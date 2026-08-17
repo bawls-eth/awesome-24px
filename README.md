@@ -12,6 +12,8 @@
 
 # Awesome 24px (and 28px¹) Downloads - Free Pixel Art Collections in the 24x24 (and 28x28¹) Format
 
+> 🎮 **New:** [`/game`](game/) — a tiny Animal Crossing-style multiplayer town built on these sprite collections. `cd game && npm install && npm start`.
+
 
 ## Punks
 

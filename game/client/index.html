@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pixeltown</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div id="join-overlay">
+  <div class="join-card">
+    <h1>🏝️ Pixeltown</h1>
+    <p class="tagline">A tiny shared town for you and your friends.</p>
+
+    <label for="name-input">Your name</label>
+    <input id="name-input" maxlength="16" placeholder="e.g. Ben" autocomplete="off" />
+
+    <label>Pick your villager</label>
+    <div id="species-tabs"></div>
+    <div id="avatar-grid"></div>
+
+    <button id="join-btn" disabled>Join Town</button>
+    <p id="join-error" class="error"></p>
+  </div>
+</div>
+
+<div id="game-container"></div>
+
+<div id="hud" class="hidden">
+  <div id="player-list-panel">
+    <h2>In town</h2>
+    <ul id="player-list"></ul>
+  </div>
+
+  <div id="chat-panel">
+    <div id="chat-log"></div>
+    <input id="chat-input" maxlength="140" placeholder="Press Enter to chat…" />
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,247 @@
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: #1c2430;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #eef2f7;
+  overflow: hidden;
+}
+
+#game-container {
+  position: fixed;
+  inset: 0;
+}
+
+#game-container canvas {
+  image-rendering: pixelated;
+  display: block;
+}
+
+/* ---------- Join overlay ---------- */
+
+#join-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 20%, #3a5a40 0%, #1c2430 70%);
+  z-index: 20;
+}
+
+#join-overlay.hidden { display: none; }
+
+.join-card {
+  background: #232c3a;
+  border: 3px solid #3a4658;
+  border-radius: 14px;
+  padding: 28px 32px;
+  width: 360px;
+  max-width: 90vw;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+
+.join-card h1 {
+  margin: 0 0 4px;
+  font-size: 26px;
+}
+
+.tagline {
+  margin: 0 0 18px;
+  color: #9aa7bb;
+  font-size: 13px;
+}
+
+.join-card label {
+  display: block;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9aa7bb;
+  margin: 14px 0 6px;
+}
+
+#name-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 2px solid #3a4658;
+  background: #1c2430;
+  color: #eef2f7;
+  font-size: 14px;
+}
+
+#name-input:focus {
+  outline: none;
+  border-color: #6fbf73;
+}
+
+#species-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.species-tab {
+  flex: 1 1 auto;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 2px solid #3a4658;
+  background: #1c2430;
+  color: #cbd5e1;
+  font-size: 11px;
+  text-transform: capitalize;
+  cursor: pointer;
+  text-align: center;
+}
+
+.species-tab.active {
+  border-color: #6fbf73;
+  color: #6fbf73;
+  background: #223328;
+}
+
+#avatar-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 48px);
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.avatar-choice {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  border: 2px solid #3a4658;
+  background-color: #1c2430;
+  background-repeat: no-repeat;
+  background-size: 432px 48px;
+  image-rendering: pixelated;
+  cursor: pointer;
+  padding: 0;
+}
+
+.avatar-choice.selected {
+  border-color: #6fbf73;
+  box-shadow: 0 0 0 2px rgba(111,191,115,0.4);
+}
+
+#join-btn {
+  width: 100%;
+  margin-top: 20px;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background: #6fbf73;
+  color: #10240f;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#join-btn:disabled {
+  background: #3a4658;
+  color: #6b7385;
+  cursor: not-allowed;
+}
+
+.error {
+  color: #ef6f6f;
+  font-size: 12px;
+  min-height: 16px;
+  margin: 8px 0 0;
+}
+
+/* ---------- HUD ---------- */
+
+#hud.hidden { display: none; }
+
+#player-list-panel {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  width: 180px;
+  background: rgba(28,36,48,0.85);
+  border: 2px solid #3a4658;
+  border-radius: 10px;
+  padding: 10px 12px;
+  z-index: 10;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+#player-list-panel h2 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9aa7bb;
+}
+
+#player-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 13px;
+}
+
+#player-list li {
+  padding: 3px 0;
+}
+
+#chat-panel {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  width: 320px;
+  z-index: 10;
+}
+
+#chat-log {
+  max-height: 160px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chat-line {
+  background: rgba(28,36,48,0.85);
+  border: 1px solid #3a4658;
+  border-radius: 8px;
+  padding: 5px 9px;
+  font-size: 13px;
+  width: fit-content;
+  max-width: 100%;
+  word-break: break-word;
+}
+
+.chat-line .who {
+  color: #6fbf73;
+  font-weight: 700;
+  margin-right: 4px;
+}
+
+.chat-line.system {
+  color: #9aa7bb;
+  font-style: italic;
+  background: transparent;
+  border: none;
+}
+
+#chat-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 2px solid #3a4658;
+  background: rgba(28,36,48,0.85);
+  color: #eef2f7;
+  font-size: 13px;
+}
+
+#chat-input:focus { outline: none; border-color: #6fbf73; }
