@@ -1,5 +1,7 @@
 const FRAME_SIZE = 24;
 const FRAME_COUNT = 9;
+const HOP_HEIGHT = 5; // px of vertical lift at the peak of a walk hop
+const HOP_SPEED = 9; // radians/sec the hop phase advances while moving
 const SPECIES = [
   { key: 'coolcats', label: 'Cats' },
   { key: 'punks', label: 'Punks' },
@@ -71,19 +73,14 @@ class TownScene extends Phaser.Scene {
     this.drawTulipBeds();
     this.drawRocks();
 
-    const { sprite, nameText } = this.createAvatarVisual(this.selfData);
-    this.physics.add.existing(sprite);
-    sprite.body.setCollideWorldBounds(true);
-    sprite.body.setSize(16, 16).setOffset(4, 12);
-    this.localPlayer = sprite;
-    this.localPlayer.nameText = nameText;
-    this.physics.add.collider(this.localPlayer, this.obstacles);
+    this.createLocalPlayer(this.selfData);
+    this.physics.add.collider(this.localBody, this.obstacles);
 
     this.allPlayers.forEach((p) => {
       if (p.id !== this.selfData.id) this.addRemotePlayer(p);
     });
 
-    this.cameras.main.startFollow(this.localPlayer, true, 0.15, 0.15);
+    this.cameras.main.startFollow(this.localBody, true, 0.15, 0.15);
 
     this.cursors = this.input.keyboard.createCursorKeys();
     this.wasd = this.input.keyboard.addKeys('W,A,S,D');
@@ -95,14 +92,14 @@ class TownScene extends Phaser.Scene {
     this.addChatLine({ system: true, text: 'Welcome to Pixeltown! WASD or arrows to move, Enter to chat.' });
   }
 
-  update(time) {
-    this.updateLocalMovement(time);
-    this.updateRemoteInterpolation();
+  update(time, delta) {
+    this.updateLocalMovement(time, delta);
+    this.updateRemoteInterpolation(delta);
   }
 
   // ---------- movement ----------
 
-  updateLocalMovement(time) {
+  updateLocalMovement(time, delta) {
     const speed = 140;
     let vx = 0;
     let vy = 0;
@@ -120,75 +117,128 @@ class TownScene extends Phaser.Scene {
       vy *= 0.7071;
     }
 
-    this.localPlayer.body.setVelocity(vx * speed, vy * speed);
-    if (vx !== 0) this.localPlayer.setFlipX(vx < 0);
-    this.localPlayer.setDepth(this.localPlayer.y);
-    this.localPlayer.nameText.setPosition(this.localPlayer.x, this.localPlayer.y - 22);
+    this.localBody.body.setVelocity(vx * speed, vy * speed);
+    if (vx !== 0) this.localVisual.setFlipX(vx < 0);
+
+    const moving = vx !== 0 || vy !== 0;
+    this.applyBob(this.localBobState, this.localVisual, this.localShadow, this.localBody.x, this.localBody.y, moving, delta);
+    this.localNameText.setPosition(this.localBody.x, this.localVisual.y - 22);
 
     if (time - this.lastSentAt > 60) {
       this.lastSentAt = time;
       this.socket.emit('move', {
-        x: this.localPlayer.x,
-        y: this.localPlayer.y,
-        facing: this.localPlayer.flipX ? -1 : 1,
+        x: this.localBody.x,
+        y: this.localBody.y,
+        facing: this.localVisual.flipX ? -1 : 1,
       });
     }
   }
 
-  updateRemoteInterpolation() {
+  updateRemoteInterpolation(delta) {
     this.remotePlayers.forEach((rp) => {
-      rp.sprite.x += (rp.targetX - rp.sprite.x) * 0.25;
-      rp.sprite.y += (rp.targetY - rp.sprite.y) * 0.25;
-      rp.sprite.setFlipX(rp.facing === -1);
-      rp.sprite.setDepth(rp.sprite.y);
-      rp.nameText.setPosition(rp.sprite.x, rp.sprite.y - 22);
-      if (rp.bubble) rp.bubble.setPosition(rp.sprite.x, rp.sprite.y - 40);
+      const prevX = rp.x;
+      const prevY = rp.y;
+      rp.x += (rp.targetX - rp.x) * 0.25;
+      rp.y += (rp.targetY - rp.y) * 0.25;
+      rp.visual.setFlipX(rp.facing === -1);
+
+      const moving = Math.hypot(rp.x - prevX, rp.y - prevY) > 0.05;
+      this.applyBob(rp.bob, rp.visual, rp.shadow, rp.x, rp.y, moving, delta);
+      rp.nameText.setPosition(rp.x, rp.visual.y - 22);
+      if (rp.bubble) rp.bubble.setPosition(rp.x, rp.visual.y - 40);
     });
+  }
+
+  // ---------- walk-cycle (squash/stretch hop, since the source sprites are single-pose) ----------
+
+  applyBob(state, visual, shadow, anchorX, anchorY, moving, delta) {
+    if (moving) {
+      state.phase += (delta / 1000) * HOP_SPEED;
+      const target = Math.abs(Math.sin(state.phase));
+      state.lift += (target - state.lift) * 0.6;
+    } else {
+      state.phase = 0;
+      state.lift += (0 - state.lift) * 0.3;
+    }
+
+    visual.x = anchorX;
+    visual.y = anchorY - state.lift * HOP_HEIGHT;
+    visual.setScale(1 - state.lift * 0.07, 1 + state.lift * 0.12);
+    visual.setDepth(anchorY);
+
+    shadow.x = anchorX;
+    shadow.y = anchorY + 9;
+    const shrink = 1 - state.lift * 0.35;
+    shadow.setScale(shrink, shrink);
   }
 
   // ---------- players ----------
 
-  createAvatarVisual(playerData) {
-    const sprite = this.add.sprite(playerData.x, playerData.y, playerData.species, playerData.frame);
-    sprite.setDepth(playerData.y);
-    if (playerData.facing === -1) sprite.setFlipX(true);
+  createShadow(x, y) {
+    return this.add.ellipse(x, y + 9, 18, 8, 0x000000, 0.28).setDepth(-1);
+  }
 
-    const nameText = this.add.text(playerData.x, playerData.y - 22, playerData.name, {
+  createNameText(x, y, name) {
+    return this.add.text(x, y - 22, name, {
       fontSize: '11px',
       fontFamily: 'monospace',
       color: '#ffffff',
       stroke: '#000000',
       strokeThickness: 3,
     }).setOrigin(0.5).setDepth(100000);
+  }
 
-    return { sprite, nameText };
+  createLocalPlayer(playerData) {
+    this.localBody = this.physics.add.sprite(playerData.x, playerData.y, playerData.species, playerData.frame).setVisible(false);
+    this.localBody.body.setCollideWorldBounds(true);
+    this.localBody.body.setSize(16, 16).setOffset(4, 12);
+
+    this.localVisual = this.add.sprite(playerData.x, playerData.y, playerData.species, playerData.frame);
+    if (playerData.facing === -1) this.localVisual.setFlipX(true);
+
+    this.localShadow = this.createShadow(playerData.x, playerData.y);
+    this.localNameText = this.createNameText(playerData.x, playerData.y, playerData.name);
+    this.localBobState = { phase: 0, lift: 0 };
   }
 
   addRemotePlayer(p) {
-    const { sprite, nameText } = this.createAvatarVisual(p);
-    this.remotePlayers.set(p.id, { sprite, nameText, targetX: p.x, targetY: p.y, facing: p.facing, bubble: null });
+    const visual = this.add.sprite(p.x, p.y, p.species, p.frame).setFlipX(p.facing === -1);
+    const shadow = this.createShadow(p.x, p.y);
+    const nameText = this.createNameText(p.x, p.y, p.name);
+    this.remotePlayers.set(p.id, {
+      visual,
+      shadow,
+      nameText,
+      bubble: null,
+      x: p.x,
+      y: p.y,
+      targetX: p.x,
+      targetY: p.y,
+      facing: p.facing,
+      bob: { phase: 0, lift: 0 },
+    });
   }
 
   removeRemotePlayer(id) {
     const rp = this.remotePlayers.get(id);
     if (!rp) return;
-    rp.sprite.destroy();
+    rp.visual.destroy();
+    rp.shadow.destroy();
     rp.nameText.destroy();
     if (rp.bubble) rp.bubble.destroy();
     this.remotePlayers.delete(id);
   }
 
   showChatBubble(playerId, text) {
-    let nameText;
     let anchor;
-    let isLocal = playerId === this.selfData.id;
+    const isLocal = playerId === this.selfData.id;
 
     if (isLocal) {
-      anchor = this.localPlayer;
+      anchor = this.localVisual;
     } else {
       const rp = this.remotePlayers.get(playerId);
       if (!rp) return;
-      anchor = rp.sprite;
+      anchor = rp.visual;
       if (rp.bubble) rp.bubble.destroy();
     }
 

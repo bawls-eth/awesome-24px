@@ -52,6 +52,10 @@ For something more permanent, deploy the `game/` folder to any Node host
 - Villager avatars are sliced directly from `i/coolcats-strip.png`,
   `i/punks-strip.png`, `i/pudgypenguins-strip.png`, and `i/doge-strip.png`
   (each a 9-frame, 24×24-per-frame strip) using Phaser's spritesheet loader.
+- The source sprites are single-pose (no walk-cycle frames), so movement
+  animation is faked with a procedural squash-and-stretch hop + shrinking
+  ground shadow, synced to whether each player is actively moving — no
+  extra art needed, and it reads as a proper walk cycle in motion.
 
 ## Controls
 
@@ -65,5 +69,4 @@ This is a deliberately small first version. Natural things to add next:
 - Placeable furniture/decorations, a simple inventory
 - Day/night cycle, weather
 - More villager species from the rest of the collection (apes, rocks, tulips as pets?)
-- Proper walk-cycle animations (current sprites are single-pose, so movement just flips left/right)
 - A "home" per player / multiple rooms instead of one shared map
