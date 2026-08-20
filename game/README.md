@@ -33,12 +33,30 @@ ngrok http 3000
 Send the `https://...ngrok-free.app` URL it prints to whoever you want in
 the town.
 
-For something more permanent, deploy the `game/` folder to any Node host
-(Render, Railway, Fly.io, a cheap VPS, etc.):
+For something more permanent, deploy it to Render — free, and this repo is
+already set up for it via `render.yaml` at the repo root:
 
-- Start command: `npm start` (or `node server/index.js`)
-- No environment variables required (optional `PORT`, defaults to 3000)
-- No database — state is in-memory and resets when the server restarts
+1. Push this repo to GitHub (already done if you're reading this from there).
+2. Go to [render.com](https://render.com) → **New** → **Blueprint**, sign in
+   with GitHub, and pick this repo (`awesome-24px`).
+3. Render reads `render.yaml` automatically — it already knows to build
+   from the `game/` folder, run `npm install` then `npm start`, and use the
+   free plan. Click **Apply**.
+4. In a minute or two you'll get a URL like `https://pixeltown-xxxx.onrender.com`
+   — send that to your gf/friends.
+
+Notes on the free plan: the service spins down after ~15 minutes with no
+traffic and takes ~30-50s to wake back up on the next visit (the first
+person just has to wait a bit) — fine for a casual hangout, not for
+guaranteed instant joins. Upgrading to a paid Render plan removes that.
+
+No environment variables are required (Render sets `PORT` for you). No
+database — state is in-memory and resets on every restart/redeploy/sleep
+cycle, so player positions and chat history don't persist between sessions.
+
+Other Node hosts (Railway, Fly.io, a cheap VPS) work too if you'd rather
+not use Render — same start command (`npm start` / `node server/index.js`),
+same "no env vars, no database" notes.
 
 ## How it works
 
