@@ -9,8 +9,8 @@ const SPECIES = [
   { key: 'doge', label: 'Dogs' },
 ];
 
-// Fixed town layout. Must stay in sync with the server's WORLD size (1600x1200) —
-// everyone's client draws the same map so landmarks mean the same thing to everyone.
+// Fixed town layout. WORLD size (1600x1200) is defined in net.js — everyone's
+// client draws the same map so landmarks mean the same thing to everyone.
 const TREES = [
   [60, 50], [220, 40], [380, 55], [560, 45], [680, 60],
   [920, 60], [1040, 45], [1200, 55], [1360, 40], [1520, 50],
@@ -38,7 +38,7 @@ class TownScene extends Phaser.Scene {
   }
 
   init(data) {
-    this.socket = data.socket;
+    this.net = data.net;
     this.selfData = data.self;
     this.world = data.world;
     this.allPlayers = new Map(Object.entries(data.players));
@@ -46,13 +46,13 @@ class TownScene extends Phaser.Scene {
 
   preload() {
     SPECIES.forEach((s) => {
-      this.load.spritesheet(s.key, `/assets/i/${s.key}-strip.png`, {
+      this.load.spritesheet(s.key, `../i/${s.key}-strip.png`, {
         frameWidth: FRAME_SIZE,
         frameHeight: FRAME_SIZE,
       });
     });
-    this.load.spritesheet('tulips', '/assets/i/tulips-strip.png', { frameWidth: FRAME_SIZE, frameHeight: FRAME_SIZE });
-    this.load.spritesheet('rocks', '/assets/i/rocks-strip.png', { frameWidth: FRAME_SIZE, frameHeight: FRAME_SIZE });
+    this.load.spritesheet('tulips', '../i/tulips-strip.png', { frameWidth: FRAME_SIZE, frameHeight: FRAME_SIZE });
+    this.load.spritesheet('rocks', '../i/rocks-strip.png', { frameWidth: FRAME_SIZE, frameHeight: FRAME_SIZE });
   }
 
   create() {
@@ -86,10 +86,13 @@ class TownScene extends Phaser.Scene {
     this.wasd = this.input.keyboard.addKeys('W,A,S,D');
     this.lastSentAt = 0;
 
-    this.registerSocketHandlers();
+    this.registerNetHandlers();
     this.registerChatUI();
     this.renderPlayerList();
     this.addChatLine({ system: true, text: 'Welcome to Pixeltown! WASD or arrows to move, Enter to chat.' });
+
+    // Handlers are wired up — safe to start receiving live updates now.
+    this.net.startListening();
   }
 
   update(time, delta) {
@@ -124,13 +127,9 @@ class TownScene extends Phaser.Scene {
     this.applyBob(this.localBobState, this.localVisual, this.localShadow, this.localBody.x, this.localBody.y, moving, delta);
     this.localNameText.setPosition(this.localBody.x, this.localVisual.y - 22);
 
-    if (time - this.lastSentAt > 60) {
+    if (time - this.lastSentAt > 100) {
       this.lastSentAt = time;
-      this.socket.emit('move', {
-        x: this.localBody.x,
-        y: this.localBody.y,
-        facing: this.localVisual.flipX ? -1 : 1,
-      });
+      this.net.move(this.localBody.x, this.localBody.y, this.localVisual.flipX ? -1 : 1);
     }
   }
 
@@ -376,15 +375,16 @@ class TownScene extends Phaser.Scene {
 
   // ---------- networking ----------
 
-  registerSocketHandlers() {
-    this.socket.on('playerJoined', (p) => {
+  registerNetHandlers() {
+    this.net.on('playerJoined', (p) => {
+      if (this.remotePlayers.has(p.id)) return;
       this.allPlayers.set(p.id, p);
       this.addRemotePlayer(p);
       this.renderPlayerList();
       this.addChatLine({ system: true, text: `${p.name} arrived in town.` });
     });
 
-    this.socket.on('playerLeft', (id) => {
+    this.net.on('playerLeft', (id) => {
       const p = this.allPlayers.get(id);
       this.allPlayers.delete(id);
       this.removeRemotePlayer(id);
@@ -392,7 +392,7 @@ class TownScene extends Phaser.Scene {
       if (p) this.addChatLine({ system: true, text: `${p.name} left.` });
     });
 
-    this.socket.on('playerMoved', (d) => {
+    this.net.on('playerMoved', (d) => {
       const rp = this.remotePlayers.get(d.id);
       if (!rp) return;
       rp.targetX = d.x;
@@ -400,13 +400,9 @@ class TownScene extends Phaser.Scene {
       rp.facing = d.facing;
     });
 
-    this.socket.on('chat', (msg) => {
+    this.net.on('chat', (msg) => {
       this.addChatLine({ name: msg.name, text: msg.text });
-      this.showChatBubble(msg.id, msg.text);
-    });
-
-    this.socket.on('disconnect', () => {
-      this.addChatLine({ system: true, text: 'Disconnected from the town server. Refresh to rejoin.' });
+      if (!msg.isOld) this.showChatBubble(msg.id, msg.text);
     });
   }
 
@@ -421,7 +417,7 @@ class TownScene extends Phaser.Scene {
     chatInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         const text = chatInput.value.trim();
-        if (text) this.socket.emit('chat', text);
+        if (text) this.net.sendChat(text);
         chatInput.value = '';
         chatInput.blur();
       } else if (e.key === 'Escape') {
@@ -506,7 +502,7 @@ function renderAvatarGrid() {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'avatar-choice' + (frame === selectedFrame ? ' selected' : '');
-    btn.style.backgroundImage = `url(/assets/i/${selectedSpecies}-strip.png)`;
+    btn.style.backgroundImage = `url(../i/${selectedSpecies}-strip.png)`;
     btn.style.backgroundPosition = `-${frame * 48}px 0`;
     btn.addEventListener('click', () => {
       selectedFrame = frame;
@@ -532,31 +528,33 @@ function attemptJoin() {
   joinBtn.disabled = true;
   joinError.textContent = '';
 
-  const socket = io();
+  const net = new TownNet();
   let joined = false;
 
-  socket.on('connect', () => {
-    socket.emit('join', { name, species: selectedSpecies, frame: selectedFrame });
-  });
-  socket.on('connect_error', () => {
-    joinError.textContent = 'Could not connect to the town server.';
+  net.on('configMissing', () => {
+    joinError.textContent = 'Not connected to a Firebase project yet — see game/firebase-config.js.';
     joinBtn.disabled = false;
   });
-  socket.on('townFull', () => {
-    joinError.textContent = 'Town is full right now (24 max) — try again shortly.';
+  net.on('townFull', () => {
+    joinError.textContent = 'Town is full right now (10 max) — try again shortly.';
     joinBtn.disabled = false;
-    socket.disconnect();
   });
-  socket.on('init', (data) => {
+  net.on('error', (text) => {
+    joinError.textContent = text;
+    joinBtn.disabled = false;
+  });
+  net.on('init', (data) => {
     if (joined) return;
     joined = true;
     joinOverlay.classList.add('hidden');
     hud.classList.remove('hidden');
-    startTown(socket, data);
+    startTown(net, data);
   });
+
+  net.join({ name, species: selectedSpecies, frame: selectedFrame });
 }
 
-function startTown(socket, data) {
+function startTown(net, data) {
   const config = {
     type: Phaser.AUTO,
     parent: 'game-container',
@@ -567,7 +565,7 @@ function startTown(socket, data) {
     physics: { default: 'arcade', arcade: { debug: false } },
   };
   const game = new Phaser.Game(config);
-  game.scene.add('Town', TownScene, true, { socket, self: data.self, players: data.players, world: data.world });
+  game.scene.add('Town', TownScene, true, { net, self: data.self, players: data.players, world: data.world });
 
   window.addEventListener('resize', () => {
     game.scale.resize(window.innerWidth, window.innerHeight);

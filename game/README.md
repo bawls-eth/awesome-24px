@@ -5,86 +5,118 @@ friends — built straight on top of this repo's 24×24px sprite collections.
 Pick a villager (cat, punk, penguin, or dog), walk around a little pixel
 town, and chat with whoever else is online, all in real time.
 
-No accounts, no database, no build step — just a Node server and a browser.
+It's a **static site** (no server to run) + a **free Firebase Realtime
+Database** for the live multiplayer sync. That means it can be hosted for
+free on GitHub Pages, and everyone's position/chat updates push to everyone
+else automatically. Capped at **10 players** at once for now.
+
+## Setup — the one manual step (~5 minutes)
+
+Pixeltown needs a free Firebase project to sync players. A static page can't
+store shared data by itself, so this is unavoidable — but it's quick and
+free (no credit card).
+
+1. Go to <https://console.firebase.google.com> and **Add project** (any name;
+   you can disable Google Analytics).
+2. In the project: **Build → Realtime Database → Create Database**. Pick a
+   location, then choose **Start in test mode** and enable it.
+3. Click the **gear icon → Project settings**, scroll to **Your apps**, and
+   click the web icon **`</>`** to register a web app (any nickname; you do
+   NOT need Firebase Hosting).
+4. Firebase shows a `const firebaseConfig = { … }` snippet. Copy that object
+   and paste it over the placeholder in **[`firebase-config.js`](firebase-config.js)**.
+5. Commit and push. That's it.
+
+> The Firebase web config keys are **safe to commit** — they're meant to be
+> public. Access is controlled by the database rules, not by hiding the keys.
+
+### Locking the rules down a little (optional but recommended)
+
+"Test mode" lets anyone read/write and auto-expires after 30 days. For a
+friends-only town, in **Realtime Database → Rules** you can paste something
+like this (open, but with basic shape/size limits so nobody can dump junk):
+
+```json
+{
+  "rules": {
+    "players": { ".read": true, ".write": true },
+    "chat": {
+      ".read": true,
+      "$msg": {
+        ".write": true,
+        "text": { ".validate": "newData.isString() && newData.val().length <= 140" }
+      }
+    }
+  }
+}
+```
+
+This is still world-writable (fine for a link you only share with friends).
+For anything more public, add Firebase Anonymous Auth and gate writes on
+`auth != null` — see the "Ideas for next steps" below.
+
+## Host it free on GitHub Pages
+
+1. Push this repo to GitHub (done, if you're reading this there).
+2. Repo **Settings → Pages**. Under **Build and deployment**, set **Source =
+   Deploy from a branch**, pick your branch (e.g. `master`) and folder
+   **`/ (root)`**, then **Save**.
+3. Wait a minute, then open:
+   **`https://<your-user>.github.io/<repo>/game/`**
+   (for this repo: `https://bawls-eth.github.io/awesome-24px/game/`)
+4. Send that link to your gf/friends. Everyone who opens it and picks a
+   villager shows up in the same town.
+
+No cold starts, no server bill, nothing to keep running — GitHub Pages
+serves the files and Firebase handles the live sync.
 
 ## Run it locally
 
-```bash
-cd game
-npm install
-npm start
-```
-
-Then open **http://localhost:3000** in your browser. Open it in a second
-tab (or have someone else on the same network hit your machine's IP on port
-3000) to see multiplayer working.
-
-## Play with your girlfriend / friends over the internet
-
-The simplest option while you're testing: run it on your machine and share
-your local network, or use a tunnel like [ngrok](https://ngrok.com):
+Because it's just static files, any static server works — you don't need
+Node. From the **repo root**:
 
 ```bash
-npm start
-# in another terminal
-ngrok http 3000
+python3 -m http.server 8000
 ```
 
-Send the `https://...ngrok-free.app` URL it prints to whoever you want in
-the town.
-
-For something more permanent, deploy it to Render — free, and this repo is
-already set up for it via `render.yaml` at the repo root:
-
-1. Push this repo to GitHub (already done if you're reading this from there).
-2. Go to [render.com](https://render.com) → **New** → **Blueprint**, sign in
-   with GitHub, and pick this repo (`awesome-24px`).
-3. Render reads `render.yaml` automatically — it already knows to build
-   from the `game/` folder, run `npm install` then `npm start`, and use the
-   free plan. Click **Apply**.
-4. In a minute or two you'll get a URL like `https://pixeltown-xxxx.onrender.com`
-   — send that to your gf/friends.
-
-Notes on the free plan: the service spins down after ~15 minutes with no
-traffic and takes ~30-50s to wake back up on the next visit (the first
-person just has to wait a bit) — fine for a casual hangout, not for
-guaranteed instant joins. Upgrading to a paid Render plan removes that.
-
-No environment variables are required (Render sets `PORT` for you). No
-database — state is in-memory and resets on every restart/redeploy/sleep
-cycle, so player positions and chat history don't persist between sessions.
-
-Other Node hosts (Railway, Fly.io, a cheap VPS) work too if you'd rather
-not use Render — same start command (`npm start` / `node server/index.js`),
-same "no env vars, no database" notes.
-
-## How it works
-
-- **`server/index.js`** — Express serves the client and the sprite assets
-  (straight from the repo's `i/` folder, no duplication); Socket.io tracks
-  connected players and relays movement + chat.
-- **`client/`** — plain HTML/CSS/JS. [Phaser 3](https://phaser.io) (loaded
-  from a CDN) renders the town; the join screen is a plain DOM overlay.
-- The town map (pond, bridge, path, campfire, forest ring, tulip beds) is
-  drawn procedurally in `client/main.js` — no external tileset needed.
-- Villager avatars are sliced directly from `i/coolcats-strip.png`,
-  `i/punks-strip.png`, `i/pudgypenguins-strip.png`, and `i/doge-strip.png`
-  (each a 9-frame, 24×24-per-frame strip) using Phaser's spritesheet loader.
-- The source sprites are single-pose (no walk-cycle frames), so movement
-  animation is faked with a procedural squash-and-stretch hop + shrinking
-  ground shadow, synced to whether each player is actively moving — no
-  extra art needed, and it reads as a proper walk cycle in motion.
+Then open **http://localhost:8000/game/**. (Opening `index.html` directly
+via `file://` won't work — the sprite sheets need to load over http.)
 
 ## Controls
 
 - **WASD** or **arrow keys** — walk
 - **Enter** — open chat, type, **Enter** again to send
 
+## How it works
+
+- **`index.html` / `style.css`** — the page shell and join screen.
+- **`main.js`** — [Phaser 3](https://phaser.io) (from a CDN) renders the
+  town and players; the map (pond, bridge, path, campfire, forest ring,
+  tulip beds) is drawn procedurally — no external tileset.
+- **`net.js`** — the multiplayer layer. Players live under `/players/{id}`
+  in the Realtime Database; each client writes its own position (throttled
+  to ~10×/sec) and Firebase pushes everyone else's changes live. Presence
+  uses `onDisconnect()` so you vanish from the town when you close the tab.
+  Chat lives under `/chat`.
+- **`firebase-config.js`** — your project's keys (the one file you edit).
+- Villager avatars are sliced directly from the repo's `i/*-strip.png`
+  sprite sheets (9-frame, 24×24-per-frame strips) via Phaser's spritesheet
+  loader. The sprites are single-pose, so walking is faked with a
+  procedural squash-and-stretch hop + shrinking ground shadow.
+
+## Notes / limits
+
+- **10 players max** at once (change `MAX_PLAYERS` in `net.js`).
+- State is ephemeral by design: players disappear when they leave, and chat
+  history is just the last ~30 messages. Nothing needs cleanup.
+- Position updates are throttled to ~10/sec per player — smooth, and well
+  within Firebase's free tier for a handful of friends.
+
 ## Ideas for next steps
 
-This is a deliberately small first version. Natural things to add next:
-- Persistence (save player position/name/avatar across sessions — e.g. SQLite or Redis)
+- Firebase Anonymous Auth so writes require `auth != null` (safer public link)
+- Persistence: remember your name/avatar/last position across visits
 - Placeable furniture/decorations, a simple inventory
 - Day/night cycle, weather
-- More villager species from the rest of the collection (apes, rocks, tulips as pets?)
-- A "home" per player / multiple rooms instead of one shared map
+- More villager species from the rest of the collection (apes, etc.)
+- Per-player "homes" / multiple rooms instead of one shared map
