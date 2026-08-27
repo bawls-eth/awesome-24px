@@ -2,13 +2,20 @@
 
 A tiny Animal Crossing-style shared town for you, your girlfriend, and your
 friends — built straight on top of this repo's 24×24px sprite collections.
-Pick a villager (cat, punk, penguin, or dog), walk around a little pixel
-town, and chat with whoever else is online, all in real time.
+Pick a villager (cat, punk, penguin, dog, or ape), walk around a little
+pixel town, chat, throw emotes, and race for sparkles — all in real time.
 
 It's a **static site** (no server to run) + a **free Firebase Realtime
 Database** for the live multiplayer sync. That means it can be hosted for
-free on GitHub Pages, and everyone's position/chat updates push to everyone
-else automatically. Capped at **10 players** at once for now.
+free on GitHub Pages, and everyone's position/chat/score updates push to
+everyone else automatically. Capped at **10 players** at once for now.
+
+**What there is to do:**
+- Walk the town, chat, hang out by the campfire or the pond
+- 5 emotes (keys **1-5**) that pop up over your head for everyone to see
+- A rotating **✨ sparkle** wanders the town every 8s — walk into it to
+  score a point; the player list is a live-sorted mini-leaderboard
+- A day/night tint that follows your local clock, purely for atmosphere
 
 ## Setup — the one manual step (~5 minutes)
 
@@ -59,11 +66,12 @@ For anything more public, add Firebase Anonymous Auth and gate writes on
 
 1. Push this repo to GitHub (done, if you're reading this there).
 2. Repo **Settings → Pages**. Under **Build and deployment**, set **Source =
-   Deploy from a branch**, pick your branch (e.g. `master`) and folder
-   **`/ (root)`**, then **Save**.
-3. Wait a minute, then open:
-   **`https://<your-user>.github.io/<repo>/game/`**
-   (for this repo: `https://bawls-eth.github.io/awesome-24px/game/`)
+   Deploy from a branch**, pick your branch and folder **`/ (root)`**, then
+   **Save**. This is the one step I can't do for you — it's a repo-admin
+   setting change, not something a `git push` can flip.
+3. Wait a minute, then open your repo's Pages URL — the root now redirects
+   straight into the game (`index.html` at the repo root sends you to
+   `game/`). For this repo that's `https://bawls-eth.github.io/awesome-24px/`.
 4. Send that link to your gf/friends. Everyone who opens it and picks a
    villager shows up in the same town.
 
@@ -86,6 +94,8 @@ via `file://` won't work — the sprite sheets need to load over http.)
 
 - **WASD** or **arrow keys** — walk
 - **Enter** — open chat, type, **Enter** again to send
+- **1-5** — emote (👋 😀 ❤️ 😂 🎉), visible to everyone nearby
+- Walk into the **✨ sparkle** to score a point
 
 ## How it works
 
@@ -94,29 +104,41 @@ via `file://` won't work — the sprite sheets need to load over http.)
   town and players; the map (pond, bridge, path, campfire, forest ring,
   tulip beds) is drawn procedurally — no external tileset.
 - **`net.js`** — the multiplayer layer. Players live under `/players/{id}`
-  in the Realtime Database; each client writes its own position (throttled
-  to ~10×/sec) and Firebase pushes everyone else's changes live. Presence
-  uses `onDisconnect()` so you vanish from the town when you close the tab.
+  in the Realtime Database (position, facing, species, score, current
+  emote); each client writes its own fields (position throttled to
+  ~10×/sec) and Firebase pushes everyone else's changes live. Presence uses
+  `onDisconnect()` so you vanish from the town when you close the tab.
   Chat lives under `/chat`.
 - **`firebase-config.js`** — your project's keys (the one file you edit).
 - Villager avatars are sliced directly from the repo's `i/*-strip.png`
   sprite sheets (9-frame, 24×24-per-frame strips) via Phaser's spritesheet
-  loader. The sprites are single-pose, so walking is faked with a
-  procedural squash-and-stretch hop + shrinking ground shadow.
+  loader — cats, punks, penguins, dogs, apes. The sprites are single-pose,
+  so walking is faked with a procedural squash-and-stretch hop + shrinking
+  ground shadow.
+- The sparkle's position is derived from wall-clock time
+  (`Math.floor(Date.now() / 8000) % spots.length`), so every client agrees
+  on where it is without any extra network traffic — no server needed to
+  referee it. Anyone nearby when it rotates scores a point, so it's casual
+  and co-op rather than a first-click-wins race.
+- Day/night tint reads each device's own local clock — cosmetic only, not
+  synced (friends in different timezones will see different lighting).
 
 ## Notes / limits
 
 - **10 players max** at once (change `MAX_PLAYERS` in `net.js`).
 - State is ephemeral by design: players disappear when they leave, and chat
-  history is just the last ~30 messages. Nothing needs cleanup.
+  history is just the last ~30 messages. Nothing needs cleanup. Scores reset
+  when a player leaves and rejoins (no accounts, no persistence).
 - Position updates are throttled to ~10/sec per player — smooth, and well
   within Firebase's free tier for a handful of friends.
+- Firebase's "test mode" rules are wide open (see below) — fine for a link
+  you only share with people you trust, not for posting publicly.
 
 ## Ideas for next steps
 
 - Firebase Anonymous Auth so writes require `auth != null` (safer public link)
-- Persistence: remember your name/avatar/last position across visits
+- Persistence: remember your name/avatar/score across visits
 - Placeable furniture/decorations, a simple inventory
-- Day/night cycle, weather
-- More villager species from the rest of the collection (apes, etc.)
+- Weather, seasons
+- More villager species from the rest of the collection (rocks, zombies, mohawks…)
 - Per-player "homes" / multiple rooms instead of one shared map

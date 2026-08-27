@@ -7,7 +7,16 @@ const SPECIES = [
   { key: 'punks', label: 'Punks' },
   { key: 'pudgypenguins', label: 'Penguins' },
   { key: 'doge', label: 'Dogs' },
+  { key: 'apes', label: 'Apes' },
 ];
+
+const EMOTES = ['😀', '❤️', '😂', '👋', '🎉'];
+const SPARKLE_SPOTS = [
+  [500, 300], [1100, 300], [500, 950], [1150, 940], [300, 780],
+  [1280, 650], [700, 850], [900, 400], [650, 350], [1050, 950],
+];
+const SPARKLE_ROTATE_MS = 8000;
+const SPARKLE_CATCH_RADIUS = 26;
 
 // Fixed town layout. WORLD size (1600x1200) is defined in net.js — everyone's
 // client draws the same map so landmarks mean the same thing to everyone.
@@ -86,10 +95,14 @@ class TownScene extends Phaser.Scene {
     this.wasd = this.input.keyboard.addKeys('W,A,S,D');
     this.lastSentAt = 0;
 
+    this.setupEmotes();
+    this.setupSparkle();
+    this.setupDayNight();
+
     this.registerNetHandlers();
     this.registerChatUI();
     this.renderPlayerList();
-    this.addChatLine({ system: true, text: 'Welcome to Pixeltown! WASD or arrows to move, Enter to chat.' });
+    this.addChatLine({ system: true, text: 'Welcome to Pixeltown! WASD/arrows to move, Enter to chat, 1-5 to emote, walk into a sparkle to score.' });
 
     // Handlers are wired up — safe to start receiving live updates now.
     this.net.startListening();
@@ -98,6 +111,8 @@ class TownScene extends Phaser.Scene {
   update(time, delta) {
     this.updateLocalMovement(time, delta);
     this.updateRemoteInterpolation(delta);
+    this.updateSparkle(time);
+    this.updateDayNight(time);
   }
 
   // ---------- movement ----------
@@ -169,6 +184,117 @@ class TownScene extends Phaser.Scene {
     shadow.y = anchorY + 9;
     const shrink = 1 - state.lift * 0.35;
     shadow.setScale(shrink, shrink);
+  }
+
+  // ---------- emotes ----------
+
+  setupEmotes() {
+    this.lastEmoteAt = new Map(); // playerId -> last emoteAt we've already shown
+    this.input.keyboard.on('keydown', (e) => {
+      if (this.chatFocused) return;
+      const i = Number(e.key) - 1;
+      if (i >= 0 && i < EMOTES.length) {
+        this.net.emote(EMOTES[i]);
+        this.showEmoteBubble(this.selfData.id, EMOTES[i]);
+      }
+    });
+  }
+
+  showEmoteBubble(playerId, symbol) {
+    const anchor = playerId === this.selfData.id
+      ? this.localVisual
+      : (this.remotePlayers.get(playerId) || {}).visual;
+    if (!anchor) return;
+
+    const bubble = this.add.text(anchor.x, anchor.y - 34, symbol, { fontSize: '20px' })
+      .setOrigin(0.5)
+      .setDepth(100001);
+    this.tweens.add({
+      targets: bubble,
+      y: bubble.y - 14,
+      alpha: { from: 1, to: 0 },
+      duration: 1400,
+      onComplete: () => bubble.destroy(),
+    });
+  }
+
+  // ---------- sparkle minigame ----------
+  // The active spot is derived from wall-clock time, so every client agrees
+  // on where it is without any extra network traffic. Anyone nearby when it
+  // rotates scores a point — casual and co-op, not first-click-wins.
+
+  setupSparkle() {
+    this.sparkleIndex = -1;
+    this.sparkleCaught = false;
+    this.sparkleStar = this.add.star(0, 0, 5, 6, 12, 0xfff2a8).setDepth(200001).setVisible(false);
+    this.sparkleGlow = this.add.star(0, 0, 5, 9, 18, 0xffe066, 0.35).setDepth(200000).setVisible(false);
+    this.tweens.add({
+      targets: [this.sparkleStar, this.sparkleGlow],
+      angle: 360,
+      duration: 4000,
+      repeat: -1,
+    });
+    this.localScore = 0;
+  }
+
+  updateSparkle(time) {
+    const index = Math.floor(time / SPARKLE_ROTATE_MS) % SPARKLE_SPOTS.length;
+    if (index !== this.sparkleIndex) {
+      this.sparkleIndex = index;
+      this.sparkleCaught = false;
+      const [x, y] = SPARKLE_SPOTS[index];
+      this.sparkleStar.setPosition(x, y).setVisible(true);
+      this.sparkleGlow.setPosition(x, y).setVisible(true);
+    }
+
+    if (this.sparkleCaught) return;
+    const [sx, sy] = SPARKLE_SPOTS[this.sparkleIndex];
+    if (Math.hypot(this.localBody.x - sx, this.localBody.y - sy) < SPARKLE_CATCH_RADIUS) {
+      this.sparkleCaught = true;
+      this.localScore += 1;
+      this.net.addScore(1);
+      const mine = this.allPlayers.get(this.selfData.id);
+      if (mine) mine.score = this.localScore;
+      this.renderPlayerList();
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, '+1 ⭐');
+    }
+  }
+
+  showFloatingText(x, y, text) {
+    const t = this.add.text(x, y, text, {
+      fontSize: '13px',
+      fontFamily: 'monospace',
+      color: '#ffe066',
+      stroke: '#1c2430',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(100002);
+    this.tweens.add({ targets: t, y: y - 24, alpha: { from: 1, to: 0 }, duration: 900, onComplete: () => t.destroy() });
+  }
+
+  // ---------- day/night ambience ----------
+
+  setupDayNight() {
+    this.dayNightOverlay = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x0a1030, 0)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(300000);
+    this.scale.on('resize', (size) => this.dayNightOverlay.setSize(size.width, size.height));
+    this.lastDayNightCheck = 0;
+  }
+
+  updateDayNight(time) {
+    if (time - this.lastDayNightCheck < 1000) return;
+    this.lastDayNightCheck = time;
+
+    const now = new Date();
+    const hour = now.getHours() + now.getMinutes() / 60;
+    let night;
+    if (hour >= 20 || hour < 5) night = 1;
+    else if (hour >= 18) night = (hour - 18) / 2;
+    else if (hour < 7) night = 1 - (hour - 5) / 2;
+    else night = 0;
+
+    this.dayNightOverlay.setAlpha(night * 0.45);
   }
 
   // ---------- players ----------
@@ -392,12 +518,23 @@ class TownScene extends Phaser.Scene {
       if (p) this.addChatLine({ system: true, text: `${p.name} left.` });
     });
 
-    this.net.on('playerMoved', (d) => {
+    this.net.on('playerUpdated', (d) => {
       const rp = this.remotePlayers.get(d.id);
       if (!rp) return;
       rp.targetX = d.x;
       rp.targetY = d.y;
       rp.facing = d.facing;
+
+      const known = this.allPlayers.get(d.id);
+      if (known && known.score !== d.score) {
+        known.score = d.score || 0;
+        this.renderPlayerList();
+      }
+
+      if (d.emote && d.emoteAt && this.lastEmoteAt.get(d.id) !== d.emoteAt) {
+        this.lastEmoteAt.set(d.id, d.emoteAt);
+        this.showEmoteBubble(d.id, d.emote);
+      }
     });
 
     this.net.on('chat', (msg) => {
@@ -458,9 +595,11 @@ class TownScene extends Phaser.Scene {
   renderPlayerList() {
     const listEl = document.getElementById('player-list');
     listEl.innerHTML = '';
-    this.allPlayers.forEach((p) => {
+    const sorted = Array.from(this.allPlayers.values()).sort((a, b) => (b.score || 0) - (a.score || 0));
+    sorted.forEach((p) => {
       const li = document.createElement('li');
-      li.textContent = p.id === this.selfData.id ? `${p.name} (you)` : p.name;
+      const label = p.id === this.selfData.id ? `${p.name} (you)` : p.name;
+      li.textContent = `${label} — ⭐${p.score || 0}`;
       listEl.appendChild(li);
     });
   }

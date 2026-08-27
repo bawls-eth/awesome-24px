@@ -82,7 +82,11 @@ class TownNet {
       x: WORLD.width / 2,
       y: WORLD.height / 2,
       facing: 1,
+      score: 0,
+      emote: null,
+      emoteAt: 0,
     };
+    this.localScore = 0;
 
     try {
       await this.playerRef.set({
@@ -92,6 +96,9 @@ class TownNet {
         x: self.x,
         y: self.y,
         facing: self.facing,
+        score: 0,
+        emote: null,
+        emoteAt: 0,
         t: firebase.database.ServerValue.TIMESTAMP,
       });
     } catch (e) {
@@ -115,8 +122,7 @@ class TownNet {
 
     this.playersRef.on('child_changed', (s) => {
       if (s.key === this.id) return;
-      const v = s.val();
-      this.emit('playerMoved', { id: s.key, x: v.x, y: v.y, facing: v.facing });
+      this.emit('playerUpdated', { id: s.key, ...s.val() });
     });
 
     this.playersRef.on('child_removed', (s) => {
@@ -138,6 +144,16 @@ class TownNet {
 
   move(x, y, facing) {
     if (this.playerRef) this.playerRef.update({ x, y, facing });
+  }
+
+  emote(symbol) {
+    if (this.playerRef) this.playerRef.update({ emote: symbol, emoteAt: firebase.database.ServerValue.TIMESTAMP });
+  }
+
+  addScore(delta) {
+    if (!this.playerRef) return;
+    this.localScore = (this.localScore || 0) + delta;
+    this.playerRef.update({ score: this.localScore });
   }
 
   sendChat(text) {
