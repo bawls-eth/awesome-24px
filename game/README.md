@@ -119,13 +119,15 @@ via `file://` won't work — the sprite sheets need to load over http.)
 **Mobile (iPhone/Android):** on-screen controls appear automatically on touch
 devices — a D-pad (bottom-left), and action buttons (bottom-right): 🎮 Tilt,
 🧱 Build, ✋ Interact, 😀 Emotes, 💬 Chat.
-- **🎮 Tilt** — tap once to enable; iOS will ask for a Motion & Orientation
-  permission (required by Apple, can't be skipped) — tilt the phone like a
-  steering wheel to walk
+- **🎮 Tilt** — tap to enable; iOS will ask for a Motion & Orientation
+  permission the first time (required by Apple, can't be skipped) — tilt
+  the phone like a steering wheel to walk. Tap again to turn it off
 - **✋ Interact** does the same thing as desktop's E — fish/chop/mine/build.
   **Shaking the phone** is a fun bonus trigger for the same action, if
   something's in range
 - **💬** focuses chat, **➤** sends it
+- Your 🎒 bag (top-left) shows your wood/stone/fish; a visible rod line
+  appears between you and the water while you're fishing
 
 ### Fishing
 

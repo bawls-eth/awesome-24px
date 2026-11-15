@@ -183,6 +183,7 @@ class TownScene extends Phaser.Scene {
     this.updateSparkle(time);
     this.updateDayNight(time);
     this.updateBuildPreview();
+    this.updateFishingRod();
   }
 
   // ---------- movement ----------
@@ -440,6 +441,9 @@ class TownScene extends Phaser.Scene {
     this.tiltBaseline = null;
     this.lastAccelMag = null;
     this.lastShakeAt = 0;
+    this.tiltPermissionGranted = false;
+    this.boundOnDeviceOrientation = (e) => this.onDeviceOrientation(e);
+    this.boundOnDeviceMotion = (e) => this.onDeviceMotion(e);
 
     const hasOrientation = typeof window.DeviceOrientationEvent !== 'undefined';
     const btn = document.getElementById('tilt-toggle-btn');
@@ -448,25 +452,36 @@ class TownScene extends Phaser.Scene {
       return;
     }
 
-    btn.addEventListener('click', () => this.enableTiltShake(btn));
+    btn.addEventListener('click', () => this.toggleTilt(btn));
   }
 
-  async enableTiltShake(btn) {
-    if (this.tiltEnabled) return;
+  async toggleTilt(btn) {
+    if (this.tiltEnabled) {
+      this.tiltEnabled = false;
+      this.tiltMove = { x: 0, y: 0 };
+      window.removeEventListener('deviceorientation', this.boundOnDeviceOrientation);
+      window.removeEventListener('devicemotion', this.boundOnDeviceMotion);
+      btn.classList.remove('enabled');
+      btn.textContent = '🎮 Tilt';
+      return;
+    }
 
-    try {
-      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-        const res = await DeviceOrientationEvent.requestPermission();
-        if (res !== 'granted') {
-          this.addChatLine({ system: true, text: 'Tilt controls need motion access — check Settings > Safari > Motion & Orientation Access.' });
-          return;
+    if (!this.tiltPermissionGranted) {
+      try {
+        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+          const res = await DeviceOrientationEvent.requestPermission();
+          if (res !== 'granted') {
+            this.addChatLine({ system: true, text: 'Tilt controls need motion access — check Settings > Safari > Motion & Orientation Access.' });
+            return;
+          }
         }
+        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+          await DeviceMotionEvent.requestPermission();
+        }
+      } catch (e) {
+        // Non-iOS browsers don't need permission — fall through and enable anyway.
       }
-      if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-        await DeviceMotionEvent.requestPermission();
-      }
-    } catch (e) {
-      // Non-iOS browsers don't need permission — fall through and enable anyway.
+      this.tiltPermissionGranted = true;
     }
 
     this.tiltEnabled = true;
@@ -474,8 +489,8 @@ class TownScene extends Phaser.Scene {
     btn.classList.add('enabled');
     btn.textContent = '🎮 Tilt ✓';
 
-    window.addEventListener('deviceorientation', (e) => this.onDeviceOrientation(e));
-    window.addEventListener('devicemotion', (e) => this.onDeviceMotion(e));
+    window.addEventListener('deviceorientation', this.boundOnDeviceOrientation);
+    window.addEventListener('devicemotion', this.boundOnDeviceMotion);
   }
 
   onDeviceOrientation(e) {
@@ -666,8 +681,19 @@ class TownScene extends Phaser.Scene {
     this.fishing.state = 'casting';
     this.fishing.spot = spot;
     this.fishing.bobber = this.add.circle(spot.x, spot.y, 4, 0xffffff).setDepth(-1);
+    this.fishing.rod = this.add.graphics().setDepth(100000);
     const waitMs = FISH_BITE_WAIT_MIN + Math.random() * (FISH_BITE_WAIT_MAX - FISH_BITE_WAIT_MIN);
     this.fishing.timer = this.time.delayedCall(waitMs, () => this.fishBite());
+  }
+
+  updateFishingRod() {
+    if (!this.fishing.rod) return;
+    const rod = this.fishing.rod;
+    rod.clear();
+    const tipX = this.localVisual.flipX ? this.localBody.x - 8 : this.localBody.x + 8;
+    const tipY = this.localBody.y - 14;
+    rod.lineStyle(2, 0x6b4226, 1);
+    rod.lineBetween(tipX, tipY, this.fishing.spot.x, this.fishing.spot.y - 2);
   }
 
   fishBite() {
@@ -697,9 +723,11 @@ class TownScene extends Phaser.Scene {
   endFishing() {
     if (this.fishing.timer) this.fishing.timer.remove(false);
     if (this.fishing.bobber) this.fishing.bobber.destroy();
+    if (this.fishing.rod) this.fishing.rod.destroy();
     this.fishing.state = 'idle';
     this.fishing.spot = null;
     this.fishing.bobber = null;
+    this.fishing.rod = null;
     this.fishing.timer = null;
   }
 
