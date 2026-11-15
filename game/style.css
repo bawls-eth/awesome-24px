@@ -687,3 +687,7 @@ body.touch-device #underground-controls { display: block; }
   align-items: center;
   justify-content: space-between;
 }
+
+.tap-hint { display: none; }
+body.touch-device .tap-hint { display: inline; }
+body.touch-device .key-hint { display: none; }

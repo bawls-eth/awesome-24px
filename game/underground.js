@@ -44,7 +44,7 @@ class UndergroundWorld {
   _initThree() {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x0a0e14);
-    this.scene.fog = new THREE.FogExp2(0x0a0e14, 0.045);
+    this.scene.fog = new THREE.FogExp2(0x0a0e14, 0.03);
 
     this.camera = new THREE.PerspectiveCamera(70, 1, 0.1, 200);
 
@@ -52,8 +52,8 @@ class UndergroundWorld {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.canvasWrap.appendChild(this.renderer.domElement);
 
-    this.scene.add(new THREE.AmbientLight(0x6a7a9a, 1.3));
-    this.torch = new THREE.PointLight(0xffb366, 2.2, 26, 1.6);
+    this.scene.add(new THREE.AmbientLight(0x8a96b0, 2.2));
+    this.torch = new THREE.PointLight(0xffc98a, 60, 30, 1.6);
     this.scene.add(this.torch);
 
     const playerGeo = new THREE.CapsuleGeometry(0.6, 1.1, 4, 8);
