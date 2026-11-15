@@ -86,6 +86,9 @@ const FISHING_SPOTS = [
   { x: 1865, y: 280 },
 ];
 const FISH_INTERACT_RADIUS = 36;
+const BUG_COUNT = 8;
+const BUG_CATCH_RADIUS = 40;
+const BUG_RESPAWN_MS = 15000;
 const ROCK_MINE_RADIUS = 30;
 const FISH_BITE_WAIT_MIN = 1800;
 const FISH_BITE_WAIT_MAX = 4000;
@@ -187,6 +190,7 @@ class TownScene extends Phaser.Scene {
     this.setupActivities();
     this.setupBuilding();
     this.setupWalkie();
+    this.setupBugs();
     if (IS_TOUCH) {
       this.setupTouchControls();
       this.setupTiltShake();
@@ -585,6 +589,7 @@ class TownScene extends Phaser.Scene {
       wood: Number(saved.wood) || 0,
       stone: Number(saved.stone) || 0,
       fish: Number(saved.fish) || 0,
+      bugs: Number(saved.bugs) || 0,
     };
     this.treeCooldowns = {};
     this.rockCooldowns = {};
@@ -616,6 +621,13 @@ class TownScene extends Phaser.Scene {
     }
     if (this.isNearDigHole()) {
       this.enterUnderground();
+      return;
+    }
+
+    const bug = this.findNearestBug();
+    if (bug) {
+      this.swingTool('🥍');
+      this.catchBug(bug);
       return;
     }
 
@@ -654,12 +666,12 @@ class TownScene extends Phaser.Scene {
   }
 
   sellAtShop() {
-    const total = (this.resources.wood || 0) + (this.resources.stone || 0) + (this.resources.fish || 0);
+    const total = (this.resources.wood || 0) + (this.resources.stone || 0) + (this.resources.fish || 0) + (this.resources.bugs || 0);
     if (total === 0) {
       this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'bag is empty');
       return;
     }
-    this.resources = { wood: 0, stone: 0, fish: 0 };
+    this.resources = { wood: 0, stone: 0, fish: 0, bugs: 0 };
     this.updateInventoryHUD();
     this.saveResources();
     this.awardPoint(total, `sold! +${total} ⭐`, this.localBody.x, this.localBody.y - 30);
@@ -764,6 +776,61 @@ class TownScene extends Phaser.Scene {
     });
   }
 
+  // ---------- bug catching (local-only, like fishing) ----------
+
+  setupBugs() {
+    this.bugs = [];
+    for (let i = 0; i < BUG_COUNT; i++) {
+      const sprite = this.add.text(0, 0, '🦋', { fontSize: '14px' }).setOrigin(0.5).setDepth(150000);
+      const bug = { sprite, alive: true };
+      this.bugs.push(bug);
+      this.placeBug(bug);
+    }
+  }
+
+  placeBug(bug) {
+    bug.alive = true;
+    bug.sprite.setVisible(true);
+    bug.sprite.setPosition(
+      Phaser.Math.Between(120, this.world.width - 120),
+      Phaser.Math.Between(120, this.world.height - 120)
+    );
+    this.flutterBug(bug);
+  }
+
+  flutterBug(bug) {
+    if (!bug.alive) return;
+    const x = Phaser.Math.Clamp(bug.sprite.x + Phaser.Math.Between(-90, 90), 80, this.world.width - 80);
+    const y = Phaser.Math.Clamp(bug.sprite.y + Phaser.Math.Between(-70, 70), 80, this.world.height - 80);
+    bug.tween = this.tweens.add({
+      targets: bug.sprite,
+      x,
+      y,
+      duration: Phaser.Math.Between(1400, 2600),
+      ease: 'Sine.easeInOut',
+      onComplete: () => this.flutterBug(bug),
+    });
+  }
+
+  findNearestBug() {
+    let best = null;
+    let bestDist = BUG_CATCH_RADIUS;
+    this.bugs.forEach((bug) => {
+      if (!bug.alive) return;
+      const d = Math.hypot(this.localBody.x - bug.sprite.x, this.localBody.y - bug.sprite.y);
+      if (d < bestDist) { bestDist = d; best = bug; }
+    });
+    return best;
+  }
+
+  catchBug(bug) {
+    bug.alive = false;
+    if (bug.tween) bug.tween.stop();
+    bug.sprite.setVisible(false);
+    this.gainResource('bugs', 1, bug.sprite.x, bug.sprite.y - 16);
+    this.time.delayedCall(BUG_RESPAWN_MS, () => this.placeBug(bug));
+  }
+
   findNearestTree() {
     const now = Date.now();
     let best = null;
@@ -816,7 +883,7 @@ class TownScene extends Phaser.Scene {
     this.resources[type] = (this.resources[type] || 0) + amount;
     this.updateInventoryHUD();
     this.saveResources();
-    const icon = type === 'wood' ? '🪵' : type === 'stone' ? '🪨' : '🐟';
+    const icon = { wood: '🪵', stone: '🪨', fish: '🐟', bugs: '🦋' }[type];
     this.showFloatingText(x, y, `+${amount} ${icon}`);
   }
 
@@ -827,6 +894,8 @@ class TownScene extends Phaser.Scene {
     if (woodEl) woodEl.textContent = this.resources.wood || 0;
     if (stoneEl) stoneEl.textContent = this.resources.stone || 0;
     if (fishEl) fishEl.textContent = this.resources.fish || 0;
+    const bugEl = document.getElementById('bug-count');
+    if (bugEl) bugEl.textContent = this.resources.bugs || 0;
   }
 
   // ---------- fishing ----------

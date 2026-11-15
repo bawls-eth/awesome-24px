@@ -19,11 +19,16 @@ everyone else automatically. Capped at **10 players** at once for now.
 - **Fish** at the pond (or the second pond out east), **chop** trees for
   wood, **mine** rocks for stone — classic Animal Crossing activities, fill
   the inventory in the top-left
+- **Catch butterflies** 🦋 — eight of them flutter around town; walk up and
+  press interact to net one. They respawn elsewhere after a few seconds
+- A tool shows in your hand as you work: axe for trees, pickaxe for rocks,
+  net for bugs — and underground your villager becomes a 3D voxel figure
+  (extruded from its own sprite) carrying a pickaxe
 - **Build**: spend wood to place grid-snapped blocks anywhere — a real
   obstacle everyone sees and collides with, Minecraft-sandbox-flavored.
   Tap your own block again to remove it for a refund. An unmissable yellow
   banner tells you when build mode is on
-- **Sell** your wood/stone/fish at the 🏠 shop near the statue for ⭐ points —
+- **Sell** your wood/stone/fish/bugs at the 🏠 shop near the statue for ⭐ points —
   a proper Nook's-Cranny-style loop that feeds the leaderboard
 - A day/night tint that follows your local clock, purely for atmosphere
 - Full mobile support: on-screen D-pad, tilt steering, and clearly-labeled
