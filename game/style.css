@@ -315,7 +315,7 @@ body.touch-device #player-list-panel {
 body.touch-device #chat-panel {
   left: 8px;
   right: 8px;
-  bottom: calc(132px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(180px + env(safe-area-inset-bottom, 0px));
   width: auto;
 }
 

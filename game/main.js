@@ -121,7 +121,10 @@ class TownScene extends Phaser.Scene {
     this.load.spritesheet('tulips', '../i/tulips-strip.png', { frameWidth: FRAME_SIZE, frameHeight: FRAME_SIZE });
     this.load.spritesheet('rocks', '../i/rocks-strip.png', { frameWidth: FRAME_SIZE, frameHeight: FRAME_SIZE });
     this.load.spritesheet('punkrocks', '../i/punkrocks-strip.png', { frameWidth: FRAME_SIZE, frameHeight: FRAME_SIZE });
-    this.load.spritesheet('mooncats', '../i/mooncatrescue-strip.png', { frameWidth: FRAME_SIZE, frameHeight: FRAME_SIZE });
+    // mooncatrescue-strip.png is the one collection in i/ with no transparency
+    // (solid white background baked in) — assets/ holds a chroma-keyed copy
+    // just for the game; the original in i/ is left untouched.
+    this.load.spritesheet('mooncats', 'assets/mooncats-strip.png', { frameWidth: FRAME_SIZE, frameHeight: FRAME_SIZE });
     this.load.spritesheet('boredapes', '../i/boredapes-strip.png', { frameWidth: 28, frameHeight: 28 });
   }
 
