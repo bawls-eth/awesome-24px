@@ -5,7 +5,7 @@
 // client automatically (no polling, no server to run). Presence is handled by
 // onDisconnect(), so a player vanishes from the town when they close the tab.
 
-const WORLD = { width: 1600, height: 1200 };
+const WORLD = { width: 2400, height: 1200 };
 const MAX_PLAYERS = 10;
 
 function firebaseConfigLooksReal() {

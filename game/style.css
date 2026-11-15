@@ -229,6 +229,35 @@ html, body {
   #inventory-panel { right: auto; left: 8px; top: 8px; padding: 6px 10px; font-size: 12px; gap: 8px; }
 }
 
+#build-mode-banner {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ffe066;
+  color: #1c2430;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 2px solid #c9a93a;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  z-index: 15;
+  animation: build-banner-pulse 1.4s ease-in-out infinite;
+  white-space: nowrap;
+}
+
+#build-mode-banner.hidden { display: none; }
+
+@keyframes build-banner-pulse {
+  0%, 100% { box-shadow: 0 4px 16px rgba(255,224,102,0.2); }
+  50% { box-shadow: 0 4px 22px rgba(255,224,102,0.8); }
+}
+
+@media (max-width: 720px) {
+  #build-mode-banner { top: 64px; font-size: 11px; padding: 6px 12px; white-space: normal; text-align: center; max-width: 90vw; }
+}
+
 #chat-panel {
   position: fixed;
   left: 16px;

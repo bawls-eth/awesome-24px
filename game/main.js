@@ -18,6 +18,7 @@ const EMOTES = ['😀', '❤️', '😂', '👋', '🎉'];
 const SPARKLE_SPOTS = [
   [500, 300], [1100, 300], [500, 950], [1150, 940], [300, 780],
   [1280, 650], [700, 850], [900, 400], [650, 350], [1050, 950],
+  [1750, 450], [2100, 650], [2250, 950],
 ];
 const SPARKLE_ROTATE_MS = 8000;
 const SPARKLE_CATCH_RADIUS = 26;
@@ -32,8 +33,10 @@ const SHAKE_COOLDOWN_MS = 800;
 const TREE_SHAKE_RADIUS = 46;
 const TREE_SHAKE_COOLDOWN_MS = 20000;
 
-// Fixed town layout. WORLD size (1600x1200) is defined in net.js — everyone's
+// Fixed town layout. WORLD size (2400x1200) is defined in net.js — everyone's
 // client draws the same map so landmarks mean the same thing to everyone.
+// The original town occupies x:0-1600; x:1600-2400 is the newer "East Meadow"
+// zone, reachable by walking east along the main path.
 const TREES = [
   [60, 50], [220, 40], [380, 55], [560, 45], [680, 60],
   [920, 60], [1040, 45], [1200, 55], [1360, 40], [1520, 50],
@@ -41,6 +44,10 @@ const TREES = [
   [920, 1140], [1040, 1155], [1200, 1145], [1360, 1160], [1520, 1150],
   [40, 180], [50, 320], [40, 880], [55, 1020],
   [1550, 180], [1560, 320], [1540, 460], [1545, 740], [1555, 880], [1540, 1020],
+  // East Meadow perimeter
+  [1650, 60], [1780, 45], [1900, 55], [2150, 50], [2280, 60], [2370, 45],
+  [1650, 1150], [1780, 1160], [1900, 1145], [2050, 1155], [2200, 1140], [2320, 1150],
+  [2370, 300], [2370, 500], [2370, 700], [2370, 900],
 ];
 const TULIP_BEDS = [
   { x: 700, y: 520, frames: [0, 1, 2] },
@@ -48,14 +55,17 @@ const TULIP_BEDS = [
   { x: 700, y: 680, frames: [6, 7, 8] },
   { x: 900, y: 680, frames: [0, 3, 6] },
   { x: 1150, y: 900, frames: [1, 4, 7] },
+  { x: 1750, y: 850, frames: [2, 5, 8] },
+  { x: 2200, y: 950, frames: [0, 4, 7] },
 ];
 const ROCKS = [
   [500, 470, 0], [1080, 470, 3], [500, 730, 5], [1080, 730, 2],
   [760, 460, 1], [840, 460, 4], [300, 900, 6], [1300, 300, 7],
   [1300, 900, 8], [150, 1050, 0],
+  [1700, 700, 2], [1950, 950, 5], [2150, 750, 0], [2300, 450, 6],
 ];
 const PUNK_ROCKS = [
-  [200, 1000, 1], [1400, 950, 4], [900, 1080, 7],
+  [200, 1000, 1], [1400, 950, 4], [900, 1080, 7], [2050, 480, 2],
 ];
 const POND_CATS = [
   { y: 552, frame: 0, range: [180, 330] },
@@ -63,10 +73,15 @@ const POND_CATS = [
   { y: 648, frame: 6, range: [170, 320] },
 ];
 const STATUE_POS = { x: 1200, y: 550 };
+const HOUSE_POS = { x: 1020, y: 760, w: 110, h: 70 };
+const SHOP_RADIUS = 70;
+const EAST_POND = { cx: 2000, cy: 280, rx: 130, ry: 80 };
 
 const FISHING_SPOTS = [
   { x: 115, y: 600 },
   { x: 260, y: 700 },
+  { x: 2000, y: 170 },
+  { x: 1865, y: 280 },
 ];
 const FISH_INTERACT_RADIUS = 36;
 const ROCK_MINE_RADIUS = 30;
@@ -140,6 +155,7 @@ class TownScene extends Phaser.Scene {
     this.drawPath();
     this.drawPond();
     this.drawPondCats();
+    this.drawEastPond();
     this.drawBridge();
     this.drawHouse();
     this.drawStatue();
@@ -337,13 +353,13 @@ class TownScene extends Phaser.Scene {
     const [sx, sy] = SPARKLE_SPOTS[this.sparkleIndex];
     if (Math.hypot(this.localBody.x - sx, this.localBody.y - sy) < SPARKLE_CATCH_RADIUS) {
       this.sparkleCaught = true;
-      this.awardPoint('+1 ⭐', this.localBody.x, this.localBody.y - 30);
+      this.awardPoint(1, '+1 ⭐', this.localBody.x, this.localBody.y - 30);
     }
   }
 
-  awardPoint(label, x, y) {
-    this.localScore += 1;
-    this.net.addScore(1);
+  awardPoint(amount, label, x, y) {
+    this.localScore += amount;
+    this.net.addScore(amount);
     const mine = this.allPlayers.get(this.selfData.id);
     if (mine) mine.score = this.localScore;
     this.renderPlayerList();
@@ -588,6 +604,10 @@ class TownScene extends Phaser.Scene {
       this.handleFishingInteract();
       return;
     }
+    if (this.isNearShop()) {
+      this.sellAtShop();
+      return;
+    }
 
     const tree = this.findNearestTree();
     if (tree) {
@@ -611,6 +631,26 @@ class TownScene extends Phaser.Scene {
     }
 
     this.triggerEmote(Math.floor(Math.random() * EMOTES.length));
+  }
+
+  // ---------- shop (classic AC "sell your stuff" loop) ----------
+
+  isNearShop() {
+    const cx = HOUSE_POS.x + HOUSE_POS.w / 2;
+    const cy = HOUSE_POS.y + HOUSE_POS.h / 2;
+    return Math.hypot(this.localBody.x - cx, this.localBody.y - cy) < SHOP_RADIUS;
+  }
+
+  sellAtShop() {
+    const total = (this.resources.wood || 0) + (this.resources.stone || 0) + (this.resources.fish || 0);
+    if (total === 0) {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'bag is empty');
+      return;
+    }
+    this.resources = { wood: 0, stone: 0, fish: 0 };
+    this.updateInventoryHUD();
+    this.saveResources();
+    this.awardPoint(total, `sold! +${total} ⭐`, this.localBody.x, this.localBody.y - 30);
   }
 
   findNearestTree() {
@@ -757,6 +797,7 @@ class TownScene extends Phaser.Scene {
     const btn = document.getElementById('build-toggle-btn');
     if (btn) btn.classList.toggle('enabled', this.buildMode);
     this.buildPreview.setVisible(this.buildMode);
+    document.getElementById('build-mode-banner').classList.toggle('hidden', !this.buildMode);
   }
 
   getBuildTargetCell() {
@@ -970,6 +1011,15 @@ class TownScene extends Phaser.Scene {
     });
   }
 
+  drawEastPond() {
+    const { cx, cy, rx, ry } = EAST_POND;
+    const g = this.add.graphics().setDepth(-1);
+    g.fillStyle(0x3a86c8, 1).fillEllipse(cx, cy, rx * 2, ry * 2);
+    g.fillStyle(0x5ab0e8, 1).fillEllipse(cx - 15, cy - 12, rx * 1.3, ry * 0.9);
+    g.fillStyle(0x8fd0f2, 1).fillEllipse(cx - 28, cy - 22, rx * 0.7, ry * 0.45);
+    this.addObstacleRect({ x: cx - rx * 0.8, y: cy - ry * 0.8, width: rx * 1.6, height: ry * 1.6 });
+  }
+
   drawBridge() {
     const cx = 260;
     const cy = 600;
@@ -983,10 +1033,7 @@ class TownScene extends Phaser.Scene {
   }
 
   drawHouse() {
-    const x = 1020;
-    const y = 760;
-    const w = 110;
-    const h = 70;
+    const { x, y, w, h } = HOUSE_POS;
     const g = this.add.graphics();
     g.fillStyle(0x8a5a3b, 1).fillRect(x, y, w, h);
     g.fillStyle(0xd9663b, 1).fillTriangle(x - 10, y, x + w + 10, y, x + w / 2, y - 45);
@@ -996,7 +1043,7 @@ class TownScene extends Phaser.Scene {
     g.fillRect(x + w - 36, y + 14, 20, 20);
     g.setDepth(y + h);
 
-    this.add.text(x + w / 2, y - 55, '🏠', { fontSize: '20px' }).setOrigin(0.5).setDepth(y + h + 1);
+    this.add.text(x + w / 2, y - 55, '🏠 Shop', { fontSize: '16px' }).setOrigin(0.5).setDepth(y + h + 1);
     this.addObstacleRect({ x, y: y + 20, width: w, height: h - 20 });
   }
 
