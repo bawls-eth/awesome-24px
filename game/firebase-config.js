@@ -18,9 +18,9 @@
 // ---------------------------------------------------------------------------
 
 const firebaseConfig = {
-  apiKey: 'PASTE_YOUR_API_KEY',
-  authDomain: 'PASTE_YOUR_PROJECT.firebaseapp.com',
-  databaseURL: 'https://PASTE_YOUR_PROJECT-default-rtdb.firebaseio.com',
-  projectId: 'PASTE_YOUR_PROJECT',
-  appId: 'PASTE_YOUR_APP_ID',
+  apiKey: 'AIzaSyDZPi-MezzqhEHSHRVmfKJdc6jlXPn60CI',
+  authDomain: 'animalcrossing-15728.firebaseapp.com',
+  databaseURL: 'https://animalcrossing-15728-default-rtdb.firebaseio.com',
+  projectId: 'animalcrossing-15728',
+  appId: '1:317304570507:web:31720b6bf67b11488eca8e',
 };
