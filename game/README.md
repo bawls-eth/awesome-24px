@@ -16,16 +16,27 @@ everyone else automatically. Capped at **10 players** at once for now.
 - 5 emotes (keys **1-5**) that pop up over your head for everyone to see
 - A rotating **✨ sparkle** wanders the town every 8s — walk into it to
   score a point; the player list is a live-sorted mini-leaderboard
-- **Fish** at the pond, **chop** trees for wood, **mine** rocks for stone —
-  classic Animal Crossing activities, fill the inventory in the top-left
+- **Fish** at the pond (or the second pond out east), **chop** trees for
+  wood, **mine** rocks for stone — classic Animal Crossing activities, fill
+  the inventory in the top-left
 - **Build**: spend wood to place grid-snapped blocks anywhere — a real
   obstacle everyone sees and collides with, Minecraft-sandbox-flavored.
-  Tap your own block again to remove it for a refund
+  Tap your own block again to remove it for a refund. An unmissable yellow
+  banner tells you when build mode is on
+- **Sell** your wood/stone/fish at the 🏠 shop near the statue for ⭐ points —
+  a proper Nook's-Cranny-style loop that feeds the leaderboard
 - A day/night tint that follows your local clock, purely for atmosphere
 - Full mobile support: on-screen D-pad, tilt steering, and an Interact/Build
   button pair so every activity works with a tap
 - A Bored Ape "Mayor" statue watches over the plaza, and Moon Cats drift
   lazily around the pond — pure flavor, no gameplay attached
+- A wide **East Meadow** past the original town — walk east along the main
+  path to find a second pond (with its own fishing spot), more trees, rocks,
+  and tulip beds to explore
+- A real **3D voxel cave** underground — find the ⛏️ hole north of the
+  statue, press **E** to jump in, and mine/place real 3D blocks Minecraft-
+  style. Climb back up the shaft and press **E** again to pop back to the
+  2D town (see "Going underground" below)
 - Your name, villager choice, and wood/stone/fish inventory are remembered
   on this device (see "Local save" below) — no account, nothing synced
 - On iPhone/Android, you can **Add to Home Screen** for a proper app icon
@@ -115,6 +126,8 @@ via `file://` won't work — the sprite sheets need to load over http.)
 - **Enter** — open chat, type, **Enter** again to send
 - **1-5** — emote (👋 😀 ❤️ 😂 🎉), visible to everyone nearby
 - Walk into the **✨ sparkle** to score a point
+- Jump in the ⛏️ **Hole** (press E) for the 3D underground — see "Going
+  underground" below for its own controls (look-drag, mine **E**, place **F**)
 
 **Mobile (iPhone/Android):** on-screen controls appear automatically on touch
 devices — a D-pad (bottom-left), and action buttons (bottom-right): 🎮 Tilt,
@@ -143,6 +156,35 @@ the next block lands, just in front of you. Press **Interact** to place a
 block there (costs 1 🪵), or press it again on a block you placed to remove
 it for a refund. Blocks are real obstacles for everyone in the town, synced
 live. Capped at 150 blocks total so the town doesn't fill up solid.
+
+### Going underground
+
+Find the dark ⛏️ **Hole** just north of the Mayor statue and press **Interact**
+to jump in — the game switches from the 2D town to a real 3D voxel cave
+(rendered with [Three.js](https://threejs.org), loaded from a CDN just like
+Phaser).
+
+- **Look:** drag with your mouse (desktop) or finger (mobile) to look around.
+- **Move:** **WASD**/arrows (desktop) or the D-pad (mobile) — you walk in
+  whatever direction you're looking, including up/down, so look down and
+  walk forward to descend, look up and walk forward to climb. There's no
+  gravity down here — it's a flight-style "creative mode" dig, not a fall.
+- **Mine:** **E** (desktop) or ⛏️ (mobile) breaks whatever block is directly
+  ahead of you, within reach. Stone and the rarer gold ore blocks add to
+  your 🪨 stone count; dirt doesn't, it's just in the way.
+- **Place:** **F** (desktop) or 🧱 (mobile) spends 1 stone to place a block
+  where you're looking.
+- **Exit:** climb back up the central shaft toward the surface — a yellow
+  "Press E to climb out" banner appears once you're close enough — then
+  press **E** (or the mobile ⬆️ button) to pop back into the 2D town, right
+  where you left from.
+
+The cave is generated once per visit and is **entirely local** — nothing
+underground syncs over the network, so what you dig and build down there is
+only ever seen by you (same as fishing/chopping in the 2D game). Stone you
+mine underground *does* add to the same 🪨 count shown in the 2D inventory
+and carries over to the shop, so a mining trip is a legitimate way to stock
+up before selling.
 
 ### Local save
 
@@ -178,6 +220,14 @@ manifest, 32×32 for the favicon).
   `onDisconnect()` so you vanish from the town when you close the tab.
   Chat lives under `/chat`; placed blocks live under `/blocks/{x}_{y}`,
   keyed by their grid position so there's never a duplicate at one spot.
+- **`underground.js`** — the 3D cave, rendered with
+  [Three.js](https://threejs.org) (also from a CDN) on its own `<canvas>`
+  that's swapped in over the 2D game. Terrain is generated fresh each time
+  you enter (a carved shaft + a couple of random-walk tunnels per depth
+  level) and rendered with one `InstancedMesh` per block type for
+  performance; mining/placing just hides/shows individual instances rather
+  than rebuilding geometry. It's intentionally local-only, like
+  fishing/chopping — no block sync, no multiplayer down there.
 - **`firebase-config.js`** — your project's keys (the one file you edit).
 - Villager avatars and decorations are sliced directly from the repo's
   `i/*-strip.png` sprite sheets (9-frame, 24×24-per-frame strips, 28×28 for
@@ -204,6 +254,9 @@ manifest, 32×32 for the favicon).
   persist locally on this device (see "Local save" above) but don't sync
   anywhere. Placed **blocks persist** in the shared database until removed,
   capped at 150 total.
+- The **underground cave is local-only and regenerates each visit** — it's
+  not saved, not synced, and friends can't see each other down there (same
+  scope as fishing/chopping — see "Going underground" above).
 - Position updates are throttled to ~10/sec per player — smooth, and well
   within Firebase's free tier for a handful of friends.
 - Firebase's "test mode" rules are wide open (see below) — fine for a link
@@ -220,3 +273,5 @@ manifest, 32×32 for the favicon).
 - Weather, seasons
 - More villager species from the rest of the collection (plain rocks, genius…)
 - Per-player "homes" / multiple rooms instead of one shared map
+- Sync the underground cave (shared dig state, friends visible down there) —
+  skipped for now to keep the first version simple and purely local

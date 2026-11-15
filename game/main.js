@@ -72,9 +72,11 @@ const POND_CATS = [
   { y: 578, frame: 3, range: [150, 300] },
   { y: 648, frame: 6, range: [170, 320] },
 ];
-const STATUE_POS = { x: 1200, y: 550 };
+const STATUE_POS = { x: 1450, y: 600 };
 const HOUSE_POS = { x: 1020, y: 760, w: 110, h: 70 };
 const SHOP_RADIUS = 70;
+const DIG_HOLE_POS = { x: 1200, y: 460 };
+const DIG_HOLE_RADIUS = 36;
 const EAST_POND = { cx: 2000, cy: 280, rx: 130, ry: 80 };
 
 const FISHING_SPOTS = [
@@ -160,6 +162,7 @@ class TownScene extends Phaser.Scene {
     this.drawHouse();
     this.drawStatue();
     this.drawCampfire();
+    this.drawDigHole();
     this.drawForestRing();
     this.drawTulipBeds();
     this.drawRocks();
@@ -203,6 +206,7 @@ class TownScene extends Phaser.Scene {
     this.updateDayNight(time);
     this.updateBuildPreview();
     this.updateFishingRod();
+    this.updateDigHoleHint();
   }
 
   // ---------- movement ----------
@@ -596,6 +600,7 @@ class TownScene extends Phaser.Scene {
   }
 
   interact() {
+    if (this.inUnderground) return;
     if (this.buildMode) {
       this.handleBuildInteract();
       return;
@@ -606,6 +611,10 @@ class TownScene extends Phaser.Scene {
     }
     if (this.isNearShop()) {
       this.sellAtShop();
+      return;
+    }
+    if (this.isNearDigHole()) {
+      this.enterUnderground();
       return;
     }
 
@@ -651,6 +660,87 @@ class TownScene extends Phaser.Scene {
     this.updateInventoryHUD();
     this.saveResources();
     this.awardPoint(total, `sold! +${total} ⭐`, this.localBody.x, this.localBody.y - 30);
+  }
+
+  // ---------- underground (3D voxel cave, local-only) ----------
+
+  isNearDigHole() {
+    return Math.hypot(this.localBody.x - DIG_HOLE_POS.x, this.localBody.y - DIG_HOLE_POS.y) < DIG_HOLE_RADIUS;
+  }
+
+  updateDigHoleHint() {
+    const hint = document.getElementById('dig-hole-hint');
+    if (!hint) return;
+    hint.classList.toggle('hidden', this.inUnderground || this.buildMode || !this.isNearDigHole());
+  }
+
+  enterUnderground() {
+    if (this.inUnderground) return;
+    this.inUnderground = true;
+    document.getElementById('dig-hole-hint').classList.add('hidden');
+    document.getElementById('hud').classList.add('hidden');
+    const overlay = document.getElementById('underground-overlay');
+    overlay.classList.remove('hidden');
+    this.scene.pause();
+
+    if (!this.underground) {
+      const onResourceChange = () => { this.updateInventoryHUD(); this.saveResources(); };
+      this.underground = new UndergroundWorld({
+        canvasWrap: document.getElementById('underground-canvas-wrap'),
+        resources: this.resources,
+        onResourceChange,
+        onExit: () => this.exitUnderground(),
+      });
+      this.setupUndergroundControls();
+    }
+    this.underground.start();
+  }
+
+  exitUnderground() {
+    if (!this.inUnderground) return;
+    this.inUnderground = false;
+    this.underground.stop();
+    document.getElementById('underground-overlay').classList.add('hidden');
+    document.getElementById('hud').classList.remove('hidden');
+    this.scene.resume();
+  }
+
+  setupUndergroundControls() {
+    const ug = this.underground;
+    this.input.keyboard && window.addEventListener('keydown', (e) => {
+      if (!this.inUnderground) return;
+      const k = e.key.toLowerCase();
+      if (k === 'e') {
+        if (ug.nearExit) this.exitUnderground();
+        else ug.mine();
+      } else if (k === 'f') {
+        ug.place();
+      }
+    });
+
+    const setDir = (dir, on) => {
+      const v = on ? 1 : 0;
+      if (dir === 'up') this.ugFwd = v;
+      if (dir === 'down') this.ugFwd = -v;
+      if (dir === 'left') this.ugStrafe = -v;
+      if (dir === 'right') this.ugStrafe = v;
+      ug.setMoveInput(this.ugFwd || 0, this.ugStrafe || 0);
+    };
+    document.querySelectorAll('#ug-dpad .dpad-btn').forEach((btn) => {
+      const dir = btn.dataset.ugdir;
+      btn.addEventListener('pointerdown', (e) => { e.preventDefault(); setDir(dir, true); });
+      btn.addEventListener('pointerup', () => setDir(dir, false));
+      btn.addEventListener('pointerleave', () => setDir(dir, false));
+    });
+
+    document.getElementById('ug-mine-btn').addEventListener('click', () => ug.mine());
+    document.getElementById('ug-place-btn').addEventListener('click', () => ug.place());
+    document.getElementById('ug-exit-btn').addEventListener('click', () => { if (ug.nearExit) this.exitUnderground(); });
+
+    this._ugExitHintInterval = setInterval(() => {
+      if (!this.inUnderground) return;
+      document.getElementById('underground-exit-hint').classList.toggle('hidden', !ug.nearExit);
+    }, 150);
   }
 
   findNearestTree() {
@@ -1077,6 +1167,14 @@ class TownScene extends Phaser.Scene {
     const flame = this.add.circle(x, y - 8, 9, 0xffb238).setDepth(-1);
     const flameInner = this.add.circle(x, y - 8, 5, 0xffe066).setDepth(-1);
     this.tweens.add({ targets: [flame, flameInner], scale: { from: 0.85, to: 1.15 }, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+  }
+
+  drawDigHole() {
+    const { x, y } = DIG_HOLE_POS;
+    const g = this.add.graphics().setDepth(-1);
+    g.fillStyle(0x1a1410, 1).fillEllipse(x, y, 42, 26);
+    g.fillStyle(0x100b08, 1).fillEllipse(x, y, 28, 16);
+    this.add.text(x, y - 26, '⛏️ Hole', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
   }
 
   drawForestRing() {
