@@ -745,6 +745,10 @@ class TownScene extends Phaser.Scene {
       this.addChatLine({ name: msg.name, text: msg.text });
       if (!msg.isOld) this.showChatBubble(msg.id, msg.text);
     });
+
+    this.net.on('selfRemoved', () => {
+      this.addChatLine({ system: true, text: 'Lost your spot in town (connection dropped). You can still look around, but refresh to fully rejoin.' });
+    });
   }
 
   // ---------- DOM: chat + player list ----------

@@ -109,6 +109,18 @@ class TownNet {
     this.playerRef.onDisconnect().remove();
     this.joinTime = Date.now();
 
+    // If our own node gets removed server-side while this tab still thinks
+    // it's connected (e.g. iOS backgrounds the tab, the connection drops and
+    // onDisconnect fires, but the page's JS keeps running briefly after),
+    // null out playerRef so every write method below becomes a safe no-op
+    // instead of recreating a bare, broken record via update().
+    this.playerRef.on('value', (snap) => {
+      if (!snap.exists() && this.playerRef) {
+        this.playerRef = null;
+        this.emit('selfRemoved');
+      }
+    });
+
     this.emit('init', { self, players: { [this.id]: self }, world: WORLD });
   }
 
@@ -117,12 +129,16 @@ class TownNet {
   startListening() {
     this.playersRef.on('child_added', (s) => {
       if (s.key === this.id) return;
-      this.emit('playerJoined', { id: s.key, ...s.val() });
+      const v = s.val();
+      if (!v || !v.name || !v.species) return; // skip broken/zombie records
+      this.emit('playerJoined', { id: s.key, ...v });
     });
 
     this.playersRef.on('child_changed', (s) => {
       if (s.key === this.id) return;
-      this.emit('playerUpdated', { id: s.key, ...s.val() });
+      const v = s.val();
+      if (!v || !v.name) return;
+      this.emit('playerUpdated', { id: s.key, ...v });
     });
 
     this.playersRef.on('child_removed', (s) => {
