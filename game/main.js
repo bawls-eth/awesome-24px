@@ -8,6 +8,10 @@ const SPECIES = [
   { key: 'pudgypenguins', label: 'Penguins' },
   { key: 'doge', label: 'Dogs' },
   { key: 'apes', label: 'Apes' },
+  { key: 'zombies', label: 'Zombies' },
+  { key: 'mohawks', label: 'Mohawks' },
+  { key: 'blondies', label: 'Blondies' },
+  { key: 'aliens', label: 'Aliens' },
 ];
 
 const EMOTES = ['😀', '❤️', '😂', '👋', '🎉'];
@@ -50,6 +54,15 @@ const ROCKS = [
   [760, 460, 1], [840, 460, 4], [300, 900, 6], [1300, 300, 7],
   [1300, 900, 8], [150, 1050, 0],
 ];
+const PUNK_ROCKS = [
+  [200, 1000, 1], [1400, 950, 4], [900, 1080, 7],
+];
+const POND_CATS = [
+  { y: 552, frame: 0, range: [180, 330] },
+  { y: 578, frame: 3, range: [150, 300] },
+  { y: 648, frame: 6, range: [170, 320] },
+];
+const STATUE_POS = { x: 1200, y: 550 };
 
 class TownScene extends Phaser.Scene {
   constructor() {
@@ -72,6 +85,9 @@ class TownScene extends Phaser.Scene {
     });
     this.load.spritesheet('tulips', '../i/tulips-strip.png', { frameWidth: FRAME_SIZE, frameHeight: FRAME_SIZE });
     this.load.spritesheet('rocks', '../i/rocks-strip.png', { frameWidth: FRAME_SIZE, frameHeight: FRAME_SIZE });
+    this.load.spritesheet('punkrocks', '../i/punkrocks-strip.png', { frameWidth: FRAME_SIZE, frameHeight: FRAME_SIZE });
+    this.load.spritesheet('mooncats', '../i/mooncatrescue-strip.png', { frameWidth: FRAME_SIZE, frameHeight: FRAME_SIZE });
+    this.load.spritesheet('boredapes', '../i/boredapes-strip.png', { frameWidth: 28, frameHeight: 28 });
   }
 
   create() {
@@ -85,12 +101,15 @@ class TownScene extends Phaser.Scene {
     this.drawGround();
     this.drawPath();
     this.drawPond();
+    this.drawPondCats();
     this.drawBridge();
     this.drawHouse();
+    this.drawStatue();
     this.drawCampfire();
     this.drawForestRing();
     this.drawTulipBeds();
     this.drawRocks();
+    this.drawPunkRocks();
 
     this.createLocalPlayer(this.selfData);
     this.physics.add.collider(this.localBody, this.obstacles);
@@ -621,6 +640,26 @@ class TownScene extends Phaser.Scene {
     this.addObstacleRect({ x: cx - rx * 0.8, y: cy + gapHalf, width: rx * 1.6, height: ry * 0.8 - gapHalf });
   }
 
+  drawPondCats() {
+    POND_CATS.forEach(({ y, frame, range }) => {
+      const startX = (range[0] + range[1]) / 2;
+      const cat = this.add.sprite(startX, y, 'mooncats', frame).setDepth(-1);
+      cat.prevX = startX;
+      this.tweens.add({
+        targets: cat,
+        x: { from: range[0], to: range[1] },
+        duration: 6000 + frame * 400,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+        onUpdate: () => {
+          cat.setFlipX(cat.x < cat.prevX);
+          cat.prevX = cat.x;
+        },
+      });
+    });
+  }
+
   drawBridge() {
     const cx = 260;
     const cy = 600;
@@ -649,6 +688,25 @@ class TownScene extends Phaser.Scene {
 
     this.add.text(x + w / 2, y - 55, '🏠', { fontSize: '20px' }).setOrigin(0.5).setDepth(y + h + 1);
     this.addObstacleRect({ x, y: y + 20, width: w, height: h - 20 });
+  }
+
+  drawStatue() {
+    const { x, y } = STATUE_POS;
+    const g = this.add.graphics();
+    g.fillStyle(0x9a9a9a, 1).fillRect(x - 24, y, 48, 14);
+    g.fillStyle(0x7d7d7d, 1).fillRect(x - 18, y - 10, 36, 10);
+    g.setDepth(y - 1);
+
+    const ape = this.add.sprite(x, y - 28, 'boredapes', 0).setScale(2.3).setDepth(y);
+    this.add.text(x, y - 68, '🐵 Mayor', {
+      fontSize: '12px',
+      fontFamily: 'monospace',
+      color: '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(y + 1);
+
+    this.addObstacleRect({ x: x - 22, y: y - 8, width: 44, height: 20 });
   }
 
   drawCampfire() {
@@ -694,6 +752,12 @@ class TownScene extends Phaser.Scene {
   drawRocks() {
     ROCKS.forEach(([x, y, frame]) => {
       this.add.sprite(x, y, 'rocks', frame).setDepth(-1);
+    });
+  }
+
+  drawPunkRocks() {
+    PUNK_ROCKS.forEach(([x, y, frame]) => {
+      this.add.sprite(x, y, 'punkrocks', frame).setDepth(-1);
     });
   }
 

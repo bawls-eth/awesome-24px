@@ -2,8 +2,9 @@
 
 A tiny Animal Crossing-style shared town for you, your girlfriend, and your
 friends — built straight on top of this repo's 24×24px sprite collections.
-Pick a villager (cat, punk, penguin, dog, or ape), walk around a little
-pixel town, chat, throw emotes, and race for sparkles — all in real time.
+Pick a villager from 9 species (cats, punks, penguins, dogs, apes, zombies,
+mohawks, blondies, aliens), walk around a little pixel town, chat, throw
+emotes, and race for sparkles — all in real time.
 
 It's a **static site** (no server to run) + a **free Firebase Realtime
 Database** for the live multiplayer sync. That means it can be hosted for
@@ -11,12 +12,14 @@ free on GitHub Pages, and everyone's position/chat/score updates push to
 everyone else automatically. Capped at **10 players** at once for now.
 
 **What there is to do:**
-- Walk the town, chat, hang out by the campfire or the pond
+- Walk the town, chat, hang out by the campfire, the pond, or the statue
 - 5 emotes (keys **1-5**) that pop up over your head for everyone to see
 - A rotating **✨ sparkle** wanders the town every 8s — walk into it to
   score a point; the player list is a live-sorted mini-leaderboard
 - A day/night tint that follows your local clock, purely for atmosphere
 - Full mobile support: on-screen D-pad, tilt steering, and shake-a-tree-for-a-point on phones
+- A Bored Ape "Mayor" statue watches over the plaza, and Moon Cats drift
+  lazily around the pond — pure flavor, no gameplay attached
 
 ## Setup — the one manual step (~5 minutes)
 
@@ -113,8 +116,8 @@ tilt controls, emotes, and chat.
 
 - **`index.html` / `style.css`** — the page shell and join screen.
 - **`main.js`** — [Phaser 3](https://phaser.io) (from a CDN) renders the
-  town and players; the map (pond, bridge, path, campfire, forest ring,
-  tulip beds) is drawn procedurally — no external tileset.
+  town and players; the map (pond, bridge, path, campfire, statue, forest
+  ring, tulip beds) is drawn procedurally — no external tileset.
 - **`net.js`** — the multiplayer layer. Players live under `/players/{id}`
   in the Realtime Database (position, facing, species, score, current
   emote); each client writes its own fields (position throttled to
@@ -122,11 +125,11 @@ tilt controls, emotes, and chat.
   `onDisconnect()` so you vanish from the town when you close the tab.
   Chat lives under `/chat`.
 - **`firebase-config.js`** — your project's keys (the one file you edit).
-- Villager avatars are sliced directly from the repo's `i/*-strip.png`
-  sprite sheets (9-frame, 24×24-per-frame strips) via Phaser's spritesheet
-  loader — cats, punks, penguins, dogs, apes. The sprites are single-pose,
-  so walking is faked with a procedural squash-and-stretch hop + shrinking
-  ground shadow.
+- Villager avatars and decorations are sliced directly from the repo's
+  `i/*-strip.png` sprite sheets (9-frame, 24×24-per-frame strips, 28×28 for
+  Bored Apes) via Phaser's spritesheet loader — nothing pulled from outside
+  this repo. The sprites are single-pose, so walking is faked with a
+  procedural squash-and-stretch hop + shrinking ground shadow.
 - The sparkle's position is derived from wall-clock time
   (`Math.floor(Date.now() / 8000) % spots.length`), so every client agrees
   on where it is without any extra network traffic — no server needed to
