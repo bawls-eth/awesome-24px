@@ -18,6 +18,16 @@ const SPARKLE_SPOTS = [
 const SPARKLE_ROTATE_MS = 8000;
 const SPARKLE_CATCH_RADIUS = 26;
 
+const IS_TOUCH = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+if (IS_TOUCH) document.body.classList.add('touch-device');
+
+const TILT_DEADZONE_DEG = 4;
+const TILT_RANGE_DEG = 22;
+const SHAKE_THRESHOLD = 15; // m/s^2 jump in accelerationIncludingGravity magnitude
+const SHAKE_COOLDOWN_MS = 800;
+const TREE_SHAKE_RADIUS = 46;
+const TREE_SHAKE_COOLDOWN_MS = 20000;
+
 // Fixed town layout. WORLD size (1600x1200) is defined in net.js — everyone's
 // client draws the same map so landmarks mean the same thing to everyone.
 const TREES = [
@@ -98,6 +108,10 @@ class TownScene extends Phaser.Scene {
     this.setupEmotes();
     this.setupSparkle();
     this.setupDayNight();
+    if (IS_TOUCH) {
+      this.setupTouchControls();
+      this.setupTiltShake();
+    }
 
     this.registerNetHandlers();
     this.registerChatUI();
@@ -123,16 +137,25 @@ class TownScene extends Phaser.Scene {
     let vy = 0;
 
     if (!this.chatFocused) {
-      if (this.cursors.left.isDown || this.wasd.A.isDown) vx = -1;
-      else if (this.cursors.right.isDown || this.wasd.D.isDown) vx = 1;
+      if (this.cursors.left.isDown || this.wasd.A.isDown) vx -= 1;
+      if (this.cursors.right.isDown || this.wasd.D.isDown) vx += 1;
+      if (this.cursors.up.isDown || this.wasd.W.isDown) vy -= 1;
+      if (this.cursors.down.isDown || this.wasd.S.isDown) vy += 1;
 
-      if (this.cursors.up.isDown || this.wasd.W.isDown) vy = -1;
-      else if (this.cursors.down.isDown || this.wasd.S.isDown) vy = 1;
+      if (this.touchMove) {
+        vx += this.touchMove.x;
+        vy += this.touchMove.y;
+      }
+      if (this.tiltEnabled && this.tiltMove) {
+        vx += this.tiltMove.x;
+        vy += this.tiltMove.y;
+      }
     }
 
-    if (vx !== 0 && vy !== 0) {
-      vx *= 0.7071;
-      vy *= 0.7071;
+    const mag = Math.hypot(vx, vy);
+    if (mag > 1) {
+      vx /= mag;
+      vy /= mag;
     }
 
     this.localBody.body.setVelocity(vx * speed, vy * speed);
@@ -193,11 +216,14 @@ class TownScene extends Phaser.Scene {
     this.input.keyboard.on('keydown', (e) => {
       if (this.chatFocused) return;
       const i = Number(e.key) - 1;
-      if (i >= 0 && i < EMOTES.length) {
-        this.net.emote(EMOTES[i]);
-        this.showEmoteBubble(this.selfData.id, EMOTES[i]);
-      }
+      this.triggerEmote(i);
     });
+  }
+
+  triggerEmote(i) {
+    if (i < 0 || i >= EMOTES.length) return;
+    this.net.emote(EMOTES[i]);
+    this.showEmoteBubble(this.selfData.id, EMOTES[i]);
   }
 
   showEmoteBubble(playerId, symbol) {
@@ -251,13 +277,17 @@ class TownScene extends Phaser.Scene {
     const [sx, sy] = SPARKLE_SPOTS[this.sparkleIndex];
     if (Math.hypot(this.localBody.x - sx, this.localBody.y - sy) < SPARKLE_CATCH_RADIUS) {
       this.sparkleCaught = true;
-      this.localScore += 1;
-      this.net.addScore(1);
-      const mine = this.allPlayers.get(this.selfData.id);
-      if (mine) mine.score = this.localScore;
-      this.renderPlayerList();
-      this.showFloatingText(this.localBody.x, this.localBody.y - 30, '+1 ⭐');
+      this.awardPoint('+1 ⭐', this.localBody.x, this.localBody.y - 30);
     }
+  }
+
+  awardPoint(label, x, y) {
+    this.localScore += 1;
+    this.net.addScore(1);
+    const mine = this.allPlayers.get(this.selfData.id);
+    if (mine) mine.score = this.localScore;
+    this.renderPlayerList();
+    this.showFloatingText(x, y, label);
   }
 
   showFloatingText(x, y, text) {
@@ -295,6 +325,177 @@ class TownScene extends Phaser.Scene {
     else night = 0;
 
     this.dayNightOverlay.setAlpha(night * 0.45);
+  }
+
+  // ---------- mobile: virtual D-pad + action buttons ----------
+
+  setupTouchControls() {
+    this.touchMove = { x: 0, y: 0 };
+    const pressed = new Set();
+    const recompute = () => {
+      let x = 0;
+      let y = 0;
+      if (pressed.has('up')) y -= 1;
+      if (pressed.has('down')) y += 1;
+      if (pressed.has('left')) x -= 1;
+      if (pressed.has('right')) x += 1;
+      this.touchMove = { x, y };
+    };
+
+    document.querySelectorAll('.dpad-btn').forEach((btn) => {
+      const dir = btn.dataset.dir;
+      const start = (e) => { e.preventDefault(); pressed.add(dir); btn.classList.add('active'); recompute(); };
+      const end = (e) => { if (e.cancelable) e.preventDefault(); pressed.delete(dir); btn.classList.remove('active'); recompute(); };
+      btn.addEventListener('touchstart', start, { passive: false });
+      btn.addEventListener('touchend', end);
+      btn.addEventListener('touchcancel', end);
+      btn.addEventListener('mousedown', start);
+      btn.addEventListener('mouseup', end);
+      btn.addEventListener('mouseleave', end);
+    });
+
+    const chatInput = document.getElementById('chat-input');
+    document.getElementById('chat-send-btn').addEventListener('click', () => this.sendChatMessage());
+    document.getElementById('mobile-chat-btn').addEventListener('click', () => chatInput.focus());
+
+    const emotePopup = document.getElementById('emote-popup');
+    EMOTES.forEach((symbol, i) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = symbol;
+      btn.addEventListener('click', () => {
+        this.triggerEmote(i);
+        emotePopup.classList.add('hidden');
+      });
+      emotePopup.appendChild(btn);
+    });
+    document.getElementById('emote-toggle-btn').addEventListener('click', () => {
+      emotePopup.classList.toggle('hidden');
+    });
+  }
+
+  // ---------- mobile: tilt steering + shake-to-interact ----------
+  // iOS requires DeviceOrientation/DeviceMotion permission from a real tap,
+  // so this only activates when the player presses the Tilt button.
+
+  setupTiltShake() {
+    this.tiltEnabled = false;
+    this.tiltMove = { x: 0, y: 0 };
+    this.tiltBaseline = null;
+    this.lastAccelMag = null;
+    this.lastShakeAt = 0;
+    this.treeCooldowns = {};
+
+    const hasOrientation = typeof window.DeviceOrientationEvent !== 'undefined';
+    const btn = document.getElementById('tilt-toggle-btn');
+    if (!hasOrientation) {
+      btn.style.display = 'none';
+      return;
+    }
+
+    btn.addEventListener('click', () => this.enableTiltShake(btn));
+  }
+
+  async enableTiltShake(btn) {
+    if (this.tiltEnabled) return;
+
+    try {
+      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        const res = await DeviceOrientationEvent.requestPermission();
+        if (res !== 'granted') {
+          this.addChatLine({ system: true, text: 'Tilt controls need motion access — check Settings > Safari > Motion & Orientation Access.' });
+          return;
+        }
+      }
+      if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+        await DeviceMotionEvent.requestPermission();
+      }
+    } catch (e) {
+      // Non-iOS browsers don't need permission — fall through and enable anyway.
+    }
+
+    this.tiltEnabled = true;
+    this.tiltBaseline = null;
+    btn.classList.add('enabled');
+    btn.textContent = '🎮 Tilt ✓';
+
+    window.addEventListener('deviceorientation', (e) => this.onDeviceOrientation(e));
+    window.addEventListener('devicemotion', (e) => this.onDeviceMotion(e));
+    this.addChatLine({ system: true, text: 'Tilt to steer, shake near a tree for a point!' });
+  }
+
+  onDeviceOrientation(e) {
+    if (!this.tiltEnabled) return;
+    if (this.tiltBaseline === null) {
+      this.tiltBaseline = { beta: e.beta || 0, gamma: e.gamma || 0 };
+      return;
+    }
+    const dGamma = (e.gamma || 0) - this.tiltBaseline.gamma; // left/right lean
+    const dBeta = (e.beta || 0) - this.tiltBaseline.beta; // forward/back lean
+    this.tiltMove = {
+      x: this.applyDeadzone(dGamma),
+      y: this.applyDeadzone(dBeta),
+    };
+  }
+
+  applyDeadzone(v) {
+    const sign = Math.sign(v);
+    const mag = Math.max(0, Math.abs(v) - TILT_DEADZONE_DEG);
+    return sign * Math.min(1, mag / (TILT_RANGE_DEG - TILT_DEADZONE_DEG));
+  }
+
+  onDeviceMotion(e) {
+    if (!this.tiltEnabled) return;
+    const a = e.accelerationIncludingGravity || e.acceleration;
+    if (!a || a.x === null) return;
+
+    const mag = Math.sqrt((a.x || 0) ** 2 + (a.y || 0) ** 2 + (a.z || 0) ** 2);
+    if (this.lastAccelMag !== null) {
+      const jump = Math.abs(mag - this.lastAccelMag);
+      const now = Date.now();
+      if (jump > SHAKE_THRESHOLD && now - this.lastShakeAt > SHAKE_COOLDOWN_MS) {
+        this.lastShakeAt = now;
+        this.onShake();
+      }
+    }
+    this.lastAccelMag = mag;
+  }
+
+  onShake() {
+    let nearestIndex = -1;
+    let nearestDist = Infinity;
+    TREES.forEach(([tx, ty], i) => {
+      const d = Math.hypot(this.localBody.x - tx, this.localBody.y - (ty - 10));
+      if (d < TREE_SHAKE_RADIUS && d < nearestDist) {
+        nearestDist = d;
+        nearestIndex = i;
+      }
+    });
+
+    const now = Date.now();
+    const onCooldown = nearestIndex >= 0 && this.treeCooldowns[nearestIndex] && now - this.treeCooldowns[nearestIndex] < TREE_SHAKE_COOLDOWN_MS;
+
+    if (nearestIndex >= 0 && !onCooldown) {
+      this.treeCooldowns[nearestIndex] = now;
+      const [tx, ty] = TREES[nearestIndex];
+      this.shakeTreeVisual(nearestIndex);
+      this.awardPoint('+1 🍃', tx, ty - 40);
+    } else {
+      this.triggerEmote(Math.floor(Math.random() * EMOTES.length));
+    }
+  }
+
+  shakeTreeVisual(index) {
+    const g = this.treeGraphics[index];
+    if (!g) return;
+    this.tweens.add({
+      targets: g,
+      angle: { from: -6, to: 6 },
+      duration: 70,
+      yoyo: true,
+      repeat: 5,
+      onComplete: () => g.setAngle(0),
+    });
   }
 
   // ---------- players ----------
@@ -464,18 +665,21 @@ class TownScene extends Phaser.Scene {
   }
 
   drawForestRing() {
+    this.treeGraphics = [];
     TREES.forEach(([x, y]) => this.drawTree(x, y));
   }
 
   drawTree(x, y) {
     const g = this.add.graphics();
-    g.fillStyle(0x5a3a22, 1).fillRect(x - 4, y - 4, 8, 16);
-    g.fillStyle(0x3f8f4f, 1).fillCircle(x, y - 20, 17);
-    g.fillStyle(0x4fa85f, 1).fillCircle(x - 11, y - 12, 13);
-    g.fillStyle(0x4fa85f, 1).fillCircle(x + 11, y - 12, 13);
-    g.fillStyle(0x5cb86a, 1).fillCircle(x, y - 28, 12);
+    g.fillStyle(0x5a3a22, 1).fillRect(-4, -4, 8, 16);
+    g.fillStyle(0x3f8f4f, 1).fillCircle(0, -20, 17);
+    g.fillStyle(0x4fa85f, 1).fillCircle(-11, -12, 13);
+    g.fillStyle(0x4fa85f, 1).fillCircle(11, -12, 13);
+    g.fillStyle(0x5cb86a, 1).fillCircle(0, -28, 12);
+    g.setPosition(x, y);
     g.setDepth(y);
     this.addObstacleRect({ x: x - 5, y: y - 3, width: 10, height: 12 });
+    this.treeGraphics.push(g);
   }
 
   drawTulipBeds() {
@@ -553,10 +757,7 @@ class TownScene extends Phaser.Scene {
 
     chatInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
-        const text = chatInput.value.trim();
-        if (text) this.net.sendChat(text);
-        chatInput.value = '';
-        chatInput.blur();
+        this.sendChatMessage();
       } else if (e.key === 'Escape') {
         chatInput.value = '';
         chatInput.blur();
@@ -569,6 +770,14 @@ class TownScene extends Phaser.Scene {
         e.preventDefault();
       }
     });
+  }
+
+  sendChatMessage() {
+    const chatInput = document.getElementById('chat-input');
+    const text = chatInput.value.trim();
+    if (text) this.net.sendChat(text);
+    chatInput.value = '';
+    chatInput.blur();
   }
 
   addChatLine({ name, text, system }) {

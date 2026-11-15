@@ -16,6 +16,7 @@ everyone else automatically. Capped at **10 players** at once for now.
 - A rotating **✨ sparkle** wanders the town every 8s — walk into it to
   score a point; the player list is a live-sorted mini-leaderboard
 - A day/night tint that follows your local clock, purely for atmosphere
+- Full mobile support: on-screen D-pad, tilt steering, and shake-a-tree-for-a-point on phones
 
 ## Setup — the one manual step (~5 minutes)
 
@@ -92,10 +93,21 @@ via `file://` won't work — the sprite sheets need to load over http.)
 
 ## Controls
 
+**Desktop:**
 - **WASD** or **arrow keys** — walk
 - **Enter** — open chat, type, **Enter** again to send
 - **1-5** — emote (👋 😀 ❤️ 😂 🎉), visible to everyone nearby
 - Walk into the **✨ sparkle** to score a point
+
+**Mobile (iPhone/Android):** on-screen controls appear automatically on touch
+devices — a D-pad (bottom-left), and 🎮/😀/💬 buttons (bottom-right) for
+tilt controls, emotes, and chat.
+- **🎮 Tilt** — tap once to enable; iOS will ask for a Motion & Orientation
+  permission (required by Apple, can't be skipped) — tilt the phone like a
+  steering wheel to walk
+- **Shake** the phone near a tree to score a point (each tree resets after
+  ~20s); shake anywhere else for a random emote
+- **💬** focuses chat, **➤** sends it
 
 ## How it works
 

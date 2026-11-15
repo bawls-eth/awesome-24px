@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>Pixeltown</title>
 <link rel="stylesheet" href="style.css" />
 </head>
@@ -42,7 +42,27 @@
 
   <div id="chat-panel">
     <div id="chat-log"></div>
-    <input id="chat-input" maxlength="140" placeholder="Press Enter to chat…" />
+    <div id="chat-input-row">
+      <input id="chat-input" maxlength="140" placeholder="Press Enter to chat…" enterkeyhint="send" autocomplete="off" />
+      <button id="chat-send-btn" type="button" aria-label="Send">➤</button>
+    </div>
+  </div>
+
+  <div id="mobile-controls">
+    <div id="dpad">
+      <button class="dpad-btn" data-dir="up" type="button" aria-label="Up">▲</button>
+      <button class="dpad-btn" data-dir="left" type="button" aria-label="Left">◀</button>
+      <button class="dpad-btn" data-dir="right" type="button" aria-label="Right">▶</button>
+      <button class="dpad-btn" data-dir="down" type="button" aria-label="Down">▼</button>
+    </div>
+
+    <div id="emote-popup" class="hidden"></div>
+
+    <div id="action-buttons">
+      <button id="tilt-toggle-btn" type="button">🎮 Tilt</button>
+      <button id="emote-toggle-btn" type="button" aria-label="Emotes">😀</button>
+      <button id="mobile-chat-btn" type="button" aria-label="Chat">💬</button>
+    </div>
   </div>
 </div>
 
