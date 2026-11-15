@@ -86,6 +86,7 @@ const FISHING_SPOTS = [
   { x: 1865, y: 280 },
 ];
 const FISH_INTERACT_RADIUS = 36;
+const FRUIT_TREE_EVERY = 3;
 const BUG_COUNT = 8;
 const BUG_CATCH_RADIUS = 40;
 const BUG_RESPAWN_MS = 15000;
@@ -590,6 +591,7 @@ class TownScene extends Phaser.Scene {
       stone: Number(saved.stone) || 0,
       fish: Number(saved.fish) || 0,
       bugs: Number(saved.bugs) || 0,
+      fruit: Number(saved.fruit) || 0,
     };
     this.treeCooldowns = {};
     this.rockCooldowns = {};
@@ -637,6 +639,12 @@ class TownScene extends Phaser.Scene {
       this.shakeTreeVisual(tree.index);
       this.swingTool('🪓');
       this.gainResource('wood', 1, tree.x, tree.y - 40);
+      const fruit = this.treeFruit[tree.index];
+      if (fruit) {
+        fruit.setVisible(false);
+        this.gainResource('fruit', 1, tree.x, tree.y - 58);
+        this.time.delayedCall(TREE_SHAKE_COOLDOWN_MS, () => fruit.setVisible(true));
+      }
       return;
     }
 
@@ -666,12 +674,12 @@ class TownScene extends Phaser.Scene {
   }
 
   sellAtShop() {
-    const total = (this.resources.wood || 0) + (this.resources.stone || 0) + (this.resources.fish || 0) + (this.resources.bugs || 0);
+    const total = (this.resources.wood || 0) + (this.resources.stone || 0) + (this.resources.fish || 0) + (this.resources.bugs || 0) + (this.resources.fruit || 0);
     if (total === 0) {
       this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'bag is empty');
       return;
     }
-    this.resources = { wood: 0, stone: 0, fish: 0, bugs: 0 };
+    this.resources = { wood: 0, stone: 0, fish: 0, bugs: 0, fruit: 0 };
     this.updateInventoryHUD();
     this.saveResources();
     this.awardPoint(total, `sold! +${total} ⭐`, this.localBody.x, this.localBody.y - 30);
@@ -883,7 +891,7 @@ class TownScene extends Phaser.Scene {
     this.resources[type] = (this.resources[type] || 0) + amount;
     this.updateInventoryHUD();
     this.saveResources();
-    const icon = { wood: '🪵', stone: '🪨', fish: '🐟', bugs: '🦋' }[type];
+    const icon = { wood: '🪵', stone: '🪨', fish: '🐟', bugs: '🦋', fruit: '🍎' }[type];
     this.showFloatingText(x, y, `+${amount} ${icon}`);
   }
 
@@ -896,6 +904,8 @@ class TownScene extends Phaser.Scene {
     if (fishEl) fishEl.textContent = this.resources.fish || 0;
     const bugEl = document.getElementById('bug-count');
     if (bugEl) bugEl.textContent = this.resources.bugs || 0;
+    const fruitEl = document.getElementById('fruit-count');
+    if (fruitEl) fruitEl.textContent = this.resources.fruit || 0;
   }
 
   // ---------- fishing ----------
@@ -1269,6 +1279,7 @@ class TownScene extends Phaser.Scene {
 
   drawForestRing() {
     this.treeGraphics = [];
+    this.treeFruit = {};
     TREES.forEach(([x, y]) => this.drawTree(x, y));
   }
 
@@ -1283,6 +1294,15 @@ class TownScene extends Phaser.Scene {
     g.setDepth(y);
     this.addObstacleRect({ x: x - 5, y: y - 3, width: 10, height: 12 });
     this.treeGraphics.push(g);
+
+    const index = this.treeGraphics.length - 1;
+    if (index % FRUIT_TREE_EVERY === 0) {
+      const fruit = this.add.graphics();
+      fruit.fillStyle(0xe0453a, 1);
+      fruit.fillCircle(-9, -14, 3.5).fillCircle(8, -19, 3.5).fillCircle(1, -29, 3.5);
+      fruit.setPosition(x, y).setDepth(y + 0.5);
+      this.treeFruit[index] = fruit;
+    }
   }
 
   drawTulipBeds() {

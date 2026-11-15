@@ -19,6 +19,8 @@ everyone else automatically. Capped at **10 players** at once for now.
 - **Fish** at the pond (or the second pond out east), **chop** trees for
   wood, **mine** rocks for stone — classic Animal Crossing activities, fill
   the inventory in the top-left
+- **Shake fruit trees** 🍎 — every third tree bears apples; chopping it drops
+  an apple as well as wood. The apple regrows after the tree's cooldown
 - **Catch butterflies** 🦋 — eight of them flutter around town; walk up and
   press interact to net one. They respawn elsewhere after a few seconds
 - A tool shows in your hand as you work: axe for trees, pickaxe for rocks,

@@ -226,7 +226,7 @@ html, body {
 }
 
 @media (max-width: 720px) {
-  #inventory-panel { right: auto; left: 8px; top: 8px; padding: 6px 10px; font-size: 12px; gap: 8px; }
+  #inventory-panel { right: auto; left: 8px; top: 8px; padding: 6px 10px; font-size: 12px; gap: 4px 8px; flex-wrap: wrap; max-width: 46vw; }
 }
 
 #build-mode-banner {
@@ -660,7 +660,7 @@ body.touch-device #underground-controls { display: block; }
      stack it just under the top-left inventory panel instead, a spot
      that's always clear. */
   #walkie-panel {
-    top: 58px;
+    top: 84px;
     bottom: auto;
     left: 8px;
     transform: none;
