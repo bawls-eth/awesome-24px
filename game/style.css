@@ -574,3 +574,116 @@ body.touch-device #underground-controls { display: block; }
   border-radius: 18px !important;
   font-size: 12px !important;
 }
+
+/* ---------- A/B action buttons (interact / build) ---------- */
+
+.ab-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.1;
+}
+
+.ab-letter {
+  font-size: 18px;
+  font-weight: 800;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  pointer-events: none;
+}
+
+.ab-emoji {
+  font-size: 11px;
+  pointer-events: none;
+}
+
+#interact-btn.ab-btn { border-color: #6fbf73 !important; }
+#build-toggle-btn.ab-btn { border-color: #ffb366 !important; }
+
+/* ---------- Walkie-talkie ---------- */
+
+#walkie-panel {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  z-index: 10;
+}
+
+#memo-inbox-btn {
+  border: 2px solid #ffe066;
+  border-radius: 999px;
+  background: rgba(28,36,48,0.85);
+  color: #eef2f7;
+  padding: 6px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  animation: build-banner-pulse 1.4s ease-in-out infinite;
+}
+
+#memo-inbox-btn.hidden { display: none; }
+
+#walkie-talk-btn {
+  border: 2px solid #3a4658;
+  border-radius: 999px;
+  background: rgba(28,36,48,0.85);
+  color: #eef2f7;
+  padding: 6px 14px;
+  font-size: 12px;
+  text-align: center;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#walkie-talk-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+#walkie-talk-btn.recording {
+  border-color: #ef6f6f;
+  background: rgba(239,111,111,0.3);
+}
+
+#bestie-label {
+  color: #9aa7bb;
+  font-size: 10px;
+}
+
+@media (max-width: 720px) {
+  /* Top-center overlaps the player list once it's pushed into the
+     top-left column on small screens, and the chat log's height varies —
+     stack it just under the top-left inventory panel instead, a spot
+     that's always clear. */
+  #walkie-panel {
+    top: 58px;
+    bottom: auto;
+    left: 8px;
+    transform: none;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+.bestie-star {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0 0 0 6px;
+  opacity: 0.5;
+}
+
+.bestie-star.active {
+  opacity: 1;
+}
+
+#player-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}

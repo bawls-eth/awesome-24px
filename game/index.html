@@ -53,6 +53,13 @@
     <span>🐟 <b id="fish-count">0</b></span>
   </div>
 
+  <div id="walkie-panel">
+    <button id="memo-inbox-btn" type="button" aria-label="Voice memos" class="hidden">📬 <span id="memo-count">0</span></button>
+    <button id="walkie-talk-btn" type="button" aria-label="Push to talk to bestie" disabled>
+      🎙️ Hold to talk<br /><span id="bestie-label">no bestie picked</span>
+    </button>
+  </div>
+
   <div id="build-mode-banner" class="hidden">🧱 BUILD MODE — ✋ / E to place or remove a block (1🪵)</div>
 
   <div id="dig-hole-hint" class="hidden">⛏️ Press E to jump down the hole</div>
@@ -77,8 +84,8 @@
 
     <div id="action-buttons">
       <button id="tilt-toggle-btn" type="button">🎮 Tilt</button>
-      <button id="build-toggle-btn" type="button" aria-label="Build">🧱</button>
-      <button id="interact-btn" type="button" aria-label="Interact">✋</button>
+      <button id="build-toggle-btn" class="ab-btn" type="button" aria-label="Build (B)"><span class="ab-letter">B</span><span class="ab-emoji">🧱</span></button>
+      <button id="interact-btn" class="ab-btn" type="button" aria-label="Interact (A)"><span class="ab-letter">A</span><span class="ab-emoji">✋</span></button>
       <button id="emote-toggle-btn" type="button" aria-label="Emotes">😀</button>
       <button id="mobile-chat-btn" type="button" aria-label="Chat">💬</button>
     </div>

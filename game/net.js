@@ -250,4 +250,18 @@ class TownNet {
     if (!this.blocksRef) return;
     this.blocksRef.child(key).remove().catch(() => {});
   }
+
+  // Walkie-talkie: a short voice clip addressed to one other player's id.
+  // Lives under /walkie/{targetId}, not /players, so it's never confused
+  // with presence data and survives the sender leaving.
+  sendWalkie(targetId, base64Data, mime) {
+    if (!this.db || !this.id || !targetId) return;
+    this.db.ref(`walkie/${targetId}`).push({
+      from: this.id,
+      fromName: this.name,
+      data: base64Data,
+      mime: mime || 'audio/webm',
+      t: firebase.database.ServerValue.TIMESTAMP,
+    }).catch(() => {});
+  }
 }

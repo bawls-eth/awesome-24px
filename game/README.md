@@ -26,8 +26,11 @@ everyone else automatically. Capped at **10 players** at once for now.
 - **Sell** your wood/stone/fish at the 🏠 shop near the statue for ⭐ points —
   a proper Nook's-Cranny-style loop that feeds the leaderboard
 - A day/night tint that follows your local clock, purely for atmosphere
-- Full mobile support: on-screen D-pad, tilt steering, and an Interact/Build
-  button pair so every activity works with a tap
+- Full mobile support: on-screen D-pad, tilt steering, and clearly-labeled
+  **A** (interact) / **B** (build) action buttons, console-controller style
+- A **walkie-talkie** — pick a bestie from the player list, hold to record
+  a short voice clip, they hear it right away if their tab's open (see
+  "Walkie-talkie" below)
 - A Bored Ape "Mayor" statue watches over the plaza, and Moon Cats drift
   lazily around the pond — pure flavor, no gameplay attached
 - A wide **East Meadow** past the original town — walk east along the main
@@ -73,6 +76,7 @@ like this (open, but with basic shape/size limits so nobody can dump junk):
   "rules": {
     "players": { ".read": true, ".write": true },
     "blocks": { ".read": true, ".write": true },
+    "walkie": { ".read": true, ".write": true },
     "chat": {
       ".read": true,
       "$msg": {
@@ -186,6 +190,33 @@ mine underground *does* add to the same 🪨 count shown in the 2D inventory
 and carries over to the shop, so a mining trip is a legitimate way to stock
 up before selling.
 
+### Walkie-talkie
+
+Open the player list (top-right) and tap the 🤍 next to a friend's name to
+make them your **bestie** — it turns 💛 and a "🎙️ Hold to talk · to \<name\>"
+button appears near the top of the screen (desktop: hold **T** instead).
+
+- **Hold** the button (or **T**) to record, **release** to send — clips are
+  capped at 15 seconds.
+- If your bestie's tab is **open and in front of them** right now, it plays
+  the instant it arrives — genuinely real-time, no polling.
+- If it's **not** — their phone's locked, they're in another app, or the
+  tab's just in the background — the clip is saved as an unread **voice
+  memo** instead of trying (and failing) to play. A pulsing **📬** badge
+  with a count appears the moment they come back; tap it to play the
+  oldest one (it's removed once played; tap again for the next).
+- Clips are peer-to-peer through Firebase — base64-encoded audio sent
+  straight to `/walkie/{their-id}`, the same database as everything else
+  here, not a third-party calling service.
+
+**The honest limit:** this is a plain web page, not a native app, so it
+can't keep running or play audio while fully backgrounded or closed —
+no iOS app can do that over plain web APIs without real push notifications
+from a server, which is well beyond a free static-site + Firebase setup.
+"Plays instantly" means *while the game tab is actually open and visible*;
+otherwise it waits for you as a memo, which is what was asked for and is
+the honest, reliable version of this feature on the web.
+
 ### Local save
 
 Your name, villager species/color, and wood/stone/fish counts are saved to
@@ -229,6 +260,13 @@ manifest, 32×32 for the favicon).
   than rebuilding geometry. It's intentionally local-only, like
   fishing/chopping — no block sync, no multiplayer down there.
 - **`firebase-config.js`** — your project's keys (the one file you edit).
+- Walkie-talkie clips are recorded with `MediaRecorder` (picking whatever
+  codec the browser actually supports — iOS Safari and desktop Chrome don't
+  agree, so the format is negotiated, not assumed), base64-encoded, and
+  pushed to `/walkie/{recipientId}`. The recipient's listener plays it
+  immediately if `document.visibilityState === 'visible'`, otherwise queues
+  it as an unread memo; either way the node is deleted once played so
+  `/walkie` never grows unbounded.
 - Villager avatars and decorations are sliced directly from the repo's
   `i/*-strip.png` sprite sheets (9-frame, 24×24-per-frame strips, 28×28 for
   Bored Apes) via Phaser's spritesheet loader — nothing pulled from outside

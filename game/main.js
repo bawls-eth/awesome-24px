@@ -186,6 +186,7 @@ class TownScene extends Phaser.Scene {
     this.setupDayNight();
     this.setupActivities();
     this.setupBuilding();
+    this.setupWalkie();
     if (IS_TOUCH) {
       this.setupTouchControls();
       this.setupTiltShake();
@@ -1332,9 +1333,146 @@ class TownScene extends Phaser.Scene {
     sorted.forEach((p) => {
       const li = document.createElement('li');
       const label = p.id === this.selfData.id ? `${p.name} (you)` : p.name;
-      li.textContent = `${label} — ⭐${p.score || 0}`;
+      const text = document.createElement('span');
+      text.textContent = `${label} — ⭐${p.score || 0}`;
+      li.appendChild(text);
+
+      if (p.id !== this.selfData.id) {
+        const star = document.createElement('button');
+        star.type = 'button';
+        star.className = 'bestie-star' + (this.bestieId === p.id ? ' active' : '');
+        star.title = `Set ${p.name} as your walkie-talkie bestie`;
+        star.textContent = this.bestieId === p.id ? '💛' : '🤍';
+        star.addEventListener('click', () => this.setBestie(p.id, p.name));
+        li.appendChild(star);
+      }
       listEl.appendChild(li);
     });
+  }
+
+  // ---------- walkie-talkie (push-to-talk voice clips, bestie-only) ----------
+  // Fully peer-addressed, like chat but binary: a short recorded clip is
+  // base64-encoded and pushed to /walkie/{bestieId} in Firebase. If the
+  // recipient's tab is visible right now it plays instantly; otherwise it's
+  // queued as an unread voice memo and plays (or waits to be tapped) the
+  // moment they come back — a real background-tab web app can't reliably
+  // keep running or play audio while backgrounded/closed, so "while this
+  // tab is open and in front of you" is the honest scope here.
+
+  setupWalkie() {
+    this.bestieId = savedProfile.bestieId || null;
+    this.bestieName = savedProfile.bestieName || null;
+    this.voiceMemos = [];
+    this.recording = false;
+    this.updateBestieLabel();
+
+    if (this.net.db && this.net.id) {
+      this.walkieRef = this.net.db.ref(`walkie/${this.net.id}`);
+      this.walkieRef.on('child_added', (snap) => {
+        const v = snap.val();
+        if (!v || !v.data) return;
+        const memo = { key: snap.key, from: v.from, fromName: v.fromName || 'someone', data: v.data, mime: v.mime || 'audio/webm' };
+        this.voiceMemos.push(memo);
+        this.updateMemoBadge();
+        if (document.visibilityState === 'visible') this.playMemo(memo);
+      });
+    }
+
+    const talkBtn = document.getElementById('walkie-talk-btn');
+    const press = (e) => { e.preventDefault(); this.startRecording(); };
+    const release = () => this.stopRecording();
+    talkBtn.addEventListener('pointerdown', press);
+    talkBtn.addEventListener('pointerup', release);
+    talkBtn.addEventListener('pointerleave', release);
+
+    window.addEventListener('keydown', (e) => {
+      if (this.chatFocused || this.inUnderground) return;
+      if (e.key.toLowerCase() === 't' && !this.recording) this.startRecording();
+    });
+    window.addEventListener('keyup', (e) => {
+      if (e.key.toLowerCase() === 't') this.stopRecording();
+    });
+
+    document.getElementById('memo-inbox-btn').addEventListener('click', () => {
+      if (this.voiceMemos.length) this.playMemo(this.voiceMemos[0]);
+    });
+  }
+
+  setBestie(id, name) {
+    this.bestieId = id;
+    this.bestieName = name;
+    writeSave({ bestieId: id, bestieName: name });
+    this.updateBestieLabel();
+    this.renderPlayerList();
+  }
+
+  updateBestieLabel() {
+    const label = document.getElementById('bestie-label');
+    const talkBtn = document.getElementById('walkie-talk-btn');
+    if (label) label.textContent = this.bestieId ? `to ${this.bestieName}` : 'pick a bestie →';
+    if (talkBtn) talkBtn.disabled = !this.bestieId;
+  }
+
+  async startRecording() {
+    if (this.recording || !this.bestieId) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.recording = true;
+      document.getElementById('walkie-talk-btn').classList.add('recording');
+      this.walkieStream = stream;
+      this.walkieChunks = [];
+      // iOS Safari records AAC/mp4, not webm — ask for whatever this
+      // browser actually supports instead of assuming one.
+      const candidates = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg'];
+      const supported = candidates.find((t) => window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t));
+      this.walkieRecorder = new MediaRecorder(stream, supported ? { mimeType: supported } : undefined);
+      this.walkieRecorder.ondataavailable = (e) => { if (e.data.size) this.walkieChunks.push(e.data); };
+      this.walkieRecordedAt = Date.now();
+      this.walkieRecorder.start();
+      this.walkieTimeout = setTimeout(() => this.stopRecording(), 15000); // cap a clip at 15s
+    } catch (e) {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'mic permission needed');
+    }
+  }
+
+  stopRecording() {
+    if (!this.recording) return;
+    this.recording = false;
+    clearTimeout(this.walkieTimeout);
+    document.getElementById('walkie-talk-btn').classList.remove('recording');
+    const tooShort = Date.now() - this.walkieRecordedAt < 300;
+    const recorder = this.walkieRecorder;
+    const stream = this.walkieStream;
+    recorder.onstop = () => {
+      stream.getTracks().forEach((t) => t.stop());
+      if (tooShort || !this.walkieChunks.length) return;
+      const mime = recorder.mimeType || 'audio/webm';
+      const blob = new Blob(this.walkieChunks, { type: mime });
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = String(reader.result).split(',')[1];
+        if (base64) this.net.sendWalkie(this.bestieId, base64, mime);
+      };
+      reader.readAsDataURL(blob);
+    };
+    recorder.stop();
+  }
+
+  playMemo(memo) {
+    try {
+      const audio = new Audio(`data:${memo.mime};base64,${memo.data}`);
+      audio.play().catch(() => {});
+    } catch (e) { /* unsupported format on this device — still clear it below */ }
+    this.voiceMemos = this.voiceMemos.filter((m) => m.key !== memo.key);
+    this.updateMemoBadge();
+    if (this.walkieRef) this.walkieRef.child(memo.key).remove().catch(() => {});
+  }
+
+  updateMemoBadge() {
+    const btn = document.getElementById('memo-inbox-btn');
+    const count = document.getElementById('memo-count');
+    if (count) count.textContent = this.voiceMemos.length;
+    if (btn) btn.classList.toggle('hidden', this.voiceMemos.length === 0);
   }
 }
 
