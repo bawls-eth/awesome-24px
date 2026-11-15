@@ -26,6 +26,10 @@ everyone else automatically. Capped at **10 players** at once for now.
   button pair so every activity works with a tap
 - A Bored Ape "Mayor" statue watches over the plaza, and Moon Cats drift
   lazily around the pond — pure flavor, no gameplay attached
+- Your name, villager choice, and wood/stone/fish inventory are remembered
+  on this device (see "Local save" below) — no account, nothing synced
+- On iPhone/Android, you can **Add to Home Screen** for a proper app icon
+  and a full-screen launch (no Safari address bar)
 
 ## Setup — the one manual step (~5 minutes)
 
@@ -138,6 +142,27 @@ block there (costs 1 🪵), or press it again on a block you placed to remove
 it for a refund. Blocks are real obstacles for everyone in the town, synced
 live. Capped at 150 blocks total so the town doesn't fill up solid.
 
+### Local save
+
+Your name, villager species/color, and wood/stone/fish counts are saved to
+this browser's `localStorage` (key `pixeltown-save-v1`) — purely on your
+device, nothing sent anywhere. Reopen the page later and your villager and
+inventory pick up where you left off. Clearing your browser data (or using
+a different browser/device) starts fresh. Score isn't part of this — it
+lives on the Firebase leaderboard and resets with each new join, by design.
+
+### Add to Home Screen (iPhone/Android)
+
+- **iPhone (Safari):** open the site → Share icon → **Add to Home Screen**.
+  You get a proper icon (cropped from the Cool Cats sprite sheet) and it
+  launches full-screen, no address bar.
+- **Android (Chrome):** menu → **Add to Home screen** / **Install app**.
+
+This works because of `game/manifest.json` and the icons in `game/icons/` —
+if you want a different icon, swap the PNGs in that folder (keep the same
+filenames/sizes: 180×180 for `apple-touch-icon.png`, 192 and 512 for the
+manifest, 32×32 for the favicon).
+
 ## How it works
 
 - **`index.html` / `style.css`** — the page shell and join screen.
@@ -173,9 +198,10 @@ live. Capped at 150 blocks total so the town doesn't fill up solid.
 - **10 players max** at once (change `MAX_PLAYERS` in `net.js`).
 - State is ephemeral by design: players disappear when they leave, and chat
   history is just the last ~30 messages. Scores reset when a player leaves
-  and rejoins (no accounts, no persistence). Wood/stone/fish counts are
-  purely local and reset on refresh. Placed **blocks persist** in the shared
-  database until removed, capped at 150 total.
+  and rejoins (no accounts, no persistence there). Wood/stone/fish counts
+  persist locally on this device (see "Local save" above) but don't sync
+  anywhere. Placed **blocks persist** in the shared database until removed,
+  capped at 150 total.
 - Position updates are throttled to ~10/sec per player — smooth, and well
   within Firebase's free tier for a handful of friends.
 - Firebase's "test mode" rules are wide open (see below) — fine for a link
@@ -187,7 +213,7 @@ live. Capped at 150 blocks total so the town doesn't fill up solid.
 ## Ideas for next steps
 
 - Firebase Anonymous Auth so writes require `auth != null` (safer public link)
-- Persistence: remember your name/avatar/score/inventory across visits
+- Persistence: name/avatar/inventory now save locally (done); score/leaderboard across visits would need real accounts
 - More block types (stone blocks, decorative items) and a crafting recipe or two
 - Weather, seasons
 - More villager species from the rest of the collection (plain rocks, genius…)

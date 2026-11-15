@@ -25,8 +25,8 @@ const SPARKLE_CATCH_RADIUS = 26;
 const IS_TOUCH = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 if (IS_TOUCH) document.body.classList.add('touch-device');
 
-const TILT_DEADZONE_DEG = 4;
-const TILT_RANGE_DEG = 22;
+const TILT_DEADZONE_DEG = 8;
+const TILT_RANGE_DEG = 36;
 const SHAKE_THRESHOLD = 15; // m/s^2 jump in accelerationIncludingGravity magnitude
 const SHAKE_COOLDOWN_MS = 800;
 const TREE_SHAKE_RADIUS = 46;
@@ -77,6 +77,27 @@ const FISH_BITE_WINDOW = 1300;
 const GRID_SIZE = 32;
 const BLOCK_PLACE_DISTANCE = 28;
 const BLOCK_CAP = 150;
+
+// ---------------- local save (this device only — nothing here is synced) ----------------
+
+const SAVE_KEY = 'pixeltown-save-v1';
+
+function loadSave() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    return raw ? JSON.parse(raw) || {} : {};
+  } catch (e) {
+    return {}; // private browsing / storage disabled — just play without saving
+  }
+}
+
+function writeSave(partial) {
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ ...loadSave(), ...partial }));
+  } catch (e) {
+    // ignore — nothing to persist to
+  }
+}
 
 class TownScene extends Phaser.Scene {
   constructor() {
@@ -520,7 +541,12 @@ class TownScene extends Phaser.Scene {
   // feed the building system below.
 
   setupActivities() {
-    this.resources = { wood: 0, stone: 0, fish: 0 };
+    const saved = loadSave().resources || {};
+    this.resources = {
+      wood: Number(saved.wood) || 0,
+      stone: Number(saved.stone) || 0,
+      fish: Number(saved.fish) || 0,
+    };
     this.treeCooldowns = {};
     this.rockCooldowns = {};
     this.fishing = { state: 'idle', spot: null, bobber: null, timer: null };
@@ -529,6 +555,10 @@ class TownScene extends Phaser.Scene {
     this.input.keyboard.on('keydown-E', () => { if (!this.chatFocused) this.interact(); });
     const btn = document.getElementById('interact-btn');
     if (btn) btn.addEventListener('click', () => this.interact());
+  }
+
+  saveResources() {
+    writeSave({ resources: this.resources });
   }
 
   interact() {
@@ -616,6 +646,7 @@ class TownScene extends Phaser.Scene {
   gainResource(type, amount, x, y) {
     this.resources[type] = (this.resources[type] || 0) + amount;
     this.updateInventoryHUD();
+    this.saveResources();
     const icon = type === 'wood' ? '🪵' : type === 'stone' ? '🪨' : '🐟';
     this.showFloatingText(x, y, `+${amount} ${icon}`);
   }
@@ -721,6 +752,7 @@ class TownScene extends Phaser.Scene {
         this.net.removeBlock(key);
         this.resources.wood = (this.resources.wood || 0) + 1;
         this.updateInventoryHUD();
+        this.saveResources();
       } else {
         this.showFloatingText(gx, gy - 20, "not yours");
       }
@@ -738,6 +770,7 @@ class TownScene extends Phaser.Scene {
 
     this.resources.wood -= 1;
     this.updateInventoryHUD();
+    this.saveResources();
     this.net.placeBlock(gx, gy);
   }
 
@@ -1139,8 +1172,12 @@ const joinError = document.getElementById('join-error');
 const joinOverlay = document.getElementById('join-overlay');
 const hud = document.getElementById('hud');
 
-let selectedSpecies = SPECIES[0].key;
-let selectedFrame = 0;
+let savedProfile = loadSave();
+let selectedSpecies = SPECIES.some((s) => s.key === savedProfile.species) ? savedProfile.species : SPECIES[0].key;
+let selectedFrame = Number.isInteger(savedProfile.frame) && savedProfile.frame >= 0 && savedProfile.frame < FRAME_COUNT
+  ? savedProfile.frame
+  : 0;
+if (savedProfile.name) nameInput.value = savedProfile.name;
 
 function renderSpeciesTabs() {
   speciesTabsEl.innerHTML = '';
@@ -1190,6 +1227,7 @@ function attemptJoin() {
   if (!name) return;
   joinBtn.disabled = true;
   joinError.textContent = '';
+  writeSave({ name, species: selectedSpecies, frame: selectedFrame });
 
   const net = new TownNet();
   let joined = false;
@@ -1237,3 +1275,4 @@ function startTown(net, data) {
 
 renderSpeciesTabs();
 renderAvatarGrid();
+updateJoinButtonState();
