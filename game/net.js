@@ -158,18 +158,48 @@ class TownNet {
     });
   }
 
+  // Writes via transaction instead of update(): if our node has already been
+  // removed server-side (onDisconnect fired while this write was in flight —
+  // a real race, not just a theoretical one), the transaction sees `current
+  // === null` and aborts instead of recreating a bare, identity-less node.
+  async writeIfAlive(mutate) {
+    if (!this.playerRef) return undefined;
+    const ref = this.playerRef;
+    const result = await ref.transaction((current) => {
+      if (current === null) return undefined; // abort — never recreate from nothing
+      mutate(current);
+      return current;
+    });
+    if (!result.committed && this.playerRef === ref) {
+      this.playerRef = null;
+      this.emit('selfRemoved');
+    }
+    return result;
+  }
+
   move(x, y, facing) {
-    if (this.playerRef) this.playerRef.update({ x, y, facing });
+    this.writeIfAlive((current) => {
+      current.x = x;
+      current.y = y;
+      current.facing = facing;
+    });
   }
 
   emote(symbol) {
-    if (this.playerRef) this.playerRef.update({ emote: symbol, emoteAt: firebase.database.ServerValue.TIMESTAMP });
+    // Transactions can retry, so they can't use the ServerValue.TIMESTAMP
+    // sentinel (it would differ per retry) — client time is fine here since
+    // emoteAt is only ever used to detect "this changed", not displayed.
+    this.writeIfAlive((current) => {
+      current.emote = symbol;
+      current.emoteAt = Date.now();
+    });
   }
 
-  addScore(delta) {
-    if (!this.playerRef) return;
-    this.localScore = (this.localScore || 0) + delta;
-    this.playerRef.update({ score: this.localScore });
+  async addScore(delta) {
+    const result = await this.writeIfAlive((current) => {
+      current.score = (current.score || 0) + delta;
+    });
+    if (result && result.committed) this.localScore = result.snapshot.val().score;
   }
 
   sendChat(text) {
