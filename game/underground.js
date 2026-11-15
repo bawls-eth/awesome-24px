@@ -64,6 +64,20 @@ class UndergroundWorld {
     this.rig = new THREE.Object3D();
     this.scene.add(this.rig);
 
+    // Pickaxe held at the player's right side; swings on every mine().
+    this.tool = new THREE.Group();
+    const grip = new THREE.Group();
+    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.14, 1.4, 0.14), new THREE.MeshStandardMaterial({ color: 0x8a5a2b }));
+    handle.position.y = 0.6;
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 1.1), new THREE.MeshStandardMaterial({ color: 0xb8c2cc }));
+    head.position.y = 1.25;
+    grip.add(handle, head);
+    grip.position.set(1.25, -0.5, -0.35);
+    this.tool.add(grip);
+    this.toolGrip = grip;
+    this.swingT = 0;
+    this.scene.add(this.tool);
+
     this.reticle = new THREE.Mesh(
       new THREE.RingGeometry(0.006, 0.01, 12),
       new THREE.MeshBasicMaterial({ color: 0xffffff, depthTest: false, transparent: true, opacity: 0.8 })
@@ -303,6 +317,10 @@ class UndergroundWorld {
 
     this.playerMesh.position.copy(this.rig.position);
     this.playerMesh.rotation.y = this.yaw;
+    this.tool.position.copy(this.rig.position);
+    this.tool.rotation.y = this.yaw;
+    this.swingT = Math.max(0, this.swingT - delta);
+    this.toolGrip.rotation.x = -0.35 - Math.sin((this.swingT / 0.25) * Math.PI) * 1.2;
     const camDist = 6;
     const look = this._forwardVector();
     this.camera.position.copy(this.rig.position).addScaledVector(look, -camDist);
@@ -330,6 +348,7 @@ class UndergroundWorld {
   }
 
   mine() {
+    this.swingT = 0.25;
     const hits = this._raycastTargets();
     if (!hits.length) return false;
     const hit = hits[0];

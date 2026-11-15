@@ -623,6 +623,7 @@ class TownScene extends Phaser.Scene {
     if (tree) {
       this.treeCooldowns[tree.index] = Date.now();
       this.shakeTreeVisual(tree.index);
+      this.swingTool('🪓');
       this.gainResource('wood', 1, tree.x, tree.y - 40);
       return;
     }
@@ -630,6 +631,7 @@ class TownScene extends Phaser.Scene {
     const rock = this.findNearestRock();
     if (rock) {
       this.rockCooldowns[rock.key] = Date.now();
+      this.swingTool('⛏️');
       this.gainResource('stone', 1, rock.x, rock.y - 20);
       return;
     }
@@ -743,6 +745,23 @@ class TownScene extends Phaser.Scene {
       if (!this.inUnderground) return;
       document.getElementById('underground-exit-hint').classList.toggle('hidden', !ug.nearExit);
     }, 150);
+  }
+
+  // Briefly shows the tool in the villager's hand and swings it.
+  swingTool(symbol) {
+    const dir = this.localVisual.flipX ? -1 : 1;
+    const tool = this.add.text(this.localBody.x + dir * 12, this.localBody.y - 4, symbol, { fontSize: '14px' })
+      .setOrigin(0.5, 0.9)
+      .setDepth(this.localBody.y + 1);
+    tool.setAngle(-50 * dir);
+    this.tweens.add({
+      targets: tool,
+      angle: 40 * dir,
+      duration: 140,
+      yoyo: true,
+      repeat: 1,
+      onComplete: () => tool.destroy(),
+    });
   }
 
   findNearestTree() {
