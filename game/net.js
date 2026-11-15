@@ -177,12 +177,24 @@ class TownNet {
   async writeIfAlive(mutate) {
     if (!this.playerRef) return undefined;
     const ref = this.playerRef;
-    const result = await ref.transaction((current) => {
-      if (current === null) return undefined; // abort — never recreate from nothing
-      mutate(current);
-      return current;
-    });
-    if (!result.committed && this.playerRef === ref) {
+    let result;
+    try {
+      result = await ref.transaction((current) => {
+        if (current === null) return undefined; // abort — never recreate from nothing
+        const next = { ...current };
+        mutate(next);
+        // RTDB stores `null` fields by omitting the key entirely, which can
+        // round-trip back through a transaction as an explicit `undefined` —
+        // Firebase's own validator rejects that, so strip it defensively.
+        Object.keys(next).forEach((k) => { if (next[k] === undefined) delete next[k]; });
+        return next;
+      });
+    } catch (e) {
+      return undefined; // transient failure — not evidence our node was removed
+    }
+    // Only treat a non-commit as "we got removed" once that's actually
+    // confirmed by the final snapshot, not just any abort reason.
+    if (!result.committed && !result.snapshot.exists() && this.playerRef === ref) {
       this.playerRef = null;
       this.emit('selfRemoved');
     }
