@@ -266,6 +266,20 @@ html, body {
   z-index: 10;
 }
 
+#chat-clear-btn {
+  display: block;
+  margin: 0 0 6px auto;
+  background: rgba(28,36,48,0.75);
+  border: 1px solid #3a4658;
+  border-radius: 999px;
+  color: #9aa7bb;
+  font-size: 11px;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+
+#chat-clear-btn.hidden { display: none; }
+
 #chat-log {
   max-height: 160px;
   overflow-y: auto;

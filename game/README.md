@@ -150,6 +150,8 @@ devices — a D-pad (bottom-left), and action buttons (bottom-right): 🎮 Tilt,
   **Shaking the phone** is a fun bonus trigger for the same action, if
   something's in range
 - **💬** focuses chat, **➤** sends it
+- **🗑️ Clear** appears above the chat log once there's something to clear —
+  it only clears your own screen, not the shared history everyone else sees
 - Your 🎒 bag (top-left) shows your wood/stone/fish; a visible rod line
   appears between you and the water while you're fishing
 

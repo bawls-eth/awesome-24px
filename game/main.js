@@ -1404,6 +1404,14 @@ class TownScene extends Phaser.Scene {
         e.preventDefault();
       }
     });
+
+    // Clears this device's own view of the log only — it's a local
+    // declutter button, not a moderation tool, so it doesn't touch the
+    // shared Firebase chat history or anyone else's screen.
+    document.getElementById('chat-clear-btn').addEventListener('click', () => {
+      document.getElementById('chat-log').innerHTML = '';
+      document.getElementById('chat-clear-btn').classList.add('hidden');
+    });
   }
 
   sendChatMessage() {
@@ -1431,6 +1439,7 @@ class TownScene extends Phaser.Scene {
 
     chatLog.appendChild(line);
     chatLog.scrollTop = chatLog.scrollHeight;
+    document.getElementById('chat-clear-btn').classList.remove('hidden');
 
     while (chatLog.children.length > 50) chatLog.removeChild(chatLog.firstChild);
   }
