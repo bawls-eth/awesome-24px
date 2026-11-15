@@ -182,6 +182,47 @@ class UndergroundWorld {
     this.moveInput.strafe = strafe;
   }
 
+  // Extrudes one 24x24 frame of a sprite strip into a voxel figure: every
+  // opaque pixel becomes a small box, so the 2D villager keeps its exact
+  // look in 3D. Replaces the placeholder capsule once the image loads.
+  setAvatar(url, frame, frameSize) {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = frameSize; c.height = frameSize;
+      const g = c.getContext('2d');
+      g.drawImage(img, frame * frameSize, 0, frameSize, frameSize, 0, 0, frameSize, frameSize);
+      const px = g.getImageData(0, 0, frameSize, frameSize).data;
+      const cells = [];
+      for (let y = 0; y < frameSize; y++) {
+        for (let x = 0; x < frameSize; x++) {
+          const i = (y * frameSize + x) * 4;
+          if (px[i + 3] > 127) cells.push([x, y, px[i], px[i + 1], px[i + 2]]);
+        }
+      }
+      if (!cells.length) return;
+      const s = 2.4 / frameSize;
+      const mesh = new THREE.InstancedMesh(
+        new THREE.BoxGeometry(s, s, s * 4),
+        new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8 }),
+        cells.length
+      );
+      const m = new THREE.Matrix4();
+      const col = new THREE.Color();
+      cells.forEach(([x, y, r, gr, b], i) => {
+        m.makeTranslation((x - frameSize / 2 + 0.5) * s, (frameSize / 2 - y - 0.5) * s, 0);
+        mesh.setMatrixAt(i, m);
+        col.setRGB(r / 255, gr / 255, b / 255, THREE.SRGBColorSpace);
+        mesh.setColorAt(i, col);
+      });
+      mesh.instanceColor.needsUpdate = true;
+      this.scene.remove(this.playerMesh);
+      this.playerMesh = mesh;
+      this.scene.add(mesh);
+    };
+    img.src = url;
+  }
+
   // ---------- lifecycle ----------
 
   start() {
@@ -261,6 +302,7 @@ class UndergroundWorld {
     }
 
     this.playerMesh.position.copy(this.rig.position);
+    this.playerMesh.rotation.y = this.yaw;
     const camDist = 6;
     const look = this._forwardVector();
     this.camera.position.copy(this.rig.position).addScaledVector(look, -camDist);

@@ -692,6 +692,7 @@ class TownScene extends Phaser.Scene {
         onResourceChange,
         onExit: () => this.exitUnderground(),
       });
+      this.underground.setAvatar(`../i/${this.selfData.species}-strip.png`, this.selfData.frame || 0, FRAME_SIZE);
       this.setupUndergroundControls();
     }
     this.underground.start();
