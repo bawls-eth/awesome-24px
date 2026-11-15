@@ -16,8 +16,14 @@ everyone else automatically. Capped at **10 players** at once for now.
 - 5 emotes (keys **1-5**) that pop up over your head for everyone to see
 - A rotating **✨ sparkle** wanders the town every 8s — walk into it to
   score a point; the player list is a live-sorted mini-leaderboard
+- **Fish** at the pond, **chop** trees for wood, **mine** rocks for stone —
+  classic Animal Crossing activities, fill the inventory in the top-left
+- **Build**: spend wood to place grid-snapped blocks anywhere — a real
+  obstacle everyone sees and collides with, Minecraft-sandbox-flavored.
+  Tap your own block again to remove it for a refund
 - A day/night tint that follows your local clock, purely for atmosphere
-- Full mobile support: on-screen D-pad, tilt steering, and shake-a-tree-for-a-point on phones
+- Full mobile support: on-screen D-pad, tilt steering, and an Interact/Build
+  button pair so every activity works with a tap
 - A Bored Ape "Mayor" statue watches over the plaza, and Moon Cats drift
   lazily around the pond — pure flavor, no gameplay attached
 
@@ -51,6 +57,7 @@ like this (open, but with basic shape/size limits so nobody can dump junk):
 {
   "rules": {
     "players": { ".read": true, ".write": true },
+    "blocks": { ".read": true, ".write": true },
     "chat": {
       ".read": true,
       "$msg": {
@@ -98,19 +105,38 @@ via `file://` won't work — the sprite sheets need to load over http.)
 
 **Desktop:**
 - **WASD** or **arrow keys** — walk
+- **E** — interact: fish at the pond, chop a tree, mine a rock, or place/remove
+  a block if you're in build mode (whichever's nearest to you)
+- **B** — toggle build mode
 - **Enter** — open chat, type, **Enter** again to send
 - **1-5** — emote (👋 😀 ❤️ 😂 🎉), visible to everyone nearby
 - Walk into the **✨ sparkle** to score a point
 
 **Mobile (iPhone/Android):** on-screen controls appear automatically on touch
-devices — a D-pad (bottom-left), and 🎮/😀/💬 buttons (bottom-right) for
-tilt controls, emotes, and chat.
+devices — a D-pad (bottom-left), and action buttons (bottom-right): 🎮 Tilt,
+🧱 Build, ✋ Interact, 😀 Emotes, 💬 Chat.
 - **🎮 Tilt** — tap once to enable; iOS will ask for a Motion & Orientation
   permission (required by Apple, can't be skipped) — tilt the phone like a
   steering wheel to walk
-- **Shake** the phone near a tree to score a point (each tree resets after
-  ~20s); shake anywhere else for a random emote
+- **✋ Interact** does the same thing as desktop's E — fish/chop/mine/build.
+  **Shaking the phone** is a fun bonus trigger for the same action, if
+  something's in range
 - **💬** focuses chat, **➤** sends it
+
+### Fishing
+
+Walk up to the pond's edge (west side or south dock) and press **Interact**.
+Wait for a **❗** — that's the bite — then press **Interact** again within
+about a second. Too early and the fish gets spooked; too late and it gets
+away. Catches add to your 🐟 count (inventory only, not the leaderboard).
+
+### Building
+
+Press **B** (or tap 🧱) to toggle build mode — a yellow outline shows where
+the next block lands, just in front of you. Press **Interact** to place a
+block there (costs 1 🪵), or press it again on a block you placed to remove
+it for a refund. Blocks are real obstacles for everyone in the town, synced
+live. Capped at 150 blocks total so the town doesn't fill up solid.
 
 ## How it works
 
@@ -123,7 +149,8 @@ tilt controls, emotes, and chat.
   emote); each client writes its own fields (position throttled to
   ~10×/sec) and Firebase pushes everyone else's changes live. Presence uses
   `onDisconnect()` so you vanish from the town when you close the tab.
-  Chat lives under `/chat`.
+  Chat lives under `/chat`; placed blocks live under `/blocks/{x}_{y}`,
+  keyed by their grid position so there's never a duplicate at one spot.
 - **`firebase-config.js`** — your project's keys (the one file you edit).
 - Villager avatars and decorations are sliced directly from the repo's
   `i/*-strip.png` sprite sheets (9-frame, 24×24-per-frame strips, 28×28 for
@@ -135,6 +162,9 @@ tilt controls, emotes, and chat.
   on where it is without any extra network traffic — no server needed to
   referee it. Anyone nearby when it rotates scores a point, so it's casual
   and co-op rather than a first-click-wins race.
+- Fishing/chopping/mining are entirely client-side (per-tree/rock/spot
+  cooldowns, a timed bite window) — only the resulting wood/stone/fish
+  counts live in your own browser; they don't sync or persist.
 - Day/night tint reads each device's own local clock — cosmetic only, not
   synced (friends in different timezones will see different lighting).
 
@@ -142,18 +172,23 @@ tilt controls, emotes, and chat.
 
 - **10 players max** at once (change `MAX_PLAYERS` in `net.js`).
 - State is ephemeral by design: players disappear when they leave, and chat
-  history is just the last ~30 messages. Nothing needs cleanup. Scores reset
-  when a player leaves and rejoins (no accounts, no persistence).
+  history is just the last ~30 messages. Scores reset when a player leaves
+  and rejoins (no accounts, no persistence). Wood/stone/fish counts are
+  purely local and reset on refresh. Placed **blocks persist** in the shared
+  database until removed, capped at 150 total.
 - Position updates are throttled to ~10/sec per player — smooth, and well
   within Firebase's free tier for a handful of friends.
 - Firebase's "test mode" rules are wide open (see below) — fine for a link
-  you only share with people you trust, not for posting publicly.
+  you only share with people you trust, not for posting publicly. Anyone
+  can remove anyone else's placed block if you tighten the rules without
+  also adding ownership checks there — the client enforces "your blocks
+  only" but test-mode rules don't.
 
 ## Ideas for next steps
 
 - Firebase Anonymous Auth so writes require `auth != null` (safer public link)
-- Persistence: remember your name/avatar/score across visits
-- Placeable furniture/decorations, a simple inventory
+- Persistence: remember your name/avatar/score/inventory across visits
+- More block types (stone blocks, decorative items) and a crafting recipe or two
 - Weather, seasons
-- More villager species from the rest of the collection (rocks, zombies, mohawks…)
+- More villager species from the rest of the collection (plain rocks, genius…)
 - Per-player "homes" / multiple rooms instead of one shared map

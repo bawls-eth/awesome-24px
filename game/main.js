@@ -64,6 +64,20 @@ const POND_CATS = [
 ];
 const STATUE_POS = { x: 1200, y: 550 };
 
+const FISHING_SPOTS = [
+  { x: 115, y: 600 },
+  { x: 260, y: 700 },
+];
+const FISH_INTERACT_RADIUS = 36;
+const ROCK_MINE_RADIUS = 30;
+const FISH_BITE_WAIT_MIN = 1800;
+const FISH_BITE_WAIT_MAX = 4000;
+const FISH_BITE_WINDOW = 1300;
+
+const GRID_SIZE = 32;
+const BLOCK_PLACE_DISTANCE = 28;
+const BLOCK_CAP = 150;
+
 class TownScene extends Phaser.Scene {
   constructor() {
     super('Town');
@@ -95,7 +109,7 @@ class TownScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, this.world.width, this.world.height);
     this.cameras.main.setZoom(2);
 
-    this.obstacles = [];
+    this.obstacles = this.physics.add.staticGroup();
     this.remotePlayers = new Map();
 
     this.drawGround();
@@ -127,6 +141,8 @@ class TownScene extends Phaser.Scene {
     this.setupEmotes();
     this.setupSparkle();
     this.setupDayNight();
+    this.setupActivities();
+    this.setupBuilding();
     if (IS_TOUCH) {
       this.setupTouchControls();
       this.setupTiltShake();
@@ -135,7 +151,6 @@ class TownScene extends Phaser.Scene {
     this.registerNetHandlers();
     this.registerChatUI();
     this.renderPlayerList();
-    this.addChatLine({ system: true, text: 'Welcome to Pixeltown! WASD/arrows to move, Enter to chat, 1-5 to emote, walk into a sparkle to score.' });
 
     // Handlers are wired up — safe to start receiving live updates now.
     this.net.startListening();
@@ -146,6 +161,7 @@ class TownScene extends Phaser.Scene {
     this.updateRemoteInterpolation(delta);
     this.updateSparkle(time);
     this.updateDayNight(time);
+    this.updateBuildPreview();
   }
 
   // ---------- movement ----------
@@ -403,7 +419,6 @@ class TownScene extends Phaser.Scene {
     this.tiltBaseline = null;
     this.lastAccelMag = null;
     this.lastShakeAt = 0;
-    this.treeCooldowns = {};
 
     const hasOrientation = typeof window.DeviceOrientationEvent !== 'undefined';
     const btn = document.getElementById('tilt-toggle-btn');
@@ -440,7 +455,6 @@ class TownScene extends Phaser.Scene {
 
     window.addEventListener('deviceorientation', (e) => this.onDeviceOrientation(e));
     window.addEventListener('devicemotion', (e) => this.onDeviceMotion(e));
-    this.addChatLine({ system: true, text: 'Tilt to steer, shake near a tree for a point!' });
   }
 
   onDeviceOrientation(e) {
@@ -480,28 +494,10 @@ class TownScene extends Phaser.Scene {
     this.lastAccelMag = mag;
   }
 
+  // Shake is just a fun alternate trigger for the same interact() logic used
+  // by the desktop 'E' key and the mobile Interact button.
   onShake() {
-    let nearestIndex = -1;
-    let nearestDist = Infinity;
-    TREES.forEach(([tx, ty], i) => {
-      const d = Math.hypot(this.localBody.x - tx, this.localBody.y - (ty - 10));
-      if (d < TREE_SHAKE_RADIUS && d < nearestDist) {
-        nearestDist = d;
-        nearestIndex = i;
-      }
-    });
-
-    const now = Date.now();
-    const onCooldown = nearestIndex >= 0 && this.treeCooldowns[nearestIndex] && now - this.treeCooldowns[nearestIndex] < TREE_SHAKE_COOLDOWN_MS;
-
-    if (nearestIndex >= 0 && !onCooldown) {
-      this.treeCooldowns[nearestIndex] = now;
-      const [tx, ty] = TREES[nearestIndex];
-      this.shakeTreeVisual(nearestIndex);
-      this.awardPoint('+1 🍃', tx, ty - 40);
-    } else {
-      this.triggerEmote(Math.floor(Math.random() * EMOTES.length));
-    }
+    this.interact();
   }
 
   shakeTreeVisual(index) {
@@ -515,6 +511,256 @@ class TownScene extends Phaser.Scene {
       repeat: 5,
       onComplete: () => g.setAngle(0),
     });
+  }
+
+  // ---------- activities: chop / mine / fish ----------
+  // One shared action (desktop 'E', mobile Interact button, or a shake) that
+  // figures out what's nearby and does the relevant thing. Wood/stone/fish
+  // are a separate inventory from the sparkle leaderboard score — they only
+  // feed the building system below.
+
+  setupActivities() {
+    this.resources = { wood: 0, stone: 0, fish: 0 };
+    this.treeCooldowns = {};
+    this.rockCooldowns = {};
+    this.fishing = { state: 'idle', spot: null, bobber: null, timer: null };
+    this.updateInventoryHUD();
+
+    this.input.keyboard.on('keydown-E', () => { if (!this.chatFocused) this.interact(); });
+    const btn = document.getElementById('interact-btn');
+    if (btn) btn.addEventListener('click', () => this.interact());
+  }
+
+  interact() {
+    if (this.buildMode) {
+      this.handleBuildInteract();
+      return;
+    }
+    if (this.fishing.state !== 'idle') {
+      this.handleFishingInteract();
+      return;
+    }
+
+    const tree = this.findNearestTree();
+    if (tree) {
+      this.treeCooldowns[tree.index] = Date.now();
+      this.shakeTreeVisual(tree.index);
+      this.gainResource('wood', 1, tree.x, tree.y - 40);
+      return;
+    }
+
+    const rock = this.findNearestRock();
+    if (rock) {
+      this.rockCooldowns[rock.key] = Date.now();
+      this.gainResource('stone', 1, rock.x, rock.y - 20);
+      return;
+    }
+
+    const spot = this.findNearestFishingSpot();
+    if (spot) {
+      this.startFishing(spot);
+      return;
+    }
+
+    this.triggerEmote(Math.floor(Math.random() * EMOTES.length));
+  }
+
+  findNearestTree() {
+    const now = Date.now();
+    let best = null;
+    let bestDist = TREE_SHAKE_RADIUS;
+    TREES.forEach(([tx, ty], i) => {
+      if (this.treeCooldowns[i] && now - this.treeCooldowns[i] < TREE_SHAKE_COOLDOWN_MS) return;
+      const d = Math.hypot(this.localBody.x - tx, this.localBody.y - (ty - 10));
+      if (d < bestDist) {
+        bestDist = d;
+        best = { x: tx, y: ty, index: i };
+      }
+    });
+    return best;
+  }
+
+  findNearestRock() {
+    const now = Date.now();
+    let best = null;
+    let bestDist = ROCK_MINE_RADIUS;
+    const consider = (list, prefix) => {
+      list.forEach(([x, y], i) => {
+        const key = `${prefix}${i}`;
+        if (this.rockCooldowns[key] && now - this.rockCooldowns[key] < TREE_SHAKE_COOLDOWN_MS) return;
+        const d = Math.hypot(this.localBody.x - x, this.localBody.y - y);
+        if (d < bestDist) {
+          bestDist = d;
+          best = { x, y, key };
+        }
+      });
+    };
+    consider(ROCKS, 'r');
+    consider(PUNK_ROCKS, 'p');
+    return best;
+  }
+
+  findNearestFishingSpot() {
+    let best = null;
+    let bestDist = FISH_INTERACT_RADIUS;
+    FISHING_SPOTS.forEach((s) => {
+      const d = Math.hypot(this.localBody.x - s.x, this.localBody.y - s.y);
+      if (d < bestDist) {
+        bestDist = d;
+        best = s;
+      }
+    });
+    return best;
+  }
+
+  gainResource(type, amount, x, y) {
+    this.resources[type] = (this.resources[type] || 0) + amount;
+    this.updateInventoryHUD();
+    const icon = type === 'wood' ? '🪵' : type === 'stone' ? '🪨' : '🐟';
+    this.showFloatingText(x, y, `+${amount} ${icon}`);
+  }
+
+  updateInventoryHUD() {
+    const woodEl = document.getElementById('wood-count');
+    const stoneEl = document.getElementById('stone-count');
+    const fishEl = document.getElementById('fish-count');
+    if (woodEl) woodEl.textContent = this.resources.wood || 0;
+    if (stoneEl) stoneEl.textContent = this.resources.stone || 0;
+    if (fishEl) fishEl.textContent = this.resources.fish || 0;
+  }
+
+  // ---------- fishing ----------
+
+  startFishing(spot) {
+    this.fishing.state = 'casting';
+    this.fishing.spot = spot;
+    this.fishing.bobber = this.add.circle(spot.x, spot.y, 4, 0xffffff).setDepth(-1);
+    const waitMs = FISH_BITE_WAIT_MIN + Math.random() * (FISH_BITE_WAIT_MAX - FISH_BITE_WAIT_MIN);
+    this.fishing.timer = this.time.delayedCall(waitMs, () => this.fishBite());
+  }
+
+  fishBite() {
+    if (this.fishing.state !== 'casting') return;
+    this.fishing.state = 'biting';
+    if (this.fishing.bobber) this.fishing.bobber.setFillStyle(0xff4444);
+    this.showFloatingText(this.fishing.spot.x, this.fishing.spot.y - 24, '❗');
+    this.fishing.timer = this.time.delayedCall(FISH_BITE_WINDOW, () => this.fishMiss());
+  }
+
+  fishMiss() {
+    if (this.fishing.state !== 'biting') return;
+    this.showFloatingText(this.fishing.spot.x, this.fishing.spot.y - 24, 'got away…');
+    this.endFishing();
+  }
+
+  handleFishingInteract() {
+    if (this.fishing.state === 'casting') {
+      this.showFloatingText(this.fishing.spot.x, this.fishing.spot.y - 24, 'too early!');
+      this.endFishing();
+    } else if (this.fishing.state === 'biting') {
+      this.gainResource('fish', 1, this.fishing.spot.x, this.fishing.spot.y - 24);
+      this.endFishing();
+    }
+  }
+
+  endFishing() {
+    if (this.fishing.timer) this.fishing.timer.remove(false);
+    if (this.fishing.bobber) this.fishing.bobber.destroy();
+    this.fishing.state = 'idle';
+    this.fishing.spot = null;
+    this.fishing.bobber = null;
+    this.fishing.timer = null;
+  }
+
+  // ---------- building ----------
+  // A lightweight, Minecraft-flavored sandbox layer: spend wood to place a
+  // grid-snapped block in front of you; it's a real obstacle for everyone,
+  // synced through Firebase, and you can remove your own blocks for a refund.
+
+  setupBuilding() {
+    this.blocks = new Map();
+    this.buildMode = false;
+    this.buildPreview = this.add.rectangle(0, 0, GRID_SIZE - 2, GRID_SIZE - 2, 0xffffff, 0)
+      .setStrokeStyle(2, 0xffe066)
+      .setDepth(400000)
+      .setVisible(false);
+
+    this.input.keyboard.on('keydown-B', () => { if (!this.chatFocused) this.toggleBuildMode(); });
+    const btn = document.getElementById('build-toggle-btn');
+    if (btn) btn.addEventListener('click', () => this.toggleBuildMode());
+  }
+
+  toggleBuildMode() {
+    this.buildMode = !this.buildMode;
+    const btn = document.getElementById('build-toggle-btn');
+    if (btn) btn.classList.toggle('enabled', this.buildMode);
+    this.buildPreview.setVisible(this.buildMode);
+  }
+
+  getBuildTargetCell() {
+    const dir = this.localVisual.flipX ? -1 : 1;
+    const tx = this.localBody.x + dir * BLOCK_PLACE_DISTANCE;
+    const ty = this.localBody.y;
+    const gx = Math.round(tx / GRID_SIZE) * GRID_SIZE;
+    const gy = Math.round(ty / GRID_SIZE) * GRID_SIZE;
+    return { gx, gy, key: `${gx}_${gy}` };
+  }
+
+  updateBuildPreview() {
+    if (!this.buildMode) return;
+    const { gx, gy } = this.getBuildTargetCell();
+    this.buildPreview.setPosition(gx, gy);
+  }
+
+  handleBuildInteract() {
+    const { gx, gy, key } = this.getBuildTargetCell();
+    const existing = this.blocks.get(key);
+
+    if (existing) {
+      if (existing.ownerId === this.selfData.id) {
+        this.net.removeBlock(key);
+        this.resources.wood = (this.resources.wood || 0) + 1;
+        this.updateInventoryHUD();
+      } else {
+        this.showFloatingText(gx, gy - 20, "not yours");
+      }
+      return;
+    }
+
+    if ((this.resources.wood || 0) < 1) {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'need 🪵');
+      return;
+    }
+    if (this.blocks.size >= BLOCK_CAP) {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'town is full!');
+      return;
+    }
+
+    this.resources.wood -= 1;
+    this.updateInventoryHUD();
+    this.net.placeBlock(gx, gy);
+  }
+
+  addBlockVisual(b) {
+    if (this.blocks.has(b.key)) return;
+    const sprite = this.add.rectangle(b.x, b.y, GRID_SIZE - 2, GRID_SIZE - 2, 0x8a5a3b, 1)
+      .setStrokeStyle(2, 0x5a3a22)
+      .setDepth(b.y);
+    const obstacle = this.addObstacleRect({
+      x: b.x - GRID_SIZE / 2 + 1,
+      y: b.y - GRID_SIZE / 2 + 1,
+      width: GRID_SIZE - 2,
+      height: GRID_SIZE - 2,
+    });
+    this.blocks.set(b.key, { sprite, obstacle, ownerId: b.ownerId });
+  }
+
+  removeBlockVisual(key) {
+    const b = this.blocks.get(key);
+    if (!b) return;
+    b.sprite.destroy();
+    b.obstacle.destroy();
+    this.blocks.delete(key);
   }
 
   // ---------- players ----------
@@ -764,7 +1010,8 @@ class TownScene extends Phaser.Scene {
   addObstacleRect({ x, y, width, height }) {
     const rect = this.add.rectangle(x + width / 2, y + height / 2, width, height, 0x000000, 0).setVisible(false);
     this.physics.add.existing(rect, true);
-    this.obstacles.push(rect);
+    this.obstacles.add(rect);
+    return rect;
   }
 
   // ---------- networking ----------
@@ -775,15 +1022,12 @@ class TownScene extends Phaser.Scene {
       this.allPlayers.set(p.id, p);
       this.addRemotePlayer(p);
       this.renderPlayerList();
-      this.addChatLine({ system: true, text: `${p.name} arrived in town.` });
     });
 
     this.net.on('playerLeft', (id) => {
-      const p = this.allPlayers.get(id);
       this.allPlayers.delete(id);
       this.removeRemotePlayer(id);
       this.renderPlayerList();
-      if (p) this.addChatLine({ system: true, text: `${p.name} left.` });
     });
 
     this.net.on('playerUpdated', (d) => {
@@ -813,6 +1057,9 @@ class TownScene extends Phaser.Scene {
     this.net.on('selfRemoved', () => {
       this.addChatLine({ system: true, text: 'Lost your spot in town (connection dropped). You can still look around, but refresh to fully rejoin.' });
     });
+
+    this.net.on('blockAdded', (b) => this.addBlockVisual(b));
+    this.net.on('blockRemoved', (b) => this.removeBlockVisual(b.key));
   }
 
   // ---------- DOM: chat + player list ----------

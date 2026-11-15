@@ -11,7 +11,7 @@
 <div id="join-overlay">
   <div class="join-card">
     <h1>🏝️ Pixeltown</h1>
-    <p class="tagline">A tiny shared town for you and your friends.</p>
+    <p class="tagline">Walk, chat, fish, chop wood, and build — with your friends, live.</p>
 
     <label for="name-input">Your name</label>
     <input id="name-input" maxlength="16" placeholder="e.g. Ben" autocomplete="off" />
@@ -22,6 +22,7 @@
 
     <button id="join-btn" disabled>Join Town</button>
     <p id="join-error" class="error"></p>
+    <p class="join-tip">WASD/arrows to walk · <b>E</b> to interact (fish, chop, mine) · <b>B</b> to build · <b>1-5</b> to emote · Enter to chat</p>
   </div>
 </div>
 
@@ -33,11 +34,10 @@
     <ul id="player-list"></ul>
   </div>
 
-  <div id="controls-hint">
-    <div><b>WASD</b> / arrows — walk</div>
-    <div><b>Enter</b> — chat</div>
-    <div><b>1-5</b> — emote</div>
-    <div>Walk into a <b>✨</b> to score</div>
+  <div id="inventory-panel">
+    <span>🪵 <b id="wood-count">0</b></span>
+    <span>🪨 <b id="stone-count">0</b></span>
+    <span>🐟 <b id="fish-count">0</b></span>
   </div>
 
   <div id="chat-panel">
@@ -60,6 +60,8 @@
 
     <div id="action-buttons">
       <button id="tilt-toggle-btn" type="button">🎮 Tilt</button>
+      <button id="build-toggle-btn" type="button" aria-label="Build">🧱</button>
+      <button id="interact-btn" type="button" aria-label="Interact">✋</button>
       <button id="emote-toggle-btn" type="button" aria-label="Emotes">😀</button>
       <button id="mobile-chat-btn" type="button" aria-label="Chat">💬</button>
     </div>

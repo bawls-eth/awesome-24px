@@ -27,6 +27,7 @@ class TownNet {
     this.playerRef = null;
     this.playersRef = null;
     this.chatRef = null;
+    this.blocksRef = null;
     this.joinTime = 0;
     this.db = null;
   }
@@ -56,6 +57,7 @@ class TownNet {
     this.db = firebase.database();
     this.playersRef = this.db.ref('players');
     this.chatRef = this.db.ref('chat');
+    this.blocksRef = this.db.ref('blocks');
 
     let snap;
     try {
@@ -156,6 +158,16 @@ class TownNet {
         isOld: typeof m.t === 'number' && m.t < this.joinTime,
       });
     });
+
+    this.blocksRef.on('child_added', (s) => {
+      const v = s.val();
+      if (!v) return;
+      this.emit('blockAdded', { key: s.key, x: v.x, y: v.y, ownerId: v.ownerId });
+    });
+
+    this.blocksRef.on('child_removed', (s) => {
+      this.emit('blockRemoved', { key: s.key });
+    });
   }
 
   // Writes via transaction instead of update(): if our node has already been
@@ -210,5 +222,20 @@ class TownNet {
       text,
       t: firebase.database.ServerValue.TIMESTAMP,
     });
+  }
+
+  placeBlock(x, y) {
+    if (!this.blocksRef || !this.id) return;
+    this.blocksRef.child(`${x}_${y}`).set({
+      x,
+      y,
+      ownerId: this.id,
+      t: firebase.database.ServerValue.TIMESTAMP,
+    }).catch(() => {});
+  }
+
+  removeBlock(key) {
+    if (!this.blocksRef) return;
+    this.blocksRef.child(key).remove().catch(() => {});
   }
 }
