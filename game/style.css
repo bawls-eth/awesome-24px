@@ -599,6 +599,7 @@ body.touch-device #underground-controls { display: block; }
 
 #interact-btn.ab-btn { border-color: #6fbf73 !important; }
 #build-toggle-btn.ab-btn { border-color: #ffb366 !important; }
+#mobile-chat-btn.ab-btn { border-color: #7ab8ff !important; }
 
 /* ---------- Walkie-talkie ---------- */
 
