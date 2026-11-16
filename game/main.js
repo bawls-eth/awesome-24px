@@ -158,6 +158,15 @@ const ACHIEVEMENTS = [
 ];
 const CAMPFIRE_POS = { x: 800, y: 600 };
 const CAMPFIRE_RADIUS = 60;
+// Beachcombing: fixed spots along the pond edges, same pattern as fishing
+// spots — a cooldown instead of a respawn timer, no network sync.
+const BEACH_ITEMS = ['🐚', '🌊', '⭐'];
+const BEACH_SPOTS = [
+  { x: 190, y: 510 }, { x: 330, y: 510 }, { x: 170, y: 690 },
+  { x: 2000, y: 380 }, { x: 2100, y: 210 },
+];
+const BEACH_PICKUP_RADIUS = 36;
+const BEACH_RESPAWN_MS = 20000;
 const KK_CONCERT_START_HOUR = 19; // 7pm local time
 const KK_CONCERT_END_HOUR = 21; // 9pm local time
 const WEATHER_CYCLE_MS = 8 * 60 * 1000; // 8-minute weather windows
@@ -267,6 +276,7 @@ class TownScene extends Phaser.Scene {
     this.drawMuseum();
     this.drawTurnipStall();
     this.drawFossilSpots();
+    this.drawBeachItems();
     this.drawForestRing();
     this.drawTulipBeds();
     this.drawRocks();
@@ -759,6 +769,7 @@ class TownScene extends Phaser.Scene {
       bugs: Number(saved.bugs) || 0,
       fruit: Number(saved.fruit) || 0,
       turnips: Number(saved.turnips) || 0,
+      shells: Number(saved.shells) || 0,
     };
     this.treeCooldowns = {};
     this.rockCooldowns = {};
@@ -807,6 +818,11 @@ class TownScene extends Phaser.Scene {
     const fossilSpot = this.findNearestFossilSpot();
     if (fossilSpot) {
       this.digFossil(fossilSpot);
+      return;
+    }
+    const beachSpot = this.findNearestBeachItem();
+    if (beachSpot) {
+      this.collectBeachItem(beachSpot);
       return;
     }
     if (this.isNearDigHole()) {
@@ -982,7 +998,7 @@ class TownScene extends Phaser.Scene {
   }
 
   sellAtShop() {
-    const total = (this.resources.wood || 0) + (this.resources.stone || 0) + (this.resources.fish || 0) + (this.resources.bugs || 0) + (this.resources.fruit || 0);
+    const total = (this.resources.wood || 0) + (this.resources.stone || 0) + (this.resources.fish || 0) + (this.resources.bugs || 0) + (this.resources.fruit || 0) + (this.resources.shells || 0);
     const turnipRevenue = (this.resources.turnips || 0) > 0 ? this.resources.turnips * this.turnipSellPrice() / TURNIP_BUNDLE : 0;
     const grandTotal = Math.round(total + turnipRevenue);
     if (grandTotal === 0) {
@@ -990,7 +1006,7 @@ class TownScene extends Phaser.Scene {
       return;
     }
     const soldTurnips = this.resources.turnips || 0;
-    this.resources = { wood: 0, stone: 0, fish: 0, bugs: 0, fruit: 0, turnips: 0 };
+    this.resources = { wood: 0, stone: 0, fish: 0, bugs: 0, fruit: 0, turnips: 0, shells: 0 };
     this.updateInventoryHUD();
     this.saveResources();
     const label = soldTurnips > 0 ? `sold (incl. ${soldTurnips} 🥬)! +${grandTotal} ⭐` : `sold! +${grandTotal} ⭐`;
@@ -1478,6 +1494,8 @@ class TownScene extends Phaser.Scene {
     if (bugEl) bugEl.textContent = this.resources.bugs || 0;
     const turnipEl = document.getElementById('turnip-count');
     if (turnipEl) turnipEl.textContent = this.resources.turnips || 0;
+    const shellEl = document.getElementById('shell-count');
+    if (shellEl) shellEl.textContent = this.resources.shells || 0;
     const fruitEl = document.getElementById('fruit-count');
     if (fruitEl) fruitEl.textContent = this.resources.fruit || 0;
   }
@@ -1848,6 +1866,44 @@ class TownScene extends Phaser.Scene {
       g.fillStyle(0x8f7044, 1).fillEllipse(x, y - 3, 22, 10);
       return g;
     });
+  }
+
+  // ---------- beachcombing ----------
+  // Fixed spots along the pond edges, same shape as the fishing spots:
+  // walk up, interact, a short cooldown before it washes up again.
+  // Local-only, like every other activity here.
+
+  drawBeachItems() {
+    this.beachCooldowns = {};
+    this.beachSprites = BEACH_SPOTS.map(({ x, y }) => {
+      const symbol = BEACH_ITEMS[Phaser.Math.Between(0, BEACH_ITEMS.length - 1)];
+      return this.add.text(x, y, symbol, { fontSize: '16px' }).setOrigin(0.5).setDepth(y);
+    });
+  }
+
+  findNearestBeachItem() {
+    const now = Date.now();
+    let best = null;
+    let bestDist = BEACH_PICKUP_RADIUS;
+    BEACH_SPOTS.forEach((spot, i) => {
+      if (this.beachCooldowns[i] && now - this.beachCooldowns[i] < BEACH_RESPAWN_MS) return;
+      const d = Math.hypot(this.localBody.x - spot.x, this.localBody.y - spot.y);
+      if (d < bestDist) { bestDist = d; best = { ...spot, index: i }; }
+    });
+    return best;
+  }
+
+  collectBeachItem(spot) {
+    this.beachCooldowns[spot.index] = Date.now();
+    const sprite = this.beachSprites[spot.index];
+    if (sprite) {
+      sprite.setVisible(false);
+      this.time.delayedCall(BEACH_RESPAWN_MS, () => {
+        sprite.setText(BEACH_ITEMS[Phaser.Math.Between(0, BEACH_ITEMS.length - 1)]);
+        sprite.setVisible(true);
+      });
+    }
+    this.gainResource('shells', 1, spot.x, spot.y - 16);
   }
 
   drawStatue() {

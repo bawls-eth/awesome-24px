@@ -63,6 +63,9 @@ everyone else automatically. Capped at **10 players** at once for now.
   random fossil (one of 5 species); carry up to 3, then donate at the
   🏛️ Museum for a permanent per-device collection and a ⭐ for each new
   species (see "Fossils & Museum" below)
+- 🐚 **Beachcombing** — 5 fixed spots along the pond edges wash up a
+  shell, sea glass, or star fragment every 20 seconds; interact to
+  collect, sell at the shop like any other resource
 - 🎸 **K.K. Slider plays the campfire** every evening, 7-9pm on *your*
   device's own clock — walk up during the show and interact for a ⭐2
   bonus and an emote, once per show (see "K.K. Slider" below)
