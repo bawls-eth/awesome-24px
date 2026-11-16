@@ -446,7 +446,14 @@ const TRIVIA_QUESTIONS = [
 const TRIVIA_REWARD = 8;
 const HOUSE_POS = { x: 1020, y: 760, w: 110, h: 70 };
 const SHOP_RADIUS = 70;
-const POLYROLL_POS = { x: 1250, y: 760 };
+// All the "minigame" structures (Polyroll, the turnip stall, the fishing
+// tournament sign) and both portal doors live together in one consolidated
+// arcade district, southeast of the statue — previously these were
+// scattered across the whole map (the tournament sign in particular sat
+// all the way on the opposite, western edge, by the main pond), which
+// meant a lot of walking just to find them. Having one GTA portal instead
+// of the original two redundant ones is part of the same tidy-up.
+const POLYROLL_POS = { x: 1900, y: 760 };
 const POLYROLL_RADIUS = 50;
 const MUSEUM_POS = { x: 900, y: 920, w: 100, h: 64 };
 const MUSEUM_RADIUS = 70;
@@ -460,7 +467,7 @@ const FOSSIL_BAG_CAP = 3;
 const DIG_HOLE_POS = { x: 1200, y: 460 };
 const DIG_HOLE_RADIUS = 36;
 const DOOR_RADIUS = 34;
-const TURNIP_STALL_POS = { x: 970, y: 650 };
+const TURNIP_STALL_POS = { x: 1760, y: 760 };
 const TURNIP_STALL_RADIUS = 50;
 const TURNIP_BUNDLE = 10;
 const TURNIP_BUY_CYCLE_MS = 4 * 60 * 60 * 1000; // buy price changes every 4h
@@ -553,7 +560,11 @@ const GRAVEYARD_POS = { x: 60, y: 700 };
 // (tracked via a Firebase transaction, same compare-and-swap shape as
 // the scavenger hunt) wins whoever's holding it a one-time bonus.
 const FISH_TOURNAMENT_HOURS = 2;
-const FISH_TOURNAMENT_SIGN_POS = { x: 150, y: 420 };
+// Just the leaderboard-style "biggest catch today" sign — the actual
+// tournament fishing still happens at the real FISHING_SPOTS (the ponds),
+// this is only a display, so it can live with the other minigames instead
+// of out by the pond on its own.
+const FISH_TOURNAMENT_SIGN_POS = { x: 2040, y: 760 };
 const FISH_TOURNAMENT_BONUS = 10;
 const GUESTBOOK_RADIUS = 60;
 const GUESTBOOK_NOTE_MAX = 80;
@@ -566,13 +577,16 @@ const WEATHER_RAIN_COUNT = 70;
 // One-way, GTA3-loading-door style portals: each is a real door object in
 // the town that, on interact, leaves Pixeltown entirely for another
 // browser game in this same tab. No teleport back — closing/navigating
-// away from the destination is how you return.
+// away from the destination is how you return. Both doors live in the
+// arcade district (see POLYROLL_POS above) — there used to be two
+// redundant GTA 3 doors on opposite sides of the map; one is enough now
+// that there's a single, easy-to-find spot for all of this.
 const PORTALS = [
-  { x: 1500, y: 700, label: '🚪 GTA 3', color: 0x4fa0e0, url: 'https://quenq.com/apps/gta-3/' },
-  { x: 2250, y: 600, label: '🚪 GTA 3', color: 0x4fa0e0, url: 'https://quenq.com/apps/gta-3/' },
-  { x: 300, y: 500, label: '🚪 NFS Underground 2', color: 0xe0454f, url: 'https://nfsu2.xyz/' },
+  { x: 1830, y: 870, label: '🚪 GTA 3', color: 0x4fa0e0, url: 'https://quenq.com/apps/gta-3/' },
+  { x: 1970, y: 870, label: '🚪 NFS Underground 2', color: 0xe0454f, url: 'https://nfsu2.xyz/' },
 ];
 const EAST_POND = { cx: 2000, cy: 280, rx: 130, ry: 80 };
+const MAIN_POND = { cx: 260, cy: 600, rx: 150, ry: 90 };
 
 // Fixed, hand-picked landmarks for the town map overlay — deliberately a
 // simple schematic (dots + labels on a plain backdrop), not a literal
@@ -590,7 +604,10 @@ const MAP_LANDMARKS = [
   { x: GRAVEYARD_POS.x, y: GRAVEYARD_POS.y, label: 'Graveyard' },
   { x: WINDMILL_POS.x, y: WINDMILL_POS.y, label: 'Windmill' },
   { x: CAMPFIRE_POS.x, y: CAMPFIRE_POS.y, label: 'Campfire' },
-  { x: POLYROLL_POS.x, y: POLYROLL_POS.y, label: 'Polyroll' },
+  // Polyroll, the turnip stall, the tournament sign, and both portal
+  // doors all live together here — one pin for the whole district
+  // instead of 5 crowded ones this close together at map scale.
+  { x: 1900, y: 800, label: '🕹️ Arcade' },
 ];
 
 const FISHING_SPOTS = [
@@ -663,8 +680,10 @@ class TownScene extends Phaser.Scene {
     // Phones (and especially standalone "Add to Home Screen" launches, which
     // have no browser chrome eating into the viewport) show a lot less of the
     // world at zoom 2 — zoom out a bit so HUD panels don't end up covering
-    // most of what's visible.
-    this.cameras.main.setZoom(IS_TOUCH ? 1.5 : 2);
+    // most of what's visible. Zoomed out further still (was 2/1.5) so more
+    // of the surroundings are visible at once — sprites are still a very
+    // legible ~38px/29px on screen at these levels.
+    this.cameras.main.setZoom(IS_TOUCH ? 1.2 : 1.6);
 
     this.obstacles = this.physics.add.staticGroup();
     this.remotePlayers = new Map();
@@ -685,6 +704,7 @@ class TownScene extends Phaser.Scene {
     this.drawNPC2();
     this.drawMerchant();
     this.drawDigHole();
+    this.drawArcadeSign();
     this.drawDoors();
     this.drawPolyrollBooth();
     this.drawMuseum();
@@ -1460,6 +1480,12 @@ class TownScene extends Phaser.Scene {
     const cx = HOUSE_POS.x + HOUSE_POS.w / 2;
     const cy = HOUSE_POS.y + HOUSE_POS.h / 2;
     return Math.hypot(this.localBody.x - cx, this.localBody.y - cy) < SHOP_RADIUS;
+  }
+
+  // A plain wayfinding sign over the arcade district — centered between
+  // the turnip stall, Polyroll, and the tournament sign, pure decoration.
+  drawArcadeSign() {
+    this.add.text(1900, 680, '🕹️ Arcade District', { fontSize: '16px' }).setOrigin(0.5).setDepth(679);
   }
 
   drawPolyrollBooth() {
@@ -2397,6 +2423,16 @@ class TownScene extends Phaser.Scene {
     ctx.fillRect(0, 0, w, h);
 
     const toScreen = (x, y) => [(x / this.world.width) * w, (y / this.world.height) * h];
+
+    ctx.fillStyle = '#3a86c8';
+    [MAIN_POND, EAST_POND].forEach(({ cx, cy, rx, ry }) => {
+      const [sx, sy] = toScreen(cx, cy);
+      const [swx] = toScreen(rx * 2, 0);
+      const [, swy] = toScreen(0, ry * 2);
+      ctx.beginPath();
+      ctx.ellipse(sx, sy, Math.max(swx / 2, 2), Math.max(swy / 2, 2), 0, 0, Math.PI * 2);
+      ctx.fill();
+    });
 
     MAP_LANDMARKS.forEach(({ x, y, label }) => {
       const [sx, sy] = toScreen(x, y);

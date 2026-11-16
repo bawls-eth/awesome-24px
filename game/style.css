@@ -1407,7 +1407,7 @@ body.touch-device .key-hint { display: none; }
 
 #map-overlay.hidden { display: none; }
 
-#map-overlay .join-card { position: relative; width: auto; }
+#map-overlay .join-card { position: relative; width: 400px; max-width: 92vw; }
 
 #map-close-btn {
   position: absolute;
@@ -1426,7 +1426,7 @@ body.touch-device .key-hint { display: none; }
   display: block;
   margin-top: 10px;
   width: 100%;
-  max-width: 280px;
+  max-width: 320px;
   height: auto;
   border: 2px solid #3a4658;
   border-radius: 8px;

@@ -164,6 +164,18 @@ for how each feature actually works and plays.
 - Fixed `#save-import-input` (the hidden file picker `.click()`-
   triggered by the Restore button) having no CSS rule hiding it at
   all, rendering as a stray native "Choose File" button in the panel
+- Consolidated Polyroll, the turnip stall, the fishing tournament's
+  leaderboard sign, and both portal doors into one 🕹️ Arcade District
+  southeast of the statue — these were scattered across the whole map
+  (the tournament sign in particular sat all the way on the opposite
+  side, by the main pond), meaning a lot of walking just to find them.
+  Also dropped the second, redundant GTA 3 door down to one, now that
+  there's a single obvious spot for all of this
+- Zoomed the main camera out further (2×/1.5× → 1.6×/1.2×, desktop/
+  touch) so more of the surroundings are visible at once; the town
+  map overlay is bigger too (280×140 → 320×160) and now shades both
+  ponds in as soft blue shapes instead of nothing, making it read
+  more like an actual overhead map
 
 ## Villagers and expression
 

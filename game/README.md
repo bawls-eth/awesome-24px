@@ -88,8 +88,9 @@ right now, before you even pick a name.
   "Walkie-talkie" below)
 - A Bored Ape "Mayor" statue watches over the plaza, and Moon Cats drift
   lazily around the pond — pure flavor, no gameplay attached
-- Three **GTA3-style portal doors** 🚪 — two near the plaza/East Meadow to
-  [GTA 3](https://quenq.com/apps/gta-3/), one west of the pond to
+- Two **GTA3-style portal doors** 🚪, side by side in the 🕹️ Arcade
+  District southeast of the statue — one to
+  [GTA 3](https://quenq.com/apps/gta-3/), one to
   [NFS Underground 2](https://nfsu2.xyz/) — walk up and interact to leave
   Pixeltown entirely for that browser game, in this same tab. It's
   one-way: there's no teleport back, just like walking through a loading
@@ -120,7 +121,7 @@ right now, before you even pick a name.
   own (one note per minute per device, and it runs through the same
   name/chat slur filter as everything else)
 - 👗 **Able Sisters** — change your villager species/color after
-  joining, any time, at the shop near the turnip stall. Everyone else
+  joining, any time. Everyone else
   sees the new look live, and it's what loads back in next time too.
   A 🎲 **Randomize** button picks a random species/frame for you to
   preview before committing with "Wear it!"
@@ -176,13 +177,18 @@ right now, before you even pick a name.
   one as a small title badge shown next to your name in the player
   list, visible to everyone — swap it any time, synced the same way
   appearance changes are
-- A 🥬 **turnip market** — buy a bundle at the stall near the shop, sell
-  at the shop itself for a profit or a loss depending on when you catch
-  it (see "Turnip market" below)
-- A 🎲 **Polyroll** betting booth near the shop — dice (pick 1-6, 5×
-  payout) or coin flip (2× payout), wagering your own ⭐ stars for fun.
-  No wallet, no crypto, no real money anywhere in it — just the same
-  stars the sparkle and the shop already use (see "Polyroll" below)
+- A 🥬 **turnip market** — buy a bundle at the stall in the 🕹️ Arcade
+  District, sell at the shop itself for a profit or a loss depending
+  on when you catch it (see "Turnip market" below)
+- A 🎲 **Polyroll** betting booth, also in the 🕹️ Arcade District — dice
+  (pick 1-6, 5× payout) or coin flip (2× payout), wagering your own ⭐
+  stars for fun. No wallet, no crypto, no real money anywhere in it —
+  just the same stars the sparkle and the shop already use (see
+  "Polyroll" below)
+- The 🕹️ **Arcade District**, southeast of the statue, groups every
+  minigame-ish thing in one easy-to-find spot: Polyroll, the turnip
+  stall, the daily fishing tournament's leaderboard sign, and both
+  portal doors
 - Your name, villager choice, and wood/stone/fish inventory are remembered
   on this device (see "Local save" below) — no account, nothing synced
 - On iPhone/Android, you can **Add to Home Screen** for a proper app icon
