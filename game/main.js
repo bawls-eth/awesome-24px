@@ -167,6 +167,8 @@ const BEACH_SPOTS = [
 ];
 const BEACH_PICKUP_RADIUS = 36;
 const BEACH_RESPAWN_MS = 20000;
+const ABLE_SISTERS_POS = { x: 1150, y: 650, w: 70, h: 56 };
+const ABLE_SISTERS_RADIUS = 55;
 const KK_CONCERT_START_HOUR = 19; // 7pm local time
 const KK_CONCERT_END_HOUR = 21; // 9pm local time
 const WEATHER_CYCLE_MS = 8 * 60 * 1000; // 8-minute weather windows
@@ -275,6 +277,7 @@ class TownScene extends Phaser.Scene {
     this.drawPolyrollBooth();
     this.drawMuseum();
     this.drawTurnipStall();
+    this.drawAbleSisters();
     this.drawFossilSpots();
     this.drawBeachItems();
     this.drawForestRing();
@@ -307,6 +310,7 @@ class TownScene extends Phaser.Scene {
     this.setupPolyroll();
     this.setupAchievements();
     this.setupAchievementsUI();
+    this.setupOutfitShop();
     this.setupBugs();
     this.setupFossils();
     if (IS_TOUCH) {
@@ -342,7 +346,7 @@ class TownScene extends Phaser.Scene {
     let vx = 0;
     let vy = 0;
 
-    if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen) {
+    if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen) {
       if (this.cursors.left.isDown || this.wasd.A.isDown) vx -= 1;
       if (this.cursors.right.isDown || this.wasd.D.isDown) vx += 1;
       if (this.cursors.up.isDown || this.wasd.W.isDown) vy -= 1;
@@ -776,7 +780,7 @@ class TownScene extends Phaser.Scene {
     this.fishing = { state: 'idle', spot: null, bobber: null, timer: null };
     this.updateInventoryHUD();
 
-    this.input.keyboard.on('keydown-E', () => { if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen) this.interact(); });
+    this.input.keyboard.on('keydown-E', () => { if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen) this.interact(); });
     const btn = document.getElementById('interact-btn');
     if (btn) btn.addEventListener('click', () => this.interact());
   }
@@ -793,6 +797,10 @@ class TownScene extends Phaser.Scene {
     }
     if (this.fishing.state !== 'idle') {
       this.handleFishingInteract();
+      return;
+    }
+    if (this.isNearAbleSisters()) {
+      this.openOutfitShop();
       return;
     }
     if (this.isNearCampfire() && this.isConcertTime()) {
@@ -1569,7 +1577,7 @@ class TownScene extends Phaser.Scene {
       .setDepth(400000)
       .setVisible(false);
 
-    this.input.keyboard.on('keydown-B', () => { if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen) this.toggleBuildMode(); });
+    this.input.keyboard.on('keydown-B', () => { if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen) this.toggleBuildMode(); });
     const btn = document.getElementById('build-toggle-btn');
     if (btn) btn.addEventListener('click', () => this.toggleBuildMode());
   }
@@ -1694,6 +1702,8 @@ class TownScene extends Phaser.Scene {
       targetX: p.x,
       targetY: p.y,
       facing: p.facing,
+      species: p.species,
+      frame: p.frame,
       bob: { phase: 0, lift: 0 },
     });
   }
@@ -1840,6 +1850,94 @@ class TownScene extends Phaser.Scene {
     g.setDepth(y + h);
     this.add.text(x + w / 2, y - 50, '🏛️ Museum', { fontSize: '14px' }).setOrigin(0.5).setDepth(y + h + 1);
     this.addObstacleRect({ x, y: y + 16, width: w, height: h - 16 });
+  }
+
+  drawAbleSisters() {
+    const { x, y, w, h } = ABLE_SISTERS_POS;
+    const g = this.add.graphics();
+    g.fillStyle(0xd88fb0, 1).fillRect(x, y, w, h);
+    g.fillStyle(0xe8b8d0, 1).fillTriangle(x - 8, y, x + w + 8, y, x + w / 2, y - 34);
+    g.fillStyle(0xcfe8f5, 1).fillRect(x + w / 2 - 10, y + 14, 20, 18);
+    g.setDepth(y + h);
+    this.add.text(x + w / 2, y - 44, '👗 Able Sisters', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + h + 1);
+    this.addObstacleRect({ x, y: y + 14, width: w, height: h - 14 });
+  }
+
+  isNearAbleSisters() {
+    const cx = ABLE_SISTERS_POS.x + ABLE_SISTERS_POS.w / 2;
+    const cy = ABLE_SISTERS_POS.y + ABLE_SISTERS_POS.h / 2;
+    return Math.hypot(this.localBody.x - cx, this.localBody.y - cy) < ABLE_SISTERS_RADIUS;
+  }
+
+  // ---------- Able Sisters outfit shop ----------
+  // Same species/frame picker as the join screen, but live: applying
+  // updates your own sprite immediately, writes through net.js so every
+  // other player's child_changed listener re-textures your remote
+  // sprite too, and persists locally like name/species already did.
+
+  openOutfitShop() {
+    this.outfitSpecies = this.selfData.species;
+    this.outfitFrame = this.selfData.frame;
+    this.renderOutfitTabs();
+    this.renderOutfitGrid();
+    document.getElementById('outfit-overlay').classList.remove('hidden');
+    this.outfitShopOpen = true;
+  }
+
+  closeOutfitShop() {
+    document.getElementById('outfit-overlay').classList.add('hidden');
+    this.outfitShopOpen = false;
+  }
+
+  renderOutfitTabs() {
+    const el = document.getElementById('outfit-species-tabs');
+    el.innerHTML = '';
+    SPECIES.forEach((s) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'species-tab' + (s.key === this.outfitSpecies ? ' active' : '');
+      btn.textContent = s.label;
+      btn.addEventListener('click', () => {
+        this.outfitSpecies = s.key;
+        this.outfitFrame = 0;
+        this.renderOutfitTabs();
+        this.renderOutfitGrid();
+      });
+      el.appendChild(btn);
+    });
+  }
+
+  renderOutfitGrid() {
+    const el = document.getElementById('outfit-avatar-grid');
+    el.innerHTML = '';
+    for (let frame = 0; frame < FRAME_COUNT; frame++) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'avatar-choice' + (frame === this.outfitFrame ? ' selected' : '');
+      btn.style.backgroundImage = `url(../i/${this.outfitSpecies}-strip.png)`;
+      btn.style.backgroundPosition = `-${frame * 48}px 0`;
+      btn.addEventListener('click', () => {
+        this.outfitFrame = frame;
+        this.renderOutfitGrid();
+      });
+      el.appendChild(btn);
+    }
+  }
+
+  applyOutfit() {
+    this.selfData.species = this.outfitSpecies;
+    this.selfData.frame = this.outfitFrame;
+    this.localVisual.setTexture(this.outfitSpecies, this.outfitFrame);
+    this.localBody.setTexture(this.outfitSpecies, this.outfitFrame);
+    writeSave({ species: this.outfitSpecies, frame: this.outfitFrame });
+    this.net.updateAppearance(this.outfitSpecies, this.outfitFrame);
+    this.closeOutfitShop();
+    this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'new look!');
+  }
+
+  setupOutfitShop() {
+    document.getElementById('outfit-close-btn').addEventListener('click', () => this.closeOutfitShop());
+    document.getElementById('outfit-apply-btn').addEventListener('click', () => this.applyOutfit());
   }
 
   drawTurnipStall() {
@@ -2092,6 +2190,11 @@ class TownScene extends Phaser.Scene {
       rp.targetX = d.x;
       rp.targetY = d.y;
       rp.facing = d.facing;
+      if (d.species && (d.species !== rp.species || d.frame !== rp.frame)) {
+        rp.species = d.species;
+        rp.frame = d.frame;
+        rp.visual.setTexture(d.species, d.frame);
+      }
 
       const known = this.allPlayers.get(d.id);
       if (known && known.score !== d.score) {

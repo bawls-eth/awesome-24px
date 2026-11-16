@@ -63,6 +63,9 @@ everyone else automatically. Capped at **10 players** at once for now.
   random fossil (one of 5 species); carry up to 3, then donate at the
   🏛️ Museum for a permanent per-device collection and a ⭐ for each new
   species (see "Fossils & Museum" below)
+- 👗 **Able Sisters** — change your villager species/color after
+  joining, any time, at the shop near the turnip stall. Everyone else
+  sees the new look live, and it's what loads back in next time too
 - 🐚 **Beachcombing** — 5 fixed spots along the pond edges wash up a
   shell, sea glass, or star fragment every 20 seconds; interact to
   collect, sell at the shop like any other resource
@@ -188,6 +191,17 @@ devices — a D-pad (bottom-left), and action buttons (bottom-right): 🎮 Tilt,
   it only clears your own screen, not the shared history everyone else sees
 - Your 🎒 bag (top-left) shows your wood/stone/fish; a visible rod line
   appears between you and the water while you're fishing
+
+### Able Sisters
+
+Your look isn't locked in at the join screen anymore. Walk up to the
+👗 **Able Sisters** shop (near the turnip stall) and interact for the
+same species/color picker from the join screen, now live in the world.
+Pick anything, hit **Wear it!**, and your sprite changes instantly —
+other players in the town see the change within about a second, the
+same way they see your position update. It's saved locally too, so
+reopening the game later remembers the new look, exactly like your
+name always has.
 
 ### K.K. Slider
 

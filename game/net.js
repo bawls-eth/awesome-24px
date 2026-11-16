@@ -226,6 +226,16 @@ class TownNet {
     if (result && result.committed) this.localScore = result.snapshot.val().score;
   }
 
+  // Lets a player change species/frame after joining (the Able Sisters
+  // shop) — everyone else's child_changed listener picks this up the
+  // same way it already picks up position/facing.
+  updateAppearance(species, frame) {
+    this.writeIfAlive((current) => {
+      current.species = species;
+      current.frame = frame;
+    });
+  }
+
   sendChat(text) {
     if (!this.chatRef || !this.id) return;
     this.chatRef.push({
