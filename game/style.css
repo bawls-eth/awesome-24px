@@ -273,6 +273,41 @@ html, body {
   #inventory-panel { right: auto; left: 8px; top: calc(8px + env(safe-area-inset-top, 0px)); padding: 6px 10px; font-size: 12px; gap: 4px 8px; flex-wrap: wrap; max-width: 46vw; }
 }
 
+#whats-new-banner {
+  position: fixed;
+  top: calc(16px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2d4a6b;
+  color: #eef2f7;
+  font-size: 12px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 2px solid #4a7aad;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  z-index: 16;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 90vw;
+}
+
+#whats-new-banner.hidden { display: none; }
+
+#whats-new-text { white-space: pre-line; line-height: 1.5; }
+
+#whats-new-close-btn {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid #4a7aad;
+  background: #1c2430;
+  color: #eef2f7;
+  cursor: pointer;
+  font-size: 11px;
+}
+
 #build-mode-banner {
   position: fixed;
   top: calc(16px + env(safe-area-inset-top, 0px));

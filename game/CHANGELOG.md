@@ -104,6 +104,9 @@ for how each feature actually works and plays.
   pure CSS, respects prefers-reduced-motion, no new art or JS state
 - A ❓ Keys button next to achievements, opening a full keyboard-shortcut
   cheat sheet
+- A dismissible "what's new" banner shown once to returning players when
+  there's something new since their last visit (skipped for genuinely
+  new players, who have nothing to compare against)
 - Two more build-mode materials, 🌳 Hedge (3 flowers, solid — a green
   bush wall) and 🟫 Path (1 stone, non-solid — a flat ground tile for
   laying out walkways), plus matching achievements

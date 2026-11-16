@@ -66,6 +66,15 @@ function censorBlockedTerms(s) {
 
 const SAVE_KEY = 'pixeltown-save-v1';
 
+// Bump this string whenever there's something worth telling returning
+// players about — shown once as a dismissible banner, then remembered.
+const GAME_VERSION = 'v24-fishing-tourney';
+const WHATS_NEW = [
+  '🎣 Daily fishing tournament — biggest catch of the day wins a bonus',
+  '🔍 Daily scavenger hunt — one hidden spot a day, first to find it wins',
+  '🏘️ Town rating readout, 🎵 opt-in ambient music, 💾 save backup/restore',
+];
+
 function loadSave() {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
@@ -74,6 +83,12 @@ function loadSave() {
     return {}; // private browsing / storage disabled — just play without saving
   }
 }
+
+// Captured once, as soon as the script runs — before the join screen's
+// own writeSave() calls touch anything — so "is this a brand-new device"
+// can still be answered correctly later, even though joining immediately
+// writes name/species/frame to the same save.
+const HAD_EXISTING_SAVE_ON_LOAD = Object.keys(loadSave()).length > 0;
 
 function writeSave(partial) {
   try {
@@ -658,6 +673,7 @@ class TownScene extends Phaser.Scene {
     this.setupMusicToggle();
     this.setupPhotoMode();
     this.setupSaveBackup();
+    this.setupWhatsNew();
     this.setupTriviaKey();
     this.setupAchievementsUI();
     this.setupKeysHelp();
@@ -1953,6 +1969,27 @@ class TownScene extends Phaser.Scene {
     this.input.keyboard.on('keydown-P', () => { if (this.canAct()) this.takePhoto(); });
     const btn = document.getElementById('photo-btn');
     if (btn) btn.addEventListener('click', () => this.takePhoto());
+  }
+
+  setupWhatsNew() {
+    const banner = document.getElementById('whats-new-banner');
+    const closeBtn = document.getElementById('whats-new-close-btn');
+    if (!banner || !closeBtn) return;
+    const save = loadSave();
+    const isReturningPlayer = HAD_EXISTING_SAVE_ON_LOAD;
+    const dismiss = () => {
+      banner.classList.add('hidden');
+      writeSave({ lastSeenVersion: GAME_VERSION });
+    };
+    if (isReturningPlayer && save.lastSeenVersion !== GAME_VERSION) {
+      document.getElementById('whats-new-text').textContent = ["🆕 What's new:", ...WHATS_NEW].join('\n');
+      banner.classList.remove('hidden');
+    } else if (!isReturningPlayer) {
+      // Brand-new player has nothing to compare against — nothing to show,
+      // but mark the current version seen so it doesn't pop up next time.
+      writeSave({ lastSeenVersion: GAME_VERSION });
+    }
+    closeBtn.addEventListener('click', dismiss);
   }
 
   setupSaveBackup() {
