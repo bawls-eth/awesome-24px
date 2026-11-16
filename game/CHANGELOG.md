@@ -88,6 +88,11 @@ for how each feature actually works and plays.
 - Two more build-mode materials, 🌳 Hedge (3 flowers, solid — a green
   bush wall) and 🟫 Path (1 stone, non-solid — a flat ground tile for
   laying out walkways), plus matching achievements
+- A 📖 Guestbook — a signpost where players leave a short signed note
+  for others to read later, persisted in Firebase (last 20 shown, not
+  just a local list) so it's shared across every client; runs through
+  the same slur filter as chat/names and is rate-limited client-side to
+  one note per minute
 
 ## Villagers and expression
 
