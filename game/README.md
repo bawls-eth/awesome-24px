@@ -2,9 +2,12 @@
 
 A tiny Animal Crossing-style shared town for you, your girlfriend, and your
 friends — built straight on top of this repo's 24×24px sprite collections.
-Pick a villager from 9 species (cats, punks, penguins, dogs, apes, zombies,
-mohawks, blondies, aliens), walk around a little pixel town, chat, throw
-emotes, and race for sparkles — all in real time.
+Pick a villager from 21 species — cats, punks, penguins, dogs, apes,
+zombies, mohawks, blondies, aliens, plus a second wave pulled from the
+repo's own unused collections (Alien Clan, Ape Punks, Dragon/Frog/Ninja/
+Pirate/Unicorn Cats, Geniuses, Golden Punks, Halloween Punks, Phunks,
+Punkettes) — walk around a little pixel town, chat, throw emotes, and
+race for sparkles — all in real time.
 
 It's a **static site** (no server to run) + a **free Firebase Realtime
 Database** for the live multiplayer sync. That means it can be hosted for

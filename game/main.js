@@ -56,6 +56,21 @@ const SPECIES = [
   { key: 'mohawks', label: 'Mohawks' },
   { key: 'blondies', label: 'Blondies' },
   { key: 'aliens', label: 'Aliens' },
+  // Unused 8-bit sprite strips already in this repo's i/ folder — same
+  // 24x24, 9-frame shape as everything above, so they drop straight into
+  // the existing species/preload/picker system with no special-casing.
+  { key: 'alienclan', label: 'Alien Clan' },
+  { key: 'apepunks', label: 'Ape Punks' },
+  { key: 'coolcats_dragons', label: 'Dragon Cats' },
+  { key: 'coolcats_frogs', label: 'Frog Cats' },
+  { key: 'coolcats_ninjas', label: 'Ninja Cats' },
+  { key: 'coolcats_pirates', label: 'Pirate Cats' },
+  { key: 'coolcats_unicorns', label: 'Unicorn Cats' },
+  { key: 'genius', label: 'Geniuses' },
+  { key: 'goldenpunks', label: 'Golden Punks' },
+  { key: 'halloweenpunks', label: 'Halloween Punks' },
+  { key: 'phunks', label: 'Phunks' },
+  { key: 'punkettes', label: 'Punkettes' },
 ];
 
 const EMOTES = ['😀', '❤️', '😂', '👋', '🎉'];
