@@ -1744,7 +1744,7 @@ class TownScene extends Phaser.Scene {
     this.resources[type] = (this.resources[type] || 0) + amount;
     this.updateInventoryHUD();
     this.saveResources();
-    const icon = { wood: '🪵', stone: '🪨', fish: '🐟', bugs: '🦋', fruit: '🍎', flowers: '🌸' }[type];
+    const icon = { wood: '🪵', stone: '🪨', fish: '🐟', bugs: '🦋', fruit: '🍎', flowers: '🌸', shells: '🐚' }[type];
     this.showFloatingText(x, y, `+${amount} ${icon}`);
     this.incrementStat(type, amount);
     SFX.catch();
@@ -2700,17 +2700,17 @@ class TownScene extends Phaser.Scene {
   // computes the same "today's rare species" and "today's visiting hour"
   // from the UTC day number, with zero network traffic.
 
-  merchantDayBucket() {
-    return Math.floor(Date.now() / 86400000);
+  merchantDayBucket(dayOffset = 0) {
+    return Math.floor(Date.now() / 86400000) + dayOffset;
   }
 
-  merchantHash(seed) {
-    const h = Math.sin(this.merchantDayBucket() * 12.9898 + seed * 78.233) * 43758.5453;
+  merchantHash(seed, dayOffset = 0) {
+    const h = Math.sin(this.merchantDayBucket(dayOffset) * 12.9898 + seed * 78.233) * 43758.5453;
     return h - Math.floor(h);
   }
 
-  merchantStartHour() {
-    return Math.floor(this.merchantHash(1) * 22); // leaves room for a 3h window inside 24h
+  merchantStartHour(dayOffset = 0) {
+    return Math.floor(this.merchantHash(1, dayOffset) * 22); // leaves room for a 3h window inside 24h
   }
 
   merchantSpecies() {
@@ -2748,8 +2748,16 @@ class TownScene extends Phaser.Scene {
       this.merchantSign.setText(`🛒 Mystery Merchant\nselling: ${species.label}`);
     } else {
       this.merchantSprite.setVisible(false);
-      const start = this.merchantStartHour();
-      this.merchantSign.setText(`🛒 closed — back at ${start}:00`);
+      const hour = new Date().getHours();
+      const todayStart = this.merchantStartHour();
+      // If today's window hasn't started yet, that's the next visit. If
+      // it already started and ended (or we're just not in it anymore),
+      // the next visit is tomorrow — with tomorrow's own hashed hour,
+      // not today's stale one.
+      const nextIsToday = hour < todayStart;
+      const nextStart = nextIsToday ? todayStart : this.merchantStartHour(1);
+      const whenLabel = nextIsToday ? 'today' : 'tomorrow';
+      this.merchantSign.setText(`🛒 closed — back at ${nextStart}:00 ${whenLabel}`);
     }
   }
 
