@@ -88,6 +88,8 @@ for how each feature actually works and plays.
 - Expanded the villager roster from 9 to 21 species, pulled from this
   repo's own unused sprite collections (Alien Clan, Dragon/Frog/Ninja/
   Pirate/Unicorn Cats, Geniuses, Golden/Halloween Punks, Phunks, Punkettes)
+- A second resident NPC, Salty Mo the dockhand, camped by the pond's dock
+  with his own grumpy flavor-text lines (no quest, flavor only)
 - Emotes expanded from 5 to 9 (keys 1-9), with a 3x3 mobile grid
 - Photo mode (**P** / 📸) — flash, shutter sound, and a PNG download of
   the current view straight from the game canvas
