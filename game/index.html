@@ -54,6 +54,8 @@
     <ul id="player-list"></ul>
     <button id="achievements-badge" type="button">🏆 <b id="achievement-count">0</b>/<span id="achievement-cap">25</span></button>
     <button id="keys-help-btn" type="button" title="Keyboard shortcuts">❓ Keys</button>
+    <button id="changelog-btn" type="button" title="See what's been added">📜 Changelog</button>
+    <a id="feedback-btn" href="#" target="_blank" rel="noopener" title="Report a bug or suggest something, on GitHub">🐞 Feedback</a>
     <div id="streak-badge" title="Daily login streak">🔥 Day <b id="streak-count">0</b></div>
     <div id="town-rating" title="How much the town has been built up, shared by everyone">🏘️ <span id="town-rating-label">Empty</span> (<b id="town-rating-count">0</b>/150)</div>
     <button id="sfx-toggle-btn" type="button" title="Toggle sound effects">🔊 Sound</button>
@@ -183,6 +185,15 @@
       <li><b>Enter</b> — chat</li>
       <li><b>Esc</b> — clear chat input / unfocus</li>
     </ul>
+  </div>
+</div>
+
+<div id="changelog-overlay" class="hidden">
+  <div class="join-card">
+    <button id="changelog-close-btn" type="button" aria-label="Close">✕</button>
+    <h1>📜 Changelog</h1>
+    <p class="tagline">Everything that's been built, in order.</p>
+    <div id="changelog-body">Loading…</div>
   </div>
 </div>
 

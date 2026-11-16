@@ -149,6 +149,8 @@ for how each feature actually works and plays.
   synced the same way appearance changes already are
 - A bulk-sell bonus — selling 10+ of one resource at once earns +20%
   on that resource, stacking with the daily deal if it's the same one
+- An in-game changelog viewer (fetches and renders this file) and a
+  feedback button that opens a prefilled GitHub issue
 
 ## Villagers and expression
 

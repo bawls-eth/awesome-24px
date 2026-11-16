@@ -56,6 +56,39 @@ function censorBlockedTerms(s) {
     .join('');
 }
 
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Turns CHANGELOG.md's fixed, simple shape (an h1 + intro paragraph we skip,
+// then "## Section" headings each followed by a flat list of "- " bullets
+// that can wrap onto indented continuation lines) into HTML for the in-game
+// changelog viewer. Not a general markdown parser — it only needs to handle
+// the one shape this file actually uses.
+function renderChangelogMarkdown(md) {
+  let html = '';
+  let inList = false;
+  let liOpen = false;
+  const closeLi = () => { if (liOpen) { html += '</li>'; liOpen = false; } };
+  const closeList = () => { closeLi(); if (inList) { html += '</ul>'; inList = false; } };
+  md.split('\n').forEach((raw) => {
+    const line = raw.replace(/\r$/, '');
+    if (line.startsWith('## ')) {
+      closeList();
+      html += `<h2>${escapeHtml(line.slice(3).trim())}</h2>`;
+    } else if (/^-\s/.test(line)) {
+      closeLi();
+      if (!inList) { html += '<ul>'; inList = true; }
+      html += `<li>${escapeHtml(line.slice(1).trim())}`;
+      liOpen = true;
+    } else if (line.trim() !== '' && liOpen) {
+      html += ` ${escapeHtml(line.trim())}`;
+    }
+  });
+  closeList();
+  return html;
+}
+
 // ---------------- local save (this device only — nothing here is synced) ----------------
 // Declared before the SFX module below, which reads loadSave() at the
 // top level on page load (sfxMuted) — it was previously declared much
@@ -694,6 +727,8 @@ class TownScene extends Phaser.Scene {
     this.setupTriviaKey();
     this.setupAchievementsUI();
     this.setupKeysHelp();
+    this.setupChangelogViewer();
+    this.setupFeedbackButton();
     this.setupOutfitShop();
     this.setupGuestbook();
     this.setupBugs();
@@ -1226,7 +1261,7 @@ class TownScene extends Phaser.Scene {
   // so chat/overlay state is respected no matter which input triggered it
   // (keyboard, on-screen button, or shake).
   canAct() {
-    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen;
+    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen;
   }
 
   // Shake is just a fun alternate trigger for the same interact() logic used
@@ -2245,6 +2280,39 @@ class TownScene extends Phaser.Scene {
       overlay.classList.add('hidden');
       this.keysHelpOpen = false;
     });
+  }
+
+  setupChangelogViewer() {
+    const btn = document.getElementById('changelog-btn');
+    const overlay = document.getElementById('changelog-overlay');
+    const closeBtn = document.getElementById('changelog-close-btn');
+    const body = document.getElementById('changelog-body');
+    if (!btn || !overlay || !closeBtn || !body) return;
+    let loaded = false;
+    btn.addEventListener('click', async () => {
+      overlay.classList.remove('hidden');
+      this.changelogOpen = true;
+      if (loaded) return;
+      loaded = true;
+      try {
+        const res = await fetch('CHANGELOG.md');
+        body.innerHTML = renderChangelogMarkdown(await res.text());
+      } catch (e) {
+        body.textContent = "Couldn't load the changelog right now.";
+      }
+    });
+    closeBtn.addEventListener('click', () => {
+      overlay.classList.add('hidden');
+      this.changelogOpen = false;
+    });
+  }
+
+  setupFeedbackButton() {
+    const btn = document.getElementById('feedback-btn');
+    if (!btn) return;
+    const title = encodeURIComponent('Pixeltown feedback');
+    const body = encodeURIComponent('What happened / what you\'d like to see:\n\n');
+    btn.href = `https://github.com/bawls-eth/awesome-24px/issues/new?title=${title}&body=${body}`;
   }
 
   updateInventoryHUD() {
