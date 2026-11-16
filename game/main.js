@@ -257,6 +257,13 @@ const BEACH_SPOTS = [
 ];
 const BEACH_PICKUP_RADIUS = 36;
 const BEACH_RESPAWN_MS = 20000;
+const FLOWER_TYPES = ['🌸', '🌷', '🌻', '🌹'];
+const FLOWER_SPOTS = [
+  { x: 400, y: 450 }, { x: 650, y: 420 }, { x: 1700, y: 750 },
+  { x: 1850, y: 950 }, { x: 2150, y: 600 }, { x: 350, y: 880 },
+];
+const FLOWER_PICKUP_RADIUS = 34;
+const FLOWER_REGROW_MS = 30000;
 const ABLE_SISTERS_POS = { x: 1150, y: 650, w: 70, h: 56 };
 const ABLE_SISTERS_RADIUS = 55;
 const KK_CONCERT_START_HOUR = 19; // 7pm local time
@@ -380,6 +387,7 @@ class TownScene extends Phaser.Scene {
     this.drawNoticeBoard();
     this.drawFossilSpots();
     this.drawBeachItems();
+    this.drawFlowers();
     this.drawForestRing();
     this.drawTulipBeds();
     this.drawRocks();
@@ -920,6 +928,7 @@ class TownScene extends Phaser.Scene {
       fruit: Number(saved.fruit) || 0,
       turnips: Number(saved.turnips) || 0,
       shells: Number(saved.shells) || 0,
+      flowers: Number(saved.flowers) || 0,
     };
     this.treeCooldowns = {};
     this.rockCooldowns = {};
@@ -981,6 +990,11 @@ class TownScene extends Phaser.Scene {
     const beachSpot = this.findNearestBeachItem();
     if (beachSpot) {
       this.collectBeachItem(beachSpot);
+      return;
+    }
+    const flowerSpot = this.findNearestFlower();
+    if (flowerSpot) {
+      this.collectFlower(flowerSpot);
       return;
     }
     if (this.isNearDigHole()) {
@@ -1156,7 +1170,7 @@ class TownScene extends Phaser.Scene {
   }
 
   sellAtShop() {
-    const total = (this.resources.wood || 0) + (this.resources.stone || 0) + (this.resources.fish || 0) + (this.resources.bugs || 0) + (this.resources.fruit || 0) + (this.resources.shells || 0);
+    const total = (this.resources.wood || 0) + (this.resources.stone || 0) + (this.resources.fish || 0) + (this.resources.bugs || 0) + (this.resources.fruit || 0) + (this.resources.shells || 0) + (this.resources.flowers || 0);
     const turnipRevenue = (this.resources.turnips || 0) > 0 ? this.resources.turnips * this.turnipSellPrice() / TURNIP_BUNDLE : 0;
     const grandTotal = Math.round(total + turnipRevenue);
     if (grandTotal === 0) {
@@ -1164,7 +1178,7 @@ class TownScene extends Phaser.Scene {
       return;
     }
     const soldTurnips = this.resources.turnips || 0;
-    this.resources = { wood: 0, stone: 0, fish: 0, bugs: 0, fruit: 0, turnips: 0, shells: 0 };
+    this.resources = { wood: 0, stone: 0, fish: 0, bugs: 0, fruit: 0, turnips: 0, shells: 0, flowers: 0 };
     this.updateInventoryHUD();
     this.saveResources();
     const label = soldTurnips > 0 ? `sold (incl. ${soldTurnips} 🥬)! +${grandTotal} ⭐` : `sold! +${grandTotal} ⭐`;
@@ -1575,7 +1589,7 @@ class TownScene extends Phaser.Scene {
     this.resources[type] = (this.resources[type] || 0) + amount;
     this.updateInventoryHUD();
     this.saveResources();
-    const icon = { wood: '🪵', stone: '🪨', fish: '🐟', bugs: '🦋', fruit: '🍎' }[type];
+    const icon = { wood: '🪵', stone: '🪨', fish: '🐟', bugs: '🦋', fruit: '🍎', flowers: '🌸' }[type];
     this.showFloatingText(x, y, `+${amount} ${icon}`);
     this.incrementStat(type, amount);
     SFX.catch();
@@ -1693,6 +1707,8 @@ class TownScene extends Phaser.Scene {
     if (shellEl) shellEl.textContent = this.resources.shells || 0;
     const fruitEl = document.getElementById('fruit-count');
     if (fruitEl) fruitEl.textContent = this.resources.fruit || 0;
+    const flowerEl = document.getElementById('flower-count');
+    if (flowerEl) flowerEl.textContent = this.resources.flowers || 0;
   }
 
   // ---------- fishing ----------
@@ -2187,6 +2203,39 @@ class TownScene extends Phaser.Scene {
   // Fixed spots along the pond edges, same shape as the fishing spots:
   // walk up, interact, a short cooldown before it washes up again.
   // Local-only, like every other activity here.
+
+  drawFlowers() {
+    this.flowerCooldowns = {};
+    this.flowerSprites = FLOWER_SPOTS.map(({ x, y }) => {
+      const symbol = FLOWER_TYPES[Phaser.Math.Between(0, FLOWER_TYPES.length - 1)];
+      return this.add.text(x, y, symbol, { fontSize: '18px' }).setOrigin(0.5).setDepth(y);
+    });
+  }
+
+  findNearestFlower() {
+    const now = Date.now();
+    let best = null;
+    let bestDist = FLOWER_PICKUP_RADIUS;
+    FLOWER_SPOTS.forEach((spot, i) => {
+      if (this.flowerCooldowns[i] && now - this.flowerCooldowns[i] < FLOWER_REGROW_MS) return;
+      const d = Math.hypot(this.localBody.x - spot.x, this.localBody.y - spot.y);
+      if (d < bestDist) { bestDist = d; best = { ...spot, index: i }; }
+    });
+    return best;
+  }
+
+  collectFlower(spot) {
+    this.flowerCooldowns[spot.index] = Date.now();
+    const sprite = this.flowerSprites[spot.index];
+    if (sprite) {
+      sprite.setVisible(false);
+      this.time.delayedCall(FLOWER_REGROW_MS, () => {
+        sprite.setText(FLOWER_TYPES[Phaser.Math.Between(0, FLOWER_TYPES.length - 1)]);
+        sprite.setVisible(true);
+      });
+    }
+    this.gainResource('flowers', 1, spot.x, spot.y - 16);
+  }
 
   drawBeachItems() {
     this.beachCooldowns = {};

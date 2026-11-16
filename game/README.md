@@ -85,6 +85,9 @@ everyone else automatically. Capped at **10 players** at once for now.
 - 🐚 **Beachcombing** — 5 fixed spots along the pond edges wash up a
   shell, sea glass, or star fragment every 20 seconds; interact to
   collect, sell at the shop like any other resource
+- 🌸 **Flowers** — 6 fixed garden spots scattered around town grow a
+  flower (🌸🌷🌻🌹, picked at random) every 30 seconds; interact to pick,
+  sell at the shop like any other resource
 - 🎸 **K.K. Slider plays the campfire** every evening, 7-9pm on *your*
   device's own clock — walk up during the show and interact for a ⭐2
   bonus and an emote, once per show (see "K.K. Slider" below)
