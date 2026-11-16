@@ -61,6 +61,9 @@ right now, before you even pick a name.
 - 🔊 **Sound effects** — short synthesized chimes (no audio files, just
   WebAudio tones) for catches, sales, and achievements. A 🔊/🔇 toggle
   under the player list remembers your choice on this device
+- 🏃 **Reduce motion** toggle under the player list — turns off the
+  walk-cycle hop for anyone sensitive to it, defaulting to your OS-level
+  reduced-motion setting if you have one
 - 🎵 **Ambient music** (opt-in, off by default) — a slow, quiet synthesized
   chord pad, same no-audio-files approach as the SFX. Toggle it next to
   the sound button; it's independent of the SFX mute, so you can have

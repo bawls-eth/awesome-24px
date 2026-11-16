@@ -109,6 +109,18 @@ function writeSave(partial) {
 let sfxMuted = loadSave().sfxMuted === true;
 let sfxCtx = null;
 
+// Reduce-motion: turns off the player walk-cycle hop for anyone sensitive
+// to it. Defaults to the OS-level prefers-reduced-motion setting, same as
+// the join-screen decor already respects, but the player can flip it
+// either way and that choice is remembered per device.
+const SAVED_REDUCE_MOTION = loadSave().reduceMotion;
+let reduceMotion = SAVED_REDUCE_MOTION === true
+  || (SAVED_REDUCE_MOTION === undefined && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+function setReduceMotion(enabled) {
+  reduceMotion = enabled;
+  writeSave({ reduceMotion: enabled });
+}
+
 // Shared lazily-created AudioContext, independent of the sfxMuted flag —
 // ambient music has its own separate opt-in toggle and shouldn't be tied
 // to whether SFX blips are muted.
@@ -673,6 +685,7 @@ class TownScene extends Phaser.Scene {
     this.setupLoginStreak();
     this.setupSfxToggle();
     this.setupMusicToggle();
+    this.setupReduceMotionToggle();
     this.setupPhotoMode();
     this.setupSaveBackup();
     this.setupWhatsNew();
@@ -796,6 +809,18 @@ class TownScene extends Phaser.Scene {
   // ---------- walk-cycle (squash/stretch hop, since the source sprites are single-pose) ----------
 
   applyBob(state, visual, shadow, anchorX, anchorY, moving, delta) {
+    if (reduceMotion) {
+      state.phase = 0;
+      state.lift = 0;
+      visual.x = anchorX;
+      visual.y = anchorY;
+      visual.setScale(1, 1);
+      visual.setDepth(anchorY);
+      shadow.x = anchorX;
+      shadow.y = anchorY + 9;
+      shadow.setScale(1, 1);
+      return;
+    }
     if (moving) {
       state.phase += (delta / 1000) * HOP_SPEED;
       const target = Math.abs(Math.sin(state.phase));
@@ -2010,6 +2035,20 @@ class TownScene extends Phaser.Scene {
     if (musicEnabled) startAmbientMusic();
     btn.addEventListener('click', () => {
       setMusicEnabled(!musicEnabled);
+      render();
+    });
+  }
+
+  setupReduceMotionToggle() {
+    const btn = document.getElementById('reduce-motion-btn');
+    if (!btn) return;
+    const render = () => {
+      btn.textContent = reduceMotion ? '🏃 Motion off' : '🏃 Motion on';
+      btn.classList.toggle('muted', reduceMotion);
+    };
+    render();
+    btn.addEventListener('click', () => {
+      setReduceMotion(!reduceMotion);
       render();
     });
   }

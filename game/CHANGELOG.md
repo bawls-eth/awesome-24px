@@ -142,6 +142,8 @@ for how each feature actually works and plays.
 - A daily deal at the shop — one resource sells for a flat +50% each
   day, same for everyone (deterministic from the date), shown on a
   sign over the shop
+- A reduce-motion toggle that turns off the walk-cycle hop, defaulting
+  to the OS-level prefers-reduced-motion setting when present
 
 ## Villagers and expression
 
