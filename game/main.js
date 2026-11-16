@@ -186,6 +186,7 @@ const POND_CATS = [
   { y: 578, frame: 3, range: [150, 300] },
   { y: 648, frame: 6, range: [170, 320] },
 ];
+const WINDMILL_POS = { x: 250, y: 200 };
 const STATUE_POS = { x: 1450, y: 600 };
 const NPC_POS = { x: 1550, y: 540 };
 const NPC_RADIUS = 48;
@@ -419,6 +420,7 @@ class TownScene extends Phaser.Scene {
     this.drawBridge();
     this.drawHouse();
     this.drawStatue();
+    this.drawWindmill();
     this.drawCampfire();
     this.drawNPC();
     this.drawMerchant();
@@ -2425,6 +2427,53 @@ class TownScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(y + 1);
 
     this.addObstacleRect({ x: x - 22, y: y - 8, width: 44, height: 20 });
+  }
+
+  // A decorative old windmill tucked into the quiet northwest corner of
+  // town — pure scenery, same static-graphics-plus-sprite pattern as the
+  // statue, but with its blades spun by a looping angle tween instead of
+  // the statue's stillness.
+  drawWindmill() {
+    const { x, y } = WINDMILL_POS;
+
+    const g = this.add.graphics();
+    // Tapered stone tower (base wider than top).
+    g.fillStyle(0xc9b896, 1);
+    g.fillTriangle(x - 20, y, x + 20, y, x + 14, y - 64);
+    g.fillTriangle(x - 20, y, x + 14, y - 64, x - 14, y - 64);
+    g.fillStyle(0xb09c76, 1);
+    for (let row = y - 8; row > y - 64; row -= 12) g.fillRect(x - 17 + (y - row) * 0.09, row, 34 - (y - row) * 0.18, 2);
+    // Conical cap.
+    g.fillStyle(0x6b4226, 1).fillTriangle(x - 18, y - 60, x + 18, y - 60, x, y - 86);
+    // Door.
+    g.fillStyle(0x5a3a22, 1).fillRect(x - 6, y - 16, 12, 16);
+    g.setDepth(y - 1);
+
+    // Blade assembly: four thin arms in a plus shape, grouped in a
+    // container so a single rotation tween spins them all together.
+    const hubX = x;
+    const hubY = y - 70;
+    const armLen = 42;
+    const armW = 7;
+    const blade1 = this.add.rectangle(0, -armLen / 2, armW, armLen, 0xf2ead8);
+    const blade2 = this.add.rectangle(0, armLen / 2, armW, armLen, 0xf2ead8);
+    const blade3 = this.add.rectangle(-armLen / 2, 0, armLen, armW, 0xf2ead8);
+    const blade4 = this.add.rectangle(armLen / 2, 0, armLen, armW, 0xf2ead8);
+    const hub = this.add.circle(0, 0, 5, 0x6b4226);
+    const blades = this.add.container(hubX, hubY, [blade1, blade2, blade3, blade4, hub]).setDepth(y);
+    this.tweens.add({ targets: blades, angle: 360, duration: 4000, repeat: -1, ease: 'Linear' });
+
+    this.add.text(x, y - 100, '🌾 Old Windmill', {
+      fontSize: '12px',
+      fontFamily: 'monospace',
+      color: '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(y + 1);
+
+    // Small solid footprint for just the tower base — players can still
+    // walk right up to and around the structure.
+    this.addObstacleRect({ x: x - 16, y: y - 14, width: 32, height: 14 });
   }
 
   // ---------- mystery merchant ----------

@@ -18,7 +18,7 @@ right now, before you even pick a name.
 
 **What there is to do:**
 - Walk the town, chat, hang out by the campfire, the pond's little dock,
-  a bench, or the statue
+  a bench, the statue, or the old windmill up in the northwest corner
 - 9 emotes (keys **1-9**) that pop up over your head for everyone to see
 - A rotating **✨ sparkle** wanders the town every 8s — walk into it to
   score a point; the player list is a live-sorted mini-leaderboard
