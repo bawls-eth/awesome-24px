@@ -176,7 +176,9 @@ right now, before you even pick a name.
   spend or sell, and unlocks persist on this device. Equip any unlocked
   one as a small title badge shown next to your name in the player
   list, visible to everyone — swap it any time, synced the same way
-  appearance changes are
+  appearance changes are. Unlocking one also pops a readable toast at
+  the top of the screen for 10 seconds — the floating "+N ⭐" text
+  alone faded too fast to actually read an achievement's name
 - A 🥬 **turnip market** — buy a bundle at the stall in the 🕹️ Arcade
   District, sell at the shop itself for a profit or a loss depending
   on when you catch it (see "Turnip market" below)

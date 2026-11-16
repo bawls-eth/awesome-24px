@@ -297,6 +297,26 @@ html, body {
 
 #whats-new-banner.hidden { display: none; }
 
+#achievement-toast {
+  position: fixed;
+  top: calc(70px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  background: #3a2f1c;
+  color: #ffe066;
+  font-size: 13px;
+  font-weight: bold;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 2px solid #ffb347;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+  z-index: 16;
+  max-width: 90vw;
+  text-align: center;
+}
+
+#achievement-toast.hidden { display: none; }
+
 #whats-new-text { white-space: pre-line; line-height: 1.5; }
 
 #whats-new-close-btn {

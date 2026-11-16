@@ -2111,8 +2111,23 @@ class TownScene extends Phaser.Scene {
       this.saveAchievements();
       this.addChatLine({ system: true, text: `🏆 Achievement unlocked: ${a.icon} ${a.label} — +${a.reward} ⭐` });
       this.awardPoint(a.reward, `${a.icon} ${a.label}!`, this.localBody.x, this.localBody.y - 44, 'achievement');
+      // The floating world-space text above fades in under a second — fine
+      // for "you just earned a point" feedback, too quick to actually read
+      // for a whole achievement name. This is a separate, screen-fixed
+      // toast (so it doesn't drift off with camera movement) that stays
+      // up long enough to read, then times out on its own.
+      this.showAchievementToast(`🏆 ${a.icon} ${a.label} unlocked! +${a.reward} ⭐`);
       this.renderAchievementsPanel();
     });
+  }
+
+  showAchievementToast(text) {
+    const toast = document.getElementById('achievement-toast');
+    if (!toast) return;
+    toast.textContent = text;
+    toast.classList.remove('hidden');
+    clearTimeout(this.achievementToastTimer);
+    this.achievementToastTimer = setTimeout(() => toast.classList.add('hidden'), 10000);
   }
 
   // ---------- daily login streak ----------
@@ -2182,6 +2197,7 @@ class TownScene extends Phaser.Scene {
     if (isReturningPlayer && save.lastSeenVersion !== GAME_VERSION) {
       document.getElementById('whats-new-text').textContent = ["🆕 What's new:", ...WHATS_NEW].join('\n');
       banner.classList.remove('hidden');
+      setTimeout(dismiss, 10000);
     } else if (!isReturningPlayer) {
       // Brand-new player has nothing to compare against — nothing to show,
       // but mark the current version seen so it doesn't pop up next time.

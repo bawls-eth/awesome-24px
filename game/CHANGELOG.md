@@ -176,6 +176,11 @@ for how each feature actually works and plays.
   map overlay is bigger too (280×140 → 320×160) and now shades both
   ponds in as soft blue shapes instead of nothing, making it read
   more like an actual overhead map
+- Achievement unlocks now show a proper screen-fixed toast (readable
+  for a full 10 seconds) instead of only the brief floating "+N ⭐"
+  text, which faded in under a second — too quick to actually read an
+  achievement's name. The what's-new banner now also auto-dismisses
+  after 10 seconds instead of sitting there until manually closed
 
 ## Villagers and expression
 
