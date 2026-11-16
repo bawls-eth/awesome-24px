@@ -362,6 +362,7 @@ const ACHIEVEMENTS = [
   { id: 'path10', icon: '🟫', label: 'Pathfinder', desc: 'Lay 10 path tiles', reward: 5, check: (s) => (s.pathsPlaced || 0) >= 10 },
   { id: 'trivia3', icon: '📝', label: 'Know-It-All', desc: "Answer 3 of Professor Byte's daily trivia questions correctly", reward: 5, check: (s) => (s.triviaCorrect || 0) >= 3 },
   { id: 'scavenger1', icon: '🔍', label: 'Treasure Hunter', desc: "Win the daily scavenger hunt", reward: 5, check: (s) => (s.scavengerHuntsWon || 0) >= 1 },
+  { id: 'tournament1', icon: '🎣', label: 'Big Catch', desc: "Set a new record in the daily fishing tournament", reward: 5, check: (s) => (s.tournamentRecordsSet || 0) >= 1 },
 ];
 const CAMPFIRE_POS = { x: 800, y: 600 };
 const CAMPFIRE_RADIUS = 60;
@@ -415,6 +416,13 @@ const SCAVENGER_SPOTS = [
 const SCAVENGER_RADIUS = 36;
 const SCAVENGER_REWARD = 20;
 const GRAVEYARD_POS = { x: 60, y: 700 };
+// Daily fishing tournament — during a deterministic 2-hour window each
+// day, every catch gets a random size, and the biggest one of the day
+// (tracked via a Firebase transaction, same compare-and-swap shape as
+// the scavenger hunt) wins whoever's holding it a one-time bonus.
+const FISH_TOURNAMENT_HOURS = 2;
+const FISH_TOURNAMENT_SIGN_POS = { x: 150, y: 420 };
+const FISH_TOURNAMENT_BONUS = 10;
 const GUESTBOOK_RADIUS = 60;
 const GUESTBOOK_NOTE_MAX = 80;
 const GUESTBOOK_COOLDOWN_MS = 60 * 1000; // one signing per minute, per client
@@ -535,6 +543,7 @@ class TownScene extends Phaser.Scene {
     this.drawNoticeBoard();
     this.setupScavengerHunt();
     this.drawGraveyard();
+    this.setupFishTournament();
     this.drawFossilSpots();
     this.drawBeachItems();
     this.drawFlowers();
@@ -2039,9 +2048,72 @@ class TownScene extends Phaser.Scene {
       this.showFloatingText(this.fishing.spot.x, this.fishing.spot.y - 24, 'too early!');
       this.endFishing();
     } else if (this.fishing.state === 'biting') {
-      this.gainResource('fish', 1, this.fishing.spot.x, this.fishing.spot.y - 24);
+      const spot = this.fishing.spot;
+      this.gainResource('fish', 1, spot.x, spot.y - 24);
+      if (this.isFishTournamentTime()) this.catchTournamentFish(spot);
       this.endFishing();
     }
+  }
+
+  // ---------- daily fishing tournament ----------
+
+  tournamentStartHour() {
+    return Math.floor(this.questHash(30) * (24 - FISH_TOURNAMENT_HOURS));
+  }
+
+  isFishTournamentTime() {
+    const hour = new Date().getHours();
+    const start = this.tournamentStartHour();
+    return hour >= start && hour < start + FISH_TOURNAMENT_HOURS;
+  }
+
+  setupFishTournament() {
+    this.tournamentBonusBucket = Number(loadSave().tournamentBonusBucket) || -1;
+    const { x, y } = FISH_TOURNAMENT_SIGN_POS;
+    const g = this.add.graphics().setDepth(y - 1);
+    g.fillStyle(0x6b4a30, 1).fillRect(x - 2, y - 4, 4, 30);
+    g.fillStyle(0xe8d9b5, 1).fillRect(x - 60, y - 54, 120, 52);
+    g.lineStyle(2, 0x8f7044, 1).strokeRect(x - 60, y - 54, 120, 52);
+    this.tournamentSignText = this.add.text(x, y - 28, '', {
+      fontSize: '8px',
+      fontFamily: 'monospace',
+      color: '#3a2a1a',
+      align: 'center',
+      wordWrap: { width: 106 },
+    }).setOrigin(0.5).setDepth(y);
+    this.refreshTournamentSign();
+    this.net.watchTournament(this.questDayBucket(), (record) => {
+      this.tournamentRecord = record;
+      this.refreshTournamentSign();
+    });
+    this.time.addEvent({ delay: 60000, loop: true, callback: () => this.refreshTournamentSign() });
+  }
+
+  refreshTournamentSign() {
+    if (!this.tournamentSignText) return;
+    const start = this.tournamentStartHour();
+    const end = start + FISH_TOURNAMENT_HOURS;
+    const record = this.tournamentRecord;
+    const recordLine = record ? `biggest: ${record.size}cm\nby ${record.name}` : 'no catches yet';
+    const statusLine = this.isFishTournamentTime() ? `LIVE now! (${start}:00-${end}:00)` : `next: ${start}:00-${end}:00`;
+    this.tournamentSignText.setText(['🎣 FISH TOURNEY', statusLine, recordLine].join('\n'));
+  }
+
+  catchTournamentFish(spot) {
+    const sizeCm = Math.round(8 + Math.random() * 72); // 8-80cm
+    this.showFloatingText(spot.x, spot.y - 40, `${sizeCm}cm!`);
+    this.net.submitTournamentCatch(this.questDayBucket(), sizeCm).then((result) => {
+      if (result.success) {
+        this.tournamentRecord = result.record;
+        this.refreshTournamentSign();
+        if (this.questDayBucket() !== this.tournamentBonusBucket) {
+          this.tournamentBonusBucket = this.questDayBucket();
+          writeSave({ tournamentBonusBucket: this.tournamentBonusBucket });
+          this.awardPoint(FISH_TOURNAMENT_BONUS, `new record! +${FISH_TOURNAMENT_BONUS}⭐`, this.localBody.x, this.localBody.y - 30, 'achievement');
+          this.incrementStat('tournamentRecordsSet');
+        }
+      }
+    });
   }
 
   endFishing() {

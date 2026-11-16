@@ -94,6 +94,10 @@ for how each feature actually works and plays.
 - 💾 Backup / 📂 Restore buttons to export the local save as a .json file
   and load one back in — for moving your villager to another browser/
   device, or just backing up before clearing site data
+- A daily fishing tournament — a 2-hour deterministic window, random
+  catch sizes, and a live-synced "biggest catch today" sign whose record
+  only a genuinely bigger catch can overwrite (Firebase transaction,
+  same shape as the scavenger hunt)
 - Two more build-mode materials, 🌳 Hedge (3 flowers, solid — a green
   bush wall) and 🟫 Path (1 stone, non-solid — a flat ground tile for
   laying out walkways), plus matching achievements

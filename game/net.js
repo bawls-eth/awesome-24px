@@ -79,6 +79,7 @@ class TownNet {
     this.blocksRef = this.db.ref('blocks');
     this.guestbookRef = this.db.ref('guestbook');
     this.scavengerRef = this.db.ref('scavenger');
+    this.tournamentRef = this.db.ref('tournament');
     this.playerCountRef = this.db.ref('playerCount');
 
     this.name = profile.name;
@@ -352,6 +353,26 @@ class TownNet {
   watchScavenger(dayKey, callback) {
     if (!this.scavengerRef) return;
     this.scavengerRef.child(String(dayKey)).on('value', (snap) => callback(snap.val()));
+  }
+
+  // Daily fishing tournament record: a compare-and-swap transaction, same
+  // shape as the scavenger hunt claim, but keyed on "is this catch bigger"
+  // instead of "is this the first claim" — the biggest size commits, every
+  // smaller/later one aborts without overwriting the real record.
+  submitTournamentCatch(dayKey, sizeCm) {
+    if (!this.tournamentRef || !this.id) return Promise.resolve({ success: false, record: null });
+    return this.tournamentRef.child(String(dayKey)).transaction((current) => {
+      if (current && current.size >= sizeCm) return; // not a new record — abort
+      return { id: this.id, name: this.name, size: sizeCm, t: Date.now() };
+    }).then((result) => {
+      const record = result.snapshot.val();
+      return { success: !!(result.committed && record && record.id === this.id), record };
+    }).catch(() => ({ success: false, record: null }));
+  }
+
+  watchTournament(dayKey, callback) {
+    if (!this.tournamentRef) return;
+    this.tournamentRef.child(String(dayKey)).on('value', (snap) => callback(snap.val()));
   }
 
   // Walkie-talkie: a short voice clip addressed to one other player's id.
