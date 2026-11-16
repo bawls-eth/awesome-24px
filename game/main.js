@@ -121,6 +121,15 @@ const HOUSE_POS = { x: 1020, y: 760, w: 110, h: 70 };
 const SHOP_RADIUS = 70;
 const POLYROLL_POS = { x: 1250, y: 760 };
 const POLYROLL_RADIUS = 50;
+const MUSEUM_POS = { x: 900, y: 920, w: 100, h: 64 };
+const MUSEUM_RADIUS = 70;
+const FOSSIL_TYPES = ['🦴 T-Rex Bone', '🐚 Ancient Shell', '🦷 Mammoth Tooth', '🥚 Dino Egg', '🪨 Trilobite'];
+const FOSSIL_SPOTS = [
+  { x: 600, y: 1000 }, { x: 650, y: 1030 }, { x: 700, y: 1000 },
+];
+const FOSSIL_DIG_RADIUS = 40;
+const FOSSIL_RESPAWN_MS = 25000;
+const FOSSIL_BAG_CAP = 3;
 const DIG_HOLE_POS = { x: 1200, y: 460 };
 const DIG_HOLE_RADIUS = 36;
 const DOOR_RADIUS = 34;
@@ -228,6 +237,8 @@ class TownScene extends Phaser.Scene {
     this.drawDigHole();
     this.drawDoors();
     this.drawPolyrollBooth();
+    this.drawMuseum();
+    this.drawFossilSpots();
     this.drawForestRing();
     this.drawTulipBeds();
     this.drawRocks();
@@ -256,6 +267,7 @@ class TownScene extends Phaser.Scene {
     this.setupPortalReopen();
     this.setupPolyroll();
     this.setupBugs();
+    this.setupFossils();
     if (IS_TOUCH) {
       this.setupTouchControls();
       this.setupTiltShake();
@@ -745,6 +757,15 @@ class TownScene extends Phaser.Scene {
       this.openPolyroll();
       return;
     }
+    if (this.isNearMuseum()) {
+      this.donateFossils();
+      return;
+    }
+    const fossilSpot = this.findNearestFossilSpot();
+    if (fossilSpot) {
+      this.digFossil(fossilSpot);
+      return;
+    }
     if (this.isNearDigHole()) {
       this.enterUnderground();
       return;
@@ -1155,6 +1176,91 @@ class TownScene extends Phaser.Scene {
     this.time.delayedCall(BUG_RESPAWN_MS, () => this.placeBug(bug));
   }
 
+  // ---------- fossils + museum ----------
+  // Dig spots work like mining a rock: a fixed location, a cooldown, no
+  // network sync (local only, same as every other activity). What's
+  // different is fossils aren't sold — they're carried in a small bag
+  // (capped at 3) until donated at the Museum, where they join a
+  // permanent per-device collection saved alongside name/species.
+
+  setupFossils() {
+    this.fossilCooldowns = {};
+    const saved = loadSave();
+    this.fossilsHeld = Array.isArray(saved.fossilsHeld) ? saved.fossilsHeld.slice(0, FOSSIL_BAG_CAP) : [];
+    this.museumCollection = new Set(Array.isArray(saved.museumCollection) ? saved.museumCollection : []);
+    this.updateFossilHUD();
+  }
+
+  saveFossils() {
+    writeSave({ fossilsHeld: this.fossilsHeld, museumCollection: [...this.museumCollection] });
+  }
+
+  updateFossilHUD() {
+    const bagEl = document.getElementById('fossil-count');
+    if (bagEl) bagEl.textContent = this.fossilsHeld.length;
+    const museumEl = document.getElementById('museum-count');
+    if (museumEl) museumEl.textContent = this.museumCollection.size;
+  }
+
+  findNearestFossilSpot() {
+    const now = Date.now();
+    let best = null;
+    let bestDist = FOSSIL_DIG_RADIUS;
+    FOSSIL_SPOTS.forEach((spot, i) => {
+      if (this.fossilCooldowns[i] && now - this.fossilCooldowns[i] < FOSSIL_RESPAWN_MS) return;
+      const d = Math.hypot(this.localBody.x - spot.x, this.localBody.y - spot.y);
+      if (d < bestDist) { bestDist = d; best = { ...spot, index: i }; }
+    });
+    return best;
+  }
+
+  digFossil(spot) {
+    if (this.fossilsHeld.length >= FOSSIL_BAG_CAP) {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'fossil bag is full');
+      return;
+    }
+    this.fossilCooldowns[spot.index] = Date.now();
+    const mound = this.fossilMounds[spot.index];
+    if (mound) {
+      mound.setVisible(false);
+      this.time.delayedCall(FOSSIL_RESPAWN_MS, () => mound.setVisible(true));
+    }
+    const typeIndex = Phaser.Math.Between(0, FOSSIL_TYPES.length - 1);
+    this.fossilsHeld.push(typeIndex);
+    this.saveFossils();
+    this.updateFossilHUD();
+    this.showFloatingText(spot.x, spot.y - 20, `found ${FOSSIL_TYPES[typeIndex]}`);
+  }
+
+  isNearMuseum() {
+    const cx = MUSEUM_POS.x + MUSEUM_POS.w / 2;
+    const cy = MUSEUM_POS.y + MUSEUM_POS.h / 2;
+    return Math.hypot(this.localBody.x - cx, this.localBody.y - cy) < MUSEUM_RADIUS;
+  }
+
+  donateFossils() {
+    if (!this.fossilsHeld.length) {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, "you don't have any fossils to donate");
+      return;
+    }
+    let newSpecies = 0;
+    this.fossilsHeld.forEach((typeIndex) => {
+      if (!this.museumCollection.has(typeIndex)) { this.museumCollection.add(typeIndex); newSpecies++; }
+    });
+    const donated = this.fossilsHeld.length;
+    this.fossilsHeld = [];
+    this.saveFossils();
+    this.updateFossilHUD();
+    if (newSpecies > 0) {
+      this.awardPoint(newSpecies, `donated ${donated} — +${newSpecies} ⭐ new species!`, this.localBody.x, this.localBody.y - 30);
+    } else {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, `donated ${donated} (already had those species)`);
+    }
+    if (this.museumCollection.size >= FOSSIL_TYPES.length) {
+      this.addChatLine({ system: true, text: '🏛️ full fossil collection donated — nice work!' });
+    }
+  }
+
   findNearestTree() {
     const now = Date.now();
     let best = null;
@@ -1551,6 +1657,27 @@ class TownScene extends Phaser.Scene {
 
     this.add.text(x + w / 2, y - 55, '🏠 Shop', { fontSize: '16px' }).setOrigin(0.5).setDepth(y + h + 1);
     this.addObstacleRect({ x, y: y + 20, width: w, height: h - 20 });
+  }
+
+  drawMuseum() {
+    const { x, y, w, h } = MUSEUM_POS;
+    const g = this.add.graphics();
+    g.fillStyle(0xd8d0bc, 1).fillRect(x, y, w, h);
+    g.fillStyle(0x8f8568, 1).fillTriangle(x - 10, y, x + w + 10, y, x + w / 2, y - 40);
+    g.fillStyle(0x6b6250, 1);
+    for (let i = 0; i < 4; i++) g.fillRect(x + 10 + i * 22, y + 16, 10, h - 20);
+    g.setDepth(y + h);
+    this.add.text(x + w / 2, y - 50, '🏛️ Museum', { fontSize: '14px' }).setOrigin(0.5).setDepth(y + h + 1);
+    this.addObstacleRect({ x, y: y + 16, width: w, height: h - 16 });
+  }
+
+  drawFossilSpots() {
+    this.fossilMounds = FOSSIL_SPOTS.map(({ x, y }) => {
+      const g = this.add.graphics().setDepth(y - 1);
+      g.fillStyle(0x7a5a38, 1).fillEllipse(x, y, 34, 18);
+      g.fillStyle(0x8f7044, 1).fillEllipse(x, y - 3, 22, 10);
+      return g;
+    });
   }
 
   drawStatue() {

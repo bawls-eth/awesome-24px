@@ -59,6 +59,10 @@ everyone else automatically. Capped at **10 players** at once for now.
   statue, press **E** to jump in, and mine/place real 3D blocks Minecraft-
   style. Climb back up the shaft and press **E** again to pop back to the
   2D town (see "Going underground" below)
+- 🦴 **Fossils & Museum** — three dig spots west of the pond yield a
+  random fossil (one of 5 species); carry up to 3, then donate at the
+  🏛️ Museum for a permanent per-device collection and a ⭐ for each new
+  species (see "Fossils & Museum" below)
 - A 🎲 **Polyroll** betting booth near the shop — dice (pick 1-6, 5×
   payout) or coin flip (2× payout), wagering your own ⭐ stars for fun.
   No wallet, no crypto, no real money anywhere in it — just the same
@@ -170,6 +174,17 @@ devices — a D-pad (bottom-left), and action buttons (bottom-right): 🎮 Tilt,
   it only clears your own screen, not the shared history everyone else sees
 - Your 🎒 bag (top-left) shows your wood/stone/fish; a visible rod line
   appears between you and the water while you're fishing
+
+### Fossils & Museum
+
+Three dig spots sit west of the pond — walk up and interact, same as
+mining a rock, and you'll dig up one of 5 fossil species at random. Your
+bag holds up to 3 before you need to donate. Walk to the 🏛️ Museum and
+interact to donate everything you're carrying: each species new to your
+collection is worth 1 ⭐, and the collection itself persists on this
+device (same as your name/species) even across a reload. Completing all
+5 species gets a line in the chat log. Local only — not synced, not
+shared between friends.
 
 ### Polyroll
 
