@@ -63,6 +63,9 @@ everyone else automatically. Capped at **10 players** at once for now.
   random fossil (one of 5 species); carry up to 3, then donate at the
   🏛️ Museum for a permanent per-device collection and a ⭐ for each new
   species (see "Fossils & Museum" below)
+- 🎸 **K.K. Slider plays the campfire** every evening, 7-9pm on *your*
+  device's own clock — walk up during the show and interact for a ⭐2
+  bonus and an emote, once per show (see "K.K. Slider" below)
 - 🏆 **Achievements** (Nook Miles-style) — a 🏆 badge under the player
   list opens a checklist of 12 lifetime goals (catch/chop/mine 10,
   complete the museum, play Polyroll 10 times, and more), each paying a
@@ -182,6 +185,16 @@ devices — a D-pad (bottom-left), and action buttons (bottom-right): 🎮 Tilt,
   it only clears your own screen, not the shared history everyone else sees
 - Your 🎒 bag (top-left) shows your wood/stone/fish; a visible rod line
   appears between you and the water while you're fishing
+
+### K.K. Slider
+
+Every day from 7pm to 9pm **on your own device's clock** (not synced —
+friends in different time zones catch the show at different real-world
+times, same as the day/night tint), the campfire plays host to a little
+show: a sign and drifting music notes appear above it. Walk up and
+interact for a one-time 2-⭐ bonus and an emote; trying again just tells
+you you've already enjoyed that night's show. Purely local, like
+fishing — nothing about it syncs to friends.
 
 ### Fossils & Museum
 

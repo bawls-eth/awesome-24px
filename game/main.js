@@ -156,6 +156,10 @@ const ACHIEVEMENTS = [
   { id: 'chat10', icon: '👋', label: 'Friendly', desc: 'Send 10 chat messages', reward: 3, check: (s) => (s.chatSent || 0) >= 10 },
   { id: 'museumFull', icon: '🏛️', label: 'Paleontologist', desc: 'Donate all 5 fossil species', reward: 10, check: (s, scene) => scene.museumCollection && scene.museumCollection.size >= FOSSIL_TYPES.length },
 ];
+const CAMPFIRE_POS = { x: 800, y: 600 };
+const CAMPFIRE_RADIUS = 60;
+const KK_CONCERT_START_HOUR = 19; // 7pm local time
+const KK_CONCERT_END_HOUR = 21; // 9pm local time
 const WEATHER_CYCLE_MS = 8 * 60 * 1000; // 8-minute weather windows
 const WEATHER_RAIN_CHANCE = 0.3; // ~30% of windows are rainy
 const WEATHER_RAIN_COUNT = 70;
@@ -284,6 +288,7 @@ class TownScene extends Phaser.Scene {
     this.setupEmotes();
     this.setupSparkle();
     this.setupDayNight();
+    this.kkEnjoyedWindow = loadSave().kkEnjoyedWindow || null;
     this.setupWeather();
     this.setupActivities();
     this.setupBuilding();
@@ -312,6 +317,7 @@ class TownScene extends Phaser.Scene {
     this.updateRemoteInterpolation(delta);
     this.updateSparkle(time);
     this.updateDayNight(time);
+    this.updateConcert(time);
     this.updateWeather(time, delta);
     this.updateTurnipPriceLabels(time);
     this.updateBuildPreview();
@@ -776,6 +782,10 @@ class TownScene extends Phaser.Scene {
     }
     if (this.fishing.state !== 'idle') {
       this.handleFishingInteract();
+      return;
+    }
+    if (this.isNearCampfire() && this.isConcertTime()) {
+      this.enjoyConcert();
       return;
     }
     if (this.isNearShop()) {
@@ -1860,8 +1870,7 @@ class TownScene extends Phaser.Scene {
   }
 
   drawCampfire() {
-    const x = 800;
-    const y = 600;
+    const { x, y } = CAMPFIRE_POS;
     const logs = this.add.graphics().setDepth(-1);
     logs.fillStyle(0x6b4226, 1);
     logs.fillRect(x - 16, y - 3, 32, 6);
@@ -1870,6 +1879,55 @@ class TownScene extends Phaser.Scene {
     const flame = this.add.circle(x, y - 8, 9, 0xffb238).setDepth(-1);
     const flameInner = this.add.circle(x, y - 8, 5, 0xffe066).setDepth(-1);
     this.tweens.add({ targets: [flame, flameInner], scale: { from: 0.85, to: 1.15 }, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+
+    this.kkSign = this.add.text(x, y - 42, '🎸 K.K. Slider is playing!', { fontSize: '12px' })
+      .setOrigin(0.5)
+      .setDepth(y + 1)
+      .setVisible(false);
+    this.kkNotes = ['🎵', '🎶', '🎵'].map((sym, i) => this.add.text(x - 16 + i * 16, y - 10, sym, { fontSize: '13px' }).setOrigin(0.5).setDepth(y + 1).setVisible(false));
+  }
+
+  // ---------- K.K. Slider campfire concert ----------
+  // A real AC staple: a live show at a fixed time of day, local to each
+  // player's own clock (same source as day/night) rather than anything
+  // synced over the network. One ⭐ bonus per show, guarded by a
+  // per-window flag so you can't just stand there and farm it.
+
+  isConcertTime() {
+    const hour = new Date().getHours();
+    return hour >= KK_CONCERT_START_HOUR && hour < KK_CONCERT_END_HOUR;
+  }
+
+  concertWindowKey() {
+    const now = new Date();
+    return `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}`;
+  }
+
+  isNearCampfire() {
+    return Math.hypot(this.localBody.x - CAMPFIRE_POS.x, this.localBody.y - CAMPFIRE_POS.y) < CAMPFIRE_RADIUS;
+  }
+
+  updateConcert(time) {
+    if (time - (this.lastConcertCheckAt || 0) < 1000) return;
+    this.lastConcertCheckAt = time;
+    const playing = this.isConcertTime();
+    if (this.kkSign) this.kkSign.setVisible(playing);
+    this.kkNotes.forEach((n, i) => {
+      n.setVisible(playing);
+      if (playing) n.y = CAMPFIRE_POS.y - 10 + Math.sin(time / 300 + i) * 4;
+    });
+  }
+
+  enjoyConcert() {
+    const key = this.concertWindowKey();
+    if (this.kkEnjoyedWindow === key) {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'already enjoyed tonight\'s show');
+      return;
+    }
+    this.kkEnjoyedWindow = key;
+    writeSave({ kkEnjoyedWindow: key });
+    this.awardPoint(2, '🎶 +2 ⭐ enjoyed the show!', this.localBody.x, this.localBody.y - 30);
+    this.triggerEmote(1);
   }
 
   drawDigHole() {
