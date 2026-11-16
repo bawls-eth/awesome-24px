@@ -78,6 +78,7 @@ class TownNet {
     this.chatRef = this.db.ref('chat');
     this.blocksRef = this.db.ref('blocks');
     this.guestbookRef = this.db.ref('guestbook');
+    this.scavengerRef = this.db.ref('scavenger');
     this.playerCountRef = this.db.ref('playerCount');
 
     this.name = profile.name;
@@ -330,6 +331,27 @@ class TownNet {
       text,
       t: firebase.database.ServerValue.TIMESTAMP,
     }).catch(() => {});
+  }
+
+  // Daily scavenger hunt: "who found today's spot first" is genuinely
+  // contested state, unlike everything else in this file (which is just
+  // broadcast-and-listen) — a transaction on /scavenger/{dayKey} makes the
+  // first successful write win and every later one abort, so two players
+  // racing to the same spot can't both claim the reward.
+  claimScavengerSpot(dayKey) {
+    if (!this.scavengerRef || !this.id) return Promise.resolve({ success: false, claim: null });
+    return this.scavengerRef.child(String(dayKey)).transaction((current) => {
+      if (current) return; // already claimed — abort, don't overwrite
+      return { id: this.id, name: this.name, t: Date.now() };
+    }).then((result) => {
+      const claim = result.snapshot.val();
+      return { success: !!(result.committed && claim && claim.id === this.id), claim };
+    }).catch(() => ({ success: false, claim: null }));
+  }
+
+  watchScavenger(dayKey, callback) {
+    if (!this.scavengerRef) return;
+    this.scavengerRef.child(String(dayKey)).on('value', (snap) => callback(snap.val()));
   }
 
   // Walkie-talkie: a short voice clip addressed to one other player's id.

@@ -361,6 +361,7 @@ const ACHIEVEMENTS = [
   { id: 'hedge1', icon: '🌳', label: 'Landscaper', desc: 'Plant a hedge', reward: 3, check: (s) => (s.hedgesPlaced || 0) >= 1 },
   { id: 'path10', icon: '🟫', label: 'Pathfinder', desc: 'Lay 10 path tiles', reward: 5, check: (s) => (s.pathsPlaced || 0) >= 10 },
   { id: 'trivia3', icon: '📝', label: 'Know-It-All', desc: "Answer 3 of Professor Byte's daily trivia questions correctly", reward: 5, check: (s) => (s.triviaCorrect || 0) >= 3 },
+  { id: 'scavenger1', icon: '🔍', label: 'Treasure Hunter', desc: "Win the daily scavenger hunt", reward: 5, check: (s) => (s.scavengerHuntsWon || 0) >= 1 },
 ];
 const CAMPFIRE_POS = { x: 800, y: 600 };
 const CAMPFIRE_RADIUS = 60;
@@ -403,6 +404,16 @@ const MERCHANT_COST = 15;
 const ABLE_SISTERS_POS = { x: 1150, y: 650, w: 70, h: 56 };
 const ABLE_SISTERS_RADIUS = 55;
 const GUESTBOOK_POS = { x: 1750, y: 520 };
+// Daily scavenger hunt — one hidden spot a day, same for everyone (picked
+// deterministically from the date, no network traffic needed), but
+// "who found it first" genuinely needs a shared source of truth, so that
+// part goes through a Firebase transaction (first write wins).
+const SCAVENGER_SPOTS = [
+  { x: 150, y: 950 }, { x: 2300, y: 300 }, { x: 1900, y: 1100 }, { x: 600, y: 250 },
+  { x: 2000, y: 900 }, { x: 100, y: 450 }, { x: 1300, y: 1050 }, { x: 700, y: 1150 },
+];
+const SCAVENGER_RADIUS = 36;
+const SCAVENGER_REWARD = 20;
 const GUESTBOOK_RADIUS = 60;
 const GUESTBOOK_NOTE_MAX = 80;
 const GUESTBOOK_COOLDOWN_MS = 60 * 1000; // one signing per minute, per client
@@ -521,6 +532,7 @@ class TownScene extends Phaser.Scene {
     this.drawAbleSisters();
     this.drawGuestbook();
     this.drawNoticeBoard();
+    this.setupScavengerHunt();
     this.drawFossilSpots();
     this.drawBeachItems();
     this.drawFlowers();
@@ -1155,6 +1167,10 @@ class TownScene extends Phaser.Scene {
     }
     if (this.isNearMuseum()) {
       this.donateFossils();
+      return;
+    }
+    if (this.isNearScavenger()) {
+      this.claimScavenger();
       return;
     }
     if (this.isNearGuestbook()) {
@@ -2896,6 +2912,45 @@ class TownScene extends Phaser.Scene {
         ? '✅ today\'s quest done!'
         : `📋 bring ${quest.amount}${quest.resource.icon} (+${quest.reward}⭐)`
     );
+  }
+
+  // ---------- daily scavenger hunt ----------
+  // Same deterministic wall-clock-hash trick as the quest/merchant/trivia
+  // for "where is it" — but "who found it first" needs real shared state,
+  // so that part goes through net.js's claimScavengerSpot() transaction.
+
+  todaysScavengerSpot() {
+    const i = Math.floor(this.questHash(20) * SCAVENGER_SPOTS.length);
+    return SCAVENGER_SPOTS[i];
+  }
+
+  setupScavengerHunt() {
+    const spot = this.todaysScavengerSpot();
+    this.scavengerMarker = this.add.text(spot.x, spot.y, '🔍', { fontSize: '20px' }).setOrigin(0.5).setDepth(spot.y);
+    this.tweens.add({ targets: this.scavengerMarker, y: spot.y - 6, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.scavengerClaim = null;
+    this.net.watchScavenger(this.questDayBucket(), (claim) => {
+      this.scavengerClaim = claim;
+      if (this.scavengerMarker) this.scavengerMarker.setVisible(!claim);
+    });
+  }
+
+  isNearScavenger() {
+    if (this.scavengerClaim) return false;
+    const spot = this.todaysScavengerSpot();
+    return Phaser.Math.Distance.Between(this.localBody.x, this.localBody.y, spot.x, spot.y) < SCAVENGER_RADIUS;
+  }
+
+  async claimScavenger() {
+    const dayKey = this.questDayBucket();
+    const result = await this.net.claimScavengerSpot(dayKey);
+    if (result.success) {
+      this.awardPoint(SCAVENGER_REWARD, `found it! +${SCAVENGER_REWARD}⭐`, this.localBody.x, this.localBody.y - 30, 'achievement');
+      this.incrementStat('scavengerHuntsWon');
+    } else {
+      const who = (result.claim && result.claim.name) || 'someone';
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, `already found by ${who}`);
+    }
   }
 
   // ---------- NPC daily trivia ----------

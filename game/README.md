@@ -114,6 +114,11 @@ right now, before you even pick a name.
   Mo (below) swap in a few rain-specific lines while it's raining. Press
   **T** near him for a **daily trivia** question (also the same for
   everyone, one attempt per day) — answer right for an 8 ⭐ bonus
+- A 🔍 **daily scavenger hunt** — one hidden spot a day, same location
+  for everyone (picked from the date, like everything else "daily" in
+  this game), but first to interact there wins a 20 ⭐ bonus. A real
+  Firebase transaction decides who wins if two players race for it at
+  the same moment, so only one of you ever gets paid
 - 🎣 **Salty Mo**, a second resident NPC camped out by the pond dock — a
   grumpy old dockhand with his own set of grumbles about the weather, the
   Mystery Merchant, and everyone who's never fallen off his dock. No quest,
@@ -130,7 +135,7 @@ right now, before you even pick a name.
   this is the only way to wear one. A sign at the spot shows what's for
   sale, or when to come back if they're not there
 - 🏆 **Achievements** (Nook Miles-style) — a 🏆 badge under the player
-  list opens a checklist of 22 lifetime goals (catch/chop/mine 10,
+  list opens a checklist of 23 lifetime goals (catch/chop/mine 10,
   complete the museum, play Polyroll 10 times, and more), each paying a
   one-time ⭐ bonus on unlock. Lifetime counters never drop when you
   spend or sell, and unlocks persist on this device

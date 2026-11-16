@@ -105,6 +105,10 @@ for how each feature actually works and plays.
   preset phrase, same send path (and slur filter/rate-limit) as typing
 - A daily trivia question from Professor Byte (**T** near him) — same
   question for everyone, one attempt per day, +8 ⭐ for a correct answer
+- A daily scavenger hunt — one hidden spot a day, same location for
+  everyone (deterministic from the date), but "who found it first" is
+  decided by a real Firebase transaction so a race between two players
+  only ever pays one of them
 
 ## Villagers and expression
 
