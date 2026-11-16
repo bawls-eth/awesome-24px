@@ -64,7 +64,7 @@ for how each feature actually works and plays.
 - A seasonal color wash tied to the real-world month
 - A notice board showing the live top-3 leaderboard
 - A daily login streak counter
-- Nook Miles-style achievements — now 17 lifetime goals, each with a one-
+- Nook Miles-style achievements — now 22 lifetime goals, each with a one-
   time ⭐ bonus (Lumberjack, Miner, Angler, Gardener, Fencer, Chatty,
   Photographer, Collector, Paleontologist, and more)
 - The Mystery Merchant — visits a fixed spot for a deterministic daily

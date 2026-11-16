@@ -38,7 +38,7 @@ right now, before you even pick a name.
   obstacle everyone sees and collides with, Minecraft-sandbox-flavored.
   Tap your own block again to remove it for a refund. An unmissable yellow
   banner tells you when build mode is on
-- **Sell** your wood/stone/fish/bugs at the 🏠 shop near the statue for ⭐ points —
+- **Sell** your wood/stone/fish/bugs/fruit/shells/flowers at the 🏠 shop near the statue for ⭐ points —
   a proper Nook's-Cranny-style loop that feeds the leaderboard
 - A day/night tint that follows your local clock, purely for atmosphere —
   the roaming butterflies turn into glowing ✨ fireflies at night (7pm-6am
