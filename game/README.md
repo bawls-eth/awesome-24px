@@ -193,8 +193,12 @@ Phaser).
 - **Mine:** **E** (desktop) or ⛏️ (mobile) breaks whatever block is directly
   ahead of you, within reach. Stone and the rarer gold ore blocks add to
   your 🪨 stone count; dirt doesn't, it's just in the way.
-- **Place:** **F** (desktop) or 🧱 (mobile) spends 1 stone to place a block
-  where you're looking.
+- **Place:** **F** (desktop) or the hotbar's Place button (mobile) places
+  whichever slot is selected on the hotbar (**1**/**2** keys, or tap 🧱/🔥 on
+  mobile):
+  - 🧱 **Wall** — costs 1 stone, a plain block, same as before.
+  - 🔥 **Torch** — costs 1 wood, lights the area around it. Mine a torch
+    back for a 1-wood refund, same as walls refund stone.
 - **Exit:** the **Exit** button works from anywhere in the cave, the
   instant you press it — no need to navigate back to the shaft first. **E**
   is dedicated to mining only, so the two never conflict; desktop can also
@@ -206,9 +210,11 @@ Phaser).
 The cave is generated once per visit and is **entirely local** — nothing
 underground syncs over the network, so what you dig and build down there is
 only ever seen by you (same as fishing/chopping in the 2D game). Stone you
-mine underground *does* add to the same 🪨 count shown in the 2D inventory
-and carries over to the shop, so a mining trip is a legitimate way to stock
-up before selling.
+mine underground *does* add to the same 🪨/🪵 counts shown in the 2D
+inventory and carries over to the shop — stone from regular rock and the
+rarer gold ore, wood from old root veins running through the dirt layer —
+so a mining trip is a legitimate way to stock up before selling, for
+either resource.
 
 ### Walkie-talkie
 

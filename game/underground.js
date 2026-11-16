@@ -28,15 +28,23 @@ class UndergroundWorld {
     this.moveInput = { fwd: 0, strafe: 0, vert: 0 };
     this.dragging = false;
     this.lastDrag = null;
-    this.occupied = new Set(); // "gx,gy,gz" currently solid (terrain or placed)
+    this.occupied = new Set(); // "gx,gy,gz" currently solid (terrain, wall or torch)
     this.lookup = new Map(); // "gx,gy,gz" -> { mesh, instanceId, kind }
     this.placedFree = [];
     this.placedNext = 0;
+    this.torches = new Map(); // "gx,gy,gz" -> { group, light, mesh }
+    this.hotbar = 'wall'; // 'wall' (costs stone) | 'torch' (costs wood)
 
     this._initThree();
     this._buildTerrain();
     this._buildPlacedPool();
     this._bindInput();
+  }
+
+  // Switches what Place puts down — a stone wall or a lit torch — same
+  // idea as a Minecraft hotbar, just two slots instead of nine.
+  setHotbar(type) {
+    this.hotbar = type;
   }
 
   // ---------- setup ----------
@@ -103,6 +111,9 @@ class UndergroundWorld {
         for (let z = -UG_SIZE; z <= UG_SIZE; z++) {
           let type = y <= -5 ? 'stone' : 'dirt';
           if (type === 'stone' && Math.random() < 0.05) type = 'ore';
+          // Old root veins running through the dirt layer — a wood source
+          // underground, so a mining trip can restock the 2D shop loop too.
+          if (type === 'dirt' && Math.random() < 0.05) type = 'root';
           solid.set(`${x},${y},${z}`, type);
         }
       }
@@ -121,12 +132,12 @@ class UndergroundWorld {
       }
     }
 
-    const counts = { dirt: 0, stone: 0, ore: 0 };
+    const counts = { dirt: 0, stone: 0, ore: 0, root: 0 };
     solid.forEach((type) => { counts[type]++; });
     const meshes = {};
-    ['dirt', 'stone', 'ore'].forEach((type) => {
+    ['dirt', 'stone', 'ore', 'root'].forEach((type) => {
       if (!counts[type]) return;
-      const color = type === 'dirt' ? 0x6b4a32 : type === 'stone' ? 0x6e7480 : 0xdcb94e;
+      const color = type === 'dirt' ? 0x6b4a32 : type === 'stone' ? 0x6e7480 : type === 'ore' ? 0xdcb94e : 0x8a5a2b;
       const geo = new THREE.BoxGeometry(UG_BLOCK * 0.98, UG_BLOCK * 0.98, UG_BLOCK * 0.98);
       const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.9 });
       const mesh = new THREE.InstancedMesh(geo, mat, counts[type]);
@@ -349,10 +360,17 @@ class UndergroundWorld {
   _raycastTargets() {
     const objs = [this.placedMesh];
     Object.values(this.terrainMeshes || {}).forEach((m) => objs.push(m));
+    this.torches.forEach((t) => objs.push(t.mesh));
     const origin = this.rig.position.clone();
     origin.y += 0.8;
     this.raycaster.set(origin, this._forwardVector());
     return this.raycaster.intersectObjects(objs);
+  }
+
+  _torchKeyForMesh(mesh) {
+    let found = null;
+    this.torches.forEach((t, key) => { if (t.mesh === mesh) found = key; });
+    return found;
   }
 
   mine() {
@@ -360,6 +378,15 @@ class UndergroundWorld {
     const hits = this._raycastTargets();
     if (!hits.length) return false;
     const hit = hits[0];
+
+    const torchKey = this._torchKeyForMesh(hit.object);
+    if (torchKey) {
+      this._removeTorch(torchKey);
+      this.resources.wood = (this.resources.wood || 0) + 1;
+      this.onResourceChange();
+      return true;
+    }
+
     if (hit.object === this.placedMesh) {
       // Find which placed cell this instance belongs to.
       let foundKey = null;
@@ -387,9 +414,52 @@ class UndergroundWorld {
     hit.object.instanceMatrix.needsUpdate = true;
     this.lookup.delete(foundKey);
     this.occupied.delete(foundKey);
-    if (kind === 'ore') { this.resources.stone = (this.resources.stone || 0) + 3; } else if (kind === 'stone') { this.resources.stone = (this.resources.stone || 0) + 1; }
+    if (kind === 'ore') { this.resources.stone = (this.resources.stone || 0) + 3; } else if (kind === 'stone') { this.resources.stone = (this.resources.stone || 0) + 1; } else if (kind === 'root') { this.resources.wood = (this.resources.wood || 0) + 1; }
     this.onResourceChange();
     return true;
+  }
+
+  _removeTorch(key) {
+    const t = this.torches.get(key);
+    if (!t) return;
+    this.scene.remove(t.group);
+    t.light.dispose();
+    this.torches.delete(key);
+    this.occupied.delete(key);
+  }
+
+  _addTorch(gx, gy, gz) {
+    const key = `${gx},${gy},${gz}`;
+    const group = new THREE.Group();
+    const post = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.06, 0.06, 0.55, 6),
+      new THREE.MeshStandardMaterial({ color: 0x7a4a26 })
+    );
+    const flame = new THREE.Mesh(
+      new THREE.SphereGeometry(0.12, 6, 6),
+      new THREE.MeshStandardMaterial({ color: 0xffcf5c, emissive: 0xff9c2e, emissiveIntensity: 1.6 })
+    );
+    flame.position.y = 0.32;
+    // The visible flame is tiny next to a full block — give mine/place
+    // raycasting a properly block-sized, invisible target instead, or
+    // hitting a torch square-on from a normal walking distance would be
+    // unreliable and it'd read as "mining does nothing" here.
+    // transparent+opacity 0, not material.visible=false — three.js's
+    // raycaster skips an object outright when its material.visible is
+    // false, which would make this hitbox unhittable, not just invisible.
+    const hitbox = new THREE.Mesh(
+      new THREE.BoxGeometry(UG_BLOCK * 0.9, UG_BLOCK * 0.9, UG_BLOCK * 0.9),
+      new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false })
+    );
+    hitbox.position.y = 0.2;
+    group.add(post, flame, hitbox);
+    group.position.set(gx * UG_BLOCK, gy * UG_BLOCK, gz * UG_BLOCK);
+    const light = new THREE.PointLight(0xffb366, 2.4, 11, 1.8);
+    light.position.y = 0.32;
+    group.add(light);
+    this.scene.add(group);
+    this.torches.set(key, { group, light, mesh: hitbox });
+    this.occupied.add(key);
   }
 
   _hidePlacedInstance(instanceId) {
@@ -400,7 +470,8 @@ class UndergroundWorld {
   }
 
   place() {
-    if ((this.resources.stone || 0) < 1) return false;
+    const cost = this.hotbar === 'torch' ? 'wood' : 'stone';
+    if ((this.resources[cost] || 0) < 1) return false;
     const hits = this._raycastTargets();
     if (!hits.length) return false;
     const hit = hits[0];
@@ -411,6 +482,13 @@ class UndergroundWorld {
     const gz = Math.round(cell.z / UG_BLOCK);
     const key = `${gx},${gy},${gz}`;
     if (this.occupied.has(key)) return false;
+
+    if (this.hotbar === 'torch') {
+      this._addTorch(gx, gy, gz);
+      this.resources.wood -= 1;
+      this.onResourceChange();
+      return true;
+    }
 
     const slot = this.placedFree.length ? this.placedFree.pop() : (this.placedNext < UG_PLACED_CAPACITY ? this.placedNext++ : null);
     if (slot === null) return false;

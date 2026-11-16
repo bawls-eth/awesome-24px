@@ -833,6 +833,14 @@ class TownScene extends Phaser.Scene {
   // gate made getting out feel broken, since the cave is a maze you can
   // get turned around in. Mining keeps its own separate key/button so the
   // two actions are never ambiguous.
+  // Keeps the on-screen hotbar buttons' highlight in sync with whichever
+  // slot Place will actually use.
+  setUgHotbar(type) {
+    this.underground.setHotbar(type);
+    document.getElementById('ug-hotbar-wall').classList.toggle('active', type === 'wall');
+    document.getElementById('ug-hotbar-torch').classList.toggle('active', type === 'torch');
+  }
+
   setupUndergroundControls() {
     const ug = this.underground;
     this.input.keyboard && window.addEventListener('keydown', (e) => {
@@ -842,6 +850,10 @@ class TownScene extends Phaser.Scene {
         ug.mine();
       } else if (k === 'f') {
         ug.place();
+      } else if (k === '1') {
+        this.setUgHotbar('wall');
+      } else if (k === '2') {
+        this.setUgHotbar('torch');
       } else if (k === 'escape' || k === 'backspace') {
         this.exitUnderground();
       }
@@ -875,6 +887,8 @@ class TownScene extends Phaser.Scene {
     document.getElementById('ug-mine-btn').addEventListener('click', () => ug.mine());
     document.getElementById('ug-place-btn').addEventListener('click', () => ug.place());
     document.getElementById('ug-exit-btn').addEventListener('click', () => this.exitUnderground());
+    document.getElementById('ug-hotbar-wall').addEventListener('click', () => this.setUgHotbar('wall'));
+    document.getElementById('ug-hotbar-torch').addEventListener('click', () => this.setUgHotbar('torch'));
 
     this._ugExitHintInterval = setInterval(() => {
       if (!this.inUnderground) return;

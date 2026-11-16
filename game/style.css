@@ -543,6 +543,31 @@ body.touch-device #mobile-controls {
 
 body.touch-device #underground-controls { display: block; }
 
+#ug-hotbar {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: calc(104px + env(safe-area-inset-top, 0px));
+  display: flex;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+#ug-hotbar button {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 2px solid rgba(255,255,255,0.25);
+  background: rgba(28,36,48,0.75);
+  font-size: 18px;
+  touch-action: none;
+}
+
+#ug-hotbar button.active {
+  border-color: #ffe066;
+  background: rgba(255,224,102,0.22);
+}
+
 #ug-dpad {
   position: absolute;
   left: calc(16px + env(safe-area-inset-left, 0px));
