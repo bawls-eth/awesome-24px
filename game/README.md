@@ -95,7 +95,7 @@ everyone else automatically. Capped at **10 players** at once for now.
   for a random bit of flavor text in a speech bubble. Purely for charm,
   no reward, but he's got a lot to say
 - 🏆 **Achievements** (Nook Miles-style) — a 🏆 badge under the player
-  list opens a checklist of 12 lifetime goals (catch/chop/mine 10,
+  list opens a checklist of 15 lifetime goals (catch/chop/mine 10,
   complete the museum, play Polyroll 10 times, and more), each paying a
   one-time ⭐ bonus on unlock. Lifetime counters never drop when you
   spend or sell, and unlocks persist on this device
