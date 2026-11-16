@@ -43,7 +43,8 @@ right now, before you even pick a name.
   your own clock) and back at dawn, same 🦋/🐛 catch mechanic either way
 - A faint **seasonal color wash** tied to the real-world month on your
   own device — cool blue in winter, green in spring, warm yellow in
-  summer, orange in autumn. No new art, cosmetic only
+  summer, orange in autumn. No new art, cosmetic only. Winter and
+  autumn also scatter a few ⛄/🎃 around town for the month
 - Occasional **rain** 🌧️ — about 3 windows in 10, it rains for a while;
   everyone sees it start/stop together without any network traffic (same
   trick as the sparkle), purely cosmetic

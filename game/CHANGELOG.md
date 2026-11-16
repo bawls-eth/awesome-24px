@@ -93,6 +93,9 @@ for how each feature actually works and plays.
   just a local list) so it's shared across every client; runs through
   the same slur filter as chat/names and is rate-limited client-side to
   one note per minute
+- Seasonal ground decor — a handful of ⛄ snowmen in winter, 🎃 pumpkins
+  in autumn, scattered around town on the same wall-clock-month check
+  that already drives the seasonal color wash
 
 ## Villagers and expression
 

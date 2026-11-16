@@ -187,6 +187,12 @@ const POND_CATS = [
   { y: 648, frame: 6, range: [170, 320] },
 ];
 const WINDMILL_POS = { x: 250, y: 200 };
+// Purely cosmetic seasonal ground decor — a snowman in winter, a pumpkin
+// in autumn, nothing extra in spring/summer (flowers already cover that).
+const SEASON_DECOR_SPOTS = [
+  { x: 550, y: 250 }, { x: 1300, y: 250 }, { x: 2100, y: 750 },
+  { x: 1050, y: 1100 }, { x: 1900, y: 350 },
+];
 const STATUE_POS = { x: 1450, y: 600 };
 const NPC_POS = { x: 1550, y: 540 };
 const NPC_RADIUS = 48;
@@ -740,6 +746,7 @@ class TownScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(299999);
     this.scale.on('resize', (size) => this.seasonOverlay.setSize(size.width, size.height));
+    this.seasonDecorSprites = SEASON_DECOR_SPOTS.map(({ x, y }) => this.add.text(x, y, '', { fontSize: '20px' }).setOrigin(0.5).setDepth(y).setVisible(false));
     this.updateSeason();
   }
 
@@ -747,11 +754,19 @@ class TownScene extends Phaser.Scene {
     const month = new Date().getMonth(); // 0=Jan
     let color;
     let alpha;
-    if (month === 11 || month === 0 || month === 1) { color = 0x9cd8ff; alpha = 0.08; } // winter
+    let decorIcon = null;
+    if (month === 11 || month === 0 || month === 1) { color = 0x9cd8ff; alpha = 0.08; decorIcon = '⛄'; } // winter
     else if (month >= 2 && month <= 4) { color = 0xcdf2a8; alpha = 0.06; } // spring
     else if (month >= 5 && month <= 7) { color = 0xfff2a0; alpha = 0.05; } // summer
-    else { color = 0xe0a050; alpha = 0.09; } // autumn
+    else { color = 0xe0a050; alpha = 0.09; decorIcon = '🎃'; } // autumn
     this.seasonOverlay.setFillStyle(color, alpha);
+
+    if (this.seasonDecorSprites) {
+      this.seasonDecorSprites.forEach((sprite) => {
+        if (decorIcon) sprite.setText(decorIcon).setVisible(true);
+        else sprite.setVisible(false);
+      });
+    }
   }
 
   // ---------- weather ----------
