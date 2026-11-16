@@ -312,11 +312,14 @@ block there, or press it again on a block you placed to remove it for a
 refund. Blocks are real obstacles for everyone in the town, synced live.
 Capped at 150 blocks total so the town doesn't fill up solid.
 
-Three materials to pick from — press **F** (or tap the material pill
+Five materials to pick from — press **F** (or tap the material pill
 under the build banner) to switch: 🪵 **Wall** (1 wood, a full solid
 block), 🪨 **Fence** (1 stone, a thinner picket-style block that still
-blocks movement), or 🪔 **Lamp** (2 flowers, purely decorative — you can
-walk straight through it, and it glows at night alongside the fireflies).
+blocks movement), 🪔 **Lamp** (2 flowers, purely decorative — you can
+walk straight through it, and it glows at night alongside the fireflies),
+🌳 **Hedge** (3 flowers, a solid green bush block for garden walls), or
+🟫 **Path** (1 stone, a flat decorative ground tile for laying out
+walkways — fully walkable, it never blocks movement).
 
 ### Going underground
 

@@ -82,6 +82,9 @@ for how each feature actually works and plays.
   task for everyone each day, computed from the date; a sign over his
   head shows the ask and reward, interact with enough in your bag to
   turn it in
+- Two more build-mode materials, 🌳 Hedge (3 flowers, solid — a green
+  bush wall) and 🟫 Path (1 stone, non-solid — a flat ground tile for
+  laying out walkways), plus matching achievements
 
 ## Villagers and expression
 
