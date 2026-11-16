@@ -37,7 +37,44 @@ html, body {
 
 #join-overlay.hidden { display: none; }
 
+#join-decor {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+#join-decor span {
+  position: absolute;
+  bottom: -40px;
+  font-size: 22px;
+  opacity: 0;
+  animation: join-decor-float 14s linear infinite;
+}
+
+#join-decor span:nth-child(1) { left: 6%; animation-delay: 0s; font-size: 26px; }
+#join-decor span:nth-child(2) { left: 18%; animation-delay: 2s; font-size: 16px; }
+#join-decor span:nth-child(3) { left: 32%; animation-delay: 5s; font-size: 20px; }
+#join-decor span:nth-child(4) { left: 55%; animation-delay: 1s; font-size: 18px; }
+#join-decor span:nth-child(5) { left: 70%; animation-delay: 7s; font-size: 22px; }
+#join-decor span:nth-child(6) { left: 84%; animation-delay: 3.5s; font-size: 24px; }
+#join-decor span:nth-child(7) { left: 94%; animation-delay: 9s; font-size: 15px; }
+
+@keyframes join-decor-float {
+  0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+  10% { opacity: 0.55; }
+  90% { opacity: 0.55; }
+  100% { transform: translateY(-100vh) rotate(25deg); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #join-decor { display: none; }
+}
+
 .join-card {
+  position: relative;
+  z-index: 1;
   background: #232c3a;
   border: 3px solid #3a4658;
   border-radius: 14px;

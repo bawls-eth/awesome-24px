@@ -100,6 +100,8 @@ for how each feature actually works and plays.
   same shape as the scavenger hunt)
 - Opt-in ambient background music — a slow synthesized chord pad, off by
   default, independent of the SFX mute toggle
+- A few drifting butterflies/sparkles/petals behind the join screen —
+  pure CSS, respects prefers-reduced-motion, no new art or JS state
 - Two more build-mode materials, 🌳 Hedge (3 flowers, solid — a green
   bush wall) and 🟫 Path (1 stone, non-solid — a flat ground tile for
   laying out walkways), plus matching achievements
