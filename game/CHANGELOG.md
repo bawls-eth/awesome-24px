@@ -183,3 +183,9 @@ for how each feature actually works and plays.
 - Fixed the mobile chat input bar sitting too close to the D-pad/action
   buttons — the quick-chat phrase row had eaten most of the original
   clearance, leaving only a few px of margin on real devices
+- Fixed the mobile on-screen keyboard leaving the chat bar floating
+  mid-screen with a stray opaque gap showing through behind it — added
+  `interactive-widget=resizes-content` to the viewport meta tag, and as
+  a fallback for browsers that don't yet honor it, the game canvas's
+  container now tracks `visualViewport` directly instead of staying
+  pinned to the full (pre-keyboard) page height

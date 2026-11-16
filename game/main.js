@@ -4218,9 +4218,20 @@ function startTown(net, data) {
   const game = new Phaser.Game(config);
   game.scene.add('Town', TownScene, true, { net, self: data.self, players: data.players, world: data.world });
 
+  const gameContainer = document.getElementById('game-container');
   const resizeToViewport = () => {
     const size = viewportSize();
     game.scale.resize(size.width, size.height);
+    // #game-container is `position: fixed; inset: 0`, sized to the full
+    // layout viewport — on a keyboard that overlays rather than resizes the
+    // page, that stays taller than the (now keyboard-aware) canvas inside
+    // it, exposing the page's own dark background in the gap behind the
+    // keyboard. Pinning its box to the same visualViewport size as the
+    // canvas removes that gap instead of leaving it to show through.
+    if (gameContainer) {
+      gameContainer.style.width = `${size.width}px`;
+      gameContainer.style.height = `${size.height}px`;
+    }
   };
   window.addEventListener('resize', resizeToViewport);
   if (window.visualViewport) {
@@ -4230,6 +4241,27 @@ function startTown(net, data) {
   // double-check shortly after start rather than only on resize events.
   setTimeout(resizeToViewport, 150);
   setTimeout(resizeToViewport, 600);
+
+  // On a browser that honors `interactive-widget=resizes-content` (the meta
+  // tag above), window.innerHeight shrinks right along with the on-screen
+  // keyboard and this gap is always ~0 — harmless no-op there. On one that
+  // doesn't (older Safari, some Android webviews), the keyboard instead
+  // overlays the page: window.innerHeight stays full-height while
+  // visualViewport shrinks (and pans) to the space still visible above the
+  // keyboard, so fixed-bottom UI (the chat bar) ends up positioned behind
+  // the keyboard or adrift wherever the visual viewport happens to be
+  // panned to. This feeds that gap into a CSS var so fixed-bottom elements
+  // can push themselves up above the keyboard instead.
+  const updateKeyboardInset = () => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    document.documentElement.style.setProperty('--kb-inset', `${Math.round(inset)}px`);
+  };
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', updateKeyboardInset);
+    window.visualViewport.addEventListener('scroll', updateKeyboardInset);
+  }
 }
 
 renderSpeciesTabs();
