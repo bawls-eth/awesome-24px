@@ -88,6 +88,9 @@ everyone else automatically. Capped at **10 players** at once for now.
 - 🎸 **K.K. Slider plays the campfire** every evening, 7-9pm on *your*
   device's own clock — walk up during the show and interact for a ⭐2
   bonus and an emote, once per show (see "K.K. Slider" below)
+- 🧪 **Professor Byte**, a resident NPC near the Mayor statue — interact
+  for a random bit of flavor text in a speech bubble. Purely for charm,
+  no reward, but he's got a lot to say
 - 🏆 **Achievements** (Nook Miles-style) — a 🏆 badge under the player
   list opens a checklist of 12 lifetime goals (catch/chop/mine 10,
   complete the museum, play Polyroll 10 times, and more), each paying a

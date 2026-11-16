@@ -186,6 +186,27 @@ const POND_CATS = [
   { y: 648, frame: 6, range: [170, 320] },
 ];
 const STATUE_POS = { x: 1450, y: 600 };
+const NPC_POS = { x: 1550, y: 540 };
+const NPC_RADIUS = 48;
+const NPC_NAME = '🧪 Professor Byte';
+const NPC_LINES = [
+  "Did you know the pond cats never actually get wet? Mysteries of pixel physics.",
+  "I've been counting your footsteps. You're very consistent. It's admirable.",
+  "The Bored Ape statue hasn't blinked once since I've been standing here.",
+  "Turnip prices are basically vibes-based. Don't ask me to explain further.",
+  "I dug a hole once. Found nothing but more dirt. 0/10, not recommending it.",
+  "If you listen closely during K.K. Slider's set, you can hear the campfire keeping time.",
+  "Fossils are just rocks with better marketing, and I stand by that.",
+  "I've met every species in this town except whichever one you just picked. Rude, honestly.",
+  "Someone should really build a fence around my research. Hint hint.",
+  "The shells on the beach regrow overnight. I have theories. None of them are good.",
+  "I tried the Polyroll dice once. Lost all my stars in four seconds. Science.",
+  "Achievements are just chores with better rewards.",
+  "I'm 73% sure the Able Sisters just recolor the same four outfits.",
+  "Day or night, rain or shine — I remain exactly this unbothered.",
+  "Keep chatting nearby and someone's going to assume we're friends.",
+  "I'm not saying the museum is understaffed. I'm saying it's me. It's always been me.",
+];
 const HOUSE_POS = { x: 1020, y: 760, w: 110, h: 70 };
 const SHOP_RADIUS = 70;
 const POLYROLL_POS = { x: 1250, y: 760 };
@@ -349,6 +370,7 @@ class TownScene extends Phaser.Scene {
     this.drawHouse();
     this.drawStatue();
     this.drawCampfire();
+    this.drawNPC();
     this.drawDigHole();
     this.drawDoors();
     this.drawPolyrollBooth();
@@ -945,6 +967,10 @@ class TownScene extends Phaser.Scene {
     }
     if (this.isNearMuseum()) {
       this.donateFossils();
+      return;
+    }
+    if (this.isNearNPC()) {
+      this.talkToNPC();
       return;
     }
     const fossilSpot = this.findNearestFossilSpot();
@@ -2212,6 +2238,41 @@ class TownScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(y + 1);
 
     this.addObstacleRect({ x: x - 22, y: y - 8, width: 44, height: 20 });
+  }
+
+  drawNPC() {
+    const { x, y } = NPC_POS;
+    const sprite = this.add.sprite(x, y, 'genius', 2).setScale(2).setDepth(y);
+    this.tweens.add({ targets: sprite, y: y - 4, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.add.text(x, y - 36, NPC_NAME, {
+      fontSize: '11px',
+      fontFamily: 'monospace',
+      color: '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(y + 1);
+    this.npcBubble = this.add.text(x, y - 56, '', {
+      fontSize: '11px',
+      color: '#1c2430',
+      backgroundColor: '#ffe066',
+      padding: { x: 8, y: 5 },
+      wordWrap: { width: 180 },
+      align: 'center',
+    }).setOrigin(0.5, 1).setDepth(y + 2).setVisible(false);
+    this.addObstacleRect({ x: x - 10, y: y - 6, width: 20, height: 20 });
+  }
+
+  isNearNPC() {
+    return Phaser.Math.Distance.Between(this.localBody.x, this.localBody.y, NPC_POS.x, NPC_POS.y) < NPC_RADIUS;
+  }
+
+  talkToNPC() {
+    const line = NPC_LINES[Math.floor(Math.random() * NPC_LINES.length)];
+    this.npcBubble.setText(line).setVisible(true);
+    if (this.npcBubbleTimer) this.npcBubbleTimer.remove();
+    this.npcBubbleTimer = this.time.delayedCall(4200, () => this.npcBubble.setVisible(false));
+    this.incrementStat('npcChats');
+    SFX.pop();
   }
 
   drawCampfire() {
