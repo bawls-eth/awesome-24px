@@ -285,15 +285,19 @@ via `file://` won't work — the sprite sheets need to load over http.)
   underground" below for its own controls (look-drag, mine **E**, place **F**)
 
 **Mobile (iPhone/Android):** on-screen controls appear automatically on touch
-devices — a D-pad (bottom-left), and action buttons (bottom-right): 🎮 Tilt,
-🧱 Build, ✋ Interact, 😀 Emotes, 💬 Chat.
+devices — a D-pad (bottom-left), and action buttons (bottom-right), stacked
+top to bottom: 😀 Emotes, 🎮 Tilt, then a 2×2 grid of 🧱 Build, ✋ Interact,
+📸 Photo, 💬 Chat.
 - **🎮 Tilt** — tap to enable; iOS will ask for a Motion & Orientation
   permission the first time (required by Apple, can't be skipped) — tilt
   the phone like a steering wheel to walk. Tap again to turn it off
 - **✋ Interact** does the same thing as desktop's E — fish/chop/mine/build.
   **Shaking the phone** is a fun bonus trigger for the same action, if
   something's in range
-- **💬** focuses chat, **➤** sends it
+- **💬 Chat** opens the text input (hidden the rest of the time so it isn't
+  always eating screen space) and focuses it; **➤** sends it, and it
+  tucks itself away again once you're done. The quick-chat phrase buttons
+  above it work without opening the keyboard at all
 - **🗑️ Clear** appears above the chat log once there's something to clear —
   it only clears your own screen, not the shared history everyone else sees
 - Your 🎒 bag (top-left) shows your wood/stone/fish; a visible rod line
@@ -302,7 +306,7 @@ devices — a D-pad (bottom-left), and action buttons (bottom-right): 🎮 Tilt,
 ### Able Sisters
 
 Your look isn't locked in at the join screen anymore. Walk up to the
-👗 **Able Sisters** shop (near the turnip stall) and interact for the
+👗 **Able Sisters** shop and interact for the
 same species/color picker from the join screen, now live in the world.
 Pick anything, hit **Wear it!**, and your sprite changes instantly —
 other players in the town see the change within about a second, the

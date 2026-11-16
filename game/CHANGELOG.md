@@ -181,6 +181,17 @@ for how each feature actually works and plays.
   text, which faded in under a second — too quick to actually read an
   achievement's name. The what's-new banner now also auto-dismisses
   after 10 seconds instead of sitting there until manually closed
+- Reworked the mobile action-button layout: moved 😀 Emotes out of the
+  cramped 2×2 grid into its own full-width row above 🎮 Tilt, and
+  filled its old spot with a new 📸 Photo button, so the main grid is
+  now a clean 🧱 Build / ✋ Interact / 📸 Photo / 💬 Chat
+- The mobile chat text input is hidden until the 💬 Chat button taps
+  it open, instead of permanently sitting on screen — quick-chat
+  phrases above it still work without opening it. Fixed a real bug
+  this surfaced: tapping Send while the input had focus blurred it
+  (standard mobile tap-to-click behavior) before the click handler
+  ran, and since blur now hides the row, the send button was
+  disappearing out from under the tap and silently swallowing it
 
 ## Villagers and expression
 

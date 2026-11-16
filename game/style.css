@@ -521,20 +521,34 @@ body.touch-device #player-list-panel {
 body.touch-device #chat-panel {
   left: 8px;
   right: 8px;
-  /* D-pad/action buttons are 150-152px tall, sitting 16px off the bottom
-     (so their top edge is ~166-168px up) — this needs clearance above
-     that with real margin, not the few px it had before quick-chat-row
-     added height to this panel and ate almost all of it. --kb-inset (set
-     in main.js from visualViewport) adds on top of that when the on-screen
+  /* #action-buttons is now 4 rows tall (emote pill, tilt pill, B/A, P/C:
+     36+36+50+50 + 3x8 gap = 196px), sitting 16px off the bottom, so its
+     top edge is ~212px up — taller than the D-pad (150px). This needs
+     clearance above whichever is taller, with real margin, not the few
+     px it had before (quick-chat-row, then a 4th button row, both ate
+     into it without the offset being rechecked). --kb-inset (set in
+     main.js from visualViewport) adds on top of that when the on-screen
      keyboard overlays the page instead of resizing it, so this bar stays
      above the keyboard instead of floating wherever the shrunk visible
      area happens to be. */
-  bottom: calc(190px + env(safe-area-inset-bottom, 0px) + var(--kb-inset, 0px));
+  bottom: calc(230px + env(safe-area-inset-bottom, 0px) + var(--kb-inset, 0px));
   width: auto;
 }
 
 body.touch-device #chat-log {
   max-height: 96px;
+}
+
+/* The text input row is hidden until the C button taps it open (see
+   mobile-chat-btn in setupTouchControls) — quick-chat phrases above it
+   still work without opening the keyboard, so there's no reason for this
+   row to permanently eat screen space on a small phone. */
+body.touch-device #chat-input-row {
+  display: none;
+}
+
+body.touch-device #chat-input-row.chat-input-visible {
+  display: flex;
 }
 
 body.touch-device #mobile-controls {
@@ -605,7 +619,7 @@ body.touch-device #mobile-controls {
   border-color: #6fbf73;
 }
 
-#tilt-toggle-btn {
+#tilt-toggle-btn, #emote-toggle-btn {
   grid-column: 1 / span 2;
   width: auto !important;
   height: 36px !important;

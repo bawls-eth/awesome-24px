@@ -1181,7 +1181,10 @@ class TownScene extends Phaser.Scene {
     });
 
     const chatInput = document.getElementById('chat-input');
-    document.getElementById('mobile-chat-btn').addEventListener('click', () => chatInput.focus());
+    document.getElementById('mobile-chat-btn').addEventListener('click', () => {
+      document.getElementById('chat-input-row').classList.add('chat-input-visible');
+      chatInput.focus();
+    });
 
     const emotePopup = document.getElementById('emote-popup');
     EMOTES.forEach((symbol, i) => {
@@ -1194,9 +1197,24 @@ class TownScene extends Phaser.Scene {
       });
       emotePopup.appendChild(btn);
     });
-    document.getElementById('emote-toggle-btn').addEventListener('click', () => {
+    const emoteToggleBtn = document.getElementById('emote-toggle-btn');
+    emoteToggleBtn.addEventListener('click', () => {
+      const willShow = emotePopup.classList.contains('hidden');
       emotePopup.classList.toggle('hidden');
+      if (willShow) {
+        // Positioned from the button's actual on-screen spot rather than a
+        // hardcoded offset, so it keeps popping up directly above the
+        // emote button if this row ever moves or gains/loses a neighbor.
+        const btnRect = emoteToggleBtn.getBoundingClientRect();
+        const popupRect = emotePopup.getBoundingClientRect();
+        emotePopup.style.left = `${btnRect.right - popupRect.width}px`;
+        emotePopup.style.right = 'auto';
+        emotePopup.style.bottom = `${window.innerHeight - btnRect.top + 8}px`;
+      }
     });
+
+    const photoBtn = document.getElementById('mobile-photo-btn');
+    if (photoBtn) photoBtn.addEventListener('click', () => this.takePhoto());
   }
 
   // ---------- mobile: tilt steering + shake-to-interact ----------
@@ -3992,7 +4010,15 @@ class TownScene extends Phaser.Scene {
     const chatInput = document.getElementById('chat-input');
 
     chatInput.addEventListener('focus', () => { this.chatFocused = true; });
-    chatInput.addEventListener('blur', () => { this.chatFocused = false; });
+    chatInput.addEventListener('blur', () => {
+      this.chatFocused = false;
+      // On mobile this input row is hidden until tapped open (see the
+      // mobile-chat-btn handler in setupTouchControls) — closing the
+      // keyboard/blurring is the natural "done typing" signal to hide it
+      // again, so it's not permanently eating screen space. A no-op on
+      // desktop, where the row has no hiding CSS to begin with.
+      document.getElementById('chat-input-row').classList.remove('chat-input-visible');
+    });
 
     chatInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
@@ -4018,7 +4044,21 @@ class TownScene extends Phaser.Scene {
       document.getElementById('chat-clear-btn').classList.add('hidden');
     });
 
-    document.getElementById('chat-send-btn').addEventListener('click', () => this.sendChatMessage());
+    const sendBtn = document.getElementById('chat-send-btn');
+    // On mobile, tapping this button while the input is still focused
+    // blurs the input *before* the click fires (a tap is translated into
+    // touchstart/touchend, then compatibility mousedown/mouseup/click —
+    // it's that synthetic mousedown's default "shift focus" behavior that
+    // causes the blur) — and since blur now hides #chat-input-row (see
+    // above), the row (send button included) was disappearing out from
+    // under the tap mid-gesture, silently swallowing the click entirely.
+    // Blocking just mousedown's default stops that focus shift without
+    // canceling the click itself (unlike preventDefault on touchstart,
+    // which suppresses the whole synthetic mouse-event chain, click
+    // included), so sendChatMessage()'s own explicit blur() at the end is
+    // what finally hides the row, after the message has actually sent.
+    sendBtn.addEventListener('mousedown', (e) => e.preventDefault());
+    sendBtn.addEventListener('click', () => this.sendChatMessage());
     document.querySelectorAll('#quick-chat-row button').forEach((btn) => {
       btn.addEventListener('click', () => {
         chatInput.value = btn.dataset.phrase;
