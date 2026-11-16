@@ -45,7 +45,10 @@ everyone else automatically. Capped at **10 players** at once for now.
   [NFS Underground 2](https://nfsu2.xyz/) — walk up and interact to leave
   Pixeltown entirely for that browser game, in this same tab. It's
   one-way: there's no teleport back, just like walking through a loading
-  door and leaving the area behind (a confirm prompt checks before you go)
+  door and leaving the area behind (a confirm prompt checks before you go).
+  If your browser brings you back to this exact tab with its Back button,
+  the door you just used works again right away — it used to get stuck
+  permanently closed in that case
 - A wide **East Meadow** past the original town — walk east along the main
   path to find a second pond (with its own fishing spot), more trees, rocks,
   and tulip beds to explore

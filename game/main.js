@@ -246,6 +246,7 @@ class TownScene extends Phaser.Scene {
     this.setupActivities();
     this.setupBuilding();
     this.setupWalkie();
+    this.setupPortalReopen();
     this.setupBugs();
     if (IS_TOUCH) {
       this.setupTouchControls();
@@ -788,6 +789,18 @@ class TownScene extends Phaser.Scene {
     if (!ok) return;
     this.doorBusy = true;
     window.location.href = portal.url;
+  }
+
+  // If the player presses the browser's Back button after going through a
+  // portal, some browsers (iOS Safari especially) restore this exact page
+  // from cache instead of reloading it — doorBusy would otherwise stay
+  // stuck true forever, since it was only ever set right before leaving,
+  // making every door permanently dead until a hard refresh. Clear it
+  // whenever the page becomes active again, covering both that restore
+  // and an ordinary fresh load (where it's already false, so this is a
+  // no-op).
+  setupPortalReopen() {
+    window.addEventListener('pageshow', () => { this.doorBusy = false; });
   }
 
   updateDigHoleHint() {
