@@ -127,7 +127,7 @@ const SPECIES = [
   { key: 'punkettes', label: 'Punkettes' },
 ];
 
-const EMOTES = ['😀', '❤️', '😂', '👋', '🎉'];
+const EMOTES = ['😀', '❤️', '😂', '👋', '🎉', '😢', '😮', '💤', '🎵'];
 const SPARKLE_SPOTS = [
   [500, 300], [1100, 300], [500, 950], [1150, 940], [300, 780],
   [1280, 650], [700, 850], [900, 400], [650, 350], [1050, 950],
@@ -327,7 +327,11 @@ class TownScene extends Phaser.Scene {
   create() {
     this.physics.world.setBounds(0, 0, this.world.width, this.world.height);
     this.cameras.main.setBounds(0, 0, this.world.width, this.world.height);
-    this.cameras.main.setZoom(2);
+    // Phones (and especially standalone "Add to Home Screen" launches, which
+    // have no browser chrome eating into the viewport) show a lot less of the
+    // world at zoom 2 — zoom out a bit so HUD panels don't end up covering
+    // most of what's visible.
+    this.cameras.main.setZoom(IS_TOUCH ? 1.5 : 2);
 
     this.obstacles = this.physics.add.staticGroup();
     this.remotePlayers = new Map();
@@ -2735,12 +2739,25 @@ function attemptJoin() {
   net.join({ name, species: selectedSpecies, frame: selectedFrame });
 }
 
+function viewportSize() {
+  // Standalone "Add to Home Screen" launches on iOS report a stale/incorrect
+  // window.innerWidth/innerHeight for a moment (and sometimes for good,
+  // depending on iOS version) — visualViewport tracks the real on-screen
+  // size, so prefer it whenever it's available to avoid a zoomed-in canvas.
+  const vv = window.visualViewport;
+  return {
+    width: Math.round((vv && vv.width) || window.innerWidth),
+    height: Math.round((vv && vv.height) || window.innerHeight),
+  };
+}
+
 function startTown(net, data) {
+  const initialSize = viewportSize();
   const config = {
     type: Phaser.AUTO,
     parent: 'game-container',
-    width: window.innerWidth,
-    height: window.innerHeight,
+    width: initialSize.width,
+    height: initialSize.height,
     backgroundColor: '#3a5a40',
     pixelArt: true,
     physics: { default: 'arcade', arcade: { debug: false } },
@@ -2748,9 +2765,18 @@ function startTown(net, data) {
   const game = new Phaser.Game(config);
   game.scene.add('Town', TownScene, true, { net, self: data.self, players: data.players, world: data.world });
 
-  window.addEventListener('resize', () => {
-    game.scale.resize(window.innerWidth, window.innerHeight);
-  });
+  const resizeToViewport = () => {
+    const size = viewportSize();
+    game.scale.resize(size.width, size.height);
+  };
+  window.addEventListener('resize', resizeToViewport);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', resizeToViewport);
+  }
+  // Standalone launches settle their real viewport a beat after load, so
+  // double-check shortly after start rather than only on resize events.
+  setTimeout(resizeToViewport, 150);
+  setTimeout(resizeToViewport, 600);
 }
 
 renderSpeciesTabs();

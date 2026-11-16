@@ -173,8 +173,8 @@ html, body {
 
 #player-list-panel {
   position: fixed;
-  top: 16px;
-  right: 16px;
+  top: calc(16px + env(safe-area-inset-top, 0px));
+  right: calc(16px + env(safe-area-inset-right, 0px));
   width: 180px;
   background: rgba(28,36,48,0.85);
   border: 2px solid #3a4658;
@@ -206,7 +206,7 @@ html, body {
 
 #inventory-panel {
   position: fixed;
-  top: 16px;
+  top: calc(16px + env(safe-area-inset-top, 0px));
   right: 212px;
   background: rgba(28,36,48,0.7);
   border: 2px solid #3a4658;
@@ -226,12 +226,12 @@ html, body {
 }
 
 @media (max-width: 720px) {
-  #inventory-panel { right: auto; left: 8px; top: 8px; padding: 6px 10px; font-size: 12px; gap: 4px 8px; flex-wrap: wrap; max-width: 46vw; }
+  #inventory-panel { right: auto; left: 8px; top: calc(8px + env(safe-area-inset-top, 0px)); padding: 6px 10px; font-size: 12px; gap: 4px 8px; flex-wrap: wrap; max-width: 46vw; }
 }
 
 #build-mode-banner {
   position: fixed;
-  top: 16px;
+  top: calc(16px + env(safe-area-inset-top, 0px));
   left: 50%;
   transform: translateX(-50%);
   background: #ffe066;
@@ -259,7 +259,7 @@ html, body {
      has 7 resource counters, and this banner is centered/near-full-width
      — push it below both top panels instead of guessing one specific
      height, so it can't land on top of whichever one is taller. */
-  #build-mode-banner { top: 104px; font-size: 11px; padding: 6px 12px; white-space: normal; text-align: center; max-width: 90vw; }
+  #build-mode-banner { top: calc(104px + env(safe-area-inset-top, 0px)); font-size: 11px; padding: 6px 12px; white-space: normal; text-align: center; max-width: 90vw; }
 }
 
 #chat-panel {
@@ -362,8 +362,12 @@ body.touch-device #player-list-panel {
 body.touch-device #chat-panel {
   left: 8px;
   right: 8px;
-  bottom: calc(180px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(172px + env(safe-area-inset-bottom, 0px));
   width: auto;
+}
+
+body.touch-device #chat-log {
+  max-height: 96px;
 }
 
 body.touch-device #mobile-controls {
@@ -448,8 +452,8 @@ body.touch-device #mobile-controls {
   position: absolute;
   right: calc(132px + env(safe-area-inset-right, 0px));
   bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-  display: flex;
-  flex-direction: row-reverse;
+  display: grid;
+  grid-template-columns: repeat(3, 44px);
   gap: 8px;
   pointer-events: auto;
 }
@@ -467,7 +471,7 @@ body.touch-device #mobile-controls {
 }
 
 @media (max-width: 480px) {
-  body.touch-device #player-list-panel { top: 8px; right: 8px; max-width: 46vw; }
+  body.touch-device #player-list-panel { top: calc(8px + env(safe-area-inset-top, 0px)); right: calc(8px + env(safe-area-inset-right, 0px)); max-width: 46vw; }
 }
 
 #dig-hole-hint {

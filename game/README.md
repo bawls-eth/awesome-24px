@@ -16,7 +16,7 @@ everyone else automatically. Capped at **10 players** at once for now.
 
 **What there is to do:**
 - Walk the town, chat, hang out by the campfire, the pond, or the statue
-- 5 emotes (keys **1-5**) that pop up over your head for everyone to see
+- 9 emotes (keys **1-9**) that pop up over your head for everyone to see
 - A rotating **✨ sparkle** wanders the town every 8s — walk into it to
   score a point; the player list is a live-sorted mini-leaderboard
 - **Fish** at the pond (or the second pond out east), **chop** trees for
@@ -188,7 +188,7 @@ via `file://` won't work — the sprite sheets need to load over http.)
   a block if you're in build mode (whichever's nearest to you)
 - **B** — toggle build mode
 - **Enter** — open chat, type, **Enter** again to send
-- **1-5** — emote (👋 😀 ❤️ 😂 🎉), visible to everyone nearby
+- **1-9** — emote (😀 ❤️ 😂 👋 🎉 😢 😮 💤 🎵), visible to everyone nearby
 - Walk into the **✨ sparkle** to score a point
 - Jump in the ⛏️ **Hole** (press E) for the 3D underground — see "Going
   underground" below for its own controls (look-drag, mine **E**, place **F**)
@@ -369,6 +369,17 @@ This works because of `game/manifest.json` and the icons in `game/icons/` —
 if you want a different icon, swap the PNGs in that folder (keep the same
 filenames/sizes: 180×180 for `apple-touch-icon.png`, 192 and 512 for the
 manifest, 32×32 for the favicon).
+
+Standalone home-screen launches on iOS report an unreliable
+`window.innerWidth`/`innerHeight` for a moment after launch (and sometimes
+permanently depending on iOS version), which used to make the camera look
+zoomed-in and the chat box sit too high above the on-screen controls. The
+game now sizes itself from `window.visualViewport` (with a couple of
+delayed re-checks right after launch) and every fixed HUD panel accounts
+for `env(safe-area-inset-*)`, so it should look right whether you're in
+Safari or a home-screen app. Touch devices also zoom the camera out a
+little (1.5× instead of 2×) since phone screens show a lot less of the
+world otherwise.
 
 ## How it works
 
