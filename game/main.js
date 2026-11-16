@@ -574,6 +574,25 @@ const PORTALS = [
 ];
 const EAST_POND = { cx: 2000, cy: 280, rx: 130, ry: 80 };
 
+// Fixed, hand-picked landmarks for the town map overlay — deliberately a
+// simple schematic (dots + labels on a plain backdrop), not a literal
+// zoomed-out render of the actual sprites, which would be unreadable mud
+// at the small size a map needs to be.
+const MAP_LANDMARKS = [
+  { x: 260, y: 600, label: 'Pond' },
+  { x: EAST_POND.cx, y: EAST_POND.cy, label: 'East pond' },
+  { x: HOUSE_POS.x + HOUSE_POS.w / 2, y: HOUSE_POS.y + HOUSE_POS.h / 2, label: 'Shop' },
+  { x: MUSEUM_POS.x + MUSEUM_POS.w / 2, y: MUSEUM_POS.y + MUSEUM_POS.h / 2, label: 'Museum' },
+  { x: ABLE_SISTERS_POS.x + ABLE_SISTERS_POS.w / 2, y: ABLE_SISTERS_POS.y + ABLE_SISTERS_POS.h / 2, label: 'Able Sisters' },
+  { x: STATUE_POS.x, y: STATUE_POS.y, label: 'Statue' },
+  { x: NPC_POS.x, y: NPC_POS.y, label: 'Prof. Byte' },
+  { x: NPC2_POS.x, y: NPC2_POS.y, label: 'Salty Mo' },
+  { x: GRAVEYARD_POS.x, y: GRAVEYARD_POS.y, label: 'Graveyard' },
+  { x: WINDMILL_POS.x, y: WINDMILL_POS.y, label: 'Windmill' },
+  { x: CAMPFIRE_POS.x, y: CAMPFIRE_POS.y, label: 'Campfire' },
+  { x: POLYROLL_POS.x, y: POLYROLL_POS.y, label: 'Polyroll' },
+];
+
 const FISHING_SPOTS = [
   { x: 115, y: 600 },
   { x: 260, y: 700 },
@@ -729,6 +748,8 @@ class TownScene extends Phaser.Scene {
     this.setupKeysHelp();
     this.setupChangelogViewer();
     this.setupFeedbackButton();
+    this.setupSettingsToggle();
+    this.setupMap();
     this.setupOutfitShop();
     this.setupGuestbook();
     this.setupBugs();
@@ -1261,7 +1282,7 @@ class TownScene extends Phaser.Scene {
   // so chat/overlay state is respected no matter which input triggered it
   // (keyboard, on-screen button, or shake).
   canAct() {
-    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen;
+    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen && !this.mapOpen;
   }
 
   // Shake is just a fun alternate trigger for the same interact() logic used
@@ -2313,6 +2334,98 @@ class TownScene extends Phaser.Scene {
     const title = encodeURIComponent('Pixeltown feedback');
     const body = encodeURIComponent('What happened / what you\'d like to see:\n\n');
     btn.href = `https://github.com/bawls-eth/awesome-24px/issues/new?title=${title}&body=${body}`;
+  }
+
+  // Collapses the long run of settings/utility buttons that had piled up
+  // in the player list panel (Keys, Changelog, Feedback, Sound, Music,
+  // Motion, Photo, Backup, Restore) behind one toggle, so the panel's
+  // default footprint stays small — only the player list and the always-
+  // relevant glanceable status (achievements/map/streak/rating) show by
+  // default. Collapsed state is remembered per device.
+  setupSettingsToggle() {
+    const btn = document.getElementById('settings-toggle-btn');
+    const section = document.getElementById('settings-section');
+    if (!btn || !section) return;
+    let open = loadSave().settingsOpen === true;
+    const render = () => {
+      section.classList.toggle('hidden', !open);
+      btn.textContent = open ? '⚙️ Settings ▴' : '⚙️ Settings ▾';
+    };
+    render();
+    btn.addEventListener('click', () => {
+      open = !open;
+      writeSave({ settingsOpen: open });
+      render();
+    });
+  }
+
+  // ---------- town map ----------
+  // A deliberately simple schematic (MAP_LANDMARKS dots + labels on a
+  // plain backdrop), not a literal zoomed-out render of the actual game —
+  // at the small size a map needs to be, real sprites would just be mud.
+  // Shown on demand in an overlay rather than as a permanent on-screen
+  // widget, both to avoid adding to the HUD clutter this is meant to fix
+  // and because the D-pad/chat-bar corners are already spoken for.
+
+  setupMap() {
+    const btn = document.getElementById('map-btn');
+    const overlay = document.getElementById('map-overlay');
+    const closeBtn = document.getElementById('map-close-btn');
+    const canvas = document.getElementById('map-canvas');
+    if (!btn || !overlay || !closeBtn || !canvas) return;
+    const ctx = canvas.getContext('2d');
+    let redrawTimer = null;
+    const open = () => {
+      overlay.classList.remove('hidden');
+      this.mapOpen = true;
+      this.drawMap(ctx, canvas.width, canvas.height);
+      redrawTimer = setInterval(() => this.drawMap(ctx, canvas.width, canvas.height), 400);
+    };
+    const close = () => {
+      overlay.classList.add('hidden');
+      this.mapOpen = false;
+      if (redrawTimer) { clearInterval(redrawTimer); redrawTimer = null; }
+    };
+    btn.addEventListener('click', open);
+    closeBtn.addEventListener('click', close);
+    this.input.keyboard.on('keydown-M', () => { if (this.canAct()) open(); });
+  }
+
+  drawMap(ctx, w, h) {
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = '#2f4a33';
+    ctx.fillRect(0, 0, w, h);
+
+    const toScreen = (x, y) => [(x / this.world.width) * w, (y / this.world.height) * h];
+
+    MAP_LANDMARKS.forEach(({ x, y, label }) => {
+      const [sx, sy] = toScreen(x, y);
+      ctx.fillStyle = '#d8cfa8';
+      ctx.beginPath();
+      ctx.arc(sx, sy, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(238,242,247,0.8)';
+      ctx.font = '8px monospace';
+      ctx.textAlign = sx > w - 40 ? 'right' : 'left';
+      ctx.fillText(label, sx + (sx > w - 40 ? -4 : 4), sy + 3);
+    });
+
+    this.remotePlayers.forEach((rp) => {
+      const [sx, sy] = toScreen(rp.x, rp.y);
+      ctx.fillStyle = '#6fbf73';
+      ctx.beginPath();
+      ctx.arc(sx, sy, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    const [lx, ly] = toScreen(this.localBody.x, this.localBody.y);
+    ctx.fillStyle = '#ffe066';
+    ctx.strokeStyle = '#1c2430';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(lx, ly, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
   }
 
   updateInventoryHUD() {

@@ -151,6 +151,19 @@ for how each feature actually works and plays.
   on that resource, stacking with the daily deal if it's the same one
 - An in-game changelog viewer (fetches and renders this file) and a
   feedback button that opens a prefilled GitHub issue
+- A town map overlay (🗺️ button or **M**) — a simple schematic with
+  landmark labels and everyone's live position, not a literal zoomed-
+  out render (which would be unreadable mud at map size)
+- Collapsed the player list panel's growing run of settings/utility
+  buttons behind a single ⚙️ Settings toggle, closed by default — the
+  panel had grown long enough to overflow its own max-height on real
+  devices, with lower rows unreachable
+- Bumped the player list panel's background from 85% to 97% opacity —
+  bright world text/sprites passing behind it (NPC name tags, signs)
+  were reading through it once the panel was this tall
+- Fixed `#save-import-input` (the hidden file picker `.click()`-
+  triggered by the Restore button) having no CSS rule hiding it at
+  all, rendering as a stray native "Choose File" button in the panel
 
 ## Villagers and expression
 

@@ -220,7 +220,10 @@ html, body {
   top: calc(16px + env(safe-area-inset-top, 0px));
   right: calc(16px + env(safe-area-inset-right, 0px));
   width: 180px;
-  background: rgba(28,36,48,0.85);
+  /* Was 0.85 — at that opacity, bright world text/sprites passing behind
+     the panel (NPC name tags, signs) show through enough to read, which
+     got confusing once this panel grew tall. */
+  background: rgba(20,27,38,0.97);
   border: 2px solid #3a4658;
   border-radius: 10px;
   padding: 10px 12px;
@@ -1047,21 +1050,39 @@ body.touch-device .key-hint { display: none; }
   text-align: center;
 }
 
-#streak-badge {
-  padding: 6px;
+#status-row {
+  display: flex;
   border-top: 1px solid #3a4658;
-  color: #ffb366;
-  font-size: 11px;
+  margin-top: 4px;
+}
+
+#streak-badge, #town-rating {
+  flex: 1 1 50%;
+  padding: 6px 2px;
+  font-size: 10px;
+  line-height: 1.3;
   text-align: center;
 }
 
-#town-rating {
+#streak-badge { color: #ffb366; }
+#town-rating { color: #6fbf73; }
+
+#settings-toggle-btn {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
   padding: 6px;
+  border: none;
   border-top: 1px solid #3a4658;
-  color: #6fbf73;
-  font-size: 11px;
+  background: transparent;
+  color: #9aa7bb;
+  font-size: 12px;
+  cursor: pointer;
   text-align: center;
 }
+
+#settings-section { display: block; }
+#settings-section.hidden { display: none; }
 
 #sfx-toggle-btn {
   display: block;
@@ -1111,7 +1132,7 @@ body.touch-device .key-hint { display: none; }
 
 #reduce-motion-btn.muted { color: #6b7385; }
 
-#keys-help-btn, #changelog-btn, #feedback-btn {
+#keys-help-btn, #changelog-btn, #feedback-btn, #map-btn {
   display: block;
   width: 100%;
   margin-top: 4px;
@@ -1154,6 +1175,11 @@ body.touch-device .key-hint { display: none; }
   cursor: pointer;
   text-align: center;
 }
+
+/* Never shown directly — #save-import-btn triggers it with .click().
+   It had no rule hiding it at all, so it was rendering as a stray native
+   "Choose File" button in the middle of the panel. */
+#save-import-input { display: none; }
 
 #achievements-overlay {
   position: fixed;
@@ -1367,6 +1393,44 @@ body.touch-device .key-hint { display: none; }
   display: inline-block;
   min-width: 100px;
   color: #6fbf73;
+}
+
+#map-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10,14,20,0.6);
+}
+
+#map-overlay.hidden { display: none; }
+
+#map-overlay .join-card { position: relative; width: auto; }
+
+#map-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #3a4658;
+  background: #1c2430;
+  color: #eef2f7;
+  cursor: pointer;
+}
+
+#map-canvas {
+  display: block;
+  margin-top: 10px;
+  width: 100%;
+  max-width: 280px;
+  height: auto;
+  border: 2px solid #3a4658;
+  border-radius: 8px;
+  background: #2f4a33;
 }
 
 #changelog-overlay {

@@ -53,18 +53,24 @@
     <h2>In town</h2>
     <ul id="player-list"></ul>
     <button id="achievements-badge" type="button">🏆 <b id="achievement-count">0</b>/<span id="achievement-cap">25</span></button>
-    <button id="keys-help-btn" type="button" title="Keyboard shortcuts">❓ Keys</button>
-    <button id="changelog-btn" type="button" title="See what's been added">📜 Changelog</button>
-    <a id="feedback-btn" href="#" target="_blank" rel="noopener" title="Report a bug or suggest something, on GitHub">🐞 Feedback</a>
-    <div id="streak-badge" title="Daily login streak">🔥 Day <b id="streak-count">0</b></div>
-    <div id="town-rating" title="How much the town has been built up, shared by everyone">🏘️ <span id="town-rating-label">Empty</span> (<b id="town-rating-count">0</b>/150)</div>
-    <button id="sfx-toggle-btn" type="button" title="Toggle sound effects">🔊 Sound</button>
-    <button id="music-toggle-btn" type="button" title="Toggle ambient background music (off by default)">🎵 Music off</button>
-    <button id="reduce-motion-btn" type="button" title="Turn off the walk-cycle hop for anyone sensitive to it">🏃 Motion on</button>
-    <button id="photo-btn" type="button" title="Take a photo (P)">📸 Photo</button>
-    <button id="save-export-btn" type="button" title="Download a backup of your local save">💾 Backup</button>
-    <button id="save-import-btn" type="button" title="Restore a save from a backup file">📂 Restore</button>
-    <input id="save-import-input" type="file" accept="application/json" class="hidden" />
+    <button id="map-btn" type="button" title="Town map (M)">🗺️ Map</button>
+    <div id="status-row">
+      <div id="streak-badge" title="Daily login streak">🔥 Day <b id="streak-count">0</b></div>
+      <div id="town-rating" title="How much the town has been built up, shared by everyone">🏘️ <span id="town-rating-label">Empty</span> (<b id="town-rating-count">0</b>/150)</div>
+    </div>
+    <button id="settings-toggle-btn" type="button">⚙️ Settings ▾</button>
+    <div id="settings-section" class="hidden">
+      <button id="keys-help-btn" type="button" title="Keyboard shortcuts">❓ Keys</button>
+      <button id="changelog-btn" type="button" title="See what's been added">📜 Changelog</button>
+      <a id="feedback-btn" href="#" target="_blank" rel="noopener" title="Report a bug or suggest something, on GitHub">🐞 Feedback</a>
+      <button id="sfx-toggle-btn" type="button" title="Toggle sound effects">🔊 Sound</button>
+      <button id="music-toggle-btn" type="button" title="Toggle ambient background music (off by default)">🎵 Music off</button>
+      <button id="reduce-motion-btn" type="button" title="Turn off the walk-cycle hop for anyone sensitive to it">🏃 Motion on</button>
+      <button id="photo-btn" type="button" title="Take a photo (P)">📸 Photo</button>
+      <button id="save-export-btn" type="button" title="Download a backup of your local save">💾 Backup</button>
+      <button id="save-import-btn" type="button" title="Restore a save from a backup file">📂 Restore</button>
+      <input id="save-import-input" type="file" accept="application/json" class="hidden" />
+    </div>
   </div>
 
   <div id="achievements-overlay" class="hidden">
@@ -181,10 +187,20 @@
       <li><b>Z</b> — undo last placed block (while building)</li>
       <li><b>1-9</b> — emote</li>
       <li><b>P</b> — take a photo</li>
+      <li><b>M</b> — open the town map</li>
       <li><b>T</b> — Professor Byte's daily trivia (while near him)</li>
       <li><b>Enter</b> — chat</li>
       <li><b>Esc</b> — clear chat input / unfocus</li>
     </ul>
+  </div>
+</div>
+
+<div id="map-overlay" class="hidden">
+  <div class="join-card">
+    <button id="map-close-btn" type="button" aria-label="Close">✕</button>
+    <h1>🗺️ Town Map</h1>
+    <p class="tagline">Everyone's live position, scaled down.</p>
+    <canvas id="map-canvas" width="280" height="140"></canvas>
   </div>
 </div>
 

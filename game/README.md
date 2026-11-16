@@ -69,6 +69,12 @@ right now, before you even pick a name.
 - A 📜 **Changelog** button under the player list opens an in-game view
   of this whole history, and a 🐞 **Feedback** button opens a prefilled
   GitHub issue
+- A 🗺️ **Map** button (or press **M**) opens a simple schematic town
+  map — every landmark and everyone's live position, scaled down
+- The player list panel's settings/utility buttons (Keys, Changelog,
+  Feedback, Sound, Music, Motion, Photo, Backup, Restore) live behind
+  a collapsed **⚙️ Settings** toggle by default, so the panel stays
+  small instead of growing into a long list of buttons
 - 🎵 **Ambient music** (opt-in, off by default) — a slow, quiet synthesized
   chord pad, same no-audio-files approach as the SFX. Toggle it next to
   the sound button; it's independent of the SFX mute, so you can have
