@@ -46,6 +46,60 @@ function censorBlockedTerms(s) {
     .join('');
 }
 
+// ---------- SFX ----------
+// Pixeltown had zero sound anywhere (bar walkie-talkie voice clips) —
+// a real gap for an Animal Crossing game, which leans heavily on its
+// chimes for feel. Rather than bundle audio files, these are short
+// WebAudio-synthesized blips, generated on the fly. Muted by default
+// state is remembered locally; the AudioContext itself is created lazily
+// on first real use since browsers refuse to start one before a user
+// gesture.
+let sfxMuted = loadSave().sfxMuted === true;
+let sfxCtx = null;
+
+function getSfxCtx() {
+  if (sfxMuted) return null;
+  if (!sfxCtx) {
+    try { sfxCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; }
+  }
+  if (sfxCtx.state === 'suspended') sfxCtx.resume().catch(() => {});
+  return sfxCtx;
+}
+
+// notes: a sequence of [frequencyHz, durationSeconds, delaySeconds]
+function playNotes(notes, type = 'sine', volume = 0.12) {
+  const ctx = getSfxCtx();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  notes.forEach(([freq, dur, delay]) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    const t0 = now + delay;
+    gain.gain.setValueAtTime(0, t0);
+    gain.gain.linearRampToValueAtTime(volume, t0 + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.02);
+  });
+}
+
+const SFX = {
+  catch: () => playNotes([[740, 0.08, 0], [1175, 0.1, 0.06]], 'sine', 0.12),
+  coin: () => playNotes([[988, 0.09, 0]], 'triangle', 0.1),
+  sell: () => playNotes([[523, 0.08, 0], [784, 0.08, 0.05], [1047, 0.12, 0.1]], 'triangle', 0.11),
+  achievement: () => playNotes([[523, 0.1, 0], [659, 0.1, 0.09], [784, 0.1, 0.18], [1047, 0.18, 0.27]], 'square', 0.1),
+  deny: () => playNotes([[196, 0.16, 0]], 'sawtooth', 0.09),
+  pop: () => playNotes([[392, 0.05, 0], [294, 0.06, 0.04]], 'square', 0.08),
+};
+
+function setSfxMuted(muted) {
+  sfxMuted = muted;
+  writeSave({ sfxMuted: muted });
+}
+
 const SPECIES = [
   { key: 'coolcats', label: 'Cats' },
   { key: 'punks', label: 'Punks' },
@@ -328,6 +382,7 @@ class TownScene extends Phaser.Scene {
     this.setupPolyroll();
     this.setupAchievements();
     this.setupLoginStreak();
+    this.setupSfxToggle();
     this.setupAchievementsUI();
     this.setupOutfitShop();
     this.setupBugs();
@@ -520,13 +575,14 @@ class TownScene extends Phaser.Scene {
     }
   }
 
-  awardPoint(amount, label, x, y) {
+  awardPoint(amount, label, x, y, sound) {
     this.localScore += amount;
     this.net.addScore(amount);
     const mine = this.allPlayers.get(this.selfData.id);
     if (mine) mine.score = this.localScore;
     this.renderPlayerList();
     this.showFloatingText(x, y, label);
+    (SFX[sound] || (amount < 0 ? SFX.deny : SFX.coin))();
   }
 
   showFloatingText(x, y, text) {
@@ -1078,7 +1134,7 @@ class TownScene extends Phaser.Scene {
     this.updateInventoryHUD();
     this.saveResources();
     const label = soldTurnips > 0 ? `sold (incl. ${soldTurnips} 🥬)! +${grandTotal} ⭐` : `sold! +${grandTotal} ⭐`;
-    this.awardPoint(grandTotal, label, this.localBody.x, this.localBody.y - 30);
+    this.awardPoint(grandTotal, label, this.localBody.x, this.localBody.y - 30, 'sell');
     if (soldTurnips > 0) this.incrementStat('turnipsSold', soldTurnips);
   }
 
@@ -1118,7 +1174,7 @@ class TownScene extends Phaser.Scene {
     this.resources.turnips = (this.resources.turnips || 0) + TURNIP_BUNDLE;
     this.updateInventoryHUD();
     this.saveResources();
-    this.awardPoint(-price, `bought ${TURNIP_BUNDLE} 🥬 for ${price} ⭐`, this.localBody.x, this.localBody.y - 30);
+    this.awardPoint(-price, `bought ${TURNIP_BUNDLE} 🥬 for ${price} ⭐`, this.localBody.x, this.localBody.y - 30, 'pop');
   }
 
   // ---------- underground (3D voxel cave, local-only) ----------
@@ -1403,6 +1459,7 @@ class TownScene extends Phaser.Scene {
     this.saveFossils();
     this.updateFossilHUD();
     this.showFloatingText(spot.x, spot.y - 20, `found ${FOSSIL_TYPES[typeIndex]}`);
+    SFX.catch();
   }
 
   isNearMuseum() {
@@ -1487,6 +1544,7 @@ class TownScene extends Phaser.Scene {
     const icon = { wood: '🪵', stone: '🪨', fish: '🐟', bugs: '🦋', fruit: '🍎' }[type];
     this.showFloatingText(x, y, `+${amount} ${icon}`);
     this.incrementStat(type, amount);
+    SFX.catch();
   }
 
   // ---------- achievements ----------
@@ -1515,7 +1573,7 @@ class TownScene extends Phaser.Scene {
       this.achievementsUnlocked.add(a.id);
       this.saveAchievements();
       this.addChatLine({ system: true, text: `🏆 Achievement unlocked: ${a.icon} ${a.label} — +${a.reward} ⭐` });
-      this.awardPoint(a.reward, `${a.icon} ${a.label}!`, this.localBody.x, this.localBody.y - 44);
+      this.awardPoint(a.reward, `${a.icon} ${a.label}!`, this.localBody.x, this.localBody.y - 44, 'achievement');
       this.renderAchievementsPanel();
     });
   }
@@ -1524,6 +1582,20 @@ class TownScene extends Phaser.Scene {
   // Local-only, like everything else that persists on this device: one
   // bump per calendar day (your own device's clock), broken by skipping
   // a day, with a small one-time star bonus the first time each day.
+
+  setupSfxToggle() {
+    const btn = document.getElementById('sfx-toggle-btn');
+    const render = () => {
+      btn.textContent = sfxMuted ? '🔇 Sound off' : '🔊 Sound';
+      btn.classList.toggle('muted', sfxMuted);
+    };
+    render();
+    btn.addEventListener('click', () => {
+      setSfxMuted(!sfxMuted);
+      render();
+      if (!sfxMuted) SFX.coin();
+    });
+  }
 
   setupLoginStreak() {
     const saved = loadSave();
@@ -1615,6 +1687,7 @@ class TownScene extends Phaser.Scene {
     this.fishing.state = 'biting';
     if (this.fishing.bobber) this.fishing.bobber.setFillStyle(0xff4444);
     this.showFloatingText(this.fishing.spot.x, this.fishing.spot.y - 24, '❗');
+    SFX.pop();
     this.fishing.timer = this.time.delayedCall(FISH_BITE_WINDOW, () => this.fishMiss());
   }
 

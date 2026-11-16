@@ -42,6 +42,9 @@ everyone else automatically. Capped at **10 players** at once for now.
 - Occasional **rain** 🌧️ — about 3 windows in 10, it rains for a while;
   everyone sees it start/stop together without any network traffic (same
   trick as the sparkle), purely cosmetic
+- 🔊 **Sound effects** — short synthesized chimes (no audio files, just
+  WebAudio tones) for catches, sales, and achievements. A 🔊/🔇 toggle
+  under the player list remembers your choice on this device
 - Full mobile support: on-screen D-pad, tilt steering, clearly-labeled
   **A** (interact) / **B** (build) action buttons console-controller
   style, and a short vibration on every button tap where the device
