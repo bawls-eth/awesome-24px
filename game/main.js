@@ -94,13 +94,20 @@ function writeSave(partial) {
 let sfxMuted = loadSave().sfxMuted === true;
 let sfxCtx = null;
 
-function getSfxCtx() {
-  if (sfxMuted) return null;
+// Shared lazily-created AudioContext, independent of the sfxMuted flag —
+// ambient music has its own separate opt-in toggle and shouldn't be tied
+// to whether SFX blips are muted.
+function getAudioCtx() {
   if (!sfxCtx) {
     try { sfxCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; }
   }
   if (sfxCtx.state === 'suspended') sfxCtx.resume().catch(() => {});
   return sfxCtx;
+}
+
+function getSfxCtx() {
+  if (sfxMuted) return null;
+  return getAudioCtx();
 }
 
 // notes: a sequence of [frequencyHz, durationSeconds, delaySeconds]
@@ -136,6 +143,67 @@ const SFX = {
 function setSfxMuted(muted) {
   sfxMuted = muted;
   writeSave({ sfxMuted: muted });
+}
+
+// ---------- ambient music (opt-in, off by default) ----------
+// A slow, quiet chord pad — same no-audio-files WebAudio approach as the
+// SFX blips, just long-held tones instead of short ones. Off by default
+// since background music is a bigger ask than muted-by-default SFX; the
+// player has to explicitly turn it on.
+let musicEnabled = loadSave().musicEnabled === true;
+let musicNodes = [];
+const MUSIC_CHORDS = [
+  [196.0, 246.94, 293.66], // G3 B3 D4
+  [220.0, 261.63, 329.63], // A3 C4 E4
+  [174.61, 220.0, 261.63], // F3 A3 C4
+  [196.0, 246.94, 329.63], // G3 B3 E4
+];
+let musicChordIndex = 0;
+let musicChordTimer = null;
+
+function startAmbientMusic() {
+  const ctx = getAudioCtx();
+  if (!ctx || musicNodes.length) return;
+  musicChordIndex = 0;
+  MUSIC_CHORDS[0].forEach((freq) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    gain.gain.value = 0;
+    osc.connect(gain).connect(ctx.destination);
+    osc.start();
+    gain.gain.linearRampToValueAtTime(0.025, ctx.currentTime + 2);
+    musicNodes.push({ osc, gain });
+  });
+  musicChordTimer = setInterval(() => advanceMusicChord(), 8000);
+}
+
+function advanceMusicChord() {
+  const ctx = sfxCtx;
+  if (!ctx || !musicNodes.length) return;
+  musicChordIndex = (musicChordIndex + 1) % MUSIC_CHORDS.length;
+  const chord = MUSIC_CHORDS[musicChordIndex];
+  musicNodes.forEach((node, i) => {
+    node.osc.frequency.linearRampToValueAtTime(chord[i], ctx.currentTime + 3);
+  });
+}
+
+function stopAmbientMusic() {
+  const ctx = sfxCtx;
+  musicNodes.forEach(({ osc, gain }) => {
+    if (ctx) gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 1);
+    setTimeout(() => { try { osc.stop(); } catch (e) { /* already stopped */ } }, 1100);
+  });
+  musicNodes = [];
+  if (musicChordTimer) { clearInterval(musicChordTimer); musicChordTimer = null; }
+}
+
+function setMusicEnabled(enabled) {
+  musicEnabled = enabled;
+  writeSave({ musicEnabled: enabled });
+  if (enabled) startAmbientMusic();
+  else stopAmbientMusic();
 }
 
 const SPECIES = [
@@ -587,6 +655,7 @@ class TownScene extends Phaser.Scene {
     this.setupAchievements();
     this.setupLoginStreak();
     this.setupSfxToggle();
+    this.setupMusicToggle();
     this.setupPhotoMode();
     this.setupSaveBackup();
     this.setupTriviaKey();
@@ -1861,6 +1930,21 @@ class TownScene extends Phaser.Scene {
       setSfxMuted(!sfxMuted);
       render();
       if (!sfxMuted) SFX.coin();
+    });
+  }
+
+  setupMusicToggle() {
+    const btn = document.getElementById('music-toggle-btn');
+    if (!btn) return;
+    const render = () => {
+      btn.textContent = musicEnabled ? '🎵 Music on' : '🎵 Music off';
+      btn.classList.toggle('muted', !musicEnabled);
+    };
+    render();
+    if (musicEnabled) startAmbientMusic();
+    btn.addEventListener('click', () => {
+      setMusicEnabled(!musicEnabled);
+      render();
     });
   }
 

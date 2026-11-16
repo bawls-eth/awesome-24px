@@ -999,6 +999,22 @@ body.touch-device .key-hint { display: none; }
 
 #sfx-toggle-btn.muted { color: #6b7385; }
 
+#music-toggle-btn {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 5px;
+  border: none;
+  border-top: 1px solid #3a4658;
+  background: transparent;
+  color: #9aa7bb;
+  font-size: 11px;
+  cursor: pointer;
+  text-align: center;
+}
+
+#music-toggle-btn.muted { color: #6b7385; }
+
 #photo-btn {
   display: block;
   width: 100%;

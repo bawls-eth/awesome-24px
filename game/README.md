@@ -55,6 +55,10 @@ right now, before you even pick a name.
 - 🔊 **Sound effects** — short synthesized chimes (no audio files, just
   WebAudio tones) for catches, sales, and achievements. A 🔊/🔇 toggle
   under the player list remembers your choice on this device
+- 🎵 **Ambient music** (opt-in, off by default) — a slow, quiet synthesized
+  chord pad, same no-audio-files approach as the SFX. Toggle it next to
+  the sound button; it's independent of the SFX mute, so you can have
+  either one on its own
 - Full mobile support: on-screen D-pad, tilt steering, clearly-labeled
   **A** (interact) / **B** (build) action buttons console-controller
   style, and a short vibration on every button tap where the device
