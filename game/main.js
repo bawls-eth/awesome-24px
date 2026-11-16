@@ -2767,6 +2767,15 @@ class TownScene extends Phaser.Scene {
     this.outfitShopOpen = false;
   }
 
+  randomizeOutfit() {
+    const species = SPECIES[Math.floor(Math.random() * SPECIES.length)];
+    this.outfitSpecies = species.key;
+    this.outfitFrame = Math.floor(Math.random() * FRAME_COUNT);
+    this.renderOutfitTabs();
+    this.renderOutfitGrid();
+    SFX.pop();
+  }
+
   renderOutfitTabs() {
     const el = document.getElementById('outfit-species-tabs');
     el.innerHTML = '';
@@ -2816,6 +2825,8 @@ class TownScene extends Phaser.Scene {
   setupOutfitShop() {
     document.getElementById('outfit-close-btn').addEventListener('click', () => this.closeOutfitShop());
     document.getElementById('outfit-apply-btn').addEventListener('click', () => this.applyOutfit());
+    const randomBtn = document.getElementById('outfit-random-btn');
+    if (randomBtn) randomBtn.addEventListener('click', () => this.randomizeOutfit());
   }
 
   // ---------- guestbook UI ----------

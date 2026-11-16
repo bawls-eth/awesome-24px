@@ -101,7 +101,9 @@ right now, before you even pick a name.
   name/chat slur filter as everything else)
 - 👗 **Able Sisters** — change your villager species/color after
   joining, any time, at the shop near the turnip stall. Everyone else
-  sees the new look live, and it's what loads back in next time too
+  sees the new look live, and it's what loads back in next time too.
+  A 🎲 **Randomize** button picks a random species/frame for you to
+  preview before committing with "Wear it!"
 - 🐚 **Beachcombing** — 5 fixed spots along the pond edges wash up a
   shell, sea glass, or star fragment every 20 seconds; interact to
   collect, sell at the shop like any other resource

@@ -1211,9 +1211,21 @@ body.touch-device .key-hint { display: none; }
   cursor: pointer;
 }
 
-#outfit-apply-btn {
+#outfit-random-btn {
   width: 100%;
   margin-top: 20px;
+  padding: 10px;
+  border: 2px solid #3a4658;
+  border-radius: 8px;
+  background: transparent;
+  color: #eef2f7;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+#outfit-apply-btn {
+  width: 100%;
+  margin-top: 8px;
   padding: 12px;
   border: none;
   border-radius: 8px;
