@@ -41,7 +41,9 @@ right now, before you even pick a name.
   Tap your own block again to remove it for a refund. An unmissable yellow
   banner tells you when build mode is on
 - **Sell** your wood/stone/fish/bugs/fruit/shells/flowers at the 🏠 shop near the statue for ⭐ points —
-  a proper Nook's-Cranny-style loop that feeds the leaderboard
+  a proper Nook's-Cranny-style loop that feeds the leaderboard. Selling
+  on consecutive days builds a 🛍️ loyalty streak for a small bonus
+  (same idea as the daily login streak)
 - A day/night tint that follows your local clock, purely for atmosphere —
   the roaming butterflies turn into glowing ✨ fireflies at night (7pm-6am
   your own clock) and back at dawn, same 🦋/🐛 catch mechanic either way
@@ -149,7 +151,7 @@ right now, before you even pick a name.
   this is the only way to wear one. A sign at the spot shows what's for
   sale, or when to come back if they're not there
 - 🏆 **Achievements** (Nook Miles-style) — a 🏆 badge under the player
-  list opens a checklist of 24 lifetime goals (catch/chop/mine 10,
+  list opens a checklist of 25 lifetime goals (catch/chop/mine 10,
   complete the museum, play Polyroll 10 times, and more), each paying a
   one-time ⭐ bonus on unlock. Lifetime counters never drop when you
   spend or sell, and unlocks persist on this device

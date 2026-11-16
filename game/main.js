@@ -446,6 +446,7 @@ const ACHIEVEMENTS = [
   { id: 'trivia3', icon: '📝', label: 'Know-It-All', desc: "Answer 3 of Professor Byte's daily trivia questions correctly", reward: 5, check: (s) => (s.triviaCorrect || 0) >= 3 },
   { id: 'scavenger1', icon: '🔍', label: 'Treasure Hunter', desc: "Win the daily scavenger hunt", reward: 5, check: (s) => (s.scavengerHuntsWon || 0) >= 1 },
   { id: 'tournament1', icon: '🎣', label: 'Big Catch', desc: "Set a new record in the daily fishing tournament", reward: 5, check: (s) => (s.tournamentRecordsSet || 0) >= 1 },
+  { id: 'sellstreak3', icon: '🛍️', label: 'Regular', desc: "Sell at the shop 3 days in a row", reward: 5, check: (s) => (s.bestSellStreak || 0) >= 3 },
 ];
 const CAMPFIRE_POS = { x: 800, y: 600 };
 const CAMPFIRE_RADIUS = 60;
@@ -1489,6 +1490,27 @@ class TownScene extends Phaser.Scene {
     const label = soldTurnips > 0 ? `sold (incl. ${soldTurnips} 🥬)! +${grandTotal} ⭐` : `sold! +${grandTotal} ⭐`;
     this.awardPoint(grandTotal, label, this.localBody.x, this.localBody.y - 30, 'sell');
     if (soldTurnips > 0) this.incrementStat('turnipsSold', soldTurnips);
+    this.updateSellStreak();
+  }
+
+  // A loyalty bonus for selling on consecutive days — same date-comparison
+  // shape as the daily login streak, just keyed off "did you sell today"
+  // instead of "did you log in today".
+  updateSellStreak() {
+    const saved = loadSave();
+    const today = new Date().toISOString().slice(0, 10);
+    if (saved.lastSellDate === today) return; // already counted today
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const streak = saved.lastSellDate === yesterday ? (Number(saved.sellStreak) || 0) + 1 : 1;
+    writeSave({ sellStreak: streak, lastSellDate: today });
+    this.sellStreak = streak;
+    this.lifetimeStats.bestSellStreak = Math.max(this.lifetimeStats.bestSellStreak || 0, streak);
+    this.saveAchievements();
+    this.checkAchievements();
+    if (streak >= 2) {
+      const bonus = Math.min(streak, 5);
+      this.awardPoint(bonus, `🛍️ ${streak}-day streak! +${bonus} ⭐`, this.localBody.x, this.localBody.y - 50, 'achievement');
+    }
   }
 
   // ---------- turnip / stalk market ----------

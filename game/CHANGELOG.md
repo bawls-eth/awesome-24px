@@ -109,6 +109,8 @@ for how each feature actually works and plays.
   new players, who have nothing to compare against)
 - A 🎲 Randomize button in the Able Sisters outfit shop, previewing a
   random species/frame before you commit to it
+- A 🛍️ shop loyalty streak — selling on consecutive days builds a streak
+  for a small bonus, same date-comparison shape as the login streak
 - Two more build-mode materials, 🌳 Hedge (3 flowers, solid — a green
   bush wall) and 🟫 Path (1 stone, non-solid — a flat ground tile for
   laying out walkways), plus matching achievements
