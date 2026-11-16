@@ -72,6 +72,8 @@ for how each feature actually works and plays.
   remaining unused sprite strips (not available anywhere else) for 15 ⭐
 - Butterflies turn into glowing fireflies at night and back at dawn,
   following the same local clock as the day/night tint
+- A third build-mode material, 🪔 Lamp — purely decorative (no collision),
+  costs flowers instead of wood/stone, and glows at night
 
 ## Villagers and expression
 

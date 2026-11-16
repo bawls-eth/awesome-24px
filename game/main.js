@@ -251,6 +251,7 @@ const ACHIEVEMENTS = [
   { id: 'npcChat5', icon: '🧪', label: 'Chatty', desc: "Talk to Professor Byte 5 times", reward: 3, check: (s) => (s.npcChats || 0) >= 5 },
   { id: 'photo1', icon: '📸', label: 'Photographer', desc: 'Take a photo', reward: 3, check: (s) => (s.photosTaken || 0) >= 1 },
   { id: 'merchant1', icon: '🛒', label: 'Collector', desc: 'Buy a rare look from the Mystery Merchant', reward: 5, check: (s) => (s.merchantBuys || 0) >= 1 },
+  { id: 'lamp1', icon: '🪔', label: 'Illuminator', desc: 'Place a lamp', reward: 3, check: (s) => (s.lampsPlaced || 0) >= 1 },
 ];
 const CAMPFIRE_POS = { x: 800, y: 600 };
 const CAMPFIRE_RADIUS = 60;
@@ -328,8 +329,9 @@ const GRID_SIZE = 32;
 const BLOCK_PLACE_DISTANCE = 28;
 const BLOCK_CAP = 150;
 const BLOCK_TYPES = {
-  wood: { resource: 'wood', cost: 1, label: '🪵 Wall', color: 0x8a5a3b, stroke: 0x5a3a22, size: GRID_SIZE - 2 },
-  stone: { resource: 'stone', cost: 1, label: '🪨 Fence', color: 0xb9bfc9, stroke: 0x7a818d, size: GRID_SIZE - 14 },
+  wood: { resource: 'wood', cost: 1, label: '🪵 Wall', color: 0x8a5a3b, stroke: 0x5a3a22, size: GRID_SIZE - 2, solid: true },
+  stone: { resource: 'stone', cost: 1, label: '🪨 Fence', color: 0xb9bfc9, stroke: 0x7a818d, size: GRID_SIZE - 14, solid: true },
+  lamp: { resource: 'flowers', cost: 2, label: '🪔 Lamp', color: 0x5a3a22, stroke: 0x3a2414, size: 6, solid: false },
 };
 
 // ---------------- local save (this device only — nothing here is synced) ----------------
@@ -770,6 +772,7 @@ class TownScene extends Phaser.Scene {
     if (isNightBugs !== this.isNightBugs) {
       this.isNightBugs = isNightBugs;
       this.restyleBugs();
+      (this.lampGlows || []).forEach((g) => g.setVisible(isNightBugs));
     }
   }
 
@@ -1891,7 +1894,7 @@ class TownScene extends Phaser.Scene {
 
   updateBuildBanner() {
     const def = BLOCK_TYPES[this.buildType];
-    const icon = def.resource === 'wood' ? '🪵' : '🪨';
+    const icon = { wood: '🪵', stone: '🪨', flowers: '🌸' }[def.resource] || '';
     const banner = document.getElementById('build-mode-banner');
     if (banner) {
       banner.textContent = IS_TOUCH
@@ -1936,7 +1939,8 @@ class TownScene extends Phaser.Scene {
 
     const def = BLOCK_TYPES[this.buildType];
     if ((this.resources[def.resource] || 0) < def.cost) {
-      this.showFloatingText(this.localBody.x, this.localBody.y - 30, def.resource === 'wood' ? 'need 🪵' : 'need 🪨');
+      const needIcon = { wood: '🪵', stone: '🪨', flowers: '🌸' }[def.resource] || '';
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, `need ${needIcon}`);
       return;
     }
     if (this.blocks.size >= BLOCK_CAP) {
@@ -1950,6 +1954,7 @@ class TownScene extends Phaser.Scene {
     this.net.placeBlock(gx, gy, this.buildType);
     this.incrementStat('blocksPlaced');
     if (this.buildType === 'stone') this.incrementStat('stoneBlocksPlaced');
+    if (this.buildType === 'lamp') this.incrementStat('lampsPlaced');
   }
 
   addBlockVisual(b) {
@@ -1958,20 +1963,30 @@ class TownScene extends Phaser.Scene {
     const sprite = this.add.rectangle(b.x, b.y, def.size, def.size, def.color, 1)
       .setStrokeStyle(2, def.stroke)
       .setDepth(b.y);
-    const obstacle = this.addObstacleRect({
+    const obstacle = def.solid ? this.addObstacleRect({
       x: b.x - GRID_SIZE / 2 + 1,
       y: b.y - GRID_SIZE / 2 + 1,
       width: GRID_SIZE - 2,
       height: GRID_SIZE - 2,
-    });
-    this.blocks.set(b.key, { sprite, obstacle, ownerId: b.ownerId, type: b.type });
+    }) : null;
+    let glow = null;
+    if (b.type === 'lamp') {
+      glow = this.add.circle(b.x, b.y - 10, 7, 0xffe066, 0.9).setDepth(b.y + 1).setVisible(!!this.isNightBugs);
+      this.lampGlows = this.lampGlows || [];
+      this.lampGlows.push(glow);
+    }
+    this.blocks.set(b.key, { sprite, obstacle, glow, ownerId: b.ownerId, type: b.type });
   }
 
   removeBlockVisual(key) {
     const b = this.blocks.get(key);
     if (!b) return;
     b.sprite.destroy();
-    b.obstacle.destroy();
+    if (b.obstacle) b.obstacle.destroy();
+    if (b.glow) {
+      this.lampGlows = (this.lampGlows || []).filter((g) => g !== b.glow);
+      b.glow.destroy();
+    }
     this.blocks.delete(key);
   }
 

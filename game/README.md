@@ -108,7 +108,7 @@ everyone else automatically. Capped at **10 players** at once for now.
   this is the only way to wear one. A sign at the spot shows what's for
   sale, or when to come back if they're not there
 - 🏆 **Achievements** (Nook Miles-style) — a 🏆 badge under the player
-  list opens a checklist of 17 lifetime goals (catch/chop/mine 10,
+  list opens a checklist of 18 lifetime goals (catch/chop/mine 10,
   complete the museum, play Polyroll 10 times, and more), each paying a
   one-time ⭐ bonus on unlock. Lifetime counters never drop when you
   spend or sell, and unlocks persist on this device
@@ -302,11 +302,11 @@ block there, or press it again on a block you placed to remove it for a
 refund. Blocks are real obstacles for everyone in the town, synced live.
 Capped at 150 blocks total so the town doesn't fill up solid.
 
-Two materials to pick from — press **F** (or tap the material pill under
-the build banner) to switch: 🪵 **Wall** (1 wood, a full solid block) or
-🪨 **Fence** (1 stone, a thinner picket-style block). Both block movement
-the same way; fence is just the cheaper, lower-profile look for marking
-off a yard instead of walling it in.
+Three materials to pick from — press **F** (or tap the material pill
+under the build banner) to switch: 🪵 **Wall** (1 wood, a full solid
+block), 🪨 **Fence** (1 stone, a thinner picket-style block that still
+blocks movement), or 🪔 **Lamp** (2 flowers, purely decorative — you can
+walk straight through it, and it glows at night alongside the fireflies).
 
 ### Going underground
 
