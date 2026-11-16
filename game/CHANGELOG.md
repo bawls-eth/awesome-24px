@@ -85,6 +85,9 @@ for how each feature actually works and plays.
 - An old windmill landmark tucked into the quiet northwest corner of
   town, its blades spinning on a looping tween — purely decorative
   scenery, no new mechanics
+- A small graveyard on the west edge — a few tombstones behind a low
+  fence, with a resident zombie villager standing watch; purely
+  decorative, tombstones block movement, the fence itself doesn't
 - Two more build-mode materials, 🌳 Hedge (3 flowers, solid — a green
   bush wall) and 🟫 Path (1 stone, non-solid — a flat ground tile for
   laying out walkways), plus matching achievements

@@ -414,6 +414,7 @@ const SCAVENGER_SPOTS = [
 ];
 const SCAVENGER_RADIUS = 36;
 const SCAVENGER_REWARD = 20;
+const GRAVEYARD_POS = { x: 60, y: 700 };
 const GUESTBOOK_RADIUS = 60;
 const GUESTBOOK_NOTE_MAX = 80;
 const GUESTBOOK_COOLDOWN_MS = 60 * 1000; // one signing per minute, per client
@@ -533,6 +534,7 @@ class TownScene extends Phaser.Scene {
     this.drawGuestbook();
     this.drawNoticeBoard();
     this.setupScavengerHunt();
+    this.drawGraveyard();
     this.drawFossilSpots();
     this.drawBeachItems();
     this.drawFlowers();
@@ -2334,6 +2336,36 @@ class TownScene extends Phaser.Scene {
       g.fillRect(x - 16, y + 4, 4, 8);
       g.fillRect(x + 12, y + 4, 4, 8);
     });
+  }
+
+  // A small spooky corner tying into the zombie species — a few
+  // tombstones behind a low fence, one zombie villager standing watch.
+  // Purely decorative; the tombstone footprints are solid, the fence
+  // gap isn't, so you can still walk in and look around.
+  drawGraveyard() {
+    const { x, y } = GRAVEYARD_POS;
+    const g = this.add.graphics().setDepth(y - 2);
+    g.fillStyle(0x3a4a38, 1).fillRect(x - 70, y - 50, 140, 90);
+    g.lineStyle(3, 0x5a6a52, 1).strokeRect(x - 70, y - 50, 140, 90);
+
+    const stones = [{ x: x - 36, y: y - 10 }, { x: x, y: y - 6 }, { x: x + 36, y: y - 14 }];
+    stones.forEach((s) => {
+      const sg = this.add.graphics().setDepth(s.y);
+      sg.fillStyle(0x9a9a9a, 1);
+      sg.fillRect(s.x - 10, s.y - 18, 20, 22);
+      sg.fillEllipse(s.x, s.y - 18, 20, 14);
+      this.addObstacleRect({ x: s.x - 9, y: s.y - 10, width: 18, height: 10 });
+    });
+
+    const zombie = this.add.sprite(x + 50, y + 18, 'zombies', 0).setScale(1.8).setDepth(y + 19);
+    this.tweens.add({ targets: zombie, y: y + 14, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.add.text(x, y - 68, '🪦 Old Graveyard', {
+      fontSize: '11px',
+      fontFamily: 'monospace',
+      color: '#c9d4c0',
+      stroke: '#000000',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(y + 1);
   }
 
   drawPondCats() {
