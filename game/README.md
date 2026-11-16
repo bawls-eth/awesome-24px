@@ -65,6 +65,9 @@ everyone else automatically. Capped at **10 players** at once for now.
   random fossil (one of 5 species); carry up to 3, then donate at the
   🏛️ Museum for a permanent per-device collection and a ⭐ for each new
   species (see "Fossils & Museum" below)
+- A **daily login streak** 🔥 — join on consecutive device-local days
+  for a small ⭐ bonus (capped at 5) each day, shown under the player
+  list; skip a day and it resets to 1
 - A **notice board** near the statue shows the live top 3 ⭐ scores —
   no need to open the player list to see who's winning
 - 👗 **Able Sisters** — change your villager species/color after

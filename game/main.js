@@ -310,6 +310,7 @@ class TownScene extends Phaser.Scene {
     this.setupPortalReopen();
     this.setupPolyroll();
     this.setupAchievements();
+    this.setupLoginStreak();
     this.setupAchievementsUI();
     this.setupOutfitShop();
     this.setupBugs();
@@ -1474,6 +1475,27 @@ class TownScene extends Phaser.Scene {
       this.awardPoint(a.reward, `${a.icon} ${a.label}!`, this.localBody.x, this.localBody.y - 44);
       this.renderAchievementsPanel();
     });
+  }
+
+  // ---------- daily login streak ----------
+  // Local-only, like everything else that persists on this device: one
+  // bump per calendar day (your own device's clock), broken by skipping
+  // a day, with a small one-time star bonus the first time each day.
+
+  setupLoginStreak() {
+    const saved = loadSave();
+    const today = new Date().toISOString().slice(0, 10);
+    let streak = Number(saved.loginStreak) || 0;
+    if (saved.lastLoginDate !== today) {
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      streak = saved.lastLoginDate === yesterday ? streak + 1 : 1;
+      writeSave({ loginStreak: streak, lastLoginDate: today });
+      const bonus = Math.min(streak, 5);
+      this.awardPoint(bonus, `🔥 Day ${streak} streak! +${bonus} ⭐`, this.localBody.x, this.localBody.y - 44);
+    }
+    this.loginStreak = streak;
+    const el = document.getElementById('streak-count');
+    if (el) el.textContent = streak;
   }
 
   renderAchievementsPanel() {

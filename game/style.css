@@ -899,6 +899,14 @@ body.touch-device .key-hint { display: none; }
   text-align: center;
 }
 
+#streak-badge {
+  padding: 6px;
+  border-top: 1px solid #3a4658;
+  color: #ffb366;
+  font-size: 11px;
+  text-align: center;
+}
+
 #achievements-overlay {
   position: fixed;
   inset: 0;
