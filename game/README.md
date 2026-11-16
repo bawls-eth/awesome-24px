@@ -35,7 +35,9 @@ everyone else automatically. Capped at **10 players** at once for now.
   banner tells you when build mode is on
 - **Sell** your wood/stone/fish/bugs at the 🏠 shop near the statue for ⭐ points —
   a proper Nook's-Cranny-style loop that feeds the leaderboard
-- A day/night tint that follows your local clock, purely for atmosphere
+- A day/night tint that follows your local clock, purely for atmosphere —
+  the roaming butterflies turn into glowing ✨ fireflies at night (7pm-6am
+  your own clock) and back at dawn, same 🦋/🐛 catch mechanic either way
 - A faint **seasonal color wash** tied to the real-world month on your
   own device — cool blue in winter, green in spring, warm yellow in
   summer, orange in autumn. No new art, cosmetic only

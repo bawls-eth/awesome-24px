@@ -70,6 +70,8 @@ for how each feature actually works and plays.
 - The Mystery Merchant — visits a fixed spot for a deterministic daily
   3-hour window, selling one of 12 rare looks pulled from this repo's
   remaining unused sprite strips (not available anywhere else) for 15 ⭐
+- Butterflies turn into glowing fireflies at night and back at dawn,
+  following the same local clock as the day/night tint
 
 ## Villagers and expression
 

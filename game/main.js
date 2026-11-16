@@ -765,6 +765,23 @@ class TownScene extends Phaser.Scene {
     else night = 0;
 
     this.dayNightOverlay.setAlpha(night * 0.45);
+
+    const isNightBugs = hour >= 19 || hour < 6;
+    if (isNightBugs !== this.isNightBugs) {
+      this.isNightBugs = isNightBugs;
+      this.restyleBugs();
+    }
+  }
+
+  restyleBugs() {
+    if (!this.bugs) return;
+    this.bugs.forEach((bug) => {
+      bug.sprite.setText(this.isNightBugs ? '✨' : '🦋');
+      if (bug.glowTween) { bug.glowTween.stop(); bug.glowTween = null; bug.sprite.setAlpha(1); }
+      if (this.isNightBugs) {
+        bug.glowTween = this.tweens.add({ targets: bug.sprite, alpha: { from: 0.4, to: 1 }, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      }
+    });
   }
 
   // ---------- mobile: virtual D-pad + action buttons ----------
