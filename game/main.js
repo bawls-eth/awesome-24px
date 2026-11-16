@@ -300,6 +300,10 @@ const MERCHANT_RADIUS = 56;
 const MERCHANT_COST = 15;
 const ABLE_SISTERS_POS = { x: 1150, y: 650, w: 70, h: 56 };
 const ABLE_SISTERS_RADIUS = 55;
+const GUESTBOOK_POS = { x: 1750, y: 520 };
+const GUESTBOOK_RADIUS = 60;
+const GUESTBOOK_NOTE_MAX = 80;
+const GUESTBOOK_COOLDOWN_MS = 60 * 1000; // one signing per minute, per client
 const KK_CONCERT_START_HOUR = 19; // 7pm local time
 const KK_CONCERT_END_HOUR = 21; // 9pm local time
 const WEATHER_CYCLE_MS = 8 * 60 * 1000; // 8-minute weather windows
@@ -428,6 +432,7 @@ class TownScene extends Phaser.Scene {
     this.drawMuseum();
     this.drawTurnipStall();
     this.drawAbleSisters();
+    this.drawGuestbook();
     this.drawNoticeBoard();
     this.drawFossilSpots();
     this.drawBeachItems();
@@ -468,6 +473,7 @@ class TownScene extends Phaser.Scene {
     this.setupPhotoMode();
     this.setupAchievementsUI();
     this.setupOutfitShop();
+    this.setupGuestbook();
     this.setupBugs();
     this.setupFossils();
     if (IS_TOUCH) {
@@ -504,7 +510,7 @@ class TownScene extends Phaser.Scene {
     let vx = 0;
     let vy = 0;
 
-    if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen) {
+    if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen) {
       if (this.cursors.left.isDown || this.wasd.A.isDown) vx -= 1;
       if (this.cursors.right.isDown || this.wasd.D.isDown) vx += 1;
       if (this.cursors.up.isDown || this.wasd.W.isDown) vy -= 1;
@@ -998,7 +1004,7 @@ class TownScene extends Phaser.Scene {
     this.fishing = { state: 'idle', spot: null, bobber: null, timer: null };
     this.updateInventoryHUD();
 
-    this.input.keyboard.on('keydown-E', () => { if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen) this.interact(); });
+    this.input.keyboard.on('keydown-E', () => { if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen) this.interact(); });
     const btn = document.getElementById('interact-btn');
     if (btn) btn.addEventListener('click', () => this.interact());
   }
@@ -1039,6 +1045,10 @@ class TownScene extends Phaser.Scene {
     }
     if (this.isNearMuseum()) {
       this.donateFossils();
+      return;
+    }
+    if (this.isNearGuestbook()) {
+      this.openGuestbook();
       return;
     }
     if (this.isNearNPC()) {
@@ -1713,7 +1723,7 @@ class TownScene extends Phaser.Scene {
   }
 
   setupPhotoMode() {
-    this.input.keyboard.on('keydown-P', () => { if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen) this.takePhoto(); });
+    this.input.keyboard.on('keydown-P', () => { if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen) this.takePhoto(); });
     const btn = document.getElementById('photo-btn');
     if (btn) btn.addEventListener('click', () => this.takePhoto());
   }
@@ -1876,7 +1886,7 @@ class TownScene extends Phaser.Scene {
       .setDepth(400000)
       .setVisible(false);
 
-    this.input.keyboard.on('keydown-B', () => { if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen) this.toggleBuildMode(); });
+    this.input.keyboard.on('keydown-B', () => { if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen) this.toggleBuildMode(); });
     this.input.keyboard.on('keydown-F', () => { if (this.buildMode && !this.chatFocused) this.cycleBuildType(); });
     const btn = document.getElementById('build-toggle-btn');
     if (btn) btn.addEventListener('click', () => this.toggleBuildMode());
@@ -2240,6 +2250,25 @@ class TownScene extends Phaser.Scene {
     return Math.hypot(this.localBody.x - cx, this.localBody.y - cy) < ABLE_SISTERS_RADIUS;
   }
 
+  // ---------- guestbook ----------
+  // A small signpost + open book — purely decorative scenery (no
+  // collision, like the notice board), just a landmark to stand near.
+  drawGuestbook() {
+    const { x, y } = GUESTBOOK_POS;
+    const g = this.add.graphics().setDepth(y - 1);
+    g.fillStyle(0x6b4a30, 1).fillRect(x - 3, y - 6, 6, 34);
+    g.fillStyle(0xe8d9b5, 1);
+    g.fillTriangle(x - 26, y - 6, x, y - 22, x, y - 6);
+    g.fillTriangle(x + 26, y - 6, x, y - 22, x, y - 6);
+    g.lineStyle(1, 0x8f7044, 1);
+    g.lineBetween(x, y - 22, x, y - 6);
+    this.add.text(x, y - 42, '📖 Guestbook', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
+  }
+
+  isNearGuestbook() {
+    return Math.hypot(this.localBody.x - GUESTBOOK_POS.x, this.localBody.y - GUESTBOOK_POS.y) < GUESTBOOK_RADIUS;
+  }
+
   // ---------- Able Sisters outfit shop ----------
   // Same species/frame picker as the join screen, but live: applying
   // updates your own sprite immediately, writes through net.js so every
@@ -2309,6 +2338,85 @@ class TownScene extends Phaser.Scene {
   setupOutfitShop() {
     document.getElementById('outfit-close-btn').addEventListener('click', () => this.closeOutfitShop());
     document.getElementById('outfit-apply-btn').addEventListener('click', () => this.applyOutfit());
+  }
+
+  // ---------- guestbook UI ----------
+  // Short signed notes, persisted in Firebase (`/guestbook`, last 20 kept
+  // locally) so every player who visits the sign later sees what others
+  // left — not just a local-save journal.
+
+  setupGuestbook() {
+    this.guestbookEntries = [];
+    this.lastGuestbookAt = 0;
+    document.getElementById('guestbook-close-btn').addEventListener('click', () => this.closeGuestbook());
+    document.getElementById('guestbook-sign-btn').addEventListener('click', () => this.submitGuestbookNote());
+    const input = document.getElementById('guestbook-input');
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') this.submitGuestbookNote();
+      e.stopPropagation();
+    });
+  }
+
+  openGuestbook() {
+    this.guestbookOpen = true;
+    document.getElementById('guestbook-overlay').classList.remove('hidden');
+    document.getElementById('guestbook-error').textContent = '';
+    this.renderGuestbookList();
+  }
+
+  closeGuestbook() {
+    this.guestbookOpen = false;
+    document.getElementById('guestbook-overlay').classList.add('hidden');
+  }
+
+  renderGuestbookList() {
+    const list = document.getElementById('guestbook-list');
+    list.innerHTML = '';
+    if (!this.guestbookEntries.length) {
+      const li = document.createElement('li');
+      li.className = 'guestbook-empty';
+      li.textContent = 'No notes yet — be the first to sign!';
+      list.appendChild(li);
+      return;
+    }
+    this.guestbookEntries.forEach((entry) => {
+      const li = document.createElement('li');
+      const who = document.createElement('span');
+      who.className = 'guestbook-who';
+      who.textContent = censorBlockedTerms(entry.name || '???');
+      li.appendChild(who);
+      li.appendChild(document.createTextNode(` ${censorBlockedTerms(entry.text)}`));
+      list.appendChild(li);
+    });
+  }
+
+  submitGuestbookNote() {
+    const input = document.getElementById('guestbook-input');
+    const errorEl = document.getElementById('guestbook-error');
+    const text = input.value.trim().slice(0, GUESTBOOK_NOTE_MAX);
+    errorEl.textContent = '';
+
+    if (!text) return;
+
+    if (containsBlockedTerm(text)) {
+      errorEl.textContent = "That note wasn't signed — please keep it clean.";
+      input.value = '';
+      return;
+    }
+
+    // Same client-side spam deterrent idea as chat's repeat-message guard,
+    // but time-based instead: a real cooldown between writes, since this
+    // goes straight to the shared production database.
+    const now = Date.now();
+    if (now - this.lastGuestbookAt < GUESTBOOK_COOLDOWN_MS) {
+      const waitSec = Math.ceil((GUESTBOOK_COOLDOWN_MS - (now - this.lastGuestbookAt)) / 1000);
+      errorEl.textContent = `Slow down — you can sign again in ${waitSec}s.`;
+      return;
+    }
+
+    this.net.leaveGuestbookNote(text);
+    this.lastGuestbookAt = now;
+    input.value = '';
   }
 
   drawTurnipStall() {
@@ -2798,6 +2906,15 @@ class TownScene extends Phaser.Scene {
 
     this.net.on('blockAdded', (b) => this.addBlockVisual(b));
     this.net.on('blockRemoved', (b) => this.removeBlockVisual(b.key));
+
+    this.net.on('guestbookEntry', (entry) => {
+      // child_added can replay entries we already have (e.g. a brief
+      // reconnect), so de-dupe by push key before unshifting.
+      if (this.guestbookEntries.some((e) => e.key === entry.key)) return;
+      this.guestbookEntries.unshift(entry);
+      if (this.guestbookEntries.length > 20) this.guestbookEntries.length = 20;
+      if (this.guestbookOpen) this.renderGuestbookList();
+    });
   }
 
   // ---------- DOM: chat + player list ----------

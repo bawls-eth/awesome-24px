@@ -28,6 +28,7 @@ class TownNet {
     this.playersRef = null;
     this.chatRef = null;
     this.blocksRef = null;
+    this.guestbookRef = null;
     this.joinTime = 0;
     this.db = null;
   }
@@ -75,6 +76,7 @@ class TownNet {
     this.playersRef = this.db.ref('players');
     this.chatRef = this.db.ref('chat');
     this.blocksRef = this.db.ref('blocks');
+    this.guestbookRef = this.db.ref('guestbook');
 
     let snap;
     try {
@@ -185,6 +187,14 @@ class TownNet {
     this.blocksRef.on('child_removed', (s) => {
       this.emit('blockRemoved', { key: s.key });
     });
+
+    // Only the most recent 20 notes — this is a shared sign, not a full
+    // history browser, so no point loading an unbounded guestbook on join.
+    this.guestbookRef.limitToLast(20).on('child_added', (s) => {
+      const v = s.val();
+      if (!v || !v.text) return;
+      this.emit('guestbookEntry', { key: s.key, id: v.id, name: v.name, text: v.text, t: v.t || 0 });
+    });
   }
 
   // Writes via transaction instead of update(): if our node has already been
@@ -277,6 +287,19 @@ class TownNet {
   removeBlock(key) {
     if (!this.blocksRef) return;
     this.blocksRef.child(key).remove().catch(() => {});
+  }
+
+  // Leave a short signed note on the town guestbook — persisted for
+  // everyone, same push-and-listen shape as sendChat(), just a separate
+  // ref so it doesn't get mixed in with (or capped out by) live chat.
+  leaveGuestbookNote(text) {
+    if (!this.guestbookRef || !this.id) return;
+    this.guestbookRef.push({
+      id: this.id,
+      name: this.name,
+      text,
+      t: firebase.database.ServerValue.TIMESTAMP,
+    }).catch(() => {});
   }
 
   // Walkie-talkie: a short voice clip addressed to one other player's id.

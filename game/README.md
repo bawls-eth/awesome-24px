@@ -84,6 +84,12 @@ right now, before you even pick a name.
   list; skip a day and it resets to 1
 - A **notice board** near the statue shows the live top 3 ⭐ scores —
   no need to open the player list to see who's winning
+- 📖 **Guestbook** — a signpost east of the statue lets you leave a
+  short (80-character) signed note for whoever visits next. Notes are
+  stored in Firebase, so everyone sees the same last 20, not just a
+  local list — interact at the sign to read what's there and add your
+  own (one note per minute per device, and it runs through the same
+  name/chat slur filter as everything else)
 - 👗 **Able Sisters** — change your villager species/color after
   joining, any time, at the shop near the turnip stall. Everyone else
   sees the new look live, and it's what loads back in next time too

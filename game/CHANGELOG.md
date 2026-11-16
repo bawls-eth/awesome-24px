@@ -82,6 +82,11 @@ for how each feature actually works and plays.
   task for everyone each day, computed from the date; a sign over his
   head shows the ask and reward, interact with enough in your bag to
   turn it in
+- A 📖 Guestbook — a signpost where players leave a short signed note
+  for others to read later, persisted in Firebase (last 20 shown, not
+  just a local list) so it's shared across every client; runs through
+  the same slur filter as chat/names and is rate-limited client-side to
+  one note per minute
 
 ## Villagers and expression
 
