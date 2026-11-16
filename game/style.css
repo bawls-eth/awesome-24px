@@ -362,6 +362,25 @@ html, body {
   border: none;
 }
 
+#quick-chat-row {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 6px;
+  overflow-x: auto;
+}
+
+#quick-chat-row button {
+  flex: 0 0 auto;
+  background: rgba(28,36,48,0.75);
+  border: 1px solid #3a4658;
+  border-radius: 999px;
+  color: #eef2f7;
+  font-size: 11px;
+  padding: 4px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
 #chat-input-row {
   display: flex;
   gap: 6px;
