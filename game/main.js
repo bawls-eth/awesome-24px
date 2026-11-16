@@ -660,6 +660,7 @@ class TownScene extends Phaser.Scene {
     this.setupSaveBackup();
     this.setupTriviaKey();
     this.setupAchievementsUI();
+    this.setupKeysHelp();
     this.setupOutfitShop();
     this.setupGuestbook();
     this.setupBugs();
@@ -1162,7 +1163,7 @@ class TownScene extends Phaser.Scene {
   // so chat/overlay state is respected no matter which input triggered it
   // (keyboard, on-screen button, or shake).
   canAct() {
-    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen;
+    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen;
   }
 
   // Shake is just a fun alternate trigger for the same interact() logic used
@@ -2069,6 +2070,21 @@ class TownScene extends Phaser.Scene {
     document.getElementById('achievements-close-btn').addEventListener('click', () => {
       document.getElementById('achievements-overlay').classList.add('hidden');
       this.achievementsOpen = false;
+    });
+  }
+
+  setupKeysHelp() {
+    const btn = document.getElementById('keys-help-btn');
+    const overlay = document.getElementById('keys-help-overlay');
+    const closeBtn = document.getElementById('keys-help-close-btn');
+    if (!btn || !overlay || !closeBtn) return;
+    btn.addEventListener('click', () => {
+      overlay.classList.remove('hidden');
+      this.keysHelpOpen = true;
+    });
+    closeBtn.addEventListener('click', () => {
+      overlay.classList.add('hidden');
+      this.keysHelpOpen = false;
     });
   }
 
