@@ -74,6 +74,8 @@ for how each feature actually works and plays.
   following the same local clock as the day/night tint
 - A third build-mode material, 🪔 Lamp — purely decorative (no collision),
   costs flowers instead of wood/stone, and glows at night
+- A live "villagers in town right now" count on the join screen, before
+  you've even picked a name — read-only, no new player record created
 
 ## Villagers and expression
 

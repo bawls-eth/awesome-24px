@@ -43,6 +43,23 @@ class TownNet {
   // Reads the count, claims a slot, publishes self, then fires 'init' with
   // only the local player. Remote players (existing + future) arrive through
   // startListening(), which the scene calls once its handlers are wired up.
+  // Lightweight, read-only peek at how many villagers are in town right
+  // now — used on the join screen, before this player has actually
+  // joined. Safe to call repeatedly; initializeApp() tolerates re-calls.
+  watchOnlineCount(callback) {
+    if (!firebaseConfigLooksReal()) {
+      callback(null);
+      return;
+    }
+    try {
+      firebase.initializeApp(firebaseConfig);
+    } catch (e) {
+      // already initialized — fine.
+    }
+    const ref = firebase.database().ref('players');
+    ref.on('value', (snap) => callback(snap.numChildren()));
+  }
+
   async join(profile) {
     if (!firebaseConfigLooksReal()) {
       this.emit('configMissing');

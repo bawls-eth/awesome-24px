@@ -3102,3 +3102,12 @@ function startTown(net, data) {
 renderSpeciesTabs();
 renderAvatarGrid();
 updateJoinButtonState();
+
+// A lightweight, read-only peek at how many villagers are in town right
+// now, shown on the join screen before this player has actually joined.
+const joinScreenNet = new TownNet();
+const onlineCountEl = document.getElementById('online-count');
+joinScreenNet.watchOnlineCount((count) => {
+  if (!onlineCountEl) return;
+  onlineCountEl.textContent = count === null ? '' : `🟢 ${count} villager${count === 1 ? '' : 's'} in town right now`;
+});

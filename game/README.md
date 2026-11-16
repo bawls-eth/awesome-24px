@@ -13,6 +13,8 @@ It's a **static site** (no server to run) + a **free Firebase Realtime
 Database** for the live multiplayer sync. That means it can be hosted for
 free on GitHub Pages, and everyone's position/chat/score updates push to
 everyone else automatically. Capped at **10 players** at once for now.
+The join screen shows a live count of how many villagers are in town
+right now, before you even pick a name.
 
 **What there is to do:**
 - Walk the town, chat, hang out by the campfire, the pond, or the statue

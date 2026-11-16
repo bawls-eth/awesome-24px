@@ -58,6 +58,13 @@ html, body {
   font-size: 13px;
 }
 
+.online-count {
+  margin: -12px 0 18px;
+  color: #6fbf73;
+  font-size: 12px;
+  min-height: 14px;
+}
+
 .join-card label {
   display: block;
   font-size: 12px;
