@@ -45,7 +45,9 @@ right now, before you even pick a name.
   on consecutive days builds a 🛍️ loyalty streak for a small bonus
   (same idea as the daily login streak). One resource is always on a
   **daily deal** — a sign over the shop shows which one sells for +50%
-  today, same for everyone (deterministic from the date)
+  today, same for everyone (deterministic from the date). Selling 10+
+  of any one resource at once earns a **bulk bonus** (+20% on that
+  resource), stacking with the daily deal if it's the same one
 - A day/night tint that follows your local clock, purely for atmosphere —
   the roaming butterflies turn into glowing ✨ fireflies at night (7pm-6am
   your own clock) and back at dawn, same 🦋/🐛 catch mechanic either way

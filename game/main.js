@@ -336,6 +336,8 @@ const QUEST_RESOURCES = [
 ];
 const QUEST_REWARD_BASE = 6;
 const DAILY_DEAL_BONUS = 0.5; // +50% sell price on one resource, picked daily
+const BULK_SELL_THRESHOLD = 10; // sell 10+ of one resource at once for a bonus
+const BULK_SELL_BONUS = 0.2; // +20% on any resource that hits the threshold
 const NPC_LINES = [
   "Did you know the pond cats never actually get wet? Mysteries of pixel physics.",
   "I've been counting your footsteps. You're very consistent. It's admirable.",
@@ -1523,13 +1525,19 @@ class TownScene extends Phaser.Scene {
     const deal = this.todaysDeal();
     let total = 0;
     let dealBonus = 0;
+    let bulkBonus = 0;
+    let bulkCount = 0;
     for (const { key } of QUEST_RESOURCES) {
       const count = this.resources[key] || 0;
       total += count;
       if (key === deal.key) dealBonus += count * DAILY_DEAL_BONUS;
+      if (count >= BULK_SELL_THRESHOLD) {
+        bulkBonus += count * BULK_SELL_BONUS;
+        bulkCount += 1;
+      }
     }
     const turnipRevenue = (this.resources.turnips || 0) > 0 ? this.resources.turnips * this.turnipSellPrice() / TURNIP_BUNDLE : 0;
-    const grandTotal = Math.round(total + dealBonus + turnipRevenue);
+    const grandTotal = Math.round(total + dealBonus + bulkBonus + turnipRevenue);
     if (grandTotal === 0) {
       this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'bag is empty');
       return;
@@ -1538,7 +1546,10 @@ class TownScene extends Phaser.Scene {
     this.resources = { wood: 0, stone: 0, fish: 0, bugs: 0, fruit: 0, turnips: 0, shells: 0, flowers: 0 };
     this.updateInventoryHUD();
     this.saveResources();
-    const dealNote = dealBonus > 0 ? ` (incl. ${deal.icon} deal bonus)` : '';
+    const notes = [];
+    if (dealBonus > 0) notes.push(`${deal.icon} deal`);
+    if (bulkCount > 0) notes.push('bulk bonus');
+    const dealNote = notes.length > 0 ? ` (incl. ${notes.join(' + ')})` : '';
     const label = soldTurnips > 0 ? `sold (incl. ${soldTurnips} 🥬)! +${grandTotal} ⭐${dealNote}` : `sold! +${grandTotal} ⭐${dealNote}`;
     this.awardPoint(grandTotal, label, this.localBody.x, this.localBody.y - 30, 'sell');
     if (soldTurnips > 0) this.incrementStat('turnipsSold', soldTurnips);

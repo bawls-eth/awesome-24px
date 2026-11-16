@@ -147,6 +147,8 @@ for how each feature actually works and plays.
 - Equippable achievement titles — any unlocked achievement can be worn
   as a small badge next to your name, visible to every other client,
   synced the same way appearance changes already are
+- A bulk-sell bonus — selling 10+ of one resource at once earns +20%
+  on that resource, stacking with the daily deal if it's the same one
 
 ## Villagers and expression
 
