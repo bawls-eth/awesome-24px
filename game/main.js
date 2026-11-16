@@ -214,6 +214,31 @@ const NPC_LINES = [
   "Keep chatting nearby and someone's going to assume we're friends.",
   "I'm not saying the museum is understaffed. I'm saying it's me. It's always been me.",
 ];
+// Second resident NPC — a grumpy old dockhand who hangs out by the pond's
+// pier, as far from Professor Byte (over by the statue) as the map allows.
+// Purely flavor-text, client-side only, same pattern as NPC_* above but no
+// daily quest — kept deliberately simple.
+const NPC2_POS = { x: 480, y: 660 };
+const NPC2_RADIUS = 48;
+const NPC2_NAME = '🎣 Salty Mo';
+const NPC2_LINES = [
+  "Forty years on this dock and the fish still won't tell me their names.",
+  "You call that a cast? My grandmother fishes better, and she's a statue.",
+  "I don't trust that Merchant fella. Shows up, sells junk, vanishes. Suspicious.",
+  "Back in my day we didn't have a shop. We just argued about turnip prices for free.",
+  "That dock's been 'temporary' for forty years. Nobody's fixing it. Nobody asked me either.",
+  "Heard the Professor's been talking to himself again. Takes one to know one, I guess.",
+  "The pond cats ignore me completely. Rude, but I respect the commitment.",
+  "Rain or shine, I'm out here. Mostly because nobody built me a house.",
+  "Don't trust anyone who's never fallen off a dock. Builds character, and bruises.",
+  "I've seen things in this pond. Mostly reflections. Still counts.",
+  "You'd think with all this fishing someone would've caught a decent conversation.",
+  "The Able Sisters keep asking if I want new clothes. I've had this hat since launch.",
+  "That statue never waves back. I've tried for years. Pure ego, that one.",
+  "Firefly season's my favorite. Less bugs biting, more bugs glowing. Fair trade.",
+  "Folks keep digging for fossils. I've got a whole dock full of splinters, free of charge.",
+  "I'm not grumpy, I'm just allergic to small talk. And most other talk, honestly.",
+];
 const HOUSE_POS = { x: 1020, y: 760, w: 110, h: 70 };
 const SHOP_RADIUS = 70;
 const POLYROLL_POS = { x: 1250, y: 760 };
@@ -421,6 +446,7 @@ class TownScene extends Phaser.Scene {
     this.drawStatue();
     this.drawCampfire();
     this.drawNPC();
+    this.drawNPC2();
     this.drawMerchant();
     this.drawDigHole();
     this.drawDoors();
@@ -1043,6 +1069,10 @@ class TownScene extends Phaser.Scene {
     }
     if (this.isNearNPC()) {
       this.talkToNPC();
+      return;
+    }
+    if (this.isNearNPC2()) {
+      this.talkToNPC2();
       return;
     }
     if (this.isNearMerchant()) {
@@ -2599,6 +2629,43 @@ class TownScene extends Phaser.Scene {
     if (this.npcBubbleTimer) this.npcBubbleTimer.remove();
     this.npcBubbleTimer = this.time.delayedCall(4200, () => this.npcBubble.setVisible(false));
     this.incrementStat('npcChats');
+    SFX.pop();
+  }
+
+  // ---------- Second resident NPC (dockside, no quest, flavor only) ----------
+
+  drawNPC2() {
+    const { x, y } = NPC2_POS;
+    const sprite = this.add.sprite(x, y, 'doge', 4).setScale(2).setDepth(y);
+    this.tweens.add({ targets: sprite, y: y - 4, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.add.text(x, y - 36, NPC2_NAME, {
+      fontSize: '11px',
+      fontFamily: 'monospace',
+      color: '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(y + 1);
+    this.npc2Bubble = this.add.text(x, y - 46, '', {
+      fontSize: '11px',
+      color: '#1c2430',
+      backgroundColor: '#ffe066',
+      padding: { x: 8, y: 5 },
+      wordWrap: { width: 180 },
+      align: 'center',
+    }).setOrigin(0.5, 1).setDepth(y + 2).setVisible(false);
+    this.addObstacleRect({ x: x - 10, y: y - 6, width: 20, height: 20 });
+  }
+
+  isNearNPC2() {
+    return Phaser.Math.Distance.Between(this.localBody.x, this.localBody.y, NPC2_POS.x, NPC2_POS.y) < NPC2_RADIUS;
+  }
+
+  talkToNPC2() {
+    const line = NPC2_LINES[Math.floor(Math.random() * NPC2_LINES.length)];
+    this.npc2Bubble.setText(line).setVisible(true);
+    if (this.npc2BubbleTimer) this.npc2BubbleTimer.remove();
+    this.npc2BubbleTimer = this.time.delayedCall(4200, () => this.npc2Bubble.setVisible(false));
+    this.incrementStat('npc2Chats');
     SFX.pop();
   }
 
