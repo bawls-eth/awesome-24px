@@ -250,6 +250,7 @@ const ACHIEVEMENTS = [
   { id: 'fence1', icon: '🪨', label: 'Fencer', desc: 'Place a stone fence', reward: 3, check: (s) => (s.stoneBlocksPlaced || 0) >= 1 },
   { id: 'npcChat5', icon: '🧪', label: 'Chatty', desc: "Talk to Professor Byte 5 times", reward: 3, check: (s) => (s.npcChats || 0) >= 5 },
   { id: 'photo1', icon: '📸', label: 'Photographer', desc: 'Take a photo', reward: 3, check: (s) => (s.photosTaken || 0) >= 1 },
+  { id: 'merchant1', icon: '🛒', label: 'Collector', desc: 'Buy a rare look from the Mystery Merchant', reward: 5, check: (s) => (s.merchantBuys || 0) >= 1 },
 ];
 const CAMPFIRE_POS = { x: 800, y: 600 };
 const CAMPFIRE_RADIUS = 60;
@@ -269,6 +270,26 @@ const FLOWER_SPOTS = [
 ];
 const FLOWER_PICKUP_RADIUS = 34;
 const FLOWER_REGROW_MS = 30000;
+// Rare species pulled from this repo's remaining unused 24x24 sprite
+// strips — not in the regular SPECIES list, so the only way to wear one
+// is to catch the Mystery Merchant during their daily 3-hour window.
+const RARE_SPECIES = [
+  { key: 'avalanchepunks', label: 'Avalanche Punks' },
+  { key: 'coolcats_mohawks', label: 'Mohawk Cats' },
+  { key: 'coolcats_tvheads', label: 'TV Head Cats' },
+  { key: 'expansionpunks', label: 'Expansion Punks' },
+  { key: 'frontpunks', label: 'Front Punks' },
+  { key: 'intlpunks', label: "Int'l Punks" },
+  { key: 'morepunks', label: 'More Punks' },
+  { key: 'punks_grayscale', label: 'Grayscale Punks' },
+  { key: 'punks_sepia', label: 'Sepia Punks' },
+  { key: 'aliens_blue', label: 'Blue Aliens' },
+  { key: 'aliens_green', label: 'Green Aliens' },
+  { key: 'aliens_red', label: 'Red Aliens' },
+];
+const MERCHANT_POS = { x: 2250, y: 1000 };
+const MERCHANT_RADIUS = 56;
+const MERCHANT_COST = 15;
 const ABLE_SISTERS_POS = { x: 1150, y: 650, w: 70, h: 56 };
 const ABLE_SISTERS_RADIUS = 55;
 const KK_CONCERT_START_HOUR = 19; // 7pm local time
@@ -351,6 +372,12 @@ class TownScene extends Phaser.Scene {
         frameHeight: FRAME_SIZE,
       });
     });
+    RARE_SPECIES.forEach((s) => {
+      this.load.spritesheet(s.key, `../i/${s.key}-strip.png`, {
+        frameWidth: FRAME_SIZE,
+        frameHeight: FRAME_SIZE,
+      });
+    });
     this.load.spritesheet('tulips', '../i/tulips-strip.png', { frameWidth: FRAME_SIZE, frameHeight: FRAME_SIZE });
     this.load.spritesheet('rocks', '../i/rocks-strip.png', { frameWidth: FRAME_SIZE, frameHeight: FRAME_SIZE });
     this.load.spritesheet('punkrocks', '../i/punkrocks-strip.png', { frameWidth: FRAME_SIZE, frameHeight: FRAME_SIZE });
@@ -383,6 +410,7 @@ class TownScene extends Phaser.Scene {
     this.drawStatue();
     this.drawCampfire();
     this.drawNPC();
+    this.drawMerchant();
     this.drawDigHole();
     this.drawDoors();
     this.drawPolyrollBooth();
@@ -986,6 +1014,10 @@ class TownScene extends Phaser.Scene {
     }
     if (this.isNearNPC()) {
       this.talkToNPC();
+      return;
+    }
+    if (this.isNearMerchant()) {
+      this.buyFromMerchant();
       return;
     }
     const fossilSpot = this.findNearestFossilSpot();
@@ -2321,6 +2353,85 @@ class TownScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(y + 1);
 
     this.addObstacleRect({ x: x - 22, y: y - 8, width: 44, height: 20 });
+  }
+
+  // ---------- mystery merchant ----------
+  // Same deterministic wall-clock-hash trick as weather/turnips: everyone
+  // computes the same "today's rare species" and "today's visiting hour"
+  // from the UTC day number, with zero network traffic.
+
+  merchantDayBucket() {
+    return Math.floor(Date.now() / 86400000);
+  }
+
+  merchantHash(seed) {
+    const h = Math.sin(this.merchantDayBucket() * 12.9898 + seed * 78.233) * 43758.5453;
+    return h - Math.floor(h);
+  }
+
+  merchantStartHour() {
+    return Math.floor(this.merchantHash(1) * 22); // leaves room for a 3h window inside 24h
+  }
+
+  merchantSpecies() {
+    const i = Math.floor(this.merchantHash(2) * RARE_SPECIES.length);
+    return RARE_SPECIES[i];
+  }
+
+  isMerchantVisiting() {
+    const hour = new Date().getHours();
+    const start = this.merchantStartHour();
+    return hour >= start && hour < start + 3;
+  }
+
+  drawMerchant() {
+    const { x, y } = MERCHANT_POS;
+    const species = this.merchantSpecies();
+    this.merchantSprite = this.add.sprite(x, y, species.key, 0).setScale(1.8).setDepth(y);
+    this.merchantSign = this.add.text(x, y - 34, '', {
+      fontSize: '11px',
+      fontFamily: 'monospace',
+      color: '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 3,
+      align: 'center',
+    }).setOrigin(0.5).setDepth(y + 1);
+    this.refreshMerchantSign();
+    this.time.addEvent({ delay: 15000, loop: true, callback: () => this.refreshMerchantSign() });
+  }
+
+  refreshMerchantSign() {
+    if (!this.merchantSign) return;
+    const species = this.merchantSpecies();
+    if (this.isMerchantVisiting()) {
+      this.merchantSprite.setTexture(species.key, 0).setVisible(true);
+      this.merchantSign.setText(`🛒 Mystery Merchant\nselling: ${species.label}`);
+    } else {
+      this.merchantSprite.setVisible(false);
+      const start = this.merchantStartHour();
+      this.merchantSign.setText(`🛒 closed — back at ${start}:00`);
+    }
+  }
+
+  isNearMerchant() {
+    return this.isMerchantVisiting() && Phaser.Math.Distance.Between(this.localBody.x, this.localBody.y, MERCHANT_POS.x, MERCHANT_POS.y) < MERCHANT_RADIUS;
+  }
+
+  buyFromMerchant() {
+    if ((this.localScore || 0) < MERCHANT_COST) {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, `need ${MERCHANT_COST}⭐`);
+      return;
+    }
+    const species = this.merchantSpecies();
+    const frame = Math.floor(this.merchantHash(3) * 9);
+    this.selfData.species = species.key;
+    this.selfData.frame = frame;
+    this.localVisual.setTexture(species.key, frame);
+    this.localBody.setTexture(species.key, frame);
+    writeSave({ species: species.key, frame });
+    this.net.updateAppearance(species.key, frame);
+    this.awardPoint(-MERCHANT_COST, `🛒 bought ${species.label}!`, this.localBody.x, this.localBody.y - 30, 'sell');
+    this.incrementStat('merchantBuys');
   }
 
   drawNPC() {

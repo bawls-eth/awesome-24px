@@ -97,8 +97,16 @@ everyone else automatically. Capped at **10 players** at once for now.
 - 📸 **Photo mode** — press **P** (or tap 📸 under the player list) for a
   camera flash + shutter sound and a PNG download of the current view,
   straight from the game canvas
+- 🛒 **Mystery Merchant**, in the far southeast corner — visits for a
+  3-hour window each day (the same window and rare look for everyone,
+  computed from the date, no network traffic needed) selling one of 12
+  rare looks pulled from this repo's remaining unused sprite strips
+  (Avalanche Punks, Mohawk/TV Head Cats, grayscale/sepia Punks, colored
+  Aliens, and more) for 15 ⭐. Not in the regular Able Sisters lineup —
+  this is the only way to wear one. A sign at the spot shows what's for
+  sale, or when to come back if they're not there
 - 🏆 **Achievements** (Nook Miles-style) — a 🏆 badge under the player
-  list opens a checklist of 16 lifetime goals (catch/chop/mine 10,
+  list opens a checklist of 17 lifetime goals (catch/chop/mine 10,
   complete the museum, play Polyroll 10 times, and more), each paying a
   one-time ⭐ bonus on unlock. Lifetime counters never drop when you
   spend or sell, and unlocks persist on this device

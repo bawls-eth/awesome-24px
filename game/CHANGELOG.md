@@ -64,9 +64,12 @@ for how each feature actually works and plays.
 - A seasonal color wash tied to the real-world month
 - A notice board showing the live top-3 leaderboard
 - A daily login streak counter
-- Nook Miles-style achievements — now 16 lifetime goals, each with a one-
+- Nook Miles-style achievements — now 17 lifetime goals, each with a one-
   time ⭐ bonus (Lumberjack, Miner, Angler, Gardener, Fencer, Chatty,
-  Photographer, Paleontologist, and more)
+  Photographer, Collector, Paleontologist, and more)
+- The Mystery Merchant — visits a fixed spot for a deterministic daily
+  3-hour window, selling one of 12 rare looks pulled from this repo's
+  remaining unused sprite strips (not available anywhere else) for 15 ⭐
 
 ## Villagers and expression
 
