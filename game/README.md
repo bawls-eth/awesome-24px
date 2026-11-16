@@ -161,7 +161,10 @@ right now, before you even pick a name.
   list opens a checklist of 25 lifetime goals (catch/chop/mine 10,
   complete the museum, play Polyroll 10 times, and more), each paying a
   one-time ⭐ bonus on unlock. Lifetime counters never drop when you
-  spend or sell, and unlocks persist on this device
+  spend or sell, and unlocks persist on this device. Equip any unlocked
+  one as a small title badge shown next to your name in the player
+  list, visible to everyone — swap it any time, synced the same way
+  appearance changes are
 - A 🥬 **turnip market** — buy a bundle at the stall near the shop, sell
   at the shop itself for a profit or a loss depending on when you catch
   it (see "Turnip market" below)

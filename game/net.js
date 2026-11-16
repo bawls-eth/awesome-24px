@@ -295,6 +295,15 @@ class TownNet {
     });
   }
 
+  // Equip an unlocked achievement as a small badge shown next to your name
+  // in every client's player list — same sync path as appearance changes.
+  // Pass null to unequip.
+  updateTitle(achievementId) {
+    this.writeIfAlive((current) => {
+      current.title = achievementId || null;
+    });
+  }
+
   sendChat(text) {
     if (!this.chatRef || !this.id) return;
     this.chatRef.push({

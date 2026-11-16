@@ -1198,6 +1198,25 @@ body.touch-device .key-hint { display: none; }
 
 #achievements-list .ach-reward { font-size: 12px; color: #ffe066; white-space: nowrap; }
 
+#achievements-list li.equipped { background: rgba(255, 224, 102, 0.08); }
+
+#achievements-list .ach-equip-btn {
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid #4a5568;
+  background: #2c3647;
+  color: #d6dce6;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+#achievements-list li.equipped .ach-equip-btn {
+  background: #ffe066;
+  color: #1c2430;
+  border-color: #ffe066;
+}
+
 /* ---------- Able Sisters outfit shop (reuses .join-card/.species-tab/.avatar-choice) ---------- */
 
 #outfit-overlay {

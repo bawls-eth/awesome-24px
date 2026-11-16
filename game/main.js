@@ -1980,7 +1980,24 @@ class TownScene extends Phaser.Scene {
     const saved = loadSave();
     this.lifetimeStats = (saved.lifetimeStats && typeof saved.lifetimeStats === 'object') ? { ...saved.lifetimeStats } : {};
     this.achievementsUnlocked = new Set(Array.isArray(saved.achievementsUnlocked) ? saved.achievementsUnlocked : []);
+    this.equippedTitle = (typeof saved.equippedTitle === 'string' && this.achievementsUnlocked.has(saved.equippedTitle)) ? saved.equippedTitle : null;
+    const mine = this.allPlayers.get(this.selfData.id);
+    if (mine) mine.title = this.equippedTitle;
+    if (this.equippedTitle) this.net.updateTitle(this.equippedTitle);
     this.renderAchievementsPanel();
+  }
+
+  // Equip (or unequip, passing null) an unlocked achievement as a small
+  // badge shown next to your name in every client's player list.
+  equipTitle(achievementId) {
+    const next = this.equippedTitle === achievementId ? null : achievementId;
+    this.equippedTitle = next;
+    writeSave({ equippedTitle: next });
+    const mine = this.allPlayers.get(this.selfData.id);
+    if (mine) mine.title = next;
+    this.net.updateTitle(next);
+    this.renderAchievementsPanel();
+    this.renderPlayerList();
   }
 
   saveAchievements() {
@@ -2177,11 +2194,17 @@ class TownScene extends Phaser.Scene {
     listEl.innerHTML = '';
     ACHIEVEMENTS.forEach((a) => {
       const unlocked = this.achievementsUnlocked.has(a.id);
+      const equipped = this.equippedTitle === a.id;
       const li = document.createElement('li');
-      li.className = unlocked ? 'unlocked' : '';
+      li.className = (unlocked ? 'unlocked' : '') + (equipped ? ' equipped' : '');
       li.innerHTML = `<span class="ach-icon">${unlocked ? a.icon : '🔒'}</span>`
         + `<span class="ach-text"><b>${a.label}</b><br>${a.desc}</span>`
-        + `<span class="ach-reward">+${a.reward} ⭐</span>`;
+        + (unlocked
+          ? `<button type="button" class="ach-equip-btn">${equipped ? 'Equipped' : 'Equip'}</button>`
+          : `<span class="ach-reward">+${a.reward} ⭐</span>`);
+      if (unlocked) {
+        li.querySelector('.ach-equip-btn').addEventListener('click', () => this.equipTitle(a.id));
+      }
       listEl.appendChild(li);
     });
   }
@@ -3685,8 +3708,9 @@ class TownScene extends Phaser.Scene {
       }
 
       const known = this.allPlayers.get(d.id);
-      if (known && known.score !== d.score) {
+      if (known && (known.score !== d.score || known.title !== d.title)) {
         known.score = d.score || 0;
+        known.title = d.title || null;
         this.renderPlayerList();
       }
 
@@ -3846,8 +3870,11 @@ class TownScene extends Phaser.Scene {
       const li = document.createElement('li');
       const safeName = censorBlockedTerms(p.name);
       const label = p.id === this.selfData.id ? `${safeName} (you)` : safeName;
+      const title = ACHIEVEMENTS.find((a) => a.id === p.title);
+      const badge = title ? `${title.icon} ` : '';
       const text = document.createElement('span');
-      text.textContent = `${label} — ⭐${p.score || 0}`;
+      text.textContent = `${badge}${label} — ⭐${p.score || 0}`;
+      if (title) text.title = title.label;
       li.appendChild(text);
 
       if (p.id !== this.selfData.id) {

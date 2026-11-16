@@ -144,6 +144,9 @@ for how each feature actually works and plays.
   sign over the shop
 - A reduce-motion toggle that turns off the walk-cycle hop, defaulting
   to the OS-level prefers-reduced-motion setting when present
+- Equippable achievement titles — any unlocked achievement can be worn
+  as a small badge next to your name, visible to every other client,
+  synced the same way appearance changes already are
 
 ## Villagers and expression
 
