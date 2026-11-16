@@ -25,7 +25,7 @@ class UndergroundWorld {
     this.yaw = Math.PI;
     this.pitch = -0.4;
     this.keys = {};
-    this.moveInput = { fwd: 0, strafe: 0 };
+    this.moveInput = { fwd: 0, strafe: 0, vert: 0 };
     this.dragging = false;
     this.lastDrag = null;
     this.occupied = new Set(); // "gx,gy,gz" currently solid (terrain or placed)
@@ -191,9 +191,10 @@ class UndergroundWorld {
     window.addEventListener('resize', this.onResize);
   }
 
-  setMoveInput(fwd, strafe) {
+  setMoveInput(fwd, strafe, vert) {
     this.moveInput.fwd = fwd;
     this.moveInput.strafe = strafe;
+    if (vert !== undefined) this.moveInput.vert = vert;
   }
 
   // Extrudes one 24x24 frame of a sprite strip into a voxel figure: every
@@ -287,32 +288,39 @@ class UndergroundWorld {
     return new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(this.pitch, this.yaw, 0, 'YXZ'));
   }
 
+  // Minecraft-style flight: WASD/dpad moves on the flat horizontal plane
+  // relative to the direction you're facing (yaw only, pitch ignored) —
+  // looking up or down to aim never changes where forward takes you.
+  // Up/down are their own dedicated controls, same as Minecraft creative
+  // mode, not tied to where the camera happens to be pointed.
   _update(delta) {
     let fwd = this.moveInput.fwd;
     let strafe = this.moveInput.strafe;
+    let vert = this.moveInput.vert || 0;
     if (this.keys.w || this.keys.arrowup) fwd += 1;
     if (this.keys.s || this.keys.arrowdown) fwd -= 1;
     if (this.keys.a || this.keys.arrowleft) strafe -= 1;
     if (this.keys.d || this.keys.arrowright) strafe += 1;
+    if (this.keys[' '] || this.keys.spacebar) vert += 1;
+    if (this.keys.shift || this.keys.c) vert -= 1;
 
     const speed = 6.5;
-    if (fwd || strafe) {
-      const look = this._forwardVector();
-      const flatFwd = new THREE.Vector3(look.x, 0, look.z).normalize();
-      const right = new THREE.Vector3(flatFwd.z, 0, -flatFwd.x);
-      const dir = new THREE.Vector3()
-        .addScaledVector(look.clone().normalize(), Math.max(fwd, 0))
-        .addScaledVector(flatFwd, Math.min(fwd, 0))
-        .addScaledVector(right, strafe);
-      if (dir.lengthSq() > 0) {
-        dir.normalize().multiplyScalar(speed * delta);
-        const next = this.rig.position.clone().add(dir);
-        const bound = (UG_SIZE + 1) * UG_BLOCK;
-        next.x = Math.max(-bound, Math.min(bound, next.x));
-        next.z = Math.max(-bound, Math.min(bound, next.z));
-        next.y = Math.max(-(UG_DEPTH + 1) * UG_BLOCK, Math.min(1.5 * UG_BLOCK, next.y));
-        this.rig.position.copy(next);
-      }
+    const flatFwd = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)).multiplyScalar(-1);
+    const right = new THREE.Vector3(flatFwd.z, 0, -flatFwd.x);
+    const dir = new THREE.Vector3()
+      .addScaledVector(flatFwd, fwd)
+      .addScaledVector(right, strafe);
+    dir.y = 0;
+    if (dir.lengthSq() > 0 || vert) {
+      if (dir.lengthSq() > 0) dir.normalize();
+      dir.y = vert;
+      dir.multiplyScalar(speed * delta);
+      const next = this.rig.position.clone().add(dir);
+      const bound = (UG_SIZE + 1) * UG_BLOCK;
+      next.x = Math.max(-bound, Math.min(bound, next.x));
+      next.z = Math.max(-bound, Math.min(bound, next.z));
+      next.y = Math.max(-(UG_DEPTH + 1) * UG_BLOCK, Math.min(1.5 * UG_BLOCK, next.y));
+      this.rig.position.copy(next);
     }
 
     this.playerMesh.position.copy(this.rig.position);

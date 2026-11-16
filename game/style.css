@@ -587,6 +587,8 @@ body.touch-device #underground-controls { display: block; }
   height: 36px !important;
   border-radius: 18px !important;
   font-size: 12px !important;
+  border-color: #ffe066 !important;
+  background: rgba(255,224,102,0.18) !important;
 }
 
 /* ---------- A/B action buttons (interact / build) ---------- */

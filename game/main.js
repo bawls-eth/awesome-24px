@@ -2,6 +2,50 @@ const FRAME_SIZE = 24;
 const FRAME_COUNT = 9;
 const HOP_HEIGHT = 5; // px of vertical lift at the peak of a walk hop
 const HOP_SPEED = 9; // radians/sec the hop phase advances while moving
+
+// ---------- safety: block slurs in names/chat ----------
+// This game's database is intentionally wide-open (see README) so it can
+// stay a free, server-less static site — anyone with the link can write
+// to it directly over the Firebase REST API, bypassing this client
+// entirely. That means this filter can stop an honest player's own typo
+// from this page, and can mask an attacker's text once it arrives so it
+// doesn't render raw on screen, but it is NOT a security boundary: a
+// determined bad actor can still write slurs straight into the database.
+// The real fix for that is tightening the Firebase rules (README has the
+// steps) and/or adding real auth. Keep the list itself short and specific
+// to slurs, not everyday profanity.
+const BLOCKED_TERMS = ['nigger', 'nigga', 'faggot', 'retard', 'chink', 'spic', 'kike', 'tranny'];
+
+function normalizeForFilter(s) {
+  return String(s)
+    .toLowerCase()
+    .replace(/4/g, 'a')
+    .replace(/3/g, 'e')
+    .replace(/1/g, 'i')
+    .replace(/!/g, 'i')
+    .replace(/0/g, 'o')
+    .replace(/5/g, 's')
+    .replace(/\$/g, 's')
+    .replace(/7/g, 't')
+    .replace(/[^a-z]/g, '');
+}
+
+function containsBlockedTerm(s) {
+  const norm = normalizeForFilter(s);
+  return BLOCKED_TERMS.some((term) => norm.includes(term));
+}
+
+function censorBlockedTerms(s) {
+  if (!containsBlockedTerm(s)) return s;
+  // Word-ish tokens get replaced outright rather than character-by-character
+  // masked, since leetspeak/spacing tricks mean a partial mask would still
+  // read as the slur.
+  return String(s)
+    .split(/(\s+)/)
+    .map((tok) => (containsBlockedTerm(tok) ? '*'.repeat(Math.max(3, tok.length)) : tok))
+    .join('');
+}
+
 const SPECIES = [
   { key: 'coolcats', label: 'Cats' },
   { key: 'punks', label: 'Punks' },
@@ -77,6 +121,9 @@ const HOUSE_POS = { x: 1020, y: 760, w: 110, h: 70 };
 const SHOP_RADIUS = 70;
 const DIG_HOLE_POS = { x: 1200, y: 460 };
 const DIG_HOLE_RADIUS = 36;
+const DOOR_A_POS = { x: 1500, y: 700 };
+const DOOR_B_POS = { x: 2250, y: 600 };
+const DOOR_RADIUS = 34;
 const EAST_POND = { cx: 2000, cy: 280, rx: 130, ry: 80 };
 
 const FISHING_SPOTS = [
@@ -167,6 +214,7 @@ class TownScene extends Phaser.Scene {
     this.drawStatue();
     this.drawCampfire();
     this.drawDigHole();
+    this.drawDoors();
     this.drawForestRing();
     this.drawTulipBeds();
     this.drawRocks();
@@ -242,6 +290,14 @@ class TownScene extends Phaser.Scene {
     if (mag > 1) {
       vx /= mag;
       vy /= mag;
+    }
+
+    // Walking away mid-cast used to just let the rod stay drawn to a spot
+    // you'd left, with no feedback — now moving away cancels the cast
+    // outright, same as leaving real Animal Crossing's fishing animation.
+    if (mag > 0 && this.fishing && this.fishing.state !== 'idle') {
+      this.showFloatingText(this.fishing.spot.x, this.fishing.spot.y - 24, 'left the line');
+      this.endFishing();
     }
 
     this.localBody.body.setVelocity(vx * speed, vy * speed);
@@ -626,6 +682,12 @@ class TownScene extends Phaser.Scene {
       return;
     }
 
+    const door = this.findNearestDoor();
+    if (door) {
+      this.useDoor(door);
+      return;
+    }
+
     const bug = this.findNearestBug();
     if (bug) {
       this.swingTool('🥍');
@@ -691,6 +753,25 @@ class TownScene extends Phaser.Scene {
     return Math.hypot(this.localBody.x - DIG_HOLE_POS.x, this.localBody.y - DIG_HOLE_POS.y) < DIG_HOLE_RADIUS;
   }
 
+  findNearestDoor() {
+    const near = (p) => Math.hypot(this.localBody.x - p.x, this.localBody.y - p.y) < DOOR_RADIUS;
+    if (near(DOOR_A_POS)) return DOOR_B_POS;
+    if (near(DOOR_B_POS)) return DOOR_A_POS;
+    return null;
+  }
+
+  useDoor(target) {
+    if (this.doorBusy) return;
+    this.doorBusy = true;
+    this.cameras.main.fadeOut(180, 0, 0, 0);
+    this.cameras.main.once('camerafadeoutcomplete', () => {
+      this.localBody.body.reset(target.x, target.y + DOOR_RADIUS - 6);
+      this.net.move(this.localBody.x, this.localBody.y, this.localVisual.flipX ? -1 : 1);
+      this.cameras.main.fadeIn(180, 0, 0, 0);
+      this.cameras.main.once('camerafadeincomplete', () => { this.doorBusy = false; });
+    });
+  }
+
   updateDigHoleHint() {
     const hint = document.getElementById('dig-hole-hint');
     if (!hint) return;
@@ -729,16 +810,22 @@ class TownScene extends Phaser.Scene {
     this.scene.resume();
   }
 
+  // Exit always works, from anywhere in the cave, the moment you press it —
+  // no need to navigate back to the shaft. The old "only near the surface"
+  // gate made getting out feel broken, since the cave is a maze you can
+  // get turned around in. Mining keeps its own separate key/button so the
+  // two actions are never ambiguous.
   setupUndergroundControls() {
     const ug = this.underground;
     this.input.keyboard && window.addEventListener('keydown', (e) => {
       if (!this.inUnderground) return;
       const k = e.key.toLowerCase();
       if (k === 'e') {
-        if (ug.nearExit) this.exitUnderground();
-        else ug.mine();
+        ug.mine();
       } else if (k === 'f') {
         ug.place();
+      } else if (k === 'escape' || k === 'backspace') {
+        this.exitUnderground();
       }
     });
 
@@ -757,9 +844,19 @@ class TownScene extends Phaser.Scene {
       btn.addEventListener('pointerleave', () => setDir(dir, false));
     });
 
+    const setVert = (v) => { ug.setMoveInput(this.ugFwd || 0, this.ugStrafe || 0, v); };
+    const upBtn = document.getElementById('ug-up-btn');
+    const downBtn = document.getElementById('ug-down-btn');
+    upBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); setVert(1); });
+    upBtn.addEventListener('pointerup', () => setVert(0));
+    upBtn.addEventListener('pointerleave', () => setVert(0));
+    downBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); setVert(-1); });
+    downBtn.addEventListener('pointerup', () => setVert(0));
+    downBtn.addEventListener('pointerleave', () => setVert(0));
+
     document.getElementById('ug-mine-btn').addEventListener('click', () => ug.mine());
     document.getElementById('ug-place-btn').addEventListener('click', () => ug.place());
-    document.getElementById('ug-exit-btn').addEventListener('click', () => { if (ug.nearExit) this.exitUnderground(); });
+    document.getElementById('ug-exit-btn').addEventListener('click', () => this.exitUnderground());
 
     this._ugExitHintInterval = setInterval(() => {
       if (!this.inUnderground) return;
@@ -1065,7 +1162,7 @@ class TownScene extends Phaser.Scene {
   }
 
   createNameText(x, y, name) {
-    return this.add.text(x, y - 22, name, {
+    return this.add.text(x, y - 22, censorBlockedTerms(name), {
       fontSize: '11px',
       fontFamily: 'monospace',
       color: '#ffffff',
@@ -1277,6 +1374,30 @@ class TownScene extends Phaser.Scene {
     this.add.text(x, y - 26, '⛏️ Hole', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
   }
 
+  // Two linked portal doors — a GTA3-style "walk up, interact, pop out the
+  // other side" shortcut across the now much bigger map, rather than a
+  // long walk every time. Purely a position teleport; nothing to load.
+  drawDoor(x, y, label, color) {
+    const g = this.add.graphics().setDepth(y - 1);
+    g.fillStyle(0x3a2a1a, 1).fillRect(x - 16, y - 46, 32, 46);
+    g.fillStyle(color, 0.85).fillRect(x - 12, y - 42, 24, 38);
+    g.fillStyle(0xffffff, 0.9).fillCircle(x + 7, y - 22, 2);
+    this.add.text(x, y - 56, label, { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
+    this.tweens.add({
+      targets: g,
+      alpha: { from: 0.8, to: 1 },
+      duration: 900,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  }
+
+  drawDoors() {
+    this.drawDoor(DOOR_A_POS.x, DOOR_A_POS.y, '🚪 Portal', 0x4fa0e0);
+    this.drawDoor(DOOR_B_POS.x, DOOR_B_POS.y, '🚪 Portal', 0xe0954f);
+  }
+
   drawForestRing() {
     this.treeGraphics = [];
     this.treeFruit = {};
@@ -1417,6 +1538,12 @@ class TownScene extends Phaser.Scene {
   sendChatMessage() {
     const chatInput = document.getElementById('chat-input');
     const text = chatInput.value.trim();
+    if (text && containsBlockedTerm(text)) {
+      this.addChatLine({ system: true, text: "That message wasn't sent — please keep it clean." });
+      chatInput.value = '';
+      chatInput.blur();
+      return;
+    }
     if (text) this.net.sendChat(text);
     chatInput.value = '';
     chatInput.blur();
@@ -1430,9 +1557,12 @@ class TownScene extends Phaser.Scene {
     if (!system) {
       const who = document.createElement('span');
       who.className = 'who';
-      who.textContent = `${name}:`;
+      // Defense in depth: a malicious client can write straight to Firebase
+      // and skip the checks above entirely, so anything rendered from
+      // someone else's data gets masked here too, not just on our own send.
+      who.textContent = `${censorBlockedTerms(name)}:`;
       line.appendChild(who);
-      line.appendChild(document.createTextNode(` ${text}`));
+      line.appendChild(document.createTextNode(` ${censorBlockedTerms(text)}`));
     } else {
       line.textContent = text;
     }
@@ -1450,7 +1580,8 @@ class TownScene extends Phaser.Scene {
     const sorted = Array.from(this.allPlayers.values()).sort((a, b) => (b.score || 0) - (a.score || 0));
     sorted.forEach((p) => {
       const li = document.createElement('li');
-      const label = p.id === this.selfData.id ? `${p.name} (you)` : p.name;
+      const safeName = censorBlockedTerms(p.name);
+      const label = p.id === this.selfData.id ? `${safeName} (you)` : safeName;
       const text = document.createElement('span');
       text.textContent = `${label} — ⭐${p.score || 0}`;
       li.appendChild(text);
@@ -1657,6 +1788,10 @@ joinBtn.addEventListener('click', attemptJoin);
 function attemptJoin() {
   const name = nameInput.value.trim();
   if (!name) return;
+  if (containsBlockedTerm(name)) {
+    joinError.textContent = 'Please pick a different name.';
+    return;
+  }
   joinBtn.disabled = true;
   joinError.textContent = '';
   writeSave({ name, species: selectedSpecies, frame: selectedFrame });

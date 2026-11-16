@@ -40,6 +40,9 @@ everyone else automatically. Capped at **10 players** at once for now.
   "Walkie-talkie" below)
 - A Bored Ape "Mayor" statue watches over the plaza, and Moon Cats drift
   lazily around the pond — pure flavor, no gameplay attached
+- Two linked **portal doors** 🚪 — one near the plaza, one out in the East
+  Meadow — walk up to either and interact to instantly swap places with
+  the other, GTA-loading-door style, instead of the long walk
 - A wide **East Meadow** past the original town — walk east along the main
   path to find a second pond (with its own fishing spot), more trees, rocks,
   and tulip beds to explore
@@ -157,7 +160,8 @@ devices — a D-pad (bottom-left), and action buttons (bottom-right): 🎮 Tilt,
 
 ### Fishing
 
-Walk up to the pond's edge (west side or south dock) and press **Interact**.
+Walking away mid-cast now cancels it cleanly (it used to just leave the
+rod drawn to a spot you'd already left). Walk up to the pond's edge (west side or south dock) and press **Interact**.
 Wait for a **❗** — that's the bite — then press **Interact** again within
 about a second. Too early and the fish gets spooked; too late and it gets
 away. Catches add to your 🐟 count (inventory only, not the leaderboard).
@@ -178,19 +182,23 @@ to jump in — the game switches from the 2D town to a real 3D voxel cave
 Phaser).
 
 - **Look:** drag with your mouse (desktop) or finger (mobile) to look around.
-- **Move:** **WASD**/arrows (desktop) or the D-pad (mobile) — you walk in
-  whatever direction you're looking, including up/down, so look down and
-  walk forward to descend, look up and walk forward to climb. There's no
-  gravity down here — it's a flight-style "creative mode" dig, not a fall.
+- **Move:** **WASD**/arrows (desktop) or the D-pad (mobile) — walks on the
+  flat ground relative to the way you're facing, the same as real
+  Minecraft. Looking up or down only aims; it never changes which way
+  "forward" takes you. There's no gravity down here — it's a flight-style
+  "creative mode" dig, not a fall.
 - **Mine:** **E** (desktop) or ⛏️ (mobile) breaks whatever block is directly
   ahead of you, within reach. Stone and the rarer gold ore blocks add to
   your 🪨 stone count; dirt doesn't, it's just in the way.
 - **Place:** **F** (desktop) or 🧱 (mobile) spends 1 stone to place a block
   where you're looking.
-- **Exit:** climb back up the central shaft toward the surface — a yellow
-  "Press E to climb out" banner appears once you're close enough — then
-  press **E** (or the mobile ⬆️ button) to pop back into the 2D town, right
-  where you left from.
+- **Exit:** the **Exit** button works from anywhere in the cave, the
+  instant you press it — no need to navigate back to the shaft first. **E**
+  is dedicated to mining only, so the two never conflict; desktop can also
+  press **Escape**.
+- **Up/down:** dedicated controls (**Space**/**Shift** on desktop, 🔼/🔽 on
+  mobile) — same as Minecraft creative flight, so looking up or down to aim
+  never changes where walking forward takes you.
 
 The cave is generated once per visit and is **entirely local** — nothing
 underground syncs over the network, so what you dig and build down there is
@@ -291,6 +299,30 @@ manifest, 32×32 for the favicon).
   counts live in your own browser; they don't sync or persist.
 - Day/night tint reads each device's own local clock — cosmetic only, not
   synced (friends in different timezones will see different lighting).
+
+## A word on safety
+
+This game's database is wide open by design (see Setup above) — that's
+what keeps it free and server-less, but it also means **anyone with the
+link can write directly to it**, bypassing this page entirely, over the
+plain Firebase REST API. In practice that showed up as a real slur typed
+into a display name and chat during testing on the live database.
+
+What's in place now: joining with a name containing a slur is blocked,
+sending a chat message with one is blocked, and — because a direct API
+write skips both of those — anything that still gets through is masked
+with asterisks wherever it's displayed (names, chat, the player list).
+The blocklist in `main.js` (`BLOCKED_TERMS`) is intentionally short and
+specific to slurs, not everyday profanity, and it normalizes basic
+leetspeak (`f4ggot` → `faggot`) before matching.
+
+**Be clear about what this isn't:** it is not real moderation and not a
+security boundary. It stops an honest friend's typo and masks what does
+get through, but a determined person can still hit the database directly.
+The actual fix for that is tightening the Firebase rules (see "Locking
+the rules down" above) and/or adding real authentication so writes
+require a signed-in user — worth doing if this link ever reaches people
+you don't already trust.
 
 ## Notes / limits
 
