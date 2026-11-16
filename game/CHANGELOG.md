@@ -99,6 +99,8 @@ for how each feature actually works and plays.
 - A one-key undo (**Z**) for the block you just placed in build mode —
   refunds the right resource and works from anywhere, no need to walk
   back to the exact cell, within a 10-second window
+- Professor Byte and Salty Mo now swap in a few rain-specific lines
+  while it's raining, reacting to the existing weather system
 
 ## Villagers and expression
 

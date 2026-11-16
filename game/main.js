@@ -221,6 +221,12 @@ const NPC_LINES = [
   "Keep chatting nearby and someone's going to assume we're friends.",
   "I'm not saying the museum is understaffed. I'm saying it's me. It's always been me.",
 ];
+const NPC_RAIN_LINES = [
+  "Ugh, it's raining again. My notes are getting soggy and so is my mood.",
+  "On the bright side, the fireflies don't care about rain. Lucky them.",
+  "I'd go inside, but then who'd stand here being damp and philosophical?",
+  "Rain means the turnip stall smells like wet cardboard. You're welcome for that image.",
+];
 // Second resident NPC — a grumpy old dockhand who hangs out by the pond's
 // pier, as far from Professor Byte (over by the statue) as the map allows.
 // Purely flavor-text, client-side only, same pattern as NPC_* above but no
@@ -245,6 +251,12 @@ const NPC2_LINES = [
   "Firefly season's my favorite. Less bugs biting, more bugs glowing. Fair trade.",
   "Folks keep digging for fossils. I've got a whole dock full of splinters, free of charge.",
   "I'm not grumpy, I'm just allergic to small talk. And most other talk, honestly.",
+];
+const NPC2_RAIN_LINES = [
+  "Rain on the dock. My favorite. Said no one, ever, including me.",
+  "Forty years and this dock still leaks worse than my patience right now.",
+  "The fish bite better in the rain. Doesn't mean I have to enjoy catching them in it.",
+  "Rain's just the sky doing the washing up it never finishes.",
 ];
 const HOUSE_POS = { x: 1020, y: 760, w: 110, h: 70 };
 const SHOP_RADIUS = 70;
@@ -2836,7 +2848,8 @@ class TownScene extends Phaser.Scene {
         return;
       }
     }
-    const line = NPC_LINES[Math.floor(Math.random() * NPC_LINES.length)];
+    const pool = (this.isRainWindow(Date.now()) && Math.random() < 0.5) ? NPC_RAIN_LINES : NPC_LINES;
+    const line = pool[Math.floor(Math.random() * pool.length)];
     this.npcBubble.setText(line).setVisible(true);
     if (this.npcBubbleTimer) this.npcBubbleTimer.remove();
     this.npcBubbleTimer = this.time.delayedCall(4200, () => this.npcBubble.setVisible(false));
@@ -2873,7 +2886,8 @@ class TownScene extends Phaser.Scene {
   }
 
   talkToNPC2() {
-    const line = NPC2_LINES[Math.floor(Math.random() * NPC2_LINES.length)];
+    const pool = (this.isRainWindow(Date.now()) && Math.random() < 0.5) ? NPC2_RAIN_LINES : NPC2_LINES;
+    const line = pool[Math.floor(Math.random() * pool.length)];
     this.npc2Bubble.setText(line).setVisible(true);
     if (this.npc2BubbleTimer) this.npc2BubbleTimer.remove();
     this.npc2BubbleTimer = this.time.delayedCall(4200, () => this.npc2Bubble.setVisible(false));

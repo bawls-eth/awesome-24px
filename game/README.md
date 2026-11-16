@@ -108,7 +108,8 @@ right now, before you even pick a name.
   **daily quest** (same for everyone, computed from the date): a sign
   over his head shows what to bring and the ⭐ reward; have enough of
   that resource in your bag and interacting turns it in instead of just
-  chatting. One quest per day, resets at midnight UTC
+  chatting. One quest per day, resets at midnight UTC. Both he and Salty
+  Mo (below) swap in a few rain-specific lines while it's raining
 - 🎣 **Salty Mo**, a second resident NPC camped out by the pond dock — a
   grumpy old dockhand with his own set of grumbles about the weather, the
   Mystery Merchant, and everyone who's never fallen off his dock. No quest,
