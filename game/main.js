@@ -928,15 +928,7 @@ class TownScene extends Phaser.Scene {
     });
 
     const chatInput = document.getElementById('chat-input');
-    document.getElementById('chat-send-btn').addEventListener('click', () => this.sendChatMessage());
     document.getElementById('mobile-chat-btn').addEventListener('click', () => chatInput.focus());
-
-    document.querySelectorAll('#quick-chat-row button').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        chatInput.value = btn.dataset.phrase;
-        this.sendChatMessage();
-      });
-    });
 
     const emotePopup = document.getElementById('emote-popup');
     EMOTES.forEach((symbol, i) => {
@@ -3171,6 +3163,14 @@ class TownScene extends Phaser.Scene {
     document.getElementById('chat-clear-btn').addEventListener('click', () => {
       document.getElementById('chat-log').innerHTML = '';
       document.getElementById('chat-clear-btn').classList.add('hidden');
+    });
+
+    document.getElementById('chat-send-btn').addEventListener('click', () => this.sendChatMessage());
+    document.querySelectorAll('#quick-chat-row button').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        chatInput.value = btn.dataset.phrase;
+        this.sendChatMessage();
+      });
     });
   }
 
