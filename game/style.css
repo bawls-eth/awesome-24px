@@ -733,3 +733,148 @@ body.touch-device #underground-controls { display: block; }
 .tap-hint { display: none; }
 body.touch-device .tap-hint { display: inline; }
 body.touch-device .key-hint { display: none; }
+
+/* ---------- Polyroll minigame (stars only, no crypto) ---------- */
+
+#polyroll-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10,14,20,0.6);
+}
+
+#polyroll-overlay.hidden { display: none; }
+
+.polyroll-card {
+  position: relative;
+  background: #232c3a;
+  border: 3px solid #6b2e3a;
+  border-radius: 14px;
+  padding: 24px 28px;
+  width: 340px;
+  max-width: 90vw;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  text-align: center;
+}
+
+.polyroll-card h2 { margin: 0 0 4px; }
+
+.polyroll-tagline {
+  margin: 0 0 10px;
+  color: #9aa7bb;
+  font-size: 12px;
+}
+
+.polyroll-score-line {
+  margin: 0 0 14px;
+  font-size: 14px;
+}
+
+#polyroll-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #3a4658;
+  background: #1c2430;
+  color: #eef2f7;
+  cursor: pointer;
+}
+
+.polyroll-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.polyroll-tab {
+  flex: 1 1 auto;
+  padding: 8px;
+  border-radius: 8px;
+  border: 2px solid #3a4658;
+  background: #1c2430;
+  color: #cbd5e1;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.polyroll-tab.active {
+  border-color: #ffe066;
+  color: #ffe066;
+  background: #332a1c;
+}
+
+.polyroll-panel.hidden { display: none; }
+
+.polyroll-panel label,
+.polyroll-card label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9aa7bb;
+  margin: 10px 0 6px;
+}
+
+.polyroll-picker {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.polyroll-pick {
+  min-width: 40px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 2px solid #3a4658;
+  background: #1c2430;
+  color: #eef2f7;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.polyroll-pick.active {
+  border-color: #6fbf73;
+  color: #6fbf73;
+  background: #223328;
+}
+
+#polyroll-bet {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 2px solid #3a4658;
+  background: #1c2430;
+  color: #eef2f7;
+  font-size: 14px;
+  text-align: center;
+}
+
+#polyroll-play-btn {
+  width: 100%;
+  margin-top: 14px;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background: #6b2e3a;
+  color: #ffe9ec;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#polyroll-result {
+  min-height: 18px;
+  margin: 10px 0 0;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+#polyroll-result.win { color: #6fbf73; }
+#polyroll-result.lose { color: #ef6f6f; }

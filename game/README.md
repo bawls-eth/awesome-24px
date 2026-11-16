@@ -59,6 +59,10 @@ everyone else automatically. Capped at **10 players** at once for now.
   statue, press **E** to jump in, and mine/place real 3D blocks Minecraft-
   style. Climb back up the shaft and press **E** again to pop back to the
   2D town (see "Going underground" below)
+- A 🎲 **Polyroll** betting booth near the shop — dice (pick 1-6, 5×
+  payout) or coin flip (2× payout), wagering your own ⭐ stars for fun.
+  No wallet, no crypto, no real money anywhere in it — just the same
+  stars the sparkle and the shop already use (see "Polyroll" below)
 - Your name, villager choice, and wood/stone/fish inventory are remembered
   on this device (see "Local save" below) — no account, nothing synced
 - On iPhone/Android, you can **Add to Home Screen** for a proper app icon
@@ -166,6 +170,19 @@ devices — a D-pad (bottom-left), and action buttons (bottom-right): 🎮 Tilt,
   it only clears your own screen, not the shared history everyone else sees
 - Your 🎒 bag (top-left) shows your wood/stone/fish; a visible rod line
   appears between you and the water while you're fishing
+
+### Polyroll
+
+A small betting booth near the shop, named after (but with nothing to do
+with) the real Polyroll — a crypto dice/coinflip casino. This one wagers
+only your in-game ⭐ stars: no wallet, no blockchain, no real money, ever.
+
+Walk up and interact to open it. Pick **Dice** (choose 1-6, win 5× your
+bet) or **Coin** (heads/tails, win 2× your bet), set a bet amount — capped
+at however many stars you actually have — and press **Roll!**. A loss
+costs you the bet; nothing else about the game changes. Close it any time
+with the ✕; your villager can't walk while it's open, same as while
+chatting.
 
 ### Fishing
 

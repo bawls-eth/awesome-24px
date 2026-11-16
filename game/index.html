@@ -95,6 +95,45 @@
   </div>
 </div>
 
+<div id="polyroll-overlay" class="hidden">
+  <div class="polyroll-card">
+    <button id="polyroll-close-btn" type="button" aria-label="Close">✕</button>
+    <h2>🎲 Polyroll</h2>
+    <p class="polyroll-tagline">Bet your own ⭐ stars for fun — no wallet, no crypto, no real money.</p>
+    <p class="polyroll-score-line">Your stars: <b id="polyroll-score">0</b></p>
+
+    <div class="polyroll-tabs">
+      <button id="polyroll-tab-dice" class="polyroll-tab active" type="button">🎲 Dice (5×)</button>
+      <button id="polyroll-tab-coin" class="polyroll-tab" type="button">🪙 Coin (2×)</button>
+    </div>
+
+    <div id="polyroll-dice-panel" class="polyroll-panel">
+      <label>Pick a number 1-6</label>
+      <div id="polyroll-dice-picker" class="polyroll-picker">
+        <button type="button" class="polyroll-pick active" data-num="1">1</button>
+        <button type="button" class="polyroll-pick" data-num="2">2</button>
+        <button type="button" class="polyroll-pick" data-num="3">3</button>
+        <button type="button" class="polyroll-pick" data-num="4">4</button>
+        <button type="button" class="polyroll-pick" data-num="5">5</button>
+        <button type="button" class="polyroll-pick" data-num="6">6</button>
+      </div>
+    </div>
+    <div id="polyroll-coin-panel" class="polyroll-panel hidden">
+      <label>Pick a side</label>
+      <div id="polyroll-coin-picker" class="polyroll-picker">
+        <button type="button" class="polyroll-pick active" data-side="heads">Heads</button>
+        <button type="button" class="polyroll-pick" data-side="tails">Tails</button>
+      </div>
+    </div>
+
+    <label for="polyroll-bet">Bet amount</label>
+    <input id="polyroll-bet" type="number" min="1" value="1" />
+
+    <button id="polyroll-play-btn" type="button">Roll!</button>
+    <p id="polyroll-result"></p>
+  </div>
+</div>
+
 <div id="underground-overlay" class="hidden">
   <div id="underground-canvas-wrap"></div>
   <div id="underground-depth-hint">⛰️ Underground — fully local, just for you</div>

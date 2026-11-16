@@ -119,6 +119,8 @@ const POND_CATS = [
 const STATUE_POS = { x: 1450, y: 600 };
 const HOUSE_POS = { x: 1020, y: 760, w: 110, h: 70 };
 const SHOP_RADIUS = 70;
+const POLYROLL_POS = { x: 1250, y: 760 };
+const POLYROLL_RADIUS = 50;
 const DIG_HOLE_POS = { x: 1200, y: 460 };
 const DIG_HOLE_RADIUS = 36;
 const DOOR_RADIUS = 34;
@@ -225,6 +227,7 @@ class TownScene extends Phaser.Scene {
     this.drawCampfire();
     this.drawDigHole();
     this.drawDoors();
+    this.drawPolyrollBooth();
     this.drawForestRing();
     this.drawTulipBeds();
     this.drawRocks();
@@ -251,6 +254,7 @@ class TownScene extends Phaser.Scene {
     this.setupBuilding();
     this.setupWalkie();
     this.setupPortalReopen();
+    this.setupPolyroll();
     this.setupBugs();
     if (IS_TOUCH) {
       this.setupTouchControls();
@@ -283,7 +287,7 @@ class TownScene extends Phaser.Scene {
     let vx = 0;
     let vy = 0;
 
-    if (!this.chatFocused) {
+    if (!this.chatFocused && !this.polyrollOpen) {
       if (this.cursors.left.isDown || this.wasd.A.isDown) vx -= 1;
       if (this.cursors.right.isDown || this.wasd.D.isDown) vx += 1;
       if (this.cursors.up.isDown || this.wasd.W.isDown) vy -= 1;
@@ -714,7 +718,7 @@ class TownScene extends Phaser.Scene {
     this.fishing = { state: 'idle', spot: null, bobber: null, timer: null };
     this.updateInventoryHUD();
 
-    this.input.keyboard.on('keydown-E', () => { if (!this.chatFocused) this.interact(); });
+    this.input.keyboard.on('keydown-E', () => { if (!this.chatFocused && !this.polyrollOpen) this.interact(); });
     const btn = document.getElementById('interact-btn');
     if (btn) btn.addEventListener('click', () => this.interact());
   }
@@ -735,6 +739,10 @@ class TownScene extends Phaser.Scene {
     }
     if (this.isNearShop()) {
       this.sellAtShop();
+      return;
+    }
+    if (this.isNearPolyroll()) {
+      this.openPolyroll();
       return;
     }
     if (this.isNearDigHole()) {
@@ -792,6 +800,120 @@ class TownScene extends Phaser.Scene {
     const cx = HOUSE_POS.x + HOUSE_POS.w / 2;
     const cy = HOUSE_POS.y + HOUSE_POS.h / 2;
     return Math.hypot(this.localBody.x - cx, this.localBody.y - cy) < SHOP_RADIUS;
+  }
+
+  drawPolyrollBooth() {
+    const { x, y } = POLYROLL_POS;
+    const g = this.add.graphics().setDepth(y - 1);
+    g.fillStyle(0x6b2e3a, 1).fillRect(x - 28, y - 10, 56, 26);
+    g.fillStyle(0xffffff, 1).fillRect(x - 24, y - 6, 48, 18);
+    g.fillStyle(0x1c2430, 1);
+    [[-14, -1], [0, 2], [14, -2]].forEach(([dx, dy]) => g.fillCircle(x + dx, y + dy, 2));
+    this.add.text(x, y - 36, '🎲 Polyroll', { fontSize: '13px' }).setOrigin(0.5).setDepth(y + 1);
+  }
+
+  isNearPolyroll() {
+    return Math.hypot(this.localBody.x - POLYROLL_POS.x, this.localBody.y - POLYROLL_POS.y) < POLYROLL_RADIUS;
+  }
+
+  // ---------- Polyroll: a dice/coin betting minigame, stars-only ----------
+  // Inspired by a dice/coin-flip betting game — no wallet, no crypto, no
+  // real money anywhere in this. The only stake is your own ⭐ score,
+  // same currency the sparkle and the shop already use.
+
+  openPolyroll() {
+    if (this.inUnderground) return;
+    this.polyrollOpen = true;
+    document.getElementById('polyroll-overlay').classList.remove('hidden');
+    this.updatePolyrollScoreLabel();
+  }
+
+  closePolyroll() {
+    this.polyrollOpen = false;
+    document.getElementById('polyroll-overlay').classList.add('hidden');
+  }
+
+  updatePolyrollScoreLabel() {
+    const el = document.getElementById('polyroll-score');
+    if (el) el.textContent = this.localScore || 0;
+  }
+
+  playPolyrollDice(pick, bet) {
+    const roll = Phaser.Math.Between(1, 6);
+    const win = roll === pick;
+    const delta = win ? bet * 5 : -bet;
+    this.resolvePolyroll(`🎲 rolled ${roll}`, win, delta);
+  }
+
+  playPolyrollCoin(pick, bet) {
+    const flip = Math.random() < 0.5 ? 'heads' : 'tails';
+    const win = flip === pick;
+    const delta = win ? bet : -bet;
+    this.resolvePolyroll(`🪙 landed on ${flip}`, win, delta);
+  }
+
+  resolvePolyroll(rollText, win, delta) {
+    this.awardPoint(delta, `${win ? 'won' : 'lost'} ${Math.abs(delta)} ⭐`, this.localBody.x, this.localBody.y - 30);
+    const resultEl = document.getElementById('polyroll-result');
+    resultEl.textContent = `${rollText} — you ${win ? 'won' : 'lost'} ${Math.abs(delta)} ⭐!`;
+    resultEl.className = win ? 'win' : 'lose';
+    this.updatePolyrollScoreLabel();
+  }
+
+  setupPolyroll() {
+    this.polyrollMode = 'dice';
+    this.polyrollDicePick = 1;
+    this.polyrollCoinPick = 'heads';
+
+    document.getElementById('polyroll-close-btn').addEventListener('click', () => this.closePolyroll());
+
+    const diceTab = document.getElementById('polyroll-tab-dice');
+    const coinTab = document.getElementById('polyroll-tab-coin');
+    const dicePanel = document.getElementById('polyroll-dice-panel');
+    const coinPanel = document.getElementById('polyroll-coin-panel');
+    diceTab.addEventListener('click', () => {
+      this.polyrollMode = 'dice';
+      diceTab.classList.add('active');
+      coinTab.classList.remove('active');
+      dicePanel.classList.remove('hidden');
+      coinPanel.classList.add('hidden');
+    });
+    coinTab.addEventListener('click', () => {
+      this.polyrollMode = 'coin';
+      coinTab.classList.add('active');
+      diceTab.classList.remove('active');
+      coinPanel.classList.remove('hidden');
+      dicePanel.classList.add('hidden');
+    });
+
+    document.querySelectorAll('#polyroll-dice-picker .polyroll-pick').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.polyrollDicePick = Number(btn.dataset.num);
+        document.querySelectorAll('#polyroll-dice-picker .polyroll-pick').forEach((b) => b.classList.toggle('active', b === btn));
+      });
+    });
+    document.querySelectorAll('#polyroll-coin-picker .polyroll-pick').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.polyrollCoinPick = btn.dataset.side;
+        document.querySelectorAll('#polyroll-coin-picker .polyroll-pick').forEach((b) => b.classList.toggle('active', b === btn));
+      });
+    });
+
+    document.getElementById('polyroll-play-btn').addEventListener('click', () => {
+      const betInput = document.getElementById('polyroll-bet');
+      const score = this.localScore || 0;
+      let bet = Math.floor(Number(betInput.value));
+      if (!Number.isFinite(bet) || bet < 1) bet = 1;
+      if (bet > score) bet = score;
+      betInput.value = bet;
+      if (score <= 0 || bet < 1) {
+        document.getElementById('polyroll-result').textContent = "you don't have any ⭐ to bet";
+        document.getElementById('polyroll-result').className = 'lose';
+        return;
+      }
+      if (this.polyrollMode === 'dice') this.playPolyrollDice(this.polyrollDicePick, bet);
+      else this.playPolyrollCoin(this.polyrollCoinPick, bet);
+    });
   }
 
   sellAtShop() {
@@ -1171,7 +1293,7 @@ class TownScene extends Phaser.Scene {
       .setDepth(400000)
       .setVisible(false);
 
-    this.input.keyboard.on('keydown-B', () => { if (!this.chatFocused) this.toggleBuildMode(); });
+    this.input.keyboard.on('keydown-B', () => { if (!this.chatFocused && !this.polyrollOpen) this.toggleBuildMode(); });
     const btn = document.getElementById('build-toggle-btn');
     if (btn) btn.addEventListener('click', () => this.toggleBuildMode());
   }
