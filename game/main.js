@@ -302,6 +302,8 @@ class TownScene extends Phaser.Scene {
     this.setupEmotes();
     this.setupSparkle();
     this.setupDayNight();
+    this.setupSeason();
+    this.time.addEvent({ delay: 60 * 60 * 1000, loop: true, callback: () => this.updateSeason() });
     this.kkEnjoyedWindow = loadSave().kkEnjoyedWindow || null;
     this.setupWeather();
     this.setupActivities();
@@ -532,6 +534,32 @@ class TownScene extends Phaser.Scene {
       .setDepth(300000);
     this.scale.on('resize', (size) => this.dayNightOverlay.setSize(size.width, size.height));
     this.lastDayNightCheck = 0;
+  }
+
+  // ---------- seasons ----------
+  // A faint color wash tied to the real-world month on each player's own
+  // device — no new art, same "derive it from wall-clock time" trick used
+  // everywhere else (sparkle, weather, K.K. Slider). Sits just under the
+  // day/night overlay so night still darkens it normally.
+
+  setupSeason() {
+    this.seasonOverlay = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0xffffff, 0)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(299999);
+    this.scale.on('resize', (size) => this.seasonOverlay.setSize(size.width, size.height));
+    this.updateSeason();
+  }
+
+  updateSeason() {
+    const month = new Date().getMonth(); // 0=Jan
+    let color;
+    let alpha;
+    if (month === 11 || month === 0 || month === 1) { color = 0x9cd8ff; alpha = 0.08; } // winter
+    else if (month >= 2 && month <= 4) { color = 0xcdf2a8; alpha = 0.06; } // spring
+    else if (month >= 5 && month <= 7) { color = 0xfff2a0; alpha = 0.05; } // summer
+    else { color = 0xe0a050; alpha = 0.09; } // autumn
+    this.seasonOverlay.setFillStyle(color, alpha);
   }
 
   // ---------- weather ----------

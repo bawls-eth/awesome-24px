@@ -33,6 +33,9 @@ everyone else automatically. Capped at **10 players** at once for now.
 - **Sell** your wood/stone/fish/bugs at the 🏠 shop near the statue for ⭐ points —
   a proper Nook's-Cranny-style loop that feeds the leaderboard
 - A day/night tint that follows your local clock, purely for atmosphere
+- A faint **seasonal color wash** tied to the real-world month on your
+  own device — cool blue in winter, green in spring, warm yellow in
+  summer, orange in autumn. No new art, cosmetic only
 - Occasional **rain** 🌧️ — about 3 windows in 10, it rains for a while;
   everyone sees it start/stop together without any network traffic (same
   trick as the sparkle), purely cosmetic
@@ -405,6 +408,9 @@ manifest, 32×32 for the favicon).
   counts live in your own browser; they don't sync or persist.
 - Day/night tint reads each device's own local clock — cosmetic only, not
   synced (friends in different timezones will see different lighting).
+- The seasonal wash reads the device's own month the same way — a plain
+  low-alpha rectangle re-colored per season, re-checked hourly in case a
+  long session crosses midnight on the last day of a month.
 - Weather works the same way as the sparkle: each 8-minute wall-clock
   window hashes to rain or clear, so everyone's client agrees without a
   server. It's cosmetic only — movement, fishing, etc. are unaffected.
