@@ -121,10 +121,16 @@ const HOUSE_POS = { x: 1020, y: 760, w: 110, h: 70 };
 const SHOP_RADIUS = 70;
 const DIG_HOLE_POS = { x: 1200, y: 460 };
 const DIG_HOLE_RADIUS = 36;
-const DOOR_A_POS = { x: 1500, y: 700 };
-const DOOR_B_POS = { x: 2250, y: 600 };
 const DOOR_RADIUS = 34;
-const GTA3_PORTAL_URL = 'https://quenq.com/apps/gta-3/';
+// One-way, GTA3-loading-door style portals: each is a real door object in
+// the town that, on interact, leaves Pixeltown entirely for another
+// browser game in this same tab. No teleport back — closing/navigating
+// away from the destination is how you return.
+const PORTALS = [
+  { x: 1500, y: 700, label: '🚪 GTA 3', color: 0x4fa0e0, url: 'https://quenq.com/apps/gta-3/' },
+  { x: 2250, y: 600, label: '🚪 GTA 3', color: 0x4fa0e0, url: 'https://quenq.com/apps/gta-3/' },
+  { x: 300, y: 500, label: '🚪 NFS Underground 2', color: 0xe0454f, url: 'https://nfsu2.xyz/' },
+];
 const EAST_POND = { cx: 2000, cy: 280, rx: 130, ry: 80 };
 
 const FISHING_SPOTS = [
@@ -759,17 +765,29 @@ class TownScene extends Phaser.Scene {
   // return, same as actually walking through a loading door and leaving
   // the area behind. Always confirm first since this abandons the
   // current session.
+  findNearestPortal() {
+    let best = null;
+    let bestDist = DOOR_RADIUS;
+    PORTALS.forEach((p) => {
+      const d = Math.hypot(this.localBody.x - p.x, this.localBody.y - p.y);
+      if (d < bestDist) { bestDist = d; best = p; }
+    });
+    return best;
+  }
+
   isNearDoor() {
-    const near = (p) => Math.hypot(this.localBody.x - p.x, this.localBody.y - p.y) < DOOR_RADIUS;
-    return near(DOOR_A_POS) || near(DOOR_B_POS);
+    return !!this.findNearestPortal();
   }
 
   useDoor() {
     if (this.doorBusy) return;
-    const ok = window.confirm('Walk through the portal to GTA 3? This leaves Pixeltown in this tab — there\'s no way back through it.');
+    const portal = this.findNearestPortal();
+    if (!portal) return;
+    const name = portal.label.replace('🚪', '').trim();
+    const ok = window.confirm(`Walk through the portal to ${name}? This leaves Pixeltown in this tab — there's no way back through it.`);
     if (!ok) return;
     this.doorBusy = true;
-    window.location.href = GTA3_PORTAL_URL;
+    window.location.href = portal.url;
   }
 
   updateDigHoleHint() {
@@ -1374,9 +1392,6 @@ class TownScene extends Phaser.Scene {
     this.add.text(x, y - 26, '⛏️ Hole', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
   }
 
-  // Two linked portal doors — a GTA3-style "walk up, interact, pop out the
-  // other side" shortcut across the now much bigger map, rather than a
-  // long walk every time. Purely a position teleport; nothing to load.
   drawDoor(x, y, label, color) {
     const g = this.add.graphics().setDepth(y - 1);
     g.fillStyle(0x3a2a1a, 1).fillRect(x - 16, y - 46, 32, 46);
@@ -1394,8 +1409,7 @@ class TownScene extends Phaser.Scene {
   }
 
   drawDoors() {
-    this.drawDoor(DOOR_A_POS.x, DOOR_A_POS.y, '🚪 GTA 3', 0x4fa0e0);
-    this.drawDoor(DOOR_B_POS.x, DOOR_B_POS.y, '🚪 GTA 3', 0x4fa0e0);
+    PORTALS.forEach((p) => this.drawDoor(p.x, p.y, p.label, p.color));
   }
 
   drawForestRing() {
