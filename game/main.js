@@ -133,6 +133,11 @@ const FOSSIL_BAG_CAP = 3;
 const DIG_HOLE_POS = { x: 1200, y: 460 };
 const DIG_HOLE_RADIUS = 36;
 const DOOR_RADIUS = 34;
+const TURNIP_STALL_POS = { x: 970, y: 650 };
+const TURNIP_STALL_RADIUS = 50;
+const TURNIP_BUNDLE = 10;
+const TURNIP_BUY_CYCLE_MS = 4 * 60 * 60 * 1000; // buy price changes every 4h
+const TURNIP_SELL_CYCLE_MS = 15 * 60 * 1000; // sell price changes every 15min
 const WEATHER_CYCLE_MS = 8 * 60 * 1000; // 8-minute weather windows
 const WEATHER_RAIN_CHANCE = 0.3; // ~30% of windows are rainy
 const WEATHER_RAIN_COUNT = 70;
@@ -238,6 +243,7 @@ class TownScene extends Phaser.Scene {
     this.drawDoors();
     this.drawPolyrollBooth();
     this.drawMuseum();
+    this.drawTurnipStall();
     this.drawFossilSpots();
     this.drawForestRing();
     this.drawTulipBeds();
@@ -287,6 +293,7 @@ class TownScene extends Phaser.Scene {
     this.updateSparkle(time);
     this.updateDayNight(time);
     this.updateWeather(time, delta);
+    this.updateTurnipPriceLabels(time);
     this.updateBuildPreview();
     this.updateFishingRod();
     this.updateDigHoleHint();
@@ -724,6 +731,7 @@ class TownScene extends Phaser.Scene {
       fish: Number(saved.fish) || 0,
       bugs: Number(saved.bugs) || 0,
       fruit: Number(saved.fruit) || 0,
+      turnips: Number(saved.turnips) || 0,
     };
     this.treeCooldowns = {};
     this.rockCooldowns = {};
@@ -755,6 +763,10 @@ class TownScene extends Phaser.Scene {
     }
     if (this.isNearPolyroll()) {
       this.openPolyroll();
+      return;
+    }
+    if (this.isNearTurnipStall()) {
+      this.buyTurnips();
       return;
     }
     if (this.isNearMuseum()) {
@@ -939,14 +951,57 @@ class TownScene extends Phaser.Scene {
 
   sellAtShop() {
     const total = (this.resources.wood || 0) + (this.resources.stone || 0) + (this.resources.fish || 0) + (this.resources.bugs || 0) + (this.resources.fruit || 0);
-    if (total === 0) {
+    const turnipRevenue = (this.resources.turnips || 0) > 0 ? this.resources.turnips * this.turnipSellPrice() / TURNIP_BUNDLE : 0;
+    const grandTotal = Math.round(total + turnipRevenue);
+    if (grandTotal === 0) {
       this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'bag is empty');
       return;
     }
-    this.resources = { wood: 0, stone: 0, fish: 0, bugs: 0, fruit: 0 };
+    const soldTurnips = this.resources.turnips || 0;
+    this.resources = { wood: 0, stone: 0, fish: 0, bugs: 0, fruit: 0, turnips: 0 };
     this.updateInventoryHUD();
     this.saveResources();
-    this.awardPoint(total, `sold! +${total} ⭐`, this.localBody.x, this.localBody.y - 30);
+    const label = soldTurnips > 0 ? `sold (incl. ${soldTurnips} 🥬)! +${grandTotal} ⭐` : `sold! +${grandTotal} ⭐`;
+    this.awardPoint(grandTotal, label, this.localBody.x, this.localBody.y - 30);
+  }
+
+  // ---------- turnip / stalk market ----------
+  // A simplified, single-session take on Animal Crossing's stalk market:
+  // buy a bundle from the merchant stall at a price that drifts every 4
+  // real-world hours, sell at the shop at a price that swings far more
+  // (every 15 minutes) — sometimes a profit, sometimes a loss, same
+  // deterministic wall-clock-hash trick as weather/the sparkle, so it
+  // needs no network traffic and no persistent "day" concept.
+
+  turnipHashedPrice(cycleMs, seedOffset, min, max) {
+    const bucket = Math.floor(Date.now() / cycleMs) + seedOffset;
+    const h = Math.sin(bucket * 12.9898) * 43758.5453;
+    const frac = h - Math.floor(h);
+    return Math.round(min + frac * (max - min));
+  }
+
+  turnipBuyPrice() {
+    return this.turnipHashedPrice(TURNIP_BUY_CYCLE_MS, 1000, 90, 130);
+  }
+
+  turnipSellPrice() {
+    return this.turnipHashedPrice(TURNIP_SELL_CYCLE_MS, 7000, 20, 240);
+  }
+
+  isNearTurnipStall() {
+    return Math.hypot(this.localBody.x - TURNIP_STALL_POS.x, this.localBody.y - TURNIP_STALL_POS.y) < TURNIP_STALL_RADIUS;
+  }
+
+  buyTurnips() {
+    const price = this.turnipBuyPrice();
+    if ((this.localScore || 0) < price) {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, `need ${price} ⭐ for ${TURNIP_BUNDLE} turnips`);
+      return;
+    }
+    this.resources.turnips = (this.resources.turnips || 0) + TURNIP_BUNDLE;
+    this.updateInventoryHUD();
+    this.saveResources();
+    this.awardPoint(-price, `bought ${TURNIP_BUNDLE} 🥬 for ${price} ⭐`, this.localBody.x, this.localBody.y - 30);
   }
 
   // ---------- underground (3D voxel cave, local-only) ----------
@@ -1326,6 +1381,8 @@ class TownScene extends Phaser.Scene {
     if (fishEl) fishEl.textContent = this.resources.fish || 0;
     const bugEl = document.getElementById('bug-count');
     if (bugEl) bugEl.textContent = this.resources.bugs || 0;
+    const turnipEl = document.getElementById('turnip-count');
+    if (turnipEl) turnipEl.textContent = this.resources.turnips || 0;
     const fruitEl = document.getElementById('fruit-count');
     if (fruitEl) fruitEl.textContent = this.resources.fruit || 0;
   }
@@ -1669,6 +1726,23 @@ class TownScene extends Phaser.Scene {
     g.setDepth(y + h);
     this.add.text(x + w / 2, y - 50, '🏛️ Museum', { fontSize: '14px' }).setOrigin(0.5).setDepth(y + h + 1);
     this.addObstacleRect({ x, y: y + 16, width: w, height: h - 16 });
+  }
+
+  drawTurnipStall() {
+    const { x, y } = TURNIP_STALL_POS;
+    const g = this.add.graphics().setDepth(y - 1);
+    g.fillStyle(0x7a4a26, 1).fillRect(x - 26, y - 4, 52, 18);
+    g.fillStyle(0xd9663b, 1).fillTriangle(x - 32, y - 4, x + 32, y - 4, x, y - 30);
+    this.add.text(x, y - 46, '🥬 Turnips', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
+    this.turnipBuyLabel = this.add.text(x, y + 20, '', { fontSize: '11px', color: '#ffe066' }).setOrigin(0.5).setDepth(y + 1);
+    this.turnipSellLabel = this.add.text(HOUSE_POS.x + HOUSE_POS.w / 2, HOUSE_POS.y - 38, '', { fontSize: '11px', color: '#6fbf73' }).setOrigin(0.5).setDepth(HOUSE_POS.y + 1);
+  }
+
+  updateTurnipPriceLabels(time) {
+    if (time - (this.lastTurnipLabelAt || 0) < 1000) return;
+    this.lastTurnipLabelAt = time;
+    if (this.turnipBuyLabel) this.turnipBuyLabel.setText(`${this.turnipBuyPrice()} ⭐ / ${TURNIP_BUNDLE}`);
+    if (this.turnipSellLabel) this.turnipSellLabel.setText(`sells ${this.turnipSellPrice()} ⭐ / ${TURNIP_BUNDLE}`);
   }
 
   drawFossilSpots() {
