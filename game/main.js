@@ -259,6 +259,8 @@ const ACHIEVEMENTS = [
   { id: 'merchant1', icon: '🛒', label: 'Collector', desc: 'Buy a rare look from the Mystery Merchant', reward: 5, check: (s) => (s.merchantBuys || 0) >= 1 },
   { id: 'lamp1', icon: '🪔', label: 'Illuminator', desc: 'Place a lamp', reward: 3, check: (s) => (s.lampsPlaced || 0) >= 1 },
   { id: 'quest3', icon: '📋', label: 'Quester', desc: "Complete 3 of Professor Byte's daily quests", reward: 5, check: (s) => (s.questsDone || 0) >= 3 },
+  { id: 'hedge1', icon: '🌳', label: 'Landscaper', desc: 'Plant a hedge', reward: 3, check: (s) => (s.hedgesPlaced || 0) >= 1 },
+  { id: 'path10', icon: '🟫', label: 'Pathfinder', desc: 'Lay 10 path tiles', reward: 5, check: (s) => (s.pathsPlaced || 0) >= 10 },
 ];
 const CAMPFIRE_POS = { x: 800, y: 600 };
 const CAMPFIRE_RADIUS = 60;
@@ -339,6 +341,8 @@ const BLOCK_TYPES = {
   wood: { resource: 'wood', cost: 1, label: '🪵 Wall', color: 0x8a5a3b, stroke: 0x5a3a22, size: GRID_SIZE - 2, solid: true },
   stone: { resource: 'stone', cost: 1, label: '🪨 Fence', color: 0xb9bfc9, stroke: 0x7a818d, size: GRID_SIZE - 14, solid: true },
   lamp: { resource: 'flowers', cost: 2, label: '🪔 Lamp', color: 0x5a3a22, stroke: 0x3a2414, size: 6, solid: false },
+  hedge: { resource: 'flowers', cost: 3, label: '🌳 Hedge', color: 0x3d7a33, stroke: 0x27511f, size: GRID_SIZE - 2, solid: true },
+  path: { resource: 'stone', cost: 1, label: '🟫 Path', color: 0xcbb890, stroke: 0xa8956c, size: GRID_SIZE - 4, solid: false },
 };
 
 // ---------------- local save (this device only — nothing here is synced) ----------------
@@ -1964,14 +1968,18 @@ class TownScene extends Phaser.Scene {
     this.incrementStat('blocksPlaced');
     if (this.buildType === 'stone') this.incrementStat('stoneBlocksPlaced');
     if (this.buildType === 'lamp') this.incrementStat('lampsPlaced');
+    if (this.buildType === 'hedge') this.incrementStat('hedgesPlaced');
+    if (this.buildType === 'path') this.incrementStat('pathsPlaced');
   }
 
   addBlockVisual(b) {
     if (this.blocks.has(b.key)) return;
     const def = BLOCK_TYPES[b.type] || BLOCK_TYPES.wood;
+    // Path tiles are ground texture, not objects — draw them flat and
+    // behind everything (players, props) instead of depth-sorted by y.
     const sprite = this.add.rectangle(b.x, b.y, def.size, def.size, def.color, 1)
       .setStrokeStyle(2, def.stroke)
-      .setDepth(b.y);
+      .setDepth(b.type === 'path' ? -1 : b.y);
     const obstacle = def.solid ? this.addObstacleRect({
       x: b.x - GRID_SIZE / 2 + 1,
       y: b.y - GRID_SIZE / 2 + 1,
