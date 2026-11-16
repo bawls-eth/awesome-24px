@@ -122,6 +122,9 @@ const SHOP_RADIUS = 70;
 const DIG_HOLE_POS = { x: 1200, y: 460 };
 const DIG_HOLE_RADIUS = 36;
 const DOOR_RADIUS = 34;
+const WEATHER_CYCLE_MS = 8 * 60 * 1000; // 8-minute weather windows
+const WEATHER_RAIN_CHANCE = 0.3; // ~30% of windows are rainy
+const WEATHER_RAIN_COUNT = 70;
 // One-way, GTA3-loading-door style portals: each is a real door object in
 // the town that, on interact, leaves Pixeltown entirely for another
 // browser game in this same tab. No teleport back — closing/navigating
@@ -243,6 +246,7 @@ class TownScene extends Phaser.Scene {
     this.setupEmotes();
     this.setupSparkle();
     this.setupDayNight();
+    this.setupWeather();
     this.setupActivities();
     this.setupBuilding();
     this.setupWalkie();
@@ -266,6 +270,7 @@ class TownScene extends Phaser.Scene {
     this.updateRemoteInterpolation(delta);
     this.updateSparkle(time);
     this.updateDayNight(time);
+    this.updateWeather(time, delta);
     this.updateBuildPreview();
     this.updateFishingRod();
     this.updateDigHoleHint();
@@ -460,6 +465,53 @@ class TownScene extends Phaser.Scene {
       .setDepth(300000);
     this.scale.on('resize', (size) => this.dayNightOverlay.setSize(size.width, size.height));
     this.lastDayNightCheck = 0;
+  }
+
+  // ---------- weather ----------
+  // Deterministic from wall-clock time, same trick as the sparkle: every
+  // client hashes the current 8-minute window the same way, so rain
+  // starts/stops in sync without any network traffic. Purely cosmetic —
+  // nothing about gameplay changes while it rains.
+
+  setupWeather() {
+    this.rainDrops = [];
+    for (let i = 0; i < WEATHER_RAIN_COUNT; i++) {
+      const d = this.add.rectangle(0, 0, 2, 16, 0xcfe9ff, 0.45)
+        .setScrollFactor(0)
+        .setDepth(300001)
+        .setVisible(false);
+      d.vy = Phaser.Math.Between(320, 460);
+      this.rainDrops.push(d);
+    }
+    this.isRaining = null; // unknown yet, forces the first check to apply
+  }
+
+  isRainWindow(now) {
+    const bucket = Math.floor(now / WEATHER_CYCLE_MS);
+    const h = Math.sin(bucket * 12.9898) * 43758.5453;
+    return (h - Math.floor(h)) < WEATHER_RAIN_CHANCE;
+  }
+
+  updateWeather(time, delta) {
+    const raining = this.isRainWindow(Date.now());
+    if (raining !== this.isRaining) {
+      const wasKnown = this.isRaining !== null;
+      this.isRaining = raining;
+      this.rainDrops.forEach((d) => {
+        d.setVisible(raining);
+        if (raining) d.setPosition(Phaser.Math.Between(0, this.scale.width), Phaser.Math.Between(0, this.scale.height));
+      });
+      if (wasKnown) this.addChatLine({ system: true, text: raining ? '🌧️ it started raining' : '☀️ the rain cleared up' });
+    }
+    if (!raining) return;
+    const w = this.scale.width;
+    const h = this.scale.height;
+    this.rainDrops.forEach((d) => {
+      d.y += d.vy * (delta / 1000);
+      d.x -= 40 * (delta / 1000);
+      if (d.y > h) { d.y = -10; d.x = Phaser.Math.Between(0, w); }
+      if (d.x < -10) d.x = w + 10;
+    });
   }
 
   updateDayNight(time) {

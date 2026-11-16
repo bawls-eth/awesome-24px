@@ -33,6 +33,9 @@ everyone else automatically. Capped at **10 players** at once for now.
 - **Sell** your wood/stone/fish/bugs at the 🏠 shop near the statue for ⭐ points —
   a proper Nook's-Cranny-style loop that feeds the leaderboard
 - A day/night tint that follows your local clock, purely for atmosphere
+- Occasional **rain** 🌧️ — about 3 windows in 10, it rains for a while;
+  everyone sees it start/stop together without any network traffic (same
+  trick as the sparkle), purely cosmetic
 - Full mobile support: on-screen D-pad, tilt steering, and clearly-labeled
   **A** (interact) / **B** (build) action buttons, console-controller style
 - A **walkie-talkie** — pick a bestie from the player list, hold to record
@@ -311,6 +314,9 @@ manifest, 32×32 for the favicon).
   counts live in your own browser; they don't sync or persist.
 - Day/night tint reads each device's own local clock — cosmetic only, not
   synced (friends in different timezones will see different lighting).
+- Weather works the same way as the sparkle: each 8-minute wall-clock
+  window hashes to rain or clear, so everyone's client agrees without a
+  server. It's cosmetic only — movement, fishing, etc. are unaffected.
 
 ## A word on safety
 
@@ -361,7 +367,7 @@ you don't already trust.
 - Firebase Anonymous Auth so writes require `auth != null` (safer public link)
 - Persistence: name/avatar/inventory now save locally (done); score/leaderboard across visits would need real accounts
 - More block types (stone blocks, decorative items) and a crafting recipe or two
-- Weather, seasons
+- Seasons (weather's done, above)
 - More villager species from the rest of the collection (plain rocks, genius…)
 - Per-player "homes" / multiple rooms instead of one shared map
 - Sync the underground cave (shared dig state, friends visible down there) —
