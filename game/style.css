@@ -498,7 +498,11 @@ body.touch-device #player-list-panel {
 body.touch-device #chat-panel {
   left: 8px;
   right: 8px;
-  bottom: calc(172px + env(safe-area-inset-bottom, 0px));
+  /* D-pad/action buttons are 150-152px tall, sitting 16px off the bottom
+     (so their top edge is ~166-168px up) — this needs clearance above
+     that with real margin, not the few px it had before quick-chat-row
+     added height to this panel and ate almost all of it. */
+  bottom: calc(190px + env(safe-area-inset-bottom, 0px));
   width: auto;
 }
 

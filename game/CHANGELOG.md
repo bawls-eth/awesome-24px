@@ -178,3 +178,6 @@ for how each feature actually works and plays.
 - Blocked slurs in chat (client-side word filter; the DB itself is wide
   open by design — see README's "A word on safety")
 - Rate-limited repeated identical chat messages client-side
+- Fixed the mobile chat input bar sitting too close to the D-pad/action
+  buttons — the quick-chat phrase row had eaten most of the original
+  clearance, leaving only a few px of margin on real devices
