@@ -422,6 +422,11 @@ inventory pick up where you left off. Clearing your browser data (or using
 a different browser/device) starts fresh. Score isn't part of this — it
 lives on the Firebase leaderboard and resets with each new join, by design.
 
+Under the player list, **💾 Backup** downloads this save as a `.json`
+file, and **📂 Restore** loads one back in (reloading the page to apply
+it) — handy before clearing site data, or to carry your villager/
+inventory/achievements over to a different browser or device.
+
 ### Add to Home Screen (iPhone/Android)
 
 - **iPhone (Safari):** open the site → Share icon → **Add to Home Screen**.

@@ -91,6 +91,9 @@ for how each feature actually works and plays.
 - A 🏘️ Town rating readout under the player list — a live, shared count
   of every block anyone's placed, with a few flavor tiers (Empty through
   Full!)
+- 💾 Backup / 📂 Restore buttons to export the local save as a .json file
+  and load one back in — for moving your villager to another browser/
+  device, or just backing up before clearing site data
 - Two more build-mode materials, 🌳 Hedge (3 flowers, solid — a green
   bush wall) and 🟫 Path (1 stone, non-solid — a flat ground tile for
   laying out walkways), plus matching achievements

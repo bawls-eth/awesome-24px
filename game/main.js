@@ -579,6 +579,7 @@ class TownScene extends Phaser.Scene {
     this.setupLoginStreak();
     this.setupSfxToggle();
     this.setupPhotoMode();
+    this.setupSaveBackup();
     this.setupTriviaKey();
     this.setupAchievementsUI();
     this.setupOutfitShop();
@@ -1858,6 +1859,50 @@ class TownScene extends Phaser.Scene {
     this.input.keyboard.on('keydown-P', () => { if (this.canAct()) this.takePhoto(); });
     const btn = document.getElementById('photo-btn');
     if (btn) btn.addEventListener('click', () => this.takePhoto());
+  }
+
+  setupSaveBackup() {
+    const exportBtn = document.getElementById('save-export-btn');
+    const importBtn = document.getElementById('save-import-btn');
+    const importInput = document.getElementById('save-import-input');
+    if (exportBtn) exportBtn.addEventListener('click', () => this.exportSave());
+    if (importBtn && importInput) {
+      importBtn.addEventListener('click', () => importInput.click());
+      importInput.addEventListener('change', () => this.importSave(importInput));
+    }
+  }
+
+  exportSave() {
+    const data = JSON.stringify(loadSave(), null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `pixeltown-save-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'save backed up!');
+  }
+
+  importSave(input) {
+    const file = input.files && input.files[0];
+    input.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result);
+        if (!parsed || typeof parsed !== 'object') throw new Error('bad save file');
+        localStorage.setItem(SAVE_KEY, JSON.stringify(parsed));
+        this.addChatLine({ system: true, text: 'Save restored! Reloading…' });
+        this.time.delayedCall(800, () => window.location.reload());
+      } catch (e) {
+        this.addChatLine({ system: true, text: "That doesn't look like a valid Pixeltown save file." });
+      }
+    };
+    reader.readAsText(file);
   }
 
   setupTriviaKey() {
