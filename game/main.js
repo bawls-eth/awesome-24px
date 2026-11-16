@@ -323,6 +323,7 @@ const QUEST_RESOURCES = [
   { key: 'shells', icon: '🐚' },
 ];
 const QUEST_REWARD_BASE = 6;
+const DAILY_DEAL_BONUS = 0.5; // +50% sell price on one resource, picked daily
 const NPC_LINES = [
   "Did you know the pond cats never actually get wet? Mysteries of pixel physics.",
   "I've been counting your footsteps. You're very consistent. It's admirable.",
@@ -1494,9 +1495,16 @@ class TownScene extends Phaser.Scene {
   }
 
   sellAtShop() {
-    const total = (this.resources.wood || 0) + (this.resources.stone || 0) + (this.resources.fish || 0) + (this.resources.bugs || 0) + (this.resources.fruit || 0) + (this.resources.shells || 0) + (this.resources.flowers || 0);
+    const deal = this.todaysDeal();
+    let total = 0;
+    let dealBonus = 0;
+    for (const { key } of QUEST_RESOURCES) {
+      const count = this.resources[key] || 0;
+      total += count;
+      if (key === deal.key) dealBonus += count * DAILY_DEAL_BONUS;
+    }
     const turnipRevenue = (this.resources.turnips || 0) > 0 ? this.resources.turnips * this.turnipSellPrice() / TURNIP_BUNDLE : 0;
-    const grandTotal = Math.round(total + turnipRevenue);
+    const grandTotal = Math.round(total + dealBonus + turnipRevenue);
     if (grandTotal === 0) {
       this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'bag is empty');
       return;
@@ -1505,7 +1513,8 @@ class TownScene extends Phaser.Scene {
     this.resources = { wood: 0, stone: 0, fish: 0, bugs: 0, fruit: 0, turnips: 0, shells: 0, flowers: 0 };
     this.updateInventoryHUD();
     this.saveResources();
-    const label = soldTurnips > 0 ? `sold (incl. ${soldTurnips} 🥬)! +${grandTotal} ⭐` : `sold! +${grandTotal} ⭐`;
+    const dealNote = dealBonus > 0 ? ` (incl. ${deal.icon} deal bonus)` : '';
+    const label = soldTurnips > 0 ? `sold (incl. ${soldTurnips} 🥬)! +${grandTotal} ⭐${dealNote}` : `sold! +${grandTotal} ⭐${dealNote}`;
     this.awardPoint(grandTotal, label, this.localBody.x, this.localBody.y - 30, 'sell');
     if (soldTurnips > 0) this.incrementStat('turnipsSold', soldTurnips);
     this.updateSellStreak();
@@ -2758,7 +2767,15 @@ class TownScene extends Phaser.Scene {
     g.setDepth(y + h);
 
     this.add.text(x + w / 2, y - 55, '🏠 Shop', { fontSize: '16px' }).setOrigin(0.5).setDepth(y + h + 1);
+    const deal = this.todaysDeal();
+    this.add.text(x + w / 2, y - 38, `💰 ${deal.icon} +50% today`, { fontSize: '11px', color: '#2a6b2a' }).setOrigin(0.5).setDepth(y + h + 1);
     this.addObstacleRect({ x, y: y + 20, width: w, height: h - 20 });
+  }
+
+  // Same deterministic wall-clock-hash trick as the daily quest — a
+  // different resource sells for a flat +50% each day, same for everyone.
+  todaysDeal() {
+    return QUEST_RESOURCES[Math.floor(this.questHash(40) * QUEST_RESOURCES.length)];
   }
 
   drawMuseum() {

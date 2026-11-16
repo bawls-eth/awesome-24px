@@ -139,6 +139,9 @@ for how each feature actually works and plays.
   only ever pays one of them
 - Faint ripples drifting across the pond every couple of seconds —
   purely cosmetic, local-only, no new mechanics
+- A daily deal at the shop — one resource sells for a flat +50% each
+  day, same for everyone (deterministic from the date), shown on a
+  sign over the shop
 
 ## Villagers and expression
 

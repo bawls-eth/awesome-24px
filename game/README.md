@@ -43,7 +43,9 @@ right now, before you even pick a name.
 - **Sell** your wood/stone/fish/bugs/fruit/shells/flowers at the 🏠 shop near the statue for ⭐ points —
   a proper Nook's-Cranny-style loop that feeds the leaderboard. Selling
   on consecutive days builds a 🛍️ loyalty streak for a small bonus
-  (same idea as the daily login streak)
+  (same idea as the daily login streak). One resource is always on a
+  **daily deal** — a sign over the shop shows which one sells for +50%
+  today, same for everyone (deterministic from the date)
 - A day/night tint that follows your local clock, purely for atmosphere —
   the roaming butterflies turn into glowing ✨ fireflies at night (7pm-6am
   your own clock) and back at dawn, same 🦋/🐛 catch mechanic either way
