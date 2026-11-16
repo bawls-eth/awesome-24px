@@ -316,6 +316,7 @@ class TownScene extends Phaser.Scene {
     if (IS_TOUCH) {
       this.setupTouchControls();
       this.setupTiltShake();
+      this.setupHaptics();
     }
 
     this.registerNetHandlers();
@@ -594,6 +595,20 @@ class TownScene extends Phaser.Scene {
   }
 
   // ---------- mobile: virtual D-pad + action buttons ----------
+
+  // A short vibration pulse on any mobile button tap, where supported.
+  // Honest caveat: iOS Safari has never implemented the Vibration API
+  // (Apple's choice, not a bug here), so this is a no-op on iPhone —
+  // it only does anything for Android friends in the group. Delegated
+  // to the two button containers instead of touching every individual
+  // handler.
+  setupHaptics() {
+    const haptic = () => { try { if (navigator.vibrate) navigator.vibrate(12); } catch (e) { /* unsupported */ } };
+    ['mobile-controls', 'underground-controls'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('touchstart', (e) => { if (e.target.closest('button')) haptic(); }, { passive: true });
+    });
+  }
 
   setupTouchControls() {
     this.touchMove = { x: 0, y: 0 };

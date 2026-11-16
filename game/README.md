@@ -36,8 +36,10 @@ everyone else automatically. Capped at **10 players** at once for now.
 - Occasional **rain** 🌧️ — about 3 windows in 10, it rains for a while;
   everyone sees it start/stop together without any network traffic (same
   trick as the sparkle), purely cosmetic
-- Full mobile support: on-screen D-pad, tilt steering, and clearly-labeled
-  **A** (interact) / **B** (build) action buttons, console-controller style
+- Full mobile support: on-screen D-pad, tilt steering, clearly-labeled
+  **A** (interact) / **B** (build) action buttons console-controller
+  style, and a short vibration on every button tap where the device
+  supports it (not iPhones — see "Notes / limits")
 - A **walkie-talkie** — pick a bestie from the player list, hold to record
   a short voice clip, they hear it right away if their tab's open (see
   "Walkie-talkie" below)
@@ -429,6 +431,10 @@ you don't already trust.
 ## Notes / limits
 
 - **10 players max** at once (change `MAX_PLAYERS` in `net.js`).
+- **Haptic taps don't do anything on iPhone.** iOS Safari has never
+  implemented the Vibration API at all — that's Apple's own platform
+  choice, not something fixable from this page. It's a real (if small)
+  perk for any Android friends in the group.
 - State is ephemeral by design: players disappear when they leave, and chat
   history is just the last ~30 messages. Scores reset when a player leaves
   and rejoins (no accounts, no persistence there). Wood/stone/fish counts
