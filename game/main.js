@@ -93,6 +93,7 @@ const SFX = {
   achievement: () => playNotes([[523, 0.1, 0], [659, 0.1, 0.09], [784, 0.1, 0.18], [1047, 0.18, 0.27]], 'square', 0.1),
   deny: () => playNotes([[196, 0.16, 0]], 'sawtooth', 0.09),
   pop: () => playNotes([[392, 0.05, 0], [294, 0.06, 0.04]], 'square', 0.08),
+  shutter: () => playNotes([[1800, 0.03, 0], [220, 0.05, 0.03]], 'square', 0.07),
 };
 
 function setSfxMuted(muted) {
@@ -248,6 +249,7 @@ const ACHIEVEMENTS = [
   { id: 'flowers10', icon: '🌸', label: 'Gardener', desc: 'Pick 10 flowers', reward: 5, check: (s) => (s.flowers || 0) >= 10 },
   { id: 'fence1', icon: '🪨', label: 'Fencer', desc: 'Place a stone fence', reward: 3, check: (s) => (s.stoneBlocksPlaced || 0) >= 1 },
   { id: 'npcChat5', icon: '🧪', label: 'Chatty', desc: "Talk to Professor Byte 5 times", reward: 3, check: (s) => (s.npcChats || 0) >= 5 },
+  { id: 'photo1', icon: '📸', label: 'Photographer', desc: 'Take a photo', reward: 3, check: (s) => (s.photosTaken || 0) >= 1 },
 ];
 const CAMPFIRE_POS = { x: 800, y: 600 };
 const CAMPFIRE_RADIUS = 60;
@@ -424,6 +426,7 @@ class TownScene extends Phaser.Scene {
     this.setupAchievements();
     this.setupLoginStreak();
     this.setupSfxToggle();
+    this.setupPhotoMode();
     this.setupAchievementsUI();
     this.setupOutfitShop();
     this.setupBugs();
@@ -1646,6 +1649,33 @@ class TownScene extends Phaser.Scene {
       render();
       if (!sfxMuted) SFX.coin();
     });
+  }
+
+  setupPhotoMode() {
+    this.input.keyboard.on('keydown-P', () => { if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen) this.takePhoto(); });
+    const btn = document.getElementById('photo-btn');
+    if (btn) btn.addEventListener('click', () => this.takePhoto());
+  }
+
+  takePhoto() {
+    // Full-screen flash, independent of the canvas resolution, so it still
+    // reads as a photo "snap" even if the shot itself takes a beat to render.
+    const flash = this.add.rectangle(0, 0, this.scale.width * 4, this.scale.height * 4, 0xffffff, 1)
+      .setScrollFactor(0)
+      .setDepth(999999);
+    this.tweens.add({ targets: flash, alpha: 0, duration: 350, onComplete: () => flash.destroy() });
+    SFX.shutter();
+
+    this.game.renderer.snapshot((image) => {
+      const a = document.createElement('a');
+      a.href = image.src;
+      a.download = `pixeltown-${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    });
+    this.showFloatingText(this.localBody.x, this.localBody.y - 30, '📸 saved!');
+    this.incrementStat('photosTaken');
   }
 
   setupLoginStreak() {

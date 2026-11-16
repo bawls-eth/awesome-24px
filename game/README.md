@@ -94,8 +94,11 @@ everyone else automatically. Capped at **10 players** at once for now.
 - 🧪 **Professor Byte**, a resident NPC near the Mayor statue — interact
   for a random bit of flavor text in a speech bubble. Purely for charm,
   no reward, but he's got a lot to say
+- 📸 **Photo mode** — press **P** (or tap 📸 under the player list) for a
+  camera flash + shutter sound and a PNG download of the current view,
+  straight from the game canvas
 - 🏆 **Achievements** (Nook Miles-style) — a 🏆 badge under the player
-  list opens a checklist of 15 lifetime goals (catch/chop/mine 10,
+  list opens a checklist of 16 lifetime goals (catch/chop/mine 10,
   complete the museum, play Polyroll 10 times, and more), each paying a
   one-time ⭐ bonus on unlock. Lifetime counters never drop when you
   spend or sell, and unlocks persist on this device
