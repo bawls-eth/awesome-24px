@@ -63,6 +63,9 @@ everyone else automatically. Capped at **10 players** at once for now.
   random fossil (one of 5 species); carry up to 3, then donate at the
   🏛️ Museum for a permanent per-device collection and a ⭐ for each new
   species (see "Fossils & Museum" below)
+- A 🥬 **turnip market** — buy a bundle at the stall near the shop, sell
+  at the shop itself for a profit or a loss depending on when you catch
+  it (see "Turnip market" below)
 - A 🎲 **Polyroll** betting booth near the shop — dice (pick 1-6, 5×
   payout) or coin flip (2× payout), wagering your own ⭐ stars for fun.
   No wallet, no crypto, no real money anywhere in it — just the same
@@ -185,6 +188,20 @@ collection is worth 1 ⭐, and the collection itself persists on this
 device (same as your name/species) even across a reload. Completing all
 5 species gets a line in the chat log. Local only — not synced, not
 shared between friends.
+
+### Turnip market
+
+A simplified, single-session take on Animal Crossing's stalk market — no
+persistent "day of the week," since there are no accounts, but the same
+buy-low-sell-high idea. Walk up to the 🥬 stall and interact to buy a
+bundle of 10 turnips; its price drifts every 4 real-world hours. Carry
+them to the shop and interact there (same button as selling your other
+goods) to sell at the shop's own price, which swings far more — every 15
+minutes, anywhere from a steep loss to more than double. Both prices are
+hashed from wall-clock time, the same trick as weather and the sparkle,
+so there's no server keeping score and no persistence between visits —
+check the live price labels floating above the stall and the shop before
+you commit.
 
 ### Polyroll
 
