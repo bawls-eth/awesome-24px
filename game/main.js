@@ -504,6 +504,13 @@ class TownScene extends Phaser.Scene {
 
     this.cursors = this.input.keyboard.createCursorKeys();
     this.wasd = this.input.keyboard.addKeys('W,A,S,D');
+    // createCursorKeys()/addKeys() capture their keys by default and call
+    // preventDefault() on them globally — including SPACE, W, A, S, D —
+    // which blocks typing a space or those letters into the chat input
+    // (and the name input on the join screen) no matter which element has
+    // focus. None of these need preventDefault for movement, so release
+    // the capture entirely.
+    this.input.keyboard.removeCapture('SPACE,W,A,S,D,UP,DOWN,LEFT,RIGHT');
     this.lastSentAt = 0;
 
     this.setupEmotes();
