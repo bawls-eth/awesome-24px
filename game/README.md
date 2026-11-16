@@ -329,7 +329,10 @@ Press **B** (or tap 🧱) to toggle build mode — a yellow outline shows where
 the next block lands, just in front of you. Press **Interact** to place a
 block there, or press it again on a block you placed to remove it for a
 refund. Blocks are real obstacles for everyone in the town, synced live.
-Capped at 150 blocks total so the town doesn't fill up solid.
+Capped at 150 blocks total so the town doesn't fill up solid. A 🏘️ **Town
+rating** under the player list shows how built-up it is right now (Empty
+→ Sparse → Cozy → Bustling → Metropolis → Full!) — it's a shared count of
+every block anyone's placed, synced live like everything else here.
 
 Five materials to pick from — press **F** (or tap the material pill
 under the build banner) to switch: 🪵 **Wall** (1 wood, a full solid

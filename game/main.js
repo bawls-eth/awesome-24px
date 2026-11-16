@@ -2019,6 +2019,7 @@ class TownScene extends Phaser.Scene {
     this.blocks = new Map();
     this.buildMode = false;
     this.buildType = 'wood';
+    this.updateTownRating();
     this.buildPreview = this.add.rectangle(0, 0, GRID_SIZE - 2, GRID_SIZE - 2, 0xffffff, 0)
       .setStrokeStyle(2, 0xffe066)
       .setDepth(400000)
@@ -2168,6 +2169,7 @@ class TownScene extends Phaser.Scene {
       this.lampGlows.push(glow);
     }
     this.blocks.set(b.key, { sprite, obstacle, glow, ownerId: b.ownerId, type: b.type });
+    this.updateTownRating();
   }
 
   removeBlockVisual(key) {
@@ -2180,6 +2182,25 @@ class TownScene extends Phaser.Scene {
       b.glow.destroy();
     }
     this.blocks.delete(key);
+    this.updateTownRating();
+  }
+
+  // A shared, synced "how built-up is the town" readout — just a count
+  // of every block currently placed (by anyone), with a few flavor tiers.
+  updateTownRating() {
+    const countEl = document.getElementById('town-rating-count');
+    const labelEl = document.getElementById('town-rating-label');
+    if (!countEl || !labelEl) return;
+    const count = this.blocks.size;
+    countEl.textContent = count;
+    let label;
+    if (count === 0) label = 'Empty';
+    else if (count < 10) label = 'Sparse';
+    else if (count < 30) label = 'Cozy';
+    else if (count < 70) label = 'Bustling';
+    else if (count < BLOCK_CAP) label = 'Metropolis';
+    else label = 'Full!';
+    labelEl.textContent = label;
   }
 
   // ---------- players ----------

@@ -88,6 +88,9 @@ for how each feature actually works and plays.
 - A small graveyard on the west edge — a few tombstones behind a low
   fence, with a resident zombie villager standing watch; purely
   decorative, tombstones block movement, the fence itself doesn't
+- A 🏘️ Town rating readout under the player list — a live, shared count
+  of every block anyone's placed, with a few flavor tiers (Empty through
+  Full!)
 - Two more build-mode materials, 🌳 Hedge (3 flowers, solid — a green
   bush wall) and 🟫 Path (1 stone, non-solid — a flat ground tile for
   laying out walkways), plus matching achievements

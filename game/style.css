@@ -975,6 +975,14 @@ body.touch-device .key-hint { display: none; }
   text-align: center;
 }
 
+#town-rating {
+  padding: 6px;
+  border-top: 1px solid #3a4658;
+  color: #6fbf73;
+  font-size: 11px;
+  text-align: center;
+}
+
 #sfx-toggle-btn {
   display: block;
   width: 100%;
