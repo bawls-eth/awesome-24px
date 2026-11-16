@@ -605,7 +605,7 @@ class TownScene extends Phaser.Scene {
     let vx = 0;
     let vy = 0;
 
-    if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen) {
+    if (this.canAct()) {
       if (this.cursors.left.isDown || this.wasd.A.isDown) vx -= 1;
       if (this.cursors.right.isDown || this.wasd.D.isDown) vx += 1;
       if (this.cursors.up.isDown || this.wasd.W.isDown) vy -= 1;
@@ -1837,13 +1837,13 @@ class TownScene extends Phaser.Scene {
   }
 
   setupPhotoMode() {
-    this.input.keyboard.on('keydown-P', () => { if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen) this.takePhoto(); });
+    this.input.keyboard.on('keydown-P', () => { if (this.canAct()) this.takePhoto(); });
     const btn = document.getElementById('photo-btn');
     if (btn) btn.addEventListener('click', () => this.takePhoto());
   }
 
   setupTriviaKey() {
-    this.input.keyboard.on('keydown-T', () => { if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && this.isNearNPC()) this.openTrivia(); });
+    this.input.keyboard.on('keydown-T', () => { if (this.canAct() && this.isNearNPC()) this.openTrivia(); });
     const closeBtn = document.getElementById('trivia-close-btn');
     if (closeBtn) closeBtn.addEventListener('click', () => this.closeTrivia());
   }
