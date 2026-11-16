@@ -2620,6 +2620,28 @@ class TownScene extends Phaser.Scene {
     const gapHalf = 34;
     this.addObstacleRect({ x: cx - rx * 0.8, y: cy - ry * 0.8, width: rx * 1.6, height: ry * 0.8 - gapHalf });
     this.addObstacleRect({ x: cx - rx * 0.8, y: cy + gapHalf, width: rx * 1.6, height: ry * 0.8 - gapHalf });
+
+    // A faint ripple every couple of seconds, somewhere random inside the
+    // pond — purely cosmetic, no gameplay effect, just a bit of life.
+    this.time.addEvent({
+      delay: 2200,
+      loop: true,
+      callback: () => {
+        const rippleX = cx + (Math.random() * 2 - 1) * rx * 0.7;
+        const rippleY = cy + (Math.random() * 2 - 1) * ry * 0.7;
+        const ripple = this.add.circle(rippleX, rippleY, 3, 0xffffff, 0).setStrokeStyle(1, 0xdfefff, 0.5).setDepth(-1);
+        const state = { r: 3, a: 0.5 };
+        this.tweens.add({
+          targets: state,
+          r: 14,
+          a: 0,
+          duration: 1800,
+          ease: 'Sine.easeOut',
+          onUpdate: () => { ripple.setRadius(state.r); ripple.setStrokeStyle(1, 0xdfefff, state.a); },
+          onComplete: () => ripple.destroy(),
+        });
+      },
+    });
   }
 
   drawDock() {

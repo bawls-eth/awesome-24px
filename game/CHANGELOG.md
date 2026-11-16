@@ -137,6 +137,8 @@ for how each feature actually works and plays.
   everyone (deterministic from the date), but "who found it first" is
   decided by a real Firebase transaction so a race between two players
   only ever pays one of them
+- Faint ripples drifting across the pond every couple of seconds —
+  purely cosmetic, local-only, no new mechanics
 
 ## Villagers and expression
 

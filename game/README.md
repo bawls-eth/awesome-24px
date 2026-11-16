@@ -54,6 +54,8 @@ right now, before you even pick a name.
 - Occasional **rain** 🌧️ — about 3 windows in 10, it rains for a while;
   everyone sees it start/stop together without any network traffic (same
   trick as the sparkle), purely cosmetic
+- Faint ripples drift across the pond every couple seconds — purely
+  cosmetic ambiance, local-only, no new mechanics
 - 🔊 **Sound effects** — short synthesized chimes (no audio files, just
   WebAudio tones) for catches, sales, and achievements. A 🔊/🔇 toggle
   under the player list remembers your choice on this device
