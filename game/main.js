@@ -138,6 +138,24 @@ const TURNIP_STALL_RADIUS = 50;
 const TURNIP_BUNDLE = 10;
 const TURNIP_BUY_CYCLE_MS = 4 * 60 * 60 * 1000; // buy price changes every 4h
 const TURNIP_SELL_CYCLE_MS = 15 * 60 * 1000; // sell price changes every 15min
+
+// Nook Miles-style achievements: lifetime counters (never decrease even
+// when the resource is later sold/spent), checked after every relevant
+// action. Each unlocks once, ever, per device.
+const ACHIEVEMENTS = [
+  { id: 'wood10', icon: '🪓', label: 'Lumberjack', desc: 'Chop 10 wood', reward: 5, check: (s) => (s.wood || 0) >= 10 },
+  { id: 'stone10', icon: '⛏️', label: 'Miner', desc: 'Mine 10 stone', reward: 5, check: (s) => (s.stone || 0) >= 10 },
+  { id: 'fish10', icon: '🐟', label: 'Angler', desc: 'Catch 10 fish', reward: 5, check: (s) => (s.fish || 0) >= 10 },
+  { id: 'bugs10', icon: '🦋', label: 'Bug Catcher', desc: 'Catch 10 bugs', reward: 5, check: (s) => (s.bugs || 0) >= 10 },
+  { id: 'fruit10', icon: '🍎', label: 'Orchardist', desc: 'Gather 10 fruit', reward: 5, check: (s) => (s.fruit || 0) >= 10 },
+  { id: 'blocks10', icon: '🧱', label: 'Builder', desc: 'Place 10 blocks', reward: 5, check: (s) => (s.blocksPlaced || 0) >= 10 },
+  { id: 'sparkle10', icon: '✨', label: 'Star Chaser', desc: 'Catch 10 sparkles', reward: 5, check: (s) => (s.sparkles || 0) >= 10 },
+  { id: 'polyroll10', icon: '🎲', label: 'High Roller', desc: 'Play Polyroll 10 times', reward: 5, check: (s) => (s.polyrollPlays || 0) >= 10 },
+  { id: 'turnipSold', icon: '🥬', label: 'Investor', desc: 'Sell turnips at the shop', reward: 5, check: (s) => (s.turnipsSold || 0) >= 1 },
+  { id: 'cave1', icon: '⛰️', label: 'Spelunker', desc: 'Visit the underground cave', reward: 3, check: (s) => (s.caveVisits || 0) >= 1 },
+  { id: 'chat10', icon: '👋', label: 'Friendly', desc: 'Send 10 chat messages', reward: 3, check: (s) => (s.chatSent || 0) >= 10 },
+  { id: 'museumFull', icon: '🏛️', label: 'Paleontologist', desc: 'Donate all 5 fossil species', reward: 10, check: (s, scene) => scene.museumCollection && scene.museumCollection.size >= FOSSIL_TYPES.length },
+];
 const WEATHER_CYCLE_MS = 8 * 60 * 1000; // 8-minute weather windows
 const WEATHER_RAIN_CHANCE = 0.3; // ~30% of windows are rainy
 const WEATHER_RAIN_COUNT = 70;
@@ -272,6 +290,8 @@ class TownScene extends Phaser.Scene {
     this.setupWalkie();
     this.setupPortalReopen();
     this.setupPolyroll();
+    this.setupAchievements();
+    this.setupAchievementsUI();
     this.setupBugs();
     this.setupFossils();
     if (IS_TOUCH) {
@@ -306,7 +326,7 @@ class TownScene extends Phaser.Scene {
     let vx = 0;
     let vy = 0;
 
-    if (!this.chatFocused && !this.polyrollOpen) {
+    if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen) {
       if (this.cursors.left.isDown || this.wasd.A.isDown) vx -= 1;
       if (this.cursors.right.isDown || this.wasd.D.isDown) vx += 1;
       if (this.cursors.up.isDown || this.wasd.W.isDown) vy -= 1;
@@ -456,6 +476,7 @@ class TownScene extends Phaser.Scene {
     if (Math.hypot(this.localBody.x - sx, this.localBody.y - sy) < SPARKLE_CATCH_RADIUS) {
       this.sparkleCaught = true;
       this.awardPoint(1, '+1 ⭐', this.localBody.x, this.localBody.y - 30);
+      this.incrementStat('sparkles');
     }
   }
 
@@ -738,7 +759,7 @@ class TownScene extends Phaser.Scene {
     this.fishing = { state: 'idle', spot: null, bobber: null, timer: null };
     this.updateInventoryHUD();
 
-    this.input.keyboard.on('keydown-E', () => { if (!this.chatFocused && !this.polyrollOpen) this.interact(); });
+    this.input.keyboard.on('keydown-E', () => { if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen) this.interact(); });
     const btn = document.getElementById('interact-btn');
     if (btn) btn.addEventListener('click', () => this.interact());
   }
@@ -891,6 +912,7 @@ class TownScene extends Phaser.Scene {
     resultEl.textContent = `${rollText} — you ${win ? 'won' : 'lost'} ${Math.abs(delta)} ⭐!`;
     resultEl.className = win ? 'win' : 'lose';
     this.updatePolyrollScoreLabel();
+    this.incrementStat('polyrollPlays');
   }
 
   setupPolyroll() {
@@ -963,6 +985,7 @@ class TownScene extends Phaser.Scene {
     this.saveResources();
     const label = soldTurnips > 0 ? `sold (incl. ${soldTurnips} 🥬)! +${grandTotal} ⭐` : `sold! +${grandTotal} ⭐`;
     this.awardPoint(grandTotal, label, this.localBody.x, this.localBody.y - 30);
+    if (soldTurnips > 0) this.incrementStat('turnipsSold', soldTurnips);
   }
 
   // ---------- turnip / stalk market ----------
@@ -1062,6 +1085,7 @@ class TownScene extends Phaser.Scene {
   enterUnderground() {
     if (this.inUnderground) return;
     this.inUnderground = true;
+    this.incrementStat('caveVisits');
     document.getElementById('dig-hole-hint').classList.add('hidden');
     document.getElementById('hud').classList.add('hidden');
     const overlay = document.getElementById('underground-overlay');
@@ -1311,9 +1335,7 @@ class TownScene extends Phaser.Scene {
     } else {
       this.showFloatingText(this.localBody.x, this.localBody.y - 30, `donated ${donated} (already had those species)`);
     }
-    if (this.museumCollection.size >= FOSSIL_TYPES.length) {
-      this.addChatLine({ system: true, text: '🏛️ full fossil collection donated — nice work!' });
-    }
+    this.checkAchievements();
   }
 
   findNearestTree() {
@@ -1370,6 +1392,69 @@ class TownScene extends Phaser.Scene {
     this.saveResources();
     const icon = { wood: '🪵', stone: '🪨', fish: '🐟', bugs: '🦋', fruit: '🍎' }[type];
     this.showFloatingText(x, y, `+${amount} ${icon}`);
+    this.incrementStat(type, amount);
+  }
+
+  // ---------- achievements ----------
+
+  setupAchievements() {
+    const saved = loadSave();
+    this.lifetimeStats = (saved.lifetimeStats && typeof saved.lifetimeStats === 'object') ? { ...saved.lifetimeStats } : {};
+    this.achievementsUnlocked = new Set(Array.isArray(saved.achievementsUnlocked) ? saved.achievementsUnlocked : []);
+    this.renderAchievementsPanel();
+  }
+
+  saveAchievements() {
+    writeSave({ lifetimeStats: this.lifetimeStats, achievementsUnlocked: [...this.achievementsUnlocked] });
+  }
+
+  incrementStat(key, amount = 1) {
+    this.lifetimeStats[key] = (this.lifetimeStats[key] || 0) + amount;
+    this.saveAchievements();
+    this.checkAchievements();
+  }
+
+  checkAchievements() {
+    ACHIEVEMENTS.forEach((a) => {
+      if (this.achievementsUnlocked.has(a.id)) return;
+      if (!a.check(this.lifetimeStats, this)) return;
+      this.achievementsUnlocked.add(a.id);
+      this.saveAchievements();
+      this.addChatLine({ system: true, text: `🏆 Achievement unlocked: ${a.icon} ${a.label} — +${a.reward} ⭐` });
+      this.awardPoint(a.reward, `${a.icon} ${a.label}!`, this.localBody.x, this.localBody.y - 44);
+      this.renderAchievementsPanel();
+    });
+  }
+
+  renderAchievementsPanel() {
+    const countEl = document.getElementById('achievement-count');
+    if (countEl) countEl.textContent = this.achievementsUnlocked.size;
+    const capEl = document.getElementById('achievement-cap');
+    if (capEl) capEl.textContent = ACHIEVEMENTS.length;
+    const listEl = document.getElementById('achievements-list');
+    if (!listEl) return;
+    listEl.innerHTML = '';
+    ACHIEVEMENTS.forEach((a) => {
+      const unlocked = this.achievementsUnlocked.has(a.id);
+      const li = document.createElement('li');
+      li.className = unlocked ? 'unlocked' : '';
+      li.innerHTML = `<span class="ach-icon">${unlocked ? a.icon : '🔒'}</span>`
+        + `<span class="ach-text"><b>${a.label}</b><br>${a.desc}</span>`
+        + `<span class="ach-reward">+${a.reward} ⭐</span>`;
+      listEl.appendChild(li);
+    });
+  }
+
+  setupAchievementsUI() {
+    document.getElementById('achievements-badge').addEventListener('click', () => {
+      this.renderAchievementsPanel();
+      document.getElementById('achievements-overlay').classList.remove('hidden');
+      this.achievementsOpen = true;
+    });
+    document.getElementById('achievements-close-btn').addEventListener('click', () => {
+      document.getElementById('achievements-overlay').classList.add('hidden');
+      this.achievementsOpen = false;
+    });
   }
 
   updateInventoryHUD() {
@@ -1456,7 +1541,7 @@ class TownScene extends Phaser.Scene {
       .setDepth(400000)
       .setVisible(false);
 
-    this.input.keyboard.on('keydown-B', () => { if (!this.chatFocused && !this.polyrollOpen) this.toggleBuildMode(); });
+    this.input.keyboard.on('keydown-B', () => { if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen) this.toggleBuildMode(); });
     const btn = document.getElementById('build-toggle-btn');
     if (btn) btn.addEventListener('click', () => this.toggleBuildMode());
   }
@@ -1513,6 +1598,7 @@ class TownScene extends Phaser.Scene {
     this.updateInventoryHUD();
     this.saveResources();
     this.net.placeBlock(gx, gy);
+    this.incrementStat('blocksPlaced');
   }
 
   addBlockVisual(b) {
@@ -1960,7 +2046,10 @@ class TownScene extends Phaser.Scene {
       chatInput.blur();
       return;
     }
-    if (text) this.net.sendChat(text);
+    if (text) {
+      this.net.sendChat(text);
+      this.incrementStat('chatSent');
+    }
     chatInput.value = '';
     chatInput.blur();
   }

@@ -63,6 +63,11 @@ everyone else automatically. Capped at **10 players** at once for now.
   random fossil (one of 5 species); carry up to 3, then donate at the
   🏛️ Museum for a permanent per-device collection and a ⭐ for each new
   species (see "Fossils & Museum" below)
+- 🏆 **Achievements** (Nook Miles-style) — a 🏆 badge under the player
+  list opens a checklist of 12 lifetime goals (catch/chop/mine 10,
+  complete the museum, play Polyroll 10 times, and more), each paying a
+  one-time ⭐ bonus on unlock. Lifetime counters never drop when you
+  spend or sell, and unlocks persist on this device
 - A 🥬 **turnip market** — buy a bundle at the stall near the shop, sell
   at the shop itself for a profit or a loss depending on when you catch
   it (see "Turnip market" below)
