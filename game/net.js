@@ -31,6 +31,7 @@ class TownNet {
     this.guestbookRef = null;
     this.joinTime = 0;
     this.db = null;
+    this.playerCountRef = null;
   }
 
   on(event, cb) {
@@ -77,23 +78,42 @@ class TownNet {
     this.chatRef = this.db.ref('chat');
     this.blocksRef = this.db.ref('blocks');
     this.guestbookRef = this.db.ref('guestbook');
+    this.playerCountRef = this.db.ref('playerCount');
 
-    let snap;
+    this.name = profile.name;
+    // Reserve our player key up front (push() only allocates a key locally —
+    // it does not write anything to the server), then atomically claim a
+    // capacity slot via a transaction on a small counter node. A plain
+    // read-then-write check here (read numChildren, compare, then write) is
+    // exactly the race this replaces: two joins in the same window could
+    // both pass the read before either writes, blowing past MAX_PLAYERS.
+    // The transaction's updateFn is retried by the SDK against the latest
+    // server value until it either commits or we deliberately abort it by
+    // returning undefined, so only one joiner over the cap can ever succeed.
+    this.playerRef = this.playersRef.push();
+    this.id = this.playerRef.key;
+
+    let countResult;
     try {
-      snap = await this.playersRef.once('value');
+      countResult = await this.playerCountRef.transaction((current) => {
+        const n = current || 0;
+        if (n >= MAX_PLAYERS) return; // abort — do not increment, town is full
+        return n + 1;
+      });
     } catch (e) {
+      this.playerRef = null;
       this.emit('error', 'Could not reach the town database. Check the Firebase config and database rules.');
       return;
     }
 
-    if (snap.numChildren() >= MAX_PLAYERS) {
+    if (!countResult.committed) {
+      // Town is at capacity — release the reserved (never-written) player
+      // key and bail out before touching /players at all.
+      this.playerRef.remove().catch(() => {});
+      this.playerRef = null;
       this.emit('townFull');
       return;
     }
-
-    this.name = profile.name;
-    this.playerRef = this.playersRef.push();
-    this.id = this.playerRef.key;
 
     const self = {
       id: this.id,
@@ -123,11 +143,21 @@ class TownNet {
         t: firebase.database.ServerValue.TIMESTAMP,
       });
     } catch (e) {
+      // We already claimed a capacity slot above — give it back since we
+      // never actually occupied it.
+      this.playerCountRef.transaction((current) => Math.max(0, (current || 0) - 1)).catch(() => {});
+      this.playerRef = null;
       this.emit('error', 'Could not join the town (database write was rejected). Check the database rules.');
       return;
     }
 
     this.playerRef.onDisconnect().remove();
+    // Keep the counter accurate when a player disconnects without a clean
+    // leave (closed tab, lost connection, etc.) — mirrors the player-node
+    // onDisconnect() above. onDisconnect() can't run a transaction, but
+    // ServerValue.increment() is itself atomic server-side, so a plain
+    // queued set() here is race-free the same way the join transaction is.
+    this.playerCountRef.onDisconnect().set(firebase.database.ServerValue.increment(-1));
     this.joinTime = Date.now();
 
     // If our own node gets removed server-side while this tab still thinks

@@ -1065,10 +1065,17 @@ class TownScene extends Phaser.Scene {
     this.lastAccelMag = mag;
   }
 
+  // Shared gate for any player-triggered action (interact, build toggle, etc.)
+  // so chat/overlay state is respected no matter which input triggered it
+  // (keyboard, on-screen button, or shake).
+  canAct() {
+    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen;
+  }
+
   // Shake is just a fun alternate trigger for the same interact() logic used
   // by the desktop 'E' key and the mobile Interact button.
   onShake() {
-    this.interact();
+    if (this.canAct()) this.interact();
   }
 
   shakeTreeVisual(index) {
@@ -1107,9 +1114,9 @@ class TownScene extends Phaser.Scene {
     this.fishing = { state: 'idle', spot: null, bobber: null, timer: null };
     this.updateInventoryHUD();
 
-    this.input.keyboard.on('keydown-E', () => { if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen) this.interact(); });
+    this.input.keyboard.on('keydown-E', () => { if (this.canAct()) this.interact(); });
     const btn = document.getElementById('interact-btn');
-    if (btn) btn.addEventListener('click', () => this.interact());
+    if (btn) btn.addEventListener('click', () => { if (this.canAct()) this.interact(); });
   }
 
   saveResources() {
@@ -1284,7 +1291,7 @@ class TownScene extends Phaser.Scene {
   playPolyrollCoin(pick, bet) {
     const flip = Math.random() < 0.5 ? 'heads' : 'tails';
     const win = flip === pick;
-    const delta = win ? bet : -bet;
+    const delta = win ? bet * 2 : -bet;
     this.resolvePolyroll(`🪙 landed on ${flip}`, win, delta);
   }
 
@@ -1999,15 +2006,15 @@ class TownScene extends Phaser.Scene {
       .setDepth(400000)
       .setVisible(false);
 
-    this.input.keyboard.on('keydown-B', () => { if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen) this.toggleBuildMode(); });
-    this.input.keyboard.on('keydown-F', () => { if (this.buildMode && !this.chatFocused) this.cycleBuildType(); });
-    this.input.keyboard.on('keydown-Z', () => { if (this.buildMode && !this.chatFocused) this.undoLastBlock(); });
+    this.input.keyboard.on('keydown-B', () => { if (this.canAct()) this.toggleBuildMode(); });
+    this.input.keyboard.on('keydown-F', () => { if (this.buildMode && this.canAct()) this.cycleBuildType(); });
+    this.input.keyboard.on('keydown-Z', () => { if (this.buildMode && this.canAct()) this.undoLastBlock(); });
     const btn = document.getElementById('build-toggle-btn');
-    if (btn) btn.addEventListener('click', () => this.toggleBuildMode());
+    if (btn) btn.addEventListener('click', () => { if (this.canAct()) this.toggleBuildMode(); });
     const matBtn = document.getElementById('build-material-btn');
-    if (matBtn) matBtn.addEventListener('click', () => this.cycleBuildType());
+    if (matBtn) matBtn.addEventListener('click', () => { if (this.buildMode && this.canAct()) this.cycleBuildType(); });
     const undoBtn = document.getElementById('build-undo-btn');
-    if (undoBtn) undoBtn.addEventListener('click', () => this.undoLastBlock());
+    if (undoBtn) undoBtn.addEventListener('click', () => { if (this.buildMode && this.canAct()) this.undoLastBlock(); });
   }
 
   toggleBuildMode() {
