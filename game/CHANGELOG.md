@@ -96,6 +96,9 @@ for how each feature actually works and plays.
 - Seasonal ground decor — a handful of ⛄ snowmen in winter, 🎃 pumpkins
   in autumn, scattered around town on the same wall-clock-month check
   that already drives the seasonal color wash
+- A one-key undo (**Z**) for the block you just placed in build mode —
+  refunds the right resource and works from anywhere, no need to walk
+  back to the exact cell, within a 10-second window
 
 ## Villagers and expression
 

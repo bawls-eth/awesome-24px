@@ -274,6 +274,24 @@ html, body {
 
 #build-material-btn.hidden { display: none; }
 
+#build-undo-btn {
+  position: fixed;
+  top: calc(96px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(28,36,48,0.85);
+  color: #eef2f7;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  border: 2px solid #3a4658;
+  z-index: 15;
+  cursor: pointer;
+}
+
+#build-undo-btn.hidden { display: none; }
+
 @keyframes build-banner-pulse {
   0%, 100% { box-shadow: 0 4px 16px rgba(255,224,102,0.2); }
   50% { box-shadow: 0 4px 22px rgba(255,224,102,0.8); }
@@ -286,6 +304,7 @@ html, body {
      height, so it can't land on top of whichever one is taller. */
   #build-mode-banner { top: calc(104px + env(safe-area-inset-top, 0px)); font-size: 11px; padding: 6px 12px; white-space: normal; text-align: center; max-width: 90vw; }
   #build-material-btn { top: calc(140px + env(safe-area-inset-top, 0px)); }
+  #build-undo-btn { top: calc(180px + env(safe-area-inset-top, 0px)); }
 }
 
 #chat-panel {

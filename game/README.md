@@ -328,6 +328,10 @@ walk straight through it, and it glows at night alongside the fireflies),
 🟫 **Path** (1 stone, a flat decorative ground tile for laying out
 walkways — fully walkable, it never blocks movement).
 
+Placed the wrong thing? Press **Z** (or tap the ↩️ Undo pill) within 10
+seconds of placing a block to remove it and get a full refund — works
+from wherever you are, no need to walk back to the exact spot.
+
 ### Going underground
 
 Find the dark ⛏️ **Hole** just north of the Mayor statue and press **Interact**

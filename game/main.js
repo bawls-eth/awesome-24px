@@ -373,6 +373,7 @@ const FISH_BITE_WINDOW = 1300;
 const GRID_SIZE = 32;
 const BLOCK_PLACE_DISTANCE = 28;
 const BLOCK_CAP = 150;
+const BUILD_UNDO_WINDOW_MS = 10000;
 const BLOCK_TYPES = {
   wood: { resource: 'wood', cost: 1, label: '🪵 Wall', color: 0x8a5a3b, stroke: 0x5a3a22, size: GRID_SIZE - 2, solid: true },
   stone: { resource: 'stone', cost: 1, label: '🪨 Fence', color: 0xb9bfc9, stroke: 0x7a818d, size: GRID_SIZE - 14, solid: true },
@@ -1939,10 +1940,13 @@ class TownScene extends Phaser.Scene {
 
     this.input.keyboard.on('keydown-B', () => { if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen) this.toggleBuildMode(); });
     this.input.keyboard.on('keydown-F', () => { if (this.buildMode && !this.chatFocused) this.cycleBuildType(); });
+    this.input.keyboard.on('keydown-Z', () => { if (this.buildMode && !this.chatFocused) this.undoLastBlock(); });
     const btn = document.getElementById('build-toggle-btn');
     if (btn) btn.addEventListener('click', () => this.toggleBuildMode());
     const matBtn = document.getElementById('build-material-btn');
     if (matBtn) matBtn.addEventListener('click', () => this.cycleBuildType());
+    const undoBtn = document.getElementById('build-undo-btn');
+    if (undoBtn) undoBtn.addEventListener('click', () => this.undoLastBlock());
   }
 
   toggleBuildMode() {
@@ -1952,6 +1956,8 @@ class TownScene extends Phaser.Scene {
     this.buildPreview.setVisible(this.buildMode);
     document.getElementById('build-mode-banner').classList.toggle('hidden', !this.buildMode);
     document.getElementById('build-material-btn').classList.toggle('hidden', !this.buildMode);
+    document.getElementById('build-undo-btn').classList.toggle('hidden', !this.buildMode);
+    if (!this.buildMode) this.lastPlacedBlockKey = null;
     this.updateBuildBanner();
   }
 
@@ -2027,6 +2033,32 @@ class TownScene extends Phaser.Scene {
     if (this.buildType === 'lamp') this.incrementStat('lampsPlaced');
     if (this.buildType === 'hedge') this.incrementStat('hedgesPlaced');
     if (this.buildType === 'path') this.incrementStat('pathsPlaced');
+    this.lastPlacedBlockKey = key;
+    this.lastPlacedBlockAt = Date.now();
+  }
+
+  // A one-key undo for the block you JUST placed, wherever you are now —
+  // saves walking back to the exact cell. Only undoes your own most
+  // recent placement, and only within a short window.
+  undoLastBlock() {
+    if (!this.lastPlacedBlockKey || Date.now() - this.lastPlacedBlockAt > BUILD_UNDO_WINDOW_MS) {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'nothing to undo');
+      return;
+    }
+    const existing = this.blocks.get(this.lastPlacedBlockKey);
+    if (!existing || existing.ownerId !== this.selfData.id) {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'nothing to undo');
+      this.lastPlacedBlockKey = null;
+      return;
+    }
+    this.net.removeBlock(this.lastPlacedBlockKey);
+    const refundDef = BLOCK_TYPES[existing.type] || BLOCK_TYPES.wood;
+    this.resources[refundDef.resource] = (this.resources[refundDef.resource] || 0) + refundDef.cost;
+    this.updateInventoryHUD();
+    this.saveResources();
+    this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'undone!');
+    SFX.pop();
+    this.lastPlacedBlockKey = null;
   }
 
   addBlockVisual(b) {
