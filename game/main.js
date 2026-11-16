@@ -46,6 +46,33 @@ function censorBlockedTerms(s) {
     .join('');
 }
 
+// ---------------- local save (this device only — nothing here is synced) ----------------
+// Declared before the SFX module below, which reads loadSave() at the
+// top level on page load (sfxMuted) — it was previously declared much
+// further down in this file as a `const`, which put it in the temporal
+// dead zone at that point, throwing on every load; loadSave()'s own
+// try/catch silently swallowed that error and returned {}, so the
+// persisted mute flag was never actually honored after a reload.
+
+const SAVE_KEY = 'pixeltown-save-v1';
+
+function loadSave() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    return raw ? JSON.parse(raw) || {} : {};
+  } catch (e) {
+    return {}; // private browsing / storage disabled — just play without saving
+  }
+}
+
+function writeSave(partial) {
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ ...loadSave(), ...partial }));
+  } catch (e) {
+    // ignore — nothing to persist to
+  }
+}
+
 // ---------- SFX ----------
 // Pixeltown had zero sound anywhere (bar walkie-talkie voice clips) —
 // a real gap for an Animal Crossing game, which leans heavily on its
@@ -394,26 +421,6 @@ const BLOCK_TYPES = {
   path: { resource: 'stone', cost: 1, label: '🟫 Path', color: 0xcbb890, stroke: 0xa8956c, size: GRID_SIZE - 4, solid: false },
 };
 
-// ---------------- local save (this device only — nothing here is synced) ----------------
-
-const SAVE_KEY = 'pixeltown-save-v1';
-
-function loadSave() {
-  try {
-    const raw = localStorage.getItem(SAVE_KEY);
-    return raw ? JSON.parse(raw) || {} : {};
-  } catch (e) {
-    return {}; // private browsing / storage disabled — just play without saving
-  }
-}
-
-function writeSave(partial) {
-  try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify({ ...loadSave(), ...partial }));
-  } catch (e) {
-    // ignore — nothing to persist to
-  }
-}
 
 class TownScene extends Phaser.Scene {
   constructor() {
