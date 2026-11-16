@@ -103,6 +103,8 @@ for how each feature actually works and plays.
   while it's raining, reacting to the existing weather system
 - A row of quick-chat buttons above the chat box — one tap sends a
   preset phrase, same send path (and slur filter/rate-limit) as typing
+- A daily trivia question from Professor Byte (**T** near him) — same
+  question for everyone, one attempt per day, +8 ⭐ for a correct answer
 
 ## Villagers and expression
 

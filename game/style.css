@@ -1143,6 +1143,55 @@ body.touch-device .key-hint { display: none; }
   cursor: pointer;
 }
 
+#trivia-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10,14,20,0.6);
+}
+
+#trivia-overlay.hidden { display: none; }
+
+#trivia-overlay .join-card { position: relative; }
+
+#trivia-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #3a4658;
+  background: #1c2430;
+  color: #eef2f7;
+  cursor: pointer;
+}
+
+#trivia-body p {
+  margin: 0 0 14px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+#trivia-body button {
+  display: block;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 2px solid #3a4658;
+  background: rgba(28,36,48,0.85);
+  color: #eef2f7;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+#trivia-body button:hover { border-color: #6fbf73; }
+
 .guestbook-list {
   list-style: none;
   margin: 0 0 16px;

@@ -295,6 +295,24 @@ const NPC2_RAIN_LINES = [
   "The fish bite better in the rain. Doesn't mean I have to enjoy catching them in it.",
   "Rain's just the sky doing the washing up it never finishes.",
 ];
+// Professor Byte's daily trivia — one question a day, same for everyone
+// (same deterministic wall-clock-hash trick as the merchant/quest), a
+// small star reward for a correct first answer, no retry once answered.
+const TRIVIA_QUESTIONS = [
+  { q: 'How many villager species can you pick from on the join screen?', choices: ['9', '15', '21', '29'], correct: 2 },
+  { q: "What does Professor Byte's daily quest reset at?", choices: ['Noon local time', 'Midnight UTC', 'Every Monday', 'It never resets'], correct: 1 },
+  { q: 'What do butterflies turn into at night?', choices: ['Moths', 'Fireflies', 'Nothing, they hide', 'Bats'], correct: 1 },
+  { q: 'How much does a stone fence cost to place?', choices: ['1 wood', '1 stone', '2 flowers', '3 stone'], correct: 1 },
+  { q: 'Which build-mode material is purely decorative and blocks no movement at all?', choices: ['Wall', 'Fence', 'Hedge', 'Lamp'], correct: 3 },
+  { q: "What's the Mystery Merchant's visiting window length?", choices: ['1 hour', '3 hours', '6 hours', 'All day'], correct: 1 },
+  { q: "How many fossil species does the Museum's full collection need?", choices: ['3', '5', '7', '10'], correct: 1 },
+  { q: 'What multiplier does a winning Polyroll dice bet pay?', choices: ['2x', '3x', '5x', '10x'], correct: 2 },
+  { q: 'How many hours a night does K.K. Slider play the campfire?', choices: ['1 hour', '2 hours', '3 hours', 'All night'], correct: 1 },
+  { q: 'How many fossils can you carry in your bag before donating?', choices: ['1', '3', '5', '10'], correct: 1 },
+  { q: 'What resource does a decorative Lamp cost?', choices: ['Wood', 'Stone', 'Flowers', 'Shells'], correct: 2 },
+  { q: "What's the max number of players in town at once?", choices: ['5', '10', '20', 'Unlimited'], correct: 1 },
+];
+const TRIVIA_REWARD = 8;
 const HOUSE_POS = { x: 1020, y: 760, w: 110, h: 70 };
 const SHOP_RADIUS = 70;
 const POLYROLL_POS = { x: 1250, y: 760 };
@@ -342,6 +360,7 @@ const ACHIEVEMENTS = [
   { id: 'quest3', icon: '📋', label: 'Quester', desc: "Complete 3 of Professor Byte's daily quests", reward: 5, check: (s) => (s.questsDone || 0) >= 3 },
   { id: 'hedge1', icon: '🌳', label: 'Landscaper', desc: 'Plant a hedge', reward: 3, check: (s) => (s.hedgesPlaced || 0) >= 1 },
   { id: 'path10', icon: '🟫', label: 'Pathfinder', desc: 'Lay 10 path tiles', reward: 5, check: (s) => (s.pathsPlaced || 0) >= 10 },
+  { id: 'trivia3', icon: '📝', label: 'Know-It-All', desc: "Answer 3 of Professor Byte's daily trivia questions correctly", reward: 5, check: (s) => (s.triviaCorrect || 0) >= 3 },
 ];
 const CAMPFIRE_POS = { x: 800, y: 600 };
 const CAMPFIRE_RADIUS = 60;
@@ -546,6 +565,7 @@ class TownScene extends Phaser.Scene {
     this.setupLoginStreak();
     this.setupSfxToggle();
     this.setupPhotoMode();
+    this.setupTriviaKey();
     this.setupAchievementsUI();
     this.setupOutfitShop();
     this.setupGuestbook();
@@ -585,7 +605,7 @@ class TownScene extends Phaser.Scene {
     let vx = 0;
     let vy = 0;
 
-    if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen) {
+    if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen) {
       if (this.cursors.left.isDown || this.wasd.A.isDown) vx -= 1;
       if (this.cursors.right.isDown || this.wasd.D.isDown) vx += 1;
       if (this.cursors.up.isDown || this.wasd.W.isDown) vy -= 1;
@@ -1087,7 +1107,7 @@ class TownScene extends Phaser.Scene {
     this.fishing = { state: 'idle', spot: null, bobber: null, timer: null };
     this.updateInventoryHUD();
 
-    this.input.keyboard.on('keydown-E', () => { if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen) this.interact(); });
+    this.input.keyboard.on('keydown-E', () => { if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen) this.interact(); });
     const btn = document.getElementById('interact-btn');
     if (btn) btn.addEventListener('click', () => this.interact());
   }
@@ -1810,9 +1830,15 @@ class TownScene extends Phaser.Scene {
   }
 
   setupPhotoMode() {
-    this.input.keyboard.on('keydown-P', () => { if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen) this.takePhoto(); });
+    this.input.keyboard.on('keydown-P', () => { if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen) this.takePhoto(); });
     const btn = document.getElementById('photo-btn');
     if (btn) btn.addEventListener('click', () => this.takePhoto());
+  }
+
+  setupTriviaKey() {
+    this.input.keyboard.on('keydown-T', () => { if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && this.isNearNPC()) this.openTrivia(); });
+    const closeBtn = document.getElementById('trivia-close-btn');
+    if (closeBtn) closeBtn.addEventListener('click', () => this.closeTrivia());
   }
 
   takePhoto() {
@@ -1973,7 +1999,7 @@ class TownScene extends Phaser.Scene {
       .setDepth(400000)
       .setVisible(false);
 
-    this.input.keyboard.on('keydown-B', () => { if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen) this.toggleBuildMode(); });
+    this.input.keyboard.on('keydown-B', () => { if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen) this.toggleBuildMode(); });
     this.input.keyboard.on('keydown-F', () => { if (this.buildMode && !this.chatFocused) this.cycleBuildType(); });
     this.input.keyboard.on('keydown-Z', () => { if (this.buildMode && !this.chatFocused) this.undoLastBlock(); });
     const btn = document.getElementById('build-toggle-btn');
@@ -2820,6 +2846,7 @@ class TownScene extends Phaser.Scene {
       wordWrap: { width: 150 },
     }).setOrigin(0.5).setDepth(y + 1);
     this.questClaimedBucket = Number(loadSave().questClaimedBucket) || -1;
+    this.triviaAnsweredBucket = Number(loadSave().triviaAnsweredBucket) || -1;
     this.refreshNpcQuestSign();
     this.addObstacleRect({ x: x - 10, y: y - 6, width: 20, height: 20 });
   }
@@ -2862,6 +2889,66 @@ class TownScene extends Phaser.Scene {
         ? '✅ today\'s quest done!'
         : `📋 bring ${quest.amount}${quest.resource.icon} (+${quest.reward}⭐)`
     );
+  }
+
+  // ---------- NPC daily trivia ----------
+
+  todaysTrivia() {
+    const i = Math.floor(this.questHash(10) * TRIVIA_QUESTIONS.length);
+    return TRIVIA_QUESTIONS[i];
+  }
+
+  isTriviaAnsweredToday() {
+    return this.triviaAnsweredBucket === this.questDayBucket();
+  }
+
+  openTrivia() {
+    if (!this.isNearNPC()) return;
+    const overlay = document.getElementById('trivia-overlay');
+    const body = document.getElementById('trivia-body');
+    overlay.classList.remove('hidden');
+    this.triviaOpen = true;
+    body.innerHTML = '';
+    if (this.isTriviaAnsweredToday()) {
+      const p = document.createElement('p');
+      p.textContent = "Come back tomorrow for a new question!";
+      body.appendChild(p);
+      return;
+    }
+    const trivia = this.todaysTrivia();
+    const q = document.createElement('p');
+    q.textContent = trivia.q;
+    body.appendChild(q);
+    trivia.choices.forEach((choice, i) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = choice;
+      btn.addEventListener('click', () => this.answerTrivia(i));
+      body.appendChild(btn);
+    });
+  }
+
+  closeTrivia() {
+    document.getElementById('trivia-overlay').classList.add('hidden');
+    this.triviaOpen = false;
+  }
+
+  answerTrivia(choiceIndex) {
+    const trivia = this.todaysTrivia();
+    const body = document.getElementById('trivia-body');
+    this.triviaAnsweredBucket = this.questDayBucket();
+    writeSave({ triviaAnsweredBucket: this.triviaAnsweredBucket });
+    body.innerHTML = '';
+    const p = document.createElement('p');
+    if (choiceIndex === trivia.correct) {
+      p.textContent = `Correct! +${TRIVIA_REWARD} ⭐`;
+      this.awardPoint(TRIVIA_REWARD, `trivia correct! +${TRIVIA_REWARD}⭐`, this.localBody.x, this.localBody.y - 30, 'achievement');
+      this.incrementStat('triviaCorrect');
+    } else {
+      p.textContent = `Not quite — the answer was "${trivia.choices[trivia.correct]}". Come back tomorrow!`;
+      SFX.deny();
+    }
+    body.appendChild(p);
   }
 
   talkToNPC() {

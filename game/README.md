@@ -111,7 +111,9 @@ right now, before you even pick a name.
   over his head shows what to bring and the ⭐ reward; have enough of
   that resource in your bag and interacting turns it in instead of just
   chatting. One quest per day, resets at midnight UTC. Both he and Salty
-  Mo (below) swap in a few rain-specific lines while it's raining
+  Mo (below) swap in a few rain-specific lines while it's raining. Press
+  **T** near him for a **daily trivia** question (also the same for
+  everyone, one attempt per day) — answer right for an 8 ⭐ bonus
 - 🎣 **Salty Mo**, a second resident NPC camped out by the pond dock — a
   grumpy old dockhand with his own set of grumbles about the weather, the
   Mystery Merchant, and everyone who's never fallen off his dock. No quest,
@@ -128,7 +130,7 @@ right now, before you even pick a name.
   this is the only way to wear one. A sign at the spot shows what's for
   sale, or when to come back if they're not there
 - 🏆 **Achievements** (Nook Miles-style) — a 🏆 badge under the player
-  list opens a checklist of 19 lifetime goals (catch/chop/mine 10,
+  list opens a checklist of 22 lifetime goals (catch/chop/mine 10,
   complete the museum, play Polyroll 10 times, and more), each paying a
   one-time ⭐ bonus on unlock. Lifetime counters never drop when you
   spend or sell, and unlocks persist on this device
