@@ -124,6 +124,7 @@ const DIG_HOLE_RADIUS = 36;
 const DOOR_A_POS = { x: 1500, y: 700 };
 const DOOR_B_POS = { x: 2250, y: 600 };
 const DOOR_RADIUS = 34;
+const GTA3_PORTAL_URL = 'https://quenq.com/apps/gta-3/';
 const EAST_POND = { cx: 2000, cy: 280, rx: 130, ry: 80 };
 
 const FISHING_SPOTS = [
@@ -682,9 +683,8 @@ class TownScene extends Phaser.Scene {
       return;
     }
 
-    const door = this.findNearestDoor();
-    if (door) {
-      this.useDoor(door);
+    if (this.isNearDoor()) {
+      this.useDoor();
       return;
     }
 
@@ -753,23 +753,23 @@ class TownScene extends Phaser.Scene {
     return Math.hypot(this.localBody.x - DIG_HOLE_POS.x, this.localBody.y - DIG_HOLE_POS.y) < DIG_HOLE_RADIUS;
   }
 
-  findNearestDoor() {
+  // These doors are one-way, GTA3-loading-door style: they leave Pixeltown
+  // entirely for another browser game in this same tab. There's no
+  // teleport back — closing/navigating away from that page is how you
+  // return, same as actually walking through a loading door and leaving
+  // the area behind. Always confirm first since this abandons the
+  // current session.
+  isNearDoor() {
     const near = (p) => Math.hypot(this.localBody.x - p.x, this.localBody.y - p.y) < DOOR_RADIUS;
-    if (near(DOOR_A_POS)) return DOOR_B_POS;
-    if (near(DOOR_B_POS)) return DOOR_A_POS;
-    return null;
+    return near(DOOR_A_POS) || near(DOOR_B_POS);
   }
 
-  useDoor(target) {
+  useDoor() {
     if (this.doorBusy) return;
+    const ok = window.confirm('Walk through the portal to GTA 3? This leaves Pixeltown in this tab — there\'s no way back through it.');
+    if (!ok) return;
     this.doorBusy = true;
-    this.cameras.main.fadeOut(180, 0, 0, 0);
-    this.cameras.main.once('camerafadeoutcomplete', () => {
-      this.localBody.body.reset(target.x, target.y + DOOR_RADIUS - 6);
-      this.net.move(this.localBody.x, this.localBody.y, this.localVisual.flipX ? -1 : 1);
-      this.cameras.main.fadeIn(180, 0, 0, 0);
-      this.cameras.main.once('camerafadeincomplete', () => { this.doorBusy = false; });
-    });
+    window.location.href = GTA3_PORTAL_URL;
   }
 
   updateDigHoleHint() {
@@ -1394,8 +1394,8 @@ class TownScene extends Phaser.Scene {
   }
 
   drawDoors() {
-    this.drawDoor(DOOR_A_POS.x, DOOR_A_POS.y, '🚪 Portal', 0x4fa0e0);
-    this.drawDoor(DOOR_B_POS.x, DOOR_B_POS.y, '🚪 Portal', 0xe0954f);
+    this.drawDoor(DOOR_A_POS.x, DOOR_A_POS.y, '🚪 GTA 3', 0x4fa0e0);
+    this.drawDoor(DOOR_B_POS.x, DOOR_B_POS.y, '🚪 GTA 3', 0x4fa0e0);
   }
 
   drawForestRing() {

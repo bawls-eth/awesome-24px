@@ -40,9 +40,11 @@ everyone else automatically. Capped at **10 players** at once for now.
   "Walkie-talkie" below)
 - A Bored Ape "Mayor" statue watches over the plaza, and Moon Cats drift
   lazily around the pond — pure flavor, no gameplay attached
-- Two linked **portal doors** 🚪 — one near the plaza, one out in the East
-  Meadow — walk up to either and interact to instantly swap places with
-  the other, GTA-loading-door style, instead of the long walk
+- Two **GTA3-style portal doors** 🚪 — one near the plaza, one out in the
+  East Meadow — walk up to either and interact to leave Pixeltown
+  entirely for another browser game in this same tab. It's one-way: there's
+  no teleport back, just like walking through a loading door and leaving
+  the area behind (a confirm prompt checks before you go)
 - A wide **East Meadow** past the original town — walk east along the main
   path to find a second pond (with its own fishing spot), more trees, rocks,
   and tulip beds to explore
