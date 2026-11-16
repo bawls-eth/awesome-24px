@@ -420,7 +420,9 @@ write skips both of those — anything that still gets through is masked
 with asterisks wherever it's displayed (names, chat, the player list).
 The blocklist in `main.js` (`BLOCKED_TERMS`) is intentionally short and
 specific to slurs, not everyday profanity, and it normalizes basic
-leetspeak (`f4ggot` → `faggot`) before matching.
+leetspeak (`f4ggot` → `faggot`) before matching. Sending the exact same
+message twice in a row within 10 seconds is also blocked client-side —
+a basic spam deterrent, same caveat as everything else here.
 
 **Be clear about what this isn't:** it is not real moderation and not a
 security boundary. It stops an honest friend's typo and masks what does

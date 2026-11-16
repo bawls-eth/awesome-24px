@@ -2279,9 +2279,20 @@ class TownScene extends Phaser.Scene {
       chatInput.blur();
       return;
     }
+    // Simple client-side spam deterrent, not moderation: block sending the
+    // exact same text twice in a row within 10s. Doesn't stop a determined
+    // bad actor hitting the database directly, same caveat as the slur
+    // filter — see the README's "A word on safety" section.
+    if (text && text === this.lastChatText && Date.now() - (this.lastChatTextAt || 0) < 10000) {
+      chatInput.value = '';
+      chatInput.blur();
+      return;
+    }
     if (text) {
       this.net.sendChat(text);
       this.incrementStat('chatSent');
+      this.lastChatText = text;
+      this.lastChatTextAt = Date.now();
     }
     chatInput.value = '';
     chatInput.blur();
