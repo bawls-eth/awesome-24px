@@ -190,6 +190,12 @@ const STATUE_POS = { x: 1450, y: 600 };
 const NPC_POS = { x: 1550, y: 540 };
 const NPC_RADIUS = 48;
 const NPC_NAME = '🧪 Professor Byte';
+const QUEST_RESOURCES = [
+  { key: 'wood', icon: '🪵' }, { key: 'stone', icon: '🪨' }, { key: 'fish', icon: '🐟' },
+  { key: 'bugs', icon: '🦋' }, { key: 'fruit', icon: '🍎' }, { key: 'flowers', icon: '🌸' },
+  { key: 'shells', icon: '🐚' },
+];
+const QUEST_REWARD_BASE = 6;
 const NPC_LINES = [
   "Did you know the pond cats never actually get wet? Mysteries of pixel physics.",
   "I've been counting your footsteps. You're very consistent. It's admirable.",
@@ -252,6 +258,7 @@ const ACHIEVEMENTS = [
   { id: 'photo1', icon: '📸', label: 'Photographer', desc: 'Take a photo', reward: 3, check: (s) => (s.photosTaken || 0) >= 1 },
   { id: 'merchant1', icon: '🛒', label: 'Collector', desc: 'Buy a rare look from the Mystery Merchant', reward: 5, check: (s) => (s.merchantBuys || 0) >= 1 },
   { id: 'lamp1', icon: '🪔', label: 'Illuminator', desc: 'Place a lamp', reward: 3, check: (s) => (s.lampsPlaced || 0) >= 1 },
+  { id: 'quest3', icon: '📋', label: 'Quester', desc: "Complete 3 of Professor Byte's daily quests", reward: 5, check: (s) => (s.questsDone || 0) >= 3 },
 ];
 const CAMPFIRE_POS = { x: 800, y: 600 };
 const CAMPFIRE_RADIUS = 60;
@@ -2518,6 +2525,17 @@ class TownScene extends Phaser.Scene {
       wordWrap: { width: 180 },
       align: 'center',
     }).setOrigin(0.5, 1).setDepth(y + 2).setVisible(false);
+    this.npcQuestSign = this.add.text(x, y - 46, '', {
+      fontSize: '10px',
+      fontFamily: 'monospace',
+      color: '#6fbf73',
+      stroke: '#000000',
+      strokeThickness: 3,
+      align: 'center',
+      wordWrap: { width: 150 },
+    }).setOrigin(0.5).setDepth(y + 1);
+    this.questClaimedBucket = Number(loadSave().questClaimedBucket) || -1;
+    this.refreshNpcQuestSign();
     this.addObstacleRect({ x: x - 10, y: y - 6, width: 20, height: 20 });
   }
 
@@ -2525,7 +2543,57 @@ class TownScene extends Phaser.Scene {
     return Phaser.Math.Distance.Between(this.localBody.x, this.localBody.y, NPC_POS.x, NPC_POS.y) < NPC_RADIUS;
   }
 
+  // ---------- NPC daily quest ----------
+  // Same deterministic wall-clock-hash trick as weather/merchant: every
+  // client computes the same "today's resource + amount" from the UTC
+  // day number. Only "did I claim it" is stored locally — nothing synced.
+
+  questDayBucket() {
+    return Math.floor(Date.now() / 86400000);
+  }
+
+  questHash(seed) {
+    const bucket = this.questDayBucket();
+    const h = Math.sin(bucket * 37.719 + seed * 91.345) * 24634.6345;
+    return h - Math.floor(h);
+  }
+
+  todaysQuest() {
+    const resource = QUEST_RESOURCES[Math.floor(this.questHash(1) * QUEST_RESOURCES.length)];
+    const amount = 4 + Math.floor(this.questHash(2) * 5); // 4-8
+    const reward = QUEST_REWARD_BASE + amount;
+    return { resource, amount, reward };
+  }
+
+  isQuestClaimedToday() {
+    return this.questClaimedBucket === this.questDayBucket();
+  }
+
+  refreshNpcQuestSign() {
+    if (!this.npcQuestSign) return;
+    const quest = this.todaysQuest();
+    this.npcQuestSign.setText(
+      this.isQuestClaimedToday()
+        ? '✅ today\'s quest done!'
+        : `📋 bring ${quest.amount}${quest.resource.icon} (+${quest.reward}⭐)`
+    );
+  }
+
   talkToNPC() {
+    if (!this.isQuestClaimedToday()) {
+      const quest = this.todaysQuest();
+      if ((this.resources[quest.resource.key] || 0) >= quest.amount) {
+        this.resources[quest.resource.key] -= quest.amount;
+        this.updateInventoryHUD();
+        this.saveResources();
+        this.questClaimedBucket = this.questDayBucket();
+        writeSave({ questClaimedBucket: this.questClaimedBucket });
+        this.refreshNpcQuestSign();
+        this.awardPoint(quest.reward, `quest done! +${quest.reward}⭐`, this.localBody.x, this.localBody.y - 30, 'achievement');
+        this.incrementStat('questsDone');
+        return;
+      }
+    }
     const line = NPC_LINES[Math.floor(Math.random() * NPC_LINES.length)];
     this.npcBubble.setText(line).setVisible(true);
     if (this.npcBubbleTimer) this.npcBubbleTimer.remove();

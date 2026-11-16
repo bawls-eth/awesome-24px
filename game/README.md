@@ -97,8 +97,11 @@ right now, before you even pick a name.
   device's own clock — walk up during the show and interact for a ⭐2
   bonus and an emote, once per show (see "K.K. Slider" below)
 - 🧪 **Professor Byte**, a resident NPC near the Mayor statue — interact
-  for a random bit of flavor text in a speech bubble. Purely for charm,
-  no reward, but he's got a lot to say
+  for a random bit of flavor text in a speech bubble. He also hands out a
+  **daily quest** (same for everyone, computed from the date): a sign
+  over his head shows what to bring and the ⭐ reward; have enough of
+  that resource in your bag and interacting turns it in instead of just
+  chatting. One quest per day, resets at midnight UTC
 - 📸 **Photo mode** — press **P** (or tap 📸 under the player list) for a
   camera flash + shutter sound and a PNG download of the current view,
   straight from the game canvas
@@ -111,7 +114,7 @@ right now, before you even pick a name.
   this is the only way to wear one. A sign at the spot shows what's for
   sale, or when to come back if they're not there
 - 🏆 **Achievements** (Nook Miles-style) — a 🏆 badge under the player
-  list opens a checklist of 18 lifetime goals (catch/chop/mine 10,
+  list opens a checklist of 19 lifetime goals (catch/chop/mine 10,
   complete the museum, play Polyroll 10 times, and more), each paying a
   one-time ⭐ bonus on unlock. Lifetime counters never drop when you
   spend or sell, and unlocks persist on this device

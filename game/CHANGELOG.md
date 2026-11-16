@@ -78,6 +78,10 @@ for how each feature actually works and plays.
   you've even picked a name — read-only, no new player record created
 - A small wooden dock off the pond's edge and a few benches scattered
   around town — purely decorative scenery, no new mechanics
+- A daily quest from Professor Byte — the same "bring N of resource X"
+  task for everyone each day, computed from the date; a sign over his
+  head shows the ask and reward, interact with enough in your bag to
+  turn it in
 
 ## Villagers and expression
 
