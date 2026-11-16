@@ -752,11 +752,29 @@ class TownScene extends Phaser.Scene {
     const moving = vx !== 0 || vy !== 0;
     this.applyBob(this.localBobState, this.localVisual, this.localShadow, this.localBody.x, this.localBody.y, moving, delta);
     this.localNameText.setPosition(this.localBody.x, this.localVisual.y - 22);
+    if (moving) this.spawnFootstepDust(time, this.localBody.x, this.localBody.y + 10);
 
     if (time - this.lastSentAt > 100) {
       this.lastSentAt = time;
       this.net.move(this.localBody.x, this.localBody.y, this.localVisual.flipX ? -1 : 1);
     }
+  }
+
+  // A tiny, purely cosmetic dust puff under the player's feet while
+  // walking — throttled so it's a trail of soft dots, not a solid smear.
+  spawnFootstepDust(time, x, y) {
+    if (this.lastDustAt && time - this.lastDustAt < 220) return;
+    this.lastDustAt = time;
+    const puff = this.add.ellipse(x, y, 7, 4, 0xd8cfa8, 0.35).setDepth(y - 1);
+    this.tweens.add({
+      targets: puff,
+      scaleX: 1.8,
+      scaleY: 1.8,
+      alpha: 0,
+      duration: 450,
+      ease: 'Sine.easeOut',
+      onComplete: () => puff.destroy(),
+    });
   }
 
   updateRemoteInterpolation(delta) {

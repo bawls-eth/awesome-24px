@@ -111,6 +111,8 @@ for how each feature actually works and plays.
   random species/frame before you commit to it
 - A 🛍️ shop loyalty streak — selling on consecutive days builds a streak
   for a small bonus, same date-comparison shape as the login streak
+- Soft footstep dust puffs under the player while walking — purely
+  cosmetic, local-only, throttled to a trail instead of a smear
 - Two more build-mode materials, 🌳 Hedge (3 flowers, solid — a green
   bush wall) and 🟫 Path (1 stone, non-solid — a flat ground tile for
   laying out walkways), plus matching achievements
