@@ -278,6 +278,7 @@ class TownScene extends Phaser.Scene {
     this.drawMuseum();
     this.drawTurnipStall();
     this.drawAbleSisters();
+    this.drawNoticeBoard();
     this.drawFossilSpots();
     this.drawBeachItems();
     this.drawForestRing();
@@ -2311,10 +2312,36 @@ class TownScene extends Phaser.Scene {
     while (chatLog.children.length > 50) chatLog.removeChild(chatLog.firstChild);
   }
 
+  drawNoticeBoard() {
+    const x = 1350;
+    const y = 520;
+    const g = this.add.graphics().setDepth(y - 1);
+    g.fillStyle(0x6b4a30, 1).fillRect(x - 2, y - 4, 4, 30);
+    g.fillStyle(0xe8d9b5, 1).fillRect(x - 55, y - 54, 110, 52);
+    g.lineStyle(2, 0x8f7044, 1).strokeRect(x - 55, y - 54, 110, 52);
+    this.noticeBoardText = this.add.text(x, y - 28, '', {
+      fontSize: '8px',
+      fontFamily: 'monospace',
+      color: '#3a2a1a',
+      align: 'center',
+      wordWrap: { width: 96 },
+    }).setOrigin(0.5).setDepth(y);
+  }
+
+  updateNoticeBoard(sorted) {
+    if (!this.noticeBoardText) return;
+    const top3 = sorted.slice(0, 3);
+    const lines = top3.length
+      ? top3.map((p, i) => `${['🥇', '🥈', '🥉'][i]} ${censorBlockedTerms(p.name).slice(0, 8)} ${p.score || 0}`)
+      : ['no scores yet'];
+    this.noticeBoardText.setText(['TOP SCORES', ...lines].join('\n'));
+  }
+
   renderPlayerList() {
     const listEl = document.getElementById('player-list');
     listEl.innerHTML = '';
     const sorted = Array.from(this.allPlayers.values()).sort((a, b) => (b.score || 0) - (a.score || 0));
+    this.updateNoticeBoard(sorted);
     sorted.forEach((p) => {
       const li = document.createElement('li');
       const safeName = censorBlockedTerms(p.name);

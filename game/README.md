@@ -65,6 +65,8 @@ everyone else automatically. Capped at **10 players** at once for now.
   random fossil (one of 5 species); carry up to 3, then donate at the
   🏛️ Museum for a permanent per-device collection and a ⭐ for each new
   species (see "Fossils & Museum" below)
+- A **notice board** near the statue shows the live top 3 ⭐ scores —
+  no need to open the player list to see who's winning
 - 👗 **Able Sisters** — change your villager species/color after
   joining, any time, at the shop near the turnip stall. Everyone else
   sees the new look live, and it's what loads back in next time too
