@@ -31,8 +31,18 @@ function normalizeForFilter(s) {
 }
 
 function containsBlockedTerm(s) {
-  const norm = normalizeForFilter(s);
-  return BLOCKED_TERMS.some((term) => norm.includes(term));
+  // Check each whitespace-separated word on its own, not the whole string
+  // normalized together — otherwise stripping spaces can glue adjacent
+  // innocent words into a false hit (e.g. "this pic is great" collapsing
+  // into "...thispic..." and matching "spic"). Leetspeak/punctuation
+  // obfuscation *within* a single word is still caught, since that word's
+  // own normalization still strips punctuation and substitutes digits.
+  return String(s)
+    .split(/\s+/)
+    .some((word) => {
+      const norm = normalizeForFilter(word);
+      return norm && BLOCKED_TERMS.some((term) => norm.includes(term));
+    });
 }
 
 function censorBlockedTerms(s) {
