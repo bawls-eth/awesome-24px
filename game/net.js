@@ -162,7 +162,7 @@ class TownNet {
     this.blocksRef.on('child_added', (s) => {
       const v = s.val();
       if (!v) return;
-      this.emit('blockAdded', { key: s.key, x: v.x, y: v.y, ownerId: v.ownerId });
+      this.emit('blockAdded', { key: s.key, x: v.x, y: v.y, type: v.type || 'wood', ownerId: v.ownerId });
     });
 
     this.blocksRef.on('child_removed', (s) => {
@@ -246,11 +246,12 @@ class TownNet {
     });
   }
 
-  placeBlock(x, y) {
+  placeBlock(x, y, type = 'wood') {
     if (!this.blocksRef || !this.id) return;
     this.blocksRef.child(`${x}_${y}`).set({
       x,
       y,
+      type,
       ownerId: this.id,
       t: firebase.database.ServerValue.TIMESTAMP,
     }).catch(() => {});

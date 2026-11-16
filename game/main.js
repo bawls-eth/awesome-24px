@@ -273,6 +273,10 @@ const FISH_BITE_WINDOW = 1300;
 const GRID_SIZE = 32;
 const BLOCK_PLACE_DISTANCE = 28;
 const BLOCK_CAP = 150;
+const BLOCK_TYPES = {
+  wood: { resource: 'wood', cost: 1, label: '🪵 Wall', color: 0x8a5a3b, stroke: 0x5a3a22, size: GRID_SIZE - 2 },
+  stone: { resource: 'stone', cost: 1, label: '🪨 Fence', color: 0xb9bfc9, stroke: 0x7a818d, size: GRID_SIZE - 14 },
+};
 
 // ---------------- local save (this device only — nothing here is synced) ----------------
 
@@ -1730,14 +1734,18 @@ class TownScene extends Phaser.Scene {
   setupBuilding() {
     this.blocks = new Map();
     this.buildMode = false;
+    this.buildType = 'wood';
     this.buildPreview = this.add.rectangle(0, 0, GRID_SIZE - 2, GRID_SIZE - 2, 0xffffff, 0)
       .setStrokeStyle(2, 0xffe066)
       .setDepth(400000)
       .setVisible(false);
 
     this.input.keyboard.on('keydown-B', () => { if (!this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen) this.toggleBuildMode(); });
+    this.input.keyboard.on('keydown-F', () => { if (this.buildMode && !this.chatFocused) this.cycleBuildType(); });
     const btn = document.getElementById('build-toggle-btn');
     if (btn) btn.addEventListener('click', () => this.toggleBuildMode());
+    const matBtn = document.getElementById('build-material-btn');
+    if (matBtn) matBtn.addEventListener('click', () => this.cycleBuildType());
   }
 
   toggleBuildMode() {
@@ -1746,6 +1754,28 @@ class TownScene extends Phaser.Scene {
     if (btn) btn.classList.toggle('enabled', this.buildMode);
     this.buildPreview.setVisible(this.buildMode);
     document.getElementById('build-mode-banner').classList.toggle('hidden', !this.buildMode);
+    document.getElementById('build-material-btn').classList.toggle('hidden', !this.buildMode);
+    this.updateBuildBanner();
+  }
+
+  cycleBuildType() {
+    const keys = Object.keys(BLOCK_TYPES);
+    this.buildType = keys[(keys.indexOf(this.buildType) + 1) % keys.length];
+    this.updateBuildBanner();
+    SFX.pop();
+  }
+
+  updateBuildBanner() {
+    const def = BLOCK_TYPES[this.buildType];
+    const icon = def.resource === 'wood' ? '🪵' : '🪨';
+    const banner = document.getElementById('build-mode-banner');
+    if (banner) {
+      banner.textContent = IS_TOUCH
+        ? `🧱 BUILD MODE — ✋ to place/remove ${def.label} (${def.cost}${icon})`
+        : `🧱 BUILD MODE — ✋ / E to place or remove ${def.label} (${def.cost}${icon}) · F to switch material`;
+    }
+    const matBtn = document.getElementById('build-material-btn');
+    if (matBtn) matBtn.textContent = `${def.label} (tap to switch)`;
   }
 
   getBuildTargetCell() {
@@ -1770,7 +1800,8 @@ class TownScene extends Phaser.Scene {
     if (existing) {
       if (existing.ownerId === this.selfData.id) {
         this.net.removeBlock(key);
-        this.resources.wood = (this.resources.wood || 0) + 1;
+        const refundDef = BLOCK_TYPES[existing.type] || BLOCK_TYPES.wood;
+        this.resources[refundDef.resource] = (this.resources[refundDef.resource] || 0) + refundDef.cost;
         this.updateInventoryHUD();
         this.saveResources();
       } else {
@@ -1779,8 +1810,9 @@ class TownScene extends Phaser.Scene {
       return;
     }
 
-    if ((this.resources.wood || 0) < 1) {
-      this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'need 🪵');
+    const def = BLOCK_TYPES[this.buildType];
+    if ((this.resources[def.resource] || 0) < def.cost) {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, def.resource === 'wood' ? 'need 🪵' : 'need 🪨');
       return;
     }
     if (this.blocks.size >= BLOCK_CAP) {
@@ -1788,17 +1820,18 @@ class TownScene extends Phaser.Scene {
       return;
     }
 
-    this.resources.wood -= 1;
+    this.resources[def.resource] -= def.cost;
     this.updateInventoryHUD();
     this.saveResources();
-    this.net.placeBlock(gx, gy);
+    this.net.placeBlock(gx, gy, this.buildType);
     this.incrementStat('blocksPlaced');
   }
 
   addBlockVisual(b) {
     if (this.blocks.has(b.key)) return;
-    const sprite = this.add.rectangle(b.x, b.y, GRID_SIZE - 2, GRID_SIZE - 2, 0x8a5a3b, 1)
-      .setStrokeStyle(2, 0x5a3a22)
+    const def = BLOCK_TYPES[b.type] || BLOCK_TYPES.wood;
+    const sprite = this.add.rectangle(b.x, b.y, def.size, def.size, def.color, 1)
+      .setStrokeStyle(2, def.stroke)
       .setDepth(b.y);
     const obstacle = this.addObstacleRect({
       x: b.x - GRID_SIZE / 2 + 1,
@@ -1806,7 +1839,7 @@ class TownScene extends Phaser.Scene {
       width: GRID_SIZE - 2,
       height: GRID_SIZE - 2,
     });
-    this.blocks.set(b.key, { sprite, obstacle, ownerId: b.ownerId });
+    this.blocks.set(b.key, { sprite, obstacle, ownerId: b.ownerId, type: b.type });
   }
 
   removeBlockVisual(key) {

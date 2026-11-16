@@ -279,9 +279,15 @@ away. Catches add to your 🐟 count (inventory only, not the leaderboard).
 
 Press **B** (or tap 🧱) to toggle build mode — a yellow outline shows where
 the next block lands, just in front of you. Press **Interact** to place a
-block there (costs 1 🪵), or press it again on a block you placed to remove
-it for a refund. Blocks are real obstacles for everyone in the town, synced
-live. Capped at 150 blocks total so the town doesn't fill up solid.
+block there, or press it again on a block you placed to remove it for a
+refund. Blocks are real obstacles for everyone in the town, synced live.
+Capped at 150 blocks total so the town doesn't fill up solid.
+
+Two materials to pick from — press **F** (or tap the material pill under
+the build banner) to switch: 🪵 **Wall** (1 wood, a full solid block) or
+🪨 **Fence** (1 stone, a thinner picket-style block). Both block movement
+the same way; fence is just the cheaper, lower-profile look for marking
+off a yard instead of walling it in.
 
 ### Going underground
 
