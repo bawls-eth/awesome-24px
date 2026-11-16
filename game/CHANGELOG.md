@@ -76,6 +76,8 @@ for how each feature actually works and plays.
   costs flowers instead of wood/stone, and glows at night
 - A live "villagers in town right now" count on the join screen, before
   you've even picked a name — read-only, no new player record created
+- A small wooden dock off the pond's edge and a few benches scattered
+  around town — purely decorative scenery, no new mechanics
 
 ## Villagers and expression
 

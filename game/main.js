@@ -406,6 +406,8 @@ class TownScene extends Phaser.Scene {
     this.drawPath();
     this.drawPond();
     this.drawPondCats();
+    this.drawDock();
+    this.drawBenches();
     this.drawEastPond();
     this.drawBridge();
     this.drawHouse();
@@ -2113,6 +2115,37 @@ class TownScene extends Phaser.Scene {
     const gapHalf = 34;
     this.addObstacleRect({ x: cx - rx * 0.8, y: cy - ry * 0.8, width: rx * 1.6, height: ry * 0.8 - gapHalf });
     this.addObstacleRect({ x: cx - rx * 0.8, y: cy + gapHalf, width: rx * 1.6, height: ry * 0.8 - gapHalf });
+  }
+
+  drawDock() {
+    // A small wooden pier off the pond's east edge — purely decorative
+    // (no collision), just a nicer place to stand and look at the water.
+    const baseX = 410;
+    const baseY = 600;
+    const g = this.add.graphics().setDepth(-1);
+    g.fillStyle(0x8a5a3b, 1);
+    g.fillRect(baseX, baseY - 14, 70, 28);
+    g.lineStyle(2, 0x5a3a22, 1);
+    for (let i = 0; i <= 70; i += 14) g.lineBetween(baseX + i, baseY - 14, baseX + i, baseY + 14);
+    g.fillStyle(0x5a3a22, 1);
+    [baseX + 6, baseX + 64].forEach((x) => g.fillRect(x - 3, baseY + 12, 6, 10));
+  }
+
+  // A few sittable-looking (purely decorative) benches scattered around
+  // town — no collision, no interact handler, just scenery.
+  drawBenches() {
+    const spots = [
+      { x: 760, y: 560 }, { x: 1620, y: 640 }, { x: 1950, y: 720 },
+    ];
+    spots.forEach(({ x, y }) => {
+      const g = this.add.graphics().setDepth(y - 1);
+      g.fillStyle(0x6b4226, 1);
+      g.fillRect(x - 18, y - 4, 36, 8);
+      g.fillRect(x - 18, y - 14, 36, 4);
+      g.fillStyle(0x4a2e18, 1);
+      g.fillRect(x - 16, y + 4, 4, 8);
+      g.fillRect(x + 12, y + 4, 4, 8);
+    });
   }
 
   drawPondCats() {

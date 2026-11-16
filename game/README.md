@@ -17,7 +17,8 @@ The join screen shows a live count of how many villagers are in town
 right now, before you even pick a name.
 
 **What there is to do:**
-- Walk the town, chat, hang out by the campfire, the pond, or the statue
+- Walk the town, chat, hang out by the campfire, the pond's little dock,
+  a bench, or the statue
 - 9 emotes (keys **1-9**) that pop up over your head for everyone to see
 - A rotating **✨ sparkle** wanders the town every 8s — walk into it to
   score a point; the player list is a live-sorted mini-leaderboard
