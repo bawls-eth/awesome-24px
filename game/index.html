@@ -56,6 +56,7 @@
     <button id="achievements-badge" type="button">🏆 <b id="achievement-count">0</b>/<span id="achievement-cap">25</span></button>
     <button id="map-btn" type="button" title="Town map (M)">🗺️ Map</button>
     <button id="museum-badge" type="button" title="Museum collection">🏛️ Museum</button>
+    <button id="wildlife-badge" type="button" title="Wildlife log">🔭 Wildlife <b id="wildlife-count">0</b>/<span id="wildlife-cap">0</span></button>
     <div id="status-row">
       <div id="streak-badge" title="Daily login streak">🔥 Day <b id="streak-count">0</b></div>
       <div id="town-rating" title="How much the town has been built up, shared by everyone">🏘️ <span id="town-rating-label">Empty</span> (<b id="town-rating-count">0</b>/150)</div>
@@ -96,6 +97,16 @@
       <ul id="museum-fauna-list" class="museum-list"></ul>
       <h3 class="museum-section-title">🌸 Flora</h3>
       <ul id="museum-flora-list" class="museum-list"></ul>
+    </div>
+  </div>
+
+  <div id="wildlife-overlay" class="hidden">
+    <div class="achievements-card">
+      <button id="wildlife-close-btn" type="button" aria-label="Close">✕</button>
+      <h2>🔭 Wildlife Log</h2>
+      <p class="polyroll-tagline">Walk up to any of the wild plants/animals scattered through the
+        wilderness, ponds, and ocean and press E to log it — no need to carry it in.</p>
+      <ul id="wildlife-list" class="museum-list"></ul>
     </div>
   </div>
 

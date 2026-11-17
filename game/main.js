@@ -371,77 +371,82 @@ const PUNK_ROCKS = [
 // here since this is a 2D Phaser game; the GLBs ride along unused but ID-
 // matched, ready for a 3D engine (or this game's own Three.js cave) later.
 // `zone` just picks which scatter rule below places it — not a biome engine.
+// `name` is the display name shown in the Wildlife Log once a specimen's
+// been logged — the full metadata (scientific name, diet, etc.) lives in
+// species-registry.json instead; duplicating just the short display name
+// here avoids an extra fetch for something this small.
+const FF_COLLECT_RADIUS = 40;
 const FF_ASSETS = [
-  { id: 'fox', w: 28, h: 28, zone: 'forest' },
-  { id: 'deer', w: 34, h: 34, zone: 'forest' },
-  { id: 'bird', w: 18, h: 18, zone: 'forest' },
-  { id: 'butterfly', w: 16, h: 16, zone: 'meadow' },
-  { id: 'frog', w: 16, h: 16, zone: 'pond' },
-  { id: 'snake', w: 20, h: 20, zone: 'meadow' },
-  { id: 'mushroom', w: 14, h: 14, zone: 'forest' },
-  { id: 'oak_tree', w: 44, h: 44, zone: 'forest' },
-  { id: 'pine_tree', w: 36, h: 48, zone: 'forest' },
-  { id: 'flower', w: 14, h: 14, zone: 'meadow' },
-  { id: 'fern', w: 18, h: 18, zone: 'forest' },
-  { id: 'grass', w: 14, h: 14, zone: 'meadow' },
-  { id: 'shrub', w: 22, h: 22, zone: 'forest' },
-  { id: 'cactus', w: 22, h: 30, zone: 'desert_accent' },
-  { id: 'trout', w: 18, h: 18, zone: 'pond' },
-  { id: 'crab', w: 16, h: 16, zone: 'pond' },
-  { id: 'jellyfish', w: 18, h: 18, zone: 'ocean' },
-  { id: 'shark', w: 34, h: 34, zone: 'ocean' },
-  { id: 'coral', w: 20, h: 20, zone: 'ocean' },
-  { id: 'kelp', w: 18, h: 34, zone: 'ocean' },
+  { id: 'fox', w: 28, h: 28, zone: 'forest', name: 'Red Fox' },
+  { id: 'deer', w: 34, h: 34, zone: 'forest', name: 'White-tailed Deer' },
+  { id: 'bird', w: 18, h: 18, zone: 'forest', name: 'European Robin' },
+  { id: 'butterfly', w: 16, h: 16, zone: 'meadow', name: 'Monarch Butterfly' },
+  { id: 'frog', w: 16, h: 16, zone: 'pond', name: 'American Bullfrog' },
+  { id: 'snake', w: 20, h: 20, zone: 'meadow', name: 'Garter Snake' },
+  { id: 'mushroom', w: 14, h: 14, zone: 'forest', name: 'Fly Agaric' },
+  { id: 'oak_tree', w: 44, h: 44, zone: 'forest', name: 'Northern Red Oak' },
+  { id: 'pine_tree', w: 36, h: 48, zone: 'forest', name: 'Eastern White Pine' },
+  { id: 'flower', w: 14, h: 14, zone: 'meadow', name: 'Wild Tulip' },
+  { id: 'fern', w: 18, h: 18, zone: 'forest', name: 'Western Sword Fern' },
+  { id: 'grass', w: 14, h: 14, zone: 'meadow', name: 'Tall Fescue' },
+  { id: 'shrub', w: 22, h: 22, zone: 'forest', name: 'Common Juniper' },
+  { id: 'cactus', w: 22, h: 30, zone: 'desert_accent', name: 'Saguaro Cactus' },
+  { id: 'trout', w: 18, h: 18, zone: 'pond', name: 'Rainbow Trout' },
+  { id: 'crab', w: 16, h: 16, zone: 'pond', name: 'Fiddler Crab' },
+  { id: 'jellyfish', w: 18, h: 18, zone: 'ocean', name: 'Moon Jellyfish' },
+  { id: 'shark', w: 34, h: 34, zone: 'ocean', name: 'Blacktip Reef Shark' },
+  { id: 'coral', w: 20, h: 20, zone: 'ocean', name: 'Staghorn Coral' },
+  { id: 'kelp', w: 18, h: 34, zone: 'ocean', name: 'Giant Kelp' },
   // Batch 2 (44 species) — fills in the biomes/taxa batch 1 barely
   // touched: desert, alpine/tundra, rainforest, more wetland/marine/
   // freshwater variety, plus arachnids and mollusks. Same id/zone
   // scatter convention as above; 'desert_accent' and 'alpine_accent'
   // are both fixed hand-placed corners (there's no real desert or
   // alpine biome on this map), same trick already used for cactus.
-  { id: 'scorpion', w: 20, h: 16, zone: 'desert_accent' },
-  { id: 'roadrunner', w: 24, h: 20, zone: 'desert_accent' },
-  { id: 'desert_tortoise', w: 22, h: 16, zone: 'desert_accent' },
-  { id: 'joshua_tree', w: 40, h: 52, zone: 'desert_accent' },
-  { id: 'sagebrush', w: 22, h: 20, zone: 'desert_accent' },
-  { id: 'snowy_owl', w: 24, h: 20, zone: 'alpine_accent' },
-  { id: 'arctic_fox', w: 26, h: 22, zone: 'alpine_accent' },
-  { id: 'caribou', w: 34, h: 30, zone: 'alpine_accent' },
-  { id: 'mountain_goat', w: 30, h: 30, zone: 'alpine_accent' },
-  { id: 'lichen', w: 14, h: 10, zone: 'alpine_accent' },
-  { id: 'toucan', w: 22, h: 20, zone: 'forest' },
-  { id: 'poison_dart_frog', w: 14, h: 12, zone: 'forest' },
-  { id: 'howler_monkey', w: 28, h: 26, zone: 'forest' },
-  { id: 'orchid', w: 18, h: 16, zone: 'forest' },
-  { id: 'liana_vine', w: 20, h: 30, zone: 'forest' },
-  { id: 'leafcutter_ant', w: 14, h: 10, zone: 'forest' },
-  { id: 'heron', w: 26, h: 30, zone: 'pond' },
-  { id: 'cattail', w: 14, h: 28, zone: 'pond' },
-  { id: 'dragonfly', w: 16, h: 14, zone: 'pond' },
-  { id: 'otter', w: 26, h: 20, zone: 'pond' },
-  { id: 'water_lily', w: 16, h: 16, zone: 'pond' },
-  { id: 'sea_turtle', w: 30, h: 28, zone: 'ocean' },
-  { id: 'clownfish', w: 14, h: 14, zone: 'ocean' },
-  { id: 'octopus', w: 22, h: 20, zone: 'ocean' },
-  { id: 'starfish', w: 16, h: 16, zone: 'ocean' },
-  { id: 'sea_anemone', w: 18, h: 16, zone: 'ocean' },
-  { id: 'seahorse', w: 16, h: 18, zone: 'ocean' },
-  { id: 'beaver', w: 28, h: 22, zone: 'pond' },
-  { id: 'catfish', w: 20, h: 16, zone: 'pond' },
-  { id: 'duckweed', w: 12, h: 8, zone: 'pond' },
-  { id: 'owl', w: 22, h: 22, zone: 'forest' },
-  { id: 'squirrel', w: 18, h: 16, zone: 'forest' },
-  { id: 'hedgehog', w: 16, h: 14, zone: 'forest' },
-  { id: 'ladybug', w: 12, h: 12, zone: 'meadow' },
-  { id: 'honeybee', w: 12, h: 12, zone: 'meadow' },
-  { id: 'spider', w: 14, h: 14, zone: 'forest' },
-  { id: 'clover', w: 12, h: 10, zone: 'meadow' },
-  { id: 'dandelion', w: 12, h: 14, zone: 'meadow' },
-  { id: 'moss', w: 12, h: 8, zone: 'forest' },
-  { id: 'maple_tree', w: 44, h: 44, zone: 'forest' },
-  { id: 'blackberry_vine', w: 22, h: 20, zone: 'forest' },
-  { id: 'hawk', w: 24, h: 22, zone: 'forest' },
-  { id: 'hummingbird', w: 12, h: 12, zone: 'meadow' },
-  { id: 'bat', w: 16, h: 14, zone: 'forest' },
+  { id: 'scorpion', w: 20, h: 16, zone: 'desert_accent', name: 'Deathstalker Scorpion' },
+  { id: 'roadrunner', w: 24, h: 20, zone: 'desert_accent', name: 'Greater Roadrunner' },
+  { id: 'desert_tortoise', w: 22, h: 16, zone: 'desert_accent', name: 'Desert Tortoise' },
+  { id: 'joshua_tree', w: 40, h: 52, zone: 'desert_accent', name: 'Joshua Tree' },
+  { id: 'sagebrush', w: 22, h: 20, zone: 'desert_accent', name: 'Big Sagebrush' },
+  { id: 'snowy_owl', w: 24, h: 20, zone: 'alpine_accent', name: 'Snowy Owl' },
+  { id: 'arctic_fox', w: 26, h: 22, zone: 'alpine_accent', name: 'Arctic Fox' },
+  { id: 'caribou', w: 34, h: 30, zone: 'alpine_accent', name: 'Caribou' },
+  { id: 'mountain_goat', w: 30, h: 30, zone: 'alpine_accent', name: 'Mountain Goat' },
+  { id: 'lichen', w: 14, h: 10, zone: 'alpine_accent', name: 'Map Lichen' },
+  { id: 'toucan', w: 22, h: 20, zone: 'forest', name: 'Keel-billed Toucan' },
+  { id: 'poison_dart_frog', w: 14, h: 12, zone: 'forest', name: 'Strawberry Poison Frog' },
+  { id: 'howler_monkey', w: 28, h: 26, zone: 'forest', name: 'Mantled Howler' },
+  { id: 'orchid', w: 18, h: 16, zone: 'forest', name: 'Tiger Orchid' },
+  { id: 'liana_vine', w: 20, h: 30, zone: 'forest', name: 'Strangler Fig Vine' },
+  { id: 'leafcutter_ant', w: 14, h: 10, zone: 'forest', name: 'Leafcutter Ant' },
+  { id: 'heron', w: 26, h: 30, zone: 'pond', name: 'Great Blue Heron' },
+  { id: 'cattail', w: 14, h: 28, zone: 'pond', name: 'Common Cattail' },
+  { id: 'dragonfly', w: 16, h: 14, zone: 'pond', name: 'Common Green Darner' },
+  { id: 'otter', w: 26, h: 20, zone: 'pond', name: 'North American River Otter' },
+  { id: 'water_lily', w: 16, h: 16, zone: 'pond', name: 'White Water Lily' },
+  { id: 'sea_turtle', w: 30, h: 28, zone: 'ocean', name: 'Green Sea Turtle' },
+  { id: 'clownfish', w: 14, h: 14, zone: 'ocean', name: 'Ocellaris Clownfish' },
+  { id: 'octopus', w: 22, h: 20, zone: 'ocean', name: 'Common Octopus' },
+  { id: 'starfish', w: 16, h: 16, zone: 'ocean', name: 'Common Starfish' },
+  { id: 'sea_anemone', w: 18, h: 16, zone: 'ocean', name: 'Giant Green Anemone' },
+  { id: 'seahorse', w: 16, h: 18, zone: 'ocean', name: 'Lined Seahorse' },
+  { id: 'beaver', w: 28, h: 22, zone: 'pond', name: 'North American Beaver' },
+  { id: 'catfish', w: 20, h: 16, zone: 'pond', name: 'Channel Catfish' },
+  { id: 'duckweed', w: 12, h: 8, zone: 'pond', name: 'Common Duckweed' },
+  { id: 'owl', w: 22, h: 22, zone: 'forest', name: 'Great Horned Owl' },
+  { id: 'squirrel', w: 18, h: 16, zone: 'forest', name: 'Eastern Gray Squirrel' },
+  { id: 'hedgehog', w: 16, h: 14, zone: 'forest', name: 'European Hedgehog' },
+  { id: 'ladybug', w: 12, h: 12, zone: 'meadow', name: 'Seven-spot Ladybird' },
+  { id: 'honeybee', w: 12, h: 12, zone: 'meadow', name: 'Western Honey Bee' },
+  { id: 'spider', w: 14, h: 14, zone: 'forest', name: 'Garden Orb Weaver' },
+  { id: 'clover', w: 12, h: 10, zone: 'meadow', name: 'White Clover' },
+  { id: 'dandelion', w: 12, h: 14, zone: 'meadow', name: 'Common Dandelion' },
+  { id: 'moss', w: 12, h: 8, zone: 'forest', name: 'Common Haircap Moss' },
+  { id: 'maple_tree', w: 44, h: 44, zone: 'forest', name: 'Sugar Maple' },
+  { id: 'blackberry_vine', w: 22, h: 20, zone: 'forest', name: 'Blackberry Bramble' },
+  { id: 'hawk', w: 24, h: 22, zone: 'forest', name: 'Red-tailed Hawk' },
+  { id: 'hummingbird', w: 12, h: 12, zone: 'meadow', name: 'Ruby-throated Hummingbird' },
+  { id: 'bat', w: 16, h: 14, zone: 'forest', name: 'Little Brown Bat' },
 ];
 const POND_CATS = [
   { y: 552, frame: 0, range: [180, 330] },
@@ -1010,6 +1015,8 @@ class TownScene extends Phaser.Scene {
     this.setupTriviaKey();
     this.setupAchievementsUI();
     this.setupMuseumUI();
+    this.setupFloraFaunaLog();
+    this.setupWildlifeUI();
     this.setupKeysHelp();
     this.setupChangelogViewer();
     this.setupFeedbackButton();
@@ -1675,6 +1682,11 @@ class TownScene extends Phaser.Scene {
     const villager = this.findNearestVillager();
     if (villager) {
       this.talkToVillager(villager);
+      return;
+    }
+    const specimen = this.findNearestFloraFauna();
+    if (specimen) {
+      this.collectFloraFauna(specimen);
       return;
     }
     if (this.isNearMerchant()) {
@@ -3360,6 +3372,7 @@ class TownScene extends Phaser.Scene {
     const land = this.landBounds();
     const desertSpots = this.floraFaunaClusterSpots(land.x + 70, land.y + land.height - 70);
     const alpineSpots = this.floraFaunaClusterSpots(land.x + land.width - 70, land.y + 70);
+    this.ffSpecimens = [];
     FF_ASSETS.forEach((a, idx) => {
       const seedBase = 500 + idx * 13;
       const count = a.zone === 'forest' || a.zone === 'meadow' ? 3 : 2;
@@ -3389,12 +3402,87 @@ class TownScene extends Phaser.Scene {
           if (inVillage) { x += 350; y += 350; } // one-pass nudge clear of the village, same idea as the ocean branch
         }
         const sprite = this.add.image(x, y, `ff_${a.id}`).setDisplaySize(a.w, a.h).setDepth(y);
+        this.ffSpecimens.push({ id: a.id, name: a.name, x, y });
         if (a.zone === 'pond' || a.zone === 'ocean') {
           this.tweens.add({ targets: sprite, y: y - 4, duration: 1200 + i * 150, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
         } else {
           this.tweens.add({ targets: sprite, angle: { from: -3, to: 3 }, duration: 1800 + i * 200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
         }
       }
+    });
+  }
+
+  // ---------- Wildlife Log (collecting the flora/fauna pack) ----------
+  // Walking up to any scattered specimen and pressing E logs that species
+  // permanently (per device), same "no need to carry it in" pattern as the
+  // museum's fauna/flora sections — just a separate, bigger list, since
+  // folding 64+ species into the small fixed-size FAUNA_TYPES/FLORA_TYPES
+  // arrays the museum already uses would mean restructuring a system this
+  // doesn't need to touch.
+
+  setupFloraFaunaLog() {
+    const saved = loadSave();
+    this.ffDiscovered = new Set(Array.isArray(saved.ffDiscovered) ? saved.ffDiscovered : []);
+    this.updateWildlifeHUD();
+  }
+
+  saveFloraFaunaLog() {
+    writeSave({ ffDiscovered: [...this.ffDiscovered] });
+  }
+
+  updateWildlifeHUD() {
+    const countEl = document.getElementById('wildlife-count');
+    const capEl = document.getElementById('wildlife-cap');
+    if (countEl) countEl.textContent = this.ffDiscovered.size;
+    if (capEl) capEl.textContent = FF_ASSETS.length;
+  }
+
+  findNearestFloraFauna() {
+    if (!this.ffSpecimens) return null;
+    let nearest = null;
+    let nearestDist = Infinity;
+    this.ffSpecimens.forEach((spec) => {
+      const d = Phaser.Math.Distance.Between(this.localBody.x, this.localBody.y, spec.x, spec.y);
+      if (d < FF_COLLECT_RADIUS && d < nearestDist) { nearest = spec; nearestDist = d; }
+    });
+    return nearest;
+  }
+
+  collectFloraFauna(spec) {
+    if (this.ffDiscovered.has(spec.id)) {
+      this.showFloatingText(spec.x, spec.y - 30, `${spec.name} (already logged)`);
+      SFX.pop();
+      return;
+    }
+    this.ffDiscovered.add(spec.id);
+    this.saveFloraFaunaLog();
+    this.updateWildlifeHUD();
+    this.awardPoint(1, `🔍 ${spec.name} logged! (${this.ffDiscovered.size}/${FF_ASSETS.length})`, spec.x, spec.y - 30, 'achievement');
+  }
+
+  setupWildlifeUI() {
+    document.getElementById('wildlife-badge').addEventListener('click', () => {
+      this.renderWildlifePanel();
+      document.getElementById('wildlife-overlay').classList.remove('hidden');
+      this.wildlifeOpen = true;
+    });
+    document.getElementById('wildlife-close-btn').addEventListener('click', () => {
+      document.getElementById('wildlife-overlay').classList.add('hidden');
+      this.wildlifeOpen = false;
+    });
+  }
+
+  renderWildlifePanel() {
+    const listEl = document.getElementById('wildlife-list');
+    if (!listEl) return;
+    listEl.innerHTML = '';
+    FF_ASSETS.forEach((a) => {
+      const unlocked = this.ffDiscovered.has(a.id);
+      const li = document.createElement('li');
+      li.className = unlocked ? 'unlocked' : '';
+      li.innerHTML = `<span class="ach-icon">${unlocked ? '🔍' : '🔒'}</span>`
+        + `<span class="ach-text">${unlocked ? a.name : '???'}</span>`;
+      listEl.appendChild(li);
     });
   }
 

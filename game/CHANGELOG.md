@@ -300,3 +300,11 @@ for how each feature actually works and plays.
   groups each get one fixed "accent corner" instead of being scattered
   across the land like everything else. `species-registry.json` is now
   64 species total
+- The flora/fauna pack is now actually collectible, not just decor:
+  walk up to any of the 64 scattered specimens and press E to log it
+  into a new **🔭 Wildlife Log** panel (a button under the player list,
+  right next to Museum) — same "no need to carry it in" idea as the
+  museum's fauna/flora sections, just its own bigger list instead of
+  folding 64+ species into that system's small fixed-size arrays.
+  Logging a species again just repeats a flavor line instead of
+  double-counting; progress is saved permanently per device

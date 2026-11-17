@@ -113,7 +113,11 @@ right now, before you even pick a name.
   `game/species-registry.json`, a modular registry meant to keep growing
   in further batches; matching GLB 3D models ship alongside the SVGs in
   `game/assets/flora-fauna/glb/` for any future 3D engine, keyed by the
-  same species id
+  same species id. Every specimen is collectible: walk up and press **E**
+  to log it into your **🔭 Wildlife Log** (a button under the player
+  list) — logging the same species again just repeats a flavor line,
+  no double-counting; your progress (`x`/64 and counting) is permanent
+  per device, same as the Museum
 - An **ocean-bordered island** well beyond the village — walk past the
   original town in any direction and you'll cross a wilderness ring of
   trees, rocks, flowers, and roaming critters before hitting a beach and
