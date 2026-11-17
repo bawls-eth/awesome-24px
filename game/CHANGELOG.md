@@ -230,3 +230,10 @@ for how each feature actually works and plays.
   a fallback for browsers that don't yet honor it, the game canvas's
   container now tracks `visualViewport` directly instead of staying
   pinned to the full (pre-keyboard) page height
+- Fixed the fishing bite being easy to miss entirely on mobile: the
+  bobber rendered at a fixed depth below the pond/ground layer, so
+  anything with a normal y-based depth (players, decor, even the
+  pond's own ripple effect) could render on top of it; a zoomed-out
+  camera made this worse. It now renders above everything and pulses
+  with a scale animation on top of its color change when a fish bites,
+  so the catch window is much harder to miss and let expire unnoticed

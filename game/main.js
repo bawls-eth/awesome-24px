@@ -2522,7 +2522,12 @@ class TownScene extends Phaser.Scene {
   startFishing(spot) {
     this.fishing.state = 'casting';
     this.fishing.spot = spot;
-    this.fishing.bobber = this.add.circle(spot.x, spot.y, 4, 0xffffff).setDepth(-1);
+    // Depth -1 (same as the pond/ground layer) used to mean the bobber
+    // could render underneath anything with a normal y-based depth —
+    // players, decor, ripples added after it — which on a zoomed-out
+    // mobile camera made the bite's color change easy to miss entirely.
+    // A fixed high depth keeps it on top of the world consistently.
+    this.fishing.bobber = this.add.circle(spot.x, spot.y, 4, 0xffffff).setDepth(99999);
     this.fishing.rod = this.add.graphics().setDepth(100000);
     const waitMs = FISH_BITE_WAIT_MIN + Math.random() * (FISH_BITE_WAIT_MAX - FISH_BITE_WAIT_MIN);
     this.fishing.timer = this.time.delayedCall(waitMs, () => this.fishBite());
@@ -2541,7 +2546,22 @@ class TownScene extends Phaser.Scene {
   fishBite() {
     if (this.fishing.state !== 'casting') return;
     this.fishing.state = 'biting';
-    if (this.fishing.bobber) this.fishing.bobber.setFillStyle(0xff4444);
+    if (this.fishing.bobber) {
+      const bobber = this.fishing.bobber;
+      bobber.setFillStyle(0xff4444);
+      // A color change alone on a 4px circle is easy to miss, especially
+      // zoomed out on mobile — a quick scale pulse makes the bite much
+      // harder to not notice, on top of the ❗ text and SFX.pop() below.
+      bobber.setScale(1);
+      this.tweens.add({
+        targets: bobber,
+        scale: 2.2,
+        duration: 180,
+        yoyo: true,
+        repeat: 2,
+        ease: 'Sine.easeInOut',
+      });
+    }
     this.showFloatingText(this.fishing.spot.x, this.fishing.spot.y - 24, '❗');
     SFX.pop();
     this.fishing.timer = this.time.delayedCall(FISH_BITE_WINDOW, () => this.fishMiss());
