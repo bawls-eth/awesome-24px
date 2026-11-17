@@ -130,6 +130,13 @@ right now, before you even pick a name.
   list; skip a day and it resets to 1
 - A **notice board** near the statue shows the live top 3 ⭐ scores —
   no need to open the player list to see who's winning
+- 🏡 **Residential Lane** — 5 named animal-villager NPCs (Mocha, Frosty,
+  Buster, Lily, Spike), each with their own house, personality, and
+  lines, south of the museum/shop cluster. Press **E** near one to chat
+  (closer friends unlock extra dialogue), or **G** / the 🎁 **Gift**
+  button to give them something from your bag they like — gifting
+  raises a 0–100 affinity (saved per device) through acquaintance →
+  friend → good friend → best friend, with a ⭐ bonus on every tier-up
 - 📖 **Guestbook** — a signpost east of the statue lets you leave a
   short (80-character) signed note for whoever visits next. Notes are
   stored in Firebase, so everyone sees the same last 20, not just a

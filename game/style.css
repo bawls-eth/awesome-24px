@@ -695,6 +695,25 @@ body.touch-device #mobile-controls {
   border-color: #ffe066;
 }
 
+#gift-hint-btn {
+  position: fixed;
+  bottom: 268px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(216,143,176,0.92);
+  border: 2px solid #ffe066;
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #fff6e8;
+  z-index: 15;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+#gift-hint-btn.hidden { display: none; }
+
 /* ---------- Underground (Three.js voxel cave) ---------- */
 
 #underground-overlay {

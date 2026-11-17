@@ -264,3 +264,14 @@ for how each feature actually works and plays.
   generator scanned every few pixels of the new, much larger world to
   draw ground texture and waves, which measurably tanked frame rate —
   it now draws a fixed number of each instead
+- Added 🏡 **Residential Lane**: 5 named animal-villager NPCs (Mocha,
+  Frosty, Buster, Lily, Spike), each with their own personality, house,
+  and dialogue, south of the museum/shop cluster — the first real
+  Animal-Crossing-style villagers in the game, distinct from the two
+  existing flavor-only NPCs. Press E to chat (closer friendships unlock
+  extra lines) or press G / tap the new 🎁 Gift button to give a
+  villager something from your bag they like; gifting raises a
+  per-device 0–100 affinity through acquaintance → friend → good friend
+  → best friend, with a ⭐ bonus on every tier-up
+- Softened the ground and path colors to a lighter, more pastel palette
+  for a cozier, more Animal-Crossing-like look

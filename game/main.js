@@ -659,6 +659,90 @@ const PORTALS = [
 const EAST_POND = { cx: 2000, cy: 280, rx: 130, ry: 80 };
 const MAIN_POND = { cx: 260, cy: 600, rx: 150, ry: 90 };
 
+// A row of named animal-villager houses along the south edge of the
+// village — a Residential Lane, in the gap below the pond/museum/shop
+// cluster and well clear of the arcade district's foot traffic. Unlike
+// Professor Byte/Salty Mo (flavor-only NPCs), each of these has its own
+// species/personality, a liked-gift list drawn from the same resources
+// the player already carries in their bag, and a 0-100 affinity tracked
+// locally per villager — closer to the real Animal Crossing loop of
+// "bring them something they like, they warm up to you over time."
+const VILLAGER_HOUSE_W = 64;
+const VILLAGER_HOUSE_H = 46;
+const VILLAGER_RADIUS = 46;
+const VILLAGERS = [
+  {
+    id: 'mocha', name: 'Mocha', species: 'coolcats', frame: 0, personality: 'Lazy',
+    hx: 200, hy: 1080, roof: 0xd98f3b,
+    likes: ['fruit', 'flowers'],
+    lines: [
+      "Ugh, mornings. Who invented those.",
+      "I was *this* close to a nap. Then you showed up. Worth it, I guess.",
+      "Food's the best hobby there is, and I will not be taking questions.",
+    ],
+    closeLines: [
+      "You're basically furniture around here now. The good kind.",
+      "I saved you a napping spot by the window. Don't tell the others.",
+    ],
+  },
+  {
+    id: 'frosty', name: 'Frosty', species: 'pudgypenguins', frame: 3, personality: 'Snooty',
+    hx: 650, hy: 1080, roof: 0x6fa8d9,
+    likes: ['shells', 'turnips'],
+    lines: [
+      "That outfit is... a choice. I respect the confidence, at least.",
+      "I only associate with residents who have *taste*. You're on probation.",
+      "Bells, dear. Everything of value costs bells.",
+    ],
+    closeLines: [
+      "Fine. You have taste after all. Don't let it go to your head.",
+      "I've decided you're my exception to 'everyone else is beneath me.'",
+    ],
+  },
+  {
+    id: 'buster', name: 'Buster', species: 'doge', frame: 1, personality: 'Jock',
+    hx: 1300, hy: 1080, roof: 0x5ab06a,
+    likes: ['fish', 'wood'],
+    lines: [
+      "Did a hundred laps of the plaza before breakfast. You should try it!",
+      "Bet I can out-fish you. Bet. Name the pond, name the time.",
+      "Gotta keep those gains up, even on an island. Especially on an island.",
+    ],
+    closeLines: [
+      "You're my training buddy now, official, no takebacks.",
+      "Knew you had it in you! High five! ...okay, paw-bump works too.",
+    ],
+  },
+  {
+    id: 'lily', name: 'Lily', species: 'coolcats_frogs', frame: 2, personality: 'Peppy',
+    hx: 1700, hy: 1080, roof: 0xe06fa0,
+    likes: ['flowers', 'bugs'],
+    lines: [
+      "OMG hi!! I was just thinking about you, isn't that wild??",
+      "Today is going to be the BEST day, I can just feel it!",
+      "You have to come see the sunset from the dock later, promise me!",
+    ],
+    closeLines: [
+      "You're seriously my favorite person on this whole island, no contest!",
+      "I made you a flower crown in my head. It's beautiful. You're welcome.",
+    ],
+  },
+  {
+    id: 'spike', name: 'Spike', species: 'mohawks', frame: 4, personality: 'Cranky',
+    hx: 2050, hy: 1080, roof: 0x8a5a5a,
+    likes: ['stone', 'bugs'],
+    lines: [
+      "Back in my day we didn't have bridges. We swam. Builds character.",
+      "You kids and your 'sparkles' and your 'emotes.' Bah.",
+      "...fine, the weather's decent today. Don't quote me on it.",
+    ],
+    closeLines: [
+      "You're alright, kid. Don't make me say it twice.",
+      "Come by anytime. Door's open. Don't tell anyone I said that either.",
+    ],
+  },
+];
+
 // Fixed, hand-picked landmarks for the town map overlay — deliberately a
 // simple schematic (dots + labels on a plain backdrop), not a literal
 // zoomed-out render of the actual sprites, which would be unreadable mud
@@ -679,6 +763,7 @@ const MAP_LANDMARKS = [
   // doors all live together here — one pin for the whole district
   // instead of 5 crowded ones this close together at map scale.
   { x: 1900, y: 800, label: '🕹️ Arcade' },
+  { x: 1125, y: 1080, label: '🏡 Residential Lane' },
 ];
 
 const FISHING_SPOTS = [
@@ -795,6 +880,7 @@ class TownScene extends Phaser.Scene {
     this.drawTulipBeds();
     this.drawRocks();
     this.drawPunkRocks();
+    this.drawVillagers();
 
     this.createLocalPlayer(this.selfData);
     this.physics.add.collider(this.localBody, this.obstacles);
@@ -835,6 +921,7 @@ class TownScene extends Phaser.Scene {
     this.setupReduceMotionToggle();
     this.setupPhotoMode();
     this.setupFishHint();
+    this.setupGiftHint();
     this.setupSaveBackup();
     this.setupWhatsNew();
     this.setupTriviaKey();
@@ -875,6 +962,7 @@ class TownScene extends Phaser.Scene {
     this.updateFishingRod();
     this.updateDigHoleHint();
     this.updateFishHint();
+    this.updateGiftHint();
   }
 
   // ---------- movement ----------
@@ -1442,6 +1530,7 @@ class TownScene extends Phaser.Scene {
     this.updateInventoryHUD();
 
     this.input.keyboard.on('keydown-E', () => { if (this.canAct()) this.interact(); });
+    this.input.keyboard.on('keydown-G', () => { if (this.canAct()) this.giveNearestVillagerGift(); });
     const btn = document.getElementById('interact-btn');
     if (btn) btn.addEventListener('click', () => { if (this.canAct()) this.interact(); });
   }
@@ -1498,6 +1587,11 @@ class TownScene extends Phaser.Scene {
     }
     if (this.isNearNPC2()) {
       this.talkToNPC2();
+      return;
+    }
+    const villager = this.findNearestVillager();
+    if (villager) {
+      this.talkToVillager(villager);
       return;
     }
     if (this.isNearMerchant()) {
@@ -3166,8 +3260,8 @@ class TownScene extends Phaser.Scene {
     // of everything, so one layer up is enough.
     const groundDepth = this.world.originY - 900;
     const g = this.add.graphics().setDepth(groundDepth);
-    g.fillStyle(0x6bbf59, 1).fillRect(land.x, land.y, land.width, land.height);
-    g.fillStyle(0x5aa84c, 1);
+    g.fillStyle(0x8fd474, 1).fillRect(land.x, land.y, land.width, land.height);
+    g.fillStyle(0x7bc464, 1);
     // A fixed, small number of texture flecks (same reasoning as
     // drawOcean()'s waves) instead of scanning a 48px grid across the
     // whole land rect, which at this size added several thousand
@@ -3188,10 +3282,10 @@ class TownScene extends Phaser.Scene {
     // land rect — a dirt road cutting straight across the wilderness and
     // into the ocean made no sense.
     const g = this.add.graphics().setDepth(-1);
-    g.fillStyle(0xc9ab7a, 1);
+    g.fillStyle(0xe0c49a, 1);
     g.fillRect(VILLAGE_BOUNDS.x, 600 - 32, VILLAGE_BOUNDS.width, 64);
     g.fillRect(800 - 32, VILLAGE_BOUNDS.y, 64, VILLAGE_BOUNDS.height);
-    g.fillStyle(0xd9c294, 1);
+    g.fillStyle(0xedd9ad, 1);
     g.fillCircle(800, 600, 150);
   }
 
@@ -4054,6 +4148,132 @@ class TownScene extends Phaser.Scene {
     this.npc2BubbleTimer = this.time.delayedCall(4200, () => this.npc2Bubble.setVisible(false));
     this.incrementStat('npc2Chats');
     SFX.pop();
+  }
+
+  // ---------- Residential Lane villagers (gift-affinity, AC-style) ----------
+
+  villagerAffinity(id) {
+    const map = loadSave().villagerAffinity || {};
+    return map[id] || 0;
+  }
+
+  villagerTier(id) {
+    const a = this.villagerAffinity(id);
+    if (a >= 50) return 3; // best friend
+    if (a >= 25) return 2; // good friend
+    if (a >= 10) return 1; // friend
+    return 0; // acquaintance
+  }
+
+  bumpVillagerAffinity(id, amount) {
+    const map = { ...(loadSave().villagerAffinity || {}) };
+    const before = map[id] || 0;
+    const after = Math.min(100, before + amount);
+    map[id] = after;
+    writeSave({ villagerAffinity: map });
+    return { before, after };
+  }
+
+  drawVillagers() {
+    this.villagerBubbles = {};
+    VILLAGERS.forEach((v) => {
+      const { hx: x, hy: y } = v;
+      const w = VILLAGER_HOUSE_W;
+      const h = VILLAGER_HOUSE_H;
+      const g = this.add.graphics();
+      g.fillStyle(0xe8d9b5, 1).fillRect(x, y, w, h);
+      g.fillStyle(v.roof, 1).fillTriangle(x - 8, y, x + w + 8, y, x + w / 2, y - 30);
+      g.fillStyle(0x5a3a22, 1).fillRect(x + w / 2 - 8, y + h - 20, 16, 20);
+      g.setDepth(y + h);
+      this.addObstacleRect({ x, y, width: w, height: h });
+
+      const vx = x + w / 2;
+      const vy = y + h + 30;
+      const sprite = this.add.sprite(vx, vy, v.species, v.frame).setDepth(vy);
+      this.tweens.add({ targets: sprite, y: vy - 4, duration: 1000 + Math.random() * 300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      this.add.text(vx, vy - 26, v.name, {
+        fontSize: '11px', fontFamily: 'monospace', color: '#ffffff', stroke: '#000000', strokeThickness: 3,
+      }).setOrigin(0.5).setDepth(vy + 1);
+      this.villagerBubbles[v.id] = this.add.text(vx, vy - 44, '', {
+        fontSize: '11px', color: '#1c2430', backgroundColor: '#ffe066', padding: { x: 8, y: 5 },
+        wordWrap: { width: 170 }, align: 'center',
+      }).setOrigin(0.5, 1).setDepth(vy + 2).setVisible(false);
+    });
+  }
+
+  findNearestVillager() {
+    let nearest = null;
+    let nearestDist = Infinity;
+    VILLAGERS.forEach((v) => {
+      const vx = v.hx + VILLAGER_HOUSE_W / 2;
+      const vy = v.hy + VILLAGER_HOUSE_H + 30;
+      const d = Phaser.Math.Distance.Between(this.localBody.x, this.localBody.y, vx, vy);
+      if (d < VILLAGER_RADIUS && d < nearestDist) { nearest = v; nearestDist = d; }
+    });
+    return nearest;
+  }
+
+  talkToVillager(v) {
+    const tier = this.villagerTier(v.id);
+    const pool = tier >= 2 ? v.lines.concat(v.closeLines) : v.lines;
+    const line = pool[Math.floor(Math.random() * pool.length)];
+    const bubble = this.villagerBubbles[v.id];
+    if (!bubble) return;
+    bubble.setText(line).setVisible(true);
+    if (this.villagerBubbleTimers && this.villagerBubbleTimers[v.id]) this.villagerBubbleTimers[v.id].remove();
+    this.villagerBubbleTimers = this.villagerBubbleTimers || {};
+    this.villagerBubbleTimers[v.id] = this.time.delayedCall(4200, () => bubble.setVisible(false));
+    SFX.pop();
+  }
+
+  giveNearestVillagerGift() {
+    const v = this.findNearestVillager();
+    if (!v) return;
+    const likedKey = v.likes.find((key) => (this.resources[key] || 0) > 0);
+    if (!likedKey) {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, `nothing ${v.name} would like in your bag`);
+      return;
+    }
+    this.resources[likedKey] -= 1;
+    this.updateInventoryHUD();
+    this.saveResources();
+    const beforeTier = this.villagerTier(v.id);
+    this.bumpVillagerAffinity(v.id, 8);
+    const afterTier = this.villagerTier(v.id);
+    const bubble = this.villagerBubbles[v.id];
+    if (afterTier > beforeTier) {
+      const tierName = ['acquaintance', 'friend', 'good friend', 'best friend'][afterTier];
+      if (bubble) {
+        bubble.setText(`You're ${tierName}s now!`).setVisible(true);
+        if (this.villagerBubbleTimers && this.villagerBubbleTimers[v.id]) this.villagerBubbleTimers[v.id].remove();
+        this.villagerBubbleTimers = this.villagerBubbleTimers || {};
+        this.villagerBubbleTimers[v.id] = this.time.delayedCall(4200, () => bubble.setVisible(false));
+      }
+      this.awardPoint(5, `${v.name} is now a ${tierName}! +5⭐`, this.localBody.x, this.localBody.y - 30, 'achievement');
+    } else {
+      if (bubble) {
+        bubble.setText(`${v.name} loves it!`).setVisible(true);
+        if (this.villagerBubbleTimers && this.villagerBubbleTimers[v.id]) this.villagerBubbleTimers[v.id].remove();
+        this.villagerBubbleTimers = this.villagerBubbleTimers || {};
+        this.villagerBubbleTimers[v.id] = this.time.delayedCall(4200, () => bubble.setVisible(false));
+      }
+      this.awardPoint(1, '+1 ⭐', this.localBody.x, this.localBody.y - 30);
+    }
+    this.incrementStat('giftsGiven');
+    SFX.pop();
+  }
+
+  setupGiftHint() {
+    const btn = document.getElementById('gift-hint-btn');
+    if (!btn) return;
+    btn.addEventListener('click', () => { if (this.canAct()) this.giveNearestVillagerGift(); });
+  }
+
+  updateGiftHint() {
+    const btn = document.getElementById('gift-hint-btn');
+    if (!btn) return;
+    const show = !this.inUnderground && !this.buildMode && !!this.findNearestVillager();
+    btn.classList.toggle('hidden', !show);
   }
 
   drawCampfire() {
