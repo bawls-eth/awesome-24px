@@ -103,6 +103,17 @@ right now, before you even pick a name.
 - A wide **East Meadow** past the original town — walk east along the main
   path to find a second pond (with its own fishing spot), more trees, rocks,
   and tulip beds to explore
+- An **ocean-bordered island** well beyond the village — walk past the
+  original town in any direction and you'll cross a wilderness ring of
+  trees, rocks, flowers, and roaming critters before hitting a beach and
+  open water at the world's edge. It's the same for everyone and costs no
+  network traffic: every tree/rock/critter position is computed from a
+  deterministic hash of its location, not random or server-generated, so
+  the world looks identical on every device without anyone having to
+  fetch or store it
+- A proper 🎣 **Fish button** appears on screen whenever you're close
+  enough to a fishing spot to act (or already casting/waiting on a bite),
+  instead of relying only on the **E** key
 - A real **3D voxel cave** underground — find the ⛏️ hole north of the
   statue, press **E** to jump in, and mine/place real 3D blocks Minecraft-
   style. Climb back up the shaft and press **E** again to pop back to the

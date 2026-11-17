@@ -5,7 +5,12 @@
 // client automatically (no polling, no server to run). Presence is handled by
 // onDisconnect(), so a player vanishes from the town when they close the tab.
 
-const WORLD = { width: 2400, height: 1200 };
+// The original village occupies (0,0)-(2400,1200) — unchanged, so none of
+// its landmark coordinates needed to move. The world now extends well
+// past it in every direction (negative x/y included) for a wilderness
+// ring and an ocean border; originX/originY tell main.js where that
+// bigger rect actually starts, since it's no longer (0,0).
+const WORLD = { width: 5800, height: 4600, originX: -1700, originY: -1700 };
 const MAX_PLAYERS = 10;
 
 function firebaseConfigLooksReal() {
@@ -122,8 +127,10 @@ class TownNet {
       name: profile.name,
       species: profile.species,
       frame: profile.frame,
-      x: WORLD.width / 2,
-      y: WORLD.height / 2,
+      // The village center, not the world's center — the world is much
+      // bigger than the village now, with wilderness/ocean around it.
+      x: 1200,
+      y: 600,
       facing: 1,
       score: 0,
       emote: null,

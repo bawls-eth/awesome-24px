@@ -247,3 +247,20 @@ for how each feature actually works and plays.
   every butterfly/firefly and flower species gets recorded the first
   time you ever catch or pick one, no need to carry it in. A new 🏛️
   Museum button under the player list opens the full interior view
+- The world is now a much bigger island surrounded by ocean, instead
+  of ending abruptly at the edge of town. Walking out past the village
+  in any direction crosses a wilderness ring (trees, rocks, flowers,
+  roaming critters) before hitting a sandy beach and open water —
+  all of it generated deterministically from a position hash, so
+  every device sees the exact same layout with zero extra network
+  traffic or server-side generation (no AI API calls, no randomness).
+  Bug-catching stays a village-only activity; the wilderness and ocean
+  are there to explore, not to farm
+- Fixed three bugs found while building the above: the dirt path used
+  to stretch across the whole new world into the ocean instead of
+  staying within the village; trees/flowers/critters placed at
+  negative Y coordinates rendered behind the ground/ocean layers
+  instead of on top of them; and an early version of the wilderness
+  generator scanned every few pixels of the new, much larger world to
+  draw ground texture and waves, which measurably tanked frame rate —
+  it now draws a fixed number of each instead

@@ -56,6 +56,17 @@ function censorBlockedTerms(s) {
     .join('');
 }
 
+// A pure function of (x, y, seed) — always the same output for the same
+// inputs, no state, no Math.random(). Used to scatter wilderness/ocean
+// decoration deterministically: every client computes the same world
+// without any of it needing to be generated once and synced over the
+// network, the same trick weather/the sparkle/the daily merchant already
+// use with time instead of position.
+function worldHash(x, y, seed) {
+  const h = Math.sin(x * 12.9898 + y * 78.233 + seed * 37.719) * 43758.5453;
+  return h - Math.floor(h);
+}
+
 function escapeHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
@@ -316,6 +327,13 @@ const TREE_SHAKE_COOLDOWN_MS = 20000;
 // client draws the same map so landmarks mean the same thing to everyone.
 // The original town occupies x:0-1600; x:1600-2400 is the newer "East Meadow"
 // zone, reachable by walking east along the main path.
+// The original village footprint — unchanged by the world expansion below.
+// Bugs (and anything else that should stay a "village" activity rather
+// than spread out into the much bigger wilderness) are bounded to this.
+const VILLAGE_BOUNDS = { x: 0, y: 0, width: 2400, height: 1200 };
+// Thickness of the ocean band at the very edge of the (much bigger) world —
+// everything between the village and the ocean is the wilderness ring.
+const OCEAN_MARGIN = 500;
 const TREES = [
   [60, 50], [220, 40], [380, 55], [560, 45], [680, 60],
   [920, 60], [1040, 45], [1200, 55], [1360, 40], [1520, 50],
@@ -526,6 +544,52 @@ const FLOWER_SPOTS = [
 ];
 const FLOWER_PICKUP_RADIUS = 34;
 const FLOWER_REGROW_MS = 30000;
+
+// Scatters extra trees/rocks/flowers across the wilderness ring (between
+// the village and the ocean) by pushing more entries into the exact same
+// arrays the hand-placed village ones live in — the existing chop/mine/
+// pick code doesn't need to know any of this, it just sees more trees.
+// Deterministic (worldHash, not Math.random()) so every client generates
+// the identical wilderness with zero network traffic, same trick as
+// weather/the sparkle/the daily merchant already use with time instead
+// of position. WORLD here is net.js's top-level `const` — plain classic
+// scripts share one global lexical scope, same as main.js already
+// relying on net.js's TownNet class without any import.
+(function generateWilderness() {
+  const land = {
+    x: WORLD.originX + OCEAN_MARGIN,
+    y: WORLD.originY + OCEAN_MARGIN,
+    width: WORLD.width - OCEAN_MARGIN * 2,
+    height: WORLD.height - OCEAN_MARGIN * 2,
+  };
+  const villagePad = 150; // keep generated decor off the village's own edge
+  // Each tree is its own Phaser Graphics object (not a sprite), and those
+  // are considerably more expensive to render than sprites/text — dense
+  // generation at this scale (a ~13x-bigger land area than the village)
+  // measurably hurt frame rate. Wide spacing keeps density sparse.
+  const spacing = 480;
+  for (let gx = land.x + spacing / 2; gx < land.x + land.width; gx += spacing) {
+    for (let gy = land.y + spacing / 2; gy < land.y + land.height; gy += spacing) {
+      const inVillage = gx > VILLAGE_BOUNDS.x - villagePad && gx < VILLAGE_BOUNDS.x + VILLAGE_BOUNDS.width + villagePad
+        && gy > VILLAGE_BOUNDS.y - villagePad && gy < VILLAGE_BOUNDS.y + VILLAGE_BOUNDS.height + villagePad;
+      if (inVillage) continue;
+      const jitterX = (worldHash(gx, gy, 21) - 0.5) * spacing * 0.8;
+      const jitterY = (worldHash(gx, gy, 22) - 0.5) * spacing * 0.8;
+      const x = Math.round(gx + jitterX);
+      const y = Math.round(gy + jitterY);
+      const roll = worldHash(gx, gy, 23);
+      if (roll < 0.16) {
+        TREES.push([x, y]);
+      } else if (roll < 0.26) {
+        const frame = Math.floor(worldHash(gx, gy, 24) * 9);
+        ROCKS.push([x, y, frame]);
+      } else if (roll < 0.30) {
+        FLOWER_SPOTS.push({ x, y });
+      }
+    }
+  }
+})();
+
 // Rare species pulled from this repo's remaining unused 24x24 sprite
 // strips — not in the regular SPECIES list, so the only way to wear one
 // is to catch the Mystery Merchant during their daily 3-hour window.
@@ -682,8 +746,8 @@ class TownScene extends Phaser.Scene {
   }
 
   create() {
-    this.physics.world.setBounds(0, 0, this.world.width, this.world.height);
-    this.cameras.main.setBounds(0, 0, this.world.width, this.world.height);
+    this.physics.world.setBounds(this.world.originX, this.world.originY, this.world.width, this.world.height);
+    this.cameras.main.setBounds(this.world.originX, this.world.originY, this.world.width, this.world.height);
     // Phones (and especially standalone "Add to Home Screen" launches, which
     // have no browser chrome eating into the viewport) show a lot less of the
     // world at zoom 2 — zoom out a bit so HUD panels don't end up covering
@@ -695,6 +759,8 @@ class TownScene extends Phaser.Scene {
     this.obstacles = this.physics.add.staticGroup();
     this.remotePlayers = new Map();
 
+    this.drawOcean();
+    this.drawWilderness();
     this.drawGround();
     this.drawPath();
     this.drawPond();
@@ -1938,16 +2004,16 @@ class TownScene extends Phaser.Scene {
     bug.alive = true;
     bug.sprite.setVisible(true);
     bug.sprite.setPosition(
-      Phaser.Math.Between(120, this.world.width - 120),
-      Phaser.Math.Between(120, this.world.height - 120)
+      Phaser.Math.Between(VILLAGE_BOUNDS.x + 120, VILLAGE_BOUNDS.x + VILLAGE_BOUNDS.width - 120),
+      Phaser.Math.Between(VILLAGE_BOUNDS.y + 120, VILLAGE_BOUNDS.y + VILLAGE_BOUNDS.height - 120)
     );
     this.flutterBug(bug);
   }
 
   flutterBug(bug) {
     if (!bug.alive) return;
-    const x = Phaser.Math.Clamp(bug.sprite.x + Phaser.Math.Between(-90, 90), 80, this.world.width - 80);
-    const y = Phaser.Math.Clamp(bug.sprite.y + Phaser.Math.Between(-70, 70), 80, this.world.height - 80);
+    const x = Phaser.Math.Clamp(bug.sprite.x + Phaser.Math.Between(-90, 90), VILLAGE_BOUNDS.x + 80, VILLAGE_BOUNDS.x + VILLAGE_BOUNDS.width - 80);
+    const y = Phaser.Math.Clamp(bug.sprite.y + Phaser.Math.Between(-70, 70), VILLAGE_BOUNDS.y + 80, VILLAGE_BOUNDS.y + VILLAGE_BOUNDS.height - 80);
     bug.tween = this.tweens.add({
       targets: bug.sprite,
       x,
@@ -2531,10 +2597,16 @@ class TownScene extends Phaser.Scene {
 
   drawMap(ctx, w, h) {
     ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = '#2f4a33';
-    ctx.fillRect(0, 0, w, h);
+    const toScreen = (x, y) => [((x - this.world.originX) / this.world.width) * w, ((y - this.world.originY) / this.world.height) * h];
 
-    const toScreen = (x, y) => [(x / this.world.width) * w, (y / this.world.height) * h];
+    // Ocean background, land rect inset by the ocean margin — same shape
+    // as the real world, just schematic.
+    ctx.fillStyle = '#2a5a8a';
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#2f4a33';
+    const [landX, landY] = toScreen(this.world.originX + OCEAN_MARGIN, this.world.originY + OCEAN_MARGIN);
+    const [landX2, landY2] = toScreen(this.world.originX + this.world.width - OCEAN_MARGIN, this.world.originY + this.world.height - OCEAN_MARGIN);
+    ctx.fillRect(landX, landY, landX2 - landX, landY2 - landY);
 
     ctx.fillStyle = '#3a86c8';
     [MAIN_POND, EAST_POND].forEach(({ cx, cy, rx, ry }) => {
@@ -3018,22 +3090,107 @@ class TownScene extends Phaser.Scene {
 
   // ---------- world drawing ----------
 
-  drawGround() {
-    const g = this.add.graphics().setDepth(-2);
-    g.fillStyle(0x6bbf59, 1).fillRect(0, 0, this.world.width, this.world.height);
-    g.fillStyle(0x5aa84c, 1);
-    for (let gx = 16; gx < this.world.width; gx += 48) {
-      for (let gy = 16; gy < this.world.height; gy += 48) {
-        if ((gx / 48 + gy / 48) % 3 === 0) g.fillRect(gx, gy, 4, 4);
-      }
+  // Land rect (village + wilderness ring), inset from the world's true
+  // edges by OCEAN_MARGIN — everything outside this is ocean.
+  landBounds() {
+    return {
+      x: this.world.originX + OCEAN_MARGIN,
+      y: this.world.originY + OCEAN_MARGIN,
+      width: this.world.width - OCEAN_MARGIN * 2,
+      height: this.world.height - OCEAN_MARGIN * 2,
+    };
+  }
+
+  drawOcean() {
+    // Trees/flowers/critters elsewhere use their own y as their Phaser
+    // depth (a common 2D "y-sort" trick) — fine when y is always a small
+    // positive village coordinate, but the wilderness ring extends y well
+    // below 0 (up to originY). A fixed depth like the old -3 would then
+    // sit *above* that content and hide it behind the ocean. Anchoring
+    // this to originY instead guarantees it's always further back than
+    // anything anywhere in the (much bigger) world.
+    const g = this.add.graphics().setDepth(this.world.originY - 1000);
+    g.fillStyle(0x2a5a8a, 1).fillRect(this.world.originX, this.world.originY, this.world.width, this.world.height);
+    g.fillStyle(0x3a7ab0, 1);
+    // A fixed, small number of wave-dots (picked by index, not a full
+    // grid scan of the whole ocean band) — a Graphics object redraws all
+    // of its own shape commands every frame, so scanning a ~90px grid
+    // across a world this size added 1000+ fillCircle calls to a single
+    // object and visibly tanked the frame rate. This reads the same from
+    // a normal zoom level at a fraction of the cost.
+    const land = this.landBounds();
+    const waveCount = 260;
+    for (let i = 0; i < waveCount; i++) {
+      const wx = Math.round(this.world.originX + worldHash(i, 0, 11) * this.world.width);
+      const wy = Math.round(this.world.originY + worldHash(i, 1, 12) * this.world.height);
+      const onLand = wx > land.x - 20 && wx < land.x + land.width + 20 && wy > land.y - 20 && wy < land.y + land.height + 20;
+      if (!onLand) g.fillCircle(wx, wy, 6);
     }
   }
 
+  // A sparse scatter of wild villager-sprites roaming the wilderness ring,
+  // reusing whatever species sheets preload() already loaded for regular
+  // villagers — purely decorative, same wander-tween shape as the pond's
+  // Moon Cats, no interaction. Deterministic (worldHash) so it's the same
+  // for every client, no network traffic needed.
+  drawWilderness() {
+    const land = this.landBounds();
+    const critterCount = 14;
+    for (let i = 0; i < critterCount; i++) {
+      const x = Math.round(land.x + worldHash(i, 0, 41) * land.width);
+      const y = Math.round(land.y + worldHash(i, 0, 42) * land.height);
+      const nearVillage = x > VILLAGE_BOUNDS.x - 150 && x < VILLAGE_BOUNDS.x + VILLAGE_BOUNDS.width + 150
+        && y > VILLAGE_BOUNDS.y - 150 && y < VILLAGE_BOUNDS.y + VILLAGE_BOUNDS.height + 150;
+      if (nearVillage) continue;
+      const species = SPECIES[Math.floor(worldHash(i, 1, 43) * SPECIES.length)];
+      const frame = Math.floor(worldHash(i, 2, 44) * FRAME_COUNT);
+      const range = 60 + worldHash(i, 3, 45) * 80;
+      const critter = this.add.sprite(x, y, species.key, frame).setDepth(y);
+      critter.prevX = x;
+      this.tweens.add({
+        targets: critter,
+        x: { from: x - range, to: x + range },
+        duration: 5000 + i * 300,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+        onUpdate: () => { critter.setFlipX(critter.x < critter.prevX); critter.prevX = critter.x; },
+      });
+    }
+  }
+
+  drawGround() {
+    const land = this.landBounds();
+    // Same reasoning as drawOcean()'s depth — see the comment there —
+    // except this only needs to sit in front of the ocean, not in front
+    // of everything, so one layer up is enough.
+    const groundDepth = this.world.originY - 900;
+    const g = this.add.graphics().setDepth(groundDepth);
+    g.fillStyle(0x6bbf59, 1).fillRect(land.x, land.y, land.width, land.height);
+    g.fillStyle(0x5aa84c, 1);
+    // A fixed, small number of texture flecks (same reasoning as
+    // drawOcean()'s waves) instead of scanning a 48px grid across the
+    // whole land rect, which at this size added several thousand
+    // fillRect calls to one Graphics object.
+    const textureCount = 600;
+    for (let i = 0; i < textureCount; i++) {
+      const gx = Math.round(land.x + worldHash(i, 0, 31) * land.width);
+      const gy = Math.round(land.y + worldHash(i, 1, 32) * land.height);
+      g.fillRect(gx, gy, 4, 4);
+    }
+    // A thin sandy beach right where the land meets the ocean.
+    const beach = this.add.graphics().setDepth(groundDepth);
+    beach.lineStyle(26, 0xe3d2a0, 1).strokeRect(land.x + 13, land.y + 13, land.width - 26, land.height - 26);
+  }
+
   drawPath() {
+    // Deliberately scoped to the village, not the whole (much bigger)
+    // land rect — a dirt road cutting straight across the wilderness and
+    // into the ocean made no sense.
     const g = this.add.graphics().setDepth(-1);
     g.fillStyle(0xc9ab7a, 1);
-    g.fillRect(0, 600 - 32, this.world.width, 64);
-    g.fillRect(800 - 32, 0, 64, this.world.height);
+    g.fillRect(VILLAGE_BOUNDS.x, 600 - 32, VILLAGE_BOUNDS.width, 64);
+    g.fillRect(800 - 32, VILLAGE_BOUNDS.y, 64, VILLAGE_BOUNDS.height);
     g.fillStyle(0xd9c294, 1);
     g.fillCircle(800, 600, 150);
   }
