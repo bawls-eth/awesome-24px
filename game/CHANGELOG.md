@@ -308,3 +308,15 @@ for how each feature actually works and plays.
   Logging a species again just repeats a flavor line instead of
   double-counting; progress is saved permanently per device, same as
   everything else in the Museum
+- Imported a third, 34-species flora/fauna batch closing out the taxa
+  that were still thin or missing: mollusks (snail, nudibranch, giant
+  clam), crustaceans (lobster, shrimp, barnacle), cnidarians (sea fan,
+  fire coral), echinoderms (sea urchin, sand dollar), fungi (puffball,
+  bracket fungus, slime mold), mosses/ferns (sphagnum moss, bracken
+  fern, maidenhair fern), algae/sea grasses (red algae, diatom, turtle
+  grass, eelgrass — sea grass had zero coverage before this), and
+  microscopic life (copepod, amoeba, paramecium — also zero coverage
+  before this, rendered as tiny specks near pond edges rather than
+  life-sized), plus a round of insects, arachnids, an amphibian, vines,
+  and wildflowers. `species-registry.json` and the Museum's Wild Fauna/
+  Wild Flora sections are now 98 species total (57 fauna, 41 flora)

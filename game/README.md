@@ -103,11 +103,13 @@ right now, before you even pick a name.
 - A wide **East Meadow** past the original town — walk east along the main
   path to find a second pond (with its own fishing spot), more trees, rocks,
   and tulip beds to explore
-- 🦋 **Flora & fauna starter pack** — 64 real species across two
+- 🦋 **Flora & fauna starter pack** — 98 real species across three
   imported batches (fox, deer, scorpion, snowy owl, toucan, heron, sea
-  turtle, octopus, owl, honeybee, maple tree, and dozens more) scattered
-  through the wilderness, ponds, ocean, and two fixed "accent" corners
-  standing in for a desert and an alpine biome, each one real vector art
+  turtle, octopus, lobster, tarantula, sunflower, copepod, and dozens
+  more — including microscopic pond life, rendered as tiny specks, not
+  life-sized) scattered through the wilderness, ponds, ocean, and two
+  fixed "accent" corners standing in for a desert and an alpine biome,
+  each one real vector art
   (not the game's usual pixel sprites). Full metadata for each — common/
   scientific name, biome, trophic role, diet, behavior, rarity — lives in
   `game/species-registry.json`, a modular registry meant to keep growing

@@ -1,0 +1,397 @@
+{
+  "name": "Flora and fauna cross-platform prototype pack - batch 3",
+  "license": "Original procedural assets; use and modify freely",
+  "assets": [
+    {
+      "id": "snail",
+      "category": "mollusk",
+      "svg": "svg_2d/snail.svg",
+      "model": "glb_3d/snail.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "nudibranch",
+      "category": "mollusk",
+      "svg": "svg_2d/nudibranch.svg",
+      "model": "glb_3d/nudibranch.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "giant_clam",
+      "category": "mollusk",
+      "svg": "svg_2d/giant_clam.svg",
+      "model": "glb_3d/giant_clam.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "lobster",
+      "category": "crustacean",
+      "svg": "svg_2d/lobster.svg",
+      "model": "glb_3d/lobster.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "shrimp",
+      "category": "crustacean",
+      "svg": "svg_2d/shrimp.svg",
+      "model": "glb_3d/shrimp.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "barnacle",
+      "category": "crustacean",
+      "svg": "svg_2d/barnacle.svg",
+      "model": "glb_3d/barnacle.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "sea_fan",
+      "category": "marine_plantlike",
+      "svg": "svg_2d/sea_fan.svg",
+      "model": "glb_3d/sea_fan.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "fire_coral",
+      "category": "marine_plantlike",
+      "svg": "svg_2d/fire_coral.svg",
+      "model": "glb_3d/fire_coral.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "sea_urchin",
+      "category": "marine_invertebrate",
+      "svg": "svg_2d/sea_urchin.svg",
+      "model": "glb_3d/sea_urchin.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "sand_dollar",
+      "category": "marine_invertebrate",
+      "svg": "svg_2d/sand_dollar.svg",
+      "model": "glb_3d/sand_dollar.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "puffball_mushroom",
+      "category": "fungus",
+      "svg": "svg_2d/puffball_mushroom.svg",
+      "model": "glb_3d/puffball_mushroom.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "bracket_fungus",
+      "category": "fungus",
+      "svg": "svg_2d/bracket_fungus.svg",
+      "model": "glb_3d/bracket_fungus.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "slime_mold",
+      "category": "fungus",
+      "svg": "svg_2d/slime_mold.svg",
+      "model": "glb_3d/slime_mold.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "sphagnum_moss",
+      "category": "moss",
+      "svg": "svg_2d/sphagnum_moss.svg",
+      "model": "glb_3d/sphagnum_moss.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "bracken_fern",
+      "category": "understory",
+      "svg": "svg_2d/bracken_fern.svg",
+      "model": "glb_3d/bracken_fern.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "maidenhair_fern",
+      "category": "understory",
+      "svg": "svg_2d/maidenhair_fern.svg",
+      "model": "glb_3d/maidenhair_fern.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "red_algae",
+      "category": "algae",
+      "svg": "svg_2d/red_algae.svg",
+      "model": "glb_3d/red_algae.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "diatom",
+      "category": "algae",
+      "svg": "svg_2d/diatom.svg",
+      "model": "glb_3d/diatom.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "turtle_grass",
+      "category": "aquatic_plant",
+      "svg": "svg_2d/turtle_grass.svg",
+      "model": "glb_3d/turtle_grass.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "eelgrass",
+      "category": "aquatic_plant",
+      "svg": "svg_2d/eelgrass.svg",
+      "model": "glb_3d/eelgrass.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "copepod",
+      "category": "microscopic",
+      "svg": "svg_2d/copepod.svg",
+      "model": "glb_3d/copepod.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "amoeba",
+      "category": "microscopic",
+      "svg": "svg_2d/amoeba.svg",
+      "model": "glb_3d/amoeba.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "paramecium",
+      "category": "microscopic",
+      "svg": "svg_2d/paramecium.svg",
+      "model": "glb_3d/paramecium.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "grasshopper",
+      "category": "insect",
+      "svg": "svg_2d/grasshopper.svg",
+      "model": "glb_3d/grasshopper.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "firefly",
+      "category": "insect",
+      "svg": "svg_2d/firefly.svg",
+      "model": "glb_3d/firefly.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "praying_mantis",
+      "category": "insect",
+      "svg": "svg_2d/praying_mantis.svg",
+      "model": "glb_3d/praying_mantis.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "tarantula",
+      "category": "arachnid",
+      "svg": "svg_2d/tarantula.svg",
+      "model": "glb_3d/tarantula.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "daddy_longlegs",
+      "category": "arachnid",
+      "svg": "svg_2d/daddy_longlegs.svg",
+      "model": "glb_3d/daddy_longlegs.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "salamander",
+      "category": "amphibian",
+      "svg": "svg_2d/salamander.svg",
+      "model": "glb_3d/salamander.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "poison_ivy",
+      "category": "vine",
+      "svg": "svg_2d/poison_ivy.svg",
+      "model": "glb_3d/poison_ivy.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "wisteria",
+      "category": "vine",
+      "svg": "svg_2d/wisteria.svg",
+      "model": "glb_3d/wisteria.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "sunflower",
+      "category": "wildflower",
+      "svg": "svg_2d/sunflower.svg",
+      "model": "glb_3d/sunflower.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "bluebell",
+      "category": "wildflower",
+      "svg": "svg_2d/bluebell.svg",
+      "model": "glb_3d/bluebell.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "lavender",
+      "category": "wildflower",
+      "svg": "svg_2d/lavender.svg",
+      "model": "glb_3d/lavender.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    }
+  ]
+}
