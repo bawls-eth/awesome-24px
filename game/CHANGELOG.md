@@ -275,3 +275,13 @@ for how each feature actually works and plays.
   → best friend, with a ⭐ bonus on every tier-up
 - Softened the ground and path colors to a lighter, more pastel palette
   for a cozier, more Animal-Crossing-like look
+- Imported a 20-species flora/fauna starter pack (fox, deer, bird,
+  butterfly, frog, snake, mushroom, oak/pine trees, flowers, ferns,
+  grass, shrubs, cactus, trout, crab, jellyfish, shark, coral, kelp) as
+  real vector SVG art, scattered through the wilderness, ponds, and
+  ocean as decor. Each species' full metadata (common/scientific name,
+  biome, trophic role, size, diet, behavior, rarity) lives in a new
+  `species-registry.json`, a modular registry meant to grow — this
+  starter set doesn't claim to cover every biome or species, just seeds
+  one. Matching GLB 3D models ship alongside the SVGs, keyed by the same
+  species id, for any future 3D engine to pick up

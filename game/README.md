@@ -103,6 +103,16 @@ right now, before you even pick a name.
 - A wide **East Meadow** past the original town — walk east along the main
   path to find a second pond (with its own fishing spot), more trees, rocks,
   and tulip beds to explore
+- 🦋 **Flora & fauna starter pack** — 20 real species (fox, deer, bird,
+  butterfly, frog, snake, mushroom, oak/pine trees, flowers, ferns,
+  grass, shrubs, cactus, trout, crab, jellyfish, shark, coral, kelp)
+  scattered through the wilderness, ponds, and ocean as decor, each one
+  real vector art (not the game's usual pixel sprites). Full metadata
+  for each — common/scientific name, biome, trophic role, diet,
+  behavior, rarity — lives in `game/species-registry.json`, a modular
+  registry meant to grow; matching GLB 3D models ship alongside the SVGs
+  in `game/assets/flora-fauna/glb/` for any future 3D engine, keyed by
+  the same species id
 - An **ocean-bordered island** well beyond the village — walk past the
   original town in any direction and you'll cross a wilderness ring of
   trees, rocks, flowers, and roaming critters before hitting a beach and

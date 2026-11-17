@@ -1,0 +1,191 @@
+{
+  "$schema_notes": "A modular, extensible flora/fauna species registry. Each entry's `id` is stable across 2D (svg) and 3D (glb) assets, matching assets/flora-fauna/source-manifest.json's own `id` field. This starter set (20 species) comes from an uploaded 'flora_fauna_starter_pack' prototype pack and covers a deliberately small cross-section of biomes/trophic roles/taxa as a seed for later growth — it does not claim coverage of all Earth species. Add new entries by following the same field shape; nothing elsewhere in the game hardcodes this list's length.",
+  "enums": {
+    "biome": ["terrestrial_forest", "terrestrial_grassland", "freshwater", "marine", "marine_reef", "wetland", "desert", "alpine_tundra"],
+    "trophic_role": ["primary_producer", "primary_consumer", "secondary_consumer", "apex_predator", "decomposer", "filter_feeder"],
+    "life_stage": ["egg", "larva", "juvenile", "adult", "fruiting_body", "seedling", "mature"],
+    "rarity": ["common", "uncommon", "rare"]
+  },
+  "species": [
+    {
+      "id": "trout", "common_name": "Rainbow Trout", "scientific_name": "Oncorhynchus mykiss",
+      "category": "aquatic_fish", "biome": "freshwater", "habitat": "river and pond shallows",
+      "trophic_role": "secondary_consumer", "size_cm": 30, "life_stage": "adult",
+      "seasonality": "spawns in spring; active year-round", "diet": "aquatic insects, small fish",
+      "behavior": "schools loosely, darts when startled", "rarity": "common",
+      "svg": "assets/flora-fauna/svg/trout.svg", "glb": "assets/flora-fauna/glb/trout.glb",
+      "animations": ["idle", "move", "interact"]
+    },
+    {
+      "id": "shark", "common_name": "Blacktip Reef Shark", "scientific_name": "Carcharhinus melanopterus",
+      "category": "aquatic_fish", "biome": "marine_reef", "habitat": "shallow coastal reef",
+      "trophic_role": "apex_predator", "size_cm": 160, "life_stage": "adult",
+      "seasonality": "year-round resident", "diet": "reef fish, crustaceans",
+      "behavior": "patrols reef edges, generally shy of large movement", "rarity": "rare",
+      "svg": "assets/flora-fauna/svg/shark.svg", "glb": "assets/flora-fauna/glb/shark.glb",
+      "animations": ["idle", "move", "interact"]
+    },
+    {
+      "id": "jellyfish", "common_name": "Moon Jellyfish", "scientific_name": "Aurelia aurita",
+      "category": "marine_invertebrate", "biome": "marine", "habitat": "open water column",
+      "trophic_role": "secondary_consumer", "size_cm": 20, "life_stage": "adult",
+      "seasonality": "blooms in summer", "diet": "zooplankton",
+      "behavior": "drifts with current, slow pulsing swim", "rarity": "uncommon",
+      "svg": "assets/flora-fauna/svg/jellyfish.svg", "glb": "assets/flora-fauna/glb/jellyfish.glb",
+      "animations": ["idle", "move", "interact"]
+    },
+    {
+      "id": "crab", "common_name": "Fiddler Crab", "scientific_name": "Uca pugnax",
+      "category": "crustacean", "biome": "wetland", "habitat": "tidal mudflat and beach",
+      "trophic_role": "decomposer", "size_cm": 3, "life_stage": "adult",
+      "seasonality": "active year-round in warm climates", "diet": "detritus, algae",
+      "behavior": "burrows, scuttles sideways, males wave one oversized claw", "rarity": "common",
+      "svg": "assets/flora-fauna/svg/crab.svg", "glb": "assets/flora-fauna/glb/crab.glb",
+      "animations": ["idle", "move", "interact"]
+    },
+    {
+      "id": "butterfly", "common_name": "Monarch Butterfly", "scientific_name": "Danaus plexippus",
+      "category": "insect", "biome": "terrestrial_grassland", "habitat": "meadow and garden",
+      "trophic_role": "primary_consumer", "size_cm": 10, "life_stage": "adult",
+      "seasonality": "migratory, most visible summer-fall", "diet": "nectar (milkweed as larva)",
+      "behavior": "flutters erratically between flowers", "rarity": "common",
+      "svg": "assets/flora-fauna/svg/butterfly.svg", "glb": "assets/flora-fauna/glb/butterfly.glb",
+      "animations": ["idle", "move", "interact"]
+    },
+    {
+      "id": "bird", "common_name": "European Robin", "scientific_name": "Erithacus rubecula",
+      "category": "bird", "biome": "terrestrial_forest", "habitat": "forest edge and garden",
+      "trophic_role": "secondary_consumer", "size_cm": 14, "life_stage": "adult",
+      "seasonality": "year-round resident in most of its range", "diet": "insects, berries",
+      "behavior": "perches, forages on the ground, sings from cover", "rarity": "common",
+      "svg": "assets/flora-fauna/svg/bird.svg", "glb": "assets/flora-fauna/glb/bird.glb",
+      "animations": ["idle", "move", "interact"]
+    },
+    {
+      "id": "fox", "common_name": "Red Fox", "scientific_name": "Vulpes vulpes",
+      "category": "mammal", "biome": "terrestrial_forest", "habitat": "forest and grassland edge",
+      "trophic_role": "secondary_consumer", "size_cm": 60, "life_stage": "adult",
+      "seasonality": "breeds in late winter", "diet": "rodents, birds, fruit",
+      "behavior": "mostly nocturnal, territorial, cautious of the open", "rarity": "uncommon",
+      "svg": "assets/flora-fauna/svg/fox.svg", "glb": "assets/flora-fauna/glb/fox.glb",
+      "animations": ["idle", "move", "interact"]
+    },
+    {
+      "id": "deer", "common_name": "White-tailed Deer", "scientific_name": "Odocoileus virginianus",
+      "category": "mammal", "biome": "terrestrial_forest", "habitat": "forest and meadow",
+      "trophic_role": "primary_consumer", "size_cm": 180, "life_stage": "adult",
+      "seasonality": "rut in autumn", "diet": "grasses, leaves, acorns",
+      "behavior": "grazes, alert and skittish, bounds away from disturbance", "rarity": "common",
+      "svg": "assets/flora-fauna/svg/deer.svg", "glb": "assets/flora-fauna/glb/deer.glb",
+      "animations": ["idle", "move", "interact"]
+    },
+    {
+      "id": "frog", "common_name": "American Bullfrog", "scientific_name": "Lithobates catesbeianus",
+      "category": "amphibian", "biome": "freshwater", "habitat": "pond edge and wetland",
+      "trophic_role": "secondary_consumer", "size_cm": 15, "life_stage": "adult",
+      "seasonality": "breeds spring through summer", "diet": "insects, small animals",
+      "behavior": "ambush predator, sits still, deep croak", "rarity": "common",
+      "svg": "assets/flora-fauna/svg/frog.svg", "glb": "assets/flora-fauna/glb/frog.glb",
+      "animations": ["idle", "move", "interact"]
+    },
+    {
+      "id": "snake", "common_name": "Garter Snake", "scientific_name": "Thamnophis sirtalis",
+      "category": "reptile", "biome": "terrestrial_grassland", "habitat": "grassland near water",
+      "trophic_role": "secondary_consumer", "size_cm": 60, "life_stage": "adult",
+      "seasonality": "dormant through winter (brumation)", "diet": "amphibians, worms, small fish",
+      "behavior": "basks in open, slithers for cover when approached", "rarity": "common",
+      "svg": "assets/flora-fauna/svg/snake.svg", "glb": "assets/flora-fauna/glb/snake.glb",
+      "animations": ["idle", "move", "interact"]
+    },
+    {
+      "id": "oak_tree", "common_name": "Northern Red Oak", "scientific_name": "Quercus rubra",
+      "category": "tree", "biome": "terrestrial_forest", "habitat": "forest and woodland",
+      "trophic_role": "primary_producer", "size_cm": 2500, "life_stage": "mature",
+      "seasonality": "deciduous — leafs in spring, bare in winter", "diet": null,
+      "behavior": "static, sways in wind", "rarity": "common",
+      "svg": "assets/flora-fauna/svg/oak_tree.svg", "glb": "assets/flora-fauna/glb/oak_tree.glb",
+      "animations": ["idle", "wind_reaction"]
+    },
+    {
+      "id": "pine_tree", "common_name": "Eastern White Pine", "scientific_name": "Pinus strobus",
+      "category": "tree", "biome": "alpine_tundra", "habitat": "mountain slope and conifer forest",
+      "trophic_role": "primary_producer", "size_cm": 3000, "life_stage": "mature",
+      "seasonality": "evergreen, no seasonal foliage change", "diet": null,
+      "behavior": "static, sways in wind", "rarity": "common",
+      "svg": "assets/flora-fauna/svg/pine_tree.svg", "glb": "assets/flora-fauna/glb/pine_tree.glb",
+      "animations": ["idle", "wind_reaction"]
+    },
+    {
+      "id": "flower", "common_name": "Wild Tulip", "scientific_name": "Tulipa sylvestris",
+      "category": "wildflower", "biome": "terrestrial_grassland", "habitat": "meadow and garden",
+      "trophic_role": "primary_producer", "size_cm": 30, "life_stage": "mature",
+      "seasonality": "blooms in spring", "diet": null,
+      "behavior": "static, sways in wind", "rarity": "common",
+      "svg": "assets/flora-fauna/svg/flower.svg", "glb": "assets/flora-fauna/glb/flower.glb",
+      "animations": ["idle", "wind_reaction"]
+    },
+    {
+      "id": "fern", "common_name": "Western Sword Fern", "scientific_name": "Polystichum munitum",
+      "category": "understory", "biome": "terrestrial_forest", "habitat": "shaded forest floor",
+      "trophic_role": "primary_producer", "size_cm": 100, "life_stage": "mature",
+      "seasonality": "evergreen, year-round", "diet": null,
+      "behavior": "static, sways in wind", "rarity": "common",
+      "svg": "assets/flora-fauna/svg/fern.svg", "glb": "assets/flora-fauna/glb/fern.glb",
+      "animations": ["idle", "wind_reaction"]
+    },
+    {
+      "id": "grass", "common_name": "Tall Fescue", "scientific_name": "Festuca arundinacea",
+      "category": "grass", "biome": "terrestrial_grassland", "habitat": "open grassland and meadow",
+      "trophic_role": "primary_producer", "size_cm": 50, "life_stage": "mature",
+      "seasonality": "grows fastest in spring/summer", "diet": null,
+      "behavior": "static, sways in wind", "rarity": "common",
+      "svg": "assets/flora-fauna/svg/grass.svg", "glb": "assets/flora-fauna/glb/grass.glb",
+      "animations": ["idle", "wind_reaction"]
+    },
+    {
+      "id": "mushroom", "common_name": "Fly Agaric", "scientific_name": "Amanita muscaria",
+      "category": "fungus", "biome": "terrestrial_forest", "habitat": "forest floor leaf litter",
+      "trophic_role": "decomposer", "size_cm": 15, "life_stage": "fruiting_body",
+      "seasonality": "fruits in autumn", "diet": "decaying organic matter",
+      "behavior": "static, minimal sway", "rarity": "uncommon",
+      "svg": "assets/flora-fauna/svg/mushroom.svg", "glb": "assets/flora-fauna/glb/mushroom.glb",
+      "animations": ["idle", "wind_reaction"]
+    },
+    {
+      "id": "coral", "common_name": "Staghorn Coral", "scientific_name": "Acropora cervicornis",
+      "category": "marine_plantlike", "biome": "marine_reef", "habitat": "shallow coral reef",
+      "trophic_role": "filter_feeder", "size_cm": 100, "life_stage": "mature",
+      "seasonality": "bleaching risk rises in warm-water seasons", "diet": "zooplankton, photosynthetic symbionts",
+      "behavior": "static, gentle current sway", "rarity": "rare",
+      "svg": "assets/flora-fauna/svg/coral.svg", "glb": "assets/flora-fauna/glb/coral.glb",
+      "animations": ["idle", "wind_reaction"]
+    },
+    {
+      "id": "kelp", "common_name": "Giant Kelp", "scientific_name": "Macrocystis pyrifera",
+      "category": "algae", "biome": "marine", "habitat": "kelp forest, rocky seafloor",
+      "trophic_role": "primary_producer", "size_cm": 3000, "life_stage": "mature",
+      "seasonality": "grows fastest in cooler, nutrient-rich months", "diet": null,
+      "behavior": "static, sways with current", "rarity": "common",
+      "svg": "assets/flora-fauna/svg/kelp.svg", "glb": "assets/flora-fauna/glb/kelp.glb",
+      "animations": ["idle", "wind_reaction"]
+    },
+    {
+      "id": "cactus", "common_name": "Saguaro Cactus", "scientific_name": "Carnegiea gigantea",
+      "category": "desert_plant", "biome": "desert", "habitat": "arid desert flats",
+      "trophic_role": "primary_producer", "size_cm": 1200, "life_stage": "mature",
+      "seasonality": "blooms in early summer", "diet": null,
+      "behavior": "static, almost no sway", "rarity": "uncommon",
+      "svg": "assets/flora-fauna/svg/cactus.svg", "glb": "assets/flora-fauna/glb/cactus.glb",
+      "animations": ["idle", "wind_reaction"]
+    },
+    {
+      "id": "shrub", "common_name": "Common Juniper", "scientific_name": "Juniperus communis",
+      "category": "shrub", "biome": "alpine_tundra", "habitat": "tundra scrub and forest edge",
+      "trophic_role": "primary_producer", "size_cm": 200, "life_stage": "mature",
+      "seasonality": "evergreen, year-round", "diet": null,
+      "behavior": "static, sways in wind", "rarity": "common",
+      "svg": "assets/flora-fauna/svg/shrub.svg", "glb": "assets/flora-fauna/glb/shrub.glb",
+      "animations": ["idle", "wind_reaction"]
+    }
+  ]
+}

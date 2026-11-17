@@ -364,6 +364,35 @@ const ROCKS = [
 const PUNK_ROCKS = [
   [200, 1000, 1], [1400, 950, 4], [900, 1080, 7], [2050, 480, 2],
 ];
+
+// Flora/fauna starter pack (20 species) — real vector art (assets/flora-fauna/svg/)
+// plus a matching GLB for 3D engines (assets/flora-fauna/glb/), both keyed by
+// the same species id as game/species-registry.json. Only the SVGs are loaded
+// here since this is a 2D Phaser game; the GLBs ride along unused but ID-
+// matched, ready for a 3D engine (or this game's own Three.js cave) later.
+// `zone` just picks which scatter rule below places it — not a biome engine.
+const FF_ASSETS = [
+  { id: 'fox', w: 28, h: 28, zone: 'forest' },
+  { id: 'deer', w: 34, h: 34, zone: 'forest' },
+  { id: 'bird', w: 18, h: 18, zone: 'forest' },
+  { id: 'butterfly', w: 16, h: 16, zone: 'meadow' },
+  { id: 'frog', w: 16, h: 16, zone: 'pond' },
+  { id: 'snake', w: 20, h: 20, zone: 'meadow' },
+  { id: 'mushroom', w: 14, h: 14, zone: 'forest' },
+  { id: 'oak_tree', w: 44, h: 44, zone: 'forest' },
+  { id: 'pine_tree', w: 36, h: 48, zone: 'forest' },
+  { id: 'flower', w: 14, h: 14, zone: 'meadow' },
+  { id: 'fern', w: 18, h: 18, zone: 'forest' },
+  { id: 'grass', w: 14, h: 14, zone: 'meadow' },
+  { id: 'shrub', w: 22, h: 22, zone: 'forest' },
+  { id: 'cactus', w: 22, h: 30, zone: 'desert_accent' },
+  { id: 'trout', w: 18, h: 18, zone: 'pond' },
+  { id: 'crab', w: 16, h: 16, zone: 'pond' },
+  { id: 'jellyfish', w: 18, h: 18, zone: 'ocean' },
+  { id: 'shark', w: 34, h: 34, zone: 'ocean' },
+  { id: 'coral', w: 20, h: 20, zone: 'ocean' },
+  { id: 'kelp', w: 18, h: 34, zone: 'ocean' },
+];
 const POND_CATS = [
   { y: 552, frame: 0, range: [180, 330] },
   { y: 578, frame: 3, range: [150, 300] },
@@ -828,6 +857,9 @@ class TownScene extends Phaser.Scene {
     // just for the game; the original in i/ is left untouched.
     this.load.spritesheet('mooncats', 'assets/mooncats-strip.png', { frameWidth: FRAME_SIZE, frameHeight: FRAME_SIZE });
     this.load.spritesheet('boredapes', '../i/boredapes-strip.png', { frameWidth: 28, frameHeight: 28 });
+    FF_ASSETS.forEach((a) => {
+      this.load.svg(`ff_${a.id}`, `assets/flora-fauna/svg/${a.id}.svg`, { width: 64, height: 64 });
+    });
   }
 
   create() {
@@ -881,6 +913,7 @@ class TownScene extends Phaser.Scene {
     this.drawRocks();
     this.drawPunkRocks();
     this.drawVillagers();
+    this.drawFloraFauna();
 
     this.createLocalPlayer(this.selfData);
     this.physics.add.collider(this.localBody, this.obstacles);
@@ -3251,6 +3284,54 @@ class TownScene extends Phaser.Scene {
         onUpdate: () => { critter.setFlipX(critter.x < critter.prevX); critter.prevX = critter.x; },
       });
     }
+  }
+
+  // ---------- flora/fauna starter pack scatter ----------
+  // A handful of each of the 20 imported species (see species-registry.json),
+  // scattered deterministically with worldHash like the rest of the
+  // wilderness — same reasoning: identical on every device, no network
+  // traffic, no Math.random(). Low counts per species on purpose: this is
+  // decor variety layered on top of the existing wilderness/pond/ocean
+  // systems, not a replacement for them, and the big Graphics-draw-call
+  // performance lesson from the ocean/ground rewrite still applies even
+  // though these are cheap Sprites, not Graphics.
+  drawFloraFauna() {
+    const land = this.landBounds();
+    FF_ASSETS.forEach((a, idx) => {
+      const seedBase = 500 + idx * 13;
+      const count = a.zone === 'forest' ? 3 : a.zone === 'meadow' ? 3 : a.zone === 'desert_accent' ? 2 : 2;
+      for (let i = 0; i < count; i++) {
+        const seed = seedBase + i;
+        let x;
+        let y;
+        if (a.zone === 'pond') {
+          const pond = i % 2 === 0 ? MAIN_POND : EAST_POND;
+          const angle = worldHash(seed, 0, 71) * Math.PI * 2;
+          x = Math.round(pond.cx + Math.cos(angle) * pond.rx * 1.3);
+          y = Math.round(pond.cy + Math.sin(angle) * pond.ry * 1.3);
+        } else if (a.zone === 'ocean') {
+          x = Math.round(this.world.originX + worldHash(seed, 0, 72) * this.world.width);
+          y = Math.round(this.world.originY + worldHash(seed, 1, 73) * this.world.height);
+          const onLand = x > land.x - 20 && x < land.x + land.width + 20 && y > land.y - 20 && y < land.y + land.height + 20;
+          if (onLand) { x = land.x - 60; y = land.y - 60; } // nudge into open ocean, one pass is enough at this scale
+        } else if (a.zone === 'desert_accent') {
+          x = i === 0 ? land.x + 50 : land.x + land.width - 60;
+          y = land.y + land.height - 70;
+        } else {
+          x = Math.round(land.x + worldHash(seed, 0, 74) * land.width);
+          y = Math.round(land.y + worldHash(seed, 1, 75) * land.height);
+          const inVillage = x > VILLAGE_BOUNDS.x - 150 && x < VILLAGE_BOUNDS.x + VILLAGE_BOUNDS.width + 150
+            && y > VILLAGE_BOUNDS.y - 150 && y < VILLAGE_BOUNDS.y + VILLAGE_BOUNDS.height + 150;
+          if (inVillage) { x += 350; y += 350; } // one-pass nudge clear of the village, same idea as the ocean branch
+        }
+        const sprite = this.add.image(x, y, `ff_${a.id}`).setDisplaySize(a.w, a.h).setDepth(y);
+        if (a.zone === 'pond' || a.zone === 'ocean') {
+          this.tweens.add({ targets: sprite, y: y - 4, duration: 1200 + i * 150, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        } else {
+          this.tweens.add({ targets: sprite, angle: { from: -3, to: 3 }, duration: 1800 + i * 200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        }
+      }
+    });
   }
 
   drawGround() {
