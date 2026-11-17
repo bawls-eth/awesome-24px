@@ -285,3 +285,18 @@ for how each feature actually works and plays.
   starter set doesn't claim to cover every biome or species, just seeds
   one. Matching GLB 3D models ship alongside the SVGs, keyed by the same
   species id, for any future 3D engine to pick up
+- Imported a second, 44-species flora/fauna batch filling in the biomes
+  the first batch barely touched: desert (scorpion, roadrunner, desert
+  tortoise, Joshua tree, sagebrush), alpine/tundra (snowy owl, arctic
+  fox, caribou, mountain goat, lichen), rainforest (toucan, poison dart
+  frog, howler monkey, orchid, liana vine, leafcutter ant), more wetland
+  (heron, cattail, dragonfly, otter, water lily), more marine (sea
+  turtle, clownfish, octopus, starfish, sea anemone, seahorse), more
+  freshwater (beaver, catfish, duckweed), and a round of forest/
+  grassland/aerial species (owl, squirrel, hedgehog, ladybug, honeybee,
+  spider, clover, dandelion, moss, maple tree, blackberry vine, hawk,
+  hummingbird, bat) — the registry's first arachnids and mollusks.
+  Since there's no real desert or alpine biome on this map, those two
+  groups each get one fixed "accent corner" instead of being scattered
+  across the land like everything else. `species-registry.json` is now
+  64 species total

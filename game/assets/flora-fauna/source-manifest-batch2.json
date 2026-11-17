@@ -1,0 +1,520 @@
+{
+  "name": "Flora and fauna cross-platform prototype pack - batch 2",
+  "license": "Original procedural assets; use and modify freely",
+  "assets": [
+    {
+      "id": "scorpion",
+      "category": "arachnid",
+      "svg": "svg_2d/scorpion.svg",
+      "model": "glb_3d/scorpion.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "roadrunner",
+      "category": "bird",
+      "svg": "svg_2d/roadrunner.svg",
+      "model": "glb_3d/roadrunner.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "desert_tortoise",
+      "category": "reptile",
+      "svg": "svg_2d/desert_tortoise.svg",
+      "model": "glb_3d/desert_tortoise.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "joshua_tree",
+      "category": "desert_plant",
+      "svg": "svg_2d/joshua_tree.svg",
+      "model": "glb_3d/joshua_tree.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "sagebrush",
+      "category": "shrub",
+      "svg": "svg_2d/sagebrush.svg",
+      "model": "glb_3d/sagebrush.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "snowy_owl",
+      "category": "bird",
+      "svg": "svg_2d/snowy_owl.svg",
+      "model": "glb_3d/snowy_owl.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "arctic_fox",
+      "category": "mammal",
+      "svg": "svg_2d/arctic_fox.svg",
+      "model": "glb_3d/arctic_fox.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "caribou",
+      "category": "mammal",
+      "svg": "svg_2d/caribou.svg",
+      "model": "glb_3d/caribou.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "mountain_goat",
+      "category": "mammal",
+      "svg": "svg_2d/mountain_goat.svg",
+      "model": "glb_3d/mountain_goat.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "lichen",
+      "category": "lichen",
+      "svg": "svg_2d/lichen.svg",
+      "model": "glb_3d/lichen.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "toucan",
+      "category": "bird",
+      "svg": "svg_2d/toucan.svg",
+      "model": "glb_3d/toucan.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "poison_dart_frog",
+      "category": "amphibian",
+      "svg": "svg_2d/poison_dart_frog.svg",
+      "model": "glb_3d/poison_dart_frog.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "howler_monkey",
+      "category": "mammal",
+      "svg": "svg_2d/howler_monkey.svg",
+      "model": "glb_3d/howler_monkey.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "orchid",
+      "category": "wildflower",
+      "svg": "svg_2d/orchid.svg",
+      "model": "glb_3d/orchid.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "liana_vine",
+      "category": "vine",
+      "svg": "svg_2d/liana_vine.svg",
+      "model": "glb_3d/liana_vine.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "leafcutter_ant",
+      "category": "insect",
+      "svg": "svg_2d/leafcutter_ant.svg",
+      "model": "glb_3d/leafcutter_ant.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "heron",
+      "category": "bird",
+      "svg": "svg_2d/heron.svg",
+      "model": "glb_3d/heron.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "cattail",
+      "category": "aquatic_plant",
+      "svg": "svg_2d/cattail.svg",
+      "model": "glb_3d/cattail.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "dragonfly",
+      "category": "insect",
+      "svg": "svg_2d/dragonfly.svg",
+      "model": "glb_3d/dragonfly.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "otter",
+      "category": "mammal",
+      "svg": "svg_2d/otter.svg",
+      "model": "glb_3d/otter.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "water_lily",
+      "category": "aquatic_plant",
+      "svg": "svg_2d/water_lily.svg",
+      "model": "glb_3d/water_lily.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "sea_turtle",
+      "category": "reptile",
+      "svg": "svg_2d/sea_turtle.svg",
+      "model": "glb_3d/sea_turtle.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "clownfish",
+      "category": "aquatic_fish",
+      "svg": "svg_2d/clownfish.svg",
+      "model": "glb_3d/clownfish.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "octopus",
+      "category": "mollusk",
+      "svg": "svg_2d/octopus.svg",
+      "model": "glb_3d/octopus.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "starfish",
+      "category": "marine_invertebrate",
+      "svg": "svg_2d/starfish.svg",
+      "model": "glb_3d/starfish.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "sea_anemone",
+      "category": "marine_plantlike",
+      "svg": "svg_2d/sea_anemone.svg",
+      "model": "glb_3d/sea_anemone.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "seahorse",
+      "category": "aquatic_fish",
+      "svg": "svg_2d/seahorse.svg",
+      "model": "glb_3d/seahorse.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "beaver",
+      "category": "mammal",
+      "svg": "svg_2d/beaver.svg",
+      "model": "glb_3d/beaver.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "catfish",
+      "category": "aquatic_fish",
+      "svg": "svg_2d/catfish.svg",
+      "model": "glb_3d/catfish.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "duckweed",
+      "category": "algae",
+      "svg": "svg_2d/duckweed.svg",
+      "model": "glb_3d/duckweed.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "owl",
+      "category": "bird",
+      "svg": "svg_2d/owl.svg",
+      "model": "glb_3d/owl.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "squirrel",
+      "category": "mammal",
+      "svg": "svg_2d/squirrel.svg",
+      "model": "glb_3d/squirrel.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "hedgehog",
+      "category": "mammal",
+      "svg": "svg_2d/hedgehog.svg",
+      "model": "glb_3d/hedgehog.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "ladybug",
+      "category": "insect",
+      "svg": "svg_2d/ladybug.svg",
+      "model": "glb_3d/ladybug.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "honeybee",
+      "category": "insect",
+      "svg": "svg_2d/honeybee.svg",
+      "model": "glb_3d/honeybee.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "spider",
+      "category": "arachnid",
+      "svg": "svg_2d/spider.svg",
+      "model": "glb_3d/spider.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "clover",
+      "category": "wildflower",
+      "svg": "svg_2d/clover.svg",
+      "model": "glb_3d/clover.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "dandelion",
+      "category": "wildflower",
+      "svg": "svg_2d/dandelion.svg",
+      "model": "glb_3d/dandelion.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "moss",
+      "category": "moss",
+      "svg": "svg_2d/moss.svg",
+      "model": "glb_3d/moss.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "maple_tree",
+      "category": "tree",
+      "svg": "svg_2d/maple_tree.svg",
+      "model": "glb_3d/maple_tree.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "blackberry_vine",
+      "category": "vine",
+      "svg": "svg_2d/blackberry_vine.svg",
+      "model": "glb_3d/blackberry_vine.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "wind_reaction"
+      ]
+    },
+    {
+      "id": "hawk",
+      "category": "bird",
+      "svg": "svg_2d/hawk.svg",
+      "model": "glb_3d/hawk.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "hummingbird",
+      "category": "bird",
+      "svg": "svg_2d/hummingbird.svg",
+      "model": "glb_3d/hummingbird.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    },
+    {
+      "id": "bat",
+      "category": "mammal",
+      "svg": "svg_2d/bat.svg",
+      "model": "glb_3d/bat.glb",
+      "style": "stylized low poly prototype",
+      "animations": [
+        "idle",
+        "move",
+        "interact"
+      ]
+    }
+  ]
+}

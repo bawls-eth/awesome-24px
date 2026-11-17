@@ -392,6 +392,56 @@ const FF_ASSETS = [
   { id: 'shark', w: 34, h: 34, zone: 'ocean' },
   { id: 'coral', w: 20, h: 20, zone: 'ocean' },
   { id: 'kelp', w: 18, h: 34, zone: 'ocean' },
+  // Batch 2 (44 species) — fills in the biomes/taxa batch 1 barely
+  // touched: desert, alpine/tundra, rainforest, more wetland/marine/
+  // freshwater variety, plus arachnids and mollusks. Same id/zone
+  // scatter convention as above; 'desert_accent' and 'alpine_accent'
+  // are both fixed hand-placed corners (there's no real desert or
+  // alpine biome on this map), same trick already used for cactus.
+  { id: 'scorpion', w: 20, h: 16, zone: 'desert_accent' },
+  { id: 'roadrunner', w: 24, h: 20, zone: 'desert_accent' },
+  { id: 'desert_tortoise', w: 22, h: 16, zone: 'desert_accent' },
+  { id: 'joshua_tree', w: 40, h: 52, zone: 'desert_accent' },
+  { id: 'sagebrush', w: 22, h: 20, zone: 'desert_accent' },
+  { id: 'snowy_owl', w: 24, h: 20, zone: 'alpine_accent' },
+  { id: 'arctic_fox', w: 26, h: 22, zone: 'alpine_accent' },
+  { id: 'caribou', w: 34, h: 30, zone: 'alpine_accent' },
+  { id: 'mountain_goat', w: 30, h: 30, zone: 'alpine_accent' },
+  { id: 'lichen', w: 14, h: 10, zone: 'alpine_accent' },
+  { id: 'toucan', w: 22, h: 20, zone: 'forest' },
+  { id: 'poison_dart_frog', w: 14, h: 12, zone: 'forest' },
+  { id: 'howler_monkey', w: 28, h: 26, zone: 'forest' },
+  { id: 'orchid', w: 18, h: 16, zone: 'forest' },
+  { id: 'liana_vine', w: 20, h: 30, zone: 'forest' },
+  { id: 'leafcutter_ant', w: 14, h: 10, zone: 'forest' },
+  { id: 'heron', w: 26, h: 30, zone: 'pond' },
+  { id: 'cattail', w: 14, h: 28, zone: 'pond' },
+  { id: 'dragonfly', w: 16, h: 14, zone: 'pond' },
+  { id: 'otter', w: 26, h: 20, zone: 'pond' },
+  { id: 'water_lily', w: 16, h: 16, zone: 'pond' },
+  { id: 'sea_turtle', w: 30, h: 28, zone: 'ocean' },
+  { id: 'clownfish', w: 14, h: 14, zone: 'ocean' },
+  { id: 'octopus', w: 22, h: 20, zone: 'ocean' },
+  { id: 'starfish', w: 16, h: 16, zone: 'ocean' },
+  { id: 'sea_anemone', w: 18, h: 16, zone: 'ocean' },
+  { id: 'seahorse', w: 16, h: 18, zone: 'ocean' },
+  { id: 'beaver', w: 28, h: 22, zone: 'pond' },
+  { id: 'catfish', w: 20, h: 16, zone: 'pond' },
+  { id: 'duckweed', w: 12, h: 8, zone: 'pond' },
+  { id: 'owl', w: 22, h: 22, zone: 'forest' },
+  { id: 'squirrel', w: 18, h: 16, zone: 'forest' },
+  { id: 'hedgehog', w: 16, h: 14, zone: 'forest' },
+  { id: 'ladybug', w: 12, h: 12, zone: 'meadow' },
+  { id: 'honeybee', w: 12, h: 12, zone: 'meadow' },
+  { id: 'spider', w: 14, h: 14, zone: 'forest' },
+  { id: 'clover', w: 12, h: 10, zone: 'meadow' },
+  { id: 'dandelion', w: 12, h: 14, zone: 'meadow' },
+  { id: 'moss', w: 12, h: 8, zone: 'forest' },
+  { id: 'maple_tree', w: 44, h: 44, zone: 'forest' },
+  { id: 'blackberry_vine', w: 22, h: 20, zone: 'forest' },
+  { id: 'hawk', w: 24, h: 22, zone: 'forest' },
+  { id: 'hummingbird', w: 12, h: 12, zone: 'meadow' },
+  { id: 'bat', w: 16, h: 14, zone: 'forest' },
 ];
 const POND_CATS = [
   { y: 552, frame: 0, range: [180, 330] },
@@ -3295,11 +3345,24 @@ class TownScene extends Phaser.Scene {
   // systems, not a replacement for them, and the big Graphics-draw-call
   // performance lesson from the ocean/ground rewrite still applies even
   // though these are cheap Sprites, not Graphics.
+  // Small fixed clusters standing in for a "desert corner" and an "alpine
+  // corner" — there's no real desert or alpine biome on this map, so
+  // unlike the forest/meadow/pond/ocean zones (scattered across real
+  // terrain), these just gather their species into one hand-placed spot
+  // each, offset so 5 species don't render stacked on the same pixel.
+  floraFaunaClusterSpots(anchorX, anchorY) {
+    return [
+      [0, 0], [70, -30], [-70, -20], [40, 55], [-60, 45], [110, 20],
+    ].map(([dx, dy]) => [anchorX + dx, anchorY + dy]);
+  }
+
   drawFloraFauna() {
     const land = this.landBounds();
+    const desertSpots = this.floraFaunaClusterSpots(land.x + 70, land.y + land.height - 70);
+    const alpineSpots = this.floraFaunaClusterSpots(land.x + land.width - 70, land.y + 70);
     FF_ASSETS.forEach((a, idx) => {
       const seedBase = 500 + idx * 13;
-      const count = a.zone === 'forest' ? 3 : a.zone === 'meadow' ? 3 : a.zone === 'desert_accent' ? 2 : 2;
+      const count = a.zone === 'forest' || a.zone === 'meadow' ? 3 : 2;
       for (let i = 0; i < count; i++) {
         const seed = seedBase + i;
         let x;
@@ -3315,8 +3378,9 @@ class TownScene extends Phaser.Scene {
           const onLand = x > land.x - 20 && x < land.x + land.width + 20 && y > land.y - 20 && y < land.y + land.height + 20;
           if (onLand) { x = land.x - 60; y = land.y - 60; } // nudge into open ocean, one pass is enough at this scale
         } else if (a.zone === 'desert_accent') {
-          x = i === 0 ? land.x + 50 : land.x + land.width - 60;
-          y = land.y + land.height - 70;
+          [x, y] = desertSpots[(idx * 2 + i) % desertSpots.length];
+        } else if (a.zone === 'alpine_accent') {
+          [x, y] = alpineSpots[(idx * 2 + i) % alpineSpots.length];
         } else {
           x = Math.round(land.x + worldHash(seed, 0, 74) * land.width);
           y = Math.round(land.y + worldHash(seed, 1, 75) * land.height);
