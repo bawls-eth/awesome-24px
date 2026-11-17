@@ -237,3 +237,13 @@ for how each feature actually works and plays.
   camera made this worse. It now renders above everything and pulses
   with a scale animation on top of its color change when a fish bites,
   so the catch window is much harder to miss and let expire unnoticed
+- Two more portal doors in the Arcade District — Kart Racing and Vice
+  City, alongside the existing GTA 3 and NFS Underground 2 doors
+- A real 🎣 Fish button that appears on screen whenever there's a
+  rod-related action available (close enough to cast, already
+  waiting, or a bite ready to reel in), changing label/color with the
+  state — not just a "press E" hint, a proper tappable button
+- The Museum now has fauna and flora sections alongside fossils —
+  every butterfly/firefly and flower species gets recorded the first
+  time you ever catch or pick one, no need to carry it in. A new 🏛️
+  Museum button under the player list opens the full interior view

@@ -458,6 +458,11 @@ const POLYROLL_RADIUS = 50;
 const MUSEUM_POS = { x: 900, y: 920, w: 100, h: 64 };
 const MUSEUM_RADIUS = 70;
 const FOSSIL_TYPES = ['🦴 T-Rex Bone', '🐚 Ancient Shell', '🦷 Mammoth Tooth', '🥚 Dino Egg', '🪨 Trilobite'];
+// Fauna/flora sections of the museum are discovery-based, not donated —
+// catching a bug or picking a flower marks that species seen permanently,
+// independent of your bag (which you'll sell for stars, not hoard).
+const FAUNA_TYPES = ['🦋 Butterfly', '✨ Firefly'];
+const FLORA_TYPES = ['🌸 Cherry Blossom', '🌷 Tulip', '🌻 Sunflower', '🌹 Rose'];
 const FOSSIL_SPOTS = [
   { x: 600, y: 1000 }, { x: 650, y: 1030 }, { x: 700, y: 1000 },
 ];
@@ -584,6 +589,8 @@ const WEATHER_RAIN_COUNT = 70;
 const PORTALS = [
   { x: 1830, y: 870, label: '🚪 GTA 3', color: 0x4fa0e0, url: 'https://quenq.com/apps/gta-3/' },
   { x: 1970, y: 870, label: '🚪 NFS Underground 2', color: 0xe0454f, url: 'https://nfsu2.xyz/' },
+  { x: 1830, y: 960, label: '🚪 Kart Racing', color: 0xffa726, url: 'https://olivers.tools/kart/' },
+  { x: 1970, y: 960, label: '🚪 Vice City', color: 0xff4fa0, url: 'https://quenq.com/apps/vice-city/' },
 ];
 const EAST_POND = { cx: 2000, cy: 280, rx: 130, ry: 80 };
 const MAIN_POND = { cx: 260, cy: 600, rx: 150, ry: 90 };
@@ -761,10 +768,12 @@ class TownScene extends Phaser.Scene {
     this.setupMusicToggle();
     this.setupReduceMotionToggle();
     this.setupPhotoMode();
+    this.setupFishHint();
     this.setupSaveBackup();
     this.setupWhatsNew();
     this.setupTriviaKey();
     this.setupAchievementsUI();
+    this.setupMuseumUI();
     this.setupKeysHelp();
     this.setupChangelogViewer();
     this.setupFeedbackButton();
@@ -799,6 +808,7 @@ class TownScene extends Phaser.Scene {
     this.updateBuildPreview();
     this.updateFishingRod();
     this.updateDigHoleHint();
+    this.updateFishHint();
   }
 
   // ---------- movement ----------
@@ -1320,7 +1330,7 @@ class TownScene extends Phaser.Scene {
   // so chat/overlay state is respected no matter which input triggered it
   // (keyboard, on-screen button, or shake).
   canAct() {
-    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen && !this.mapOpen;
+    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen && !this.mapOpen && !this.museumOpen;
   }
 
   // Shake is just a fun alternate trigger for the same interact() logic used
@@ -1770,6 +1780,30 @@ class TownScene extends Phaser.Scene {
     hint.classList.toggle('hidden', this.inUnderground || this.buildMode || !this.isNearDigHole());
   }
 
+  // A real tappable button — not just a key hint — since "press E" isn't
+  // discoverable at a glance and mobile's Interact button is tucked away
+  // in the action-button cluster. Shows whenever there's a rod-related
+  // action available: close enough to cast, already waiting, or a bite
+  // ready to be reeled in.
+  setupFishHint() {
+    const btn = document.getElementById('fish-hint-btn');
+    if (!btn) return;
+    btn.addEventListener('click', () => { if (this.canAct()) this.interact(); });
+  }
+
+  updateFishHint() {
+    const btn = document.getElementById('fish-hint-btn');
+    if (!btn) return;
+    const state = this.fishing.state;
+    const nearSpot = state === 'idle' && !!this.findNearestFishingSpot();
+    const show = !this.inUnderground && !this.buildMode && (state !== 'idle' || nearSpot);
+    btn.classList.toggle('hidden', !show);
+    btn.classList.toggle('biting', state === 'biting');
+    if (state === 'biting') btn.textContent = '❗ Reel it in!';
+    else if (state === 'casting') btn.textContent = '🎣 Waiting for a bite…';
+    else btn.textContent = '🎣 Fish';
+  }
+
   enterUnderground() {
     if (this.inUnderground) return;
     this.inUnderground = true;
@@ -1940,6 +1974,11 @@ class TownScene extends Phaser.Scene {
     if (bug.tween) bug.tween.stop();
     bug.sprite.setVisible(false);
     this.gainResource('bugs', 1, bug.sprite.x, bug.sprite.y - 16);
+    const faunaIdx = this.isNightBugs ? 1 : 0; // 0: butterfly, 1: firefly — see FAUNA_TYPES
+    if (!this.museumFauna.has(faunaIdx)) {
+      this.museumFauna.add(faunaIdx);
+      this.saveFossils();
+    }
     this.time.delayedCall(BUG_RESPAWN_MS, () => this.placeBug(bug));
   }
 
@@ -1955,11 +1994,18 @@ class TownScene extends Phaser.Scene {
     const saved = loadSave();
     this.fossilsHeld = Array.isArray(saved.fossilsHeld) ? saved.fossilsHeld.slice(0, FOSSIL_BAG_CAP) : [];
     this.museumCollection = new Set(Array.isArray(saved.museumCollection) ? saved.museumCollection : []);
+    this.museumFauna = new Set(Array.isArray(saved.museumFauna) ? saved.museumFauna : []);
+    this.museumFlora = new Set(Array.isArray(saved.museumFlora) ? saved.museumFlora : []);
     this.updateFossilHUD();
   }
 
   saveFossils() {
-    writeSave({ fossilsHeld: this.fossilsHeld, museumCollection: [...this.museumCollection] });
+    writeSave({
+      fossilsHeld: this.fossilsHeld,
+      museumCollection: [...this.museumCollection],
+      museumFauna: [...this.museumFauna],
+      museumFlora: [...this.museumFlora],
+    });
   }
 
   updateFossilHUD() {
@@ -2346,6 +2392,38 @@ class TownScene extends Phaser.Scene {
       document.getElementById('achievements-overlay').classList.add('hidden');
       this.achievementsOpen = false;
     });
+  }
+
+  setupMuseumUI() {
+    document.getElementById('museum-badge').addEventListener('click', () => {
+      this.renderMuseumPanel();
+      document.getElementById('museum-overlay').classList.remove('hidden');
+      this.museumOpen = true;
+    });
+    document.getElementById('museum-close-btn').addEventListener('click', () => {
+      document.getElementById('museum-overlay').classList.add('hidden');
+      this.museumOpen = false;
+    });
+  }
+
+  renderMuseumPanel() {
+    const renderSection = (listId, types, collected) => {
+      const listEl = document.getElementById(listId);
+      if (!listEl) return;
+      listEl.innerHTML = '';
+      types.forEach((label, i) => {
+        const unlocked = collected.has(i);
+        const [icon, ...nameParts] = label.split(' ');
+        const li = document.createElement('li');
+        li.className = unlocked ? 'unlocked' : '';
+        li.innerHTML = `<span class="ach-icon">${unlocked ? icon : '🔒'}</span>`
+          + `<span class="ach-text">${unlocked ? nameParts.join(' ') : '???'}</span>`;
+        listEl.appendChild(li);
+      });
+    };
+    renderSection('museum-fossils-list', FOSSIL_TYPES, this.museumCollection);
+    renderSection('museum-fauna-list', FAUNA_TYPES, this.museumFauna);
+    renderSection('museum-flora-list', FLORA_TYPES, this.museumFlora);
   }
 
   setupKeysHelp() {
@@ -3386,6 +3464,11 @@ class TownScene extends Phaser.Scene {
     this.flowerCooldowns[spot.index] = Date.now();
     const sprite = this.flowerSprites[spot.index];
     if (sprite) {
+      const floraIdx = FLOWER_TYPES.indexOf(sprite.text);
+      if (floraIdx >= 0 && !this.museumFlora.has(floraIdx)) {
+        this.museumFlora.add(floraIdx);
+        this.saveFossils();
+      }
       sprite.setVisible(false);
       this.time.delayedCall(FLOWER_REGROW_MS, () => {
         sprite.setText(FLOWER_TYPES[Phaser.Math.Between(0, FLOWER_TYPES.length - 1)]);

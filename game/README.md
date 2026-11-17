@@ -88,11 +88,13 @@ right now, before you even pick a name.
   "Walkie-talkie" below)
 - A Bored Ape "Mayor" statue watches over the plaza, and Moon Cats drift
   lazily around the pond — pure flavor, no gameplay attached
-- Two **GTA3-style portal doors** 🚪, side by side in the 🕹️ Arcade
-  District southeast of the statue — one to
-  [GTA 3](https://quenq.com/apps/gta-3/), one to
-  [NFS Underground 2](https://nfsu2.xyz/) — walk up and interact to leave
-  Pixeltown entirely for that browser game, in this same tab. It's
+- Four **GTA3-style portal doors**, in a 2x2 in the 🕹️ Arcade
+  District southeast of the statue — to
+  [GTA 3](https://quenq.com/apps/gta-3/),
+  [NFS Underground 2](https://nfsu2.xyz/),
+  [Kart Racing](https://olivers.tools/kart/), and
+  [Vice City](https://quenq.com/apps/vice-city/) — walk up and interact to
+  leave Pixeltown entirely for that browser game, in this same tab. It's
   one-way: there's no teleport back, just like walking through a loading
   door and leaving the area behind (a confirm prompt checks before you go).
   If your browser brings you back to this exact tab with its Back button,
@@ -108,7 +110,10 @@ right now, before you even pick a name.
 - 🦴 **Fossils & Museum** — three dig spots west of the pond yield a
   random fossil (one of 5 species); carry up to 3, then donate at the
   🏛️ Museum for a permanent per-device collection and a ⭐ for each new
-  species (see "Fossils & Museum" below)
+  species (see "Fossils & Museum" below). A 🏛️ **Museum** button under
+  the player list opens the full collection — fossils donated, plus
+  every butterfly/firefly and flower species you've ever caught or
+  picked, recorded automatically the first time, nothing to carry in
 - A **daily login streak** 🔥 — join on consecutive device-local days
   for a small ⭐ bonus (capped at 5) each day, shown under the player
   list; skip a day and it resets to 1
@@ -189,8 +194,8 @@ right now, before you even pick a name.
   "Polyroll" below)
 - The 🕹️ **Arcade District**, southeast of the statue, groups every
   minigame-ish thing in one easy-to-find spot: Polyroll, the turnip
-  stall, the daily fishing tournament's leaderboard sign, and both
-  portal doors
+  stall, the daily fishing tournament's leaderboard sign, and all
+  four portal doors
 - Your name, villager choice, and wood/stone/fish inventory are remembered
   on this device (see "Local save" below) — no account, nothing synced
 - On iPhone/Android, you can **Add to Home Screen** for a proper app icon
@@ -335,6 +340,13 @@ device (same as your name/species) even across a reload. Completing all
 5 species gets a line in the chat log. Local only — not synced, not
 shared between friends.
 
+The 🏛️ **Museum** button under the player list opens the full interior —
+not just fossils. Catching any butterfly/firefly or picking any of the 4
+flower species marks it seen permanently the first time, automatically;
+there's nothing to carry in or hand over for those two sections, since
+you'll sell bugs and flowers for stars rather than hoard them. Locked
+species show as 🔒 ??? until you've found one.
+
 ### Turnip market
 
 A simplified, single-session take on Animal Crossing's stalk market — no
@@ -365,10 +377,13 @@ chatting.
 ### Fishing
 
 Walking away mid-cast now cancels it cleanly (it used to just leave the
-rod drawn to a spot you'd already left). Walk up to the pond's edge (west side or south dock) and press **Interact**.
-Wait for a **❗** — that's the bite — then press **Interact** again within
-about a second. Too early and the fish gets spooked; too late and it gets
-away. Catches add to your 🐟 count (inventory only, not the leaderboard).
+rod drawn to a spot you'd already left). Walk up to the pond's edge (west side or south dock) — a
+**🎣 Fish** button appears on screen once you're close enough, or just press
+**Interact**. Wait for a **❗** (the bobber also pulses, hard to miss) — that's
+the bite — then tap the button (now **❗ Reel it in!**) or press **Interact**
+again within about a second. Too early and the fish gets spooked; too late
+and it gets away. Catches add to your 🐟 count (inventory only, not the
+leaderboard).
 
 ### Building
 

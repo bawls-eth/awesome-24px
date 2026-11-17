@@ -671,6 +671,30 @@ body.touch-device #mobile-controls {
 
 #dig-hole-hint.hidden { display: none; }
 
+#fish-hint-btn {
+  position: fixed;
+  bottom: 220px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(58,134,200,0.9);
+  border: 2px solid #6fbf73;
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #eef2f7;
+  z-index: 15;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+#fish-hint-btn.hidden { display: none; }
+
+#fish-hint-btn.biting {
+  background: rgba(224,69,79,0.95);
+  border-color: #ffe066;
+}
+
 /* ---------- Underground (Three.js voxel cave) ---------- */
 
 #underground-overlay {
@@ -1300,6 +1324,61 @@ body.touch-device .key-hint { display: none; }
   color: #1c2430;
   border-color: #ffe066;
 }
+
+#museum-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10,14,20,0.6);
+}
+
+#museum-overlay.hidden { display: none; }
+
+#museum-overlay .achievements-card { max-height: 85vh; overflow-y: auto; }
+
+#museum-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #3a4658;
+  background: #1c2430;
+  color: #eef2f7;
+  cursor: pointer;
+}
+
+.museum-section-title {
+  margin: 14px 0 2px;
+  font-size: 13px;
+  color: #9aa7bb;
+  text-align: left;
+}
+
+.museum-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  text-align: left;
+}
+
+.museum-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+  border-bottom: 1px solid #2c3647;
+  opacity: 0.4;
+  font-size: 13px;
+}
+
+.museum-list li.unlocked { opacity: 1; }
+
+.museum-list li:last-child { border-bottom: none; }
 
 /* ---------- Able Sisters outfit shop (reuses .join-card/.species-tab/.avatar-choice) ---------- */
 
