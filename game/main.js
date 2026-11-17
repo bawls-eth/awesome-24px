@@ -3438,7 +3438,14 @@ class TownScene extends Phaser.Scene {
     this.ffSpecimens = [];
     FF_ASSETS.forEach((a, idx) => {
       const seedBase = 500 + idx * 13;
-      const count = a.zone === 'forest' || a.zone === 'meadow' ? 3 : 2;
+      // Land animals now roam the whole island instead of being confined to
+      // their zone's small patch — a fox or snowy owl stuck in one corner
+      // didn't feel like "wildlife," it felt like a diorama. Plants stay
+      // put (a cactus doesn't wander), so only kind:'fauna' gets the
+      // land-wide scatter + bigger count; desert_accent/alpine_accent stay
+      // literal fixed corners for the plants that still use them.
+      const roamsLand = a.kind === 'fauna' && a.zone !== 'pond' && a.zone !== 'ocean';
+      const count = roamsLand ? 5 : (a.zone === 'forest' || a.zone === 'meadow' ? 3 : 2);
       for (let i = 0; i < count; i++) {
         const seed = seedBase + i;
         let x;
@@ -3453,6 +3460,12 @@ class TownScene extends Phaser.Scene {
           y = Math.round(this.world.originY + worldHash(seed, 1, 73) * this.world.height);
           const onLand = x > land.x - 20 && x < land.x + land.width + 20 && y > land.y - 20 && y < land.y + land.height + 20;
           if (onLand) { x = land.x - 60; y = land.y - 60; } // nudge into open ocean, one pass is enough at this scale
+        } else if (roamsLand) {
+          x = Math.round(land.x + worldHash(seed, 0, 74) * land.width);
+          y = Math.round(land.y + worldHash(seed, 1, 75) * land.height);
+          const inVillage = x > VILLAGE_BOUNDS.x - 150 && x < VILLAGE_BOUNDS.x + VILLAGE_BOUNDS.width + 150
+            && y > VILLAGE_BOUNDS.y - 150 && y < VILLAGE_BOUNDS.y + VILLAGE_BOUNDS.height + 150;
+          if (inVillage) { x += 350; y += 350; } // one-pass nudge clear of the village, same idea as the ocean branch
         } else if (a.zone === 'desert_accent') {
           [x, y] = desertSpots[(idx * 2 + i) % desertSpots.length];
         } else if (a.zone === 'alpine_accent') {

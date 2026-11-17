@@ -107,9 +107,13 @@ right now, before you even pick a name.
   imported batches (fox, deer, scorpion, snowy owl, toucan, heron, sea
   turtle, octopus, lobster, tarantula, sunflower, copepod, and dozens
   more — including microscopic pond life, rendered as tiny specks, not
-  life-sized) scattered through the wilderness, ponds, ocean, and two
-  fixed "accent" corners standing in for a desert and an alpine biome,
-  each one real vector art
+  life-sized). Land animals roam the whole island, not just their home
+  biome's corner — a fox or a scorpion turns up anywhere across the
+  wilderness; plants stay put, with desert and alpine species still
+  clustered into their own fixed "accent" corner (there's no real
+  desert/alpine biome on this map) since a cactus doesn't wander.
+  Ocean/pond life stays in the water, where it belongs. Each one real
+  vector art
   (not the game's usual pixel sprites). Full metadata for each — common/
   scientific name, biome, trophic role, diet, behavior, rarity — lives in
   `game/species-registry.json`, a modular registry meant to keep growing

@@ -320,3 +320,10 @@ for how each feature actually works and plays.
   life-sized), plus a round of insects, arachnids, an amphibian, vines,
   and wildflowers. `species-registry.json` and the Museum's Wild Fauna/
   Wild Flora sections are now 98 species total (57 fauna, 41 flora)
+- Land animals now roam the whole island instead of being stuck in
+  their zone's small patch — a fox, a scorpion, or a snowy owl can turn
+  up anywhere across the wilderness, with 5 instances each instead of
+  2-3. Plants stay put: desert and alpine species (cactus, Joshua tree,
+  lichen, etc.) still cluster into their own fixed "accent" corner,
+  since a cactus doesn't wander, and ocean/pond life stays in the
+  water where it belongs
