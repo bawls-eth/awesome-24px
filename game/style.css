@@ -917,28 +917,49 @@ body.touch-device #dig-hole-hint { bottom: calc(192px + env(safe-area-inset-bott
 body.touch-device #underground-controls { display: block; }
 
 #ug-hotbar {
-  position: absolute;
+  position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  top: calc(104px + env(safe-area-inset-top, 0px));
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  z-index: 32;
   display: flex;
-  gap: 8px;
+  gap: 3px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--ac-panel-glass);
+  border: 2px solid var(--ac-border);
   pointer-events: auto;
 }
 
-#ug-hotbar button {
-  width: 44px;
+#ug-hotbar .ug-slot {
+  position: relative;
+  width: 40px;
   height: 44px;
-  border-radius: 10px;
-  border: 2px solid var(--ac-border);
-  background: var(--ac-panel-glass);
+  padding: 0;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background: rgba(255, 255, 255, 0.35);
   font-size: 18px;
-  touch-action: none;
+  touch-action: manipulation;
 }
 
-#ug-hotbar button.active {
+#ug-hotbar .ug-slot.empty .ico { opacity: 0.35; }
+#ug-hotbar .ug-slot .key { position: absolute; left: 3px; top: 0; font-size: 9px; opacity: 0.6; }
+#ug-hotbar .ug-slot .cnt { position: absolute; right: 2px; bottom: 0; font-size: 11px; font-weight: 800; color: var(--ac-text); text-shadow: 0 0 2px #fff; }
+
+#ug-hotbar .ug-slot.active {
   border-color: var(--ac-gold);
   background: var(--ac-gold-wash);
+}
+
+/* On a phone the bottom corners belong to the joystick and action buttons: hotbar goes to the top. */
+body.touch-device #ug-hotbar {
+  bottom: auto;
+  top: calc(76px + env(safe-area-inset-top, 0px));
+}
+@media (max-width: 420px) {
+  #ug-hotbar { gap: 2px; padding: 3px; }
+  #ug-hotbar .ug-slot { width: 36px; height: 42px; }
 }
 
 #ug-dpad {
@@ -2263,3 +2284,6 @@ body.touch-device .key-hint { display: none; }
 #ug-health.low { border-color: #d9534f; color: #d9534f; }
 #ug-fly-btn { font-size: 12px !important; }
 #ug-fly-btn.active { border-color: var(--ac-gold) !important; background: var(--ac-gold-wash) !important; }
+
+/* Cave A3: keyboard tips are noise on a touch screen */
+body.touch-device .kbd-hint { display: none; }

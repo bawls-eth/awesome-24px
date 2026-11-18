@@ -582,15 +582,17 @@ Phaser).
   regenerates ~1 per 3 s; at 0 you respawn on the surface (nothing is lost).
 - **Fly:** double-tap **Space** (or tap 🕊️ Fly) for creative flight — no gravity,
   Space up / Shift down (⤴️/⤵️ on mobile); touching down ends it. Still collides.
-- **Mine:** **E** (desktop) or ⛏️ (mobile) breaks whatever block is directly
-  ahead of you, within reach. Stone adds 1 and coal / iron / gold ore add 3 to
-  your 🪨 stone count; logs add 1 🪵; dirt and grass don't, they're just in the way.
-- **Place:** **F** (desktop) or the hotbar's Place button (mobile) places
-  whichever slot is selected on the hotbar (**1**/**2** keys, or tap 🧱/🔥 on
-  mobile):
-  - 🧱 **Wall** — costs 1 stone, a plain block, same as before.
-  - 🔥 **Torch** — costs 1 wood, lights the area around it. Mine a torch
-    back for a 1-wood refund, same as walls refund stone.
+- **Mine:** hold **E** (desktop) or hold ⛏️ (mobile) on the block in your crosshair.
+  It cracks over a few seconds (dirt is quick, gold is slow) and drops an item
+  you walk up to. Stone adds 1 and coal / iron / gold ore add 3 to your 🪨 stone
+  count (and 1 of the ore itself); logs add 1 🪵; dirt and grass drop dirt.
+  Look away or let go and the progress resets.
+- **Hotbar:** nine slots — press **1–9**, scroll the mouse wheel, or tap a slot.
+  1 🧱 stone wall (1 stone), 2 🔥 torch (1 wood, a light), 3 🟫 dirt block (1 dirt),
+  4–6 coal / iron ore / gold ore (collected materials, kept for crafting), 7–9 empty.
+  **F** (desktop) or the 🧱 button (mobile) places the selected block. Mine a
+  torch or block back and it drops again. Your cave materials are saved with the
+  rest of your inventory.
 - **Exit:** the **Exit** button works from anywhere in the cave, the
   instant you press it — no need to navigate back to the shaft first. **E**
   is dedicated to mining only, so the two never conflict; desktop can also
