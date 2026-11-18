@@ -40,10 +40,10 @@ const SEED = { resources: { wood: 20, stone: 20, fish: 5, bugs: 9, fruit: 6, she
   r = await scene(page, (s) => {
     s.resources = Object.fromEntries(Object.keys(s.resources).map((k) => [k, 0]));
     s.craftedGoods.lantern = 2; s.localBody.setPosition(1075, 850);
-    const before = s.score || 0; s.sellAtShop();
-    return { lantern: s.craftedGoods.lantern, gained: (s.score || 0) - before };
+    const before = s.localScore; s.sellAtShop();
+    return { lantern: s.craftedGoods.lantern, gained: s.localScore - before };
   });
-  check('selling clears crafted goods', r.lantern === 0, JSON.stringify(r));
+  check('selling clears crafted goods and pays stars (2 lanterns = 18)', r.lantern === 0 && r.gained === 18, JSON.stringify(r));
   check('no console errors (desktop)', errors.length === 0, errors.join('|'));
   await browser.close();
 

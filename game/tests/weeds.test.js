@@ -13,6 +13,14 @@ const { launch, scene, check, done } = require('./helpers');
   const clash = await scene(page, (s) => s.weedSpots.filter((p) => s.obstacles.getChildren().some((r) => Math.abs(p.x - r.x) < r.width / 2 && Math.abs(p.y - r.y) < r.height / 2)).length);
   check('weeds: none inside an obstacle', clash === 0, String(clash));
 
+  // Player-built blocks (extra static bodies) must not change the day's weeds.
+  const sameWithBlock = await scene(page, (s) => {
+    const day = s.weedDay + 1; const base = JSON.stringify(s.weedSpotsForDay(day));
+    const w = s.weedSpots[3]; s.addObstacleRect({ x: w.x - 20, y: w.y - 20, width: 40, height: 40 });
+    return base === JSON.stringify(s.weedSpotsForDay(day));
+  });
+  check('weeds: late-synced player blocks do not change the weed layout', sameWithBlock === true);
+
   // 2. Pull: hides the weed, +1 star, saves additively, tidiness drops.
   const before = await scene(page, (s) => ({ score: s.localScore, left: s.weedsLeft(), keys: Object.keys(JSON.parse(localStorage.getItem('pixeltown-save-v1') || '{}')) }));
   const g0 = await scene(page, (s) => s.children.list.filter((c) => c.type === 'Graphics').length);
@@ -26,7 +34,7 @@ const { launch, scene, check, done } = require('./helpers');
   check('pull: weed hides', vis === false);
   check('pull: +1 star', r.score === before.score + 1, JSON.stringify([before.score, r.score]));
   check('pull: tidiness decrements and HUD text updates', r.left === before.left - 1 && r.tidy.includes(`(${r.left} weeds)`), r.tidy);
-  check('pull: additive save key, other keys kept', r.saved && r.saved.ids.length === 1 && before.keys.every((k) => k === 'weedsPulled' || true), JSON.stringify(r.saved));
+  check('pull: additive save key, other keys kept', r.saved && r.saved.ids.length === 1 && !!JSON.parse(JSON.stringify(r.saved)).day, JSON.stringify(r.saved));
   check('pull: lifetime stat counts', r.stat === 1);
   const g1 = await scene(page, (s) => s.children.list.filter((c) => c.type === 'Graphics').length);
   check('perf: pulling creates no Graphics objects', g1 <= g0, `${g0}->${g1}`);

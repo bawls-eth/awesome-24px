@@ -2171,6 +2171,13 @@ class TownScene extends Phaser.Scene {
       this.openGuestbook();
       return;
     }
+    // Weeds are one-shot and tiny, so they win over wandering villagers / fish
+    // shadows / wildlife that could otherwise shadow a weed beside them.
+    const weed = this.findNearestWeed();
+    if (weed) {
+      this.pullWeed(weed);
+      return;
+    }
     if (this.isNearNPC()) {
       this.talkToNPC();
       return;
@@ -2206,11 +2213,6 @@ class TownScene extends Phaser.Scene {
     const beachSpot = this.findNearestBeachItem();
     if (beachSpot) {
       this.collectBeachItem(beachSpot);
-      return;
-    }
-    const weed = this.findNearestWeed();
-    if (weed) {
-      this.pullWeed(weed);
       return;
     }
     const flowerSpot = this.findNearestFlower();
@@ -5571,9 +5573,7 @@ class TownScene extends Phaser.Scene {
   weedSpotsForDay(day) {
     const vb = VILLAGE_BOUNDS;
     const pad = 70;
-    const blockers = this.obstacles.getChildren().map((r) => [
-      r.x - r.width / 2 - 24, r.y - r.height / 2 - 48, r.x + r.width / 2 + 24, r.y + r.height / 2 + 16,
-    ]);
+    const blockers = this.weedBlockers;
     const keepClear = [
       ...FLOWER_SPOTS, CAMPFIRE_POS, STATUE_POS, NPC_POS, NPC2_POS, GUESTBOOK_POS, WORKBENCH_POS,
       POLYROLL_POS, TURNIP_STALL_POS, ABLE_SISTERS_POS, MERCHANT_POS, DIG_HOLE_POS, FISH_TOURNAMENT_SIGN_POS,
@@ -5595,6 +5595,12 @@ class TownScene extends Phaser.Scene {
   }
 
   setupWeeds() {
+    // Snapshot the STATIC obstacles once (player-built blocks arrive later
+    // via Firebase and differ per client/timing) so every client — including
+    // one that rolls over to a new day mid-session — computes identical weeds.
+    this.weedBlockers = this.obstacles.getChildren().map((r) => [
+      r.x - r.width / 2 - 24, r.y - r.height / 2 - 48, r.x + r.width / 2 + 24, r.y + r.height / 2 + 16,
+    ]);
     if (!this.textures.exists('weed')) {
       const g = this.make.graphics({ x: 0, y: 0, add: false });
       g.fillStyle(0x000000, 0.15).fillEllipse(10, 18, 16, 5);
