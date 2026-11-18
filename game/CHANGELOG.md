@@ -327,3 +327,51 @@ for how each feature actually works and plays.
   lichen, etc.) still cluster into their own fixed "accent" corner,
   since a cactus doesn't wander, and ocean/pond life stays in the
   water where it belongs
+
+## The big rework (10 parallel passes)
+
+A quality pass over every system at once, split across ten workstreams
+and merged together. Highlights:
+
+- **Movement/camera:** eased start/stop, Shift to run, corner-sliding so
+  you no longer snag on obstacle edges, a tighter foot hitbox, and a
+  frame-rate-independent camera. Idle players stopped firing a Firebase
+  write every 100ms.
+- **World rendering:** the trees, ground and ocean are baked into
+  textures once instead of redrawn every frame — Graphics objects
+  dropped from ~117 to 32 and frame rate roughly doubled (~23 → ~43 fps
+  headless). New rounded, animated coastline with shallows, wet sand and
+  foam; grass tufts and clover; prettier ponds with lily pads.
+- **Wildlife:** animals actually move now — fauna wander near their
+  spawn and avoid buildings/ponds, birds and insects flutter, fish drift
+  in the water. ~16 small critters live in the village itself. Only
+  near-camera specimens animate, to keep it cheap. Collecting follows
+  the animal's live position, with a sparkle + "E: log" hint on
+  undiscovered species.
+- **Fishing:** fish shadows swim in both ponds and you cast at a nearby
+  visible fish; bite timing moved to wall-clock checks so it stays
+  reliable at low FPS, with a much more obvious bite.
+- **Villagers:** they wander their front yards on a shared schedule,
+  doze at night, turn to face you, show friendship hearts, give a
+  daily-capped greeting, and have far more per-personality,
+  time-of-day and weather dialogue; the Gift button names the villager
+  and what they like.
+- **Museum:** reworked from one long text list into tabbed wings with
+  per-section and overall progress bars, specimen cards showing the real
+  SVG art (silhouette + lock until found), and a detail view with facts
+  from the species registry. The building opens it when you have no
+  fossils to donate.
+- **Mobile + controller:** Bluetooth/USB gamepad support (left stick or
+  D-pad to move, A interact, X gift, B build/close, Start map), the
+  4-button D-pad replaced by a proper virtual joystick, and a cleaned-up
+  phone layout.
+- **Look:** a warm, cream-and-brown Animal-Crossing-style theme via CSS
+  variables, across the join screen, HUD, chat and every overlay.
+- **Networking/chat:** reconnect handling with a "Reconnecting…" pill
+  and automatic re-join, validation/clamping of everything read from the
+  database, quote-safe HTML escaping, de-duplicated chat replay, and
+  several real bug fixes.
+- **Economy/progression:** fixed star-farming exploits (the coin flip
+  paying double, unbounded turnip flipping, the shop wiping the whole
+  bag), added achievements for the villager and wildlife systems, and
+  made the achievement count real (35) instead of a hard-coded 25.

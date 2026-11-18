@@ -330,9 +330,15 @@ via `file://` won't work — the sprite sheets need to load over http.)
   underground" below for its own controls (look-drag, mine **E**, place **F**)
 
 **Mobile (iPhone/Android):** on-screen controls appear automatically on touch
-devices — a D-pad (bottom-left), and action buttons (bottom-right), stacked
-top to bottom: 😀 Emotes, 🎮 Tilt, then a 2×2 grid of 🧱 Build, ✋ Interact,
-📸 Photo, 💬 Chat.
+devices — a virtual joystick (bottom-left; push gently to walk, far to run),
+and action buttons (bottom-right), stacked top to bottom: 😀 Emotes, 🎮 Tilt,
+then a 2×2 grid of 🧱 Build, ✋ Interact, 📸 Photo, 💬 Chat.
+
+**Game controller:** a Bluetooth or USB gamepad works too — pair an Xbox
+controller (or any Gamepad-API pad) to your phone or computer and the left
+stick / D-pad walks, **A** interacts, **X** gifts a villager, **B** toggles
+build or closes an open panel, and **Start** opens the map. It works
+alongside keyboard and touch.
 - **🎮 Tilt** — tap to enable; iOS will ask for a Motion & Orientation
   permission the first time (required by Apple, can't be skipped) — tilt
   the phone like a steering wheel to walk. Tap again to turn it off
