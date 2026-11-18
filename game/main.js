@@ -897,7 +897,8 @@ const FISH_TOURNAMENT_BONUS = 10;
 const GUESTBOOK_RADIUS = 60;
 
 const PANEL_COLLAPSE_KEY = 'pixeltown-panel-collapsed'; // own key; never part of the save
-const PANEL_PHONE_MAX_WIDTH = 600;
+// Phone layout: narrow screens (portrait) OR a short touch screen (landscape phone).
+const PANEL_PHONE_QUERY = '(max-width: 600px), (max-height: 500px) and (pointer: coarse)';
 // ---------- daily checklist ----------
 // A "Today" board (button in the player panel, or J) that lists every daily
 // chore with live progress so players can see what is left: Professor Byte's
@@ -7286,7 +7287,7 @@ class TownScene extends Phaser.Scene {
     const panel = document.getElementById('player-list-panel');
     const toggle = document.getElementById('panel-toggle');
     if (!panel || !toggle) return;
-    const mq = window.matchMedia(`(max-width: ${PANEL_PHONE_MAX_WIDTH}px)`);
+    const mq = window.matchMedia(PANEL_PHONE_QUERY);
     let stored = null;
     try { stored = localStorage.getItem(PANEL_COLLAPSE_KEY); } catch (e) { /* storage blocked */ }
     // Default on phones: collapsed.
@@ -7304,11 +7305,18 @@ class TownScene extends Phaser.Scene {
     // Keep the expanded panel clear of the chat bar (and so the controls) below it.
     const fit = () => {
       if (!mq.matches || panel.classList.contains('collapsed')) { panel.style.maxHeight = ''; return; }
-      const chat = document.getElementById('chat-panel');
-      const top = panel.getBoundingClientRect().top;
-      const chatTop = chat ? chat.getBoundingClientRect().top : window.innerHeight;
-      const room = Math.floor(chatTop - top - 8);
-      panel.style.maxHeight = `${Math.max(120, Math.min(Math.floor(window.innerHeight * 0.6), room))}px`;
+      // Stay clear of anything below the panel that overlaps it horizontally
+      // (chat bar, joystick, action buttons, hint pills).
+      const pr = panel.getBoundingClientRect();
+      let limit = window.innerHeight;
+      ['chat-panel', 'joystick', 'action-buttons', 'fish-hint-btn', 'gift-hint-btn', 'dig-hole-hint'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el || el.classList.contains('hidden') || getComputedStyle(el).display === 'none') return;
+        const r = el.getBoundingClientRect();
+        if (r.width > 0 && r.left < pr.right && r.right > pr.left && r.top > pr.top) limit = Math.min(limit, r.top);
+      });
+      const room = Math.floor(limit - pr.top - 8);
+      panel.style.maxHeight = `${Math.max(72, Math.min(Math.floor(window.innerHeight * 0.6), room))}px`;
     };
     const apply = () => {
       panel.classList.toggle('collapsed', mq.matches && this.panelCollapsed);

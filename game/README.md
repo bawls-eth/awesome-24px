@@ -773,7 +773,7 @@ you don't already trust.
 On phone widths (<= 600px) the "In town" panel starts **collapsed to a small chip** (👥 players · 🏆 trophies ▾) so the world and the joystick stay visible; tap it to expand
 and **✕ Close ▴** to collapse again. Expanded, it scrolls inside itself (at most 60% of the screen height, and always clear of the chat bar and the on-screen
 controls), and every button (Achievements, Map, Museum, Today, Journal, Settings) stays reachable. The choice is remembered under its own localStorage key
-(`pixeltown-panel-collapsed`, separate from the save). Desktop layout is unchanged. Overlay close buttons are 40px on phones, over-tall cards scroll inside the
+(`pixeltown-panel-collapsed`, separate from the save). This also applies to **landscape phones** (short touch screens, e.g. 844x390): the panel starts collapsed there too, the chat bar is shortened so it never runs under the panel, and the walkie button moves to the free strip at the bottom centre. Desktop layout is unchanged. Overlay close buttons are 40px on phones, over-tall cards scroll inside the
 screen instead of being clipped, and the "What's new" banner is capped at about a third of the screen. Tests: `game/tests/phone-panel.test.js`,
 `game/tests/phone-overlays.test.js`.
 

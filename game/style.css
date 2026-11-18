@@ -2158,7 +2158,7 @@ body.touch-device .key-hint { display: none; }
 /* ---------- Phone: collapsible "In town" panel ---------- */
 #panel-toggle { display: none; }
 
-@media (max-width: 600px) {
+@media (max-width: 600px), (max-height: 500px) and (pointer: coarse) {
   #player-list-panel #panel-toggle {
     display: block;
     width: 100%;
@@ -2194,15 +2194,14 @@ body.touch-device .key-hint { display: none; }
 /* ---------- Phone audit fixes (<= 600px wide or short screens) ---------- */
 /* An overlay card taller than the screen used to be centred and clipped at the
    top (join screen, keyboard help at 360x640): cap it and let it scroll. */
-[id$="-overlay"] > .join-card,
-[id$="-overlay"] > .achievements-card {
+[id$="-overlay"] > [class$="-card"] {
   max-height: calc(100vh - 16px);
   max-height: calc(100dvh - 16px);
   overflow-y: auto;
   box-sizing: border-box;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 600px), (max-height: 500px) and (pointer: coarse) {
   /* 28px close buttons were too small to tap reliably: 40px hit area. */
   [id$="-overlay"] button[id$="close-btn"] {
     width: 40px !important;
@@ -2212,8 +2211,8 @@ body.touch-device .key-hint { display: none; }
     font-size: 16px;
   }
   /* ...and keep the (now bigger) close button off the card title. */
-  [id$="-overlay"] .join-card > h1,
-  [id$="-overlay"] .achievements-card > h2 { padding-right: 44px; }
+  [id$="-overlay"] [class$="-card"] > h1,
+  [id$="-overlay"] [class$="-card"] > h2 { padding-right: 44px; }
   /* The "What's new" banner grew to ~450px tall at 360px wide and covered the
      chat bar and HUD: cap it and scroll inside. */
   #whats-new-banner {
@@ -2223,4 +2222,19 @@ body.touch-device .key-hint { display: none; }
     align-items: flex-start;
   }
   #whats-new-text { white-space: pre-line; }
+}
+
+/* Landscape phones (short, touch): keep the chat bar out from under the (right-hand)
+   town panel and park the walkie button in the free strip at the bottom. */
+@media (max-height: 500px) and (pointer: coarse) {
+  body.touch-device #chat-panel { right: 200px; }
+  /* Bottom-centre, in the free strip between the joystick and the action buttons. */
+  #walkie-panel {
+    top: auto;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    left: 50%;
+    transform: translateX(-50%);
+    flex-direction: row;
+    align-items: center;
+  }
 }

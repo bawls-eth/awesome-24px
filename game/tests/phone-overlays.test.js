@@ -7,7 +7,7 @@ const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 (async () => {
   // Join screen (before joining) at 360x640: the card must not be clipped at the top.
   const browser = await chromium.launch();
-  for (const [w, h] of [[390, 844], [360, 640]]) {
+  for (const [w, h] of [[390, 844], [360, 640], [844, 390], [640, 360]]) {
     const page = await browser.newPage({ viewport: { width: w, height: h }, hasTouch: true, isMobile: true });
     await page.goto(BASE);
     await page.waitForSelector('#join-overlay .join-card');
@@ -17,7 +17,7 @@ const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
   }
   await browser.close();
 
-  for (const [w, h] of [[390, 844], [360, 640]]) {
+  for (const [w, h] of [[390, 844], [360, 640], [844, 390], [640, 360]]) {
     const tag = `${w}x${h}`;
     const { browser: b, page, errors } = await launch({ width: w, height: h }, { fishlog: { caught: { koi: { n: 1, best: 20 } }, claimed: [], lastDay: 0 }, crafted: { plank: 2 } }, true);
     const res = await page.evaluate(() => {
@@ -25,7 +25,7 @@ const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
       for (const el of document.querySelectorAll('[id$="-overlay"]')) {
         if (['join-overlay', 'underground-overlay'].includes(el.id)) continue;
         const wasHidden = el.classList.contains('hidden'); el.classList.remove('hidden');
-        const card = el.querySelector(':scope > .join-card, :scope > .achievements-card') || el.firstElementChild;
+        const card = el.querySelector(':scope > [class$="-card"]') || el.firstElementChild;
         const r = card.getBoundingClientRect(); const close = el.querySelector('button[id$="close-btn"]'); const cr = close && close.getBoundingClientRect();
         out.push({ id: el.id, fits: r.left >= -0.5 && r.right <= innerWidth + 0.5 && r.top >= -0.5 && r.bottom <= innerHeight + 0.5, close: cr ? [Math.round(cr.width), Math.round(cr.height)] : null, closeIn: !!cr && cr.top >= 0 && cr.right <= innerWidth && cr.bottom <= innerHeight });
         if (wasHidden) el.classList.add('hidden');

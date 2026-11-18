@@ -4,10 +4,11 @@ const { launch, scene, check, done } = require('./helpers');
 
 const rect = (page, sel) => page.evaluate((s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); const cs = getComputedStyle(e); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height, vis: cs.display !== 'none' && cs.visibility !== 'hidden' }; }, sel);
 const overlap = (a, b) => a && b && a.vis && b.vis && a.l < b.r && a.r > b.l && a.t < b.b && a.b > b.t;
-const SEL = { joystick: '#joystick', actions: '#action-buttons', chat: '#chat-panel', interact: '#interact-btn' };
+const SEL = { joystick: '#joystick', actions: '#action-buttons', chat: '#chat-panel', interact: '#interact-btn', walkie: '#walkie-panel', inventory: '#inventory-panel' };
 
 (async () => {
-  for (const [w, h] of [[390, 844], [360, 640]]) {
+  // Portrait and landscape phones.
+  for (const [w, h] of [[390, 844], [360, 640], [844, 390], [667, 375], [640, 360]]) {
     const tag = `${w}x${h}`;
     const { browser, page, errors } = await launch({ width: w, height: h }, null, true);
     // 1. Collapsed by default: only the chip shows; it carries the key stats.
@@ -15,6 +16,16 @@ const SEL = { joystick: '#joystick', actions: '#action-buttons', chat: '#chat-pa
     check(`${tag}: panel starts collapsed to a chip with players + trophies`, c.collapsed && c.visibleKids === 0 && /👥 \d+ · 🏆 \d+\/\d+/.test(c.chip) && c.expanded === 'false', JSON.stringify(c));
     check(`${tag}: collapsed chip is small (< 40% of the screen width, < 64px tall)`, c.w < w * 0.4 && c.h < 64, `${c.w}x${c.h}`);
     check(`${tag}: collapsed state is not persisted until the player chooses`, c.stored === null);
+
+    // The rest of the phone HUD must not overlap itself either (collapsed state).
+    const hudHits = await page.evaluate(() => {
+      const ids = ['inventory-panel', 'walkie-panel', 'player-list-panel', 'chat-panel', 'joystick', 'action-buttons'];
+      const r = {}; for (const id of ids) { const e = document.getElementById(id); if (!e || e.classList.contains('hidden') || getComputedStyle(e).display === 'none') continue; const b = e.getBoundingClientRect(); if (b.width) r[id] = b; }
+      const hits = []; const n = Object.keys(r);
+      for (let i = 0; i < n.length; i++) for (let j = i + 1; j < n.length; j++) { const a = r[n[i]]; const b = r[n[j]]; if (a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top) hits.push([n[i], n[j]]); }
+      return hits;
+    });
+    check(`${tag}: no two HUD pieces overlap (inventory, walkie, panel chip, chat bar, joystick, action buttons)`, hudHits.length === 0, JSON.stringify(hudHits));
 
     // 2. Expand on tap: every button reachable, scrolls inside itself, <= 60vh, clear of chat/controls.
     await page.click('#panel-toggle');
