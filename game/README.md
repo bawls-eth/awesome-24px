@@ -29,6 +29,14 @@ right now, before you even pick a name.
 - **Fish** at the pond (or the second pond out east), **chop** trees for
   wood, **mine** rocks for stone — classic Animal Crossing activities, fill
   the inventory in the top-left
+- **Today board** 📋 — the 📋 Today button in the player panel (or **J**) lists
+  every daily chore with live progress: Professor Byte's request and trivia,
+  your letters, the weeds, the Bug-Off (catch 5), a villager's birthday gift
+  (only on a birthday) and a visit to your home plot (once it has decor).
+  Finish every chore that applies for a one-time +5⭐ bonus; the button shows
+  `done/total`. Local only; saved under the additive `dailies: {day, paid,
+  days}` key. Achievements: Daily Routine, Creature of Habit (7 days).
+  Tests: `node game/tests/dailies.test.js`.
 - **Villager birthdays** 🎂 — every 10 days one villager has a birthday (a fixed
   rotation through the five villagers, so everyone sees the same one). Their
   name tag gets a 🎂, the player panel shows "birthday today" (or "Next: X in

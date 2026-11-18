@@ -2123,3 +2123,14 @@ body.touch-device .key-hint { display: none; }
 .home-slot-select { min-height: 44px; flex: 1; max-width: 220px; border-radius: 8px; border: 2px solid var(--ac-border); background: var(--ac-inset); color: var(--ac-text); font-size: 13px; padding: 0 6px; }
 #birthday-line { font-size: 10px; text-align: center; padding: 0 0 4px; color: var(--ac-text); white-space: normal; }
 #birthday-line:empty { display: none; }
+
+#dailies-overlay { position: fixed; inset: 0; z-index: 25; display: flex; align-items: center; justify-content: center; background: var(--ac-scrim); }
+#dailies-overlay.hidden { display: none; }
+#dailies-overlay .join-card { position: relative; max-height: 90vh; overflow-y: auto; }
+#dailies-close-btn { position: absolute; top: 10px; right: 10px; width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--ac-border); background: var(--ac-inset); color: var(--ac-text); cursor: pointer; }
+#dailies-list { max-height: 55vh; }
+#dailies-list li { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; }
+#dailies-list li small { opacity: 0.7; font-size: 11px; padding-left: 26px; }
+#dailies-list li.daily-done span { text-decoration: line-through; opacity: 0.75; }
+#dailies-list li.daily-na { opacity: 0.45; }
+#dailies-btn { min-height: 30px; }

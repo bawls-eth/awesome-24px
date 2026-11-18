@@ -113,8 +113,9 @@ const SAVE_KEY = 'pixeltown-save-v1';
 
 // Bump this string whenever there's something worth telling returning
 // players about — shown once as a dismissible banner, then remembered.
-const GAME_VERSION = 'v31-seasonal-crafts';
+const GAME_VERSION = 'v32-dailies';
 const WHATS_NEW = [
+  '📋 Today board — see every daily chore at a glance (J), finish them all for a bonus',
   '🍁 Seasonal specials at the workbench — a new craft for every season',
   "🎂 Villager birthdays — bring a gift on their big day for a party bonus",
   '🏡 Home plot — display your crafted goods as cozy decor, earn a daily visitor bonus',
@@ -713,6 +714,8 @@ const ACHIEVEMENTS = [
   { id: 'bday1', icon: '🎂', label: 'Party Guest', desc: "Give a villager a birthday gift", reward: 3, check: (s) => (s.birthdayGifts || 0) >= 1 },
   { id: 'bday5', icon: '🎉', label: 'Birthday Regular', desc: 'Give 5 birthday gifts', reward: 8, check: (s) => (s.birthdayGifts || 0) >= 5 },
   { id: 'bdayAll', icon: '🥳', label: 'Party Planner', desc: "Celebrate every villager's birthday", reward: 15, check: (s, scene) => !!scene.birthdayGuests && scene.birthdayGuests.size >= VILLAGERS.length },
+  { id: 'daily1', icon: '📋', label: 'Daily Routine', desc: 'Finish every daily chore in one day', reward: 5, check: (s) => (s.dailyAllDone || 0) >= 1 },
+  { id: 'daily7', icon: '🗓️', label: 'Creature of Habit', desc: 'Finish all daily chores on 7 different days', reward: 15, check: (s) => (s.dailyAllDone || 0) >= 7 },
   { id: 'craft1', icon: '🔨', label: 'DIY Beginner', desc: 'Craft something at the workbench', reward: 3, check: (s) => (s.crafted || 0) >= 1 },
   { id: 'craft10', icon: '🛠️', label: 'Crafty', desc: 'Craft 10 items', reward: 5, check: (s) => (s.crafted || 0) >= 10 },
   { id: 'craftAll', icon: '🧰', label: 'Master Crafter', desc: 'Craft every recipe at least once', reward: 10, check: (s) => RECIPES.filter((r) => !r.season).every((r) => (s['craft_' + r.id] || 0) >= 1) },
@@ -886,6 +889,14 @@ const FISH_TOURNAMENT_SIGN_POS = { x: 2040, y: 760 };
 const FISH_TOURNAMENT_BONUS = 10;
 const GUESTBOOK_RADIUS = 60;
 
+// ---------- daily checklist ----------
+// A "Today" board (button in the player panel, or J) that lists every daily
+// chore with live progress so players can see what is left: Professor Byte's
+// request and trivia, the mailbox, weeds, the Bug-Off, the home plot visit
+// and a villager's birthday (when there is one). Finishing every chore that
+// applies today pays a one-time bonus. Local only; paid-day lives in the
+// additive `dailies: {day, paid, days}` save key.
+const DAILY_BONUS = 5;
 // ---------- villager birthdays ----------
 // Every BIRTHDAY_CYCLE_DAYS (UTC) days one villager has a birthday: purely
 // deterministic (day number -> villager), so it needs no network and is the
@@ -1380,6 +1391,7 @@ class TownScene extends Phaser.Scene {
     this.setupBirthdays();
     this.setupFossils();
     this.setupWeeds();
+    this.setupDailies(); // after weeds/mail/bug-off/home/birthdays exist
     if (IS_TOUCH) {
       this.setupTouchControls();
       this.setupTiltShake();
@@ -2054,7 +2066,7 @@ class TownScene extends Phaser.Scene {
       ['achievementsOpen', 'achievements-close-btn'], ['outfitShopOpen', 'outfit-close-btn'],
       ['guestbookOpen', 'guestbook-close-btn'], ['triviaOpen', 'trivia-close-btn'],
       ['keysHelpOpen', 'keys-help-close-btn'], ['changelogOpen', 'changelog-close-btn'],
-      ['museumOpen', 'museum-close-btn'], ['workbenchOpen', 'workbench-close-btn'], ['mailboxOpen', 'mailbox-close-btn'], ['homeOpen', 'home-close-btn'],
+      ['museumOpen', 'museum-close-btn'], ['workbenchOpen', 'workbench-close-btn'], ['mailboxOpen', 'mailbox-close-btn'], ['homeOpen', 'home-close-btn'], ['dailiesOpen', 'dailies-close-btn'],
     ];
     const open = overlays.find(([flag]) => this[flag]);
     if (open) {
@@ -2172,7 +2184,7 @@ class TownScene extends Phaser.Scene {
   // so chat/overlay state is respected no matter which input triggered it
   // (keyboard, on-screen button, or shake).
   canAct() {
-    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen && !this.mapOpen && !this.museumOpen && !this.workbenchOpen && !this.mailboxOpen && !this.homeOpen;
+    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen && !this.mapOpen && !this.museumOpen && !this.workbenchOpen && !this.mailboxOpen && !this.homeOpen && !this.dailiesOpen;
   }
 
   // Shake is just a fun alternate trigger for the same interact() logic used
@@ -6973,6 +6985,103 @@ class TownScene extends Phaser.Scene {
     }
     this.showVillagerBubble(v, line);
     SFX.pop();
+  }
+
+  // ---------- daily checklist ----------
+  setupDailies() {
+    document.getElementById('dailies-btn').addEventListener('click', () => { if (this.canAct()) this.openDailies(); });
+    document.getElementById('dailies-close-btn').addEventListener('click', () => this.closeDailies());
+    const overlay = document.getElementById('dailies-overlay');
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) this.closeDailies(); });
+    this.input.keyboard.on('keydown-J', () => { if (this.dailiesOpen) this.closeDailies(); else if (this.canAct()) this.openDailies(); });
+    this.refreshDailies();
+    this.time.addEvent({ delay: 20000, loop: true, callback: () => this.refreshDailies() });
+  }
+
+  // Today's chores, each {id, icon, label, detail, status: 'done'|'todo'|'later'|'na', optional?}.
+  // 'na' items (no birthday today, empty home plot) don't count.
+  dailyItems() {
+    const day = this.questDayBucket();
+    const items = [];
+    const quest = this.todaysQuest();
+    items.push({ id: 'quest', icon: '🧪', label: "Professor Byte's request", detail: `${quest.amount} ${quest.resource.icon} → ${quest.reward}⭐`, status: this.isQuestClaimedToday() ? 'done' : 'todo' });
+    items.push({ id: 'trivia', icon: '❓', label: "Professor Byte's trivia", detail: 'answer today\'s question', status: this.isTriviaAnsweredToday() ? 'done' : 'todo' });
+    const mailLeft = this.unclaimedLetters().length;
+    items.push({ id: 'mail', icon: '📬', label: 'Collect your letters', detail: mailLeft ? `${mailLeft} waiting at the mailbox` : 'all collected', status: mailLeft ? 'todo' : 'done' });
+    const weedsLeft = this.weedsLeft();
+    items.push({ id: 'weeds', icon: '🌿', label: 'Pull the weeds', detail: `${weedsLeft} left`, status: weedsLeft ? 'todo' : 'done' });
+    const bo = this.bugOffRecord();
+    const live = this.isBugOffTime();
+    items.push({ id: 'bugoff', icon: '🦋', label: 'Bug-Off (catch 5)', detail: live ? `LIVE — ${bo.count}/5 caught` : `${bo.count} caught (window ${this.bugOffStartHour()}:00-${this.bugOffStartHour() + BUGOFF_HOURS}:00)`, status: bo.tier >= 1 ? 'done' : (live ? 'todo' : 'later') });
+    const bday = this.todaysBirthdayVillager();
+    items.push({ id: 'birthday', icon: '🎂', label: bday ? `${bday.name}'s birthday` : 'Birthdays', detail: bday ? 'bring a gift' : 'none today', status: !bday ? 'na' : (this.birthdayClaimed(bday) ? 'done' : 'todo') });
+    items.push({ id: 'home', icon: '🏡', label: 'Visit your home plot', detail: this.homeCozy() ? `cozy ${this.homeCozy()}` : 'place a crafted good first', status: this.homeCozy() === 0 ? 'na' : (this.home.paidDay === day ? 'done' : 'todo') });
+    return items;
+  }
+
+  dailyProgress() {
+    const items = this.dailyItems().filter((i) => i.status !== 'na');
+    return { done: items.filter((i) => i.status === 'done').length, total: items.length };
+  }
+
+  dailiesRecord() {
+    const rec = loadSave().dailies;
+    const ok = rec && typeof rec === 'object' && !Array.isArray(rec);
+    return { day: ok ? cleanCount(rec.day) : 0, paid: !!(ok && rec.day === this.questDayBucket() && rec.paid === true), days: ok ? cleanCount(rec.days) : 0 };
+  }
+
+  // Cheap poll: updates the panel button and pays the all-done bonus once a day.
+  refreshDailies() {
+    const { done, total } = this.dailyProgress();
+    const btn = document.getElementById('dailies-btn');
+    const label = `📋 Today ${done}/${total}`;
+    if (btn && btn.textContent !== label) btn.textContent = label;
+    if (total > 0 && done === total) {
+      const rec = this.dailiesRecord();
+      if (!rec.paid) {
+        // Save first, then pay, so a reload can never double-pay.
+        writeSave({ dailies: { day: this.questDayBucket(), paid: true, days: rec.days + 1 } });
+        this.awardPoint(DAILY_BONUS, `📋 All chores done! +${DAILY_BONUS} ⭐`, this.localBody.x, this.localBody.y - 50, 'achievement');
+        this.addChatLine({ system: true, text: `📋 Every daily chore is done — +${DAILY_BONUS} ⭐ bonus!` });
+        this.incrementStat('dailyAllDone');
+      }
+    }
+    if (this.dailiesOpen) this.renderDailies();
+  }
+
+  openDailies() {
+    this.dailiesOpen = true;
+    document.getElementById('dailies-overlay').classList.remove('hidden');
+    this.refreshDailies();
+    this.renderDailies();
+  }
+
+  closeDailies() {
+    this.dailiesOpen = false;
+    document.getElementById('dailies-overlay').classList.add('hidden');
+  }
+
+  renderDailies() {
+    const list = document.getElementById('dailies-list');
+    list.innerHTML = '';
+    const mark = { done: '✅', todo: '⬜', later: '🕒', na: '➖' };
+    this.dailyItems().forEach((it) => {
+      const li = document.createElement('li');
+      li.className = `daily-${it.status}`;
+      li.dataset.daily = it.id;
+      li.dataset.status = it.status;
+      const t = document.createElement('span');
+      t.textContent = `${mark[it.status]} ${it.icon} ${it.label}`;
+      const d = document.createElement('small');
+      d.textContent = it.detail;
+      li.append(t, d);
+      list.appendChild(li);
+    });
+    const { done, total } = this.dailyProgress();
+    const rec = this.dailiesRecord();
+    document.getElementById('dailies-summary').textContent = done === total && total > 0
+      ? `All ${total} chores done today! ${rec.paid ? `(+${DAILY_BONUS} ⭐ collected)` : ''} Days completed: ${rec.days}`
+      : `${done}/${total} done — finish them all for a +${DAILY_BONUS} ⭐ bonus. Days completed: ${rec.days}`;
   }
 
   // ---------- birthdays ----------
