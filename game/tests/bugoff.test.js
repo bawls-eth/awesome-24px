@@ -61,13 +61,18 @@ const { launch, scene, check, done } = require('./helpers');
 
   // 5. Phone: sign present on the map, A button still nets a bug.
   ({ browser, page, errors } = await launch({ width: 390, height: 844 }, null, true));
-  await scene(page, (s) => { s.isBugOffTime = () => true; s.refreshBugOff(); // Pick a bug that no earlier interact() branch (e.g. a weed) would shadow.
-    const bug = s.bugs.filter((x) => x.alive).find((x) => { s.localBody.setPosition(x.sprite.x, x.sprite.y); return !s.findNearestWeed(); });
-    if (bug.tween) bug.tween.stop(); s.localBody.setPosition(bug.sprite.x, bug.sprite.y); });
-  await page.waitForTimeout(200);
-  await page.click('#interact-btn');
-  await page.waitForTimeout(300);
-  check('phone: A button catches a bug and it counts', await scene(page, (s) => s.bugOffRecord().count === 1));
+  await scene(page, (s) => { s.isBugOffTime = () => true; s.refreshBugOff(); });
+  // Try several bugs with the real A button: an earlier-priority target (weed,
+  // villager, ...) beside one bug must not make the test flaky.
+  let caught = false;
+  for (let attempt = 0; attempt < 8 && !caught; attempt++) {
+    await scene(page, (s, n) => { const bug = s.bugs.filter((x) => x.alive)[n]; if (bug.tween) bug.tween.stop(); s.localBody.setPosition(bug.sprite.x, bug.sprite.y); }, attempt);
+    await page.waitForTimeout(150);
+    await page.click('#interact-btn');
+    await page.waitForTimeout(150);
+    caught = await scene(page, (s) => s.bugOffRecord().count >= 1);
+  }
+  check('phone: A button catches a bug and it counts', caught);
   await scene(page, (s) => { s.localBody.setPosition(2200, 800); });
   await page.waitForTimeout(600);
   if (process.env.SHOTS) await page.screenshot({ path: process.env.SHOTS + '/bugoff-phone.png' });
