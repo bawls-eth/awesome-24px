@@ -106,7 +106,7 @@ const { launch, scene, check, done } = require('./helpers');
   check('flight: double-tap Jump toggles creative flight (a single tap does not)', !fl.a && !fl.mid && fl.on, JSON.stringify(fl));
   check('flight: no gravity (hovers), Space rises, going down to the ground ends flight', fl.up > 2 && fl.hover && fl.after === false && Math.abs(fl.y + 1) < 0.05, JSON.stringify(fl));
   // pressing the real key twice quickly
-  await scene(page, (s) => { const u = s.underground; u.start(); u.stop(); u.toggleFly(false); u._lastSpaceT = -1e9; });
+  await scene(page, (s) => { const u = s.underground; u.start(); u.stop(); u.active = true; u.toggleFly(false); u._lastSpaceT = -1e9; });
   await page.keyboard.press('Space'); await page.waitForTimeout(80); await page.keyboard.press('Space'); await page.waitForTimeout(100);
   check('flight: pressing the Space key twice quickly toggles flight', (await scene(page, (s) => s.underground.flying)) === true);
 

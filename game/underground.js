@@ -446,7 +446,7 @@ class UndergroundWorld {
   _bindInput() {
     this.onKeyDown = (e) => {
       const k = e.key.toLowerCase();
-      if ((k === ' ' || k === 'spacebar') && !e.repeat) this.tapJump();
+      if ((k === ' ' || k === 'spacebar') && !e.repeat && this.active) this.tapJump();
       this.keys[k] = true;
     };
     this.onKeyUp = (e) => { this.keys[e.key.toLowerCase()] = false; };
@@ -651,6 +651,7 @@ class UndergroundWorld {
       (Array.isArray(m.material) ? m.material : [m.material]).forEach((mat) => mat.dispose());
       m.geometry.dispose();
     });
+    if (this.waterMesh) { this.waterMesh.geometry.dispose(); this.waterMesh.material.dispose(); }
     this.renderer.dispose();
     if (this.renderer.domElement.parentNode) this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
   }
@@ -732,6 +733,7 @@ class UndergroundWorld {
         if (this._boxHits(ox, p.y, oz) && !this._boxHits(ox, p.y + UG_BLOCK + 0.02, oz)) this.vel.y = UG_JUMP_V;
       }
 
+      if (this.flying && p.y > 14 && this.vel.y > 0) this.vel.y = 0; // flight ceiling, as before
       const by = this._moveAxis('y', this.vel.y * dt);
       const wasAir = !wasGround;
       this.onGround = by && this.vel.y < 0;

@@ -2901,7 +2901,7 @@ class TownScene extends Phaser.Scene {
     downBtn.addEventListener('pointerleave', () => setVert(0));
     downBtn.addEventListener('pointercancel', () => setVert(0));
 
-    document.getElementById('ug-fly-btn').addEventListener('click', () => ug.toggleFly());
+    document.getElementById('ug-fly-btn').addEventListener('click', (e) => { ug.toggleFly(); e.currentTarget.blur(); }); // blur: a focused button would also fire on Space
     document.getElementById('ug-view-btn').addEventListener('click', () => { ug.toggleView(); this.updateUgViewButton(); });
     this.updateUgViewButton();
     document.getElementById('ug-mine-btn').addEventListener('click', () => ug.mine());
