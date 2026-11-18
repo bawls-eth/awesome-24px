@@ -380,6 +380,30 @@ const PUNK_ROCKS = [
 // species-registry.json instead; duplicating just the short display name
 // here avoids an extra fetch for something this small.
 const FF_COLLECT_RADIUS = 40;
+// How each fauna species moves (anything not listed walks; flora never
+// moves). 'fly' = flutters with a bob, 'swim' = drifts inside its own water
+// body (pond or the near-shore ocean band), 'bank' = walks along a pond's
+// shore, 'still' = sessile, just bobs in place. Purely cosmetic and local:
+// only the spawn (home) point is deterministic across clients.
+const FF_MOVE = {
+  bird: 'fly', butterfly: 'fly', dragonfly: 'fly', toucan: 'fly', hawk: 'fly', hummingbird: 'fly',
+  bat: 'fly', honeybee: 'fly', firefly: 'fly', ladybug: 'fly', owl: 'fly', snowy_owl: 'fly',
+  trout: 'swim', catfish: 'swim', copepod: 'swim', amoeba: 'swim', paramecium: 'swim',
+  jellyfish: 'swim', shark: 'swim', sea_turtle: 'swim', clownfish: 'swim', octopus: 'swim',
+  seahorse: 'swim', nudibranch: 'swim', shrimp: 'swim', lobster: 'swim',
+  frog: 'bank', crab: 'bank', heron: 'bank', otter: 'bank', beaver: 'bank',
+  starfish: 'still', giant_clam: 'still', barnacle: 'still', sea_urchin: 'still', sand_dollar: 'still',
+};
+// Travel speed in px/s for the slowpokes/sprinters; everyone else gets a
+// size-based default in drawFloraFauna().
+const FF_SPEED = { snail: 5, desert_tortoise: 8, slime_mold: 3, roadrunner: 95, hummingbird: 90, hawk: 70, shark: 40, jellyfish: 10, seahorse: 8, amoeba: 4, paramecium: 6, copepod: 8 };
+// The art faces right except these (flipX logic is inverted for them).
+const FF_FACES_LEFT = new Set(['snail', 'shrimp']);
+// Pond species that live *in* the water rather than on the bank.
+const FF_IN_WATER = new Set(['trout', 'catfish', 'copepod', 'amoeba', 'paramecium', 'water_lily', 'duckweed', 'diatom']);
+// Small, harmless species that also get a couple of spawns inside the
+// village itself (everything else stays out in the wilderness).
+const FF_VILLAGE = ['bird', 'butterfly', 'honeybee', 'ladybug', 'hummingbird', 'squirrel', 'snail', 'dragonfly'];
 const FF_ASSETS = [
   { id: 'fox', w: 56, h: 56, zone: 'forest', name: 'Red Fox', kind: 'fauna' },
   { id: 'deer', w: 68, h: 68, zone: 'forest', name: 'White-tailed Deer', kind: 'fauna' },
@@ -1219,6 +1243,7 @@ class TownScene extends Phaser.Scene {
     this.updateDigHoleHint();
     this.updateFishHint();
     this.updateGiftHint();
+    this.updateFloraFaunaHint();
   }
 
   // ---------- movement ----------
@@ -3913,59 +3938,297 @@ class TownScene extends Phaser.Scene {
 
   drawFloraFauna() {
     const land = this.landBounds();
-    const desertSpots = this.floraFaunaClusterSpots(land.x + 70, land.y + land.height - 70);
-    const alpineSpots = this.floraFaunaClusterSpots(land.x + land.width - 70, land.y + 70);
+    this.ffLand = land;
+    // Every static collision rect drawn so far (buildings, trees, rocks,
+    // the pond walls...), padded — mostly upward, since building art
+    // stands taller than its collision rect — so nothing spawns or walks
+    // on top of a house. Player-built structures come later and are not
+    // included, which also keeps spawn points identical on every client.
+    this.ffBlockers = this.obstacles.getChildren().map((r) => [
+      r.x - r.width / 2 - 16, r.y - r.height / 2 - 48, r.x + r.width / 2 + 16, r.y + r.height / 2 + 12,
+    ]);
+    const desertSpots = this.floraFaunaClusterSpots(land.x + 110, land.y + land.height - 110);
+    const alpineSpots = this.floraFaunaClusterSpots(land.x + land.width - 140, land.y + 110);
+    const inVillage = (x, y) => x > VILLAGE_BOUNDS.x - 150 && x < VILLAGE_BOUNDS.x + VILLAGE_BOUNDS.width + 150
+      && y > VILLAGE_BOUNDS.y - 150 && y < VILLAGE_BOUNDS.y + VILLAGE_BOUNDS.height + 150;
+    // Deterministic per (seed, attempt): a rejected spot just moves on to
+    // the next attempt, so every client still lands on the same answer.
+    const H = (seed, t, k, salt) => worldHash(seed, t * 3 + k, salt);
+    const pick = (gen, ok) => {
+      for (let t = 0; t < 16; t++) {
+        const [x, y] = gen(t);
+        if (ok(x, y)) return [Math.round(x), Math.round(y)];
+      }
+      return null;
+    };
+    const polar = (p, ang, k) => [p.cx + Math.cos(ang) * p.rx * k, p.cy + Math.sin(ang) * p.ry * k];
     this.ffSpecimens = [];
     FF_ASSETS.forEach((a, idx) => {
       const seedBase = 500 + idx * 13;
-      // Land animals now roam the whole island instead of being confined to
-      // their zone's small patch — a fox or snowy owl stuck in one corner
-      // didn't feel like "wildlife," it felt like a diorama. Plants stay
-      // put (a cactus doesn't wander), so only kind:'fauna' gets the
-      // land-wide scatter + bigger count; desert_accent/alpine_accent stay
-      // literal fixed corners for the plants that still use them.
+      // Land animals roam the whole island instead of being confined to
+      // their zone's small patch; plants stay put, and desert_accent/
+      // alpine_accent stay small corner patches for the plants using them.
       const roamsLand = a.kind === 'fauna' && a.zone !== 'pond' && a.zone !== 'ocean';
       const count = roamsLand ? 5 : (a.zone === 'forest' || a.zone === 'meadow' ? 3 : 2);
+      const move = a.kind === 'fauna' ? (FF_MOVE[a.id] || 'walk') : null;
+      const spawns = [];
       for (let i = 0; i < count; i++) {
         const seed = seedBase + i;
-        let x;
-        let y;
+        let spot;
+        let pond = null;
+        let ocean = false;
         if (a.zone === 'pond') {
-          const pond = i % 2 === 0 ? MAIN_POND : EAST_POND;
-          const angle = worldHash(seed, 0, 71) * Math.PI * 2;
-          x = Math.round(pond.cx + Math.cos(angle) * pond.rx * 1.3);
-          y = Math.round(pond.cy + Math.sin(angle) * pond.ry * 1.3);
+          pond = i % 2 === 0 ? MAIN_POND : EAST_POND;
+          spot = FF_IN_WATER.has(a.id)
+            // In the water (was: on the bank, so lilies/fish sat on grass).
+            ? pick((t) => polar(pond, H(seed, t, 0, 71) * Math.PI * 2, 0.3 + H(seed, t, 1, 76) * 0.5), () => true)
+            : pick((t) => polar(pond, H(seed, t, 0, 71) * Math.PI * 2, 1.3 + H(seed, t, 1, 76) * 0.12), (x, y) => !this.ffBlocked(x, y));
         } else if (a.zone === 'ocean') {
-          x = Math.round(this.world.originX + worldHash(seed, 0, 72) * this.world.width);
-          y = Math.round(this.world.originY + worldHash(seed, 1, 73) * this.world.height);
-          const onLand = x > land.x - 20 && x < land.x + land.width + 20 && y > land.y - 20 && y < land.y + land.height + 20;
-          if (onLand) { x = land.x - 60; y = land.y - 60; } // nudge into open ocean, one pass is enough at this scale
-        } else if (roamsLand) {
-          x = Math.round(land.x + worldHash(seed, 0, 74) * land.width);
-          y = Math.round(land.y + worldHash(seed, 1, 75) * land.height);
-          const inVillage = x > VILLAGE_BOUNDS.x - 150 && x < VILLAGE_BOUNDS.x + VILLAGE_BOUNDS.width + 150
-            && y > VILLAGE_BOUNDS.y - 150 && y < VILLAGE_BOUNDS.y + VILLAGE_BOUNDS.height + 150;
-          if (inVillage) { x += 350; y += 350; } // one-pass nudge clear of the village, same idea as the ocean branch
-        } else if (a.zone === 'desert_accent') {
-          [x, y] = desertSpots[(idx * 2 + i) % desertSpots.length];
-        } else if (a.zone === 'alpine_accent') {
-          [x, y] = alpineSpots[(idx * 2 + i) % alpineSpots.length];
+          // A near-shore band all the way round the island (was: anywhere
+          // in the world, with every on-land roll piled onto one point).
+          ocean = true;
+          spot = pick((t) => {
+            const side = Math.floor(H(seed, t, 0, 72) * 4);
+            const d = 50 + H(seed, t, 1, 73) * 180;
+            const u = H(seed, t, 2, 77);
+            if (side === 0) return [land.x + u * land.width, land.y - d];
+            if (side === 1) return [land.x + u * land.width, land.y + land.height + d];
+            if (side === 2) return [land.x - d, land.y + u * land.height];
+            return [land.x + land.width + d, land.y + u * land.height];
+          }, (x, y) => this.ffOceanOk(x, y));
+        } else if (!roamsLand && (a.zone === 'desert_accent' || a.zone === 'alpine_accent')) {
+          const [ax, ay] = (a.zone === 'desert_accent' ? desertSpots : alpineSpots)[(idx * 2 + i) % desertSpots.length];
+          spot = pick((t) => [ax + (H(seed, t, 0, 78) - 0.5) * 90, ay + (H(seed, t, 1, 79) - 0.5) * 90], (x, y) => this.ffLandOk(x, y));
         } else {
-          x = Math.round(land.x + worldHash(seed, 0, 74) * land.width);
-          y = Math.round(land.y + worldHash(seed, 1, 75) * land.height);
-          const inVillage = x > VILLAGE_BOUNDS.x - 150 && x < VILLAGE_BOUNDS.x + VILLAGE_BOUNDS.width + 150
-            && y > VILLAGE_BOUNDS.y - 150 && y < VILLAGE_BOUNDS.y + VILLAGE_BOUNDS.height + 150;
-          if (inVillage) { x += 350; y += 350; } // one-pass nudge clear of the village, same idea as the ocean branch
+          // Was a one-pass "+350" nudge that could land inside a pond, on a
+          // building, or back inside the village; now retried properly.
+          spot = pick((t) => [land.x + H(seed, t, 0, 74) * land.width, land.y + H(seed, t, 1, 75) * land.height],
+            (x, y) => !inVillage(x, y) && this.ffLandOk(x, y));
         }
-        const sprite = this.add.image(x, y, `ff_${a.id}`).setDisplaySize(a.w, a.h).setDepth(y);
-        this.ffSpecimens.push({ id: a.id, name: a.name, x, y });
-        if (a.zone === 'pond' || a.zone === 'ocean') {
-          this.tweens.add({ targets: sprite, y: y - 4, duration: 1200 + i * 150, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-        } else {
-          this.tweens.add({ targets: sprite, angle: { from: -3, to: 3 }, duration: 1800 + i * 200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        if (spot) spawns.push({ x: spot[0], y: spot[1], pond, ocean });
+      }
+      // A couple of small harmless critters living in the village itself.
+      if (FF_VILLAGE.includes(a.id)) {
+        for (let i = 0; i < 2; i++) {
+          const seed = seedBase + 9 + i;
+          const spot = pick((t) => [
+            VILLAGE_BOUNDS.x + 100 + H(seed, t, 0, 81) * (VILLAGE_BOUNDS.width - 200),
+            VILLAGE_BOUNDS.y + 100 + H(seed, t, 1, 82) * (VILLAGE_BOUNDS.height - 200),
+          ], (x, y) => this.ffLandOk(x, y));
+          if (spot) spawns.push({ x: spot[0], y: spot[1], pond: null, ocean: false });
         }
       }
+      spawns.forEach((s, i) => this.addFloraFaunaSpecimen(a, move, s, i));
     });
+
+    // Nearby-specimen bookkeeping: a cheap 400ms sweep decides which
+    // specimens are around the camera; only those animate, and only those
+    // are looked at every frame for the hint/sparkles/E-to-log.
+    this.ffNear = [];
+    this.time.addEvent({ delay: 400, loop: true, callback: () => this.refreshFloraFaunaNear() });
+    this.ffHint = this.add.text(0, 0, '', {
+      fontSize: '11px', fontFamily: 'monospace', color: '#ffffff', stroke: '#1c2430', strokeThickness: 3,
+    }).setOrigin(0.5, 0).setDepth(99995).setVisible(false);
+    this.ffSparkles = [];
+    for (let i = 0; i < 6; i++) {
+      this.ffSparkles.push(this.add.star(0, 0, 4, 2, 6, 0xfff2a8).setDepth(99994).setVisible(false));
+    }
+    this.tweens.add({ targets: this.ffSparkles, alpha: { from: 1, to: 0.2 }, angle: 90, duration: 650, yoyo: true, repeat: -1 });
+  }
+
+  addFloraFaunaSpecimen(a, move, s, i) {
+    // The SVGs are square, so a non-square w/h used to squash the art
+    // (pine 72x96, joshua tree 80x104...). Keep the bigger side, square;
+    // never below 14px so the microscopic species stay findable specks.
+    const size = Math.max(14, a.w, a.h);
+    const fly = move === 'fly';
+    const sprite = this.add.image(s.x, s.y, `ff_${a.id}`).setDisplaySize(size, size).setDepth(fly ? s.y + 40 : s.y);
+    const inWater = !!s.pond && FF_IN_WATER.has(a.id);
+    const spec = {
+      id: a.id, name: a.name, x: s.x, y: s.y, px: s.x, py: s.y, sprite, move, pond: s.pond, ocean: s.ocean,
+      baseScaleY: sprite.scaleY,
+      phase: i * 1.7 + a.w,
+      // Big animals are reachable from their edge, not just their centre;
+      // players can't wade into the ponds, so in-water species reach further.
+      reach: Math.max(FF_COLLECT_RADIUS, size / 2 + 16) * (inWater ? 1.6 : 1),
+      speed: FF_SPEED[a.id] || (fly ? 55 : move === 'swim' ? 22 : Phaser.Math.Clamp(size * 0.7, 12, 50)),
+      range: fly ? 160 : size > 50 ? 150 : 90,
+      active: false,
+      moving: false,
+      idle: null,
+    };
+    if (!move || move === 'still') {
+      // Rooted plants sway, water-bound ones (and sessile sea life) bob.
+      // Created paused; refreshFloraFaunaNear() only runs them on screen.
+      spec.idle = (s.pond || s.ocean)
+        ? this.tweens.add({ targets: sprite, y: s.y - 4, duration: 1200 + i * 150, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', paused: true })
+        : this.tweens.add({ targets: sprite, angle: { from: -3, to: 3 }, duration: 1800 + i * 200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', paused: true });
+    }
+    this.ffSpecimens.push(spec);
+  }
+
+  ffBlocked(x, y) {
+    const b = this.ffBlockers;
+    for (let i = 0; i < b.length; i++) {
+      const r = b[i];
+      if (x > r[0] && x < r[2] && y > r[1] && y < r[3]) return true;
+    }
+    return false;
+  }
+
+  ffInPond(p, x, y, k) {
+    const dx = (x - p.cx) / (p.rx * k);
+    const dy = (y - p.cy) / (p.ry * k);
+    return dx * dx + dy * dy < 1;
+  }
+
+  // Solid ground: inside the island (clear of the beach), out of both
+  // ponds and clear of every static obstacle.
+  ffLandOk(x, y) {
+    const land = this.ffLand;
+    const pad = 40;
+    if (x < land.x + pad || x > land.x + land.width - pad || y < land.y + pad || y > land.y + land.height - pad) return false;
+    if (this.ffInPond(MAIN_POND, x, y, 1.2) || this.ffInPond(EAST_POND, x, y, 1.2)) return false;
+    return !this.ffBlocked(x, y);
+  }
+
+  // Open water just off the beach, still inside the world.
+  ffOceanOk(x, y) {
+    const land = this.ffLand;
+    const w = this.world;
+    if (x < w.originX + 30 || x > w.originX + w.width - 30 || y < w.originY + 30 || y > w.originY + w.height - 30) return false;
+    return x < land.x - 35 || x > land.x + land.width + 35 || y < land.y - 35 || y > land.y + land.height + 35;
+  }
+
+  refreshFloraFaunaNear() {
+    const v = this.cameras.main.worldView;
+    const m = 160;
+    const near = [];
+    this.ffSpecimens.forEach((spec) => {
+      const { x, y } = spec.sprite;
+      const inView = x > v.x - m && x < v.right + m && y > v.y - m && y < v.bottom + m;
+      if (inView) near.push(spec);
+      spec.active = inView && !reduceMotion;
+      if (spec.idle) {
+        if (spec.active && spec.idle.isPaused()) spec.idle.resume();
+        else if (!spec.active && !spec.idle.isPaused()) spec.idle.pause();
+      } else if (spec.active && !spec.moving) {
+        spec.moving = true;
+        this.time.delayedCall(Phaser.Math.Between(0, 1500), () => this.stepFloraFauna(spec));
+      }
+    });
+    this.ffNear = near;
+  }
+
+  pickFloraFaunaTarget(spec) {
+    for (let t = 0; t < 4; t++) {
+      if (spec.move === 'bank') {
+        // Pace along the shore of its own pond.
+        const p = spec.pond;
+        const ang = Math.atan2((spec.py - p.cy) / p.ry, (spec.px - p.cx) / p.rx) + (Math.random() - 0.5) * 1.0;
+        const [x, y] = [p.cx + Math.cos(ang) * p.rx * (1.25 + Math.random() * 0.2), p.cy + Math.sin(ang) * p.ry * (1.25 + Math.random() * 0.2)];
+        if (!this.ffBlocked(x, y)) return [x, y];
+        continue;
+      }
+      const x = spec.x + (Math.random() * 2 - 1) * spec.range;
+      const y = spec.y + (Math.random() * 2 - 1) * spec.range * 0.7;
+      if (spec.move === 'swim') {
+        if (spec.pond ? this.ffInPond(spec.pond, x, y, 0.85) : this.ffOceanOk(x, y)) return [x, y];
+        continue;
+      }
+      if (spec.move === 'fly') {
+        // Fliers may pass over rooftops, but stay over the island.
+        const land = this.ffLand;
+        if (x > land.x + 30 && x < land.x + land.width - 30 && y > land.y + 30 && y < land.y + land.height - 30) return [x, y];
+        continue;
+      }
+      // Walkers: the destination and the way there must be solid ground.
+      let ok = true;
+      for (const f of [0.33, 0.66, 1]) {
+        if (!this.ffLandOk(spec.px + (x - spec.px) * f, spec.py + (y - spec.py) * f)) { ok = false; break; }
+      }
+      if (ok) return [x, y];
+    }
+    return null;
+  }
+
+  // One leg of an animal's wander: tween to a nearby target, then rest and
+  // go again — but only while it's near the camera (otherwise it parks
+  // until refreshFloraFaunaNear() wakes it).
+  stepFloraFauna(spec) {
+    if (!spec.active) { spec.moving = false; return; }
+    const target = this.pickFloraFaunaTarget(spec);
+    if (!target) {
+      this.time.delayedCall(Phaser.Math.Between(800, 2000), () => this.stepFloraFauna(spec));
+      return;
+    }
+    const sprite = spec.sprite;
+    const [tx, ty] = target;
+    const dx = tx - spec.px;
+    const dist = Math.hypot(dx, ty - spec.py);
+    if (Math.abs(dx) > 2) sprite.setFlipX((dx < 0) !== FF_FACES_LEFT.has(spec.id));
+    const fly = spec.move === 'fly';
+    const swim = spec.move === 'swim';
+    const pos = { x: spec.px, y: spec.py };
+    this.tweens.add({
+      targets: pos,
+      x: tx,
+      y: ty,
+      duration: Math.max(400, (dist / spec.speed) * 1000),
+      ease: 'Sine.easeInOut',
+      onUpdate: () => {
+        const now = this.time.now;
+        if (fly) {
+          // Bob up and down and flap (squash) while flying.
+          sprite.setPosition(pos.x, pos.y - 10 + Math.sin(now / 160 + spec.phase) * 5);
+          sprite.scaleY = spec.baseScaleY * (0.8 + 0.2 * Math.abs(Math.sin(now / 60 + spec.phase)));
+          sprite.setDepth(pos.y + 40);
+        } else if (swim) {
+          sprite.setPosition(pos.x, pos.y + Math.sin(now / 500 + spec.phase) * 2);
+          sprite.angle = Math.sin(now / 300 + spec.phase) * 4;
+        } else {
+          // Little side-to-side waddle while walking.
+          sprite.setPosition(pos.x, pos.y);
+          sprite.angle = Math.sin(now / 90 + spec.phase) * 5;
+          sprite.setDepth(pos.y);
+        }
+      },
+      onComplete: () => {
+        spec.px = tx;
+        spec.py = ty;
+        sprite.angle = 0;
+        sprite.scaleY = spec.baseScaleY;
+        this.time.delayedCall(fly ? Phaser.Math.Between(200, 1400) : Phaser.Math.Between(900, 4000), () => this.stepFloraFauna(spec));
+      },
+    });
+  }
+
+  // Per frame, but only over the specimens near the camera: sparkles over
+  // species not logged yet, and an "E: log <name>" label under the one in reach
+  // (under, so it never collides with the player's own nametag).
+  updateFloraFaunaHint() {
+    if (!this.ffNear || !this.localBody || !this.ffDiscovered) return;
+    const px = this.localBody.x;
+    const py = this.localBody.y;
+    let best = null;
+    let bestDist = Infinity;
+    let n = 0;
+    for (const spec of this.ffNear) {
+      if (this.ffDiscovered.has(spec.id)) continue;
+      const s = spec.sprite;
+      const d = Math.hypot(s.x - px, s.y - py);
+      if (d < 260 && n < this.ffSparkles.length) {
+        this.ffSparkles[n++].setPosition(s.x + s.displayWidth * 0.3, s.y - s.displayHeight * 0.45).setVisible(true);
+      }
+      if (d < spec.reach && d < bestDist) { best = spec; bestDist = d; }
+    }
+    for (let i = n; i < this.ffSparkles.length; i++) this.ffSparkles[i].setVisible(false);
+    if (best && this.canAct()) {
+      const s = best.sprite;
+      this.ffHint.setText(`${IS_TOUCH ? '✋' : 'E'}: log ${best.name}`).setPosition(s.x, s.y + s.displayHeight / 2 + 2).setVisible(true);
+    } else {
+      this.ffHint.setVisible(false);
+    }
   }
 
   // ---------- Wild fauna/flora log (folded into the Museum) ----------
@@ -3984,26 +4247,32 @@ class TownScene extends Phaser.Scene {
     writeSave({ ffDiscovered: [...this.ffDiscovered] });
   }
 
+  // Uses each specimen's *current* position (animals move), and prefers a
+  // not-yet-logged species over an already-logged one standing closer.
   findNearestFloraFauna() {
-    if (!this.ffSpecimens) return null;
+    if (!this.ffNear) return null;
     let nearest = null;
     let nearestDist = Infinity;
-    this.ffSpecimens.forEach((spec) => {
-      const d = Phaser.Math.Distance.Between(this.localBody.x, this.localBody.y, spec.x, spec.y);
-      if (d < FF_COLLECT_RADIUS && d < nearestDist) { nearest = spec; nearestDist = d; }
+    let nearestNew = false;
+    this.ffNear.forEach((spec) => {
+      const d = Phaser.Math.Distance.Between(this.localBody.x, this.localBody.y, spec.sprite.x, spec.sprite.y);
+      if (d >= spec.reach) return;
+      const isNew = !this.ffDiscovered.has(spec.id);
+      if ((isNew && !nearestNew) || (isNew === nearestNew && d < nearestDist)) { nearest = spec; nearestDist = d; nearestNew = isNew; }
     });
     return nearest;
   }
 
   collectFloraFauna(spec) {
+    const { x, y } = spec.sprite;
     if (this.ffDiscovered.has(spec.id)) {
-      this.showFloatingText(spec.x, spec.y - 30, `${spec.name} (already logged)`);
+      this.showFloatingText(x, y - 30, `${spec.name} (already logged)`);
       SFX.pop();
       return;
     }
     this.ffDiscovered.add(spec.id);
     this.saveFloraFaunaLog();
-    this.awardPoint(1, `🔍 ${spec.name} added to the Museum! (${this.ffDiscovered.size}/${FF_ASSETS.length})`, spec.x, spec.y - 30, 'achievement');
+    this.awardPoint(1, `🔍 ${spec.name} added to the Museum! (${this.ffDiscovered.size}/${FF_ASSETS.length})`, x, y - 30, 'achievement');
   }
 
   drawGround() {
