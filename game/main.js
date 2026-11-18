@@ -2849,6 +2849,7 @@ class TownScene extends Phaser.Scene {
       if (k === 'f5' || k === 'v') {
         // F5 would reload the page: swallow it and flip first/third person instead.
         e.preventDefault();
+        if (e.repeat) return; // holding the key must not flicker between views
         ug.toggleView();
         this.updateUgViewButton();
       } else if (k === 'e') {

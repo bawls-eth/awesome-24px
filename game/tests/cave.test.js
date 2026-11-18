@@ -12,7 +12,8 @@ const findOre = `(s) => {
     const [gx, gy, gz] = key.split(',').map(Number);
     for (const [dx, dz, yaw] of dirs) {
       const nx = gx - dx; const nz = gz - dz;
-      if (Math.abs(nx) > 8 || Math.abs(nz) > 8) continue;
+      // Stay off the cave boundary so there is always a block to place against after mining.
+      if (Math.abs(nx) > 6 || Math.abs(nz) > 6 || Math.abs(gx) > 6 || Math.abs(gz) > 6) continue;
       if (u.occupied.has(nx + ',' + gy + ',' + nz)) continue;
       return { key, kind: v.kind, rig: [nx * B, gy * B - 0.8, nz * B], yaw };
     }
@@ -69,6 +70,7 @@ const findOre = `(s) => {
 
   // 4. Mining a textured ore: the block disappears and yields stone; kinds still work.
   const spot = await scene(page, new Function('s', `return (${findOre})(s)`));
+  check('mining setup: found an ore block with a free neighbouring cell', !!spot, String(spot));
   const m = await scene(page, (s, sp) => {
     const u = s.underground; u.rig.position.set(sp.rig[0], sp.rig[1], sp.rig[2]); u.yaw = sp.yaw; u.pitch = 0; u._update(0.016);
     const occ = u.occupied.size; const stone = s.resources.stone; const had = u.lookup.has(sp.key);

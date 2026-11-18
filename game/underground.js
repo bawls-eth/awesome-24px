@@ -492,6 +492,12 @@ class UndergroundWorld {
     window.removeEventListener('keyup', this.onKeyUp);
     window.removeEventListener('pointerup', this.onPointerUp);
     window.removeEventListener('resize', this.onResize);
+    // Free GPU resources: textures and the per-kind material sets.
+    Object.values(this.textures || {}).forEach((t) => t.dispose());
+    Object.values(this.terrainMeshes || {}).forEach((m) => {
+      (Array.isArray(m.material) ? m.material : [m.material]).forEach((mat) => mat.dispose());
+      m.geometry.dispose();
+    });
     this.renderer.dispose();
     if (this.renderer.domElement.parentNode) this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
   }
