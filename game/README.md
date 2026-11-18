@@ -29,6 +29,14 @@ right now, before you even pick a name.
 - **Fish** at the pond (or the second pond out east), **chop** trees for
   wood, **mine** rocks for stone — classic Animal Crossing activities, fill
   the inventory in the top-left
+- **Weeds & tidiness** 🌿 — every (UTC) day a fresh batch of ~24 weeds sprouts
+  around the village, the same for everyone (deterministic `worldHash` of the
+  day, nothing synced). Walk up and press **E** / **A** to pull one for ⭐1;
+  clear them all for a +5⭐ "Spotless town" bonus. The player panel shows how
+  tidy the town is (Spotless / Tidy / Scruffy / Overgrown). Progress is
+  local, saved under the additive `weedsPulled: {day, ids}` key and resets
+  each day. Achievements: Weed Whacker (10), Groundskeeper (100), Spotless
+  Town. Tests: `node game/tests/weeds.test.js`.
 - **DIY Workbench** 🔨 — walk up to the workbench just east of the shop/museum
   (shown on the map) and press **E** / the **A** button. Eight recipes turn
   gathered goods into crafted items that sell at the shop for ~1.3-1.5x their

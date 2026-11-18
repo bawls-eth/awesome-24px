@@ -113,8 +113,9 @@ const SAVE_KEY = 'pixeltown-save-v1';
 
 // Bump this string whenever there's something worth telling returning
 // players about — shown once as a dismissible banner, then remembered.
-const GAME_VERSION = 'v25-workbench';
+const GAME_VERSION = 'v26-weeds';
 const WHATS_NEW = [
+  '🌿 Weeds sprout every day — pull them for ⭐ and keep the town tidy',
   '🔨 DIY Workbench — craft goods from what you gather, sell them for more',
   '🎣 Daily fishing tournament — biggest catch of the day wins a bonus',
   '🔍 Daily scavenger hunt — one hidden spot a day, first to find it wins',
@@ -691,6 +692,9 @@ const ACHIEVEMENTS = [
   { id: 'craft1', icon: '🔨', label: 'DIY Beginner', desc: 'Craft something at the workbench', reward: 3, check: (s) => (s.crafted || 0) >= 1 },
   { id: 'craft10', icon: '🛠️', label: 'Crafty', desc: 'Craft 10 items', reward: 5, check: (s) => (s.crafted || 0) >= 10 },
   { id: 'craftAll', icon: '🧰', label: 'Master Crafter', desc: 'Craft every recipe at least once', reward: 10, check: (s) => RECIPES.every((r) => (s['craft_' + r.id] || 0) >= 1) },
+  { id: 'weeds10', icon: '🌿', label: 'Weed Whacker', desc: 'Pull 10 weeds', reward: 3, check: (s) => (s.weedsPulled || 0) >= 10 },
+  { id: 'weeds100', icon: '🧑‍🌾', label: 'Groundskeeper', desc: 'Pull 100 weeds', reward: 10, check: (s) => (s.weedsPulled || 0) >= 100 },
+  { id: 'spotless1', icon: '✨', label: 'Spotless Town', desc: 'Pull every weed in town in one day', reward: 8, check: (s) => (s.spotlessDays || 0) >= 1 },
   { id: 'flowers10', icon: '🌸', label: 'Gardener', desc: 'Pick 10 flowers', reward: 5, check: (s) => (s.flowers || 0) >= 10 },
   { id: 'fence1', icon: '🪨', label: 'Fencer', desc: 'Place a stone fence', reward: 3, check: (s) => (s.stoneBlocksPlaced || 0) >= 1 },
   { id: 'npcChat5', icon: '🧪', label: 'Chatty', desc: "Talk to Professor Byte 5 times", reward: 3, check: (s) => (s.npcChats || 0) >= 5 },
@@ -746,6 +750,18 @@ const FLOWER_SPOTS = [
   { x: 1850, y: 950 }, { x: 2150, y: 600 }, { x: 350, y: 880 },
 ];
 const FLOWER_PICKUP_RADIUS = 34;
+
+// ---------- weeds & tidiness ----------
+// Each (UTC) day a fresh, deterministic batch of weeds sprouts around the
+// village — worldHash on the day number, never Math.random, so every client
+// sees the same weeds without syncing anything. Pulling one is local-only
+// (saved as `weedsPulled: {day, ids}`) and pays a star; clear them all for
+// a bonus. The sprites come from ONE baked texture and are never redrawn.
+const WEED_COUNT = 24;
+const WEED_PULL_RADIUS = 38;
+const WEED_STAR_REWARD = 1;
+const WEED_SPOTLESS_BONUS = 5;
+const WEED_SEED = 91;
 const FLOWER_REGROW_MS = 30000;
 
 // Scatters extra trees/rocks/flowers across the wilderness ring (between
@@ -1263,6 +1279,7 @@ class TownScene extends Phaser.Scene {
     this.setupGuestbook();
     this.setupBugs();
     this.setupFossils();
+    this.setupWeeds();
     if (IS_TOUCH) {
       this.setupTouchControls();
       this.setupTiltShake();
@@ -2189,6 +2206,11 @@ class TownScene extends Phaser.Scene {
     const beachSpot = this.findNearestBeachItem();
     if (beachSpot) {
       this.collectBeachItem(beachSpot);
+      return;
+    }
+    const weed = this.findNearestWeed();
+    if (weed) {
+      this.pullWeed(weed);
       return;
     }
     const flowerSpot = this.findNearestFlower();
@@ -5539,6 +5561,119 @@ class TownScene extends Phaser.Scene {
   // Fixed spots along the pond edges, same shape as the fishing spots:
   // walk up, interact, a short cooldown before it washes up again.
   // Local-only, like every other activity here.
+
+  // ---------- weeds ----------
+  // The day's weed positions: deterministic (worldHash of day + index +
+  // attempt), kept inside the village on open ground — off the ponds, every
+  // static obstacle (padded like the wildlife blockers), and clear of the
+  // flower patches and landmarks. May return fewer than WEED_COUNT in the
+  // unlikely event a slot finds no free spot in 12 tries.
+  weedSpotsForDay(day) {
+    const vb = VILLAGE_BOUNDS;
+    const pad = 70;
+    const blockers = this.obstacles.getChildren().map((r) => [
+      r.x - r.width / 2 - 24, r.y - r.height / 2 - 48, r.x + r.width / 2 + 24, r.y + r.height / 2 + 16,
+    ]);
+    const keepClear = [
+      ...FLOWER_SPOTS, CAMPFIRE_POS, STATUE_POS, NPC_POS, NPC2_POS, GUESTBOOK_POS, WORKBENCH_POS,
+      POLYROLL_POS, TURNIP_STALL_POS, ABLE_SISTERS_POS, MERCHANT_POS, DIG_HOLE_POS, FISH_TOURNAMENT_SIGN_POS,
+    ];
+    const spots = [];
+    for (let i = 0; i < WEED_COUNT; i++) {
+      for (let t = 0; t < 12; t++) {
+        const x = Math.round(vb.x + pad + worldHash(day % 100000 + i * 0.37, t, WEED_SEED) * (vb.width - pad * 2));
+        const y = Math.round(vb.y + pad + worldHash(day % 100000 + i * 0.37, t + 50, WEED_SEED + 1) * (vb.height - pad * 2));
+        if (blockers.some((b) => x > b[0] && x < b[2] && y > b[1] && y < b[3])) continue;
+        if (this.ffInPond(MAIN_POND, x, y, 1.25) || this.ffInPond(EAST_POND, x, y, 1.25)) continue;
+        if (keepClear.some((k) => Math.hypot(k.x - x, k.y - y) < 60)) continue;
+        if (spots.some((o) => Math.hypot(o.x - x, o.y - y) < 40)) continue;
+        spots.push({ x, y });
+        break;
+      }
+    }
+    return spots;
+  }
+
+  setupWeeds() {
+    if (!this.textures.exists('weed')) {
+      const g = this.make.graphics({ x: 0, y: 0, add: false });
+      g.fillStyle(0x000000, 0.15).fillEllipse(10, 18, 16, 5);
+      g.fillStyle(0x3f7a2a, 1).fillTriangle(10, 2, 6, 17, 10, 14).fillTriangle(10, 2, 14, 17, 10, 14);
+      g.fillStyle(0x58a03a, 1).fillTriangle(3, 6, 8, 17, 9, 12).fillTriangle(17, 6, 12, 17, 11, 12);
+      g.fillStyle(0x2f5f1f, 1).fillRect(9, 12, 2, 6);
+      g.generateTexture('weed', 20, 20);
+      g.destroy();
+    }
+    this.weedSprites = [];
+    for (let i = 0; i < WEED_COUNT; i++) {
+      this.weedSprites.push(this.add.image(0, 0, 'weed').setVisible(false));
+    }
+    this.weedDay = null;
+    this.refreshWeeds();
+    // Day rollover is polled (like the merchant sign) — no per-frame work.
+    this.time.addEvent({ delay: 30000, loop: true, callback: () => this.refreshWeeds() });
+  }
+
+  refreshWeeds() {
+    const day = this.questDayBucket();
+    if (day === this.weedDay) return;
+    this.weedDay = day;
+    this.weedSpots = this.weedSpotsForDay(day);
+    const rec = loadSave().weedsPulled;
+    const ids = rec && typeof rec === 'object' && rec.day === day && Array.isArray(rec.ids) ? rec.ids : [];
+    this.weedsPulledToday = new Set(ids.filter((v) => Number.isInteger(v) && v >= 0 && v < WEED_COUNT));
+    this.weedSprites.forEach((sp, i) => {
+      const spot = this.weedSpots[i];
+      if (!spot) { sp.setVisible(false); return; }
+      sp.setPosition(spot.x, spot.y).setScale(1).setAlpha(1).setDepth(spot.y);
+      sp.setVisible(!this.weedsPulledToday.has(i));
+    });
+    this.updateTidiness();
+  }
+
+  weedsLeft() {
+    let n = 0;
+    this.weedSpots.forEach((_, i) => { if (!this.weedsPulledToday.has(i)) n++; });
+    return n;
+  }
+
+  updateTidiness() {
+    const el = document.getElementById('town-tidy');
+    if (!el) return;
+    const left = this.weedsLeft();
+    const label = left === 0 ? 'Spotless ✨' : left <= 8 ? 'Tidy' : left <= 16 ? 'Scruffy' : 'Overgrown';
+    el.textContent = `🌿 ${label} (${left} weeds)`;
+  }
+
+  findNearestWeed() {
+    let best = null;
+    let bestDist = WEED_PULL_RADIUS;
+    this.weedSpots.forEach((spot, i) => {
+      if (this.weedsPulledToday.has(i)) return;
+      const d = Math.hypot(this.localBody.x - spot.x, this.localBody.y - spot.y);
+      if (d < bestDist) { bestDist = d; best = { ...spot, index: i }; }
+    });
+    return best;
+  }
+
+  pullWeed(weed) {
+    if (this.weedsPulledToday.has(weed.index)) return false;
+    this.weedsPulledToday.add(weed.index);
+    writeSave({ weedsPulled: { day: this.weedDay, ids: [...this.weedsPulledToday] } });
+    const sp = this.weedSprites[weed.index];
+    if (sp) {
+      // One-shot pop-out tween (not per-frame), then hide.
+      this.tweens.add({ targets: sp, scale: 1.6, alpha: 0, y: weed.y - 14, duration: 220, onComplete: () => sp.setVisible(false) });
+    }
+    this.awardPoint(WEED_STAR_REWARD, `🌿 +${WEED_STAR_REWARD} ⭐`, weed.x, weed.y - 20, 'sell');
+    this.incrementStat('weedsPulled');
+    this.updateTidiness();
+    if (this.weedsLeft() === 0 && this.weedSpots.length > 0) {
+      this.awardPoint(WEED_SPOTLESS_BONUS, `✨ Spotless town! +${WEED_SPOTLESS_BONUS} ⭐`, this.localBody.x, this.localBody.y - 50, 'achievement');
+      this.incrementStat('spotlessDays');
+    }
+    return true;
+  }
 
   drawFlowers() {
     this.flowerCooldowns = {};
