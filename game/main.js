@@ -903,6 +903,21 @@ const ROCK_MINE_RADIUS = 30;
 const FISH_BITE_WAIT_MIN = 1800;
 const FISH_BITE_WAIT_MAX = 4000;
 const FISH_BITE_WINDOW = 1300;
+// Visible fish shadows swimming in both ponds (client-local, cosmetic
+// positions): walk up to one and the Fish button / E casts right at it.
+// Each zone is a convex slice of a pond's ellipse so a straight swim
+// between two points never leaves the water — the main pond is split
+// into north/south halves because its middle row is the walkable bridge
+// corridor (see drawPond's two obstacle rects).
+const FISH_SHADOW_REACH = 72;
+const FISH_SHADOW_ZONES = [
+  { pond: MAIN_POND, count: 3, yMax: MAIN_POND.cy - 40 },
+  { pond: MAIN_POND, count: 3, yMin: MAIN_POND.cy + 40 },
+  { pond: EAST_POND, count: 4 },
+];
+const FISH_SHADOW_ALPHA = 0.42;
+const FISH_SHADOW_RESPAWN_MIN = 4000;
+const FISH_SHADOW_RESPAWN_MAX = 9000;
 
 const GRID_SIZE = 32;
 const BLOCK_PLACE_DISTANCE = 28;
@@ -1654,6 +1669,7 @@ class TownScene extends Phaser.Scene {
     this.treeCooldowns = {};
     this.rockCooldowns = {};
     this.fishing = { state: 'idle', spot: null, bobber: null, timer: null };
+    this.setupFishShadows();
     this.updateInventoryHUD();
 
     this.input.keyboard.on('keydown-E', () => { if (this.canAct()) this.interact(); });
@@ -1719,6 +1735,11 @@ class TownScene extends Phaser.Scene {
     const villager = this.findNearestVillager();
     if (villager) {
       this.talkToVillager(villager);
+      return;
+    }
+    const fishTarget = this.findNearestFishingSpot();
+    if (fishTarget && fishTarget.shadow) {
+      this.startFishing(fishTarget);
       return;
     }
     const specimen = this.findNearestFloraFauna();
@@ -2080,20 +2101,39 @@ class TownScene extends Phaser.Scene {
   setupFishHint() {
     const btn = document.getElementById('fish-hint-btn');
     if (!btn) return;
-    btn.addEventListener('click', () => { if (this.canAct()) this.interact(); });
+    // Fish directly rather than via interact(): pond-side critters,
+    // flowers and beach items are checked earlier in interact() and used
+    // to swallow the tap, so "🎣 Fish" did something else entirely.
+    btn.addEventListener('click', () => {
+      if (!this.canAct() || this.inUnderground || this.buildMode) return;
+      if (this.fishing.state !== 'idle') { this.handleFishingInteract(); return; }
+      const spot = this.findNearestFishingSpot();
+      if (spot) this.startFishing(spot);
+    });
   }
 
   updateFishHint() {
     const btn = document.getElementById('fish-hint-btn');
     if (!btn) return;
     const state = this.fishing.state;
-    const nearSpot = state === 'idle' && !!this.findNearestFishingSpot();
-    const show = !this.inUnderground && !this.buildMode && (state !== 'idle' || nearSpot);
+    const target = state === 'idle' ? this.findNearestFishingSpot() : null;
+    // Highlight the fish shadow a cast would go to, so "near a fish" is
+    // visible in the world, not just implied by the button appearing.
+    const targetShadow = target && target.shadow ? target.shadow : null;
+    if (this.fishTargetShadow !== targetShadow) {
+      if (this.fishTargetShadow && this.fishTargetShadow.state === 'swim') this.fishTargetShadow.sprite.setFillStyle(0x0f2236, FISH_SHADOW_ALPHA);
+      if (targetShadow) targetShadow.sprite.setFillStyle(0x0f2236, 0.7);
+      this.fishTargetShadow = targetShadow;
+    }
+    const show = !this.inUnderground && !this.buildMode && (state !== 'idle' || !!target);
     btn.classList.toggle('hidden', !show);
     btn.classList.toggle('biting', state === 'biting');
-    if (state === 'biting') btn.textContent = '❗ Reel it in!';
-    else if (state === 'casting') btn.textContent = '🎣 Waiting for a bite…';
-    else btn.textContent = '🎣 Fish';
+    let label = '🎣 Fish';
+    if (state === 'biting') label = '❗ Reel it in!';
+    else if (state === 'casting') label = '🎣 Waiting for a bite…';
+    // Only touch the DOM when the label actually changes — this runs
+    // every frame.
+    if (btn.textContent !== label) btn.textContent = label;
   }
 
   enterUnderground() {
@@ -2400,7 +2440,22 @@ class TownScene extends Phaser.Scene {
     return best;
   }
 
+  // Prefers a visible fish shadow within casting reach (returned as
+  // { x, y, shadow }); falls back to the old fixed bank spots, which now
+  // summon the nearest fish in that pond to the bobber.
   findNearestFishingSpot() {
+    const now = performance.now();
+    let bestShadow = null;
+    let bestShadowDist = FISH_SHADOW_REACH;
+    (this.fishShadows || []).forEach((s) => {
+      if (s.state !== 'swim' || now < s.spookedUntil) return;
+      const d = Math.hypot(this.localBody.x - s.x, this.localBody.y - s.y);
+      if (d < bestShadowDist) {
+        bestShadowDist = d;
+        bestShadow = s;
+      }
+    });
+    if (bestShadow) return { x: bestShadow.x, y: bestShadow.y, shadow: bestShadow };
     let best = null;
     let bestDist = FISH_INTERACT_RADIUS;
     FISHING_SPOTS.forEach((s) => {
@@ -2920,53 +2975,264 @@ class TownScene extends Phaser.Scene {
   }
 
   // ---------- fishing ----------
+  // Fish shadows are client-local cosmetics (Math.random is fine — the
+  // catch itself is local-only, like bugs). All fishing timing is
+  // wall-clock (performance.now()) checked every frame in
+  // updateFishingRod(), not long delayedCalls: Phaser's clock advances by
+  // a capped per-frame delta, so at low FPS a 3s delayedCall could take
+  // many real seconds and bites felt broken.
+
+  setupFishShadows() {
+    this.fishShadows = [];
+    this.fishTargetShadow = null;
+    this.fishShadowLastAt = performance.now();
+    FISH_SHADOW_ZONES.forEach((zone) => {
+      for (let i = 0; i < zone.count; i++) {
+        const size = Math.random();
+        const p = this.randomFishPoint(zone);
+        const sprite = this.add.ellipse(p.x, p.y, 12 + size * 10, 5 + size * 4, 0x0f2236, FISH_SHADOW_ALPHA).setDepth(-1);
+        const s = {
+          zone, sprite, size, x: p.x, y: p.y, tx: p.x, ty: p.y,
+          baseSpeed: 14 + Math.random() * 12, speed: 0,
+          state: 'swim', pauseUntil: 0, spookedUntil: 0, fleeUntil: 0, respawnAt: 0,
+          phase: Math.random() * Math.PI * 2, heading: 0,
+        };
+        this.pickFishTarget(s);
+        this.fishShadows.push(s);
+      }
+    });
+  }
+
+  randomFishPoint(zone) {
+    const { cx, cy, rx, ry } = zone.pond;
+    for (let i = 0; i < 24; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = Math.sqrt(Math.random());
+      const x = cx + Math.cos(a) * r * rx * 0.82;
+      const y = cy + Math.sin(a) * r * ry * 0.82;
+      if (zone.yMax !== undefined && y > zone.yMax) continue;
+      if (zone.yMin !== undefined && y < zone.yMin) continue;
+      return { x, y };
+    }
+    if (zone.yMax !== undefined) return { x: cx, y: zone.yMax - 14 };
+    if (zone.yMin !== undefined) return { x: cx, y: zone.yMin + 14 };
+    return { x: cx, y: cy };
+  }
+
+  pickFishTarget(s) {
+    const p = this.randomFishPoint(s.zone);
+    s.tx = p.x;
+    s.ty = p.y;
+  }
+
+  // Keeps a point inside a pond's ellipse (scaled by k) so a bobber or a
+  // hooked fish never ends up on the grass.
+  clampToPond(pond, x, y, k = 0.88) {
+    const nx = (x - pond.cx) / (pond.rx * k);
+    const ny = (y - pond.cy) / (pond.ry * k);
+    const d = Math.hypot(nx, ny);
+    if (d <= 1) return { x, y };
+    return { x: pond.cx + (nx / d) * pond.rx * k, y: pond.cy + (ny / d) * pond.ry * k };
+  }
+
+  nearestPond(x, y) {
+    const d = (p) => Math.hypot((x - p.cx) / p.rx, (y - p.cy) / p.ry);
+    return d(MAIN_POND) <= d(EAST_POND) ? MAIN_POND : EAST_POND;
+  }
+
+  spookFishShadow(s, now) {
+    s.state = 'swim';
+    s.fleeUntil = now + 1200;
+    s.spookedUntil = now + 3000;
+    s.pauseUntil = 0;
+    s.sprite.setFillStyle(0x0f2236, FISH_SHADOW_ALPHA).setScale(1);
+    this.pickFishTarget(s);
+  }
+
+  updateFishShadows(now) {
+    if (!this.fishShadows) return;
+    const dt = Math.min(now - this.fishShadowLastAt, 1000) / 1000;
+    this.fishShadowLastAt = now;
+    this.fishShadows.forEach((s) => {
+      if (s.state === 'gone') {
+        if (now < s.respawnAt) return;
+        const p = this.randomFishPoint(s.zone);
+        s.x = p.x;
+        s.y = p.y;
+        s.state = 'swim';
+        this.pickFishTarget(s);
+        s.sprite.setPosition(s.x, s.y).setFillStyle(0x0f2236, FISH_SHADOW_ALPHA).setScale(1).setVisible(true).setAlpha(0);
+        this.tweens.add({ targets: s.sprite, alpha: 1, duration: 800 });
+        return;
+      }
+      let moving = false;
+      if (s.state === 'biting') {
+        // Thrashing on the line.
+        s.sprite.setRotation(s.heading + Math.sin(now / 45) * 0.35);
+        return;
+      }
+      if (s.state === 'hooked' || now >= s.pauseUntil) {
+        const dx = s.tx - s.x;
+        const dy = s.ty - s.y;
+        const dist = Math.hypot(dx, dy);
+        const speed = s.state === 'hooked' ? s.speed : (now < s.fleeUntil ? 80 : s.baseSpeed);
+        const step = Math.min(dist, speed * dt);
+        if (dist > 0.5) {
+          s.x += (dx / dist) * step;
+          s.y += (dy / dist) * step;
+          s.heading = Math.atan2(dy, dx);
+          moving = true;
+        } else if (s.state === 'swim') {
+          this.pickFishTarget(s);
+          if (Math.random() < 0.45) s.pauseUntil = now + 600 + Math.random() * 2000;
+        }
+      }
+      const wiggle = Math.sin(now / (moving ? 120 : 400) + s.phase) * (moving ? 0.12 : 0.05);
+      s.sprite.setPosition(s.x, s.y).setRotation(s.heading + wiggle);
+    });
+  }
 
   startFishing(spot) {
+    const now = performance.now();
+    let shadow = spot.shadow || null;
+    const pond = shadow ? shadow.zone.pond : this.nearestPond(spot.x, spot.y);
+    let bx = spot.x;
+    let by = spot.y;
+    if (shadow) {
+      // Land the bobber just ahead of the fish so it visibly swims up to it.
+      const ahead = this.clampToPond(pond, shadow.x + Math.cos(shadow.heading) * 12, shadow.y + Math.sin(shadow.heading) * 12);
+      bx = ahead.x;
+      by = ahead.y;
+    } else {
+      // Fixed bank spot: keep the bobber in the water (one of the old
+      // spots sat just past the main pond's south edge, on the grass)
+      // and call over the nearest free fish in that pond.
+      const p = this.clampToPond(pond, bx, by);
+      bx = p.x;
+      by = p.y;
+      let bestD = Infinity;
+      (this.fishShadows || []).forEach((s) => {
+        if (s.state !== 'swim' || s.zone.pond !== pond) return;
+        const d = Math.hypot(s.x - bx, s.y - by);
+        if (d < bestD) { bestD = d; shadow = s; }
+      });
+    }
+
     this.fishing.state = 'casting';
-    this.fishing.spot = spot;
+    this.fishing.spot = { x: bx, y: by, shadow };
     // Depth -1 (same as the pond/ground layer) used to mean the bobber
     // could render underneath anything with a normal y-based depth —
     // players, decor, ripples added after it — which on a zoomed-out
     // mobile camera made the bite's color change easy to miss entirely.
     // A fixed high depth keeps it on top of the world consistently.
-    this.fishing.bobber = this.add.circle(spot.x, spot.y, 4, 0xffffff).setDepth(99999);
+    this.fishing.bobber = this.add.circle(bx, by, 4, 0xffffff).setStrokeStyle(1, 0x1c2430, 1).setDepth(99999);
     this.fishing.rod = this.add.graphics().setDepth(100000);
     const waitMs = FISH_BITE_WAIT_MIN + Math.random() * (FISH_BITE_WAIT_MAX - FISH_BITE_WAIT_MIN);
-    this.fishing.timer = this.time.delayedCall(waitMs, () => this.fishBite());
+    this.fishing.biteAt = now + waitMs;
+    // One fake-out nibble partway through on longer waits: a small
+    // twitch with no sound, so reacting to *any* movement is "too early".
+    this.fishing.nibbleAt = waitMs > 2400 ? now + waitMs * (0.4 + Math.random() * 0.25) : 0;
+    this.fishing.biteEndAt = 0;
+    this.fishing.biteFrames = 0;
+    if (shadow) {
+      shadow.state = 'hooked';
+      const dx = bx - shadow.x;
+      const dy = by - shadow.y;
+      const d = Math.hypot(dx, dy) || 1;
+      // Stop with its nose at the bobber, arriving around 70% of the wait.
+      shadow.tx = bx - (dx / d) * 7;
+      shadow.ty = by - (dy / d) * 7;
+      shadow.speed = Math.max(16, d / ((waitMs * 0.7) / 1000));
+      shadow.sprite.setFillStyle(0x0f2236, 0.6);
+    }
+    this.splashRing(bx, by, 10, 0.6);
   }
 
+  splashRing(x, y, toR, alpha) {
+    const ring = this.add.circle(x, y, 3, 0xffffff, 0).setStrokeStyle(2, 0xffffff, alpha).setDepth(99998);
+    const state = { r: 3, a: alpha };
+    this.tweens.add({
+      targets: state,
+      r: toR,
+      a: 0,
+      duration: 500,
+      ease: 'Sine.easeOut',
+      onUpdate: () => { ring.setRadius(state.r); ring.setStrokeStyle(2, 0xffffff, state.a); },
+      onComplete: () => ring.destroy(),
+    });
+  }
+
+  // Runs every frame from update(): moves the fish shadows, drives the
+  // cast -> nibble -> bite -> miss timeline off the wall clock, and
+  // draws the line.
   updateFishingRod() {
-    if (!this.fishing.rod) return;
-    const rod = this.fishing.rod;
+    const now = performance.now();
+    this.updateFishShadows(now);
+    const f = this.fishing;
+    if (!f) return;
+    if (f.state === 'casting') {
+      if (f.nibbleAt && now >= f.nibbleAt) {
+        f.nibbleAt = 0;
+        if (f.bobber) this.tweens.add({ targets: f.bobber, y: f.spot.y + 2, duration: 90, yoyo: true });
+      }
+      if (now >= f.biteAt) this.fishBite(now);
+    } else if (f.state === 'biting') {
+      f.biteFrames += 1;
+      // The reaction window starts when the bite is actually detected
+      // (and so drawn), and needs a few rendered frames, so one long
+      // frame hitch can't eat the whole window.
+      if (now > f.biteEndAt && f.biteFrames >= 3) this.fishMiss();
+    }
+    if (!f.rod) return;
+    const rod = f.rod;
     rod.clear();
     const tipX = this.localVisual.flipX ? this.localBody.x - 8 : this.localBody.x + 8;
     const tipY = this.localBody.y - 14;
     rod.lineStyle(2, 0x6b4226, 1);
-    rod.lineBetween(tipX, tipY, this.fishing.spot.x, this.fishing.spot.y - 2);
+    rod.lineBetween(tipX, tipY, f.bobber ? f.bobber.x : f.spot.x, (f.bobber ? f.bobber.y : f.spot.y) - 2);
   }
 
-  fishBite() {
+  fishBite(now) {
     if (this.fishing.state !== 'casting') return;
     this.fishing.state = 'biting';
+    this.fishing.biteEndAt = now + FISH_BITE_WINDOW;
+    this.fishing.biteFrames = 0;
+    const { x, y, shadow } = this.fishing.spot;
+    if (shadow && shadow.state === 'hooked') {
+      shadow.state = 'biting';
+      shadow.x = shadow.tx;
+      shadow.y = shadow.ty;
+      shadow.sprite.setPosition(shadow.x, shadow.y).setFillStyle(0x0f2236, 0.8).setScale(1.25);
+    }
     if (this.fishing.bobber) {
       const bobber = this.fishing.bobber;
+      this.tweens.killTweensOf(bobber);
       bobber.setFillStyle(0xff4444);
-      // A color change alone on a 4px circle is easy to miss, especially
-      // zoomed out on mobile — a quick scale pulse makes the bite much
-      // harder to not notice, on top of the ❗ text and SFX.pop() below.
+      // Pulled under a little and pulsing for the whole window — a color
+      // change alone on a 4px circle is easy to miss zoomed out on mobile.
+      bobber.setPosition(x, y + 3);
       bobber.setScale(1);
       this.tweens.add({
         targets: bobber,
         scale: 2.2,
-        duration: 180,
+        duration: 160,
         yoyo: true,
-        repeat: 2,
+        repeat: -1,
         ease: 'Sine.easeInOut',
       });
     }
-    this.showFloatingText(this.fishing.spot.x, this.fishing.spot.y - 24, '❗');
+    this.splashRing(x, y, 22, 0.9);
+    // A big "!" that stays up for the whole reaction window (the shared
+    // floating text is small and fades out in under a second).
+    this.fishing.alert = this.add.text(x, y - 26, '❗', {
+      fontSize: '24px',
+      fontFamily: 'monospace',
+      stroke: '#1c2430',
+      strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(100003);
+    this.tweens.add({ targets: this.fishing.alert, y: y - 32, duration: 140, yoyo: true, repeat: -1 });
     SFX.pop();
-    this.fishing.timer = this.time.delayedCall(FISH_BITE_WINDOW, () => this.fishMiss());
+    try { if (navigator.vibrate) navigator.vibrate([60, 40, 60]); } catch (e) { /* unsupported */ }
   }
 
   fishMiss() {
@@ -2981,6 +3247,14 @@ class TownScene extends Phaser.Scene {
       this.endFishing();
     } else if (this.fishing.state === 'biting') {
       const spot = this.fishing.spot;
+      if (spot.shadow) {
+        // Caught: that fish leaves the pond, a new one shows up later.
+        const s = spot.shadow;
+        s.state = 'gone';
+        s.respawnAt = performance.now() + FISH_SHADOW_RESPAWN_MIN + Math.random() * (FISH_SHADOW_RESPAWN_MAX - FISH_SHADOW_RESPAWN_MIN);
+        s.sprite.setVisible(false);
+      }
+      this.splashRing(spot.x, spot.y, 18, 0.8);
       this.gainResource('fish', 1, spot.x, spot.y - 24);
       if (this.isFishTournamentTime()) this.catchTournamentFish(spot);
       this.endFishing();
@@ -3014,11 +3288,26 @@ class TownScene extends Phaser.Scene {
       wordWrap: { width: 106 },
     }).setOrigin(0.5).setDepth(y);
     this.refreshTournamentSign();
-    this.net.watchTournament(this.questDayBucket(), (record) => {
+    this.watchTournamentDay();
+    this.time.addEvent({ delay: 60000, loop: true, callback: () => { this.watchTournamentDay(); this.refreshTournamentSign(); } });
+  }
+
+  // The record lives under a per-day key; a session left open past the
+  // day rollover used to keep showing (and comparing against) yesterday's
+  // record while catches were submitted to today's key.
+  watchTournamentDay() {
+    const day = this.questDayBucket();
+    if (this.tournamentDayKey === day) return;
+    if (this.tournamentDayKey !== undefined && this.net.tournamentRef) {
+      this.net.tournamentRef.child(String(this.tournamentDayKey)).off('value');
+    }
+    this.tournamentDayKey = day;
+    this.tournamentRecord = null;
+    this.net.watchTournament(day, (record) => {
+      if (this.tournamentDayKey !== day) return;
       this.tournamentRecord = record;
       this.refreshTournamentSign();
     });
-    this.time.addEvent({ delay: 60000, loop: true, callback: () => this.refreshTournamentSign() });
   }
 
   refreshTournamentSign() {
@@ -3027,12 +3316,17 @@ class TownScene extends Phaser.Scene {
     const end = start + FISH_TOURNAMENT_HOURS;
     const record = this.tournamentRecord;
     const recordLine = record ? `biggest: ${record.size}cm\nby ${record.name}` : 'no catches yet';
-    const statusLine = this.isFishTournamentTime() ? `LIVE now! (${start}:00-${end}:00)` : `next: ${start}:00-${end}:00`;
+    let statusLine = `next: ${start}:00-${end}:00`;
+    if (this.isFishTournamentTime()) statusLine = `LIVE now! (${start}:00-${end}:00)`;
+    else if (new Date().getHours() >= end) statusLine = `ended (${start}:00-${end}:00)`;
     this.tournamentSignText.setText(['🎣 FISH TOURNEY', statusLine, recordLine].join('\n'));
   }
 
   catchTournamentFish(spot) {
-    const sizeCm = Math.round(8 + Math.random() * 72); // 8-80cm
+    // Bigger shadows tend to be bigger fish, so picking which fish to
+    // cast at matters during the tournament. Still 8-80cm overall.
+    const bias = spot && spot.shadow ? spot.shadow.size : Math.random();
+    const sizeCm = Math.round(8 + (0.55 * bias + 0.45 * Math.random()) * 72);
     this.showFloatingText(spot.x, spot.y - 40, `${sizeCm}cm!`);
     this.net.submitTournamentCatch(this.questDayBucket(), sizeCm).then((result) => {
       if (result.success) {
@@ -3050,8 +3344,23 @@ class TownScene extends Phaser.Scene {
 
   endFishing() {
     if (this.fishing.timer) this.fishing.timer.remove(false);
-    if (this.fishing.bobber) this.fishing.bobber.destroy();
+    if (this.fishing.bobber) {
+      this.tweens.killTweensOf(this.fishing.bobber);
+      this.fishing.bobber.destroy();
+    }
     if (this.fishing.rod) this.fishing.rod.destroy();
+    if (this.fishing.alert) {
+      this.tweens.killTweensOf(this.fishing.alert);
+      this.fishing.alert.destroy();
+      this.fishing.alert = null;
+    }
+    // Any fish still on the line (too early, got away, walked off)
+    // darts off and is skittish for a few seconds.
+    const shadow = this.fishing.spot && this.fishing.spot.shadow;
+    if (shadow && (shadow.state === 'hooked' || shadow.state === 'biting')) this.spookFishShadow(shadow, performance.now());
+    this.fishing.biteAt = 0;
+    this.fishing.nibbleAt = 0;
+    this.fishing.biteEndAt = 0;
     this.fishing.state = 'idle';
     this.fishing.spot = null;
     this.fishing.bobber = null;
