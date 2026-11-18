@@ -539,6 +539,11 @@ const NPC_RAIN_LINES = [
   "I'd go inside, but then who'd stand here being damp and philosophical?",
   "Rain means the turnip stall smells like wet cardboard. You're welcome for that image.",
 ];
+const NPC_NIGHT_LINES = [
+  "Night shift! The stars are just pixels that stayed up late. Probably.",
+  "Fireflies are out. I've named all of them Gerald. Saves time.",
+  "Shouldn't you be asleep? Shouldn't I? Science never sleeps. It yawns a lot, though.",
+];
 // Second resident NPC — a grumpy old dockhand who hangs out by the pond's
 // pier, as far from Professor Byte (over by the statue) as the map allows.
 // Purely flavor-text, client-side only, same pattern as NPC_* above but no
@@ -569,6 +574,11 @@ const NPC2_RAIN_LINES = [
   "Forty years and this dock still leaks worse than my patience right now.",
   "The fish bite better in the rain. Doesn't mean I have to enjoy catching them in it.",
   "Rain's just the sky doing the washing up it never finishes.",
+];
+const NPC2_NIGHT_LINES = [
+  "Night fishing's the real fishing. The big ones come out when the tourists go home.",
+  "Can't sleep. Dock creaks louder at night. Or maybe that's my back.",
+  "Moon's bright tonight. Good for spotting shadows in the water. Shh.",
 ];
 // Professor Byte's daily trivia — one question a day, same for everyone
 // (same deterministic wall-clock-hash trick as the merchant/quest), a
@@ -903,6 +913,80 @@ const VILLAGERS = [
     ],
   },
 ];
+// Villagers stroll around their front yard, picking a new spot every
+// VILLAGER_WANDER_MS. The spot is a hash of (time bucket, villager id),
+// so every client sees them in the same place without any syncing.
+const VILLAGER_WANDER_MS = 20000;
+const VILLAGER_HEARTS_RADIUS = 110; // friendship hearts show within this range
+const VILLAGER_HEART_STEPS = [10, 25, 50, 75, 100]; // affinity per heart (first 3 = tiers)
+const VILLAGER_DAILY_TALK_AFFINITY = 2; // first chat of the day, once per villager
+const VILLAGER_TIER_NAMES = ['acquaintance', 'friend', 'good friend', 'best friend'];
+const VILLAGER_GIFT_ICONS = {
+  wood: '🪵', stone: '🪨', fish: '🐟', bugs: '🦋', fruit: '🍎', flowers: '🌸', shells: '🐚', turnips: '🥬',
+};
+const VILLAGER_SLEEP_LINES = ['Zzz...', '*mumbles something about bells* ...zzz'];
+// First-chat-of-the-day greeting per personality; {name} is the player.
+const VILLAGER_GREETINGS = {
+  Lazy: "Oh hey, {name}. Wanna split a snack? I brought two. Well, I ate one.",
+  Snooty: "Ah, {name}. You may approach. Briefly.",
+  Jock: "{name}! Perfect timing, I just finished my warm-up! Feel the burn!",
+  Peppy: "{name}!!! Eeee, you came to say hi! Best. Day. Ever!",
+  Cranky: "Hmph. {name}. ...Good to see you, I suppose.",
+};
+// Personality-wide lines layered on top of each villager's own: `any` is
+// mixed into normal chat, the rest kick in by time of day / weather.
+const VILLAGER_PERSONALITY_LINES = {
+  Lazy: {
+    any: [
+      "I counted the clouds today. Lost track at three. Good number, three.",
+      "If you ever find a snack that's also a pillow, call me immediately.",
+    ],
+    morning: ["Is it still morning? Wake me when it's lunch. Or second breakfast."],
+    evening: ["Evenings are great. It's like a nap, but for the whole sky."],
+    night: ["Zzz... huh? Oh. Five more minutes... zzz..."],
+    rain: ["Rain's the best. Nobody expects you to do anything when it rains."],
+  },
+  Snooty: {
+    any: [
+      "I've redecorated twice this week. Inspiration simply strikes the gifted.",
+      "Do try to keep up with the trends, dear. It's exhausting watching you not.",
+    ],
+    morning: ["Good morning. My beauty routine takes ninety minutes. You're welcome."],
+    evening: ["The sunset matches my roof. I arranged that, obviously."],
+    night: ["*yawn* A lady needs her beauty sleep. Do come back tomorrow."],
+    rain: ["This drizzle is simply ruining my fur. Hold the umbrella higher, please."],
+  },
+  Jock: {
+    any: [
+      "Protein! Carbs! Hustle! That's the whole recipe, buddy!",
+      "Race you to the plaza! ...okay, I'll give you a head start. A small one.",
+    ],
+    morning: ["Morning jog: done! Morning stretch: done! Morning snack: in progress!"],
+    evening: ["Cool-down stretches at sunset. That's how the pros do it!"],
+    night: ["Zzz... one more rep... zzz..."],
+    rain: ["Running in the rain builds grit! And puddles! Mostly puddles!"],
+  },
+  Peppy: {
+    any: [
+      "I'm thinking of starting a band! You can play tambourine! Or triangle!",
+      "Did you see that butterfly?! It waved at me! I'm almost sure!",
+    ],
+    morning: ["Good morning, sunshine! Wait, YOU'RE the sunshine! Eee!"],
+    evening: ["The sky's going all pink and orange! It's like a smoothie up there!"],
+    night: ["Mmm... dreaming about... glitter... zzz..."],
+    rain: ["Rainy days mean rainbows later! I've got my wishing face ready!"],
+  },
+  Cranky: {
+    any: [
+      "Kids these days and their fishing rods. We used our paws. Built character.",
+      "My knees say the weather's turning. My knees are never wrong.",
+    ],
+    morning: ["What's so good about mornings? Name one thing. ...Coffee. Fine."],
+    evening: ["Good, the sun's going down. Too bright out here all day."],
+    night: ["Zzz... get off my lawn... zzz..."],
+    rain: ["Rain, eh? Called it this morning. Nobody listens to the knees."],
+  },
+};
 
 // Fixed, hand-picked landmarks for the town map overlay — deliberately a
 // simple schematic (dots + labels on a plain backdrop), not a literal
@@ -4716,7 +4800,7 @@ class TownScene extends Phaser.Scene {
       padding: { x: 8, y: 5 },
       wordWrap: { width: 180 },
       align: 'center',
-    }).setOrigin(0.5, 1).setDepth(y + 2).setVisible(false);
+    }).setOrigin(0.5, 1).setDepth(99990).setVisible(false);
     this.npcQuestSign = this.add.text(x, y - 46, '', {
       fontSize: '10px',
       fontFamily: 'monospace',
@@ -4886,13 +4970,19 @@ class TownScene extends Phaser.Scene {
         return;
       }
     }
-    const pool = (this.isRainWindow(Date.now()) && Math.random() < 0.5) ? NPC_RAIN_LINES : NPC_LINES;
-    const line = pool[Math.floor(Math.random() * pool.length)];
+    const pool = (this.isRainWindow(Date.now()) && Math.random() < 0.5) ? NPC_RAIN_LINES
+      : (this.isNpcNightHour() && Math.random() < 0.4) ? NPC_NIGHT_LINES : NPC_LINES;
+    const line = this.pickFreshLine(pool, 'npc');
     this.npcBubble.setText(line).setVisible(true);
     if (this.npcBubbleTimer) this.npcBubbleTimer.remove();
     this.npcBubbleTimer = this.time.delayedCall(4200, () => this.npcBubble.setVisible(false));
     this.incrementStat('npcChats');
     SFX.pop();
+  }
+
+  isNpcNightHour() {
+    const hour = new Date().getHours();
+    return hour >= 21 || hour < 6;
   }
 
   // ---------- Second resident NPC (dockside, no quest, flavor only) ----------
@@ -4908,14 +4998,14 @@ class TownScene extends Phaser.Scene {
       stroke: '#000000',
       strokeThickness: 3,
     }).setOrigin(0.5).setDepth(y + 1);
-    this.npc2Bubble = this.add.text(x, y - 46, '', {
+    this.npc2Bubble = this.add.text(x, y - 50, '', {
       fontSize: '11px',
       color: '#1c2430',
       backgroundColor: '#ffe066',
       padding: { x: 8, y: 5 },
       wordWrap: { width: 180 },
       align: 'center',
-    }).setOrigin(0.5, 1).setDepth(y + 2).setVisible(false);
+    }).setOrigin(0.5, 1).setDepth(99990).setVisible(false);
     this.addObstacleRect({ x: x - 10, y: y - 6, width: 20, height: 20 });
   }
 
@@ -4924,8 +5014,9 @@ class TownScene extends Phaser.Scene {
   }
 
   talkToNPC2() {
-    const pool = (this.isRainWindow(Date.now()) && Math.random() < 0.5) ? NPC2_RAIN_LINES : NPC2_LINES;
-    const line = pool[Math.floor(Math.random() * pool.length)];
+    const pool = (this.isRainWindow(Date.now()) && Math.random() < 0.5) ? NPC2_RAIN_LINES
+      : (this.isNpcNightHour() && Math.random() < 0.4) ? NPC2_NIGHT_LINES : NPC2_LINES;
+    const line = this.pickFreshLine(pool, 'npc2');
     this.npc2Bubble.setText(line).setVisible(true);
     if (this.npc2BubbleTimer) this.npc2BubbleTimer.remove();
     this.npc2BubbleTimer = this.time.delayedCall(4200, () => this.npc2Bubble.setVisible(false));
@@ -4935,9 +5026,14 @@ class TownScene extends Phaser.Scene {
 
   // ---------- Residential Lane villagers (gift-affinity, AC-style) ----------
 
+  // Affinity is cached in memory (the save is the source of truth, read
+  // once) so the per-frame heart indicator never re-parses localStorage.
   villagerAffinity(id) {
-    const map = loadSave().villagerAffinity || {};
-    return map[id] || 0;
+    if (!this.villagerAffinityCache) {
+      const saved = loadSave().villagerAffinity;
+      this.villagerAffinityCache = (saved && typeof saved === 'object') ? { ...saved } : {};
+    }
+    return Math.max(0, Math.min(100, Number(this.villagerAffinityCache[id]) || 0));
   }
 
   villagerTier(id) {
@@ -4949,16 +5045,71 @@ class TownScene extends Phaser.Scene {
   }
 
   bumpVillagerAffinity(id, amount) {
-    const map = { ...(loadSave().villagerAffinity || {}) };
-    const before = map[id] || 0;
+    const before = this.villagerAffinity(id);
     const after = Math.min(100, before + amount);
+    const map = { ...(loadSave().villagerAffinity || {}) };
     map[id] = after;
+    this.villagerAffinityCache = { ...map };
     writeSave({ villagerAffinity: map });
     return { before, after };
   }
 
+  // 0-5 hearts; the first three line up with the friend/good/best tiers.
+  villagerHearts(id) {
+    const a = this.villagerAffinity(id);
+    return VILLAGER_HEART_STEPS.filter((s) => a >= s).length;
+  }
+
+  // Villagers doze at their front door late at night.
+  villagerIsAsleep(now = new Date()) {
+    const hour = now.getHours();
+    return hour >= 23 || hour < 6;
+  }
+
+  // Where a villager should be right now. Purely a function of wall-clock
+  // time + villager id, so every client puts them in the same spot with
+  // no network traffic.
+  villagerSpotFor(v, now) {
+    const doorX = v.hx + VILLAGER_HOUSE_W / 2;
+    const doorY = v.hy + VILLAGER_HOUSE_H + 12;
+    if (this.villagerIsAsleep(new Date(now))) return this.villagerUnhide(v, { x: doorX, y: doorY });
+    return this.villagerUnhide(v, this.villagerYardSpot(v, now, doorX, doorY));
+  }
+
+  // The lane's front yards have trees in them; a spot just behind a
+  // canopy would hide the villager, so step out in front of the trunk.
+  villagerUnhide(v, spot) {
+    this.villagerYardTrees = this.villagerYardTrees || {};
+    if (!this.villagerYardTrees[v.id]) {
+      this.villagerYardTrees[v.id] = TREES.filter(([tx, ty]) => tx > v.hx - 60 && tx < v.hx + VILLAGER_HOUSE_W + 60
+        && ty > v.hy && ty < v.hy + VILLAGER_HOUSE_H + 120);
+    }
+    let { x, y } = spot;
+    this.villagerYardTrees[v.id].forEach(([tx, ty]) => {
+      if (Math.abs(x - tx) < 30 && y <= ty && y > ty - 52) y = ty + 8;
+    });
+    return { x, y };
+  }
+
+  villagerYardSpot(v, now, doorX, doorY) {
+    const bucket = Math.floor(now / VILLAGER_WANDER_MS);
+    let seed = bucket;
+    for (let i = 0; i < v.id.length; i++) seed = (seed * 31 + v.id.charCodeAt(i)) | 0;
+    const rand = (k) => {
+      const h = Math.sin(seed * 12.9898 + k * 78.233) * 43758.5453;
+      return h - Math.floor(h);
+    };
+    // Roughly one bucket in four they just hang out by the door.
+    if (rand(0) < 0.25) return { x: doorX, y: doorY + 16 };
+    return {
+      x: v.hx - 16 + rand(1) * (VILLAGER_HOUSE_W + 32),
+      y: v.hy + VILLAGER_HOUSE_H + 14 + rand(2) * 24,
+    };
+  }
+
   drawVillagers() {
     this.villagerBubbles = {};
+    this.villagerState = {};
     VILLAGERS.forEach((v) => {
       const { hx: x, hy: y } = v;
       const w = VILLAGER_HOUSE_W;
@@ -4970,42 +5121,158 @@ class TownScene extends Phaser.Scene {
       g.setDepth(y + h);
       this.addObstacleRect({ x, y, width: w, height: h });
 
-      const vx = x + w / 2;
-      const vy = y + h + 30;
-      const sprite = this.add.sprite(vx, vy, v.species, v.frame).setDepth(vy);
-      this.tweens.add({ targets: sprite, y: vy - 4, duration: 1000 + Math.random() * 300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-      this.add.text(vx, vy - 26, v.name, {
+      const spot = this.villagerSpotFor(v, Date.now());
+      const sprite = this.add.sprite(spot.x, spot.y, v.species, v.frame).setDepth(spot.y);
+      const nameText = this.add.text(spot.x, spot.y - 26, v.name, {
         fontSize: '11px', fontFamily: 'monospace', color: '#ffffff', stroke: '#000000', strokeThickness: 3,
-      }).setOrigin(0.5).setDepth(vy + 1);
-      this.villagerBubbles[v.id] = this.add.text(vx, vy - 44, '', {
+      }).setOrigin(0.5).setDepth(spot.y + 1);
+      const hearts = this.add.text(spot.x, spot.y - 41, '', {
+        fontSize: '10px', fontFamily: 'monospace', color: '#ff7aa8', stroke: '#1c2430', strokeThickness: 3,
+      }).setOrigin(0.5).setDepth(spot.y + 1).setVisible(false);
+      // Bubble sits above the hearts row (which sits above the name tag),
+      // on a high depth so players walking past never cover it.
+      this.villagerBubbles[v.id] = this.add.text(spot.x, spot.y - 50, '', {
         fontSize: '11px', color: '#1c2430', backgroundColor: '#ffe066', padding: { x: 8, y: 5 },
         wordWrap: { width: 170 }, align: 'center',
-      }).setOrigin(0.5, 1).setDepth(vy + 2).setVisible(false);
+      }).setOrigin(0.5, 1).setDepth(99990).setVisible(false);
+      this.villagerState[v.id] = {
+        sprite, nameText, hearts, x: spot.x, y: spot.y, bucket: null, tween: null,
+        phase: Math.random() * Math.PI * 2, heartsShown: null,
+      };
     });
   }
 
+  // Called every frame (from updateGiftHint): eases each villager toward
+  // their scheduled spot, bobs them gently, and keeps the name tag,
+  // hearts and speech bubble glued above them.
+  updateVillagers() {
+    if (!this.villagerState) return;
+    const now = Date.now();
+    const asleep = this.villagerIsAsleep(new Date(now));
+    const key = `${Math.floor(now / VILLAGER_WANDER_MS)}-${asleep}`;
+    const t = this.time.now;
+    const px = this.localBody ? this.localBody.x : -99999;
+    const py = this.localBody ? this.localBody.y : -99999;
+    VILLAGERS.forEach((v) => {
+      const st = this.villagerState[v.id];
+      if (!st) return;
+      if (st.bucket !== key) {
+        st.bucket = key;
+        const target = this.villagerSpotFor(v, now);
+        if (st.tween) st.tween.stop();
+        st.tween = null;
+        const dist = Phaser.Math.Distance.Between(st.x, st.y, target.x, target.y);
+        if (dist > 1) {
+          st.sprite.setFlipX(target.x < st.x);
+          st.tween = this.tweens.add({
+            targets: st, x: target.x, y: target.y,
+            duration: Math.max(400, dist * 28), ease: 'Sine.easeInOut',
+            onComplete: () => { st.tween = null; },
+          });
+        }
+      }
+      // Hop while walking, slow breathe while idle, still if reduced motion.
+      let lift = 0;
+      if (!reduceMotion && !asleep) {
+        lift = st.tween
+          ? Math.abs(Math.sin(t / 110 + st.phase)) * 3
+          : (Math.sin(t / 500 + st.phase) + 1) * 1.5;
+      }
+      st.sprite.setPosition(st.x, st.y - lift).setDepth(st.y).setAlpha(asleep ? 0.75 : 1);
+      st.nameText.setPosition(st.x, st.y - 26).setDepth(st.y + 1);
+      st.hearts.setPosition(st.x, st.y - 41).setDepth(st.y + 1);
+      this.villagerBubbles[v.id].setPosition(st.x, st.y - 50);
+
+      const near = Phaser.Math.Distance.Between(px, py, st.x, st.y) < VILLAGER_HEARTS_RADIUS;
+      st.hearts.setVisible(near);
+      if (near) {
+        const n = asleep ? -1 : this.villagerHearts(v.id);
+        if (n !== st.heartsShown) {
+          st.heartsShown = n;
+          st.hearts.setText(asleep ? 'z z z' : '♥'.repeat(n) + '♡'.repeat(VILLAGER_HEART_STEPS.length - n));
+          st.hearts.setColor(asleep ? '#cfd8ff' : '#ff7aa8');
+        }
+      }
+    });
+  }
+
+  villagerPos(v) {
+    const st = this.villagerState && this.villagerState[v.id];
+    if (st) return { x: st.x, y: st.y };
+    return { x: v.hx + VILLAGER_HOUSE_W / 2, y: v.hy + VILLAGER_HOUSE_H + 30 };
+  }
+
   findNearestVillager() {
+    if (!this.localBody) return null;
     let nearest = null;
     let nearestDist = Infinity;
     VILLAGERS.forEach((v) => {
-      const vx = v.hx + VILLAGER_HOUSE_W / 2;
-      const vy = v.hy + VILLAGER_HOUSE_H + 30;
-      const d = Phaser.Math.Distance.Between(this.localBody.x, this.localBody.y, vx, vy);
+      const p = this.villagerPos(v);
+      const d = Phaser.Math.Distance.Between(this.localBody.x, this.localBody.y, p.x, p.y);
       if (d < VILLAGER_RADIUS && d < nearestDist) { nearest = v; nearestDist = d; }
     });
     return nearest;
   }
 
-  talkToVillager(v) {
-    const tier = this.villagerTier(v.id);
-    const pool = tier >= 2 ? v.lines.concat(v.closeLines) : v.lines;
-    const line = pool[Math.floor(Math.random() * pool.length)];
-    const bubble = this.villagerBubbles[v.id];
+  showVillagerBubble(v, text, ms = 4200) {
+    const bubble = this.villagerBubbles && this.villagerBubbles[v.id];
     if (!bubble) return;
-    bubble.setText(line).setVisible(true);
-    if (this.villagerBubbleTimers && this.villagerBubbleTimers[v.id]) this.villagerBubbleTimers[v.id].remove();
+    bubble.setText(text).setVisible(true);
     this.villagerBubbleTimers = this.villagerBubbleTimers || {};
-    this.villagerBubbleTimers[v.id] = this.time.delayedCall(4200, () => bubble.setVisible(false));
+    if (this.villagerBubbleTimers[v.id]) this.villagerBubbleTimers[v.id].remove();
+    this.villagerBubbleTimers[v.id] = this.time.delayedCall(ms, () => bubble.setVisible(false));
+    // Turn to face the player while talking.
+    const st = this.villagerState && this.villagerState[v.id];
+    if (st && this.localBody) st.sprite.setFlipX(this.localBody.x < st.x);
+  }
+
+  // Random line from a pool, never the same line twice in a row per speaker.
+  pickFreshLine(pool, speaker) {
+    this.lastLineBySpeaker = this.lastLineBySpeaker || {};
+    let line = pool[Math.floor(Math.random() * pool.length)];
+    if (pool.length > 1 && line === this.lastLineBySpeaker[speaker]) {
+      line = pool[(pool.indexOf(line) + 1) % pool.length];
+    }
+    this.lastLineBySpeaker[speaker] = line;
+    return line;
+  }
+
+  villagerLinePool(v) {
+    const now = new Date();
+    const hour = now.getHours();
+    const extra = VILLAGER_PERSONALITY_LINES[v.personality] || {};
+    if (this.villagerIsAsleep(now)) return (extra.night || []).concat(VILLAGER_SLEEP_LINES);
+    // Weather/time-of-day lines are mixed in, not a replacement.
+    if (extra.rain && this.isRainWindow(now.getTime()) && Math.random() < 0.5) return extra.rain;
+    const slot = hour < 11 ? extra.morning : (hour >= 18 ? extra.evening : null);
+    if (slot && Math.random() < 0.35) return slot;
+    const base = v.lines.concat(extra.any || []);
+    return this.villagerTier(v.id) >= 2 ? base.concat(v.closeLines) : base;
+  }
+
+  talkToVillager(v) {
+    // First chat of the (local) day: a personal greeting and a small
+    // affinity bump, capped at once per villager per day.
+    const today = new Date().toISOString().slice(0, 10);
+    const talkDays = { ...(loadSave().villagerTalkDay || {}) };
+    let line;
+    if (talkDays[v.id] !== today && !this.villagerIsAsleep()) {
+      talkDays[v.id] = today;
+      writeSave({ villagerTalkDay: talkDays });
+      const beforeTier = this.villagerTier(v.id);
+      this.bumpVillagerAffinity(v.id, VILLAGER_DAILY_TALK_AFFINITY);
+      const afterTier = this.villagerTier(v.id);
+      const who = (this.localNameText && this.localNameText.text) || 'neighbor';
+      line = (VILLAGER_GREETINGS[v.personality] || 'Oh, hi, {name}!').replace('{name}', who);
+      if (afterTier > beforeTier) {
+        this.awardPoint(5, `${v.name} is now a ${VILLAGER_TIER_NAMES[afterTier]}! +5⭐`, this.localBody.x, this.localBody.y - 30, 'achievement');
+      } else {
+        this.showFloatingText(this.localBody.x, this.localBody.y - 30, `+♥ ${v.name}`);
+      }
+    } else {
+      line = this.pickFreshLine(this.villagerLinePool(v), v.id);
+    }
+    this.showVillagerBubble(v, line);
     SFX.pop();
   }
 
@@ -5014,7 +5281,8 @@ class TownScene extends Phaser.Scene {
     if (!v) return;
     const likedKey = v.likes.find((key) => (this.resources[key] || 0) > 0);
     if (!likedKey) {
-      this.showFloatingText(this.localBody.x, this.localBody.y - 30, `nothing ${v.name} would like in your bag`);
+      const wants = v.likes.map((k) => VILLAGER_GIFT_ICONS[k] || k).join(' or ');
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, `${v.name} would love ${wants}`);
       return;
     }
     this.resources[likedKey] -= 1;
@@ -5023,23 +5291,13 @@ class TownScene extends Phaser.Scene {
     const beforeTier = this.villagerTier(v.id);
     this.bumpVillagerAffinity(v.id, 8);
     const afterTier = this.villagerTier(v.id);
-    const bubble = this.villagerBubbles[v.id];
+    const icon = VILLAGER_GIFT_ICONS[likedKey] || '';
     if (afterTier > beforeTier) {
-      const tierName = ['acquaintance', 'friend', 'good friend', 'best friend'][afterTier];
-      if (bubble) {
-        bubble.setText(`You're ${tierName}s now!`).setVisible(true);
-        if (this.villagerBubbleTimers && this.villagerBubbleTimers[v.id]) this.villagerBubbleTimers[v.id].remove();
-        this.villagerBubbleTimers = this.villagerBubbleTimers || {};
-        this.villagerBubbleTimers[v.id] = this.time.delayedCall(4200, () => bubble.setVisible(false));
-      }
+      const tierName = VILLAGER_TIER_NAMES[afterTier];
+      this.showVillagerBubble(v, `${icon} For me?! We're ${tierName}s now!`);
       this.awardPoint(5, `${v.name} is now a ${tierName}! +5⭐`, this.localBody.x, this.localBody.y - 30, 'achievement');
     } else {
-      if (bubble) {
-        bubble.setText(`${v.name} loves it!`).setVisible(true);
-        if (this.villagerBubbleTimers && this.villagerBubbleTimers[v.id]) this.villagerBubbleTimers[v.id].remove();
-        this.villagerBubbleTimers = this.villagerBubbleTimers || {};
-        this.villagerBubbleTimers[v.id] = this.time.delayedCall(4200, () => bubble.setVisible(false));
-      }
+      this.showVillagerBubble(v, `${icon} ${v.name} loves it!`);
       this.awardPoint(1, '+1 ⭐', this.localBody.x, this.localBody.y - 30);
     }
     this.incrementStat('giftsGiven');
@@ -5053,10 +5311,17 @@ class TownScene extends Phaser.Scene {
   }
 
   updateGiftHint() {
+    this.updateVillagers();
     const btn = document.getElementById('gift-hint-btn');
     if (!btn) return;
-    const show = !this.inUnderground && !this.buildMode && !!this.findNearestVillager();
-    btn.classList.toggle('hidden', !show);
+    const v = (!this.inUnderground && !this.buildMode) ? this.findNearestVillager() : null;
+    btn.classList.toggle('hidden', !v);
+    if (!v) return;
+    // e.g. "🎁 Gift Mocha 🍎🌸" — dimmed when nothing they like is in the bag.
+    const label = `🎁 Gift ${v.name} ${v.likes.map((k) => VILLAGER_GIFT_ICONS[k] || k).join('')}`;
+    if (btn.textContent !== label) btn.textContent = label;
+    const has = v.likes.some((k) => (this.resources[k] || 0) > 0);
+    btn.style.opacity = has ? '' : '0.6';
   }
 
   drawCampfire() {
