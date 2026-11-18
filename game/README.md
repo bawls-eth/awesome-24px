@@ -29,6 +29,14 @@ right now, before you even pick a name.
 - **Fish** at the pond (or the second pond out east), **chop** trees for
   wood, **mine** rocks for stone — classic Animal Crossing activities, fill
   the inventory in the top-left
+- **Daily Bug-Off** 🦋 — a deterministic 2-hour window each day (shown on the
+  new sign east of the fishing-tournament sign, and on the map). While it is
+  live, 8 extra bugs flutter around and every bug respawns in ~3.5s instead
+  of 15s. Catch **5 / 10 / 15** bugs for Bronze 🥉 (+3⭐), Silver 🥈 (+6⭐) and
+  Gold 🥇 (+10⭐); each prize pays once a day. The sign shows today's count and
+  your lifetime best. Fully local (no network), saved under the additive
+  `bugoff: {day, count, tier, best}` key. Achievements: Bug Buddy, Bug
+  Champion, Bug-Off Regular. Tests: `node game/tests/bugoff.test.js`.
 - **Villager mailbox** 📬 — the blue mailbox just south of the museum (shown on
   the town's world as `📬 Mailbox ❗N` when letters are waiting). Each day
   the villagers you know write you letters with a small gift attached

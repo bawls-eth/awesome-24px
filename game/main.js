@@ -113,8 +113,9 @@ const SAVE_KEY = 'pixeltown-save-v1';
 
 // Bump this string whenever there's something worth telling returning
 // players about — shown once as a dismissible banner, then remembered.
-const GAME_VERSION = 'v27-mailbox';
+const GAME_VERSION = 'v28-bugoff';
 const WHATS_NEW = [
+  '🦋 Daily Bug-Off — a 2-hour contest, catch 5/10/15 bugs for Bronze/Silver/Gold',
   '📬 Villager mailbox — friends write you daily letters with gifts attached',
   '🌿 Weeds sprout every day — pull them for ⭐ and keep the town tidy',
   '🔨 DIY Workbench — craft goods from what you gather, sell them for more',
@@ -700,6 +701,9 @@ const ACHIEVEMENTS = [
   { id: 'mail1', icon: '📬', label: 'Pen Pal', desc: 'Collect your first letter', reward: 3, check: (s) => (s.lettersRead || 0) >= 1 },
   { id: 'mail25', icon: '💌', label: 'Postmaster', desc: 'Collect 25 letters', reward: 10, check: (s) => (s.lettersRead || 0) >= 25 },
   { id: 'mailBest', icon: '💖', label: 'Dear Friend', desc: 'Get a letter from a best friend', reward: 8, check: (s) => (s.bestFriendLetters || 0) >= 1 },
+  { id: 'bugoffBronze', icon: '🥉', label: 'Bug Buddy', desc: 'Earn Bronze in a Bug-Off', reward: 3, check: (s) => (s.bugOffTiers || 0) >= 1 },
+  { id: 'bugoffGold', icon: '🥇', label: 'Bug Champion', desc: 'Earn Gold in a Bug-Off (catch 15)', reward: 10, check: (s) => (s.bugOffGold || 0) >= 1 },
+  { id: 'bugoffRegular', icon: '🦋', label: 'Bug-Off Regular', desc: 'Earn 10 Bug-Off prizes', reward: 8, check: (s) => (s.bugOffTiers || 0) >= 10 },
   { id: 'craft1', icon: '🔨', label: 'DIY Beginner', desc: 'Craft something at the workbench', reward: 3, check: (s) => (s.crafted || 0) >= 1 },
   { id: 'craft10', icon: '🛠️', label: 'Crafty', desc: 'Craft 10 items', reward: 5, check: (s) => (s.crafted || 0) >= 10 },
   { id: 'craftAll', icon: '🧰', label: 'Master Crafter', desc: 'Craft every recipe at least once', reward: 10, check: (s) => RECIPES.every((r) => (s['craft_' + r.id] || 0) >= 1) },
@@ -1091,6 +1095,7 @@ const VILLAGER_PERSONALITY_LINES = {
 // zoomed-out render of the actual sprites, which would be unreadable mud
 // at the small size a map needs to be.
 const MAP_LANDMARKS = [
+  { x: 2200, y: 760, label: '🦋 Bug-Off' },
   { x: 1125, y: 990, label: '📬 Mailbox' },
   { x: 1330, y: 800, label: '🔨 Workbench' },
   { x: 260, y: 600, label: 'Pond' },
@@ -1122,6 +1127,21 @@ const FRUIT_TREE_EVERY = 3;
 const BUG_COUNT = 8;
 const BUG_CATCH_RADIUS = 40;
 const BUG_RESPAWN_MS = 15000;
+// ---------- daily Bug-Off ----------
+// A local, deterministic 2-hour window each day (hour from the day's hash,
+// like the fishing tournament). During it extra bugs flutter around and
+// respawn much faster; catch 5 / 10 / 15 for Bronze / Silver / Gold prizes.
+// Nothing touches the network: progress lives in the additive `bugoff` save
+// key {day, count, tier, best} and resets each day (best is lifetime).
+const BUGOFF_HOURS = 2;
+const BUGOFF_EXTRA_BUGS = 8;
+const BUGOFF_RESPAWN_MS = 3500;
+const BUGOFF_TIERS = [
+  { name: 'Bronze', icon: '🥉', need: 5, reward: 3 },
+  { name: 'Silver', icon: '🥈', need: 10, reward: 6 },
+  { name: 'Gold', icon: '🥇', need: 15, reward: 10 },
+];
+const BUGOFF_SIGN_POS = { x: 2200, y: 760 };
 const ROCK_MINE_RADIUS = 30;
 const FISH_BITE_WAIT_MIN = 1800;
 const FISH_BITE_WAIT_MAX = 4000;
@@ -1308,6 +1328,7 @@ class TownScene extends Phaser.Scene {
     this.setupOutfitShop();
     this.setupGuestbook();
     this.setupBugs();
+    this.setupBugOff();
     this.setupFossils();
     this.setupWeeds();
     if (IS_TOUCH) {
@@ -2829,7 +2850,111 @@ class TownScene extends Phaser.Scene {
       this.museumFauna.add(faunaIdx);
       this.saveFossils();
     }
-    this.time.delayedCall(BUG_RESPAWN_MS, () => this.placeBug(bug));
+    this.time.delayedCall(this.isBugOffTime() ? BUGOFF_RESPAWN_MS : BUG_RESPAWN_MS, () => {
+      // Contest extras only respawn while the Bug-Off is still on.
+      if (bug.extra && !this.bugOffActive) return;
+      this.placeBug(bug);
+    });
+    this.bugOffCaught();
+  }
+
+  // ---------- daily Bug-Off ----------
+  bugOffStartHour() {
+    return Math.floor(this.questHash(31) * (24 - BUGOFF_HOURS));
+  }
+
+  isBugOffTime() {
+    const hour = new Date().getHours();
+    const start = this.bugOffStartHour();
+    return hour >= start && hour < start + BUGOFF_HOURS;
+  }
+
+  // Today's saved progress; anything malformed or from another day is empty.
+  bugOffRecord() {
+    const rec = loadSave().bugoff;
+    const day = this.questDayBucket();
+    const ok = rec && typeof rec === 'object' && !Array.isArray(rec);
+    return {
+      day,
+      count: ok && rec.day === day ? cleanCount(rec.count) : 0,
+      tier: ok && rec.day === day ? Math.min(BUGOFF_TIERS.length, cleanCount(rec.tier)) : 0,
+      best: ok ? cleanCount(rec.best) : 0,
+    };
+  }
+
+  setupBugOff() {
+    // Hidden extras, created once; activated only during the window.
+    for (let i = 0; i < BUGOFF_EXTRA_BUGS; i++) {
+      const sprite = this.add.text(0, 0, this.isNightBugs ? '✨' : '🦋', { fontSize: '14px' }).setOrigin(0.5).setDepth(150000).setVisible(false);
+      this.bugs.push({ sprite, alive: false, extra: true });
+    }
+    this.bugOffActive = false;
+    const { x, y } = BUGOFF_SIGN_POS;
+    if (!this.textures.exists('bugoffSign')) {
+      const g = this.make.graphics({ x: 0, y: 0, add: false });
+      g.fillStyle(0x6b4a30, 1).fillRect(58, 56, 4, 30);
+      g.fillStyle(0xe8d9b5, 1).fillRect(0, 0, 120, 58);
+      g.lineStyle(2, 0x8f7044, 1).strokeRect(1, 1, 118, 56);
+      g.generateTexture('bugoffSign', 120, 88);
+      g.destroy();
+    }
+    this.add.image(x, y - 54, 'bugoffSign').setOrigin(0.5, 0).setDepth(y - 1);
+    this.addObstacleRect({ x: x - 4, y: y + 14, width: 8, height: 12 });
+    this.bugOffSignText = this.add.text(x, y - 27, '', {
+      fontSize: '8px', fontFamily: 'monospace', color: '#3a2a1a', align: 'center', wordWrap: { width: 106 },
+    }).setOrigin(0.5).setDepth(y);
+    this.refreshBugOff();
+    this.time.addEvent({ delay: 30000, loop: true, callback: () => this.refreshBugOff() });
+  }
+
+  refreshBugOff() {
+    const live = this.isBugOffTime();
+    if (live && !this.bugOffActive) {
+      this.bugOffActive = true;
+      this.bugs.filter((b) => b.extra).forEach((b) => this.placeBug(b));
+      this.addChatLine({ system: true, text: '🦋 The Bug-Off is LIVE! Catch 5 / 10 / 15 bugs for Bronze / Silver / Gold.' });
+    } else if (!live && this.bugOffActive) {
+      this.bugOffActive = false;
+      this.bugs.filter((b) => b.extra).forEach((b) => {
+        b.alive = false;
+        if (b.tween) b.tween.stop();
+        b.sprite.setVisible(false);
+      });
+    }
+    this.refreshBugOffSign();
+  }
+
+  refreshBugOffSign() {
+    if (!this.bugOffSignText) return;
+    const start = this.bugOffStartHour();
+    const end = start + BUGOFF_HOURS;
+    const rec = this.bugOffRecord();
+    let status = `next: ${start}:00-${end}:00`;
+    if (this.isBugOffTime()) status = `LIVE now! (${start}:00-${end}:00)`;
+    else if (new Date().getHours() >= end) status = `ended (${start}:00-${end}:00)`;
+    const medal = rec.tier > 0 ? BUGOFF_TIERS[rec.tier - 1].icon : '';
+    this.bugOffSignText.setText(['🦋 BUG-OFF', status, `today: ${rec.count} ${medal}`, `best: ${rec.best}`].join('\n'));
+  }
+
+  // Called for every bug caught; only counts during the Bug-Off window.
+  bugOffCaught() {
+    if (!this.isBugOffTime()) return;
+    const rec = this.bugOffRecord();
+    const count = rec.count + 1;
+    let tier = rec.tier;
+    const best = Math.max(rec.best, count);
+    const earned = [];
+    while (tier < BUGOFF_TIERS.length && count >= BUGOFF_TIERS[tier].need) { earned.push(BUGOFF_TIERS[tier]); tier++; }
+    // Save first, then pay, so a reload can never double-pay a prize.
+    writeSave({ bugoff: { day: rec.day, count, tier, best } });
+    this.showFloatingText(this.localBody.x, this.localBody.y - 54, `🦋 ${count}/${BUGOFF_TIERS[BUGOFF_TIERS.length - 1].need}`);
+    earned.forEach((t) => {
+      this.awardPoint(t.reward, `${t.icon} Bug-Off ${t.name}! +${t.reward} ⭐`, this.localBody.x, this.localBody.y - 70, 'achievement');
+      this.addChatLine({ system: true, text: `${t.icon} Bug-Off ${t.name}! +${t.reward} ⭐` });
+      this.incrementStat('bugOffTiers');
+      if (t.name === 'Gold') this.incrementStat('bugOffGold');
+    });
+    this.refreshBugOffSign();
   }
 
   // ---------- fossils + museum ----------
@@ -5786,7 +5911,7 @@ class TownScene extends Phaser.Scene {
     const pad = 70;
     const blockers = this.weedBlockers;
     const keepClear = [
-      ...FLOWER_SPOTS, CAMPFIRE_POS, STATUE_POS, MAILBOX_POS, GUESTBOOK_POS, WORKBENCH_POS,
+      ...FLOWER_SPOTS, CAMPFIRE_POS, STATUE_POS, MAILBOX_POS, BUGOFF_SIGN_POS, GUESTBOOK_POS, WORKBENCH_POS,
       POLYROLL_POS, TURNIP_STALL_POS, ABLE_SISTERS_POS, MERCHANT_POS, DIG_HOLE_POS, FISH_TOURNAMENT_SIGN_POS,
     ];
     const spots = [];
