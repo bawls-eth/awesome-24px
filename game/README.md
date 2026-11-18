@@ -1,0 +1,783 @@
+# Pixeltown
+
+A tiny Animal Crossing-style shared town for you, your girlfriend, and your
+friends — built straight on top of this repo's 24×24px sprite collections.
+Pick a villager from 21 species — cats, punks, penguins, dogs, apes,
+zombies, mohawks, blondies, aliens, plus a second wave pulled from the
+repo's own unused collections (Alien Clan, Ape Punks, Dragon/Frog/Ninja/
+Pirate/Unicorn Cats, Geniuses, Golden Punks, Halloween Punks, Phunks,
+Punkettes) — walk around a little pixel town, chat, throw emotes, and
+race for sparkles — all in real time.
+
+It's a **static site** (no server to run) + a **free Firebase Realtime
+Database** for the live multiplayer sync. That means it can be hosted for
+free on GitHub Pages, and everyone's position/chat/score updates push to
+everyone else automatically. Capped at **10 players** at once for now.
+The join screen shows a live count of how many villagers are in town
+right now, before you even pick a name.
+
+**What there is to do:**
+- Walk the town, chat, hang out by the campfire, the pond's little dock,
+  a bench, the statue, the old windmill up in the northwest corner, or
+  the small graveyard tucked into the west edge (complete with a resident
+  zombie keeping watch). A row of quick-chat buttons above the chat box
+  sends a preset phrase (👋 Hi!, 😂 lol, 🎣 Fishing!, ⭐ Nice!, 👋 Bye!) in
+  one tap
+- 9 emotes (keys **1-9**) that pop up over your head for everyone to see
+- A rotating **✨ sparkle** wanders the town every 8s — walk into it to
+  score a point; the player list is a live-sorted mini-leaderboard
+- **Fish** at the pond (or the second pond out east), **chop** trees for
+  wood, **mine** rocks for stone — classic Animal Crossing activities, fill
+  the inventory in the top-left
+- **Angler's Journal** 🐟 — every fish you reel in is now one of **12 species**,
+  chosen by the pond (west / east), the time of day, the season, and the
+  size of the shadow you cast at (bigger shadows lean rarer): Minnow, Shrimp,
+  Pond Frog (spring/summer, west), Koi (west), Pufferfish (east), Mud Crab
+  (night), Snapping Turtle (east, day), Squid (night), Jellyfish (summer),
+  Octopus (east, night), Baby Shark (east, day, summer/autumn) and the Golden
+  Fish (winter). The 🐟 Journal button in the player panel (or **L**) shows
+  found cards (count, best length) and locked silhouettes with hints. First
+  catches pay +2⭐; sets of 4 / 8 / 12 species pay 5 / 12 / 30⭐ (claim
+  buttons). Catches stay local and the fish count / tournament are unchanged;
+  progress is saved under the additive `fishlog: {caught, claimed, lastDay}`
+  key. Achievements: Angler, Master Angler, Lunker (70cm+). A "Catch a fish"
+  chore joins the Today board. Tests: `node game/tests/fishlog.test.js`.
+- **Home aquarium** 🐠 — a little glass tank beside your home plot. Open the plot
+  and pick up to three **different species from your Angler's Journal** to show
+  off in the tank (nothing is consumed — fish stay in your log). Each adds
+  rarity × 2 to your cozy score, which feeds the daily visitor bonus and the
+  Cozy Corner achievement. Achievements: Fish Fan, Aquarist (fill all three).
+  Saved inside the additive `home.tank` list. Tests:
+  `node game/tests/aquarium.test.js`.
+- **Today board** 📋 — the 📋 Today button in the player panel (or **J**) lists
+  every daily chore with live progress: Professor Byte's request and trivia,
+  your letters, the weeds, the Bug-Off (catch 5), a villager's birthday gift
+  (only on a birthday) and a visit to your home plot (once it has decor).
+  Finish every chore that applies for a one-time +5⭐ bonus; the button shows
+  `done/total`. Local only; saved under the additive `dailies: {day, paid,
+  days}` key. Achievements: Daily Routine, Creature of Habit (7 days).
+  Tests: `node game/tests/dailies.test.js`.
+- **Villager birthdays** 🎂 — every 10 days one villager has a birthday (a fixed
+  rotation through the five villagers, so everyone sees the same one). Their
+  name tag gets a 🎂, the player panel shows "birthday today" (or "Next: X in
+  Nd"), and they always write you a letter. Give them a gift (G / Gift
+  button) for a party: +5⭐, +20 friendship (instead of +8), and the first
+  gift can be a crafted good from the workbench if you have no liked
+  resource (cheapest first, with a small bonus). Claims are saved under the
+  additive `birthdays: {claimed, guests}` key. Achievements: Party Guest,
+  Birthday Regular, Party Planner (every villager). Tests:
+  `node game/tests/birthdays.test.js`.
+- **Home plot** 🏡 — a fenced plot (east of the shop row, on the map) where you
+  display goods crafted at the workbench: six spots, each with a dropdown of
+  the goods in your bag. Placed goods leave your bag (so they can't be
+  sold) and come back if you swap or clear the spot. The sum of their shop
+  values is your **cozy score**; the first time you open the plot each day
+  your visitors admire it for +1⭐ per 5 cozy (max +6). Local only — other
+  players don't see your plot — saved under the additive
+  `home: {slots, paidDay}` key. Achievements: Home Sweet Home, Interior
+  Designer, Cozy Corner. Tests: `node game/tests/home.test.js`.
+- **Daily Bug-Off** 🦋 — a deterministic 2-hour window each day (shown on the
+  new sign east of the fishing-tournament sign, and on the map). While it is
+  live, 8 extra bugs flutter around and every bug respawns in ~3.5s instead
+  of 15s. Catch **5 / 10 / 15** bugs for Bronze 🥉 (+3⭐), Silver 🥈 (+6⭐) and
+  Gold 🥇 (+10⭐); each prize pays once a day. The sign shows today's count and
+  your lifetime best. Fully local (no network), saved under the additive
+  `bugoff: {day, count, tier, best}` key. Achievements: Bug Buddy, Bug
+  Champion, Bug-Off Regular. Tests: `node game/tests/bugoff.test.js`.
+- **Villager mailbox** 📬 — the blue mailbox just south of the museum (shown on
+  the town's world as `📬 Mailbox ❗N` when letters are waiting). Each day
+  the villagers you know write you letters with a small gift attached
+  (a resource they like, or ⭐). Better friends write more often and send
+  more; best friends write every day. Collect them one by one or with
+  **Collect all**. Entirely local and deterministic per UTC day; claims are
+  saved under the additive `mail: {day, claimed, lifetime}` key.
+  Achievements: Pen Pal, Postmaster (25), Dear Friend. Tests:
+  `node game/tests/mailbox.test.js`.
+- **Weeds & tidiness** 🌿 — every (UTC) day a fresh batch of ~24 weeds sprouts
+  around the village, the same for everyone (deterministic `worldHash` of the
+  day, nothing synced). Walk up and press **E** / **A** to pull one for ⭐1;
+  clear them all for a +5⭐ "Spotless town" bonus. The player panel shows how
+  tidy the town is (Spotless / Tidy / Scruffy / Overgrown). Progress is
+  local, saved under the additive `weedsPulled: {day, ids}` key and resets
+  each day. Achievements: Weed Whacker (10), Groundskeeper (100), Spotless
+  Town. Tests: `node game/tests/weeds.test.js`.
+- **DIY Workbench** 🔨 — walk up to the workbench just east of the shop/museum
+  (shown on the map) and press **E** / the **A** button. Eight recipes turn
+  gathered goods into crafted items that sell at the shop for ~1.3-1.5x their
+  raw value (deal/bulk bonuses don't apply to crafted goods):
+  | Recipe | Cost | Sells for |
+  |---|---|---|
+  | 🪵 Plank Stack | 3 wood | 4⭐ |
+  | 🧱 Stone Brick | 3 stone | 4⭐ |
+  | 🍲 Fish Stew | 2 fish + 1 fruit | 4⭐ |
+  | 🫙 Bug Jar | 3 bugs + 1 wood | 6⭐ |
+  | 🥧 Fruit Pie | 4 fruit | 6⭐ |
+  | 🌼 Flower Crown | 4 flowers | 6⭐ |
+  | 🎐 Shell Chime | 3 shells + 1 wood | 6⭐ |
+  | 🏮 Lantern | 2 stone + 2 wood + 2 bugs | 9⭐ |
+
+  **Seasonal specials** (only craftable while their season is on, matching the
+  seasonal tint; the goods keep forever, sell, and can be displayed any time):
+  💐 Tulip Wreath (spring: 5 flowers + 1 wood), ⛱️ Beach Umbrella (summer: 4 shells
+  + 2 wood), 🎃 Jack-o'-Lantern (autumn: 4 fruit + 2 bugs), ⛄ Snowman (winter:
+  4 stone + 2 wood), each worth 9⭐. Achievements: Seasonal Crafter and
+  Year-Round Crafter (all four); Master Crafter still needs only the eight
+  year-round recipes. Tests: `node game/tests/seasonal.test.js`.
+
+  Crafted stock shows as a 🔨 chip in the bag and is saved under the
+  additive `crafted` key. Achievements: DIY Beginner, Crafty, Master Crafter.
+  Tests: `NODE_PATH=$(npm root -g) node game/tests/workbench.test.js`.
+- **Shake fruit trees** 🍎 — every third tree bears apples; chopping it drops
+  an apple as well as wood. The apple regrows after the tree's cooldown
+- **Catch butterflies** 🦋 — eight of them flutter around town; walk up and
+  press interact to net one. They respawn elsewhere after a few seconds
+- A tool shows in your hand as you work: axe for trees, pickaxe for rocks,
+  net for bugs — and underground your villager becomes a 3D voxel figure
+  (extruded from its own sprite) carrying a pickaxe
+- **Build**: spend wood to place grid-snapped blocks anywhere — a real
+  obstacle everyone sees and collides with, Minecraft-sandbox-flavored.
+  Tap your own block again to remove it for a refund. An unmissable yellow
+  banner tells you when build mode is on
+- **Sell** your wood/stone/fish/bugs/fruit/shells/flowers at the 🏠 shop near the statue for ⭐ points —
+  a proper Nook's-Cranny-style loop that feeds the leaderboard. Selling
+  on consecutive days builds a 🛍️ loyalty streak for a small bonus
+  (same idea as the daily login streak). One resource is always on a
+  **daily deal** — a sign over the shop shows which one sells for +50%
+  today, same for everyone (deterministic from the date). Selling 10+
+  of any one resource at once earns a **bulk bonus** (+20% on that
+  resource), stacking with the daily deal if it's the same one
+- A day/night tint that follows your local clock, purely for atmosphere —
+  the roaming butterflies turn into glowing ✨ fireflies at night (7pm-6am
+  your own clock) and back at dawn, same 🦋/🐛 catch mechanic either way
+- A faint **seasonal color wash** tied to the real-world month on your
+  own device — cool blue in winter, green in spring, warm yellow in
+  summer, orange in autumn. No new art, cosmetic only. Winter and
+  autumn also scatter a few ⛄/🎃 around town for the month
+- Occasional **rain** 🌧️ — about 3 windows in 10, it rains for a while;
+  everyone sees it start/stop together without any network traffic (same
+  trick as the sparkle), purely cosmetic
+- Faint ripples drift across the pond every couple seconds — purely
+  cosmetic ambiance, local-only, no new mechanics
+- 🔊 **Sound effects** — short synthesized chimes (no audio files, just
+  WebAudio tones) for catches, sales, and achievements. A 🔊/🔇 toggle
+  under the player list remembers your choice on this device
+- 🏃 **Reduce motion** toggle under the player list — turns off the
+  walk-cycle hop for anyone sensitive to it, defaulting to your OS-level
+  reduced-motion setting if you have one
+- A 📜 **Changelog** button under the player list opens an in-game view
+  of this whole history, and a 🐞 **Feedback** button opens a prefilled
+  GitHub issue
+- A 🗺️ **Map** button (or press **M**) opens a simple schematic town
+  map — every landmark and everyone's live position, scaled down
+- The player list panel's settings/utility buttons (Keys, Changelog,
+  Feedback, Sound, Music, Motion, Photo, Backup, Restore) live behind
+  a collapsed **⚙️ Settings** toggle by default, so the panel stays
+  small instead of growing into a long list of buttons
+- 🎵 **Ambient music** (opt-in, off by default) — a slow, quiet synthesized
+  chord pad, same no-audio-files approach as the SFX. Toggle it next to
+  the sound button; it's independent of the SFX mute, so you can have
+  either one on its own
+- Full mobile support: on-screen D-pad, tilt steering, clearly-labeled
+  **A** (interact) / **B** (build) action buttons console-controller
+  style, and a short vibration on every button tap where the device
+  supports it (not iPhones — see "Notes / limits")
+- A **walkie-talkie** — pick a bestie from the player list, hold to record
+  a short voice clip, they hear it right away if their tab's open (see
+  "Walkie-talkie" below)
+- A Bored Ape "Mayor" statue watches over the plaza, and Moon Cats drift
+  lazily around the pond — pure flavor, no gameplay attached
+- Four **GTA3-style portal doors**, in a 2x2 in the 🕹️ Arcade
+  District southeast of the statue — to
+  [GTA 3](https://quenq.com/apps/gta-3/),
+  [NFS Underground 2](https://nfsu2.xyz/),
+  [Kart Racing](https://olivers.tools/kart/), and
+  [Vice City](https://quenq.com/apps/vice-city/) — walk up and interact to
+  leave Pixeltown entirely for that browser game, in this same tab. It's
+  one-way: there's no teleport back, just like walking through a loading
+  door and leaving the area behind (a confirm prompt checks before you go).
+  If your browser brings you back to this exact tab with its Back button,
+  the door you just used works again right away — it used to get stuck
+  permanently closed in that case
+- A wide **East Meadow** past the original town — walk east along the main
+  path to find a second pond (with its own fishing spot), more trees, rocks,
+  and tulip beds to explore
+- 🦋 **Flora & fauna starter pack** — 98 real species across three
+  imported batches (fox, deer, scorpion, snowy owl, toucan, heron, sea
+  turtle, octopus, lobster, tarantula, sunflower, copepod, and dozens
+  more — including microscopic pond life, rendered as tiny specks, not
+  life-sized). Land animals roam the whole island, not just their home
+  biome's corner — a fox or a scorpion turns up anywhere across the
+  wilderness; plants stay put, with desert and alpine species still
+  clustered into their own fixed "accent" corner (there's no real
+  desert/alpine biome on this map) since a cactus doesn't wander.
+  Ocean/pond life stays in the water, where it belongs. Each one real
+  vector art
+  (not the game's usual pixel sprites). Full metadata for each — common/
+  scientific name, biome, trophic role, diet, behavior, rarity — lives in
+  `game/species-registry.json`, a modular registry meant to keep growing
+  in further batches; matching GLB 3D models ship alongside the SVGs in
+  `game/assets/flora-fauna/glb/` for any future 3D engine, keyed by the
+  same species id. Every specimen is collectible: walk up and press **E**
+  to log it — logging the same species again just repeats a flavor line,
+  no double-counting. Discoveries show up as two more sections inside the
+  **🏛️ Museum** panel, 🦌 **Wild Fauna** and 🌿 **Wild Flora**, right
+  alongside the existing Fossils/Fauna/Flora sections; progress is
+  permanent per device
+- An **ocean-bordered island** well beyond the village — walk past the
+  original town in any direction and you'll cross a wilderness ring of
+  trees, rocks, flowers, and roaming critters before hitting a beach and
+  open water at the world's edge. It's the same for everyone and costs no
+  network traffic: every tree/rock/critter position is computed from a
+  deterministic hash of its location, not random or server-generated, so
+  the world looks identical on every device without anyone having to
+  fetch or store it
+- A proper 🎣 **Fish button** appears on screen whenever you're close
+  enough to a fishing spot to act (or already casting/waiting on a bite),
+  instead of relying only on the **E** key
+- A real **3D voxel cave** underground — find the ⛏️ hole north of the
+  statue, press **E** to jump in, and mine/place real 3D blocks Minecraft-
+  style. Climb back up the shaft and press **E** again to pop back to the
+  2D town (see "Going underground" below)
+- 🦴 **Fossils & Museum** — three dig spots west of the pond yield a
+  random fossil (one of 5 species); carry up to 3, then donate at the
+  🏛️ Museum for a permanent per-device collection and a ⭐ for each new
+  species (see "Fossils & Museum" below). A 🏛️ **Museum** button under
+  the player list opens the full collection — fossils donated, plus
+  every butterfly/firefly and flower species you've ever caught or
+  picked, recorded automatically the first time, nothing to carry in
+- A **daily login streak** 🔥 — join on consecutive device-local days
+  for a small ⭐ bonus (capped at 5) each day, shown under the player
+  list; skip a day and it resets to 1
+- A **notice board** near the statue shows the live top 3 ⭐ scores —
+  no need to open the player list to see who's winning
+- 🏡 **Residential Lane** — 5 named animal-villager NPCs (Mocha, Frosty,
+  Buster, Lily, Spike), each with their own house, personality, and
+  lines, south of the museum/shop cluster. Press **E** near one to chat
+  (closer friends unlock extra dialogue), or **G** / the 🎁 **Gift**
+  button to give them something from your bag they like — gifting
+  raises a 0–100 affinity (saved per device) through acquaintance →
+  friend → good friend → best friend, with a ⭐ bonus on every tier-up
+- 📖 **Guestbook** — a signpost east of the statue lets you leave a
+  short (80-character) signed note for whoever visits next. Notes are
+  stored in Firebase, so everyone sees the same last 20, not just a
+  local list — interact at the sign to read what's there and add your
+  own (one note per minute per device, and it runs through the same
+  name/chat slur filter as everything else)
+- 👗 **Able Sisters** — change your villager species/color after
+  joining, any time. Everyone else
+  sees the new look live, and it's what loads back in next time too.
+  A 🎲 **Randomize** button picks a random species/frame for you to
+  preview before committing with "Wear it!"
+- 🐚 **Beachcombing** — 5 fixed spots along the pond edges wash up a
+  shell, sea glass, or star fragment every 20 seconds; interact to
+  collect, sell at the shop like any other resource
+- 🌸 **Flowers** — 6 fixed garden spots scattered around town grow a
+  flower (🌸🌷🌻🌹, picked at random) every 30 seconds; interact to pick,
+  sell at the shop like any other resource
+- 🎸 **K.K. Slider plays the campfire** every evening, 7-9pm on *your*
+  device's own clock — walk up during the show and interact for a ⭐2
+  bonus and an emote, once per show (see "K.K. Slider" below)
+- 🧪 **Professor Byte**, a resident NPC near the Mayor statue — interact
+  for a random bit of flavor text in a speech bubble. He also hands out a
+  **daily quest** (same for everyone, computed from the date): a sign
+  over his head shows what to bring and the ⭐ reward; have enough of
+  that resource in your bag and interacting turns it in instead of just
+  chatting. One quest per day, resets at midnight UTC. Both he and Salty
+  Mo (below) swap in a few rain-specific lines while it's raining. Press
+  **T** near him for a **daily trivia** question (also the same for
+  everyone, one attempt per day) — answer right for an 8 ⭐ bonus
+- A 🔍 **daily scavenger hunt** — one hidden spot a day, same location
+  for everyone (picked from the date, like everything else "daily" in
+  this game), but first to interact there wins a 20 ⭐ bonus. A real
+  Firebase transaction decides who wins if two players race for it at
+  the same moment, so only one of you ever gets paid
+- A 🎣 **daily fishing tournament** — a 2-hour window each day (same
+  deterministic trick, different hour each day), during which every
+  catch gets a random size (8-80cm). A sign near the west beach shows
+  the day's biggest catch and holder live; beating the record for the
+  first time that day wins a 10 ⭐ bonus (a Firebase transaction makes
+  sure only a genuinely bigger catch can ever overwrite the record)
+- 🎣 **Salty Mo**, a second resident NPC camped out by the pond dock — a
+  grumpy old dockhand with his own set of grumbles about the weather, the
+  Mystery Merchant, and everyone who's never fallen off his dock. No quest,
+  just interact for a random line
+- 📸 **Photo mode** — press **P** (or tap 📸 under the player list) for a
+  camera flash + shutter sound and a PNG download of the current view,
+  straight from the game canvas
+- 🛒 **Mystery Merchant**, in the far southeast corner — visits for a
+  3-hour window each day (the same window and rare look for everyone,
+  computed from the date, no network traffic needed) selling one of 12
+  rare looks pulled from this repo's remaining unused sprite strips
+  (Avalanche Punks, Mohawk/TV Head Cats, grayscale/sepia Punks, colored
+  Aliens, and more) for 15 ⭐. Not in the regular Able Sisters lineup —
+  this is the only way to wear one. A sign at the spot shows what's for
+  sale, or when to come back if they're not there
+- 🏆 **Achievements** (Nook Miles-style) — a 🏆 badge under the player
+  list opens a checklist of 25 lifetime goals (catch/chop/mine 10,
+  complete the museum, play Polyroll 10 times, and more), each paying a
+  one-time ⭐ bonus on unlock. Lifetime counters never drop when you
+  spend or sell, and unlocks persist on this device. Equip any unlocked
+  one as a small title badge shown next to your name in the player
+  list, visible to everyone — swap it any time, synced the same way
+  appearance changes are. Unlocking one also pops a readable toast at
+  the top of the screen for 10 seconds — the floating "+N ⭐" text
+  alone faded too fast to actually read an achievement's name
+- A 🥬 **turnip market** — buy a bundle at the stall in the 🕹️ Arcade
+  District, sell at the shop itself for a profit or a loss depending
+  on when you catch it (see "Turnip market" below)
+- A 🎲 **Polyroll** betting booth, also in the 🕹️ Arcade District — dice
+  (pick 1-6, 5× payout) or coin flip (2× payout), wagering your own ⭐
+  stars for fun. No wallet, no crypto, no real money anywhere in it —
+  just the same stars the sparkle and the shop already use (see
+  "Polyroll" below)
+- The 🕹️ **Arcade District**, southeast of the statue, groups every
+  minigame-ish thing in one easy-to-find spot: Polyroll, the turnip
+  stall, the daily fishing tournament's leaderboard sign, and all
+  four portal doors
+- Your name, villager choice, and wood/stone/fish inventory are remembered
+  on this device (see "Local save" below) — no account, nothing synced
+- On iPhone/Android, you can **Add to Home Screen** for a proper app icon
+  and a full-screen launch (no Safari address bar)
+
+## Setup — the one manual step (~5 minutes)
+
+Pixeltown needs a free Firebase project to sync players. A static page can't
+store shared data by itself, so this is unavoidable — but it's quick and
+free (no credit card).
+
+1. Go to <https://console.firebase.google.com> and **Add project** (any name;
+   you can disable Google Analytics).
+2. In the project: **Build → Realtime Database → Create Database**. Pick a
+   location, then choose **Start in test mode** and enable it.
+3. Click the **gear icon → Project settings**, scroll to **Your apps**, and
+   click the web icon **`</>`** to register a web app (any nickname; you do
+   NOT need Firebase Hosting).
+4. Firebase shows a `const firebaseConfig = { … }` snippet. Copy that object
+   and paste it over the placeholder in **[`firebase-config.js`](firebase-config.js)**.
+5. Commit and push. That's it.
+
+> The Firebase web config keys are **safe to commit** — they're meant to be
+> public. Access is controlled by the database rules, not by hiding the keys.
+
+### Locking the rules down a little (optional but recommended)
+
+"Test mode" lets anyone read/write and auto-expires after 30 days. For a
+friends-only town, in **Realtime Database → Rules** you can paste something
+like this (open, but with basic shape/size limits so nobody can dump junk):
+
+```json
+{
+  "rules": {
+    "players": { ".read": true, ".write": true },
+    "blocks": { ".read": true, ".write": true },
+    "walkie": { ".read": true, ".write": true },
+    "chat": {
+      ".read": true,
+      "$msg": {
+        ".write": true,
+        "text": { ".validate": "newData.isString() && newData.val().length <= 140" }
+      }
+    }
+  }
+}
+```
+
+This is still world-writable (fine for a link you only share with friends).
+For anything more public, add Firebase Anonymous Auth and gate writes on
+`auth != null` — see the "Ideas for next steps" below.
+
+## Host it free on GitHub Pages
+
+1. Push this repo to GitHub (done, if you're reading this there).
+2. Repo **Settings → Pages**. Under **Build and deployment**, set **Source =
+   Deploy from a branch**, pick your branch and folder **`/ (root)`**, then
+   **Save**. This is the one step I can't do for you — it's a repo-admin
+   setting change, not something a `git push` can flip.
+3. Wait a minute, then open your repo's Pages URL — the root now redirects
+   straight into the game (`index.html` at the repo root sends you to
+   `game/`). For this repo that's `https://bawls-eth.github.io/awesome-24px/`.
+4. Send that link to your gf/friends. Everyone who opens it and picks a
+   villager shows up in the same town.
+
+No cold starts, no server bill, nothing to keep running — GitHub Pages
+serves the files and Firebase handles the live sync.
+
+## Run it locally
+
+Because it's just static files, any static server works — you don't need
+Node. From the **repo root**:
+
+```bash
+python3 -m http.server 8000
+```
+
+Then open **http://localhost:8000/game/**. (Opening `index.html` directly
+via `file://` won't work — the sprite sheets need to load over http.)
+
+## Controls
+
+**Desktop:**
+- **WASD** or **arrow keys** — walk
+- **E** — interact: fish at the pond, chop a tree, mine a rock, or place/remove
+  a block if you're in build mode (whichever's nearest to you)
+- **B** — toggle build mode
+- **Enter** — open chat, type, **Enter** again to send
+- **1-9** — emote (😀 ❤️ 😂 👋 🎉 😢 😮 💤 🎵), visible to everyone nearby
+- Walk into the **✨ sparkle** to score a point
+- Jump in the ⛏️ **Hole** (press E) for the 3D underground — see "Going
+  underground" below for its own controls (look-drag, mine **E**, place **F**)
+
+**Mobile (iPhone/Android):** on-screen controls appear automatically on touch
+devices — a virtual joystick (bottom-left; push gently to walk, far to run),
+and action buttons (bottom-right), stacked top to bottom: 😀 Emotes, 🎮 Tilt,
+then a 2×2 grid of 🧱 Build, ✋ Interact, 📸 Photo, 💬 Chat.
+
+**Game controller:** a Bluetooth or USB gamepad works too — pair an Xbox
+controller (or any Gamepad-API pad) to your phone or computer and the left
+stick / D-pad walks, **A** interacts, **X** gifts a villager, **B** toggles
+build or closes an open panel, and **Start** opens the map. It works
+alongside keyboard and touch.
+- **🎮 Tilt** — tap to enable; iOS will ask for a Motion & Orientation
+  permission the first time (required by Apple, can't be skipped) — tilt
+  the phone like a steering wheel to walk. Tap again to turn it off
+- **✋ Interact** does the same thing as desktop's E — fish/chop/mine/build.
+  **Shaking the phone** is a fun bonus trigger for the same action, if
+  something's in range
+- **💬 Chat** opens the text input (hidden the rest of the time so it isn't
+  always eating screen space) and focuses it; **➤** sends it, and it
+  tucks itself away again once you're done. The quick-chat phrase buttons
+  above it work without opening the keyboard at all
+- **🗑️ Clear** appears above the chat log once there's something to clear —
+  it only clears your own screen, not the shared history everyone else sees
+- Your 🎒 bag (top-left) shows your wood/stone/fish; a visible rod line
+  appears between you and the water while you're fishing
+
+### Able Sisters
+
+Your look isn't locked in at the join screen anymore. Walk up to the
+👗 **Able Sisters** shop and interact for the
+same species/color picker from the join screen, now live in the world.
+Pick anything, hit **Wear it!**, and your sprite changes instantly —
+other players in the town see the change within about a second, the
+same way they see your position update. It's saved locally too, so
+reopening the game later remembers the new look, exactly like your
+name always has.
+
+### K.K. Slider
+
+Every day from 7pm to 9pm **on your own device's clock** (not synced —
+friends in different time zones catch the show at different real-world
+times, same as the day/night tint), the campfire plays host to a little
+show: a sign and drifting music notes appear above it. Walk up and
+interact for a one-time 2-⭐ bonus and an emote; trying again just tells
+you you've already enjoyed that night's show. Purely local, like
+fishing — nothing about it syncs to friends.
+
+### Fossils & Museum
+
+Three dig spots sit west of the pond — walk up and interact, same as
+mining a rock, and you'll dig up one of 5 fossil species at random. Your
+bag holds up to 3 before you need to donate. Walk to the 🏛️ Museum and
+interact to donate everything you're carrying: each species new to your
+collection is worth 1 ⭐, and the collection itself persists on this
+device (same as your name/species) even across a reload. Completing all
+5 species gets a line in the chat log. Local only — not synced, not
+shared between friends.
+
+The 🏛️ **Museum** button under the player list opens the full interior —
+not just fossils. Catching any butterfly/firefly or picking any of the 4
+flower species marks it seen permanently the first time, automatically;
+there's nothing to carry in or hand over for those two sections, since
+you'll sell bugs and flowers for stars rather than hoard them. Locked
+species show as 🔒 ??? until you've found one.
+
+### Turnip market
+
+A simplified, single-session take on Animal Crossing's stalk market — no
+persistent "day of the week," since there are no accounts, but the same
+buy-low-sell-high idea. Walk up to the 🥬 stall and interact to buy a
+bundle of 10 turnips; its price drifts every 4 real-world hours. Carry
+them to the shop and interact there (same button as selling your other
+goods) to sell at the shop's own price, which swings far more — every 15
+minutes, anywhere from a steep loss to more than double. Both prices are
+hashed from wall-clock time, the same trick as weather and the sparkle,
+so there's no server keeping score and no persistence between visits —
+check the live price labels floating above the stall and the shop before
+you commit.
+
+### Polyroll
+
+A small betting booth near the shop, named after (but with nothing to do
+with) the real Polyroll — a crypto dice/coinflip casino. This one wagers
+only your in-game ⭐ stars: no wallet, no blockchain, no real money, ever.
+
+Walk up and interact to open it. Pick **Dice** (choose 1-6, win 5× your
+bet) or **Coin** (heads/tails, win 2× your bet), set a bet amount — capped
+at however many stars you actually have — and press **Roll!**. A loss
+costs you the bet; nothing else about the game changes. Close it any time
+with the ✕; your villager can't walk while it's open, same as while
+chatting.
+
+### Fishing
+
+Walking away mid-cast now cancels it cleanly (it used to just leave the
+rod drawn to a spot you'd already left). Walk up to the pond's edge (west side or south dock) — a
+**🎣 Fish** button appears on screen once you're close enough, or just press
+**Interact**. Wait for a **❗** (the bobber also pulses, hard to miss) — that's
+the bite — then tap the button (now **❗ Reel it in!**) or press **Interact**
+again within about a second. Too early and the fish gets spooked; too late
+and it gets away. Catches add to your 🐟 count (inventory only, not the
+leaderboard).
+
+### Building
+
+Press **B** (or tap 🧱) to toggle build mode — a yellow outline shows where
+the next block lands, just in front of you. Press **Interact** to place a
+block there, or press it again on a block you placed to remove it for a
+refund. Blocks are real obstacles for everyone in the town, synced live.
+Capped at 150 blocks total so the town doesn't fill up solid. A 🏘️ **Town
+rating** under the player list shows how built-up it is right now (Empty
+→ Sparse → Cozy → Bustling → Metropolis → Full!) — it's a shared count of
+every block anyone's placed, synced live like everything else here.
+
+Five materials to pick from — press **F** (or tap the material pill
+under the build banner) to switch: 🪵 **Wall** (1 wood, a full solid
+block), 🪨 **Fence** (1 stone, a thinner picket-style block that still
+blocks movement), 🪔 **Lamp** (2 flowers, purely decorative — you can
+walk straight through it, and it glows at night alongside the fireflies),
+🌳 **Hedge** (3 flowers, a solid green bush block for garden walls), or
+🟫 **Path** (1 stone, a flat decorative ground tile for laying out
+walkways — fully walkable, it never blocks movement).
+
+Placed the wrong thing? Press **Z** (or tap the ↩️ Undo pill) within 10
+seconds of placing a block to remove it and get a full refund — works
+from wherever you are, no need to walk back to the exact spot.
+
+### Going underground
+
+Find the dark ⛏️ **Hole** just north of the Mayor statue and press **Interact**
+to jump in — the game switches from the 2D town to a real 3D voxel cave
+(rendered with [Three.js](https://threejs.org), loaded from a CDN just like
+Phaser).
+
+- **Look:** drag with your mouse (desktop) or finger (mobile) to look around.
+- **Move:** **WASD**/arrows (desktop) or the D-pad (mobile) — walks on the
+  flat ground relative to the way you're facing, the same as real
+  Minecraft. Looking up or down only aims; it never changes which way
+  "forward" takes you. There's no gravity down here — it's a flight-style
+  "creative mode" dig, not a fall.
+- **Mine:** **E** (desktop) or ⛏️ (mobile) breaks whatever block is directly
+  ahead of you, within reach. Stone and the rarer gold ore blocks add to
+  your 🪨 stone count; dirt doesn't, it's just in the way.
+- **Place:** **F** (desktop) or the hotbar's Place button (mobile) places
+  whichever slot is selected on the hotbar (**1**/**2** keys, or tap 🧱/🔥 on
+  mobile):
+  - 🧱 **Wall** — costs 1 stone, a plain block, same as before.
+  - 🔥 **Torch** — costs 1 wood, lights the area around it. Mine a torch
+    back for a 1-wood refund, same as walls refund stone.
+- **Exit:** the **Exit** button works from anywhere in the cave, the
+  instant you press it — no need to navigate back to the shaft first. **E**
+  is dedicated to mining only, so the two never conflict; desktop can also
+  press **Escape**.
+- **Up/down:** dedicated controls (**Space**/**Shift** on desktop, 🔼/🔽 on
+  mobile) — same as Minecraft creative flight, so looking up or down to aim
+  never changes where walking forward takes you.
+
+The cave is generated once per visit and is **entirely local** — nothing
+underground syncs over the network, so what you dig and build down there is
+only ever seen by you (same as fishing/chopping in the 2D game). Stone you
+mine underground *does* add to the same 🪨/🪵 counts shown in the 2D
+inventory and carries over to the shop — stone from regular rock and the
+rarer gold ore, wood from old root veins running through the dirt layer —
+so a mining trip is a legitimate way to stock up before selling, for
+either resource.
+
+### Walkie-talkie
+
+Open the player list (top-right) and tap the 🤍 next to a friend's name to
+make them your **bestie** — it turns 💛 and a "🎙️ Hold to talk · to \<name\>"
+button appears near the top of the screen (desktop: hold **T** instead).
+
+- **Hold** the button (or **T**) to record, **release** to send — clips are
+  capped at 15 seconds.
+- If your bestie's tab is **open and in front of them** right now, it plays
+  the instant it arrives — genuinely real-time, no polling.
+- If it's **not** — their phone's locked, they're in another app, or the
+  tab's just in the background — the clip is saved as an unread **voice
+  memo** instead of trying (and failing) to play. A pulsing **📬** badge
+  with a count appears the moment they come back; tap it to play the
+  oldest one (it's removed once played; tap again for the next).
+- Clips are peer-to-peer through Firebase — base64-encoded audio sent
+  straight to `/walkie/{their-id}`, the same database as everything else
+  here, not a third-party calling service.
+
+**The honest limit:** this is a plain web page, not a native app, so it
+can't keep running or play audio while fully backgrounded or closed —
+no iOS app can do that over plain web APIs without real push notifications
+from a server, which is well beyond a free static-site + Firebase setup.
+"Plays instantly" means *while the game tab is actually open and visible*;
+otherwise it waits for you as a memo, which is what was asked for and is
+the honest, reliable version of this feature on the web.
+
+### Local save
+
+Your name, villager species/color, and wood/stone/fish counts are saved to
+this browser's `localStorage` (key `pixeltown-save-v1`) — purely on your
+device, nothing sent anywhere. Reopen the page later and your villager and
+inventory pick up where you left off. Clearing your browser data (or using
+a different browser/device) starts fresh. Score isn't part of this — it
+lives on the Firebase leaderboard and resets with each new join, by design.
+
+Under the player list, **💾 Backup** downloads this save as a `.json`
+file, and **📂 Restore** loads one back in (reloading the page to apply
+it) — handy before clearing site data, or to carry your villager/
+inventory/achievements over to a different browser or device.
+
+### Add to Home Screen (iPhone/Android)
+
+- **iPhone (Safari):** open the site → Share icon → **Add to Home Screen**.
+  You get a proper icon (cropped from the Cool Cats sprite sheet) and it
+  launches full-screen, no address bar.
+- **Android (Chrome):** menu → **Add to Home screen** / **Install app**.
+
+This works because of `game/manifest.json` and the icons in `game/icons/` —
+if you want a different icon, swap the PNGs in that folder (keep the same
+filenames/sizes: 180×180 for `apple-touch-icon.png`, 192 and 512 for the
+manifest, 32×32 for the favicon).
+
+Standalone home-screen launches on iOS report an unreliable
+`window.innerWidth`/`innerHeight` for a moment after launch (and sometimes
+permanently depending on iOS version), which used to make the camera look
+zoomed-in and the chat box sit too high above the on-screen controls. The
+game now sizes itself from `window.visualViewport` (with a couple of
+delayed re-checks right after launch) and every fixed HUD panel accounts
+for `env(safe-area-inset-*)`, so it should look right whether you're in
+Safari or a home-screen app. Touch devices also zoom the camera out a
+little (1.5× instead of 2×) since phone screens show a lot less of the
+world otherwise.
+
+## How it works
+
+- **`index.html` / `style.css`** — the page shell and join screen.
+- **`main.js`** — [Phaser 3](https://phaser.io) (from a CDN) renders the
+  town and players; the map (pond, bridge, path, campfire, statue, forest
+  ring, tulip beds) is drawn procedurally — no external tileset.
+- **`net.js`** — the multiplayer layer. Players live under `/players/{id}`
+  in the Realtime Database (position, facing, species, score, current
+  emote); each client writes its own fields (position throttled to
+  ~10×/sec) and Firebase pushes everyone else's changes live. Presence uses
+  `onDisconnect()` so you vanish from the town when you close the tab.
+  Chat lives under `/chat`; placed blocks live under `/blocks/{x}_{y}`,
+  keyed by their grid position so there's never a duplicate at one spot.
+- **`underground.js`** — the 3D cave, rendered with
+  [Three.js](https://threejs.org) (also from a CDN) on its own `<canvas>`
+  that's swapped in over the 2D game. Terrain is generated fresh each time
+  you enter (a carved shaft + a couple of random-walk tunnels per depth
+  level) and rendered with one `InstancedMesh` per block type for
+  performance; mining/placing just hides/shows individual instances rather
+  than rebuilding geometry. It's intentionally local-only, like
+  fishing/chopping — no block sync, no multiplayer down there.
+- **`firebase-config.js`** — your project's keys (the one file you edit).
+- Walkie-talkie clips are recorded with `MediaRecorder` (picking whatever
+  codec the browser actually supports — iOS Safari and desktop Chrome don't
+  agree, so the format is negotiated, not assumed), base64-encoded, and
+  pushed to `/walkie/{recipientId}`. The recipient's listener plays it
+  immediately if `document.visibilityState === 'visible'`, otherwise queues
+  it as an unread memo; either way the node is deleted once played so
+  `/walkie` never grows unbounded.
+- Villager avatars and decorations are sliced directly from the repo's
+  `i/*-strip.png` sprite sheets (9-frame, 24×24-per-frame strips, 28×28 for
+  Bored Apes) via Phaser's spritesheet loader — nothing pulled from outside
+  this repo. The sprites are single-pose, so walking is faked with a
+  procedural squash-and-stretch hop + shrinking ground shadow.
+- The sparkle's position is derived from wall-clock time
+  (`Math.floor(Date.now() / 8000) % spots.length`), so every client agrees
+  on where it is without any extra network traffic — no server needed to
+  referee it. Anyone nearby when it rotates scores a point, so it's casual
+  and co-op rather than a first-click-wins race.
+- Fishing/chopping/mining are entirely client-side (per-tree/rock/spot
+  cooldowns, a timed bite window) — only the resulting wood/stone/fish
+  counts live in your own browser; they don't sync or persist.
+- Day/night tint reads each device's own local clock — cosmetic only, not
+  synced (friends in different timezones will see different lighting).
+- The seasonal wash reads the device's own month the same way — a plain
+  low-alpha rectangle re-colored per season, re-checked hourly in case a
+  long session crosses midnight on the last day of a month.
+- Weather works the same way as the sparkle: each 8-minute wall-clock
+  window hashes to rain or clear, so everyone's client agrees without a
+  server. It's cosmetic only — movement, fishing, etc. are unaffected.
+
+## A word on safety
+
+This game's database is wide open by design (see Setup above) — that's
+what keeps it free and server-less, but it also means **anyone with the
+link can write directly to it**, bypassing this page entirely, over the
+plain Firebase REST API. In practice that showed up as a real slur typed
+into a display name and chat during testing on the live database.
+
+What's in place now: joining with a name containing a slur is blocked,
+sending a chat message with one is blocked, and — because a direct API
+write skips both of those — anything that still gets through is masked
+with asterisks wherever it's displayed (names, chat, the player list).
+The blocklist in `main.js` (`BLOCKED_TERMS`) is intentionally short and
+specific to slurs, not everyday profanity, and it normalizes basic
+leetspeak (`f4ggot` → `faggot`) before matching. Sending the exact same
+message twice in a row within 10 seconds is also blocked client-side —
+a basic spam deterrent, same caveat as everything else here.
+
+**Be clear about what this isn't:** it is not real moderation and not a
+security boundary. It stops an honest friend's typo and masks what does
+get through, but a determined person can still hit the database directly.
+The actual fix for that is tightening the Firebase rules (see "Locking
+the rules down" above) and/or adding real authentication so writes
+require a signed-in user — worth doing if this link ever reaches people
+you don't already trust.
+
+## Notes / limits
+
+- **10 players max** at once (change `MAX_PLAYERS` in `net.js`).
+- **Haptic taps don't do anything on iPhone.** iOS Safari has never
+  implemented the Vibration API at all — that's Apple's own platform
+  choice, not something fixable from this page. It's a real (if small)
+  perk for any Android friends in the group.
+- State is ephemeral by design: players disappear when they leave, and chat
+  history is just the last ~30 messages. Scores reset when a player leaves
+  and rejoins (no accounts, no persistence there). Wood/stone/fish counts
+  persist locally on this device (see "Local save" above) but don't sync
+  anywhere. Placed **blocks persist** in the shared database until removed,
+  capped at 150 total.
+- The **underground cave is local-only and regenerates each visit** — it's
+  not saved, not synced, and friends can't see each other down there (same
+  scope as fishing/chopping — see "Going underground" above).
+- Position updates are throttled to ~10/sec per player — smooth, and well
+  within Firebase's free tier for a handful of friends.
+- Firebase's "test mode" rules are wide open (see below) — fine for a link
+  you only share with people you trust, not for posting publicly. Anyone
+  can remove anyone else's placed block if you tighten the rules without
+  also adding ownership checks there — the client enforces "your blocks
+  only" but test-mode rules don't.
+
+## Ideas for next steps
+
+- Firebase Anonymous Auth so writes require `auth != null` (safer public link)
+- Persistence: name/avatar/inventory now save locally (done); score/leaderboard across visits would need real accounts
+- More block types (stone blocks, decorative items) and more crafting recipes
+- Seasons (weather's done, above)
+- More villager species from the rest of the collection (plain rocks, genius…)
+- Per-player "homes" / multiple rooms instead of one shared map
+- Sync the underground cave (shared dig state, friends visible down there) —
+  skipped for now to keep the first version simple and purely local
+
+## Tests
+
+Headless Playwright suites live in `game/tests/` (one per feature plus
+`integration` and a `soak` run). Run them all with:
+
+```
+NODE_PATH=$(npm root -g) node game/tests/run-all.js
+```
+
+or a single one with `node game/tests/<name>.test.js` while
+`python3 -m http.server 8440` serves the repo root. The tests join the live
+town as `ADMIN*` bots (presence only), never chat, and never write anything
+else to Firebase.

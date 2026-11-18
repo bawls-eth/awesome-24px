@@ -1,0 +1,8304 @@
+const FRAME_SIZE = 24;
+const FRAME_COUNT = 9;
+const HOP_HEIGHT = 5; // px of vertical lift at the peak of a walk hop
+const HOP_SPEED = 9; // radians/sec the hop phase advances while moving
+
+// ---------- safety: block slurs in names/chat ----------
+// This game's database is intentionally wide-open (see README) so it can
+// stay a free, server-less static site — anyone with the link can write
+// to it directly over the Firebase REST API, bypassing this client
+// entirely. That means this filter can stop an honest player's own typo
+// from this page, and can mask an attacker's text once it arrives so it
+// doesn't render raw on screen, but it is NOT a security boundary: a
+// determined bad actor can still write slurs straight into the database.
+// The real fix for that is tightening the Firebase rules (README has the
+// steps) and/or adding real auth. Keep the list itself short and specific
+// to slurs, not everyday profanity.
+const BLOCKED_TERMS = ['nigger', 'nigga', 'faggot', 'retard', 'chink', 'spic', 'kike', 'tranny'];
+
+function normalizeForFilter(s) {
+  return String(s)
+    .toLowerCase()
+    .replace(/4/g, 'a')
+    .replace(/3/g, 'e')
+    .replace(/1/g, 'i')
+    .replace(/!/g, 'i')
+    .replace(/0/g, 'o')
+    .replace(/5/g, 's')
+    .replace(/\$/g, 's')
+    .replace(/7/g, 't')
+    .replace(/[^a-z]/g, '');
+}
+
+function containsBlockedTerm(s) {
+  // Check each whitespace-separated word on its own, not the whole string
+  // normalized together — otherwise stripping spaces can glue adjacent
+  // innocent words into a false hit (e.g. "this pic is great" collapsing
+  // into "...thispic..." and matching "spic"). Leetspeak/punctuation
+  // obfuscation *within* a single word is still caught, since that word's
+  // own normalization still strips punctuation and substitutes digits.
+  return String(s)
+    .split(/\s+/)
+    .some((word) => {
+      const norm = normalizeForFilter(word);
+      return norm && BLOCKED_TERMS.some((term) => norm.includes(term));
+    });
+}
+
+function censorBlockedTerms(s) {
+  if (!containsBlockedTerm(s)) return s;
+  // Word-ish tokens get replaced outright rather than character-by-character
+  // masked, since leetspeak/spacing tricks mean a partial mask would still
+  // read as the slur.
+  return String(s)
+    .split(/(\s+)/)
+    .map((tok) => (containsBlockedTerm(tok) ? '*'.repeat(Math.max(3, tok.length)) : tok))
+    .join('');
+}
+
+// A pure function of (x, y, seed) — always the same output for the same
+// inputs, no state, no Math.random(). Used to scatter wilderness/ocean
+// decoration deterministically: every client computes the same world
+// without any of it needing to be generated once and synced over the
+// network, the same trick weather/the sparkle/the daily merchant already
+// use with time instead of position.
+function worldHash(x, y, seed) {
+  const h = Math.sin(x * 12.9898 + y * 78.233 + seed * 37.719) * 43758.5453;
+  return h - Math.floor(h);
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// Turns CHANGELOG.md's fixed, simple shape (an h1 + intro paragraph we skip,
+// then "## Section" headings each followed by a flat list of "- " bullets
+// that can wrap onto indented continuation lines) into HTML for the in-game
+// changelog viewer. Not a general markdown parser — it only needs to handle
+// the one shape this file actually uses.
+function renderChangelogMarkdown(md) {
+  let html = '';
+  let inList = false;
+  let liOpen = false;
+  const closeLi = () => { if (liOpen) { html += '</li>'; liOpen = false; } };
+  const closeList = () => { closeLi(); if (inList) { html += '</ul>'; inList = false; } };
+  md.split('\n').forEach((raw) => {
+    const line = raw.replace(/\r$/, '');
+    if (line.startsWith('## ')) {
+      closeList();
+      html += `<h2>${escapeHtml(line.slice(3).trim())}</h2>`;
+    } else if (/^-\s/.test(line)) {
+      closeLi();
+      if (!inList) { html += '<ul>'; inList = true; }
+      html += `<li>${escapeHtml(line.slice(1).trim())}`;
+      liOpen = true;
+    } else if (line.trim() !== '' && liOpen) {
+      html += ` ${escapeHtml(line.trim())}`;
+    }
+  });
+  closeList();
+  return html;
+}
+
+// ---------------- local save (this device only — nothing here is synced) ----------------
+// Declared before the SFX module below, which reads loadSave() at the
+// top level on page load (sfxMuted) — it was previously declared much
+// further down in this file as a `const`, which put it in the temporal
+// dead zone at that point, throwing on every load; loadSave()'s own
+// try/catch silently swallowed that error and returned {}, so the
+// persisted mute flag was never actually honored after a reload.
+
+const SAVE_KEY = 'pixeltown-save-v1';
+
+// Bump this string whenever there's something worth telling returning
+// players about — shown once as a dismissible banner, then remembered.
+const GAME_VERSION = 'v34-aquarium';
+const WHATS_NEW = [
+  '🐠 Home aquarium — show fish from your journal beside your plot for extra cozy',
+  "🐟 Angler's Journal — 12 fish species by pond, time and season, with set rewards (L)",
+  '📋 Today board — see every daily chore at a glance (J), finish them all for a bonus',
+  '🍁 Seasonal specials at the workbench — a new craft for every season',
+  "🎂 Villager birthdays — bring a gift on their big day for a party bonus",
+  '🏡 Home plot — display your crafted goods as cozy decor, earn a daily visitor bonus',
+  '🦋 Daily Bug-Off — a 2-hour contest, catch 5/10/15 bugs for Bronze/Silver/Gold',
+  '📬 Villager mailbox — friends write you daily letters with gifts attached',
+  '🌿 Weeds sprout every day — pull them for ⭐ and keep the town tidy',
+  '🔨 DIY Workbench — craft goods from what you gather, sell them for more',
+  '🎣 Daily fishing tournament — biggest catch of the day wins a bonus',
+  '🔍 Daily scavenger hunt — one hidden spot a day, first to find it wins',
+  '🏘️ Town rating readout, 🎵 opt-in ambient music, 💾 save backup/restore',
+];
+
+function loadSave() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    // A corrupt/hand-edited save that isn't a plain object (number, string,
+    // array...) would otherwise get spread into garbage keys on next write.
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch (e) {
+    return {}; // private browsing / storage disabled — just play without saving
+  }
+}
+
+// Captured once, as soon as the script runs — before the join screen's
+// own writeSave() calls touch anything — so "is this a brand-new device"
+// can still be answered correctly later, even though joining immediately
+// writes name/species/frame to the same save.
+const HAD_EXISTING_SAVE_ON_LOAD = Object.keys(loadSave()).length > 0;
+
+// A saved counter that is a finite, non-negative whole number — anything
+// else (NaN, Infinity, negatives, strings from a hand-edited save) becomes 0.
+function cleanCount(v) {
+  v = Math.floor(Number(v));
+  return Number.isFinite(v) && v > 0 ? Math.min(v, 1e9) : 0;
+}
+
+function writeSave(partial) {
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ ...loadSave(), ...partial }));
+  } catch (e) {
+    // ignore — nothing to persist to
+  }
+}
+
+// ---------- SFX ----------
+// Pixeltown had zero sound anywhere (bar walkie-talkie voice clips) —
+// a real gap for an Animal Crossing game, which leans heavily on its
+// chimes for feel. Rather than bundle audio files, these are short
+// WebAudio-synthesized blips, generated on the fly. Muted by default
+// state is remembered locally; the AudioContext itself is created lazily
+// on first real use since browsers refuse to start one before a user
+// gesture.
+let sfxMuted = loadSave().sfxMuted === true;
+let sfxCtx = null;
+
+// Reduce-motion: turns off the player walk-cycle hop for anyone sensitive
+// to it. Defaults to the OS-level prefers-reduced-motion setting, same as
+// the join-screen decor already respects, but the player can flip it
+// either way and that choice is remembered per device.
+const SAVED_REDUCE_MOTION = loadSave().reduceMotion;
+let reduceMotion = SAVED_REDUCE_MOTION === true
+  || (SAVED_REDUCE_MOTION === undefined && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+function setReduceMotion(enabled) {
+  reduceMotion = enabled;
+  writeSave({ reduceMotion: enabled });
+}
+
+// Shared lazily-created AudioContext, independent of the sfxMuted flag —
+// ambient music has its own separate opt-in toggle and shouldn't be tied
+// to whether SFX blips are muted.
+function getAudioCtx() {
+  if (!sfxCtx) {
+    try { sfxCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; }
+  }
+  if (sfxCtx.state === 'suspended') sfxCtx.resume().catch(() => {});
+  return sfxCtx;
+}
+
+function getSfxCtx() {
+  if (sfxMuted) return null;
+  return getAudioCtx();
+}
+
+// notes: a sequence of [frequencyHz, durationSeconds, delaySeconds]
+function playNotes(notes, type = 'sine', volume = 0.12) {
+  const ctx = getSfxCtx();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  notes.forEach(([freq, dur, delay]) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    const t0 = now + delay;
+    gain.gain.setValueAtTime(0, t0);
+    gain.gain.linearRampToValueAtTime(volume, t0 + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.02);
+  });
+}
+
+const SFX = {
+  catch: () => playNotes([[740, 0.08, 0], [1175, 0.1, 0.06]], 'sine', 0.12),
+  coin: () => playNotes([[988, 0.09, 0]], 'triangle', 0.1),
+  sell: () => playNotes([[523, 0.08, 0], [784, 0.08, 0.05], [1047, 0.12, 0.1]], 'triangle', 0.11),
+  achievement: () => playNotes([[523, 0.1, 0], [659, 0.1, 0.09], [784, 0.1, 0.18], [1047, 0.18, 0.27]], 'square', 0.1),
+  deny: () => playNotes([[196, 0.16, 0]], 'sawtooth', 0.09),
+  pop: () => playNotes([[392, 0.05, 0], [294, 0.06, 0.04]], 'square', 0.08),
+  shutter: () => playNotes([[1800, 0.03, 0], [220, 0.05, 0.03]], 'square', 0.07),
+};
+
+function setSfxMuted(muted) {
+  sfxMuted = muted;
+  writeSave({ sfxMuted: muted });
+}
+
+// ---------- ambient music (opt-in, off by default) ----------
+// A slow, quiet chord pad — same no-audio-files WebAudio approach as the
+// SFX blips, just long-held tones instead of short ones. Off by default
+// since background music is a bigger ask than muted-by-default SFX; the
+// player has to explicitly turn it on.
+let musicEnabled = loadSave().musicEnabled === true;
+let musicNodes = [];
+const MUSIC_CHORDS = [
+  [196.0, 246.94, 293.66], // G3 B3 D4
+  [220.0, 261.63, 329.63], // A3 C4 E4
+  [174.61, 220.0, 261.63], // F3 A3 C4
+  [196.0, 246.94, 329.63], // G3 B3 E4
+];
+let musicChordIndex = 0;
+let musicChordTimer = null;
+
+function startAmbientMusic() {
+  const ctx = getAudioCtx();
+  if (!ctx || musicNodes.length) return;
+  musicChordIndex = 0;
+  MUSIC_CHORDS[0].forEach((freq) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    gain.gain.value = 0;
+    osc.connect(gain).connect(ctx.destination);
+    osc.start();
+    gain.gain.linearRampToValueAtTime(0.025, ctx.currentTime + 2);
+    musicNodes.push({ osc, gain });
+  });
+  musicChordTimer = setInterval(() => advanceMusicChord(), 8000);
+}
+
+function advanceMusicChord() {
+  const ctx = sfxCtx;
+  if (!ctx || !musicNodes.length) return;
+  musicChordIndex = (musicChordIndex + 1) % MUSIC_CHORDS.length;
+  const chord = MUSIC_CHORDS[musicChordIndex];
+  musicNodes.forEach((node, i) => {
+    node.osc.frequency.linearRampToValueAtTime(chord[i], ctx.currentTime + 3);
+  });
+}
+
+function stopAmbientMusic() {
+  const ctx = sfxCtx;
+  musicNodes.forEach(({ osc, gain }) => {
+    if (ctx) gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 1);
+    setTimeout(() => { try { osc.stop(); } catch (e) { /* already stopped */ } }, 1100);
+  });
+  musicNodes = [];
+  if (musicChordTimer) { clearInterval(musicChordTimer); musicChordTimer = null; }
+}
+
+function setMusicEnabled(enabled) {
+  musicEnabled = enabled;
+  writeSave({ musicEnabled: enabled });
+  if (enabled) startAmbientMusic();
+  else stopAmbientMusic();
+}
+
+const SPECIES = [
+  { key: 'coolcats', label: 'Cats' },
+  { key: 'punks', label: 'Punks' },
+  { key: 'pudgypenguins', label: 'Penguins' },
+  { key: 'doge', label: 'Dogs' },
+  { key: 'apes', label: 'Apes' },
+  { key: 'zombies', label: 'Zombies' },
+  { key: 'mohawks', label: 'Mohawks' },
+  { key: 'blondies', label: 'Blondies' },
+  { key: 'aliens', label: 'Aliens' },
+  // Unused 8-bit sprite strips already in this repo's i/ folder — same
+  // 24x24, 9-frame shape as everything above, so they drop straight into
+  // the existing species/preload/picker system with no special-casing.
+  { key: 'alienclan', label: 'Alien Clan' },
+  { key: 'apepunks', label: 'Ape Punks' },
+  { key: 'coolcats_dragons', label: 'Dragon Cats' },
+  { key: 'coolcats_frogs', label: 'Frog Cats' },
+  { key: 'coolcats_ninjas', label: 'Ninja Cats' },
+  { key: 'coolcats_pirates', label: 'Pirate Cats' },
+  { key: 'coolcats_unicorns', label: 'Unicorn Cats' },
+  { key: 'genius', label: 'Geniuses' },
+  { key: 'goldenpunks', label: 'Golden Punks' },
+  { key: 'halloweenpunks', label: 'Halloween Punks' },
+  { key: 'phunks', label: 'Phunks' },
+  { key: 'punkettes', label: 'Punkettes' },
+];
+
+const EMOTES = ['😀', '❤️', '😂', '👋', '🎉', '😢', '😮', '💤', '🎵'];
+const SPARKLE_SPOTS = [
+  [500, 300], [1100, 300], [500, 950], [1150, 940], [300, 780],
+  [1280, 650], [700, 850], [900, 400], [650, 350], [1050, 950],
+  [1750, 450], [2100, 650], [2250, 950],
+];
+const SPARKLE_ROTATE_MS = 8000;
+const SPARKLE_CATCH_RADIUS = 26;
+
+const IS_TOUCH = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+if (IS_TOUCH) document.body.classList.add('touch-device');
+
+const TILT_DEADZONE_DEG = 8;
+const TILT_RANGE_DEG = 36;
+// Radial dead zone for gamepad sticks and the on-screen joystick (0..1 of
+// full deflection) — worn sticks rest a little off-center and would
+// otherwise make the villager creep on their own.
+const PAD_DEADZONE = 0.22;
+const JOYSTICK_DEADZONE = 0.18;
+const SHAKE_THRESHOLD = 15; // m/s^2 jump in accelerationIncludingGravity magnitude
+const SHAKE_COOLDOWN_MS = 800;
+const TREE_SHAKE_RADIUS = 46;
+const TREE_SHAKE_COOLDOWN_MS = 20000;
+
+// Fixed town layout. WORLD size (2400x1200) is defined in net.js — everyone's
+// client draws the same map so landmarks mean the same thing to everyone.
+// The original town occupies x:0-1600; x:1600-2400 is the newer "East Meadow"
+// zone, reachable by walking east along the main path.
+// The original village footprint — unchanged by the world expansion below.
+// Bugs (and anything else that should stay a "village" activity rather
+// than spread out into the much bigger wilderness) are bounded to this.
+const VILLAGE_BOUNDS = { x: 0, y: 0, width: 2400, height: 1200 };
+// Thickness of the ocean band at the very edge of the (much bigger) world —
+// everything between the village and the ocean is the wilderness ring.
+const OCEAN_MARGIN = 500;
+// Baked tree texture size and where the tree's base point (its old
+// Graphics-local 0,0) sits inside it — see bakeTreeTextures().
+const TREE_TEX = { w: 56, h: 60, ox: 28, oy: 43 };
+const TREES = [
+  [60, 50], [220, 40], [380, 55], [560, 45], [680, 60],
+  [920, 60], [1040, 45], [1200, 55], [1360, 40], [1520, 50],
+  [60, 1150], [220, 1160], [380, 1145], [560, 1155], [680, 1140],
+  [920, 1140], [1040, 1155], [1200, 1145], [1360, 1160], [1520, 1150],
+  [40, 180], [50, 320], [40, 880], [55, 1020],
+  [1550, 180], [1560, 320], [1540, 460], [1545, 740], [1555, 880], [1540, 1020],
+  // East Meadow perimeter
+  [1650, 60], [1780, 45], [1900, 55], [2150, 50], [2280, 60], [2370, 45],
+  [1650, 1150], [1780, 1160], [1900, 1145], [2050, 1155], [2200, 1140], [2320, 1150],
+  [2370, 300], [2370, 500], [2370, 700], [2370, 900],
+];
+const TULIP_BEDS = [
+  { x: 700, y: 520, frames: [0, 1, 2] },
+  { x: 900, y: 520, frames: [3, 4, 5] },
+  { x: 700, y: 680, frames: [6, 7, 8] },
+  { x: 900, y: 680, frames: [0, 3, 6] },
+  { x: 1150, y: 900, frames: [1, 4, 7] },
+  { x: 1750, y: 850, frames: [2, 5, 8] },
+  { x: 2200, y: 950, frames: [0, 4, 7] },
+];
+const ROCKS = [
+  [500, 470, 0], [1080, 470, 3], [500, 730, 5], [1080, 730, 2],
+  [760, 460, 1], [840, 460, 4], [300, 900, 6], [1300, 300, 7],
+  [1300, 900, 8], [150, 1050, 0],
+  [1700, 700, 2], [1950, 950, 5], [2150, 750, 0], [2300, 450, 6],
+];
+const PUNK_ROCKS = [
+  [200, 1000, 1], [1400, 950, 4], [900, 1080, 7], [2050, 480, 2],
+];
+
+// Flora/fauna starter pack (20 species) — real vector art (assets/flora-fauna/svg/)
+// plus a matching GLB for 3D engines (assets/flora-fauna/glb/), both keyed by
+// the same species id as game/species-registry.json. Only the SVGs are loaded
+// here since this is a 2D Phaser game; the GLBs ride along unused but ID-
+// matched, ready for a 3D engine (or this game's own Three.js cave) later.
+// `zone` just picks which scatter rule below places it — not a biome engine.
+// `name` is the display name shown in the Wildlife Log once a specimen's
+// been logged — the full metadata (scientific name, diet, etc.) lives in
+// species-registry.json instead; duplicating just the short display name
+// here avoids an extra fetch for something this small.
+const FF_COLLECT_RADIUS = 40;
+// How each fauna species moves (anything not listed walks; flora never
+// moves). 'fly' = flutters with a bob, 'swim' = drifts inside its own water
+// body (pond or the near-shore ocean band), 'bank' = walks along a pond's
+// shore, 'still' = sessile, just bobs in place. Purely cosmetic and local:
+// only the spawn (home) point is deterministic across clients.
+const FF_MOVE = {
+  bird: 'fly', butterfly: 'fly', dragonfly: 'fly', toucan: 'fly', hawk: 'fly', hummingbird: 'fly',
+  bat: 'fly', honeybee: 'fly', firefly: 'fly', ladybug: 'fly', owl: 'fly', snowy_owl: 'fly',
+  trout: 'swim', catfish: 'swim', copepod: 'swim', amoeba: 'swim', paramecium: 'swim',
+  jellyfish: 'swim', shark: 'swim', sea_turtle: 'swim', clownfish: 'swim', octopus: 'swim',
+  seahorse: 'swim', nudibranch: 'swim', shrimp: 'swim', lobster: 'swim',
+  frog: 'bank', crab: 'bank', heron: 'bank', otter: 'bank', beaver: 'bank',
+  starfish: 'still', giant_clam: 'still', barnacle: 'still', sea_urchin: 'still', sand_dollar: 'still',
+};
+// Travel speed in px/s for the slowpokes/sprinters; everyone else gets a
+// size-based default in drawFloraFauna().
+const FF_SPEED = { snail: 5, desert_tortoise: 8, slime_mold: 3, roadrunner: 95, hummingbird: 90, hawk: 70, shark: 40, jellyfish: 10, seahorse: 8, amoeba: 4, paramecium: 6, copepod: 8 };
+// The art faces right except these (flipX logic is inverted for them).
+const FF_FACES_LEFT = new Set(['snail', 'shrimp']);
+// Pond species that live *in* the water rather than on the bank.
+const FF_IN_WATER = new Set(['trout', 'catfish', 'copepod', 'amoeba', 'paramecium', 'water_lily', 'duckweed', 'diatom']);
+// Small, harmless species that also get a couple of spawns inside the
+// village itself (everything else stays out in the wilderness).
+const FF_VILLAGE = ['bird', 'butterfly', 'honeybee', 'ladybug', 'hummingbird', 'squirrel', 'snail', 'dragonfly'];
+const FF_ASSETS = [
+  { id: 'fox', w: 56, h: 56, zone: 'forest', name: 'Red Fox', kind: 'fauna' },
+  { id: 'deer', w: 68, h: 68, zone: 'forest', name: 'White-tailed Deer', kind: 'fauna' },
+  { id: 'bird', w: 36, h: 36, zone: 'forest', name: 'European Robin', kind: 'fauna' },
+  { id: 'butterfly', w: 32, h: 32, zone: 'meadow', name: 'Monarch Butterfly', kind: 'fauna' },
+  { id: 'frog', w: 32, h: 32, zone: 'pond', name: 'American Bullfrog', kind: 'fauna' },
+  { id: 'snake', w: 40, h: 40, zone: 'meadow', name: 'Garter Snake', kind: 'fauna' },
+  { id: 'mushroom', w: 28, h: 28, zone: 'forest', name: 'Fly Agaric', kind: 'flora' },
+  { id: 'oak_tree', w: 88, h: 88, zone: 'forest', name: 'Northern Red Oak', kind: 'flora' },
+  { id: 'pine_tree', w: 72, h: 96, zone: 'forest', name: 'Eastern White Pine', kind: 'flora' },
+  { id: 'flower', w: 28, h: 28, zone: 'meadow', name: 'Wild Tulip', kind: 'flora' },
+  { id: 'fern', w: 36, h: 36, zone: 'forest', name: 'Western Sword Fern', kind: 'flora' },
+  { id: 'grass', w: 28, h: 28, zone: 'meadow', name: 'Tall Fescue', kind: 'flora' },
+  { id: 'shrub', w: 44, h: 44, zone: 'forest', name: 'Common Juniper', kind: 'flora' },
+  { id: 'cactus', w: 44, h: 60, zone: 'desert_accent', name: 'Saguaro Cactus', kind: 'flora' },
+  { id: 'trout', w: 36, h: 36, zone: 'pond', name: 'Rainbow Trout', kind: 'fauna' },
+  { id: 'crab', w: 32, h: 32, zone: 'pond', name: 'Fiddler Crab', kind: 'fauna' },
+  { id: 'jellyfish', w: 36, h: 36, zone: 'ocean', name: 'Moon Jellyfish', kind: 'fauna' },
+  { id: 'shark', w: 68, h: 68, zone: 'ocean', name: 'Blacktip Reef Shark', kind: 'fauna' },
+  { id: 'coral', w: 40, h: 40, zone: 'ocean', name: 'Staghorn Coral', kind: 'flora' },
+  { id: 'kelp', w: 36, h: 68, zone: 'ocean', name: 'Giant Kelp', kind: 'flora' },
+  // Batch 2 (44 species) — fills in the biomes/taxa batch 1 barely
+  // touched: desert, alpine/tundra, rainforest, more wetland/marine/
+  // freshwater variety, plus arachnids and mollusks. Same id/zone
+  // scatter convention as above; 'desert_accent' and 'alpine_accent'
+  // are both fixed hand-placed corners (there's no real desert or
+  // alpine biome on this map), same trick already used for cactus.
+  { id: 'scorpion', w: 40, h: 32, zone: 'desert_accent', name: 'Deathstalker Scorpion', kind: 'fauna' },
+  { id: 'roadrunner', w: 48, h: 40, zone: 'desert_accent', name: 'Greater Roadrunner', kind: 'fauna' },
+  { id: 'desert_tortoise', w: 44, h: 32, zone: 'desert_accent', name: 'Desert Tortoise', kind: 'fauna' },
+  { id: 'joshua_tree', w: 80, h: 104, zone: 'desert_accent', name: 'Joshua Tree', kind: 'flora' },
+  { id: 'sagebrush', w: 44, h: 40, zone: 'desert_accent', name: 'Big Sagebrush', kind: 'flora' },
+  { id: 'snowy_owl', w: 48, h: 40, zone: 'alpine_accent', name: 'Snowy Owl', kind: 'fauna' },
+  { id: 'arctic_fox', w: 52, h: 44, zone: 'alpine_accent', name: 'Arctic Fox', kind: 'fauna' },
+  { id: 'caribou', w: 68, h: 60, zone: 'alpine_accent', name: 'Caribou', kind: 'fauna' },
+  { id: 'mountain_goat', w: 60, h: 60, zone: 'alpine_accent', name: 'Mountain Goat', kind: 'fauna' },
+  { id: 'lichen', w: 28, h: 20, zone: 'alpine_accent', name: 'Map Lichen', kind: 'flora' },
+  { id: 'toucan', w: 44, h: 40, zone: 'forest', name: 'Keel-billed Toucan', kind: 'fauna' },
+  { id: 'poison_dart_frog', w: 28, h: 24, zone: 'forest', name: 'Strawberry Poison Frog', kind: 'fauna' },
+  { id: 'howler_monkey', w: 56, h: 52, zone: 'forest', name: 'Mantled Howler', kind: 'fauna' },
+  { id: 'orchid', w: 36, h: 32, zone: 'forest', name: 'Tiger Orchid', kind: 'flora' },
+  { id: 'liana_vine', w: 40, h: 60, zone: 'forest', name: 'Strangler Fig Vine', kind: 'flora' },
+  { id: 'leafcutter_ant', w: 28, h: 20, zone: 'forest', name: 'Leafcutter Ant', kind: 'fauna' },
+  { id: 'heron', w: 52, h: 60, zone: 'pond', name: 'Great Blue Heron', kind: 'fauna' },
+  { id: 'cattail', w: 28, h: 56, zone: 'pond', name: 'Common Cattail', kind: 'flora' },
+  { id: 'dragonfly', w: 32, h: 28, zone: 'pond', name: 'Common Green Darner', kind: 'fauna' },
+  { id: 'otter', w: 52, h: 40, zone: 'pond', name: 'North American River Otter', kind: 'fauna' },
+  { id: 'water_lily', w: 32, h: 32, zone: 'pond', name: 'White Water Lily', kind: 'flora' },
+  { id: 'sea_turtle', w: 60, h: 56, zone: 'ocean', name: 'Green Sea Turtle', kind: 'fauna' },
+  { id: 'clownfish', w: 28, h: 28, zone: 'ocean', name: 'Ocellaris Clownfish', kind: 'fauna' },
+  { id: 'octopus', w: 44, h: 40, zone: 'ocean', name: 'Common Octopus', kind: 'fauna' },
+  { id: 'starfish', w: 32, h: 32, zone: 'ocean', name: 'Common Starfish', kind: 'fauna' },
+  { id: 'sea_anemone', w: 36, h: 32, zone: 'ocean', name: 'Giant Green Anemone', kind: 'flora' },
+  { id: 'seahorse', w: 32, h: 36, zone: 'ocean', name: 'Lined Seahorse', kind: 'fauna' },
+  { id: 'beaver', w: 56, h: 44, zone: 'pond', name: 'North American Beaver', kind: 'fauna' },
+  { id: 'catfish', w: 40, h: 32, zone: 'pond', name: 'Channel Catfish', kind: 'fauna' },
+  { id: 'duckweed', w: 24, h: 16, zone: 'pond', name: 'Common Duckweed', kind: 'flora' },
+  { id: 'owl', w: 44, h: 44, zone: 'forest', name: 'Great Horned Owl', kind: 'fauna' },
+  { id: 'squirrel', w: 36, h: 32, zone: 'forest', name: 'Eastern Gray Squirrel', kind: 'fauna' },
+  { id: 'hedgehog', w: 32, h: 28, zone: 'forest', name: 'European Hedgehog', kind: 'fauna' },
+  { id: 'ladybug', w: 24, h: 24, zone: 'meadow', name: 'Seven-spot Ladybird', kind: 'fauna' },
+  { id: 'honeybee', w: 24, h: 24, zone: 'meadow', name: 'Western Honey Bee', kind: 'fauna' },
+  { id: 'spider', w: 28, h: 28, zone: 'forest', name: 'Garden Orb Weaver', kind: 'fauna' },
+  { id: 'clover', w: 24, h: 20, zone: 'meadow', name: 'White Clover', kind: 'flora' },
+  { id: 'dandelion', w: 24, h: 28, zone: 'meadow', name: 'Common Dandelion', kind: 'flora' },
+  { id: 'moss', w: 24, h: 16, zone: 'forest', name: 'Common Haircap Moss', kind: 'flora' },
+  { id: 'maple_tree', w: 88, h: 88, zone: 'forest', name: 'Sugar Maple', kind: 'flora' },
+  { id: 'blackberry_vine', w: 44, h: 40, zone: 'forest', name: 'Blackberry Bramble', kind: 'flora' },
+  { id: 'hawk', w: 48, h: 44, zone: 'forest', name: 'Red-tailed Hawk', kind: 'fauna' },
+  { id: 'hummingbird', w: 24, h: 24, zone: 'meadow', name: 'Ruby-throated Hummingbird', kind: 'fauna' },
+  { id: 'bat', w: 32, h: 28, zone: 'forest', name: 'Little Brown Bat', kind: 'fauna' },
+  // Batch 3 (34 species) — closes out the taxa the brief called for that
+  // were still thin or missing: mollusks, crustaceans, cnidarians,
+  // echinoderms, fungi, mosses, ferns, sea grasses, and microscopic life
+  // (the last rendered as tiny specks near pond edges, not life-sized).
+  { id: 'snail', w: 24, h: 20, zone: 'forest', name: 'Garden Snail', kind: 'fauna' },
+  { id: 'nudibranch', w: 26, h: 20, zone: 'ocean', name: 'Spanish Shawl Nudibranch', kind: 'fauna' },
+  { id: 'giant_clam', w: 38, h: 30, zone: 'ocean', name: 'Giant Clam', kind: 'fauna' },
+  { id: 'lobster', w: 32, h: 22, zone: 'ocean', name: 'American Lobster', kind: 'fauna' },
+  { id: 'shrimp', w: 22, h: 16, zone: 'ocean', name: 'Common Shrimp', kind: 'fauna' },
+  { id: 'barnacle', w: 18, h: 16, zone: 'ocean', name: 'Acorn Barnacle', kind: 'fauna' },
+  { id: 'sea_fan', w: 34, h: 30, zone: 'ocean', name: 'Purple Sea Fan', kind: 'flora' },
+  { id: 'fire_coral', w: 26, h: 24, zone: 'ocean', name: 'Fire Coral', kind: 'flora' },
+  { id: 'sea_urchin', w: 22, h: 18, zone: 'ocean', name: 'Purple Sea Urchin', kind: 'fauna' },
+  { id: 'sand_dollar', w: 18, h: 18, zone: 'ocean', name: 'Common Sand Dollar', kind: 'fauna' },
+  { id: 'puffball_mushroom', w: 26, h: 22, zone: 'forest', name: 'Giant Puffball', kind: 'flora' },
+  { id: 'bracket_fungus', w: 20, h: 14, zone: 'forest', name: 'Turkey Tail', kind: 'flora' },
+  { id: 'slime_mold', w: 16, h: 12, zone: 'forest', name: 'Many-headed Slime', kind: 'flora' },
+  { id: 'sphagnum_moss', w: 16, h: 10, zone: 'pond', name: 'Sphagnum Moss', kind: 'flora' },
+  { id: 'bracken_fern', w: 26, h: 30, zone: 'forest', name: 'Bracken Fern', kind: 'flora' },
+  { id: 'maidenhair_fern', w: 22, h: 22, zone: 'forest', name: 'Maidenhair Fern', kind: 'flora' },
+  { id: 'red_algae', w: 18, h: 16, zone: 'ocean', name: 'Dulse', kind: 'flora' },
+  { id: 'diatom', w: 12, h: 10, zone: 'pond', name: 'Diatom', kind: 'flora' },
+  { id: 'turtle_grass', w: 20, h: 16, zone: 'ocean', name: 'Turtle Grass', kind: 'flora' },
+  { id: 'eelgrass', w: 18, h: 28, zone: 'ocean', name: 'Eelgrass', kind: 'flora' },
+  { id: 'copepod', w: 10, h: 8, zone: 'pond', name: 'Copepod', kind: 'fauna' },
+  { id: 'amoeba', w: 10, h: 8, zone: 'pond', name: 'Amoeba', kind: 'fauna' },
+  { id: 'paramecium', w: 10, h: 8, zone: 'pond', name: 'Paramecium', kind: 'fauna' },
+  { id: 'grasshopper', w: 20, h: 16, zone: 'meadow', name: 'Grasshopper', kind: 'fauna' },
+  { id: 'firefly', w: 14, h: 12, zone: 'meadow', name: 'Firefly', kind: 'fauna' },
+  { id: 'praying_mantis', w: 22, h: 18, zone: 'meadow', name: 'Praying Mantis', kind: 'fauna' },
+  { id: 'tarantula', w: 26, h: 22, zone: 'desert_accent', name: 'Tarantula', kind: 'fauna' },
+  { id: 'daddy_longlegs', w: 18, h: 16, zone: 'forest', name: 'Daddy Longlegs', kind: 'fauna' },
+  { id: 'salamander', w: 22, h: 14, zone: 'forest', name: 'Spotted Salamander', kind: 'fauna' },
+  { id: 'poison_ivy', w: 22, h: 26, zone: 'forest', name: 'Poison Ivy', kind: 'flora' },
+  { id: 'wisteria', w: 26, h: 32, zone: 'forest', name: 'Wisteria', kind: 'flora' },
+  { id: 'sunflower', w: 26, h: 30, zone: 'meadow', name: 'Sunflower', kind: 'flora' },
+  { id: 'bluebell', w: 16, h: 20, zone: 'meadow', name: 'Common Bluebell', kind: 'flora' },
+  { id: 'lavender', w: 18, h: 22, zone: 'meadow', name: 'Lavender', kind: 'flora' },
+];
+const POND_CATS = [
+  { y: 552, frame: 0, range: [180, 330] },
+  { y: 578, frame: 3, range: [150, 300] },
+  { y: 648, frame: 6, range: [170, 320] },
+];
+const WINDMILL_POS = { x: 250, y: 200 };
+// Purely cosmetic seasonal ground decor — a snowman in winter, a pumpkin
+// in autumn, nothing extra in spring/summer (flowers already cover that).
+const SEASON_DECOR_SPOTS = [
+  { x: 550, y: 250 }, { x: 1300, y: 250 }, { x: 2100, y: 750 },
+  { x: 1050, y: 1100 }, { x: 1900, y: 350 },
+];
+const STATUE_POS = { x: 1450, y: 600 };
+const NPC_POS = { x: 1550, y: 540 };
+const NPC_RADIUS = 48;
+const NPC_NAME = '🧪 Professor Byte';
+const QUEST_RESOURCES = [
+  { key: 'wood', icon: '🪵' }, { key: 'stone', icon: '🪨' }, { key: 'fish', icon: '🐟' },
+  { key: 'bugs', icon: '🦋' }, { key: 'fruit', icon: '🍎' }, { key: 'flowers', icon: '🌸' },
+  { key: 'shells', icon: '🐚' },
+];
+const QUEST_REWARD_BASE = 6;
+const DAILY_DEAL_BONUS = 0.5; // +50% sell price on one resource, picked daily
+const BULK_SELL_THRESHOLD = 10; // sell 10+ of one resource at once for a bonus
+const BULK_SELL_BONUS = 0.2; // +20% on any resource that hits the threshold
+const NPC_LINES = [
+  "Did you know the pond cats never actually get wet? Mysteries of pixel physics.",
+  "I've been counting your footsteps. You're very consistent. It's admirable.",
+  "The Bored Ape statue hasn't blinked once since I've been standing here.",
+  "Turnip prices are basically vibes-based. Don't ask me to explain further.",
+  "I dug a hole once. Found nothing but more dirt. 0/10, not recommending it.",
+  "If you listen closely during K.K. Slider's set, you can hear the campfire keeping time.",
+  "Fossils are just rocks with better marketing, and I stand by that.",
+  "I've met every species in this town except whichever one you just picked. Rude, honestly.",
+  "Someone should really build a fence around my research. Hint hint.",
+  "The shells on the beach regrow overnight. I have theories. None of them are good.",
+  "I tried the Polyroll dice once. Lost all my stars in four seconds. Science.",
+  "Achievements are just chores with better rewards.",
+  "I'm 73% sure the Able Sisters just recolor the same four outfits.",
+  "Day or night, rain or shine — I remain exactly this unbothered.",
+  "Keep chatting nearby and someone's going to assume we're friends.",
+  "I'm not saying the museum is understaffed. I'm saying it's me. It's always been me.",
+];
+const NPC_RAIN_LINES = [
+  "Ugh, it's raining again. My notes are getting soggy and so is my mood.",
+  "On the bright side, the fireflies don't care about rain. Lucky them.",
+  "I'd go inside, but then who'd stand here being damp and philosophical?",
+  "Rain means the turnip stall smells like wet cardboard. You're welcome for that image.",
+];
+const NPC_NIGHT_LINES = [
+  "Night shift! The stars are just pixels that stayed up late. Probably.",
+  "Fireflies are out. I've named all of them Gerald. Saves time.",
+  "Shouldn't you be asleep? Shouldn't I? Science never sleeps. It yawns a lot, though.",
+];
+// Second resident NPC — a grumpy old dockhand who hangs out by the pond's
+// pier, as far from Professor Byte (over by the statue) as the map allows.
+// Purely flavor-text, client-side only, same pattern as NPC_* above but no
+// daily quest — kept deliberately simple.
+const NPC2_POS = { x: 480, y: 660 };
+const NPC2_RADIUS = 48;
+const NPC2_NAME = '🎣 Salty Mo';
+const NPC2_LINES = [
+  "Forty years on this dock and the fish still won't tell me their names.",
+  "You call that a cast? My grandmother fishes better, and she's a statue.",
+  "I don't trust that Merchant fella. Shows up, sells junk, vanishes. Suspicious.",
+  "Back in my day we didn't have a shop. We just argued about turnip prices for free.",
+  "That dock's been 'temporary' for forty years. Nobody's fixing it. Nobody asked me either.",
+  "Heard the Professor's been talking to himself again. Takes one to know one, I guess.",
+  "The pond cats ignore me completely. Rude, but I respect the commitment.",
+  "Rain or shine, I'm out here. Mostly because nobody built me a house.",
+  "Don't trust anyone who's never fallen off a dock. Builds character, and bruises.",
+  "I've seen things in this pond. Mostly reflections. Still counts.",
+  "You'd think with all this fishing someone would've caught a decent conversation.",
+  "The Able Sisters keep asking if I want new clothes. I've had this hat since launch.",
+  "That statue never waves back. I've tried for years. Pure ego, that one.",
+  "Firefly season's my favorite. Less bugs biting, more bugs glowing. Fair trade.",
+  "Folks keep digging for fossils. I've got a whole dock full of splinters, free of charge.",
+  "I'm not grumpy, I'm just allergic to small talk. And most other talk, honestly.",
+];
+const NPC2_RAIN_LINES = [
+  "Rain on the dock. My favorite. Said no one, ever, including me.",
+  "Forty years and this dock still leaks worse than my patience right now.",
+  "The fish bite better in the rain. Doesn't mean I have to enjoy catching them in it.",
+  "Rain's just the sky doing the washing up it never finishes.",
+];
+const NPC2_NIGHT_LINES = [
+  "Night fishing's the real fishing. The big ones come out when the tourists go home.",
+  "Can't sleep. Dock creaks louder at night. Or maybe that's my back.",
+  "Moon's bright tonight. Good for spotting shadows in the water. Shh.",
+];
+// Professor Byte's daily trivia — one question a day, same for everyone
+// (same deterministic wall-clock-hash trick as the merchant/quest), a
+// small star reward for a correct first answer, no retry once answered.
+const TRIVIA_QUESTIONS = [
+  { q: 'How many villager species can you pick from on the join screen?', choices: ['9', '15', '21', '29'], correct: 2 },
+  { q: "What does Professor Byte's daily quest reset at?", choices: ['Noon local time', 'Midnight UTC', 'Every Monday', 'It never resets'], correct: 1 },
+  { q: 'What do butterflies turn into at night?', choices: ['Moths', 'Fireflies', 'Nothing, they hide', 'Bats'], correct: 1 },
+  { q: 'How much does a stone fence cost to place?', choices: ['1 wood', '1 stone', '2 flowers', '3 stone'], correct: 1 },
+  { q: 'Which build-mode material is purely decorative and blocks no movement at all?', choices: ['Wall', 'Fence', 'Hedge', 'Lamp'], correct: 3 },
+  { q: "What's the Mystery Merchant's visiting window length?", choices: ['1 hour', '3 hours', '6 hours', 'All day'], correct: 1 },
+  { q: "How many fossil species does the Museum's full collection need?", choices: ['3', '5', '7', '10'], correct: 1 },
+  { q: 'What multiplier does a winning Polyroll dice bet pay?', choices: ['2x', '3x', '5x', '10x'], correct: 2 },
+  { q: 'How many hours a night does K.K. Slider play the campfire?', choices: ['1 hour', '2 hours', '3 hours', 'All night'], correct: 1 },
+  { q: 'How many fossils can you carry in your bag before donating?', choices: ['1', '3', '5', '10'], correct: 1 },
+  { q: 'What resource does a decorative Lamp cost?', choices: ['Wood', 'Stone', 'Flowers', 'Shells'], correct: 2 },
+  { q: "What's the max number of players in town at once?", choices: ['5', '10', '20', 'Unlimited'], correct: 1 },
+];
+const TRIVIA_REWARD = 8;
+const HOUSE_POS = { x: 1020, y: 760, w: 110, h: 70 };
+const SHOP_RADIUS = 70;
+// All the "minigame" structures (Polyroll, the turnip stall, the fishing
+// tournament sign) and both portal doors live together in one consolidated
+// arcade district, southeast of the statue — previously these were
+// scattered across the whole map (the tournament sign in particular sat
+// all the way on the opposite, western edge, by the main pond), which
+// meant a lot of walking just to find them. Having one GTA portal instead
+// of the original two redundant ones is part of the same tidy-up.
+const POLYROLL_POS = { x: 1900, y: 760 };
+const POLYROLL_RADIUS = 50;
+const MUSEUM_POS = { x: 900, y: 920, w: 100, h: 64 };
+const MUSEUM_RADIUS = 70;
+const FOSSIL_TYPES = ['🦴 T-Rex Bone', '🐚 Ancient Shell', '🦷 Mammoth Tooth', '🥚 Dino Egg', '🪨 Trilobite'];
+// Fauna/flora sections of the museum are discovery-based, not donated —
+// catching a bug or picking a flower marks that species seen permanently,
+// independent of your bag (which you'll sell for stars, not hoard).
+const FAUNA_TYPES = ['🦋 Butterfly', '✨ Firefly'];
+const FLORA_TYPES = ['🌸 Cherry Blossom', '🌷 Tulip', '🌻 Sunflower', '🌹 Rose'];
+const FOSSIL_SPOTS = [
+  { x: 600, y: 1000 }, { x: 650, y: 1030 }, { x: 700, y: 1000 },
+];
+const FOSSIL_DIG_RADIUS = 40;
+const FOSSIL_RESPAWN_MS = 25000;
+const FOSSIL_BAG_CAP = 3;
+const DIG_HOLE_POS = { x: 1200, y: 460 };
+const DIG_HOLE_RADIUS = 36;
+const DOOR_RADIUS = 34;
+const TURNIP_STALL_POS = { x: 1760, y: 760 };
+const TURNIP_STALL_RADIUS = 50;
+const TURNIP_BUNDLE = 10;
+const TURNIP_BUY_CYCLE_MS = 4 * 60 * 60 * 1000; // buy price changes every 4h
+const TURNIP_SELL_CYCLE_MS = 15 * 60 * 1000; // sell price changes every 15min
+// The sell price used to be a flat 20-240 roll every 15 minutes against a
+// 90-130 buy price: positive expected value even selling at random, and
+// unlimited bundles meant waiting for a high roll printed stars. Now most
+// windows are below the buy price with an occasional spike (AC-style), and
+// you can only buy a couple of bundles per (UTC) day.
+const TURNIP_SPIKE_CHANCE = 0.15; // ~1 in 7 sell windows is a spike
+const TURNIP_DAILY_BUNDLE_CAP = 2;
+
+// Nook Miles-style achievements: lifetime counters (never decrease even
+// when the resource is later sold/spent), checked after every relevant
+// action. Each unlocks once, ever, per device.
+const ACHIEVEMENTS = [
+  { id: 'wood10', icon: '🪓', label: 'Lumberjack', desc: 'Chop 10 wood', reward: 5, check: (s) => (s.wood || 0) >= 10 },
+  { id: 'stone10', icon: '⛏️', label: 'Miner', desc: 'Mine 10 stone', reward: 5, check: (s) => (s.stone || 0) >= 10 },
+  { id: 'fish10', icon: '🐟', label: 'Angler', desc: 'Catch 10 fish', reward: 5, check: (s) => (s.fish || 0) >= 10 },
+  { id: 'bugs10', icon: '🦋', label: 'Bug Catcher', desc: 'Catch 10 bugs', reward: 5, check: (s) => (s.bugs || 0) >= 10 },
+  { id: 'fruit10', icon: '🍎', label: 'Orchardist', desc: 'Gather 10 fruit', reward: 5, check: (s) => (s.fruit || 0) >= 10 },
+  { id: 'blocks10', icon: '🧱', label: 'Builder', desc: 'Place 10 blocks', reward: 5, check: (s) => (s.blocksPlaced || 0) >= 10 },
+  { id: 'sparkle10', icon: '✨', label: 'Star Chaser', desc: 'Catch 10 sparkles', reward: 5, check: (s) => (s.sparkles || 0) >= 10 },
+  { id: 'polyroll10', icon: '🎲', label: 'High Roller', desc: 'Play Polyroll 10 times', reward: 5, check: (s) => (s.polyrollPlays || 0) >= 10 },
+  { id: 'turnipSold', icon: '🥬', label: 'Investor', desc: 'Sell turnips at the shop', reward: 5, check: (s) => (s.turnipsSold || 0) >= 1 },
+  { id: 'cave1', icon: '⛰️', label: 'Spelunker', desc: 'Visit the underground cave', reward: 3, check: (s) => (s.caveVisits || 0) >= 1 },
+  { id: 'chat10', icon: '👋', label: 'Friendly', desc: 'Send 10 chat messages', reward: 3, check: (s) => (s.chatSent || 0) >= 10 },
+  { id: 'museumFull', icon: '🏛️', label: 'Paleontologist', desc: 'Donate all 5 fossil species', reward: 10, check: (s, scene) => scene.museumCollection && scene.museumCollection.size >= FOSSIL_TYPES.length },
+  { id: 'mail1', icon: '📬', label: 'Pen Pal', desc: 'Collect your first letter', reward: 3, check: (s) => (s.lettersRead || 0) >= 1 },
+  { id: 'mail25', icon: '💌', label: 'Postmaster', desc: 'Collect 25 letters', reward: 10, check: (s) => (s.lettersRead || 0) >= 25 },
+  { id: 'mailBest', icon: '💖', label: 'Dear Friend', desc: 'Get a letter from a best friend', reward: 8, check: (s) => (s.bestFriendLetters || 0) >= 1 },
+  { id: 'bugoffBronze', icon: '🥉', label: 'Bug Buddy', desc: 'Earn Bronze in a Bug-Off', reward: 3, check: (s) => (s.bugOffTiers || 0) >= 1 },
+  { id: 'bugoffGold', icon: '🥇', label: 'Bug Champion', desc: 'Earn Gold in a Bug-Off (catch 15)', reward: 10, check: (s) => (s.bugOffGold || 0) >= 1 },
+  { id: 'bugoffRegular', icon: '🦋', label: 'Bug-Off Regular', desc: 'Earn 10 Bug-Off prizes', reward: 8, check: (s) => (s.bugOffTiers || 0) >= 10 },
+  { id: 'homeFirst', icon: '🏡', label: 'Home Sweet Home', desc: 'Place a crafted good on your home plot', reward: 3, check: (s) => (s.homePlaced || 0) >= 1 },
+  { id: 'homeFull', icon: '🛋️', label: 'Interior Designer', desc: 'Fill every spot on your home plot', reward: 8, check: (s) => (s.homeFullPlots || 0) >= 1 },
+  { id: 'homeCozy', icon: '🕯️', label: 'Cozy Corner', desc: 'Reach a cozy score of 30', reward: 8, check: (s) => (s.homeCozyBest || 0) >= 30 },
+  { id: 'bday1', icon: '🎂', label: 'Party Guest', desc: "Give a villager a birthday gift", reward: 3, check: (s) => (s.birthdayGifts || 0) >= 1 },
+  { id: 'bday5', icon: '🎉', label: 'Birthday Regular', desc: 'Give 5 birthday gifts', reward: 8, check: (s) => (s.birthdayGifts || 0) >= 5 },
+  { id: 'bdayAll', icon: '🥳', label: 'Party Planner', desc: "Celebrate every villager's birthday", reward: 15, check: (s, scene) => !!scene.birthdayGuests && scene.birthdayGuests.size >= VILLAGERS.length },
+  { id: 'daily1', icon: '📋', label: 'Daily Routine', desc: 'Finish every daily chore in one day', reward: 5, check: (s) => (s.dailyAllDone || 0) >= 1 },
+  { id: 'daily7', icon: '🗓️', label: 'Creature of Habit', desc: 'Finish all daily chores on 7 different days', reward: 15, check: (s) => (s.dailyAllDone || 0) >= 7 },
+  { id: 'fishSpecies5', icon: '🎣', label: 'Angler', desc: 'Log 5 different fish species', reward: 5, check: (s, scene) => !!scene.fishlog && scene.fishSpeciesCount() >= 5 },
+  { id: 'fishSpecies12', icon: '🏆', label: 'Master Angler', desc: 'Log every fish species', reward: 15, check: (s, scene) => !!scene.fishlog && scene.fishSpeciesCount() >= FISH_SPECIES.length },
+  { id: 'fishLunker', icon: '📏', label: 'Lunker', desc: 'Catch a fish 70cm or longer', reward: 5, check: (s) => (s.fishLunker || 0) >= 1 },
+  { id: 'tank1', icon: '🐠', label: 'Fish Fan', desc: 'Show a fish in your home aquarium', reward: 3, check: (s) => (s.tankPlaced || 0) >= 1 },
+  { id: 'tank3', icon: '🫧', label: 'Aquarist', desc: 'Fill your aquarium with 3 species', reward: 8, check: (s) => (s.tankFull || 0) >= 1 },
+  { id: 'craft1', icon: '🔨', label: 'DIY Beginner', desc: 'Craft something at the workbench', reward: 3, check: (s) => (s.crafted || 0) >= 1 },
+  { id: 'craft10', icon: '🛠️', label: 'Crafty', desc: 'Craft 10 items', reward: 5, check: (s) => (s.crafted || 0) >= 10 },
+  { id: 'craftAll', icon: '🧰', label: 'Master Crafter', desc: 'Craft every recipe at least once', reward: 10, check: (s) => RECIPES.filter((r) => !r.season).every((r) => (s['craft_' + r.id] || 0) >= 1) },
+  { id: 'craftSeason', icon: '🍁', label: 'Seasonal Crafter', desc: 'Craft a seasonal special', reward: 5, check: (s) => RECIPES.filter((r) => r.season).some((r) => (s['craft_' + r.id] || 0) >= 1) },
+  { id: 'craftYear', icon: '📅', label: 'Year-Round Crafter', desc: 'Craft all four seasonal specials', reward: 15, check: (s) => RECIPES.filter((r) => r.season).every((r) => (s['craft_' + r.id] || 0) >= 1) },
+  { id: 'weeds10', icon: '🌿', label: 'Weed Whacker', desc: 'Pull 10 weeds', reward: 3, check: (s) => (s.weedsPulled || 0) >= 10 },
+  { id: 'weeds100', icon: '🧑‍🌾', label: 'Groundskeeper', desc: 'Pull 100 weeds', reward: 10, check: (s) => (s.weedsPulled || 0) >= 100 },
+  { id: 'spotless1', icon: '✨', label: 'Spotless Town', desc: 'Pull every weed in town in one day', reward: 8, check: (s) => (s.spotlessDays || 0) >= 1 },
+  { id: 'flowers10', icon: '🌸', label: 'Gardener', desc: 'Pick 10 flowers', reward: 5, check: (s) => (s.flowers || 0) >= 10 },
+  { id: 'fence1', icon: '🪨', label: 'Fencer', desc: 'Place a stone fence', reward: 3, check: (s) => (s.stoneBlocksPlaced || 0) >= 1 },
+  { id: 'npcChat5', icon: '🧪', label: 'Chatty', desc: "Talk to Professor Byte 5 times", reward: 3, check: (s) => (s.npcChats || 0) >= 5 },
+  { id: 'photo1', icon: '📸', label: 'Photographer', desc: 'Take a photo', reward: 3, check: (s) => (s.photosTaken || 0) >= 1 },
+  { id: 'merchant1', icon: '🛒', label: 'Collector', desc: 'Buy a rare look from the Mystery Merchant', reward: 5, check: (s) => (s.merchantBuys || 0) >= 1 },
+  { id: 'lamp1', icon: '🪔', label: 'Illuminator', desc: 'Place a lamp', reward: 3, check: (s) => (s.lampsPlaced || 0) >= 1 },
+  { id: 'quest3', icon: '📋', label: 'Quester', desc: "Complete 3 of Professor Byte's daily quests", reward: 5, check: (s) => (s.questsDone || 0) >= 3 },
+  { id: 'hedge1', icon: '🌳', label: 'Landscaper', desc: 'Plant a hedge', reward: 3, check: (s) => (s.hedgesPlaced || 0) >= 1 },
+  { id: 'path10', icon: '🟫', label: 'Pathfinder', desc: 'Lay 10 path tiles', reward: 5, check: (s) => (s.pathsPlaced || 0) >= 10 },
+  { id: 'trivia3', icon: '📝', label: 'Know-It-All', desc: "Answer 3 of Professor Byte's daily trivia questions correctly", reward: 5, check: (s) => (s.triviaCorrect || 0) >= 3 },
+  { id: 'scavenger1', icon: '🔍', label: 'Treasure Hunter', desc: "Win the daily scavenger hunt", reward: 5, check: (s) => (s.scavengerHuntsWon || 0) >= 1 },
+  { id: 'tournament1', icon: '🎣', label: 'Big Catch', desc: "Set a new record in the daily fishing tournament", reward: 5, check: (s) => (s.tournamentRecordsSet || 0) >= 1 },
+  { id: 'sellstreak3', icon: '🛍️', label: 'Regular', desc: "Sell at the shop 3 days in a row", reward: 5, check: (s) => (s.bestSellStreak || 0) >= 3 },
+  // Residential Lane villagers + wildlife log. These read live scene state
+  // (affinity lives in the save, discoveries in scene.ffDiscovered), so
+  // they're re-checked from awardPoint()/incrementStat(), which both of
+  // those systems already call, rather than from inside their code.
+  { id: 'gift1', icon: '🎁', label: 'Thoughtful', desc: 'Give a villager a gift', reward: 3, check: (s) => (s.giftsGiven || 0) >= 1 },
+  { id: 'gift10', icon: '💝', label: 'Generous', desc: 'Give villagers 10 gifts', reward: 5, check: (s) => (s.giftsGiven || 0) >= 10 },
+  { id: 'bestfriend1', icon: '🤝', label: 'Best Buds', desc: 'Become best friends with a villager', reward: 10, check: (s, scene) => villagerBestFriendCount(scene) >= 1 },
+  { id: 'bestfriendAll', icon: '🏘️', label: 'Beloved Neighbor', desc: 'Become best friends with every villager on Residential Lane', reward: 25, check: (s, scene) => villagerBestFriendCount(scene) >= VILLAGERS.length },
+  { id: 'wildlife10', icon: '🔎', label: 'Naturalist', desc: 'Log 10 wildlife species', reward: 5, check: (s, scene) => wildlifeLoggedCount(scene) >= 10 },
+  { id: 'wildlife25', icon: '🗒️', label: 'Field Researcher', desc: 'Log 25 wildlife species', reward: 10, check: (s, scene) => wildlifeLoggedCount(scene) >= 25 },
+  { id: 'wildlife50', icon: '🔭', label: 'Biologist', desc: 'Log 50 wildlife species', reward: 15, check: (s, scene) => wildlifeLoggedCount(scene) >= 50 },
+  { id: 'wildlifeAll', icon: '🌍', label: 'Living Encyclopedia', desc: `Log all ${FF_ASSETS.length} wildlife species`, reward: 30, check: (s, scene) => wildlifeLoggedCount(scene) >= FF_ASSETS.length },
+  { id: 'faunaAll', icon: '🦊', label: 'Zoologist', desc: 'Log every animal species', reward: 15, check: (s, scene) => wildlifeLoggedCount(scene, 'fauna') >= FF_ASSETS.filter((a) => a.kind === 'fauna').length },
+  { id: 'floraAll', icon: '🌿', label: 'Botanist', desc: 'Log every plant species', reward: 15, check: (s, scene) => wildlifeLoggedCount(scene, 'flora') >= FF_ASSETS.filter((a) => a.kind === 'flora').length },
+];
+// Helpers for the achievement checks above (VILLAGERS is declared further
+// down, but these only run once the scene exists).
+function villagerBestFriendCount(scene) {
+  if (!scene || typeof scene.villagerTier !== 'function') return 0;
+  return VILLAGERS.filter((v) => scene.villagerTier(v.id) >= 3).length;
+}
+function wildlifeLoggedCount(scene, kind) {
+  if (!scene || !scene.ffDiscovered) return 0;
+  return FF_ASSETS.filter((a) => (!kind || a.kind === kind) && scene.ffDiscovered.has(a.id)).length;
+}
+const CAMPFIRE_POS = { x: 800, y: 600 };
+const CAMPFIRE_RADIUS = 60;
+// Beachcombing: fixed spots along the pond edges, same pattern as fishing
+// spots — a cooldown instead of a respawn timer, no network sync.
+const BEACH_ITEMS = ['🐚', '🌊', '⭐'];
+const BEACH_SPOTS = [
+  { x: 190, y: 510 }, { x: 330, y: 510 }, { x: 170, y: 690 },
+  { x: 2000, y: 380 }, { x: 2100, y: 210 },
+];
+const BEACH_PICKUP_RADIUS = 36;
+const BEACH_RESPAWN_MS = 20000;
+const FLOWER_TYPES = ['🌸', '🌷', '🌻', '🌹'];
+const FLOWER_SPOTS = [
+  { x: 400, y: 450 }, { x: 650, y: 420 }, { x: 1700, y: 750 },
+  { x: 1850, y: 950 }, { x: 2150, y: 600 }, { x: 350, y: 880 },
+];
+const FLOWER_PICKUP_RADIUS = 34;
+
+// ---------- weeds & tidiness ----------
+// Each (UTC) day a fresh, deterministic batch of weeds sprouts around the
+// village — worldHash on the day number, never Math.random, so every client
+// sees the same weeds without syncing anything. Pulling one is local-only
+// (saved as `weedsPulled: {day, ids}`) and pays a star; clear them all for
+// a bonus. The sprites come from ONE baked texture and are never redrawn.
+const WEED_COUNT = 24;
+const WEED_PULL_RADIUS = 38;
+const WEED_STAR_REWARD = 1;
+const WEED_SPOTLESS_BONUS = 5;
+const WEED_SEED = 91;
+const FLOWER_REGROW_MS = 30000;
+
+// Scatters extra trees/rocks/flowers across the wilderness ring (between
+// the village and the ocean) by pushing more entries into the exact same
+// arrays the hand-placed village ones live in — the existing chop/mine/
+// pick code doesn't need to know any of this, it just sees more trees.
+// Deterministic (worldHash, not Math.random()) so every client generates
+// the identical wilderness with zero network traffic, same trick as
+// weather/the sparkle/the daily merchant already use with time instead
+// of position. WORLD here is net.js's top-level `const` — plain classic
+// scripts share one global lexical scope, same as main.js already
+// relying on net.js's TownNet class without any import.
+(function generateWilderness() {
+  const land = {
+    x: WORLD.originX + OCEAN_MARGIN,
+    y: WORLD.originY + OCEAN_MARGIN,
+    width: WORLD.width - OCEAN_MARGIN * 2,
+    height: WORLD.height - OCEAN_MARGIN * 2,
+  };
+  const villagePad = 150; // keep generated decor off the village's own edge
+  // Each tree is its own Phaser Graphics object (not a sprite), and those
+  // are considerably more expensive to render than sprites/text — dense
+  // generation at this scale (a ~13x-bigger land area than the village)
+  // measurably hurt frame rate. Wide spacing keeps density sparse.
+  const spacing = 480;
+  for (let gx = land.x + spacing / 2; gx < land.x + land.width; gx += spacing) {
+    for (let gy = land.y + spacing / 2; gy < land.y + land.height; gy += spacing) {
+      const inVillage = gx > VILLAGE_BOUNDS.x - villagePad && gx < VILLAGE_BOUNDS.x + VILLAGE_BOUNDS.width + villagePad
+        && gy > VILLAGE_BOUNDS.y - villagePad && gy < VILLAGE_BOUNDS.y + VILLAGE_BOUNDS.height + villagePad;
+      if (inVillage) continue;
+      const jitterX = (worldHash(gx, gy, 21) - 0.5) * spacing * 0.8;
+      const jitterY = (worldHash(gx, gy, 22) - 0.5) * spacing * 0.8;
+      const x = Math.round(gx + jitterX);
+      const y = Math.round(gy + jitterY);
+      const roll = worldHash(gx, gy, 23);
+      if (roll < 0.16) {
+        TREES.push([x, y]);
+      } else if (roll < 0.26) {
+        const frame = Math.floor(worldHash(gx, gy, 24) * 9);
+        ROCKS.push([x, y, frame]);
+      } else if (roll < 0.30) {
+        FLOWER_SPOTS.push({ x, y });
+      }
+    }
+  }
+})();
+
+// Rare species pulled from this repo's remaining unused 24x24 sprite
+// strips — not in the regular SPECIES list, so the only way to wear one
+// is to catch the Mystery Merchant during their daily 3-hour window.
+const RARE_SPECIES = [
+  { key: 'avalanchepunks', label: 'Avalanche Punks' },
+  { key: 'coolcats_mohawks', label: 'Mohawk Cats' },
+  { key: 'coolcats_tvheads', label: 'TV Head Cats' },
+  { key: 'expansionpunks', label: 'Expansion Punks' },
+  { key: 'frontpunks', label: 'Front Punks' },
+  { key: 'intlpunks', label: "Int'l Punks" },
+  { key: 'morepunks', label: 'More Punks' },
+  { key: 'punks_grayscale', label: 'Grayscale Punks' },
+  { key: 'punks_sepia', label: 'Sepia Punks' },
+  { key: 'aliens_blue', label: 'Blue Aliens' },
+  { key: 'aliens_green', label: 'Green Aliens' },
+  { key: 'aliens_red', label: 'Red Aliens' },
+];
+const MERCHANT_POS = { x: 2250, y: 1000 };
+const MERCHANT_RADIUS = 56;
+const MERCHANT_COST = 15;
+// Star sink for players already wearing today's rare look: a once-a-day
+// gift box the merchant delivers to every Residential Lane villager.
+const MERCHANT_GIFT_BOX_COST = 20;
+const MERCHANT_GIFT_BOX_AFFINITY = 8; // same as one hand-delivered gift
+const ABLE_SISTERS_POS = { x: 1150, y: 650, w: 70, h: 56 };
+const ABLE_SISTERS_RADIUS = 55;
+const GUESTBOOK_POS = { x: 1750, y: 520 };
+// Daily scavenger hunt — one hidden spot a day, same for everyone (picked
+// deterministically from the date, no network traffic needed), but
+// "who found it first" genuinely needs a shared source of truth, so that
+// part goes through a Firebase transaction (first write wins).
+const SCAVENGER_SPOTS = [
+  { x: 150, y: 950 }, { x: 2300, y: 300 }, { x: 1900, y: 1100 }, { x: 600, y: 250 },
+  { x: 2000, y: 900 }, { x: 100, y: 450 }, { x: 1300, y: 1050 }, { x: 700, y: 1150 },
+];
+const SCAVENGER_RADIUS = 36;
+const SCAVENGER_REWARD = 20;
+const GRAVEYARD_POS = { x: 60, y: 700 };
+// Daily fishing tournament — during a deterministic 2-hour window each
+// day, every catch gets a random size, and the biggest one of the day
+// (tracked via a Firebase transaction, same compare-and-swap shape as
+// the scavenger hunt) wins whoever's holding it a one-time bonus.
+const FISH_TOURNAMENT_HOURS = 2;
+// Just the leaderboard-style "biggest catch today" sign — the actual
+// tournament fishing still happens at the real FISHING_SPOTS (the ponds),
+// this is only a display, so it can live with the other minigames instead
+// of out by the pond on its own.
+const FISH_TOURNAMENT_SIGN_POS = { x: 2040, y: 760 };
+const FISH_TOURNAMENT_BONUS = 10;
+const GUESTBOOK_RADIUS = 60;
+
+// ---------- daily checklist ----------
+// A "Today" board (button in the player panel, or J) that lists every daily
+// chore with live progress so players can see what is left: Professor Byte's
+// request and trivia, the mailbox, weeds, the Bug-Off, the home plot visit
+// and a villager's birthday (when there is one). Finishing every chore that
+// applies today pays a one-time bonus. Local only; paid-day lives in the
+// additive `dailies: {day, paid, days}` save key.
+const DAILY_BONUS = 5;
+// ---------- villager birthdays ----------
+// Every BIRTHDAY_CYCLE_DAYS (UTC) days one villager has a birthday: purely
+// deterministic (day number -> villager), so it needs no network and is the
+// same for everyone. On the day: their name tag gets a 🎂, a letter is
+// guaranteed in the mailbox, and the first gift you give them pays a party
+// bonus. Claims are saved under the additive `birthdays` key
+// {claimed: ['day:id'], guests: [villager ids]}.
+const BIRTHDAY_CYCLE_DAYS = 10;
+const BIRTHDAY_STARS = 5;
+const BIRTHDAY_EXTRA_AFFINITY = 12;
+// Index into VILLAGERS of the birthday villager for a UTC day, or -1.
+function birthdayIndexForDay(day) {
+  const slot = ((Math.floor(day) % BIRTHDAY_CYCLE_DAYS) + BIRTHDAY_CYCLE_DAYS) % BIRTHDAY_CYCLE_DAYS;
+  for (let i = 0; i < VILLAGERS.length; i++) if ((i * 2 + 1) % BIRTHDAY_CYCLE_DAYS === slot) return i;
+  return -1;
+}
+// ---------- home plot ----------
+// A small fenced plot where you display crafted goods as decor. It is YOUR
+// plot: placement is local-only (other players don't see it), saved under the
+// additive `home: {slots, paidDay}` key. Cozy score = sum of the goods'
+// shop values; opening the plot for the first time each day pays a small
+// visitor bonus. Placed goods leave your bag (so they can't be sold).
+const HOME_POS = { x: 1650, y: 940 };
+const HOME_RADIUS = 75;
+const HOME_SLOTS = 6;
+const HOME_BONUS_PER = 5; // cozy points per ⭐ of daily visitor bonus
+const HOME_BONUS_CAP = 6;
+// A small aquarium beside the plot: show off up to 3 species from your
+// Angler's Journal (nothing is consumed). Each adds rarity x 2 cozy.
+const HOME_TANK_SLOTS = 3;
+const HOME_TANK_OFFSET = { x: -126, y: 0 };
+const HOME_SLOT_OFFSETS = [[-52, -18], [0, -18], [52, -18], [-52, 22], [0, 22], [52, 22]];
+// ---------- villager mailbox ----------
+// Each (UTC) day the villagers you know write you letters with a small gift
+// attached. Which villagers write, and what they send, is a pure function of
+// (day, villager, friendship tier) via worldHash — no Math.random, no
+// network: it is entirely local and identical for anyone with the same
+// friendships. Claims are saved under the additive `mail` key.
+const MAILBOX_POS = { x: 1125, y: 990 };
+const MAILBOX_RADIUS = 70;
+const MAIL_SALT = 131;
+const MAIL_WRITE_CHANCE = [0.4, 0.6, 0.8, 1.01]; // best friends always write // by friendship tier 0..3
+const LETTER_OPENERS = [
+  ['Hello, neighbor! It was nice to meet you.', 'Just a quick note to say hi.', 'Hope the town is treating you well.'],
+  ['Hi, friend! I was thinking about you.', 'Thanks for stopping by lately!', 'Wanted to drop you a line.'],
+  ['Dear good friend, you always brighten my day.', 'I looked forward to writing this one.', 'Missing our chats, so here is a letter.'],
+  ['Dearest best friend, you mean the world to me.', 'Okay, I will say it: you are my favorite person in town.', 'I wrote this twice because it matters.'],
+];
+const MAIL_STAR_BASE = 2;
+// ---------- DIY workbench ----------
+// Turns gathered resources into crafted goods (sold at the shop for ~1.4x
+// the raw inputs; kept below the 1.7x deal+bulk raw rate so it can't be exploited;
+// deal/bulk bonuses never apply to crafted goods). Local-only: nothing here touches the network.
+const WORKBENCH_POS = { x: 1330, y: 800 };
+const WORKBENCH_RADIUS = 70;
+const RECIPES = [
+  { id: 'plank', icon: '🪵', label: 'Plank Stack', cost: { wood: 3 }, value: 4 },
+  { id: 'brick', icon: '🧱', label: 'Stone Brick', cost: { stone: 3 }, value: 4 },
+  { id: 'stew', icon: '🍲', label: 'Fish Stew', cost: { fish: 2, fruit: 1 }, value: 4 },
+  { id: 'bugjar', icon: '🫙', label: 'Bug Jar', cost: { bugs: 3, wood: 1 }, value: 6 },
+  { id: 'pie', icon: '🥧', label: 'Fruit Pie', cost: { fruit: 4 }, value: 6 },
+  { id: 'crown', icon: '🌼', label: 'Flower Crown', cost: { flowers: 4 }, value: 6 },
+  { id: 'chime', icon: '🎐', label: 'Shell Chime', cost: { shells: 3, wood: 1 }, value: 6 },
+  { id: 'lantern', icon: '🏮', label: 'Lantern', cost: { stone: 2, wood: 2, bugs: 2 }, value: 9 },
+  // Seasonal specials: only craftable while their season is on (the goods
+  // keep forever and can be sold or displayed any time).
+  { id: 'wreath', icon: '💐', label: 'Tulip Wreath', cost: { flowers: 5, wood: 1 }, value: 9, season: 'spring' },
+  { id: 'umbrella', icon: '⛱️', label: 'Beach Umbrella', cost: { shells: 4, wood: 2 }, value: 9, season: 'summer' },
+  { id: 'jacko', icon: '🎃', label: "Jack-o'-Lantern", cost: { fruit: 4, bugs: 2 }, value: 9, season: 'autumn' },
+  { id: 'snowman', icon: '⛄', label: 'Snowman', cost: { stone: 4, wood: 2 }, value: 9, season: 'winter' },
+];
+const SEASON_ICONS = { spring: '🌷', summer: '☀️', autumn: '🍂', winter: '❄️' };
+const RES_ICONS = { wood: '🪵', stone: '🪨', fish: '🐟', bugs: '🦋', fruit: '🍎', shells: '🐚', flowers: '🌸' };
+const GUESTBOOK_NOTE_MAX = 80;
+const GUESTBOOK_COOLDOWN_MS = 60 * 1000; // one signing per minute, per client
+const KK_CONCERT_START_HOUR = 19; // 7pm local time
+const KK_CONCERT_END_HOUR = 21; // 9pm local time
+const WEATHER_CYCLE_MS = 8 * 60 * 1000; // 8-minute weather windows
+const WEATHER_RAIN_CHANCE = 0.3; // ~30% of windows are rainy
+const WEATHER_RAIN_COUNT = 70;
+// One-way, GTA3-loading-door style portals: each is a real door object in
+// the town that, on interact, leaves Pixeltown entirely for another
+// browser game in this same tab. No teleport back — closing/navigating
+// away from the destination is how you return. Both doors live in the
+// arcade district (see POLYROLL_POS above) — there used to be two
+// redundant GTA 3 doors on opposite sides of the map; one is enough now
+// that there's a single, easy-to-find spot for all of this.
+const PORTALS = [
+  { x: 1830, y: 870, label: '🚪 GTA 3', color: 0x4fa0e0, url: 'https://quenq.com/apps/gta-3/' },
+  { x: 1970, y: 870, label: '🚪 NFS Underground 2', color: 0xe0454f, url: 'https://nfsu2.xyz/' },
+  { x: 1830, y: 960, label: '🚪 Kart Racing', color: 0xffa726, url: 'https://olivers.tools/kart/' },
+  { x: 1970, y: 960, label: '🚪 Vice City', color: 0xff4fa0, url: 'https://quenq.com/apps/vice-city/' },
+];
+const EAST_POND = { cx: 2000, cy: 280, rx: 130, ry: 80 };
+const MAIN_POND = { cx: 260, cy: 600, rx: 150, ry: 90 };
+
+// A row of named animal-villager houses along the south edge of the
+// village — a Residential Lane, in the gap below the pond/museum/shop
+// cluster and well clear of the arcade district's foot traffic. Unlike
+// Professor Byte/Salty Mo (flavor-only NPCs), each of these has its own
+// species/personality, a liked-gift list drawn from the same resources
+// the player already carries in their bag, and a 0-100 affinity tracked
+// locally per villager — closer to the real Animal Crossing loop of
+// "bring them something they like, they warm up to you over time."
+const VILLAGER_HOUSE_W = 64;
+const VILLAGER_HOUSE_H = 46;
+const VILLAGER_RADIUS = 46;
+const VILLAGERS = [
+  {
+    id: 'mocha', name: 'Mocha', species: 'coolcats', frame: 0, personality: 'Lazy',
+    hx: 200, hy: 1080, roof: 0xd98f3b,
+    likes: ['fruit', 'flowers'],
+    lines: [
+      "Ugh, mornings. Who invented those.",
+      "I was *this* close to a nap. Then you showed up. Worth it, I guess.",
+      "Food's the best hobby there is, and I will not be taking questions.",
+    ],
+    closeLines: [
+      "You're basically furniture around here now. The good kind.",
+      "I saved you a napping spot by the window. Don't tell the others.",
+    ],
+  },
+  {
+    id: 'frosty', name: 'Frosty', species: 'pudgypenguins', frame: 3, personality: 'Snooty',
+    hx: 650, hy: 1080, roof: 0x6fa8d9,
+    likes: ['shells', 'turnips'],
+    lines: [
+      "That outfit is... a choice. I respect the confidence, at least.",
+      "I only associate with residents who have *taste*. You're on probation.",
+      "Bells, dear. Everything of value costs bells.",
+    ],
+    closeLines: [
+      "Fine. You have taste after all. Don't let it go to your head.",
+      "I've decided you're my exception to 'everyone else is beneath me.'",
+    ],
+  },
+  {
+    id: 'buster', name: 'Buster', species: 'doge', frame: 1, personality: 'Jock',
+    hx: 1300, hy: 1080, roof: 0x5ab06a,
+    likes: ['fish', 'wood'],
+    lines: [
+      "Did a hundred laps of the plaza before breakfast. You should try it!",
+      "Bet I can out-fish you. Bet. Name the pond, name the time.",
+      "Gotta keep those gains up, even on an island. Especially on an island.",
+    ],
+    closeLines: [
+      "You're my training buddy now, official, no takebacks.",
+      "Knew you had it in you! High five! ...okay, paw-bump works too.",
+    ],
+  },
+  {
+    id: 'lily', name: 'Lily', species: 'coolcats_frogs', frame: 2, personality: 'Peppy',
+    hx: 1700, hy: 1080, roof: 0xe06fa0,
+    likes: ['flowers', 'bugs'],
+    lines: [
+      "OMG hi!! I was just thinking about you, isn't that wild??",
+      "Today is going to be the BEST day, I can just feel it!",
+      "You have to come see the sunset from the dock later, promise me!",
+    ],
+    closeLines: [
+      "You're seriously my favorite person on this whole island, no contest!",
+      "I made you a flower crown in my head. It's beautiful. You're welcome.",
+    ],
+  },
+  {
+    id: 'spike', name: 'Spike', species: 'mohawks', frame: 4, personality: 'Cranky',
+    hx: 2050, hy: 1080, roof: 0x8a5a5a,
+    likes: ['stone', 'bugs'],
+    lines: [
+      "Back in my day we didn't have bridges. We swam. Builds character.",
+      "You kids and your 'sparkles' and your 'emotes.' Bah.",
+      "...fine, the weather's decent today. Don't quote me on it.",
+    ],
+    closeLines: [
+      "You're alright, kid. Don't make me say it twice.",
+      "Come by anytime. Door's open. Don't tell anyone I said that either.",
+    ],
+  },
+];
+// Villagers stroll around their front yard, picking a new spot every
+// VILLAGER_WANDER_MS. The spot is a hash of (time bucket, villager id),
+// so every client sees them in the same place without any syncing.
+const VILLAGER_WANDER_MS = 20000;
+const VILLAGER_HEARTS_RADIUS = 110; // friendship hearts show within this range
+const VILLAGER_HEART_STEPS = [10, 25, 50, 75, 100]; // affinity per heart (first 3 = tiers)
+const VILLAGER_DAILY_TALK_AFFINITY = 2; // first chat of the day, once per villager
+const VILLAGER_TIER_NAMES = ['acquaintance', 'friend', 'good friend', 'best friend'];
+const VILLAGER_GIFT_ICONS = {
+  wood: '🪵', stone: '🪨', fish: '🐟', bugs: '🦋', fruit: '🍎', flowers: '🌸', shells: '🐚', turnips: '🥬',
+};
+const VILLAGER_SLEEP_LINES = ['Zzz...', '*mumbles something about bells* ...zzz'];
+// First-chat-of-the-day greeting per personality; {name} is the player.
+const VILLAGER_GREETINGS = {
+  Lazy: "Oh hey, {name}. Wanna split a snack? I brought two. Well, I ate one.",
+  Snooty: "Ah, {name}. You may approach. Briefly.",
+  Jock: "{name}! Perfect timing, I just finished my warm-up! Feel the burn!",
+  Peppy: "{name}!!! Eeee, you came to say hi! Best. Day. Ever!",
+  Cranky: "Hmph. {name}. ...Good to see you, I suppose.",
+};
+// Personality-wide lines layered on top of each villager's own: `any` is
+// mixed into normal chat, the rest kick in by time of day / weather.
+const VILLAGER_PERSONALITY_LINES = {
+  Lazy: {
+    any: [
+      "I counted the clouds today. Lost track at three. Good number, three.",
+      "If you ever find a snack that's also a pillow, call me immediately.",
+    ],
+    morning: ["Is it still morning? Wake me when it's lunch. Or second breakfast."],
+    evening: ["Evenings are great. It's like a nap, but for the whole sky."],
+    night: ["Zzz... huh? Oh. Five more minutes... zzz..."],
+    rain: ["Rain's the best. Nobody expects you to do anything when it rains."],
+  },
+  Snooty: {
+    any: [
+      "I've redecorated twice this week. Inspiration simply strikes the gifted.",
+      "Do try to keep up with the trends, dear. It's exhausting watching you not.",
+    ],
+    morning: ["Good morning. My beauty routine takes ninety minutes. You're welcome."],
+    evening: ["The sunset matches my roof. I arranged that, obviously."],
+    night: ["*yawn* A lady needs her beauty sleep. Do come back tomorrow."],
+    rain: ["This drizzle is simply ruining my fur. Hold the umbrella higher, please."],
+  },
+  Jock: {
+    any: [
+      "Protein! Carbs! Hustle! That's the whole recipe, buddy!",
+      "Race you to the plaza! ...okay, I'll give you a head start. A small one.",
+    ],
+    morning: ["Morning jog: done! Morning stretch: done! Morning snack: in progress!"],
+    evening: ["Cool-down stretches at sunset. That's how the pros do it!"],
+    night: ["Zzz... one more rep... zzz..."],
+    rain: ["Running in the rain builds grit! And puddles! Mostly puddles!"],
+  },
+  Peppy: {
+    any: [
+      "I'm thinking of starting a band! You can play tambourine! Or triangle!",
+      "Did you see that butterfly?! It waved at me! I'm almost sure!",
+    ],
+    morning: ["Good morning, sunshine! Wait, YOU'RE the sunshine! Eee!"],
+    evening: ["The sky's going all pink and orange! It's like a smoothie up there!"],
+    night: ["Mmm... dreaming about... glitter... zzz..."],
+    rain: ["Rainy days mean rainbows later! I've got my wishing face ready!"],
+  },
+  Cranky: {
+    any: [
+      "Kids these days and their fishing rods. We used our paws. Built character.",
+      "My knees say the weather's turning. My knees are never wrong.",
+    ],
+    morning: ["What's so good about mornings? Name one thing. ...Coffee. Fine."],
+    evening: ["Good, the sun's going down. Too bright out here all day."],
+    night: ["Zzz... get off my lawn... zzz..."],
+    rain: ["Rain, eh? Called it this morning. Nobody listens to the knees."],
+  },
+};
+
+// Fixed, hand-picked landmarks for the town map overlay — deliberately a
+// simple schematic (dots + labels on a plain backdrop), not a literal
+// zoomed-out render of the actual sprites, which would be unreadable mud
+// at the small size a map needs to be.
+const MAP_LANDMARKS = [
+  { x: 1650, y: 940, label: '🏡 Home plot' },
+  { x: 2200, y: 760, label: '🦋 Bug-Off' },
+  { x: 1125, y: 990, label: '📬 Mailbox' },
+  { x: 1330, y: 800, label: '🔨 Workbench' },
+  { x: 260, y: 600, label: 'Pond' },
+  { x: EAST_POND.cx, y: EAST_POND.cy, label: 'East pond' },
+  { x: HOUSE_POS.x + HOUSE_POS.w / 2, y: HOUSE_POS.y + HOUSE_POS.h / 2, label: 'Shop' },
+  { x: MUSEUM_POS.x + MUSEUM_POS.w / 2, y: MUSEUM_POS.y + MUSEUM_POS.h / 2, label: 'Museum' },
+  { x: ABLE_SISTERS_POS.x + ABLE_SISTERS_POS.w / 2, y: ABLE_SISTERS_POS.y + ABLE_SISTERS_POS.h / 2, label: 'Able Sisters' },
+  { x: STATUE_POS.x, y: STATUE_POS.y, label: 'Statue' },
+  { x: NPC_POS.x, y: NPC_POS.y, label: 'Prof. Byte' },
+  { x: NPC2_POS.x, y: NPC2_POS.y, label: 'Salty Mo' },
+  { x: GRAVEYARD_POS.x, y: GRAVEYARD_POS.y, label: 'Graveyard' },
+  { x: WINDMILL_POS.x, y: WINDMILL_POS.y, label: 'Windmill' },
+  { x: CAMPFIRE_POS.x, y: CAMPFIRE_POS.y, label: 'Campfire' },
+  // Polyroll, the turnip stall, the tournament sign, and both portal
+  // doors all live together here — one pin for the whole district
+  // instead of 5 crowded ones this close together at map scale.
+  { x: 1900, y: 800, label: '🕹️ Arcade' },
+  { x: 1125, y: 1080, label: '🏡 Residential Lane' },
+];
+
+const FISHING_SPOTS = [
+  { x: 115, y: 600 },
+  { x: 260, y: 700 },
+  { x: 2000, y: 170 },
+  { x: 1865, y: 280 },
+];
+const FISH_INTERACT_RADIUS = 36;
+const FRUIT_TREE_EVERY = 3;
+const BUG_COUNT = 8;
+const BUG_CATCH_RADIUS = 40;
+const BUG_RESPAWN_MS = 15000;
+// ---------- daily Bug-Off ----------
+// A local, deterministic 2-hour window each day (hour from the day's hash,
+// like the fishing tournament). During it extra bugs flutter around and
+// respawn much faster; catch 5 / 10 / 15 for Bronze / Silver / Gold prizes.
+// Nothing touches the network: progress lives in the additive `bugoff` save
+// key {day, count, tier, best} and resets each day (best is lifetime).
+const BUGOFF_HOURS = 2;
+const BUGOFF_EXTRA_BUGS = 8;
+const BUGOFF_RESPAWN_MS = 3500;
+const BUGOFF_TIERS = [
+  { name: 'Bronze', icon: '🥉', need: 5, reward: 3 },
+  { name: 'Silver', icon: '🥈', need: 10, reward: 6 },
+  { name: 'Gold', icon: '🥇', need: 15, reward: 10 },
+];
+const BUGOFF_SIGN_POS = { x: 2200, y: 760 };
+const ROCK_MINE_RADIUS = 30;
+const FISH_BITE_WAIT_MIN = 1800;
+const FISH_BITE_WAIT_MAX = 4000;
+const FISH_BITE_WINDOW = 1300;
+// Visible fish shadows swimming in both ponds (client-local, cosmetic
+// positions): walk up to one and the Fish button / E casts right at it.
+// Each zone is a convex slice of a pond's ellipse so a straight swim
+// between two points never leaves the water — the main pond is split
+// into north/south halves because its middle row is the walkable bridge
+// corridor (see drawPond's two obstacle rects).
+const FISH_SHADOW_REACH = 72;
+const FISH_SHADOW_ZONES = [
+  { pond: MAIN_POND, count: 3, yMax: MAIN_POND.cy - 40 },
+  { pond: MAIN_POND, count: 3, yMin: MAIN_POND.cy + 40 },
+  { pond: EAST_POND, count: 4 },
+];
+// ---------- angler's journal ----------
+// Every fish you reel in is now a species, depending on the pond, the time of
+// day and the season (bigger shadows lean rarer). Catches are local, so
+// Math.random is fine here. Progress lives in the additive `fishlog` key
+// {caught: {id: {n, best}}, claimed: [tier ids], lastDay}. First catches and
+// milestone sets (4 / 8 / 12 species) pay ⭐, saved before paying.
+const FISH_SPECIES = [
+  { id: 'minnow', icon: '🐟', name: 'Minnow', rarity: 1 },
+  { id: 'shrimp', icon: '🦐', name: 'Shrimp', rarity: 1 },
+  { id: 'frog', icon: '🐸', name: 'Pond Frog', rarity: 1, pond: 'main', seasons: ['spring', 'summer'] },
+  { id: 'koi', icon: '🐠', name: 'Koi', rarity: 2, pond: 'main' },
+  { id: 'puffer', icon: '🐡', name: 'Pufferfish', rarity: 2, pond: 'east' },
+  { id: 'crab', icon: '🦀', name: 'Mud Crab', rarity: 2, time: 'night' },
+  { id: 'turtle', icon: '🐢', name: 'Snapping Turtle', rarity: 2, pond: 'east', time: 'day' },
+  { id: 'squid', icon: '🦑', name: 'Squid', rarity: 3, time: 'night' },
+  { id: 'jelly', icon: '🪼', name: 'Jellyfish', rarity: 3, seasons: ['summer'] },
+  { id: 'octopus', icon: '🐙', name: 'Octopus', rarity: 3, pond: 'east', time: 'night' },
+  { id: 'shark', icon: '🦈', name: 'Baby Shark', rarity: 4, pond: 'east', time: 'day', seasons: ['summer', 'autumn'] },
+  { id: 'goldfish', icon: '✨', name: 'Golden Fish', rarity: 4, seasons: ['winter'] },
+];
+const FISH_MILESTONES = [
+  { id: 'set4', need: 4, reward: 5 },
+  { id: 'set8', need: 8, reward: 12 },
+  { id: 'set12', need: 12, reward: 30 },
+];
+const FISH_FIRST_CATCH_BONUS = 2;
+const FISH_LUNKER_CM = 70;
+const FISH_SHADOW_ALPHA = 0.42;
+const FISH_SHADOW_RESPAWN_MIN = 4000;
+const FISH_SHADOW_RESPAWN_MAX = 9000;
+
+const GRID_SIZE = 32;
+const BLOCK_PLACE_DISTANCE = 28;
+const BLOCK_CAP = 150;
+const BUILD_UNDO_WINDOW_MS = 10000;
+const BLOCK_TYPES = {
+  wood: { resource: 'wood', cost: 1, label: '🪵 Wall', color: 0x8a5a3b, stroke: 0x5a3a22, size: GRID_SIZE - 2, solid: true },
+  stone: { resource: 'stone', cost: 1, label: '🪨 Fence', color: 0xb9bfc9, stroke: 0x7a818d, size: GRID_SIZE - 14, solid: true },
+  lamp: { resource: 'flowers', cost: 2, label: '🪔 Lamp', color: 0x5a3a22, stroke: 0x3a2414, size: 6, solid: false },
+  hedge: { resource: 'flowers', cost: 3, label: '🌳 Hedge', color: 0x3d7a33, stroke: 0x27511f, size: GRID_SIZE - 2, solid: true },
+  path: { resource: 'stone', cost: 1, label: '🟫 Path', color: 0xcbb890, stroke: 0xa8956c, size: GRID_SIZE - 4, solid: false },
+};
+
+
+class TownScene extends Phaser.Scene {
+  constructor() {
+    super('Town');
+  }
+
+  init(data) {
+    this.net = data.net;
+    this.selfData = data.self;
+    this.world = data.world;
+    this.allPlayers = new Map(Object.entries(data.players));
+  }
+
+  preload() {
+    SPECIES.forEach((s) => {
+      this.load.spritesheet(s.key, `../i/${s.key}-strip.png`, {
+        frameWidth: FRAME_SIZE,
+        frameHeight: FRAME_SIZE,
+      });
+    });
+    RARE_SPECIES.forEach((s) => {
+      this.load.spritesheet(s.key, `../i/${s.key}-strip.png`, {
+        frameWidth: FRAME_SIZE,
+        frameHeight: FRAME_SIZE,
+      });
+    });
+    this.load.spritesheet('tulips', '../i/tulips-strip.png', { frameWidth: FRAME_SIZE, frameHeight: FRAME_SIZE });
+    this.load.spritesheet('rocks', '../i/rocks-strip.png', { frameWidth: FRAME_SIZE, frameHeight: FRAME_SIZE });
+    this.load.spritesheet('punkrocks', '../i/punkrocks-strip.png', { frameWidth: FRAME_SIZE, frameHeight: FRAME_SIZE });
+    // mooncatrescue-strip.png is the one collection in i/ with no transparency
+    // (solid white background baked in) — assets/ holds a chroma-keyed copy
+    // just for the game; the original in i/ is left untouched.
+    this.load.spritesheet('mooncats', 'assets/mooncats-strip.png', { frameWidth: FRAME_SIZE, frameHeight: FRAME_SIZE });
+    this.load.spritesheet('boredapes', '../i/boredapes-strip.png', { frameWidth: 28, frameHeight: 28 });
+    FF_ASSETS.forEach((a) => {
+      this.load.svg(`ff_${a.id}`, `assets/flora-fauna/svg/${a.id}.svg`, { width: 64, height: 64 });
+    });
+  }
+
+  create() {
+    this.physics.world.setBounds(this.world.originX, this.world.originY, this.world.width, this.world.height);
+    this.cameras.main.setBounds(this.world.originX, this.world.originY, this.world.width, this.world.height);
+    // Phones (and especially standalone "Add to Home Screen" launches, which
+    // have no browser chrome eating into the viewport) show a lot less of the
+    // world at zoom 2 — zoom out a bit so HUD panels don't end up covering
+    // most of what's visible. Zoomed out further still (was 2/1.5) so more
+    // of the surroundings are visible at once — sprites are still a very
+    // legible ~38px/29px on screen at these levels.
+    this.cameras.main.setZoom(IS_TOUCH ? 1.2 : 1.6);
+
+    this.obstacles = this.physics.add.staticGroup();
+    this.remotePlayers = new Map();
+
+    this.drawOcean();
+    this.drawWilderness();
+    this.drawGround();
+    this.drawPath();
+    this.drawPond();
+    this.drawPondCats();
+    this.drawDock();
+    this.drawBenches();
+    this.drawEastPond();
+    this.drawBridge();
+    this.drawHouse();
+    this.drawStatue();
+    this.drawWindmill();
+    this.drawCampfire();
+    this.drawNPC();
+    this.drawNPC2();
+    this.drawMerchant();
+    this.drawDigHole();
+    this.drawArcadeSign();
+    this.drawDoors();
+    this.drawPolyrollBooth();
+    this.drawMuseum();
+    this.drawTurnipStall();
+    this.drawAbleSisters();
+    this.drawGuestbook();
+    this.drawWorkbench();
+    this.drawMailbox();
+    this.drawHomePlot();
+    this.drawNoticeBoard();
+    this.setupScavengerHunt();
+    this.drawGraveyard();
+    this.setupFishTournament();
+    this.drawFossilSpots();
+    this.drawBeachItems();
+    this.drawFlowers();
+    this.drawForestRing();
+    this.drawTulipBeds();
+    this.drawRocks();
+    this.drawPunkRocks();
+    this.drawVillagers();
+    this.drawFloraFauna();
+
+    this.createLocalPlayer(this.selfData);
+    this.physics.add.collider(this.localBody, this.obstacles);
+
+    this.allPlayers.forEach((p) => {
+      if (p.id !== this.selfData.id) this.addRemotePlayer(p);
+    });
+
+    this.cameras.main.startFollow(this.localBody, true, 0.15, 0.15);
+    // A small deadzone so tiny back-and-forth steps (lining up to fish,
+    // shuffling next to a villager) don't drag the whole view around; the
+    // lerp itself is re-derived per frame in updateLocalMovement so the
+    // camera eases the same on 60Hz and 120Hz+ displays.
+    this.cameras.main.setDeadzone(24, 16);
+
+    this.cursors = this.input.keyboard.createCursorKeys();
+    this.wasd = this.input.keyboard.addKeys('W,A,S,D');
+    this.runKey = this.input.keyboard.addKey('SHIFT', false);
+    // createCursorKeys()/addKeys() capture their keys by default and call
+    // preventDefault() on them globally — including SPACE, W, A, S, D —
+    // which blocks typing a space or those letters into the chat input
+    // (and the name input on the join screen) no matter which element has
+    // focus. None of these need preventDefault for movement, so release
+    // the capture entirely.
+    this.input.keyboard.removeCapture('SPACE,W,A,S,D,UP,DOWN,LEFT,RIGHT');
+    this.lastSentAt = 0;
+
+    this.setupEmotes();
+    this.setupSparkle();
+    this.setupDayNight();
+    this.setupSeason();
+    this.time.addEvent({ delay: 60 * 60 * 1000, loop: true, callback: () => this.updateSeason() });
+    this.kkEnjoyedWindow = loadSave().kkEnjoyedWindow || null;
+    this.setupWeather();
+    this.setupActivities();
+    this.setupBuilding();
+    this.setupWalkie();
+    this.setupPortalReopen();
+    this.setupPolyroll();
+    this.setupAchievements();
+    this.setupLoginStreak();
+    this.setupSfxToggle();
+    this.setupMusicToggle();
+    this.setupReduceMotionToggle();
+    this.setupPhotoMode();
+    this.setupFishHint();
+    this.setupGiftHint();
+    this.setupSaveBackup();
+    this.setupWhatsNew();
+    this.setupTriviaKey();
+    this.setupAchievementsUI();
+    this.setupMuseumUI();
+    this.setupFloraFaunaLog();
+    this.setupKeysHelp();
+    this.setupChangelogViewer();
+    this.setupFeedbackButton();
+    this.setupSettingsToggle();
+    this.setupMap();
+    this.setupOutfitShop();
+    this.setupGuestbook();
+    this.setupBugs();
+    this.setupBugOff();
+    this.setupBirthdays();
+    this.setupFossils();
+    this.setupWeeds();
+    this.setupJournal();
+    this.setupDailies(); // after weeds/mail/bug-off/home/birthdays exist
+    if (IS_TOUCH) {
+      this.setupTouchControls();
+      this.setupTiltShake();
+      this.setupHaptics();
+    }
+    this.setupGamepad();
+
+    this.registerNetHandlers();
+    this.registerChatUI();
+    this.renderPlayerList();
+
+    // Handlers are wired up — safe to start receiving live updates now.
+    this.net.startListening();
+  }
+
+  update(time, delta) {
+    this.pollGamepad();
+    this.updateLocalMovement(time, delta);
+    this.updateRemoteInterpolation(delta);
+    this.updateSparkle(time);
+    this.updateDayNight(time);
+    this.updateConcert(time);
+    this.updateWeather(time, delta);
+    this.updateTurnipPriceLabels(time);
+    this.updateBuildPreview();
+    this.updateFishingRod();
+    // Cheap distance check, only while the workbench is open: walking away closes it.
+    if (this.workbenchOpen && !this.isNearWorkbench(WORKBENCH_RADIUS + 90)) this.closeWorkbench();
+    if (this.mailboxOpen && !this.isNearMailbox(MAILBOX_RADIUS + 90)) this.closeMailbox();
+    if (this.homeOpen && !this.isNearHome(HOME_RADIUS + 90)) this.closeHome();
+    this.updateDigHoleHint();
+    this.updateFishHint();
+    this.updateGiftHint();
+    this.updateFloraFaunaHint();
+  }
+
+  // ---------- movement ----------
+
+  updateLocalMovement(time, delta) {
+    const WALK_SPEED = 140;
+    const RUN_SPEED = 220;
+    // Clamp so a background-tab hitch doesn't turn into one huge step.
+    const dt = Math.min(delta, 50);
+    let vx = 0;
+    let vy = 0;
+    let running = false;
+
+    if (this.canAct()) {
+      if (this.cursors.left.isDown || this.wasd.A.isDown) vx -= 1;
+      if (this.cursors.right.isDown || this.wasd.D.isDown) vx += 1;
+      if (this.cursors.up.isDown || this.wasd.W.isDown) vy -= 1;
+      if (this.cursors.down.isDown || this.wasd.S.isDown) vy += 1;
+      running = !!(this.runKey && this.runKey.isDown);
+
+      if (this.touchMove) {
+        vx += this.touchMove.x;
+        vy += this.touchMove.y;
+      }
+      if (this.tiltEnabled && this.tiltMove) {
+        vx += this.tiltMove.x;
+        vy += this.tiltMove.y;
+      }
+      if (this.padInput) { vx += this.padInput.x; vy += this.padInput.y; } // gamepad, see pollGamepad()
+    }
+
+    // Normalise so diagonals aren't ~41% faster; analog (tilt) input under
+    // 1 keeps its partial magnitude.
+    const mag = Math.hypot(vx, vy);
+    if (mag > 1) {
+      vx /= mag;
+      vy /= mag;
+    }
+
+    // Walking away mid-cast used to just let the rod stay drawn to a spot
+    // you'd left, with no feedback — now moving away cancels the cast
+    // outright, same as leaving real Animal Crossing's fishing animation.
+    if (mag > 0 && this.fishing && this.fishing.state !== 'idle') {
+      this.showFloatingText(this.fishing.spot.x, this.fishing.spot.y - 24, 'left the line');
+      this.endFishing();
+    }
+
+    const speed = running ? RUN_SPEED : WALK_SPEED;
+    const body = this.localBody.body;
+    let targetVx = vx * speed;
+    let targetVy = vy * speed;
+
+    // Corner assist: pushing straight into the very edge of an obstacle
+    // used to dead-stop you on its corner. If a few px sideways would clear
+    // it, slide around instead.
+    if (mag > 0) {
+      const slide = this.cornerSlide(body, vx, vy, speed, dt);
+      if (slide) {
+        targetVx = slide.x;
+        targetVy = slide.y;
+      }
+    }
+
+    // Quick ease in/out instead of instant start/stop: snappy enough to
+    // still feel direct, but no more 0->full speed in one frame.
+    // Exponential smoothing keeps it frame-rate independent.
+    const tau = mag > 0 ? 45 : 30; // ms
+    const k = 1 - Math.exp(-dt / tau);
+    let nvx = body.velocity.x + (targetVx - body.velocity.x) * k;
+    let nvy = body.velocity.y + (targetVy - body.velocity.y) * k;
+    if (Math.abs(nvx) < 2 && targetVx === 0) nvx = 0;
+    if (Math.abs(nvy) < 2 && targetVy === 0) nvy = 0;
+    body.setVelocity(nvx, nvy);
+
+    // Face where the player is steering, not where the body is drifting;
+    // ignore tiny analog (tilt) noise so the sprite doesn't flicker.
+    if (Math.abs(vx) > 0.15) this.localVisual.setFlipX(vx < 0);
+
+    // Keep the camera ease consistent across refresh rates (0.15/frame @60fps).
+    const camLerp = 1 - Math.pow(0.85, dt / (1000 / 60));
+    this.cameras.main.setLerp(camLerp, camLerp);
+
+    const moving = mag > 0.05;
+    const bobDelta = running ? delta * (RUN_SPEED / WALK_SPEED) : delta;
+    this.applyBob(this.localBobState, this.localVisual, this.localShadow, this.localBody.x, this.localBody.y, moving, bobDelta);
+    this.localNameText.setPosition(this.localBody.x, this.localVisual.y - 22);
+    if (moving) this.spawnFootstepDust(time, this.localBody.x, this.localBody.y + 10, running);
+
+    // Only write when something changed — standing still used to fire a
+    // full Firebase transaction every 100ms for nothing.
+    if (time - this.lastSentAt > 100) {
+      const x = Math.round(this.localBody.x * 10) / 10;
+      const y = Math.round(this.localBody.y * 10) / 10;
+      const facing = this.localVisual.flipX ? -1 : 1;
+      const last = this.lastSentPos;
+      if (!last || last.x !== x || last.y !== y || last.facing !== facing) {
+        this.lastSentAt = time;
+        this.lastSentPos = { x, y, facing };
+        this.net.move(x, y, facing);
+      }
+    }
+  }
+
+  // Returns a replacement velocity that steers around an obstacle corner
+  // when the body is blocked on the axis the player is pushing along and a
+  // small perpendicular shift (up to CORNER px) would clear it, else null.
+  cornerSlide(body, ix, iy, speed, dt) {
+    const CORNER = 7;
+    // touching (not blocked): world-bound hits only set blocked, and there is
+    // no "around" to slide to at the edge of the map.
+    const touching = body.touching;
+    const tryAxis = (dir, horizontal) => {
+      for (let d = 1; d <= CORNER; d++) {
+        for (const side of [-1, 1]) {
+          const px = body.x + (horizontal ? dir * 2 : side * d);
+          const py = body.y + (horizontal ? side * d : dir * 2);
+          if (this.physics.overlapRect(px, py, body.width, body.height, false, true).length === 0) {
+            const v = Math.min(speed, (d / Math.max(dt, 1)) * 1000);
+            return horizontal ? { x: 0, y: side * v } : { x: side * v, y: 0 };
+          }
+        }
+      }
+      return null;
+    };
+    if (iy === 0 && ix !== 0) {
+      const dir = Math.sign(ix);
+      if ((dir < 0 && touching.left) || (dir > 0 && touching.right)) {
+        return tryAxis(dir, true);
+      }
+    } else if (ix === 0 && iy !== 0) {
+      const dir = Math.sign(iy);
+      if ((dir < 0 && touching.up) || (dir > 0 && touching.down)) {
+        return tryAxis(dir, false);
+      }
+    }
+    return null;
+  }
+
+  // A tiny, purely cosmetic dust puff under the player's feet while
+  // walking — throttled so it's a trail of soft dots, not a solid smear.
+  spawnFootstepDust(time, x, y, running) {
+    if (this.lastDustAt && time - this.lastDustAt < (running ? 140 : 220)) return;
+    this.lastDustAt = time;
+    const puff = this.add.ellipse(x, y, 7, 4, 0xd8cfa8, 0.35).setDepth(y - 1);
+    this.tweens.add({
+      targets: puff,
+      scaleX: 1.8,
+      scaleY: 1.8,
+      alpha: 0,
+      duration: 450,
+      ease: 'Sine.easeOut',
+      onComplete: () => puff.destroy(),
+    });
+  }
+
+  updateRemoteInterpolation(delta) {
+    // Updates arrive ~10/s with network jitter. A fixed 0.25-per-frame lerp
+    // was frame-rate dependent and made the hop stutter on/off between
+    // packets; ease with a time constant instead, and decide "walking" from
+    // the remaining distance to the target rather than this frame's step.
+    const dt = Math.min(delta, 100);
+    const k = 1 - Math.exp(-dt / 90);
+    this.remotePlayers.forEach((rp) => {
+      const dx = rp.targetX - rp.x;
+      const dy = rp.targetY - rp.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > 400 || dist < 0.05) {
+        // Teleport (portal/rejoin) or already there: snap, don't glide across the map.
+        rp.x = rp.targetX;
+        rp.y = rp.targetY;
+      } else {
+        rp.x += dx * k;
+        rp.y += dy * k;
+      }
+      rp.visual.setFlipX(rp.facing === -1);
+
+      const moving = dist > 1.5 && dist <= 400;
+      // Remote runners hop faster too (their updates land further apart).
+      const bobDelta = moving ? delta * Math.min(1.6, Math.max(1, dist / 14)) : delta;
+      this.applyBob(rp.bob, rp.visual, rp.shadow, rp.x, rp.y, moving, bobDelta);
+      rp.nameText.setPosition(rp.x, rp.visual.y - 22);
+      if (rp.bubble) rp.bubble.setPosition(rp.x, rp.visual.y - 40);
+    });
+  }
+
+  // ---------- walk-cycle (squash/stretch hop, since the source sprites are single-pose) ----------
+
+  applyBob(state, visual, shadow, anchorX, anchorY, moving, delta) {
+    if (reduceMotion) {
+      state.phase = 0;
+      state.lift = 0;
+      visual.x = anchorX;
+      visual.y = anchorY;
+      visual.setScale(1, 1);
+      visual.setDepth(anchorY);
+      shadow.x = anchorX;
+      shadow.y = anchorY + 9;
+      shadow.setScale(1, 1);
+      return;
+    }
+    if (moving) {
+      state.phase += (delta / 1000) * HOP_SPEED;
+      const target = Math.abs(Math.sin(state.phase));
+      state.lift += (target - state.lift) * (1 - Math.pow(0.4, Math.min(delta, 50) / 16.7));
+    } else {
+      state.phase = 0;
+      state.lift += (0 - state.lift) * (1 - Math.pow(0.7, Math.min(delta, 50) / 16.7));
+    }
+
+    visual.x = anchorX;
+    visual.y = anchorY - state.lift * HOP_HEIGHT;
+    visual.setScale(1 - state.lift * 0.07, 1 + state.lift * 0.12);
+    visual.setDepth(anchorY);
+
+    shadow.x = anchorX;
+    shadow.y = anchorY + 9;
+    const shrink = 1 - state.lift * 0.35;
+    shadow.setScale(shrink, shrink);
+  }
+
+  // ---------- emotes ----------
+
+  setupEmotes() {
+    this.lastEmoteAt = new Map(); // playerId -> last emoteAt we've already shown
+    this.input.keyboard.on('keydown', (e) => {
+      if (this.chatFocused) return;
+      const i = Number(e.key) - 1;
+      this.triggerEmote(i);
+    });
+  }
+
+  triggerEmote(i) {
+    if (i < 0 || i >= EMOTES.length) return;
+    this.net.emote(EMOTES[i]);
+    this.showEmoteBubble(this.selfData.id, EMOTES[i]);
+  }
+
+  showEmoteBubble(playerId, symbol) {
+    const anchor = playerId === this.selfData.id
+      ? this.localVisual
+      : (this.remotePlayers.get(playerId) || {}).visual;
+    if (!anchor) return;
+
+    const bubble = this.add.text(anchor.x, anchor.y - 34, symbol, { fontSize: '20px' })
+      .setOrigin(0.5)
+      .setDepth(100001);
+    this.tweens.add({
+      targets: bubble,
+      y: bubble.y - 14,
+      alpha: { from: 1, to: 0 },
+      duration: 1400,
+      onComplete: () => bubble.destroy(),
+    });
+  }
+
+  // ---------- sparkle minigame ----------
+  // The active spot is derived from wall-clock time, so every client agrees
+  // on where it is without any extra network traffic. Anyone nearby when it
+  // rotates scores a point — casual and co-op, not first-click-wins.
+
+  setupSparkle() {
+    this.sparkleIndex = -1;
+    this.sparkleCaught = false;
+    this.sparkleStar = this.add.star(0, 0, 5, 6, 12, 0xfff2a8).setDepth(200001).setVisible(false);
+    this.sparkleGlow = this.add.star(0, 0, 5, 9, 18, 0xffe066, 0.35).setDepth(200000).setVisible(false);
+    this.tweens.add({
+      targets: [this.sparkleStar, this.sparkleGlow],
+      angle: 360,
+      duration: 4000,
+      repeat: -1,
+    });
+    this.localScore = 0;
+  }
+
+  updateSparkle(time) {
+    const index = Math.floor(time / SPARKLE_ROTATE_MS) % SPARKLE_SPOTS.length;
+    if (index !== this.sparkleIndex) {
+      this.sparkleIndex = index;
+      this.sparkleCaught = false;
+      const [x, y] = SPARKLE_SPOTS[index];
+      this.sparkleStar.setPosition(x, y).setVisible(true);
+      this.sparkleGlow.setPosition(x, y).setVisible(true);
+    }
+
+    if (this.sparkleCaught) return;
+    const [sx, sy] = SPARKLE_SPOTS[this.sparkleIndex];
+    if (Math.hypot(this.localBody.x - sx, this.localBody.y - sy) < SPARKLE_CATCH_RADIUS) {
+      this.sparkleCaught = true;
+      this.awardPoint(1, '+1 ⭐', this.localBody.x, this.localBody.y - 30);
+      this.incrementStat('sparkles');
+    }
+  }
+
+  awardPoint(amount, label, x, y, sound) {
+    this.localScore += amount;
+    this.net.addScore(amount);
+    const mine = this.allPlayers.get(this.selfData.id);
+    if (mine) mine.score = this.localScore;
+    this.renderPlayerList();
+    this.showFloatingText(x, y, label);
+    (SFX[sound] || (amount < 0 ? SFX.deny : SFX.coin))();
+    // Systems that award stars without bumping a stat (wildlife log,
+    // villager tier-ups, museum) still get their achievements checked.
+    if (amount > 0 && this.achievementsUnlocked) this.checkAchievements();
+  }
+
+  showFloatingText(x, y, text) {
+    const t = this.add.text(x, y, text, {
+      fontSize: '13px',
+      fontFamily: 'monospace',
+      color: '#ffe066',
+      stroke: '#1c2430',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(100002);
+    this.tweens.add({ targets: t, y: y - 24, alpha: { from: 1, to: 0 }, duration: 900, onComplete: () => t.destroy() });
+  }
+
+  // ---------- day/night ambience ----------
+
+  setupDayNight() {
+    this.dayNightOverlay = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x0a1030, 0)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(300000);
+    this.scale.on('resize', (size) => this.dayNightOverlay.setSize(size.width, size.height));
+    this.lastDayNightCheck = 0;
+  }
+
+  // ---------- seasons ----------
+  // A faint color wash tied to the real-world month on each player's own
+  // device — no new art, same "derive it from wall-clock time" trick used
+  // everywhere else (sparkle, weather, K.K. Slider). Sits just under the
+  // day/night overlay so night still darkens it normally.
+
+  setupSeason() {
+    this.seasonOverlay = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0xffffff, 0)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+      .setDepth(299999);
+    this.scale.on('resize', (size) => this.seasonOverlay.setSize(size.width, size.height));
+    this.seasonDecorSprites = SEASON_DECOR_SPOTS.map(({ x, y }) => this.add.text(x, y, '', { fontSize: '20px' }).setOrigin(0.5).setDepth(y).setVisible(false));
+    this.updateSeason();
+  }
+
+  // 'winter' | 'spring' | 'summer' | 'autumn' from the local month.
+  currentSeason() {
+    const month = new Date().getMonth(); // 0=Jan
+    if (month === 11 || month === 0 || month === 1) return 'winter';
+    if (month >= 2 && month <= 4) return 'spring';
+    if (month >= 5 && month <= 7) return 'summer';
+    return 'autumn';
+  }
+
+  updateSeason() {
+    const month = new Date().getMonth(); // 0=Jan
+    let color;
+    let alpha;
+    let decorIcon = null;
+    if (month === 11 || month === 0 || month === 1) { color = 0x9cd8ff; alpha = 0.08; decorIcon = '⛄'; } // winter
+    else if (month >= 2 && month <= 4) { color = 0xcdf2a8; alpha = 0.06; } // spring
+    else if (month >= 5 && month <= 7) { color = 0xfff2a0; alpha = 0.05; } // summer
+    else { color = 0xe0a050; alpha = 0.09; decorIcon = '🎃'; } // autumn
+    this.seasonOverlay.setFillStyle(color, alpha);
+
+    if (this.seasonDecorSprites) {
+      this.seasonDecorSprites.forEach((sprite) => {
+        if (decorIcon) sprite.setText(decorIcon).setVisible(true);
+        else sprite.setVisible(false);
+      });
+    }
+  }
+
+  // ---------- weather ----------
+  // Deterministic from wall-clock time, same trick as the sparkle: every
+  // client hashes the current 8-minute window the same way, so rain
+  // starts/stops in sync without any network traffic. Purely cosmetic —
+  // nothing about gameplay changes while it rains.
+
+  setupWeather() {
+    this.rainDrops = [];
+    for (let i = 0; i < WEATHER_RAIN_COUNT; i++) {
+      const d = this.add.rectangle(0, 0, 2, 16, 0xcfe9ff, 0.45)
+        .setScrollFactor(0)
+        .setDepth(300001)
+        .setVisible(false);
+      d.vy = Phaser.Math.Between(320, 460);
+      this.rainDrops.push(d);
+    }
+    this.isRaining = null; // unknown yet, forces the first check to apply
+  }
+
+  isRainWindow(now) {
+    const bucket = Math.floor(now / WEATHER_CYCLE_MS);
+    const h = Math.sin(bucket * 12.9898) * 43758.5453;
+    return (h - Math.floor(h)) < WEATHER_RAIN_CHANCE;
+  }
+
+  updateWeather(time, delta) {
+    const raining = this.isRainWindow(Date.now());
+    if (raining !== this.isRaining) {
+      const wasKnown = this.isRaining !== null;
+      this.isRaining = raining;
+      this.rainDrops.forEach((d) => {
+        d.setVisible(raining);
+        if (raining) d.setPosition(Phaser.Math.Between(0, this.scale.width), Phaser.Math.Between(0, this.scale.height));
+      });
+      if (wasKnown) this.addChatLine({ system: true, text: raining ? '🌧️ it started raining' : '☀️ the rain cleared up' });
+    }
+    if (!raining) return;
+    const w = this.scale.width;
+    const h = this.scale.height;
+    this.rainDrops.forEach((d) => {
+      d.y += d.vy * (delta / 1000);
+      d.x -= 40 * (delta / 1000);
+      if (d.y > h) { d.y = -10; d.x = Phaser.Math.Between(0, w); }
+      if (d.x < -10) d.x = w + 10;
+    });
+  }
+
+  updateDayNight(time) {
+    if (time - this.lastDayNightCheck < 1000) return;
+    this.lastDayNightCheck = time;
+
+    const now = new Date();
+    const hour = now.getHours() + now.getMinutes() / 60;
+    let night;
+    if (hour >= 20 || hour < 5) night = 1;
+    else if (hour >= 18) night = (hour - 18) / 2;
+    else if (hour < 7) night = 1 - (hour - 5) / 2;
+    else night = 0;
+
+    this.dayNightOverlay.setAlpha(night * 0.45);
+
+    const isNightBugs = hour >= 19 || hour < 6;
+    if (isNightBugs !== this.isNightBugs) {
+      this.isNightBugs = isNightBugs;
+      this.restyleBugs();
+      (this.lampGlows || []).forEach((g) => g.setVisible(isNightBugs));
+    }
+  }
+
+  restyleBugs() {
+    if (!this.bugs) return;
+    this.bugs.forEach((bug) => {
+      bug.sprite.setText(this.isNightBugs ? '✨' : '🦋');
+      if (bug.glowTween) { bug.glowTween.stop(); bug.glowTween = null; bug.sprite.setAlpha(1); }
+      if (this.isNightBugs) {
+        bug.glowTween = this.tweens.add({ targets: bug.sprite, alpha: { from: 0.4, to: 1 }, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      }
+    });
+  }
+
+  // ---------- mobile: virtual D-pad + action buttons ----------
+
+  // A short vibration pulse on any mobile button tap, where supported.
+  // Honest caveat: iOS Safari has never implemented the Vibration API
+  // (Apple's choice, not a bug here), so this is a no-op on iPhone —
+  // it only does anything for Android friends in the group. Delegated
+  // to the two button containers instead of touching every individual
+  // handler.
+  setupHaptics() {
+    const haptic = () => { try { if (navigator.vibrate) navigator.vibrate(12); } catch (e) { /* unsupported */ } };
+    ['mobile-controls', 'underground-controls'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('touchstart', (e) => { if (e.target.closest('button, #joystick')) haptic(); }, { passive: true });
+    });
+  }
+
+  setupTouchControls() {
+    this.touchMove = { x: 0, y: 0 };
+    this.setupJoystick();
+
+    const chatInput = document.getElementById('chat-input');
+    document.getElementById('mobile-chat-btn').addEventListener('click', () => {
+      document.getElementById('chat-input-row').classList.add('chat-input-visible');
+      chatInput.focus();
+    });
+
+    const emotePopup = document.getElementById('emote-popup');
+    EMOTES.forEach((symbol, i) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = symbol;
+      btn.addEventListener('click', () => {
+        this.triggerEmote(i);
+        emotePopup.classList.add('hidden');
+      });
+      emotePopup.appendChild(btn);
+    });
+    const emoteToggleBtn = document.getElementById('emote-toggle-btn');
+    emoteToggleBtn.addEventListener('click', () => {
+      const willShow = emotePopup.classList.contains('hidden');
+      emotePopup.classList.toggle('hidden');
+      if (willShow) {
+        // Positioned from the button's actual on-screen spot rather than a
+        // hardcoded offset, so it keeps popping up directly above the
+        // emote button if this row ever moves or gains/loses a neighbor.
+        const btnRect = emoteToggleBtn.getBoundingClientRect();
+        const popupRect = emotePopup.getBoundingClientRect();
+        emotePopup.style.left = `${btnRect.right - popupRect.width}px`;
+        emotePopup.style.right = 'auto';
+        emotePopup.style.bottom = `${window.innerHeight - btnRect.top + 8}px`;
+      }
+    });
+
+    const photoBtn = document.getElementById('mobile-photo-btn');
+    if (photoBtn) photoBtn.addEventListener('click', () => this.takePhoto());
+  }
+
+  // Virtual analog stick (replaces the old 4-button D-pad). Pointer events
+  // with capture, so the finger can slide off the pad and keep steering,
+  // and only the first finger that lands on it is tracked — a second
+  // finger tapping A/B at the same time never hijacks or freezes the
+  // stick. Any way that finger's contact can end (lift, iOS cancelling the
+  // touch for a system gesture, capture being lost, the tab losing focus)
+  // recenters it, so the villager can't get stuck walking. Output goes
+  // into this.touchMove, already read by updateLocalMovement; magnitude is
+  // analog (a light push walks slower).
+  setupJoystick() {
+    const base = document.getElementById('joystick');
+    const knob = document.getElementById('joystick-knob');
+    if (!base || !knob) return;
+    let activeId = null;
+    const reset = () => {
+      activeId = null;
+      base.classList.remove('active');
+      knob.style.transform = '';
+      this.touchMove = { x: 0, y: 0 };
+    };
+    const track = (e) => {
+      const r = base.getBoundingClientRect();
+      const radius = r.width / 2;
+      let dx = (e.clientX - (r.left + radius)) / radius;
+      let dy = (e.clientY - (r.top + radius)) / radius;
+      const mag = Math.hypot(dx, dy);
+      if (mag > 1) { dx /= mag; dy /= mag; }
+      const travel = radius - knob.offsetWidth / 2;
+      knob.style.transform = `translate(${dx * travel}px, ${dy * travel}px)`;
+      if (mag < JOYSTICK_DEADZONE) { this.touchMove = { x: 0, y: 0 }; return; }
+      // Full speed a bit before the rim, so you don't have to pin the
+      // thumb against the very edge to run.
+      const strength = Math.min(1, (mag - JOYSTICK_DEADZONE) / (0.8 - JOYSTICK_DEADZONE));
+      this.touchMove = { x: (dx / Math.min(1, mag)) * strength, y: (dy / Math.min(1, mag)) * strength };
+    };
+    base.addEventListener('pointerdown', (e) => {
+      if (activeId !== null) return;
+      e.preventDefault();
+      activeId = e.pointerId;
+      try { base.setPointerCapture(e.pointerId); } catch (err) { /* already released */ }
+      base.classList.add('active');
+      track(e);
+    });
+    base.addEventListener('pointermove', (e) => { if (e.pointerId === activeId) track(e); });
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((type) => {
+      base.addEventListener(type, (e) => { if (e.pointerId === activeId) reset(); });
+    });
+    window.addEventListener('blur', reset);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) reset(); });
+    base.addEventListener('contextmenu', (e) => e.preventDefault());
+  }
+
+  // ---------- gamepad (Bluetooth Xbox / PlayStation / MFi controllers) ----------
+  // Polled once a frame from update() via the standard Gamepad API, which
+  // iOS Safari supports for paired Xbox/PS controllers (a pad only shows up
+  // after its first button press — a browser privacy rule, not a bug).
+  // Standard mapping: left stick or D-pad walks, A = interact (E),
+  // X = gift (G), B = close the open overlay / leave chat, otherwise
+  // toggle build (B), Start = map (M). Works alongside keyboard and touch;
+  // movement is summed into the same vector, actions use the same canAct()
+  // gate as every other input.
+  setupGamepad() {
+    this.padInput = { x: 0, y: 0 };
+    this.padPrev = [];
+    if (typeof navigator.getGamepads !== 'function') return;
+    window.addEventListener('gamepadconnected', () => {
+      this.addChatLine({ system: true, text: '🎮 Controller connected — stick/D-pad to walk, A interact, X gift, B build/close, Start map.' });
+    });
+    window.addEventListener('gamepaddisconnected', () => {
+      this.padInput = { x: 0, y: 0 };
+      this.padPrev = [];
+    });
+  }
+
+  pollGamepad() {
+    if (!this.padInput || typeof navigator.getGamepads !== 'function') return;
+    let pad = null;
+    try {
+      pad = Array.from(navigator.getGamepads() || []).find((p) => p && p.connected);
+    } catch (e) { /* blocked by permissions policy */ }
+    if (!pad) {
+      this.padInput.x = 0;
+      this.padInput.y = 0;
+      this.padPrev = [];
+      return;
+    }
+    const held = pad.buttons.map((b) => !!b && (b.pressed || b.value > 0.5));
+    const prev = this.padPrev;
+    const justPressed = (i) => held[i] && !prev[i];
+    // Buttons already down on the first poll (e.g. the press that woke the
+    // pad up) count as "seen", so they don't fire an action on their own.
+    const first = prev.length === 0;
+    this.padPrev = held;
+
+    let x = pad.axes[0] || 0;
+    let y = pad.axes[1] || 0;
+    const mag = Math.hypot(x, y);
+    if (mag < PAD_DEADZONE) {
+      x = 0;
+      y = 0;
+    } else {
+      const s = Math.min(1, (mag - PAD_DEADZONE) / (1 - PAD_DEADZONE)) / mag;
+      x *= s;
+      y *= s;
+    }
+    if (held[14]) x -= 1;
+    if (held[15]) x += 1;
+    if (held[12]) y -= 1;
+    if (held[13]) y += 1;
+    this.padInput.x = Phaser.Math.Clamp(x, -1, 1);
+    this.padInput.y = Phaser.Math.Clamp(y, -1, 1);
+    if (first) return;
+
+    if (justPressed(0) && this.canAct()) this.interact();
+    if (justPressed(2) && this.canAct()) this.giveNearestVillagerGift();
+    if (justPressed(1) && !this.closeTopOverlay() && this.canAct()) this.toggleBuildMode();
+    if (justPressed(9)) {
+      if (this.mapOpen) this.closeTopOverlay();
+      else if (this.canAct()) document.getElementById('map-btn')?.click();
+    }
+  }
+
+  // Closes whichever overlay is up by pressing its own ✕ button, so each
+  // overlay's normal close logic (timers, flags) runs unchanged. Returns
+  // false when nothing was open.
+  closeTopOverlay() {
+    const overlays = [
+      ['mapOpen', 'map-close-btn'], ['polyrollOpen', 'polyroll-close-btn'],
+      ['achievementsOpen', 'achievements-close-btn'], ['outfitShopOpen', 'outfit-close-btn'],
+      ['guestbookOpen', 'guestbook-close-btn'], ['triviaOpen', 'trivia-close-btn'],
+      ['keysHelpOpen', 'keys-help-close-btn'], ['changelogOpen', 'changelog-close-btn'],
+      ['museumOpen', 'museum-close-btn'], ['workbenchOpen', 'workbench-close-btn'], ['mailboxOpen', 'mailbox-close-btn'], ['homeOpen', 'home-close-btn'], ['dailiesOpen', 'dailies-close-btn'], ['journalOpen', 'journal-close-btn'],
+    ];
+    const open = overlays.find(([flag]) => this[flag]);
+    if (open) {
+      const btn = document.getElementById(open[1]);
+      if (btn) btn.click();
+      return true;
+    }
+    if (this.chatFocused) {
+      document.getElementById('chat-input').blur();
+      return true;
+    }
+    return false;
+  }
+
+  // ---------- mobile: tilt steering + shake-to-interact ----------
+  // iOS requires DeviceOrientation/DeviceMotion permission from a real tap,
+  // so this only activates when the player presses the Tilt button.
+
+  setupTiltShake() {
+    this.tiltEnabled = false;
+    this.tiltMove = { x: 0, y: 0 };
+    this.tiltBaseline = null;
+    this.lastAccelMag = null;
+    this.lastShakeAt = 0;
+    this.tiltPermissionGranted = false;
+    this.boundOnDeviceOrientation = (e) => this.onDeviceOrientation(e);
+    this.boundOnDeviceMotion = (e) => this.onDeviceMotion(e);
+
+    const hasOrientation = typeof window.DeviceOrientationEvent !== 'undefined';
+    const btn = document.getElementById('tilt-toggle-btn');
+    if (!hasOrientation) {
+      btn.style.display = 'none';
+      return;
+    }
+
+    btn.addEventListener('click', () => this.toggleTilt(btn));
+  }
+
+  async toggleTilt(btn) {
+    if (this.tiltEnabled) {
+      this.tiltEnabled = false;
+      this.tiltMove = { x: 0, y: 0 };
+      window.removeEventListener('deviceorientation', this.boundOnDeviceOrientation);
+      window.removeEventListener('devicemotion', this.boundOnDeviceMotion);
+      btn.classList.remove('enabled');
+      btn.textContent = '🎮 Tilt';
+      return;
+    }
+
+    if (!this.tiltPermissionGranted) {
+      try {
+        if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+          const res = await DeviceOrientationEvent.requestPermission();
+          if (res !== 'granted') {
+            this.addChatLine({ system: true, text: 'Tilt controls need motion access — check Settings > Safari > Motion & Orientation Access.' });
+            return;
+          }
+        }
+        if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+          await DeviceMotionEvent.requestPermission();
+        }
+      } catch (e) {
+        // Non-iOS browsers don't need permission — fall through and enable anyway.
+      }
+      this.tiltPermissionGranted = true;
+    }
+
+    this.tiltEnabled = true;
+    this.tiltBaseline = null;
+    btn.classList.add('enabled');
+    btn.textContent = '🎮 Tilt ✓';
+
+    window.addEventListener('deviceorientation', this.boundOnDeviceOrientation);
+    window.addEventListener('devicemotion', this.boundOnDeviceMotion);
+  }
+
+  onDeviceOrientation(e) {
+    if (!this.tiltEnabled) return;
+    if (this.tiltBaseline === null) {
+      this.tiltBaseline = { beta: e.beta || 0, gamma: e.gamma || 0 };
+      return;
+    }
+    const dGamma = (e.gamma || 0) - this.tiltBaseline.gamma; // left/right lean
+    const dBeta = (e.beta || 0) - this.tiltBaseline.beta; // forward/back lean
+    this.tiltMove = {
+      x: this.applyDeadzone(dGamma),
+      y: this.applyDeadzone(dBeta),
+    };
+  }
+
+  applyDeadzone(v) {
+    const sign = Math.sign(v);
+    const mag = Math.max(0, Math.abs(v) - TILT_DEADZONE_DEG);
+    return sign * Math.min(1, mag / (TILT_RANGE_DEG - TILT_DEADZONE_DEG));
+  }
+
+  onDeviceMotion(e) {
+    if (!this.tiltEnabled) return;
+    const a = e.accelerationIncludingGravity || e.acceleration;
+    if (!a || a.x === null) return;
+
+    const mag = Math.sqrt((a.x || 0) ** 2 + (a.y || 0) ** 2 + (a.z || 0) ** 2);
+    if (this.lastAccelMag !== null) {
+      const jump = Math.abs(mag - this.lastAccelMag);
+      const now = Date.now();
+      if (jump > SHAKE_THRESHOLD && now - this.lastShakeAt > SHAKE_COOLDOWN_MS) {
+        this.lastShakeAt = now;
+        this.onShake();
+      }
+    }
+    this.lastAccelMag = mag;
+  }
+
+  // Shared gate for any player-triggered action (interact, build toggle, etc.)
+  // so chat/overlay state is respected no matter which input triggered it
+  // (keyboard, on-screen button, or shake).
+  canAct() {
+    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen && !this.mapOpen && !this.museumOpen && !this.workbenchOpen && !this.mailboxOpen && !this.homeOpen && !this.dailiesOpen && !this.journalOpen;
+  }
+
+  // Shake is just a fun alternate trigger for the same interact() logic used
+  // by the desktop 'E' key and the mobile Interact button.
+  onShake() {
+    if (this.canAct()) this.interact();
+  }
+
+  shakeTreeVisual(index) {
+    const g = this.treeGraphics[index];
+    if (!g) return;
+    this.tweens.add({
+      targets: g,
+      angle: { from: -6, to: 6 },
+      duration: 70,
+      yoyo: true,
+      repeat: 5,
+      onComplete: () => g.setAngle(0),
+    });
+  }
+
+  // ---------- activities: chop / mine / fish ----------
+  // One shared action (desktop 'E', mobile Interact button, or a shake) that
+  // figures out what's nearby and does the relevant thing. Wood/stone/fish
+  // are a separate inventory from the sparkle leaderboard score — they only
+  // feed the building system below.
+
+  setupActivities() {
+    const savedRes = loadSave().resources;
+    const saved = savedRes && typeof savedRes === 'object' ? savedRes : {};
+    // Finite, non-negative whole numbers only (a corrupt save can't mint
+    // negative/Infinity/fractional stock).
+    const n = (v) => { v = Math.floor(Number(v)); return Number.isFinite(v) && v > 0 ? v : 0; };
+    this.resources = {
+      wood: n(saved.wood),
+      stone: n(saved.stone),
+      fish: n(saved.fish),
+      bugs: n(saved.bugs),
+      fruit: n(saved.fruit),
+      turnips: n(saved.turnips),
+      shells: n(saved.shells),
+      flowers: n(saved.flowers),
+    };
+    const savedCrafted = loadSave().crafted;
+    const sc = savedCrafted && typeof savedCrafted === 'object' ? savedCrafted : {};
+    this.craftedGoods = {};
+    RECIPES.forEach((r) => { this.craftedGoods[r.id] = n(sc[r.id]); });
+    this.treeCooldowns = {};
+    this.rockCooldowns = {};
+    this.fishing = { state: 'idle', spot: null, bobber: null, timer: null };
+    this.setupFishShadows();
+    this.updateInventoryHUD();
+
+    this.input.keyboard.on('keydown-E', () => { if (this.canAct()) this.interact(); });
+    this.input.keyboard.on('keydown-G', () => { if (this.canAct()) this.giveNearestVillagerGift(); });
+    const btn = document.getElementById('interact-btn');
+    if (btn) btn.addEventListener('click', () => { if (this.canAct()) this.interact(); });
+  }
+
+  saveResources() {
+    writeSave({ resources: this.resources, crafted: this.craftedGoods });
+  }
+
+  interact() {
+    if (this.inUnderground) return;
+    if (this.buildMode) {
+      this.handleBuildInteract();
+      return;
+    }
+    if (this.fishing.state !== 'idle') {
+      this.handleFishingInteract();
+      return;
+    }
+    if (this.isNearAbleSisters()) {
+      this.openOutfitShop();
+      return;
+    }
+    if (this.isNearCampfire() && this.isConcertTime()) {
+      this.enjoyConcert();
+      return;
+    }
+    if (this.isNearShop()) {
+      this.sellAtShop();
+      return;
+    }
+    if (this.isNearPolyroll()) {
+      this.openPolyroll();
+      return;
+    }
+    if (this.isNearTurnipStall()) {
+      this.buyTurnips();
+      return;
+    }
+    if (this.isNearMuseum()) {
+      this.donateFossils();
+      return;
+    }
+    if (this.isNearScavenger()) {
+      this.claimScavenger();
+      return;
+    }
+    if (this.isNearWorkbench()) {
+      this.openWorkbench();
+      return;
+    }
+    if (this.isNearMailbox()) {
+      this.openMailbox();
+      return;
+    }
+    if (this.isNearHome()) {
+      this.openHome();
+      return;
+    }
+    if (this.isNearGuestbook()) {
+      this.openGuestbook();
+      return;
+    }
+    // Weeds are one-shot and tiny, so they win over wandering villagers / fish
+    // shadows / wildlife that could otherwise shadow a weed beside them.
+    const weed = this.findNearestWeed();
+    if (weed) {
+      this.pullWeed(weed);
+      return;
+    }
+    if (this.isNearNPC()) {
+      this.talkToNPC();
+      return;
+    }
+    if (this.isNearNPC2()) {
+      this.talkToNPC2();
+      return;
+    }
+    const villager = this.findNearestVillager();
+    if (villager) {
+      this.talkToVillager(villager);
+      return;
+    }
+    const fishTarget = this.findNearestFishingSpot();
+    if (fishTarget && fishTarget.shadow) {
+      this.startFishing(fishTarget);
+      return;
+    }
+    const specimen = this.findNearestFloraFauna();
+    if (specimen) {
+      this.collectFloraFauna(specimen);
+      return;
+    }
+    if (this.isNearMerchant()) {
+      this.buyFromMerchant();
+      return;
+    }
+    const fossilSpot = this.findNearestFossilSpot();
+    if (fossilSpot) {
+      this.digFossil(fossilSpot);
+      return;
+    }
+    const beachSpot = this.findNearestBeachItem();
+    if (beachSpot) {
+      this.collectBeachItem(beachSpot);
+      return;
+    }
+    const flowerSpot = this.findNearestFlower();
+    if (flowerSpot) {
+      this.collectFlower(flowerSpot);
+      return;
+    }
+    if (this.isNearDigHole()) {
+      this.enterUnderground();
+      return;
+    }
+
+    if (this.isNearDoor()) {
+      this.useDoor();
+      return;
+    }
+
+    const bug = this.findNearestBug();
+    if (bug) {
+      this.swingTool('🥍');
+      this.catchBug(bug);
+      return;
+    }
+
+    const tree = this.findNearestTree();
+    if (tree) {
+      this.treeCooldowns[tree.index] = Date.now();
+      this.shakeTreeVisual(tree.index);
+      this.swingTool('🪓');
+      this.gainResource('wood', 1, tree.x, tree.y - 40);
+      const fruit = this.treeFruit[tree.index];
+      if (fruit) {
+        fruit.setVisible(false);
+        this.gainResource('fruit', 1, tree.x, tree.y - 58);
+        this.time.delayedCall(TREE_SHAKE_COOLDOWN_MS, () => fruit.setVisible(true));
+      }
+      return;
+    }
+
+    const rock = this.findNearestRock();
+    if (rock) {
+      this.rockCooldowns[rock.key] = Date.now();
+      this.swingTool('⛏️');
+      this.gainResource('stone', 1, rock.x, rock.y - 20);
+      return;
+    }
+
+    const spot = this.findNearestFishingSpot();
+    if (spot) {
+      this.startFishing(spot);
+      return;
+    }
+
+    this.triggerEmote(Math.floor(Math.random() * EMOTES.length));
+  }
+
+  // ---------- shop (classic AC "sell your stuff" loop) ----------
+
+  isNearShop() {
+    const cx = HOUSE_POS.x + HOUSE_POS.w / 2;
+    const cy = HOUSE_POS.y + HOUSE_POS.h / 2;
+    return Math.hypot(this.localBody.x - cx, this.localBody.y - cy) < SHOP_RADIUS;
+  }
+
+  // A plain wayfinding sign over the arcade district — centered between
+  // the turnip stall, Polyroll, and the tournament sign, pure decoration.
+  drawArcadeSign() {
+    this.add.text(1900, 680, '🕹️ Arcade District', { fontSize: '16px' }).setOrigin(0.5).setDepth(679);
+  }
+
+  drawPolyrollBooth() {
+    const { x, y } = POLYROLL_POS;
+    const g = this.add.graphics().setDepth(y - 1);
+    g.fillStyle(0x6b2e3a, 1).fillRect(x - 28, y - 10, 56, 26);
+    g.fillStyle(0xffffff, 1).fillRect(x - 24, y - 6, 48, 18);
+    g.fillStyle(0x1c2430, 1);
+    [[-14, -1], [0, 2], [14, -2]].forEach(([dx, dy]) => g.fillCircle(x + dx, y + dy, 2));
+    this.add.text(x, y - 36, '🎲 Polyroll', { fontSize: '13px' }).setOrigin(0.5).setDepth(y + 1);
+  }
+
+  isNearPolyroll() {
+    return Math.hypot(this.localBody.x - POLYROLL_POS.x, this.localBody.y - POLYROLL_POS.y) < POLYROLL_RADIUS;
+  }
+
+  // ---------- Polyroll: a dice/coin betting minigame, stars-only ----------
+  // Inspired by a dice/coin-flip betting game — no wallet, no crypto, no
+  // real money anywhere in this. The only stake is your own ⭐ score,
+  // same currency the sparkle and the shop already use.
+
+  openPolyroll() {
+    if (this.inUnderground) return;
+    this.polyrollOpen = true;
+    document.getElementById('polyroll-overlay').classList.remove('hidden');
+    this.updatePolyrollScoreLabel();
+  }
+
+  closePolyroll() {
+    this.polyrollOpen = false;
+    document.getElementById('polyroll-overlay').classList.add('hidden');
+  }
+
+  updatePolyrollScoreLabel() {
+    const el = document.getElementById('polyroll-score');
+    if (el) el.textContent = this.localScore || 0;
+  }
+
+  playPolyrollDice(pick, bet) {
+    const roll = Phaser.Math.Between(1, 6);
+    const win = roll === pick;
+    const delta = win ? bet * 5 : -bet;
+    this.resolvePolyroll(`🎲 rolled ${roll}`, win, delta);
+  }
+
+  playPolyrollCoin(pick, bet) {
+    const flip = Math.random() < 0.5 ? 'heads' : 'tails';
+    const win = flip === pick;
+    // "2x" is the total payout (stake back + winnings), so a win nets +bet.
+    // Netting +2x bet on a 50/50 flip was positive expected value — an
+    // unlimited star printer.
+    const delta = win ? bet : -bet;
+    this.resolvePolyroll(`🪙 landed on ${flip}`, win, delta);
+  }
+
+  resolvePolyroll(rollText, win, delta) {
+    this.awardPoint(delta, `${win ? 'won' : 'lost'} ${Math.abs(delta)} ⭐`, this.localBody.x, this.localBody.y - 30);
+    const resultEl = document.getElementById('polyroll-result');
+    resultEl.textContent = `${rollText} — you ${win ? 'won' : 'lost'} ${Math.abs(delta)} ⭐!`;
+    resultEl.className = win ? 'win' : 'lose';
+    this.updatePolyrollScoreLabel();
+    this.incrementStat('polyrollPlays');
+  }
+
+  setupPolyroll() {
+    this.polyrollMode = 'dice';
+    this.polyrollDicePick = 1;
+    this.polyrollCoinPick = 'heads';
+
+    document.getElementById('polyroll-close-btn').addEventListener('click', () => this.closePolyroll());
+
+    const diceTab = document.getElementById('polyroll-tab-dice');
+    const coinTab = document.getElementById('polyroll-tab-coin');
+    const dicePanel = document.getElementById('polyroll-dice-panel');
+    const coinPanel = document.getElementById('polyroll-coin-panel');
+    diceTab.addEventListener('click', () => {
+      this.polyrollMode = 'dice';
+      diceTab.classList.add('active');
+      coinTab.classList.remove('active');
+      dicePanel.classList.remove('hidden');
+      coinPanel.classList.add('hidden');
+    });
+    coinTab.addEventListener('click', () => {
+      this.polyrollMode = 'coin';
+      coinTab.classList.add('active');
+      diceTab.classList.remove('active');
+      coinPanel.classList.remove('hidden');
+      dicePanel.classList.add('hidden');
+    });
+
+    document.querySelectorAll('#polyroll-dice-picker .polyroll-pick').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.polyrollDicePick = Number(btn.dataset.num);
+        document.querySelectorAll('#polyroll-dice-picker .polyroll-pick').forEach((b) => b.classList.toggle('active', b === btn));
+      });
+    });
+    document.querySelectorAll('#polyroll-coin-picker .polyroll-pick').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.polyrollCoinPick = btn.dataset.side;
+        document.querySelectorAll('#polyroll-coin-picker .polyroll-pick').forEach((b) => b.classList.toggle('active', b === btn));
+      });
+    });
+
+    document.getElementById('polyroll-play-btn').addEventListener('click', () => {
+      const betInput = document.getElementById('polyroll-bet');
+      const score = this.localScore || 0;
+      let bet = Math.floor(Number(betInput.value));
+      if (!Number.isFinite(bet) || bet < 1) bet = 1;
+      if (bet > score) bet = score;
+      betInput.value = bet;
+      if (score <= 0 || bet < 1) {
+        document.getElementById('polyroll-result').textContent = "you don't have any ⭐ to bet";
+        document.getElementById('polyroll-result').className = 'lose';
+        return;
+      }
+      if (this.polyrollMode === 'dice') this.playPolyrollDice(this.polyrollDicePick, bet);
+      else this.playPolyrollCoin(this.polyrollCoinPick, bet);
+    });
+  }
+
+  sellAtShop() {
+    const deal = this.todaysDeal();
+    let total = 0;
+    let dealBonus = 0;
+    let bulkBonus = 0;
+    let bulkCount = 0;
+    for (const { key } of QUEST_RESOURCES) {
+      const count = this.resources[key] || 0;
+      total += count;
+      if (key === deal.key) dealBonus += count * DAILY_DEAL_BONUS;
+      if (count >= BULK_SELL_THRESHOLD) {
+        bulkBonus += count * BULK_SELL_BONUS;
+        bulkCount += 1;
+      }
+    }
+    const turnipRevenue = (this.resources.turnips || 0) > 0 ? this.resources.turnips * this.turnipSellPrice() / TURNIP_BUNDLE : 0;
+    let craftedRevenue = 0;
+    for (const r of RECIPES) craftedRevenue += (this.craftedGoods[r.id] || 0) * r.value;
+    const grandTotal = Math.round(total + dealBonus + bulkBonus + turnipRevenue + craftedRevenue);
+    if (grandTotal === 0) {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'bag is empty');
+      return;
+    }
+    const soldTurnips = this.resources.turnips || 0;
+    // Zero only what was actually paid for, so a bag item the shop doesn't
+    // buy isn't silently wiped for nothing.
+    for (const { key } of QUEST_RESOURCES) this.resources[key] = 0;
+    this.resources.turnips = 0;
+    for (const r of RECIPES) this.craftedGoods[r.id] = 0;
+    this.updateInventoryHUD();
+    this.saveResources();
+    const notes = [];
+    if (craftedRevenue > 0) notes.push('🔨 crafts');
+    if (dealBonus > 0) notes.push(`${deal.icon} deal`);
+    if (bulkCount > 0) notes.push('bulk bonus');
+    const dealNote = notes.length > 0 ? ` (incl. ${notes.join(' + ')})` : '';
+    const label = soldTurnips > 0 ? `sold (incl. ${soldTurnips} 🥬)! +${grandTotal} ⭐${dealNote}` : `sold! +${grandTotal} ⭐${dealNote}`;
+    this.awardPoint(grandTotal, label, this.localBody.x, this.localBody.y - 30, 'sell');
+    if (soldTurnips > 0) this.incrementStat('turnipsSold', soldTurnips);
+    this.updateSellStreak();
+  }
+
+  // A loyalty bonus for selling on consecutive days — same date-comparison
+  // shape as the daily login streak, just keyed off "did you sell today"
+  // instead of "did you log in today".
+  updateSellStreak() {
+    const saved = loadSave();
+    const today = new Date().toISOString().slice(0, 10);
+    if (saved.lastSellDate === today) return; // already counted today
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const streak = saved.lastSellDate === yesterday ? cleanCount(saved.sellStreak) + 1 : 1;
+    writeSave({ sellStreak: streak, lastSellDate: today });
+    this.sellStreak = streak;
+    this.lifetimeStats.bestSellStreak = Math.max(this.lifetimeStats.bestSellStreak || 0, streak);
+    this.saveAchievements();
+    this.checkAchievements();
+    if (streak >= 2) {
+      const bonus = Math.min(streak, 5);
+      this.awardPoint(bonus, `🛍️ ${streak}-day streak! +${bonus} ⭐`, this.localBody.x, this.localBody.y - 50, 'achievement');
+    }
+  }
+
+  // ---------- turnip / stalk market ----------
+  // A simplified, single-session take on Animal Crossing's stalk market:
+  // buy a bundle from the merchant stall at a price that drifts every 4
+  // real-world hours, sell at the shop at a price that swings far more
+  // (every 15 minutes) — sometimes a profit, sometimes a loss, same
+  // deterministic wall-clock-hash trick as weather/the sparkle, so it
+  // needs no network traffic and no persistent "day" concept.
+
+  turnipHashedPrice(cycleMs, seedOffset, min, max) {
+    const bucket = Math.floor(Date.now() / cycleMs) + seedOffset;
+    const h = Math.sin(bucket * 12.9898) * 43758.5453;
+    const frac = h - Math.floor(h);
+    return Math.round(min + frac * (max - min));
+  }
+
+  turnipBuyPrice() {
+    return this.turnipHashedPrice(TURNIP_BUY_CYCLE_MS, 1000, 90, 130);
+  }
+
+  turnipSellPrice() {
+    const bucket = Math.floor(Date.now() / TURNIP_SELL_CYCLE_MS) + 7000;
+    const h = Math.sin(bucket * 12.9898) * 43758.5453;
+    const frac = h - Math.floor(h);
+    const normal = 1 - TURNIP_SPIKE_CHANCE;
+    if (frac < normal) return Math.round(30 + (frac / normal) * 80); // 30-110
+    return Math.round(140 + ((frac - normal) / TURNIP_SPIKE_CHANCE) * 60); // spike: 140-200
+  }
+
+  turnipBundlesBoughtToday() {
+    const rec = loadSave().turnipBuys;
+    return rec && rec.day === this.questDayBucket() ? (Number(rec.bundles) || 0) : 0;
+  }
+
+  isNearTurnipStall() {
+    return Math.hypot(this.localBody.x - TURNIP_STALL_POS.x, this.localBody.y - TURNIP_STALL_POS.y) < TURNIP_STALL_RADIUS;
+  }
+
+  buyTurnips() {
+    const price = this.turnipBuyPrice();
+    if ((this.localScore || 0) < price) {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, `need ${price} ⭐ for ${TURNIP_BUNDLE} turnips`);
+      return;
+    }
+    const boughtToday = this.turnipBundlesBoughtToday();
+    if (boughtToday >= TURNIP_DAILY_BUNDLE_CAP) {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'sold out for today — come back tomorrow');
+      return;
+    }
+    writeSave({ turnipBuys: { day: this.questDayBucket(), bundles: boughtToday + 1 } });
+    this.resources.turnips = (this.resources.turnips || 0) + TURNIP_BUNDLE;
+    this.updateInventoryHUD();
+    this.saveResources();
+    this.awardPoint(-price, `bought ${TURNIP_BUNDLE} 🥬 for ${price} ⭐`, this.localBody.x, this.localBody.y - 30, 'pop');
+  }
+
+  // ---------- underground (3D voxel cave, local-only) ----------
+
+  isNearDigHole() {
+    return Math.hypot(this.localBody.x - DIG_HOLE_POS.x, this.localBody.y - DIG_HOLE_POS.y) < DIG_HOLE_RADIUS;
+  }
+
+  // These doors are one-way, GTA3-loading-door style: they leave Pixeltown
+  // entirely for another browser game in this same tab. There's no
+  // teleport back — closing/navigating away from that page is how you
+  // return, same as actually walking through a loading door and leaving
+  // the area behind. Always confirm first since this abandons the
+  // current session.
+  findNearestPortal() {
+    let best = null;
+    let bestDist = DOOR_RADIUS;
+    PORTALS.forEach((p) => {
+      const d = Math.hypot(this.localBody.x - p.x, this.localBody.y - p.y);
+      if (d < bestDist) { bestDist = d; best = p; }
+    });
+    return best;
+  }
+
+  isNearDoor() {
+    return !!this.findNearestPortal();
+  }
+
+  useDoor() {
+    if (this.doorBusy) return;
+    const portal = this.findNearestPortal();
+    if (!portal) return;
+    const name = portal.label.replace('🚪', '').trim();
+    const ok = window.confirm(`Walk through the portal to ${name}? This leaves Pixeltown in this tab — there's no way back through it.`);
+    if (!ok) return;
+    this.doorBusy = true;
+    window.location.href = portal.url;
+  }
+
+  // If the player presses the browser's Back button after going through a
+  // portal, some browsers (iOS Safari especially) restore this exact page
+  // from cache instead of reloading it — doorBusy would otherwise stay
+  // stuck true forever, since it was only ever set right before leaving,
+  // making every door permanently dead until a hard refresh. Clear it
+  // whenever the page becomes active again, covering both that restore
+  // and an ordinary fresh load (where it's already false, so this is a
+  // no-op).
+  setupPortalReopen() {
+    window.addEventListener('pageshow', () => { this.doorBusy = false; });
+  }
+
+  updateDigHoleHint() {
+    const hint = document.getElementById('dig-hole-hint');
+    if (!hint) return;
+    hint.classList.toggle('hidden', this.inUnderground || this.buildMode || !this.isNearDigHole());
+  }
+
+  // A real tappable button — not just a key hint — since "press E" isn't
+  // discoverable at a glance and mobile's Interact button is tucked away
+  // in the action-button cluster. Shows whenever there's a rod-related
+  // action available: close enough to cast, already waiting, or a bite
+  // ready to be reeled in.
+  setupFishHint() {
+    const btn = document.getElementById('fish-hint-btn');
+    if (!btn) return;
+    // Fish directly rather than via interact(): pond-side critters,
+    // flowers and beach items are checked earlier in interact() and used
+    // to swallow the tap, so "🎣 Fish" did something else entirely.
+    btn.addEventListener('click', () => {
+      if (!this.canAct() || this.inUnderground || this.buildMode) return;
+      if (this.fishing.state !== 'idle') { this.handleFishingInteract(); return; }
+      const spot = this.findNearestFishingSpot();
+      if (spot) this.startFishing(spot);
+    });
+  }
+
+  updateFishHint() {
+    const btn = document.getElementById('fish-hint-btn');
+    if (!btn) return;
+    const state = this.fishing.state;
+    const target = state === 'idle' ? this.findNearestFishingSpot() : null;
+    // Highlight the fish shadow a cast would go to, so "near a fish" is
+    // visible in the world, not just implied by the button appearing.
+    const targetShadow = target && target.shadow ? target.shadow : null;
+    if (this.fishTargetShadow !== targetShadow) {
+      if (this.fishTargetShadow && this.fishTargetShadow.state === 'swim') this.fishTargetShadow.sprite.setFillStyle(0x0f2236, FISH_SHADOW_ALPHA);
+      if (targetShadow) targetShadow.sprite.setFillStyle(0x0f2236, 0.7);
+      this.fishTargetShadow = targetShadow;
+    }
+    const show = !this.inUnderground && !this.buildMode && (state !== 'idle' || !!target);
+    btn.classList.toggle('hidden', !show);
+    btn.classList.toggle('biting', state === 'biting');
+    let label = '🎣 Fish';
+    if (state === 'biting') label = '❗ Reel it in!';
+    else if (state === 'casting') label = '🎣 Waiting for a bite…';
+    // Only touch the DOM when the label actually changes — this runs
+    // every frame.
+    if (btn.textContent !== label) btn.textContent = label;
+  }
+
+  enterUnderground() {
+    if (this.inUnderground) return;
+    this.inUnderground = true;
+    this.incrementStat('caveVisits');
+    document.getElementById('dig-hole-hint').classList.add('hidden');
+    document.getElementById('hud').classList.add('hidden');
+    const overlay = document.getElementById('underground-overlay');
+    overlay.classList.remove('hidden');
+    this.scene.pause();
+
+    if (!this.underground) {
+      const onResourceChange = () => { this.updateInventoryHUD(); this.saveResources(); };
+      this.underground = new UndergroundWorld({
+        canvasWrap: document.getElementById('underground-canvas-wrap'),
+        resources: this.resources,
+        onResourceChange,
+        onExit: () => this.exitUnderground(),
+      });
+      this.underground.setAvatar(`../i/${this.selfData.species}-strip.png`, this.selfData.frame || 0, FRAME_SIZE);
+      this.setupUndergroundControls();
+    }
+    this.underground.start();
+  }
+
+  exitUnderground() {
+    if (!this.inUnderground) return;
+    this.inUnderground = false;
+    this.underground.stop();
+    document.getElementById('underground-overlay').classList.add('hidden');
+    document.getElementById('hud').classList.remove('hidden');
+    this.scene.resume();
+  }
+
+  // Exit always works, from anywhere in the cave, the moment you press it —
+  // no need to navigate back to the shaft. The old "only near the surface"
+  // gate made getting out feel broken, since the cave is a maze you can
+  // get turned around in. Mining keeps its own separate key/button so the
+  // two actions are never ambiguous.
+  // Keeps the on-screen hotbar buttons' highlight in sync with whichever
+  // slot Place will actually use.
+  setUgHotbar(type) {
+    this.underground.setHotbar(type);
+    document.getElementById('ug-hotbar-wall').classList.toggle('active', type === 'wall');
+    document.getElementById('ug-hotbar-torch').classList.toggle('active', type === 'torch');
+  }
+
+  setupUndergroundControls() {
+    const ug = this.underground;
+    this.input.keyboard && window.addEventListener('keydown', (e) => {
+      if (!this.inUnderground) return;
+      const k = e.key.toLowerCase();
+      if (k === 'e') {
+        ug.mine();
+      } else if (k === 'f') {
+        ug.place();
+      } else if (k === '1') {
+        this.setUgHotbar('wall');
+      } else if (k === '2') {
+        this.setUgHotbar('torch');
+      } else if (k === 'escape' || k === 'backspace') {
+        this.exitUnderground();
+      }
+    });
+
+    const setDir = (dir, on) => {
+      const v = on ? 1 : 0;
+      if (dir === 'up') this.ugFwd = v;
+      if (dir === 'down') this.ugFwd = -v;
+      if (dir === 'left') this.ugStrafe = -v;
+      if (dir === 'right') this.ugStrafe = v;
+      ug.setMoveInput(this.ugFwd || 0, this.ugStrafe || 0);
+    };
+    document.querySelectorAll('#ug-dpad .dpad-btn').forEach((btn) => {
+      const dir = btn.dataset.ugdir;
+      btn.addEventListener('pointerdown', (e) => { e.preventDefault(); setDir(dir, true); });
+      btn.addEventListener('pointerup', () => setDir(dir, false));
+      btn.addEventListener('pointerleave', () => setDir(dir, false));
+      btn.addEventListener('pointercancel', () => setDir(dir, false));
+    });
+
+    const setVert = (v) => { ug.setMoveInput(this.ugFwd || 0, this.ugStrafe || 0, v); };
+    const upBtn = document.getElementById('ug-up-btn');
+    const downBtn = document.getElementById('ug-down-btn');
+    upBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); setVert(1); });
+    upBtn.addEventListener('pointerup', () => setVert(0));
+    upBtn.addEventListener('pointerleave', () => setVert(0));
+    upBtn.addEventListener('pointercancel', () => setVert(0));
+    downBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); setVert(-1); });
+    downBtn.addEventListener('pointerup', () => setVert(0));
+    downBtn.addEventListener('pointerleave', () => setVert(0));
+    downBtn.addEventListener('pointercancel', () => setVert(0));
+
+    document.getElementById('ug-mine-btn').addEventListener('click', () => ug.mine());
+    document.getElementById('ug-place-btn').addEventListener('click', () => ug.place());
+    document.getElementById('ug-exit-btn').addEventListener('click', () => this.exitUnderground());
+    document.getElementById('ug-hotbar-wall').addEventListener('click', () => this.setUgHotbar('wall'));
+    document.getElementById('ug-hotbar-torch').addEventListener('click', () => this.setUgHotbar('torch'));
+
+    this._ugExitHintInterval = setInterval(() => {
+      if (!this.inUnderground) return;
+      document.getElementById('underground-exit-hint').classList.toggle('hidden', !ug.nearExit);
+    }, 150);
+  }
+
+  // Briefly shows the tool in the villager's hand and swings it.
+  swingTool(symbol) {
+    const dir = this.localVisual.flipX ? -1 : 1;
+    const tool = this.add.text(this.localBody.x + dir * 12, this.localBody.y - 4, symbol, { fontSize: '14px' })
+      .setOrigin(0.5, 0.9)
+      .setDepth(this.localBody.y + 1);
+    tool.setAngle(-50 * dir);
+    this.tweens.add({
+      targets: tool,
+      angle: 40 * dir,
+      duration: 140,
+      yoyo: true,
+      repeat: 1,
+      onComplete: () => tool.destroy(),
+    });
+  }
+
+  // ---------- bug catching (local-only, like fishing) ----------
+
+  setupBugs() {
+    this.bugs = [];
+    for (let i = 0; i < BUG_COUNT; i++) {
+      const sprite = this.add.text(0, 0, '🦋', { fontSize: '14px' }).setOrigin(0.5).setDepth(150000);
+      const bug = { sprite, alive: true };
+      this.bugs.push(bug);
+      this.placeBug(bug);
+    }
+  }
+
+  placeBug(bug) {
+    bug.alive = true;
+    bug.sprite.setVisible(true);
+    bug.sprite.setPosition(
+      Phaser.Math.Between(VILLAGE_BOUNDS.x + 120, VILLAGE_BOUNDS.x + VILLAGE_BOUNDS.width - 120),
+      Phaser.Math.Between(VILLAGE_BOUNDS.y + 120, VILLAGE_BOUNDS.y + VILLAGE_BOUNDS.height - 120)
+    );
+    this.flutterBug(bug);
+  }
+
+  flutterBug(bug) {
+    if (!bug.alive) return;
+    const x = Phaser.Math.Clamp(bug.sprite.x + Phaser.Math.Between(-90, 90), VILLAGE_BOUNDS.x + 80, VILLAGE_BOUNDS.x + VILLAGE_BOUNDS.width - 80);
+    const y = Phaser.Math.Clamp(bug.sprite.y + Phaser.Math.Between(-70, 70), VILLAGE_BOUNDS.y + 80, VILLAGE_BOUNDS.y + VILLAGE_BOUNDS.height - 80);
+    bug.tween = this.tweens.add({
+      targets: bug.sprite,
+      x,
+      y,
+      duration: Phaser.Math.Between(1400, 2600),
+      ease: 'Sine.easeInOut',
+      onComplete: () => this.flutterBug(bug),
+    });
+  }
+
+  findNearestBug() {
+    let best = null;
+    let bestDist = BUG_CATCH_RADIUS;
+    this.bugs.forEach((bug) => {
+      if (!bug.alive) return;
+      const d = Math.hypot(this.localBody.x - bug.sprite.x, this.localBody.y - bug.sprite.y);
+      if (d < bestDist) { bestDist = d; best = bug; }
+    });
+    return best;
+  }
+
+  catchBug(bug) {
+    bug.alive = false;
+    if (bug.tween) bug.tween.stop();
+    bug.sprite.setVisible(false);
+    this.gainResource('bugs', 1, bug.sprite.x, bug.sprite.y - 16);
+    const faunaIdx = this.isNightBugs ? 1 : 0; // 0: butterfly, 1: firefly — see FAUNA_TYPES
+    if (!this.museumFauna.has(faunaIdx)) {
+      this.museumFauna.add(faunaIdx);
+      this.saveFossils();
+    }
+    this.time.delayedCall(this.isBugOffTime() ? BUGOFF_RESPAWN_MS : BUG_RESPAWN_MS, () => {
+      // Contest extras only respawn while the Bug-Off is still on.
+      if (bug.extra && !this.bugOffActive) return;
+      this.placeBug(bug);
+    });
+    this.bugOffCaught();
+  }
+
+  // ---------- daily Bug-Off ----------
+  bugOffStartHour() {
+    return Math.floor(this.questHash(31) * (24 - BUGOFF_HOURS));
+  }
+
+  // 'before' | 'live' | 'after' relative to today's window (local hour).
+  bugOffPhase() {
+    const hour = new Date().getHours();
+    const start = this.bugOffStartHour();
+    if (hour < start) return 'before';
+    return hour < start + BUGOFF_HOURS ? 'live' : 'after';
+  }
+
+  isBugOffTime() {
+    return this.bugOffPhase() === 'live';
+  }
+
+  // Today's saved progress; anything malformed or from another day is empty.
+  bugOffRecord() {
+    const rec = loadSave().bugoff;
+    const day = this.questDayBucket();
+    const ok = rec && typeof rec === 'object' && !Array.isArray(rec);
+    return {
+      day,
+      count: ok && rec.day === day ? cleanCount(rec.count) : 0,
+      tier: ok && rec.day === day ? Math.min(BUGOFF_TIERS.length, cleanCount(rec.tier)) : 0,
+      best: ok ? cleanCount(rec.best) : 0,
+    };
+  }
+
+  setupBugOff() {
+    // Hidden extras, created once; activated only during the window.
+    for (let i = 0; i < BUGOFF_EXTRA_BUGS; i++) {
+      const sprite = this.add.text(0, 0, this.isNightBugs ? '✨' : '🦋', { fontSize: '14px' }).setOrigin(0.5).setDepth(150000).setVisible(false);
+      this.bugs.push({ sprite, alive: false, extra: true });
+    }
+    this.bugOffActive = false;
+    const { x, y } = BUGOFF_SIGN_POS;
+    if (!this.textures.exists('bugoffSign')) {
+      const g = this.make.graphics({ x: 0, y: 0, add: false });
+      g.fillStyle(0x6b4a30, 1).fillRect(58, 56, 4, 30);
+      g.fillStyle(0xe8d9b5, 1).fillRect(0, 0, 120, 58);
+      g.lineStyle(2, 0x8f7044, 1).strokeRect(1, 1, 118, 56);
+      g.generateTexture('bugoffSign', 120, 88);
+      g.destroy();
+    }
+    this.add.image(x, y - 54, 'bugoffSign').setOrigin(0.5, 0).setDepth(y - 1);
+    this.addObstacleRect({ x: x - 4, y: y + 14, width: 8, height: 12 });
+    this.bugOffSignText = this.add.text(x, y - 27, '', {
+      fontSize: '8px', fontFamily: 'monospace', color: '#3a2a1a', align: 'center', wordWrap: { width: 106 },
+    }).setOrigin(0.5).setDepth(y);
+    this.refreshBugOff();
+    this.time.addEvent({ delay: 30000, loop: true, callback: () => this.refreshBugOff() });
+  }
+
+  refreshBugOff() {
+    const live = this.isBugOffTime();
+    if (live && !this.bugOffActive) {
+      this.bugOffActive = true;
+      this.bugs.filter((b) => b.extra).forEach((b) => this.placeBug(b));
+      this.addChatLine({ system: true, text: '🦋 The Bug-Off is LIVE! Catch 5 / 10 / 15 bugs for Bronze / Silver / Gold.' });
+    } else if (!live && this.bugOffActive) {
+      this.bugOffActive = false;
+      this.bugs.filter((b) => b.extra).forEach((b) => {
+        b.alive = false;
+        if (b.tween) b.tween.stop();
+        b.sprite.setVisible(false);
+      });
+    }
+    this.refreshBugOffSign();
+  }
+
+  refreshBugOffSign() {
+    if (!this.bugOffSignText) return;
+    const start = this.bugOffStartHour();
+    const end = start + BUGOFF_HOURS;
+    const rec = this.bugOffRecord();
+    let status = `next: ${start}:00-${end}:00`;
+    if (this.isBugOffTime()) status = `LIVE now! (${start}:00-${end}:00)`;
+    else if (new Date().getHours() >= end) status = `ended (${start}:00-${end}:00)`;
+    const medal = rec.tier > 0 ? BUGOFF_TIERS[rec.tier - 1].icon : '';
+    this.bugOffSignText.setText(['🦋 BUG-OFF', status, `today: ${rec.count} ${medal}`, `best: ${rec.best}`].join('\n'));
+  }
+
+  // Called for every bug caught; only counts during the Bug-Off window.
+  bugOffCaught() {
+    if (!this.isBugOffTime()) return;
+    const rec = this.bugOffRecord();
+    const count = rec.count + 1;
+    let tier = rec.tier;
+    const best = Math.max(rec.best, count);
+    const earned = [];
+    while (tier < BUGOFF_TIERS.length && count >= BUGOFF_TIERS[tier].need) { earned.push(BUGOFF_TIERS[tier]); tier++; }
+    // Save first, then pay, so a reload can never double-pay a prize.
+    writeSave({ bugoff: { day: rec.day, count, tier, best } });
+    this.showFloatingText(this.localBody.x, this.localBody.y - 54, `🦋 ${count}/${BUGOFF_TIERS[BUGOFF_TIERS.length - 1].need}`);
+    earned.forEach((t) => {
+      this.awardPoint(t.reward, `${t.icon} Bug-Off ${t.name}! +${t.reward} ⭐`, this.localBody.x, this.localBody.y - 70, 'achievement');
+      this.addChatLine({ system: true, text: `${t.icon} Bug-Off ${t.name}! +${t.reward} ⭐` });
+      this.incrementStat('bugOffTiers');
+      if (t.name === 'Gold') this.incrementStat('bugOffGold');
+    });
+    this.refreshBugOffSign();
+  }
+
+  // ---------- fossils + museum ----------
+  // Dig spots work like mining a rock: a fixed location, a cooldown, no
+  // network sync (local only, same as every other activity). What's
+  // different is fossils aren't sold — they're carried in a small bag
+  // (capped at 3) until donated at the Museum, where they join a
+  // permanent per-device collection saved alongside name/species.
+
+  setupFossils() {
+    this.fossilCooldowns = {};
+    const saved = loadSave();
+    this.fossilsHeld = Array.isArray(saved.fossilsHeld) ? saved.fossilsHeld.slice(0, FOSSIL_BAG_CAP) : [];
+    this.museumCollection = new Set(Array.isArray(saved.museumCollection) ? saved.museumCollection : []);
+    this.museumFauna = new Set(Array.isArray(saved.museumFauna) ? saved.museumFauna : []);
+    this.museumFlora = new Set(Array.isArray(saved.museumFlora) ? saved.museumFlora : []);
+    this.updateFossilHUD();
+  }
+
+  saveFossils() {
+    writeSave({
+      fossilsHeld: this.fossilsHeld,
+      museumCollection: [...this.museumCollection],
+      museumFauna: [...this.museumFauna],
+      museumFlora: [...this.museumFlora],
+    });
+  }
+
+  updateFossilHUD() {
+    const bagEl = document.getElementById('fossil-count');
+    if (bagEl) bagEl.textContent = this.fossilsHeld.length;
+    const museumEl = document.getElementById('museum-count');
+    if (museumEl) museumEl.textContent = this.museumCollection.size;
+  }
+
+  findNearestFossilSpot() {
+    const now = Date.now();
+    let best = null;
+    let bestDist = FOSSIL_DIG_RADIUS;
+    FOSSIL_SPOTS.forEach((spot, i) => {
+      if (this.fossilCooldowns[i] && now - this.fossilCooldowns[i] < FOSSIL_RESPAWN_MS) return;
+      const d = Math.hypot(this.localBody.x - spot.x, this.localBody.y - spot.y);
+      if (d < bestDist) { bestDist = d; best = { ...spot, index: i }; }
+    });
+    return best;
+  }
+
+  digFossil(spot) {
+    if (this.fossilsHeld.length >= FOSSIL_BAG_CAP) {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'fossil bag is full');
+      return;
+    }
+    this.fossilCooldowns[spot.index] = Date.now();
+    const mound = this.fossilMounds[spot.index];
+    if (mound) {
+      mound.setVisible(false);
+      this.time.delayedCall(FOSSIL_RESPAWN_MS, () => mound.setVisible(true));
+    }
+    const typeIndex = Phaser.Math.Between(0, FOSSIL_TYPES.length - 1);
+    this.fossilsHeld.push(typeIndex);
+    this.saveFossils();
+    this.updateFossilHUD();
+    this.showFloatingText(spot.x, spot.y - 20, `found ${FOSSIL_TYPES[typeIndex]}`);
+    SFX.catch();
+  }
+
+  isNearMuseum() {
+    const cx = MUSEUM_POS.x + MUSEUM_POS.w / 2;
+    const cy = MUSEUM_POS.y + MUSEUM_POS.h / 2;
+    return Math.hypot(this.localBody.x - cx, this.localBody.y - cy) < MUSEUM_RADIUS;
+  }
+
+  donateFossils() {
+    if (!this.fossilsHeld.length) {
+      // Nothing to hand over — walking up to the building just lets you
+      // browse the collection instead.
+      this.openMuseum();
+      return;
+    }
+    let newSpecies = 0;
+    this.fossilsHeld.forEach((typeIndex) => {
+      if (!this.museumCollection.has(typeIndex)) { this.museumCollection.add(typeIndex); newSpecies++; }
+    });
+    const donated = this.fossilsHeld.length;
+    this.fossilsHeld = [];
+    this.saveFossils();
+    this.updateFossilHUD();
+    if (newSpecies > 0) {
+      this.awardPoint(newSpecies, `donated ${donated} — +${newSpecies} ⭐ new species!`, this.localBody.x, this.localBody.y - 30);
+    } else {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, `donated ${donated} (already had those species)`);
+    }
+    this.checkAchievements();
+  }
+
+  findNearestTree() {
+    const now = Date.now();
+    let best = null;
+    let bestDist = TREE_SHAKE_RADIUS;
+    TREES.forEach(([tx, ty], i) => {
+      if (this.treeCooldowns[i] && now - this.treeCooldowns[i] < TREE_SHAKE_COOLDOWN_MS) return;
+      const d = Math.hypot(this.localBody.x - tx, this.localBody.y - (ty - 10));
+      if (d < bestDist) {
+        bestDist = d;
+        best = { x: tx, y: ty, index: i };
+      }
+    });
+    return best;
+  }
+
+  findNearestRock() {
+    const now = Date.now();
+    let best = null;
+    let bestDist = ROCK_MINE_RADIUS;
+    const consider = (list, prefix) => {
+      list.forEach(([x, y], i) => {
+        const key = `${prefix}${i}`;
+        if (this.rockCooldowns[key] && now - this.rockCooldowns[key] < TREE_SHAKE_COOLDOWN_MS) return;
+        const d = Math.hypot(this.localBody.x - x, this.localBody.y - y);
+        if (d < bestDist) {
+          bestDist = d;
+          best = { x, y, key };
+        }
+      });
+    };
+    consider(ROCKS, 'r');
+    consider(PUNK_ROCKS, 'p');
+    return best;
+  }
+
+  // Prefers a visible fish shadow within casting reach (returned as
+  // { x, y, shadow }); falls back to the old fixed bank spots, which now
+  // summon the nearest fish in that pond to the bobber.
+  findNearestFishingSpot() {
+    const now = performance.now();
+    let bestShadow = null;
+    let bestShadowDist = FISH_SHADOW_REACH;
+    (this.fishShadows || []).forEach((s) => {
+      if (s.state !== 'swim' || now < s.spookedUntil) return;
+      const d = Math.hypot(this.localBody.x - s.x, this.localBody.y - s.y);
+      if (d < bestShadowDist) {
+        bestShadowDist = d;
+        bestShadow = s;
+      }
+    });
+    if (bestShadow) return { x: bestShadow.x, y: bestShadow.y, shadow: bestShadow };
+    let best = null;
+    let bestDist = FISH_INTERACT_RADIUS;
+    FISHING_SPOTS.forEach((s) => {
+      const d = Math.hypot(this.localBody.x - s.x, this.localBody.y - s.y);
+      if (d < bestDist) {
+        bestDist = d;
+        best = s;
+      }
+    });
+    return best;
+  }
+
+  gainResource(type, amount, x, y) {
+    this.resources[type] = (this.resources[type] || 0) + amount;
+    this.updateInventoryHUD();
+    this.saveResources();
+    const icon = { wood: '🪵', stone: '🪨', fish: '🐟', bugs: '🦋', fruit: '🍎', flowers: '🌸', shells: '🐚' }[type];
+    this.showFloatingText(x, y, `+${amount} ${icon}`);
+    this.incrementStat(type, amount);
+    SFX.catch();
+  }
+
+  // ---------- achievements ----------
+
+  setupAchievements() {
+    const saved = loadSave();
+    this.lifetimeStats = {};
+    if (saved.lifetimeStats && typeof saved.lifetimeStats === 'object' && !Array.isArray(saved.lifetimeStats)) {
+      for (const k of Object.keys(saved.lifetimeStats)) this.lifetimeStats[k] = cleanCount(saved.lifetimeStats[k]);
+    }
+    this.achievementsUnlocked = new Set(Array.isArray(saved.achievementsUnlocked) ? saved.achievementsUnlocked.filter((id) => typeof id === 'string') : []);
+    this.equippedTitle = (typeof saved.equippedTitle === 'string' && this.achievementsUnlocked.has(saved.equippedTitle)) ? saved.equippedTitle : null;
+    const mine = this.allPlayers.get(this.selfData.id);
+    if (mine) mine.title = this.equippedTitle;
+    if (this.equippedTitle) this.net.updateTitle(this.equippedTitle);
+    this.renderAchievementsPanel();
+    // Existing saves may already qualify for newer achievements (villager
+    // friendships, wildlife log) — check once create() has finished.
+    this.time.delayedCall(0, () => this.checkAchievements());
+  }
+
+  // Equip (or unequip, passing null) an unlocked achievement as a small
+  // badge shown next to your name in every client's player list.
+  equipTitle(achievementId) {
+    const next = this.equippedTitle === achievementId ? null : achievementId;
+    this.equippedTitle = next;
+    writeSave({ equippedTitle: next });
+    const mine = this.allPlayers.get(this.selfData.id);
+    if (mine) mine.title = next;
+    this.net.updateTitle(next);
+    this.renderAchievementsPanel();
+    this.renderPlayerList();
+  }
+
+  saveAchievements() {
+    writeSave({ lifetimeStats: this.lifetimeStats, achievementsUnlocked: [...this.achievementsUnlocked] });
+  }
+
+  incrementStat(key, amount = 1) {
+    this.lifetimeStats[key] = (this.lifetimeStats[key] || 0) + amount;
+    this.saveAchievements();
+    this.checkAchievements();
+  }
+
+  checkAchievements() {
+    // awardPoint() re-checks achievements, and unlocking one awards stars,
+    // so don't re-enter while a pass is already running.
+    if (this.checkingAchievements) return;
+    this.checkingAchievements = true;
+    try { this.runAchievementChecks(); } finally { this.checkingAchievements = false; }
+  }
+
+  runAchievementChecks() {
+    ACHIEVEMENTS.forEach((a) => {
+      if (this.achievementsUnlocked.has(a.id)) return;
+      if (!a.check(this.lifetimeStats, this)) return;
+      this.achievementsUnlocked.add(a.id);
+      this.saveAchievements();
+      this.addChatLine({ system: true, text: `🏆 Achievement unlocked: ${a.icon} ${a.label} — +${a.reward} ⭐` });
+      this.awardPoint(a.reward, `${a.icon} ${a.label}!`, this.localBody.x, this.localBody.y - 44, 'achievement');
+      // The floating world-space text above fades in under a second — fine
+      // for "you just earned a point" feedback, too quick to actually read
+      // for a whole achievement name. This is a separate, screen-fixed
+      // toast (so it doesn't drift off with camera movement) that stays
+      // up long enough to read, then times out on its own.
+      this.showAchievementToast(`🏆 ${a.icon} ${a.label} unlocked! +${a.reward} ⭐`);
+      this.renderAchievementsPanel();
+    });
+  }
+
+  showAchievementToast(text) {
+    const toast = document.getElementById('achievement-toast');
+    if (!toast) return;
+    toast.textContent = text;
+    toast.classList.remove('hidden');
+    clearTimeout(this.achievementToastTimer);
+    this.achievementToastTimer = setTimeout(() => toast.classList.add('hidden'), 10000);
+  }
+
+  // ---------- daily login streak ----------
+  // Local-only, like everything else that persists on this device: one
+  // bump per calendar day (your own device's clock), broken by skipping
+  // a day, with a small one-time star bonus the first time each day.
+
+  setupSfxToggle() {
+    const btn = document.getElementById('sfx-toggle-btn');
+    const render = () => {
+      btn.textContent = sfxMuted ? '🔇 Sound off' : '🔊 Sound';
+      btn.classList.toggle('muted', sfxMuted);
+    };
+    render();
+    btn.addEventListener('click', () => {
+      setSfxMuted(!sfxMuted);
+      render();
+      if (!sfxMuted) SFX.coin();
+    });
+  }
+
+  setupMusicToggle() {
+    const btn = document.getElementById('music-toggle-btn');
+    if (!btn) return;
+    const render = () => {
+      btn.textContent = musicEnabled ? '🎵 Music on' : '🎵 Music off';
+      btn.classList.toggle('muted', !musicEnabled);
+    };
+    render();
+    if (musicEnabled) startAmbientMusic();
+    btn.addEventListener('click', () => {
+      setMusicEnabled(!musicEnabled);
+      render();
+    });
+  }
+
+  setupReduceMotionToggle() {
+    const btn = document.getElementById('reduce-motion-btn');
+    if (!btn) return;
+    const render = () => {
+      btn.textContent = reduceMotion ? '🏃 Motion off' : '🏃 Motion on';
+      btn.classList.toggle('muted', reduceMotion);
+    };
+    render();
+    btn.addEventListener('click', () => {
+      setReduceMotion(!reduceMotion);
+      render();
+    });
+  }
+
+  setupPhotoMode() {
+    this.input.keyboard.on('keydown-P', () => { if (this.canAct()) this.takePhoto(); });
+    const btn = document.getElementById('photo-btn');
+    if (btn) btn.addEventListener('click', () => this.takePhoto());
+  }
+
+  setupWhatsNew() {
+    const banner = document.getElementById('whats-new-banner');
+    const closeBtn = document.getElementById('whats-new-close-btn');
+    if (!banner || !closeBtn) return;
+    const save = loadSave();
+    const isReturningPlayer = HAD_EXISTING_SAVE_ON_LOAD;
+    const dismiss = () => {
+      banner.classList.add('hidden');
+      writeSave({ lastSeenVersion: GAME_VERSION });
+    };
+    if (isReturningPlayer && save.lastSeenVersion !== GAME_VERSION) {
+      document.getElementById('whats-new-text').textContent = ["🆕 What's new:", ...WHATS_NEW.slice(0, 5)].join('\n');
+      banner.classList.remove('hidden');
+      setTimeout(dismiss, 10000);
+    } else if (!isReturningPlayer) {
+      // Brand-new player has nothing to compare against — nothing to show,
+      // but mark the current version seen so it doesn't pop up next time.
+      writeSave({ lastSeenVersion: GAME_VERSION });
+    }
+    closeBtn.addEventListener('click', dismiss);
+  }
+
+  setupSaveBackup() {
+    const exportBtn = document.getElementById('save-export-btn');
+    const importBtn = document.getElementById('save-import-btn');
+    const importInput = document.getElementById('save-import-input');
+    if (exportBtn) exportBtn.addEventListener('click', () => this.exportSave());
+    if (importBtn && importInput) {
+      importBtn.addEventListener('click', () => importInput.click());
+      importInput.addEventListener('change', () => this.importSave(importInput));
+    }
+  }
+
+  exportSave() {
+    const data = JSON.stringify(loadSave(), null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `pixeltown-save-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'save backed up!');
+  }
+
+  importSave(input) {
+    const file = input.files && input.files[0];
+    input.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result);
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('bad save file');
+        localStorage.setItem(SAVE_KEY, JSON.stringify(parsed));
+        this.addChatLine({ system: true, text: 'Save restored! Reloading…' });
+        this.time.delayedCall(800, () => window.location.reload());
+      } catch (e) {
+        this.addChatLine({ system: true, text: "That doesn't look like a valid Pixeltown save file." });
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  setupTriviaKey() {
+    this.input.keyboard.on('keydown-T', () => { if (this.canAct() && this.isNearNPC()) this.openTrivia(); });
+    const closeBtn = document.getElementById('trivia-close-btn');
+    if (closeBtn) closeBtn.addEventListener('click', () => this.closeTrivia());
+  }
+
+  takePhoto() {
+    // Full-screen flash, independent of the canvas resolution, so it still
+    // reads as a photo "snap" even if the shot itself takes a beat to render.
+    const flash = this.add.rectangle(0, 0, this.scale.width * 4, this.scale.height * 4, 0xffffff, 1)
+      .setScrollFactor(0)
+      .setDepth(999999);
+    this.tweens.add({ targets: flash, alpha: 0, duration: 350, onComplete: () => flash.destroy() });
+    SFX.shutter();
+
+    this.game.renderer.snapshot((image) => {
+      const a = document.createElement('a');
+      a.href = image.src;
+      a.download = `pixeltown-${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    });
+    this.showFloatingText(this.localBody.x, this.localBody.y - 30, '📸 saved!');
+    this.incrementStat('photosTaken');
+  }
+
+  setupLoginStreak() {
+    const saved = loadSave();
+    const today = new Date().toISOString().slice(0, 10);
+    let streak = cleanCount(saved.loginStreak);
+    if (saved.lastLoginDate !== today) {
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      streak = saved.lastLoginDate === yesterday ? streak + 1 : 1;
+      writeSave({ loginStreak: streak, lastLoginDate: today });
+      const bonus = Math.min(streak, 5);
+      this.awardPoint(bonus, `🔥 Day ${streak} streak! +${bonus} ⭐`, this.localBody.x, this.localBody.y - 44);
+    }
+    this.loginStreak = streak;
+    const el = document.getElementById('streak-count');
+    if (el) el.textContent = streak;
+  }
+
+  renderAchievementsPanel() {
+    const countEl = document.getElementById('achievement-count');
+    if (countEl) countEl.textContent = this.achievementsUnlocked.size;
+    const capEl = document.getElementById('achievement-cap');
+    if (capEl) capEl.textContent = ACHIEVEMENTS.length;
+    const listEl = document.getElementById('achievements-list');
+    if (!listEl) return;
+    listEl.innerHTML = '';
+    ACHIEVEMENTS.forEach((a) => {
+      const unlocked = this.achievementsUnlocked.has(a.id);
+      const equipped = this.equippedTitle === a.id;
+      const li = document.createElement('li');
+      li.className = (unlocked ? 'unlocked' : '') + (equipped ? ' equipped' : '');
+      li.innerHTML = `<span class="ach-icon">${unlocked ? a.icon : '🔒'}</span>`
+        + `<span class="ach-text"><b>${a.label}</b><br>${a.desc}</span>`
+        + (unlocked
+          ? `<button type="button" class="ach-equip-btn">${equipped ? 'Equipped' : 'Equip'}</button>`
+          : `<span class="ach-reward">+${a.reward} ⭐</span>`);
+      if (unlocked) {
+        li.querySelector('.ach-equip-btn').addEventListener('click', () => this.equipTitle(a.id));
+      }
+      listEl.appendChild(li);
+    });
+  }
+
+  setupAchievementsUI() {
+    document.getElementById('achievements-badge').addEventListener('click', () => {
+      this.renderAchievementsPanel();
+      document.getElementById('achievements-overlay').classList.remove('hidden');
+      this.achievementsOpen = true;
+    });
+    document.getElementById('achievements-close-btn').addEventListener('click', () => {
+      document.getElementById('achievements-overlay').classList.add('hidden');
+      this.achievementsOpen = false;
+    });
+  }
+
+  setupMuseumUI() {
+    this.museumWing = 'fossils';
+    const overlay = document.getElementById('museum-overlay');
+    document.getElementById('museum-badge').addEventListener('click', () => this.openMuseum());
+    document.getElementById('museum-close-btn').addEventListener('click', () => this.closeMuseum());
+    // Tapping the dimmed backdrop (not the card) closes, like a native sheet.
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) this.closeMuseum(); });
+    overlay.querySelectorAll('.museum-tab').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        this.museumWing = tab.dataset.wing;
+        this.hideMuseumDetail();
+        this.showMuseumWing();
+      });
+    });
+    // One delegated listener for every specimen card, since the grids are
+    // re-rendered on each open.
+    overlay.querySelector('.museum-body').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-ff-id]');
+      if (btn) this.showMuseumDetail(btn.dataset.ffId);
+    });
+    window.addEventListener('keydown', (e) => {
+      if (!this.museumOpen || e.key !== 'Escape') return;
+      if (this.museumDetailOpen) this.hideMuseumDetail();
+      else this.closeMuseum();
+    });
+  }
+
+  openMuseum() {
+    this.renderMuseumPanel();
+    this.hideMuseumDetail();
+    this.showMuseumWing();
+    document.getElementById('museum-overlay').classList.remove('hidden');
+    this.museumOpen = true;
+    // Species facts live in a separate ~50KB registry that most sessions
+    // never need, so it's only fetched the first time the Museum is opened.
+    this.loadSpeciesRegistry();
+  }
+
+  closeMuseum() {
+    document.getElementById('museum-overlay').classList.add('hidden');
+    this.hideMuseumDetail();
+    this.museumOpen = false;
+  }
+
+  loadSpeciesRegistry() {
+    if (!this.speciesRegistryPromise) {
+      this.speciesRegistryPromise = fetch('species-registry.json')
+        .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+        .then((data) => {
+          const byId = new Map();
+          (Array.isArray(data && data.species) ? data.species : []).forEach((s) => { if (s && s.id) byId.set(s.id, s); });
+          return byId;
+        })
+        .catch((err) => {
+          // Forget the failed attempt so the next open retries.
+          this.speciesRegistryPromise = null;
+          throw err;
+        });
+    }
+    return this.speciesRegistryPromise;
+  }
+
+  showMuseumWing() {
+    const overlay = document.getElementById('museum-overlay');
+    overlay.querySelectorAll('.museum-tab').forEach((tab) => {
+      const active = tab.dataset.wing === this.museumWing;
+      tab.classList.toggle('active', active);
+      tab.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    overlay.querySelectorAll('.museum-wing').forEach((wing) => {
+      wing.classList.toggle('hidden', wing.dataset.wing !== this.museumWing);
+    });
+    overlay.querySelector('.museum-card').scrollTop = 0;
+  }
+
+  hideMuseumDetail() {
+    this.museumDetailOpen = false;
+    this.museumDetailId = null;
+    const card = document.querySelector('#museum-overlay .museum-card');
+    if (card) card.classList.remove('museum-detail-open');
+    const detail = document.getElementById('museum-detail');
+    if (detail) { detail.classList.add('hidden'); detail.innerHTML = ''; }
+  }
+
+  showMuseumDetail(id) {
+    const asset = FF_ASSETS.find((a) => a.id === id);
+    if (!asset || !this.ffDiscovered.has(id)) return;
+    const card = document.querySelector('#museum-overlay .museum-card');
+    const detail = document.getElementById('museum-detail');
+    this.museumDetailOpen = true;
+    this.museumDetailId = id;
+    card.classList.add('museum-detail-open');
+    detail.classList.remove('hidden');
+    detail.innerHTML = '<button type="button" class="museum-detail-back">‹ Back</button>'
+      + `<div class="museum-detail-art"><img src="assets/flora-fauna/svg/${encodeURIComponent(id)}.svg" alt=""></div>`
+      + `<h3 class="museum-detail-name">${escapeHtml(asset.name)}</h3>`
+      + '<p class="museum-detail-sci"></p>'
+      + '<dl class="museum-facts"><div class="museum-facts-loading">Loading field notes…</div></dl>';
+    detail.querySelector('.museum-detail-back').addEventListener('click', () => this.hideMuseumDetail());
+    card.scrollTop = 0;
+
+    const pretty = (s) => String(s).replace(/_/g, ' ');
+    const size = (cm) => {
+      const n = Number(cm);
+      if (!Number.isFinite(n)) return '';
+      if (n >= 100) return `${+(n / 100).toFixed(1)} m`;
+      if (n < 1) return `${+(n * 10).toFixed(2)} mm`;
+      return `${n} cm`;
+    };
+    this.loadSpeciesRegistry().then((byId) => {
+      if (this.museumDetailId !== id) return; // user moved on meanwhile
+      const s = byId.get(id);
+      const facts = detail.querySelector('.museum-facts');
+      if (!s) { facts.innerHTML = '<div class="museum-facts-loading">No field notes for this species yet.</div>'; return; }
+      if (s.common_name) detail.querySelector('.museum-detail-name').textContent = s.common_name;
+      detail.querySelector('.museum-detail-sci').textContent = s.scientific_name || '';
+      const rows = [
+        ['Rarity', s.rarity && pretty(s.rarity)],
+        ['Biome', s.biome && pretty(s.biome)],
+        ['Habitat', s.habitat],
+        ['Size', s.size_cm != null && size(s.size_cm)],
+        ['Diet', s.diet],
+        ['Role', s.trophic_role && pretty(s.trophic_role)],
+        ['Behavior', s.behavior],
+        ['Season', s.seasonality],
+      ].filter(([, v]) => v);
+      facts.innerHTML = rows.map(([k, v]) => `<div><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd></div>`).join('');
+      if (s.rarity) detail.querySelector('.museum-detail-art').dataset.rarity = String(s.rarity);
+    }).catch(() => {
+      if (this.museumDetailId !== id) return;
+      detail.querySelector('.museum-facts').innerHTML = '<div class="museum-facts-loading">Couldn\'t load field notes — try again later.</div>';
+    });
+  }
+
+  renderMuseumPanel() {
+    const overlay = document.getElementById('museum-overlay');
+    const progress = {};
+    const setProgress = (wing, have, total) => {
+      progress[wing] = [have, total];
+      const section = overlay.querySelector(`.museum-wing[data-wing="${wing}"]`);
+      const tab = overlay.querySelector(`.museum-tab[data-wing="${wing}"]`);
+      const pct = total ? Math.round((have / total) * 100) : 0;
+      if (section) {
+        section.querySelector('.museum-bar-fill').style.width = `${pct}%`;
+        section.classList.toggle('complete', total > 0 && have >= total);
+      }
+      if (tab) {
+        tab.querySelector('.museum-tab-count').textContent = `${have}/${total}`;
+        tab.classList.toggle('complete', total > 0 && have >= total);
+      }
+    };
+
+    const renderSection = (listId, types, collected) => {
+      const listEl = document.getElementById(listId);
+      if (!listEl) return 0;
+      let have = 0;
+      listEl.innerHTML = types.map((label, i) => {
+        const unlocked = collected.has(i);
+        if (unlocked) have++;
+        const [icon, ...nameParts] = label.split(' ');
+        return `<li class="museum-specimen ${unlocked ? 'unlocked' : 'locked'}">`
+          + `<span class="museum-art museum-art-emoji" aria-hidden="true">${escapeHtml(icon)}</span>`
+          + (unlocked ? '' : '<span class="museum-lock" aria-hidden="true">🔒</span>')
+          + `<span class="museum-name">${unlocked ? escapeHtml(nameParts.join(' ')) : '???'}</span></li>`;
+      }).join('');
+      return have;
+    };
+    setProgress('fossils', renderSection('museum-fossils-list', FOSSIL_TYPES, this.museumCollection), FOSSIL_TYPES.length);
+    setProgress('fauna', renderSection('museum-fauna-list', FAUNA_TYPES, this.museumFauna), FAUNA_TYPES.length);
+    setProgress('flora', renderSection('museum-flora-list', FLORA_TYPES, this.museumFlora), FLORA_TYPES.length);
+
+    // The flora/fauna pack (string ids rather than the small fixed-size
+    // FAUNA_TYPES/FLORA_TYPES arrays above) renders the same way but keyed
+    // by id, with each species' own SVG art — shown as a dark silhouette
+    // until it's been discovered.
+    const discovered = this.ffDiscovered || new Set();
+    const renderIdSection = (listId, items) => {
+      const listEl = document.getElementById(listId);
+      if (!listEl) return 0;
+      let have = 0;
+      listEl.innerHTML = items.map((item) => {
+        const unlocked = discovered.has(item.id);
+        if (unlocked) have++;
+        const img = `<span class="museum-art"><img src="assets/flora-fauna/svg/${encodeURIComponent(item.id)}.svg" alt="" loading="lazy" decoding="async"></span>`;
+        if (!unlocked) {
+          return `<li class="museum-specimen locked">${img}<span class="museum-lock" aria-hidden="true">🔒</span><span class="museum-name">???</span></li>`;
+        }
+        const name = escapeHtml(item.name);
+        return `<li class="museum-specimen unlocked"><button type="button" class="museum-card-btn" data-ff-id="${escapeHtml(item.id).replace(/"/g, '&quot;')}" aria-label="${name.replace(/"/g, '&quot;')} — view details">`
+          + `${img}<span class="museum-name">${name}</span></button></li>`;
+      }).join('');
+      return have;
+    };
+    const wildFauna = FF_ASSETS.filter((a) => a.kind === 'fauna');
+    const wildFlora = FF_ASSETS.filter((a) => a.kind === 'flora');
+    const faunaHave = renderIdSection('museum-wildfauna-list', wildFauna);
+    const floraHave = renderIdSection('museum-wildflora-list', wildFlora);
+    setProgress('wildfauna', faunaHave, wildFauna.length);
+    setProgress('wildflora', floraHave, wildFlora.length);
+    document.getElementById('wild-fauna-count').textContent = faunaHave;
+    document.getElementById('wild-fauna-cap').textContent = wildFauna.length;
+    document.getElementById('wild-flora-count').textContent = floraHave;
+    document.getElementById('wild-flora-cap').textContent = wildFlora.length;
+
+    const totals = Object.values(progress).reduce((acc, [h, t]) => [acc[0] + h, acc[1] + t], [0, 0]);
+    document.getElementById('museum-total-count').textContent = `${totals[0]}/${totals[1]}`;
+    document.getElementById('museum-total-bar').style.width = `${totals[1] ? Math.round((totals[0] / totals[1]) * 100) : 0}%`;
+  }
+
+  setupKeysHelp() {
+    const btn = document.getElementById('keys-help-btn');
+    const overlay = document.getElementById('keys-help-overlay');
+    const closeBtn = document.getElementById('keys-help-close-btn');
+    if (!btn || !overlay || !closeBtn) return;
+    btn.addEventListener('click', () => {
+      overlay.classList.remove('hidden');
+      this.keysHelpOpen = true;
+    });
+    closeBtn.addEventListener('click', () => {
+      overlay.classList.add('hidden');
+      this.keysHelpOpen = false;
+    });
+  }
+
+  setupChangelogViewer() {
+    const btn = document.getElementById('changelog-btn');
+    const overlay = document.getElementById('changelog-overlay');
+    const closeBtn = document.getElementById('changelog-close-btn');
+    const body = document.getElementById('changelog-body');
+    if (!btn || !overlay || !closeBtn || !body) return;
+    let loaded = false;
+    btn.addEventListener('click', async () => {
+      overlay.classList.remove('hidden');
+      this.changelogOpen = true;
+      if (loaded) return;
+      loaded = true;
+      try {
+        const res = await fetch('CHANGELOG.md');
+        body.innerHTML = renderChangelogMarkdown(await res.text());
+      } catch (e) {
+        body.textContent = "Couldn't load the changelog right now.";
+      }
+    });
+    closeBtn.addEventListener('click', () => {
+      overlay.classList.add('hidden');
+      this.changelogOpen = false;
+    });
+  }
+
+  setupFeedbackButton() {
+    const btn = document.getElementById('feedback-btn');
+    if (!btn) return;
+    const title = encodeURIComponent('Pixeltown feedback');
+    const body = encodeURIComponent('What happened / what you\'d like to see:\n\n');
+    btn.href = `https://github.com/bawls-eth/awesome-24px/issues/new?title=${title}&body=${body}`;
+  }
+
+  // Collapses the long run of settings/utility buttons that had piled up
+  // in the player list panel (Keys, Changelog, Feedback, Sound, Music,
+  // Motion, Photo, Backup, Restore) behind one toggle, so the panel's
+  // default footprint stays small — only the player list and the always-
+  // relevant glanceable status (achievements/map/streak/rating) show by
+  // default. Collapsed state is remembered per device.
+  setupSettingsToggle() {
+    const btn = document.getElementById('settings-toggle-btn');
+    const section = document.getElementById('settings-section');
+    if (!btn || !section) return;
+    let open = loadSave().settingsOpen === true;
+    const render = () => {
+      section.classList.toggle('hidden', !open);
+      btn.textContent = open ? '⚙️ Settings ▴' : '⚙️ Settings ▾';
+    };
+    render();
+    btn.addEventListener('click', () => {
+      open = !open;
+      writeSave({ settingsOpen: open });
+      render();
+    });
+  }
+
+  // ---------- town map ----------
+  // A deliberately simple schematic (MAP_LANDMARKS dots + labels on a
+  // plain backdrop), not a literal zoomed-out render of the actual game —
+  // at the small size a map needs to be, real sprites would just be mud.
+  // Shown on demand in an overlay rather than as a permanent on-screen
+  // widget, both to avoid adding to the HUD clutter this is meant to fix
+  // and because the D-pad/chat-bar corners are already spoken for.
+
+  setupMap() {
+    const btn = document.getElementById('map-btn');
+    const overlay = document.getElementById('map-overlay');
+    const closeBtn = document.getElementById('map-close-btn');
+    const canvas = document.getElementById('map-canvas');
+    if (!btn || !overlay || !closeBtn || !canvas) return;
+    const ctx = canvas.getContext('2d');
+    let redrawTimer = null;
+    const open = () => {
+      overlay.classList.remove('hidden');
+      this.mapOpen = true;
+      this.drawMap(ctx, canvas.width, canvas.height);
+      redrawTimer = setInterval(() => this.drawMap(ctx, canvas.width, canvas.height), 400);
+    };
+    const close = () => {
+      overlay.classList.add('hidden');
+      this.mapOpen = false;
+      if (redrawTimer) { clearInterval(redrawTimer); redrawTimer = null; }
+    };
+    btn.addEventListener('click', open);
+    closeBtn.addEventListener('click', close);
+    this.input.keyboard.on('keydown-M', () => { if (this.canAct()) open(); });
+  }
+
+  drawMap(ctx, w, h) {
+    ctx.clearRect(0, 0, w, h);
+    const toScreen = (x, y) => [((x - this.world.originX) / this.world.width) * w, ((y - this.world.originY) / this.world.height) * h];
+
+    // Ocean background, land rect inset by the ocean margin — same shape
+    // as the real world, just schematic.
+    ctx.fillStyle = '#2a5a8a';
+    ctx.fillRect(0, 0, w, h);
+    // The same rounded coastline the world draws (islandCoast), with a
+    // thin sand rim, falling back to the plain land rect.
+    if (this.islandCoast) {
+      ctx.beginPath();
+      this.islandCoast.forEach((p, i) => { const [sx, sy] = toScreen(p.x, p.y); if (i) ctx.lineTo(sx, sy); else ctx.moveTo(sx, sy); });
+      ctx.closePath();
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = '#3f74a3';
+      ctx.stroke();
+      ctx.fillStyle = '#b9a878';
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#b9a878';
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#2f4a33';
+    const [landX, landY] = toScreen(this.world.originX + OCEAN_MARGIN, this.world.originY + OCEAN_MARGIN);
+    const [landX2, landY2] = toScreen(this.world.originX + this.world.width - OCEAN_MARGIN, this.world.originY + this.world.height - OCEAN_MARGIN);
+    const inset = this.islandCoast ? 2 : 0;
+    if (ctx.roundRect && inset) {
+      ctx.beginPath();
+      ctx.roundRect(landX + inset, landY + inset, landX2 - landX - inset * 2, landY2 - landY - inset * 2, 8);
+      ctx.fill();
+    } else {
+      ctx.fillRect(landX, landY, landX2 - landX, landY2 - landY);
+    }
+
+    ctx.fillStyle = '#3a86c8';
+    [MAIN_POND, EAST_POND].forEach(({ cx, cy, rx, ry }) => {
+      const [sx, sy] = toScreen(cx, cy);
+      // Sizes scale by the map's ratio only — running them through
+      // toScreen() (which also adds the world-origin offset) drew the
+      // ponds as huge blobs covering most of the village.
+      const swx = (rx * 2 * w) / this.world.width;
+      const swy = (ry * 2 * h) / this.world.height;
+      ctx.beginPath();
+      ctx.ellipse(sx, sy, Math.max(swx / 2, 2), Math.max(swy / 2, 2), 0, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    MAP_LANDMARKS.forEach(({ x, y, label }) => {
+      const [sx, sy] = toScreen(x, y);
+      ctx.fillStyle = '#d8cfa8';
+      ctx.beginPath();
+      ctx.arc(sx, sy, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(238,242,247,0.8)';
+      ctx.font = '8px monospace';
+      ctx.textAlign = sx > w - 40 ? 'right' : 'left';
+      ctx.fillText(label, sx + (sx > w - 40 ? -4 : 4), sy + 3);
+    });
+
+    this.remotePlayers.forEach((rp) => {
+      const [sx, sy] = toScreen(rp.x, rp.y);
+      ctx.fillStyle = '#6fbf73';
+      ctx.beginPath();
+      ctx.arc(sx, sy, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    const [lx, ly] = toScreen(this.localBody.x, this.localBody.y);
+    ctx.fillStyle = '#ffe066';
+    ctx.strokeStyle = '#1c2430';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(lx, ly, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  updateInventoryHUD() {
+    const woodEl = document.getElementById('wood-count');
+    const stoneEl = document.getElementById('stone-count');
+    const fishEl = document.getElementById('fish-count');
+    if (woodEl) woodEl.textContent = this.resources.wood || 0;
+    if (stoneEl) stoneEl.textContent = this.resources.stone || 0;
+    if (fishEl) fishEl.textContent = this.resources.fish || 0;
+    const bugEl = document.getElementById('bug-count');
+    if (bugEl) bugEl.textContent = this.resources.bugs || 0;
+    const turnipEl = document.getElementById('turnip-count');
+    if (turnipEl) turnipEl.textContent = this.resources.turnips || 0;
+    const shellEl = document.getElementById('shell-count');
+    if (shellEl) shellEl.textContent = this.resources.shells || 0;
+    const fruitEl = document.getElementById('fruit-count');
+    if (fruitEl) fruitEl.textContent = this.resources.fruit || 0;
+    const flowerEl = document.getElementById('flower-count');
+    if (flowerEl) flowerEl.textContent = this.resources.flowers || 0;
+    // Crafted goods: one chip showing the total, hidden until you own any.
+    const craftedEl = document.getElementById('crafted-count');
+    if (craftedEl && this.craftedGoods) {
+      const total = Object.values(this.craftedGoods).reduce((a, b) => a + b, 0);
+      craftedEl.textContent = total;
+      craftedEl.parentElement.classList.toggle('hidden', total === 0);
+    }
+  }
+
+  // ---------- fishing ----------
+  // Fish shadows are client-local cosmetics (Math.random is fine — the
+  // catch itself is local-only, like bugs). All fishing timing is
+  // wall-clock (performance.now()) checked every frame in
+  // updateFishingRod(), not long delayedCalls: Phaser's clock advances by
+  // a capped per-frame delta, so at low FPS a 3s delayedCall could take
+  // many real seconds and bites felt broken.
+
+  setupFishShadows() {
+    this.fishShadows = [];
+    this.fishTargetShadow = null;
+    this.fishShadowLastAt = performance.now();
+    FISH_SHADOW_ZONES.forEach((zone) => {
+      for (let i = 0; i < zone.count; i++) {
+        const size = Math.random();
+        const p = this.randomFishPoint(zone);
+        const sprite = this.add.ellipse(p.x, p.y, 12 + size * 10, 5 + size * 4, 0x0f2236, FISH_SHADOW_ALPHA).setDepth(-1);
+        const s = {
+          zone, sprite, size, x: p.x, y: p.y, tx: p.x, ty: p.y,
+          baseSpeed: 14 + Math.random() * 12, speed: 0,
+          state: 'swim', pauseUntil: 0, spookedUntil: 0, fleeUntil: 0, respawnAt: 0,
+          phase: Math.random() * Math.PI * 2, heading: 0,
+        };
+        this.pickFishTarget(s);
+        this.fishShadows.push(s);
+      }
+    });
+  }
+
+  randomFishPoint(zone) {
+    const { cx, cy, rx, ry } = zone.pond;
+    for (let i = 0; i < 24; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = Math.sqrt(Math.random());
+      const x = cx + Math.cos(a) * r * rx * 0.82;
+      const y = cy + Math.sin(a) * r * ry * 0.82;
+      if (zone.yMax !== undefined && y > zone.yMax) continue;
+      if (zone.yMin !== undefined && y < zone.yMin) continue;
+      return { x, y };
+    }
+    if (zone.yMax !== undefined) return { x: cx, y: zone.yMax - 14 };
+    if (zone.yMin !== undefined) return { x: cx, y: zone.yMin + 14 };
+    return { x: cx, y: cy };
+  }
+
+  pickFishTarget(s) {
+    const p = this.randomFishPoint(s.zone);
+    s.tx = p.x;
+    s.ty = p.y;
+  }
+
+  // Keeps a point inside a pond's ellipse (scaled by k) so a bobber or a
+  // hooked fish never ends up on the grass.
+  clampToPond(pond, x, y, k = 0.88) {
+    const nx = (x - pond.cx) / (pond.rx * k);
+    const ny = (y - pond.cy) / (pond.ry * k);
+    const d = Math.hypot(nx, ny);
+    if (d <= 1) return { x, y };
+    return { x: pond.cx + (nx / d) * pond.rx * k, y: pond.cy + (ny / d) * pond.ry * k };
+  }
+
+  nearestPond(x, y) {
+    const d = (p) => Math.hypot((x - p.cx) / p.rx, (y - p.cy) / p.ry);
+    return d(MAIN_POND) <= d(EAST_POND) ? MAIN_POND : EAST_POND;
+  }
+
+  spookFishShadow(s, now) {
+    s.state = 'swim';
+    s.fleeUntil = now + 1200;
+    s.spookedUntil = now + 3000;
+    s.pauseUntil = 0;
+    s.sprite.setFillStyle(0x0f2236, FISH_SHADOW_ALPHA).setScale(1);
+    this.pickFishTarget(s);
+  }
+
+  updateFishShadows(now) {
+    if (!this.fishShadows) return;
+    const dt = Math.min(now - this.fishShadowLastAt, 1000) / 1000;
+    this.fishShadowLastAt = now;
+    this.fishShadows.forEach((s) => {
+      if (s.state === 'gone') {
+        if (now < s.respawnAt) return;
+        const p = this.randomFishPoint(s.zone);
+        s.x = p.x;
+        s.y = p.y;
+        s.state = 'swim';
+        this.pickFishTarget(s);
+        s.sprite.setPosition(s.x, s.y).setFillStyle(0x0f2236, FISH_SHADOW_ALPHA).setScale(1).setVisible(true).setAlpha(0);
+        this.tweens.add({ targets: s.sprite, alpha: 1, duration: 800 });
+        return;
+      }
+      let moving = false;
+      if (s.state === 'biting') {
+        // Thrashing on the line.
+        s.sprite.setRotation(s.heading + Math.sin(now / 45) * 0.35);
+        return;
+      }
+      if (s.state === 'hooked' || now >= s.pauseUntil) {
+        const dx = s.tx - s.x;
+        const dy = s.ty - s.y;
+        const dist = Math.hypot(dx, dy);
+        const speed = s.state === 'hooked' ? s.speed : (now < s.fleeUntil ? 80 : s.baseSpeed);
+        const step = Math.min(dist, speed * dt);
+        if (dist > 0.5) {
+          s.x += (dx / dist) * step;
+          s.y += (dy / dist) * step;
+          s.heading = Math.atan2(dy, dx);
+          moving = true;
+        } else if (s.state === 'swim') {
+          this.pickFishTarget(s);
+          if (Math.random() < 0.45) s.pauseUntil = now + 600 + Math.random() * 2000;
+        }
+      }
+      const wiggle = Math.sin(now / (moving ? 120 : 400) + s.phase) * (moving ? 0.12 : 0.05);
+      s.sprite.setPosition(s.x, s.y).setRotation(s.heading + wiggle);
+    });
+  }
+
+  startFishing(spot) {
+    const now = performance.now();
+    let shadow = spot.shadow || null;
+    const pond = shadow ? shadow.zone.pond : this.nearestPond(spot.x, spot.y);
+    let bx = spot.x;
+    let by = spot.y;
+    if (shadow) {
+      // Land the bobber just ahead of the fish so it visibly swims up to it.
+      const ahead = this.clampToPond(pond, shadow.x + Math.cos(shadow.heading) * 12, shadow.y + Math.sin(shadow.heading) * 12);
+      bx = ahead.x;
+      by = ahead.y;
+    } else {
+      // Fixed bank spot: keep the bobber in the water (one of the old
+      // spots sat just past the main pond's south edge, on the grass)
+      // and call over the nearest free fish in that pond.
+      const p = this.clampToPond(pond, bx, by);
+      bx = p.x;
+      by = p.y;
+      let bestD = Infinity;
+      (this.fishShadows || []).forEach((s) => {
+        if (s.state !== 'swim' || s.zone.pond !== pond) return;
+        const d = Math.hypot(s.x - bx, s.y - by);
+        if (d < bestD) { bestD = d; shadow = s; }
+      });
+    }
+
+    this.fishing.state = 'casting';
+    this.fishing.spot = { x: bx, y: by, shadow };
+    // Depth -1 (same as the pond/ground layer) used to mean the bobber
+    // could render underneath anything with a normal y-based depth —
+    // players, decor, ripples added after it — which on a zoomed-out
+    // mobile camera made the bite's color change easy to miss entirely.
+    // A fixed high depth keeps it on top of the world consistently.
+    this.fishing.bobber = this.add.circle(bx, by, 4, 0xffffff).setStrokeStyle(1, 0x1c2430, 1).setDepth(99999);
+    this.fishing.rod = this.add.graphics().setDepth(100000);
+    const waitMs = FISH_BITE_WAIT_MIN + Math.random() * (FISH_BITE_WAIT_MAX - FISH_BITE_WAIT_MIN);
+    this.fishing.biteAt = now + waitMs;
+    // One fake-out nibble partway through on longer waits: a small
+    // twitch with no sound, so reacting to *any* movement is "too early".
+    this.fishing.nibbleAt = waitMs > 2400 ? now + waitMs * (0.4 + Math.random() * 0.25) : 0;
+    this.fishing.biteEndAt = 0;
+    this.fishing.biteFrames = 0;
+    if (shadow) {
+      shadow.state = 'hooked';
+      const dx = bx - shadow.x;
+      const dy = by - shadow.y;
+      const d = Math.hypot(dx, dy) || 1;
+      // Stop with its nose at the bobber, arriving around 70% of the wait.
+      shadow.tx = bx - (dx / d) * 7;
+      shadow.ty = by - (dy / d) * 7;
+      shadow.speed = Math.max(16, d / ((waitMs * 0.7) / 1000));
+      shadow.sprite.setFillStyle(0x0f2236, 0.6);
+    }
+    this.splashRing(bx, by, 10, 0.6);
+  }
+
+  splashRing(x, y, toR, alpha) {
+    const ring = this.add.circle(x, y, 3, 0xffffff, 0).setStrokeStyle(2, 0xffffff, alpha).setDepth(99998);
+    const state = { r: 3, a: alpha };
+    this.tweens.add({
+      targets: state,
+      r: toR,
+      a: 0,
+      duration: 500,
+      ease: 'Sine.easeOut',
+      onUpdate: () => { ring.setRadius(state.r); ring.setStrokeStyle(2, 0xffffff, state.a); },
+      onComplete: () => ring.destroy(),
+    });
+  }
+
+  // Runs every frame from update(): moves the fish shadows, drives the
+  // cast -> nibble -> bite -> miss timeline off the wall clock, and
+  // draws the line.
+  updateFishingRod() {
+    const now = performance.now();
+    this.updateFishShadows(now);
+    const f = this.fishing;
+    if (!f) return;
+    if (f.state === 'casting') {
+      if (f.nibbleAt && now >= f.nibbleAt) {
+        f.nibbleAt = 0;
+        if (f.bobber) this.tweens.add({ targets: f.bobber, y: f.spot.y + 2, duration: 90, yoyo: true });
+      }
+      if (now >= f.biteAt) this.fishBite(now);
+    } else if (f.state === 'biting') {
+      f.biteFrames += 1;
+      // The reaction window starts when the bite is actually detected
+      // (and so drawn), and needs a few rendered frames, so one long
+      // frame hitch can't eat the whole window.
+      if (now > f.biteEndAt && f.biteFrames >= 3) this.fishMiss();
+    }
+    if (!f.rod) return;
+    const rod = f.rod;
+    rod.clear();
+    const tipX = this.localVisual.flipX ? this.localBody.x - 8 : this.localBody.x + 8;
+    const tipY = this.localBody.y - 14;
+    rod.lineStyle(2, 0x6b4226, 1);
+    rod.lineBetween(tipX, tipY, f.bobber ? f.bobber.x : f.spot.x, (f.bobber ? f.bobber.y : f.spot.y) - 2);
+  }
+
+  fishBite(now) {
+    if (this.fishing.state !== 'casting') return;
+    this.fishing.state = 'biting';
+    this.fishing.biteEndAt = now + FISH_BITE_WINDOW;
+    this.fishing.biteFrames = 0;
+    const { x, y, shadow } = this.fishing.spot;
+    if (shadow && shadow.state === 'hooked') {
+      shadow.state = 'biting';
+      shadow.x = shadow.tx;
+      shadow.y = shadow.ty;
+      shadow.sprite.setPosition(shadow.x, shadow.y).setFillStyle(0x0f2236, 0.8).setScale(1.25);
+    }
+    if (this.fishing.bobber) {
+      const bobber = this.fishing.bobber;
+      this.tweens.killTweensOf(bobber);
+      bobber.setFillStyle(0xff4444);
+      // Pulled under a little and pulsing for the whole window — a color
+      // change alone on a 4px circle is easy to miss zoomed out on mobile.
+      bobber.setPosition(x, y + 3);
+      bobber.setScale(1);
+      this.tweens.add({
+        targets: bobber,
+        scale: 2.2,
+        duration: 160,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+    }
+    this.splashRing(x, y, 22, 0.9);
+    // A big "!" that stays up for the whole reaction window (the shared
+    // floating text is small and fades out in under a second).
+    this.fishing.alert = this.add.text(x, y - 26, '❗', {
+      fontSize: '24px',
+      fontFamily: 'monospace',
+      stroke: '#1c2430',
+      strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(100003);
+    this.tweens.add({ targets: this.fishing.alert, y: y - 32, duration: 140, yoyo: true, repeat: -1 });
+    SFX.pop();
+    try { if (navigator.vibrate) navigator.vibrate([60, 40, 60]); } catch (e) { /* unsupported */ }
+  }
+
+  fishMiss() {
+    if (this.fishing.state !== 'biting') return;
+    this.showFloatingText(this.fishing.spot.x, this.fishing.spot.y - 24, 'got away…');
+    this.endFishing();
+  }
+
+  handleFishingInteract() {
+    if (this.fishing.state === 'casting') {
+      this.showFloatingText(this.fishing.spot.x, this.fishing.spot.y - 24, 'too early!');
+      this.endFishing();
+    } else if (this.fishing.state === 'biting') {
+      const spot = this.fishing.spot;
+      if (spot.shadow) {
+        // Caught: that fish leaves the pond, a new one shows up later.
+        const s = spot.shadow;
+        s.state = 'gone';
+        s.respawnAt = performance.now() + FISH_SHADOW_RESPAWN_MIN + Math.random() * (FISH_SHADOW_RESPAWN_MAX - FISH_SHADOW_RESPAWN_MIN);
+        s.sprite.setVisible(false);
+      }
+      this.splashRing(spot.x, spot.y, 18, 0.8);
+      this.gainResource('fish', 1, spot.x, spot.y - 24);
+      const logged = this.recordFishCatch(spot);
+      // One size per fish: the journal's roll is also the tournament entry.
+      if (this.isFishTournamentTime()) this.catchTournamentFish(spot, logged.sizeCm);
+      this.endFishing();
+    }
+  }
+
+  // ---------- angler's journal ----------
+  setupJournal() {
+    this.fishlog = this.loadFishLog();
+    document.getElementById('journal-btn').addEventListener('click', () => { if (this.canAct()) this.openJournal(); });
+    document.getElementById('journal-close-btn').addEventListener('click', () => this.closeJournal());
+    const overlay = document.getElementById('journal-overlay');
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) this.closeJournal(); });
+    this.input.keyboard.on('keydown-L', () => { if (this.journalOpen) this.closeJournal(); else if (this.canAct()) this.openJournal(); });
+    this.refreshJournalButton();
+  }
+
+  // Sanitised: known species ids, finite non-negative integer counts/records.
+  loadFishLog() {
+    const rec = loadSave().fishlog;
+    const ok = rec && typeof rec === 'object' && !Array.isArray(rec);
+    const caught = {};
+    if (ok && rec.caught && typeof rec.caught === 'object' && !Array.isArray(rec.caught)) {
+      FISH_SPECIES.forEach((f) => {
+        const c = rec.caught[f.id];
+        if (c && typeof c === 'object' && cleanCount(c.n) > 0) caught[f.id] = { n: cleanCount(c.n), best: Math.min(cleanCount(c.best), 200) };
+      });
+    }
+    const claimed = ok && Array.isArray(rec.claimed) ? rec.claimed.filter((id) => FISH_MILESTONES.some((m) => m.id === id)) : [];
+    return { caught, claimed: [...new Set(claimed)], lastDay: ok ? cleanCount(rec.lastDay) : 0 };
+  }
+
+  saveFishLog() {
+    writeSave({ fishlog: { caught: this.fishlog.caught, claimed: this.fishlog.claimed, lastDay: this.fishlog.lastDay } });
+  }
+
+  fishSpeciesCount() {
+    return Object.keys(this.fishlog.caught).length;
+  }
+
+  // Which species can bite here and now. `rng` is injectable for tests.
+  rollFishSpecies(pond, hour, season, size, rng = Math.random) {
+    const night = hour >= 19 || hour < 6;
+    const pool = FISH_SPECIES.filter((f) => (!f.pond || f.pond === pond) && (!f.time || (f.time === 'night') === night) && (!f.seasons || f.seasons.includes(season)));
+    const base = [0, 10, 5, 2, 1];
+    // Bigger shadows lean toward rarer fish.
+    const weights = pool.map((f) => base[f.rarity] * (f.rarity >= 3 ? 0.5 + size * 1.5 : 1));
+    let r = rng() * weights.reduce((a, b) => a + b, 0);
+    for (let i = 0; i < pool.length; i++) { r -= weights[i]; if (r <= 0) return pool[i]; }
+    return pool[pool.length - 1];
+  }
+
+  fishPondFor(spot) {
+    const dm = Math.hypot(spot.x - MAIN_POND.cx, spot.y - MAIN_POND.cy);
+    const de = Math.hypot(spot.x - EAST_POND.cx, spot.y - EAST_POND.cy);
+    return dm <= de ? 'main' : 'east';
+  }
+
+  recordFishCatch(spot) {
+    const size = spot.shadow ? spot.shadow.size : Math.random();
+    const species = this.rollFishSpecies(this.fishPondFor(spot), new Date().getHours(), this.currentSeason(), size);
+    const sizeCm = Math.round(8 + (0.55 * size + 0.45 * Math.random()) * 72);
+    const entry = this.fishlog.caught[species.id] || { n: 0, best: 0 };
+    const isNew = entry.n === 0;
+    entry.n += 1;
+    entry.best = Math.max(entry.best, sizeCm);
+    this.fishlog.caught[species.id] = entry;
+    this.fishlog.lastDay = this.questDayBucket();
+    // Save first, then pay, so a reload can never double-pay the first-catch bonus.
+    this.saveFishLog();
+    this.showFloatingText(spot.x, spot.y - 44, `${species.icon} ${species.name} ${sizeCm}cm${isNew ? ' — NEW!' : ''}`);
+    if (isNew) {
+      this.awardPoint(FISH_FIRST_CATCH_BONUS, `📖 new fish logged! +${FISH_FIRST_CATCH_BONUS} ⭐`, spot.x, spot.y - 60, 'sell');
+      this.lifetimeStats.fishSpecies = this.fishSpeciesCount();
+      this.saveAchievements();
+      this.checkAchievements();
+    }
+    if (sizeCm >= FISH_LUNKER_CM) this.incrementStat('fishLunker');
+    this.refreshJournalButton();
+    if (this.journalOpen) this.renderJournal();
+    this.refreshDailies(); // the 'Catch a fish' chore may have completed the day
+    return { species, sizeCm, isNew };
+  }
+
+  refreshJournalButton() {
+    const btn = document.getElementById('journal-btn');
+    const label = `🐟 Journal ${this.fishSpeciesCount()}/${FISH_SPECIES.length}`;
+    if (btn && btn.textContent !== label) btn.textContent = label;
+  }
+
+  openJournal() {
+    this.journalOpen = true;
+    document.getElementById('journal-overlay').classList.remove('hidden');
+    this.renderJournal();
+  }
+
+  closeJournal() {
+    this.journalOpen = false;
+    document.getElementById('journal-overlay').classList.add('hidden');
+  }
+
+  claimFishMilestone(id) {
+    const m = FISH_MILESTONES.find((x) => x.id === id);
+    if (!m || this.fishlog.claimed.includes(id) || this.fishSpeciesCount() < m.need) return false;
+    this.fishlog.claimed.push(id);
+    this.saveFishLog(); // before paying
+    this.awardPoint(m.reward, `📖 ${m.need} species logged! +${m.reward} ⭐`, this.localBody.x, this.localBody.y - 40, 'achievement');
+    this.renderJournal();
+    return true;
+  }
+
+  fishHint(f) {
+    const bits = [];
+    if (f.pond) bits.push(f.pond === 'main' ? 'west pond' : 'east pond');
+    if (f.time) bits.push(f.time === 'night' ? 'at night' : 'by day');
+    if (f.seasons) bits.push(f.seasons.join('/'));
+    return bits.length ? bits.join(', ') : 'anywhere';
+  }
+
+  renderJournal() {
+    const count = this.fishSpeciesCount();
+    document.getElementById('journal-progress').textContent = `${count}/${FISH_SPECIES.length} species logged`;
+    const bar = document.getElementById('journal-bar-fill');
+    bar.style.width = `${Math.round((count / FISH_SPECIES.length) * 100)}%`;
+    const grid = document.getElementById('journal-grid');
+    grid.innerHTML = '';
+    FISH_SPECIES.forEach((f) => {
+      const c = this.fishlog.caught[f.id];
+      const card = document.createElement('li');
+      card.className = c ? 'fish-card found' : 'fish-card locked';
+      card.dataset.fish = f.id;
+      const icon = document.createElement('div');
+      icon.className = 'fish-icon';
+      icon.textContent = f.icon;
+      const name = document.createElement('div');
+      name.className = 'fish-name';
+      name.textContent = c ? f.name : '???';
+      const sub = document.createElement('small');
+      sub.textContent = c ? `x${c.n} · best ${c.best}cm` : this.fishHint(f);
+      card.append(icon, name, sub);
+      grid.appendChild(card);
+    });
+    const ms = document.getElementById('journal-milestones');
+    ms.innerHTML = '';
+    FISH_MILESTONES.forEach((m) => {
+      const row = document.createElement('div');
+      row.className = 'fish-milestone';
+      const done = this.fishlog.claimed.includes(m.id);
+      const label = document.createElement('span');
+      label.textContent = `${m.need} species → ${m.reward} ⭐`;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'fish-claim-btn';
+      btn.dataset.milestone = m.id;
+      btn.textContent = done ? 'Claimed' : 'Claim';
+      btn.disabled = done || count < m.need;
+      btn.addEventListener('click', () => this.claimFishMilestone(m.id));
+      row.append(label, btn);
+      ms.appendChild(row);
+    });
+  }
+
+  // ---------- daily fishing tournament ----------
+
+  tournamentStartHour() {
+    return Math.floor(this.questHash(30) * (24 - FISH_TOURNAMENT_HOURS));
+  }
+
+  isFishTournamentTime() {
+    const hour = new Date().getHours();
+    const start = this.tournamentStartHour();
+    return hour >= start && hour < start + FISH_TOURNAMENT_HOURS;
+  }
+
+  setupFishTournament() {
+    this.tournamentBonusBucket = Number(loadSave().tournamentBonusBucket) || -1;
+    const { x, y } = FISH_TOURNAMENT_SIGN_POS;
+    const g = this.add.graphics().setDepth(y - 1);
+    g.fillStyle(0x6b4a30, 1).fillRect(x - 2, y - 4, 4, 30);
+    g.fillStyle(0xe8d9b5, 1).fillRect(x - 60, y - 54, 120, 52);
+    g.lineStyle(2, 0x8f7044, 1).strokeRect(x - 60, y - 54, 120, 52);
+    this.tournamentSignText = this.add.text(x, y - 28, '', {
+      fontSize: '8px',
+      fontFamily: 'monospace',
+      color: '#3a2a1a',
+      align: 'center',
+      wordWrap: { width: 106 },
+    }).setOrigin(0.5).setDepth(y);
+    this.refreshTournamentSign();
+    this.watchTournamentDay();
+    this.time.addEvent({ delay: 60000, loop: true, callback: () => { this.watchTournamentDay(); this.refreshTournamentSign(); } });
+  }
+
+  // The record lives under a per-day key; a session left open past the
+  // day rollover used to keep showing (and comparing against) yesterday's
+  // record while catches were submitted to today's key.
+  watchTournamentDay() {
+    const day = this.questDayBucket();
+    if (this.tournamentDayKey === day) return;
+    if (this.tournamentDayKey !== undefined && this.net.tournamentRef) {
+      this.net.tournamentRef.child(String(this.tournamentDayKey)).off('value');
+    }
+    this.tournamentDayKey = day;
+    this.tournamentRecord = null;
+    this.net.watchTournament(day, (record) => {
+      if (this.tournamentDayKey !== day) return;
+      this.tournamentRecord = record;
+      this.refreshTournamentSign();
+    });
+  }
+
+  refreshTournamentSign() {
+    if (!this.tournamentSignText) return;
+    const start = this.tournamentStartHour();
+    const end = start + FISH_TOURNAMENT_HOURS;
+    const record = this.tournamentRecord;
+    const recordLine = record ? `biggest: ${record.size}cm\nby ${record.name}` : 'no catches yet';
+    let statusLine = `next: ${start}:00-${end}:00`;
+    if (this.isFishTournamentTime()) statusLine = `LIVE now! (${start}:00-${end}:00)`;
+    else if (new Date().getHours() >= end) statusLine = `ended (${start}:00-${end}:00)`;
+    this.tournamentSignText.setText(['🎣 FISH TOURNEY', statusLine, recordLine].join('\n'));
+  }
+
+  catchTournamentFish(spot, givenSizeCm) {
+    // Bigger shadows tend to be bigger fish, so picking which fish to
+    // cast at matters during the tournament. Still 8-80cm overall.
+    const bias = spot && spot.shadow ? spot.shadow.size : Math.random();
+    const sizeCm = Number.isFinite(givenSizeCm) ? givenSizeCm : Math.round(8 + (0.55 * bias + 0.45 * Math.random()) * 72);
+    // The journal's catch text already shows the length when it was passed in.
+    if (!Number.isFinite(givenSizeCm)) this.showFloatingText(spot.x, spot.y - 40, `${sizeCm}cm!`);
+    this.net.submitTournamentCatch(this.questDayBucket(), sizeCm).then((result) => {
+      if (result.success) {
+        this.tournamentRecord = result.record;
+        this.refreshTournamentSign();
+        if (this.questDayBucket() !== this.tournamentBonusBucket) {
+          this.tournamentBonusBucket = this.questDayBucket();
+          writeSave({ tournamentBonusBucket: this.tournamentBonusBucket });
+          this.awardPoint(FISH_TOURNAMENT_BONUS, `new record! +${FISH_TOURNAMENT_BONUS}⭐`, this.localBody.x, this.localBody.y - 30, 'achievement');
+          this.incrementStat('tournamentRecordsSet');
+        }
+      }
+    });
+  }
+
+  endFishing() {
+    if (this.fishing.timer) this.fishing.timer.remove(false);
+    if (this.fishing.bobber) {
+      this.tweens.killTweensOf(this.fishing.bobber);
+      this.fishing.bobber.destroy();
+    }
+    if (this.fishing.rod) this.fishing.rod.destroy();
+    if (this.fishing.alert) {
+      this.tweens.killTweensOf(this.fishing.alert);
+      this.fishing.alert.destroy();
+      this.fishing.alert = null;
+    }
+    // Any fish still on the line (too early, got away, walked off)
+    // darts off and is skittish for a few seconds.
+    const shadow = this.fishing.spot && this.fishing.spot.shadow;
+    if (shadow && (shadow.state === 'hooked' || shadow.state === 'biting')) this.spookFishShadow(shadow, performance.now());
+    this.fishing.biteAt = 0;
+    this.fishing.nibbleAt = 0;
+    this.fishing.biteEndAt = 0;
+    this.fishing.state = 'idle';
+    this.fishing.spot = null;
+    this.fishing.bobber = null;
+    this.fishing.rod = null;
+    this.fishing.timer = null;
+  }
+
+  // ---------- building ----------
+  // A lightweight, Minecraft-flavored sandbox layer: spend wood to place a
+  // grid-snapped block in front of you; it's a real obstacle for everyone,
+  // synced through Firebase, and you can remove your own blocks for a refund.
+
+  setupBuilding() {
+    this.blocks = new Map();
+    this.buildMode = false;
+    this.buildType = 'wood';
+    this.updateTownRating();
+    this.buildPreview = this.add.rectangle(0, 0, GRID_SIZE - 2, GRID_SIZE - 2, 0xffffff, 0)
+      .setStrokeStyle(2, 0xffe066)
+      .setDepth(400000)
+      .setVisible(false);
+
+    this.input.keyboard.on('keydown-B', () => { if (this.canAct()) this.toggleBuildMode(); });
+    this.input.keyboard.on('keydown-F', () => { if (this.buildMode && this.canAct()) this.cycleBuildType(); });
+    this.input.keyboard.on('keydown-Z', () => { if (this.buildMode && this.canAct()) this.undoLastBlock(); });
+    const btn = document.getElementById('build-toggle-btn');
+    if (btn) btn.addEventListener('click', () => { if (this.canAct()) this.toggleBuildMode(); });
+    const matBtn = document.getElementById('build-material-btn');
+    if (matBtn) matBtn.addEventListener('click', () => { if (this.buildMode && this.canAct()) this.cycleBuildType(); });
+    const undoBtn = document.getElementById('build-undo-btn');
+    if (undoBtn) undoBtn.addEventListener('click', () => { if (this.buildMode && this.canAct()) this.undoLastBlock(); });
+  }
+
+  toggleBuildMode() {
+    this.buildMode = !this.buildMode;
+    const btn = document.getElementById('build-toggle-btn');
+    if (btn) btn.classList.toggle('enabled', this.buildMode);
+    this.buildPreview.setVisible(this.buildMode);
+    document.getElementById('build-mode-banner').classList.toggle('hidden', !this.buildMode);
+    document.getElementById('build-material-btn').classList.toggle('hidden', !this.buildMode);
+    document.getElementById('build-undo-btn').classList.toggle('hidden', !this.buildMode);
+    if (!this.buildMode) this.lastPlacedBlockKey = null;
+    this.updateBuildBanner();
+  }
+
+  cycleBuildType() {
+    const keys = Object.keys(BLOCK_TYPES);
+    this.buildType = keys[(keys.indexOf(this.buildType) + 1) % keys.length];
+    this.updateBuildBanner();
+    SFX.pop();
+  }
+
+  updateBuildBanner() {
+    const def = BLOCK_TYPES[this.buildType];
+    const icon = { wood: '🪵', stone: '🪨', flowers: '🌸' }[def.resource] || '';
+    const banner = document.getElementById('build-mode-banner');
+    if (banner) {
+      banner.textContent = IS_TOUCH
+        ? `🧱 BUILD MODE — ✋ to place/remove ${def.label} (${def.cost}${icon})`
+        : `🧱 BUILD MODE — ✋ / E to place or remove ${def.label} (${def.cost}${icon}) · F to switch material`;
+    }
+    const matBtn = document.getElementById('build-material-btn');
+    if (matBtn) matBtn.textContent = `${def.label} (tap to switch)`;
+  }
+
+  getBuildTargetCell() {
+    const dir = this.localVisual.flipX ? -1 : 1;
+    const tx = this.localBody.x + dir * BLOCK_PLACE_DISTANCE;
+    const ty = this.localBody.y;
+    const gx = Math.round(tx / GRID_SIZE) * GRID_SIZE;
+    const gy = Math.round(ty / GRID_SIZE) * GRID_SIZE;
+    return { gx, gy, key: `${gx}_${gy}` };
+  }
+
+  updateBuildPreview() {
+    if (!this.buildMode) return;
+    const { gx, gy } = this.getBuildTargetCell();
+    this.buildPreview.setPosition(gx, gy);
+  }
+
+  handleBuildInteract() {
+    const { gx, gy, key } = this.getBuildTargetCell();
+    const existing = this.blocks.get(key);
+
+    if (existing) {
+      if (existing.ownerId === this.selfData.id) {
+        this.net.removeBlock(key);
+        const refundDef = BLOCK_TYPES[existing.type] || BLOCK_TYPES.wood;
+        this.resources[refundDef.resource] = (this.resources[refundDef.resource] || 0) + refundDef.cost;
+        this.updateInventoryHUD();
+        this.saveResources();
+      } else {
+        this.showFloatingText(gx, gy - 20, "not yours");
+      }
+      return;
+    }
+
+    const def = BLOCK_TYPES[this.buildType];
+    if ((this.resources[def.resource] || 0) < def.cost) {
+      const needIcon = { wood: '🪵', stone: '🪨', flowers: '🌸' }[def.resource] || '';
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, `need ${needIcon}`);
+      return;
+    }
+    if (this.blocks.size >= BLOCK_CAP) {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'town is full!');
+      return;
+    }
+
+    this.resources[def.resource] -= def.cost;
+    this.updateInventoryHUD();
+    this.saveResources();
+    this.net.placeBlock(gx, gy, this.buildType);
+    this.incrementStat('blocksPlaced');
+    if (this.buildType === 'stone') this.incrementStat('stoneBlocksPlaced');
+    if (this.buildType === 'lamp') this.incrementStat('lampsPlaced');
+    if (this.buildType === 'hedge') this.incrementStat('hedgesPlaced');
+    if (this.buildType === 'path') this.incrementStat('pathsPlaced');
+    this.lastPlacedBlockKey = key;
+    this.lastPlacedBlockAt = Date.now();
+  }
+
+  // A one-key undo for the block you JUST placed, wherever you are now —
+  // saves walking back to the exact cell. Only undoes your own most
+  // recent placement, and only within a short window.
+  undoLastBlock() {
+    if (!this.lastPlacedBlockKey || Date.now() - this.lastPlacedBlockAt > BUILD_UNDO_WINDOW_MS) {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'nothing to undo');
+      return;
+    }
+    const existing = this.blocks.get(this.lastPlacedBlockKey);
+    if (!existing || existing.ownerId !== this.selfData.id) {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'nothing to undo');
+      this.lastPlacedBlockKey = null;
+      return;
+    }
+    this.net.removeBlock(this.lastPlacedBlockKey);
+    const refundDef = BLOCK_TYPES[existing.type] || BLOCK_TYPES.wood;
+    this.resources[refundDef.resource] = (this.resources[refundDef.resource] || 0) + refundDef.cost;
+    this.updateInventoryHUD();
+    this.saveResources();
+    this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'undone!');
+    SFX.pop();
+    this.lastPlacedBlockKey = null;
+  }
+
+  addBlockVisual(b) {
+    if (this.blocks.has(b.key)) return;
+    const def = BLOCK_TYPES[b.type] || BLOCK_TYPES.wood;
+    // Path tiles are ground texture, not objects — draw them flat and
+    // behind everything (players, props) instead of depth-sorted by y.
+    const sprite = this.add.rectangle(b.x, b.y, def.size, def.size, def.color, 1)
+      .setStrokeStyle(2, def.stroke)
+      .setDepth(b.type === 'path' ? -1 : b.y);
+    const obstacle = def.solid ? this.addObstacleRect({
+      x: b.x - GRID_SIZE / 2 + 1,
+      y: b.y - GRID_SIZE / 2 + 1,
+      width: GRID_SIZE - 2,
+      height: GRID_SIZE - 2,
+    }) : null;
+    let glow = null;
+    if (b.type === 'lamp') {
+      glow = this.add.circle(b.x, b.y - 10, 7, 0xffe066, 0.9).setDepth(b.y + 1).setVisible(!!this.isNightBugs);
+      this.lampGlows = this.lampGlows || [];
+      this.lampGlows.push(glow);
+    }
+    this.blocks.set(b.key, { sprite, obstacle, glow, ownerId: b.ownerId, type: b.type });
+    this.updateTownRating();
+  }
+
+  removeBlockVisual(key) {
+    const b = this.blocks.get(key);
+    if (!b) return;
+    b.sprite.destroy();
+    if (b.obstacle) b.obstacle.destroy();
+    if (b.glow) {
+      this.lampGlows = (this.lampGlows || []).filter((g) => g !== b.glow);
+      b.glow.destroy();
+    }
+    this.blocks.delete(key);
+    this.updateTownRating();
+  }
+
+  // A shared, synced "how built-up is the town" readout — just a count
+  // of every block currently placed (by anyone), with a few flavor tiers.
+  updateTownRating() {
+    const countEl = document.getElementById('town-rating-count');
+    const labelEl = document.getElementById('town-rating-label');
+    if (!countEl || !labelEl) return;
+    const count = this.blocks.size;
+    countEl.textContent = count;
+    let label;
+    if (count === 0) label = 'Empty';
+    else if (count < 10) label = 'Sparse';
+    else if (count < 30) label = 'Cozy';
+    else if (count < 70) label = 'Bustling';
+    else if (count < BLOCK_CAP) label = 'Metropolis';
+    else label = 'Full!';
+    labelEl.textContent = label;
+  }
+
+  // ---------- players ----------
+
+  createShadow(x, y) {
+    return this.add.ellipse(x, y + 9, 18, 8, 0x000000, 0.28).setDepth(-1);
+  }
+
+  createNameText(x, y, name) {
+    return this.add.text(x, y - 22, censorBlockedTerms(name), {
+      fontSize: '11px',
+      fontFamily: 'monospace',
+      color: '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(100000);
+  }
+
+  createLocalPlayer(playerData) {
+    this.localBody = this.physics.add.sprite(playerData.x, playerData.y, playerData.species, playerData.frame).setVisible(false);
+    this.localBody.body.setCollideWorldBounds(true);
+    // Feet-sized hitbox: was 16x16 at offset (4,12), which stuck 4px out
+    // below the 24px sprite so you stopped short of things above you and
+    // snagged on corners; 14x12 ends exactly at the sprite's feet.
+    this.localBody.body.setSize(14, 12).setOffset(5, 12);
+
+    this.localVisual = this.add.sprite(playerData.x, playerData.y, playerData.species, playerData.frame);
+    if (playerData.facing === -1) this.localVisual.setFlipX(true);
+
+    this.localShadow = this.createShadow(playerData.x, playerData.y);
+    this.localNameText = this.createNameText(playerData.x, playerData.y, playerData.name);
+    this.localBobState = { phase: 0, lift: 0 };
+  }
+
+  // A remote record can name a species this client doesn't have loaded
+  // (a newer client's rare outfit, or plain junk) - fall back to a known
+  // sheet instead of Phaser's missing-texture box, and keep the frame in
+  // range for whichever sheet is used.
+  safeTexture(species, frame) {
+    const key = typeof species === 'string' && this.textures.exists(species) ? species : SPECIES[0].key;
+    const f = Number.isInteger(frame) && this.textures.get(key).has(frame) ? frame : 0;
+    return { key, frame: f };
+  }
+
+  addRemotePlayer(p) {
+    const tex = this.safeTexture(p.species, p.frame);
+    const visual = this.add.sprite(p.x, p.y, tex.key, tex.frame).setFlipX(p.facing === -1);
+    const shadow = this.createShadow(p.x, p.y);
+    const nameText = this.createNameText(p.x, p.y, p.name);
+    this.remotePlayers.set(p.id, {
+      visual,
+      shadow,
+      nameText,
+      bubble: null,
+      x: p.x,
+      y: p.y,
+      targetX: p.x,
+      targetY: p.y,
+      facing: p.facing,
+      species: p.species,
+      frame: p.frame,
+      bob: { phase: 0, lift: 0 },
+    });
+  }
+
+  removeRemotePlayer(id) {
+    const rp = this.remotePlayers.get(id);
+    if (!rp) return;
+    rp.visual.destroy();
+    rp.shadow.destroy();
+    rp.nameText.destroy();
+    if (rp.bubble) rp.bubble.destroy();
+    this.remotePlayers.delete(id);
+    if (this.lastEmoteAt) this.lastEmoteAt.delete(id);
+  }
+
+  showChatBubble(playerId, text) {
+    let anchor;
+    const isLocal = playerId === this.selfData.id;
+
+    if (isLocal) {
+      anchor = this.localVisual;
+    } else {
+      const rp = this.remotePlayers.get(playerId);
+      if (!rp) return;
+      anchor = rp.visual;
+      if (rp.bubble) rp.bubble.destroy();
+    }
+
+    // Remote text is masked the same way as the chat log (a client that
+    // writes straight to the database skips the send-side filter), and
+    // capped so a giant message can't paper over the screen.
+    const bubbleText = censorBlockedTerms(String(text)).slice(0, 140);
+    const bubble = this.add.text(anchor.x, anchor.y - 40, bubbleText, {
+      fontSize: '11px',
+      fontFamily: 'monospace',
+      color: '#1c2430',
+      backgroundColor: '#ffffff',
+      padding: { x: 6, y: 4 },
+      wordWrap: { width: 160 },
+    }).setOrigin(0.5).setDepth(100001);
+
+    if (isLocal) {
+      if (this.localChatBubble) this.localChatBubble.destroy();
+      this.localChatBubble = bubble;
+    } else {
+      this.remotePlayers.get(playerId).bubble = bubble;
+    }
+
+    this.time.delayedCall(4000, () => {
+      bubble.destroy();
+      if (this.localChatBubble === bubble) this.localChatBubble = null;
+      const rp = this.remotePlayers.get(playerId);
+      if (rp && rp.bubble === bubble) rp.bubble = null;
+    });
+  }
+
+  // ---------- world drawing ----------
+
+  // Land rect (village + wilderness ring), inset from the world's true
+  // edges by OCEAN_MARGIN — everything outside this is ocean.
+  landBounds() {
+    return {
+      x: this.world.originX + OCEAN_MARGIN,
+      y: this.world.originY + OCEAN_MARGIN,
+      width: this.world.width - OCEAN_MARGIN * 2,
+      height: this.world.height - OCEAN_MARGIN * 2,
+    };
+  }
+
+  // The island's outline: the land rect with rounded corners (radius 140),
+  // pushed out along its normal by `offset` plus up to `amp` px of smooth,
+  // deterministic wobble (negative amp pulls inward). Every frequency is a
+  // whole number of cycles around the perimeter so the outline closes
+  // seamlessly. The coast itself (offset 60+) always sits OUTSIDE
+  // landBounds() — a rounded corner of radius 140 bulges in by at most
+  // 140*(sqrt2-1) = 58px — so everything placed against the plain rect
+  // (wilderness trees/rocks, flora/fauna, wild critters) still stands on
+  // land exactly where it did; the beach just grew a natural shape.
+  islandOutline(offset, amp, seed, step = 24) {
+    const land = this.landBounds();
+    const r = 140;
+    const x0 = land.x + r;
+    const y0 = land.y + r;
+    const x1 = land.x + land.width - r;
+    const y1 = land.y + land.height - r;
+    const w = x1 - x0;
+    const h = y1 - y0;
+    const arc = (Math.PI / 2) * r;
+    const perimeter = 2 * w + 2 * h + 4 * arc;
+    const waves = [[5, 1], [11, 0.6], [19, 0.4], [37, 0.25], [61, 0.15]]
+      .map(([k, wt], i) => [k, wt, worldHash(seed, i, 61) * Math.PI * 2]);
+    const totalWeight = waves.reduce((sum, [, wt]) => sum + wt, 0);
+    // [length, (t) => [cx, cy, nx, ny]] — edges and quarter arcs of the
+    // inner (radius-0) rect, clockwise from the top edge's left end.
+    const quarter = (cx, cy, a0) => (t) => { const a = a0 + t * Math.PI / 2; return [cx, cy, Math.cos(a), Math.sin(a)]; };
+    const segs = [
+      [w, (t) => [x0 + t * w, y0, 0, -1]],
+      [arc, quarter(x1, y0, -Math.PI / 2)],
+      [h, (t) => [x1, y0 + t * h, 1, 0]],
+      [arc, quarter(x1, y1, 0)],
+      [w, (t) => [x1 - t * w, y1, 0, 1]],
+      [arc, quarter(x0, y1, Math.PI / 2)],
+      [h, (t) => [x0, y1 - t * h, -1, 0]],
+      [arc, quarter(x0, y0, Math.PI)],
+    ];
+    const points = [];
+    let s = 0;
+    segs.forEach(([len, at]) => {
+      const n = Math.max(1, Math.round(len / step));
+      for (let i = 0; i < n; i++, s += len / n) {
+        const [cx, cy, nx, ny] = at(i / n);
+        let noise = 0;
+        waves.forEach(([k, wt, ph]) => { noise += wt * Math.sin((s / perimeter) * k * Math.PI * 2 + ph); });
+        const d = r + offset + amp * (noise / totalWeight + 1) / 2;
+        points.push({ x: cx + nx * d, y: cy + ny * d, nx, ny });
+      }
+    });
+    return points;
+  }
+
+  traceOutline(ctx, points) {
+    ctx.beginPath();
+    points.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+    ctx.closePath();
+  }
+
+  // Ocean, shallows, beach and grass never change, so instead of live
+  // Graphics objects (each one re-tessellates all of its shapes on every
+  // frame — the old ocean/ground layers were 860+ shape commands redrawn
+  // per frame) they're painted ONCE with the 2D canvas API into a 2x2 grid
+  // of half-resolution canvas textures and shown as 4 plain Images.
+  // Half-res keeps each tile ~1450x1150 (well under any device's max
+  // texture size, ~27MB total) and the 2px texels suit the pixel-art look.
+  // drawOcean() paints water + beach; drawGround() paints grass onto the
+  // same canvases. Only the waves/foam on top are live (cheap) objects.
+  drawOcean() {
+    // Trees/flowers/critters elsewhere use their own y as their Phaser
+    // depth (a common 2D "y-sort" trick) — fine when y is always a small
+    // positive village coordinate, but the wilderness ring extends y well
+    // below 0 (up to originY). A fixed depth like the old -3 would then
+    // sit *above* that content and hide it behind the ocean. Anchoring
+    // this to originY instead guarantees it's always further back than
+    // anything anywhere in the (much bigger) world.
+    const depth = this.world.originY - 1000;
+    const scale = 0.5;
+    const tileW = this.world.width / 2;
+    const tileH = this.world.height / 2;
+    this.islandCoast = this.islandOutline(60, 55, 1);
+    const layers = [
+      [this.islandOutline(330, 140, 4, 48), '#3471a6'],
+      [this.islandOutline(190, 90, 3), '#4b93c6'],
+      [this.islandOutline(110, 60, 2), '#6cb8de'],
+    ];
+    this.islandTiles = [];
+    for (let ty = 0; ty < 2; ty++) {
+      for (let tx = 0; tx < 2; tx++) {
+        const left = this.world.originX + tx * tileW;
+        const top = this.world.originY + ty * tileH;
+        const key = `island_${tx}_${ty}`;
+        if (this.textures.exists(key)) this.textures.remove(key);
+        const tex = this.textures.createCanvas(key, Math.ceil(tileW * scale), Math.ceil(tileH * scale));
+        tex.context.setTransform(scale, 0, 0, scale, -left * scale, -top * scale);
+        this.paintOcean(tex.context, layers);
+        tex.refresh();
+        this.add.image(left, top, key).setOrigin(0, 0).setScale(1 / scale).setDepth(depth);
+        this.islandTiles.push(tex);
+      }
+    }
+    this.drawOceanWaves();
+  }
+
+  paintOcean(ctx, layers) {
+    const W = this.world;
+    ctx.fillStyle = '#2a5a8a';
+    ctx.fillRect(W.originX, W.originY, W.width, W.height);
+    // Glints out in the deep water (same deterministic scatter the old
+    // wave-dots used — free now that they're baked).
+    ctx.fillStyle = 'rgba(96,146,196,0.6)';
+    for (let i = 0; i < 260; i++) {
+      const wx = Math.round(W.originX + worldHash(i, 0, 11) * W.width);
+      const wy = Math.round(W.originY + worldHash(i, 1, 12) * W.height);
+      ctx.fillRect(wx - 8, wy, 16, 4);
+    }
+    // Deep -> shelf -> shallows -> turquoise near-shore bands.
+    layers.forEach(([pts, color]) => {
+      this.traceOutline(ctx, pts);
+      ctx.fillStyle = color;
+      ctx.fill();
+    });
+    // Sand, a darker wet-sand lip where the water laps, then a foam line.
+    this.traceOutline(ctx, this.islandCoast);
+    ctx.fillStyle = '#e3d2a0';
+    ctx.fill();
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#d2bd88';
+    ctx.lineWidth = 22;
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+    ctx.lineWidth = 6;
+    ctx.stroke();
+    // A few pebbles and shell bits on the sand.
+    this.islandCoast.forEach((p, i) => {
+      if (worldHash(i, 0, 81) > 0.3) return;
+      const inset = 26 + worldHash(i, 1, 82) * 40;
+      ctx.fillStyle = worldHash(i, 2, 83) < 0.5 ? '#f6ecd0' : '#c4ad7c';
+      ctx.fillRect(p.x - p.nx * inset, p.y - p.ny * inset, 6, 4);
+    });
+  }
+
+  // Cheap animated water: baked wave-crest Images out at sea and foam
+  // dashes along the shoreline, all driven by 5 shared tweens — no
+  // per-frame redraw, no Graphics objects.
+  drawOceanWaves() {
+    if (!this.textures.exists('wave_crest')) {
+      const g = this.make.graphics({ x: 0, y: 0, add: false });
+      g.lineStyle(3, 0xd8ecfa, 1);
+      g.beginPath(); g.arc(9, 12, 8, Math.PI * 1.1, Math.PI * 1.9); g.strokePath();
+      g.beginPath(); g.arc(23, 12, 8, Math.PI * 1.1, Math.PI * 1.9); g.strokePath();
+      g.generateTexture('wave_crest', 32, 14);
+      g.clear();
+      g.fillStyle(0xffffff, 1).fillEllipse(12, 4, 22, 6);
+      g.generateTexture('foam_dash', 24, 8);
+      g.destroy();
+    }
+    const depth = this.world.originY - 990;
+    const land = this.landBounds();
+    const pad = 260;
+    const crests = [[], [], []];
+    for (let i = 0; i < 120; i++) {
+      const x = Math.round(this.world.originX + worldHash(i, 0, 51) * this.world.width);
+      const y = Math.round(this.world.originY + worldHash(i, 1, 52) * this.world.height);
+      const nearLand = x > land.x - pad && x < land.x + land.width + pad && y > land.y - pad && y < land.y + land.height + pad;
+      if (nearLand) continue;
+      crests[i % 3].push(this.add.image(x, y, 'wave_crest').setDepth(depth).setAlpha(0.15));
+    }
+    crests.forEach((group, i) => this.tweens.add({
+      targets: group, x: '+=10', alpha: 0.7, duration: 2000 + i * 600, delay: i * 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    }));
+    const foam = [[], []];
+    this.islandCoast.forEach((p, i) => {
+      if (i % 6) return;
+      const dash = this.add.image(p.x + p.nx * 16, p.y + p.ny * 16, 'foam_dash')
+        .setDepth(depth).setAlpha(0.1).setRotation(Math.atan2(p.ny, p.nx) + Math.PI / 2);
+      dash.nx = p.nx;
+      dash.ny = p.ny;
+      foam[(i / 6) % 2].push(dash);
+    });
+    foam.forEach((group, i) => this.tweens.add({
+      targets: group,
+      x: (target, key, value) => value - target.nx * 10,
+      y: (target, key, value) => value - target.ny * 10,
+      alpha: 0.85,
+      duration: 1700 + i * 500,
+      delay: i * 850,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    }));
+  }
+
+  // A sparse scatter of wild villager-sprites roaming the wilderness ring,
+  // reusing whatever species sheets preload() already loaded for regular
+  // villagers — purely decorative, same wander-tween shape as the pond's
+  // Moon Cats, no interaction. Deterministic (worldHash) so it's the same
+  // for every client, no network traffic needed.
+  drawWilderness() {
+    const land = this.landBounds();
+    const critterCount = 14;
+    for (let i = 0; i < critterCount; i++) {
+      const x = Math.round(land.x + worldHash(i, 0, 41) * land.width);
+      const y = Math.round(land.y + worldHash(i, 0, 42) * land.height);
+      const nearVillage = x > VILLAGE_BOUNDS.x - 150 && x < VILLAGE_BOUNDS.x + VILLAGE_BOUNDS.width + 150
+        && y > VILLAGE_BOUNDS.y - 150 && y < VILLAGE_BOUNDS.y + VILLAGE_BOUNDS.height + 150;
+      if (nearVillage) continue;
+      const species = SPECIES[Math.floor(worldHash(i, 1, 43) * SPECIES.length)];
+      const frame = Math.floor(worldHash(i, 2, 44) * FRAME_COUNT);
+      const range = 60 + worldHash(i, 3, 45) * 80;
+      const critter = this.add.sprite(x, y, species.key, frame).setDepth(y);
+      critter.prevX = x;
+      this.tweens.add({
+        targets: critter,
+        x: { from: x - range, to: x + range },
+        duration: 5000 + i * 300,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+        onUpdate: () => { critter.setFlipX(critter.x < critter.prevX); critter.prevX = critter.x; },
+      });
+    }
+  }
+
+  // ---------- flora/fauna starter pack scatter ----------
+  // A handful of each of the 20 imported species (see species-registry.json),
+  // scattered deterministically with worldHash like the rest of the
+  // wilderness — same reasoning: identical on every device, no network
+  // traffic, no Math.random(). Low counts per species on purpose: this is
+  // decor variety layered on top of the existing wilderness/pond/ocean
+  // systems, not a replacement for them, and the big Graphics-draw-call
+  // performance lesson from the ocean/ground rewrite still applies even
+  // though these are cheap Sprites, not Graphics.
+  // Small fixed clusters standing in for a "desert corner" and an "alpine
+  // corner" — there's no real desert or alpine biome on this map, so
+  // unlike the forest/meadow/pond/ocean zones (scattered across real
+  // terrain), these just gather their species into one hand-placed spot
+  // each, offset so 5 species don't render stacked on the same pixel.
+  floraFaunaClusterSpots(anchorX, anchorY) {
+    return [
+      [0, 0], [70, -30], [-70, -20], [40, 55], [-60, 45], [110, 20],
+    ].map(([dx, dy]) => [anchorX + dx, anchorY + dy]);
+  }
+
+  drawFloraFauna() {
+    const land = this.landBounds();
+    this.ffLand = land;
+    // Every static collision rect drawn so far (buildings, trees, rocks,
+    // the pond walls...), padded — mostly upward, since building art
+    // stands taller than its collision rect — so nothing spawns or walks
+    // on top of a house. Player-built structures come later and are not
+    // included, which also keeps spawn points identical on every client.
+    this.ffBlockers = this.obstacles.getChildren().map((r) => [
+      r.x - r.width / 2 - 16, r.y - r.height / 2 - 48, r.x + r.width / 2 + 16, r.y + r.height / 2 + 12,
+    ]);
+    const desertSpots = this.floraFaunaClusterSpots(land.x + 110, land.y + land.height - 110);
+    const alpineSpots = this.floraFaunaClusterSpots(land.x + land.width - 140, land.y + 110);
+    const inVillage = (x, y) => x > VILLAGE_BOUNDS.x - 150 && x < VILLAGE_BOUNDS.x + VILLAGE_BOUNDS.width + 150
+      && y > VILLAGE_BOUNDS.y - 150 && y < VILLAGE_BOUNDS.y + VILLAGE_BOUNDS.height + 150;
+    // Deterministic per (seed, attempt): a rejected spot just moves on to
+    // the next attempt, so every client still lands on the same answer.
+    const H = (seed, t, k, salt) => worldHash(seed, t * 3 + k, salt);
+    const pick = (gen, ok) => {
+      for (let t = 0; t < 16; t++) {
+        const [x, y] = gen(t);
+        if (ok(x, y)) return [Math.round(x), Math.round(y)];
+      }
+      return null;
+    };
+    const polar = (p, ang, k) => [p.cx + Math.cos(ang) * p.rx * k, p.cy + Math.sin(ang) * p.ry * k];
+    this.ffSpecimens = [];
+    FF_ASSETS.forEach((a, idx) => {
+      const seedBase = 500 + idx * 13;
+      // Land animals roam the whole island instead of being confined to
+      // their zone's small patch; plants stay put, and desert_accent/
+      // alpine_accent stay small corner patches for the plants using them.
+      const roamsLand = a.kind === 'fauna' && a.zone !== 'pond' && a.zone !== 'ocean';
+      const count = roamsLand ? 5 : (a.zone === 'forest' || a.zone === 'meadow' ? 3 : 2);
+      const move = a.kind === 'fauna' ? (FF_MOVE[a.id] || 'walk') : null;
+      const spawns = [];
+      for (let i = 0; i < count; i++) {
+        const seed = seedBase + i;
+        let spot;
+        let pond = null;
+        let ocean = false;
+        if (a.zone === 'pond') {
+          pond = i % 2 === 0 ? MAIN_POND : EAST_POND;
+          spot = FF_IN_WATER.has(a.id)
+            // In the water (was: on the bank, so lilies/fish sat on grass).
+            ? pick((t) => polar(pond, H(seed, t, 0, 71) * Math.PI * 2, 0.3 + H(seed, t, 1, 76) * 0.5), () => true)
+            : pick((t) => polar(pond, H(seed, t, 0, 71) * Math.PI * 2, 1.3 + H(seed, t, 1, 76) * 0.12), (x, y) => !this.ffBlocked(x, y));
+        } else if (a.zone === 'ocean') {
+          // A near-shore band all the way round the island (was: anywhere
+          // in the world, with every on-land roll piled onto one point).
+          ocean = true;
+          spot = pick((t) => {
+            const side = Math.floor(H(seed, t, 0, 72) * 4);
+            const d = 50 + H(seed, t, 1, 73) * 180;
+            const u = H(seed, t, 2, 77);
+            if (side === 0) return [land.x + u * land.width, land.y - d];
+            if (side === 1) return [land.x + u * land.width, land.y + land.height + d];
+            if (side === 2) return [land.x - d, land.y + u * land.height];
+            return [land.x + land.width + d, land.y + u * land.height];
+          }, (x, y) => this.ffOceanOk(x, y));
+        } else if (!roamsLand && (a.zone === 'desert_accent' || a.zone === 'alpine_accent')) {
+          const [ax, ay] = (a.zone === 'desert_accent' ? desertSpots : alpineSpots)[(idx * 2 + i) % desertSpots.length];
+          spot = pick((t) => [ax + (H(seed, t, 0, 78) - 0.5) * 90, ay + (H(seed, t, 1, 79) - 0.5) * 90], (x, y) => this.ffLandOk(x, y));
+        } else {
+          // Was a one-pass "+350" nudge that could land inside a pond, on a
+          // building, or back inside the village; now retried properly.
+          spot = pick((t) => [land.x + H(seed, t, 0, 74) * land.width, land.y + H(seed, t, 1, 75) * land.height],
+            (x, y) => !inVillage(x, y) && this.ffLandOk(x, y));
+        }
+        if (spot) spawns.push({ x: spot[0], y: spot[1], pond, ocean });
+      }
+      // A couple of small harmless critters living in the village itself.
+      if (FF_VILLAGE.includes(a.id)) {
+        for (let i = 0; i < 2; i++) {
+          const seed = seedBase + 9 + i;
+          const spot = pick((t) => [
+            VILLAGE_BOUNDS.x + 100 + H(seed, t, 0, 81) * (VILLAGE_BOUNDS.width - 200),
+            VILLAGE_BOUNDS.y + 100 + H(seed, t, 1, 82) * (VILLAGE_BOUNDS.height - 200),
+          ], (x, y) => this.ffLandOk(x, y));
+          if (spot) spawns.push({ x: spot[0], y: spot[1], pond: null, ocean: false });
+        }
+      }
+      spawns.forEach((s, i) => this.addFloraFaunaSpecimen(a, move, s, i));
+    });
+
+    // Nearby-specimen bookkeeping: a cheap 400ms sweep decides which
+    // specimens are around the camera; only those animate, and only those
+    // are looked at every frame for the hint/sparkles/E-to-log.
+    this.ffNear = [];
+    this.time.addEvent({ delay: 400, loop: true, callback: () => this.refreshFloraFaunaNear() });
+    this.ffHint = this.add.text(0, 0, '', {
+      fontSize: '11px', fontFamily: 'monospace', color: '#ffffff', stroke: '#1c2430', strokeThickness: 3,
+    }).setOrigin(0.5, 0).setDepth(99995).setVisible(false);
+    this.ffSparkles = [];
+    for (let i = 0; i < 6; i++) {
+      this.ffSparkles.push(this.add.star(0, 0, 4, 2, 6, 0xfff2a8).setDepth(99994).setVisible(false));
+    }
+    this.tweens.add({ targets: this.ffSparkles, alpha: { from: 1, to: 0.2 }, angle: 90, duration: 650, yoyo: true, repeat: -1 });
+  }
+
+  addFloraFaunaSpecimen(a, move, s, i) {
+    // The SVGs are square, so a non-square w/h used to squash the art
+    // (pine 72x96, joshua tree 80x104...). Keep the bigger side, square;
+    // never below 14px so the microscopic species stay findable specks.
+    const size = Math.max(14, a.w, a.h);
+    const fly = move === 'fly';
+    const sprite = this.add.image(s.x, s.y, `ff_${a.id}`).setDisplaySize(size, size).setDepth(fly ? s.y + 40 : s.y);
+    const inWater = !!s.pond && FF_IN_WATER.has(a.id);
+    const spec = {
+      id: a.id, name: a.name, x: s.x, y: s.y, px: s.x, py: s.y, sprite, move, pond: s.pond, ocean: s.ocean,
+      baseScaleY: sprite.scaleY,
+      phase: i * 1.7 + a.w,
+      // Big animals are reachable from their edge, not just their centre;
+      // players can't wade into the ponds, so in-water species reach further.
+      reach: Math.max(FF_COLLECT_RADIUS, size / 2 + 16) * (inWater ? 1.6 : 1),
+      speed: FF_SPEED[a.id] || (fly ? 55 : move === 'swim' ? 22 : Phaser.Math.Clamp(size * 0.7, 12, 50)),
+      range: fly ? 160 : size > 50 ? 150 : 90,
+      active: false,
+      moving: false,
+      idle: null,
+    };
+    if (!move || move === 'still') {
+      // Rooted plants sway, water-bound ones (and sessile sea life) bob.
+      // Created paused; refreshFloraFaunaNear() only runs them on screen.
+      spec.idle = (s.pond || s.ocean)
+        ? this.tweens.add({ targets: sprite, y: s.y - 4, duration: 1200 + i * 150, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', paused: true })
+        : this.tweens.add({ targets: sprite, angle: { from: -3, to: 3 }, duration: 1800 + i * 200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut', paused: true });
+    }
+    this.ffSpecimens.push(spec);
+  }
+
+  ffBlocked(x, y) {
+    const b = this.ffBlockers;
+    for (let i = 0; i < b.length; i++) {
+      const r = b[i];
+      if (x > r[0] && x < r[2] && y > r[1] && y < r[3]) return true;
+    }
+    return false;
+  }
+
+  ffInPond(p, x, y, k) {
+    const dx = (x - p.cx) / (p.rx * k);
+    const dy = (y - p.cy) / (p.ry * k);
+    return dx * dx + dy * dy < 1;
+  }
+
+  // Solid ground: inside the island (clear of the beach), out of both
+  // ponds and clear of every static obstacle.
+  ffLandOk(x, y) {
+    const land = this.ffLand;
+    const pad = 40;
+    if (x < land.x + pad || x > land.x + land.width - pad || y < land.y + pad || y > land.y + land.height - pad) return false;
+    if (this.ffInPond(MAIN_POND, x, y, 1.2) || this.ffInPond(EAST_POND, x, y, 1.2)) return false;
+    return !this.ffBlocked(x, y);
+  }
+
+  // Open water just off the beach, still inside the world.
+  ffOceanOk(x, y) {
+    const land = this.ffLand;
+    const w = this.world;
+    if (x < w.originX + 30 || x > w.originX + w.width - 30 || y < w.originY + 30 || y > w.originY + w.height - 30) return false;
+    return x < land.x - 35 || x > land.x + land.width + 35 || y < land.y - 35 || y > land.y + land.height + 35;
+  }
+
+  refreshFloraFaunaNear() {
+    const v = this.cameras.main.worldView;
+    const m = 160;
+    const near = [];
+    this.ffSpecimens.forEach((spec) => {
+      const { x, y } = spec.sprite;
+      const inView = x > v.x - m && x < v.right + m && y > v.y - m && y < v.bottom + m;
+      if (inView) near.push(spec);
+      spec.active = inView && !reduceMotion;
+      if (spec.idle) {
+        if (spec.active && spec.idle.isPaused()) spec.idle.resume();
+        else if (!spec.active && !spec.idle.isPaused()) spec.idle.pause();
+      } else if (spec.active && !spec.moving) {
+        spec.moving = true;
+        this.time.delayedCall(Phaser.Math.Between(0, 1500), () => this.stepFloraFauna(spec));
+      }
+    });
+    this.ffNear = near;
+  }
+
+  pickFloraFaunaTarget(spec) {
+    for (let t = 0; t < 4; t++) {
+      if (spec.move === 'bank') {
+        // Pace along the shore of its own pond.
+        const p = spec.pond;
+        const ang = Math.atan2((spec.py - p.cy) / p.ry, (spec.px - p.cx) / p.rx) + (Math.random() - 0.5) * 1.0;
+        const [x, y] = [p.cx + Math.cos(ang) * p.rx * (1.25 + Math.random() * 0.2), p.cy + Math.sin(ang) * p.ry * (1.25 + Math.random() * 0.2)];
+        if (!this.ffBlocked(x, y)) return [x, y];
+        continue;
+      }
+      const x = spec.x + (Math.random() * 2 - 1) * spec.range;
+      const y = spec.y + (Math.random() * 2 - 1) * spec.range * 0.7;
+      if (spec.move === 'swim') {
+        if (spec.pond ? this.ffInPond(spec.pond, x, y, 0.85) : this.ffOceanOk(x, y)) return [x, y];
+        continue;
+      }
+      if (spec.move === 'fly') {
+        // Fliers may pass over rooftops, but stay over the island.
+        const land = this.ffLand;
+        if (x > land.x + 30 && x < land.x + land.width - 30 && y > land.y + 30 && y < land.y + land.height - 30) return [x, y];
+        continue;
+      }
+      // Walkers: the destination and the way there must be solid ground.
+      let ok = true;
+      for (const f of [0.33, 0.66, 1]) {
+        if (!this.ffLandOk(spec.px + (x - spec.px) * f, spec.py + (y - spec.py) * f)) { ok = false; break; }
+      }
+      if (ok) return [x, y];
+    }
+    return null;
+  }
+
+  // One leg of an animal's wander: tween to a nearby target, then rest and
+  // go again — but only while it's near the camera (otherwise it parks
+  // until refreshFloraFaunaNear() wakes it).
+  stepFloraFauna(spec) {
+    if (!spec.active) { spec.moving = false; return; }
+    const target = this.pickFloraFaunaTarget(spec);
+    if (!target) {
+      this.time.delayedCall(Phaser.Math.Between(800, 2000), () => this.stepFloraFauna(spec));
+      return;
+    }
+    const sprite = spec.sprite;
+    const [tx, ty] = target;
+    const dx = tx - spec.px;
+    const dist = Math.hypot(dx, ty - spec.py);
+    if (Math.abs(dx) > 2) sprite.setFlipX((dx < 0) !== FF_FACES_LEFT.has(spec.id));
+    const fly = spec.move === 'fly';
+    const swim = spec.move === 'swim';
+    const pos = { x: spec.px, y: spec.py };
+    this.tweens.add({
+      targets: pos,
+      x: tx,
+      y: ty,
+      duration: Math.max(400, (dist / spec.speed) * 1000),
+      ease: 'Sine.easeInOut',
+      onUpdate: () => {
+        const now = this.time.now;
+        if (fly) {
+          // Bob up and down and flap (squash) while flying.
+          sprite.setPosition(pos.x, pos.y - 10 + Math.sin(now / 160 + spec.phase) * 5);
+          sprite.scaleY = spec.baseScaleY * (0.8 + 0.2 * Math.abs(Math.sin(now / 60 + spec.phase)));
+          sprite.setDepth(pos.y + 40);
+        } else if (swim) {
+          sprite.setPosition(pos.x, pos.y + Math.sin(now / 500 + spec.phase) * 2);
+          sprite.angle = Math.sin(now / 300 + spec.phase) * 4;
+        } else {
+          // Little side-to-side waddle while walking.
+          sprite.setPosition(pos.x, pos.y);
+          sprite.angle = Math.sin(now / 90 + spec.phase) * 5;
+          sprite.setDepth(pos.y);
+        }
+      },
+      onComplete: () => {
+        spec.px = tx;
+        spec.py = ty;
+        sprite.angle = 0;
+        sprite.scaleY = spec.baseScaleY;
+        this.time.delayedCall(fly ? Phaser.Math.Between(200, 1400) : Phaser.Math.Between(900, 4000), () => this.stepFloraFauna(spec));
+      },
+    });
+  }
+
+  // Per frame, but only over the specimens near the camera: sparkles over
+  // species not logged yet, and an "E: log <name>" label under the one in reach
+  // (under, so it never collides with the player's own nametag).
+  updateFloraFaunaHint() {
+    if (!this.ffNear || !this.localBody || !this.ffDiscovered) return;
+    const px = this.localBody.x;
+    const py = this.localBody.y;
+    let best = null;
+    let bestDist = Infinity;
+    let n = 0;
+    for (const spec of this.ffNear) {
+      if (this.ffDiscovered.has(spec.id)) continue;
+      const s = spec.sprite;
+      const d = Math.hypot(s.x - px, s.y - py);
+      if (d < 260 && n < this.ffSparkles.length) {
+        this.ffSparkles[n++].setPosition(s.x + s.displayWidth * 0.3, s.y - s.displayHeight * 0.45).setVisible(true);
+      }
+      if (d < spec.reach && d < bestDist) { best = spec; bestDist = d; }
+    }
+    for (let i = n; i < this.ffSparkles.length; i++) this.ffSparkles[i].setVisible(false);
+    if (best && this.canAct()) {
+      const s = best.sprite;
+      this.ffHint.setText(`${IS_TOUCH ? '✋' : 'E'}: log ${best.name}`).setPosition(s.x, s.y + s.displayHeight / 2 + 2).setVisible(true);
+    } else {
+      this.ffHint.setVisible(false);
+    }
+  }
+
+  // ---------- Wild fauna/flora log (folded into the Museum) ----------
+  // Walking up to any scattered flora/fauna specimen and pressing E logs
+  // that species permanently (per device) — same "no need to carry it
+  // in" pattern as the museum's existing fauna/flora sections, and
+  // rendered right alongside them as two more sections in the same
+  // overlay, rather than a separate button/panel.
+
+  setupFloraFaunaLog() {
+    const saved = loadSave();
+    this.ffDiscovered = new Set(Array.isArray(saved.ffDiscovered) ? saved.ffDiscovered : []);
+  }
+
+  saveFloraFaunaLog() {
+    writeSave({ ffDiscovered: [...this.ffDiscovered] });
+  }
+
+  // Uses each specimen's *current* position (animals move), and prefers a
+  // not-yet-logged species over an already-logged one standing closer.
+  findNearestFloraFauna() {
+    if (!this.ffNear) return null;
+    let nearest = null;
+    let nearestDist = Infinity;
+    let nearestNew = false;
+    this.ffNear.forEach((spec) => {
+      const d = Phaser.Math.Distance.Between(this.localBody.x, this.localBody.y, spec.sprite.x, spec.sprite.y);
+      if (d >= spec.reach) return;
+      const isNew = !this.ffDiscovered.has(spec.id);
+      if ((isNew && !nearestNew) || (isNew === nearestNew && d < nearestDist)) { nearest = spec; nearestDist = d; nearestNew = isNew; }
+    });
+    return nearest;
+  }
+
+  collectFloraFauna(spec) {
+    const { x, y } = spec.sprite;
+    if (this.ffDiscovered.has(spec.id)) {
+      this.showFloatingText(x, y - 30, `${spec.name} (already logged)`);
+      SFX.pop();
+      return;
+    }
+    this.ffDiscovered.add(spec.id);
+    this.saveFloraFaunaLog();
+    this.awardPoint(1, `🔍 ${spec.name} added to the Museum! (${this.ffDiscovered.size}/${FF_ASSETS.length})`, x, y - 30, 'achievement');
+  }
+
+  drawGround() {
+    const land = this.landBounds();
+    // Painted straight into drawOcean()'s baked canvas tiles (one
+    // layer, behind everything) rather than a separate Graphics object.
+    // The grass edge wobbles 6-36px inside landBounds(), leaving a beach
+    // of varying width between it and the coast.
+    const grassEdge = this.islandOutline(-6, -30, 5);
+    (this.islandTiles || []).forEach((tex) => {
+      const ctx = tex.context;
+      ctx.save();
+      this.traceOutline(ctx, grassEdge);
+      ctx.fillStyle = '#8fd474';
+      ctx.fill();
+      ctx.strokeStyle = '#a9dc86';
+      ctx.lineWidth = 8;
+      ctx.stroke();
+      ctx.clip();
+      // Soft lighter/darker meadow patches so the grass isn't one flat color.
+      for (let i = 0; i < 320; i++) {
+        const gx = land.x + worldHash(i, 0, 33) * land.width;
+        const gy = land.y + worldHash(i, 1, 34) * land.height;
+        const r = 50 + worldHash(i, 2, 35) * 130;
+        const tone = worldHash(i, 3, 36) < 0.5 ? '164,224,134' : '122,194,98';
+        const grad = ctx.createRadialGradient(gx, gy, 0, gx, gy, r);
+        grad.addColorStop(0, `rgba(${tone},0.55)`);
+        grad.addColorStop(0.6, `rgba(${tone},0.35)`);
+        grad.addColorStop(1, `rgba(${tone},0)`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(gx - r, gy - r, r * 2, r * 2);
+      }
+      // Texture flecks (same scatter as before) plus little grass tufts.
+      ctx.fillStyle = '#7bc464';
+      for (let i = 0; i < 1400; i++) {
+        const gx = Math.round(land.x + worldHash(i, 0, 31) * land.width);
+        const gy = Math.round(land.y + worldHash(i, 1, 32) * land.height);
+        ctx.fillRect(gx, gy, 4, 4);
+      }
+      ctx.strokeStyle = '#6db457';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i < 900; i++) {
+        const gx = Math.round(land.x + worldHash(i, 0, 37) * land.width);
+        const gy = Math.round(land.y + worldHash(i, 1, 38) * land.height);
+        ctx.moveTo(gx - 4, gy - 6); ctx.lineTo(gx, gy); ctx.lineTo(gx + 4, gy - 6);
+      }
+      ctx.stroke();
+      // Tiny clover/daisy dots.
+      for (let i = 0; i < 220; i++) {
+        const gx = Math.round(land.x + worldHash(i, 0, 39) * land.width);
+        const gy = Math.round(land.y + worldHash(i, 1, 40) * land.height);
+        ctx.fillStyle = worldHash(i, 2, 41) < 0.6 ? '#f7f7ea' : '#fff0a0';
+        ctx.fillRect(gx, gy, 4, 4);
+        ctx.fillRect(gx + 6, gy + 3, 4, 4);
+        ctx.fillRect(gx + 1, gy + 7, 4, 4);
+      }
+      ctx.restore();
+      tex.refresh();
+    });
+  }
+
+  drawPath() {
+    // Deliberately scoped to the village, not the whole (much bigger)
+    // land rect — a dirt road cutting straight across the wilderness and
+    // into the ocean made no sense.
+    // Same footprint as always (64px roads, 150px plaza); a soft darker
+    // rim and rounded ends instead of hard rectangle edges. Only a dozen
+    // shape commands, so it stays one small Graphics object.
+    const g = this.add.graphics().setDepth(-1);
+    const { x, y, width, height } = VILLAGE_BOUNDS;
+    g.fillStyle(0xa5cf86, 1);
+    g.fillRoundedRect(x - 6, 600 - 38, width + 12, 76, 38);
+    g.fillRoundedRect(800 - 38, y - 6, 76, height + 12, 38);
+    g.fillCircle(800, 600, 157);
+    g.fillStyle(0xe0c49a, 1);
+    g.fillRoundedRect(x, 600 - 32, width, 64, 32);
+    g.fillRoundedRect(800 - 32, y, 64, height, 32);
+    g.fillStyle(0xd8ba8e, 1);
+    g.fillCircle(800, 600, 150);
+    g.fillStyle(0xedd9ad, 1);
+    g.fillCircle(800, 600, 142);
+  }
+
+  // Draws static vector art once into a texture and places it as a plain
+  // Image (inserted at the same point in the display list, same depth, so
+  // layering against neighbours is unchanged). `draw(g)` uses coordinates
+  // local to the w x h texture; (left, top) is where its corner goes.
+  addBakedImage(key, left, top, w, h, depth, draw) {
+    if (!this.textures.exists(key)) {
+      const g = this.make.graphics({ x: 0, y: 0, add: false });
+      draw(g);
+      g.generateTexture(key, w, h);
+      g.destroy();
+    }
+    return this.add.image(left, top, key).setOrigin(0, 0).setDepth(depth);
+  }
+
+  // A pond with a grassy bank, a darker deep middle, a sky highlight and a
+  // few lily pads — `pads` are [dx, dy, r] from the centre, kept clear of
+  // anything that crosses the water (the main pond's bridge).
+  addBakedPond(key, cx, cy, rx, ry, pads) {
+    const pad = 14;
+    const w = rx * 2 + pad * 2;
+    const h = ry * 2 + pad * 2;
+    const ox = w / 2;
+    const oy = h / 2;
+    this.addBakedImage(key, cx - ox, cy - oy, w, h, -1, (g) => {
+      g.fillStyle(0x76bd60, 1).fillEllipse(ox + 2, oy + 4, rx * 2 + 22, ry * 2 + 20);
+      g.fillStyle(0xd9c79a, 1).fillEllipse(ox, oy + 1, rx * 2 + 12, ry * 2 + 10);
+      g.fillStyle(0x5ab0e8, 1).fillEllipse(ox, oy, rx * 2, ry * 2);
+      g.fillStyle(0x3a86c8, 1).fillEllipse(ox + rx * 0.06, oy + ry * 0.08, rx * 1.75, ry * 1.7);
+      g.fillStyle(0x2f74b4, 1).fillEllipse(ox + rx * 0.12, oy + ry * 0.16, rx * 1.1, ry * 1.0);
+      g.fillStyle(0x8fd0f2, 0.8).fillEllipse(ox - rx * 0.3, oy - ry * 0.38, rx * 0.8, ry * 0.32);
+      g.lineStyle(2, 0xe8f6ff, 0.9);
+      g.lineBetween(ox - rx * 0.55, oy - ry * 0.45, ox - rx * 0.35, oy - ry * 0.45);
+      g.lineBetween(ox - rx * 0.25, oy - ry * 0.6, ox - rx * 0.1, oy - ry * 0.6);
+      pads.forEach(([dx, dy, r]) => {
+        g.fillStyle(0x2f6a32, 0.35).fillEllipse(ox + dx + 2, oy + dy + 2, r * 2, r * 1.4);
+        g.fillStyle(0x5cae4f, 1);
+        g.slice(ox + dx, oy + dy, r, Phaser.Math.DegToRad(30), Phaser.Math.DegToRad(350), false);
+        g.fillPath();
+        if (r > 9) g.fillStyle(0xf6a6c8, 1).fillCircle(ox + dx - r * 0.3, oy + dy - r * 0.2, 3);
+      });
+    });
+  }
+
+  drawPond() {
+    const cx = 260;
+    const cy = 600;
+    const rx = 150;
+    const ry = 90;
+    this.addBakedPond('pond_main', cx, cy, rx, ry, [[-100, 30, 11], [95, -35, 9], [70, 50, 7]]);
+
+    const gapHalf = 34;
+    this.addObstacleRect({ x: cx - rx * 0.8, y: cy - ry * 0.8, width: rx * 1.6, height: ry * 0.8 - gapHalf });
+    this.addObstacleRect({ x: cx - rx * 0.8, y: cy + gapHalf, width: rx * 1.6, height: ry * 0.8 - gapHalf });
+
+    // A faint ripple every couple of seconds, somewhere random inside the
+    // pond — purely cosmetic, no gameplay effect, just a bit of life.
+    this.time.addEvent({
+      delay: 2200,
+      loop: true,
+      callback: () => {
+        const rippleX = cx + (Math.random() * 2 - 1) * rx * 0.7;
+        const rippleY = cy + (Math.random() * 2 - 1) * ry * 0.7;
+        const ripple = this.add.circle(rippleX, rippleY, 3, 0xffffff, 0).setStrokeStyle(1, 0xdfefff, 0.5).setDepth(-1);
+        const state = { r: 3, a: 0.5 };
+        this.tweens.add({
+          targets: state,
+          r: 14,
+          a: 0,
+          duration: 1800,
+          ease: 'Sine.easeOut',
+          onUpdate: () => { ripple.setRadius(state.r); ripple.setStrokeStyle(1, 0xdfefff, state.a); },
+          onComplete: () => ripple.destroy(),
+        });
+      },
+    });
+  }
+
+  drawDock() {
+    // A small wooden pier off the pond's east edge — purely decorative
+    // (no collision), just a nicer place to stand and look at the water.
+    const baseX = 410;
+    const baseY = 600;
+    // Baked once into a texture (see addBakedImage); local coords are
+    // shifted by (1, 15) so the 2px plank lines at the ends aren't clipped.
+    this.addBakedImage('dock_baked', baseX - 1, baseY - 15, 72, 38, -1, (g) => {
+      g.fillStyle(0x8a5a3b, 1);
+      g.fillRect(1, 1, 70, 28);
+      g.lineStyle(2, 0x5a3a22, 1);
+      for (let i = 0; i <= 70; i += 14) g.lineBetween(1 + i, 1, 1 + i, 29);
+      g.fillStyle(0x5a3a22, 1);
+      [7, 65].forEach((x) => g.fillRect(x - 3, 27, 6, 10));
+    });
+  }
+
+  // A few sittable-looking (purely decorative) benches scattered around
+  // town — no collision, no interact handler, just scenery.
+  drawBenches() {
+    const spots = [
+      { x: 760, y: 560 }, { x: 1620, y: 640 }, { x: 1950, y: 720 },
+    ];
+    spots.forEach(({ x, y }) => {
+      const g = this.add.graphics().setDepth(y - 1);
+      g.fillStyle(0x6b4226, 1);
+      g.fillRect(x - 18, y - 4, 36, 8);
+      g.fillRect(x - 18, y - 14, 36, 4);
+      g.fillStyle(0x4a2e18, 1);
+      g.fillRect(x - 16, y + 4, 4, 8);
+      g.fillRect(x + 12, y + 4, 4, 8);
+    });
+  }
+
+  // A small spooky corner tying into the zombie species — a few
+  // tombstones behind a low fence, one zombie villager standing watch.
+  // Purely decorative; the tombstone footprints are solid, the fence
+  // gap isn't, so you can still walk in and look around.
+  drawGraveyard() {
+    const { x, y } = GRAVEYARD_POS;
+    const g = this.add.graphics().setDepth(y - 2);
+    g.fillStyle(0x3a4a38, 1).fillRect(x - 70, y - 50, 140, 90);
+    g.lineStyle(3, 0x5a6a52, 1).strokeRect(x - 70, y - 50, 140, 90);
+
+    const stones = [{ x: x - 36, y: y - 10 }, { x: x, y: y - 6 }, { x: x + 36, y: y - 14 }];
+    stones.forEach((s) => {
+      const sg = this.add.graphics().setDepth(s.y);
+      sg.fillStyle(0x9a9a9a, 1);
+      sg.fillRect(s.x - 10, s.y - 18, 20, 22);
+      sg.fillEllipse(s.x, s.y - 18, 20, 14);
+      this.addObstacleRect({ x: s.x - 9, y: s.y - 10, width: 18, height: 10 });
+    });
+
+    const zombie = this.add.sprite(x + 50, y + 18, 'zombies', 0).setScale(1.8).setDepth(y + 19);
+    this.tweens.add({ targets: zombie, y: y + 14, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.add.text(x, y - 68, '🪦 Old Graveyard', {
+      fontSize: '11px',
+      fontFamily: 'monospace',
+      color: '#c9d4c0',
+      stroke: '#000000',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(y + 1);
+  }
+
+  drawPondCats() {
+    POND_CATS.forEach(({ y, frame, range }) => {
+      const startX = (range[0] + range[1]) / 2;
+      const cat = this.add.sprite(startX, y, 'mooncats', frame).setDepth(-1);
+      cat.prevX = startX;
+      this.tweens.add({
+        targets: cat,
+        x: { from: range[0], to: range[1] },
+        duration: 6000 + frame * 400,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+        onUpdate: () => {
+          cat.setFlipX(cat.x < cat.prevX);
+          cat.prevX = cat.x;
+        },
+      });
+    });
+  }
+
+  drawEastPond() {
+    const { cx, cy, rx, ry } = EAST_POND;
+    this.addBakedPond('pond_east', cx, cy, rx, ry, [[-70, 30, 10], [60, -28, 8], [80, 22, 6]]);
+    this.addObstacleRect({ x: cx - rx * 0.8, y: cy - ry * 0.8, width: rx * 1.6, height: ry * 1.6 });
+  }
+
+  drawBridge() {
+    const cx = 260;
+    const cy = 600;
+    // Baked once into a texture (see addBakedImage), local coords with the
+    // bridge's top-left corner at (0, 0).
+    this.addBakedImage('bridge_baked', cx - 40, cy - 36, 80, 72, -1, (g) => {
+      g.fillStyle(0x2f6a8a, 0.35).fillRect(3, 6, 80, 68);
+      g.fillStyle(0xa9784a, 1).fillRect(0, 2, 80, 68);
+      g.fillStyle(0x8a5f39, 1);
+      for (let px = 0; px < 80; px += 10) g.fillRect(px, 2, 2, 68);
+      g.fillStyle(0x6b4226, 1);
+      g.fillRect(0, 0, 80, 4);
+      g.fillRect(0, 68, 80, 4);
+    });
+  }
+
+  drawHouse() {
+    const { x, y, w, h } = HOUSE_POS;
+    const g = this.add.graphics();
+    g.fillStyle(0x8a5a3b, 1).fillRect(x, y, w, h);
+    g.fillStyle(0xd9663b, 1).fillTriangle(x - 10, y, x + w + 10, y, x + w / 2, y - 45);
+    g.fillStyle(0x5a3a22, 1).fillRect(x + w / 2 - 10, y + h - 28, 20, 28);
+    g.fillStyle(0xcfe8f5, 1);
+    g.fillRect(x + 16, y + 14, 20, 20);
+    g.fillRect(x + w - 36, y + 14, 20, 20);
+    g.setDepth(y + h);
+
+    this.add.text(x + w / 2, y - 55, '🏠 Shop', { fontSize: '16px' }).setOrigin(0.5).setDepth(y + h + 1);
+    const deal = this.todaysDeal();
+    this.add.text(x + w / 2, y - 38, `💰 ${deal.icon} +50% today`, { fontSize: '11px', color: '#2a6b2a' }).setOrigin(0.5).setDepth(y + h + 1);
+    this.addObstacleRect({ x, y: y + 20, width: w, height: h - 20 });
+  }
+
+  // Same deterministic wall-clock-hash trick as the daily quest — a
+  // different resource sells for a flat +50% each day, same for everyone.
+  todaysDeal() {
+    return QUEST_RESOURCES[Math.floor(this.questHash(40) * QUEST_RESOURCES.length)];
+  }
+
+  drawMuseum() {
+    const { x, y, w, h } = MUSEUM_POS;
+    const g = this.add.graphics();
+    g.fillStyle(0xd8d0bc, 1).fillRect(x, y, w, h);
+    g.fillStyle(0x8f8568, 1).fillTriangle(x - 10, y, x + w + 10, y, x + w / 2, y - 40);
+    g.fillStyle(0x6b6250, 1);
+    for (let i = 0; i < 4; i++) g.fillRect(x + 10 + i * 22, y + 16, 10, h - 20);
+    g.setDepth(y + h);
+    this.add.text(x + w / 2, y - 50, '🏛️ Museum', { fontSize: '14px' }).setOrigin(0.5).setDepth(y + h + 1);
+    this.addObstacleRect({ x, y: y + 16, width: w, height: h - 16 });
+  }
+
+  drawAbleSisters() {
+    const { x, y, w, h } = ABLE_SISTERS_POS;
+    const g = this.add.graphics();
+    g.fillStyle(0xd88fb0, 1).fillRect(x, y, w, h);
+    g.fillStyle(0xe8b8d0, 1).fillTriangle(x - 8, y, x + w + 8, y, x + w / 2, y - 34);
+    g.fillStyle(0xcfe8f5, 1).fillRect(x + w / 2 - 10, y + 14, 20, 18);
+    g.setDepth(y + h);
+    this.add.text(x + w / 2, y - 44, '👗 Able Sisters', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + h + 1);
+    this.addObstacleRect({ x, y: y + 14, width: w, height: h - 14 });
+  }
+
+  isNearAbleSisters() {
+    const cx = ABLE_SISTERS_POS.x + ABLE_SISTERS_POS.w / 2;
+    const cy = ABLE_SISTERS_POS.y + ABLE_SISTERS_POS.h / 2;
+    return Math.hypot(this.localBody.x - cx, this.localBody.y - cy) < ABLE_SISTERS_RADIUS;
+  }
+
+  // ---------- guestbook ----------
+  // A small signpost + open book — purely decorative scenery (no
+  // collision, like the notice board), just a landmark to stand near.
+  drawGuestbook() {
+    const { x, y } = GUESTBOOK_POS;
+    const g = this.add.graphics().setDepth(y - 1);
+    g.fillStyle(0x6b4a30, 1).fillRect(x - 3, y - 6, 6, 34);
+    g.fillStyle(0xe8d9b5, 1);
+    g.fillTriangle(x - 26, y - 6, x, y - 22, x, y - 6);
+    g.fillTriangle(x + 26, y - 6, x, y - 22, x, y - 6);
+    g.lineStyle(1, 0x8f7044, 1);
+    g.lineBetween(x, y - 22, x, y - 6);
+    this.add.text(x, y - 42, '📖 Guestbook', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
+  }
+
+  isNearGuestbook() {
+    return Math.hypot(this.localBody.x - GUESTBOOK_POS.x, this.localBody.y - GUESTBOOK_POS.y) < GUESTBOOK_RADIUS;
+  }
+
+  // ---------- home plot ----------
+  drawHomePlot() {
+    const { x, y } = HOME_POS;
+    if (!this.textures.exists('homePlot')) {
+      const g = this.make.graphics({ x: 0, y: 0, add: false });
+      g.fillStyle(0x000000, 0.12).fillRoundedRect(4, 8, 156, 92, 8);
+      g.fillStyle(0xb98a52, 1).fillRoundedRect(0, 0, 156, 92, 8);
+      g.fillStyle(0xcfa56a, 1).fillRoundedRect(6, 6, 144, 80, 6);
+      g.lineStyle(3, 0x6b4a30, 1).strokeRoundedRect(0, 0, 156, 92, 8);
+      for (let i = 0; i < 9; i++) { g.fillStyle(0x8f6a3c, 1).fillRect(8 + i * 17, -4, 4, 10); g.fillRect(8 + i * 17, 86, 4, 10); }
+      g.generateTexture('homePlot', 156, 96);
+      g.destroy();
+    }
+    if (!this.textures.exists('homeTank')) {
+      const g = this.make.graphics({ x: 0, y: 0, add: false });
+      g.fillStyle(0x000000, 0.12).fillRoundedRect(3, 6, 66, 46, 6);
+      g.fillStyle(0x8fd3f2, 0.55).fillRoundedRect(0, 0, 66, 46, 6);
+      g.fillStyle(0xe8d9b5, 0.9).fillRect(0, 36, 66, 10);
+      g.lineStyle(3, 0x6b4a30, 1).strokeRoundedRect(0, 0, 66, 46, 6);
+      g.generateTexture('homeTank', 70, 54);
+      g.destroy();
+    }
+    this.add.image(x, y, 'homePlot').setDepth(y - 60);
+    this.add.image(x + HOME_TANK_OFFSET.x, y + HOME_TANK_OFFSET.y, 'homeTank').setDepth(y - 59);
+    this.homeTankSprites = [];
+    this.homeSprites = [];
+    this.homeLabel = this.add.text(x, y - 66, '🏡 Home', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 60);
+    this.home = this.loadHome();
+    this.renderHomeSprites();
+  }
+
+  // Sanitised: slot ids must be real recipe ids; everything else is dropped.
+  loadHome() {
+    const rec = loadSave().home;
+    const slots = new Array(HOME_SLOTS).fill(null);
+    if (rec && typeof rec === 'object' && !Array.isArray(rec) && Array.isArray(rec.slots)) {
+      for (let i = 0; i < HOME_SLOTS; i++) {
+        const id = rec.slots[i];
+        if (typeof id === 'string' && RECIPES.some((r) => r.id === id)) slots[i] = id;
+      }
+    }
+    const tank = new Array(HOME_TANK_SLOTS).fill(null);
+    if (rec && typeof rec === 'object' && !Array.isArray(rec) && Array.isArray(rec.tank)) {
+      const used = new Set();
+      for (let i = 0; i < HOME_TANK_SLOTS; i++) {
+        const id = rec.tank[i];
+        if (typeof id === 'string' && FISH_SPECIES.some((f) => f.id === id) && !used.has(id)) { tank[i] = id; used.add(id); }
+      }
+    }
+    return { slots, tank, paidDay: rec && typeof rec === 'object' ? cleanCount(rec.paidDay) : 0 };
+  }
+
+  homeCozy() {
+    const goods = this.home.slots.reduce((sum, id) => sum + (id ? RECIPES.find((r) => r.id === id).value : 0), 0);
+    const fish = this.home.tank.reduce((sum, id) => sum + (id ? FISH_SPECIES.find((f) => f.id === id).rarity * 2 : 0), 0);
+    return goods + fish;
+  }
+
+  // Rebuilt only when placement changes (never per frame).
+  renderHomeSprites() {
+    this.homeSprites.forEach((t) => t.destroy());
+    this.homeSprites = [];
+    this.home.slots.forEach((id, i) => {
+      if (!id) return;
+      const r = RECIPES.find((x) => x.id === id);
+      const [dx, dy] = HOME_SLOT_OFFSETS[i];
+      this.homeSprites.push(this.add.text(HOME_POS.x + dx, HOME_POS.y + dy, r.icon, { fontSize: '22px' }).setOrigin(0.5).setDepth(HOME_POS.y + dy + 70));
+    });
+    // Aquarium fish: a few emoji with a slow drift (3 tiny tweens, rebuilt only on change).
+    this.homeTankSprites.forEach((t) => { this.tweens.killTweensOf(t); t.destroy(); });
+    this.homeTankSprites = [];
+    this.home.tank.forEach((id, i) => {
+      if (!id) return;
+      const f = FISH_SPECIES.find((x) => x.id === id);
+      const bx = HOME_POS.x + HOME_TANK_OFFSET.x - 16 + i * 16;
+      const by = HOME_POS.y + HOME_TANK_OFFSET.y - 8 + (i % 2) * 10;
+      const t = this.add.text(bx, by, f.icon, { fontSize: '14px' }).setOrigin(0.5).setDepth(HOME_POS.y + 20);
+      this.tweens.add({ targets: t, x: bx + 12, duration: 1800 + i * 400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      this.homeTankSprites.push(t);
+    });
+    if (this.homeLabel) this.homeLabel.setText(`🏡 Home (cozy ${this.homeCozy()})`);
+  }
+
+  isNearHome(radius = HOME_RADIUS) {
+    return Math.hypot(this.localBody.x - HOME_POS.x, this.localBody.y - HOME_POS.y) < radius;
+  }
+
+  openHome() {
+    this.homeOpen = true;
+    document.getElementById('home-overlay').classList.remove('hidden');
+    const note = document.getElementById('home-note');
+    note.textContent = '';
+    // First visit of the day: neighbors admire the place.
+    const day = this.questDayBucket();
+    const cozy = this.homeCozy();
+    if (this.home.paidDay !== day) {
+      const bonus = Math.min(HOME_BONUS_CAP, Math.floor(cozy / HOME_BONUS_PER));
+      this.home.paidDay = day;
+      this.saveHome();
+      if (bonus > 0) {
+        this.awardPoint(bonus, `🏡 visitors admire your home! +${bonus} ⭐`, this.localBody.x, this.localBody.y - 40, 'sell');
+        note.textContent = `Visitors admired your home today: +${bonus} ⭐`;
+      }
+    }
+    this.renderHome();
+  }
+
+  closeHome() {
+    this.homeOpen = false;
+    document.getElementById('home-overlay').classList.add('hidden');
+  }
+
+  saveHome() {
+    writeSave({ home: { slots: this.home.slots, tank: this.home.tank, paidDay: this.home.paidDay }, crafted: this.craftedGoods });
+  }
+
+  renderHome() {
+    const list = document.getElementById('home-list');
+    list.innerHTML = '';
+    this.home.slots.forEach((cur, i) => {
+      const li = document.createElement('li');
+      const label = document.createElement('label');
+      label.textContent = `Spot ${i + 1}`;
+      label.htmlFor = `home-slot-${i}`;
+      const sel = document.createElement('select');
+      sel.id = `home-slot-${i}`;
+      sel.className = 'home-slot-select';
+      const mk = (value, text) => { const o = document.createElement('option'); o.value = value; o.textContent = text; return o; };
+      sel.appendChild(mk('', '— empty —'));
+      RECIPES.forEach((r) => {
+        const have = this.craftedGoods[r.id] || 0;
+        if (r.id === cur || have > 0) sel.appendChild(mk(r.id, `${r.icon} ${r.label}${r.id === cur ? ' (placed)' : ` (x${have})`}`));
+      });
+      sel.value = cur || '';
+      sel.addEventListener('change', () => this.setHomeSlot(i, sel.value || null));
+      li.append(label, sel);
+      list.appendChild(li);
+    });
+    const tankList = document.getElementById('home-tank-list');
+    tankList.innerHTML = '';
+    const caught = this.fishlog ? this.fishlog.caught : {};
+    this.home.tank.forEach((cur, i) => {
+      const li = document.createElement('li');
+      const label = document.createElement('label');
+      label.textContent = `Tank ${i + 1}`;
+      label.htmlFor = `home-tank-${i}`;
+      const sel = document.createElement('select');
+      sel.id = `home-tank-${i}`;
+      sel.className = 'home-slot-select';
+      const mk = (value, text) => { const o = document.createElement('option'); o.value = value; o.textContent = text; return o; };
+      sel.appendChild(mk('', FISH_SPECIES.some((f) => caught[f.id]) ? '— empty —' : '— catch fish first —'));
+      FISH_SPECIES.forEach((f) => {
+        const usedElsewhere = this.home.tank.some((id, j) => id === f.id && j !== i);
+        if ((caught[f.id] || f.id === cur) && !usedElsewhere) sel.appendChild(mk(f.id, `${f.icon} ${f.name}`));
+      });
+      sel.value = cur || '';
+      sel.addEventListener('change', () => this.setTankSlot(i, sel.value || null));
+      li.append(label, sel);
+      tankList.appendChild(li);
+    });
+    document.getElementById('home-cozy').textContent = `Cozy score: ${this.homeCozy()} (daily visitor bonus: +${Math.min(HOME_BONUS_CAP, Math.floor(this.homeCozy() / HOME_BONUS_PER))} ⭐)`;
+  }
+
+  // Aquarium: show a species you have logged (nothing is consumed).
+  setTankSlot(i, id) {
+    if (i < 0 || i >= HOME_TANK_SLOTS) return false;
+    if (this.home.tank[i] === id) return false;
+    if (id !== null) {
+      const known = FISH_SPECIES.some((f) => f.id === id);
+      const caught = this.fishlog && this.fishlog.caught[id];
+      if (!known || !caught || this.home.tank.some((x, j) => x === id && j !== i)) { this.renderHome(); return false; }
+    }
+    this.home.tank[i] = id;
+    this.saveHome();
+    this.renderHomeSprites();
+    this.renderHome();
+    if (id) {
+      this.incrementStat('tankPlaced');
+      if (this.home.tank.every(Boolean)) this.incrementStat('tankFull');
+    }
+    this.noteCozy();
+    return true;
+  }
+
+  // Track the best cozy score ever (for the Cozy Corner achievement).
+  noteCozy() {
+    const cozy = this.homeCozy();
+    if (cozy > (this.lifetimeStats.homeCozyBest || 0)) { this.lifetimeStats.homeCozyBest = cozy; this.saveAchievements(); this.checkAchievements(); }
+  }
+
+  // Swap one slot: the old good returns to the bag, the new one leaves it.
+  setHomeSlot(i, id) {
+    if (i < 0 || i >= HOME_SLOTS) return false;
+    const cur = this.home.slots[i];
+    if (cur === id) return false;
+    if (id !== null) {
+      if (!RECIPES.some((r) => r.id === id) || (this.craftedGoods[id] || 0) < 1) { this.renderHome(); return false; }
+    }
+    if (cur) this.craftedGoods[cur] = (this.craftedGoods[cur] || 0) + 1;
+    if (id) this.craftedGoods[id] -= 1;
+    this.home.slots[i] = id;
+    this.saveHome();
+    this.updateInventoryHUD();
+    this.renderHomeSprites();
+    this.renderHome();
+    if (id) {
+      this.incrementStat('homePlaced');
+      if (this.home.slots.every(Boolean)) this.incrementStat('homeFullPlots');
+    }
+    this.noteCozy();
+    return true;
+  }
+
+  // ---------- villager mailbox ----------
+  // Pure: the letters for a UTC day given each villager's friendship tier
+  // ({id: tier}). Each has a stable id `${day}:${villagerId}`, sender,
+  // text, tier and an attachment ({kind:'res', key, n} or {kind:'stars', n}).
+  lettersForDay(day, tiers) {
+    const d = day % 100000;
+    const letters = [];
+    VILLAGERS.forEach((v, i) => {
+      const tier = Math.max(0, Math.min(3, Math.floor(Number(tiers[v.id]) || 0)));
+      if (birthdayIndexForDay(day) === i || worldHash(d, i, MAIL_SALT) < MAIL_WRITE_CHANCE[tier]) letters.push(this.makeLetter(d, day, v, i, tier));
+    });
+    if (letters.length === 0) {
+      // Everyone is busy today: the villager with the lowest roll still writes.
+      let best = 0;
+      VILLAGERS.forEach((v, i) => { if (worldHash(d, i, MAIL_SALT) < worldHash(d, best, MAIL_SALT)) best = i; });
+      const v = VILLAGERS[best];
+      letters.push(this.makeLetter(d, day, v, best, Math.max(0, Math.min(3, Math.floor(Number(tiers[v.id]) || 0)))));
+    }
+    return letters;
+  }
+
+  makeLetter(d, day, v, i, tier) {
+    const opener = LETTER_OPENERS[tier][Math.floor(worldHash(d, i, MAIL_SALT + 1) * LETTER_OPENERS[tier].length)];
+    const pool = tier >= 2 && v.closeLines && v.closeLines.length ? v.closeLines : v.lines;
+    const body = pool[Math.floor(worldHash(d, i, MAIL_SALT + 2) * pool.length)];
+    const wantsRes = worldHash(d, i, MAIL_SALT + 3) < 0.6;
+    const attach = wantsRes
+      ? { kind: 'res', key: v.likes[Math.floor(worldHash(d, i, MAIL_SALT + 4) * v.likes.length)], n: 1 + Math.floor(worldHash(d, i, MAIL_SALT + 5) * 2) + (tier >= 2 ? 1 : 0) }
+      : { kind: 'stars', n: MAIL_STAR_BASE + tier + Math.floor(worldHash(d, i, MAIL_SALT + 6) * 2) };
+    const bday = birthdayIndexForDay(day) === i;
+    if (bday) attach.n += attach.kind === 'stars' ? 2 : 1;
+    return { id: `${day}:${v.id}`, from: v.name, villagerId: v.id, tier, birthday: bday,
+      text: bday ? `🎂 It's my birthday today — come by for cake! ${body}` : `${opener} ${body}`, attach };
+  }
+
+  mailTiers() {
+    const t = {};
+    VILLAGERS.forEach((v) => { t[v.id] = this.villagerTier(v.id); });
+    return t;
+  }
+
+  // Today's claimed ids from the save; anything malformed or from another day is empty.
+  claimedLetters() {
+    const rec = loadSave().mail;
+    const day = this.questDayBucket();
+    if (!rec || typeof rec !== 'object' || rec.day !== day || !Array.isArray(rec.claimed)) return new Set();
+    return new Set(rec.claimed.filter((x) => typeof x === 'string'));
+  }
+
+  unclaimedLetters() {
+    const day = this.questDayBucket();
+    const claimed = this.claimedLetters();
+    return this.lettersForDay(day, this.mailTiers()).filter((l) => !claimed.has(l.id));
+  }
+
+  attachLabel(a) {
+    return a.kind === 'stars' ? `${a.n} ⭐` : `${a.n} ${VILLAGER_GIFT_ICONS[a.key] || a.key}`;
+  }
+
+  drawMailbox() {
+    const { x, y } = MAILBOX_POS;
+    if (!this.textures.exists('mailbox')) {
+      const g = this.make.graphics({ x: 0, y: 0, add: false });
+      g.fillStyle(0x000000, 0.16).fillEllipse(16, 40, 28, 8);
+      g.fillStyle(0x6b4a30, 1).fillRect(14, 20, 5, 20);
+      g.fillStyle(0x3b6fb6, 1).fillRoundedRect(4, 6, 26, 16, 5);
+      g.fillStyle(0x2c5594, 1).fillRect(4, 14, 26, 3);
+      g.fillStyle(0xe8d9b5, 1).fillRect(11, 9, 12, 3);
+      g.generateTexture('mailbox', 34, 44);
+      g.destroy();
+    }
+    this.add.image(x, y, 'mailbox').setDepth(y - 1);
+    this.addObstacleRect({ x: x - 8, y: y + 8, width: 16, height: 14 });
+    this.mailboxLabel = this.add.text(x, y - 40, '📬 Mailbox', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
+    this.refreshMailboxLabel();
+    // Day rollover / friendship changes: poll cheaply (no per-frame work).
+    this.time.addEvent({ delay: 30000, loop: true, callback: () => this.refreshMailboxLabel() });
+  }
+
+  refreshMailboxLabel() {
+    if (!this.mailboxLabel) return;
+    const n = this.unclaimedLetters().length;
+    this.mailboxLabel.setText(n > 0 ? `📬 Mailbox ❗${n}` : '📬 Mailbox');
+  }
+
+  isNearMailbox(radius = MAILBOX_RADIUS) {
+    return Math.hypot(this.localBody.x - MAILBOX_POS.x, this.localBody.y - MAILBOX_POS.y) < radius;
+  }
+
+  openMailbox() {
+    this.mailboxOpen = true;
+    document.getElementById('mailbox-overlay').classList.remove('hidden');
+    document.getElementById('mailbox-note').textContent = '';
+    this.renderMailbox();
+  }
+
+  closeMailbox() {
+    this.mailboxOpen = false;
+    document.getElementById('mailbox-overlay').classList.add('hidden');
+    this.refreshMailboxLabel();
+  }
+
+  renderMailbox() {
+    const list = document.getElementById('mailbox-list');
+    list.innerHTML = '';
+    const day = this.questDayBucket();
+    const claimed = this.claimedLetters();
+    const letters = this.lettersForDay(day, this.mailTiers());
+    letters.forEach((l) => {
+      const li = document.createElement('li');
+      li.className = 'mail-letter';
+      const head = document.createElement('div');
+      head.className = 'mail-from';
+      head.textContent = `✉️ From ${l.from} (${VILLAGER_TIER_NAMES[l.tier]})`;
+      const body = document.createElement('div');
+      body.className = 'mail-body';
+      body.textContent = l.text;
+      const foot = document.createElement('div');
+      foot.className = 'mail-foot';
+      const gift = document.createElement('span');
+      gift.textContent = `🎁 ${this.attachLabel(l.attach)}`;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'mail-collect-btn';
+      btn.dataset.letter = l.id;
+      btn.setAttribute('aria-label', `Collect letter from ${l.from}`);
+      btn.textContent = claimed.has(l.id) ? 'Collected' : 'Collect';
+      btn.disabled = claimed.has(l.id);
+      btn.addEventListener('click', () => this.claimLetter(l.id));
+      foot.append(gift, btn);
+      li.append(head, body, foot);
+      list.appendChild(li);
+    });
+    const left = letters.filter((l) => !claimed.has(l.id)).length;
+    document.getElementById('mailbox-collect-all-btn').disabled = left === 0;
+    const note = document.getElementById('mailbox-note');
+    if (left === 0 && !note.textContent) note.textContent = 'All caught up — new letters arrive tomorrow.';
+  }
+
+  claimLetter(id) {
+    const day = this.questDayBucket();
+    const claimed = this.claimedLetters();
+    if (claimed.has(id)) return false;
+    const letter = this.lettersForDay(day, this.mailTiers()).find((l) => l.id === id);
+    if (!letter) return false;
+    claimed.add(id);
+    const prev = loadSave().mail;
+    const lifetime = prev && typeof prev === 'object' ? cleanCount(prev.lifetime) : 0;
+    // Save the claim BEFORE paying out so a crash/reload can never double-pay.
+    writeSave({ mail: { day, claimed: [...claimed], lifetime: lifetime + 1 } });
+    const a = letter.attach;
+    if (a.kind === 'stars') {
+      this.awardPoint(a.n, `📬 +${a.n} ⭐`, this.localBody.x, this.localBody.y - 36, 'sell');
+    } else {
+      this.resources[a.key] = (this.resources[a.key] || 0) + a.n;
+      this.updateInventoryHUD();
+      this.saveResources();
+      this.showFloatingText(this.localBody.x, this.localBody.y - 36, `📬 +${this.attachLabel(a)}`);
+    }
+    this.incrementStat('lettersRead');
+    if (letter.tier >= 3) this.incrementStat('bestFriendLetters');
+    const note = document.getElementById('mailbox-note');
+    if (note) note.textContent = `Thanks, ${letter.from}! You got ${this.attachLabel(a)}.`;
+    this.renderMailbox();
+    this.refreshMailboxLabel();
+    return true;
+  }
+
+  collectAllLetters() {
+    this.unclaimedLetters().forEach((l) => this.claimLetter(l.id));
+  }
+
+  // ---------- DIY workbench ----------
+  // Baked once into a texture (no per-frame drawing), then placed as an image.
+  drawWorkbench() {
+    const { x, y } = WORKBENCH_POS;
+    if (!this.textures.exists('workbench')) {
+      const g = this.make.graphics({ x: 0, y: 0, add: false });
+      g.fillStyle(0x000000, 0.18).fillEllipse(40, 46, 76, 14);
+      g.fillStyle(0x6b4a30, 1).fillRect(8, 30, 6, 16).fillRect(66, 30, 6, 16);
+      g.fillStyle(0xc89a5b, 1).fillRect(4, 18, 72, 14);
+      g.fillStyle(0xa87c44, 1).fillRect(4, 28, 72, 4);
+      g.fillStyle(0x8a8f99, 1).fillRect(16, 10, 18, 8);
+      g.fillStyle(0x6b4a30, 1).fillRect(52, 6, 4, 12);
+      g.fillStyle(0xb0b5bf, 1).fillRect(50, 4, 12, 5);
+      g.generateTexture('workbench', 80, 50);
+      g.destroy();
+    }
+    this.add.image(x, y, 'workbench').setDepth(y - 1);
+    this.addObstacleRect({ x: x - 36, y: y - 4, width: 72, height: 24 });
+    this.add.text(x, y - 36, '🔨 Workbench', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
+  }
+
+  isNearWorkbench(radius = WORKBENCH_RADIUS) {
+    return Math.hypot(this.localBody.x - WORKBENCH_POS.x, this.localBody.y - WORKBENCH_POS.y) < radius;
+  }
+
+  openWorkbench() {
+    this.workbenchOpen = true;
+    document.getElementById('workbench-overlay').classList.remove('hidden');
+    document.getElementById('workbench-note').textContent = '';
+    this.renderWorkbench();
+  }
+
+  closeWorkbench() {
+    this.workbenchOpen = false;
+    document.getElementById('workbench-overlay').classList.add('hidden');
+  }
+
+  canCraft(recipe) {
+    return Object.entries(recipe.cost).every(([k, v]) => (this.resources[k] || 0) >= v);
+  }
+
+  renderWorkbench() {
+    const list = document.getElementById('workbench-list');
+    list.innerHTML = '';
+    const season = this.currentSeason();
+    const seasonEl = document.getElementById('workbench-season');
+    if (seasonEl) seasonEl.textContent = `${SEASON_ICONS[season]} It's ${season} — ${season} specials can be crafted now.`;
+    RECIPES.forEach((r) => {
+      const li = document.createElement('li');
+      const cost = Object.entries(r.cost).map(([k, v]) => `${v}${RES_ICONS[k]}`).join(' + ');
+      const have = this.craftedGoods[r.id] || 0;
+      const outOfSeason = !!r.season && r.season !== season;
+      const info = document.createElement('span');
+      info.textContent = `${r.season ? SEASON_ICONS[r.season] + ' ' : ''}${r.icon} ${r.label} — ${cost} → ${r.value}⭐ (have ${have})${outOfSeason ? ` · only in ${r.season}` : ''}`;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'workbench-craft-btn';
+      btn.setAttribute('aria-label', `Craft ${r.label}`);
+      btn.dataset.recipe = r.id;
+      btn.textContent = 'Craft';
+      btn.disabled = !this.canCraft(r) || outOfSeason;
+      btn.addEventListener('click', () => this.craftRecipe(r.id));
+      li.append(info, btn);
+      list.appendChild(li);
+    });
+  }
+
+  craftRecipe(id) {
+    const r = RECIPES.find((x) => x.id === id);
+    const note = document.getElementById('workbench-note');
+    if (!r) return false;
+    if (r.season && r.season !== this.currentSeason()) {
+      if (note) note.textContent = `${r.label} can only be crafted in ${r.season}.`;
+      return false;
+    }
+    if (!this.canCraft(r)) {
+      const need = Object.entries(r.cost).filter(([k, v]) => (this.resources[k] || 0) < v).map(([k, v]) => `${v - (this.resources[k] || 0)}${RES_ICONS[k]}`).join(' ');
+      if (note) note.textContent = `Need ${need} more`;
+      return false;
+    }
+    for (const [k, v] of Object.entries(r.cost)) this.resources[k] -= v;
+    this.craftedGoods[r.id] = (this.craftedGoods[r.id] || 0) + 1;
+    this.updateInventoryHUD();
+    this.saveResources();
+    this.incrementStat('crafted');
+    this.incrementStat('craft_' + r.id);
+    if (note) note.textContent = `Crafted ${r.icon} ${r.label}! Sell it at the shop.`;
+    this.showFloatingText(this.localBody.x, this.localBody.y - 30, `${r.icon} crafted!`);
+    this.renderWorkbench();
+    return true;
+  }
+
+  // ---------- Able Sisters outfit shop ----------
+  // Same species/frame picker as the join screen, but live: applying
+  // updates your own sprite immediately, writes through net.js so every
+  // other player's child_changed listener re-textures your remote
+  // sprite too, and persists locally like name/species already did.
+
+  openOutfitShop() {
+    this.outfitSpecies = this.selfData.species;
+    this.outfitFrame = this.selfData.frame;
+    this.renderOutfitTabs();
+    this.renderOutfitGrid();
+    document.getElementById('outfit-overlay').classList.remove('hidden');
+    this.outfitShopOpen = true;
+  }
+
+  closeOutfitShop() {
+    document.getElementById('outfit-overlay').classList.add('hidden');
+    this.outfitShopOpen = false;
+  }
+
+  randomizeOutfit() {
+    const species = SPECIES[Math.floor(Math.random() * SPECIES.length)];
+    this.outfitSpecies = species.key;
+    this.outfitFrame = Math.floor(Math.random() * FRAME_COUNT);
+    this.renderOutfitTabs();
+    this.renderOutfitGrid();
+    SFX.pop();
+  }
+
+  renderOutfitTabs() {
+    const el = document.getElementById('outfit-species-tabs');
+    el.innerHTML = '';
+    SPECIES.forEach((s) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'species-tab' + (s.key === this.outfitSpecies ? ' active' : '');
+      btn.textContent = s.label;
+      btn.addEventListener('click', () => {
+        this.outfitSpecies = s.key;
+        this.outfitFrame = 0;
+        this.renderOutfitTabs();
+        this.renderOutfitGrid();
+      });
+      el.appendChild(btn);
+    });
+  }
+
+  renderOutfitGrid() {
+    const el = document.getElementById('outfit-avatar-grid');
+    el.innerHTML = '';
+    for (let frame = 0; frame < FRAME_COUNT; frame++) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'avatar-choice' + (frame === this.outfitFrame ? ' selected' : '');
+      btn.style.backgroundImage = `url(../i/${this.outfitSpecies}-strip.png)`;
+      btn.style.backgroundPosition = `-${frame * 48}px 0`;
+      btn.addEventListener('click', () => {
+        this.outfitFrame = frame;
+        this.renderOutfitGrid();
+      });
+      el.appendChild(btn);
+    }
+  }
+
+  applyOutfit() {
+    this.selfData.species = this.outfitSpecies;
+    this.selfData.frame = this.outfitFrame;
+    this.localVisual.setTexture(this.outfitSpecies, this.outfitFrame);
+    this.localBody.setTexture(this.outfitSpecies, this.outfitFrame);
+    writeSave({ species: this.outfitSpecies, frame: this.outfitFrame });
+    this.net.updateAppearance(this.outfitSpecies, this.outfitFrame);
+    this.closeOutfitShop();
+    this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'new look!');
+  }
+
+  setupOutfitShop() {
+    document.getElementById('outfit-close-btn').addEventListener('click', () => this.closeOutfitShop());
+    document.getElementById('outfit-apply-btn').addEventListener('click', () => this.applyOutfit());
+    const randomBtn = document.getElementById('outfit-random-btn');
+    if (randomBtn) randomBtn.addEventListener('click', () => this.randomizeOutfit());
+  }
+
+  // ---------- guestbook UI ----------
+  // Short signed notes, persisted in Firebase (`/guestbook`, last 20 kept
+  // locally) so every player who visits the sign later sees what others
+  // left — not just a local-save journal.
+
+  setupGuestbook() {
+    this.guestbookEntries = [];
+    this.lastGuestbookAt = 0;
+    document.getElementById('guestbook-close-btn').addEventListener('click', () => this.closeGuestbook());
+    document.getElementById('workbench-close-btn').addEventListener('click', () => this.closeWorkbench());
+    document.getElementById('home-close-btn').addEventListener('click', () => this.closeHome());
+    const homeOverlay = document.getElementById('home-overlay');
+    homeOverlay.addEventListener('click', (e) => { if (e.target === homeOverlay) this.closeHome(); });
+    document.getElementById('mailbox-close-btn').addEventListener('click', () => this.closeMailbox());
+    const mbOverlay = document.getElementById('mailbox-overlay');
+    mbOverlay.addEventListener('click', (e) => { if (e.target === mbOverlay) this.closeMailbox(); });
+    document.getElementById('mailbox-collect-all-btn').addEventListener('click', () => this.collectAllLetters());
+    const wbOverlay = document.getElementById('workbench-overlay');
+    wbOverlay.addEventListener('click', (e) => { if (e.target === wbOverlay) this.closeWorkbench(); });
+    document.getElementById('guestbook-sign-btn').addEventListener('click', () => this.submitGuestbookNote());
+    const input = document.getElementById('guestbook-input');
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') this.submitGuestbookNote();
+      e.stopPropagation();
+    });
+  }
+
+  openGuestbook() {
+    this.guestbookOpen = true;
+    document.getElementById('guestbook-overlay').classList.remove('hidden');
+    document.getElementById('guestbook-error').textContent = '';
+    this.renderGuestbookList();
+  }
+
+  closeGuestbook() {
+    this.guestbookOpen = false;
+    document.getElementById('guestbook-overlay').classList.add('hidden');
+  }
+
+  renderGuestbookList() {
+    const list = document.getElementById('guestbook-list');
+    list.innerHTML = '';
+    if (!this.guestbookEntries.length) {
+      const li = document.createElement('li');
+      li.className = 'guestbook-empty';
+      li.textContent = 'No notes yet — be the first to sign!';
+      list.appendChild(li);
+      return;
+    }
+    this.guestbookEntries.forEach((entry) => {
+      const li = document.createElement('li');
+      const who = document.createElement('span');
+      who.className = 'guestbook-who';
+      who.textContent = censorBlockedTerms(entry.name || '???');
+      li.appendChild(who);
+      li.appendChild(document.createTextNode(` ${censorBlockedTerms(entry.text)}`));
+      list.appendChild(li);
+    });
+  }
+
+  submitGuestbookNote() {
+    const input = document.getElementById('guestbook-input');
+    const errorEl = document.getElementById('guestbook-error');
+    const text = input.value.trim().slice(0, GUESTBOOK_NOTE_MAX);
+    errorEl.textContent = '';
+
+    if (!text) return;
+
+    if (containsBlockedTerm(text)) {
+      errorEl.textContent = "That note wasn't signed — please keep it clean.";
+      input.value = '';
+      return;
+    }
+
+    // Same client-side spam deterrent idea as chat's repeat-message guard,
+    // but time-based instead: a real cooldown between writes, since this
+    // goes straight to the shared production database.
+    const now = Date.now();
+    if (now - this.lastGuestbookAt < GUESTBOOK_COOLDOWN_MS) {
+      const waitSec = Math.ceil((GUESTBOOK_COOLDOWN_MS - (now - this.lastGuestbookAt)) / 1000);
+      errorEl.textContent = `Slow down — you can sign again in ${waitSec}s.`;
+      return;
+    }
+
+    this.net.leaveGuestbookNote(text);
+    this.lastGuestbookAt = now;
+    input.value = '';
+  }
+
+  drawTurnipStall() {
+    const { x, y } = TURNIP_STALL_POS;
+    const g = this.add.graphics().setDepth(y - 1);
+    g.fillStyle(0x7a4a26, 1).fillRect(x - 26, y - 4, 52, 18);
+    g.fillStyle(0xd9663b, 1).fillTriangle(x - 32, y - 4, x + 32, y - 4, x, y - 30);
+    this.add.text(x, y - 46, '🥬 Turnips', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
+    this.turnipBuyLabel = this.add.text(x, y + 20, '', { fontSize: '11px', color: '#ffe066' }).setOrigin(0.5).setDepth(y + 1);
+    this.turnipSellLabel = this.add.text(HOUSE_POS.x + HOUSE_POS.w / 2, HOUSE_POS.y - 38, '', { fontSize: '11px', color: '#6fbf73' }).setOrigin(0.5).setDepth(HOUSE_POS.y + 1);
+  }
+
+  updateTurnipPriceLabels(time) {
+    if (time - (this.lastTurnipLabelAt || 0) < 1000) return;
+    this.lastTurnipLabelAt = time;
+    if (this.turnipBuyLabel) this.turnipBuyLabel.setText(`${this.turnipBuyPrice()} ⭐ / ${TURNIP_BUNDLE}`);
+    if (this.turnipSellLabel) this.turnipSellLabel.setText(`sells ${this.turnipSellPrice()} ⭐ / ${TURNIP_BUNDLE}`);
+  }
+
+  drawFossilSpots() {
+    this.fossilMounds = FOSSIL_SPOTS.map(({ x, y }) => {
+      const g = this.add.graphics().setDepth(y - 1);
+      g.fillStyle(0x7a5a38, 1).fillEllipse(x, y, 34, 18);
+      g.fillStyle(0x8f7044, 1).fillEllipse(x, y - 3, 22, 10);
+      return g;
+    });
+  }
+
+  // ---------- beachcombing ----------
+  // Fixed spots along the pond edges, same shape as the fishing spots:
+  // walk up, interact, a short cooldown before it washes up again.
+  // Local-only, like every other activity here.
+
+  // ---------- weeds ----------
+  // The day's weed positions: deterministic (worldHash of day + index +
+  // attempt), kept inside the village on open ground — off the ponds, every
+  // static obstacle (padded like the wildlife blockers), and clear of the
+  // flower patches and landmarks. May return fewer than WEED_COUNT in the
+  // unlikely event a slot finds no free spot in 12 tries.
+  weedSpotsForDay(day) {
+    const vb = VILLAGE_BOUNDS;
+    const pad = 70;
+    const blockers = this.weedBlockers;
+    const keepClear = [
+      ...FLOWER_SPOTS, CAMPFIRE_POS, STATUE_POS, MAILBOX_POS, BUGOFF_SIGN_POS, HOME_POS, GUESTBOOK_POS, WORKBENCH_POS,
+      POLYROLL_POS, TURNIP_STALL_POS, ABLE_SISTERS_POS, MERCHANT_POS, DIG_HOLE_POS, FISH_TOURNAMENT_SIGN_POS,
+    ];
+    const spots = [];
+    for (let i = 0; i < WEED_COUNT; i++) {
+      for (let t = 0; t < 12; t++) {
+        const x = Math.round(vb.x + pad + worldHash(day % 100000 + i * 0.37, t, WEED_SEED) * (vb.width - pad * 2));
+        const y = Math.round(vb.y + pad + worldHash(day % 100000 + i * 0.37, t + 50, WEED_SEED + 1) * (vb.height - pad * 2));
+        if (blockers.some((b) => x > b[0] && x < b[2] && y > b[1] && y < b[3])) continue;
+        if (this.ffInPond(MAIN_POND, x, y, 1.25) || this.ffInPond(EAST_POND, x, y, 1.25)) continue;
+        if (keepClear.some((k) => Math.hypot(k.x - x, k.y - y) < 60)) continue;
+        // The home plot is a 156x96 footprint: keep weeds off it (and its fence).
+        if (Math.abs(x - HOME_POS.x) < 175 && Math.abs(y - HOME_POS.y) < 80) continue;
+        // Talk-radius NPCs: stay outside their interaction radius so a weed can't steal a chat.
+        if (Math.hypot(NPC_POS.x - x, NPC_POS.y - y) < 100 || Math.hypot(NPC2_POS.x - x, NPC2_POS.y - y) < 100) continue;
+        if (spots.some((o) => Math.hypot(o.x - x, o.y - y) < 40)) continue;
+        spots.push({ x, y });
+        break;
+      }
+    }
+    return spots;
+  }
+
+  setupWeeds() {
+    // Snapshot the STATIC obstacles once (player-built blocks arrive later
+    // via Firebase and differ per client/timing) so every client — including
+    // one that rolls over to a new day mid-session — computes identical weeds.
+    this.weedBlockers = this.obstacles.getChildren().map((r) => [
+      r.x - r.width / 2 - 24, r.y - r.height / 2 - 48, r.x + r.width / 2 + 24, r.y + r.height / 2 + 16,
+    ]);
+    if (!this.textures.exists('weed')) {
+      const g = this.make.graphics({ x: 0, y: 0, add: false });
+      g.fillStyle(0x000000, 0.15).fillEllipse(10, 18, 16, 5);
+      g.fillStyle(0x3f7a2a, 1).fillTriangle(10, 2, 6, 17, 10, 14).fillTriangle(10, 2, 14, 17, 10, 14);
+      g.fillStyle(0x58a03a, 1).fillTriangle(3, 6, 8, 17, 9, 12).fillTriangle(17, 6, 12, 17, 11, 12);
+      g.fillStyle(0x2f5f1f, 1).fillRect(9, 12, 2, 6);
+      g.generateTexture('weed', 20, 20);
+      g.destroy();
+    }
+    this.weedSprites = [];
+    for (let i = 0; i < WEED_COUNT; i++) {
+      this.weedSprites.push(this.add.image(0, 0, 'weed').setVisible(false));
+    }
+    this.weedDay = null;
+    this.refreshWeeds();
+    // Day rollover is polled (like the merchant sign) — no per-frame work.
+    this.time.addEvent({ delay: 30000, loop: true, callback: () => this.refreshWeeds() });
+  }
+
+  refreshWeeds() {
+    const day = this.questDayBucket();
+    if (day === this.weedDay) return;
+    this.weedDay = day;
+    this.weedSpots = this.weedSpotsForDay(day);
+    const rec = loadSave().weedsPulled;
+    const ids = rec && typeof rec === 'object' && rec.day === day && Array.isArray(rec.ids) ? rec.ids : [];
+    this.weedsPulledToday = new Set(ids.filter((v) => Number.isInteger(v) && v >= 0 && v < WEED_COUNT));
+    this.weedSprites.forEach((sp, i) => {
+      const spot = this.weedSpots[i];
+      if (!spot) { sp.setVisible(false); return; }
+      sp.setPosition(spot.x, spot.y).setScale(1).setAlpha(1).setDepth(spot.y);
+      sp.setVisible(!this.weedsPulledToday.has(i));
+    });
+    this.updateTidiness();
+  }
+
+  weedsLeft() {
+    let n = 0;
+    this.weedSpots.forEach((_, i) => { if (!this.weedsPulledToday.has(i)) n++; });
+    return n;
+  }
+
+  updateTidiness() {
+    const el = document.getElementById('town-tidy');
+    if (!el) return;
+    const left = this.weedsLeft();
+    const label = left === 0 ? 'Spotless ✨' : left <= 8 ? 'Tidy' : left <= 16 ? 'Scruffy' : 'Overgrown';
+    el.textContent = `🌿 ${label} (${left} weeds)`;
+  }
+
+  findNearestWeed() {
+    let best = null;
+    let bestDist = WEED_PULL_RADIUS;
+    this.weedSpots.forEach((spot, i) => {
+      if (this.weedsPulledToday.has(i)) return;
+      const d = Math.hypot(this.localBody.x - spot.x, this.localBody.y - spot.y);
+      if (d < bestDist) { bestDist = d; best = { ...spot, index: i }; }
+    });
+    return best;
+  }
+
+  pullWeed(weed) {
+    if (this.weedsPulledToday.has(weed.index)) return false;
+    this.weedsPulledToday.add(weed.index);
+    writeSave({ weedsPulled: { day: this.weedDay, ids: [...this.weedsPulledToday] } });
+    const sp = this.weedSprites[weed.index];
+    if (sp) {
+      // One-shot pop-out tween (not per-frame), then hide.
+      this.tweens.add({ targets: sp, scale: 1.6, alpha: 0, y: weed.y - 14, duration: 220, onComplete: () => sp.setVisible(false) });
+    }
+    this.awardPoint(WEED_STAR_REWARD, `🌿 +${WEED_STAR_REWARD} ⭐`, weed.x, weed.y - 20, 'sell');
+    this.incrementStat('weedsPulled');
+    this.updateTidiness();
+    if (this.weedsLeft() === 0 && this.weedSpots.length > 0) {
+      this.awardPoint(WEED_SPOTLESS_BONUS, `✨ Spotless town! +${WEED_SPOTLESS_BONUS} ⭐`, this.localBody.x, this.localBody.y - 50, 'achievement');
+      this.incrementStat('spotlessDays');
+    }
+    return true;
+  }
+
+  drawFlowers() {
+    this.flowerCooldowns = {};
+    this.flowerSprites = FLOWER_SPOTS.map(({ x, y }) => {
+      const symbol = FLOWER_TYPES[Phaser.Math.Between(0, FLOWER_TYPES.length - 1)];
+      return this.add.text(x, y, symbol, { fontSize: '18px' }).setOrigin(0.5).setDepth(y);
+    });
+  }
+
+  findNearestFlower() {
+    const now = Date.now();
+    let best = null;
+    let bestDist = FLOWER_PICKUP_RADIUS;
+    FLOWER_SPOTS.forEach((spot, i) => {
+      if (this.flowerCooldowns[i] && now - this.flowerCooldowns[i] < FLOWER_REGROW_MS) return;
+      const d = Math.hypot(this.localBody.x - spot.x, this.localBody.y - spot.y);
+      if (d < bestDist) { bestDist = d; best = { ...spot, index: i }; }
+    });
+    return best;
+  }
+
+  collectFlower(spot) {
+    this.flowerCooldowns[spot.index] = Date.now();
+    const sprite = this.flowerSprites[spot.index];
+    if (sprite) {
+      const floraIdx = FLOWER_TYPES.indexOf(sprite.text);
+      if (floraIdx >= 0 && !this.museumFlora.has(floraIdx)) {
+        this.museumFlora.add(floraIdx);
+        this.saveFossils();
+      }
+      sprite.setVisible(false);
+      this.time.delayedCall(FLOWER_REGROW_MS, () => {
+        sprite.setText(FLOWER_TYPES[Phaser.Math.Between(0, FLOWER_TYPES.length - 1)]);
+        sprite.setVisible(true);
+      });
+    }
+    this.gainResource('flowers', 1, spot.x, spot.y - 16);
+  }
+
+  drawBeachItems() {
+    this.beachCooldowns = {};
+    this.beachSprites = BEACH_SPOTS.map(({ x, y }) => {
+      const symbol = BEACH_ITEMS[Phaser.Math.Between(0, BEACH_ITEMS.length - 1)];
+      return this.add.text(x, y, symbol, { fontSize: '16px' }).setOrigin(0.5).setDepth(y);
+    });
+  }
+
+  findNearestBeachItem() {
+    const now = Date.now();
+    let best = null;
+    let bestDist = BEACH_PICKUP_RADIUS;
+    BEACH_SPOTS.forEach((spot, i) => {
+      if (this.beachCooldowns[i] && now - this.beachCooldowns[i] < BEACH_RESPAWN_MS) return;
+      const d = Math.hypot(this.localBody.x - spot.x, this.localBody.y - spot.y);
+      if (d < bestDist) { bestDist = d; best = { ...spot, index: i }; }
+    });
+    return best;
+  }
+
+  collectBeachItem(spot) {
+    this.beachCooldowns[spot.index] = Date.now();
+    const sprite = this.beachSprites[spot.index];
+    if (sprite) {
+      sprite.setVisible(false);
+      this.time.delayedCall(BEACH_RESPAWN_MS, () => {
+        sprite.setText(BEACH_ITEMS[Phaser.Math.Between(0, BEACH_ITEMS.length - 1)]);
+        sprite.setVisible(true);
+      });
+    }
+    this.gainResource('shells', 1, spot.x, spot.y - 16);
+  }
+
+  drawStatue() {
+    const { x, y } = STATUE_POS;
+    const g = this.add.graphics();
+    g.fillStyle(0x9a9a9a, 1).fillRect(x - 24, y, 48, 14);
+    g.fillStyle(0x7d7d7d, 1).fillRect(x - 18, y - 10, 36, 10);
+    g.setDepth(y - 1);
+
+    const ape = this.add.sprite(x, y - 28, 'boredapes', 0).setScale(2.3).setDepth(y);
+    this.add.text(x, y - 68, '🐵 Mayor', {
+      fontSize: '12px',
+      fontFamily: 'monospace',
+      color: '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(y + 1);
+
+    this.addObstacleRect({ x: x - 22, y: y - 8, width: 44, height: 20 });
+  }
+
+  // A decorative old windmill tucked into the quiet northwest corner of
+  // town — pure scenery, same static-graphics-plus-sprite pattern as the
+  // statue, but with its blades spun by a looping angle tween instead of
+  // the statue's stillness.
+  drawWindmill() {
+    const { x, y } = WINDMILL_POS;
+
+    const g = this.add.graphics();
+    // Tapered stone tower (base wider than top).
+    g.fillStyle(0xc9b896, 1);
+    g.fillTriangle(x - 20, y, x + 20, y, x + 14, y - 64);
+    g.fillTriangle(x - 20, y, x + 14, y - 64, x - 14, y - 64);
+    g.fillStyle(0xb09c76, 1);
+    for (let row = y - 8; row > y - 64; row -= 12) g.fillRect(x - 17 + (y - row) * 0.09, row, 34 - (y - row) * 0.18, 2);
+    // Conical cap.
+    g.fillStyle(0x6b4226, 1).fillTriangle(x - 18, y - 60, x + 18, y - 60, x, y - 86);
+    // Door.
+    g.fillStyle(0x5a3a22, 1).fillRect(x - 6, y - 16, 12, 16);
+    g.setDepth(y - 1);
+
+    // Blade assembly: four thin arms in a plus shape, grouped in a
+    // container so a single rotation tween spins them all together.
+    const hubX = x;
+    const hubY = y - 70;
+    const armLen = 42;
+    const armW = 7;
+    const blade1 = this.add.rectangle(0, -armLen / 2, armW, armLen, 0xf2ead8);
+    const blade2 = this.add.rectangle(0, armLen / 2, armW, armLen, 0xf2ead8);
+    const blade3 = this.add.rectangle(-armLen / 2, 0, armLen, armW, 0xf2ead8);
+    const blade4 = this.add.rectangle(armLen / 2, 0, armLen, armW, 0xf2ead8);
+    const hub = this.add.circle(0, 0, 5, 0x6b4226);
+    const blades = this.add.container(hubX, hubY, [blade1, blade2, blade3, blade4, hub]).setDepth(y);
+    this.tweens.add({ targets: blades, angle: 360, duration: 4000, repeat: -1, ease: 'Linear' });
+
+    this.add.text(x, y - 100, '🌾 Old Windmill', {
+      fontSize: '12px',
+      fontFamily: 'monospace',
+      color: '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(y + 1);
+
+    // Small solid footprint for just the tower base — players can still
+    // walk right up to and around the structure.
+    this.addObstacleRect({ x: x - 16, y: y - 14, width: 32, height: 14 });
+  }
+
+  // ---------- mystery merchant ----------
+  // Same deterministic wall-clock-hash trick as weather/turnips: everyone
+  // computes the same "today's rare species" and "today's visiting hour"
+  // from the UTC day number, with zero network traffic.
+
+  merchantDayBucket(dayOffset = 0) {
+    return Math.floor(Date.now() / 86400000) + dayOffset;
+  }
+
+  merchantHash(seed, dayOffset = 0) {
+    const h = Math.sin(this.merchantDayBucket(dayOffset) * 12.9898 + seed * 78.233) * 43758.5453;
+    return h - Math.floor(h);
+  }
+
+  merchantStartHour(dayOffset = 0) {
+    return Math.floor(this.merchantHash(1, dayOffset) * 22); // leaves room for a 3h window inside 24h
+  }
+
+  merchantSpecies() {
+    const i = Math.floor(this.merchantHash(2) * RARE_SPECIES.length);
+    return RARE_SPECIES[i];
+  }
+
+  isMerchantVisiting() {
+    const hour = new Date().getHours();
+    const start = this.merchantStartHour();
+    return hour >= start && hour < start + 3;
+  }
+
+  drawMerchant() {
+    const { x, y } = MERCHANT_POS;
+    const species = this.merchantSpecies();
+    this.merchantSprite = this.add.sprite(x, y, species.key, 0).setScale(1.8).setDepth(y);
+    this.merchantSign = this.add.text(x, y - 34, '', {
+      fontSize: '11px',
+      fontFamily: 'monospace',
+      color: '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 3,
+      align: 'center',
+    }).setOrigin(0.5).setDepth(y + 1);
+    this.refreshMerchantSign();
+    this.time.addEvent({ delay: 15000, loop: true, callback: () => this.refreshMerchantSign() });
+  }
+
+  refreshMerchantSign() {
+    if (!this.merchantSign) return;
+    const species = this.merchantSpecies();
+    if (this.isMerchantVisiting()) {
+      this.merchantSprite.setTexture(species.key, 0).setVisible(true);
+      this.merchantSign.setText(`🛒 Mystery Merchant\nselling: ${species.label}`);
+    } else {
+      this.merchantSprite.setVisible(false);
+      const hour = new Date().getHours();
+      const todayStart = this.merchantStartHour();
+      // If today's window hasn't started yet, that's the next visit. If
+      // it already started and ended (or we're just not in it anymore),
+      // the next visit is tomorrow — with tomorrow's own hashed hour,
+      // not today's stale one.
+      const nextIsToday = hour < todayStart;
+      const nextStart = nextIsToday ? todayStart : this.merchantStartHour(1);
+      const whenLabel = nextIsToday ? 'today' : 'tomorrow';
+      this.merchantSign.setText(`🛒 closed — back at ${nextStart}:00 ${whenLabel}`);
+    }
+  }
+
+  isNearMerchant() {
+    return this.isMerchantVisiting() && Phaser.Math.Distance.Between(this.localBody.x, this.localBody.y, MERCHANT_POS.x, MERCHANT_POS.y) < MERCHANT_RADIUS;
+  }
+
+  buyFromMerchant() {
+    const species = this.merchantSpecies();
+    const frame = Math.floor(this.merchantHash(3) * 9);
+    // Already wearing today's look: paying again used to just re-apply the
+    // same sprite for 15 stars. Offer the gift-box star sink instead.
+    if (this.selfData.species === species.key && this.selfData.frame === frame) {
+      this.buyMerchantGiftBox();
+      return;
+    }
+    if ((this.localScore || 0) < MERCHANT_COST) {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, `need ${MERCHANT_COST}⭐`);
+      return;
+    }
+    this.selfData.species = species.key;
+    this.selfData.frame = frame;
+    this.localVisual.setTexture(species.key, frame);
+    this.localBody.setTexture(species.key, frame);
+    writeSave({ species: species.key, frame });
+    this.net.updateAppearance(species.key, frame);
+    this.awardPoint(-MERCHANT_COST, `🛒 bought ${species.label}!`, this.localBody.x, this.localBody.y - 30, 'sell');
+    this.incrementStat('merchantBuys');
+  }
+
+  // Once-a-day star sink: the merchant delivers a gift to every villager
+  // (affinity only, no tier-up star bonus, so it can't pay for itself).
+  buyMerchantGiftBox() {
+    const today = this.questDayBucket();
+    if (Number(loadSave().merchantGiftBoxDay) === today) {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, "already sent today's gift boxes");
+      return;
+    }
+    if ((this.localScore || 0) < MERCHANT_GIFT_BOX_COST) {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, `🎁 gift boxes for every villager: need ${MERCHANT_GIFT_BOX_COST}⭐`);
+      return;
+    }
+    writeSave({ merchantGiftBoxDay: today });
+    VILLAGERS.forEach((v) => this.bumpVillagerAffinity(v.id, MERCHANT_GIFT_BOX_AFFINITY));
+    this.awardPoint(-MERCHANT_GIFT_BOX_COST, `🎁 gift boxes sent to all ${VILLAGERS.length} villagers!`, this.localBody.x, this.localBody.y - 30, 'sell');
+    this.incrementStat('merchantGiftBoxes');
+  }
+
+  drawNPC() {
+    const { x, y } = NPC_POS;
+    const sprite = this.add.sprite(x, y, 'genius', 2).setScale(2).setDepth(y);
+    this.tweens.add({ targets: sprite, y: y - 4, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.add.text(x, y - 36, NPC_NAME, {
+      fontSize: '11px',
+      fontFamily: 'monospace',
+      color: '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(y + 1);
+    this.npcBubble = this.add.text(x, y - 56, '', {
+      fontSize: '11px',
+      color: '#1c2430',
+      backgroundColor: '#ffe066',
+      padding: { x: 8, y: 5 },
+      wordWrap: { width: 180 },
+      align: 'center',
+    }).setOrigin(0.5, 1).setDepth(99990).setVisible(false);
+    this.npcQuestSign = this.add.text(x, y - 46, '', {
+      fontSize: '10px',
+      fontFamily: 'monospace',
+      color: '#6fbf73',
+      stroke: '#000000',
+      strokeThickness: 3,
+      align: 'center',
+      wordWrap: { width: 150 },
+    }).setOrigin(0.5).setDepth(y + 1);
+    this.questClaimedBucket = Number(loadSave().questClaimedBucket) || -1;
+    this.triviaAnsweredBucket = Number(loadSave().triviaAnsweredBucket) || -1;
+    this.refreshNpcQuestSign();
+    this.addObstacleRect({ x: x - 10, y: y - 6, width: 20, height: 20 });
+  }
+
+  isNearNPC() {
+    return Phaser.Math.Distance.Between(this.localBody.x, this.localBody.y, NPC_POS.x, NPC_POS.y) < NPC_RADIUS;
+  }
+
+  // ---------- NPC daily quest ----------
+  // Same deterministic wall-clock-hash trick as weather/merchant: every
+  // client computes the same "today's resource + amount" from the UTC
+  // day number. Only "did I claim it" is stored locally — nothing synced.
+
+  questDayBucket() {
+    return Math.floor(Date.now() / 86400000);
+  }
+
+  questHash(seed) {
+    const bucket = this.questDayBucket();
+    const h = Math.sin(bucket * 37.719 + seed * 91.345) * 24634.6345;
+    return h - Math.floor(h);
+  }
+
+  todaysQuest() {
+    const resource = QUEST_RESOURCES[Math.floor(this.questHash(1) * QUEST_RESOURCES.length)];
+    const amount = 4 + Math.floor(this.questHash(2) * 5); // 4-8
+    const reward = QUEST_REWARD_BASE + amount;
+    return { resource, amount, reward };
+  }
+
+  isQuestClaimedToday() {
+    return this.questClaimedBucket === this.questDayBucket();
+  }
+
+  refreshNpcQuestSign() {
+    if (!this.npcQuestSign) return;
+    const quest = this.todaysQuest();
+    this.npcQuestSign.setText(
+      this.isQuestClaimedToday()
+        ? '✅ today\'s quest done!'
+        : `📋 bring ${quest.amount}${quest.resource.icon} (+${quest.reward}⭐)`
+    );
+  }
+
+  // ---------- daily scavenger hunt ----------
+  // Same deterministic wall-clock-hash trick as the quest/merchant/trivia
+  // for "where is it" — but "who found it first" needs real shared state,
+  // so that part goes through net.js's claimScavengerSpot() transaction.
+
+  todaysScavengerSpot() {
+    const i = Math.floor(this.questHash(20) * SCAVENGER_SPOTS.length);
+    return SCAVENGER_SPOTS[i];
+  }
+
+  setupScavengerHunt() {
+    const spot = this.todaysScavengerSpot();
+    this.scavengerMarker = this.add.text(spot.x, spot.y, '🔍', { fontSize: '20px' }).setOrigin(0.5).setDepth(spot.y);
+    this.tweens.add({ targets: this.scavengerMarker, y: spot.y - 6, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.scavengerClaim = null;
+    this.net.watchScavenger(this.questDayBucket(), (claim) => {
+      this.scavengerClaim = claim;
+      if (this.scavengerMarker) this.scavengerMarker.setVisible(!claim);
+    });
+  }
+
+  isNearScavenger() {
+    if (this.scavengerClaim) return false;
+    const spot = this.todaysScavengerSpot();
+    return Phaser.Math.Distance.Between(this.localBody.x, this.localBody.y, spot.x, spot.y) < SCAVENGER_RADIUS;
+  }
+
+  async claimScavenger() {
+    const dayKey = this.questDayBucket();
+    const result = await this.net.claimScavengerSpot(dayKey);
+    if (result.success) {
+      this.awardPoint(SCAVENGER_REWARD, `found it! +${SCAVENGER_REWARD}⭐`, this.localBody.x, this.localBody.y - 30, 'achievement');
+      this.incrementStat('scavengerHuntsWon');
+    } else {
+      const who = (result.claim && result.claim.name) || 'someone';
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, `already found by ${who}`);
+    }
+  }
+
+  // ---------- NPC daily trivia ----------
+
+  todaysTrivia() {
+    const i = Math.floor(this.questHash(10) * TRIVIA_QUESTIONS.length);
+    return TRIVIA_QUESTIONS[i];
+  }
+
+  isTriviaAnsweredToday() {
+    return this.triviaAnsweredBucket === this.questDayBucket();
+  }
+
+  openTrivia() {
+    if (!this.isNearNPC()) return;
+    const overlay = document.getElementById('trivia-overlay');
+    const body = document.getElementById('trivia-body');
+    overlay.classList.remove('hidden');
+    this.triviaOpen = true;
+    body.innerHTML = '';
+    if (this.isTriviaAnsweredToday()) {
+      const p = document.createElement('p');
+      p.textContent = "Come back tomorrow for a new question!";
+      body.appendChild(p);
+      return;
+    }
+    const trivia = this.todaysTrivia();
+    const q = document.createElement('p');
+    q.textContent = trivia.q;
+    body.appendChild(q);
+    trivia.choices.forEach((choice, i) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = choice;
+      btn.addEventListener('click', () => this.answerTrivia(i));
+      body.appendChild(btn);
+    });
+  }
+
+  closeTrivia() {
+    document.getElementById('trivia-overlay').classList.add('hidden');
+    this.triviaOpen = false;
+  }
+
+  answerTrivia(choiceIndex) {
+    const trivia = this.todaysTrivia();
+    const body = document.getElementById('trivia-body');
+    this.triviaAnsweredBucket = this.questDayBucket();
+    writeSave({ triviaAnsweredBucket: this.triviaAnsweredBucket });
+    body.innerHTML = '';
+    const p = document.createElement('p');
+    if (choiceIndex === trivia.correct) {
+      p.textContent = `Correct! +${TRIVIA_REWARD} ⭐`;
+      this.awardPoint(TRIVIA_REWARD, `trivia correct! +${TRIVIA_REWARD}⭐`, this.localBody.x, this.localBody.y - 30, 'achievement');
+      this.incrementStat('triviaCorrect');
+    } else {
+      p.textContent = `Not quite — the answer was "${trivia.choices[trivia.correct]}". Come back tomorrow!`;
+      SFX.deny();
+    }
+    body.appendChild(p);
+  }
+
+  talkToNPC() {
+    if (!this.isQuestClaimedToday()) {
+      const quest = this.todaysQuest();
+      if ((this.resources[quest.resource.key] || 0) >= quest.amount) {
+        this.resources[quest.resource.key] -= quest.amount;
+        this.updateInventoryHUD();
+        this.saveResources();
+        this.questClaimedBucket = this.questDayBucket();
+        writeSave({ questClaimedBucket: this.questClaimedBucket });
+        this.refreshNpcQuestSign();
+        this.awardPoint(quest.reward, `quest done! +${quest.reward}⭐`, this.localBody.x, this.localBody.y - 30, 'achievement');
+        this.incrementStat('questsDone');
+        return;
+      }
+    }
+    const pool = (this.isRainWindow(Date.now()) && Math.random() < 0.5) ? NPC_RAIN_LINES
+      : (this.isNpcNightHour() && Math.random() < 0.4) ? NPC_NIGHT_LINES : NPC_LINES;
+    const line = this.pickFreshLine(pool, 'npc');
+    this.npcBubble.setText(line).setVisible(true);
+    if (this.npcBubbleTimer) this.npcBubbleTimer.remove();
+    this.npcBubbleTimer = this.time.delayedCall(4200, () => this.npcBubble.setVisible(false));
+    this.incrementStat('npcChats');
+    SFX.pop();
+  }
+
+  isNpcNightHour() {
+    const hour = new Date().getHours();
+    return hour >= 21 || hour < 6;
+  }
+
+  // ---------- Second resident NPC (dockside, no quest, flavor only) ----------
+
+  drawNPC2() {
+    const { x, y } = NPC2_POS;
+    const sprite = this.add.sprite(x, y, 'doge', 4).setScale(2).setDepth(y);
+    this.tweens.add({ targets: sprite, y: y - 4, duration: 1100, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.add.text(x, y - 36, NPC2_NAME, {
+      fontSize: '11px',
+      fontFamily: 'monospace',
+      color: '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(y + 1);
+    this.npc2Bubble = this.add.text(x, y - 50, '', {
+      fontSize: '11px',
+      color: '#1c2430',
+      backgroundColor: '#ffe066',
+      padding: { x: 8, y: 5 },
+      wordWrap: { width: 180 },
+      align: 'center',
+    }).setOrigin(0.5, 1).setDepth(99990).setVisible(false);
+    this.addObstacleRect({ x: x - 10, y: y - 6, width: 20, height: 20 });
+  }
+
+  isNearNPC2() {
+    return Phaser.Math.Distance.Between(this.localBody.x, this.localBody.y, NPC2_POS.x, NPC2_POS.y) < NPC2_RADIUS;
+  }
+
+  talkToNPC2() {
+    const pool = (this.isRainWindow(Date.now()) && Math.random() < 0.5) ? NPC2_RAIN_LINES
+      : (this.isNpcNightHour() && Math.random() < 0.4) ? NPC2_NIGHT_LINES : NPC2_LINES;
+    const line = this.pickFreshLine(pool, 'npc2');
+    this.npc2Bubble.setText(line).setVisible(true);
+    if (this.npc2BubbleTimer) this.npc2BubbleTimer.remove();
+    this.npc2BubbleTimer = this.time.delayedCall(4200, () => this.npc2Bubble.setVisible(false));
+    this.incrementStat('npc2Chats');
+    SFX.pop();
+  }
+
+  // ---------- Residential Lane villagers (gift-affinity, AC-style) ----------
+
+  // Affinity is cached in memory (the save is the source of truth, read
+  // once) so the per-frame heart indicator never re-parses localStorage.
+  villagerAffinity(id) {
+    if (!this.villagerAffinityCache) {
+      const saved = loadSave().villagerAffinity;
+      this.villagerAffinityCache = (saved && typeof saved === 'object') ? { ...saved } : {};
+    }
+    return Math.max(0, Math.min(100, Number(this.villagerAffinityCache[id]) || 0));
+  }
+
+  villagerTier(id) {
+    const a = this.villagerAffinity(id);
+    if (a >= 50) return 3; // best friend
+    if (a >= 25) return 2; // good friend
+    if (a >= 10) return 1; // friend
+    return 0; // acquaintance
+  }
+
+  bumpVillagerAffinity(id, amount) {
+    const before = this.villagerAffinity(id);
+    const after = Math.min(100, before + amount);
+    const map = { ...(loadSave().villagerAffinity || {}) };
+    map[id] = after;
+    this.villagerAffinityCache = { ...map };
+    writeSave({ villagerAffinity: map });
+    return { before, after };
+  }
+
+  // 0-5 hearts; the first three line up with the friend/good/best tiers.
+  villagerHearts(id) {
+    const a = this.villagerAffinity(id);
+    return VILLAGER_HEART_STEPS.filter((s) => a >= s).length;
+  }
+
+  // Villagers doze at their front door late at night.
+  villagerIsAsleep(now = new Date()) {
+    const hour = now.getHours();
+    return hour >= 23 || hour < 6;
+  }
+
+  // Where a villager should be right now. Purely a function of wall-clock
+  // time + villager id, so every client puts them in the same spot with
+  // no network traffic.
+  villagerSpotFor(v, now) {
+    const doorX = v.hx + VILLAGER_HOUSE_W / 2;
+    const doorY = v.hy + VILLAGER_HOUSE_H + 12;
+    if (this.villagerIsAsleep(new Date(now))) return this.villagerUnhide(v, { x: doorX, y: doorY });
+    return this.villagerUnhide(v, this.villagerYardSpot(v, now, doorX, doorY));
+  }
+
+  // The lane's front yards have trees in them; a spot just behind a
+  // canopy would hide the villager, so step out in front of the trunk.
+  villagerUnhide(v, spot) {
+    this.villagerYardTrees = this.villagerYardTrees || {};
+    if (!this.villagerYardTrees[v.id]) {
+      this.villagerYardTrees[v.id] = TREES.filter(([tx, ty]) => tx > v.hx - 60 && tx < v.hx + VILLAGER_HOUSE_W + 60
+        && ty > v.hy && ty < v.hy + VILLAGER_HOUSE_H + 120);
+    }
+    let { x, y } = spot;
+    this.villagerYardTrees[v.id].forEach(([tx, ty]) => {
+      if (Math.abs(x - tx) < 30 && y <= ty && y > ty - 52) y = ty + 8;
+    });
+    return { x, y };
+  }
+
+  villagerYardSpot(v, now, doorX, doorY) {
+    const bucket = Math.floor(now / VILLAGER_WANDER_MS);
+    let seed = bucket;
+    for (let i = 0; i < v.id.length; i++) seed = (seed * 31 + v.id.charCodeAt(i)) | 0;
+    const rand = (k) => {
+      const h = Math.sin(seed * 12.9898 + k * 78.233) * 43758.5453;
+      return h - Math.floor(h);
+    };
+    // Roughly one bucket in four they just hang out by the door.
+    if (rand(0) < 0.25) return { x: doorX, y: doorY + 16 };
+    return {
+      x: v.hx - 16 + rand(1) * (VILLAGER_HOUSE_W + 32),
+      y: v.hy + VILLAGER_HOUSE_H + 14 + rand(2) * 24,
+    };
+  }
+
+  drawVillagers() {
+    this.villagerBubbles = {};
+    this.villagerState = {};
+    VILLAGERS.forEach((v) => {
+      const { hx: x, hy: y } = v;
+      const w = VILLAGER_HOUSE_W;
+      const h = VILLAGER_HOUSE_H;
+      const g = this.add.graphics();
+      g.fillStyle(0xe8d9b5, 1).fillRect(x, y, w, h);
+      g.fillStyle(v.roof, 1).fillTriangle(x - 8, y, x + w + 8, y, x + w / 2, y - 30);
+      g.fillStyle(0x5a3a22, 1).fillRect(x + w / 2 - 8, y + h - 20, 16, 20);
+      g.setDepth(y + h);
+      this.addObstacleRect({ x, y, width: w, height: h });
+
+      const spot = this.villagerSpotFor(v, Date.now());
+      const sprite = this.add.sprite(spot.x, spot.y, v.species, v.frame).setDepth(spot.y);
+      const nameText = this.add.text(spot.x, spot.y - 26, v.name, {
+        fontSize: '11px', fontFamily: 'monospace', color: '#ffffff', stroke: '#000000', strokeThickness: 3,
+      }).setOrigin(0.5).setDepth(spot.y + 1);
+      const hearts = this.add.text(spot.x, spot.y - 41, '', {
+        fontSize: '10px', fontFamily: 'monospace', color: '#ff7aa8', stroke: '#1c2430', strokeThickness: 3,
+      }).setOrigin(0.5).setDepth(spot.y + 1).setVisible(false);
+      // Bubble sits above the hearts row (which sits above the name tag),
+      // on a high depth so players walking past never cover it.
+      this.villagerBubbles[v.id] = this.add.text(spot.x, spot.y - 50, '', {
+        fontSize: '11px', color: '#1c2430', backgroundColor: '#ffe066', padding: { x: 8, y: 5 },
+        wordWrap: { width: 170 }, align: 'center',
+      }).setOrigin(0.5, 1).setDepth(99990).setVisible(false);
+      this.villagerState[v.id] = {
+        sprite, nameText, hearts, x: spot.x, y: spot.y, bucket: null, tween: null,
+        phase: Math.random() * Math.PI * 2, heartsShown: null,
+      };
+    });
+  }
+
+  // Called every frame (from updateGiftHint): eases each villager toward
+  // their scheduled spot, bobs them gently, and keeps the name tag,
+  // hearts and speech bubble glued above them.
+  updateVillagers() {
+    if (!this.villagerState) return;
+    const now = Date.now();
+    const asleep = this.villagerIsAsleep(new Date(now));
+    const key = `${Math.floor(now / VILLAGER_WANDER_MS)}-${asleep}`;
+    const t = this.time.now;
+    const px = this.localBody ? this.localBody.x : -99999;
+    const py = this.localBody ? this.localBody.y : -99999;
+    VILLAGERS.forEach((v) => {
+      const st = this.villagerState[v.id];
+      if (!st) return;
+      if (st.bucket !== key) {
+        st.bucket = key;
+        const target = this.villagerSpotFor(v, now);
+        if (st.tween) st.tween.stop();
+        st.tween = null;
+        const dist = Phaser.Math.Distance.Between(st.x, st.y, target.x, target.y);
+        if (dist > 1) {
+          st.sprite.setFlipX(target.x < st.x);
+          st.tween = this.tweens.add({
+            targets: st, x: target.x, y: target.y,
+            duration: Math.max(400, dist * 28), ease: 'Sine.easeInOut',
+            onComplete: () => { st.tween = null; },
+          });
+        }
+      }
+      // Hop while walking, slow breathe while idle, still if reduced motion.
+      let lift = 0;
+      if (!reduceMotion && !asleep) {
+        lift = st.tween
+          ? Math.abs(Math.sin(t / 110 + st.phase)) * 3
+          : (Math.sin(t / 500 + st.phase) + 1) * 1.5;
+      }
+      st.sprite.setPosition(st.x, st.y - lift).setDepth(st.y).setAlpha(asleep ? 0.75 : 1);
+      st.nameText.setPosition(st.x, st.y - 26).setDepth(st.y + 1);
+      st.hearts.setPosition(st.x, st.y - 41).setDepth(st.y + 1);
+      this.villagerBubbles[v.id].setPosition(st.x, st.y - 50);
+
+      const near = Phaser.Math.Distance.Between(px, py, st.x, st.y) < VILLAGER_HEARTS_RADIUS;
+      st.hearts.setVisible(near);
+      if (near) {
+        const n = asleep ? -1 : this.villagerHearts(v.id);
+        if (n !== st.heartsShown) {
+          st.heartsShown = n;
+          st.hearts.setText(asleep ? 'z z z' : '♥'.repeat(n) + '♡'.repeat(VILLAGER_HEART_STEPS.length - n));
+          st.hearts.setColor(asleep ? '#cfd8ff' : '#ff7aa8');
+        }
+      }
+    });
+  }
+
+  villagerPos(v) {
+    const st = this.villagerState && this.villagerState[v.id];
+    if (st) return { x: st.x, y: st.y };
+    return { x: v.hx + VILLAGER_HOUSE_W / 2, y: v.hy + VILLAGER_HOUSE_H + 30 };
+  }
+
+  findNearestVillager() {
+    if (!this.localBody) return null;
+    let nearest = null;
+    let nearestDist = Infinity;
+    VILLAGERS.forEach((v) => {
+      const p = this.villagerPos(v);
+      const d = Phaser.Math.Distance.Between(this.localBody.x, this.localBody.y, p.x, p.y);
+      if (d < VILLAGER_RADIUS && d < nearestDist) { nearest = v; nearestDist = d; }
+    });
+    return nearest;
+  }
+
+  showVillagerBubble(v, text, ms = 4200) {
+    const bubble = this.villagerBubbles && this.villagerBubbles[v.id];
+    if (!bubble) return;
+    bubble.setText(text).setVisible(true);
+    this.villagerBubbleTimers = this.villagerBubbleTimers || {};
+    if (this.villagerBubbleTimers[v.id]) this.villagerBubbleTimers[v.id].remove();
+    this.villagerBubbleTimers[v.id] = this.time.delayedCall(ms, () => bubble.setVisible(false));
+    // Turn to face the player while talking.
+    const st = this.villagerState && this.villagerState[v.id];
+    if (st && this.localBody) st.sprite.setFlipX(this.localBody.x < st.x);
+  }
+
+  // Random line from a pool, never the same line twice in a row per speaker.
+  pickFreshLine(pool, speaker) {
+    this.lastLineBySpeaker = this.lastLineBySpeaker || {};
+    let line = pool[Math.floor(Math.random() * pool.length)];
+    if (pool.length > 1 && line === this.lastLineBySpeaker[speaker]) {
+      line = pool[(pool.indexOf(line) + 1) % pool.length];
+    }
+    this.lastLineBySpeaker[speaker] = line;
+    return line;
+  }
+
+  villagerLinePool(v) {
+    const now = new Date();
+    const hour = now.getHours();
+    const extra = VILLAGER_PERSONALITY_LINES[v.personality] || {};
+    if (this.villagerIsAsleep(now)) return (extra.night || []).concat(VILLAGER_SLEEP_LINES);
+    // Weather/time-of-day lines are mixed in, not a replacement.
+    if (extra.rain && this.isRainWindow(now.getTime()) && Math.random() < 0.5) return extra.rain;
+    const slot = hour < 11 ? extra.morning : (hour >= 18 ? extra.evening : null);
+    if (slot && Math.random() < 0.35) return slot;
+    const base = v.lines.concat(extra.any || []);
+    return this.villagerTier(v.id) >= 2 ? base.concat(v.closeLines) : base;
+  }
+
+  talkToVillager(v) {
+    // First chat of the (local) day: a personal greeting and a small
+    // affinity bump, capped at once per villager per day.
+    const today = new Date().toISOString().slice(0, 10);
+    const talkDays = { ...(loadSave().villagerTalkDay || {}) };
+    let line;
+    if (talkDays[v.id] !== today && !this.villagerIsAsleep()) {
+      talkDays[v.id] = today;
+      writeSave({ villagerTalkDay: talkDays });
+      const beforeTier = this.villagerTier(v.id);
+      this.bumpVillagerAffinity(v.id, VILLAGER_DAILY_TALK_AFFINITY);
+      const afterTier = this.villagerTier(v.id);
+      const who = (this.localNameText && this.localNameText.text) || 'neighbor';
+      line = (VILLAGER_GREETINGS[v.personality] || 'Oh, hi, {name}!').replace('{name}', who);
+      if (afterTier > beforeTier) {
+        this.awardPoint(5, `${v.name} is now a ${VILLAGER_TIER_NAMES[afterTier]}! +5⭐`, this.localBody.x, this.localBody.y - 30, 'achievement');
+      } else {
+        this.showFloatingText(this.localBody.x, this.localBody.y - 30, `+♥ ${v.name}`);
+      }
+    } else {
+      line = this.pickFreshLine(this.villagerLinePool(v), v.id);
+    }
+    if (this.isBirthdayFor(v) && !this.birthdayClaimed(v)) {
+      line = "🎂 It's my birthday today! A little gift would make it perfect.";
+    }
+    this.showVillagerBubble(v, line);
+    SFX.pop();
+  }
+
+  // ---------- daily checklist ----------
+  setupDailies() {
+    document.getElementById('dailies-btn').addEventListener('click', () => { if (this.canAct()) this.openDailies(); });
+    document.getElementById('dailies-close-btn').addEventListener('click', () => this.closeDailies());
+    const overlay = document.getElementById('dailies-overlay');
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) this.closeDailies(); });
+    this.input.keyboard.on('keydown-J', () => { if (this.dailiesOpen) this.closeDailies(); else if (this.canAct()) this.openDailies(); });
+    this.refreshDailies();
+    this.time.addEvent({ delay: 20000, loop: true, callback: () => this.refreshDailies() });
+  }
+
+  // Today's chores, each {id, icon, label, detail, status: 'done'|'todo'|'later'|'na', optional?}.
+  // 'na' items (no birthday today, empty home plot) don't count.
+  dailyItems() {
+    const day = this.questDayBucket();
+    const items = [];
+    const quest = this.todaysQuest();
+    items.push({ id: 'quest', icon: '🧪', label: "Professor Byte's request", detail: `${quest.amount} ${quest.resource.icon} → ${quest.reward}⭐`, status: this.isQuestClaimedToday() ? 'done' : 'todo' });
+    items.push({ id: 'trivia', icon: '❓', label: "Professor Byte's trivia", detail: 'answer today\'s question', status: this.isTriviaAnsweredToday() ? 'done' : 'todo' });
+    const mailLeft = this.unclaimedLetters().length;
+    items.push({ id: 'fish', icon: '🎣', label: 'Catch a fish', detail: this.fishlog.lastDay === day ? 'logged today' : 'cast at a pond', status: this.fishlog.lastDay === day ? 'done' : 'todo' });
+    items.push({ id: 'mail', icon: '📬', label: 'Collect your letters', detail: mailLeft ? `${mailLeft} waiting at the mailbox` : 'all collected', status: mailLeft ? 'todo' : 'done' });
+    const weedsLeft = this.weedsLeft();
+    items.push({ id: 'weeds', icon: '🌿', label: 'Pull the weeds', detail: `${weedsLeft} left`, status: weedsLeft ? 'todo' : 'done' });
+    const bo = this.bugOffRecord();
+    const live = this.isBugOffTime();
+    // Once the window has passed without a medal it can no longer be done today:
+    // 'missed' is excluded from the total so it can't lock you out of the bonus.
+    const after = !live && this.bugOffPhase() === 'after';
+    items.push({ id: 'bugoff', icon: '🦋', label: 'Bug-Off (catch 5)', detail: live ? `LIVE — ${bo.count}/5 caught` : `${bo.count} caught (window ${this.bugOffStartHour()}:00-${this.bugOffStartHour() + BUGOFF_HOURS}:00${after ? ', over for today' : ''})`, status: bo.tier >= 1 ? 'done' : (live ? 'todo' : (after ? 'missed' : 'later')) });
+    const bday = this.todaysBirthdayVillager();
+    items.push({ id: 'birthday', icon: '🎂', label: bday ? `${bday.name}'s birthday` : 'Birthdays', detail: bday ? 'bring a gift' : 'none today', status: !bday ? 'na' : (this.birthdayClaimed(bday) ? 'done' : 'todo') });
+    items.push({ id: 'home', icon: '🏡', label: 'Visit your home plot', detail: this.homeCozy() ? `cozy ${this.homeCozy()}` : 'place a crafted good first', status: this.homeCozy() === 0 ? 'na' : (this.home.paidDay === day ? 'done' : 'todo') });
+    return items;
+  }
+
+  dailyProgress() {
+    const items = this.dailyItems().filter((i) => i.status !== 'na' && i.status !== 'missed');
+    return { done: items.filter((i) => i.status === 'done').length, total: items.length };
+  }
+
+  dailiesRecord() {
+    const rec = loadSave().dailies;
+    const ok = rec && typeof rec === 'object' && !Array.isArray(rec);
+    return { day: ok ? cleanCount(rec.day) : 0, paid: !!(ok && rec.day === this.questDayBucket() && rec.paid === true), days: ok ? cleanCount(rec.days) : 0 };
+  }
+
+  // Cheap poll: updates the panel button and pays the all-done bonus once a day.
+  refreshDailies() {
+    const { done, total } = this.dailyProgress();
+    const btn = document.getElementById('dailies-btn');
+    const label = `📋 Today ${done}/${total}`;
+    if (btn && btn.textContent !== label) btn.textContent = label;
+    if (total > 0 && done === total) {
+      const rec = this.dailiesRecord();
+      if (!rec.paid) {
+        // Save first, then pay, so a reload can never double-pay.
+        writeSave({ dailies: { day: this.questDayBucket(), paid: true, days: rec.days + 1 } });
+        this.awardPoint(DAILY_BONUS, `📋 All chores done! +${DAILY_BONUS} ⭐`, this.localBody.x, this.localBody.y - 50, 'achievement');
+        this.addChatLine({ system: true, text: `📋 Every daily chore is done — +${DAILY_BONUS} ⭐ bonus!` });
+        this.incrementStat('dailyAllDone');
+      }
+    }
+    if (this.dailiesOpen) this.renderDailies();
+  }
+
+  openDailies() {
+    this.dailiesOpen = true;
+    document.getElementById('dailies-overlay').classList.remove('hidden');
+    this.refreshDailies(); // re-renders while open
+  }
+
+  closeDailies() {
+    this.dailiesOpen = false;
+    document.getElementById('dailies-overlay').classList.add('hidden');
+  }
+
+  renderDailies() {
+    const list = document.getElementById('dailies-list');
+    list.innerHTML = '';
+    const mark = { done: '✅', todo: '⬜', later: '🕒', na: '➖', missed: '➖' };
+    this.dailyItems().forEach((it) => {
+      const li = document.createElement('li');
+      li.className = `daily-${it.status}`;
+      li.dataset.daily = it.id;
+      li.dataset.status = it.status;
+      const t = document.createElement('span');
+      t.textContent = `${mark[it.status]} ${it.icon} ${it.label}`;
+      const d = document.createElement('small');
+      d.textContent = it.detail;
+      li.append(t, d);
+      list.appendChild(li);
+    });
+    const { done, total } = this.dailyProgress();
+    const rec = this.dailiesRecord();
+    document.getElementById('dailies-summary').textContent = done === total && total > 0
+      ? `All ${total} chores done today! ${rec.paid ? `(+${DAILY_BONUS} ⭐ collected)` : ''} Days completed: ${rec.days}`
+      : `${done}/${total} done — finish them all for a +${DAILY_BONUS} ⭐ bonus. Days completed: ${rec.days}`;
+  }
+
+  // ---------- birthdays ----------
+  setupBirthdays() {
+    this.loadBirthdays();
+    this.refreshBirthdays();
+    this.time.addEvent({ delay: 30000, loop: true, callback: () => this.refreshBirthdays() });
+  }
+
+  // Sanitised: claimed ids are short strings (last 40 kept), guests real villager ids.
+  loadBirthdays() {
+    const rec = loadSave().birthdays;
+    const ok = rec && typeof rec === 'object' && !Array.isArray(rec);
+    this.birthdayClaimedIds = new Set(ok && Array.isArray(rec.claimed) ? rec.claimed.filter((x) => typeof x === 'string' && x.length < 40).slice(-40) : []);
+    this.birthdayGuests = new Set(ok && Array.isArray(rec.guests) ? rec.guests.filter((id) => VILLAGERS.some((v) => v.id === id)) : []);
+  }
+
+  todaysBirthdayVillager() {
+    const i = birthdayIndexForDay(this.questDayBucket());
+    return i >= 0 ? VILLAGERS[i] : null;
+  }
+
+  isBirthdayFor(v) {
+    const b = this.todaysBirthdayVillager();
+    return !!b && b.id === v.id;
+  }
+
+  birthdayClaimed(v) {
+    return this.birthdayClaimedIds.has(`${this.questDayBucket()}:${v.id}`);
+  }
+
+  // Name tags + the panel line; only touches text when it changed.
+  refreshBirthdays() {
+    const day = this.questDayBucket();
+    const today = this.todaysBirthdayVillager();
+    VILLAGERS.forEach((v) => {
+      const st = this.villagerState && this.villagerState[v.id];
+      if (!st) return;
+      const want = today && today.id === v.id ? `🎂 ${v.name}` : v.name;
+      if (st.nameText.text !== want) st.nameText.setText(want);
+    });
+    const el = document.getElementById('birthday-line');
+    if (!el) return;
+    if (today) {
+      el.textContent = `🎂 ${today.name}'s birthday today!${this.birthdayClaimedIds.has(`${day}:${today.id}`) ? ' ✓' : ''}`;
+    } else {
+      let best = null; let bestIn = Infinity;
+      VILLAGERS.forEach((v, i) => {
+        const inDays = (((i * 2 + 1) % BIRTHDAY_CYCLE_DAYS) - (day % BIRTHDAY_CYCLE_DAYS) + BIRTHDAY_CYCLE_DAYS) % BIRTHDAY_CYCLE_DAYS;
+        if (inDays > 0 && inDays < bestIn) { best = v; bestIn = inDays; }
+      });
+      el.textContent = best ? `🎂 Next: ${best.name} in ${bestIn}d` : '';
+    }
+  }
+
+  // Returns true when the gift press was handled as a birthday gift.
+  giveBirthdayGift(v) {
+    const likedKey = v.likes.find((key) => (this.resources[key] || 0) > 0);
+    let good = null;
+    if (!likedKey) {
+      good = RECIPES.filter((r) => (this.craftedGoods[r.id] || 0) > 0).sort((a, b) => a.value - b.value)[0] || null;
+    }
+    if (!likedKey && !good) {
+      const wants = v.likes.map((k) => VILLAGER_GIFT_ICONS[k] || k).join(' or ');
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, `It's ${v.name}'s birthday! Bring ${wants} (or a crafted good)`);
+      return true;
+    }
+    const id = `${this.questDayBucket()}:${v.id}`;
+    this.birthdayClaimedIds.add(id);
+    this.birthdayGuests.add(v.id);
+    // Save the claim before paying out so a reload can never double-pay.
+    writeSave({ birthdays: { claimed: [...this.birthdayClaimedIds].slice(-40), guests: [...this.birthdayGuests] } });
+    let icon;
+    let bonus = BIRTHDAY_STARS;
+    if (likedKey) {
+      this.resources[likedKey] -= 1;
+      icon = VILLAGER_GIFT_ICONS[likedKey] || '';
+    } else {
+      this.craftedGoods[good.id] -= 1;
+      icon = good.icon;
+      bonus += Math.floor(good.value / 2);
+    }
+    this.updateInventoryHUD();
+    this.saveResources();
+    const beforeTier = this.villagerTier(v.id);
+    this.bumpVillagerAffinity(v.id, 8 + BIRTHDAY_EXTRA_AFFINITY);
+    const afterTier = this.villagerTier(v.id);
+    this.showVillagerBubble(v, `${icon} 🎂 Best birthday ever! Thank you!`);
+    this.awardPoint(bonus, `🎂 ${v.name}'s party! +${bonus} ⭐`, this.localBody.x, this.localBody.y - 30, 'achievement');
+    if (afterTier > beforeTier) this.addChatLine({ system: true, text: `💞 ${v.name} is now a ${VILLAGER_TIER_NAMES[afterTier]}!` });
+    this.incrementStat('birthdayGifts');
+    this.incrementStat('giftsGiven');
+    this.refreshBirthdays();
+    SFX.pop();
+    return true;
+  }
+
+  giveNearestVillagerGift() {
+    const v = this.findNearestVillager();
+    if (!v) return;
+    if (this.isBirthdayFor(v) && !this.birthdayClaimed(v) && this.giveBirthdayGift(v)) return;
+    const likedKey = v.likes.find((key) => (this.resources[key] || 0) > 0);
+    if (!likedKey) {
+      const wants = v.likes.map((k) => VILLAGER_GIFT_ICONS[k] || k).join(' or ');
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, `${v.name} would love ${wants}`);
+      return;
+    }
+    this.resources[likedKey] -= 1;
+    this.updateInventoryHUD();
+    this.saveResources();
+    const beforeTier = this.villagerTier(v.id);
+    this.bumpVillagerAffinity(v.id, 8);
+    const afterTier = this.villagerTier(v.id);
+    const icon = VILLAGER_GIFT_ICONS[likedKey] || '';
+    if (afterTier > beforeTier) {
+      const tierName = VILLAGER_TIER_NAMES[afterTier];
+      this.showVillagerBubble(v, `${icon} For me?! We're ${tierName}s now!`);
+      this.awardPoint(5, `${v.name} is now a ${tierName}! +5⭐`, this.localBody.x, this.localBody.y - 30, 'achievement');
+    } else {
+      this.showVillagerBubble(v, `${icon} ${v.name} loves it!`);
+      this.awardPoint(1, '+1 ⭐', this.localBody.x, this.localBody.y - 30);
+    }
+    this.incrementStat('giftsGiven');
+    SFX.pop();
+  }
+
+  setupGiftHint() {
+    const btn = document.getElementById('gift-hint-btn');
+    if (!btn) return;
+    btn.addEventListener('click', () => { if (this.canAct()) this.giveNearestVillagerGift(); });
+  }
+
+  updateGiftHint() {
+    this.updateVillagers();
+    const btn = document.getElementById('gift-hint-btn');
+    if (!btn) return;
+    const v = (!this.inUnderground && !this.buildMode) ? this.findNearestVillager() : null;
+    btn.classList.toggle('hidden', !v);
+    if (!v) return;
+    // e.g. "🎁 Gift Mocha 🍎🌸" — dimmed when nothing they like is in the bag.
+    const label = `🎁 Gift ${v.name} ${v.likes.map((k) => VILLAGER_GIFT_ICONS[k] || k).join('')}`;
+    if (btn.textContent !== label) btn.textContent = label;
+    const has = v.likes.some((k) => (this.resources[k] || 0) > 0);
+    btn.style.opacity = has ? '' : '0.6';
+  }
+
+  drawCampfire() {
+    const { x, y } = CAMPFIRE_POS;
+    const logs = this.add.graphics().setDepth(-1);
+    logs.fillStyle(0x6b4226, 1);
+    logs.fillRect(x - 16, y - 3, 32, 6);
+    logs.fillRect(x - 4, y - 14, 8, 28);
+
+    const flame = this.add.circle(x, y - 8, 9, 0xffb238).setDepth(-1);
+    const flameInner = this.add.circle(x, y - 8, 5, 0xffe066).setDepth(-1);
+    this.tweens.add({ targets: [flame, flameInner], scale: { from: 0.85, to: 1.15 }, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+
+    this.kkSign = this.add.text(x, y - 42, '🎸 K.K. Slider is playing!', { fontSize: '12px' })
+      .setOrigin(0.5)
+      .setDepth(y + 1)
+      .setVisible(false);
+    this.kkNotes = ['🎵', '🎶', '🎵'].map((sym, i) => this.add.text(x - 16 + i * 16, y - 10, sym, { fontSize: '13px' }).setOrigin(0.5).setDepth(y + 1).setVisible(false));
+  }
+
+  // ---------- K.K. Slider campfire concert ----------
+  // A real AC staple: a live show at a fixed time of day, local to each
+  // player's own clock (same source as day/night) rather than anything
+  // synced over the network. One ⭐ bonus per show, guarded by a
+  // per-window flag so you can't just stand there and farm it.
+
+  isConcertTime() {
+    const hour = new Date().getHours();
+    return hour >= KK_CONCERT_START_HOUR && hour < KK_CONCERT_END_HOUR;
+  }
+
+  concertWindowKey() {
+    const now = new Date();
+    return `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}-${now.getHours()}`;
+  }
+
+  isNearCampfire() {
+    return Math.hypot(this.localBody.x - CAMPFIRE_POS.x, this.localBody.y - CAMPFIRE_POS.y) < CAMPFIRE_RADIUS;
+  }
+
+  updateConcert(time) {
+    if (time - (this.lastConcertCheckAt || 0) < 1000) return;
+    this.lastConcertCheckAt = time;
+    const playing = this.isConcertTime();
+    if (this.kkSign) this.kkSign.setVisible(playing);
+    this.kkNotes.forEach((n, i) => {
+      n.setVisible(playing);
+      if (playing) n.y = CAMPFIRE_POS.y - 10 + Math.sin(time / 300 + i) * 4;
+    });
+  }
+
+  enjoyConcert() {
+    const key = this.concertWindowKey();
+    if (this.kkEnjoyedWindow === key) {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'already enjoyed tonight\'s show');
+      return;
+    }
+    this.kkEnjoyedWindow = key;
+    writeSave({ kkEnjoyedWindow: key });
+    this.awardPoint(2, '🎶 +2 ⭐ enjoyed the show!', this.localBody.x, this.localBody.y - 30);
+    this.triggerEmote(1);
+  }
+
+  drawDigHole() {
+    const { x, y } = DIG_HOLE_POS;
+    const g = this.add.graphics().setDepth(-1);
+    g.fillStyle(0x1a1410, 1).fillEllipse(x, y, 42, 26);
+    g.fillStyle(0x100b08, 1).fillEllipse(x, y, 28, 16);
+    this.add.text(x, y - 26, '⛏️ Hole', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
+  }
+
+  drawDoor(x, y, label, color) {
+    const g = this.add.graphics().setDepth(y - 1);
+    g.fillStyle(0x3a2a1a, 1).fillRect(x - 16, y - 46, 32, 46);
+    g.fillStyle(color, 0.85).fillRect(x - 12, y - 42, 24, 38);
+    g.fillStyle(0xffffff, 0.9).fillCircle(x + 7, y - 22, 2);
+    this.add.text(x, y - 56, label, { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
+    this.tweens.add({
+      targets: g,
+      alpha: { from: 0.8, to: 1 },
+      duration: 900,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  }
+
+  drawDoors() {
+    PORTALS.forEach((p) => this.drawDoor(p.x, p.y, p.label, p.color));
+  }
+
+  drawForestRing() {
+    this.treeGraphics = [];
+    this.treeFruit = {};
+    TREES.forEach(([x, y]) => this.drawTree(x, y));
+  }
+
+  // Each tree used to be its own Graphics object, re-tessellating 5 shapes
+  // every frame (58+ of them, plus fruit overlays) — the single biggest
+  // Graphics cost in the scene. The art is now baked once into a few
+  // shared textures (3 deterministic canopy tints + a fruit overlay) and
+  // each tree is a plain Image. The origin is the old Graphics' local
+  // (0, 0), so position, y-sort depth, and the chop-shake rotation pivot
+  // are all exactly what they were; treeGraphics/treeFruit keep their
+  // shape (index -> object with setAngle/setVisible) for the chop code.
+  bakeTreeTextures() {
+    if (this.textures.exists('tree_0')) return;
+    const ox = TREE_TEX.ox;
+    const oy = TREE_TEX.oy;
+    const tints = [
+      [0x2f7a40, 0x3f8f4f, 0x4fa85f, 0x5cb86a, 0x7fd08a],
+      [0x2c7446, 0x3b8a55, 0x48a064, 0x58b673, 0x7ccc8e],
+      [0x3a7d3a, 0x4b9447, 0x5aaa52, 0x6bbd5f, 0x8fd682],
+    ];
+    const g = this.make.graphics({ x: 0, y: 0, add: false });
+    tints.forEach(([outline, back, mid, top, light], i) => {
+      g.clear();
+      g.fillStyle(0x2a5a2a, 0.22).fillEllipse(ox, oy + 11, 36, 10);
+      g.fillStyle(0x5a3a22, 1).fillRect(ox - 4, oy - 4, 8, 16);
+      g.fillStyle(0x7a5236, 1).fillRect(ox - 4, oy - 4, 3, 16);
+      g.fillStyle(outline, 1).fillCircle(ox, oy - 20, 19).fillCircle(ox - 11, oy - 12, 15).fillCircle(ox + 11, oy - 12, 15).fillCircle(ox, oy - 28, 14);
+      g.fillStyle(back, 1).fillCircle(ox, oy - 20, 17);
+      g.fillStyle(mid, 1).fillCircle(ox - 11, oy - 12, 13).fillCircle(ox + 11, oy - 12, 13);
+      g.fillStyle(top, 1).fillCircle(ox, oy - 28, 12);
+      g.fillStyle(light, 0.9).fillCircle(ox - 4, oy - 32, 5).fillCircle(ox - 13, oy - 16, 4);
+      g.generateTexture(`tree_${i}`, TREE_TEX.w, TREE_TEX.h);
+    });
+    g.clear();
+    g.fillStyle(0xe0453a, 1);
+    g.fillCircle(ox - 9, oy - 14, 3.5).fillCircle(ox + 8, oy - 19, 3.5).fillCircle(ox + 1, oy - 29, 3.5);
+    g.fillStyle(0xffb0a0, 1);
+    g.fillRect(ox - 10, oy - 16, 1.5, 1.5).fillRect(ox + 7, oy - 21, 1.5, 1.5).fillRect(ox, oy - 31, 1.5, 1.5);
+    g.generateTexture('tree_fruit', TREE_TEX.w, TREE_TEX.h);
+    g.destroy();
+  }
+
+  drawTree(x, y) {
+    this.bakeTreeTextures();
+    const ox = TREE_TEX.ox / TREE_TEX.w;
+    const oy = TREE_TEX.oy / TREE_TEX.h;
+    const variant = Math.floor(worldHash(x, y, 91) * 3);
+    const g = this.add.image(x, y, `tree_${variant}`).setOrigin(ox, oy);
+    g.setDepth(y);
+    this.addObstacleRect({ x: x - 5, y: y - 3, width: 10, height: 12 });
+    this.treeGraphics.push(g);
+
+    const index = this.treeGraphics.length - 1;
+    if (index % FRUIT_TREE_EVERY === 0) {
+      const fruit = this.add.image(x, y, 'tree_fruit').setOrigin(ox, oy);
+      fruit.setDepth(y + 0.5);
+      this.treeFruit[index] = fruit;
+    }
+  }
+
+  drawTulipBeds() {
+    TULIP_BEDS.forEach((bed) => {
+      bed.frames.forEach((frame, i) => {
+        const px = bed.x + i * 20 - ((bed.frames.length - 1) * 10);
+        this.add.sprite(px, bed.y, 'tulips', frame).setDepth(-1);
+      });
+    });
+  }
+
+  drawRocks() {
+    ROCKS.forEach(([x, y, frame]) => {
+      this.add.sprite(x, y, 'rocks', frame).setDepth(-1);
+    });
+  }
+
+  drawPunkRocks() {
+    PUNK_ROCKS.forEach(([x, y, frame]) => {
+      this.add.sprite(x, y, 'punkrocks', frame).setDepth(-1);
+    });
+  }
+
+  addObstacleRect({ x, y, width, height }) {
+    const rect = this.add.rectangle(x + width / 2, y + height / 2, width, height, 0x000000, 0).setVisible(false);
+    this.physics.add.existing(rect, true);
+    this.obstacles.add(rect);
+    return rect;
+  }
+
+  // ---------- networking ----------
+
+  registerNetHandlers() {
+    this.net.on('playerJoined', (p) => {
+      if (this.remotePlayers.has(p.id)) return;
+      this.allPlayers.set(p.id, p);
+      this.addRemotePlayer(p);
+      this.renderPlayerList();
+    });
+
+    this.net.on('playerLeft', (id) => {
+      this.allPlayers.delete(id);
+      this.removeRemotePlayer(id);
+      this.renderPlayerList();
+    });
+
+    this.net.on('playerUpdated', (d) => {
+      const rp = this.remotePlayers.get(d.id);
+      if (!rp) {
+        // A record that was skipped on child_added (written in two steps,
+        // or broken and later repaired) becomes valid here — show it now
+        // instead of never.
+        this.allPlayers.set(d.id, d);
+        this.addRemotePlayer(d);
+        this.renderPlayerList();
+        return;
+      }
+      rp.targetX = d.x;
+      rp.targetY = d.y;
+      rp.facing = d.facing;
+      if (d.species && (d.species !== rp.species || d.frame !== rp.frame)) {
+        rp.species = d.species;
+        rp.frame = d.frame;
+        const tex = this.safeTexture(d.species, d.frame);
+        rp.visual.setTexture(tex.key, tex.frame);
+      }
+
+      const known = this.allPlayers.get(d.id);
+      if (known && (known.score !== d.score || known.title !== d.title)) {
+        known.score = d.score || 0;
+        known.title = d.title || null;
+        this.renderPlayerList();
+      }
+
+      if (EMOTES.includes(d.emote) && d.emoteAt && this.lastEmoteAt.get(d.id) !== d.emoteAt) {
+        this.lastEmoteAt.set(d.id, d.emoteAt);
+        this.showEmoteBubble(d.id, d.emote);
+      }
+    });
+
+    this.net.on('chat', (msg) => {
+      this.addChatLine({ name: msg.name, text: msg.text, old: msg.isOld });
+      if (!msg.isOld) this.showChatBubble(msg.id, msg.text);
+    });
+
+    // Only fires when a rejoin after a dropped connection failed for good
+    // (the town filled up while we were away); short drops are healed
+    // automatically by net.js and reported through 'rejoined'.
+    this.net.on('selfRemoved', () => {
+      this.addChatLine({ system: true, text: 'Lost your spot in town (connection dropped and the town filled up). You can still look around, but refresh to rejoin.' });
+    });
+
+    this.net.on('connection', ({ connected }) => {
+      this.setNetStatus(connected ? null : 'Reconnecting…');
+      if (!connected) {
+        this.wasDisconnected = true;
+      } else if (this.wasDisconnected) {
+        this.wasDisconnected = false;
+        // Force the next movement tick to send our position again, in case
+        // the last one was lost with the connection.
+        this.lastSentPos = null;
+      }
+    });
+
+    this.net.on('rejoined', () => {
+      this.lastSentPos = null;
+      this.addChatLine({ system: true, text: 'Reconnected — you’re back in town.' });
+    });
+
+    this.net.on('blockAdded', (b) => this.addBlockVisual(b));
+    this.net.on('blockRemoved', (b) => this.removeBlockVisual(b.key));
+
+    this.net.on('guestbookEntry', (entry) => {
+      // child_added can replay entries we already have (e.g. a brief
+      // reconnect), so de-dupe by push key before unshifting.
+      if (this.guestbookEntries.some((e) => e.key === entry.key)) return;
+      this.guestbookEntries.unshift(entry);
+      if (this.guestbookEntries.length > 20) this.guestbookEntries.length = 20;
+      if (this.guestbookOpen) this.renderGuestbookList();
+    });
+  }
+
+  // Small "Reconnecting…" pill, created on demand (and styled inline) so
+  // it needs no markup or stylesheet changes. Pass null to hide it.
+  setNetStatus(text) {
+    let el = document.getElementById('net-status');
+    if (!text) {
+      if (el) el.remove();
+      return;
+    }
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'net-status';
+      el.setAttribute('role', 'status');
+      el.setAttribute('aria-live', 'polite');
+      el.style.cssText = 'position:fixed;top:calc(10px + env(safe-area-inset-top, 0px));left:50%;'
+        + 'transform:translateX(-50%);z-index:1000;padding:6px 14px;border-radius:999px;'
+        + 'background:rgba(28,36,48,0.92);color:#ffd27a;border:1px solid #3a4658;'
+        + 'font:600 13px system-ui,sans-serif;pointer-events:none;';
+      document.body.appendChild(el);
+    }
+    el.textContent = `📡 ${text}`;
+  }
+
+  // ---------- DOM: chat + player list ----------
+
+  registerChatUI() {
+    const chatInput = document.getElementById('chat-input');
+
+    chatInput.addEventListener('focus', () => { this.chatFocused = true; });
+    chatInput.addEventListener('blur', () => {
+      this.chatFocused = false;
+      // On mobile this input row is hidden until tapped open (see the
+      // mobile-chat-btn handler in setupTouchControls) — closing the
+      // keyboard/blurring is the natural "done typing" signal to hide it
+      // again, so it's not permanently eating screen space. A no-op on
+      // desktop, where the row has no hiding CSS to begin with.
+      document.getElementById('chat-input-row').classList.remove('chat-input-visible');
+    });
+
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        this.sendChatMessage();
+      } else if (e.key === 'Escape') {
+        chatInput.value = '';
+        chatInput.blur();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && document.activeElement !== chatInput) {
+        chatInput.focus();
+        e.preventDefault();
+      }
+    });
+
+    // Clears this device's own view of the log only — it's a local
+    // declutter button, not a moderation tool, so it doesn't touch the
+    // shared Firebase chat history or anyone else's screen.
+    document.getElementById('chat-clear-btn').addEventListener('click', () => {
+      document.getElementById('chat-log').innerHTML = '';
+      document.getElementById('chat-clear-btn').classList.add('hidden');
+    });
+
+    const sendBtn = document.getElementById('chat-send-btn');
+    // On mobile, tapping this button while the input is still focused
+    // blurs the input *before* the click fires (a tap is translated into
+    // touchstart/touchend, then compatibility mousedown/mouseup/click —
+    // it's that synthetic mousedown's default "shift focus" behavior that
+    // causes the blur) — and since blur now hides #chat-input-row (see
+    // above), the row (send button included) was disappearing out from
+    // under the tap mid-gesture, silently swallowing the click entirely.
+    // Blocking just mousedown's default stops that focus shift without
+    // canceling the click itself (unlike preventDefault on touchstart,
+    // which suppresses the whole synthetic mouse-event chain, click
+    // included), so sendChatMessage()'s own explicit blur() at the end is
+    // what finally hides the row, after the message has actually sent.
+    sendBtn.addEventListener('mousedown', (e) => e.preventDefault());
+    sendBtn.addEventListener('click', () => this.sendChatMessage());
+    document.querySelectorAll('#quick-chat-row button').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        chatInput.value = btn.dataset.phrase;
+        this.sendChatMessage();
+      });
+    });
+  }
+
+  sendChatMessage() {
+    const chatInput = document.getElementById('chat-input');
+    const text = chatInput.value.trim();
+    if (text && containsBlockedTerm(text)) {
+      this.addChatLine({ system: true, text: "That message wasn't sent — please keep it clean." });
+      chatInput.value = '';
+      chatInput.blur();
+      return;
+    }
+    // Simple client-side spam deterrent, not moderation: block sending the
+    // exact same text twice in a row within 10s. Doesn't stop a determined
+    // bad actor hitting the database directly, same caveat as the slur
+    // filter — see the README's "A word on safety" section.
+    if (text && text === this.lastChatText && Date.now() - (this.lastChatTextAt || 0) < 10000) {
+      chatInput.value = '';
+      chatInput.blur();
+      return;
+    }
+    // Same spirit: at most CHAT_BURST messages per CHAT_WINDOW_MS. The
+    // input is kept (not cleared) so the player can just retry.
+    const CHAT_BURST = 5;
+    const CHAT_WINDOW_MS = 10000;
+    const now = Date.now();
+    this.chatSentTimes = (this.chatSentTimes || []).filter((t) => now - t < CHAT_WINDOW_MS);
+    if (text && this.chatSentTimes.length >= CHAT_BURST) {
+      this.addChatLine({ system: true, text: 'Whoa, slow down a little — try again in a few seconds.' });
+      return;
+    }
+    if (text) {
+      this.chatSentTimes.push(now);
+      this.net.sendChat(text.slice(0, 140));
+      this.incrementStat('chatSent');
+      this.lastChatText = text;
+      this.lastChatTextAt = Date.now();
+    }
+    chatInput.value = '';
+    chatInput.blur();
+  }
+
+  addChatLine({ name, text, system, old }) {
+    const chatLog = document.getElementById('chat-log');
+    const line = document.createElement('div');
+    line.className = system ? 'chat-line system' : 'chat-line';
+    // Lines from before we joined are history, not live conversation.
+    if (old) line.style.opacity = '0.6';
+
+    if (!system) {
+      const who = document.createElement('span');
+      who.className = 'who';
+      // Defense in depth: a malicious client can write straight to Firebase
+      // and skip the checks above entirely, so anything rendered from
+      // someone else's data gets masked here too, not just on our own send.
+      who.textContent = `${censorBlockedTerms(name)}:`;
+      line.appendChild(who);
+      line.appendChild(document.createTextNode(` ${censorBlockedTerms(text)}`));
+    } else {
+      line.textContent = text;
+    }
+
+    // Only auto-scroll if the reader is already at (or near) the bottom, so
+    // a new line doesn't yank them away from scrolling back through history.
+    const nearBottom = chatLog.scrollHeight - chatLog.scrollTop - chatLog.clientHeight < 40;
+    chatLog.appendChild(line);
+    while (chatLog.children.length > 50) chatLog.removeChild(chatLog.firstChild);
+    if (nearBottom) chatLog.scrollTop = chatLog.scrollHeight;
+    document.getElementById('chat-clear-btn').classList.remove('hidden');
+  }
+
+  drawNoticeBoard() {
+    const x = 1350;
+    const y = 520;
+    const g = this.add.graphics().setDepth(y - 1);
+    g.fillStyle(0x6b4a30, 1).fillRect(x - 2, y - 4, 4, 30);
+    g.fillStyle(0xe8d9b5, 1).fillRect(x - 55, y - 54, 110, 52);
+    g.lineStyle(2, 0x8f7044, 1).strokeRect(x - 55, y - 54, 110, 52);
+    this.noticeBoardText = this.add.text(x, y - 28, '', {
+      fontSize: '8px',
+      fontFamily: 'monospace',
+      color: '#3a2a1a',
+      align: 'center',
+      wordWrap: { width: 96 },
+    }).setOrigin(0.5).setDepth(y);
+  }
+
+  updateNoticeBoard(sorted) {
+    if (!this.noticeBoardText) return;
+    const top3 = sorted.slice(0, 3);
+    const lines = top3.length
+      ? top3.map((p, i) => `${['🥇', '🥈', '🥉'][i]} ${censorBlockedTerms(p.name).slice(0, 8)} ${p.score || 0}`)
+      : ['no scores yet'];
+    this.noticeBoardText.setText(['TOP SCORES', ...lines].join('\n'));
+  }
+
+  renderPlayerList() {
+    const listEl = document.getElementById('player-list');
+    listEl.innerHTML = '';
+    const sorted = Array.from(this.allPlayers.values()).sort((a, b) => (b.score || 0) - (a.score || 0));
+    this.updateNoticeBoard(sorted);
+    sorted.forEach((p) => {
+      const li = document.createElement('li');
+      const safeName = censorBlockedTerms(p.name);
+      const label = p.id === this.selfData.id ? `${safeName} (you)` : safeName;
+      const title = ACHIEVEMENTS.find((a) => a.id === p.title);
+      const badge = title ? `${title.icon} ` : '';
+      const text = document.createElement('span');
+      text.textContent = `${badge}${label} — ⭐${p.score || 0}`;
+      if (title) text.title = title.label;
+      li.appendChild(text);
+
+      if (p.id !== this.selfData.id) {
+        const star = document.createElement('button');
+        star.type = 'button';
+        star.className = 'bestie-star' + (this.bestieId === p.id ? ' active' : '');
+        star.title = `Set ${safeName} as your walkie-talkie bestie`;
+        star.textContent = this.bestieId === p.id ? '💛' : '🤍';
+        star.addEventListener('click', () => this.setBestie(p.id, p.name));
+        li.appendChild(star);
+      }
+      listEl.appendChild(li);
+    });
+  }
+
+  // ---------- walkie-talkie (push-to-talk voice clips, bestie-only) ----------
+  // Fully peer-addressed, like chat but binary: a short recorded clip is
+  // base64-encoded and pushed to /walkie/{bestieId} in Firebase. If the
+  // recipient's tab is visible right now it plays instantly; otherwise it's
+  // queued as an unread voice memo and plays (or waits to be tapped) the
+  // moment they come back — a real background-tab web app can't reliably
+  // keep running or play audio while backgrounded/closed, so "while this
+  // tab is open and in front of you" is the honest scope here.
+
+  setupWalkie() {
+    this.bestieId = savedProfile.bestieId || null;
+    this.bestieName = savedProfile.bestieName || null;
+    this.voiceMemos = [];
+    this.recording = false;
+    this.updateBestieLabel();
+
+    if (this.net.db && this.net.id) {
+      this.walkieRef = this.net.db.ref(`walkie/${this.net.id}`);
+      this.walkieRef.on('child_added', (snap) => {
+        const v = snap.val();
+        if (!v || !v.data) return;
+        const memo = { key: snap.key, from: v.from, fromName: v.fromName || 'someone', data: v.data, mime: v.mime || 'audio/webm' };
+        this.voiceMemos.push(memo);
+        this.updateMemoBadge();
+        if (document.visibilityState === 'visible') this.playMemo(memo);
+      });
+    }
+
+    const talkBtn = document.getElementById('walkie-talk-btn');
+    const press = (e) => { e.preventDefault(); this.startRecording(); };
+    const release = () => this.stopRecording();
+    talkBtn.addEventListener('pointerdown', press);
+    talkBtn.addEventListener('pointerup', release);
+    talkBtn.addEventListener('pointerleave', release);
+
+    window.addEventListener('keydown', (e) => {
+      if (this.chatFocused || this.inUnderground) return;
+      if (e.key.toLowerCase() === 't' && !this.recording) this.startRecording();
+    });
+    window.addEventListener('keyup', (e) => {
+      if (e.key.toLowerCase() === 't') this.stopRecording();
+    });
+
+    document.getElementById('memo-inbox-btn').addEventListener('click', () => {
+      if (this.voiceMemos.length) this.playMemo(this.voiceMemos[0]);
+    });
+  }
+
+  setBestie(id, name) {
+    this.bestieId = id;
+    this.bestieName = name;
+    writeSave({ bestieId: id, bestieName: name });
+    this.updateBestieLabel();
+    this.renderPlayerList();
+  }
+
+  updateBestieLabel() {
+    const label = document.getElementById('bestie-label');
+    const talkBtn = document.getElementById('walkie-talk-btn');
+    if (label) label.textContent = this.bestieId ? `to ${this.bestieName}` : 'pick a bestie →';
+    if (talkBtn) talkBtn.disabled = !this.bestieId;
+  }
+
+  async startRecording() {
+    if (this.recording || !this.bestieId) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.recording = true;
+      document.getElementById('walkie-talk-btn').classList.add('recording');
+      this.walkieStream = stream;
+      this.walkieChunks = [];
+      // iOS Safari records AAC/mp4, not webm — ask for whatever this
+      // browser actually supports instead of assuming one.
+      const candidates = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg'];
+      const supported = candidates.find((t) => window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t));
+      this.walkieRecorder = new MediaRecorder(stream, supported ? { mimeType: supported } : undefined);
+      this.walkieRecorder.ondataavailable = (e) => { if (e.data.size) this.walkieChunks.push(e.data); };
+      this.walkieRecordedAt = Date.now();
+      this.walkieRecorder.start();
+      this.walkieTimeout = setTimeout(() => this.stopRecording(), 15000); // cap a clip at 15s
+    } catch (e) {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'mic permission needed');
+    }
+  }
+
+  stopRecording() {
+    if (!this.recording) return;
+    this.recording = false;
+    clearTimeout(this.walkieTimeout);
+    document.getElementById('walkie-talk-btn').classList.remove('recording');
+    const tooShort = Date.now() - this.walkieRecordedAt < 300;
+    const recorder = this.walkieRecorder;
+    const stream = this.walkieStream;
+    recorder.onstop = () => {
+      stream.getTracks().forEach((t) => t.stop());
+      if (tooShort || !this.walkieChunks.length) return;
+      const mime = recorder.mimeType || 'audio/webm';
+      const blob = new Blob(this.walkieChunks, { type: mime });
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = String(reader.result).split(',')[1];
+        if (base64) this.net.sendWalkie(this.bestieId, base64, mime);
+      };
+      reader.readAsDataURL(blob);
+    };
+    recorder.stop();
+  }
+
+  playMemo(memo) {
+    try {
+      const audio = new Audio(`data:${memo.mime};base64,${memo.data}`);
+      audio.play().catch(() => {});
+    } catch (e) { /* unsupported format on this device — still clear it below */ }
+    this.voiceMemos = this.voiceMemos.filter((m) => m.key !== memo.key);
+    this.updateMemoBadge();
+    if (this.walkieRef) this.walkieRef.child(memo.key).remove().catch(() => {});
+  }
+
+  updateMemoBadge() {
+    const btn = document.getElementById('memo-inbox-btn');
+    const count = document.getElementById('memo-count');
+    if (count) count.textContent = this.voiceMemos.length;
+    if (btn) btn.classList.toggle('hidden', this.voiceMemos.length === 0);
+  }
+}
+
+// ---------------- join overlay ----------------
+
+const nameInput = document.getElementById('name-input');
+const speciesTabsEl = document.getElementById('species-tabs');
+const avatarGridEl = document.getElementById('avatar-grid');
+const joinBtn = document.getElementById('join-btn');
+const joinError = document.getElementById('join-error');
+const joinOverlay = document.getElementById('join-overlay');
+const hud = document.getElementById('hud');
+
+let savedProfile = loadSave();
+let selectedSpecies = SPECIES.some((s) => s.key === savedProfile.species) ? savedProfile.species : SPECIES[0].key;
+let selectedFrame = Number.isInteger(savedProfile.frame) && savedProfile.frame >= 0 && savedProfile.frame < FRAME_COUNT
+  ? savedProfile.frame
+  : 0;
+if (savedProfile.name) nameInput.value = savedProfile.name;
+
+function renderSpeciesTabs() {
+  speciesTabsEl.innerHTML = '';
+  SPECIES.forEach((s) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'species-tab' + (s.key === selectedSpecies ? ' active' : '');
+    btn.textContent = s.label;
+    btn.addEventListener('click', () => {
+      selectedSpecies = s.key;
+      selectedFrame = 0;
+      renderSpeciesTabs();
+      renderAvatarGrid();
+    });
+    speciesTabsEl.appendChild(btn);
+  });
+}
+
+function renderAvatarGrid() {
+  avatarGridEl.innerHTML = '';
+  for (let frame = 0; frame < FRAME_COUNT; frame++) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'avatar-choice' + (frame === selectedFrame ? ' selected' : '');
+    btn.style.backgroundImage = `url(../i/${selectedSpecies}-strip.png)`;
+    btn.style.backgroundPosition = `-${frame * 48}px 0`;
+    btn.addEventListener('click', () => {
+      selectedFrame = frame;
+      renderAvatarGrid();
+    });
+    avatarGridEl.appendChild(btn);
+  }
+}
+
+function updateJoinButtonState() {
+  joinBtn.disabled = nameInput.value.trim().length === 0;
+}
+
+nameInput.addEventListener('input', updateJoinButtonState);
+nameInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !joinBtn.disabled) attemptJoin();
+});
+joinBtn.addEventListener('click', attemptJoin);
+
+function attemptJoin() {
+  const name = nameInput.value.trim();
+  if (!name) return;
+  if (containsBlockedTerm(name)) {
+    joinError.textContent = 'Please pick a different name.';
+    return;
+  }
+  joinBtn.disabled = true;
+  joinError.textContent = '';
+  writeSave({ name, species: selectedSpecies, frame: selectedFrame });
+
+  const net = new TownNet();
+  let joined = false;
+
+  net.on('configMissing', () => {
+    joinError.textContent = 'Not connected to a Firebase project yet — see game/firebase-config.js.';
+    joinBtn.disabled = false;
+  });
+  net.on('townFull', () => {
+    joinError.textContent = 'Town is full right now (10 max) — try again shortly.';
+    joinBtn.disabled = false;
+  });
+  net.on('error', (text) => {
+    joinError.textContent = text;
+    joinBtn.disabled = false;
+  });
+  net.on('init', (data) => {
+    if (joined) return;
+    joined = true;
+    joinOverlay.classList.add('hidden');
+    hud.classList.remove('hidden');
+    startTown(net, data);
+  });
+
+  net.join({ name, species: selectedSpecies, frame: selectedFrame });
+}
+
+function viewportSize() {
+  // Standalone "Add to Home Screen" launches on iOS report a stale/incorrect
+  // window.innerWidth/innerHeight for a moment (and sometimes for good,
+  // depending on iOS version) — visualViewport tracks the real on-screen
+  // size, so prefer it whenever it's available to avoid a zoomed-in canvas.
+  const vv = window.visualViewport;
+  return {
+    width: Math.round((vv && vv.width) || window.innerWidth),
+    height: Math.round((vv && vv.height) || window.innerHeight),
+  };
+}
+
+function startTown(net, data) {
+  const initialSize = viewportSize();
+  const config = {
+    type: Phaser.AUTO,
+    parent: 'game-container',
+    width: initialSize.width,
+    height: initialSize.height,
+    backgroundColor: '#3a5a40',
+    pixelArt: true,
+    physics: { default: 'arcade', arcade: { debug: false } },
+  };
+  const game = new Phaser.Game(config);
+  game.scene.add('Town', TownScene, true, { net, self: data.self, players: data.players, world: data.world });
+
+  const gameContainer = document.getElementById('game-container');
+  const resizeToViewport = () => {
+    const size = viewportSize();
+    game.scale.resize(size.width, size.height);
+    // #game-container is `position: fixed; inset: 0`, sized to the full
+    // layout viewport — on a keyboard that overlays rather than resizes the
+    // page, that stays taller than the (now keyboard-aware) canvas inside
+    // it, exposing the page's own dark background in the gap behind the
+    // keyboard. Pinning its box to the same visualViewport size as the
+    // canvas removes that gap instead of leaving it to show through.
+    if (gameContainer) {
+      gameContainer.style.width = `${size.width}px`;
+      gameContainer.style.height = `${size.height}px`;
+    }
+  };
+  window.addEventListener('resize', resizeToViewport);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', resizeToViewport);
+  }
+  // Standalone launches settle their real viewport a beat after load, so
+  // double-check shortly after start rather than only on resize events.
+  setTimeout(resizeToViewport, 150);
+  setTimeout(resizeToViewport, 600);
+
+  // On a browser that honors `interactive-widget=resizes-content` (the meta
+  // tag above), window.innerHeight shrinks right along with the on-screen
+  // keyboard and this gap is always ~0 — harmless no-op there. On one that
+  // doesn't (older Safari, some Android webviews), the keyboard instead
+  // overlays the page: window.innerHeight stays full-height while
+  // visualViewport shrinks (and pans) to the space still visible above the
+  // keyboard, so fixed-bottom UI (the chat bar) ends up positioned behind
+  // the keyboard or adrift wherever the visual viewport happens to be
+  // panned to. This feeds that gap into a CSS var so fixed-bottom elements
+  // can push themselves up above the keyboard instead.
+  const updateKeyboardInset = () => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    document.documentElement.style.setProperty('--kb-inset', `${Math.round(inset)}px`);
+  };
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', updateKeyboardInset);
+    window.visualViewport.addEventListener('scroll', updateKeyboardInset);
+  }
+}
+
+renderSpeciesTabs();
+renderAvatarGrid();
+updateJoinButtonState();
+
+// A lightweight, read-only peek at how many villagers are in town right
+// now, shown on the join screen before this player has actually joined.
+const joinScreenNet = new TownNet();
+const onlineCountEl = document.getElementById('online-count');
+joinScreenNet.watchOnlineCount((count) => {
+  if (!onlineCountEl) return;
+  onlineCountEl.textContent = count === null ? '' : `🟢 ${count} villager${count === 1 ? '' : 's'} in town right now`;
+});

@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
+<title>Pixeltown</title>
+<link rel="stylesheet" href="style.css" />
+
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#bfe6f2" />
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
+
+<!-- iOS "Add to Home Screen": apple-touch-icon is what shows as the app icon;
+     the two meta tags make it launch full-screen (no Safari chrome) instead
+     of just bookmarking the page. -->
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Pixeltown" />
+</head>
+<body>
+
+<div id="join-overlay">
+  <div id="join-decor" aria-hidden="true">
+    <span>🦋</span><span>✨</span><span>🌸</span><span>🍃</span><span>⭐</span><span>🦋</span><span>✨</span>
+  </div>
+  <div class="join-card">
+    <h1>🏝️ Pixeltown</h1>
+    <p class="tagline">Walk, chat, fish, chop wood, and build — with your friends, live.</p>
+    <p id="online-count" class="online-count"></p>
+
+    <label for="name-input">Your name</label>
+    <input id="name-input" maxlength="16" placeholder="e.g. Ben" autocomplete="off" />
+
+    <label>Pick your villager</label>
+    <div id="species-tabs"></div>
+    <div id="avatar-grid"></div>
+
+    <button id="join-btn" disabled>Join Town</button>
+    <p id="join-error" class="error"></p>
+    <p class="join-tip">WASD/arrows to walk · <b>E</b> to interact (fish, chop, mine, catch bugs) · <b>B</b> to build · <b>1-9</b> to emote · <b>P</b> for a photo · Enter to chat</p>
+  </div>
+</div>
+
+<div id="game-container"></div>
+
+<div id="hud" class="hidden">
+  <div id="whats-new-banner" class="hidden">
+    <span id="whats-new-text"></span>
+    <button id="whats-new-close-btn" type="button" aria-label="Dismiss">✕</button>
+  </div>
+  <div id="achievement-toast" class="hidden" aria-live="polite"></div>
+  <div id="player-list-panel">
+    <h2>In town</h2>
+    <ul id="player-list"></ul>
+    <button id="achievements-badge" type="button">🏆 <b id="achievement-count">0</b>/<span id="achievement-cap"></span></button>
+    <button id="map-btn" type="button" title="Town map (M)">🗺️ Map</button>
+    <button id="museum-badge" type="button" title="Museum collection">🏛️ Museum</button>
+    <button id="dailies-btn" type="button" title="Today's chores (J)">📋 Today</button>
+    <button id="journal-btn" type="button" title="Angler's journal (L)">🐟 Journal</button>
+    <div id="status-row">
+      <div id="streak-badge" title="Daily login streak">🔥 Day <b id="streak-count">0</b></div>
+      <div id="town-rating" title="How much the town has been built up, shared by everyone">🏘️ <span id="town-rating-label">Empty</span> (<b id="town-rating-count">0</b>/150)</div>
+    </div>
+    <div id="town-tidy" title="Weeds sprout every day — walk up and press E / A to pull them">🌿 Tidy</div>
+    <div id="birthday-line" title="Villager birthdays — give them a gift on the day for a party bonus"></div>
+    <button id="settings-toggle-btn" type="button">⚙️ Settings ▾</button>
+    <div id="settings-section" class="hidden">
+      <button id="keys-help-btn" type="button" title="Keyboard shortcuts">❓ Keys</button>
+      <button id="changelog-btn" type="button" title="See what's been added">📜 Changelog</button>
+      <a id="feedback-btn" href="#" target="_blank" rel="noopener" title="Report a bug or suggest something, on GitHub">🐞 Feedback</a>
+      <button id="sfx-toggle-btn" type="button" title="Toggle sound effects">🔊 Sound</button>
+      <button id="music-toggle-btn" type="button" title="Toggle ambient background music (off by default)">🎵 Music off</button>
+      <button id="reduce-motion-btn" type="button" title="Turn off the walk-cycle hop for anyone sensitive to it">🏃 Motion on</button>
+      <button id="photo-btn" type="button" title="Take a photo (P)">📸 Photo</button>
+      <button id="save-export-btn" type="button" title="Download a backup of your local save">💾 Backup</button>
+      <button id="save-import-btn" type="button" title="Restore a save from a backup file">📂 Restore</button>
+      <input id="save-import-input" type="file" accept="application/json" class="hidden" />
+    </div>
+  </div>
+
+  <div id="achievements-overlay" class="hidden">
+    <div class="achievements-card">
+      <button id="achievements-close-btn" type="button" aria-label="Close">✕</button>
+      <h2>🏆 Achievements</h2>
+      <p class="polyroll-tagline">Lifetime progress on this device — never resets when you spend or sell.</p>
+      <ul id="achievements-list"></ul>
+    </div>
+  </div>
+
+  <div id="museum-overlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="museum-title">
+    <div class="achievements-card museum-card">
+      <button id="museum-close-btn" type="button" aria-label="Close">✕</button>
+      <h2 id="museum-title">🏛️ Museum</h2>
+      <p class="polyroll-tagline">Fossils are donated at the building outside; fauna and flora are
+        recorded the first time you ever catch or pick one — nothing to carry in or hand over.</p>
+      <div class="museum-progress">
+        <div class="museum-progress-label"><span>Overall collection</span><b id="museum-total-count">0/0</b></div>
+        <div class="museum-bar"><div id="museum-total-bar" class="museum-bar-fill"></div></div>
+      </div>
+      <div class="museum-tabs" role="tablist" aria-label="Museum wings">
+        <button type="button" class="museum-tab" role="tab" data-wing="fossils">🦴 Fossils <span class="museum-tab-count"></span></button>
+        <button type="button" class="museum-tab" role="tab" data-wing="fauna">🦋 Fauna <span class="museum-tab-count"></span></button>
+        <button type="button" class="museum-tab" role="tab" data-wing="flora">🌸 Flora <span class="museum-tab-count"></span></button>
+        <button type="button" class="museum-tab" role="tab" data-wing="wildfauna">🦌 Wild Fauna <span class="museum-tab-count"></span></button>
+        <button type="button" class="museum-tab" role="tab" data-wing="wildflora">🌿 Wild Flora <span class="museum-tab-count"></span></button>
+      </div>
+      <div class="museum-body">
+        <section class="museum-wing" data-wing="fossils" role="tabpanel">
+          <h3 class="museum-section-title">🦴 Fossils</h3>
+          <p class="polyroll-tagline">Dig fossils up, then press E at the Museum building to donate them.</p>
+          <div class="museum-bar"><div class="museum-bar-fill"></div></div>
+          <ul id="museum-fossils-list" class="museum-list museum-grid"></ul>
+        </section>
+        <section class="museum-wing" data-wing="fauna" role="tabpanel">
+          <h3 class="museum-section-title">🦋 Fauna</h3>
+          <p class="polyroll-tagline">Logged the first time you catch one.</p>
+          <div class="museum-bar"><div class="museum-bar-fill"></div></div>
+          <ul id="museum-fauna-list" class="museum-list museum-grid"></ul>
+        </section>
+        <section class="museum-wing" data-wing="flora" role="tabpanel">
+          <h3 class="museum-section-title">🌸 Flora</h3>
+          <p class="polyroll-tagline">Logged the first time you pick one.</p>
+          <div class="museum-bar"><div class="museum-bar-fill"></div></div>
+          <ul id="museum-flora-list" class="museum-list museum-grid"></ul>
+        </section>
+        <section class="museum-wing" data-wing="wildfauna" role="tabpanel">
+          <h3 class="museum-section-title">🦌 Wild Fauna <span id="wild-fauna-count">0</span>/<span id="wild-fauna-cap">0</span></h3>
+          <p class="polyroll-tagline">The animals scattered through the wilderness, ponds, and ocean —
+            walk up and press E to log one, no need to carry it in. Tap a discovered card for its facts.</p>
+          <div class="museum-bar"><div class="museum-bar-fill"></div></div>
+          <ul id="museum-wildfauna-list" class="museum-list museum-grid"></ul>
+        </section>
+        <section class="museum-wing" data-wing="wildflora" role="tabpanel">
+          <h3 class="museum-section-title">🌿 Wild Flora <span id="wild-flora-count">0</span>/<span id="wild-flora-cap">0</span></h3>
+          <p class="polyroll-tagline">Plants, fungi and more — press E next to one to log it. Tap a discovered card for its facts.</p>
+          <div class="museum-bar"><div class="museum-bar-fill"></div></div>
+          <ul id="museum-wildflora-list" class="museum-list museum-grid"></ul>
+        </section>
+      </div>
+      <div id="museum-detail" class="museum-detail hidden" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <div id="inventory-panel">
+    <span id="bag-icon">🎒</span>
+    <span>🪵 <b id="wood-count">0</b></span>
+    <span>🪨 <b id="stone-count">0</b></span>
+    <span>🐟 <b id="fish-count">0</b></span>
+    <span>🦋 <b id="bug-count">0</b></span>
+    <span>🍎 <b id="fruit-count">0</b></span>
+    <span title="Fossils in your bag — donate at the Museum">🦴 <b id="fossil-count">0</b>/<span id="fossil-cap">3</span></span>
+    <span title="Museum collection">🏛️ <b id="museum-count">0</b>/<span id="museum-cap">5</span></span>
+    <span title="Turnips — sell at the shop before the price drops">🥬 <b id="turnip-count">0</b></span>
+    <span title="Beachcombed shells — sell at the shop">🐚 <b id="shell-count">0</b></span>
+    <span title="Flowers picked around town — sell at the shop">🌸 <b id="flower-count">0</b></span>
+    <span class="hidden" title="Crafted goods from the workbench — sell at the shop">🔨 <b id="crafted-count">0</b></span>
+  </div>
+
+  <div id="walkie-panel">
+    <button id="memo-inbox-btn" type="button" aria-label="Voice memos" class="hidden">📬 <span id="memo-count">0</span></button>
+    <button id="walkie-talk-btn" type="button" aria-label="Push to talk to bestie" disabled>
+      🎙️ Hold to talk<br /><span id="bestie-label">no bestie picked</span>
+    </button>
+  </div>
+
+  <div id="build-mode-banner" class="hidden">🧱 BUILD MODE — ✋ / E to place or remove a block (1🪵) · F to switch material</div>
+  <button id="build-material-btn" type="button" class="hidden">🪵 Wall</button>
+  <button id="build-undo-btn" type="button" class="hidden" title="Undo your last placed block (Z)">↩️ Undo</button>
+
+  <div id="dig-hole-hint" class="hidden">⛏️ <span class="key-hint">Press E</span><span class="tap-hint">Tap A</span> to jump down the hole</div>
+  <button id="fish-hint-btn" class="hidden" type="button">🎣 Fish</button>
+  <button id="gift-hint-btn" class="hidden" type="button">🎁 Gift</button>
+
+  <div id="chat-panel">
+    <button id="chat-clear-btn" type="button" aria-label="Clear chat" class="hidden">🗑️ Clear</button>
+    <div id="chat-log"></div>
+    <div id="quick-chat-row">
+      <button type="button" data-phrase="👋 hi!">👋 Hi!</button>
+      <button type="button" data-phrase="😂 lol">😂 lol</button>
+      <button type="button" data-phrase="🎣 fishing!">🎣 Fishing!</button>
+      <button type="button" data-phrase="⭐ nice!">⭐ Nice!</button>
+      <button type="button" data-phrase="👋 bye!">👋 Bye!</button>
+    </div>
+    <div id="chat-input-row">
+      <input id="chat-input" maxlength="140" placeholder="Press Enter to chat…" enterkeyhint="send" autocomplete="off" />
+      <button id="chat-send-btn" type="button" aria-label="Send">➤</button>
+    </div>
+  </div>
+
+  <div id="mobile-controls">
+    <div id="joystick" role="application" aria-label="Move — drag to walk"><div id="joystick-knob"></div></div>
+
+    <div id="emote-popup" class="hidden"></div>
+
+    <div id="action-buttons">
+      <button id="emote-toggle-btn" type="button" aria-label="Emotes">😀 Emotes</button>
+      <button id="tilt-toggle-btn" type="button">🎮 Tilt</button>
+      <button id="build-toggle-btn" class="ab-btn" type="button" aria-label="Build (B)"><span class="ab-letter">B</span><span class="ab-emoji">🧱</span></button>
+      <button id="interact-btn" class="ab-btn" type="button" aria-label="Interact (A)"><span class="ab-letter">A</span><span class="ab-emoji">✋</span></button>
+      <button id="mobile-photo-btn" class="ab-btn" type="button" aria-label="Photo (P)"><span class="ab-letter">P</span><span class="ab-emoji">📸</span></button>
+      <button id="mobile-chat-btn" class="ab-btn" type="button" aria-label="Chat (C)"><span class="ab-letter">C</span><span class="ab-emoji">💬</span></button>
+    </div>
+  </div>
+</div>
+
+<div id="outfit-overlay" class="hidden">
+  <div class="join-card">
+    <button id="outfit-close-btn" type="button" aria-label="Close">✕</button>
+    <h1>👗 Able Sisters</h1>
+    <p class="tagline">Pick a new look — everyone in town sees it too.</p>
+
+    <label>Pick your villager</label>
+    <div id="outfit-species-tabs"></div>
+    <div id="outfit-avatar-grid"></div>
+
+    <button id="outfit-random-btn" type="button">🎲 Randomize</button>
+    <button id="outfit-apply-btn" type="button">Wear it!</button>
+  </div>
+</div>
+
+<div id="journal-overlay" class="hidden" role="dialog" aria-modal="true" aria-label="Angler's journal">
+  <div class="join-card">
+    <button id="journal-close-btn" type="button" aria-label="Close">✕</button>
+    <h1>🐟 Angler's Journal</h1>
+    <p class="tagline">Every fish you reel in is logged. Where, when and the season decide what bites.</p>
+    <p id="journal-progress" class="tagline"></p>
+    <div id="journal-bar"><div id="journal-bar-fill"></div></div>
+    <ul id="journal-grid"></ul>
+    <div id="journal-milestones"></div>
+    <p class="tagline">Press <b>L</b> any time to open this.</p>
+  </div>
+</div>
+
+<div id="dailies-overlay" class="hidden" role="dialog" aria-modal="true" aria-label="Today's chores">
+  <div class="join-card">
+    <button id="dailies-close-btn" type="button" aria-label="Close">✕</button>
+    <h1>📋 Today</h1>
+    <p class="tagline">Everything you can do today. Finish every chore that applies for a bonus.</p>
+    <ul id="dailies-list" class="guestbook-list"></ul>
+    <p id="dailies-summary" class="tagline"></p>
+  </div>
+</div>
+
+<div id="home-overlay" class="hidden" role="dialog" aria-modal="true" aria-label="Home plot">
+  <div class="join-card">
+    <button id="home-close-btn" type="button" aria-label="Close">✕</button>
+    <h1>🏡 Home plot</h1>
+    <p class="tagline">Display crafted goods from the workbench. Only you can see your plot. Placed goods leave your bag.</p>
+    <ul id="home-list" class="guestbook-list"></ul>
+    <h2 class="home-sub">🐠 Aquarium</h2>
+    <ul id="home-tank-list" class="guestbook-list"></ul>
+    <p id="home-cozy" class="tagline"></p>
+    <p id="home-note" class="tagline"></p>
+  </div>
+</div>
+
+<div id="mailbox-overlay" class="hidden" role="dialog" aria-modal="true" aria-label="Mailbox">
+  <div class="join-card">
+    <button id="mailbox-close-btn" type="button" aria-label="Close">✕</button>
+    <h1>📬 Mailbox</h1>
+    <p class="tagline">Villagers write when they're thinking of you — better friends write more often, with nicer gifts.</p>
+    <ul id="mailbox-list" class="guestbook-list"></ul>
+    <button id="mailbox-collect-all-btn" type="button">Collect all</button>
+    <p id="mailbox-note" class="tagline"></p>
+  </div>
+</div>
+
+<div id="workbench-overlay" class="hidden" role="dialog" aria-modal="true" aria-label="Workbench">
+  <div class="join-card">
+    <button id="workbench-close-btn" type="button" aria-label="Close">✕</button>
+    <h1>🔨 Workbench</h1>
+    <p class="tagline">Turn what you gather into crafted goods — they sell for more at the shop.</p>
+    <p id="workbench-season" class="tagline"></p>
+    <ul id="workbench-list" class="guestbook-list"></ul>
+    <p id="workbench-note" class="tagline"></p>
+  </div>
+</div>
+
+<div id="guestbook-overlay" class="hidden">
+  <div class="join-card">
+    <button id="guestbook-close-btn" type="button" aria-label="Close">✕</button>
+    <h1>📖 Guestbook</h1>
+    <p class="tagline">Leave a short note for whoever walks by next — everyone sees it, forever (well, the last 20).</p>
+
+    <ul id="guestbook-list" class="guestbook-list"></ul>
+
+    <label for="guestbook-input">Your note</label>
+    <input id="guestbook-input" maxlength="80" placeholder="e.g. Ben was here!" autocomplete="off" />
+    <button id="guestbook-sign-btn" type="button">Sign it!</button>
+    <p id="guestbook-error" class="error"></p>
+  </div>
+</div>
+
+<div id="keys-help-overlay" class="hidden">
+  <div class="join-card">
+    <button id="keys-help-close-btn" type="button" aria-label="Close">✕</button>
+    <h1>❓ Keyboard Shortcuts</h1>
+    <ul class="keys-list">
+      <li><b>WASD / arrows</b> — walk (hold <b>Shift</b> to run)</li>
+      <li><b>E</b> — interact (fish, chop, mine, catch bugs, talk, shop)</li>
+      <li><b>B</b> — toggle build mode</li>
+      <li><b>F</b> — switch build material (while building)</li>
+      <li><b>Z</b> — undo last placed block (while building)</li>
+      <li><b>1-9</b> — emote</li>
+      <li><b>P</b> — take a photo</li>
+      <li><b>M</b> — open the town map</li>
+      <li><b>J</b> — today's chores checklist</li>
+      <li><b>L</b> — angler's fish journal</li>
+      <li><b>G</b> — give a gift to the nearest villager</li>
+      <li><b>T</b> — Professor Byte's daily trivia (while near him)</li>
+      <li><b>Enter</b> — chat</li>
+      <li><b>Esc</b> — clear chat input / unfocus</li>
+      <li><b>🎮 Controller</b> — stick / D-pad walk · A interact · X gift · B build or close · Start map</li>
+    </ul>
+  </div>
+</div>
+
+<div id="map-overlay" class="hidden">
+  <div class="join-card">
+    <button id="map-close-btn" type="button" aria-label="Close">✕</button>
+    <h1>🗺️ Town Map</h1>
+    <p class="tagline">Everyone's live position, scaled down.</p>
+    <canvas id="map-canvas" width="320" height="254"></canvas>
+  </div>
+</div>
+
+<div id="changelog-overlay" class="hidden">
+  <div class="join-card">
+    <button id="changelog-close-btn" type="button" aria-label="Close">✕</button>
+    <h1>📜 Changelog</h1>
+    <p class="tagline">Everything that's been built, in order.</p>
+    <div id="changelog-body">Loading…</div>
+  </div>
+</div>
+
+<div id="trivia-overlay" class="hidden">
+  <div class="join-card">
+    <button id="trivia-close-btn" type="button" aria-label="Close">✕</button>
+    <h1>📝 Professor Byte's Trivia</h1>
+    <p class="tagline">One question a day, same for everyone — answer right for a star bonus.</p>
+    <div id="trivia-body"></div>
+  </div>
+</div>
+
+<div id="polyroll-overlay" class="hidden">
+  <div class="polyroll-card">
+    <button id="polyroll-close-btn" type="button" aria-label="Close">✕</button>
+    <h2>🎲 Polyroll</h2>
+    <p class="polyroll-tagline">Bet your own ⭐ stars for fun — no wallet, no crypto, no real money.</p>
+    <p class="polyroll-score-line">Your stars: <b id="polyroll-score">0</b></p>
+
+    <div class="polyroll-tabs">
+      <button id="polyroll-tab-dice" class="polyroll-tab active" type="button">🎲 Dice (5×)</button>
+      <button id="polyroll-tab-coin" class="polyroll-tab" type="button">🪙 Coin (2×)</button>
+    </div>
+
+    <div id="polyroll-dice-panel" class="polyroll-panel">
+      <label>Pick a number 1-6</label>
+      <div id="polyroll-dice-picker" class="polyroll-picker">
+        <button type="button" class="polyroll-pick active" data-num="1">1</button>
+        <button type="button" class="polyroll-pick" data-num="2">2</button>
+        <button type="button" class="polyroll-pick" data-num="3">3</button>
+        <button type="button" class="polyroll-pick" data-num="4">4</button>
+        <button type="button" class="polyroll-pick" data-num="5">5</button>
+        <button type="button" class="polyroll-pick" data-num="6">6</button>
+      </div>
+    </div>
+    <div id="polyroll-coin-panel" class="polyroll-panel hidden">
+      <label>Pick a side</label>
+      <div id="polyroll-coin-picker" class="polyroll-picker">
+        <button type="button" class="polyroll-pick active" data-side="heads">Heads</button>
+        <button type="button" class="polyroll-pick" data-side="tails">Tails</button>
+      </div>
+    </div>
+
+    <label for="polyroll-bet">Bet amount</label>
+    <input id="polyroll-bet" type="number" min="1" value="1" />
+
+    <button id="polyroll-play-btn" type="button">Roll!</button>
+    <p id="polyroll-result"></p>
+  </div>
+</div>
+
+<div id="underground-overlay" class="hidden">
+  <div id="underground-canvas-wrap"></div>
+  <div id="underground-depth-hint">⛰️ Underground — fully local, just for you</div>
+  <div id="underground-exit-hint" class="hidden">⬆️ You're near the surface shaft</div>
+  <div id="underground-controls">
+    <div id="ug-hotbar">
+      <button id="ug-hotbar-wall" class="active" type="button" aria-label="Place walls (stone)">🧱</button>
+      <button id="ug-hotbar-torch" type="button" aria-label="Place torches (wood)">🔥</button>
+    </div>
+    <div id="ug-dpad">
+      <button class="dpad-btn" data-ugdir="up" type="button" aria-label="Forward">▲</button>
+      <button class="dpad-btn" data-ugdir="left" type="button" aria-label="Strafe left">◀</button>
+      <button class="dpad-btn" data-ugdir="right" type="button" aria-label="Strafe right">▶</button>
+      <button class="dpad-btn" data-ugdir="down" type="button" aria-label="Back">▼</button>
+    </div>
+    <div id="ug-action-buttons">
+      <button id="ug-mine-btn" type="button" aria-label="Mine">⛏️</button>
+      <button id="ug-place-btn" type="button" aria-label="Place">🧱</button>
+      <button id="ug-up-btn" type="button" aria-label="Rise">🔼</button>
+      <button id="ug-down-btn" type="button" aria-label="Descend">🔽</button>
+      <button id="ug-exit-btn" type="button" aria-label="Exit">⬆️ Exit anytime</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="firebase-config.js"></script>
+<script src="net.js"></script>
+<script src="underground.js"></script>
+<script src="main.js"></script>
+</body>
+</html>
