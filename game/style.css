@@ -2121,3 +2121,5 @@ body.touch-device .key-hint { display: none; }
 #home-list { max-height: 50vh; }
 #home-list li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 10px; }
 .home-slot-select { min-height: 44px; flex: 1; max-width: 220px; border-radius: 8px; border: 2px solid var(--ac-border); background: var(--ac-inset); color: var(--ac-text); font-size: 13px; padding: 0 6px; }
+#birthday-line { font-size: 10px; text-align: center; padding: 0 0 4px; color: var(--ac-text); white-space: normal; }
+#birthday-line:empty { display: none; }

@@ -29,6 +29,16 @@ right now, before you even pick a name.
 - **Fish** at the pond (or the second pond out east), **chop** trees for
   wood, **mine** rocks for stone — classic Animal Crossing activities, fill
   the inventory in the top-left
+- **Villager birthdays** 🎂 — every 10 days one villager has a birthday (a fixed
+  rotation through the five villagers, so everyone sees the same one). Their
+  name tag gets a 🎂, the player panel shows "birthday today" (or "Next: X in
+  Nd"), and they always write you a letter. Give them a gift (G / Gift
+  button) for a party: +5⭐, +20 friendship (instead of +8), and the first
+  gift can be a crafted good from the workbench if you have no liked
+  resource (cheapest first, with a small bonus). Claims are saved under the
+  additive `birthdays: {claimed, guests}` key. Achievements: Party Guest,
+  Birthday Regular, Party Planner (every villager). Tests:
+  `node game/tests/birthdays.test.js`.
 - **Home plot** 🏡 — a fenced plot (east of the shop row, on the map) where you
   display goods crafted at the workbench: six spots, each with a dropdown of
   the goods in your bag. Placed goods leave your bag (so they can't be

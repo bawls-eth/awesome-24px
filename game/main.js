@@ -113,8 +113,9 @@ const SAVE_KEY = 'pixeltown-save-v1';
 
 // Bump this string whenever there's something worth telling returning
 // players about — shown once as a dismissible banner, then remembered.
-const GAME_VERSION = 'v29-home';
+const GAME_VERSION = 'v30-birthdays';
 const WHATS_NEW = [
+  "🎂 Villager birthdays — bring a gift on their big day for a party bonus",
   '🏡 Home plot — display your crafted goods as cozy decor, earn a daily visitor bonus',
   '🦋 Daily Bug-Off — a 2-hour contest, catch 5/10/15 bugs for Bronze/Silver/Gold',
   '📬 Villager mailbox — friends write you daily letters with gifts attached',
@@ -708,6 +709,9 @@ const ACHIEVEMENTS = [
   { id: 'homeFirst', icon: '🏡', label: 'Home Sweet Home', desc: 'Place a crafted good on your home plot', reward: 3, check: (s) => (s.homePlaced || 0) >= 1 },
   { id: 'homeFull', icon: '🛋️', label: 'Interior Designer', desc: 'Fill every spot on your home plot', reward: 8, check: (s) => (s.homeFullPlots || 0) >= 1 },
   { id: 'homeCozy', icon: '🕯️', label: 'Cozy Corner', desc: 'Reach a cozy score of 30', reward: 8, check: (s) => (s.homeCozyBest || 0) >= 30 },
+  { id: 'bday1', icon: '🎂', label: 'Party Guest', desc: "Give a villager a birthday gift", reward: 3, check: (s) => (s.birthdayGifts || 0) >= 1 },
+  { id: 'bday5', icon: '🎉', label: 'Birthday Regular', desc: 'Give 5 birthday gifts', reward: 8, check: (s) => (s.birthdayGifts || 0) >= 5 },
+  { id: 'bdayAll', icon: '🥳', label: 'Party Planner', desc: "Celebrate every villager's birthday", reward: 15, check: (s, scene) => !!scene.birthdayGuests && scene.birthdayGuests.size >= VILLAGERS.length },
   { id: 'craft1', icon: '🔨', label: 'DIY Beginner', desc: 'Craft something at the workbench', reward: 3, check: (s) => (s.crafted || 0) >= 1 },
   { id: 'craft10', icon: '🛠️', label: 'Crafty', desc: 'Craft 10 items', reward: 5, check: (s) => (s.crafted || 0) >= 10 },
   { id: 'craftAll', icon: '🧰', label: 'Master Crafter', desc: 'Craft every recipe at least once', reward: 10, check: (s) => RECIPES.every((r) => (s['craft_' + r.id] || 0) >= 1) },
@@ -879,6 +883,22 @@ const FISH_TOURNAMENT_SIGN_POS = { x: 2040, y: 760 };
 const FISH_TOURNAMENT_BONUS = 10;
 const GUESTBOOK_RADIUS = 60;
 
+// ---------- villager birthdays ----------
+// Every BIRTHDAY_CYCLE_DAYS (UTC) days one villager has a birthday: purely
+// deterministic (day number -> villager), so it needs no network and is the
+// same for everyone. On the day: their name tag gets a 🎂, a letter is
+// guaranteed in the mailbox, and the first gift you give them pays a party
+// bonus. Claims are saved under the additive `birthdays` key
+// {claimed: ['day:id'], guests: [villager ids]}.
+const BIRTHDAY_CYCLE_DAYS = 10;
+const BIRTHDAY_STARS = 5;
+const BIRTHDAY_EXTRA_AFFINITY = 12;
+// Index into VILLAGERS of the birthday villager for a UTC day, or -1.
+function birthdayIndexForDay(day) {
+  const slot = ((Math.floor(day) % BIRTHDAY_CYCLE_DAYS) + BIRTHDAY_CYCLE_DAYS) % BIRTHDAY_CYCLE_DAYS;
+  for (let i = 0; i < VILLAGERS.length; i++) if ((i * 2 + 1) % BIRTHDAY_CYCLE_DAYS === slot) return i;
+  return -1;
+}
 // ---------- home plot ----------
 // A small fenced plot where you display crafted goods as decor. It is YOUR
 // plot: placement is local-only (other players don't see it), saved under the
@@ -1347,6 +1367,7 @@ class TownScene extends Phaser.Scene {
     this.setupGuestbook();
     this.setupBugs();
     this.setupBugOff();
+    this.setupBirthdays();
     this.setupFossils();
     this.setupWeeds();
     if (IS_TOUCH) {
@@ -3288,7 +3309,7 @@ class TownScene extends Phaser.Scene {
       writeSave({ lastSeenVersion: GAME_VERSION });
     };
     if (isReturningPlayer && save.lastSeenVersion !== GAME_VERSION) {
-      document.getElementById('whats-new-text').textContent = ["🆕 What's new:", ...WHATS_NEW].join('\n');
+      document.getElementById('whats-new-text').textContent = ["🆕 What's new:", ...WHATS_NEW.slice(0, 5)].join('\n');
       banner.classList.remove('hidden');
       setTimeout(dismiss, 10000);
     } else if (!isReturningPlayer) {
@@ -5612,7 +5633,7 @@ class TownScene extends Phaser.Scene {
     const letters = [];
     VILLAGERS.forEach((v, i) => {
       const tier = Math.max(0, Math.min(3, Math.floor(Number(tiers[v.id]) || 0)));
-      if (worldHash(d, i, MAIL_SALT) < MAIL_WRITE_CHANCE[tier]) letters.push(this.makeLetter(d, day, v, i, tier));
+      if (birthdayIndexForDay(day) === i || worldHash(d, i, MAIL_SALT) < MAIL_WRITE_CHANCE[tier]) letters.push(this.makeLetter(d, day, v, i, tier));
     });
     if (letters.length === 0) {
       // Everyone is busy today: the villager with the lowest roll still writes.
@@ -5632,7 +5653,10 @@ class TownScene extends Phaser.Scene {
     const attach = wantsRes
       ? { kind: 'res', key: v.likes[Math.floor(worldHash(d, i, MAIL_SALT + 4) * v.likes.length)], n: 1 + Math.floor(worldHash(d, i, MAIL_SALT + 5) * 2) + (tier >= 2 ? 1 : 0) }
       : { kind: 'stars', n: MAIL_STAR_BASE + tier + Math.floor(worldHash(d, i, MAIL_SALT + 6) * 2) };
-    return { id: `${day}:${v.id}`, from: v.name, villagerId: v.id, tier, text: `${opener} ${body}`, attach };
+    const bday = birthdayIndexForDay(day) === i;
+    if (bday) attach.n += attach.kind === 'stars' ? 2 : 1;
+    return { id: `${day}:${v.id}`, from: v.name, villagerId: v.id, tier, birthday: bday,
+      text: bday ? `🎂 It's my birthday today — come by for cake! ${body}` : `${opener} ${body}`, attach };
   }
 
   mailTiers() {
@@ -6917,13 +6941,112 @@ class TownScene extends Phaser.Scene {
     } else {
       line = this.pickFreshLine(this.villagerLinePool(v), v.id);
     }
+    if (this.isBirthdayFor(v) && !this.birthdayClaimed(v)) {
+      line = "🎂 It's my birthday today! A little gift would make it perfect.";
+    }
     this.showVillagerBubble(v, line);
     SFX.pop();
+  }
+
+  // ---------- birthdays ----------
+  setupBirthdays() {
+    this.loadBirthdays();
+    this.refreshBirthdays();
+    this.time.addEvent({ delay: 30000, loop: true, callback: () => this.refreshBirthdays() });
+  }
+
+  // Sanitised: claimed ids are short strings (last 40 kept), guests real villager ids.
+  loadBirthdays() {
+    const rec = loadSave().birthdays;
+    const ok = rec && typeof rec === 'object' && !Array.isArray(rec);
+    this.birthdayClaimedIds = new Set(ok && Array.isArray(rec.claimed) ? rec.claimed.filter((x) => typeof x === 'string' && x.length < 40).slice(-40) : []);
+    this.birthdayGuests = new Set(ok && Array.isArray(rec.guests) ? rec.guests.filter((id) => VILLAGERS.some((v) => v.id === id)) : []);
+  }
+
+  todaysBirthdayVillager() {
+    const i = birthdayIndexForDay(this.questDayBucket());
+    return i >= 0 ? VILLAGERS[i] : null;
+  }
+
+  isBirthdayFor(v) {
+    const b = this.todaysBirthdayVillager();
+    return !!b && b.id === v.id;
+  }
+
+  birthdayClaimed(v) {
+    return this.birthdayClaimedIds.has(`${this.questDayBucket()}:${v.id}`);
+  }
+
+  // Name tags + the panel line; only touches text when it changed.
+  refreshBirthdays() {
+    const day = this.questDayBucket();
+    const today = this.todaysBirthdayVillager();
+    VILLAGERS.forEach((v) => {
+      const st = this.villagerState && this.villagerState[v.id];
+      if (!st) return;
+      const want = today && today.id === v.id ? `🎂 ${v.name}` : v.name;
+      if (st.nameText.text !== want) st.nameText.setText(want);
+    });
+    const el = document.getElementById('birthday-line');
+    if (!el) return;
+    if (today) {
+      el.textContent = `🎂 ${today.name}'s birthday today!${this.birthdayClaimedIds.has(`${day}:${today.id}`) ? ' ✓' : ''}`;
+    } else {
+      let best = null; let bestIn = Infinity;
+      VILLAGERS.forEach((v, i) => {
+        const inDays = (((i * 2 + 1) % BIRTHDAY_CYCLE_DAYS) - (day % BIRTHDAY_CYCLE_DAYS) + BIRTHDAY_CYCLE_DAYS) % BIRTHDAY_CYCLE_DAYS;
+        if (inDays > 0 && inDays < bestIn) { best = v; bestIn = inDays; }
+      });
+      el.textContent = best ? `🎂 Next: ${best.name} in ${bestIn}d` : '';
+    }
+  }
+
+  // Returns true when the gift press was handled as a birthday gift.
+  giveBirthdayGift(v) {
+    const likedKey = v.likes.find((key) => (this.resources[key] || 0) > 0);
+    let good = null;
+    if (!likedKey) {
+      good = RECIPES.filter((r) => (this.craftedGoods[r.id] || 0) > 0).sort((a, b) => a.value - b.value)[0] || null;
+    }
+    if (!likedKey && !good) {
+      const wants = v.likes.map((k) => VILLAGER_GIFT_ICONS[k] || k).join(' or ');
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, `It's ${v.name}'s birthday! Bring ${wants} (or a crafted good)`);
+      return true;
+    }
+    const id = `${this.questDayBucket()}:${v.id}`;
+    this.birthdayClaimedIds.add(id);
+    this.birthdayGuests.add(v.id);
+    // Save the claim before paying out so a reload can never double-pay.
+    writeSave({ birthdays: { claimed: [...this.birthdayClaimedIds].slice(-40), guests: [...this.birthdayGuests] } });
+    let icon;
+    let bonus = BIRTHDAY_STARS;
+    if (likedKey) {
+      this.resources[likedKey] -= 1;
+      icon = VILLAGER_GIFT_ICONS[likedKey] || '';
+    } else {
+      this.craftedGoods[good.id] -= 1;
+      icon = good.icon;
+      bonus += Math.floor(good.value / 2);
+    }
+    this.updateInventoryHUD();
+    this.saveResources();
+    const beforeTier = this.villagerTier(v.id);
+    this.bumpVillagerAffinity(v.id, 8 + BIRTHDAY_EXTRA_AFFINITY);
+    const afterTier = this.villagerTier(v.id);
+    this.showVillagerBubble(v, `${icon} 🎂 Best birthday ever! Thank you!`);
+    this.awardPoint(bonus, `🎂 ${v.name}'s party! +${bonus} ⭐`, this.localBody.x, this.localBody.y - 30, 'achievement');
+    if (afterTier > beforeTier) this.addChatLine({ system: true, text: `💞 ${v.name} is now a ${VILLAGER_TIER_NAMES[afterTier]}!` });
+    this.incrementStat('birthdayGifts');
+    this.incrementStat('giftsGiven');
+    this.refreshBirthdays();
+    SFX.pop();
+    return true;
   }
 
   giveNearestVillagerGift() {
     const v = this.findNearestVillager();
     if (!v) return;
+    if (this.isBirthdayFor(v) && !this.birthdayClaimed(v) && this.giveBirthdayGift(v)) return;
     const likedKey = v.likes.find((key) => (this.resources[key] || 0) > 0);
     if (!likedKey) {
       const wants = v.likes.map((k) => VILLAGER_GIFT_ICONS[k] || k).join(' or ');
