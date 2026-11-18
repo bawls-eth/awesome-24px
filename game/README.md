@@ -88,6 +88,14 @@ right now, before you even pick a name.
   | 🎐 Shell Chime | 3 shells + 1 wood | 6⭐ |
   | 🏮 Lantern | 2 stone + 2 wood + 2 bugs | 9⭐ |
 
+  **Seasonal specials** (only craftable while their season is on, matching the
+  seasonal tint; the goods keep forever, sell, and can be displayed any time):
+  💐 Tulip Wreath (spring: 5 flowers + 1 wood), ⛱️ Beach Umbrella (summer: 4 shells
+  + 2 wood), 🎃 Jack-o'-Lantern (autumn: 4 fruit + 2 bugs), ⛄ Snowman (winter:
+  4 stone + 2 wood), each worth 9⭐. Achievements: Seasonal Crafter and
+  Year-Round Crafter (all four); Master Crafter still needs only the eight
+  year-round recipes. Tests: `node game/tests/seasonal.test.js`.
+
   Crafted stock shows as a 🔨 chip in the bag and is saved under the
   additive `crafted` key. Achievements: DIY Beginner, Crafty, Master Crafter.
   Tests: `NODE_PATH=$(npm root -g) node game/tests/workbench.test.js`.

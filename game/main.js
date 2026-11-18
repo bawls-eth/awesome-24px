@@ -113,8 +113,9 @@ const SAVE_KEY = 'pixeltown-save-v1';
 
 // Bump this string whenever there's something worth telling returning
 // players about — shown once as a dismissible banner, then remembered.
-const GAME_VERSION = 'v30-birthdays';
+const GAME_VERSION = 'v31-seasonal-crafts';
 const WHATS_NEW = [
+  '🍁 Seasonal specials at the workbench — a new craft for every season',
   "🎂 Villager birthdays — bring a gift on their big day for a party bonus",
   '🏡 Home plot — display your crafted goods as cozy decor, earn a daily visitor bonus',
   '🦋 Daily Bug-Off — a 2-hour contest, catch 5/10/15 bugs for Bronze/Silver/Gold',
@@ -714,7 +715,9 @@ const ACHIEVEMENTS = [
   { id: 'bdayAll', icon: '🥳', label: 'Party Planner', desc: "Celebrate every villager's birthday", reward: 15, check: (s, scene) => !!scene.birthdayGuests && scene.birthdayGuests.size >= VILLAGERS.length },
   { id: 'craft1', icon: '🔨', label: 'DIY Beginner', desc: 'Craft something at the workbench', reward: 3, check: (s) => (s.crafted || 0) >= 1 },
   { id: 'craft10', icon: '🛠️', label: 'Crafty', desc: 'Craft 10 items', reward: 5, check: (s) => (s.crafted || 0) >= 10 },
-  { id: 'craftAll', icon: '🧰', label: 'Master Crafter', desc: 'Craft every recipe at least once', reward: 10, check: (s) => RECIPES.every((r) => (s['craft_' + r.id] || 0) >= 1) },
+  { id: 'craftAll', icon: '🧰', label: 'Master Crafter', desc: 'Craft every recipe at least once', reward: 10, check: (s) => RECIPES.filter((r) => !r.season).every((r) => (s['craft_' + r.id] || 0) >= 1) },
+  { id: 'craftSeason', icon: '🍁', label: 'Seasonal Crafter', desc: 'Craft a seasonal special', reward: 5, check: (s) => RECIPES.filter((r) => r.season).some((r) => (s['craft_' + r.id] || 0) >= 1) },
+  { id: 'craftYear', icon: '📅', label: 'Year-Round Crafter', desc: 'Craft all four seasonal specials', reward: 15, check: (s) => RECIPES.filter((r) => r.season).every((r) => (s['craft_' + r.id] || 0) >= 1) },
   { id: 'weeds10', icon: '🌿', label: 'Weed Whacker', desc: 'Pull 10 weeds', reward: 3, check: (s) => (s.weedsPulled || 0) >= 10 },
   { id: 'weeds100', icon: '🧑‍🌾', label: 'Groundskeeper', desc: 'Pull 100 weeds', reward: 10, check: (s) => (s.weedsPulled || 0) >= 100 },
   { id: 'spotless1', icon: '✨', label: 'Spotless Town', desc: 'Pull every weed in town in one day', reward: 8, check: (s) => (s.spotlessDays || 0) >= 1 },
@@ -943,7 +946,14 @@ const RECIPES = [
   { id: 'crown', icon: '🌼', label: 'Flower Crown', cost: { flowers: 4 }, value: 6 },
   { id: 'chime', icon: '🎐', label: 'Shell Chime', cost: { shells: 3, wood: 1 }, value: 6 },
   { id: 'lantern', icon: '🏮', label: 'Lantern', cost: { stone: 2, wood: 2, bugs: 2 }, value: 9 },
+  // Seasonal specials: only craftable while their season is on (the goods
+  // keep forever and can be sold or displayed any time).
+  { id: 'wreath', icon: '💐', label: 'Tulip Wreath', cost: { flowers: 5, wood: 1 }, value: 9, season: 'spring' },
+  { id: 'umbrella', icon: '⛱️', label: 'Beach Umbrella', cost: { shells: 4, wood: 2 }, value: 9, season: 'summer' },
+  { id: 'jacko', icon: '🎃', label: "Jack-o'-Lantern", cost: { fruit: 4, bugs: 2 }, value: 9, season: 'autumn' },
+  { id: 'snowman', icon: '⛄', label: 'Snowman', cost: { stone: 4, wood: 2 }, value: 9, season: 'winter' },
 ];
+const SEASON_ICONS = { spring: '🌷', summer: '☀️', autumn: '🍂', winter: '❄️' };
 const RES_ICONS = { wood: '🪵', stone: '🪨', fish: '🐟', bugs: '🦋', fruit: '🍎', shells: '🐚', flowers: '🌸' };
 const GUESTBOOK_NOTE_MAX = 80;
 const GUESTBOOK_COOLDOWN_MS = 60 * 1000; // one signing per minute, per client
@@ -1746,6 +1756,15 @@ class TownScene extends Phaser.Scene {
     this.scale.on('resize', (size) => this.seasonOverlay.setSize(size.width, size.height));
     this.seasonDecorSprites = SEASON_DECOR_SPOTS.map(({ x, y }) => this.add.text(x, y, '', { fontSize: '20px' }).setOrigin(0.5).setDepth(y).setVisible(false));
     this.updateSeason();
+  }
+
+  // 'winter' | 'spring' | 'summer' | 'autumn' from the local month.
+  currentSeason() {
+    const month = new Date().getMonth(); // 0=Jan
+    if (month === 11 || month === 0 || month === 1) return 'winter';
+    if (month >= 2 && month <= 4) return 'spring';
+    if (month >= 5 && month <= 7) return 'summer';
+    return 'autumn';
   }
 
   updateSeason() {
@@ -5840,19 +5859,23 @@ class TownScene extends Phaser.Scene {
   renderWorkbench() {
     const list = document.getElementById('workbench-list');
     list.innerHTML = '';
+    const season = this.currentSeason();
+    const seasonEl = document.getElementById('workbench-season');
+    if (seasonEl) seasonEl.textContent = `${SEASON_ICONS[season]} It's ${season} — ${season} specials can be crafted now.`;
     RECIPES.forEach((r) => {
       const li = document.createElement('li');
       const cost = Object.entries(r.cost).map(([k, v]) => `${v}${RES_ICONS[k]}`).join(' + ');
       const have = this.craftedGoods[r.id] || 0;
+      const outOfSeason = !!r.season && r.season !== season;
       const info = document.createElement('span');
-      info.textContent = `${r.icon} ${r.label} — ${cost} → ${r.value}⭐ (have ${have})`;
+      info.textContent = `${r.season ? SEASON_ICONS[r.season] + ' ' : ''}${r.icon} ${r.label} — ${cost} → ${r.value}⭐ (have ${have})${outOfSeason ? ` · only in ${r.season}` : ''}`;
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'workbench-craft-btn';
       btn.setAttribute('aria-label', `Craft ${r.label}`);
       btn.dataset.recipe = r.id;
       btn.textContent = 'Craft';
-      btn.disabled = !this.canCraft(r);
+      btn.disabled = !this.canCraft(r) || outOfSeason;
       btn.addEventListener('click', () => this.craftRecipe(r.id));
       li.append(info, btn);
       list.appendChild(li);
@@ -5863,6 +5886,10 @@ class TownScene extends Phaser.Scene {
     const r = RECIPES.find((x) => x.id === id);
     const note = document.getElementById('workbench-note');
     if (!r) return false;
+    if (r.season && r.season !== this.currentSeason()) {
+      if (note) note.textContent = `${r.label} can only be crafted in ${r.season}.`;
+      return false;
+    }
     if (!this.canCraft(r)) {
       const need = Object.entries(r.cost).filter(([k, v]) => (this.resources[k] || 0) < v).map(([k, v]) => `${v - (this.resources[k] || 0)}${RES_ICONS[k]}`).join(' ');
       if (note) note.textContent = `Need ${need} more`;
