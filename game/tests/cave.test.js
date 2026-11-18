@@ -15,7 +15,7 @@ const findOre = `(s) => {
       // Stay off the cave boundary so there is always a block to place against after mining.
       if (Math.abs(nx) > 6 || Math.abs(nz) > 6 || Math.abs(gx) > 6 || Math.abs(gz) > 6) continue;
       if (u.occupied.has(nx + ',' + gy + ',' + nz)) continue;
-      return { key, kind: v.kind, rig: [nx * B, gy * B - 0.8, nz * B], yaw };
+      return { key, kind: v.kind, rig: [nx * B, gy * B - 3.24, nz * B], yaw };
     }
   }
   return null;
@@ -56,12 +56,12 @@ const findOre = `(s) => {
 
   // 3. First-person camera: eye height, held items visible, own body hidden; crosshair ray = camera ray.
   const f = await scene(page, (s) => {
-    const u = s.underground; u.rig.position.set(0, -4, 0); u.yaw = -Math.PI / 2; u.pitch = 0.1; u._update(0.016);
-    const eye = [u.rig.position.x, u.rig.position.y + 0.8, u.rig.position.z]; const cam = u.camera.position.toArray();
+    const u = s.underground; u.physicsEnabled = false; u.rig.position.set(0, -4, 0); u.yaw = -Math.PI / 2; u.pitch = 0.1; u._update(0.016);
+    const eye = [u.rig.position.x, u.rig.position.y + 3.24, u.rig.position.z]; const cam = u.camera.position.toArray();
     const dir = new THREE.Vector3(); u.camera.getWorldDirection(dir); const fwd = u._forwardVector();
     return { view: u.viewMode, camAtEye: eye.every((v, i) => Math.abs(v - cam[i]) < 1e-6), hand: u.fpHand.visible, body: u.playerMesh.visible, tool3: u.tool.visible, aligned: dir.distanceTo(fwd) < 1e-3, heldCube: u.fpItem.getObjectByName('fp-cube').visible, heldTorch: u.fpItem.getObjectByName('fp-torch').visible };
   });
-  check('first person: default view; camera sits at eye height (rig + 0.8); body + 3rd-person pickaxe hidden', f.view === 'first' && f.camAtEye && f.hand && !f.body && !f.tool3, JSON.stringify(f));
+  check('first person: default view; camera sits at eye height (feet + 3.24); body + 3rd-person pickaxe hidden', f.view === 'first' && f.camAtEye && f.hand && !f.body && !f.tool3, JSON.stringify(f));
   check('first person: camera direction equals the mine/place ray direction (exact crosshair)', f.aligned === true);
   const h2 = await scene(page, (s) => { s.setUgHotbar('torch'); const a = s.underground.fpItem.getObjectByName('fp-torch').visible && !s.underground.fpItem.getObjectByName('fp-cube').visible; s.setUgHotbar('wall'); return { a, b: s.underground.fpItem.getObjectByName('fp-cube').visible }; });
   check('first person: the held item follows the hotbar (torch <-> block)', h2.a && h2.b, JSON.stringify(h2));
@@ -72,14 +72,14 @@ const findOre = `(s) => {
   const spot = await scene(page, new Function('s', `return (${findOre})(s)`));
   check('mining setup: found an ore block with a free neighbouring cell', !!spot, String(spot));
   const m = await scene(page, (s, sp) => {
-    const u = s.underground; u.rig.position.set(sp.rig[0], sp.rig[1], sp.rig[2]); u.yaw = sp.yaw; u.pitch = 0; u._update(0.016);
+    const u = s.underground; u.physicsEnabled = false; u.rig.position.set(sp.rig[0], sp.rig[1], sp.rig[2]); u.yaw = sp.yaw; u.pitch = 0; u._update(0.016);
     const occ = u.occupied.size; const stone = s.resources.stone; const had = u.lookup.has(sp.key);
     const ok = u.mine(); return { ok, had, gone: !u.lookup.has(sp.key), occDelta: occ - u.occupied.size, stoneGain: s.resources.stone - stone, kind: sp.kind };
   }, spot);
   check('mining: a textured ore block is hit by the crosshair ray, removed, and yields 3 stone', m.ok && m.had && m.gone && m.occDelta === 1 && m.stoneGain === 3, JSON.stringify(m));
   if (process.env.SHOTS) {
     const sp2 = await scene(page, new Function('s', `return (${findOre})(s)`));
-    await scene(page, (s, sp) => { const u = s.underground; u.rig.position.set(sp.rig[0], sp.rig[1], sp.rig[2]); u.yaw = sp.yaw; u.pitch = 0; }, sp2);
+    await scene(page, (s, sp) => { const u = s.underground; u.physicsEnabled = false; u.physicsEnabled = false; u.rig.position.set(sp.rig[0], sp.rig[1], sp.rig[2]); u.yaw = sp.yaw; u.pitch = 0; }, sp2);
     await page.waitForTimeout(500); await page.screenshot({ path: process.env.SHOTS + '/cave-ore-first.png' });
   }
   const pl = await scene(page, (s) => { const u = s.underground; const stone = s.resources.stone; const ok = u.place(); return { ok, spent: stone - s.resources.stone }; });
@@ -87,7 +87,7 @@ const findOre = `(s) => {
 
   // 5. Third-person toggle: API, F5 key (no page reload), V key and the on-screen button.
   await page.evaluate(() => { window.__marker = 'alive'; });
-  const a = await scene(page, (s) => { const u = s.underground; u.rig.position.set(0, -0.2, 0); const r1 = u.toggleView(); u._update(0.016); const d = u.camera.position.distanceTo(new THREE.Vector3(u.rig.position.x, u.rig.position.y + 1.5, u.rig.position.z)); return { r1, third: u.viewMode, hand: u.fpHand.visible, body: u.playerMesh.visible, tool3: u.tool.visible, dist: +d.toFixed(2) }; });
+  const a = await scene(page, (s) => { const u = s.underground; u.rig.position.set(0, -3, 0); const r1 = u.toggleView(); u._update(0.016); const d = u.camera.position.distanceTo(new THREE.Vector3(u.rig.position.x, u.rig.position.y + 2.5, u.rig.position.z)); return { r1, third: u.viewMode, hand: u.fpHand.visible, body: u.playerMesh.visible, tool3: u.tool.visible, dist: +d.toFixed(2) }; });
   check('third person: toggleView shows the avatar + pickaxe, hides the held items, camera 6 units behind', a.third === 'third' && !a.hand && a.body && a.tool3 && Math.abs(a.dist - 6) < 0.05, JSON.stringify(a));
   if (process.env.SHOTS) { await page.waitForTimeout(400); await page.screenshot({ path: process.env.SHOTS + '/cave-third.png' }); }
   await page.keyboard.press('F5'); await page.waitForTimeout(300);
@@ -105,7 +105,7 @@ const findOre = `(s) => {
   const ex = await scene(page, (s) => { const ok = !s.inUnderground; s.enterUnderground(); return { ok, again: s.inUnderground, view: s.underground.viewMode }; });
   check('exit and re-enter still work; mine/place/setHotbar/nearExit public methods exist', ex.ok && ex.again && ['mine', 'place', 'setHotbar', 'setMoveInput', 'setAvatar', 'start', 'stop', 'destroy'].every((n) => true), JSON.stringify(ex));
   check('no console errors (desktop)', errors.length === 0, errors.join('|'));
-  if (process.env.SHOTS) { await scene(page, (s) => { const u = s.underground; u.setView('first'); u.rig.position.set(0, -0.2, 0); u.yaw = Math.PI; u.pitch = -0.5; }); await page.waitForTimeout(600); await page.screenshot({ path: process.env.SHOTS + '/cave-first-surface.png' }); }
+  if (process.env.SHOTS) { await scene(page, (s) => { const u = s.underground; u.physicsEnabled = false; u.setView('first'); u.rig.position.set(0, -1, 0); u.yaw = Math.PI; u.pitch = -0.5; }); await page.waitForTimeout(600); await page.screenshot({ path: process.env.SHOTS + '/cave-first-surface.png' }); }
   await browser.close();
 
   // 7. Phone: the cave opens on a touch screen, controls fit, the View button is >= 36px and works.

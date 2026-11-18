@@ -571,11 +571,17 @@ Phaser).
   (or **V**, or tap **👁️ 1st / 🧍 3rd** on mobile) to switch to a third-person
   camera behind your voxel villager. F5 never reloads the page down here.
 - **Look:** drag with your mouse (desktop) or finger (mobile) to look around.
-- **Move:** **WASD**/arrows (desktop) or the D-pad (mobile) — walks on the
-  flat ground relative to the way you're facing, the same as real
-  Minecraft. Looking up or down only aims; it never changes which way
-  "forward" takes you. There's no gravity down here — it's a flight-style
-  "creative mode" dig, not a fall.
+- **Move:** **WASD**/arrows (desktop) or the D-pad (mobile) walks on the flat
+  ground relative to the way you face. Real physics: gravity, **Space** (or the
+  ⤴️ button) to jump about 1¼ blocks, solid blocks you can't walk through (you
+  slide along walls), and you auto-hop onto a one-block ledge — a two-block wall
+  stops you. You spawn on the grass beside the shaft; the cave edge is a solid wall.
+- **Swim:** the flooded cavern off the bottom of the shaft (hop up the 1-block
+  ledge from the shaft floor) slows you to half speed; Space swims up, Shift down.
+- **Health:** ❤️ 20. Drops over ~3 blocks hurt (water breaks your fall); health
+  regenerates ~1 per 3 s; at 0 you respawn on the surface (nothing is lost).
+- **Fly:** double-tap **Space** (or tap 🕊️ Fly) for creative flight — no gravity,
+  Space up / Shift down (⤴️/⤵️ on mobile); touching down ends it. Still collides.
 - **Mine:** **E** (desktop) or ⛏️ (mobile) breaks whatever block is directly
   ahead of you, within reach. Stone adds 1 and coal / iron / gold ore add 3 to
   your 🪨 stone count; logs add 1 🪵; dirt and grass don't, they're just in the way.
@@ -589,9 +595,6 @@ Phaser).
   instant you press it — no need to navigate back to the shaft first. **E**
   is dedicated to mining only, so the two never conflict; desktop can also
   press **Escape**.
-- **Up/down:** dedicated controls (**Space**/**Shift** on desktop, 🔼/🔽 on
-  mobile) — same as Minecraft creative flight, so looking up or down to aim
-  never changes where walking forward takes you.
 
 The cave is generated once per visit and is **entirely local** — nothing
 underground syncs over the network, so what you dig and build down there is

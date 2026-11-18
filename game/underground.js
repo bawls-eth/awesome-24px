@@ -22,8 +22,22 @@ const UG_REACH = 7.5; // units — how far mine/place can reach
 const UG_PLACED_CAPACITY = 150;
 const UG_AMBIENT = 1.6;
 const UG_HEAD_LIGHT = 6;
-const UG_EYE_HEIGHT = 0.8; // eye is this far above rig.position (matches the mine/place ray origin)
+// Physics (A2). rig.position is the player's FEET. The body is a 1.2 x 3.6 box (a bit under 2
+// blocks tall); a block is 2 units, so the jump clears one block and a 2-block wall stops you.
+const UG_HALF_W = 0.6;
+const UG_BODY_H = 3.6;
+const UG_EYE_HEIGHT = 3.24; // eye is this far above rig.position (also the mine/place ray origin)
+const UG_GRAVITY = 30;
+const UG_JUMP_V = 12.25; // sqrt(2 * 30 * 2.5): a 2.5 unit jump
+const UG_TERMINAL_V = 40;
+const UG_WALK = 7;
+const UG_SWIM = 3.5;
+const UG_FLY = 11;
+const UG_MAX_HEALTH = 20;
+const UG_FALL_SAFE = 6; // units you can drop without taking damage
+const UG_SPAWN = [5.2, -1, 0]; // feet; standing on the surface grass beside the shaft
 const UG_THIRD_PERSON_DIST = 6;
+const UG_THIRD_PIVOT = 2.5; // third-person camera orbits this far above the feet
 const UG_ORE_KINDS = ['coal', 'iron', 'gold'];
 const UG_TEXTURE_NAMES = ['grass_top', 'grass_side', 'dirt', 'stone', 'coal', 'iron', 'gold', 'wood_side', 'wood_top', 'cobble'];
 
@@ -146,7 +160,7 @@ function ugBuildTextures() {
 }
 
 class UndergroundWorld {
-  constructor({ canvasWrap, resources, onResourceChange, onExit }) {
+  constructor({ canvasWrap, resources, onResourceChange, onExit, onHealthChange, onFlyChange }) {
     this.canvasWrap = canvasWrap;
     this.resources = resources; // shared reference to main.js's resources object
     this.onResourceChange = onResourceChange; // () => void — call after any resource change
@@ -165,6 +179,21 @@ class UndergroundWorld {
     this.torches = new Map(); // "gx,gy,gz" -> { group, light, mesh }
     this.hotbar = 'wall'; // 'wall' (costs stone) | 'torch' (costs wood)
     this.viewMode = 'first'; // 'first' (eye height) | 'third' (behind the player)
+    this.water = new Set(); // "gx,gy,gz" water cells (not solid; swimmable)
+    this.physicsEnabled = true; // tests can freeze movement to pose the rig
+    this.vel = { x: 0, y: 0, z: 0 };
+    this.onGround = false;
+    this.flying = false;
+    this.inWater = false;
+    this.health = UG_MAX_HEALTH;
+    this.maxHealth = UG_MAX_HEALTH;
+    this.deaths = 0;
+    this.lastFall = 0; // distance of the most recent landing, for the HUD / tests
+    this._peakY = UG_SPAWN[1];
+    this._regenT = 0;
+    this._lastSpaceT = -1e9;
+    this.onHealthChange = onHealthChange || (() => {});
+    this.onFlyChange = onFlyChange || (() => {});
 
     this._initThree();
     this._buildTerrain();
@@ -218,7 +247,7 @@ class UndergroundWorld {
     this.torch = new THREE.PointLight(0xffe2b8, UG_HEAD_LIGHT, 30, 1.6);
     this.scene.add(this.torch);
 
-    const playerGeo = new THREE.CapsuleGeometry(0.6, 1.1, 4, 8);
+    const playerGeo = new THREE.CapsuleGeometry(UG_HALF_W, UG_BODY_H - 2 * UG_HALF_W, 4, 8);
     const playerMat = new THREE.MeshStandardMaterial({ color: 0x6fbf73 });
     this.playerMesh = new THREE.Mesh(playerGeo, playerMat);
     this.scene.add(this.playerMesh);
@@ -337,6 +366,15 @@ class UndergroundWorld {
       }
     }
 
+    // A flooded cavern off the shaft (levels -5..-7): the swimming spot. It is joined to the
+    // shaft by carving x = 2..6, and the lower two levels of x = 3..6 are filled with water.
+    for (let x = 2; x <= 6; x++) {
+      for (let z = -1; z <= 1; z++) {
+        for (let y = -5; y >= -7; y--) solid.delete(`${x},${y},${z}`);
+        if (x >= 3) { this.water.add(`${x},-6,${z}`); this.water.add(`${x},-7,${z}`); }
+      }
+    }
+
     const kinds = ['grass', 'dirt', 'stone', 'coal', 'iron', 'gold', 'wood'];
     const counts = {};
     kinds.forEach((k) => { counts[k] = 0; });
@@ -376,6 +414,21 @@ class UndergroundWorld {
     });
     Object.values(meshes).forEach((mesh) => { mesh.instanceMatrix.needsUpdate = true; });
     this.terrainMeshes = meshes;
+
+    const waterMesh = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(UG_BLOCK * 0.98, UG_BLOCK * 0.98, UG_BLOCK * 0.98),
+      new THREE.MeshStandardMaterial({ color: 0x3a6fe0, roughness: 0.3, metalness: 0, transparent: true, opacity: 0.55, depthWrite: false }),
+      Math.max(1, this.water.size)
+    );
+    let wi = 0;
+    this.water.forEach((key) => {
+      const [gx, gy, gz] = key.split(',').map(Number);
+      m.makeTranslation(gx * UG_BLOCK, gy * UG_BLOCK, gz * UG_BLOCK);
+      waterMesh.setMatrixAt(wi++, m);
+    });
+    waterMesh.count = wi;
+    this.scene.add(waterMesh);
+    this.waterMesh = waterMesh;
   }
 
   _buildPlacedPool() {
@@ -391,7 +444,11 @@ class UndergroundWorld {
   // ---------- input ----------
 
   _bindInput() {
-    this.onKeyDown = (e) => { this.keys[e.key.toLowerCase()] = true; };
+    this.onKeyDown = (e) => {
+      const k = e.key.toLowerCase();
+      if ((k === ' ' || k === 'spacebar') && !e.repeat) this.tapJump();
+      this.keys[k] = true;
+    };
     this.onKeyUp = (e) => { this.keys[e.key.toLowerCase()] = false; };
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('keyup', this.onKeyUp);
@@ -424,6 +481,101 @@ class UndergroundWorld {
     this.moveInput.fwd = fwd;
     this.moveInput.strafe = strafe;
     if (vert !== undefined) this.moveInput.vert = vert;
+  }
+
+  // A fresh press of Jump. Two presses within 300 ms toggle creative flight.
+  tapJump() {
+    const now = performance.now();
+    if (now - this._lastSpaceT < 300) { this.toggleFly(); this._lastSpaceT = -1e9; } else this._lastSpaceT = now;
+  }
+
+  toggleFly(on) {
+    this.flying = on === undefined ? !this.flying : !!on;
+    this.vel.y = 0;
+    this._peakY = this.rig.position.y;
+    this.onFlyChange(this.flying);
+    return this.flying;
+  }
+
+  // ---------- physics ----------
+
+  // Cell (gx,gy,gz) blocks the body? Outside the cave on the sides and below the last layer is
+  // solid (invisible wall / bedrock floor); above the surface is open air. Torches do not collide.
+  _solidAt(gx, gy, gz) {
+    if (gx < -UG_SIZE || gx > UG_SIZE || gz < -UG_SIZE || gz > UG_SIZE || gy < -UG_DEPTH) return true;
+    const key = `${gx},${gy},${gz}`;
+    return this.occupied.has(key) && !this.torches.has(key);
+  }
+
+  _boxHits(x, y, z) {
+    const e = 1e-6;
+    const x0 = Math.floor((x - UG_HALF_W + 1) / UG_BLOCK);
+    const x1 = Math.floor((x + UG_HALF_W + 1 - e) / UG_BLOCK);
+    const y0 = Math.floor((y + 1) / UG_BLOCK);
+    const y1 = Math.floor((y + UG_BODY_H + 1 - e) / UG_BLOCK);
+    const z0 = Math.floor((z - UG_HALF_W + 1) / UG_BLOCK);
+    const z1 = Math.floor((z + UG_HALF_W + 1 - e) / UG_BLOCK);
+    for (let gx = x0; gx <= x1; gx++) for (let gy = y0; gy <= y1; gy++) for (let gz = z0; gz <= z1; gz++) if (this._solidAt(gx, gy, gz)) return true;
+    return false;
+  }
+
+  // Moves along one axis in <= 0.4 unit sub-steps (so a fast fall can't tunnel through a 2 unit
+  // block) and bisects to the surface on contact. Axes resolve one at a time, which makes
+  // sliding along walls and corners work. Returns true if it was blocked.
+  _moveAxis(axis, d) {
+    if (!d) return false;
+    const p = this.rig.position;
+    const n = Math.ceil(Math.abs(d) / 0.4);
+    const step = d / n;
+    for (let i = 0; i < n; i++) {
+      const prev = p[axis];
+      p[axis] = prev + step;
+      if (this._boxHits(p.x, p.y, p.z)) {
+        let lo = prev; let hi = prev + step;
+        for (let k = 0; k < 8; k++) {
+          const mid = (lo + hi) / 2;
+          p[axis] = mid;
+          if (this._boxHits(p.x, p.y, p.z)) hi = mid; else lo = mid;
+        }
+        p[axis] = lo;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  _inWaterCell() {
+    const p = this.rig.position;
+    return this.water.has(`${Math.round(p.x / UG_BLOCK)},${Math.round((p.y + 1.2) / UG_BLOCK)},${Math.round(p.z / UG_BLOCK)}`);
+  }
+
+  _damage(n) {
+    if (n <= 0) return;
+    this.health = Math.max(0, this.health - n);
+    this._regenT = 0;
+    if (this.health <= 0) {
+      this.deaths += 1;
+      this.respawn();
+    } else this.onHealthChange(this.health, this.maxHealth);
+  }
+
+  respawn() {
+    this.rig.position.set(UG_SPAWN[0], UG_SPAWN[1], UG_SPAWN[2]);
+    this.vel.x = 0; this.vel.y = 0; this.vel.z = 0;
+    this.health = this.maxHealth;
+    this.flying = false;
+    this._peakY = UG_SPAWN[1];
+    this.onHealthChange(this.health, this.maxHealth);
+    this.onFlyChange(false);
+  }
+
+  // Would a block in cell (gx,gy,gz) overlap the player's body?
+  _cellOverlapsPlayer(gx, gy, gz) {
+    const p = this.rig.position;
+    const B = UG_BLOCK;
+    return p.x + UG_HALF_W > gx * B - 1 && p.x - UG_HALF_W < gx * B + 1
+      && p.y + UG_BODY_H > gy * B - 1 && p.y < gy * B + 1
+      && p.z + UG_HALF_W > gz * B - 1 && p.z - UG_HALF_W < gz * B + 1;
   }
 
   // Extrudes one 24x24 frame of a sprite strip into a voxel figure: every
@@ -460,6 +612,7 @@ class UndergroundWorld {
         mesh.setColorAt(i, col);
       });
       mesh.instanceColor.needsUpdate = true;
+      mesh.scale.setScalar(UG_BODY_H / 2.4); // sprite is 2.4 tall; the body is 3.6
       this.scene.remove(this.playerMesh);
       this.playerMesh = mesh;
       this.scene.add(mesh);
@@ -472,9 +625,9 @@ class UndergroundWorld {
 
   start() {
     this.active = true;
-    this.rig.position.set(0, -0.2, 0);
-    this.yaw = Math.PI;
-    this.pitch = -0.5;
+    this.respawn();
+    this.yaw = Math.PI / 2; // facing the shaft
+    this.pitch = -0.15;
     this._applyViewVisibility();
     this._resize();
     this._lastT = performance.now();
@@ -525,50 +678,89 @@ class UndergroundWorld {
     return new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(this.pitch, this.yaw, 0, 'YXZ'));
   }
 
-  // Minecraft-style flight: WASD/dpad moves on the flat horizontal plane
-  // relative to the direction you're facing (yaw only, pitch ignored) —
-  // looking up or down to aim never changes where forward takes you.
-  // Up/down are their own dedicated controls, same as Minecraft creative
-  // mode, not tied to where the camera happens to be pointed.
+  // Walking physics (A2): gravity, jump, voxel collision with auto-jump up a one-block ledge,
+  // swimming, fall damage; creative flight (double-tap Jump) is a toggle. WASD / the dpad move
+  // on the flat plane relative to where you face; looking up/down only aims.
   _update(delta) {
+    const dt = Math.min(delta, 0.05);
     let fwd = this.moveInput.fwd;
     let strafe = this.moveInput.strafe;
-    let vert = this.moveInput.vert || 0;
+    const vert = this.moveInput.vert || 0;
     if (this.keys.w || this.keys.arrowup) fwd += 1;
     if (this.keys.s || this.keys.arrowdown) fwd -= 1;
     if (this.keys.a || this.keys.arrowleft) strafe -= 1;
     if (this.keys.d || this.keys.arrowright) strafe += 1;
-    if (this.keys[' '] || this.keys.spacebar) vert += 1;
-    if (this.keys.shift || this.keys.c) vert -= 1;
+    const jumpHeld = !!(this.keys[' '] || this.keys.spacebar) || vert > 0;
+    const downHeld = !!(this.keys.shift || this.keys.c) || vert < 0;
 
-    const speed = 6.5;
-    const flatFwd = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)).multiplyScalar(-1);
-    const right = new THREE.Vector3(flatFwd.z, 0, -flatFwd.x);
-    const dir = new THREE.Vector3()
-      .addScaledVector(flatFwd, fwd)
-      .addScaledVector(right, strafe);
-    dir.y = 0;
-    if (dir.lengthSq() > 0 || vert) {
-      if (dir.lengthSq() > 0) dir.normalize();
-      dir.y = vert;
-      dir.multiplyScalar(speed * delta);
-      const next = this.rig.position.clone().add(dir);
-      const bound = (UG_SIZE + 1) * UG_BLOCK;
-      next.x = Math.max(-bound, Math.min(bound, next.x));
-      next.z = Math.max(-bound, Math.min(bound, next.z));
-      next.y = Math.max(-(UG_DEPTH + 1) * UG_BLOCK, Math.min(1.5 * UG_BLOCK, next.y));
-      this.rig.position.copy(next);
+    const p = this.rig.position;
+    if (this.physicsEnabled) {
+      if (this._boxHits(p.x, p.y, p.z)) { // never start inside a block: pop up to the first free spot
+        const y0 = p.y; let guard = 0;
+        while (guard++ < 24 && this._boxHits(p.x, p.y, p.z)) p.y += 0.5;
+        if (this._boxHits(p.x, p.y, p.z)) p.y = y0;
+      }
+      const wasGround = this.onGround;
+      this.inWater = this._inWaterCell();
+      const flatFwd = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)).multiplyScalar(-1);
+      const right = new THREE.Vector3(flatFwd.z, 0, -flatFwd.x);
+      const dir = new THREE.Vector3().addScaledVector(flatFwd, fwd).addScaledVector(right, strafe);
+      const moving = dir.lengthSq() > 0;
+      if (moving) dir.normalize();
+      const speed = this.flying ? UG_FLY : this.inWater ? UG_SWIM : UG_WALK;
+      this.vel.x = dir.x * speed;
+      this.vel.z = dir.z * speed;
+
+      if (this.flying) {
+        this.vel.y = ((jumpHeld ? 1 : 0) - (downHeld ? 1 : 0)) * 8;
+        if (downHeld && wasGround) this.toggleFly(false); // touching down ends flight
+      } else if (this.inWater) {
+        this.vel.y = Math.max(this.vel.y - UG_GRAVITY * 0.15 * dt, -3);
+        if (jumpHeld) this.vel.y = 4.5; else if (downHeld) this.vel.y = -4.5;
+        this.vel.y *= 0.96;
+      } else {
+        this.vel.y = Math.max(this.vel.y - UG_GRAVITY * dt, -UG_TERMINAL_V);
+        if (jumpHeld && wasGround) this.vel.y = UG_JUMP_V;
+      }
+
+      const bx = this._moveAxis('x', this.vel.x * dt);
+      const bz = this._moveAxis('z', this.vel.z * dt);
+      if ((bx || bz) && wasGround && moving && !this.flying && !this.inWater && this.vel.y <= 0.01) {
+        // Auto-jump: walk into a one-block ledge and hop up it, but only if the space on top is
+        // clear — a two-block wall still stops you.
+        const ox = p.x + dir.x * 0.4; const oz = p.z + dir.z * 0.4;
+        if (this._boxHits(ox, p.y, oz) && !this._boxHits(ox, p.y + UG_BLOCK + 0.02, oz)) this.vel.y = UG_JUMP_V;
+      }
+
+      const by = this._moveAxis('y', this.vel.y * dt);
+      const wasAir = !wasGround;
+      this.onGround = by && this.vel.y < 0;
+      if (by) {
+        if (this.vel.y < 0 && wasAir && !this.flying && !this.inWater) {
+          const fall = this._peakY - p.y;
+          this.lastFall = fall;
+          if (fall > UG_FALL_SAFE) this._damage(Math.floor((fall - UG_FALL_SAFE) / 1.5));
+        }
+        this.vel.y = 0;
+      }
+      if (this.onGround || this.flying || this.inWater) this._peakY = p.y; else this._peakY = Math.max(this._peakY, p.y);
+
+      this._regenT += dt;
+      if (this._regenT >= 3 && this.health < this.maxHealth) {
+        this.health += 1; this._regenT = 0; this.onHealthChange(this.health, this.maxHealth);
+      }
     }
 
-    this.playerMesh.position.copy(this.rig.position);
+    // The mesh origins are body centres; the rig is the feet.
+    this.playerMesh.position.set(p.x, p.y + UG_BODY_H / 2, p.z);
     this.playerMesh.rotation.y = this.yaw;
-    this.tool.position.copy(this.rig.position);
+    this.tool.position.set(p.x, p.y + UG_BODY_H / 2, p.z);
     this.tool.rotation.y = this.yaw;
     this.swingT = Math.max(0, this.swingT - delta);
     this.toolGrip.rotation.x = -0.35 - Math.sin((this.swingT / 0.25) * Math.PI) * 1.2;
     if (this.viewMode === 'first') {
       // Eye height; same origin the mine/place ray uses, so the crosshair is exact.
-      this.camera.position.set(this.rig.position.x, this.rig.position.y + UG_EYE_HEIGHT, this.rig.position.z);
+      this.camera.position.set(p.x, p.y + UG_EYE_HEIGHT, p.z);
       this.camera.rotation.set(this.pitch, this.yaw, 0, 'YXZ');
       // Pickaxe swing (the whole arm kicks forward and back).
       const k = Math.sin((this.swingT / 0.25) * Math.PI);
@@ -576,15 +768,12 @@ class UndergroundWorld {
       this.fpPick.position.set(0.5, -0.42 + k * 0.05, -0.85 - k * 0.15);
     } else {
       const look = this._forwardVector();
-      this.camera.position.copy(this.rig.position).addScaledVector(look, -UG_THIRD_PERSON_DIST);
-      this.camera.position.y += 1.5;
-      this.camera.lookAt(this.rig.position.x, this.rig.position.y + 0.8, this.rig.position.z);
+      this.camera.position.set(p.x, p.y + UG_THIRD_PIVOT, p.z).addScaledVector(look, -UG_THIRD_PERSON_DIST);
+      this.camera.lookAt(p.x, p.y + UG_THIRD_PIVOT, p.z);
     }
     this.torch.position.copy(this.camera.position);
 
-    this.nearExit = Math.abs(this.rig.position.x) < UG_BLOCK * 1.5
-      && Math.abs(this.rig.position.z) < UG_BLOCK * 1.5
-      && this.rig.position.y > -UG_BLOCK * 1.5;
+    this.nearExit = Math.abs(p.x) < UG_BLOCK * 1.5 && Math.abs(p.z) < UG_BLOCK * 1.5 && p.y > -UG_BLOCK * 1.5;
   }
 
   // ---------- mine / place ----------
@@ -597,7 +786,7 @@ class UndergroundWorld {
     Object.values(this.terrainMeshes || {}).forEach((m) => objs.push(m));
     this.torches.forEach((t) => objs.push(t.mesh));
     const origin = this.rig.position.clone();
-    origin.y += 0.8;
+    origin.y += UG_EYE_HEIGHT;
     this.raycaster.set(origin, this._forwardVector());
     return this.raycaster.intersectObjects(objs);
   }
@@ -716,7 +905,8 @@ class UndergroundWorld {
     const gy = Math.round(cell.y / UG_BLOCK);
     const gz = Math.round(cell.z / UG_BLOCK);
     const key = `${gx},${gy},${gz}`;
-    if (this.occupied.has(key)) return false;
+    if (this.occupied.has(key) || this.water.has(key)) return false;
+    if (this.hotbar !== 'torch' && this._cellOverlapsPlayer(gx, gy, gz)) return false; // don't wall yourself in
 
     if (this.hotbar === 'torch') {
       this._addTorch(gx, gy, gz);
@@ -725,16 +915,24 @@ class UndergroundWorld {
       return true;
     }
 
+    if (!this._putStone(gx, gy, gz)) return false;
+    this.resources.stone -= 1;
+    this.onResourceChange();
+    return true;
+  }
+
+  // Puts a cobble block in a cell with no cost / reach checks (used by place(), and handy for
+  // tests and later features like crafting). False if the cell is taken or the pool is full.
+  _putStone(gx, gy, gz) {
+    const key = `${gx},${gy},${gz}`;
+    if (this.occupied.has(key)) return false;
     const slot = this.placedFree.length ? this.placedFree.pop() : (this.placedNext < UG_PLACED_CAPACITY ? this.placedNext++ : null);
     if (slot === null) return false;
-
     const m = new THREE.Matrix4().makeTranslation(gx * UG_BLOCK, gy * UG_BLOCK, gz * UG_BLOCK);
     this.placedMesh.setMatrixAt(slot, m);
     this.placedMesh.instanceMatrix.needsUpdate = true;
     this.lookup.set(key, { mesh: this.placedMesh, instanceId: slot, kind: 'placed' });
     this.occupied.add(key);
-    this.resources.stone -= 1;
-    this.onResourceChange();
     return true;
   }
 }

@@ -2807,6 +2807,14 @@ class TownScene extends Phaser.Scene {
         resources: this.resources,
         onResourceChange,
         onExit: () => this.exitUnderground(),
+        onHealthChange: (hp, max) => {
+          const el = document.getElementById('ug-health');
+          if (el) { el.textContent = `❤️ ${hp}/${max}`; el.classList.toggle('low', hp <= max / 4); }
+        },
+        onFlyChange: (on) => {
+          const b = document.getElementById('ug-fly-btn');
+          if (b) b.classList.toggle('active', !!on);
+        },
       });
       this.underground.setAvatar(`../i/${this.selfData.species}-strip.png`, this.selfData.frame || 0, FRAME_SIZE);
       this.setupUndergroundControls();
@@ -2884,7 +2892,7 @@ class TownScene extends Phaser.Scene {
     const setVert = (v) => { ug.setMoveInput(this.ugFwd || 0, this.ugStrafe || 0, v); };
     const upBtn = document.getElementById('ug-up-btn');
     const downBtn = document.getElementById('ug-down-btn');
-    upBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); setVert(1); });
+    upBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); ug.tapJump(); setVert(1); });
     upBtn.addEventListener('pointerup', () => setVert(0));
     upBtn.addEventListener('pointerleave', () => setVert(0));
     upBtn.addEventListener('pointercancel', () => setVert(0));
@@ -2893,6 +2901,7 @@ class TownScene extends Phaser.Scene {
     downBtn.addEventListener('pointerleave', () => setVert(0));
     downBtn.addEventListener('pointercancel', () => setVert(0));
 
+    document.getElementById('ug-fly-btn').addEventListener('click', () => ug.toggleFly());
     document.getElementById('ug-view-btn').addEventListener('click', () => { ug.toggleView(); this.updateUgViewButton(); });
     this.updateUgViewButton();
     document.getElementById('ug-mine-btn').addEventListener('click', () => ug.mine());

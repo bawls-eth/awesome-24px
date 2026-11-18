@@ -2246,3 +2246,20 @@ body.touch-device .key-hint { display: none; }
   border-radius: 18px !important;
   font-size: 12px !important;
 }
+
+/* ---------- Cave A2: health + flight ---------- */
+#ug-health {
+  position: absolute;
+  left: calc(12px + env(safe-area-inset-left, 0px));
+  top: 44px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: var(--ac-panel-glass);
+  border: 2px solid var(--ac-border);
+  font-size: 13px;
+  font-weight: 700;
+  pointer-events: none;
+}
+#ug-health.low { border-color: #d9534f; color: #d9534f; }
+#ug-fly-btn { font-size: 12px !important; }
+#ug-fly-btn.active { border-color: var(--ac-gold) !important; background: var(--ac-gold-wash) !important; }
