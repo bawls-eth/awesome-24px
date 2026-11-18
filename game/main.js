@@ -319,6 +319,11 @@ if (IS_TOUCH) document.body.classList.add('touch-device');
 
 const TILT_DEADZONE_DEG = 8;
 const TILT_RANGE_DEG = 36;
+// Radial dead zone for gamepad sticks and the on-screen joystick (0..1 of
+// full deflection) — worn sticks rest a little off-center and would
+// otherwise make the villager creep on their own.
+const PAD_DEADZONE = 0.22;
+const JOYSTICK_DEADZONE = 0.18;
 const SHAKE_THRESHOLD = 15; // m/s^2 jump in accelerationIncludingGravity magnitude
 const SHAKE_COOLDOWN_MS = 800;
 const TREE_SHAKE_RADIUS = 46;
@@ -1236,6 +1241,7 @@ class TownScene extends Phaser.Scene {
       this.setupTiltShake();
       this.setupHaptics();
     }
+    this.setupGamepad();
 
     this.registerNetHandlers();
     this.registerChatUI();
@@ -1246,6 +1252,7 @@ class TownScene extends Phaser.Scene {
   }
 
   update(time, delta) {
+    this.pollGamepad();
     this.updateLocalMovement(time, delta);
     this.updateRemoteInterpolation(delta);
     this.updateSparkle(time);
@@ -1287,6 +1294,7 @@ class TownScene extends Phaser.Scene {
         vx += this.tiltMove.x;
         vy += this.tiltMove.y;
       }
+      if (this.padInput) { vx += this.padInput.x; vy += this.padInput.y; } // gamepad, see pollGamepad()
     }
 
     // Normalise so diagonals aren't ~41% faster; analog (tilt) input under
@@ -1713,34 +1721,13 @@ class TownScene extends Phaser.Scene {
     const haptic = () => { try { if (navigator.vibrate) navigator.vibrate(12); } catch (e) { /* unsupported */ } };
     ['mobile-controls', 'underground-controls'].forEach((id) => {
       const el = document.getElementById(id);
-      if (el) el.addEventListener('touchstart', (e) => { if (e.target.closest('button')) haptic(); }, { passive: true });
+      if (el) el.addEventListener('touchstart', (e) => { if (e.target.closest('button, #joystick')) haptic(); }, { passive: true });
     });
   }
 
   setupTouchControls() {
     this.touchMove = { x: 0, y: 0 };
-    const pressed = new Set();
-    const recompute = () => {
-      let x = 0;
-      let y = 0;
-      if (pressed.has('up')) y -= 1;
-      if (pressed.has('down')) y += 1;
-      if (pressed.has('left')) x -= 1;
-      if (pressed.has('right')) x += 1;
-      this.touchMove = { x, y };
-    };
-
-    document.querySelectorAll('.dpad-btn').forEach((btn) => {
-      const dir = btn.dataset.dir;
-      const start = (e) => { e.preventDefault(); pressed.add(dir); btn.classList.add('active'); recompute(); };
-      const end = (e) => { if (e.cancelable) e.preventDefault(); pressed.delete(dir); btn.classList.remove('active'); recompute(); };
-      btn.addEventListener('touchstart', start, { passive: false });
-      btn.addEventListener('touchend', end);
-      btn.addEventListener('touchcancel', end);
-      btn.addEventListener('mousedown', start);
-      btn.addEventListener('mouseup', end);
-      btn.addEventListener('mouseleave', end);
-    });
+    this.setupJoystick();
 
     const chatInput = document.getElementById('chat-input');
     document.getElementById('mobile-chat-btn').addEventListener('click', () => {
@@ -1777,6 +1764,152 @@ class TownScene extends Phaser.Scene {
 
     const photoBtn = document.getElementById('mobile-photo-btn');
     if (photoBtn) photoBtn.addEventListener('click', () => this.takePhoto());
+  }
+
+  // Virtual analog stick (replaces the old 4-button D-pad). Pointer events
+  // with capture, so the finger can slide off the pad and keep steering,
+  // and only the first finger that lands on it is tracked — a second
+  // finger tapping A/B at the same time never hijacks or freezes the
+  // stick. Any way that finger's contact can end (lift, iOS cancelling the
+  // touch for a system gesture, capture being lost, the tab losing focus)
+  // recenters it, so the villager can't get stuck walking. Output goes
+  // into this.touchMove, already read by updateLocalMovement; magnitude is
+  // analog (a light push walks slower).
+  setupJoystick() {
+    const base = document.getElementById('joystick');
+    const knob = document.getElementById('joystick-knob');
+    if (!base || !knob) return;
+    let activeId = null;
+    const reset = () => {
+      activeId = null;
+      base.classList.remove('active');
+      knob.style.transform = '';
+      this.touchMove = { x: 0, y: 0 };
+    };
+    const track = (e) => {
+      const r = base.getBoundingClientRect();
+      const radius = r.width / 2;
+      let dx = (e.clientX - (r.left + radius)) / radius;
+      let dy = (e.clientY - (r.top + radius)) / radius;
+      const mag = Math.hypot(dx, dy);
+      if (mag > 1) { dx /= mag; dy /= mag; }
+      const travel = radius - knob.offsetWidth / 2;
+      knob.style.transform = `translate(${dx * travel}px, ${dy * travel}px)`;
+      if (mag < JOYSTICK_DEADZONE) { this.touchMove = { x: 0, y: 0 }; return; }
+      // Full speed a bit before the rim, so you don't have to pin the
+      // thumb against the very edge to run.
+      const strength = Math.min(1, (mag - JOYSTICK_DEADZONE) / (0.8 - JOYSTICK_DEADZONE));
+      this.touchMove = { x: (dx / Math.min(1, mag)) * strength, y: (dy / Math.min(1, mag)) * strength };
+    };
+    base.addEventListener('pointerdown', (e) => {
+      if (activeId !== null) return;
+      e.preventDefault();
+      activeId = e.pointerId;
+      try { base.setPointerCapture(e.pointerId); } catch (err) { /* already released */ }
+      base.classList.add('active');
+      track(e);
+    });
+    base.addEventListener('pointermove', (e) => { if (e.pointerId === activeId) track(e); });
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((type) => {
+      base.addEventListener(type, (e) => { if (e.pointerId === activeId) reset(); });
+    });
+    window.addEventListener('blur', reset);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) reset(); });
+    base.addEventListener('contextmenu', (e) => e.preventDefault());
+  }
+
+  // ---------- gamepad (Bluetooth Xbox / PlayStation / MFi controllers) ----------
+  // Polled once a frame from update() via the standard Gamepad API, which
+  // iOS Safari supports for paired Xbox/PS controllers (a pad only shows up
+  // after its first button press — a browser privacy rule, not a bug).
+  // Standard mapping: left stick or D-pad walks, A = interact (E),
+  // X = gift (G), B = close the open overlay / leave chat, otherwise
+  // toggle build (B), Start = map (M). Works alongside keyboard and touch;
+  // movement is summed into the same vector, actions use the same canAct()
+  // gate as every other input.
+  setupGamepad() {
+    this.padInput = { x: 0, y: 0 };
+    this.padPrev = [];
+    if (typeof navigator.getGamepads !== 'function') return;
+    window.addEventListener('gamepadconnected', () => {
+      this.addChatLine({ system: true, text: '🎮 Controller connected — stick/D-pad to walk, A interact, X gift, B build/close, Start map.' });
+    });
+    window.addEventListener('gamepaddisconnected', () => {
+      this.padInput = { x: 0, y: 0 };
+      this.padPrev = [];
+    });
+  }
+
+  pollGamepad() {
+    if (!this.padInput || typeof navigator.getGamepads !== 'function') return;
+    let pad = null;
+    try {
+      pad = Array.from(navigator.getGamepads() || []).find((p) => p && p.connected);
+    } catch (e) { /* blocked by permissions policy */ }
+    if (!pad) {
+      this.padInput.x = 0;
+      this.padInput.y = 0;
+      this.padPrev = [];
+      return;
+    }
+    const held = pad.buttons.map((b) => !!b && (b.pressed || b.value > 0.5));
+    const prev = this.padPrev;
+    const justPressed = (i) => held[i] && !prev[i];
+    // Buttons already down on the first poll (e.g. the press that woke the
+    // pad up) count as "seen", so they don't fire an action on their own.
+    const first = prev.length === 0;
+    this.padPrev = held;
+
+    let x = pad.axes[0] || 0;
+    let y = pad.axes[1] || 0;
+    const mag = Math.hypot(x, y);
+    if (mag < PAD_DEADZONE) {
+      x = 0;
+      y = 0;
+    } else {
+      const s = Math.min(1, (mag - PAD_DEADZONE) / (1 - PAD_DEADZONE)) / mag;
+      x *= s;
+      y *= s;
+    }
+    if (held[14]) x -= 1;
+    if (held[15]) x += 1;
+    if (held[12]) y -= 1;
+    if (held[13]) y += 1;
+    this.padInput.x = Phaser.Math.Clamp(x, -1, 1);
+    this.padInput.y = Phaser.Math.Clamp(y, -1, 1);
+    if (first) return;
+
+    if (justPressed(0) && this.canAct()) this.interact();
+    if (justPressed(2) && this.canAct()) this.giveNearestVillagerGift();
+    if (justPressed(1) && !this.closeTopOverlay() && this.canAct()) this.toggleBuildMode();
+    if (justPressed(9)) {
+      if (this.mapOpen) this.closeTopOverlay();
+      else if (this.canAct()) document.getElementById('map-btn')?.click();
+    }
+  }
+
+  // Closes whichever overlay is up by pressing its own ✕ button, so each
+  // overlay's normal close logic (timers, flags) runs unchanged. Returns
+  // false when nothing was open.
+  closeTopOverlay() {
+    const overlays = [
+      ['mapOpen', 'map-close-btn'], ['polyrollOpen', 'polyroll-close-btn'],
+      ['achievementsOpen', 'achievements-close-btn'], ['outfitShopOpen', 'outfit-close-btn'],
+      ['guestbookOpen', 'guestbook-close-btn'], ['triviaOpen', 'trivia-close-btn'],
+      ['keysHelpOpen', 'keys-help-close-btn'], ['changelogOpen', 'changelog-close-btn'],
+      ['museumOpen', 'museum-close-btn'],
+    ];
+    const open = overlays.find(([flag]) => this[flag]);
+    if (open) {
+      const btn = document.getElementById(open[1]);
+      if (btn) btn.click();
+      return true;
+    }
+    if (this.chatFocused) {
+      document.getElementById('chat-input').blur();
+      return true;
+    }
+    return false;
   }
 
   // ---------- mobile: tilt steering + shake-to-interact ----------
@@ -2491,6 +2624,7 @@ class TownScene extends Phaser.Scene {
       btn.addEventListener('pointerdown', (e) => { e.preventDefault(); setDir(dir, true); });
       btn.addEventListener('pointerup', () => setDir(dir, false));
       btn.addEventListener('pointerleave', () => setDir(dir, false));
+      btn.addEventListener('pointercancel', () => setDir(dir, false));
     });
 
     const setVert = (v) => { ug.setMoveInput(this.ugFwd || 0, this.ugStrafe || 0, v); };
@@ -2499,9 +2633,11 @@ class TownScene extends Phaser.Scene {
     upBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); setVert(1); });
     upBtn.addEventListener('pointerup', () => setVert(0));
     upBtn.addEventListener('pointerleave', () => setVert(0));
+    upBtn.addEventListener('pointercancel', () => setVert(0));
     downBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); setVert(-1); });
     downBtn.addEventListener('pointerup', () => setVert(0));
     downBtn.addEventListener('pointerleave', () => setVert(0));
+    downBtn.addEventListener('pointercancel', () => setVert(0));
 
     document.getElementById('ug-mine-btn').addEventListener('click', () => ug.mine());
     document.getElementById('ug-place-btn').addEventListener('click', () => ug.place());

@@ -521,17 +521,15 @@ body.touch-device #player-list-panel {
 body.touch-device #chat-panel {
   left: 8px;
   right: 8px;
-  /* #action-buttons is now 4 rows tall (emote pill, tilt pill, B/A, P/C:
-     36+36+50+50 + 3x8 gap = 196px), sitting 16px off the bottom, so its
-     top edge is ~212px up — taller than the D-pad (150px). This needs
-     clearance above whichever is taller, with real margin, not the few
-     px it had before (quick-chat-row, then a 4th button row, both ate
-     into it without the offset being rechecked). --kb-inset (set in
+  /* Bottom of the screen, stacked from the edge up (all + safe area):
+     joystick / action buttons 12..140px, fish + gift hint row 148..184px,
+     dig-hole hint 192..222px — so chat starts at 232px. Recheck these
+     numbers if any of those rows changes height. --kb-inset (set in
      main.js from visualViewport) adds on top of that when the on-screen
      keyboard overlays the page instead of resizing it, so this bar stays
      above the keyboard instead of floating wherever the shrunk visible
      area happens to be. */
-  bottom: calc(230px + env(safe-area-inset-bottom, 0px) + var(--kb-inset, 0px));
+  bottom: calc(232px + env(safe-area-inset-bottom, 0px) + var(--kb-inset, 0px));
   width: auto;
 }
 
@@ -559,18 +557,39 @@ body.touch-device #mobile-controls {
   pointer-events: none;
 }
 
-#dpad {
+/* Virtual analog stick (setupJoystick in main.js). */
+#joystick {
   position: absolute;
-  left: calc(16px + env(safe-area-inset-left, 0px));
-  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-  width: 150px;
-  height: 150px;
-  display: grid;
-  grid-template-columns: 50px 50px 50px;
-  grid-template-rows: 50px 50px 50px;
-  gap: 0;
+  left: calc(12px + env(safe-area-inset-left, 0px));
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  width: 128px;
+  height: 128px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.25);
+  background: radial-gradient(circle, rgba(28,36,48,0.35) 0 30%, rgba(28,36,48,0.6) 70%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
+
+#joystick.active { border-color: #6fbf73; }
+
+#joystick-knob {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(238,242,247,0.85);
+  border: 2px solid rgba(28,36,48,0.6);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+  pointer-events: none;
+}
+
+#joystick.active #joystick-knob { background: rgba(111,191,115,0.95); }
 
 .dpad-btn {
   border: 2px solid rgba(255,255,255,0.25);
@@ -588,20 +607,26 @@ body.touch-device #mobile-controls {
   border-color: #6fbf73;
 }
 
-.dpad-btn[data-dir="up"] { grid-column: 2; grid-row: 1; }
-.dpad-btn[data-dir="left"] { grid-column: 1; grid-row: 2; }
-.dpad-btn[data-dir="right"] { grid-column: 3; grid-row: 2; }
-.dpad-btn[data-dir="down"] { grid-column: 2; grid-row: 3; }
-
+/* Two rows only (was four), so the whole control strip is 128px tall:
+   [Emotes][B][A]
+   [Tilt  ][P][C]  */
 #action-buttons {
   position: absolute;
-  right: calc(16px + env(safe-area-inset-right, 0px));
-  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  right: calc(12px + env(safe-area-inset-right, 0px));
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   display: grid;
-  grid-template-columns: repeat(2, 50px);
+  grid-template-columns: 64px repeat(2, 50px);
+  grid-template-rows: repeat(2, 50px);
   gap: 8px;
   pointer-events: auto;
 }
+
+#emote-toggle-btn { grid-column: 1; grid-row: 1; }
+#tilt-toggle-btn { grid-column: 1; grid-row: 2; }
+#build-toggle-btn { grid-column: 2; grid-row: 1; }
+#interact-btn { grid-column: 3; grid-row: 1; }
+#mobile-photo-btn { grid-column: 2; grid-row: 2; }
+#mobile-chat-btn { grid-column: 3; grid-row: 2; }
 
 #action-buttons button {
   width: 50px;
@@ -620,13 +645,13 @@ body.touch-device #mobile-controls {
 }
 
 #tilt-toggle-btn, #emote-toggle-btn {
-  grid-column: 1 / span 2;
-  width: auto !important;
-  height: 36px !important;
-  border-radius: 18px !important;
-  padding: 0 12px;
+  width: 64px !important;
+  height: 50px !important;
+  border-radius: 25px !important;
+  padding: 0 4px;
   font-size: 11px !important;
-  white-space: nowrap;
+  line-height: 1.15;
+  white-space: normal;
 }
 
 #emote-popup {
@@ -651,8 +676,29 @@ body.touch-device #mobile-controls {
   touch-action: none;
 }
 
+/* Contextual hints on touch: fish on the left and gift on the right of
+   one row just above the control strip, so both can show at once without
+   covering each other, the joystick, or the buttons; the (non-tappable)
+   dig-hole hint gets its own row above that. */
+body.touch-device #fish-hint-btn,
+body.touch-device #gift-hint-btn {
+  bottom: calc(148px + env(safe-area-inset-bottom, 0px));
+  transform: none;
+  padding: 7px 14px;
+  font-size: 13px;
+}
+body.touch-device #fish-hint-btn { left: calc(12px + env(safe-area-inset-left, 0px)); right: auto; }
+body.touch-device #gift-hint-btn { right: calc(12px + env(safe-area-inset-right, 0px)); left: auto; }
+body.touch-device #dig-hole-hint { bottom: calc(192px + env(safe-area-inset-bottom, 0px)); }
+
 @media (max-width: 480px) {
   body.touch-device #player-list-panel { top: calc(8px + env(safe-area-inset-top, 0px)); right: calc(8px + env(safe-area-inset-right, 0px)); max-width: 46vw; }
+}
+
+/* Short phones (e.g. 360x640): two lines of chat log is enough to keep it
+   clear of the top-right player panel. */
+@media (max-height: 700px) {
+  body.touch-device #chat-log { max-height: 54px; }
 }
 
 #dig-hole-hint {
