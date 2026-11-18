@@ -29,6 +29,15 @@ right now, before you even pick a name.
 - **Fish** at the pond (or the second pond out east), **chop** trees for
   wood, **mine** rocks for stone — classic Animal Crossing activities, fill
   the inventory in the top-left
+- **Home plot** 🏡 — a fenced plot (east of the shop row, on the map) where you
+  display goods crafted at the workbench: six spots, each with a dropdown of
+  the goods in your bag. Placed goods leave your bag (so they can't be
+  sold) and come back if you swap or clear the spot. The sum of their shop
+  values is your **cozy score**; the first time you open the plot each day
+  your visitors admire it for +1⭐ per 5 cozy (max +6). Local only — other
+  players don't see your plot — saved under the additive
+  `home: {slots, paidDay}` key. Achievements: Home Sweet Home, Interior
+  Designer, Cozy Corner. Tests: `node game/tests/home.test.js`.
 - **Daily Bug-Off** 🦋 — a deterministic 2-hour window each day (shown on the
   new sign east of the fishing-tournament sign, and on the map). While it is
   live, 8 extra bugs flutter around and every bug respawns in ~3.5s instead

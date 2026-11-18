@@ -113,8 +113,9 @@ const SAVE_KEY = 'pixeltown-save-v1';
 
 // Bump this string whenever there's something worth telling returning
 // players about — shown once as a dismissible banner, then remembered.
-const GAME_VERSION = 'v28-bugoff';
+const GAME_VERSION = 'v29-home';
 const WHATS_NEW = [
+  '🏡 Home plot — display your crafted goods as cozy decor, earn a daily visitor bonus',
   '🦋 Daily Bug-Off — a 2-hour contest, catch 5/10/15 bugs for Bronze/Silver/Gold',
   '📬 Villager mailbox — friends write you daily letters with gifts attached',
   '🌿 Weeds sprout every day — pull them for ⭐ and keep the town tidy',
@@ -704,6 +705,9 @@ const ACHIEVEMENTS = [
   { id: 'bugoffBronze', icon: '🥉', label: 'Bug Buddy', desc: 'Earn Bronze in a Bug-Off', reward: 3, check: (s) => (s.bugOffTiers || 0) >= 1 },
   { id: 'bugoffGold', icon: '🥇', label: 'Bug Champion', desc: 'Earn Gold in a Bug-Off (catch 15)', reward: 10, check: (s) => (s.bugOffGold || 0) >= 1 },
   { id: 'bugoffRegular', icon: '🦋', label: 'Bug-Off Regular', desc: 'Earn 10 Bug-Off prizes', reward: 8, check: (s) => (s.bugOffTiers || 0) >= 10 },
+  { id: 'homeFirst', icon: '🏡', label: 'Home Sweet Home', desc: 'Place a crafted good on your home plot', reward: 3, check: (s) => (s.homePlaced || 0) >= 1 },
+  { id: 'homeFull', icon: '🛋️', label: 'Interior Designer', desc: 'Fill every spot on your home plot', reward: 8, check: (s) => (s.homeFullPlots || 0) >= 1 },
+  { id: 'homeCozy', icon: '🕯️', label: 'Cozy Corner', desc: 'Reach a cozy score of 30', reward: 8, check: (s) => (s.homeCozyBest || 0) >= 30 },
   { id: 'craft1', icon: '🔨', label: 'DIY Beginner', desc: 'Craft something at the workbench', reward: 3, check: (s) => (s.crafted || 0) >= 1 },
   { id: 'craft10', icon: '🛠️', label: 'Crafty', desc: 'Craft 10 items', reward: 5, check: (s) => (s.crafted || 0) >= 10 },
   { id: 'craftAll', icon: '🧰', label: 'Master Crafter', desc: 'Craft every recipe at least once', reward: 10, check: (s) => RECIPES.every((r) => (s['craft_' + r.id] || 0) >= 1) },
@@ -875,6 +879,18 @@ const FISH_TOURNAMENT_SIGN_POS = { x: 2040, y: 760 };
 const FISH_TOURNAMENT_BONUS = 10;
 const GUESTBOOK_RADIUS = 60;
 
+// ---------- home plot ----------
+// A small fenced plot where you display crafted goods as decor. It is YOUR
+// plot: placement is local-only (other players don't see it), saved under the
+// additive `home: {slots, paidDay}` key. Cozy score = sum of the goods'
+// shop values; opening the plot for the first time each day pays a small
+// visitor bonus. Placed goods leave your bag (so they can't be sold).
+const HOME_POS = { x: 1650, y: 940 };
+const HOME_RADIUS = 90;
+const HOME_SLOTS = 6;
+const HOME_BONUS_PER = 5; // cozy points per ⭐ of daily visitor bonus
+const HOME_BONUS_CAP = 6;
+const HOME_SLOT_OFFSETS = [[-52, -18], [0, -18], [52, -18], [-52, 22], [0, 22], [52, 22]];
 // ---------- villager mailbox ----------
 // Each (UTC) day the villagers you know write you letters with a small gift
 // attached. Which villagers write, and what they send, is a pure function of
@@ -1095,6 +1111,7 @@ const VILLAGER_PERSONALITY_LINES = {
 // zoomed-out render of the actual sprites, which would be unreadable mud
 // at the small size a map needs to be.
 const MAP_LANDMARKS = [
+  { x: 1650, y: 940, label: '🏡 Home plot' },
   { x: 2200, y: 760, label: '🦋 Bug-Off' },
   { x: 1125, y: 990, label: '📬 Mailbox' },
   { x: 1330, y: 800, label: '🔨 Workbench' },
@@ -1254,6 +1271,7 @@ class TownScene extends Phaser.Scene {
     this.drawGuestbook();
     this.drawWorkbench();
     this.drawMailbox();
+    this.drawHomePlot();
     this.drawNoticeBoard();
     this.setupScavengerHunt();
     this.drawGraveyard();
@@ -1360,6 +1378,7 @@ class TownScene extends Phaser.Scene {
     // Cheap distance check, only while the workbench is open: walking away closes it.
     if (this.workbenchOpen && !this.isNearWorkbench(WORKBENCH_RADIUS + 90)) this.closeWorkbench();
     if (this.mailboxOpen && !this.isNearMailbox(MAILBOX_RADIUS + 90)) this.closeMailbox();
+    if (this.homeOpen && !this.isNearHome(HOME_RADIUS + 90)) this.closeHome();
     this.updateDigHoleHint();
     this.updateFishHint();
     this.updateGiftHint();
@@ -1995,7 +2014,7 @@ class TownScene extends Phaser.Scene {
       ['achievementsOpen', 'achievements-close-btn'], ['outfitShopOpen', 'outfit-close-btn'],
       ['guestbookOpen', 'guestbook-close-btn'], ['triviaOpen', 'trivia-close-btn'],
       ['keysHelpOpen', 'keys-help-close-btn'], ['changelogOpen', 'changelog-close-btn'],
-      ['museumOpen', 'museum-close-btn'], ['workbenchOpen', 'workbench-close-btn'], ['mailboxOpen', 'mailbox-close-btn'],
+      ['museumOpen', 'museum-close-btn'], ['workbenchOpen', 'workbench-close-btn'], ['mailboxOpen', 'mailbox-close-btn'], ['homeOpen', 'home-close-btn'],
     ];
     const open = overlays.find(([flag]) => this[flag]);
     if (open) {
@@ -2113,7 +2132,7 @@ class TownScene extends Phaser.Scene {
   // so chat/overlay state is respected no matter which input triggered it
   // (keyboard, on-screen button, or shake).
   canAct() {
-    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen && !this.mapOpen && !this.museumOpen && !this.workbenchOpen && !this.mailboxOpen;
+    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen && !this.mapOpen && !this.museumOpen && !this.workbenchOpen && !this.mailboxOpen && !this.homeOpen;
   }
 
   // Shake is just a fun alternate trigger for the same interact() logic used
@@ -2221,6 +2240,10 @@ class TownScene extends Phaser.Scene {
     }
     if (this.isNearMailbox()) {
       this.openMailbox();
+      return;
+    }
+    if (this.isNearHome()) {
+      this.openHome();
       return;
     }
     if (this.isNearGuestbook()) {
@@ -5448,6 +5471,138 @@ class TownScene extends Phaser.Scene {
     return Math.hypot(this.localBody.x - GUESTBOOK_POS.x, this.localBody.y - GUESTBOOK_POS.y) < GUESTBOOK_RADIUS;
   }
 
+  // ---------- home plot ----------
+  drawHomePlot() {
+    const { x, y } = HOME_POS;
+    if (!this.textures.exists('homePlot')) {
+      const g = this.make.graphics({ x: 0, y: 0, add: false });
+      g.fillStyle(0x000000, 0.12).fillRoundedRect(4, 8, 156, 92, 8);
+      g.fillStyle(0xb98a52, 1).fillRoundedRect(0, 0, 156, 92, 8);
+      g.fillStyle(0xcfa56a, 1).fillRoundedRect(6, 6, 144, 80, 6);
+      g.lineStyle(3, 0x6b4a30, 1).strokeRoundedRect(0, 0, 156, 92, 8);
+      for (let i = 0; i < 9; i++) { g.fillStyle(0x8f6a3c, 1).fillRect(8 + i * 17, -4, 4, 10); g.fillRect(8 + i * 17, 86, 4, 10); }
+      g.generateTexture('homePlot', 156, 96);
+      g.destroy();
+    }
+    this.add.image(x, y, 'homePlot').setDepth(y - 60);
+    this.homeSprites = [];
+    this.homeLabel = this.add.text(x, y - 66, '🏡 Home', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 60);
+    this.home = this.loadHome();
+    this.renderHomeSprites();
+  }
+
+  // Sanitised: slot ids must be real recipe ids; everything else is dropped.
+  loadHome() {
+    const rec = loadSave().home;
+    const slots = new Array(HOME_SLOTS).fill(null);
+    if (rec && typeof rec === 'object' && !Array.isArray(rec) && Array.isArray(rec.slots)) {
+      for (let i = 0; i < HOME_SLOTS; i++) {
+        const id = rec.slots[i];
+        if (typeof id === 'string' && RECIPES.some((r) => r.id === id)) slots[i] = id;
+      }
+    }
+    return { slots, paidDay: rec && typeof rec === 'object' ? cleanCount(rec.paidDay) : 0 };
+  }
+
+  homeCozy() {
+    return this.home.slots.reduce((sum, id) => sum + (id ? RECIPES.find((r) => r.id === id).value : 0), 0);
+  }
+
+  // Rebuilt only when placement changes (never per frame).
+  renderHomeSprites() {
+    this.homeSprites.forEach((t) => t.destroy());
+    this.homeSprites = [];
+    this.home.slots.forEach((id, i) => {
+      if (!id) return;
+      const r = RECIPES.find((x) => x.id === id);
+      const [dx, dy] = HOME_SLOT_OFFSETS[i];
+      this.homeSprites.push(this.add.text(HOME_POS.x + dx, HOME_POS.y + dy, r.icon, { fontSize: '22px' }).setOrigin(0.5).setDepth(HOME_POS.y + dy + 70));
+    });
+    if (this.homeLabel) this.homeLabel.setText(`🏡 Home (cozy ${this.homeCozy()})`);
+  }
+
+  isNearHome(radius = HOME_RADIUS) {
+    return Math.hypot(this.localBody.x - HOME_POS.x, this.localBody.y - HOME_POS.y) < radius;
+  }
+
+  openHome() {
+    this.homeOpen = true;
+    document.getElementById('home-overlay').classList.remove('hidden');
+    const note = document.getElementById('home-note');
+    note.textContent = '';
+    // First visit of the day: neighbors admire the place.
+    const day = this.questDayBucket();
+    const cozy = this.homeCozy();
+    if (this.home.paidDay !== day) {
+      const bonus = Math.min(HOME_BONUS_CAP, Math.floor(cozy / HOME_BONUS_PER));
+      this.home.paidDay = day;
+      this.saveHome();
+      if (bonus > 0) {
+        this.awardPoint(bonus, `🏡 visitors admire your home! +${bonus} ⭐`, this.localBody.x, this.localBody.y - 40, 'sell');
+        note.textContent = `Visitors admired your home today: +${bonus} ⭐`;
+      }
+    }
+    this.renderHome();
+  }
+
+  closeHome() {
+    this.homeOpen = false;
+    document.getElementById('home-overlay').classList.add('hidden');
+  }
+
+  saveHome() {
+    writeSave({ home: { slots: this.home.slots, paidDay: this.home.paidDay }, crafted: this.craftedGoods });
+  }
+
+  renderHome() {
+    const list = document.getElementById('home-list');
+    list.innerHTML = '';
+    this.home.slots.forEach((cur, i) => {
+      const li = document.createElement('li');
+      const label = document.createElement('label');
+      label.textContent = `Spot ${i + 1}`;
+      label.htmlFor = `home-slot-${i}`;
+      const sel = document.createElement('select');
+      sel.id = `home-slot-${i}`;
+      sel.className = 'home-slot-select';
+      const mk = (value, text) => { const o = document.createElement('option'); o.value = value; o.textContent = text; return o; };
+      sel.appendChild(mk('', '— empty —'));
+      RECIPES.forEach((r) => {
+        const have = this.craftedGoods[r.id] || 0;
+        if (r.id === cur || have > 0) sel.appendChild(mk(r.id, `${r.icon} ${r.label}${r.id === cur ? ' (placed)' : ` (x${have})`}`));
+      });
+      sel.value = cur || '';
+      sel.addEventListener('change', () => this.setHomeSlot(i, sel.value || null));
+      li.append(label, sel);
+      list.appendChild(li);
+    });
+    document.getElementById('home-cozy').textContent = `Cozy score: ${this.homeCozy()} (daily visitor bonus: +${Math.min(HOME_BONUS_CAP, Math.floor(this.homeCozy() / HOME_BONUS_PER))} ⭐)`;
+  }
+
+  // Swap one slot: the old good returns to the bag, the new one leaves it.
+  setHomeSlot(i, id) {
+    if (i < 0 || i >= HOME_SLOTS) return false;
+    const cur = this.home.slots[i];
+    if (cur === id) return false;
+    if (id !== null) {
+      if (!RECIPES.some((r) => r.id === id) || (this.craftedGoods[id] || 0) < 1) { this.renderHome(); return false; }
+    }
+    if (cur) this.craftedGoods[cur] = (this.craftedGoods[cur] || 0) + 1;
+    if (id) this.craftedGoods[id] -= 1;
+    this.home.slots[i] = id;
+    this.saveHome();
+    this.updateInventoryHUD();
+    this.renderHomeSprites();
+    this.renderHome();
+    if (id) {
+      this.incrementStat('homePlaced');
+      if (this.home.slots.every(Boolean)) this.incrementStat('homeFullPlots');
+    }
+    const cozy = this.homeCozy();
+    if (cozy > (this.lifetimeStats.homeCozyBest || 0)) { this.lifetimeStats.homeCozyBest = cozy; this.saveAchievements(); this.checkAchievements(); }
+    return true;
+  }
+
   // ---------- villager mailbox ----------
   // Pure: the letters for a UTC day given each villager's friendship tier
   // ({id: tier}). Each has a stable id `${day}:${villagerId}`, sender,
@@ -5793,6 +5948,9 @@ class TownScene extends Phaser.Scene {
     this.lastGuestbookAt = 0;
     document.getElementById('guestbook-close-btn').addEventListener('click', () => this.closeGuestbook());
     document.getElementById('workbench-close-btn').addEventListener('click', () => this.closeWorkbench());
+    document.getElementById('home-close-btn').addEventListener('click', () => this.closeHome());
+    const homeOverlay = document.getElementById('home-overlay');
+    homeOverlay.addEventListener('click', (e) => { if (e.target === homeOverlay) this.closeHome(); });
     document.getElementById('mailbox-close-btn').addEventListener('click', () => this.closeMailbox());
     const mbOverlay = document.getElementById('mailbox-overlay');
     mbOverlay.addEventListener('click', (e) => { if (e.target === mbOverlay) this.closeMailbox(); });
@@ -5911,7 +6069,7 @@ class TownScene extends Phaser.Scene {
     const pad = 70;
     const blockers = this.weedBlockers;
     const keepClear = [
-      ...FLOWER_SPOTS, CAMPFIRE_POS, STATUE_POS, MAILBOX_POS, BUGOFF_SIGN_POS, GUESTBOOK_POS, WORKBENCH_POS,
+      ...FLOWER_SPOTS, CAMPFIRE_POS, STATUE_POS, MAILBOX_POS, BUGOFF_SIGN_POS, HOME_POS, GUESTBOOK_POS, WORKBENCH_POS,
       POLYROLL_POS, TURNIP_STALL_POS, ABLE_SISTERS_POS, MERCHANT_POS, DIG_HOLE_POS, FISH_TOURNAMENT_SIGN_POS,
     ];
     const spots = [];
