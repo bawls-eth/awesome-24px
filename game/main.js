@@ -140,6 +140,13 @@ function loadSave() {
 // writes name/species/frame to the same save.
 const HAD_EXISTING_SAVE_ON_LOAD = Object.keys(loadSave()).length > 0;
 
+// A saved counter that is a finite, non-negative whole number — anything
+// else (NaN, Infinity, negatives, strings from a hand-edited save) becomes 0.
+function cleanCount(v) {
+  v = Math.floor(Number(v));
+  return Number.isFinite(v) && v > 0 ? Math.min(v, 1e9) : 0;
+}
+
 function writeSave(partial) {
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify({ ...loadSave(), ...partial }));
@@ -2451,7 +2458,7 @@ class TownScene extends Phaser.Scene {
     const today = new Date().toISOString().slice(0, 10);
     if (saved.lastSellDate === today) return; // already counted today
     const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-    const streak = saved.lastSellDate === yesterday ? (Number(saved.sellStreak) || 0) + 1 : 1;
+    const streak = saved.lastSellDate === yesterday ? cleanCount(saved.sellStreak) + 1 : 1;
     writeSave({ sellStreak: streak, lastSellDate: today });
     this.sellStreak = streak;
     this.lifetimeStats.bestSellStreak = Math.max(this.lifetimeStats.bestSellStreak || 0, streak);
@@ -2967,8 +2974,11 @@ class TownScene extends Phaser.Scene {
 
   setupAchievements() {
     const saved = loadSave();
-    this.lifetimeStats = (saved.lifetimeStats && typeof saved.lifetimeStats === 'object') ? { ...saved.lifetimeStats } : {};
-    this.achievementsUnlocked = new Set(Array.isArray(saved.achievementsUnlocked) ? saved.achievementsUnlocked : []);
+    this.lifetimeStats = {};
+    if (saved.lifetimeStats && typeof saved.lifetimeStats === 'object' && !Array.isArray(saved.lifetimeStats)) {
+      for (const k of Object.keys(saved.lifetimeStats)) this.lifetimeStats[k] = cleanCount(saved.lifetimeStats[k]);
+    }
+    this.achievementsUnlocked = new Set(Array.isArray(saved.achievementsUnlocked) ? saved.achievementsUnlocked.filter((id) => typeof id === 'string') : []);
     this.equippedTitle = (typeof saved.equippedTitle === 'string' && this.achievementsUnlocked.has(saved.equippedTitle)) ? saved.equippedTitle : null;
     const mine = this.allPlayers.get(this.selfData.id);
     if (mine) mine.title = this.equippedTitle;
@@ -3187,7 +3197,7 @@ class TownScene extends Phaser.Scene {
   setupLoginStreak() {
     const saved = loadSave();
     const today = new Date().toISOString().slice(0, 10);
-    let streak = Number(saved.loginStreak) || 0;
+    let streak = cleanCount(saved.loginStreak);
     if (saved.lastLoginDate !== today) {
       const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
       streak = saved.lastLoginDate === yesterday ? streak + 1 : 1;
@@ -5575,7 +5585,7 @@ class TownScene extends Phaser.Scene {
     const pad = 70;
     const blockers = this.weedBlockers;
     const keepClear = [
-      ...FLOWER_SPOTS, CAMPFIRE_POS, STATUE_POS, NPC_POS, NPC2_POS, GUESTBOOK_POS, WORKBENCH_POS,
+      ...FLOWER_SPOTS, CAMPFIRE_POS, STATUE_POS, GUESTBOOK_POS, WORKBENCH_POS,
       POLYROLL_POS, TURNIP_STALL_POS, ABLE_SISTERS_POS, MERCHANT_POS, DIG_HOLE_POS, FISH_TOURNAMENT_SIGN_POS,
     ];
     const spots = [];
@@ -5586,6 +5596,8 @@ class TownScene extends Phaser.Scene {
         if (blockers.some((b) => x > b[0] && x < b[2] && y > b[1] && y < b[3])) continue;
         if (this.ffInPond(MAIN_POND, x, y, 1.25) || this.ffInPond(EAST_POND, x, y, 1.25)) continue;
         if (keepClear.some((k) => Math.hypot(k.x - x, k.y - y) < 60)) continue;
+        // Talk-radius NPCs: stay outside their interaction radius so a weed can't steal a chat.
+        if (Math.hypot(NPC_POS.x - x, NPC_POS.y - y) < 100 || Math.hypot(NPC2_POS.x - x, NPC2_POS.y - y) < 100) continue;
         if (spots.some((o) => Math.hypot(o.x - x, o.y - y) < 40)) continue;
         spots.push({ x, y });
         break;
