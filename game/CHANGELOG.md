@@ -375,3 +375,7 @@ and merged together. Highlights:
   paying double, unbounded turnip flipping, the shop wiping the whole
   bag), added achievements for the villager and wildlife systems, and
   made the achievement count real (35) instead of a hard-coded 25.
+
+## Admin maintenance
+
+- **Save robustness:** a corrupt `pixeltown-save-v1` (JSON that is a number, string or array) is now treated as empty instead of being spread into garbage keys; save import rejects arrays; resource counts load as finite non-negative whole numbers. Save format unchanged.

@@ -123,7 +123,10 @@ const WHATS_NEW = [
 function loadSave() {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
-    return raw ? JSON.parse(raw) || {} : {};
+    const parsed = raw ? JSON.parse(raw) : null;
+    // A corrupt/hand-edited save that isn't a plain object (number, string,
+    // array...) would otherwise get spread into garbage keys on next write.
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
   } catch (e) {
     return {}; // private browsing / storage disabled — just play without saving
   }
@@ -2044,16 +2047,20 @@ class TownScene extends Phaser.Scene {
   // feed the building system below.
 
   setupActivities() {
-    const saved = loadSave().resources || {};
+    const savedRes = loadSave().resources;
+    const saved = savedRes && typeof savedRes === 'object' ? savedRes : {};
+    // Finite, non-negative whole numbers only (a corrupt save can't mint
+    // negative/Infinity/fractional stock).
+    const n = (v) => { v = Math.floor(Number(v)); return Number.isFinite(v) && v > 0 ? v : 0; };
     this.resources = {
-      wood: Number(saved.wood) || 0,
-      stone: Number(saved.stone) || 0,
-      fish: Number(saved.fish) || 0,
-      bugs: Number(saved.bugs) || 0,
-      fruit: Number(saved.fruit) || 0,
-      turnips: Number(saved.turnips) || 0,
-      shells: Number(saved.shells) || 0,
-      flowers: Number(saved.flowers) || 0,
+      wood: n(saved.wood),
+      stone: n(saved.stone),
+      fish: n(saved.fish),
+      bugs: n(saved.bugs),
+      fruit: n(saved.fruit),
+      turnips: n(saved.turnips),
+      shells: n(saved.shells),
+      flowers: n(saved.flowers),
     };
     this.treeCooldowns = {};
     this.rockCooldowns = {};
@@ -3077,7 +3084,7 @@ class TownScene extends Phaser.Scene {
     reader.onload = () => {
       try {
         const parsed = JSON.parse(reader.result);
-        if (!parsed || typeof parsed !== 'object') throw new Error('bad save file');
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('bad save file');
         localStorage.setItem(SAVE_KEY, JSON.stringify(parsed));
         this.addChatLine({ system: true, text: 'Save restored! Reloading…' });
         this.time.delayedCall(800, () => window.location.reload());
