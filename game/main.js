@@ -617,6 +617,13 @@ const TURNIP_STALL_RADIUS = 50;
 const TURNIP_BUNDLE = 10;
 const TURNIP_BUY_CYCLE_MS = 4 * 60 * 60 * 1000; // buy price changes every 4h
 const TURNIP_SELL_CYCLE_MS = 15 * 60 * 1000; // sell price changes every 15min
+// The sell price used to be a flat 20-240 roll every 15 minutes against a
+// 90-130 buy price: positive expected value even selling at random, and
+// unlimited bundles meant waiting for a high roll printed stars. Now most
+// windows are below the buy price with an occasional spike (AC-style), and
+// you can only buy a couple of bundles per (UTC) day.
+const TURNIP_SPIKE_CHANCE = 0.15; // ~1 in 7 sell windows is a spike
+const TURNIP_DAILY_BUNDLE_CAP = 2;
 
 // Nook Miles-style achievements: lifetime counters (never decrease even
 // when the resource is later sold/spent), checked after every relevant
@@ -647,7 +654,31 @@ const ACHIEVEMENTS = [
   { id: 'scavenger1', icon: '🔍', label: 'Treasure Hunter', desc: "Win the daily scavenger hunt", reward: 5, check: (s) => (s.scavengerHuntsWon || 0) >= 1 },
   { id: 'tournament1', icon: '🎣', label: 'Big Catch', desc: "Set a new record in the daily fishing tournament", reward: 5, check: (s) => (s.tournamentRecordsSet || 0) >= 1 },
   { id: 'sellstreak3', icon: '🛍️', label: 'Regular', desc: "Sell at the shop 3 days in a row", reward: 5, check: (s) => (s.bestSellStreak || 0) >= 3 },
+  // Residential Lane villagers + wildlife log. These read live scene state
+  // (affinity lives in the save, discoveries in scene.ffDiscovered), so
+  // they're re-checked from awardPoint()/incrementStat(), which both of
+  // those systems already call, rather than from inside their code.
+  { id: 'gift1', icon: '🎁', label: 'Thoughtful', desc: 'Give a villager a gift', reward: 3, check: (s) => (s.giftsGiven || 0) >= 1 },
+  { id: 'gift10', icon: '💝', label: 'Generous', desc: 'Give villagers 10 gifts', reward: 5, check: (s) => (s.giftsGiven || 0) >= 10 },
+  { id: 'bestfriend1', icon: '🤝', label: 'Best Buds', desc: 'Become best friends with a villager', reward: 10, check: (s, scene) => villagerBestFriendCount(scene) >= 1 },
+  { id: 'bestfriendAll', icon: '🏘️', label: 'Beloved Neighbor', desc: 'Become best friends with every villager on Residential Lane', reward: 25, check: (s, scene) => villagerBestFriendCount(scene) >= VILLAGERS.length },
+  { id: 'wildlife10', icon: '🔎', label: 'Naturalist', desc: 'Log 10 wildlife species', reward: 5, check: (s, scene) => wildlifeLoggedCount(scene) >= 10 },
+  { id: 'wildlife25', icon: '🗒️', label: 'Field Researcher', desc: 'Log 25 wildlife species', reward: 10, check: (s, scene) => wildlifeLoggedCount(scene) >= 25 },
+  { id: 'wildlife50', icon: '🔭', label: 'Biologist', desc: 'Log 50 wildlife species', reward: 15, check: (s, scene) => wildlifeLoggedCount(scene) >= 50 },
+  { id: 'wildlifeAll', icon: '🌍', label: 'Living Encyclopedia', desc: `Log all ${FF_ASSETS.length} wildlife species`, reward: 30, check: (s, scene) => wildlifeLoggedCount(scene) >= FF_ASSETS.length },
+  { id: 'faunaAll', icon: '🦊', label: 'Zoologist', desc: 'Log every animal species', reward: 15, check: (s, scene) => wildlifeLoggedCount(scene, 'fauna') >= FF_ASSETS.filter((a) => a.kind === 'fauna').length },
+  { id: 'floraAll', icon: '🌿', label: 'Botanist', desc: 'Log every plant species', reward: 15, check: (s, scene) => wildlifeLoggedCount(scene, 'flora') >= FF_ASSETS.filter((a) => a.kind === 'flora').length },
 ];
+// Helpers for the achievement checks above (VILLAGERS is declared further
+// down, but these only run once the scene exists).
+function villagerBestFriendCount(scene) {
+  if (!scene || typeof scene.villagerTier !== 'function') return 0;
+  return VILLAGERS.filter((v) => scene.villagerTier(v.id) >= 3).length;
+}
+function wildlifeLoggedCount(scene, kind) {
+  if (!scene || !scene.ffDiscovered) return 0;
+  return FF_ASSETS.filter((a) => (!kind || a.kind === kind) && scene.ffDiscovered.has(a.id)).length;
+}
 const CAMPFIRE_POS = { x: 800, y: 600 };
 const CAMPFIRE_RADIUS = 60;
 // Beachcombing: fixed spots along the pond edges, same pattern as fishing
@@ -732,6 +763,10 @@ const RARE_SPECIES = [
 const MERCHANT_POS = { x: 2250, y: 1000 };
 const MERCHANT_RADIUS = 56;
 const MERCHANT_COST = 15;
+// Star sink for players already wearing today's rare look: a once-a-day
+// gift box the merchant delivers to every Residential Lane villager.
+const MERCHANT_GIFT_BOX_COST = 20;
+const MERCHANT_GIFT_BOX_AFFINITY = 8; // same as one hand-delivered gift
 const ABLE_SISTERS_POS = { x: 1150, y: 650, w: 70, h: 56 };
 const ABLE_SISTERS_RADIUS = 55;
 const GUESTBOOK_POS = { x: 1750, y: 520 };
@@ -1291,6 +1326,9 @@ class TownScene extends Phaser.Scene {
     this.renderPlayerList();
     this.showFloatingText(x, y, label);
     (SFX[sound] || (amount < 0 ? SFX.deny : SFX.coin))();
+    // Systems that award stars without bumping a stat (wildlife log,
+    // villager tier-ups, museum) still get their achievements checked.
+    if (amount > 0 && this.achievementsUnlocked) this.checkAchievements();
   }
 
   showFloatingText(x, y, text) {
@@ -1854,7 +1892,10 @@ class TownScene extends Phaser.Scene {
   playPolyrollCoin(pick, bet) {
     const flip = Math.random() < 0.5 ? 'heads' : 'tails';
     const win = flip === pick;
-    const delta = win ? bet * 2 : -bet;
+    // "2x" is the total payout (stake back + winnings), so a win nets +bet.
+    // Netting +2x bet on a 50/50 flip was positive expected value — an
+    // unlimited star printer.
+    const delta = win ? bet : -bet;
     this.resolvePolyroll(`🪙 landed on ${flip}`, win, delta);
   }
 
@@ -1945,7 +1986,10 @@ class TownScene extends Phaser.Scene {
       return;
     }
     const soldTurnips = this.resources.turnips || 0;
-    this.resources = { wood: 0, stone: 0, fish: 0, bugs: 0, fruit: 0, turnips: 0, shells: 0, flowers: 0 };
+    // Zero only what was actually paid for, so a bag item the shop doesn't
+    // buy isn't silently wiped for nothing.
+    for (const { key } of QUEST_RESOURCES) this.resources[key] = 0;
+    this.resources.turnips = 0;
     this.updateInventoryHUD();
     this.saveResources();
     const notes = [];
@@ -1998,7 +2042,17 @@ class TownScene extends Phaser.Scene {
   }
 
   turnipSellPrice() {
-    return this.turnipHashedPrice(TURNIP_SELL_CYCLE_MS, 7000, 20, 240);
+    const bucket = Math.floor(Date.now() / TURNIP_SELL_CYCLE_MS) + 7000;
+    const h = Math.sin(bucket * 12.9898) * 43758.5453;
+    const frac = h - Math.floor(h);
+    const normal = 1 - TURNIP_SPIKE_CHANCE;
+    if (frac < normal) return Math.round(30 + (frac / normal) * 80); // 30-110
+    return Math.round(140 + ((frac - normal) / TURNIP_SPIKE_CHANCE) * 60); // spike: 140-200
+  }
+
+  turnipBundlesBoughtToday() {
+    const rec = loadSave().turnipBuys;
+    return rec && rec.day === this.questDayBucket() ? (Number(rec.bundles) || 0) : 0;
   }
 
   isNearTurnipStall() {
@@ -2011,6 +2065,12 @@ class TownScene extends Phaser.Scene {
       this.showFloatingText(this.localBody.x, this.localBody.y - 30, `need ${price} ⭐ for ${TURNIP_BUNDLE} turnips`);
       return;
     }
+    const boughtToday = this.turnipBundlesBoughtToday();
+    if (boughtToday >= TURNIP_DAILY_BUNDLE_CAP) {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'sold out for today — come back tomorrow');
+      return;
+    }
+    writeSave({ turnipBuys: { day: this.questDayBucket(), bundles: boughtToday + 1 } });
     this.resources.turnips = (this.resources.turnips || 0) + TURNIP_BUNDLE;
     this.updateInventoryHUD();
     this.saveResources();
@@ -2434,6 +2494,9 @@ class TownScene extends Phaser.Scene {
     if (mine) mine.title = this.equippedTitle;
     if (this.equippedTitle) this.net.updateTitle(this.equippedTitle);
     this.renderAchievementsPanel();
+    // Existing saves may already qualify for newer achievements (villager
+    // friendships, wildlife log) — check once create() has finished.
+    this.time.delayedCall(0, () => this.checkAchievements());
   }
 
   // Equip (or unequip, passing null) an unlocked achievement as a small
@@ -2460,6 +2523,14 @@ class TownScene extends Phaser.Scene {
   }
 
   checkAchievements() {
+    // awardPoint() re-checks achievements, and unlocking one awards stars,
+    // so don't re-enter while a pass is already running.
+    if (this.checkingAchievements) return;
+    this.checkingAchievements = true;
+    try { this.runAchievementChecks(); } finally { this.checkingAchievements = false; }
+  }
+
+  runAchievementChecks() {
     ACHIEVEMENTS.forEach((a) => {
       if (this.achievementsUnlocked.has(a.id)) return;
       if (!a.check(this.lifetimeStats, this)) return;
@@ -4172,12 +4243,18 @@ class TownScene extends Phaser.Scene {
   }
 
   buyFromMerchant() {
+    const species = this.merchantSpecies();
+    const frame = Math.floor(this.merchantHash(3) * 9);
+    // Already wearing today's look: paying again used to just re-apply the
+    // same sprite for 15 stars. Offer the gift-box star sink instead.
+    if (this.selfData.species === species.key && this.selfData.frame === frame) {
+      this.buyMerchantGiftBox();
+      return;
+    }
     if ((this.localScore || 0) < MERCHANT_COST) {
       this.showFloatingText(this.localBody.x, this.localBody.y - 30, `need ${MERCHANT_COST}⭐`);
       return;
     }
-    const species = this.merchantSpecies();
-    const frame = Math.floor(this.merchantHash(3) * 9);
     this.selfData.species = species.key;
     this.selfData.frame = frame;
     this.localVisual.setTexture(species.key, frame);
@@ -4186,6 +4263,24 @@ class TownScene extends Phaser.Scene {
     this.net.updateAppearance(species.key, frame);
     this.awardPoint(-MERCHANT_COST, `🛒 bought ${species.label}!`, this.localBody.x, this.localBody.y - 30, 'sell');
     this.incrementStat('merchantBuys');
+  }
+
+  // Once-a-day star sink: the merchant delivers a gift to every villager
+  // (affinity only, no tier-up star bonus, so it can't pay for itself).
+  buyMerchantGiftBox() {
+    const today = this.questDayBucket();
+    if (Number(loadSave().merchantGiftBoxDay) === today) {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, "already sent today's gift boxes");
+      return;
+    }
+    if ((this.localScore || 0) < MERCHANT_GIFT_BOX_COST) {
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, `🎁 gift boxes for every villager: need ${MERCHANT_GIFT_BOX_COST}⭐`);
+      return;
+    }
+    writeSave({ merchantGiftBoxDay: today });
+    VILLAGERS.forEach((v) => this.bumpVillagerAffinity(v.id, MERCHANT_GIFT_BOX_AFFINITY));
+    this.awardPoint(-MERCHANT_GIFT_BOX_COST, `🎁 gift boxes sent to all ${VILLAGERS.length} villagers!`, this.localBody.x, this.localBody.y - 30, 'sell');
+    this.incrementStat('merchantGiftBoxes');
   }
 
   drawNPC() {
