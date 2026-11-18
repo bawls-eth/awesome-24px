@@ -29,6 +29,19 @@ right now, before you even pick a name.
 - **Fish** at the pond (or the second pond out east), **chop** trees for
   wood, **mine** rocks for stone — classic Animal Crossing activities, fill
   the inventory in the top-left
+- **Angler's Journal** 🐟 — every fish you reel in is now one of **12 species**,
+  chosen by the pond (west / east), the time of day, the season, and the
+  size of the shadow you cast at (bigger shadows lean rarer): Minnow, Shrimp,
+  Pond Frog (spring/summer, west), Koi (west), Pufferfish (east), Mud Crab
+  (night), Snapping Turtle (east, day), Squid (night), Jellyfish (summer),
+  Octopus (east, night), Baby Shark (east, day, summer/autumn) and the Golden
+  Fish (winter). The 🐟 Journal button in the player panel (or **L**) shows
+  found cards (count, best length) and locked silhouettes with hints. First
+  catches pay +2⭐; sets of 4 / 8 / 12 species pay 5 / 12 / 30⭐ (claim
+  buttons). Catches stay local and the fish count / tournament are unchanged;
+  progress is saved under the additive `fishlog: {caught, claimed, lastDay}`
+  key. Achievements: Angler, Master Angler, Lunker (70cm+). A "Catch a fish"
+  chore joins the Today board. Tests: `node game/tests/fishlog.test.js`.
 - **Today board** 📋 — the 📋 Today button in the player panel (or **J**) lists
   every daily chore with live progress: Professor Byte's request and trivia,
   your letters, the weeds, the Bug-Off (catch 5), a villager's birthday gift

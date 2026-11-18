@@ -2134,3 +2134,20 @@ body.touch-device .key-hint { display: none; }
 #dailies-list li.daily-done span { text-decoration: line-through; opacity: 0.75; }
 #dailies-list li.daily-na, #dailies-list li.daily-missed { opacity: 0.45; }
 #dailies-btn { min-height: 30px; }
+
+#journal-overlay { position: fixed; inset: 0; z-index: 25; display: flex; align-items: center; justify-content: center; background: var(--ac-scrim); }
+#journal-overlay.hidden { display: none; }
+#journal-overlay .join-card { position: relative; max-height: 92vh; overflow-y: auto; }
+#journal-close-btn { position: absolute; top: 10px; right: 10px; width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--ac-border); background: var(--ac-inset); color: var(--ac-text); cursor: pointer; }
+#journal-bar { height: 10px; border-radius: 6px; background: var(--ac-inset); border: 2px solid var(--ac-border); overflow: hidden; margin: 4px 0 10px; }
+#journal-bar-fill { height: 100%; width: 0; background: var(--ac-leaf-deep, #5a8a3a); transition: width 0.3s; }
+#journal-grid { list-style: none; margin: 0 0 10px; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.fish-card { border: 2px solid var(--ac-border); border-radius: 10px; background: var(--ac-inset); padding: 6px 4px; text-align: center; min-height: 84px; }
+.fish-card .fish-icon { font-size: 26px; }
+.fish-card .fish-name { font-size: 11px; font-weight: 700; }
+.fish-card small { display: block; font-size: 9px; opacity: 0.75; line-height: 1.2; }
+.fish-card.locked .fish-icon { filter: brightness(0) opacity(0.35); }
+.fish-milestone { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; }
+.fish-claim-btn { min-height: 44px; min-width: 88px; border-radius: 8px; border: 2px solid var(--ac-border); background: var(--ac-leaf-deep, #5a8a3a); color: #fff; font-weight: 700; cursor: pointer; }
+.fish-claim-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+#journal-btn { min-height: 30px; }

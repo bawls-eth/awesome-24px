@@ -11,9 +11,9 @@ const { launch, scene, check, done } = require('./helpers');
     const canAct = s.canAct(); s.closeTopOverlay();
     return { btn, rows, vis, canAct, closed: !s.dailiesOpen, ids: s.dailyItems().map((i) => i.id) };
   });
-  check('dailies: button shows progress and board lists 7 chores', /Today \d+\/\d+/.test(a.btn) && a.rows.length === 7 && a.vis, JSON.stringify([a.btn, a.rows]));
+  check('dailies: button shows progress and board lists 8 chores', /Today \d+\/\d+/.test(a.btn) && a.rows.length === 8 && a.vis, JSON.stringify([a.btn, a.rows]));
   check('dailies: input blocked while open, Esc closes', a.canAct === false && a.closed === true);
-  check('dailies: fresh day — quest/trivia/mail/weeds are todo', ['quest', 'trivia', 'mail', 'weeds'].every((id) => a.rows.find((r) => r[0] === id)[1] === 'todo') && a.rows.find((r) => r[0] === 'home')[1] === 'na', JSON.stringify(a.rows));
+  check('dailies: fresh day — quest/trivia/mail/weeds are todo', ['quest', 'trivia', 'mail', 'weeds', 'fish'].every((id) => a.rows.find((r) => r[0] === id)[1] === 'todo') && a.rows.find((r) => r[0] === 'home')[1] === 'na', JSON.stringify(a.rows));
 
   // 2. Status follows real state: weeds, mail, home, bug-off, birthday.
   const b = await scene(page, (s) => {
@@ -59,6 +59,7 @@ const { launch, scene, check, done } = require('./helpers');
     s.loadBirthdays(); s.refreshBirthdays(); s.refreshWeeds && 0;
     s.questClaimedBucket = s.questDayBucket(); s.triviaAnsweredBucket = s.questDayBucket();
     s.weedSpots.forEach((w, i) => s.weedsPulledToday.add(i));
+    s.fishlog.lastDay = s.questDayBucket(); // fish chore done
     s.collectAllLetters(); s.isBugOffTime = () => false; s.bugOffPhase = () => 'after'; // window missed: must still be completable
     // If today happens to be a villager's birthday, that chore counts too: do it.
     const bv = s.todaysBirthdayVillager();
@@ -78,7 +79,7 @@ const { launch, scene, check, done } = require('./helpers');
   for (const bad of ['x', { day: 'q', paid: 'yes', days: -4 }, [1], null]) {
     ({ browser, page, errors } = await launch({ width: 1000, height: 700 }, { dailies: bad }));
     const r = await scene(page, (s) => { s.openDailies(); return { n: document.querySelectorAll('#dailies-list li').length, rec: s.dailiesRecord() }; });
-    check(`corrupt dailies ${JSON.stringify(bad)}: board opens, sane record, no errors`, r.n === 7 && r.rec.days >= 0 && r.rec.paid === false && errors.length === 0, JSON.stringify(r) + errors.join('|'));
+    check(`corrupt dailies ${JSON.stringify(bad)}: board opens, sane record, no errors`, r.n === 8 && r.rec.days >= 0 && r.rec.paid === false && errors.length === 0, JSON.stringify(r) + errors.join('|'));
     await browser.close();
   }
 

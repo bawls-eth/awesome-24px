@@ -113,8 +113,9 @@ const SAVE_KEY = 'pixeltown-save-v1';
 
 // Bump this string whenever there's something worth telling returning
 // players about — shown once as a dismissible banner, then remembered.
-const GAME_VERSION = 'v32-dailies';
+const GAME_VERSION = 'v33-journal';
 const WHATS_NEW = [
+  "🐟 Angler's Journal — 12 fish species by pond, time and season, with set rewards (L)",
   '📋 Today board — see every daily chore at a glance (J), finish them all for a bonus',
   '🍁 Seasonal specials at the workbench — a new craft for every season',
   "🎂 Villager birthdays — bring a gift on their big day for a party bonus",
@@ -716,6 +717,9 @@ const ACHIEVEMENTS = [
   { id: 'bdayAll', icon: '🥳', label: 'Party Planner', desc: "Celebrate every villager's birthday", reward: 15, check: (s, scene) => !!scene.birthdayGuests && scene.birthdayGuests.size >= VILLAGERS.length },
   { id: 'daily1', icon: '📋', label: 'Daily Routine', desc: 'Finish every daily chore in one day', reward: 5, check: (s) => (s.dailyAllDone || 0) >= 1 },
   { id: 'daily7', icon: '🗓️', label: 'Creature of Habit', desc: 'Finish all daily chores on 7 different days', reward: 15, check: (s) => (s.dailyAllDone || 0) >= 7 },
+  { id: 'fishSpecies5', icon: '🎣', label: 'Angler', desc: 'Log 5 different fish species', reward: 5, check: (s) => (s.fishSpecies || 0) >= 5 },
+  { id: 'fishSpecies12', icon: '🏆', label: 'Master Angler', desc: 'Log every fish species', reward: 15, check: (s) => (s.fishSpecies || 0) >= 12 },
+  { id: 'fishLunker', icon: '📏', label: 'Lunker', desc: 'Catch a fish 70cm or longer', reward: 5, check: (s) => (s.fishLunker || 0) >= 1 },
   { id: 'craft1', icon: '🔨', label: 'DIY Beginner', desc: 'Craft something at the workbench', reward: 3, check: (s) => (s.crafted || 0) >= 1 },
   { id: 'craft10', icon: '🛠️', label: 'Crafty', desc: 'Craft 10 items', reward: 5, check: (s) => (s.crafted || 0) >= 10 },
   { id: 'craftAll', icon: '🧰', label: 'Master Crafter', desc: 'Craft every recipe at least once', reward: 10, check: (s) => RECIPES.filter((r) => !r.season).every((r) => (s['craft_' + r.id] || 0) >= 1) },
@@ -1216,6 +1220,33 @@ const FISH_SHADOW_ZONES = [
   { pond: MAIN_POND, count: 3, yMin: MAIN_POND.cy + 40 },
   { pond: EAST_POND, count: 4 },
 ];
+// ---------- angler's journal ----------
+// Every fish you reel in is now a species, depending on the pond, the time of
+// day and the season (bigger shadows lean rarer). Catches are local, so
+// Math.random is fine here. Progress lives in the additive `fishlog` key
+// {caught: {id: {n, best}}, claimed: [tier ids], lastDay}. First catches and
+// milestone sets (4 / 8 / 12 species) pay ⭐, saved before paying.
+const FISH_SPECIES = [
+  { id: 'minnow', icon: '🐟', name: 'Minnow', rarity: 1 },
+  { id: 'shrimp', icon: '🦐', name: 'Shrimp', rarity: 1 },
+  { id: 'frog', icon: '🐸', name: 'Pond Frog', rarity: 1, pond: 'main', seasons: ['spring', 'summer'] },
+  { id: 'koi', icon: '🐠', name: 'Koi', rarity: 2, pond: 'main' },
+  { id: 'puffer', icon: '🐡', name: 'Pufferfish', rarity: 2, pond: 'east' },
+  { id: 'crab', icon: '🦀', name: 'Mud Crab', rarity: 2, time: 'night' },
+  { id: 'turtle', icon: '🐢', name: 'Snapping Turtle', rarity: 2, pond: 'east', time: 'day' },
+  { id: 'squid', icon: '🦑', name: 'Squid', rarity: 3, time: 'night' },
+  { id: 'jelly', icon: '🪼', name: 'Jellyfish', rarity: 3, seasons: ['summer'] },
+  { id: 'octopus', icon: '🐙', name: 'Octopus', rarity: 3, pond: 'east', time: 'night' },
+  { id: 'shark', icon: '🦈', name: 'Baby Shark', rarity: 4, pond: 'east', time: 'day', seasons: ['summer', 'autumn'] },
+  { id: 'goldfish', icon: '✨', name: 'Golden Fish', rarity: 4, seasons: ['winter'] },
+];
+const FISH_MILESTONES = [
+  { id: 'set4', need: 4, reward: 5 },
+  { id: 'set8', need: 8, reward: 12 },
+  { id: 'set12', need: 12, reward: 30 },
+];
+const FISH_FIRST_CATCH_BONUS = 2;
+const FISH_LUNKER_CM = 70;
 const FISH_SHADOW_ALPHA = 0.42;
 const FISH_SHADOW_RESPAWN_MIN = 4000;
 const FISH_SHADOW_RESPAWN_MAX = 9000;
@@ -1391,6 +1422,7 @@ class TownScene extends Phaser.Scene {
     this.setupBirthdays();
     this.setupFossils();
     this.setupWeeds();
+    this.setupJournal();
     this.setupDailies(); // after weeds/mail/bug-off/home/birthdays exist
     if (IS_TOUCH) {
       this.setupTouchControls();
@@ -2066,7 +2098,7 @@ class TownScene extends Phaser.Scene {
       ['achievementsOpen', 'achievements-close-btn'], ['outfitShopOpen', 'outfit-close-btn'],
       ['guestbookOpen', 'guestbook-close-btn'], ['triviaOpen', 'trivia-close-btn'],
       ['keysHelpOpen', 'keys-help-close-btn'], ['changelogOpen', 'changelog-close-btn'],
-      ['museumOpen', 'museum-close-btn'], ['workbenchOpen', 'workbench-close-btn'], ['mailboxOpen', 'mailbox-close-btn'], ['homeOpen', 'home-close-btn'], ['dailiesOpen', 'dailies-close-btn'],
+      ['museumOpen', 'museum-close-btn'], ['workbenchOpen', 'workbench-close-btn'], ['mailboxOpen', 'mailbox-close-btn'], ['homeOpen', 'home-close-btn'], ['dailiesOpen', 'dailies-close-btn'], ['journalOpen', 'journal-close-btn'],
     ];
     const open = overlays.find(([flag]) => this[flag]);
     if (open) {
@@ -2184,7 +2216,7 @@ class TownScene extends Phaser.Scene {
   // so chat/overlay state is respected no matter which input triggered it
   // (keyboard, on-screen button, or shake).
   canAct() {
-    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen && !this.mapOpen && !this.museumOpen && !this.workbenchOpen && !this.mailboxOpen && !this.homeOpen && !this.dailiesOpen;
+    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen && !this.mapOpen && !this.museumOpen && !this.workbenchOpen && !this.mailboxOpen && !this.homeOpen && !this.dailiesOpen && !this.journalOpen;
   }
 
   // Shake is just a fun alternate trigger for the same interact() logic used
@@ -4179,9 +4211,165 @@ class TownScene extends Phaser.Scene {
       }
       this.splashRing(spot.x, spot.y, 18, 0.8);
       this.gainResource('fish', 1, spot.x, spot.y - 24);
+      this.recordFishCatch(spot);
       if (this.isFishTournamentTime()) this.catchTournamentFish(spot);
       this.endFishing();
     }
+  }
+
+  // ---------- angler's journal ----------
+  setupJournal() {
+    this.fishlog = this.loadFishLog();
+    document.getElementById('journal-btn').addEventListener('click', () => { if (this.canAct()) this.openJournal(); });
+    document.getElementById('journal-close-btn').addEventListener('click', () => this.closeJournal());
+    const overlay = document.getElementById('journal-overlay');
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) this.closeJournal(); });
+    this.input.keyboard.on('keydown-L', () => { if (this.journalOpen) this.closeJournal(); else if (this.canAct()) this.openJournal(); });
+    this.refreshJournalButton();
+  }
+
+  // Sanitised: known species ids, finite non-negative integer counts/records.
+  loadFishLog() {
+    const rec = loadSave().fishlog;
+    const ok = rec && typeof rec === 'object' && !Array.isArray(rec);
+    const caught = {};
+    if (ok && rec.caught && typeof rec.caught === 'object' && !Array.isArray(rec.caught)) {
+      FISH_SPECIES.forEach((f) => {
+        const c = rec.caught[f.id];
+        if (c && typeof c === 'object' && cleanCount(c.n) > 0) caught[f.id] = { n: cleanCount(c.n), best: Math.min(cleanCount(c.best), 200) };
+      });
+    }
+    const claimed = ok && Array.isArray(rec.claimed) ? rec.claimed.filter((id) => FISH_MILESTONES.some((m) => m.id === id)) : [];
+    return { caught, claimed: [...new Set(claimed)], lastDay: ok ? cleanCount(rec.lastDay) : 0 };
+  }
+
+  saveFishLog() {
+    writeSave({ fishlog: { caught: this.fishlog.caught, claimed: this.fishlog.claimed, lastDay: this.fishlog.lastDay } });
+  }
+
+  fishSpeciesCount() {
+    return Object.keys(this.fishlog.caught).length;
+  }
+
+  // Which species can bite here and now. `rng` is injectable for tests.
+  rollFishSpecies(pond, hour, season, size, rng = Math.random) {
+    const night = hour >= 19 || hour < 6;
+    const pool = FISH_SPECIES.filter((f) => (!f.pond || f.pond === pond) && (!f.time || (f.time === 'night') === night) && (!f.seasons || f.seasons.includes(season)));
+    const base = [0, 10, 5, 2, 1];
+    // Bigger shadows lean toward rarer fish.
+    const weights = pool.map((f) => base[f.rarity] * (f.rarity >= 3 ? 0.5 + size * 1.5 : 1));
+    let r = rng() * weights.reduce((a, b) => a + b, 0);
+    for (let i = 0; i < pool.length; i++) { r -= weights[i]; if (r <= 0) return pool[i]; }
+    return pool[pool.length - 1];
+  }
+
+  fishPondFor(spot) {
+    const dm = Math.hypot(spot.x - MAIN_POND.cx, spot.y - MAIN_POND.cy);
+    const de = Math.hypot(spot.x - EAST_POND.cx, spot.y - EAST_POND.cy);
+    return dm <= de ? 'main' : 'east';
+  }
+
+  recordFishCatch(spot) {
+    const size = spot.shadow ? spot.shadow.size : Math.random();
+    const species = this.rollFishSpecies(this.fishPondFor(spot), new Date().getHours(), this.currentSeason(), size);
+    const sizeCm = Math.round(8 + (0.55 * size + 0.45 * Math.random()) * 72);
+    const entry = this.fishlog.caught[species.id] || { n: 0, best: 0 };
+    const isNew = entry.n === 0;
+    entry.n += 1;
+    entry.best = Math.max(entry.best, sizeCm);
+    this.fishlog.caught[species.id] = entry;
+    this.fishlog.lastDay = this.questDayBucket();
+    // Save first, then pay, so a reload can never double-pay the first-catch bonus.
+    this.saveFishLog();
+    this.showFloatingText(spot.x, spot.y - 44, `${species.icon} ${species.name} ${sizeCm}cm${isNew ? ' — NEW!' : ''}`);
+    if (isNew) {
+      this.awardPoint(FISH_FIRST_CATCH_BONUS, `📖 new fish logged! +${FISH_FIRST_CATCH_BONUS} ⭐`, spot.x, spot.y - 60, 'sell');
+      this.lifetimeStats.fishSpecies = this.fishSpeciesCount();
+      this.saveAchievements();
+      this.checkAchievements();
+    }
+    if (sizeCm >= FISH_LUNKER_CM) this.incrementStat('fishLunker');
+    this.refreshJournalButton();
+    if (this.journalOpen) this.renderJournal();
+    return { species, sizeCm, isNew };
+  }
+
+  refreshJournalButton() {
+    const btn = document.getElementById('journal-btn');
+    const label = `🐟 Journal ${this.fishSpeciesCount()}/${FISH_SPECIES.length}`;
+    if (btn && btn.textContent !== label) btn.textContent = label;
+  }
+
+  openJournal() {
+    this.journalOpen = true;
+    document.getElementById('journal-overlay').classList.remove('hidden');
+    this.renderJournal();
+  }
+
+  closeJournal() {
+    this.journalOpen = false;
+    document.getElementById('journal-overlay').classList.add('hidden');
+  }
+
+  claimFishMilestone(id) {
+    const m = FISH_MILESTONES.find((x) => x.id === id);
+    if (!m || this.fishlog.claimed.includes(id) || this.fishSpeciesCount() < m.need) return false;
+    this.fishlog.claimed.push(id);
+    this.saveFishLog(); // before paying
+    this.awardPoint(m.reward, `📖 ${m.need} species logged! +${m.reward} ⭐`, this.localBody.x, this.localBody.y - 40, 'achievement');
+    this.renderJournal();
+    return true;
+  }
+
+  fishHint(f) {
+    const bits = [];
+    if (f.pond) bits.push(f.pond === 'main' ? 'west pond' : 'east pond');
+    if (f.time) bits.push(f.time === 'night' ? 'at night' : 'by day');
+    if (f.seasons) bits.push(f.seasons.join('/'));
+    return bits.length ? bits.join(', ') : 'anywhere';
+  }
+
+  renderJournal() {
+    const count = this.fishSpeciesCount();
+    document.getElementById('journal-progress').textContent = `${count}/${FISH_SPECIES.length} species logged`;
+    const bar = document.getElementById('journal-bar-fill');
+    bar.style.width = `${Math.round((count / FISH_SPECIES.length) * 100)}%`;
+    const grid = document.getElementById('journal-grid');
+    grid.innerHTML = '';
+    FISH_SPECIES.forEach((f) => {
+      const c = this.fishlog.caught[f.id];
+      const card = document.createElement('li');
+      card.className = c ? 'fish-card found' : 'fish-card locked';
+      card.dataset.fish = f.id;
+      const icon = document.createElement('div');
+      icon.className = 'fish-icon';
+      icon.textContent = f.icon;
+      const name = document.createElement('div');
+      name.className = 'fish-name';
+      name.textContent = c ? f.name : '???';
+      const sub = document.createElement('small');
+      sub.textContent = c ? `x${c.n} · best ${c.best}cm` : this.fishHint(f);
+      card.append(icon, name, sub);
+      grid.appendChild(card);
+    });
+    const ms = document.getElementById('journal-milestones');
+    ms.innerHTML = '';
+    FISH_MILESTONES.forEach((m) => {
+      const row = document.createElement('div');
+      row.className = 'fish-milestone';
+      const done = this.fishlog.claimed.includes(m.id);
+      const label = document.createElement('span');
+      label.textContent = `${m.need} species → ${m.reward} ⭐`;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'fish-claim-btn';
+      btn.dataset.milestone = m.id;
+      btn.textContent = done ? 'Claimed' : 'Claim';
+      btn.disabled = done || count < m.need;
+      btn.addEventListener('click', () => this.claimFishMilestone(m.id));
+      row.append(label, btn);
+      ms.appendChild(row);
+    });
   }
 
   // ---------- daily fishing tournament ----------
@@ -7013,6 +7201,7 @@ class TownScene extends Phaser.Scene {
     items.push({ id: 'quest', icon: '🧪', label: "Professor Byte's request", detail: `${quest.amount} ${quest.resource.icon} → ${quest.reward}⭐`, status: this.isQuestClaimedToday() ? 'done' : 'todo' });
     items.push({ id: 'trivia', icon: '❓', label: "Professor Byte's trivia", detail: 'answer today\'s question', status: this.isTriviaAnsweredToday() ? 'done' : 'todo' });
     const mailLeft = this.unclaimedLetters().length;
+    items.push({ id: 'fish', icon: '🎣', label: 'Catch a fish', detail: this.fishlog.lastDay === day ? 'logged today' : 'cast at a pond', status: this.fishlog.lastDay === day ? 'done' : 'todo' });
     items.push({ id: 'mail', icon: '📬', label: 'Collect your letters', detail: mailLeft ? `${mailLeft} waiting at the mailbox` : 'all collected', status: mailLeft ? 'todo' : 'done' });
     const weedsLeft = this.weedsLeft();
     items.push({ id: 'weeds', icon: '🌿', label: 'Pull the weeds', detail: `${weedsLeft} left`, status: weedsLeft ? 'todo' : 'done' });

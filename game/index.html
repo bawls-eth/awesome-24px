@@ -57,6 +57,7 @@
     <button id="map-btn" type="button" title="Town map (M)">🗺️ Map</button>
     <button id="museum-badge" type="button" title="Museum collection">🏛️ Museum</button>
     <button id="dailies-btn" type="button" title="Today's chores (J)">📋 Today</button>
+    <button id="journal-btn" type="button" title="Angler's journal (L)">🐟 Journal</button>
     <div id="status-row">
       <div id="streak-badge" title="Daily login streak">🔥 Day <b id="streak-count">0</b></div>
       <div id="town-rating" title="How much the town has been built up, shared by everyone">🏘️ <span id="town-rating-label">Empty</span> (<b id="town-rating-count">0</b>/150)</div>
@@ -218,6 +219,19 @@
   </div>
 </div>
 
+<div id="journal-overlay" class="hidden" role="dialog" aria-modal="true" aria-label="Angler's journal">
+  <div class="join-card">
+    <button id="journal-close-btn" type="button" aria-label="Close">✕</button>
+    <h1>🐟 Angler's Journal</h1>
+    <p class="tagline">Every fish you reel in is logged. Where, when and the season decide what bites.</p>
+    <p id="journal-progress" class="tagline"></p>
+    <div id="journal-bar"><div id="journal-bar-fill"></div></div>
+    <ul id="journal-grid"></ul>
+    <div id="journal-milestones"></div>
+    <p class="tagline">Press <b>L</b> any time to open this.</p>
+  </div>
+</div>
+
 <div id="dailies-overlay" class="hidden" role="dialog" aria-modal="true" aria-label="Today's chores">
   <div class="join-card">
     <button id="dailies-close-btn" type="button" aria-label="Close">✕</button>
@@ -290,6 +304,7 @@
       <li><b>P</b> — take a photo</li>
       <li><b>M</b> — open the town map</li>
       <li><b>J</b> — today's chores checklist</li>
+      <li><b>L</b> — angler's fish journal</li>
       <li><b>G</b> — give a gift to the nearest villager</li>
       <li><b>T</b> — Professor Byte's daily trivia (while near him)</li>
       <li><b>Enter</b> — chat</li>
