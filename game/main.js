@@ -717,8 +717,8 @@ const ACHIEVEMENTS = [
   { id: 'bdayAll', icon: '🥳', label: 'Party Planner', desc: "Celebrate every villager's birthday", reward: 15, check: (s, scene) => !!scene.birthdayGuests && scene.birthdayGuests.size >= VILLAGERS.length },
   { id: 'daily1', icon: '📋', label: 'Daily Routine', desc: 'Finish every daily chore in one day', reward: 5, check: (s) => (s.dailyAllDone || 0) >= 1 },
   { id: 'daily7', icon: '🗓️', label: 'Creature of Habit', desc: 'Finish all daily chores on 7 different days', reward: 15, check: (s) => (s.dailyAllDone || 0) >= 7 },
-  { id: 'fishSpecies5', icon: '🎣', label: 'Angler', desc: 'Log 5 different fish species', reward: 5, check: (s) => (s.fishSpecies || 0) >= 5 },
-  { id: 'fishSpecies12', icon: '🏆', label: 'Master Angler', desc: 'Log every fish species', reward: 15, check: (s) => (s.fishSpecies || 0) >= 12 },
+  { id: 'fishSpecies5', icon: '🎣', label: 'Angler', desc: 'Log 5 different fish species', reward: 5, check: (s, scene) => !!scene.fishlog && scene.fishSpeciesCount() >= 5 },
+  { id: 'fishSpecies12', icon: '🏆', label: 'Master Angler', desc: 'Log every fish species', reward: 15, check: (s, scene) => !!scene.fishlog && scene.fishSpeciesCount() >= FISH_SPECIES.length },
   { id: 'fishLunker', icon: '📏', label: 'Lunker', desc: 'Catch a fish 70cm or longer', reward: 5, check: (s) => (s.fishLunker || 0) >= 1 },
   { id: 'craft1', icon: '🔨', label: 'DIY Beginner', desc: 'Craft something at the workbench', reward: 3, check: (s) => (s.crafted || 0) >= 1 },
   { id: 'craft10', icon: '🛠️', label: 'Crafty', desc: 'Craft 10 items', reward: 5, check: (s) => (s.crafted || 0) >= 10 },
@@ -4211,8 +4211,9 @@ class TownScene extends Phaser.Scene {
       }
       this.splashRing(spot.x, spot.y, 18, 0.8);
       this.gainResource('fish', 1, spot.x, spot.y - 24);
-      this.recordFishCatch(spot);
-      if (this.isFishTournamentTime()) this.catchTournamentFish(spot);
+      const logged = this.recordFishCatch(spot);
+      // One size per fish: the journal's roll is also the tournament entry.
+      if (this.isFishTournamentTime()) this.catchTournamentFish(spot, logged.sizeCm);
       this.endFishing();
     }
   }
@@ -4291,6 +4292,7 @@ class TownScene extends Phaser.Scene {
     if (sizeCm >= FISH_LUNKER_CM) this.incrementStat('fishLunker');
     this.refreshJournalButton();
     if (this.journalOpen) this.renderJournal();
+    this.refreshDailies(); // the 'Catch a fish' chore may have completed the day
     return { species, sizeCm, isNew };
   }
 
@@ -4433,12 +4435,13 @@ class TownScene extends Phaser.Scene {
     this.tournamentSignText.setText(['🎣 FISH TOURNEY', statusLine, recordLine].join('\n'));
   }
 
-  catchTournamentFish(spot) {
+  catchTournamentFish(spot, givenSizeCm) {
     // Bigger shadows tend to be bigger fish, so picking which fish to
     // cast at matters during the tournament. Still 8-80cm overall.
     const bias = spot && spot.shadow ? spot.shadow.size : Math.random();
-    const sizeCm = Math.round(8 + (0.55 * bias + 0.45 * Math.random()) * 72);
-    this.showFloatingText(spot.x, spot.y - 40, `${sizeCm}cm!`);
+    const sizeCm = Number.isFinite(givenSizeCm) ? givenSizeCm : Math.round(8 + (0.55 * bias + 0.45 * Math.random()) * 72);
+    // The journal's catch text already shows the length when it was passed in.
+    if (!Number.isFinite(givenSizeCm)) this.showFloatingText(spot.x, spot.y - 40, `${sizeCm}cm!`);
     this.net.submitTournamentCatch(this.questDayBucket(), sizeCm).then((result) => {
       if (result.success) {
         this.tournamentRecord = result.record;

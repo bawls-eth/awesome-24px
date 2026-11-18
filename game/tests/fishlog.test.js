@@ -56,7 +56,7 @@ const { launch, scene, check, done } = require('./helpers');
     const again = s.claimFishMilestone('set4');
     const save = JSON.parse(localStorage.getItem('pixeltown-save-v1')).fishlog;
     s.openJournal(); const btn = document.querySelector('[data-milestone=set4]'); const btnState = [btn.textContent, btn.disabled]; const h = btn.getBoundingClientRect().height; s.closeJournal();
-    FISH_SPECIES.forEach((f) => { s.fishlog.caught[f.id] = { n: 1, best: 75 }; }); s.lifetimeStats.fishSpecies = 12; s.incrementStat('fishLunker');
+    FISH_SPECIES.forEach((f) => { s.fishlog.caught[f.id] = { n: 1, best: 75 }; }); s.incrementStat('fishLunker'); s.checkAchievements();
     const chore = s.dailyItems().find((i) => i.id === 'fish');
     return { early, ok, paid, again, claimed: save.claimed, btnState, h, ach: ['fishSpecies5', 'fishSpecies12', 'fishLunker'].map((id) => s.achievementsUnlocked.has(id)), chore: chore.status };
   });
@@ -64,6 +64,16 @@ const { launch, scene, check, done } = require('./helpers');
   check('milestone: button shows Claimed/disabled and is a >= 40px target', d.btnState[0] === 'Claimed' && d.btnState[1] === true && d.h >= 40, JSON.stringify(d.btnState) + d.h);
   check('achievements: Angler, Master Angler and Lunker unlock', d.ach.every(Boolean), JSON.stringify(d.ach));
   check('Today board: "Catch a fish" chore is done after a catch today', d.chore === 'done', d.chore);
+  const e = await scene(page, (s) => {
+    // Tournament: one size is rolled and handed to both the journal and the tournament entry.
+    let tourneySize = null; s.net.submitTournamentCatch = (day, size) => { tourneySize = size; return Promise.resolve({ success: false }); };
+    s.isFishTournamentTime = () => true; s.fishlog.caught = {};
+    const spot = { x: MAIN_POND.cx + 20, y: MAIN_POND.cy - 60, shadow: null };
+    const orig = s.recordFishCatch.bind(s); let logged = null; s.recordFishCatch = (sp) => { logged = orig(sp); return logged; };
+    s.fishing = { state: 'biting', spot, timer: null, bobber: null }; s.handleFishingInteract();
+    return { same: logged && logged.sizeCm === tourneySize, size: tourneySize };
+  });
+  check('tournament: the journal size and the tournament entry are the same roll', e.same === true, JSON.stringify(e));
   check('no console errors (desktop)', errors.length === 0, errors.join('|'));
   await browser.close();
 
