@@ -2276,6 +2276,11 @@ class TownScene extends Phaser.Scene {
     // Cave materials (additive save key): dirt / coal / iron / gold collected underground.
     this.caveInv = {};
     ['dirt', 'coal', 'iron', 'gold'].forEach((k) => { this.caveInv[k] = Math.min(9999, n(si[k])); });
+    // Cave world seed (additive key). 0 = the classic flat cave; a missing / invalid value gets a
+    // fresh random seed once, which is then saved so your cave looks the same on every visit.
+    const sSeed = loadSave().caveSeed;
+    this.caveSeed = Number.isInteger(sSeed) && sSeed >= 0 && sSeed < 4294967296 ? sSeed : 1 + Math.floor(Math.random() * 4294967294);
+    if (sSeed !== this.caveSeed) writeSave({ caveSeed: this.caveSeed }); // persist a freshly made seed right away, or a reload before the first sale would grow a different cave
     const savedCrafted = loadSave().crafted;
     const sc = savedCrafted && typeof savedCrafted === 'object' ? savedCrafted : {};
     this.craftedGoods = {};
@@ -2293,7 +2298,7 @@ class TownScene extends Phaser.Scene {
   }
 
   saveResources() {
-    writeSave({ resources: this.resources, crafted: this.craftedGoods, caveInv: this.caveInv });
+    writeSave({ resources: this.resources, crafted: this.craftedGoods, caveInv: this.caveInv, caveSeed: this.caveSeed });
   }
 
   interact() {
@@ -2811,6 +2816,7 @@ class TownScene extends Phaser.Scene {
         canvasWrap: document.getElementById('underground-canvas-wrap'),
         resources: this.resources,
         inventory: this.caveInv,
+        seed: this.caveSeed,
         onResourceChange,
         onHotbarChange: (state) => this.renderUgHotbar(state),
         onExit: () => this.exitUnderground(),

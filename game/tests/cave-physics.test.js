@@ -3,7 +3,7 @@
 const { launch, scene, check, done } = require('./helpers');
 
 (async () => {
-  let { browser, page, errors } = await launch({ width: 1000, height: 700 }, { resources: { stone: 9, wood: 5 } });
+  let { browser, page, errors } = await launch({ width: 1000, height: 700 }, { caveSeed: 0, resources: { stone: 9, wood: 5 } });
   await scene(page, (s) => { s.enterUnderground(); const u = s.underground; u.stop(); window.__step = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) u._update(dt); }; });
 
   // 1. Gravity: dropped from the air, you land exactly on the grass surface and stay put.
@@ -115,10 +115,10 @@ const { launch, scene, check, done } = require('./helpers');
     const u = s.underground; u.toggleFly(false); u.rig.position.set(10, -1, 6); u.vel.y = 0; window.__step(3);
     const own = u._cellOverlapsPlayer(5, 0, 3);
     u.rig.position.set(40, -1, 0); const out = u._boxHits(u.rig.position.x, u.rig.position.y, u.rig.position.z);
-    u.rig.position.set(16.2, -1, 0); u.keys.d = false; u.yaw = -Math.PI / 2; u.keys.w = true; window.__step(120); u.keys.w = false;
+    u.rig.position.set(23.5, -1, 0); u.keys.d = false; u.yaw = -Math.PI / 2; u.keys.w = true; window.__step(120); u.keys.w = false;
     return { own, out, xEdge: u.rig.position.x, y: u.rig.position.y };
   });
-  check('place: a cell on top of the player is rejected; the cave sides are solid', pr.own === true && pr.out === true && pr.xEdge <= 17 - 0.6 + 0.01 && pr.y > -17, JSON.stringify(pr));
+  check('place: a cell on top of the player is rejected; the cave sides are solid', pr.own === true && pr.out === true && pr.xEdge <= 25 - 0.6 + 0.01 && pr.y > -17, JSON.stringify(pr));
 
   // 9. Torches don't collide; mined blocks open the way; existing mining ray starts at the eye.
   const tm = await scene(page, (s) => {
@@ -139,7 +139,7 @@ const { launch, scene, check, done } = require('./helpers');
   await browser.close();
 
   // 10. Phone: jump button, fly button, health badge fit and work on a touch screen.
-  ({ browser, page, errors } = await launch({ width: 390, height: 844 }, { resources: { stone: 5, wood: 5 } }, true));
+  ({ browser, page, errors } = await launch({ width: 390, height: 844 }, { caveSeed: 0, resources: { stone: 5, wood: 5 } }, true));
   await scene(page, (s) => { s.enterUnderground(); });
   await page.waitForTimeout(1500);
   await scene(page, (s) => { const u = s.underground; u.stop(); window.__step = (n) => { for (let i = 0; i < n; i++) u._update(1 / 60); }; u.rig.position.set(10, -1, 6); window.__step(5); });

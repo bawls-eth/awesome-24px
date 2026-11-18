@@ -23,7 +23,7 @@ const findKind = `(s, kind) => {
 }`;
 
 (async () => {
-  let { browser, page, errors } = await launch({ width: 1000, height: 700 }, { resources: { stone: 4, wood: 3 }, caveInv: { dirt: 2 } });
+  let { browser, page, errors } = await launch({ width: 1000, height: 700 }, { caveSeed: 0, resources: { stone: 4, wood: 3 }, caveInv: { dirt: 2 } });
   await scene(page, (s) => { s.enterUnderground(); const u = s.underground; u.stop(); u.active = true; u.physicsEnabled = false; });
   const poseKind = (kind) => page.evaluate(`((s, kind) => { const sp = (${findKind})(s, kind); if (!sp) return null; const u = s.underground; u.mineHeld = false; u._cancelMining(); u.rig.position.set(sp.rig[0], sp.rig[1], sp.rig[2]); u.yaw = sp.yaw; u.pitch = 0; u._update(0.001); return sp; })(window.__g.scene.getScene('Town'), ${JSON.stringify(kind)})`);
 
@@ -90,8 +90,13 @@ const findKind = `(s, kind) => {
   check('placing with slot 3 puts a dirt block (own pool) and spends 1 dirt', pl.ok && pl.spent === 0 || (pl.ok && pl.placed === 1), JSON.stringify(pl));
   const nop = await scene(page, (s) => { const u = s.underground; u.selectSlot(3); const a = u.place(); u.selectSlot(8); const b = u.place(); u.selectSlot(0); return { a, b }; });
   check('collected materials (coal) and empty slots cannot be placed', nop.a === false && nop.b === false, JSON.stringify(nop));
-  const mined = await scene(page, (s) => { const u = s.underground; const k = [...u.lookup.entries()].find(([key, v]) => v.kind === 'placed' && v.pool === 'dirt'); return !!k; });
-  check('a placed dirt block can be mined back (drops dirt)', mined === true);
+  const mined = await scene(page, (s) => {
+    const u = s.underground; const k = [...u.lookup.entries()].find(([key, v]) => v.kind === 'placed' && v.pool === 'dirt'); if (!k) return null;
+    const hit = u._raycastTargets()[0]; const t = hit && u._targetFromHit(hit); const d0 = u.inventory.dirt;
+    u.setMining(true); for (let i = 0; i < 40; i++) u._update(0.02); u.setMining(false); for (let i = 0; i < 90; i++) u._update(1 / 60);
+    return { hitPlaced: !!t && t.type === 'placed' && t.key === k[0], gone: !u.lookup.has(k[0]), dirt: u.inventory.dirt - d0 };
+  });
+  check('a placed dirt block is hit by the crosshair ray, mines in 0.4 s and drops dirt (raycast bounding sphere stays fresh)', mined && mined.hitPlaced && mined.gone && mined.dirt === 1, JSON.stringify(mined));
 
   // 5. Save: cave inventory persists under its own additive key, other keys untouched.
   await scene(page, (s) => { s.underground._collect({ coal: 2, iron: 1, gold: 1, dirt: 3 }); });
@@ -108,13 +113,13 @@ const findKind = `(s, kind) => {
   await browser.close();
 
   // 6. Corrupt saves can't mint items.
-  ({ browser, page, errors } = await launch({ width: 1000, height: 700 }, { resources: { stone: 1 }, caveInv: { dirt: -5, coal: 'x', iron: 3.7, gold: 1e12, bogus: 9 } }));
+  ({ browser, page, errors } = await launch({ width: 1000, height: 700 }, { caveSeed: 0, resources: { stone: 1 }, caveInv: { dirt: -5, coal: 'x', iron: 3.7, gold: 1e12, bogus: 9 } }));
   const cs = await scene(page, (s) => ({ ...s.caveInv }));
   check('corrupt caveInv is sanitised on load: negatives/NaN -> 0, fractions floored, capped at 9999, unknown keys dropped', cs.dirt === 0 && cs.coal === 0 && cs.iron === 3 && cs.gold === 9999 && !('bogus' in cs), JSON.stringify(cs));
   await browser.close();
 
   // 7. Phone: all 9 slots fit and do not overlap the controls; holding the pickaxe button mines.
-  ({ browser, page, errors } = await launch({ width: 390, height: 844 }, { resources: { stone: 5, wood: 5 } }, true));
+  ({ browser, page, errors } = await launch({ width: 390, height: 844 }, { caveSeed: 0, resources: { stone: 5, wood: 5 } }, true));
   await scene(page, (s) => { s.enterUnderground(); const u = s.underground; u.stop(); u.active = true; u.physicsEnabled = false; });
   const ph = await page.evaluate(() => {
     const r = (id) => document.getElementById(id).getBoundingClientRect();

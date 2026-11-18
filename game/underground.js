@@ -16,7 +16,7 @@
 // near the surface and press Exit to pop back to the 2D town.
 
 const UG_BLOCK = 2; // world units per voxel
-const UG_SIZE = 8; // cave spans x,z in [-UG_SIZE, UG_SIZE]
+const UG_SIZE = 12; // cave spans x,z in [-UG_SIZE, UG_SIZE] (25 x 25 columns)
 const UG_DEPTH = 8; // y levels 0 (surface) down to -UG_DEPTH
 const UG_REACH = 7.5; // units — how far mine/place can reach
 const UG_PLACED_CAPACITY = 150;
@@ -40,7 +40,7 @@ const UG_THIRD_PERSON_DIST = 6;
 const UG_THIRD_PIVOT = 2.5; // third-person camera orbits this far above the feet
 const UG_ORE_KINDS = ['coal', 'iron', 'gold'];
 // Timed mining (A3): seconds to break each block with the pickaxe.
-const UG_MINE_TIME = { grass: 0.5, dirt: 0.4, wood: 0.8, stone: 1.0, coal: 1.2, iron: 1.6, gold: 2.0, placed_wall: 0.8, placed_dirt: 0.4, torch: 0.1 };
+const UG_MINE_TIME = { leaves: 0.2, grass: 0.5, dirt: 0.4, wood: 0.8, stone: 1.0, coal: 1.2, iron: 1.6, gold: 2.0, placed_wall: 0.8, placed_dirt: 0.4, torch: 0.1 };
 const UG_CRACK_STAGES = 10;
 const UG_DROP_CAPACITY = 24;
 const UG_PICKUP_RADIUS = 2.6;
@@ -49,7 +49,27 @@ const UG_MAGNET_RADIUS = 5;
 // empty slots are kept free for crafting (a later slice).
 const UG_SLOTS = ['wall', 'torch', 'dirt', 'coal', 'iron', 'gold', null, null, null];
 const UG_INV_KEYS = ['dirt', 'coal', 'iron', 'gold'];
-const UG_TEXTURE_NAMES = ['grass_top', 'grass_side', 'dirt', 'stone', 'coal', 'iron', 'gold', 'wood_side', 'wood_top', 'cobble'];
+const UG_TEXTURE_NAMES = ['grass_top', 'grass_side', 'dirt', 'stone', 'coal', 'iron', 'gold', 'wood_side', 'wood_top', 'cobble', 'leaves'];
+const UG_FLAT_RADIUS = 4; // cells around the shaft that stay flat and tree-free (spawn + entry hole)
+
+// Integer hash -> [0,1). Terrain is a pure function of (seed, cell), so the same seed always makes
+// the same cave — no Math.random in world generation.
+function ugHash(a, b, c, seed) {
+  let h = (Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(c | 0, 2147483647) ^ Math.imul(seed | 0, 1274126177)) >>> 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177) >>> 0;
+  h = Math.imul(h ^ (h >>> 16), 2246822519) >>> 0;
+  return (h >>> 0) / 4294967296;
+}
+
+// Smooth 2D value noise (bilinear on a smoothstep) in [0,1).
+function ugNoise2(x, z, seed) {
+  const x0 = Math.floor(x); const z0 = Math.floor(z);
+  const fx = x - x0; const fz = z - z0;
+  const sx = fx * fx * (3 - 2 * fx); const sz = fz * fz * (3 - 2 * fz);
+  const a = ugHash(x0, 0, z0, seed); const b = ugHash(x0 + 1, 0, z0, seed);
+  const c = ugHash(x0, 0, z0 + 1, seed); const d = ugHash(x0 + 1, 0, z0 + 1, seed);
+  return (a + (b - a) * sx) + ((c + (d - c) * sx) - (a + (b - a) * sx)) * sz;
+}
 
 // Small seeded PRNG so every texture is the same on every machine and run.
 function ugRng(seed) {
@@ -141,6 +161,13 @@ function ugDrawTile(kind) {
         px(x, y, base + edge + j, base * 0.74 + edge + j, base * 0.42 + edge + j);
       }
       break;
+    case 'leaves':
+      for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+        const dark = rng() < 0.28;
+        const j = (rng() - 0.5) * 14;
+        if (dark) px(x, y, 38 + j, 92 + j, 34 + j); else px(x, y, 70 + j, 140 + j, 58 + j);
+      }
+      break;
     case 'cobble':
       noisy([118, 118, 122], 12);
       // brick-ish mortar lines
@@ -170,13 +197,15 @@ function ugBuildTextures() {
 }
 
 class UndergroundWorld {
-  constructor({ canvasWrap, resources, inventory, onResourceChange, onExit, onHealthChange, onFlyChange, onHotbarChange }) {
+  constructor({ canvasWrap, resources, inventory, seed, onResourceChange, onExit, onHealthChange, onFlyChange, onHotbarChange }) {
     this.canvasWrap = canvasWrap;
     this.resources = resources; // shared reference to main.js's resources object
     this.onResourceChange = onResourceChange; // () => void — call after any resource change
     this.inventory = inventory || {}; // extra collected counts: dirt / coal / iron / gold (saved by main.js)
     UG_INV_KEYS.forEach((k) => { this.inventory[k] = Math.max(0, Math.floor(Number(this.inventory[k])) || 0); });
     this.onHotbarChange = onHotbarChange || (() => {});
+    // Seed 0 is the classic flat cave (no hills or trees); any other seed grows a hilly, wooded one.
+    this.seed = Number.isInteger(seed) && seed >= 0 && seed < 4294967296 ? seed : 0;
     this.onExit = onExit;
     this.active = false;
     this.yaw = Math.PI;
@@ -368,36 +397,76 @@ class UndergroundWorld {
   // so the entry hole is visible from the surface and you can always find
   // your way back up.
   _buildTerrain() {
-    const solid = new Map(); // key -> 'grass' | 'dirt' | 'stone' | 'coal' | 'iron' | 'gold' | 'wood'
+    const solid = new Map(); // key -> 'grass' | 'dirt' | 'stone' | 'coal' | 'iron' | 'gold' | 'wood' | 'leaves'
+    const seed = this.seed;
+    const flat = seed === 0;
     const inBounds = (x, z) => Math.abs(x) <= UG_SIZE && Math.abs(z) <= UG_SIZE;
+    const inFlat = (x, z) => Math.max(Math.abs(x), Math.abs(z)) <= UG_FLAT_RADIUS;
 
-    for (let y = -1; y >= -UG_DEPTH; y--) {
-      for (let x = -UG_SIZE; x <= UG_SIZE; x++) {
-        for (let z = -UG_SIZE; z <= UG_SIZE; z++) {
-          let type = y === -1 ? 'grass' : y <= -5 ? 'stone' : 'dirt';
+    // Surface height above the old flat level, in blocks: 0, 1 or 2. Rolling hills from two octaves
+    // of value noise; the area around the shaft is always flat.
+    const rise = (x, z) => {
+      if (flat || inFlat(x, z)) return 0;
+      const n = ugNoise2(x / 7, z / 7, seed) * 0.7 + ugNoise2(x / 3.2, z / 3.2, seed + 17) * 0.3;
+      return n < 0.46 ? 0 : n < 0.62 ? 1 : 2;
+    };
+    this.surfaceRise = (x, z) => rise(x, z); // exposed for tests / later slices
+
+    for (let x = -UG_SIZE; x <= UG_SIZE; x++) {
+      for (let z = -UG_SIZE; z <= UG_SIZE; z++) {
+        const top = -1 + rise(x, z); // gy of the grass block
+        for (let y = top; y >= -UG_DEPTH; y--) {
+          const depth = top - y;
+          let type = depth === 0 ? 'grass' : y >= -4 ? 'dirt' : 'stone';
           if (type === 'stone') {
-            const roll = Math.random();
+            const roll = ugHash(x, y, z, seed + 101);
             if (roll < 0.01 && y <= -6) type = 'gold';
             else if (roll < 0.035 && y <= -5) type = 'iron';
             else if (roll < 0.075) type = 'coal';
           }
-          // Old log veins running through the dirt layer — a wood source
-          // underground, so a mining trip can restock the 2D shop loop too.
-          if ((type === 'dirt' || type === 'grass') && Math.random() < 0.05) type = 'wood';
+          // Old log veins running through the dirt layer — a wood source underground.
+          if ((type === 'dirt' || type === 'grass') && ugHash(x, y, z, seed + 202) < 0.05) type = 'wood';
           solid.set(`${x},${y},${z}`, type);
         }
       }
-      // Carve the central shaft clear at every level.
-      for (let x = -1; x <= 1; x++) for (let z = -1; z <= 1; z++) solid.delete(`${x},${y},${z}`);
-      // A couple of wandering tunnels off the shaft, per level.
+    }
+
+    // Trees on the hills: a 2-block trunk with a leafy crown, never near the shaft, never touching.
+    this.trees = 0;
+    if (!flat) {
+      const taken = new Set();
+      for (let x = -UG_SIZE + 2; x <= UG_SIZE - 2; x++) {
+        for (let z = -UG_SIZE + 2; z <= UG_SIZE - 2; z++) {
+          if (inFlat(x, z) || ugHash(x, 0, z, seed + 303) > 0.045) continue;
+          const r = rise(x, z);
+          let ok = true;
+          for (let dx = -2; dx <= 2 && ok; dx++) for (let dz = -2; dz <= 2; dz++) if (taken.has(`${x + dx},${z + dz}`)) { ok = false; break; }
+          for (let dx = -1; dx <= 1 && ok; dx++) for (let dz = -1; dz <= 1; dz++) if (rise(x + dx, z + dz) !== r) { ok = false; break; } // level ground only
+          if (!ok) continue;
+          taken.add(`${x},${z}`);
+          const base = -1 + r; // grass block under the trunk
+          solid.set(`${x},${base + 1},${z}`, 'wood');
+          solid.set(`${x},${base + 2},${z}`, 'wood');
+          for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) solid.set(`${x + dx},${base + 3},${z + dz}`, 'leaves');
+          solid.set(`${x},${base + 4},${z}`, 'leaves');
+          this.trees += 1;
+        }
+      }
+    }
+
+    const carve = (x, y, z) => solid.delete(`${x},${y},${z}`);
+    for (let y = -1; y >= -UG_DEPTH; y--) {
+      // Carve the central shaft clear at every level (and up through any hill that grew over it).
+      for (let x = -1; x <= 1; x++) for (let z = -1; z <= 1; z++) carve(x, y, z);
+      // A couple of wandering tunnels off the shaft, per level (seeded walk).
       for (let t = 0; t < 2; t++) {
         let cx = 0; let cz = 0;
         for (let step = 0; step < 16; step++) {
-          cx += Math.round(Math.random() * 2 - 1);
-          cz += Math.round(Math.random() * 2 - 1);
+          cx += Math.round(ugHash(step, y * 2 + t, 1, seed + 404) * 2 - 1);
+          cz += Math.round(ugHash(step, y * 2 + t, 2, seed + 404) * 2 - 1);
           if (!inBounds(cx, cz)) break;
-          solid.delete(`${cx},${y},${cz}`);
-          solid.delete(`${cx},${y - 1},${cz}`);
+          carve(cx, y, cz);
+          carve(cx, y - 1, cz);
         }
       }
     }
@@ -411,7 +480,7 @@ class UndergroundWorld {
       }
     }
 
-    const kinds = ['grass', 'dirt', 'stone', 'coal', 'iron', 'gold', 'wood'];
+    const kinds = ['grass', 'dirt', 'stone', 'coal', 'iron', 'gold', 'wood', 'leaves'];
     const counts = {};
     kinds.forEach((k) => { counts[k] = 0; });
     solid.forEach((type) => { counts[type]++; });
@@ -428,6 +497,7 @@ class UndergroundWorld {
       coal: () => lambert('coal'),
       iron: () => lambert('iron'),
       gold: () => lambert('gold'),
+      leaves: () => lambert('leaves'),
     };
     kinds.forEach((type) => {
       if (!counts[type]) return;
@@ -894,6 +964,7 @@ class UndergroundWorld {
       case 'placed_wall': return { loot: { stone: 1 }, look: 'cobble' };
       case 'placed_dirt': return { loot: { dirt: 1 }, look: 'dirt' };
       case 'torch': return { loot: { wood: 1 }, look: 'wood_side' };
+      case 'leaves': return { loot: {}, look: 'leaves' };
       default: return { loot: {}, look: 'stone' };
     }
   }
@@ -996,7 +1067,7 @@ class UndergroundWorld {
     if (progress >= 1) {
       const r = this._removeTarget(t);
       this._cancelMining();
-      this._spawnDrop(r.pos, r.loot, r.look);
+      if (Object.keys(r.loot).length) this._spawnDrop(r.pos, r.loot, r.look);
       return;
     }
     const [gx, gy, gz] = t.key.split(',').map(Number);
@@ -1110,6 +1181,7 @@ class UndergroundWorld {
   _hidePlacedInstance(pool, instanceId) {
     pool.mesh.setMatrixAt(instanceId, new THREE.Matrix4().makeTranslation(0, -9999, 0));
     pool.mesh.instanceMatrix.needsUpdate = true;
+    pool.mesh.boundingSphere = null;
     pool.free.push(instanceId);
   }
 
@@ -1153,6 +1225,7 @@ class UndergroundWorld {
     if (slot === null) return false;
     pool.mesh.setMatrixAt(slot, new THREE.Matrix4().makeTranslation(gx * UG_BLOCK, gy * UG_BLOCK, gz * UG_BLOCK));
     pool.mesh.instanceMatrix.needsUpdate = true;
+    pool.mesh.boundingSphere = null; // three caches it from the all-hidden pool; without this a placed block can never be hit by the ray
     this.lookup.set(key, { mesh: pool.mesh, instanceId: slot, kind: 'placed', pool: poolName });
     this.occupied.add(key);
     return true;

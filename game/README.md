@@ -598,7 +598,10 @@ Phaser).
   is dedicated to mining only, so the two never conflict; desktop can also
   press **Escape**.
 
-The cave is generated once per visit and is **entirely local** — nothing
+The cave is a **seeded world**: a random seed is made the first time you
+play and saved with your game, so the same hills, trees, ores and tunnels are
+there every visit (25 x 25 columns, hills up to 2 blocks, trees with leaves you
+can chop, a flat clearing around the shaft). It is also **entirely local** — nothing
 underground syncs over the network, so what you dig and build down there is
 only ever seen by you (same as fishing/chopping in the 2D game). Stone you
 mine underground *does* add to the same 🪨/🪵 counts shown in the 2D
