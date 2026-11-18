@@ -1,4 +1,4 @@
-const { launch, scene, check, done } = require('./helpers');
+const { launch, scene, check, done, expandPanel } = require('./helpers');
 
 (async () => {
   // 1. Determinism + placement sanity.
@@ -82,6 +82,7 @@ const { launch, scene, check, done } = require('./helpers');
   await page.click('#interact-btn');
   await page.waitForTimeout(500);
   check('phone: A button pulls a weed', await scene(page, (s) => s.weedsPulledToday.has(2)));
+  await expandPanel(page);
   const tidyBox = await page.evaluate(() => { const r = document.getElementById('town-tidy').getBoundingClientRect(); return { l: r.left, r: r.right, w: r.width }; });
   check('phone: tidiness readout on screen', tidyBox.w > 0 && tidyBox.l >= 0 && tidyBox.r <= 390, JSON.stringify(tidyBox));
   if (process.env.SHOTS) await page.screenshot({ path: process.env.SHOTS + '/weeds-phone.png' });

@@ -1,4 +1,4 @@
-const { launch, scene, check, done } = require('./helpers');
+const { launch, scene, check, done, expandPanel } = require('./helpers');
 
 (async () => {
   let { browser, page, errors } = await launch({ width: 1000, height: 700 });
@@ -85,6 +85,7 @@ const { launch, scene, check, done } = require('./helpers');
 
   // 6. Phone: panel button tappable, board fits, J key toggles on desktop.
   ({ browser, page, errors } = await launch({ width: 390, height: 844 }, null, true));
+  await expandPanel(page);
   await page.click('#dailies-btn');
   await page.waitForTimeout(300);
   const ph = await page.evaluate(() => { const c = document.querySelector('#dailies-overlay .join-card').getBoundingClientRect(); return { open: !document.getElementById('dailies-overlay').classList.contains('hidden'), l: c.left, r: c.right, b: c.bottom, sw: document.documentElement.scrollWidth }; });

@@ -1,4 +1,4 @@
-const { launch, scene, check, done } = require('./helpers');
+const { launch, scene, check, done, expandPanel } = require('./helpers');
 // Find a UTC day number whose birthday villager index is `idx` (or -1), near today.
 
 (async () => {
@@ -84,6 +84,7 @@ const { launch, scene, check, done } = require('./helpers');
   ({ browser, page, errors } = await launch({ width: 390, height: 844 }, { birthdays: { claimed: [], guests: [] } }, true));
   await page.evaluate(() => { window.dayFor = (s, idx) => { const d0 = Math.floor(Date.now() / 86400000); for (let d = d0; d < d0 + 20; d++) if (birthdayIndexForDay(d) === idx) return d; return null; }; });
   const day0 = await scene(page, (s) => { const d = window.dayFor(s, 3); s.questDayBucket = () => d; s.refreshBirthdays(); return d; });
+  await expandPanel(page);
   const ph = await page.evaluate(() => { const r = document.getElementById('birthday-line').getBoundingClientRect(); return { w: r.width, l: r.left, r: r.right, sw: document.documentElement.scrollWidth, text: document.getElementById('birthday-line').textContent }; });
   check('phone: birthday line visible, inside the panel, no overflow', ph.w > 0 && ph.l >= 0 && ph.r <= 390 && ph.sw <= 390 && /birthday/.test(ph.text), JSON.stringify(ph));
   if (process.env.SHOTS) await page.screenshot({ path: process.env.SHOTS + '/bday-phone.png' });

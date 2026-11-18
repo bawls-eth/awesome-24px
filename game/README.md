@@ -560,15 +560,31 @@ to jump in — the game switches from the 2D town to a real 3D voxel cave
 (rendered with [Three.js](https://threejs.org), loaded from a CDN just like
 Phaser).
 
+- **Pixel-art blocks:** every block is a 16×16 pixel-art texture drawn
+  procedurally (seeded, so it looks the same every time) and shown with
+  crisp nearest-neighbour filtering: grass (green top, grassy dirt sides),
+  dirt, stone, **coal**, **iron** and **gold** ore, wood logs (bark sides,
+  ringed ends) and the cobble blocks you place. Still one instanced mesh per
+  block type, so it stays fast.
+- **View:** you start in **first person** at eye height with the pickaxe in
+  your right hand and the selected block / torch in your left. Press **F5**
+  (or **V**, or tap **👁️ 1st / 🧍 3rd** on mobile) to switch to a third-person
+  camera behind your voxel villager. F5 never reloads the page down here.
 - **Look:** drag with your mouse (desktop) or finger (mobile) to look around.
-- **Move:** **WASD**/arrows (desktop) or the D-pad (mobile) — walks on the
-  flat ground relative to the way you're facing, the same as real
-  Minecraft. Looking up or down only aims; it never changes which way
-  "forward" takes you. There's no gravity down here — it's a flight-style
-  "creative mode" dig, not a fall.
+- **Move:** **WASD**/arrows (desktop) or the D-pad (mobile) walks on the flat
+  ground relative to the way you face. Real physics: gravity, **Space** (or the
+  ⤴️ button) to jump about 1¼ blocks, solid blocks you can't walk through (you
+  slide along walls), and you auto-hop onto a one-block ledge — a two-block wall
+  stops you. You spawn on the grass beside the shaft; the cave edge is a solid wall.
+- **Swim:** the flooded cavern off the bottom of the shaft (hop up the 1-block
+  ledge from the shaft floor) slows you to half speed; Space swims up, Shift down.
+- **Health:** ❤️ 20. Drops over ~3 blocks hurt (water breaks your fall); health
+  regenerates ~1 per 3 s; at 0 you respawn on the surface (nothing is lost).
+- **Fly:** double-tap **Space** (or tap 🕊️ Fly) for creative flight — no gravity,
+  Space up / Shift down (⤴️/⤵️ on mobile); touching down ends it. Still collides.
 - **Mine:** **E** (desktop) or ⛏️ (mobile) breaks whatever block is directly
-  ahead of you, within reach. Stone and the rarer gold ore blocks add to
-  your 🪨 stone count; dirt doesn't, it's just in the way.
+  ahead of you, within reach. Stone adds 1 and coal / iron / gold ore add 3 to
+  your 🪨 stone count; logs add 1 🪵; dirt and grass don't, they're just in the way.
 - **Place:** **F** (desktop) or the hotbar's Place button (mobile) places
   whichever slot is selected on the hotbar (**1**/**2** keys, or tap 🧱/🔥 on
   mobile):
@@ -579,9 +595,6 @@ Phaser).
   instant you press it — no need to navigate back to the shaft first. **E**
   is dedicated to mining only, so the two never conflict; desktop can also
   press **Escape**.
-- **Up/down:** dedicated controls (**Space**/**Shift** on desktop, 🔼/🔽 on
-  mobile) — same as Minecraft creative flight, so looking up or down to aim
-  never changes where walking forward takes you.
 
 The cave is generated once per visit and is **entirely local** — nothing
 underground syncs over the network, so what you dig and build down there is
@@ -767,6 +780,15 @@ you don't already trust.
 - Per-player "homes" / multiple rooms instead of one shared map
 - Sync the underground cave (shared dig state, friends visible down there) —
   skipped for now to keep the first version simple and purely local
+
+## Phone layout
+
+On phone widths (<= 600px) the "In town" panel starts **collapsed to a small chip** (👥 players · 🏆 trophies ▾) so the world and the joystick stay visible; tap it to expand
+and **✕ Close ▴** to collapse again. Expanded, it scrolls inside itself (at most 60% of the screen height, and always clear of the chat bar and the on-screen
+controls), and every button (Achievements, Map, Museum, Today, Journal, Settings) stays reachable. The choice is remembered under its own localStorage key
+(`pixeltown-panel-collapsed`, separate from the save). This also applies to **landscape phones** (short touch screens, e.g. 844x390): the panel starts collapsed there too, the chat bar is shortened so it never runs under the panel, and the walkie button moves to the free strip at the bottom centre. Desktop layout is unchanged. Overlay close buttons are 40px on phones, over-tall cards scroll inside the
+screen instead of being clipped, and the "What's new" banner is capped at about a third of the screen. Tests: `game/tests/phone-panel.test.js`,
+`game/tests/phone-overlays.test.js`.
 
 ## Tests
 

@@ -34,10 +34,17 @@ async function launch(viewport = { width: 1000, height: 700 }, seedSave, touch =
 }
 const scene = (page, fn, arg) => page.evaluate(`(${fn.toString()})(window.__g.scene.getScene('Town'), ${JSON.stringify(arg)})`);
 
+// On phone widths the "In town" panel starts collapsed to a chip; tests that
+// click its buttons (or measure its lines) expand it first.
+async function expandPanel(page) {
+  const collapsed = await page.evaluate(() => document.getElementById('player-list-panel').classList.contains('collapsed'));
+  if (collapsed) { await page.click('#panel-toggle'); await page.waitForTimeout(200); }
+}
+
 let failed = 0;
 function check(name, cond, extra = '') {
   console.log((cond ? 'PASS ' : 'FAIL ') + name + (cond ? '' : ' ' + extra));
   if (!cond) failed++;
 }
 const done = () => { console.log(failed ? `${failed} FAILED` : 'ALL PASSED'); process.exitCode = failed ? 1 : 0; };
-module.exports = { launch, scene, check, done };
+module.exports = { launch, scene, check, done, expandPanel };

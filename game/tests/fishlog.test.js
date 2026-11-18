@@ -1,4 +1,4 @@
-const { launch, scene, check, done } = require('./helpers');
+const { launch, scene, check, done, expandPanel } = require('./helpers');
 
 (async () => {
   let { browser, page, errors } = await launch();
@@ -91,6 +91,7 @@ const { launch, scene, check, done } = require('./helpers');
 
   // 6. Phone: button opens the journal, grid fits 390x844, claim buttons >= 44px.
   ({ browser, page, errors } = await launch({ width: 390, height: 844 }, { fishlog: { caught: { minnow: { n: 4, best: 30 }, koi: { n: 2, best: 44 }, shrimp: { n: 1, best: 12 }, frog: { n: 1, best: 9 } }, claimed: [], lastDay: 0 } }, true));
+  await expandPanel(page);
   await page.click('#journal-btn');
   await page.waitForTimeout(300);
   const ph = await page.evaluate(() => { const c = document.querySelector('#journal-overlay .join-card').getBoundingClientRect(); const b = document.querySelector('.fish-claim-btn').getBoundingClientRect(); return { open: !document.getElementById('journal-overlay').classList.contains('hidden'), l: c.left, r: c.right, b: c.bottom, bh: b.height, sw: document.documentElement.scrollWidth, cards: document.querySelectorAll('.fish-card').length }; });

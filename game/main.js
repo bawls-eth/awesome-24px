@@ -896,6 +896,9 @@ const FISH_TOURNAMENT_SIGN_POS = { x: 2040, y: 760 };
 const FISH_TOURNAMENT_BONUS = 10;
 const GUESTBOOK_RADIUS = 60;
 
+const PANEL_COLLAPSE_KEY = 'pixeltown-panel-collapsed'; // own key; never part of the save
+// Phone layout: narrow screens (portrait) OR a short touch screen (landscape phone).
+const PANEL_PHONE_QUERY = '(max-width: 600px), (max-height: 500px) and (pointer: coarse)';
 // ---------- daily checklist ----------
 // A "Today" board (button in the player panel, or J) that lists every daily
 // chore with live progress so players can see what is left: Professor Byte's
@@ -1431,6 +1434,7 @@ class TownScene extends Phaser.Scene {
     this.setupWeeds();
     this.setupJournal();
     this.setupDailies(); // after weeds/mail/bug-off/home/birthdays exist
+    this.setupPanelCollapse();
     if (IS_TOUCH) {
       this.setupTouchControls();
       this.setupTiltShake();
@@ -2803,6 +2807,14 @@ class TownScene extends Phaser.Scene {
         resources: this.resources,
         onResourceChange,
         onExit: () => this.exitUnderground(),
+        onHealthChange: (hp, max) => {
+          const el = document.getElementById('ug-health');
+          if (el) { el.textContent = `❤️ ${hp}/${max}`; el.classList.toggle('low', hp <= max / 4); }
+        },
+        onFlyChange: (on) => {
+          const b = document.getElementById('ug-fly-btn');
+          if (b) b.classList.toggle('active', !!on);
+        },
       });
       this.underground.setAvatar(`../i/${this.selfData.species}-strip.png`, this.selfData.frame || 0, FRAME_SIZE);
       this.setupUndergroundControls();
@@ -2832,12 +2844,23 @@ class TownScene extends Phaser.Scene {
     document.getElementById('ug-hotbar-torch').classList.toggle('active', type === 'torch');
   }
 
+  updateUgViewButton() {
+    const btn = document.getElementById('ug-view-btn');
+    if (btn && this.underground) btn.textContent = this.underground.viewMode === 'first' ? '👁️ 1st' : '🧍 3rd';
+  }
+
   setupUndergroundControls() {
     const ug = this.underground;
     this.input.keyboard && window.addEventListener('keydown', (e) => {
       if (!this.inUnderground) return;
       const k = e.key.toLowerCase();
-      if (k === 'e') {
+      if (k === 'f5' || k === 'v') {
+        // F5 would reload the page: swallow it and flip first/third person instead.
+        e.preventDefault();
+        if (e.repeat) return; // holding the key must not flicker between views
+        ug.toggleView();
+        this.updateUgViewButton();
+      } else if (k === 'e') {
         ug.mine();
       } else if (k === 'f') {
         ug.place();
@@ -2869,7 +2892,7 @@ class TownScene extends Phaser.Scene {
     const setVert = (v) => { ug.setMoveInput(this.ugFwd || 0, this.ugStrafe || 0, v); };
     const upBtn = document.getElementById('ug-up-btn');
     const downBtn = document.getElementById('ug-down-btn');
-    upBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); setVert(1); });
+    upBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); ug.tapJump(); setVert(1); });
     upBtn.addEventListener('pointerup', () => setVert(0));
     upBtn.addEventListener('pointerleave', () => setVert(0));
     upBtn.addEventListener('pointercancel', () => setVert(0));
@@ -2878,6 +2901,9 @@ class TownScene extends Phaser.Scene {
     downBtn.addEventListener('pointerleave', () => setVert(0));
     downBtn.addEventListener('pointercancel', () => setVert(0));
 
+    document.getElementById('ug-fly-btn').addEventListener('click', (e) => { ug.toggleFly(); e.currentTarget.blur(); }); // blur: a focused button would also fire on Space
+    document.getElementById('ug-view-btn').addEventListener('click', () => { ug.toggleView(); this.updateUgViewButton(); });
+    this.updateUgViewButton();
     document.getElementById('ug-mine-btn').addEventListener('click', () => ug.mine());
     document.getElementById('ug-place-btn').addEventListener('click', () => ug.place());
     document.getElementById('ug-exit-btn').addEventListener('click', () => this.exitUnderground());
@@ -7270,6 +7296,76 @@ class TownScene extends Phaser.Scene {
     }
     this.showVillagerBubble(v, line);
     SFX.pop();
+  }
+
+  // ---------- phone: collapsible "In town" panel ----------
+  // On phone widths the panel (player list + every button + status lines) is
+  // tall and covered half the screen, so it starts collapsed to a small chip
+  // (players + trophies) and expands on tap. Desktop is unchanged (the CSS only
+  // applies at <= 600px). The choice is remembered under its own
+  // localStorage key, separate from the save, and the expanded height is
+  // capped so the panel can never run into the chat bar / controls below.
+  setupPanelCollapse() {
+    const panel = document.getElementById('player-list-panel');
+    const toggle = document.getElementById('panel-toggle');
+    if (!panel || !toggle) return;
+    const mq = window.matchMedia(PANEL_PHONE_QUERY);
+    let stored = null;
+    try { stored = localStorage.getItem(PANEL_COLLAPSE_KEY); } catch (e) { /* storage blocked */ }
+    // Default on phones: collapsed.
+    this.panelCollapsed = stored === null ? true : stored === '1';
+    const label = () => {
+      const n = document.querySelectorAll('#player-list li').length;
+      const a = (document.getElementById('achievement-count') || {}).textContent || '0';
+      const cap = (document.getElementById('achievement-cap') || {}).textContent || '';
+      const collapsed = panel.classList.contains('collapsed');
+      const text = collapsed ? `👥 ${n} · 🏆 ${a}${cap ? '/' + cap : ''} ▾` : '✕ Close ▴';
+      if (toggle.textContent !== text) toggle.textContent = text;
+      toggle.setAttribute('aria-expanded', String(!collapsed));
+      toggle.setAttribute('aria-label', collapsed ? 'Open the town panel' : 'Close the town panel');
+    };
+    // Keep the expanded panel clear of the chat bar (and so the controls) below it.
+    const fit = () => {
+      if (!mq.matches || panel.classList.contains('collapsed')) { panel.style.maxHeight = ''; return; }
+      // Stay clear of anything below the panel that overlaps it horizontally
+      // (chat bar, joystick, action buttons, hint pills).
+      const pr = panel.getBoundingClientRect();
+      let limit = window.innerHeight;
+      ['chat-panel', 'joystick', 'action-buttons', 'fish-hint-btn', 'gift-hint-btn', 'dig-hole-hint'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el || el.classList.contains('hidden') || getComputedStyle(el).display === 'none') return;
+        const r = el.getBoundingClientRect();
+        if (r.width > 0 && r.left < pr.right && r.right > pr.left && r.top > pr.top) limit = Math.min(limit, r.top);
+      });
+      const room = Math.floor(limit - pr.top - 8);
+      panel.style.maxHeight = `${Math.max(72, Math.min(Math.floor(window.innerHeight * 0.6), room))}px`;
+    };
+    const apply = () => {
+      panel.classList.toggle('collapsed', mq.matches && this.panelCollapsed);
+      label();
+      fit();
+    };
+    this.setPanelCollapsed = (collapsed) => {
+      this.panelCollapsed = !!collapsed;
+      try { localStorage.setItem(PANEL_COLLAPSE_KEY, this.panelCollapsed ? '1' : '0'); } catch (e) { /* ignore */ }
+      apply();
+    };
+    toggle.addEventListener('click', () => this.setPanelCollapsed(!panel.classList.contains('collapsed')));
+    if (mq.addEventListener) mq.addEventListener('change', apply); else if (mq.addListener) mq.addListener(apply);
+    window.addEventListener('resize', fit);
+    // The chip's text follows the player count and trophy count (cheap: DOM events only).
+    const obs = new MutationObserver(label);
+    obs.observe(document.getElementById('player-list'), { childList: true });
+    const ac = document.getElementById('achievement-count');
+    if (ac) obs.observe(ac, { childList: true, characterData: true, subtree: true });
+    const cap = document.getElementById('achievement-cap');
+    if (cap) obs.observe(cap, { childList: true, characterData: true, subtree: true });
+    // Hint pills (fish / gift / dig hole) appear and disappear: refit so an expanded panel never sits on one.
+    const hintObs = new MutationObserver(fit);
+    ['fish-hint-btn', 'gift-hint-btn', 'dig-hole-hint'].forEach((id) => { const el = document.getElementById(id); if (el) hintObs.observe(el, { attributes: true, attributeFilter: ['class'] }); });
+    // Expanded content grows/shrinks (e.g. settings section): refit.
+    if (window.ResizeObserver && document.getElementById('chat-panel')) new ResizeObserver(fit).observe(document.getElementById('chat-panel'));
+    apply();
   }
 
   // ---------- daily checklist ----------
