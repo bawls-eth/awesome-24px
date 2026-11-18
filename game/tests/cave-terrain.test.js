@@ -29,7 +29,6 @@ const enter = (s) => { s.enterUnderground(); const u = s.underground; u.stop(); 
       if (Math.max(Math.abs(x), Math.abs(z)) <= 4 && r !== 0) flatOk = false;
       // the grass block of every column sits exactly at its rise (or the column was carved by a tunnel / shaft)
       const top = -1 + r; const k = x + ',' + top + ',' + z; const e = u.lookup.get(k);
-      if (e && e.kind !== 'grass' && e.kind !== 'wood') { if (!(e.kind === 'leaves')) flatOk = flatOk && true; }
     }
     let shaftClear = true; for (let y = 8; y >= -8; y--) for (let x = -1; x <= 1; x++) for (let z = -1; z <= 1; z++) if (u.occupied.has(x + ',' + y + ',' + z)) shaftClear = false;
     let maxGy = -99; u.lookup.forEach((v, k) => { maxGy = Math.max(maxGy, Number(k.split(',')[1])); });
@@ -61,7 +60,24 @@ const enter = (s) => { s.enterUnderground(); const u = s.underground; u.stop(); 
     let tt = 0; u.setMining(true); while (u.lookup.has(key) && tt < 3) { u._update(0.02); tt += 0.02; } u.setMining(false);
     return { hitKey: tg && tg.key, key, kind: tg && tg.kind, tt: +tt.toFixed(2), gone: !u.lookup.has(key), drops: u.drops.length - dr0, same: JSON.stringify(before) === JSON.stringify(s.resources) };
   }, t.leafCell);
-  check('leaves: break in 0.2 s and drop nothing', lf.skip || (lf.kind === 'leaves' && lf.tt <= 0.26 && lf.gone && lf.drops === 0 && lf.same), JSON.stringify(lf));
+  check('leaves: break in 0.2 s and drop nothing', (lf.kind === 'leaves' && lf.tt <= 0.26 && lf.gone && lf.drops === 0 && lf.same), JSON.stringify(lf));
+
+  // Seed sweep: the spawn is solid and every tree is rooted for several seeds, including the classic seed 0.
+  const sweep = await scene(page, (s) => {
+    const out = [];
+    [0, 1, 2, 3, 4, 5, 6, 7, 8].forEach((seed) => {
+      const w = new UndergroundWorld({ canvasWrap: document.createElement('div'), resources: { stone: 0, wood: 0 }, seed, onResourceChange() {}, onExit() {} });
+      const solid = (x, y, z) => w.lookup.has(x + ',' + y + ',' + z);
+      let floating = 0;
+      w.lookup.forEach((v, k) => { if (v.kind !== 'wood') return; const [x, y, z] = k.split(',').map(Number); if (solid(x, y + 1, z) && !solid(x, y - 1, z) && w.lookup.get(x + ',' + (y + 1) + ',' + z).kind === 'leaves') floating++; });
+      let trunkOverHole = 0;
+      w.lookup.forEach((v, k) => { if (v.kind !== 'leaves') return; const [x, y, z] = k.split(',').map(Number); if (solid(x, y - 1, z) && solid(x, y - 2, z) && w.lookup.get(x + ',' + (y - 1) + ',' + z).kind === 'wood' && !solid(x, y - 3, z)) trunkOverHole++; });
+      out.push({ seed, spawnSolid: solid(2, -1, 0) && solid(3, -1, 0), floating, trunkOverHole });
+      w.destroy();
+    });
+    return out;
+  });
+  check('seed sweep (0-8): the spawn cells are always solid grass and no tree hangs over a tunnel hole', sweep.every((r) => r.spawnSolid && r.floating === 0 && r.trunkOverHole === 0), JSON.stringify(sweep));
 
   // Walking: spawn is on solid grass at y = -1; walking across the hills auto-hops without ever clipping into a block.
   const w = await scene(page, (s) => {

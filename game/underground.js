@@ -433,6 +433,7 @@ class UndergroundWorld {
 
     // Trees on the hills: a 2-block trunk with a leafy crown, never near the shaft, never touching.
     this.trees = 0;
+    const treeRoots = new Set(); // columns that carry a tree: the surface under them is never tunnelled
     if (!flat) {
       const taken = new Set();
       for (let x = -UG_SIZE + 2; x <= UG_SIZE - 2; x++) {
@@ -444,6 +445,7 @@ class UndergroundWorld {
           for (let dx = -1; dx <= 1 && ok; dx++) for (let dz = -1; dz <= 1; dz++) if (rise(x + dx, z + dz) !== r) { ok = false; break; } // level ground only
           if (!ok) continue;
           taken.add(`${x},${z}`);
+          treeRoots.add(`${x},${z}`);
           const base = -1 + r; // grass block under the trunk
           solid.set(`${x},${base + 1},${z}`, 'wood');
           solid.set(`${x},${base + 2},${z}`, 'wood');
@@ -465,7 +467,8 @@ class UndergroundWorld {
           cx += Math.round(ugHash(step, y * 2 + t, 1, seed + 404) * 2 - 1);
           cz += Math.round(ugHash(step, y * 2 + t, 2, seed + 404) * 2 - 1);
           if (!inBounds(cx, cz)) break;
-          carve(cx, y, cz);
+          // The grass layer is never cut inside the flat clearing (spawn!) or under a tree.
+          if (!(y === -1 && (inFlat(cx, cz) || treeRoots.has(`${cx},${cz}`)))) carve(cx, y, cz);
           carve(cx, y - 1, cz);
         }
       }
