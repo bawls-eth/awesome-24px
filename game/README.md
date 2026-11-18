@@ -731,3 +731,17 @@ you don't already trust.
 - Per-player "homes" / multiple rooms instead of one shared map
 - Sync the underground cave (shared dig state, friends visible down there) —
   skipped for now to keep the first version simple and purely local
+
+## Tests
+
+Headless Playwright suites live in `game/tests/` (one per feature plus
+`integration` and a `soak` run). Run them all with:
+
+```
+NODE_PATH=$(npm root -g) node game/tests/run-all.js
+```
+
+or a single one with `node game/tests/<name>.test.js` while
+`python3 -m http.server 8440` serves the repo root. The tests join the live
+town as `ADMIN*` bots (presence only), never chat, and never write anything
+else to Firebase.
