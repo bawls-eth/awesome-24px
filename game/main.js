@@ -2271,6 +2271,16 @@ class TownScene extends Phaser.Scene {
       shells: n(saved.shells),
       flowers: n(saved.flowers),
     };
+    const sci = loadSave().caveInv;
+    const si = sci && typeof sci === 'object' ? sci : {};
+    // Cave materials (additive save key): dirt / coal / iron / gold collected underground.
+    this.caveInv = {};
+    ['dirt', 'coal', 'iron', 'gold'].forEach((k) => { this.caveInv[k] = Math.min(9999, n(si[k])); });
+    // Cave world seed (additive key). 0 = the classic flat cave; a missing / invalid value gets a
+    // fresh random seed once, which is then saved so your cave looks the same on every visit.
+    const sSeed = loadSave().caveSeed;
+    this.caveSeed = Number.isInteger(sSeed) && sSeed >= 0 && sSeed < 4294967296 ? sSeed : 1 + Math.floor(Math.random() * 4294967294);
+    if (sSeed !== this.caveSeed) writeSave({ caveSeed: this.caveSeed }); // persist a freshly made seed right away, or a reload before the first sale would grow a different cave
     const savedCrafted = loadSave().crafted;
     const sc = savedCrafted && typeof savedCrafted === 'object' ? savedCrafted : {};
     this.craftedGoods = {};
@@ -2288,7 +2298,7 @@ class TownScene extends Phaser.Scene {
   }
 
   saveResources() {
-    writeSave({ resources: this.resources, crafted: this.craftedGoods });
+    writeSave({ resources: this.resources, crafted: this.craftedGoods, caveInv: this.caveInv, caveSeed: this.caveSeed });
   }
 
   interact() {
@@ -2805,7 +2815,10 @@ class TownScene extends Phaser.Scene {
       this.underground = new UndergroundWorld({
         canvasWrap: document.getElementById('underground-canvas-wrap'),
         resources: this.resources,
+        inventory: this.caveInv,
+        seed: this.caveSeed,
         onResourceChange,
+        onHotbarChange: (state) => this.renderUgHotbar(state),
         onExit: () => this.exitUnderground(),
         onHealthChange: (hp, max) => {
           const el = document.getElementById('ug-health');
@@ -2840,8 +2853,19 @@ class TownScene extends Phaser.Scene {
   // slot Place will actually use.
   setUgHotbar(type) {
     this.underground.setHotbar(type);
-    document.getElementById('ug-hotbar-wall').classList.toggle('active', type === 'wall');
-    document.getElementById('ug-hotbar-torch').classList.toggle('active', type === 'torch');
+  }
+
+  // Redraws the 9 slots: highlight on the selected one, a count badge on slots that hold stock.
+  renderUgHotbar(state) {
+    const slots = document.querySelectorAll('#ug-hotbar .ug-slot');
+    (state || this.underground.getHotbarState()).forEach((s, i) => {
+      const el = slots[i];
+      if (!el) return;
+      el.classList.toggle('active', s.selected);
+      el.classList.toggle('empty', !s.id || s.count < 1);
+      const cnt = el.querySelector('.cnt');
+      if (cnt) cnt.textContent = s.id && s.count > 0 ? (s.count > 99 ? '99+' : s.count) : '';
+    });
   }
 
   updateUgViewButton() {
@@ -2861,17 +2885,18 @@ class TownScene extends Phaser.Scene {
         ug.toggleView();
         this.updateUgViewButton();
       } else if (k === 'e') {
-        ug.mine();
+        if (!e.repeat) ug.setMining(true); // hold E to mine
       } else if (k === 'f') {
         ug.place();
-      } else if (k === '1') {
-        this.setUgHotbar('wall');
-      } else if (k === '2') {
-        this.setUgHotbar('torch');
+      } else if (k >= '1' && k <= '9' && k.length === 1) {
+        ug.selectSlot(Number(k) - 1);
       } else if (k === 'escape' || k === 'backspace') {
         this.exitUnderground();
       }
     });
+
+    window.addEventListener('keyup', (e) => { if (e.key.toLowerCase() === 'e') ug.setMining(false); });
+    window.addEventListener('blur', () => ug.setMining(false));
 
     const setDir = (dir, on) => {
       const v = on ? 1 : 0;
@@ -2904,12 +2929,14 @@ class TownScene extends Phaser.Scene {
     document.getElementById('ug-fly-btn').addEventListener('click', (e) => { ug.toggleFly(); e.currentTarget.blur(); }); // blur: a focused button would also fire on Space
     document.getElementById('ug-view-btn').addEventListener('click', () => { ug.toggleView(); this.updateUgViewButton(); });
     this.updateUgViewButton();
-    document.getElementById('ug-mine-btn').addEventListener('click', () => ug.mine());
+    const mineBtn = document.getElementById('ug-mine-btn');
+    mineBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); ug.setMining(true); }); // hold to mine
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach((ev) => mineBtn.addEventListener(ev, () => ug.setMining(false)));
+    document.querySelectorAll('#ug-hotbar .ug-slot').forEach((el) => el.addEventListener('click', () => ug.selectSlot(Number(el.dataset.slot))));
+    this.renderUgHotbar();
     document.getElementById('ug-place-btn').addEventListener('click', () => ug.place());
     document.getElementById('ug-exit-btn').addEventListener('click', () => this.exitUnderground());
-    document.getElementById('ug-hotbar-wall').addEventListener('click', () => this.setUgHotbar('wall'));
-    document.getElementById('ug-hotbar-torch').addEventListener('click', () => this.setUgHotbar('torch'));
-
+    
     this._ugExitHintInterval = setInterval(() => {
       if (!this.inUnderground) return;
       document.getElementById('underground-exit-hint').classList.toggle('hidden', !ug.nearExit);

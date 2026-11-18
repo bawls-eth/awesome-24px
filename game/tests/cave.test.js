@@ -22,7 +22,7 @@ const findOre = `(s) => {
 }`;
 
 (async () => {
-  let { browser, page, errors } = await launch({ width: 1000, height: 700 }, { resources: { stone: 5, wood: 5 } });
+  let { browser, page, errors } = await launch({ width: 1000, height: 700 }, { caveSeed: 0, resources: { stone: 5, wood: 5 } });
   await scene(page, (s) => { s.enterUnderground(); });
   await page.waitForTimeout(1500);
 
@@ -33,8 +33,8 @@ const findOre = `(s) => {
     const mean = (name, x0, y0, x1, y1) => { const d = u.textures[name].image.getContext('2d').getImageData(x0, y0, x1 - x0, y1 - y0).data; let r = 0; let g = 0; let b = 0; const n = d.length / 4; for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i + 1]; b += d[i + 2]; } return [r / n, g / n, b / n]; };
     return { info, grassTop: mean('grass_top', 0, 0, 16, 16), sideTop: mean('grass_side', 0, 0, 16, 2), sideBottom: mean('grass_side', 0, 10, 16, 16), dirt: mean('dirt', 0, 0, 16, 16), stone: mean('stone', 0, 0, 16, 16), gold: mean('gold', 0, 0, 16, 16) };
   });
-  check('textures: 10 tiles, all 16x16, nearest-neighbour, no mipmaps, sRGB', t.info.length === 10 && t.info.every((x) => x.w === 16 && x.h === 16 && x.mag && x.min && x.mip === false && x.srgb), JSON.stringify(t.info.map((x) => x.n)));
-  check('textures: every tile is visually distinct (unique pixel hash)', new Set(t.info.map((x) => x.hash)).size === 10);
+  check('textures: 11 tiles, all 16x16, nearest-neighbour, no mipmaps, sRGB', t.info.length === 11 && t.info.every((x) => x.w === 16 && x.h === 16 && x.mag && x.min && x.mip === false && x.srgb), JSON.stringify(t.info.map((x) => x.n)));
+  check('textures: every tile is visually distinct (unique pixel hash)', new Set(t.info.map((x) => x.hash)).size === 11);
   check('textures: grass top is green, grass side has a green cap over dirt', t.grassTop[1] > t.grassTop[0] && t.grassTop[1] > t.grassTop[2] && t.sideTop[1] > t.sideTop[0] && t.sideBottom[0] > t.sideBottom[2] && t.sideBottom[0] > t.sideBottom[1], JSON.stringify([t.grassTop, t.sideTop, t.sideBottom]));
   check('textures: dirt is brown (r > g > b), stone is grey, gold ore is warmer than plain stone', t.dirt[0] > t.dirt[1] && t.dirt[1] > t.dirt[2] && Math.abs(t.stone[0] - t.stone[2]) < 12 && t.gold[0] - t.gold[2] > t.stone[0] - t.stone[2] + 8, JSON.stringify([t.dirt, t.stone, t.gold]));
   const hashes1 = t.info.map((x) => x.hash).join();
@@ -82,7 +82,7 @@ const findOre = `(s) => {
     await scene(page, (s, sp) => { const u = s.underground; u.physicsEnabled = false; u.physicsEnabled = false; u.rig.position.set(sp.rig[0], sp.rig[1], sp.rig[2]); u.yaw = sp.yaw; u.pitch = 0; }, sp2);
     await page.waitForTimeout(500); await page.screenshot({ path: process.env.SHOTS + '/cave-ore-first.png' });
   }
-  const pl = await scene(page, (s) => { const u = s.underground; const stone = s.resources.stone; const ok = u.place(); return { ok, spent: stone - s.resources.stone }; });
+  const spotKey = spot.key; const pl = await scene(page, (s, spotKey) => { const u = s.underground; u.pitch = 0; const [ox, oy, oz] = spotKey.split(',').map(Number); const fx = Math.round(-Math.sin(u.yaw)); const fz = Math.round(-Math.cos(u.yaw)); u._putStone(ox + fx, oy, oz + fz); const stone = s.resources.stone; const ok = u.place(); return { ok, spent: stone - s.resources.stone }; }, spotKey);
   check('placing: a cobble block is placed where you look and costs 1 stone', pl.ok && pl.spent === 1, JSON.stringify(pl));
 
   // 5. Third-person toggle: API, F5 key (no page reload), V key and the on-screen button.
@@ -109,7 +109,7 @@ const findOre = `(s) => {
   await browser.close();
 
   // 7. Phone: the cave opens on a touch screen, controls fit, the View button is >= 36px and works.
-  ({ browser, page, errors } = await launch({ width: 390, height: 844 }, { resources: { stone: 5, wood: 5 } }, true));
+  ({ browser, page, errors } = await launch({ width: 390, height: 844 }, { caveSeed: 0, resources: { stone: 5, wood: 5 } }, true));
   await scene(page, (s) => { s.enterUnderground(); });
   await page.waitForTimeout(1500);
   const ph = await page.evaluate(() => {

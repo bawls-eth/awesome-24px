@@ -16,7 +16,7 @@
 // near the surface and press Exit to pop back to the 2D town.
 
 const UG_BLOCK = 2; // world units per voxel
-const UG_SIZE = 8; // cave spans x,z in [-UG_SIZE, UG_SIZE]
+const UG_SIZE = 12; // cave spans x,z in [-UG_SIZE, UG_SIZE] (25 x 25 columns)
 const UG_DEPTH = 8; // y levels 0 (surface) down to -UG_DEPTH
 const UG_REACH = 7.5; // units — how far mine/place can reach
 const UG_PLACED_CAPACITY = 150;
@@ -39,7 +39,37 @@ const UG_SPAWN = [5.2, -1, 0]; // feet; standing on the surface grass beside the
 const UG_THIRD_PERSON_DIST = 6;
 const UG_THIRD_PIVOT = 2.5; // third-person camera orbits this far above the feet
 const UG_ORE_KINDS = ['coal', 'iron', 'gold'];
-const UG_TEXTURE_NAMES = ['grass_top', 'grass_side', 'dirt', 'stone', 'coal', 'iron', 'gold', 'wood_side', 'wood_top', 'cobble'];
+// Timed mining (A3): seconds to break each block with the pickaxe.
+const UG_MINE_TIME = { leaves: 0.2, grass: 0.5, dirt: 0.4, wood: 0.8, stone: 1.0, coal: 1.2, iron: 1.6, gold: 2.0, placed_wall: 0.8, placed_dirt: 0.4, torch: 0.1 };
+const UG_CRACK_STAGES = 10;
+const UG_DROP_CAPACITY = 24;
+const UG_PICKUP_RADIUS = 2.6;
+const UG_MAGNET_RADIUS = 5;
+// The 9-slot hotbar. wall/torch/dirt are placeable; coal/iron/gold are collected materials; the
+// empty slots are kept free for crafting (a later slice).
+const UG_SLOTS = ['wall', 'torch', 'dirt', 'coal', 'iron', 'gold', null, null, null];
+const UG_INV_KEYS = ['dirt', 'coal', 'iron', 'gold'];
+const UG_TEXTURE_NAMES = ['grass_top', 'grass_side', 'dirt', 'stone', 'coal', 'iron', 'gold', 'wood_side', 'wood_top', 'cobble', 'leaves'];
+const UG_FLAT_RADIUS = 4; // cells around the shaft that stay flat and tree-free (spawn + entry hole)
+
+// Integer hash -> [0,1). Terrain is a pure function of (seed, cell), so the same seed always makes
+// the same cave — no Math.random in world generation.
+function ugHash(a, b, c, seed) {
+  let h = (Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(c | 0, 2147483647) ^ Math.imul(seed | 0, 1274126177)) >>> 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177) >>> 0;
+  h = Math.imul(h ^ (h >>> 16), 2246822519) >>> 0;
+  return (h >>> 0) / 4294967296;
+}
+
+// Smooth 2D value noise (bilinear on a smoothstep) in [0,1).
+function ugNoise2(x, z, seed) {
+  const x0 = Math.floor(x); const z0 = Math.floor(z);
+  const fx = x - x0; const fz = z - z0;
+  const sx = fx * fx * (3 - 2 * fx); const sz = fz * fz * (3 - 2 * fz);
+  const a = ugHash(x0, 0, z0, seed); const b = ugHash(x0 + 1, 0, z0, seed);
+  const c = ugHash(x0, 0, z0 + 1, seed); const d = ugHash(x0 + 1, 0, z0 + 1, seed);
+  return (a + (b - a) * sx) + ((c + (d - c) * sx) - (a + (b - a) * sx)) * sz;
+}
 
 // Small seeded PRNG so every texture is the same on every machine and run.
 function ugRng(seed) {
@@ -131,6 +161,13 @@ function ugDrawTile(kind) {
         px(x, y, base + edge + j, base * 0.74 + edge + j, base * 0.42 + edge + j);
       }
       break;
+    case 'leaves':
+      for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+        const dark = rng() < 0.28;
+        const j = (rng() - 0.5) * 14;
+        if (dark) px(x, y, 38 + j, 92 + j, 34 + j); else px(x, y, 70 + j, 140 + j, 58 + j);
+      }
+      break;
     case 'cobble':
       noisy([118, 118, 122], 12);
       // brick-ish mortar lines
@@ -160,10 +197,15 @@ function ugBuildTextures() {
 }
 
 class UndergroundWorld {
-  constructor({ canvasWrap, resources, onResourceChange, onExit, onHealthChange, onFlyChange }) {
+  constructor({ canvasWrap, resources, inventory, seed, onResourceChange, onExit, onHealthChange, onFlyChange, onHotbarChange }) {
     this.canvasWrap = canvasWrap;
     this.resources = resources; // shared reference to main.js's resources object
     this.onResourceChange = onResourceChange; // () => void — call after any resource change
+    this.inventory = inventory || {}; // extra collected counts: dirt / coal / iron / gold (saved by main.js)
+    UG_INV_KEYS.forEach((k) => { this.inventory[k] = Math.max(0, Math.floor(Number(this.inventory[k])) || 0); });
+    this.onHotbarChange = onHotbarChange || (() => {});
+    // Seed 0 is the classic flat cave (no hills or trees); any other seed grows a hilly, wooded one.
+    this.seed = Number.isInteger(seed) && seed >= 0 && seed < 4294967296 ? seed : 0;
     this.onExit = onExit;
     this.active = false;
     this.yaw = Math.PI;
@@ -174,8 +216,11 @@ class UndergroundWorld {
     this.lastDrag = null;
     this.occupied = new Set(); // "gx,gy,gz" currently solid (terrain, wall or torch)
     this.lookup = new Map(); // "gx,gy,gz" -> { mesh, instanceId, kind }
-    this.placedFree = [];
-    this.placedNext = 0;
+    this.pools = {}; // placed-block pools: wall (cobble) and dirt
+    this.slotIndex = 0;
+    this.mineHeld = false; // pickaxe held down (timed mining)
+    this.mining = null; // { key, t, need } for the block being broken
+    this.drops = []; // dropped item entities
     this.torches = new Map(); // "gx,gy,gz" -> { group, light, mesh }
     this.hotbar = 'wall'; // 'wall' (costs stone) | 'torch' (costs wood)
     this.viewMode = 'first'; // 'first' (eye height) | 'third' (behind the player)
@@ -198,14 +243,30 @@ class UndergroundWorld {
     this._initThree();
     this._buildTerrain();
     this._buildPlacedPool();
+    this._buildCrackOverlay();
     this._bindInput();
   }
 
   // Switches what Place puts down — a stone wall or a lit torch — same
   // idea as a Minecraft hotbar, just two slots instead of nine.
   setHotbar(type) {
-    this.hotbar = type;
+    const i = UG_SLOTS.indexOf(type);
+    if (i >= 0) this.selectSlot(i);
+  }
+
+  // 0..8. Number keys, the mouse wheel and tapping a slot all land here.
+  selectSlot(i) {
+    i = ((Math.floor(i) % 9) + 9) % 9;
+    this.slotIndex = i;
+    this.hotbar = UG_SLOTS[i] || 'empty';
     this._refreshHeldItem();
+    this.onHotbarChange(this.getHotbarState());
+  }
+
+  // [{ id, count, selected }] for the on-screen hotbar.
+  getHotbarState() {
+    const count = (id) => (id === 'wall' ? this.resources.stone : id === 'torch' ? this.resources.wood : this.inventory[id]) || 0;
+    return UG_SLOTS.map((id, i) => ({ id, count: id ? count(id) : 0, selected: i === this.slotIndex }));
   }
 
   // 'first' | 'third'. F5 / the View button flip between them.
@@ -323,7 +384,11 @@ class UndergroundWorld {
     if (!this.fpItem) return;
     const cube = this.fpItem.getObjectByName('fp-cube');
     const torch = this.fpItem.getObjectByName('fp-torch');
-    if (cube) cube.visible = this.hotbar !== 'torch';
+    const texFor = { wall: 'cobble', dirt: 'dirt', coal: 'coal', iron: 'iron', gold: 'gold' }[this.hotbar];
+    if (cube) {
+      cube.visible = !!texFor;
+      if (texFor) { cube.material.map = this.textures[texFor]; cube.material.needsUpdate = true; }
+    }
     if (torch) torch.visible = this.hotbar === 'torch';
   }
 
@@ -332,36 +397,79 @@ class UndergroundWorld {
   // so the entry hole is visible from the surface and you can always find
   // your way back up.
   _buildTerrain() {
-    const solid = new Map(); // key -> 'grass' | 'dirt' | 'stone' | 'coal' | 'iron' | 'gold' | 'wood'
+    const solid = new Map(); // key -> 'grass' | 'dirt' | 'stone' | 'coal' | 'iron' | 'gold' | 'wood' | 'leaves'
+    const seed = this.seed;
+    const flat = seed === 0;
     const inBounds = (x, z) => Math.abs(x) <= UG_SIZE && Math.abs(z) <= UG_SIZE;
+    const inFlat = (x, z) => Math.max(Math.abs(x), Math.abs(z)) <= UG_FLAT_RADIUS;
 
-    for (let y = -1; y >= -UG_DEPTH; y--) {
-      for (let x = -UG_SIZE; x <= UG_SIZE; x++) {
-        for (let z = -UG_SIZE; z <= UG_SIZE; z++) {
-          let type = y === -1 ? 'grass' : y <= -5 ? 'stone' : 'dirt';
+    // Surface height above the old flat level, in blocks: 0, 1 or 2. Rolling hills from two octaves
+    // of value noise; the area around the shaft is always flat.
+    const rise = (x, z) => {
+      if (flat || inFlat(x, z)) return 0;
+      const n = ugNoise2(x / 7, z / 7, seed) * 0.7 + ugNoise2(x / 3.2, z / 3.2, seed + 17) * 0.3;
+      return n < 0.46 ? 0 : n < 0.62 ? 1 : 2;
+    };
+    this.surfaceRise = (x, z) => rise(x, z); // exposed for tests / later slices
+
+    for (let x = -UG_SIZE; x <= UG_SIZE; x++) {
+      for (let z = -UG_SIZE; z <= UG_SIZE; z++) {
+        const top = -1 + rise(x, z); // gy of the grass block
+        for (let y = top; y >= -UG_DEPTH; y--) {
+          const depth = top - y;
+          let type = depth === 0 ? 'grass' : y >= -4 ? 'dirt' : 'stone';
           if (type === 'stone') {
-            const roll = Math.random();
+            const roll = ugHash(x, y, z, seed + 101);
             if (roll < 0.01 && y <= -6) type = 'gold';
             else if (roll < 0.035 && y <= -5) type = 'iron';
             else if (roll < 0.075) type = 'coal';
           }
-          // Old log veins running through the dirt layer — a wood source
-          // underground, so a mining trip can restock the 2D shop loop too.
-          if ((type === 'dirt' || type === 'grass') && Math.random() < 0.05) type = 'wood';
+          // Old log veins running through the dirt layer — a wood source underground.
+          if ((type === 'dirt' || type === 'grass') && ugHash(x, y, z, seed + 202) < 0.05) type = 'wood';
           solid.set(`${x},${y},${z}`, type);
         }
       }
-      // Carve the central shaft clear at every level.
-      for (let x = -1; x <= 1; x++) for (let z = -1; z <= 1; z++) solid.delete(`${x},${y},${z}`);
-      // A couple of wandering tunnels off the shaft, per level.
+    }
+
+    // Trees on the hills: a 2-block trunk with a leafy crown, never near the shaft, never touching.
+    this.trees = 0;
+    const treeRoots = new Set(); // columns that carry a tree: the surface under them is never tunnelled
+    if (!flat) {
+      const taken = new Set();
+      for (let x = -UG_SIZE + 2; x <= UG_SIZE - 2; x++) {
+        for (let z = -UG_SIZE + 2; z <= UG_SIZE - 2; z++) {
+          if (inFlat(x, z) || ugHash(x, 0, z, seed + 303) > 0.045) continue;
+          const r = rise(x, z);
+          let ok = true;
+          for (let dx = -2; dx <= 2 && ok; dx++) for (let dz = -2; dz <= 2; dz++) if (taken.has(`${x + dx},${z + dz}`)) { ok = false; break; }
+          for (let dx = -1; dx <= 1 && ok; dx++) for (let dz = -1; dz <= 1; dz++) if (rise(x + dx, z + dz) !== r) { ok = false; break; } // level ground only
+          if (!ok) continue;
+          taken.add(`${x},${z}`);
+          treeRoots.add(`${x},${z}`);
+          const base = -1 + r; // grass block under the trunk
+          solid.set(`${x},${base + 1},${z}`, 'wood');
+          solid.set(`${x},${base + 2},${z}`, 'wood');
+          for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) solid.set(`${x + dx},${base + 3},${z + dz}`, 'leaves');
+          solid.set(`${x},${base + 4},${z}`, 'leaves');
+          this.trees += 1;
+        }
+      }
+    }
+
+    const carve = (x, y, z) => solid.delete(`${x},${y},${z}`);
+    for (let y = -1; y >= -UG_DEPTH; y--) {
+      // Carve the central shaft clear at every level (and up through any hill that grew over it).
+      for (let x = -1; x <= 1; x++) for (let z = -1; z <= 1; z++) carve(x, y, z);
+      // A couple of wandering tunnels off the shaft, per level (seeded walk).
       for (let t = 0; t < 2; t++) {
         let cx = 0; let cz = 0;
         for (let step = 0; step < 16; step++) {
-          cx += Math.round(Math.random() * 2 - 1);
-          cz += Math.round(Math.random() * 2 - 1);
+          cx += Math.round(ugHash(step, y * 2 + t, 1, seed + 404) * 2 - 1);
+          cz += Math.round(ugHash(step, y * 2 + t, 2, seed + 404) * 2 - 1);
           if (!inBounds(cx, cz)) break;
-          solid.delete(`${cx},${y},${cz}`);
-          solid.delete(`${cx},${y - 1},${cz}`);
+          // The grass layer is never cut inside the flat clearing (spawn!) or under a tree.
+          if (!(y === -1 && (inFlat(cx, cz) || treeRoots.has(`${cx},${cz}`)))) carve(cx, y, cz);
+          carve(cx, y - 1, cz);
         }
       }
     }
@@ -375,7 +483,7 @@ class UndergroundWorld {
       }
     }
 
-    const kinds = ['grass', 'dirt', 'stone', 'coal', 'iron', 'gold', 'wood'];
+    const kinds = ['grass', 'dirt', 'stone', 'coal', 'iron', 'gold', 'wood', 'leaves'];
     const counts = {};
     kinds.forEach((k) => { counts[k] = 0; });
     solid.forEach((type) => { counts[type]++; });
@@ -392,6 +500,7 @@ class UndergroundWorld {
       coal: () => lambert('coal'),
       iron: () => lambert('iron'),
       gold: () => lambert('gold'),
+      leaves: () => lambert('leaves'),
     };
     kinds.forEach((type) => {
       if (!counts[type]) return;
@@ -433,12 +542,18 @@ class UndergroundWorld {
 
   _buildPlacedPool() {
     const geo = new THREE.BoxGeometry(UG_BLOCK * 0.98, UG_BLOCK * 0.98, UG_BLOCK * 0.98);
-    const mat = new THREE.MeshStandardMaterial({ map: this.textures.cobble, roughness: 1, metalness: 0 });
-    this.placedMesh = new THREE.InstancedMesh(geo, mat, UG_PLACED_CAPACITY);
-    this.placedMesh.count = UG_PLACED_CAPACITY;
     const hidden = new THREE.Matrix4().makeTranslation(0, -9999, 0);
-    for (let i = 0; i < UG_PLACED_CAPACITY; i++) this.placedMesh.setMatrixAt(i, hidden);
-    this.scene.add(this.placedMesh);
+    const make = (name, tex, capacity) => {
+      const mat = new THREE.MeshStandardMaterial({ map: this.textures[tex], roughness: 1, metalness: 0 });
+      const mesh = new THREE.InstancedMesh(geo, mat, capacity);
+      mesh.count = capacity;
+      for (let i = 0; i < capacity; i++) mesh.setMatrixAt(i, hidden);
+      this.scene.add(mesh);
+      this.pools[name] = { name, mesh, free: [], next: 0, capacity };
+    };
+    make('wall', 'cobble', UG_PLACED_CAPACITY);
+    make('dirt', 'dirt', 100);
+    this.placedMesh = this.pools.wall.mesh; // kept for older callers / tests
   }
 
   // ---------- input ----------
@@ -472,6 +587,16 @@ class UndergroundWorld {
     dom.addEventListener('pointerdown', this.onPointerDown);
     dom.addEventListener('pointermove', this.onPointerMove);
     window.addEventListener('pointerup', this.onPointerUp);
+
+    // Mouse wheel cycles the hotbar (down = next slot).
+    this.onWheel = (e) => {
+      e.preventDefault();
+      const now = performance.now();
+      if (!e.deltaY || now - (this._lastWheelT || 0) < 80) return; // sideways scroll / trackpad burst: one slot per gesture tick
+      this._lastWheelT = now;
+      this.selectSlot(this.slotIndex + (e.deltaY > 0 ? 1 : -1));
+    };
+    dom.addEventListener('wheel', this.onWheel, { passive: false });
 
     this.onResize = () => { if (this.active) this._resize(); };
     window.addEventListener('resize', this.onResize);
@@ -636,11 +761,15 @@ class UndergroundWorld {
 
   stop() {
     this.active = false;
+    this.mineHeld = false;
+    this._cancelMining();
+    this._collectAllDrops(); // anything still on the ground is handed over, never lost
     if (this._raf) cancelAnimationFrame(this._raf);
   }
 
   destroy() {
     this.stop();
+    this.renderer.domElement.removeEventListener('wheel', this.onWheel);
     window.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('keyup', this.onKeyUp);
     window.removeEventListener('pointerup', this.onPointerUp);
@@ -651,6 +780,10 @@ class UndergroundWorld {
       (Array.isArray(m.material) ? m.material : [m.material]).forEach((mat) => mat.dispose());
       m.geometry.dispose();
     });
+    (this.crackTextures || []).forEach((t) => t.dispose());
+    this.drops.forEach((d) => this.scene.remove(d.mesh));
+    if (this._dropGeo) this._dropGeo.dispose();
+    Object.values(this._dropMats || {}).forEach((m) => m.dispose());
     if (this.waterMesh) { this.waterMesh.geometry.dispose(); this.waterMesh.material.dispose(); }
     this.renderer.dispose();
     if (this.renderer.domElement.parentNode) this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
@@ -753,6 +886,9 @@ class UndergroundWorld {
       }
     }
 
+    this._updateMining(dt);
+    this._updateDrops(dt);
+
     // The mesh origins are body centres; the rig is the feet.
     this.playerMesh.position.set(p.x, p.y + UG_BODY_H / 2, p.z);
     this.playerMesh.rotation.y = this.yaw;
@@ -784,7 +920,7 @@ class UndergroundWorld {
   // behind/above in third-person and would give an unreliable reach,
   // especially when looking steeply up/down) along the look direction.
   _raycastTargets() {
-    const objs = [this.placedMesh];
+    const objs = Object.values(this.pools).map((p) => p.mesh);
     Object.values(this.terrainMeshes || {}).forEach((m) => objs.push(m));
     this.torches.forEach((t) => objs.push(t.mesh));
     const origin = this.rig.position.clone();
@@ -799,50 +935,207 @@ class UndergroundWorld {
     return found;
   }
 
+  // What does a raycast hit refer to? { type: 'torch'|'placed'|'terrain', key, kind, pool? } or null.
+  // The cell is recovered from the hit point (half a block back along the normal), so there is no
+  // scan over every block.
+  _targetFromHit(hit) {
+    const torchKey = this._torchKeyForMesh(hit.object);
+    if (torchKey) return { type: 'torch', key: torchKey, kind: 'torch' };
+    const normal = hit.face.normal.clone().applyMatrix3(new THREE.Matrix3().getNormalMatrix(hit.object.matrixWorld)).normalize();
+    const p = hit.point.clone().addScaledVector(normal, -UG_BLOCK * 0.5);
+    let key = `${Math.round(p.x / UG_BLOCK)},${Math.round(p.y / UG_BLOCK)},${Math.round(p.z / UG_BLOCK)}`;
+    let e = this.lookup.get(key);
+    if (!e || e.mesh !== hit.object || e.instanceId !== hit.instanceId) {
+      e = null; key = null;
+      this.lookup.forEach((v, k) => { if (v.mesh === hit.object && v.instanceId === hit.instanceId) { e = v; key = k; } });
+    }
+    if (!e) return null;
+    if (e.kind === 'placed') return { type: 'placed', key, kind: `placed_${e.pool}`, entry: e };
+    return { type: 'terrain', key, kind: e.kind, entry: e };
+  }
+
+  _mineTime(kind) { return UG_MINE_TIME[kind] || 1; }
+
+  // What breaking a block gives: { stone, wood, dirt, coal, iron, gold } counts + the block to draw.
+  _lootFor(kind) {
+    if (UG_ORE_KINDS.includes(kind)) return { loot: { stone: 3, [kind]: 1 }, look: kind };
+    switch (kind) {
+      case 'stone': return { loot: { stone: 1 }, look: 'stone' };
+      case 'wood': return { loot: { wood: 1 }, look: 'wood_side' };
+      case 'dirt': return { loot: { dirt: 1 }, look: 'dirt' };
+      case 'grass': return { loot: { dirt: 1 }, look: 'dirt' };
+      case 'placed_wall': return { loot: { stone: 1 }, look: 'cobble' };
+      case 'placed_dirt': return { loot: { dirt: 1 }, look: 'dirt' };
+      case 'torch': return { loot: { wood: 1 }, look: 'wood_side' };
+      case 'leaves': return { loot: {}, look: 'leaves' };
+      default: return { loot: {}, look: 'stone' };
+    }
+  }
+
+  _collect(loot) {
+    Object.keys(loot).forEach((k) => {
+      if (k === 'stone' || k === 'wood') this.resources[k] = (this.resources[k] || 0) + loot[k];
+      else if (UG_INV_KEYS.includes(k)) this.inventory[k] = (this.inventory[k] || 0) + loot[k];
+    });
+    this.onResourceChange();
+    this.onHotbarChange(this.getHotbarState());
+  }
+
+  // Removes the targeted block and returns { loot, look, pos } (pos = the block's centre).
+  _removeTarget(t) {
+    const [gx, gy, gz] = t.key.split(',').map(Number);
+    const pos = new THREE.Vector3(gx * UG_BLOCK, gy * UG_BLOCK, gz * UG_BLOCK);
+    if (t.type === 'torch') {
+      this._removeTorch(t.key);
+    } else if (t.type === 'placed') {
+      const pool = this.pools[t.entry.pool];
+      this._hidePlacedInstance(pool, t.entry.instanceId);
+      this.lookup.delete(t.key);
+      this.occupied.delete(t.key);
+    } else {
+      const mesh = t.entry.mesh;
+      mesh.setMatrixAt(t.entry.instanceId, new THREE.Matrix4().makeTranslation(0, -9999, 0));
+      mesh.instanceMatrix.needsUpdate = true;
+      this.lookup.delete(t.key);
+      this.occupied.delete(t.key);
+    }
+    return { ...this._lootFor(t.kind), pos };
+  }
+
+  // Instant mine: breaks the targeted block right now and collects the loot straight into the
+  // inventory (the original one-press behaviour; kept so existing callers keep working).
   mine() {
     this.swingT = 0.25;
     const hits = this._raycastTargets();
     if (!hits.length) return false;
-    const hit = hits[0];
-
-    const torchKey = this._torchKeyForMesh(hit.object);
-    if (torchKey) {
-      this._removeTorch(torchKey);
-      this.resources.wood = (this.resources.wood || 0) + 1;
-      this.onResourceChange();
-      return true;
-    }
-
-    if (hit.object === this.placedMesh) {
-      // Find which placed cell this instance belongs to.
-      let foundKey = null;
-      this.lookup.forEach((v, key) => {
-        if (v.mesh === this.placedMesh && v.instanceId === hit.instanceId) foundKey = key;
-      });
-      if (!foundKey) return false;
-      this._hidePlacedInstance(hit.instanceId);
-      this.lookup.delete(foundKey);
-      this.occupied.delete(foundKey);
-      this.resources.stone = (this.resources.stone || 0) + 1;
-      this.onResourceChange();
-      return true;
-    }
-
-    // Terrain block: find its grid key by matching mesh+instanceId.
-    let foundKey = null;
-    let kind = null;
-    this.lookup.forEach((v, key) => {
-      if (v.mesh === hit.object && v.instanceId === hit.instanceId) { foundKey = key; kind = v.kind; }
-    });
-    if (!foundKey) return false;
-    const hideMatrix = new THREE.Matrix4().makeTranslation(0, -9999, 0);
-    hit.object.setMatrixAt(hit.instanceId, hideMatrix);
-    hit.object.instanceMatrix.needsUpdate = true;
-    this.lookup.delete(foundKey);
-    this.occupied.delete(foundKey);
-    if (UG_ORE_KINDS.includes(kind)) { this.resources.stone = (this.resources.stone || 0) + 3; } else if (kind === 'stone') { this.resources.stone = (this.resources.stone || 0) + 1; } else if (kind === 'wood') { this.resources.wood = (this.resources.wood || 0) + 1; }
-    this.onResourceChange();
+    const t = this._targetFromHit(hits[0]);
+    if (!t) return false;
+    this._collect(this._removeTarget(t).loot);
     return true;
+  }
+
+  // Timed mining: hold the pickaxe on a block and it cracks apart over UG_MINE_TIME seconds, then
+  // drops an item you walk over to pick up. Looking away or releasing resets the progress.
+  setMining(on) {
+    this.mineHeld = !!on;
+    if (!on) this._cancelMining();
+  }
+
+  _cancelMining() {
+    this.mining = null;
+    if (this.crackMesh) this.crackMesh.visible = false;
+  }
+
+  _buildCrackOverlay() {
+    this.crackTextures = [];
+    for (let i = 0; i < UG_CRACK_STAGES; i++) {
+      const c = document.createElement('canvas');
+      c.width = 16; c.height = 16;
+      const g = c.getContext('2d');
+      const rnd = ugRng(9100 + i);
+      g.fillStyle = 'rgba(10,10,10,0.9)';
+      // Each stage adds more crack pixels (deterministic walks from the centre).
+      const walks = 2 + Math.floor(i * 0.9);
+      for (let w = 0; w < walks; w++) {
+        let x = 4 + Math.floor(rnd() * 8); let y = 4 + Math.floor(rnd() * 8);
+        const len = 3 + Math.floor(i * 0.8);
+        for (let k = 0; k < len; k++) {
+          g.fillRect(x, y, 1, 1);
+          x += Math.floor(rnd() * 3) - 1; y += Math.floor(rnd() * 3) - 1;
+          x = Math.max(0, Math.min(15, x)); y = Math.max(0, Math.min(15, y));
+        }
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false;
+      this.crackTextures.push(tex);
+    }
+    this.crackMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(UG_BLOCK * 1.01, UG_BLOCK * 1.01, UG_BLOCK * 1.01),
+      new THREE.MeshBasicMaterial({ map: this.crackTextures[0], transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 })
+    );
+    this.crackMesh.visible = false;
+    this.crackMesh.renderOrder = 5;
+    this.scene.add(this.crackMesh);
+  }
+
+  _updateMining(dt) {
+    if (!this.mineHeld) return;
+    if (this.swingT <= 0) this.swingT = 0.25; // keep the pickaxe swinging while you hold
+    const hits = this._raycastTargets();
+    const t = hits.length ? this._targetFromHit(hits[0]) : null;
+    if (!t) { this._cancelMining(); return; }
+    if (!this.mining || this.mining.key !== t.key) this.mining = { key: t.key, t: 0, need: this._mineTime(t.kind) };
+    this.mining.t += dt;
+    const progress = Math.min(1, this.mining.t / this.mining.need);
+    if (progress >= 1) {
+      const r = this._removeTarget(t);
+      this._cancelMining();
+      if (Object.keys(r.loot).length) this._spawnDrop(r.pos, r.loot, r.look);
+      return;
+    }
+    const [gx, gy, gz] = t.key.split(',').map(Number);
+    this.crackMesh.position.set(gx * UG_BLOCK, gy * UG_BLOCK, gz * UG_BLOCK);
+    this.crackMesh.material.map = this.crackTextures[Math.min(UG_CRACK_STAGES - 1, Math.floor(progress * UG_CRACK_STAGES))];
+    this.crackMesh.visible = true;
+  }
+
+  // ---------- dropped items ----------
+
+  _dropMaterial(look) {
+    this._dropMats = this._dropMats || {};
+    if (!this._dropMats[look]) this._dropMats[look] = new THREE.MeshStandardMaterial({ map: this.textures[look], roughness: 1, metalness: 0 });
+    return this._dropMats[look];
+  }
+
+  _spawnDrop(pos, loot, look) {
+    if (!this._dropGeo) this._dropGeo = new THREE.BoxGeometry(0.55, 0.55, 0.55);
+    if (this.drops.length >= UG_DROP_CAPACITY) { // pool full: the oldest is handed over immediately
+      const old = this.drops.shift();
+      this._collect(old.loot);
+      this.scene.remove(old.mesh);
+    }
+    const mesh = new THREE.Mesh(this._dropGeo, this._dropMaterial(look));
+    mesh.position.copy(pos);
+    this.scene.add(mesh);
+    this.drops.push({ mesh, loot, x: pos.x, y: pos.y, z: pos.z, vx: (Math.random() - 0.5) * 3, vy: 5, vz: (Math.random() - 0.5) * 3, age: 0 });
+  }
+
+  _collectAllDrops() {
+    if (!this.drops.length) return;
+    this.drops.forEach((d) => { this._collect(d.loot); this.scene.remove(d.mesh); });
+    this.drops = [];
+  }
+
+  _updateDrops(dt) {
+    if (!this.drops.length) return;
+    const p = this.rig.position;
+    const cx = p.x; const cy = p.y + UG_BODY_H / 2; const cz = p.z;
+    for (let i = this.drops.length - 1; i >= 0; i--) {
+      const d = this.drops[i];
+      d.age += dt;
+      const dx = cx - d.x; const dy = cy - d.y; const dz = cz - d.z;
+      const dist = Math.hypot(dx, dy, dz);
+      if (d.age > 0.3 && dist < UG_PICKUP_RADIUS) {
+        this._collect(d.loot);
+        this.scene.remove(d.mesh);
+        this.drops.splice(i, 1);
+        continue;
+      }
+      if (d.age > 0.5 && dist < UG_MAGNET_RADIUS) { // drift toward you once close
+        const k = (10 * dt) / Math.max(dist, 0.001);
+        d.x += dx * k; d.y += dy * k; d.z += dz * k; d.vy = 0;
+      } else {
+        d.vy -= 25 * dt;
+        d.x += d.vx * dt; d.z += d.vz * dt; d.y += d.vy * dt;
+        const damp = Math.pow(0.96, dt * 60); d.vx *= damp; d.vz *= damp; // frame-rate independent
+        const gx = Math.floor((d.x + 1) / UG_BLOCK); const gz = Math.floor((d.z + 1) / UG_BLOCK);
+        const gyb = Math.floor((d.y - 0.28 + 1) / UG_BLOCK);
+        if (this._solidAt(gx, gyb, gz)) { d.y = gyb * UG_BLOCK + 1 + 0.28; d.vy = 0; d.vx = 0; d.vz = 0; }
+        if (d.y < -UG_DEPTH * UG_BLOCK - 4) { d.y = -UG_DEPTH * UG_BLOCK - 1 + 0.28; d.vy = 0; }
+      }
+      d.mesh.position.set(d.x, d.y + Math.sin(d.age * 3) * 0.08 + 0.1, d.z);
+      d.mesh.rotation.y = d.age * 1.8;
+    }
   }
 
   _removeTorch(key) {
@@ -888,16 +1181,19 @@ class UndergroundWorld {
     this.occupied.add(key);
   }
 
-  _hidePlacedInstance(instanceId) {
-    const hidden = new THREE.Matrix4().makeTranslation(0, -9999, 0);
-    this.placedMesh.setMatrixAt(instanceId, hidden);
-    this.placedMesh.instanceMatrix.needsUpdate = true;
-    this.placedFree.push(instanceId);
+  _hidePlacedInstance(pool, instanceId) {
+    pool.mesh.setMatrixAt(instanceId, new THREE.Matrix4().makeTranslation(0, -9999, 0));
+    pool.mesh.instanceMatrix.needsUpdate = true;
+    pool.mesh.boundingSphere = null;
+    pool.free.push(instanceId);
   }
 
   place() {
-    const cost = this.hotbar === 'torch' ? 'wood' : 'stone';
-    if ((this.resources[cost] || 0) < 1) return false;
+    const type = this.hotbar;
+    const costKey = type === 'torch' ? 'wood' : type === 'wall' ? 'stone' : type === 'dirt' ? 'dirt' : null;
+    if (!costKey) return false; // coal / iron / gold / empty slots can't be placed (yet)
+    const have = costKey === 'dirt' ? this.inventory.dirt : this.resources[costKey];
+    if ((have || 0) < 1) return false;
     const hits = this._raycastTargets();
     if (!hits.length) return false;
     const hit = hits[0];
@@ -908,33 +1204,35 @@ class UndergroundWorld {
     const gz = Math.round(cell.z / UG_BLOCK);
     const key = `${gx},${gy},${gz}`;
     if (this.occupied.has(key) || this.water.has(key)) return false;
-    if (this.hotbar !== 'torch' && this._cellOverlapsPlayer(gx, gy, gz)) return false; // don't wall yourself in
+    if (type !== 'torch' && this._cellOverlapsPlayer(gx, gy, gz)) return false; // don't wall yourself in
 
-    if (this.hotbar === 'torch') {
+    if (type === 'torch') {
       this._addTorch(gx, gy, gz);
       this.resources.wood -= 1;
-      this.onResourceChange();
-      return true;
+    } else {
+      if (!this._putBlock(type === 'dirt' ? 'dirt' : 'wall', gx, gy, gz)) return false;
+      if (type === 'dirt') this.inventory.dirt -= 1; else this.resources.stone -= 1;
     }
-
-    if (!this._putStone(gx, gy, gz)) return false;
-    this.resources.stone -= 1;
     this.onResourceChange();
+    this.onHotbarChange(this.getHotbarState());
     return true;
   }
 
-  // Puts a cobble block in a cell with no cost / reach checks (used by place(), and handy for
+  // Puts a block from a pool into a cell with no cost / reach checks (used by place(), and handy for
   // tests and later features like crafting). False if the cell is taken or the pool is full.
-  _putStone(gx, gy, gz) {
+  _putBlock(poolName, gx, gy, gz) {
     const key = `${gx},${gy},${gz}`;
     if (this.occupied.has(key)) return false;
-    const slot = this.placedFree.length ? this.placedFree.pop() : (this.placedNext < UG_PLACED_CAPACITY ? this.placedNext++ : null);
+    const pool = this.pools[poolName];
+    const slot = pool.free.length ? pool.free.pop() : (pool.next < pool.capacity ? pool.next++ : null);
     if (slot === null) return false;
-    const m = new THREE.Matrix4().makeTranslation(gx * UG_BLOCK, gy * UG_BLOCK, gz * UG_BLOCK);
-    this.placedMesh.setMatrixAt(slot, m);
-    this.placedMesh.instanceMatrix.needsUpdate = true;
-    this.lookup.set(key, { mesh: this.placedMesh, instanceId: slot, kind: 'placed' });
+    pool.mesh.setMatrixAt(slot, new THREE.Matrix4().makeTranslation(gx * UG_BLOCK, gy * UG_BLOCK, gz * UG_BLOCK));
+    pool.mesh.instanceMatrix.needsUpdate = true;
+    pool.mesh.boundingSphere = null; // three caches it from the all-hidden pool; without this a placed block can never be hit by the ray
+    this.lookup.set(key, { mesh: pool.mesh, instanceId: slot, kind: 'placed', pool: poolName });
     this.occupied.add(key);
     return true;
   }
+
+  _putStone(gx, gy, gz) { return this._putBlock('wall', gx, gy, gz); }
 }

@@ -385,14 +385,21 @@
 
 <div id="underground-overlay" class="hidden">
   <div id="underground-canvas-wrap"></div>
-  <div id="underground-depth-hint">⛰️ Underground · local only · F5 view · Space jump (2x = fly)</div>
+  <div id="underground-depth-hint">⛰️ Underground · local only<span class="kbd-hint"> · F5 view · Space jump (2x = fly) · hold E to mine</span></div>
   <div id="ug-health" aria-label="Health">❤️ 20/20</div>
   <div id="underground-exit-hint" class="hidden">⬆️ You're near the surface shaft</div>
+  <div id="ug-hotbar" role="toolbar" aria-label="Hotbar (keys 1-9, mouse wheel)">
+    <button id="ug-hotbar-wall" class="ug-slot active" data-slot="0" type="button" aria-label="Slot 1: Stone wall"><span class="key">1</span><span class="ico">🧱</span><span class="cnt"></span></button>
+    <button id="ug-hotbar-torch" class="ug-slot" data-slot="1" type="button" aria-label="Slot 2: Torch"><span class="key">2</span><span class="ico">🔥</span><span class="cnt"></span></button>
+    <button class="ug-slot" data-slot="2" type="button" aria-label="Slot 3: Dirt"><span class="key">3</span><span class="ico">🟫</span><span class="cnt"></span></button>
+    <button class="ug-slot" data-slot="3" type="button" aria-label="Slot 4: Coal"><span class="key">4</span><span class="ico">⚫</span><span class="cnt"></span></button>
+    <button class="ug-slot" data-slot="4" type="button" aria-label="Slot 5: Iron ore"><span class="key">5</span><span class="ico">🔩</span><span class="cnt"></span></button>
+    <button class="ug-slot" data-slot="5" type="button" aria-label="Slot 6: Gold ore"><span class="key">6</span><span class="ico">🟡</span><span class="cnt"></span></button>
+    <button class="ug-slot" data-slot="6" type="button" aria-label="Slot 7: Empty"><span class="key">7</span><span class="ico"></span><span class="cnt"></span></button>
+    <button class="ug-slot" data-slot="7" type="button" aria-label="Slot 8: Empty"><span class="key">8</span><span class="ico"></span><span class="cnt"></span></button>
+    <button class="ug-slot" data-slot="8" type="button" aria-label="Slot 9: Empty"><span class="key">9</span><span class="ico"></span><span class="cnt"></span></button>
+  </div>
   <div id="underground-controls">
-    <div id="ug-hotbar">
-      <button id="ug-hotbar-wall" class="active" type="button" aria-label="Place walls (stone)">🧱</button>
-      <button id="ug-hotbar-torch" type="button" aria-label="Place torches (wood)">🔥</button>
-    </div>
     <div id="ug-dpad">
       <button class="dpad-btn" data-ugdir="up" type="button" aria-label="Forward">▲</button>
       <button class="dpad-btn" data-ugdir="left" type="button" aria-label="Strafe left">◀</button>
