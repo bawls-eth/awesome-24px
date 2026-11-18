@@ -2238,3 +2238,11 @@ body.touch-device .key-hint { display: none; }
     align-items: center;
   }
 }
+
+#ug-view-btn {
+  grid-column: 1 / span 2;
+  width: auto !important;
+  height: 36px !important;
+  border-radius: 18px !important;
+  font-size: 12px !important;
+}

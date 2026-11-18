@@ -2836,12 +2836,22 @@ class TownScene extends Phaser.Scene {
     document.getElementById('ug-hotbar-torch').classList.toggle('active', type === 'torch');
   }
 
+  updateUgViewButton() {
+    const btn = document.getElementById('ug-view-btn');
+    if (btn && this.underground) btn.textContent = this.underground.viewMode === 'first' ? '👁️ 1st' : '🧍 3rd';
+  }
+
   setupUndergroundControls() {
     const ug = this.underground;
     this.input.keyboard && window.addEventListener('keydown', (e) => {
       if (!this.inUnderground) return;
       const k = e.key.toLowerCase();
-      if (k === 'e') {
+      if (k === 'f5' || k === 'v') {
+        // F5 would reload the page: swallow it and flip first/third person instead.
+        e.preventDefault();
+        ug.toggleView();
+        this.updateUgViewButton();
+      } else if (k === 'e') {
         ug.mine();
       } else if (k === 'f') {
         ug.place();
@@ -2882,6 +2892,8 @@ class TownScene extends Phaser.Scene {
     downBtn.addEventListener('pointerleave', () => setVert(0));
     downBtn.addEventListener('pointercancel', () => setVert(0));
 
+    document.getElementById('ug-view-btn').addEventListener('click', () => { ug.toggleView(); this.updateUgViewButton(); });
+    this.updateUgViewButton();
     document.getElementById('ug-mine-btn').addEventListener('click', () => ug.mine());
     document.getElementById('ug-place-btn').addEventListener('click', () => ug.place());
     document.getElementById('ug-exit-btn').addEventListener('click', () => this.exitUnderground());

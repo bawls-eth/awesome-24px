@@ -560,6 +560,16 @@ to jump in — the game switches from the 2D town to a real 3D voxel cave
 (rendered with [Three.js](https://threejs.org), loaded from a CDN just like
 Phaser).
 
+- **Pixel-art blocks:** every block is a 16×16 pixel-art texture drawn
+  procedurally (seeded, so it looks the same every time) and shown with
+  crisp nearest-neighbour filtering: grass (green top, grassy dirt sides),
+  dirt, stone, **coal**, **iron** and **gold** ore, wood logs (bark sides,
+  ringed ends) and the cobble blocks you place. Still one instanced mesh per
+  block type, so it stays fast.
+- **View:** you start in **first person** at eye height with the pickaxe in
+  your right hand and the selected block / torch in your left. Press **F5**
+  (or **V**, or tap **👁️ 1st / 🧍 3rd** on mobile) to switch to a third-person
+  camera behind your voxel villager. F5 never reloads the page down here.
 - **Look:** drag with your mouse (desktop) or finger (mobile) to look around.
 - **Move:** **WASD**/arrows (desktop) or the D-pad (mobile) — walks on the
   flat ground relative to the way you're facing, the same as real
@@ -567,8 +577,8 @@ Phaser).
   "forward" takes you. There's no gravity down here — it's a flight-style
   "creative mode" dig, not a fall.
 - **Mine:** **E** (desktop) or ⛏️ (mobile) breaks whatever block is directly
-  ahead of you, within reach. Stone and the rarer gold ore blocks add to
-  your 🪨 stone count; dirt doesn't, it's just in the way.
+  ahead of you, within reach. Stone adds 1 and coal / iron / gold ore add 3 to
+  your 🪨 stone count; logs add 1 🪵; dirt and grass don't, they're just in the way.
 - **Place:** **F** (desktop) or the hotbar's Place button (mobile) places
   whichever slot is selected on the hotbar (**1**/**2** keys, or tap 🧱/🔥 on
   mobile):

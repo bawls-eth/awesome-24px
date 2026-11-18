@@ -3,6 +3,12 @@
 // 2D game's fishing/chopping), so what you mine and build underground is
 // only ever seen by you.
 //
+// Visuals (slice A1): every block is a 16x16 pixel-art texture drawn
+// procedurally to a canvas (seeded, so identical every run), sampled with
+// nearest-neighbour filtering for the crisp Minecraft look. The camera is
+// first-person at eye height by default, with a held pickaxe and the
+// selected block in view; F5 (or the View button) toggles third-person.
+//
 // Controls: WASD/dpad moves in the direction you're looking (so looking down
 // and walking forward takes you deeper — no separate up/down buttons needed).
 // Drag (mouse or touch) on the view to look around. Mine/Place act on
@@ -14,6 +20,130 @@ const UG_SIZE = 8; // cave spans x,z in [-UG_SIZE, UG_SIZE]
 const UG_DEPTH = 8; // y levels 0 (surface) down to -UG_DEPTH
 const UG_REACH = 7.5; // units — how far mine/place can reach
 const UG_PLACED_CAPACITY = 150;
+const UG_AMBIENT = 1.6;
+const UG_HEAD_LIGHT = 6;
+const UG_EYE_HEIGHT = 0.8; // eye is this far above rig.position (matches the mine/place ray origin)
+const UG_THIRD_PERSON_DIST = 6;
+const UG_ORE_KINDS = ['coal', 'iron', 'gold'];
+const UG_TEXTURE_NAMES = ['grass_top', 'grass_side', 'dirt', 'stone', 'coal', 'iron', 'gold', 'wood_side', 'wood_top', 'cobble'];
+
+// Small seeded PRNG so every texture is the same on every machine and run.
+function ugRng(seed) {
+  let t = seed >>> 0;
+  return () => {
+    t = (t + 0x6D2B79F5) >>> 0;
+    let r = Math.imul(t ^ (t >>> 15), 1 | t);
+    r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// Draws one 16x16 pixel-art tile onto a canvas and returns it. `kind` picks
+// the design; everything is per-pixel (no smoothing) so it stays crisp.
+function ugDrawTile(kind) {
+  const N = 16;
+  const c = document.createElement('canvas');
+  c.width = N; c.height = N;
+  const g = c.getContext('2d');
+  const rng = ugRng(kind.split('').reduce((a, ch) => a * 31 + ch.charCodeAt(0), 7));
+  const clamp = (v) => Math.max(0, Math.min(255, Math.round(v)));
+  const px = (x, y, r, gr, b) => { g.fillStyle = `rgb(${clamp(r)},${clamp(gr)},${clamp(b)})`; g.fillRect(x, y, 1, 1); };
+  const noisy = (base, jitter, x0 = 0, y0 = 0, x1 = N, y1 = N) => {
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+      const j = (rng() - 0.5) * 2 * jitter;
+      px(x, y, base[0] + j, base[1] + j, base[2] + j * 0.9);
+    }
+  };
+  const blob = (cx, cy, color, size = 2) => {
+    for (let dy = 0; dy < size; dy++) for (let dx = 0; dx < size; dx++) {
+      if (rng() < 0.18 && size > 1) continue; // ragged edges
+      const j = (rng() - 0.5) * 24;
+      px(cx + dx, cy + dy, color[0] + j, color[1] + j, color[2] + j);
+    }
+  };
+  const stoneBase = () => {
+    noisy([128, 128, 132], 15);
+    // a few dark cracks / pits
+    for (let i = 0; i < 7; i++) px((rng() * N) | 0, (rng() * N) | 0, 92, 92, 98);
+  };
+  switch (kind) {
+    case 'dirt':
+      noisy([121, 85, 58], 14);
+      for (let i = 0; i < 10; i++) px((rng() * N) | 0, (rng() * N) | 0, 92, 62, 40);
+      for (let i = 0; i < 6; i++) px((rng() * N) | 0, (rng() * N) | 0, 150, 108, 76);
+      break;
+    case 'grass_top':
+      noisy([88, 150, 52], 18);
+      for (let i = 0; i < 14; i++) px((rng() * N) | 0, (rng() * N) | 0, 64, 118, 38);
+      for (let i = 0; i < 8; i++) px((rng() * N) | 0, (rng() * N) | 0, 120, 178, 74);
+      break;
+    case 'grass_side': {
+      noisy([121, 85, 58], 14);
+      for (let i = 0; i < 8; i++) px((rng() * N) | 0, (rng() * N) | 0, 92, 62, 40);
+      // grass cap with a ragged fringe
+      for (let x = 0; x < N; x++) {
+        const depth = 3 + ((rng() * 3) | 0);
+        for (let y = 0; y < depth; y++) { const j = (rng() - 0.5) * 30; px(x, y, 88 + j, 150 + j, 52 + j * 0.5); }
+      }
+      break;
+    }
+    case 'stone':
+      stoneBase();
+      break;
+    case 'coal':
+      stoneBase();
+      [[2, 3], [9, 2], [5, 9], [11, 11], [1, 12]].forEach(([x, y]) => blob(x, y, [34, 34, 38], 2 + ((rng() * 2) | 0)));
+      break;
+    case 'iron':
+      stoneBase();
+      [[3, 2], [10, 4], [6, 10], [12, 11], [1, 11]].forEach(([x, y]) => blob(x, y, [216, 160, 120], 2));
+      break;
+    case 'gold':
+      stoneBase();
+      [[2, 4], [9, 1], [5, 9], [11, 10], [2, 12]].forEach(([x, y]) => blob(x, y, [244, 208, 54], 2));
+      break;
+    case 'wood_side':
+      for (let x = 0; x < N; x++) {
+        const stripe = 108 + ((x % 4 === 0) ? -28 : (x % 4 === 2 ? 10 : 0));
+        for (let y = 0; y < N; y++) { const j = (rng() - 0.5) * 10; px(x, y, stripe + j, stripe * 0.68 + j, stripe * 0.36 + j); }
+      }
+      break;
+    case 'wood_top':
+      for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+        const ring = Math.floor(Math.hypot(x - 7.5, y - 7.5)) % 3;
+        const base = ring === 0 ? 178 : ring === 1 ? 150 : 128;
+        const edge = (x === 0 || y === 0 || x === N - 1 || y === N - 1) ? -40 : 0;
+        const j = (rng() - 0.5) * 8;
+        px(x, y, base + edge + j, base * 0.74 + edge + j, base * 0.42 + edge + j);
+      }
+      break;
+    case 'cobble':
+      noisy([118, 118, 122], 12);
+      // brick-ish mortar lines
+      for (let x = 0; x < N; x++) { px(x, 0, 80, 80, 86); px(x, 7, 80, 80, 86); px(x, 15, 80, 80, 86); }
+      for (let y = 0; y < 8; y++) px(4, y, 80, 80, 86);
+      for (let y = 8; y < N; y++) px(11, y, 80, 80, 86);
+      break;
+    default:
+      noisy([200, 0, 200], 0);
+  }
+  return c;
+}
+
+// All textures once: nearest-neighbour, no mipmaps, sRGB.
+function ugBuildTextures() {
+  const out = {};
+  UG_TEXTURE_NAMES.forEach((name) => {
+    const tex = new THREE.CanvasTexture(ugDrawTile(name));
+    tex.magFilter = THREE.NearestFilter;
+    tex.minFilter = THREE.NearestFilter;
+    tex.generateMipmaps = false;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.needsUpdate = true;
+    out[name] = tex;
+  });
+  return out;
+}
 
 class UndergroundWorld {
   constructor({ canvasWrap, resources, onResourceChange, onExit }) {
@@ -34,6 +164,7 @@ class UndergroundWorld {
     this.placedNext = 0;
     this.torches = new Map(); // "gx,gy,gz" -> { group, light, mesh }
     this.hotbar = 'wall'; // 'wall' (costs stone) | 'torch' (costs wood)
+    this.viewMode = 'first'; // 'first' (eye height) | 'third' (behind the player)
 
     this._initThree();
     this._buildTerrain();
@@ -45,11 +176,31 @@ class UndergroundWorld {
   // idea as a Minecraft hotbar, just two slots instead of nine.
   setHotbar(type) {
     this.hotbar = type;
+    this._refreshHeldItem();
+  }
+
+  // 'first' | 'third'. F5 / the View button flip between them.
+  setView(mode) {
+    this.viewMode = mode === 'third' ? 'third' : 'first';
+    this._applyViewVisibility();
+  }
+
+  toggleView() {
+    this.setView(this.viewMode === 'first' ? 'third' : 'first');
+    return this.viewMode;
+  }
+
+  _applyViewVisibility() {
+    const first = this.viewMode === 'first';
+    if (this.playerMesh) this.playerMesh.visible = !first;
+    if (this.tool) this.tool.visible = !first;
+    if (this.fpHand) this.fpHand.visible = first;
   }
 
   // ---------- setup ----------
 
   _initThree() {
+    this.textures = ugBuildTextures();
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x0a0e14);
     this.scene.fog = new THREE.FogExp2(0x0a0e14, 0.03);
@@ -57,11 +208,14 @@ class UndergroundWorld {
     this.camera = new THREE.PerspectiveCamera(70, 1, 0.1, 200);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    // Phones are fill-rate bound: cap the pixel ratio lower there (the chunky pixel-art look doesn't need more).
+    const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, coarse ? 1.5 : 2));
     this.canvasWrap.appendChild(this.renderer.domElement);
 
-    this.scene.add(new THREE.AmbientLight(0x8a96b0, 2.2));
-    this.torch = new THREE.PointLight(0xffc98a, 60, 30, 1.6);
+    // Tuned for the (brighter) pixel-art textures: dim ambient + a head-torch that fades with distance.
+    this.scene.add(new THREE.AmbientLight(0x8a96b0, UG_AMBIENT));
+    this.torch = new THREE.PointLight(0xffe2b8, UG_HEAD_LIGHT, 30, 1.6);
     this.scene.add(this.torch);
 
     const playerGeo = new THREE.CapsuleGeometry(0.6, 1.1, 4, 8);
@@ -96,6 +250,52 @@ class UndergroundWorld {
 
     this.raycaster = new THREE.Raycaster();
     this.raycaster.far = UG_REACH;
+
+    this._buildFirstPersonHand();
+    this._applyViewVisibility();
+  }
+
+  // Held items for first-person, parented to the camera: the pickaxe in the
+  // right hand (swings on mine) and the selected block / torch in the left.
+  _buildFirstPersonHand() {
+    this.fpHand = new THREE.Group();
+    const handMat = (color) => new THREE.MeshBasicMaterial({ color, depthTest: false });
+    const pick = new THREE.Group();
+    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.62, 0.07), handMat(0x8a5a2b));
+    handle.position.y = 0.05;
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.09, 0.5), handMat(0xb8c2cc));
+    head.position.y = 0.36;
+    pick.add(handle, head);
+    pick.position.set(0.5, -0.42, -0.85);
+    pick.rotation.set(-0.5, -0.35, 0.25);
+    this.fpPick = pick;
+
+    // Selected block (cobble cube for walls) or a torch, in the left hand.
+    this.fpItem = new THREE.Group();
+    this.fpItem.position.set(-0.5, -0.4, -0.85);
+    this.fpItem.rotation.set(0.35, 0.6, 0);
+    const cube = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.24, 0.24), new THREE.MeshBasicMaterial({ map: this.textures.cobble, color: 0xcfcfcf, depthTest: false }));
+    cube.name = 'fp-cube';
+    const torchHeld = new THREE.Group();
+    torchHeld.name = 'fp-torch';
+    const stick = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.34, 0.06), handMat(0x7a4a26));
+    const flame = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.09, 0.09), new THREE.MeshBasicMaterial({ color: 0xffcf5c, depthTest: false }));
+    flame.position.y = 0.2;
+    torchHeld.add(stick, flame);
+    this.fpItem.add(cube, torchHeld);
+
+    [pick, this.fpItem].forEach((grp) => grp.traverse((o) => { if (o.isMesh) o.renderOrder = 999; }));
+    this.fpHand.add(pick, this.fpItem);
+    this.camera.add(this.fpHand);
+    this._refreshHeldItem();
+  }
+
+  _refreshHeldItem() {
+    if (!this.fpItem) return;
+    const cube = this.fpItem.getObjectByName('fp-cube');
+    const torch = this.fpItem.getObjectByName('fp-torch');
+    if (cube) cube.visible = this.hotbar !== 'torch';
+    if (torch) torch.visible = this.hotbar === 'torch';
   }
 
   // Carved with a short random walk per depth level so it reads as tunnels,
@@ -103,17 +303,22 @@ class UndergroundWorld {
   // so the entry hole is visible from the surface and you can always find
   // your way back up.
   _buildTerrain() {
-    const solid = new Map(); // key -> 'dirt' | 'stone' | 'ore'
+    const solid = new Map(); // key -> 'grass' | 'dirt' | 'stone' | 'coal' | 'iron' | 'gold' | 'wood'
     const inBounds = (x, z) => Math.abs(x) <= UG_SIZE && Math.abs(z) <= UG_SIZE;
 
     for (let y = -1; y >= -UG_DEPTH; y--) {
       for (let x = -UG_SIZE; x <= UG_SIZE; x++) {
         for (let z = -UG_SIZE; z <= UG_SIZE; z++) {
-          let type = y <= -5 ? 'stone' : 'dirt';
-          if (type === 'stone' && Math.random() < 0.05) type = 'ore';
-          // Old root veins running through the dirt layer — a wood source
+          let type = y === -1 ? 'grass' : y <= -5 ? 'stone' : 'dirt';
+          if (type === 'stone') {
+            const roll = Math.random();
+            if (roll < 0.01 && y <= -6) type = 'gold';
+            else if (roll < 0.035 && y <= -5) type = 'iron';
+            else if (roll < 0.075) type = 'coal';
+          }
+          // Old log veins running through the dirt layer — a wood source
           // underground, so a mining trip can restock the 2D shop loop too.
-          if (type === 'dirt' && Math.random() < 0.05) type = 'root';
+          if ((type === 'dirt' || type === 'grass') && Math.random() < 0.05) type = 'wood';
           solid.set(`${x},${y},${z}`, type);
         }
       }
@@ -132,15 +337,28 @@ class UndergroundWorld {
       }
     }
 
-    const counts = { dirt: 0, stone: 0, ore: 0, root: 0 };
+    const kinds = ['grass', 'dirt', 'stone', 'coal', 'iron', 'gold', 'wood'];
+    const counts = {};
+    kinds.forEach((k) => { counts[k] = 0; });
     solid.forEach((type) => { counts[type]++; });
     const meshes = {};
-    ['dirt', 'stone', 'ore', 'root'].forEach((type) => {
+    // Per-pixel lighting (Standard, fully rough): the 2-unit block faces are too large for
+    // cheap per-vertex lighting to look right next to a point light.
+    const lambert = (name) => new THREE.MeshStandardMaterial({ map: this.textures[name], roughness: 1, metalness: 0 });
+    // Per-face materials (BoxGeometry order: +x, -x, +y, -y, +z, -z).
+    const faces = {
+      grass: () => { const side = lambert('grass_side'); return [side, side, lambert('grass_top'), lambert('dirt'), side, side]; },
+      wood: () => { const side = lambert('wood_side'); const top = lambert('wood_top'); return [side, side, top, top, side, side]; },
+      dirt: () => lambert('dirt'),
+      stone: () => lambert('stone'),
+      coal: () => lambert('coal'),
+      iron: () => lambert('iron'),
+      gold: () => lambert('gold'),
+    };
+    kinds.forEach((type) => {
       if (!counts[type]) return;
-      const color = type === 'dirt' ? 0x6b4a32 : type === 'stone' ? 0x6e7480 : type === 'ore' ? 0xdcb94e : 0x8a5a2b;
       const geo = new THREE.BoxGeometry(UG_BLOCK * 0.98, UG_BLOCK * 0.98, UG_BLOCK * 0.98);
-      const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.9 });
-      const mesh = new THREE.InstancedMesh(geo, mat, counts[type]);
+      const mesh = new THREE.InstancedMesh(geo, faces[type](), counts[type]);
       mesh.count = 0;
       this.scene.add(mesh);
       meshes[type] = mesh;
@@ -162,7 +380,7 @@ class UndergroundWorld {
 
   _buildPlacedPool() {
     const geo = new THREE.BoxGeometry(UG_BLOCK * 0.98, UG_BLOCK * 0.98, UG_BLOCK * 0.98);
-    const mat = new THREE.MeshStandardMaterial({ color: 0x8c96a6, roughness: 0.9 });
+    const mat = new THREE.MeshStandardMaterial({ map: this.textures.cobble, roughness: 1, metalness: 0 });
     this.placedMesh = new THREE.InstancedMesh(geo, mat, UG_PLACED_CAPACITY);
     this.placedMesh.count = UG_PLACED_CAPACITY;
     const hidden = new THREE.Matrix4().makeTranslation(0, -9999, 0);
@@ -245,6 +463,7 @@ class UndergroundWorld {
       this.scene.remove(this.playerMesh);
       this.playerMesh = mesh;
       this.scene.add(mesh);
+      this._applyViewVisibility(); // the voxel avatar arrives async: honour the current view
     };
     img.src = url;
   }
@@ -256,6 +475,7 @@ class UndergroundWorld {
     this.rig.position.set(0, -0.2, 0);
     this.yaw = Math.PI;
     this.pitch = -0.5;
+    this._applyViewVisibility();
     this._resize();
     this._lastT = performance.now();
     this._raf = requestAnimationFrame(this._loop);
@@ -340,11 +560,20 @@ class UndergroundWorld {
     this.tool.rotation.y = this.yaw;
     this.swingT = Math.max(0, this.swingT - delta);
     this.toolGrip.rotation.x = -0.35 - Math.sin((this.swingT / 0.25) * Math.PI) * 1.2;
-    const camDist = 6;
-    const look = this._forwardVector();
-    this.camera.position.copy(this.rig.position).addScaledVector(look, -camDist);
-    this.camera.position.y += 1.5;
-    this.camera.lookAt(this.rig.position.x, this.rig.position.y + 0.8, this.rig.position.z);
+    if (this.viewMode === 'first') {
+      // Eye height; same origin the mine/place ray uses, so the crosshair is exact.
+      this.camera.position.set(this.rig.position.x, this.rig.position.y + UG_EYE_HEIGHT, this.rig.position.z);
+      this.camera.rotation.set(this.pitch, this.yaw, 0, 'YXZ');
+      // Pickaxe swing (the whole arm kicks forward and back).
+      const k = Math.sin((this.swingT / 0.25) * Math.PI);
+      this.fpPick.rotation.set(-0.5 - k * 1.1, -0.35, 0.25);
+      this.fpPick.position.set(0.5, -0.42 + k * 0.05, -0.85 - k * 0.15);
+    } else {
+      const look = this._forwardVector();
+      this.camera.position.copy(this.rig.position).addScaledVector(look, -UG_THIRD_PERSON_DIST);
+      this.camera.position.y += 1.5;
+      this.camera.lookAt(this.rig.position.x, this.rig.position.y + 0.8, this.rig.position.z);
+    }
     this.torch.position.copy(this.camera.position);
 
     this.nearExit = Math.abs(this.rig.position.x) < UG_BLOCK * 1.5
@@ -414,7 +643,7 @@ class UndergroundWorld {
     hit.object.instanceMatrix.needsUpdate = true;
     this.lookup.delete(foundKey);
     this.occupied.delete(foundKey);
-    if (kind === 'ore') { this.resources.stone = (this.resources.stone || 0) + 3; } else if (kind === 'stone') { this.resources.stone = (this.resources.stone || 0) + 1; } else if (kind === 'root') { this.resources.wood = (this.resources.wood || 0) + 1; }
+    if (UG_ORE_KINDS.includes(kind)) { this.resources.stone = (this.resources.stone || 0) + 3; } else if (kind === 'stone') { this.resources.stone = (this.resources.stone || 0) + 1; } else if (kind === 'wood') { this.resources.wood = (this.resources.wood || 0) + 1; }
     this.onResourceChange();
     return true;
   }
