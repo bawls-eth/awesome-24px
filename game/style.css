@@ -2175,7 +2175,7 @@ body.touch-device .key-hint { display: none; }
     white-space: nowrap;
   }
   /* Collapsed: just the chip. */
-  #player-list-panel.collapsed {
+  body #player-list-panel.collapsed {
     width: auto;
     max-width: none;
     padding: 4px;
