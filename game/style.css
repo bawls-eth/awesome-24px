@@ -1399,6 +1399,233 @@ body.touch-device .key-hint { display: none; }
 
 .museum-list li:last-child { border-bottom: none; }
 
+/* Museum wings: tabs, progress bars, specimen card grid, detail view */
+#museum-overlay .museum-card {
+  width: 560px;
+  max-width: calc(100vw - 24px);
+  max-height: 88vh;
+  max-height: 88dvh;
+  padding: 20px 16px 16px;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+}
+
+#museum-overlay .museum-card h2 { padding: 0 36px; }
+
+#museum-overlay .museum-card > * { flex-shrink: 0; }
+
+.museum-wing.hidden,
+.museum-detail.hidden,
+.museum-card.museum-detail-open .museum-tabs,
+.museum-card.museum-detail-open .museum-body,
+.museum-card.museum-detail-open .museum-progress { display: none; }
+
+.museum-progress { margin: 0 0 10px; }
+
+.museum-progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #9aa7bb;
+  margin-bottom: 4px;
+}
+
+.museum-progress-label b { color: #ffe066; }
+
+.museum-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: #1c2430;
+  border: 1px solid #3a4658;
+  overflow: hidden;
+}
+
+.museum-bar-fill {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, #7bd88f, #ffe066);
+  transition: width 0.3s ease;
+}
+
+.museum-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  gap: 6px;
+  margin: 0 -16px 4px;
+  padding: 8px 16px;
+  background: #232c3a;
+  flex-wrap: wrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.museum-tabs::-webkit-scrollbar { display: none; }
+
+.museum-tab {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid #3a4658;
+  background: #1c2430;
+  color: #d6dce6;
+  font: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.museum-tab.active { background: #ffe066; border-color: #ffe066; color: #1c2430; font-weight: 700; }
+
+.museum-tab-count { opacity: 0.75; font-size: 11px; }
+
+.museum-tab.complete:not(.active) { border-color: #7bd88f; color: #7bd88f; }
+
+.museum-wing .museum-section-title { margin-top: 6px; }
+
+.museum-wing .polyroll-tagline { text-align: left; margin-bottom: 8px; }
+
+.museum-wing.complete .museum-section-title::after { content: ' ✓ complete'; color: #7bd88f; }
+
+.museum-list.museum-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.museum-list.museum-grid li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  border: 1px solid #3a4658;
+  border-radius: 10px;
+  background: #1c2430;
+  opacity: 1;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.museum-list.museum-grid li:last-child { border-bottom: 1px solid #3a4658; }
+
+.museum-list.museum-grid li.unlocked { border-color: #6b7a52; background: #2a3324; }
+
+.museum-card-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: center;
+}
+
+.museum-card-btn:hover .museum-art,
+.museum-card-btn:focus-visible .museum-art { background: #3a4630; }
+
+.museum-card-btn:focus-visible { outline: 2px solid #ffe066; outline-offset: -2px; }
+
+.museum-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+.museum-art img { width: 100%; height: 100%; object-fit: contain; }
+
+.museum-art-emoji { font-size: 40px; line-height: 1; }
+
+.museum-specimen.locked .museum-art { filter: brightness(0) opacity(0.35); }
+
+.museum-lock {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.museum-name {
+  padding: 4px 4px 6px;
+  font-size: 11px;
+  line-height: 1.25;
+  text-align: center;
+  color: #eef2f7;
+  overflow-wrap: anywhere;
+}
+
+.museum-specimen.locked .museum-name { color: #6f7c90; }
+
+.museum-detail { text-align: left; }
+
+.museum-detail-back {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid #3a4658;
+  background: #1c2430;
+  color: #eef2f7;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.museum-detail-art {
+  width: 160px;
+  max-width: 60%;
+  aspect-ratio: 1;
+  margin: 10px auto 6px;
+  padding: 12px;
+  box-sizing: border-box;
+  border-radius: 14px;
+  background: #1c2430;
+  border: 2px solid #3a4658;
+}
+
+.museum-detail-art[data-rarity="uncommon"] { border-color: #6fb3ff; }
+.museum-detail-art[data-rarity="rare"] { border-color: #ffe066; }
+
+.museum-detail-art img { width: 100%; height: 100%; object-fit: contain; }
+
+.museum-detail-name { margin: 4px 0 0; text-align: center; font-size: 18px; }
+
+.museum-detail-sci { margin: 2px 0 10px; text-align: center; font-style: italic; color: #9aa7bb; font-size: 13px; min-height: 1em; }
+
+.museum-facts { margin: 0; font-size: 13px; }
+
+.museum-facts > div:not(.museum-facts-loading) {
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid #2c3647;
+}
+
+.museum-facts > div:last-child { border-bottom: none; }
+
+.museum-facts dt { color: #9aa7bb; }
+
+.museum-facts dd { margin: 0; color: #eef2f7; text-transform: none; }
+
+.museum-facts-loading { color: #9aa7bb; font-style: italic; text-align: center; padding: 10px 0; }
+
+@media (max-width: 480px) {
+  .museum-list.museum-grid { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; }
+  .museum-tabs { flex-wrap: nowrap; }
+  .museum-art-emoji { font-size: 32px; }
+}
+
 /* ---------- Able Sisters outfit shop (reuses .join-card/.species-tab/.avatar-choice) ---------- */
 
 #outfit-overlay {

@@ -84,24 +84,57 @@
     </div>
   </div>
 
-  <div id="museum-overlay" class="hidden">
-    <div class="achievements-card">
+  <div id="museum-overlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="museum-title">
+    <div class="achievements-card museum-card">
       <button id="museum-close-btn" type="button" aria-label="Close">✕</button>
-      <h2>🏛️ Museum</h2>
+      <h2 id="museum-title">🏛️ Museum</h2>
       <p class="polyroll-tagline">Fossils are donated at the building outside; fauna and flora are
         recorded the first time you ever catch or pick one — nothing to carry in or hand over.</p>
-      <h3 class="museum-section-title">🦴 Fossils</h3>
-      <ul id="museum-fossils-list" class="museum-list"></ul>
-      <h3 class="museum-section-title">🦋 Fauna</h3>
-      <ul id="museum-fauna-list" class="museum-list"></ul>
-      <h3 class="museum-section-title">🌸 Flora</h3>
-      <ul id="museum-flora-list" class="museum-list"></ul>
-      <h3 class="museum-section-title">🦌 Wild Fauna <span id="wild-fauna-count">0</span>/<span id="wild-fauna-cap">0</span></h3>
-      <p class="polyroll-tagline">The animals scattered through the wilderness, ponds, and ocean —
-        walk up and press E to log one, no need to carry it in.</p>
-      <ul id="museum-wildfauna-list" class="museum-list"></ul>
-      <h3 class="museum-section-title">🌿 Wild Flora <span id="wild-flora-count">0</span>/<span id="wild-flora-cap">0</span></h3>
-      <ul id="museum-wildflora-list" class="museum-list"></ul>
+      <div class="museum-progress">
+        <div class="museum-progress-label"><span>Overall collection</span><b id="museum-total-count">0/0</b></div>
+        <div class="museum-bar"><div id="museum-total-bar" class="museum-bar-fill"></div></div>
+      </div>
+      <div class="museum-tabs" role="tablist" aria-label="Museum wings">
+        <button type="button" class="museum-tab" role="tab" data-wing="fossils">🦴 Fossils <span class="museum-tab-count"></span></button>
+        <button type="button" class="museum-tab" role="tab" data-wing="fauna">🦋 Fauna <span class="museum-tab-count"></span></button>
+        <button type="button" class="museum-tab" role="tab" data-wing="flora">🌸 Flora <span class="museum-tab-count"></span></button>
+        <button type="button" class="museum-tab" role="tab" data-wing="wildfauna">🦌 Wild Fauna <span class="museum-tab-count"></span></button>
+        <button type="button" class="museum-tab" role="tab" data-wing="wildflora">🌿 Wild Flora <span class="museum-tab-count"></span></button>
+      </div>
+      <div class="museum-body">
+        <section class="museum-wing" data-wing="fossils" role="tabpanel">
+          <h3 class="museum-section-title">🦴 Fossils</h3>
+          <p class="polyroll-tagline">Dig fossils up, then press E at the Museum building to donate them.</p>
+          <div class="museum-bar"><div class="museum-bar-fill"></div></div>
+          <ul id="museum-fossils-list" class="museum-list museum-grid"></ul>
+        </section>
+        <section class="museum-wing" data-wing="fauna" role="tabpanel">
+          <h3 class="museum-section-title">🦋 Fauna</h3>
+          <p class="polyroll-tagline">Logged the first time you catch one.</p>
+          <div class="museum-bar"><div class="museum-bar-fill"></div></div>
+          <ul id="museum-fauna-list" class="museum-list museum-grid"></ul>
+        </section>
+        <section class="museum-wing" data-wing="flora" role="tabpanel">
+          <h3 class="museum-section-title">🌸 Flora</h3>
+          <p class="polyroll-tagline">Logged the first time you pick one.</p>
+          <div class="museum-bar"><div class="museum-bar-fill"></div></div>
+          <ul id="museum-flora-list" class="museum-list museum-grid"></ul>
+        </section>
+        <section class="museum-wing" data-wing="wildfauna" role="tabpanel">
+          <h3 class="museum-section-title">🦌 Wild Fauna <span id="wild-fauna-count">0</span>/<span id="wild-fauna-cap">0</span></h3>
+          <p class="polyroll-tagline">The animals scattered through the wilderness, ponds, and ocean —
+            walk up and press E to log one, no need to carry it in. Tap a discovered card for its facts.</p>
+          <div class="museum-bar"><div class="museum-bar-fill"></div></div>
+          <ul id="museum-wildfauna-list" class="museum-list museum-grid"></ul>
+        </section>
+        <section class="museum-wing" data-wing="wildflora" role="tabpanel">
+          <h3 class="museum-section-title">🌿 Wild Flora <span id="wild-flora-count">0</span>/<span id="wild-flora-cap">0</span></h3>
+          <p class="polyroll-tagline">Plants, fungi and more — press E next to one to log it. Tap a discovered card for its facts.</p>
+          <div class="museum-bar"><div class="museum-bar-fill"></div></div>
+          <ul id="museum-wildflora-list" class="museum-list museum-grid"></ul>
+        </section>
+      </div>
+      <div id="museum-detail" class="museum-detail hidden" aria-live="polite"></div>
     </div>
   </div>
 
