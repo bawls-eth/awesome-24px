@@ -2098,3 +2098,5 @@ body.touch-device .key-hint { display: none; }
 .workbench-craft-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 #workbench-list { max-height: 50vh; }
 .workbench-craft-btn { white-space: nowrap; flex-shrink: 0; }
+.workbench-craft-btn { min-height: 40px; min-width: 64px; font-weight: 700; }
+#inventory-panel .hidden { display: none; }

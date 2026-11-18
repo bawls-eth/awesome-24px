@@ -29,6 +29,24 @@ right now, before you even pick a name.
 - **Fish** at the pond (or the second pond out east), **chop** trees for
   wood, **mine** rocks for stone — classic Animal Crossing activities, fill
   the inventory in the top-left
+- **DIY Workbench** 🔨 — walk up to the workbench just east of the shop/museum
+  (shown on the map) and press **E** / the **A** button. Eight recipes turn
+  gathered goods into crafted items that sell at the shop for ~1.3-1.5x their
+  raw value (deal/bulk bonuses don't apply to crafted goods):
+  | Recipe | Cost | Sells for |
+  |---|---|---|
+  | 🪵 Plank Stack | 3 wood | 4⭐ |
+  | 🧱 Stone Brick | 3 stone | 4⭐ |
+  | 🍲 Fish Stew | 2 fish + 1 fruit | 4⭐ |
+  | 🫙 Bug Jar | 3 bugs + 1 wood | 6⭐ |
+  | 🥧 Fruit Pie | 4 fruit | 6⭐ |
+  | 🌼 Flower Crown | 4 flowers | 6⭐ |
+  | 🎐 Shell Chime | 3 shells + 1 wood | 6⭐ |
+  | 🏮 Lantern | 2 stone + 2 wood + 2 bugs | 9⭐ |
+
+  Crafted stock shows as a 🔨 chip in the bag and is saved under the
+  additive `crafted` key. Achievements: DIY Beginner, Crafty, Master Crafter.
+  Tests: `NODE_PATH=$(npm root -g) node game/tests/workbench.test.js`.
 - **Shake fruit trees** 🍎 — every third tree bears apples; chopping it drops
   an apple as well as wood. The apple regrows after the tree's cooldown
 - **Catch butterflies** 🦋 — eight of them flutter around town; walk up and

@@ -150,6 +150,7 @@
     <span title="Turnips — sell at the shop before the price drops">🥬 <b id="turnip-count">0</b></span>
     <span title="Beachcombed shells — sell at the shop">🐚 <b id="shell-count">0</b></span>
     <span title="Flowers picked around town — sell at the shop">🌸 <b id="flower-count">0</b></span>
+    <span class="hidden" title="Crafted goods from the workbench — sell at the shop">🔨 <b id="crafted-count">0</b></span>
   </div>
 
   <div id="walkie-panel">
@@ -214,7 +215,7 @@
   </div>
 </div>
 
-<div id="workbench-overlay" class="hidden">
+<div id="workbench-overlay" class="hidden" role="dialog" aria-modal="true" aria-label="Workbench">
   <div class="join-card">
     <button id="workbench-close-btn" type="button" aria-label="Close">✕</button>
     <h1>🔨 Workbench</h1>

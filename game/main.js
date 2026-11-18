@@ -1047,6 +1047,7 @@ const VILLAGER_PERSONALITY_LINES = {
 // zoomed-out render of the actual sprites, which would be unreadable mud
 // at the small size a map needs to be.
 const MAP_LANDMARKS = [
+  { x: 1330, y: 800, label: '🔨 Workbench' },
   { x: 260, y: 600, label: 'Pond' },
   { x: EAST_POND.cx, y: EAST_POND.cy, label: 'East pond' },
   { x: HOUSE_POS.x + HOUSE_POS.w / 2, y: HOUSE_POS.y + HOUSE_POS.h / 2, label: 'Shop' },
@@ -1288,6 +1289,8 @@ class TownScene extends Phaser.Scene {
     this.updateTurnipPriceLabels(time);
     this.updateBuildPreview();
     this.updateFishingRod();
+    // Cheap distance check, only while the workbench is open: walking away closes it.
+    if (this.workbenchOpen && !this.isNearWorkbench(WORKBENCH_RADIUS + 90)) this.closeWorkbench();
     this.updateDigHoleHint();
     this.updateFishHint();
     this.updateGiftHint();
@@ -3617,6 +3620,13 @@ class TownScene extends Phaser.Scene {
     if (fruitEl) fruitEl.textContent = this.resources.fruit || 0;
     const flowerEl = document.getElementById('flower-count');
     if (flowerEl) flowerEl.textContent = this.resources.flowers || 0;
+    // Crafted goods: one chip showing the total, hidden until you own any.
+    const craftedEl = document.getElementById('crafted-count');
+    if (craftedEl && this.craftedGoods) {
+      const total = Object.values(this.craftedGoods).reduce((a, b) => a + b, 0);
+      craftedEl.textContent = total;
+      craftedEl.parentElement.classList.toggle('hidden', total === 0);
+    }
   }
 
   // ---------- fishing ----------
@@ -5272,8 +5282,8 @@ class TownScene extends Phaser.Scene {
     this.add.text(x, y - 36, '🔨 Workbench', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
   }
 
-  isNearWorkbench() {
-    return Math.hypot(this.localBody.x - WORKBENCH_POS.x, this.localBody.y - WORKBENCH_POS.y) < WORKBENCH_RADIUS;
+  isNearWorkbench(radius = WORKBENCH_RADIUS) {
+    return Math.hypot(this.localBody.x - WORKBENCH_POS.x, this.localBody.y - WORKBENCH_POS.y) < radius;
   }
 
   openWorkbench() {
@@ -5304,6 +5314,7 @@ class TownScene extends Phaser.Scene {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'workbench-craft-btn';
+      btn.setAttribute('aria-label', `Craft ${r.label}`);
       btn.dataset.recipe = r.id;
       btn.textContent = 'Craft';
       btn.disabled = !this.canCraft(r);
