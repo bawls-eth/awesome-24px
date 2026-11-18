@@ -13,6 +13,73 @@
 const WORLD = { width: 5800, height: 4600, originX: -1700, originY: -1700 };
 const MAX_PLAYERS = 10;
 
+// Upper bounds for anything read back out of the shared database. The rules
+// are open (see the README), so another client — or someone poking the REST
+// API by hand — can write any shape at all; these keep a malformed record
+// from breaking or defacing everyone else's screen. Not security, just
+// robustness: the same limits the UI already enforces on input.
+const MAX_NAME_LEN = 16;
+const MAX_CHAT_LEN = 140;
+const MAX_NOTE_LEN = 80;
+// Chat older than this isn't replayed into a fresh client's log on join —
+// a quiet town shouldn't greet you with yesterday's conversation.
+const CHAT_MAX_AGE_MS = 2 * 60 * 60 * 1000;
+
+// Control characters, line/paragraph separators, and bidi overrides/isolates
+// (which can flip the direction of everything rendered after them).
+const UNSAFE_TEXT_CHARS = new RegExp('[\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029\\u202a-\\u202e\\u2066-\\u2069]', 'g');
+
+function cleanText(v, max) {
+  if (typeof v !== 'string' && typeof v !== 'number') return '';
+  // Array.from splits by code point, so the cut never leaves half an emoji.
+  return Array.from(String(v).replace(UNSAFE_TEXT_CHARS, ' ').trim()).slice(0, max).join('').trim();
+}
+
+function clampNum(v, min, max, fallback) {
+  const n = typeof v === 'number' ? v : Number.NaN;
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(max, Math.max(min, n));
+}
+
+function clampToWorld(x, y) {
+  return {
+    x: clampNum(x, WORLD.originX, WORLD.originX + WORLD.width, 1200),
+    y: clampNum(y, WORLD.originY, WORLD.originY + WORLD.height, 600),
+  };
+}
+
+// Normalizes one /players/{id} record. Unknown extra fields are passed
+// through untouched (newer clients may add some); every field this client
+// actually reads is type-checked and bounded. Returns null for records too
+// broken to show at all.
+function sanitizePlayer(id, v) {
+  if (!v || typeof v !== 'object') return null;
+  const name = cleanText(v.name, MAX_NAME_LEN);
+  if (!name || typeof v.species !== 'string' || !v.species) return null;
+  const pos = clampToWorld(v.x, v.y);
+  return {
+    ...v,
+    id,
+    name,
+    species: v.species.slice(0, 48),
+    frame: Math.floor(clampNum(v.frame, 0, 9999, 0)),
+    x: pos.x,
+    y: pos.y,
+    facing: v.facing === -1 ? -1 : 1,
+    score: Math.floor(clampNum(v.score, -1e9, 1e9, 0)),
+    emote: typeof v.emote === 'string' ? v.emote.slice(0, 8) : null,
+    emoteAt: clampNum(v.emoteAt, 0, Number.MAX_SAFE_INTEGER, 0),
+    title: typeof v.title === 'string' ? v.title.slice(0, 48) : null,
+  };
+}
+
+// Display names that come from claim/record nodes (scavenger, tournament)
+// get the same treatment as player names.
+function cleanClaimName(v) {
+  const name = cleanText(v, MAX_NAME_LEN) || 'someone';
+  return typeof censorBlockedTerms === 'function' ? censorBlockedTerms(name) : name;
+}
+
 function firebaseConfigLooksReal() {
   return (
     typeof firebaseConfig !== 'undefined' &&
@@ -37,6 +104,23 @@ class TownNet {
     this.joinTime = 0;
     this.db = null;
     this.playerCountRef = null;
+    // selfRef is our reserved /players/{id} ref and never changes;
+    // playerRef is the same ref while our record is live, null while it's
+    // gone (dropped connection) — so writes become no-ops until rejoin().
+    this.selfRef = null;
+    this.state = null; // last known own record, used to recreate it on rejoin
+    this.connected = false;
+    this.everConnected = false;
+    this.rejoining = false;
+    this.gaveUp = false;
+    this.serverTimeOffset = 0;
+    this.moveInFlight = false;
+    this.pendingMove = null;
+    this.seenChatKeys = new Set();
+  }
+
+  serverNow() {
+    return Date.now() + this.serverTimeOffset;
   }
 
   on(event, cb) {
@@ -124,7 +208,7 @@ class TownNet {
 
     const self = {
       id: this.id,
-      name: profile.name,
+      name: cleanText(profile.name, MAX_NAME_LEN),
       species: profile.species,
       frame: profile.frame,
       // The village center, not the world's center — the world is much
@@ -160,28 +244,129 @@ class TownNet {
       return;
     }
 
-    this.playerRef.onDisconnect().remove();
+    this.selfRef = this.playerRef;
+    this.state = {
+      name: self.name, species: self.species, frame: self.frame,
+      x: self.x, y: self.y, facing: self.facing, title: null,
+    };
+    this.armPresence();
+    this.joinTime = Date.now();
+
+    // If our own node gets removed server-side while this tab is still
+    // running (the connection dropped long enough for onDisconnect to fire —
+    // a flaky network, iOS backgrounding the tab, a laptop lid), null out
+    // playerRef so every write below becomes a safe no-op instead of
+    // recreating a bare, broken record, then put ourselves back in town as
+    // soon as we're connected again.
+    this.selfRef.on('value', (snap) => {
+      if (snap.exists() || this.rejoining) return;
+      this.handleSelfGone();
+    });
+
+    this.watchConnection();
+
+    this.emit('init', { self, players: { [this.id]: self }, world: WORLD });
+  }
+
+  // (Re-)queue the server-side cleanup for our presence. onDisconnect ops
+  // fire once and are tied to the connection that registered them, so they
+  // must be re-armed after every reconnect. Both are idempotent per path,
+  // so arming twice on one connection never double-decrements.
+  armPresence() {
+    if (!this.selfRef) return;
+    this.selfRef.onDisconnect().remove().catch(() => {});
     // Keep the counter accurate when a player disconnects without a clean
     // leave (closed tab, lost connection, etc.) — mirrors the player-node
     // onDisconnect() above. onDisconnect() can't run a transaction, but
     // ServerValue.increment() is itself atomic server-side, so a plain
     // queued set() here is race-free the same way the join transaction is.
-    this.playerCountRef.onDisconnect().set(firebase.database.ServerValue.increment(-1));
-    this.joinTime = Date.now();
+    this.playerCountRef.onDisconnect().set(firebase.database.ServerValue.increment(-1)).catch(() => {});
+  }
 
-    // If our own node gets removed server-side while this tab still thinks
-    // it's connected (e.g. iOS backgrounds the tab, the connection drops and
-    // onDisconnect fires, but the page's JS keeps running briefly after),
-    // null out playerRef so every write method below becomes a safe no-op
-    // instead of recreating a bare, broken record via update().
-    this.playerRef.on('value', (snap) => {
-      if (!snap.exists() && this.playerRef) {
-        this.playerRef = null;
-        this.emit('selfRemoved');
-      }
+  // Tracks the socket via the special .info/connected node and emits
+  // 'connection' ({ connected }) so the scene can show a reconnecting
+  // indicator. Firebase reconnects on its own; what it doesn't do is
+  // restore presence, so that happens here.
+  watchConnection() {
+    this.db.ref('.info/serverTimeOffset').on('value', (s) => {
+      this.serverTimeOffset = typeof s.val() === 'number' ? s.val() : 0;
     });
+    this.db.ref('.info/connected').on('value', (snap) => {
+      const connected = snap.val() === true;
+      if (connected === this.connected) return;
+      this.connected = connected;
+      if (connected) {
+        const wasReconnect = this.everConnected;
+        this.everConnected = true;
+        if (wasReconnect && !this.gaveUp) {
+          if (this.playerRef) this.armPresence();
+          else this.rejoin();
+        }
+      }
+      this.emit('connection', { connected });
+    });
+  }
 
-    this.emit('init', { self, players: { [this.id]: self }, world: WORLD });
+  handleSelfGone() {
+    if (!this.selfRef || this.gaveUp) return;
+    this.playerRef = null;
+    this.moveInFlight = false;
+    this.pendingMove = null;
+    if (this.connected) this.rejoin();
+    // otherwise watchConnection() calls rejoin() once we're back online.
+  }
+
+  // Recreate our player record under the same id after the server dropped
+  // it. Claims a capacity slot again first (the onDisconnect decrement
+  // already gave ours back); if the town filled up in the meantime we
+  // stay a spectator and tell the scene via 'selfRemoved'.
+  async rejoin() {
+    if (this.rejoining || this.playerRef || !this.selfRef || this.gaveUp) return;
+    this.rejoining = true;
+    let claimedSlot = false;
+    try {
+      const existing = await this.selfRef.once('value');
+      if (!existing.exists()) {
+        const countResult = await this.playerCountRef.transaction((current) => {
+          const n = current || 0;
+          if (n >= MAX_PLAYERS) return;
+          return n + 1;
+        });
+        if (!countResult.committed) {
+          this.gaveUp = true;
+          this.emit('selfRemoved');
+          return;
+        }
+        claimedSlot = true;
+        const s = this.state;
+        await this.selfRef.set({
+          name: s.name,
+          species: s.species,
+          frame: s.frame,
+          x: s.x,
+          y: s.y,
+          facing: s.facing,
+          score: this.localScore || 0,
+          emote: null,
+          emoteAt: 0,
+          title: s.title || null,
+          t: firebase.database.ServerValue.TIMESTAMP,
+        });
+      }
+      claimedSlot = false;
+      this.playerRef = this.selfRef;
+      this.armPresence();
+      this.emit('rejoined');
+    } catch (e) {
+      // Give back a slot we claimed but never occupied, then try again
+      // shortly (or on the next .info/connected=true if we're offline).
+      if (claimedSlot) {
+        this.playerCountRef.transaction((current) => Math.max(0, (current || 0) - 1)).catch(() => {});
+      }
+      setTimeout(() => { if (this.connected) this.rejoin(); }, 5000);
+    } finally {
+      this.rejoining = false;
+    }
   }
 
   // Attach the live listeners. child_added fires for every existing player as
@@ -189,16 +374,16 @@ class TownNet {
   startListening() {
     this.playersRef.on('child_added', (s) => {
       if (s.key === this.id) return;
-      const v = s.val();
-      if (!v || !v.name || !v.species) return; // skip broken/zombie records
-      this.emit('playerJoined', { id: s.key, ...v });
+      const p = sanitizePlayer(s.key, s.val());
+      if (!p) return; // skip broken/zombie records
+      this.emit('playerJoined', p);
     });
 
     this.playersRef.on('child_changed', (s) => {
       if (s.key === this.id) return;
-      const v = s.val();
-      if (!v || !v.name) return;
-      this.emit('playerUpdated', { id: s.key, ...v });
+      const p = sanitizePlayer(s.key, s.val());
+      if (!p) return;
+      this.emit('playerUpdated', p);
     });
 
     this.playersRef.on('child_removed', (s) => {
@@ -207,20 +392,40 @@ class TownNet {
     });
 
     this.chatRef.limitToLast(30).on('child_added', (s) => {
+      // child_added can replay after a reconnect — never show a line twice.
+      if (this.seenChatKeys.has(s.key)) return;
+      this.seenChatKeys.add(s.key);
+      if (this.seenChatKeys.size > 200) {
+        this.seenChatKeys.delete(this.seenChatKeys.values().next().value);
+      }
       const m = s.val();
-      if (!m) return;
+      if (!m || typeof m !== 'object') return;
+      const text = cleanText(m.text, MAX_CHAT_LEN);
+      if (!text) return;
+      const t = typeof m.t === 'number' ? m.t : 0;
+      const isOld = t < this.joinTime + this.serverTimeOffset;
+      if (isOld && this.serverNow() - t > CHAT_MAX_AGE_MS) return;
       this.emit('chat', {
-        id: m.id,
-        name: m.name,
-        text: m.text,
-        isOld: typeof m.t === 'number' && m.t < this.joinTime,
+        key: s.key,
+        id: typeof m.id === 'string' ? m.id : null,
+        name: cleanText(m.name, MAX_NAME_LEN) || '???',
+        text,
+        isOld,
       });
     });
 
     this.blocksRef.on('child_added', (s) => {
       const v = s.val();
-      if (!v) return;
-      this.emit('blockAdded', { key: s.key, x: v.x, y: v.y, type: v.type || 'wood', ownerId: v.ownerId });
+      if (!v || typeof v !== 'object') return;
+      if (!Number.isFinite(v.x) || !Number.isFinite(v.y)) return;
+      const pos = clampToWorld(v.x, v.y);
+      this.emit('blockAdded', {
+        key: s.key,
+        x: pos.x,
+        y: pos.y,
+        type: typeof v.type === 'string' ? v.type.slice(0, 24) : 'wood',
+        ownerId: typeof v.ownerId === 'string' ? v.ownerId : null,
+      });
     });
 
     this.blocksRef.on('child_removed', (s) => {
@@ -231,8 +436,16 @@ class TownNet {
     // history browser, so no point loading an unbounded guestbook on join.
     this.guestbookRef.limitToLast(20).on('child_added', (s) => {
       const v = s.val();
-      if (!v || !v.text) return;
-      this.emit('guestbookEntry', { key: s.key, id: v.id, name: v.name, text: v.text, t: v.t || 0 });
+      if (!v || typeof v !== 'object') return;
+      const text = cleanText(v.text, MAX_NOTE_LEN);
+      if (!text) return;
+      this.emit('guestbookEntry', {
+        key: s.key,
+        id: typeof v.id === 'string' ? v.id : null,
+        name: cleanText(v.name, MAX_NAME_LEN) || '???',
+        text,
+        t: typeof v.t === 'number' ? v.t : 0,
+      });
     });
   }
 
@@ -261,17 +474,34 @@ class TownNet {
     // Only treat a non-commit as "we got removed" once that's actually
     // confirmed by the final snapshot, not just any abort reason.
     if (!result.committed && !result.snapshot.exists() && this.playerRef === ref) {
-      this.playerRef = null;
-      this.emit('selfRemoved');
+      this.handleSelfGone();
     }
     return result;
   }
 
+  // At most one position transaction in flight: each one is a full
+  // round-trip, so firing them on a timer regardless would pile up a queue
+  // on slow connections. Calls made while one is pending just replace the
+  // queued target, and the latest one is sent when it settles.
   move(x, y, facing) {
+    const pos = clampToWorld(x, y);
+    const target = { x: Math.round(pos.x * 10) / 10, y: Math.round(pos.y * 10) / 10, facing: facing === -1 ? -1 : 1 };
+    if (this.state) Object.assign(this.state, target);
+    if (!this.playerRef) return;
+    if (this.moveInFlight) {
+      this.pendingMove = target;
+      return;
+    }
+    this.moveInFlight = true;
     this.writeIfAlive((current) => {
-      current.x = x;
-      current.y = y;
-      current.facing = facing;
+      current.x = target.x;
+      current.y = target.y;
+      current.facing = target.facing;
+    }).finally(() => {
+      this.moveInFlight = false;
+      const next = this.pendingMove;
+      this.pendingMove = null;
+      if (next) this.move(next.x, next.y, next.facing);
     });
   }
 
@@ -296,6 +526,7 @@ class TownNet {
   // shop) — everyone else's child_changed listener picks this up the
   // same way it already picks up position/facing.
   updateAppearance(species, frame) {
+    if (this.state) Object.assign(this.state, { species, frame });
     this.writeIfAlive((current) => {
       current.species = species;
       current.frame = frame;
@@ -306,6 +537,7 @@ class TownNet {
   // in every client's player list — same sync path as appearance changes.
   // Pass null to unequip.
   updateTitle(achievementId) {
+    if (this.state) this.state.title = achievementId || null;
     this.writeIfAlive((current) => {
       current.title = achievementId || null;
     });
@@ -313,12 +545,14 @@ class TownNet {
 
   sendChat(text) {
     if (!this.chatRef || !this.id) return;
+    const clean = cleanText(text, MAX_CHAT_LEN);
+    if (!clean) return;
     this.chatRef.push({
       id: this.id,
-      name: this.name,
-      text,
+      name: cleanText(this.name, MAX_NAME_LEN),
+      text: clean,
       t: firebase.database.ServerValue.TIMESTAMP,
-    });
+    }).catch(() => {});
   }
 
   placeBlock(x, y, type = 'wood') {
@@ -342,10 +576,12 @@ class TownNet {
   // ref so it doesn't get mixed in with (or capped out by) live chat.
   leaveGuestbookNote(text) {
     if (!this.guestbookRef || !this.id) return;
+    const clean = cleanText(text, MAX_NOTE_LEN);
+    if (!clean) return;
     this.guestbookRef.push({
       id: this.id,
-      name: this.name,
-      text,
+      name: cleanText(this.name, MAX_NAME_LEN),
+      text: clean,
       t: firebase.database.ServerValue.TIMESTAMP,
     }).catch(() => {});
   }
@@ -361,14 +597,14 @@ class TownNet {
       if (current) return; // already claimed — abort, don't overwrite
       return { id: this.id, name: this.name, t: Date.now() };
     }).then((result) => {
-      const claim = result.snapshot.val();
+      const claim = this.cleanClaim(result.snapshot.val());
       return { success: !!(result.committed && claim && claim.id === this.id), claim };
     }).catch(() => ({ success: false, claim: null }));
   }
 
   watchScavenger(dayKey, callback) {
     if (!this.scavengerRef) return;
-    this.scavengerRef.child(String(dayKey)).on('value', (snap) => callback(snap.val()));
+    this.scavengerRef.child(String(dayKey)).on('value', (snap) => callback(this.cleanClaim(snap.val())));
   }
 
   // Daily fishing tournament record: a compare-and-swap transaction, same
@@ -378,17 +614,35 @@ class TownNet {
   submitTournamentCatch(dayKey, sizeCm) {
     if (!this.tournamentRef || !this.id) return Promise.resolve({ success: false, record: null });
     return this.tournamentRef.child(String(dayKey)).transaction((current) => {
-      if (current && current.size >= sizeCm) return; // not a new record — abort
+      // not a new record — abort. A malformed size (string, NaN) counts as
+      // "no record" so a junk node can't block the tournament for the day.
+      if (current && Number.isFinite(current.size) && current.size >= sizeCm) return;
       return { id: this.id, name: this.name, size: sizeCm, t: Date.now() };
     }).then((result) => {
-      const record = result.snapshot.val();
+      const record = this.cleanRecord(result.snapshot.val());
       return { success: !!(result.committed && record && record.id === this.id), record };
     }).catch(() => ({ success: false, record: null }));
   }
 
   watchTournament(dayKey, callback) {
     if (!this.tournamentRef) return;
-    this.tournamentRef.child(String(dayKey)).on('value', (snap) => callback(snap.val()));
+    this.tournamentRef.child(String(dayKey)).on('value', (snap) => callback(this.cleanRecord(snap.val())));
+  }
+
+  // Any truthy value counts as "claimed" (that's what the transaction
+  // checks too), so a malformed claim still hides the marker — it just
+  // gets a safe display name.
+  cleanClaim(v) {
+    if (!v) return null;
+    if (typeof v !== 'object') return { id: null, name: 'someone', t: 0 };
+    return { ...v, id: typeof v.id === 'string' ? v.id : null, name: cleanClaimName(v.name) };
+  }
+
+  cleanRecord(v) {
+    if (!v || typeof v !== 'object') return null;
+    const size = clampNum(v.size, 0, 999, null);
+    if (size === null) return null;
+    return { ...v, id: typeof v.id === 'string' ? v.id : null, name: cleanClaimName(v.name), size: Math.round(size) };
   }
 
   // Walkie-talkie: a short voice clip addressed to one other player's id.

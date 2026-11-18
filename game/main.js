@@ -68,7 +68,8 @@ function worldHash(x, y, seed) {
 }
 
 function escapeHtml(s) {
-  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 // Turns CHANGELOG.md's fixed, simple shape (an h1 + intro paragraph we skip,
@@ -1137,9 +1138,18 @@ class TownScene extends Phaser.Scene {
     this.localNameText.setPosition(this.localBody.x, this.localVisual.y - 22);
     if (moving) this.spawnFootstepDust(time, this.localBody.x, this.localBody.y + 10);
 
+    // Only write when something actually changed: standing still used to
+    // cost a database transaction every 100ms, forever. Positions are
+    // sent at most every 100ms while walking, and the last (resting)
+    // position always goes out because it differs from the last one sent.
     if (time - this.lastSentAt > 100) {
-      this.lastSentAt = time;
-      this.net.move(this.localBody.x, this.localBody.y, this.localVisual.flipX ? -1 : 1);
+      const facing = this.localVisual.flipX ? -1 : 1;
+      const last = this.lastSentPos;
+      if (!last || Math.abs(last.x - this.localBody.x) > 0.5 || Math.abs(last.y - this.localBody.y) > 0.5 || last.facing !== facing) {
+        this.lastSentAt = time;
+        this.lastSentPos = { x: this.localBody.x, y: this.localBody.y, facing };
+        this.net.move(this.localBody.x, this.localBody.y, facing);
+      }
     }
   }
 
@@ -3281,8 +3291,19 @@ class TownScene extends Phaser.Scene {
     this.localBobState = { phase: 0, lift: 0 };
   }
 
+  // A remote record can name a species this client doesn't have loaded
+  // (a newer client's rare outfit, or plain junk) - fall back to a known
+  // sheet instead of Phaser's missing-texture box, and keep the frame in
+  // range for whichever sheet is used.
+  safeTexture(species, frame) {
+    const key = typeof species === 'string' && this.textures.exists(species) ? species : SPECIES[0].key;
+    const f = Number.isInteger(frame) && this.textures.get(key).has(frame) ? frame : 0;
+    return { key, frame: f };
+  }
+
   addRemotePlayer(p) {
-    const visual = this.add.sprite(p.x, p.y, p.species, p.frame).setFlipX(p.facing === -1);
+    const tex = this.safeTexture(p.species, p.frame);
+    const visual = this.add.sprite(p.x, p.y, tex.key, tex.frame).setFlipX(p.facing === -1);
     const shadow = this.createShadow(p.x, p.y);
     const nameText = this.createNameText(p.x, p.y, p.name);
     this.remotePlayers.set(p.id, {
@@ -3309,6 +3330,7 @@ class TownScene extends Phaser.Scene {
     rp.nameText.destroy();
     if (rp.bubble) rp.bubble.destroy();
     this.remotePlayers.delete(id);
+    if (this.lastEmoteAt) this.lastEmoteAt.delete(id);
   }
 
   showChatBubble(playerId, text) {
@@ -3324,7 +3346,11 @@ class TownScene extends Phaser.Scene {
       if (rp.bubble) rp.bubble.destroy();
     }
 
-    const bubble = this.add.text(anchor.x, anchor.y - 40, text, {
+    // Remote text is masked the same way as the chat log (a client that
+    // writes straight to the database skips the send-side filter), and
+    // capped so a giant message can't paper over the screen.
+    const bubbleText = censorBlockedTerms(String(text)).slice(0, 140);
+    const bubble = this.add.text(anchor.x, anchor.y - 40, bubbleText, {
       fontSize: '11px',
       fontFamily: 'monospace',
       color: '#1c2430',
@@ -3333,11 +3359,19 @@ class TownScene extends Phaser.Scene {
       wordWrap: { width: 160 },
     }).setOrigin(0.5).setDepth(100001);
 
-    if (!isLocal) {
+    if (isLocal) {
+      if (this.localChatBubble) this.localChatBubble.destroy();
+      this.localChatBubble = bubble;
+    } else {
       this.remotePlayers.get(playerId).bubble = bubble;
     }
 
-    this.time.delayedCall(4000, () => bubble.destroy());
+    this.time.delayedCall(4000, () => {
+      bubble.destroy();
+      if (this.localChatBubble === bubble) this.localChatBubble = null;
+      const rp = this.remotePlayers.get(playerId);
+      if (rp && rp.bubble === bubble) rp.bubble = null;
+    });
   }
 
   // ---------- world drawing ----------
@@ -4712,14 +4746,23 @@ class TownScene extends Phaser.Scene {
 
     this.net.on('playerUpdated', (d) => {
       const rp = this.remotePlayers.get(d.id);
-      if (!rp) return;
+      if (!rp) {
+        // A record that was skipped on child_added (written in two steps,
+        // or broken and later repaired) becomes valid here — show it now
+        // instead of never.
+        this.allPlayers.set(d.id, d);
+        this.addRemotePlayer(d);
+        this.renderPlayerList();
+        return;
+      }
       rp.targetX = d.x;
       rp.targetY = d.y;
       rp.facing = d.facing;
       if (d.species && (d.species !== rp.species || d.frame !== rp.frame)) {
         rp.species = d.species;
         rp.frame = d.frame;
-        rp.visual.setTexture(d.species, d.frame);
+        const tex = this.safeTexture(d.species, d.frame);
+        rp.visual.setTexture(tex.key, tex.frame);
       }
 
       const known = this.allPlayers.get(d.id);
@@ -4729,19 +4772,39 @@ class TownScene extends Phaser.Scene {
         this.renderPlayerList();
       }
 
-      if (d.emote && d.emoteAt && this.lastEmoteAt.get(d.id) !== d.emoteAt) {
+      if (EMOTES.includes(d.emote) && d.emoteAt && this.lastEmoteAt.get(d.id) !== d.emoteAt) {
         this.lastEmoteAt.set(d.id, d.emoteAt);
         this.showEmoteBubble(d.id, d.emote);
       }
     });
 
     this.net.on('chat', (msg) => {
-      this.addChatLine({ name: msg.name, text: msg.text });
+      this.addChatLine({ name: msg.name, text: msg.text, old: msg.isOld });
       if (!msg.isOld) this.showChatBubble(msg.id, msg.text);
     });
 
+    // Only fires when a rejoin after a dropped connection failed for good
+    // (the town filled up while we were away); short drops are healed
+    // automatically by net.js and reported through 'rejoined'.
     this.net.on('selfRemoved', () => {
-      this.addChatLine({ system: true, text: 'Lost your spot in town (connection dropped). You can still look around, but refresh to fully rejoin.' });
+      this.addChatLine({ system: true, text: 'Lost your spot in town (connection dropped and the town filled up). You can still look around, but refresh to rejoin.' });
+    });
+
+    this.net.on('connection', ({ connected }) => {
+      this.setNetStatus(connected ? null : 'Reconnecting…');
+      if (!connected) {
+        this.wasDisconnected = true;
+      } else if (this.wasDisconnected) {
+        this.wasDisconnected = false;
+        // Force the next movement tick to send our position again, in case
+        // the last one was lost with the connection.
+        this.lastSentPos = null;
+      }
+    });
+
+    this.net.on('rejoined', () => {
+      this.lastSentPos = null;
+      this.addChatLine({ system: true, text: 'Reconnected — you’re back in town.' });
     });
 
     this.net.on('blockAdded', (b) => this.addBlockVisual(b));
@@ -4755,6 +4818,28 @@ class TownScene extends Phaser.Scene {
       if (this.guestbookEntries.length > 20) this.guestbookEntries.length = 20;
       if (this.guestbookOpen) this.renderGuestbookList();
     });
+  }
+
+  // Small "Reconnecting…" pill, created on demand (and styled inline) so
+  // it needs no markup or stylesheet changes. Pass null to hide it.
+  setNetStatus(text) {
+    let el = document.getElementById('net-status');
+    if (!text) {
+      if (el) el.remove();
+      return;
+    }
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'net-status';
+      el.setAttribute('role', 'status');
+      el.setAttribute('aria-live', 'polite');
+      el.style.cssText = 'position:fixed;top:calc(10px + env(safe-area-inset-top, 0px));left:50%;'
+        + 'transform:translateX(-50%);z-index:1000;padding:6px 14px;border-radius:999px;'
+        + 'background:rgba(28,36,48,0.92);color:#ffd27a;border:1px solid #3a4658;'
+        + 'font:600 13px system-ui,sans-serif;pointer-events:none;';
+      document.body.appendChild(el);
+    }
+    el.textContent = `📡 ${text}`;
   }
 
   // ---------- DOM: chat + player list ----------
@@ -4838,8 +4923,19 @@ class TownScene extends Phaser.Scene {
       chatInput.blur();
       return;
     }
+    // Same spirit: at most CHAT_BURST messages per CHAT_WINDOW_MS. The
+    // input is kept (not cleared) so the player can just retry.
+    const CHAT_BURST = 5;
+    const CHAT_WINDOW_MS = 10000;
+    const now = Date.now();
+    this.chatSentTimes = (this.chatSentTimes || []).filter((t) => now - t < CHAT_WINDOW_MS);
+    if (text && this.chatSentTimes.length >= CHAT_BURST) {
+      this.addChatLine({ system: true, text: 'Whoa, slow down a little — try again in a few seconds.' });
+      return;
+    }
     if (text) {
-      this.net.sendChat(text);
+      this.chatSentTimes.push(now);
+      this.net.sendChat(text.slice(0, 140));
       this.incrementStat('chatSent');
       this.lastChatText = text;
       this.lastChatTextAt = Date.now();
@@ -4848,10 +4944,12 @@ class TownScene extends Phaser.Scene {
     chatInput.blur();
   }
 
-  addChatLine({ name, text, system }) {
+  addChatLine({ name, text, system, old }) {
     const chatLog = document.getElementById('chat-log');
     const line = document.createElement('div');
     line.className = system ? 'chat-line system' : 'chat-line';
+    // Lines from before we joined are history, not live conversation.
+    if (old) line.style.opacity = '0.6';
 
     if (!system) {
       const who = document.createElement('span');
@@ -4866,11 +4964,13 @@ class TownScene extends Phaser.Scene {
       line.textContent = text;
     }
 
+    // Only auto-scroll if the reader is already at (or near) the bottom, so
+    // a new line doesn't yank them away from scrolling back through history.
+    const nearBottom = chatLog.scrollHeight - chatLog.scrollTop - chatLog.clientHeight < 40;
     chatLog.appendChild(line);
-    chatLog.scrollTop = chatLog.scrollHeight;
-    document.getElementById('chat-clear-btn').classList.remove('hidden');
-
     while (chatLog.children.length > 50) chatLog.removeChild(chatLog.firstChild);
+    if (nearBottom) chatLog.scrollTop = chatLog.scrollHeight;
+    document.getElementById('chat-clear-btn').classList.remove('hidden');
   }
 
   drawNoticeBoard() {
@@ -4918,7 +5018,7 @@ class TownScene extends Phaser.Scene {
         const star = document.createElement('button');
         star.type = 'button';
         star.className = 'bestie-star' + (this.bestieId === p.id ? ' active' : '');
-        star.title = `Set ${p.name} as your walkie-talkie bestie`;
+        star.title = `Set ${safeName} as your walkie-talkie bestie`;
         star.textContent = this.bestieId === p.id ? '💛' : '🤍';
         star.addEventListener('click', () => this.setBestie(p.id, p.name));
         li.appendChild(star);
