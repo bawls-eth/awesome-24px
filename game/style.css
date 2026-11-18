@@ -2304,3 +2304,4 @@ body.touch-device .kbd-hint { display: none; }
   font-weight: 700;
   pointer-events: none;
 }
+body.touch-device #underground-exit-hint { top: 150px; } /* below the hotbar, clear of the health / clock badges */

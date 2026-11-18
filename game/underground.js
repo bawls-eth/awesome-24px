@@ -740,7 +740,9 @@ class UndergroundWorld {
   _inLavaCell() {
     if (!this.lava.size) return false;
     const p = this.rig.position;
-    return this.lava.has(`${Math.round(p.x / UG_BLOCK)},${Math.round((p.y + 0.3) / UG_BLOCK)},${Math.round(p.z / UG_BLOCK)}`);
+    const gx = Math.round(p.x / UG_BLOCK); const gz = Math.round(p.z / UG_BLOCK);
+    // feet or upper body in a lava cell (a pit under the lava still burns you)
+    return this.lava.has(`${gx},${Math.round((p.y + 0.3) / UG_BLOCK)},${gz}`) || this.lava.has(`${gx},${Math.round((p.y + 2.2) / UG_BLOCK)},${gz}`);
   }
 
   _damage(n) {
@@ -1166,14 +1168,18 @@ class UndergroundWorld {
   // sky out so caves stay dark at noon and you need your head light or torches there.
   setTime(t) {
     this.timeOfDay = ((t % 1) + 1) % 1;
-    this._applyLighting(1);
+    this._applyLighting(0);
   }
 
   _skyExposure() {
     const p = this.rig.position;
     const gx = Math.round(p.x / UG_BLOCK); const gz = Math.round(p.z / UG_BLOCK);
     const gy0 = Math.floor((p.y + UG_BODY_H + 1) / UG_BLOCK) + 1;
-    for (let gy = gy0; gy <= 6; gy++) if (this._solidAt(gx, gy, gz)) return 0;
+    for (let gy = gy0; gy <= 6; gy++) {
+      if (!this._solidAt(gx, gy, gz)) continue;
+      const e = this.lookup.get(`${gx},${gy},${gz}`);
+      if (!(e && e.kind === 'leaves')) return 0; // tree leaves don't roof you over
+    }
     return Math.max(0, 1 - Math.max(0, -1 - p.y) / 12); // the open shaft lets daylight in, fading with depth
   }
 
@@ -1184,7 +1190,7 @@ class UndergroundWorld {
     this._applyLighting(dt);
   }
 
-  _applyLighting() {
+  _applyLighting(dt) {
     const t = this.timeOfDay;
     const sn = Math.sin(t * Math.PI * 2); // 1 at noon, -1 at midnight
     const sm = (a, b, x) => { const k = Math.max(0, Math.min(1, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
@@ -1208,8 +1214,8 @@ class UndergroundWorld {
     const phase = sn > 0.35 ? 'day' : sn > -0.15 ? (Math.cos(t * Math.PI * 2) > 0 ? 'dawn' : 'dusk') : 'night';
     if (phase !== this.clockPhase) { this.clockPhase = phase; this.onClockChange(phase); }
     if (this.lavaMesh) { // flowing lava
-      this.textures.lava.offset.y = (this.textures.lava.offset.y + 0.0006) % 1;
-      this.textures.lava.offset.x = (this.textures.lava.offset.x + 0.0003) % 1;
+      this.textures.lava.offset.y = (this.textures.lava.offset.y + 0.036 * (dt || 0)) % 1; // per second, not per frame
+      this.textures.lava.offset.x = (this.textures.lava.offset.x + 0.018 * (dt || 0)) % 1;
     }
   }
 

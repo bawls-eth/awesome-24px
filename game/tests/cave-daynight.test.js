@@ -64,11 +64,11 @@ const { launch, scene, check, done } = require('./helpers');
   check('lava: stay in it and you die and respawn on the surface with full health', dth.deaths >= 1 && dth.hp > 0 && dth.y > -2 && Math.abs(dth.x - 5.2) < 0.5, JSON.stringify(dth));
   const bl = await scene(page, (s) => {
     const u = s.underground; u.respawn(); u.physicsEnabled = false; u.setHotbar('wall'); s.resources.stone = 5;
-    u.rig.position.set(-4, -15, 0); u.yaw = Math.PI / 2; u.pitch = -0.2; // over the lava, looking toward the far wall
-    u._update(0.01); const ok = u.place(); const stoneUsed = 5 - s.resources.stone; const occ = u.occupied.has('-5,-7,0') || u.occupied.has('-4,-7,0') || u.occupied.has('-3,-7,0');
-    return { ok, stoneUsed, lavaCell: u.lava.has('-5,-7,0') && !occ };
+    u.rig.position.set(-8, -12, 0); u.yaw = Math.PI / 2; u.pitch = -1.2; // hovering over the lava, looking down at the floor under it
+    u._update(0.01); const hit = u._raycastTargets()[0]; const ok = u.place(); const stoneUsed = 5 - s.resources.stone; const occ = u.occupied.has('-4,-7,0');
+    return { ok, stoneUsed, aimedAtFloor: !!hit, lavaCell: u.lava.has('-4,-7,0') && !occ };
   });
-  check('lava: you cannot place blocks into lava cells', bl.lavaCell, JSON.stringify(bl));
+  check('lava: aiming at the floor under lava, place() refuses and costs nothing', bl.aimedAtFloor && bl.ok === false && bl.stoneUsed === 0 && bl.lavaCell, JSON.stringify(bl));
   check('no console errors (desktop)', errors.length === 0, errors.join('|'));
   if (process.env.SHOTS) {
     await scene(page, (s) => { const u = s.underground; u.start(); u.stop(); u.active = true; });
@@ -86,10 +86,11 @@ const { launch, scene, check, done } = require('./helpers');
   await page.waitForTimeout(1200);
   const ph = await page.evaluate(() => {
     const r = (id) => document.getElementById(id).getBoundingClientRect(); const over = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
-    const clk = r('ug-clock'); const hp = r('ug-health'); const hb = r('ug-hotbar'); const hint = r('underground-depth-hint');
-    return { inside: clk.left >= 0 && clk.right <= innerWidth, overlaps: [over(clk, hp), over(clk, hb), over(clk, hint)].filter(Boolean).length, text: document.getElementById('ug-clock').textContent };
+    document.getElementById('underground-exit-hint').classList.remove('hidden');
+    const clk = r('ug-clock'); const hp = r('ug-health'); const hb = r('ug-hotbar'); const hint = r('underground-depth-hint'); const exit = r('underground-exit-hint');
+    return { inside: clk.left >= 0 && clk.right <= innerWidth, overlaps: [over(clk, hp), over(clk, hb), over(clk, hint), over(clk, exit), over(hp, exit), over(hb, exit)].filter(Boolean).length, text: document.getElementById('ug-clock').textContent };
   });
-  check('phone: the time-of-day badge fits beside the health badge and overlaps nothing', ph.inside && ph.overlaps === 0 && /Day|Dawn/.test(ph.text), JSON.stringify(ph));
+  check('phone: the time-of-day badge fits beside the health badge and overlaps nothing (incl. the exit hint)', ph.inside && ph.overlaps === 0 && /Day|Dawn/.test(ph.text), JSON.stringify(ph));
   const keys = await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('pixeltown-save-v1') || '{}')).sort().join(','));
   check('save format: no new keys were added by day/night or lava (time of day is not saved)', !/timeOfDay|clock|lava|dayTime|cave(Time|Light)/i.test(keys) && keys === 'achievementsUnlocked,caveSeed,frame,lastLoginDate,lifetimeStats,loginStreak,name,resources,species', keys);
   if (process.env.SHOTS) { await scene(page, (s) => { const u = s.underground; u.setTime(0.5); u.physicsEnabled = false; u.rig.position.set(9, -1, 6); u.yaw = -Math.PI / 2 + 0.6; u.pitch = 0.1; for (let i = 0; i < 90; i++) u._update(1 / 60); }); await page.waitForTimeout(700); await page.screenshot({ path: process.env.SHOTS + '/cave-dusk-phone.png' }); }
