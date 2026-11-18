@@ -2824,6 +2824,10 @@ class TownScene extends Phaser.Scene {
           const el = document.getElementById('ug-health');
           if (el) { el.textContent = `❤️ ${hp}/${max}`; el.classList.toggle('low', hp <= max / 4); }
         },
+        onClockChange: (phase) => {
+          const el = document.getElementById('ug-clock');
+          if (el) el.textContent = { day: '☀️ Day', dawn: '🌄 Dawn', dusk: '🌅 Dusk', night: '🌙 Night' }[phase] || phase;
+        },
         onFlyChange: (on) => {
           const b = document.getElementById('ug-fly-btn');
           if (b) b.classList.toggle('active', !!on);

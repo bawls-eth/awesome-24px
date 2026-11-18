@@ -20,8 +20,21 @@ const UG_SIZE = 12; // cave spans x,z in [-UG_SIZE, UG_SIZE] (25 x 25 columns)
 const UG_DEPTH = 8; // y levels 0 (surface) down to -UG_DEPTH
 const UG_REACH = 7.5; // units — how far mine/place can reach
 const UG_PLACED_CAPACITY = 150;
-const UG_AMBIENT = 1.6;
-const UG_HEAD_LIGHT = 6;
+// Light (A4b). Out under the sky the ambient + sun follow the clock; underground it falls to a dim
+// cave ambient, so you see by your head light, a held torch and the torches you place.
+const UG_DAY_LENGTH = 240; // seconds for a full day / night cycle
+const UG_AMBIENT_CAVE = 0.5;
+const UG_AMBIENT_DAY = 2.0;
+const UG_AMBIENT_NIGHT = 0.45;
+const UG_HEAD_LIGHT = 4.5; // your own glow
+const UG_HEAD_LIGHT_TORCH = 9; // holding a torch (hotbar slot 2) lights up much more
+const UG_START_TIME = 0.2; // morning, so a new visit starts in daylight
+const UG_SKY_DAY = [0.53, 0.77, 1.0];
+const UG_SKY_DUSK = [0.95, 0.52, 0.28];
+const UG_SKY_NIGHT = [0.03, 0.04, 0.09];
+const UG_CAVE_DARK = [0.04, 0.055, 0.08];
+const UG_LAVA_DAMAGE = 2; // hit points every UG_LAVA_TICK seconds while standing in lava
+const UG_LAVA_TICK = 0.5;
 // Physics (A2). rig.position is the player's FEET. The body is a 1.2 x 3.6 box (a bit under 2
 // blocks tall); a block is 2 units, so the jump clears one block and a 2-block wall stops you.
 const UG_HALF_W = 0.6;
@@ -49,7 +62,7 @@ const UG_MAGNET_RADIUS = 5;
 // empty slots are kept free for crafting (a later slice).
 const UG_SLOTS = ['wall', 'torch', 'dirt', 'coal', 'iron', 'gold', null, null, null];
 const UG_INV_KEYS = ['dirt', 'coal', 'iron', 'gold'];
-const UG_TEXTURE_NAMES = ['grass_top', 'grass_side', 'dirt', 'stone', 'coal', 'iron', 'gold', 'wood_side', 'wood_top', 'cobble', 'leaves'];
+const UG_TEXTURE_NAMES = ['grass_top', 'grass_side', 'dirt', 'stone', 'coal', 'iron', 'gold', 'wood_side', 'wood_top', 'cobble', 'leaves', 'lava'];
 const UG_FLAT_RADIUS = 4; // cells around the shaft that stay flat and tree-free (spawn + entry hole)
 
 // Integer hash -> [0,1). Terrain is a pure function of (seed, cell), so the same seed always makes
@@ -161,6 +174,13 @@ function ugDrawTile(kind) {
         px(x, y, base + edge + j, base * 0.74 + edge + j, base * 0.42 + edge + j);
       }
       break;
+    case 'lava':
+      for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+        const w = Math.sin(x * 0.9 + y * 0.35) + Math.sin(y * 1.1 - x * 0.2) + (rng() - 0.5) * 0.9;
+        const hot = w > 1.0 ? 1 : w > 0.1 ? 0.55 : 0;
+        px(x, y, 170 + hot * 85, 40 + hot * 150, 8 + hot * 28);
+      }
+      break;
     case 'leaves':
       for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
         const dark = rng() < 0.28;
@@ -190,6 +210,7 @@ function ugBuildTextures() {
     tex.minFilter = THREE.NearestFilter;
     tex.generateMipmaps = false;
     tex.colorSpace = THREE.SRGBColorSpace;
+    if (name === 'lava') { tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping; } // scrolled to make it flow
     tex.needsUpdate = true;
     out[name] = tex;
   });
@@ -197,7 +218,7 @@ function ugBuildTextures() {
 }
 
 class UndergroundWorld {
-  constructor({ canvasWrap, resources, inventory, seed, onResourceChange, onExit, onHealthChange, onFlyChange, onHotbarChange }) {
+  constructor({ canvasWrap, resources, inventory, seed, onResourceChange, onExit, onHealthChange, onFlyChange, onHotbarChange, onClockChange }) {
     this.canvasWrap = canvasWrap;
     this.resources = resources; // shared reference to main.js's resources object
     this.onResourceChange = onResourceChange; // () => void — call after any resource change
@@ -225,6 +246,13 @@ class UndergroundWorld {
     this.hotbar = 'wall'; // 'wall' (costs stone) | 'torch' (costs wood)
     this.viewMode = 'first'; // 'first' (eye height) | 'third' (behind the player)
     this.water = new Set(); // "gx,gy,gz" water cells (not solid; swimmable)
+    this.lava = new Set(); // lava cells: slow like water, but they burn
+    this.inLava = false;
+    this._lavaT = 0;
+    this.timeOfDay = UG_START_TIME; // 0 sunrise, 0.25 noon, 0.5 sunset, 0.75 midnight
+    this.clockPhase = '';
+    this.skyLight = 1; // 1 under open sky, 0 roofed over (smoothed)
+    this.onClockChange = onClockChange || (() => {});
     this.physicsEnabled = true; // tests can freeze movement to pose the rig
     this.vel = { x: 0, y: 0, z: 0 };
     this.onGround = false;
@@ -294,6 +322,7 @@ class UndergroundWorld {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x0a0e14);
     this.scene.fog = new THREE.FogExp2(0x0a0e14, 0.03);
+    this._skyColor = new THREE.Color();
 
     this.camera = new THREE.PerspectiveCamera(70, 1, 0.1, 200);
 
@@ -304,7 +333,11 @@ class UndergroundWorld {
     this.canvasWrap.appendChild(this.renderer.domElement);
 
     // Tuned for the (brighter) pixel-art textures: dim ambient + a head-torch that fades with distance.
-    this.scene.add(new THREE.AmbientLight(0x8a96b0, UG_AMBIENT));
+    this.ambient = new THREE.AmbientLight(0x8a96b0, UG_AMBIENT_DAY);
+    this.scene.add(this.ambient);
+    this.sun = new THREE.DirectionalLight(0xfff0cc, 1);
+    this.sun.position.set(40, 90, 25);
+    this.scene.add(this.sun);
     this.torch = new THREE.PointLight(0xffe2b8, UG_HEAD_LIGHT, 30, 1.6);
     this.scene.add(this.torch);
 
@@ -483,6 +516,15 @@ class UndergroundWorld {
       }
     }
 
+    // A lava cavern on the other side of the shaft: x = -6..-2 is carved, the lower level of
+    // x = -6..-3 is lava, and the lit ledge at x = -2 is how you walk in (and out).
+    for (let x = -6; x <= -2; x++) {
+      for (let z = -1; z <= 1; z++) {
+        for (let y = -5; y >= -7; y--) solid.delete(`${x},${y},${z}`);
+        if (x <= -3) this.lava.add(`${x},-7,${z}`);
+      }
+    }
+
     const kinds = ['grass', 'dirt', 'stone', 'coal', 'iron', 'gold', 'wood', 'leaves'];
     const counts = {};
     kinds.forEach((k) => { counts[k] = 0; });
@@ -538,6 +580,27 @@ class UndergroundWorld {
     waterMesh.count = wi;
     this.scene.add(waterMesh);
     this.waterMesh = waterMesh;
+
+    // Lava: a glowing, scrolling texture and two warm lights so the cavern shows up in the dark.
+    const lavaMesh = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(UG_BLOCK * 0.98, UG_BLOCK * 0.98, UG_BLOCK * 0.98),
+      new THREE.MeshStandardMaterial({ map: this.textures.lava, emissive: 0xff5a14, emissiveMap: this.textures.lava, emissiveIntensity: 1.1, roughness: 0.6, metalness: 0 }),
+      Math.max(1, this.lava.size)
+    );
+    let li = 0;
+    this.lava.forEach((key) => {
+      const [gx, gy, gz] = key.split(',').map(Number);
+      m.makeTranslation(gx * UG_BLOCK, gy * UG_BLOCK, gz * UG_BLOCK);
+      lavaMesh.setMatrixAt(li++, m);
+    });
+    lavaMesh.count = li;
+    this.scene.add(lavaMesh);
+    this.lavaMesh = lavaMesh;
+    [-9, -13].forEach((x) => {
+      const light = new THREE.PointLight(0xff7a2a, 3.2, 17, 1.6);
+      light.position.set(x, -12.2, 0);
+      this.scene.add(light);
+    });
   }
 
   _buildPlacedPool() {
@@ -674,6 +737,12 @@ class UndergroundWorld {
     return this.water.has(`${Math.round(p.x / UG_BLOCK)},${Math.round((p.y + 1.2) / UG_BLOCK)},${Math.round(p.z / UG_BLOCK)}`);
   }
 
+  _inLavaCell() {
+    if (!this.lava.size) return false;
+    const p = this.rig.position;
+    return this.lava.has(`${Math.round(p.x / UG_BLOCK)},${Math.round((p.y + 0.3) / UG_BLOCK)},${Math.round(p.z / UG_BLOCK)}`);
+  }
+
   _damage(n) {
     if (n <= 0) return;
     this.health = Math.max(0, this.health - n);
@@ -751,6 +820,9 @@ class UndergroundWorld {
   start() {
     this.active = true;
     this.respawn();
+    this.timeOfDay = UG_START_TIME;
+    this.skyLight = 1;
+    this._applyLighting(0);
     this.yaw = Math.PI / 2; // facing the shaft
     this.pitch = -0.15;
     this._applyViewVisibility();
@@ -784,6 +856,7 @@ class UndergroundWorld {
     this.drops.forEach((d) => this.scene.remove(d.mesh));
     if (this._dropGeo) this._dropGeo.dispose();
     Object.values(this._dropMats || {}).forEach((m) => m.dispose());
+    if (this.lavaMesh) { this.lavaMesh.geometry.dispose(); this.lavaMesh.material.dispose(); }
     if (this.waterMesh) { this.waterMesh.geometry.dispose(); this.waterMesh.material.dispose(); }
     this.renderer.dispose();
     if (this.renderer.domElement.parentNode) this.renderer.domElement.parentNode.removeChild(this.renderer.domElement);
@@ -836,19 +909,21 @@ class UndergroundWorld {
       }
       const wasGround = this.onGround;
       this.inWater = this._inWaterCell();
+      this.inLava = this._inLavaCell();
+      const fluid = this.inWater || this.inLava; // both slow you and cancel fall damage
       const flatFwd = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw)).multiplyScalar(-1);
       const right = new THREE.Vector3(flatFwd.z, 0, -flatFwd.x);
       const dir = new THREE.Vector3().addScaledVector(flatFwd, fwd).addScaledVector(right, strafe);
       const moving = dir.lengthSq() > 0;
       if (moving) dir.normalize();
-      const speed = this.flying ? UG_FLY : this.inWater ? UG_SWIM : UG_WALK;
+      const speed = this.flying ? UG_FLY : fluid ? UG_SWIM : UG_WALK;
       this.vel.x = dir.x * speed;
       this.vel.z = dir.z * speed;
 
       if (this.flying) {
         this.vel.y = ((jumpHeld ? 1 : 0) - (downHeld ? 1 : 0)) * 8;
         if (downHeld && wasGround) this.toggleFly(false); // touching down ends flight
-      } else if (this.inWater) {
+      } else if (fluid) {
         this.vel.y = Math.max(this.vel.y - UG_GRAVITY * 0.15 * dt, -3);
         if (jumpHeld) this.vel.y = 4.5; else if (downHeld) this.vel.y = -4.5;
         this.vel.y *= 0.96;
@@ -859,7 +934,7 @@ class UndergroundWorld {
 
       const bx = this._moveAxis('x', this.vel.x * dt);
       const bz = this._moveAxis('z', this.vel.z * dt);
-      if ((bx || bz) && wasGround && moving && !this.flying && !this.inWater && this.vel.y <= 0.01) {
+      if ((bx || bz) && wasGround && moving && !this.flying && !fluid && this.vel.y <= 0.01) {
         // Auto-jump: walk into a one-block ledge and hop up it, but only if the space on top is
         // clear — a two-block wall still stops you.
         const ox = p.x + dir.x * 0.4; const oz = p.z + dir.z * 0.4;
@@ -871,14 +946,19 @@ class UndergroundWorld {
       const wasAir = !wasGround;
       this.onGround = by && this.vel.y < 0;
       if (by) {
-        if (this.vel.y < 0 && wasAir && !this.flying && !this.inWater) {
+        if (this.vel.y < 0 && wasAir && !this.flying && !fluid) {
           const fall = this._peakY - p.y;
           this.lastFall = fall;
           if (fall > UG_FALL_SAFE) this._damage(Math.floor((fall - UG_FALL_SAFE) / 1.5));
         }
         this.vel.y = 0;
       }
-      if (this.onGround || this.flying || this.inWater) this._peakY = p.y; else this._peakY = Math.max(this._peakY, p.y);
+      if (this.onGround || this.flying || fluid) this._peakY = p.y; else this._peakY = Math.max(this._peakY, p.y);
+
+      if (this.inLava) {
+        this._lavaT += dt;
+        if (this._lavaT >= UG_LAVA_TICK) { this._lavaT -= UG_LAVA_TICK; this._damage(UG_LAVA_DAMAGE); }
+      } else this._lavaT = 0;
 
       this._regenT += dt;
       if (this._regenT >= 3 && this.health < this.maxHealth) {
@@ -888,6 +968,7 @@ class UndergroundWorld {
 
     this._updateMining(dt);
     this._updateDrops(dt);
+    this._updateLighting(dt);
 
     // The mesh origins are body centres; the rig is the feet.
     this.playerMesh.position.set(p.x, p.y + UG_BODY_H / 2, p.z);
@@ -1079,6 +1160,59 @@ class UndergroundWorld {
     this.crackMesh.visible = true;
   }
 
+  // ---------- day / night and light ----------
+
+  // The sun, sky colour, fog and ambient follow the clock; roofed-over (underground) air fades the
+  // sky out so caves stay dark at noon and you need your head light or torches there.
+  setTime(t) {
+    this.timeOfDay = ((t % 1) + 1) % 1;
+    this._applyLighting(1);
+  }
+
+  _skyExposure() {
+    const p = this.rig.position;
+    const gx = Math.round(p.x / UG_BLOCK); const gz = Math.round(p.z / UG_BLOCK);
+    const gy0 = Math.floor((p.y + UG_BODY_H + 1) / UG_BLOCK) + 1;
+    for (let gy = gy0; gy <= 6; gy++) if (this._solidAt(gx, gy, gz)) return 0;
+    return Math.max(0, 1 - Math.max(0, -1 - p.y) / 12); // the open shaft lets daylight in, fading with depth
+  }
+
+  _updateLighting(dt) {
+    this.timeOfDay = (this.timeOfDay + dt / UG_DAY_LENGTH) % 1;
+    const target = this._skyExposure();
+    this.skyLight += (target - this.skyLight) * Math.min(1, dt * 3);
+    this._applyLighting(dt);
+  }
+
+  _applyLighting() {
+    const t = this.timeOfDay;
+    const sn = Math.sin(t * Math.PI * 2); // 1 at noon, -1 at midnight
+    const sm = (a, b, x) => { const k = Math.max(0, Math.min(1, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
+    const day = sm(-0.15, 0.35, sn);
+    const warm = 1 - sm(0, 0.45, Math.abs(sn)); // strongest at the horizon
+    const lerp = (a, b, k) => a + (b - a) * k;
+    const sky = [0, 1, 2].map((i) => {
+      const base = lerp(UG_SKY_NIGHT[i], UG_SKY_DAY[i], day);
+      return lerp(lerp(base, UG_SKY_DUSK[i], warm * 0.75), UG_CAVE_DARK[i], 1 - this.skyLight);
+    });
+    this._skyColor.setRGB(sky[0], sky[1], sky[2]);
+    this.scene.background.copy(this._skyColor);
+    this.scene.fog.color.copy(this._skyColor);
+    this.scene.fog.density = lerp(0.03, 0.018, day * this.skyLight);
+    const outdoor = lerp(UG_AMBIENT_NIGHT, UG_AMBIENT_DAY, day);
+    this.ambient.intensity = lerp(UG_AMBIENT_CAVE, outdoor, this.skyLight);
+    this.sun.intensity = day * this.skyLight * 1.1;
+    const glow = this.hotbar === 'torch' ? UG_HEAD_LIGHT_TORCH : UG_HEAD_LIGHT;
+    this.torch.intensity = glow * (1 - 0.65 * day * this.skyLight);
+    this.torch.color.setHex(this.hotbar === 'torch' ? 0xffc27a : 0xffe2b8);
+    const phase = sn > 0.35 ? 'day' : sn > -0.15 ? (Math.cos(t * Math.PI * 2) > 0 ? 'dawn' : 'dusk') : 'night';
+    if (phase !== this.clockPhase) { this.clockPhase = phase; this.onClockChange(phase); }
+    if (this.lavaMesh) { // flowing lava
+      this.textures.lava.offset.y = (this.textures.lava.offset.y + 0.0006) % 1;
+      this.textures.lava.offset.x = (this.textures.lava.offset.x + 0.0003) % 1;
+    }
+  }
+
   // ---------- dropped items ----------
 
   _dropMaterial(look) {
@@ -1203,7 +1337,7 @@ class UndergroundWorld {
     const gy = Math.round(cell.y / UG_BLOCK);
     const gz = Math.round(cell.z / UG_BLOCK);
     const key = `${gx},${gy},${gz}`;
-    if (this.occupied.has(key) || this.water.has(key)) return false;
+    if (this.occupied.has(key) || this.water.has(key) || this.lava.has(key)) return false;
     if (type !== 'torch' && this._cellOverlapsPlayer(gx, gy, gz)) return false; // don't wall yourself in
 
     if (type === 'torch') {

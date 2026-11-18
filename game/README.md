@@ -582,6 +582,8 @@ Phaser).
   regenerates ~1 per 3 s; at 0 you respawn on the surface (nothing is lost).
 - **Fly:** double-tap **Space** (or tap 🕊️ Fly) for creative flight — no gravity,
   Space up / Shift down (⤴️/⤵️ on mobile); touching down ends it. Still collides.
+- **Day and night:** a full day lasts 4 minutes (☀️ Day / 🌅 Dusk / 🌙 Night in the badge by your health). Out under the sky it is bright by day and dark at night; deeper caves are always dim — you see by your own glow, by the torch you hold (slot 2, a much brighter light), and by torches you place.
+- **Lava:** the glowing cavern across the shaft from the pool burns 2 HP every half second (and slows you); you can't build over it. Cross by the ledge, not through it.
 - **Mine:** hold **E** (desktop) or hold ⛏️ (mobile) on the block in your crosshair.
   It cracks over a few seconds (dirt is quick, gold is slow) and drops an item
   you walk up to. Stone adds 1 and coal / iron / gold ore add 3 to your 🪨 stone

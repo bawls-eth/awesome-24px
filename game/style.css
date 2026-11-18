@@ -2290,3 +2290,17 @@ body.touch-device .key-hint { display: none; }
 
 /* Cave A3: keyboard tips are noise on a touch screen */
 body.touch-device .kbd-hint { display: none; }
+
+/* Cave A4b: time of day badge, tucked next to the health badge */
+#ug-clock {
+  position: absolute;
+  left: calc(110px + env(safe-area-inset-left, 0px));
+  top: 44px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: var(--ac-panel-glass);
+  border: 2px solid var(--ac-border);
+  font-size: 13px;
+  font-weight: 700;
+  pointer-events: none;
+}

@@ -33,8 +33,8 @@ const findOre = `(s) => {
     const mean = (name, x0, y0, x1, y1) => { const d = u.textures[name].image.getContext('2d').getImageData(x0, y0, x1 - x0, y1 - y0).data; let r = 0; let g = 0; let b = 0; const n = d.length / 4; for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i + 1]; b += d[i + 2]; } return [r / n, g / n, b / n]; };
     return { info, grassTop: mean('grass_top', 0, 0, 16, 16), sideTop: mean('grass_side', 0, 0, 16, 2), sideBottom: mean('grass_side', 0, 10, 16, 16), dirt: mean('dirt', 0, 0, 16, 16), stone: mean('stone', 0, 0, 16, 16), gold: mean('gold', 0, 0, 16, 16) };
   });
-  check('textures: 11 tiles, all 16x16, nearest-neighbour, no mipmaps, sRGB', t.info.length === 11 && t.info.every((x) => x.w === 16 && x.h === 16 && x.mag && x.min && x.mip === false && x.srgb), JSON.stringify(t.info.map((x) => x.n)));
-  check('textures: every tile is visually distinct (unique pixel hash)', new Set(t.info.map((x) => x.hash)).size === 11);
+  check('textures: 12 tiles, all 16x16, nearest-neighbour, no mipmaps, sRGB', t.info.length === 12 && t.info.every((x) => x.w === 16 && x.h === 16 && x.mag && x.min && x.mip === false && x.srgb), JSON.stringify(t.info.map((x) => x.n)));
+  check('textures: every tile is visually distinct (unique pixel hash)', new Set(t.info.map((x) => x.hash)).size === 12);
   check('textures: grass top is green, grass side has a green cap over dirt', t.grassTop[1] > t.grassTop[0] && t.grassTop[1] > t.grassTop[2] && t.sideTop[1] > t.sideTop[0] && t.sideBottom[0] > t.sideBottom[2] && t.sideBottom[0] > t.sideBottom[1], JSON.stringify([t.grassTop, t.sideTop, t.sideBottom]));
   check('textures: dirt is brown (r > g > b), stone is grey, gold ore is warmer than plain stone', t.dirt[0] > t.dirt[1] && t.dirt[1] > t.dirt[2] && Math.abs(t.stone[0] - t.stone[2]) < 12 && t.gold[0] - t.gold[2] > t.stone[0] - t.stone[2] + 8, JSON.stringify([t.dirt, t.stone, t.gold]));
   const hashes1 = t.info.map((x) => x.hash).join();
