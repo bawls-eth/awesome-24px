@@ -886,7 +886,7 @@ const GUESTBOOK_RADIUS = 60;
 // shop values; opening the plot for the first time each day pays a small
 // visitor bonus. Placed goods leave your bag (so they can't be sold).
 const HOME_POS = { x: 1650, y: 940 };
-const HOME_RADIUS = 90;
+const HOME_RADIUS = 75;
 const HOME_SLOTS = 6;
 const HOME_BONUS_PER = 5; // cozy points per ⭐ of daily visitor bonus
 const HOME_BONUS_CAP = 6;
@@ -6080,6 +6080,8 @@ class TownScene extends Phaser.Scene {
         if (blockers.some((b) => x > b[0] && x < b[2] && y > b[1] && y < b[3])) continue;
         if (this.ffInPond(MAIN_POND, x, y, 1.25) || this.ffInPond(EAST_POND, x, y, 1.25)) continue;
         if (keepClear.some((k) => Math.hypot(k.x - x, k.y - y) < 60)) continue;
+        // The home plot is a 156x96 footprint: keep weeds off it (and its fence).
+        if (Math.abs(x - HOME_POS.x) < 110 && Math.abs(y - HOME_POS.y) < 80) continue;
         // Talk-radius NPCs: stay outside their interaction radius so a weed can't steal a chat.
         if (Math.hypot(NPC_POS.x - x, NPC_POS.y - y) < 100 || Math.hypot(NPC2_POS.x - x, NPC2_POS.y - y) < 100) continue;
         if (spots.some((o) => Math.hypot(o.x - x, o.y - y) < 40)) continue;
