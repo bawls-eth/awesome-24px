@@ -113,8 +113,9 @@ const SAVE_KEY = 'pixeltown-save-v1';
 
 // Bump this string whenever there's something worth telling returning
 // players about — shown once as a dismissible banner, then remembered.
-const GAME_VERSION = 'v26-weeds';
+const GAME_VERSION = 'v27-mailbox';
 const WHATS_NEW = [
+  '📬 Villager mailbox — friends write you daily letters with gifts attached',
   '🌿 Weeds sprout every day — pull them for ⭐ and keep the town tidy',
   '🔨 DIY Workbench — craft goods from what you gather, sell them for more',
   '🎣 Daily fishing tournament — biggest catch of the day wins a bonus',
@@ -696,6 +697,9 @@ const ACHIEVEMENTS = [
   { id: 'cave1', icon: '⛰️', label: 'Spelunker', desc: 'Visit the underground cave', reward: 3, check: (s) => (s.caveVisits || 0) >= 1 },
   { id: 'chat10', icon: '👋', label: 'Friendly', desc: 'Send 10 chat messages', reward: 3, check: (s) => (s.chatSent || 0) >= 10 },
   { id: 'museumFull', icon: '🏛️', label: 'Paleontologist', desc: 'Donate all 5 fossil species', reward: 10, check: (s, scene) => scene.museumCollection && scene.museumCollection.size >= FOSSIL_TYPES.length },
+  { id: 'mail1', icon: '📬', label: 'Pen Pal', desc: 'Collect your first letter', reward: 3, check: (s) => (s.lettersRead || 0) >= 1 },
+  { id: 'mail25', icon: '💌', label: 'Postmaster', desc: 'Collect 25 letters', reward: 10, check: (s) => (s.lettersRead || 0) >= 25 },
+  { id: 'mailBest', icon: '💖', label: 'Dear Friend', desc: 'Get a letter from a best friend', reward: 8, check: (s) => (s.bestFriendLetters || 0) >= 1 },
   { id: 'craft1', icon: '🔨', label: 'DIY Beginner', desc: 'Craft something at the workbench', reward: 3, check: (s) => (s.crafted || 0) >= 1 },
   { id: 'craft10', icon: '🛠️', label: 'Crafty', desc: 'Craft 10 items', reward: 5, check: (s) => (s.crafted || 0) >= 10 },
   { id: 'craftAll', icon: '🧰', label: 'Master Crafter', desc: 'Craft every recipe at least once', reward: 10, check: (s) => RECIPES.every((r) => (s['craft_' + r.id] || 0) >= 1) },
@@ -867,6 +871,23 @@ const FISH_TOURNAMENT_SIGN_POS = { x: 2040, y: 760 };
 const FISH_TOURNAMENT_BONUS = 10;
 const GUESTBOOK_RADIUS = 60;
 
+// ---------- villager mailbox ----------
+// Each (UTC) day the villagers you know write you letters with a small gift
+// attached. Which villagers write, and what they send, is a pure function of
+// (day, villager, friendship tier) via worldHash — no Math.random, no
+// network: it is entirely local and identical for anyone with the same
+// friendships. Claims are saved under the additive `mail` key.
+const MAILBOX_POS = { x: 1125, y: 990 };
+const MAILBOX_RADIUS = 70;
+const MAIL_SALT = 131;
+const MAIL_WRITE_CHANCE = [0.4, 0.6, 0.8, 1.01]; // best friends always write // by friendship tier 0..3
+const LETTER_OPENERS = [
+  ['Hello, neighbor! It was nice to meet you.', 'Just a quick note to say hi.', 'Hope the town is treating you well.'],
+  ['Hi, friend! I was thinking about you.', 'Thanks for stopping by lately!', 'Wanted to drop you a line.'],
+  ['Dear good friend, you always brighten my day.', 'I looked forward to writing this one.', 'Missing our chats, so here is a letter.'],
+  ['Dearest best friend, you mean the world to me.', 'Okay, I will say it: you are my favorite person in town.', 'I wrote this twice because it matters.'],
+];
+const MAIL_STAR_BASE = 2;
 // ---------- DIY workbench ----------
 // Turns gathered resources into crafted goods (sold at the shop for ~1.4x
 // the raw inputs; kept below the 1.7x deal+bulk raw rate so it can't be exploited;
@@ -1070,6 +1091,7 @@ const VILLAGER_PERSONALITY_LINES = {
 // zoomed-out render of the actual sprites, which would be unreadable mud
 // at the small size a map needs to be.
 const MAP_LANDMARKS = [
+  { x: 1125, y: 990, label: '📬 Mailbox' },
   { x: 1330, y: 800, label: '🔨 Workbench' },
   { x: 260, y: 600, label: 'Pond' },
   { x: EAST_POND.cx, y: EAST_POND.cy, label: 'East pond' },
@@ -1211,6 +1233,7 @@ class TownScene extends Phaser.Scene {
     this.drawAbleSisters();
     this.drawGuestbook();
     this.drawWorkbench();
+    this.drawMailbox();
     this.drawNoticeBoard();
     this.setupScavengerHunt();
     this.drawGraveyard();
@@ -1315,6 +1338,7 @@ class TownScene extends Phaser.Scene {
     this.updateFishingRod();
     // Cheap distance check, only while the workbench is open: walking away closes it.
     if (this.workbenchOpen && !this.isNearWorkbench(WORKBENCH_RADIUS + 90)) this.closeWorkbench();
+    if (this.mailboxOpen && !this.isNearMailbox(MAILBOX_RADIUS + 90)) this.closeMailbox();
     this.updateDigHoleHint();
     this.updateFishHint();
     this.updateGiftHint();
@@ -1950,7 +1974,7 @@ class TownScene extends Phaser.Scene {
       ['achievementsOpen', 'achievements-close-btn'], ['outfitShopOpen', 'outfit-close-btn'],
       ['guestbookOpen', 'guestbook-close-btn'], ['triviaOpen', 'trivia-close-btn'],
       ['keysHelpOpen', 'keys-help-close-btn'], ['changelogOpen', 'changelog-close-btn'],
-      ['museumOpen', 'museum-close-btn'], ['workbenchOpen', 'workbench-close-btn'],
+      ['museumOpen', 'museum-close-btn'], ['workbenchOpen', 'workbench-close-btn'], ['mailboxOpen', 'mailbox-close-btn'],
     ];
     const open = overlays.find(([flag]) => this[flag]);
     if (open) {
@@ -2068,7 +2092,7 @@ class TownScene extends Phaser.Scene {
   // so chat/overlay state is respected no matter which input triggered it
   // (keyboard, on-screen button, or shake).
   canAct() {
-    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen && !this.mapOpen && !this.museumOpen && !this.workbenchOpen;
+    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen && !this.mapOpen && !this.museumOpen && !this.workbenchOpen && !this.mailboxOpen;
   }
 
   // Shake is just a fun alternate trigger for the same interact() logic used
@@ -2172,6 +2196,10 @@ class TownScene extends Phaser.Scene {
     }
     if (this.isNearWorkbench()) {
       this.openWorkbench();
+      return;
+    }
+    if (this.isNearMailbox()) {
+      this.openMailbox();
       return;
     }
     if (this.isNearGuestbook()) {
@@ -5295,6 +5323,175 @@ class TownScene extends Phaser.Scene {
     return Math.hypot(this.localBody.x - GUESTBOOK_POS.x, this.localBody.y - GUESTBOOK_POS.y) < GUESTBOOK_RADIUS;
   }
 
+  // ---------- villager mailbox ----------
+  // Pure: the letters for a UTC day given each villager's friendship tier
+  // ({id: tier}). Each has a stable id `${day}:${villagerId}`, sender,
+  // text, tier and an attachment ({kind:'res', key, n} or {kind:'stars', n}).
+  lettersForDay(day, tiers) {
+    const d = day % 100000;
+    const letters = [];
+    VILLAGERS.forEach((v, i) => {
+      const tier = Math.max(0, Math.min(3, Math.floor(Number(tiers[v.id]) || 0)));
+      if (worldHash(d, i, MAIL_SALT) < MAIL_WRITE_CHANCE[tier]) letters.push(this.makeLetter(d, day, v, i, tier));
+    });
+    if (letters.length === 0) {
+      // Everyone is busy today: the villager with the lowest roll still writes.
+      let best = 0;
+      VILLAGERS.forEach((v, i) => { if (worldHash(d, i, MAIL_SALT) < worldHash(d, best, MAIL_SALT)) best = i; });
+      const v = VILLAGERS[best];
+      letters.push(this.makeLetter(d, day, v, best, Math.max(0, Math.min(3, Math.floor(Number(tiers[v.id]) || 0)))));
+    }
+    return letters;
+  }
+
+  makeLetter(d, day, v, i, tier) {
+    const opener = LETTER_OPENERS[tier][Math.floor(worldHash(d, i, MAIL_SALT + 1) * LETTER_OPENERS[tier].length)];
+    const pool = tier >= 2 && v.closeLines && v.closeLines.length ? v.closeLines : v.lines;
+    const body = pool[Math.floor(worldHash(d, i, MAIL_SALT + 2) * pool.length)];
+    const wantsRes = worldHash(d, i, MAIL_SALT + 3) < 0.6;
+    const attach = wantsRes
+      ? { kind: 'res', key: v.likes[Math.floor(worldHash(d, i, MAIL_SALT + 4) * v.likes.length)], n: 1 + Math.floor(worldHash(d, i, MAIL_SALT + 5) * 2) + (tier >= 2 ? 1 : 0) }
+      : { kind: 'stars', n: MAIL_STAR_BASE + tier + Math.floor(worldHash(d, i, MAIL_SALT + 6) * 2) };
+    return { id: `${day}:${v.id}`, from: v.name, villagerId: v.id, tier, text: `${opener} ${body}`, attach };
+  }
+
+  mailTiers() {
+    const t = {};
+    VILLAGERS.forEach((v) => { t[v.id] = this.villagerTier(v.id); });
+    return t;
+  }
+
+  // Today's claimed ids from the save; anything malformed or from another day is empty.
+  claimedLetters() {
+    const rec = loadSave().mail;
+    const day = this.questDayBucket();
+    if (!rec || typeof rec !== 'object' || rec.day !== day || !Array.isArray(rec.claimed)) return new Set();
+    return new Set(rec.claimed.filter((x) => typeof x === 'string'));
+  }
+
+  unclaimedLetters() {
+    const day = this.questDayBucket();
+    const claimed = this.claimedLetters();
+    return this.lettersForDay(day, this.mailTiers()).filter((l) => !claimed.has(l.id));
+  }
+
+  attachLabel(a) {
+    return a.kind === 'stars' ? `${a.n} ⭐` : `${a.n} ${VILLAGER_GIFT_ICONS[a.key] || a.key}`;
+  }
+
+  drawMailbox() {
+    const { x, y } = MAILBOX_POS;
+    if (!this.textures.exists('mailbox')) {
+      const g = this.make.graphics({ x: 0, y: 0, add: false });
+      g.fillStyle(0x000000, 0.16).fillEllipse(16, 40, 28, 8);
+      g.fillStyle(0x6b4a30, 1).fillRect(14, 20, 5, 20);
+      g.fillStyle(0x3b6fb6, 1).fillRoundedRect(4, 6, 26, 16, 5);
+      g.fillStyle(0x2c5594, 1).fillRect(4, 14, 26, 3);
+      g.fillStyle(0xe8d9b5, 1).fillRect(11, 9, 12, 3);
+      g.generateTexture('mailbox', 34, 44);
+      g.destroy();
+    }
+    this.add.image(x, y, 'mailbox').setDepth(y - 1);
+    this.addObstacleRect({ x: x - 8, y: y + 8, width: 16, height: 14 });
+    this.mailboxLabel = this.add.text(x, y - 40, '📬 Mailbox', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
+    this.refreshMailboxLabel();
+    // Day rollover / friendship changes: poll cheaply (no per-frame work).
+    this.time.addEvent({ delay: 30000, loop: true, callback: () => this.refreshMailboxLabel() });
+  }
+
+  refreshMailboxLabel() {
+    if (!this.mailboxLabel) return;
+    const n = this.unclaimedLetters().length;
+    this.mailboxLabel.setText(n > 0 ? `📬 Mailbox ❗${n}` : '📬 Mailbox');
+  }
+
+  isNearMailbox(radius = MAILBOX_RADIUS) {
+    return Math.hypot(this.localBody.x - MAILBOX_POS.x, this.localBody.y - MAILBOX_POS.y) < radius;
+  }
+
+  openMailbox() {
+    this.mailboxOpen = true;
+    document.getElementById('mailbox-overlay').classList.remove('hidden');
+    document.getElementById('mailbox-note').textContent = '';
+    this.renderMailbox();
+  }
+
+  closeMailbox() {
+    this.mailboxOpen = false;
+    document.getElementById('mailbox-overlay').classList.add('hidden');
+    this.refreshMailboxLabel();
+  }
+
+  renderMailbox() {
+    const list = document.getElementById('mailbox-list');
+    list.innerHTML = '';
+    const day = this.questDayBucket();
+    const claimed = this.claimedLetters();
+    const letters = this.lettersForDay(day, this.mailTiers());
+    letters.forEach((l) => {
+      const li = document.createElement('li');
+      li.className = 'mail-letter';
+      const head = document.createElement('div');
+      head.className = 'mail-from';
+      head.textContent = `✉️ From ${l.from} (${VILLAGER_TIER_NAMES[l.tier]})`;
+      const body = document.createElement('div');
+      body.className = 'mail-body';
+      body.textContent = l.text;
+      const foot = document.createElement('div');
+      foot.className = 'mail-foot';
+      const gift = document.createElement('span');
+      gift.textContent = `🎁 ${this.attachLabel(l.attach)}`;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'mail-collect-btn';
+      btn.dataset.letter = l.id;
+      btn.setAttribute('aria-label', `Collect letter from ${l.from}`);
+      btn.textContent = claimed.has(l.id) ? 'Collected' : 'Collect';
+      btn.disabled = claimed.has(l.id);
+      btn.addEventListener('click', () => this.claimLetter(l.id));
+      foot.append(gift, btn);
+      li.append(head, body, foot);
+      list.appendChild(li);
+    });
+    const left = letters.filter((l) => !claimed.has(l.id)).length;
+    document.getElementById('mailbox-collect-all-btn').disabled = left === 0;
+    const note = document.getElementById('mailbox-note');
+    if (left === 0 && !note.textContent) note.textContent = 'All caught up — new letters arrive tomorrow.';
+  }
+
+  claimLetter(id) {
+    const day = this.questDayBucket();
+    const claimed = this.claimedLetters();
+    if (claimed.has(id)) return false;
+    const letter = this.lettersForDay(day, this.mailTiers()).find((l) => l.id === id);
+    if (!letter) return false;
+    claimed.add(id);
+    const prev = loadSave().mail;
+    const lifetime = prev && typeof prev === 'object' ? cleanCount(prev.lifetime) : 0;
+    // Save the claim BEFORE paying out so a crash/reload can never double-pay.
+    writeSave({ mail: { day, claimed: [...claimed], lifetime: lifetime + 1 } });
+    const a = letter.attach;
+    if (a.kind === 'stars') {
+      this.awardPoint(a.n, `📬 +${a.n} ⭐`, this.localBody.x, this.localBody.y - 36, 'sell');
+    } else {
+      this.resources[a.key] = (this.resources[a.key] || 0) + a.n;
+      this.updateInventoryHUD();
+      this.saveResources();
+      this.showFloatingText(this.localBody.x, this.localBody.y - 36, `📬 +${this.attachLabel(a)}`);
+    }
+    this.incrementStat('lettersRead');
+    if (letter.tier >= 3) this.incrementStat('bestFriendLetters');
+    const note = document.getElementById('mailbox-note');
+    if (note) note.textContent = `Thanks, ${letter.from}! You got ${this.attachLabel(a)}.`;
+    this.renderMailbox();
+    this.refreshMailboxLabel();
+    return true;
+  }
+
+  collectAllLetters() {
+    this.unclaimedLetters().forEach((l) => this.claimLetter(l.id));
+  }
+
   // ---------- DIY workbench ----------
   // Baked once into a texture (no per-frame drawing), then placed as an image.
   drawWorkbench() {
@@ -5471,6 +5668,10 @@ class TownScene extends Phaser.Scene {
     this.lastGuestbookAt = 0;
     document.getElementById('guestbook-close-btn').addEventListener('click', () => this.closeGuestbook());
     document.getElementById('workbench-close-btn').addEventListener('click', () => this.closeWorkbench());
+    document.getElementById('mailbox-close-btn').addEventListener('click', () => this.closeMailbox());
+    const mbOverlay = document.getElementById('mailbox-overlay');
+    mbOverlay.addEventListener('click', (e) => { if (e.target === mbOverlay) this.closeMailbox(); });
+    document.getElementById('mailbox-collect-all-btn').addEventListener('click', () => this.collectAllLetters());
     const wbOverlay = document.getElementById('workbench-overlay');
     wbOverlay.addEventListener('click', (e) => { if (e.target === wbOverlay) this.closeWorkbench(); });
     document.getElementById('guestbook-sign-btn').addEventListener('click', () => this.submitGuestbookNote());
@@ -5585,7 +5786,7 @@ class TownScene extends Phaser.Scene {
     const pad = 70;
     const blockers = this.weedBlockers;
     const keepClear = [
-      ...FLOWER_SPOTS, CAMPFIRE_POS, STATUE_POS, GUESTBOOK_POS, WORKBENCH_POS,
+      ...FLOWER_SPOTS, CAMPFIRE_POS, STATUE_POS, MAILBOX_POS, GUESTBOOK_POS, WORKBENCH_POS,
       POLYROLL_POS, TURNIP_STALL_POS, ABLE_SISTERS_POS, MERCHANT_POS, DIG_HOLE_POS, FISH_TOURNAMENT_SIGN_POS,
     ];
     const spots = [];

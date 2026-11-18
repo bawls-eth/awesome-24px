@@ -29,6 +29,15 @@ right now, before you even pick a name.
 - **Fish** at the pond (or the second pond out east), **chop** trees for
   wood, **mine** rocks for stone — classic Animal Crossing activities, fill
   the inventory in the top-left
+- **Villager mailbox** 📬 — the blue mailbox just south of the museum (shown on
+  the town's world as `📬 Mailbox ❗N` when letters are waiting). Each day
+  the villagers you know write you letters with a small gift attached
+  (a resource they like, or ⭐). Better friends write more often and send
+  more; best friends write every day. Collect them one by one or with
+  **Collect all**. Entirely local and deterministic per UTC day; claims are
+  saved under the additive `mail: {day, claimed, lifetime}` key.
+  Achievements: Pen Pal, Postmaster (25), Dear Friend. Tests:
+  `node game/tests/mailbox.test.js`.
 - **Weeds & tidiness** 🌿 — every (UTC) day a fresh batch of ~24 weeds sprouts
   around the village, the same for everyone (deterministic `worldHash` of the
   day, nothing synced). Walk up and press **E** / **A** to pull one for ⭐1;
