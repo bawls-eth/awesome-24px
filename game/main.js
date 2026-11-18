@@ -2664,7 +2664,9 @@ class TownScene extends Phaser.Scene {
 
   donateFossils() {
     if (!this.fossilsHeld.length) {
-      this.showFloatingText(this.localBody.x, this.localBody.y - 30, "you don't have any fossils to donate");
+      // Nothing to hand over — walking up to the building just lets you
+      // browse the collection instead.
+      this.openMuseum();
       return;
     }
     let newSpecies = 0;
@@ -3031,61 +3033,212 @@ class TownScene extends Phaser.Scene {
   }
 
   setupMuseumUI() {
-    document.getElementById('museum-badge').addEventListener('click', () => {
-      this.renderMuseumPanel();
-      document.getElementById('museum-overlay').classList.remove('hidden');
-      this.museumOpen = true;
+    this.museumWing = 'fossils';
+    const overlay = document.getElementById('museum-overlay');
+    document.getElementById('museum-badge').addEventListener('click', () => this.openMuseum());
+    document.getElementById('museum-close-btn').addEventListener('click', () => this.closeMuseum());
+    // Tapping the dimmed backdrop (not the card) closes, like a native sheet.
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) this.closeMuseum(); });
+    overlay.querySelectorAll('.museum-tab').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        this.museumWing = tab.dataset.wing;
+        this.hideMuseumDetail();
+        this.showMuseumWing();
+      });
     });
-    document.getElementById('museum-close-btn').addEventListener('click', () => {
-      document.getElementById('museum-overlay').classList.add('hidden');
-      this.museumOpen = false;
+    // One delegated listener for every specimen card, since the grids are
+    // re-rendered on each open.
+    overlay.querySelector('.museum-body').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-ff-id]');
+      if (btn) this.showMuseumDetail(btn.dataset.ffId);
+    });
+    window.addEventListener('keydown', (e) => {
+      if (!this.museumOpen || e.key !== 'Escape') return;
+      if (this.museumDetailOpen) this.hideMuseumDetail();
+      else this.closeMuseum();
+    });
+  }
+
+  openMuseum() {
+    this.renderMuseumPanel();
+    this.hideMuseumDetail();
+    this.showMuseumWing();
+    document.getElementById('museum-overlay').classList.remove('hidden');
+    this.museumOpen = true;
+    // Species facts live in a separate ~50KB registry that most sessions
+    // never need, so it's only fetched the first time the Museum is opened.
+    this.loadSpeciesRegistry();
+  }
+
+  closeMuseum() {
+    document.getElementById('museum-overlay').classList.add('hidden');
+    this.hideMuseumDetail();
+    this.museumOpen = false;
+  }
+
+  loadSpeciesRegistry() {
+    if (!this.speciesRegistryPromise) {
+      this.speciesRegistryPromise = fetch('species-registry.json')
+        .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+        .then((data) => {
+          const byId = new Map();
+          (Array.isArray(data && data.species) ? data.species : []).forEach((s) => { if (s && s.id) byId.set(s.id, s); });
+          return byId;
+        })
+        .catch((err) => {
+          // Forget the failed attempt so the next open retries.
+          this.speciesRegistryPromise = null;
+          throw err;
+        });
+    }
+    return this.speciesRegistryPromise;
+  }
+
+  showMuseumWing() {
+    const overlay = document.getElementById('museum-overlay');
+    overlay.querySelectorAll('.museum-tab').forEach((tab) => {
+      const active = tab.dataset.wing === this.museumWing;
+      tab.classList.toggle('active', active);
+      tab.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    overlay.querySelectorAll('.museum-wing').forEach((wing) => {
+      wing.classList.toggle('hidden', wing.dataset.wing !== this.museumWing);
+    });
+    overlay.querySelector('.museum-card').scrollTop = 0;
+  }
+
+  hideMuseumDetail() {
+    this.museumDetailOpen = false;
+    this.museumDetailId = null;
+    const card = document.querySelector('#museum-overlay .museum-card');
+    if (card) card.classList.remove('museum-detail-open');
+    const detail = document.getElementById('museum-detail');
+    if (detail) { detail.classList.add('hidden'); detail.innerHTML = ''; }
+  }
+
+  showMuseumDetail(id) {
+    const asset = FF_ASSETS.find((a) => a.id === id);
+    if (!asset || !this.ffDiscovered.has(id)) return;
+    const card = document.querySelector('#museum-overlay .museum-card');
+    const detail = document.getElementById('museum-detail');
+    this.museumDetailOpen = true;
+    this.museumDetailId = id;
+    card.classList.add('museum-detail-open');
+    detail.classList.remove('hidden');
+    detail.innerHTML = '<button type="button" class="museum-detail-back">‹ Back</button>'
+      + `<div class="museum-detail-art"><img src="assets/flora-fauna/svg/${encodeURIComponent(id)}.svg" alt=""></div>`
+      + `<h3 class="museum-detail-name">${escapeHtml(asset.name)}</h3>`
+      + '<p class="museum-detail-sci"></p>'
+      + '<dl class="museum-facts"><div class="museum-facts-loading">Loading field notes…</div></dl>';
+    detail.querySelector('.museum-detail-back').addEventListener('click', () => this.hideMuseumDetail());
+    card.scrollTop = 0;
+
+    const pretty = (s) => String(s).replace(/_/g, ' ');
+    const size = (cm) => {
+      const n = Number(cm);
+      if (!Number.isFinite(n)) return '';
+      if (n >= 100) return `${+(n / 100).toFixed(1)} m`;
+      if (n < 1) return `${+(n * 10).toFixed(2)} mm`;
+      return `${n} cm`;
+    };
+    this.loadSpeciesRegistry().then((byId) => {
+      if (this.museumDetailId !== id) return; // user moved on meanwhile
+      const s = byId.get(id);
+      const facts = detail.querySelector('.museum-facts');
+      if (!s) { facts.innerHTML = '<div class="museum-facts-loading">No field notes for this species yet.</div>'; return; }
+      if (s.common_name) detail.querySelector('.museum-detail-name').textContent = s.common_name;
+      detail.querySelector('.museum-detail-sci').textContent = s.scientific_name || '';
+      const rows = [
+        ['Rarity', s.rarity && pretty(s.rarity)],
+        ['Biome', s.biome && pretty(s.biome)],
+        ['Habitat', s.habitat],
+        ['Size', s.size_cm != null && size(s.size_cm)],
+        ['Diet', s.diet],
+        ['Role', s.trophic_role && pretty(s.trophic_role)],
+        ['Behavior', s.behavior],
+        ['Season', s.seasonality],
+      ].filter(([, v]) => v);
+      facts.innerHTML = rows.map(([k, v]) => `<div><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd></div>`).join('');
+      if (s.rarity) detail.querySelector('.museum-detail-art').dataset.rarity = String(s.rarity);
+    }).catch(() => {
+      if (this.museumDetailId !== id) return;
+      detail.querySelector('.museum-facts').innerHTML = '<div class="museum-facts-loading">Couldn\'t load field notes — try again later.</div>';
     });
   }
 
   renderMuseumPanel() {
+    const overlay = document.getElementById('museum-overlay');
+    const progress = {};
+    const setProgress = (wing, have, total) => {
+      progress[wing] = [have, total];
+      const section = overlay.querySelector(`.museum-wing[data-wing="${wing}"]`);
+      const tab = overlay.querySelector(`.museum-tab[data-wing="${wing}"]`);
+      const pct = total ? Math.round((have / total) * 100) : 0;
+      if (section) {
+        section.querySelector('.museum-bar-fill').style.width = `${pct}%`;
+        section.classList.toggle('complete', total > 0 && have >= total);
+      }
+      if (tab) {
+        tab.querySelector('.museum-tab-count').textContent = `${have}/${total}`;
+        tab.classList.toggle('complete', total > 0 && have >= total);
+      }
+    };
+
     const renderSection = (listId, types, collected) => {
       const listEl = document.getElementById(listId);
-      if (!listEl) return;
-      listEl.innerHTML = '';
-      types.forEach((label, i) => {
+      if (!listEl) return 0;
+      let have = 0;
+      listEl.innerHTML = types.map((label, i) => {
         const unlocked = collected.has(i);
+        if (unlocked) have++;
         const [icon, ...nameParts] = label.split(' ');
-        const li = document.createElement('li');
-        li.className = unlocked ? 'unlocked' : '';
-        li.innerHTML = `<span class="ach-icon">${unlocked ? icon : '🔒'}</span>`
-          + `<span class="ach-text">${unlocked ? nameParts.join(' ') : '???'}</span>`;
-        listEl.appendChild(li);
-      });
+        return `<li class="museum-specimen ${unlocked ? 'unlocked' : 'locked'}">`
+          + `<span class="museum-art museum-art-emoji" aria-hidden="true">${escapeHtml(icon)}</span>`
+          + (unlocked ? '' : '<span class="museum-lock" aria-hidden="true">🔒</span>')
+          + `<span class="museum-name">${unlocked ? escapeHtml(nameParts.join(' ')) : '???'}</span></li>`;
+      }).join('');
+      return have;
     };
-    renderSection('museum-fossils-list', FOSSIL_TYPES, this.museumCollection);
-    renderSection('museum-fauna-list', FAUNA_TYPES, this.museumFauna);
-    renderSection('museum-flora-list', FLORA_TYPES, this.museumFlora);
+    setProgress('fossils', renderSection('museum-fossils-list', FOSSIL_TYPES, this.museumCollection), FOSSIL_TYPES.length);
+    setProgress('fauna', renderSection('museum-fauna-list', FAUNA_TYPES, this.museumFauna), FAUNA_TYPES.length);
+    setProgress('flora', renderSection('museum-flora-list', FLORA_TYPES, this.museumFlora), FLORA_TYPES.length);
 
-    // The flora/fauna pack (64 species, string ids rather than the small
-    // fixed-size FAUNA_TYPES/FLORA_TYPES arrays above) renders the same
-    // way but keyed by id instead of index.
-    const renderIdSection = (listId, items, collected) => {
+    // The flora/fauna pack (string ids rather than the small fixed-size
+    // FAUNA_TYPES/FLORA_TYPES arrays above) renders the same way but keyed
+    // by id, with each species' own SVG art — shown as a dark silhouette
+    // until it's been discovered.
+    const discovered = this.ffDiscovered || new Set();
+    const renderIdSection = (listId, items) => {
       const listEl = document.getElementById(listId);
-      if (!listEl) return;
-      listEl.innerHTML = '';
-      items.forEach((item) => {
-        const unlocked = collected.has(item.id);
-        const li = document.createElement('li');
-        li.className = unlocked ? 'unlocked' : '';
-        li.innerHTML = `<span class="ach-icon">${unlocked ? '🔍' : '🔒'}</span>`
-          + `<span class="ach-text">${unlocked ? item.name : '???'}</span>`;
-        listEl.appendChild(li);
-      });
+      if (!listEl) return 0;
+      let have = 0;
+      listEl.innerHTML = items.map((item) => {
+        const unlocked = discovered.has(item.id);
+        if (unlocked) have++;
+        const img = `<span class="museum-art"><img src="assets/flora-fauna/svg/${encodeURIComponent(item.id)}.svg" alt="" loading="lazy" decoding="async"></span>`;
+        if (!unlocked) {
+          return `<li class="museum-specimen locked">${img}<span class="museum-lock" aria-hidden="true">🔒</span><span class="museum-name">???</span></li>`;
+        }
+        const name = escapeHtml(item.name);
+        return `<li class="museum-specimen unlocked"><button type="button" class="museum-card-btn" data-ff-id="${escapeHtml(item.id).replace(/"/g, '&quot;')}" aria-label="${name.replace(/"/g, '&quot;')} — view details">`
+          + `${img}<span class="museum-name">${name}</span></button></li>`;
+      }).join('');
+      return have;
     };
     const wildFauna = FF_ASSETS.filter((a) => a.kind === 'fauna');
     const wildFlora = FF_ASSETS.filter((a) => a.kind === 'flora');
-    renderIdSection('museum-wildfauna-list', wildFauna, this.ffDiscovered);
-    renderIdSection('museum-wildflora-list', wildFlora, this.ffDiscovered);
-    const discoveredOf = (list) => list.filter((a) => this.ffDiscovered.has(a.id)).length;
-    document.getElementById('wild-fauna-count').textContent = discoveredOf(wildFauna);
+    const faunaHave = renderIdSection('museum-wildfauna-list', wildFauna);
+    const floraHave = renderIdSection('museum-wildflora-list', wildFlora);
+    setProgress('wildfauna', faunaHave, wildFauna.length);
+    setProgress('wildflora', floraHave, wildFlora.length);
+    document.getElementById('wild-fauna-count').textContent = faunaHave;
     document.getElementById('wild-fauna-cap').textContent = wildFauna.length;
-    document.getElementById('wild-flora-count').textContent = discoveredOf(wildFlora);
+    document.getElementById('wild-flora-count').textContent = floraHave;
     document.getElementById('wild-flora-cap').textContent = wildFlora.length;
+
+    const totals = Object.values(progress).reduce((acc, [h, t]) => [acc[0] + h, acc[1] + t], [0, 0]);
+    document.getElementById('museum-total-count').textContent = `${totals[0]}/${totals[1]}`;
+    document.getElementById('museum-total-bar').style.width = `${totals[1] ? Math.round((totals[0] / totals[1]) * 100) : 0}%`;
   }
 
   setupKeysHelp() {
