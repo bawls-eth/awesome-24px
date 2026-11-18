@@ -896,6 +896,8 @@ const FISH_TOURNAMENT_SIGN_POS = { x: 2040, y: 760 };
 const FISH_TOURNAMENT_BONUS = 10;
 const GUESTBOOK_RADIUS = 60;
 
+const PANEL_COLLAPSE_KEY = 'pixeltown-panel-collapsed'; // own key; never part of the save
+const PANEL_PHONE_MAX_WIDTH = 600;
 // ---------- daily checklist ----------
 // A "Today" board (button in the player panel, or J) that lists every daily
 // chore with live progress so players can see what is left: Professor Byte's
@@ -1431,6 +1433,7 @@ class TownScene extends Phaser.Scene {
     this.setupWeeds();
     this.setupJournal();
     this.setupDailies(); // after weeds/mail/bug-off/home/birthdays exist
+    this.setupPanelCollapse();
     if (IS_TOUCH) {
       this.setupTouchControls();
       this.setupTiltShake();
@@ -7270,6 +7273,66 @@ class TownScene extends Phaser.Scene {
     }
     this.showVillagerBubble(v, line);
     SFX.pop();
+  }
+
+  // ---------- phone: collapsible "In town" panel ----------
+  // On phone widths the panel (player list + every button + status lines) is
+  // tall and covered half the screen, so it starts collapsed to a small chip
+  // (players + trophies) and expands on tap. Desktop is unchanged (the CSS only
+  // applies at <= 600px). The choice is remembered under its own
+  // localStorage key, separate from the save, and the expanded height is
+  // capped so the panel can never run into the chat bar / controls below.
+  setupPanelCollapse() {
+    const panel = document.getElementById('player-list-panel');
+    const toggle = document.getElementById('panel-toggle');
+    if (!panel || !toggle) return;
+    const mq = window.matchMedia(`(max-width: ${PANEL_PHONE_MAX_WIDTH}px)`);
+    let stored = null;
+    try { stored = localStorage.getItem(PANEL_COLLAPSE_KEY); } catch (e) { /* storage blocked */ }
+    // Default on phones: collapsed.
+    this.panelCollapsed = stored === null ? true : stored === '1';
+    const label = () => {
+      const n = document.querySelectorAll('#player-list li').length;
+      const a = (document.getElementById('achievement-count') || {}).textContent || '0';
+      const cap = (document.getElementById('achievement-cap') || {}).textContent || '';
+      const collapsed = panel.classList.contains('collapsed');
+      const text = collapsed ? `👥 ${n} · 🏆 ${a}${cap ? '/' + cap : ''} ▾` : '✕ Close ▴';
+      if (toggle.textContent !== text) toggle.textContent = text;
+      toggle.setAttribute('aria-expanded', String(!collapsed));
+      toggle.setAttribute('aria-label', collapsed ? 'Open the town panel' : 'Close the town panel');
+    };
+    // Keep the expanded panel clear of the chat bar (and so the controls) below it.
+    const fit = () => {
+      if (!mq.matches || panel.classList.contains('collapsed')) { panel.style.maxHeight = ''; return; }
+      const chat = document.getElementById('chat-panel');
+      const top = panel.getBoundingClientRect().top;
+      const chatTop = chat ? chat.getBoundingClientRect().top : window.innerHeight;
+      const room = Math.floor(chatTop - top - 8);
+      panel.style.maxHeight = `${Math.max(120, Math.min(Math.floor(window.innerHeight * 0.6), room))}px`;
+    };
+    const apply = () => {
+      panel.classList.toggle('collapsed', mq.matches && this.panelCollapsed);
+      label();
+      fit();
+    };
+    this.setPanelCollapsed = (collapsed) => {
+      this.panelCollapsed = !!collapsed;
+      try { localStorage.setItem(PANEL_COLLAPSE_KEY, this.panelCollapsed ? '1' : '0'); } catch (e) { /* ignore */ }
+      apply();
+    };
+    toggle.addEventListener('click', () => this.setPanelCollapsed(!panel.classList.contains('collapsed')));
+    if (mq.addEventListener) mq.addEventListener('change', apply); else if (mq.addListener) mq.addListener(apply);
+    window.addEventListener('resize', fit);
+    // The chip's text follows the player count and trophy count (cheap: DOM events only).
+    const obs = new MutationObserver(label);
+    obs.observe(document.getElementById('player-list'), { childList: true });
+    const ac = document.getElementById('achievement-count');
+    if (ac) obs.observe(ac, { childList: true, characterData: true, subtree: true });
+    const cap = document.getElementById('achievement-cap');
+    if (cap) obs.observe(cap, { childList: true, characterData: true, subtree: true });
+    // Expanded content grows/shrinks (e.g. settings section): refit.
+    if (window.ResizeObserver && document.getElementById('chat-panel')) new ResizeObserver(fit).observe(document.getElementById('chat-panel'));
+    apply();
   }
 
   // ---------- daily checklist ----------

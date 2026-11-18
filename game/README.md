@@ -768,6 +768,15 @@ you don't already trust.
 - Sync the underground cave (shared dig state, friends visible down there) —
   skipped for now to keep the first version simple and purely local
 
+## Phone layout
+
+On phone widths (<= 600px) the "In town" panel starts **collapsed to a small chip** (👥 players · 🏆 trophies ▾) so the world and the joystick stay visible; tap it to expand
+and **✕ Close ▴** to collapse again. Expanded, it scrolls inside itself (at most 60% of the screen height, and always clear of the chat bar and the on-screen
+controls), and every button (Achievements, Map, Museum, Today, Journal, Settings) stays reachable. The choice is remembered under its own localStorage key
+(`pixeltown-panel-collapsed`, separate from the save). Desktop layout is unchanged. Overlay close buttons are 40px on phones, over-tall cards scroll inside the
+screen instead of being clipped, and the "What's new" banner is capped at about a third of the screen. Tests: `game/tests/phone-panel.test.js`,
+`game/tests/phone-overlays.test.js`.
+
 ## Tests
 
 Headless Playwright suites live in `game/tests/` (one per feature plus
