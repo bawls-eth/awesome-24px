@@ -334,6 +334,9 @@ const VILLAGE_BOUNDS = { x: 0, y: 0, width: 2400, height: 1200 };
 // Thickness of the ocean band at the very edge of the (much bigger) world —
 // everything between the village and the ocean is the wilderness ring.
 const OCEAN_MARGIN = 500;
+// Baked tree texture size and where the tree's base point (its old
+// Graphics-local 0,0) sits inside it — see bakeTreeTextures().
+const TREE_TEX = { w: 56, h: 60, ox: 28, oy: 43 };
 const TREES = [
   [60, 50], [220, 40], [380, 55], [560, 45], [680, 60],
   [920, 60], [1040, 45], [1200, 55], [1360, 40], [1520, 50],
@@ -2855,16 +2858,41 @@ class TownScene extends Phaser.Scene {
     // as the real world, just schematic.
     ctx.fillStyle = '#2a5a8a';
     ctx.fillRect(0, 0, w, h);
+    // The same rounded coastline the world draws (islandCoast), with a
+    // thin sand rim, falling back to the plain land rect.
+    if (this.islandCoast) {
+      ctx.beginPath();
+      this.islandCoast.forEach((p, i) => { const [sx, sy] = toScreen(p.x, p.y); if (i) ctx.lineTo(sx, sy); else ctx.moveTo(sx, sy); });
+      ctx.closePath();
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = '#3f74a3';
+      ctx.stroke();
+      ctx.fillStyle = '#b9a878';
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#b9a878';
+      ctx.stroke();
+    }
     ctx.fillStyle = '#2f4a33';
     const [landX, landY] = toScreen(this.world.originX + OCEAN_MARGIN, this.world.originY + OCEAN_MARGIN);
     const [landX2, landY2] = toScreen(this.world.originX + this.world.width - OCEAN_MARGIN, this.world.originY + this.world.height - OCEAN_MARGIN);
-    ctx.fillRect(landX, landY, landX2 - landX, landY2 - landY);
+    const inset = this.islandCoast ? 2 : 0;
+    if (ctx.roundRect && inset) {
+      ctx.beginPath();
+      ctx.roundRect(landX + inset, landY + inset, landX2 - landX - inset * 2, landY2 - landY - inset * 2, 8);
+      ctx.fill();
+    } else {
+      ctx.fillRect(landX, landY, landX2 - landX, landY2 - landY);
+    }
 
     ctx.fillStyle = '#3a86c8';
     [MAIN_POND, EAST_POND].forEach(({ cx, cy, rx, ry }) => {
       const [sx, sy] = toScreen(cx, cy);
-      const [swx] = toScreen(rx * 2, 0);
-      const [, swy] = toScreen(0, ry * 2);
+      // Sizes scale by the map's ratio only — running them through
+      // toScreen() (which also adds the world-origin offset) drew the
+      // ponds as huge blobs covering most of the village.
+      const swx = (rx * 2 * w) / this.world.width;
+      const swy = (ry * 2 * h) / this.world.height;
       ctx.beginPath();
       ctx.ellipse(sx, sy, Math.max(swx / 2, 2), Math.max(swy / 2, 2), 0, 0, Math.PI * 2);
       ctx.fill();
@@ -3353,6 +3381,72 @@ class TownScene extends Phaser.Scene {
     };
   }
 
+  // The island's outline: the land rect with rounded corners (radius 140),
+  // pushed out along its normal by `offset` plus up to `amp` px of smooth,
+  // deterministic wobble (negative amp pulls inward). Every frequency is a
+  // whole number of cycles around the perimeter so the outline closes
+  // seamlessly. The coast itself (offset 60+) always sits OUTSIDE
+  // landBounds() — a rounded corner of radius 140 bulges in by at most
+  // 140*(sqrt2-1) = 58px — so everything placed against the plain rect
+  // (wilderness trees/rocks, flora/fauna, wild critters) still stands on
+  // land exactly where it did; the beach just grew a natural shape.
+  islandOutline(offset, amp, seed, step = 24) {
+    const land = this.landBounds();
+    const r = 140;
+    const x0 = land.x + r;
+    const y0 = land.y + r;
+    const x1 = land.x + land.width - r;
+    const y1 = land.y + land.height - r;
+    const w = x1 - x0;
+    const h = y1 - y0;
+    const arc = (Math.PI / 2) * r;
+    const perimeter = 2 * w + 2 * h + 4 * arc;
+    const waves = [[5, 1], [11, 0.6], [19, 0.4], [37, 0.25], [61, 0.15]]
+      .map(([k, wt], i) => [k, wt, worldHash(seed, i, 61) * Math.PI * 2]);
+    const totalWeight = waves.reduce((sum, [, wt]) => sum + wt, 0);
+    // [length, (t) => [cx, cy, nx, ny]] — edges and quarter arcs of the
+    // inner (radius-0) rect, clockwise from the top edge's left end.
+    const quarter = (cx, cy, a0) => (t) => { const a = a0 + t * Math.PI / 2; return [cx, cy, Math.cos(a), Math.sin(a)]; };
+    const segs = [
+      [w, (t) => [x0 + t * w, y0, 0, -1]],
+      [arc, quarter(x1, y0, -Math.PI / 2)],
+      [h, (t) => [x1, y0 + t * h, 1, 0]],
+      [arc, quarter(x1, y1, 0)],
+      [w, (t) => [x1 - t * w, y1, 0, 1]],
+      [arc, quarter(x0, y1, Math.PI / 2)],
+      [h, (t) => [x0, y1 - t * h, -1, 0]],
+      [arc, quarter(x0, y0, Math.PI)],
+    ];
+    const points = [];
+    let s = 0;
+    segs.forEach(([len, at]) => {
+      const n = Math.max(1, Math.round(len / step));
+      for (let i = 0; i < n; i++, s += len / n) {
+        const [cx, cy, nx, ny] = at(i / n);
+        let noise = 0;
+        waves.forEach(([k, wt, ph]) => { noise += wt * Math.sin((s / perimeter) * k * Math.PI * 2 + ph); });
+        const d = r + offset + amp * (noise / totalWeight + 1) / 2;
+        points.push({ x: cx + nx * d, y: cy + ny * d, nx, ny });
+      }
+    });
+    return points;
+  }
+
+  traceOutline(ctx, points) {
+    ctx.beginPath();
+    points.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+    ctx.closePath();
+  }
+
+  // Ocean, shallows, beach and grass never change, so instead of live
+  // Graphics objects (each one re-tessellates all of its shapes on every
+  // frame — the old ocean/ground layers were 860+ shape commands redrawn
+  // per frame) they're painted ONCE with the 2D canvas API into a 2x2 grid
+  // of half-resolution canvas textures and shown as 4 plain Images.
+  // Half-res keeps each tile ~1450x1150 (well under any device's max
+  // texture size, ~27MB total) and the 2px texels suit the pixel-art look.
+  // drawOcean() paints water + beach; drawGround() paints grass onto the
+  // same canvases. Only the waves/foam on top are live (cheap) objects.
   drawOcean() {
     // Trees/flowers/critters elsewhere use their own y as their Phaser
     // depth (a common 2D "y-sort" trick) — fine when y is always a small
@@ -3361,23 +3455,121 @@ class TownScene extends Phaser.Scene {
     // sit *above* that content and hide it behind the ocean. Anchoring
     // this to originY instead guarantees it's always further back than
     // anything anywhere in the (much bigger) world.
-    const g = this.add.graphics().setDepth(this.world.originY - 1000);
-    g.fillStyle(0x2a5a8a, 1).fillRect(this.world.originX, this.world.originY, this.world.width, this.world.height);
-    g.fillStyle(0x3a7ab0, 1);
-    // A fixed, small number of wave-dots (picked by index, not a full
-    // grid scan of the whole ocean band) — a Graphics object redraws all
-    // of its own shape commands every frame, so scanning a ~90px grid
-    // across a world this size added 1000+ fillCircle calls to a single
-    // object and visibly tanked the frame rate. This reads the same from
-    // a normal zoom level at a fraction of the cost.
-    const land = this.landBounds();
-    const waveCount = 260;
-    for (let i = 0; i < waveCount; i++) {
-      const wx = Math.round(this.world.originX + worldHash(i, 0, 11) * this.world.width);
-      const wy = Math.round(this.world.originY + worldHash(i, 1, 12) * this.world.height);
-      const onLand = wx > land.x - 20 && wx < land.x + land.width + 20 && wy > land.y - 20 && wy < land.y + land.height + 20;
-      if (!onLand) g.fillCircle(wx, wy, 6);
+    const depth = this.world.originY - 1000;
+    const scale = 0.5;
+    const tileW = this.world.width / 2;
+    const tileH = this.world.height / 2;
+    this.islandCoast = this.islandOutline(60, 55, 1);
+    const layers = [
+      [this.islandOutline(330, 140, 4, 48), '#3471a6'],
+      [this.islandOutline(190, 90, 3), '#4b93c6'],
+      [this.islandOutline(110, 60, 2), '#6cb8de'],
+    ];
+    this.islandTiles = [];
+    for (let ty = 0; ty < 2; ty++) {
+      for (let tx = 0; tx < 2; tx++) {
+        const left = this.world.originX + tx * tileW;
+        const top = this.world.originY + ty * tileH;
+        const key = `island_${tx}_${ty}`;
+        if (this.textures.exists(key)) this.textures.remove(key);
+        const tex = this.textures.createCanvas(key, Math.ceil(tileW * scale), Math.ceil(tileH * scale));
+        tex.context.setTransform(scale, 0, 0, scale, -left * scale, -top * scale);
+        this.paintOcean(tex.context, layers);
+        tex.refresh();
+        this.add.image(left, top, key).setOrigin(0, 0).setScale(1 / scale).setDepth(depth);
+        this.islandTiles.push(tex);
+      }
     }
+    this.drawOceanWaves();
+  }
+
+  paintOcean(ctx, layers) {
+    const W = this.world;
+    ctx.fillStyle = '#2a5a8a';
+    ctx.fillRect(W.originX, W.originY, W.width, W.height);
+    // Glints out in the deep water (same deterministic scatter the old
+    // wave-dots used — free now that they're baked).
+    ctx.fillStyle = 'rgba(96,146,196,0.6)';
+    for (let i = 0; i < 260; i++) {
+      const wx = Math.round(W.originX + worldHash(i, 0, 11) * W.width);
+      const wy = Math.round(W.originY + worldHash(i, 1, 12) * W.height);
+      ctx.fillRect(wx - 8, wy, 16, 4);
+    }
+    // Deep -> shelf -> shallows -> turquoise near-shore bands.
+    layers.forEach(([pts, color]) => {
+      this.traceOutline(ctx, pts);
+      ctx.fillStyle = color;
+      ctx.fill();
+    });
+    // Sand, a darker wet-sand lip where the water laps, then a foam line.
+    this.traceOutline(ctx, this.islandCoast);
+    ctx.fillStyle = '#e3d2a0';
+    ctx.fill();
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#d2bd88';
+    ctx.lineWidth = 22;
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+    ctx.lineWidth = 6;
+    ctx.stroke();
+    // A few pebbles and shell bits on the sand.
+    this.islandCoast.forEach((p, i) => {
+      if (worldHash(i, 0, 81) > 0.3) return;
+      const inset = 26 + worldHash(i, 1, 82) * 40;
+      ctx.fillStyle = worldHash(i, 2, 83) < 0.5 ? '#f6ecd0' : '#c4ad7c';
+      ctx.fillRect(p.x - p.nx * inset, p.y - p.ny * inset, 6, 4);
+    });
+  }
+
+  // Cheap animated water: baked wave-crest Images out at sea and foam
+  // dashes along the shoreline, all driven by 5 shared tweens — no
+  // per-frame redraw, no Graphics objects.
+  drawOceanWaves() {
+    if (!this.textures.exists('wave_crest')) {
+      const g = this.make.graphics({ x: 0, y: 0, add: false });
+      g.lineStyle(3, 0xd8ecfa, 1);
+      g.beginPath(); g.arc(9, 12, 8, Math.PI * 1.1, Math.PI * 1.9); g.strokePath();
+      g.beginPath(); g.arc(23, 12, 8, Math.PI * 1.1, Math.PI * 1.9); g.strokePath();
+      g.generateTexture('wave_crest', 32, 14);
+      g.clear();
+      g.fillStyle(0xffffff, 1).fillEllipse(12, 4, 22, 6);
+      g.generateTexture('foam_dash', 24, 8);
+      g.destroy();
+    }
+    const depth = this.world.originY - 990;
+    const land = this.landBounds();
+    const pad = 260;
+    const crests = [[], [], []];
+    for (let i = 0; i < 120; i++) {
+      const x = Math.round(this.world.originX + worldHash(i, 0, 51) * this.world.width);
+      const y = Math.round(this.world.originY + worldHash(i, 1, 52) * this.world.height);
+      const nearLand = x > land.x - pad && x < land.x + land.width + pad && y > land.y - pad && y < land.y + land.height + pad;
+      if (nearLand) continue;
+      crests[i % 3].push(this.add.image(x, y, 'wave_crest').setDepth(depth).setAlpha(0.15));
+    }
+    crests.forEach((group, i) => this.tweens.add({
+      targets: group, x: '+=10', alpha: 0.7, duration: 2000 + i * 600, delay: i * 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    }));
+    const foam = [[], []];
+    this.islandCoast.forEach((p, i) => {
+      if (i % 6) return;
+      const dash = this.add.image(p.x + p.nx * 16, p.y + p.ny * 16, 'foam_dash')
+        .setDepth(depth).setAlpha(0.1).setRotation(Math.atan2(p.ny, p.nx) + Math.PI / 2);
+      dash.nx = p.nx;
+      dash.ny = p.ny;
+      foam[(i / 6) % 2].push(dash);
+    });
+    foam.forEach((group, i) => this.tweens.add({
+      targets: group,
+      x: (target, key, value) => value - target.nx * 10,
+      y: (target, key, value) => value - target.ny * 10,
+      alpha: 0.85,
+      duration: 1700 + i * 500,
+      delay: i * 850,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    }));
   }
 
   // A sparse scatter of wild villager-sprites roaming the wilderness ring,
@@ -3528,38 +3720,127 @@ class TownScene extends Phaser.Scene {
 
   drawGround() {
     const land = this.landBounds();
-    // Same reasoning as drawOcean()'s depth — see the comment there —
-    // except this only needs to sit in front of the ocean, not in front
-    // of everything, so one layer up is enough.
-    const groundDepth = this.world.originY - 900;
-    const g = this.add.graphics().setDepth(groundDepth);
-    g.fillStyle(0x8fd474, 1).fillRect(land.x, land.y, land.width, land.height);
-    g.fillStyle(0x7bc464, 1);
-    // A fixed, small number of texture flecks (same reasoning as
-    // drawOcean()'s waves) instead of scanning a 48px grid across the
-    // whole land rect, which at this size added several thousand
-    // fillRect calls to one Graphics object.
-    const textureCount = 600;
-    for (let i = 0; i < textureCount; i++) {
-      const gx = Math.round(land.x + worldHash(i, 0, 31) * land.width);
-      const gy = Math.round(land.y + worldHash(i, 1, 32) * land.height);
-      g.fillRect(gx, gy, 4, 4);
-    }
-    // A thin sandy beach right where the land meets the ocean.
-    const beach = this.add.graphics().setDepth(groundDepth);
-    beach.lineStyle(26, 0xe3d2a0, 1).strokeRect(land.x + 13, land.y + 13, land.width - 26, land.height - 26);
+    // Painted straight into drawOcean()'s baked canvas tiles (one
+    // layer, behind everything) rather than a separate Graphics object.
+    // The grass edge wobbles 6-36px inside landBounds(), leaving a beach
+    // of varying width between it and the coast.
+    const grassEdge = this.islandOutline(-6, -30, 5);
+    (this.islandTiles || []).forEach((tex) => {
+      const ctx = tex.context;
+      ctx.save();
+      this.traceOutline(ctx, grassEdge);
+      ctx.fillStyle = '#8fd474';
+      ctx.fill();
+      ctx.strokeStyle = '#a9dc86';
+      ctx.lineWidth = 8;
+      ctx.stroke();
+      ctx.clip();
+      // Soft lighter/darker meadow patches so the grass isn't one flat color.
+      for (let i = 0; i < 320; i++) {
+        const gx = land.x + worldHash(i, 0, 33) * land.width;
+        const gy = land.y + worldHash(i, 1, 34) * land.height;
+        const r = 50 + worldHash(i, 2, 35) * 130;
+        const tone = worldHash(i, 3, 36) < 0.5 ? '164,224,134' : '122,194,98';
+        const grad = ctx.createRadialGradient(gx, gy, 0, gx, gy, r);
+        grad.addColorStop(0, `rgba(${tone},0.55)`);
+        grad.addColorStop(0.6, `rgba(${tone},0.35)`);
+        grad.addColorStop(1, `rgba(${tone},0)`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(gx - r, gy - r, r * 2, r * 2);
+      }
+      // Texture flecks (same scatter as before) plus little grass tufts.
+      ctx.fillStyle = '#7bc464';
+      for (let i = 0; i < 1400; i++) {
+        const gx = Math.round(land.x + worldHash(i, 0, 31) * land.width);
+        const gy = Math.round(land.y + worldHash(i, 1, 32) * land.height);
+        ctx.fillRect(gx, gy, 4, 4);
+      }
+      ctx.strokeStyle = '#6db457';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i < 900; i++) {
+        const gx = Math.round(land.x + worldHash(i, 0, 37) * land.width);
+        const gy = Math.round(land.y + worldHash(i, 1, 38) * land.height);
+        ctx.moveTo(gx - 4, gy - 6); ctx.lineTo(gx, gy); ctx.lineTo(gx + 4, gy - 6);
+      }
+      ctx.stroke();
+      // Tiny clover/daisy dots.
+      for (let i = 0; i < 220; i++) {
+        const gx = Math.round(land.x + worldHash(i, 0, 39) * land.width);
+        const gy = Math.round(land.y + worldHash(i, 1, 40) * land.height);
+        ctx.fillStyle = worldHash(i, 2, 41) < 0.6 ? '#f7f7ea' : '#fff0a0';
+        ctx.fillRect(gx, gy, 4, 4);
+        ctx.fillRect(gx + 6, gy + 3, 4, 4);
+        ctx.fillRect(gx + 1, gy + 7, 4, 4);
+      }
+      ctx.restore();
+      tex.refresh();
+    });
   }
 
   drawPath() {
     // Deliberately scoped to the village, not the whole (much bigger)
     // land rect — a dirt road cutting straight across the wilderness and
     // into the ocean made no sense.
+    // Same footprint as always (64px roads, 150px plaza); a soft darker
+    // rim and rounded ends instead of hard rectangle edges. Only a dozen
+    // shape commands, so it stays one small Graphics object.
     const g = this.add.graphics().setDepth(-1);
+    const { x, y, width, height } = VILLAGE_BOUNDS;
+    g.fillStyle(0xa5cf86, 1);
+    g.fillRoundedRect(x - 6, 600 - 38, width + 12, 76, 38);
+    g.fillRoundedRect(800 - 38, y - 6, 76, height + 12, 38);
+    g.fillCircle(800, 600, 157);
     g.fillStyle(0xe0c49a, 1);
-    g.fillRect(VILLAGE_BOUNDS.x, 600 - 32, VILLAGE_BOUNDS.width, 64);
-    g.fillRect(800 - 32, VILLAGE_BOUNDS.y, 64, VILLAGE_BOUNDS.height);
-    g.fillStyle(0xedd9ad, 1);
+    g.fillRoundedRect(x, 600 - 32, width, 64, 32);
+    g.fillRoundedRect(800 - 32, y, 64, height, 32);
+    g.fillStyle(0xd8ba8e, 1);
     g.fillCircle(800, 600, 150);
+    g.fillStyle(0xedd9ad, 1);
+    g.fillCircle(800, 600, 142);
+  }
+
+  // Draws static vector art once into a texture and places it as a plain
+  // Image (inserted at the same point in the display list, same depth, so
+  // layering against neighbours is unchanged). `draw(g)` uses coordinates
+  // local to the w x h texture; (left, top) is where its corner goes.
+  addBakedImage(key, left, top, w, h, depth, draw) {
+    if (!this.textures.exists(key)) {
+      const g = this.make.graphics({ x: 0, y: 0, add: false });
+      draw(g);
+      g.generateTexture(key, w, h);
+      g.destroy();
+    }
+    return this.add.image(left, top, key).setOrigin(0, 0).setDepth(depth);
+  }
+
+  // A pond with a grassy bank, a darker deep middle, a sky highlight and a
+  // few lily pads — `pads` are [dx, dy, r] from the centre, kept clear of
+  // anything that crosses the water (the main pond's bridge).
+  addBakedPond(key, cx, cy, rx, ry, pads) {
+    const pad = 14;
+    const w = rx * 2 + pad * 2;
+    const h = ry * 2 + pad * 2;
+    const ox = w / 2;
+    const oy = h / 2;
+    this.addBakedImage(key, cx - ox, cy - oy, w, h, -1, (g) => {
+      g.fillStyle(0x76bd60, 1).fillEllipse(ox + 2, oy + 4, rx * 2 + 22, ry * 2 + 20);
+      g.fillStyle(0xd9c79a, 1).fillEllipse(ox, oy + 1, rx * 2 + 12, ry * 2 + 10);
+      g.fillStyle(0x5ab0e8, 1).fillEllipse(ox, oy, rx * 2, ry * 2);
+      g.fillStyle(0x3a86c8, 1).fillEllipse(ox + rx * 0.06, oy + ry * 0.08, rx * 1.75, ry * 1.7);
+      g.fillStyle(0x2f74b4, 1).fillEllipse(ox + rx * 0.12, oy + ry * 0.16, rx * 1.1, ry * 1.0);
+      g.fillStyle(0x8fd0f2, 0.8).fillEllipse(ox - rx * 0.3, oy - ry * 0.38, rx * 0.8, ry * 0.32);
+      g.lineStyle(2, 0xe8f6ff, 0.9);
+      g.lineBetween(ox - rx * 0.55, oy - ry * 0.45, ox - rx * 0.35, oy - ry * 0.45);
+      g.lineBetween(ox - rx * 0.25, oy - ry * 0.6, ox - rx * 0.1, oy - ry * 0.6);
+      pads.forEach(([dx, dy, r]) => {
+        g.fillStyle(0x2f6a32, 0.35).fillEllipse(ox + dx + 2, oy + dy + 2, r * 2, r * 1.4);
+        g.fillStyle(0x5cae4f, 1);
+        g.slice(ox + dx, oy + dy, r, Phaser.Math.DegToRad(30), Phaser.Math.DegToRad(350), false);
+        g.fillPath();
+        if (r > 9) g.fillStyle(0xf6a6c8, 1).fillCircle(ox + dx - r * 0.3, oy + dy - r * 0.2, 3);
+      });
+    });
   }
 
   drawPond() {
@@ -3567,10 +3848,7 @@ class TownScene extends Phaser.Scene {
     const cy = 600;
     const rx = 150;
     const ry = 90;
-    const g = this.add.graphics().setDepth(-1);
-    g.fillStyle(0x3a86c8, 1).fillEllipse(cx, cy, rx * 2, ry * 2);
-    g.fillStyle(0x5ab0e8, 1).fillEllipse(cx - 20, cy - 15, rx * 1.3, ry * 0.9);
-    g.fillStyle(0x8fd0f2, 1).fillEllipse(cx - 35, cy - 28, rx * 0.7, ry * 0.45);
+    this.addBakedPond('pond_main', cx, cy, rx, ry, [[-100, 30, 11], [95, -35, 9], [70, 50, 7]]);
 
     const gapHalf = 34;
     this.addObstacleRect({ x: cx - rx * 0.8, y: cy - ry * 0.8, width: rx * 1.6, height: ry * 0.8 - gapHalf });
@@ -3604,13 +3882,16 @@ class TownScene extends Phaser.Scene {
     // (no collision), just a nicer place to stand and look at the water.
     const baseX = 410;
     const baseY = 600;
-    const g = this.add.graphics().setDepth(-1);
-    g.fillStyle(0x8a5a3b, 1);
-    g.fillRect(baseX, baseY - 14, 70, 28);
-    g.lineStyle(2, 0x5a3a22, 1);
-    for (let i = 0; i <= 70; i += 14) g.lineBetween(baseX + i, baseY - 14, baseX + i, baseY + 14);
-    g.fillStyle(0x5a3a22, 1);
-    [baseX + 6, baseX + 64].forEach((x) => g.fillRect(x - 3, baseY + 12, 6, 10));
+    // Baked once into a texture (see addBakedImage); local coords are
+    // shifted by (1, 15) so the 2px plank lines at the ends aren't clipped.
+    this.addBakedImage('dock_baked', baseX - 1, baseY - 15, 72, 38, -1, (g) => {
+      g.fillStyle(0x8a5a3b, 1);
+      g.fillRect(1, 1, 70, 28);
+      g.lineStyle(2, 0x5a3a22, 1);
+      for (let i = 0; i <= 70; i += 14) g.lineBetween(1 + i, 1, 1 + i, 29);
+      g.fillStyle(0x5a3a22, 1);
+      [7, 65].forEach((x) => g.fillRect(x - 3, 27, 6, 10));
+    });
   }
 
   // A few sittable-looking (purely decorative) benches scattered around
@@ -3682,23 +3963,24 @@ class TownScene extends Phaser.Scene {
 
   drawEastPond() {
     const { cx, cy, rx, ry } = EAST_POND;
-    const g = this.add.graphics().setDepth(-1);
-    g.fillStyle(0x3a86c8, 1).fillEllipse(cx, cy, rx * 2, ry * 2);
-    g.fillStyle(0x5ab0e8, 1).fillEllipse(cx - 15, cy - 12, rx * 1.3, ry * 0.9);
-    g.fillStyle(0x8fd0f2, 1).fillEllipse(cx - 28, cy - 22, rx * 0.7, ry * 0.45);
+    this.addBakedPond('pond_east', cx, cy, rx, ry, [[-70, 30, 10], [60, -28, 8], [80, 22, 6]]);
     this.addObstacleRect({ x: cx - rx * 0.8, y: cy - ry * 0.8, width: rx * 1.6, height: ry * 1.6 });
   }
 
   drawBridge() {
     const cx = 260;
     const cy = 600;
-    const g = this.add.graphics().setDepth(-1);
-    g.fillStyle(0xa9784a, 1).fillRect(cx - 40, cy - 34, 80, 68);
-    g.fillStyle(0x8a5f39, 1);
-    for (let px = cx - 40; px < cx + 40; px += 10) g.fillRect(px, cy - 34, 2, 68);
-    g.fillStyle(0x6b4226, 1);
-    g.fillRect(cx - 40, cy - 36, 80, 4);
-    g.fillRect(cx - 40, cy + 32, 80, 4);
+    // Baked once into a texture (see addBakedImage), local coords with the
+    // bridge's top-left corner at (0, 0).
+    this.addBakedImage('bridge_baked', cx - 40, cy - 36, 80, 72, -1, (g) => {
+      g.fillStyle(0x2f6a8a, 0.35).fillRect(3, 6, 80, 68);
+      g.fillStyle(0xa9784a, 1).fillRect(0, 2, 80, 68);
+      g.fillStyle(0x8a5f39, 1);
+      for (let px = 0; px < 80; px += 10) g.fillRect(px, 2, 2, 68);
+      g.fillStyle(0x6b4226, 1);
+      g.fillRect(0, 0, 80, 4);
+      g.fillRect(0, 68, 80, 4);
+    });
   }
 
   drawHouse() {
@@ -4644,24 +4926,59 @@ class TownScene extends Phaser.Scene {
     TREES.forEach(([x, y]) => this.drawTree(x, y));
   }
 
+  // Each tree used to be its own Graphics object, re-tessellating 5 shapes
+  // every frame (58+ of them, plus fruit overlays) — the single biggest
+  // Graphics cost in the scene. The art is now baked once into a few
+  // shared textures (3 deterministic canopy tints + a fruit overlay) and
+  // each tree is a plain Image. The origin is the old Graphics' local
+  // (0, 0), so position, y-sort depth, and the chop-shake rotation pivot
+  // are all exactly what they were; treeGraphics/treeFruit keep their
+  // shape (index -> object with setAngle/setVisible) for the chop code.
+  bakeTreeTextures() {
+    if (this.textures.exists('tree_0')) return;
+    const ox = TREE_TEX.ox;
+    const oy = TREE_TEX.oy;
+    const tints = [
+      [0x2f7a40, 0x3f8f4f, 0x4fa85f, 0x5cb86a, 0x7fd08a],
+      [0x2c7446, 0x3b8a55, 0x48a064, 0x58b673, 0x7ccc8e],
+      [0x3a7d3a, 0x4b9447, 0x5aaa52, 0x6bbd5f, 0x8fd682],
+    ];
+    const g = this.make.graphics({ x: 0, y: 0, add: false });
+    tints.forEach(([outline, back, mid, top, light], i) => {
+      g.clear();
+      g.fillStyle(0x2a5a2a, 0.22).fillEllipse(ox, oy + 11, 36, 10);
+      g.fillStyle(0x5a3a22, 1).fillRect(ox - 4, oy - 4, 8, 16);
+      g.fillStyle(0x7a5236, 1).fillRect(ox - 4, oy - 4, 3, 16);
+      g.fillStyle(outline, 1).fillCircle(ox, oy - 20, 19).fillCircle(ox - 11, oy - 12, 15).fillCircle(ox + 11, oy - 12, 15).fillCircle(ox, oy - 28, 14);
+      g.fillStyle(back, 1).fillCircle(ox, oy - 20, 17);
+      g.fillStyle(mid, 1).fillCircle(ox - 11, oy - 12, 13).fillCircle(ox + 11, oy - 12, 13);
+      g.fillStyle(top, 1).fillCircle(ox, oy - 28, 12);
+      g.fillStyle(light, 0.9).fillCircle(ox - 4, oy - 32, 5).fillCircle(ox - 13, oy - 16, 4);
+      g.generateTexture(`tree_${i}`, TREE_TEX.w, TREE_TEX.h);
+    });
+    g.clear();
+    g.fillStyle(0xe0453a, 1);
+    g.fillCircle(ox - 9, oy - 14, 3.5).fillCircle(ox + 8, oy - 19, 3.5).fillCircle(ox + 1, oy - 29, 3.5);
+    g.fillStyle(0xffb0a0, 1);
+    g.fillRect(ox - 10, oy - 16, 1.5, 1.5).fillRect(ox + 7, oy - 21, 1.5, 1.5).fillRect(ox, oy - 31, 1.5, 1.5);
+    g.generateTexture('tree_fruit', TREE_TEX.w, TREE_TEX.h);
+    g.destroy();
+  }
+
   drawTree(x, y) {
-    const g = this.add.graphics();
-    g.fillStyle(0x5a3a22, 1).fillRect(-4, -4, 8, 16);
-    g.fillStyle(0x3f8f4f, 1).fillCircle(0, -20, 17);
-    g.fillStyle(0x4fa85f, 1).fillCircle(-11, -12, 13);
-    g.fillStyle(0x4fa85f, 1).fillCircle(11, -12, 13);
-    g.fillStyle(0x5cb86a, 1).fillCircle(0, -28, 12);
-    g.setPosition(x, y);
+    this.bakeTreeTextures();
+    const ox = TREE_TEX.ox / TREE_TEX.w;
+    const oy = TREE_TEX.oy / TREE_TEX.h;
+    const variant = Math.floor(worldHash(x, y, 91) * 3);
+    const g = this.add.image(x, y, `tree_${variant}`).setOrigin(ox, oy);
     g.setDepth(y);
     this.addObstacleRect({ x: x - 5, y: y - 3, width: 10, height: 12 });
     this.treeGraphics.push(g);
 
     const index = this.treeGraphics.length - 1;
     if (index % FRUIT_TREE_EVERY === 0) {
-      const fruit = this.add.graphics();
-      fruit.fillStyle(0xe0453a, 1);
-      fruit.fillCircle(-9, -14, 3.5).fillCircle(8, -19, 3.5).fillCircle(1, -29, 3.5);
-      fruit.setPosition(x, y).setDepth(y + 0.5);
+      const fruit = this.add.image(x, y, 'tree_fruit').setOrigin(ox, oy);
+      fruit.setDepth(y + 0.5);
       this.treeFruit[index] = fruit;
     }
   }
