@@ -663,7 +663,7 @@ you don't already trust.
 
 - Firebase Anonymous Auth so writes require `auth != null` (safer public link)
 - Persistence: name/avatar/inventory now save locally (done); score/leaderboard across visits would need real accounts
-- More block types (stone blocks, decorative items) and a crafting recipe or two
+- More block types (stone blocks, decorative items) and more crafting recipes
 - Seasons (weather's done, above)
 - More villager species from the rest of the collection (plain rocks, genius…)
 - Per-player "homes" / multiple rooms instead of one shared map

@@ -379,3 +379,4 @@ and merged together. Highlights:
 ## Admin maintenance
 
 - **Save robustness:** a corrupt `pixeltown-save-v1` (JSON that is a number, string or array) is now treated as empty instead of being spread into garbage keys; save import rejects arrays; resource counts load as finite non-negative whole numbers. Save format unchanged.
+- **DIY Workbench:** a new workbench in the village (east of the museum) turns gathered wood/stone/fish/bugs/fruit/flowers/shells into 8 crafted goods (plank stack, stone brick, fish stew, bug jar, fruit pie, flower crown, shell chime, lantern). Crafted goods are sold at the shop for more than the raw inputs. Local only; new additive `crafted` save key; 3 new achievements (DIY Beginner, Crafty, Master Crafter).

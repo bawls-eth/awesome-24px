@@ -113,8 +113,9 @@ const SAVE_KEY = 'pixeltown-save-v1';
 
 // Bump this string whenever there's something worth telling returning
 // players about — shown once as a dismissible banner, then remembered.
-const GAME_VERSION = 'v24-fishing-tourney';
+const GAME_VERSION = 'v25-workbench';
 const WHATS_NEW = [
+  '🔨 DIY Workbench — craft goods from what you gather, sell them for more',
   '🎣 Daily fishing tournament — biggest catch of the day wins a bonus',
   '🔍 Daily scavenger hunt — one hidden spot a day, first to find it wins',
   '🏘️ Town rating readout, 🎵 opt-in ambient music, 💾 save backup/restore',
@@ -687,6 +688,9 @@ const ACHIEVEMENTS = [
   { id: 'cave1', icon: '⛰️', label: 'Spelunker', desc: 'Visit the underground cave', reward: 3, check: (s) => (s.caveVisits || 0) >= 1 },
   { id: 'chat10', icon: '👋', label: 'Friendly', desc: 'Send 10 chat messages', reward: 3, check: (s) => (s.chatSent || 0) >= 10 },
   { id: 'museumFull', icon: '🏛️', label: 'Paleontologist', desc: 'Donate all 5 fossil species', reward: 10, check: (s, scene) => scene.museumCollection && scene.museumCollection.size >= FOSSIL_TYPES.length },
+  { id: 'craft1', icon: '🔨', label: 'DIY Beginner', desc: 'Craft something at the workbench', reward: 3, check: (s) => (s.crafted || 0) >= 1 },
+  { id: 'craft10', icon: '🛠️', label: 'Crafty', desc: 'Craft 10 items', reward: 5, check: (s) => (s.crafted || 0) >= 10 },
+  { id: 'craftAll', icon: '🧰', label: 'Master Crafter', desc: 'Craft every recipe at least once', reward: 10, check: (s) => RECIPES.every((r) => (s['craft_' + r.id] || 0) >= 1) },
   { id: 'flowers10', icon: '🌸', label: 'Gardener', desc: 'Pick 10 flowers', reward: 5, check: (s) => (s.flowers || 0) >= 10 },
   { id: 'fence1', icon: '🪨', label: 'Fencer', desc: 'Place a stone fence', reward: 3, check: (s) => (s.stoneBlocksPlaced || 0) >= 1 },
   { id: 'npcChat5', icon: '🧪', label: 'Chatty', desc: "Talk to Professor Byte 5 times", reward: 3, check: (s) => (s.npcChats || 0) >= 5 },
@@ -839,6 +843,24 @@ const FISH_TOURNAMENT_HOURS = 2;
 const FISH_TOURNAMENT_SIGN_POS = { x: 2040, y: 760 };
 const FISH_TOURNAMENT_BONUS = 10;
 const GUESTBOOK_RADIUS = 60;
+
+// ---------- DIY workbench ----------
+// Turns gathered resources into crafted goods (sold at the shop for ~1.4x
+// the raw inputs; kept below the 1.7x deal+bulk raw rate so it can't be exploited;
+// deal/bulk bonuses never apply to crafted goods). Local-only: nothing here touches the network.
+const WORKBENCH_POS = { x: 1330, y: 800 };
+const WORKBENCH_RADIUS = 70;
+const RECIPES = [
+  { id: 'plank', icon: '🪵', label: 'Plank Stack', cost: { wood: 3 }, value: 4 },
+  { id: 'brick', icon: '🧱', label: 'Stone Brick', cost: { stone: 3 }, value: 4 },
+  { id: 'stew', icon: '🍲', label: 'Fish Stew', cost: { fish: 2, fruit: 1 }, value: 4 },
+  { id: 'bugjar', icon: '🫙', label: 'Bug Jar', cost: { bugs: 3, wood: 1 }, value: 6 },
+  { id: 'pie', icon: '🥧', label: 'Fruit Pie', cost: { fruit: 4 }, value: 6 },
+  { id: 'crown', icon: '🌼', label: 'Flower Crown', cost: { flowers: 4 }, value: 6 },
+  { id: 'chime', icon: '🎐', label: 'Shell Chime', cost: { shells: 3, wood: 1 }, value: 6 },
+  { id: 'lantern', icon: '🏮', label: 'Lantern', cost: { stone: 2, wood: 2, bugs: 2 }, value: 9 },
+];
+const RES_ICONS = { wood: '🪵', stone: '🪨', fish: '🐟', bugs: '🦋', fruit: '🍎', shells: '🐚', flowers: '🌸' };
 const GUESTBOOK_NOTE_MAX = 80;
 const GUESTBOOK_COOLDOWN_MS = 60 * 1000; // one signing per minute, per client
 const KK_CONCERT_START_HOUR = 19; // 7pm local time
@@ -1164,6 +1186,7 @@ class TownScene extends Phaser.Scene {
     this.drawTurnipStall();
     this.drawAbleSisters();
     this.drawGuestbook();
+    this.drawWorkbench();
     this.drawNoticeBoard();
     this.setupScavengerHunt();
     this.drawGraveyard();
@@ -1900,7 +1923,7 @@ class TownScene extends Phaser.Scene {
       ['achievementsOpen', 'achievements-close-btn'], ['outfitShopOpen', 'outfit-close-btn'],
       ['guestbookOpen', 'guestbook-close-btn'], ['triviaOpen', 'trivia-close-btn'],
       ['keysHelpOpen', 'keys-help-close-btn'], ['changelogOpen', 'changelog-close-btn'],
-      ['museumOpen', 'museum-close-btn'],
+      ['museumOpen', 'museum-close-btn'], ['workbenchOpen', 'workbench-close-btn'],
     ];
     const open = overlays.find(([flag]) => this[flag]);
     if (open) {
@@ -2018,7 +2041,7 @@ class TownScene extends Phaser.Scene {
   // so chat/overlay state is respected no matter which input triggered it
   // (keyboard, on-screen button, or shake).
   canAct() {
-    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen && !this.mapOpen && !this.museumOpen;
+    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen && !this.mapOpen && !this.museumOpen && !this.workbenchOpen;
   }
 
   // Shake is just a fun alternate trigger for the same interact() logic used
@@ -2062,6 +2085,10 @@ class TownScene extends Phaser.Scene {
       shells: n(saved.shells),
       flowers: n(saved.flowers),
     };
+    const savedCrafted = loadSave().crafted;
+    const sc = savedCrafted && typeof savedCrafted === 'object' ? savedCrafted : {};
+    this.craftedGoods = {};
+    RECIPES.forEach((r) => { this.craftedGoods[r.id] = n(sc[r.id]); });
     this.treeCooldowns = {};
     this.rockCooldowns = {};
     this.fishing = { state: 'idle', spot: null, bobber: null, timer: null };
@@ -2075,7 +2102,7 @@ class TownScene extends Phaser.Scene {
   }
 
   saveResources() {
-    writeSave({ resources: this.resources });
+    writeSave({ resources: this.resources, crafted: this.craftedGoods });
   }
 
   interact() {
@@ -2114,6 +2141,10 @@ class TownScene extends Phaser.Scene {
     }
     if (this.isNearScavenger()) {
       this.claimScavenger();
+      return;
+    }
+    if (this.isNearWorkbench()) {
+      this.openWorkbench();
       return;
     }
     if (this.isNearGuestbook()) {
@@ -2359,7 +2390,9 @@ class TownScene extends Phaser.Scene {
       }
     }
     const turnipRevenue = (this.resources.turnips || 0) > 0 ? this.resources.turnips * this.turnipSellPrice() / TURNIP_BUNDLE : 0;
-    const grandTotal = Math.round(total + dealBonus + bulkBonus + turnipRevenue);
+    let craftedRevenue = 0;
+    for (const r of RECIPES) craftedRevenue += (this.craftedGoods[r.id] || 0) * r.value;
+    const grandTotal = Math.round(total + dealBonus + bulkBonus + turnipRevenue + craftedRevenue);
     if (grandTotal === 0) {
       this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'bag is empty');
       return;
@@ -2369,9 +2402,11 @@ class TownScene extends Phaser.Scene {
     // buy isn't silently wiped for nothing.
     for (const { key } of QUEST_RESOURCES) this.resources[key] = 0;
     this.resources.turnips = 0;
+    for (const r of RECIPES) this.craftedGoods[r.id] = 0;
     this.updateInventoryHUD();
     this.saveResources();
     const notes = [];
+    if (craftedRevenue > 0) notes.push('🔨 crafts');
     if (dealBonus > 0) notes.push(`${deal.icon} deal`);
     if (bulkCount > 0) notes.push('bulk bonus');
     const dealNote = notes.length > 0 ? ` (incl. ${notes.join(' + ')})` : '';
@@ -5216,6 +5251,89 @@ class TownScene extends Phaser.Scene {
     return Math.hypot(this.localBody.x - GUESTBOOK_POS.x, this.localBody.y - GUESTBOOK_POS.y) < GUESTBOOK_RADIUS;
   }
 
+  // ---------- DIY workbench ----------
+  // Baked once into a texture (no per-frame drawing), then placed as an image.
+  drawWorkbench() {
+    const { x, y } = WORKBENCH_POS;
+    if (!this.textures.exists('workbench')) {
+      const g = this.make.graphics({ x: 0, y: 0, add: false });
+      g.fillStyle(0x000000, 0.18).fillEllipse(40, 46, 76, 14);
+      g.fillStyle(0x6b4a30, 1).fillRect(8, 30, 6, 16).fillRect(66, 30, 6, 16);
+      g.fillStyle(0xc89a5b, 1).fillRect(4, 18, 72, 14);
+      g.fillStyle(0xa87c44, 1).fillRect(4, 28, 72, 4);
+      g.fillStyle(0x8a8f99, 1).fillRect(16, 10, 18, 8);
+      g.fillStyle(0x6b4a30, 1).fillRect(52, 6, 4, 12);
+      g.fillStyle(0xb0b5bf, 1).fillRect(50, 4, 12, 5);
+      g.generateTexture('workbench', 80, 50);
+      g.destroy();
+    }
+    this.add.image(x, y, 'workbench').setDepth(y - 1);
+    this.addObstacleRect({ x: x - 36, y: y - 4, width: 72, height: 24 });
+    this.add.text(x, y - 36, '🔨 Workbench', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
+  }
+
+  isNearWorkbench() {
+    return Math.hypot(this.localBody.x - WORKBENCH_POS.x, this.localBody.y - WORKBENCH_POS.y) < WORKBENCH_RADIUS;
+  }
+
+  openWorkbench() {
+    this.workbenchOpen = true;
+    document.getElementById('workbench-overlay').classList.remove('hidden');
+    document.getElementById('workbench-note').textContent = '';
+    this.renderWorkbench();
+  }
+
+  closeWorkbench() {
+    this.workbenchOpen = false;
+    document.getElementById('workbench-overlay').classList.add('hidden');
+  }
+
+  canCraft(recipe) {
+    return Object.entries(recipe.cost).every(([k, v]) => (this.resources[k] || 0) >= v);
+  }
+
+  renderWorkbench() {
+    const list = document.getElementById('workbench-list');
+    list.innerHTML = '';
+    RECIPES.forEach((r) => {
+      const li = document.createElement('li');
+      const cost = Object.entries(r.cost).map(([k, v]) => `${v}${RES_ICONS[k]}`).join(' + ');
+      const have = this.craftedGoods[r.id] || 0;
+      const info = document.createElement('span');
+      info.textContent = `${r.icon} ${r.label} — ${cost} → ${r.value}⭐ (have ${have})`;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'workbench-craft-btn';
+      btn.dataset.recipe = r.id;
+      btn.textContent = 'Craft';
+      btn.disabled = !this.canCraft(r);
+      btn.addEventListener('click', () => this.craftRecipe(r.id));
+      li.append(info, btn);
+      list.appendChild(li);
+    });
+  }
+
+  craftRecipe(id) {
+    const r = RECIPES.find((x) => x.id === id);
+    const note = document.getElementById('workbench-note');
+    if (!r) return false;
+    if (!this.canCraft(r)) {
+      const need = Object.entries(r.cost).filter(([k, v]) => (this.resources[k] || 0) < v).map(([k, v]) => `${v - (this.resources[k] || 0)}${RES_ICONS[k]}`).join(' ');
+      if (note) note.textContent = `Need ${need} more`;
+      return false;
+    }
+    for (const [k, v] of Object.entries(r.cost)) this.resources[k] -= v;
+    this.craftedGoods[r.id] = (this.craftedGoods[r.id] || 0) + 1;
+    this.updateInventoryHUD();
+    this.saveResources();
+    this.incrementStat('crafted');
+    this.incrementStat('craft_' + r.id);
+    if (note) note.textContent = `Crafted ${r.icon} ${r.label}! Sell it at the shop.`;
+    this.showFloatingText(this.localBody.x, this.localBody.y - 30, `${r.icon} crafted!`);
+    this.renderWorkbench();
+    return true;
+  }
+
   // ---------- Able Sisters outfit shop ----------
   // Same species/frame picker as the join screen, but live: applying
   // updates your own sprite immediately, writes through net.js so every
@@ -5307,6 +5425,9 @@ class TownScene extends Phaser.Scene {
     this.guestbookEntries = [];
     this.lastGuestbookAt = 0;
     document.getElementById('guestbook-close-btn').addEventListener('click', () => this.closeGuestbook());
+    document.getElementById('workbench-close-btn').addEventListener('click', () => this.closeWorkbench());
+    const wbOverlay = document.getElementById('workbench-overlay');
+    wbOverlay.addEventListener('click', (e) => { if (e.target === wbOverlay) this.closeWorkbench(); });
     document.getElementById('guestbook-sign-btn').addEventListener('click', () => this.submitGuestbookNote());
     const input = document.getElementById('guestbook-input');
     input.addEventListener('keydown', (e) => {
