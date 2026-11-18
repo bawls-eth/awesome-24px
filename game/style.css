@@ -955,11 +955,14 @@ body.touch-device #underground-controls { display: block; }
 /* On a phone the bottom corners belong to the joystick and action buttons: hotbar goes to the top. */
 body.touch-device #ug-hotbar {
   bottom: auto;
-  top: calc(76px + env(safe-area-inset-top, 0px));
+  top: calc(96px + env(safe-area-inset-top, 0px));
 }
 @media (max-width: 420px) {
   #ug-hotbar { gap: 2px; padding: 3px; }
   #ug-hotbar .ug-slot { width: 36px; height: 42px; }
+}
+@media (max-width: 345px) {
+  #ug-hotbar .ug-slot { width: 31px; }
 }
 
 #ug-dpad {

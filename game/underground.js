@@ -516,7 +516,13 @@ class UndergroundWorld {
     window.addEventListener('pointerup', this.onPointerUp);
 
     // Mouse wheel cycles the hotbar (down = next slot).
-    this.onWheel = (e) => { e.preventDefault(); this.selectSlot(this.slotIndex + (e.deltaY > 0 ? 1 : -1)); };
+    this.onWheel = (e) => {
+      e.preventDefault();
+      const now = performance.now();
+      if (!e.deltaY || now - (this._lastWheelT || 0) < 80) return; // sideways scroll / trackpad burst: one slot per gesture tick
+      this._lastWheelT = now;
+      this.selectSlot(this.slotIndex + (e.deltaY > 0 ? 1 : -1));
+    };
     dom.addEventListener('wheel', this.onWheel, { passive: false });
 
     this.onResize = () => { if (this.active) this._resize(); };
@@ -684,6 +690,7 @@ class UndergroundWorld {
     this.active = false;
     this.mineHeld = false;
     this._cancelMining();
+    this._collectAllDrops(); // anything still on the ground is handed over, never lost
     if (this._raf) cancelAnimationFrame(this._raf);
   }
 
@@ -1019,6 +1026,12 @@ class UndergroundWorld {
     this.drops.push({ mesh, loot, x: pos.x, y: pos.y, z: pos.z, vx: (Math.random() - 0.5) * 3, vy: 5, vz: (Math.random() - 0.5) * 3, age: 0 });
   }
 
+  _collectAllDrops() {
+    if (!this.drops.length) return;
+    this.drops.forEach((d) => { this._collect(d.loot); this.scene.remove(d.mesh); });
+    this.drops = [];
+  }
+
   _updateDrops(dt) {
     if (!this.drops.length) return;
     const p = this.rig.position;
@@ -1040,7 +1053,7 @@ class UndergroundWorld {
       } else {
         d.vy -= 25 * dt;
         d.x += d.vx * dt; d.z += d.vz * dt; d.y += d.vy * dt;
-        d.vx *= 0.96; d.vz *= 0.96;
+        const damp = Math.pow(0.96, dt * 60); d.vx *= damp; d.vz *= damp; // frame-rate independent
         const gx = Math.floor((d.x + 1) / UG_BLOCK); const gz = Math.floor((d.z + 1) / UG_BLOCK);
         const gyb = Math.floor((d.y - 0.28 + 1) / UG_BLOCK);
         if (this._solidAt(gx, gyb, gz)) { d.y = gyb * UG_BLOCK + 1 + 0.28; d.vy = 0; d.vx = 0; d.vz = 0; }

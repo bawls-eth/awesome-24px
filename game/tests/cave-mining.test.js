@@ -57,6 +57,11 @@ const findKind = `(s, kind) => {
   check('mining times scale with hardness: dirt (0.4 s) < stone (1.0 s) < coal (1.2 s) < gold (2.0 s)', dirt && coal && gold && dirt.t < 0.5 && coal.t > 1.1 && coal.t < 1.35 && gold.t > 1.9 && gold.t < 2.2, JSON.stringify({ dirt, coal, gold }));
   check('drops: dirt gives +1 dirt; coal gives +3 stone and +1 coal; gold gives +1 gold', dirt.inv1.dirt === dirt.inv0.dirt + 1 && coal.stone === 3 && coal.inv1.coal === coal.inv0.coal + 1 && gold.inv1.gold === gold.inv0.gold + 1, JSON.stringify({ dirt, coal, gold }));
 
+  // Pending drops are never lost on exit.
+  const sp2 = await poseKind('stone');
+  const ex = await scene(page, (s, sp) => { const u = s.underground; const st0 = s.resources.stone; u.setMining(true); for (let i = 0; i < 60; i++) u._update(0.02); u.setMining(false); const had = u.drops.length; u.stop(); const out = { had, after: u.drops.length, gained: s.resources.stone - st0 }; u.active = true; return out; }, sp2);
+  check('exit: drops still on the ground are collected when you leave the cave', ex.had === 1 && ex.after === 0 && ex.gained === 1, JSON.stringify(ex));
+
   // 3. Looking away resets progress; releasing resets too.
   const sp3 = await poseKind('stone');
   const r3 = await scene(page, (s, sp) => {
