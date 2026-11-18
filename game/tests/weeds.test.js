@@ -13,7 +13,7 @@ const { launch, scene, check, done } = require('./helpers');
   const clash = await scene(page, (s) => s.weedSpots.filter((p) => s.obstacles.getChildren().some((r) => Math.abs(p.x - r.x) < r.width / 2 && Math.abs(p.y - r.y) < r.height / 2)).length);
   check('weeds: none inside an obstacle', clash === 0, String(clash));
 
-  check('weeds: none on the home plot footprint', a.spots.every((p) => !(Math.abs(p.x - 1650) < 110 && Math.abs(p.y - 940) < 80)));
+  check('weeds: none on the home plot footprint', a.spots.every((p) => !(Math.abs(p.x - 1650) < 175 && Math.abs(p.y - 940) < 80)));
 
   // Player-built blocks (extra static bodies) must not change the day's weeds.
   const sameWithBlock = await scene(page, (s) => {

@@ -2151,3 +2151,6 @@ body.touch-device .key-hint { display: none; }
 .fish-claim-btn { min-height: 44px; min-width: 88px; border-radius: 8px; border: 2px solid var(--ac-border); background: var(--ac-leaf-deep, #5a8a3a); color: #fff; font-weight: 700; cursor: pointer; }
 .fish-claim-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 #journal-btn { min-height: 30px; }
+.home-sub { font-size: 14px; margin: 6px 0 4px; }
+#home-tank-list { max-height: none; }
+#home-tank-list li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 10px; }

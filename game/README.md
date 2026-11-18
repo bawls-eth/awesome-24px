@@ -42,6 +42,13 @@ right now, before you even pick a name.
   progress is saved under the additive `fishlog: {caught, claimed, lastDay}`
   key. Achievements: Angler, Master Angler, Lunker (70cm+). A "Catch a fish"
   chore joins the Today board. Tests: `node game/tests/fishlog.test.js`.
+- **Home aquarium** 🐠 — a little glass tank beside your home plot. Open the plot
+  and pick up to three **different species from your Angler's Journal** to show
+  off in the tank (nothing is consumed — fish stay in your log). Each adds
+  rarity × 2 to your cozy score, which feeds the daily visitor bonus and the
+  Cozy Corner achievement. Achievements: Fish Fan, Aquarist (fill all three).
+  Saved inside the additive `home.tank` list. Tests:
+  `node game/tests/aquarium.test.js`.
 - **Today board** 📋 — the 📋 Today button in the player panel (or **J**) lists
   every daily chore with live progress: Professor Byte's request and trivia,
   your letters, the weeds, the Bug-Off (catch 5), a villager's birthday gift

@@ -113,8 +113,9 @@ const SAVE_KEY = 'pixeltown-save-v1';
 
 // Bump this string whenever there's something worth telling returning
 // players about — shown once as a dismissible banner, then remembered.
-const GAME_VERSION = 'v33-journal';
+const GAME_VERSION = 'v34-aquarium';
 const WHATS_NEW = [
+  '🐠 Home aquarium — show fish from your journal beside your plot for extra cozy',
   "🐟 Angler's Journal — 12 fish species by pond, time and season, with set rewards (L)",
   '📋 Today board — see every daily chore at a glance (J), finish them all for a bonus',
   '🍁 Seasonal specials at the workbench — a new craft for every season',
@@ -720,6 +721,8 @@ const ACHIEVEMENTS = [
   { id: 'fishSpecies5', icon: '🎣', label: 'Angler', desc: 'Log 5 different fish species', reward: 5, check: (s, scene) => !!scene.fishlog && scene.fishSpeciesCount() >= 5 },
   { id: 'fishSpecies12', icon: '🏆', label: 'Master Angler', desc: 'Log every fish species', reward: 15, check: (s, scene) => !!scene.fishlog && scene.fishSpeciesCount() >= FISH_SPECIES.length },
   { id: 'fishLunker', icon: '📏', label: 'Lunker', desc: 'Catch a fish 70cm or longer', reward: 5, check: (s) => (s.fishLunker || 0) >= 1 },
+  { id: 'tank1', icon: '🐠', label: 'Fish Fan', desc: 'Show a fish in your home aquarium', reward: 3, check: (s) => (s.tankPlaced || 0) >= 1 },
+  { id: 'tank3', icon: '🫧', label: 'Aquarist', desc: 'Fill your aquarium with 3 species', reward: 8, check: (s) => (s.tankFull || 0) >= 1 },
   { id: 'craft1', icon: '🔨', label: 'DIY Beginner', desc: 'Craft something at the workbench', reward: 3, check: (s) => (s.crafted || 0) >= 1 },
   { id: 'craft10', icon: '🛠️', label: 'Crafty', desc: 'Craft 10 items', reward: 5, check: (s) => (s.crafted || 0) >= 10 },
   { id: 'craftAll', icon: '🧰', label: 'Master Crafter', desc: 'Craft every recipe at least once', reward: 10, check: (s) => RECIPES.filter((r) => !r.season).every((r) => (s['craft_' + r.id] || 0) >= 1) },
@@ -928,6 +931,10 @@ const HOME_RADIUS = 75;
 const HOME_SLOTS = 6;
 const HOME_BONUS_PER = 5; // cozy points per ⭐ of daily visitor bonus
 const HOME_BONUS_CAP = 6;
+// A small aquarium beside the plot: show off up to 3 species from your
+// Angler's Journal (nothing is consumed). Each adds rarity x 2 cozy.
+const HOME_TANK_SLOTS = 3;
+const HOME_TANK_OFFSET = { x: -126, y: 0 };
 const HOME_SLOT_OFFSETS = [[-52, -18], [0, -18], [52, -18], [-52, 22], [0, 22], [52, 22]];
 // ---------- villager mailbox ----------
 // Each (UTC) day the villagers you know write you letters with a small gift
@@ -5733,7 +5740,18 @@ class TownScene extends Phaser.Scene {
       g.generateTexture('homePlot', 156, 96);
       g.destroy();
     }
+    if (!this.textures.exists('homeTank')) {
+      const g = this.make.graphics({ x: 0, y: 0, add: false });
+      g.fillStyle(0x000000, 0.12).fillRoundedRect(3, 6, 66, 46, 6);
+      g.fillStyle(0x8fd3f2, 0.55).fillRoundedRect(0, 0, 66, 46, 6);
+      g.fillStyle(0xe8d9b5, 0.9).fillRect(0, 36, 66, 10);
+      g.lineStyle(3, 0x6b4a30, 1).strokeRoundedRect(0, 0, 66, 46, 6);
+      g.generateTexture('homeTank', 70, 54);
+      g.destroy();
+    }
     this.add.image(x, y, 'homePlot').setDepth(y - 60);
+    this.add.image(x + HOME_TANK_OFFSET.x, y + HOME_TANK_OFFSET.y, 'homeTank').setDepth(y - 59);
+    this.homeTankSprites = [];
     this.homeSprites = [];
     this.homeLabel = this.add.text(x, y - 66, '🏡 Home', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 60);
     this.home = this.loadHome();
@@ -5750,11 +5768,21 @@ class TownScene extends Phaser.Scene {
         if (typeof id === 'string' && RECIPES.some((r) => r.id === id)) slots[i] = id;
       }
     }
-    return { slots, paidDay: rec && typeof rec === 'object' ? cleanCount(rec.paidDay) : 0 };
+    const tank = new Array(HOME_TANK_SLOTS).fill(null);
+    if (rec && typeof rec === 'object' && !Array.isArray(rec) && Array.isArray(rec.tank)) {
+      const used = new Set();
+      for (let i = 0; i < HOME_TANK_SLOTS; i++) {
+        const id = rec.tank[i];
+        if (typeof id === 'string' && FISH_SPECIES.some((f) => f.id === id) && !used.has(id)) { tank[i] = id; used.add(id); }
+      }
+    }
+    return { slots, tank, paidDay: rec && typeof rec === 'object' ? cleanCount(rec.paidDay) : 0 };
   }
 
   homeCozy() {
-    return this.home.slots.reduce((sum, id) => sum + (id ? RECIPES.find((r) => r.id === id).value : 0), 0);
+    const goods = this.home.slots.reduce((sum, id) => sum + (id ? RECIPES.find((r) => r.id === id).value : 0), 0);
+    const fish = this.home.tank.reduce((sum, id) => sum + (id ? FISH_SPECIES.find((f) => f.id === id).rarity * 2 : 0), 0);
+    return goods + fish;
   }
 
   // Rebuilt only when placement changes (never per frame).
@@ -5766,6 +5794,18 @@ class TownScene extends Phaser.Scene {
       const r = RECIPES.find((x) => x.id === id);
       const [dx, dy] = HOME_SLOT_OFFSETS[i];
       this.homeSprites.push(this.add.text(HOME_POS.x + dx, HOME_POS.y + dy, r.icon, { fontSize: '22px' }).setOrigin(0.5).setDepth(HOME_POS.y + dy + 70));
+    });
+    // Aquarium fish: a few emoji with a slow drift (3 tiny tweens, rebuilt only on change).
+    this.homeTankSprites.forEach((t) => { this.tweens.killTweensOf(t); t.destroy(); });
+    this.homeTankSprites = [];
+    this.home.tank.forEach((id, i) => {
+      if (!id) return;
+      const f = FISH_SPECIES.find((x) => x.id === id);
+      const bx = HOME_POS.x + HOME_TANK_OFFSET.x - 16 + i * 16;
+      const by = HOME_POS.y + HOME_TANK_OFFSET.y - 8 + (i % 2) * 10;
+      const t = this.add.text(bx, by, f.icon, { fontSize: '14px' }).setOrigin(0.5).setDepth(HOME_POS.y + 20);
+      this.tweens.add({ targets: t, x: bx + 12, duration: 1800 + i * 400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      this.homeTankSprites.push(t);
     });
     if (this.homeLabel) this.homeLabel.setText(`🏡 Home (cozy ${this.homeCozy()})`);
   }
@@ -5800,7 +5840,7 @@ class TownScene extends Phaser.Scene {
   }
 
   saveHome() {
-    writeSave({ home: { slots: this.home.slots, paidDay: this.home.paidDay }, crafted: this.craftedGoods });
+    writeSave({ home: { slots: this.home.slots, tank: this.home.tank, paidDay: this.home.paidDay }, crafted: this.craftedGoods });
   }
 
   renderHome() {
@@ -5825,7 +5865,56 @@ class TownScene extends Phaser.Scene {
       li.append(label, sel);
       list.appendChild(li);
     });
+    const tankList = document.getElementById('home-tank-list');
+    tankList.innerHTML = '';
+    const caught = this.fishlog ? this.fishlog.caught : {};
+    this.home.tank.forEach((cur, i) => {
+      const li = document.createElement('li');
+      const label = document.createElement('label');
+      label.textContent = `Tank ${i + 1}`;
+      label.htmlFor = `home-tank-${i}`;
+      const sel = document.createElement('select');
+      sel.id = `home-tank-${i}`;
+      sel.className = 'home-slot-select';
+      const mk = (value, text) => { const o = document.createElement('option'); o.value = value; o.textContent = text; return o; };
+      sel.appendChild(mk('', FISH_SPECIES.some((f) => caught[f.id]) ? '— empty —' : '— catch fish first —'));
+      FISH_SPECIES.forEach((f) => {
+        const usedElsewhere = this.home.tank.some((id, j) => id === f.id && j !== i);
+        if ((caught[f.id] || f.id === cur) && !usedElsewhere) sel.appendChild(mk(f.id, `${f.icon} ${f.name}`));
+      });
+      sel.value = cur || '';
+      sel.addEventListener('change', () => this.setTankSlot(i, sel.value || null));
+      li.append(label, sel);
+      tankList.appendChild(li);
+    });
     document.getElementById('home-cozy').textContent = `Cozy score: ${this.homeCozy()} (daily visitor bonus: +${Math.min(HOME_BONUS_CAP, Math.floor(this.homeCozy() / HOME_BONUS_PER))} ⭐)`;
+  }
+
+  // Aquarium: show a species you have logged (nothing is consumed).
+  setTankSlot(i, id) {
+    if (i < 0 || i >= HOME_TANK_SLOTS) return false;
+    if (this.home.tank[i] === id) return false;
+    if (id !== null) {
+      const known = FISH_SPECIES.some((f) => f.id === id);
+      const caught = this.fishlog && this.fishlog.caught[id];
+      if (!known || !caught || this.home.tank.some((x, j) => x === id && j !== i)) { this.renderHome(); return false; }
+    }
+    this.home.tank[i] = id;
+    this.saveHome();
+    this.renderHomeSprites();
+    this.renderHome();
+    if (id) {
+      this.incrementStat('tankPlaced');
+      if (this.home.tank.every(Boolean)) this.incrementStat('tankFull');
+    }
+    this.noteCozy();
+    return true;
+  }
+
+  // Track the best cozy score ever (for the Cozy Corner achievement).
+  noteCozy() {
+    const cozy = this.homeCozy();
+    if (cozy > (this.lifetimeStats.homeCozyBest || 0)) { this.lifetimeStats.homeCozyBest = cozy; this.saveAchievements(); this.checkAchievements(); }
   }
 
   // Swap one slot: the old good returns to the bag, the new one leaves it.
@@ -5847,8 +5936,7 @@ class TownScene extends Phaser.Scene {
       this.incrementStat('homePlaced');
       if (this.home.slots.every(Boolean)) this.incrementStat('homeFullPlots');
     }
-    const cozy = this.homeCozy();
-    if (cozy > (this.lifetimeStats.homeCozyBest || 0)) { this.lifetimeStats.homeCozyBest = cozy; this.saveAchievements(); this.checkAchievements(); }
+    this.noteCozy();
     return true;
   }
 
@@ -6341,7 +6429,7 @@ class TownScene extends Phaser.Scene {
         if (this.ffInPond(MAIN_POND, x, y, 1.25) || this.ffInPond(EAST_POND, x, y, 1.25)) continue;
         if (keepClear.some((k) => Math.hypot(k.x - x, k.y - y) < 60)) continue;
         // The home plot is a 156x96 footprint: keep weeds off it (and its fence).
-        if (Math.abs(x - HOME_POS.x) < 110 && Math.abs(y - HOME_POS.y) < 80) continue;
+        if (Math.abs(x - HOME_POS.x) < 175 && Math.abs(y - HOME_POS.y) < 80) continue;
         // Talk-radius NPCs: stay outside their interaction radius so a weed can't steal a chat.
         if (Math.hypot(NPC_POS.x - x, NPC_POS.y - y) < 100 || Math.hypot(NPC2_POS.x - x, NPC2_POS.y - y) < 100) continue;
         if (spots.some((o) => Math.hypot(o.x - x, o.y - y) < 40)) continue;
