@@ -21,8 +21,8 @@ const { launch, scene, check, done } = require('./helpers');
     const out = { weedsBefore: st('weeds') };
     s.weedSpots.forEach((w, i) => s.weedsPulledToday.add(i)); out.weedsAfter = st('weeds');
     out.mailBefore = st('mail'); s.collectAllLetters(); out.mailAfter = st('mail');
-    s.isBugOffTime = () => false; out.bugLater = st('bugoff');
-    s.isBugOffTime = () => true; out.bugTodo = st('bugoff');
+    s.isBugOffTime = () => false; s.bugOffPhase = () => 'before'; out.bugLater = st('bugoff');
+    s.isBugOffTime = () => true; s.bugOffPhase = () => 'live'; out.bugTodo = st('bugoff');
     for (let i = 0; i < 5; i++) { s.bugs[i].alive = true; s.catchBug(s.bugs[i]); } out.bugDone = st('bugoff');
     s.craftedGoods.lantern = 1; s.setHomeSlot(0, 'lantern'); out.homeTodo = st('home');
     s.localBody.setPosition(HOME_POS.x, HOME_POS.y + 60); s.openHome(); s.closeHome(); out.homeDone = st('home');
@@ -30,6 +30,18 @@ const { launch, scene, check, done } = require('./helpers');
     const real = s.questDayBucket(); return out;
   });
   check('dailies: weeds/mail/bug-off/home statuses follow real game state', b.weedsBefore === 'todo' && b.weedsAfter === 'done' && b.mailBefore === 'todo' && b.mailAfter === 'done' && b.bugLater === 'later' && b.bugTodo === 'todo' && b.bugDone === 'done' && b.homeTodo === 'todo' && b.homeDone === 'done', JSON.stringify(b));
+
+  // Missed Bug-Off window must not lock the bonus: 'missed' is excluded from the total.
+  const m = await scene(page, (s) => {
+    writeSave({ bugoff: { day: s.questDayBucket(), count: 0, tier: 0, best: 5 } });
+    s.isBugOffTime = () => false; s.bugOffPhase = () => 'before';
+    const before = { st: s.dailyItems().find((i) => i.id === 'bugoff').status, total: s.dailyProgress().total };
+    s.bugOffPhase = () => 'after';
+    const after = { st: s.dailyItems().find((i) => i.id === 'bugoff').status, total: s.dailyProgress().total, detail: s.dailyItems().find((i) => i.id === 'bugoff').detail };
+    s.openDailies(); const row = document.querySelector('#dailies-list li[data-daily=bugoff]').dataset.status; s.closeDailies();
+    return { before, after, row };
+  });
+  check('dailies: a missed Bug-Off window is excluded from the total (no lockout)', m.before.st === 'later' && m.after.st === 'missed' && m.after.total === m.before.total - 1 && m.row === 'missed' && /over for today/.test(m.after.detail), JSON.stringify(m));
 
   // 3. Birthday item appears only on a birthday and completes with the gift.
   const c = await scene(page, (s) => {
@@ -47,7 +59,7 @@ const { launch, scene, check, done } = require('./helpers');
     s.loadBirthdays(); s.refreshBirthdays(); s.refreshWeeds && 0;
     s.questClaimedBucket = s.questDayBucket(); s.triviaAnsweredBucket = s.questDayBucket();
     s.weedSpots.forEach((w, i) => s.weedsPulledToday.add(i));
-    s.collectAllLetters(); s.isBugOffTime = () => true;
+    s.collectAllLetters(); s.isBugOffTime = () => false; s.bugOffPhase = () => 'after'; // window missed: must still be completable
     // If today happens to be a villager's birthday, that chore counts too: do it.
     const bv = s.todaysBirthdayVillager();
     if (bv && !s.birthdayClaimed(bv)) { Object.keys(s.resources).forEach((k) => { s.resources[k] = 3; }); s.giveBirthdayGift(bv); }

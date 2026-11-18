@@ -2132,5 +2132,5 @@ body.touch-device .key-hint { display: none; }
 #dailies-list li { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; }
 #dailies-list li small { opacity: 0.7; font-size: 11px; padding-left: 26px; }
 #dailies-list li.daily-done span { text-decoration: line-through; opacity: 0.75; }
-#dailies-list li.daily-na { opacity: 0.45; }
+#dailies-list li.daily-na, #dailies-list li.daily-missed { opacity: 0.45; }
 #dailies-btn { min-height: 30px; }

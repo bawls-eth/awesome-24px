@@ -2938,10 +2938,16 @@ class TownScene extends Phaser.Scene {
     return Math.floor(this.questHash(31) * (24 - BUGOFF_HOURS));
   }
 
-  isBugOffTime() {
+  // 'before' | 'live' | 'after' relative to today's window (local hour).
+  bugOffPhase() {
     const hour = new Date().getHours();
     const start = this.bugOffStartHour();
-    return hour >= start && hour < start + BUGOFF_HOURS;
+    if (hour < start) return 'before';
+    return hour < start + BUGOFF_HOURS ? 'live' : 'after';
+  }
+
+  isBugOffTime() {
+    return this.bugOffPhase() === 'live';
   }
 
   // Today's saved progress; anything malformed or from another day is empty.
@@ -7012,7 +7018,10 @@ class TownScene extends Phaser.Scene {
     items.push({ id: 'weeds', icon: '🌿', label: 'Pull the weeds', detail: `${weedsLeft} left`, status: weedsLeft ? 'todo' : 'done' });
     const bo = this.bugOffRecord();
     const live = this.isBugOffTime();
-    items.push({ id: 'bugoff', icon: '🦋', label: 'Bug-Off (catch 5)', detail: live ? `LIVE — ${bo.count}/5 caught` : `${bo.count} caught (window ${this.bugOffStartHour()}:00-${this.bugOffStartHour() + BUGOFF_HOURS}:00)`, status: bo.tier >= 1 ? 'done' : (live ? 'todo' : 'later') });
+    // Once the window has passed without a medal it can no longer be done today:
+    // 'missed' is excluded from the total so it can't lock you out of the bonus.
+    const after = !live && this.bugOffPhase() === 'after';
+    items.push({ id: 'bugoff', icon: '🦋', label: 'Bug-Off (catch 5)', detail: live ? `LIVE — ${bo.count}/5 caught` : `${bo.count} caught (window ${this.bugOffStartHour()}:00-${this.bugOffStartHour() + BUGOFF_HOURS}:00${after ? ', over for today' : ''})`, status: bo.tier >= 1 ? 'done' : (live ? 'todo' : (after ? 'missed' : 'later')) });
     const bday = this.todaysBirthdayVillager();
     items.push({ id: 'birthday', icon: '🎂', label: bday ? `${bday.name}'s birthday` : 'Birthdays', detail: bday ? 'bring a gift' : 'none today', status: !bday ? 'na' : (this.birthdayClaimed(bday) ? 'done' : 'todo') });
     items.push({ id: 'home', icon: '🏡', label: 'Visit your home plot', detail: this.homeCozy() ? `cozy ${this.homeCozy()}` : 'place a crafted good first', status: this.homeCozy() === 0 ? 'na' : (this.home.paidDay === day ? 'done' : 'todo') });
@@ -7020,7 +7029,7 @@ class TownScene extends Phaser.Scene {
   }
 
   dailyProgress() {
-    const items = this.dailyItems().filter((i) => i.status !== 'na');
+    const items = this.dailyItems().filter((i) => i.status !== 'na' && i.status !== 'missed');
     return { done: items.filter((i) => i.status === 'done').length, total: items.length };
   }
 
@@ -7052,8 +7061,7 @@ class TownScene extends Phaser.Scene {
   openDailies() {
     this.dailiesOpen = true;
     document.getElementById('dailies-overlay').classList.remove('hidden');
-    this.refreshDailies();
-    this.renderDailies();
+    this.refreshDailies(); // re-renders while open
   }
 
   closeDailies() {
@@ -7064,7 +7072,7 @@ class TownScene extends Phaser.Scene {
   renderDailies() {
     const list = document.getElementById('dailies-list');
     list.innerHTML = '';
-    const mark = { done: '✅', todo: '⬜', later: '🕒', na: '➖' };
+    const mark = { done: '✅', todo: '⬜', later: '🕒', na: '➖', missed: '➖' };
     this.dailyItems().forEach((it) => {
       const li = document.createElement('li');
       li.className = `daily-${it.status}`;
