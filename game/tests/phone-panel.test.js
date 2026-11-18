@@ -1,6 +1,6 @@
 // Phone layout: the "In town" panel starts collapsed, expands/scrolls, never
 // overlaps the controls or chat bar, is remembered, and desktop is unchanged.
-const { launch, scene, check, done } = require('./helpers');
+const { launch, scene, check, done, expandPanel } = require('./helpers');
 
 const rect = (page, sel) => page.evaluate((s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); const cs = getComputedStyle(e); return { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height, vis: cs.display !== 'none' && cs.visibility !== 'hidden' }; }, sel);
 const overlap = (a, b) => a && b && a.vis && b.vis && a.l < b.r && a.r > b.l && a.t < b.b && a.b > b.t;
@@ -82,6 +82,26 @@ const SEL = { joystick: '#joystick', actions: '#action-buttons', chat: '#chat-pa
     check(`${tag}: HUD chip, Workbench, Today and Journal overlays still fit the screen`, o.hudChip && o.workbench && o.dailies && o.journal, JSON.stringify(o));
     check(`${tag}: no console errors`, errors.length === 0, errors.join('|'));
     await browser.close();
+  }
+
+  // 5b. Landscape: an expanded panel re-fits when a hint pill (gift) appears under it.
+  {
+    const { browser: lb, page: lp, errors: le } = await launch({ width: 844, height: 390 }, null, true);
+    await expandPanel(lp);
+    const before = await lp.evaluate(() => document.getElementById('player-list-panel').getBoundingClientRect().height);
+    // Walk up to a villager so the game itself shows the gift pill.
+    await scene(lp, (s) => { const st = s.villagerState.mocha; s.localBody.setPosition(st.x, st.y + 10); });
+    await lp.waitForTimeout(600);
+    const h = await lp.evaluate((b) => {
+      const panel = document.getElementById('player-list-panel'); const pill = document.getElementById('gift-hint-btn');
+      const pr = panel.getBoundingClientRect(); const br = pill.getBoundingClientRect();
+      const shown = !pill.classList.contains('hidden') && br.width > 0;
+      const overlap = shown && pr.left < br.right && pr.right > br.left && pr.top < br.bottom && pr.bottom > br.top;
+      return { before: b, after: pr.height, shown, overlap, pill: [Math.round(br.top), Math.round(br.bottom)], panelBottom: Math.round(pr.bottom) };
+    }, before);
+    check('844x390: a real gift hint pill appears and the expanded panel shrinks to stay clear of it', h.shown && !h.overlap && h.after < h.before, JSON.stringify(h));
+    check('844x390: no console errors (hint refit)', le.length === 0, le.join('|'));
+    await lb.close();
   }
 
   // 6. Desktop unchanged: no chip, full panel, same size as before, never collapsed.

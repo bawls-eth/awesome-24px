@@ -7338,6 +7338,9 @@ class TownScene extends Phaser.Scene {
     if (ac) obs.observe(ac, { childList: true, characterData: true, subtree: true });
     const cap = document.getElementById('achievement-cap');
     if (cap) obs.observe(cap, { childList: true, characterData: true, subtree: true });
+    // Hint pills (fish / gift / dig hole) appear and disappear: refit so an expanded panel never sits on one.
+    const hintObs = new MutationObserver(fit);
+    ['fish-hint-btn', 'gift-hint-btn', 'dig-hole-hint'].forEach((id) => { const el = document.getElementById(id); if (el) hintObs.observe(el, { attributes: true, attributeFilter: ['class'] }); });
     // Expanded content grows/shrinks (e.g. settings section): refit.
     if (window.ResizeObserver && document.getElementById('chat-panel')) new ResizeObserver(fit).observe(document.getElementById('chat-panel'));
     apply();
