@@ -1017,9 +1017,15 @@ class TownScene extends Phaser.Scene {
     });
 
     this.cameras.main.startFollow(this.localBody, true, 0.15, 0.15);
+    // A small deadzone so tiny back-and-forth steps (lining up to fish,
+    // shuffling next to a villager) don't drag the whole view around; the
+    // lerp itself is re-derived per frame in updateLocalMovement so the
+    // camera eases the same on 60Hz and 120Hz+ displays.
+    this.cameras.main.setDeadzone(24, 16);
 
     this.cursors = this.input.keyboard.createCursorKeys();
     this.wasd = this.input.keyboard.addKeys('W,A,S,D');
+    this.runKey = this.input.keyboard.addKey('SHIFT', false);
     // createCursorKeys()/addKeys() capture their keys by default and call
     // preventDefault() on them globally — including SPACE, W, A, S, D —
     // which blocks typing a space or those letters into the chat input
@@ -1096,15 +1102,20 @@ class TownScene extends Phaser.Scene {
   // ---------- movement ----------
 
   updateLocalMovement(time, delta) {
-    const speed = 140;
+    const WALK_SPEED = 140;
+    const RUN_SPEED = 220;
+    // Clamp so a background-tab hitch doesn't turn into one huge step.
+    const dt = Math.min(delta, 50);
     let vx = 0;
     let vy = 0;
+    let running = false;
 
     if (this.canAct()) {
       if (this.cursors.left.isDown || this.wasd.A.isDown) vx -= 1;
       if (this.cursors.right.isDown || this.wasd.D.isDown) vx += 1;
       if (this.cursors.up.isDown || this.wasd.W.isDown) vy -= 1;
       if (this.cursors.down.isDown || this.wasd.S.isDown) vy += 1;
+      running = !!(this.runKey && this.runKey.isDown);
 
       if (this.touchMove) {
         vx += this.touchMove.x;
@@ -1116,6 +1127,8 @@ class TownScene extends Phaser.Scene {
       }
     }
 
+    // Normalise so diagonals aren't ~41% faster; analog (tilt) input under
+    // 1 keeps its partial magnitude.
     const mag = Math.hypot(vx, vy);
     if (mag > 1) {
       vx /= mag;
@@ -1130,33 +1143,101 @@ class TownScene extends Phaser.Scene {
       this.endFishing();
     }
 
-    this.localBody.body.setVelocity(vx * speed, vy * speed);
-    if (vx !== 0) this.localVisual.setFlipX(vx < 0);
+    const speed = running ? RUN_SPEED : WALK_SPEED;
+    const body = this.localBody.body;
+    let targetVx = vx * speed;
+    let targetVy = vy * speed;
 
-    const moving = vx !== 0 || vy !== 0;
-    this.applyBob(this.localBobState, this.localVisual, this.localShadow, this.localBody.x, this.localBody.y, moving, delta);
+    // Corner assist: pushing straight into the very edge of an obstacle
+    // used to dead-stop you on its corner. If a few px sideways would clear
+    // it, slide around instead.
+    if (mag > 0) {
+      const slide = this.cornerSlide(body, vx, vy, speed, dt);
+      if (slide) {
+        targetVx = slide.x;
+        targetVy = slide.y;
+      }
+    }
+
+    // Quick ease in/out instead of instant start/stop: snappy enough to
+    // still feel direct, but no more 0->full speed in one frame.
+    // Exponential smoothing keeps it frame-rate independent.
+    const tau = mag > 0 ? 45 : 30; // ms
+    const k = 1 - Math.exp(-dt / tau);
+    let nvx = body.velocity.x + (targetVx - body.velocity.x) * k;
+    let nvy = body.velocity.y + (targetVy - body.velocity.y) * k;
+    if (Math.abs(nvx) < 2 && targetVx === 0) nvx = 0;
+    if (Math.abs(nvy) < 2 && targetVy === 0) nvy = 0;
+    body.setVelocity(nvx, nvy);
+
+    // Face where the player is steering, not where the body is drifting;
+    // ignore tiny analog (tilt) noise so the sprite doesn't flicker.
+    if (Math.abs(vx) > 0.15) this.localVisual.setFlipX(vx < 0);
+
+    // Keep the camera ease consistent across refresh rates (0.15/frame @60fps).
+    const camLerp = 1 - Math.pow(0.85, dt / (1000 / 60));
+    this.cameras.main.setLerp(camLerp, camLerp);
+
+    const moving = mag > 0.05;
+    const bobDelta = running ? delta * (RUN_SPEED / WALK_SPEED) : delta;
+    this.applyBob(this.localBobState, this.localVisual, this.localShadow, this.localBody.x, this.localBody.y, moving, bobDelta);
     this.localNameText.setPosition(this.localBody.x, this.localVisual.y - 22);
-    if (moving) this.spawnFootstepDust(time, this.localBody.x, this.localBody.y + 10);
+    if (moving) this.spawnFootstepDust(time, this.localBody.x, this.localBody.y + 10, running);
 
-    // Only write when something actually changed: standing still used to
-    // cost a database transaction every 100ms, forever. Positions are
-    // sent at most every 100ms while walking, and the last (resting)
-    // position always goes out because it differs from the last one sent.
+    // Only write when something changed — standing still used to fire a
+    // full Firebase transaction every 100ms for nothing.
     if (time - this.lastSentAt > 100) {
+      const x = Math.round(this.localBody.x * 10) / 10;
+      const y = Math.round(this.localBody.y * 10) / 10;
       const facing = this.localVisual.flipX ? -1 : 1;
       const last = this.lastSentPos;
-      if (!last || Math.abs(last.x - this.localBody.x) > 0.5 || Math.abs(last.y - this.localBody.y) > 0.5 || last.facing !== facing) {
+      if (!last || last.x !== x || last.y !== y || last.facing !== facing) {
         this.lastSentAt = time;
-        this.lastSentPos = { x: this.localBody.x, y: this.localBody.y, facing };
-        this.net.move(this.localBody.x, this.localBody.y, facing);
+        this.lastSentPos = { x, y, facing };
+        this.net.move(x, y, facing);
       }
     }
   }
 
+  // Returns a replacement velocity that steers around an obstacle corner
+  // when the body is blocked on the axis the player is pushing along and a
+  // small perpendicular shift (up to CORNER px) would clear it, else null.
+  cornerSlide(body, ix, iy, speed, dt) {
+    const CORNER = 7;
+    // touching (not blocked): world-bound hits only set blocked, and there is
+    // no "around" to slide to at the edge of the map.
+    const touching = body.touching;
+    const tryAxis = (dir, horizontal) => {
+      for (let d = 1; d <= CORNER; d++) {
+        for (const side of [-1, 1]) {
+          const px = body.x + (horizontal ? dir * 2 : side * d);
+          const py = body.y + (horizontal ? side * d : dir * 2);
+          if (this.physics.overlapRect(px, py, body.width, body.height, false, true).length === 0) {
+            const v = Math.min(speed, (d / Math.max(dt, 1)) * 1000);
+            return horizontal ? { x: 0, y: side * v } : { x: side * v, y: 0 };
+          }
+        }
+      }
+      return null;
+    };
+    if (iy === 0 && ix !== 0) {
+      const dir = Math.sign(ix);
+      if ((dir < 0 && touching.left) || (dir > 0 && touching.right)) {
+        return tryAxis(dir, true);
+      }
+    } else if (ix === 0 && iy !== 0) {
+      const dir = Math.sign(iy);
+      if ((dir < 0 && touching.up) || (dir > 0 && touching.down)) {
+        return tryAxis(dir, false);
+      }
+    }
+    return null;
+  }
+
   // A tiny, purely cosmetic dust puff under the player's feet while
   // walking — throttled so it's a trail of soft dots, not a solid smear.
-  spawnFootstepDust(time, x, y) {
-    if (this.lastDustAt && time - this.lastDustAt < 220) return;
+  spawnFootstepDust(time, x, y, running) {
+    if (this.lastDustAt && time - this.lastDustAt < (running ? 140 : 220)) return;
     this.lastDustAt = time;
     const puff = this.add.ellipse(x, y, 7, 4, 0xd8cfa8, 0.35).setDepth(y - 1);
     this.tweens.add({
@@ -1171,15 +1252,30 @@ class TownScene extends Phaser.Scene {
   }
 
   updateRemoteInterpolation(delta) {
+    // Updates arrive ~10/s with network jitter. A fixed 0.25-per-frame lerp
+    // was frame-rate dependent and made the hop stutter on/off between
+    // packets; ease with a time constant instead, and decide "walking" from
+    // the remaining distance to the target rather than this frame's step.
+    const dt = Math.min(delta, 100);
+    const k = 1 - Math.exp(-dt / 90);
     this.remotePlayers.forEach((rp) => {
-      const prevX = rp.x;
-      const prevY = rp.y;
-      rp.x += (rp.targetX - rp.x) * 0.25;
-      rp.y += (rp.targetY - rp.y) * 0.25;
+      const dx = rp.targetX - rp.x;
+      const dy = rp.targetY - rp.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > 400 || dist < 0.05) {
+        // Teleport (portal/rejoin) or already there: snap, don't glide across the map.
+        rp.x = rp.targetX;
+        rp.y = rp.targetY;
+      } else {
+        rp.x += dx * k;
+        rp.y += dy * k;
+      }
       rp.visual.setFlipX(rp.facing === -1);
 
-      const moving = Math.hypot(rp.x - prevX, rp.y - prevY) > 0.05;
-      this.applyBob(rp.bob, rp.visual, rp.shadow, rp.x, rp.y, moving, delta);
+      const moving = dist > 1.5 && dist <= 400;
+      // Remote runners hop faster too (their updates land further apart).
+      const bobDelta = moving ? delta * Math.min(1.6, Math.max(1, dist / 14)) : delta;
+      this.applyBob(rp.bob, rp.visual, rp.shadow, rp.x, rp.y, moving, bobDelta);
       rp.nameText.setPosition(rp.x, rp.visual.y - 22);
       if (rp.bubble) rp.bubble.setPosition(rp.x, rp.visual.y - 40);
     });
@@ -1203,10 +1299,10 @@ class TownScene extends Phaser.Scene {
     if (moving) {
       state.phase += (delta / 1000) * HOP_SPEED;
       const target = Math.abs(Math.sin(state.phase));
-      state.lift += (target - state.lift) * 0.6;
+      state.lift += (target - state.lift) * (1 - Math.pow(0.4, Math.min(delta, 50) / 16.7));
     } else {
       state.phase = 0;
-      state.lift += (0 - state.lift) * 0.3;
+      state.lift += (0 - state.lift) * (1 - Math.pow(0.7, Math.min(delta, 50) / 16.7));
     }
 
     visual.x = anchorX;
@@ -3281,7 +3377,10 @@ class TownScene extends Phaser.Scene {
   createLocalPlayer(playerData) {
     this.localBody = this.physics.add.sprite(playerData.x, playerData.y, playerData.species, playerData.frame).setVisible(false);
     this.localBody.body.setCollideWorldBounds(true);
-    this.localBody.body.setSize(16, 16).setOffset(4, 12);
+    // Feet-sized hitbox: was 16x16 at offset (4,12), which stuck 4px out
+    // below the 24px sprite so you stopped short of things above you and
+    // snagged on corners; 14x12 ends exactly at the sprite's feet.
+    this.localBody.body.setSize(14, 12).setOffset(5, 12);
 
     this.localVisual = this.add.sprite(playerData.x, playerData.y, playerData.species, playerData.frame);
     if (playerData.facing === -1) this.localVisual.setFlipX(true);
