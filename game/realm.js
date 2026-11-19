@@ -151,10 +151,10 @@ class RealmArena {
   // ---------- team play ----------
 
   // role: 'host' | 'guest'; link: { send, onMessage, close }. Call before start(); clearTeam() after the run.
-  setTeam(role, link, name) {
+  setTeam(role, link, name, mode) {
     this.clearTeam();
     this.role = role;
-    this.team = new RealmTeam({ arena: this, role, link, name });
+    this.team = new RealmTeam({ arena: this, role, link, name, mode });
   }
 
   clearTeam() {
@@ -247,6 +247,7 @@ class RealmArena {
 
   // Stats = base + level + equipped items (recomputed when level / equipment changes, read every frame).
   _calcStats() {
+    if (this.team && this.team.mode === 'duel') { this.stats = { maxHp: RT_DUEL_HP, dmg: 1, rate: RT_DUEL_RATE, speed: RM_PLAYER.speed, shards: 1, xp: 1, iframes: 0.12 }; return this.stats; } // a duel is fought with identical stats: no gear, no level
     const st = { maxHp: RM_PLAYER.hp + RM_HP_PER_LEVEL * (this.save.level - 1), dmg: RM_PLAYER.dmg, rate: RM_PLAYER.fireRate, speed: RM_PLAYER.speed, shards: 1, xp: 1, iframes: RM_PLAYER.iframes };
     RM_SLOTS.forEach((slot) => {
       const uid = this.save.eq[slot];
@@ -456,7 +457,8 @@ class RealmArena {
     this.displayShards = this.save.shards;
     this.state = 'banner';
     this.bannerT = 1.4;
-    this.bannerText = 'Realm — survive the waves!';
+    this.bannerText = this.team && this.team.mode === 'duel' ? 'Duel — first to 2 rounds!' : 'Realm — survive the waves!';
+    if (this.team && this.team.mode === 'duel') { this.state = 'play'; this.run.wave = 1; this.team.duelReset(); }
     this.nextWaveIn = 1.4;
     this._syncHud(true);
     this._showBanner(this.bannerText);
@@ -682,6 +684,12 @@ class RealmArena {
       return;
     }
 
+    if (this.team && this.role === 'host' && this.team.mode === 'duel') { // a duel: no waves, enemies or hazards
+      this.clock += dt;
+      this._updatePlayer(dt); this._updateAbilities(dt); this._updateBullets(dt);
+      this.team.hostTick(dt); this.team.duelTick(dt);
+      return;
+    }
     this.clock += dt;
     this._updateHazards(dt);
     this._updatePlayer(dt);
@@ -870,6 +878,7 @@ class RealmArena {
       if (!b.active) continue;
       b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
       if (b.life <= 0 || b.x < -10 || b.y < -10 || b.x > this.W + 10 || b.y > this.H + 10) { b.active = false; continue; }
+      if (this.team && this.role === 'host' && this.team.mode === 'duel') { if (this.team.duelBoltHit(b)) b.active = false; continue; }
       for (let j = 0; j < this.enemies.length; j++) {
         const e = this.enemies[j];
         if (!e.active) continue;
@@ -950,6 +959,7 @@ class RealmArena {
   // With a living partner you go down (they can revive you); alone, or when both are down, the run ends.
   _downOrDie() {
     const t = this.team;
+    if (t && t.mode === 'duel') { t.duelKO(1); return; } // the host fell: the guest takes the round
     if (t && this.role === 'host' && t.partner && t.partner.ready && !t.partner.down) {
       this.down = true; this.reviveT = 0; this.player.hp = 0;
       this._showBanner('You are down — your partner can revive you!', 2.2);
@@ -1072,6 +1082,7 @@ class RealmArena {
     if (!this.active || this.state === 'dead' || this.paused) return false;
     const ab = RM_ABILITIES[i];
     if (!ab || !this.abilityUnlocked(i) || this.abilityCd[i] > 0) return false;
+    if (this.team && this.team.mode === 'duel' && ab.id !== 'dash') return false; // duels allow only the Dash
     const p = this.player;
     if (ab.id === 'dash') {
       let dx = this._mx || 0; let dy = this._my || 0;
@@ -1235,7 +1246,7 @@ class RealmArena {
       g.save(); g.translate(q.x, q.y); g.globalAlpha = q.down ? 0.45 : 1;
       g.drawImage(this.sprites.playerFallback, -16, -20, 32, 32); g.restore(); g.globalAlpha = 1;
       g.strokeStyle = 'rgba(126,231,135,0.85)'; g.lineWidth = 2; g.beginPath(); g.arc(q.x, q.y - 4, 19, 0, Math.PI * 2); g.stroke();
-      g.font = 'bold 11px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(tm.role === 'host' ? (q.name || 'Friend') : 'Host', q.x + 1, q.y - 27); g.fillStyle = '#7ee787'; g.fillText(tm.role === 'host' ? (q.name || 'Friend') : 'Host', q.x, q.y - 28);
+      g.font = 'bold 11px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(tm.role === 'host' ? (q.name || 'Friend') : (tm.partnerName || 'Host'), q.x + 1, q.y - 27); g.fillStyle = '#7ee787'; g.fillText(tm.role === 'host' ? (q.name || 'Friend') : (tm.partnerName || 'Host'), q.x, q.y - 28);
       if (q.down) { const prog = tm.role === 'host' ? Math.min(1, q.reviveT / RT_REVIVE_TIME) : (q.revive || 0); g.strokeStyle = '#7ee787'; g.lineWidth = 3; g.beginPath(); g.arc(q.x, q.y, RT_REVIVE_RANGE, -Math.PI / 2, -Math.PI / 2 + prog * Math.PI * 2); g.stroke(); g.strokeStyle = 'rgba(126,231,135,0.35)'; g.lineWidth = 1; g.beginPath(); g.arc(q.x, q.y, RT_REVIVE_RANGE, 0, Math.PI * 2); g.stroke(); }
     }
     // Player: the villager sprite (flickers while invulnerable), with a soft shadow and aim marker.
@@ -1288,11 +1299,11 @@ class RealmArena {
     const hpText = document.getElementById('realm-hp-text');
     if (hpText) hpText.textContent = `${Math.ceil(this.player.hp)} / ${this.stats.maxHp}`;
     const wave = document.getElementById('realm-wave');
-    if (wave) wave.textContent = this.run.wave > 0 ? `Wave ${this.run.wave}` : 'Get ready';
+    if (wave) wave.textContent = this.team && this.team.mode === 'duel' ? this.team.duelLabel() : this.run.wave > 0 ? `Wave ${this.run.wave}` : 'Get ready';
     const shards = document.getElementById('realm-shards');
     if (shards) shards.textContent = `💎 ${Math.floor(this.displayShards)}`;
     const bio = document.getElementById('realm-biome');
-    if (bio) bio.textContent = this.run.wave > 0 ? RM_BIOMES[this.biome].name : '';
+    if (bio) bio.textContent = this.run.wave > 0 && !(this.team && this.team.mode === 'duel') ? RM_BIOMES[this.biome].name : '';
     const pe = document.getElementById('realm-partner');
     if (pe) {
       const t = this.team; const q = t ? (t.role === 'host' ? (t.partner && t.partner.ready ? t.partner : null) : t.hostPl) : null;

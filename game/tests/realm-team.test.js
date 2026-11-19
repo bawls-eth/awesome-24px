@@ -82,7 +82,8 @@ const startTeam = (role) => (s, r) => {
   const fa = await st(A.page), fb = await st(B.page).catch(() => ({}));
   check('invite: after Join both are in the same Realm run (host + guest over Firebase)', fa.role === 'host' && fb.role === 'guest' && fa.partner && fb.partner, JSON.stringify([fa, fb]));
   await sleep(1500);
-  const wave = await Promise.all([A, B].map((x) => scene(x.page, (s) => s.realm.run && s.realm.run.wave)));
+  let wave = [];
+  for (let i = 0; i < 20; i++) { wave = await Promise.all([A, B].map((x) => scene(x.page, (s) => s.realm.run && s.realm.run.wave))); if (wave[0] === wave[1] && wave[0] > 0) break; await sleep(300); }
   check('invite: wave progress is shared over the Firebase link', wave[0] === wave[1], JSON.stringify(wave));
   await B.page.evaluate(() => { document.getElementById('realm-leave-btn').click(); });
   await sleep(1500);

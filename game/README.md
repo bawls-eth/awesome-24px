@@ -851,6 +851,10 @@ press **E** (or tap **A**) to step through. It's a separate arena, fully local:
   tougher with a partner, the boss targets whoever is nearer, and at 0 HP you are
   **down** — your partner stands beside you for 2 seconds to revive you. The run
   ends when both are down. Loot bags go to whoever walks over them and your XP,
-  shards and items stay your own. Duel and 2v2 arenas are planned.
+  shards and items stay your own. 2v2 is planned.
+- **⚔️ Duel (1v1):** pick **Duel** next to a player at the gate. Best of three rounds,
+  identical stats for both of you (100 HP, no gear or level), only Dash allowed. Each
+  round starts with a short protected countdown; each bolt does 8 damage; first to two
+  rounds wins. Nothing is won or lost in your save.
 - Solo runs are local to you; only team runs send fight data, and only to your partner
   (via short-lived `realmInvites` / `realmParties` entries that are removed when you leave).

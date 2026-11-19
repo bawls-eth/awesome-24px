@@ -681,7 +681,7 @@ class TownNet {
       const t = clampNum(v.t, 0, Number.MAX_SAFE_INTEGER, 0);
       if (!party || !from || from === this.id) return;
       if (Date.now() - t > 90 * 1000 || t - Date.now() > 60 * 1000) return; // stale (or from a wildly wrong clock)
-      cb({ party, from, fromName: cleanText(v.fromName, MAX_NAME_LEN) || 'someone', mode: v.mode === 'coop' ? 'coop' : 'coop' });
+      cb({ party, from, fromName: cleanText(v.fromName, MAX_NAME_LEN) || 'someone', mode: v.mode === 'duel' ? 'duel' : 'coop' });
     });
   }
 
@@ -692,9 +692,9 @@ class TownNet {
     this.realmRateAt = Date.now();
     const partyRef = this.db.ref('realmParties').push();
     const party = partyRef.key;
-    partyRef.child('m').set({ host: this.id, hostName: cleanText(this.name, MAX_NAME_LEN), guest: null, mode: mode === 'coop' ? 'coop' : 'coop', t: firebase.database.ServerValue.TIMESTAMP }).catch(() => {});
+    partyRef.child('m').set({ host: this.id, hostName: cleanText(this.name, MAX_NAME_LEN), guest: null, mode: mode === 'duel' ? 'duel' : 'coop', t: firebase.database.ServerValue.TIMESTAMP }).catch(() => {});
     partyRef.onDisconnect().remove().catch(() => {});
-    this.db.ref(`realmInvites/${targetId}`).push({ party, from: this.id, fromName: cleanText(this.name, MAX_NAME_LEN), mode: 'coop', t: firebase.database.ServerValue.TIMESTAMP }).catch(() => {});
+    this.db.ref(`realmInvites/${targetId}`).push({ party, from: this.id, fromName: cleanText(this.name, MAX_NAME_LEN), mode: mode === 'duel' ? 'duel' : 'coop', t: firebase.database.ServerValue.TIMESTAMP }).catch(() => {});
     return party;
   }
 

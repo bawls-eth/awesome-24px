@@ -16,6 +16,10 @@ const RT_EVENT_WINDOW = 1.2; // seconds an event stays in the snapshot (so one l
 const RT_TIMEOUT_S = 8; // no word from the other side for this long: the run ends
 const RT_REVIVE_RANGE = 44;
 const RT_REVIVE_TIME = 2;
+const RT_DUEL_HP = 100;
+const RT_DUEL_RATE = 6;
+const RT_DUEL_HIT = 8; // damage per bolt in a duel
+const RT_DUEL_WIN = 2; // rounds to win
 const RT_HP_SCALE = 1.7; // enemies are tougher with two players
 const RT_TYPES = ['spiral', 'aimed', 'ring', 'boss'];
 const RT_KINDS = ['wisp', 'cinder', 'puff'];
@@ -46,7 +50,7 @@ function rtCleanInput(m, W, H) {
 function rtCleanSnap(m, W, H) {
   if (!m || typeof m !== 'object') return null;
   const arr = (a, n) => (Array.isArray(a) ? a.slice(0, n) : []);
-  const out = { nm: rtText(m.nm, 16), n: rtNum(m.n, 0, 1e9, 0), t: rtNum(m.t, 0, 1e9, 0), st: RT_STATES.includes(m.st) ? m.st : 'play', w: rtNum(m.w, 0, 9999, 0) | 0, b: rtNum(m.b, 0, 2, 0) | 0 };
+  const out = { du: Array.isArray(m.du) ? m.du.slice(0, 4).map((v) => rtNum(v, 0, 99, 0) | 0) : null, nm: rtText(m.nm, 16), n: rtNum(m.n, 0, 1e9, 0), t: rtNum(m.t, 0, 1e9, 0), st: RT_STATES.includes(m.st) ? m.st : 'play', w: rtNum(m.w, 0, 9999, 0) | 0, b: rtNum(m.b, 0, 2, 0) | 0 };
   out.pl = arr(m.pl, 2).map((p) => (Array.isArray(p) ? [rtNum(p[0], 0, W, 0), rtNum(p[1], 0, H, 0), rtNum(p[2], 0, 9999, 0), rtNum(p[3], 1, 9999, 100), p[4] ? 1 : 0, rtNum(p[5], -7, 7, 0), rtNum(p[6], 0, 3, 0), rtNum(p[7], 0, 1, 0)] : null));
   out.en = arr(m.en, 24).map((e) => (Array.isArray(e) ? [rtNum(e[0], 0, 23, 0) | 0, RT_TYPES[rtNum(e[1], 0, 3, 0) | 0], rtNum(e[2], -50, W + 50, 0), rtNum(e[3], -50, H + 50, 0), rtNum(e[4], 0, 99999, 0), rtNum(e[5], 1, 99999, 1), rtNum(e[6], 0, 3, 0) | 0, e[7] ? 1 : 0] : null)).filter(Boolean);
   out.bg = arr(m.bg, 14).map((e) => (Array.isArray(e) ? [rtNum(e[0], 0, 13, 0) | 0, rtNum(e[1], 0, W, 0), rtNum(e[2], 0, H, 0), rtNum(e[3], 0, 2, 0) | 0] : null)).filter(Boolean);
@@ -56,14 +60,16 @@ function rtCleanSnap(m, W, H) {
     if (!e || typeof e !== 'object') return null;
     const q = rtNum(e.q, 0, 1e9, 0); const k = typeof e.k === 'string' ? e.k : ''; const d = Array.isArray(e.d) ? e.d.slice(0, 8) : [];
     return { q, k, d, o: rtNum(e.o, -1, 1, -1) | 0 };
-  }).filter((e) => e && ['fe', 'fp', 'clr', 'bn', 'rew', 'loot', 'end', 'fx'].includes(e.k));
+  }).filter((e) => e && ['fe', 'fp', 'clr', 'bn', 'rew', 'loot', 'end', 'fx', 'dpos'].includes(e.k));
   return out;
 }
 
 class RealmTeam {
   // role: 'host' | 'guest'. link: { send, onMessage, close }.
-  constructor({ arena, role, link, name }) {
+  constructor({ arena, role, link, name, mode }) {
     this.arena = arena;
+    this.mode = mode === 'duel' ? 'duel' : 'coop';
+    this.duel = { s: [0, 0], ph: 0, rd: 1, t: 0 }; // duel: scores, phase (0 ready, 1 fight, 2 between rounds, 3 over), round, phase timer
     this.role = role;
     this.link = link;
     this.name = rtText(name, 16) || 'Friend';
@@ -114,6 +120,7 @@ class RealmTeam {
   partnerLeft() {
     const a = this.arena;
     if (this.role === 'host') {
+      if (this.mode === 'duel' && this.duel.ph < 3) { this.duel.s = [RT_DUEL_WIN, this.duel.s[1]]; this.duel.ph = 3; this.duel.t = 2.5; } // leaving a duel forfeits it
       this.partner = null;
       a._showBanner('Your partner left the Realm', 2);
       a._syncHud();
@@ -137,8 +144,21 @@ class RealmTeam {
     if (!p) return;
     const first = !p.ready;
     p.ready = true; this.inputs += 1;
-    p.x = c.x; p.y = c.y; p.aim = c.aim; p.fire = c.f; p.dmg = c.dm; p.rate = c.rt; p.maxHp = c.mh; p.lv = c.lv; p.name = c.nm || this.partnerName || 'Friend';
-    if (first) { p.hp = c.mh; p.iframes = 1.5; this.arena._showBanner(`${p.name} joined the fight!`, 2); this.arena._syncHud(); }
+    let nx = c.x; let ny = c.y;
+    if (this.mode === 'duel' && !first && this.duel.ph === 1) { // PvP: the guest cannot teleport or outrun the speed limit (plus one Dash when it is ready)
+      const dtIn = Math.max(0, Math.min(0.5, this.arena.clock - (p.lastIn === undefined ? this.arena.clock : p.lastIn)));
+      p.budget = Math.min(40, (p.budget === undefined ? 10 : p.budget) + RM_PLAYER.speed * 1.3 * dtIn); // a movement budget that refills with arena time, so many messages in one frame cannot outrun it
+      let reach = p.budget;
+      if (c.ab.some((x) => x.k === 'dash') && this.arena.clock - (p.dashAt === undefined ? -99 : p.dashAt) >= 2.4) { reach += 160; p.dashAt = this.arena.clock; }
+      const dx = nx - p.x; const dy = ny - p.y; const d = Math.hypot(dx, dy);
+      if (d > reach) { nx = p.x + dx / d * reach; ny = p.y + dy / d * reach; p.budget = 0; } else p.budget = Math.max(0, reach - d - (reach > p.budget ? 160 : 0));
+    }
+    p.lastIn = this.arena.clock;
+    p.x = nx; p.y = ny; p.aim = c.aim; p.fire = c.f; p.dmg = c.dm; p.rate = c.rt; p.maxHp = c.mh; p.lv = c.lv;
+    if (this.mode === 'duel') { p.dmg = 1; p.rate = RT_DUEL_RATE; p.maxHp = RT_DUEL_HP; p.fire = this.duel.ph === 1 ? c.f : 0; }
+    if (this.mode === 'duel') c.ab = c.ab.filter((x) => x.k === 'dash');
+     p.name = c.nm || this.partnerName || 'Friend';
+    if (first) { p.hp = this.mode === 'duel' ? RT_DUEL_HP : c.mh; p.iframes = 1.5; this.arena._showBanner(`${p.name} joined the fight!`, 2); this.arena._syncHud(); }
     c.ab.forEach((ab) => {
       if (ab.q <= this.lastAb) return;
       this.lastAb = ab.q;
@@ -158,8 +178,9 @@ class RealmTeam {
     const p = this.partner; const a = this.arena;
     if (!p || !p.ready || p.down || p.iframes > 0) return false;
     if (p.shield > 0) { p.shield -= 1; p.iframes = 0.25; a._burst(p.x, p.y, '#8fe9ff', 6, 140); return true; }
-    p.hp = Math.max(0, p.hp - dmg); p.iframes = 0.5;
+    p.hp = Math.max(0, p.hp - dmg); p.iframes = this.mode === 'duel' ? 0.12 : 0.5;
     a._burst(p.x, p.y, '#ff6f91', 8, 160); a._floatText(p.x, p.y - 22, `-${dmg}`, '#ff6f91');
+    if (this.mode === 'duel') { if (p.hp <= 0) this.duelKO(0); return true; }
     if (p.hp <= 0) { p.down = true; p.reviveT = 0; a._showBanner(`${p.name || 'Your partner'} is down — stand next to them to revive!`, 2); }
     return true;
   }
@@ -197,11 +218,62 @@ class RealmTeam {
       en: [], bg: [], hz: [], dr: [],
       ev: this.evq.map((e) => ({ q: e.q, k: e.k, d: e.d, o: e.o })),
     };
+    if (this.mode === 'duel') snap.du = [this.duel.s[0], this.duel.s[1], this.duel.ph, this.duel.rd]; // never an undefined key: Firebase rejects the whole write
     a.enemies.forEach((e, i) => { if (e.active) snap.en.push([i, RT_TYPES.indexOf(e.type), Math.round(e.x), Math.round(e.y), r1(e.hp), Math.ceil(e.maxHp), e.phase || 0, e.invuln > 0 ? 1 : 0]); });
     a.bags.forEach((b, i) => { if (b.active) snap.bg.push([i, Math.round(b.x), Math.round(b.y), b.r]); });
     a.hazards.forEach((z) => { if (z.active) snap.hz.push([Math.round(z.x), Math.round(z.y), RT_HAZ.indexOf(z.kind)]); });
     a.drifters.forEach((d, i) => { if (d.active) snap.dr.push([i, Math.round(d.x), Math.round(d.y), RT_KINDS.indexOf(d.kind)]); });
     try { this.link.send(snap); } catch (e) { /* link down: the timeout ends the run */ }
+  }
+
+  // ---------- duel (host decides everything) ----------
+
+  duelLabel() {
+    const mine = this.role === 'host' ? 0 : 1; const d = this.duel;
+    return `⚔️ ${d.s[mine]}–${d.s[1 - mine]} · R${d.rd}`;
+  }
+
+  // Round start: both fighters to their corners, full HP, a short protected countdown.
+  duelReset() {
+    const a = this.arena; const d = this.duel; const p = this.partner;
+    d.ph = 0; d.t = 2.4;
+    a.pBullets.forEach((b) => { b.active = false; }); a.eBullets.forEach((b) => { b.active = false; });
+    a.player.x = a.W * 0.2; a.player.y = a.H / 2; a.player.hp = RT_DUEL_HP; a.player.iframes = 2.4; a.down = false;
+    if (p) { p.x = a.W * 0.8; p.y = a.H / 2; p.hp = RT_DUEL_HP; p.maxHp = RT_DUEL_HP; p.down = false; p.iframes = 2.4; this.ev('dpos', [Math.round(p.x), Math.round(p.y)]); }
+    a._showBanner(`Round ${d.rd} — get ready!`, 2.2, true);
+    a._syncHud();
+  }
+
+  duelTick(dt) {
+    const a = this.arena; const d = this.duel; const p = this.partner;
+    if (d.ph === 3) { d.t -= dt; if (d.t <= 0) a._teamEnd('duel'); return; }
+    if (!p || !p.ready) { if (d.ph !== 0) { d.ph = 0; } return; } // wait for the guest to arrive
+    d.t -= dt;
+    if (d.ph === 0) { a.player.iframes = Math.max(a.player.iframes, 0.3); p.iframes = Math.max(p.iframes, 0.3); if (d.t <= 0) { d.ph = 1; a.pBullets.forEach((b) => { b.active = false; }); a.player.iframes = 0; p.iframes = 0; a._showBanner('FIGHT!', 1, true); } }
+    else if (d.ph === 2 && d.t <= 0) { d.rd += 1; this.duelReset(); }
+  }
+
+  // A bolt in flight during a duel: true when it hit the other fighter (host side).
+  duelBoltHit(b) {
+    const a = this.arena; const d = this.duel; const p = this.partner; const r = 18;
+    if (d.ph !== 1 || !p || !p.ready) return false;
+    if (b.own === 0) { if ((b.x - p.x) ** 2 + (b.y - p.y) ** 2 < r * r) return this.hitPartner(RT_DUEL_HIT) || true; }
+    else if ((b.x - a.player.x) ** 2 + (b.y - a.player.y) ** 2 < r * r) { if (a.player.iframes > 0) return false; a._hitPlayer(RT_DUEL_HIT); return true; }
+    return false;
+  }
+
+  // duelKO(winner): 0 = the host won the round, 1 = the guest did
+  duelKO(winner) {
+    const a = this.arena; const d = this.duel;
+    if (d.ph !== 1) return;
+    d.s[winner] += 1;
+    const wname = winner === 0 ? (this.name || 'Host') : ((this.partner && this.partner.name) || 'Guest');
+    a.pBullets.forEach((b) => { b.active = false; });
+    a.player.hp = Math.max(a.player.hp, 0);
+    if (d.s[winner] >= RT_DUEL_WIN) { d.ph = 3; d.t = 3.5; a._showBanner(`${wname} wins the duel! ${d.s[0]}–${d.s[1]}`, 3.2, true); this.ev('fx', [10]); }
+    else { d.ph = 2; d.t = 2.6; a._showBanner(`${wname} takes round ${d.rd}  (${d.s[0]}–${d.s[1]})`, 2.4, true); }
+    a.player.iframes = 5; if (this.partner) this.partner.iframes = 5;
+    a._syncHud();
   }
 
   // ---------- guest ----------
@@ -211,6 +283,7 @@ class RealmTeam {
     if (s.n <= (this._lastN || 0) - 5 && s.n > 0) { /* stale / reordered: ignore very old */ }
     this._lastN = Math.max(this._lastN || 0, s.n); this.snaps += 1;
     a.state = s.st; a.run.wave = s.w; a.biome = s.b; a.clock = s.t;
+    if (s.du && s.du.length === 4) { this.duel.s = [s.du[0], s.du[1]]; this.duel.ph = s.du[2]; this.duel.rd = s.du[3]; a._syncHud(); }
     const hpl = s.pl[0]; const gpl = s.pl[1];
     if (hpl) { Object.assign(this.hostPl, { x: hpl[0], y: hpl[1], hp: hpl[2], maxHp: hpl[3], down: hpl[4], aim: hpl[5], shield: hpl[6], revive: hpl[7] }); { const pn = s.nm || this.partnerName || 'Host'; if (pn !== this.partnerName) { this.partnerName = pn; a._syncHud(); } } }
     if (gpl) {
@@ -245,6 +318,7 @@ class RealmTeam {
       else if (e.k === 'rew') a._teamReward({ sh: rtNum(d[0], 0, 999, 0), xp: rtNum(d[1], 0, 9999, 0), t: rtText(String(d[2] || ''), 8), boss: d[3] ? 1 : 0, tenths: rtNum(d[4], 0, 999999, 0) });
       else if (e.k === 'loot') { if (e.o === 1) { const id = rtText(String(d[0] || ''), 20); if (RM_ITEM_BY_ID[id]) a.collectItem(id, rtNum(d[1], 0, 2, 0) | 0); } }
       else if (e.k === 'end') a._teamEnd(rtText(String(d[0] || 'end'), 12));
+      else if (e.k === 'dpos') { me.x = rtNum(d[0], 0, a.W, me.x); me.y = rtNum(d[1], 0, a.H, me.y); }
       else if (e.k === 'fx') a.shake = Math.max(a.shake, rtNum(d[0], 0, 16, 4));
     });
   }

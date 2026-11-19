@@ -2898,23 +2898,28 @@ class TownScene extends Phaser.Scene {
       btn.textContent = inv && inv.to === rp.id ? 'Invited…' : 'Invite';
       btn.disabled = !!inv || !(this.net && this.net.db);
       btn.setAttribute('aria-label', `Invite ${rp.name} to fight together in the Realm`);
-      btn.addEventListener('click', () => this.sendRealmInvite(rp.id, rp.name));
-      li.append(nm, btn);
+      btn.addEventListener('click', () => this.sendRealmInvite(rp.id, rp.name, 'coop'));
+      const dbtn = document.createElement('button'); dbtn.type = 'button'; dbtn.className = 'realm-invite-btn realm-duel-btn'; dbtn.dataset.pid = rp.id;
+      dbtn.textContent = '⚔️ Duel'; dbtn.disabled = btn.disabled;
+      dbtn.setAttribute('aria-label', `Challenge ${rp.name} to a 1v1 duel`);
+      dbtn.addEventListener('click', () => this.sendRealmInvite(rp.id, rp.name, 'duel'));
+      const box = document.createElement('span'); box.className = 'realm-invite-btns'; box.append(btn, dbtn);
+      li.append(nm, box);
       list.appendChild(li);
     });
   }
 
-  sendRealmInvite(targetId, name) {
+  sendRealmInvite(targetId, name, mode = 'coop') {
     if (this.realmInviteOut || !this.net || !this.net.db) return false;
-    const party = this.net.realmInvite(targetId, 'coop');
+    const party = this.net.realmInvite(targetId, mode);
     if (!party) return false;
-    this.realmInviteOut = { party, to: targetId, name, stop: null, timer: null };
+    this.realmInviteOut = { party, to: targetId, name, mode, stop: null, timer: null };
     this.realmInviteOut.stop = this.net.realmWatchGuest(party, (guestId) => {
       if (!this.realmInviteOut || this.realmInviteOut.party !== party || guestId !== targetId) return;
       const link = this.net.realmOpenLink(party, 'host');
       this.realmInviteOut.stop(); clearTimeout(this.realmInviteOut.timer); this.realmInviteOut = null;
       this.closeRealmGateMenu();
-      this.enterRealm({ role: 'host', link });
+      this.enterRealm({ role: 'host', link, mode });
     });
     this.realmInviteOut.timer = setTimeout(() => { if (this.realmInviteOut && this.realmInviteOut.party === party) { this.cancelRealmInvite(); if (this.realmMenuOpen) { document.getElementById('realm-menu-status').textContent = `${name} did not answer.`; } } }, 45000);
     this.renderRealmGateMenu();
@@ -2948,7 +2953,7 @@ class TownScene extends Phaser.Scene {
     if (this.inRealm || this.inUnderground) return; // busy: the sender's invite times out
     this.realmInviteIn = inv;
     const el = document.getElementById('realm-invite');
-    document.getElementById('realm-invite-text').textContent = `🌀 ${inv.fromName} invites you to fight in the Realm together!`;
+    document.getElementById('realm-invite-text').textContent = inv.mode === 'duel' ? `⚔️ ${inv.fromName} challenges you to a duel in the Realm!` : `🌀 ${inv.fromName} invites you to fight in the Realm together!`;
     el.classList.remove('hidden');
     clearTimeout(this._inviteHide);
     this._inviteHide = setTimeout(() => this.hideRealmInvite(), 40000);
@@ -2969,7 +2974,7 @@ class TownScene extends Phaser.Scene {
     if (this.inRealm || this.inUnderground) { this.net.realmCancel(inv.party); return false; }
     for (let i = 0; i < 4 && this.closeTopOverlay(); i++);
     const link = this.net.realmOpenLink(inv.party, 'guest');
-    this.enterRealm({ role: 'guest', link });
+    this.enterRealm({ role: 'guest', link, mode: inv.mode });
     return true;
   }
 
@@ -2993,7 +2998,7 @@ class TownScene extends Phaser.Scene {
       this.realm.setAvatar(`../i/${this.selfData.species}-strip.png`, this.selfData.frame || 0, FRAME_SIZE);
       this.setupRealmControls();
     }
-    if (opts.role && opts.link) { this.realm.setTeam(opts.role, opts.link, this.selfData.name); document.getElementById('realm-overlay').classList.add('team'); } else document.getElementById('realm-overlay').classList.remove('team');
+    if (opts.role && opts.link) { this.realm.setTeam(opts.role, opts.link, this.selfData.name, opts.mode); document.getElementById('realm-overlay').classList.add('team'); } else document.getElementById('realm-overlay').classList.remove('team');
     this.realm.start();
   }
 
