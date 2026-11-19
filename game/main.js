@@ -2870,6 +2870,13 @@ class TownScene extends Phaser.Scene {
     if (this.realmMenuOpen || this.inRealm || this.inUnderground) return;
     this.realmMenuOpen = true;
     document.getElementById('realm-menu').classList.remove('hidden');
+    const mm = document.getElementById('realm-menu-madmaze');
+    if (mm && !mm.dataset.bound) {
+      mm.dataset.bound = '1';
+      mm.addEventListener('click', () => {
+        if (window.confirm('Open the new Mad Maze? Your progress is shared, and the town will close.')) location.href = mm.dataset.href;
+      });
+    }
     this.renderRealmGateMenu();
   }
 
@@ -8618,6 +8625,27 @@ let selectedFrame = Number.isInteger(savedProfile.frame) && savedProfile.frame >
   ? savedProfile.frame
   : 0;
 if (savedProfile.name) nameInput.value = savedProfile.name;
+
+// ?from=hub: show a back pill; prefill name/species/frame ONLY if the form is empty (read-only, never writes storage).
+try {
+  if (new URLSearchParams(location.search).get('from') === 'hub') {
+    const pill = document.getElementById('back-to-map-pill');
+    if (pill) pill.classList.remove('hidden');
+    if (!nameInput.value && typeof MMHubProfile !== 'undefined') {
+      let raw = null;
+      try { raw = JSON.parse(localStorage.getItem(MMHubProfile.KEY)); } catch (e) { raw = null; }
+      const prof = raw && typeof raw === 'object' ? MMHubProfile.sanitize(raw) : MMHubProfile.seedFromTown(localStorage.getItem(MMHubProfile.TOWN_KEY), 0);
+      const hasProfile = raw && typeof raw === 'object' ? true : !!localStorage.getItem(MMHubProfile.TOWN_KEY);
+      if (hasProfile && prof.name && prof.name !== 'Villager') {
+        nameInput.value = prof.name.slice(0, 16);
+        if (SPECIES.some((s) => s.key === prof.species)) {
+          selectedSpecies = prof.species;
+          selectedFrame = prof.frame >= 0 && prof.frame < FRAME_COUNT ? prof.frame : 0;
+        }
+      }
+    }
+  }
+} catch (e) { /* prefill is best-effort */ }
 
 function renderSpeciesTabs() {
   speciesTabsEl.innerHTML = '';
