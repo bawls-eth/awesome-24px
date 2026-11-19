@@ -38,3 +38,6 @@ PARTIAL = some of it plays, the rest is modules only or missing, TODO = nothing 
 8. Daily Maze, ghost and board pages (`MMDaily`, `MMGhost`, `MMBoard`), tutorial, colour-blind palettes (`MMAccess`).
 9. Mad Maze co-op: lite party code and dungeon sync on `MMParty`; port duel / 2v2 to the standalone page.
 10. Angler: link the town fish journal and aquarium, add a tournament and bait from Bug Safari.
+
+## Activity snapshot (read-only)
+Each session's last step: `node game/tools/activity-snapshot.js --append` adds a counts-only line (no names, no chat text) to `game/design/DAILY-REPORT.md`. GET requests only.
