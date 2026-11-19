@@ -1,0 +1,538 @@
+{
+  "name": "Arcane RPG \u2014 Warrior B0 Revision 2 (21 strips)",
+  "license": "original, owned by me",
+  "frame_size": 256,
+  "assets": [
+    {
+      "id": "warrior_idle_down",
+      "category": "character",
+      "class": "warrior",
+      "action": "idle",
+      "dir": "down",
+      "path": "characters/warrior/warrior_idle_down.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "approved_down_reference",
+      "scale_policy": "approved_down_master"
+    },
+    {
+      "id": "warrior_idle_up",
+      "category": "character",
+      "class": "warrior",
+      "action": "idle",
+      "dir": "up",
+      "path": "characters/warrior/warrior_idle_up.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustration",
+      "scale_policy": "fixed_per_source_sheet_not_per_pose"
+    },
+    {
+      "id": "warrior_idle_right",
+      "category": "character",
+      "class": "warrior",
+      "action": "idle",
+      "dir": "right",
+      "path": "characters/warrior/warrior_idle_right.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustration",
+      "scale_policy": "fixed_per_source_sheet_not_per_pose"
+    },
+    {
+      "id": "warrior_walk_down",
+      "category": "character",
+      "class": "warrior",
+      "action": "walk",
+      "dir": "down",
+      "path": "characters/warrior/warrior_walk_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "approved_down_reference",
+      "scale_policy": "approved_down_master"
+    },
+    {
+      "id": "warrior_walk_up",
+      "category": "character",
+      "class": "warrior",
+      "action": "walk",
+      "dir": "up",
+      "path": "characters/warrior/warrior_walk_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustration",
+      "scale_policy": "fixed_per_source_sheet_not_per_pose"
+    },
+    {
+      "id": "warrior_walk_right",
+      "category": "character",
+      "class": "warrior",
+      "action": "walk",
+      "dir": "right",
+      "path": "characters/warrior/warrior_walk_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustration",
+      "scale_policy": "fixed_per_source_sheet_not_per_pose"
+    },
+    {
+      "id": "warrior_attack_down",
+      "category": "character",
+      "class": "warrior",
+      "action": "attack",
+      "dir": "down",
+      "path": "characters/warrior/warrior_attack_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "muzzle": [
+        {
+          "x": 86,
+          "y": 189
+        },
+        {
+          "x": 120,
+          "y": 79
+        },
+        {
+          "x": 115,
+          "y": 187
+        },
+        {
+          "x": 127,
+          "y": 229
+        },
+        {
+          "x": 86,
+          "y": 192
+        }
+      ],
+      "source": "approved_down_reference",
+      "scale_policy": "approved_down_master"
+    },
+    {
+      "id": "warrior_attack_up",
+      "category": "character",
+      "class": "warrior",
+      "action": "attack",
+      "dir": "up",
+      "path": "characters/warrior/warrior_attack_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "muzzle": [
+        {
+          "x": 184,
+          "y": 160
+        },
+        {
+          "x": 185,
+          "y": 100
+        },
+        {
+          "x": 180,
+          "y": 125
+        },
+        {
+          "x": 192,
+          "y": 108
+        },
+        {
+          "x": 184,
+          "y": 160
+        }
+      ],
+      "source": "image_generated_illustration",
+      "scale_policy": "fixed_per_source_sheet_not_per_pose"
+    },
+    {
+      "id": "warrior_attack_right",
+      "category": "character",
+      "class": "warrior",
+      "action": "attack",
+      "dir": "right",
+      "path": "characters/warrior/warrior_attack_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "muzzle": [
+        {
+          "x": 205,
+          "y": 175
+        },
+        {
+          "x": 210,
+          "y": 103
+        },
+        {
+          "x": 210,
+          "y": 150
+        },
+        {
+          "x": 223,
+          "y": 177
+        },
+        {
+          "x": 205,
+          "y": 175
+        }
+      ],
+      "source": "image_generated_illustration",
+      "scale_policy": "fixed_per_source_sheet_not_per_pose"
+    },
+    {
+      "id": "warrior_cast_down",
+      "category": "character",
+      "class": "warrior",
+      "action": "cast",
+      "dir": "down",
+      "path": "characters/warrior/warrior_cast_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "muzzle": [
+        {
+          "x": 177,
+          "y": 191
+        },
+        {
+          "x": 181,
+          "y": 110
+        },
+        {
+          "x": 188,
+          "y": 153
+        },
+        {
+          "x": 190,
+          "y": 175
+        },
+        {
+          "x": 178,
+          "y": 197
+        }
+      ],
+      "source": "approved_down_reference",
+      "scale_policy": "approved_down_master"
+    },
+    {
+      "id": "warrior_cast_up",
+      "category": "character",
+      "class": "warrior",
+      "action": "cast",
+      "dir": "up",
+      "path": "characters/warrior/warrior_cast_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "muzzle": [
+        {
+          "x": 184,
+          "y": 160
+        },
+        {
+          "x": 185,
+          "y": 100
+        },
+        {
+          "x": 180,
+          "y": 125
+        },
+        {
+          "x": 192,
+          "y": 108
+        },
+        {
+          "x": 184,
+          "y": 160
+        }
+      ],
+      "source": "image_generated_illustration",
+      "scale_policy": "fixed_per_source_sheet_not_per_pose"
+    },
+    {
+      "id": "warrior_cast_right",
+      "category": "character",
+      "class": "warrior",
+      "action": "cast",
+      "dir": "right",
+      "path": "characters/warrior/warrior_cast_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "muzzle": [
+        {
+          "x": 205,
+          "y": 175
+        },
+        {
+          "x": 210,
+          "y": 103
+        },
+        {
+          "x": 210,
+          "y": 150
+        },
+        {
+          "x": 223,
+          "y": 177
+        },
+        {
+          "x": 205,
+          "y": 175
+        }
+      ],
+      "source": "image_generated_illustration",
+      "scale_policy": "fixed_per_source_sheet_not_per_pose"
+    },
+    {
+      "id": "warrior_roll_down",
+      "category": "character",
+      "class": "warrior",
+      "action": "roll",
+      "dir": "down",
+      "path": "characters/warrior/warrior_roll_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "approved_down_reference",
+      "scale_policy": "approved_down_master"
+    },
+    {
+      "id": "warrior_roll_up",
+      "category": "character",
+      "class": "warrior",
+      "action": "roll",
+      "dir": "up",
+      "path": "characters/warrior/warrior_roll_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustration",
+      "scale_policy": "fixed_per_source_sheet_not_per_pose"
+    },
+    {
+      "id": "warrior_roll_right",
+      "category": "character",
+      "class": "warrior",
+      "action": "roll",
+      "dir": "right",
+      "path": "characters/warrior/warrior_roll_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustration",
+      "scale_policy": "fixed_per_source_sheet_not_per_pose"
+    },
+    {
+      "id": "warrior_hit_down",
+      "category": "character",
+      "class": "warrior",
+      "action": "hit",
+      "dir": "down",
+      "path": "characters/warrior/warrior_hit_down.png",
+      "frames": 2,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "approved_down_reference",
+      "scale_policy": "approved_down_master"
+    },
+    {
+      "id": "warrior_hit_up",
+      "category": "character",
+      "class": "warrior",
+      "action": "hit",
+      "dir": "up",
+      "path": "characters/warrior/warrior_hit_up.png",
+      "frames": 2,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustration",
+      "scale_policy": "fixed_per_source_sheet_not_per_pose"
+    },
+    {
+      "id": "warrior_hit_right",
+      "category": "character",
+      "class": "warrior",
+      "action": "hit",
+      "dir": "right",
+      "path": "characters/warrior/warrior_hit_right.png",
+      "frames": 2,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustration",
+      "scale_policy": "fixed_per_source_sheet_not_per_pose"
+    },
+    {
+      "id": "warrior_death_down",
+      "category": "character",
+      "class": "warrior",
+      "action": "death",
+      "dir": "down",
+      "path": "characters/warrior/warrior_death_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "approved_down_reference",
+      "scale_policy": "approved_down_master"
+    },
+    {
+      "id": "warrior_death_up",
+      "category": "character",
+      "class": "warrior",
+      "action": "death",
+      "dir": "up",
+      "path": "characters/warrior/warrior_death_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustration",
+      "scale_policy": "fixed_per_source_sheet_not_per_pose"
+    },
+    {
+      "id": "warrior_death_right",
+      "category": "character",
+      "class": "warrior",
+      "action": "death",
+      "dir": "right",
+      "path": "characters/warrior/warrior_death_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustration",
+      "scale_policy": "fixed_per_source_sheet_not_per_pose"
+    }
+  ]
+}

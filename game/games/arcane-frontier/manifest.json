@@ -1,0 +1,909 @@
+{
+  "name": "Arcane Frontier \u2014 original top-down action RPG prototype art",
+  "license": "Original procedural placeholder artwork; freely editable",
+  "tile_size": 32,
+  "format": "RGBA PNG, transparent for non-terrain sprites",
+  "reference": "Gameplay feel only; no original game artwork reused",
+  "assets": [
+    {
+      "id": "vanguard",
+      "category": "hero",
+      "path": "assets/hero/vanguard.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "ranger",
+      "category": "hero",
+      "path": "assets/hero/ranger.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "arcanist",
+      "category": "hero",
+      "path": "assets/hero/arcanist.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "guardian",
+      "category": "hero",
+      "path": "assets/hero/guardian.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "duelist",
+      "category": "hero",
+      "path": "assets/hero/duelist.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "pyromancer",
+      "category": "hero",
+      "path": "assets/hero/pyromancer.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "frostbinder",
+      "category": "hero",
+      "path": "assets/hero/frostbinder.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "shadowblade",
+      "category": "hero",
+      "path": "assets/hero/shadowblade.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "cleric",
+      "category": "hero",
+      "path": "assets/hero/cleric.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "stormcaller",
+      "category": "hero",
+      "path": "assets/hero/stormcaller.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "slime_green",
+      "category": "enemy",
+      "path": "assets/enemy/slime_green.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "slime_red",
+      "category": "enemy",
+      "path": "assets/enemy/slime_red.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "slime_blue",
+      "category": "enemy",
+      "path": "assets/enemy/slime_blue.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "goblin_scout",
+      "category": "enemy",
+      "path": "assets/enemy/goblin_scout.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "goblin_shaman",
+      "category": "enemy",
+      "path": "assets/enemy/goblin_shaman.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "skeleton",
+      "category": "enemy",
+      "path": "assets/enemy/skeleton.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "skeleton_archer",
+      "category": "enemy",
+      "path": "assets/enemy/skeleton_archer.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "bone_knight",
+      "category": "enemy",
+      "path": "assets/enemy/bone_knight.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "cave_bat",
+      "category": "enemy",
+      "path": "assets/enemy/cave_bat.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "dark_spider",
+      "category": "enemy",
+      "path": "assets/enemy/dark_spider.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "forest_wolf",
+      "category": "enemy",
+      "path": "assets/enemy/forest_wolf.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "stone_golem",
+      "category": "enemy",
+      "path": "assets/enemy/stone_golem.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "ember_imp",
+      "category": "enemy",
+      "path": "assets/enemy/ember_imp.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "ice_wraith",
+      "category": "enemy",
+      "path": "assets/enemy/ice_wraith.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "mushroom_monster",
+      "category": "enemy",
+      "path": "assets/enemy/mushroom_monster.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "shadow_cultist",
+      "category": "enemy",
+      "path": "assets/enemy/shadow_cultist.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "swamp_leech",
+      "category": "enemy",
+      "path": "assets/enemy/swamp_leech.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "crystal_beetle",
+      "category": "enemy",
+      "path": "assets/enemy/crystal_beetle.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "spectral_eye",
+      "category": "enemy",
+      "path": "assets/enemy/spectral_eye.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "bandit",
+      "category": "enemy",
+      "path": "assets/enemy/bandit.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "sand_scorpion",
+      "category": "enemy",
+      "path": "assets/enemy/sand_scorpion.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "toxic_serpent",
+      "category": "enemy",
+      "path": "assets/enemy/toxic_serpent.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "mimic_chest",
+      "category": "enemy",
+      "path": "assets/enemy/mimic_chest.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "undead_soldier",
+      "category": "enemy",
+      "path": "assets/enemy/undead_soldier.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "bone_colossus",
+      "category": "boss",
+      "path": "assets/boss/bone_colossus.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "inferno_wyrm",
+      "category": "boss",
+      "path": "assets/boss/inferno_wyrm.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "void_oracle",
+      "category": "boss",
+      "path": "assets/boss/void_oracle.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "crystal_titan",
+      "category": "boss",
+      "path": "assets/boss/crystal_titan.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "forest_warden",
+      "category": "boss",
+      "path": "assets/boss/forest_warden.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "dread_knight",
+      "category": "boss",
+      "path": "assets/boss/dread_knight.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "storm_harbinger",
+      "category": "boss",
+      "path": "assets/boss/storm_harbinger.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "mire_queen",
+      "category": "boss",
+      "path": "assets/boss/mire_queen.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "grass_tile",
+      "category": "terrain",
+      "path": "assets/terrain/grass_tile.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "tile"
+    },
+    {
+      "id": "grass_dark_tile",
+      "category": "terrain",
+      "path": "assets/terrain/grass_dark_tile.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "tile"
+    },
+    {
+      "id": "dirt_tile",
+      "category": "terrain",
+      "path": "assets/terrain/dirt_tile.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "tile"
+    },
+    {
+      "id": "sand_tile",
+      "category": "terrain",
+      "path": "assets/terrain/sand_tile.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "tile"
+    },
+    {
+      "id": "snow_tile",
+      "category": "terrain",
+      "path": "assets/terrain/snow_tile.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "tile"
+    },
+    {
+      "id": "stone_floor_tile",
+      "category": "terrain",
+      "path": "assets/terrain/stone_floor_tile.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "tile"
+    },
+    {
+      "id": "stone_wall_tile",
+      "category": "terrain",
+      "path": "assets/terrain/stone_wall_tile.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "tile"
+    },
+    {
+      "id": "brick_floor_tile",
+      "category": "terrain",
+      "path": "assets/terrain/brick_floor_tile.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "tile"
+    },
+    {
+      "id": "brick_wall_tile",
+      "category": "terrain",
+      "path": "assets/terrain/brick_wall_tile.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "tile"
+    },
+    {
+      "id": "wood_floor_tile",
+      "category": "terrain",
+      "path": "assets/terrain/wood_floor_tile.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "tile"
+    },
+    {
+      "id": "water_tile",
+      "category": "terrain",
+      "path": "assets/terrain/water_tile.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "tile"
+    },
+    {
+      "id": "deep_water_tile",
+      "category": "terrain",
+      "path": "assets/terrain/deep_water_tile.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "tile"
+    },
+    {
+      "id": "lava_tile",
+      "category": "terrain",
+      "path": "assets/terrain/lava_tile.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "tile"
+    },
+    {
+      "id": "ice_tile",
+      "category": "terrain",
+      "path": "assets/terrain/ice_tile.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "tile"
+    },
+    {
+      "id": "mud_tile",
+      "category": "terrain",
+      "path": "assets/terrain/mud_tile.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "tile"
+    },
+    {
+      "id": "cobble_tile",
+      "category": "terrain",
+      "path": "assets/terrain/cobble_tile.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "tile"
+    },
+    {
+      "id": "path_tile",
+      "category": "terrain",
+      "path": "assets/terrain/path_tile.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "tile"
+    },
+    {
+      "id": "moss_stone_tile",
+      "category": "terrain",
+      "path": "assets/terrain/moss_stone_tile.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "tile"
+    },
+    {
+      "id": "cracked_floor_tile",
+      "category": "terrain",
+      "path": "assets/terrain/cracked_floor_tile.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "tile"
+    },
+    {
+      "id": "void_floor_tile",
+      "category": "terrain",
+      "path": "assets/terrain/void_floor_tile.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "tile"
+    },
+    {
+      "id": "pine_tree",
+      "category": "prop",
+      "path": "assets/prop/pine_tree.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "oak_tree",
+      "category": "prop",
+      "path": "assets/prop/oak_tree.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "boulder",
+      "category": "prop",
+      "path": "assets/prop/boulder.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "rock_cluster",
+      "category": "prop",
+      "path": "assets/prop/rock_cluster.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "barrel",
+      "category": "prop",
+      "path": "assets/prop/barrel.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "wooden_crate",
+      "category": "prop",
+      "path": "assets/prop/wooden_crate.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "treasure_chest",
+      "category": "prop",
+      "path": "assets/prop/treasure_chest.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "locked_chest",
+      "category": "prop",
+      "path": "assets/prop/locked_chest.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "torch_wall",
+      "category": "prop",
+      "path": "assets/prop/torch_wall.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "stone_pillar",
+      "category": "prop",
+      "path": "assets/prop/stone_pillar.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "portal_arch",
+      "category": "prop",
+      "path": "assets/prop/portal_arch.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "healing_shrine",
+      "category": "prop",
+      "path": "assets/prop/healing_shrine.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "sword_iron",
+      "category": "equipment",
+      "path": "assets/equipment/sword_iron.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "sword_flame",
+      "category": "equipment",
+      "path": "assets/equipment/sword_flame.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "dagger_shadow",
+      "category": "equipment",
+      "path": "assets/equipment/dagger_shadow.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "bow_oak",
+      "category": "equipment",
+      "path": "assets/equipment/bow_oak.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "bow_moon",
+      "category": "equipment",
+      "path": "assets/equipment/bow_moon.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "staff_arcane",
+      "category": "equipment",
+      "path": "assets/equipment/staff_arcane.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "staff_frost",
+      "category": "equipment",
+      "path": "assets/equipment/staff_frost.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "wand_spark",
+      "category": "equipment",
+      "path": "assets/equipment/wand_spark.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "shield_wood",
+      "category": "equipment",
+      "path": "assets/equipment/shield_wood.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "shield_steel",
+      "category": "equipment",
+      "path": "assets/equipment/shield_steel.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "helmet_knight",
+      "category": "equipment",
+      "path": "assets/equipment/helmet_knight.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "hood_mage",
+      "category": "equipment",
+      "path": "assets/equipment/hood_mage.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "armor_leather",
+      "category": "equipment",
+      "path": "assets/equipment/armor_leather.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "armor_plate",
+      "category": "equipment",
+      "path": "assets/equipment/armor_plate.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "potion_health",
+      "category": "equipment",
+      "path": "assets/equipment/potion_health.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "potion_mana",
+      "category": "equipment",
+      "path": "assets/equipment/potion_mana.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "projectile_arrow",
+      "category": "effect",
+      "path": "assets/effect/projectile_arrow.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "projectile_fireball",
+      "category": "effect",
+      "path": "assets/effect/projectile_fireball.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "projectile_ice",
+      "category": "effect",
+      "path": "assets/effect/projectile_ice.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "projectile_arcane",
+      "category": "effect",
+      "path": "assets/effect/projectile_arcane.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "projectile_poison",
+      "category": "effect",
+      "path": "assets/effect/projectile_poison.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "slash_arc",
+      "category": "effect",
+      "path": "assets/effect/slash_arc.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "explosion_fire",
+      "category": "effect",
+      "path": "assets/effect/explosion_fire.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "impact_spark",
+      "category": "effect",
+      "path": "assets/effect/impact_spark.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "heal_glow",
+      "category": "effect",
+      "path": "assets/effect/heal_glow.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    },
+    {
+      "id": "loot_bag",
+      "category": "effect",
+      "path": "assets/effect/loot_bag.png",
+      "width": 32,
+      "height": 32,
+      "tile_size": 32,
+      "use": "sprite"
+    }
+  ]
+}

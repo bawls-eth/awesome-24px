@@ -1,0 +1,40 @@
+# Mad Maze / Pixeltown hub: build status
+
+Milestones are from `WORLD-MAP-DESIGN.md` / `ROADMAP-10-DAY.md`. DONE = playable and tested,
+PARTIAL = some of it plays, the rest is modules only or missing, TODO = nothing playable yet.
+
+| M | Milestone | State | Where / what is missing |
+|---|---|---|---|
+| M1 | Combat core, standalone page | DONE | `realm.js`, `games/mad-maze/`: walls, guard, hit dot, cross-tab merge, pad, aim assist, sfx, reduce-motion |
+| M2 | Dungeons | PARTIAL | Warren run plays (`?mode=dungeon&seed=N`); labyrinth + Hedge Tide is a module only; no Sunken Lantern or Catacombs |
+| M3 | Loot and heroes | PARTIAL | Lantern page, stash, Fall / Rekindle / Retire, backup / restore; the arena ignores the hero; `MMItems` tiers not in runs |
+| M4 | The Wilds | TODO | island, groups, events, bounties, pets are modules + tests only, no page |
+| M5 | Polish | PARTIAL | pad / aim / sfx / motion live; daily maze, ghosts, board, access, tutorial are modules only |
+| M6 | Hub and Hearthvale | PARTIAL | hub page, town links, `?from=hub`, Hearthvale heading; no medals / Tokens / Snack Stand, games do not report back |
+| M7 | Deepdelve | PARTIAL | first page: chunks, light, mine / place, torch, IndexedDB; no furnace, mobs, goals, Rock Wyrm |
+| M8 | Lakeside Angler | PARTIAL | page, 48 fish, gear, bosses, bait; no tournament, no town link, no medals |
+| M9 | Festival Fields | PARTIAL | Bug Safari plays; Jam and Stalk are modules only (their map nodes link to missing pages) |
+| M10 | Co-op / secret world | PARTIAL | town co-op / duel / 2v2 live; `MMParty` is a module only; Comet Trail not started |
+
+## Wired into the playable game
+- Town (`index.html`): Realm with `MMStats`, `MMHash`, `MMPad`, `MMAim`, `MMSfx`, `MMMotion`, `MMPatterns`; links to Mad Maze and the map.
+- Mad Maze page + Warren run: `MMRng`, `MMWarren`, `MMRooms`, `MMEnemies`, `MMDungeonState`, `MMPatterns2`.
+- The Lantern: `MMProfile`, `MMBackup`, `MMItems`, `MMClasses`. Hub: `MMMap`, `MMHubProfile`.
+- Angler: `MMAngler`, `MMStore`. Bug Safari: `MMBugs`, `MMSfx`. Deepdelve: `MMChunks`, `MMLight`, `MMRecipes` (24 recipes, 1 used).
+
+## Standalone modules only (pure code + Node tests, no page uses them)
+`MMLabyrinth`, `MMPets`, `MMEvents`, `MMBounties`, `MMIsland`, `MMWilds`, `MMDaily`, `MMGhost`, `MMBoard`,
+`MMAccess`, `MMTutorial`, `MMJam`, `MMStalk`, `MMParty`, `RulesCheck`
+(and `firebase-rules.draft.json`, which is NOT applied).
+
+## Top 10 next steps
+1. Make Start run use the active Lantern hero (class, stats, items) and Fall it on death.
+2. Drop `MMItems` tiers and bags in the Warren run; chest and boss pay the Lantern stash.
+3. Owner applies and tests the Firebase rules draft in the Playground, loosening any rejected field.
+4. Let games report results to the hub profile (medals, secret exits, keys) so the map unlocks for real.
+5. Build the Campfire Jam page on `MMJam` and the Stalk Market page on `MMStalk` (the nodes already exist).
+6. Wire `MMLabyrinth` + Hedge Tide into a second dungeon and start the Wilds (`MMIsland`, `MMWilds`, `MMEvents`).
+7. Deepdelve: furnace and the full 24 recipes, mobs, day/night, lava, goals, carry over the town cave.
+8. Daily Maze, ghost and board pages (`MMDaily`, `MMGhost`, `MMBoard`), tutorial, colour-blind palettes (`MMAccess`).
+9. Mad Maze co-op: lite party code and dungeon sync on `MMParty`; port duel / 2v2 to the standalone page.
+10. Angler: link the town fish journal and aquarium, add a tournament and bait from Bug Safari.

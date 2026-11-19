@@ -862,3 +862,114 @@ press **E** (or tap **A**) to step through. It's a separate arena, fully local:
   are down. If someone leaves, the match goes on without them.
 - Solo runs are local to you; only team runs send fight data, and only to your partner
   (via short-lived `realmInvites` / `realmParties` entries that are removed when you leave).
+
+## Mad Maze (standalone)
+
+The Realm also has its own page: open `games/mad-maze/index.html` (or press
+**Open Mad Maze (new)** in the Realm Gate menu). It is solo and offline (no
+Firebase) and runs the same arena as the in-town Realm: same controls, same
+loot, same `realm` field of `pixeltown-save-v1` (it is merged with the other
+tab's copy on every save, so two tabs no longer overwrite each other). Gamepad,
+touch aim assist, sound effects and reduce-motion are on here and in town.
+
+- **Warren dungeon run:** add `?mode=dungeon&seed=N` (`seed` a number; anything
+  else is ignored). Rooms seal their doors until cleared, a key room has a key
+  for one locked treasure door and its chest, a cracked wall (three bolt hits)
+  hides a secret room, **Tab** toggles the mini-map, and Queen Burrowmole waits at
+  the end. Step into the portal for a loot summary. Same seed, same dungeon.
+- **Not built yet:** co-op / duel / 2v2 on this page (they stay in town), the
+  Wilds, the labyrinth and Hedge Tide levels, and using your Lantern hero in the run.
+
+## The Lantern
+
+`games/mad-maze/lantern.html` is the Mad Maze hub (open it from the world map or
+directly). Create heroes (up to 12; Classic or Picnic mode), keep spare items
+in the 16-slot stash, rest at the fountain, **Fall**, **Rekindle** or
+**Retire** a hero at level 20 (Hall of Heroes). "Bring my hero" copies your old
+Realm character in as a Legacy Ranger (a copy, the original stays). **Back up my
+progress** downloads one `.json`; **Restore** shows what would change and writes
+only after you press **Confirm** (all or nothing, rolled back if a write fails).
+
+- **Saved in:** `pixeltown-mm-v1` (heroes, stash, fame, Hall) and
+  `pixeltown-mm-active-v1` (selected hero). `pixeltown-save-v1` is only read
+  (the import), except when you confirm a Restore.
+- **Not built yet:** the selected hero is remembered but the arena and dungeon
+  do not use its class, stats or stash yet, and a death in a run does not Fall a hero.
+
+## World map (hub)
+
+`hub/index.html` (or **World map** in the town panel) is a Mario-World-style
+map: tap a node or use arrows / WASD / D-pad, **Enter** / **Space** / **A**
+opens the node card, **Esc** closes it. Playable nodes today: Hearthvale
+(`?from=hub` shows a Back to the map pill), The Lantern, Deepdelve, Lakeside
+Angler and Bug Safari.
+
+- **Saved in:** `pixeltown-hub-v1` (where you stand, nodes seen, keys). It only
+  reads `pixeltown-profile-v1` and `pixeltown-save-v1`.
+- **Not built yet:** Campfire Jam and Stalk Market (their nodes point at pages
+  that do not exist), Comet Trail, roamers, Tokens; games do not report medals
+  back to the map yet.
+
+## Lakeside Angler
+
+`games/angler/index.html`. Pick a spot (west / east pond, river, pier, ice hole in
+winter, and a secret mangrove after 10 species) and cast, then **hold Space /
+the mouse / touch** to reel and keep the tension in the zone. 48 fish, four rods
+and lures that unlock as you catch, boss fish (Old Whiskers, Pier Kraken, Ice
+Queen Pike) and a journal. `?bait=N` (0-99) gives bait for quicker bites.
+
+- **Saved in:** `pixeltown-angler-v1` (journal, gear, bait, trophies).
+- **Not built yet:** link to the town fish journal / aquarium, a tournament,
+  bait from Bug Safari, medals on the map.
+
+## Bug Safari
+
+`games/festival/bugs.html`. A 90-second net run on one of eight arenas (one is
+night only). **WASD / arrows** walk, hold **Shift** to sneak, **Space** / click /
+the Swing button nets a bug. Bugs hide in flowers, burrow in mounds and
+scatter in swarms; stand still by a mound for the Antlion. A summary gives
+stars and the journal lists what you found.
+
+- **Saved in:** `pixeltown-bugs-v1` (stars, journal) and `pixeltown-bugs-hint-v1`
+  (the first-run hint was seen).
+- **Not built yet:** medals / the Moonwing secret on the map, link to the town Bug-Off.
+
+## Deepdelve
+
+`games/deepdelve/index.html` (optional `?seed=N`): a bigger first-person voxel
+mine in chunks. **WASD** move, **Space** jump, mouse look (click the canvas to
+lock), **left click** (hold) mines, **right click** places, **1-9** or the wheel
+pick a hotbar slot, **C** crafts 4 torches (1 wood + 1 coal). On a phone use the
+joystick, drag to look and the on-screen buttons. Needs the three.js script
+from the CDN.
+
+- **Saved in:** the IndexedDB database `pixeltown-deepdelve-v1` (your edits as
+  chunk diffs; in memory only if the browser blocks it).
+- **Not built yet:** other recipes and the furnace, mobs, day/night, lava and
+  water, goals and medals, and carrying over the town cave. The in-town cave
+  is unchanged.
+
+## New save keys (all local, additive)
+
+| Key | Written by | Holds |
+|---|---|---|
+| `pixeltown-mm-v1` | The Lantern | Mad Maze heroes, stash, fame, Hall |
+| `pixeltown-mm-active-v1` | The Lantern | selected hero id |
+| `pixeltown-hub-v1` | World map | position, seen paths, keys |
+| `pixeltown-angler-v1` | Lakeside Angler | journal, gear, bait, trophies |
+| `pixeltown-bugs-v1` | Bug Safari | stars and journal (plus `pixeltown-bugs-hint-v1`) |
+| `pixeltown-deepdelve-v1` | Deepdelve | IndexedDB chunk edits |
+
+`pixeltown-save-v1` (the town save) is only **read** by the new pages (the hub,
+the Lantern import, `?from=hub` prefill). The single exception is the Lantern's
+explicit, confirmed **Restore**, which can write it back from a backup file.
+(The Mad Maze page itself keeps writing the `realm` field of that save, as the
+in-town Realm does.)
+
+## Firebase rules draft (not applied)
+
+`firebase-rules.draft.json` is a validation-only draft of the Realtime
+Database rules (shapes, size caps, allowed keys; read/write stay open because
+there is no sign-in). Nothing applies it: the owner pastes it into the Firebase
+console (Realtime Database > Rules) after testing it in the Rules Playground.
+See `design/FIREBASE-RULES-NOTES.md` for the steps and what it cannot stop.

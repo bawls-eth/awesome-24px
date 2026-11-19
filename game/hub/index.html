@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pixeltown Hub</title>
+<link rel="stylesheet" href="hub.css">
+</head>
+<body>
+<header id="hud">
+  <div class="hud-main">
+    <span id="hud-name" class="hud-name"></span>
+    <span id="hud-world" class="hud-world"></span>
+  </div>
+  <div class="hud-stats">
+    <span class="stat" title="Tokens">&#9679; <b id="hud-tokens">0</b></span>
+    <span class="stat" title="Medals">&#9733; <b id="hud-medals">0</b></span>
+    <span class="stat" title="Completion"><b id="hud-pct">0</b>%</span>
+  </div>
+</header>
+<main id="stage">
+  <canvas id="map" aria-label="World map" role="img"></canvas>
+  <div id="toast" role="status" aria-live="polite"></div>
+</main>
+<footer id="bar">
+  <span id="hint" class="hint">Tap a node, or use arrows / WASD / D-pad. Enter or A opens a node.</span>
+  <button id="open-btn" type="button">Open</button>
+</footer>
+<section id="card" class="card" hidden aria-labelledby="card-title">
+  <div class="card-head">
+    <h2 id="card-title"></h2>
+    <button id="card-close" type="button" aria-label="Close">&times;</button>
+  </div>
+  <p id="card-world" class="card-sub"></p>
+  <div id="card-medals" class="medals" aria-label="Medals"></div>
+  <p id="card-status" class="card-sub"></p>
+  <div class="card-actions">
+    <a id="card-play" class="btn" href="#">Play</a>
+    <span id="card-soon" class="btn disabled" hidden>Coming soon</span>
+  </div>
+</section>
+<div id="iris" aria-hidden="true"></div>
+<script src="../shared/mm-map.js"></script>
+<script src="../shared/profile.js"></script>
+<script src="hub.js"></script>
+</body>
+</html>

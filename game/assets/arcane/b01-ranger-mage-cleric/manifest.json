@@ -1,0 +1,1600 @@
+{
+  "name": "Arcane RPG \u2014 B1 Ranger Mage Cleric (illustrated prototypes)",
+  "license": "original, owned by me",
+  "frame_size": 256,
+  "assets": [
+    {
+      "id": "ranger_idle_down",
+      "category": "character",
+      "class": "ranger",
+      "action": "idle",
+      "dir": "down",
+      "path": "characters/ranger/ranger_idle_down.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "ranger_idle_up",
+      "category": "character",
+      "class": "ranger",
+      "action": "idle",
+      "dir": "up",
+      "path": "characters/ranger/ranger_idle_up.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "ranger_idle_right",
+      "category": "character",
+      "class": "ranger",
+      "action": "idle",
+      "dir": "right",
+      "path": "characters/ranger/ranger_idle_right.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "ranger_walk_down",
+      "category": "character",
+      "class": "ranger",
+      "action": "walk",
+      "dir": "down",
+      "path": "characters/ranger/ranger_walk_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "ranger_walk_up",
+      "category": "character",
+      "class": "ranger",
+      "action": "walk",
+      "dir": "up",
+      "path": "characters/ranger/ranger_walk_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "ranger_walk_right",
+      "category": "character",
+      "class": "ranger",
+      "action": "walk",
+      "dir": "right",
+      "path": "characters/ranger/ranger_walk_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "ranger_attack_down",
+      "category": "character",
+      "class": "ranger",
+      "action": "attack",
+      "dir": "down",
+      "path": "characters/ranger/ranger_attack_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions",
+      "muzzle": [
+        {
+          "x": 128,
+          "y": 152
+        },
+        {
+          "x": 128,
+          "y": 152
+        },
+        {
+          "x": 128,
+          "y": 152
+        },
+        {
+          "x": 128,
+          "y": 156
+        },
+        {
+          "x": 128,
+          "y": 156
+        }
+      ]
+    },
+    {
+      "id": "ranger_attack_up",
+      "category": "character",
+      "class": "ranger",
+      "action": "attack",
+      "dir": "up",
+      "path": "characters/ranger/ranger_attack_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions",
+      "muzzle": [
+        {
+          "x": 128,
+          "y": 152
+        },
+        {
+          "x": 128,
+          "y": 154
+        },
+        {
+          "x": 128,
+          "y": 154
+        },
+        {
+          "x": 128,
+          "y": 156
+        },
+        {
+          "x": 128,
+          "y": 156
+        }
+      ]
+    },
+    {
+      "id": "ranger_attack_right",
+      "category": "character",
+      "class": "ranger",
+      "action": "attack",
+      "dir": "right",
+      "path": "characters/ranger/ranger_attack_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions",
+      "muzzle": [
+        {
+          "x": 172,
+          "y": 154
+        },
+        {
+          "x": 168,
+          "y": 154
+        },
+        {
+          "x": 168,
+          "y": 154
+        },
+        {
+          "x": 168,
+          "y": 156
+        },
+        {
+          "x": 176,
+          "y": 156
+        }
+      ]
+    },
+    {
+      "id": "ranger_cast_down",
+      "category": "character",
+      "class": "ranger",
+      "action": "cast",
+      "dir": "down",
+      "path": "characters/ranger/ranger_cast_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions",
+      "muzzle": [
+        {
+          "x": 128,
+          "y": 152
+        },
+        {
+          "x": 128,
+          "y": 152
+        },
+        {
+          "x": 130,
+          "y": 152
+        },
+        {
+          "x": 128,
+          "y": 152
+        },
+        {
+          "x": 128,
+          "y": 152
+        }
+      ]
+    },
+    {
+      "id": "ranger_cast_up",
+      "category": "character",
+      "class": "ranger",
+      "action": "cast",
+      "dir": "up",
+      "path": "characters/ranger/ranger_cast_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions",
+      "muzzle": [
+        {
+          "x": 128,
+          "y": 154
+        },
+        {
+          "x": 126,
+          "y": 154
+        },
+        {
+          "x": 128,
+          "y": 154
+        },
+        {
+          "x": 128,
+          "y": 154
+        },
+        {
+          "x": 128,
+          "y": 154
+        }
+      ]
+    },
+    {
+      "id": "ranger_cast_right",
+      "category": "character",
+      "class": "ranger",
+      "action": "cast",
+      "dir": "right",
+      "path": "characters/ranger/ranger_cast_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions",
+      "muzzle": [
+        {
+          "x": 172,
+          "y": 154
+        },
+        {
+          "x": 176,
+          "y": 156
+        },
+        {
+          "x": 172,
+          "y": 156
+        },
+        {
+          "x": 172,
+          "y": 159
+        },
+        {
+          "x": 180,
+          "y": 156
+        }
+      ]
+    },
+    {
+      "id": "ranger_roll_down",
+      "category": "character",
+      "class": "ranger",
+      "action": "roll",
+      "dir": "down",
+      "path": "characters/ranger/ranger_roll_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "ranger_roll_up",
+      "category": "character",
+      "class": "ranger",
+      "action": "roll",
+      "dir": "up",
+      "path": "characters/ranger/ranger_roll_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "ranger_roll_right",
+      "category": "character",
+      "class": "ranger",
+      "action": "roll",
+      "dir": "right",
+      "path": "characters/ranger/ranger_roll_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "ranger_hit_down",
+      "category": "character",
+      "class": "ranger",
+      "action": "hit",
+      "dir": "down",
+      "path": "characters/ranger/ranger_hit_down.png",
+      "frames": 2,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "ranger_hit_up",
+      "category": "character",
+      "class": "ranger",
+      "action": "hit",
+      "dir": "up",
+      "path": "characters/ranger/ranger_hit_up.png",
+      "frames": 2,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "ranger_hit_right",
+      "category": "character",
+      "class": "ranger",
+      "action": "hit",
+      "dir": "right",
+      "path": "characters/ranger/ranger_hit_right.png",
+      "frames": 2,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "ranger_death_down",
+      "category": "character",
+      "class": "ranger",
+      "action": "death",
+      "dir": "down",
+      "path": "characters/ranger/ranger_death_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "ranger_death_up",
+      "category": "character",
+      "class": "ranger",
+      "action": "death",
+      "dir": "up",
+      "path": "characters/ranger/ranger_death_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "ranger_death_right",
+      "category": "character",
+      "class": "ranger",
+      "action": "death",
+      "dir": "right",
+      "path": "characters/ranger/ranger_death_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "mage_idle_down",
+      "category": "character",
+      "class": "mage",
+      "action": "idle",
+      "dir": "down",
+      "path": "characters/mage/mage_idle_down.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "mage_idle_up",
+      "category": "character",
+      "class": "mage",
+      "action": "idle",
+      "dir": "up",
+      "path": "characters/mage/mage_idle_up.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "mage_idle_right",
+      "category": "character",
+      "class": "mage",
+      "action": "idle",
+      "dir": "right",
+      "path": "characters/mage/mage_idle_right.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "mage_walk_down",
+      "category": "character",
+      "class": "mage",
+      "action": "walk",
+      "dir": "down",
+      "path": "characters/mage/mage_walk_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "mage_walk_up",
+      "category": "character",
+      "class": "mage",
+      "action": "walk",
+      "dir": "up",
+      "path": "characters/mage/mage_walk_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "mage_walk_right",
+      "category": "character",
+      "class": "mage",
+      "action": "walk",
+      "dir": "right",
+      "path": "characters/mage/mage_walk_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "mage_attack_down",
+      "category": "character",
+      "class": "mage",
+      "action": "attack",
+      "dir": "down",
+      "path": "characters/mage/mage_attack_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions",
+      "muzzle": [
+        {
+          "x": 158,
+          "y": 100
+        },
+        {
+          "x": 156,
+          "y": 100
+        },
+        {
+          "x": 156,
+          "y": 100
+        },
+        {
+          "x": 152,
+          "y": 100
+        },
+        {
+          "x": 153,
+          "y": 84
+        }
+      ]
+    },
+    {
+      "id": "mage_attack_up",
+      "category": "character",
+      "class": "mage",
+      "action": "attack",
+      "dir": "up",
+      "path": "characters/mage/mage_attack_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions",
+      "muzzle": [
+        {
+          "x": 153,
+          "y": 100
+        },
+        {
+          "x": 154,
+          "y": 100
+        },
+        {
+          "x": 154,
+          "y": 100
+        },
+        {
+          "x": 154,
+          "y": 100
+        },
+        {
+          "x": 154,
+          "y": 100
+        }
+      ]
+    },
+    {
+      "id": "mage_attack_right",
+      "category": "character",
+      "class": "mage",
+      "action": "attack",
+      "dir": "right",
+      "path": "characters/mage/mage_attack_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions",
+      "muzzle": [
+        {
+          "x": 172,
+          "y": 100
+        },
+        {
+          "x": 168,
+          "y": 100
+        },
+        {
+          "x": 172,
+          "y": 100
+        },
+        {
+          "x": 164,
+          "y": 100
+        },
+        {
+          "x": 180,
+          "y": 104
+        }
+      ]
+    },
+    {
+      "id": "mage_cast_down",
+      "category": "character",
+      "class": "mage",
+      "action": "cast",
+      "dir": "down",
+      "path": "characters/mage/mage_cast_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions",
+      "muzzle": [
+        {
+          "x": 153,
+          "y": 100
+        },
+        {
+          "x": 154,
+          "y": 100
+        },
+        {
+          "x": 154,
+          "y": 100
+        },
+        {
+          "x": 156,
+          "y": 84
+        },
+        {
+          "x": 154,
+          "y": 100
+        }
+      ]
+    },
+    {
+      "id": "mage_cast_up",
+      "category": "character",
+      "class": "mage",
+      "action": "cast",
+      "dir": "up",
+      "path": "characters/mage/mage_cast_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions",
+      "muzzle": [
+        {
+          "x": 154,
+          "y": 100
+        },
+        {
+          "x": 154,
+          "y": 84
+        },
+        {
+          "x": 154,
+          "y": 100
+        },
+        {
+          "x": 152,
+          "y": 80
+        },
+        {
+          "x": 154,
+          "y": 100
+        }
+      ]
+    },
+    {
+      "id": "mage_cast_right",
+      "category": "character",
+      "class": "mage",
+      "action": "cast",
+      "dir": "right",
+      "path": "characters/mage/mage_cast_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions",
+      "muzzle": [
+        {
+          "x": 168,
+          "y": 108
+        },
+        {
+          "x": 168,
+          "y": 104
+        },
+        {
+          "x": 168,
+          "y": 108
+        },
+        {
+          "x": 168,
+          "y": 108
+        },
+        {
+          "x": 176,
+          "y": 108
+        }
+      ]
+    },
+    {
+      "id": "mage_roll_down",
+      "category": "character",
+      "class": "mage",
+      "action": "roll",
+      "dir": "down",
+      "path": "characters/mage/mage_roll_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "mage_roll_up",
+      "category": "character",
+      "class": "mage",
+      "action": "roll",
+      "dir": "up",
+      "path": "characters/mage/mage_roll_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "mage_roll_right",
+      "category": "character",
+      "class": "mage",
+      "action": "roll",
+      "dir": "right",
+      "path": "characters/mage/mage_roll_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "mage_hit_down",
+      "category": "character",
+      "class": "mage",
+      "action": "hit",
+      "dir": "down",
+      "path": "characters/mage/mage_hit_down.png",
+      "frames": 2,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "mage_hit_up",
+      "category": "character",
+      "class": "mage",
+      "action": "hit",
+      "dir": "up",
+      "path": "characters/mage/mage_hit_up.png",
+      "frames": 2,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "mage_hit_right",
+      "category": "character",
+      "class": "mage",
+      "action": "hit",
+      "dir": "right",
+      "path": "characters/mage/mage_hit_right.png",
+      "frames": 2,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "mage_death_down",
+      "category": "character",
+      "class": "mage",
+      "action": "death",
+      "dir": "down",
+      "path": "characters/mage/mage_death_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "mage_death_up",
+      "category": "character",
+      "class": "mage",
+      "action": "death",
+      "dir": "up",
+      "path": "characters/mage/mage_death_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "mage_death_right",
+      "category": "character",
+      "class": "mage",
+      "action": "death",
+      "dir": "right",
+      "path": "characters/mage/mage_death_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "cleric_idle_down",
+      "category": "character",
+      "class": "cleric",
+      "action": "idle",
+      "dir": "down",
+      "path": "characters/cleric/cleric_idle_down.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "cleric_idle_up",
+      "category": "character",
+      "class": "cleric",
+      "action": "idle",
+      "dir": "up",
+      "path": "characters/cleric/cleric_idle_up.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "cleric_idle_right",
+      "category": "character",
+      "class": "cleric",
+      "action": "idle",
+      "dir": "right",
+      "path": "characters/cleric/cleric_idle_right.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "cleric_walk_down",
+      "category": "character",
+      "class": "cleric",
+      "action": "walk",
+      "dir": "down",
+      "path": "characters/cleric/cleric_walk_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "cleric_walk_up",
+      "category": "character",
+      "class": "cleric",
+      "action": "walk",
+      "dir": "up",
+      "path": "characters/cleric/cleric_walk_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "cleric_walk_right",
+      "category": "character",
+      "class": "cleric",
+      "action": "walk",
+      "dir": "right",
+      "path": "characters/cleric/cleric_walk_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "cleric_attack_down",
+      "category": "character",
+      "class": "cleric",
+      "action": "attack",
+      "dir": "down",
+      "path": "characters/cleric/cleric_attack_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions",
+      "muzzle": [
+        {
+          "x": 157,
+          "y": 88
+        },
+        {
+          "x": 158,
+          "y": 104
+        },
+        {
+          "x": 157,
+          "y": 92
+        },
+        {
+          "x": 156,
+          "y": 112
+        },
+        {
+          "x": 153,
+          "y": 76
+        }
+      ]
+    },
+    {
+      "id": "cleric_attack_up",
+      "category": "character",
+      "class": "cleric",
+      "action": "attack",
+      "dir": "up",
+      "path": "characters/cleric/cleric_attack_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions",
+      "muzzle": [
+        {
+          "x": 154,
+          "y": 100
+        },
+        {
+          "x": 156,
+          "y": 80
+        },
+        {
+          "x": 154,
+          "y": 100
+        },
+        {
+          "x": 154,
+          "y": 100
+        },
+        {
+          "x": 154,
+          "y": 100
+        }
+      ]
+    },
+    {
+      "id": "cleric_attack_right",
+      "category": "character",
+      "class": "cleric",
+      "action": "attack",
+      "dir": "right",
+      "path": "characters/cleric/cleric_attack_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions",
+      "muzzle": [
+        {
+          "x": 180,
+          "y": 96
+        },
+        {
+          "x": 180,
+          "y": 96
+        },
+        {
+          "x": 176,
+          "y": 100
+        },
+        {
+          "x": 172,
+          "y": 100
+        },
+        {
+          "x": 184,
+          "y": 100
+        }
+      ]
+    },
+    {
+      "id": "cleric_cast_down",
+      "category": "character",
+      "class": "cleric",
+      "action": "cast",
+      "dir": "down",
+      "path": "characters/cleric/cleric_cast_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions",
+      "muzzle": [
+        {
+          "x": 156,
+          "y": 92
+        },
+        {
+          "x": 158,
+          "y": 76
+        },
+        {
+          "x": 153,
+          "y": 84
+        },
+        {
+          "x": 154,
+          "y": 64
+        },
+        {
+          "x": 154,
+          "y": 104
+        }
+      ]
+    },
+    {
+      "id": "cleric_cast_up",
+      "category": "character",
+      "class": "cleric",
+      "action": "cast",
+      "dir": "up",
+      "path": "characters/cleric/cleric_cast_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions",
+      "muzzle": [
+        {
+          "x": 153,
+          "y": 100
+        },
+        {
+          "x": 158,
+          "y": 88
+        },
+        {
+          "x": 158,
+          "y": 104
+        },
+        {
+          "x": 158,
+          "y": 92
+        },
+        {
+          "x": 154,
+          "y": 104
+        }
+      ]
+    },
+    {
+      "id": "cleric_cast_right",
+      "category": "character",
+      "class": "cleric",
+      "action": "cast",
+      "dir": "right",
+      "path": "characters/cleric/cleric_cast_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions",
+      "muzzle": [
+        {
+          "x": 168,
+          "y": 96
+        },
+        {
+          "x": 176,
+          "y": 96
+        },
+        {
+          "x": 172,
+          "y": 100
+        },
+        {
+          "x": 164,
+          "y": 96
+        },
+        {
+          "x": 176,
+          "y": 96
+        }
+      ]
+    },
+    {
+      "id": "cleric_roll_down",
+      "category": "character",
+      "class": "cleric",
+      "action": "roll",
+      "dir": "down",
+      "path": "characters/cleric/cleric_roll_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "cleric_roll_up",
+      "category": "character",
+      "class": "cleric",
+      "action": "roll",
+      "dir": "up",
+      "path": "characters/cleric/cleric_roll_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "cleric_roll_right",
+      "category": "character",
+      "class": "cleric",
+      "action": "roll",
+      "dir": "right",
+      "path": "characters/cleric/cleric_roll_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "cleric_hit_down",
+      "category": "character",
+      "class": "cleric",
+      "action": "hit",
+      "dir": "down",
+      "path": "characters/cleric/cleric_hit_down.png",
+      "frames": 2,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "cleric_hit_up",
+      "category": "character",
+      "class": "cleric",
+      "action": "hit",
+      "dir": "up",
+      "path": "characters/cleric/cleric_hit_up.png",
+      "frames": 2,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "cleric_hit_right",
+      "category": "character",
+      "class": "cleric",
+      "action": "hit",
+      "dir": "right",
+      "path": "characters/cleric/cleric_hit_right.png",
+      "frames": 2,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "cleric_death_down",
+      "category": "character",
+      "class": "cleric",
+      "action": "death",
+      "dir": "down",
+      "path": "characters/cleric/cleric_death_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "cleric_death_up",
+      "category": "character",
+      "class": "cleric",
+      "action": "death",
+      "dir": "up",
+      "path": "characters/cleric/cleric_death_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    },
+    {
+      "id": "cleric_death_right",
+      "category": "character",
+      "class": "cleric",
+      "action": "death",
+      "dir": "right",
+      "path": "characters/cleric/cleric_death_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "image_generated_illustrated_motion_atlas",
+      "scale_policy": "fixed_per_class_all_directions"
+    }
+  ]
+}

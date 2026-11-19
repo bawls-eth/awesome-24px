@@ -1,0 +1,282 @@
+/* Mad Maze standalone shell: the Realm overlay styles, copied from ../../style.css (no edits there). */
+html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #0b0716; overscroll-behavior: none; }
+body { font-family: system-ui, sans-serif; }
+#realm-help { max-width: calc(100vw - 20px); white-space: normal; text-align: center; }
+/* ---------- The Realm (bullet-hell arena) ---------- */
+#realm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 31;
+  background: #0b0716;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#realm-canvas-wrap { position: absolute; inset: 0; }
+#realm-canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; cursor: crosshair; touch-action: none; }
+#realm-hud {
+  position: absolute;
+  left: calc(10px + env(safe-area-inset-left, 0px));
+  right: calc(10px + env(safe-area-inset-right, 0px));
+  top: calc(8px + env(safe-area-inset-top, 0px));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+  color: #fff;
+  font: 700 13px system-ui, sans-serif;
+  text-shadow: 0 1px 2px #000;
+}
+#realm-hp {
+  position: relative;
+  width: 150px;
+  height: 20px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  overflow: hidden;
+}
+#realm-hp-fill { height: 100%; width: 100%; background: linear-gradient(#ff8fa8, #e8456d); transition: width 0.12s; }
+#realm-hp-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+#realm-info { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; flex: 1; min-width: 0; }
+#realm-shards { color: #8fe9ff; }
+#realm-best { opacity: 0.75; font-weight: 600; }
+#realm-leave-btn {
+  pointer-events: auto;
+  min-width: 44px;
+  height: 40px;
+  border-radius: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font: 700 12px system-ui, sans-serif;
+  padding: 0 12px;
+}
+#realm-banner {
+  position: absolute;
+  left: 50%;
+  top: 34%;
+  transform: translate(-50%, -50%);
+  padding: 10px 22px;
+  border-radius: 999px;
+  background: rgba(20, 8, 40, 0.8);
+  border: 2px solid #b36bff;
+  color: #fff;
+  font: 800 20px system-ui, sans-serif;
+  text-align: center;
+  max-width: 90vw;
+  pointer-events: none;
+}
+#realm-banner.hidden { display: none; }
+#realm-banner.pop { animation: realm-pop 0.35s ease-out; }
+@keyframes realm-pop { 0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0; } 70% { transform: translate(-50%, -50%) scale(1.08); } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+#realm-help {
+  position: absolute;
+  left: 50%;
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.55);
+  font: 600 11px system-ui, sans-serif;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.realm-stick { display: none; }
+body.touch-device #realm-help { display: none; }
+body.touch-device .realm-stick {
+  display: block;
+  position: absolute;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  width: 124px;
+  height: 124px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  border: 3px solid rgba(255, 255, 255, 0.4);
+  touch-action: none;
+}
+body.touch-device #realm-stick-move { left: calc(20px + env(safe-area-inset-left, 0px)); }
+body.touch-device #realm-stick-aim { right: calc(20px + env(safe-area-inset-right, 0px)); border-color: rgba(143, 233, 255, 0.65); }
+.realm-stick .knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 52px;
+  height: 52px;
+  margin: -26px 0 0 -26px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+}
+@media (max-width: 420px) {
+  #realm-hp { width: 120px; }
+  #realm-best { display: none; }
+}
+
+/* ---------- Realm B2: level, abilities, backpack ---------- */
+#realm-xp {
+  position: absolute;
+  left: calc(10px + env(safe-area-inset-left, 0px));
+  top: calc(42px + env(safe-area-inset-top, 0px)); /* beta gate: was 34px, which covered the bottom 6px of the HP bar when the HUD row is vertically centred */
+  width: 150px;
+  height: 11px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 2px solid rgba(201, 167, 255, 0.6);
+  overflow: hidden;
+  pointer-events: none;
+}
+#realm-xp-fill { height: 100%; width: 0; background: linear-gradient(#e2c6ff, #a56bff); transition: width 0.15s; }
+#realm-xp-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font: 700 8px system-ui, sans-serif; color: #fff; text-shadow: 0 1px 1px #000; }
+#realm-level { color: #e2c6ff; font-weight: 800; }
+#realm-bp-btn {
+  pointer-events: auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  background: rgba(0, 0, 0, 0.55);
+  font-size: 18px;
+}
+#realm-abilities {
+  position: absolute;
+  left: 50%;
+  bottom: calc(34px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+}
+.realm-ab {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.65);
+  background: rgba(20, 8, 40, 0.75);
+  font-size: 22px;
+  touch-action: manipulation;
+  color: #fff;
+}
+.realm-ab .key { position: absolute; left: 4px; top: 1px; font: 700 10px system-ui, sans-serif; opacity: 0.8; }
+.realm-ab .cd { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font: 800 18px system-ui, sans-serif; text-shadow: 0 1px 3px #000; pointer-events: none; }
+.realm-ab.cooling { opacity: 0.55; }
+.realm-ab.cooling .ico { opacity: 0.4; }
+.realm-ab.locked { opacity: 0.4; filter: grayscale(1); }
+.realm-ab.locked .cd { font-size: 12px; }
+body.touch-device #realm-abilities {
+  left: auto;
+  right: calc(20px + env(safe-area-inset-right, 0px));
+  bottom: calc(24px + 124px + 14px + env(safe-area-inset-bottom, 0px));
+  transform: none;
+  display: grid;
+  grid-template-columns: repeat(2, 50px);
+  gap: 8px;
+}
+body.touch-device .realm-ab { width: 50px; height: 50px; }
+body.touch-device .realm-ab .key { display: none; }
+#realm-backpack {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 3, 18, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  z-index: 3;
+}
+#realm-backpack.hidden { display: none; }
+.realm-bp-card {
+  width: min(460px, 100%);
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  background: #1c1033;
+  border: 2px solid #b36bff;
+  border-radius: 14px;
+  padding: 12px;
+  color: #fff;
+  font: 600 13px system-ui, sans-serif;
+}
+.realm-bp-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 15px; }
+#realm-bp-close { width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.5); background: rgba(0, 0, 0, 0.4); color: #fff; font-size: 16px; }
+#realm-bp-stats { color: #8fe9ff; margin-bottom: 8px; }
+.realm-bp-slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 6px; }
+.realm-bp-slot { background: rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 6px; text-align: center; font-size: 12px; min-height: 30px; }
+.realm-bp-count, .dim { opacity: 0.6; }
+.realm-bp-count { margin: 6px 0; font-size: 12px; }
+#realm-bp-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+#realm-bp-list li { display: grid; grid-template-columns: 1fr auto auto; gap: 4px 8px; align-items: center; background: rgba(255, 255, 255, 0.06); border-radius: 10px; padding: 6px 8px; }
+#realm-bp-list li.on { outline: 2px solid #ffe27a; }
+#realm-bp-list .nm { font-weight: 800; }
+#realm-bp-list .rar { font-size: 11px; opacity: 0.8; }
+#realm-bp-list .st { grid-column: 1 / span 3; font-size: 12px; color: #c9d1d9; }
+#realm-bp-list button { height: 40px; min-width: 64px; border-radius: 10px; border: 2px solid rgba(255, 255, 255, 0.5); background: rgba(255, 255, 255, 0.12); color: #fff; font: 700 12px system-ui, sans-serif; }
+#realm-bp-list button.eq { grid-column: 2; grid-row: 1; }
+#realm-bp-list button.dc { grid-column: 3; grid-row: 1; }
+#realm-bp-list li { grid-template-columns: 1fr auto auto auto; }
+#realm-bp-list .nm { grid-column: 1; }
+#realm-bp-list .rar { grid-column: 2; }
+@media (max-width: 420px) {
+  #realm-xp { width: 120px; top: calc(34px + env(safe-area-inset-top, 0px)); }
+}
+
+/* ---------- Realm B3: biome label, boss bar, kill board ---------- */
+#realm-biome { opacity: 0.8; font-weight: 600; font-style: italic; }
+#realm-board-btn { pointer-events: auto; width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.6); background: rgba(0, 0, 0, 0.55); font-size: 18px; }
+#realm-boss {
+  position: absolute;
+  left: 50%;
+  top: calc(52px + env(safe-area-inset-top, 0px));
+  transform: translateX(-50%);
+  width: min(360px, 78vw);
+  text-align: center;
+  color: #fff;
+  font: 800 12px system-ui, sans-serif;
+  text-shadow: 0 1px 2px #000;
+  pointer-events: none;
+}
+#realm-boss.hidden { display: none; }
+#realm-boss .bar { height: 12px; margin-top: 2px; border-radius: 7px; background: rgba(0, 0, 0, 0.6); border: 2px solid #ff5fa2; overflow: hidden; }
+#realm-boss-fill { height: 100%; width: 100%; background: linear-gradient(#ff9ec8, #e8266f); transition: width 0.12s; }
+#realm-boss[data-phase="2"] #realm-boss-fill { background: linear-gradient(#ffd27a, #ee7d22); }
+#realm-boss[data-phase="3"] #realm-boss-fill { background: linear-gradient(#ff8a8a, #c4121d); }
+#realm-board {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 3, 18, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  z-index: 3;
+}
+#realm-board.hidden { display: none; }
+#realm-board-close { width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.5); background: rgba(0, 0, 0, 0.4); color: #fff; font-size: 16px; }
+.realm-board-row { display: flex; justify-content: space-between; padding: 8px 4px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); font-size: 14px; }
+.realm-board-row b { color: #8fe9ff; }
+@media (max-width: 420px) {
+  #realm-biome { display: none; }
+  #realm-hp, #realm-xp { width: 104px; }
+  #realm-hud { gap: 6px; align-items: flex-start; } /* beta gate: when the row wraps, keep the HP bar on the first row so the fixed-position XP bar does not cover it */
+  #realm-bp-btn, #realm-board-btn, #realm-leave-btn { min-width: 40px; }
+  #realm-leave-btn { padding: 0 8px; }
+}
+.hidden { display: none; }
+
+/* ---------- Warren dungeon mode (?mode=dungeon) ---------- */
+#mm-map { position: fixed; right: calc(10px + env(safe-area-inset-right, 0px)); top: calc(112px + env(safe-area-inset-top, 0px)); z-index: 33; border: 2px solid rgba(255, 255, 255, 0.35); border-radius: 8px; pointer-events: none; }
+#mm-map.hidden, #mm-summary.hidden { display: none; }
+#mm-map-btn { position: fixed; left: calc(10px + env(safe-area-inset-left, 0px)); top: calc(58px + env(safe-area-inset-top, 0px)); z-index: 33; width: 44px; height: 44px; border-radius: 22px; border: 2px solid rgba(255, 255, 255, 0.6); background: rgba(0, 0, 0, 0.55); color: #fff; font-size: 20px; }
+@media (max-width: 600px) { #mm-map-btn { top: calc(112px + env(safe-area-inset-top, 0px)); } #mm-map { top: calc(150px + env(safe-area-inset-top, 0px)); } } /* beta gate: the minimap sat under the aim-assist button */
+#mm-summary { position: fixed; inset: 0; z-index: 50; background: rgba(8, 4, 20, 0.88); display: flex; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box; overflow: auto; }
+.mm-sum-card { width: min(420px, 100%); background: #1b1430; border: 3px solid #8a63e0; border-radius: 14px; padding: 18px 20px; color: #fff; font: 600 14px system-ui, sans-serif; box-sizing: border-box; }
+.mm-sum-card h2 { margin: 0 0 4px; font-size: 22px; }
+.mm-sum-card h3 { margin: 14px 0 6px; font-size: 15px; color: #ffd45a; }
+.mm-sum-sub { margin: 0 0 10px; opacity: 0.7; }
+.mm-sum-card ul { list-style: none; margin: 0; padding: 0; }
+.mm-sum-stats li { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.mm-sum-loot li { padding: 3px 0; }
+.mm-sum-loot li.none { opacity: 0.6; }
+.mm-sum-btns { display: flex; gap: 10px; margin-top: 16px; }
+.mm-btn { flex: 1; text-align: center; padding: 12px 8px; border-radius: 10px; background: #8a63e0; color: #fff; text-decoration: none; font-weight: 700; min-height: 20px; }
+.mm-btn.alt { background: transparent; border: 2px solid rgba(255, 255, 255, 0.5); }
+/* Beta gate: realm.js (live file) sizes the aim-assist toggle inline at 34px; phones need a 40px tap target. */
+#realm-aim-btn { width: 40px !important; height: 40px !important; }

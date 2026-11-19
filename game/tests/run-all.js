@@ -24,6 +24,13 @@ function waitUp(url, tries = 40) {
   });
 }
 
+// Beta mode: `node game/tests/run-all.js --beta` (or BETA=1) runs ONLY the beta gate (beta/beta-run.js), exits non-zero when RED.
+// The default run never touches it (it lives in beta/, outside the *.test.js glob below).
+if (process.argv.includes('--beta') || process.env.BETA === '1') {
+  const r = spawnSync('node', [path.join(__dirname, 'beta', 'beta-run.js')], { stdio: 'inherit', env: process.env });
+  process.exit(r.status === null ? 1 : r.status);
+}
+
 (async () => {
   const port = String(process.env.PORT || await freePort());
   const server = spawn('python3', ['-m', 'http.server', port], { cwd: root, stdio: 'ignore' });

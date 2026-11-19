@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1a1030">
+<title>The Lantern - Mad Maze</title>
+<link rel="stylesheet" href="lantern.css">
+</head>
+<body>
+<main id="app">
+  <header class="top">
+    <nav class="row" aria-label="Leave the Lantern"><a class="btn" id="back-hub" href="../../hub/index.html">Hub</a><a class="btn" id="back-town" href="../../index.html">Town</a></nav>
+    <canvas id="scene" width="360" height="120" aria-hidden="true"></canvas>
+    <h1>The Lantern</h1>
+    <p class="sub">A safe, cozy place. No timers, nothing to buy, nothing to lose here.</p>
+    <p id="fame" class="fame"></p>
+  </header>
+  <p id="status" role="status" aria-live="polite" aria-atomic="true"></p>
+
+  <section id="import-offer" class="card" hidden>
+    <h2>Welcome back</h2>
+    <p>We found your hero from the old Realm arena. We can <strong>copy</strong> it here as the Legacy Ranger. Your old save stays exactly as it is.</p>
+    <div class="row"><button id="import-yes" type="button" class="btn primary">Bring my hero</button><button id="import-no" type="button" class="btn">Not now</button></div>
+  </section>
+
+  <section class="card" id="heroes-card">
+    <h2>Heroes</h2>
+    <ul id="heroes" class="list" aria-label="Your heroes"></ul>
+    <p id="heroes-empty" class="muted" hidden>No heroes yet. Make your first one below.</p>
+    <a id="start" class="btn primary big" href="./index.html" aria-label="Start run with the selected hero">Start run</a>
+  </section>
+
+  <section class="card" id="new-card">
+    <h2>New Hero</h2>
+    <form id="new-form" autocomplete="off">
+      <label for="new-class">Class</label>
+      <div class="classrow"><canvas id="new-class-art" class="heroart" width="96" height="96" aria-hidden="true" hidden></canvas><select id="new-class"></select></div>
+      <p id="new-class-note" class="muted"></p>
+      <label for="new-name">Name</label>
+      <input id="new-name" type="text" maxlength="24" placeholder="Hero name" required>
+      <fieldset>
+        <legend>Mode (chosen now, cannot be changed later)</legend>
+        <label class="choice"><input type="radio" name="mode" value="classic" checked> <span><strong>Classic</strong>: if this hero Falls, you keep your fame and a Keepsake, and can Rekindle a new hero.</span></label>
+        <label class="choice"><input type="radio" name="mode" value="picnic"> <span><strong>Picnic</strong>: no Fall at all. At 0 HP you simply return here with everything. Fame earned is halved.</span></label>
+      </fieldset>
+      <button id="new-create" type="submit" class="btn primary">Create hero</button>
+    </form>
+  </section>
+
+  <section class="card" id="fountain-card">
+    <h2>Fountain</h2>
+    <p class="muted">Rest here for a full heal. It is free and instant, any time.</p>
+    <button id="rest" type="button" class="btn" aria-label="Rest at the fountain for a full heal">Rest at the fountain</button>
+  </section>
+
+  <section class="card" id="stash-card">
+    <h2>Stash <span id="stash-count" class="muted"></span></h2>
+    <p class="muted">Tap a carried item to put it in the stash. Tap a stash slot to give it to the selected hero.</p>
+    <p id="carry-title" class="label"></p>
+    <ul id="carry" class="items" aria-label="Carried items"></ul>
+    <div id="stash" class="grid" role="list"></div>
+  </section>
+
+  <section class="card" id="hall-card">
+    <h2>Hall of Heroes</h2>
+    <ul id="hall" class="list"></ul>
+    <p id="hall-empty" class="muted">No headstones yet.</p>
+  </section>
+
+  <section class="card" id="how-card" aria-labelledby="how-title">
+    <h2 id="how-title">What is a Fall?</h2>
+    <p>A Fall is what happens when a hero runs out of HP in the arena. It is the only loss in Mad Maze, and it only happens in Classic mode.</p>
+    <ul class="plain">
+      <li><strong>The hero is lost.</strong> That hero steps into the Hall of Heroes.</li>
+      <li><strong>Your fame is banked.</strong> The fame the hero earned is added to your account for good.</li>
+      <li><strong>A Keepsake goes to your stash.</strong> One memento to remember them by.</li>
+      <li><strong>Picnic mode never falls.</strong> At 0 HP a Picnic hero just comes back here with everything.</li>
+    </ul>
+    <p>After a Fall you can Rekindle a new hero of the same class at half the level, up to level 10. Heroes at level 20 can instead Retire to the Hall with their full fame, no Fall needed.</p>
+  </section>
+
+  <section class="card" id="backup-card">
+    <h2>Back up my progress</h2>
+    <p class="muted">Saves everything to a file you keep. Restore accepts a backup file or an old single save file.</p>
+    <div class="row">
+      <button id="backup" type="button" class="btn" aria-label="Back up my progress to a file">Back up my progress</button>
+      <label class="btn file" for="restore">Restore<input id="restore" type="file" accept=".json,application/json" aria-label="Restore from a backup file"></label>
+    </div>
+    <div id="restore-confirm" class="confirm" role="alertdialog" aria-modal="true" aria-labelledby="restore-title" hidden>
+      <h3 id="restore-title">Replace these saves?</h3>
+      <p class="muted">Restoring will overwrite what is on this device for:</p>
+      <ul id="restore-list" class="list"></ul>
+      <div class="row">
+        <button id="restore-yes" type="button" class="btn primary">Confirm</button>
+        <button id="restore-no" type="button" class="btn">Cancel</button>
+      </div>
+    </div>
+  </section>
+</main>
+<script src="../../shared/mm-art.js"></script>
+<script src="../../shared/mm-classes.js"></script>
+<script src="../../shared/mm-items.js"></script>
+<script src="../../shared/mm-profile.js"></script>
+<script src="../../shared/mm-map.js"></script>
+<script src="../../shared/mm-angler.js"></script>
+<script src="../../shared/mm-bugs.js"></script>
+<script src="../../shared/profile.js"></script>
+<script src="../../shared/mm-backup.js"></script>
+<script src="lantern.js"></script>
+</body>
+</html>

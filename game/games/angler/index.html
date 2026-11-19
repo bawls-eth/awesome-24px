@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lakeside Angler</title>
+<link rel="stylesheet" href="angler.css">
+</head>
+<body>
+<header class="bar">
+  <a class="btn back" href="../../hub/index.html" id="back-hub">Hub</a>
+  <a class="btn back" href="../../index.html" id="back-town">Town</a>
+  <h1 id="spot-title">Lakeside Angler</h1>
+  <button class="btn" id="journal-btn" type="button">Journal <span id="journal-count">0/48</span></button>
+</header>
+<div id="status" aria-label="Status">
+  <span id="weather" title="Weather"><span id="weather-icon" aria-hidden="true"></span> <span id="weather-name"></span></span>
+  <span id="bait-box">Bait <output id="bait-val">0</output></span>
+  <button class="btn" id="gear-btn" type="button">Gear <span id="gear-sum"></span></button>
+</div>
+<main id="stage">
+  <canvas id="scene" width="320" height="480" aria-label="Fishing scene"></canvas>
+  <p id="msg" role="status" aria-live="polite">Pick a spot, then cast.</p>
+  <section id="result" class="panel" hidden>
+    <h2 id="res-title"></h2>
+    <p id="res-detail"></p>
+    <button class="btn primary" id="res-ok" type="button">Cast again</button>
+  </section>
+</main>
+<nav id="spots" aria-label="Fishing spots"></nav>
+<section id="gear" class="overlay" hidden>
+  <div class="panel wide">
+    <div class="jhead"><h2>Gear</h2><button class="btn" id="gear-close" type="button">Close</button></div>
+    <p class="rule" id="gear-rule"></p>
+    <h3>Rods <small>(wider catch zone)</small></h3>
+    <div id="rods" class="gearrow"></div>
+    <h3>Lures <small>(shift what bites)</small></h3>
+    <div id="lures" class="gearrow"></div>
+    <p class="rule">Bait: add ?bait=N (0-99) to the page address. Each cast uses one bait for a quicker, richer bite.</p>
+  </div>
+</section>
+<section id="journal" class="overlay" hidden>
+  <div class="panel wide">
+    <div class="jhead">
+      <h2>Angler's Journal <span id="jsum"></span></h2>
+      <button class="btn" id="journal-close" type="button">Close</button>
+    </div>
+    <div class="filters">
+      <label>Spot <select id="f-spot"></select></label>
+      <label>Rarity <select id="f-rarity"></select></label>
+      <label class="chk"><input type="checkbox" id="calm"> Calm reel</label>
+    </div>
+    <div id="bossinfo"></div>
+    <div id="jgrid"></div>
+  </div>
+</section>
+<script src="../../shared/rng.js"></script>
+<script src="../../shared/store.js"></script>
+<script src="../../shared/mm-angler.js"></script>
+<script src="angler.js"></script>
+</body>
+</html>
