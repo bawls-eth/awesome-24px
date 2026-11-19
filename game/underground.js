@@ -738,6 +738,7 @@ class UndergroundWorld {
 
   // A fresh press of Jump. Two presses within 300 ms toggle creative flight.
   tapJump() {
+    if (this.paused) return;
     const now = performance.now();
     if (now - this._lastSpaceT < 300) { this.toggleFly(); this._lastSpaceT = -1e9; } else this._lastSpaceT = now;
   }
@@ -1399,6 +1400,7 @@ class UndergroundWorld {
   }
 
   place() {
+    if (this.paused) return false;
     const type = this.hotbar;
     const costKey = type === 'torch' ? 'wood' : type === 'wall' ? 'stone' : type === 'dirt' ? 'dirt' : type === 'table' ? 'wood' : null;
     if (!costKey) return false; // coal / iron / gold / empty slots can't be placed (yet)

@@ -3028,13 +3028,13 @@ class TownScene extends Phaser.Scene {
         ug.toggleView();
         this.updateUgViewButton();
       } else if (k === 'e') {
-        if (!e.repeat) ug.setMining(true); // hold E to mine
+        if (!e.repeat && !this.workbenchOpen) ug.setMining(true); // hold E to mine
       } else if (k === 'f') {
         ug.place();
       } else if (k >= '1' && k <= '9' && k.length === 1) {
         ug.selectSlot(Number(k) - 1);
       } else if (k === 'c') {
-        if (!e.repeat && !this.workbenchOpen) ug.useTable(); // crafting table under the crosshair
+        if (!e.repeat && !this.workbenchOpen && !ug.flying) ug.useTable(); // crafting table under the crosshair (C also flies down, so not while flying)
       } else if (k === 'escape' || k === 'backspace') {
         if (this.workbenchOpen) this.closeWorkbench(); else this.exitUnderground();
       }
@@ -3072,7 +3072,7 @@ class TownScene extends Phaser.Scene {
     downBtn.addEventListener('pointercancel', () => setVert(0));
 
     document.getElementById('ug-fly-btn').addEventListener('click', (e) => { ug.toggleFly(); e.currentTarget.blur(); }); // blur: a focused button would also fire on Space
-    document.getElementById('ug-craft-btn').addEventListener('click', () => { if (!ug.useTable()) this.updatePickBadge('🛠️ Aim at a crafting table'); });
+    document.getElementById('ug-craft-btn').addEventListener('click', (e) => { e.currentTarget.blur(); if (!ug.useTable()) this.updatePickBadge('🛠️ Aim at a crafting table'); });
     document.getElementById('ug-view-btn').addEventListener('click', () => { ug.toggleView(); this.updateUgViewButton(); });
     this.updateUgViewButton();
     const mineBtn = document.getElementById('ug-mine-btn');
@@ -6348,7 +6348,7 @@ class TownScene extends Phaser.Scene {
     const wo = document.getElementById('workbench-overlay');
     wo.classList.add('hidden');
     wo.style.zIndex = '';
-    if (this.underground && this.underground.paused) this.underground.setPaused(false);
+    if (this.underground && this.underground.paused) { this.underground.setPaused(false); this.underground.onHotbarChange(this.underground.getHotbarState()); } // counts may have changed at the bench
   }
 
   canCraft(recipe) {
@@ -6405,6 +6405,7 @@ class TownScene extends Phaser.Scene {
   pickHave(k) { return (k === 'iron' || k === 'gold' || k === 'coal') ? (this.caveInv[k] || 0) : (this.resources[k] || 0); }
 
   canCraftPick(r) {
+    if (r.tier === this.cavePick.tier && this.cavePick.dur >= PICK_DUR[r.tier]) return false; // already new: nothing to repair
     return r.tier >= this.cavePick.tier && Object.entries(r.cost).every(([k, v]) => this.pickHave(k) >= v);
   }
 

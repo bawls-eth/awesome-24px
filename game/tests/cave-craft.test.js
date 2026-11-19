@@ -113,6 +113,15 @@ const findKind = `(s, kind) => {
   }, sp4);
   check('wear: at one durability left a block is the last — the pickaxe breaks, you are back to the wooden one, the badge says so and the save is updated', wear.after1.tier === 2 && wear.after1.dur === 1 && wear2.tier === 0 && wear2.dur === 0 && wear2.saved.tier === 0 && /broke/.test(wear2.badge) && wear2.broke && wear2.head === 0xb8c2cc, JSON.stringify([wear, wear2]));
 
+  const rp = await scene(page, (s) => {
+    s.cavePick = { tier: 3, dur: 120 }; s.underground.setPick(3, 120); s.caveInv.gold = 9; s.caveInv.iron = 9; s.openCaveTable();
+    const full = document.querySelector('#workbench-list button[data-pick="3"]').disabled; const spent = s.craftPick(3);
+    s.underground.setPick(3, 60); s.renderWorkbench(); const part = !document.querySelector('#workbench-list button[data-pick="3"]').disabled;
+    const o = { full, spent, part, placeBlocked: (() => { s.underground.selectSlot(0); return s.underground.place(); })() };
+    s.closeWorkbench(); return o;
+  });
+  check('bench: Repair is only offered when the pickaxe is worn (a full-durability pick cannot be re-crafted for nothing); blocks cannot be placed behind the open bench', rp.full === true && rp.spent === false && rp.part === true && rp.placeBlocked === false, JSON.stringify(rp));
+
   // 4. Persistence and corrupt saves.
   await scene(page, (s) => { s.openCaveTable(); s.caveInv.gold = 3; s.caveInv.iron = 6; s.renderWorkbench(); document.querySelector('#workbench-list button[data-pick="3"]').click(); s.closeWorkbench(); });
   const saved = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)).cavePick, SAVE);
