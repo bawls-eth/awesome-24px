@@ -209,13 +209,14 @@ class RealmArena {
     const h = this.container.clientHeight || window.innerHeight;
     const aspect = w / h;
     // Short side is always RM_SHORT logical units; the long side follows the screen.
-    if (aspect >= 1) { this.H = RM_SHORT; this.W = Math.round(Math.min(1100, Math.max(RM_SHORT, RM_SHORT * aspect))); } else { this.W = RM_SHORT; this.H = Math.round(Math.min(1100, Math.max(RM_SHORT, RM_SHORT / aspect))); }
+    if (aspect >= 1) { this.H = RM_SHORT; this.W = Math.round(Math.min(1400, Math.max(RM_SHORT, RM_SHORT * aspect))); } else { this.W = RM_SHORT; this.H = Math.round(Math.min(1400, Math.max(RM_SHORT, RM_SHORT / aspect))); }
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     this.canvas.width = Math.round(this.W * Math.min(dpr, 1.5));
     this.canvas.height = Math.round(this.H * Math.min(dpr, 1.5));
     this.canvas.style.width = '100%';
     this.canvas.style.height = '100%';
     this.scale = this.canvas.width / this.W;
+    this._vignette = null; // rebuilt for the new size on next draw
     const p = this.player;
     p.x = Math.max(RM_PLAYER.r, Math.min(this.W - RM_PLAYER.r, p.x || this.W / 2));
     p.y = Math.max(RM_PLAYER.r, Math.min(this.H - RM_PLAYER.r, p.y || this.H / 2));
@@ -227,6 +228,7 @@ class RealmArena {
     this.active = true;
     this._resize();
     [this.pBullets, this.eBullets, this.enemies, this.particles, this.texts].forEach((pool) => pool.forEach((o) => { o.active = false; }));
+    this.keys = {}; this.mouse.down = false; this.moveVec.x = 0; this.moveVec.y = 0; this.aimVec.on = false; this.aimVec.x = 0; this.aimVec.y = 0; // no stuck input from the last run
     const p = this.player;
     p.x = this.W / 2; p.y = this.H / 2; p.hp = RM_PLAYER.hp; p.iframes = 1; p.fireCd = 0; p.aim = -Math.PI / 2;
     this.run = { wave: 0, kills: 0, shards: 0 };
@@ -248,6 +250,7 @@ class RealmArena {
     this.mouse.down = false;
     this.aimVec.on = false; this.moveVec.x = 0; this.moveVec.y = 0;
     if (this._raf) cancelAnimationFrame(this._raf);
+    clearTimeout(this._bannerTimer);
     this._hideBanner();
   }
 
@@ -279,7 +282,7 @@ class RealmArena {
     this._lastT = now;
     this._update(dt);
     this._draw();
-    this._raf = requestAnimationFrame(this._loop);
+    if (this.active) this._raf = requestAnimationFrame(this._loop); // a death exit inside _update must not leave a second loop
   };
 
   // ---------- spawning ----------
@@ -600,10 +603,13 @@ class RealmArena {
     }
     g.globalAlpha = 1;
     g.restore();
-    if (this.flash > 0) { // red hit vignette
-      const gr = g.createRadialGradient(this.W / 2, this.H / 2, Math.min(this.W, this.H) * 0.3, this.W / 2, this.H / 2, Math.max(this.W, this.H) * 0.7);
-      gr.addColorStop(0, 'rgba(255,40,80,0)'); gr.addColorStop(1, `rgba(255,40,80,${0.55 * this.flash})`);
-      g.fillStyle = gr; g.fillRect(0, 0, this.W, this.H);
+    if (this.flash > 0) { // red hit vignette: one baked gradient, faded with globalAlpha (no per-frame allocation)
+      if (!this._vignette) {
+        const gr = g.createRadialGradient(this.W / 2, this.H / 2, Math.min(this.W, this.H) * 0.3, this.W / 2, this.H / 2, Math.max(this.W, this.H) * 0.7);
+        gr.addColorStop(0, 'rgba(255,40,80,0)'); gr.addColorStop(1, 'rgba(255,40,80,0.55)');
+        this._vignette = gr;
+      }
+      g.globalAlpha = this.flash; g.fillStyle = this._vignette; g.fillRect(0, 0, this.W, this.H); g.globalAlpha = 1;
     }
   }
 

@@ -2876,7 +2876,7 @@ class TownScene extends Phaser.Scene {
     document.getElementById('realm-overlay').classList.add('hidden');
     document.getElementById('hud').classList.remove('hidden');
     this.scene.resume();
-    this.localBody.setPosition(REALM_GATE_POS.x, REALM_GATE_POS.y + 56); // step out of the gate
+    this.localBody.setPosition(REALM_GATE_POS.x, REALM_GATE_POS.y + 116); // step out of the gate, clear of its enter radius (no instant re-entry from a held key)
   }
 
   // Two virtual sticks for touch: left moves, right aims and fires. They only feed the arena's vectors.
