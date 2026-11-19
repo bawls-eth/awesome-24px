@@ -829,6 +829,13 @@ press **E** (or tap **A**) to step through. It's a separate arena, fully local:
   uncommon / rare) — walk over them. Open the 🎒 **backpack** (B) to equip one
   weapon, one charm and one ring, or sell spares for 💎. Your level, items and
   loadout are kept even if you die.
+- **Biomes:** the arena changes every three waves — 🟣 Violet Hollow, 🔥 Ember Waste
+  (lava pools burn you, more Bursters) and ❄️ Frost Mire (ice patches slow you,
+  more Snipers). Little ✨ wanderers drift around for bonus shards.
+- **Boss:** every fifth wave is **Gloomheart**. It has three phases — a spiral, then
+  rings with helpers, then an enraged double spiral — each announced by a banner
+  and a shield. It drops two bags (one always rare); your fastest time is kept.
+- **Kill board:** press **K** (or 📊) for your Realm stats.
 - **💎 Shards** are your banked Realm currency (kept between visits). Dying
   costs 20% of the bank and sends you back to the village; **Esc** or **Leave**
   is always free. Your best wave is remembered.

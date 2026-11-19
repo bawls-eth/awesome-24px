@@ -2907,6 +2907,8 @@ class TownScene extends Phaser.Scene {
       b.addEventListener('pointerdown', (e) => { e.preventDefault(); r.cast(i); });
     }
     document.getElementById('realm-bp-btn').addEventListener('click', () => r.setPaused(true));
+    document.getElementById('realm-board-btn').addEventListener('click', () => r.setBoard(true));
+    document.getElementById('realm-board-close').addEventListener('click', () => r.setBoard(false));
     document.getElementById('realm-bp-close').addEventListener('click', () => r.setPaused(false));
     document.getElementById('realm-backpack-body').addEventListener('click', (e) => {
       const btn = e.target.closest('button[data-act]');

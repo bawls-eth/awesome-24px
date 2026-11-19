@@ -2537,3 +2537,55 @@ body.touch-device .realm-ab .key { display: none; }
 @media (max-width: 420px) {
   #realm-xp { width: 120px; }
 }
+
+/* ---------- Realm B3: biome label, boss bar, kill board ---------- */
+#realm-biome { opacity: 0.8; font-weight: 600; font-style: italic; }
+#realm-board-btn { pointer-events: auto; width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.6); background: rgba(0, 0, 0, 0.55); font-size: 18px; }
+#realm-boss {
+  position: absolute;
+  left: 50%;
+  top: calc(52px + env(safe-area-inset-top, 0px));
+  transform: translateX(-50%);
+  width: min(360px, 78vw);
+  text-align: center;
+  color: #fff;
+  font: 800 12px system-ui, sans-serif;
+  text-shadow: 0 1px 2px #000;
+  pointer-events: none;
+}
+#realm-boss.hidden { display: none; }
+#realm-boss .bar { height: 12px; margin-top: 2px; border-radius: 7px; background: rgba(0, 0, 0, 0.6); border: 2px solid #ff5fa2; overflow: hidden; }
+#realm-boss-fill { height: 100%; width: 100%; background: linear-gradient(#ff9ec8, #e8266f); transition: width 0.12s; }
+#realm-boss[data-phase="2"] #realm-boss-fill { background: linear-gradient(#ffd27a, #ee7d22); }
+#realm-boss[data-phase="3"] #realm-boss-fill { background: linear-gradient(#ff8a8a, #c4121d); }
+#realm-board {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 3, 18, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  z-index: 3;
+}
+#realm-board.hidden { display: none; }
+#realm-board-close { width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.5); background: rgba(0, 0, 0, 0.4); color: #fff; font-size: 16px; }
+.realm-board-row { display: flex; justify-content: space-between; padding: 8px 4px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); font-size: 14px; }
+.realm-board-row b { color: #8fe9ff; }
+@media (max-width: 420px) {
+  #realm-biome { display: none; }
+  #realm-hp, #realm-xp { width: 104px; }
+  #realm-hud { gap: 6px; }
+  #realm-bp-btn, #realm-board-btn, #realm-leave-btn { min-width: 40px; }
+  #realm-leave-btn { padding: 0 8px; }
+}
+
+/* Short landscape phones: the stacked hint rows leave room for one chat line above the bottom controls.
+   With two lines (e.g. live players chatting) the chat bar rose into the inventory strip at the top. */
+@media (max-height: 500px) {
+  body.touch-device #chat-log { max-height: 27px; }
+}
+@media (max-height: 400px) {
+  /* Too short for even one log line above the hint rows: messages still appear as bubbles over players, and quick chat keeps working. */
+  body.touch-device #chat-log { display: none; }
+}

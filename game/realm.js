@@ -18,10 +18,23 @@ const RM_ENEMIES = {
   spiral: { name: 'Whirler', hp: 16, r: 17, shards: 3, color: '#b36bff', speed: 22 },
   aimed: { name: 'Sniper', hp: 8, r: 13, shards: 2, color: '#ff6b6b', speed: 80 },
   ring: { name: 'Burster', hp: 11, r: 15, shards: 2, color: '#ffb347', speed: 48 },
+  boss: { name: 'Gloomheart', hp: 120, r: 34, shards: 40, color: '#ff5fa2', speed: 50 },
 };
 const RM_ENEMY_BULLET_DAMAGE = 8;
+// ---- biomes, wanderers and the boss (B3) ----
+const RM_BIOMES = [
+  { id: 'hollow', name: 'Violet Hollow', border: 'rgba(179,107,255,0.55)', floor: [26, 18, 50], hazard: null, mix: ['aimed', 'ring', 'spiral'], drifter: 'wisp' },
+  { id: 'ember', name: 'Ember Waste', border: 'rgba(255,120,60,0.6)', floor: [48, 22, 16], hazard: 'lava', mix: ['ring', 'ring', 'aimed', 'spiral'], drifter: 'cinder' },
+  { id: 'frost', name: 'Frost Mire', border: 'rgba(130,200,255,0.6)', floor: [18, 32, 56], hazard: 'ice', mix: ['aimed', 'aimed', 'ring', 'spiral'], drifter: 'puff' },
+];
+function rmBiomeIndex(wave) { return Math.floor((Math.max(1, wave) - 1) / 3) % RM_BIOMES.length; }
+const RM_BOSS_EVERY = 5; // every fifth wave is the boss
+const RM_BOSS_HP = 120; const RM_BOSS_HP_TIER = 40;
+const RM_HAZARD_R = 46;
+const RM_LAVA_DAMAGE = 5; const RM_LAVA_TICK = 0.7; const RM_ICE_SLOW = 0.55;
+const RM_DRIFTER_COLORS = { wisp: '#8fb8ff', cinder: '#ffa04a', puff: '#eaf6ff' };
 const RM_DEATH_PENALTY = 0.2; // share of the banked shards lost on death
-const RM_POOL = { pBullets: 160, eBullets: 420, enemies: 24, particles: 180, texts: 28, bags: 14 };
+const RM_POOL = { pBullets: 160, eBullets: 420, enemies: 24, particles: 180, texts: 28, bags: 14, drifters: 12, hazards: 5 };
 
 // ---- progression (B2) ----
 const RM_MAX_LEVEL = 20;
@@ -46,7 +59,7 @@ const RM_ITEM_BY_ID = Object.create(null); // no inherited keys like __proto__ /
 RM_ITEMS.forEach((i) => { RM_ITEM_BY_ID[i.id] = i; });
 const RM_SLOTS = ['weapon', 'charm', 'ring'];
 const RM_BAG_CHANCE = 0.3;
-const RM_XP = { spiral: 7, aimed: 4, ring: 5 };
+const RM_XP = { spiral: 7, aimed: 4, ring: 5, boss: 100 };
 const RM_ABILITIES = [
   { id: 'dash', key: 'q', icon: '💨', name: 'Dash', level: 1, cd: 3 },
   { id: 'nova', key: 'e', icon: '💥', name: 'Nova', level: 3, cd: 8 },
@@ -76,6 +89,9 @@ function rmCleanCount(v) {
 function rmCleanSave(s) {
   s = s && typeof s === 'object' ? s : {};
   const out = { shards: rmCleanCount(s.shards), bestWave: rmCleanCount(s.bestWave), kills: rmCleanCount(s.kills), deaths: rmCleanCount(s.deaths) };
+  const kb = s.kb && typeof s.kb === 'object' ? s.kb : {};
+  out.kb = { spiral: rmCleanCount(kb.spiral), aimed: rmCleanCount(kb.aimed), ring: rmCleanCount(kb.ring), drifter: rmCleanCount(kb.drifter), boss: rmCleanCount(kb.boss) };
+  out.bossBestT = Math.min(rmCleanCount(s.bossBestT), 999999); // fastest boss kill in tenths of a second (0 = none yet)
   out.level = Math.max(1, Math.min(RM_MAX_LEVEL, rmCleanCount(s.level) || 1));
   out.xp = out.level >= RM_MAX_LEVEL ? 0 : Math.min(rmCleanCount(s.xp), rmXpNeeded(out.level) - 1);
   out.items = [];
@@ -137,7 +153,10 @@ class RealmArena {
     const make = (n, f) => Array.from({ length: n }, f);
     this.pBullets = make(RM_POOL.pBullets, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0 }));
     this.eBullets = make(RM_POOL.eBullets, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, kind: 0 }));
-    this.enemies = make(RM_POOL.enemies, () => ({ active: false, type: 'aimed', x: 0, y: 0, hp: 0, maxHp: 0, t: 0, cd: 0, angle: 0, flash: 0, ax: 0, ay: 0, dir: 1 }));
+    this.enemies = make(RM_POOL.enemies, () => ({ active: false, type: 'aimed', x: 0, y: 0, hp: 0, maxHp: 0, t: 0, cd: 0, cd2: 0, angle: 0, flash: 0, ax: 0, ay: 0, dir: 1, phase: 0, invuln: 0 }));
+    this.drifters = make(RM_POOL.drifters, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, t: 0, turn: 0, kind: 'wisp' }));
+    this.hazards = make(RM_POOL.hazards, () => ({ active: false, x: 0, y: 0, kind: 'lava', tick: 0 }));
+    this.biome = 0; this.clock = 0; this.bossT0 = 0; this._speedMul = 1;
     this.particles = make(RM_POOL.particles, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, max: 1, color: '#fff', size: 3 }));
     this.texts = make(RM_POOL.texts, () => ({ active: false, x: 0, y: 0, vy: 0, life: 0, text: '', color: '#fff' }));
     this.bags = make(RM_POOL.bags, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, t: 0, id: '', r: 0 }));
@@ -200,6 +219,40 @@ class RealmArena {
         g.fillRect(x * 16, y * 16, 16, 1);
         g.fillRect(x * 16, y * 16, 1, 16);
       }
+    });
+    this.sprites.floors = RM_BIOMES.map((b, bi) => mk(64, 64, (g) => {
+      const rnd = rmRng(77 + bi * 13);
+      for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) {
+        const v = Math.floor(rnd() * 10);
+        g.fillStyle = `rgb(${b.floor[0] + v},${b.floor[1] + v - 4},${b.floor[2] + v})`;
+        g.fillRect(x * 16, y * 16, 16, 16);
+        g.fillStyle = 'rgba(255,255,255,0.045)';
+        g.fillRect(x * 16, y * 16, 16, 1); g.fillRect(x * 16, y * 16, 1, 16);
+      }
+    }));
+    this.sprites.hazard = { lava: mk(96, 96, (g) => {
+      const gr = g.createRadialGradient(48, 48, 6, 48, 48, 46);
+      gr.addColorStop(0, '#ffe27a'); gr.addColorStop(0.45, '#ff7a2a'); gr.addColorStop(0.85, '#a02a10'); gr.addColorStop(1, 'rgba(120,20,10,0)');
+      g.fillStyle = gr; g.fillRect(0, 0, 96, 96);
+    }), ice: mk(96, 96, (g) => {
+      const gr = g.createRadialGradient(48, 48, 6, 48, 48, 46);
+      gr.addColorStop(0, 'rgba(230,248,255,0.9)'); gr.addColorStop(0.7, 'rgba(150,210,255,0.55)'); gr.addColorStop(1, 'rgba(120,180,255,0)');
+      g.fillStyle = gr; g.fillRect(0, 0, 96, 96);
+      g.strokeStyle = 'rgba(255,255,255,0.7)'; g.lineWidth = 2;
+      [[30, 30, 66, 60], [60, 28, 40, 66], [28, 56, 70, 40]].forEach(([a, b, c, d]) => { g.beginPath(); g.moveTo(a, b); g.lineTo(c, d); g.stroke(); });
+    }) };
+    this.sprites.drifter = { wisp: mk(24, 24, (g) => { const gr = g.createRadialGradient(12, 12, 1, 12, 12, 11); gr.addColorStop(0, '#fff'); gr.addColorStop(0.4, RM_DRIFTER_COLORS.wisp); gr.addColorStop(1, 'rgba(100,120,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 24, 24); g.fillStyle = '#1a1a40'; g.fillRect(8, 10, 2, 3); g.fillRect(14, 10, 2, 3); }),
+      cinder: mk(24, 24, (g) => { const gr = g.createRadialGradient(12, 12, 1, 12, 12, 11); gr.addColorStop(0, '#fff3b0'); gr.addColorStop(0.45, RM_DRIFTER_COLORS.cinder); gr.addColorStop(1, 'rgba(255,80,20,0)'); g.fillStyle = gr; g.fillRect(0, 0, 24, 24); g.fillStyle = '#3a1000'; g.fillRect(8, 10, 2, 3); g.fillRect(14, 10, 2, 3); }),
+      puff: mk(24, 24, (g) => { g.fillStyle = 'rgba(180,220,255,0.35)'; g.beginPath(); g.arc(12, 12, 11, 0, Math.PI * 2); g.fill(); g.fillStyle = RM_DRIFTER_COLORS.puff; g.beginPath(); g.arc(12, 13, 8, 0, Math.PI * 2); g.fill(); g.fillStyle = '#1a2a40'; g.fillRect(8, 11, 2, 3); g.fillRect(14, 11, 2, 3); }) };
+    this.sprites.boss = mk(100, 100, (g) => {
+      const gr = g.createRadialGradient(50, 50, 20, 50, 50, 50); gr.addColorStop(0, 'rgba(255,95,162,0.5)'); gr.addColorStop(1, 'rgba(255,95,162,0)'); g.fillStyle = gr; g.fillRect(0, 0, 100, 100);
+      g.fillStyle = '#1a0f2a'; g.beginPath(); g.arc(50, 52, 36, 0, Math.PI * 2); g.fill();
+      g.beginPath(); g.moveTo(22, 38); g.lineTo(14, 10); g.lineTo(38, 26); g.closePath(); g.fill(); g.beginPath(); g.moveTo(78, 38); g.lineTo(86, 10); g.lineTo(62, 26); g.closePath(); g.fill();
+      g.fillStyle = '#ff5fa2'; g.beginPath(); g.arc(50, 52, 33, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#ff5fa2'; g.beginPath(); g.moveTo(25, 36); g.lineTo(18, 14); g.lineTo(37, 28); g.closePath(); g.fill(); g.beginPath(); g.moveTo(75, 36); g.lineTo(82, 14); g.lineTo(63, 28); g.closePath(); g.fill();
+      g.fillStyle = '#7a1a4a'; g.beginPath(); g.arc(50, 60, 18, 0, Math.PI); g.fill();
+      g.fillStyle = '#fff'; g.fillRect(31, 40, 14, 10); g.fillRect(55, 40, 14, 10); g.fillStyle = '#2a0a1a'; g.fillRect(37, 43, 6, 6); g.fillRect(57, 43, 6, 6);
+      g.fillStyle = '#1a0f2a'; g.fillRect(28, 36, 20, 4); g.fillRect(52, 36, 20, 4);
     });
     this.sprites.pBullet = mk(16, 16, (g) => {
       const gr = g.createRadialGradient(8, 8, 1, 8, 8, 8);
@@ -268,7 +321,8 @@ class RealmArena {
       if (!e.repeat) {
         const ai = RM_ABILITIES.findIndex((a) => a.key === k);
         if (ai >= 0) { this.cast(ai); return; }
-        if (k === 'b' || k === 'i') { this.setPaused(!this.paused); return; }
+        if (k === 'b' || k === 'i') { this._panel(this.panel === 'bp' ? null : 'bp'); return; }
+        if (k === 'k') { this._panel(this.panel === 'board' ? null : 'board'); return; }
       }
       this.keys[k] = true;
     };
@@ -323,13 +377,14 @@ class RealmArena {
   start() {
     this.active = true;
     this._resize();
-    [this.pBullets, this.eBullets, this.enemies, this.particles, this.texts, this.bags].forEach((pool) => pool.forEach((o) => { o.active = false; }));
+    [this.pBullets, this.eBullets, this.enemies, this.particles, this.texts, this.bags, this.drifters, this.hazards].forEach((pool) => pool.forEach((o) => { o.active = false; }));
     this.keys = {}; this.mouse.down = false; this.moveVec.x = 0; this.moveVec.y = 0; this.aimVec.on = false; this.aimVec.x = 0; this.aimVec.y = 0; // no stuck input from the last run
     const p = this.player;
     this._calcStats();
     this.abilityCd = [0, 0, 0, 0]; this.shield.hits = 0; this.shield.t = 0; this.overdriveT = 0; this.paused = false;
     p.x = this.W / 2; p.y = this.H / 2; p.hp = this.stats.maxHp; p.dashT = 0; p.iframes = 1; p.fireCd = 0; p.aim = -Math.PI / 2;
     this.run = { wave: 0, kills: 0, shards: 0 };
+    this.biome = 0; this.clock = 0; this._speedMul = 1; this._syncBoss();
     this.shake = 0; this.flash = 0;
     this.displayShards = this.save.shards;
     this.state = 'banner';
@@ -349,7 +404,7 @@ class RealmArena {
     this.aimVec.on = false; this.moveVec.x = 0; this.moveVec.y = 0;
     if (this._raf) cancelAnimationFrame(this._raf);
     clearTimeout(this._bannerTimer);
-    this.setPaused(false); // never leave the backpack covering a stopped run
+    this._panel(null); // never leave a panel covering a stopped run
     this._hideBanner();
   }
 
@@ -403,22 +458,81 @@ class RealmArena {
 
   _startWave() {
     this.run.wave += 1;
-    const n = Math.min(2 + this.run.wave, 10);
-    const order = ['aimed', 'ring', 'spiral'];
-    for (let i = 0; i < n; i++) {
-      const type = this.run.wave === 1 ? ['aimed', 'aimed', 'ring'][i % 3] : order[(i + Math.floor(this.rng() * 3)) % 3];
-      // Spawn on the arena rim, away from the player.
-      let x; let y; let tries = 0;
-      do {
-        const a = this.rng() * Math.PI * 2;
-        x = this.W / 2 + Math.cos(a) * (this.W / 2 - 40);
-        y = this.H / 2 + Math.sin(a) * (this.H / 2 - 40);
-      } while (Math.hypot(x - this.player.x, y - this.player.y) < 220 && ++tries < 12);
-      this.spawnEnemy(type, x, y);
+    const wave = this.run.wave;
+    const bi = rmBiomeIndex(wave); const biome = RM_BIOMES[bi]; const changed = bi !== this.biome || wave === 1;
+    this.biome = bi;
+    this.drifters.forEach((d) => { d.active = false; });
+    this._layHazards(biome);
+    this._spawnDrifters(biome);
+    if (wave % RM_BOSS_EVERY === 0) {
+      this._spawnBoss();
+    } else {
+      const n = Math.min(2 + wave, 10);
+      const order = biome.mix;
+      for (let i = 0; i < n; i++) {
+        const type = wave === 1 ? ['aimed', 'aimed', 'ring'][i % 3] : order[(i + Math.floor(this.rng() * order.length)) % order.length];
+        let x; let y; let tries = 0; // spawn on the arena rim, away from the player
+        do {
+          const a = this.rng() * Math.PI * 2;
+          x = this.W / 2 + Math.cos(a) * (this.W / 2 - 40);
+          y = this.H / 2 + Math.sin(a) * (this.H / 2 - 40);
+        } while (Math.hypot(x - this.player.x, y - this.player.y) < 220 && ++tries < 12);
+        this.spawnEnemy(type, x, y);
+      }
     }
+    this._syncBoss();
     this.state = 'play';
-    this._showBanner(`Wave ${this.run.wave}`, 1.1);
+    this._showBanner(wave % RM_BOSS_EVERY === 0 ? `Wave ${wave} — ${RM_ENEMIES.boss.name}!` : changed ? `Wave ${wave} — ${biome.name}` : `Wave ${wave}`, 1.4);
     this._syncHud();
+  }
+
+  // Lava (Ember) burns, ice (Frost) slows; Hollow has no hazard. Placed away from the player, not overlapping.
+  _layHazards(biome) {
+    this.hazards.forEach((h) => { h.active = false; });
+    if (!biome.hazard) return;
+    const placed = [];
+    for (let i = 0; i < 3; i++) {
+      for (let tries = 0; tries < 20; tries++) {
+        const x = 90 + this.rng() * (this.W - 180); const y = 90 + this.rng() * (this.H - 180);
+        if (Math.hypot(x - this.player.x, y - this.player.y) < 130) continue;
+        if (placed.some((p) => Math.hypot(p.x - x, p.y - y) < RM_HAZARD_R * 2.2)) continue;
+        const h = this._take(this.hazards); if (!h) break;
+        h.active = true; h.x = x; h.y = y; h.kind = biome.hazard; h.tick = 0; placed.push(h); break;
+      }
+    }
+  }
+
+  // Harmless wandering critters: shoot them for a few shards and a bit of XP. They don't count toward clearing the wave.
+  _spawnDrifters(biome) {
+    const n = 3 + Math.floor(this.rng() * 3);
+    for (let i = 0; i < n; i++) {
+      const d = this._take(this.drifters); if (!d) return;
+      d.active = true; d.kind = biome.drifter; d.x = 60 + this.rng() * (this.W - 120); d.y = 60 + this.rng() * (this.H - 120);
+      d.t = this.rng() * 6; d.turn = 0;
+    }
+  }
+
+  _spawnBoss() {
+    const tier = this.run.wave / RM_BOSS_EVERY;
+    const e = this.spawnEnemy('boss', this.W / 2, 132);
+    if (!e) return null;
+    e.maxHp = RM_BOSS_HP + RM_BOSS_HP_TIER * (tier - 1); e.hp = e.maxHp; e.phase = 1; e.invuln = 1.2; e.cd = 1.2; e.cd2 = 2.4; e.angle = 0;
+    this.bossT0 = this.clock;
+    this._syncBoss();
+    return e;
+  }
+
+  _boss() { for (let i = 0; i < this.enemies.length; i++) if (this.enemies[i].active && this.enemies[i].type === 'boss') return this.enemies[i]; return null; }
+
+  _syncBoss() {
+    const el = document.getElementById('realm-boss');
+    if (!el) return;
+    const b = this._boss();
+    el.classList.toggle('hidden', !b);
+    if (!b) return;
+    const f = document.getElementById('realm-boss-fill'); if (f) f.style.width = `${Math.max(0, b.hp) / b.maxHp * 100}%`;
+    const n = document.getElementById('realm-boss-name'); if (n) n.textContent = `${RM_ENEMIES.boss.name} · phase ${b.phase}`;
+    el.dataset.phase = String(b.phase);
   }
 
   fireEnemyBullet(x, y, angle, speed, kind) {
@@ -486,6 +600,8 @@ class RealmArena {
       return;
     }
 
+    this.clock += dt;
+    this._updateHazards(dt);
     this._updatePlayer(dt);
     if (this.state === 'banner') {
       this.nextWaveIn -= dt;
@@ -493,6 +609,7 @@ class RealmArena {
     }
     this._updateAbilities(dt);
     this._updateEnemies(dt);
+    this._updateDrifters(dt);
     this._updateBullets(dt);
     this._updateBags(dt);
     if (this.state === 'play' && this.run.wave > 0 && this.enemiesAlive() === 0) this._waveCleared();
@@ -509,8 +626,8 @@ class RealmArena {
     const len = Math.hypot(mx, my);
     p.moving = len > 0.05;
     if (len > 1) { mx /= len; my /= len; }
-    p.x = Math.max(RM_PLAYER.r, Math.min(this.W - RM_PLAYER.r, p.x + mx * this.stats.speed * dt));
-    p.y = Math.max(RM_PLAYER.r, Math.min(this.H - RM_PLAYER.r, p.y + my * this.stats.speed * dt));
+    p.x = Math.max(RM_PLAYER.r, Math.min(this.W - RM_PLAYER.r, p.x + mx * this.stats.speed * this._speedMul * dt));
+    p.y = Math.max(RM_PLAYER.r, Math.min(this.H - RM_PLAYER.r, p.y + my * this.stats.speed * this._speedMul * dt));
     this._mx = mx; this._my = my;
     if (mx) p.facing = mx > 0 ? 1 : -1;
     p.bob = p.moving ? p.bob + dt * 14 : 0;
@@ -528,12 +645,96 @@ class RealmArena {
     }
   }
 
+  _updateHazards(dt) {
+    const p = this.player; let slow = 1;
+    for (let i = 0; i < this.hazards.length; i++) {
+      const h = this.hazards[i];
+      if (!h.active) continue;
+      const inside = Math.hypot(p.x - h.x, p.y - h.y) < RM_HAZARD_R - 4;
+      if (h.kind === 'ice' && inside) slow = RM_ICE_SLOW;
+      if (h.kind === 'lava') {
+        if (inside && this.state !== 'dead') { h.tick += dt; if (h.tick >= RM_LAVA_TICK && p.iframes <= 0) { h.tick = 0; this._floatText(p.x, p.y - 30, '🔥', '#ffa04a'); this._hitPlayer(RM_LAVA_DAMAGE); } } else h.tick = Math.min(h.tick, RM_LAVA_TICK * 0.6);
+      }
+    }
+    this._speedMul = slow;
+  }
+
+  _updateDrifters(dt) {
+    for (let i = 0; i < this.drifters.length; i++) {
+      const d = this.drifters[i];
+      if (!d.active) continue;
+      d.t += dt; d.turn -= dt;
+      if (d.turn <= 0) { d.turn = 1.2 + this.rng() * 1.8; const a = this.rng() * Math.PI * 2; d.vx = Math.cos(a) * 46; d.vy = Math.sin(a) * 46; }
+      d.x += d.vx * dt; d.y += d.vy * dt;
+      if (d.x < 20 || d.x > this.W - 20) { d.vx = -d.vx; d.x = Math.max(20, Math.min(this.W - 20, d.x)); }
+      if (d.y < 20 || d.y > this.H - 20) { d.vy = -d.vy; d.y = Math.max(20, Math.min(this.H - 20, d.y)); }
+    }
+  }
+
+  _hitDrifter(d, dmg) {
+    d.active = false;
+    const gain = Math.max(1, Math.round(this.stats.shards));
+    this.run.shards += gain; this.save.shards += gain; this.save.kb.drifter += 1;
+    this._burst(d.x, d.y, RM_DRIFTER_COLORS[d.kind], 8, 160);
+    this._floatText(d.x, d.y - 14, `+${gain} 💎`, '#8fe9ff');
+    this._gainXp(Math.max(1, Math.round(2 * this.stats.xp)));
+    this.onSave(this.save);
+  }
+
+  _updateBoss(e, dt) {
+    e.invuln = Math.max(0, e.invuln - dt);
+    const fast = e.phase === 3 ? 1.35 : 1;
+    e.x = this.W / 2 + Math.sin(e.t * 0.6 * fast) * (this.W * 0.3);
+    e.y = 132 + Math.sin(e.t * 0.9 * fast) * 22; // below the HUD, even on a phone
+    if (e.invuln > 0) return; // a phase change makes it pause, shielded
+    e.cd -= dt; e.cd2 -= dt;
+    const p = this.player;
+    if (e.phase === 1) { // three-armed spiral + aimed fans
+      if (e.cd <= 0) { e.cd = 0.14; e.angle += 0.28; for (let k = 0; k < 3; k++) this.fireEnemyBullet(e.x, e.y, e.angle + k * Math.PI * 2 / 3, 140, 1); }
+      if (e.cd2 <= 0) { e.cd2 = 2.4; const a = Math.atan2(p.y - e.y, p.x - e.x); for (let k = -2; k <= 2; k++) this.fireEnemyBullet(e.x, e.y, a + k * 0.18, 230, 0); }
+    } else if (e.phase === 2) { // rings of 20, aimed fans between them
+      if (e.cd <= 0) { e.cd = 1.9; const ph = this.rng() * Math.PI * 2; for (let k = 0; k < 20; k++) this.fireEnemyBullet(e.x, e.y, ph + (k / 20) * Math.PI * 2, 135, 2); }
+      if (e.cd2 <= 0) { e.cd2 = 1.9; e.angle = 0; const a = Math.atan2(p.y - e.y, p.x - e.x); for (let k = -1; k <= 1; k++) this.fireEnemyBullet(e.x, e.y, a + k * 0.2, 225, 0); e.cd2 = 1.9; e.cd = Math.max(e.cd, 0.9); }
+    } else { // enraged: a double spiral and rings
+      if (e.cd <= 0) { e.cd = 0.1; e.angle += 0.4; this.fireEnemyBullet(e.x, e.y, e.angle, 150, 1); this.fireEnemyBullet(e.x, e.y, e.angle + Math.PI, 150, 1); }
+      if (e.cd2 <= 0) { e.cd2 = 2.2; const ph = this.rng() * Math.PI * 2; for (let k = 0; k < 16; k++) this.fireEnemyBullet(e.x, e.y, ph + (k / 16) * Math.PI * 2, 150, 2); }
+    }
+  }
+
+  _bossPhase(e, phase) {
+    e.phase = phase; e.invuln = 1.0; e.cd = 1.1; e.cd2 = 2.0;
+    this.eBullets.forEach((b) => { if (b.active) { b.active = false; this._burst(b.x, b.y, '#ff5fa2', 1, 60); } });
+    this.shake = 12; this._burst(e.x, e.y, '#ff5fa2', 30, 280);
+    this._showBanner(phase === 2 ? 'Gloomheart — it summons help!' : 'Gloomheart — ENRAGED!', 1.6);
+    if (phase === 2) { for (let k = 0; k < 2; k++) { const a = this.spawnEnemy('aimed', k ? this.W - 60 : 60, 140); if (a) a.cd = 1.5; } }
+  }
+
+  _bossDefeated(e) {
+    const tier = this.run.wave / RM_BOSS_EVERY;
+    const gain = Math.max(1, Math.round((40 + 10 * tier) * this.stats.shards));
+    this.run.shards += gain; this.save.shards += gain; this.run.kills += 1; this.save.kills += 1; this.save.kb.boss += 1;
+    const tenths = Math.max(1, Math.round((this.clock - this.bossT0) * 10));
+    const newBest = !this.save.bossBestT || tenths < this.save.bossBestT;
+    if (newBest) this.save.bossBestT = tenths;
+    this.eBullets.forEach((b) => { if (b.active) { b.active = false; this._burst(b.x, b.y, '#ffe27a', 1, 60); } });
+    this._burst(e.x, e.y, '#ff5fa2', 40, 340); this._burst(e.x, e.y, '#ffe27a', 30, 260);
+    this.shake = 14;
+    this._floatText(e.x, e.y - 30, `+${gain} 💎`, '#8fe9ff');
+    this._gainXp(Math.round(RM_XP.boss * tier * this.stats.xp));
+    this.dropBag(e.x - 20, e.y + 20, 2); this.dropBag(e.x + 20, e.y + 20, this.rollRarity()); // a guaranteed rare, plus one more
+    this._showBanner(`Gloomheart defeated!  +${gain} 💎${newBest ? '  New best time!' : ''}`, 2.4);
+    this.onSave(this.save);
+    this._syncBoss();
+  }
+
   _updateEnemies(dt) {
     const p = this.player;
     for (let i = 0; i < this.enemies.length; i++) {
       const e = this.enemies[i];
       if (!e.active) continue;
-      e.t += dt; e.flash = Math.max(0, e.flash - dt * 6); e.cd -= dt;
+      e.t += dt; e.flash = Math.max(0, e.flash - dt * 6);
+      if (e.type === 'boss') { this._updateBoss(e, dt); continue; }
+      e.cd -= dt;
       const dx = p.x - e.x; const dy = p.y - e.y; const dist = Math.hypot(dx, dy) || 1;
       if (e.type === 'spiral') {
         // Drifts toward its anchor and keeps spinning out a steady spiral.
@@ -583,6 +784,11 @@ class RealmArena {
           break;
         }
       }
+      if (!b.active) continue;
+      for (let j = 0; j < this.drifters.length; j++) {
+        const d = this.drifters[j];
+        if (d.active && (b.x - d.x) * (b.x - d.x) + (b.y - d.y) * (b.y - d.y) < 15 * 15) { b.active = false; this._hitDrifter(d, this.stats.dmg); break; }
+      }
     }
     // Enemy bullets: move, hit the player.
     const pr = RM_PLAYER.r + 4;
@@ -599,7 +805,17 @@ class RealmArena {
   }
 
   _hitEnemy(e, dmg) {
+    if (e.type === 'boss' && e.invuln > 0) { this._floatText(e.x, e.y - 40, 'shielded', '#c9d1d9'); this._burst(e.x, e.y, '#fff', 1, 60); return; }
     e.hp -= dmg; e.flash = 1;
+    if (e.type === 'boss') {
+      this._syncBoss();
+      if (e.hp > 0) {
+        const f = e.hp / e.maxHp; const want = f > 0.66 ? 1 : f > 0.33 ? 2 : 3;
+        if (want > e.phase) { this._bossPhase(e, want); this._syncBoss(); }
+        return;
+      }
+      e.active = false; this._bossDefeated(e); return;
+    }
     this._floatText(e.x + (this.rng() - 0.5) * 14, e.y - 14, String(Math.round(dmg * 10) / 10), '#fff');
     this._burst(e.x, e.y, RM_ENEMIES[e.type].color, 3, 110);
     if (e.hp > 0) return;
@@ -607,7 +823,7 @@ class RealmArena {
     const def = RM_ENEMIES[e.type];
     const gain = Math.max(1, Math.round(def.shards * this.stats.shards));
     this.run.kills += 1; this.run.shards += gain;
-    this.save.kills += 1; this.save.shards += gain;
+    this.save.kills += 1; this.save.shards += gain; this.save.kb[e.type] += 1;
     this._burst(e.x, e.y, def.color, 16, 230);
     this._floatText(e.x, e.y - 22, `+${gain} 💎`, '#8fe9ff');
     this._gainXp(Math.round(RM_XP[e.type] * (1 + 0.1 * Math.max(0, this.run.wave - 1)) * this.stats.xp));
@@ -772,11 +988,30 @@ class RealmArena {
 
   // ---------- backpack UI ----------
 
-  setPaused(on) {
-    this.paused = !!on;
-    const el = document.getElementById('realm-backpack');
-    if (el) el.classList.toggle('hidden', !on);
-    if (on) { this.keys = {}; this.mouse.down = false; this.renderBackpack(); }
+  // One panel at a time (backpack or kill board); either one pauses the fight.
+  _panel(name) {
+    this.panel = name;
+    this.paused = !!name;
+    const bp = document.getElementById('realm-backpack'); if (bp) bp.classList.toggle('hidden', name !== 'bp');
+    const bd = document.getElementById('realm-board'); if (bd) bd.classList.toggle('hidden', name !== 'board');
+    if (name) { this.keys = {}; this.mouse.down = false; this.aimVec.on = false; if (name === 'bp') this.renderBackpack(); else this.renderBoard(); }
+  }
+
+  setPaused(on) { this._panel(on ? 'bp' : null); } // false closes whichever panel is open
+
+  setBoard(on) { this._panel(on ? 'board' : null); }
+
+  renderBoard() {
+    const root = document.getElementById('realm-board-body');
+    if (!root) return;
+    const sv = this.save; const kb = sv.kb;
+    const t = sv.bossBestT ? `${(sv.bossBestT / 10).toFixed(1)} s` : '—';
+    const rows = [
+      ['🏆', 'Best wave', sv.bestWave], ['⭐', 'Level', sv.level], ['💎', 'Shards banked', sv.shards], ['☠️', 'Falls', sv.deaths],
+      ['🟣', 'Whirlers', kb.spiral], ['🔺', 'Snipers', kb.aimed], ['🟠', 'Bursters', kb.ring], ['✨', 'Wanderers', kb.drifter],
+      ['👹', 'Gloomheart defeated', kb.boss], ['⏱️', 'Fastest Gloomheart', t],
+    ];
+    root.innerHTML = rows.map(([i, l, v]) => `<div class="realm-board-row"><span>${i} ${l}</span><b>${v}</b></div>`).join('');
   }
 
   equip(uid) {
@@ -851,18 +1086,22 @@ class RealmArena {
     const sy = this.shake > 0 ? (this.rng() - 0.5) * this.shake : 0;
     g.save();
     g.translate(sx, sy);
-    if (!this._floorPattern) this._floorPattern = g.createPattern(this.sprites.floor, 'repeat');
-    g.fillStyle = this._floorPattern; g.fillRect(-10, -10, this.W + 20, this.H + 20);
-    g.strokeStyle = 'rgba(179,107,255,0.55)'; g.lineWidth = 4; g.strokeRect(2, 2, this.W - 4, this.H - 4);
+    this._floorPatterns = this._floorPatterns || [];
+    if (!this._floorPatterns[this.biome]) this._floorPatterns[this.biome] = g.createPattern(this.sprites.floors[this.biome], 'repeat');
+    g.fillStyle = this._floorPatterns[this.biome]; g.fillRect(-10, -10, this.W + 20, this.H + 20);
+    g.strokeStyle = RM_BIOMES[this.biome].border; g.lineWidth = 4; g.strokeRect(2, 2, this.W - 4, this.H - 4);
+    for (let i = 0; i < this.hazards.length; i++) { const h = this.hazards[i]; if (h.active) { g.globalAlpha = h.kind === 'lava' ? 0.85 + Math.sin(this.clock * 4 + i) * 0.1 : 0.9; g.drawImage(this.sprites.hazard[h.kind], h.x - 48, h.y - 48); g.globalAlpha = 1; } }
+    for (let i = 0; i < this.drifters.length; i++) { const d = this.drifters[i]; if (d.active) g.drawImage(this.sprites.drifter[d.kind], d.x - 12, d.y - 12 + Math.sin(d.t * 3) * 3); }
 
     for (let i = 0; i < this.enemies.length; i++) {
       const e = this.enemies[i];
       if (!e.active) continue;
       const spr = this.sprites[e.type];
-      const bob = Math.sin(e.t * 4) * 2;
+      const bob = e.type === 'boss' ? 0 : Math.sin(e.t * 4) * 2;
       g.drawImage(spr, e.x - spr.width / 2, e.y - spr.height / 2 + bob);
       if (e.flash > 0) { g.globalAlpha = e.flash * 0.7; g.fillStyle = '#fff'; g.beginPath(); g.arc(e.x, e.y + bob, RM_ENEMIES[e.type].r, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1; }
-      if (e.hp < e.maxHp) { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(e.x - 14, e.y - spr.height / 2 - 6, 28, 4); g.fillStyle = RM_ENEMIES[e.type].color; g.fillRect(e.x - 14, e.y - spr.height / 2 - 6, 28 * (e.hp / e.maxHp), 4); }
+      if (e.type === 'boss' && e.invuln > 0) { g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 3; g.beginPath(); g.arc(e.x, e.y, 40 + Math.sin(e.t * 20) * 2, 0, Math.PI * 2); g.stroke(); }
+      if (e.hp < e.maxHp && e.type !== 'boss') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(e.x - 14, e.y - spr.height / 2 - 6, 28, 4); g.fillStyle = RM_ENEMIES[e.type].color; g.fillRect(e.x - 14, e.y - spr.height / 2 - 6, 28 * (e.hp / e.maxHp), 4); }
     }
     for (let i = 0; i < this.bags.length; i++) { const b = this.bags[i]; if (b.active) g.drawImage(this.sprites.bag[b.r], b.x - 13, b.y - 13 + Math.sin(b.t * 5) * 2); }
     for (let i = 0; i < this.eBullets.length; i++) { const b = this.eBullets[i]; if (b.active) g.drawImage(this.sprites.eBullet[b.kind], b.x - 8, b.y - 8); }
@@ -919,6 +1158,8 @@ class RealmArena {
     if (wave) wave.textContent = this.run.wave > 0 ? `Wave ${this.run.wave}` : 'Get ready';
     const shards = document.getElementById('realm-shards');
     if (shards) shards.textContent = `💎 ${Math.floor(this.displayShards)}`;
+    const bio = document.getElementById('realm-biome');
+    if (bio) bio.textContent = this.run.wave > 0 ? RM_BIOMES[this.biome].name : '';
     const lv = document.getElementById('realm-level');
     if (lv) lv.textContent = `Lv ${this.save.level}`;
     const xpf = document.getElementById('realm-xp-fill');
