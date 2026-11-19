@@ -1,0 +1,115 @@
+{
+  "name": "Awesome 24px game art (generated)",
+  "license": "generated, owned by project",
+  "frame_size": 256,
+  "assets": [
+    {
+      "id": "puffcap_walk",
+      "category": "enemy",
+      "name": "puffcap",
+      "action": "walk",
+      "frame_w": 256,
+      "frame_h": 256,
+      "frames": 4,
+      "fps": 8,
+      "loop": true,
+      "path": "sheets/puffcap_walk.png"
+    },
+    {
+      "id": "puffcap_attack",
+      "category": "enemy",
+      "name": "puffcap",
+      "action": "attack",
+      "frame_w": 256,
+      "frame_h": 256,
+      "frames": 3,
+      "fps": 10,
+      "loop": false,
+      "path": "sheets/puffcap_attack.png"
+    },
+    {
+      "id": "puffcap_hurt",
+      "category": "enemy",
+      "name": "puffcap",
+      "action": "hurt",
+      "frame_w": 256,
+      "frame_h": 256,
+      "frames": 1,
+      "fps": 6,
+      "loop": false,
+      "path": "sheets/puffcap_hurt.png"
+    },
+    {
+      "id": "thorn_beetle_walk",
+      "category": "enemy",
+      "name": "thorn_beetle",
+      "action": "walk",
+      "frame_w": 256,
+      "frame_h": 256,
+      "frames": 4,
+      "fps": 8,
+      "loop": true,
+      "path": "sheets/thorn_beetle_walk.png"
+    },
+    {
+      "id": "thorn_beetle_attack",
+      "category": "enemy",
+      "name": "thorn_beetle",
+      "action": "attack",
+      "frame_w": 256,
+      "frame_h": 256,
+      "frames": 3,
+      "fps": 10,
+      "loop": false,
+      "path": "sheets/thorn_beetle_attack.png"
+    },
+    {
+      "id": "thorn_beetle_hurt",
+      "category": "enemy",
+      "name": "thorn_beetle",
+      "action": "hurt",
+      "frame_w": 256,
+      "frame_h": 256,
+      "frames": 1,
+      "fps": 6,
+      "loop": false,
+      "path": "sheets/thorn_beetle_hurt.png"
+    },
+    {
+      "id": "dusk_moth_fly",
+      "category": "enemy",
+      "name": "dusk_moth",
+      "action": "fly",
+      "frame_w": 256,
+      "frame_h": 256,
+      "frames": 4,
+      "fps": 8,
+      "loop": true,
+      "path": "sheets/dusk_moth_fly.png"
+    },
+    {
+      "id": "dusk_moth_attack",
+      "category": "enemy",
+      "name": "dusk_moth",
+      "action": "attack",
+      "frame_w": 256,
+      "frame_h": 256,
+      "frames": 3,
+      "fps": 10,
+      "loop": false,
+      "path": "sheets/dusk_moth_attack.png"
+    },
+    {
+      "id": "dusk_moth_hurt",
+      "category": "enemy",
+      "name": "dusk_moth",
+      "action": "hurt",
+      "frame_w": 256,
+      "frame_h": 256,
+      "frames": 1,
+      "fps": 6,
+      "loop": false,
+      "path": "sheets/dusk_moth_hurt.png"
+    }
+  ]
+}

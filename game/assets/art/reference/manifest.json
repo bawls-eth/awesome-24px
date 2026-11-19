@@ -1,0 +1,33 @@
+{
+  "name": "Arcane Warrior - Walk and Attack Down Review",
+  "license": "original, owned by me",
+  "frame_size": 256,
+  "assets": [
+    {
+      "id": "warrior_walk_down",
+      "category": "character",
+      "class": "warrior",
+      "action": "walk",
+      "dir": "down",
+      "path": "characters/warrior/warrior_walk_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true
+    },
+    {
+      "id": "warrior_attack_down",
+      "category": "character",
+      "class": "warrior",
+      "action": "attack",
+      "dir": "down",
+      "path": "characters/warrior/warrior_attack_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+# Art generation ledger (cap 35000, stop at 30000)
+Model gpt-image-2.5-sunburst, flow QAnBntswP96gGgWtY0yV. Reference upload tools (creative_create_asset_upload / finalize) were not available in this session, so the style was described in words in every prompt. Output is 1280x720 (16:9).
+
+| id | model | credits | flow_id | note |
+|---|---|---|---|---|
+| puffcap | gpt-image-2.5-sunburst | 190 | QAnBntswP96gGgWtY0yV | ok |
+| thorn_beetle | gpt-image-2.5-sunburst | 190 | QAnBntswP96gGgWtY0yV | ok |
+| dusk_moth | gpt-image-2.5-sunburst | 190 | QAnBntswP96gGgWtY0yV | ok |
+| bramble_archer | - | 0 | - | refused: 429 free_tier_image_limit_reached (daily free-plan image limit); nothing charged |
+
+TOTAL: 570
