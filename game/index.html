@@ -169,6 +169,7 @@
   <button id="build-material-btn" type="button" class="hidden">🪵 Wall</button>
   <button id="build-undo-btn" type="button" class="hidden" title="Undo your last placed block (Z)">↩️ Undo</button>
 
+  <div id="realm-gate-hint" class="hidden">🌀 <span class="key-hint">Press E</span><span class="tap-hint">Tap A</span> to enter the Realm</div>
   <div id="dig-hole-hint" class="hidden">⛏️ <span class="key-hint">Press E</span><span class="tap-hint">Tap A</span> to jump down the hole</div>
   <button id="fish-hint-btn" class="hidden" type="button">🎣 Fish</button>
   <button id="gift-hint-btn" class="hidden" type="button">🎁 Gift</button>
@@ -383,10 +384,64 @@
   </div>
 </div>
 
+<div id="realm-menu" class="hidden" role="dialog" aria-label="Realm gate">
+  <div class="realm-menu-card">
+    <div class="realm-bp-head"><strong>🌀 The Realm</strong><button id="realm-menu-close-btn" type="button" aria-label="Close">✕</button></div>
+    <button id="realm-menu-solo" type="button">⚔️ Go in alone</button>
+    <p class="realm-menu-sub">🤝 Fight together (2-player co-op) — invite someone in town:</p>
+    <ul id="realm-menu-players"></ul>
+    <p id="realm-menu-status" aria-live="polite"></p>
+    <p class="realm-menu-sub dim">⚔️ Duel: a best-of-3 1v1 with identical stats. 2v2 is coming soon.</p>
+  </div>
+</div>
+<div id="realm-invite" class="hidden" role="alertdialog" aria-label="Realm invitation">
+  <span id="realm-invite-text"></span>
+  <button id="realm-invite-accept" type="button">Join</button>
+  <button id="realm-invite-decline" type="button">No thanks</button>
+</div>
+
+<div id="realm-overlay" class="hidden">
+  <div id="realm-canvas-wrap"></div>
+  <div id="realm-hud">
+    <div id="realm-hp"><div id="realm-hp-fill"></div><span id="realm-hp-text"></span></div>
+    <div id="realm-info"><span id="realm-level">Lv 1</span><span id="realm-wave"></span><span id="realm-biome"></span><span id="realm-shards"></span><span id="realm-best"></span></div>
+    <button id="realm-bp-btn" type="button" aria-label="Open backpack (B)">🎒</button>
+    <button id="realm-board-btn" type="button" aria-label="Open kill board (K)">📊</button>
+    <button id="realm-leave-btn" type="button" aria-label="Leave the Realm">✖ Leave</button>
+  </div>
+  <div id="realm-partner" class="hidden"><span id="realm-partner-name">Partner</span><div class="bar"><div id="realm-partner-fill"></div></div></div>
+  <div id="realm-boss" class="hidden" data-phase="1"><span id="realm-boss-name">Gloomheart</span><div class="bar"><div id="realm-boss-fill"></div></div></div>
+  <div id="realm-xp"><div id="realm-xp-fill"></div><span id="realm-xp-text"></span></div>
+  <div id="realm-abilities">
+    <button id="realm-ab-0" class="realm-ab" type="button"><span class="ico">💨</span><span class="key">Q</span><span class="cd"></span></button>
+    <button id="realm-ab-1" class="realm-ab" type="button"><span class="ico">💥</span><span class="key">E</span><span class="cd"></span></button>
+    <button id="realm-ab-2" class="realm-ab" type="button"><span class="ico">🛡️</span><span class="key">R</span><span class="cd"></span></button>
+    <button id="realm-ab-3" class="realm-ab" type="button"><span class="ico">🔥</span><span class="key">F</span><span class="cd"></span></button>
+  </div>
+  <div id="realm-board" class="hidden" role="dialog" aria-label="Kill board">
+    <div class="realm-bp-card">
+      <div class="realm-bp-head"><strong>📊 Kill board</strong><button id="realm-board-close" type="button" aria-label="Close kill board">✖</button></div>
+      <div id="realm-board-body"></div>
+    </div>
+  </div>
+  <div id="realm-backpack" class="hidden" role="dialog" aria-label="Backpack">
+    <div class="realm-bp-card">
+      <div class="realm-bp-head"><strong>🎒 Backpack</strong><button id="realm-bp-close" type="button" aria-label="Close backpack">✖</button></div>
+      <div id="realm-backpack-body"></div>
+    </div>
+  </div>
+  <div id="realm-banner" class="hidden"></div>
+  <div id="realm-help"><span class="key-hint">WASD move · mouse aims, hold to fire · Q E R F abilities · B backpack · K board · Esc leaves</span></div>
+  <div id="realm-stick-move" class="realm-stick" aria-label="Move stick"><div class="knob"></div></div>
+  <div id="realm-stick-aim" class="realm-stick" aria-label="Aim and fire stick"><div class="knob"></div></div>
+</div>
+
 <div id="underground-overlay" class="hidden">
   <div id="underground-canvas-wrap"></div>
-  <div id="underground-depth-hint">⛰️ Underground · local only<span class="kbd-hint"> · F5 view · Space jump (2x = fly) · hold E to mine</span></div>
+  <div id="underground-depth-hint">⛰️ Underground · local only<span class="kbd-hint"> · F5 view · Space jump (2x = fly) · hold E to mine · C: crafting table</span></div>
   <div id="ug-health" aria-label="Health">❤️ 20/20</div>
+  <div id="ug-clock" aria-label="Time of day">☀️ Day</div>
+  <div id="ug-pick" aria-label="Pickaxe">⛏️ Wooden</div>
   <div id="underground-exit-hint" class="hidden">⬆️ You're near the surface shaft</div>
   <div id="ug-hotbar" role="toolbar" aria-label="Hotbar (keys 1-9, mouse wheel)">
     <button id="ug-hotbar-wall" class="ug-slot active" data-slot="0" type="button" aria-label="Slot 1: Stone wall"><span class="key">1</span><span class="ico">🧱</span><span class="cnt"></span></button>
@@ -395,7 +450,7 @@
     <button class="ug-slot" data-slot="3" type="button" aria-label="Slot 4: Coal"><span class="key">4</span><span class="ico">⚫</span><span class="cnt"></span></button>
     <button class="ug-slot" data-slot="4" type="button" aria-label="Slot 5: Iron ore"><span class="key">5</span><span class="ico">🔩</span><span class="cnt"></span></button>
     <button class="ug-slot" data-slot="5" type="button" aria-label="Slot 6: Gold ore"><span class="key">6</span><span class="ico">🟡</span><span class="cnt"></span></button>
-    <button class="ug-slot" data-slot="6" type="button" aria-label="Slot 7: Empty"><span class="key">7</span><span class="ico"></span><span class="cnt"></span></button>
+    <button class="ug-slot" data-slot="6" type="button" aria-label="Slot 7: Crafting table (4 wood)"><span class="key">7</span><span class="ico">🛠️</span><span class="cnt"></span></button>
     <button class="ug-slot" data-slot="7" type="button" aria-label="Slot 8: Empty"><span class="key">8</span><span class="ico"></span><span class="cnt"></span></button>
     <button class="ug-slot" data-slot="8" type="button" aria-label="Slot 9: Empty"><span class="key">9</span><span class="ico"></span><span class="cnt"></span></button>
   </div>
@@ -412,6 +467,7 @@
       <button id="ug-up-btn" type="button" aria-label="Jump (double-tap to fly)">⤴️</button>
       <button id="ug-down-btn" type="button" aria-label="Fly down">⤵️</button>
       <button id="ug-fly-btn" type="button" aria-label="Toggle creative flight">🕊️ Fly</button>
+      <button id="ug-craft-btn" type="button" aria-label="Use the crafting table you are aiming at (C)">🛠️</button>
       <button id="ug-view-btn" type="button" aria-label="Switch first / third person view (F5)">👁️ 1st</button>
       <button id="ug-exit-btn" type="button" aria-label="Exit">⬆️ Exit anytime</button>
     </div>
@@ -425,6 +481,8 @@
 <script src="firebase-config.js"></script>
 <script src="net.js"></script>
 <script src="underground.js"></script>
+<script src="realm-team.js"></script>
+<script src="realm.js"></script>
 <script src="main.js"></script>
 </body>
 </html>

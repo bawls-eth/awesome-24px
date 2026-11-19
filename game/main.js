@@ -674,6 +674,10 @@ const FOSSIL_RESPAWN_MS = 25000;
 const FOSSIL_BAG_CAP = 3;
 const DIG_HOLE_POS = { x: 1200, y: 460 };
 const DIG_HOLE_RADIUS = 36;
+
+// The Realm Gate: a swirling portal in the quiet north-west of the village leading to the bullet-hell Realm.
+const REALM_GATE_POS = { x: 750, y: 260 };
+const REALM_GATE_RADIUS = 70;
 const DOOR_RADIUS = 34;
 const TURNIP_STALL_POS = { x: 1760, y: 760 };
 const TURNIP_STALL_RADIUS = 50;
@@ -978,8 +982,17 @@ const RECIPES = [
   { id: 'jacko', icon: '🎃', label: "Jack-o'-Lantern", cost: { fruit: 4, bugs: 2 }, value: 9, season: 'autumn' },
   { id: 'snowman', icon: '⛄', label: 'Snowman', cost: { stone: 4, wood: 2 }, value: 9, season: 'winter' },
 ];
+// Pickaxe upgrades (cave A5): crafted at the village Workbench or at a crafting table placed in the cave.
+// Ores come from the cave inventory (iron / gold), the rest from the shared resource bag.
+const PICK_RECIPES = [
+  { tier: 1, icon: '⛏️', label: 'Stone Pickaxe', cost: { stone: 6, wood: 2 }, note: 'mines 30% faster · 150 blocks' },
+  { tier: 2, icon: '⛏️', label: 'Iron Pickaxe', cost: { iron: 4, wood: 2 }, note: 'mines 2x faster · 300 blocks' },
+  { tier: 3, icon: '⛏️', label: 'Gold Pickaxe', cost: { gold: 3, iron: 3 }, note: 'mines 3x faster · 120 blocks' },
+];
+const PICK_NAMES = ['Wooden', 'Stone', 'Iron', 'Gold'];
+const PICK_DUR = [0, 150, 300, 120];
 const SEASON_ICONS = { spring: '🌷', summer: '☀️', autumn: '🍂', winter: '❄️' };
-const RES_ICONS = { wood: '🪵', stone: '🪨', fish: '🐟', bugs: '🦋', fruit: '🍎', shells: '🐚', flowers: '🌸' };
+const RES_ICONS = { wood: '🪵', stone: '🪨', fish: '🐟', bugs: '🦋', fruit: '🍎', shells: '🐚', flowers: '🌸', iron: '🔩', gold: '🟡', coal: '⚫' };
 const GUESTBOOK_NOTE_MAX = 80;
 const GUESTBOOK_COOLDOWN_MS = 60 * 1000; // one signing per minute, per client
 const KK_CONCERT_START_HOUR = 19; // 7pm local time
@@ -1344,6 +1357,7 @@ class TownScene extends Phaser.Scene {
     this.drawNPC2();
     this.drawMerchant();
     this.drawDigHole();
+    this.drawRealmGate();
     this.drawArcadeSign();
     this.drawDoors();
     this.drawPolyrollBooth();
@@ -1447,6 +1461,8 @@ class TownScene extends Phaser.Scene {
     this.renderPlayerList();
 
     // Handlers are wired up — safe to start receiving live updates now.
+    this.setupRealmMenu();
+    this.setupRealmInvites();
     this.net.startListening();
   }
 
@@ -1466,6 +1482,7 @@ class TownScene extends Phaser.Scene {
     if (this.mailboxOpen && !this.isNearMailbox(MAILBOX_RADIUS + 90)) this.closeMailbox();
     if (this.homeOpen && !this.isNearHome(HOME_RADIUS + 90)) this.closeHome();
     this.updateDigHoleHint();
+    this.updateRealmGateHint();
     this.updateFishHint();
     this.updateGiftHint();
     this.updateFloraFaunaHint();
@@ -2109,7 +2126,7 @@ class TownScene extends Phaser.Scene {
       ['achievementsOpen', 'achievements-close-btn'], ['outfitShopOpen', 'outfit-close-btn'],
       ['guestbookOpen', 'guestbook-close-btn'], ['triviaOpen', 'trivia-close-btn'],
       ['keysHelpOpen', 'keys-help-close-btn'], ['changelogOpen', 'changelog-close-btn'],
-      ['museumOpen', 'museum-close-btn'], ['workbenchOpen', 'workbench-close-btn'], ['mailboxOpen', 'mailbox-close-btn'], ['homeOpen', 'home-close-btn'], ['dailiesOpen', 'dailies-close-btn'], ['journalOpen', 'journal-close-btn'],
+      ['museumOpen', 'museum-close-btn'], ['workbenchOpen', 'workbench-close-btn'], ['mailboxOpen', 'mailbox-close-btn'], ['homeOpen', 'home-close-btn'], ['dailiesOpen', 'dailies-close-btn'], ['journalOpen', 'journal-close-btn'], ['realmMenuOpen', 'realm-menu-close-btn'],
     ];
     const open = overlays.find(([flag]) => this[flag]);
     if (open) {
@@ -2227,7 +2244,7 @@ class TownScene extends Phaser.Scene {
   // so chat/overlay state is respected no matter which input triggered it
   // (keyboard, on-screen button, or shake).
   canAct() {
-    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen && !this.mapOpen && !this.museumOpen && !this.workbenchOpen && !this.mailboxOpen && !this.homeOpen && !this.dailiesOpen && !this.journalOpen;
+    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen && !this.mapOpen && !this.museumOpen && !this.workbenchOpen && !this.mailboxOpen && !this.homeOpen && !this.dailiesOpen && !this.journalOpen && !this.realmMenuOpen;
   }
 
   // Shake is just a fun alternate trigger for the same interact() logic used
@@ -2276,11 +2293,18 @@ class TownScene extends Phaser.Scene {
     // Cave materials (additive save key): dirt / coal / iron / gold collected underground.
     this.caveInv = {};
     ['dirt', 'coal', 'iron', 'gold'].forEach((k) => { this.caveInv[k] = Math.min(9999, n(si[k])); });
+    // Cave pickaxe (additive key): { tier 0-3, dur }. A broken / corrupt pick falls back to the wooden one.
+    const sPick = loadSave().cavePick; const pk = sPick && typeof sPick === 'object' ? sPick : {};
+    let pt = Math.floor(Number(pk.tier)); pt = pt >= 1 && pt <= 3 ? pt : 0;
+    let pd = Math.floor(Number(pk.dur)); pd = Number.isFinite(pd) ? Math.max(0, Math.min(PICK_DUR[pt], pd)) : 0;
+    this.cavePick = pt > 0 && pd >= 1 ? { tier: pt, dur: pd } : { tier: 0, dur: 0 };
     // Cave world seed (additive key). 0 = the classic flat cave; a missing / invalid value gets a
     // fresh random seed once, which is then saved so your cave looks the same on every visit.
     const sSeed = loadSave().caveSeed;
     this.caveSeed = Number.isInteger(sSeed) && sSeed >= 0 && sSeed < 4294967296 ? sSeed : 1 + Math.floor(Math.random() * 4294967294);
     if (sSeed !== this.caveSeed) writeSave({ caveSeed: this.caveSeed }); // persist a freshly made seed right away, or a reload before the first sale would grow a different cave
+    const sRealm = loadSave().realm;
+    this.realmSave = sRealm && typeof sRealm === 'object' ? sRealm : {}; // sanitised again by RealmArena
     const savedCrafted = loadSave().crafted;
     const sc = savedCrafted && typeof savedCrafted === 'object' ? savedCrafted : {};
     this.craftedGoods = {};
@@ -2298,11 +2322,11 @@ class TownScene extends Phaser.Scene {
   }
 
   saveResources() {
-    writeSave({ resources: this.resources, crafted: this.craftedGoods, caveInv: this.caveInv, caveSeed: this.caveSeed });
+    writeSave({ resources: this.resources, crafted: this.craftedGoods, caveInv: this.caveInv, caveSeed: this.caveSeed, cavePick: this.cavePick });
   }
 
   interact() {
-    if (this.inUnderground) return;
+    if (this.inUnderground || this.inRealm) return;
     if (this.buildMode) {
       this.handleBuildInteract();
       return;
@@ -2408,6 +2432,10 @@ class TownScene extends Phaser.Scene {
       this.enterUnderground();
       return;
     }
+    if (this.isNearRealmGate()) {
+      this.openRealmGateMenu();
+      return;
+    }
 
     if (this.isNearDoor()) {
       this.useDoor();
@@ -2487,7 +2515,7 @@ class TownScene extends Phaser.Scene {
   // same currency the sparkle and the shop already use.
 
   openPolyroll() {
-    if (this.inUnderground) return;
+    if (this.inUnderground || this.inRealm) return;
     this.polyrollOpen = true;
     document.getElementById('polyroll-overlay').classList.remove('hidden');
     this.updatePolyrollScoreLabel();
@@ -2754,7 +2782,7 @@ class TownScene extends Phaser.Scene {
   updateDigHoleHint() {
     const hint = document.getElementById('dig-hole-hint');
     if (!hint) return;
-    hint.classList.toggle('hidden', this.inUnderground || this.buildMode || !this.isNearDigHole());
+    hint.classList.toggle('hidden', this.inUnderground || this.inRealm || this.buildMode || !this.isNearDigHole());
   }
 
   // A real tappable button — not just a key hint — since "press E" isn't
@@ -2769,7 +2797,7 @@ class TownScene extends Phaser.Scene {
     // flowers and beach items are checked earlier in interact() and used
     // to swallow the tap, so "🎣 Fish" did something else entirely.
     btn.addEventListener('click', () => {
-      if (!this.canAct() || this.inUnderground || this.buildMode) return;
+      if (!this.canAct() || this.inUnderground || this.inRealm || this.buildMode) return;
       if (this.fishing.state !== 'idle') { this.handleFishingInteract(); return; }
       const spot = this.findNearestFishingSpot();
       if (spot) this.startFishing(spot);
@@ -2789,7 +2817,7 @@ class TownScene extends Phaser.Scene {
       if (targetShadow) targetShadow.sprite.setFillStyle(0x0f2236, 0.7);
       this.fishTargetShadow = targetShadow;
     }
-    const show = !this.inUnderground && !this.buildMode && (state !== 'idle' || !!target);
+    const show = !this.inUnderground && !this.inRealm && !this.buildMode && (state !== 'idle' || !!target);
     btn.classList.toggle('hidden', !show);
     btn.classList.toggle('biting', state === 'biting');
     let label = '🎣 Fish';
@@ -2798,6 +2826,232 @@ class TownScene extends Phaser.Scene {
     // Only touch the DOM when the label actually changes — this runs
     // every frame.
     if (btn.textContent !== label) btn.textContent = label;
+  }
+
+  // ---------- the Realm (2D bullet-hell arena, local-only) ----------
+
+  drawRealmGate() {
+    const { x, y } = REALM_GATE_POS;
+    if (!this.textures.exists('realmgate')) {
+      // Baked once: a stone arch around a violet swirl, with a soft shadow.
+      const g = this.make.graphics({ x: 0, y: 0, add: false });
+      g.fillStyle(0x000000, 0.2).fillEllipse(40, 70, 72, 12);
+      g.fillStyle(0x5a5a68, 1).fillRect(6, 14, 14, 56).fillRect(60, 14, 14, 56);
+      g.fillStyle(0x7a7a8a, 1).fillRect(6, 10, 68, 12).fillRect(10, 6, 60, 8);
+      g.fillStyle(0x45455a, 1).fillRect(6, 62, 14, 8).fillRect(60, 62, 14, 8);
+      g.fillStyle(0x2a1245, 1).fillRect(20, 22, 40, 48);
+      g.fillStyle(0x7b3fe4, 1).fillEllipse(40, 46, 34, 40);
+      g.fillStyle(0xb36bff, 1).fillEllipse(40, 46, 24, 30);
+      g.fillStyle(0xe2c6ff, 1).fillEllipse(40, 46, 12, 18);
+      g.fillStyle(0xffffff, 0.9).fillRect(38, 40, 4, 4).fillRect(34, 52, 3, 3).fillRect(45, 36, 3, 3);
+      g.generateTexture('realmgate', 80, 76);
+      g.destroy();
+    }
+    const img = this.add.image(x, y, 'realmgate').setDepth(y - 1);
+    this.tweens.add({ targets: img, alpha: { from: 0.9, to: 1 }, duration: 1200, yoyo: true, repeat: -1 }); // one cheap tween, no per-frame drawing
+    this.addObstacleRect({ x: x - 34, y: y + 6, width: 20, height: 34 });
+    this.addObstacleRect({ x: x + 34, y: y + 6, width: 20, height: 34 });
+    this.add.text(x, y - 34, '🌀 Realm Gate', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
+  }
+
+  isNearRealmGate() {
+    return Math.hypot(this.localBody.x - REALM_GATE_POS.x, this.localBody.y - (REALM_GATE_POS.y + 30)) < REALM_GATE_RADIUS;
+  }
+
+  updateRealmGateHint() {
+    const hint = document.getElementById('realm-gate-hint');
+    if (!hint) return;
+    hint.classList.toggle('hidden', this.inUnderground || this.inRealm || this.buildMode || !this.isNearRealmGate());
+  }
+
+  // ---------- Realm gate menu, invites and team link ----------
+
+  openRealmGateMenu() {
+    if (this.realmMenuOpen || this.inRealm || this.inUnderground) return;
+    this.realmMenuOpen = true;
+    document.getElementById('realm-menu').classList.remove('hidden');
+    this.renderRealmGateMenu();
+  }
+
+  closeRealmGateMenu() {
+    if (!this.realmMenuOpen) return;
+    this.realmMenuOpen = false;
+    document.getElementById('realm-menu').classList.add('hidden');
+    this.cancelRealmInvite();
+  }
+
+  // Who can I invite? Everybody else currently in town (not ourselves).
+  renderRealmGateMenu() {
+    const list = document.getElementById('realm-menu-players');
+    const status = document.getElementById('realm-menu-status');
+    if (!list) return;
+    list.innerHTML = '';
+    const inv = this.realmInviteOut;
+    if (inv) { status.textContent = `Waiting for ${inv.name} to answer…`; }
+    else status.textContent = this.net && this.net.db ? '' : 'Team play needs the online town.';
+    const online = [...this.remotePlayers.values()].filter((rp) => rp.id && rp.name);
+    if (!online.length) { const li = document.createElement('li'); li.className = 'dim'; li.textContent = 'Nobody else is in town right now.'; list.appendChild(li); }
+    online.forEach((rp) => {
+      const li = document.createElement('li');
+      const nm = document.createElement('span'); nm.textContent = `🧑 ${rp.name}`;
+      const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'realm-invite-btn'; btn.dataset.pid = rp.id;
+      btn.textContent = inv && inv.to === rp.id ? 'Invited…' : 'Invite';
+      btn.disabled = !!inv || !(this.net && this.net.db);
+      btn.setAttribute('aria-label', `Invite ${rp.name} to fight together in the Realm`);
+      btn.addEventListener('click', () => this.sendRealmInvite(rp.id, rp.name, 'coop'));
+      const dbtn = document.createElement('button'); dbtn.type = 'button'; dbtn.className = 'realm-invite-btn realm-duel-btn'; dbtn.dataset.pid = rp.id;
+      dbtn.textContent = '⚔️ Duel'; dbtn.disabled = btn.disabled;
+      dbtn.setAttribute('aria-label', `Challenge ${rp.name} to a 1v1 duel`);
+      dbtn.addEventListener('click', () => this.sendRealmInvite(rp.id, rp.name, 'duel'));
+      const box = document.createElement('span'); box.className = 'realm-invite-btns'; box.append(btn, dbtn);
+      li.append(nm, box);
+      list.appendChild(li);
+    });
+  }
+
+  sendRealmInvite(targetId, name, mode = 'coop') {
+    if (this.realmInviteOut || !this.net || !this.net.db) return false;
+    const party = this.net.realmInvite(targetId, mode);
+    if (!party) return false;
+    this.realmInviteOut = { party, to: targetId, name, mode, stop: null, timer: null };
+    this.realmInviteOut.stop = this.net.realmWatchGuest(party, (guestId) => {
+      if (!this.realmInviteOut || this.realmInviteOut.party !== party || guestId !== targetId) return;
+      const link = this.net.realmOpenLink(party, 'host');
+      this.realmInviteOut.stop(); clearTimeout(this.realmInviteOut.timer); this.realmInviteOut = null;
+      this.closeRealmGateMenu();
+      this.enterRealm({ role: 'host', link, mode });
+    });
+    this.realmInviteOut.timer = setTimeout(() => { if (this.realmInviteOut && this.realmInviteOut.party === party) { this.cancelRealmInvite(); if (this.realmMenuOpen) { document.getElementById('realm-menu-status').textContent = `${name} did not answer.`; } } }, 45000);
+    this.renderRealmGateMenu();
+    return true;
+  }
+
+  cancelRealmInvite() {
+    const inv = this.realmInviteOut;
+    if (!inv) return;
+    this.realmInviteOut = null;
+    if (inv.stop) inv.stop();
+    clearTimeout(inv.timer);
+    if (this.net) this.net.realmCancel(inv.party);
+    if (this.realmMenuOpen) this.renderRealmGateMenu();
+  }
+
+  // An invitation arrives: a toast with Accept / Decline, anywhere in town (not while already fighting).
+  setupRealmMenu() {
+    document.getElementById('realm-menu-close-btn').addEventListener('click', () => this.closeRealmGateMenu());
+    document.getElementById('realm-menu-solo').addEventListener('click', () => this.enterRealm());
+  }
+
+  setupRealmInvites() {
+    if (!this.net || !this.net.realmListenInvites) return;
+    this.net.realmListenInvites((inv) => this.showRealmInvite(inv));
+    document.getElementById('realm-invite-accept').addEventListener('click', () => this.acceptRealmInvite());
+    document.getElementById('realm-invite-decline').addEventListener('click', () => this.hideRealmInvite());
+  }
+
+  showRealmInvite(inv) {
+    if (this.inRealm || this.inUnderground) return; // busy: the sender's invite times out
+    this.realmInviteIn = inv;
+    const el = document.getElementById('realm-invite');
+    document.getElementById('realm-invite-text').textContent = inv.mode === 'duel' ? `⚔️ ${inv.fromName} challenges you to a duel in the Realm!` : `🌀 ${inv.fromName} invites you to fight in the Realm together!`;
+    el.classList.remove('hidden');
+    clearTimeout(this._inviteHide);
+    this._inviteHide = setTimeout(() => this.hideRealmInvite(), 40000);
+  }
+
+  hideRealmInvite() {
+    this.realmInviteIn = null;
+    clearTimeout(this._inviteHide);
+    const el = document.getElementById('realm-invite'); if (el) el.classList.add('hidden');
+  }
+
+  async acceptRealmInvite() {
+    const inv = this.realmInviteIn;
+    if (!inv || this.inRealm || this.inUnderground) return false;
+    this.hideRealmInvite();
+    const ok = await this.net.realmAccept(inv.party);
+    if (!ok) { this.showFloatingText(this.localBody.x, this.localBody.y - 40, 'That invite has expired'); return false; }
+    if (this.inRealm || this.inUnderground) { this.net.realmCancel(inv.party); return false; }
+    for (let i = 0; i < 4 && this.closeTopOverlay(); i++);
+    const link = this.net.realmOpenLink(inv.party, 'guest');
+    this.enterRealm({ role: 'guest', link, mode: inv.mode });
+    return true;
+  }
+
+  // opts: { role: 'host'|'guest', link } starts a two-player run; nothing = solo.
+  enterRealm(opts = {}) {
+    if (this.inRealm || this.inUnderground) return;
+    this.closeRealmGateMenu();
+    this.inRealm = true;
+    this.incrementStat('realmVisits');
+    document.getElementById('realm-gate-hint').classList.add('hidden');
+    document.getElementById('hud').classList.add('hidden');
+    document.getElementById('realm-overlay').classList.remove('hidden');
+    this.scene.pause();
+    if (!this.realm) {
+      this.realm = new RealmArena({
+        container: document.getElementById('realm-canvas-wrap'),
+        save: this.realmSave,
+        onSave: (s) => writeSave({ realm: s }),
+        onExit: (why) => this.exitRealm(why),
+      });
+      this.realm.setAvatar(`../i/${this.selfData.species}-strip.png`, this.selfData.frame || 0, FRAME_SIZE);
+      this.setupRealmControls();
+    }
+    if (opts.role && opts.link) { this.realm.setTeam(opts.role, opts.link, this.selfData.name, opts.mode); document.getElementById('realm-overlay').classList.add('team'); } else document.getElementById('realm-overlay').classList.remove('team');
+    this.realm.start();
+  }
+
+  exitRealm() {
+    if (!this.inRealm) return;
+    this.inRealm = false;
+    this.realm.stop();
+    document.getElementById('realm-overlay').classList.remove('team');
+    document.getElementById('realm-overlay').classList.add('hidden');
+    document.getElementById('hud').classList.remove('hidden');
+    this.scene.resume();
+    this.localBody.setPosition(REALM_GATE_POS.x, REALM_GATE_POS.y + 116); // step out of the gate, clear of its enter radius (no instant re-entry from a held key)
+  }
+
+  // Two virtual sticks for touch: left moves, right aims and fires. They only feed the arena's vectors.
+  setupRealmControls() {
+    const r = this.realm;
+    document.getElementById('realm-leave-btn').addEventListener('click', () => r.leave());
+    const stick = (id, apply) => {
+      const base = document.getElementById(id);
+      const knob = base.querySelector('.knob');
+      let pid = null;
+      const MAXR = 46;
+      const set = (e) => {
+        const b = base.getBoundingClientRect();
+        let dx = e.clientX - (b.left + b.width / 2); let dy = e.clientY - (b.top + b.height / 2);
+        const len = Math.hypot(dx, dy);
+        if (len > MAXR) { dx = dx / len * MAXR; dy = dy / len * MAXR; }
+        knob.style.transform = `translate(${dx}px, ${dy}px)`;
+        apply(dx / MAXR, dy / MAXR, true);
+      };
+      const end = () => { pid = null; knob.style.transform = ''; apply(0, 0, false); };
+      base.addEventListener('pointerdown', (e) => { e.preventDefault(); pid = e.pointerId; try { base.setPointerCapture(pid); } catch (err) { /* synthetic pointers can't be captured */ } set(e); });
+      base.addEventListener('pointermove', (e) => { if (e.pointerId === pid) set(e); });
+      ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((ev) => base.addEventListener(ev, (e) => { if (pid === null || e.pointerId === pid) end(); }));
+    };
+    // Abilities (also Q E R F on a keyboard) and the backpack.
+    for (let i = 0; i < 4; i++) {
+      const b = document.getElementById(`realm-ab-${i}`);
+      b.addEventListener('pointerdown', (e) => { e.preventDefault(); r.cast(i); });
+    }
+    document.getElementById('realm-bp-btn').addEventListener('click', () => r.setPaused(true));
+    document.getElementById('realm-board-btn').addEventListener('click', () => r.setBoard(true));
+    document.getElementById('realm-board-close').addEventListener('click', () => r.setBoard(false));
+    document.getElementById('realm-bp-close').addEventListener('click', () => r.setPaused(false));
+    document.getElementById('realm-backpack-body').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-act]');
+      if (!btn) return;
+      const uid = Number(btn.dataset.uid);
+      if (btn.dataset.act === 'equip') r.equip(uid); else if (btn.dataset.act === 'discard') r.discard(uid);
+    });
+    stick('realm-stick-move', (x, y) => r.setMoveStick(x, y));
+    stick('realm-stick-aim', (x, y, on) => r.setAimStick(x, y, on));
   }
 
   enterUnderground() {
@@ -2817,12 +3071,19 @@ class TownScene extends Phaser.Scene {
         resources: this.resources,
         inventory: this.caveInv,
         seed: this.caveSeed,
+        pick: this.cavePick,
+        onPickChange: (pick, broke) => { this.cavePick = { tier: pick.tier, dur: pick.dur }; this.saveResources(); this.updatePickBadge(broke ? '💥 Your pickaxe broke! Back to wood' : undefined); },
+        onOpenTable: () => this.openCaveTable(),
         onResourceChange,
         onHotbarChange: (state) => this.renderUgHotbar(state),
         onExit: () => this.exitUnderground(),
         onHealthChange: (hp, max) => {
           const el = document.getElementById('ug-health');
           if (el) { el.textContent = `❤️ ${hp}/${max}`; el.classList.toggle('low', hp <= max / 4); }
+        },
+        onClockChange: (phase) => {
+          const el = document.getElementById('ug-clock');
+          if (el) el.textContent = { day: '☀️ Day', dawn: '🌄 Dawn', dusk: '🌅 Dusk', night: '🌙 Night' }[phase] || phase;
         },
         onFlyChange: (on) => {
           const b = document.getElementById('ug-fly-btn');
@@ -2833,10 +3094,12 @@ class TownScene extends Phaser.Scene {
       this.setupUndergroundControls();
     }
     this.underground.start();
+    this.updatePickBadge();
   }
 
   exitUnderground() {
     if (!this.inUnderground) return;
+    if (this.workbenchOpen) this.closeWorkbench();
     this.inUnderground = false;
     this.underground.stop();
     document.getElementById('underground-overlay').classList.add('hidden');
@@ -2885,13 +3148,15 @@ class TownScene extends Phaser.Scene {
         ug.toggleView();
         this.updateUgViewButton();
       } else if (k === 'e') {
-        if (!e.repeat) ug.setMining(true); // hold E to mine
+        if (!e.repeat && !this.workbenchOpen) ug.setMining(true); // hold E to mine
       } else if (k === 'f') {
         ug.place();
       } else if (k >= '1' && k <= '9' && k.length === 1) {
         ug.selectSlot(Number(k) - 1);
+      } else if (k === 'c') {
+        if (!e.repeat && !this.workbenchOpen && !ug.flying) ug.useTable(); // crafting table under the crosshair (C also flies down, so not while flying)
       } else if (k === 'escape' || k === 'backspace') {
-        this.exitUnderground();
+        if (this.workbenchOpen) this.closeWorkbench(); else this.exitUnderground();
       }
     });
 
@@ -2927,6 +3192,7 @@ class TownScene extends Phaser.Scene {
     downBtn.addEventListener('pointercancel', () => setVert(0));
 
     document.getElementById('ug-fly-btn').addEventListener('click', (e) => { ug.toggleFly(); e.currentTarget.blur(); }); // blur: a focused button would also fire on Space
+    document.getElementById('ug-craft-btn').addEventListener('click', (e) => { e.currentTarget.blur(); if (!ug.useTable()) this.updatePickBadge('🛠️ Aim at a crafting table'); });
     document.getElementById('ug-view-btn').addEventListener('click', () => { ug.toggleView(); this.updateUgViewButton(); });
     this.updateUgViewButton();
     const mineBtn = document.getElementById('ug-mine-btn');
@@ -4783,6 +5049,8 @@ class TownScene extends Phaser.Scene {
     const shadow = this.createShadow(p.x, p.y);
     const nameText = this.createNameText(p.x, p.y, p.name);
     this.remotePlayers.set(p.id, {
+      id: p.id,
+      name: p.name,
       visual,
       shadow,
       nameText,
@@ -6199,7 +6467,10 @@ class TownScene extends Phaser.Scene {
 
   closeWorkbench() {
     this.workbenchOpen = false;
-    document.getElementById('workbench-overlay').classList.add('hidden');
+    const wo = document.getElementById('workbench-overlay');
+    wo.classList.add('hidden');
+    wo.style.zIndex = '';
+    if (this.underground && this.underground.paused) { this.underground.setPaused(false); this.underground.onHotbarChange(this.underground.getHotbarState()); } // counts may have changed at the bench
   }
 
   canCraft(recipe) {
@@ -6230,6 +6501,77 @@ class TownScene extends Phaser.Scene {
       li.append(info, btn);
       list.appendChild(li);
     });
+    // Pickaxe upgrades live on the same bench (and at every crafting table placed in the cave).
+    const head = document.createElement('li');
+    head.className = 'workbench-section';
+    head.textContent = `⛏️ Pickaxes — you hold the ${PICK_NAMES[this.cavePick.tier]} pickaxe${this.cavePick.tier ? ` (${this.cavePick.dur}/${PICK_DUR[this.cavePick.tier]})` : ''}`;
+    list.appendChild(head);
+    PICK_RECIPES.forEach((r) => {
+      const li = document.createElement('li');
+      const cost = Object.entries(r.cost).map(([k, v]) => `${v}${RES_ICONS[k]}`).join(' + ');
+      const info = document.createElement('span');
+      info.textContent = `${r.icon} ${r.label} — ${cost} · ${r.note}`;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'workbench-craft-btn';
+      btn.setAttribute('aria-label', `Craft ${r.label}`);
+      btn.dataset.pick = String(r.tier);
+      btn.textContent = r.tier === this.cavePick.tier ? 'Repair' : 'Craft';
+      btn.disabled = !this.canCraftPick(r);
+      btn.addEventListener('click', () => this.craftPick(r.tier));
+      li.append(info, btn);
+      list.appendChild(li);
+    });
+  }
+
+  pickHave(k) { return (k === 'iron' || k === 'gold' || k === 'coal') ? (this.caveInv[k] || 0) : (this.resources[k] || 0); }
+
+  canCraftPick(r) {
+    if (r.tier === this.cavePick.tier && this.cavePick.dur >= PICK_DUR[r.tier]) return false; // already new: nothing to repair
+    return r.tier >= this.cavePick.tier && Object.entries(r.cost).every(([k, v]) => this.pickHave(k) >= v);
+  }
+
+  craftPick(tier) {
+    const r = PICK_RECIPES.find((x) => x.tier === tier);
+    const note = document.getElementById('workbench-note');
+    if (!r) return false;
+    if (tier < this.cavePick.tier) { if (note) note.textContent = `You already hold a better pickaxe.`; return false; }
+    if (!this.canCraftPick(r)) {
+      const need = Object.entries(r.cost).filter(([k, v]) => this.pickHave(k) < v).map(([k, v]) => `${v - this.pickHave(k)}${RES_ICONS[k]}`).join(' ');
+      if (note) note.textContent = `Need ${need} more`;
+      return false;
+    }
+    for (const [k, v] of Object.entries(r.cost)) {
+      if (k === 'iron' || k === 'gold' || k === 'coal') this.caveInv[k] -= v; else this.resources[k] -= v;
+    }
+    this.cavePick = { tier, dur: PICK_DUR[tier] };
+    if (this.underground) this.underground.setPick(tier, PICK_DUR[tier]);
+    this.updateInventoryHUD();
+    this.saveResources();
+    this.updatePickBadge();
+    this.incrementStat('pickCrafted');
+    if (note) note.textContent = `Crafted the ${r.label}! It lasts ${PICK_DUR[tier]} blocks.`;
+    if (this.underground) this.underground.onHotbarChange(this.underground.getHotbarState());
+    this.renderWorkbench();
+    return true;
+  }
+
+  // The cave's pickaxe badge (tier + remaining durability); a break message shows for a moment.
+  updatePickBadge(msg) {
+    const el = document.getElementById('ug-pick');
+    if (!el) return;
+    const p = this.cavePick;
+    el.textContent = msg || `⛏️ ${PICK_NAMES[p.tier]}${p.tier ? ` ${p.dur}/${PICK_DUR[p.tier]}` : ''}`;
+    el.classList.toggle('low', !msg && p.tier > 0 && p.dur <= PICK_DUR[p.tier] * 0.1);
+    el.classList.toggle('broke', !!msg);
+    if (msg) { clearTimeout(this._pickMsgT); this._pickMsgT = setTimeout(() => this.updatePickBadge(), 3000); }
+  }
+
+  openCaveTable() {
+    if (!this.inUnderground || this.workbenchOpen) return;
+    this.underground.setPaused(true);
+    this.openWorkbench();
+    document.getElementById('workbench-overlay').style.zIndex = '40'; // above the cave canvas (30)
   }
 
   craftRecipe(id) {
@@ -6471,7 +6813,7 @@ class TownScene extends Phaser.Scene {
     const blockers = this.weedBlockers;
     const keepClear = [
       ...FLOWER_SPOTS, CAMPFIRE_POS, STATUE_POS, MAILBOX_POS, BUGOFF_SIGN_POS, HOME_POS, GUESTBOOK_POS, WORKBENCH_POS,
-      POLYROLL_POS, TURNIP_STALL_POS, ABLE_SISTERS_POS, MERCHANT_POS, DIG_HOLE_POS, FISH_TOURNAMENT_SIGN_POS,
+      POLYROLL_POS, TURNIP_STALL_POS, ABLE_SISTERS_POS, MERCHANT_POS, DIG_HOLE_POS, FISH_TOURNAMENT_SIGN_POS, REALM_GATE_POS,
     ];
     const spots = [];
     for (let i = 0; i < WEED_COUNT; i++) {
@@ -7629,7 +7971,7 @@ class TownScene extends Phaser.Scene {
     this.updateVillagers();
     const btn = document.getElementById('gift-hint-btn');
     if (!btn) return;
-    const v = (!this.inUnderground && !this.buildMode) ? this.findNearestVillager() : null;
+    const v = (!this.inUnderground && !this.inRealm && !this.buildMode) ? this.findNearestVillager() : null;
     btn.classList.toggle('hidden', !v);
     if (!v) return;
     // e.g. "🎁 Gift Mocha 🍎🌸" — dimmed when nothing they like is in the bag.
@@ -8154,7 +8496,7 @@ class TownScene extends Phaser.Scene {
     talkBtn.addEventListener('pointerleave', release);
 
     window.addEventListener('keydown', (e) => {
-      if (this.chatFocused || this.inUnderground) return;
+      if (this.chatFocused || this.inUnderground || this.inRealm) return;
       if (e.key.toLowerCase() === 't' && !this.recording) this.startRecording();
     });
     window.addEventListener('keyup', (e) => {

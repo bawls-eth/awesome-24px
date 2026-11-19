@@ -582,6 +582,14 @@ Phaser).
   regenerates ~1 per 3 s; at 0 you respawn on the surface (nothing is lost).
 - **Fly:** double-tap **Space** (or tap 🕊️ Fly) for creative flight — no gravity,
   Space up / Shift down (⤴️/⤵️ on mobile); touching down ends it. Still collides.
+- **Crafting table & pickaxes:** slot 7 (🛠️) places a crafting table for 4 wood. Aim at it
+  and press **C** (🛠️ on a phone) to open the Workbench right in the cave: craft any
+  village good, or upgrade your pickaxe — 🪨 Stone, 🔩 Iron (iron ore) or 🟡 Gold (gold +
+  iron ore). Better pickaxes mine faster but wear out (a badge shows the blocks left);
+  a broken one drops you back to the free wooden pickaxe, and you can re-craft the same
+  tier to repair it. The village Workbench sells the same upgrades.
+- **Day and night:** a full day lasts 4 minutes (☀️ Day / 🌅 Dusk / 🌙 Night in the badge by your health). Out under the sky it is bright by day and dark at night; deeper caves are always dim — you see by your own glow, by the torch you hold (slot 2, a much brighter light), and by torches you place.
+- **Lava:** the glowing cavern across the shaft from the pool burns 2 HP every half second (and slows you); you can't build over it. Cross by the ledge, not through it.
 - **Mine:** hold **E** (desktop) or hold ⛏️ (mobile) on the block in your crosshair.
   It cracks over a few seconds (dirt is quick, gold is slow) and drops an item
   you walk up to. Stone adds 1 and coal / iron / gold ore add 3 to your 🪨 stone
@@ -808,3 +816,45 @@ or a single one with `node game/tests/<name>.test.js` while
 `python3 -m http.server 8440` serves the repo root. The tests join the live
 town as `ADMIN*` bots (presence only), never chat, and never write anything
 else to Firebase.
+
+## The Realm (bullet-hell arena)
+
+A swirling violet **Realm Gate** stands in the north of the village. Walk up and
+press **E** (or tap **A**) to step through. It's a separate arena, fully local:
+
+- **Move** with **WASD** / arrows, **aim** with the mouse and hold to fire (or
+  hold **Space**). On a phone the left stick moves and the right stick aims and
+  auto-fires.
+- **Enemies:** 🟣 Whirlers spin a spiral of bolts, 🔺 Snipers circle you and fire
+  aimed bursts of three, 🟠 Bursters drift in and fire a ring. Clear a wave to
+  earn a bonus and face a bigger one.
+- **Level up:** every kill gives XP; each level (up to 20) adds max HP and unlocks
+  abilities — 💨 Dash (Q, Lv 1), 💥 Nova (E, Lv 3), 🛡️ Shield (R, Lv 5), 🔥 Overdrive
+  (F, Lv 7). On a phone they are the four buttons above the right stick.
+- **Loot:** enemies sometimes drop glowing bags (grey / green / blue = common /
+  uncommon / rare) — walk over them. Open the 🎒 **backpack** (B) to equip one
+  weapon, one charm and one ring, or sell spares for 💎. Your level, items and
+  loadout are kept even if you die.
+- **Biomes:** the arena changes every three waves — 🟣 Violet Hollow, 🔥 Ember Waste
+  (lava pools burn you, more Bursters) and ❄️ Frost Mire (ice patches slow you,
+  more Snipers). Little ✨ wanderers drift around for bonus shards.
+- **Boss:** every fifth wave is **Gloomheart**. It has three phases — a spiral, then
+  rings with helpers, then an enraged double spiral — each announced by a banner
+  and a shield. It drops two bags (one always rare); your fastest time is kept.
+- **Kill board:** press **K** (or 📊) for your Realm stats.
+- **💎 Shards** are your banked Realm currency (kept between visits). Dying
+  costs 20% of the bank and sends you back to the village; **Esc** or **Leave**
+  is always free. Your best wave is remembered.
+- **Fight together (2 players):** at the gate pick **Invite** next to someone in town.
+  They get a toast; when they press **Join** you both enter the same run. The host's
+  game runs the arena, so the guest sees everything a beat behind. Enemies are 70%
+  tougher with a partner, the boss targets whoever is nearer, and at 0 HP you are
+  **down** — your partner stands beside you for 2 seconds to revive you. The run
+  ends when both are down. Loot bags go to whoever walks over them and your XP,
+  shards and items stay your own. 2v2 is planned.
+- **⚔️ Duel (1v1):** pick **Duel** next to a player at the gate. Best of three rounds,
+  identical stats for both of you (100 HP, no gear or level), only Dash allowed. Each
+  round starts with a short protected countdown; each bolt does 8 damage; first to two
+  rounds wins. Nothing is won or lost in your save.
+- Solo runs are local to you; only team runs send fight data, and only to your partner
+  (via short-lived `realmInvites` / `realmParties` entries that are removed when you leave).

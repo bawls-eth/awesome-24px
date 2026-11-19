@@ -23,7 +23,7 @@ const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
     const res = await page.evaluate(() => {
       const out = [];
       for (const el of document.querySelectorAll('[id$="-overlay"]')) {
-        if (['join-overlay', 'underground-overlay'].includes(el.id)) continue;
+        if (['join-overlay', 'underground-overlay', 'realm-overlay'].includes(el.id)) continue;
         const wasHidden = el.classList.contains('hidden'); el.classList.remove('hidden');
         const card = el.querySelector(':scope > [class$="-card"]') || el.firstElementChild;
         const r = card.getBoundingClientRect(); const close = el.querySelector('button[id$="close-btn"]'); const cr = close && close.getBoundingClientRect();
