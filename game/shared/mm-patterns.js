@@ -41,5 +41,12 @@
     }
     return out;
   }
-  return { ring, spiral, aimed };
+  // Allocation-free angle helpers (hot paths fire these per bolt; no arrays/objects made).
+  // ringAngle(i, n, off): i-th of n evenly spaced angles from off.
+  function ringAngle(i, n, off) { return (off || 0) + (i / n) * TAU; }
+  // spiralAngle(base, arm, arms): arm-th of `arms` angles TAU/arms apart, from base.
+  function spiralAngle(base, arm, arms) { return base + (arm * TAU) / arms; }
+  // aimedAngle(base, i, n, spread): i-th of n bolts fanned over `spread` centred on base.
+  function aimedAngle(base, i, n, spread) { return n <= 1 ? base : base + (i - (n - 1) / 2) * (spread / (n - 1)); }
+  return { ring, spiral, aimed, ringAngle, spiralAngle, aimedAngle };
 });
