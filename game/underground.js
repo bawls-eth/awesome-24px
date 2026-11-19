@@ -53,16 +53,31 @@ const UG_THIRD_PERSON_DIST = 6;
 const UG_THIRD_PIVOT = 2.5; // third-person camera orbits this far above the feet
 const UG_ORE_KINDS = ['coal', 'iron', 'gold'];
 // Timed mining (A3): seconds to break each block with the pickaxe.
-const UG_MINE_TIME = { leaves: 0.2, grass: 0.5, dirt: 0.4, wood: 0.8, stone: 1.0, coal: 1.2, iron: 1.6, gold: 2.0, placed_wall: 0.8, placed_dirt: 0.4, torch: 0.1 };
+const UG_MINE_TIME = { leaves: 0.2, grass: 0.5, dirt: 0.4, wood: 0.8, stone: 1.0, coal: 1.2, iron: 1.6, gold: 2.0, placed_wall: 0.8, placed_dirt: 0.4, placed_table: 0.6, torch: 0.1 };
 const UG_CRACK_STAGES = 10;
 const UG_DROP_CAPACITY = 24;
 const UG_PICKUP_RADIUS = 2.6;
 const UG_MAGNET_RADIUS = 5;
 // The 9-slot hotbar. wall/torch/dirt are placeable; coal/iron/gold are collected materials; the
 // empty slots are kept free for crafting (a later slice).
-const UG_SLOTS = ['wall', 'torch', 'dirt', 'coal', 'iron', 'gold', null, null, null];
+const UG_SLOTS = ['wall', 'torch', 'dirt', 'coal', 'iron', 'gold', 'table', null, null];
+const UG_TABLE_WOOD = 4; // a crafting table costs 4 wood
+// Pickaxe tiers (A5). Tier 0 is the free wooden one; the others wear out and fall back to it.
+const UG_PICKS = [
+  { id: 'wood', name: 'Wooden', mult: 1, dur: 0, color: 0xb8c2cc },
+  { id: 'stone', name: 'Stone', mult: 0.7, dur: 150, color: 0x9aa0a8 },
+  { id: 'iron', name: 'Iron', mult: 0.5, dur: 300, color: 0xe0a47a },
+  { id: 'gold', name: 'Gold', mult: 0.35, dur: 120, color: 0xf4d03e },
+];
+function ugCleanPick(p) {
+  p = p && typeof p === 'object' ? p : {};
+  let tier = Math.floor(Number(p.tier)); tier = tier >= 1 && tier < UG_PICKS.length ? tier : 0;
+  let dur = Math.floor(Number(p.dur)); dur = Number.isFinite(dur) ? Math.max(0, Math.min(UG_PICKS[tier].dur, dur)) : 0;
+  if (tier > 0 && dur < 1) tier = 0;
+  return { tier, dur: tier ? dur : 0 };
+}
 const UG_INV_KEYS = ['dirt', 'coal', 'iron', 'gold'];
-const UG_TEXTURE_NAMES = ['grass_top', 'grass_side', 'dirt', 'stone', 'coal', 'iron', 'gold', 'wood_side', 'wood_top', 'cobble', 'leaves', 'lava'];
+const UG_TEXTURE_NAMES = ['grass_top', 'grass_side', 'dirt', 'stone', 'coal', 'iron', 'gold', 'wood_side', 'wood_top', 'cobble', 'leaves', 'lava', 'table'];
 const UG_FLAT_RADIUS = 4; // cells around the shaft that stay flat and tree-free (spawn + entry hole)
 
 // Integer hash -> [0,1). Terrain is a pure function of (seed, cell), so the same seed always makes
@@ -174,6 +189,14 @@ function ugDrawTile(kind) {
         px(x, y, base + edge + j, base * 0.74 + edge + j, base * 0.42 + edge + j);
       }
       break;
+    case 'table':
+      for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const j = (rng() - 0.5) * 10; const plank = (y % 5 === 0) ? -26 : 0; px(x, y, 168 + plank + j, 120 + plank + j, 70 + plank + j); }
+      for (let i = 2; i < 8; i++) px(i, 3, 70, 74, 84); // a saw blade across the top left
+      for (let i = 3; i < 6; i++) px(i, 4, 110, 114, 124);
+      for (let i = 9; i < 14; i++) px(11, i, 96, 62, 30); // a hammer handle ...
+      for (let i = 9; i < 14; i++) px(i, 9, 84, 88, 98); // ... and head
+      px(2, 6, 80, 50, 24); px(3, 6, 80, 50, 24); // saw handle
+      break;
     case 'lava':
       for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
         const w = Math.sin(x * 0.9 + y * 0.35) + Math.sin(y * 1.1 - x * 0.2) + (rng() - 0.5) * 0.9;
@@ -218,13 +241,17 @@ function ugBuildTextures() {
 }
 
 class UndergroundWorld {
-  constructor({ canvasWrap, resources, inventory, seed, onResourceChange, onExit, onHealthChange, onFlyChange, onHotbarChange, onClockChange }) {
+  constructor({ canvasWrap, resources, inventory, seed, onResourceChange, onExit, onHealthChange, onFlyChange, onHotbarChange, onClockChange, pick, onPickChange, onOpenTable }) {
     this.canvasWrap = canvasWrap;
     this.resources = resources; // shared reference to main.js's resources object
     this.onResourceChange = onResourceChange; // () => void — call after any resource change
     this.inventory = inventory || {}; // extra collected counts: dirt / coal / iron / gold (saved by main.js)
     UG_INV_KEYS.forEach((k) => { this.inventory[k] = Math.max(0, Math.floor(Number(this.inventory[k])) || 0); });
     this.onHotbarChange = onHotbarChange || (() => {});
+    this.pick = ugCleanPick(pick); // { tier, dur } — saved by main.js
+    this.onPickChange = onPickChange || (() => {});
+    this.onOpenTable = onOpenTable || (() => {});
+    this.paused = false; // true while the crafting table is open
     // Seed 0 is the classic flat cave (no hills or trees); any other seed grows a hilly, wooded one.
     this.seed = Number.isInteger(seed) && seed >= 0 && seed < 4294967296 ? seed : 0;
     this.onExit = onExit;
@@ -293,7 +320,7 @@ class UndergroundWorld {
 
   // [{ id, count, selected }] for the on-screen hotbar.
   getHotbarState() {
-    const count = (id) => (id === 'wall' ? this.resources.stone : id === 'torch' ? this.resources.wood : this.inventory[id]) || 0;
+    const count = (id) => (id === 'wall' ? this.resources.stone : id === 'torch' ? this.resources.wood : id === 'table' ? Math.floor((this.resources.wood || 0) / UG_TABLE_WOOD) : this.inventory[id]) || 0;
     return UG_SLOTS.map((id, i) => ({ id, count: id ? count(id) : 0, selected: i === this.slotIndex }));
   }
 
@@ -355,6 +382,7 @@ class UndergroundWorld {
     const handle = new THREE.Mesh(new THREE.BoxGeometry(0.14, 1.4, 0.14), new THREE.MeshStandardMaterial({ color: 0x8a5a2b }));
     handle.position.y = 0.6;
     const head = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 1.1), new THREE.MeshStandardMaterial({ color: 0xb8c2cc }));
+    this._toolHead = head;
     head.position.y = 1.25;
     grip.add(handle, head);
     grip.position.set(1.25, -0.5, -0.35);
@@ -387,6 +415,7 @@ class UndergroundWorld {
     const handle = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.62, 0.07), handMat(0x8a5a2b));
     handle.position.y = 0.05;
     const head = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.09, 0.5), handMat(0xb8c2cc));
+    this._fpHead = head;
     head.position.y = 0.36;
     pick.add(handle, head);
     pick.position.set(0.5, -0.42, -0.85);
@@ -411,13 +440,48 @@ class UndergroundWorld {
     this.fpHand.add(pick, this.fpItem);
     this.camera.add(this.fpHand);
     this._refreshHeldItem();
+    this._applyPickLook();
+  }
+
+  // The pickaxe head takes the colour of the tier you are holding.
+  _applyPickLook() {
+    const c = UG_PICKS[this.pick.tier].color;
+    if (this._toolHead) this._toolHead.material.color.setHex(c);
+    if (this._fpHead) this._fpHead.material.color.setHex(c);
+  }
+
+  setPick(tier, dur) {
+    this.pick = ugCleanPick({ tier, dur });
+    this._applyPickLook();
+    this.onPickChange(this.pick, false);
+  }
+
+  // One block broken with a tiered pickaxe costs one durability; at zero it breaks and you are back to the wooden one.
+  _wearPick() {
+    if (!this.pick.tier) return;
+    this.pick.dur -= 1;
+    let broke = false;
+    if (this.pick.dur <= 0) { this.pick = { tier: 0, dur: 0 }; broke = true; this._applyPickLook(); }
+    this.onPickChange(this.pick, broke);
+  }
+
+  setPaused(on) { this.paused = !!on; if (on) { this.mineHeld = false; this._cancelMining(); this.keys = {}; this.moveInput.fwd = 0; this.moveInput.strafe = 0; this.moveInput.vert = 0; } }
+
+  // The crafting table under the crosshair (within reach)? Opens the table, returns true.
+  useTable() {
+    if (this.paused) return false;
+    const hits = this._raycastTargets();
+    const t = hits.length ? this._targetFromHit(hits[0]) : null;
+    if (!t || t.type !== 'placed' || t.entry.pool !== 'table') return false;
+    this.onOpenTable();
+    return true;
   }
 
   _refreshHeldItem() {
     if (!this.fpItem) return;
     const cube = this.fpItem.getObjectByName('fp-cube');
     const torch = this.fpItem.getObjectByName('fp-torch');
-    const texFor = { wall: 'cobble', dirt: 'dirt', coal: 'coal', iron: 'iron', gold: 'gold' }[this.hotbar];
+    const texFor = { wall: 'cobble', dirt: 'dirt', coal: 'coal', iron: 'iron', gold: 'gold', table: 'table' }[this.hotbar];
     if (cube) {
       cube.visible = !!texFor;
       if (texFor) { cube.material.map = this.textures[texFor]; cube.material.needsUpdate = true; }
@@ -616,6 +680,7 @@ class UndergroundWorld {
     };
     make('wall', 'cobble', UG_PLACED_CAPACITY);
     make('dirt', 'dirt', 100);
+    make('table', 'table', 20);
     this.placedMesh = this.pools.wall.mesh; // kept for older callers / tests
   }
 
@@ -822,6 +887,8 @@ class UndergroundWorld {
   start() {
     this.active = true;
     this.respawn();
+    this.paused = false;
+    this._applyPickLook();
     this.timeOfDay = UG_START_TIME;
     this.skyLight = 1;
     this._applyLighting(0);
@@ -891,6 +958,7 @@ class UndergroundWorld {
   // swimming, fall damage; creative flight (double-tap Jump) is a toggle. WASD / the dpad move
   // on the flat plane relative to where you face; looking up/down only aims.
   _update(delta) {
+    if (this.paused) return; // the crafting table is open
     const dt = Math.min(delta, 0.05);
     let fwd = this.moveInput.fwd;
     let strafe = this.moveInput.strafe;
@@ -1037,7 +1105,7 @@ class UndergroundWorld {
     return { type: 'terrain', key, kind: e.kind, entry: e };
   }
 
-  _mineTime(kind) { return UG_MINE_TIME[kind] || 1; }
+  _mineTime(kind) { return (UG_MINE_TIME[kind] || 1) * UG_PICKS[this.pick.tier].mult; }
 
   // What breaking a block gives: { stone, wood, dirt, coal, iron, gold } counts + the block to draw.
   _lootFor(kind) {
@@ -1049,6 +1117,7 @@ class UndergroundWorld {
       case 'grass': return { loot: { dirt: 1 }, look: 'dirt' };
       case 'placed_wall': return { loot: { stone: 1 }, look: 'cobble' };
       case 'placed_dirt': return { loot: { dirt: 1 }, look: 'dirt' };
+      case 'placed_table': return { loot: { wood: UG_TABLE_WOOD - 1 }, look: 'table' };
       case 'torch': return { loot: { wood: 1 }, look: 'wood_side' };
       case 'leaves': return { loot: {}, look: 'leaves' };
       default: return { loot: {}, look: 'stone' };
@@ -1082,6 +1151,7 @@ class UndergroundWorld {
       this.lookup.delete(t.key);
       this.occupied.delete(t.key);
     }
+    if (t.type !== 'torch') this._wearPick();
     return { ...this._lootFor(t.kind), pos };
   }
 
@@ -1330,10 +1400,10 @@ class UndergroundWorld {
 
   place() {
     const type = this.hotbar;
-    const costKey = type === 'torch' ? 'wood' : type === 'wall' ? 'stone' : type === 'dirt' ? 'dirt' : null;
+    const costKey = type === 'torch' ? 'wood' : type === 'wall' ? 'stone' : type === 'dirt' ? 'dirt' : type === 'table' ? 'wood' : null;
     if (!costKey) return false; // coal / iron / gold / empty slots can't be placed (yet)
     const have = costKey === 'dirt' ? this.inventory.dirt : this.resources[costKey];
-    if ((have || 0) < 1) return false;
+    if ((have || 0) < (type === 'table' ? UG_TABLE_WOOD : 1)) return false;
     const hits = this._raycastTargets();
     if (!hits.length) return false;
     const hit = hits[0];
@@ -1350,8 +1420,8 @@ class UndergroundWorld {
       this._addTorch(gx, gy, gz);
       this.resources.wood -= 1;
     } else {
-      if (!this._putBlock(type === 'dirt' ? 'dirt' : 'wall', gx, gy, gz)) return false;
-      if (type === 'dirt') this.inventory.dirt -= 1; else this.resources.stone -= 1;
+      if (!this._putBlock(type === 'dirt' ? 'dirt' : type === 'table' ? 'table' : 'wall', gx, gy, gz)) return false;
+      if (type === 'dirt') this.inventory.dirt -= 1; else if (type === 'table') this.resources.wood -= UG_TABLE_WOOD; else this.resources.stone -= 1;
     }
     this.onResourceChange();
     this.onHotbarChange(this.getHotbarState());

@@ -421,9 +421,10 @@
 
 <div id="underground-overlay" class="hidden">
   <div id="underground-canvas-wrap"></div>
-  <div id="underground-depth-hint">⛰️ Underground · local only<span class="kbd-hint"> · F5 view · Space jump (2x = fly) · hold E to mine</span></div>
+  <div id="underground-depth-hint">⛰️ Underground · local only<span class="kbd-hint"> · F5 view · Space jump (2x = fly) · hold E to mine · C: crafting table</span></div>
   <div id="ug-health" aria-label="Health">❤️ 20/20</div>
   <div id="ug-clock" aria-label="Time of day">☀️ Day</div>
+  <div id="ug-pick" aria-label="Pickaxe">⛏️ Wooden</div>
   <div id="underground-exit-hint" class="hidden">⬆️ You're near the surface shaft</div>
   <div id="ug-hotbar" role="toolbar" aria-label="Hotbar (keys 1-9, mouse wheel)">
     <button id="ug-hotbar-wall" class="ug-slot active" data-slot="0" type="button" aria-label="Slot 1: Stone wall"><span class="key">1</span><span class="ico">🧱</span><span class="cnt"></span></button>
@@ -432,7 +433,7 @@
     <button class="ug-slot" data-slot="3" type="button" aria-label="Slot 4: Coal"><span class="key">4</span><span class="ico">⚫</span><span class="cnt"></span></button>
     <button class="ug-slot" data-slot="4" type="button" aria-label="Slot 5: Iron ore"><span class="key">5</span><span class="ico">🔩</span><span class="cnt"></span></button>
     <button class="ug-slot" data-slot="5" type="button" aria-label="Slot 6: Gold ore"><span class="key">6</span><span class="ico">🟡</span><span class="cnt"></span></button>
-    <button class="ug-slot" data-slot="6" type="button" aria-label="Slot 7: Empty"><span class="key">7</span><span class="ico"></span><span class="cnt"></span></button>
+    <button class="ug-slot" data-slot="6" type="button" aria-label="Slot 7: Crafting table (4 wood)"><span class="key">7</span><span class="ico">🛠️</span><span class="cnt"></span></button>
     <button class="ug-slot" data-slot="7" type="button" aria-label="Slot 8: Empty"><span class="key">8</span><span class="ico"></span><span class="cnt"></span></button>
     <button class="ug-slot" data-slot="8" type="button" aria-label="Slot 9: Empty"><span class="key">9</span><span class="ico"></span><span class="cnt"></span></button>
   </div>
@@ -449,6 +450,7 @@
       <button id="ug-up-btn" type="button" aria-label="Jump (double-tap to fly)">⤴️</button>
       <button id="ug-down-btn" type="button" aria-label="Fly down">⤵️</button>
       <button id="ug-fly-btn" type="button" aria-label="Toggle creative flight">🕊️ Fly</button>
+      <button id="ug-craft-btn" type="button" aria-label="Use the crafting table you are aiming at (C)">🛠️</button>
       <button id="ug-view-btn" type="button" aria-label="Switch first / third person view (F5)">👁️ 1st</button>
       <button id="ug-exit-btn" type="button" aria-label="Exit">⬆️ Exit anytime</button>
     </div>

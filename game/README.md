@@ -582,6 +582,12 @@ Phaser).
   regenerates ~1 per 3 s; at 0 you respawn on the surface (nothing is lost).
 - **Fly:** double-tap **Space** (or tap 🕊️ Fly) for creative flight — no gravity,
   Space up / Shift down (⤴️/⤵️ on mobile); touching down ends it. Still collides.
+- **Crafting table & pickaxes:** slot 7 (🛠️) places a crafting table for 4 wood. Aim at it
+  and press **C** (🛠️ on a phone) to open the Workbench right in the cave: craft any
+  village good, or upgrade your pickaxe — 🪨 Stone, 🔩 Iron (iron ore) or 🟡 Gold (gold +
+  iron ore). Better pickaxes mine faster but wear out (a badge shows the blocks left);
+  a broken one drops you back to the free wooden pickaxe, and you can re-craft the same
+  tier to repair it. The village Workbench sells the same upgrades.
 - **Day and night:** a full day lasts 4 minutes (☀️ Day / 🌅 Dusk / 🌙 Night in the badge by your health). Out under the sky it is bright by day and dark at night; deeper caves are always dim — you see by your own glow, by the torch you hold (slot 2, a much brighter light), and by torches you place.
 - **Lava:** the glowing cavern across the shaft from the pool burns 2 HP every half second (and slows you); you can't build over it. Cross by the ledge, not through it.
 - **Mine:** hold **E** (desktop) or hold ⛏️ (mobile) on the block in your crosshair.

@@ -982,8 +982,17 @@ const RECIPES = [
   { id: 'jacko', icon: '🎃', label: "Jack-o'-Lantern", cost: { fruit: 4, bugs: 2 }, value: 9, season: 'autumn' },
   { id: 'snowman', icon: '⛄', label: 'Snowman', cost: { stone: 4, wood: 2 }, value: 9, season: 'winter' },
 ];
+// Pickaxe upgrades (cave A5): crafted at the village Workbench or at a crafting table placed in the cave.
+// Ores come from the cave inventory (iron / gold), the rest from the shared resource bag.
+const PICK_RECIPES = [
+  { tier: 1, icon: '⛏️', label: 'Stone Pickaxe', cost: { stone: 6, wood: 2 }, note: 'mines 30% faster · 150 blocks' },
+  { tier: 2, icon: '⛏️', label: 'Iron Pickaxe', cost: { iron: 4, wood: 2 }, note: 'mines 2x faster · 300 blocks' },
+  { tier: 3, icon: '⛏️', label: 'Gold Pickaxe', cost: { gold: 3, iron: 3 }, note: 'mines 3x faster · 120 blocks' },
+];
+const PICK_NAMES = ['Wooden', 'Stone', 'Iron', 'Gold'];
+const PICK_DUR = [0, 150, 300, 120];
 const SEASON_ICONS = { spring: '🌷', summer: '☀️', autumn: '🍂', winter: '❄️' };
-const RES_ICONS = { wood: '🪵', stone: '🪨', fish: '🐟', bugs: '🦋', fruit: '🍎', shells: '🐚', flowers: '🌸' };
+const RES_ICONS = { wood: '🪵', stone: '🪨', fish: '🐟', bugs: '🦋', fruit: '🍎', shells: '🐚', flowers: '🌸', iron: '🔩', gold: '🟡', coal: '⚫' };
 const GUESTBOOK_NOTE_MAX = 80;
 const GUESTBOOK_COOLDOWN_MS = 60 * 1000; // one signing per minute, per client
 const KK_CONCERT_START_HOUR = 19; // 7pm local time
@@ -2282,6 +2291,11 @@ class TownScene extends Phaser.Scene {
     // Cave materials (additive save key): dirt / coal / iron / gold collected underground.
     this.caveInv = {};
     ['dirt', 'coal', 'iron', 'gold'].forEach((k) => { this.caveInv[k] = Math.min(9999, n(si[k])); });
+    // Cave pickaxe (additive key): { tier 0-3, dur }. A broken / corrupt pick falls back to the wooden one.
+    const sPick = loadSave().cavePick; const pk = sPick && typeof sPick === 'object' ? sPick : {};
+    let pt = Math.floor(Number(pk.tier)); pt = pt >= 1 && pt <= 3 ? pt : 0;
+    let pd = Math.floor(Number(pk.dur)); pd = Number.isFinite(pd) ? Math.max(0, Math.min(PICK_DUR[pt], pd)) : 0;
+    this.cavePick = pt > 0 && pd >= 1 ? { tier: pt, dur: pd } : { tier: 0, dur: 0 };
     // Cave world seed (additive key). 0 = the classic flat cave; a missing / invalid value gets a
     // fresh random seed once, which is then saved so your cave looks the same on every visit.
     const sSeed = loadSave().caveSeed;
@@ -2306,7 +2320,7 @@ class TownScene extends Phaser.Scene {
   }
 
   saveResources() {
-    writeSave({ resources: this.resources, crafted: this.craftedGoods, caveInv: this.caveInv, caveSeed: this.caveSeed });
+    writeSave({ resources: this.resources, crafted: this.craftedGoods, caveInv: this.caveInv, caveSeed: this.caveSeed, cavePick: this.cavePick });
   }
 
   interact() {
@@ -2937,6 +2951,9 @@ class TownScene extends Phaser.Scene {
         resources: this.resources,
         inventory: this.caveInv,
         seed: this.caveSeed,
+        pick: this.cavePick,
+        onPickChange: (pick, broke) => { this.cavePick = { tier: pick.tier, dur: pick.dur }; this.saveResources(); this.updatePickBadge(broke ? '💥 Your pickaxe broke! Back to wood' : undefined); },
+        onOpenTable: () => this.openCaveTable(),
         onResourceChange,
         onHotbarChange: (state) => this.renderUgHotbar(state),
         onExit: () => this.exitUnderground(),
@@ -2957,10 +2974,12 @@ class TownScene extends Phaser.Scene {
       this.setupUndergroundControls();
     }
     this.underground.start();
+    this.updatePickBadge();
   }
 
   exitUnderground() {
     if (!this.inUnderground) return;
+    if (this.workbenchOpen) this.closeWorkbench();
     this.inUnderground = false;
     this.underground.stop();
     document.getElementById('underground-overlay').classList.add('hidden');
@@ -3014,8 +3033,10 @@ class TownScene extends Phaser.Scene {
         ug.place();
       } else if (k >= '1' && k <= '9' && k.length === 1) {
         ug.selectSlot(Number(k) - 1);
+      } else if (k === 'c') {
+        if (!e.repeat && !this.workbenchOpen) ug.useTable(); // crafting table under the crosshair
       } else if (k === 'escape' || k === 'backspace') {
-        this.exitUnderground();
+        if (this.workbenchOpen) this.closeWorkbench(); else this.exitUnderground();
       }
     });
 
@@ -3051,6 +3072,7 @@ class TownScene extends Phaser.Scene {
     downBtn.addEventListener('pointercancel', () => setVert(0));
 
     document.getElementById('ug-fly-btn').addEventListener('click', (e) => { ug.toggleFly(); e.currentTarget.blur(); }); // blur: a focused button would also fire on Space
+    document.getElementById('ug-craft-btn').addEventListener('click', () => { if (!ug.useTable()) this.updatePickBadge('🛠️ Aim at a crafting table'); });
     document.getElementById('ug-view-btn').addEventListener('click', () => { ug.toggleView(); this.updateUgViewButton(); });
     this.updateUgViewButton();
     const mineBtn = document.getElementById('ug-mine-btn');
@@ -6323,7 +6345,10 @@ class TownScene extends Phaser.Scene {
 
   closeWorkbench() {
     this.workbenchOpen = false;
-    document.getElementById('workbench-overlay').classList.add('hidden');
+    const wo = document.getElementById('workbench-overlay');
+    wo.classList.add('hidden');
+    wo.style.zIndex = '';
+    if (this.underground && this.underground.paused) this.underground.setPaused(false);
   }
 
   canCraft(recipe) {
@@ -6354,6 +6379,76 @@ class TownScene extends Phaser.Scene {
       li.append(info, btn);
       list.appendChild(li);
     });
+    // Pickaxe upgrades live on the same bench (and at every crafting table placed in the cave).
+    const head = document.createElement('li');
+    head.className = 'workbench-section';
+    head.textContent = `⛏️ Pickaxes — you hold the ${PICK_NAMES[this.cavePick.tier]} pickaxe${this.cavePick.tier ? ` (${this.cavePick.dur}/${PICK_DUR[this.cavePick.tier]})` : ''}`;
+    list.appendChild(head);
+    PICK_RECIPES.forEach((r) => {
+      const li = document.createElement('li');
+      const cost = Object.entries(r.cost).map(([k, v]) => `${v}${RES_ICONS[k]}`).join(' + ');
+      const info = document.createElement('span');
+      info.textContent = `${r.icon} ${r.label} — ${cost} · ${r.note}`;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'workbench-craft-btn';
+      btn.setAttribute('aria-label', `Craft ${r.label}`);
+      btn.dataset.pick = String(r.tier);
+      btn.textContent = r.tier === this.cavePick.tier ? 'Repair' : 'Craft';
+      btn.disabled = !this.canCraftPick(r);
+      btn.addEventListener('click', () => this.craftPick(r.tier));
+      li.append(info, btn);
+      list.appendChild(li);
+    });
+  }
+
+  pickHave(k) { return (k === 'iron' || k === 'gold' || k === 'coal') ? (this.caveInv[k] || 0) : (this.resources[k] || 0); }
+
+  canCraftPick(r) {
+    return r.tier >= this.cavePick.tier && Object.entries(r.cost).every(([k, v]) => this.pickHave(k) >= v);
+  }
+
+  craftPick(tier) {
+    const r = PICK_RECIPES.find((x) => x.tier === tier);
+    const note = document.getElementById('workbench-note');
+    if (!r) return false;
+    if (tier < this.cavePick.tier) { if (note) note.textContent = `You already hold a better pickaxe.`; return false; }
+    if (!this.canCraftPick(r)) {
+      const need = Object.entries(r.cost).filter(([k, v]) => this.pickHave(k) < v).map(([k, v]) => `${v - this.pickHave(k)}${RES_ICONS[k]}`).join(' ');
+      if (note) note.textContent = `Need ${need} more`;
+      return false;
+    }
+    for (const [k, v] of Object.entries(r.cost)) {
+      if (k === 'iron' || k === 'gold' || k === 'coal') this.caveInv[k] -= v; else this.resources[k] -= v;
+    }
+    this.cavePick = { tier, dur: PICK_DUR[tier] };
+    if (this.underground) this.underground.setPick(tier, PICK_DUR[tier]);
+    this.updateInventoryHUD();
+    this.saveResources();
+    this.updatePickBadge();
+    this.incrementStat('pickCrafted');
+    if (note) note.textContent = `Crafted the ${r.label}! It lasts ${PICK_DUR[tier]} blocks.`;
+    if (this.underground) this.underground.onHotbarChange(this.underground.getHotbarState());
+    this.renderWorkbench();
+    return true;
+  }
+
+  // The cave's pickaxe badge (tier + remaining durability); a break message shows for a moment.
+  updatePickBadge(msg) {
+    const el = document.getElementById('ug-pick');
+    if (!el) return;
+    const p = this.cavePick;
+    el.textContent = msg || `⛏️ ${PICK_NAMES[p.tier]}${p.tier ? ` ${p.dur}/${PICK_DUR[p.tier]}` : ''}`;
+    el.classList.toggle('low', !msg && p.tier > 0 && p.dur <= PICK_DUR[p.tier] * 0.1);
+    el.classList.toggle('broke', !!msg);
+    if (msg) { clearTimeout(this._pickMsgT); this._pickMsgT = setTimeout(() => this.updatePickBadge(), 3000); }
+  }
+
+  openCaveTable() {
+    if (!this.inUnderground || this.workbenchOpen) return;
+    this.underground.setPaused(true);
+    this.openWorkbench();
+    document.getElementById('workbench-overlay').style.zIndex = '40'; // above the cave canvas (30)
   }
 
   craftRecipe(id) {

@@ -11,7 +11,7 @@ const SEED = { resources: { wood: 20, stone: 20, fish: 5, bugs: 9, fruit: 9, she
       s.localBody.setPosition(WORKBENCH_POS.x, WORKBENCH_POS.y + 30); s.openWorkbench();
       const enabled = [...document.querySelectorAll('.workbench-craft-btn')].filter((b) => !b.disabled).map((b) => b.dataset.recipe);
       const seasonal = RECIPES.filter((r) => r.season).map((r) => r.id);
-      out[season] = { seasonalEnabled: enabled.filter((id) => seasonal.includes(id)), header: document.getElementById('workbench-season').textContent, rows: document.querySelectorAll('#workbench-list li').length };
+      out[season] = { seasonalEnabled: enabled.filter((id) => seasonal.includes(id)), header: document.getElementById('workbench-season').textContent, rows: document.querySelectorAll('#workbench-list button[data-recipe]').length };
       s.closeWorkbench();
     }
     return out;

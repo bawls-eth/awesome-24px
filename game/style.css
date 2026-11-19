@@ -2589,3 +2589,22 @@ body.touch-device .realm-ab .key { display: none; }
   /* Too short for even one log line above the hint rows: messages still appear as bubbles over players, and quick chat keeps working. */
   body.touch-device #chat-log { display: none; }
 }
+
+/* ---------- Cave A5: pickaxe badge + crafting table ---------- */
+#ug-pick {
+  position: absolute;
+  left: calc(12px + env(safe-area-inset-left, 0px));
+  top: 71px;
+  padding: 1px 10px;
+  border-radius: 12px;
+  background: var(--ac-panel-glass);
+  border: 2px solid var(--ac-border);
+  font-size: 12px;
+  font-weight: 700;
+  pointer-events: none;
+  max-width: 240px;
+}
+#ug-pick.low { border-color: #d9534f; color: #d9534f; }
+#ug-pick.broke { border-color: #d9534f; background: #fff0ee; }
+#ug-craft-btn { font-size: 18px !important; }
+#workbench-list .workbench-section { list-style: none; margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--ac-border); font-weight: 700; display: block; }
