@@ -189,6 +189,7 @@ class RealmArena {
     this.run = { wave: 0, kills: 0, shards: 0 };
     this.displayShards = this.save.shards;
     this._avatar = null;
+    this._heroArt = null; this._heroClass = null; this._heroSt = null; this._heroDbg = null; this._heroHurtAt = -9; this._heroAtkAt = -9; // optional hero animations (setHeroArt)
     this.team = null; this.role = 'solo'; this.down = false; this.reviveT = 0; this._firing = false;
 
     this.canvas = document.createElement('canvas');
@@ -624,6 +625,39 @@ class RealmArena {
     img.src = url;
   }
 
+  // Additive hook: draw the player with a hero's animation set (MMArt). Pass (null) to go back to the plain sprite.
+  setHeroArt(artSet, heroClass, scale) {
+    this._heroArt = artSet && typeof artSet.anim === 'function' && typeof heroClass === 'string' ? artSet : null;
+    this._heroClass = this._heroArt ? heroClass : null;
+    this._heroScale = Number.isFinite(scale) && scale > 0 ? scale : 0.3125;
+    this._heroSt = null; this._heroDbg = null;
+  }
+  // Picks the animation (dead > hurt > attack > walk > idle) and draws it feet-anchored at the player. Returns true when drawn.
+  _drawHero(g, p) {
+    const art = this._heroArt, cls = this._heroClass, now = performance.now() / 1000;
+    const st = this._heroSt || (this._heroSt = { key: '', t0: now, dir: 'down', flip: false });
+    const fromVec = (dx, dy) => { if (Math.abs(dy) > Math.abs(dx)) st.dir = dy > 0 ? 'down' : 'up'; else { st.dir = 'right'; st.flip = dx < 0; } };
+    const atkAge = now - this._heroAtkAt;
+    let action = 'idle';
+    if (this.state === 'dead' || this.down) action = 'death';
+    else if (now - this._heroHurtAt < 0.25) action = 'hit';
+    else if (atkAge < 0.34) action = 'attack';
+    else if (p.moving) action = 'walk';
+    if (action === 'attack' || (action === 'hit' && atkAge < 0.34)) fromVec(Math.cos(p.aim), Math.sin(p.aim));
+    else if (action === 'walk') fromVec(this._mx || 0, this._my || 0);
+    const key = action + '_' + st.dir;
+    if (key !== st.key) { st.key = key; st.t0 = now; }
+    if (action === 'attack' && this._heroAtkSeen !== this._heroAtkAt) { this._heroAtkSeen = this._heroAtkAt; st.t0 = now; }
+    let a = art.anim(cls, action, st.dir);
+    if (!a && action !== 'idle') a = art.anim(cls, 'idle', st.dir);
+    if (!a) { this._heroDbg = null; return false; }
+    let t = now - st.t0;
+    if (action === 'idle' && this._reduced) t = 0; // reduced motion: a static first frame
+    const f = art.draw(g, a, t, p.x, p.y + 14, this._heroScale || 0.3125, st.flip);
+    this._heroDbg = { action: a.id ? a.id.split('_')[1] : action, dir: st.dir, flip: st.flip, frame: f, id: a.id };
+    return f >= 0;
+  }
+
   // ---------- input ----------
 
   _bindInput() {
@@ -1044,6 +1078,7 @@ class RealmArena {
     if (firing && p.fireCd <= 0 && this.state !== 'dead') {
       p.fireCd = 1 / (this.stats.rate * (this.overdriveT > 0 ? 2 : 1));
       this.firePlayerBullet(p.aim);
+      this._heroAtkAt = performance.now() / 1000;
       this._snd('shot');
     }
   }
@@ -1255,6 +1290,7 @@ class RealmArena {
       this.shield.hits -= 1; p.iframes = 0.25; this._burst(p.x, p.y, '#8fe9ff', 6, 140); this._floatText(p.x, p.y - 22, 'blocked', '#8fe9ff'); return;
     }
     p.hp = Math.max(0, p.hp - dmg);
+    this._heroHurtAt = performance.now() / 1000;
     this._snd('hurt');
     p.iframes = this.stats.iframes;
     this.flash = 1; this.shake = Math.max(this.shake, 8);
@@ -1573,6 +1609,9 @@ class RealmArena {
     if (this.state !== 'dead' && (p.iframes <= 0 || this._reduced || Math.floor(p.iframes * 20) % 2 === 0)) {
       if (this.down) { g.globalAlpha = 0.45; g.strokeStyle = '#7ee787'; g.lineWidth = 3; g.beginPath(); g.arc(p.x, p.y, RT_REVIVE_RANGE, -Math.PI / 2, -Math.PI / 2 + Math.min(1, this.reviveT / RT_REVIVE_TIME) * Math.PI * 2); g.stroke(); }
       g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(p.x, p.y + 14, 13, 5, 0, 0, Math.PI * 2); g.fill();
+      let heroDrawn = false;
+      if (this._heroArt) { const ga = g.globalAlpha; if (this._reduced && p.iframes > 0) g.globalAlpha = 0.6; heroDrawn = this._drawHero(g, p); g.globalAlpha = ga; }
+      if (!heroDrawn) {
       const spr = this._avatar || this.sprites.playerFallback;
       const size = this._avatar ? 48 : 32;
       g.save(); g.translate(p.x, p.y - Math.abs(Math.sin(p.bob)) * 3);
@@ -1580,6 +1619,7 @@ class RealmArena {
       if (this._reduced && p.iframes > 0) g.globalAlpha = 0.6; // reduced motion: a steady tint instead of the 10 Hz blink (restored by g.restore)
       g.drawImage(spr, -size / 2, -size / 2 - 4, size, size);
       g.restore();
+      }
       if (this.shield.hits > 0) { g.strokeStyle = `rgba(143,233,255,${0.5 + 0.1 * this.shield.hits})`; g.lineWidth = 3; g.beginPath(); g.arc(p.x, p.y, 26, 0, Math.PI * 2); g.stroke(); }
       if (this.overdriveT > 0) { g.strokeStyle = 'rgba(255,170,60,0.8)'; g.lineWidth = 2; g.beginPath(); g.arc(p.x, p.y, 21 + Math.sin(performance.now() / 60) * 2, 0, Math.PI * 2); g.stroke(); }
       g.strokeStyle = 'rgba(143,233,255,0.7)'; g.lineWidth = 2; g.beginPath();
@@ -1588,6 +1628,10 @@ class RealmArena {
       g.drawImage(this.sprites.hitDot, p.x - 4, p.y - 4);
     }
 
+    if (this.state === 'dead' && this._heroArt) { // the hero falls and lies down (only with hero art attached)
+      g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(p.x, p.y + 14, 13, 5, 0, 0, Math.PI * 2); g.fill();
+      this._drawHero(g, p);
+    }
     if (this.dungeon) this.dungeon.drawOver(g);
     for (let i = 0; i < this.particles.length; i++) {
       const pt = this.particles[i];

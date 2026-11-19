@@ -66,3 +66,10 @@ legend{color:var(--gold);font-size:.9rem;padding:0 6px}
 .plain li{margin:4px 0}
 .btn.testfall{border-color:var(--bad);color:var(--bad)}
 .btn.keep{border-color:var(--ok)}
+
+/* real hero art */
+.heroart{display:block;width:96px;height:96px;image-rendering:pixelated;float:right;margin:0 0 0 8px;background:rgba(0,0,0,.18);border-radius:10px}
+.heroart[hidden]{display:none}
+.classrow{display:flex;align-items:center;gap:10px}
+.classrow select{flex:1;min-width:0}
+.classrow .heroart{float:none;margin:0;flex:none}

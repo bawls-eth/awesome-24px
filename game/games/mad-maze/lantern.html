@@ -35,7 +35,7 @@
     <h2>New Hero</h2>
     <form id="new-form" autocomplete="off">
       <label for="new-class">Class</label>
-      <select id="new-class"></select>
+      <div class="classrow"><canvas id="new-class-art" class="heroart" width="96" height="96" aria-hidden="true" hidden></canvas><select id="new-class"></select></div>
       <p id="new-class-note" class="muted"></p>
       <label for="new-name">Name</label>
       <input id="new-name" type="text" maxlength="24" placeholder="Hero name" required>
@@ -98,6 +98,7 @@
     </div>
   </section>
 </main>
+<script src="../../shared/mm-art.js"></script>
 <script src="../../shared/mm-classes.js"></script>
 <script src="../../shared/mm-items.js"></script>
 <script src="../../shared/mm-profile.js"></script>

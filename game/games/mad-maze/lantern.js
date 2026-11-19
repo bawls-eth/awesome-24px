@@ -3,7 +3,7 @@
 // `pixeltown-save-v1` is only READ (legacy import) or written by a confirmed Restore.
 (function () {
   'use strict';
-  var P = window.MMProfile, B = window.MMBackup, C = window.MMClasses, I = window.MMItems;
+  var A = window.MMArt, P = window.MMProfile, B = window.MMBackup, C = window.MMClasses, I = window.MMItems;
   var KEY = P.KEY, LEGACY = P.LEGACY_KEY;
   var CARRY_MAX = 24;
   var CLS_ORDER = ['ranger', 'frostcaller', 'herald', 'punk', 'bruiser'];
@@ -314,6 +314,8 @@
     var ul = $('heroes'); ul.textContent = '';
     profile.heroes.forEach(function (h) {
       var li = el('li', h.id === selected ? 'sel' : ''); li.setAttribute('data-hero', h.id);
+      var ac = A && A.artClassFor(h.cls);
+      if (ac) { var cv = el('canvas', 'heroart'); cv.width = 96; cv.height = 96; cv.setAttribute('data-art', ac); cv.setAttribute('aria-hidden', 'true'); cv.hidden = true; li.appendChild(cv); }
       li.appendChild(el('div', 'hname', h.name));
       var meta = el('div', 'meta', clsName(h.cls) + ' - Level ' + h.level + ' - fame ' + h.fame);
       meta.appendChild(el('span', 'tag mode', h.mode === 'picnic' ? 'Picnic' : h.mode === 'hardcore' ? 'Hardcore' : 'Classic'));
@@ -378,6 +380,7 @@
     });
     sel.value = ok[prev] ? prev : 'ranger';
     updateClassNote();
+    paintArt();
 
     // stash
     var cnt = profile.stash.filter(Boolean).length;
@@ -407,6 +410,28 @@
     });
     $('hall-empty').hidden = profile.hall.length > 0;
     restoreFocus(fk);
+  }
+  // ---------- hero art (real class animations; the canvas stays hidden when a class has none) ----------
+  var artSet = null, artRaf = 0;
+  var REDUCE = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  function paintArt() {
+    var cvs = document.querySelectorAll('canvas.heroart'), t = performance.now() / 1000, any = false;
+    var pv = $('new-class-art'); if (pv) pv.setAttribute('data-art', (A && A.artClassFor($('new-class').value)) || '');
+    for (var i = 0; i < cvs.length; i++) {
+      var cv = cvs[i], cls = cv.getAttribute('data-art');
+      var a = artSet && cls ? artSet.anim(cls, 'idle', 'down') : null;
+      if (!a) { cv.hidden = true; continue; }
+      cv.hidden = false; any = true;
+      var g = cv.getContext('2d'); if (!g) continue;
+      g.clearRect(0, 0, cv.width, cv.height);
+      var f = artSet.draw(g, a, REDUCE ? 0 : t, cv.width / 2, Math.round(a.ay * 0.375) + 4, 0.375, false);
+      cv.setAttribute('data-frame', String(f));
+    }
+    if (any && !REDUCE && !artRaf) artRaf = requestAnimationFrame(function tick() { artRaf = 0; paintArt(); });
+  }
+  function loadArt() {
+    if (!A) return;
+    A.loadAll('../../assets/arcane/', { actions: ['idle'], dirs: ['down'] }).then(function (s) { artSet = s; paintArt(); }, function () { /* keep the text cards */ });
   }
   function updateClassNote() {
     var id = $('new-class').value, c = C.CLASSES[id];
@@ -454,7 +479,7 @@
   // ---------- wire up ----------
   $('import-yes').addEventListener('click', doImport);
   $('import-no').addEventListener('click', function () { offerHidden = true; render(); });
-  $('new-class').addEventListener('change', updateClassNote);
+  $('new-class').addEventListener('change', function () { updateClassNote(); paintArt(); });
   $('new-form').addEventListener('submit', function (e) {
     e.preventDefault();
     var mode = (document.querySelector('input[name=mode]:checked') || {}).value;
@@ -476,4 +501,5 @@
   selected = loadActive().heroId;
   render();
   startScene();
+  loadArt();
 }());

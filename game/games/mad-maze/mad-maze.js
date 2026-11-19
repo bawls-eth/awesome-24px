@@ -69,6 +69,21 @@
     document.body.classList.add('dungeon-mode');
   }
 
+  // Hero art: the active hero (pixeltown-mm-active-v1, cleaned) picks its class animations; any other class keeps the sprite.
+  function activeHeroClass() {
+    try {
+      if (!window.MMProfile) return null;
+      const active = MMProfile.cleanActive(localStorage.getItem(MMProfile.ACTIVE_KEY));
+      const prof = MMProfile.clean(localStorage.getItem(MMProfile.KEY));
+      const h = (prof.heroes || []).find((x) => x.id === active.heroId);
+      return h ? h.cls : null;
+    } catch (e) { return null; }
+  }
+  const artClass = window.MMArt ? MMArt.artClassFor(activeHeroClass()) : null;
+  if (artClass) {
+    MMArt.loadClass('../../assets/arcane/', artClass).then((set) => { if (set.has(artClass)) arena.setHeroArt(set, artClass); }).catch(() => {});
+  }
+
   if (TEST) window.__mm = { arena, dungeon: dungeon ? dungeon.api : null };
   arena.start();
 })();
