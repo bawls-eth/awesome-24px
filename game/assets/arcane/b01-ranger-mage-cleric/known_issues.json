@@ -1,0 +1,26 @@
+[
+  {
+    "id": "b1_global_palette",
+    "what_is_wrong": "B1 expands the Warrior-only B0 palette to include required green and purple. B0 v2 retains its older 48-color palette; global 48-color compatibility across B0+B1 needs a later explicit palette consolidation and re-quantization (do not overwrite approved B0)."
+  },
+  {
+    "id": "b1_source_image_resolution",
+    "what_is_wrong": "Illustrated source atlas places many sprites at approximately 30-50 original pixels tall. Upscaling and 4x-grid snapping ensure technical compatibility, but fine detail and subtle motions are limited; visual approval required before these become class masters."
+  },
+  {
+    "id": "b1_all_attack_cast_muzzles",
+    "what_is_wrong": "Muzzle locations are geometry-based estimates rather than manually marked weapon tip/hand positions; calibrate in engine."
+  },
+  {
+    "id": "b1_all_idle_and_walk",
+    "what_is_wrong": "Idle loops and walk cycles have not been visually verified in a running game; several adjacent poses may read similarly."
+  },
+  {
+    "id": "b1_cross_view_scale",
+    "what_is_wrong": "While one fixed scale is used per class, Ranger up/right standing poses are about 140px versus 148px down, Mage up/right 144px versus 148px down, and Cleric 148-152px across views. Strictly equal standing silhouettes need class-specific redraws, not per-frame resizing."
+  },
+  {
+    "id": "b1_weapon_pose_review",
+    "what_is_wrong": "Source sprites are small: bows/staffs in some attack/cast frames may read weakly, and tiny detached fragments were removed during alpha cleanup. Inspect weapon continuity and pose readability before final approval."
+  }
+]

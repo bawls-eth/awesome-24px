@@ -1,0 +1,18 @@
+[
+  {
+    "id": "warrior_attack_down",
+    "what_is_wrong": "Frame 2 was corrected by upscaling its previously shrunken artwork. Verify that its armor size now matches the other attack frames; this one repair is not from a fresh master pose."
+  },
+  {
+    "id": "warrior_up_right",
+    "what_is_wrong": "The up/right sprites are newly image-illustrated rather than code-drawn, but were sliced from multi-pose sheets; some weapon extremities or fine armor pixels may be clipped or simplified by the source-sheet spacing. Requires visual approval."
+  },
+  {
+    "id": "warrior_all_attacks",
+    "what_is_wrong": "Projectile/attack muzzle coordinates retain preliminary engine estimates from B0 and need in-game placement."
+  },
+  {
+    "id": "warrior_walk_all",
+    "what_is_wrong": "Walk loop continuity, baseline and attack feel need in-engine review; automated tests do not certify natural animation."
+  }
+]
