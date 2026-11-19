@@ -42,7 +42,7 @@ const RM_ITEMS = [
   { id: 'scholarring', slot: 'ring', name: 'Scholar Ring', icon: '📘', stat: 'xp', amount: 0.12, text: 'XP bonus', pct: true },
   { id: 'wardring', slot: 'ring', name: 'Warding Ring', icon: '🛡️', stat: 'iframes', amount: 0.1, text: 's safe time' },
 ];
-const RM_ITEM_BY_ID = {};
+const RM_ITEM_BY_ID = Object.create(null); // no inherited keys like __proto__ / constructor
 RM_ITEMS.forEach((i) => { RM_ITEM_BY_ID[i.id] = i; });
 const RM_SLOTS = ['weapon', 'charm', 'ring'];
 const RM_BAG_CHANCE = 0.3;
@@ -80,10 +80,10 @@ function rmCleanSave(s) {
   out.xp = out.level >= RM_MAX_LEVEL ? 0 : Math.min(rmCleanCount(s.xp), rmXpNeeded(out.level) - 1);
   out.items = [];
   const seen = new Set();
-  (Array.isArray(s.items) ? s.items : []).forEach((it) => {
+  (Array.isArray(s.items) ? s.items.slice(0, 200) : []).forEach((it) => {
     if (out.items.length >= RM_BACKPACK || !it || typeof it !== 'object') return;
     const uid = rmCleanCount(it.n);
-    const def = RM_ITEM_BY_ID[it.id];
+    const def = typeof it.id === 'string' ? RM_ITEM_BY_ID[it.id] : null;
     const rar = Math.floor(Number(it.r));
     if (!uid || seen.has(uid) || !def || !(rar >= 0 && rar < RM_RARITIES.length)) return;
     seen.add(uid);
@@ -349,6 +349,7 @@ class RealmArena {
     this.aimVec.on = false; this.moveVec.x = 0; this.moveVec.y = 0;
     if (this._raf) cancelAnimationFrame(this._raf);
     clearTimeout(this._bannerTimer);
+    this.setPaused(false); // never leave the backpack covering a stopped run
     this._hideBanner();
   }
 
@@ -712,7 +713,7 @@ class RealmArena {
       this._burst(this.player.x, this.player.y, rar.color, 10, 150);
     }
     this.onSave(this.save);
-    this._syncHud(); this.renderBackpack();
+    this._syncHud(); if (this.paused) this.renderBackpack();
   }
 
   _updateBags(dt) {
@@ -799,10 +800,9 @@ class RealmArena {
   }
 
   _afterGearChange() {
-    const oldMax = this.stats.maxHp;
     this._calcStats();
     const p = this.player;
-    p.hp = Math.min(this.stats.maxHp, p.hp + Math.max(0, this.stats.maxHp - oldMax)); // new max HP arrives filled, losing it can't kill you
+    p.hp = Math.min(this.stats.maxHp, p.hp); // swapping gear never heals (no free HP by toggling a charm); losing max HP just lowers the cap
     this.displayShards = this.save.shards;
     this.onSave(this.save);
     this._syncHud(); this.renderBackpack();

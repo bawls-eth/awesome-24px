@@ -106,6 +106,19 @@ const enter = (s) => {
   check('equip in play: a rare Spark Wand (2.2 damage) kills a 2 HP enemy with the first bolt; bare-handed it takes a second bolt (~0.13 s later)', e3.dmg > 2.19 && e3.wand < e3.plain - 0.1 && e3.wand < 1, JSON.stringify(e3));
   await scene(page, (s) => { const r = s.realm; r.save.items = []; r.save.eq = {}; r._calcStats(); });
 
+  // Swapping gear must never heal (the review's free-heal exploit).
+  const heal = await scene(page, (s) => {
+    const r = s.realm; r.save.items = [{ n: 1, id: 'heartcharm', r: 2 }, { n: 2, id: 'swiftcharm', r: 0 }]; r.save.nextUid = 3; r.save.eq = {}; r._calcStats();
+    r.player.hp = 10; r.setPaused(true); const o = { maxBase: r.stats.maxHp }; const hps = [];
+    for (let i = 0; i < 6; i++) { r.equip(1); hps.push(r.player.hp); }
+    r.equip(2); hps.push(r.player.hp); r.equip(1); hps.push(r.player.hp); // switching charm types too
+    r.setPaused(false); o.hps = hps; o.max = r.stats.maxHp;
+    return o;
+  });
+  check('equip: toggling or swapping a charm in the backpack never heals — HP stays 10 however many times you swap', heal.hps.every((h) => h === 10), JSON.stringify(heal));
+  const proto = await scene(page, (s) => ({ a: rmCleanSave({ items: [{ n: 1, id: '__proto__', r: 0 }, { n: 2, id: 'constructor', r: 0 }, { n: 3, id: 'toString', r: 0 }, { n: 4, id: 7, r: 0 }, { n: 5, id: 'luckring', r: 0 }] }).items.map((i) => i.id), big: rmCleanSave({ items: Array.from({ length: 100000 }, (_, i) => ({ n: i + 1, id: 'luckring', r: 0 })) }).items.length }));
+  check('save: built-in object names (__proto__, constructor, toString) and non-string ids are rejected as items; a huge array is trimmed fast', proto.a.join() === 'luckring' && proto.big === 24, JSON.stringify(proto));
+
   // 4. Abilities.
   const a1 = await scene(page, (s) => {
     const r = s.realm; r.save.level = 1; r.save.xp = 0; r._calcStats(); r._syncAbilities(); const o = {};
