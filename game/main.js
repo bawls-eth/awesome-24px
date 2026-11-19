@@ -674,6 +674,10 @@ const FOSSIL_RESPAWN_MS = 25000;
 const FOSSIL_BAG_CAP = 3;
 const DIG_HOLE_POS = { x: 1200, y: 460 };
 const DIG_HOLE_RADIUS = 36;
+
+// The Realm Gate: a swirling portal in the quiet north-west of the village leading to the bullet-hell Realm.
+const REALM_GATE_POS = { x: 750, y: 260 };
+const REALM_GATE_RADIUS = 70;
 const DOOR_RADIUS = 34;
 const TURNIP_STALL_POS = { x: 1760, y: 760 };
 const TURNIP_STALL_RADIUS = 50;
@@ -1344,6 +1348,7 @@ class TownScene extends Phaser.Scene {
     this.drawNPC2();
     this.drawMerchant();
     this.drawDigHole();
+    this.drawRealmGate();
     this.drawArcadeSign();
     this.drawDoors();
     this.drawPolyrollBooth();
@@ -1466,6 +1471,7 @@ class TownScene extends Phaser.Scene {
     if (this.mailboxOpen && !this.isNearMailbox(MAILBOX_RADIUS + 90)) this.closeMailbox();
     if (this.homeOpen && !this.isNearHome(HOME_RADIUS + 90)) this.closeHome();
     this.updateDigHoleHint();
+    this.updateRealmGateHint();
     this.updateFishHint();
     this.updateGiftHint();
     this.updateFloraFaunaHint();
@@ -2281,6 +2287,8 @@ class TownScene extends Phaser.Scene {
     const sSeed = loadSave().caveSeed;
     this.caveSeed = Number.isInteger(sSeed) && sSeed >= 0 && sSeed < 4294967296 ? sSeed : 1 + Math.floor(Math.random() * 4294967294);
     if (sSeed !== this.caveSeed) writeSave({ caveSeed: this.caveSeed }); // persist a freshly made seed right away, or a reload before the first sale would grow a different cave
+    const sRealm = loadSave().realm;
+    this.realmSave = sRealm && typeof sRealm === 'object' ? sRealm : {}; // sanitised again by RealmArena
     const savedCrafted = loadSave().crafted;
     const sc = savedCrafted && typeof savedCrafted === 'object' ? savedCrafted : {};
     this.craftedGoods = {};
@@ -2302,7 +2310,7 @@ class TownScene extends Phaser.Scene {
   }
 
   interact() {
-    if (this.inUnderground) return;
+    if (this.inUnderground || this.inRealm) return;
     if (this.buildMode) {
       this.handleBuildInteract();
       return;
@@ -2408,6 +2416,10 @@ class TownScene extends Phaser.Scene {
       this.enterUnderground();
       return;
     }
+    if (this.isNearRealmGate()) {
+      this.enterRealm();
+      return;
+    }
 
     if (this.isNearDoor()) {
       this.useDoor();
@@ -2487,7 +2499,7 @@ class TownScene extends Phaser.Scene {
   // same currency the sparkle and the shop already use.
 
   openPolyroll() {
-    if (this.inUnderground) return;
+    if (this.inUnderground || this.inRealm) return;
     this.polyrollOpen = true;
     document.getElementById('polyroll-overlay').classList.remove('hidden');
     this.updatePolyrollScoreLabel();
@@ -2754,7 +2766,7 @@ class TownScene extends Phaser.Scene {
   updateDigHoleHint() {
     const hint = document.getElementById('dig-hole-hint');
     if (!hint) return;
-    hint.classList.toggle('hidden', this.inUnderground || this.buildMode || !this.isNearDigHole());
+    hint.classList.toggle('hidden', this.inUnderground || this.inRealm || this.buildMode || !this.isNearDigHole());
   }
 
   // A real tappable button — not just a key hint — since "press E" isn't
@@ -2769,7 +2781,7 @@ class TownScene extends Phaser.Scene {
     // flowers and beach items are checked earlier in interact() and used
     // to swallow the tap, so "🎣 Fish" did something else entirely.
     btn.addEventListener('click', () => {
-      if (!this.canAct() || this.inUnderground || this.buildMode) return;
+      if (!this.canAct() || this.inUnderground || this.inRealm || this.buildMode) return;
       if (this.fishing.state !== 'idle') { this.handleFishingInteract(); return; }
       const spot = this.findNearestFishingSpot();
       if (spot) this.startFishing(spot);
@@ -2789,7 +2801,7 @@ class TownScene extends Phaser.Scene {
       if (targetShadow) targetShadow.sprite.setFillStyle(0x0f2236, 0.7);
       this.fishTargetShadow = targetShadow;
     }
-    const show = !this.inUnderground && !this.buildMode && (state !== 'idle' || !!target);
+    const show = !this.inUnderground && !this.inRealm && !this.buildMode && (state !== 'idle' || !!target);
     btn.classList.toggle('hidden', !show);
     btn.classList.toggle('biting', state === 'biting');
     let label = '🎣 Fish';
@@ -2798,6 +2810,99 @@ class TownScene extends Phaser.Scene {
     // Only touch the DOM when the label actually changes — this runs
     // every frame.
     if (btn.textContent !== label) btn.textContent = label;
+  }
+
+  // ---------- the Realm (2D bullet-hell arena, local-only) ----------
+
+  drawRealmGate() {
+    const { x, y } = REALM_GATE_POS;
+    if (!this.textures.exists('realmgate')) {
+      // Baked once: a stone arch around a violet swirl, with a soft shadow.
+      const g = this.make.graphics({ x: 0, y: 0, add: false });
+      g.fillStyle(0x000000, 0.2).fillEllipse(40, 70, 72, 12);
+      g.fillStyle(0x5a5a68, 1).fillRect(6, 14, 14, 56).fillRect(60, 14, 14, 56);
+      g.fillStyle(0x7a7a8a, 1).fillRect(6, 10, 68, 12).fillRect(10, 6, 60, 8);
+      g.fillStyle(0x45455a, 1).fillRect(6, 62, 14, 8).fillRect(60, 62, 14, 8);
+      g.fillStyle(0x2a1245, 1).fillRect(20, 22, 40, 48);
+      g.fillStyle(0x7b3fe4, 1).fillEllipse(40, 46, 34, 40);
+      g.fillStyle(0xb36bff, 1).fillEllipse(40, 46, 24, 30);
+      g.fillStyle(0xe2c6ff, 1).fillEllipse(40, 46, 12, 18);
+      g.fillStyle(0xffffff, 0.9).fillRect(38, 40, 4, 4).fillRect(34, 52, 3, 3).fillRect(45, 36, 3, 3);
+      g.generateTexture('realmgate', 80, 76);
+      g.destroy();
+    }
+    const img = this.add.image(x, y, 'realmgate').setDepth(y - 1);
+    this.tweens.add({ targets: img, alpha: { from: 0.9, to: 1 }, duration: 1200, yoyo: true, repeat: -1 }); // one cheap tween, no per-frame drawing
+    this.addObstacleRect({ x: x - 34, y: y + 6, width: 20, height: 34 });
+    this.addObstacleRect({ x: x + 34, y: y + 6, width: 20, height: 34 });
+    this.add.text(x, y - 34, '🌀 Realm Gate', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
+  }
+
+  isNearRealmGate() {
+    return Math.hypot(this.localBody.x - REALM_GATE_POS.x, this.localBody.y - (REALM_GATE_POS.y + 30)) < REALM_GATE_RADIUS;
+  }
+
+  updateRealmGateHint() {
+    const hint = document.getElementById('realm-gate-hint');
+    if (!hint) return;
+    hint.classList.toggle('hidden', this.inUnderground || this.inRealm || this.buildMode || !this.isNearRealmGate());
+  }
+
+  enterRealm() {
+    if (this.inRealm || this.inUnderground) return;
+    this.inRealm = true;
+    this.incrementStat('realmVisits');
+    document.getElementById('realm-gate-hint').classList.add('hidden');
+    document.getElementById('hud').classList.add('hidden');
+    document.getElementById('realm-overlay').classList.remove('hidden');
+    this.scene.pause();
+    if (!this.realm) {
+      this.realm = new RealmArena({
+        container: document.getElementById('realm-canvas-wrap'),
+        save: this.realmSave,
+        onSave: (s) => writeSave({ realm: s }),
+        onExit: (why) => this.exitRealm(why),
+      });
+      this.realm.setAvatar(`../i/${this.selfData.species}-strip.png`, this.selfData.frame || 0, FRAME_SIZE);
+      this.setupRealmControls();
+    }
+    this.realm.start();
+  }
+
+  exitRealm() {
+    if (!this.inRealm) return;
+    this.inRealm = false;
+    this.realm.stop();
+    document.getElementById('realm-overlay').classList.add('hidden');
+    document.getElementById('hud').classList.remove('hidden');
+    this.scene.resume();
+    this.localBody.setPosition(REALM_GATE_POS.x, REALM_GATE_POS.y + 56); // step out of the gate
+  }
+
+  // Two virtual sticks for touch: left moves, right aims and fires. They only feed the arena's vectors.
+  setupRealmControls() {
+    const r = this.realm;
+    document.getElementById('realm-leave-btn').addEventListener('click', () => r.leave());
+    const stick = (id, apply) => {
+      const base = document.getElementById(id);
+      const knob = base.querySelector('.knob');
+      let pid = null;
+      const MAXR = 46;
+      const set = (e) => {
+        const b = base.getBoundingClientRect();
+        let dx = e.clientX - (b.left + b.width / 2); let dy = e.clientY - (b.top + b.height / 2);
+        const len = Math.hypot(dx, dy);
+        if (len > MAXR) { dx = dx / len * MAXR; dy = dy / len * MAXR; }
+        knob.style.transform = `translate(${dx}px, ${dy}px)`;
+        apply(dx / MAXR, dy / MAXR, true);
+      };
+      const end = () => { pid = null; knob.style.transform = ''; apply(0, 0, false); };
+      base.addEventListener('pointerdown', (e) => { e.preventDefault(); pid = e.pointerId; try { base.setPointerCapture(pid); } catch (err) { /* synthetic pointers can't be captured */ } set(e); });
+      base.addEventListener('pointermove', (e) => { if (e.pointerId === pid) set(e); });
+      ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((ev) => base.addEventListener(ev, (e) => { if (pid === null || e.pointerId === pid) end(); }));
+    };
+    stick('realm-stick-move', (x, y) => r.setMoveStick(x, y));
+    stick('realm-stick-aim', (x, y, on) => r.setAimStick(x, y, on));
   }
 
   enterUnderground() {
@@ -6475,7 +6580,7 @@ class TownScene extends Phaser.Scene {
     const blockers = this.weedBlockers;
     const keepClear = [
       ...FLOWER_SPOTS, CAMPFIRE_POS, STATUE_POS, MAILBOX_POS, BUGOFF_SIGN_POS, HOME_POS, GUESTBOOK_POS, WORKBENCH_POS,
-      POLYROLL_POS, TURNIP_STALL_POS, ABLE_SISTERS_POS, MERCHANT_POS, DIG_HOLE_POS, FISH_TOURNAMENT_SIGN_POS,
+      POLYROLL_POS, TURNIP_STALL_POS, ABLE_SISTERS_POS, MERCHANT_POS, DIG_HOLE_POS, FISH_TOURNAMENT_SIGN_POS, REALM_GATE_POS,
     ];
     const spots = [];
     for (let i = 0; i < WEED_COUNT; i++) {
@@ -7633,7 +7738,7 @@ class TownScene extends Phaser.Scene {
     this.updateVillagers();
     const btn = document.getElementById('gift-hint-btn');
     if (!btn) return;
-    const v = (!this.inUnderground && !this.buildMode) ? this.findNearestVillager() : null;
+    const v = (!this.inUnderground && !this.inRealm && !this.buildMode) ? this.findNearestVillager() : null;
     btn.classList.toggle('hidden', !v);
     if (!v) return;
     // e.g. "🎁 Gift Mocha 🍎🌸" — dimmed when nothing they like is in the bag.
@@ -8158,7 +8263,7 @@ class TownScene extends Phaser.Scene {
     talkBtn.addEventListener('pointerleave', release);
 
     window.addEventListener('keydown', (e) => {
-      if (this.chatFocused || this.inUnderground) return;
+      if (this.chatFocused || this.inUnderground || this.inRealm) return;
       if (e.key.toLowerCase() === 't' && !this.recording) this.startRecording();
     });
     window.addEventListener('keyup', (e) => {

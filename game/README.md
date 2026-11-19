@@ -810,3 +810,19 @@ or a single one with `node game/tests/<name>.test.js` while
 `python3 -m http.server 8440` serves the repo root. The tests join the live
 town as `ADMIN*` bots (presence only), never chat, and never write anything
 else to Firebase.
+
+## The Realm (bullet-hell arena)
+
+A swirling violet **Realm Gate** stands in the north of the village. Walk up and
+press **E** (or tap **A**) to step through. It's a separate arena, fully local:
+
+- **Move** with **WASD** / arrows, **aim** with the mouse and hold to fire (or
+  hold **Space**). On a phone the left stick moves and the right stick aims and
+  auto-fires.
+- **Enemies:** 🟣 Whirlers spin a spiral of bolts, 🔺 Snipers circle you and fire
+  aimed bursts of three, 🟠 Bursters drift in and fire a ring. Clear a wave to
+  earn a bonus and face a bigger one.
+- **💎 Shards** are your banked Realm currency (kept between visits). Dying
+  costs 20% of the bank and sends you back to the village; **Esc** or **Leave**
+  is always free. Your best wave is remembered.
+- Everything here is local to you — nothing in the Realm is sent to other players.

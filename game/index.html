@@ -169,6 +169,7 @@
   <button id="build-material-btn" type="button" class="hidden">🪵 Wall</button>
   <button id="build-undo-btn" type="button" class="hidden" title="Undo your last placed block (Z)">↩️ Undo</button>
 
+  <div id="realm-gate-hint" class="hidden">🌀 <span class="key-hint">Press E</span><span class="tap-hint">Tap A</span> to enter the Realm</div>
   <div id="dig-hole-hint" class="hidden">⛏️ <span class="key-hint">Press E</span><span class="tap-hint">Tap A</span> to jump down the hole</div>
   <button id="fish-hint-btn" class="hidden" type="button">🎣 Fish</button>
   <button id="gift-hint-btn" class="hidden" type="button">🎁 Gift</button>
@@ -383,6 +384,19 @@
   </div>
 </div>
 
+<div id="realm-overlay" class="hidden">
+  <div id="realm-canvas-wrap"></div>
+  <div id="realm-hud">
+    <div id="realm-hp"><div id="realm-hp-fill"></div><span id="realm-hp-text"></span></div>
+    <div id="realm-info"><span id="realm-wave"></span><span id="realm-shards"></span><span id="realm-best"></span></div>
+    <button id="realm-leave-btn" type="button" aria-label="Leave the Realm">✖ Leave</button>
+  </div>
+  <div id="realm-banner" class="hidden"></div>
+  <div id="realm-help"><span class="key-hint">WASD move · mouse aims, hold to fire (or Space) · Esc leaves</span></div>
+  <div id="realm-stick-move" class="realm-stick" aria-label="Move stick"><div class="knob"></div></div>
+  <div id="realm-stick-aim" class="realm-stick" aria-label="Aim and fire stick"><div class="knob"></div></div>
+</div>
+
 <div id="underground-overlay" class="hidden">
   <div id="underground-canvas-wrap"></div>
   <div id="underground-depth-hint">⛰️ Underground · local only<span class="kbd-hint"> · F5 view · Space jump (2x = fly) · hold E to mine</span></div>
@@ -426,6 +440,7 @@
 <script src="firebase-config.js"></script>
 <script src="net.js"></script>
 <script src="underground.js"></script>
+<script src="realm.js"></script>
 <script src="main.js"></script>
 </body>
 </html>

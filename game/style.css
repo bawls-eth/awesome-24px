@@ -784,7 +784,7 @@ body.touch-device #gift-hint-btn {
 }
 body.touch-device #fish-hint-btn { left: calc(12px + env(safe-area-inset-left, 0px)); right: auto; }
 body.touch-device #gift-hint-btn { right: calc(12px + env(safe-area-inset-right, 0px)); left: auto; }
-body.touch-device #dig-hole-hint { bottom: calc(192px + env(safe-area-inset-bottom, 0px)); }
+body.touch-device #dig-hole-hint, body.touch-device #realm-gate-hint { bottom: calc(192px + env(safe-area-inset-bottom, 0px)); }
 
 @media (max-width: 480px) {
   body.touch-device #player-list-panel { top: calc(8px + env(safe-area-inset-top, 0px)); right: calc(8px + env(safe-area-inset-right, 0px)); max-width: 46vw; }
@@ -811,6 +811,22 @@ body.touch-device #dig-hole-hint { bottom: calc(192px + env(safe-area-inset-bott
 }
 
 #dig-hole-hint.hidden { display: none; }
+
+#realm-gate-hint {
+  position: fixed;
+  bottom: 220px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ac-panel-glass);
+  border: 2px solid var(--ac-border);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 12px;
+  z-index: 15;
+  white-space: nowrap;
+}
+
+#realm-gate-hint.hidden { display: none; }
 
 #fish-hint-btn {
   position: fixed;
@@ -2305,3 +2321,113 @@ body.touch-device .kbd-hint { display: none; }
   pointer-events: none;
 }
 body.touch-device #underground-exit-hint { top: 150px; } /* below the hotbar, clear of the health / clock badges */
+
+/* ---------- The Realm (bullet-hell arena) ---------- */
+#realm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 31;
+  background: #0b0716;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+#realm-overlay.hidden { display: none; }
+#realm-canvas-wrap { position: absolute; inset: 0; }
+#realm-canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; cursor: crosshair; touch-action: none; }
+#realm-hud {
+  position: absolute;
+  left: calc(10px + env(safe-area-inset-left, 0px));
+  right: calc(10px + env(safe-area-inset-right, 0px));
+  top: calc(8px + env(safe-area-inset-top, 0px));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+  color: #fff;
+  font: 700 13px system-ui, sans-serif;
+  text-shadow: 0 1px 2px #000;
+}
+#realm-hp {
+  position: relative;
+  width: 150px;
+  height: 20px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  overflow: hidden;
+}
+#realm-hp-fill { height: 100%; width: 100%; background: linear-gradient(#ff8fa8, #e8456d); transition: width 0.12s; }
+#realm-hp-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+#realm-info { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; flex: 1; min-width: 0; }
+#realm-shards { color: #8fe9ff; }
+#realm-best { opacity: 0.75; font-weight: 600; }
+#realm-leave-btn {
+  pointer-events: auto;
+  min-width: 44px;
+  height: 40px;
+  border-radius: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font: 700 12px system-ui, sans-serif;
+  padding: 0 12px;
+}
+#realm-banner {
+  position: absolute;
+  left: 50%;
+  top: 34%;
+  transform: translate(-50%, -50%);
+  padding: 10px 22px;
+  border-radius: 999px;
+  background: rgba(20, 8, 40, 0.8);
+  border: 2px solid #b36bff;
+  color: #fff;
+  font: 800 20px system-ui, sans-serif;
+  text-align: center;
+  max-width: 90vw;
+  pointer-events: none;
+}
+#realm-banner.hidden { display: none; }
+#realm-banner.pop { animation: realm-pop 0.35s ease-out; }
+@keyframes realm-pop { 0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0; } 70% { transform: translate(-50%, -50%) scale(1.08); } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+#realm-help {
+  position: absolute;
+  left: 50%;
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.55);
+  font: 600 11px system-ui, sans-serif;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.realm-stick { display: none; }
+body.touch-device #realm-help { display: none; }
+body.touch-device .realm-stick {
+  display: block;
+  position: absolute;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  width: 124px;
+  height: 124px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  border: 3px solid rgba(255, 255, 255, 0.4);
+  touch-action: none;
+}
+body.touch-device #realm-stick-move { left: calc(20px + env(safe-area-inset-left, 0px)); }
+body.touch-device #realm-stick-aim { right: calc(20px + env(safe-area-inset-right, 0px)); border-color: rgba(143, 233, 255, 0.65); }
+.realm-stick .knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 52px;
+  height: 52px;
+  margin: -26px 0 0 -26px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+}
+@media (max-width: 420px) {
+  #realm-hp { width: 120px; }
+  #realm-best { display: none; }
+}
