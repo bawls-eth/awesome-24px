@@ -12,6 +12,10 @@
   const COMBO_CAP = 6;
   const RARE_AT = 30;
   const HIDE_SECONDS = 2;
+  const FLUSH_RADIUS = 1.6;   // walking this close flushes a bug out of a flower patch
+  const BURROW_RADIUS = 3;    // a burrower surfaces only when you stand still this close
+  const STILL_SECONDS = 0.6;  // how long you must stand still
+  const FLEE_SECONDS = 1.2;   // flushed and swarm bugs keep running this long
 
   const TYPES = {
     ladybug: { points: 10, speed: 0.8, burrower: false },
@@ -78,18 +82,41 @@
     const night = !!opts.night;
     const W = opts.width || 20, H = opts.height || 14;
     const run = {
-      time: 0, score: 0, caught: 0, combo: 0, lastCatchAt: -1e9, cooldown: 0, rareSpawned: false, done: false,
+      time: 0, score: 0, caught: 0, combo: 0, bestCombo: 0, stillT: 0, flowers: [], nextGroup: 1, lastCatchAt: -1e9, cooldown: 0, rareSpawned: false, done: false,
       player: { x: W / 2, y: H / 2, sneaking: false }, bugs: [], nextId: 1, caughtTypes: []
     };
-    function spawn(type, x, y) {
+    // o.mound: a burrower that stays underground until you stand still near it; o.flower: hides in a flower patch.
+    function spawn(type, x, y, o) {
       if (!canSpawn(type, night)) return null;
+      o = o || {};
       const b = { id: run.nextId++, type, x: x === undefined ? r() * W : x, y: y === undefined ? r() * H : y,
-        state: 'idle', hideT: 0 };
+        state: 'idle', hideT: 0, hideKind: null, group: 0, fleeT: 0, mound: false };
+      if (o.mound && TYPES[type].burrower) { b.mound = true; b.state = 'hidden'; b.hideKind = 'burrow'; }
+      if (o.flower) { b.state = 'hidden'; b.hideKind = 'flower'; run.flowers.push({ x: b.x, y: b.y }); }
       run.bugs.push(b); return b;
     }
+    function hideInFlower(type, x, y) { return spawn(type, x, y, { flower: true }); }
+    // A few bugs that move as one and scatter together.
+    function spawnSwarm(type, x, y, n) {
+      const gid = run.nextGroup++, out = [];
+      for (let i = 0; i < (n || 3); i++) {
+        const b = spawn(type, x + (i % 2) * 0.5, y + (i >> 1) * 0.5);
+        if (b) { b.group = gid; out.push(b); }
+      }
+      return out;
+    }
     const count = opts.count === undefined ? 12 : opts.count;
-    if (!opts.empty) for (let i = 0; i < count; i++) spawn(COMMON[Math.floor(r() * COMMON.length)]);
+    if (!opts.empty) {
+      let left = count;
+      if (count >= 8) {
+        for (let i = 0; i < 2; i++) { hideInFlower(i ? 'butterfly' : 'ladybug', 2 + r() * (W - 4), 2 + r() * (H - 4)); left--; }
+        const sx = 2 + r() * (W - 4), sy = 2 + r() * (H - 4);
+        spawnSwarm('ladybug', sx, sy, 3); left -= 3;
+      }
+      for (let i = 0; i < left; i++) { const t = COMMON[Math.floor(r() * COMMON.length)]; spawn(t, undefined, undefined, { mound: true }); }
+    }
 
+    const lastP = { x: run.player.x, y: run.player.y };
     const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
     function setPlayer(x, y, sneaking) { run.player.x = x; run.player.y = y; run.player.sneaking = !!sneaking; }
@@ -108,6 +135,7 @@
         run.lastCatchAt = run.time;
         const mult = Math.pow(COMBO_MULT, Math.min(run.combo, COMBO_CAP) - 1);
         run.score += TYPES[b.type].points * mult;
+        run.bestCombo = Math.max(run.bestCombo, run.combo);
         run.caught++; run.caughtTypes.push(b.type);
       }
       run.score = Math.round(run.score * 100) / 100;
@@ -123,23 +151,44 @@
         run.rareSpawned = true;
         spawn(night ? 'moonwing' : 'goldbeetle');
       }
+      const moved = Math.hypot(run.player.x - lastP.x, run.player.y - lastP.y) > 0.001;
+      lastP.x = run.player.x; lastP.y = run.player.y;
+      run.stillT = moved ? 0 : run.stillT + dt;
+      const sneaking = run.player.sneaking;
+      const scaredGroups = {};
+      for (const b of run.bugs) if (b.group && b.state !== 'caught' && b.state !== 'hidden' && dist(b, run.player) <= SCARE_TILES && !sneaking) scaredGroups[b.group] = true;
+      const runAway = (b, sp, dt2, spread) => {
+        let dx = b.x - run.player.x, dy = b.y - run.player.y;
+        const L = Math.hypot(dx, dy) || 1, ang = Math.atan2(dy, dx) + (spread ? ((b.id % 5) - 2) * 0.25 : 0);
+        b.x += Math.cos(ang) * sp * 2.5 * dt2; b.y += Math.sin(ang) * sp * 2.5 * dt2; void L;
+      };
       for (const b of run.bugs) {
         if (b.state === 'caught') continue;
         const t = TYPES[b.type];
-        if (b.state === 'hidden') { b.hideT -= dt; if (b.hideT <= 0) b.state = 'idle'; continue; }
-        const scared = dist(b, run.player) <= SCARE_TILES && !run.player.sneaking;
+        if (b.state === 'hidden') {
+          const d = dist(b, run.player);
+          if (b.hideKind === 'flower') {
+            if (d <= FLUSH_RADIUS) { b.state = 'flee'; b.hideKind = null; b.fleeT = FLEE_SECONDS; b.flushed = true; }
+          } else if (b.hideKind === 'burrow') {
+            if (d <= BURROW_RADIUS && run.stillT >= STILL_SECONDS) { b.state = 'idle'; b.hideKind = null; }
+          } else { b.hideT -= dt; if (b.hideT <= 0) b.state = 'idle'; }
+          continue;
+        }
+        if (b.fleeT > 0) { b.fleeT -= dt; b.state = 'flee'; runAway(b, t.speed, dt, !!b.group); if (b.fleeT <= 0) b.state = 'idle'; continue; }
+        if (b.mound && (dist(b, run.player) > BURROW_RADIUS + 0.5 || (moved && !sneaking))) { b.state = 'hidden'; b.hideKind = 'burrow'; continue; }
+        const scared = (dist(b, run.player) <= SCARE_TILES && !sneaking) || (b.group && scaredGroups[b.group]);
         if (scared) {
-          if (t.burrower) { b.state = 'hidden'; b.hideT = HIDE_SECONDS; continue; }
+          if (t.burrower && !b.mound) { b.state = 'hidden'; b.hideT = HIDE_SECONDS; b.hideKind = null; continue; }
           b.state = 'flee';
-          const dx = b.x - run.player.x, dy = b.y - run.player.y, L = Math.hypot(dx, dy) || 1;
-          b.x += (dx / L) * t.speed * 2.5 * dt; b.y += (dy / L) * t.speed * 2.5 * dt;
+          if (b.group) b.fleeT = FLEE_SECONDS;
+          runAway(b, t.speed, dt, !!b.group);
         } else if (b.state === 'flee') b.state = 'idle';
       }
       if (run.time >= RUN_SECONDS) { run.time = RUN_SECONDS; run.done = true; }
     }
 
-    return { state: run, spawn, setPlayer, swing, update, stars: () => starsFor(opts.arena, run.score) };
+    return { state: run, spawn, spawnSwarm, hideInFlower, setPlayer, swing, update, stars: () => starsFor(opts.arena, run.score) };
   }
 
-  return { RUN_SECONDS, SWING_COOLDOWN, SCARE_TILES, COMBO_WINDOW, COMBO_MULT, RARE_AT, TYPES, ARENAS, arena, starsFor, canSpawn, createRun, cleanSave };
+  return { RUN_SECONDS, SWING_COOLDOWN, SCARE_TILES, FLUSH_RADIUS, BURROW_RADIUS, STILL_SECONDS, FLEE_SECONDS, COMBO_WINDOW, COMBO_MULT, RARE_AT, TYPES, ARENAS, arena, starsFor, canSpawn, createRun, cleanSave };
 });

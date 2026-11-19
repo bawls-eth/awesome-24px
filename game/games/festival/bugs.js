@@ -35,10 +35,30 @@
   var overlay = document.getElementById('overlay');
   var mode = 'menu'; // menu | play | summary
   var game = null, arenaId = null, rng = null, meta = null, popups = [], particles = [], shake = 0, swingAnim = 0, face = { x: 1, y: 0 };
-  var bgCache = {};
+  var bgCache = {}, gmeta = {};
   var keys = {}, joy = { x: 0, y: 0 }, sneakBtn = false;
   var testClock = TEST;
   var lastSummary = null, testSneak = false;
+  var HINT_KEY = 'pixeltown-bugs-hint-v1';
+  var hintOpen = false;
+  var sfx = null;
+  function hintSeen() { try { return localStorage.getItem(HINT_KEY) === '1'; } catch (e) { return false; } }
+  // Sound: MMSfx is created lazily on the first user gesture and respects the stored mute flag.
+  function ensureSfx() {
+    if (sfx || !window.MMSfx) return sfx;
+    try { sfx = window.MMSfx.create({ storage: window.localStorage }); } catch (e) { sfx = null; }
+    syncMute();
+    return sfx;
+  }
+  function beep(name) { if (sfx) { try { sfx.play(name); } catch (e) { /* ignore */ } } }
+  function syncMute() {
+    var b = document.getElementById('btn-mute'); if (!b) return;
+    var m = sfx ? sfx.isMuted() : mutedStored();
+    b.textContent = m ? 'Sound off' : 'Sound on'; b.setAttribute('aria-pressed', m ? 'true' : 'false');
+  }
+  function mutedStored() { try { return localStorage.getItem('mm-sfx-muted') === '1'; } catch (e) { return false; } }
+  function gesture() { if (!sfx) ensureSfx(); }
+  ['pointerdown', 'keydown', 'touchstart'].forEach(function (n) { window.addEventListener(n, gesture, { once: false, passive: true }); });
 
   function $(id) { return document.getElementById(id); }
   function el(tag, text, cls) { var e = document.createElement(tag); if (text !== undefined) e.textContent = text; if (cls) e.className = cls; return e; }
@@ -54,9 +74,10 @@
     var seed = opts.seed !== undefined ? opts.seed : (String(Date.now()) + Math.random());
     game = B.createRun({ seed: seed, arena: id, night: !!a.night, width: W, height: H, empty: !!opts.empty, count: opts.count });
     rng = R.create('page:' + seed);
-    meta = {}; popups = []; particles = []; shake = 0; swingAnim = 0;
+    meta = {}; gmeta = {}; popups = []; particles = []; shake = 0; swingAnim = 0;
     mode = 'play'; overlay.hidden = true;
     $('hud-arena').textContent = NAMES[id];
+    if (!hintSeen()) showHint(); else hideHint();
     return game;
   }
   function metaFor(b) {
@@ -69,7 +90,7 @@
     var before = game.state.score;
     var res = game.swing();
     if (res.swung) {
-      swingAnim = 0.22;
+      swingAnim = 0.22; beep(res.caught.length ? 'pickup' : 'hit');
       if (res.caught.length) {
         var st = game.state;
         game.state.bugs.forEach(function (b) {
@@ -96,8 +117,16 @@
     persist();
     var newly = [];
     B.ARENAS.forEach(function (a, i) { if (!(oldTotal >= needStars(i)) && unlocked(i)) newly.push(NAMES[a.id]); });
-    lastSummary = { arena: arenaId, score: score, stars: stars, caught: st.caught, counts: counts, best: save.best[arenaId], newlyUnlocked: newly, newBest: score > prevBest };
+    var gained = Math.max(0, stars - prevStars);
+    var nextHint = '';
+    for (var ni = 0; ni < B.ARENAS.length; ni++) {
+      if (!unlocked(ni)) { nextHint = NAMES[B.ARENAS[ni].id] + ' unlocks at ' + needStars(ni) + ' stars (you have ' + totalStars() + ').'; break; }
+    }
+    if (!nextHint) nextHint = 'Every arena is unlocked. Go for 3 stars everywhere!';
+    lastSummary = { arena: arenaId, score: score, stars: stars, gained: gained, bestCombo: st.bestCombo, hint: nextHint, caught: st.caught, counts: counts, best: save.best[arenaId], newlyUnlocked: newly, newBest: score > prevBest };
     mode = 'summary';
+    hideHint();
+    if (gained > 0) beep('levelup');
     showSummary();
   }
 
@@ -136,15 +165,16 @@
   function wander(dt) {
     var st = game.state;
     st.bugs.forEach(function (b) {
-      var m = metaFor(b);
+      var m = b.group ? (gmeta[b.group] || (gmeta[b.group] = { a: rng.next() * 6.28, t: 1 })) : metaFor(b);
       if (b.state === 'idle') {
-        m.t -= dt; if (m.t <= 0) { m.a = rng.next() * 6.28; m.t = 0.8 + rng.next() * 1.6; }
+        if (!b.group || b.id === groupLead(b)) m.t -= dt; if (m.t <= 0) { m.a = rng.next() * 6.28; m.t = 0.8 + rng.next() * 1.6; }
         var sp = B.TYPES[b.type].speed * 0.45;
         b.x += Math.cos(m.a) * sp * dt; b.y += Math.sin(m.a) * sp * dt;
       }
       b.x = Math.max(0.3, Math.min(W - 0.3, b.x)); b.y = Math.max(0.3, Math.min(H - 0.3, b.y));
     });
   }
+  function groupLead(b) { var id = b.id; game.state.bugs.forEach(function (o) { if (o.group === b.group && o.state !== 'caught' && o.id < id) id = o.id; }); return id; }
   function fx(dt) {
     swingAnim = Math.max(0, swingAnim - dt); shake = Math.max(0, shake - dt);
     popups.forEach(function (p) { p.t += dt; p.y -= dt * (reduced ? 0 : 1.2); });
@@ -183,18 +213,37 @@
     if (b.state === 'caught') { var k = time - m.caughtAt; if (m.caughtAt < 0 || k > 0.3) return; alpha = 1 - k / 0.3; }
     g.save(); g.globalAlpha = alpha;
     if (b.state === 'hidden') {
-      circle(g, x, y + 2, 3, '#a8895a'); g.fillStyle = '#6e5836'; g.fillRect(x - 3, y + 2, 6, 1); g.restore(); return;
+      if (b.hideKind === 'flower') { if (!reduced) { g.fillStyle = '#ffffff'; g.fillRect(x + Math.round(Math.sin(time * 9 + m.ph)), y - 3, 1, 1); } }
+      else if (!b.mound) { circle(g, x, y + 2, 3, '#a8895a'); g.fillStyle = '#6e5836'; g.fillRect(x - 3, y + 2, 6, 1); }
+      g.restore(); return;
     }
-    switch (b.type) {
-      case 'ladybug': circle(g, x, y, 3.5, '#d62828'); g.fillStyle = '#111'; g.fillRect(x - 0.5, y - 3.5, 1, 7); g.fillRect(x - 2, y - 1, 1, 1); g.fillRect(x + 1, y + 1, 1, 1); circle(g, x, y - 4, 1.5, '#111'); break;
+    drawSpecies(g, b.type, x, y, flap, time);
+    g.restore();
+  }
+  function drawSpecies(g, type, x, y, flap, time) {
+    switch (type) {
+      case 'ladybug': g.fillStyle = '#111'; g.fillRect(x - 4, y - 1, 1, 1); g.fillRect(x + 3, y - 1, 1, 1); g.fillRect(x - 4, y + 2, 1, 1); g.fillRect(x + 3, y + 2, 1, 1); circle(g, x, y, 3.5, '#d62828'); g.fillStyle = '#111'; g.fillRect(x - 0.5, y - 3.5, 1, 7); g.fillRect(x - 2, y - 1, 1, 1); g.fillRect(x + 1, y + 1, 1, 1); circle(g, x, y - 4, 1.5, '#111'); break;
       case 'butterfly': g.fillStyle = '#ff8fc7'; g.fillRect(x - 5, y - 3 - flap, 4, 5); g.fillRect(x + 1, y - 3 - flap, 4, 5); g.fillStyle = '#8e5bd1'; g.fillRect(x - 4, y + 1, 3, 2); g.fillRect(x + 1, y + 1, 3, 2); g.fillStyle = '#222'; g.fillRect(x - 0.5, y - 3, 1, 6); break;
-      case 'beetle': g.fillStyle = '#2d6a4f'; g.fillRect(x - 3, y - 4, 6, 8); g.fillStyle = '#95d5b2'; g.fillRect(x - 3, y - 4, 2, 8); g.fillStyle = '#111'; g.fillRect(x - 2, y - 6, 1, 2); g.fillRect(x + 1, y - 6, 1, 2); break;
+      case 'beetle': g.fillStyle = '#1b4332'; g.fillRect(x - 4, y - 2, 1, 2); g.fillRect(x + 3, y - 2, 1, 2); g.fillRect(x - 4, y + 2, 1, 2); g.fillRect(x + 3, y + 2, 1, 2); g.fillStyle = '#2d6a4f'; g.fillRect(x - 3, y - 4, 6, 8); g.fillStyle = '#95d5b2'; g.fillRect(x - 3, y - 4, 2, 8); g.fillStyle = '#111'; g.fillRect(x - 2, y - 6, 1, 2); g.fillRect(x + 1, y - 6, 1, 2); break;
       case 'cricket': g.fillStyle = '#8b5a2b'; g.fillRect(x - 5, y - 1, 10, 3); g.fillStyle = '#c08a4a'; g.fillRect(x + 2, y - 3, 3, 3); g.fillStyle = '#5a3b1e'; g.fillRect(x - 6, y + 1, 3, 2); g.fillRect(x - 4, y + 2 + (flap > 0 ? 1 : 0), 1, 2); break;
       case 'antlion': g.fillStyle = '#c9a66b'; g.beginPath(); g.moveTo(x - 5, y + 3); g.lineTo(x, y - 4); g.lineTo(x + 5, y + 3); g.closePath(); g.fill(); g.fillStyle = '#5a3b1e'; g.fillRect(x - 1, y - 1, 2, 4); g.fillRect(x - 3, y - 3, 1, 3); g.fillRect(x + 2, y - 3, 1, 3); break;
       case 'goldbeetle': circle(g, x, y, 5 + (reduced ? 0 : Math.sin(time * 8) * 0.6), 'rgba(255,215,0,.35)'); circle(g, x, y, 3.5, '#ffc300'); g.fillStyle = '#fff3b0'; g.fillRect(x - 2, y - 2, 2, 2); g.fillStyle = '#7a5c00'; g.fillRect(x - 0.5, y - 3, 1, 6); break;
       case 'moonwing': circle(g, x, y, 8, 'rgba(160,230,255,.25)'); g.fillStyle = '#b8f2ff'; g.fillRect(x - 6, y - 4 - flap, 5, 6); g.fillRect(x + 1, y - 4 - flap, 5, 6); g.fillStyle = '#e0aaff'; g.fillRect(x - 5, y + 1, 4, 3); g.fillRect(x + 1, y + 1, 4, 3); g.fillStyle = '#fff'; g.fillRect(x - 0.5, y - 3, 1, 7); break;
     }
-    g.restore();
+  }
+  function drawPatch(g, f, time) {
+    var x = f.x * TILE, y = f.y * TILE, cols = ['#ff8fc7', '#ffd166', '#fff', '#c77dff'];
+    for (var i = 0; i < 5; i++) {
+      var ox = Math.round(Math.cos(i * 1.26) * 5), oy = Math.round(Math.sin(i * 1.26) * 4), sw = reduced ? 0 : Math.sin(time * 3 + i) * 0.6;
+      g.fillStyle = '#2f6b2a'; g.fillRect(x + ox, y + oy + 1, 1, 4);
+      g.fillStyle = cols[i % 4]; g.fillRect(x + ox - 1 + sw, y + oy - 1, 3, 3);
+      g.fillStyle = '#7a5c00'; g.fillRect(x + ox, y + oy, 1, 1);
+    }
+  }
+  function drawMound(g, b) {
+    var x = b.x * TILE, y = b.y * TILE;
+    g.fillStyle = '#b08d57'; g.beginPath(); g.ellipse(x, y + 3, 6, 3, 0, 0, 6.3); g.fill();
+    g.fillStyle = '#7a5f36'; g.beginPath(); g.ellipse(x, y + 3, 2.5, 1.2, 0, 0, 6.3); g.fill();
   }
   function drawPlayer(g, p, sneaking) {
     var x = p.x * TILE, y = p.y * TILE;
@@ -215,12 +264,16 @@
     if (game) {
       var st = game.state;
       var bugs = st.bugs.slice().sort(function (a, b) { return a.y - b.y; });
+      st.flowers.forEach(function (f) { drawPatch(g, f, st.time); });
+      st.bugs.forEach(function (b) { if (b.mound) drawMound(g, b); });
       bugs.forEach(function (b) { drawBug(g, b, st.time); });
       drawPlayer(g, st.player, st.player.sneaking);
       if (swingAnim > 0) {
         var r = 1.2 * TILE, a0 = Math.atan2(face.y, face.x), t = 1 - swingAnim / 0.22;
         g.strokeStyle = 'rgba(255,255,255,' + (0.9 - t * 0.6) + ')'; g.lineWidth = 3;
-        g.beginPath(); g.arc(st.player.x * TILE, st.player.y * TILE, r, a0 - 1.3, a0 - 1.3 + 2.6 * (reduced ? 1 : t)); g.stroke();
+        var aEnd = a0 - 1.3 + 2.6 * (reduced ? 1 : t), px = st.player.x * TILE, py = st.player.y * TILE;
+        g.beginPath(); g.arc(px, py, r, a0 - 1.3, aEnd); g.stroke();
+        g.fillStyle = 'rgba(255,255,255,' + (0.85 - t * 0.5) + ')'; g.beginPath(); g.arc(px + Math.cos(aEnd) * r, py + Math.sin(aEnd) * r, 3.5, 0, 6.3); g.fill();
       }
       particles.forEach(function (p) { g.fillStyle = '#ffd166'; g.fillRect(p.x * TILE, p.y * TILE, 2, 2); });
       g.font = 'bold 9px monospace'; g.textAlign = 'center';
@@ -258,6 +311,7 @@
       grid.appendChild(b);
     });
     overlay.appendChild(grid);
+    var rule = el('p', 'Unlock rule: Meadow is always open. Every other arena opens when your total stars across all arenas reach 2 x (its number - 1): Orchard 2, Pond Edge 4, Forest 6, Dunes 8, Cliffs 10, Marsh 12, Lantern Glade 14. Earn 1 to 3 stars per arena by score.', 'dim'); rule.id = 'unlock-rule'; overlay.appendChild(rule);
     var row = el('div', undefined, 'row');
     var j = btn('Bug journal', showJournal); j.id = 'open-journal'; row.appendChild(j);
     overlay.appendChild(row);
@@ -268,6 +322,11 @@
     var list = el('div'); list.id = 'journal-list';
     SPECIES.forEach(function (sp) {
       var d = el('div'); d.dataset.species = sp;
+      var cv2 = document.createElement('canvas'); cv2.width = 32; cv2.height = 32; cv2.className = 'jicon'; cv2.setAttribute('aria-hidden', 'true');
+      cv2.dataset.silhouette = save.journal[sp] > 0 ? '0' : '1';
+      var g2 = cv2.getContext('2d'); g2.scale(2, 2); drawSpecies(g2, sp, 8, 8, 0, 0);
+      if (save.journal[sp] <= 0) { g2.setTransform(1, 0, 0, 1, 0, 0); g2.globalCompositeOperation = 'source-in'; g2.fillStyle = '#000'; g2.fillRect(0, 0, 32, 32); }
+      d.appendChild(cv2);
       d.appendChild(el('strong', save.journal[sp] > 0 ? SP_NAME[sp] : '???'));
       d.appendChild(el('div', 'Caught: ' + save.journal[sp], 'dim'));
       list.appendChild(d);
@@ -281,14 +340,31 @@
     var st = el('p', stars(s.stars), 'stars'); st.id = 'sum-stars'; overlay.appendChild(st);
     var sc = el('p', 'Score ' + s.score + (s.newBest ? '  (new best!)' : '  (best ' + s.best + ')')); sc.id = 'sum-score'; overlay.appendChild(sc);
     overlay.appendChild(el('p', 'Bugs caught: ' + s.caught));
-    var parts = Object.keys(s.counts).map(function (k) { return (SP_NAME[k] || k) + ' x' + s.counts[k]; });
-    if (parts.length) overlay.appendChild(el('p', parts.join(', '), 'dim'));
+    var gp = el('p', 'Stars gained: ' + s.gained); gp.id = 'sum-gained'; overlay.appendChild(gp);
+    var cp = el('p', 'Best combo: ' + s.bestCombo + (s.bestCombo > 1 ? ' (x' + mult(s.bestCombo).toFixed(2).replace(/0$/, '') + ')' : '')); cp.id = 'sum-combo'; overlay.appendChild(cp);
+    var cl = el('div'); cl.id = 'sum-counts';
+    SPECIES.forEach(function (sp) { if (s.counts[sp]) { var li = el('div', SP_NAME[sp] + ' x' + s.counts[sp]); li.dataset.species = sp; cl.appendChild(li); } });
+    if (!cl.firstChild) cl.appendChild(el('div', 'No bugs this time', 'dim'));
+    overlay.appendChild(cl);
     if (s.newlyUnlocked.length) overlay.appendChild(el('p', 'Unlocked: ' + s.newlyUnlocked.join(', ')));
+    var hp = el('p', 'Next: ' + s.hint, 'dim'); hp.id = 'sum-hint'; overlay.appendChild(hp);
     var row = el('div', undefined, 'row');
     var again = btn('Play again', function () { startArena(s.arena); }); again.id = 'again'; row.appendChild(again);
     var back = btn('Arenas', showMenu); back.id = 'to-menu'; row.appendChild(back);
     overlay.appendChild(row);
   }
+
+  // ---------- tutorial hint (first run only, remembered) ----------
+  function showHint() {
+    var h = $('hint'); if (!h) return;
+    hintOpen = true; h.hidden = false;
+  }
+  function hideHint() { var h = $('hint'); if (h) h.hidden = true; hintOpen = false; }
+  function dismissHint() { try { localStorage.setItem(HINT_KEY, '1'); } catch (e) { /* ignore */ } hideHint(); }
+  $('hint-ok').addEventListener('click', dismissHint);
+  $('btn-mute').addEventListener('click', function () { ensureSfx(); if (sfx) { sfx.setMuted(!sfx.isMuted()); } syncMute(); });
+  if (!window.MMSfx) $('btn-mute').hidden = true;
+  syncMute();
 
   // ---------- input ----------
   window.addEventListener('keydown', function (e) {
@@ -322,7 +398,7 @@
   function frame(t) {
     if (!testClock) {
       var dt = last ? Math.min(0.05, (t - last) / 1000) : 0; last = t; // capped: a hidden tab never advances time
-      step(dt);
+      if (!hintOpen) step(dt);
     }
     render();
     requestAnimationFrame(frame);
@@ -343,9 +419,14 @@
       start: startArena,
       step: step,
       swing: doSwing,
-      spawn: function (type, x, y) { return game ? game.spawn(type, x, y) : null; },
+      spawn: function (type, x, y, o) { return game ? game.spawn(type, x, y, o) : null; },
       setPlayer: function (x, y, sneaking) { testSneak = !!sneaking; if (game) game.setPlayer(x, y, sneaking); },
       menu: showMenu,
+      get sfx() { return sfx; },
+      get hintVisible() { return !$('hint').hidden; },
+      spawnSwarm: function (type, x, y, n) { return game ? game.spawnSwarm(type, x, y, n) : null; },
+      hideInFlower: function (type, x, y) { return game ? game.hideInFlower(type, x, y) : null; },
+      showJournal: showJournal,
       unlockedCount: function () { var n = 0; B.ARENAS.forEach(function (a, i) { if (unlocked(i)) n++; }); return n; }
     };
   }

@@ -36,3 +36,13 @@ body { min-height:100vh; display:flex; flex-direction:column; align-items:center
 #btn-sneak.on { background:#219ebc; color:#fff; }
 #help { font-size:12px; color:var(--dim); margin:0; }
 @media (pointer: coarse), (max-width: 700px) { #touch { display:flex; } #help { display:none; } }
+
+#btn-mute { align-self:center; font:inherit; font-size:12px; color:var(--ink); background:var(--panel); border:1px solid #0d160f; border-radius:8px; min-height:48px; min-width:48px; padding:4px 8px; cursor:pointer; }
+#hint { margin-top:8px; background:rgba(13,22,15,.94); border:2px solid var(--accent); border-radius:8px; padding:8px 10px; font-size:13px; }
+#hint[hidden] { display:none; }
+#hint p { margin:4px 0 8px; }
+#hint button { font:inherit; color:#1d2b20; background:var(--accent); border:0; border-radius:8px; min-height:48px; min-width:48px; padding:8px 14px; cursor:pointer; }
+#journal-list canvas.jicon { width:32px; height:32px; display:block; image-rendering:pixelated; }
+#sum-counts { display:flex; flex-wrap:wrap; gap:6px; margin:6px 0; }
+#sum-counts div { background:var(--panel); padding:4px 8px; border-radius:6px; }
+@media (max-width: 480px) { #top { gap:4px; padding:8px 8px; } #top h1 { font-size:15px; } }
