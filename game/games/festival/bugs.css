@@ -4,7 +4,7 @@ html, body { margin:0; background:var(--bg); color:var(--ink); font-family: ui-m
 body { min-height:100vh; display:flex; flex-direction:column; align-items:center; touch-action:manipulation; }
 #top { width:100%; max-width:960px; display:flex; align-items:center; justify-content:space-between; padding:8px 16px; }
 #top h1 { font-size:18px; margin:0; }
-.back { color:var(--accent); text-decoration:none; min-height:48px; min-width:48px; display:inline-flex; align-items:center; }
+.back, .menu-back { color:var(--accent); text-decoration:none; min-height:48px; min-width:48px; display:inline-flex; align-items:center; }
 #stage { width:100%; max-width:960px; padding:0 16px 16px; display:flex; flex-direction:column; gap:8px; }
 #hud { display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center; font-size:16px; }
 #hud span { background:var(--panel); padding:4px 10px; border-radius:6px; }
@@ -45,6 +45,8 @@ body { min-height:100vh; display:flex; flex-direction:column; align-items:center
 #journal-list canvas.jicon { width:32px; height:32px; display:block; image-rendering:pixelated; }
 #sum-counts { display:flex; flex-wrap:wrap; gap:6px; margin:6px 0; }
 #sum-counts div { background:var(--panel); padding:4px 8px; border-radius:6px; }
+/* Beta gate: at 360 px the joystick + sneak + swing row was 4 px too wide (horizontal scroll). */
+@media (max-width: 400px) { #joy { width:112px; height:112px; } #knob { left:36px; top:36px; } #btn-swing { width:96px; height:96px; } #touch { gap:8px; } }
 @media (max-width: 480px) { #top { gap:4px; padding:8px 8px; } #top h1 { font-size:15px; } }
 /* Phones: the canvas is short, so the overlay (arena picker, journal, summary) becomes a full-screen scrollable sheet. */
 @media (max-width: 700px) {
