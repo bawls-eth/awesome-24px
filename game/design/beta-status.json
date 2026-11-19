@@ -1,0 +1,1005 @@
+{
+  "generated_utc": "2026-11-19T20:16:04.219Z",
+  "commit": "57448c2",
+  "green": false,
+  "pages": [
+    {
+      "page": "Town (Pixeltown)",
+      "url": "/game/index.html",
+      "pass": false,
+      "viewports": [
+        {
+          "viewport": "1280x720",
+          "phone": false,
+          "pass": false,
+          "fails": [
+            "avg fps 22.8 < 30"
+          ],
+          "warns": [
+            "51 long frames"
+          ],
+          "avgFps": 22.8,
+          "worstFrameMs": 67,
+          "longFrames": 51,
+          "errors": [],
+          "failedReqs": [],
+          "scroll": {
+            "sw": 1280,
+            "cw": 1280,
+            "bw": 1280
+          },
+          "tapOffenders": [
+            {
+              "sel": "button.bestie-star \"🤍\"",
+              "w": 21,
+              "h": 14
+            },
+            {
+              "sel": "button#achievements-badge",
+              "w": 152,
+              "h": 27
+            },
+            {
+              "sel": "button#map-btn",
+              "w": 152,
+              "h": 24
+            },
+            {
+              "sel": "a#world-map-link",
+              "w": 152,
+              "h": 25
+            },
+            {
+              "sel": "button#museum-badge",
+              "w": 88,
+              "h": 21
+            },
+            {
+              "sel": "button#dailies-btn",
+              "w": 94,
+              "h": 30
+            },
+            {
+              "sel": "button#journal-btn",
+              "w": 110,
+              "h": 30
+            },
+            {
+              "sel": "button#settings-toggle-btn",
+              "w": 152,
+              "h": 27
+            },
+            {
+              "sel": "button \"👋 Hi!\"",
+              "w": 52,
+              "h": 23
+            },
+            {
+              "sel": "button \"😂 lol\"",
+              "w": 50,
+              "h": 23
+            },
+            {
+              "sel": "button \"🎣 Fishing!\"",
+              "w": 77,
+              "h": 23
+            },
+            {
+              "sel": "button \"⭐ Nice!\"",
+              "w": 64,
+              "h": 23
+            },
+            {
+              "sel": "button \"👋 Bye!\"",
+              "w": 61,
+              "h": 23
+            },
+            {
+              "sel": "input#chat-input",
+              "w": 320,
+              "h": 39
+            }
+          ],
+          "overlaps": [],
+          "clipped": [],
+          "back": null,
+          "save": {
+            "ok": true,
+            "why": "localStorage probe"
+          },
+          "notes": [],
+          "screens": {
+            "start": "../tests/beta/screens/town-1280x720-start.jpg",
+            "mid": "../tests/beta/screens/town-1280x720-mid.jpg",
+            "end": "../tests/beta/screens/town-1280x720-end.jpg"
+          }
+        },
+        {
+          "viewport": "390x844",
+          "phone": true,
+          "pass": false,
+          "fails": [
+            "5 tap target(s) < 40px"
+          ],
+          "warns": [],
+          "avgFps": 52,
+          "worstFrameMs": 50,
+          "longFrames": 0,
+          "errors": [],
+          "failedReqs": [],
+          "scroll": {
+            "sw": 390,
+            "cw": 390,
+            "bw": 390
+          },
+          "tapOffenders": [
+            {
+              "sel": "button \"👋 Hi!\"",
+              "w": 52,
+              "h": 23
+            },
+            {
+              "sel": "button \"😂 lol\"",
+              "w": 50,
+              "h": 23
+            },
+            {
+              "sel": "button \"🎣 Fishing!\"",
+              "w": 77,
+              "h": 23
+            },
+            {
+              "sel": "button \"⭐ Nice!\"",
+              "w": 64,
+              "h": 23
+            },
+            {
+              "sel": "button \"👋 Bye!\"",
+              "w": 61,
+              "h": 23
+            }
+          ],
+          "overlaps": [],
+          "clipped": [],
+          "back": null,
+          "save": {
+            "ok": true,
+            "why": "localStorage probe"
+          },
+          "notes": [],
+          "screens": {
+            "start": "../tests/beta/screens/town-390x844-start.jpg",
+            "mid": "../tests/beta/screens/town-390x844-mid.jpg",
+            "end": "../tests/beta/screens/town-390x844-end.jpg"
+          }
+        },
+        {
+          "viewport": "360x640",
+          "phone": true,
+          "pass": false,
+          "fails": [
+            "5 tap target(s) < 40px"
+          ],
+          "warns": [],
+          "avgFps": 59.6,
+          "worstFrameMs": 33,
+          "longFrames": 0,
+          "errors": [],
+          "failedReqs": [],
+          "scroll": {
+            "sw": 360,
+            "cw": 360,
+            "bw": 360
+          },
+          "tapOffenders": [
+            {
+              "sel": "button \"👋 Hi!\"",
+              "w": 52,
+              "h": 23
+            },
+            {
+              "sel": "button \"😂 lol\"",
+              "w": 50,
+              "h": 23
+            },
+            {
+              "sel": "button \"🎣 Fishing!\"",
+              "w": 77,
+              "h": 23
+            },
+            {
+              "sel": "button \"⭐ Nice!\"",
+              "w": 64,
+              "h": 23
+            },
+            {
+              "sel": "button \"👋 Bye!\"",
+              "w": 61,
+              "h": 23
+            }
+          ],
+          "overlaps": [],
+          "clipped": [],
+          "back": null,
+          "save": {
+            "ok": true,
+            "why": "localStorage probe"
+          },
+          "notes": [],
+          "screens": {
+            "start": "../tests/beta/screens/town-360x640-start.jpg",
+            "mid": "../tests/beta/screens/town-360x640-mid.jpg",
+            "end": "../tests/beta/screens/town-360x640-end.jpg"
+          }
+        }
+      ]
+    },
+    {
+      "page": "Hub map",
+      "url": "/game/hub/index.html",
+      "pass": true,
+      "viewports": [
+        {
+          "viewport": "1280x720",
+          "phone": false,
+          "pass": true,
+          "fails": [],
+          "warns": [],
+          "avgFps": 60,
+          "worstFrameMs": 17,
+          "longFrames": 0,
+          "errors": [],
+          "failedReqs": [],
+          "scroll": {
+            "sw": 1280,
+            "cw": 1280,
+            "bw": 1280
+          },
+          "tapOffenders": [],
+          "overlaps": [],
+          "clipped": [],
+          "back": {
+            "ok": true,
+            "why": "hub -> Hearthvale -> Back pill -> hub"
+          },
+          "save": {
+            "ok": true,
+            "why": "localStorage probe"
+          },
+          "notes": [],
+          "screens": {
+            "start": "../tests/beta/screens/hub-1280x720-start.jpg",
+            "mid": "../tests/beta/screens/hub-1280x720-mid.jpg",
+            "end": "../tests/beta/screens/hub-1280x720-end.jpg"
+          }
+        },
+        {
+          "viewport": "390x844",
+          "phone": true,
+          "pass": true,
+          "fails": [],
+          "warns": [],
+          "avgFps": 60,
+          "worstFrameMs": 17,
+          "longFrames": 0,
+          "errors": [],
+          "failedReqs": [],
+          "scroll": {
+            "sw": 390,
+            "cw": 390,
+            "bw": 390
+          },
+          "tapOffenders": [],
+          "overlaps": [],
+          "clipped": [],
+          "back": {
+            "ok": true,
+            "why": "hub -> Hearthvale -> Back pill -> hub"
+          },
+          "save": {
+            "ok": true,
+            "why": "localStorage probe"
+          },
+          "notes": [],
+          "screens": {
+            "start": "../tests/beta/screens/hub-390x844-start.jpg",
+            "mid": "../tests/beta/screens/hub-390x844-mid.jpg",
+            "end": "../tests/beta/screens/hub-390x844-end.jpg"
+          }
+        },
+        {
+          "viewport": "360x640",
+          "phone": true,
+          "pass": true,
+          "fails": [],
+          "warns": [],
+          "avgFps": 60,
+          "worstFrameMs": 17,
+          "longFrames": 0,
+          "errors": [],
+          "failedReqs": [],
+          "scroll": {
+            "sw": 360,
+            "cw": 360,
+            "bw": 360
+          },
+          "tapOffenders": [],
+          "overlaps": [],
+          "clipped": [],
+          "back": {
+            "ok": true,
+            "why": "hub -> Hearthvale -> Back pill -> hub"
+          },
+          "save": {
+            "ok": true,
+            "why": "localStorage probe"
+          },
+          "notes": [],
+          "screens": {
+            "start": "../tests/beta/screens/hub-360x640-start.jpg",
+            "mid": "../tests/beta/screens/hub-360x640-mid.jpg",
+            "end": "../tests/beta/screens/hub-360x640-end.jpg"
+          }
+        }
+      ]
+    },
+    {
+      "page": "Mad Maze (solo arena)",
+      "url": "/game/games/mad-maze/index.html?offline=1",
+      "pass": true,
+      "viewports": [
+        {
+          "viewport": "1280x720",
+          "phone": false,
+          "pass": true,
+          "fails": [],
+          "warns": [],
+          "avgFps": 60,
+          "worstFrameMs": 17,
+          "longFrames": 0,
+          "errors": [],
+          "failedReqs": [],
+          "scroll": {
+            "sw": 1280,
+            "cw": 1280,
+            "bw": 1280
+          },
+          "tapOffenders": [],
+          "overlaps": [],
+          "clipped": [],
+          "back": {
+            "ok": true,
+            "why": "to /game/index.html"
+          },
+          "save": {
+            "ok": true,
+            "why": "probe key in pixeltown-save-v1 survived reload + page save"
+          },
+          "notes": [],
+          "screens": {
+            "start": "../tests/beta/screens/mad-maze-solo-1280x720-start.jpg",
+            "mid": "../tests/beta/screens/mad-maze-solo-1280x720-mid.jpg",
+            "end": "../tests/beta/screens/mad-maze-solo-1280x720-end.jpg"
+          }
+        },
+        {
+          "viewport": "390x844",
+          "phone": true,
+          "pass": true,
+          "fails": [],
+          "warns": [],
+          "avgFps": 60,
+          "worstFrameMs": 17,
+          "longFrames": 0,
+          "errors": [],
+          "failedReqs": [],
+          "scroll": {
+            "sw": 390,
+            "cw": 390,
+            "bw": 390
+          },
+          "tapOffenders": [],
+          "overlaps": [],
+          "clipped": [],
+          "back": {
+            "ok": true,
+            "why": "to /game/index.html"
+          },
+          "save": {
+            "ok": true,
+            "why": "probe key in pixeltown-save-v1 survived reload + page save"
+          },
+          "notes": [],
+          "screens": {
+            "start": "../tests/beta/screens/mad-maze-solo-390x844-start.jpg",
+            "mid": "../tests/beta/screens/mad-maze-solo-390x844-mid.jpg",
+            "end": "../tests/beta/screens/mad-maze-solo-390x844-end.jpg"
+          }
+        },
+        {
+          "viewport": "360x640",
+          "phone": true,
+          "pass": true,
+          "fails": [],
+          "warns": [],
+          "avgFps": 60,
+          "worstFrameMs": 17,
+          "longFrames": 0,
+          "errors": [],
+          "failedReqs": [],
+          "scroll": {
+            "sw": 360,
+            "cw": 360,
+            "bw": 360
+          },
+          "tapOffenders": [],
+          "overlaps": [],
+          "clipped": [],
+          "back": {
+            "ok": true,
+            "why": "to /game/index.html"
+          },
+          "save": {
+            "ok": true,
+            "why": "probe key in pixeltown-save-v1 survived reload + page save"
+          },
+          "notes": [],
+          "screens": {
+            "start": "../tests/beta/screens/mad-maze-solo-360x640-start.jpg",
+            "mid": "../tests/beta/screens/mad-maze-solo-360x640-mid.jpg",
+            "end": "../tests/beta/screens/mad-maze-solo-360x640-end.jpg"
+          }
+        }
+      ]
+    },
+    {
+      "page": "Mad Maze (dungeon, seed 1)",
+      "url": "/game/games/mad-maze/index.html?mode=dungeon&seed=1",
+      "pass": true,
+      "viewports": [
+        {
+          "viewport": "1280x720",
+          "phone": false,
+          "pass": true,
+          "fails": [],
+          "warns": [],
+          "avgFps": 60,
+          "worstFrameMs": 17,
+          "longFrames": 0,
+          "errors": [],
+          "failedReqs": [],
+          "scroll": {
+            "sw": 1280,
+            "cw": 1280,
+            "bw": 1280
+          },
+          "tapOffenders": [],
+          "overlaps": [],
+          "clipped": [],
+          "back": {
+            "ok": true,
+            "why": "to /game/index.html"
+          },
+          "save": {
+            "ok": true,
+            "why": "probe key in pixeltown-save-v1 survived reload + page save"
+          },
+          "notes": [],
+          "screens": {
+            "start": "../tests/beta/screens/mad-maze-dungeon-1280x720-start.jpg",
+            "mid": "../tests/beta/screens/mad-maze-dungeon-1280x720-mid.jpg",
+            "end": "../tests/beta/screens/mad-maze-dungeon-1280x720-end.jpg"
+          }
+        },
+        {
+          "viewport": "390x844",
+          "phone": true,
+          "pass": true,
+          "fails": [],
+          "warns": [],
+          "avgFps": 60,
+          "worstFrameMs": 17,
+          "longFrames": 0,
+          "errors": [],
+          "failedReqs": [],
+          "scroll": {
+            "sw": 390,
+            "cw": 390,
+            "bw": 390
+          },
+          "tapOffenders": [],
+          "overlaps": [],
+          "clipped": [],
+          "back": {
+            "ok": true,
+            "why": "to /game/index.html"
+          },
+          "save": {
+            "ok": true,
+            "why": "probe key in pixeltown-save-v1 survived reload + page save"
+          },
+          "notes": [],
+          "screens": {
+            "start": "../tests/beta/screens/mad-maze-dungeon-390x844-start.jpg",
+            "mid": "../tests/beta/screens/mad-maze-dungeon-390x844-mid.jpg",
+            "end": "../tests/beta/screens/mad-maze-dungeon-390x844-end.jpg"
+          }
+        },
+        {
+          "viewport": "360x640",
+          "phone": true,
+          "pass": true,
+          "fails": [],
+          "warns": [],
+          "avgFps": 60,
+          "worstFrameMs": 17,
+          "longFrames": 0,
+          "errors": [],
+          "failedReqs": [],
+          "scroll": {
+            "sw": 360,
+            "cw": 360,
+            "bw": 360
+          },
+          "tapOffenders": [],
+          "overlaps": [],
+          "clipped": [],
+          "back": {
+            "ok": true,
+            "why": "to /game/index.html"
+          },
+          "save": {
+            "ok": true,
+            "why": "probe key in pixeltown-save-v1 survived reload + page save"
+          },
+          "notes": [],
+          "screens": {
+            "start": "../tests/beta/screens/mad-maze-dungeon-360x640-start.jpg",
+            "mid": "../tests/beta/screens/mad-maze-dungeon-360x640-mid.jpg",
+            "end": "../tests/beta/screens/mad-maze-dungeon-360x640-end.jpg"
+          }
+        }
+      ]
+    },
+    {
+      "page": "The Lantern",
+      "url": "/game/games/mad-maze/lantern.html",
+      "pass": true,
+      "viewports": [
+        {
+          "viewport": "1280x720",
+          "phone": false,
+          "pass": true,
+          "fails": [],
+          "warns": [],
+          "avgFps": 60,
+          "worstFrameMs": 17,
+          "longFrames": 0,
+          "errors": [],
+          "failedReqs": [],
+          "scroll": {
+            "sw": 1280,
+            "cw": 1280,
+            "bw": 1280
+          },
+          "tapOffenders": [],
+          "overlaps": [],
+          "clipped": [],
+          "back": {
+            "ok": true,
+            "why": "to /game/hub/index.html"
+          },
+          "save": {
+            "ok": true,
+            "why": "hero created via the form survived reload"
+          },
+          "notes": [],
+          "screens": {
+            "start": "../tests/beta/screens/lantern-1280x720-start.jpg",
+            "mid": "../tests/beta/screens/lantern-1280x720-mid.jpg",
+            "end": "../tests/beta/screens/lantern-1280x720-end.jpg"
+          }
+        },
+        {
+          "viewport": "390x844",
+          "phone": true,
+          "pass": true,
+          "fails": [],
+          "warns": [],
+          "avgFps": 60,
+          "worstFrameMs": 17,
+          "longFrames": 0,
+          "errors": [],
+          "failedReqs": [],
+          "scroll": {
+            "sw": 390,
+            "cw": 390,
+            "bw": 390
+          },
+          "tapOffenders": [],
+          "overlaps": [],
+          "clipped": [],
+          "back": {
+            "ok": true,
+            "why": "to /game/hub/index.html"
+          },
+          "save": {
+            "ok": true,
+            "why": "hero created via the form survived reload"
+          },
+          "notes": [],
+          "screens": {
+            "start": "../tests/beta/screens/lantern-390x844-start.jpg",
+            "mid": "../tests/beta/screens/lantern-390x844-mid.jpg",
+            "end": "../tests/beta/screens/lantern-390x844-end.jpg"
+          }
+        },
+        {
+          "viewport": "360x640",
+          "phone": true,
+          "pass": true,
+          "fails": [],
+          "warns": [],
+          "avgFps": 60,
+          "worstFrameMs": 17,
+          "longFrames": 0,
+          "errors": [],
+          "failedReqs": [],
+          "scroll": {
+            "sw": 360,
+            "cw": 360,
+            "bw": 360
+          },
+          "tapOffenders": [],
+          "overlaps": [],
+          "clipped": [],
+          "back": {
+            "ok": true,
+            "why": "to /game/hub/index.html"
+          },
+          "save": {
+            "ok": true,
+            "why": "hero created via the form survived reload"
+          },
+          "notes": [],
+          "screens": {
+            "start": "../tests/beta/screens/lantern-360x640-start.jpg",
+            "mid": "../tests/beta/screens/lantern-360x640-mid.jpg",
+            "end": "../tests/beta/screens/lantern-360x640-end.jpg"
+          }
+        }
+      ]
+    },
+    {
+      "page": "Deepdelve",
+      "url": "/game/games/deepdelve/index.html?seed=5",
+      "pass": false,
+      "viewports": [
+        {
+          "viewport": "1280x720",
+          "phone": false,
+          "pass": false,
+          "fails": [
+            "avg fps 9.3 < 30"
+          ],
+          "warns": [
+            "185 long frames"
+          ],
+          "avgFps": 9.3,
+          "worstFrameMs": 833,
+          "longFrames": 185,
+          "errors": [],
+          "failedReqs": [],
+          "scroll": {
+            "sw": 1280,
+            "cw": 1280,
+            "bw": 1280
+          },
+          "tapOffenders": [],
+          "overlaps": [],
+          "clipped": [],
+          "back": {
+            "ok": true,
+            "why": "to /game/hub/index.html"
+          },
+          "save": {
+            "ok": true,
+            "why": "mined block stayed mined after reload (IndexedDB)"
+          },
+          "notes": [],
+          "screens": {
+            "start": "../tests/beta/screens/deepdelve-1280x720-start.jpg",
+            "mid": "../tests/beta/screens/deepdelve-1280x720-mid.jpg",
+            "end": "../tests/beta/screens/deepdelve-1280x720-end.jpg"
+          }
+        },
+        {
+          "viewport": "390x844",
+          "phone": true,
+          "pass": true,
+          "fails": [],
+          "warns": [],
+          "avgFps": 58,
+          "worstFrameMs": 33,
+          "longFrames": 0,
+          "errors": [],
+          "failedReqs": [],
+          "scroll": {
+            "sw": 390,
+            "cw": 390,
+            "bw": 390
+          },
+          "tapOffenders": [],
+          "overlaps": [],
+          "clipped": [],
+          "back": {
+            "ok": true,
+            "why": "to /game/hub/index.html"
+          },
+          "save": {
+            "ok": true,
+            "why": "mined block stayed mined after reload (IndexedDB)"
+          },
+          "notes": [],
+          "screens": {
+            "start": "../tests/beta/screens/deepdelve-390x844-start.jpg",
+            "mid": "../tests/beta/screens/deepdelve-390x844-mid.jpg",
+            "end": "../tests/beta/screens/deepdelve-390x844-end.jpg"
+          }
+        },
+        {
+          "viewport": "360x640",
+          "phone": true,
+          "pass": true,
+          "fails": [],
+          "warns": [],
+          "avgFps": 57,
+          "worstFrameMs": 50,
+          "longFrames": 1,
+          "errors": [],
+          "failedReqs": [],
+          "scroll": {
+            "sw": 360,
+            "cw": 360,
+            "bw": 360
+          },
+          "tapOffenders": [],
+          "overlaps": [],
+          "clipped": [],
+          "back": {
+            "ok": true,
+            "why": "to /game/hub/index.html"
+          },
+          "save": {
+            "ok": true,
+            "why": "mined block stayed mined after reload (IndexedDB)"
+          },
+          "notes": [],
+          "screens": {
+            "start": "../tests/beta/screens/deepdelve-360x640-start.jpg",
+            "mid": "../tests/beta/screens/deepdelve-360x640-mid.jpg",
+            "end": "../tests/beta/screens/deepdelve-360x640-end.jpg"
+          }
+        }
+      ]
+    },
+    {
+      "page": "Lakeside Angler",
+      "url": "/game/games/angler/index.html",
+      "pass": true,
+      "viewports": [
+        {
+          "viewport": "1280x720",
+          "phone": false,
+          "pass": true,
+          "fails": [],
+          "warns": [],
+          "avgFps": 60,
+          "worstFrameMs": 17,
+          "longFrames": 0,
+          "errors": [],
+          "failedReqs": [],
+          "scroll": {
+            "sw": 1280,
+            "cw": 1280,
+            "bw": 1280
+          },
+          "tapOffenders": [],
+          "overlaps": [],
+          "clipped": [],
+          "back": {
+            "ok": true,
+            "why": "to /game/hub/index.html"
+          },
+          "save": {
+            "ok": true,
+            "why": "localStorage probe"
+          },
+          "notes": [],
+          "screens": {
+            "start": "../tests/beta/screens/angler-1280x720-start.jpg",
+            "mid": "../tests/beta/screens/angler-1280x720-mid.jpg",
+            "end": "../tests/beta/screens/angler-1280x720-end.jpg"
+          }
+        },
+        {
+          "viewport": "390x844",
+          "phone": true,
+          "pass": true,
+          "fails": [],
+          "warns": [],
+          "avgFps": 60,
+          "worstFrameMs": 17,
+          "longFrames": 0,
+          "errors": [],
+          "failedReqs": [],
+          "scroll": {
+            "sw": 390,
+            "cw": 390,
+            "bw": 390
+          },
+          "tapOffenders": [],
+          "overlaps": [],
+          "clipped": [],
+          "back": {
+            "ok": true,
+            "why": "to /game/hub/index.html"
+          },
+          "save": {
+            "ok": true,
+            "why": "localStorage probe"
+          },
+          "notes": [],
+          "screens": {
+            "start": "../tests/beta/screens/angler-390x844-start.jpg",
+            "mid": "../tests/beta/screens/angler-390x844-mid.jpg",
+            "end": "../tests/beta/screens/angler-390x844-end.jpg"
+          }
+        },
+        {
+          "viewport": "360x640",
+          "phone": true,
+          "pass": true,
+          "fails": [],
+          "warns": [],
+          "avgFps": 60,
+          "worstFrameMs": 17,
+          "longFrames": 0,
+          "errors": [],
+          "failedReqs": [],
+          "scroll": {
+            "sw": 360,
+            "cw": 360,
+            "bw": 360
+          },
+          "tapOffenders": [],
+          "overlaps": [],
+          "clipped": [],
+          "back": {
+            "ok": true,
+            "why": "to /game/hub/index.html"
+          },
+          "save": {
+            "ok": true,
+            "why": "localStorage probe"
+          },
+          "notes": [],
+          "screens": {
+            "start": "../tests/beta/screens/angler-360x640-start.jpg",
+            "mid": "../tests/beta/screens/angler-360x640-mid.jpg",
+            "end": "../tests/beta/screens/angler-360x640-end.jpg"
+          }
+        }
+      ]
+    },
+    {
+      "page": "Bug Safari",
+      "url": "/game/games/festival/bugs.html",
+      "pass": true,
+      "viewports": [
+        {
+          "viewport": "1280x720",
+          "phone": false,
+          "pass": true,
+          "fails": [],
+          "warns": [],
+          "avgFps": 60,
+          "worstFrameMs": 17,
+          "longFrames": 0,
+          "errors": [],
+          "failedReqs": [],
+          "scroll": {
+            "sw": 1280,
+            "cw": 1280,
+            "bw": 1280
+          },
+          "tapOffenders": [],
+          "overlaps": [],
+          "clipped": [],
+          "back": {
+            "ok": true,
+            "why": "to /game/hub/index.html"
+          },
+          "save": {
+            "ok": true,
+            "why": "mute choice survived reload"
+          },
+          "notes": [],
+          "screens": {
+            "start": "../tests/beta/screens/bugs-1280x720-start.jpg",
+            "mid": "../tests/beta/screens/bugs-1280x720-mid.jpg",
+            "end": "../tests/beta/screens/bugs-1280x720-end.jpg"
+          }
+        },
+        {
+          "viewport": "390x844",
+          "phone": true,
+          "pass": true,
+          "fails": [],
+          "warns": [],
+          "avgFps": 60,
+          "worstFrameMs": 17,
+          "longFrames": 0,
+          "errors": [],
+          "failedReqs": [],
+          "scroll": {
+            "sw": 390,
+            "cw": 390,
+            "bw": 390
+          },
+          "tapOffenders": [],
+          "overlaps": [],
+          "clipped": [],
+          "back": {
+            "ok": true,
+            "why": "to /game/hub/index.html"
+          },
+          "save": {
+            "ok": true,
+            "why": "mute choice survived reload"
+          },
+          "notes": [],
+          "screens": {
+            "start": "../tests/beta/screens/bugs-390x844-start.jpg",
+            "mid": "../tests/beta/screens/bugs-390x844-mid.jpg",
+            "end": "../tests/beta/screens/bugs-390x844-end.jpg"
+          }
+        },
+        {
+          "viewport": "360x640",
+          "phone": true,
+          "pass": true,
+          "fails": [],
+          "warns": [],
+          "avgFps": 60,
+          "worstFrameMs": 17,
+          "longFrames": 0,
+          "errors": [],
+          "failedReqs": [],
+          "scroll": {
+            "sw": 360,
+            "cw": 360,
+            "bw": 360
+          },
+          "tapOffenders": [],
+          "overlaps": [],
+          "clipped": [],
+          "back": {
+            "ok": true,
+            "why": "to /game/hub/index.html"
+          },
+          "save": {
+            "ok": true,
+            "why": "mute choice survived reload"
+          },
+          "notes": [],
+          "screens": {
+            "start": "../tests/beta/screens/bugs-360x640-start.jpg",
+            "mid": "../tests/beta/screens/bugs-360x640-mid.jpg",
+            "end": "../tests/beta/screens/bugs-360x640-end.jpg"
+          }
+        }
+      ]
+    }
+  ]
+}

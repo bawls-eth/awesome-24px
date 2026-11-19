@@ -314,6 +314,8 @@
     var rule = el('p', 'Unlock rule: Meadow is always open. Every other arena opens when your total stars across all arenas reach 2 x (its number - 1): Orchard 2, Pond Edge 4, Forest 6, Dunes 8, Cliffs 10, Marsh 12, Lantern Glade 14. Earn 1 to 3 stars per arena by score.', 'dim'); rule.id = 'unlock-rule'; overlay.appendChild(rule);
     var row = el('div', undefined, 'row');
     var j = btn('Bug journal', showJournal); j.id = 'open-journal'; row.appendChild(j);
+    var back = document.createElement('a'); back.className = 'menu-back'; back.id = 'menu-back'; back.href = '../../hub/index.html'; back.textContent = '\u2190 Back to the hub'; // beta gate: the full-screen phone sheet covers the header links
+    row.appendChild(back);
     overlay.appendChild(row);
   }
   function showJournal() {
