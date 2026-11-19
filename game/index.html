@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
-<title>Pixeltown</title>
+<title>Hearthvale</title>
 <link rel="stylesheet" href="style.css" />
 
 <link rel="manifest" href="manifest.json" />
@@ -20,12 +20,14 @@
 </head>
 <body>
 
+<a id="back-to-map-pill" class="hidden" href="./hub/index.html">← Back to the map</a>
+
 <div id="join-overlay">
   <div id="join-decor" aria-hidden="true">
     <span>🦋</span><span>✨</span><span>🌸</span><span>🍃</span><span>⭐</span><span>🦋</span><span>✨</span>
   </div>
   <div class="join-card">
-    <h1>🏝️ Pixeltown</h1>
+    <h1>🏝️ Hearthvale</h1>
     <p class="tagline">Walk, chat, fish, chop wood, and build — with your friends, live.</p>
     <p id="online-count" class="online-count"></p>
 
@@ -56,6 +58,7 @@
     <ul id="player-list"></ul>
     <button id="achievements-badge" type="button">🏆 <b id="achievement-count">0</b>/<span id="achievement-cap"></span></button>
     <button id="map-btn" type="button" title="Town map (M)">🗺️ Map</button>
+    <a id="world-map-link" href="./hub/index.html" title="Open the world map">🧭 World map</a>
     <button id="museum-badge" type="button" title="Museum collection">🏛️ Museum</button>
     <button id="dailies-btn" type="button" title="Today's chores (J)">📋 Today</button>
     <button id="journal-btn" type="button" title="Angler's journal (L)">🐟 Journal</button>
@@ -388,6 +391,7 @@
   <div class="realm-menu-card">
     <div class="realm-bp-head"><strong>🌀 The Realm</strong><button id="realm-menu-close-btn" type="button" aria-label="Close">✕</button></div>
     <button id="realm-menu-solo" type="button">⚔️ Go in alone</button>
+    <button id="realm-menu-madmaze" type="button" data-href="./games/mad-maze/index.html">🌀 Open Mad Maze (new)</button>
     <p class="realm-menu-sub">🤝 Fight together (2-player co-op) — invite someone in town:</p>
     <ul id="realm-menu-players"></ul>
     <p id="realm-menu-status" aria-live="polite"></p>
@@ -485,6 +489,7 @@
 <script src="shared/mm-hash.js"></script>
 <script src="shared/mm-pad.js"></script>
 <script src="shared/mm-aim.js"></script>
+<script src="shared/profile.js"></script>
 <script src="shared/sfx.js"></script>
 <script src="shared/motion.js"></script>
 <script src="shared/mm-patterns.js"></script>
