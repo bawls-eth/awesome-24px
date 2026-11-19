@@ -38,3 +38,18 @@ PARTIAL = some of it plays, the rest is modules only or missing, TODO = nothing 
 8. Daily Maze, ghost and board pages (`MMDaily`, `MMGhost`, `MMBoard`), tutorial, colour-blind palettes (`MMAccess`).
 9. Mad Maze co-op: lite party code and dungeon sync on `MMParty`; port duel / 2v2 to the standalone page.
 10. Angler: link the town fish journal and aquarium, add a tournament and bait from Bug Safari.
+
+## Activity snapshot (read-only)
+Each session's last step: `node game/tools/activity-snapshot.js --append` adds a counts-only line (no names, no chat text) to `game/design/DAILY-REPORT.md`. GET requests only.
+
+## Realm: shop + no death penalty (2026-11-19)
+- Falling no longer costs banked 💎. You get a Survivor's Cache item instead (Common <wave 3, Uncommon wave 3-5, Rare wave 6+); a full backpack sells it for 💎.
+- Shop (key V, or the 🛒 button in the backpack): fixed stock, price = sell value x 8 (24 / 56 / 120 💎). Uncommon unlocks at best wave 2, Rare at best wave 5. Disabled in duels. No randomness, no real money.
+- Test: game/tests/realm-shop-death.test.js
+
+## Realm: combine (2026-11-19)
+Backpack "Combine 3->next" button: 3 same gear + same rarity -> 1 of the next rarity; new Epic tier (x3.6) only from combining Rares. Test: realm-shop-death.test.js.
+
+## Queued from owner (2026-11-19)
+- GPT-designed map layouts so each Mad Maze run feels new, plus fresh art per run. Plan: GPT cannot be called from players' browsers (key lives only in this environment), so GPT writes a POOL of layouts/room templates and art sets offline (text/image calls, logged in LEDGER-OPENAI.md, inside the $4.00 cap); each run picks a combination by seed. Validate every generated layout with a solvability test before it ships.
+- Merge: the manager job merges dev to master at :08 Pacific from the ci-status.json stamp.
