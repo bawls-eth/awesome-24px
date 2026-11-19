@@ -1,0 +1,23 @@
+{
+  "zip_integrity": true,
+  "unique_ids": true,
+  "files": 63,
+  "frames": 306,
+  "empty_frames": 0,
+  "bad_alpha": 0,
+  "bad_dimensions": 0,
+  "bad_margins": 0,
+  "bad_grid": 0,
+  "palette_violations": 0,
+  "per_class": {
+    "ranger": 21,
+    "mage": 21,
+    "cleric": 21
+  },
+  "per_direction": {
+    "down": 21,
+    "up": 21,
+    "right": 21
+  },
+  "size_bytes": "archive size recorded after final zip creation"
+}
