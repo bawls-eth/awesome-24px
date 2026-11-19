@@ -143,17 +143,27 @@ function rmMergeSave(mine, stored, opts) {
   out.level = lead.level; out.xp = lead.xp;
   const base = Number.isFinite(opts.base) ? opts.base : a.shards;
   out.shards = Math.max(0, b.shards + (a.shards - base));
-  const known = opts.known || new Set();
-  const items = a.items.map((it) => ({ ...it })); const uids = new Set(items.map((it) => it.n));
+  const known = opts.known || new Set(); // uids that were in storage when this tab last synced
+  // Three-way merge by uid: an item only this tab holds is dropped if storage once had it (another tab sold it) and kept if it is new here;
+  // an item only storage holds is skipped if this tab once had it (sold here) and taken if it is new there.
   let next = Math.max(a.nextUid, b.nextUid);
-  b.items.forEach((it) => {
-    const mineSame = a.items.find((x) => x.n === it.n);
-    if (!mineSame && known.has(it.n)) return;
-    if (mineSame) { if (mineSame.id === it.id && mineSame.r === it.r) return; } // same item
-    items.push({ n: mineSame ? next++ : it.n, id: it.id, r: it.r }); // a uid collision between two different items: the other tab's gets a fresh uid
-    uids.add(items[items.length - 1].n);
+  const items = []; const remap = {};
+  const byUid = new Map(b.items.map((it) => [it.n, it]));
+  a.items.forEach((it) => {
+    const other = byUid.get(it.n);
+    if (!other) { if (known.has(it.n)) return; items.push({ ...it }); return; } // gone from storage because another tab sold it, or new here
+    if (other.id === it.id && other.r === it.r) { items.push({ ...it }); return; } // same item
+    const fresh = next++; remap[it.n] = fresh; items.push({ n: fresh, id: it.id, r: it.r }); // a uid collision between two different items: this tab's gets a fresh uid, storage's keeps the old one
   });
-  out.items = items; out.nextUid = next; out.eq = a.eq; // equipment is per-tab
+  const have = new Set(items.map((it) => it.n));
+  b.items.forEach((it) => {
+    if (have.has(it.n)) return;
+    const mineHas = a.items.some((x) => x.n === it.n);
+    if (!mineHas && known.has(it.n)) return; // sold here
+    items.push({ ...it }); have.add(it.n);
+  });
+  const eq = { ...a.eq }; Object.keys(eq).forEach((slot) => { if (remap[eq[slot]] !== undefined) eq[slot] = remap[eq[slot]]; });
+  out.items = items; out.nextUid = next; out.eq = eq; // equipment is per-tab
   return rmCleanSave(out);
 }
 
@@ -205,13 +215,14 @@ class RealmArena {
     const stored = rmReadStoredRealm();
     if (!stored) return false;
     this._adopt(rmMergeSave(this.save, stored, { base: this._baseShards, known: this._known }));
-    this._baseShards = this.save.shards; this._known = new Set(this.save.items.map((it) => it.n));
+    this._baseShards = this.save.shards; this._known = new Set(rmCleanSave(stored).items.map((it) => it.n)); // what storage held at this sync
     return true;
   }
 
   _persist(sv) {
     this.resyncSave();
     this._baseShards = this.save.shards;
+    this._known = new Set(this.save.items.map((it) => it.n)); // about to be written, so storage will hold exactly these
     this._onSave(this.save);
   }
 

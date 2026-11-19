@@ -45,6 +45,33 @@ const arenaOf = (page, fn, arg) => page.evaluate(`(${fn.toString()})(window.__mm
   await arenaOf(p1, (a) => { a.onSave(a.save); });
   const col = await p1.evaluate((k) => JSON.parse(localStorage.getItem(k)).realm, KEY);
   check('A: a uid collision between two tabs keeps both items under distinct uids', col.items.length >= 3 && new Set(col.items.map((i) => i.n)).size === col.items.length && col.items.some((i) => i.id === 'luckring') && col.items.some((i) => i.id === 'wardring'), JSON.stringify(col.items));
+  // Opus review fixes: a sold item must not come back, and a uid collision must not multiply items on repeated syncs.
+  const mg = await p1.evaluate(() => {
+    const base = (items, nextUid) => ({ level: 1, xp: 0, shards: 10, bestWave: 0, kills: 0, deaths: 0, nextUid, items, eq: {}, kb: {} });
+    const o = {};
+    // tab B still holds #5; tab A sold it and wrote (storage no longer has it); B knew #5 at its last sync
+    const sold = rmMergeSave(base([{ n: 5, id: 'sparkwand', r: 0 }, { n: 6, id: 'luckring', r: 0 }], 7), base([{ n: 6, id: 'luckring', r: 0 }], 7), { base: 10, known: new Set([5, 6]) });
+    o.soldGone = !sold.items.some((i) => i.n === 5) && sold.items.some((i) => i.n === 6);
+    // an item looted here (never in storage) is kept; an item new in storage (never known here) is taken
+    const mix = rmMergeSave(base([{ n: 9, id: 'heartcharm', r: 0 }], 10), base([{ n: 8, id: 'swiftcharm', r: 0 }], 10), { base: 10, known: new Set() });
+    o.kept = mix.items.some((i) => i.n === 9) && mix.items.some((i) => i.n === 8);
+    // an item this tab sold (still in storage, known here) stays gone
+    const mine = rmMergeSave(base([], 7), base([{ n: 5, id: 'sparkwand', r: 0 }], 7), { base: 10, known: new Set([5]) });
+    o.soldHere = mine.items.length === 0;
+    // collision: A has sword#10, B wrote ring#10; merging repeatedly in both directions never multiplies
+    let A = base([{ n: 10, id: 'sparkwand', r: 0 }], 11); let B = base([{ n: 10, id: 'luckring', r: 0 }], 11);
+    let sa = rmMergeSave(A, B, { base: 10, known: new Set() });
+    for (let i = 0; i < 4; i++) { sa = rmMergeSave(sa, sa, { base: 10, known: new Set(sa.items.map((x) => x.n)) }); }
+    const sb = rmMergeSave(B, sa, { base: 10, known: new Set([10]) });
+    o.once = sa.items.filter((i) => i.id === 'sparkwand').length === 1 && sb.items.filter((i) => i.id === 'sparkwand').length === 1 && sb.items.filter((i) => i.id === 'luckring').length === 1;
+    // equipping a renumbered item follows its new uid
+    const eqm = rmMergeSave({ ...base([{ n: 10, id: 'sparkwand', r: 0 }], 11), eq: { weapon: 10 } }, base([{ n: 10, id: 'luckring', r: 0 }], 11), { base: 10, known: new Set() });
+    const sw = eqm.items.find((i) => i.id === 'sparkwand');
+    o.eq = sw && eqm.eq.weapon === sw.n;
+    return o;
+  });
+  check('A: an item sold in another tab stays gone, new items from either tab are kept, an item sold here stays gone', mg.soldGone && mg.kept && mg.soldHere, JSON.stringify(mg));
+  check('A: a uid collision never multiplies items across repeated syncs, and an equipped item follows its new uid', mg.once && mg.eq, JSON.stringify(mg));
   // Corrupt shapes still load.
   const shapes = ['"junk"', '[1,2,3]', '{"realm":"x"}', '{"realm":[1]}', '{"realm":{"level":"zz","items":"a","eq":7,"shards":-5}}', '{{not json'];
   let okShapes = 0;
