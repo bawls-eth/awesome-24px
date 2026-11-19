@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lakeside Angler</title>
+<link rel="stylesheet" href="angler.css">
+</head>
+<body>
+<header class="bar">
+  <a class="btn back" href="../../hub/index.html" id="back-hub">Hub</a>
+  <a class="btn back" href="../../index.html" id="back-town">Town</a>
+  <h1 id="spot-title">Lakeside Angler</h1>
+  <button class="btn" id="journal-btn" type="button">Journal <span id="journal-count">0/48</span></button>
+</header>
+<main id="stage">
+  <canvas id="scene" width="320" height="480" aria-label="Fishing scene"></canvas>
+  <p id="msg" role="status" aria-live="polite">Pick a spot, then cast.</p>
+  <section id="result" class="panel" hidden>
+    <h2 id="res-title"></h2>
+    <p id="res-detail"></p>
+    <button class="btn primary" id="res-ok" type="button">Cast again</button>
+  </section>
+</main>
+<nav id="spots" aria-label="Fishing spots"></nav>
+<section id="journal" class="overlay" hidden>
+  <div class="panel wide">
+    <div class="jhead">
+      <h2>Angler's Journal <span id="jsum"></span></h2>
+      <button class="btn" id="journal-close" type="button">Close</button>
+    </div>
+    <div class="filters">
+      <label>Spot <select id="f-spot"></select></label>
+      <label>Rarity <select id="f-rarity"></select></label>
+      <label class="chk"><input type="checkbox" id="calm"> Calm reel</label>
+    </div>
+    <div id="jgrid"></div>
+  </div>
+</section>
+<script src="../../shared/rng.js"></script>
+<script src="../../shared/store.js"></script>
+<script src="../../shared/mm-angler.js"></script>
+<script src="angler.js"></script>
+</body>
+</html>
