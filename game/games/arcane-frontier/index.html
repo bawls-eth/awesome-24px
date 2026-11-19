@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#14161c">
+<title>Arcane Frontier</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="game-root"></div>
+
+<!-- ===== DOM overlay UI (crisp text, drag/drop). Built/controlled by js/ui.js ===== -->
+<div id="ui" class="hidden">
+  <!-- top-left: minimap -->
+  <div id="minimap-wrap" class="panel">
+    <div id="zone-name">Hub</div>
+    <canvas id="minimap" width="160" height="160"></canvas>
+    <div id="minimap-hint">M</div>
+  </div>
+  <!-- top-centre: next goal -->
+  <div id="goal" class="panel"><span class="goal-label">Next</span> <span id="goal-text"></span></div>
+  <!-- top-right buttons -->
+  <div id="top-buttons">
+    <button id="btn-char" class="icon-btn" title="Character (C)">C</button>
+    <button id="btn-inv" class="icon-btn" title="Inventory (I)">I</button>
+    <button id="btn-map" class="icon-btn" title="Map (Tab)">Map</button>
+    <button id="btn-mute" class="icon-btn" title="Mute (N)">Snd</button>
+    <button id="btn-pause" class="icon-btn" title="Pause (Esc)">II</button>
+  </div>
+  <div id="fps" class="hidden"></div>
+
+  <!-- bottom-left: vitals -->
+  <div id="vitals" class="panel">
+    <div id="portrait-wrap"><img id="portrait" alt=""><div id="level-badge">1</div></div>
+    <div id="bars">
+      <div class="bar hp"><div class="fill" id="hp-fill"></div><span id="hp-text">100/100</span></div>
+      <div class="bar mp"><div class="fill" id="mp-fill"></div><span id="mp-text">50/50</span></div>
+      <div class="bar xp"><div class="fill" id="xp-fill"></div><span id="xp-text">XP</span></div>
+      <div id="gold">0 g</div>
+    </div>
+  </div>
+
+  <!-- bottom-centre: abilities + equipped -->
+  <div id="actionbar" class="panel">
+    <div id="abilities"></div>
+    <div id="equipped-row"></div>
+  </div>
+
+  <div id="prompt" class="hidden"></div>
+  <div id="hint" class="hidden"></div>
+  <div id="toasts"></div>
+  <div id="boss-bar" class="hidden"><div id="boss-name"></div><div class="bar boss"><div class="fill" id="boss-fill"></div></div></div>
+
+  <!-- right side: collapsible panels -->
+  <div id="side" class="collapsed">
+    <div id="side-tabs">
+      <button data-tab="inv" class="tab active">Pack</button>
+      <button data-tab="char" class="tab">Hero</button>
+      <button id="side-close" class="tab close" title="Close">&times;</button>
+    </div>
+    <div id="tab-inv" class="tabpage">
+      <div class="section-title">Equipped</div>
+      <div id="equip-slots"></div>
+      <div class="section-title">Pack <span id="inv-count"></span></div>
+      <div id="inv-grid"></div>
+      <div class="small-note" id="inv-help">Drag to move/equip. Double-click (or tap twice) to equip/use. Drag outside the panel to drop.</div>
+    </div>
+    <div id="tab-char" class="tabpage hidden">
+      <div id="char-sheet"></div>
+    </div>
+  </div>
+  <div id="tooltip" class="hidden"></div>
+  <div id="drag-ghost" class="hidden"></div>
+
+  <!-- overlays -->
+  <div id="map-overlay" class="overlay hidden"><div class="overlay-inner"><div class="overlay-title" id="map-title">Map</div><canvas id="bigmap" width="640" height="480"></canvas><div class="small-note">Tab / Esc to close</div></div></div>
+  <div id="pause-overlay" class="overlay hidden">
+    <div class="overlay-inner menu">
+      <div class="overlay-title">Paused</div>
+      <button id="btn-resume" class="big">Resume</button>
+      <label class="opt"><input type="checkbox" id="opt-motion"> Reduce motion (no shake, softer flashes)</label>
+      <label class="opt"><input type="checkbox" id="opt-outline"> Bullet outlines</label>
+      <label class="opt"><input type="checkbox" id="opt-mute"> Mute sound</label>
+      <label class="opt"><input type="checkbox" id="opt-fps"> Show FPS</label>
+      <label class="opt"><input type="checkbox" id="opt-hints" checked> Tutorial hints</label>
+      <div class="controls-table" id="controls-table"></div>
+      <button id="btn-quit" class="big secondary">Save &amp; change hero</button>
+    </div>
+  </div>
+  <div id="portal-overlay" class="overlay hidden">
+    <div class="overlay-inner menu">
+      <div class="overlay-title">Waystone Arch</div>
+      <div id="portal-list"></div>
+      <button id="btn-portal-cancel" class="big secondary">Cancel</button>
+    </div>
+  </div>
+  <div id="death-overlay" class="overlay hidden">
+    <div class="overlay-inner menu"><div class="overlay-title">You fell</div><div class="small-note">Your gear is safe. You wake at the hub shrine.</div><button id="btn-respawn" class="big">Return to the Hub</button></div>
+  </div>
+
+  <!-- touch twin-stick -->
+  <div id="touch" class="hidden">
+    <div id="stick-l" class="stick"><div class="knob"></div></div>
+    <div id="stick-r" class="stick"><div class="knob"></div></div>
+    <div id="touch-btns">
+      <button id="t-skill" class="tbtn">Skill</button>
+      <button id="t-dodge" class="tbtn">Roll</button>
+      <button id="t-use" class="tbtn">Use</button>
+      <button id="t-pot" class="tbtn">Pot</button>
+    </div>
+  </div>
+</div>
+
+<!-- class select -->
+<div id="select" class="hidden">
+  <div id="select-inner">
+    <h1 class="title">Arcane Frontier</h1>
+    <div class="subtitle">Choose a hero</div>
+    <div id="select-body">
+      <div id="class-grid"></div>
+      <div id="class-preview" class="panel">
+        <div id="preview-sprite-wrap"><img id="preview-sprite" alt=""></div>
+        <div id="preview-name"></div>
+        <div id="preview-role"></div>
+        <div id="preview-desc"></div>
+        <div id="preview-stats"></div>
+        <div id="preview-kit"></div>
+        <button id="btn-play" class="big">Play</button>
+        <button id="btn-reset" class="link-btn">Reset all progress</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="fatal" class="hidden"></div>
+<div id="loading">Loading Arcane Frontier&hellip;</div>
+
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/data.js"></script>
+<script src="js/util.js"></script>
+<script src="js/assets.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/save.js"></script>
+<script src="js/input.js"></script>
+<script src="js/map.js"></script>
+<script src="js/fx.js"></script>
+<script src="js/combat.js"></script>
+<script src="js/items.js"></script>
+<script src="js/player.js"></script>
+<script src="js/enemies.js"></script>
+<script src="js/bosses.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/world.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
