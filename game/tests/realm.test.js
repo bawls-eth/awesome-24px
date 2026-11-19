@@ -105,7 +105,7 @@ const seed = { caveSeed: 0, resources: { stone: 1 }, realm: { shards: 100, bestW
   });
   await page.waitForTimeout(250); // Phaser applies pause/resume on its next step
   dth.paused = await scene(page, (s) => s.scene.isPaused());
-  check('death: you lose 20% of the banked shards, the death is counted and saved, and a message says so', dth.state === 'dead' && dth.after === dth.before - Math.floor(dth.before * 0.2) && dth.deaths === 1 && dth.saved.shards === dth.after && /lost/.test(dth.banner), JSON.stringify(dth));
+  check('death: no banked shards are lost, the death is counted and saved, a Survivor\'s Cache item is added, and the message says so', dth.state === 'dead' && dth.after === dth.before && dth.deaths === 1 && dth.saved.shards === dth.after && dth.saved.items.length === 1 && /no .*lost/.test(dth.banner) && /cache/.test(dth.banner), JSON.stringify(dth));
   check('death: after the message you are returned to the running village', !dth.inRealm && !dth.paused && dth.hud, JSON.stringify(dth));
 
   // 6. Pools never grow, and the per-frame cost stays tiny even with a screen full of bolts.

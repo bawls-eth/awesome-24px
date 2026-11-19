@@ -33,7 +33,9 @@ const RM_BOSS_HP = 120; const RM_BOSS_HP_TIER = 40;
 const RM_HAZARD_R = 46;
 const RM_LAVA_DAMAGE = 5; const RM_LAVA_TICK = 0.7; const RM_ICE_SLOW = 0.55;
 const RM_DRIFTER_COLORS = { wisp: '#8fb8ff', cinder: '#ffa04a', puff: '#eaf6ff' };
-const RM_DEATH_PENALTY = 0.2; // share of the banked shards lost on death
+const RM_DEATH_PENALTY = 0; // dying never costs banked shards any more: you get a Survivor's Cache item instead (see _deathBonus)
+const RM_SHOP_MULT = 8; // shop price = the item's sell value x this
+const RM_SHOP_UNLOCK = [0, 2, 5]; // best wave needed before the shop stocks Common / Uncommon / Rare
 const RM_POOL = { pBullets: 160, eBullets: 420, enemies: 24, particles: 180, texts: 28, bags: 14, drifters: 12, hazards: 5 };
 
 // ---- progression (B2) ----
@@ -272,9 +274,9 @@ class RealmArena {
   // The partner (or the host) ended the run.
   _teamEnd(why) {
     if (!this.active) return;
-    if (why === 'wipe') { // we fell with them: the same penalty as dying alone
-      const lost = Math.floor(this.save.shards * RM_DEATH_PENALTY);
-      this.save.shards -= lost; this.save.deaths += 1; this.save.bestWave = Math.max(this.save.bestWave, this.run.wave - 1);
+    if (why === 'wipe') { // we fell with them: the same cache as dying alone
+      this.save.deaths += 1; this.save.bestWave = Math.max(this.save.bestWave, this.run.wave - 1);
+      this._deathBonus();
       this.onSave(this.save);
       this.stop(); this.onExit('death'); return;
     }
@@ -671,6 +673,7 @@ class RealmArena {
         if (ai >= 0) { this.cast(ai); return; }
         if (k === 'b' || k === 'i') { this._panel(this.panel === 'bp' ? null : 'bp'); return; }
         if (k === 'k') { this._panel(this.panel === 'board' ? null : 'board'); return; }
+        if (k === 'v') { this._panel(this.panel === 'shop' ? null : 'shop'); return; }
       }
       this.keys[k] = true;
     };
@@ -1329,17 +1332,82 @@ class RealmArena {
     this._syncHud();
   }
 
+  // Falling costs nothing. Instead you keep a Survivor's Cache: one item whose rarity grows with the wave you reached.
+  // Deterministic (no randomness): the item cycles with your falls so repeat runs bring variety.
+  _deathBonus() {
+    const sv = this.save; const w = Math.max(1, this.run.wave);
+    const rarity = w >= 6 ? 2 : w >= 3 ? 1 : 0;
+    const def = RM_ITEMS[(sv.deaths + w) % RM_ITEMS.length]; const rar = RM_RARITIES[rarity];
+    let text;
+    if (sv.items.length >= RM_BACKPACK) { sv.shards += rar.sell; text = `pack full, cache sold +${rar.sell} 💎`; } else { sv.items.push({ n: sv.nextUid++, id: def.id, r: rarity }); text = `cache: ${def.icon} ${rar.name} ${def.name}`; }
+    return { id: def.id, rarity, text };
+  }
+
+  // ---------- shop ----------
+
+  // Offers: every item at each rarity your best wave has unlocked, priced at sell value x RM_SHOP_MULT. Fixed stock, no luck.
+  shopStock() {
+    const best = this.save.bestWave; const out = [];
+    RM_RARITIES.forEach((rar, r) => { if (best >= RM_SHOP_UNLOCK[r]) RM_ITEMS.forEach((def) => out.push({ id: def.id, r, price: rar.sell * RM_SHOP_MULT })); });
+    return out;
+  }
+
+  buy(id, r) {
+    const sv = this.save;
+    if (!Object.prototype.hasOwnProperty.call(RM_ITEM_BY_ID, id) || !Number.isInteger(r) || r < 0 || r >= RM_RARITIES.length) return false;
+    if (!this.shopStock().some((o) => o.id === id && o.r === r)) return false;
+    const price = RM_RARITIES[r].sell * RM_SHOP_MULT;
+    if (sv.shards < price || sv.items.length >= RM_BACKPACK) return false;
+    sv.shards -= price; sv.items.push({ n: sv.nextUid++, id, r });
+    this.displayShards = sv.shards;
+    this._snd('pickup');
+    this.onSave(sv); this._syncHud(); this.renderShop();
+    return true;
+  }
+
+  setShop(on) { if (on && this.team && this.team.isPvp) return; this._panel(on ? 'shop' : null); } // a duel is fought with identical stats: no shopping
+
+  _ensureShopDom() {
+    if (this._shopDom) return this._shopDom;
+    const ov = document.getElementById('realm-overlay'); if (!ov) return null;
+    const wrap = document.createElement('div');
+    wrap.id = 'realm-shop'; wrap.className = 'hidden'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-label', 'Shop');
+    wrap.style.cssText = 'position:absolute;inset:0;background:rgba(8,3,18,0.85);display:none;align-items:center;justify-content:center;padding:12px;z-index:3';
+    wrap.innerHTML = '<div class="realm-bp-card"><div class="realm-bp-head"><strong>🛒 Shop</strong><button id="realm-shop-close" type="button" aria-label="Close shop">✖</button></div><div id="realm-shop-body"></div></div>';
+    ov.appendChild(wrap);
+    wrap.querySelector('#realm-shop-close').addEventListener('click', () => this.setShop(false));
+    wrap.querySelector('#realm-shop-body').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-buy]'); if (!btn) return;
+      this.buy(btn.dataset.buy, Number(btn.dataset.r));
+    });
+    const bpBody = document.getElementById('realm-backpack-body'); // the backpack carries a Shop button (the HUD row is full on phones); V works too
+    if (bpBody) bpBody.addEventListener('click', (e) => { if (e.target.closest('button[data-open-shop]')) this.setShop(true); });
+    return (this._shopDom = wrap);
+  }
+
+  renderShop() {
+    const root = document.getElementById('realm-shop-body'); if (!root) return;
+    const sv = this.save; const full = sv.items.length >= RM_BACKPACK;
+    let html = `<div class="realm-bp-count">You have ${sv.shards} 💎 · ${sv.items.length} / ${RM_BACKPACK} items${full ? ' · backpack full' : ''}</div><ul id="realm-bp-list">`;
+    this.shopStock().forEach((o) => {
+      const def = RM_ITEM_BY_ID[o.id]; const rar = RM_RARITIES[o.r]; const can = sv.shards >= o.price && !full;
+      html += `<li><span class="nm" style="color:${rar.color}">${def.icon} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText({ id: o.id, r: o.r })}</span><button type="button" class="eq" data-buy="${def.id}" data-r="${o.r}"${can ? '' : ' disabled'} aria-label="Buy ${rar.name} ${def.name} for ${o.price} shards">Buy ${o.price}💎</button></li>`;
+    });
+    const nextR = RM_SHOP_UNLOCK.findIndex((w) => sv.bestWave < w);
+    html += `</ul>${nextR > 0 ? `<div class="dim">Reach wave ${RM_SHOP_UNLOCK[nextR]} to unlock ${RM_RARITIES[nextR].name} gear.</div>` : ''}`;
+    root.innerHTML = html;
+  }
+
   _die() {
-    const lost = Math.floor(this.save.shards * RM_DEATH_PENALTY);
-    this.save.shards -= lost;
     this.save.deaths += 1;
     this.save.bestWave = Math.max(this.save.bestWave, this.run.wave - 1);
-    this.lastLoss = lost;
+    const cache = this._deathBonus();
+    this.lastLoss = 0;
     this.state = 'dead';
     this.deadT = 2.6;
     this.shake = 14;
     this._burst(this.player.x, this.player.y, '#ff6f91', 30, 300);
-    this._showBanner(`You fell in the Realm…  lost ${lost} 💎`, 2.6);
+    this._showBanner(`You fell in the Realm…  no 💎 lost — ${cache.text}`, 2.6);
     this.onSave(this.save);
     this._syncHud();
   }
@@ -1474,7 +1542,8 @@ class RealmArena {
     this.paused = !!name && !this.team; // a shared run never freezes (it would time the partner out)
     const bp = document.getElementById('realm-backpack'); if (bp) bp.classList.toggle('hidden', name !== 'bp');
     const bd = document.getElementById('realm-board'); if (bd) bd.classList.toggle('hidden', name !== 'board');
-    if (name) { this.keys = {}; this.mouse.down = false; this.aimVec.on = false; if (name === 'bp') this.renderBackpack(); else this.renderBoard(); }
+    const shopEl = this._ensureShopDom(); if (shopEl) { shopEl.classList.toggle('hidden', name !== 'shop'); shopEl.style.display = name === 'shop' ? 'flex' : 'none'; }
+    if (name) { this.keys = {}; this.mouse.down = false; this.aimVec.on = false; if (name === 'bp') this.renderBackpack(); else if (name === 'shop') this.renderShop(); else this.renderBoard(); }
   }
 
   setPaused(on) { this._panel(on ? 'bp' : null); } // false closes whichever panel is open
@@ -1541,7 +1610,7 @@ class RealmArena {
     if (!root) return;
     const sv = this.save;
     const eqUids = new Set(RM_SLOTS.map((sl) => sv.eq[sl]).filter(Boolean));
-    let html = `<div id="realm-bp-stats">${this._statLine()}</div><div class="realm-bp-slots">`;
+    let html = `<div id="realm-bp-stats">${this._statLine()}</div><button type="button" class="eq" data-open-shop="1" aria-label="Open the shop (V)" style="min-height:40px;margin:4px 0">🛒 Shop (V)</button><div class="realm-bp-slots">`;
     RM_SLOTS.forEach((slot) => {
       const it = sv.items.find((x) => x.n === sv.eq[slot]);
       html += `<div class="realm-bp-slot" data-slot="${slot}">${it ? `<span style="color:${RM_RARITIES[it.r].color}">${RM_ITEM_BY_ID[it.id].icon} ${RM_ITEM_BY_ID[it.id].name}</span>` : `<span class="dim">${slot}: empty</span>`}</div>`;

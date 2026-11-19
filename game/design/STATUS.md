@@ -41,3 +41,8 @@ PARTIAL = some of it plays, the rest is modules only or missing, TODO = nothing 
 
 ## Activity snapshot (read-only)
 Each session's last step: `node game/tools/activity-snapshot.js --append` adds a counts-only line (no names, no chat text) to `game/design/DAILY-REPORT.md`. GET requests only.
+
+## Realm: shop + no death penalty (2026-11-19)
+- Falling no longer costs banked 💎. You get a Survivor's Cache item instead (Common <wave 3, Uncommon wave 3-5, Rare wave 6+); a full backpack sells it for 💎.
+- Shop (key V, or the 🛒 button in the backpack): fixed stock, price = sell value x 8 (24 / 56 / 120 💎). Uncommon unlocks at best wave 2, Rare at best wave 5. Disabled in duels. No randomness, no real money.
+- Test: game/tests/realm-shop-death.test.js
