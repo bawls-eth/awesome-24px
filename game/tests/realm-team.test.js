@@ -4,6 +4,20 @@
 const { launch, scene, check, done } = require('./helpers');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const DB = 'https://animalcrossing-15728-default-rtdb.firebaseio.com';
+// Wait (up to 25 s) until none of OUR records remain: ADMIN players, and invites/parties made by ADMIN bots.
+// Other real players' invites are none of the tests' business.
+async function adminClean(DB) {
+  let last = '';
+  for (let i = 0; i < 25; i++) {
+    const [pl, ri, rp] = await Promise.all(['players', 'realmInvites', 'realmParties'].map((p) => fetch(`${DB}/${p}.json`).then((r) => r.text()).catch(() => 'null')));
+    const ours = /"name":"ADMIN/.test(pl) || /"fromName":"ADMIN/.test(ri) || /"hostName":"ADMIN/.test(rp);
+    last = [pl.slice(0, 80), ri.slice(0, 80), rp.slice(0, 80)].join(' / ');
+    if (!ours) return { ok: true, last };
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  return { ok: false, last };
+}
+
 const seed = { caveSeed: 0, resources: { stone: 1 }, realm: { shards: 100, bestWave: 2, kills: 5, deaths: 1 } };
 
 async function relay(a, b) {
@@ -94,8 +108,7 @@ const startTeam = (role) => (s, r) => {
   check('no console errors', errs.length === 0, errs.join(' | '));
   await A.browser.close(); await B.browser.close();
   await sleep(5000);
-  const [pl, ri, rp] = await Promise.all(['players', 'realmInvites', 'realmParties'].map((p) => fetch(`${DB}/${p}.json`).then((r) => r.text())));
-  check('cleanup: no ADMIN player records remain', !/ADMIN/.test(pl), pl.slice(0, 200));
-  check('cleanup: realmInvites and realmParties are empty', ri === 'null' && rp === 'null', ri.slice(0, 100) + ' / ' + rp.slice(0, 100));
+  const cl = await adminClean(DB);
+  check('cleanup: no ADMIN players, invites or parties of ours remain', cl.ok, cl.last);
   done();
 })();

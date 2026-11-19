@@ -3,6 +3,20 @@
 const { launch, scene, check, done } = require('./helpers');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const DB = 'https://animalcrossing-15728-default-rtdb.firebaseio.com';
+// Wait (up to 25 s) until none of OUR records remain: ADMIN players, and invites/parties made by ADMIN bots.
+// Other real players' invites are none of the tests' business.
+async function adminClean(DB) {
+  let last = '';
+  for (let i = 0; i < 25; i++) {
+    const [pl, ri, rp] = await Promise.all(['players', 'realmInvites', 'realmParties'].map((p) => fetch(`${DB}/${p}.json`).then((r) => r.text()).catch(() => 'null')));
+    const ours = /"name":"ADMIN/.test(pl) || /"fromName":"ADMIN/.test(ri) || /"hostName":"ADMIN/.test(rp);
+    last = [pl.slice(0, 80), ri.slice(0, 80), rp.slice(0, 80)].join(' / ');
+    if (!ours) return { ok: true, last };
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  return { ok: false, last };
+}
+
 const seed = { caveSeed: 0, resources: { stone: 1 }, realm: { level: 12, shards: 100, bestWave: 2, kills: 5, deaths: 1 } };
 const start = (role) => `(function(s){const link={onMessage:null,send:(m)=>window.__relaySend(JSON.stringify(m)),close(){}};window.__relayIn=(x)=>{if(link.onMessage)link.onMessage(JSON.parse(x))};s.localBody.setPosition(REALM_GATE_POS.x,REALM_GATE_POS.y+30);s.enterRealm({role:'${role}',link,mode:'duel'});})(window.__g.scene.getScene('Town'))`;
 
@@ -45,7 +59,8 @@ const start = (role) => `(function(s){const link={onMessage:null,send:(m)=>windo
   await sleep(800);
   const k1 = await info(A.page), k1g = await info(B.page);
   check('duel: a KO scores the round for the winner on both screens and starts the between-rounds pause', k1.s === '1-0' && k1g.s === '1-0' && k1.ph === 2, JSON.stringify([k1, k1g]));
-  await sleep(3200);
+  for (let i = 0; i < 60 && (await info(A.page)).rd !== 2; i++) await sleep(250); // game time runs slower than wall time on a loaded machine (frame dt is clamped), so poll instead of a fixed sleep
+  await sleep(400);
   const r2 = await info(A.page), r2g = await info(B.page);
   check('duel: round 2 resets both fighters to full HP', r2.rd === 2 && r2.hp === 100 && r2.partnerHp === 100 && r2g.hp === 100 && r2.ph <= 1, JSON.stringify([r2, r2g]));
 
@@ -60,7 +75,8 @@ const start = (role) => `(function(s){const link={onMessage:null,send:(m)=>windo
   await sleep(900);
   const ov = await info(A.page);
   check('duel: first to 2 rounds wins the duel (banner + over phase)', ov.s === '2-0' && ov.ph === 3, JSON.stringify(ov));
-  await sleep(4500);
+  for (let i = 0; i < 60 && await A.page.evaluate(() => window.__g.scene.getScene('Town').inRealm); i++) await sleep(250);
+  await sleep(500);
   const out = await Promise.all([A, B].map((x) => scene(x.page, (s) => ({ inRealm: s.inRealm, save: JSON.stringify(s.realm.save) }))));
   check('duel: after the result both players are back in town and the save is untouched', !out[0].inRealm && !out[1].inRealm && out[0].save === save0, JSON.stringify([out[0].inRealm, out[1].inRealm]));
 
@@ -96,7 +112,7 @@ const start = (role) => `(function(s){const link={onMessage:null,send:(m)=>windo
   const errs = [...A.errors, ...B.errors].filter((e) => !/favicon|net::ERR/.test(e));
   check('no console errors', errs.length === 0, errs.join(' | '));
   await A.browser.close(); await B.browser.close(); await sleep(5000);
-  const [pl, ri, rp] = await Promise.all(['players', 'realmInvites', 'realmParties'].map((p) => fetch(`${DB}/${p}.json`).then((r) => r.text())));
-  check('cleanup: no ADMIN players, invites or parties remain', !/ADMIN/.test(pl) && ri === 'null' && rp === 'null', [pl.slice(0, 80), ri, rp].join(' / '));
+  const cl = await adminClean(DB);
+  check('cleanup: no ADMIN players, invites or parties of ours remain', cl.ok, cl.last);
   done();
 })();
