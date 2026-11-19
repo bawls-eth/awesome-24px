@@ -1101,14 +1101,14 @@ class RealmArena {
     if (e.invuln > 0) return; // a phase change makes it pause, shielded
     e.cd -= dt; e.cd2 -= dt;
     if (e.phase === 1) { // three-armed spiral + aimed fans
-      if (e.cd <= 0) { e.cd = 0.14; e.angle += 0.28; for (let k = 0; k < 3; k++) this.fireEnemyBullet(e.x, e.y, e.angle + k * Math.PI * 2 / 3, 140, 1); }
-      if (e.cd2 <= 0) { e.cd2 = 2.4; const a = Math.atan2(p.y - e.y, p.x - e.x); for (let k = -2; k <= 2; k++) this.fireEnemyBullet(e.x, e.y, a + k * 0.18, 230, 0); }
+      if (e.cd <= 0) { e.cd = 0.14; e.angle += 0.28; for (let k = 0; k < 3; k++) this.fireEnemyBullet(e.x, e.y, MMPatterns.spiralAngle(e.angle, k, 3), 140, 1); }
+      if (e.cd2 <= 0) { e.cd2 = 2.4; const a = Math.atan2(p.y - e.y, p.x - e.x); for (let k = 0; k < 5; k++) this.fireEnemyBullet(e.x, e.y, MMPatterns.aimedAngle(a, k, 5, 0.72), 230, 0); }
     } else if (e.phase === 2) { // rings of 20, aimed fans between them
-      if (e.cd <= 0) { e.cd = 1.9; const ph = this.rng() * Math.PI * 2; for (let k = 0; k < 20; k++) this.fireEnemyBullet(e.x, e.y, ph + (k / 20) * Math.PI * 2, 135, 2); }
-      if (e.cd2 <= 0) { e.cd2 = 1.9; e.angle = 0; const a = Math.atan2(p.y - e.y, p.x - e.x); for (let k = -1; k <= 1; k++) this.fireEnemyBullet(e.x, e.y, a + k * 0.2, 225, 0); e.cd2 = 1.9; e.cd = Math.max(e.cd, 0.9); }
+      if (e.cd <= 0) { e.cd = 1.9; const ph = this.rng() * Math.PI * 2; for (let k = 0; k < 20; k++) this.fireEnemyBullet(e.x, e.y, MMPatterns.ringAngle(k, 20, ph), 135, 2); }
+      if (e.cd2 <= 0) { e.cd2 = 1.9; e.angle = 0; const a = Math.atan2(p.y - e.y, p.x - e.x); for (let k = 0; k < 3; k++) this.fireEnemyBullet(e.x, e.y, MMPatterns.aimedAngle(a, k, 3, 0.4), 225, 0); e.cd2 = 1.9; e.cd = Math.max(e.cd, 0.9); }
     } else { // enraged: a double spiral and rings
-      if (e.cd <= 0) { e.cd = 0.1; e.angle += 0.4; this.fireEnemyBullet(e.x, e.y, e.angle, 150, 1); this.fireEnemyBullet(e.x, e.y, e.angle + Math.PI, 150, 1); }
-      if (e.cd2 <= 0) { e.cd2 = 2.2; const ph = this.rng() * Math.PI * 2; for (let k = 0; k < 16; k++) this.fireEnemyBullet(e.x, e.y, ph + (k / 16) * Math.PI * 2, 150, 2); }
+      if (e.cd <= 0) { e.cd = 0.1; e.angle += 0.4; this.fireEnemyBullet(e.x, e.y, e.angle, 150, 1); this.fireEnemyBullet(e.x, e.y, MMPatterns.spiralAngle(e.angle, 1, 2), 150, 1); }
+      if (e.cd2 <= 0) { e.cd2 = 2.2; const ph = this.rng() * Math.PI * 2; for (let k = 0; k < 16; k++) this.fireEnemyBullet(e.x, e.y, MMPatterns.ringAngle(k, 16, ph), 150, 2); }
     }
   }
 
@@ -1163,7 +1163,7 @@ class RealmArena {
         if (e.cd <= 0) {
           e.cd = 1.3;
           const a = Math.atan2(dy, dx);
-          for (let k = -1; k <= 1; k++) this.fireEnemyBullet(e.x, e.y, a + k * 0.22, 235, 0);
+          for (let k = 0; k < 3; k++) this.fireEnemyBullet(e.x, e.y, MMPatterns.aimedAngle(a, k, 3, 0.44), 235, 0);
         }
       } else {
         // Drifts in and fires a ring of bolts with a random phase.
@@ -1171,7 +1171,7 @@ class RealmArena {
         if (e.cd <= 0) {
           e.cd = 2.4;
           const phase = this.rng() * Math.PI * 2;
-          for (let k = 0; k < 14; k++) this.fireEnemyBullet(e.x, e.y, phase + (k / 14) * Math.PI * 2, 140, 2);
+          for (let k = 0; k < 14; k++) this.fireEnemyBullet(e.x, e.y, MMPatterns.ringAngle(k, 14, phase), 140, 2);
         }
       }
       e.x = Math.max(20, Math.min(this.W - 20, e.x));
