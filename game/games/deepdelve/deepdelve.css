@@ -28,3 +28,24 @@ body { display:flex; flex-direction:column; max-width:100vw; overflow:hidden; to
 #hotbar .sw { width:20px; height:20px; border-radius:3px; border:1px solid #000; display:inline-block; }
 #hotbar .hint { color:var(--mut); font-size:13px; }
 @media (max-width:600px) { #hotbar .slot { min-width:44px; padding:0 4px; font-size:14px; } }
+
+.tools { padding-top:0; flex-wrap:wrap; }
+.tools .btn { flex:1 1 0; min-width:0; font-size:14px; padding:0 6px; }
+#hpbar { width:120px; height:10px; margin:3px 0; background:#3a1218; border:1px solid #000; border-radius:5px; overflow:hidden; }
+#hpfill { height:100%; width:100%; background:var(--bad); transition:width .15s; }
+#hud-pick { color:var(--mut); }
+.panel { position:absolute; left:8px; right:8px; top:8px; bottom:8px; max-width:520px; margin:0 auto; padding:10px; background:rgba(7,13,18,.95); border:2px solid #3f7aa0; border-radius:12px; overflow-y:auto; touch-action:pan-y; z-index:5; user-select:text; -webkit-user-select:text; }
+.panel[hidden] { display:none; }
+.ph { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.ph h2 { margin:0; font-size:18px; }
+.btn.mini { min-height:44px; min-width:64px; font-size:14px; }
+.note { color:var(--mut); font-size:13px; margin:6px 0; }
+.smelt { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+#recipes, #goal-list { list-style:none; margin:8px 0 0; padding:0; display:grid; gap:6px; }
+#recipes li { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:4px 6px; background:var(--panel); border-radius:8px; }
+#recipes .ri { display:flex; flex-direction:column; min-width:0; }
+#recipes small { color:var(--mut); overflow-wrap:anywhere; }
+#goal-list li { display:flex; flex-direction:column; padding:8px; background:var(--panel); border-radius:8px; }
+#goal-list li.done strong { color:var(--acc); }
+#goal-list span { color:var(--mut); font-size:13px; }
+@media (prefers-reduced-motion: reduce) { #hpfill { transition:none; } }

@@ -7,7 +7,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   const SIZE = 16, VOL = 4096;
   const WORLD = { cx: 8, cy: 4, cz: 8 };
-  const B = { AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, COAL: 4, IRON: 5, GOLD: 6, CRYSTAL: 7, LAVA: 8, WATER: 9, BEDROCK: 10, TORCH: 11 };
+  const B = { AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, COAL: 4, IRON: 5, GOLD: 6, CRYSTAL: 7, LAVA: 8, WATER: 9, BEDROCK: 10, TORCH: 11, FURNACE: 12 };
   // Ore depth bands (inclusive world y, y grows downward): coal/iron in stone, gold deep, crystal at the core.
   const ORE_BANDS = {
     [B.COAL]: { min: 4, max: 40, chance: 0.03 },
@@ -16,6 +16,9 @@
     [B.CRYSTAL]: { min: 48, max: 62, chance: 0.02 },
   };
   const LAVA_BAND = { min: 30, max: 46, chance: 0.012 };
+  // The Lava Lake: a fixed cavern (same in every seed). Air y 38..41 over a single lava layer at y 42.
+  const LAKE = { x0: 76, x1: 92, z0: 60, z1: 68, airY0: 38, airY1: 41, lavaY: 42 };
+  const inLake = (wx, wz) => wx >= LAKE.x0 && wx <= LAKE.x1 && wz >= LAKE.z0 && wz <= LAKE.z1;
   const MAX_DIFFS = 20000;
 
   function hash(a, b, c, seed) {
@@ -41,6 +44,7 @@
     if (wy < s) return B.AIR;
     if (wy === s) return B.GRASS;
     if (wy <= s + 3) return B.DIRT;
+    if (inLake(wx, wz)) { if (wy >= LAKE.airY0 && wy <= LAKE.airY1) return B.AIR; if (wy === LAKE.lavaY) return B.LAVA; }
     if (wy >= LAVA_BAND.min && wy <= LAVA_BAND.max && hash(wx, wy, wz, seed + 91) < LAVA_BAND.chance) return B.LAVA;
     if (wy > s + 6 && hash(wx >> 2, wy >> 2, wz >> 2, seed + 5) < 0.04 && hash(wx, wy, wz, seed + 6) < 0.8) return B.AIR; // cave pockets
     const r = hash(wx, wy, wz, seed + 33);
@@ -195,7 +199,7 @@
         const d = {};
         for (let j = 0; j + 1 < e[3].length && diffCount < MAX_DIFFS; j += 2) {
           const i = e[3][j], b = e[3][j + 1];
-          if (i >= 0 && i < VOL && b >= 0 && b <= 11) { d[i] = b; diffCount++; }
+          if (i >= 0 && i < VOL && b >= 0 && b <= 12) { d[i] = b; diffCount++; }
         }
         if (Object.keys(d).length) diffs.set(key(e[0], e[1], e[2]), d);
       }
@@ -205,5 +209,5 @@
     return { seed, getChunk, getBlock, setBlock, neighbours, serialise, load, diffCount: () => diffCount, unloadChunk: (k) => chunks.delete(k), loadedKeys: () => Array.from(chunks.keys()) };
   }
 
-  return { SIZE, VOL, WORLD, B, ORE_BANDS, LAVA_BAND, MAX_DIFFS, generate, blockAt, mesh, visible, unload, createWorld, key, inWorld, surfaceY };
+  return { SIZE, VOL, WORLD, B, ORE_BANDS, LAVA_BAND, LAKE, MAX_DIFFS, generate, blockAt, mesh, visible, unload, createWorld, key, inWorld, surfaceY };
 });

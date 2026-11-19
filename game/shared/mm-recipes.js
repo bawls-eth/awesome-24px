@@ -39,6 +39,8 @@
     survival: { id: 'survival', fallDamage: true, flight: false },
     creative: { id: 'creative', fallDamage: false, flight: true },
   };
+  // Furnace smelting (not a crafting recipe): 1 ore + 1 coal -> 1 ingot. Ingots use the item ids the recipes expect.
+  const SMELT = { iron_ore: { cost: { iron_ore: 1, coal: 1 }, out: { iron: 1 } }, gold_ore: { cost: { gold_ore: 1, coal: 1 }, out: { gold: 1 } } };
   const get = (id) => byId.get(id) || null;
   const has = (inv, k, n) => ((inv && inv[k]) | 0) >= n;
   function canCraft(inv, id) {
@@ -54,6 +56,14 @@
     for (const k of Object.keys(r.out)) inv[k] = (inv[k] | 0) + r.out[k];
     return true;
   }
+  function canSmelt(inv, ore) { const r = SMELT[ore]; return !!r && Object.keys(r.cost).every((k) => has(inv, k, r.cost[k])); }
+  function smelt(inv, ore) {
+    if (!canSmelt(inv, ore)) return false;
+    const r = SMELT[ore];
+    for (const k of Object.keys(r.cost)) inv[k] = (inv[k] | 0) - r.cost[k];
+    for (const k of Object.keys(r.out)) inv[k] = (inv[k] | 0) + r.out[k];
+    return true;
+  }
   const mode = (name) => MODES[name] || MODES.survival;
-  return { RECIPES, MODES, get, canCraft, craft, mode, ids: () => RECIPES.map((r) => r.id) };
+  return { RECIPES, MODES, SMELT, canSmelt, smelt, get, canCraft, craft, mode, ids: () => RECIPES.map((r) => r.id) };
 });
