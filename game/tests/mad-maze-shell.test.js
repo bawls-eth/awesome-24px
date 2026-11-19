@@ -3,7 +3,8 @@
 // Set SHOTS=<dir> to also write desktop/phone screenshots.
 const { chromium } = require('playwright');
 const { check, done } = require('./helpers');
-const BASE = process.env.MM_BASE || 'http://localhost:8442/game/games/mad-maze/index.html?test=1&offline=1';
+const ORIGIN = (process.env.BASE || 'http://localhost:8440/game/index.html').replace(/\/game\/index\.html.*$/, ''); // follows run-all's throwaway server
+const BASE = process.env.MM_BASE || ORIGIN + '/game/games/mad-maze/index.html?test=1&offline=1';
 
 async function open(browser, opts, seed) {
   const ctx = await browser.newContext(opts);
@@ -26,7 +27,7 @@ async function open(browser, opts, seed) {
   const d = await open(browser, { viewport: { width: 1000, height: 700 } }, { realm: { level: 4, shards: 7 } });
   check('canvas exists', await d.page.evaluate(() => !!document.getElementById('realm-canvas')));
   check('window.__mm exists with an arena', await d.page.evaluate(() => !!(window.__mm && window.__mm.arena)));
-  check('no requests to firebase/gstatic, only own origin', d.reqs.every((u) => u.startsWith('http://localhost:8442/')) && !d.reqs.some((u) => /firebase|gstatic/.test(u)), d.reqs.join(' '));
+  check('no requests to firebase/gstatic, only own origin', d.reqs.every((u) => u.startsWith(ORIGIN + '/')) && !d.reqs.some((u) => /firebase|gstatic/.test(u)), d.reqs.join(' '));
   const st = await d.page.evaluate(() => {
     const a = window.__mm.arena; const o = { state: a.state };
     a.firePlayerBullet(0); o.bolt = a.pBullets.some((b) => b.active); return o;
