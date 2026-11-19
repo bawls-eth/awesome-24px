@@ -328,28 +328,71 @@ class RealmArena {
       if (dx * dx + dy * dy < r * r) this._hq.best = id;
     };
     this._padPrev = [false, false, false, false]; this._aimTargets = [];
-    this.sfx = null; this._gesture = false;
+    this.sfx = null; this._gesture = false; this._actx = null;
+    this._padPause = false; this._padWas = false;
+    this._padRes = { move: { x: 0, y: 0 }, aim: { x: 0, y: 0, on: false }, fire: false, ability: [false, false, false, false], pause: false }; // reused every frame (no per-frame allocation)
     this._aimAssist = true; this._reduced = false;
     this._wireRefresh();
+    this._mountAimToggle();
+  }
+
+  // Small HUD toggle for touch aim assist (stored in 'mm-aim-assist'; the realm save is untouched). Idempotent.
+  _mountAimToggle() {
+    if (typeof document === 'undefined') return;
+    const hud = document.getElementById('realm-hud'); if (!hud) return;
+    let b = document.getElementById('realm-aim-btn');
+    if (!b) {
+      b = document.createElement('button'); b.id = 'realm-aim-btn'; b.type = 'button'; b.textContent = '🎯';
+      b.style.cssText = 'position:absolute;right:0;top:calc(100% + 4px);pointer-events:auto;width:34px;height:34px;border-radius:50%;border:2px solid rgba(255,255,255,0.6);background:rgba(0,0,0,0.55);font-size:16px;padding:0;'; // out of the flex row so the phone HUD keeps its width
+      hud.appendChild(b);
+      b.addEventListener('click', () => this.setAimAssist(!this._aimAssist));
+    }
+    this._aimBtn = b; this._syncAimBtn();
+  }
+
+  _syncAimBtn() {
+    const b = this._aimBtn; if (!b) return;
+    b.setAttribute('aria-label', 'Aim assist: ' + (this._aimAssist ? 'on' : 'off') + ' (toggle)');
+    b.setAttribute('aria-pressed', this._aimAssist ? 'true' : 'false');
+    b.style.opacity = this._aimAssist ? '1' : '0.5';
+    b.title = 'Aim assist ' + (this._aimAssist ? 'on' : 'off');
   }
 
   // Re-read the two preferences (aim-assist toggle, reduce-motion); called on construction and at every start().
   _wireRefresh() {
     try { this._aimAssist = localStorage.getItem('mm-aim-assist') !== '0'; } catch (e) { this._aimAssist = true; }
+    this._syncAimBtn();
+    this._readReduced();
+  }
+
+  // Reduce-motion is read live (cheap), so flipping the OS setting mid-run takes effect on the next frame.
+  _readReduced() {
     try { this._reduced = typeof MMMotion !== 'undefined' && MMMotion.reduced(window, localStorage); } catch (e) { this._reduced = false; }
   }
 
   setAimAssist(on) {
-    this._aimAssist = !!on;
+    this._aimAssist = !!on; this._syncAimBtn();
     try { localStorage.setItem('mm-aim-assist', on ? '1' : '0'); } catch (e) { /* ignore */ }
   }
 
   // Sound: created lazily and only after a real user gesture (so no autoplay), music stays off. Tests may assign arena.sfx.
+  // The AudioContext is created / resumed INSIDE the user-gesture handler (iOS Safari only unlocks audio there).
+  _unlockAudio() {
+    this._gesture = true;
+    try {
+      if (!this._actx) { const C = typeof AudioContext !== 'undefined' ? AudioContext : (typeof webkitAudioContext !== 'undefined' ? webkitAudioContext : null); if (C) this._actx = new C(); }
+      if (this._actx && this._actx.state === 'suspended' && this._actx.resume) { const r = this._actx.resume(); if (r && r.catch) r.catch(() => {}); }
+    } catch (e) { /* audio must never break the game */ }
+    if (!this.sfx && typeof MMSfx !== 'undefined') {
+      try { const f = MMSfx.create({ storage: localStorage, ctxFactory: () => this._actx }); f.setMusic(false); this.sfx = f; } catch (e) { /* ignore */ }
+    }
+  }
+
   _snd(name) {
     let f = this.sfx;
     if (!f) {
       if (!this._gesture || typeof MMSfx === 'undefined') return;
-      try { f = this.sfx = MMSfx.create({ storage: localStorage }); f.setMusic(false); } catch (e) { return; }
+      try { f = this.sfx = MMSfx.create({ storage: localStorage, ctxFactory: () => this._actx }); f.setMusic(false); } catch (e) { return; }
     }
     try { f.play(name); } catch (e) { /* audio must never break the game */ }
   }
@@ -377,13 +420,46 @@ class RealmArena {
   }
 
   // Gamepad: first connected pad feeds the same move/aim/fire/ability inputs as keyboard and touch.
+  // Same mapping as MMPad.read, but written into one reused result object (MMPad.read allocates ~6 objects per call).
   _readPad() {
     this._pad = null;
-    if (typeof MMPad === 'undefined' || typeof navigator === 'undefined' || !navigator.getGamepads) return null;
-    let pads; try { pads = navigator.getGamepads(); } catch (e) { return null; }
-    if (!pads) return null;
-    for (let i = 0; i < pads.length; i++) if (pads[i] && pads[i].connected !== false) { this._pad = MMPad.read(pads[i]); return this._pad; }
+    if (typeof MMPad === 'undefined' || typeof navigator === 'undefined' || !navigator.getGamepads) return this._padGone();
+    let pads; try { pads = navigator.getGamepads(); } catch (e) { return this._padGone(); }
+    if (!pads) return this._padGone();
+    for (let i = 0; i < pads.length; i++) {
+      const gp = pads[i]; if (!gp || gp.connected === false) continue;
+      const b = gp.buttons || [];
+      for (let k = 0; k < b.length; k++) if (b[k] && (b[k].pressed === true || b[k].value > 0.5)) { if (!this._actx || !this.sfx) this._unlockAudio(); break; } // a pad press counts as a gesture
+      this._padWas = true;
+      return (this._pad = MMPad.DEAD !== undefined ? this._padFill(gp) : MMPad.read(gp));
+    }
+    return this._padGone();
+  }
+
+  // The pad went away: forget its held buttons so a reconnect cannot fire a stale edge.
+  _padGone() {
+    if (this._padWas) { this._padPrev.fill(false); this._padPause = false; this._padWas = false; }
     return null;
+  }
+
+  _padFill(gp) {
+    const r = this._padRes, a = gp.axes || [], b = gp.buttons || [], D = MMPad.DEAD;
+    const dn = (x) => !!x && (x.pressed === true || (+x.value || 0) > 0.5);
+    let x = +a[0] || 0, y = +a[1] || 0, m = Math.hypot(x, y);
+    if (m <= D) { r.move.x = 0; r.move.y = 0; } else { const o = Math.min(1, (m - D) / (1 - D)); r.move.x = (x / m) * o; r.move.y = (y / m) * o; }
+    x = +a[2] || 0; y = +a[3] || 0; m = Math.hypot(x, y);
+    r.fire = m > MMPad.FIRE_AT || dn(b[7]);
+    if (m <= D) { r.aim.x = 0; r.aim.y = 0; r.aim.on = false; } else { const o = Math.min(1, (m - D) / (1 - D)); r.aim.x = (x / m) * o; r.aim.y = (y / m) * o; r.aim.on = o > 0; }
+    r.ability[0] = dn(b[0]) || dn(b[5]); r.ability[1] = dn(b[1]) || dn(b[4]); r.ability[2] = dn(b[2]); r.ability[3] = dn(b[3]);
+    r.pause = dn(b[9]);
+    return r;
+  }
+
+  // Start (button 9) opens / closes the pause + backpack panel, like B / Esc: one toggle per press.
+  _padPauseEdge() {
+    const on = !!(this._pad && this._pad.pause);
+    if (on && !this._padPause) { if (this.panel || this.paused) this.setPaused(false); else this._panel('bp'); }
+    this._padPause = on;
   }
 
   countActive(name) {
@@ -568,8 +644,8 @@ class RealmArena {
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('keyup', this.onKeyUp);
     window.addEventListener('blur', this.onBlur);
-    this._onGesture = () => { this._gesture = true; };
-    ['keydown', 'pointerdown', 'touchstart'].forEach((ev) => window.addEventListener(ev, this._onGesture, { capture: true, passive: true }));
+    this._onGesture = () => { this._unlockAudio(); };
+    ['keydown', 'pointerdown', 'touchstart', 'touchend', 'click'].forEach((ev) => window.addEventListener(ev, this._onGesture, { capture: true, passive: true }));
 
     const toArena = (e) => {
       const r = this.canvas.getBoundingClientRect();
@@ -657,7 +733,7 @@ class RealmArena {
     window.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('keyup', this.onKeyUp);
     window.removeEventListener('blur', this.onBlur);
-    ['keydown', 'pointerdown', 'touchstart'].forEach((ev) => window.removeEventListener(ev, this._onGesture, { capture: true }));
+    ['keydown', 'pointerdown', 'touchstart', 'touchend', 'click'].forEach((ev) => window.removeEventListener(ev, this._onGesture, { capture: true }));
     window.removeEventListener('pointerup', this.onPointerUp);
     window.removeEventListener('resize', this.onResize);
     if (this.canvas.parentNode) this.canvas.parentNode.removeChild(this.canvas);
@@ -816,7 +892,8 @@ class RealmArena {
   // ---------- simulation ----------
 
   _update(dt) {
-    if (this.paused) return; // backpack open
+    this._readReduced();
+    if (this.paused) { this._readPad(); this._padPauseEdge(); return; } // backpack open (Start can still close it)
     const p = this.player;
     this.shake = Math.max(0, this.shake - dt * 30);
     this.flash = Math.max(0, this.flash - dt * 2.2);
@@ -921,7 +998,7 @@ class RealmArena {
     if (this.keys.d || this.keys.arrowright) mx += 1;
     if (this.keys.w || this.keys.arrowup) my -= 1;
     if (this.keys.s || this.keys.arrowdown) my += 1;
-    const pad = this._readPad();
+    const pad = this._readPad(); this._padPauseEdge();
     if (pad) { mx += pad.move.x; my += pad.move.y; }
     if (this.down) { mx = 0; my = 0; } // downed: no moving or shooting until revived
     const len = Math.hypot(mx, my);
@@ -1091,7 +1168,7 @@ class RealmArena {
   _updateBullets(dt) {
     const p = this.player;
     // Player bolts: move, hit enemies (spatial hash over the enemies, rebuilt once per frame).
-    if (this._hash) this._buildHash();
+    if (this._hash) { let any = false; for (let i = 0; i < this.pBullets.length; i++) if (this.pBullets[i].active) { any = true; break; } if (any) this._buildHash(); } // no bolts, no hash
     for (let i = 0; i < this.pBullets.length; i++) {
       const b = this.pBullets[i];
       if (!b.active) continue;
@@ -1476,13 +1553,14 @@ class RealmArena {
     }
     // Player: the villager sprite (flickers while invulnerable), with a soft shadow and aim marker.
     const p = this.player;
-    if (this.state !== 'dead' && (p.iframes <= 0 || Math.floor(p.iframes * 20) % 2 === 0)) {
+    if (this.state !== 'dead' && (p.iframes <= 0 || this._reduced || Math.floor(p.iframes * 20) % 2 === 0)) {
       if (this.down) { g.globalAlpha = 0.45; g.strokeStyle = '#7ee787'; g.lineWidth = 3; g.beginPath(); g.arc(p.x, p.y, RT_REVIVE_RANGE, -Math.PI / 2, -Math.PI / 2 + Math.min(1, this.reviveT / RT_REVIVE_TIME) * Math.PI * 2); g.stroke(); }
       g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(p.x, p.y + 14, 13, 5, 0, 0, Math.PI * 2); g.fill();
       const spr = this._avatar || this.sprites.playerFallback;
       const size = this._avatar ? 48 : 32;
       g.save(); g.translate(p.x, p.y - Math.abs(Math.sin(p.bob)) * 3);
       g.scale(p.facing, 1);
+      if (this._reduced && p.iframes > 0) g.globalAlpha = 0.6; // reduced motion: a steady tint instead of the 10 Hz blink (restored by g.restore)
       g.drawImage(spr, -size / 2, -size / 2 - 4, size, size);
       g.restore();
       if (this.shield.hits > 0) { g.strokeStyle = `rgba(143,233,255,${0.5 + 0.1 * this.shield.hits})`; g.lineWidth = 3; g.beginPath(); g.arc(p.x, p.y, 26, 0, Math.PI * 2); g.stroke(); }
