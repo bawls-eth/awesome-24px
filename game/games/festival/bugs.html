@@ -10,6 +10,7 @@
 <header id="top">
   <a class="back" href="../../hub/index.html">&larr; Hub</a>
   <h1>Bug Safari</h1>
+  <button id="btn-mute" type="button" aria-pressed="false">Sound on</button>
   <a class="back" href="../../index.html">Town</a>
 </header>
 <main id="stage">
@@ -20,6 +21,7 @@
     <div id="combo"><div id="combo-bar"></div><span id="combo-text"></span></div>
   </div>
   <div id="canvas-wrap"><canvas id="game" width="320" height="224" aria-label="Bug Safari field"></canvas>
+    <div id="hint" hidden role="note"><strong>How to play</strong><p>Walk close, then press Space or tap Swing to net a bug. Sneak (Shift) so bugs do not flee. Bugs hide in flowers, burrow in mounds when you move, and swarms scatter together. Stand still near a mound to lure the Antlion out.</p><button id="hint-ok" type="button">Got it</button></div>
     <div id="overlay" hidden></div>
   </div>
   <div id="touch">
@@ -32,6 +34,7 @@
 <script src="../../shared/rng.js"></script>
 <script src="../../shared/store.js"></script>
 <script src="../../shared/mm-bugs.js"></script>
+<script src="../../shared/sfx.js"></script>
 <script src="bugs.js"></script>
 </body>
 </html>
