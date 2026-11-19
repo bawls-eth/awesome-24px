@@ -653,7 +653,7 @@ class RealmArena {
       const inside = Math.hypot(p.x - h.x, p.y - h.y) < RM_HAZARD_R - 4;
       if (h.kind === 'ice' && inside) slow = RM_ICE_SLOW;
       if (h.kind === 'lava') {
-        if (inside && this.state !== 'dead') { h.tick += dt; if (h.tick >= RM_LAVA_TICK && p.iframes <= 0) { h.tick = 0; this._floatText(p.x, p.y - 30, '🔥', '#ffa04a'); this._hitPlayer(RM_LAVA_DAMAGE); } } else h.tick = Math.min(h.tick, RM_LAVA_TICK * 0.6);
+        if (inside && this.state === 'play') { h.tick += dt; if (h.tick >= RM_LAVA_TICK && p.iframes <= 0) { h.tick = 0; this._floatText(p.x, p.y - 30, '🔥', '#ffa04a'); this._hitPlayer(RM_LAVA_DAMAGE); } } else h.tick = Math.min(h.tick, RM_LAVA_TICK * 0.6);
       }
     }
     this._speedMul = slow;
@@ -990,6 +990,7 @@ class RealmArena {
 
   // One panel at a time (backpack or kill board); either one pauses the fight.
   _panel(name) {
+    if (name && this.state === 'dead') return; // no panels while the death message runs (it would freeze the exit)
     this.panel = name;
     this.paused = !!name;
     const bp = document.getElementById('realm-backpack'); if (bp) bp.classList.toggle('hidden', name !== 'bp');

@@ -35,7 +35,7 @@ const enter = (s) => {
   check('biomes: each has its own floor tile, hazards keep clear of you and of each other, Ember sends more Bursters', bio.floors === 3 && bio.sep && bio.w4.types.filter((t) => t === 'ring').length >= 2, JSON.stringify([bio.floors, bio.sep, bio.w4.types]));
   const hz = await scene(page, (s) => {
     const r = s.realm; const o = {};
-    window.__wave(4); [r.enemies].forEach((p) => p.forEach((e) => { e.active = false; })); const lava = r.hazards.find((h) => h.active); r.player.x = lava.x; r.player.y = lava.y; r.player.iframes = 0; const hp0 = r.player.hp;
+    window.__wave(4); [r.enemies].forEach((p) => p.forEach((e) => { e.active = false; })); const keep = r.spawnEnemy('spiral', r.W - 50, r.H - 50); keep.cd = 1e9; keep.hp = keep.maxHp = 1e9; keep.ax = keep.x; keep.ay = keep.y; const lava = r.hazards.find((h) => h.active); r.player.x = lava.x; r.player.y = lava.y; r.player.iframes = 0; const hp0 = r.player.hp;
     o.ticks = []; for (let i = 0; i < 160; i++) { const before = r.player.hp; window.__st(1); if (r.player.hp < before) o.ticks.push(+(i / 60).toFixed(2)); }
     o.lostLava = hp0 - r.player.hp;
     r.player.x = 20; r.player.y = 20; r.player.iframes = 0; const hpEdge = r.player.hp; window.__st(120); o.safe = r.player.hp === hpEdge;
@@ -130,6 +130,8 @@ const enter = (s) => {
   await page.keyboard.press('Escape'); await page.waitForTimeout(100);
   const esc = await scene(page, (s) => ({ panel: s.realm.panel, paused: s.realm.paused, inRealm: s.inRealm }));
   check('board: Esc closes the open panel first (you stay in the Realm), the game resumes', esc.panel === null && !esc.paused && esc.inRealm, JSON.stringify(esc));
+  const dead = await scene(page, (s) => { const r = s.realm; window.__clear(); r.state = 'dead'; r.deadT = 2; r.setBoard(true); r.setPaused(true); const o = { paused: r.paused, panel: r.panel }; r.state = 'play'; return o; });
+  check('death: the backpack and kill board cannot be opened during the death message (the exit would freeze)', dead.paused === false && dead.panel !== 'bp' && dead.panel !== 'board', JSON.stringify(dead));
   check('no console errors (desktop)', errors.length === 0, errors.join('|'));
   const saved = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)).realm, SAVE);
   if (process.env.SHOTS) {
