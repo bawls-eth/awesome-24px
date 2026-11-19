@@ -59,7 +59,8 @@ const start = (role) => `(function(s){const link={onMessage:null,send:(m)=>windo
   await sleep(800);
   const k1 = await info(A.page), k1g = await info(B.page);
   check('duel: a KO scores the round for the winner on both screens and starts the between-rounds pause', k1.s === '1-0' && k1g.s === '1-0' && k1.ph === 2, JSON.stringify([k1, k1g]));
-  await sleep(3200);
+  for (let i = 0; i < 60 && (await info(A.page)).rd !== 2; i++) await sleep(250); // game time runs slower than wall time on a loaded machine (frame dt is clamped), so poll instead of a fixed sleep
+  await sleep(400);
   const r2 = await info(A.page), r2g = await info(B.page);
   check('duel: round 2 resets both fighters to full HP', r2.rd === 2 && r2.hp === 100 && r2.partnerHp === 100 && r2g.hp === 100 && r2.ph <= 1, JSON.stringify([r2, r2g]));
 
@@ -74,7 +75,8 @@ const start = (role) => `(function(s){const link={onMessage:null,send:(m)=>windo
   await sleep(900);
   const ov = await info(A.page);
   check('duel: first to 2 rounds wins the duel (banner + over phase)', ov.s === '2-0' && ov.ph === 3, JSON.stringify(ov));
-  await sleep(4500);
+  for (let i = 0; i < 60 && await A.page.evaluate(() => window.__g.scene.getScene('Town').inRealm); i++) await sleep(250);
+  await sleep(500);
   const out = await Promise.all([A, B].map((x) => scene(x.page, (s) => ({ inRealm: s.inRealm, save: JSON.stringify(s.realm.save) }))));
   check('duel: after the result both players are back in town and the save is untouched', !out[0].inRealm && !out[1].inRealm && out[0].save === save0, JSON.stringify([out[0].inRealm, out[1].inRealm]));
 
