@@ -115,12 +115,56 @@ function rmCleanSave(s) {
   return out;
 }
 
+// ---------- cross-tab save merge ----------
+// The arena keeps `realm` in memory and used to write it back whole, so two tabs clobbered each other.
+// Now every save re-reads pixeltown-save-v1, merges (never loses progress) and writes the merge.
+const RM_SAVE_KEY = 'pixeltown-save-v1';
+const RM_TILE = 40; // wall-grid tile size in logical px
+
+function rmReadStoredRealm() {
+  try {
+    const raw = localStorage.getItem(RM_SAVE_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    const r = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed.realm : null;
+    return r && typeof r === 'object' && !Array.isArray(r) ? r : null;
+  } catch (e) { return null; }
+}
+
+// mine = this tab's save, stored = what is in localStorage now. opts.base = this tab's last-known shard total
+// (so only THIS tab's delta is applied on top of the stored value), opts.known = uids this tab has already seen (a stored item it knew but no longer holds was sold here, so it stays gone).
+function rmMergeSave(mine, stored, opts) {
+  opts = opts || {};
+  const a = rmCleanSave(mine); const b = rmCleanSave(stored);
+  const out = {};
+  out.bestWave = Math.max(a.bestWave, b.bestWave); out.kills = Math.max(a.kills, b.kills); out.deaths = Math.max(a.deaths, b.deaths);
+  out.kb = {}; Object.keys(a.kb).forEach((k) => { out.kb[k] = Math.max(a.kb[k], b.kb[k]); });
+  out.bossBestT = a.bossBestT && b.bossBestT ? Math.min(a.bossBestT, b.bossBestT) : (a.bossBestT || b.bossBestT);
+  const lead = (a.level > b.level || (a.level === b.level && a.xp >= b.xp)) ? a : b;
+  out.level = lead.level; out.xp = lead.xp;
+  const base = Number.isFinite(opts.base) ? opts.base : a.shards;
+  out.shards = Math.max(0, b.shards + (a.shards - base));
+  const known = opts.known || new Set();
+  const items = a.items.map((it) => ({ ...it })); const uids = new Set(items.map((it) => it.n));
+  let next = Math.max(a.nextUid, b.nextUid);
+  b.items.forEach((it) => {
+    const mineSame = a.items.find((x) => x.n === it.n);
+    if (!mineSame && known.has(it.n)) return;
+    if (mineSame) { if (mineSame.id === it.id && mineSame.r === it.r) return; } // same item
+    items.push({ n: mineSame ? next++ : it.n, id: it.id, r: it.r }); // a uid collision between two different items: the other tab's gets a fresh uid
+    uids.add(items[items.length - 1].n);
+  });
+  out.items = items; out.nextUid = next; out.eq = a.eq; // equipment is per-tab
+  return rmCleanSave(out);
+}
+
 class RealmArena {
   constructor({ container, save, onSave, onExit, seed }) {
     this.container = container;
-    this.onSave = onSave || (() => {});
+    this._onSave = onSave || (() => {});
+    this.onSave = (sv) => this._persist(sv); // every save goes through the cross-tab merge first
     this.onExit = onExit || (() => {});
     this.save = rmCleanSave(save);
+    this._baseShards = this.save.shards; this._known = new Set(this.save.items.map((it) => it.n)); this.walls = null; this.extraGuard = 0;
     this.rng = rmRng(seed === undefined ? (Date.now() & 0xffffffff) : seed);
     this.active = false;
     this.state = 'idle'; // idle | banner | play | dead
@@ -146,6 +190,29 @@ class RealmArena {
     this._bakeSprites();
     this._bindInput();
     this._resize();
+    if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('storage', (e) => { if (!e.key || e.key === RM_SAVE_KEY) this.resyncSave(); });
+  }
+
+  // Replace the in-memory save with `m` in place (callers hold references to this.save) and refresh what depends on it.
+  _adopt(m) {
+    const sv = this.save; const before = JSON.stringify([sv.level, sv.items, sv.eq]);
+    Object.keys(sv).forEach((k) => { delete sv[k]; }); Object.assign(sv, m);
+    if (JSON.stringify([sv.level, sv.items, sv.eq]) !== before) { this._calcStats(); if (this.active) this._syncHud(); }
+  }
+
+  // Merge with whatever is in storage now (another tab may have written) without writing.
+  resyncSave() {
+    const stored = rmReadStoredRealm();
+    if (!stored) return false;
+    this._adopt(rmMergeSave(this.save, stored, { base: this._baseShards, known: this._known }));
+    this._baseShards = this.save.shards; this._known = new Set(this.save.items.map((it) => it.n));
+    return true;
+  }
+
+  _persist(sv) {
+    this.resyncSave();
+    this._baseShards = this.save.shards;
+    this._onSave(this.save);
   }
 
   // ---------- team play ----------
@@ -262,8 +329,24 @@ class RealmArena {
       else if (def.stat === 'xp') st.xp += v;
       else if (def.stat === 'iframes') st.iframes += v;
     });
+    st.guard = this._calcGuard();
     this.stats = st;
     return st;
+  }
+
+  // Guard comes from the equipped items via MMStats (0 for every legacy item today); extraGuard is a test/future hook.
+  _calcGuard() {
+    let g = Number(this.extraGuard) || 0;
+    if (typeof MMStats !== 'undefined') g += MMStats.fromLegacy(this.save).GRD;
+    return g;
+  }
+
+  // Enemy bolt damage after guard: max(dmg - guard, 25% of dmg). Guard 0 leaves damage unchanged.
+  _guarded(dmg) {
+    const g = (this.stats && this.stats.guard) || 0;
+    if (g <= 0) return dmg;
+    if (typeof MMStats !== 'undefined') return MMStats.damageTaken(dmg, g);
+    return Math.max(Math.ceil(dmg * 0.25), dmg - g);
   }
 
   // ---------- baked sprites ----------
@@ -276,6 +359,11 @@ class RealmArena {
       return c;
     };
     this.sprites = {};
+    // Hit-box dot: the tiny marker at the player's centre that shows what actually gets hit (baked once).
+    this.sprites.hitDot = mk(8, 8, (g) => {
+      g.fillStyle = '#fff'; g.beginPath(); g.arc(4, 4, 3.5, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#ff3b6b'; g.beginPath(); g.arc(4, 4, 2.2, 0, Math.PI * 2); g.fill();
+    });
     // Arena floor: a dark chunky tiled pattern, drawn once and repeated.
     this.sprites.floor = mk(64, 64, (g) => {
       const rnd = rmRng(77);
@@ -444,6 +532,7 @@ class RealmArena {
 
   start() {
     this.active = true;
+    this.resyncSave(); // pick up progress another tab saved while this arena sat idle
     this._resize();
     [this.pBullets, this.eBullets, this.enemies, this.particles, this.texts, this.bags, this.drifters, this.hazards].forEach((pool) => pool.forEach((o) => { o.active = false; }));
     this.keys = {}; this.mouse.down = false; this.moveVec.x = 0; this.moveVec.y = 0; this.aimVec.on = false; this.aimVec.x = 0; this.aimVec.y = 0; // no stuck input from the last run
@@ -706,6 +795,39 @@ class RealmArena {
     if (this.state === 'play' && this.run.wave > 0 && this.enemiesAlive() === 0) this._waveCleared();
   }
 
+  // ---------- tile walls (optional; null = open arena, the default) ----------
+  // rows: array of strings ('#' = wall) or arrays of 0/1, row-major, RM_TILE px per tile from the arena's top-left.
+  setWalls(rows) {
+    if (!rows || !rows.length) { this.walls = null; return; }
+    const cells = rows.map((r) => Array.from(r, (c) => (c === '#' || c === 1 || c === true ? 1 : 0)));
+    this.walls = { rows: cells.length, cols: cells.reduce((m, r) => Math.max(m, r.length), 0), cells };
+  }
+
+  isWallAt(x, y) {
+    const w = this.walls; if (!w) return false;
+    const c = Math.floor(x / RM_TILE); const r = Math.floor(y / RM_TILE);
+    return r >= 0 && c >= 0 && r < w.rows && c < w.cols && w.cells[r][c] === 1;
+  }
+
+  // Does a circle of radius rad at (x, y) overlap any wall tile? (AABB of the circle against tiles)
+  _blocked(x, y, rad) {
+    if (!this.walls) return false;
+    const c0 = Math.floor((x - rad) / RM_TILE); const c1 = Math.floor((x + rad) / RM_TILE);
+    const r0 = Math.floor((y - rad) / RM_TILE); const r1 = Math.floor((y + rad) / RM_TILE);
+    for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) if (this.isWallAt(c * RM_TILE + 1, r * RM_TILE + 1)) return true;
+    return false;
+  }
+
+  // Move the player by (dx, dy), each axis on its own so a diagonal push into a wall slides along it.
+  _movePlayer(dx, dy) {
+    const p = this.player; const R = RM_PLAYER.r;
+    const clampX = (v) => Math.max(R, Math.min(this.W - R, v)); const clampY = (v) => Math.max(R, Math.min(this.H - R, v));
+    if (!this.walls) { p.x = clampX(p.x + dx); p.y = clampY(p.y + dy); return; }
+    const stuck = this._blocked(p.x, p.y, R); // already inside a wall (grid set under us): let the player walk out
+    const nx = clampX(p.x + dx); if (stuck || !this._blocked(nx, p.y, R)) p.x = nx;
+    const ny = clampY(p.y + dy); if (stuck || !this._blocked(p.x, ny, R)) p.y = ny;
+  }
+
   _updatePlayer(dt) {
     const p = this.player;
     p.iframes = Math.max(0, p.iframes - dt);
@@ -718,8 +840,7 @@ class RealmArena {
     const len = Math.hypot(mx, my);
     p.moving = len > 0.05;
     if (len > 1) { mx /= len; my /= len; }
-    p.x = Math.max(RM_PLAYER.r, Math.min(this.W - RM_PLAYER.r, p.x + mx * this.stats.speed * this._speedMul * dt));
-    p.y = Math.max(RM_PLAYER.r, Math.min(this.H - RM_PLAYER.r, p.y + my * this.stats.speed * this._speedMul * dt));
+    this._movePlayer(mx * this.stats.speed * this._speedMul * dt, my * this.stats.speed * this._speedMul * dt);
     this._mx = mx; this._my = my;
     if (mx) p.facing = mx > 0 ? 1 : -1;
     p.bob = p.moving ? p.bob + dt * 14 : 0;
@@ -878,6 +999,7 @@ class RealmArena {
       if (!b.active) continue;
       b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
       if (b.life <= 0 || b.x < -10 || b.y < -10 || b.x > this.W + 10 || b.y > this.H + 10) { b.active = false; continue; }
+      if (this.walls && this.isWallAt(b.x, b.y)) { b.active = false; continue; }
       if (this.team && this.role === 'host' && this.team.isPvp) { if (this.team.duelBoltHit(b)) b.active = false; continue; }
       for (let j = 0; j < this.enemies.length; j++) {
         const e = this.enemies[j];
@@ -902,9 +1024,10 @@ class RealmArena {
       if (!b.active) continue;
       b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
       if (b.life <= 0 || b.x < -20 || b.y < -20 || b.x > this.W + 20 || b.y > this.H + 20) { b.active = false; continue; }
+      if (this.walls && this.isWallAt(b.x, b.y)) { b.active = false; continue; }
       if (this.state !== 'dead' && !this.down && p.iframes <= 0 && (b.x - p.x) * (b.x - p.x) + (b.y - p.y) * (b.y - p.y) < pr * pr) {
         b.active = false;
-        this._hitPlayer(RM_ENEMY_BULLET_DAMAGE);
+        this._hitPlayer(this._guarded(RM_ENEMY_BULLET_DAMAGE));
       } else if (this.team && this.role === 'host' && this.team.partner && this.team.partner.ready) {
         const q = this.team.partner;
         if ((b.x - q.x) * (b.x - q.x) + (b.y - q.y) * (b.y - q.y) < pr * pr && this.team.hitPartner(RM_ENEMY_BULLET_DAMAGE)) b.active = false;
@@ -1089,8 +1212,11 @@ class RealmArena {
       if (Math.hypot(dx, dy) < 0.1) { dx = Math.cos(p.aim); dy = Math.sin(p.aim); }
       const len = Math.hypot(dx, dy) || 1;
       this._burst(p.x, p.y, '#8fe9ff', 8, 120);
-      p.x = Math.max(RM_PLAYER.r, Math.min(this.W - RM_PLAYER.r, p.x + (dx / len) * 150));
-      p.y = Math.max(RM_PLAYER.r, Math.min(this.H - RM_PLAYER.r, p.y + (dy / len) * 150));
+      if (this.walls) { for (let k = 0; k < 15; k++) this._movePlayer((dx / len) * 10, (dy / len) * 10); } // stepwise so a dash cannot tunnel through a wall
+      else {
+        p.x = Math.max(RM_PLAYER.r, Math.min(this.W - RM_PLAYER.r, p.x + (dx / len) * 150));
+        p.y = Math.max(RM_PLAYER.r, Math.min(this.H - RM_PLAYER.r, p.y + (dy / len) * 150));
+      }
       p.iframes = Math.max(p.iframes, 0.4);
     } else if (ab.id === 'nova') {
       for (let k = 0; k < 16; k++) this.firePlayerBullet((k / 16) * Math.PI * 2);
@@ -1221,6 +1347,7 @@ class RealmArena {
     if (!this._floorPatterns[this.biome]) this._floorPatterns[this.biome] = g.createPattern(this.sprites.floors[this.biome], 'repeat');
     g.fillStyle = this._floorPatterns[this.biome]; g.fillRect(-10, -10, this.W + 20, this.H + 20);
     g.strokeStyle = RM_BIOMES[this.biome].border; g.lineWidth = 4; g.strokeRect(2, 2, this.W - 4, this.H - 4);
+    if (this.walls) { const w = this.walls; for (let r = 0; r < w.rows; r++) for (let c = 0; c < w.cols; c++) if (w.cells[r][c] === 1) { g.fillStyle = '#1b1430'; g.fillRect(c * RM_TILE, r * RM_TILE, RM_TILE, RM_TILE); g.fillStyle = RM_BIOMES[this.biome].border; g.fillRect(c * RM_TILE, r * RM_TILE, RM_TILE, 3); g.fillRect(c * RM_TILE, r * RM_TILE, 3, RM_TILE); } }
     for (let i = 0; i < this.hazards.length; i++) { const h = this.hazards[i]; if (h.active) { g.globalAlpha = h.kind === 'lava' ? 0.85 + Math.sin(this.clock * 4 + i) * 0.1 : 0.9; g.drawImage(this.sprites.hazard[h.kind], h.x - 48, h.y - 48); g.globalAlpha = 1; } }
     for (let i = 0; i < this.drifters.length; i++) { const d = this.drifters[i]; if (d.active) g.drawImage(this.sprites.drifter[d.kind], d.x - 12, d.y - 12 + Math.sin(d.t * 3) * 3); }
 
@@ -1268,6 +1395,7 @@ class RealmArena {
       g.strokeStyle = 'rgba(143,233,255,0.7)'; g.lineWidth = 2; g.beginPath();
       g.moveTo(p.x + Math.cos(p.aim) * 26, p.y + Math.sin(p.aim) * 26); g.lineTo(p.x + Math.cos(p.aim) * 34, p.y + Math.sin(p.aim) * 34); g.stroke();
       g.globalAlpha = 1;
+      g.drawImage(this.sprites.hitDot, p.x - 4, p.y - 4);
     }
 
     for (let i = 0; i < this.particles.length; i++) {
