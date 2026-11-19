@@ -195,6 +195,7 @@ class RealmArena {
     this.container.appendChild(this.canvas);
     this.ctx = this.canvas.getContext('2d');
 
+    this._wireInit();
     this._makePools();
     this._calcStats();
     this._bakeSprites();
@@ -312,7 +313,76 @@ class RealmArena {
   }
 
   _take(pool) {
-    for (let i = 0; i < pool.length; i++) if (!pool[i].active) return pool[i];
+    for (let i = 0; i < pool.length; i++) if (!pool[i].active) { if (pool === this.enemies) this._spawnN++; return pool[i]; }
+    return null;
+  }
+
+  // ---------- shared-module wiring (hash, gamepad, aim assist, sfx, reduce-motion); every piece degrades to a no-op if its script is missing ----------
+
+  _wireInit() {
+    this._hash = typeof MMHash !== 'undefined' ? MMHash.create(64) : null;
+    this._spawnN = 0; this._hashN = -1; this._hq = { x: 0, y: 0, best: -1 };
+    this._hitCb = (id) => { // exact circle test; the lowest pool index wins, like the old linear scan
+      const e = this.enemies[id]; if (!e.active || (this._hq.best >= 0 && id > this._hq.best)) return;
+      const r = RM_ENEMIES[e.type].r + 5; const dx = this._hq.x - e.x; const dy = this._hq.y - e.y;
+      if (dx * dx + dy * dy < r * r) this._hq.best = id;
+    };
+    this._padPrev = [false, false, false, false]; this._aimTargets = [];
+    this.sfx = null; this._gesture = false;
+    this._aimAssist = true; this._reduced = false;
+    this._wireRefresh();
+  }
+
+  // Re-read the two preferences (aim-assist toggle, reduce-motion); called on construction and at every start().
+  _wireRefresh() {
+    try { this._aimAssist = localStorage.getItem('mm-aim-assist') !== '0'; } catch (e) { this._aimAssist = true; }
+    try { this._reduced = typeof MMMotion !== 'undefined' && MMMotion.reduced(window, localStorage); } catch (e) { this._reduced = false; }
+  }
+
+  setAimAssist(on) {
+    this._aimAssist = !!on;
+    try { localStorage.setItem('mm-aim-assist', on ? '1' : '0'); } catch (e) { /* ignore */ }
+  }
+
+  // Sound: created lazily and only after a real user gesture (so no autoplay), music stays off. Tests may assign arena.sfx.
+  _snd(name) {
+    let f = this.sfx;
+    if (!f) {
+      if (!this._gesture || typeof MMSfx === 'undefined') return;
+      try { f = this.sfx = MMSfx.create({ storage: localStorage }); f.setMusic(false); } catch (e) { return; }
+    }
+    try { f.play(name); } catch (e) { /* audio must never break the game */ }
+  }
+
+  // Effective screen shake in px (0 under reduced motion).
+  shakeAmt() { return typeof MMMotion !== 'undefined' ? MMMotion.shake(this.shake, this._reduced) : (this._reduced ? 0 : this.shake); }
+
+  // Index of the first active enemy whose hit circle contains (x, y), via the spatial hash; -1 if none.
+  _boltHitIndex(x, y) {
+    const h = this._hash;
+    if (!h) { // fallback without the module
+      for (let j = 0; j < this.enemies.length; j++) { const e = this.enemies[j]; if (!e.active) continue; const r = RM_ENEMIES[e.type].r + 5; if ((x - e.x) * (x - e.x) + (y - e.y) * (y - e.y) < r * r) return j; }
+      return -1;
+    }
+    if (this._hashN !== this._spawnN) this._buildHash();
+    this._hq.x = x; this._hq.y = y; this._hq.best = -1;
+    h.query(x, y, 0, this._hitCb);
+    return this._hq.best;
+  }
+
+  _buildHash() {
+    const h = this._hash; h.clear();
+    for (let j = 0; j < this.enemies.length; j++) { const e = this.enemies[j]; if (e.active) h.insert(j, e.x, e.y, RM_ENEMIES[e.type].r + 5); }
+    this._hashN = this._spawnN;
+  }
+
+  // Gamepad: first connected pad feeds the same move/aim/fire/ability inputs as keyboard and touch.
+  _readPad() {
+    this._pad = null;
+    if (typeof MMPad === 'undefined' || typeof navigator === 'undefined' || !navigator.getGamepads) return null;
+    let pads; try { pads = navigator.getGamepads(); } catch (e) { return null; }
+    if (!pads) return null;
+    for (let i = 0; i < pads.length; i++) if (pads[i] && pads[i].connected !== false) { this._pad = MMPad.read(pads[i]); return this._pad; }
     return null;
   }
 
@@ -498,6 +568,8 @@ class RealmArena {
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('keyup', this.onKeyUp);
     window.addEventListener('blur', this.onBlur);
+    this._onGesture = () => { this._gesture = true; };
+    ['keydown', 'pointerdown', 'touchstart'].forEach((ev) => window.addEventListener(ev, this._onGesture, { capture: true, passive: true }));
 
     const toArena = (e) => {
       const r = this.canvas.getBoundingClientRect();
@@ -546,6 +618,7 @@ class RealmArena {
     this.resyncSave(); // pick up progress another tab saved while this arena sat idle
     this._resize();
     [this.pBullets, this.eBullets, this.enemies, this.particles, this.texts, this.bags, this.drifters, this.hazards].forEach((pool) => pool.forEach((o) => { o.active = false; }));
+    this._wireRefresh(); this._padPrev.fill(false);
     this.keys = {}; this.mouse.down = false; this.moveVec.x = 0; this.moveVec.y = 0; this.aimVec.on = false; this.aimVec.x = 0; this.aimVec.y = 0; // no stuck input from the last run
     const p = this.player;
     this._calcStats();
@@ -584,6 +657,7 @@ class RealmArena {
     window.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('keyup', this.onKeyUp);
     window.removeEventListener('blur', this.onBlur);
+    ['keydown', 'pointerdown', 'touchstart'].forEach((ev) => window.removeEventListener(ev, this._onGesture, { capture: true }));
     window.removeEventListener('pointerup', this.onPointerUp);
     window.removeEventListener('resize', this.onResize);
     if (this.canvas.parentNode) this.canvas.parentNode.removeChild(this.canvas);
@@ -847,6 +921,8 @@ class RealmArena {
     if (this.keys.d || this.keys.arrowright) mx += 1;
     if (this.keys.w || this.keys.arrowup) my -= 1;
     if (this.keys.s || this.keys.arrowdown) my += 1;
+    const pad = this._readPad();
+    if (pad) { mx += pad.move.x; my += pad.move.y; }
     if (this.down) { mx = 0; my = 0; } // downed: no moving or shooting until revived
     const len = Math.hypot(mx, my);
     p.moving = len > 0.05;
@@ -858,16 +934,26 @@ class RealmArena {
 
     // Twin-stick aim: the right stick wins, otherwise the mouse pointer.
     let firing = false;
-    if (this.aimVec.on && Math.hypot(this.aimVec.x, this.aimVec.y) > 0.25) { p.aim = Math.atan2(this.aimVec.y, this.aimVec.x); firing = true; } else if (this.mouse.seen) {
+    if (pad && pad.aim.on) { p.aim = Math.atan2(pad.aim.y, pad.aim.x); firing = pad.fire; } else if (this.aimVec.on && Math.hypot(this.aimVec.x, this.aimVec.y) > 0.25) {
+      p.aim = Math.atan2(this.aimVec.y, this.aimVec.x); firing = true;
+      if (this._aimAssist && typeof MMAim !== 'undefined') { // touch aim assist: snap to the nearest enemy within the cone
+        const t = this._aimTargets; t.length = 0;
+        for (let i = 0; i < this.enemies.length; i++) if (this.enemies[i].active) t.push(this.enemies[i]);
+        p.aim = MMAim.assist(p.aim, p, t, { enabled: true, tile: RM_TILE });
+      }
+    } else if (this.mouse.seen) {
       p.aim = Math.atan2(this.mouse.y - p.y, this.mouse.x - p.x);
       firing = this.mouse.down || !!this.keys[' '];
     } else if (this.keys[' ']) firing = true;
+    if (pad && pad.fire) firing = true;
+    if (pad) { for (let i = 0; i < 4; i++) { const on = !!pad.ability[i]; if (on && !this._padPrev[i]) this.cast(i); this._padPrev[i] = on; } }
     if (this.down) firing = false;
     this._firing = firing;
     p.fireCd -= dt;
     if (firing && p.fireCd <= 0 && this.state !== 'dead') {
       p.fireCd = 1 / (this.stats.rate * (this.overdriveT > 0 ? 2 : 1));
       this.firePlayerBullet(p.aim);
+      this._snd('shot');
     }
   }
 
@@ -1004,7 +1090,8 @@ class RealmArena {
 
   _updateBullets(dt) {
     const p = this.player;
-    // Player bolts: move, hit enemies.
+    // Player bolts: move, hit enemies (spatial hash over the enemies, rebuilt once per frame).
+    if (this._hash) this._buildHash();
     for (let i = 0; i < this.pBullets.length; i++) {
       const b = this.pBullets[i];
       if (!b.active) continue;
@@ -1012,16 +1099,8 @@ class RealmArena {
       if (b.life <= 0 || b.x < -10 || b.y < -10 || b.x > this.W + 10 || b.y > this.H + 10) { b.active = false; continue; }
       if (this.walls && this.isWallAt(b.x, b.y)) { b.active = false; continue; }
       if (this.team && this.role === 'host' && this.team.isPvp) { if (this.team.duelBoltHit(b)) b.active = false; continue; }
-      for (let j = 0; j < this.enemies.length; j++) {
-        const e = this.enemies[j];
-        if (!e.active) continue;
-        const r = RM_ENEMIES[e.type].r + 5;
-        if ((b.x - e.x) * (b.x - e.x) + (b.y - e.y) * (b.y - e.y) < r * r) {
-          b.active = false;
-          this._hitEnemy(e, b.dmg || this.stats.dmg);
-          break;
-        }
-      }
+      const hj = this._boltHitIndex(b.x, b.y);
+      if (hj >= 0) { b.active = false; this._hitEnemy(this.enemies[hj], b.dmg || this.stats.dmg); }
       if (!b.active) continue;
       for (let j = 0; j < this.drifters.length; j++) {
         const d = this.drifters[j];
@@ -1049,6 +1128,7 @@ class RealmArena {
   _hitEnemy(e, dmg) {
     if (e.type === 'boss' && e.invuln > 0) { this._floatText(e.x, e.y - 40, 'shielded', '#c9d1d9'); this._burst(e.x, e.y, '#fff', 1, 60); return; }
     e.hp -= dmg; e.flash = 1;
+    this._snd(e.hp > 0 ? 'hit' : 'kill');
     if (e.type === 'boss') {
       this._syncBoss();
       if (e.hp > 0) {
@@ -1082,6 +1162,7 @@ class RealmArena {
       this.shield.hits -= 1; p.iframes = 0.25; this._burst(p.x, p.y, '#8fe9ff', 6, 140); this._floatText(p.x, p.y - 22, 'blocked', '#8fe9ff'); return;
     }
     p.hp = Math.max(0, p.hp - dmg);
+    this._snd('hurt');
     p.iframes = this.stats.iframes;
     this.flash = 1; this.shake = Math.max(this.shake, 8);
     this._burst(p.x, p.y, '#ff6f91', 8, 160);
@@ -1150,6 +1231,7 @@ class RealmArena {
   }
 
   _levelUp() {
+    this._snd('levelup');
     const before = this.stats.maxHp;
     this._calcStats();
     const p = this.player;
@@ -1179,6 +1261,7 @@ class RealmArena {
 
   // Picks an item up. A full backpack sells it on the spot for shards.
   collectItem(id, rarity) {
+    this._snd('pickup');
     const sv = this.save; const def = RM_ITEM_BY_ID[id]; const rar = RM_RARITIES[rarity];
     if (sv.items.length >= RM_BACKPACK) {
       sv.shards += rar.sell;
@@ -1350,8 +1433,9 @@ class RealmArena {
     const g = this.ctx; const s = this.scale;
     g.setTransform(s, 0, 0, s, 0, 0);
     g.imageSmoothingEnabled = false;
-    const sx = this.shake > 0 ? (this.rng() - 0.5) * this.shake : 0;
-    const sy = this.shake > 0 ? (this.rng() - 0.5) * this.shake : 0;
+    const sh = this.shakeAmt();
+    const sx = sh > 0 ? (this.rng() - 0.5) * sh : 0;
+    const sy = sh > 0 ? (this.rng() - 0.5) * sh : 0;
     g.save();
     g.translate(sx, sy);
     this._floorPatterns = this._floorPatterns || [];
@@ -1423,13 +1507,13 @@ class RealmArena {
     }
     g.globalAlpha = 1;
     g.restore();
-    if (this.flash > 0) { // red hit vignette: one baked gradient, faded with globalAlpha (no per-frame allocation)
+    if (this.flash > 0) { // red hit vignette (reduced motion: a steady tint while it lasts, no fade or blink): one baked gradient, faded with globalAlpha (no per-frame allocation)
       if (!this._vignette) {
         const gr = g.createRadialGradient(this.W / 2, this.H / 2, Math.min(this.W, this.H) * 0.3, this.W / 2, this.H / 2, Math.max(this.W, this.H) * 0.7);
         gr.addColorStop(0, 'rgba(255,40,80,0)'); gr.addColorStop(1, 'rgba(255,40,80,0.55)');
         this._vignette = gr;
       }
-      g.globalAlpha = this.flash; g.fillStyle = this._vignette; g.fillRect(0, 0, this.W, this.H); g.globalAlpha = 1;
+      g.globalAlpha = this._reduced ? 0.35 : this.flash; g.fillStyle = this._vignette; g.fillRect(0, 0, this.W, this.H); g.globalAlpha = 1;
     }
   }
 
