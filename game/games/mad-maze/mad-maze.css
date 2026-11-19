@@ -260,3 +260,21 @@ body.touch-device .realm-ab .key { display: none; }
   #realm-leave-btn { padding: 0 8px; }
 }
 .hidden { display: none; }
+
+/* ---------- Warren dungeon mode (?mode=dungeon) ---------- */
+#mm-map { position: fixed; right: calc(10px + env(safe-area-inset-right, 0px)); top: calc(112px + env(safe-area-inset-top, 0px)); z-index: 33; border: 2px solid rgba(255, 255, 255, 0.35); border-radius: 8px; pointer-events: none; }
+#mm-map.hidden, #mm-summary.hidden { display: none; }
+#mm-map-btn { position: fixed; left: calc(10px + env(safe-area-inset-left, 0px)); top: calc(58px + env(safe-area-inset-top, 0px)); z-index: 33; width: 44px; height: 44px; border-radius: 22px; border: 2px solid rgba(255, 255, 255, 0.6); background: rgba(0, 0, 0, 0.55); color: #fff; font-size: 20px; }
+@media (max-width: 600px) { #mm-map-btn { top: calc(112px + env(safe-area-inset-top, 0px)); } }
+#mm-summary { position: fixed; inset: 0; z-index: 50; background: rgba(8, 4, 20, 0.88); display: flex; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box; overflow: auto; }
+.mm-sum-card { width: min(420px, 100%); background: #1b1430; border: 3px solid #8a63e0; border-radius: 14px; padding: 18px 20px; color: #fff; font: 600 14px system-ui, sans-serif; box-sizing: border-box; }
+.mm-sum-card h2 { margin: 0 0 4px; font-size: 22px; }
+.mm-sum-card h3 { margin: 14px 0 6px; font-size: 15px; color: #ffd45a; }
+.mm-sum-sub { margin: 0 0 10px; opacity: 0.7; }
+.mm-sum-card ul { list-style: none; margin: 0; padding: 0; }
+.mm-sum-stats li { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.mm-sum-loot li { padding: 3px 0; }
+.mm-sum-loot li.none { opacity: 0.6; }
+.mm-sum-btns { display: flex; gap: 10px; margin-top: 16px; }
+.mm-btn { flex: 1; text-align: center; padding: 12px 8px; border-radius: 10px; background: #8a63e0; color: #fff; text-decoration: none; font-weight: 700; min-height: 20px; }
+.mm-btn.alt { background: transparent; border: 2px solid rgba(255, 255, 255, 0.5); }

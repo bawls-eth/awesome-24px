@@ -19,11 +19,12 @@
 
   if ((window.matchMedia && matchMedia('(pointer: coarse)').matches) || 'ontouchstart' in window) document.body.classList.add('touch-device');
 
+  let dungeon = null; // ?mode=dungeon&seed=N turns the arena into a Warren run; the default stays the solo arena
   const arena = new RealmArena({
     container: document.getElementById('realm-canvas-wrap'),
     save: rmCleanSave(loadSave().realm),
     onSave: (s) => writeSave({ realm: s }),
-    onExit: () => { location.href = HOME; },
+    onExit: (why) => { if (dungeon && why === 'death') dungeon.onDeath(); else location.href = HOME; },
   });
 
   // Same on-screen controls main.js wires for the in-town overlay.
@@ -60,6 +61,11 @@
   stick('realm-stick-move', (x, y) => arena.setMoveStick(x, y));
   stick('realm-stick-aim', (x, y, on) => arena.setAimStick(x, y, on));
 
-  if (TEST) window.__mm = { arena };
+  if (params.get('mode') === 'dungeon' && window.MMDungeonRun) {
+    dungeon = MMDungeonRun.create(arena, { seed: params.get('seed') || String(Date.now() % 100000), home: HOME, test: TEST });
+    document.body.classList.add('dungeon-mode');
+  }
+
+  if (TEST) window.__mm = { arena, dungeon: dungeon ? dungeon.api : null };
   arena.start();
 })();
