@@ -75,4 +75,8 @@ const ledger = fs.readFileSync(path.join(ART, 'LEDGER.md'), 'utf8');
 const m = ledger.match(/TOTAL:\s*(\d+)/);
 check('ledger total present', !!m);
 check('ledger total <= 35000', m && Number(m[1]) <= 35000);
+const l2 = fs.readFileSync(path.join(ART, 'LEDGER-OPENAI.md'), 'utf8');
+const m2 = l2.match(/TOTAL:\s*([0-9.]+)/);
+check('openai ledger total present', !!m2);
+check('openai ledger total <= 3.50', m2 && Number(m2[1]) <= 3.5);
 done();
