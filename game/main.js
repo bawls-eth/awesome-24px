@@ -2901,6 +2901,19 @@ class TownScene extends Phaser.Scene {
       base.addEventListener('pointermove', (e) => { if (e.pointerId === pid) set(e); });
       ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((ev) => base.addEventListener(ev, (e) => { if (pid === null || e.pointerId === pid) end(); }));
     };
+    // Abilities (also Q E R F on a keyboard) and the backpack.
+    for (let i = 0; i < 4; i++) {
+      const b = document.getElementById(`realm-ab-${i}`);
+      b.addEventListener('pointerdown', (e) => { e.preventDefault(); r.cast(i); });
+    }
+    document.getElementById('realm-bp-btn').addEventListener('click', () => r.setPaused(true));
+    document.getElementById('realm-bp-close').addEventListener('click', () => r.setPaused(false));
+    document.getElementById('realm-backpack-body').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-act]');
+      if (!btn) return;
+      const uid = Number(btn.dataset.uid);
+      if (btn.dataset.act === 'equip') r.equip(uid); else if (btn.dataset.act === 'discard') r.discard(uid);
+    });
     stick('realm-stick-move', (x, y) => r.setMoveStick(x, y));
     stick('realm-stick-aim', (x, y, on) => r.setAimStick(x, y, on));
   }

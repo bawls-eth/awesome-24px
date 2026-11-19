@@ -2431,3 +2431,109 @@ body.touch-device #realm-stick-aim { right: calc(20px + env(safe-area-inset-righ
   #realm-hp { width: 120px; }
   #realm-best { display: none; }
 }
+
+/* ---------- Realm B2: level, abilities, backpack ---------- */
+#realm-xp {
+  position: absolute;
+  left: calc(10px + env(safe-area-inset-left, 0px));
+  top: calc(34px + env(safe-area-inset-top, 0px));
+  width: 150px;
+  height: 11px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 2px solid rgba(201, 167, 255, 0.6);
+  overflow: hidden;
+  pointer-events: none;
+}
+#realm-xp-fill { height: 100%; width: 0; background: linear-gradient(#e2c6ff, #a56bff); transition: width 0.15s; }
+#realm-xp-text { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font: 700 8px system-ui, sans-serif; color: #fff; text-shadow: 0 1px 1px #000; }
+#realm-level { color: #e2c6ff; font-weight: 800; }
+#realm-bp-btn {
+  pointer-events: auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  background: rgba(0, 0, 0, 0.55);
+  font-size: 18px;
+}
+#realm-abilities {
+  position: absolute;
+  left: 50%;
+  bottom: calc(34px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+}
+.realm-ab {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.65);
+  background: rgba(20, 8, 40, 0.75);
+  font-size: 22px;
+  touch-action: manipulation;
+  color: #fff;
+}
+.realm-ab .key { position: absolute; left: 4px; top: 1px; font: 700 10px system-ui, sans-serif; opacity: 0.8; }
+.realm-ab .cd { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font: 800 18px system-ui, sans-serif; text-shadow: 0 1px 3px #000; pointer-events: none; }
+.realm-ab.cooling { opacity: 0.55; }
+.realm-ab.cooling .ico { opacity: 0.4; }
+.realm-ab.locked { opacity: 0.4; filter: grayscale(1); }
+.realm-ab.locked .cd { font-size: 12px; }
+body.touch-device #realm-abilities {
+  left: auto;
+  right: calc(20px + env(safe-area-inset-right, 0px));
+  bottom: calc(24px + 124px + 14px + env(safe-area-inset-bottom, 0px));
+  transform: none;
+  display: grid;
+  grid-template-columns: repeat(2, 50px);
+  gap: 8px;
+}
+body.touch-device .realm-ab { width: 50px; height: 50px; }
+body.touch-device .realm-ab .key { display: none; }
+#realm-backpack {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 3, 18, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  z-index: 3;
+}
+#realm-backpack.hidden { display: none; }
+.realm-bp-card {
+  width: min(460px, 100%);
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  background: #1c1033;
+  border: 2px solid #b36bff;
+  border-radius: 14px;
+  padding: 12px;
+  color: #fff;
+  font: 600 13px system-ui, sans-serif;
+}
+.realm-bp-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 15px; }
+#realm-bp-close { width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.5); background: rgba(0, 0, 0, 0.4); color: #fff; font-size: 16px; }
+#realm-bp-stats { color: #8fe9ff; margin-bottom: 8px; }
+.realm-bp-slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 6px; }
+.realm-bp-slot { background: rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 6px; text-align: center; font-size: 12px; min-height: 30px; }
+.realm-bp-count, .dim { opacity: 0.6; }
+.realm-bp-count { margin: 6px 0; font-size: 12px; }
+#realm-bp-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+#realm-bp-list li { display: grid; grid-template-columns: 1fr auto auto; gap: 4px 8px; align-items: center; background: rgba(255, 255, 255, 0.06); border-radius: 10px; padding: 6px 8px; }
+#realm-bp-list li.on { outline: 2px solid #ffe27a; }
+#realm-bp-list .nm { font-weight: 800; }
+#realm-bp-list .rar { font-size: 11px; opacity: 0.8; }
+#realm-bp-list .st { grid-column: 1 / span 3; font-size: 12px; color: #c9d1d9; }
+#realm-bp-list button { height: 40px; min-width: 64px; border-radius: 10px; border: 2px solid rgba(255, 255, 255, 0.5); background: rgba(255, 255, 255, 0.12); color: #fff; font: 700 12px system-ui, sans-serif; }
+#realm-bp-list button.eq { grid-column: 2; grid-row: 1; }
+#realm-bp-list button.dc { grid-column: 3; grid-row: 1; }
+#realm-bp-list li { grid-template-columns: 1fr auto auto auto; }
+#realm-bp-list .nm { grid-column: 1; }
+#realm-bp-list .rar { grid-column: 2; }
+@media (max-width: 420px) {
+  #realm-xp { width: 120px; }
+}

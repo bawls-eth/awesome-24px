@@ -822,6 +822,13 @@ press **E** (or tap **A**) to step through. It's a separate arena, fully local:
 - **Enemies:** 🟣 Whirlers spin a spiral of bolts, 🔺 Snipers circle you and fire
   aimed bursts of three, 🟠 Bursters drift in and fire a ring. Clear a wave to
   earn a bonus and face a bigger one.
+- **Level up:** every kill gives XP; each level (up to 20) adds max HP and unlocks
+  abilities — 💨 Dash (Q, Lv 1), 💥 Nova (E, Lv 3), 🛡️ Shield (R, Lv 5), 🔥 Overdrive
+  (F, Lv 7). On a phone they are the four buttons above the right stick.
+- **Loot:** enemies sometimes drop glowing bags (grey / green / blue = common /
+  uncommon / rare) — walk over them. Open the 🎒 **backpack** (B) to equip one
+  weapon, one charm and one ring, or sell spares for 💎. Your level, items and
+  loadout are kept even if you die.
 - **💎 Shards** are your banked Realm currency (kept between visits). Dying
   costs 20% of the bank and sends you back to the village; **Esc** or **Leave**
   is always free. Your best wave is remembered.

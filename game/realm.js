@@ -21,7 +21,39 @@ const RM_ENEMIES = {
 };
 const RM_ENEMY_BULLET_DAMAGE = 8;
 const RM_DEATH_PENALTY = 0.2; // share of the banked shards lost on death
-const RM_POOL = { pBullets: 160, eBullets: 420, enemies: 24, particles: 180, texts: 28 };
+const RM_POOL = { pBullets: 160, eBullets: 420, enemies: 24, particles: 180, texts: 28, bags: 14 };
+
+// ---- progression (B2) ----
+const RM_MAX_LEVEL = 20;
+const RM_HP_PER_LEVEL = 8;
+const RM_BACKPACK = 24; // items you can carry; extras are sold for shards on pickup
+const RM_RARITIES = [
+  { id: 'common', name: 'Common', mult: 1, color: '#c9d1d9', sell: 3 },
+  { id: 'uncommon', name: 'Uncommon', mult: 1.6, color: '#7ee787', sell: 7 },
+  { id: 'rare', name: 'Rare', mult: 2.4, color: '#79c0ff', sell: 15 },
+];
+// slot: weapon | charm | ring. Each item adds `stat` x rarity multiplier.
+const RM_ITEMS = [
+  { id: 'sparkwand', slot: 'weapon', name: 'Spark Wand', icon: '🪄', stat: 'dmg', amount: 0.5, text: 'damage' },
+  { id: 'quickwand', slot: 'weapon', name: 'Quickfire Wand', icon: '⚡', stat: 'rate', amount: 1.5, text: 'shots/s' },
+  { id: 'heartcharm', slot: 'charm', name: 'Hearty Charm', icon: '💖', stat: 'hp', amount: 12, text: 'max HP' },
+  { id: 'swiftcharm', slot: 'charm', name: 'Swift Charm', icon: '👟', stat: 'speed', amount: 18, text: 'speed' },
+  { id: 'luckring', slot: 'ring', name: 'Lucky Ring', icon: '💍', stat: 'shards', amount: 0.12, text: 'shard bonus', pct: true },
+  { id: 'scholarring', slot: 'ring', name: 'Scholar Ring', icon: '📘', stat: 'xp', amount: 0.12, text: 'XP bonus', pct: true },
+  { id: 'wardring', slot: 'ring', name: 'Warding Ring', icon: '🛡️', stat: 'iframes', amount: 0.1, text: 's safe time' },
+];
+const RM_ITEM_BY_ID = {};
+RM_ITEMS.forEach((i) => { RM_ITEM_BY_ID[i.id] = i; });
+const RM_SLOTS = ['weapon', 'charm', 'ring'];
+const RM_BAG_CHANCE = 0.3;
+const RM_XP = { spiral: 7, aimed: 4, ring: 5 };
+const RM_ABILITIES = [
+  { id: 'dash', key: 'q', icon: '💨', name: 'Dash', level: 1, cd: 3 },
+  { id: 'nova', key: 'e', icon: '💥', name: 'Nova', level: 3, cd: 8 },
+  { id: 'shield', key: 'r', icon: '🛡️', name: 'Shield', level: 5, cd: 14 },
+  { id: 'overdrive', key: 'f', icon: '🔥', name: 'Overdrive', level: 7, cd: 20 },
+];
+function rmXpNeeded(level) { return 30 + 20 * (level - 1); }
 const RM_WAVE_PAUSE = 2.4; // seconds between waves (shows the banner)
 
 // Tiny seeded PRNG so a run can be reproduced in tests.
@@ -40,13 +72,39 @@ function rmCleanCount(v) {
   return Number.isFinite(v) && v > 0 ? Math.min(v, 9999999) : 0;
 }
 
+// Everything read back from localStorage goes through here (additive fields: old saves load as level 1).
+function rmCleanSave(s) {
+  s = s && typeof s === 'object' ? s : {};
+  const out = { shards: rmCleanCount(s.shards), bestWave: rmCleanCount(s.bestWave), kills: rmCleanCount(s.kills), deaths: rmCleanCount(s.deaths) };
+  out.level = Math.max(1, Math.min(RM_MAX_LEVEL, rmCleanCount(s.level) || 1));
+  out.xp = out.level >= RM_MAX_LEVEL ? 0 : Math.min(rmCleanCount(s.xp), rmXpNeeded(out.level) - 1);
+  out.items = [];
+  const seen = new Set();
+  (Array.isArray(s.items) ? s.items : []).forEach((it) => {
+    if (out.items.length >= RM_BACKPACK || !it || typeof it !== 'object') return;
+    const uid = rmCleanCount(it.n);
+    const def = RM_ITEM_BY_ID[it.id];
+    const rar = Math.floor(Number(it.r));
+    if (!uid || seen.has(uid) || !def || !(rar >= 0 && rar < RM_RARITIES.length)) return;
+    seen.add(uid);
+    out.items.push({ n: uid, id: it.id, r: rar });
+  });
+  out.nextUid = Math.max(rmCleanCount(s.nextUid), 1 + out.items.reduce((m, it) => Math.max(m, it.n), 0));
+  out.eq = {};
+  const eq = s.eq && typeof s.eq === 'object' ? s.eq : {};
+  RM_SLOTS.forEach((slot) => {
+    const it = out.items.find((x) => x.n === rmCleanCount(eq[slot]));
+    if (it && RM_ITEM_BY_ID[it.id].slot === slot) out.eq[slot] = it.n;
+  });
+  return out;
+}
+
 class RealmArena {
   constructor({ container, save, onSave, onExit, seed }) {
     this.container = container;
     this.onSave = onSave || (() => {});
     this.onExit = onExit || (() => {});
-    const s = save && typeof save === 'object' ? save : {};
-    this.save = { shards: rmCleanCount(s.shards), bestWave: rmCleanCount(s.bestWave), kills: rmCleanCount(s.kills), deaths: rmCleanCount(s.deaths) };
+    this.save = rmCleanSave(save);
     this.rng = rmRng(seed === undefined ? (Date.now() & 0xffffffff) : seed);
     this.active = false;
     this.state = 'idle'; // idle | banner | play | dead
@@ -67,6 +125,7 @@ class RealmArena {
     this.ctx = this.canvas.getContext('2d');
 
     this._makePools();
+    this._calcStats();
     this._bakeSprites();
     this._bindInput();
     this._resize();
@@ -81,7 +140,11 @@ class RealmArena {
     this.enemies = make(RM_POOL.enemies, () => ({ active: false, type: 'aimed', x: 0, y: 0, hp: 0, maxHp: 0, t: 0, cd: 0, angle: 0, flash: 0, ax: 0, ay: 0, dir: 1 }));
     this.particles = make(RM_POOL.particles, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, max: 1, color: '#fff', size: 3 }));
     this.texts = make(RM_POOL.texts, () => ({ active: false, x: 0, y: 0, vy: 0, life: 0, text: '', color: '#fff' }));
-    this.player = { x: 0, y: 0, hp: RM_PLAYER.hp, iframes: 0, fireCd: 0, aim: 0, facing: 1, moving: false, bob: 0 };
+    this.bags = make(RM_POOL.bags, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, t: 0, id: '', r: 0 }));
+    this.abilityCd = [0, 0, 0, 0];
+    this.shield = { hits: 0, t: 0 };
+    this.overdriveT = 0;
+    this.player = { x: 0, y: 0, hp: RM_PLAYER.hp, dashT: 0, iframes: 0, fireCd: 0, aim: 0, facing: 1, moving: false, bob: 0 };
   }
 
   _take(pool) {
@@ -94,6 +157,26 @@ class RealmArena {
     const pool = this[name];
     for (let i = 0; i < pool.length; i++) if (pool[i].active) n++;
     return n;
+  }
+
+  // Stats = base + level + equipped items (recomputed when level / equipment changes, read every frame).
+  _calcStats() {
+    const st = { maxHp: RM_PLAYER.hp + RM_HP_PER_LEVEL * (this.save.level - 1), dmg: RM_PLAYER.dmg, rate: RM_PLAYER.fireRate, speed: RM_PLAYER.speed, shards: 1, xp: 1, iframes: RM_PLAYER.iframes };
+    RM_SLOTS.forEach((slot) => {
+      const uid = this.save.eq[slot];
+      const it = uid && this.save.items.find((x) => x.n === uid);
+      if (!it) return;
+      const def = RM_ITEM_BY_ID[it.id]; const v = def.amount * RM_RARITIES[it.r].mult;
+      if (def.stat === 'hp') st.maxHp += Math.round(v);
+      else if (def.stat === 'dmg') st.dmg += v;
+      else if (def.stat === 'rate') st.rate += v;
+      else if (def.stat === 'speed') st.speed += v;
+      else if (def.stat === 'shards') st.shards += v;
+      else if (def.stat === 'xp') st.xp += v;
+      else if (def.stat === 'iframes') st.iframes += v;
+    });
+    this.stats = st;
+    return st;
   }
 
   // ---------- baked sprites ----------
@@ -147,6 +230,14 @@ class RealmArena {
       c.beginPath(); c.arc(20, 20, 15 + pad, 0, Math.PI * 2); c.fill();
       c.fillRect(4 - pad, 18 - pad, 32 + pad * 2, 5 + pad * 2);
     }) || (g.fillStyle = '#fff', g.fillRect(13, 14, 5, 5), g.fillRect(22, 14, 5, 5), g.fillStyle = '#3a2a0f', g.fillRect(15, 16, 2, 3), g.fillRect(24, 16, 2, 3)));
+    this.sprites.bag = RM_RARITIES.map((r) => mk(26, 26, (g) => {
+      const gr = g.createRadialGradient(13, 13, 2, 13, 13, 13);
+      gr.addColorStop(0, r.color); gr.addColorStop(1, 'rgba(0,0,0,0)');
+      g.globalAlpha = 0.55; g.fillStyle = gr; g.fillRect(0, 0, 26, 26); g.globalAlpha = 1;
+      g.fillStyle = '#1a0f2a'; g.fillRect(6, 9, 14, 12); g.fillRect(9, 6, 8, 4);
+      g.fillStyle = r.color; g.fillRect(7, 10, 12, 10); g.fillRect(10, 7, 6, 3);
+      g.fillStyle = '#fff'; g.fillRect(11, 13, 4, 4);
+    }));
     this.sprites.playerFallback = mk(32, 32, (g) => {
       g.fillStyle = '#1a2a1a'; g.beginPath(); g.arc(16, 16, 13, 0, Math.PI * 2); g.fill();
       g.fillStyle = '#6fbf73'; g.beginPath(); g.arc(16, 16, 11, 0, Math.PI * 2); g.fill();
@@ -172,8 +263,13 @@ class RealmArena {
     this.onKeyDown = (e) => {
       if (!this.active) return;
       const k = e.key.toLowerCase();
-      if (k === 'escape') { e.preventDefault(); this.leave(); return; }
+      if (k === 'escape') { e.preventDefault(); if (this.paused) this.setPaused(false); else this.leave(); return; }
       if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault();
+      if (!e.repeat) {
+        const ai = RM_ABILITIES.findIndex((a) => a.key === k);
+        if (ai >= 0) { this.cast(ai); return; }
+        if (k === 'b' || k === 'i') { this.setPaused(!this.paused); return; }
+      }
       this.keys[k] = true;
     };
     this.onKeyUp = (e) => { this.keys[e.key.toLowerCase()] = false; };
@@ -227,10 +323,12 @@ class RealmArena {
   start() {
     this.active = true;
     this._resize();
-    [this.pBullets, this.eBullets, this.enemies, this.particles, this.texts].forEach((pool) => pool.forEach((o) => { o.active = false; }));
+    [this.pBullets, this.eBullets, this.enemies, this.particles, this.texts, this.bags].forEach((pool) => pool.forEach((o) => { o.active = false; }));
     this.keys = {}; this.mouse.down = false; this.moveVec.x = 0; this.moveVec.y = 0; this.aimVec.on = false; this.aimVec.x = 0; this.aimVec.y = 0; // no stuck input from the last run
     const p = this.player;
-    p.x = this.W / 2; p.y = this.H / 2; p.hp = RM_PLAYER.hp; p.iframes = 1; p.fireCd = 0; p.aim = -Math.PI / 2;
+    this._calcStats();
+    this.abilityCd = [0, 0, 0, 0]; this.shield.hits = 0; this.shield.t = 0; this.overdriveT = 0; this.paused = false;
+    p.x = this.W / 2; p.y = this.H / 2; p.hp = this.stats.maxHp; p.dashT = 0; p.iframes = 1; p.fireCd = 0; p.aim = -Math.PI / 2;
     this.run = { wave: 0, kills: 0, shards: 0 };
     this.shake = 0; this.flash = 0;
     this.displayShards = this.save.shards;
@@ -354,6 +452,7 @@ class RealmArena {
   // ---------- simulation ----------
 
   _update(dt) {
+    if (this.paused) return; // backpack open
     const p = this.player;
     this.shake = Math.max(0, this.shake - dt * 30);
     this.flash = Math.max(0, this.flash - dt * 2.2);
@@ -391,8 +490,10 @@ class RealmArena {
       this.nextWaveIn -= dt;
       if (this.nextWaveIn <= 0) this._startWave();
     }
+    this._updateAbilities(dt);
     this._updateEnemies(dt);
     this._updateBullets(dt);
+    this._updateBags(dt);
     if (this.state === 'play' && this.run.wave > 0 && this.enemiesAlive() === 0) this._waveCleared();
   }
 
@@ -407,8 +508,9 @@ class RealmArena {
     const len = Math.hypot(mx, my);
     p.moving = len > 0.05;
     if (len > 1) { mx /= len; my /= len; }
-    p.x = Math.max(RM_PLAYER.r, Math.min(this.W - RM_PLAYER.r, p.x + mx * RM_PLAYER.speed * dt));
-    p.y = Math.max(RM_PLAYER.r, Math.min(this.H - RM_PLAYER.r, p.y + my * RM_PLAYER.speed * dt));
+    p.x = Math.max(RM_PLAYER.r, Math.min(this.W - RM_PLAYER.r, p.x + mx * this.stats.speed * dt));
+    p.y = Math.max(RM_PLAYER.r, Math.min(this.H - RM_PLAYER.r, p.y + my * this.stats.speed * dt));
+    this._mx = mx; this._my = my;
     if (mx) p.facing = mx > 0 ? 1 : -1;
     p.bob = p.moving ? p.bob + dt * 14 : 0;
 
@@ -420,7 +522,7 @@ class RealmArena {
     } else if (this.keys[' ']) firing = true;
     p.fireCd -= dt;
     if (firing && p.fireCd <= 0 && this.state !== 'dead') {
-      p.fireCd = 1 / RM_PLAYER.fireRate;
+      p.fireCd = 1 / (this.stats.rate * (this.overdriveT > 0 ? 2 : 1));
       this.firePlayerBullet(p.aim);
     }
   }
@@ -476,7 +578,7 @@ class RealmArena {
         const r = RM_ENEMIES[e.type].r + 5;
         if ((b.x - e.x) * (b.x - e.x) + (b.y - e.y) * (b.y - e.y) < r * r) {
           b.active = false;
-          this._hitEnemy(e, RM_PLAYER.dmg);
+          this._hitEnemy(e, this.stats.dmg);
           break;
         }
       }
@@ -497,23 +599,29 @@ class RealmArena {
 
   _hitEnemy(e, dmg) {
     e.hp -= dmg; e.flash = 1;
-    this._floatText(e.x + (this.rng() - 0.5) * 14, e.y - 14, String(dmg), '#fff');
+    this._floatText(e.x + (this.rng() - 0.5) * 14, e.y - 14, String(Math.round(dmg * 10) / 10), '#fff');
     this._burst(e.x, e.y, RM_ENEMIES[e.type].color, 3, 110);
     if (e.hp > 0) return;
     e.active = false;
     const def = RM_ENEMIES[e.type];
-    this.run.kills += 1; this.run.shards += def.shards;
-    this.save.kills += 1; this.save.shards += def.shards;
+    const gain = Math.max(1, Math.round(def.shards * this.stats.shards));
+    this.run.kills += 1; this.run.shards += gain;
+    this.save.kills += 1; this.save.shards += gain;
     this._burst(e.x, e.y, def.color, 16, 230);
-    this._floatText(e.x, e.y - 22, `+${def.shards} 💎`, '#8fe9ff');
+    this._floatText(e.x, e.y - 22, `+${gain} 💎`, '#8fe9ff');
+    this._gainXp(Math.round(RM_XP[e.type] * (1 + 0.1 * Math.max(0, this.run.wave - 1)) * this.stats.xp));
+    if (this.rng() < RM_BAG_CHANCE) this.dropBag(e.x, e.y, this.rollRarity());
     this.shake = Math.max(this.shake, 3);
     this.onSave(this.save);
   }
 
   _hitPlayer(dmg) {
     const p = this.player;
+    if (this.shield.hits > 0) { // Shield soaks the hit
+      this.shield.hits -= 1; p.iframes = 0.25; this._burst(p.x, p.y, '#8fe9ff', 6, 140); this._floatText(p.x, p.y - 22, 'blocked', '#8fe9ff'); return;
+    }
     p.hp = Math.max(0, p.hp - dmg);
-    p.iframes = RM_PLAYER.iframes;
+    p.iframes = this.stats.iframes;
     this.flash = 1; this.shake = Math.max(this.shake, 8);
     this._burst(p.x, p.y, '#ff6f91', 8, 160);
     this._floatText(p.x, p.y - 22, `-${dmg}`, '#ff6f91');
@@ -549,6 +657,190 @@ class RealmArena {
     this._syncHud();
   }
 
+  // ---------- XP, levels, loot ----------
+
+  _gainXp(n) {
+    const sv = this.save;
+    if (sv.level >= RM_MAX_LEVEL || n <= 0) return;
+    sv.xp += n;
+    this._floatText(this.player.x, this.player.y - 34, `+${n} xp`, '#c9a7ff');
+    let up = false;
+    while (sv.level < RM_MAX_LEVEL && sv.xp >= rmXpNeeded(sv.level)) { sv.xp -= rmXpNeeded(sv.level); sv.level += 1; up = true; }
+    if (sv.level >= RM_MAX_LEVEL) sv.xp = 0;
+    if (up) this._levelUp();
+    this.onSave(this.save);
+    this._syncHud();
+  }
+
+  _levelUp() {
+    const before = this.stats.maxHp;
+    this._calcStats();
+    const p = this.player;
+    p.hp = Math.min(this.stats.maxHp, p.hp + Math.round(this.stats.maxHp * 0.3) + (this.stats.maxHp - before)); // a level heals a bit and the new max HP is free
+    this.shake = Math.max(this.shake, 4);
+    this._burst(p.x, p.y, '#ffe27a', 28, 260);
+    const unlocked = RM_ABILITIES.filter((a) => a.level === this.save.level);
+    this._showBanner(`Level ${this.save.level}!${unlocked.length ? `  ${unlocked[0].icon} ${unlocked[0].name} unlocked` : ''}`, 2);
+    this._syncAbilities();
+  }
+
+  rollRarity() {
+    const w = this.run.wave;
+    const r = this.rng();
+    const rare = Math.min(0.2, 0.02 + 0.02 * w); const unc = Math.min(0.4, 0.15 + 0.04 * w);
+    return r < rare ? 2 : r < rare + unc ? 1 : 0;
+  }
+
+  dropBag(x, y, rarity, itemId) {
+    const b = this._take(this.bags);
+    if (!b) return null;
+    b.active = true; b.x = x; b.y = y; b.t = 0; b.r = rarity;
+    b.id = itemId || RM_ITEMS[Math.floor(this.rng() * RM_ITEMS.length)].id;
+    const a = this.rng() * Math.PI * 2; b.vx = Math.cos(a) * 60; b.vy = Math.sin(a) * 60;
+    return b;
+  }
+
+  // Picks an item up. A full backpack sells it on the spot for shards.
+  collectItem(id, rarity) {
+    const sv = this.save; const def = RM_ITEM_BY_ID[id]; const rar = RM_RARITIES[rarity];
+    if (sv.items.length >= RM_BACKPACK) {
+      sv.shards += rar.sell;
+      this._floatText(this.player.x, this.player.y - 24, `sold ${def.name} +${rar.sell} 💎`, rar.color);
+    } else {
+      sv.items.push({ n: sv.nextUid++, id, r: rarity });
+      this._floatText(this.player.x, this.player.y - 24, `${def.icon} ${def.name}`, rar.color);
+      this._burst(this.player.x, this.player.y, rar.color, 10, 150);
+    }
+    this.onSave(this.save);
+    this._syncHud(); this.renderBackpack();
+  }
+
+  _updateBags(dt) {
+    const p = this.player;
+    for (let i = 0; i < this.bags.length; i++) {
+      const b = this.bags[i];
+      if (!b.active) continue;
+      b.t += dt;
+      b.x += b.vx * dt; b.y += b.vy * dt; b.vx *= 0.93; b.vy *= 0.93;
+      b.x = Math.max(14, Math.min(this.W - 14, b.x)); b.y = Math.max(14, Math.min(this.H - 14, b.y));
+      const dx = p.x - b.x; const dy = p.y - b.y; const d = Math.hypot(dx, dy) || 1;
+      if (b.t > 0.4 && d < 110) { const k = (230 * dt) / d; b.x += dx * k; b.y += dy * k; } // bags drift toward you
+      if (b.t > 0.25 && d < 20) { b.active = false; this.collectItem(b.id, b.r); }
+    }
+  }
+
+  // ---------- abilities ----------
+
+  abilityUnlocked(i) { return this.save.level >= RM_ABILITIES[i].level; }
+
+  cast(i) {
+    if (!this.active || this.state === 'dead' || this.paused) return false;
+    const ab = RM_ABILITIES[i];
+    if (!ab || !this.abilityUnlocked(i) || this.abilityCd[i] > 0) return false;
+    const p = this.player;
+    if (ab.id === 'dash') {
+      let dx = this._mx || 0; let dy = this._my || 0;
+      if (Math.hypot(dx, dy) < 0.1) { dx = Math.cos(p.aim); dy = Math.sin(p.aim); }
+      const len = Math.hypot(dx, dy) || 1;
+      this._burst(p.x, p.y, '#8fe9ff', 8, 120);
+      p.x = Math.max(RM_PLAYER.r, Math.min(this.W - RM_PLAYER.r, p.x + (dx / len) * 150));
+      p.y = Math.max(RM_PLAYER.r, Math.min(this.H - RM_PLAYER.r, p.y + (dy / len) * 150));
+      p.iframes = Math.max(p.iframes, 0.4);
+    } else if (ab.id === 'nova') {
+      for (let k = 0; k < 16; k++) this.firePlayerBullet((k / 16) * Math.PI * 2);
+      this.shake = Math.max(this.shake, 3);
+    } else if (ab.id === 'shield') {
+      this.shield.hits = 3; this.shield.t = 6;
+    } else if (ab.id === 'overdrive') {
+      this.overdriveT = 4;
+    }
+    this.abilityCd[i] = ab.cd;
+    this._floatText(p.x, p.y - 30, `${ab.icon} ${ab.name}`, '#fff');
+    this._syncAbilities();
+    return true;
+  }
+
+  _updateAbilities(dt) {
+    let changed = false;
+    for (let i = 0; i < 4; i++) if (this.abilityCd[i] > 0) { this.abilityCd[i] = Math.max(0, this.abilityCd[i] - dt); changed = true; }
+    if (this.overdriveT > 0) this.overdriveT = Math.max(0, this.overdriveT - dt);
+    if (this.shield.t > 0) { this.shield.t -= dt; if (this.shield.t <= 0) this.shield.hits = 0; }
+    this._abTick = (this._abTick || 0) + dt;
+    if (changed && this._abTick > 0.1) { this._abTick = 0; this._syncAbilities(); }
+  }
+
+  // ---------- backpack UI ----------
+
+  setPaused(on) {
+    this.paused = !!on;
+    const el = document.getElementById('realm-backpack');
+    if (el) el.classList.toggle('hidden', !on);
+    if (on) { this.keys = {}; this.mouse.down = false; this.renderBackpack(); }
+  }
+
+  equip(uid) {
+    const it = this.save.items.find((x) => x.n === uid);
+    if (!it) return false;
+    const slot = RM_ITEM_BY_ID[it.id].slot;
+    if (this.save.eq[slot] === uid) delete this.save.eq[slot]; else this.save.eq[slot] = uid;
+    this._afterGearChange();
+    return true;
+  }
+
+  discard(uid) {
+    const i = this.save.items.findIndex((x) => x.n === uid);
+    if (i < 0) return false;
+    const it = this.save.items[i];
+    this.save.shards += RM_RARITIES[it.r].sell;
+    this.save.items.splice(i, 1);
+    RM_SLOTS.forEach((slot) => { if (this.save.eq[slot] === uid) delete this.save.eq[slot]; });
+    this._afterGearChange();
+    return true;
+  }
+
+  _afterGearChange() {
+    const oldMax = this.stats.maxHp;
+    this._calcStats();
+    const p = this.player;
+    p.hp = Math.min(this.stats.maxHp, p.hp + Math.max(0, this.stats.maxHp - oldMax)); // new max HP arrives filled, losing it can't kill you
+    this.displayShards = this.save.shards;
+    this.onSave(this.save);
+    this._syncHud(); this.renderBackpack();
+  }
+
+  _statLine() {
+    const st = this.stats; const bits = [`${st.maxHp} HP`, `${(Math.round(st.dmg * 10) / 10)} dmg`, `${(Math.round(st.rate * 10) / 10)} shots/s`, `${Math.round(st.speed)} speed`];
+    if (st.shards > 1) bits.push(`+${Math.round((st.shards - 1) * 100)}% 💎`);
+    if (st.xp > 1) bits.push(`+${Math.round((st.xp - 1) * 100)}% xp`);
+    return bits.join(' · ');
+  }
+
+  _itemText(it) {
+    const def = RM_ITEM_BY_ID[it.id]; const v = def.amount * RM_RARITIES[it.r].mult;
+    const num = def.pct ? `+${Math.round(v * 100)}%` : `+${Math.round(v * 10) / 10}`;
+    return `${num} ${def.text}`;
+  }
+
+  renderBackpack() {
+    const root = document.getElementById('realm-backpack-body');
+    if (!root) return;
+    const sv = this.save;
+    const eqUids = new Set(RM_SLOTS.map((sl) => sv.eq[sl]).filter(Boolean));
+    let html = `<div id="realm-bp-stats">${this._statLine()}</div><div class="realm-bp-slots">`;
+    RM_SLOTS.forEach((slot) => {
+      const it = sv.items.find((x) => x.n === sv.eq[slot]);
+      html += `<div class="realm-bp-slot" data-slot="${slot}">${it ? `<span style="color:${RM_RARITIES[it.r].color}">${RM_ITEM_BY_ID[it.id].icon} ${RM_ITEM_BY_ID[it.id].name}</span>` : `<span class="dim">${slot}: empty</span>`}</div>`;
+    });
+    html += `</div><div class="realm-bp-count">${sv.items.length} / ${RM_BACKPACK} items</div><ul id="realm-bp-list">`;
+    if (!sv.items.length) html += '<li class="dim">Nothing yet — defeat enemies to find loot bags.</li>';
+    sv.items.forEach((it) => {
+      const def = RM_ITEM_BY_ID[it.id]; const rar = RM_RARITIES[it.r]; const on = eqUids.has(it.n);
+      html += `<li data-uid="${it.n}" class="${on ? 'on' : ''}"><span class="nm" style="color:${rar.color}">${def.icon} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(it)}</span><button type="button" class="eq" data-act="equip" data-uid="${it.n}">${on ? 'Unequip' : 'Equip'}</button><button type="button" class="dc" data-act="discard" data-uid="${it.n}" aria-label="Sell ${def.name} for ${rar.sell} shards">Sell ${rar.sell}💎</button></li>`;
+    });
+    html += '</ul>';
+    root.innerHTML = html;
+  }
+
   // ---------- drawing ----------
 
   _draw() {
@@ -572,6 +864,7 @@ class RealmArena {
       if (e.flash > 0) { g.globalAlpha = e.flash * 0.7; g.fillStyle = '#fff'; g.beginPath(); g.arc(e.x, e.y + bob, RM_ENEMIES[e.type].r, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1; }
       if (e.hp < e.maxHp) { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(e.x - 14, e.y - spr.height / 2 - 6, 28, 4); g.fillStyle = RM_ENEMIES[e.type].color; g.fillRect(e.x - 14, e.y - spr.height / 2 - 6, 28 * (e.hp / e.maxHp), 4); }
     }
+    for (let i = 0; i < this.bags.length; i++) { const b = this.bags[i]; if (b.active) g.drawImage(this.sprites.bag[b.r], b.x - 13, b.y - 13 + Math.sin(b.t * 5) * 2); }
     for (let i = 0; i < this.eBullets.length; i++) { const b = this.eBullets[i]; if (b.active) g.drawImage(this.sprites.eBullet[b.kind], b.x - 8, b.y - 8); }
     for (let i = 0; i < this.pBullets.length; i++) { const b = this.pBullets[i]; if (b.active) g.drawImage(this.sprites.pBullet, b.x - 8, b.y - 8); }
 
@@ -585,6 +878,8 @@ class RealmArena {
       g.scale(p.facing, 1);
       g.drawImage(spr, -size / 2, -size / 2 - 4, size, size);
       g.restore();
+      if (this.shield.hits > 0) { g.strokeStyle = `rgba(143,233,255,${0.5 + 0.1 * this.shield.hits})`; g.lineWidth = 3; g.beginPath(); g.arc(p.x, p.y, 26, 0, Math.PI * 2); g.stroke(); }
+      if (this.overdriveT > 0) { g.strokeStyle = 'rgba(255,170,60,0.8)'; g.lineWidth = 2; g.beginPath(); g.arc(p.x, p.y, 21 + Math.sin(performance.now() / 60) * 2, 0, Math.PI * 2); g.stroke(); }
       g.strokeStyle = 'rgba(143,233,255,0.7)'; g.lineWidth = 2; g.beginPath();
       g.moveTo(p.x + Math.cos(p.aim) * 26, p.y + Math.sin(p.aim) * 26); g.lineTo(p.x + Math.cos(p.aim) * 34, p.y + Math.sin(p.aim) * 34); g.stroke();
     }
@@ -617,16 +912,36 @@ class RealmArena {
 
   _syncHud(force) {
     const hp = document.getElementById('realm-hp-fill');
-    if (hp) hp.style.width = `${Math.max(0, this.player.hp) / RM_PLAYER.hp * 100}%`;
+    if (hp) hp.style.width = `${Math.max(0, this.player.hp) / this.stats.maxHp * 100}%`;
     const hpText = document.getElementById('realm-hp-text');
-    if (hpText) hpText.textContent = `${Math.ceil(this.player.hp)} / ${RM_PLAYER.hp}`;
+    if (hpText) hpText.textContent = `${Math.ceil(this.player.hp)} / ${this.stats.maxHp}`;
     const wave = document.getElementById('realm-wave');
     if (wave) wave.textContent = this.run.wave > 0 ? `Wave ${this.run.wave}` : 'Get ready';
     const shards = document.getElementById('realm-shards');
     if (shards) shards.textContent = `💎 ${Math.floor(this.displayShards)}`;
+    const lv = document.getElementById('realm-level');
+    if (lv) lv.textContent = `Lv ${this.save.level}`;
+    const xpf = document.getElementById('realm-xp-fill');
+    if (xpf) xpf.style.width = this.save.level >= RM_MAX_LEVEL ? '100%' : `${(this.save.xp / rmXpNeeded(this.save.level)) * 100}%`;
+    const xpt = document.getElementById('realm-xp-text');
+    if (xpt) xpt.textContent = this.save.level >= RM_MAX_LEVEL ? 'MAX' : `${this.save.xp} / ${rmXpNeeded(this.save.level)} xp`;
+    this._syncAbilities();
     const best = document.getElementById('realm-best');
     if (best) best.textContent = this.save.bestWave > 0 ? `Best wave ${this.save.bestWave}` : '';
     if (force) this._hideBanner();
+  }
+
+  _syncAbilities() {
+    for (let i = 0; i < 4; i++) {
+      const el = document.getElementById(`realm-ab-${i}`);
+      if (!el) continue;
+      const ab = RM_ABILITIES[i]; const unlocked = this.abilityUnlocked(i); const cd = this.abilityCd[i];
+      el.classList.toggle('locked', !unlocked);
+      el.classList.toggle('cooling', unlocked && cd > 0);
+      const cdEl = el.querySelector('.cd');
+      if (cdEl) cdEl.textContent = !unlocked ? `Lv${ab.level}` : cd > 0 ? String(Math.ceil(cd)) : '';
+      el.setAttribute('aria-label', `${ab.name} (${ab.key.toUpperCase()})${unlocked ? '' : ` — unlocks at level ${ab.level}`}`);
+    }
   }
 
   _showBanner(text, seconds) {
