@@ -5,8 +5,8 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); 
 body { display: flex; flex-direction: column; height: 100dvh; }
 #hud { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 12px; background: var(--panel); border-bottom: 2px solid var(--line); min-height: 48px; }
 .hud-main { display: flex; flex-direction: column; min-width: 0; }
-.hud-name { font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hud-world { color: var(--dim); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hud-name { font-weight: bold; overflow-wrap: anywhere; }
+.hud-world { color: var(--dim); font-size: 13px; overflow-wrap: anywhere; }
 .hud-stats { display: flex; gap: 12px; font-size: 14px; white-space: nowrap; }
 #stage { flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 #map { image-rendering: pixelated; image-rendering: crisp-edges; touch-action: manipulation; display: block; background: #3f7a3a; cursor: pointer; }
@@ -30,5 +30,5 @@ button, .btn { min-height: 48px; min-width: 48px; padding: 0 18px; background: v
 .card-actions .btn { flex: 1; }
 #iris { position: fixed; inset: 0; pointer-events: none; z-index: 9; display: none; background: radial-gradient(circle at var(--ix, 50%) var(--iy, 50%), transparent var(--r, 150%), #000 var(--r, 150%)); }
 #iris.on { display: block; }
-@media (max-width: 480px) { .hint { display: none; } #bar { justify-content: flex-end; } }
+@media (max-width: 480px) { #hud { padding: 4px 8px; gap: 6px; } .hud-stats { gap: 8px; font-size: 13px; } .hud-main { flex: 1 1 0; } .hint { display: none; } #bar { justify-content: flex-end; } }
 @media (prefers-reduced-motion: reduce) { #toast { transition: none; } }

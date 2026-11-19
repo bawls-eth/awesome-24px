@@ -5,7 +5,9 @@
   const SAVE_KEY = 'pixeltown-save-v1';
   const params = new URLSearchParams(location.search);
   const TEST = params.get('test') === '1';
-  const HOME = '../../index.html';
+  const FROM_HUB = params.get('from') === 'hub'; // exact match only; anything else keeps the town exit
+  const HOME = FROM_HUB ? '../../hub/index.html' : '../../index.html';
+  const HOME_LABEL = FROM_HUB ? 'Back to the map' : 'Back to town';
 
   function loadSave() {
     try {
@@ -46,6 +48,7 @@
     base.addEventListener('pointermove', (e) => { if (e.pointerId === pid) set(e); });
     ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((ev) => base.addEventListener(ev, (e) => { if (pid === null || e.pointerId === pid) end(); }));
   };
+  if (FROM_HUB) { const lb = document.getElementById('realm-leave-btn'); lb.textContent = '✖ Back to the map'; lb.setAttribute('aria-label', 'Leave Mad Maze and go back to the map'); }
   document.getElementById('realm-leave-btn').addEventListener('click', () => arena.leave());
   for (let i = 0; i < 4; i++) document.getElementById(`realm-ab-${i}`).addEventListener('pointerdown', (e) => { e.preventDefault(); arena.cast(i); });
   document.getElementById('realm-bp-btn').addEventListener('click', () => arena.setPaused(true));
@@ -62,7 +65,7 @@
   stick('realm-stick-aim', (x, y, on) => arena.setAimStick(x, y, on));
 
   if (params.get('mode') === 'dungeon' && window.MMDungeonRun) {
-    dungeon = MMDungeonRun.create(arena, { seed: /^[A-Za-z0-9_-]{1,24}$/.test(params.get('seed') || '') ? params.get('seed') : String(Date.now() % 100000), home: HOME, test: TEST });
+    dungeon = MMDungeonRun.create(arena, { seed: /^[A-Za-z0-9_-]{1,24}$/.test(params.get('seed') || '') ? params.get('seed') : String(Date.now() % 100000), home: HOME, homeLabel: HOME_LABEL, test: TEST });
     document.body.classList.add('dungeon-mode');
   }
 

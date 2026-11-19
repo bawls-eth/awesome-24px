@@ -82,7 +82,7 @@ async function tap(page, id) {
     'pixeltown-hub-v1': JSON.stringify({ v: 1, at: 'w2-lantern', evil: '<img src=x onerror=alert(1)>', nodes: { 'w2-lantern': { exits: ['normal'], medals: { b: true } } } }),
   });
   await s.page.keyboard.press('Enter');
-  check('Mad Maze Lantern Play link points at the real page', (await s.page.getAttribute('#card-play', 'href')) === '../games/mad-maze/lantern.html' && (await s.page.textContent('#card-title')) === 'The Lantern');
+  check('Mad Maze Lantern Play link points at the real page', (await s.page.getAttribute('#card-play', 'href')) === '../games/mad-maze/lantern.html?from=hub' && (await s.page.textContent('#card-title')) === 'The Lantern');
   check('card shows medal state (1 of 3)', (await s.page.textContent('#card-status')) === '1 of 3 medals');
   const kept = await s.page.evaluate(() => { window.__hub.at; return Object.keys(JSON.parse(localStorage.getItem('pixeltown-hub-v1'))); });
   check('unknown keys are dropped when the state is sanitised and saved', !kept.includes('evil'), kept.join(','));

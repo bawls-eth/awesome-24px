@@ -20,11 +20,11 @@
   const LINKS = Object.assign(Object.create(null), {
     'w0-hearthvale': FROM_HUB,
     'w1-hearthvale': FROM_HUB,
-    'w2-lantern': '../games/mad-maze/lantern.html',
+    'w2-lantern': '../games/mad-maze/lantern.html?from=hub',
     'w4-angler': '../games/angler/index.html',
     'w3-deepdelve': '../games/deepdelve/index.html',
     'w5-safari': '../games/festival/bugs.html',
-    'w2-catacombs': '../games/mad-maze/index.html?mode=dungeon&seed=1',
+    'w2-catacombs': '../games/mad-maze/index.html?mode=dungeon&seed=1&from=hub',
   });
 
   const $ = (id) => document.getElementById(id);
@@ -94,7 +94,8 @@
     if (b.y !== a.y) pts.push({ x: b.x, y: b.y });
     return pts;
   }
-  const geo = Object.create(null);
+  let geo = Object.create(null);
+  let wantRows = 0; // phones: pad the map vertically so it fills the stage (set by resize)
   function geoFor(w) {
     if (geo[w]) return geo[w];
     const ns = MAP.nodes.filter((n) => n.world === w);
@@ -104,6 +105,7 @@
     const maxY = Math.max.apply(null, ns.map((n) => n.y)) + 3;
     const g = { w, minX, maxX: Math.max(maxX, minX + 13), minY, maxY: Math.max(maxY, minY + 9), paths: [], stubs: [], tiles: new Set() };
     g.cols = g.maxX - g.minX + 1; g.rows = g.maxY - g.minY + 1;
+    if (wantRows > g.rows) { const ex = wantRows - g.rows, top = Math.floor(ex / 2); g.minY -= top; g.maxY += ex - top; g.rows = wantRows; }
     MAP.paths.forEach((p) => {
       const a = byId[p.from], b = byId[p.to];
       if (a.world === w && b.world === w) {
@@ -139,7 +141,7 @@
   function px(c, x, y, w, h, col) { c.fillStyle = col; c.fillRect(x, y, w, h); }
 
   // ---------- terrain (cached per world) ----------
-  const bgCache = Object.create(null);
+  let bgCache = Object.create(null);
   function buildBg(w) {
     if (bgCache[w]) return bgCache[w];
     const g = geoFor(w);
@@ -400,9 +402,15 @@
 
   // ---------- layout ----------
   function resize() {
-    const g = geoFor(view.world);
     const stage = $('stage');
     const sw = stage.clientWidth, sh = stage.clientHeight;
+    let g = geoFor(view.world);
+    // Portrait: scale to the width, then add map rows so the canvas fills the height (no empty bands).
+    const s0 = Math.min(sw / (g.cols * T), 4);
+    const need = s0 > 0 && sh / sw > (g.rows / g.cols) ? Math.min(60, Math.floor(sh / (s0 * T))) : 0;
+    if (need !== wantRows && (need > 0 || wantRows > 0)) {
+      wantRows = need; geo = Object.create(null); bgCache = Object.create(null); g = geoFor(view.world);
+    }
     let s = Math.min(sw / (g.cols * T), sh / (g.rows * T), 4);
     if (s >= 1) s = Math.floor(s * 4) / 4;
     canvas.width = g.cols * T; canvas.height = g.rows * T;

@@ -361,8 +361,13 @@
     });
     $('heroes-empty').hidden = profile.heroes.length > 0;
     var st = $('start'), sh = heroById(selected);
-    if (sh) { st.setAttribute('href', './index.html?hero=' + encodeURIComponent(sh.id)); st.removeAttribute('aria-disabled'); }
-    else { st.setAttribute('href', './index.html'); st.setAttribute('aria-disabled', 'true'); }
+    if (sh) {
+      st.setAttribute('href', './index.html?hero=' + encodeURIComponent(sh.id) + (new URLSearchParams(location.search).get('from') === 'hub' ? '&from=hub' : ''));
+      st.removeAttribute('aria-disabled'); st.removeAttribute('tabindex'); st.style.pointerEvents = '';
+    } else {
+      st.removeAttribute('href'); st.setAttribute('aria-disabled', 'true'); st.setAttribute('tabindex', '-1'); st.style.pointerEvents = 'none';
+      if (!$('status').textContent) { say('Create a hero first: Start run needs a hero to play.'); }
+    }
 
     // new-hero class list
     var sel = $('new-class'), prev = sel.value, ok = unlockedClasses();
