@@ -22,6 +22,7 @@
     'w1-hearthvale': FROM_HUB,
     'w2-lantern': '../games/mad-maze/lantern.html',
     'w4-angler': '../games/angler/index.html',
+    'w3-deepdelve': '../games/deepdelve/index.html',
     'w5-safari': '../games/festival/bugs.html',
     'w2-catacombs': '../games/mad-maze/index.html?mode=dungeon&seed=1',
   });
