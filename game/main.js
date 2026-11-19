@@ -8720,6 +8720,7 @@ function attemptJoin() {
     if (joined) return;
     joined = true;
     joinOverlay.classList.add('hidden');
+    { const bp = document.getElementById('back-to-map-pill'); if (bp) bp.classList.add('hidden'); } // the pill is for the join screen only (it would cover the inventory bar and leave lobbies without a confirm)
     hud.classList.remove('hidden');
     startTown(net, data);
   });

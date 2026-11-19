@@ -64,6 +64,10 @@ const overlap = (a, b) => a && b && a.vis && b.vis && a.l < b.r && a.r > b.l && 
   check('?from=hub with no profile leaves the form empty', (await d.p.evaluate(() => document.getElementById('name-input').value)) === '');
   check('join heading says Hearthvale', (await d.p.textContent('.join-card h1')).includes('Hearthvale'));
   check('no page errors on the join screen', [A, b, c, d].every((x) => x.errs.length === 0));
+  // Opus review: the Back pill is for the join screen only (it must not cover the inventory bar once you are in town)
+  await d.p.fill('#name-input', 'ADMINpill'); await d.p.click('.species-tab'); await d.p.waitForTimeout(150); await d.p.click('.avatar-choice'); await d.p.click('#join-btn');
+  await d.p.waitForSelector('#player-list-panel', { timeout: 20000 }); await d.p.waitForTimeout(500);
+  check('after joining the Back to the map pill is hidden', await d.p.evaluate(() => document.getElementById('back-to-map-pill').classList.contains('hidden')));
   await b2.close();
   done();
 })();
