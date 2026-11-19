@@ -56,6 +56,29 @@ const enter = (s) => {
   check('shop: buying an Uncommon costs 56, adds the item and saves; locked Rare / too poor / junk ids are refused', sh.bought === true && sh.shards1 === 100 - sh.price && sh.items1 === 1 && sh.saved === 1 && sh.rareBlocked && sh.tooPoor && sh.bad, JSON.stringify(sh));
   check('shop: a full backpack blocks buying; V closes it; the backpack 🛒 Shop button opens it; Rare unlocks at best wave 5', sh.fullBlocked && sh.closed && sh.btnOpens && sh.hiddenAfter && sh.stock6 === 7, JSON.stringify(sh));
 
+  // 3. Combine: 3 identical items fuse into one of the next rarity (stronger stat).
+  const cb = await scene(page, (s) => {
+    const r = s.realm; const o = {}; r.state = 'play'; r.setShop(false); r.setPaused(false);
+    const mk = (n, id, rr) => ({ n, id, r: rr });
+    const forget = () => { r._known = new Set(JSON.parse(localStorage.getItem('pixeltown-save-v1')).realm.items.map((x) => x.n)); }; // the test replaces the backpack wholesale; tell the save-merge those stored uids are already known
+    forget();
+    r.save.items = [mk(1, 'sparkwand', 0), mk(2, 'sparkwand', 0), mk(3, 'sparkwand', 0), mk(4, 'sparkwand', 0), mk(5, 'heartcharm', 0), mk(6, 'heartcharm', 0)]; r.save.nextUid = 10; r.save.eq = { weapon: 2 };
+    r._calcStats(); o.dmg0 = r.stats.dmg;
+    o.twoNot = r.combine(5) === false; // only 2 charms
+    r.setPaused(true); o.btns = document.querySelectorAll('#realm-backpack-body button[data-combine]').length;
+    o.ok = r.combine(1); // the equipped #2 survives as Uncommon; #1 and #3 are spent first
+    o.left = r.save.items.map((x) => x.n + ':' + x.r).join(','); o.eq = r.save.eq.weapon; o.dmg1 = r.stats.dmg;
+    forget(); r.save.items = [mk(701, 'luckring', 2), mk(702, 'luckring', 2), mk(703, 'luckring', 2)]; r.save.eq = {}; // fresh uids: the save-merge remaps a uid that collides with a different stored item
+    o.epicRet = r.combine(702); o.epicItems = JSON.stringify(r.save.items); o.epic = o.epicRet && r.save.items.length === 1 && r.save.items[0].r === 3 && r.save.items[0].n === 702; o.saved = JSON.parse(localStorage.getItem('pixeltown-save-v1')).realm.items.length === 1 && JSON.parse(localStorage.getItem('pixeltown-save-v1')).realm.items[0].r === 3;
+    o.epicText = r._itemText(r.save.items[0]); o.noMore = r.combinable(702) === null;
+    r.save.items = [mk(801, 'luckring', 3), mk(802, 'luckring', 3), mk(803, 'luckring', 3)]; o.capped = r.combine(801) === false;
+    r.save.items = []; r.save.eq = {}; r.setPaused(false);
+    return o;
+  });
+  check('combine: needs 3 identical items; the backpack shows the Combine button only then', cb.twoNot && cb.btns >= 1, JSON.stringify(cb));
+  check('combine: 3 Common wands -> 1 Uncommon (the equipped copy is upgraded, others spent), damage goes up at once', cb.ok && cb.left === '2:1,4:0,5:0,6:0' && cb.eq === 2 && cb.dmg1 > cb.dmg0, JSON.stringify(cb));
+  check('combine: 3 Rares -> 1 Epic (+43% shard bonus), Epic is the cap and persists in the save', cb.epic && /43%/.test(cb.epicText) && cb.noMore && cb.capped && cb.saved, JSON.stringify(cb));
+
   check('no console errors', errors.length === 0, errors.join('|'));
   await browser.close();
   done();

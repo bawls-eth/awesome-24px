@@ -35,6 +35,7 @@ const RM_LAVA_DAMAGE = 5; const RM_LAVA_TICK = 0.7; const RM_ICE_SLOW = 0.55;
 const RM_DRIFTER_COLORS = { wisp: '#8fb8ff', cinder: '#ffa04a', puff: '#eaf6ff' };
 const RM_DEATH_PENALTY = 0; // dying never costs banked shards any more: you get a Survivor's Cache item instead (see _deathBonus)
 const RM_SHOP_MULT = 8; // shop price = the item's sell value x this
+const RM_COMBINE_COUNT = 3; // identical items (same gear, same rarity) fuse into one of the next rarity
 const RM_SHOP_UNLOCK = [0, 2, 5]; // best wave needed before the shop stocks Common / Uncommon / Rare
 const RM_POOL = { pBullets: 160, eBullets: 420, enemies: 24, particles: 180, texts: 28, bags: 14, drifters: 12, hazards: 5 };
 
@@ -46,6 +47,7 @@ const RM_RARITIES = [
   { id: 'common', name: 'Common', mult: 1, color: '#c9d1d9', sell: 3 },
   { id: 'uncommon', name: 'Uncommon', mult: 1.6, color: '#7ee787', sell: 7 },
   { id: 'rare', name: 'Rare', mult: 2.4, color: '#79c0ff', sell: 15 },
+  { id: 'epic', name: 'Epic', mult: 3.6, color: '#d2a8ff', sell: 30 }, // only made by combining 3 Rares (never dropped or sold in the shop)
 ];
 // slot: weapon | charm | ring. Each item adds `stat` x rarity multiplier.
 const RM_ITEMS = [
@@ -1348,7 +1350,7 @@ class RealmArena {
   // Offers: every item at each rarity your best wave has unlocked, priced at sell value x RM_SHOP_MULT. Fixed stock, no luck.
   shopStock() {
     const best = this.save.bestWave; const out = [];
-    RM_RARITIES.forEach((rar, r) => { if (best >= RM_SHOP_UNLOCK[r]) RM_ITEMS.forEach((def) => out.push({ id: def.id, r, price: rar.sell * RM_SHOP_MULT })); });
+    RM_RARITIES.forEach((rar, r) => { if (r < RM_SHOP_UNLOCK.length && best >= RM_SHOP_UNLOCK[r]) RM_ITEMS.forEach((def) => out.push({ id: def.id, r, price: rar.sell * RM_SHOP_MULT })); });
     return out;
   }
 
@@ -1381,7 +1383,10 @@ class RealmArena {
       this.buy(btn.dataset.buy, Number(btn.dataset.r));
     });
     const bpBody = document.getElementById('realm-backpack-body'); // the backpack carries a Shop button (the HUD row is full on phones); V works too
-    if (bpBody) bpBody.addEventListener('click', (e) => { if (e.target.closest('button[data-open-shop]')) this.setShop(true); });
+    if (bpBody) bpBody.addEventListener('click', (e) => {
+      if (e.target.closest('button[data-open-shop]')) { this.setShop(true); return; }
+      const cb = e.target.closest('button[data-combine]'); if (cb) this.combine(Number(cb.dataset.combine));
+    });
     return (this._shopDom = wrap);
   }
 
@@ -1572,6 +1577,31 @@ class RealmArena {
     return true;
   }
 
+  // Fuse RM_COMBINE_COUNT identical items (same gear + rarity) into ONE of the next rarity: +50%..+80% of the stat. The item you clicked survives upgraded.
+  combinable(uid) {
+    const it = this.save.items.find((x) => x.n === uid);
+    if (!it || it.r >= RM_RARITIES.length - 1) return null;
+    const group = this.save.items.filter((x) => x.id === it.id && x.r === it.r);
+    return group.length >= RM_COMBINE_COUNT ? { keep: it, group } : null;
+  }
+
+  combine(uid) {
+    const c = this.combinable(uid); if (!c) return false;
+    const sv = this.save;
+    // The survivor is the equipped copy if there is one (so your damage goes up at once), else the one you clicked; spend unequipped copies first.
+    const eqUids = new Set(RM_SLOTS.map((sl) => sv.eq[sl]).filter(Boolean));
+    c.keep = c.group.find((x) => eqUids.has(x.n)) || c.keep;
+    const others = c.group.filter((x) => x !== c.keep).sort((a, b) => (eqUids.has(a.n) ? 1 : 0) - (eqUids.has(b.n) ? 1 : 0)).slice(0, RM_COMBINE_COUNT - 1);
+    const gone = new Set(others.map((x) => x.n));
+    sv.items = sv.items.filter((x) => !gone.has(x.n));
+    RM_SLOTS.forEach((slot) => { if (gone.has(sv.eq[slot])) delete sv.eq[slot]; });
+    c.keep.r += 1;
+    this._snd('levelup');
+    this._floatText(this.player.x, this.player.y - 34, `${RM_ITEM_BY_ID[c.keep.id].icon} ${RM_RARITIES[c.keep.r].name}!`, RM_RARITIES[c.keep.r].color);
+    this._afterGearChange();
+    return true;
+  }
+
   discard(uid) {
     const i = this.save.items.findIndex((x) => x.n === uid);
     if (i < 0) return false;
@@ -1619,7 +1649,7 @@ class RealmArena {
     if (!sv.items.length) html += '<li class="dim">Nothing yet — defeat enemies to find loot bags.</li>';
     sv.items.forEach((it) => {
       const def = RM_ITEM_BY_ID[it.id]; const rar = RM_RARITIES[it.r]; const on = eqUids.has(it.n);
-      html += `<li data-uid="${it.n}" class="${on ? 'on' : ''}"><span class="nm" style="color:${rar.color}">${def.icon} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(it)}</span><button type="button" class="eq" data-act="equip" data-uid="${it.n}">${on ? 'Unequip' : 'Equip'}</button><button type="button" class="dc" data-act="discard" data-uid="${it.n}" aria-label="Sell ${def.name} for ${rar.sell} shards">Sell ${rar.sell}💎</button></li>`;
+      html += `<li data-uid="${it.n}" class="${on ? 'on' : ''}"><span class="nm" style="color:${rar.color}">${def.icon} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(it)}</span><button type="button" class="eq" data-act="equip" data-uid="${it.n}">${on ? 'Unequip' : 'Equip'}</button>${this.combinable(it.n) ? `<button type="button" class="eq" data-combine="${it.n}" aria-label="Combine ${RM_COMBINE_COUNT} ${rar.name} ${def.name} into one ${RM_RARITIES[it.r + 1].name}">Combine ${RM_COMBINE_COUNT}→${RM_RARITIES[it.r + 1].name}</button>` : ''}<button type="button" class="dc" data-act="discard" data-uid="${it.n}" aria-label="Sell ${def.name} for ${rar.sell} shards">Sell ${rar.sell}💎</button></li>`;
     });
     html += '</ul>';
     root.innerHTML = html;
