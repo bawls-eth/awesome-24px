@@ -142,6 +142,7 @@ const ev = (page, fn, arg) => page.evaluate(fn, arg);
   if (shot) await p.screenshot({ path: `${shot}/dungeon-desktop-secret.png` });
 
   // ---------- mini-map ----------
+  await p.waitForTimeout(500); // the map redraws on the next frame after the last room change
   const mm = await ev(p, () => { const d = window.__mm.dungeon; const vis = d.state.visibleRooms(); const visited = d.graph.rooms.filter((r) => d.state.room(r.id).visited).map((r) => r.id); const unseen = d.graph.rooms.filter((r) => !vis.includes(r.id)).length; return { vis, drawn: d.mapDrawn, visited, unseen, total: d.graph.rooms.length }; });
   const adj = await ev(p, () => { const d = window.__mm.dungeon; return d.graph.doors.filter((x) => !x.cracked || d.state.secretOpen).map((x) => [x.a, x.b]); });
   const okNb = mm.vis.every((id) => mm.visited.includes(id) || adj.some(([x, y]) => (x === id && mm.visited.includes(y)) || (y === id && mm.visited.includes(x))));
@@ -198,6 +199,20 @@ const ev = (page, fn, arg) => page.evaluate(fn, arg);
   const dflt = await dp.evaluate(() => { const a = window.__mm.arena; return { dungeon: window.__mm.dungeon, hook: a.dungeon, fixed: a.fixedWorld, walls: a.walls, W: a.W, map: !!document.getElementById('mm-map'), state: a.state }; });
   check('default page (no ?mode) is still the solo arena: no dungeon, no fixed world, no walls, no map', !dflt.dungeon && !dflt.hook && !dflt.fixed && !dflt.walls && !dflt.map && dflt.W >= 540 && derr.length === 0, JSON.stringify(dflt));
   await def.close();
+
+  // ---------- review fixes: the seed parameter cannot inject markup; Tab is not swallowed on the summary ----------
+  const xs = await browser.newContext({ viewport: { width: 1000, height: 700 } });
+  const xp = await xs.newPage(); const xerr = []; let dialogs = 0;
+  xp.on('pageerror', (e) => xerr.push(e.message)); xp.on('dialog', (d) => { dialogs++; d.dismiss(); });
+  await xp.goto(PAGE + '?mode=dungeon&test=1&seed=' + encodeURIComponent('<img src=x onerror=alert(1)>'));
+  await xp.waitForFunction(() => window.__mm && window.__mm.dungeon); await xp.waitForTimeout(300);
+  const xo = await xp.evaluate(() => { const d = window.__mm.dungeon; return { seed: String(d.seed), imgs: document.querySelectorAll('img').length }; });
+  await xp.evaluate(() => window.__mm.dungeon.fail && window.__mm.dungeon.fail());
+  await xp.waitForTimeout(300);
+  const tabOk = await xp.evaluate(() => { const ev = new KeyboardEvent('keydown', { key: 'Tab', cancelable: true }); window.dispatchEvent(ev); return { prevented: ev.defaultPrevented, sum: !!document.querySelector('.mm-sum-card'), html: (document.querySelector('.mm-sum-card') || { innerHTML: '' }).innerHTML.includes('<img') }; });
+  check('a hostile ?seed= is ignored (no injected <img>, no alert dialog, no errors)', !/[<>]/.test(xo.seed) && xo.imgs === 0 && dialogs === 0 && xerr.length === 0 && !tabOk.html, JSON.stringify([xo, tabOk, dialogs, xerr]));
+  check('once the summary is shown Tab is no longer swallowed (keyboard users can reach the buttons)', tabOk.sum === false || tabOk.prevented === false, JSON.stringify(tabOk));
+  await xs.close();
 
   // ---------- phone ----------
   const ph = await open(browser, { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });

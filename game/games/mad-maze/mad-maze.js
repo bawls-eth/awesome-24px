@@ -62,7 +62,7 @@
   stick('realm-stick-aim', (x, y, on) => arena.setAimStick(x, y, on));
 
   if (params.get('mode') === 'dungeon' && window.MMDungeonRun) {
-    dungeon = MMDungeonRun.create(arena, { seed: params.get('seed') || String(Date.now() % 100000), home: HOME, test: TEST });
+    dungeon = MMDungeonRun.create(arena, { seed: /^[A-Za-z0-9_-]{1,24}$/.test(params.get('seed') || '') ? params.get('seed') : String(Date.now() % 100000), home: HOME, test: TEST });
     document.body.classList.add('dungeon-mode');
   }
 
