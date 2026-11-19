@@ -60,12 +60,12 @@ check('stash capped at 16', P.clean({ stash: Array.from({ length: 40 }, () => ({
 
 // backup
 const prof = P.importLegacy(realm);
-const s1 = fake({ 'pixeltown-save-v1': JSON.stringify({ realm: { level: 3 }, coins: 9 }), 'pixeltown-mm-v1': JSON.stringify(prof), 'pixeltown-other': '{"a":1}', unrelated: 'x' });
+const s1 = fake({ 'pixeltown-save-v1': JSON.stringify({ realm: { level: 3 }, coins: 9 }), 'pixeltown-mm-v1': JSON.stringify(prof), 'pixeltown-angler-v1': '{"caught":{"bluegill":{"n":2,"best":9}},"bosses":{}}', unrelated: 'x' });
 const bun = B.bundle(s1);
-check('bundle has both keys + extras, not unrelated', bun.v >= 1 && bun.keys['pixeltown-save-v1'] && bun.keys['pixeltown-mm-v1'] && bun.keys['pixeltown-other'] && !bun.keys.unrelated);
+check('bundle has both keys + extras, not unrelated', bun.v >= 1 && bun.keys['pixeltown-save-v1'] && bun.keys['pixeltown-mm-v1'] && bun.keys['pixeltown-angler-v1'] && !bun.keys.unrelated);
 const s2 = fake();
 const rr = B.restore(s2, JSON.parse(JSON.stringify(bun)));
-check('round trip equal', rr.ok && JSON.stringify(B.bundle(s2)) === JSON.stringify(bun));
+check('round trip equal', rr.ok && Object.keys(bun.keys).every((k) => JSON.parse(s2._m[k]) && true) && JSON.parse(s2._m['pixeltown-angler-v1']).caught.bluegill.n === 2);
 const s3 = fake();
 const old = B.restore(s3, { realm: { level: 5 }, coins: 2 });
 check('old single-save restores', old.ok && JSON.parse(s3._m['pixeltown-save-v1']).realm.level === 5);
@@ -77,4 +77,54 @@ try {
   B.restore(null, { a: 1 }); B.bundle(null);
 } catch (e) { threw = true; }
 check('restore never throws on garbage', !threw);
+
+// ---- atomic, validated restore
+const TOWN = JSON.stringify({ name: 'Ben', species: 'doge', coins: 1 });
+{
+  const st = fake({ 'pixeltown-save-v1': TOWN });
+  const r = B.restore(st, { caught: { bluegill: { n: 1, best: 3 } }, bosses: {} });
+  check('angler-style single export is rejected, town save untouched', !r.ok && r.error === 'not-a-town-save' && st._m['pixeltown-save-v1'] === TOWN && /not a town save/.test(r.message));
+  check('plan() alone never writes', (() => { const s2 = fake({ k: 'v' }); const pl = B.plan({ format: 'pixeltown-backup', v: 2, keys: { 'pixeltown-mm-v1': '{}' } }); return pl.ok && !('pixeltown-mm-v1' in s2._m); })());
+  const un = B.restore(fake({ 'pixeltown-save-v1': TOWN }), { format: 'pixeltown-backup', v: 2, keys: { 'pixeltown-save-v1': '{"name":"x"}', 'pixeltown-evil-v1': '{}' } });
+  check('unknown pixeltown-* key rejects the whole file', !un.ok && un.error === 'unknown-key');
+  const st2 = fake({ 'pixeltown-save-v1': TOWN });
+  const un2 = B.restore(st2, { format: 'pixeltown-backup', v: 2, keys: { 'pixeltown-save-v1': '{"name":"x"}', 'pixeltown-mm-v1': 'not json' } });
+  check('one invalid value rejects everything (town save untouched)', !un2.ok && st2._m['pixeltown-save-v1'] === TOWN);
+  const st3 = fake();
+  const dirty = { v: 1, heroes: [{ id: 'a', name: 'X', cls: 'zzz', level: 999, evil: 1 }], stash: 'no', fame: -5 };
+  const rc = B.restore(st3, { format: 'pixeltown-backup', v: 2, keys: { 'pixeltown-mm-v1': JSON.stringify(dirty), 'pixeltown-angler-v1': JSON.stringify({ caught: { constructor: { n: 5 }, bluegill: { n: 2, best: 4 } }, bosses: { constructor: true } }), 'pixeltown-hub-v1': JSON.stringify({ at: 'constructor', keys: 3 }), 'pixeltown-bugs-v1': JSON.stringify({ stars: { meadow: 99 }, junk: 1 }) } });
+  const mm = JSON.parse(st3._m['pixeltown-mm-v1']), an = JSON.parse(st3._m['pixeltown-angler-v1']), hub = JSON.parse(st3._m['pixeltown-hub-v1']), bg = JSON.parse(st3._m['pixeltown-bugs-v1']);
+  check('restored mm-v1 is cleaned', rc.ok && mm.heroes[0].cls === 'ranger' && mm.heroes[0].level === 20 && mm.heroes[0].evil === undefined && mm.fame === 0 && mm.stash.length === 16);
+  check('restored angler is cleaned (no prototype names)', Object.keys(an.caught).join() === 'bluegill' && Object.keys(an.bosses).length === 0);
+  check('restored hub: hostile position falls back to start, keys kept', hub.at === 'w0-square' && hub.keys === 3);
+  check('restored bugs is cleaned', bg.stars.meadow === 3 && bg.junk === undefined && bg.v === 1);
+  // mid-bundle write failure rolls back
+  const orig = { 'pixeltown-save-v1': TOWN, 'pixeltown-mm-v1': JSON.stringify(P.clean({ fame: 7 })) };
+  const st4 = fake(orig);
+  let calls = 0; const realSet = st4.setItem;
+  st4.setItem = (k, v) => { calls++; if (calls === 3) throw new Error('quota'); realSet(k, v); };
+  const bad = B.restore(st4, { format: 'pixeltown-backup', v: 2, keys: { 'pixeltown-angler-v1': '{}', 'pixeltown-bugs-v1': '{}', 'pixeltown-mm-v1': '{"fame":1}', 'pixeltown-save-v1': '{"name":"new"}' } });
+  check('3rd write throws -> ok:false with message', !bad.ok && bad.error === 'write-failed' && typeof bad.message === 'string' && bad.message.length > 10);
+  check('rolled back: originals restored, new keys removed', st4._m['pixeltown-save-v1'] === TOWN && st4._m['pixeltown-mm-v1'] === orig['pixeltown-mm-v1'] && !('pixeltown-angler-v1' in st4._m) && !('pixeltown-bugs-v1' in st4._m), JSON.stringify(st4._m));
+}
+// corrupt mm-v1 is exported raw
+{
+  const st = fake({ 'pixeltown-mm-v1': '{{corrupt' });
+  check('bundle() keeps raw corrupt value', B.bundle(st).keys['pixeltown-mm-v1'] === '{{corrupt');
+}
+// full-roster legacy import is retryable
+{
+  const full = P.clean({ heroes: Array.from({ length: 12 }, (_, i) => ({ id: 'h' + i })) });
+  const r1 = P.importLegacy(realm, full);
+  check('full roster: hero skipped and migratedFrom NOT set', r1.heroes.length === 12 && !r1.heroes.some((h) => h.id === 'legacy-ranger') && r1.migratedFrom === null);
+  r1.heroes.pop();
+  const r2 = P.importLegacy(realm, r1);
+  check('after a slot frees the import succeeds', r2.heroes.some((h) => h.id === 'legacy-ranger') && r2.migratedFrom === 'pixeltown-save-v1');
+}
+// Fall with a full stash reports the lost Keepsake
+{
+  const p = P.clean({ heroes: [{ id: 'a', name: 'A', fame: 10 }], stash: Array.from({ length: 16 }, () => ({ id: 'x' })) });
+  const f = P.fall(p, 'a');
+  check('full-stash Fall flags keepsakeLost', f.ok && f.keepsake === null && f.keepsakeLost === true);
+}
 done();

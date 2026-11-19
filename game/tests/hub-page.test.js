@@ -82,11 +82,25 @@ async function tap(page, id) {
     'pixeltown-hub-v1': JSON.stringify({ v: 1, at: 'w2-lantern', evil: '<img src=x onerror=alert(1)>', nodes: { 'w2-lantern': { exits: ['normal'], medals: { b: true } } } }),
   });
   await s.page.keyboard.press('Enter');
-  check('Mad Maze Lantern Play link points at the real page', (await s.page.getAttribute('#card-play', 'href')) === '../games/mad-maze/index.html' && (await s.page.textContent('#card-title')) === 'The Lantern');
+  check('Mad Maze Lantern Play link points at the real page', (await s.page.getAttribute('#card-play', 'href')) === '../games/mad-maze/lantern.html' && (await s.page.textContent('#card-title')) === 'The Lantern');
   check('card shows medal state (1 of 3)', (await s.page.textContent('#card-status')) === '1 of 3 medals');
   const kept = await s.page.evaluate(() => { window.__hub.at; return Object.keys(JSON.parse(localStorage.getItem('pixeltown-hub-v1'))); });
   check('unknown keys are dropped when the state is sanitised and saved', !kept.includes('evil'), kept.join(','));
   await s.ctx.close();
+
+  // Angler and Bug Safari nodes link to their real pages.
+  for (const [at, want] of [['w4-angler', '../games/angler/index.html'], ['w5-safari', '../games/festival/bugs.html']]) {
+    const l = await open(browser, { viewport: { width: 1100, height: 760 } }, { 'pixeltown-save-v1': TOWN, 'pixeltown-hub-v1': JSON.stringify({ v: 1, at }) });
+    await l.page.keyboard.press('Enter');
+    check('hub ' + at + ' Play link is ' + want, (await l.page.getAttribute('#card-play', 'href')) === want);
+    await l.ctx.close();
+  }
+  // Hostile saved positions fall back to the start node (never Object.prototype members).
+  for (const bad of ['constructor', 'toString', '__proto__']) {
+    const h = await open(browser, { viewport: { width: 1100, height: 760 } }, { 'pixeltown-save-v1': TOWN, 'pixeltown-hub-v1': '{"v":1,"at":"' + bad + '"}' });
+    check('hostile position ' + bad + ' falls back to the start node', (await h.page.evaluate(() => window.__hub.at)) === 'w0-square' && h.errors.length === 0, h.errors.join('|'));
+    await h.ctx.close();
+  }
 
   // Corrupt key loads clean.
   const c = await open(browser, { viewport: { width: 1100, height: 760 } }, { 'pixeltown-save-v1': TOWN, 'pixeltown-hub-v1': '{not json<<' });

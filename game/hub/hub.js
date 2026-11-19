@@ -8,21 +8,23 @@
   const T = 16;            // logical pixels per tile
   const SPEED = 7;         // tiles per second while walking
   const MAP = MMMap.MAP;
-  const byId = {};
+  const byId = Object.create(null);
   MAP.nodes.forEach((n) => { byId[n.id] = n; });
-  const wIdx = {};
+  const wIdx = Object.create(null);
   MAP.worlds.forEach((w, i) => { wIdx[w.id] = i; });
-  const wName = {};
+  const wName = Object.create(null);
   MAP.worlds.forEach((w) => { wName[w.id] = w.name; });
 
   // Real pages (relative to /game/hub/). Anything else is "Coming soon".
   const FROM_HUB = '../index.html?from=hub';
-  const LINKS = {
+  const LINKS = Object.assign(Object.create(null), {
     'w0-hearthvale': FROM_HUB,
     'w1-hearthvale': FROM_HUB,
-    'w2-lantern': '../games/mad-maze/index.html',
+    'w2-lantern': '../games/mad-maze/lantern.html',
+    'w4-angler': '../games/angler/index.html',
+    'w5-safari': '../games/festival/bugs.html',
     'w2-catacombs': '../games/mad-maze/index.html?mode=dungeon&seed=1',
-  };
+  });
 
   const $ = (id) => document.getElementById(id);
   const canvas = $('map');
@@ -36,7 +38,7 @@
   function loadHub() {
     const raw = parse(readKey(KEY));
     const st = MMMap.sanitizeState(raw);
-    const at = isObj(raw) && typeof raw.at === 'string' && byId[raw.at] ? raw.at : MAP.start;
+    const at = isObj(raw) && MMMap.hasNode(raw.at) ? raw.at : MAP.start;
     return { at, state: st };
   }
   let hub = loadHub();
@@ -59,7 +61,7 @@
   // Effective state = hub state merged with what the games reported to the profile.
   function effective() {
     const h = hub.state;
-    const nodes = {};
+    const nodes = Object.create(null);
     const ids = Object.keys(h.nodes).concat(Object.keys(profile.nodes).filter((i) => !(i in h.nodes)));
     ids.forEach((id) => {
       const a = h.nodes[id] || { exits: [], medals: {} };
@@ -91,7 +93,7 @@
     if (b.y !== a.y) pts.push({ x: b.x, y: b.y });
     return pts;
   }
-  const geo = {};
+  const geo = Object.create(null);
   function geoFor(w) {
     if (geo[w]) return geo[w];
     const ns = MAP.nodes.filter((n) => n.world === w);
@@ -136,7 +138,7 @@
   function px(c, x, y, w, h, col) { c.fillStyle = col; c.fillRect(x, y, w, h); }
 
   // ---------- terrain (cached per world) ----------
-  const bgCache = {};
+  const bgCache = Object.create(null);
   function buildBg(w) {
     if (bgCache[w]) return bgCache[w];
     const g = geoFor(w);

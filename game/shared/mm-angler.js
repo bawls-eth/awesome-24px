@@ -68,7 +68,7 @@
   const FISH = T.map((r) => Object.assign({
     id: r[0], icon: r[1], name: r[2], rarity: r[3], spots: r[4].split(','), behaviour: r[5],
   }, r[6] || {}));
-  const BY_ID = {};
+  const BY_ID = Object.create(null);
   FISH.forEach((f) => { BY_ID[f.id] = f; });
   const EXISTING_IDS = T.slice(0, 12).map((r) => r[0]);
 
@@ -276,7 +276,7 @@
       out.caught[id] = { n, best: clampInt(c[id].best, 0, 9999) };
     });
     const b = o.bosses && typeof o.bosses === 'object' ? o.bosses : {};
-    Object.keys(b).forEach((id) => { if (BOSSES[id] && b[id] === true) out.bosses[id] = true; });
+    Object.keys(b).forEach((id) => { if (Object.prototype.hasOwnProperty.call(BOSSES, id) && b[id] === true) out.bosses[id] = true; });
     return out;
   }
   function record(journal, fishId, size) {
@@ -286,7 +286,7 @@
     e.n = Math.min(99999, e.n + 1);
     e.best = Math.max(e.best, clampInt(size, 0, 9999));
     j.caught[fishId] = e;
-    if (BOSSES[fishId]) j.bosses[fishId] = true;
+    if (Object.prototype.hasOwnProperty.call(BOSSES, fishId)) j.bosses[fishId] = true;
     return j;
   }
   function serialize(journal) { return JSON.stringify(clean(journal)); }

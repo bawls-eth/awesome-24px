@@ -103,16 +103,76 @@ const prof = (page) => page.evaluate((K) => JSON.parse(localStorage.getItem(K) |
   check('backup download contains both keys', bundle.format === 'pixeltown-backup' && typeof bundle.keys[MM] === 'string' && typeof bundle.keys[SAVE] === 'string', Object.keys(bundle.keys || {}).join());
   await s.page.evaluate(([a, b]) => { localStorage.removeItem(a); localStorage.removeItem(b); window.__lantern.reload(); }, [MM, SAVE]);
   await s.page.setInputFiles('#restore', { name: 'b.json', mimeType: 'application/json', buffer: fs.readFileSync(dlPath) });
+  await s.page.waitForSelector('#restore-confirm:not([hidden])');
+  const listed = await s.page.locator('#restore-list li').allTextContents();
+  check('restore shows a confirmation panel listing the keys, and has changed nothing yet', listed.length === 2 && listed.some((t) => t.includes(MM)) && listed.some((t) => t.includes(SAVE)) && (await s.page.evaluate((K) => localStorage.getItem(K), MM)) === null);
+  await s.page.click('#restore-no');
+  check('Cancel hides the panel and changes nothing', (await s.page.isHidden('#restore-confirm')) && (await s.page.evaluate((K) => localStorage.getItem(K), MM)) === null && (await s.page.evaluate((K) => localStorage.getItem(K), SAVE)) === null);
+  await s.page.setInputFiles('#restore', { name: 'b.json', mimeType: 'application/json', buffer: fs.readFileSync(dlPath) });
+  await s.page.waitForSelector('#restore-confirm:not([hidden])');
+  await s.page.click('#restore-yes');
   await s.page.waitForFunction(() => /Restored/.test(document.getElementById('status').textContent));
   p = await prof(s.page);
-  check('restore round-trips the profile and the old save', p.heroes[0].name === 'Packed' && p.fame === 42 && (await s.page.evaluate((K) => localStorage.getItem(K), SAVE)) === JSON.stringify(JSON.parse(LEGACY_SAVE)));
+  check('Confirm round-trips the profile and the old save', p.heroes[0].name === 'Packed' && p.fame === 42 && (await s.page.evaluate((K) => localStorage.getItem(K), SAVE)) === JSON.stringify(JSON.parse(LEGACY_SAVE)));
+  // old single town-save file: accepted after confirm
   await s.page.evaluate((K) => { localStorage.removeItem(K); }, SAVE);
   await s.page.setInputFiles('#restore', { name: 'old.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ realm: { level: 3 }, name: 'Old' })) });
+  await s.page.waitForSelector('#restore-confirm:not([hidden])');
+  await s.page.click('#restore-yes');
   await s.page.waitForFunction(() => /Restored/.test(document.getElementById('status').textContent));
-  check('old single-save file restores into pixeltown-save-v1', (await s.page.evaluate((K) => JSON.parse(localStorage.getItem(K)).realm.level, SAVE)) === 3);
-  await s.page.setInputFiles('#restore', { name: 'bad.json', mimeType: 'application/json', buffer: Buffer.from('not json {{{') });
+  check('old town save file restores into pixeltown-save-v1 after Confirm', (await s.page.evaluate((K) => JSON.parse(localStorage.getItem(K)).realm.level, SAVE)) === 3);
+  // an old Angler export must NOT overwrite the town save
+  const townNow = await s.page.evaluate((K) => localStorage.getItem(K), SAVE);
+  await s.page.setInputFiles('#restore', { name: 'angler.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ caught: { bluegill: { n: 1, best: 4 } }, bosses: {} })) });
   await s.page.waitForFunction(() => document.getElementById('status').className === 'err');
-  check('a bad restore file shows a friendly message and does not throw', /does not look like/.test(await s.page.textContent('#status')) && s.errors.length === 0, s.errors.join());
+  check('angler export is rejected with a clear message, no panel, town save untouched', /not a town save/.test(await s.page.textContent('#status')) && (await s.page.isHidden('#restore-confirm')) && (await s.page.evaluate((K) => localStorage.getItem(K), SAVE)) === townNow);
+  await s.page.setInputFiles('#restore', { name: 'bad.json', mimeType: 'application/json', buffer: Buffer.from('not json {{{') });
+  await s.page.waitForFunction(() => /not valid JSON/.test(document.getElementById('status').textContent));
+  check('a bad restore file shows a friendly message and does not throw', s.errors.length === 0, s.errors.join());
+  // a restored mm-v1 is cleaned by MMProfile.clean
+  const dirtyBundle = { format: 'pixeltown-backup', v: 2, keys: { [MM]: JSON.stringify({ v: 1, heroes: [{ id: 'z', name: 'Zed', cls: 'nope', level: 500, evil: 1 }], fame: -9 }) } };
+  await s.page.setInputFiles('#restore', { name: 'dirty.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(dirtyBundle)) });
+  await s.page.waitForSelector('#restore-confirm:not([hidden])');
+  await s.page.click('#restore-yes');
+  await s.page.waitForFunction(() => /Restored/.test(document.getElementById('status').textContent));
+  p = await prof(s.page);
+  check('restored mm-v1 is cleaned before writing', p.heroes[0].cls === 'ranger' && p.heroes[0].level === 20 && p.heroes[0].evil === undefined && p.fame === 0, JSON.stringify(p.heroes));
+  // mid-bundle write failure: 3rd setItem throws -> everything rolled back, honest message
+  const before = await s.page.evaluate(([a, b]) => [localStorage.getItem(a), localStorage.getItem(b), localStorage.getItem('pixeltown-angler-v1'), localStorage.getItem('pixeltown-bugs-v1')], [MM, SAVE]);
+  const failBundle = { format: 'pixeltown-backup', v: 2, keys: { 'pixeltown-angler-v1': '{}', 'pixeltown-bugs-v1': '{}', [MM]: JSON.stringify({ fame: 1 }), [SAVE]: JSON.stringify({ name: 'New' }) } };
+  await s.page.setInputFiles('#restore', { name: 'fail.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(failBundle)) });
+  await s.page.waitForSelector('#restore-confirm:not([hidden])');
+  await s.page.evaluate(() => { const real = Storage.prototype.setItem; let n = 0; Storage.prototype.setItem = function (k, v) { n++; if (n === 3) { Storage.prototype.setItem = real; throw new Error('quota'); } return real.call(this, k, v); }; });
+  await s.page.click('#restore-yes');
+  await s.page.waitForFunction(() => document.getElementById('status').className === 'err');
+  const after = await s.page.evaluate(([a, b]) => [localStorage.getItem(a), localStorage.getItem(b), localStorage.getItem('pixeltown-angler-v1'), localStorage.getItem('pixeltown-bugs-v1')], [MM, SAVE]);
+  check('write failure on the 3rd key rolls every key back and says so', JSON.stringify(before) === JSON.stringify(after) && /put back|could not fully undo|failed/i.test(await s.page.textContent('#status')), JSON.stringify([before, after]));
+  await s.ctx.close();
+
+  // 5b. Backup reads raw values: a corrupt mm-v1 is backed up as it was.
+  s = await open(browser, { mm: '{{corrupt-raw', save: LEGACY_SAVE });
+  const [dl2] = await Promise.all([s.page.waitForEvent('download'), s.page.click('#backup')]);
+  const b2 = JSON.parse(fs.readFileSync(await dl2.path(), 'utf8'));
+  check('backup of a corrupt pixeltown-mm-v1 keeps the raw value', b2.keys[MM] === '{{corrupt-raw');
+  await s.ctx.close();
+
+  // 5c. Legacy import with a full roster says so and can be retried.
+  const twelve = []; for (let i = 0; i < 12; i++) twelve.push(hero({ id: 'f' + i, name: 'F' + i }));
+  s = await open(browser, { mm: { v: 1, heroes: twelve }, save: LEGACY_SAVE });
+  await s.page.click('#import-yes');
+  p = await prof(s.page);
+  check('full roster: message says roster is full, no Legacy Ranger, import not marked done', /roster is full/.test(await s.page.textContent('#status')) && !/Legacy Ranger is here/.test(await s.page.textContent('#status')) && p.heroes.length === 12 && !p.migratedFrom, JSON.stringify(p.migratedFrom));
+  check('the import offer is still shown (retry possible)', await s.page.isVisible('#import-offer'));
+  await s.page.evaluate((K) => { const q = JSON.parse(localStorage.getItem(K)); q.heroes.pop(); localStorage.setItem(K, JSON.stringify(q)); window.__lantern.reload(); }, MM);
+  await s.page.click('#import-yes');
+  p = await prof(s.page);
+  check('after a slot frees the import works', p.heroes.some((h) => h.id === 'legacy-ranger') && p.migratedFrom === SAVE);
+  await s.ctx.close();
+
+  // 5d. Fall with a full stash tells the player the Keepsake could not be stored.
+  s = await open(browser, { mm: { v: 1, heroes: [hero({ id: 'h-a', name: 'Fally', fame: 10 })], stash: Array.from({ length: 16 }, (_, i) => ({ id: 'luckring', r: 0, n: i + 1 })) } });
+  await s.page.evaluate(() => window.__lantern.fall('h-a'));
+  check('full-stash Fall says the Keepsake could not be stored', /Keepsake could not be stored/.test(await s.page.textContent('#status')));
   await s.ctx.close();
 
   // 6. Hostile name.
@@ -140,6 +200,11 @@ const prof = (page) => page.evaluate((K) => JSON.parse(localStorage.getItem(K) |
   check('zero off-origin requests', s.reqs.every((u) => u.startsWith(ORIGIN + '/') || u.startsWith('data:') || u.startsWith('blob:')), s.reqs.join(' '));
   check('no console errors', s.errors.length === 0, s.errors.join());
   if (process.env.SHOTS) {
+    await s.page.setInputFiles('#restore', { name: 'b.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ format: 'pixeltown-backup', v: 2, keys: { [MM]: '{"v":1}', [SAVE]: '{"name":"Ben"}' } })) });
+    await s.page.waitForSelector('#restore-confirm:not([hidden])');
+    await s.page.locator('#restore-confirm').scrollIntoViewIfNeeded();
+    await s.page.screenshot({ path: process.env.SHOTS + '/lantern-restore-confirm.png' });
+    await s.page.click('#restore-no');
     await s.page.screenshot({ path: process.env.SHOTS + '/lantern-phone.png', fullPage: true });
     const d = await open(browser, { mm: { v: 1, heroes: [hero({ name: 'Mossy', level: 12 })], fame: 120, hall: [{ name: 'Old Pip', cls: 'herald', level: 20, fame: 900, how: 'retire' }], stash: [{ id: 'heartcharm', r: 1 }] }, save: LEGACY_SAVE });
     await d.page.screenshot({ path: process.env.SHOTS + '/lantern-desktop.png', fullPage: true });

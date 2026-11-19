@@ -119,7 +119,9 @@
       id: 'legacy-ranger', name: 'Legacy Ranger', cls: 'ranger',
       level: realmSave.level, xp: realmSave.xp, fame: 0, mode: 'classic', items: items
     }, Object.create(null));
-    if (p.heroes.length < MAX_HEROES) p.heroes.push(hero);
+    // Roster full: skip the hero and do NOT mark the import done, so it can be retried after a slot frees.
+    if (p.heroes.length >= MAX_HEROES) return p;
+    p.heroes.push(hero);
     p.migratedFrom = LEGACY_KEY;
     return p;
   }
@@ -154,13 +156,13 @@
     p.fame = Math.min(MAX_FAME, p.fame + fame);
     p.hall.push({ name: h.name, cls: h.cls, level: h.level, fame: fame, how: 'fall' });
     if (p.hall.length > MAX_HALL) p.hall.shift();
-    let keepsake = null;
+    let keepsake = null, keepsakeLost = false;
     if (mode !== 'hardcore') {
       keepsake = Object.assign({}, h.keepsake || { id: 'keepsake', r: 0, from: h.name, cls: h.cls, level: h.level }, { keepsake: true });
       const slot = p.stash.indexOf(null);
-      if (slot >= 0) p.stash[slot] = keepsake; else keepsake = null; // stash full: Keepsake is lost
+      if (slot >= 0) p.stash[slot] = keepsake; else { keepsake = null; keepsakeLost = true; } // stash full: Keepsake could not be stored
     }
-    return { ok: true, profile: p, fame: fame, keepsake: keepsake };
+    return { ok: true, profile: p, fame: fame, keepsake: keepsake, keepsakeLost: keepsakeLost };
   }
 
   // New hero of the same class at level min(10, floor(L/2)); not allowed in hardcore.

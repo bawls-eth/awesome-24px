@@ -56,7 +56,21 @@
     return s;
   }
   // Moonwing only at night
-  function canSpawn(type, night) { const t = TYPES[type]; return !!t && (!t.night || !!night); }
+  function canSpawn(type, night) { const t = Object.prototype.hasOwnProperty.call(TYPES, type) ? TYPES[type] : null; return !!t && (!t.night || !!night); }
+
+  // Save shape for `pixeltown-bugs-v1`: {v, stars{arena:0..3}, best{arena:0..99999}, journal{type:0..999999}}.
+  // Any input -> a valid save; only known arena / species names survive.
+  function clampInt(v, lo, hi) { v = Math.floor(Number(v)); return Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : lo; }
+  function cleanSave(raw) {
+    if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch (e) { raw = null; } }
+    const isO = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
+    const own = (o, k) => isO(o) && Object.prototype.hasOwnProperty.call(o, k) ? o[k] : 0;
+    if (!isO(raw)) raw = {};
+    const out = { v: 1, stars: {}, best: {}, journal: {} };
+    ARENAS.forEach((a) => { out.stars[a.id] = clampInt(own(raw.stars, a.id), 0, 3); out.best[a.id] = clampInt(own(raw.best, a.id), 0, 99999); });
+    Object.keys(TYPES).forEach((t) => { out.journal[t] = clampInt(own(raw.journal, t), 0, 999999); });
+    return out;
+  }
 
   function createRun(opts) {
     opts = opts || {};
@@ -127,5 +141,5 @@
     return { state: run, spawn, setPlayer, swing, update, stars: () => starsFor(opts.arena, run.score) };
   }
 
-  return { RUN_SECONDS, SWING_COOLDOWN, SCARE_TILES, COMBO_WINDOW, COMBO_MULT, RARE_AT, TYPES, ARENAS, arena, starsFor, canSpawn, createRun };
+  return { RUN_SECONDS, SWING_COOLDOWN, SCARE_TILES, COMBO_WINDOW, COMBO_MULT, RARE_AT, TYPES, ARENAS, arena, starsFor, canSpawn, createRun, cleanSave };
 });

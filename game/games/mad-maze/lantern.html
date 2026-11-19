@@ -80,11 +80,24 @@
       <button id="backup" type="button" class="btn">Back up my progress</button>
       <label class="btn file" for="restore">Restore<input id="restore" type="file" accept=".json,application/json"></label>
     </div>
+    <div id="restore-confirm" class="confirm" role="alertdialog" aria-labelledby="restore-title" hidden>
+      <h3 id="restore-title">Replace these saves?</h3>
+      <p class="muted">Restoring will overwrite what is on this device for:</p>
+      <ul id="restore-list" class="list"></ul>
+      <div class="row">
+        <button id="restore-yes" type="button" class="btn primary">Confirm</button>
+        <button id="restore-no" type="button" class="btn">Cancel</button>
+      </div>
+    </div>
   </section>
 </main>
 <script src="../../shared/mm-classes.js"></script>
 <script src="../../shared/mm-items.js"></script>
 <script src="../../shared/mm-profile.js"></script>
+<script src="../../shared/mm-map.js"></script>
+<script src="../../shared/mm-angler.js"></script>
+<script src="../../shared/mm-bugs.js"></script>
+<script src="../../shared/profile.js"></script>
 <script src="../../shared/mm-backup.js"></script>
 <script src="lantern.js"></script>
 </body>

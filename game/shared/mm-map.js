@@ -35,7 +35,7 @@
     N('w1-bonus', 'level', 31, 18, 'Hidden Garden'),
     N('w1-castle', 'castle', 36, 20, "Mayor's Statue"),
     // W2 Mad Maze Wilds
-    N('w2-lantern', 'game', 6, 18, 'The Lantern', { game: 'games/madmaze/?from=hub&node=w2-lantern' }),
+    N('w2-lantern', 'game', 6, 18, 'The Lantern', { game: 'games/mad-maze/lantern.html?from=hub&node=w2-lantern' }),
     N('w2-burrow', 'level', 6, 13, 'Burrow Warren', { secret: true }),
     N('w2-sunken', 'level', 10, 20, 'Sunken Lantern', { secret: true }),
     N('w2-catacombs', 'level', 4, 8, 'Bonefire Catacombs'),
@@ -48,14 +48,14 @@
     N('w3-lava', 'level', 26, 6, 'Lava Lake', { secret: true }),
     N('w3-crystal', 'castle', 32, 10, 'Crystal Core'),
     // W4 Lakeside
-    N('w4-angler', 'game', 6, 6, 'Lakeside Angler', { game: 'games/angler/?from=hub' }),
+    N('w4-angler', 'game', 6, 6, 'Lakeside Angler', { game: 'games/angler/index.html?from=hub' }),
     N('w4-west', 'level', 12, 10, 'West Pond'),
     N('w4-east', 'level', 18, 12, 'East Pond'),
     N('w4-river', 'level', 24, 8, 'River Run', { secret: true }),
     N('w4-pier', 'level', 30, 14, 'Sea Pier'),
     N('w4-whiskers', 'castle', 35, 18, 'Old Whiskers'),
     // W5 Festival Fields
-    N('w5-safari', 'game', 6, 10, 'Bug Safari', { game: 'games/safari/?from=hub', secret: true }),
+    N('w5-safari', 'game', 6, 10, 'Bug Safari', { game: 'games/festival/bugs.html?from=hub', secret: true }),
     N('w5-jam', 'game', 14, 6, 'Campfire Jam', { game: 'games/jam/?from=hub' }),
     N('w5-stalk', 'game', 22, 10, 'Stalk Market', { game: 'games/stalk/?from=hub' }),
     N('w5-finale', 'castle', 30, 14, 'Festival Finale'),
@@ -119,9 +119,10 @@
   const uniq = (a) => a.filter((s, i) => a.indexOf(s) === i);
   function sanitizeState(raw) {
     const r = isObj(raw) ? raw : {};
-    const nodesOut = {};
+    const nodesOut = Object.create(null);
     if (isObj(r.nodes)) {
       Object.keys(r.nodes).slice(0, 200).forEach((id) => {
+        if (id === '__proto__' || id.length > 80) return;
         const n = isObj(r.nodes[id]) ? r.nodes[id] : {};
         const medals = {};
         MEDALS.forEach((m) => { medals[m] = !!(isObj(n.medals) && n.medals[m] === true); });
@@ -137,6 +138,19 @@
     };
   }
   function clone(s) { return JSON.parse(JSON.stringify(s)); }
+
+  // Own-property node lookup: ids from saved/URL strings never reach Object.prototype.
+  const NODE_BY_ID = Object.create(null);
+  nodes.forEach((n) => { NODE_BY_ID[n.id] = n; });
+  function hasNode(id) { return typeof id === 'string' && Object.prototype.hasOwnProperty.call(NODE_BY_ID, id); }
+
+  // The shape the hub stores under `pixeltown-hub-v1`; an unknown `at` falls back to the start node.
+  function cleanHub(raw) {
+    if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch (e) { raw = null; } }
+    const s = sanitizeState(raw);
+    const at = isObj(raw) && hasNode(raw.at) ? raw.at : MAP.start;
+    return { v: 1, at, nodes: JSON.parse(JSON.stringify(s.nodes)), seenPaths: s.seenPaths, keys: s.keys, keysUsed: s.keysUsed, comets: s.comets };
+  }
 
   // ---------- queries ----------
   function medalCount(state) {
@@ -166,13 +180,14 @@
     const ids = new Set(map.nodes.map((n) => n.id));
     if (!ids.has(from) || !ids.has(to)) return null;
     const open = unlocked == null ? null : new Set(unlocked);
-    const adj = {};
+    const adj = Object.create(null);
     map.paths.forEach((p) => {
       if (open && !open.has(p.id)) return;
       (adj[p.from] = adj[p.from] || []).push(p.to);
       (adj[p.to] = adj[p.to] || []).push(p.from);
     });
-    const prev = { [from]: null };
+    const prev = Object.create(null);
+    prev[from] = null;
     const q = [from];
     for (let i = 0; i < q.length; i++) {
       const cur = q[i];
@@ -266,5 +281,5 @@
     return { ok: errors.length === 0, errors };
   }
 
-  return { MAP, MEDALS, validate, bfs, unlock, useKey, pending, openPathIds, medalCount, medalGate, completion, totals, sanitizeState };
+  return { MAP, MEDALS, validate, bfs, unlock, useKey, pending, openPathIds, medalCount, medalGate, completion, totals, sanitizeState, cleanHub, hasNode };
 }));

@@ -22,21 +22,7 @@
   var SP_NAME = { ladybug: 'Ladybug', butterfly: 'Butterfly', beetle: 'Beetle', cricket: 'Cricket', antlion: 'Antlion', goldbeetle: 'Gold Beetle', moonwing: 'Moonwing' };
 
   // ---------- save ----------
-  function clampInt(v, lo, hi) { v = Math.floor(Number(v)); if (!isFinite(v)) return lo; return Math.max(lo, Math.min(hi, v)); }
-  function sanitize(raw) {
-    var out = { stars: {}, best: {}, journal: {} };
-    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) raw = {};
-    B.ARENAS.forEach(function (a) {
-      var s = raw.stars && typeof raw.stars === 'object' ? raw.stars[a.id] : 0;
-      var b = raw.best && typeof raw.best === 'object' ? raw.best[a.id] : 0;
-      out.stars[a.id] = clampInt(s, 0, 3);
-      out.best[a.id] = clampInt(b, 0, 99999);
-    });
-    SPECIES.forEach(function (sp) {
-      out.journal[sp] = clampInt(raw.journal && typeof raw.journal === 'object' ? raw.journal[sp] : 0, 0, 999999);
-    });
-    return out;
-  }
+  function sanitize(raw) { return B.cleanSave(raw); }
   var save = sanitize(S.get(KEY, null));
   function persist() { S.set(KEY, { v: 1, stars: save.stars, best: save.best, journal: save.journal }); }
   persist();

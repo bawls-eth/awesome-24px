@@ -35,8 +35,8 @@
     return out;
   }
   function cleanNodes(v) {
-    const out = {};
-    if (isObj(v)) Object.keys(v).slice(0, 200).forEach((id) => { if (id.length <= 80) out[id] = cleanNode(v[id]); });
+    const out = Object.create(null);
+    if (isObj(v)) Object.keys(v).slice(0, 200).forEach((id) => { if (id.length <= 80 && id !== '__proto__') out[id] = cleanNode(v[id]); });
     return out;
   }
   function cleanResult(r) {

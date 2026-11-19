@@ -1,6 +1,6 @@
 // The Lantern: Mad Maze hub page. Pure DOM + textContent (never innerHTML with user data).
 // State lives only in localStorage `pixeltown-mm-v1`, always written through MMProfile.clean.
-// `pixeltown-save-v1` is only READ (legacy import) or written by an explicit Restore.
+// `pixeltown-save-v1` is only READ (legacy import) or written by a confirmed Restore.
 (function () {
   'use strict';
   var P = window.MMProfile, B = window.MMBackup, C = window.MMClasses, I = window.MMItems;
@@ -116,7 +116,7 @@
     if (!r.ok) { say(REASONS[r.reason] || 'That cannot happen.', true); return r; }
     profile = r.profile; save();
     if (selected === heroId) selected = null;
-    say('Fallen. ' + r.fame + ' fame banked' + (r.keepsake ? ', and a Keepsake waits in the stash.' : '.'));
+    say('Fallen. ' + r.fame + ' fame banked' + (r.keepsake ? ', and a Keepsake waits in the stash.' : r.keepsakeLost ? '. The stash is full, so the Keepsake could not be stored. Free a slot before the next Fall.' : '.'));
     render(); return r;
   }
   function doRekindle(heroId) {
@@ -135,11 +135,13 @@
     var real = legacyRealm();
     if (!real) { say('No old Realm hero was found.', true); return; }
     profile = P.importLegacy(real, profile); save();
-    var h = heroById('legacy-ranger'); if (h) selected = h.id;
-    say('Your Legacy Ranger is here. The old save was left untouched.'); render();
+    var h = heroById('legacy-ranger');
+    if (h) { selected = h.id; say('Your Legacy Ranger is here. The old save was left untouched.'); }
+    else say('Your roster is full (12 heroes), so the Legacy Ranger was not added. Retire or free a slot and try again.', true);
+    render();
   }
   function downloadBackup() {
-    save();
+    // Raw stored values, read before anything is cleaned or saved, so a corrupt key is backed up as it was.
     var data = JSON.stringify(B.bundle(localStorage), null, 1);
     try {
       var url = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
@@ -150,18 +152,51 @@
       say('Backup file saved. Keep it somewhere safe.');
     } catch (e) { say('Could not make the backup file.', true); }
   }
+
+  // Restore is two steps: validate the file and show what would change, then write only on Confirm.
+  var pending = null;
+  function hideConfirm() {
+    pending = null;
+    var p = $('restore-confirm'); p.hidden = true;
+    $('restore-list').textContent = '';
+  }
+  function showConfirm(plan) {
+    pending = plan;
+    var list = $('restore-list'); list.textContent = '';
+    plan.keys.forEach(function (k) {
+      var li = el('li', '', B.labelOf(k));
+      li.appendChild(el('span', 'muted', ' (' + k + ')'));
+      list.appendChild(li);
+    });
+    $('restore-confirm').hidden = false;
+    say('Check the list below, then Confirm or Cancel. Nothing has changed yet.');
+    $('restore-no').focus();
+  }
+  function confirmRestore() {
+    var plan = pending;
+    hideConfirm();
+    if (!plan) return;
+    var r;
+    try { r = B.apply(localStorage, plan); } catch (e) { r = { ok: false, message: 'Restore failed, nothing was changed.' }; }
+    if (r && r.ok) {
+      profile = load(); selected = null; render();
+      say('Restored ' + r.restored.length + ' saved item' + (r.restored.length === 1 ? '' : 's') + '.');
+    } else {
+      profile = load(); render();
+      say((r && r.message) || 'Restore failed, nothing was changed.', true);
+    }
+  }
   function restoreFile(file) {
+    hideConfirm();
     if (!file) return;
     if (file.size > 3000000) { say('That file is too big to be a backup.', true); return; }
     var fr = new FileReader();
     fr.onerror = function () { say('Could not read that file.', true); };
     fr.onload = function () {
-      var r;
-      try { r = B.restore(localStorage, String(fr.result)); } catch (e) { r = { ok: false }; }
-      if (r && r.ok) {
-        profile = load(); selected = null; render();
-        say('Restored ' + r.restored.length + ' saved item' + (r.restored.length === 1 ? '' : 's') + '.');
-      } else say('That file does not look like a Mad Maze backup.', true);
+      var plan;
+      try { plan = B.plan(String(fr.result)); } catch (e) { plan = { ok: false }; }
+      if (plan && plan.ok) showConfirm(plan);
+      else say((plan && plan.message) || 'That file does not look like a Mad Maze backup.', true);
     };
     try { fr.readAsText(file); } catch (e) { say('Could not read that file.', true); }
   }
@@ -298,6 +333,8 @@
   });
   $('rest').addEventListener('click', rest);
   $('backup').addEventListener('click', downloadBackup);
+  $('restore-yes').addEventListener('click', confirmRestore);
+  $('restore-no').addEventListener('click', function () { hideConfirm(); say('Restore cancelled. Nothing was changed.'); });
   $('restore').addEventListener('change', function (e) { restoreFile(e.target.files && e.target.files[0]); e.target.value = ''; });
   $('start').addEventListener('click', function (e) { if ($('start').getAttribute('aria-disabled') === 'true') { e.preventDefault(); say('Make or pick a hero first.', true); } });
 
