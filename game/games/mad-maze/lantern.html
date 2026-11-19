@@ -15,7 +15,7 @@
     <p class="sub">A safe, cozy place. No timers, nothing to buy, nothing to lose here.</p>
     <p id="fame" class="fame"></p>
   </header>
-  <p id="status" role="status" aria-live="polite"></p>
+  <p id="status" role="status" aria-live="polite" aria-atomic="true"></p>
 
   <section id="import-offer" class="card" hidden>
     <h2>Welcome back</h2>
@@ -25,9 +25,9 @@
 
   <section class="card" id="heroes-card">
     <h2>Heroes</h2>
-    <ul id="heroes" class="list"></ul>
+    <ul id="heroes" class="list" aria-label="Your heroes"></ul>
     <p id="heroes-empty" class="muted" hidden>No heroes yet. Make your first one below.</p>
-    <a id="start" class="btn primary big" href="./index.html">Start Mad Maze</a>
+    <a id="start" class="btn primary big" href="./index.html" aria-label="Start run with the selected hero">Start run</a>
   </section>
 
   <section class="card" id="new-card">
@@ -50,14 +50,14 @@
   <section class="card" id="fountain-card">
     <h2>Fountain</h2>
     <p class="muted">Rest here for a full heal. It is free and instant, any time.</p>
-    <button id="rest" type="button" class="btn">Rest at the fountain</button>
+    <button id="rest" type="button" class="btn" aria-label="Rest at the fountain for a full heal">Rest at the fountain</button>
   </section>
 
   <section class="card" id="stash-card">
     <h2>Stash <span id="stash-count" class="muted"></span></h2>
     <p class="muted">Tap a carried item to put it in the stash. Tap a stash slot to give it to the selected hero.</p>
     <p id="carry-title" class="label"></p>
-    <ul id="carry" class="items"></ul>
+    <ul id="carry" class="items" aria-label="Carried items"></ul>
     <div id="stash" class="grid" role="list"></div>
   </section>
 
@@ -67,20 +67,26 @@
     <p id="hall-empty" class="muted">No headstones yet.</p>
   </section>
 
-  <section class="card" id="how-card">
-    <h2>How the Fall works</h2>
-    <p>The Fall is the only loss in Mad Maze, and only in Classic mode. If a hero Falls, that hero is gone. You keep your account fame, your stash, and one Keepsake. You can then Rekindle a new hero of the same class at half the level, up to level 10. Picnic heroes never Fall.</p>
-    <p>Rekindle makes a fresh hero of the same class and name. Retire is for heroes at level 20: they step into the Hall with their full fame, no Fall needed.</p>
+  <section class="card" id="how-card" aria-labelledby="how-title">
+    <h2 id="how-title">What is a Fall?</h2>
+    <p>A Fall is what happens when a hero runs out of HP in the arena. It is the only loss in Mad Maze, and it only happens in Classic mode.</p>
+    <ul class="plain">
+      <li><strong>The hero is lost.</strong> That hero steps into the Hall of Heroes.</li>
+      <li><strong>Your fame is banked.</strong> The fame the hero earned is added to your account for good.</li>
+      <li><strong>A Keepsake goes to your stash.</strong> One memento to remember them by.</li>
+      <li><strong>Picnic mode never falls.</strong> At 0 HP a Picnic hero just comes back here with everything.</li>
+    </ul>
+    <p>After a Fall you can Rekindle a new hero of the same class at half the level, up to level 10. Heroes at level 20 can instead Retire to the Hall with their full fame, no Fall needed.</p>
   </section>
 
   <section class="card" id="backup-card">
     <h2>Back up my progress</h2>
     <p class="muted">Saves everything to a file you keep. Restore accepts a backup file or an old single save file.</p>
     <div class="row">
-      <button id="backup" type="button" class="btn">Back up my progress</button>
-      <label class="btn file" for="restore">Restore<input id="restore" type="file" accept=".json,application/json"></label>
+      <button id="backup" type="button" class="btn" aria-label="Back up my progress to a file">Back up my progress</button>
+      <label class="btn file" for="restore">Restore<input id="restore" type="file" accept=".json,application/json" aria-label="Restore from a backup file"></label>
     </div>
-    <div id="restore-confirm" class="confirm" role="alertdialog" aria-labelledby="restore-title" hidden>
+    <div id="restore-confirm" class="confirm" role="alertdialog" aria-modal="true" aria-labelledby="restore-title" hidden>
       <h3 id="restore-title">Replace these saves?</h3>
       <p class="muted">Restoring will overwrite what is on this device for:</p>
       <ul id="restore-list" class="list"></ul>

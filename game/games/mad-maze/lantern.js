@@ -18,6 +18,20 @@
   var selected = null;
   var offerHidden = false;
   var confirmRetire = null;
+  var confirmFall = null;
+  var TEST = /[?&]test=1\b/.test(location.search);
+  var ACTIVE_KEY = P.ACTIVE_KEY;
+  var ABILITY_TEXT = {
+    yarnSnare: 'Throws yarn that roots enemies in place and makes them take extra damage.',
+    shards: 'Fires a fan of ice shards that hurt and slow everything they hit.',
+    heal: 'A warm aura that heals nearby friends and toughens their guard.',
+    moshShield: 'Raises a shield in front of you that blocks shots and stuns close enemies.',
+    groundPound: 'Slams the ground to hurt and push back enemies around you.',
+    siphon: 'Drains life from enemies and heals you with it.',
+    blink: 'Blinks a few steps away and leaves a decoy behind.',
+    smoke: 'Vanishes for a moment, then your next volley hits harder.'
+  };
+  var STAT_NAMES = [['pow', 'POW'], ['grd', 'GRD'], ['swf', 'SWF'], ['knk', 'KNK'], ['vig', 'VIG'], ['wit', 'WIT']];
 
   function $(id) { return document.getElementById(id); }
   function el(tag, cls, text) {
@@ -37,6 +51,18 @@
     profile = P.clean(profile);
     try { localStorage.setItem(KEY, JSON.stringify(profile)); } catch (e) { say('Could not save here (storage is blocked).', true); }
   }
+  function loadActive() {
+    var raw = null;
+    try { raw = localStorage.getItem(ACTIVE_KEY); } catch (e) { raw = null; }
+    var a = P.cleanActive(raw);
+    if (raw !== null && JSON.stringify(a) !== raw) { try { localStorage.setItem(ACTIVE_KEY, JSON.stringify(a)); } catch (e) { /* ignore */ } }
+    return a;
+  }
+  function saveActive(heroId) {
+    var a = P.cleanActive({ v: 1, heroId: heroId });
+    try { localStorage.setItem(ACTIVE_KEY, JSON.stringify(a)); } catch (e) { say('Could not remember your hero (storage is blocked).', true); }
+    return a;
+  }
   function say(msg, err) {
     var s = $('status');
     s.textContent = msg || '';
@@ -54,12 +80,29 @@
     return isObj(o) && isObj(o.realm) ? o.realm : null;
   }
   function clsName(id) { var c = C.CLASSES[id]; return c ? c.name : id; }
-  function itemLabel(it) {
-    if (it.keepsake) return 'Keepsake' + (it.from ? ' of ' + it.from : '');
+  function itemInfo(it) {
+    if (it.keepsake) return { name: 'Keepsake' + (it.from ? ' of ' + String(it.from).replace(/[\u0000-\u001f]/g, '') : ''), icon: I.KIND_ICONS.keepsake, tier: null, color: '#ffd36b' };
     var m = null;
     try { m = I.fromLegacy(it.id, it.r); } catch (e) { m = null; }
-    var name = m && (m.name || m.id) ? (m.name || m.id) : it.id;
-    return name + ' T' + it.r;
+    var d = I.describe(it.id, m ? m.tier : it.r);
+    return { name: d.name, icon: d.icon, tier: d.tier, color: d.color };
+  }
+  function itemLabel(it) {
+    var d = itemInfo(it);
+    return d.name + (d.tier === null ? '' : ' tier ' + d.tier);
+  }
+  // Icon + friendly name + coloured tier badge, built with textContent only.
+  function fillItem(node, it) {
+    var d = itemInfo(it);
+    node.textContent = '';
+    node.appendChild(el('span', 'ico', d.icon)).setAttribute('aria-hidden', 'true');
+    node.appendChild(el('span', 'iname', d.name));
+    if (d.tier !== null) {
+      var b = el('span', 'tier t' + d.tier, 'T' + d.tier);
+      b.style.background = d.color;
+      node.appendChild(b);
+    }
+    node.setAttribute('aria-label', itemLabel(it));
   }
   function heroById(id) {
     for (var i = 0; i < profile.heroes.length; i++) if (profile.heroes[i].id === id) return profile.heroes[i];
@@ -154,12 +197,28 @@
   }
 
   // Restore is two steps: validate the file and show what would change, then write only on Confirm.
-  var pending = null;
+  var pending = null, lastFocus = null;
   function hideConfirm() {
+    var wasOpen = !$('restore-confirm').hidden;
     pending = null;
     var p = $('restore-confirm'); p.hidden = true;
     $('restore-list').textContent = '';
+    if (wasOpen && lastFocus && lastFocus.focus) { try { lastFocus.focus(); } catch (e) { /* ignore */ } }
   }
+  // Keep Tab / focus inside the restore panel until it is closed; Escape cancels.
+  document.addEventListener('keydown', function (e) {
+    var p = $('restore-confirm'); if (p.hidden) return;
+    if (e.key === 'Escape') { e.preventDefault(); hideConfirm(); say('Restore cancelled. Nothing was changed.'); return; }
+    if (e.key !== 'Tab') return;
+    var f = [$('restore-yes'), $('restore-no')], i = f.indexOf(document.activeElement);
+    e.preventDefault();
+    if (i < 0) f[0].focus();
+    else f[(i + (e.shiftKey ? f.length - 1 : 1)) % f.length].focus();
+  });
+  document.addEventListener('focusin', function (e) {
+    var p = $('restore-confirm');
+    if (!p.hidden && !p.contains(e.target)) $('restore-no').focus();
+  });
   function showConfirm(plan) {
     pending = plan;
     var list = $('restore-list'); list.textContent = '';
@@ -170,6 +229,7 @@
     });
     $('restore-confirm').hidden = false;
     say('Check the list below, then Confirm or Cancel. Nothing has changed yet.');
+    lastFocus = document.activeElement && document.activeElement !== document.body ? document.activeElement : $('restore');
     $('restore-no').focus();
   }
   function confirmRestore() {
@@ -202,7 +262,50 @@
   }
 
   // ---------- render ----------
+  function focusKey() {
+    var a = document.activeElement; if (!a || a === document.body) return null;
+    var li = a.closest && a.closest('#heroes li[data-hero]');
+    if (li) return { t: 'hero', id: li.getAttribute('data-hero'), c: (String(a.className).match(/\b(pick|rekindle|retire|testfall|keep)\b/) || [])[1] || 'pick' };
+    if (a.classList.contains('slot')) return { t: 'slot', i: a.getAttribute('data-slot') };
+    if (a.classList.contains('item')) return { t: 'item', i: a.getAttribute('data-idx') };
+    return null;
+  }
+  function restoreFocus(k) {
+    if (!k) return;
+    var q = k.t === 'hero' ? '#heroes li[data-hero="' + k.id + '"] .' + k.c : k.t === 'slot' ? '#stash .slot[data-slot="' + k.i + '"]' : '#carry .item[data-idx="' + k.i + '"]';
+    var n = null; try { n = document.querySelector(q); } catch (e) { n = null; }
+    if ((!n || n.disabled) && k.t === 'hero') n = document.querySelector('#heroes li[data-hero="' + k.id + '"] .pick');
+    if (n && !n.disabled) n.focus();
+  }
+  function heroDetails(li, h) {
+    var c = C.CLASSES[h.cls]; if (!c) return;
+    var need = I.xpToNext(h.level), maxed = h.level >= P.MAX_LEVEL;
+    var pct = maxed ? 100 : Math.max(0, Math.min(100, Math.floor(h.xp / need * 100)));
+    var wrap = el('div', 'xp');
+    var bar = el('div', 'bar'); bar.setAttribute('role', 'progressbar');
+    bar.setAttribute('aria-label', h.name + ' level ' + h.level + ' experience');
+    bar.setAttribute('aria-valuemin', '0'); bar.setAttribute('aria-valuemax', '100'); bar.setAttribute('aria-valuenow', String(pct));
+    var fill = el('div', 'fill'); fill.style.width = pct + '%'; bar.appendChild(fill);
+    wrap.appendChild(bar);
+    wrap.appendChild(el('span', 'xptext', maxed ? 'Level ' + h.level + ' (max)' : 'Level ' + h.level + ': ' + h.xp + ' / ' + need + ' xp'));
+    li.appendChild(wrap);
+    var stats = el('ul', 'stats'); stats.setAttribute('aria-label', h.name + ' stats');
+    var life = Math.min(c.cap.life, c.base.life + c.gain.life * (h.level - 1));
+    var foc = C.maxFocus(h.cls, h.level, 0);
+    [['LIFE', life], ['FOC', foc]].concat(STAT_NAMES.map(function (s) { return [s[1], c.base[s[0]]]; })).forEach(function (p) {
+      var s = el('li', 'stat'); s.appendChild(el('span', 'k', p[0])); s.appendChild(el('span', 'v', p[1])); stats.appendChild(s);
+    });
+    li.appendChild(stats);
+    var ab = el('ul', 'abilities'); ab.setAttribute('aria-label', h.name + ' abilities');
+    var a = c.ability, x = el('li', 'ability');
+    x.appendChild(el('strong', '', a.name));
+    x.appendChild(el('span', 'tag', a.cost + ' FOC'));
+    x.appendChild(el('span', 'abtext', ABILITY_TEXT[a.id] || 'A special class move.'));
+    ab.appendChild(x);
+    li.appendChild(ab);
+  }
   function render() {
+    var fk = focusKey();
     if (selected && !heroById(selected)) selected = null;
     if (!selected && profile.heroes.length) selected = profile.heroes[0].id;
     $('fame').textContent = 'Account fame: ' + profile.fame;
@@ -215,14 +318,17 @@
       var meta = el('div', 'meta', clsName(h.cls) + ' - Level ' + h.level + ' - fame ' + h.fame);
       meta.appendChild(el('span', 'tag mode', h.mode === 'picnic' ? 'Picnic' : h.mode === 'hardcore' ? 'Hardcore' : 'Classic'));
       li.appendChild(meta);
+      heroDetails(li, h);
       var row = el('div', 'row');
       var pick = el('button', 'btn pick', h.id === selected ? 'Selected' : 'Select'); pick.type = 'button';
-      pick.addEventListener('click', function () { selected = h.id; confirmRetire = null; render(); });
+      pick.addEventListener('click', function () { selected = h.id; confirmRetire = null; confirmFall = null; render(); });
       row.appendChild(pick);
       var rk = el('button', 'btn rekindle', 'Rekindle'); rk.type = 'button';
       var rkWhy = h.mode === 'hardcore' ? REASONS['hardcore-no-rekindle'] : profile.heroes.length >= 12 ? REASONS['roster-full'] : '';
       if (rkWhy) { rk.disabled = true; rk.title = rkWhy; }
       rk.addEventListener('click', function () { doRekindle(h.id); });
+      pick.setAttribute('aria-label', (h.id === selected ? 'Selected hero ' : 'Select hero ') + h.name);
+      rk.setAttribute('aria-label', 'Rekindle ' + h.name + ' at half level');
       var rt = el('button', 'btn retire', confirmRetire === h.id ? 'Tap again to retire' : 'Retire'); rt.type = 'button';
       var rtWhy = h.level < P.MAX_LEVEL ? 'Reach level 20 to retire (now ' + h.level + ')' : '';
       if (rtWhy) { rt.disabled = true; rt.title = rtWhy; }
@@ -230,7 +336,24 @@
         if (confirmRetire !== h.id) { confirmRetire = h.id; say('Retire ' + h.name + ' with honour? Tap Retire again to confirm.'); render(); return; }
         confirmRetire = null; doRetire(h.id);
       });
+      rt.setAttribute('aria-label', (confirmRetire === h.id ? 'Confirm: retire ' : 'Retire ') + h.name + ' to the Hall');
+      rt.textContent = confirmRetire === h.id ? 'Tap again to retire' : 'Retire to the Hall';
       row.appendChild(rk); row.appendChild(rt);
+      if (confirmRetire === h.id) {
+        var cn = el('button', 'btn keep', 'Keep playing'); cn.type = 'button'; cn.setAttribute('aria-label', 'Cancel retire for ' + h.name);
+        cn.addEventListener('click', function () { confirmRetire = null; say('Retire cancelled. ' + h.name + ' is still here.'); render(); });
+        row.appendChild(cn);
+      }
+      if (TEST) {
+        var tf = el('button', 'btn testfall', confirmFall === h.id ? 'Tap again: Fall now' : 'Test a Fall'); tf.type = 'button';
+        tf.setAttribute('aria-label', 'Test a Fall for ' + h.name + ' (testing only)');
+        if (h.mode === 'picnic') { tf.disabled = true; tf.title = REASONS['picnic-no-fall']; }
+        tf.addEventListener('click', function () {
+          if (confirmFall !== h.id) { confirmFall = h.id; say('Test a Fall for ' + h.name + '? Tap again to confirm. This removes the hero.'); render(); return; }
+          confirmFall = null; doFall(h.id);
+        });
+        row.appendChild(tf);
+      }
       li.appendChild(row);
       if (rkWhy) li.appendChild(el('span', 'reason', rkWhy));
       if (rtWhy) li.appendChild(el('span', 'reason', rtWhy));
@@ -257,15 +380,15 @@
     var carry = $('carry'); carry.textContent = '';
     $('carry-title').textContent = sh ? sh.name + ' carries ' + sh.items.length + ' / ' + CARRY_MAX : 'Select a hero to see what they carry';
     if (sh) sh.items.forEach(function (it, i) {
-      var li = el('li'); var b = el('button', 'item', itemLabel(it)); b.type = 'button';
+      var li = el('li'); var b = el('button', 'item'); fillItem(b, it); b.type = 'button'; b.setAttribute('data-idx', i);
       b.addEventListener('click', function () { toStash(sh.id, i); });
       li.appendChild(b); carry.appendChild(li);
     });
     var grid = $('stash'); grid.textContent = '';
     profile.stash.forEach(function (it, i) {
-      var b = el('button', 'slot' + (it ? ' full' : ''), it ? itemLabel(it) : ''); b.type = 'button';
+      var b = el('button', 'slot' + (it ? ' full' : '')); if (it) fillItem(b, it); b.type = 'button';
       b.setAttribute('role', 'listitem'); b.setAttribute('data-slot', i);
-      b.setAttribute('aria-label', it ? 'Stash slot ' + (i + 1) + ': ' + itemLabel(it) : 'Stash slot ' + (i + 1) + ' empty');
+      b.setAttribute('aria-label', it ? 'Stash slot ' + (i + 1) + ': ' + itemLabel(it) + '. Give to selected hero' : 'Stash slot ' + (i + 1) + ' empty');
       if (it) b.addEventListener('click', function () { toHero(selected, i); });
       grid.appendChild(b);
     });
@@ -278,6 +401,7 @@
       hall.appendChild(li);
     });
     $('hall-empty').hidden = profile.hall.length > 0;
+    restoreFocus(fk);
   }
   function updateClassNote() {
     var id = $('new-class').value, c = C.CLASSES[id];
@@ -336,11 +460,15 @@
   $('restore-yes').addEventListener('click', confirmRestore);
   $('restore-no').addEventListener('click', function () { hideConfirm(); say('Restore cancelled. Nothing was changed.'); });
   $('restore').addEventListener('change', function (e) { restoreFile(e.target.files && e.target.files[0]); e.target.value = ''; });
-  $('start').addEventListener('click', function (e) { if ($('start').getAttribute('aria-disabled') === 'true') { e.preventDefault(); say('Make or pick a hero first.', true); } });
+  $('start').addEventListener('click', function (e) {
+    if ($('start').getAttribute('aria-disabled') === 'true') { e.preventDefault(); say('Make or pick a hero first.', true); return; }
+    saveActive(selected);
+  });
 
-  if (/[?&]test=1\b/.test(location.search)) {
-    window.__lantern = { fall: doFall, get: function () { return JSON.parse(JSON.stringify(profile)); }, reload: function () { profile = load(); render(); } };
+  if (TEST) {
+    window.__lantern = { active: loadActive, fall: doFall, get: function () { return JSON.parse(JSON.stringify(profile)); }, reload: function () { profile = load(); render(); } };
   }
+  selected = loadActive().heroId;
   render();
   startScene();
 }());

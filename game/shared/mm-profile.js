@@ -7,6 +7,7 @@
 }(typeof self !== 'undefined' ? self : this, function () {
   const KEY = 'pixeltown-mm-v1';
   const LEGACY_KEY = 'pixeltown-save-v1';
+  const ACTIVE_KEY = 'pixeltown-mm-active-v1';
   const STASH_SLOTS = 16;
   const MAX_HEROES = 12;
   const MAX_HALL = 200;
@@ -196,8 +197,16 @@
     return { ok: true, profile: p, fame: fame };
   }
 
+  // Active-hero pointer for the arena: {v:1, heroId}. Accepts a raw string or object; corrupt input -> {v:1, heroId:null}.
+  function cleanActive(raw) {
+    let o = raw;
+    if (typeof raw === 'string') { try { o = JSON.parse(raw); } catch (e) { o = null; } }
+    const id = isObj(o) && typeof o.heroId === 'string' && o.heroId.length && o.heroId.length <= 40 && o.heroId !== '__proto__' ? o.heroId : null;
+    return { v: 1, heroId: id };
+  }
+
   return {
-    KEY: KEY, LEGACY_KEY: LEGACY_KEY, STASH_SLOTS: STASH_SLOTS, MAX_LEVEL: MAX_LEVEL,
+    KEY: KEY, LEGACY_KEY: LEGACY_KEY, ACTIVE_KEY: ACTIVE_KEY, cleanActive: cleanActive, STASH_SLOTS: STASH_SLOTS, MAX_LEVEL: MAX_LEVEL,
     empty: empty, clean: clean, importLegacy: importLegacy, setMode: setMode,
     fall: fall, rekindle: rekindle, retire: retire
   };

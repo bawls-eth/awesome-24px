@@ -170,7 +170,37 @@
     return { ok: true, reason: '', gain, value: cur + gain };
   }
 
+  // ---- Friendly names, icons and tier labels (display only; safe for any id string) ----
+  const BASE_NAMES = {
+    sparkwand: 'Spark Wand', quickwand: 'Quick Wand', heartcharm: 'Heart Charm', swiftcharm: 'Swift Charm',
+    luckring: 'Luck Ring', scholarring: 'Scholar Ring', wardring: 'Ward Ring',
+    slingbow: 'Slingbow', frostwand: 'Frost Wand', squeakstaff: 'Squeak Staff', riffblade: 'Riff Blade',
+    knuckle: 'Knuckle Duster', bonewand: 'Bone Wand', raypistol: 'Ray Pistol', shuriken: 'Shuriken',
+  };
+  const BASE_ICONS = { sparkwand: '\u2728', quickwand: '\u26A1', heartcharm: '\u2764\uFE0F', swiftcharm: '\uD83D\uDCA8', luckring: '\uD83C\uDF40', scholarring: '\uD83D\uDCD6', wardring: '\uD83D\uDEE1\uFE0F' };
+  const KIND_ICONS = { weapon: '\u2694\uFE0F', armor: '\uD83D\uDEE1\uFE0F', ability: '\uD83C\uDF1F', charm: '\uD83D\uDC8E', potion: '\uD83E\uDDEA', relic: '\uD83C\uDFFA', egg: '\uD83E\uDD5A', keepsake: '\uD83D\uDD6F\uFE0F' };
+  const TIER_COLORS = ['#b9b0cc', '#8fdc9a', '#6fc3ff', '#c39bff', '#ffb36b', '#ff8fa8', '#ffd36b', '#fff3c4', '#ffffff'];
+  const title = (w) => w.charAt(0).toUpperCase() + w.slice(1);
+  function words(s) { return String(s).replace(/[^A-Za-z0-9]+/g, ' ').trim().split(' ').filter(Boolean).map(title).join(' '); }
+  // Any stored item {id, r} -> {name, icon, kind, tier, tierLabel, color}. Never returns a raw underscore id.
+  function describe(id, rarity) {
+    id = typeof id === 'string' ? id.slice(0, 40) : '';
+    let tier = Math.max(0, Math.min(8, Math.floor(Number(rarity)) || 0));
+    let base = id, kind = null;
+    const m = /^(.*)_t([0-8])$/.exec(id);
+    if (m) { base = m[1]; tier = Number(m[2]); }
+    const own = Object.prototype.hasOwnProperty;
+    let name;
+    if (own.call(BASE_NAMES, base)) name = BASE_NAMES[base];
+    else if (/^armor_/.test(base)) { kind = 'armor'; name = words(base.slice(6)) + ' Armor'; }
+    else if (/^ability_/.test(base)) { kind = 'ability'; const k = base.slice(8); name = (own.call(CLASS_DEFS, k) ? CLASS_DEFS[k].ability : words(k)) + ' Gem'; }
+    else name = words(base) || 'Mystery Item';
+    if (!kind) kind = own.call(BASE_ICONS, base) ? (/ring|charm/.test(base) ? 'charm' : 'weapon') : /wand|staff|bow|blade|knuckle|pistol|shuriken/.test(base) ? 'weapon' : 'charm';
+    const icon = own.call(BASE_ICONS, base) ? BASE_ICONS[base] : KIND_ICONS[kind];
+    return { name, icon, kind, tier, tierLabel: 'T' + tier, color: TIER_COLORS[tier] };
+  }
+
   return { MAX_TIER, KLASSES, CLASS_DEFS, BAG_ORDER, COMMON_DROPS, CLASS_CAPS, POTION_GAIN,
     damageRange, makeWeapon, makeArmor, makeAbility, makeCharm, fromLegacy, canEquip,
-    bagColor, bestBagColor, dropBag, xpToNext, totalXpToLevel, capFor, canDrink };
+    bagColor, bestBagColor, dropBag, describe, TIER_COLORS, KIND_ICONS, xpToNext, totalXpToLevel, capFor, canDrink };
 });

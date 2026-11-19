@@ -43,3 +43,26 @@ legend{color:var(--gold);font-size:.9rem;padding:0 6px}
 .confirm[hidden]{display:none}
 .confirm h3{margin:0 0 6px}
 .confirm li{overflow-wrap:anywhere}
+/* polish: focus, items, hero cards */
+:focus-visible{outline:3px solid #fff;outline-offset:2px;box-shadow:0 0 0 5px #7a4dff}
+.file:focus-within{outline:3px solid #fff;outline-offset:2px;box-shadow:0 0 0 5px #7a4dff}
+.ico{margin-right:6px}
+.iname{overflow-wrap:anywhere}
+.tier{display:inline-block;margin-left:6px;padding:0 7px;border-radius:8px;color:#1a1030;font-weight:700;font-size:.74rem;line-height:1.5}
+.item{display:inline-flex;align-items:center}
+.slot{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.slot .tier{margin-left:0}
+.xp{margin:8px 0 4px}
+.bar{height:12px;border-radius:8px;background:#150d29;border:1px solid var(--line);overflow:hidden}
+.fill{height:100%;background:linear-gradient(90deg,#7be0a4,#ffd36b)}
+.xptext{display:block;font-size:.82rem;color:var(--muted);margin-top:2px}
+.stats{list-style:none;margin:6px 0;padding:0;display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.list>li.stat,.stats>li{border:0;background:#150d29;border-radius:8px;padding:2px 6px;margin:0;display:flex;justify-content:space-between;font-size:.8rem}
+.stats .k{color:var(--muted)}
+.abilities{list-style:none;margin:6px 0;padding:0}
+.list>li.ability{border:0;background:transparent;padding:0;margin:0}
+.abtext{display:block;color:var(--muted);font-size:.88rem}
+.plain{margin:6px 0;padding-left:20px}
+.plain li{margin:4px 0}
+.btn.testfall{border-color:var(--bad);color:var(--bad)}
+.btn.keep{border-color:var(--ok)}
