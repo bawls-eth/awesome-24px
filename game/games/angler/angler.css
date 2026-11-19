@@ -31,5 +31,16 @@ body { display:flex; flex-direction:column; max-width:100vw; overflow-x:hidden; 
 .card canvas { width:96px; height:56px; max-width:100%; image-rendering:pixelated; }
 .card .nm { font-weight:700; } .card .sub { color:var(--mut); font-size:12px; }
 .card.unk .nm { color:var(--mut); }
+#status { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:4px 8px; background:#0b1b27; border-top:1px solid #1d3d54; font-size:14px; }
+#status #gear-btn { margin-left:auto; min-height:48px; }
+#weather-icon { font-size:20px; } #bait-val { color:var(--acc); font-weight:700; }
+.gearrow { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
+.gearrow .btn { flex-direction:column; font-size:13px; padding:4px 8px; line-height:1.15; }
+.gearrow .btn small { font-weight:400; color:var(--mut); }
+.rule { color:var(--mut); font-size:13px; margin:6px 0; }
+.panel h3 { margin:10px 0 6px; font-size:15px; } .panel h3 small { color:var(--mut); font-weight:400; }
+#bossinfo { margin:6px 0 10px; font-size:13px; color:var(--mut); }
+#bossinfo .trophy { color:var(--acc); font-weight:700; }
+.r1 { color:#cfd8dc; } .r2 { color:#8fe08f; } .r3 { color:#6db8ff; } .r4 { color:#c88bff; } .r5 { color:#ffc24a; }
 @media (max-width:480px) { .bar h1 { display:none; } .bar { justify-content:space-between; } #journal-btn { margin-left:auto; } }
 @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }

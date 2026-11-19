@@ -261,12 +261,36 @@
     return b;
   }
 
-  // ---- journal: {caught: {id: {n, best}}, bosses: {id: true}} ----
+  // ---- journal: {caught: {id: {n, best}}, bosses: {id: true}, trophies: {id: true}, gear: {rod, lure}, bait: 0-99} ----
+  // Gear unlocks by journal milestones (species caught / trophies). Own rule, shown on the page.
+  const GEAR_RULES = {
+    rod: { stick: { species: 0 }, bamboo: { species: 5 }, steel: { species: 12 }, golden: { trophies: 1 } },
+    lure: { none: { species: 0 }, worm: { species: 2 }, spinner: { species: 4 }, deep: { species: 7 }, glow: { species: 10 }, shiny: { species: 16 }, rainbow: { species: 22 } },
+  };
+  // Boss lairs: which spot, and how many species of that spot must be in the journal first.
+  const BOSS_SPOTS = { west: { boss: 'old_whiskers', need: 4 }, pier: { boss: 'pier_kraken', need: 5 }, ice: { boss: 'ice_queen_pike', need: 3 } };
   function clampInt(v, lo, hi) { v = Math.floor(Number(v)); return isFinite(v) ? Math.max(lo, Math.min(hi, v)) : lo; }
+  function ownKey(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
+  function trophyCount(j) { return Object.keys(j.trophies || {}).length; }
+  function gearUnlocked(journal, kind, id) {
+    const j = clean(journal), r = GEAR_RULES[kind] && ownKey(GEAR_RULES[kind], id) ? GEAR_RULES[kind][id] : null;
+    if (!r) return false;
+    return Object.keys(j.caught).length >= (r.species || 0) && trophyCount(j) >= (r.trophies || 0);
+  }
+  function spotSpecies(journal, spot) {
+    const j = clean(journal);
+    return Object.keys(j.caught).filter((id) => !BY_ID[id].boss && BY_ID[id].spots.indexOf(spot) >= 0).length;
+  }
+  function bossFor(journal, spot) {
+    const b = ownKey(BOSS_SPOTS, spot) ? BOSS_SPOTS[spot] : null;
+    if (!b) return null;
+    const have = spotSpecies(journal, spot);
+    return { boss: b.boss, need: b.need, have, ready: have >= b.need };
+  }
   function clean(raw) {
     let o = raw;
     if (typeof raw === 'string') { try { o = JSON.parse(raw); } catch (e) { o = null; } }
-    const out = { caught: {}, bosses: {} };
+    const out = { caught: {}, bosses: {}, trophies: {}, gear: { rod: 'stick', lure: 'none' }, bait: 0 };
     if (!o || typeof o !== 'object' || Array.isArray(o)) return out;
     const c = o.caught && typeof o.caught === 'object' ? o.caught : {};
     Object.keys(c).forEach((id) => {
@@ -276,8 +300,19 @@
       out.caught[id] = { n, best: clampInt(c[id].best, 0, 9999) };
     });
     const b = o.bosses && typeof o.bosses === 'object' ? o.bosses : {};
-    Object.keys(b).forEach((id) => { if (Object.prototype.hasOwnProperty.call(BOSSES, id) && b[id] === true) out.bosses[id] = true; });
+    Object.keys(b).forEach((id) => { if (ownKey(BOSSES, id) && b[id] === true) out.bosses[id] = true; });
+    const t = o.trophies && typeof o.trophies === 'object' ? o.trophies : {};
+    Object.keys(t).forEach((id) => { if (ownKey(BOSSES, id) && t[id] === true) out.trophies[id] = true; });
+    const g = o.gear && typeof o.gear === 'object' ? o.gear : {};
+    if (typeof g.rod === 'string' && ownKey(RODS, g.rod)) out.gear.rod = g.rod;
+    if (typeof g.lure === 'string' && ownKey(LURES, g.lure)) out.gear.lure = g.lure;
+    out.bait = clampInt(o.bait, 0, 99);
     return out;
+  }
+  function addTrophy(journal, bossId) {
+    const j = clean(journal);
+    if (ownKey(BOSSES, bossId)) j.trophies[bossId] = true;
+    return j;
   }
   function record(journal, fishId, size) {
     const j = clean(journal);
@@ -296,6 +331,7 @@
     SPOTS, SPOT_NAMES, ICE_MONTHS, RATES, BITE, SEASONS, FISH, BY_ID, EXISTING_IDS, RODS, LURES, BOSSES,
     seasonOf, timeOf, iceOpen, pool, weightOf, rollFish, rollSize, seedRng,
     reel: { create },
-    bite, journal: { clean, record, serialize, speciesCount }, clean, serialize,
+    bite, journal: { clean, record, serialize, speciesCount, addTrophy, gearUnlocked, bossFor, trophyCount }, clean, serialize,
+    GEAR_RULES, BOSS_SPOTS,
   };
 }));
