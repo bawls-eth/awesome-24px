@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Deepdelve</title>
+<link rel="stylesheet" href="deepdelve.css">
+</head>
+<body>
+<header class="bar">
+  <a class="btn back" href="../../hub/index.html" id="back-hub">Hub</a>
+  <a class="btn back" href="../../index.html" id="back-town">Town</a>
+  <h1>Deepdelve</h1>
+  <button class="btn" id="craft-btn" type="button" disabled>Torch</button>
+</header>
+<main id="stage">
+  <canvas id="gl" aria-label="Deepdelve world"></canvas>
+  <div id="cross" aria-hidden="true"></div>
+  <div id="hud" aria-live="polite">
+    <span id="hud-hp"></span> <span id="hud-depth"></span> <span id="hud-seed"></span>
+    <div id="hud-goal"></div>
+  </div>
+  <p id="msg" role="status" aria-live="polite">Loading the mine...</p>
+  <div id="touch" hidden>
+    <div id="joy" aria-label="Move"><div id="knob"></div></div>
+    <div id="tbtns">
+      <button class="btn tb" id="t-jump" type="button">Jump</button>
+      <button class="btn tb" id="t-mine" type="button">Mine</button>
+      <button class="btn tb" id="t-place" type="button">Place</button>
+    </div>
+  </div>
+</main>
+<nav id="hotbar" aria-label="Hotbar"></nav>
+<script src="../../shared/rng.js"></script>
+<script src="../../shared/mm-chunks.js"></script>
+<script src="../../shared/mm-light.js"></script>
+<script src="../../shared/mm-recipes.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="deepdelve.js"></script>
+</body>
+</html>
