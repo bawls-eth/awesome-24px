@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b0716">
+<title>Mad Maze</title>
+<link rel="stylesheet" href="mad-maze.css">
+</head>
+<body>
+<div id="realm-overlay">
+  <div id="realm-canvas-wrap"></div>
+  <div id="realm-hud">
+    <div id="realm-hp"><div id="realm-hp-fill"></div><span id="realm-hp-text"></span></div>
+    <div id="realm-info"><span id="realm-level">Lv 1</span><span id="realm-wave"></span><span id="realm-biome"></span><span id="realm-shards"></span><span id="realm-best"></span></div>
+    <button id="realm-bp-btn" type="button" aria-label="Open backpack (B)">🎒</button>
+    <button id="realm-board-btn" type="button" aria-label="Open kill board (K)">📊</button>
+    <button id="realm-leave-btn" type="button" aria-label="Leave Mad Maze">✖ Leave</button>
+  </div>
+  <div id="realm-partner" class="hidden"><span id="realm-partner-name">Partner</span><div class="bar"><div id="realm-partner-fill"></div></div></div>
+  <div id="realm-boss" class="hidden" data-phase="1"><span id="realm-boss-name">Gloomheart</span><div class="bar"><div id="realm-boss-fill"></div></div></div>
+  <div id="realm-xp"><div id="realm-xp-fill"></div><span id="realm-xp-text"></span></div>
+  <div id="realm-abilities">
+    <button id="realm-ab-0" class="realm-ab" type="button"><span class="ico">💨</span><span class="key">Q</span><span class="cd"></span></button>
+    <button id="realm-ab-1" class="realm-ab" type="button"><span class="ico">💥</span><span class="key">E</span><span class="cd"></span></button>
+    <button id="realm-ab-2" class="realm-ab" type="button"><span class="ico">🛡️</span><span class="key">R</span><span class="cd"></span></button>
+    <button id="realm-ab-3" class="realm-ab" type="button"><span class="ico">🔥</span><span class="key">F</span><span class="cd"></span></button>
+  </div>
+  <div id="realm-board" class="hidden" role="dialog" aria-label="Kill board">
+    <div class="realm-bp-card">
+      <div class="realm-bp-head"><strong>📊 Kill board</strong><button id="realm-board-close" type="button" aria-label="Close kill board">✖</button></div>
+      <div id="realm-board-body"></div>
+    </div>
+  </div>
+  <div id="realm-backpack" class="hidden" role="dialog" aria-label="Backpack">
+    <div class="realm-bp-card">
+      <div class="realm-bp-head"><strong>🎒 Backpack</strong><button id="realm-bp-close" type="button" aria-label="Close backpack">✖</button></div>
+      <div id="realm-backpack-body"></div>
+    </div>
+  </div>
+  <div id="realm-banner" class="hidden"></div>
+  <div id="realm-help"><span class="key-hint">WASD move · mouse aims, hold to fire · Q E R F abilities · B backpack · K board · Esc leaves</span></div>
+  <div id="realm-stick-move" class="realm-stick" aria-label="Move stick"><div class="knob"></div></div>
+  <div id="realm-stick-aim" class="realm-stick" aria-label="Aim and fire stick"><div class="knob"></div></div>
+</div>
+<script src="../../realm.js"></script>
+<script src="mad-maze.js"></script>
+</body>
+</html>
