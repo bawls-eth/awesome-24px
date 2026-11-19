@@ -30,20 +30,49 @@
     return true;
   }
   if (TEST) setDate(params.get('date'));
+  // ---- weather: injected in test mode, otherwise a calm pseudo-forecast from the real date (no network) ----
+  const WEATHERS = ['clear', 'cloudy', 'rain', 'snow'];
+  const WX_ICON = { clear: '\u2600\uFE0F', night: '\uD83C\uDF19', cloudy: '\u2601\uFE0F', rain: '\uD83C\uDF27\uFE0F', snow: '\u2744\uFE0F' };
+  let weatherOverride = null;
+  function setWeather(w) {
+    weatherOverride = WEATHERS.indexOf(w) >= 0 ? w : null;
+    if (ready) { renderStatus(); draw(); }
+    return weatherOverride !== null;
+  }
+  if (TEST) setWeather(params.get('weather'));
+  function forecast(d) {
+    const month = d.getMonth() + 1;
+    let h = (d.getFullYear() * 372 + month * 31 + d.getDate()) >>> 0;
+    h = Math.imul(h ^ (h >>> 15), 2246822519) >>> 0; h = (h ^ (h >>> 13)) % 10;
+    if (h < 5) return 'clear';
+    if (h < 8) return 'cloudy';
+    return month === 12 || month <= 2 ? 'snow' : 'rain';
+  }
   function nowCtx() {
-    if (dateOverride) return { month: dateOverride.month, hour: dateOverride.hour, weather: 'clear' };
+    if (dateOverride) return { month: dateOverride.month, hour: dateOverride.hour, weather: weatherOverride || 'clear' };
     const d = new Date();
-    return { month: d.getMonth() + 1, hour: d.getHours(), weather: 'clear' };
+    return { month: d.getMonth() + 1, hour: d.getHours(), weather: weatherOverride || (TEST ? 'clear' : forecast(d)) };
   }
 
   // ---- journal ----
   let journal = A.journal.clean(Store.get(KEY, null));
+  // gear that is not unlocked (hand-edited storage) falls back to the starter kit
+  function fixGear() {
+    if (!A.journal.gearUnlocked(journal, 'rod', journal.gear.rod)) journal.gear.rod = 'stick';
+    if (!A.journal.gearUnlocked(journal, 'lure', journal.gear.lure)) journal.gear.lure = 'none';
+  }
+  fixGear();
+  // ?bait=N: digits only, clamped 0-99. Anything else is ignored. Never a purchase.
+  (function () {
+    const raw = params.get('bait');
+    if (raw !== null && /^\d{1,6}$/.test(raw)) { journal.bait = Math.max(0, Math.min(99, Number(raw))); Store.set(KEY, A.journal.clean(journal)); }
+  })();
   function saveJournal() { journal = A.journal.clean(journal); Store.set(KEY, journal); }
 
   // ---- state ----
   const g = {
     state: 'idle', spot: 'west', bite: null, reel: null, fish: null, size: 0, forced: null,
-    result: null, t: 0, hooked: 0, calm: false, fx: [], bobY: 0,
+    result: null, t: 0, hooked: 0, calm: false, fx: [], bobY: 0, baited: false, bossChance: 0.25, boss: false,
   };
   const held = { ptr: false, key: false, pad: false, test: false };
   const anyHeld = () => held.ptr || held.key || held.pad || held.test;
@@ -74,7 +103,9 @@
     if (g.state !== 'idle') return;
     if (spotLocked(g.spot)) { setMsg('This spot is closed right now.'); return; }
     g.bite = A.bite(rng); g.state = 'waiting'; g.t = 0;
-    setMsg('Waiting for a bite... (do not press yet)');
+    g.baited = journal.bait > 0;
+    if (g.baited) { journal.bait -= 1; g.bite.wait *= 0.7; saveJournal(); }
+    setMsg(g.baited ? 'Bait on the hook! Waiting for a bite...' : 'Waiting for a bite... (do not press yet)');
     renderSpots();
   }
   function finish(outcome, title, detail) {
@@ -82,16 +113,18 @@
     $('res-title').textContent = title; $('res-detail').textContent = detail;
     $('res-ok').textContent = outcome === 'caught' ? 'Cast again' : 'Try again';
     $('result').hidden = false; g.resultAt = g.t;
+    $('res-title').className = outcome === 'caught' && g.fish ? 'r' + g.fish.rarity : '';
     setMsg(title); renderSpots();
     if (!TEST) setTimeout(() => { try { $('res-ok').focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 0);
   }
   function dismiss() {
     if (g.state !== 'result') return;
-    $('result').hidden = true; g.state = 'idle'; g.reel = null; g.bite = null; g.fish = null;
+    $('result').hidden = true; g.fan = null; g.boss = false; g.state = 'idle'; g.reel = null; g.bite = null; g.fish = null;
     setMsg(idleMsg()); renderSpots();
   }
+  const overlayOpen = () => !$('journal').hidden || !$('gear').hidden;
   function onDown() {
-    if (!$('journal').hidden) return;
+    if (overlayOpen()) return;
     if (g.state === 'idle') cast();
     else if (g.state === 'waiting' || g.state === 'biting') {
       const r = g.bite.press();
@@ -101,31 +134,45 @@
   }
   function hook() {
     const c = nowCtx();
-    const f = g.forced ? A.BY_ID[g.forced] : A.rollFish(rng, g.spot, c, {});
+    const lair = A.journal.bossFor(journal, g.spot);
+    let f;
+    if (g.forced) f = A.BY_ID[g.forced];
+    else if (lair && lair.ready && rng() < g.bossChance) f = A.BY_ID[lair.boss];
+    else f = A.rollFish(rng, g.spot, c, { lure: journal.gear.lure, bait: g.baited });
     g.forced = null;
     if (!f) { finish('none', 'Nothing here', 'This spot is closed.'); return; }
-    g.fish = f; g.size = A.rollSize(rng, f);
-    g.reel = A.reel.create(f, 'stick', { seed: Math.floor(rng() * 1e9), calm: g.calm });
-    g.state = 'reeling'; g.t = 0;
-    setMsg('Hooked! Hold to reel. Keep the zone on the fish.');
+    g.fish = f; g.size = A.rollSize(rng, f); g.boss = !!f.boss;
+    g.reel = A.reel.create(f, journal.gear.rod, { seed: Math.floor(rng() * 1e9), calm: g.calm });
+    g.state = 'reeling'; g.t = 0; g.lastPhase = 0; g.phaseAt = 0;
+    setMsg(g.boss ? 'BOSS! ' + f.name + ' takes the line. The line snaps after 1.5 s at max tension.' : 'Hooked! Hold to reel. Keep the zone on the fish.');
     renderSpots();
   }
   function land() {
     const f = g.fish, isNew = !journal.caught[f.id];
+    const firstTrophy = f.boss && !journal.trophies[f.id];
     journal = A.journal.record(journal, f.id, g.size);
-    saveJournal(); renderJournalCount();
-    finish('caught', (isNew ? 'New! ' : '') + f.name, RARITY[f.rarity] + ' (' + f.rarity + '/5) - ' + g.size + ' cm');
+    if (f.boss) journal = A.journal.addTrophy(journal, f.id);
+    saveJournal(); renderJournalCount(); renderStatus();
+    g.fan = { t: 0, big: f.rarity >= 4 };
+    finish('caught', (f.boss ? (firstTrophy ? 'TROPHY! ' : 'Boss beaten! ') : isNew ? 'New! ' : '') + f.name,
+      RARITY[f.rarity] + ' (' + f.rarity + '/5) - ' + sizeWord(f, g.size) + ', ' + g.size + ' cm' + (f.boss ? ' - trophy in your journal' : ''));
   }
 
+  function sizeWord(f, cm) {
+    const s = f.size || [10, 30], q = (cm - s[0]) / Math.max(1, s[1] - s[0]);
+    return q < 0.25 ? 'a tiny one' : q < 0.6 ? 'a nice one' : q < 0.9 ? 'a big one' : 'a whopper';
+  }
   function step(dt) {
     g.t += dt;
+    if (g.fan) g.fan.t += dt;
     if (g.state === 'waiting' || g.state === 'biting') {
       const s = g.bite.tick(dt);
       if (s === 'biting' && g.state === 'waiting') { g.state = 'biting'; setMsg('A bite! Press now!'); }
       else if (s === 'missed') finish('missed', 'Too slow', 'The fish got away.');
     } else if (g.state === 'reeling') {
       const r = g.reel.tick(dt, anyHeld());
-      if (r.status === 'snapped') finish('snapped', 'Line snapped!', 'Tension stayed at max too long. Release more often.');
+      if (g.boss && r.phase !== g.lastPhase) { g.lastPhase = r.phase; g.phaseAt = g.t; }
+      if (r.status === 'snapped') finish('snapped', 'Line snapped!', g.boss ? 'The boss won this round. At max tension the line lasts only 1.5 s.' : 'Tension stayed at max too long. Release more often.');
       else if (r.status === 'caught') land();
     }
     if (g.state === 'biting' || g.state === 'hooked') g.bobY = 6;
@@ -137,14 +184,14 @@
     const before = anyHeld(); held[src] = v; const after = anyHeld();
     if (!before && after) onDown();
   }
-  const ignoreEl = (t) => t && t.closest && t.closest('button, a, select, input, label, .overlay, #result');
+  const ignoreEl = (t) => t && t.closest && t.closest('button, a, select, input, label, .overlay, #result, #status');
   document.addEventListener('pointerdown', (e) => { if (ignoreEl(e.target)) return; setInput('ptr', true); });
   const up = () => setInput('ptr', false);
   document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
   window.addEventListener('blur', () => { held.ptr = held.key = held.pad = false; });
   document.addEventListener('keydown', (e) => {
     if (e.code !== 'Space' || e.repeat) return;
-    if (!$('journal').hidden) return;
+    if (overlayOpen()) return;
     e.preventDefault();
     if (g.state === 'result') { if (g.t - g.resultAt > 0.25 || TEST) dismiss(); return; }
     setInput('key', true);
@@ -175,6 +222,61 @@
       b.addEventListener('click', () => { if (locked) setMsg(A.SPOT_NAMES[id] + ': ' + lockReason(id) + '.'); else pickSpot(id); });
       box.appendChild(b);
     });
+    if (ready) renderStatus();
+  }
+  const GEAR_NAMES = { stick: 'Stick', bamboo: 'Bamboo', steel: 'Steel', golden: 'Golden', none: 'No lure', worm: 'Worm', spinner: 'Spinner', glow: 'Glow', deep: 'Deep', shiny: 'Shiny', rainbow: 'Rainbow' };
+  const LURE_HINT = { none: 'plain hook', worm: 'common fish', spinner: 'darting fish', glow: 'night fish', deep: 'bottom feeders', shiny: 'rare fish', rainbow: 'rain fish' };
+  const BOSS_NAMES = { old_whiskers: 'Old Whiskers', pier_kraken: 'Pier Kraken', ice_queen_pike: 'Ice Queen Pike' };
+  const PHASE_NAMES = { old_whiskers: ['Calm', 'Darting', 'Frenzy'], pier_kraken: ['Tentacle sweep', 'Ink rush'], ice_queen_pike: ['Ice dash', 'Frost swap'] };
+  function weatherLabel() {
+    const c = nowCtx(), night = c.hour >= 19 || c.hour < 6;
+    return { icon: c.weather === 'clear' && night ? WX_ICON.night : WX_ICON[c.weather], name: c.weather === 'clear' && night ? 'clear night' : c.weather };
+  }
+  function renderStatus() {
+    const w = weatherLabel();
+    $('weather-icon').textContent = w.icon; $('weather-name').textContent = w.name;
+    $('bait-val').textContent = String(journal.bait);
+    $('gear-sum').textContent = GEAR_NAMES[journal.gear.rod] + ' / ' + GEAR_NAMES[journal.gear.lure];
+    $('gear-btn').disabled = g.state !== 'idle';
+  }
+  function needText(r) {
+    const p = [];
+    if (r.species) p.push(r.species + ' species');
+    if (r.trophies) p.push(r.trophies + ' boss trophy');
+    return p.length ? 'Unlock: ' + p.join(' + ') : 'Starter';
+  }
+  function renderGear() {
+    $('gear-rule').textContent = 'Gear unlocks as your journal grows: rods and lures need a number of species caught (golden rod needs a boss trophy). Rods widen the catch zone; lures shift what bites.';
+    [['rod', 'rods', A.RODS], ['lure', 'lures', A.LURES]].forEach((k) => {
+      const box = $(k[1]); box.textContent = '';
+      Object.keys(k[2]).forEach((id) => {
+        const ok = A.journal.gearUnlocked(journal, k[0], id), sel = journal.gear[k[0]] === id;
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'btn' + (sel ? ' sel' : '') + (ok ? '' : ' locked'); b.dataset[k[0]] = id;
+        if (!ok) b.setAttribute('aria-disabled', 'true');
+        const t = document.createElement('span'); t.textContent = GEAR_NAMES[id];
+        const sm = document.createElement('small');
+        sm.textContent = ok ? (k[0] === 'rod' ? 'zone ' + Math.round(k[2][id].zone * 100) + '%' : LURE_HINT[id]) : needText(A.GEAR_RULES[k[0]][id]);
+        b.appendChild(t); b.appendChild(sm);
+        b.addEventListener('click', () => setGear(k[0], id));
+        box.appendChild(b);
+      });
+    });
+  }
+  function setGear(kind, id) {
+    if (g.state !== 'idle' || (kind !== 'rod' && kind !== 'lure') || !A.journal.gearUnlocked(journal, kind, id)) return false;
+    journal.gear[kind] = id; saveJournal(); renderGear(); renderStatus(); return true;
+  }
+  function renderBossInfo() {
+    const box = $('bossinfo'); box.textContent = '';
+    A.SPOTS.forEach((sp) => {
+      const b = A.journal.bossFor(journal, sp); if (!b) return;
+      const p = document.createElement('p'); p.style.margin = '2px 0';
+      const won = journal.trophies[b.boss];
+      p.textContent = (won ? '\uD83C\uDFC6 ' : '') + BOSS_NAMES[b.boss] + ' (' + A.SPOT_NAMES[sp] + '): ' + (b.ready ? 'lurking now' : 'catch ' + b.need + ' species here to lure it out') + ' - ' + Math.min(b.have, b.need) + '/' + b.need + (won ? ' - TROPHY' : '');
+      if (won) p.className = 'trophy';
+      box.appendChild(p);
+    });
   }
   function renderJournalCount() {
     const n = A.journal.speciesCount(journal);
@@ -200,17 +302,21 @@
       const c = document.createElement('canvas'); c.width = 48; c.height = 28;
       const cx = c.getContext('2d'); cx.imageSmoothingEnabled = false;
       drawFish(cx, 24, 14, 16, f, !e);
-      const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = e ? f.name : '???';
+      const nm = document.createElement('div'); nm.className = 'nm' + (e ? ' r' + f.rarity : ''); nm.textContent = e ? f.name : '???';
       const sub = document.createElement('div'); sub.className = 'sub';
       sub.textContent = e ? 'x' + e.n + ' best ' + e.best + ' cm - ' + RARITY[f.rarity] : RARITY[f.rarity];
       card.appendChild(c); card.appendChild(nm); card.appendChild(sub); grid.appendChild(card);
     });
   }
-  function openJournal() { renderJournal(); $('journal').hidden = false; $('journal-close').focus(); }
+  function openJournal() { renderBossInfo(); renderJournal(); $('journal').hidden = false; $('journal-close').focus(); }
   function closeJournal() { $('journal').hidden = true; $('journal-btn').focus(); }
   $('journal-btn').addEventListener('click', openJournal);
   $('journal-close').addEventListener('click', closeJournal);
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('journal').hidden) closeJournal(); });
+  function openGear() { if (g.state !== 'idle') return; renderGear(); $('gear').hidden = false; $('gear-close').focus(); }
+  function closeGear() { $('gear').hidden = true; $('gear-btn').focus(); }
+  $('gear-btn').addEventListener('click', openGear);
+  $('gear-close').addEventListener('click', closeGear);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { if (!$('journal').hidden) closeJournal(); else if (!$('gear').hidden) closeGear(); } });
 
   // ---- drawing ----
   function hashOf(s) { let h = 7; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; }
@@ -252,6 +358,16 @@
       }
     }
     if (g.spot === 'ice') { c.fillStyle = 'rgba(255,255,255,.4)'; c.fillRect(0, WATER, W, 6); }
+    const wx = nowCtx().weather;
+    if (wx === 'cloudy' || wx === 'rain') { c.fillStyle = 'rgba(70,80,95,.45)'; c.fillRect(0, 0, W, 90); }
+    if (wx === 'rain' || wx === 'snow') {
+      c.fillStyle = wx === 'rain' ? 'rgba(200,225,255,.7)' : 'rgba(255,255,255,.85)';
+      const drift = reduced() ? 0 : t * (wx === 'rain' ? 160 : 30);
+      for (let i = 0; i < 40; i++) {
+        const xx = (i * 47) % W, yy = ((i * 83 + drift) % (WATER + 60));
+        if (wx === 'rain') c.fillRect(xx, yy, 1, 7); else c.fillRect(xx, yy, 2, 2);
+      }
+    }
     // dock + angler
     c.fillStyle = '#8a5a34'; c.fillRect(0, 150, 96, 14); c.fillStyle = '#6b4226'; c.fillRect(0, 164, 96, 4);
     c.fillStyle = '#d9534f'; c.fillRect(40, 118, 14, 18); c.fillStyle = '#f1c9a5'; c.fillRect(42, 106, 10, 10); c.fillStyle = '#e2b84a'; c.fillRect(40, 102, 14, 5);
@@ -269,10 +385,24 @@
       c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = 1; c.beginPath(); c.moveTo(tipX, tipY); c.lineTo(tipX + 4, 150); c.stroke();
     }
     if (g.state === 'reeling' && g.reel) drawReel(c);
+    if (g.fan && g.state === 'result') drawFanfare(c);
     if (g.state === 'result' && g.result && g.result.outcome === 'caught') drawFish(c, W / 2, 290, 46, g.fish, false);
     if (g.state === 'idle' || g.state === 'result') {
       c.fillStyle = 'rgba(0,0,0,.35)'; c.font = '12px sans-serif'; c.textAlign = 'left'; c.fillText(A.SPOT_NAMES[g.spot], 8, 18);
     }
+  }
+  function drawFanfare(c) {
+    const f = g.fan, rare = ['', '#cfd8dc', '#8fe08f', '#6db8ff', '#c88bff', '#ffc24a'][g.fish.rarity];
+    c.fillStyle = rare; c.textAlign = 'center';
+    if (reduced()) { c.font = 'bold 22px sans-serif'; c.fillText('\u2605 CAUGHT \u2605', W / 2, 226); return; } // no motion
+    if (f.t > 1.4) return;
+    const n = f.big ? 28 : 14;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2, rr = f.t * (70 + (i % 4) * 25);
+      c.globalAlpha = Math.max(0, 1 - f.t / 1.4);
+      c.fillRect(W / 2 + Math.cos(a) * rr - 2, 290 + Math.sin(a) * rr * 0.8 - 2, 4, 4);
+    }
+    c.globalAlpha = 1;
   }
   function drawReel(c) {
     const r = g.reel, bx = 268, bw = 34, top = 60, bot = 440, hgt = bot - top;
@@ -287,13 +417,25 @@
     const danger = Math.min(1, r.atMax / r.snapLimit);
     c.fillStyle = 'rgba(255,60,60,' + (0.25 + 0.6 * danger) + ')'; c.fillRect(bx, top, bw, 10);
     if (danger > 0) { c.fillStyle = '#ff6b6b'; c.fillRect(bx - 4, top - 6, (bw + 8) * danger, 4); }
-    drawFish(c, bx + bw / 2, yOf(r.pos), 12, g.fish, false);
+    drawFish(c, bx + bw / 2 + r.side * 24, yOf(r.pos), 12, g.fish, false);
+    if (r.side) { c.fillStyle = '#ff9f1c'; c.font = 'bold 14px sans-serif'; c.textAlign = 'center'; c.fillText(r.side > 0 ? '>>' : '<<', bx + bw / 2 + r.side * 24, yOf(r.pos) - 12); }
     // catch meter, horizontal
     c.fillStyle = 'rgba(8,20,30,.78)'; c.fillRect(20, 14, 200, 18);
     c.fillStyle = '#12384f'; c.fillRect(24, 18, 192, 10);
     c.fillStyle = '#6fe3a0'; c.fillRect(24, 18, 192 * r.meter, 10);
     c.fillStyle = '#fff'; c.font = '10px sans-serif'; c.textAlign = 'left'; c.fillText('CATCH', 24, 44);
-    if (r.side) c.fillRect(160 + r.side * 40, 46, 4, 4);
+    if (r.boss) {
+      const names = PHASE_NAMES[g.fish.id] || [], nph = names.length || 1;
+      c.fillStyle = 'rgba(8,20,30,.78)'; c.fillRect(20, 52, 200, 34);
+      c.fillStyle = '#4a1d1d'; c.fillRect(24, 68, 192, 8);
+      c.fillStyle = '#e63946'; c.fillRect(24, 68, 192 * (1 - r.meter), 8);
+      c.fillStyle = '#ffd166'; c.font = 'bold 11px sans-serif'; c.textAlign = 'left';
+      c.fillText((BOSS_NAMES[g.fish.id] || g.fish.name).toUpperCase() + ' HP', 24, 64);
+      const flash = !reduced() && g.t - g.phaseAt < 1.2;
+      c.fillStyle = flash ? 'rgba(255,209,102,.95)' : 'rgba(8,20,30,.78)'; c.fillRect(60, 92, 120, 20);
+      c.fillStyle = flash ? '#0b1b27' : '#ffd166'; c.textAlign = 'center';
+      c.fillText('Phase ' + (r.phase + 1) + '/' + nph + ': ' + (names[r.phase] || ''), 120, 106);
+    }
   }
 
   // ---- loop ----
@@ -305,7 +447,7 @@
   }
 
   // ---- init ----
-  ready = true; initFilters(); renderSpots(); renderJournalCount();
+  ready = true; initFilters(); renderSpots(); renderJournalCount(); renderStatus();
   $('spot-title').textContent = A.SPOT_NAMES[g.spot]; setMsg(idleMsg());
   draw();
   if (TEST) {
@@ -317,7 +459,16 @@
       tap() { setInput('test', true); setInput('test', false); },
       advance(sec) { let n = Math.round(sec * 60); while (n-- > 0) step(1 / 60); draw(); },
       setDate, pickSpot, spotLocked, renderSpots, forceFish(id) { g.forced = id; },
-      dismiss, redraw: draw, rng,
+      dismiss, redraw: draw, rng, setWeather, setGear, renderStatus,
+      get gear() { return journal.gear; }, get bait() { return journal.bait; }, get weather() { return nowCtx().weather; },
+      get boss() { return g.boss; }, get phase() { return g.reel ? g.reel.phase : -1; }, get fish() { return g.fish && g.fish.id; },
+      get fanfare() { return { reduced: reduced(), active: !!g.fan, t: g.fan ? g.fan.t : 0 }; },
+      setBossChance(p) { g.bossChance = p; }, bossFor(sp) { return A.journal.bossFor(journal, sp || g.spot); },
+      poolInfo() {
+        const c = nowCtx(), p = A.pool(g.spot, c, {}), gear = { lure: journal.gear.lure, bait: false };
+        return { ids: p.map((f) => f.id), weights: p.map((f) => A.weightOf(f, c, gear)) };
+      },
+      setJournal(j) { journal = A.journal.clean(j); fixGear(); saveJournal(); renderStatus(); renderJournalCount(); renderSpots(); },
     };
   } else {
     requestAnimationFrame(frame);
