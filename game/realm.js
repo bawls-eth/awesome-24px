@@ -175,6 +175,7 @@ class RealmArena {
     this.onExit = onExit || (() => {});
     this.save = rmCleanSave(save);
     this._baseShards = this.save.shards; this._known = new Set(this.save.items.map((it) => it.n)); this.walls = null; this.extraGuard = 0;
+    this.dungeon = null; this.fixedWorld = null; // optional run controller + fixed-size world (Mad Maze dungeons); null = classic waves
     this.rng = rmRng(seed === undefined ? (Date.now() & 0xffffffff) : seed);
     this.active = false;
     this.state = 'idle'; // idle | banner | play | dead
@@ -673,6 +674,17 @@ class RealmArena {
     const w = this.container.clientWidth || window.innerWidth;
     const h = this.container.clientHeight || window.innerHeight;
     const aspect = w / h;
+    if (this.fixedWorld) { // a fixed-size world (a dungeon room): letterboxed, never stretched
+      this.W = this.fixedWorld.w; this.H = this.fixedWorld.h;
+      const k = Math.min(w / this.W, h / this.H); const cs = this.canvas.style;
+      cs.position = 'absolute'; cs.width = `${Math.floor(this.W * k)}px`; cs.height = `${Math.floor(this.H * k)}px`;
+      cs.left = `${Math.floor((w - this.W * k) / 2)}px`; cs.top = `${Math.floor((h - this.H * k) / 2)}px`;
+      const dpr0 = Math.min(window.devicePixelRatio || 1, 2);
+      this.canvas.width = Math.round(this.W * Math.min(dpr0, 1.5)); this.canvas.height = Math.round(this.H * Math.min(dpr0, 1.5));
+      this.scale = this.canvas.width / this.W; this._vignette = null;
+      const q = this.player; q.x = Math.max(RM_PLAYER.r, Math.min(this.W - RM_PLAYER.r, q.x || this.W / 2)); q.y = Math.max(RM_PLAYER.r, Math.min(this.H - RM_PLAYER.r, q.y || this.H / 2));
+      return;
+    }
     // Short side is always RM_SHORT logical units; the long side follows the screen.
     if (aspect >= 1) { this.H = RM_SHORT; this.W = Math.round(Math.min(1400, Math.max(RM_SHORT, RM_SHORT * aspect))); } else { this.W = RM_SHORT; this.H = Math.round(Math.min(1400, Math.max(RM_SHORT, RM_SHORT / aspect))); }
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -711,6 +723,7 @@ class RealmArena {
     this.nextWaveIn = 1.4;
     this._syncHud(true);
     this._showBanner(this.bannerText);
+    if (this.dungeon && !this.team) { this.state = 'play'; this.dungeon.onStart(); }
     this._lastT = performance.now();
     this._raf = requestAnimationFrame(this._loop);
   }
@@ -771,7 +784,7 @@ class RealmArena {
     const scale = (1 + 0.15 * Math.max(0, this.run.wave - 1)) * (this.team && this.role === 'host' ? RT_HP_SCALE : 1); // tougher with a partner
     e.active = true; e.type = type; e.x = x; e.y = y;
     e.maxHp = Math.ceil(def.hp * scale); e.hp = e.maxHp;
-    e.t = 0; e.flash = 0; e.angle = this.rng() * Math.PI * 2; e.dir = this.rng() < 0.5 ? 1 : -1;
+    e.dg = null; e.t = 0; e.flash = 0; e.angle = this.rng() * Math.PI * 2; e.dir = this.rng() < 0.5 ? 1 : -1;
     e.cd = 0.8 + this.rng() * 0.8; // first shot is never instant
     e.ax = 80 + this.rng() * (this.W - 160); e.ay = 80 + this.rng() * (this.H - 160); // drift target for Whirlers
     return e;
@@ -953,6 +966,7 @@ class RealmArena {
     this._updateDrifters(dt);
     this._updateBullets(dt);
     this._updateBags(dt);
+    if (this.dungeon) this.dungeon.tick(dt);
     if (this.team && this.role === 'host') this.team.hostTick(dt);
     if (this.state === 'play' && this.run.wave > 0 && this.enemiesAlive() === 0) this._waveCleared();
   }
@@ -1174,7 +1188,7 @@ class RealmArena {
       if (!b.active) continue;
       b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
       if (b.life <= 0 || b.x < -10 || b.y < -10 || b.x > this.W + 10 || b.y > this.H + 10) { b.active = false; continue; }
-      if (this.walls && this.isWallAt(b.x, b.y)) { b.active = false; continue; }
+      if (this.walls && this.isWallAt(b.x, b.y)) { if (this.dungeon) this.dungeon.onBoltWall(b.x, b.y); b.active = false; continue; }
       if (this.team && this.role === 'host' && this.team.isPvp) { if (this.team.duelBoltHit(b)) b.active = false; continue; }
       const hj = this._boltHitIndex(b.x, b.y);
       if (hj >= 0) { b.active = false; this._hitEnemy(this.enemies[hj], b.dmg || this.stats.dmg); }
@@ -1203,6 +1217,7 @@ class RealmArena {
   }
 
   _hitEnemy(e, dmg) {
+    if (this.dungeon && e.dg === 'boss') { this.dungeon.hitBoss(e, dmg); return; }
     if (e.type === 'boss' && e.invuln > 0) { this._floatText(e.x, e.y - 40, 'shielded', '#c9d1d9'); this._burst(e.x, e.y, '#fff', 1, 60); return; }
     e.hp -= dmg; e.flash = 1;
     this._snd(e.hp > 0 ? 'hit' : 'kill');
@@ -1230,6 +1245,7 @@ class RealmArena {
     if (this.rng() < RM_BAG_CHANCE) this.dropBag(e.x, e.y, this.rollRarity());
     this.shake = Math.max(this.shake, 3);
     this.onSave(this.save);
+    if (this.dungeon) this.dungeon.onKill(e);
   }
 
   _hitPlayer(dmg) {
@@ -1520,6 +1536,7 @@ class RealmArena {
     g.fillStyle = this._floorPatterns[this.biome]; g.fillRect(-10, -10, this.W + 20, this.H + 20);
     g.strokeStyle = RM_BIOMES[this.biome].border; g.lineWidth = 4; g.strokeRect(2, 2, this.W - 4, this.H - 4);
     if (this.walls) { const w = this.walls; for (let r = 0; r < w.rows; r++) for (let c = 0; c < w.cols; c++) if (w.cells[r][c] === 1) { g.fillStyle = '#1b1430'; g.fillRect(c * RM_TILE, r * RM_TILE, RM_TILE, RM_TILE); g.fillStyle = RM_BIOMES[this.biome].border; g.fillRect(c * RM_TILE, r * RM_TILE, RM_TILE, 3); g.fillRect(c * RM_TILE, r * RM_TILE, 3, RM_TILE); } }
+    if (this.dungeon) this.dungeon.drawUnder(g);
     for (let i = 0; i < this.hazards.length; i++) { const h = this.hazards[i]; if (h.active) { g.globalAlpha = h.kind === 'lava' ? 0.85 + Math.sin(this.clock * 4 + i) * 0.1 : 0.9; g.drawImage(this.sprites.hazard[h.kind], h.x - 48, h.y - 48); g.globalAlpha = 1; } }
     for (let i = 0; i < this.drifters.length; i++) { const d = this.drifters[i]; if (d.active) g.drawImage(this.sprites.drifter[d.kind], d.x - 12, d.y - 12 + Math.sin(d.t * 3) * 3); }
 
@@ -1571,6 +1588,7 @@ class RealmArena {
       g.drawImage(this.sprites.hitDot, p.x - 4, p.y - 4);
     }
 
+    if (this.dungeon) this.dungeon.drawOver(g);
     for (let i = 0; i < this.particles.length; i++) {
       const pt = this.particles[i];
       if (!pt.active) continue;
