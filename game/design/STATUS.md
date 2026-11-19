@@ -53,3 +53,6 @@ Backpack "Combine 3->next" button: 3 same gear + same rarity -> 1 of the next ra
 ## Queued from owner (2026-11-19)
 - GPT-designed map layouts so each Mad Maze run feels new, plus fresh art per run. Plan: GPT cannot be called from players' browsers (key lives only in this environment), so GPT writes a POOL of layouts/room templates and art sets offline (text/image calls, logged in LEDGER-OPENAI.md, inside the $4.00 cap); each run picks a combination by seed. Validate every generated layout with a solvability test before it ships.
 - Merge: the manager job merges dev to master at :08 Pacific from the ci-status.json stamp.
+
+## Research brief
+`game/design/RESEARCH-ROTMG.md` (Realm of the Mad God study, 8 ideas to borrow). Planner: read it before picking Realm slices. Caveat: built from search excerpts, details approximate.
