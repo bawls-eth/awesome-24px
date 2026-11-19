@@ -384,6 +384,22 @@
   </div>
 </div>
 
+<div id="realm-menu" class="hidden" role="dialog" aria-label="Realm gate">
+  <div class="realm-menu-card">
+    <div class="realm-bp-head"><strong>🌀 The Realm</strong><button id="realm-menu-close-btn" type="button" aria-label="Close">✕</button></div>
+    <button id="realm-menu-solo" type="button">⚔️ Go in alone</button>
+    <p class="realm-menu-sub">🤝 Fight together (2-player co-op) — invite someone in town:</p>
+    <ul id="realm-menu-players"></ul>
+    <p id="realm-menu-status" aria-live="polite"></p>
+    <p class="realm-menu-sub dim">Duel and 2v2 arenas are coming soon.</p>
+  </div>
+</div>
+<div id="realm-invite" class="hidden" role="alertdialog" aria-label="Realm invitation">
+  <span id="realm-invite-text"></span>
+  <button id="realm-invite-accept" type="button">Join</button>
+  <button id="realm-invite-decline" type="button">No thanks</button>
+</div>
+
 <div id="realm-overlay" class="hidden">
   <div id="realm-canvas-wrap"></div>
   <div id="realm-hud">
@@ -393,6 +409,7 @@
     <button id="realm-board-btn" type="button" aria-label="Open kill board (K)">📊</button>
     <button id="realm-leave-btn" type="button" aria-label="Leave the Realm">✖ Leave</button>
   </div>
+  <div id="realm-partner" class="hidden"><span id="realm-partner-name">Partner</span><div class="bar"><div id="realm-partner-fill"></div></div></div>
   <div id="realm-boss" class="hidden" data-phase="1"><span id="realm-boss-name">Gloomheart</span><div class="bar"><div id="realm-boss-fill"></div></div></div>
   <div id="realm-xp"><div id="realm-xp-fill"></div><span id="realm-xp-text"></span></div>
   <div id="realm-abilities">
@@ -464,6 +481,7 @@
 <script src="firebase-config.js"></script>
 <script src="net.js"></script>
 <script src="underground.js"></script>
+<script src="realm-team.js"></script>
 <script src="realm.js"></script>
 <script src="main.js"></script>
 </body>

@@ -134,6 +134,7 @@ class RealmArena {
     this.run = { wave: 0, kills: 0, shards: 0 };
     this.displayShards = this.save.shards;
     this._avatar = null;
+    this.team = null; this.role = 'solo'; this.down = false; this.reviveT = 0; this._firing = false;
 
     this.canvas = document.createElement('canvas');
     this.canvas.id = 'realm-canvas';
@@ -145,6 +146,72 @@ class RealmArena {
     this._bakeSprites();
     this._bindInput();
     this._resize();
+  }
+
+  // ---------- team play ----------
+
+  // role: 'host' | 'guest'; link: { send, onMessage, close }. Call before start(); clearTeam() after the run.
+  setTeam(role, link, name) {
+    this.clearTeam();
+    this.role = role;
+    this.team = new RealmTeam({ arena: this, role, link, name });
+  }
+
+  clearTeam() {
+    if (this.team) this.team.close();
+    this.team = null; this.role = 'solo'; this.down = false; this.reviveT = 0;
+    const el = document.getElementById('realm-partner'); if (el) el.classList.add('hidden');
+  }
+
+  // The nearest living player to a point — enemies aim at whoever is closest.
+  _nearest(x, y) {
+    let best = this.down ? null : this.player; let bd = best ? Math.hypot(best.x - x, best.y - y) : 1e9;
+    const t = this.team;
+    if (t && t.role === 'host' && t.partner && t.partner.ready && !t.partner.down) {
+      const d = Math.hypot(t.partner.x - x, t.partner.y - y);
+      if (d < bd) { best = t.partner; bd = d; }
+    }
+    return best || this.player;
+  }
+
+  _revive(frac) {
+    this.down = false; this.reviveT = 0;
+    this.player.hp = Math.max(1, Math.ceil(this.stats.maxHp * frac)); this.player.iframes = 1.5;
+    this._floatText(this.player.x, this.player.y - 28, 'revived!', '#7ee787');
+    this._syncHud();
+  }
+
+  _teamWipe() {
+    if (this.state === 'dead') return;
+    if (this.team) { this.team.ev('end', ['wipe']); this.team._sendSnap(); } // _die() stops the host tick, so push the news out now
+    this.down = false; this.player.hp = 0;
+    this._die();
+  }
+
+  // The partner (or the host) ended the run.
+  _teamEnd(why) {
+    if (!this.active) return;
+    if (why === 'wipe') { // we fell with them: the same penalty as dying alone
+      const lost = Math.floor(this.save.shards * RM_DEATH_PENALTY);
+      this.save.shards -= lost; this.save.deaths += 1; this.save.bestWave = Math.max(this.save.bestWave, this.run.wave - 1);
+      this.onSave(this.save);
+      this.stop(); this.onExit('death'); return;
+    }
+    this.onSave(this.save);
+    this.stop(); this.onExit(why === 'lost' ? 'lost' : 'leave');
+  }
+
+  // A kill / wave bonus the host told us about: pay it out with OUR multipliers.
+  _teamReward(r) {
+    const sv = this.save;
+    if (r.t === 'wave') { const gain = Math.max(0, Math.round(r.sh)); sv.shards += gain; sv.bestWave = Math.max(sv.bestWave, this.run.wave); this.run.shards += gain; this.onSave(sv); this._syncHud(); return; }
+    const gain = Math.max(1, Math.round(r.sh * this.stats.shards));
+    sv.shards += gain; this.run.shards += gain;
+    if (r.t === 'drifter') sv.kb.drifter += 1;
+    else if (r.boss) { sv.kb.boss += 1; sv.kills += 1; if (r.tenths && (!sv.bossBestT || r.tenths < sv.bossBestT)) sv.bossBestT = r.tenths; } else if (Object.prototype.hasOwnProperty.call(sv.kb, r.t) && typeof sv.kb[r.t] === 'number') { sv.kb[r.t] += 1; sv.kills += 1; }
+    this._floatText(this.player.x, this.player.y - 36, `+${gain} 💎`, '#8fe9ff');
+    this._gainXp(Math.max(1, Math.round(r.xp * this.stats.xp)));
+    this.onSave(sv);
   }
 
   // ---------- pools ----------
@@ -316,7 +383,7 @@ class RealmArena {
     this.onKeyDown = (e) => {
       if (!this.active) return;
       const k = e.key.toLowerCase();
-      if (k === 'escape') { e.preventDefault(); if (this.paused) this.setPaused(false); else this.leave(); return; }
+      if (k === 'escape') { e.preventDefault(); if (this.paused || this.panel) this.setPaused(false); else this.leave(); return; }
       if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault();
       if (!e.repeat) {
         const ai = RM_ABILITIES.findIndex((a) => a.key === k);
@@ -384,7 +451,7 @@ class RealmArena {
     this.abilityCd = [0, 0, 0, 0]; this.shield.hits = 0; this.shield.t = 0; this.overdriveT = 0; this.paused = false;
     p.x = this.W / 2; p.y = this.H / 2; p.hp = this.stats.maxHp; p.dashT = 0; p.iframes = 1; p.fireCd = 0; p.aim = -Math.PI / 2;
     this.run = { wave: 0, kills: 0, shards: 0 };
-    this.biome = 0; this.clock = 0; this._speedMul = 1; this._syncBoss();
+    this.biome = 0; this.clock = 0; this._speedMul = 1; this.down = false; this.reviveT = 0; this._syncBoss();
     this.shake = 0; this.flash = 0;
     this.displayShards = this.save.shards;
     this.state = 'banner';
@@ -399,6 +466,8 @@ class RealmArena {
 
   stop() {
     this.active = false;
+    if (this.team) { this.team.close(); this.team = null; this.role = 'solo'; }
+    const pe = document.getElementById('realm-partner'); if (pe) pe.classList.add('hidden');
     this.keys = {};
     this.mouse.down = false;
     this.aimVec.on = false; this.moveVec.x = 0; this.moveVec.y = 0;
@@ -447,7 +516,7 @@ class RealmArena {
     const e = this._take(this.enemies);
     if (!e) return null;
     const def = RM_ENEMIES[type];
-    const scale = 1 + 0.15 * Math.max(0, this.run.wave - 1);
+    const scale = (1 + 0.15 * Math.max(0, this.run.wave - 1)) * (this.team && this.role === 'host' ? RT_HP_SCALE : 1); // tougher with a partner
     e.active = true; e.type = type; e.x = x; e.y = y;
     e.maxHp = Math.ceil(def.hp * scale); e.hp = e.maxHp;
     e.t = 0; e.flash = 0; e.angle = this.rng() * Math.PI * 2; e.dir = this.rng() < 0.5 ? 1 : -1;
@@ -482,7 +551,7 @@ class RealmArena {
     }
     this._syncBoss();
     this.state = 'play';
-    this._showBanner(wave % RM_BOSS_EVERY === 0 ? `Wave ${wave} — ${RM_ENEMIES.boss.name}!` : changed ? `Wave ${wave} — ${biome.name}` : `Wave ${wave}`, 1.4);
+    this._showBanner(wave % RM_BOSS_EVERY === 0 ? `Wave ${wave} — ${RM_ENEMIES.boss.name}!` : changed ? `Wave ${wave} — ${biome.name}` : `Wave ${wave}`, 1.4, true);
     this._syncHud();
   }
 
@@ -516,7 +585,7 @@ class RealmArena {
     const tier = this.run.wave / RM_BOSS_EVERY;
     const e = this.spawnEnemy('boss', this.W / 2, 132);
     if (!e) return null;
-    e.maxHp = RM_BOSS_HP + RM_BOSS_HP_TIER * (tier - 1); e.hp = e.maxHp; e.phase = 1; e.invuln = 1.2; e.cd = 1.2; e.cd2 = 2.4; e.angle = 0;
+    e.maxHp = Math.ceil((RM_BOSS_HP + RM_BOSS_HP_TIER * (tier - 1)) * (this.team && this.role === 'host' ? RT_HP_SCALE : 1)); e.hp = e.maxHp; e.phase = 1; e.invuln = 1.2; e.cd = 1.2; e.cd2 = 2.4; e.angle = 0;
     this.bossT0 = this.clock;
     this._syncBoss();
     return e;
@@ -538,14 +607,18 @@ class RealmArena {
   fireEnemyBullet(x, y, angle, speed, kind) {
     const b = this._take(this.eBullets);
     if (!b) return;
+    if (this.team && this.role === 'host') this.team.ev('fe', [Math.round(x), Math.round(y), Math.round(angle * 1000) / 1000, speed, kind || 0]);
     b.active = true; b.x = x; b.y = y; b.vx = Math.cos(angle) * speed; b.vy = Math.sin(angle) * speed; b.life = 6; b.kind = kind || 0;
   }
 
-  firePlayerBullet(angle) {
+  firePlayerBullet(angle) { this.firePlayerBulletFrom(this.player.x, this.player.y, angle, this.stats.dmg, 0); }
+
+  // owner 0 = you (host), 1 = your partner. Everything a bolt does is decided on the host; guests only draw them.
+  firePlayerBulletFrom(x, y, angle, dmg, owner) {
     const b = this._take(this.pBullets);
     if (!b) return;
-    const p = this.player;
-    b.active = true; b.x = p.x + Math.cos(angle) * 14; b.y = p.y + Math.sin(angle) * 14;
+    if (this.team && this.role === 'host') this.team.ev('fp', [Math.round(x), Math.round(y), Math.round(angle * 1000) / 1000, Math.round(dmg * 10) / 10], owner);
+    b.active = true; b.x = x + Math.cos(angle) * 14; b.y = y + Math.sin(angle) * 14; b.dmg = dmg; b.own = owner;
     b.vx = Math.cos(angle) * RM_PLAYER.bulletSpeed; b.vy = Math.sin(angle) * RM_PLAYER.bulletSpeed; b.life = RM_PLAYER.bulletLife;
   }
 
@@ -594,6 +667,15 @@ class RealmArena {
       t.y += t.vy * dt;
     }
 
+    if (this.role === 'guest' && this.team) { // the guest only moves itself; the host runs everything else
+      this._guestSlow();
+      this._updatePlayer(dt);
+      this._updateAbilities(dt);
+      this.team.guestTick(dt);
+      this._syncBoss();
+      return;
+    }
+
     if (this.state === 'dead') {
       this.deadT -= dt;
       if (this.deadT <= 0) { this.stop(); this.onExit('death'); }
@@ -612,6 +694,7 @@ class RealmArena {
     this._updateDrifters(dt);
     this._updateBullets(dt);
     this._updateBags(dt);
+    if (this.team && this.role === 'host') this.team.hostTick(dt);
     if (this.state === 'play' && this.run.wave > 0 && this.enemiesAlive() === 0) this._waveCleared();
   }
 
@@ -623,6 +706,7 @@ class RealmArena {
     if (this.keys.d || this.keys.arrowright) mx += 1;
     if (this.keys.w || this.keys.arrowup) my -= 1;
     if (this.keys.s || this.keys.arrowdown) my += 1;
+    if (this.down) { mx = 0; my = 0; } // downed: no moving or shooting until revived
     const len = Math.hypot(mx, my);
     p.moving = len > 0.05;
     if (len > 1) { mx /= len; my /= len; }
@@ -638,11 +722,20 @@ class RealmArena {
       p.aim = Math.atan2(this.mouse.y - p.y, this.mouse.x - p.x);
       firing = this.mouse.down || !!this.keys[' '];
     } else if (this.keys[' ']) firing = true;
+    if (this.down) firing = false;
+    this._firing = firing;
     p.fireCd -= dt;
     if (firing && p.fireCd <= 0 && this.state !== 'dead') {
       p.fireCd = 1 / (this.stats.rate * (this.overdriveT > 0 ? 2 : 1));
       this.firePlayerBullet(p.aim);
     }
+  }
+
+  // Guest: only the ice slows us locally (the host owns all damage).
+  _guestSlow() {
+    const p = this.player; let slow = 1;
+    for (let i = 0; i < this.hazards.length; i++) { const h = this.hazards[i]; if (h.active && h.kind === 'ice' && Math.hypot(p.x - h.x, p.y - h.y) < RM_HAZARD_R - 4) slow = RM_ICE_SLOW; }
+    this._speedMul = slow;
   }
 
   _updateHazards(dt) {
@@ -675,6 +768,7 @@ class RealmArena {
     d.active = false;
     const gain = Math.max(1, Math.round(this.stats.shards));
     this.run.shards += gain; this.save.shards += gain; this.save.kb.drifter += 1;
+    if (this.team) this.team.ev('rew', [1, 2, 'drifter']);
     this._burst(d.x, d.y, RM_DRIFTER_COLORS[d.kind], 8, 160);
     this._floatText(d.x, d.y - 14, `+${gain} 💎`, '#8fe9ff');
     this._gainXp(Math.max(1, Math.round(2 * this.stats.xp)));
@@ -683,12 +777,12 @@ class RealmArena {
 
   _updateBoss(e, dt) {
     e.invuln = Math.max(0, e.invuln - dt);
+    const p = this._nearest(e.x, e.y);
     const fast = e.phase === 3 ? 1.35 : 1;
     e.x = this.W / 2 + Math.sin(e.t * 0.6 * fast) * (this.W * 0.3);
     e.y = 132 + Math.sin(e.t * 0.9 * fast) * 22; // below the HUD, even on a phone
     if (e.invuln > 0) return; // a phase change makes it pause, shielded
     e.cd -= dt; e.cd2 -= dt;
-    const p = this.player;
     if (e.phase === 1) { // three-armed spiral + aimed fans
       if (e.cd <= 0) { e.cd = 0.14; e.angle += 0.28; for (let k = 0; k < 3; k++) this.fireEnemyBullet(e.x, e.y, e.angle + k * Math.PI * 2 / 3, 140, 1); }
       if (e.cd2 <= 0) { e.cd2 = 2.4; const a = Math.atan2(p.y - e.y, p.x - e.x); for (let k = -2; k <= 2; k++) this.fireEnemyBullet(e.x, e.y, a + k * 0.18, 230, 0); }
@@ -705,7 +799,8 @@ class RealmArena {
     e.phase = phase; e.invuln = 1.0; e.cd = 1.1; e.cd2 = 2.0;
     this.eBullets.forEach((b) => { if (b.active) { b.active = false; this._burst(b.x, b.y, '#ff5fa2', 1, 60); } });
     this.shake = 12; this._burst(e.x, e.y, '#ff5fa2', 30, 280);
-    this._showBanner(phase === 2 ? 'Gloomheart — it summons help!' : 'Gloomheart — ENRAGED!', 1.6);
+    this._showBanner(phase === 2 ? 'Gloomheart — it summons help!' : 'Gloomheart — ENRAGED!', 1.6, true);
+    if (this.team) { this.team.ev('clr', []); this.team.ev('fx', [12]); }
     if (phase === 2) { for (let k = 0; k < 2; k++) { const a = this.spawnEnemy('aimed', k ? this.W - 60 : 60, 140); if (a) a.cd = 1.5; } }
   }
 
@@ -722,16 +817,17 @@ class RealmArena {
     this._floatText(e.x, e.y - 30, `+${gain} 💎`, '#8fe9ff');
     this._gainXp(Math.round(RM_XP.boss * tier * this.stats.xp));
     this.dropBag(e.x - 20, e.y + 20, 2); this.dropBag(e.x + 20, e.y + 20, this.rollRarity()); // a guaranteed rare, plus one more
-    this._showBanner(`Gloomheart defeated!  +${gain} 💎${newBest ? '  New best time!' : ''}`, 2.4);
+    this._showBanner(`Gloomheart defeated!  +${gain} 💎${newBest ? '  New best time!' : ''}`, 2.4, true);
+    if (this.team) { this.team.ev('rew', [40 + 10 * tier, RM_XP.boss * tier, 'boss', 1, tenths]); this.team.ev('clr', []); }
     this.onSave(this.save);
     this._syncBoss();
   }
 
   _updateEnemies(dt) {
-    const p = this.player;
     for (let i = 0; i < this.enemies.length; i++) {
       const e = this.enemies[i];
       if (!e.active) continue;
+      const p = this._nearest(e.x, e.y);
       e.t += dt; e.flash = Math.max(0, e.flash - dt * 6);
       if (e.type === 'boss') { this._updateBoss(e, dt); continue; }
       e.cd -= dt;
@@ -780,14 +876,14 @@ class RealmArena {
         const r = RM_ENEMIES[e.type].r + 5;
         if ((b.x - e.x) * (b.x - e.x) + (b.y - e.y) * (b.y - e.y) < r * r) {
           b.active = false;
-          this._hitEnemy(e, this.stats.dmg);
+          this._hitEnemy(e, b.dmg || this.stats.dmg);
           break;
         }
       }
       if (!b.active) continue;
       for (let j = 0; j < this.drifters.length; j++) {
         const d = this.drifters[j];
-        if (d.active && (b.x - d.x) * (b.x - d.x) + (b.y - d.y) * (b.y - d.y) < 15 * 15) { b.active = false; this._hitDrifter(d, this.stats.dmg); break; }
+        if (d.active && (b.x - d.x) * (b.x - d.x) + (b.y - d.y) * (b.y - d.y) < 15 * 15) { b.active = false; this._hitDrifter(d, b.dmg || this.stats.dmg); break; }
       }
     }
     // Enemy bullets: move, hit the player.
@@ -797,9 +893,12 @@ class RealmArena {
       if (!b.active) continue;
       b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
       if (b.life <= 0 || b.x < -20 || b.y < -20 || b.x > this.W + 20 || b.y > this.H + 20) { b.active = false; continue; }
-      if (this.state !== 'dead' && p.iframes <= 0 && (b.x - p.x) * (b.x - p.x) + (b.y - p.y) * (b.y - p.y) < pr * pr) {
+      if (this.state !== 'dead' && !this.down && p.iframes <= 0 && (b.x - p.x) * (b.x - p.x) + (b.y - p.y) * (b.y - p.y) < pr * pr) {
         b.active = false;
         this._hitPlayer(RM_ENEMY_BULLET_DAMAGE);
+      } else if (this.team && this.role === 'host' && this.team.partner && this.team.partner.ready) {
+        const q = this.team.partner;
+        if ((b.x - q.x) * (b.x - q.x) + (b.y - q.y) * (b.y - q.y) < pr * pr && this.team.hitPartner(RM_ENEMY_BULLET_DAMAGE)) b.active = false;
       }
     }
   }
@@ -824,6 +923,7 @@ class RealmArena {
     const gain = Math.max(1, Math.round(def.shards * this.stats.shards));
     this.run.kills += 1; this.run.shards += gain;
     this.save.kills += 1; this.save.shards += gain; this.save.kb[e.type] += 1;
+    if (this.team) this.team.ev('rew', [def.shards, RM_XP[e.type] * (1 + 0.1 * Math.max(0, this.run.wave - 1)), e.type]);
     this._burst(e.x, e.y, def.color, 16, 230);
     this._floatText(e.x, e.y - 22, `+${gain} 💎`, '#8fe9ff');
     this._gainXp(Math.round(RM_XP[e.type] * (1 + 0.1 * Math.max(0, this.run.wave - 1)) * this.stats.xp));
@@ -834,6 +934,7 @@ class RealmArena {
 
   _hitPlayer(dmg) {
     const p = this.player;
+    if (this.down) return; // already down: hazards must not reset the revive
     if (this.shield.hits > 0) { // Shield soaks the hit
       this.shield.hits -= 1; p.iframes = 0.25; this._burst(p.x, p.y, '#8fe9ff', 6, 140); this._floatText(p.x, p.y - 22, 'blocked', '#8fe9ff'); return;
     }
@@ -843,7 +944,18 @@ class RealmArena {
     this._burst(p.x, p.y, '#ff6f91', 8, 160);
     this._floatText(p.x, p.y - 22, `-${dmg}`, '#ff6f91');
     this._syncHud();
-    if (p.hp <= 0) this._die();
+    if (p.hp <= 0) this._downOrDie();
+  }
+
+  // With a living partner you go down (they can revive you); alone, or when both are down, the run ends.
+  _downOrDie() {
+    const t = this.team;
+    if (t && this.role === 'host' && t.partner && t.partner.ready && !t.partner.down) {
+      this.down = true; this.reviveT = 0; this.player.hp = 0;
+      this._showBanner('You are down — your partner can revive you!', 2.2);
+      this._syncHud();
+    } else if (t && this.role === 'host') this._teamWipe();
+    else this._die();
   }
 
   _waveCleared() {
@@ -854,7 +966,11 @@ class RealmArena {
     this.state = 'banner';
     this.nextWaveIn = RM_WAVE_PAUSE;
     this.eBullets.forEach((b) => { if (b.active) { b.active = false; this._burst(b.x, b.y, '#8fe9ff', 1, 40); } }); // clearing a wave pops the leftover bolts
-    this._showBanner(`Wave ${this.run.wave} cleared!  +${bonus} 💎`, RM_WAVE_PAUSE - 0.2);
+    this._showBanner(`Wave ${this.run.wave} cleared!  +${bonus} 💎`, RM_WAVE_PAUSE - 0.2, true);
+    if (this.team) this.team.ev('rew', [bonus, 0, 'wave']);
+    if (this.team) this.team.ev('clr', []);
+    if (this.down) this._revive(0.4);
+    if (this.team && this.team.partner && this.team.partner.down) { const pp = this.team.partner; pp.down = false; pp.reviveT = 0; pp.hp = Math.ceil(pp.maxHp * 0.4); pp.iframes = 1.5; }
     this._burst(this.W / 2, this.H / 2, '#ffe27a', 24, 280);
     this._syncHud();
   }
@@ -942,7 +1058,9 @@ class RealmArena {
       b.x = Math.max(14, Math.min(this.W - 14, b.x)); b.y = Math.max(14, Math.min(this.H - 14, b.y));
       const dx = p.x - b.x; const dy = p.y - b.y; const d = Math.hypot(dx, dy) || 1;
       if (b.t > 0.4 && d < 110) { const k = (230 * dt) / d; b.x += dx * k; b.y += dy * k; } // bags drift toward you
-      if (b.t > 0.25 && d < 20) { b.active = false; this.collectItem(b.id, b.r); }
+      if (b.t > 0.25 && d < 20 && !this.down) { b.active = false; this.collectItem(b.id, b.r); continue; }
+      const q = this.team && this.role === 'host' && this.team.partner && this.team.partner.ready && !this.team.partner.down ? this.team.partner : null;
+      if (q && b.t > 0.25 && Math.hypot(q.x - b.x, q.y - b.y) < 20) { b.active = false; this.team.ev('loot', [b.id, b.r], 1); }
     }
   }
 
@@ -972,6 +1090,7 @@ class RealmArena {
       this.overdriveT = 4;
     }
     this.abilityCd[i] = ab.cd;
+    if (this.team && this.role === 'guest') this.team.sendAbility(ab.id);
     this._floatText(p.x, p.y - 30, `${ab.icon} ${ab.name}`, '#fff');
     this._syncAbilities();
     return true;
@@ -992,7 +1111,7 @@ class RealmArena {
   _panel(name) {
     if (name && this.state === 'dead') return; // no panels while the death message runs (it would freeze the exit)
     this.panel = name;
-    this.paused = !!name;
+    this.paused = !!name && !this.team; // a shared run never freezes (it would time the partner out)
     const bp = document.getElementById('realm-backpack'); if (bp) bp.classList.toggle('hidden', name !== 'bp');
     const bd = document.getElementById('realm-board'); if (bd) bd.classList.toggle('hidden', name !== 'board');
     if (name) { this.keys = {}; this.mouse.down = false; this.aimVec.on = false; if (name === 'bp') this.renderBackpack(); else this.renderBoard(); }
@@ -1108,9 +1227,21 @@ class RealmArena {
     for (let i = 0; i < this.eBullets.length; i++) { const b = this.eBullets[i]; if (b.active) g.drawImage(this.sprites.eBullet[b.kind], b.x - 8, b.y - 8); }
     for (let i = 0; i < this.pBullets.length; i++) { const b = this.pBullets[i]; if (b.active) g.drawImage(this.sprites.pBullet, b.x - 8, b.y - 8); }
 
+    // Your partner: a tinted villager with a name tag, a small HP bar, and a revive ring while they are down.
+    const tm = this.team;
+    const q = tm ? (tm.role === 'host' ? (tm.partner && tm.partner.ready ? tm.partner : null) : tm.hostPl) : null;
+    if (q) {
+      g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(q.x, q.y + 14, 13, 5, 0, 0, Math.PI * 2); g.fill();
+      g.save(); g.translate(q.x, q.y); g.globalAlpha = q.down ? 0.45 : 1;
+      g.drawImage(this.sprites.playerFallback, -16, -20, 32, 32); g.restore(); g.globalAlpha = 1;
+      g.strokeStyle = 'rgba(126,231,135,0.85)'; g.lineWidth = 2; g.beginPath(); g.arc(q.x, q.y - 4, 19, 0, Math.PI * 2); g.stroke();
+      g.font = 'bold 11px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(tm.role === 'host' ? (q.name || 'Friend') : 'Host', q.x + 1, q.y - 27); g.fillStyle = '#7ee787'; g.fillText(tm.role === 'host' ? (q.name || 'Friend') : 'Host', q.x, q.y - 28);
+      if (q.down) { const prog = tm.role === 'host' ? Math.min(1, q.reviveT / RT_REVIVE_TIME) : (q.revive || 0); g.strokeStyle = '#7ee787'; g.lineWidth = 3; g.beginPath(); g.arc(q.x, q.y, RT_REVIVE_RANGE, -Math.PI / 2, -Math.PI / 2 + prog * Math.PI * 2); g.stroke(); g.strokeStyle = 'rgba(126,231,135,0.35)'; g.lineWidth = 1; g.beginPath(); g.arc(q.x, q.y, RT_REVIVE_RANGE, 0, Math.PI * 2); g.stroke(); }
+    }
     // Player: the villager sprite (flickers while invulnerable), with a soft shadow and aim marker.
     const p = this.player;
     if (this.state !== 'dead' && (p.iframes <= 0 || Math.floor(p.iframes * 20) % 2 === 0)) {
+      if (this.down) { g.globalAlpha = 0.45; g.strokeStyle = '#7ee787'; g.lineWidth = 3; g.beginPath(); g.arc(p.x, p.y, RT_REVIVE_RANGE, -Math.PI / 2, -Math.PI / 2 + Math.min(1, this.reviveT / RT_REVIVE_TIME) * Math.PI * 2); g.stroke(); }
       g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(p.x, p.y + 14, 13, 5, 0, 0, Math.PI * 2); g.fill();
       const spr = this._avatar || this.sprites.playerFallback;
       const size = this._avatar ? 48 : 32;
@@ -1122,6 +1253,7 @@ class RealmArena {
       if (this.overdriveT > 0) { g.strokeStyle = 'rgba(255,170,60,0.8)'; g.lineWidth = 2; g.beginPath(); g.arc(p.x, p.y, 21 + Math.sin(performance.now() / 60) * 2, 0, Math.PI * 2); g.stroke(); }
       g.strokeStyle = 'rgba(143,233,255,0.7)'; g.lineWidth = 2; g.beginPath();
       g.moveTo(p.x + Math.cos(p.aim) * 26, p.y + Math.sin(p.aim) * 26); g.lineTo(p.x + Math.cos(p.aim) * 34, p.y + Math.sin(p.aim) * 34); g.stroke();
+      g.globalAlpha = 1;
     }
 
     for (let i = 0; i < this.particles.length; i++) {
@@ -1161,6 +1293,16 @@ class RealmArena {
     if (shards) shards.textContent = `💎 ${Math.floor(this.displayShards)}`;
     const bio = document.getElementById('realm-biome');
     if (bio) bio.textContent = this.run.wave > 0 ? RM_BIOMES[this.biome].name : '';
+    const pe = document.getElementById('realm-partner');
+    if (pe) {
+      const t = this.team; const q = t ? (t.role === 'host' ? (t.partner && t.partner.ready ? t.partner : null) : t.hostPl) : null;
+      pe.classList.toggle('hidden', !q);
+      if (q) {
+        const nm = t.role === 'host' ? (q.name || 'Friend') : (t.partnerName || 'Host');
+        const pf = document.getElementById('realm-partner-fill'); if (pf) pf.style.width = `${Math.max(0, q.hp) / Math.max(1, q.maxHp) * 100}%`;
+        const pn = document.getElementById('realm-partner-name'); if (pn) pn.textContent = `🤝 ${nm}${q.down ? ' · down!' : ''}`;
+      }
+    }
     const lv = document.getElementById('realm-level');
     if (lv) lv.textContent = `Lv ${this.save.level}`;
     const xpf = document.getElementById('realm-xp-fill');
@@ -1186,7 +1328,8 @@ class RealmArena {
     }
   }
 
-  _showBanner(text, seconds) {
+  _showBanner(text, seconds, share) {
+    if (share && this.team && this.role === 'host') this.team.ev('bn', [text, seconds || 0]);
     const el = document.getElementById('realm-banner');
     if (!el) return;
     el.textContent = text;

@@ -5,7 +5,7 @@ const SAVE = 'pixeltown-save-v1';
 const seed = { caveSeed: 0, resources: { stone: 1 }, realm: { shards: 100, bestWave: 2, kills: 5, deaths: 1 } };
 
 const enter = (s) => {
-  s.localBody.setPosition(REALM_GATE_POS.x, REALM_GATE_POS.y + 30); s.interact();
+  s.localBody.setPosition(REALM_GATE_POS.x, REALM_GATE_POS.y + 30); s.enterRealm();
   const r = s.realm; r.stop(); r.active = true;
   window.__st = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) r._update(dt); };
   let t = 4242; r.rng = () => { t = (t * 1664525 + 1013904223) >>> 0; return t / 4294967296; };
@@ -175,7 +175,7 @@ const enter = (s) => {
 
   // 6. Phone: ability buttons sit above the aim stick, the backpack fits and works by touch.
   ({ browser, page, errors } = await launch({ width: 390, height: 844 }, { ...seed, realm: { shards: 100, level: 8, xp: 10, items: [{ n: 1, id: 'sparkwand', r: 2 }, { n: 2, id: 'heartcharm', r: 1 }, { n: 3, id: 'luckring', r: 0 }, { n: 4, id: 'swiftcharm', r: 0 }, { n: 5, id: 'quickwand', r: 1 }, { n: 6, id: 'wardring', r: 2 }], nextUid: 7 } }, true));
-  await scene(page, (s) => { enter_(s); function enter_(s) { s.localBody.setPosition(REALM_GATE_POS.x, REALM_GATE_POS.y + 30); s.interact(); const r = s.realm; r.stop(); r.active = true; window.__st = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) r._update(dt); }; r._resize(); r.state = 'play'; r.run.wave = 2; } });
+  await scene(page, (s) => { enter_(s); function enter_(s) { s.localBody.setPosition(REALM_GATE_POS.x, REALM_GATE_POS.y + 30); s.enterRealm(); const r = s.realm; r.stop(); r.active = true; window.__st = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) r._update(dt); }; r._resize(); r.state = 'play'; r.run.wave = 2; } });
   const ph = await page.evaluate(() => {
     const r = (id) => document.getElementById(id).getBoundingClientRect(); const over = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
     const abs = [0, 1, 2, 3].map((i) => r(`realm-ab-${i}`)); const aim = r('realm-stick-aim'); const move = r('realm-stick-move'); const hud = r('realm-hud'); const leave = r('realm-leave-btn'); const bp = r('realm-bp-btn'); const xp = r('realm-xp'); const hp = r('realm-hp');

@@ -20,9 +20,11 @@ const seed = { caveSeed: 0, resources: { stone: 1 }, realm: { shards: 100, bestW
     return out;
   });
   check('gate: a labelled Realm Gate stands in the village; the hint shows only when you are beside it; far away E does nothing', gate.label && gate.hintNear && gate.hintFar && !gate.farEnters, JSON.stringify(gate));
-  await page.keyboard.press('e'); await page.waitForTimeout(400);
+  await page.keyboard.press('e'); await page.waitForTimeout(300);
+  check('gate: pressing E opens the gate menu (Go in alone / invite) without entering yet', await page.evaluate(() => !document.getElementById('realm-menu').classList.contains('hidden') && !window.__g.scene.getScene('Town').inRealm), '');
+  await page.click('#realm-menu-solo'); await page.waitForTimeout(400);
   const inR = await scene(page, (s) => ({ inRealm: s.inRealm, paused: s.scene.isPaused(), overlay: !document.getElementById('realm-overlay').classList.contains('hidden'), hud: document.getElementById('hud').classList.contains('hidden'), canvas: !!document.getElementById('realm-canvas'), size: [document.getElementById('realm-canvas').width, document.getElementById('realm-canvas').height], state: s.realm.state, hint: document.getElementById('realm-gate-hint').classList.contains('hidden'), shards: document.getElementById('realm-shards').textContent }));
-  check('gate: pressing E enters the Realm — village paused, HUD hidden, canvas arena ready, shard bank shown', inR.inRealm && inR.paused && inR.overlay && inR.hud && inR.canvas && inR.state === 'banner' && inR.hint && /100/.test(inR.shards), JSON.stringify(inR));
+  check('gate: choosing Go in alone enters the Realm — village paused, HUD hidden, canvas arena ready, shard bank shown', inR.inRealm && inR.paused && inR.overlay && inR.hud && inR.canvas && inR.state === 'banner' && inR.hint && /100/.test(inR.shards), JSON.stringify(inR));
   await scene(page, (s) => { const r = s.realm; r.stop(); r.active = true; window.__st = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) r._update(dt); }; });
   await page.keyboard.press('Escape'); await page.waitForTimeout(300);
   const out = await scene(page, (s) => ({ reentered: s.isNearRealmGate(), inRealm: s.inRealm, paused: s.scene.isPaused(), overlay: document.getElementById('realm-overlay').classList.contains('hidden'), hud: !document.getElementById('hud').classList.contains('hidden'), shards: s.realm.save.shards, nearGate: Math.hypot(s.localBody.x - REALM_GATE_POS.x, s.localBody.y - REALM_GATE_POS.y) < 140, canAct: s.canAct() }));
@@ -30,7 +32,7 @@ const seed = { caveSeed: 0, resources: { stone: 1 }, realm: { shards: 100, bestW
   check('leaving with Esc: back in the village, scene resumed, HUD back, you stand beside the gate and nothing is lost', !out.inRealm && !out.paused && out.overlay && out.hud && out.shards === 100 && out.nearGate && out.canAct && out.reentered === false, JSON.stringify(out));
 
   // Re-enter for the combat tests.
-  await scene(page, (s) => { s.localBody.setPosition(REALM_GATE_POS.x, REALM_GATE_POS.y + 30); s.interact(); const r = s.realm; r.stop(); r.active = true; window.__st = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) r._update(dt); }; r.rng = (() => { let t = 12345; return () => { t = (t * 1664525 + 1013904223) >>> 0; return t / 4294967296; }; })(); });
+  await scene(page, (s) => { s.localBody.setPosition(REALM_GATE_POS.x, REALM_GATE_POS.y + 30); s.enterRealm(); const r = s.realm; r.stop(); r.active = true; window.__st = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) r._update(dt); }; r.rng = (() => { let t = 12345; return () => { t = (t * 1664525 + 1013904223) >>> 0; return t / 4294967296; }; })(); });
 
   // 2. Waves: starts with a banner, wave 1 brings 3 enemies, clearing it pays a bonus and the next wave is bigger.
   const w1 = await scene(page, (s) => {
@@ -107,7 +109,7 @@ const seed = { caveSeed: 0, resources: { stone: 1 }, realm: { shards: 100, bestW
   check('death: after the message you are returned to the running village', !dth.inRealm && !dth.paused && dth.hud, JSON.stringify(dth));
 
   // 6. Pools never grow, and the per-frame cost stays tiny even with a screen full of bolts.
-  await scene(page, (s) => { s.localBody.setPosition(REALM_GATE_POS.x, REALM_GATE_POS.y + 30); s.interact(); const r = s.realm; r.stop(); r.active = true; window.__st = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) r._update(dt); }; });
+  await scene(page, (s) => { s.localBody.setPosition(REALM_GATE_POS.x, REALM_GATE_POS.y + 30); s.enterRealm(); const r = s.realm; r.stop(); r.active = true; window.__st = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) r._update(dt); }; });
   const pool = await scene(page, (s) => {
     const r = s.realm; const p = r.player; const refs = [r.pBullets, r.eBullets, r.enemies, r.particles, r.texts]; const lens = refs.map((a) => a.length); const first = refs.map((a) => a[0]);
     r.run.wave = 7; r.state = 'play'; p.iframes = 1e9; p.x = r.W / 2; p.y = r.H / 2; r.mouse = { x: 800, y: 100, down: true, seen: true };
@@ -142,13 +144,13 @@ const seed = { caveSeed: 0, resources: { stone: 1 }, realm: { shards: 100, bestW
 
   // 8. Corrupt saves can't mint shards.
   ({ browser, page, errors } = await launch({ width: 1000, height: 700 }, { caveSeed: 0, realm: { shards: -5, bestWave: 'x', kills: 2.7, deaths: 1e12, bogus: 9 } }));
-  const cs = await scene(page, (s) => { s.localBody.setPosition(REALM_GATE_POS.x, REALM_GATE_POS.y + 30); s.interact(); const r = s.realm; const o = { ...r.save }; r.stop(); s.exitRealm(); return o; });
+  const cs = await scene(page, (s) => { s.localBody.setPosition(REALM_GATE_POS.x, REALM_GATE_POS.y + 30); s.enterRealm(); const r = s.realm; const o = { ...r.save }; r.stop(); s.exitRealm(); return o; });
   check('corrupt realm save is sanitised: negatives and text become 0, fractions floored, huge values capped, unknown keys dropped', cs.shards === 0 && cs.bestWave === 0 && cs.kills === 2 && cs.deaths === 9999999 && !('bogus' in cs), JSON.stringify(cs));
   await browser.close();
 
   // 9. Phone: portrait arena, HUD fits, both sticks work (left moves, right aims and fires), nothing overlaps.
   ({ browser, page, errors } = await launch({ width: 390, height: 844 }, seed, true));
-  await scene(page, (s) => { s.localBody.setPosition(REALM_GATE_POS.x, REALM_GATE_POS.y + 30); s.interact(); const r = s.realm; r.stop(); r.active = true; r.rng = (() => { let t = 99; return () => { t = (t * 1664525 + 1013904223) >>> 0; return t / 4294967296; }; })(); window.__st = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) r._update(dt); }; r._resize(); });
+  await scene(page, (s) => { s.localBody.setPosition(REALM_GATE_POS.x, REALM_GATE_POS.y + 30); s.enterRealm(); const r = s.realm; r.stop(); r.active = true; r.rng = (() => { let t = 99; return () => { t = (t * 1664525 + 1013904223) >>> 0; return t / 4294967296; }; })(); window.__st = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) r._update(dt); }; r._resize(); });
   const ph = await page.evaluate(() => {
     const r = (id) => document.getElementById(id).getBoundingClientRect(); const over = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
     const hud = r('realm-hud'); const hp = r('realm-hp'); const leave = r('realm-leave-btn'); const ms = r('realm-stick-move'); const as = r('realm-stick-aim');

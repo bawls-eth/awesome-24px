@@ -1461,6 +1461,8 @@ class TownScene extends Phaser.Scene {
     this.renderPlayerList();
 
     // Handlers are wired up — safe to start receiving live updates now.
+    this.setupRealmMenu();
+    this.setupRealmInvites();
     this.net.startListening();
   }
 
@@ -2124,7 +2126,7 @@ class TownScene extends Phaser.Scene {
       ['achievementsOpen', 'achievements-close-btn'], ['outfitShopOpen', 'outfit-close-btn'],
       ['guestbookOpen', 'guestbook-close-btn'], ['triviaOpen', 'trivia-close-btn'],
       ['keysHelpOpen', 'keys-help-close-btn'], ['changelogOpen', 'changelog-close-btn'],
-      ['museumOpen', 'museum-close-btn'], ['workbenchOpen', 'workbench-close-btn'], ['mailboxOpen', 'mailbox-close-btn'], ['homeOpen', 'home-close-btn'], ['dailiesOpen', 'dailies-close-btn'], ['journalOpen', 'journal-close-btn'],
+      ['museumOpen', 'museum-close-btn'], ['workbenchOpen', 'workbench-close-btn'], ['mailboxOpen', 'mailbox-close-btn'], ['homeOpen', 'home-close-btn'], ['dailiesOpen', 'dailies-close-btn'], ['journalOpen', 'journal-close-btn'], ['realmMenuOpen', 'realm-menu-close-btn'],
     ];
     const open = overlays.find(([flag]) => this[flag]);
     if (open) {
@@ -2242,7 +2244,7 @@ class TownScene extends Phaser.Scene {
   // so chat/overlay state is respected no matter which input triggered it
   // (keyboard, on-screen button, or shake).
   canAct() {
-    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen && !this.mapOpen && !this.museumOpen && !this.workbenchOpen && !this.mailboxOpen && !this.homeOpen && !this.dailiesOpen && !this.journalOpen;
+    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen && !this.mapOpen && !this.museumOpen && !this.workbenchOpen && !this.mailboxOpen && !this.homeOpen && !this.dailiesOpen && !this.journalOpen && !this.realmMenuOpen;
   }
 
   // Shake is just a fun alternate trigger for the same interact() logic used
@@ -2431,7 +2433,7 @@ class TownScene extends Phaser.Scene {
       return;
     }
     if (this.isNearRealmGate()) {
-      this.enterRealm();
+      this.openRealmGateMenu();
       return;
     }
 
@@ -2862,8 +2864,119 @@ class TownScene extends Phaser.Scene {
     hint.classList.toggle('hidden', this.inUnderground || this.inRealm || this.buildMode || !this.isNearRealmGate());
   }
 
-  enterRealm() {
+  // ---------- Realm gate menu, invites and team link ----------
+
+  openRealmGateMenu() {
+    if (this.realmMenuOpen || this.inRealm || this.inUnderground) return;
+    this.realmMenuOpen = true;
+    document.getElementById('realm-menu').classList.remove('hidden');
+    this.renderRealmGateMenu();
+  }
+
+  closeRealmGateMenu() {
+    if (!this.realmMenuOpen) return;
+    this.realmMenuOpen = false;
+    document.getElementById('realm-menu').classList.add('hidden');
+    this.cancelRealmInvite();
+  }
+
+  // Who can I invite? Everybody else currently in town (not ourselves).
+  renderRealmGateMenu() {
+    const list = document.getElementById('realm-menu-players');
+    const status = document.getElementById('realm-menu-status');
+    if (!list) return;
+    list.innerHTML = '';
+    const inv = this.realmInviteOut;
+    if (inv) { status.textContent = `Waiting for ${inv.name} to answer…`; }
+    else status.textContent = this.net && this.net.db ? '' : 'Team play needs the online town.';
+    const online = [...this.remotePlayers.values()].filter((rp) => rp.id && rp.name);
+    if (!online.length) { const li = document.createElement('li'); li.className = 'dim'; li.textContent = 'Nobody else is in town right now.'; list.appendChild(li); }
+    online.forEach((rp) => {
+      const li = document.createElement('li');
+      const nm = document.createElement('span'); nm.textContent = `🧑 ${rp.name}`;
+      const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'realm-invite-btn'; btn.dataset.pid = rp.id;
+      btn.textContent = inv && inv.to === rp.id ? 'Invited…' : 'Invite';
+      btn.disabled = !!inv || !(this.net && this.net.db);
+      btn.setAttribute('aria-label', `Invite ${rp.name} to fight together in the Realm`);
+      btn.addEventListener('click', () => this.sendRealmInvite(rp.id, rp.name));
+      li.append(nm, btn);
+      list.appendChild(li);
+    });
+  }
+
+  sendRealmInvite(targetId, name) {
+    if (this.realmInviteOut || !this.net || !this.net.db) return false;
+    const party = this.net.realmInvite(targetId, 'coop');
+    if (!party) return false;
+    this.realmInviteOut = { party, to: targetId, name, stop: null, timer: null };
+    this.realmInviteOut.stop = this.net.realmWatchGuest(party, (guestId) => {
+      if (!this.realmInviteOut || this.realmInviteOut.party !== party || guestId !== targetId) return;
+      const link = this.net.realmOpenLink(party, 'host');
+      this.realmInviteOut.stop(); clearTimeout(this.realmInviteOut.timer); this.realmInviteOut = null;
+      this.closeRealmGateMenu();
+      this.enterRealm({ role: 'host', link });
+    });
+    this.realmInviteOut.timer = setTimeout(() => { if (this.realmInviteOut && this.realmInviteOut.party === party) { this.cancelRealmInvite(); if (this.realmMenuOpen) { document.getElementById('realm-menu-status').textContent = `${name} did not answer.`; } } }, 45000);
+    this.renderRealmGateMenu();
+    return true;
+  }
+
+  cancelRealmInvite() {
+    const inv = this.realmInviteOut;
+    if (!inv) return;
+    this.realmInviteOut = null;
+    if (inv.stop) inv.stop();
+    clearTimeout(inv.timer);
+    if (this.net) this.net.realmCancel(inv.party);
+    if (this.realmMenuOpen) this.renderRealmGateMenu();
+  }
+
+  // An invitation arrives: a toast with Accept / Decline, anywhere in town (not while already fighting).
+  setupRealmMenu() {
+    document.getElementById('realm-menu-close-btn').addEventListener('click', () => this.closeRealmGateMenu());
+    document.getElementById('realm-menu-solo').addEventListener('click', () => this.enterRealm());
+  }
+
+  setupRealmInvites() {
+    if (!this.net || !this.net.realmListenInvites) return;
+    this.net.realmListenInvites((inv) => this.showRealmInvite(inv));
+    document.getElementById('realm-invite-accept').addEventListener('click', () => this.acceptRealmInvite());
+    document.getElementById('realm-invite-decline').addEventListener('click', () => this.hideRealmInvite());
+  }
+
+  showRealmInvite(inv) {
+    if (this.inRealm || this.inUnderground) return; // busy: the sender's invite times out
+    this.realmInviteIn = inv;
+    const el = document.getElementById('realm-invite');
+    document.getElementById('realm-invite-text').textContent = `🌀 ${inv.fromName} invites you to fight in the Realm together!`;
+    el.classList.remove('hidden');
+    clearTimeout(this._inviteHide);
+    this._inviteHide = setTimeout(() => this.hideRealmInvite(), 40000);
+  }
+
+  hideRealmInvite() {
+    this.realmInviteIn = null;
+    clearTimeout(this._inviteHide);
+    const el = document.getElementById('realm-invite'); if (el) el.classList.add('hidden');
+  }
+
+  async acceptRealmInvite() {
+    const inv = this.realmInviteIn;
+    if (!inv || this.inRealm || this.inUnderground) return false;
+    this.hideRealmInvite();
+    const ok = await this.net.realmAccept(inv.party);
+    if (!ok) { this.showFloatingText(this.localBody.x, this.localBody.y - 40, 'That invite has expired'); return false; }
+    if (this.inRealm || this.inUnderground) { this.net.realmCancel(inv.party); return false; }
+    for (let i = 0; i < 4 && this.closeTopOverlay(); i++);
+    const link = this.net.realmOpenLink(inv.party, 'guest');
+    this.enterRealm({ role: 'guest', link });
+    return true;
+  }
+
+  // opts: { role: 'host'|'guest', link } starts a two-player run; nothing = solo.
+  enterRealm(opts = {}) {
     if (this.inRealm || this.inUnderground) return;
+    this.closeRealmGateMenu();
     this.inRealm = true;
     this.incrementStat('realmVisits');
     document.getElementById('realm-gate-hint').classList.add('hidden');
@@ -2880,6 +2993,7 @@ class TownScene extends Phaser.Scene {
       this.realm.setAvatar(`../i/${this.selfData.species}-strip.png`, this.selfData.frame || 0, FRAME_SIZE);
       this.setupRealmControls();
     }
+    if (opts.role && opts.link) { this.realm.setTeam(opts.role, opts.link, this.selfData.name); document.getElementById('realm-overlay').classList.add('team'); } else document.getElementById('realm-overlay').classList.remove('team');
     this.realm.start();
   }
 
@@ -2887,6 +3001,7 @@ class TownScene extends Phaser.Scene {
     if (!this.inRealm) return;
     this.inRealm = false;
     this.realm.stop();
+    document.getElementById('realm-overlay').classList.remove('team');
     document.getElementById('realm-overlay').classList.add('hidden');
     document.getElementById('hud').classList.remove('hidden');
     this.scene.resume();
@@ -4929,6 +5044,8 @@ class TownScene extends Phaser.Scene {
     const shadow = this.createShadow(p.x, p.y);
     const nameText = this.createNameText(p.x, p.y, p.name);
     this.remotePlayers.set(p.id, {
+      id: p.id,
+      name: p.name,
       visual,
       shadow,
       nameText,

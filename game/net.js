@@ -658,4 +658,110 @@ class TownNet {
       t: firebase.database.ServerValue.TIMESTAMP,
     }).catch(() => {});
   }
+
+  // ---------- Realm team play (co-op) ----------
+  // Layout (all under the town database, nothing else is touched):
+  //   realmInvites/{targetId}/{pushId} = { party, from, fromName, mode, t }   an invitation, deleted by the reader
+  //   realmParties/{party}/m = { host, hostName, guest, mode, t }              the lobby record
+  //   realmParties/{party}/h = host -> guest snapshots (overwritten ~10x/s)
+  //   realmParties/{party}/g = guest -> host input     (overwritten ~15x/s)
+  // The host removes the whole party when it leaves or disconnects. Messages are size-capped and rate-limited
+  // here, and the receiving side sanitises every field again (see realm-team.js).
+
+  // Someone invites us. cb({ party, from, fromName, mode }) — only well-formed, fresh invites from known ids.
+  realmListenInvites(cb) {
+    if (!this.db || !this.id) return;
+    this.realmInviteRef = this.db.ref(`realmInvites/${this.id}`);
+    this.realmInviteRef.on('child_added', (snap) => {
+      const v = snap.val();
+      snap.ref.remove().catch(() => {}); // an invite is read once
+      if (!v || typeof v !== 'object') return;
+      const party = typeof v.party === 'string' && /^[-_A-Za-z0-9]{8,40}$/.test(v.party) ? v.party : null;
+      const from = typeof v.from === 'string' && /^[-_A-Za-z0-9]{8,40}$/.test(v.from) ? v.from : null;
+      const t = clampNum(v.t, 0, Number.MAX_SAFE_INTEGER, 0);
+      if (!party || !from || from === this.id) return;
+      if (Date.now() - t > 90 * 1000 || t - Date.now() > 60 * 1000) return; // stale (or from a wildly wrong clock)
+      cb({ party, from, fromName: cleanText(v.fromName, MAX_NAME_LEN) || 'someone', mode: v.mode === 'coop' ? 'coop' : 'coop' });
+    });
+  }
+
+  // Open a lobby and invite one player. Returns the party id (the host then waits for realmWatchGuest).
+  realmInvite(targetId, mode) {
+    if (!this.db || !this.id || typeof targetId !== 'string' || !/^[-_A-Za-z0-9]{8,40}$/.test(targetId) || targetId === this.id) return null;
+    if (this.realmRateAt && Date.now() - this.realmRateAt < 3000) return null; // at most one invite every 3 seconds
+    this.realmRateAt = Date.now();
+    const partyRef = this.db.ref('realmParties').push();
+    const party = partyRef.key;
+    partyRef.child('m').set({ host: this.id, hostName: cleanText(this.name, MAX_NAME_LEN), guest: null, mode: mode === 'coop' ? 'coop' : 'coop', t: firebase.database.ServerValue.TIMESTAMP }).catch(() => {});
+    partyRef.onDisconnect().remove().catch(() => {});
+    this.db.ref(`realmInvites/${targetId}`).push({ party, from: this.id, fromName: cleanText(this.name, MAX_NAME_LEN), mode: 'coop', t: firebase.database.ServerValue.TIMESTAMP }).catch(() => {});
+    return party;
+  }
+
+  // Host: call cb(guestId) once somebody accepted.
+  realmWatchGuest(party, cb) {
+    if (!this.db) return () => {};
+    const ref = this.db.ref(`realmParties/${party}/m/guest`);
+    const fn = (snap) => { const g = snap.val(); if (typeof g === 'string' && /^[-_A-Za-z0-9]{8,40}$/.test(g)) cb(g); };
+    ref.on('value', fn);
+    return () => ref.off('value', fn);
+  }
+
+  // Guest: take the seat. Resolves true when the lobby still existed and the seat was free (a transaction).
+  async realmAccept(party) {
+    if (!this.db || !this.id || typeof party !== 'string' || !/^[-_A-Za-z0-9]{8,40}$/.test(party)) return false;
+    let ref = null; let keep = null;
+    try {
+      ref = this.db.ref(`realmParties/${party}/m`);
+      keep = () => {}; ref.on('value', keep); // hold a listener so the node is cached: a transaction on an unread node first runs against null and would abort
+      await ref.once('value');
+      const r = await ref.transaction((m) => {
+        if (!m || typeof m !== 'object' || m.guest) return; // gone, or somebody else got there first
+        m.guest = this.id;
+        return m;
+      });
+      return !!(r.committed && r.snapshot.val());
+    } catch (e) { return false; } finally { if (ref && keep) ref.off('value', keep); }
+  }
+
+  realmCancel(party) {
+    if (!this.db || typeof party !== 'string') return;
+    this.db.ref(`realmParties/${party}`).remove().catch(() => {});
+  }
+
+  // The two-way channel for a party. send() is rate-limited and size-capped; messages arrive via link.onMessage.
+  realmOpenLink(party, role) {
+    const out = this.db.ref(`realmParties/${party}/${role === 'host' ? 'h' : 'g'}`);
+    const inn = this.db.ref(`realmParties/${party}/${role === 'host' ? 'g' : 'h'}`);
+    const cap = role === 'host' ? 24000 : 2500;
+    const gap = role === 'host' ? 60 : 40;
+    let last = 0; let closed = false;
+    const link = {
+      onMessage: null,
+      send(msg) {
+        if (closed || !msg) return;
+        const now = Date.now();
+        if (msg.k !== 'bye' && now - last < gap) return; // a burst is dropped, the next tick carries the state anyway
+        const text = JSON.stringify(msg);
+        if (text.length > cap) return;
+        last = now;
+        out.set(msg).catch(() => {});
+      },
+      close() {
+        if (closed) return;
+        closed = true;
+        inn.off('value', fn);
+        if (role === 'host') this_.realmCancel(party); else out.remove().catch(() => {});
+      },
+    };
+    const this_ = this;
+    let seen = false;
+    const fn = (snap) => {
+      const v = snap.val();
+      if (v && typeof v === 'object') { seen = true; if (link.onMessage) link.onMessage(v); } else if (!v && seen && link.onMessage) { seen = false; link.onMessage({ k: 'bye' }); } // the other side's node vanished: they left
+    };
+    inn.on('value', fn);
+    if (role === 'guest') out.onDisconnect().remove().catch(() => {});
+    return link;
+  }
 }

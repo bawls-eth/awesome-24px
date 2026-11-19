@@ -845,4 +845,12 @@ press **E** (or tap **A**) to step through. It's a separate arena, fully local:
 - **💎 Shards** are your banked Realm currency (kept between visits). Dying
   costs 20% of the bank and sends you back to the village; **Esc** or **Leave**
   is always free. Your best wave is remembered.
-- Everything here is local to you — nothing in the Realm is sent to other players.
+- **Fight together (2 players):** at the gate pick **Invite** next to someone in town.
+  They get a toast; when they press **Join** you both enter the same run. The host's
+  game runs the arena, so the guest sees everything a beat behind. Enemies are 70%
+  tougher with a partner, the boss targets whoever is nearer, and at 0 HP you are
+  **down** — your partner stands beside you for 2 seconds to revive you. The run
+  ends when both are down. Loot bags go to whoever walks over them and your XP,
+  shards and items stay your own. Duel and 2v2 arenas are planned.
+- Solo runs are local to you; only team runs send fight data, and only to your partner
+  (via short-lived `realmInvites` / `realmParties` entries that are removed when you leave).

@@ -5,7 +5,7 @@ const SAVE = 'pixeltown-save-v1';
 const seed = { caveSeed: 0, resources: { stone: 1 }, realm: { shards: 100, bestWave: 2, kills: 5, deaths: 1 } };
 
 const enter = (s) => {
-  s.localBody.setPosition(REALM_GATE_POS.x, REALM_GATE_POS.y + 30); s.interact();
+  s.localBody.setPosition(REALM_GATE_POS.x, REALM_GATE_POS.y + 30); s.enterRealm();
   const r = s.realm; r.stop(); r.active = true;
   window.__st = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) r._update(dt); };
   let t = 777; r.rng = () => { t = (t * 1664525 + 1013904223) >>> 0; return t / 4294967296; };
@@ -151,7 +151,7 @@ const enter = (s) => {
   check('save: corrupt kill-board numbers are cleaned (text/negative -> 0, fractions floored, capped), unknown keys dropped, an old save has an empty board', cs.kb.spiral === 3 && cs.kb.aimed === 7 && cs.kb.ring === 0 && cs.kb.drifter === 2 && cs.kb.boss === 9999999 && !('bogus' in cs.kb) && cs.bossBestT === 0 && cs.oldKb === 0 && cs.oldBest === 0, JSON.stringify(cs.kb));
   await browser.close();
   ({ browser, page, errors } = await launch({ width: 1000, height: 700 }, { caveSeed: 0, realm: saved }));
-  const re = await scene(page, (s) => { s.localBody.setPosition(REALM_GATE_POS.x, REALM_GATE_POS.y + 30); s.interact(); const r = s.realm; r.stop(); r.setBoard(true); return { kb: r.save.kb, best: r.save.bossBestT, text: [...document.querySelectorAll('.realm-board-row')].map((r) => r.children[0].textContent + ' ' + r.children[1].textContent).join(' | ') }; });
+  const re = await scene(page, (s) => { s.localBody.setPosition(REALM_GATE_POS.x, REALM_GATE_POS.y + 30); s.enterRealm(); const r = s.realm; r.stop(); r.setBoard(true); return { kb: r.save.kb, best: r.save.bossBestT, text: [...document.querySelectorAll('.realm-board-row')].map((r) => r.children[0].textContent + ' ' + r.children[1].textContent).join(' | ') }; });
   check('save: the kill board and best boss time survive a reload and show in the board', re.kb.boss === 2 && re.best === 473 && /47\.3 s/.test(re.text) && re.kb.aimed >= 34, JSON.stringify(re));
   await browser.close();
 

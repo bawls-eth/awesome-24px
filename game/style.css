@@ -2608,3 +2608,25 @@ body.touch-device .realm-ab .key { display: none; }
 #ug-pick.broke { border-color: #d9534f; background: #fff0ee; }
 #ug-craft-btn { font-size: 18px !important; }
 #workbench-list .workbench-section { list-style: none; margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--ac-border); font-weight: 700; display: block; }
+
+/* ---- Realm team play ---- */
+#realm-partner { position: absolute; top: 56px; left: 50%; transform: translateX(-50%); width: min(220px, 50vw); font-weight: 700; font-size: 12px; text-align: center; color: #fff; text-shadow: 0 1px 2px #000; pointer-events: none; z-index: 3; }
+#realm-partner.hidden { display: none; }
+#realm-partner .bar { height: 9px; margin-top: 2px; border-radius: 6px; background: rgba(0,0,0,.6); border: 2px solid #5fd0ff; overflow: hidden; }
+#realm-partner-fill { height: 100%; width: 100%; background: linear-gradient(#a8e8ff, #2a8fd0); transition: width .12s; }
+#realm-partner.down #realm-partner-fill { background: #777; }
+#realm-overlay.team #realm-boss { top: 84px; }
+#realm-menu { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.45); }
+#realm-menu.hidden, #realm-invite.hidden { display: none; }
+.realm-menu-card { width: min(380px, 92vw); max-height: 88vh; overflow: auto; padding: 14px; border-radius: 14px; background: #fffaf0; color: #3a2a1a; border: 3px solid #8a5a2b; box-shadow: 0 6px 20px rgba(0,0,0,.4); }
+.realm-menu-card button { font: inherit; cursor: pointer; }
+#realm-menu-solo { width: 100%; padding: 10px; margin: 8px 0; border-radius: 10px; border: 2px solid #8a5a2b; background: #ffd27a; font-weight: 700; }
+#realm-menu-players { list-style: none; margin: 6px 0; padding: 0; max-height: 34vh; overflow: auto; }
+#realm-menu-players li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 4px; border-bottom: 1px dashed #c9a56b; }
+#realm-menu-players .dim, .realm-menu-sub.dim { opacity: .65; }
+.realm-invite-btn { padding: 6px 12px; border-radius: 8px; border: 2px solid #2a8fd0; background: #cdeeff; font-weight: 700; }
+.realm-invite-btn:disabled { opacity: .5; cursor: default; }
+.realm-menu-sub { margin: 6px 0; font-size: 13px; }
+#realm-menu-status { min-height: 1.2em; font-size: 13px; font-weight: 700; }
+#realm-invite { position: fixed; top: 64px; left: 50%; transform: translateX(-50%); z-index: 70; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; max-width: 92vw; padding: 10px 12px; border-radius: 12px; background: #fffaf0; color: #3a2a1a; border: 3px solid #2a8fd0; box-shadow: 0 4px 16px rgba(0,0,0,.4); font-size: 14px; }
+#realm-invite button { font: inherit; cursor: pointer; padding: 6px 12px; border-radius: 8px; border: 2px solid #8a5a2b; background: #ffd27a; font-weight: 700; }
