@@ -2887,7 +2887,8 @@ class TownScene extends Phaser.Scene {
     if (!list) return;
     list.innerHTML = '';
     const inv = this.realmInviteOut;
-    if (inv) { status.textContent = `Waiting for ${inv.name} to answer…`; }
+    if (inv && inv.mode === '2v2') status.textContent = `2v2 lobby: ${Object.keys(inv.joined).length}/3 joined — ${inv.invited.length < 3 ? `invite ${3 - inv.invited.length} more` : 'waiting for answers (you can invite others to replace a no-show)'}…`;
+    else if (inv) { status.textContent = `Waiting for ${inv.name} to answer…`; }
     else status.textContent = this.net && this.net.db ? '' : 'Team play needs the online town.';
     const online = [...this.remotePlayers.values()].filter((rp) => rp.id && rp.name);
     if (!online.length) { const li = document.createElement('li'); li.className = 'dim'; li.textContent = 'Nobody else is in town right now.'; list.appendChild(li); }
@@ -2897,31 +2898,45 @@ class TownScene extends Phaser.Scene {
       const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'realm-invite-btn'; btn.dataset.pid = rp.id;
       btn.textContent = inv && inv.to === rp.id ? 'Invited…' : 'Invite';
       btn.disabled = !!inv || !(this.net && this.net.db);
+      const lobby = inv && inv.mode === '2v2';
       btn.setAttribute('aria-label', `Invite ${rp.name} to fight together in the Realm`);
       btn.addEventListener('click', () => this.sendRealmInvite(rp.id, rp.name, 'coop'));
       const dbtn = document.createElement('button'); dbtn.type = 'button'; dbtn.className = 'realm-invite-btn realm-duel-btn'; dbtn.dataset.pid = rp.id;
       dbtn.textContent = '⚔️ Duel'; dbtn.disabled = btn.disabled;
       dbtn.setAttribute('aria-label', `Challenge ${rp.name} to a 1v1 duel`);
       dbtn.addEventListener('click', () => this.sendRealmInvite(rp.id, rp.name, 'duel'));
-      const box = document.createElement('span'); box.className = 'realm-invite-btns'; box.append(btn, dbtn);
+      const tbtn = document.createElement('button'); tbtn.type = 'button'; tbtn.className = 'realm-invite-btn realm-2v2-btn'; tbtn.dataset.pid = rp.id;
+      tbtn.textContent = lobby && inv.invited.includes(rp.id) ? '2v2 ✓' : '2v2';
+      tbtn.disabled = !(this.net && this.net.db) || (!!inv && !lobby) || (lobby && (inv.invited.includes(rp.id) || inv.invited.length >= 6));
+      tbtn.setAttribute('aria-label', `Invite ${rp.name} to a 2v2 (you need three other players)`);
+      tbtn.addEventListener('click', () => this.sendRealmInvite(rp.id, rp.name, '2v2'));
+      const box = document.createElement('span'); box.className = 'realm-invite-btns'; box.append(btn, dbtn, tbtn);
       li.append(nm, box);
       list.appendChild(li);
     });
   }
 
   sendRealmInvite(targetId, name, mode = 'coop') {
-    if (this.realmInviteOut || !this.net || !this.net.db) return false;
-    const party = this.net.realmInvite(targetId, mode);
+    if (!this.net || !this.net.db) return false;
+    const cur = this.realmInviteOut;
+    if (cur && !(mode === '2v2' && cur.mode === '2v2')) return false;
+    if (cur && (cur.invited.includes(targetId) || cur.invited.length >= 6)) return false; // up to six invites for three seats, so a decline can be replaced
+    const party = this.net.realmInvite(targetId, mode, cur ? cur.party : undefined);
     if (!party) return false;
-    this.realmInviteOut = { party, to: targetId, name, mode, stop: null, timer: null };
-    this.realmInviteOut.stop = this.net.realmWatchGuest(party, (guestId) => {
-      if (!this.realmInviteOut || this.realmInviteOut.party !== party || guestId !== targetId) return;
+    if (cur) { cur.invited.push(targetId); cur.names[targetId] = name; this.renderRealmGateMenu(); return true; }
+    const inv = this.realmInviteOut = { party, to: targetId, name, mode, invited: [targetId], names: { [targetId]: name }, joined: {}, stop: null, timer: null };
+    inv.stop = this.net.realmWatchGuest(party, (guestId, seat, count) => {
+      if (this.realmInviteOut !== inv) return;
+      if (mode !== '2v2' ? guestId !== targetId : !inv.invited.includes(guestId)) return; // only players we invited may take a seat
+      inv.joined[seat] = guestId;
+      const need = mode === '2v2' ? 3 : 1;
+      if (Object.keys(inv.joined).length < need) { if (this.realmMenuOpen) this.renderRealmGateMenu(); return; }
       const link = this.net.realmOpenLink(party, 'host');
-      this.realmInviteOut.stop(); clearTimeout(this.realmInviteOut.timer); this.realmInviteOut = null;
+      inv.stop(); clearTimeout(inv.timer); this.realmInviteOut = null;
       this.closeRealmGateMenu();
       this.enterRealm({ role: 'host', link, mode });
     });
-    this.realmInviteOut.timer = setTimeout(() => { if (this.realmInviteOut && this.realmInviteOut.party === party) { this.cancelRealmInvite(); if (this.realmMenuOpen) { document.getElementById('realm-menu-status').textContent = `${name} did not answer.`; } } }, 45000);
+    inv.timer = setTimeout(() => { if (this.realmInviteOut === inv) { this.cancelRealmInvite(); if (this.realmMenuOpen) { document.getElementById('realm-menu-status').textContent = mode === '2v2' ? 'The 2v2 lobby timed out.' : `${name} did not answer.`; } } }, mode === '2v2' ? 90000 : 45000);
     this.renderRealmGateMenu();
     return true;
   }
@@ -2953,7 +2968,7 @@ class TownScene extends Phaser.Scene {
     if (this.inRealm || this.inUnderground) return; // busy: the sender's invite times out
     this.realmInviteIn = inv;
     const el = document.getElementById('realm-invite');
-    document.getElementById('realm-invite-text').textContent = inv.mode === 'duel' ? `⚔️ ${inv.fromName} challenges you to a duel in the Realm!` : `🌀 ${inv.fromName} invites you to fight in the Realm together!`;
+    document.getElementById('realm-invite-text').textContent = inv.mode === '2v2' ? `⚔️ ${inv.fromName} invites you to a 2v2 in the Realm!` : inv.mode === 'duel' ? `⚔️ ${inv.fromName} challenges you to a duel in the Realm!` : `🌀 ${inv.fromName} invites you to fight in the Realm together!`;
     el.classList.remove('hidden');
     clearTimeout(this._inviteHide);
     this._inviteHide = setTimeout(() => this.hideRealmInvite(), 40000);
@@ -2969,12 +2984,13 @@ class TownScene extends Phaser.Scene {
     const inv = this.realmInviteIn;
     if (!inv || this.inRealm || this.inUnderground) return false;
     this.hideRealmInvite();
-    const ok = await this.net.realmAccept(inv.party);
+    const seat = await this.net.realmAccept(inv.party);
+    const ok = seat > 0;
     if (!ok) { this.showFloatingText(this.localBody.x, this.localBody.y - 40, 'That invite has expired'); return false; }
     if (this.inRealm || this.inUnderground) { this.net.realmCancel(inv.party); return false; }
     for (let i = 0; i < 4 && this.closeTopOverlay(); i++);
-    const link = this.net.realmOpenLink(inv.party, 'guest');
-    this.enterRealm({ role: 'guest', link, mode: inv.mode });
+    const link = this.net.realmOpenLink(inv.party, 'guest', seat);
+    this.enterRealm({ role: 'guest', link, mode: inv.mode, slot: seat });
     return true;
   }
 
@@ -2998,7 +3014,7 @@ class TownScene extends Phaser.Scene {
       this.realm.setAvatar(`../i/${this.selfData.species}-strip.png`, this.selfData.frame || 0, FRAME_SIZE);
       this.setupRealmControls();
     }
-    if (opts.role && opts.link) { this.realm.setTeam(opts.role, opts.link, this.selfData.name, opts.mode); document.getElementById('realm-overlay').classList.add('team'); } else document.getElementById('realm-overlay').classList.remove('team');
+    if (opts.role && opts.link) { this.realm.setTeam(opts.role, opts.link, this.selfData.name, opts.mode, opts.slot); document.getElementById('realm-overlay').classList.add('team'); } else document.getElementById('realm-overlay').classList.remove('team');
     this.realm.start();
   }
 

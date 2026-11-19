@@ -856,5 +856,9 @@ press **E** (or tap **A**) to step through. It's a separate arena, fully local:
   identical stats for both of you (100 HP, no gear or level), only Dash allowed. Each
   round starts with a short protected countdown; each bolt does 8 damage; first to two
   rounds wins. Nothing is won or lost in your save.
+- **2v2:** press **2v2** next to three players at the gate. You and the first to join
+  are Team A against the other two. Same rules as the duel (identical stats, Dash
+  only, best of three), no friendly fire, and a round is won when both opponents
+  are down. If someone leaves, the match goes on without them.
 - Solo runs are local to you; only team runs send fight data, and only to your partner
   (via short-lived `realmInvites` / `realmParties` entries that are removed when you leave).
