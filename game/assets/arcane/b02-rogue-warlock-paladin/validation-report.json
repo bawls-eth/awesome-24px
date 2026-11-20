@@ -1,21 +1,21 @@
 {
   "batch": "b02",
   "label": "rogue-warlock-paladin",
-  "generated_utc": "2026-11-20T01:51:48.012356Z",
+  "generated_utc": "2026-11-20T03:07:00.239645Z",
   "files": 63,
   "duplicate_ids": 0,
   "blocking": {},
   "warnings": {},
   "standing_heights": {
-    "rogue/down": 152,
+    "rogue/down": 148,
     "rogue/up": 148,
     "rogue/right": 148,
-    "warlock/down": 144,
+    "warlock/down": 148,
     "warlock/up": 148,
     "warlock/right": 148,
-    "paladin/down": 144,
+    "paladin/down": 148,
     "paladin/up": 148,
-    "paladin/right": 152
+    "paladin/right": 148
   },
   "status": "provisional"
 }

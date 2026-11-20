@@ -1,26 +1,14 @@
 [
   {
-    "id": "b02_walk_frame6",
-    "what_is_wrong": "The source atlas depicts only five clear walk key poses despite its Walk (6) label. Frame six uses the illustrated fifth upper body and first lower-body pose as an articulated interpolation; needs visual approval."
+    "id": "b02_v2_warlock_right_preparation",
+    "description": "Right-facing attack and cast frame 2 reuse two distinct poses from the new Warlock reaction sheet to keep the orb visible. Review how those poses transition to the strike and release at game speed."
   },
   {
-    "id": "b02_source_detail",
-    "what_is_wrong": "Generated multi-action atlas contains individual figures approximately 30\u201355 native pixels tall, below the requested >=80px source target. The strips are valid pixel-art prototypes; fine weapons/armor details may be weaker than B0 Warrior."
+    "id": "b02_v2_muzzle_calibration",
+    "description": "Muzzle points were estimated from the exported silhouettes. Verify them against the attack and cast effects in Pixeltown."
   },
   {
-    "id": "b02_standing_view_height",
-    "what_is_wrong": "Some standing views vary from 148 px despite one fixed per-class scaling factor: Rogue 148-152 px, Warlock 144-148 px, Paladin 144-152 px. Adjust one fixed per-view game scale or redraw; per-frame resizing was deliberately not used."
-  },
-  {
-    "id": "b02_weapon_readability",
-    "what_is_wrong": "Some attack/cast poses from the illustrated source are small, so dagger, staff, or hammer silhouettes may not read clearly in EVERY frame. Review at gameplay scale before production approval."
-  },
-  {
-    "id": "b02_attack_muzzle",
-    "what_is_wrong": "Weapon-effect spawn coordinates in the manifest are approximations and need in-engine adjustment."
-  },
-  {
-    "id": "b02_style_continuity",
-    "what_is_wrong": "B2 source atlas has a different native detail level from B0 and some frames have near-identical walk/idle silhouette. Art refinement is recommended if B0 fidelity is mandatory."
+    "id": "b02_v2_animation_review",
+    "description": "The full contact sheet was visually reviewed. In-engine playback and transitions have not been checked."
   }
 ]
