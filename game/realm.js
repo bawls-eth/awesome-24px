@@ -2173,7 +2173,7 @@ class RealmArena {
     wrap.id = 'realm-pause'; wrap.className = 'rm-panel hidden'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-label', 'Menu'); wrap.style.display = 'none';
     wrap.innerHTML = '<div class="realm-bp-card rm-card"><div class="realm-bp-head"><strong>☰ Menu</strong><button id="realm-menu-close" type="button" data-m="resume" aria-label="Close menu">✖</button></div>'
       + '<div class="rm-main"><button type="button" class="rm-btn" data-m="resume">▶ Resume</button><button type="button" class="rm-btn" data-m="restart">↻ Restart run</button><p class="rm-note dim"></p><button type="button" class="rm-btn" data-m="leave">🚪 Leave to start</button></div>'
-      + '<div class="rm-confirm hidden"><p>Restart? You keep your items and shards; your wave resets.</p><button type="button" class="rm-btn" data-m="restart-yes">Yes, restart</button><button type="button" class="rm-btn" data-m="restart-no">Keep playing</button></div>'
+      + '<div class="rm-confirm hidden"><p class="rm-restart-copy"></p><button type="button" class="rm-btn" data-m="restart-yes">Yes, restart</button><button type="button" class="rm-btn" data-m="restart-no">Keep playing</button></div>'
       + '<div class="rm-settings"><strong>Settings</strong><button type="button" class="rm-tog" data-set="sound"></button><button type="button" class="rm-tog" data-set="motion"></button><button type="button" class="rm-tog" data-set="aim"></button></div></div>';
     ov.appendChild(wrap);
     wrap.addEventListener('click', (e) => {
@@ -2201,6 +2201,9 @@ class RealmArena {
 
   _syncMenu() {
     const d = this._menuDom; if (!d) return;
+    d.querySelector('.rm-restart-copy').textContent = this.mode === 'world' && !this.dungeon
+      ? 'Return to the island spawn? You keep your items and shards.'
+      : 'Restart? You keep your items and shards; your wave resets.';
     const rs = d.querySelector('button[data-m="restart"]'); const note = d.querySelector('.rm-note');
     const can = this.canRestart(); rs.disabled = !can;
     note.textContent = can ? '' : this.team ? 'Restart is off during a shared run: your partner is fighting too.' : this.dungeon ? 'Restart is off in a Warren: leave and enter again for a new one.' : '';
@@ -2224,7 +2227,9 @@ class RealmArena {
   _showDeath() {
     const d = this._ensureDeathDom(); if (!d) { this.stop(); this.onExit('death'); return; }
     this._deathShown = true; this.keys = {}; this.mouse.down = false; this.aimVec.on = false; this.moveVec.x = 0; this.moveVec.y = 0;
-    d.querySelector('.rm-recap').innerHTML = `<div class="realm-board-row"><span>🌊 Wave reached</span><b>${Math.max(1, this.run.wave)}</b></div><div class="realm-board-row"><span>⚔️ Kills</span><b>${this.run.kills}</b></div><div class="realm-board-row"><span>💎 Shards this run</span><b>+${this.run.shards}</b></div><div class="realm-board-row"><span>🎁 Survivor's cache</span><b>${this._lastCache.replace(/^cache: /, '')}</b></div>`;
+    const showWave = this.mode !== 'world' || !!this.dungeon;
+    const waveRow = showWave ? `<div class="realm-board-row"><span>🌊 Wave reached</span><b>${Math.max(1, this.run.wave)}</b></div>` : '';
+    d.querySelector('.rm-recap').innerHTML = `${waveRow}<div class="realm-board-row"><span>⚔️ Kills</span><b>${this.run.kills}</b></div><div class="realm-board-row"><span>💎 Shards this run</span><b>+${this.run.shards}</b></div><div class="realm-board-row"><span>🎁 Survivor's cache</span><b>${this._lastCache.replace(/^cache: /, '')}</b></div>`;
     d.classList.remove('hidden'); d.style.display = 'flex';
     const f = d.querySelector('button[data-d="again"]'); if (f && f.focus) f.focus({ preventScroll: true });
   }

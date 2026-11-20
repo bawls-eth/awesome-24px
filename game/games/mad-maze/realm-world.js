@@ -281,7 +281,16 @@
       const txt = `${zi.name} · ${zi.danger}`;
       if (txt !== zoneTxt || force) { zoneTxt = txt; zName.textContent = txt; zName.style.color = zi.color; zoneEl.dataset.zone = String(zi.zone); }
       const dx = world.center.x - tx; const dy = world.center.y - ty; const dist = Math.round(Math.hypot(dx, dy));
-      const deg = Math.round(Math.atan2(dy, dx) * 180 / Math.PI / 5) * 5;
+      let goal = null;
+      let goalDistance = Infinity;
+      for (const portal of portals) {
+        const distance = (portal.tx - tx) ** 2 + (portal.ty - ty) ** 2;
+        if (distance < goalDistance) { goal = portal; goalDistance = distance; }
+      }
+      zArrow.title = goal ? 'Nearest dungeon portal' : 'Island centre';
+      zArrow.setAttribute('aria-label', zArrow.title);
+      const heading = goal ? Math.atan2(goal.ty - ty, goal.tx - tx) : Math.atan2(dy, dx);
+      const deg = Math.round(heading * 180 / Math.PI / 5) * 5;
       if (deg !== arrowDeg) { arrowDeg = deg; zArrow.style.transform = `rotate(${deg}deg)`; }
       const ct = `${tx},${ty} · centre ${dist}`;
       if (zCoords.textContent !== ct) zCoords.textContent = ct;
@@ -434,7 +443,10 @@
       onStart() {
         if (pendingAt) { placeAt(pendingAt.x, pendingAt.y); pendingAt = null; } else placeAt(world.spawnPoint.x, world.spawnPoint.y);
         arena.run.wave = 0; arena.biome = 0;
-        resetZones(); kills = 0; promptFor = -2; leaving = false;
+        resetZones();
+        kills = 0; spawned = 0; despawned = 0; lastDrops.length = 0;
+        bossReadyNow.fill(0); bossT = 0; sweepT = 0;
+        promptFor = -2; leaving = false;
         if (save.returnTo) { save.returnTo = null; writeSave(save); } // back from a dungeon: the trip is over
         arena._showBanner(`The Realm · island #${seed}`, 1.8);
         savePos(true); syncHud(true);
