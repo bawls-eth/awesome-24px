@@ -69,3 +69,6 @@ B05 stages 72 validated animation strips for Mini Sprout and five Arcane Frontie
 
 ## Heroes + enemy art live in code (2026-11-20)
 Six new heroes selectable in Lantern with real art; enemy animations drawn in the Mad Maze arena (setEnemyArt, ?enemyart=0 disables). Not yet: arena reads class stats/abilities; enemy death animation; b05 enemies unmapped.
+### B07 boss art
+
+B07 stages 48 validated animation strips for all eight Arcane Frontier boss IDs. Runtime integration and playback review are pending.
