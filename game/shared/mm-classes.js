@@ -220,5 +220,42 @@
   // Siphon heal: 50% of damage dealt, capped at 120.
   function siphonHeal(damageDealt) { return Math.min(CLASSES.graveTender.ability.healCap, Math.max(0, num(damageDealt, 0)) * 0.5); }
 
-  return { CLASSES, START, cast, blink, shieldBlocks, unlocks, isStart, focusRegen, maxFocus, abilityCost, regenFocus, spend, siphonHeal };
+  // arenaProfile(classId): bounded multipliers for the standalone Mad Maze arena, relative to the ranger (= all 1).
+  // Derived from the stat vector: hp = LIFE/120, speed = 1 + 0.5*(SWF/12-1), dmg = (POW/10)^0.8,
+  // rate = 1 + 0.6*(KNK/12-1), iframes = 1 + 0.03*GRD; then a small flavour tweak per class; every value clamped to [0.7, 1.4].
+  // shots/spread/pierce are flavour tags only (not applied by the arena yet). Unknown id -> all 1.
+  // class        hp    speed dmg   rate  iframes | flavour
+  // ranger       1.00  1.00  1.00  1.00  1.00    | baseline
+  // frostcaller  0.83  0.83  1.30  0.80  1.00    | caster
+  // herald       1.08  0.92  0.84  0.80  1.06    |
+  // rogue        0.88  1.08  0.97  1.20  1.10    | fast, light hits
+  // warlock      0.88  0.83  1.23  0.85  1.00    | caster
+  // paladin      1.25  0.83  0.84  0.70  1.18    | tank, slow fire
+  // berserker    1.21  0.96  1.31  0.95  1.06    | heavy hits
+  // druid        1.00  0.83  0.84  0.80  1.09    | caster
+  // necromancer  0.88  0.79  1.23  0.85  1.00    | caster
+  const FLAVOUR = {
+    rogue: { dmg: 0.9, rate: 1.15, iframes: 1.1, shots: 1, spread: 0, pierce: 0 },
+    berserker: { speed: 1.05, rate: 1.0, shots: 1, spread: 0, pierce: 0 },
+    paladin: { iframes: 1, shots: 1, spread: 0, pierce: 1 },
+    warlock: { shots: 2, spread: 0.2, pierce: 0 },
+    necromancer: { shots: 2, spread: 0.2, pierce: 0 },
+    druid: { shots: 3, spread: 0.35, pierce: 0 },
+  };
+  const clampM = (v) => Math.round(Math.max(0.7, Math.min(1.4, v)) * 1000) / 1000;
+  function arenaProfile(classId) {
+    const c = Object.prototype.hasOwnProperty.call(CLASSES, classId) ? CLASSES[classId] : null;
+    const out = { id: c ? c.id : null, name: c ? c.name : '', hp: 1, speed: 1, dmg: 1, rate: 1, iframes: 1, shots: 1, spread: 0, pierce: 0 };
+    if (!c) return out;
+    const b = c.base, f = FLAVOUR[c.id] || {};
+    out.hp = clampM(b.life / 120);
+    out.speed = clampM((1 + 0.5 * (b.swf / 12 - 1)) * (f.speed || 1));
+    out.dmg = clampM(Math.pow(b.pow / 10, 0.8) * (f.dmg || 1));
+    out.rate = clampM((1 + 0.6 * (b.knk / 12 - 1)) * (f.rate || 1));
+    out.iframes = clampM((1 + 0.03 * b.grd) * (f.iframes || 1));
+    out.shots = f.shots || 1; out.spread = f.spread || 0; out.pierce = f.pierce || 0;
+    return out;
+  }
+
+  return { CLASSES, START, arenaProfile, cast, blink, shieldBlocks, unlocks, isStart, focusRegen, maxFocus, abilityCost, regenFocus, spend, siphonHeal };
 });

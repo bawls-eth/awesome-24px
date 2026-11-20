@@ -84,6 +84,9 @@
     MMArt.loadClass('../../assets/arcane/', artClass).then((set) => { if (set.has(artClass)) arena.setHeroArt(set, artClass); }).catch(() => {});
   }
 
+  // Class stats: the active hero's class nudges HP/speed/damage/fire rate/safe time (MMClasses.arenaProfile); ?classstats=0 disables it.
+  if (window.MMClasses && MMClasses.arenaProfile && params.get('classstats') !== '0' && activeHeroClass()) arena.setHeroProfile(MMClasses.arenaProfile(activeHeroClass()));
+
   // Enemy art: only the mapped arena creatures (idle/move/attack); any failure keeps the procedural sprites.
   if (window.MMArt && MMArt.loadEnemies && params.get('enemyart') !== '0') {
     MMArt.loadEnemies('../../assets/arcane/').then((set) => { if (set.classes().length) arena.setEnemyArt(set); }).catch(() => {});
