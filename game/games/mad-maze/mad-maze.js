@@ -89,6 +89,11 @@
     MMArt.loadEnemies('../../assets/arcane/').then((set) => { if (set.classes().length) arena.setEnemyArt(set); }).catch(() => {});
   }
 
+  // Item icons: backpack / shop / equipped slots show manifest art with emoji fallback; ?itemart=0 turns it off.
+  if (window.MMArt && MMArt.loadItems && params.get('itemart') !== '0') {
+    MMArt.loadItems('../../assets/arcane/').then((set) => { if (set.ids().length) arena.setItemArt(set); }).catch(() => {});
+  }
+
   if (TEST) window.__mm = { arena, dungeon: dungeon ? dungeon.api : null };
   arena.start();
 })();

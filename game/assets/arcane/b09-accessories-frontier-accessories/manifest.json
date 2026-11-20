@@ -1,0 +1,1611 @@
+{
+  "name": "Arcane Frontier accessories",
+  "frame_size": 32,
+  "assets": [
+    {
+      "id": "accessory_copper_emerald_ring",
+      "category": "item",
+      "path": "items/accessory_copper_emerald_ring.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "accessory",
+        [
+          [
+            "accessory_copper_emerald_ring",
+            "copper emerald ring",
+            1
+          ],
+          [
+            "accessory_silver_moonstone_ring",
+            "silver moonstone ring",
+            2
+          ],
+          [
+            "accessory_gold_ruby_signet",
+            "gold ruby signet",
+            3
+          ],
+          [
+            "accessory_iron_skull_ring",
+            "iron skull ring",
+            1
+          ],
+          [
+            "accessory_jade_vine_ring",
+            "jade vine ring",
+            2
+          ],
+          [
+            "accessory_opal_pearl_ring",
+            "opal pearl ring",
+            3
+          ],
+          [
+            "accessory_obsidian_violet_ring",
+            "obsidian violet ring",
+            1
+          ],
+          [
+            "accessory_sapphire_wave_ring",
+            "sapphire wave ring",
+            2
+          ],
+          [
+            "accessory_amber_sun_ring",
+            "amber sun ring",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        321,
+        305
+      ]
+    },
+    {
+      "id": "accessory_silver_moonstone_ring",
+      "category": "item",
+      "path": "items/accessory_silver_moonstone_ring.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "accessory",
+        [
+          [
+            "accessory_copper_emerald_ring",
+            "copper emerald ring",
+            1
+          ],
+          [
+            "accessory_silver_moonstone_ring",
+            "silver moonstone ring",
+            2
+          ],
+          [
+            "accessory_gold_ruby_signet",
+            "gold ruby signet",
+            3
+          ],
+          [
+            "accessory_iron_skull_ring",
+            "iron skull ring",
+            1
+          ],
+          [
+            "accessory_jade_vine_ring",
+            "jade vine ring",
+            2
+          ],
+          [
+            "accessory_opal_pearl_ring",
+            "opal pearl ring",
+            3
+          ],
+          [
+            "accessory_obsidian_violet_ring",
+            "obsidian violet ring",
+            1
+          ],
+          [
+            "accessory_sapphire_wave_ring",
+            "sapphire wave ring",
+            2
+          ],
+          [
+            "accessory_amber_sun_ring",
+            "amber sun ring",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        328,
+        301
+      ]
+    },
+    {
+      "id": "accessory_gold_ruby_signet",
+      "category": "item",
+      "path": "items/accessory_gold_ruby_signet.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "accessory",
+        [
+          [
+            "accessory_copper_emerald_ring",
+            "copper emerald ring",
+            1
+          ],
+          [
+            "accessory_silver_moonstone_ring",
+            "silver moonstone ring",
+            2
+          ],
+          [
+            "accessory_gold_ruby_signet",
+            "gold ruby signet",
+            3
+          ],
+          [
+            "accessory_iron_skull_ring",
+            "iron skull ring",
+            1
+          ],
+          [
+            "accessory_jade_vine_ring",
+            "jade vine ring",
+            2
+          ],
+          [
+            "accessory_opal_pearl_ring",
+            "opal pearl ring",
+            3
+          ],
+          [
+            "accessory_obsidian_violet_ring",
+            "obsidian violet ring",
+            1
+          ],
+          [
+            "accessory_sapphire_wave_ring",
+            "sapphire wave ring",
+            2
+          ],
+          [
+            "accessory_amber_sun_ring",
+            "amber sun ring",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        328,
+        311
+      ]
+    },
+    {
+      "id": "accessory_iron_skull_ring",
+      "category": "item",
+      "path": "items/accessory_iron_skull_ring.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "accessory",
+        [
+          [
+            "accessory_copper_emerald_ring",
+            "copper emerald ring",
+            1
+          ],
+          [
+            "accessory_silver_moonstone_ring",
+            "silver moonstone ring",
+            2
+          ],
+          [
+            "accessory_gold_ruby_signet",
+            "gold ruby signet",
+            3
+          ],
+          [
+            "accessory_iron_skull_ring",
+            "iron skull ring",
+            1
+          ],
+          [
+            "accessory_jade_vine_ring",
+            "jade vine ring",
+            2
+          ],
+          [
+            "accessory_opal_pearl_ring",
+            "opal pearl ring",
+            3
+          ],
+          [
+            "accessory_obsidian_violet_ring",
+            "obsidian violet ring",
+            1
+          ],
+          [
+            "accessory_sapphire_wave_ring",
+            "sapphire wave ring",
+            2
+          ],
+          [
+            "accessory_amber_sun_ring",
+            "amber sun ring",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        320,
+        297
+      ]
+    },
+    {
+      "id": "accessory_jade_vine_ring",
+      "category": "item",
+      "path": "items/accessory_jade_vine_ring.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "accessory",
+        [
+          [
+            "accessory_copper_emerald_ring",
+            "copper emerald ring",
+            1
+          ],
+          [
+            "accessory_silver_moonstone_ring",
+            "silver moonstone ring",
+            2
+          ],
+          [
+            "accessory_gold_ruby_signet",
+            "gold ruby signet",
+            3
+          ],
+          [
+            "accessory_iron_skull_ring",
+            "iron skull ring",
+            1
+          ],
+          [
+            "accessory_jade_vine_ring",
+            "jade vine ring",
+            2
+          ],
+          [
+            "accessory_opal_pearl_ring",
+            "opal pearl ring",
+            3
+          ],
+          [
+            "accessory_obsidian_violet_ring",
+            "obsidian violet ring",
+            1
+          ],
+          [
+            "accessory_sapphire_wave_ring",
+            "sapphire wave ring",
+            2
+          ],
+          [
+            "accessory_amber_sun_ring",
+            "amber sun ring",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        326,
+        297
+      ]
+    },
+    {
+      "id": "accessory_opal_pearl_ring",
+      "category": "item",
+      "path": "items/accessory_opal_pearl_ring.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "accessory",
+        [
+          [
+            "accessory_copper_emerald_ring",
+            "copper emerald ring",
+            1
+          ],
+          [
+            "accessory_silver_moonstone_ring",
+            "silver moonstone ring",
+            2
+          ],
+          [
+            "accessory_gold_ruby_signet",
+            "gold ruby signet",
+            3
+          ],
+          [
+            "accessory_iron_skull_ring",
+            "iron skull ring",
+            1
+          ],
+          [
+            "accessory_jade_vine_ring",
+            "jade vine ring",
+            2
+          ],
+          [
+            "accessory_opal_pearl_ring",
+            "opal pearl ring",
+            3
+          ],
+          [
+            "accessory_obsidian_violet_ring",
+            "obsidian violet ring",
+            1
+          ],
+          [
+            "accessory_sapphire_wave_ring",
+            "sapphire wave ring",
+            2
+          ],
+          [
+            "accessory_amber_sun_ring",
+            "amber sun ring",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        344,
+        300
+      ]
+    },
+    {
+      "id": "accessory_obsidian_violet_ring",
+      "category": "item",
+      "path": "items/accessory_obsidian_violet_ring.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "accessory",
+        [
+          [
+            "accessory_copper_emerald_ring",
+            "copper emerald ring",
+            1
+          ],
+          [
+            "accessory_silver_moonstone_ring",
+            "silver moonstone ring",
+            2
+          ],
+          [
+            "accessory_gold_ruby_signet",
+            "gold ruby signet",
+            3
+          ],
+          [
+            "accessory_iron_skull_ring",
+            "iron skull ring",
+            1
+          ],
+          [
+            "accessory_jade_vine_ring",
+            "jade vine ring",
+            2
+          ],
+          [
+            "accessory_opal_pearl_ring",
+            "opal pearl ring",
+            3
+          ],
+          [
+            "accessory_obsidian_violet_ring",
+            "obsidian violet ring",
+            1
+          ],
+          [
+            "accessory_sapphire_wave_ring",
+            "sapphire wave ring",
+            2
+          ],
+          [
+            "accessory_amber_sun_ring",
+            "amber sun ring",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        321,
+        340
+      ]
+    },
+    {
+      "id": "accessory_sapphire_wave_ring",
+      "category": "item",
+      "path": "items/accessory_sapphire_wave_ring.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "accessory",
+        [
+          [
+            "accessory_copper_emerald_ring",
+            "copper emerald ring",
+            1
+          ],
+          [
+            "accessory_silver_moonstone_ring",
+            "silver moonstone ring",
+            2
+          ],
+          [
+            "accessory_gold_ruby_signet",
+            "gold ruby signet",
+            3
+          ],
+          [
+            "accessory_iron_skull_ring",
+            "iron skull ring",
+            1
+          ],
+          [
+            "accessory_jade_vine_ring",
+            "jade vine ring",
+            2
+          ],
+          [
+            "accessory_opal_pearl_ring",
+            "opal pearl ring",
+            3
+          ],
+          [
+            "accessory_obsidian_violet_ring",
+            "obsidian violet ring",
+            1
+          ],
+          [
+            "accessory_sapphire_wave_ring",
+            "sapphire wave ring",
+            2
+          ],
+          [
+            "accessory_amber_sun_ring",
+            "amber sun ring",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        334,
+        328
+      ]
+    },
+    {
+      "id": "accessory_amber_sun_ring",
+      "category": "item",
+      "path": "items/accessory_amber_sun_ring.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "accessory",
+        [
+          [
+            "accessory_copper_emerald_ring",
+            "copper emerald ring",
+            1
+          ],
+          [
+            "accessory_silver_moonstone_ring",
+            "silver moonstone ring",
+            2
+          ],
+          [
+            "accessory_gold_ruby_signet",
+            "gold ruby signet",
+            3
+          ],
+          [
+            "accessory_iron_skull_ring",
+            "iron skull ring",
+            1
+          ],
+          [
+            "accessory_jade_vine_ring",
+            "jade vine ring",
+            2
+          ],
+          [
+            "accessory_opal_pearl_ring",
+            "opal pearl ring",
+            3
+          ],
+          [
+            "accessory_obsidian_violet_ring",
+            "obsidian violet ring",
+            1
+          ],
+          [
+            "accessory_sapphire_wave_ring",
+            "sapphire wave ring",
+            2
+          ],
+          [
+            "accessory_amber_sun_ring",
+            "amber sun ring",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        337,
+        341
+      ]
+    },
+    {
+      "id": "accessory_bronze_compass_pendant",
+      "category": "item",
+      "path": "items/accessory_bronze_compass_pendant.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "accessory",
+        [
+          [
+            "accessory_bronze_compass_pendant",
+            "bronze compass pendant",
+            1
+          ],
+          [
+            "accessory_silver_crescent_pendant",
+            "silver crescent pendant",
+            2
+          ],
+          [
+            "accessory_gold_sun_medallion",
+            "gold sun medallion",
+            3
+          ],
+          [
+            "accessory_teal_dragon_scale_pendant",
+            "teal dragon scale pendant",
+            1
+          ],
+          [
+            "accessory_amethyst_teardrop_pendant",
+            "amethyst teardrop pendant",
+            2
+          ],
+          [
+            "accessory_ivory_carved_tooth_pendant",
+            "ivory carved tooth pendant",
+            3
+          ],
+          [
+            "accessory_red_garnet_heart_pendant",
+            "red garnet heart pendant",
+            1
+          ],
+          [
+            "accessory_green_leaf_pendant",
+            "green leaf pendant",
+            2
+          ],
+          [
+            "accessory_blue_hourglass_pendant",
+            "blue hourglass pendant",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        282,
+        357
+      ]
+    },
+    {
+      "id": "accessory_silver_crescent_pendant",
+      "category": "item",
+      "path": "items/accessory_silver_crescent_pendant.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "accessory",
+        [
+          [
+            "accessory_bronze_compass_pendant",
+            "bronze compass pendant",
+            1
+          ],
+          [
+            "accessory_silver_crescent_pendant",
+            "silver crescent pendant",
+            2
+          ],
+          [
+            "accessory_gold_sun_medallion",
+            "gold sun medallion",
+            3
+          ],
+          [
+            "accessory_teal_dragon_scale_pendant",
+            "teal dragon scale pendant",
+            1
+          ],
+          [
+            "accessory_amethyst_teardrop_pendant",
+            "amethyst teardrop pendant",
+            2
+          ],
+          [
+            "accessory_ivory_carved_tooth_pendant",
+            "ivory carved tooth pendant",
+            3
+          ],
+          [
+            "accessory_red_garnet_heart_pendant",
+            "red garnet heart pendant",
+            1
+          ],
+          [
+            "accessory_green_leaf_pendant",
+            "green leaf pendant",
+            2
+          ],
+          [
+            "accessory_blue_hourglass_pendant",
+            "blue hourglass pendant",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        256,
+        355
+      ]
+    },
+    {
+      "id": "accessory_gold_sun_medallion",
+      "category": "item",
+      "path": "items/accessory_gold_sun_medallion.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "accessory",
+        [
+          [
+            "accessory_bronze_compass_pendant",
+            "bronze compass pendant",
+            1
+          ],
+          [
+            "accessory_silver_crescent_pendant",
+            "silver crescent pendant",
+            2
+          ],
+          [
+            "accessory_gold_sun_medallion",
+            "gold sun medallion",
+            3
+          ],
+          [
+            "accessory_teal_dragon_scale_pendant",
+            "teal dragon scale pendant",
+            1
+          ],
+          [
+            "accessory_amethyst_teardrop_pendant",
+            "amethyst teardrop pendant",
+            2
+          ],
+          [
+            "accessory_ivory_carved_tooth_pendant",
+            "ivory carved tooth pendant",
+            3
+          ],
+          [
+            "accessory_red_garnet_heart_pendant",
+            "red garnet heart pendant",
+            1
+          ],
+          [
+            "accessory_green_leaf_pendant",
+            "green leaf pendant",
+            2
+          ],
+          [
+            "accessory_blue_hourglass_pendant",
+            "blue hourglass pendant",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        308,
+        356
+      ]
+    },
+    {
+      "id": "accessory_teal_dragon_scale_pendant",
+      "category": "item",
+      "path": "items/accessory_teal_dragon_scale_pendant.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "accessory",
+        [
+          [
+            "accessory_bronze_compass_pendant",
+            "bronze compass pendant",
+            1
+          ],
+          [
+            "accessory_silver_crescent_pendant",
+            "silver crescent pendant",
+            2
+          ],
+          [
+            "accessory_gold_sun_medallion",
+            "gold sun medallion",
+            3
+          ],
+          [
+            "accessory_teal_dragon_scale_pendant",
+            "teal dragon scale pendant",
+            1
+          ],
+          [
+            "accessory_amethyst_teardrop_pendant",
+            "amethyst teardrop pendant",
+            2
+          ],
+          [
+            "accessory_ivory_carved_tooth_pendant",
+            "ivory carved tooth pendant",
+            3
+          ],
+          [
+            "accessory_red_garnet_heart_pendant",
+            "red garnet heart pendant",
+            1
+          ],
+          [
+            "accessory_green_leaf_pendant",
+            "green leaf pendant",
+            2
+          ],
+          [
+            "accessory_blue_hourglass_pendant",
+            "blue hourglass pendant",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        212,
+        353
+      ]
+    },
+    {
+      "id": "accessory_amethyst_teardrop_pendant",
+      "category": "item",
+      "path": "items/accessory_amethyst_teardrop_pendant.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "accessory",
+        [
+          [
+            "accessory_bronze_compass_pendant",
+            "bronze compass pendant",
+            1
+          ],
+          [
+            "accessory_silver_crescent_pendant",
+            "silver crescent pendant",
+            2
+          ],
+          [
+            "accessory_gold_sun_medallion",
+            "gold sun medallion",
+            3
+          ],
+          [
+            "accessory_teal_dragon_scale_pendant",
+            "teal dragon scale pendant",
+            1
+          ],
+          [
+            "accessory_amethyst_teardrop_pendant",
+            "amethyst teardrop pendant",
+            2
+          ],
+          [
+            "accessory_ivory_carved_tooth_pendant",
+            "ivory carved tooth pendant",
+            3
+          ],
+          [
+            "accessory_red_garnet_heart_pendant",
+            "red garnet heart pendant",
+            1
+          ],
+          [
+            "accessory_green_leaf_pendant",
+            "green leaf pendant",
+            2
+          ],
+          [
+            "accessory_blue_hourglass_pendant",
+            "blue hourglass pendant",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        225,
+        358
+      ]
+    },
+    {
+      "id": "accessory_ivory_carved_tooth_pendant",
+      "category": "item",
+      "path": "items/accessory_ivory_carved_tooth_pendant.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "accessory",
+        [
+          [
+            "accessory_bronze_compass_pendant",
+            "bronze compass pendant",
+            1
+          ],
+          [
+            "accessory_silver_crescent_pendant",
+            "silver crescent pendant",
+            2
+          ],
+          [
+            "accessory_gold_sun_medallion",
+            "gold sun medallion",
+            3
+          ],
+          [
+            "accessory_teal_dragon_scale_pendant",
+            "teal dragon scale pendant",
+            1
+          ],
+          [
+            "accessory_amethyst_teardrop_pendant",
+            "amethyst teardrop pendant",
+            2
+          ],
+          [
+            "accessory_ivory_carved_tooth_pendant",
+            "ivory carved tooth pendant",
+            3
+          ],
+          [
+            "accessory_red_garnet_heart_pendant",
+            "red garnet heart pendant",
+            1
+          ],
+          [
+            "accessory_green_leaf_pendant",
+            "green leaf pendant",
+            2
+          ],
+          [
+            "accessory_blue_hourglass_pendant",
+            "blue hourglass pendant",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        193,
+        352
+      ]
+    },
+    {
+      "id": "accessory_red_garnet_heart_pendant",
+      "category": "item",
+      "path": "items/accessory_red_garnet_heart_pendant.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "accessory",
+        [
+          [
+            "accessory_bronze_compass_pendant",
+            "bronze compass pendant",
+            1
+          ],
+          [
+            "accessory_silver_crescent_pendant",
+            "silver crescent pendant",
+            2
+          ],
+          [
+            "accessory_gold_sun_medallion",
+            "gold sun medallion",
+            3
+          ],
+          [
+            "accessory_teal_dragon_scale_pendant",
+            "teal dragon scale pendant",
+            1
+          ],
+          [
+            "accessory_amethyst_teardrop_pendant",
+            "amethyst teardrop pendant",
+            2
+          ],
+          [
+            "accessory_ivory_carved_tooth_pendant",
+            "ivory carved tooth pendant",
+            3
+          ],
+          [
+            "accessory_red_garnet_heart_pendant",
+            "red garnet heart pendant",
+            1
+          ],
+          [
+            "accessory_green_leaf_pendant",
+            "green leaf pendant",
+            2
+          ],
+          [
+            "accessory_blue_hourglass_pendant",
+            "blue hourglass pendant",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        295,
+        374
+      ]
+    },
+    {
+      "id": "accessory_green_leaf_pendant",
+      "category": "item",
+      "path": "items/accessory_green_leaf_pendant.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "accessory",
+        [
+          [
+            "accessory_bronze_compass_pendant",
+            "bronze compass pendant",
+            1
+          ],
+          [
+            "accessory_silver_crescent_pendant",
+            "silver crescent pendant",
+            2
+          ],
+          [
+            "accessory_gold_sun_medallion",
+            "gold sun medallion",
+            3
+          ],
+          [
+            "accessory_teal_dragon_scale_pendant",
+            "teal dragon scale pendant",
+            1
+          ],
+          [
+            "accessory_amethyst_teardrop_pendant",
+            "amethyst teardrop pendant",
+            2
+          ],
+          [
+            "accessory_ivory_carved_tooth_pendant",
+            "ivory carved tooth pendant",
+            3
+          ],
+          [
+            "accessory_red_garnet_heart_pendant",
+            "red garnet heart pendant",
+            1
+          ],
+          [
+            "accessory_green_leaf_pendant",
+            "green leaf pendant",
+            2
+          ],
+          [
+            "accessory_blue_hourglass_pendant",
+            "blue hourglass pendant",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        233,
+        369
+      ]
+    },
+    {
+      "id": "accessory_blue_hourglass_pendant",
+      "category": "item",
+      "path": "items/accessory_blue_hourglass_pendant.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "accessory",
+        [
+          [
+            "accessory_bronze_compass_pendant",
+            "bronze compass pendant",
+            1
+          ],
+          [
+            "accessory_silver_crescent_pendant",
+            "silver crescent pendant",
+            2
+          ],
+          [
+            "accessory_gold_sun_medallion",
+            "gold sun medallion",
+            3
+          ],
+          [
+            "accessory_teal_dragon_scale_pendant",
+            "teal dragon scale pendant",
+            1
+          ],
+          [
+            "accessory_amethyst_teardrop_pendant",
+            "amethyst teardrop pendant",
+            2
+          ],
+          [
+            "accessory_ivory_carved_tooth_pendant",
+            "ivory carved tooth pendant",
+            3
+          ],
+          [
+            "accessory_red_garnet_heart_pendant",
+            "red garnet heart pendant",
+            1
+          ],
+          [
+            "accessory_green_leaf_pendant",
+            "green leaf pendant",
+            2
+          ],
+          [
+            "accessory_blue_hourglass_pendant",
+            "blue hourglass pendant",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        224,
+        380
+      ]
+    },
+    {
+      "id": "accessory_bronze_key_charm",
+      "category": "item",
+      "path": "items/accessory_bronze_key_charm.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "accessory",
+        [
+          [
+            "accessory_bronze_key_charm",
+            "bronze key charm",
+            1
+          ],
+          [
+            "accessory_violet_tassel_brooch",
+            "violet tassel brooch",
+            2
+          ],
+          [
+            "accessory_gold_feather_brooch",
+            "gold feather brooch",
+            3
+          ],
+          [
+            "accessory_leather_wrist_cuff",
+            "leather wrist cuff",
+            1
+          ],
+          [
+            "accessory_beaded_jade_bracelet",
+            "beaded jade bracelet",
+            2
+          ],
+          [
+            "accessory_silver_chain_bracelet",
+            "silver chain bracelet",
+            3
+          ],
+          [
+            "accessory_blue_silk_sash",
+            "blue silk sash",
+            1
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        177,
+        357
+      ]
+    },
+    {
+      "id": "accessory_violet_tassel_brooch",
+      "category": "item",
+      "path": "items/accessory_violet_tassel_brooch.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "accessory",
+        [
+          [
+            "accessory_bronze_key_charm",
+            "bronze key charm",
+            1
+          ],
+          [
+            "accessory_violet_tassel_brooch",
+            "violet tassel brooch",
+            2
+          ],
+          [
+            "accessory_gold_feather_brooch",
+            "gold feather brooch",
+            3
+          ],
+          [
+            "accessory_leather_wrist_cuff",
+            "leather wrist cuff",
+            1
+          ],
+          [
+            "accessory_beaded_jade_bracelet",
+            "beaded jade bracelet",
+            2
+          ],
+          [
+            "accessory_silver_chain_bracelet",
+            "silver chain bracelet",
+            3
+          ],
+          [
+            "accessory_blue_silk_sash",
+            "blue silk sash",
+            1
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        224,
+        371
+      ]
+    },
+    {
+      "id": "accessory_gold_feather_brooch",
+      "category": "item",
+      "path": "items/accessory_gold_feather_brooch.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "accessory",
+        [
+          [
+            "accessory_bronze_key_charm",
+            "bronze key charm",
+            1
+          ],
+          [
+            "accessory_violet_tassel_brooch",
+            "violet tassel brooch",
+            2
+          ],
+          [
+            "accessory_gold_feather_brooch",
+            "gold feather brooch",
+            3
+          ],
+          [
+            "accessory_leather_wrist_cuff",
+            "leather wrist cuff",
+            1
+          ],
+          [
+            "accessory_beaded_jade_bracelet",
+            "beaded jade bracelet",
+            2
+          ],
+          [
+            "accessory_silver_chain_bracelet",
+            "silver chain bracelet",
+            3
+          ],
+          [
+            "accessory_blue_silk_sash",
+            "blue silk sash",
+            1
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        287,
+        340
+      ]
+    },
+    {
+      "id": "accessory_leather_wrist_cuff",
+      "category": "item",
+      "path": "items/accessory_leather_wrist_cuff.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "accessory",
+        [
+          [
+            "accessory_bronze_key_charm",
+            "bronze key charm",
+            1
+          ],
+          [
+            "accessory_violet_tassel_brooch",
+            "violet tassel brooch",
+            2
+          ],
+          [
+            "accessory_gold_feather_brooch",
+            "gold feather brooch",
+            3
+          ],
+          [
+            "accessory_leather_wrist_cuff",
+            "leather wrist cuff",
+            1
+          ],
+          [
+            "accessory_beaded_jade_bracelet",
+            "beaded jade bracelet",
+            2
+          ],
+          [
+            "accessory_silver_chain_bracelet",
+            "silver chain bracelet",
+            3
+          ],
+          [
+            "accessory_blue_silk_sash",
+            "blue silk sash",
+            1
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        299,
+        257
+      ]
+    },
+    {
+      "id": "accessory_beaded_jade_bracelet",
+      "category": "item",
+      "path": "items/accessory_beaded_jade_bracelet.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "accessory",
+        [
+          [
+            "accessory_bronze_key_charm",
+            "bronze key charm",
+            1
+          ],
+          [
+            "accessory_violet_tassel_brooch",
+            "violet tassel brooch",
+            2
+          ],
+          [
+            "accessory_gold_feather_brooch",
+            "gold feather brooch",
+            3
+          ],
+          [
+            "accessory_leather_wrist_cuff",
+            "leather wrist cuff",
+            1
+          ],
+          [
+            "accessory_beaded_jade_bracelet",
+            "beaded jade bracelet",
+            2
+          ],
+          [
+            "accessory_silver_chain_bracelet",
+            "silver chain bracelet",
+            3
+          ],
+          [
+            "accessory_blue_silk_sash",
+            "blue silk sash",
+            1
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        335,
+        271
+      ]
+    },
+    {
+      "id": "accessory_silver_chain_bracelet",
+      "category": "item",
+      "path": "items/accessory_silver_chain_bracelet.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "accessory",
+        [
+          [
+            "accessory_bronze_key_charm",
+            "bronze key charm",
+            1
+          ],
+          [
+            "accessory_violet_tassel_brooch",
+            "violet tassel brooch",
+            2
+          ],
+          [
+            "accessory_gold_feather_brooch",
+            "gold feather brooch",
+            3
+          ],
+          [
+            "accessory_leather_wrist_cuff",
+            "leather wrist cuff",
+            1
+          ],
+          [
+            "accessory_beaded_jade_bracelet",
+            "beaded jade bracelet",
+            2
+          ],
+          [
+            "accessory_silver_chain_bracelet",
+            "silver chain bracelet",
+            3
+          ],
+          [
+            "accessory_blue_silk_sash",
+            "blue silk sash",
+            1
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        337,
+        259
+      ]
+    },
+    {
+      "id": "accessory_blue_silk_sash",
+      "category": "item",
+      "path": "items/accessory_blue_silk_sash.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "accessory",
+        [
+          [
+            "accessory_bronze_key_charm",
+            "bronze key charm",
+            1
+          ],
+          [
+            "accessory_violet_tassel_brooch",
+            "violet tassel brooch",
+            2
+          ],
+          [
+            "accessory_gold_feather_brooch",
+            "gold feather brooch",
+            3
+          ],
+          [
+            "accessory_leather_wrist_cuff",
+            "leather wrist cuff",
+            1
+          ],
+          [
+            "accessory_beaded_jade_bracelet",
+            "beaded jade bracelet",
+            2
+          ],
+          [
+            "accessory_silver_chain_bracelet",
+            "silver chain bracelet",
+            3
+          ],
+          [
+            "accessory_blue_silk_sash",
+            "blue silk sash",
+            1
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        314,
+        354
+      ]
+    }
+  ]
+}

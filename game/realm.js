@@ -193,7 +193,7 @@ class RealmArena {
     this.run = { wave: 0, kills: 0, shards: 0 };
     this.displayShards = this.save.shards;
     this._avatar = null;
-    this._enemyArt = null; this._enemyMap = null; this._driftMap = null; this._enemyDbgOn = false; // optional enemy animations (setEnemyArt)
+    this._itemArt = null; this._enemyArt = null; this._enemyMap = null; this._driftMap = null; this._enemyDbgOn = false; // optional enemy animations (setEnemyArt)
     this._heroArt = null; this._heroClass = null; this._heroSt = null; this._heroDbg = null; this._heroHurtAt = -9; this._heroAtkAt = -9; // optional hero animations (setHeroArt)
     this.team = null; this.role = 'solo'; this.down = false; this.reviveT = 0; this._firing = false;
 
@@ -639,6 +639,26 @@ class RealmArena {
   }
   // Additive hook: draw arena enemies / drifters with creature animations (MMArt.loadEnemies). Pass (null) to go back to the procedural sprites.
   // `map` / `driftMap` default to MMArt's ENEMY_MAP / DRIFTER_MAP. Never attached by the in-town gate.
+  // Additive hook: show item art (MMArt.loadItems ItemSet) in the backpack, shop and equipped slots, emoji as fallback. null = emoji only.
+  setItemArt(itemSet) {
+    this._itemArt = itemSet && typeof itemSet.iconUrl === 'function' ? itemSet : null;
+    if (this.paused && document.getElementById('realm-backpack-body')) this.renderBackpack();
+  }
+  // Icon markup for an item id: <img> from a trusted manifest url (never user data), else the emoji. Fallback on load error is wired by _fixIcons.
+  _icon(def) {
+    let url = null;
+    try { url = this._itemArt ? this._itemArt.iconUrl(def.id) : null; } catch (e) { url = null; }
+    if (!url || !/^[A-Za-z0-9_.\/-]+$/.test(url)) return def.icon;
+    return `<img class="realm-ico" src="${url}" alt="" width="32" height="32" data-item="${def.id}" style="image-rendering:pixelated">`;
+  }
+  _fixIcons(root) {
+    root.querySelectorAll('img.realm-ico').forEach((img) => {
+      const def = RM_ITEM_BY_ID[img.dataset.item];
+      const swap = () => { if (this._itemArt && this._itemArt.markBad) this._itemArt.markBad(img.dataset.item); img.replaceWith(document.createTextNode(def ? def.icon : '')); };
+      if (img.complete && !img.naturalWidth) swap(); else img.addEventListener('error', swap, { once: true });
+    });
+  }
+
   setEnemyArt(artSet, map, driftMap) {
     const ok = artSet && typeof artSet.anim === 'function' && typeof artSet.draw === 'function';
     this._enemyArt = ok ? artSet : null;
@@ -1444,11 +1464,11 @@ class RealmArena {
     let html = `<div class="realm-bp-count">You have ${sv.shards} 💎 · ${sv.items.length} / ${RM_BACKPACK} items${full ? ' · backpack full' : ''}</div><ul id="realm-bp-list">`;
     this.shopStock().forEach((o) => {
       const def = RM_ITEM_BY_ID[o.id]; const rar = RM_RARITIES[o.r]; const can = sv.shards >= o.price && !full;
-      html += `<li><span class="nm" style="color:${rar.color}">${def.icon} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText({ id: o.id, r: o.r })}</span><button type="button" class="eq" data-buy="${def.id}" data-r="${o.r}"${can ? '' : ' disabled'} aria-label="Buy ${rar.name} ${def.name} for ${o.price} shards">Buy ${o.price}💎</button></li>`;
+      html += `<li><span class="nm" style="color:${rar.color}">${this._icon(def)} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText({ id: o.id, r: o.r })}</span><button type="button" class="eq" data-buy="${def.id}" data-r="${o.r}"${can ? '' : ' disabled'} aria-label="Buy ${rar.name} ${def.name} for ${o.price} shards">Buy ${o.price}💎</button></li>`;
     });
     const nextR = RM_SHOP_UNLOCK.findIndex((w) => sv.bestWave < w);
     html += `</ul>${nextR > 0 ? `<div class="dim">Reach wave ${RM_SHOP_UNLOCK[nextR]} to unlock ${RM_RARITIES[nextR].name} gear.</div>` : ''}`;
-    root.innerHTML = html;
+    root.innerHTML = html; this._fixIcons(root);
   }
 
   _die() {
@@ -1691,16 +1711,16 @@ class RealmArena {
     let html = `<div id="realm-bp-stats">${this._statLine()}</div><button type="button" class="eq" data-open-shop="1" aria-label="Open the shop (V)" style="min-height:40px;margin:4px 0">🛒 Shop (V)</button><div class="realm-bp-slots">`;
     RM_SLOTS.forEach((slot) => {
       const it = sv.items.find((x) => x.n === sv.eq[slot]);
-      html += `<div class="realm-bp-slot" data-slot="${slot}">${it ? `<span style="color:${RM_RARITIES[it.r].color}">${RM_ITEM_BY_ID[it.id].icon} ${RM_ITEM_BY_ID[it.id].name}</span>` : `<span class="dim">${slot}: empty</span>`}</div>`;
+      html += `<div class="realm-bp-slot" data-slot="${slot}">${it ? `<span style="color:${RM_RARITIES[it.r].color}">${this._icon(RM_ITEM_BY_ID[it.id])} ${RM_ITEM_BY_ID[it.id].name}</span>` : `<span class="dim">${slot}: empty</span>`}</div>`;
     });
     html += `</div><div class="realm-bp-count">${sv.items.length} / ${RM_BACKPACK} items</div><ul id="realm-bp-list">`;
     if (!sv.items.length) html += '<li class="dim">Nothing yet — defeat enemies to find loot bags.</li>';
     sv.items.forEach((it) => {
       const def = RM_ITEM_BY_ID[it.id]; const rar = RM_RARITIES[it.r]; const on = eqUids.has(it.n);
-      html += `<li data-uid="${it.n}" class="${on ? 'on' : ''}"><span class="nm" style="color:${rar.color}">${def.icon} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(it)}</span><button type="button" class="eq" data-act="equip" data-uid="${it.n}">${on ? 'Unequip' : 'Equip'}</button>${this.combinable(it.n) ? `<button type="button" class="eq" data-combine="${it.n}" aria-label="Combine ${RM_COMBINE_COUNT} ${rar.name} ${def.name} into one ${RM_RARITIES[it.r + 1].name}">Combine ${RM_COMBINE_COUNT}→${RM_RARITIES[it.r + 1].name}</button>` : ''}<button type="button" class="dc" data-act="discard" data-uid="${it.n}" aria-label="Sell ${def.name} for ${rar.sell} shards">Sell ${rar.sell}💎</button></li>`;
+      html += `<li data-uid="${it.n}" class="${on ? 'on' : ''}"><span class="nm" style="color:${rar.color}">${this._icon(def)} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(it)}</span><button type="button" class="eq" data-act="equip" data-uid="${it.n}">${on ? 'Unequip' : 'Equip'}</button>${this.combinable(it.n) ? `<button type="button" class="eq" data-combine="${it.n}" aria-label="Combine ${RM_COMBINE_COUNT} ${rar.name} ${def.name} into one ${RM_RARITIES[it.r + 1].name}">Combine ${RM_COMBINE_COUNT}→${RM_RARITIES[it.r + 1].name}</button>` : ''}<button type="button" class="dc" data-act="discard" data-uid="${it.n}" aria-label="Sell ${def.name} for ${rar.sell} shards">Sell ${rar.sell}💎</button></li>`;
     });
     html += '</ul>';
-    root.innerHTML = html;
+    root.innerHTML = html; this._fixIcons(root);
   }
 
   // ---------- drawing ----------

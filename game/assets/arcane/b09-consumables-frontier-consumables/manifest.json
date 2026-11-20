@@ -1,0 +1,1611 @@
+{
+  "name": "Arcane Frontier consumables",
+  "frame_size": 32,
+  "assets": [
+    {
+      "id": "consumable_amber_strength_elixir_flask",
+      "category": "item",
+      "path": "items/consumable_amber_strength_elixir_flask.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "consumable",
+        [
+          [
+            "consumable_amber_strength_elixir_flask",
+            "amber strength elixir flask",
+            1
+          ],
+          [
+            "consumable_teal_swiftness_phial",
+            "teal swiftness phial",
+            2
+          ],
+          [
+            "consumable_violet_focus_tonic_bottle",
+            "violet focus tonic bottle",
+            3
+          ],
+          [
+            "consumable_gold_warding_ampoule",
+            "gold warding ampoule",
+            1
+          ],
+          [
+            "consumable_green_antidote_vial",
+            "green antidote vial",
+            2
+          ],
+          [
+            "consumable_white_frostward_potion",
+            "white frostward potion",
+            3
+          ],
+          [
+            "consumable_orange_fireward_potion",
+            "orange fireward potion",
+            1
+          ],
+          [
+            "consumable_inky_shadow_draught",
+            "inky shadow draught",
+            2
+          ],
+          [
+            "consumable_silver_rejuvenation_flask",
+            "silver rejuvenation flask",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        294,
+        363
+      ]
+    },
+    {
+      "id": "consumable_teal_swiftness_phial",
+      "category": "item",
+      "path": "items/consumable_teal_swiftness_phial.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "consumable",
+        [
+          [
+            "consumable_amber_strength_elixir_flask",
+            "amber strength elixir flask",
+            1
+          ],
+          [
+            "consumable_teal_swiftness_phial",
+            "teal swiftness phial",
+            2
+          ],
+          [
+            "consumable_violet_focus_tonic_bottle",
+            "violet focus tonic bottle",
+            3
+          ],
+          [
+            "consumable_gold_warding_ampoule",
+            "gold warding ampoule",
+            1
+          ],
+          [
+            "consumable_green_antidote_vial",
+            "green antidote vial",
+            2
+          ],
+          [
+            "consumable_white_frostward_potion",
+            "white frostward potion",
+            3
+          ],
+          [
+            "consumable_orange_fireward_potion",
+            "orange fireward potion",
+            1
+          ],
+          [
+            "consumable_inky_shadow_draught",
+            "inky shadow draught",
+            2
+          ],
+          [
+            "consumable_silver_rejuvenation_flask",
+            "silver rejuvenation flask",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        237,
+        371
+      ]
+    },
+    {
+      "id": "consumable_violet_focus_tonic_bottle",
+      "category": "item",
+      "path": "items/consumable_violet_focus_tonic_bottle.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "consumable",
+        [
+          [
+            "consumable_amber_strength_elixir_flask",
+            "amber strength elixir flask",
+            1
+          ],
+          [
+            "consumable_teal_swiftness_phial",
+            "teal swiftness phial",
+            2
+          ],
+          [
+            "consumable_violet_focus_tonic_bottle",
+            "violet focus tonic bottle",
+            3
+          ],
+          [
+            "consumable_gold_warding_ampoule",
+            "gold warding ampoule",
+            1
+          ],
+          [
+            "consumable_green_antidote_vial",
+            "green antidote vial",
+            2
+          ],
+          [
+            "consumable_white_frostward_potion",
+            "white frostward potion",
+            3
+          ],
+          [
+            "consumable_orange_fireward_potion",
+            "orange fireward potion",
+            1
+          ],
+          [
+            "consumable_inky_shadow_draught",
+            "inky shadow draught",
+            2
+          ],
+          [
+            "consumable_silver_rejuvenation_flask",
+            "silver rejuvenation flask",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        238,
+        372
+      ]
+    },
+    {
+      "id": "consumable_gold_warding_ampoule",
+      "category": "item",
+      "path": "items/consumable_gold_warding_ampoule.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "consumable",
+        [
+          [
+            "consumable_amber_strength_elixir_flask",
+            "amber strength elixir flask",
+            1
+          ],
+          [
+            "consumable_teal_swiftness_phial",
+            "teal swiftness phial",
+            2
+          ],
+          [
+            "consumable_violet_focus_tonic_bottle",
+            "violet focus tonic bottle",
+            3
+          ],
+          [
+            "consumable_gold_warding_ampoule",
+            "gold warding ampoule",
+            1
+          ],
+          [
+            "consumable_green_antidote_vial",
+            "green antidote vial",
+            2
+          ],
+          [
+            "consumable_white_frostward_potion",
+            "white frostward potion",
+            3
+          ],
+          [
+            "consumable_orange_fireward_potion",
+            "orange fireward potion",
+            1
+          ],
+          [
+            "consumable_inky_shadow_draught",
+            "inky shadow draught",
+            2
+          ],
+          [
+            "consumable_silver_rejuvenation_flask",
+            "silver rejuvenation flask",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        221,
+        389
+      ]
+    },
+    {
+      "id": "consumable_green_antidote_vial",
+      "category": "item",
+      "path": "items/consumable_green_antidote_vial.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "consumable",
+        [
+          [
+            "consumable_amber_strength_elixir_flask",
+            "amber strength elixir flask",
+            1
+          ],
+          [
+            "consumable_teal_swiftness_phial",
+            "teal swiftness phial",
+            2
+          ],
+          [
+            "consumable_violet_focus_tonic_bottle",
+            "violet focus tonic bottle",
+            3
+          ],
+          [
+            "consumable_gold_warding_ampoule",
+            "gold warding ampoule",
+            1
+          ],
+          [
+            "consumable_green_antidote_vial",
+            "green antidote vial",
+            2
+          ],
+          [
+            "consumable_white_frostward_potion",
+            "white frostward potion",
+            3
+          ],
+          [
+            "consumable_orange_fireward_potion",
+            "orange fireward potion",
+            1
+          ],
+          [
+            "consumable_inky_shadow_draught",
+            "inky shadow draught",
+            2
+          ],
+          [
+            "consumable_silver_rejuvenation_flask",
+            "silver rejuvenation flask",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        224,
+        354
+      ]
+    },
+    {
+      "id": "consumable_white_frostward_potion",
+      "category": "item",
+      "path": "items/consumable_white_frostward_potion.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "consumable",
+        [
+          [
+            "consumable_amber_strength_elixir_flask",
+            "amber strength elixir flask",
+            1
+          ],
+          [
+            "consumable_teal_swiftness_phial",
+            "teal swiftness phial",
+            2
+          ],
+          [
+            "consumable_violet_focus_tonic_bottle",
+            "violet focus tonic bottle",
+            3
+          ],
+          [
+            "consumable_gold_warding_ampoule",
+            "gold warding ampoule",
+            1
+          ],
+          [
+            "consumable_green_antidote_vial",
+            "green antidote vial",
+            2
+          ],
+          [
+            "consumable_white_frostward_potion",
+            "white frostward potion",
+            3
+          ],
+          [
+            "consumable_orange_fireward_potion",
+            "orange fireward potion",
+            1
+          ],
+          [
+            "consumable_inky_shadow_draught",
+            "inky shadow draught",
+            2
+          ],
+          [
+            "consumable_silver_rejuvenation_flask",
+            "silver rejuvenation flask",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        271,
+        364
+      ]
+    },
+    {
+      "id": "consumable_orange_fireward_potion",
+      "category": "item",
+      "path": "items/consumable_orange_fireward_potion.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "consumable",
+        [
+          [
+            "consumable_amber_strength_elixir_flask",
+            "amber strength elixir flask",
+            1
+          ],
+          [
+            "consumable_teal_swiftness_phial",
+            "teal swiftness phial",
+            2
+          ],
+          [
+            "consumable_violet_focus_tonic_bottle",
+            "violet focus tonic bottle",
+            3
+          ],
+          [
+            "consumable_gold_warding_ampoule",
+            "gold warding ampoule",
+            1
+          ],
+          [
+            "consumable_green_antidote_vial",
+            "green antidote vial",
+            2
+          ],
+          [
+            "consumable_white_frostward_potion",
+            "white frostward potion",
+            3
+          ],
+          [
+            "consumable_orange_fireward_potion",
+            "orange fireward potion",
+            1
+          ],
+          [
+            "consumable_inky_shadow_draught",
+            "inky shadow draught",
+            2
+          ],
+          [
+            "consumable_silver_rejuvenation_flask",
+            "silver rejuvenation flask",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        283,
+        380
+      ]
+    },
+    {
+      "id": "consumable_inky_shadow_draught",
+      "category": "item",
+      "path": "items/consumable_inky_shadow_draught.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "consumable",
+        [
+          [
+            "consumable_amber_strength_elixir_flask",
+            "amber strength elixir flask",
+            1
+          ],
+          [
+            "consumable_teal_swiftness_phial",
+            "teal swiftness phial",
+            2
+          ],
+          [
+            "consumable_violet_focus_tonic_bottle",
+            "violet focus tonic bottle",
+            3
+          ],
+          [
+            "consumable_gold_warding_ampoule",
+            "gold warding ampoule",
+            1
+          ],
+          [
+            "consumable_green_antidote_vial",
+            "green antidote vial",
+            2
+          ],
+          [
+            "consumable_white_frostward_potion",
+            "white frostward potion",
+            3
+          ],
+          [
+            "consumable_orange_fireward_potion",
+            "orange fireward potion",
+            1
+          ],
+          [
+            "consumable_inky_shadow_draught",
+            "inky shadow draught",
+            2
+          ],
+          [
+            "consumable_silver_rejuvenation_flask",
+            "silver rejuvenation flask",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        256,
+        378
+      ]
+    },
+    {
+      "id": "consumable_silver_rejuvenation_flask",
+      "category": "item",
+      "path": "items/consumable_silver_rejuvenation_flask.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "consumable",
+        [
+          [
+            "consumable_amber_strength_elixir_flask",
+            "amber strength elixir flask",
+            1
+          ],
+          [
+            "consumable_teal_swiftness_phial",
+            "teal swiftness phial",
+            2
+          ],
+          [
+            "consumable_violet_focus_tonic_bottle",
+            "violet focus tonic bottle",
+            3
+          ],
+          [
+            "consumable_gold_warding_ampoule",
+            "gold warding ampoule",
+            1
+          ],
+          [
+            "consumable_green_antidote_vial",
+            "green antidote vial",
+            2
+          ],
+          [
+            "consumable_white_frostward_potion",
+            "white frostward potion",
+            3
+          ],
+          [
+            "consumable_orange_fireward_potion",
+            "orange fireward potion",
+            1
+          ],
+          [
+            "consumable_inky_shadow_draught",
+            "inky shadow draught",
+            2
+          ],
+          [
+            "consumable_silver_rejuvenation_flask",
+            "silver rejuvenation flask",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        308,
+        374
+      ]
+    },
+    {
+      "id": "consumable_red_apple",
+      "category": "item",
+      "path": "items/consumable_red_apple.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "consumable",
+        [
+          [
+            "consumable_red_apple",
+            "red apple",
+            1
+          ],
+          [
+            "consumable_round_brown_bread_loaf",
+            "round brown bread loaf",
+            2
+          ],
+          [
+            "consumable_yellow_cheese_wedge",
+            "yellow cheese wedge",
+            3
+          ],
+          [
+            "consumable_roasted_drumstick",
+            "roasted drumstick",
+            1
+          ],
+          [
+            "consumable_cooked_trout_on_leaf",
+            "cooked trout on leaf",
+            2
+          ],
+          [
+            "consumable_blue_berry_cluster",
+            "blue berry cluster",
+            3
+          ],
+          [
+            "consumable_honey_jar",
+            "honey jar",
+            1
+          ],
+          [
+            "consumable_sealed_green_tea_tin",
+            "sealed green tea tin",
+            2
+          ],
+          [
+            "consumable_tied_ration_bundle",
+            "tied ration bundle",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        279,
+        316
+      ]
+    },
+    {
+      "id": "consumable_round_brown_bread_loaf",
+      "category": "item",
+      "path": "items/consumable_round_brown_bread_loaf.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "consumable",
+        [
+          [
+            "consumable_red_apple",
+            "red apple",
+            1
+          ],
+          [
+            "consumable_round_brown_bread_loaf",
+            "round brown bread loaf",
+            2
+          ],
+          [
+            "consumable_yellow_cheese_wedge",
+            "yellow cheese wedge",
+            3
+          ],
+          [
+            "consumable_roasted_drumstick",
+            "roasted drumstick",
+            1
+          ],
+          [
+            "consumable_cooked_trout_on_leaf",
+            "cooked trout on leaf",
+            2
+          ],
+          [
+            "consumable_blue_berry_cluster",
+            "blue berry cluster",
+            3
+          ],
+          [
+            "consumable_honey_jar",
+            "honey jar",
+            1
+          ],
+          [
+            "consumable_sealed_green_tea_tin",
+            "sealed green tea tin",
+            2
+          ],
+          [
+            "consumable_tied_ration_bundle",
+            "tied ration bundle",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        334,
+        273
+      ]
+    },
+    {
+      "id": "consumable_yellow_cheese_wedge",
+      "category": "item",
+      "path": "items/consumable_yellow_cheese_wedge.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "consumable",
+        [
+          [
+            "consumable_red_apple",
+            "red apple",
+            1
+          ],
+          [
+            "consumable_round_brown_bread_loaf",
+            "round brown bread loaf",
+            2
+          ],
+          [
+            "consumable_yellow_cheese_wedge",
+            "yellow cheese wedge",
+            3
+          ],
+          [
+            "consumable_roasted_drumstick",
+            "roasted drumstick",
+            1
+          ],
+          [
+            "consumable_cooked_trout_on_leaf",
+            "cooked trout on leaf",
+            2
+          ],
+          [
+            "consumable_blue_berry_cluster",
+            "blue berry cluster",
+            3
+          ],
+          [
+            "consumable_honey_jar",
+            "honey jar",
+            1
+          ],
+          [
+            "consumable_sealed_green_tea_tin",
+            "sealed green tea tin",
+            2
+          ],
+          [
+            "consumable_tied_ration_bundle",
+            "tied ration bundle",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        301,
+        274
+      ]
+    },
+    {
+      "id": "consumable_roasted_drumstick",
+      "category": "item",
+      "path": "items/consumable_roasted_drumstick.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "consumable",
+        [
+          [
+            "consumable_red_apple",
+            "red apple",
+            1
+          ],
+          [
+            "consumable_round_brown_bread_loaf",
+            "round brown bread loaf",
+            2
+          ],
+          [
+            "consumable_yellow_cheese_wedge",
+            "yellow cheese wedge",
+            3
+          ],
+          [
+            "consumable_roasted_drumstick",
+            "roasted drumstick",
+            1
+          ],
+          [
+            "consumable_cooked_trout_on_leaf",
+            "cooked trout on leaf",
+            2
+          ],
+          [
+            "consumable_blue_berry_cluster",
+            "blue berry cluster",
+            3
+          ],
+          [
+            "consumable_honey_jar",
+            "honey jar",
+            1
+          ],
+          [
+            "consumable_sealed_green_tea_tin",
+            "sealed green tea tin",
+            2
+          ],
+          [
+            "consumable_tied_ration_bundle",
+            "tied ration bundle",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        308,
+        318
+      ]
+    },
+    {
+      "id": "consumable_cooked_trout_on_leaf",
+      "category": "item",
+      "path": "items/consumable_cooked_trout_on_leaf.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "consumable",
+        [
+          [
+            "consumable_red_apple",
+            "red apple",
+            1
+          ],
+          [
+            "consumable_round_brown_bread_loaf",
+            "round brown bread loaf",
+            2
+          ],
+          [
+            "consumable_yellow_cheese_wedge",
+            "yellow cheese wedge",
+            3
+          ],
+          [
+            "consumable_roasted_drumstick",
+            "roasted drumstick",
+            1
+          ],
+          [
+            "consumable_cooked_trout_on_leaf",
+            "cooked trout on leaf",
+            2
+          ],
+          [
+            "consumable_blue_berry_cluster",
+            "blue berry cluster",
+            3
+          ],
+          [
+            "consumable_honey_jar",
+            "honey jar",
+            1
+          ],
+          [
+            "consumable_sealed_green_tea_tin",
+            "sealed green tea tin",
+            2
+          ],
+          [
+            "consumable_tied_ration_bundle",
+            "tied ration bundle",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        383,
+        281
+      ]
+    },
+    {
+      "id": "consumable_blue_berry_cluster",
+      "category": "item",
+      "path": "items/consumable_blue_berry_cluster.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "consumable",
+        [
+          [
+            "consumable_red_apple",
+            "red apple",
+            1
+          ],
+          [
+            "consumable_round_brown_bread_loaf",
+            "round brown bread loaf",
+            2
+          ],
+          [
+            "consumable_yellow_cheese_wedge",
+            "yellow cheese wedge",
+            3
+          ],
+          [
+            "consumable_roasted_drumstick",
+            "roasted drumstick",
+            1
+          ],
+          [
+            "consumable_cooked_trout_on_leaf",
+            "cooked trout on leaf",
+            2
+          ],
+          [
+            "consumable_blue_berry_cluster",
+            "blue berry cluster",
+            3
+          ],
+          [
+            "consumable_honey_jar",
+            "honey jar",
+            1
+          ],
+          [
+            "consumable_sealed_green_tea_tin",
+            "sealed green tea tin",
+            2
+          ],
+          [
+            "consumable_tied_ration_bundle",
+            "tied ration bundle",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        331,
+        284
+      ]
+    },
+    {
+      "id": "consumable_honey_jar",
+      "category": "item",
+      "path": "items/consumable_honey_jar.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "consumable",
+        [
+          [
+            "consumable_red_apple",
+            "red apple",
+            1
+          ],
+          [
+            "consumable_round_brown_bread_loaf",
+            "round brown bread loaf",
+            2
+          ],
+          [
+            "consumable_yellow_cheese_wedge",
+            "yellow cheese wedge",
+            3
+          ],
+          [
+            "consumable_roasted_drumstick",
+            "roasted drumstick",
+            1
+          ],
+          [
+            "consumable_cooked_trout_on_leaf",
+            "cooked trout on leaf",
+            2
+          ],
+          [
+            "consumable_blue_berry_cluster",
+            "blue berry cluster",
+            3
+          ],
+          [
+            "consumable_honey_jar",
+            "honey jar",
+            1
+          ],
+          [
+            "consumable_sealed_green_tea_tin",
+            "sealed green tea tin",
+            2
+          ],
+          [
+            "consumable_tied_ration_bundle",
+            "tied ration bundle",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        310,
+        319
+      ]
+    },
+    {
+      "id": "consumable_sealed_green_tea_tin",
+      "category": "item",
+      "path": "items/consumable_sealed_green_tea_tin.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "consumable",
+        [
+          [
+            "consumable_red_apple",
+            "red apple",
+            1
+          ],
+          [
+            "consumable_round_brown_bread_loaf",
+            "round brown bread loaf",
+            2
+          ],
+          [
+            "consumable_yellow_cheese_wedge",
+            "yellow cheese wedge",
+            3
+          ],
+          [
+            "consumable_roasted_drumstick",
+            "roasted drumstick",
+            1
+          ],
+          [
+            "consumable_cooked_trout_on_leaf",
+            "cooked trout on leaf",
+            2
+          ],
+          [
+            "consumable_blue_berry_cluster",
+            "blue berry cluster",
+            3
+          ],
+          [
+            "consumable_honey_jar",
+            "honey jar",
+            1
+          ],
+          [
+            "consumable_sealed_green_tea_tin",
+            "sealed green tea tin",
+            2
+          ],
+          [
+            "consumable_tied_ration_bundle",
+            "tied ration bundle",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        267,
+        322
+      ]
+    },
+    {
+      "id": "consumable_tied_ration_bundle",
+      "category": "item",
+      "path": "items/consumable_tied_ration_bundle.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "consumable",
+        [
+          [
+            "consumable_red_apple",
+            "red apple",
+            1
+          ],
+          [
+            "consumable_round_brown_bread_loaf",
+            "round brown bread loaf",
+            2
+          ],
+          [
+            "consumable_yellow_cheese_wedge",
+            "yellow cheese wedge",
+            3
+          ],
+          [
+            "consumable_roasted_drumstick",
+            "roasted drumstick",
+            1
+          ],
+          [
+            "consumable_cooked_trout_on_leaf",
+            "cooked trout on leaf",
+            2
+          ],
+          [
+            "consumable_blue_berry_cluster",
+            "blue berry cluster",
+            3
+          ],
+          [
+            "consumable_honey_jar",
+            "honey jar",
+            1
+          ],
+          [
+            "consumable_sealed_green_tea_tin",
+            "sealed green tea tin",
+            2
+          ],
+          [
+            "consumable_tied_ration_bundle",
+            "tied ration bundle",
+            3
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        349,
+        290
+      ]
+    },
+    {
+      "id": "consumable_rolled_linen_bandage",
+      "category": "item",
+      "path": "items/consumable_rolled_linen_bandage.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "consumable",
+        [
+          [
+            "consumable_rolled_linen_bandage",
+            "rolled linen bandage",
+            1
+          ],
+          [
+            "consumable_gold_wax_sealed_recall_scroll",
+            "gold wax sealed recall scroll",
+            2
+          ],
+          [
+            "consumable_cyan_rune_teleport_tablet",
+            "cyan rune teleport tablet",
+            3
+          ],
+          [
+            "consumable_small_green_herbal_salve_jar",
+            "small green herbal salve jar",
+            1
+          ],
+          [
+            "consumable_red_glass_smoke_bomb_with_stopper",
+            "red glass smoke bomb with stopper",
+            2
+          ],
+          [
+            "consumable_brown_paper_wrapped_incense_sticks",
+            "brown paper wrapped incense sticks",
+            3
+          ],
+          [
+            "consumable_blue_stamina_crystal_candy",
+            "blue stamina crystal candy",
+            1
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        315,
+        312
+      ]
+    },
+    {
+      "id": "consumable_gold_wax_sealed_recall_scroll",
+      "category": "item",
+      "path": "items/consumable_gold_wax_sealed_recall_scroll.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "consumable",
+        [
+          [
+            "consumable_rolled_linen_bandage",
+            "rolled linen bandage",
+            1
+          ],
+          [
+            "consumable_gold_wax_sealed_recall_scroll",
+            "gold wax sealed recall scroll",
+            2
+          ],
+          [
+            "consumable_cyan_rune_teleport_tablet",
+            "cyan rune teleport tablet",
+            3
+          ],
+          [
+            "consumable_small_green_herbal_salve_jar",
+            "small green herbal salve jar",
+            1
+          ],
+          [
+            "consumable_red_glass_smoke_bomb_with_stopper",
+            "red glass smoke bomb with stopper",
+            2
+          ],
+          [
+            "consumable_brown_paper_wrapped_incense_sticks",
+            "brown paper wrapped incense sticks",
+            3
+          ],
+          [
+            "consumable_blue_stamina_crystal_candy",
+            "blue stamina crystal candy",
+            1
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        380,
+        308
+      ]
+    },
+    {
+      "id": "consumable_cyan_rune_teleport_tablet",
+      "category": "item",
+      "path": "items/consumable_cyan_rune_teleport_tablet.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "consumable",
+        [
+          [
+            "consumable_rolled_linen_bandage",
+            "rolled linen bandage",
+            1
+          ],
+          [
+            "consumable_gold_wax_sealed_recall_scroll",
+            "gold wax sealed recall scroll",
+            2
+          ],
+          [
+            "consumable_cyan_rune_teleport_tablet",
+            "cyan rune teleport tablet",
+            3
+          ],
+          [
+            "consumable_small_green_herbal_salve_jar",
+            "small green herbal salve jar",
+            1
+          ],
+          [
+            "consumable_red_glass_smoke_bomb_with_stopper",
+            "red glass smoke bomb with stopper",
+            2
+          ],
+          [
+            "consumable_brown_paper_wrapped_incense_sticks",
+            "brown paper wrapped incense sticks",
+            3
+          ],
+          [
+            "consumable_blue_stamina_crystal_candy",
+            "blue stamina crystal candy",
+            1
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        280,
+        350
+      ]
+    },
+    {
+      "id": "consumable_small_green_herbal_salve_jar",
+      "category": "item",
+      "path": "items/consumable_small_green_herbal_salve_jar.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "consumable",
+        [
+          [
+            "consumable_rolled_linen_bandage",
+            "rolled linen bandage",
+            1
+          ],
+          [
+            "consumable_gold_wax_sealed_recall_scroll",
+            "gold wax sealed recall scroll",
+            2
+          ],
+          [
+            "consumable_cyan_rune_teleport_tablet",
+            "cyan rune teleport tablet",
+            3
+          ],
+          [
+            "consumable_small_green_herbal_salve_jar",
+            "small green herbal salve jar",
+            1
+          ],
+          [
+            "consumable_red_glass_smoke_bomb_with_stopper",
+            "red glass smoke bomb with stopper",
+            2
+          ],
+          [
+            "consumable_brown_paper_wrapped_incense_sticks",
+            "brown paper wrapped incense sticks",
+            3
+          ],
+          [
+            "consumable_blue_stamina_crystal_candy",
+            "blue stamina crystal candy",
+            1
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        299,
+        306
+      ]
+    },
+    {
+      "id": "consumable_red_glass_smoke_bomb_with_stopper",
+      "category": "item",
+      "path": "items/consumable_red_glass_smoke_bomb_with_stopper.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "consumable",
+        [
+          [
+            "consumable_rolled_linen_bandage",
+            "rolled linen bandage",
+            1
+          ],
+          [
+            "consumable_gold_wax_sealed_recall_scroll",
+            "gold wax sealed recall scroll",
+            2
+          ],
+          [
+            "consumable_cyan_rune_teleport_tablet",
+            "cyan rune teleport tablet",
+            3
+          ],
+          [
+            "consumable_small_green_herbal_salve_jar",
+            "small green herbal salve jar",
+            1
+          ],
+          [
+            "consumable_red_glass_smoke_bomb_with_stopper",
+            "red glass smoke bomb with stopper",
+            2
+          ],
+          [
+            "consumable_brown_paper_wrapped_incense_sticks",
+            "brown paper wrapped incense sticks",
+            3
+          ],
+          [
+            "consumable_blue_stamina_crystal_candy",
+            "blue stamina crystal candy",
+            1
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        297,
+        354
+      ]
+    },
+    {
+      "id": "consumable_brown_paper_wrapped_incense_sticks",
+      "category": "item",
+      "path": "items/consumable_brown_paper_wrapped_incense_sticks.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "consumable",
+        [
+          [
+            "consumable_rolled_linen_bandage",
+            "rolled linen bandage",
+            1
+          ],
+          [
+            "consumable_gold_wax_sealed_recall_scroll",
+            "gold wax sealed recall scroll",
+            2
+          ],
+          [
+            "consumable_cyan_rune_teleport_tablet",
+            "cyan rune teleport tablet",
+            3
+          ],
+          [
+            "consumable_small_green_herbal_salve_jar",
+            "small green herbal salve jar",
+            1
+          ],
+          [
+            "consumable_red_glass_smoke_bomb_with_stopper",
+            "red glass smoke bomb with stopper",
+            2
+          ],
+          [
+            "consumable_brown_paper_wrapped_incense_sticks",
+            "brown paper wrapped incense sticks",
+            3
+          ],
+          [
+            "consumable_blue_stamina_crystal_candy",
+            "blue stamina crystal candy",
+            1
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        321,
+        364
+      ]
+    },
+    {
+      "id": "consumable_blue_stamina_crystal_candy",
+      "category": "item",
+      "path": "items/consumable_blue_stamina_crystal_candy.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "consumable",
+        [
+          [
+            "consumable_rolled_linen_bandage",
+            "rolled linen bandage",
+            1
+          ],
+          [
+            "consumable_gold_wax_sealed_recall_scroll",
+            "gold wax sealed recall scroll",
+            2
+          ],
+          [
+            "consumable_cyan_rune_teleport_tablet",
+            "cyan rune teleport tablet",
+            3
+          ],
+          [
+            "consumable_small_green_herbal_salve_jar",
+            "small green herbal salve jar",
+            1
+          ],
+          [
+            "consumable_red_glass_smoke_bomb_with_stopper",
+            "red glass smoke bomb with stopper",
+            2
+          ],
+          [
+            "consumable_brown_paper_wrapped_incense_sticks",
+            "brown paper wrapped incense sticks",
+            3
+          ],
+          [
+            "consumable_blue_stamina_crystal_candy",
+            "blue stamina crystal candy",
+            1
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        353,
+        302
+      ]
+    }
+  ]
+}
