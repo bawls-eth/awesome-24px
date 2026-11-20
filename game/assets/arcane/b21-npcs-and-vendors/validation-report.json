@@ -1,0 +1,19 @@
+{
+  "batch": "b21",
+  "label": "npcs-and-vendors",
+  "generated_utc": "2026-11-20T18:48:11.973253Z",
+  "files": 14,
+  "duplicate_ids": 0,
+  "blocking": {},
+  "warnings": {},
+  "standing_heights": {
+    "npc_nexus_guide/down": 120,
+    "npc_vendor/down": 120,
+    "npc_healer/down": 120,
+    "npc_blacksmith/down": 120,
+    "npc_quest_giver/down": 120,
+    "npc_wanderer/down": 120,
+    "npc_ghost_guide/down": 120
+  },
+  "status": "provisional"
+}

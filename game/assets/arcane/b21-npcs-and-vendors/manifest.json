@@ -1,0 +1,244 @@
+{
+  "name": "B21 NPCs and Vendors",
+  "frame_size": 256,
+  "assets": [
+    {
+      "id": "npc_nexus_guide_idle_down",
+      "category": "enemy",
+      "enemy": "npc_nexus_guide",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "path": "enemies/npc_nexus_guide/npc_nexus_guide_idle_down.png"
+    },
+    {
+      "id": "npc_nexus_guide_talk_down",
+      "category": "enemy",
+      "enemy": "npc_nexus_guide",
+      "action": "talk",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "path": "enemies/npc_nexus_guide/npc_nexus_guide_talk_down.png"
+    },
+    {
+      "id": "npc_vendor_idle_down",
+      "category": "enemy",
+      "enemy": "npc_vendor",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "path": "enemies/npc_vendor/npc_vendor_idle_down.png"
+    },
+    {
+      "id": "npc_vendor_talk_down",
+      "category": "enemy",
+      "enemy": "npc_vendor",
+      "action": "talk",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "path": "enemies/npc_vendor/npc_vendor_talk_down.png"
+    },
+    {
+      "id": "npc_healer_idle_down",
+      "category": "enemy",
+      "enemy": "npc_healer",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "path": "enemies/npc_healer/npc_healer_idle_down.png"
+    },
+    {
+      "id": "npc_healer_talk_down",
+      "category": "enemy",
+      "enemy": "npc_healer",
+      "action": "talk",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "path": "enemies/npc_healer/npc_healer_talk_down.png"
+    },
+    {
+      "id": "npc_blacksmith_idle_down",
+      "category": "enemy",
+      "enemy": "npc_blacksmith",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "path": "enemies/npc_blacksmith/npc_blacksmith_idle_down.png"
+    },
+    {
+      "id": "npc_blacksmith_talk_down",
+      "category": "enemy",
+      "enemy": "npc_blacksmith",
+      "action": "talk",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "path": "enemies/npc_blacksmith/npc_blacksmith_talk_down.png"
+    },
+    {
+      "id": "npc_quest_giver_idle_down",
+      "category": "enemy",
+      "enemy": "npc_quest_giver",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "path": "enemies/npc_quest_giver/npc_quest_giver_idle_down.png"
+    },
+    {
+      "id": "npc_quest_giver_talk_down",
+      "category": "enemy",
+      "enemy": "npc_quest_giver",
+      "action": "talk",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "path": "enemies/npc_quest_giver/npc_quest_giver_talk_down.png"
+    },
+    {
+      "id": "npc_wanderer_idle_down",
+      "category": "enemy",
+      "enemy": "npc_wanderer",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "path": "enemies/npc_wanderer/npc_wanderer_idle_down.png"
+    },
+    {
+      "id": "npc_wanderer_talk_down",
+      "category": "enemy",
+      "enemy": "npc_wanderer",
+      "action": "talk",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "path": "enemies/npc_wanderer/npc_wanderer_talk_down.png"
+    },
+    {
+      "id": "npc_ghost_guide_idle_down",
+      "category": "enemy",
+      "enemy": "npc_ghost_guide",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "path": "enemies/npc_ghost_guide/npc_ghost_guide_idle_down.png"
+    },
+    {
+      "id": "npc_ghost_guide_talk_down",
+      "category": "enemy",
+      "enemy": "npc_ghost_guide",
+      "action": "talk",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "path": "enemies/npc_ghost_guide/npc_ghost_guide_talk_down.png"
+    }
+  ]
+}
