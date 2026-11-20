@@ -120,3 +120,6 @@ Done: generator, zones module, menu/restart/phone layout, test tiers. Next (NEXT
 
 ## First playable big map (2026-11-20)
 Open /game/games/mad-maze/index.html?mode=world[&seed=N]. realm.js: setWorld/setMode(world), camera, screenToWorld. New realm-world.js (terrain chunks, HUD, minimap, portals), pixeltown-realm-v1 save. Gaps: bag tier colours, death text says Wave, shallow-water slow, narrow shore band, only Warren portals, fog, events, Nexus, co-op, Codex terrain art.
+
+## Overworld terrain transitions (Codex, 2026-11-20)
+B10T is registered on this branch. The overworld loader uses 32 base variants and 120 transition tiles when all differing cardinal neighbors match the manifest blend. Fully surrounded tiles use base variants. Mixed boundaries, missing art and map borders use the existing fallback. Node syntax and offline manifest/mask checks passed. Browser playback and integration CI remain pending. Next Realm gameplay slice: verify the death and restart loop, then zone loot presentation.

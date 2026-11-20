@@ -90,7 +90,8 @@
     world.structures.forEach((s) => { if (s.kind !== 'event_site') return; const k = Math.floor(s.y / CH) * ccols + Math.floor(s.x / CH); (propsBy[k] = propsBy[k] || []).push({ x: s.x, y: s.y, kind: 'event_ring' }); });
 
     // ---------- optional terrain art: tile_<terrain>_a..d from any registered batch (none delivered yet: code fallback) ----------
-    const tileArt = Object.create(null); // terrain id -> [img...]
+    const tileArt = Object.create(null); // terrain id -> fixed a-d slots
+    const edgeArt = Object.create(null); // terrain id -> blend id -> mask slots
     let artTiles = 0;
     function loadTileArt(root) {
       if (!root || typeof fetch !== 'function') return Promise.resolve(0);
@@ -104,11 +105,24 @@
           return fetch(join(join(root, id), 'manifest.json')).then((r) => (r.ok ? r.json() : null)).then((m) => {
             const assets = m && Array.isArray(m.assets) ? m.assets : [];
             return Promise.all(assets.map((a) => {
-              const mt = a && typeof a.id === 'string' ? /^tile_([a-z_]+)_([a-d])$/.exec(a.id) : null;
+              const mt = a && typeof a.id === 'string' ? /^tile_([a-z_]+)_([a-d]|edge_\d{2})$/.exec(a.id) : null;
               if (!mt || !Object.prototype.hasOwnProperty.call(T, mt[1]) || !okPath(a.path)) return null;
+              const tid = T[mt[1]];
+              const variant = mt[2].length === 1;
+              const slot = variant ? mt[2].charCodeAt(0) - 97 : Number(mt[2].slice(5));
+              if (!variant && (slot >= 15 || slot !== a.edge_mask || a.blend === mt[1] ||
+                !Object.prototype.hasOwnProperty.call(T, a.blend))) return null;
               return new Promise((res) => {
                 const img = new Image();
-                img.onload = () => { if (img.naturalWidth >= 16) { const tid = T[mt[1]]; (tileArt[tid] = tileArt[tid] || []).push(img); artTiles++; } res(); };
+                img.onload = () => {
+                  if (img.naturalWidth === TILE && img.naturalHeight === TILE) {
+                    const banks = variant ? tileArt : (edgeArt[tid] ||= Object.create(null));
+                    const bank = (banks[variant ? tid : T[a.blend]] ||= []);
+                    if (!bank[slot]) artTiles++;
+                    bank[slot] = img;
+                  }
+                  res();
+                };
                 img.onerror = () => res();
                 img.src = join(join(root, id), a.path);
               });
@@ -116,6 +130,22 @@
           }).catch(() => null);
         }));
       }).then(() => { if (artTiles) dropChunks(); return artTiles; }).catch(() => 0);
+    }
+
+    function transitionAt(x, y, t) {
+      const blends = edgeArt[t];
+      if (!blends || x === 0 || y === 0 || x === ww - 1 || y === wh - 1) return null;
+      const i = y * ww + x;
+      const neighbours = [terrain[i - ww], terrain[i + 1], terrain[i + ww], terrain[i - 1]];
+      let mask = 0;
+      let blend = null;
+      for (let dir = 0; dir < neighbours.length; dir++) {
+        const other = neighbours[dir];
+        if (other === t) mask |= 1 << dir;
+        else if (blend === null) blend = other;
+        else if (blend !== other) return null;
+      }
+      return blend === null ? null : blends[blend]?.[mask] || null;
     }
 
     // ---------- chunk renderer: 16x16 tiles into a cached 512x512 canvas, LRU-evicted (max MAX_CHUNKS) ----------
@@ -156,9 +186,11 @@
         const wx = x0 + tx; const wy = y0 + ty; const px = tx * TILE; const py = ty * TILE;
         if (wx >= ww || wy >= wh) { rect(g, PAL.deep_water[0], px, py, TILE, TILE); continue; }
         const i = wy * ww + wx; const t = terrain[i]; const pal = PAL[TN[t]] || PAL.grass;
-        const art = tileArt[t];
+        const art = tileArt[t]?.filter(Boolean);
         if (t === T.deep_water || t === T.shallow_water) water = true;
-        if (art && art.length) g.drawImage(art[Math.floor(h2(wx, wy, 91) * art.length)], px, py, TILE, TILE);
+        const transition = transitionAt(wx, wy, t);
+        if (transition) g.drawImage(transition, px, py, TILE, TILE);
+        else if (art && art.length) g.drawImage(art[Math.floor(h2(wx, wy, 91) * art.length)], px, py, TILE, TILE);
         else {
           rect(g, pal[0], px, py, TILE, TILE);
           for (let k = 0; k < 3; k++) { const r = h2(wx * 3 + k, wy, 7); if (r < 0.55) rect(g, r < 0.27 ? pal[1] : pal[2], px + Math.floor(h2(wx, wy * 5 + k, 11) * 26), py + Math.floor(h2(wx * 7 + k, wy, 13) * 26), t === T.flower_meadow ? 3 : 6, t === T.flower_meadow ? 3 : 4); }
@@ -168,7 +200,9 @@
       // darker edge line where neighbouring terrain differs
       for (let ty = 0; ty < CH; ty++) for (let tx = 0; tx < CH; tx++) {
         const wx = x0 + tx; const wy = y0 + ty; if (wx >= ww || wy >= wh) continue;
-        const t = terrain[wy * ww + wx]; const e = (PAL[TN[t]] || PAL.grass)[3]; const px = tx * TILE; const py = ty * TILE;
+        const t = terrain[wy * ww + wx];
+        if (transitionAt(wx, wy, t)) continue;
+        const e = (PAL[TN[t]] || PAL.grass)[3]; const px = tx * TILE; const py = ty * TILE;
         if (wx + 1 < ww && terrain[wy * ww + wx + 1] !== t) rect(g, e, px + TILE - 2, py, 2, TILE);
         if (wx > 0 && terrain[wy * ww + wx - 1] !== t) rect(g, e, px, py, 2, TILE);
         if (wy + 1 < wh && terrain[(wy + 1) * ww + wx] !== t) rect(g, e, px, py + TILE - 2, TILE, 2);
