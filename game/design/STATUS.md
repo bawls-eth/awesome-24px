@@ -70,3 +70,7 @@ B05 stages 72 validated animation strips for Mini Sprout and five Arcane Frontie
 ### Frontier item art
 
 Staged 16 validated equipment and potion icons matching the existing catalog IDs. Integration is pending.
+
+### Frontier weapon expansion
+
+Staged 20 additional weapon icons. The two item packs cover 28 weapon IDs and eight other equipment and potion IDs.

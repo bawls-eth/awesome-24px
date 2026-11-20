@@ -1,0 +1,426 @@
+{
+  "name": "Arcane Frontier weapon expansion",
+  "frame_size": 32,
+  "assets": [
+    {
+      "id": "sword_bronze",
+      "category": "item",
+      "path": "items/sword_bronze.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "weapon",
+        "sword",
+        "bronze"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        470,
+        497
+      ]
+    },
+    {
+      "id": "sword_frost",
+      "category": "item",
+      "path": "items/sword_frost.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "weapon",
+        "sword",
+        "frost"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        526,
+        539
+      ]
+    },
+    {
+      "id": "sword_obsidian",
+      "category": "item",
+      "path": "items/sword_obsidian.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "weapon",
+        "sword",
+        "obsidian"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        506,
+        562
+      ]
+    },
+    {
+      "id": "rapier_silver",
+      "category": "item",
+      "path": "items/rapier_silver.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "weapon",
+        "rapier",
+        "silver"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        539,
+        537
+      ]
+    },
+    {
+      "id": "axe_woodcutter",
+      "category": "item",
+      "path": "items/axe_woodcutter.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "weapon",
+        "axe",
+        "woodcutter"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        540,
+        511
+      ]
+    },
+    {
+      "id": "axe_berserker",
+      "category": "item",
+      "path": "items/axe_berserker.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "weapon",
+        "axe",
+        "berserker"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        556,
+        573
+      ]
+    },
+    {
+      "id": "axe_rune",
+      "category": "item",
+      "path": "items/axe_rune.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "weapon",
+        "axe",
+        "rune"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        538,
+        559
+      ]
+    },
+    {
+      "id": "hammer_paladin",
+      "category": "item",
+      "path": "items/hammer_paladin.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "weapon",
+        "hammer",
+        "paladin"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        505,
+        570
+      ]
+    },
+    {
+      "id": "spear_iron",
+      "category": "item",
+      "path": "items/spear_iron.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "weapon",
+        "spear",
+        "iron"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        579,
+        583
+      ]
+    },
+    {
+      "id": "spear_thorn",
+      "category": "item",
+      "path": "items/spear_thorn.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "weapon",
+        "spear",
+        "thorn"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        576,
+        587
+      ]
+    },
+    {
+      "id": "halberd_guardian",
+      "category": "item",
+      "path": "items/halberd_guardian.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "weapon",
+        "halberd",
+        "guardian"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        570,
+        587
+      ]
+    },
+    {
+      "id": "scythe_bone",
+      "category": "item",
+      "path": "items/scythe_bone.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "weapon",
+        "scythe",
+        "bone"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        580,
+        587
+      ]
+    },
+    {
+      "id": "bow_hunter",
+      "category": "item",
+      "path": "items/bow_hunter.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "weapon",
+        "bow",
+        "hunter"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        563,
+        571
+      ]
+    },
+    {
+      "id": "crossbow_bronze",
+      "category": "item",
+      "path": "items/crossbow_bronze.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "weapon",
+        "crossbow",
+        "bronze"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        524,
+        523
+      ]
+    },
+    {
+      "id": "dagger_steel",
+      "category": "item",
+      "path": "items/dagger_steel.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "weapon",
+        "dagger",
+        "steel"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        520,
+        552
+      ]
+    },
+    {
+      "id": "dagger_venom",
+      "category": "item",
+      "path": "items/dagger_venom.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "weapon",
+        "dagger",
+        "venom"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        516,
+        548
+      ]
+    },
+    {
+      "id": "staff_druid",
+      "category": "item",
+      "path": "items/staff_druid.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "weapon",
+        "staff",
+        "druid"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        570,
+        588
+      ]
+    },
+    {
+      "id": "staff_bone",
+      "category": "item",
+      "path": "items/staff_bone.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "weapon",
+        "staff",
+        "bone"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        530,
+        583
+      ]
+    },
+    {
+      "id": "wand_ember",
+      "category": "item",
+      "path": "items/wand_ember.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "weapon",
+        "wand",
+        "ember"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        529,
+        558
+      ]
+    },
+    {
+      "id": "orb_void",
+      "category": "item",
+      "path": "items/orb_void.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "weapon",
+        "orb",
+        "void"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        486,
+        509
+      ]
+    }
+  ]
+}
