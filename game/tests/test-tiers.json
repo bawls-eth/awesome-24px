@@ -394,5 +394,9 @@
   "world-camera.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "world-page.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }

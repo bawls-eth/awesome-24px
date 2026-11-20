@@ -6,8 +6,11 @@
   const params = new URLSearchParams(location.search);
   const TEST = params.get('test') === '1';
   const FROM_HUB = params.get('from') === 'hub'; // exact match only; anything else keeps the town exit
-  const HOME = FROM_HUB ? '../../hub/index.html' : '../../index.html';
-  const HOME_LABEL = FROM_HUB ? 'Back to the map' : 'Back to town';
+  // ?return=<world url> (set by a Realm World portal): a same-origin relative link back to the portal tile, exact shape only.
+  const RETURN_RE = /^index\.html\?mode=world&seed=[A-Za-z0-9_-]{1,24}&at=\d{1,4},\d{1,4}(&test=1)?$/;
+  const RETURN = params.get('mode') === 'dungeon' && RETURN_RE.test(params.get('return') || '') ? params.get('return') : null;
+  const HOME = RETURN || (FROM_HUB ? '../../hub/index.html' : '../../index.html');
+  const HOME_LABEL = RETURN ? 'Back to the world' : FROM_HUB ? 'Back to the map' : 'Back to town';
 
   function loadSave() {
     try {
@@ -53,6 +56,7 @@
     ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((ev) => base.addEventListener(ev, (e) => { if (pid === null || e.pointerId === pid) end(); }));
   };
   if (FROM_HUB) { const lb = document.getElementById('realm-leave-btn'); lb.textContent = '✖ Back to the map'; lb.setAttribute('aria-label', 'Leave Mad Maze and go back to the map'); }
+  if (RETURN) { const lb = document.getElementById('realm-leave-btn'); lb.textContent = '✖ To the world'; lb.setAttribute('aria-label', 'Leave the dungeon and go back to the world'); }
   document.getElementById('realm-leave-btn').addEventListener('click', () => arena.leave());
   for (let i = 0; i < 4; i++) document.getElementById(`realm-ab-${i}`).addEventListener('pointerdown', (e) => { e.preventDefault(); arena.cast(i); });
   document.getElementById('realm-bp-btn').addEventListener('click', () => arena.setPaused(true));
@@ -71,7 +75,7 @@
   if (params.get('mode') === 'dungeon' && window.MMDungeonRun) {
     const hasSeed = /^[A-Za-z0-9_-]{1,24}$/.test(params.get('seed') || '');
     // layout version: explicit ?lv=2, or a fresh random seed (new run); a link with a seed and no lv keeps the original layouts
-    dungeon = MMDungeonRun.create(arena, { layout: (params.get('lv') === '2' || !hasSeed) ? 2 : 1, seed: hasSeed ? params.get('seed') : String(Date.now() % 100000), home: HOME, homeLabel: HOME_LABEL, test: TEST });
+    dungeon = MMDungeonRun.create(arena, { layout: (params.get('lv') === '2' || !hasSeed) ? 2 : 1, seed: hasSeed ? params.get('seed') : String(Date.now() % 100000), home: HOME, homeLabel: HOME_LABEL, test: TEST, returnTo: RETURN });
     document.body.classList.add('dungeon-mode');
   }
   if (WORLD) {
@@ -100,8 +104,13 @@
   if (window.MMClasses && MMClasses.arenaSignature && params.get('signature') !== '0' && activeHeroClass()) arena.setHeroSignature(MMClasses.arenaSignature(activeHeroClass()));
 
   // Enemy art: only the mapped arena creatures (idle/move/attack); any failure keeps the procedural sprites.
-  if (window.MMArt && MMArt.loadEnemies && params.get('enemyart') !== '0') {
+  if (window.MMArt && MMArt.loadEnemies && params.get('enemyart') !== '0' && !realmWorld) {
     MMArt.loadEnemies('../../assets/arcane/').then((set) => { if (set.classes().length) arena.setEnemyArt(set); }).catch(() => {});
+  } else if (window.MMArt && MMArt.loadAll && params.get('enemyart') !== '0' && realmWorld) { // world: the zone creatures too (every enemy carries its creature id)
+    const only = []; const add = (id) => { if (typeof id === 'string' && only.indexOf(id) < 0) only.push(id); };
+    [MMArt.ENEMY_MAP, MMArt.DRIFTER_MAP].forEach((m) => Object.keys(m || {}).forEach((k) => add(m[k])));
+    Object.keys(MMOverworld.CREATURE_TIERS).forEach((t) => MMOverworld.CREATURE_TIERS[t].forEach((tier) => tier.forEach(add)));
+    MMArt.loadAll('../../assets/arcane/', { only, actions: ['idle', 'move', 'attack', 'death'], actionDirs: { death: ['down', 'right'] } }).then((set) => { if (set.classes().length) arena.setEnemyArt(set); }).catch(() => {});
   }
 
   // Item icons: backpack / shop / equipped slots show manifest art with emoji fallback; ?itemart=0 turns it off.
