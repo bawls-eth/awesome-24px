@@ -135,3 +135,6 @@ Overworld players move at 70% speed on shallow water. Targeted checks covered sh
 
 ## Minimap accessibility
 The minimap opens with mouse, touch or keyboard and exposes its zoom state. Horizontal and vertical marker scaling use the respective world dimensions. Syntax and offline interaction checks passed. Browser playback remains pending. Next: verify browser behavior and continue Lantern stash rewards.
+
+## Realm chunk rendering
+Chunk builds now resolve terrain transitions once per cell and compact sprite variants once per terrain. Offline mocked-canvas checks passed for base art, transitions, and fallback borders. Phone performance and browser playback remain pending.
