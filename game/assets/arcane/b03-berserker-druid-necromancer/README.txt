@@ -1,5 +1,5 @@
-ARCANE RPG B03 — idle and walk checkpoint
+ARCANE RPG B03 — Berserker, Druid and Necromancer
 
-18 of 63 planned strips. Berserker, Druid and Necromancer each have idle and walk in down, up, and right. The original source atlases were generated with the in-app image generator, using the project's Warrior idle strip as a style reference. Source poses are 147–163 pixels tall. Each class and view uses one scale factor across all poses. First idle frames stand 148 pixels tall, and exported baseline is y=231. Uses the shared B01/B02 48-color palette.
+Includes 63 original animation strips across all seven actions and three views for each class. Each strip uses 256 × 256 transparent cells, a baseline at y=231, and the shared B01/B02 48-color palette. The first idle frame of each direction stands 148 pixels tall. The built-in image generator illustrated the poses. The source sheets were cropped, scaled and palette-quantized during export.
 
-Attack, cast, roll, hit and death remain in production. Visual review in motion and at game scale is pending. Keep the checkpoint out of INDEX until the batch is ready.
+Intake passed with zero blockers and zero warnings. See known_issues.json for the visual review notes. The manifest includes estimated muzzle points for each attack and cast frame.
