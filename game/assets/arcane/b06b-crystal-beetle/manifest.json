@@ -1,0 +1,288 @@
+{
+  "name": "ARCANE RPG B06 \u2014 Crystal Beetle",
+  "frame_size": 256,
+  "assets": [
+    {
+      "id": "crystal_beetle_idle_down",
+      "category": "enemy",
+      "enemy": "crystal_beetle",
+      "action": "idle",
+      "dir": "down",
+      "path": "enemies/crystal_beetle/crystal_beetle_idle_down.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "crystal_beetle_move_down",
+      "category": "enemy",
+      "enemy": "crystal_beetle",
+      "action": "move",
+      "dir": "down",
+      "path": "enemies/crystal_beetle/crystal_beetle_move_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "crystal_beetle_attack_down",
+      "category": "enemy",
+      "enemy": "crystal_beetle",
+      "action": "attack",
+      "dir": "down",
+      "path": "enemies/crystal_beetle/crystal_beetle_attack_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 126,
+          "y": 208
+        },
+        {
+          "x": 128,
+          "y": 211
+        },
+        {
+          "x": 126,
+          "y": 209
+        },
+        {
+          "x": 126,
+          "y": 212
+        },
+        {
+          "x": 126,
+          "y": 208
+        }
+      ]
+    },
+    {
+      "id": "crystal_beetle_death_down",
+      "category": "enemy",
+      "enemy": "crystal_beetle",
+      "action": "death",
+      "dir": "down",
+      "path": "enemies/crystal_beetle/crystal_beetle_death_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "crystal_beetle_idle_up",
+      "category": "enemy",
+      "enemy": "crystal_beetle",
+      "action": "idle",
+      "dir": "up",
+      "path": "enemies/crystal_beetle/crystal_beetle_idle_up.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "crystal_beetle_move_up",
+      "category": "enemy",
+      "enemy": "crystal_beetle",
+      "action": "move",
+      "dir": "up",
+      "path": "enemies/crystal_beetle/crystal_beetle_move_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "crystal_beetle_attack_up",
+      "category": "enemy",
+      "enemy": "crystal_beetle",
+      "action": "attack",
+      "dir": "up",
+      "path": "enemies/crystal_beetle/crystal_beetle_attack_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 128,
+          "y": 150
+        },
+        {
+          "x": 128,
+          "y": 160
+        },
+        {
+          "x": 126,
+          "y": 147
+        },
+        {
+          "x": 128,
+          "y": 163
+        },
+        {
+          "x": 126,
+          "y": 147
+        }
+      ]
+    },
+    {
+      "id": "crystal_beetle_death_up",
+      "category": "enemy",
+      "enemy": "crystal_beetle",
+      "action": "death",
+      "dir": "up",
+      "path": "enemies/crystal_beetle/crystal_beetle_death_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "crystal_beetle_idle_right",
+      "category": "enemy",
+      "enemy": "crystal_beetle",
+      "action": "idle",
+      "dir": "right",
+      "path": "enemies/crystal_beetle/crystal_beetle_idle_right.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "crystal_beetle_move_right",
+      "category": "enemy",
+      "enemy": "crystal_beetle",
+      "action": "move",
+      "dir": "right",
+      "path": "enemies/crystal_beetle/crystal_beetle_move_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "crystal_beetle_attack_right",
+      "category": "enemy",
+      "enemy": "crystal_beetle",
+      "action": "attack",
+      "dir": "right",
+      "path": "enemies/crystal_beetle/crystal_beetle_attack_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 161,
+          "y": 190
+        },
+        {
+          "x": 159,
+          "y": 197
+        },
+        {
+          "x": 163,
+          "y": 187
+        },
+        {
+          "x": 166,
+          "y": 195
+        },
+        {
+          "x": 161,
+          "y": 190
+        }
+      ]
+    },
+    {
+      "id": "crystal_beetle_death_right",
+      "category": "enemy",
+      "enemy": "crystal_beetle",
+      "action": "death",
+      "dir": "right",
+      "path": "enemies/crystal_beetle/crystal_beetle_death_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    }
+  ]
+}
