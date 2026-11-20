@@ -23,3 +23,7 @@ Sixteen original atlases from the built-in image generator, two per boss. Source
 ## Codex Frontier items · 2026-11-19
 
 Four original inventory icon atlases from the built-in image generator. The item pack includes the source prompts.
+
+## Codex Frontier weapon expansion
+
+Five original inventory atlases from the built-in image generator. The pack includes the source prompts.

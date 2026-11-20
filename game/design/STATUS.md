@@ -75,3 +75,7 @@ B07 stages 48 validated animation strips for all eight Arcane Frontier boss IDs.
 ### Frontier item art
 
 Staged 16 validated equipment and potion icons matching the existing catalog IDs. Integration is pending.
+
+### Frontier weapon expansion
+
+Staged 20 additional weapon icons. The two item packs cover 28 weapon IDs and eight other equipment and potion IDs.
