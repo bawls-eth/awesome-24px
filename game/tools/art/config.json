@@ -1,8 +1,8 @@
 {
   "_comment": "Single source of truth for the art pipeline. A human raises/lowers the spend cap HERE only (cap_total_usd / stop_usd); then run `python3 game/tools/art/generate.py --sync-header` to mirror it into the ledger header text.",
-  "cap_total_usd": 6.0,
-  "stop_usd": 5.6,
-  "report_usd": 5.2,
+  "cap_total_usd": 4.0,
+  "stop_usd": 3.96,
+  "report_usd": 3.6,
   "ledger": "game/assets/art/LEDGER-OPENAI.md",
   "prices_per_million": {
     "out": 40,

@@ -105,9 +105,9 @@ const sumRows = (file) => ledgerRows(file).reduce((s, c) => s + parseFloat(c[6])
   const total = lines.reduce((s, l) => s + parseFloat(l.match(/= ([0-9.]+) USD/)[1]), 0);
   const tm = r.out.match(/estimated total: ([0-9.]+) USD/);
   check('estimated total equals the sum of the calls', tm && Math.abs(parseFloat(tm[1]) - total) < 0.001);
-  check('config: TOTAL cap 6.00, stop 5.60, single source in config.json (owner raised the cap by $2 in chat 2026-11-20)', cfg.cap_total_usd === 6 && cfg.stop_usd === 5.6);
+  check('config: TOTAL cap 4.00, stop 3.96 (about $2 more than the 1.96 spent; the owner has a hard cap on the API side), single source in config.json', cfg.cap_total_usd === 4 && cfg.stop_usd === 3.96);
   const head = fs.readFileSync(REAL_LEDGER, 'utf8').split('\n')[0];
-  check('ledger header describes the TOTAL cap 6.00 / stop 5.60', /TOTAL cap 6\.00/.test(head) && /stop at 5\.60/.test(head), head);
+  check('ledger header describes the TOTAL cap 4.00 / stop 3.96', /TOTAL cap 4\.00/.test(head) && /stop at 3\.96/.test(head), head);
   const spent = sumRows(REAL_LEDGER);
   const sm = r.out.match(/ledger so far: ([0-9.]+)/);
   check('ledger parser sums the table rows', sm && Math.abs(parseFloat(sm[1]) - spent) < 1e-3, sm && sm[0]);
@@ -151,10 +151,10 @@ function cfgFile(name, over) {
   void before;
   // a single call that would cross the stop level is also refused
   const near = path.join(TMP, 'near.md');
-  fs.writeFileSync(near, '# OpenAI art ledger (TOTAL cap 6.00 USD, stop at 5.60, report at 5.20)\n\n| id | model | size | quality | usage tokens | est. cost USD | note |\n|---|---|---|---|---|---|---|\n'
-    + '| a | gpt-image-1.5 | 1536x1024 | medium | out 1, in text 1, in image 0 | 5.5500 | x |\n\nTOTAL: 5.5500\n');
+  fs.writeFileSync(near, '# OpenAI art ledger (TOTAL cap 4.00 USD, stop at 3.96, report at 3.60)\n\n| id | model | size | quality | usage tokens | est. cost USD | note |\n|---|---|---|---|---|---|---|\n'
+    + '| a | gpt-image-1.5 | 1536x1024 | medium | out 1, in text 1, in image 0 | 3.9000 | x |\n\nTOTAL: 3.9000\n');
   const r2 = py('generate.py', ['--jobs', jobs, '--ledger', near, '--state', path.join(TMP, 'near-state.json')], { ART_HTTP_MOCK: mock });
-  check('5.55 spent + ~0.09 estimate would pass the 5.60 stop level: refused', r2.code === 3 && !fs.existsSync(log), r2.out);
+  check('3.90 spent + ~0.09 estimate would pass the 3.96 stop level: refused', r2.code === 3 && !fs.existsSync(log), r2.out);
   const r3 = py('generate.py', ['--batch', 'b02', '--dry-run', '--ledger', ledger, '--config', small]);
   check('dry run on an over-cap ledger reports FITS: NO', /FITS: NO/.test(r3.out));
 })();
