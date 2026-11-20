@@ -25,6 +25,11 @@
   var DRIFTER_MAP = { wisp: 'mothling', cinder: 'beetle', puff: 'sprout' };
   // Visible creature width in px at scale 1 (cells are 256 wide, creatures fill about half): callers size the art off this.
   var ENEMY_VISIBLE_W = 130;
+  // Arena boss art (batch b07-frontier-bosses, 384px cells, 'down' only). BOSS_MAP is indexed by boss tier (0 = the first boss, Gloomheart ->
+  // void_oracle, whose pink/purple fits); later tiers walk the rest of the list and wrap. Deterministic: no randomness, same tier -> same boss.
+  var BOSS_MAP = ['void_oracle', 'bone_colossus', 'inferno_wyrm', 'crystal_titan', 'forest_warden', 'dread_knight', 'storm_harbinger', 'mire_queen'];
+  var BOSS_ACTIONS = ['idle', 'move', 'attack_a', 'attack_b', 'hit', 'death'];
+  var BOSS_VISIBLE_W = 220; // typical visible body width in px inside a 384 cell
 
   function artClassFor(mmClass) {
     return typeof mmClass === 'string' && Object.prototype.hasOwnProperty.call(CLASS_MAP, mmClass) ? CLASS_MAP[mmClass] : null;
@@ -34,6 +39,11 @@
   }
   function drifterArtFor(kind) {
     return typeof kind === 'string' && Object.prototype.hasOwnProperty.call(DRIFTER_MAP, kind) ? DRIFTER_MAP[kind] : null;
+  }
+  function bossArtFor(tier) {
+    var t = Math.floor(Number(tier));
+    if (!isFinite(t) || t < 0) t = 0;
+    return BOSS_MAP[t % BOSS_MAP.length];
   }
   function packFor(artClass) {
     for (var i = 0; i < PACKS.length; i++) if (PACKS[i].classes.indexOf(artClass) >= 0) return PACKS[i];
@@ -206,5 +216,82 @@
     return loadPacks(assetRoot, o);
   }
 
-  return { enemyArtFor: enemyArtFor, drifterArtFor: drifterArtFor, loadEnemies: loadEnemies, ENEMY_MAP: ENEMY_MAP, DRIFTER_MAP: DRIFTER_MAP, ENEMY_VISIBLE_W: ENEMY_VISIBLE_W, load: load, loadClass: loadClass, loadAll: loadAll, packIds: packIds, artClassFor: artClassFor, packFor: packFor, frameAt: frameAt, scaleFor: scaleFor, duration: duration, PACKS: PACKS, CLASS_MAP: CLASS_MAP, ArtSet: ArtSet };
+  // ---------- item icons (separate from the animation loader) ----------
+  // Realm item id -> item art id (art ids come from the item manifests). Rarity never changes the art (CSS tints the border).
+  // Unknown ids or art that is not shipped resolve to null so callers keep their emoji.
+  var ITEM_ICON_MAP = {
+    sparkwand: 'wand_spark', quickwand: 'wand_ember',
+    heartcharm: 'accessory_red_garnet_heart_pendant', swiftcharm: 'accessory_gold_feather_brooch',
+    luckring: 'accessory_copper_emerald_ring', scholarring: 'accessory_sapphire_wave_ring', wardring: 'accessory_gold_ruby_signet'
+  };
+  var ITEM_BATCH_RE = /(items|weapons|armor|headgear|clothing|accessories|consumables)/;
+  var lastItemSet = null;
+
+  function ItemSet() { this.byId = Object.create(null); this.images = Object.create(null); this.bad = Object.create(null); }
+  ItemSet.prototype.has = function (id) { return typeof id === 'string' && !!this.byId[id]; };
+  ItemSet.prototype.ids = function () { return Object.keys(this.byId); };
+  ItemSet.prototype.tags = function (id) { var e = this.has(id) ? this.byId[id] : null; return e ? e.tags.slice() : []; };
+  // Url for a game item id (via ITEM_ICON_MAP) or a raw art id. null when unmapped, unknown, or the PNG already failed to load. Never throws.
+  ItemSet.prototype.iconUrl = function (id) {
+    try {
+      if (typeof id !== 'string') return null;
+      var art = Object.prototype.hasOwnProperty.call(ITEM_ICON_MAP, id) ? ITEM_ICON_MAP[id] : id;
+      var e = this.byId[art];
+      if (!e || this.bad[art]) return null;
+      this.image(art);
+      return e.url;
+    } catch (err) { return null; }
+  };
+  // Lazily creates and caches the Image for an art id (null when unknown).
+  ItemSet.prototype.image = function (art) {
+    try {
+      var e = this.byId[art]; if (!e) return null;
+      if (this.images[art]) return this.images[art];
+      var img = new root.Image(), self = this;
+      img.onerror = function () { self.bad[art] = 1; };
+      img.src = e.url;
+      this.images[art] = img;
+      return img;
+    } catch (err) { return null; }
+  };
+  ItemSet.prototype.markBad = function (id) {
+    var art = Object.prototype.hasOwnProperty.call(ITEM_ICON_MAP, id) ? ITEM_ICON_MAP[id] : id;
+    if (typeof art === 'string') this.bad[art] = 1;
+  };
+
+  // loadItems(assetRoot) -> Promise<ItemSet>. Reads INDEX.json and only the item batch manifests; no PNGs are fetched until used. Never rejects.
+  function loadItems(assetRoot) {
+    var base = assetRoot || ASSET_ROOT, set = new ItemSet();
+    return fetchJson(join(base, 'INDEX.json')).then(function (idx) {
+      var ids = [];
+      if (idx && Array.isArray(idx.batches)) idx.batches.forEach(function (b) {
+        var id = b && typeof b.path === 'string' ? b.path.replace(/\/+$/, '').split('/').pop() : '';
+        if (/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(id) && ITEM_BATCH_RE.test(id) && ids.indexOf(id) < 0) ids.push(id);
+      });
+      return Promise.all(ids.map(function (id) {
+        return fetchJson(join(join(base, id), 'manifest.json')).then(function (m) {
+          (m && Array.isArray(m.assets) ? m.assets : []).forEach(function (a) {
+            if (!a || a.category !== 'item' || typeof a.id !== 'string' || typeof a.path !== 'string') return;
+            if (!/^[A-Za-z0-9_.\/-]+$/.test(a.path) || a.path.indexOf('..') >= 0) return;
+            set.byId[a.id] = { url: join(join(base, id), a.path), tags: Array.isArray(a.tags) ? a.tags.filter(function (t) { return typeof t === 'string'; }) : [] };
+          });
+        });
+      }));
+    }).then(function () { lastItemSet = set; return set; }).catch(function () { return set; });
+  }
+  // itemIconUrl(id, set?) -> url string or null (uses the most recently loaded ItemSet when none is given). Never throws.
+  function itemIconUrl(id, set) {
+    try { var s = set || lastItemSet; return s && typeof s.iconUrl === 'function' ? s.iconUrl(id) : null; } catch (e) { return null; }
+  }
+
+  // loadBosses(assetRoot, ids?, opts?) -> Promise<ArtSet> holding only the named bosses (default: the tier-0 boss), idle/move/attack_a/attack_b/hit/death.
+  function loadBosses(assetRoot, ids, opts) {
+    var o = {}; for (var k in opts || {}) o[k] = opts[k];
+    var only = (Array.isArray(ids) ? ids : [BOSS_MAP[0]]).filter(function (x) { return BOSS_MAP.indexOf(x) >= 0; });
+    if (!only.length) return Promise.resolve(new ArtSet());
+    o.only = only; o.actions = o.actions || BOSS_ACTIONS;
+    return loadPacks(assetRoot, o);
+  }
+
+  return { bossArtFor: bossArtFor, loadBosses: loadBosses, BOSS_MAP: BOSS_MAP, BOSS_VISIBLE_W: BOSS_VISIBLE_W, BOSS_ACTIONS: BOSS_ACTIONS, loadItems: loadItems, itemIconUrl: itemIconUrl, ITEM_ICON_MAP: ITEM_ICON_MAP, ItemSet: ItemSet, enemyArtFor: enemyArtFor, drifterArtFor: drifterArtFor, loadEnemies: loadEnemies, ENEMY_MAP: ENEMY_MAP, DRIFTER_MAP: DRIFTER_MAP, ENEMY_VISIBLE_W: ENEMY_VISIBLE_W, load: load, loadClass: loadClass, loadAll: loadAll, packIds: packIds, artClassFor: artClassFor, packFor: packFor, frameAt: frameAt, scaleFor: scaleFor, duration: duration, PACKS: PACKS, CLASS_MAP: CLASS_MAP, ArtSet: ArtSet };
 }));

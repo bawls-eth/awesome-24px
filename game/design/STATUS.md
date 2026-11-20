@@ -91,3 +91,6 @@ Staged 50 validated armor icons alongside the 26 headgear icons. Runtime integra
 ### B09 clothing and helmets
 
 Staged 30 clothing icons and four helmets. Catalog and runtime integration are pending.
+
+## Boss art + item icons (2026-11-20)
+Boss animations in the Mad Maze arena by wave tier (?bossart=0 off); item icons in backpack/shop/slots on the Mad Maze page (?itemart=0 off). Not yet: town Realm Gate keeps emoji; loot bag art; dungeon-mode bosses untested; arena still ignores class stats.

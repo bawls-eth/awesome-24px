@@ -193,7 +193,7 @@ class RealmArena {
     this.run = { wave: 0, kills: 0, shards: 0 };
     this.displayShards = this.save.shards;
     this._avatar = null;
-    this._enemyArt = null; this._enemyMap = null; this._driftMap = null; this._enemyDbgOn = false; // optional enemy animations (setEnemyArt)
+    this._itemArt = null; this._enemyArt = null; this._enemyMap = null; this._driftMap = null; this._enemyDbgOn = false; this._bossArt = null; this._bossLoad = null; this._bossDbg = null; this._bossGhost = null; this._bossReq = null; // optional enemy animations (setEnemyArt)
     this._heroArt = null; this._heroClass = null; this._heroSt = null; this._heroDbg = null; this._heroHurtAt = -9; this._heroAtkAt = -9; // optional hero animations (setHeroArt)
     this.team = null; this.role = 'solo'; this.down = false; this.reviveT = 0; this._firing = false;
 
@@ -639,6 +639,26 @@ class RealmArena {
   }
   // Additive hook: draw arena enemies / drifters with creature animations (MMArt.loadEnemies). Pass (null) to go back to the procedural sprites.
   // `map` / `driftMap` default to MMArt's ENEMY_MAP / DRIFTER_MAP. Never attached by the in-town gate.
+  // Additive hook: show item art (MMArt.loadItems ItemSet) in the backpack, shop and equipped slots, emoji as fallback. null = emoji only.
+  setItemArt(itemSet) {
+    this._itemArt = itemSet && typeof itemSet.iconUrl === 'function' ? itemSet : null;
+    if (this.paused && document.getElementById('realm-backpack-body')) this.renderBackpack();
+  }
+  // Icon markup for an item id: <img> from a trusted manifest url (never user data), else the emoji. Fallback on load error is wired by _fixIcons.
+  _icon(def) {
+    let url = null;
+    try { url = this._itemArt ? this._itemArt.iconUrl(def.id) : null; } catch (e) { url = null; }
+    if (!url || !/^[A-Za-z0-9_.\/-]+$/.test(url)) return def.icon;
+    return `<img class="realm-ico" src="${url}" alt="" width="32" height="32" data-item="${def.id}" style="image-rendering:pixelated">`;
+  }
+  _fixIcons(root) {
+    root.querySelectorAll('img.realm-ico').forEach((img) => {
+      const def = RM_ITEM_BY_ID[img.dataset.item];
+      const swap = () => { if (this._itemArt && this._itemArt.markBad) this._itemArt.markBad(img.dataset.item); img.replaceWith(document.createTextNode(def ? def.icon : '')); };
+      if (img.complete && !img.naturalWidth) swap(); else img.addEventListener('error', swap, { once: true });
+    });
+  }
+
   setEnemyArt(artSet, map, driftMap) {
     const ok = artSet && typeof artSet.anim === 'function' && typeof artSet.draw === 'function';
     this._enemyArt = ok ? artSet : null;
@@ -676,6 +696,63 @@ class RealmArena {
     const f = art.draw(g, a, t, e.x, e.y + def.r * 0.9, 2.8 * def.r / this._enemyVis, e._flip);
     if (this._enemyDbgOn) this._enemyDbg = { type: e.type, name, action: act, dir: e._dir, flip: e._flip, frame: f, id: a.id };
     return f >= 0;
+  }
+  // Additive hook: draw the arena boss with boss art (MMArt.loadBosses). `loader(name)` (optional) is called once per boss id that has no strips yet
+  // so the page can load it lazily. setBossArt(null) goes back to the procedural Gloomheart. Never attached by the in-town gate.
+  setBossArt(artSet, loader) {
+    const ok = artSet && typeof artSet.anim === 'function' && typeof artSet.draw === 'function' && typeof artSet.has === 'function';
+    this._bossArt = ok ? artSet : null;
+    this._bossLoad = ok && typeof loader === 'function' ? loader : null;
+    this._bossReq = ok ? Object.create(null) : null; this._bossDbg = null; this._bossGhost = null;
+  }
+  // Boss art id for this boss: tier (0-based) comes from the run wave, so the same wave always shows the same boss.
+  _bossName(e) {
+    if (e._bk !== 'boss' || e.t < e._lt) { e._bk = 'boss'; e._at = undefined; const A = typeof MMArt !== 'undefined' ? MMArt : null; const w = this.run && this.run.wave; e._bn = A && A.bossArtFor ? A.bossArtFor(Math.max(0, Math.round((Number(w) || 0) / RM_BOSS_EVERY) - 1)) : null; }
+    return e._bn;
+  }
+  // Draws the live boss with art; per-boss state lives on the pooled enemy (no allocation). Timing uses e.t (game time), so pausing freezes it.
+  // Actions: hit (flash) > attack_b (ring specials, phases 2/3) > attack_a (aimed fans, phase 3 spiral start) > move > idle.
+  _drawBossArt(g, e) {
+    const art = this._bossArt, name = this._bossName(e);
+    if (!name) return false;
+    if (!art.has(name)) { if (this._bossLoad && !this._bossReq[name]) { this._bossReq[name] = 1; try { this._bossLoad(name); } catch (err) { /* fallback */ } } return false; }
+    if (e._at === undefined) { e._at = -9; e._bt = -9; e._ht = -9; e._mvT = -9; e._px = e.x; e._py = e.y; e._pcd = e.cd; e._pcd2 = e.cd2; e._pfl = 0; e._key = ''; e._t0 = 0; e._hSeen = -9; e._aSeen = -9; e._bSeen = -9; }
+    e._lt = e.t;
+    const dx = e.x - e._px, dy = e.y - e._py; e._px = e.x; e._py = e.y;
+    if (e.invuln <= 0) { // a cooldown that jumped up means that pattern just fired
+      const ph = e.phase;
+      if (e.cd > e._pcd + 0.001 && ph === 2) e._bt = e.t; // ring of 20
+      if (e.cd2 > e._pcd2 + 0.001) { if (ph === 3) e._bt = e.t; else e._at = e.t; } // phase 3 ring / the aimed fans
+    }
+    e._pcd = e.cd; e._pcd2 = e.cd2;
+    if (e.flash > e._pfl + 0.001) e._ht = e.t; e._pfl = e.flash;
+    let action = 'idle';
+    if (e.t - e._ht < 0.22) action = 'hit';
+    else if (e.t - e._bt < 0.5) action = 'attack_b';
+    else if (e.t - e._at < 0.4) action = 'attack_a';
+    else if (dx * dx + dy * dy > 0.0004) { e._mvT = e.t; action = 'move'; }
+    else if (e.t - e._mvT < 0.15) action = 'move';
+    let a = art.anim(name, action, 'down'), act = action;
+    if (!a && action !== 'idle') { a = art.anim(name, 'idle', 'down'); act = 'idle'; }
+    if (!a) return false;
+    if (act !== e._key) { e._key = act; e._t0 = e.t; }
+    if (act === 'hit' && e._hSeen !== e._ht) { e._hSeen = e._ht; e._t0 = e.t; }
+    else if (act === 'attack_a' && e._aSeen !== e._at) { e._aSeen = e._at; e._t0 = e.t; }
+    else if (act === 'attack_b' && e._bSeen !== e._bt) { e._bSeen = e._bt; e._t0 = e.t; }
+    const t = this._reduced && act === 'idle' ? 0 : e.t - e._t0;
+    const r = RM_ENEMIES.boss.r, vis = (typeof MMArt !== 'undefined' && MMArt.BOSS_VISIBLE_W) || 220;
+    const f = art.draw(g, a, t, e.x, e.y + r * 1.5, 3 * r / vis, false);
+    if (this._enemyDbgOn) this._bossDbg = { name, action: act, frame: f, id: a.id, phase: e.phase };
+    return f >= 0;
+  }
+  // The boss death animation, played where the boss fell (the boss entity is already inactive). Uses this.clock (game time: freezes on pause).
+  _drawBossGhost(g) {
+    const gh = this._bossGhost; if (!gh) return;
+    const a = this._bossArt && this._bossArt.anim(gh.name, 'death', 'down');
+    const t = this.clock - gh.t0;
+    if (!a || t > a.frames / a.fps + 0.8) { this._bossGhost = null; return; }
+    const r = RM_ENEMIES.boss.r, vis = (typeof MMArt !== 'undefined' && MMArt.BOSS_VISIBLE_W) || 220;
+    this._bossArt.draw(g, a, t, gh.x, gh.y + r * 1.5, 3 * r / vis, false);
   }
   _drawDrifterArt(g, d) {
     const name = this._driftMap && this._driftMap[d.kind];
@@ -1316,7 +1393,9 @@ class RealmArena {
         if (want > e.phase) { this._bossPhase(e, want); this._syncBoss(); }
         return;
       }
-      e.active = false; this._bossDefeated(e); return;
+      e.active = false; this._bossDefeated(e);
+      if (this._bossArt && e._bn && this._bossArt.anim(e._bn, 'death', 'down')) this._bossGhost = { name: e._bn, x: e.x, y: e.y, t0: this.clock };
+      return;
     }
     this._floatText(e.x + (this.rng() - 0.5) * 14, e.y - 14, String(Math.round(dmg * 10) / 10), '#fff');
     this._burst(e.x, e.y, RM_ENEMIES[e.type].color, 3, 110);
@@ -1444,11 +1523,11 @@ class RealmArena {
     let html = `<div class="realm-bp-count">You have ${sv.shards} 💎 · ${sv.items.length} / ${RM_BACKPACK} items${full ? ' · backpack full' : ''}</div><ul id="realm-bp-list">`;
     this.shopStock().forEach((o) => {
       const def = RM_ITEM_BY_ID[o.id]; const rar = RM_RARITIES[o.r]; const can = sv.shards >= o.price && !full;
-      html += `<li><span class="nm" style="color:${rar.color}">${def.icon} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText({ id: o.id, r: o.r })}</span><button type="button" class="eq" data-buy="${def.id}" data-r="${o.r}"${can ? '' : ' disabled'} aria-label="Buy ${rar.name} ${def.name} for ${o.price} shards">Buy ${o.price}💎</button></li>`;
+      html += `<li><span class="nm" style="color:${rar.color}">${this._icon(def)} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText({ id: o.id, r: o.r })}</span><button type="button" class="eq" data-buy="${def.id}" data-r="${o.r}"${can ? '' : ' disabled'} aria-label="Buy ${rar.name} ${def.name} for ${o.price} shards">Buy ${o.price}💎</button></li>`;
     });
     const nextR = RM_SHOP_UNLOCK.findIndex((w) => sv.bestWave < w);
     html += `</ul>${nextR > 0 ? `<div class="dim">Reach wave ${RM_SHOP_UNLOCK[nextR]} to unlock ${RM_RARITIES[nextR].name} gear.</div>` : ''}`;
-    root.innerHTML = html;
+    root.innerHTML = html; this._fixIcons(root);
   }
 
   _die() {
@@ -1691,16 +1770,16 @@ class RealmArena {
     let html = `<div id="realm-bp-stats">${this._statLine()}</div><button type="button" class="eq" data-open-shop="1" aria-label="Open the shop (V)" style="min-height:40px;margin:4px 0">🛒 Shop (V)</button><div class="realm-bp-slots">`;
     RM_SLOTS.forEach((slot) => {
       const it = sv.items.find((x) => x.n === sv.eq[slot]);
-      html += `<div class="realm-bp-slot" data-slot="${slot}">${it ? `<span style="color:${RM_RARITIES[it.r].color}">${RM_ITEM_BY_ID[it.id].icon} ${RM_ITEM_BY_ID[it.id].name}</span>` : `<span class="dim">${slot}: empty</span>`}</div>`;
+      html += `<div class="realm-bp-slot" data-slot="${slot}">${it ? `<span style="color:${RM_RARITIES[it.r].color}">${this._icon(RM_ITEM_BY_ID[it.id])} ${RM_ITEM_BY_ID[it.id].name}</span>` : `<span class="dim">${slot}: empty</span>`}</div>`;
     });
     html += `</div><div class="realm-bp-count">${sv.items.length} / ${RM_BACKPACK} items</div><ul id="realm-bp-list">`;
     if (!sv.items.length) html += '<li class="dim">Nothing yet — defeat enemies to find loot bags.</li>';
     sv.items.forEach((it) => {
       const def = RM_ITEM_BY_ID[it.id]; const rar = RM_RARITIES[it.r]; const on = eqUids.has(it.n);
-      html += `<li data-uid="${it.n}" class="${on ? 'on' : ''}"><span class="nm" style="color:${rar.color}">${def.icon} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(it)}</span><button type="button" class="eq" data-act="equip" data-uid="${it.n}">${on ? 'Unequip' : 'Equip'}</button>${this.combinable(it.n) ? `<button type="button" class="eq" data-combine="${it.n}" aria-label="Combine ${RM_COMBINE_COUNT} ${rar.name} ${def.name} into one ${RM_RARITIES[it.r + 1].name}">Combine ${RM_COMBINE_COUNT}→${RM_RARITIES[it.r + 1].name}</button>` : ''}<button type="button" class="dc" data-act="discard" data-uid="${it.n}" aria-label="Sell ${def.name} for ${rar.sell} shards">Sell ${rar.sell}💎</button></li>`;
+      html += `<li data-uid="${it.n}" class="${on ? 'on' : ''}"><span class="nm" style="color:${rar.color}">${this._icon(def)} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(it)}</span><button type="button" class="eq" data-act="equip" data-uid="${it.n}">${on ? 'Unequip' : 'Equip'}</button>${this.combinable(it.n) ? `<button type="button" class="eq" data-combine="${it.n}" aria-label="Combine ${RM_COMBINE_COUNT} ${rar.name} ${def.name} into one ${RM_RARITIES[it.r + 1].name}">Combine ${RM_COMBINE_COUNT}→${RM_RARITIES[it.r + 1].name}</button>` : ''}<button type="button" class="dc" data-act="discard" data-uid="${it.n}" aria-label="Sell ${def.name} for ${rar.sell} shards">Sell ${rar.sell}💎</button></li>`;
     });
     html += '</ul>';
-    root.innerHTML = html;
+    root.innerHTML = html; this._fixIcons(root);
   }
 
   // ---------- drawing ----------
@@ -1728,12 +1807,13 @@ class RealmArena {
       if (!e.active) continue;
       const spr = this.sprites[e.type];
       const bob = e.type === 'boss' ? 0 : Math.sin(e.t * 4) * 2;
-      const art = this._enemyArt && e.type !== 'boss' && this._drawEnemyArt(g, e, RM_ENEMIES[e.type]);
+      const art = e.type === 'boss' ? !!(this._bossArt && this._drawBossArt(g, e)) : !!(this._enemyArt && this._drawEnemyArt(g, e, RM_ENEMIES[e.type]));
       if (!art) g.drawImage(spr, e.x - spr.width / 2, e.y - spr.height / 2 + bob);
       if (e.flash > 0) { g.globalAlpha = e.flash * 0.7; g.fillStyle = '#fff'; g.beginPath(); g.arc(e.x, e.y + (art ? 0 : bob), RM_ENEMIES[e.type].r, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1; }
       if (e.type === 'boss' && e.invuln > 0) { g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 3; g.beginPath(); g.arc(e.x, e.y, 40 + Math.sin(e.t * 20) * 2, 0, Math.PI * 2); g.stroke(); }
       if (e.hp < e.maxHp && e.type !== 'boss') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(e.x - 14, e.y - spr.height / 2 - 6, 28, 4); g.fillStyle = RM_ENEMIES[e.type].color; g.fillRect(e.x - 14, e.y - spr.height / 2 - 6, 28 * (e.hp / e.maxHp), 4); }
     }
+    if (this._bossGhost) this._drawBossGhost(g);
     for (let i = 0; i < this.bags.length; i++) { const b = this.bags[i]; if (b.active) g.drawImage(this.sprites.bag[b.r], b.x - 13, b.y - 13 + Math.sin(b.t * 5) * 2); }
     for (let i = 0; i < this.eBullets.length; i++) { const b = this.eBullets[i]; if (b.active) g.drawImage(this.sprites.eBullet[b.kind], b.x - 8, b.y - 8); }
     for (let i = 0; i < this.pBullets.length; i++) { const b = this.pBullets[i]; if (b.active) g.drawImage(this.sprites.pBullet, b.x - 8, b.y - 8); }
