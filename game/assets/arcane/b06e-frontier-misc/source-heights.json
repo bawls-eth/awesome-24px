@@ -1,0 +1,422 @@
+{
+  "bandit_idle_down": [
+    173,
+    176,
+    174,
+    172
+  ],
+  "bandit_move_down": [
+    179,
+    163,
+    177,
+    171,
+    179,
+    174
+  ],
+  "bandit_attack_down": [
+    141,
+    140,
+    156,
+    129,
+    140
+  ],
+  "bandit_death_down": [
+    135,
+    134,
+    116,
+    89,
+    63
+  ],
+  "bandit_idle_up": [
+    170,
+    170,
+    166,
+    170
+  ],
+  "bandit_move_up": [
+    173,
+    161,
+    169,
+    163,
+    177,
+    176
+  ],
+  "bandit_attack_up": [
+    152,
+    149,
+    169,
+    136,
+    149
+  ],
+  "bandit_death_up": [
+    135,
+    135,
+    112,
+    91,
+    67
+  ],
+  "bandit_idle_right": [
+    174,
+    164,
+    172,
+    170
+  ],
+  "bandit_move_right": [
+    174,
+    170,
+    173,
+    167,
+    177,
+    173
+  ],
+  "bandit_attack_right": [
+    145,
+    137,
+    164,
+    125,
+    142
+  ],
+  "bandit_death_right": [
+    138,
+    137,
+    112,
+    83,
+    61
+  ],
+  "mimic_chest_idle_down": [
+    122,
+    124,
+    116,
+    122
+  ],
+  "mimic_chest_move_down": [
+    118,
+    125,
+    125,
+    125,
+    118,
+    122
+  ],
+  "mimic_chest_attack_down": [
+    151,
+    160,
+    181,
+    193,
+    159
+  ],
+  "mimic_chest_death_down": [
+    143,
+    151,
+    151,
+    120,
+    88
+  ],
+  "mimic_chest_idle_up": [
+    110,
+    112,
+    110,
+    110
+  ],
+  "mimic_chest_move_up": [
+    109,
+    112,
+    111,
+    111,
+    110,
+    117
+  ],
+  "mimic_chest_attack_up": [
+    146,
+    153,
+    170,
+    191,
+    151
+  ],
+  "mimic_chest_death_up": [
+    138,
+    147,
+    147,
+    118,
+    86
+  ],
+  "mimic_chest_idle_right": [
+    118,
+    116,
+    115,
+    119
+  ],
+  "mimic_chest_move_right": [
+    118,
+    122,
+    122,
+    123,
+    119,
+    124
+  ],
+  "mimic_chest_attack_right": [
+    139,
+    150,
+    167,
+    183,
+    157
+  ],
+  "mimic_chest_death_right": [
+    140,
+    146,
+    143,
+    120,
+    94
+  ],
+  "undead_soldier_idle_down": [
+    176,
+    157,
+    173,
+    164
+  ],
+  "undead_soldier_move_down": [
+    170,
+    163,
+    175,
+    159,
+    168,
+    171
+  ],
+  "undead_soldier_attack_down": [
+    171,
+    171,
+    187,
+    168,
+    171
+  ],
+  "undead_soldier_death_down": [
+    163,
+    161,
+    134,
+    110,
+    80
+  ],
+  "undead_soldier_idle_up": [
+    169,
+    156,
+    173,
+    163
+  ],
+  "undead_soldier_move_up": [
+    170,
+    168,
+    169,
+    160,
+    171,
+    161
+  ],
+  "undead_soldier_attack_up": [
+    168,
+    163,
+    181,
+    162,
+    167
+  ],
+  "undead_soldier_death_up": [
+    163,
+    162,
+    133,
+    116,
+    72
+  ],
+  "undead_soldier_idle_right": [
+    177,
+    162,
+    177,
+    171
+  ],
+  "undead_soldier_move_right": [
+    171,
+    171,
+    171,
+    160,
+    170,
+    174
+  ],
+  "undead_soldier_attack_right": [
+    171,
+    166,
+    190,
+    162,
+    171
+  ],
+  "undead_soldier_death_right": [
+    164,
+    167,
+    131,
+    108,
+    74
+  ],
+  "spectral_eye_idle_down": [
+    166,
+    160,
+    166,
+    165
+  ],
+  "spectral_eye_move_down": [
+    162,
+    163,
+    152,
+    159,
+    163,
+    161
+  ],
+  "spectral_eye_attack_down": [
+    177,
+    177,
+    179,
+    180,
+    176
+  ],
+  "spectral_eye_death_down": [
+    167,
+    162,
+    150,
+    131,
+    95
+  ],
+  "spectral_eye_idle_up": [
+    167,
+    163,
+    166,
+    167
+  ],
+  "spectral_eye_move_up": [
+    160,
+    163,
+    153,
+    161,
+    160,
+    164
+  ],
+  "spectral_eye_attack_up": [
+    175,
+    181,
+    175,
+    192,
+    167
+  ],
+  "spectral_eye_death_up": [
+    167,
+    154,
+    141,
+    119,
+    95
+  ],
+  "spectral_eye_idle_right": [
+    165,
+    168,
+    168,
+    165
+  ],
+  "spectral_eye_move_right": [
+    163,
+    161,
+    157,
+    159,
+    165,
+    162
+  ],
+  "spectral_eye_attack_right": [
+    176,
+    174,
+    187,
+    189,
+    176
+  ],
+  "spectral_eye_death_right": [
+    167,
+    154,
+    144,
+    120,
+    90
+  ],
+  "mushroom_monster_idle_down": [
+    176,
+    163,
+    169,
+    161
+  ],
+  "mushroom_monster_move_down": [
+    173,
+    165,
+    166,
+    158,
+    161,
+    176
+  ],
+  "mushroom_monster_attack_down": [
+    191,
+    194,
+    203,
+    184,
+    185
+  ],
+  "mushroom_monster_death_down": [
+    191,
+    184,
+    167,
+    131,
+    92
+  ],
+  "mushroom_monster_idle_up": [
+    176,
+    180,
+    172,
+    167
+  ],
+  "mushroom_monster_move_up": [
+    166,
+    169,
+    168,
+    159,
+    171,
+    167
+  ],
+  "mushroom_monster_attack_up": [
+    189,
+    188,
+    204,
+    184,
+    184
+  ],
+  "mushroom_monster_death_up": [
+    187,
+    185,
+    164,
+    130,
+    93
+  ],
+  "mushroom_monster_idle_right": [
+    178,
+    176,
+    177,
+    175
+  ],
+  "mushroom_monster_move_right": [
+    175,
+    172,
+    168,
+    168,
+    169,
+    179
+  ],
+  "mushroom_monster_attack_right": [
+    194,
+    192,
+    205,
+    191,
+    192
+  ],
+  "mushroom_monster_death_right": [
+    196,
+    185,
+    156,
+    123,
+    101
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "batch": "b06e",
+  "label": "frontier-misc",
+  "generated_utc": "2026-11-20T17:57:03.927245Z",
+  "files": 60,
+  "duplicate_ids": 0,
+  "blocking": {},
+  "warnings": {},
+  "standing_heights": {
+    "bandit/down": 112,
+    "bandit/up": 112,
+    "bandit/right": 112,
+    "mimic_chest/down": 92,
+    "mimic_chest/up": 84,
+    "mimic_chest/right": 88,
+    "undead_soldier/down": 116,
+    "undead_soldier/up": 112,
+    "undead_soldier/right": 116,
+    "spectral_eye/down": 92,
+    "spectral_eye/up": 96,
+    "spectral_eye/right": 96,
+    "mushroom_monster/down": 116,
+    "mushroom_monster/up": 116,
+    "mushroom_monster/right": 116
+  },
+  "status": "provisional"
+}
