@@ -1,5 +1,5 @@
-# OpenAI art ledger (TOTAL cap 4.00 USD, stop at 3.60, report at 3.20)
-Cap fields: TOTAL cap = 4.00 USD for ALL rows below (not per day); work STOPS at 3.60; a report is due at 3.20. Estimated at the high prices below. Single source: game/tools/art/config.json (cap_total_usd, stop_usd, report_usd).
+# OpenAI art ledger (TOTAL cap 6.00 USD, stop at 5.60, report at 5.20)
+Cap fields: TOTAL cap = 6.00 USD for ALL rows below (not per day); work STOPS at 5.60; a report is due at 5.20. Estimated at the high prices below. Single source: game/tools/art/config.json (cap_total_usd, stop_usd, report_usd).
 Model gpt-image-1.5, Images API /v1/images/edits with reference images, quality medium, background transparent.
 Cost estimate uses deliberately high prices: output $40/M, input text $5/M, input image $10/M.
 Totals are computed from the rows below.
