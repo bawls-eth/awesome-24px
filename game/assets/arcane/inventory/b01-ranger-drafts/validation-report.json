@@ -1,0 +1,346 @@
+{
+  "batch": "B1",
+  "expected": 63,
+  "assets": {
+    "ranger_idle_down": {
+      "path": "characters/ranger/ranger_idle_down.png",
+      "sha256": "714cfd829e9744cc1e5791cb51666160dabe991a09ee9412982a28e0ad300271",
+      "errors": [
+        "Partial alpha found (requires hard alpha)",
+        "Frame 0: nonuniform 4x4 logical-pixel grid",
+        "Frame 1: empty",
+        "Frame 2: empty",
+        "Frame 3: empty",
+        "Duplicate animation frames"
+      ],
+      "info": {
+        "size": [
+          1024,
+          256
+        ],
+        "mode": "RGBA",
+        "alpha_extrema": [
+          0,
+          255
+        ],
+        "frame_bboxes": [
+          [
+            24,
+            51,
+            232,
+            231
+          ],
+          null,
+          null,
+          null
+        ],
+        "anchor_semantic_review": "not automated"
+      }
+    },
+    "ranger_walk_down": {
+      "path": "characters/ranger/ranger_walk_down.png",
+      "sha256": "197ea70632b6ed2b5febc0338ab99c2b98b75264a2ff407b6baa74099ca417f8",
+      "errors": [
+        "Partial alpha found (requires hard alpha)",
+        "Frame 0: nonuniform 4x4 logical-pixel grid",
+        "Frame 1: empty",
+        "Frame 2: empty",
+        "Frame 3: empty",
+        "Frame 4: empty",
+        "Frame 5: empty",
+        "Duplicate animation frames"
+      ],
+      "info": {
+        "size": [
+          1536,
+          256
+        ],
+        "mode": "RGBA",
+        "alpha_extrema": [
+          0,
+          255
+        ],
+        "frame_bboxes": [
+          [
+            62,
+            51,
+            194,
+            231
+          ],
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "anchor_semantic_review": "not automated"
+      }
+    },
+    "ranger_walk_up": {
+      "path": "characters/ranger/ranger_walk_up.png",
+      "sha256": "40d2d66077fc6e1f41fe24c87ee3c1a527589614b1cfa2001f7f7e9ade542e71",
+      "errors": [
+        "Frame 0: insufficient 12px margin",
+        "Frame 0: nonuniform 4x4 logical-pixel grid",
+        "Frame 1: empty",
+        "Frame 2: empty",
+        "Frame 3: empty",
+        "Frame 4: empty",
+        "Frame 5: empty",
+        "Duplicate animation frames"
+      ],
+      "info": {
+        "size": [
+          1536,
+          256
+        ],
+        "mode": "RGBA",
+        "alpha_extrema": [
+          0,
+          255
+        ],
+        "frame_bboxes": [
+          [
+            58,
+            11,
+            197,
+            231
+          ],
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "anchor_semantic_review": "not automated"
+      }
+    },
+    "ranger_walk_right": {
+      "path": "characters/ranger/ranger_walk_right.png",
+      "sha256": "7f035013456550798930e65ebf7192aa4ac01352dfd06f3a8722afdae38986b8",
+      "errors": [
+        "Frame 0: insufficient 12px margin",
+        "Frame 0: nonuniform 4x4 logical-pixel grid",
+        "Frame 1: empty",
+        "Frame 2: empty",
+        "Frame 3: empty",
+        "Frame 4: empty",
+        "Frame 5: empty",
+        "Duplicate animation frames"
+      ],
+      "info": {
+        "size": [
+          1536,
+          256
+        ],
+        "mode": "RGBA",
+        "alpha_extrema": [
+          0,
+          255
+        ],
+        "frame_bboxes": [
+          [
+            53,
+            11,
+            203,
+            231
+          ],
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "anchor_semantic_review": "not automated"
+      }
+    },
+    "ranger_attack_down": {
+      "path": "characters/ranger/ranger_attack_down.png",
+      "sha256": "72c318fcf35882043fa5eb66a44d40cae84cf42b3adf28bb9bf96ba901ccdcac",
+      "errors": [
+        "Partial alpha found (requires hard alpha)",
+        "Frame 0: nonuniform 4x4 logical-pixel grid",
+        "Frame 1: empty",
+        "Frame 2: empty",
+        "Frame 3: empty",
+        "Frame 4: empty",
+        "Duplicate animation frames"
+      ],
+      "info": {
+        "size": [
+          1280,
+          256
+        ],
+        "mode": "RGBA",
+        "alpha_extrema": [
+          0,
+          255
+        ],
+        "frame_bboxes": [
+          [
+            36,
+            51,
+            220,
+            231
+          ],
+          null,
+          null,
+          null,
+          null
+        ],
+        "anchor_semantic_review": "not automated"
+      }
+    },
+    "ranger_roll_down": {
+      "path": "characters/ranger/ranger_roll_down.png",
+      "sha256": "ab9fadceabd5e86a1776b20a04102612749201697bcfc3f0db9d0882fa9fbf87",
+      "errors": [
+        "Frame 0: insufficient 12px margin",
+        "Frame 0: nonuniform 4x4 logical-pixel grid",
+        "Frame 1: empty",
+        "Frame 2: empty",
+        "Frame 3: empty",
+        "Frame 4: empty",
+        "Frame 5: empty",
+        "Duplicate animation frames"
+      ],
+      "info": {
+        "size": [
+          1536,
+          256
+        ],
+        "mode": "RGBA",
+        "alpha_extrema": [
+          0,
+          255
+        ],
+        "frame_bboxes": [
+          [
+            27,
+            11,
+            229,
+            231
+          ],
+          null,
+          null,
+          null,
+          null,
+          null
+        ],
+        "anchor_semantic_review": "not automated"
+      }
+    }
+  },
+  "failures": [
+    "ranger_idle_down: Partial alpha found (requires hard alpha)",
+    "ranger_idle_down: Frame 0: nonuniform 4x4 logical-pixel grid",
+    "ranger_idle_down: Frame 1: empty",
+    "ranger_idle_down: Frame 2: empty",
+    "ranger_idle_down: Frame 3: empty",
+    "ranger_idle_down: Duplicate animation frames",
+    "MISSING ranger_idle_up",
+    "MISSING ranger_idle_right",
+    "ranger_walk_down: Partial alpha found (requires hard alpha)",
+    "ranger_walk_down: Frame 0: nonuniform 4x4 logical-pixel grid",
+    "ranger_walk_down: Frame 1: empty",
+    "ranger_walk_down: Frame 2: empty",
+    "ranger_walk_down: Frame 3: empty",
+    "ranger_walk_down: Frame 4: empty",
+    "ranger_walk_down: Frame 5: empty",
+    "ranger_walk_down: Duplicate animation frames",
+    "ranger_walk_up: Frame 0: insufficient 12px margin",
+    "ranger_walk_up: Frame 0: nonuniform 4x4 logical-pixel grid",
+    "ranger_walk_up: Frame 1: empty",
+    "ranger_walk_up: Frame 2: empty",
+    "ranger_walk_up: Frame 3: empty",
+    "ranger_walk_up: Frame 4: empty",
+    "ranger_walk_up: Frame 5: empty",
+    "ranger_walk_up: Duplicate animation frames",
+    "ranger_walk_right: Frame 0: insufficient 12px margin",
+    "ranger_walk_right: Frame 0: nonuniform 4x4 logical-pixel grid",
+    "ranger_walk_right: Frame 1: empty",
+    "ranger_walk_right: Frame 2: empty",
+    "ranger_walk_right: Frame 3: empty",
+    "ranger_walk_right: Frame 4: empty",
+    "ranger_walk_right: Frame 5: empty",
+    "ranger_walk_right: Duplicate animation frames",
+    "ranger_attack_down: Partial alpha found (requires hard alpha)",
+    "ranger_attack_down: Frame 0: nonuniform 4x4 logical-pixel grid",
+    "ranger_attack_down: Frame 1: empty",
+    "ranger_attack_down: Frame 2: empty",
+    "ranger_attack_down: Frame 3: empty",
+    "ranger_attack_down: Frame 4: empty",
+    "ranger_attack_down: Duplicate animation frames",
+    "MISSING ranger_attack_up",
+    "MISSING ranger_attack_right",
+    "MISSING ranger_cast_down",
+    "MISSING ranger_cast_up",
+    "MISSING ranger_cast_right",
+    "ranger_roll_down: Frame 0: insufficient 12px margin",
+    "ranger_roll_down: Frame 0: nonuniform 4x4 logical-pixel grid",
+    "ranger_roll_down: Frame 1: empty",
+    "ranger_roll_down: Frame 2: empty",
+    "ranger_roll_down: Frame 3: empty",
+    "ranger_roll_down: Frame 4: empty",
+    "ranger_roll_down: Frame 5: empty",
+    "ranger_roll_down: Duplicate animation frames",
+    "MISSING ranger_roll_up",
+    "MISSING ranger_roll_right",
+    "MISSING ranger_hit_down",
+    "MISSING ranger_hit_up",
+    "MISSING ranger_hit_right",
+    "MISSING ranger_death_down",
+    "MISSING ranger_death_up",
+    "MISSING ranger_death_right",
+    "MISSING mage_idle_down",
+    "MISSING mage_idle_up",
+    "MISSING mage_idle_right",
+    "MISSING mage_walk_down",
+    "MISSING mage_walk_up",
+    "MISSING mage_walk_right",
+    "MISSING mage_attack_down",
+    "MISSING mage_attack_up",
+    "MISSING mage_attack_right",
+    "MISSING mage_cast_down",
+    "MISSING mage_cast_up",
+    "MISSING mage_cast_right",
+    "MISSING mage_roll_down",
+    "MISSING mage_roll_up",
+    "MISSING mage_roll_right",
+    "MISSING mage_hit_down",
+    "MISSING mage_hit_up",
+    "MISSING mage_hit_right",
+    "MISSING mage_death_down",
+    "MISSING mage_death_up",
+    "MISSING mage_death_right",
+    "MISSING cleric_idle_down",
+    "MISSING cleric_idle_up",
+    "MISSING cleric_idle_right",
+    "MISSING cleric_walk_down",
+    "MISSING cleric_walk_up",
+    "MISSING cleric_walk_right",
+    "MISSING cleric_attack_down",
+    "MISSING cleric_attack_up",
+    "MISSING cleric_attack_right",
+    "MISSING cleric_cast_down",
+    "MISSING cleric_cast_up",
+    "MISSING cleric_cast_right",
+    "MISSING cleric_roll_down",
+    "MISSING cleric_roll_up",
+    "MISSING cleric_roll_right",
+    "MISSING cleric_hit_down",
+    "MISSING cleric_hit_up",
+    "MISSING cleric_hit_right",
+    "MISSING cleric_death_down",
+    "MISSING cleric_death_up",
+    "MISSING cleric_death_right"
+  ],
+  "unautomated_checks": [
+    "Visual fidelity and originality",
+    "real pose motion and back/side view correctness",
+    "foot-contact baseline semantics",
+    "palette/art style review",
+    "muzzle correctness if applicable"
+  ],
+  "technical_pass": false
+}
