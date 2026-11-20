@@ -1,0 +1,186 @@
+{
+  "name": "Arcane Frontier relics and runes",
+  "frame_size": 32,
+  "assets": [
+    {
+      "id": "relic_sun_disk",
+      "category": "item",
+      "path": "items/relic_sun_disk.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        360,
+        364
+      ]
+    },
+    {
+      "id": "relic_moon_mirror",
+      "category": "item",
+      "path": "items/relic_moon_mirror.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        309,
+        373
+      ]
+    },
+    {
+      "id": "relic_fossil_talisman",
+      "category": "item",
+      "path": "items/relic_fossil_talisman.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        303,
+        369
+      ]
+    },
+    {
+      "id": "relic_hourglass",
+      "category": "item",
+      "path": "items/relic_hourglass.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        268,
+        378
+      ]
+    },
+    {
+      "id": "relic_crown_fragment",
+      "category": "item",
+      "path": "items/relic_crown_fragment.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        345,
+        273
+      ]
+    },
+    {
+      "id": "relic_phoenix_feather",
+      "category": "item",
+      "path": "items/relic_phoenix_feather.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        334,
+        369
+      ]
+    },
+    {
+      "id": "rune_ice",
+      "category": "item",
+      "path": "items/rune_ice.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "rune",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        305,
+        378
+      ]
+    },
+    {
+      "id": "rune_flame",
+      "category": "item",
+      "path": "items/rune_flame.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "rune",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        330,
+        383
+      ]
+    },
+    {
+      "id": "rune_thorn",
+      "category": "item",
+      "path": "items/rune_thorn.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "rune",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        345,
+        383
+      ]
+    }
+  ]
+}
