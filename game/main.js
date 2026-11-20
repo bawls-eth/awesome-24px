@@ -2972,21 +2972,26 @@ class TownScene extends Phaser.Scene {
     this.net.realmListenInvites((inv) => this.showRealmInvite(inv));
     document.getElementById('realm-invite-accept').addEventListener('click', () => this.acceptRealmInvite());
     document.getElementById('realm-invite-decline').addEventListener('click', () => this.hideRealmInvite());
+    setInterval(() => { const d = this._deferredInvite; if (d && !this.inRealm && !this.inUnderground) { if (Date.now() - d.at < 60000) this.showRealmInvite(d.inv); else this._deferredInvite = null; } }, 1500);
   }
 
   showRealmInvite(inv) {
-    if (this.inRealm || this.inUnderground) return; // busy: the sender's invite times out
+    if (this.inRealm || this.inUnderground) { this._deferredInvite = { inv, at: Date.now() }; return; } // busy: show it the moment we are back in town (for up to 60 s)
+    this._deferredInvite = null;
     this.realmInviteIn = inv;
     const el = document.getElementById('realm-invite');
     document.getElementById('realm-invite-text').textContent = inv.mode === '2v2' ? `⚔️ ${inv.fromName} invites you to a 2v2 in the Realm!` : inv.mode === 'duel' ? `⚔️ ${inv.fromName} challenges you to a duel in the Realm!` : `🌀 ${inv.fromName} invites you to fight in the Realm together!`;
     el.classList.remove('hidden');
     clearTimeout(this._inviteHide);
-    this._inviteHide = setTimeout(() => this.hideRealmInvite(), 40000);
+    this._inviteHide = setTimeout(() => this.hideRealmInvite(), 75000);
+    if (!this._titleBefore) this._titleBefore = document.title;
+    document.title = '🌀 Realm invite! - ' + this._titleBefore; // a hidden tab still shows it
   }
 
   hideRealmInvite() {
     this.realmInviteIn = null;
     clearTimeout(this._inviteHide);
+    if (this._titleBefore) { document.title = this._titleBefore; this._titleBefore = null; }
     const el = document.getElementById('realm-invite'); if (el) el.classList.add('hidden');
   }
 

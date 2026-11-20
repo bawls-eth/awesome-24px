@@ -90,6 +90,8 @@ const startTeam = (role) => (s, r) => {
   await A.page.evaluate((id) => { const b = document.querySelector(`.realm-invite-btn[data-pid="${id}"]`); if (b) b.click(); }, idB);
   await sleep(2500);
   const toast = await B.page.evaluate(() => ({ shown: !document.getElementById('realm-invite').classList.contains('hidden'), text: document.getElementById('realm-invite-text').textContent }));
+  const ttl = await B.page.evaluate(() => document.title);
+  check('invite: the tab title flashes the invite for a hidden tab', /Realm invite/.test(ttl), ttl);
   check('invite: the other player gets a toast naming the sender', toast.shown && /invites you/.test(toast.text), JSON.stringify(toast));
   const dl = await scene(A.page, (s) => ({ delivered: !!(s.realmInviteOut && s.realmInviteOut.delivered), status: document.getElementById('realm-menu-status').textContent }));
   check('invite: the sender sees a delivery receipt once the other page picked the invite up', dl.delivered && /got your invite/.test(dl.status), JSON.stringify(dl));
