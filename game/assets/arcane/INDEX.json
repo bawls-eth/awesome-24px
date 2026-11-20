@@ -61,6 +61,15 @@
       "ingested_utc": "2026-11-20T05:30:00Z",
       "source": "codex",
       "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "i01",
+      "label": "items-v2",
+      "path": "assets/arcane/i01-items-v2",
+      "manifest": "assets/arcane/i01-items-v2/manifest.json",
+      "files": 58,
+      "status": "needs-fix",
+      "ingested_utc": "2026-11-20T07:36:25.139176Z"
     }
   ]
 }
