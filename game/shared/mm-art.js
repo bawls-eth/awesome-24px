@@ -21,6 +21,9 @@
   var DIRS = { down: 1, up: 1, right: 1 };
   // Mad Maze arena enemy type (RM_ENEMIES key) -> art creature id. The boss and unknown types are absent (procedural sprite stays).
   var ENEMY_MAP = { spiral: 'moth', aimed: 'archer', ring: 'puffcap' };
+  // Biome-aware skins: biome id -> { enemy type -> art creature id }. Looked up before ENEMY_MAP; types/biomes not listed fall back to ENEMY_MAP.
+  // Deterministic (no randomness): the dark spider is the Frost Mire's ranged 'aimed' enemy. Hitboxes and stats are untouched (art only).
+  var BIOME_ENEMY_MAP = { frost: { aimed: 'dark_spider' } };
   // Ambient drifter kind -> art creature id.
   var DRIFTER_MAP = { wisp: 'mothling', cinder: 'beetle', puff: 'sprout' };
   // Visible creature width in px at scale 1 (cells are 256 wide, creatures fill about half): callers size the art off this.
@@ -34,7 +37,11 @@
   function artClassFor(mmClass) {
     return typeof mmClass === 'string' && Object.prototype.hasOwnProperty.call(CLASS_MAP, mmClass) ? CLASS_MAP[mmClass] : null;
   }
-  function enemyArtFor(type) {
+  function enemyArtFor(type, biomeId) {
+    if (typeof type === 'string' && typeof biomeId === 'string' && Object.prototype.hasOwnProperty.call(BIOME_ENEMY_MAP, biomeId)) {
+      var bm = BIOME_ENEMY_MAP[biomeId];
+      if (Object.prototype.hasOwnProperty.call(bm, type)) return bm[type];
+    }
     return typeof type === 'string' && Object.prototype.hasOwnProperty.call(ENEMY_MAP, type) ? ENEMY_MAP[type] : null;
   }
   function drifterArtFor(kind) {
@@ -157,6 +164,7 @@
         if (opts.only && opts.only.indexOf(key) < 0) return;
         if (opts.actions && opts.actions.indexOf(a.action) < 0) return;
         if (opts.dirs && opts.dirs.indexOf(a.dir) < 0) return;
+        if (opts.actionDirs && Object.prototype.hasOwnProperty.call(opts.actionDirs, a.action) && opts.actionDirs[a.action].indexOf(a.dir) < 0) return; // per-action dir limit (e.g. death: down/right only)
         var frames = Math.max(1, Math.floor(num(a.frames, 1)));
         var fw = num(a.frame_w, 256), fh = num(a.frame_h, 256);
         if (fw <= 0 || fh <= 0 || frames > 64) return;
@@ -207,12 +215,14 @@
   // loadAll(assetRoot, opts?) -> one set holding every pack listed in INDEX.json (plus the registered ones).
   function loadAll(assetRoot, opts) { return loadPacks(assetRoot, opts); }
 
-  // loadEnemies(assetRoot) -> Promise<ArtSet> holding only the mapped arena creatures, idle/move/attack (no death) to keep memory low.
+  // loadEnemies(assetRoot) -> Promise<ArtSet> holding only the mapped arena creatures: idle/move/attack, plus death for the down/right dirs only (memory).
   function loadEnemies(assetRoot, opts) {
     var o = {}; for (var k in opts || {}) o[k] = opts[k];
     var only = [];
-    [ENEMY_MAP, DRIFTER_MAP].forEach(function (m) { Object.keys(m).forEach(function (t) { if (only.indexOf(m[t]) < 0) only.push(m[t]); }); });
-    o.only = only; o.actions = ['idle', 'move', 'attack'];
+    var maps = [ENEMY_MAP, DRIFTER_MAP];
+    Object.keys(BIOME_ENEMY_MAP).forEach(function (b) { maps.push(BIOME_ENEMY_MAP[b]); });
+    maps.forEach(function (m) { Object.keys(m).forEach(function (t) { if (only.indexOf(m[t]) < 0) only.push(m[t]); }); });
+    o.only = only; o.actions = ['idle', 'move', 'attack', 'death']; o.actionDirs = { death: ['down', 'right'] };
     return loadPacks(assetRoot, o);
   }
 
@@ -293,5 +303,5 @@
     return loadPacks(assetRoot, o);
   }
 
-  return { bossArtFor: bossArtFor, loadBosses: loadBosses, BOSS_MAP: BOSS_MAP, BOSS_VISIBLE_W: BOSS_VISIBLE_W, BOSS_ACTIONS: BOSS_ACTIONS, loadItems: loadItems, itemIconUrl: itemIconUrl, ITEM_ICON_MAP: ITEM_ICON_MAP, ItemSet: ItemSet, enemyArtFor: enemyArtFor, drifterArtFor: drifterArtFor, loadEnemies: loadEnemies, ENEMY_MAP: ENEMY_MAP, DRIFTER_MAP: DRIFTER_MAP, ENEMY_VISIBLE_W: ENEMY_VISIBLE_W, load: load, loadClass: loadClass, loadAll: loadAll, packIds: packIds, artClassFor: artClassFor, packFor: packFor, frameAt: frameAt, scaleFor: scaleFor, duration: duration, PACKS: PACKS, CLASS_MAP: CLASS_MAP, ArtSet: ArtSet };
+  return { bossArtFor: bossArtFor, loadBosses: loadBosses, BOSS_MAP: BOSS_MAP, BOSS_VISIBLE_W: BOSS_VISIBLE_W, BOSS_ACTIONS: BOSS_ACTIONS, loadItems: loadItems, itemIconUrl: itemIconUrl, ITEM_ICON_MAP: ITEM_ICON_MAP, ItemSet: ItemSet, enemyArtFor: enemyArtFor, drifterArtFor: drifterArtFor, loadEnemies: loadEnemies, ENEMY_MAP: ENEMY_MAP, BIOME_ENEMY_MAP: BIOME_ENEMY_MAP, DRIFTER_MAP: DRIFTER_MAP, ENEMY_VISIBLE_W: ENEMY_VISIBLE_W, load: load, loadClass: loadClass, loadAll: loadAll, packIds: packIds, artClassFor: artClassFor, packFor: packFor, frameAt: frameAt, scaleFor: scaleFor, duration: duration, PACKS: PACKS, CLASS_MAP: CLASS_MAP, ArtSet: ArtSet };
 }));

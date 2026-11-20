@@ -35,7 +35,7 @@ async function suite(label, opts) {
   await P.page.waitForFunction(() => window.__mm.arena._enemyArt, null, { timeout: 8000 });
   await park(P.page);
   check(T('enemy art attached after load'), await P.page.evaluate(() => !!window.__mm.arena._enemyArt));
-  check(T('only idle/move/attack strips are loaded for mapped creatures'), await P.page.evaluate(() => { const r = window.__mm.arena._enemyArt.registry; const names = Object.keys(r).sort().join(','); const acts = new Set(); Object.keys(r).forEach((c) => Object.keys(r[c]).forEach((k) => acts.add(k.split('_')[0]))); return names === 'archer,beetle,moth,mothling,puffcap,sprout' && [...acts].sort().join(',') === 'attack,idle,move'; }));
+  check(T('only idle/move/attack (+ death, down/right only) strips are loaded for mapped creatures'), await P.page.evaluate(() => { const r = window.__mm.arena._enemyArt.registry; const names = Object.keys(r).sort().join(','); const acts = new Set(); Object.keys(r).forEach((c) => Object.keys(r[c]).forEach((k) => acts.add(k.split('_')[0]))); return names === 'archer,beetle,dark_spider,moth,mothling,puffcap,sprout' && [...acts].sort().join(',') === 'attack,death,idle,move' && !Object.keys(r).some((c) => Object.keys(r[c]).some((k) => k.startsWith('death_') && !/_(down|right)$/.test(k))); }));
   check(T('ENEMY_MAP covers spiral/aimed/ring and not the boss; helper never throws'), await P.page.evaluate(() => MMArt.enemyArtFor('spiral') === 'moth' && MMArt.enemyArtFor('aimed') === 'archer' && MMArt.enemyArtFor('ring') === 'puffcap' && MMArt.enemyArtFor('boss') === null && MMArt.enemyArtFor(undefined) === null && MMArt.enemyArtFor('__proto__') === null && MMArt.drifterArtFor({}) === null));
 
   // Each mapped type draws pixels that differ from the procedural sprite.

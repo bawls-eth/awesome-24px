@@ -37,6 +37,7 @@ const RM_DEATH_PENALTY = 0; // dying never costs banked shards any more: you get
 const RM_SHOP_MULT = 8; // shop price = the item's sell value x this
 const RM_COMBINE_COUNT = 3; // identical items (same gear, same rarity) fuse into one of the next rarity
 const RM_SHOP_UNLOCK = [0, 2, 5]; // best wave needed before the shop stocks Common / Uncommon / Rare
+const RM_ED_GHOSTS = 24; const RM_ED_REDUCED = 0.25; // enemy death-ghost pool size; reduced-motion fade seconds
 const RM_POOL = { pBullets: 160, eBullets: 420, enemies: 24, particles: 180, texts: 28, bags: 14, drifters: 12, hazards: 5 };
 
 // ---- progression (B2) ----
@@ -193,7 +194,7 @@ class RealmArena {
     this.run = { wave: 0, kills: 0, shards: 0 };
     this.displayShards = this.save.shards;
     this._avatar = null;
-    this._itemArt = null; this._enemyArt = null; this._enemyMap = null; this._driftMap = null; this._enemyDbgOn = false; this._bossArt = null; this._bossLoad = null; this._bossDbg = null; this._bossGhost = null; this._bossReq = null; // optional enemy animations (setEnemyArt)
+    this._itemArt = null; this._enemyArt = null; this._enemyMap = null; this._driftMap = null; this._enemyDbgOn = false; this._bossArt = null; this._bossLoad = null; this._bossDbg = null; this._bossGhost = null; this._bossReq = null; this._biomeEnemyMap = null; this._edGhosts = null; // optional enemy animations (setEnemyArt)
     this.heroProfile = null; // setHeroProfile
     this._heroArt = null; this._heroClass = null; this._heroSt = null; this._heroDbg = null; this._heroHurtAt = -9; this._heroAtkAt = -9; // optional hero animations (setHeroArt)
     this.team = null; this.role = 'solo'; this.down = false; this.reviveT = 0; this._firing = false;
@@ -701,19 +702,62 @@ class RealmArena {
     });
   }
 
-  setEnemyArt(artSet, map, driftMap) {
+  setEnemyArt(artSet, map, driftMap, biomeMap) {
     const ok = artSet && typeof artSet.anim === 'function' && typeof artSet.draw === 'function';
     this._enemyArt = ok ? artSet : null;
     const A = typeof MMArt !== 'undefined' ? MMArt : null;
     this._enemyMap = ok ? (map || (A && A.ENEMY_MAP) || null) : null;
     this._driftMap = ok ? (driftMap || (A && A.DRIFTER_MAP) || null) : null;
+    this._biomeEnemyMap = ok ? (biomeMap || (!map && A && A.BIOME_ENEMY_MAP) || null) : null;
+    this._edGhosts = ok ? this._edGhosts || Array.from({ length: RM_ED_GHOSTS }, () => ({ active: false, name: '', dir: 'down', flip: false, x: 0, y: 0, k: 1, t0: 0 })) : null; // preallocated death-ghost pool
+    if (!ok && this._edGhosts) this._edGhosts.forEach((q) => { q.active = false; });
     this._enemyVis = (A && A.ENEMY_VISIBLE_W) || 130;
     this._enemyDbg = null;
+  }
+  // Art creature for an enemy type: the current biome's skin first (deterministic), then the plain type map.
+  _enemyNameFor(type) {
+    const bm = this._biomeEnemyMap && this._biomeEnemyMap[RM_BIOMES[this.biome].id];
+    if (bm && Object.prototype.hasOwnProperty.call(bm, type)) return bm[type];
+    return this._enemyMap && Object.prototype.hasOwnProperty.call(this._enemyMap, type) ? this._enemyMap[type] : undefined;
+  }
+  // Starts a pooled death animation at an art-drawn enemy's feet (same dir/flip/scale as when it died). Reuses the oldest slot when full.
+  _spawnEnemyGhost(e, def) {
+    const art = this._enemyArt, pool = this._edGhosts;
+    if (!art || !pool || e._at === undefined) return; // never drawn with art: nothing to continue
+    const name = this._enemyNameFor(e.type);
+    if (!name) return;
+    const dir = art.anim(name, 'death', e._dir) ? e._dir : 'down';
+    if (!art.anim(name, 'death', dir)) return;
+    let q = null;
+    for (let i = 0; i < pool.length; i++) if (!pool[i].active) { q = pool[i]; break; }
+    if (!q) { q = pool[0]; for (let i = 1; i < pool.length; i++) if (pool[i].t0 < q.t0) q = pool[i]; }
+    q.active = true; q.name = name; q.dir = dir; q.flip = !!e._flip; q.x = e.x; q.y = e.y + def.r * 0.9; q.k = 2.8 * def.r / this._enemyVis; q.t0 = this.clock;
+  }
+  // Plays every live death ghost once, then frees the slot. Game time (this.clock) drives it, so pause freezes it; reduced motion = last frame, short fade.
+  _drawEnemyGhosts(g) {
+    const pool = this._edGhosts, art = this._enemyArt;
+    if (!pool) return;
+    for (let i = 0; i < pool.length; i++) {
+      const q = pool[i]; if (!q.active) continue;
+      const a = art && art.anim(q.name, 'death', q.dir);
+      const t = this.clock - q.t0;
+      if (!a) { q.active = false; continue; }
+      const len = a.frames / a.fps;
+      if (this._reduced) {
+        if (t > RM_ED_REDUCED) { q.active = false; continue; }
+        const ga = g.globalAlpha; g.globalAlpha = ga * (1 - t / RM_ED_REDUCED);
+        art.draw(g, a, len, q.x, q.y, q.k, q.flip); g.globalAlpha = ga;
+      } else {
+        if (t > len + 0.3) { q.active = false; continue; }
+        const ga = g.globalAlpha; if (t > len) g.globalAlpha = ga * (1 - (t - len) / 0.3);
+        art.draw(g, a, t, q.x, q.y, q.k, q.flip); g.globalAlpha = ga;
+      }
+    }
   }
   // Draws one enemy's creature animation; per-enemy state lives on the pooled enemy object (no allocation). Returns true when drawn.
   // Timing uses e.t (advanced only while the game runs), so pausing freezes the animation.
   _drawEnemyArt(g, e, def) {
-    const art = this._enemyArt, name = this._enemyMap && this._enemyMap[e.type];
+    const art = this._enemyArt, name = this._enemyNameFor(e.type);
     if (!name) return false;
     if (e._at === undefined || e.t < e._lt) { e._at = -9; e._px = e.x; e._py = e.y; e._mvT = -9; e._dir = 'down'; e._flip = false; e._key = ''; e._t0 = 0; e._pcd = e.cd; e._atSeen = -9; }
     e._lt = e.t;
@@ -911,7 +955,7 @@ class RealmArena {
     this.active = true;
     this.resyncSave(); // pick up progress another tab saved while this arena sat idle
     this._resize();
-    [this.pBullets, this.eBullets, this.enemies, this.particles, this.texts, this.bags, this.drifters, this.hazards].forEach((pool) => pool.forEach((o) => { o.active = false; }));
+    [this.pBullets, this.eBullets, this.enemies, this._edGhosts || [], this.particles, this.texts, this.bags, this.drifters, this.hazards].forEach((pool) => pool.forEach((o) => { o.active = false; }));
     this._wireRefresh(); this._padPrev.fill(false);
     this.keys = {}; this.mouse.down = false; this.moveVec.x = 0; this.moveVec.y = 0; this.aimVec.on = false; this.aimVec.x = 0; this.aimVec.y = 0; // no stuck input from the last run
     const p = this.player;
@@ -990,7 +1034,7 @@ class RealmArena {
     const scale = (1 + 0.15 * Math.max(0, this.run.wave - 1)) * (this.team && this.role === 'host' ? RT_HP_SCALE : 1); // tougher with a partner
     e.active = true; e.type = type; e.x = x; e.y = y;
     e.maxHp = Math.ceil(def.hp * scale); e.hp = e.maxHp;
-    e.dg = null; e.t = 0; e.flash = 0; e.angle = this.rng() * Math.PI * 2; e.dir = this.rng() < 0.5 ? 1 : -1;
+    e.dg = null; e._at = undefined; e.t = 0; e.flash = 0; e.angle = this.rng() * Math.PI * 2; e.dir = this.rng() < 0.5 ? 1 : -1;
     e.cd = 0.8 + this.rng() * 0.8; // first shot is never instant
     e.ax = 80 + this.rng() * (this.W - 160); e.ay = 80 + this.rng() * (this.H - 160); // drift target for Whirlers
     return e;
@@ -1445,6 +1489,7 @@ class RealmArena {
     if (e.hp > 0) return;
     e.active = false;
     const def = RM_ENEMIES[e.type];
+    if (this._edGhosts) this._spawnEnemyGhost(e, def);
     const gain = Math.max(1, Math.round(def.shards * this.stats.shards));
     this.run.kills += 1; this.run.shards += gain;
     this.save.kills += 1; this.save.shards += gain; this.save.kb[e.type] += 1;
@@ -1858,6 +1903,7 @@ class RealmArena {
       if (e.type === 'boss' && e.invuln > 0) { g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 3; g.beginPath(); g.arc(e.x, e.y, 40 + Math.sin(e.t * 20) * 2, 0, Math.PI * 2); g.stroke(); }
       if (e.hp < e.maxHp && e.type !== 'boss') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(e.x - 14, e.y - spr.height / 2 - 6, 28, 4); g.fillStyle = RM_ENEMIES[e.type].color; g.fillRect(e.x - 14, e.y - spr.height / 2 - 6, 28 * (e.hp / e.maxHp), 4); }
     }
+    if (this._edGhosts) this._drawEnemyGhosts(g);
     if (this._bossGhost) this._drawBossGhost(g);
     for (let i = 0; i < this.bags.length; i++) { const b = this.bags[i]; if (b.active) { const by = b.y - 13 + Math.sin(b.t * 5) * 2; g.drawImage(this.sprites.bag[b.r], b.x - 13, by); if (this._itemArt) { const ic = this._lootIcon(b.id, b.r); if (ic) g.drawImage(ic, b.x - 10, by - 18 + Math.sin(b.t * 5 + 1) * 1.5); } } }
     for (let i = 0; i < this.eBullets.length; i++) { const b = this.eBullets[i]; if (b.active) g.drawImage(this.sprites.eBullet[b.kind], b.x - 8, b.y - 8); }
