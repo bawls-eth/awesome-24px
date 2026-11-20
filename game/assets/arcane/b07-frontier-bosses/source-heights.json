@@ -1,0 +1,354 @@
+{
+  "bone_colossus_idle_down": [
+    250,
+    249,
+    239,
+    244
+  ],
+  "bone_colossus_move_down": [
+    240,
+    246,
+    244,
+    246,
+    246,
+    237
+  ],
+  "bone_colossus_attack_a_down": [
+    235,
+    284,
+    283,
+    238,
+    238,
+    233
+  ],
+  "bone_colossus_attack_b_down": [
+    237,
+    253,
+    274,
+    234,
+    247,
+    238
+  ],
+  "bone_colossus_hit_down": [
+    254,
+    233
+  ],
+  "bone_colossus_death_down": [
+    230,
+    213,
+    195,
+    177,
+    171,
+    158,
+    147,
+    146
+  ],
+  "inferno_wyrm_idle_down": [
+    199,
+    208,
+    220,
+    198
+  ],
+  "inferno_wyrm_move_down": [
+    203,
+    222,
+    215,
+    225,
+    222,
+    205
+  ],
+  "inferno_wyrm_attack_a_down": [
+    222,
+    245,
+    255,
+    247,
+    201,
+    207
+  ],
+  "inferno_wyrm_attack_b_down": [
+    241,
+    266,
+    264,
+    289,
+    275,
+    243
+  ],
+  "inferno_wyrm_hit_down": [
+    244,
+    244
+  ],
+  "inferno_wyrm_death_down": [
+    248,
+    216,
+    213,
+    184,
+    184,
+    174,
+    165,
+    157
+  ],
+  "void_oracle_idle_down": [
+    274,
+    279,
+    268,
+    276
+  ],
+  "void_oracle_move_down": [
+    269,
+    274,
+    270,
+    267,
+    272,
+    272
+  ],
+  "void_oracle_attack_a_down": [
+    270,
+    285,
+    310,
+    267,
+    273,
+    271
+  ],
+  "void_oracle_attack_b_down": [
+    285,
+    256,
+    272,
+    268,
+    263,
+    268
+  ],
+  "void_oracle_hit_down": [
+    257,
+    252
+  ],
+  "void_oracle_death_down": [
+    259,
+    245,
+    219,
+    184,
+    176,
+    157,
+    130,
+    114
+  ],
+  "crystal_titan_idle_down": [
+    227,
+    209,
+    229,
+    229
+  ],
+  "crystal_titan_move_down": [
+    238,
+    224,
+    223,
+    242,
+    232,
+    220
+  ],
+  "crystal_titan_attack_a_down": [
+    214,
+    248,
+    247,
+    207,
+    221,
+    232
+  ],
+  "crystal_titan_attack_b_down": [
+    271,
+    271,
+    271,
+    269,
+    270,
+    270
+  ],
+  "crystal_titan_hit_down": [
+    272,
+    268
+  ],
+  "crystal_titan_death_down": [
+    267,
+    252,
+    222,
+    194,
+    184,
+    168,
+    146,
+    138
+  ],
+  "forest_warden_idle_down": [
+    270,
+    271,
+    268,
+    256
+  ],
+  "forest_warden_move_down": [
+    271,
+    258,
+    260,
+    271,
+    274,
+    273
+  ],
+  "forest_warden_attack_a_down": [
+    265,
+    288,
+    252,
+    236,
+    242,
+    243
+  ],
+  "forest_warden_attack_b_down": [
+    284,
+    251,
+    287,
+    239,
+    252,
+    268
+  ],
+  "forest_warden_hit_down": [
+    274,
+    255
+  ],
+  "forest_warden_death_down": [
+    281,
+    271,
+    253,
+    226,
+    221,
+    190,
+    159,
+    138
+  ],
+  "dread_knight_idle_down": [
+    273,
+    280,
+    268,
+    258
+  ],
+  "dread_knight_move_down": [
+    266,
+    271,
+    269,
+    272,
+    273,
+    274
+  ],
+  "dread_knight_attack_a_down": [
+    270,
+    280,
+    263,
+    257,
+    235,
+    251
+  ],
+  "dread_knight_attack_b_down": [
+    289,
+    280,
+    263,
+    281,
+    229,
+    268
+  ],
+  "dread_knight_hit_down": [
+    251,
+    246
+  ],
+  "dread_knight_death_down": [
+    250,
+    228,
+    197,
+    161,
+    149,
+    140,
+    115,
+    115
+  ],
+  "storm_harbinger_idle_down": [
+    255,
+    251,
+    261,
+    255
+  ],
+  "storm_harbinger_move_down": [
+    241,
+    253,
+    251,
+    261,
+    257,
+    253
+  ],
+  "storm_harbinger_attack_a_down": [
+    241,
+    227,
+    229,
+    242,
+    231,
+    231
+  ],
+  "storm_harbinger_attack_b_down": [
+    244,
+    205,
+    219,
+    265,
+    235,
+    223
+  ],
+  "storm_harbinger_hit_down": [
+    231,
+    243
+  ],
+  "storm_harbinger_death_down": [
+    232,
+    195,
+    181,
+    152,
+    141,
+    126,
+    112,
+    105
+  ],
+  "mire_queen_idle_down": [
+    235,
+    243,
+    251,
+    233
+  ],
+  "mire_queen_move_down": [
+    234,
+    259,
+    250,
+    264,
+    249,
+    237
+  ],
+  "mire_queen_attack_a_down": [
+    223,
+    258,
+    246,
+    224,
+    225,
+    225
+  ],
+  "mire_queen_attack_b_down": [
+    242,
+    222,
+    224,
+    235,
+    217,
+    217
+  ],
+  "mire_queen_hit_down": [
+    249,
+    219
+  ],
+  "mire_queen_death_down": [
+    233,
+    216,
+    203,
+    182,
+    164,
+    161,
+    155,
+    148
+  ]
+}

@@ -1,0 +1,1106 @@
+{
+  "name": "Arcane Frontier armor",
+  "frame_size": 32,
+  "assets": [
+    {
+      "id": "armor_cuirass_iron",
+      "category": "item",
+      "path": "items/armor_cuirass_iron.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "armor",
+        "cuirass",
+        "iron"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        348,
+        351
+      ]
+    },
+    {
+      "id": "armor_cuirass_scout",
+      "category": "item",
+      "path": "items/armor_cuirass_scout.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "armor",
+        "cuirass",
+        "scout"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        338,
+        361
+      ]
+    },
+    {
+      "id": "armor_cuirass_warden",
+      "category": "item",
+      "path": "items/armor_cuirass_warden.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "armor",
+        "cuirass",
+        "warden"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        348,
+        357
+      ]
+    },
+    {
+      "id": "armor_cuirass_frost",
+      "category": "item",
+      "path": "items/armor_cuirass_frost.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "armor",
+        "cuirass",
+        "frost"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        356,
+        357
+      ]
+    },
+    {
+      "id": "armor_cuirass_ember",
+      "category": "item",
+      "path": "items/armor_cuirass_ember.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "armor",
+        "cuirass",
+        "ember"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        357,
+        360
+      ]
+    },
+    {
+      "id": "armor_cuirass_storm",
+      "category": "item",
+      "path": "items/armor_cuirass_storm.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "armor",
+        "cuirass",
+        "storm"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        359,
+        351
+      ]
+    },
+    {
+      "id": "armor_cuirass_mire",
+      "category": "item",
+      "path": "items/armor_cuirass_mire.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "armor",
+        "cuirass",
+        "mire"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        357,
+        348
+      ]
+    },
+    {
+      "id": "armor_cuirass_dread",
+      "category": "item",
+      "path": "items/armor_cuirass_dread.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "armor",
+        "cuirass",
+        "dread"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        370,
+        352
+      ]
+    },
+    {
+      "id": "armor_cuirass_paladin",
+      "category": "item",
+      "path": "items/armor_cuirass_paladin.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "armor",
+        "cuirass",
+        "paladin"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        359,
+        369
+      ]
+    },
+    {
+      "id": "armor_jerkin_iron",
+      "category": "item",
+      "path": "items/armor_jerkin_iron.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "armor",
+        "jerkin",
+        "iron"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        262,
+        371
+      ]
+    },
+    {
+      "id": "armor_jerkin_scout",
+      "category": "item",
+      "path": "items/armor_jerkin_scout.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "armor",
+        "jerkin",
+        "scout"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        258,
+        371
+      ]
+    },
+    {
+      "id": "armor_jerkin_warden",
+      "category": "item",
+      "path": "items/armor_jerkin_warden.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "armor",
+        "jerkin",
+        "warden"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        259,
+        371
+      ]
+    },
+    {
+      "id": "armor_jerkin_frost",
+      "category": "item",
+      "path": "items/armor_jerkin_frost.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "armor",
+        "jerkin",
+        "frost"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        268,
+        380
+      ]
+    },
+    {
+      "id": "armor_jerkin_ember",
+      "category": "item",
+      "path": "items/armor_jerkin_ember.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "armor",
+        "jerkin",
+        "ember"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        269,
+        379
+      ]
+    },
+    {
+      "id": "armor_jerkin_storm",
+      "category": "item",
+      "path": "items/armor_jerkin_storm.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "armor",
+        "jerkin",
+        "storm"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        262,
+        372
+      ]
+    },
+    {
+      "id": "armor_jerkin_mire",
+      "category": "item",
+      "path": "items/armor_jerkin_mire.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "armor",
+        "jerkin",
+        "mire"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        262,
+        376
+      ]
+    },
+    {
+      "id": "armor_jerkin_dread",
+      "category": "item",
+      "path": "items/armor_jerkin_dread.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "armor",
+        "jerkin",
+        "dread"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        267,
+        379
+      ]
+    },
+    {
+      "id": "armor_jerkin_paladin",
+      "category": "item",
+      "path": "items/armor_jerkin_paladin.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "armor",
+        "jerkin",
+        "paladin"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        270,
+        381
+      ]
+    },
+    {
+      "id": "armor_pauldrons_iron",
+      "category": "item",
+      "path": "items/armor_pauldrons_iron.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "armor",
+        "pauldrons",
+        "iron"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        396,
+        240
+      ]
+    },
+    {
+      "id": "armor_pauldrons_scout",
+      "category": "item",
+      "path": "items/armor_pauldrons_scout.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "armor",
+        "pauldrons",
+        "scout"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        386,
+        240
+      ]
+    },
+    {
+      "id": "armor_pauldrons_warden",
+      "category": "item",
+      "path": "items/armor_pauldrons_warden.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "armor",
+        "pauldrons",
+        "warden"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        403,
+        236
+      ]
+    },
+    {
+      "id": "armor_pauldrons_frost",
+      "category": "item",
+      "path": "items/armor_pauldrons_frost.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "armor",
+        "pauldrons",
+        "frost"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        392,
+        278
+      ]
+    },
+    {
+      "id": "armor_pauldrons_ember",
+      "category": "item",
+      "path": "items/armor_pauldrons_ember.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "armor",
+        "pauldrons",
+        "ember"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        402,
+        256
+      ]
+    },
+    {
+      "id": "armor_pauldrons_storm",
+      "category": "item",
+      "path": "items/armor_pauldrons_storm.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "armor",
+        "pauldrons",
+        "storm"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        406,
+        247
+      ]
+    },
+    {
+      "id": "armor_pauldrons_mire",
+      "category": "item",
+      "path": "items/armor_pauldrons_mire.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "armor",
+        "pauldrons",
+        "mire"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        401,
+        256
+      ]
+    },
+    {
+      "id": "armor_pauldrons_dread",
+      "category": "item",
+      "path": "items/armor_pauldrons_dread.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "armor",
+        "pauldrons",
+        "dread"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        402,
+        295
+      ]
+    },
+    {
+      "id": "armor_pauldrons_paladin",
+      "category": "item",
+      "path": "items/armor_pauldrons_paladin.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "armor",
+        "pauldrons",
+        "paladin"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        407,
+        281
+      ]
+    },
+    {
+      "id": "armor_gauntlet_iron",
+      "category": "item",
+      "path": "items/armor_gauntlet_iron.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "armor",
+        "gauntlet",
+        "iron"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        240,
+        362
+      ]
+    },
+    {
+      "id": "armor_gauntlet_scout",
+      "category": "item",
+      "path": "items/armor_gauntlet_scout.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "armor",
+        "gauntlet",
+        "scout"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        230,
+        362
+      ]
+    },
+    {
+      "id": "armor_gauntlet_warden",
+      "category": "item",
+      "path": "items/armor_gauntlet_warden.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "armor",
+        "gauntlet",
+        "warden"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        238,
+        364
+      ]
+    },
+    {
+      "id": "armor_gauntlet_frost",
+      "category": "item",
+      "path": "items/armor_gauntlet_frost.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "armor",
+        "gauntlet",
+        "frost"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        244,
+        366
+      ]
+    },
+    {
+      "id": "armor_gauntlet_ember",
+      "category": "item",
+      "path": "items/armor_gauntlet_ember.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "armor",
+        "gauntlet",
+        "ember"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        244,
+        357
+      ]
+    },
+    {
+      "id": "armor_gauntlet_storm",
+      "category": "item",
+      "path": "items/armor_gauntlet_storm.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "armor",
+        "gauntlet",
+        "storm"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        245,
+        357
+      ]
+    },
+    {
+      "id": "armor_gauntlet_mire",
+      "category": "item",
+      "path": "items/armor_gauntlet_mire.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "armor",
+        "gauntlet",
+        "mire"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        244,
+        379
+      ]
+    },
+    {
+      "id": "armor_gauntlet_dread",
+      "category": "item",
+      "path": "items/armor_gauntlet_dread.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "armor",
+        "gauntlet",
+        "dread"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        248,
+        388
+      ]
+    },
+    {
+      "id": "armor_gauntlet_paladin",
+      "category": "item",
+      "path": "items/armor_gauntlet_paladin.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "armor",
+        "gauntlet",
+        "paladin"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        249,
+        389
+      ]
+    },
+    {
+      "id": "armor_greaves_iron",
+      "category": "item",
+      "path": "items/armor_greaves_iron.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "armor",
+        "greaves",
+        "iron"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        239,
+        350
+      ]
+    },
+    {
+      "id": "armor_greaves_scout",
+      "category": "item",
+      "path": "items/armor_greaves_scout.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "armor",
+        "greaves",
+        "scout"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        246,
+        349
+      ]
+    },
+    {
+      "id": "armor_greaves_warden",
+      "category": "item",
+      "path": "items/armor_greaves_warden.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "armor",
+        "greaves",
+        "warden"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        252,
+        350
+      ]
+    },
+    {
+      "id": "armor_greaves_frost",
+      "category": "item",
+      "path": "items/armor_greaves_frost.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "armor",
+        "greaves",
+        "frost"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        280,
+        353
+      ]
+    },
+    {
+      "id": "armor_greaves_ember",
+      "category": "item",
+      "path": "items/armor_greaves_ember.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "armor",
+        "greaves",
+        "ember"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        259,
+        353
+      ]
+    },
+    {
+      "id": "armor_greaves_storm",
+      "category": "item",
+      "path": "items/armor_greaves_storm.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "armor",
+        "greaves",
+        "storm"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        280,
+        352
+      ]
+    },
+    {
+      "id": "armor_greaves_mire",
+      "category": "item",
+      "path": "items/armor_greaves_mire.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "armor",
+        "greaves",
+        "mire"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        258,
+        355
+      ]
+    },
+    {
+      "id": "armor_greaves_dread",
+      "category": "item",
+      "path": "items/armor_greaves_dread.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "armor",
+        "greaves",
+        "dread"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        271,
+        351
+      ]
+    },
+    {
+      "id": "armor_greaves_paladin",
+      "category": "item",
+      "path": "items/armor_greaves_paladin.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "armor",
+        "greaves",
+        "paladin"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        267,
+        353
+      ]
+    },
+    {
+      "id": "armor_boots_iron",
+      "category": "item",
+      "path": "items/armor_boots_iron.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "armor",
+        "boots",
+        "iron"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        319,
+        366
+      ]
+    },
+    {
+      "id": "armor_boots_scout",
+      "category": "item",
+      "path": "items/armor_boots_scout.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "armor",
+        "boots",
+        "scout"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        324,
+        362
+      ]
+    },
+    {
+      "id": "armor_boots_warden",
+      "category": "item",
+      "path": "items/armor_boots_warden.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "armor",
+        "boots",
+        "warden"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        327,
+        373
+      ]
+    },
+    {
+      "id": "armor_boots_frost",
+      "category": "item",
+      "path": "items/armor_boots_frost.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "armor",
+        "boots",
+        "frost"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        328,
+        387
+      ]
+    },
+    {
+      "id": "armor_boots_ember",
+      "category": "item",
+      "path": "items/armor_boots_ember.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "armor",
+        "boots",
+        "ember"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        321,
+        382
+      ]
+    }
+  ]
+}

@@ -61,12 +61,12 @@ async function open(browser, url, { heroes, active, opts } = {}) {
     out.deadManifest = bad.classes().length === 0 && bad.anim('warrior', 'idle', 'down') === null;
     // Every batch INDEX.json lists must load: each one's manifest classes show up in the merged registry.
     const artIdx = await (await fetch('/game/assets/arcane/INDEX.json')).json(); out.batches = [];
-    for (const b of artIdx.batches) { const id = b.path.split('/').pop(); const m = await (await fetch('/game/assets/arcane/' + id + '/manifest.json')).json(); const cls = [...new Set(m.assets.map((a) => a.class || a.enemy))]; out.batches.push({ id, missing: cls.filter((c) => !set.has(c)) }); }
+    for (const b of artIdx.batches) { const id = b.path.split('/').pop(); const m = await (await fetch('/game/assets/arcane/' + id + '/manifest.json')).json(); const animated = m.assets.filter((a) => a.action && a.dir); const cls = [...new Set(animated.map((a) => a.class || a.enemy || a.boss))]; const gone = []; for (const a of m.assets) { const r = await fetch('/game/assets/arcane/' + id + '/' + a.path, { method: 'HEAD' }); if (!r.ok) gone.push(a.path); } out.batches.push({ id, missing: cls.filter((c) => !set.has(c)), gone }); }
     out.ids = (await MMArt.packIds('/game/assets/arcane/')).join(',');
     out.mapped = [MMArt.artClassFor('bruiser'), MMArt.artClassFor('frostcaller'), MMArt.artClassFor('herald'), MMArt.artClassFor('punk'), MMArt.artClassFor('__proto__'), MMArt.artClassFor(null)].join('|');
     return out;
   });
-  check('INDEX.json: every listed batch loads (no class of any batch is missing from the registry) and packIds covers them', r.batches.length >= 2 && r.batches.every((b) => b.missing.length === 0) && r.batches.every((b) => r.ids.split(',').includes(b.id)), JSON.stringify([r.batches, r.ids]));
+  check('INDEX.json: every listed batch loads (no class of any batch is missing from the registry) and packIds covers them', r.batches.length >= 2 && r.batches.every((b) => b.missing.length === 0 && b.gone.length === 0) && r.batches.every((b) => r.ids.split(',').includes(b.id)), JSON.stringify([r.batches, r.ids]));
   check('MMArt loads every INDEX.json pack (registry holds at least warrior, ranger, mage, cleric)', ['warrior', 'ranger', 'mage', 'cleric'].every((c) => r.classes.split(',').includes(c)), r.classes);
   check('anim(warrior, walk, down): 6 frames at 10 fps, looping, 256 cell, feet anchor y 231', r.w && r.w.f === 6 && r.w.fps === 10 && r.w.loop === true && r.w.fw === 256 && r.w.ay === 231, JSON.stringify(r.w));
   check('anim(mage, attack, right): 5 frames at 12 fps, one-shot, with muzzle data', r.m && r.m.f === 5 && r.m.fps === 12 && r.m.loop === false && r.m.muz === 5, JSON.stringify(r.m));

@@ -31,6 +31,19 @@
       { id: 'blink', name: 'Blink Decoy', cost: 45, cd: 1, dist: 4, tries: 100, decoySec: 3 }, { from: '*', level: 10 }),
     shadowPaw: mk('shadowPaw', 'Shadow Paw', 'coolcats_ninjas', [110, 16, 500], [100, 7, 260], [12, 0, 14, 14, 6, 8], [50, 25, 50, 50, 35, 40],
       { id: 'smoke', name: 'Smoke Step', cost: 55, cd: 1, invisSec: 2.5, volleyMult: 1.5 }, { from: 'trickster', level: 20 }),
+    // Batch b02/b03 heroes (ids equal their art class ids). Unlocks chain off the selectable classes.
+    rogue: mk('rogue', 'Dusk Rogue', 'rogues', [105, 15, 480], [95, 7, 240], [11, 0, 14, 13, 6, 6], [48, 25, 50, 50, 35, 38],
+      { id: 'shadowDash', name: 'Shadow Dash', cost: 45, cd: 1, dist: 5, critMult: 1.6, critSec: 3 }, { from: 'ranger', level: 8 }),
+    warlock: mk('warlock', 'Hollow Warlock', 'warlocks', [105, 15, 480], [115, 9, 290], [13, 0, 8, 9, 8, 12], [50, 25, 42, 45, 40, 50],
+      { id: 'drainOrb', name: 'Drain Orb', cost: 60, cd: 1, range: 7, radius: 3, dmgBase: 60, dmgPerPow: 2, healFrac: 0.6, healCap: 100 }, { from: 'frostcaller', level: 8 }),
+    paladin: mk('paladin', 'Oathward Paladin', 'paladins', [150, 20, 600], [100, 7, 250], [8, 6, 8, 6, 11, 10], [40, 45, 40, 38, 48, 45],
+      { id: 'bulwark', name: 'Bulwark Oath', cost: 55, cd: 1.5, shieldSec: 3, arcDeg: 180, radius: 4, grdBonus: 12, grdSec: 5, healBase: 30, healPerWit: 1 }, { from: 'herald', level: 8 }),
+    berserker: mk('berserker', 'Ember Berserker', 'berserkers', [145, 22, 640], [80, 5, 200], [14, 2, 10, 10, 12, 4], [50, 30, 45, 45, 50, 30],
+      { id: 'rageSlam', name: 'Rage Slam', cost: 45, cd: 1, radius: 3.5, dmgBase: 80, dmgPerPow: 2.5, knockback: 1.5, powBonus: 6, powSec: 5 }, { from: 'punk', level: 10 }),
+    druid: mk('druid', 'Mossbound Druid', 'druids', [120, 17, 540], [110, 8, 280], [9, 3, 8, 8, 11, 11], [42, 35, 42, 42, 48, 50],
+      { id: 'thornBloom', name: 'Thorn Bloom', cost: 55, cd: 1.5, range: 6, radius: 3, rootSec: 2.5, thornsDmg: 12, thornsSec: 5, healBase: 40, healPerWit: 1.5 }, { from: 'herald', level: 12 }),
+    necromancer: mk('necromancer', 'Bonewhisper Necromancer', 'necromancers', [105, 15, 490], [120, 9, 300], [13, 0, 7, 9, 8, 13], [48, 25, 38, 45, 38, 50],
+      { id: 'raiseBones', name: 'Raise Bones', cost: 65, cd: 1.5, range: 6, minions: 3, minionSec: 12, minionDmg: 14, siphonFrac: 0.3, siphonCap: 80 }, { from: 'frostcaller', level: 12 }),
   };
   const START = ['ranger', 'frostcaller', 'herald'];
 
@@ -154,7 +167,7 @@
           { type: 'knockback', at: pos, radius: a.radius, tiles: a.knockback },
           { type: 'unhittable', sec: a.unhittableSec });
         break;
-      case 'siphon': {
+      case 'siphon': case 'drainOrb': {
         const at = toward(pos, aim, a.range);
         const dmg = a.dmgBase + a.dmgPerPow * pow;
         const n = Math.max(0, Math.floor(num(world.hitCount, 1)));
@@ -166,6 +179,36 @@
         const b = blink({ x: pos.x, y: pos.y, aim }, world);
         fx.push({ type: 'teleport', from: b.from, to: b.to, moved: b.moved },
           { type: 'decoy', at: b.from, sec: a.decoySec, aggro: 'all' });
+        break;
+      }
+      case 'shadowDash': {
+        const isWall = world.isWall || (() => false);
+        let to = toward(pos, aim, a.dist);
+        if (isWall(Math.floor(to.x), Math.floor(to.y)) || !pathClear(pos, to, isWall)) to = pos;
+        fx.push({ type: 'teleport', from: pos, to, moved: to !== pos }, { type: 'nextVolley', mult: a.critMult, sec: a.critSec });
+        break;
+      }
+      case 'bulwark':
+        fx.push({ type: 'shield', arcDeg: a.arcDeg, facing: num(caster.facing, 0), sec: a.shieldSec },
+          { type: 'buffGrd', at: pos, radius: a.radius, grd: a.grdBonus, sec: a.grdSec },
+          { type: 'heal', at: pos, radius: a.radius, amount: a.healBase + a.healPerWit * wit, self: true });
+        break;
+      case 'rageSlam':
+        fx.push({ type: 'damage', at: pos, radius: a.radius, amount: a.dmgBase + a.dmgPerPow * pow },
+          { type: 'knockback', at: pos, radius: a.radius, tiles: a.knockback },
+          { type: 'buffPow', pow: a.powBonus, sec: a.powSec });
+        break;
+      case 'thornBloom': {
+        const at = toward(pos, aim, a.range);
+        fx.push({ type: 'root', at, radius: a.radius, sec: a.rootSec },
+          { type: 'thorns', at, radius: a.radius, dmg: a.thornsDmg, sec: a.thornsSec },
+          { type: 'heal', at, radius: a.radius, amount: a.healBase + a.healPerWit * wit, self: true });
+        break;
+      }
+      case 'raiseBones': {
+        const at = toward(pos, aim, a.range);
+        fx.push({ type: 'summon', at, count: a.minions, sec: a.minionSec, dmg: a.minionDmg + Math.floor(pow / 4) },
+          { type: 'siphonAura', frac: a.siphonFrac, cap: a.siphonCap, sec: a.minionSec });
         break;
       }
       case 'smoke':

@@ -439,3 +439,5 @@ and merged together. Highlights:
 - Realm: dying no longer costs banked diamonds; you get a Survivor's Cache item (rarity by wave reached) instead. New in-Realm shop (V key or the backpack Shop button) sells gear for diamonds with fixed stock unlocked by best wave.
 
 - Realm: Combine in the backpack: 3 identical items fuse into one of the next rarity (Common > Uncommon > Rare > new Epic, +50% each step; the equipped copy is upgraded so damage rises at once). Epic cannot be bought or dropped.
+
+- Town: quick-chat chips are now 40 px tall (tap target), phone layout checked.

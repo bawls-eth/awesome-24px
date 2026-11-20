@@ -6,7 +6,7 @@
   var A = window.MMArt, P = window.MMProfile, B = window.MMBackup, C = window.MMClasses, I = window.MMItems;
   var KEY = P.KEY, LEGACY = P.LEGACY_KEY;
   var CARRY_MAX = 24;
-  var CLS_ORDER = ['ranger', 'frostcaller', 'herald', 'punk', 'bruiser'];
+  var CLS_ORDER = ['ranger', 'frostcaller', 'herald', 'punk', 'bruiser', 'rogue', 'warlock', 'paladin', 'berserker', 'druid', 'necromancer'];
   var REASONS = {
     'level-20-required': 'Reach level 20 to retire',
     'picnic-no-fall': 'Picnic heroes never Fall',
@@ -29,7 +29,13 @@
     groundPound: 'Slams the ground to hurt and push back enemies around you.',
     siphon: 'Drains life from enemies and heals you with it.',
     blink: 'Blinks a few steps away and leaves a decoy behind.',
-    smoke: 'Vanishes for a moment, then your next volley hits harder.'
+    smoke: 'Vanishes for a moment, then your next volley hits harder.',
+    shadowDash: 'Dashes a few steps, then your next strikes land critical hits.',
+    drainOrb: 'Hurls a dark orb that hurts enemies and drains their life into you.',
+    bulwark: 'Raises a wide shield, heals you and toughens nearby friends.',
+    rageSlam: 'A furious slam that hurts and shoves enemies, and boosts your power.',
+    thornBloom: 'Thorny vines root enemies, prick them back and heal you.',
+    raiseBones: 'Raises bone minions that fight for you and siphon life.'
   };
   var STAT_NAMES = [['pow', 'POW'], ['grd', 'GRD'], ['swf', 'SWF'], ['knk', 'KNK'], ['vig', 'VIG'], ['wit', 'WIT']];
 

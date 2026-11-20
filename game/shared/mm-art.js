@@ -11,14 +11,29 @@
   // Registry of shipped packs: which classes each one carries. Add b02.. here as they land.
   var PACKS = [
     { id: 'b00-warrior', classes: ['warrior'] },
-    { id: 'b01-ranger-mage-cleric', classes: ['ranger', 'mage', 'cleric'] }
+    { id: 'b01-ranger-mage-cleric', classes: ['ranger', 'mage', 'cleric'] },
+    { id: 'b02-rogue-warlock-paladin', classes: ['rogue', 'warlock', 'paladin'] },
+    { id: 'b03-berserker-druid-necromancer', classes: ['berserker', 'druid', 'necromancer'] }
   ];
   // Mad Maze class id -> art class id (classes without art are absent: callers keep their sprite).
-  var CLASS_MAP = { bruiser: 'warrior', ranger: 'ranger', frostcaller: 'mage', herald: 'cleric' };
+  var CLASS_MAP = { bruiser: 'warrior', ranger: 'ranger', frostcaller: 'mage', herald: 'cleric',
+    rogue: 'rogue', warlock: 'warlock', paladin: 'paladin', berserker: 'berserker', druid: 'druid', necromancer: 'necromancer' };
   var DIRS = { down: 1, up: 1, right: 1 };
+  // Mad Maze arena enemy type (RM_ENEMIES key) -> art creature id. The boss and unknown types are absent (procedural sprite stays).
+  var ENEMY_MAP = { spiral: 'moth', aimed: 'archer', ring: 'puffcap' };
+  // Ambient drifter kind -> art creature id.
+  var DRIFTER_MAP = { wisp: 'mothling', cinder: 'beetle', puff: 'sprout' };
+  // Visible creature width in px at scale 1 (cells are 256 wide, creatures fill about half): callers size the art off this.
+  var ENEMY_VISIBLE_W = 130;
 
   function artClassFor(mmClass) {
     return typeof mmClass === 'string' && Object.prototype.hasOwnProperty.call(CLASS_MAP, mmClass) ? CLASS_MAP[mmClass] : null;
+  }
+  function enemyArtFor(type) {
+    return typeof type === 'string' && Object.prototype.hasOwnProperty.call(ENEMY_MAP, type) ? ENEMY_MAP[type] : null;
+  }
+  function drifterArtFor(kind) {
+    return typeof kind === 'string' && Object.prototype.hasOwnProperty.call(DRIFTER_MAP, kind) ? DRIFTER_MAP[kind] : null;
   }
   function packFor(artClass) {
     for (var i = 0; i < PACKS.length; i++) if (PACKS[i].classes.indexOf(artClass) >= 0) return PACKS[i];
@@ -127,7 +142,7 @@
       var assets = m && Array.isArray(m.assets) ? m.assets : [];
       var jobs = [];
       assets.forEach(function (a) {
-        var key = a && typeof a.class === 'string' ? a.class : (a && typeof a.enemy === 'string' ? a.enemy : null); // heroes are keyed by class, enemies by creature name
+        var key = a && typeof a.class === 'string' ? a.class : (a && typeof a.enemy === 'string' ? a.enemy : (a && typeof a.boss === 'string' ? a.boss : null)); // heroes are keyed by class, enemies by creature name, bosses by boss id (items have no action/dir and are skipped here)
         if (!a || typeof a !== 'object' || typeof a.path !== 'string' || !key || typeof a.action !== 'string' || !DIRS[a.dir]) return;
         if (opts.only && opts.only.indexOf(key) < 0) return;
         if (opts.actions && opts.actions.indexOf(a.action) < 0) return;
@@ -182,5 +197,14 @@
   // loadAll(assetRoot, opts?) -> one set holding every pack listed in INDEX.json (plus the registered ones).
   function loadAll(assetRoot, opts) { return loadPacks(assetRoot, opts); }
 
-  return { load: load, loadClass: loadClass, loadAll: loadAll, packIds: packIds, artClassFor: artClassFor, packFor: packFor, frameAt: frameAt, scaleFor: scaleFor, duration: duration, PACKS: PACKS, CLASS_MAP: CLASS_MAP, ArtSet: ArtSet };
+  // loadEnemies(assetRoot) -> Promise<ArtSet> holding only the mapped arena creatures, idle/move/attack (no death) to keep memory low.
+  function loadEnemies(assetRoot, opts) {
+    var o = {}; for (var k in opts || {}) o[k] = opts[k];
+    var only = [];
+    [ENEMY_MAP, DRIFTER_MAP].forEach(function (m) { Object.keys(m).forEach(function (t) { if (only.indexOf(m[t]) < 0) only.push(m[t]); }); });
+    o.only = only; o.actions = ['idle', 'move', 'attack'];
+    return loadPacks(assetRoot, o);
+  }
+
+  return { enemyArtFor: enemyArtFor, drifterArtFor: drifterArtFor, loadEnemies: loadEnemies, ENEMY_MAP: ENEMY_MAP, DRIFTER_MAP: DRIFTER_MAP, ENEMY_VISIBLE_W: ENEMY_VISIBLE_W, load: load, loadClass: loadClass, loadAll: loadAll, packIds: packIds, artClassFor: artClassFor, packFor: packFor, frameAt: frameAt, scaleFor: scaleFor, duration: duration, PACKS: PACKS, CLASS_MAP: CLASS_MAP, ArtSet: ArtSet };
 }));

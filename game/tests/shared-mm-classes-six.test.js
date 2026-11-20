@@ -1,0 +1,55 @@
+// Run: node game/tests/shared-mm-classes-six.test.js  (rogue, warlock, paladin, berserker, druid, necromancer)
+const M = require('../shared/mm-classes.js');
+const I = require('../shared/mm-items.js');
+const P = require('../shared/mm-profile.js');
+let n = 0, bad = 0;
+function check(name, ok) { n++; if (!ok) { bad++; console.log('FAIL ' + name); } }
+const NEW = ['rogue', 'warlock', 'paladin', 'berserker', 'druid', 'necromancer'];
+const C = M.CLASSES, STATS = ['pow', 'grd', 'swf', 'knk', 'vig', 'wit'];
+const base = { x: 10, y: 10, aim: { x: 14, y: 10 }, facing: 0, focus: 300, pow: 10, wit: 10 };
+
+check('starters unchanged', M.START.join() === 'ranger,frostcaller,herald');
+check('existing 8 classes still present', ['ranger', 'frostcaller', 'herald', 'punk', 'bruiser', 'graveTender', 'trickster', 'shadowPaw'].every((k) => C[k]));
+NEW.forEach((k) => {
+  const c = C[k];
+  check(k + ' exists with matching id and non-empty name', c && c.id === k && c.name.length > 3);
+  const sum = STATS.reduce((s, x) => s + c.base[x], 0), capSum = STATS.reduce((s, x) => s + c.cap[x], 0);
+  check(k + ' base stat total 46..53 (matches existing classes)', sum >= 46 && sum <= 53);
+  check(k + ' every stat <= its cap, cap sum 200..260', STATS.every((x) => c.base[x] <= c.cap[x]) && capSum >= 200 && capSum <= 260);
+  check(k + ' life/focus within existing ranges', c.base.life >= 100 && c.base.life <= 150 && c.cap.life >= 480 && c.cap.life <= 640 && c.base.foc >= 80 && c.base.foc <= 120 && c.cap.foc >= 200 && c.cap.foc <= 300 && c.base.life <= c.cap.life && c.base.foc <= c.cap.foc);
+  check(k + ' not a starter, has an unlock rule from an existing class', !M.isStart(k) && C[c.unlock.from] && c.unlock.level >= 8 && c.unlock.level <= 20);
+  check(k + ' unlocks at its level only', M.unlocks(c.unlock.from, c.unlock.level).includes(k) && !M.unlocks(c.unlock.from, c.unlock.level - 1).includes(k));
+  const a = c.ability;
+  check(k + ' ability has id/name/cost/cd', a.id && a.name && a.cost > 0 && a.cost <= 70 && a.cd > 0);
+  const r = M.cast(k, a.id, base);
+  check(k + ' cast ok, pays cost, yields effects', r.ok && r.focusAfter === 300 - a.cost && r.effects.length >= 2 && r.effects.every((e) => typeof e.type === 'string'));
+  const f = M.cast(k, a.id, Object.assign({}, base, { focus: 1 }));
+  check(k + ' cast without focus fails cleanly', !f.ok && f.focusAfter === 1 && f.effects.length === 0);
+  check(k + ' ability gear tier lowers cost', M.abilityCost(k, 2) === a.cost - 6);
+  check(k + ' another class ability id is refused', !M.cast(k, 'yarnSnare', base).ok);
+  const d = I.CLASS_DEFS[k];
+  check(k + ' item def: weapon, armor, ability name match', d && d.weapon && d.armor && d.ability === a.name && I.KLASSES.includes(k));
+  const w0 = I.makeWeapon(k, 0), w8 = I.makeWeapon(k, 8);
+  check(k + ' weapon damage T0<T8, equippable by own class only', w0.dmg[1] < w8.dmg[1] && I.canEquip(w0, k) && !I.canEquip(w0, 'ranger') && !I.canEquip(I.makeWeapon('ranger', 0), k));
+  check(k + ' caps table matches class data', I.capFor(k, 'LIFE') === c.cap.life && I.capFor(k, 'FOC') === c.cap.foc && I.capFor(k, 'POW') === c.cap.pow && I.capFor(k, 'WIT') === c.cap.wit);
+  check(k + ' weapon/ability describe() is a clean named item', /^[A-Z]/.test(I.describe(w0.id, 0).name) && I.describe(w0.id, 0).kind === 'weapon' && I.describe('ability_' + k + '_t1', 1).name === a.name + ' Gem');
+  check(k + ' profile keeps the class', P.clean({ heroes: [{ id: 'h', cls: k }] }).heroes[0].cls === k);
+});
+check('unknown class still falls back to ranger in profile', P.clean({ heroes: [{ id: 'h', cls: 'nope' }] }).heroes[0].cls === 'ranger');
+let r = M.cast('warlock', 'drainOrb', base, { hitCount: 2 });
+check('warlock drain: damage + capped self heal', r.effects[0].type === 'damage' && r.effects[0].amount === 80 && r.effects[1].type === 'heal' && r.effects[1].amount <= 100);
+r = M.cast('rogue', 'shadowDash', Object.assign({}, base, { aim: { x: 50, y: 10 } }));
+check('rogue dash capped at 5 tiles, then crit volley', r.effects[0].to.x === 15 && r.effects[1].mult === 1.6);
+r = M.cast('rogue', 'shadowDash', base, { isWall: (x) => x >= 12 });
+check('rogue dash never ends in a wall', !r.effects[0].moved && r.effects[0].to.x === 10);
+r = M.cast('paladin', 'bulwark', base);
+check('paladin: wide shield + GRD aura + heal', r.effects[0].arcDeg === 180 && r.effects[1].type === 'buffGrd' && r.effects[2].amount === 40);
+r = M.cast('berserker', 'rageSlam', base);
+check('berserker: slam 80+2.5*POW and POW buff', r.effects[0].amount === 105 && r.effects[2].type === 'buffPow');
+r = M.cast('druid', 'thornBloom', base);
+check('druid: root + thorns + heal', r.effects[0].type === 'root' && r.effects[1].type === 'thorns' && r.effects[2].amount === 55);
+r = M.cast('necromancer', 'raiseBones', base);
+check('necromancer: 3 minions with siphon', r.effects[0].type === 'summon' && r.effects[0].count === 3 && r.effects[1].type === 'siphonAura');
+check('balance: tank life > caster life, berserker focus lowest', C.paladin.base.life > C.warlock.base.life && C.berserker.base.foc < C.rogue.base.foc && C.rogue.base.swf >= C.berserker.base.swf);
+check('casts are deterministic', JSON.stringify(M.cast('rogue', 'shadowDash', base)) === JSON.stringify(M.cast('rogue', 'shadowDash', base)));
+console.log((bad ? 'FAILED ' + bad + ' of ' : 'ok ') + n + ' assertions'); process.exit(bad ? 1 : 0);

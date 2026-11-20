@@ -66,3 +66,28 @@ B04 stages 72 validated enemy animation strips for the six Mad Maze IDs in the m
 ### B05 enemy art
 
 B05 stages 72 validated animation strips for Mini Sprout and five Arcane Frontier enemies. Integration and playback review are pending.
+
+## Heroes + enemy art live in code (2026-11-20)
+Six new heroes selectable in Lantern with real art; enemy animations drawn in the Mad Maze arena (setEnemyArt, ?enemyart=0 disables). Not yet: arena reads class stats/abilities; enemy death animation; b05 enemies unmapped.
+### B07 boss art
+
+B07 stages 48 validated animation strips for all eight Arcane Frontier boss IDs. Runtime integration and playback review are pending.
+### Frontier item art
+
+Staged 16 validated equipment and potion icons matching the existing catalog IDs. Integration is pending.
+
+### Frontier weapon expansion
+
+Staged 20 additional weapon icons. The two item packs cover 28 weapon IDs and eight other equipment and potion IDs.
+
+### B08 headgear
+
+Staged 26 validated headgear icons. Runtime integration is pending.
+
+### B08 armor
+
+Staged 50 validated armor icons alongside the 26 headgear icons. Runtime integration is pending.
+
+### B09 clothing and helmets
+
+Staged 30 clothing icons and four helmets. Catalog and runtime integration are pending.

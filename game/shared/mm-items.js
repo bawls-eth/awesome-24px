@@ -4,7 +4,7 @@
   else root.MMItems = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   const MAX_TIER = { weapon: 8, armor: 8, ability: 4, charm: 4 };
-  const KLASSES = ['ranger', 'frostcaller', 'herald', 'punk', 'bruiser', 'gravetender', 'trickster', 'shadowpaw'];
+  const KLASSES = ['ranger', 'frostcaller', 'herald', 'punk', 'bruiser', 'gravetender', 'trickster', 'shadowpaw', 'rogue', 'warlock', 'paladin', 'berserker', 'druid', 'necromancer'];
 
   // Per class: weapon type, T0 and T8 damage ranges (design table 3.4), armor family, ability name.
   const CLASS_DEFS = {
@@ -16,6 +16,12 @@
     gravetender: { weapon: 'bonewand',    t0: [16, 24], t8: [46, 62],  armor: 'robe',  ability: 'Grave Siphon' },
     trickster:   { weapon: 'raypistol',   t0: [9, 15],  t8: [28, 40],  armor: 'light', ability: 'Blink Decoy' },
     shadowpaw:   { weapon: 'shuriken',    t0: [10, 16], t8: [30, 42],  armor: 'light', ability: 'Smoke Step' },
+    rogue:       { weapon: 'twindaggers', t0: [10, 16], t8: [32, 44],  armor: 'light', ability: 'Shadow Dash' },
+    warlock:     { weapon: 'orbstaff',    t0: [15, 23], t8: [44, 60],  armor: 'robe',  ability: 'Drain Orb' },
+    paladin:     { weapon: 'warhammer',   t0: [14, 22], t8: [40, 54],  armor: 'heavy', ability: 'Bulwark Oath' },
+    berserker:   { weapon: 'twinaxes',    t0: [18, 28], t8: [56, 76],  armor: 'heavy', ability: 'Rage Slam' },
+    druid:       { weapon: 'thornstaff',  t0: [12, 18], t8: [36, 50],  armor: 'robe',  ability: 'Thorn Bloom' },
+    necromancer: { weapon: 'bonestaff',   t0: [14, 22], t8: [42, 56],  armor: 'robe',  ability: 'Raise Bones' },
   };
 
   const clampTier = (t, max) => Math.max(0, Math.min(max, Math.floor(Number(t)) || 0));
@@ -151,6 +157,12 @@
     gravetender: { LIFE: 520, FOC: 280, caps: [50, 30, 35, 45, 50, 45] },
     trickster: { LIFE: 500, FOC: 260, caps: [45, 25, 50, 50, 40, 45] },
     shadowpaw: { LIFE: 500, FOC: 260, caps: [50, 25, 50, 50, 35, 40] },
+    rogue: { LIFE: 480, FOC: 240, caps: [48, 25, 50, 50, 35, 38] },
+    warlock: { LIFE: 480, FOC: 290, caps: [50, 25, 42, 45, 40, 50] },
+    paladin: { LIFE: 600, FOC: 250, caps: [40, 45, 40, 38, 48, 45] },
+    berserker: { LIFE: 640, FOC: 200, caps: [50, 30, 45, 45, 50, 30] },
+    druid: { LIFE: 540, FOC: 280, caps: [42, 35, 42, 42, 48, 50] },
+    necromancer: { LIFE: 490, FOC: 300, caps: [48, 25, 38, 45, 38, 50] },
   };
   function capFor(klass, stat) {
     const c = CLASS_CAPS[klass];
@@ -195,7 +207,7 @@
     else if (/^armor_/.test(base)) { kind = 'armor'; name = words(base.slice(6)) + ' Armor'; }
     else if (/^ability_/.test(base)) { kind = 'ability'; const k = base.slice(8); name = (own.call(CLASS_DEFS, k) ? CLASS_DEFS[k].ability : words(k)) + ' Gem'; }
     else name = words(base) || 'Mystery Item';
-    if (!kind) kind = own.call(BASE_ICONS, base) ? (/ring|charm/.test(base) ? 'charm' : 'weapon') : /wand|staff|bow|blade|knuckle|pistol|shuriken/.test(base) ? 'weapon' : 'charm';
+    if (!kind) kind = own.call(BASE_ICONS, base) ? (/ring|charm/.test(base) ? 'charm' : 'weapon') : /wand|staff|bow|blade|knuckle|pistol|shuriken|dagger|hammer|axe/.test(base) ? 'weapon' : 'charm';
     const icon = own.call(BASE_ICONS, base) ? BASE_ICONS[base] : KIND_ICONS[kind];
     return { name, icon, kind, tier, tierLabel: 'T' + tier, color: TIER_COLORS[tier] };
   }

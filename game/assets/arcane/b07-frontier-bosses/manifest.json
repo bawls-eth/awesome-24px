@@ -1,0 +1,1286 @@
+{
+  "name": "ARCANE RPG \u2014 Frontier Bosses",
+  "frame_size": 384,
+  "assets": [
+    {
+      "id": "bone_colossus_idle_down",
+      "category": "boss",
+      "boss": "bone_colossus",
+      "action": "idle",
+      "dir": "down",
+      "path": "bosses/bone_colossus/bone_colossus_idle_down.png",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "bone_colossus_move_down",
+      "category": "boss",
+      "boss": "bone_colossus",
+      "action": "move",
+      "dir": "down",
+      "path": "bosses/bone_colossus/bone_colossus_move_down.png",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "bone_colossus_attack_a_down",
+      "category": "boss",
+      "boss": "bone_colossus",
+      "action": "attack_a",
+      "dir": "down",
+      "path": "bosses/bone_colossus/bone_colossus_attack_a_down.png",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 94,
+          "y": 320
+        },
+        {
+          "x": 130,
+          "y": 123
+        },
+        {
+          "x": 157,
+          "y": 124
+        },
+        {
+          "x": 150,
+          "y": 326
+        },
+        {
+          "x": 271,
+          "y": 313
+        },
+        {
+          "x": 95,
+          "y": 320
+        }
+      ]
+    },
+    {
+      "id": "bone_colossus_attack_b_down",
+      "category": "boss",
+      "boss": "bone_colossus",
+      "action": "attack_b",
+      "dir": "down",
+      "path": "bosses/bone_colossus/bone_colossus_attack_b_down.png",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 94,
+          "y": 321
+        },
+        {
+          "x": 134,
+          "y": 148
+        },
+        {
+          "x": 133,
+          "y": 128
+        },
+        {
+          "x": 107,
+          "y": 321
+        },
+        {
+          "x": 204,
+          "y": 317
+        },
+        {
+          "x": 91,
+          "y": 323
+        }
+      ]
+    },
+    {
+      "id": "bone_colossus_hit_down",
+      "category": "boss",
+      "boss": "bone_colossus",
+      "action": "hit",
+      "dir": "down",
+      "path": "bosses/bone_colossus/bone_colossus_hit_down.png",
+      "frames": 2,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "bone_colossus_death_down",
+      "category": "boss",
+      "boss": "bone_colossus",
+      "action": "death",
+      "dir": "down",
+      "path": "bosses/bone_colossus/bone_colossus_death_down.png",
+      "frames": 8,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "inferno_wyrm_idle_down",
+      "category": "boss",
+      "boss": "inferno_wyrm",
+      "action": "idle",
+      "dir": "down",
+      "path": "bosses/inferno_wyrm/inferno_wyrm_idle_down.png",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "inferno_wyrm_move_down",
+      "category": "boss",
+      "boss": "inferno_wyrm",
+      "action": "move",
+      "dir": "down",
+      "path": "bosses/inferno_wyrm/inferno_wyrm_move_down.png",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "inferno_wyrm_attack_a_down",
+      "category": "boss",
+      "boss": "inferno_wyrm",
+      "action": "attack_a",
+      "dir": "down",
+      "path": "bosses/inferno_wyrm/inferno_wyrm_attack_a_down.png",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 162,
+          "y": 295
+        },
+        {
+          "x": 169,
+          "y": 235
+        },
+        {
+          "x": 162,
+          "y": 266
+        },
+        {
+          "x": 166,
+          "y": 294
+        },
+        {
+          "x": 160,
+          "y": 299
+        },
+        {
+          "x": 167,
+          "y": 286
+        }
+      ]
+    },
+    {
+      "id": "inferno_wyrm_attack_b_down",
+      "category": "boss",
+      "boss": "inferno_wyrm",
+      "action": "attack_b",
+      "dir": "down",
+      "path": "bosses/inferno_wyrm/inferno_wyrm_attack_b_down.png",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 175,
+          "y": 289
+        },
+        {
+          "x": 178,
+          "y": 267
+        },
+        {
+          "x": 229,
+          "y": 291
+        },
+        {
+          "x": 230,
+          "y": 308
+        },
+        {
+          "x": 118,
+          "y": 303
+        },
+        {
+          "x": 156,
+          "y": 296
+        }
+      ]
+    },
+    {
+      "id": "inferno_wyrm_hit_down",
+      "category": "boss",
+      "boss": "inferno_wyrm",
+      "action": "hit",
+      "dir": "down",
+      "path": "bosses/inferno_wyrm/inferno_wyrm_hit_down.png",
+      "frames": 2,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "inferno_wyrm_death_down",
+      "category": "boss",
+      "boss": "inferno_wyrm",
+      "action": "death",
+      "dir": "down",
+      "path": "bosses/inferno_wyrm/inferno_wyrm_death_down.png",
+      "frames": 8,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "void_oracle_idle_down",
+      "category": "boss",
+      "boss": "void_oracle",
+      "action": "idle",
+      "dir": "down",
+      "path": "bosses/void_oracle/void_oracle_idle_down.png",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "void_oracle_move_down",
+      "category": "boss",
+      "boss": "void_oracle",
+      "action": "move",
+      "dir": "down",
+      "path": "bosses/void_oracle/void_oracle_move_down.png",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "void_oracle_attack_a_down",
+      "category": "boss",
+      "boss": "void_oracle",
+      "action": "attack_a",
+      "dir": "down",
+      "path": "bosses/void_oracle/void_oracle_attack_a_down.png",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 244,
+          "y": 183
+        },
+        {
+          "x": 230,
+          "y": 139
+        },
+        {
+          "x": 211,
+          "y": 128
+        },
+        {
+          "x": 249,
+          "y": 196
+        },
+        {
+          "x": 259,
+          "y": 196
+        },
+        {
+          "x": 255,
+          "y": 176
+        }
+      ]
+    },
+    {
+      "id": "void_oracle_attack_b_down",
+      "category": "boss",
+      "boss": "void_oracle",
+      "action": "attack_b",
+      "dir": "down",
+      "path": "bosses/void_oracle/void_oracle_attack_b_down.png",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 259,
+          "y": 194
+        },
+        {
+          "x": 260,
+          "y": 208
+        },
+        {
+          "x": 261,
+          "y": 158
+        },
+        {
+          "x": 153,
+          "y": 314
+        },
+        {
+          "x": 137,
+          "y": 319
+        },
+        {
+          "x": 263,
+          "y": 206
+        }
+      ]
+    },
+    {
+      "id": "void_oracle_hit_down",
+      "category": "boss",
+      "boss": "void_oracle",
+      "action": "hit",
+      "dir": "down",
+      "path": "bosses/void_oracle/void_oracle_hit_down.png",
+      "frames": 2,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "void_oracle_death_down",
+      "category": "boss",
+      "boss": "void_oracle",
+      "action": "death",
+      "dir": "down",
+      "path": "bosses/void_oracle/void_oracle_death_down.png",
+      "frames": 8,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "crystal_titan_idle_down",
+      "category": "boss",
+      "boss": "crystal_titan",
+      "action": "idle",
+      "dir": "down",
+      "path": "bosses/crystal_titan/crystal_titan_idle_down.png",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "crystal_titan_move_down",
+      "category": "boss",
+      "boss": "crystal_titan",
+      "action": "move",
+      "dir": "down",
+      "path": "bosses/crystal_titan/crystal_titan_move_down.png",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "crystal_titan_attack_a_down",
+      "category": "boss",
+      "boss": "crystal_titan",
+      "action": "attack_a",
+      "dir": "down",
+      "path": "bosses/crystal_titan/crystal_titan_attack_a_down.png",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 116,
+          "y": 289
+        },
+        {
+          "x": 125,
+          "y": 196
+        },
+        {
+          "x": 136,
+          "y": 149
+        },
+        {
+          "x": 136,
+          "y": 312
+        },
+        {
+          "x": 113,
+          "y": 299
+        },
+        {
+          "x": 128,
+          "y": 292
+        }
+      ]
+    },
+    {
+      "id": "crystal_titan_attack_b_down",
+      "category": "boss",
+      "boss": "crystal_titan",
+      "action": "attack_b",
+      "dir": "down",
+      "path": "bosses/crystal_titan/crystal_titan_attack_b_down.png",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 119,
+          "y": 281
+        },
+        {
+          "x": 129,
+          "y": 183
+        },
+        {
+          "x": 122,
+          "y": 222
+        },
+        {
+          "x": 127,
+          "y": 224
+        },
+        {
+          "x": 115,
+          "y": 265
+        },
+        {
+          "x": 123,
+          "y": 274
+        }
+      ]
+    },
+    {
+      "id": "crystal_titan_hit_down",
+      "category": "boss",
+      "boss": "crystal_titan",
+      "action": "hit",
+      "dir": "down",
+      "path": "bosses/crystal_titan/crystal_titan_hit_down.png",
+      "frames": 2,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "crystal_titan_death_down",
+      "category": "boss",
+      "boss": "crystal_titan",
+      "action": "death",
+      "dir": "down",
+      "path": "bosses/crystal_titan/crystal_titan_death_down.png",
+      "frames": 8,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "forest_warden_idle_down",
+      "category": "boss",
+      "boss": "forest_warden",
+      "action": "idle",
+      "dir": "down",
+      "path": "bosses/forest_warden/forest_warden_idle_down.png",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "forest_warden_move_down",
+      "category": "boss",
+      "boss": "forest_warden",
+      "action": "move",
+      "dir": "down",
+      "path": "bosses/forest_warden/forest_warden_move_down.png",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "forest_warden_attack_a_down",
+      "category": "boss",
+      "boss": "forest_warden",
+      "action": "attack_a",
+      "dir": "down",
+      "path": "bosses/forest_warden/forest_warden_attack_a_down.png",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 118,
+          "y": 257
+        },
+        {
+          "x": 117,
+          "y": 138
+        },
+        {
+          "x": 126,
+          "y": 315
+        },
+        {
+          "x": 137,
+          "y": 327
+        },
+        {
+          "x": 128,
+          "y": 284
+        },
+        {
+          "x": 112,
+          "y": 286
+        }
+      ]
+    },
+    {
+      "id": "forest_warden_attack_b_down",
+      "category": "boss",
+      "boss": "forest_warden",
+      "action": "attack_b",
+      "dir": "down",
+      "path": "bosses/forest_warden/forest_warden_attack_b_down.png",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 123,
+          "y": 263
+        },
+        {
+          "x": 122,
+          "y": 260
+        },
+        {
+          "x": 99,
+          "y": 239
+        },
+        {
+          "x": 142,
+          "y": 316
+        },
+        {
+          "x": 91,
+          "y": 239
+        },
+        {
+          "x": 136,
+          "y": 272
+        }
+      ]
+    },
+    {
+      "id": "forest_warden_hit_down",
+      "category": "boss",
+      "boss": "forest_warden",
+      "action": "hit",
+      "dir": "down",
+      "path": "bosses/forest_warden/forest_warden_hit_down.png",
+      "frames": 2,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "forest_warden_death_down",
+      "category": "boss",
+      "boss": "forest_warden",
+      "action": "death",
+      "dir": "down",
+      "path": "bosses/forest_warden/forest_warden_death_down.png",
+      "frames": 8,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "dread_knight_idle_down",
+      "category": "boss",
+      "boss": "dread_knight",
+      "action": "idle",
+      "dir": "down",
+      "path": "bosses/dread_knight/dread_knight_idle_down.png",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "dread_knight_move_down",
+      "category": "boss",
+      "boss": "dread_knight",
+      "action": "move",
+      "dir": "down",
+      "path": "bosses/dread_knight/dread_knight_move_down.png",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "dread_knight_attack_a_down",
+      "category": "boss",
+      "boss": "dread_knight",
+      "action": "attack_a",
+      "dir": "down",
+      "path": "bosses/dread_knight/dread_knight_attack_a_down.png",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 158,
+          "y": 150
+        },
+        {
+          "x": 119,
+          "y": 140
+        },
+        {
+          "x": 192,
+          "y": 160
+        },
+        {
+          "x": 194,
+          "y": 337
+        },
+        {
+          "x": 305,
+          "y": 313
+        },
+        {
+          "x": 203,
+          "y": 335
+        }
+      ]
+    },
+    {
+      "id": "dread_knight_attack_b_down",
+      "category": "boss",
+      "boss": "dread_knight",
+      "action": "attack_b",
+      "dir": "down",
+      "path": "bosses/dread_knight/dread_knight_attack_b_down.png",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 122,
+          "y": 326
+        },
+        {
+          "x": 115,
+          "y": 140
+        },
+        {
+          "x": 192,
+          "y": 160
+        },
+        {
+          "x": 196,
+          "y": 333
+        },
+        {
+          "x": 82,
+          "y": 321
+        },
+        {
+          "x": 119,
+          "y": 327
+        }
+      ]
+    },
+    {
+      "id": "dread_knight_hit_down",
+      "category": "boss",
+      "boss": "dread_knight",
+      "action": "hit",
+      "dir": "down",
+      "path": "bosses/dread_knight/dread_knight_hit_down.png",
+      "frames": 2,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "dread_knight_death_down",
+      "category": "boss",
+      "boss": "dread_knight",
+      "action": "death",
+      "dir": "down",
+      "path": "bosses/dread_knight/dread_knight_death_down.png",
+      "frames": 8,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "storm_harbinger_idle_down",
+      "category": "boss",
+      "boss": "storm_harbinger",
+      "action": "idle",
+      "dir": "down",
+      "path": "bosses/storm_harbinger/storm_harbinger_idle_down.png",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "storm_harbinger_move_down",
+      "category": "boss",
+      "boss": "storm_harbinger",
+      "action": "move",
+      "dir": "down",
+      "path": "bosses/storm_harbinger/storm_harbinger_move_down.png",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "storm_harbinger_attack_a_down",
+      "category": "boss",
+      "boss": "storm_harbinger",
+      "action": "attack_a",
+      "dir": "down",
+      "path": "bosses/storm_harbinger/storm_harbinger_attack_a_down.png",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 169,
+          "y": 319
+        },
+        {
+          "x": 165,
+          "y": 304
+        },
+        {
+          "x": 146,
+          "y": 327
+        },
+        {
+          "x": 148,
+          "y": 328
+        },
+        {
+          "x": 156,
+          "y": 319
+        },
+        {
+          "x": 167,
+          "y": 321
+        }
+      ]
+    },
+    {
+      "id": "storm_harbinger_attack_b_down",
+      "category": "boss",
+      "boss": "storm_harbinger",
+      "action": "attack_b",
+      "dir": "down",
+      "path": "bosses/storm_harbinger/storm_harbinger_attack_b_down.png",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 136,
+          "y": 255
+        },
+        {
+          "x": 137,
+          "y": 267
+        },
+        {
+          "x": 125,
+          "y": 264
+        },
+        {
+          "x": 99,
+          "y": 210
+        },
+        {
+          "x": 108,
+          "y": 246
+        },
+        {
+          "x": 132,
+          "y": 258
+        }
+      ]
+    },
+    {
+      "id": "storm_harbinger_hit_down",
+      "category": "boss",
+      "boss": "storm_harbinger",
+      "action": "hit",
+      "dir": "down",
+      "path": "bosses/storm_harbinger/storm_harbinger_hit_down.png",
+      "frames": 2,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "storm_harbinger_death_down",
+      "category": "boss",
+      "boss": "storm_harbinger",
+      "action": "death",
+      "dir": "down",
+      "path": "bosses/storm_harbinger/storm_harbinger_death_down.png",
+      "frames": 8,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "mire_queen_idle_down",
+      "category": "boss",
+      "boss": "mire_queen",
+      "action": "idle",
+      "dir": "down",
+      "path": "bosses/mire_queen/mire_queen_idle_down.png",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "mire_queen_move_down",
+      "category": "boss",
+      "boss": "mire_queen",
+      "action": "move",
+      "dir": "down",
+      "path": "bosses/mire_queen/mire_queen_move_down.png",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "mire_queen_attack_a_down",
+      "category": "boss",
+      "boss": "mire_queen",
+      "action": "attack_a",
+      "dir": "down",
+      "path": "bosses/mire_queen/mire_queen_attack_a_down.png",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 132,
+          "y": 309
+        },
+        {
+          "x": 140,
+          "y": 306
+        },
+        {
+          "x": 119,
+          "y": 317
+        },
+        {
+          "x": 126,
+          "y": 334
+        },
+        {
+          "x": 122,
+          "y": 329
+        },
+        {
+          "x": 131,
+          "y": 327
+        }
+      ]
+    },
+    {
+      "id": "mire_queen_attack_b_down",
+      "category": "boss",
+      "boss": "mire_queen",
+      "action": "attack_b",
+      "dir": "down",
+      "path": "bosses/mire_queen/mire_queen_attack_b_down.png",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 190,
+          "y": 259
+        },
+        {
+          "x": 190,
+          "y": 270
+        },
+        {
+          "x": 192,
+          "y": 270
+        },
+        {
+          "x": 192,
+          "y": 263
+        },
+        {
+          "x": 190,
+          "y": 271
+        },
+        {
+          "x": 190,
+          "y": 269
+        }
+      ]
+    },
+    {
+      "id": "mire_queen_hit_down",
+      "category": "boss",
+      "boss": "mire_queen",
+      "action": "hit",
+      "dir": "down",
+      "path": "bosses/mire_queen/mire_queen_hit_down.png",
+      "frames": 2,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "mire_queen_death_down",
+      "category": "boss",
+      "boss": "mire_queen",
+      "action": "death",
+      "dir": "down",
+      "path": "bosses/mire_queen/mire_queen_death_down.png",
+      "frames": 8,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "source": "original image-generated atlas"
+    }
+  ]
+}

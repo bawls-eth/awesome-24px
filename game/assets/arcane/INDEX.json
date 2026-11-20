@@ -61,6 +61,81 @@
       "ingested_utc": "2026-11-20T05:30:00Z",
       "source": "codex",
       "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "i01",
+      "label": "items-v2",
+      "path": "assets/arcane/i01-items-v2",
+      "manifest": "assets/arcane/i01-items-v2/manifest.json",
+      "files": 58,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T07:36:39.463363Z"
+    },
+    {
+      "id": "b07",
+      "label": "frontier-bosses",
+      "path": "assets/arcane/b07-frontier-bosses",
+      "manifest": "assets/arcane/b07-frontier-bosses/manifest.json",
+      "files": 48,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T08:20:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "b07x",
+      "label": "frontier-equipment",
+      "path": "assets/arcane/b07-items-frontier-equipment",
+      "manifest": "assets/arcane/b07-items-frontier-equipment/manifest.json",
+      "files": 16,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T08:20:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "b07w",
+      "label": "weapon-expansion",
+      "path": "assets/arcane/b07-weapons-frontier-weapon-expansion",
+      "manifest": "assets/arcane/b07-weapons-frontier-weapon-expansion/manifest.json",
+      "files": 20,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T08:20:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "b08",
+      "label": "frontier-armor",
+      "path": "assets/arcane/b08-armor-frontier-armor",
+      "manifest": "assets/arcane/b08-armor-frontier-armor/manifest.json",
+      "files": 50,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T08:20:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "b08h",
+      "label": "frontier-headgear",
+      "path": "assets/arcane/b08-headgear-frontier-headgear",
+      "manifest": "assets/arcane/b08-headgear-frontier-headgear/manifest.json",
+      "files": 26,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T08:20:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "b09",
+      "label": "frontier-clothing",
+      "path": "assets/arcane/b09-clothing-frontier-clothing",
+      "manifest": "assets/arcane/b09-clothing-frontier-clothing/manifest.json",
+      "files": 34,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T08:20:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
     }
   ]
 }
