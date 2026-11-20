@@ -36,22 +36,28 @@ const start = (role) => `(function(s){const link={onMessage:null,send:(m)=>windo
   const early = await scene(A.page, (s) => { const t = s.realm.team; const b = s.realm.firePlayerBullet; return { ph: t.duel.ph, prot: s.realm.player.iframes > 0 }; });
   check('duel: rounds start with a protected countdown', early.ph === 0 && early.prot, JSON.stringify(early));
   await sleep(2600);
-  const f1 = await info(A.page);
+  let f1 = await info(A.page);
+  for (let i = 0; i < 40 && f1.ph !== 1; i++) { await sleep(250); f1 = await info(A.page); } // the countdown is game time: a slow machine needs longer than 2.6 s of wall time
+
   check('duel: after the countdown the round is live', f1.ph === 1, JSON.stringify(f1));
 
   // host shoots the guest: 8 damage per bolt
   const hit = await scene(A.page, (s) => { const r = s.realm; const p = r.team.partner; p.iframes = 0; r.player.x = p.x - 200; r.player.y = p.y; r.firePlayerBulletFrom(r.player.x, r.player.y, 0, 1, 0); return p.hp; });
   await sleep(700);
-  const hp1 = await scene(A.page, (s) => Math.round(s.realm.team.partner.hp));
-  const gHp = await scene(B.page, (s) => Math.round(s.realm.player.hp));
+  let hp1 = await scene(A.page, (s) => Math.round(s.realm.team.partner.hp));
+  let gHp = await scene(B.page, (s) => Math.round(s.realm.player.hp));
+  for (let i = 0; i < 24 && !(hp1 === 92 && gHp === 92); i++) { await sleep(250); hp1 = await scene(A.page, (s) => Math.round(s.realm.team.partner.hp)); gHp = await scene(B.page, (s) => Math.round(s.realm.player.hp)); } // a slow machine needs longer for the snapshot to reach the guest
   check('duel: a host bolt does exactly 8 damage to the guest, and the guest sees its own HP drop', hp1 === 92 && gHp === 92, JSON.stringify([hit, hp1, gHp]));
 
   // the guest's bolts hurt the host (guest fires via the real input path)
   await scene(B.page, (s) => { const r = s.realm; r.player.x = s.realm.W * 0.7; r.player.y = s.realm.H / 2; r.keys = {}; r.mouse.seen = true; r.mouse.x = r.player.x - 100; r.mouse.y = r.player.y; r.mouse.down = true; });
   await scene(A.page, (s) => { const r = s.realm; r.player.x = r.W * 0.7 - 250; r.player.y = r.H / 2; r.player.iframes = 0; });
   await sleep(900);
+  let hpHost = await scene(A.page, (s) => Math.round(s.realm.player.hp));
+  for (let i = 0; i < 24 && hpHost >= 100; i++) { await sleep(250); hpHost = await scene(A.page, (s) => Math.round(s.realm.player.hp)); } // guest input travels at ~15 Hz: wait until the first bolt has landed
   await scene(B.page, (s) => { s.realm.mouse.down = false; });
-  const hpHost = await scene(A.page, (s) => Math.round(s.realm.player.hp));
+  await sleep(600);
+  hpHost = await scene(A.page, (s) => Math.round(s.realm.player.hp));
   check('duel: guest bolts hurt the host in steps of 8', hpHost < 100 && (100 - hpHost) % 8 === 0, String(hpHost));
 
   // KO: guest at 8 HP, one more bolt takes round 1 for the host
