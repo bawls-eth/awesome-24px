@@ -390,5 +390,9 @@
   "workbench.test.js": {
     "class": "live",
     "tier": "full"
+  },
+  "world-camera.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
