@@ -65,7 +65,9 @@
   stick('realm-stick-aim', (x, y, on) => arena.setAimStick(x, y, on));
 
   if (params.get('mode') === 'dungeon' && window.MMDungeonRun) {
-    dungeon = MMDungeonRun.create(arena, { seed: /^[A-Za-z0-9_-]{1,24}$/.test(params.get('seed') || '') ? params.get('seed') : String(Date.now() % 100000), home: HOME, homeLabel: HOME_LABEL, test: TEST });
+    const hasSeed = /^[A-Za-z0-9_-]{1,24}$/.test(params.get('seed') || '');
+    // layout version: explicit ?lv=2, or a fresh random seed (new run); a link with a seed and no lv keeps the original layouts
+    dungeon = MMDungeonRun.create(arena, { layout: (params.get('lv') === '2' || !hasSeed) ? 2 : 1, seed: hasSeed ? params.get('seed') : String(Date.now() % 100000), home: HOME, homeLabel: HOME_LABEL, test: TEST });
     document.body.classList.add('dungeon-mode');
   }
 

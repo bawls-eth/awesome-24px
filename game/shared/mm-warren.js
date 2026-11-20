@@ -107,7 +107,8 @@
       const r = filled.get(key(secret[0] + d[0], secret[1] + d[1]));
       if (r !== undefined) addDoor(sid, r, false, true);
     }
-    return { seed: String(seed), w: GW, h: GH, rooms, doors, keyRoomId: keyRoom, bossRoomId: boss, secretRoomId: sid };
+    const layout = opts && opts.layout === 2 ? 2 : 1; // layout version: 1 = original room selection, 2 = tagged pool
+    return { seed: String(seed), layout, w: GW, h: GH, rooms, doors, keyRoomId: keyRoom, bossRoomId: boss, secretRoomId: sid };
   }
 
   // Returns a list of violated invariants (empty = valid).
