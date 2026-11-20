@@ -1,6 +1,5 @@
 {
-  "name": "Arcane RPG B2 \u2014 Rogue, Warlock, Paladin",
-  "license": "original, owned by me",
+  "name": "ARCANE RPG B02 v2 \u2014 Rogue, Warlock, Paladin",
   "frame_size": 256,
   "assets": [
     {
@@ -19,46 +18,8 @@
         "x": 128,
         "y": 231
       },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
-    },
-    {
-      "id": "rogue_idle_up",
-      "category": "character",
-      "class": "rogue",
-      "action": "idle",
-      "dir": "up",
-      "path": "characters/rogue/rogue_idle_up.png",
-      "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 6,
-      "loop": true,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
-    },
-    {
-      "id": "rogue_idle_right",
-      "category": "character",
-      "class": "rogue",
-      "action": "idle",
-      "dir": "right",
-      "path": "characters/rogue/rogue_idle_right.png",
-      "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 6,
-      "loop": true,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
     },
     {
       "id": "rogue_walk_down",
@@ -76,46 +37,8 @@
         "x": 128,
         "y": 231
       },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
-    },
-    {
-      "id": "rogue_walk_up",
-      "category": "character",
-      "class": "rogue",
-      "action": "walk",
-      "dir": "up",
-      "path": "characters/rogue/rogue_walk_up.png",
-      "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 10,
-      "loop": true,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
-    },
-    {
-      "id": "rogue_walk_right",
-      "category": "character",
-      "class": "rogue",
-      "action": "walk",
-      "dir": "right",
-      "path": "characters/rogue/rogue_walk_right.png",
-      "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 10,
-      "loop": true,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
     },
     {
       "id": "rogue_attack_down",
@@ -133,115 +56,30 @@
         "x": 128,
         "y": 231
       },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions",
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas",
       "muzzle": [
         {
-          "x": 90,
-          "y": 172
+          "x": 77,
+          "y": 220
         },
         {
-          "x": 90,
-          "y": 172
+          "x": 72,
+          "y": 136
         },
         {
-          "x": 90,
-          "y": 172
+          "x": 50,
+          "y": 173
         },
         {
-          "x": 90,
-          "y": 172
+          "x": 68,
+          "y": 207
         },
         {
-          "x": 90,
-          "y": 172
+          "x": 72,
+          "y": 220
         }
-      ],
-      "muzzle_accuracy": "estimated_needs_engine_review"
-    },
-    {
-      "id": "rogue_attack_up",
-      "category": "character",
-      "class": "rogue",
-      "action": "attack",
-      "dir": "up",
-      "path": "characters/rogue/rogue_attack_up.png",
-      "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 12,
-      "loop": false,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions",
-      "muzzle": [
-        {
-          "x": 120,
-          "y": 178
-        },
-        {
-          "x": 120,
-          "y": 178
-        },
-        {
-          "x": 120,
-          "y": 178
-        },
-        {
-          "x": 120,
-          "y": 178
-        },
-        {
-          "x": 120,
-          "y": 178
-        }
-      ],
-      "muzzle_accuracy": "estimated_needs_engine_review"
-    },
-    {
-      "id": "rogue_attack_right",
-      "category": "character",
-      "class": "rogue",
-      "action": "attack",
-      "dir": "right",
-      "path": "characters/rogue/rogue_attack_right.png",
-      "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 12,
-      "loop": false,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions",
-      "muzzle": [
-        {
-          "x": 161,
-          "y": 178
-        },
-        {
-          "x": 161,
-          "y": 178
-        },
-        {
-          "x": 161,
-          "y": 178
-        },
-        {
-          "x": 161,
-          "y": 178
-        },
-        {
-          "x": 161,
-          "y": 178
-        }
-      ],
-      "muzzle_accuracy": "estimated_needs_engine_review"
+      ]
     },
     {
       "id": "rogue_cast_down",
@@ -259,115 +97,30 @@
         "x": 128,
         "y": 231
       },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions",
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas",
       "muzzle": [
         {
-          "x": 90,
-          "y": 172
+          "x": 74,
+          "y": 217
         },
         {
-          "x": 90,
-          "y": 172
+          "x": 76,
+          "y": 155
         },
         {
-          "x": 90,
-          "y": 172
+          "x": 76,
+          "y": 90
         },
         {
-          "x": 90,
-          "y": 172
+          "x": 65,
+          "y": 137
         },
         {
-          "x": 90,
-          "y": 172
+          "x": 74,
+          "y": 217
         }
-      ],
-      "muzzle_accuracy": "estimated_needs_engine_review"
-    },
-    {
-      "id": "rogue_cast_up",
-      "category": "character",
-      "class": "rogue",
-      "action": "cast",
-      "dir": "up",
-      "path": "characters/rogue/rogue_cast_up.png",
-      "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 10,
-      "loop": false,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions",
-      "muzzle": [
-        {
-          "x": 120,
-          "y": 178
-        },
-        {
-          "x": 120,
-          "y": 178
-        },
-        {
-          "x": 120,
-          "y": 178
-        },
-        {
-          "x": 120,
-          "y": 178
-        },
-        {
-          "x": 120,
-          "y": 178
-        }
-      ],
-      "muzzle_accuracy": "estimated_needs_engine_review"
-    },
-    {
-      "id": "rogue_cast_right",
-      "category": "character",
-      "class": "rogue",
-      "action": "cast",
-      "dir": "right",
-      "path": "characters/rogue/rogue_cast_right.png",
-      "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 10,
-      "loop": false,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions",
-      "muzzle": [
-        {
-          "x": 161,
-          "y": 178
-        },
-        {
-          "x": 161,
-          "y": 178
-        },
-        {
-          "x": 161,
-          "y": 178
-        },
-        {
-          "x": 161,
-          "y": 178
-        },
-        {
-          "x": 161,
-          "y": 178
-        }
-      ],
-      "muzzle_accuracy": "estimated_needs_engine_review"
+      ]
     },
     {
       "id": "rogue_roll_down",
@@ -385,46 +138,8 @@
         "x": 128,
         "y": 231
       },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
-    },
-    {
-      "id": "rogue_roll_up",
-      "category": "character",
-      "class": "rogue",
-      "action": "roll",
-      "dir": "up",
-      "path": "characters/rogue/rogue_roll_up.png",
-      "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 12,
-      "loop": true,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
-    },
-    {
-      "id": "rogue_roll_right",
-      "category": "character",
-      "class": "rogue",
-      "action": "roll",
-      "dir": "right",
-      "path": "characters/rogue/rogue_roll_right.png",
-      "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 12,
-      "loop": true,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
     },
     {
       "id": "rogue_hit_down",
@@ -442,46 +157,8 @@
         "x": 128,
         "y": 231
       },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
-    },
-    {
-      "id": "rogue_hit_up",
-      "category": "character",
-      "class": "rogue",
-      "action": "hit",
-      "dir": "up",
-      "path": "characters/rogue/rogue_hit_up.png",
-      "frames": 2,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 8,
-      "loop": false,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
-    },
-    {
-      "id": "rogue_hit_right",
-      "category": "character",
-      "class": "rogue",
-      "action": "hit",
-      "dir": "right",
-      "path": "characters/rogue/rogue_hit_right.png",
-      "frames": 2,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 8,
-      "loop": false,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
     },
     {
       "id": "rogue_death_down",
@@ -499,8 +176,166 @@
         "x": 128,
         "y": 231
       },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
+    },
+    {
+      "id": "rogue_idle_up",
+      "category": "character",
+      "class": "rogue",
+      "action": "idle",
+      "dir": "up",
+      "path": "characters/rogue/rogue_idle_up.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
+    },
+    {
+      "id": "rogue_walk_up",
+      "category": "character",
+      "class": "rogue",
+      "action": "walk",
+      "dir": "up",
+      "path": "characters/rogue/rogue_walk_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
+    },
+    {
+      "id": "rogue_attack_up",
+      "category": "character",
+      "class": "rogue",
+      "action": "attack",
+      "dir": "up",
+      "path": "characters/rogue/rogue_attack_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas",
+      "muzzle": [
+        {
+          "x": 72,
+          "y": 219
+        },
+        {
+          "x": 70,
+          "y": 145
+        },
+        {
+          "x": 49,
+          "y": 173
+        },
+        {
+          "x": 61,
+          "y": 207
+        },
+        {
+          "x": 72,
+          "y": 220
+        }
+      ]
+    },
+    {
+      "id": "rogue_cast_up",
+      "category": "character",
+      "class": "rogue",
+      "action": "cast",
+      "dir": "up",
+      "path": "characters/rogue/rogue_cast_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas",
+      "muzzle": [
+        {
+          "x": 70,
+          "y": 217
+        },
+        {
+          "x": 67,
+          "y": 151
+        },
+        {
+          "x": 74,
+          "y": 81
+        },
+        {
+          "x": 51,
+          "y": 140
+        },
+        {
+          "x": 74,
+          "y": 217
+        }
+      ]
+    },
+    {
+      "id": "rogue_roll_up",
+      "category": "character",
+      "class": "rogue",
+      "action": "roll",
+      "dir": "up",
+      "path": "characters/rogue/rogue_roll_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
+    },
+    {
+      "id": "rogue_hit_up",
+      "category": "character",
+      "class": "rogue",
+      "action": "hit",
+      "dir": "up",
+      "path": "characters/rogue/rogue_hit_up.png",
+      "frames": 2,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
     },
     {
       "id": "rogue_death_up",
@@ -518,8 +353,166 @@
         "x": 128,
         "y": 231
       },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
+    },
+    {
+      "id": "rogue_idle_right",
+      "category": "character",
+      "class": "rogue",
+      "action": "idle",
+      "dir": "right",
+      "path": "characters/rogue/rogue_idle_right.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
+    },
+    {
+      "id": "rogue_walk_right",
+      "category": "character",
+      "class": "rogue",
+      "action": "walk",
+      "dir": "right",
+      "path": "characters/rogue/rogue_walk_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
+    },
+    {
+      "id": "rogue_attack_right",
+      "category": "character",
+      "class": "rogue",
+      "action": "attack",
+      "dir": "right",
+      "path": "characters/rogue/rogue_attack_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas",
+      "muzzle": [
+        {
+          "x": 164,
+          "y": 157
+        },
+        {
+          "x": 184,
+          "y": 134
+        },
+        {
+          "x": 223,
+          "y": 153
+        },
+        {
+          "x": 203,
+          "y": 189
+        },
+        {
+          "x": 164,
+          "y": 157
+        }
+      ]
+    },
+    {
+      "id": "rogue_cast_right",
+      "category": "character",
+      "class": "rogue",
+      "action": "cast",
+      "dir": "right",
+      "path": "characters/rogue/rogue_cast_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas",
+      "muzzle": [
+        {
+          "x": 164,
+          "y": 151
+        },
+        {
+          "x": 188,
+          "y": 128
+        },
+        {
+          "x": 183,
+          "y": 93
+        },
+        {
+          "x": 195,
+          "y": 134
+        },
+        {
+          "x": 164,
+          "y": 153
+        }
+      ]
+    },
+    {
+      "id": "rogue_roll_right",
+      "category": "character",
+      "class": "rogue",
+      "action": "roll",
+      "dir": "right",
+      "path": "characters/rogue/rogue_roll_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
+    },
+    {
+      "id": "rogue_hit_right",
+      "category": "character",
+      "class": "rogue",
+      "action": "hit",
+      "dir": "right",
+      "path": "characters/rogue/rogue_hit_right.png",
+      "frames": 2,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
     },
     {
       "id": "rogue_death_right",
@@ -537,8 +530,8 @@
         "x": 128,
         "y": 231
       },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
     },
     {
       "id": "warlock_idle_down",
@@ -556,46 +549,8 @@
         "x": 128,
         "y": 231
       },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
-    },
-    {
-      "id": "warlock_idle_up",
-      "category": "character",
-      "class": "warlock",
-      "action": "idle",
-      "dir": "up",
-      "path": "characters/warlock/warlock_idle_up.png",
-      "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 6,
-      "loop": true,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
-    },
-    {
-      "id": "warlock_idle_right",
-      "category": "character",
-      "class": "warlock",
-      "action": "idle",
-      "dir": "right",
-      "path": "characters/warlock/warlock_idle_right.png",
-      "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 6,
-      "loop": true,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
     },
     {
       "id": "warlock_walk_down",
@@ -613,46 +568,8 @@
         "x": 128,
         "y": 231
       },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
-    },
-    {
-      "id": "warlock_walk_up",
-      "category": "character",
-      "class": "warlock",
-      "action": "walk",
-      "dir": "up",
-      "path": "characters/warlock/warlock_walk_up.png",
-      "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 10,
-      "loop": true,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
-    },
-    {
-      "id": "warlock_walk_right",
-      "category": "character",
-      "class": "warlock",
-      "action": "walk",
-      "dir": "right",
-      "path": "characters/warlock/warlock_walk_right.png",
-      "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 10,
-      "loop": true,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
     },
     {
       "id": "warlock_attack_down",
@@ -670,115 +587,30 @@
         "x": 128,
         "y": 231
       },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions",
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas",
       "muzzle": [
         {
-          "x": 174,
-          "y": 132
+          "x": 160,
+          "y": 152
+        },
+        {
+          "x": 172,
+          "y": 142
+        },
+        {
+          "x": 183,
+          "y": 136
         },
         {
           "x": 174,
-          "y": 132
+          "y": 146
         },
         {
-          "x": 174,
-          "y": 132
-        },
-        {
-          "x": 174,
-          "y": 132
-        },
-        {
-          "x": 174,
-          "y": 132
+          "x": 162,
+          "y": 152
         }
-      ],
-      "muzzle_accuracy": "estimated_needs_engine_review"
-    },
-    {
-      "id": "warlock_attack_up",
-      "category": "character",
-      "class": "warlock",
-      "action": "attack",
-      "dir": "up",
-      "path": "characters/warlock/warlock_attack_up.png",
-      "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 12,
-      "loop": false,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions",
-      "muzzle": [
-        {
-          "x": 147,
-          "y": 139
-        },
-        {
-          "x": 147,
-          "y": 139
-        },
-        {
-          "x": 147,
-          "y": 139
-        },
-        {
-          "x": 147,
-          "y": 139
-        },
-        {
-          "x": 147,
-          "y": 139
-        }
-      ],
-      "muzzle_accuracy": "estimated_needs_engine_review"
-    },
-    {
-      "id": "warlock_attack_right",
-      "category": "character",
-      "class": "warlock",
-      "action": "attack",
-      "dir": "right",
-      "path": "characters/warlock/warlock_attack_right.png",
-      "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 12,
-      "loop": false,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions",
-      "muzzle": [
-        {
-          "x": 166,
-          "y": 137
-        },
-        {
-          "x": 166,
-          "y": 137
-        },
-        {
-          "x": 166,
-          "y": 137
-        },
-        {
-          "x": 166,
-          "y": 137
-        },
-        {
-          "x": 166,
-          "y": 137
-        }
-      ],
-      "muzzle_accuracy": "estimated_needs_engine_review"
+      ]
     },
     {
       "id": "warlock_cast_down",
@@ -796,115 +628,30 @@
         "x": 128,
         "y": 231
       },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions",
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas",
       "muzzle": [
         {
-          "x": 174,
-          "y": 132
+          "x": 161,
+          "y": 152
         },
         {
-          "x": 174,
-          "y": 132
+          "x": 171,
+          "y": 136
         },
         {
-          "x": 174,
-          "y": 132
+          "x": 179,
+          "y": 120
         },
         {
-          "x": 174,
-          "y": 132
+          "x": 183,
+          "y": 112
         },
         {
-          "x": 174,
-          "y": 132
+          "x": 161,
+          "y": 152
         }
-      ],
-      "muzzle_accuracy": "estimated_needs_engine_review"
-    },
-    {
-      "id": "warlock_cast_up",
-      "category": "character",
-      "class": "warlock",
-      "action": "cast",
-      "dir": "up",
-      "path": "characters/warlock/warlock_cast_up.png",
-      "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 10,
-      "loop": false,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions",
-      "muzzle": [
-        {
-          "x": 147,
-          "y": 139
-        },
-        {
-          "x": 147,
-          "y": 139
-        },
-        {
-          "x": 147,
-          "y": 139
-        },
-        {
-          "x": 147,
-          "y": 139
-        },
-        {
-          "x": 147,
-          "y": 139
-        }
-      ],
-      "muzzle_accuracy": "estimated_needs_engine_review"
-    },
-    {
-      "id": "warlock_cast_right",
-      "category": "character",
-      "class": "warlock",
-      "action": "cast",
-      "dir": "right",
-      "path": "characters/warlock/warlock_cast_right.png",
-      "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 10,
-      "loop": false,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions",
-      "muzzle": [
-        {
-          "x": 166,
-          "y": 137
-        },
-        {
-          "x": 166,
-          "y": 137
-        },
-        {
-          "x": 166,
-          "y": 137
-        },
-        {
-          "x": 166,
-          "y": 137
-        },
-        {
-          "x": 166,
-          "y": 137
-        }
-      ],
-      "muzzle_accuracy": "estimated_needs_engine_review"
+      ]
     },
     {
       "id": "warlock_roll_down",
@@ -922,46 +669,8 @@
         "x": 128,
         "y": 231
       },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
-    },
-    {
-      "id": "warlock_roll_up",
-      "category": "character",
-      "class": "warlock",
-      "action": "roll",
-      "dir": "up",
-      "path": "characters/warlock/warlock_roll_up.png",
-      "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 12,
-      "loop": true,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
-    },
-    {
-      "id": "warlock_roll_right",
-      "category": "character",
-      "class": "warlock",
-      "action": "roll",
-      "dir": "right",
-      "path": "characters/warlock/warlock_roll_right.png",
-      "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 12,
-      "loop": true,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
     },
     {
       "id": "warlock_hit_down",
@@ -979,46 +688,8 @@
         "x": 128,
         "y": 231
       },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
-    },
-    {
-      "id": "warlock_hit_up",
-      "category": "character",
-      "class": "warlock",
-      "action": "hit",
-      "dir": "up",
-      "path": "characters/warlock/warlock_hit_up.png",
-      "frames": 2,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 8,
-      "loop": false,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
-    },
-    {
-      "id": "warlock_hit_right",
-      "category": "character",
-      "class": "warlock",
-      "action": "hit",
-      "dir": "right",
-      "path": "characters/warlock/warlock_hit_right.png",
-      "frames": 2,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 8,
-      "loop": false,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
     },
     {
       "id": "warlock_death_down",
@@ -1036,8 +707,166 @@
         "x": 128,
         "y": 231
       },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
+    },
+    {
+      "id": "warlock_idle_up",
+      "category": "character",
+      "class": "warlock",
+      "action": "idle",
+      "dir": "up",
+      "path": "characters/warlock/warlock_idle_up.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
+    },
+    {
+      "id": "warlock_walk_up",
+      "category": "character",
+      "class": "warlock",
+      "action": "walk",
+      "dir": "up",
+      "path": "characters/warlock/warlock_walk_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
+    },
+    {
+      "id": "warlock_attack_up",
+      "category": "character",
+      "class": "warlock",
+      "action": "attack",
+      "dir": "up",
+      "path": "characters/warlock/warlock_attack_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas",
+      "muzzle": [
+        {
+          "x": 165,
+          "y": 150
+        },
+        {
+          "x": 179,
+          "y": 139
+        },
+        {
+          "x": 190,
+          "y": 133
+        },
+        {
+          "x": 172,
+          "y": 140
+        },
+        {
+          "x": 160,
+          "y": 152
+        }
+      ]
+    },
+    {
+      "id": "warlock_cast_up",
+      "category": "character",
+      "class": "warlock",
+      "action": "cast",
+      "dir": "up",
+      "path": "characters/warlock/warlock_cast_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas",
+      "muzzle": [
+        {
+          "x": 165,
+          "y": 149
+        },
+        {
+          "x": 170,
+          "y": 133
+        },
+        {
+          "x": 174,
+          "y": 117
+        },
+        {
+          "x": 178,
+          "y": 117
+        },
+        {
+          "x": 160,
+          "y": 151
+        }
+      ]
+    },
+    {
+      "id": "warlock_roll_up",
+      "category": "character",
+      "class": "warlock",
+      "action": "roll",
+      "dir": "up",
+      "path": "characters/warlock/warlock_roll_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
+    },
+    {
+      "id": "warlock_hit_up",
+      "category": "character",
+      "class": "warlock",
+      "action": "hit",
+      "dir": "up",
+      "path": "characters/warlock/warlock_hit_up.png",
+      "frames": 2,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
     },
     {
       "id": "warlock_death_up",
@@ -1055,8 +884,166 @@
         "x": 128,
         "y": 231
       },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
+    },
+    {
+      "id": "warlock_idle_right",
+      "category": "character",
+      "class": "warlock",
+      "action": "idle",
+      "dir": "right",
+      "path": "characters/warlock/warlock_idle_right.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
+    },
+    {
+      "id": "warlock_walk_right",
+      "category": "character",
+      "class": "warlock",
+      "action": "walk",
+      "dir": "right",
+      "path": "characters/warlock/warlock_walk_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
+    },
+    {
+      "id": "warlock_attack_right",
+      "category": "character",
+      "class": "warlock",
+      "action": "attack",
+      "dir": "right",
+      "path": "characters/warlock/warlock_attack_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas",
+      "muzzle": [
+        {
+          "x": 161,
+          "y": 155
+        },
+        {
+          "x": 157,
+          "y": 186
+        },
+        {
+          "x": 185,
+          "y": 140
+        },
+        {
+          "x": 174,
+          "y": 143
+        },
+        {
+          "x": 154,
+          "y": 155
+        }
+      ]
+    },
+    {
+      "id": "warlock_cast_right",
+      "category": "character",
+      "class": "warlock",
+      "action": "cast",
+      "dir": "right",
+      "path": "characters/warlock/warlock_cast_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas",
+      "muzzle": [
+        {
+          "x": 161,
+          "y": 154
+        },
+        {
+          "x": 145,
+          "y": 146
+        },
+        {
+          "x": 171,
+          "y": 118
+        },
+        {
+          "x": 182,
+          "y": 117
+        },
+        {
+          "x": 154,
+          "y": 155
+        }
+      ]
+    },
+    {
+      "id": "warlock_roll_right",
+      "category": "character",
+      "class": "warlock",
+      "action": "roll",
+      "dir": "right",
+      "path": "characters/warlock/warlock_roll_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
+    },
+    {
+      "id": "warlock_hit_right",
+      "category": "character",
+      "class": "warlock",
+      "action": "hit",
+      "dir": "right",
+      "path": "characters/warlock/warlock_hit_right.png",
+      "frames": 2,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
     },
     {
       "id": "warlock_death_right",
@@ -1074,8 +1061,8 @@
         "x": 128,
         "y": 231
       },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
     },
     {
       "id": "paladin_idle_down",
@@ -1093,46 +1080,8 @@
         "x": 128,
         "y": 231
       },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
-    },
-    {
-      "id": "paladin_idle_up",
-      "category": "character",
-      "class": "paladin",
-      "action": "idle",
-      "dir": "up",
-      "path": "characters/paladin/paladin_idle_up.png",
-      "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 6,
-      "loop": true,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
-    },
-    {
-      "id": "paladin_idle_right",
-      "category": "character",
-      "class": "paladin",
-      "action": "idle",
-      "dir": "right",
-      "path": "characters/paladin/paladin_idle_right.png",
-      "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 6,
-      "loop": true,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
     },
     {
       "id": "paladin_walk_down",
@@ -1150,46 +1099,8 @@
         "x": 128,
         "y": 231
       },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
-    },
-    {
-      "id": "paladin_walk_up",
-      "category": "character",
-      "class": "paladin",
-      "action": "walk",
-      "dir": "up",
-      "path": "characters/paladin/paladin_walk_up.png",
-      "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 10,
-      "loop": true,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
-    },
-    {
-      "id": "paladin_walk_right",
-      "category": "character",
-      "class": "paladin",
-      "action": "walk",
-      "dir": "right",
-      "path": "characters/paladin/paladin_walk_right.png",
-      "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 10,
-      "loop": true,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
     },
     {
       "id": "paladin_attack_down",
@@ -1207,115 +1118,30 @@
         "x": 128,
         "y": 231
       },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions",
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas",
       "muzzle": [
         {
-          "x": 89,
-          "y": 126
+          "x": 71,
+          "y": 205
         },
         {
-          "x": 89,
-          "y": 126
+          "x": 62,
+          "y": 127
         },
         {
-          "x": 89,
-          "y": 126
+          "x": 88,
+          "y": 72
         },
         {
-          "x": 89,
-          "y": 126
+          "x": 78,
+          "y": 204
         },
         {
-          "x": 89,
-          "y": 126
+          "x": 77,
+          "y": 204
         }
-      ],
-      "muzzle_accuracy": "estimated_needs_engine_review"
-    },
-    {
-      "id": "paladin_attack_up",
-      "category": "character",
-      "class": "paladin",
-      "action": "attack",
-      "dir": "up",
-      "path": "characters/paladin/paladin_attack_up.png",
-      "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 12,
-      "loop": false,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions",
-      "muzzle": [
-        {
-          "x": 118,
-          "y": 124
-        },
-        {
-          "x": 118,
-          "y": 124
-        },
-        {
-          "x": 118,
-          "y": 124
-        },
-        {
-          "x": 118,
-          "y": 124
-        },
-        {
-          "x": 118,
-          "y": 124
-        }
-      ],
-      "muzzle_accuracy": "estimated_needs_engine_review"
-    },
-    {
-      "id": "paladin_attack_right",
-      "category": "character",
-      "class": "paladin",
-      "action": "attack",
-      "dir": "right",
-      "path": "characters/paladin/paladin_attack_right.png",
-      "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 12,
-      "loop": false,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions",
-      "muzzle": [
-        {
-          "x": 168,
-          "y": 138
-        },
-        {
-          "x": 168,
-          "y": 138
-        },
-        {
-          "x": 168,
-          "y": 138
-        },
-        {
-          "x": 168,
-          "y": 138
-        },
-        {
-          "x": 168,
-          "y": 138
-        }
-      ],
-      "muzzle_accuracy": "estimated_needs_engine_review"
+      ]
     },
     {
       "id": "paladin_cast_down",
@@ -1333,115 +1159,30 @@
         "x": 128,
         "y": 231
       },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions",
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas",
       "muzzle": [
         {
-          "x": 89,
-          "y": 126
+          "x": 76,
+          "y": 205
         },
         {
-          "x": 89,
-          "y": 126
+          "x": 68,
+          "y": 131
         },
         {
-          "x": 89,
-          "y": 126
+          "x": 79,
+          "y": 63
         },
         {
-          "x": 89,
-          "y": 126
+          "x": 81,
+          "y": 109
         },
         {
-          "x": 89,
-          "y": 126
+          "x": 71,
+          "y": 204
         }
-      ],
-      "muzzle_accuracy": "estimated_needs_engine_review"
-    },
-    {
-      "id": "paladin_cast_up",
-      "category": "character",
-      "class": "paladin",
-      "action": "cast",
-      "dir": "up",
-      "path": "characters/paladin/paladin_cast_up.png",
-      "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 10,
-      "loop": false,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions",
-      "muzzle": [
-        {
-          "x": 118,
-          "y": 124
-        },
-        {
-          "x": 118,
-          "y": 124
-        },
-        {
-          "x": 118,
-          "y": 124
-        },
-        {
-          "x": 118,
-          "y": 124
-        },
-        {
-          "x": 118,
-          "y": 124
-        }
-      ],
-      "muzzle_accuracy": "estimated_needs_engine_review"
-    },
-    {
-      "id": "paladin_cast_right",
-      "category": "character",
-      "class": "paladin",
-      "action": "cast",
-      "dir": "right",
-      "path": "characters/paladin/paladin_cast_right.png",
-      "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 10,
-      "loop": false,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions",
-      "muzzle": [
-        {
-          "x": 168,
-          "y": 138
-        },
-        {
-          "x": 168,
-          "y": 138
-        },
-        {
-          "x": 168,
-          "y": 138
-        },
-        {
-          "x": 168,
-          "y": 138
-        },
-        {
-          "x": 168,
-          "y": 138
-        }
-      ],
-      "muzzle_accuracy": "estimated_needs_engine_review"
+      ]
     },
     {
       "id": "paladin_roll_down",
@@ -1459,46 +1200,8 @@
         "x": 128,
         "y": 231
       },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
-    },
-    {
-      "id": "paladin_roll_up",
-      "category": "character",
-      "class": "paladin",
-      "action": "roll",
-      "dir": "up",
-      "path": "characters/paladin/paladin_roll_up.png",
-      "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 12,
-      "loop": true,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
-    },
-    {
-      "id": "paladin_roll_right",
-      "category": "character",
-      "class": "paladin",
-      "action": "roll",
-      "dir": "right",
-      "path": "characters/paladin/paladin_roll_right.png",
-      "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 12,
-      "loop": true,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
     },
     {
       "id": "paladin_hit_down",
@@ -1516,46 +1219,8 @@
         "x": 128,
         "y": 231
       },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
-    },
-    {
-      "id": "paladin_hit_up",
-      "category": "character",
-      "class": "paladin",
-      "action": "hit",
-      "dir": "up",
-      "path": "characters/paladin/paladin_hit_up.png",
-      "frames": 2,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 8,
-      "loop": false,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
-    },
-    {
-      "id": "paladin_hit_right",
-      "category": "character",
-      "class": "paladin",
-      "action": "hit",
-      "dir": "right",
-      "path": "characters/paladin/paladin_hit_right.png",
-      "frames": 2,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 8,
-      "loop": false,
-      "anchor": {
-        "x": 128,
-        "y": 231
-      },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
     },
     {
       "id": "paladin_death_down",
@@ -1573,8 +1238,166 @@
         "x": 128,
         "y": 231
       },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
+    },
+    {
+      "id": "paladin_idle_up",
+      "category": "character",
+      "class": "paladin",
+      "action": "idle",
+      "dir": "up",
+      "path": "characters/paladin/paladin_idle_up.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
+    },
+    {
+      "id": "paladin_walk_up",
+      "category": "character",
+      "class": "paladin",
+      "action": "walk",
+      "dir": "up",
+      "path": "characters/paladin/paladin_walk_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
+    },
+    {
+      "id": "paladin_attack_up",
+      "category": "character",
+      "class": "paladin",
+      "action": "attack",
+      "dir": "up",
+      "path": "characters/paladin/paladin_attack_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas",
+      "muzzle": [
+        {
+          "x": 177,
+          "y": 195
+        },
+        {
+          "x": 176,
+          "y": 108
+        },
+        {
+          "x": 170,
+          "y": 75
+        },
+        {
+          "x": 193,
+          "y": 201
+        },
+        {
+          "x": 168,
+          "y": 196
+        }
+      ]
+    },
+    {
+      "id": "paladin_cast_up",
+      "category": "character",
+      "class": "paladin",
+      "action": "cast",
+      "dir": "up",
+      "path": "characters/paladin/paladin_cast_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas",
+      "muzzle": [
+        {
+          "x": 171,
+          "y": 196
+        },
+        {
+          "x": 178,
+          "y": 109
+        },
+        {
+          "x": 167,
+          "y": 77
+        },
+        {
+          "x": 177,
+          "y": 96
+        },
+        {
+          "x": 168,
+          "y": 199
+        }
+      ]
+    },
+    {
+      "id": "paladin_roll_up",
+      "category": "character",
+      "class": "paladin",
+      "action": "roll",
+      "dir": "up",
+      "path": "characters/paladin/paladin_roll_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
+    },
+    {
+      "id": "paladin_hit_up",
+      "category": "character",
+      "class": "paladin",
+      "action": "hit",
+      "dir": "up",
+      "path": "characters/paladin/paladin_hit_up.png",
+      "frames": 2,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
     },
     {
       "id": "paladin_death_up",
@@ -1592,8 +1415,166 @@
         "x": 128,
         "y": 231
       },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
+    },
+    {
+      "id": "paladin_idle_right",
+      "category": "character",
+      "class": "paladin",
+      "action": "idle",
+      "dir": "right",
+      "path": "characters/paladin/paladin_idle_right.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
+    },
+    {
+      "id": "paladin_walk_right",
+      "category": "character",
+      "class": "paladin",
+      "action": "walk",
+      "dir": "right",
+      "path": "characters/paladin/paladin_walk_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
+    },
+    {
+      "id": "paladin_attack_right",
+      "category": "character",
+      "class": "paladin",
+      "action": "attack",
+      "dir": "right",
+      "path": "characters/paladin/paladin_attack_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas",
+      "muzzle": [
+        {
+          "x": 145,
+          "y": 198
+        },
+        {
+          "x": 72,
+          "y": 109
+        },
+        {
+          "x": 93,
+          "y": 74
+        },
+        {
+          "x": 175,
+          "y": 208
+        },
+        {
+          "x": 142,
+          "y": 199
+        }
+      ]
+    },
+    {
+      "id": "paladin_cast_right",
+      "category": "character",
+      "class": "paladin",
+      "action": "cast",
+      "dir": "right",
+      "path": "characters/paladin/paladin_cast_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas",
+      "muzzle": [
+        {
+          "x": 142,
+          "y": 199
+        },
+        {
+          "x": 75,
+          "y": 121
+        },
+        {
+          "x": 96,
+          "y": 68
+        },
+        {
+          "x": 189,
+          "y": 111
+        },
+        {
+          "x": 142,
+          "y": 199
+        }
+      ]
+    },
+    {
+      "id": "paladin_roll_right",
+      "category": "character",
+      "class": "paladin",
+      "action": "roll",
+      "dir": "right",
+      "path": "characters/paladin/paladin_roll_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
+    },
+    {
+      "id": "paladin_hit_right",
+      "category": "character",
+      "class": "paladin",
+      "action": "hit",
+      "dir": "right",
+      "path": "characters/paladin/paladin_hit_right.png",
+      "frames": 2,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
     },
     {
       "id": "paladin_death_right",
@@ -1611,8 +1592,8 @@
         "x": 128,
         "y": 231
       },
-      "source": "image_generated_pose_atlas",
-      "scale_policy": "one_fixed_factor_per_class_all_directions"
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view within source atlas"
     }
   ]
 }

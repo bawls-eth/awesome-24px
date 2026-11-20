@@ -1,0 +1,434 @@
+{
+  "rogue_idle_down": [
+    161,
+    164,
+    165,
+    160
+  ],
+  "rogue_walk_down": [
+    159,
+    166,
+    162,
+    157,
+    168,
+    164
+  ],
+  "rogue_attack_down": [
+    181,
+    181,
+    168,
+    171,
+    181
+  ],
+  "rogue_cast_down": [
+    179,
+    179,
+    191,
+    178,
+    179
+  ],
+  "rogue_roll_down": [
+    147,
+    117,
+    111,
+    89,
+    114,
+    148
+  ],
+  "rogue_hit_down": [
+    144,
+    144
+  ],
+  "rogue_death_down": [
+    144,
+    127,
+    110,
+    78,
+    78,
+    65
+  ],
+  "rogue_idle_up": [
+    156,
+    163,
+    165,
+    159
+  ],
+  "rogue_walk_up": [
+    156,
+    159,
+    160,
+    154,
+    163,
+    160
+  ],
+  "rogue_attack_up": [
+    176,
+    177,
+    169,
+    165,
+    176
+  ],
+  "rogue_cast_up": [
+    177,
+    179,
+    196,
+    177,
+    177
+  ],
+  "rogue_roll_up": [
+    144,
+    116,
+    110,
+    84,
+    114,
+    144
+  ],
+  "rogue_hit_up": [
+    144,
+    139
+  ],
+  "rogue_death_up": [
+    147,
+    130,
+    113,
+    88,
+    78,
+    66
+  ],
+  "rogue_idle_right": [
+    157,
+    162,
+    163,
+    157
+  ],
+  "rogue_walk_right": [
+    157,
+    160,
+    158,
+    155,
+    161,
+    159
+  ],
+  "rogue_attack_right": [
+    178,
+    180,
+    168,
+    170,
+    178
+  ],
+  "rogue_cast_right": [
+    184,
+    183,
+    191,
+    176,
+    184
+  ],
+  "rogue_roll_right": [
+    143,
+    115,
+    103,
+    80,
+    116,
+    148
+  ],
+  "rogue_hit_right": [
+    141,
+    140
+  ],
+  "rogue_death_right": [
+    143,
+    123,
+    108,
+    83,
+    74,
+    65
+  ],
+  "warlock_idle_down": [
+    178,
+    180,
+    182,
+    177
+  ],
+  "warlock_walk_down": [
+    182,
+    185,
+    185,
+    183,
+    186,
+    184
+  ],
+  "warlock_attack_down": [
+    190,
+    187,
+    188,
+    186,
+    189
+  ],
+  "warlock_cast_down": [
+    191,
+    190,
+    190,
+    187,
+    189
+  ],
+  "warlock_roll_down": [
+    157,
+    132,
+    113,
+    111,
+    124,
+    158
+  ],
+  "warlock_hit_down": [
+    168,
+    157
+  ],
+  "warlock_death_down": [
+    156,
+    132,
+    116,
+    91,
+    84,
+    63
+  ],
+  "warlock_idle_up": [
+    171,
+    174,
+    175,
+    171
+  ],
+  "warlock_walk_up": [
+    173,
+    178,
+    173,
+    174,
+    176,
+    173
+  ],
+  "warlock_attack_up": [
+    185,
+    186,
+    184,
+    183,
+    181
+  ],
+  "warlock_cast_up": [
+    184,
+    183,
+    183,
+    183,
+    180
+  ],
+  "warlock_roll_up": [
+    160,
+    134,
+    115,
+    108,
+    123,
+    161
+  ],
+  "warlock_hit_up": [
+    167,
+    159
+  ],
+  "warlock_death_up": [
+    157,
+    134,
+    108,
+    87,
+    77,
+    54
+  ],
+  "warlock_idle_right": [
+    173,
+    173,
+    173,
+    173
+  ],
+  "warlock_walk_right": [
+    176,
+    177,
+    179,
+    178,
+    177,
+    180
+  ],
+  "warlock_attack_right": [
+    191,
+    135,
+    188,
+    188,
+    190
+  ],
+  "warlock_cast_right": [
+    192,
+    163,
+    191,
+    191,
+    191
+  ],
+  "warlock_roll_right": [
+    157,
+    135,
+    120,
+    111,
+    129,
+    157
+  ],
+  "warlock_hit_right": [
+    163,
+    163
+  ],
+  "warlock_death_right": [
+    166,
+    141,
+    119,
+    92,
+    81,
+    56
+  ],
+  "paladin_idle_down": [
+    155,
+    155,
+    161,
+    155
+  ],
+  "paladin_walk_down": [
+    156,
+    160,
+    159,
+    157,
+    157,
+    160
+  ],
+  "paladin_attack_down": [
+    167,
+    167,
+    202,
+    156,
+    168
+  ],
+  "paladin_cast_down": [
+    166,
+    168,
+    210,
+    168,
+    166
+  ],
+  "paladin_roll_down": [
+    146,
+    124,
+    95,
+    112,
+    119,
+    146
+  ],
+  "paladin_hit_down": [
+    142,
+    140
+  ],
+  "paladin_death_down": [
+    137,
+    122,
+    104,
+    84,
+    78,
+    63
+  ],
+  "paladin_idle_up": [
+    164,
+    166,
+    169,
+    164
+  ],
+  "paladin_walk_up": [
+    164,
+    169,
+    169,
+    165,
+    167,
+    166
+  ],
+  "paladin_attack_up": [
+    173,
+    173,
+    212,
+    164,
+    173
+  ],
+  "paladin_cast_up": [
+    172,
+    171,
+    207,
+    183,
+    173
+  ],
+  "paladin_roll_up": [
+    147,
+    122,
+    98,
+    112,
+    111,
+    148
+  ],
+  "paladin_hit_up": [
+    135,
+    139
+  ],
+  "paladin_death_up": [
+    139,
+    123,
+    105,
+    85,
+    72,
+    62
+  ],
+  "paladin_idle_right": [
+    156,
+    157,
+    160,
+    153
+  ],
+  "paladin_walk_right": [
+    163,
+    163,
+    169,
+    161,
+    161,
+    163
+  ],
+  "paladin_attack_right": [
+    169,
+    169,
+    208,
+    160,
+    169
+  ],
+  "paladin_cast_right": [
+    173,
+    169,
+    212,
+    168,
+    173
+  ],
+  "paladin_roll_right": [
+    146,
+    125,
+    101,
+    110,
+    114,
+    145
+  ],
+  "paladin_hit_right": [
+    136,
+    141
+  ],
+  "paladin_death_right": [
+    135,
+    116,
+    93,
+    78,
+    66,
+    57
+  ]
+}
