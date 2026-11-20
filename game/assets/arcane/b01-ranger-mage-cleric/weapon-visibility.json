@@ -1,0 +1,701 @@
+{
+ "batch": "b01-ranger-mage-cleric",
+ "heuristic": "see art-cleanup.py docstring: outside idle silhouette (dilated 1 logical px) and accent coloured (luma>110 or saturation>80); visible if outside>=10 and accent>=5 cells",
+ "frames_total": 90,
+ "frames_without_visible_weapon": 79,
+ "missing": {
+  "cleric_attack_down": [
+   1,
+   3,
+   4
+  ],
+  "cleric_attack_right": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "cleric_attack_up": [
+   0,
+   2,
+   3,
+   4
+  ],
+  "cleric_cast_down": [
+   0,
+   2,
+   4
+  ],
+  "cleric_cast_right": [
+   0,
+   1,
+   2,
+   3,
+   4
+  ],
+  "cleric_cast_up": [
+   0,
+   2,
+   3,
+   4
+  ],
+  "mage_attack_down": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "mage_attack_right": [
+   0,
+   1,
+   2,
+   3,
+   4
+  ],
+  "mage_attack_up": [
+   0,
+   1,
+   2,
+   3,
+   4
+  ],
+  "mage_cast_down": [
+   0,
+   1,
+   2,
+   4
+  ],
+  "mage_cast_right": [
+   0,
+   1,
+   2,
+   3,
+   4
+  ],
+  "mage_cast_up": [
+   0,
+   2,
+   4
+  ],
+  "ranger_attack_down": [
+   0,
+   1,
+   2,
+   3,
+   4
+  ],
+  "ranger_attack_right": [
+   0,
+   1,
+   2,
+   3,
+   4
+  ],
+  "ranger_attack_up": [
+   0,
+   1,
+   2,
+   3,
+   4
+  ],
+  "ranger_cast_down": [
+   0,
+   1,
+   2,
+   3,
+   4
+  ],
+  "ranger_cast_right": [
+   0,
+   1,
+   2,
+   3,
+   4
+  ],
+  "ranger_cast_up": [
+   0,
+   1,
+   2,
+   3,
+   4
+  ]
+ },
+ "strips": {
+  "cleric_attack_down": [
+   {
+    "frame": 0,
+    "outside_cells": 52,
+    "accent_cells": 14,
+    "weapon_visible": true
+   },
+   {
+    "frame": 1,
+    "outside_cells": 9,
+    "accent_cells": 1,
+    "weapon_visible": false
+   },
+   {
+    "frame": 2,
+    "outside_cells": 44,
+    "accent_cells": 9,
+    "weapon_visible": true
+   },
+   {
+    "frame": 3,
+    "outside_cells": 9,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 4,
+    "outside_cells": 33,
+    "accent_cells": 3,
+    "weapon_visible": false
+   }
+  ],
+  "cleric_attack_right": [
+   {
+    "frame": 0,
+    "outside_cells": 8,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 1,
+    "outside_cells": 7,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 2,
+    "outside_cells": 4,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 3,
+    "outside_cells": 1,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 4,
+    "outside_cells": 47,
+    "accent_cells": 8,
+    "weapon_visible": true
+   }
+  ],
+  "cleric_attack_up": [
+   {
+    "frame": 0,
+    "outside_cells": 0,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 1,
+    "outside_cells": 48,
+    "accent_cells": 13,
+    "weapon_visible": true
+   },
+   {
+    "frame": 2,
+    "outside_cells": 0,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 3,
+    "outside_cells": 0,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 4,
+    "outside_cells": 0,
+    "accent_cells": 0,
+    "weapon_visible": false
+   }
+  ],
+  "cleric_cast_down": [
+   {
+    "frame": 0,
+    "outside_cells": 24,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 1,
+    "outside_cells": 59,
+    "accent_cells": 19,
+    "weapon_visible": true
+   },
+   {
+    "frame": 2,
+    "outside_cells": 30,
+    "accent_cells": 2,
+    "weapon_visible": false
+   },
+   {
+    "frame": 3,
+    "outside_cells": 56,
+    "accent_cells": 19,
+    "weapon_visible": true
+   },
+   {
+    "frame": 4,
+    "outside_cells": 2,
+    "accent_cells": 0,
+    "weapon_visible": false
+   }
+  ],
+  "cleric_cast_right": [
+   {
+    "frame": 0,
+    "outside_cells": 0,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 1,
+    "outside_cells": 0,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 2,
+    "outside_cells": 4,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 3,
+    "outside_cells": 3,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 4,
+    "outside_cells": 9,
+    "accent_cells": 0,
+    "weapon_visible": false
+   }
+  ],
+  "cleric_cast_up": [
+   {
+    "frame": 0,
+    "outside_cells": 4,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 1,
+    "outside_cells": 60,
+    "accent_cells": 11,
+    "weapon_visible": true
+   },
+   {
+    "frame": 2,
+    "outside_cells": 17,
+    "accent_cells": 2,
+    "weapon_visible": false
+   },
+   {
+    "frame": 3,
+    "outside_cells": 38,
+    "accent_cells": 3,
+    "weapon_visible": false
+   },
+   {
+    "frame": 4,
+    "outside_cells": 0,
+    "accent_cells": 0,
+    "weapon_visible": false
+   }
+  ],
+  "mage_attack_down": [
+   {
+    "frame": 0,
+    "outside_cells": 9,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 1,
+    "outside_cells": 1,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 2,
+    "outside_cells": 1,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 3,
+    "outside_cells": 3,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 4,
+    "outside_cells": 52,
+    "accent_cells": 21,
+    "weapon_visible": true
+   }
+  ],
+  "mage_attack_right": [
+   {
+    "frame": 0,
+    "outside_cells": 10,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 1,
+    "outside_cells": 6,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 2,
+    "outside_cells": 5,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 3,
+    "outside_cells": 0,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 4,
+    "outside_cells": 55,
+    "accent_cells": 3,
+    "weapon_visible": false
+   }
+  ],
+  "mage_attack_up": [
+   {
+    "frame": 0,
+    "outside_cells": 0,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 1,
+    "outside_cells": 11,
+    "accent_cells": 1,
+    "weapon_visible": false
+   },
+   {
+    "frame": 2,
+    "outside_cells": 6,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 3,
+    "outside_cells": 0,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 4,
+    "outside_cells": 0,
+    "accent_cells": 0,
+    "weapon_visible": false
+   }
+  ],
+  "mage_cast_down": [
+   {
+    "frame": 0,
+    "outside_cells": 0,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 1,
+    "outside_cells": 0,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 2,
+    "outside_cells": 0,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 3,
+    "outside_cells": 53,
+    "accent_cells": 20,
+    "weapon_visible": true
+   },
+   {
+    "frame": 4,
+    "outside_cells": 0,
+    "accent_cells": 0,
+    "weapon_visible": false
+   }
+  ],
+  "mage_cast_right": [
+   {
+    "frame": 0,
+    "outside_cells": 0,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 1,
+    "outside_cells": 0,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 2,
+    "outside_cells": 0,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 3,
+    "outside_cells": 0,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 4,
+    "outside_cells": 7,
+    "accent_cells": 0,
+    "weapon_visible": false
+   }
+  ],
+  "mage_cast_up": [
+   {
+    "frame": 0,
+    "outside_cells": 0,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 1,
+    "outside_cells": 62,
+    "accent_cells": 27,
+    "weapon_visible": true
+   },
+   {
+    "frame": 2,
+    "outside_cells": 0,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 3,
+    "outside_cells": 58,
+    "accent_cells": 25,
+    "weapon_visible": true
+   },
+   {
+    "frame": 4,
+    "outside_cells": 0,
+    "accent_cells": 0,
+    "weapon_visible": false
+   }
+  ],
+  "ranger_attack_down": [
+   {
+    "frame": 0,
+    "outside_cells": 3,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 1,
+    "outside_cells": 5,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 2,
+    "outside_cells": 8,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 3,
+    "outside_cells": 1,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 4,
+    "outside_cells": 6,
+    "accent_cells": 0,
+    "weapon_visible": false
+   }
+  ],
+  "ranger_attack_right": [
+   {
+    "frame": 0,
+    "outside_cells": 4,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 1,
+    "outside_cells": 0,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 2,
+    "outside_cells": 0,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 3,
+    "outside_cells": 0,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 4,
+    "outside_cells": 11,
+    "accent_cells": 0,
+    "weapon_visible": false
+   }
+  ],
+  "ranger_attack_up": [
+   {
+    "frame": 0,
+    "outside_cells": 1,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 1,
+    "outside_cells": 11,
+    "accent_cells": 2,
+    "weapon_visible": false
+   },
+   {
+    "frame": 2,
+    "outside_cells": 22,
+    "accent_cells": 2,
+    "weapon_visible": false
+   },
+   {
+    "frame": 3,
+    "outside_cells": 13,
+    "accent_cells": 1,
+    "weapon_visible": false
+   },
+   {
+    "frame": 4,
+    "outside_cells": 12,
+    "accent_cells": 0,
+    "weapon_visible": false
+   }
+  ],
+  "ranger_cast_down": [
+   {
+    "frame": 0,
+    "outside_cells": 1,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 1,
+    "outside_cells": 4,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 2,
+    "outside_cells": 1,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 3,
+    "outside_cells": 3,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 4,
+    "outside_cells": 0,
+    "accent_cells": 0,
+    "weapon_visible": false
+   }
+  ],
+  "ranger_cast_right": [
+   {
+    "frame": 0,
+    "outside_cells": 5,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 1,
+    "outside_cells": 13,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 2,
+    "outside_cells": 6,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 3,
+    "outside_cells": 5,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 4,
+    "outside_cells": 38,
+    "accent_cells": 0,
+    "weapon_visible": false
+   }
+  ],
+  "ranger_cast_up": [
+   {
+    "frame": 0,
+    "outside_cells": 3,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 1,
+    "outside_cells": 23,
+    "accent_cells": 2,
+    "weapon_visible": false
+   },
+   {
+    "frame": 2,
+    "outside_cells": 13,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 3,
+    "outside_cells": 10,
+    "accent_cells": 0,
+    "weapon_visible": false
+   },
+   {
+    "frame": 4,
+    "outside_cells": 52,
+    "accent_cells": 2,
+    "weapon_visible": false
+   }
+  ]
+ }
+}

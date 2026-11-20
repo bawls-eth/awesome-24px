@@ -22,5 +22,57 @@
   {
     "id": "b02_style_continuity",
     "what_is_wrong": "B2 source atlas has a different native detail level from B0 and some frames have near-identical walk/idle silhouette. Art refinement is recommended if B0 fidelity is mandatory."
+  },
+  {
+    "id": "b02_paladin_attack_down_weapon_not_visible",
+    "what_is_wrong": "Frames [1] of paladin_attack_down show no weapon/accent region beyond the idle body silhouette (heuristic in game/tools/art-cleanup.py, see weapon-visibility.json); the weapon may be unreadable there."
+  },
+  {
+    "id": "b02_paladin_attack_right_weapon_not_visible",
+    "what_is_wrong": "Frames [1, 3] of paladin_attack_right show no weapon/accent region beyond the idle body silhouette (heuristic in game/tools/art-cleanup.py, see weapon-visibility.json); the weapon may be unreadable there."
+  },
+  {
+    "id": "b02_paladin_attack_up_weapon_not_visible",
+    "what_is_wrong": "Frames [1, 2, 3, 4] of paladin_attack_up show no weapon/accent region beyond the idle body silhouette (heuristic in game/tools/art-cleanup.py, see weapon-visibility.json); the weapon may be unreadable there."
+  },
+  {
+    "id": "b02_paladin_cast_down_weapon_not_visible",
+    "what_is_wrong": "Frames [2, 3, 4] of paladin_cast_down show no weapon/accent region beyond the idle body silhouette (heuristic in game/tools/art-cleanup.py, see weapon-visibility.json); the weapon may be unreadable there."
+  },
+  {
+    "id": "b02_paladin_cast_up_weapon_not_visible",
+    "what_is_wrong": "Frames [2] of paladin_cast_up show no weapon/accent region beyond the idle body silhouette (heuristic in game/tools/art-cleanup.py, see weapon-visibility.json); the weapon may be unreadable there."
+  },
+  {
+    "id": "b02_rogue_attack_down_weapon_not_visible",
+    "what_is_wrong": "Frames [1, 2, 3, 4] of rogue_attack_down show no weapon/accent region beyond the idle body silhouette (heuristic in game/tools/art-cleanup.py, see weapon-visibility.json); the weapon may be unreadable there."
+  },
+  {
+    "id": "b02_rogue_attack_right_weapon_not_visible",
+    "what_is_wrong": "Frames [1, 2, 3, 4] of rogue_attack_right show no weapon/accent region beyond the idle body silhouette (heuristic in game/tools/art-cleanup.py, see weapon-visibility.json); the weapon may be unreadable there."
+  },
+  {
+    "id": "b02_rogue_attack_up_weapon_not_visible",
+    "what_is_wrong": "Frames [3, 4] of rogue_attack_up show no weapon/accent region beyond the idle body silhouette (heuristic in game/tools/art-cleanup.py, see weapon-visibility.json); the weapon may be unreadable there."
+  },
+  {
+    "id": "b02_rogue_cast_down_weapon_not_visible",
+    "what_is_wrong": "Frames [0, 4] of rogue_cast_down show no weapon/accent region beyond the idle body silhouette (heuristic in game/tools/art-cleanup.py, see weapon-visibility.json); the weapon may be unreadable there."
+  },
+  {
+    "id": "b02_rogue_cast_up_weapon_not_visible",
+    "what_is_wrong": "Frames [0] of rogue_cast_up show no weapon/accent region beyond the idle body silhouette (heuristic in game/tools/art-cleanup.py, see weapon-visibility.json); the weapon may be unreadable there."
+  },
+  {
+    "id": "b02_warlock_attack_down_weapon_not_visible",
+    "what_is_wrong": "Frames [1, 4] of warlock_attack_down show no weapon/accent region beyond the idle body silhouette (heuristic in game/tools/art-cleanup.py, see weapon-visibility.json); the weapon may be unreadable there."
+  },
+  {
+    "id": "b02_warlock_attack_right_weapon_not_visible",
+    "what_is_wrong": "Frames [2, 3] of warlock_attack_right show no weapon/accent region beyond the idle body silhouette (heuristic in game/tools/art-cleanup.py, see weapon-visibility.json); the weapon may be unreadable there."
+  },
+  {
+    "id": "b02_warlock_attack_up_weapon_not_visible",
+    "what_is_wrong": "Frames [1, 2, 3, 4] of warlock_attack_up show no weapon/accent region beyond the idle body silhouette (heuristic in game/tools/art-cleanup.py, see weapon-visibility.json); the weapon may be unreadable there."
   }
 ]
