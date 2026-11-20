@@ -27,7 +27,40 @@
       "status": "provisional",
       "ingested_utc": "2026-11-20T01:51:48Z",
       "source": "codex",
-      "note": "approved provisional by Claude 2026-11-20; see known_issues.json"
+      "note": "b02 v2 (Codex redraw) approved provisional by Claude 2026-11-20"
+    },
+    {
+      "id": "b03",
+      "label": "berserker-druid-necromancer",
+      "path": "assets/arcane/b03-berserker-druid-necromancer",
+      "manifest": "assets/arcane/b03-berserker-druid-necromancer/manifest.json",
+      "files": 63,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T05:30:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "b04",
+      "label": "mad-maze-enemies",
+      "path": "assets/arcane/b04-mad-maze-enemies",
+      "manifest": "assets/arcane/b04-mad-maze-enemies/manifest.json",
+      "files": 72,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T05:30:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "b05",
+      "label": "frontier-enemies",
+      "path": "assets/arcane/b05-frontier-enemies",
+      "manifest": "assets/arcane/b05-frontier-enemies/manifest.json",
+      "files": 72,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T05:30:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
     }
   ]
 }

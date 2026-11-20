@@ -127,8 +127,9 @@
       var assets = m && Array.isArray(m.assets) ? m.assets : [];
       var jobs = [];
       assets.forEach(function (a) {
-        if (!a || typeof a !== 'object' || typeof a.path !== 'string' || typeof a.class !== 'string' || typeof a.action !== 'string' || !DIRS[a.dir]) return;
-        if (opts.only && opts.only.indexOf(a.class) < 0) return;
+        var key = a && typeof a.class === 'string' ? a.class : (a && typeof a.enemy === 'string' ? a.enemy : null); // heroes are keyed by class, enemies by creature name
+        if (!a || typeof a !== 'object' || typeof a.path !== 'string' || !key || typeof a.action !== 'string' || !DIRS[a.dir]) return;
+        if (opts.only && opts.only.indexOf(key) < 0) return;
         if (opts.actions && opts.actions.indexOf(a.action) < 0) return;
         if (opts.dirs && opts.dirs.indexOf(a.dir) < 0) return;
         var frames = Math.max(1, Math.floor(num(a.frames, 1)));
@@ -136,7 +137,7 @@
         if (fw <= 0 || fh <= 0 || frames > 64) return;
         var anc = a.anchor && typeof a.anchor === 'object' ? a.anchor : {};
         var entry = { ready: false, anim: null };
-        var c = set.registry[a.class] || (set.registry[a.class] = Object.create(null));
+        var c = set.registry[key] || (set.registry[key] = Object.create(null));
         c[a.action + '_' + a.dir] = entry;
         var url = join(baseUrl, a.path);
         jobs.push(loadImage(url).then(function (img) {
