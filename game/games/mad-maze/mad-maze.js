@@ -29,6 +29,8 @@
     onExit: (why) => { if (dungeon && why === 'death') dungeon.onDeath(); else location.href = HOME; },
   });
 
+  arena.setMenuMode(true); // the standalone page opts in to the in-game menu (Esc / ☰) and the death screen; the town gate keeps the old behaviour
+
   // Same on-screen controls main.js wires for the in-town overlay.
   const stick = (id, apply) => {
     const base = document.getElementById(id);

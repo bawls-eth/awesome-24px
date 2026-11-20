@@ -201,6 +201,9 @@ class RealmArena {
     this.sg = { powT: 0, powMul: 1, fx: { t: 0, max: 0.5, x: 0, y: 0, r: 0, color: '#fff' }, bloom: { t: 0, x: 0, y: 0, r: 0, tick: 0 }, bones: { t: 0, a: 0, n: 0, heal: 0, frac: 0 } }; // signature runtime state (preallocated)
     this._heroArt = null; this._heroClass = null; this._heroSt = null; this._heroDbg = null; this._heroHurtAt = -9; this._heroAtkAt = -9; // optional hero animations (setHeroArt)
     this.team = null; this.role = 'solo'; this.down = false; this.reviveT = 0; this._firing = false;
+    this._menuMode = false; this._deathShown = false; this._lastCache = ''; this._menuDom = null; this._deathDom = null; this._menuBtn = null; // in-game menu + death screen: opt-in via setMenuMode(true)
+    this._pf = { ema: 16, slow: 0, fast: 0, q: 1, on: false }; this._cssK = 1; this._vpKey = ''; this._cvKey = ''; this._rzKey = ''; // perf guard (render-resolution scale) + resize caches
+    try { this._pf.on = (typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches) || (typeof window !== 'undefined' && 'ontouchstart' in window); } catch (e) { this._pf.on = false; }
 
     this.canvas = document.createElement('canvas');
     this.canvas.id = 'realm-canvas';
@@ -355,7 +358,7 @@ class RealmArena {
     let b = document.getElementById('realm-aim-btn');
     if (!b) {
       b = document.createElement('button'); b.id = 'realm-aim-btn'; b.type = 'button'; b.textContent = '🎯';
-      b.style.cssText = 'position:absolute;right:0;top:calc(100% + 4px);pointer-events:auto;width:34px;height:34px;border-radius:50%;border:2px solid rgba(255,255,255,0.6);background:rgba(0,0,0,0.55);font-size:16px;padding:0;'; // out of the flex row so the phone HUD keeps its width
+      b.style.cssText = 'position:absolute;right:0;top:calc(100% + 4px);pointer-events:auto;width:44px;height:44px;border-radius:50%;border:2px solid rgba(255,255,255,0.6);background:rgba(0,0,0,0.55);font-size:18px;padding:0;'; // out of the flex row so the phone HUD keeps its width
       hud.appendChild(b);
       b.addEventListener('click', () => this.setAimAssist(!this._aimAssist));
     }
@@ -908,7 +911,12 @@ class RealmArena {
     this.onKeyDown = (e) => {
       if (!this.active) return;
       const k = e.key.toLowerCase();
-      if (k === 'escape') { e.preventDefault(); if (this.paused || this.panel) this.setPaused(false); else this.leave(); return; }
+      if (k === 'escape') {
+        e.preventDefault();
+        if (this._menuMode) { this._escMenu(); return; }
+        if (this.paused || this.panel) this.setPaused(false); else this.leave();
+        return;
+      }
       if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault();
       if (!e.repeat) {
         const ai = RM_ABILITIES.findIndex((a) => a.key === k);
@@ -941,49 +949,104 @@ class RealmArena {
     window.addEventListener('pointerup', this.onPointerUp);
     this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
-    this.onResize = () => { if (this.active) this._resize(); };
+    this.onResize = () => { if (this.active) this._resize(); }; // synchronous but cheap: _resize returns early when nothing changed
     window.addEventListener('resize', this.onResize);
+    window.addEventListener('orientationchange', this.onResize);
+    if (window.visualViewport) { window.visualViewport.addEventListener('resize', this.onResize); window.visualViewport.addEventListener('scroll', this.onResize); }
   }
 
   // Touch sticks are DOM elements (set up by main.js); they only feed these two vectors.
   setMoveStick(x, y) { this.moveVec.x = x; this.moveVec.y = y; }
   setAimStick(x, y, on) { this.aimVec.x = x; this.aimVec.y = y; this.aimVec.on = !!on; }
 
-  _resize() {
-    const w = this.container.clientWidth || window.innerWidth;
-    const h = this.container.clientHeight || window.innerHeight;
-    const aspect = w / h;
-    if (this.fixedWorld) { // a fixed-size world (a dungeon room): letterboxed, never stretched
-      this.W = this.fixedWorld.w; this.H = this.fixedWorld.h;
-      const k = Math.min(w / this.W, h / this.H); const cs = this.canvas.style;
-      cs.position = 'absolute'; cs.width = `${Math.floor(this.W * k)}px`; cs.height = `${Math.floor(this.H * k)}px`;
-      cs.left = `${Math.floor((w - this.W * k) / 2)}px`; cs.top = `${Math.floor((h - this.H * k) / 2)}px`;
-      const dpr0 = Math.min(window.devicePixelRatio || 1, 2);
-      this.canvas.width = Math.round(this.W * Math.min(dpr0, 1.5)); this.canvas.height = Math.round(this.H * Math.min(dpr0, 1.5));
-      this.scale = this.canvas.width / this.W; this._vignette = null;
-      const q = this.player; q.x = Math.max(RM_PLAYER.r, Math.min(this.W - RM_PLAYER.r, q.x || this.W / 2)); q.y = Math.max(RM_PLAYER.r, Math.min(this.H - RM_PLAYER.r, q.y || this.H / 2));
-      return;
-    }
-    // Short side is always RM_SHORT logical units; the long side follows the screen.
-    if (aspect >= 1) { this.H = RM_SHORT; this.W = Math.round(Math.min(1400, Math.max(RM_SHORT, RM_SHORT * aspect))); } else { this.W = RM_SHORT; this.H = Math.round(Math.min(1400, Math.max(RM_SHORT, RM_SHORT / aspect))); }
+  // Sizing rule (documented): the arena fills the VISIBLE viewport (visualViewport when available, so the mobile URL bar and
+  // rotation are followed). The world's short side is always RM_SHORT logical units and the long side follows the screen up to
+  // 1400, so the world aspect matches the viewport and nothing is stretched. Only beyond aspect 0.386..2.59 (or a fixed dungeon
+  // room) is the canvas letterboxed: fitted inside the viewport and centred. The backing store is min(dpr, 2) capped at 1.5
+  // per logical unit and never more than the CSS size needs, times the perf-guard quality (1 or 0.75).
+  _resize(force) {
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+    const ov = this.container.parentElement;
+    let w; let h;
+    if (vv && vv.width > 0 && vv.height > 0 && ov && ov.id === 'realm-overlay') {
+      if (vv.scale > 1.01) return; // pinch-zoomed: keep the layout stable
+      w = vv.width; h = vv.height;
+      const key = `${w}|${h}|${vv.offsetLeft}|${vv.offsetTop}`;
+      if (key !== this._vpKey) { // pin the overlay to the visible viewport (URL bar / keyboard / rotation)
+        this._vpKey = key; const os = ov.style;
+        os.inset = 'auto'; os.left = `${vv.offsetLeft}px`; os.top = `${vv.offsetTop}px`; os.width = `${w}px`; os.height = `${h}px`;
+      }
+    } else { w = this.container.clientWidth || window.innerWidth; h = this.container.clientHeight || window.innerHeight; }
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    this.canvas.width = Math.round(this.W * Math.min(dpr, 1.5));
-    this.canvas.height = Math.round(this.H * Math.min(dpr, 1.5));
-    this.canvas.style.width = '100%';
-    this.canvas.style.height = '100%';
-    this.scale = this.canvas.width / this.W;
-    this._vignette = null; // rebuilt for the new size on next draw
+    const rkey = `${w}|${h}|${dpr}|${this._pf.q}|${this.fixedWorld ? 1 : 0}`;
+    if (!force && rkey === this._rzKey) return;
+    this._rzKey = rkey;
+    const oldW = this.W; const oldH = this.H;
+    if (this.fixedWorld) { this.W = this.fixedWorld.w; this.H = this.fixedWorld.h; } else { // short side is always RM_SHORT logical units; the long side follows the screen
+      const aspect = w / h;
+      if (aspect >= 1) { this.H = RM_SHORT; this.W = Math.round(Math.min(1400, Math.max(RM_SHORT, RM_SHORT * aspect))); } else { this.W = RM_SHORT; this.H = Math.round(Math.min(1400, Math.max(RM_SHORT, RM_SHORT / aspect))); }
+    }
+    const k = Math.min(w / this.W, h / this.H); this._cssK = k;
+    const cw = Math.floor(this.W * k); const ch = Math.floor(this.H * k);
+    const ckey = `${cw}|${ch}|${w}|${h}`;
+    if (ckey !== this._cvKey) { // letterboxed only when the world aspect cannot match the screen
+      this._cvKey = ckey; const cs = this.canvas.style;
+      cs.position = 'absolute'; cs.width = `${cw}px`; cs.height = `${ch}px`; cs.left = `${Math.floor((w - cw) / 2)}px`; cs.top = `${Math.floor((h - ch) / 2)}px`;
+    }
+    this._applyBacking();
     const p = this.player;
     p.x = Math.max(RM_PLAYER.r, Math.min(this.W - RM_PLAYER.r, p.x || this.W / 2));
     p.y = Math.max(RM_PLAYER.r, Math.min(this.H - RM_PLAYER.r, p.y || this.H / 2));
+    if ((oldW !== this.W || oldH !== this.H) && !this.fixedWorld) this._fitPools();
   }
+
+  // Backing-store size: min(dpr, 2), at most 1.5 px per logical unit, no finer than the CSS size needs, times the perf-guard quality.
+  _applyBacking() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const s = Math.min(dpr, 1.5, this._cssK * dpr) * this._pf.q;
+    const cw = Math.max(1, Math.round(this.W * s)); const ch = Math.max(1, Math.round(this.H * s));
+    if (this.canvas.width !== cw || this.canvas.height !== ch) { this.canvas.width = cw; this.canvas.height = ch; }
+    this.scale = this.canvas.width / this.W; this._vignette = null;
+  }
+
+  // After a rotation the world changes shape: pull anything that is now outside back in.
+  _fitPools() {
+    const W = this.W; const H = this.H;
+    [this.enemies, this.bags, this.hazards, this.drifters].forEach((pool) => { if (pool) pool.forEach((o) => { if (o.active) { o.x = Math.max(20, Math.min(W - 20, o.x)); o.y = Math.max(20, Math.min(H - 20, o.y)); } }); });
+  }
+
+  // ---------- performance guard (phones) ----------
+  // Feed one raw frame time in ms. A rolling average above 33 ms for 2 s drops the render resolution to 0.75; below 22 ms for 6 s restores it.
+  _perfFeed(ms) {
+    if (!(ms > 0) || ms > 250) return; // tab switches / debugger pauses are not slow frames
+    const pf = this._pf; pf.ema += (ms - pf.ema) * 0.1;
+    if (!pf.on) return;
+    const sec = ms / 1000;
+    if (pf.q === 1) {
+      if (pf.ema > 33) { pf.slow += sec; if (pf.slow >= 2) this._perfSet(0.75); } else pf.slow = 0;
+    } else if (pf.ema < 22) { pf.fast += sec; if (pf.fast >= 6) this._perfSet(1); } else pf.fast = 0;
+  }
+
+  _perfSet(q) { const pf = this._pf; pf.q = q; pf.slow = 0; pf.fast = 0; this._resize(true); }
+
+  // Debug hook for tests: perfState() reads, perfFeed(ms) injects a frame, setPerfPhone(on) forces phone detection.
+  perfState() { const pf = this._pf; return { quality: pf.q, ema: pf.ema, phone: pf.on, scale: this.scale, w: this.canvas.width, h: this.canvas.height }; }
+  perfFeed(ms) { this._perfFeed(ms); }
+  setPerfPhone(on) { this._pf.on = !!on; this._pf.slow = 0; this._pf.fast = 0; if (!on && this._pf.q !== 1) this._perfSet(1); }
 
   // ---------- lifecycle ----------
 
   start() {
     this.active = true;
     this.resyncSave(); // pick up progress another tab saved while this arena sat idle
-    this._resize();
+    this._resize(true);
+    this._beginRun();
+    this._lastT = performance.now();
+    this._raf = requestAnimationFrame(this._loop);
+  }
+
+  // Everything a fresh run needs (shared by start() and restart()); never touches the loop or the save.
+  _beginRun() {
     [this.pBullets, this.eBullets, this.enemies, this._edGhosts || [], this.particles, this.texts, this.bags, this.drifters, this.hazards].forEach((pool) => pool.forEach((o) => { o.active = false; }));
     this._wireRefresh(); this._padPrev.fill(false);
     this.keys = {}; this.mouse.down = false; this.moveVec.x = 0; this.moveVec.y = 0; this.aimVec.on = false; this.aimVec.x = 0; this.aimVec.y = 0; // no stuck input from the last run
@@ -1003,8 +1066,7 @@ class RealmArena {
     this._syncHud(true);
     this._showBanner(this.bannerText);
     if (this.dungeon && !this.team) { this.state = 'play'; this.dungeon.onStart(); }
-    this._lastT = performance.now();
-    this._raf = requestAnimationFrame(this._loop);
+    this._deathShown = false; this._hideDeath();
   }
 
   stop() {
@@ -1028,6 +1090,8 @@ class RealmArena {
     ['keydown', 'pointerdown', 'touchstart', 'touchend', 'click'].forEach((ev) => window.removeEventListener(ev, this._onGesture, { capture: true }));
     window.removeEventListener('pointerup', this.onPointerUp);
     window.removeEventListener('resize', this.onResize);
+    window.removeEventListener('orientationchange', this.onResize);
+    if (window.visualViewport) { window.visualViewport.removeEventListener('resize', this.onResize); window.visualViewport.removeEventListener('scroll', this.onResize); }
     if (this.canvas.parentNode) this.canvas.parentNode.removeChild(this.canvas);
   }
 
@@ -1045,8 +1109,9 @@ class RealmArena {
 
   _loop = (now) => {
     if (!this.active) return;
-    const dt = Math.min((now - this._lastT) / 1000, 0.05);
+    const raw = now - this._lastT; const dt = Math.min(raw / 1000, 0.05);
     this._lastT = now;
+    this._perfFeed(raw);
     this._update(dt);
     this._draw();
     if (this.active) this._raf = requestAnimationFrame(this._loop); // a death exit inside _update must not leave a second loop
@@ -1225,7 +1290,10 @@ class RealmArena {
 
     if (this.state === 'dead') {
       this.deadT -= dt;
-      if (this.deadT <= 0) { this.stop(); this.onExit('death'); }
+      if (this.deadT <= 0) {
+        if (this._menuMode && !this.team && !this.dungeon) { if (!this._deathShown) this._showDeath(); } // menu mode: recap + Try again / Leave instead of exiting
+        else { this.stop(); this.onExit('death'); }
+      }
       return;
     }
 
@@ -1655,6 +1723,7 @@ class RealmArena {
     this.save.deaths += 1;
     this.save.bestWave = Math.max(this.save.bestWave, this.run.wave - 1);
     const cache = this._deathBonus();
+    this._lastCache = cache.text;
     this.lastLoss = 0;
     this.state = 'dead';
     this.deadT = 2.6;
@@ -1947,13 +2016,138 @@ class RealmArena {
     this.paused = !!name && !this.team; // a shared run never freezes (it would time the partner out)
     const bp = document.getElementById('realm-backpack'); if (bp) bp.classList.toggle('hidden', name !== 'bp');
     const bd = document.getElementById('realm-board'); if (bd) bd.classList.toggle('hidden', name !== 'board');
+    if (this._menuDom || name === 'menu') { const mn = this._ensureMenuDom(); if (mn) { mn.classList.toggle('hidden', name !== 'menu'); mn.style.display = name === 'menu' ? 'flex' : 'none'; if (name !== 'menu') this._menuConfirm(false); } }
     const shopEl = this._ensureShopDom(); if (shopEl) { shopEl.classList.toggle('hidden', name !== 'shop'); shopEl.style.display = name === 'shop' ? 'flex' : 'none'; }
-    if (name) { this.keys = {}; this.mouse.down = false; this.aimVec.on = false; if (name === 'bp') this.renderBackpack(); else if (name === 'shop') this.renderShop(); else this.renderBoard(); }
+    if (name) { this.keys = {}; this.mouse.down = false; this.aimVec.on = false; if (name === 'bp') this.renderBackpack(); else if (name === 'shop') this.renderShop(); else if (name === 'menu') this._syncMenu(); else this.renderBoard(); }
   }
 
   setPaused(on) { this._panel(on ? 'bp' : null); } // false closes whichever panel is open
 
   setBoard(on) { this._panel(on ? 'board' : null); }
+
+  // ---------- in-game menu, settings and death screen (opt-in: setMenuMode(true); the town gate keeps the old behaviour) ----------
+
+  setMenuMode(on) {
+    this._menuMode = !!on;
+    if (on) this._mountMenuBtn();
+    if (this._menuBtn) this._menuBtn.classList.toggle('hidden', !on);
+    if (!on && this.panel === 'menu') this._panel(null);
+  }
+
+  _mountMenuBtn() {
+    if (this._menuBtn || typeof document === 'undefined') return;
+    const hud = document.getElementById('realm-hud'); if (!hud) return;
+    const b = document.createElement('button'); b.id = 'realm-menu-btn'; b.type = 'button'; b.textContent = '☰'; b.setAttribute('aria-label', 'Open menu (Esc)');
+    const lb = document.getElementById('realm-leave-btn'); hud.insertBefore(b, lb || null);
+    b.addEventListener('click', () => this.setMenu(true));
+    this._menuBtn = b;
+  }
+
+  setMenu(on) {
+    if (!this._menuMode || !this.active) return;
+    if (on && this.state === 'dead') return;
+    this._panel(on ? 'menu' : null);
+    if (on && this._menuDom) { const f = this._menuDom.querySelector('button[data-m="resume"].rm-btn'); if (f && f.focus) f.focus({ preventScroll: true }); }
+    else if (document.activeElement && document.activeElement.blur && document.activeElement !== document.body) document.activeElement.blur();
+  }
+
+  _escMenu() {
+    if (this._deathShown) { this.leave(); return; }
+    if (this.panel === 'menu') { if (this._menuDom && !this._menuDom.querySelector('.rm-confirm').classList.contains('hidden')) this._menuConfirm(false); else this.setMenu(false); return; }
+    if (this.paused || this.panel) { this.setPaused(false); return; }
+    this.setMenu(true);
+  }
+
+  canRestart() { return this.active && !this.team && !this.dungeon; }
+
+  // Start wave 1 again WITHOUT leaving the page. Items, shards, level and the save stay as they are; only the run (wave, enemies, bullets, bags, hp) resets.
+  restart() {
+    if (!this.canRestart()) return false;
+    this._panel(null);
+    this.resyncSave();
+    this._beginRun();
+    return true;
+  }
+
+  isMuted() {
+    if (this.sfx) { try { return !!this.sfx.isMuted(); } catch (e) { /* fall through */ } }
+    try { return localStorage.getItem('mm-sfx-muted') === '1'; } catch (e) { return false; }
+  }
+
+  setMuted(on) {
+    if (this.sfx) { try { this.sfx.setMuted(!!on); } catch (e) { /* ignore */ } } else { try { localStorage.setItem('mm-sfx-muted', on ? '1' : '0'); } catch (e) { /* ignore */ } }
+    this._syncMenu();
+  }
+
+  setReduceMotion(on) {
+    try { if (typeof MMMotion !== 'undefined') MMMotion.setOverride(localStorage, !!on); else localStorage.setItem('mm-reduce-motion', on ? '1' : '0'); } catch (e) { /* ignore */ }
+    this._readReduced(); this._syncMenu();
+  }
+
+  _ensureMenuDom() {
+    if (this._menuDom) return this._menuDom;
+    const ov = document.getElementById('realm-overlay'); if (!ov) return null;
+    const wrap = document.createElement('div');
+    wrap.id = 'realm-pause'; wrap.className = 'rm-panel hidden'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-label', 'Menu'); wrap.style.display = 'none';
+    wrap.innerHTML = '<div class="realm-bp-card rm-card"><div class="realm-bp-head"><strong>☰ Menu</strong><button id="realm-menu-close" type="button" data-m="resume" aria-label="Close menu">✖</button></div>'
+      + '<div class="rm-main"><button type="button" class="rm-btn" data-m="resume">▶ Resume</button><button type="button" class="rm-btn" data-m="restart">↻ Restart run</button><p class="rm-note dim"></p><button type="button" class="rm-btn" data-m="leave">🚪 Leave to start</button></div>'
+      + '<div class="rm-confirm hidden"><p>Restart? You keep your items and shards; your wave resets.</p><button type="button" class="rm-btn" data-m="restart-yes">Yes, restart</button><button type="button" class="rm-btn" data-m="restart-no">Keep playing</button></div>'
+      + '<div class="rm-settings"><strong>Settings</strong><button type="button" class="rm-tog" data-set="sound"></button><button type="button" class="rm-tog" data-set="motion"></button><button type="button" class="rm-tog" data-set="aim"></button></div></div>';
+    ov.appendChild(wrap);
+    wrap.addEventListener('click', (e) => {
+      const b = e.target.closest('button'); if (!b) return;
+      const m = b.dataset.m; const st = b.dataset.set;
+      if (m === 'resume') this.setMenu(false);
+      else if (m === 'restart') { if (this.canRestart()) this._menuConfirm(true); }
+      else if (m === 'restart-yes') this.restart();
+      else if (m === 'restart-no') this._menuConfirm(false);
+      else if (m === 'leave') this.leave();
+      else if (st === 'sound') this.setMuted(!this.isMuted());
+      else if (st === 'motion') this.setReduceMotion(!this._reduced);
+      else if (st === 'aim') this.setAimAssist(!this._aimAssist);
+      if (st) this._syncMenu();
+    });
+    return (this._menuDom = wrap);
+  }
+
+  _menuConfirm(on) {
+    const d = this._menuDom; if (!d) return;
+    d.querySelector('.rm-confirm').classList.toggle('hidden', !on);
+    d.querySelector('.rm-main').classList.toggle('hidden', on);
+    const f = d.querySelector(on ? 'button[data-m="restart-yes"]' : 'button[data-m="resume"].rm-btn'); if (f && f.focus && this.panel === 'menu') f.focus({ preventScroll: true });
+  }
+
+  _syncMenu() {
+    const d = this._menuDom; if (!d) return;
+    const rs = d.querySelector('button[data-m="restart"]'); const note = d.querySelector('.rm-note');
+    const can = this.canRestart(); rs.disabled = !can;
+    note.textContent = can ? '' : this.team ? 'Restart is off during a shared run: your partner is fighting too.' : this.dungeon ? 'Restart is off in a Warren: leave and enter again for a new one.' : '';
+    note.classList.toggle('hidden', can);
+    const set = (k, label, on) => { const b = d.querySelector(`button[data-set="${k}"]`); const t = `${label}: ${on ? 'on' : 'off'}`; if (b.textContent !== t) b.textContent = t; b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.classList.toggle('on', on); };
+    set('sound', '🔊 Sound', !this.isMuted()); set('motion', '🌀 Reduce motion', !!this._reduced); set('aim', '🎯 Aim assist', !!this._aimAssist);
+  }
+
+  _ensureDeathDom() {
+    if (this._deathDom) return this._deathDom;
+    const ov = document.getElementById('realm-overlay'); if (!ov) return null;
+    const wrap = document.createElement('div');
+    wrap.id = 'realm-death'; wrap.className = 'rm-panel hidden'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-label', 'You fell'); wrap.style.display = 'none';
+    wrap.innerHTML = '<div class="realm-bp-card rm-card"><div class="realm-bp-head"><strong>☠️ You fell in the Realm</strong></div><div class="rm-recap"></div>'
+      + '<div class="rm-main"><button type="button" class="rm-btn" data-d="again">↻ Try again</button><button type="button" class="rm-btn" data-d="leave">🚪 Leave</button></div></div>';
+    ov.appendChild(wrap);
+    wrap.addEventListener('click', (e) => { const b = e.target.closest('button[data-d]'); if (!b) return; if (b.dataset.d === 'again') this.restart(); else this.leave(); });
+    return (this._deathDom = wrap);
+  }
+
+  _showDeath() {
+    const d = this._ensureDeathDom(); if (!d) { this.stop(); this.onExit('death'); return; }
+    this._deathShown = true; this.keys = {}; this.mouse.down = false; this.aimVec.on = false; this.moveVec.x = 0; this.moveVec.y = 0;
+    d.querySelector('.rm-recap').innerHTML = `<div class="realm-board-row"><span>🌊 Wave reached</span><b>${Math.max(1, this.run.wave)}</b></div><div class="realm-board-row"><span>⚔️ Kills</span><b>${this.run.kills}</b></div><div class="realm-board-row"><span>💎 Shards this run</span><b>+${this.run.shards}</b></div><div class="realm-board-row"><span>🎁 Survivor's cache</span><b>${this._lastCache.replace(/^cache: /, '')}</b></div>`;
+    d.classList.remove('hidden'); d.style.display = 'flex';
+    const f = d.querySelector('button[data-d="again"]'); if (f && f.focus) f.focus({ preventScroll: true });
+  }
+
+  _hideDeath() { const d = this._deathDom; if (d) { d.classList.add('hidden'); d.style.display = 'none'; } }
 
   renderBoard() {
     const root = document.getElementById('realm-board-body');
@@ -2041,7 +2235,7 @@ class RealmArena {
     if (!root) return;
     const sv = this.save;
     const eqUids = new Set(RM_SLOTS.map((sl) => sv.eq[sl]).filter(Boolean));
-    let html = `<div id="realm-bp-stats">${this._statLine()}</div><button type="button" class="eq" data-open-shop="1" aria-label="Open the shop (V)" style="min-height:40px;margin:4px 0">🛒 Shop (V)</button><div class="realm-bp-slots">`;
+    let html = `<div id="realm-bp-stats">${this._statLine()}</div><button type="button" class="eq" data-open-shop="1" aria-label="Open the shop (V)" style="min-height:44px;margin:4px 0">🛒 Shop (V)</button><div class="realm-bp-slots">`;
     RM_SLOTS.forEach((slot) => {
       const it = sv.items.find((x) => x.n === sv.eq[slot]);
       html += `<div class="realm-bp-slot" data-slot="${slot}">${it ? `<span style="color:${RM_RARITIES[it.r].color}">${this._icon(RM_ITEM_BY_ID[it.id])} ${RM_ITEM_BY_ID[it.id].name}</span>` : `<span class="dim">${slot}: empty</span>`}</div>`;
