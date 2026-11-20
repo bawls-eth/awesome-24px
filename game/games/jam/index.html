@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Campfire Jam - Pixeltown</title>
+<link rel="stylesheet" href="jam.css">
+</head>
+<body>
+<header id="top">
+  <a class="back" id="back-hub" href="../../hub/index.html">&larr; Hub</a>
+  <h1>Campfire Jam</h1>
+  <button id="btn-mute" type="button" aria-pressed="false">Sound on</button>
+  <a class="back" id="back-town" href="../../index.html">Town</a>
+</header>
+<main id="stage">
+  <div id="hud" aria-live="off">
+    <span id="hud-score">0</span>
+    <span id="hud-combo">Combo 0</span>
+    <span id="hud-acc">100%</span>
+    <span id="hud-song"></span>
+  </div>
+  <div id="progress"><div id="progress-bar"></div></div>
+  <div id="canvas-wrap">
+    <canvas id="game" width="320" height="420" aria-label="Campfire Jam lanes"></canvas>
+    <div id="overlay" hidden></div>
+  </div>
+  <div id="pads" aria-label="Touch lanes">
+    <button type="button" class="pad" id="pad-D" data-lane="D">D</button>
+    <button type="button" class="pad" id="pad-F" data-lane="F">F</button>
+    <button type="button" class="pad" id="pad-J" data-lane="J">J</button>
+    <button type="button" class="pad" id="pad-K" data-lane="K">K</button>
+  </div>
+  <p id="help">Keys D F J K (or the arrow keys) hit the four lanes. Hold long notes. Esc pauses.</p>
+</main>
+<script src="../../shared/rng.js"></script>
+<script src="../../shared/store.js"></script>
+<script src="../../shared/motion.js"></script>
+<script src="../../shared/mm-jam.js"></script>
+<script src="../../shared/mm-jam-songs.js"></script>
+<script src="../../shared/sfx.js"></script>
+<script src="jam.js"></script>
+</body>
+</html>
