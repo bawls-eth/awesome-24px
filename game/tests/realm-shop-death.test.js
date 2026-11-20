@@ -28,6 +28,7 @@ const enter = (s) => {
     return out;
   });
   check('death: no shards lost at waves 1, 4 and 7, one fall counted each time, banner says nothing was lost', d.slice(0, 3).every((o) => o.shards === 100 && o.deaths === 1 && o.lastLoss === 0 && /no .*lost/.test(o.banner)), JSON.stringify(d));
+  check('death: the fall banner recaps the run (wave, kills, 💎 earned)', /wave 7, \d+ kills, \+\d+ 💎 this run/.test(d[2].banner), d[2].banner);
   check('death: the cache is Common at wave 1, Uncommon at wave 4, Rare at wave 7', d[0].added === 1 && d[0].rar === 0 && d[1].rar === 1 && d[2].rar === 2, JSON.stringify(d));
   check('death: with a full backpack the cache is sold for shards instead of dropped', d[3].len === 24 && d[3].shards === 100 + 15, JSON.stringify(d[3]));
 

@@ -1412,7 +1412,7 @@ class RealmArena {
     this.deadT = 2.6;
     this.shake = 14;
     this._burst(this.player.x, this.player.y, '#ff6f91', 30, 300);
-    this._showBanner(`You fell in the Realm…  no 💎 lost — ${cache.text}`, 2.6);
+    this._showBanner(`You fell in the Realm…  no 💎 lost — ${cache.text}  ·  wave ${Math.max(1, this.run.wave)}, ${this.run.kills} kills, +${this.run.shards} 💎 this run`, 2.6);
     this.onSave(this.save);
     this._syncHud();
   }
