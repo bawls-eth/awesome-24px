@@ -313,7 +313,7 @@
       }
       for (let i = 0; i < bossLive.length; i++) {
         if (bossLive[i] !== e) continue;
-        const site = world.bossSites[i]; bossLive[i] = null; miniKey = '';
+        const site = world.bossSites[i]; bossLive[i] = null; bossReadyNow[i] = 0; miniKey = '';
         zones.bossDefeated(site, arena.clock); kills++; save.stats.bossKills++;
         rollFor({ zone: site.zone, tier: site.zone, boss: true }, e.x, e.y + 30, 'boss' + i);
         writeSave(save);
@@ -332,11 +332,13 @@
       miniKey = '';
       return e;
     }
+    const bossReadyNow = new Uint8Array(world.bossSites.length); // refreshed by bossTick (2 Hz) so drawing never builds lookup strings
     function bossTick() {
       const p = arena.player; const alive = bossAlive();
       for (let i = 0; i < bossLive.length; i++) {
         const b = world.bossSites[i]; const bx = (b.x + 0.5) * TILE; const by = (b.y + 0.5) * TILE; const d = Math.hypot(p.x - bx, p.y - by);
         const e = bossLive[i];
+        bossReadyNow[i] = !e && zones.bossReady(b, arena.clock) ? 1 : 0;
         if (e && !e.active) { bossLive[i] = null; miniKey = ''; continue; }
         if (e) { if (d > 40 * TILE) { e.active = false; bossLive[i] = null; arena._syncBoss(); miniKey = ''; } continue; } // walked away: it rests (no cooldown)
         if (alive < 0 && d < 9 * TILE && zones.bossReady(b, arena.clock)) spawnBoss(i);
@@ -435,7 +437,7 @@
         for (let i = 0; i < portals.length; i++) { const q = portals[i]; if (q.x > vx0 && q.x < vx1 && q.y > vy0 && q.y < vy1) drawPortal(g, q, tt, reduced); }
         for (let i = 0; i < world.bossSites.length; i++) { // a ready altar glows (the boss wakes when you come close)
           const b = world.bossSites[i]; const bx = (b.x + 0.5) * TILE; const by = (b.y + 0.5) * TILE;
-          if (bx < vx0 || bx > vx1 || by < vy0 || by > vy1 || bossLive[i] || !zones || !zones.bossReady(b, tt)) continue;
+          if (bx < vx0 || bx > vx1 || by < vy0 || by > vy1 || bossLive[i] || !bossReadyNow[i]) continue;
           g.globalAlpha = reduced ? 0.5 : 0.35 + 0.25 * Math.sin(tt * 3); g.strokeStyle = '#ff3b3b'; g.lineWidth = 3; g.beginPath(); g.arc(bx, by, 22, 0, Math.PI * 2); g.stroke(); g.globalAlpha = 1;
           g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(BOSS_NAME[i], bx + 1, by - 29); g.fillStyle = '#ff8a8a'; g.fillText(BOSS_NAME[i], bx, by - 30);
         }
