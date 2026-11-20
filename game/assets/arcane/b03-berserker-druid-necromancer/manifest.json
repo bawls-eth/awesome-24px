@@ -1,0 +1,348 @@
+{
+  "name": "ARCANE RPG B03 checkpoint",
+  "frame_size": 256,
+  "assets": [
+    {
+      "id": "berserker_idle_down",
+      "category": "character",
+      "class": "berserker",
+      "action": "idle",
+      "dir": "down",
+      "path": "characters/berserker/berserker_idle_down.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view across all frames"
+    },
+    {
+      "id": "berserker_walk_down",
+      "category": "character",
+      "class": "berserker",
+      "action": "walk",
+      "dir": "down",
+      "path": "characters/berserker/berserker_walk_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view across all frames"
+    },
+    {
+      "id": "berserker_idle_up",
+      "category": "character",
+      "class": "berserker",
+      "action": "idle",
+      "dir": "up",
+      "path": "characters/berserker/berserker_idle_up.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view across all frames"
+    },
+    {
+      "id": "berserker_walk_up",
+      "category": "character",
+      "class": "berserker",
+      "action": "walk",
+      "dir": "up",
+      "path": "characters/berserker/berserker_walk_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view across all frames"
+    },
+    {
+      "id": "berserker_idle_right",
+      "category": "character",
+      "class": "berserker",
+      "action": "idle",
+      "dir": "right",
+      "path": "characters/berserker/berserker_idle_right.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view across all frames"
+    },
+    {
+      "id": "berserker_walk_right",
+      "category": "character",
+      "class": "berserker",
+      "action": "walk",
+      "dir": "right",
+      "path": "characters/berserker/berserker_walk_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view across all frames"
+    },
+    {
+      "id": "druid_idle_down",
+      "category": "character",
+      "class": "druid",
+      "action": "idle",
+      "dir": "down",
+      "path": "characters/druid/druid_idle_down.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view across all frames"
+    },
+    {
+      "id": "druid_walk_down",
+      "category": "character",
+      "class": "druid",
+      "action": "walk",
+      "dir": "down",
+      "path": "characters/druid/druid_walk_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view across all frames"
+    },
+    {
+      "id": "druid_idle_up",
+      "category": "character",
+      "class": "druid",
+      "action": "idle",
+      "dir": "up",
+      "path": "characters/druid/druid_idle_up.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view across all frames"
+    },
+    {
+      "id": "druid_walk_up",
+      "category": "character",
+      "class": "druid",
+      "action": "walk",
+      "dir": "up",
+      "path": "characters/druid/druid_walk_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view across all frames"
+    },
+    {
+      "id": "druid_idle_right",
+      "category": "character",
+      "class": "druid",
+      "action": "idle",
+      "dir": "right",
+      "path": "characters/druid/druid_idle_right.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view across all frames"
+    },
+    {
+      "id": "druid_walk_right",
+      "category": "character",
+      "class": "druid",
+      "action": "walk",
+      "dir": "right",
+      "path": "characters/druid/druid_walk_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view across all frames"
+    },
+    {
+      "id": "necromancer_idle_down",
+      "category": "character",
+      "class": "necromancer",
+      "action": "idle",
+      "dir": "down",
+      "path": "characters/necromancer/necromancer_idle_down.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view across all frames"
+    },
+    {
+      "id": "necromancer_walk_down",
+      "category": "character",
+      "class": "necromancer",
+      "action": "walk",
+      "dir": "down",
+      "path": "characters/necromancer/necromancer_walk_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view across all frames"
+    },
+    {
+      "id": "necromancer_idle_up",
+      "category": "character",
+      "class": "necromancer",
+      "action": "idle",
+      "dir": "up",
+      "path": "characters/necromancer/necromancer_idle_up.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view across all frames"
+    },
+    {
+      "id": "necromancer_walk_up",
+      "category": "character",
+      "class": "necromancer",
+      "action": "walk",
+      "dir": "up",
+      "path": "characters/necromancer/necromancer_walk_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view across all frames"
+    },
+    {
+      "id": "necromancer_idle_right",
+      "category": "character",
+      "class": "necromancer",
+      "action": "idle",
+      "dir": "right",
+      "path": "characters/necromancer/necromancer_idle_right.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view across all frames"
+    },
+    {
+      "id": "necromancer_walk_right",
+      "category": "character",
+      "class": "necromancer",
+      "action": "walk",
+      "dir": "right",
+      "path": "characters/necromancer/necromancer_walk_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated pose atlas",
+      "scale_policy": "fixed per class and view across all frames"
+    }
+  ]
+}
