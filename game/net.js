@@ -699,8 +699,20 @@ class TownNet {
       partyRef.child('m').set({ host: this.id, hostName: cleanText(this.name, MAX_NAME_LEN), guest: null, mode: m, cap: m === '2v2' ? 3 : 1, t: firebase.database.ServerValue.TIMESTAMP }).catch(() => {});
       partyRef.onDisconnect().remove().catch(() => {});
     }
-    this.db.ref(`realmInvites/${targetId}`).push({ party, from: this.id, fromName: cleanText(this.name, MAX_NAME_LEN), mode: m, t: firebase.database.ServerValue.TIMESTAMP }).catch(() => {});
+    const ir = this.db.ref(`realmInvites/${targetId}`).push({ party, from: this.id, fromName: cleanText(this.name, MAX_NAME_LEN), mode: m, t: firebase.database.ServerValue.TIMESTAMP });
+    ir.catch(() => {});
+    (this.realmInviteRefs = this.realmInviteRefs || {})[targetId] = ir; // so the sender can see when the other page picks it up
     return party;
+  }
+
+  // Sender: cb() once when the invite we last sent to targetId has been picked up (the reader deletes it). Returns a stop function.
+  realmOnDelivered(targetId, cb) {
+    const ref = this.realmInviteRefs && this.realmInviteRefs[targetId];
+    if (!ref || !ref.on) return () => {};
+    let seen = false; let done = false;
+    const fn = (snap) => { if (snap.exists()) { seen = true; return; } if (seen && !done) { done = true; ref.off('value', fn); cb(); } };
+    ref.on('value', fn);
+    return () => ref.off('value', fn);
   }
 
   // Host: cb(guestId, seat, joinedCount) once for each guest that takes a seat.

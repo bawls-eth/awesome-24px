@@ -12,7 +12,7 @@ async function launch(viewport = { width: 1000, height: 700 }, seedSave, touch =
   const errors = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
-  await page.route('**/main.js', async (route) => {
+  await page.route('**/main.js*', async (route) => {
     const resp = await route.fetch();
     const body = (await resp.text()).replace('const game = new Phaser.Game(config);', 'const game = window.__g = new Phaser.Game(config);');
     route.fulfill({ response: resp, body });

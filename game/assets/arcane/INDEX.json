@@ -17,6 +17,17 @@
       "files": 63,
       "status": "provisional",
       "ingested_utc": "2026-11-19T23:44:35.708950Z"
+    },
+    {
+      "id": "b02",
+      "label": "rogue-warlock-paladin",
+      "path": "assets/arcane/b02-rogue-warlock-paladin",
+      "manifest": "assets/arcane/b02-rogue-warlock-paladin/manifest.json",
+      "files": 63,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T01:51:48Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20; see known_issues.json"
     }
   ]
 }
