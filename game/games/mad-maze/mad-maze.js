@@ -22,6 +22,8 @@
   if ((window.matchMedia && matchMedia('(pointer: coarse)').matches) || 'ontouchstart' in window) document.body.classList.add('touch-device');
 
   let dungeon = null; // ?mode=dungeon&seed=N turns the arena into a Warren run; the default stays the solo arena
+  let realmWorld = null; // ?mode=world (or ?world=1) turns it into the big scrolling Realm overworld (realm-world.js)
+  const WORLD = (params.get('mode') === 'world' || params.get('world') === '1') && params.get('mode') !== 'dungeon' && !!window.RealmWorld && !!window.MMOverworld && !!window.MMZones;
   const arena = new RealmArena({
     container: document.getElementById('realm-canvas-wrap'),
     save: rmCleanSave(loadSave().realm),
@@ -72,6 +74,10 @@
     dungeon = MMDungeonRun.create(arena, { layout: (params.get('lv') === '2' || !hasSeed) ? 2 : 1, seed: hasSeed ? params.get('seed') : String(Date.now() % 100000), home: HOME, homeLabel: HOME_LABEL, test: TEST });
     document.body.classList.add('dungeon-mode');
   }
+  if (WORLD) {
+    realmWorld = RealmWorld.create(arena, { seed: params.get('seed'), at: params.get('at'), test: TEST, home: HOME, assetRoot: params.get('tileart') === '0' ? null : '../../assets/arcane/' });
+    document.body.classList.add('world-mode');
+  }
 
   // Hero art: the active hero (pixeltown-mm-active-v1, cleaned) picks its class animations; any other class keeps the sprite.
   function activeHeroClass() {
@@ -109,6 +115,6 @@
     }).catch(() => {});
   }
 
-  if (TEST) window.__mm = { arena, dungeon: dungeon ? dungeon.api : null };
+  if (TEST) window.__mm = { arena, dungeon: dungeon ? dungeon.api : null, world: realmWorld ? realmWorld.api : null };
   arena.start();
 })();
