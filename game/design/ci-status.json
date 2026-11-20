@@ -1,9 +1,9 @@
 {
-  "sha": "c160dc2dd20fb6baac694a8afe039064bb12b0b7",
-  "generated_utc": "2026-11-20T11:55:38Z",
+  "sha": "d3d3784f9cd2e71f7d45d7b870679dadabc28f72",
+  "generated_utc": "2026-11-20T12:37:49Z",
   "full_suite_green": true,
   "beta_green": null,
-  "suites_passed": 84,
-  "suites_total": 84,
-  "notes": "beta runs only on owner request; bugoff.test.js flaked once (phone A-button click timeout) and passed on 4 reruns and the next full run"
+  "suites_passed": 87,
+  "suites_total": 87,
+  "notes": "beta runs only on owner request"
 }
