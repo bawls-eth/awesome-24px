@@ -1,0 +1,15 @@
+{
+  "batch": "b06",
+  "label": "dark-spider",
+  "generated_utc": "2026-11-20T10:13:46.587791Z",
+  "files": 12,
+  "duplicate_ids": 0,
+  "blocking": {},
+  "warnings": {},
+  "standing_heights": {
+    "dark_spider/down": 100,
+    "dark_spider/up": 92,
+    "dark_spider/right": 92
+  },
+  "status": "provisional"
+}
