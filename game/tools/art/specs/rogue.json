@@ -1,0 +1,210 @@
+{
+  "schema_version": 1,
+  "id": "rogue",
+  "category": "hero",
+  "title": "Rogue (shadow knifer)",
+  "batch": "b02",
+  "design": {
+    "summary": "Lean, quick shadow-thief in dark grey leathers with a long crimson scarf and two crossed daggers.",
+    "silhouette": "Wide low hood with a pointed tip, scarf tail streaming to one side, two short blades jutting out at the hips; short and wide.",
+    "headgear": {
+      "shape": "pointed hood",
+      "description": "Deep dark-grey pointed hood that shades the eyes, hood tip flopping to the back, a small crimson trim line at the brim."
+    },
+    "armour": [
+      {
+        "part": "shoulders",
+        "description": "Small studded leather pauldrons.",
+        "color": "#5a514b"
+      },
+      {
+        "part": "chest",
+        "description": "Dark-grey leather jerkin with two crossing belts.",
+        "color": "#463d3d"
+      },
+      {
+        "part": "belt",
+        "description": "Wide belt with a steel buckle and two dagger sheaths.",
+        "color": "#5b371d"
+      },
+      {
+        "part": "boots",
+        "description": "Soft grey boots with folded cuffs.",
+        "color": "#291c24"
+      }
+    ],
+    "cloth": "Long crimson scarf wrapped twice around the neck with two tails trailing behind; short dark-grey half cape at the back.",
+    "weapon_summary": "Two short curved steel daggers with dark-grey grips, one in each hand, blades pointing forward and down when idle."
+  },
+  "palette": {
+    "outline": "#080706",
+    "cloth_dark": "#463d3d",
+    "cloth_mid": "#5a514b",
+    "cloth_light": "#6f6876",
+    "scarf": "#ad181b",
+    "scarf_dark": "#76101c",
+    "scarf_light": "#d63b36",
+    "skin": "#ecc6a1",
+    "steel": "#ccc9cd",
+    "steel_dark": "#938b95",
+    "leather": "#5b371d",
+    "boot": "#291c24"
+  },
+  "proportions": {
+    "style": "short wide chibi: big head (about 1/3 of the height), stocky wide torso, short thick limbs, big hands and boots",
+    "standing_height_px": 148,
+    "cell_px": 256,
+    "notes": "Standing height is equal in the down, up and right views. Feet of every frame rest on ONE baseline row."
+  },
+  "weapon": {
+    "name": "twin daggers",
+    "hand": "both",
+    "description": "Two short curved steel daggers with dark-grey grips, one in each hand, blades pointing forward and down when idle.",
+    "region_hexes": [
+      "#ccc9cd",
+      "#e4e1e1"
+    ]
+  },
+  "views": {
+    "down": {
+      "descriptor": "FRONT view (down): the figure faces the camera, face and chest visible, both boots visible, toes toward the viewer.",
+      "face_visible": true
+    },
+    "up": {
+      "descriptor": "BACK view (up): the figure faces away from the camera. NO face, NO eyes, NO mouth anywhere: show only the back of the head/headgear, the back of the torso, back armour and the cape/cloth hanging down the back, and the heels of both boots. Back view: hood tip, scarf tails hanging down the back, crossed belts, two dagger hilts at the lower back.",
+      "face_visible": false
+    },
+    "right": {
+      "descriptor": "RIGHT side view (right): a TRUE side profile facing the right edge of the image, body turned exactly 90 degrees, one eye only, nose/brow in profile; the NEAR arm and NEAR leg are drawn IN FRONT of the torso, the far limbs partly hidden behind it.",
+      "true_profile": true
+    }
+  },
+  "actions": {
+    "idle": {
+      "frames": 4,
+      "fps": 6,
+      "loop": true,
+      "ref_frames": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "poses": [
+        "Stand relaxed, feet shoulder-width apart, twin daggers held low in both hands, chest rests low.",
+        "Breathe in: torso rises one pixel step, shoulders lift slightly, the crimson scarf tails.",
+        "Peak of the breath: head and chest at their highest, arms swing a hair outward, the crimson scarf tails sways a little.",
+        "Breathe out: torso sinks back lower than frame 1, weight shifts slightly, the crimson scarf tails settles."
+      ]
+    },
+    "walk": {
+      "frames": 6,
+      "fps": 10,
+      "loop": true,
+      "ref_frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "poses": [
+        "Contact: left boot planted forward, right boot behind on its toes, arms opposite to legs, twin daggers held low in both hands.",
+        "Down: body at its lowest, left boot flat under the body, right boot lifting off, right knee bent.",
+        "Passing: right leg swings through beside the planted left leg, body at its highest, the crimson scarf tails.",
+        "Contact: right boot planted forward, left boot behind on its toes, arms swapped, twin daggers held low in both hands.",
+        "Down: body at its lowest, right boot flat under the body, left boot lifting off, left knee bent.",
+        "Passing: left leg swings through beside the planted right leg, body at its highest, the crimson scarf tails flares."
+      ]
+    },
+    "attack": {
+      "frames": 5,
+      "fps": 12,
+      "loop": false,
+      "ref_frames": [
+        0
+      ],
+      "poses": [
+        "Wind-up: both daggers pulled back beside the hips, weight on the back foot, hood tilted forward.",
+        "Right dagger slashes across the body from upper left to lower right, body twisting forward, blade fully visible.",
+        "Left dagger follows with a stabbing thrust straight ahead, both arms extended, front knee bent, blade tips farthest from the body.",
+        "Follow-through: arms crossed in front, both daggers pointing out, scarf tails whipping.",
+        "Recover: daggers brought back to the low guard, feet together, scarf settling."
+      ],
+      "weapon_frames": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "cast": {
+      "frames": 5,
+      "fps": 10,
+      "loop": false,
+      "ref_frames": [
+        0
+      ],
+      "poses": [
+        "Gather: both daggers raised crossed above the chest, head bowed, scarf lifting.",
+        "Daggers spread wide to either side at shoulder height, blades gleaming, knees bent.",
+        "Throw wind-up: right arm back over the shoulder holding one dagger up high, left hand open ahead.",
+        "Release: right arm snaps forward, dagger tip pointing far ahead at shoulder height, body leaning into the throw.",
+        "Recover: arm extended, then lowering, second dagger returned to the left hand, scarf swirling."
+      ],
+      "weapon_frames": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "roll": {
+      "frames": 6,
+      "fps": 12,
+      "loop": true,
+      "ref_frames": [
+        0
+      ],
+      "poses": [
+        "Crouch low, knees bent deeply, head ducked forward, twin daggers held low in both hands pulled in tight.",
+        "Launch: body tipping forward, head tucked, back arching, both boots still visible leaving the floor.",
+        "Tumble 1: figure curled into a compact ball, head near the knees, back toward the camera side, boots tucked.",
+        "Tumble 2: the ball has rotated half a turn, upside down, boots up top, head tucked below.",
+        "Tumble 3: rotating up out of the ball, legs reaching down toward the ground, head coming up.",
+        "Landing: one knee bent, other boot planted, rising out of the roll, twin daggers held low in both hands back in hand."
+      ]
+    },
+    "hit": {
+      "frames": 2,
+      "fps": 8,
+      "loop": false,
+      "ref_frames": [
+        0
+      ],
+      "poses": [
+        "Struck: head snaps back, torso leans away from the blow, eyes squeezed shut, arms flung outward, twin daggers held low in both hands.",
+        "Recoil: body bent at the waist, knees buckled, one boot sliding back, wincing, twin daggers held low in both hands."
+      ]
+    },
+    "death": {
+      "frames": 6,
+      "fps": 8,
+      "loop": false,
+      "ref_frames": [
+        0
+      ],
+      "poses": [
+        "Fatal hit: head snaps back, torso arching, twin daggers held low in both hands loosening in the grip.",
+        "Stumble: knees give way, one knee drops, a hand drops the weapon, head hangs.",
+        "Fall: body topples sideways, both arms flailing, boots leaving the ground.",
+        "Impact: the body lands on its side, weapon clattering beside it, cloth settling.",
+        "Slump: the body flat on the ground, one arm stretched out, legs straight, head turned.",
+        "Final: lying completely still on the ground, weapon at rest next to the hand, cloth lying flat. Feet on the baseline row."
+      ]
+    }
+  }
+}

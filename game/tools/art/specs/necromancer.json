@@ -1,0 +1,208 @@
+{
+  "schema_version": 1,
+  "id": "necromancer",
+  "category": "hero",
+  "title": "Necromancer (bone caller)",
+  "batch": "b03",
+  "design": {
+    "summary": "Gaunt-looking but chunky dark mage in teal robes and bone-white armour, a skull hood, and a long bone staff.",
+    "silhouette": "Large skull-shaped hood, hunched wide shoulders with rib-plate armour, long robe, a tall bone staff topped by a small skull and a pale flame.",
+    "headgear": {
+      "shape": "skull hood",
+      "description": "A teal hood whose front is a white skull mask with dark eye hollows (the face is the skull), a ridge of small bone spikes along the top."
+    },
+    "armour": [
+      {
+        "part": "shoulders",
+        "description": "Bone-white shoulder plates shaped like ribs.",
+        "color": "#e4e1e1"
+      },
+      {
+        "part": "chest",
+        "description": "Rib-cage breastplate of bone white over a deep teal robe.",
+        "color": "#f4f0e9"
+      },
+      {
+        "part": "belt",
+        "description": "Teal sash with a small hanging skull and a bone clasp.",
+        "color": "#3686a0"
+      },
+      {
+        "part": "boots",
+        "description": "Dark teal pointed boots with bone toe caps.",
+        "color": "#224e76"
+      }
+    ],
+    "cloth": "A long deep-teal robe with a tattered hem and a short tattered teal cape with pale teal edges.",
+    "weapon_summary": "A long staff made of three lashed bones topped with a small skull that holds a pale teal flame; carried in the right hand."
+  },
+  "palette": {
+    "outline": "#080706",
+    "teal_dark": "#224e76",
+    "teal": "#3686a0",
+    "teal_light": "#63b6c1",
+    "teal_pale": "#b6e8f0",
+    "bone": "#e4e1e1",
+    "bone_white": "#f4f0e9",
+    "bone_shade": "#ccc9cd",
+    "night": "#19101d",
+    "skin": "#d5a778"
+  },
+  "proportions": {
+    "style": "short wide chibi: big head (about 1/3 of the height), stocky wide torso, short thick limbs, big hands and boots",
+    "standing_height_px": 148,
+    "cell_px": 256,
+    "notes": "Standing height is equal in the down, up and right views. Feet of every frame rest on ONE baseline row."
+  },
+  "weapon": {
+    "name": "bone staff",
+    "hand": "right",
+    "description": "A long staff made of three lashed bones topped with a small skull that holds a pale teal flame; carried in the right hand.",
+    "region_hexes": [
+      "#b6e8f0",
+      "#f4f0e9"
+    ]
+  },
+  "views": {
+    "down": {
+      "descriptor": "FRONT view (down): the figure faces the camera, face and chest visible, both boots visible, toes toward the viewer.",
+      "face_visible": true
+    },
+    "up": {
+      "descriptor": "BACK view (up): the figure faces away from the camera. NO face, NO eyes, NO mouth anywhere: show only the back of the head/headgear, the back of the torso, back armour and the cape/cloth hanging down the back, and the heels of both boots. Back view: the back of the skull hood (plain teal with a ridge of small bone spikes), rib plates on the back, the tattered cape, staff shaft at the right side.",
+      "face_visible": false
+    },
+    "right": {
+      "descriptor": "RIGHT side view (right): a TRUE side profile facing the right edge of the image, body turned exactly 90 degrees, one eye only, nose/brow in profile; the NEAR arm and NEAR leg are drawn IN FRONT of the torso, the far limbs partly hidden behind it.",
+      "true_profile": true
+    }
+  },
+  "actions": {
+    "idle": {
+      "frames": 4,
+      "fps": 6,
+      "loop": true,
+      "ref_frames": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "poses": [
+        "Stand relaxed, feet shoulder-width apart, the bone staff held upright at the right side, left hand open, chest rests low.",
+        "Breathe in: torso rises one pixel step, shoulders lift slightly, the tattered robe hem and cape.",
+        "Peak of the breath: head and chest at their highest, arms swing a hair outward, the tattered robe hem and cape sways a little.",
+        "Breathe out: torso sinks back lower than frame 1, weight shifts slightly, the tattered robe hem and cape settles."
+      ]
+    },
+    "walk": {
+      "frames": 6,
+      "fps": 10,
+      "loop": true,
+      "ref_frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "poses": [
+        "Contact: left boot planted forward, right boot behind on its toes, arms opposite to legs, the bone staff held upright at the right side, left hand open.",
+        "Down: body at its lowest, left boot flat under the body, right boot lifting off, right knee bent.",
+        "Passing: right leg swings through beside the planted left leg, body at its highest, the tattered robe hem and cape.",
+        "Contact: right boot planted forward, left boot behind on its toes, arms swapped, the bone staff held upright at the right side, left hand open.",
+        "Down: body at its lowest, right boot flat under the body, left boot lifting off, left knee bent.",
+        "Passing: left leg swings through beside the planted right leg, body at its highest, the tattered robe hem and cape flares."
+      ]
+    },
+    "attack": {
+      "frames": 5,
+      "fps": 12,
+      "loop": false,
+      "ref_frames": [
+        0
+      ],
+      "poses": [
+        "Wind-up: staff pulled back horizontally behind the right shoulder, body coiled.",
+        "Staff swung forward and down in a diagonal arc, skull tip leading, robe snapping.",
+        "Strike: staff thrust forward at full reach, skull tip far ahead of the body, front knee bent.",
+        "Follow-through: staff swept low to the left, torso twisted, cape flaring.",
+        "Recover: staff drawn back upright at the right side, cape settling."
+      ],
+      "weapon_frames": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "cast": {
+      "frames": 5,
+      "fps": 10,
+      "loop": false,
+      "ref_frames": [
+        0
+      ],
+      "poses": [
+        "Gather: staff raised straight up, left palm opening beside the chest, flame flickering.",
+        "Staff held overhead, pale flame growing, skull hood tilted back, arms rising.",
+        "Arms spread wide, staff overhead in the right hand, robe flaring, chest out.",
+        "Thrust: staff pointed forward at shoulder height at full reach, left hand clawed forward.",
+        "Recover: staff lowering upright, flame shrinking, robe settling."
+      ],
+      "weapon_frames": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "roll": {
+      "frames": 6,
+      "fps": 12,
+      "loop": true,
+      "ref_frames": [
+        0
+      ],
+      "poses": [
+        "Crouch low, knees bent deeply, head ducked forward, the bone staff held upright at the right side, left hand open pulled in tight.",
+        "Launch: body tipping forward, head tucked, back arching, both boots still visible leaving the floor.",
+        "Tumble 1: figure curled into a compact ball, head near the knees, back toward the camera side, boots tucked.",
+        "Tumble 2: the ball has rotated half a turn, upside down, boots up top, head tucked below.",
+        "Tumble 3: rotating up out of the ball, legs reaching down toward the ground, head coming up.",
+        "Landing: one knee bent, other boot planted, rising out of the roll, the bone staff held upright at the right side, left hand open back in hand."
+      ]
+    },
+    "hit": {
+      "frames": 2,
+      "fps": 8,
+      "loop": false,
+      "ref_frames": [
+        0
+      ],
+      "poses": [
+        "Struck: head snaps back, torso leans away from the blow, eyes squeezed shut, arms flung outward, the bone staff held upright at the right side, left hand open.",
+        "Recoil: body bent at the waist, knees buckled, one boot sliding back, wincing, the bone staff held upright at the right side, left hand open."
+      ]
+    },
+    "death": {
+      "frames": 6,
+      "fps": 8,
+      "loop": false,
+      "ref_frames": [
+        0
+      ],
+      "poses": [
+        "Fatal hit: head snaps back, torso arching, the bone staff held upright at the right side, left hand open loosening in the grip.",
+        "Stumble: knees give way, one knee drops, a hand drops the weapon, head hangs.",
+        "Fall: body topples sideways, both arms flailing, boots leaving the ground.",
+        "Impact: the body lands on its side, weapon clattering beside it, cloth settling.",
+        "Slump: the body flat on the ground, one arm stretched out, legs straight, head turned.",
+        "Final: lying completely still on the ground, weapon at rest next to the hand, cloth lying flat. Feet on the baseline row."
+      ]
+    }
+  }
+}

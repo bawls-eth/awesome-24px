@@ -1,0 +1,119 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Pixeltown art spec (hero class, enemy or item)",
+  "type": "object",
+  "required": ["schema_version", "id", "category", "title", "batch", "design", "palette", "proportions"],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "category": { "type": "string", "enum": ["hero", "enemy", "item"] },
+    "title": { "type": "string", "minLength": 3 },
+    "batch": { "type": "string", "pattern": "^b[0-9]{2}$" },
+    "design": {
+      "type": "object",
+      "required": ["summary", "silhouette"],
+      "properties": {
+        "summary": { "type": "string", "minLength": 10 },
+        "silhouette": { "type": "string", "minLength": 10 },
+        "headgear": { "$ref": "#/definitions/headgear" },
+        "armour": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/armour_piece" } },
+        "cloth": { "type": "string", "minLength": 5 },
+        "weapon_summary": { "type": "string", "minLength": 5 }
+      }
+    },
+    "palette": {
+      "type": "object",
+      "description": "role -> hex. For heroes every hex must exist in the shared palette (b00+b01 palette.json).",
+      "additionalProperties": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" }
+    },
+    "proportions": {
+      "type": "object",
+      "required": ["style", "standing_height_px", "cell_px"],
+      "properties": {
+        "style": { "type": "string" },
+        "standing_height_px": { "type": "integer", "minimum": 16, "maximum": 384 },
+        "cell_px": { "type": "integer", "enum": [32, 64, 128, 256, 384] },
+        "notes": { "type": "string" }
+      }
+    },
+    "weapon": {
+      "type": "object",
+      "required": ["name", "hand", "description", "region_hexes"],
+      "properties": {
+        "name": { "type": "string" },
+        "hand": { "type": "string", "enum": ["right", "left", "both", "none"] },
+        "offhand": { "type": "string" },
+        "description": { "type": "string", "minLength": 10 },
+        "region_hexes": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" } }
+      }
+    },
+    "views": {
+      "type": "object",
+      "required": ["down", "up", "right"],
+      "properties": {
+        "down": { "$ref": "#/definitions/view" },
+        "up": { "$ref": "#/definitions/view" },
+        "right": { "$ref": "#/definitions/view" }
+      }
+    },
+    "actions": {
+      "type": "object",
+      "properties": {
+        "idle": { "$ref": "#/definitions/action" },
+        "walk": { "$ref": "#/definitions/action" },
+        "attack": { "$ref": "#/definitions/action" },
+        "cast": { "$ref": "#/definitions/action" },
+        "roll": { "$ref": "#/definitions/action" },
+        "hit": { "$ref": "#/definitions/action" },
+        "death": { "$ref": "#/definitions/action" }
+      }
+    },
+    "single": {
+      "type": "object",
+      "description": "enemy/item: one 1024x1024 image, one subject.",
+      "properties": {
+        "subject": { "type": "string" },
+        "pose": { "type": "string" },
+        "output_px": { "type": "integer" },
+        "fill_percent": { "type": "integer" }
+      }
+    }
+  },
+  "definitions": {
+    "headgear": {
+      "type": "object",
+      "required": ["shape", "description"],
+      "properties": { "shape": { "type": "string" }, "description": { "type": "string", "minLength": 10 } }
+    },
+    "armour_piece": {
+      "type": "object",
+      "required": ["part", "description", "color"],
+      "properties": {
+        "part": { "type": "string" },
+        "description": { "type": "string", "minLength": 5 },
+        "color": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" }
+      }
+    },
+    "view": {
+      "type": "object",
+      "required": ["descriptor"],
+      "properties": {
+        "descriptor": { "type": "string", "minLength": 20 },
+        "face_visible": { "type": "boolean" },
+        "true_profile": { "type": "boolean" }
+      }
+    },
+    "action": {
+      "type": "object",
+      "required": ["frames", "fps", "loop", "poses", "ref_frames"],
+      "properties": {
+        "frames": { "type": "integer", "minimum": 1, "maximum": 12 },
+        "fps": { "type": "integer", "minimum": 1, "maximum": 30 },
+        "loop": { "type": "boolean" },
+        "ref_frames": { "type": "array", "minItems": 1, "items": { "type": "integer", "minimum": 0 }, "description": "frame indexes where the figure stands upright (scale reference)" },
+        "poses": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 10 } },
+        "weapon_frames": { "type": "array", "items": { "type": "integer", "minimum": 0 }, "description": "frames that get a computed muzzle (attack/cast)" }
+      }
+    }
+  }
+}
