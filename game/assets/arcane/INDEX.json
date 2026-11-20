@@ -191,6 +191,17 @@
       "ingested_utc": "2026-11-20T15:50:00Z",
       "source": "codex",
       "note": "approved provisional by Claude 2026-11-20; small figures, muzzle points provisional"
+    },
+    {
+      "id": "b06c",
+      "label": "frontier-casters-and-undead",
+      "path": "assets/arcane/b06c-frontier-casters-and-undead",
+      "manifest": "assets/arcane/b06c-frontier-casters-and-undead/manifest.json",
+      "files": 72,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T16:20:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
     }
   ]
 }
