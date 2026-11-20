@@ -103,3 +103,9 @@ Deepdelve: adaptive render scale/view distance governor (window.__dd.perf hook, 
 
 ## Room variety + enemy deaths (2026-11-20)
 mm-rooms: 25 new templates (68 with mirrors), MMRooms.selectRooms (layout v2; v1 selection kept verbatim for old seeds; ?lv=2 or fresh random seed uses v2). Hub catacombs link still v1 (add &lv=2 in game/hub/hub.js to enable). Enemy death ghosts (24-slot pool), dark_spider skin for Frost Mire Sniper. Not yet: new rooms eyeballed in browser, up-facing death strips.
+
+## Art spend cap (2026-11-20)
+Owner said in chat: "$2 is good, I have a cap on the API side so you can over spend". Owner then clarified: the $2 is a hard cap on their API side, I cannot overspend. Total cap kept at 4.00 USD (about $2 more than the 1.96 spent), stop 3.96, report 3.60. OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0. Codex makes the main asset batches; credits are for gaps Codex has not covered.
+
+## Jam + Stalk + class signatures (2026-11-20)
+New pages: games/jam (Campfire Jam: 4 songs, pixeltown-jam-v1), games/stalk (Stalk Market: play-money weekly prices, pixeltown-stalk-v1). Arena: MMClasses.arenaSignature + realm.setHeroSignature (F slot at level 7 replaces Overdrive; ?signature=0 off). Not yet: Jam calibration/12 songs, signature sounds/co-op sync, balance pass. OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.

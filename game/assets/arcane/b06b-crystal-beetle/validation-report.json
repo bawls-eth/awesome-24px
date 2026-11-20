@@ -1,0 +1,15 @@
+{
+  "batch": "b06b",
+  "label": "crystal-beetle",
+  "generated_utc": "2026-11-20T15:41:05.339621Z",
+  "files": 12,
+  "duplicate_ids": 0,
+  "blocking": {},
+  "warnings": {},
+  "standing_heights": {
+    "crystal_beetle/down": 92,
+    "crystal_beetle/up": 92,
+    "crystal_beetle/right": 92
+  },
+  "status": "provisional"
+}

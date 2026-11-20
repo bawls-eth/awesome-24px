@@ -72,6 +72,7 @@ const RM_ABILITIES = [
   { id: 'overdrive', key: 'f', icon: '🔥', name: 'Overdrive', level: 7, cd: 20 },
 ];
 function rmXpNeeded(level) { return 30 + 20 * (level - 1); }
+const RM_SIG_KINDS = ['dash-volley', 'drain-orb', 'oath-shield', 'rage-slam', 'thorn-bloom', 'bone-guard', 'volley']; // class signature kinds (setHeroSignature)
 const RM_WAVE_PAUSE = 2.4; // seconds between waves (shows the banner)
 
 // Tiny seeded PRNG so a run can be reproduced in tests.
@@ -196,6 +197,8 @@ class RealmArena {
     this._avatar = null;
     this._itemArt = null; this._enemyArt = null; this._enemyMap = null; this._driftMap = null; this._enemyDbgOn = false; this._bossArt = null; this._bossLoad = null; this._bossDbg = null; this._bossGhost = null; this._bossReq = null; this._biomeEnemyMap = null; this._edGhosts = null; // optional enemy animations (setEnemyArt)
     this.heroProfile = null; // setHeroProfile
+    this.sig = null; this._sigAb = { id: 'sig', key: 'f', icon: '🔥', name: 'Signature', short: '', level: 7, cd: 15 }; // setHeroSignature: the class signature takes the F slot (null = Overdrive, today's behaviour)
+    this.sg = { powT: 0, powMul: 1, fx: { t: 0, max: 0.5, x: 0, y: 0, r: 0, color: '#fff' }, bloom: { t: 0, x: 0, y: 0, r: 0, tick: 0 }, bones: { t: 0, a: 0, n: 0, heal: 0, frac: 0 } }; // signature runtime state (preallocated)
     this._heroArt = null; this._heroClass = null; this._heroSt = null; this._heroDbg = null; this._heroHurtAt = -9; this._heroAtkAt = -9; // optional hero animations (setHeroArt)
     this.team = null; this.role = 'solo'; this.down = false; this.reviveT = 0; this._firing = false;
 
@@ -648,6 +651,32 @@ class RealmArena {
     this.heroProfile = ok ? { name: String(profile.name || '').slice(0, 40), hp: m(profile.hp), dmg: m(profile.dmg), rate: m(profile.rate), speed: m(profile.speed), iframes: m(profile.iframes) } : null;
     if (this.save) { this._calcStats(); if (this.player && this.player.hp > this.stats.maxHp) this.player.hp = this.stats.maxHp; if (this.active) this._syncHud(); }
   }
+  // Additive hook: the class signature ability from MMClasses.arenaSignature(classId). It replaces the F slot (Overdrive) at its level.
+  // null / unknown kind = today's behaviour. Never active in team duels (the Dash is the only ability there).
+  setHeroSignature(desc) {
+    const ok = desc && typeof desc === 'object' && RM_SIG_KINDS.indexOf(desc.kind) >= 0;
+    const n = (v, lo, hi, d) => (Number.isFinite(Number(v)) && v !== null && v !== '' ? Math.max(lo, Math.min(hi, Number(v))) : d);
+    if (!ok) this.sig = null;
+    else {
+      this.sig = {
+        kind: desc.kind, variant: String(desc.variant || '').slice(0, 20), id: String(desc.id || 'sig').slice(0, 24),
+        name: String(desc.name || 'Signature').slice(0, 24), short: String(desc.short || '').slice(0, 9), icon: String(desc.icon || '⭐').slice(0, 8),
+        cooldown: n(desc.cooldown, 3, 60, 15), level: Math.floor(n(desc.level, 1, RM_MAX_LEVEL, 7)),
+        count: Math.floor(n(desc.count, 1, 24, 6)), spread: n(desc.spread, 0, 6, 0.8), dmg: n(desc.dmg, 0, 12, 1), dist: n(desc.dist, 0, 300, 140),
+        range: n(desc.range, 0, 500, 200), radius: n(desc.radius, 10, 260, 90), dur: n(desc.dur, 0, 20, 5), heal: n(desc.heal, 0, 60, 0), healFrac: n(desc.healFrac, 0, 1, 0),
+        shield: Math.floor(n(desc.shield, 0, 6, 0)), knock: n(desc.knock, 0, 160, 0), slow: n(desc.slow, 0.05, 1, 1), powMul: n(desc.powMul, 1, 1.6, 1), powSec: n(desc.powSec, 0, 12, 0),
+      };
+      const a = this._sigAb; a.icon = this.sig.icon; a.name = this.sig.name; a.short = this.sig.short; a.level = this.sig.level; a.cd = this.sig.cooldown;
+    }
+    this._sigReset();
+    if (this.abilityCd) this.abilityCd[3] = 0;
+    this._syncAbilities();
+  }
+
+  _sigOn() { return !!this.sig && !(this.team && this.team.isPvp); }
+  _ab(i) { return i === 3 && this._sigOn() ? this._sigAb : RM_ABILITIES[i]; }
+  _sigReset() { const g = this.sg; g.powT = 0; g.powMul = 1; g.fx.t = 0; g.bloom.t = 0; g.bones.t = 0; g.bones.n = 0; }
+
   // Additive hook: draw arena enemies / drifters with creature animations (MMArt.loadEnemies). Pass (null) to go back to the procedural sprites.
   // `map` / `driftMap` default to MMArt's ENEMY_MAP / DRIFTER_MAP. Never attached by the in-town gate.
   // Additive hook: show item art (MMArt.loadItems ItemSet) in the backpack, shop and equipped slots, emoji as fallback. null = emoji only.
@@ -960,7 +989,7 @@ class RealmArena {
     this.keys = {}; this.mouse.down = false; this.moveVec.x = 0; this.moveVec.y = 0; this.aimVec.on = false; this.aimVec.x = 0; this.aimVec.y = 0; // no stuck input from the last run
     const p = this.player;
     this._calcStats();
-    this.abilityCd = [0, 0, 0, 0]; this.shield.hits = 0; this.shield.t = 0; this.overdriveT = 0; this.paused = false;
+    this.abilityCd = [0, 0, 0, 0]; this.shield.hits = 0; this.shield.t = 0; this.overdriveT = 0; this.paused = false; this._sigReset();
     p.x = this.W / 2; p.y = this.H / 2; p.hp = this.stats.maxHp; p.dashT = 0; p.iframes = 1; p.fireCd = 0; p.aim = -Math.PI / 2;
     this.run = { wave: 0, kills: 0, shards: 0 };
     this.biome = 0; this.clock = 0; this._speedMul = 1; this.down = false; this.reviveT = 0; this._syncBoss();
@@ -1034,6 +1063,7 @@ class RealmArena {
     const scale = (1 + 0.15 * Math.max(0, this.run.wave - 1)) * (this.team && this.role === 'host' ? RT_HP_SCALE : 1); // tougher with a partner
     e.active = true; e.type = type; e.x = x; e.y = y;
     e.maxHp = Math.ceil(def.hp * scale); e.hp = e.maxHp;
+    e.slowT = 0; e.slowF = 1; e.boneT = 0;
     e.dg = null; e._at = undefined; e.t = 0; e.flash = 0; e.angle = this.rng() * Math.PI * 2; e.dir = this.rng() < 0.5 ? 1 : -1;
     e.cd = 0.8 + this.rng() * 0.8; // first shot is never instant
     e.ax = 80 + this.rng() * (this.W - 160); e.ay = 80 + this.rng() * (this.H - 160); // drift target for Whirlers
@@ -1126,7 +1156,7 @@ class RealmArena {
     b.active = true; b.x = x; b.y = y; b.vx = Math.cos(angle) * speed; b.vy = Math.sin(angle) * speed; b.life = 6; b.kind = kind || 0;
   }
 
-  firePlayerBullet(angle) { this.firePlayerBulletFrom(this.player.x, this.player.y, angle, this.stats.dmg, 0); }
+  firePlayerBullet(angle) { this.firePlayerBulletFrom(this.player.x, this.player.y, angle, this.stats.dmg * (this.sg.powT > 0 ? this.sg.powMul : 1), 0); }
 
   // owner 0 = you (host), 1 = your partner. Everything a bolt does is decided on the host; guests only draw them.
   firePlayerBulletFrom(x, y, angle, dmg, owner) {
@@ -1392,10 +1422,12 @@ class RealmArena {
     this._syncBoss();
   }
 
-  _updateEnemies(dt) {
+  _updateEnemies(dt0) {
     for (let i = 0; i < this.enemies.length; i++) {
       const e = this.enemies[i];
       if (!e.active) continue;
+      let dt = dt0;
+      if (e.slowT > 0) { e.slowT -= dt0; dt = dt0 * e.slowF; } // a signature slow (Blizzard Ring / Thorn Bloom); never set otherwise
       const p = this._nearest(e.x, e.y);
       e.t += dt; e.flash = Math.max(0, e.flash - dt * 6);
       if (e.type === 'boss') { this._updateBoss(e, dt); continue; }
@@ -1656,7 +1688,7 @@ class RealmArena {
     p.hp = Math.min(this.stats.maxHp, p.hp + Math.round(this.stats.maxHp * 0.3) + (this.stats.maxHp - before)); // a level heals a bit and the new max HP is free
     this.shake = Math.max(this.shake, 4);
     this._burst(p.x, p.y, '#ffe27a', 28, 260);
-    const unlocked = RM_ABILITIES.filter((a) => a.level === this.save.level);
+    const unlocked = [0, 1, 2, 3].map((i) => this._ab(i)).filter((a) => a.level === this.save.level);
     this._showBanner(`Level ${this.save.level}!${unlocked.length ? `  ${unlocked[0].icon} ${unlocked[0].name} unlocked` : ''}`, 2);
     this._syncAbilities();
   }
@@ -1711,15 +1743,16 @@ class RealmArena {
 
   // ---------- abilities ----------
 
-  abilityUnlocked(i) { return this.save.level >= RM_ABILITIES[i].level; }
+  abilityUnlocked(i) { return this.save.level >= this._ab(i).level; }
 
   cast(i) {
     if (!this.active || this.state === 'dead' || this.paused) return false;
-    const ab = RM_ABILITIES[i];
+    const ab = this._ab(i);
     if (!ab || !this.abilityUnlocked(i) || this.abilityCd[i] > 0) return false;
     if (this.team && this.team.isPvp && ab.id !== 'dash') return false; // duels allow only the Dash
     const p = this.player;
-    if (ab.id === 'dash') {
+    if (ab === this._sigAb) this._castSignature();
+    else if (ab.id === 'dash') {
       let dx = this._mx || 0; let dy = this._my || 0;
       if (Math.hypot(dx, dy) < 0.1) { dx = Math.cos(p.aim); dy = Math.sin(p.aim); }
       const len = Math.hypot(dx, dy) || 1;
@@ -1739,8 +1772,9 @@ class RealmArena {
       this.overdriveT = 4;
     }
     this.abilityCd[i] = ab.cd;
-    if (this.team && this.role === 'guest') this.team.sendAbility(ab.id);
+    if (this.team && this.role === 'guest' && ab !== this._sigAb) this.team.sendAbility(ab.id);
     this._floatText(p.x, p.y - 30, `${ab.icon} ${ab.name}`, '#fff');
+    if (ab === this._sigAb) this._showBanner(`${ab.icon} ${ab.name}!`, 1.1);
     this._syncAbilities();
     return true;
   }
@@ -1750,8 +1784,158 @@ class RealmArena {
     for (let i = 0; i < 4; i++) if (this.abilityCd[i] > 0) { this.abilityCd[i] = Math.max(0, this.abilityCd[i] - dt); changed = true; }
     if (this.overdriveT > 0) this.overdriveT = Math.max(0, this.overdriveT - dt);
     if (this.shield.t > 0) { this.shield.t -= dt; if (this.shield.t <= 0) this.shield.hits = 0; }
+    this._updateSignature(dt);
     this._abTick = (this._abTick || 0) + dt;
     if (changed && this._abTick > 0.1) { this._abTick = 0; this._syncAbilities(); }
+  }
+
+  // ---------- class signature (F slot) ----------
+
+  _sigDmg(mul) { return this.stats.dmg * (this.sg.powT > 0 ? this.sg.powMul : 1) * mul; }
+
+  _sigHeal(n) {
+    const p = this.player; if (this.down || n <= 0 || p.hp >= this.stats.maxHp) return 0;
+    const got = Math.min(Math.round(n), this.stats.maxHp - p.hp); if (got <= 0) return 0;
+    p.hp += got; this._floatText(p.x, p.y - 40, `+${got}`, '#7ee787'); this._syncHud(); return got;
+  }
+
+  _sigFx(x, y, r, color, sec) { const f = this.sg.fx; f.x = x; f.y = y; f.r = r; f.color = color; f.t = f.max = sec; }
+
+  // Damage every live enemy within r of (x, y); returns the damage actually dealt (capped by remaining hp) for drain heals.
+  _sigAoe(x, y, r, dmg, knock, slow, slowSec) {
+    let dealt = 0;
+    for (let i = 0; i < this.enemies.length; i++) {
+      const e = this.enemies[i]; if (!e.active) continue;
+      const er = RM_ENEMIES[e.type].r; const dx = e.x - x; const dy = e.y - y; const rr = r + er;
+      if (dx * dx + dy * dy > rr * rr) continue;
+      if (slow < 1) { e.slowT = Math.max(e.slowT || 0, slowSec); e.slowF = slow; }
+      if (knock > 0 && e.type !== 'boss') {
+        const d = Math.hypot(dx, dy) || 1; const nx = Math.max(20, Math.min(this.W - 20, e.x + (dx / d) * knock)); const ny = Math.max(20, Math.min(this.H - 20, e.y + (dy / d) * knock));
+        if (!this.walls || !this.isWallAt(nx, ny)) { e.x = nx; e.y = ny; }
+      }
+      if (dmg > 0) { dealt += Math.min(dmg, Math.max(0, e.hp)); this._hitEnemy(e, dmg); }
+    }
+    return dealt;
+  }
+
+  _sigCancelBullets(x, y, r) {
+    const rr = r * r;
+    for (let i = 0; i < this.eBullets.length; i++) { const b = this.eBullets[i]; if (b.active && (b.x - x) * (b.x - x) + (b.y - y) * (b.y - y) <= rr) { b.active = false; if (i % 3 === 0) this._burst(b.x, b.y, '#8fe9ff', 1, 50); } }
+  }
+
+  _sigVolley(count, spread, dmgMul) {
+    const p = this.player; const d = this._sigDmg(dmgMul);
+    for (let k = 0; k < count; k++) this.firePlayerBulletFrom(p.x, p.y, p.aim + (count > 1 ? (k / (count - 1) - 0.5) * spread : 0), d, 0);
+  }
+
+  _castSignature() {
+    const s = this.sig; const p = this.player; const g = this.sg;
+    const ax = Math.cos(p.aim); const ay = Math.sin(p.aim);
+    if (s.kind === 'volley') {
+      this._sigVolley(s.count, s.spread, s.dmg); this._burst(p.x, p.y, '#ffe27a', 8, 160); this.shake = Math.max(this.shake, 2);
+    } else if (s.kind === 'dash-volley') {
+      let dx = this._mx || 0; let dy = this._my || 0;
+      if (Math.hypot(dx, dy) < 0.1) { dx = ax; dy = ay; }
+      const len = Math.hypot(dx, dy) || 1;
+      this._burst(p.x, p.y, '#b69cff', 10, 150);
+      if (this.walls) { for (let k = 0; k < 15; k++) this._movePlayer((dx / len) * (s.dist / 15), (dy / len) * (s.dist / 15)); }
+      else { p.x = Math.max(RM_PLAYER.r, Math.min(this.W - RM_PLAYER.r, p.x + (dx / len) * s.dist)); p.y = Math.max(RM_PLAYER.r, Math.min(this.H - RM_PLAYER.r, p.y + (dy / len) * s.dist)); }
+      p.iframes = Math.max(p.iframes, s.variant === 'smoke' ? 0.8 : 0.5);
+      this._burst(p.x, p.y, '#b69cff', 8, 150);
+      this._sigVolley(s.count, s.spread, s.dmg);
+    } else if (s.kind === 'drain-orb') {
+      const blizzard = s.variant === 'blizzard';
+      let cx = p.x; let cy = p.y;
+      if (!blizzard) { cx = Math.max(10, Math.min(this.W - 10, p.x + ax * s.range)); cy = Math.max(10, Math.min(this.H - 10, p.y + ay * s.range)); }
+      const dealt = this._sigAoe(cx, cy, s.radius, this._sigDmg(s.dmg), 0, blizzard ? s.slow : 1, s.dur);
+      this._sigFx(cx, cy, s.radius, blizzard ? '#bfe9ff' : '#c06bff', 0.5);
+      this._burst(cx, cy, blizzard ? '#bfe9ff' : '#c06bff', 14, 200);
+      if (s.healFrac > 0) this._sigHeal(Math.min(s.heal, s.healFrac * dealt));
+    } else if (s.kind === 'oath-shield') {
+      this.shield.hits = Math.max(this.shield.hits, s.shield); this.shield.t = Math.max(this.shield.t, s.dur);
+      p.iframes = Math.max(p.iframes, 0.3);
+      this._sigCancelBullets(p.x, p.y, s.radius);
+      this._sigFx(p.x, p.y, s.radius, '#ffe27a', 0.5);
+      this._burst(p.x, p.y, '#ffe27a', 12, 170);
+      this._sigHeal(s.heal);
+    } else if (s.kind === 'rage-slam') {
+      this._sigAoe(p.x, p.y, s.radius, this._sigDmg(s.dmg), s.knock, 1, 0);
+      this._sigCancelBullets(p.x, p.y, s.radius);
+      if (s.powSec > 0) { g.powT = s.powSec; g.powMul = s.powMul; }
+      p.iframes = Math.max(p.iframes, 0.3);
+      this._sigFx(p.x, p.y, s.radius, '#ff7a3a', 0.45);
+      this._burst(p.x, p.y, '#ff7a3a', 18, 240); this.shake = Math.max(this.shake, 6);
+    } else if (s.kind === 'thorn-bloom') {
+      const b = g.bloom;
+      b.x = Math.max(10, Math.min(this.W - 10, p.x + ax * s.range * 0.8)); b.y = Math.max(10, Math.min(this.H - 10, p.y + ay * s.range * 0.8));
+      b.r = s.radius; b.t = s.dur; b.tick = 0.5;
+      this._sigApplyBloom(0);
+      this._sigFx(b.x, b.y, b.r, '#7ee787', 0.4);
+      this._burst(b.x, b.y, '#7ee787', 14, 160);
+      this._sigHeal(s.heal);
+    } else if (s.kind === 'bone-guard') {
+      const bn = g.bones; bn.t = s.dur; bn.n = Math.max(1, Math.min(6, s.count)); bn.heal = s.heal; bn.frac = s.healFrac;
+      this._burst(p.x, p.y, '#e9e4d0', 12, 150);
+    }
+  }
+
+  // Thorn Bloom zone: enemies inside are rooted (heavily slowed); thorns tick every 0.5s.
+  _sigApplyBloom(dmg) {
+    const b = this.sg.bloom;
+    return this._sigAoe(b.x, b.y, b.r, dmg, 0, this.sig.slow, 0.3);
+  }
+
+  _updateSignature(dt) {
+    const g = this.sg;
+    if (g.powT > 0) g.powT = Math.max(0, g.powT - dt);
+    if (g.fx.t > 0) g.fx.t -= dt;
+    if (!this._sigOn() || this.state === 'dead') return;
+    const s = this.sig;
+    if (g.bloom.t > 0) {
+      const b = g.bloom; b.t -= dt; b.tick -= dt;
+      if (b.tick <= 0) { b.tick += 0.5; this._sigApplyBloom(this._sigDmg(s.dmg)); } else this._sigApplyBloom(0);
+    }
+    if (g.bones.t > 0) {
+      const bn = g.bones; const p = this.player; bn.t -= dt; bn.a += dt * 3.2;
+      const dmg = this._sigDmg(s.dmg);
+      for (let i = 0; i < this.enemies.length; i++) {
+        const e = this.enemies[i]; if (!e.active) continue;
+        if (e.boneT > 0) { e.boneT -= dt; continue; }
+        const rr = RM_ENEMIES[e.type].r + 8;
+        for (let k = 0; k < bn.n; k++) {
+          const a = bn.a + k * Math.PI * 2 / bn.n; const bx = p.x + Math.cos(a) * s.radius; const by = p.y + Math.sin(a) * s.radius;
+          if ((e.x - bx) * (e.x - bx) + (e.y - by) * (e.y - by) > rr * rr) continue;
+          const dealt = Math.min(dmg, Math.max(0, e.hp));
+          e.boneT = 0.45; this._burst(bx, by, '#e9e4d0', 2, 90); this._hitEnemy(e, dmg);
+          if (bn.frac > 0 && bn.heal > 0) { const h = Math.min(bn.heal, bn.frac * dealt); bn.heal -= this._sigHeal(Math.max(1, h)) || 0; }
+          break;
+        }
+      }
+    }
+  }
+
+  _drawSignature(g) {
+    const sg = this.sg; const p = this.player;
+    if (sg.fx.t > 0) {
+      const f = sg.fx; const k = f.t / f.max;
+      g.globalAlpha = 0.7 * k; g.strokeStyle = f.color; g.lineWidth = 3; g.beginPath(); g.arc(f.x, f.y, f.r * (this._reduced ? 1 : 1.05 - 0.15 * k), 0, Math.PI * 2); g.stroke();
+      g.globalAlpha = 0.12 * k; g.fillStyle = f.color; g.fill(); g.globalAlpha = 1;
+    }
+    if (sg.bloom.t > 0) {
+      const b = sg.bloom;
+      g.globalAlpha = 0.16; g.fillStyle = '#7ee787'; g.beginPath(); g.arc(b.x, b.y, b.r, 0, Math.PI * 2); g.fill();
+      g.globalAlpha = 0.6; g.strokeStyle = '#7ee787'; g.lineWidth = 2; g.stroke();
+      for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4 + 0.3; g.beginPath(); g.moveTo(b.x + Math.cos(a) * b.r * 0.5, b.y + Math.sin(a) * b.r * 0.5); g.lineTo(b.x + Math.cos(a) * b.r * 0.78, b.y + Math.sin(a) * b.r * 0.78); g.stroke(); }
+      g.globalAlpha = 1;
+    }
+    if (sg.bones.t > 0 && this.state !== 'dead') {
+      const bn = sg.bones; g.fillStyle = '#efe9d2'; g.strokeStyle = '#3a2f4a'; g.lineWidth = 1.5;
+      for (let k = 0; k < bn.n; k++) {
+        const a = bn.a + k * Math.PI * 2 / bn.n; const x = p.x + Math.cos(a) * this.sig.radius; const y = p.y + Math.sin(a) * this.sig.radius;
+        g.beginPath(); g.moveTo(x, y - 8); g.lineTo(x + 5, y); g.lineTo(x, y + 8); g.lineTo(x - 5, y); g.closePath(); g.fill(); g.stroke();
+      }
+    }
+    if (sg.powT > 0 && this.state !== 'dead') { g.strokeStyle = 'rgba(255,110,60,0.8)'; g.lineWidth = 2; g.beginPath(); g.arc(p.x, p.y, 18, 0, Math.PI * 2); g.stroke(); }
   }
 
   // ---------- backpack UI ----------
@@ -1951,6 +2135,7 @@ class RealmArena {
       g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(p.x, p.y + 14, 13, 5, 0, 0, Math.PI * 2); g.fill();
       this._drawHero(g, p);
     }
+    if (this.sig) this._drawSignature(g);
     if (this.dungeon) this.dungeon.drawOver(g);
     for (let i = 0; i < this.particles.length; i++) {
       const pt = this.particles[i];
@@ -2022,12 +2207,21 @@ class RealmArena {
     for (let i = 0; i < 4; i++) {
       const el = document.getElementById(`realm-ab-${i}`);
       if (!el) continue;
-      const ab = RM_ABILITIES[i]; const unlocked = this.abilityUnlocked(i); const cd = this.abilityCd[i];
+      const ab = this._ab(i); const unlocked = this.abilityUnlocked(i); const cd = this.abilityCd[i];
       el.classList.toggle('locked', !unlocked);
       el.classList.toggle('cooling', unlocked && cd > 0);
       const cdEl = el.querySelector('.cd');
       if (cdEl) cdEl.textContent = !unlocked ? `Lv${ab.level}` : cd > 0 ? String(Math.ceil(cd)) : '';
       el.setAttribute('aria-label', `${ab.name} (${ab.key.toUpperCase()})${unlocked ? '' : ` — unlocks at level ${ab.level}`}`);
+      if (i === 3) { // the F slot shows the class signature (icon + short name) when one is set
+        const ico = el.querySelector('.ico'); if (ico && ico.textContent !== ab.icon) ico.textContent = ab.icon;
+        let nm = el.querySelector('.nm');
+        if (this._sigOn()) {
+          if (!nm) { nm = document.createElement('span'); nm.className = 'nm'; el.appendChild(nm); }
+          if (nm.textContent !== ab.short) nm.textContent = ab.short;
+          el.title = ab.name; el.dataset.sig = this.sig.kind;
+        } else { if (nm) nm.remove(); el.removeAttribute('title'); delete el.dataset.sig; }
+      }
     }
   }
 

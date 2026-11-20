@@ -1,0 +1,36 @@
+:root { --bg:#1d2b20; --panel:#2b3d2e; --ink:#f4f1de; --accent:#ffd166; --dim:#9db3a0; --buy:#7fd18b; --sell:#f4a261; }
+* { box-sizing: border-box; }
+html, body { margin:0; background:var(--bg); color:var(--ink); font-family: ui-monospace, Menlo, Consolas, monospace; overflow-x:hidden; }
+body { min-height:100vh; display:flex; flex-direction:column; align-items:center; touch-action:manipulation; }
+#top { width:100%; max-width:640px; display:flex; align-items:center; justify-content:space-between; gap:6px; padding:8px 16px; }
+#top h1 { font-size:18px; margin:0; }
+.back { color:var(--accent); text-decoration:none; min-height:48px; min-width:48px; display:inline-flex; align-items:center; }
+#btn-mute { font:inherit; font-size:14px; color:var(--ink); background:var(--panel); border:1px solid #455; border-radius:8px; min-height:48px; min-width:48px; padding:4px 10px; cursor:pointer; }
+#stage { width:100%; max-width:640px; padding:0 16px 24px; display:flex; flex-direction:column; gap:10px; }
+#stats { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.stat { background:var(--panel); border-radius:8px; padding:8px; display:flex; flex-direction:column; min-width:0; }
+.stat .lbl { font-size:12px; color:var(--dim); }
+.stat strong { font-size:18px; overflow-wrap:anywhere; }
+#price-card { display:flex; align-items:center; gap:14px; background:var(--panel); border-radius:10px; padding:10px 14px; }
+#icon { width:48px; height:48px; flex:none; }
+#when { color:var(--dim); font-size:14px; }
+#price { font-size:40px; font-weight:bold; color:var(--accent); line-height:1.1; }
+#price-note { font-size:13px; color:var(--dim); }
+#chart { width:100%; height:auto; display:block; background:#18241b; border:3px solid #0d160f; border-radius:8px; }
+#chart-alt { margin:0; font-size:12px; }
+#actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.big { font:inherit; font-size:18px; font-weight:bold; color:#1d2b20; border:0; border-radius:12px; min-height:64px; cursor:pointer; }
+.big.buy { background:var(--buy); }
+.big.sell { background:var(--sell); }
+.big[disabled] { background:#566; color:#aab; cursor:not-allowed; }
+.big:focus-visible, #btn-mute:focus-visible, .back:focus-visible, #hint button:focus-visible { outline:3px solid #fff; outline-offset:2px; }
+#msg { min-height:1.4em; margin:0; }
+#hint { background:var(--panel); border:2px solid var(--accent); border-radius:10px; padding:10px 14px; }
+#hint[hidden], .card[hidden] { display:none; }
+#hint p { margin:6px 0; }
+#hint button { font:inherit; color:#1d2b20; background:var(--accent); border:0; border-radius:8px; min-height:48px; min-width:48px; padding:8px 14px; cursor:pointer; }
+.card { background:var(--panel); border-radius:10px; padding:8px 14px; }
+.card h2 { font-size:16px; margin:4px 0; }
+.card p { margin:4px 0; }
+#history { margin:4px 0; padding-left:18px; font-size:14px; }
+.dim { color:var(--dim); }
