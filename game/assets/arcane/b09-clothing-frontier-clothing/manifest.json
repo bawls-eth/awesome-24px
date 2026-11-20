@@ -1,0 +1,746 @@
+{
+  "name": "Arcane Frontier clothing and helmets",
+  "frame_size": 32,
+  "assets": [
+    {
+      "id": "clothing_tunic_linen",
+      "category": "item",
+      "path": "items/clothing_tunic_linen.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "clothing",
+        "tunic",
+        "linen"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        342,
+        334
+      ]
+    },
+    {
+      "id": "clothing_tunic_wayfarer",
+      "category": "item",
+      "path": "items/clothing_tunic_wayfarer.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "clothing",
+        "tunic",
+        "wayfarer"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        342,
+        334
+      ]
+    },
+    {
+      "id": "clothing_tunic_orchard",
+      "category": "item",
+      "path": "items/clothing_tunic_orchard.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "clothing",
+        "tunic",
+        "orchard"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        340,
+        333
+      ]
+    },
+    {
+      "id": "clothing_tunic_festival",
+      "category": "item",
+      "path": "items/clothing_tunic_festival.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "clothing",
+        "tunic",
+        "festival"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        343,
+        333
+      ]
+    },
+    {
+      "id": "clothing_tunic_moon",
+      "category": "item",
+      "path": "items/clothing_tunic_moon.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "clothing",
+        "tunic",
+        "moon"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        344,
+        332
+      ]
+    },
+    {
+      "id": "clothing_tunic_river",
+      "category": "item",
+      "path": "items/clothing_tunic_river.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "clothing",
+        "tunic",
+        "river"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        341,
+        331
+      ]
+    },
+    {
+      "id": "clothing_tunic_sun",
+      "category": "item",
+      "path": "items/clothing_tunic_sun.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "clothing",
+        "tunic",
+        "sun"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        342,
+        341
+      ]
+    },
+    {
+      "id": "clothing_tunic_twilight",
+      "category": "item",
+      "path": "items/clothing_tunic_twilight.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "clothing",
+        "tunic",
+        "twilight"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        345,
+        342
+      ]
+    },
+    {
+      "id": "clothing_tunic_winter",
+      "category": "item",
+      "path": "items/clothing_tunic_winter.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "clothing",
+        "tunic",
+        "winter"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        349,
+        347
+      ]
+    },
+    {
+      "id": "clothing_robe_linen",
+      "category": "item",
+      "path": "items/clothing_robe_linen.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "clothing",
+        "robe",
+        "linen"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        281,
+        366
+      ]
+    },
+    {
+      "id": "clothing_robe_wayfarer",
+      "category": "item",
+      "path": "items/clothing_robe_wayfarer.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "clothing",
+        "robe",
+        "wayfarer"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        283,
+        367
+      ]
+    },
+    {
+      "id": "clothing_robe_orchard",
+      "category": "item",
+      "path": "items/clothing_robe_orchard.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "clothing",
+        "robe",
+        "orchard"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        277,
+        366
+      ]
+    },
+    {
+      "id": "clothing_robe_festival",
+      "category": "item",
+      "path": "items/clothing_robe_festival.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "clothing",
+        "robe",
+        "festival"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        290,
+        371
+      ]
+    },
+    {
+      "id": "clothing_robe_moon",
+      "category": "item",
+      "path": "items/clothing_robe_moon.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "clothing",
+        "robe",
+        "moon"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        293,
+        371
+      ]
+    },
+    {
+      "id": "clothing_robe_river",
+      "category": "item",
+      "path": "items/clothing_robe_river.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "clothing",
+        "robe",
+        "river"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        291,
+        369
+      ]
+    },
+    {
+      "id": "clothing_robe_sun",
+      "category": "item",
+      "path": "items/clothing_robe_sun.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "clothing",
+        "robe",
+        "sun"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        288,
+        376
+      ]
+    },
+    {
+      "id": "clothing_robe_twilight",
+      "category": "item",
+      "path": "items/clothing_robe_twilight.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "clothing",
+        "robe",
+        "twilight"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        288,
+        378
+      ]
+    },
+    {
+      "id": "clothing_robe_winter",
+      "category": "item",
+      "path": "items/clothing_robe_winter.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "clothing",
+        "robe",
+        "winter"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        295,
+        384
+      ]
+    },
+    {
+      "id": "clothing_cloak_linen",
+      "category": "item",
+      "path": "items/clothing_cloak_linen.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "clothing",
+        "cloak",
+        "linen"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        367,
+        338
+      ]
+    },
+    {
+      "id": "clothing_cloak_wayfarer",
+      "category": "item",
+      "path": "items/clothing_cloak_wayfarer.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "clothing",
+        "cloak",
+        "wayfarer"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        376,
+        338
+      ]
+    },
+    {
+      "id": "clothing_cloak_orchard",
+      "category": "item",
+      "path": "items/clothing_cloak_orchard.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "clothing",
+        "cloak",
+        "orchard"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        374,
+        339
+      ]
+    },
+    {
+      "id": "clothing_cloak_festival",
+      "category": "item",
+      "path": "items/clothing_cloak_festival.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "clothing",
+        "cloak",
+        "festival"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        381,
+        345
+      ]
+    },
+    {
+      "id": "clothing_cloak_moon",
+      "category": "item",
+      "path": "items/clothing_cloak_moon.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "clothing",
+        "cloak",
+        "moon"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        375,
+        345
+      ]
+    },
+    {
+      "id": "clothing_cloak_river",
+      "category": "item",
+      "path": "items/clothing_cloak_river.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "clothing",
+        "cloak",
+        "river"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        383,
+        345
+      ]
+    },
+    {
+      "id": "clothing_cloak_sun",
+      "category": "item",
+      "path": "items/clothing_cloak_sun.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "clothing",
+        "cloak",
+        "sun"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        371,
+        356
+      ]
+    },
+    {
+      "id": "clothing_cloak_twilight",
+      "category": "item",
+      "path": "items/clothing_cloak_twilight.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "clothing",
+        "cloak",
+        "twilight"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        377,
+        357
+      ]
+    },
+    {
+      "id": "clothing_cloak_winter",
+      "category": "item",
+      "path": "items/clothing_cloak_winter.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "clothing",
+        "cloak",
+        "winter"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        390,
+        360
+      ]
+    },
+    {
+      "id": "clothing_trousers_linen",
+      "category": "item",
+      "path": "items/clothing_trousers_linen.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "clothing",
+        "trousers",
+        "linen"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        267,
+        355
+      ]
+    },
+    {
+      "id": "clothing_trousers_wayfarer",
+      "category": "item",
+      "path": "items/clothing_trousers_wayfarer.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "clothing",
+        "trousers",
+        "wayfarer"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        260,
+        354
+      ]
+    },
+    {
+      "id": "clothing_trousers_winter",
+      "category": "item",
+      "path": "items/clothing_trousers_winter.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "clothing",
+        "trousers",
+        "winter"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        280,
+        355
+      ]
+    },
+    {
+      "id": "helm_coral_sentinel",
+      "category": "item",
+      "path": "items/helm_coral_sentinel.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "headgear"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        266,
+        341
+      ]
+    },
+    {
+      "id": "helm_raven_steel",
+      "category": "item",
+      "path": "items/helm_raven_steel.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "headgear"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        317,
+        352
+      ]
+    },
+    {
+      "id": "helm_copper_lamellar",
+      "category": "item",
+      "path": "items/helm_copper_lamellar.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "headgear"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        300,
+        338
+      ]
+    },
+    {
+      "id": "helm_azurite_guard",
+      "category": "item",
+      "path": "items/helm_azurite_guard.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "headgear"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        264,
+        352
+      ]
+    }
+  ]
+}
