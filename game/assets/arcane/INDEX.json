@@ -257,6 +257,16 @@
       "ingested_utc": "2026-11-20T19:20:00Z",
       "source": "codex",
       "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "b10t",
+      "label": "overworld-terrain-1",
+      "path": "assets/arcane/b10t-overworld-terrain-1",
+      "manifest": "assets/arcane/b10t-overworld-terrain-1/manifest.json",
+      "files": 160,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T19:49:09.264586Z",
+      "source": "codex"
     }
   ]
 }
