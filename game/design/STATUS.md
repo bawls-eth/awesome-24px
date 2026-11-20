@@ -94,3 +94,9 @@ Staged 30 clothing icons and four helmets. Catalog and runtime integration are p
 
 ## Boss art + item icons (2026-11-20)
 Boss animations in the Mad Maze arena by wave tier (?bossart=0 off); item icons in backpack/shop/slots on the Mad Maze page (?itemart=0 off). Not yet: town Realm Gate keeps emoji; loot bag art; dungeon-mode bosses untested; arena still ignores class stats.
+
+## Class stats in the arena (2026-11-20)
+MMClasses.arenaProfile multipliers (hp/speed/dmg/rate/iframes, clamped 0.7-1.4, ranger = 1) applied via realm.setHeroProfile on the Mad Maze page only (?classstats=0 off); duels and the town arena unchanged. Not yet: multi-shot/spread/pierce tags are not applied.
+
+## Deepdelve governor + loot bag icons (2026-11-20)
+Deepdelve: adaptive render scale/view distance governor (window.__dd.perf hook, off in ?test=1), max 3 chunk meshes per frame. Arena: loot bags show item icons with rarity outline; pickup/combine/buy float texts carry the icon. Not yet: town item icons, enemy death animation, dark_spider unmapped.

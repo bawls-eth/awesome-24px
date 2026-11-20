@@ -194,6 +194,7 @@ class RealmArena {
     this.displayShards = this.save.shards;
     this._avatar = null;
     this._itemArt = null; this._enemyArt = null; this._enemyMap = null; this._driftMap = null; this._enemyDbgOn = false; this._bossArt = null; this._bossLoad = null; this._bossDbg = null; this._bossGhost = null; this._bossReq = null; // optional enemy animations (setEnemyArt)
+    this.heroProfile = null; // setHeroProfile
     this._heroArt = null; this._heroClass = null; this._heroSt = null; this._heroDbg = null; this._heroHurtAt = -9; this._heroAtkAt = -9; // optional hero animations (setHeroArt)
     this.team = null; this.role = 'solo'; this.down = false; this.reviveT = 0; this._firing = false;
 
@@ -311,7 +312,7 @@ class RealmArena {
     this.hazards = make(RM_POOL.hazards, () => ({ active: false, x: 0, y: 0, kind: 'lava', tick: 0 }));
     this.biome = 0; this.clock = 0; this.bossT0 = 0; this._speedMul = 1;
     this.particles = make(RM_POOL.particles, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, max: 1, color: '#fff', size: 3 }));
-    this.texts = make(RM_POOL.texts, () => ({ active: false, x: 0, y: 0, vy: 0, life: 0, text: '', color: '#fff' }));
+    this.texts = make(RM_POOL.texts, () => ({ active: false, x: 0, y: 0, vy: 0, life: 0, text: '', color: '#fff', ico: '', ir: 0, plain: '' }));
     this.bags = make(RM_POOL.bags, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, t: 0, id: '', r: 0 }));
     this.abilityCd = [0, 0, 0, 0];
     this.shield = { hits: 0, t: 0 };
@@ -493,6 +494,8 @@ class RealmArena {
       else if (def.stat === 'xp') st.xp += v;
       else if (def.stat === 'iframes') st.iframes += v;
     });
+    const hp = this.heroProfile; // additive class profile (setHeroProfile), applied after gear and level; never in duels (returned above)
+    if (hp) { st.maxHp = Math.max(1, Math.round(st.maxHp * hp.hp)); st.dmg *= hp.dmg; st.rate *= hp.rate; st.speed *= hp.speed; st.iframes *= hp.iframes; }
     st.guard = this._calcGuard();
     this.stats = st;
     return st;
@@ -637,11 +640,19 @@ class RealmArena {
     this._heroScale = Number.isFinite(scale) && scale > 0 ? scale : 0.3125;
     this._heroSt = null; this._heroDbg = null;
   }
+  // Additive hook: class stat multipliers {hp,dmg,rate,speed,iframes,name} from MMClasses.arenaProfile. null = today's behaviour. Ignored in team duels.
+  setHeroProfile(profile) {
+    const ok = profile && typeof profile === 'object';
+    const m = (v) => (Number.isFinite(v) ? Math.max(0.7, Math.min(1.4, v)) : 1);
+    this.heroProfile = ok ? { name: String(profile.name || '').slice(0, 40), hp: m(profile.hp), dmg: m(profile.dmg), rate: m(profile.rate), speed: m(profile.speed), iframes: m(profile.iframes) } : null;
+    if (this.save) { this._calcStats(); if (this.player && this.player.hp > this.stats.maxHp) this.player.hp = this.stats.maxHp; if (this.active) this._syncHud(); }
+  }
   // Additive hook: draw arena enemies / drifters with creature animations (MMArt.loadEnemies). Pass (null) to go back to the procedural sprites.
   // `map` / `driftMap` default to MMArt's ENEMY_MAP / DRIFTER_MAP. Never attached by the in-town gate.
   // Additive hook: show item art (MMArt.loadItems ItemSet) in the backpack, shop and equipped slots, emoji as fallback. null = emoji only.
   setItemArt(itemSet) {
     this._itemArt = itemSet && typeof itemSet.iconUrl === 'function' ? itemSet : null;
+    this._lootIco = Object.create(null); // arena loot icons: id -> { img, cv: [one outlined canvas per rarity] }
     if (this.paused && document.getElementById('realm-backpack-body')) this.renderBackpack();
   }
   // Icon markup for an item id: <img> from a trusted manifest url (never user data), else the emoji. Fallback on load error is wired by _fixIcons.
@@ -650,6 +661,37 @@ class RealmArena {
     try { url = this._itemArt ? this._itemArt.iconUrl(def.id) : null; } catch (e) { url = null; }
     if (!url || !/^[A-Za-z0-9_.\/-]+$/.test(url)) return def.icon;
     return `<img class="realm-ico" src="${url}" alt="" width="32" height="32" data-item="${def.id}" style="image-rendering:pixelated">`;
+  }
+  // Small floor / floating-text icon for an item id at a rarity: a cached 20x20 canvas (item art + rarity-colour outline), built once per id+rarity.
+  // null until the PNG is complete (or when item art is off / missing), so callers keep the old look. No per-frame allocation after the first build.
+  _lootIcon(id, r) {
+    if (!this._itemArt || !(r >= 0 && r < RM_RARITIES.length)) return null;
+    const c = this._lootIco || (this._lootIco = Object.create(null));
+    let e = c[id];
+    if (e === undefined) {
+      let url = null;
+      try { url = this._itemArt.iconUrl(id); } catch (err) { url = null; }
+      if (!url || !/^[A-Za-z0-9_.\/-]+$/.test(url)) return null; // not cached: may become available later
+      const img = new Image(); e = c[id] = { img, cv: [null, null, null, null], dead: false };
+      img.onerror = () => { e.dead = true; if (this._itemArt && this._itemArt.markBad) this._itemArt.markBad(id); };
+      img.src = url;
+    }
+    if (e.dead) return null;
+    if (e.cv[r]) return e.cv[r];
+    const im = e.img;
+    if (!(im.complete && im.naturalWidth > 0)) return null;
+    const cv = document.createElement('canvas'); cv.width = 20; cv.height = 20;
+    const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
+    g.drawImage(im, 1, 2, 16, 16); g.drawImage(im, 3, 2, 16, 16); g.drawImage(im, 2, 1, 16, 16); g.drawImage(im, 2, 3, 16, 16);
+    g.globalCompositeOperation = 'source-in'; g.fillStyle = RM_RARITIES[r].color; g.fillRect(0, 0, 20, 20);
+    g.globalCompositeOperation = 'source-over'; g.drawImage(im, 2, 2, 16, 16);
+    e.cv[r] = cv;
+    return cv;
+  }
+  // Floating "icon + name" text: the icon is drawn from _lootIcon when ready, else the emoji text stays.
+  _itemText2(x, y, id, rarity, name, emoji, color) {
+    const t = this._floatText(x, y, `${emoji} ${name}`, color);
+    if (t) { t.ico = id; t.ir = rarity; t.plain = name; }
   }
   _fixIcons(root) {
     root.querySelectorAll('img.realm-ico').forEach((img) => {
@@ -1062,8 +1104,9 @@ class RealmArena {
 
   _floatText(x, y, text, color) {
     const t = this._take(this.texts);
-    if (!t) return;
-    t.active = true; t.x = x; t.y = y; t.vy = -48; t.life = 0.7; t.text = text; t.color = color;
+    if (!t) return null;
+    t.active = true; t.x = x; t.y = y; t.vy = -48; t.life = 0.7; t.text = text; t.color = color; t.ico = ''; t.plain = '';
+    return t;
   }
 
   // ---------- simulation ----------
@@ -1490,6 +1533,7 @@ class RealmArena {
     sv.shards -= price; sv.items.push({ n: sv.nextUid++, id, r });
     this.displayShards = sv.shards;
     this._snd('pickup');
+    this._itemText2(this.player.x, this.player.y - 24, id, r, RM_ITEM_BY_ID[id].name, RM_ITEM_BY_ID[id].icon, RM_RARITIES[r].color);
     this.onSave(sv); this._syncHud(); this.renderShop();
     return true;
   }
@@ -1597,7 +1641,7 @@ class RealmArena {
       this._floatText(this.player.x, this.player.y - 24, `sold ${def.name} +${rar.sell} 💎`, rar.color);
     } else {
       sv.items.push({ n: sv.nextUid++, id, r: rarity });
-      this._floatText(this.player.x, this.player.y - 24, `${def.icon} ${def.name}`, rar.color);
+      this._itemText2(this.player.x, this.player.y - 24, id, rarity, def.name, def.icon, rar.color);
       this._burst(this.player.x, this.player.y, rar.color, 10, 150);
     }
     this.onSave(this.save);
@@ -1724,7 +1768,7 @@ class RealmArena {
     RM_SLOTS.forEach((slot) => { if (gone.has(sv.eq[slot])) delete sv.eq[slot]; });
     c.keep.r += 1;
     this._snd('levelup');
-    this._floatText(this.player.x, this.player.y - 34, `${RM_ITEM_BY_ID[c.keep.id].icon} ${RM_RARITIES[c.keep.r].name}!`, RM_RARITIES[c.keep.r].color);
+    this._itemText2(this.player.x, this.player.y - 34, c.keep.id, c.keep.r, `${RM_RARITIES[c.keep.r].name}!`, RM_ITEM_BY_ID[c.keep.id].icon, RM_RARITIES[c.keep.r].color);
     this._afterGearChange();
     return true;
   }
@@ -1751,6 +1795,7 @@ class RealmArena {
 
   _statLine() {
     const st = this.stats; const bits = [`${st.maxHp} HP`, `${(Math.round(st.dmg * 10) / 10)} dmg`, `${(Math.round(st.rate * 10) / 10)} shots/s`, `${Math.round(st.speed)} speed`];
+    if (this.heroProfile && this.heroProfile.name && !(this.team && this.team.isPvp)) bits.unshift(this.heroProfile.name);
     if (st.shards > 1) bits.push(`+${Math.round((st.shards - 1) * 100)}% 💎`);
     if (st.xp > 1) bits.push(`+${Math.round((st.xp - 1) * 100)}% xp`);
     return bits.join(' · ');
@@ -1814,7 +1859,7 @@ class RealmArena {
       if (e.hp < e.maxHp && e.type !== 'boss') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(e.x - 14, e.y - spr.height / 2 - 6, 28, 4); g.fillStyle = RM_ENEMIES[e.type].color; g.fillRect(e.x - 14, e.y - spr.height / 2 - 6, 28 * (e.hp / e.maxHp), 4); }
     }
     if (this._bossGhost) this._drawBossGhost(g);
-    for (let i = 0; i < this.bags.length; i++) { const b = this.bags[i]; if (b.active) g.drawImage(this.sprites.bag[b.r], b.x - 13, b.y - 13 + Math.sin(b.t * 5) * 2); }
+    for (let i = 0; i < this.bags.length; i++) { const b = this.bags[i]; if (b.active) { const by = b.y - 13 + Math.sin(b.t * 5) * 2; g.drawImage(this.sprites.bag[b.r], b.x - 13, by); if (this._itemArt) { const ic = this._lootIcon(b.id, b.r); if (ic) g.drawImage(ic, b.x - 10, by - 18 + Math.sin(b.t * 5 + 1) * 1.5); } } }
     for (let i = 0; i < this.eBullets.length; i++) { const b = this.eBullets[i]; if (b.active) g.drawImage(this.sprites.eBullet[b.kind], b.x - 8, b.y - 8); }
     for (let i = 0; i < this.pBullets.length; i++) { const b = this.pBullets[i]; if (b.active) g.drawImage(this.sprites.pBullet, b.x - 8, b.y - 8); }
 
@@ -1871,7 +1916,14 @@ class RealmArena {
     for (let i = 0; i < this.texts.length; i++) {
       const t = this.texts[i];
       if (!t.active) continue;
-      g.globalAlpha = Math.min(1, t.life * 2.5); g.fillStyle = '#000'; g.fillText(t.text, t.x + 1, t.y + 1); g.fillStyle = t.color; g.fillText(t.text, t.x, t.y);
+      g.globalAlpha = Math.min(1, t.life * 2.5);
+      const ic = t.ico && this._itemArt ? this._lootIcon(t.ico, t.ir) : null;
+      if (ic) { // icon + name: the icon replaces the emoji
+        const w = g.measureText(t.plain).width; const x0 = t.x - (w + 22) / 2;
+        g.drawImage(ic, x0, t.y - 15); g.textAlign = 'left';
+        g.fillStyle = '#000'; g.fillText(t.plain, x0 + 23, t.y + 1); g.fillStyle = t.color; g.fillText(t.plain, x0 + 22, t.y);
+        g.textAlign = 'center';
+      } else { g.fillStyle = '#000'; g.fillText(t.text, t.x + 1, t.y + 1); g.fillStyle = t.color; g.fillText(t.text, t.x, t.y); }
     }
     g.globalAlpha = 1;
     g.restore();
