@@ -136,6 +136,28 @@
       "ingested_utc": "2026-11-20T08:20:00Z",
       "source": "codex",
       "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "b09a",
+      "label": "frontier-accessories",
+      "path": "assets/arcane/b09-accessories-frontier-accessories",
+      "manifest": "assets/arcane/b09-accessories-frontier-accessories/manifest.json",
+      "files": 25,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T09:20:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20"
+    },
+    {
+      "id": "b09c",
+      "label": "frontier-consumables",
+      "path": "assets/arcane/b09-consumables-frontier-consumables",
+      "manifest": "assets/arcane/b09-consumables-frontier-consumables/manifest.json",
+      "files": 25,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T09:20:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20"
     }
   ]
 }
