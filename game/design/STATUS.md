@@ -100,3 +100,6 @@ MMClasses.arenaProfile multipliers (hp/speed/dmg/rate/iframes, clamped 0.7-1.4, 
 
 ## Deepdelve governor + loot bag icons (2026-11-20)
 Deepdelve: adaptive render scale/view distance governor (window.__dd.perf hook, off in ?test=1), max 3 chunk meshes per frame. Arena: loot bags show item icons with rarity outline; pickup/combine/buy float texts carry the icon. Not yet: town item icons, enemy death animation, dark_spider unmapped.
+
+## Room variety + enemy deaths (2026-11-20)
+mm-rooms: 25 new templates (68 with mirrors), MMRooms.selectRooms (layout v2; v1 selection kept verbatim for old seeds; ?lv=2 or fresh random seed uses v2). Hub catacombs link still v1 (add &lv=2 in game/hub/hub.js to enable). Enemy death ghosts (24-slot pool), dark_spider skin for Frost Mire Sniper. Not yet: new rooms eyeballed in browser, up-facing death strips.
