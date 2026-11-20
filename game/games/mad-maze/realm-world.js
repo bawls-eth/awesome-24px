@@ -250,12 +250,22 @@
     const EMPTY = [];
 
     // ---------- minimap (base image cached once) + zone HUD ----------
-    const mini = document.createElement('canvas'); mini.id = 'rw-minimap'; mini.width = 96; mini.height = 96; mini.setAttribute('aria-label', 'World map (tap to enlarge)'); mini.setAttribute('role', 'img');
+    const mini = document.createElement('canvas'); mini.id = 'rw-minimap'; mini.width = 96; mini.height = 96; mini.setAttribute('aria-label', 'World map (tap to enlarge)'); mini.setAttribute('role', 'button'); mini.tabIndex = 0; mini.setAttribute('aria-pressed', 'false');
     const zoneEl = document.createElement('div'); zoneEl.id = 'rw-zone'; zoneEl.setAttribute('aria-live', 'polite');
     zoneEl.innerHTML = '<div class="rw-zname"></div><div class="rw-zsub"><span class="rw-arrow" aria-hidden="true">➤</span> <span class="rw-coords"></span></div>';
     const ov = document.getElementById('realm-overlay') || document.body;
     ov.appendChild(mini); ov.appendChild(zoneEl);
-    mini.addEventListener('click', () => mini.classList.toggle('big'));
+    function toggleMinimap() {
+      const expanded = mini.classList.toggle('big');
+      mini.setAttribute('aria-pressed', String(expanded));
+    }
+    mini.addEventListener('click', toggleMinimap);
+    mini.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (!event.repeat) toggleMinimap();
+    });
     const zName = zoneEl.querySelector('.rw-zname'); const zArrow = zoneEl.querySelector('.rw-arrow'); const zCoords = zoneEl.querySelector('.rw-coords');
     let miniBase = null;
     function buildMiniBase() {
@@ -273,11 +283,11 @@
       if (!force && key === miniKey) return;
       miniKey = key; miniDraws++;
       if (!miniBase) miniBase = buildMiniBase();
-      const g = mini.getContext('2d'); const k = 96 / ww;
-      g.imageSmoothingEnabled = true; g.drawImage(miniBase, 0, 0, ww, wh, 0, 0, 96, 96);
-      for (let i = 0; i < portals.length; i++) { const q = portals[i]; g.fillStyle = '#000'; g.fillRect(q.tx * k - 2.5, q.ty * k - 2.5, 5, 5); g.fillStyle = q.col; g.fillRect(q.tx * k - 1.5, q.ty * k - 1.5, 3, 3); }
-      for (let i = 0; i < world.bossSites.length; i++) { const b = world.bossSites[i]; g.fillStyle = bossMarkCol(i); g.beginPath(); g.arc(b.x * k, b.y * k, 2, 0, Math.PI * 2); g.fill(); }
-      g.fillStyle = '#000'; g.fillRect(tx * k - 2.5, ty * k - 2.5, 5, 5); g.fillStyle = '#fff'; g.fillRect(tx * k - 1.5, ty * k - 1.5, 3, 3);
+      const g = mini.getContext('2d'); const sx = mini.width / ww; const sy = mini.height / wh;
+      g.imageSmoothingEnabled = true; g.drawImage(miniBase, 0, 0, ww, wh, 0, 0, mini.width, mini.height);
+      for (let i = 0; i < portals.length; i++) { const q = portals[i]; g.fillStyle = '#000'; g.fillRect(q.tx * sx - 2.5, q.ty * sy - 2.5, 5, 5); g.fillStyle = q.col; g.fillRect(q.tx * sx - 1.5, q.ty * sy - 1.5, 3, 3); }
+      for (let i = 0; i < world.bossSites.length; i++) { const b = world.bossSites[i]; g.fillStyle = bossMarkCol(i); g.beginPath(); g.arc(b.x * sx, b.y * sy, 2, 0, Math.PI * 2); g.fill(); }
+      g.fillStyle = '#000'; g.fillRect(tx * sx - 2.5, ty * sy - 2.5, 5, 5); g.fillStyle = '#fff'; g.fillRect(tx * sx - 1.5, ty * sy - 1.5, 3, 3);
     }
     function syncHud(force) {
       const p = arena.player; const tx = Math.floor(p.x / TILE); const ty = Math.floor(p.y / TILE);
