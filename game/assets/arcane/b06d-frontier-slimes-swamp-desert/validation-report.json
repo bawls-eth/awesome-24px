@@ -1,0 +1,30 @@
+{
+  "batch": "b06d",
+  "label": "frontier-slimes-swamp-desert",
+  "generated_utc": "2026-11-20T17:01:39.173070Z",
+  "files": 72,
+  "duplicate_ids": 0,
+  "blocking": {},
+  "warnings": {},
+  "standing_heights": {
+    "slime_green/down": 92,
+    "slime_green/up": 92,
+    "slime_green/right": 92,
+    "slime_red/down": 92,
+    "slime_red/up": 92,
+    "slime_red/right": 92,
+    "slime_blue/down": 96,
+    "slime_blue/up": 96,
+    "slime_blue/right": 92,
+    "swamp_leech/down": 116,
+    "swamp_leech/up": 112,
+    "swamp_leech/right": 88,
+    "toxic_serpent/down": 96,
+    "toxic_serpent/up": 96,
+    "toxic_serpent/right": 92,
+    "sand_scorpion/down": 108,
+    "sand_scorpion/up": 96,
+    "sand_scorpion/right": 96
+  },
+  "status": "provisional"
+}

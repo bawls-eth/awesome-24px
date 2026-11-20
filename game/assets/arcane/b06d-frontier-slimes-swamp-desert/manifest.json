@@ -1,0 +1,1698 @@
+{
+  "name": "ARCANE RPG B06d \u2014 Frontier Slimes, Swamp and Desert",
+  "frame_size": 256,
+  "assets": [
+    {
+      "id": "slime_green_idle_down",
+      "category": "enemy",
+      "enemy": "slime_green",
+      "action": "idle",
+      "dir": "down",
+      "path": "enemies/slime_green/slime_green_idle_down.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "slime_green_move_down",
+      "category": "enemy",
+      "enemy": "slime_green",
+      "action": "move",
+      "dir": "down",
+      "path": "enemies/slime_green/slime_green_move_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "slime_green_attack_down",
+      "category": "enemy",
+      "enemy": "slime_green",
+      "action": "attack",
+      "dir": "down",
+      "path": "enemies/slime_green/slime_green_attack_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 126,
+          "y": 172
+        },
+        {
+          "x": 126,
+          "y": 179
+        },
+        {
+          "x": 128,
+          "y": 160
+        },
+        {
+          "x": 128,
+          "y": 146
+        },
+        {
+          "x": 126,
+          "y": 169
+        }
+      ]
+    },
+    {
+      "id": "slime_green_death_down",
+      "category": "enemy",
+      "enemy": "slime_green",
+      "action": "death",
+      "dir": "down",
+      "path": "enemies/slime_green/slime_green_death_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "slime_green_idle_up",
+      "category": "enemy",
+      "enemy": "slime_green",
+      "action": "idle",
+      "dir": "up",
+      "path": "enemies/slime_green/slime_green_idle_up.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "slime_green_move_up",
+      "category": "enemy",
+      "enemy": "slime_green",
+      "action": "move",
+      "dir": "up",
+      "path": "enemies/slime_green/slime_green_move_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "slime_green_attack_up",
+      "category": "enemy",
+      "enemy": "slime_green",
+      "action": "attack",
+      "dir": "up",
+      "path": "enemies/slime_green/slime_green_attack_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 126,
+          "y": 164
+        },
+        {
+          "x": 126,
+          "y": 172
+        },
+        {
+          "x": 128,
+          "y": 151
+        },
+        {
+          "x": 128,
+          "y": 138
+        },
+        {
+          "x": 126,
+          "y": 162
+        }
+      ]
+    },
+    {
+      "id": "slime_green_death_up",
+      "category": "enemy",
+      "enemy": "slime_green",
+      "action": "death",
+      "dir": "up",
+      "path": "enemies/slime_green/slime_green_death_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "slime_green_idle_right",
+      "category": "enemy",
+      "enemy": "slime_green",
+      "action": "idle",
+      "dir": "right",
+      "path": "enemies/slime_green/slime_green_idle_right.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "slime_green_move_right",
+      "category": "enemy",
+      "enemy": "slime_green",
+      "action": "move",
+      "dir": "right",
+      "path": "enemies/slime_green/slime_green_move_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "slime_green_attack_right",
+      "category": "enemy",
+      "enemy": "slime_green",
+      "action": "attack",
+      "dir": "right",
+      "path": "enemies/slime_green/slime_green_attack_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 180,
+          "y": 180
+        },
+        {
+          "x": 183,
+          "y": 186
+        },
+        {
+          "x": 176,
+          "y": 170
+        },
+        {
+          "x": 182,
+          "y": 162
+        },
+        {
+          "x": 180,
+          "y": 178
+        }
+      ]
+    },
+    {
+      "id": "slime_green_death_right",
+      "category": "enemy",
+      "enemy": "slime_green",
+      "action": "death",
+      "dir": "right",
+      "path": "enemies/slime_green/slime_green_death_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "slime_red_idle_down",
+      "category": "enemy",
+      "enemy": "slime_red",
+      "action": "idle",
+      "dir": "down",
+      "path": "enemies/slime_red/slime_red_idle_down.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "slime_red_move_down",
+      "category": "enemy",
+      "enemy": "slime_red",
+      "action": "move",
+      "dir": "down",
+      "path": "enemies/slime_red/slime_red_move_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "slime_red_attack_down",
+      "category": "enemy",
+      "enemy": "slime_red",
+      "action": "attack",
+      "dir": "down",
+      "path": "enemies/slime_red/slime_red_attack_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 128,
+          "y": 176
+        },
+        {
+          "x": 126,
+          "y": 190
+        },
+        {
+          "x": 128,
+          "y": 167
+        },
+        {
+          "x": 126,
+          "y": 158
+        },
+        {
+          "x": 128,
+          "y": 172
+        }
+      ]
+    },
+    {
+      "id": "slime_red_death_down",
+      "category": "enemy",
+      "enemy": "slime_red",
+      "action": "death",
+      "dir": "down",
+      "path": "enemies/slime_red/slime_red_death_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "slime_red_idle_up",
+      "category": "enemy",
+      "enemy": "slime_red",
+      "action": "idle",
+      "dir": "up",
+      "path": "enemies/slime_red/slime_red_idle_up.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "slime_red_move_up",
+      "category": "enemy",
+      "enemy": "slime_red",
+      "action": "move",
+      "dir": "up",
+      "path": "enemies/slime_red/slime_red_move_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "slime_red_attack_up",
+      "category": "enemy",
+      "enemy": "slime_red",
+      "action": "attack",
+      "dir": "up",
+      "path": "enemies/slime_red/slime_red_attack_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 128,
+          "y": 170
+        },
+        {
+          "x": 126,
+          "y": 188
+        },
+        {
+          "x": 126,
+          "y": 162
+        },
+        {
+          "x": 126,
+          "y": 149
+        },
+        {
+          "x": 128,
+          "y": 167
+        }
+      ]
+    },
+    {
+      "id": "slime_red_death_up",
+      "category": "enemy",
+      "enemy": "slime_red",
+      "action": "death",
+      "dir": "up",
+      "path": "enemies/slime_red/slime_red_death_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "slime_red_idle_right",
+      "category": "enemy",
+      "enemy": "slime_red",
+      "action": "idle",
+      "dir": "right",
+      "path": "enemies/slime_red/slime_red_idle_right.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "slime_red_move_right",
+      "category": "enemy",
+      "enemy": "slime_red",
+      "action": "move",
+      "dir": "right",
+      "path": "enemies/slime_red/slime_red_move_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "slime_red_attack_right",
+      "category": "enemy",
+      "enemy": "slime_red",
+      "action": "attack",
+      "dir": "right",
+      "path": "enemies/slime_red/slime_red_attack_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 177,
+          "y": 186
+        },
+        {
+          "x": 180,
+          "y": 198
+        },
+        {
+          "x": 180,
+          "y": 184
+        },
+        {
+          "x": 189,
+          "y": 178
+        },
+        {
+          "x": 179,
+          "y": 186
+        }
+      ]
+    },
+    {
+      "id": "slime_red_death_right",
+      "category": "enemy",
+      "enemy": "slime_red",
+      "action": "death",
+      "dir": "right",
+      "path": "enemies/slime_red/slime_red_death_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "slime_blue_idle_down",
+      "category": "enemy",
+      "enemy": "slime_blue",
+      "action": "idle",
+      "dir": "down",
+      "path": "enemies/slime_blue/slime_blue_idle_down.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "slime_blue_move_down",
+      "category": "enemy",
+      "enemy": "slime_blue",
+      "action": "move",
+      "dir": "down",
+      "path": "enemies/slime_blue/slime_blue_move_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "slime_blue_attack_down",
+      "category": "enemy",
+      "enemy": "slime_blue",
+      "action": "attack",
+      "dir": "down",
+      "path": "enemies/slime_blue/slime_blue_attack_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 126,
+          "y": 172
+        },
+        {
+          "x": 126,
+          "y": 183
+        },
+        {
+          "x": 128,
+          "y": 169
+        },
+        {
+          "x": 126,
+          "y": 153
+        },
+        {
+          "x": 128,
+          "y": 169
+        }
+      ]
+    },
+    {
+      "id": "slime_blue_death_down",
+      "category": "enemy",
+      "enemy": "slime_blue",
+      "action": "death",
+      "dir": "down",
+      "path": "enemies/slime_blue/slime_blue_death_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "slime_blue_idle_up",
+      "category": "enemy",
+      "enemy": "slime_blue",
+      "action": "idle",
+      "dir": "up",
+      "path": "enemies/slime_blue/slime_blue_idle_up.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "slime_blue_move_up",
+      "category": "enemy",
+      "enemy": "slime_blue",
+      "action": "move",
+      "dir": "up",
+      "path": "enemies/slime_blue/slime_blue_move_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "slime_blue_attack_up",
+      "category": "enemy",
+      "enemy": "slime_blue",
+      "action": "attack",
+      "dir": "up",
+      "path": "enemies/slime_blue/slime_blue_attack_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 126,
+          "y": 167
+        },
+        {
+          "x": 126,
+          "y": 180
+        },
+        {
+          "x": 128,
+          "y": 162
+        },
+        {
+          "x": 126,
+          "y": 146
+        },
+        {
+          "x": 126,
+          "y": 164
+        }
+      ]
+    },
+    {
+      "id": "slime_blue_death_up",
+      "category": "enemy",
+      "enemy": "slime_blue",
+      "action": "death",
+      "dir": "up",
+      "path": "enemies/slime_blue/slime_blue_death_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "slime_blue_idle_right",
+      "category": "enemy",
+      "enemy": "slime_blue",
+      "action": "idle",
+      "dir": "right",
+      "path": "enemies/slime_blue/slime_blue_idle_right.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "slime_blue_move_right",
+      "category": "enemy",
+      "enemy": "slime_blue",
+      "action": "move",
+      "dir": "right",
+      "path": "enemies/slime_blue/slime_blue_move_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "slime_blue_attack_right",
+      "category": "enemy",
+      "enemy": "slime_blue",
+      "action": "attack",
+      "dir": "right",
+      "path": "enemies/slime_blue/slime_blue_attack_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 171,
+          "y": 184
+        },
+        {
+          "x": 174,
+          "y": 196
+        },
+        {
+          "x": 170,
+          "y": 182
+        },
+        {
+          "x": 177,
+          "y": 172
+        },
+        {
+          "x": 171,
+          "y": 184
+        }
+      ]
+    },
+    {
+      "id": "slime_blue_death_right",
+      "category": "enemy",
+      "enemy": "slime_blue",
+      "action": "death",
+      "dir": "right",
+      "path": "enemies/slime_blue/slime_blue_death_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "swamp_leech_idle_down",
+      "category": "enemy",
+      "enemy": "swamp_leech",
+      "action": "idle",
+      "dir": "down",
+      "path": "enemies/swamp_leech/swamp_leech_idle_down.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "swamp_leech_move_down",
+      "category": "enemy",
+      "enemy": "swamp_leech",
+      "action": "move",
+      "dir": "down",
+      "path": "enemies/swamp_leech/swamp_leech_move_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "swamp_leech_attack_down",
+      "category": "enemy",
+      "enemy": "swamp_leech",
+      "action": "attack",
+      "dir": "down",
+      "path": "enemies/swamp_leech/swamp_leech_attack_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 128,
+          "y": 148
+        },
+        {
+          "x": 128,
+          "y": 167
+        },
+        {
+          "x": 126,
+          "y": 148
+        },
+        {
+          "x": 126,
+          "y": 137
+        },
+        {
+          "x": 128,
+          "y": 151
+        }
+      ]
+    },
+    {
+      "id": "swamp_leech_death_down",
+      "category": "enemy",
+      "enemy": "swamp_leech",
+      "action": "death",
+      "dir": "down",
+      "path": "enemies/swamp_leech/swamp_leech_death_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "swamp_leech_idle_up",
+      "category": "enemy",
+      "enemy": "swamp_leech",
+      "action": "idle",
+      "dir": "up",
+      "path": "enemies/swamp_leech/swamp_leech_idle_up.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "swamp_leech_move_up",
+      "category": "enemy",
+      "enemy": "swamp_leech",
+      "action": "move",
+      "dir": "up",
+      "path": "enemies/swamp_leech/swamp_leech_move_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "swamp_leech_attack_up",
+      "category": "enemy",
+      "enemy": "swamp_leech",
+      "action": "attack",
+      "dir": "up",
+      "path": "enemies/swamp_leech/swamp_leech_attack_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 128,
+          "y": 151
+        },
+        {
+          "x": 126,
+          "y": 162
+        },
+        {
+          "x": 126,
+          "y": 141
+        },
+        {
+          "x": 128,
+          "y": 125
+        },
+        {
+          "x": 128,
+          "y": 149
+        }
+      ]
+    },
+    {
+      "id": "swamp_leech_death_up",
+      "category": "enemy",
+      "enemy": "swamp_leech",
+      "action": "death",
+      "dir": "up",
+      "path": "enemies/swamp_leech/swamp_leech_death_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "swamp_leech_idle_right",
+      "category": "enemy",
+      "enemy": "swamp_leech",
+      "action": "idle",
+      "dir": "right",
+      "path": "enemies/swamp_leech/swamp_leech_idle_right.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "swamp_leech_move_right",
+      "category": "enemy",
+      "enemy": "swamp_leech",
+      "action": "move",
+      "dir": "right",
+      "path": "enemies/swamp_leech/swamp_leech_move_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "swamp_leech_attack_right",
+      "category": "enemy",
+      "enemy": "swamp_leech",
+      "action": "attack",
+      "dir": "right",
+      "path": "enemies/swamp_leech/swamp_leech_attack_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 180,
+          "y": 192
+        },
+        {
+          "x": 180,
+          "y": 196
+        },
+        {
+          "x": 176,
+          "y": 186
+        },
+        {
+          "x": 185,
+          "y": 182
+        },
+        {
+          "x": 179,
+          "y": 192
+        }
+      ]
+    },
+    {
+      "id": "swamp_leech_death_right",
+      "category": "enemy",
+      "enemy": "swamp_leech",
+      "action": "death",
+      "dir": "right",
+      "path": "enemies/swamp_leech/swamp_leech_death_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "toxic_serpent_idle_down",
+      "category": "enemy",
+      "enemy": "toxic_serpent",
+      "action": "idle",
+      "dir": "down",
+      "path": "enemies/toxic_serpent/toxic_serpent_idle_down.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "toxic_serpent_move_down",
+      "category": "enemy",
+      "enemy": "toxic_serpent",
+      "action": "move",
+      "dir": "down",
+      "path": "enemies/toxic_serpent/toxic_serpent_move_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "toxic_serpent_attack_down",
+      "category": "enemy",
+      "enemy": "toxic_serpent",
+      "action": "attack",
+      "dir": "down",
+      "path": "enemies/toxic_serpent/toxic_serpent_attack_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 126,
+          "y": 174
+        },
+        {
+          "x": 128,
+          "y": 190
+        },
+        {
+          "x": 126,
+          "y": 165
+        },
+        {
+          "x": 128,
+          "y": 186
+        },
+        {
+          "x": 128,
+          "y": 174
+        }
+      ]
+    },
+    {
+      "id": "toxic_serpent_death_down",
+      "category": "enemy",
+      "enemy": "toxic_serpent",
+      "action": "death",
+      "dir": "down",
+      "path": "enemies/toxic_serpent/toxic_serpent_death_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "toxic_serpent_idle_up",
+      "category": "enemy",
+      "enemy": "toxic_serpent",
+      "action": "idle",
+      "dir": "up",
+      "path": "enemies/toxic_serpent/toxic_serpent_idle_up.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "toxic_serpent_move_up",
+      "category": "enemy",
+      "enemy": "toxic_serpent",
+      "action": "move",
+      "dir": "up",
+      "path": "enemies/toxic_serpent/toxic_serpent_move_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "toxic_serpent_attack_up",
+      "category": "enemy",
+      "enemy": "toxic_serpent",
+      "action": "attack",
+      "dir": "up",
+      "path": "enemies/toxic_serpent/toxic_serpent_attack_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 126,
+          "y": 164
+        },
+        {
+          "x": 128,
+          "y": 185
+        },
+        {
+          "x": 126,
+          "y": 159
+        },
+        {
+          "x": 128,
+          "y": 151
+        },
+        {
+          "x": 128,
+          "y": 167
+        }
+      ]
+    },
+    {
+      "id": "toxic_serpent_death_up",
+      "category": "enemy",
+      "enemy": "toxic_serpent",
+      "action": "death",
+      "dir": "up",
+      "path": "enemies/toxic_serpent/toxic_serpent_death_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "toxic_serpent_idle_right",
+      "category": "enemy",
+      "enemy": "toxic_serpent",
+      "action": "idle",
+      "dir": "right",
+      "path": "enemies/toxic_serpent/toxic_serpent_idle_right.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "toxic_serpent_move_right",
+      "category": "enemy",
+      "enemy": "toxic_serpent",
+      "action": "move",
+      "dir": "right",
+      "path": "enemies/toxic_serpent/toxic_serpent_move_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "toxic_serpent_attack_right",
+      "category": "enemy",
+      "enemy": "toxic_serpent",
+      "action": "attack",
+      "dir": "right",
+      "path": "enemies/toxic_serpent/toxic_serpent_attack_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 168,
+          "y": 175
+        },
+        {
+          "x": 174,
+          "y": 196
+        },
+        {
+          "x": 170,
+          "y": 163
+        },
+        {
+          "x": 185,
+          "y": 190
+        },
+        {
+          "x": 168,
+          "y": 179
+        }
+      ]
+    },
+    {
+      "id": "toxic_serpent_death_right",
+      "category": "enemy",
+      "enemy": "toxic_serpent",
+      "action": "death",
+      "dir": "right",
+      "path": "enemies/toxic_serpent/toxic_serpent_death_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "sand_scorpion_idle_down",
+      "category": "enemy",
+      "enemy": "sand_scorpion",
+      "action": "idle",
+      "dir": "down",
+      "path": "enemies/sand_scorpion/sand_scorpion_idle_down.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "sand_scorpion_move_down",
+      "category": "enemy",
+      "enemy": "sand_scorpion",
+      "action": "move",
+      "dir": "down",
+      "path": "enemies/sand_scorpion/sand_scorpion_move_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "sand_scorpion_attack_down",
+      "category": "enemy",
+      "enemy": "sand_scorpion",
+      "action": "attack",
+      "dir": "down",
+      "path": "enemies/sand_scorpion/sand_scorpion_attack_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 128,
+          "y": 162
+        },
+        {
+          "x": 126,
+          "y": 172
+        },
+        {
+          "x": 128,
+          "y": 165
+        },
+        {
+          "x": 128,
+          "y": 160
+        },
+        {
+          "x": 128,
+          "y": 167
+        }
+      ]
+    },
+    {
+      "id": "sand_scorpion_death_down",
+      "category": "enemy",
+      "enemy": "sand_scorpion",
+      "action": "death",
+      "dir": "down",
+      "path": "enemies/sand_scorpion/sand_scorpion_death_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "sand_scorpion_idle_up",
+      "category": "enemy",
+      "enemy": "sand_scorpion",
+      "action": "idle",
+      "dir": "up",
+      "path": "enemies/sand_scorpion/sand_scorpion_idle_up.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "sand_scorpion_move_up",
+      "category": "enemy",
+      "enemy": "sand_scorpion",
+      "action": "move",
+      "dir": "up",
+      "path": "enemies/sand_scorpion/sand_scorpion_move_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "sand_scorpion_attack_up",
+      "category": "enemy",
+      "enemy": "sand_scorpion",
+      "action": "attack",
+      "dir": "up",
+      "path": "enemies/sand_scorpion/sand_scorpion_attack_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 126,
+          "y": 160
+        },
+        {
+          "x": 127,
+          "y": 170
+        },
+        {
+          "x": 126,
+          "y": 157
+        },
+        {
+          "x": 128,
+          "y": 157
+        },
+        {
+          "x": 128,
+          "y": 164
+        }
+      ]
+    },
+    {
+      "id": "sand_scorpion_death_up",
+      "category": "enemy",
+      "enemy": "sand_scorpion",
+      "action": "death",
+      "dir": "up",
+      "path": "enemies/sand_scorpion/sand_scorpion_death_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "sand_scorpion_idle_right",
+      "category": "enemy",
+      "enemy": "sand_scorpion",
+      "action": "idle",
+      "dir": "right",
+      "path": "enemies/sand_scorpion/sand_scorpion_idle_right.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "sand_scorpion_move_right",
+      "category": "enemy",
+      "enemy": "sand_scorpion",
+      "action": "move",
+      "dir": "right",
+      "path": "enemies/sand_scorpion/sand_scorpion_move_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "sand_scorpion_attack_right",
+      "category": "enemy",
+      "enemy": "sand_scorpion",
+      "action": "attack",
+      "dir": "right",
+      "path": "enemies/sand_scorpion/sand_scorpion_attack_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 164,
+          "y": 180
+        },
+        {
+          "x": 163,
+          "y": 182
+        },
+        {
+          "x": 171,
+          "y": 184
+        },
+        {
+          "x": 175,
+          "y": 180
+        },
+        {
+          "x": 167,
+          "y": 184
+        }
+      ]
+    },
+    {
+      "id": "sand_scorpion_death_right",
+      "category": "enemy",
+      "enemy": "sand_scorpion",
+      "action": "death",
+      "dir": "right",
+      "path": "enemies/sand_scorpion/sand_scorpion_death_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    }
+  ]
+}
