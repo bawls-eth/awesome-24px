@@ -1,0 +1,1698 @@
+{
+  "name": "ARCANE RPG B05 \u2014 Arcane Frontier Enemies and Mini Sprout",
+  "frame_size": 256,
+  "assets": [
+    {
+      "id": "sprout_mini_idle_down",
+      "category": "enemy",
+      "enemy": "sprout_mini",
+      "action": "idle",
+      "dir": "down",
+      "path": "enemies/sprout_mini/sprout_mini_idle_down.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "sprout_mini_move_down",
+      "category": "enemy",
+      "enemy": "sprout_mini",
+      "action": "move",
+      "dir": "down",
+      "path": "enemies/sprout_mini/sprout_mini_move_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "sprout_mini_attack_down",
+      "category": "enemy",
+      "enemy": "sprout_mini",
+      "action": "attack",
+      "dir": "down",
+      "path": "enemies/sprout_mini/sprout_mini_attack_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 126,
+          "y": 210
+        },
+        {
+          "x": 126,
+          "y": 210
+        },
+        {
+          "x": 128,
+          "y": 212
+        },
+        {
+          "x": 126,
+          "y": 215
+        },
+        {
+          "x": 126,
+          "y": 210
+        }
+      ]
+    },
+    {
+      "id": "sprout_mini_death_down",
+      "category": "enemy",
+      "enemy": "sprout_mini",
+      "action": "death",
+      "dir": "down",
+      "path": "enemies/sprout_mini/sprout_mini_death_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "sprout_mini_idle_up",
+      "category": "enemy",
+      "enemy": "sprout_mini",
+      "action": "idle",
+      "dir": "up",
+      "path": "enemies/sprout_mini/sprout_mini_idle_up.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "sprout_mini_move_up",
+      "category": "enemy",
+      "enemy": "sprout_mini",
+      "action": "move",
+      "dir": "up",
+      "path": "enemies/sprout_mini/sprout_mini_move_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "sprout_mini_attack_up",
+      "category": "enemy",
+      "enemy": "sprout_mini",
+      "action": "attack",
+      "dir": "up",
+      "path": "enemies/sprout_mini/sprout_mini_attack_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 126,
+          "y": 198
+        },
+        {
+          "x": 126,
+          "y": 198
+        },
+        {
+          "x": 126,
+          "y": 202
+        },
+        {
+          "x": 128,
+          "y": 210
+        },
+        {
+          "x": 126,
+          "y": 198
+        }
+      ]
+    },
+    {
+      "id": "sprout_mini_death_up",
+      "category": "enemy",
+      "enemy": "sprout_mini",
+      "action": "death",
+      "dir": "up",
+      "path": "enemies/sprout_mini/sprout_mini_death_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "sprout_mini_idle_right",
+      "category": "enemy",
+      "enemy": "sprout_mini",
+      "action": "idle",
+      "dir": "right",
+      "path": "enemies/sprout_mini/sprout_mini_idle_right.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "sprout_mini_move_right",
+      "category": "enemy",
+      "enemy": "sprout_mini",
+      "action": "move",
+      "dir": "right",
+      "path": "enemies/sprout_mini/sprout_mini_move_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "sprout_mini_attack_right",
+      "category": "enemy",
+      "enemy": "sprout_mini",
+      "action": "attack",
+      "dir": "right",
+      "path": "enemies/sprout_mini/sprout_mini_attack_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 147,
+          "y": 208
+        },
+        {
+          "x": 147,
+          "y": 208
+        },
+        {
+          "x": 150,
+          "y": 210
+        },
+        {
+          "x": 153,
+          "y": 215
+        },
+        {
+          "x": 150,
+          "y": 208
+        }
+      ]
+    },
+    {
+      "id": "sprout_mini_death_right",
+      "category": "enemy",
+      "enemy": "sprout_mini",
+      "action": "death",
+      "dir": "right",
+      "path": "enemies/sprout_mini/sprout_mini_death_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "goblin_scout_idle_down",
+      "category": "enemy",
+      "enemy": "goblin_scout",
+      "action": "idle",
+      "dir": "down",
+      "path": "enemies/goblin_scout/goblin_scout_idle_down.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "goblin_scout_move_down",
+      "category": "enemy",
+      "enemy": "goblin_scout",
+      "action": "move",
+      "dir": "down",
+      "path": "enemies/goblin_scout/goblin_scout_move_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "goblin_scout_attack_down",
+      "category": "enemy",
+      "enemy": "goblin_scout",
+      "action": "attack",
+      "dir": "down",
+      "path": "enemies/goblin_scout/goblin_scout_attack_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 71,
+          "y": 159
+        },
+        {
+          "x": 77,
+          "y": 123
+        },
+        {
+          "x": 89,
+          "y": 98
+        },
+        {
+          "x": 167,
+          "y": 220
+        },
+        {
+          "x": 171,
+          "y": 224
+        }
+      ]
+    },
+    {
+      "id": "goblin_scout_death_down",
+      "category": "enemy",
+      "enemy": "goblin_scout",
+      "action": "death",
+      "dir": "down",
+      "path": "enemies/goblin_scout/goblin_scout_death_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "goblin_scout_idle_up",
+      "category": "enemy",
+      "enemy": "goblin_scout",
+      "action": "idle",
+      "dir": "up",
+      "path": "enemies/goblin_scout/goblin_scout_idle_up.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "goblin_scout_move_up",
+      "category": "enemy",
+      "enemy": "goblin_scout",
+      "action": "move",
+      "dir": "up",
+      "path": "enemies/goblin_scout/goblin_scout_move_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "goblin_scout_attack_up",
+      "category": "enemy",
+      "enemy": "goblin_scout",
+      "action": "attack",
+      "dir": "up",
+      "path": "enemies/goblin_scout/goblin_scout_attack_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 179,
+          "y": 159
+        },
+        {
+          "x": 175,
+          "y": 124
+        },
+        {
+          "x": 157,
+          "y": 99
+        },
+        {
+          "x": 191,
+          "y": 200
+        },
+        {
+          "x": 188,
+          "y": 205
+        }
+      ]
+    },
+    {
+      "id": "goblin_scout_death_up",
+      "category": "enemy",
+      "enemy": "goblin_scout",
+      "action": "death",
+      "dir": "up",
+      "path": "enemies/goblin_scout/goblin_scout_death_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "goblin_scout_idle_right",
+      "category": "enemy",
+      "enemy": "goblin_scout",
+      "action": "idle",
+      "dir": "right",
+      "path": "enemies/goblin_scout/goblin_scout_idle_right.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "goblin_scout_move_right",
+      "category": "enemy",
+      "enemy": "goblin_scout",
+      "action": "move",
+      "dir": "right",
+      "path": "enemies/goblin_scout/goblin_scout_move_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "goblin_scout_attack_right",
+      "category": "enemy",
+      "enemy": "goblin_scout",
+      "action": "attack",
+      "dir": "right",
+      "path": "enemies/goblin_scout/goblin_scout_attack_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 165,
+          "y": 183
+        },
+        {
+          "x": 120,
+          "y": 133
+        },
+        {
+          "x": 114,
+          "y": 100
+        },
+        {
+          "x": 184,
+          "y": 186
+        },
+        {
+          "x": 171,
+          "y": 197
+        }
+      ]
+    },
+    {
+      "id": "goblin_scout_death_right",
+      "category": "enemy",
+      "enemy": "goblin_scout",
+      "action": "death",
+      "dir": "right",
+      "path": "enemies/goblin_scout/goblin_scout_death_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "skeleton_idle_down",
+      "category": "enemy",
+      "enemy": "skeleton",
+      "action": "idle",
+      "dir": "down",
+      "path": "enemies/skeleton/skeleton_idle_down.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "skeleton_move_down",
+      "category": "enemy",
+      "enemy": "skeleton",
+      "action": "move",
+      "dir": "down",
+      "path": "enemies/skeleton/skeleton_move_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "skeleton_attack_down",
+      "category": "enemy",
+      "enemy": "skeleton",
+      "action": "attack",
+      "dir": "down",
+      "path": "enemies/skeleton/skeleton_attack_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 74,
+          "y": 220
+        },
+        {
+          "x": 83,
+          "y": 149
+        },
+        {
+          "x": 95,
+          "y": 102
+        },
+        {
+          "x": 132,
+          "y": 93
+        },
+        {
+          "x": 169,
+          "y": 223
+        }
+      ]
+    },
+    {
+      "id": "skeleton_death_down",
+      "category": "enemy",
+      "enemy": "skeleton",
+      "action": "death",
+      "dir": "down",
+      "path": "enemies/skeleton/skeleton_death_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "skeleton_idle_up",
+      "category": "enemy",
+      "enemy": "skeleton",
+      "action": "idle",
+      "dir": "up",
+      "path": "enemies/skeleton/skeleton_idle_up.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "skeleton_move_up",
+      "category": "enemy",
+      "enemy": "skeleton",
+      "action": "move",
+      "dir": "up",
+      "path": "enemies/skeleton/skeleton_move_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "skeleton_attack_up",
+      "category": "enemy",
+      "enemy": "skeleton",
+      "action": "attack",
+      "dir": "up",
+      "path": "enemies/skeleton/skeleton_attack_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 175,
+          "y": 215
+        },
+        {
+          "x": 174,
+          "y": 142
+        },
+        {
+          "x": 161,
+          "y": 99
+        },
+        {
+          "x": 136,
+          "y": 85
+        },
+        {
+          "x": 183,
+          "y": 218
+        }
+      ]
+    },
+    {
+      "id": "skeleton_death_up",
+      "category": "enemy",
+      "enemy": "skeleton",
+      "action": "death",
+      "dir": "up",
+      "path": "enemies/skeleton/skeleton_death_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "skeleton_idle_right",
+      "category": "enemy",
+      "enemy": "skeleton",
+      "action": "idle",
+      "dir": "right",
+      "path": "enemies/skeleton/skeleton_idle_right.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "skeleton_move_right",
+      "category": "enemy",
+      "enemy": "skeleton",
+      "action": "move",
+      "dir": "right",
+      "path": "enemies/skeleton/skeleton_move_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "skeleton_attack_right",
+      "category": "enemy",
+      "enemy": "skeleton",
+      "action": "attack",
+      "dir": "right",
+      "path": "enemies/skeleton/skeleton_attack_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 158,
+          "y": 203
+        },
+        {
+          "x": 159,
+          "y": 171
+        },
+        {
+          "x": 107,
+          "y": 115
+        },
+        {
+          "x": 151,
+          "y": 83
+        },
+        {
+          "x": 188,
+          "y": 213
+        }
+      ]
+    },
+    {
+      "id": "skeleton_death_right",
+      "category": "enemy",
+      "enemy": "skeleton",
+      "action": "death",
+      "dir": "right",
+      "path": "enemies/skeleton/skeleton_death_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "cave_bat_idle_down",
+      "category": "enemy",
+      "enemy": "cave_bat",
+      "action": "idle",
+      "dir": "down",
+      "path": "enemies/cave_bat/cave_bat_idle_down.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "cave_bat_move_down",
+      "category": "enemy",
+      "enemy": "cave_bat",
+      "action": "move",
+      "dir": "down",
+      "path": "enemies/cave_bat/cave_bat_move_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "cave_bat_attack_down",
+      "category": "enemy",
+      "enemy": "cave_bat",
+      "action": "attack",
+      "dir": "down",
+      "path": "enemies/cave_bat/cave_bat_attack_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 128,
+          "y": 199
+        },
+        {
+          "x": 126,
+          "y": 202
+        },
+        {
+          "x": 128,
+          "y": 203
+        },
+        {
+          "x": 126,
+          "y": 199
+        },
+        {
+          "x": 126,
+          "y": 205
+        }
+      ]
+    },
+    {
+      "id": "cave_bat_death_down",
+      "category": "enemy",
+      "enemy": "cave_bat",
+      "action": "death",
+      "dir": "down",
+      "path": "enemies/cave_bat/cave_bat_death_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "cave_bat_idle_up",
+      "category": "enemy",
+      "enemy": "cave_bat",
+      "action": "idle",
+      "dir": "up",
+      "path": "enemies/cave_bat/cave_bat_idle_up.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "cave_bat_move_up",
+      "category": "enemy",
+      "enemy": "cave_bat",
+      "action": "move",
+      "dir": "up",
+      "path": "enemies/cave_bat/cave_bat_move_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "cave_bat_attack_up",
+      "category": "enemy",
+      "enemy": "cave_bat",
+      "action": "attack",
+      "dir": "up",
+      "path": "enemies/cave_bat/cave_bat_attack_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 128,
+          "y": 184
+        },
+        {
+          "x": 126,
+          "y": 188
+        },
+        {
+          "x": 128,
+          "y": 188
+        },
+        {
+          "x": 126,
+          "y": 184
+        },
+        {
+          "x": 126,
+          "y": 192
+        }
+      ]
+    },
+    {
+      "id": "cave_bat_death_up",
+      "category": "enemy",
+      "enemy": "cave_bat",
+      "action": "death",
+      "dir": "up",
+      "path": "enemies/cave_bat/cave_bat_death_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "cave_bat_idle_right",
+      "category": "enemy",
+      "enemy": "cave_bat",
+      "action": "idle",
+      "dir": "right",
+      "path": "enemies/cave_bat/cave_bat_idle_right.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "cave_bat_move_right",
+      "category": "enemy",
+      "enemy": "cave_bat",
+      "action": "move",
+      "dir": "right",
+      "path": "enemies/cave_bat/cave_bat_move_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "cave_bat_attack_right",
+      "category": "enemy",
+      "enemy": "cave_bat",
+      "action": "attack",
+      "dir": "right",
+      "path": "enemies/cave_bat/cave_bat_attack_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 171,
+          "y": 196
+        },
+        {
+          "x": 165,
+          "y": 202
+        },
+        {
+          "x": 159,
+          "y": 207
+        },
+        {
+          "x": 171,
+          "y": 196
+        },
+        {
+          "x": 168,
+          "y": 202
+        }
+      ]
+    },
+    {
+      "id": "cave_bat_death_right",
+      "category": "enemy",
+      "enemy": "cave_bat",
+      "action": "death",
+      "dir": "right",
+      "path": "enemies/cave_bat/cave_bat_death_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "forest_wolf_idle_down",
+      "category": "enemy",
+      "enemy": "forest_wolf",
+      "action": "idle",
+      "dir": "down",
+      "path": "enemies/forest_wolf/forest_wolf_idle_down.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "forest_wolf_move_down",
+      "category": "enemy",
+      "enemy": "forest_wolf",
+      "action": "move",
+      "dir": "down",
+      "path": "enemies/forest_wolf/forest_wolf_move_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "forest_wolf_attack_down",
+      "category": "enemy",
+      "enemy": "forest_wolf",
+      "action": "attack",
+      "dir": "down",
+      "path": "enemies/forest_wolf/forest_wolf_attack_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 126,
+          "y": 213
+        },
+        {
+          "x": 128,
+          "y": 213
+        },
+        {
+          "x": 126,
+          "y": 215
+        },
+        {
+          "x": 128,
+          "y": 213
+        },
+        {
+          "x": 128,
+          "y": 213
+        }
+      ]
+    },
+    {
+      "id": "forest_wolf_death_down",
+      "category": "enemy",
+      "enemy": "forest_wolf",
+      "action": "death",
+      "dir": "down",
+      "path": "enemies/forest_wolf/forest_wolf_death_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "forest_wolf_idle_up",
+      "category": "enemy",
+      "enemy": "forest_wolf",
+      "action": "idle",
+      "dir": "up",
+      "path": "enemies/forest_wolf/forest_wolf_idle_up.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "forest_wolf_move_up",
+      "category": "enemy",
+      "enemy": "forest_wolf",
+      "action": "move",
+      "dir": "up",
+      "path": "enemies/forest_wolf/forest_wolf_move_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "forest_wolf_attack_up",
+      "category": "enemy",
+      "enemy": "forest_wolf",
+      "action": "attack",
+      "dir": "up",
+      "path": "enemies/forest_wolf/forest_wolf_attack_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 126,
+          "y": 149
+        },
+        {
+          "x": 126,
+          "y": 161
+        },
+        {
+          "x": 126,
+          "y": 164
+        },
+        {
+          "x": 128,
+          "y": 158
+        },
+        {
+          "x": 128,
+          "y": 149
+        }
+      ]
+    },
+    {
+      "id": "forest_wolf_death_up",
+      "category": "enemy",
+      "enemy": "forest_wolf",
+      "action": "death",
+      "dir": "up",
+      "path": "enemies/forest_wolf/forest_wolf_death_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "forest_wolf_idle_right",
+      "category": "enemy",
+      "enemy": "forest_wolf",
+      "action": "idle",
+      "dir": "right",
+      "path": "enemies/forest_wolf/forest_wolf_idle_right.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "forest_wolf_move_right",
+      "category": "enemy",
+      "enemy": "forest_wolf",
+      "action": "move",
+      "dir": "right",
+      "path": "enemies/forest_wolf/forest_wolf_move_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "forest_wolf_attack_right",
+      "category": "enemy",
+      "enemy": "forest_wolf",
+      "action": "attack",
+      "dir": "right",
+      "path": "enemies/forest_wolf/forest_wolf_attack_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 181,
+          "y": 189
+        },
+        {
+          "x": 184,
+          "y": 195
+        },
+        {
+          "x": 187,
+          "y": 195
+        },
+        {
+          "x": 181,
+          "y": 197
+        },
+        {
+          "x": 181,
+          "y": 187
+        }
+      ]
+    },
+    {
+      "id": "forest_wolf_death_right",
+      "category": "enemy",
+      "enemy": "forest_wolf",
+      "action": "death",
+      "dir": "right",
+      "path": "enemies/forest_wolf/forest_wolf_death_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "stone_golem_idle_down",
+      "category": "enemy",
+      "enemy": "stone_golem",
+      "action": "idle",
+      "dir": "down",
+      "path": "enemies/stone_golem/stone_golem_idle_down.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "stone_golem_move_down",
+      "category": "enemy",
+      "enemy": "stone_golem",
+      "action": "move",
+      "dir": "down",
+      "path": "enemies/stone_golem/stone_golem_move_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "stone_golem_attack_down",
+      "category": "enemy",
+      "enemy": "stone_golem",
+      "action": "attack",
+      "dir": "down",
+      "path": "enemies/stone_golem/stone_golem_attack_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 71,
+          "y": 207
+        },
+        {
+          "x": 63,
+          "y": 161
+        },
+        {
+          "x": 67,
+          "y": 104
+        },
+        {
+          "x": 85,
+          "y": 199
+        },
+        {
+          "x": 78,
+          "y": 205
+        }
+      ]
+    },
+    {
+      "id": "stone_golem_death_down",
+      "category": "enemy",
+      "enemy": "stone_golem",
+      "action": "death",
+      "dir": "down",
+      "path": "enemies/stone_golem/stone_golem_death_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "stone_golem_idle_up",
+      "category": "enemy",
+      "enemy": "stone_golem",
+      "action": "idle",
+      "dir": "up",
+      "path": "enemies/stone_golem/stone_golem_idle_up.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "stone_golem_move_up",
+      "category": "enemy",
+      "enemy": "stone_golem",
+      "action": "move",
+      "dir": "up",
+      "path": "enemies/stone_golem/stone_golem_move_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "stone_golem_attack_up",
+      "category": "enemy",
+      "enemy": "stone_golem",
+      "action": "attack",
+      "dir": "up",
+      "path": "enemies/stone_golem/stone_golem_attack_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 175,
+          "y": 201
+        },
+        {
+          "x": 196,
+          "y": 159
+        },
+        {
+          "x": 181,
+          "y": 98
+        },
+        {
+          "x": 186,
+          "y": 172
+        },
+        {
+          "x": 182,
+          "y": 201
+        }
+      ]
+    },
+    {
+      "id": "stone_golem_death_up",
+      "category": "enemy",
+      "enemy": "stone_golem",
+      "action": "death",
+      "dir": "up",
+      "path": "enemies/stone_golem/stone_golem_death_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "stone_golem_idle_right",
+      "category": "enemy",
+      "enemy": "stone_golem",
+      "action": "idle",
+      "dir": "right",
+      "path": "enemies/stone_golem/stone_golem_idle_right.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "stone_golem_move_right",
+      "category": "enemy",
+      "enemy": "stone_golem",
+      "action": "move",
+      "dir": "right",
+      "path": "enemies/stone_golem/stone_golem_move_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "stone_golem_attack_right",
+      "category": "enemy",
+      "enemy": "stone_golem",
+      "action": "attack",
+      "dir": "right",
+      "path": "enemies/stone_golem/stone_golem_attack_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 160,
+          "y": 196
+        },
+        {
+          "x": 106,
+          "y": 149
+        },
+        {
+          "x": 98,
+          "y": 94
+        },
+        {
+          "x": 183,
+          "y": 206
+        },
+        {
+          "x": 160,
+          "y": 188
+        }
+      ]
+    },
+    {
+      "id": "stone_golem_death_right",
+      "category": "enemy",
+      "enemy": "stone_golem",
+      "action": "death",
+      "dir": "right",
+      "path": "enemies/stone_golem/stone_golem_death_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    }
+  ]
+}

@@ -63,3 +63,6 @@ game/tools/art/ (specs, prompt builder, capped generator, processor, critic hook
 ### B04 enemy art
 
 B04 stages 72 validated enemy animation strips for the six Mad Maze IDs in the manifest. Integration and playback review are pending.
+### B05 enemy art
+
+B05 stages 72 validated animation strips for Mini Sprout and five Arcane Frontier enemies. Integration and playback review are pending.
