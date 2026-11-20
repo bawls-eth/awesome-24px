@@ -1,1 +1,5 @@
 .claude/
+
+# Python caches from the art tools
+__pycache__/
+*.pyc

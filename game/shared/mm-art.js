@@ -138,19 +138,31 @@
     }).catch(function () { return set; });
   }
 
-  // loadClass(assetRoot, artClass, opts?) -> Promise<ArtSet> using the pack registry above.
+  // The pack folders to load: every batch listed in INDEX.json (new batches appear with no code change), plus the static registry above as a floor.
+  function packIds(assetRoot) {
+    var ids = PACKS.map(function (p) { return p.id; });
+    return fetchJson(join(assetRoot || ASSET_ROOT, 'INDEX.json')).then(function (idx) {
+      if (idx && Array.isArray(idx.batches)) idx.batches.forEach(function (b) {
+        var id = b && typeof b.path === 'string' ? b.path.replace(/\/+$/, '').split('/').pop() : '';
+        if (/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(id) && ids.indexOf(id) < 0) ids.push(id);
+      });
+      return ids;
+    });
+  }
+  function loadPacks(assetRoot, opts) {
+    return packIds(assetRoot).then(function (ids) {
+      return Promise.all(ids.map(function (id) { return load(join(assetRoot || ASSET_ROOT, id), 'manifest.json', opts); }));
+    }).then(function (sets) { var s = new ArtSet(); sets.forEach(function (x) { s.merge(x); }); return s; });
+  }
+  // loadClass(assetRoot, artClass, opts?) -> Promise<ArtSet>: only that class's strips are loaded (every pack's manifest is read).
   function loadClass(assetRoot, artClass, opts) {
-    var p = packFor(artClass);
-    if (!p) return Promise.resolve(new ArtSet());
+    if (typeof artClass !== 'string' || !artClass) return Promise.resolve(new ArtSet());
     var o = {}; for (var k in opts || {}) o[k] = opts[k];
     o.only = [artClass];
-    return load(join(assetRoot || ASSET_ROOT, p.id), 'manifest.json', o);
+    return loadPacks(assetRoot, o);
   }
-  // loadAll(assetRoot, opts?) -> one set holding every registered pack.
-  function loadAll(assetRoot, opts) {
-    return Promise.all(PACKS.map(function (p) { return load(join(assetRoot || ASSET_ROOT, p.id), 'manifest.json', opts); }))
-      .then(function (sets) { var s = new ArtSet(); sets.forEach(function (x) { s.merge(x); }); return s; });
-  }
+  // loadAll(assetRoot, opts?) -> one set holding every pack listed in INDEX.json (plus the registered ones).
+  function loadAll(assetRoot, opts) { return loadPacks(assetRoot, opts); }
 
-  return { load: load, loadClass: loadClass, loadAll: loadAll, artClassFor: artClassFor, packFor: packFor, frameAt: frameAt, duration: duration, PACKS: PACKS, CLASS_MAP: CLASS_MAP, ArtSet: ArtSet };
+  return { load: load, loadClass: loadClass, loadAll: loadAll, packIds: packIds, artClassFor: artClassFor, packFor: packFor, frameAt: frameAt, duration: duration, PACKS: PACKS, CLASS_MAP: CLASS_MAP, ArtSet: ArtSet };
 }));
