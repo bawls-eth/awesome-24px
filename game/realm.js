@@ -194,6 +194,7 @@ class RealmArena {
     this.displayShards = this.save.shards;
     this._avatar = null;
     this._itemArt = null; this._enemyArt = null; this._enemyMap = null; this._driftMap = null; this._enemyDbgOn = false; this._bossArt = null; this._bossLoad = null; this._bossDbg = null; this._bossGhost = null; this._bossReq = null; // optional enemy animations (setEnemyArt)
+    this.heroProfile = null; // setHeroProfile
     this._heroArt = null; this._heroClass = null; this._heroSt = null; this._heroDbg = null; this._heroHurtAt = -9; this._heroAtkAt = -9; // optional hero animations (setHeroArt)
     this.team = null; this.role = 'solo'; this.down = false; this.reviveT = 0; this._firing = false;
 
@@ -493,6 +494,8 @@ class RealmArena {
       else if (def.stat === 'xp') st.xp += v;
       else if (def.stat === 'iframes') st.iframes += v;
     });
+    const hp = this.heroProfile; // additive class profile (setHeroProfile), applied after gear and level; never in duels (returned above)
+    if (hp) { st.maxHp = Math.max(1, Math.round(st.maxHp * hp.hp)); st.dmg *= hp.dmg; st.rate *= hp.rate; st.speed *= hp.speed; st.iframes *= hp.iframes; }
     st.guard = this._calcGuard();
     this.stats = st;
     return st;
@@ -636,6 +639,13 @@ class RealmArena {
     this._heroClass = this._heroArt ? heroClass : null;
     this._heroScale = Number.isFinite(scale) && scale > 0 ? scale : 0.3125;
     this._heroSt = null; this._heroDbg = null;
+  }
+  // Additive hook: class stat multipliers {hp,dmg,rate,speed,iframes,name} from MMClasses.arenaProfile. null = today's behaviour. Ignored in team duels.
+  setHeroProfile(profile) {
+    const ok = profile && typeof profile === 'object';
+    const m = (v) => (Number.isFinite(v) ? Math.max(0.7, Math.min(1.4, v)) : 1);
+    this.heroProfile = ok ? { name: String(profile.name || '').slice(0, 40), hp: m(profile.hp), dmg: m(profile.dmg), rate: m(profile.rate), speed: m(profile.speed), iframes: m(profile.iframes) } : null;
+    if (this.save) { this._calcStats(); if (this.player && this.player.hp > this.stats.maxHp) this.player.hp = this.stats.maxHp; if (this.active) this._syncHud(); }
   }
   // Additive hook: draw arena enemies / drifters with creature animations (MMArt.loadEnemies). Pass (null) to go back to the procedural sprites.
   // `map` / `driftMap` default to MMArt's ENEMY_MAP / DRIFTER_MAP. Never attached by the in-town gate.
@@ -1751,6 +1761,7 @@ class RealmArena {
 
   _statLine() {
     const st = this.stats; const bits = [`${st.maxHp} HP`, `${(Math.round(st.dmg * 10) / 10)} dmg`, `${(Math.round(st.rate * 10) / 10)} shots/s`, `${Math.round(st.speed)} speed`];
+    if (this.heroProfile && this.heroProfile.name && !(this.team && this.team.isPvp)) bits.unshift(this.heroProfile.name);
     if (st.shards > 1) bits.push(`+${Math.round((st.shards - 1) * 100)}% 💎`);
     if (st.xp > 1) bits.push(`+${Math.round((st.xp - 1) * 100)}% xp`);
     return bits.join(' · ');
