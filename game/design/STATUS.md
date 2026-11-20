@@ -72,3 +72,6 @@ Six new heroes selectable in Lantern with real art; enemy animations drawn in th
 ### B07 boss art
 
 B07 stages 48 validated animation strips for all eight Arcane Frontier boss IDs. Runtime integration and playback review are pending.
+### Frontier item art
+
+Staged 16 validated equipment and potion icons matching the existing catalog IDs. Integration is pending.

@@ -20,3 +20,6 @@ Twelve atlases from the built-in image generator, one movement sheet and one bat
 ## Codex B07 bosses · 2026-11-19
 
 Sixteen original atlases from the built-in image generator, two per boss. Source prompts are included with the batch.
+## Codex Frontier items · 2026-11-19
+
+Four original inventory icon atlases from the built-in image generator. The item pack includes the source prompts.
