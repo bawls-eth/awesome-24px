@@ -8,6 +8,7 @@
   const TIERS = ['easy', 'normal', 'hard'];
   const RANK_LIST = ['S', 'A', 'B', 'C', 'D'];
   const STAR_AT = [0.5, 0.75, 0.9]; // accuracy needed for 1 / 2 / 3 stars
+  const FC_MIN_COMBO = 20, OFFSET_MAX = Jam.OFFSET_MAX || 200;
   const MAX_SCORE = 999999, MAX_COMBO = 9999, MAX_PLAYS = 999999;
   const LEAD_BEATS = 4;
   // Tier shape: which eighth-note slots of a bar may hold a note, how dense, hold chance, notes-per-second cap.
@@ -25,7 +26,17 @@
     { id: 'moth-parade', name: 'Moth Parade', bpm: 128, bars: 32, rootHz: 164.81, scale: [0, 2, 3, 7, 9], prog: [0, 3, 5, 3],
       patterns: ['trill', 'mirror', 'jacks', 'rand'], needStars: 5, blurb: 'Fluttery runs and quick pairs.' },
     { id: 'starlit-stomp', name: 'Starlit Stomp', bpm: 144, bars: 36, rootHz: 196, scale: [0, 3, 5, 7, 10], prog: [0, 3, 7, 5],
-      patterns: ['jacks', 'mirror', 'stairs', 'rand', 'trill'], needStars: 8, blurb: 'The big finale under the stars.' }
+      patterns: ['jacks', 'mirror', 'stairs', 'rand', 'trill'], needStars: 8, blurb: 'The big finale under the stars.' },
+    // second ladder: each step is reachable (a song gives at most 3 stars) and keeps asking for more
+    { id: 'kettle-song', name: 'Kettle Song', bpm: 104, bars: 30, rootHz: 174.61, scale: [0, 2, 3, 5, 7, 9, 10], prog: [0, -2, 3, 5],
+      patterns: ['cross', 'pulse', 'stairs', 'rand'], needStars: 10, blurb: 'A rolling boil of crossing lanes.' },
+    { id: 'owl-hour', name: 'Owl Hour', bpm: 118, bars: 32, rootHz: 130.81, scale: [0, 2, 4, 5, 7, 9, 10], prog: [0, 7, 5, -2],
+      patterns: ['wave', 'jacks', 'mirror', 'cross'], needStars: 13, blurb: 'Low hoots and swooping runs.' },
+    { id: 'comet-tail', name: 'Comet Tail', bpm: 136, bars: 36, rootHz: 185, scale: [0, 2, 4, 6, 7, 9, 11], prog: [0, 4, 2, 7],
+      patterns: ['pulse', 'wave', 'trill', 'jacks', 'rand'], needStars: 16, blurb: 'Bright sparks trailing across the sky.' },
+    // secret: opens only after a full combo on any Hard chart (no stars needed)
+    { id: 'midnight-campfire', name: 'Midnight Campfire', bpm: 126, bars: 44, rootHz: 123.47, scale: [0, 1, 3, 5, 7, 8, 10], prog: [0, -5, -2, -7],
+      patterns: ['cross', 'wave', 'jacks', 'pulse', 'stairs'], needStars: 0, secret: true, blurb: 'Only the embers know this one.' }
   ];
   const TIER_NAMES = { easy: 'Easy', normal: 'Normal', hard: 'Hard' };
 
@@ -43,6 +54,9 @@
         return state.walk;
       case 'trill': return k % 2 ? state.b : state.a;
       case 'mirror': return [0, 3, 1, 2][k % 4];
+      case 'cross': return [0, 2, 1, 3][k % 4];
+      case 'pulse': return k % 2 ? [1, 2][Math.floor(k / 2) % 2] : [0, 3][Math.floor(k / 2) % 2];
+      case 'wave': { const w = [0, 1, 2, 3, 2, 1][k % 6]; return w; }
       case 'jacks': return last < 0 ? 1 : (r() < 0.4 ? last : (last + 1 + Math.floor(r() * 3)) % 4);
       default: { let li = Math.floor(r() * 4); if (li === last) li = (li + 1) % 4; return li; }
     }
@@ -137,6 +151,7 @@
   function totalStars(save) { let n = 0; for (const s of SONGS) n += songStars(save, s.id); return n; }
   function songUnlocked(save, id) {
     const s = song(id); if (!s) return false;
+    if (s.secret) return !!(save && save.fullCombo === true);
     return s.needStars <= totalStars(save);
   }
   // Hard needs 2 stars on Normal of the same song.
@@ -160,9 +175,15 @@
     }
     out.plays = clampInt(raw.plays, 0, MAX_PLAYS);
     out.hint = raw.hint === true;
+    // optional additive fields: a bad offsetMs is dropped (reads as 0), a number is clamped to +-200
+    if (typeof raw.offsetMs === 'number' && Number.isFinite(raw.offsetMs)) out.offsetMs = Jam.clampOffset(raw.offsetMs);
+    // fullCombo only counts when a Hard entry with a long combo backs it up, so a bare flag cannot open the secret
+    if (raw.fullCombo === true && SONGS.some((s) => out.best[s.id] && out.best[s.id].hard && out.best[s.id].hard.combo >= FC_MIN_COMBO)) out.fullCombo = true;
     out.unlocked = SONGS.filter((s) => songUnlocked(out, s.id)).map((s) => s.id); // always derived from earned stars, never trusted from disk
     return out;
   }
+  function offsetOf(save) { return save && typeof save.offsetMs === 'number' && Number.isFinite(save.offsetMs) ? Jam.clampOffset(save.offsetMs) : 0; }
+  function setOffset(save, ms) { save.offsetMs = Jam.clampOffset(ms); return save.offsetMs; }
   // Applies a finished run (MMJam run result()) to a save; mutates it and returns a report.
   function record(save, songId, tier, res) {
     const rep = { stars: starsFor(res.accuracy), newBest: false, starsGained: 0, newlyUnlocked: [], rank: res.rank };
@@ -179,11 +200,17 @@
     save.plays = Math.min(MAX_PLAYS, save.plays + 1);
     rep.starsGained = Math.max(0, songStars(save, songId) - before);
     const total = totalStars(save);
-    for (const s of SONGS) if (s.needStars > beforeTotal && s.needStars <= total) rep.newlyUnlocked.push(s.id);
+    const hadSecret = save.fullCombo === true;
+    if (tier === 'hard' && res.fullCombo === true && clampInt(res.maxCombo, 0, MAX_COMBO) >= FC_MIN_COMBO && save.best[songId].hard.combo >= FC_MIN_COMBO) save.fullCombo = true;
+    rep.fullCombo = save.fullCombo === true;
+    for (const s of SONGS) {
+      if (s.secret) { if (!hadSecret && save.fullCombo === true) rep.newlyUnlocked.push(s.id); }
+      else if (s.needStars > beforeTotal && s.needStars <= total) rep.newlyUnlocked.push(s.id);
+    }
     save.unlocked = SONGS.map((s) => s.id).filter((id) => songUnlocked(save, id));
     return rep;
   }
 
   return { LANES, TIERS, TIER_NAMES, TIER, SONGS, STAR_AT, LEAD_BEATS, song, songIds, beatMs, chartFor, backing, toneHz, noteHz,
-    starsFor, emptySave, cleanSave, record, totalStars, songStars, songUnlocked, tierUnlocked };
+    starsFor, emptySave, cleanSave, record, offsetOf, setOffset, FC_MIN_COMBO, totalStars, songStars, songUnlocked, tierUnlocked };
 });
