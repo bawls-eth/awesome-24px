@@ -129,3 +129,6 @@ World restart describes the return to spawn and retains the existing no-loss pol
 
 ## Realm zone bag presentation (Codex)
 Overworld item drops use the six zone bag tier colors and the rolled lifetime. Item rarity still drives inventory and pickup. Syntax and offline pooled-bag metadata checks passed. Browser playback and Lantern stash payout remain pending.
+
+## Shallow water movement
+Overworld players move at 70% speed on shallow water. Targeted checks covered shallow water, land and map bounds. Browser playback and stash payout remain pending.
