@@ -2895,8 +2895,8 @@ class TownScene extends Phaser.Scene {
     list.innerHTML = '';
     const inv = this.realmInviteOut;
     if (inv && inv.mode === '2v2') status.textContent = `2v2 lobby: ${Object.keys(inv.joined).length}/3 joined — ${inv.invited.length < 3 ? `invite ${3 - inv.invited.length} more` : 'waiting for answers (you can invite others to replace a no-show)'}…`;
-    else if (inv) { status.textContent = `Waiting for ${inv.name} to answer…`; }
-    else status.textContent = this.net && this.net.db ? '' : 'Team play needs the online town.';
+    else if (inv) { status.textContent = inv.delivered ? `${inv.name} got your invite. Waiting for them to tap Accept…` : inv.notDelivered ? `${inv.name} has not received it yet. Ask them to refresh the page (and not be inside the Realm or cave), then invite again.` : `Invite sent to ${inv.name}…`; }
+    else status.textContent = this.net && this.net.db ? 'Pick a player: they get a popup in town and tap Join. You enter together.' : 'Team play needs the online town.';
     const online = [...this.remotePlayers.values()].filter((rp) => rp.id && rp.name);
     if (!online.length) { const li = document.createElement('li'); li.className = 'dim'; li.textContent = 'Nobody else is in town right now.'; list.appendChild(li); }
     online.forEach((rp) => {
@@ -2931,15 +2931,18 @@ class TownScene extends Phaser.Scene {
     const party = this.net.realmInvite(targetId, mode, cur ? cur.party : undefined);
     if (!party) return false;
     if (cur) { cur.invited.push(targetId); cur.names[targetId] = name; this.renderRealmGateMenu(); return true; }
-    const inv = this.realmInviteOut = { party, to: targetId, name, mode, invited: [targetId], names: { [targetId]: name }, joined: {}, stop: null, timer: null };
-    inv.stop = this.net.realmWatchGuest(party, (guestId, seat, count) => {
+    const inv = this.realmInviteOut = { party, to: targetId, name, mode, invited: [targetId], names: { [targetId]: name }, joined: {}, stop: null, timer: null, delivered: false, notDelivered: false, deliveryTimer: null };
+    const stopDelivery = this.net.realmOnDelivered ? this.net.realmOnDelivered(targetId, () => { if (this.realmInviteOut === inv) { inv.delivered = true; if (this.realmMenuOpen) this.renderRealmGateMenu(); } }) : () => {};
+    inv.stopDelivery = stopDelivery;
+    inv.deliveryTimer = setTimeout(() => { if (this.realmInviteOut === inv && !inv.delivered) { inv.notDelivered = true; if (this.realmMenuOpen) this.renderRealmGateMenu(); } }, 12000);
+        inv.stop = this.net.realmWatchGuest(party, (guestId, seat, count) => {
       if (this.realmInviteOut !== inv) return;
       if (mode !== '2v2' ? guestId !== targetId : !inv.invited.includes(guestId)) return; // only players we invited may take a seat
       inv.joined[seat] = guestId;
       const need = mode === '2v2' ? 3 : 1;
       if (Object.keys(inv.joined).length < need) { if (this.realmMenuOpen) this.renderRealmGateMenu(); return; }
       const link = this.net.realmOpenLink(party, 'host');
-      inv.stop(); clearTimeout(inv.timer); this.realmInviteOut = null;
+      inv.stop(); clearTimeout(inv.timer); clearTimeout(inv.deliveryTimer); if (inv.stopDelivery) inv.stopDelivery(); this.realmInviteOut = null;
       this.closeRealmGateMenu();
       this.enterRealm({ role: 'host', link, mode });
     });
@@ -2953,7 +2956,7 @@ class TownScene extends Phaser.Scene {
     if (!inv) return;
     this.realmInviteOut = null;
     if (inv.stop) inv.stop();
-    clearTimeout(inv.timer);
+    clearTimeout(inv.timer); clearTimeout(inv.deliveryTimer); if (inv.stopDelivery) inv.stopDelivery();
     if (this.net) this.net.realmCancel(inv.party);
     if (this.realmMenuOpen) this.renderRealmGateMenu();
   }

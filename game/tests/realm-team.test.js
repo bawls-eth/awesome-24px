@@ -91,6 +91,8 @@ const startTeam = (role) => (s, r) => {
   await sleep(2500);
   const toast = await B.page.evaluate(() => ({ shown: !document.getElementById('realm-invite').classList.contains('hidden'), text: document.getElementById('realm-invite-text').textContent }));
   check('invite: the other player gets a toast naming the sender', toast.shown && /invites you/.test(toast.text), JSON.stringify(toast));
+  const dl = await scene(A.page, (s) => ({ delivered: !!(s.realmInviteOut && s.realmInviteOut.delivered), status: document.getElementById('realm-menu-status').textContent }));
+  check('invite: the sender sees a delivery receipt once the other page picked the invite up', dl.delivered && /got your invite/.test(dl.status), JSON.stringify(dl));
   await B.page.click('#realm-invite-accept');
   await sleep(4500);
   const fa = await st(A.page), fb = await st(B.page).catch(() => ({}));
