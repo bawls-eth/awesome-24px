@@ -195,8 +195,16 @@
     "class": "live",
     "tier": "full"
   },
+  "realm-menu.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "realm-patterns.test.js": {
     "class": "live",
+    "tier": "full"
+  },
+  "realm-phone-layout.test.js": {
+    "class": "browser",
     "tier": "full"
   },
   "realm-polish.test.js": {
