@@ -1,0 +1,26 @@
+{
+  "delivered": [
+    "B0_v2"
+  ],
+  "remaining_batches": [
+    "B1",
+    "B2",
+    "B3",
+    "B4",
+    "B5",
+    "B6",
+    "B7",
+    "B8",
+    "B9",
+    "B10",
+    "B11",
+    "B12"
+  ],
+  "asset_files_in_this_batch": 21,
+  "total_asset_target": 1000,
+  "accepted_files": 0,
+  "pending_review_files": 21,
+  "remaining_asset_target": 979,
+  "next_batch": "B1_after_user_approval",
+  "batch_status": "technical_validation_complete_pending_visual_approval"
+}

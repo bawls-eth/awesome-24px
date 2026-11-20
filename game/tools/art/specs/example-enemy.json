@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": "ember_mite",
+  "category": "enemy",
+  "title": "Ember Mite (example enemy)",
+  "batch": "b99",
+  "design": {
+    "summary": "A knee-high round beetle-like critter with a cracked clay shell that glows orange through the cracks.",
+    "silhouette": "Round dome shell, six tiny stubby legs, two short curved pincers and two big round eyes; wider than tall."
+  },
+  "palette": {
+    "outline": "#080706",
+    "shell_dark": "#5b371d",
+    "shell": "#80502d",
+    "crack_glow": "#ffbc3c",
+    "crack_hot": "#fff187",
+    "eye": "#f4f0e9",
+    "pupil": "#080706"
+  },
+  "proportions": {
+    "style": "short wide chibi creature, readable at 64x64 logical pixels",
+    "standing_height_px": 96,
+    "cell_px": 256
+  },
+  "single": {
+    "subject": "ember mite enemy, one creature, three-quarter front view",
+    "pose": "neutral idle stance, all six legs touching the ground",
+    "output_px": 256,
+    "fill_percent": 70
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "batch": "b00",
+  "label": "warrior",
+  "generated_utc": "2026-11-19T23:44:34.008106Z",
+  "files": 21,
+  "duplicate_ids": 0,
+  "blocking": {},
+  "warnings": {},
+  "standing_heights": {
+    "warrior/down": 148,
+    "warrior/up": 148,
+    "warrior/right": 148
+  },
+  "status": "provisional"
+}

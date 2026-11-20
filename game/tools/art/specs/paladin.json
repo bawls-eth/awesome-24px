@@ -1,0 +1,215 @@
+{
+  "schema_version": 1,
+  "id": "paladin",
+  "category": "hero",
+  "title": "Paladin (shield bearer)",
+  "batch": "b02",
+  "design": {
+    "summary": "Heavy gold and blue plate knight with a huge kite shield on the left arm and a big warhammer in the right hand.",
+    "silhouette": "Broad rounded helm with a small crest, huge shield covering the left half of the body, hammer head bulging over the right shoulder; very wide and short.",
+    "headgear": {
+      "shape": "crested great helm",
+      "description": "Rounded gold-trimmed steel great helm with a T-shaped visor slit and a short blue plume crest."
+    },
+    "armour": [
+      {
+        "part": "shoulders",
+        "description": "Large rounded gold pauldrons with blue rivets.",
+        "color": "#d99125"
+      },
+      {
+        "part": "chest",
+        "description": "Silver breastplate with a gold sun emblem over a blue tabard.",
+        "color": "#ccc9cd"
+      },
+      {
+        "part": "belt",
+        "description": "Gold-buckled brown belt holding a blue tabard skirt.",
+        "color": "#a16925"
+      },
+      {
+        "part": "shield",
+        "description": "Huge blue kite shield with a gold rim and a gold sun boss, strapped to the left arm.",
+        "color": "#224e76"
+      },
+      {
+        "part": "boots",
+        "description": "Heavy silver greaves and boots with gold knee caps.",
+        "color": "#938b95"
+      }
+    ],
+    "cloth": "Short blue tabard with gold trim front and back; a white-and-blue cape fixed at the shoulders hanging to the knees.",
+    "weapon_summary": "Big two-faced steel warhammer with a short brown handle and a gold band, held in the right hand; large kite shield on the left arm."
+  },
+  "palette": {
+    "outline": "#080706",
+    "gold": "#d99125",
+    "gold_light": "#ffbc3c",
+    "gold_dark": "#a16925",
+    "blue": "#224e76",
+    "blue_light": "#3686a0",
+    "blue_pale": "#63b6c1",
+    "silver": "#ccc9cd",
+    "silver_dark": "#938b95",
+    "white": "#f4f0e9",
+    "skin": "#ecc6a1",
+    "handle": "#80502d"
+  },
+  "proportions": {
+    "style": "short wide chibi: big head (about 1/3 of the height), stocky wide torso, short thick limbs, big hands and boots",
+    "standing_height_px": 148,
+    "cell_px": 256,
+    "notes": "Standing height is equal in the down, up and right views. Feet of every frame rest on ONE baseline row."
+  },
+  "weapon": {
+    "name": "warhammer",
+    "hand": "right",
+    "description": "Big two-faced steel warhammer with a short brown handle and a gold band, held in the right hand; large kite shield on the left arm.",
+    "region_hexes": [
+      "#ada9b1",
+      "#80502d"
+    ]
+  },
+  "views": {
+    "down": {
+      "descriptor": "FRONT view (down): the figure faces the camera, face and chest visible, both boots visible, toes toward the viewer.",
+      "face_visible": true
+    },
+    "up": {
+      "descriptor": "BACK view (up): the figure faces away from the camera. NO face, NO eyes, NO mouth anywhere: show only the back of the head/headgear, the back of the torso, back armour and the cape/cloth hanging down the back, and the heels of both boots. Back view: crest and helm back, the cape falling from the shoulders with a gold sun emblem, shield strapped on the left back arm, hammer handle over the right shoulder.",
+      "face_visible": false
+    },
+    "right": {
+      "descriptor": "RIGHT side view (right): a TRUE side profile facing the right edge of the image, body turned exactly 90 degrees, one eye only, nose/brow in profile; the NEAR arm and NEAR leg are drawn IN FRONT of the torso, the far limbs partly hidden behind it.",
+      "true_profile": true
+    }
+  },
+  "actions": {
+    "idle": {
+      "frames": 4,
+      "fps": 6,
+      "loop": true,
+      "ref_frames": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "poses": [
+        "Stand relaxed, feet shoulder-width apart, the warhammer resting on the right shoulder or held low, shield on the left arm, chest rests low.",
+        "Breathe in: torso rises one pixel step, shoulders lift slightly, the tabard and cape.",
+        "Peak of the breath: head and chest at their highest, arms swing a hair outward, the tabard and cape sways a little.",
+        "Breathe out: torso sinks back lower than frame 1, weight shifts slightly, the tabard and cape settles."
+      ]
+    },
+    "walk": {
+      "frames": 6,
+      "fps": 10,
+      "loop": true,
+      "ref_frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "poses": [
+        "Contact: left boot planted forward, right boot behind on its toes, arms opposite to legs, the warhammer resting on the right shoulder or held low, shield on the left arm.",
+        "Down: body at its lowest, left boot flat under the body, right boot lifting off, right knee bent.",
+        "Passing: right leg swings through beside the planted left leg, body at its highest, the tabard and cape.",
+        "Contact: right boot planted forward, left boot behind on its toes, arms swapped, the warhammer resting on the right shoulder or held low, shield on the left arm.",
+        "Down: body at its lowest, right boot flat under the body, left boot lifting off, left knee bent.",
+        "Passing: left leg swings through beside the planted right leg, body at its highest, the tabard and cape flares."
+      ]
+    },
+    "attack": {
+      "frames": 5,
+      "fps": 12,
+      "loop": false,
+      "ref_frames": [
+        0
+      ],
+      "poses": [
+        "Wind-up: hammer raised high overhead in the right hand, shield forward to guard, knees bent.",
+        "Hammer comes down in a heavy overhead arc, shield arm steadying the body, front foot stepping.",
+        "Impact: hammer head slammed down at the far reach in front of the feet, torso bent forward behind the shield.",
+        "Follow-through: hammer low and forward at the end of the extended arm, weight on the front foot.",
+        "Recover: hammer lifted back to the shoulder, shield raised, feet together."
+      ],
+      "weapon_frames": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "cast": {
+      "frames": 5,
+      "fps": 10,
+      "loop": false,
+      "ref_frames": [
+        0
+      ],
+      "poses": [
+        "Gather: hammer raised in the right hand straight up, shield held in front of the chest, head bowed.",
+        "Hammer glows gold, held overhead, shield arm lifts up beside it, knees bending.",
+        "Arms spread, hammer high at the right and shield high at the left, chest out, tabard flaring.",
+        "Thrust: hammer pointed straight forward at shoulder height, far ahead of the body, shield pulled back.",
+        "Recover: hammer lowering to the carry pose, shield dropping, cape settling."
+      ],
+      "weapon_frames": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "roll": {
+      "frames": 6,
+      "fps": 12,
+      "loop": true,
+      "ref_frames": [
+        0
+      ],
+      "poses": [
+        "Crouch low, knees bent deeply, head ducked forward, the warhammer resting on the right shoulder or held low, shield on the left arm pulled in tight.",
+        "Launch: body tipping forward, head tucked, back arching, both boots still visible leaving the floor.",
+        "Tumble 1: figure curled into a compact ball, head near the knees, back toward the camera side, boots tucked.",
+        "Tumble 2: the ball has rotated half a turn, upside down, boots up top, head tucked below.",
+        "Tumble 3: rotating up out of the ball, legs reaching down toward the ground, head coming up.",
+        "Landing: one knee bent, other boot planted, rising out of the roll, the warhammer resting on the right shoulder or held low, shield on the left arm back in hand."
+      ]
+    },
+    "hit": {
+      "frames": 2,
+      "fps": 8,
+      "loop": false,
+      "ref_frames": [
+        0
+      ],
+      "poses": [
+        "Struck: head snaps back, torso leans away from the blow, eyes squeezed shut, arms flung outward, the warhammer resting on the right shoulder or held low, shield on the left arm.",
+        "Recoil: body bent at the waist, knees buckled, one boot sliding back, wincing, the warhammer resting on the right shoulder or held low, shield on the left arm."
+      ]
+    },
+    "death": {
+      "frames": 6,
+      "fps": 8,
+      "loop": false,
+      "ref_frames": [
+        0
+      ],
+      "poses": [
+        "Fatal hit: head snaps back, torso arching, the warhammer resting on the right shoulder or held low, shield on the left arm loosening in the grip.",
+        "Stumble: knees give way, one knee drops, a hand drops the weapon, head hangs.",
+        "Fall: body topples sideways, both arms flailing, boots leaving the ground.",
+        "Impact: the body lands on its side, weapon clattering beside it, cloth settling.",
+        "Slump: the body flat on the ground, one arm stretched out, legs straight, head turned.",
+        "Final: lying completely still on the ground, weapon at rest next to the hand, cloth lying flat. Feet on the baseline row."
+      ]
+    }
+  }
+}

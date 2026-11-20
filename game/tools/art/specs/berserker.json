@@ -1,0 +1,215 @@
+{
+  "schema_version": 1,
+  "id": "berserker",
+  "category": "hero",
+  "title": "Berserker (axe raider)",
+  "batch": "b03",
+  "design": {
+    "summary": "Wild fur-clad raider in brown leather and bone with a horned helm and two heavy axes.",
+    "silhouette": "Wide bone-horned helm, huge fur collar making the shoulders enormous, one axe in each fist hanging low; very stocky.",
+    "headgear": {
+      "shape": "horned helm",
+      "description": "Open-faced rough iron-brown helm with two thick cream bone horns curving forward, wild hair spilling out the sides."
+    },
+    "armour": [
+      {
+        "part": "shoulders",
+        "description": "Huge brown fur mantle over both shoulders with bone studs.",
+        "color": "#80502d"
+      },
+      {
+        "part": "chest",
+        "description": "Bare tanned chest crossed by a brown leather harness with bone buckles.",
+        "color": "#5b371d"
+      },
+      {
+        "part": "belt",
+        "description": "Thick studded belt hung with small bone trophies.",
+        "color": "#342519"
+      },
+      {
+        "part": "arms",
+        "description": "Bone bracers on both forearms.",
+        "color": "#d5a778"
+      },
+      {
+        "part": "boots",
+        "description": "Fur-topped brown boots with leather wraps.",
+        "color": "#5b371d"
+      }
+    ],
+    "cloth": "Short ragged brown kilt-skirt of leather strips; a tattered fur cloak hangs down the back.",
+    "weapon_summary": "Two heavy single-bladed hand axes with brown handles and dull steel blades, one in each hand, blades pointing outward and down when idle."
+  },
+  "palette": {
+    "outline": "#080706",
+    "brown_dark": "#342519",
+    "brown": "#5b371d",
+    "brown_mid": "#80502d",
+    "brown_light": "#a97747",
+    "bone": "#d5a778",
+    "bone_light": "#f4f0e9",
+    "skin": "#e1bb92",
+    "steel": "#ada9b1",
+    "steel_light": "#e4e1e1",
+    "blood": "#ad181b",
+    "hair": "#775016"
+  },
+  "proportions": {
+    "style": "short wide chibi: big head (about 1/3 of the height), stocky wide torso, short thick limbs, big hands and boots",
+    "standing_height_px": 148,
+    "cell_px": 256,
+    "notes": "Standing height is equal in the down, up and right views. Feet of every frame rest on ONE baseline row."
+  },
+  "weapon": {
+    "name": "double axes",
+    "hand": "both",
+    "description": "Two heavy single-bladed hand axes with brown handles and dull steel blades, one in each hand, blades pointing outward and down when idle.",
+    "region_hexes": [
+      "#ada9b1",
+      "#e4e1e1"
+    ]
+  },
+  "views": {
+    "down": {
+      "descriptor": "FRONT view (down): the figure faces the camera, face and chest visible, both boots visible, toes toward the viewer.",
+      "face_visible": true
+    },
+    "up": {
+      "descriptor": "BACK view (up): the figure faces away from the camera. NO face, NO eyes, NO mouth anywhere: show only the back of the head/headgear, the back of the torso, back armour and the cape/cloth hanging down the back, and the heels of both boots. Back view: bone horns from behind, wild hair, the ragged fur cloak covering the back, axe handles crossed over the lower back.",
+      "face_visible": false
+    },
+    "right": {
+      "descriptor": "RIGHT side view (right): a TRUE side profile facing the right edge of the image, body turned exactly 90 degrees, one eye only, nose/brow in profile; the NEAR arm and NEAR leg are drawn IN FRONT of the torso, the far limbs partly hidden behind it.",
+      "true_profile": true
+    }
+  },
+  "actions": {
+    "idle": {
+      "frames": 4,
+      "fps": 6,
+      "loop": true,
+      "ref_frames": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "poses": [
+        "Stand relaxed, feet shoulder-width apart, an axe hanging in each fist, chest rests low.",
+        "Breathe in: torso rises one pixel step, shoulders lift slightly, the fur cloak and kilt strips.",
+        "Peak of the breath: head and chest at their highest, arms swing a hair outward, the fur cloak and kilt strips sways a little.",
+        "Breathe out: torso sinks back lower than frame 1, weight shifts slightly, the fur cloak and kilt strips settles."
+      ]
+    },
+    "walk": {
+      "frames": 6,
+      "fps": 10,
+      "loop": true,
+      "ref_frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "poses": [
+        "Contact: left boot planted forward, right boot behind on its toes, arms opposite to legs, an axe hanging in each fist.",
+        "Down: body at its lowest, left boot flat under the body, right boot lifting off, right knee bent.",
+        "Passing: right leg swings through beside the planted left leg, body at its highest, the fur cloak and kilt strips.",
+        "Contact: right boot planted forward, left boot behind on its toes, arms swapped, an axe hanging in each fist.",
+        "Down: body at its lowest, right boot flat under the body, left boot lifting off, left knee bent.",
+        "Passing: left leg swings through beside the planted right leg, body at its highest, the fur cloak and kilt strips flares."
+      ]
+    },
+    "attack": {
+      "frames": 5,
+      "fps": 12,
+      "loop": false,
+      "ref_frames": [
+        0
+      ],
+      "poses": [
+        "Wind-up: both axes pulled back and raised behind the shoulders, chest thrust out, roaring mouth open.",
+        "Right axe chops down and across in front of the chest, body twisting, left axe still raised.",
+        "Left axe chops across the opposite way, both axes crossed in front, front foot stamped forward.",
+        "Spin: body twisting full around, both axes extended outward at the sides, far from the body.",
+        "Recover: axes dropping back to the hanging pose, shoulders heaving, fur settling."
+      ],
+      "weapon_frames": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "cast": {
+      "frames": 5,
+      "fps": 10,
+      "loop": false,
+      "ref_frames": [
+        0
+      ],
+      "poses": [
+        "Gather: both axes raised overhead and clashed together, head thrown back in a roar.",
+        "Axes held high and apart, chest out, arms trembling, knees bent.",
+        "Axes slammed together in front of the chest, body hunched forward.",
+        "Throw: right arm snaps forward releasing the axe pose, arm at full reach ahead, left axe pulled back.",
+        "Recover: arm lowering, axes back in both hands, breath heaving."
+      ],
+      "weapon_frames": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "roll": {
+      "frames": 6,
+      "fps": 12,
+      "loop": true,
+      "ref_frames": [
+        0
+      ],
+      "poses": [
+        "Crouch low, knees bent deeply, head ducked forward, an axe hanging in each fist pulled in tight.",
+        "Launch: body tipping forward, head tucked, back arching, both boots still visible leaving the floor.",
+        "Tumble 1: figure curled into a compact ball, head near the knees, back toward the camera side, boots tucked.",
+        "Tumble 2: the ball has rotated half a turn, upside down, boots up top, head tucked below.",
+        "Tumble 3: rotating up out of the ball, legs reaching down toward the ground, head coming up.",
+        "Landing: one knee bent, other boot planted, rising out of the roll, an axe hanging in each fist back in hand."
+      ]
+    },
+    "hit": {
+      "frames": 2,
+      "fps": 8,
+      "loop": false,
+      "ref_frames": [
+        0
+      ],
+      "poses": [
+        "Struck: head snaps back, torso leans away from the blow, eyes squeezed shut, arms flung outward, an axe hanging in each fist.",
+        "Recoil: body bent at the waist, knees buckled, one boot sliding back, wincing, an axe hanging in each fist."
+      ]
+    },
+    "death": {
+      "frames": 6,
+      "fps": 8,
+      "loop": false,
+      "ref_frames": [
+        0
+      ],
+      "poses": [
+        "Fatal hit: head snaps back, torso arching, an axe hanging in each fist loosening in the grip.",
+        "Stumble: knees give way, one knee drops, a hand drops the weapon, head hangs.",
+        "Fall: body topples sideways, both arms flailing, boots leaving the ground.",
+        "Impact: the body lands on its side, weapon clattering beside it, cloth settling.",
+        "Slump: the body flat on the ground, one arm stretched out, legs straight, head turned.",
+        "Final: lying completely still on the ground, weapon at rest next to the hand, cloth lying flat. Feet on the baseline row."
+      ]
+    }
+  }
+}

@@ -1,0 +1,778 @@
+{
+  "checks": {
+    "zip_integrity": true,
+    "unique_ids": true,
+    "dimensions": true,
+    "binary_alpha": true,
+    "minimum_margin_12": true,
+    "pixel_4x4_uniform": true,
+    "palette_locked": true,
+    "no_empty_frames": true,
+    "correct_frames": true,
+    "actual_colors_used": 45,
+    "number_of_strips": 21,
+    "number_of_frames": 102
+  },
+  "issues": [
+    {
+      "id": "warrior_attack_down",
+      "what_is_wrong": "Frame 2 was corrected by upscaling its previously shrunken artwork. Verify that its armor size now matches the other attack frames; this one repair is not from a fresh master pose."
+    },
+    {
+      "id": "warrior_up_right",
+      "what_is_wrong": "The up/right sprites are newly image-illustrated rather than code-drawn, but were sliced from multi-pose sheets; some weapon extremities or fine armor pixels may be clipped or simplified by the source-sheet spacing. Requires visual approval."
+    },
+    {
+      "id": "warrior_all_attacks",
+      "what_is_wrong": "Projectile/attack muzzle coordinates retain preliminary engine estimates from B0 and need in-game placement."
+    },
+    {
+      "id": "warrior_walk_all",
+      "what_is_wrong": "Walk loop continuity, baseline and attack feel need in-engine review; automated tests do not certify natural animation."
+    }
+  ],
+  "asset_count": 21,
+  "total_frames": 102,
+  "frame_bboxes": {
+    "warrior_idle_down": [
+      [
+        56,
+        84,
+        196,
+        232
+      ],
+      [
+        56,
+        84,
+        200,
+        232
+      ],
+      [
+        56,
+        84,
+        196,
+        232
+      ],
+      [
+        56,
+        84,
+        196,
+        232
+      ]
+    ],
+    "warrior_idle_up": [
+      [
+        68,
+        84,
+        188,
+        232
+      ],
+      [
+        64,
+        84,
+        188,
+        232
+      ],
+      [
+        64,
+        84,
+        192,
+        232
+      ],
+      [
+        68,
+        84,
+        188,
+        232
+      ]
+    ],
+    "warrior_idle_right": [
+      [
+        68,
+        84,
+        188,
+        232
+      ],
+      [
+        68,
+        84,
+        188,
+        232
+      ],
+      [
+        60,
+        84,
+        196,
+        232
+      ],
+      [
+        64,
+        84,
+        192,
+        232
+      ]
+    ],
+    "warrior_walk_down": [
+      [
+        52,
+        84,
+        204,
+        232
+      ],
+      [
+        48,
+        84,
+        208,
+        232
+      ],
+      [
+        52,
+        84,
+        204,
+        232
+      ],
+      [
+        52,
+        84,
+        204,
+        232
+      ],
+      [
+        52,
+        84,
+        204,
+        232
+      ],
+      [
+        52,
+        84,
+        204,
+        232
+      ]
+    ],
+    "warrior_walk_up": [
+      [
+        68,
+        80,
+        188,
+        232
+      ],
+      [
+        68,
+        76,
+        188,
+        232
+      ],
+      [
+        68,
+        76,
+        188,
+        232
+      ],
+      [
+        68,
+        80,
+        188,
+        232
+      ],
+      [
+        68,
+        80,
+        188,
+        232
+      ],
+      [
+        68,
+        80,
+        188,
+        232
+      ]
+    ],
+    "warrior_walk_right": [
+      [
+        68,
+        76,
+        188,
+        232
+      ],
+      [
+        60,
+        80,
+        196,
+        232
+      ],
+      [
+        60,
+        80,
+        196,
+        232
+      ],
+      [
+        60,
+        80,
+        196,
+        232
+      ],
+      [
+        64,
+        84,
+        192,
+        232
+      ],
+      [
+        64,
+        76,
+        188,
+        232
+      ]
+    ],
+    "warrior_attack_down": [
+      [
+        32,
+        84,
+        224,
+        232
+      ],
+      [
+        56,
+        56,
+        200,
+        232
+      ],
+      [
+        52,
+        84,
+        204,
+        232
+      ],
+      [
+        48,
+        84,
+        208,
+        232
+      ],
+      [
+        52,
+        84,
+        204,
+        232
+      ]
+    ],
+    "warrior_attack_up": [
+      [
+        68,
+        84,
+        184,
+        232
+      ],
+      [
+        72,
+        48,
+        184,
+        232
+      ],
+      [
+        76,
+        88,
+        180,
+        232
+      ],
+      [
+        64,
+        104,
+        188,
+        232
+      ],
+      [
+        68,
+        84,
+        188,
+        232
+      ]
+    ],
+    "warrior_attack_right": [
+      [
+        68,
+        84,
+        188,
+        232
+      ],
+      [
+        72,
+        40,
+        184,
+        232
+      ],
+      [
+        84,
+        100,
+        172,
+        232
+      ],
+      [
+        72,
+        116,
+        184,
+        232
+      ],
+      [
+        68,
+        84,
+        188,
+        232
+      ]
+    ],
+    "warrior_cast_down": [
+      [
+        56,
+        84,
+        200,
+        232
+      ],
+      [
+        56,
+        84,
+        200,
+        232
+      ],
+      [
+        52,
+        84,
+        204,
+        232
+      ],
+      [
+        48,
+        84,
+        208,
+        232
+      ],
+      [
+        52,
+        84,
+        204,
+        232
+      ]
+    ],
+    "warrior_cast_up": [
+      [
+        68,
+        80,
+        184,
+        232
+      ],
+      [
+        72,
+        80,
+        184,
+        232
+      ],
+      [
+        72,
+        80,
+        184,
+        232
+      ],
+      [
+        64,
+        92,
+        192,
+        232
+      ],
+      [
+        68,
+        80,
+        188,
+        232
+      ]
+    ],
+    "warrior_cast_right": [
+      [
+        68,
+        84,
+        188,
+        232
+      ],
+      [
+        76,
+        84,
+        180,
+        232
+      ],
+      [
+        80,
+        84,
+        176,
+        232
+      ],
+      [
+        72,
+        96,
+        184,
+        232
+      ],
+      [
+        68,
+        84,
+        188,
+        232
+      ]
+    ],
+    "warrior_roll_down": [
+      [
+        48,
+        88,
+        208,
+        232
+      ],
+      [
+        64,
+        80,
+        192,
+        232
+      ],
+      [
+        52,
+        76,
+        204,
+        232
+      ],
+      [
+        52,
+        72,
+        204,
+        232
+      ],
+      [
+        52,
+        76,
+        204,
+        232
+      ],
+      [
+        40,
+        68,
+        212,
+        232
+      ]
+    ],
+    "warrior_roll_up": [
+      [
+        80,
+        92,
+        176,
+        232
+      ],
+      [
+        76,
+        92,
+        180,
+        232
+      ],
+      [
+        72,
+        112,
+        184,
+        232
+      ],
+      [
+        64,
+        116,
+        192,
+        232
+      ],
+      [
+        72,
+        80,
+        184,
+        232
+      ],
+      [
+        68,
+        84,
+        188,
+        232
+      ]
+    ],
+    "warrior_roll_right": [
+      [
+        44,
+        88,
+        212,
+        232
+      ],
+      [
+        52,
+        108,
+        204,
+        232
+      ],
+      [
+        52,
+        96,
+        200,
+        232
+      ],
+      [
+        44,
+        116,
+        212,
+        232
+      ],
+      [
+        52,
+        112,
+        204,
+        232
+      ],
+      [
+        52,
+        84,
+        204,
+        232
+      ]
+    ],
+    "warrior_hit_down": [
+      [
+        52,
+        84,
+        200,
+        232
+      ],
+      [
+        52,
+        84,
+        204,
+        232
+      ]
+    ],
+    "warrior_hit_up": [
+      [
+        68,
+        88,
+        184,
+        232
+      ],
+      [
+        72,
+        88,
+        184,
+        232
+      ]
+    ],
+    "warrior_hit_right": [
+      [
+        68,
+        88,
+        188,
+        232
+      ],
+      [
+        72,
+        88,
+        184,
+        232
+      ]
+    ],
+    "warrior_death_down": [
+      [
+        52,
+        76,
+        204,
+        232
+      ],
+      [
+        52,
+        84,
+        200,
+        232
+      ],
+      [
+        52,
+        100,
+        200,
+        232
+      ],
+      [
+        48,
+        116,
+        208,
+        232
+      ],
+      [
+        48,
+        136,
+        208,
+        232
+      ],
+      [
+        44,
+        140,
+        212,
+        232
+      ]
+    ],
+    "warrior_death_up": [
+      [
+        84,
+        88,
+        168,
+        232
+      ],
+      [
+        80,
+        88,
+        176,
+        232
+      ],
+      [
+        80,
+        108,
+        176,
+        232
+      ],
+      [
+        68,
+        132,
+        188,
+        232
+      ],
+      [
+        72,
+        144,
+        184,
+        232
+      ],
+      [
+        72,
+        152,
+        184,
+        232
+      ]
+    ],
+    "warrior_death_right": [
+      [
+        68,
+        84,
+        188,
+        232
+      ],
+      [
+        60,
+        112,
+        196,
+        232
+      ],
+      [
+        64,
+        132,
+        192,
+        232
+      ],
+      [
+        60,
+        124,
+        196,
+        232
+      ],
+      [
+        52,
+        156,
+        204,
+        232
+      ],
+      [
+        52,
+        164,
+        204,
+        232
+      ]
+    ]
+  },
+  "height_stats": {
+    "warrior_idle_down": {
+      "min": 148,
+      "max": 148
+    },
+    "warrior_idle_up": {
+      "min": 148,
+      "max": 148
+    },
+    "warrior_idle_right": {
+      "min": 148,
+      "max": 148
+    },
+    "warrior_walk_down": {
+      "min": 148,
+      "max": 148
+    },
+    "warrior_walk_up": {
+      "min": 152,
+      "max": 156
+    },
+    "warrior_walk_right": {
+      "min": 148,
+      "max": 156
+    },
+    "warrior_attack_down": {
+      "min": 148,
+      "max": 176
+    },
+    "warrior_attack_up": {
+      "min": 128,
+      "max": 184
+    },
+    "warrior_attack_right": {
+      "min": 116,
+      "max": 192
+    },
+    "warrior_cast_down": {
+      "min": 148,
+      "max": 148
+    },
+    "warrior_cast_up": {
+      "min": 140,
+      "max": 152
+    },
+    "warrior_cast_right": {
+      "min": 136,
+      "max": 148
+    },
+    "warrior_roll_down": {
+      "min": 144,
+      "max": 164
+    },
+    "warrior_roll_up": {
+      "min": 116,
+      "max": 152
+    },
+    "warrior_roll_right": {
+      "min": 116,
+      "max": 148
+    },
+    "warrior_hit_down": {
+      "min": 148,
+      "max": 148
+    },
+    "warrior_hit_up": {
+      "min": 144,
+      "max": 144
+    },
+    "warrior_hit_right": {
+      "min": 144,
+      "max": 144
+    },
+    "warrior_death_down": {
+      "min": 92,
+      "max": 156
+    },
+    "warrior_death_up": {
+      "min": 80,
+      "max": 144
+    },
+    "warrior_death_right": {
+      "min": 68,
+      "max": 148
+    }
+  }
+}

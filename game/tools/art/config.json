@@ -1,0 +1,33 @@
+{
+  "_comment": "Single source of truth for the art pipeline. A human raises/lowers the spend cap HERE only (cap_total_usd / stop_usd); then run `python3 game/tools/art/generate.py --sync-header` to mirror it into the ledger header text.",
+  "cap_total_usd": 4.00,
+  "stop_usd": 3.60,
+  "report_usd": 3.20,
+  "ledger": "game/assets/art/LEDGER-OPENAI.md",
+  "prices_per_million": { "out": 40, "in_text": 5, "in_image": 10 },
+  "api": {
+    "url": "https://api.openai.com/v1/images/generations",
+    "model": "gpt-image-1.5",
+    "quality": "medium",
+    "size_sheet": "1536x1024",
+    "size_single": "1024x1024",
+    "output_format": "png",
+    "timeout_s": 180,
+    "max_attempts": 4,
+    "backoff_base_s": 4,
+    "backoff_max_s": 60
+  },
+  "estimate": {
+    "out_tokens_1536x1024": 2150,
+    "out_tokens_1024x1024": 1500,
+    "chars_per_text_token": 3.5
+  },
+  "frame": { "cell": 256, "logical": 64, "block": 4, "baseline_y": 231, "anchor_x": 128, "margin": 12, "standing_h": 148 },
+  "key": { "magenta": "#FF00FF", "dist": 100, "fringe_dist": 160, "min_component_frac": 0.02, "merge_radius_px": 10 },
+  "retry": { "max_per_strip": 2 },
+  "batches": {
+    "b02": { "label": "rogue-warlock-paladin", "classes": ["rogue", "warlock", "paladin"] },
+    "b03": { "label": "berserker-druid-necromancer", "classes": ["berserker", "druid", "necromancer"] }
+  },
+  "reference_batches": { "warrior": "b00-warrior", "ranger": "b01-ranger-mage-cleric" }
+}

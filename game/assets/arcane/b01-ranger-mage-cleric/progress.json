@@ -1,0 +1,27 @@
+{
+  "delivered": [
+    "B0_v2",
+    "B1"
+  ],
+  "approved": [
+    "B0_v2_provisional"
+  ],
+  "pending_review": [
+    "B1"
+  ],
+  "asset_files_in_this_batch": 63,
+  "total_asset_target": 1000,
+  "cumulative_delivered_file_count": 84,
+  "remaining_asset_target": 916,
+  "next_batch": "B2_after_B1_review",
+  "batch_status": "technical_validation_complete_pending_visual_approval",
+  "per_category_files": {
+    "hero_animation_strips": 84,
+    "enemies": 0,
+    "boss": 0,
+    "items": 0,
+    "projectiles_effects": 0,
+    "tiles": 0,
+    "props_ui": 0
+  }
+}
