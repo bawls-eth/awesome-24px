@@ -1,0 +1,14 @@
+[
+  {
+    "id": "b04_attack_origins",
+    "description": "The per-frame attack origins use silhouette estimates. Verify the Thistle Archer bow release and the Puffcap burst origin against the corresponding game effects."
+  },
+  {
+    "id": "b04_mothling_pose_continuity",
+    "description": "Wing markings and outline detail vary slightly between the movement and battle sheets. Review the transition at gameplay scale."
+  },
+  {
+    "id": "b04_in_game_review",
+    "description": "All strips passed intake and received contact-sheet review. Live playback, spawn sizing, and action transitions are pending integration."
+  }
+]

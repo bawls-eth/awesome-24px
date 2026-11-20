@@ -1,0 +1,14 @@
+[
+  {
+    "id": "b03_berserker_rear_axe",
+    "description": "The axe changes screen side between rear-facing idle/walk and the ready/recovery poses in rear attack/cast. Check continuity before final visual approval."
+  },
+  {
+    "id": "b03_muzzle_estimates",
+    "description": "Attack and cast muzzle points are estimated from the illustrated weapon tips. Calibrate them at gameplay scale."
+  },
+  {
+    "id": "b03_playback_review",
+    "description": "All sequences were reviewed in a contact sheet. In-engine playback, loop timing and action transitions still need review."
+  }
+]

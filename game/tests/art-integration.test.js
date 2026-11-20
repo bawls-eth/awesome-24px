@@ -61,7 +61,7 @@ async function open(browser, url, { heroes, active, opts } = {}) {
     out.deadManifest = bad.classes().length === 0 && bad.anim('warrior', 'idle', 'down') === null;
     // Every batch INDEX.json lists must load: each one's manifest classes show up in the merged registry.
     const artIdx = await (await fetch('/game/assets/arcane/INDEX.json')).json(); out.batches = [];
-    for (const b of artIdx.batches) { const id = b.path.split('/').pop(); const m = await (await fetch('/game/assets/arcane/' + id + '/manifest.json')).json(); const cls = [...new Set(m.assets.map((a) => a.class))]; out.batches.push({ id, missing: cls.filter((c) => !set.has(c)) }); }
+    for (const b of artIdx.batches) { const id = b.path.split('/').pop(); const m = await (await fetch('/game/assets/arcane/' + id + '/manifest.json')).json(); const cls = [...new Set(m.assets.map((a) => a.class || a.enemy))]; out.batches.push({ id, missing: cls.filter((c) => !set.has(c)) }); }
     out.ids = (await MMArt.packIds('/game/assets/arcane/')).join(',');
     out.mapped = [MMArt.artClassFor('bruiser'), MMArt.artClassFor('frostcaller'), MMArt.artClassFor('herald'), MMArt.artClassFor('punk'), MMArt.artClassFor('__proto__'), MMArt.artClassFor(null)].join('|');
     return out;

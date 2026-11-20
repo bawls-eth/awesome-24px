@@ -1,0 +1,14 @@
+[
+  {
+    "id": "b05_attack_origins",
+    "description": "The per-frame attack origins are estimates from the exported pose silhouettes. Calibrate sword tips, Stone Golem fist positions and the Mini Sprout projectile origin against game effects."
+  },
+  {
+    "id": "b05_transition_review",
+    "description": "The Goblin Scout recovery still holds the sword in the follow-through position before returning to idle. Review that cut and the Cave Bat's wing positions between movement and attack at gameplay scale."
+  },
+  {
+    "id": "b05_in_game",
+    "description": "The full batch received contact-sheet review and passed intake. Live playback and runtime integration are pending."
+  }
+]

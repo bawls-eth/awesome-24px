@@ -192,193 +192,382 @@
    "display_scale": 0.9737
   },
   "rogue_idle_down": {
-   "display_scale": 0.9737
+   "display_scale": 1.0
+  },
+  "rogue_walk_down": {
+   "display_scale": 1.0
+  },
+  "rogue_attack_down": {
+   "display_scale": 1.0
+  },
+  "rogue_cast_down": {
+   "display_scale": 1.0
+  },
+  "rogue_roll_down": {
+   "display_scale": 1.0
+  },
+  "rogue_hit_down": {
+   "display_scale": 1.0
+  },
+  "rogue_death_down": {
+   "display_scale": 1.0
   },
   "rogue_idle_up": {
+   "display_scale": 1.0
+  },
+  "rogue_walk_up": {
+   "display_scale": 1.0
+  },
+  "rogue_attack_up": {
+   "display_scale": 1.0
+  },
+  "rogue_cast_up": {
+   "display_scale": 1.0
+  },
+  "rogue_roll_up": {
+   "display_scale": 1.0
+  },
+  "rogue_hit_up": {
+   "display_scale": 1.0
+  },
+  "rogue_death_up": {
    "display_scale": 1.0
   },
   "rogue_idle_right": {
    "display_scale": 1.0
   },
-  "rogue_walk_down": {
-   "display_scale": 0.9737
-  },
-  "rogue_walk_up": {
-   "display_scale": 1.0
-  },
   "rogue_walk_right": {
-   "display_scale": 1.0
-  },
-  "rogue_attack_down": {
-   "display_scale": 0.9737
-  },
-  "rogue_attack_up": {
    "display_scale": 1.0
   },
   "rogue_attack_right": {
    "display_scale": 1.0
   },
-  "rogue_cast_down": {
-   "display_scale": 0.9737
-  },
-  "rogue_cast_up": {
-   "display_scale": 1.0
-  },
   "rogue_cast_right": {
-   "display_scale": 1.0
-  },
-  "rogue_roll_down": {
-   "display_scale": 0.9737
-  },
-  "rogue_roll_up": {
    "display_scale": 1.0
   },
   "rogue_roll_right": {
    "display_scale": 1.0
   },
-  "rogue_hit_down": {
-   "display_scale": 0.9737
-  },
-  "rogue_hit_up": {
-   "display_scale": 1.0
-  },
   "rogue_hit_right": {
-   "display_scale": 1.0
-  },
-  "rogue_death_down": {
-   "display_scale": 0.9737
-  },
-  "rogue_death_up": {
    "display_scale": 1.0
   },
   "rogue_death_right": {
    "display_scale": 1.0
   },
   "warlock_idle_down": {
-   "display_scale": 1.0278
+   "display_scale": 1.0
+  },
+  "warlock_walk_down": {
+   "display_scale": 1.0
+  },
+  "warlock_attack_down": {
+   "display_scale": 1.0
+  },
+  "warlock_cast_down": {
+   "display_scale": 1.0
+  },
+  "warlock_roll_down": {
+   "display_scale": 1.0
+  },
+  "warlock_hit_down": {
+   "display_scale": 1.0
+  },
+  "warlock_death_down": {
+   "display_scale": 1.0
   },
   "warlock_idle_up": {
+   "display_scale": 1.0
+  },
+  "warlock_walk_up": {
+   "display_scale": 1.0
+  },
+  "warlock_attack_up": {
+   "display_scale": 1.0
+  },
+  "warlock_cast_up": {
+   "display_scale": 1.0
+  },
+  "warlock_roll_up": {
+   "display_scale": 1.0
+  },
+  "warlock_hit_up": {
+   "display_scale": 1.0
+  },
+  "warlock_death_up": {
    "display_scale": 1.0
   },
   "warlock_idle_right": {
    "display_scale": 1.0
   },
-  "warlock_walk_down": {
-   "display_scale": 1.0278
-  },
-  "warlock_walk_up": {
-   "display_scale": 1.0
-  },
   "warlock_walk_right": {
-   "display_scale": 1.0
-  },
-  "warlock_attack_down": {
-   "display_scale": 1.0278
-  },
-  "warlock_attack_up": {
    "display_scale": 1.0
   },
   "warlock_attack_right": {
    "display_scale": 1.0
   },
-  "warlock_cast_down": {
-   "display_scale": 1.0278
-  },
-  "warlock_cast_up": {
-   "display_scale": 1.0
-  },
   "warlock_cast_right": {
-   "display_scale": 1.0
-  },
-  "warlock_roll_down": {
-   "display_scale": 1.0278
-  },
-  "warlock_roll_up": {
    "display_scale": 1.0
   },
   "warlock_roll_right": {
    "display_scale": 1.0
   },
-  "warlock_hit_down": {
-   "display_scale": 1.0278
-  },
-  "warlock_hit_up": {
-   "display_scale": 1.0
-  },
   "warlock_hit_right": {
-   "display_scale": 1.0
-  },
-  "warlock_death_down": {
-   "display_scale": 1.0278
-  },
-  "warlock_death_up": {
    "display_scale": 1.0
   },
   "warlock_death_right": {
    "display_scale": 1.0
   },
   "paladin_idle_down": {
-   "display_scale": 1.0278
+   "display_scale": 1.0
+  },
+  "paladin_walk_down": {
+   "display_scale": 1.0
+  },
+  "paladin_attack_down": {
+   "display_scale": 1.0
+  },
+  "paladin_cast_down": {
+   "display_scale": 1.0
+  },
+  "paladin_roll_down": {
+   "display_scale": 1.0
+  },
+  "paladin_hit_down": {
+   "display_scale": 1.0
+  },
+  "paladin_death_down": {
+   "display_scale": 1.0
   },
   "paladin_idle_up": {
    "display_scale": 1.0
   },
-  "paladin_idle_right": {
-   "display_scale": 0.9737
-  },
-  "paladin_walk_down": {
-   "display_scale": 1.0278
-  },
   "paladin_walk_up": {
    "display_scale": 1.0
-  },
-  "paladin_walk_right": {
-   "display_scale": 0.9737
-  },
-  "paladin_attack_down": {
-   "display_scale": 1.0278
   },
   "paladin_attack_up": {
    "display_scale": 1.0
   },
-  "paladin_attack_right": {
-   "display_scale": 0.9737
-  },
-  "paladin_cast_down": {
-   "display_scale": 1.0278
-  },
   "paladin_cast_up": {
    "display_scale": 1.0
-  },
-  "paladin_cast_right": {
-   "display_scale": 0.9737
-  },
-  "paladin_roll_down": {
-   "display_scale": 1.0278
   },
   "paladin_roll_up": {
    "display_scale": 1.0
   },
-  "paladin_roll_right": {
-   "display_scale": 0.9737
-  },
-  "paladin_hit_down": {
-   "display_scale": 1.0278
-  },
   "paladin_hit_up": {
    "display_scale": 1.0
-  },
-  "paladin_hit_right": {
-   "display_scale": 0.9737
-  },
-  "paladin_death_down": {
-   "display_scale": 1.0278
   },
   "paladin_death_up": {
    "display_scale": 1.0
   },
+  "paladin_idle_right": {
+   "display_scale": 1.0
+  },
+  "paladin_walk_right": {
+   "display_scale": 1.0
+  },
+  "paladin_attack_right": {
+   "display_scale": 1.0
+  },
+  "paladin_cast_right": {
+   "display_scale": 1.0
+  },
+  "paladin_roll_right": {
+   "display_scale": 1.0
+  },
+  "paladin_hit_right": {
+   "display_scale": 1.0
+  },
   "paladin_death_right": {
-   "display_scale": 0.9737
+   "display_scale": 1.0
+  },
+  "berserker_idle_down": {
+   "display_scale": 1.0
+  },
+  "berserker_walk_down": {
+   "display_scale": 1.0
+  },
+  "berserker_attack_down": {
+   "display_scale": 1.0
+  },
+  "berserker_cast_down": {
+   "display_scale": 1.0
+  },
+  "berserker_roll_down": {
+   "display_scale": 1.0
+  },
+  "berserker_hit_down": {
+   "display_scale": 1.0
+  },
+  "berserker_death_down": {
+   "display_scale": 1.0
+  },
+  "berserker_idle_up": {
+   "display_scale": 1.0
+  },
+  "berserker_walk_up": {
+   "display_scale": 1.0
+  },
+  "berserker_attack_up": {
+   "display_scale": 1.0
+  },
+  "berserker_cast_up": {
+   "display_scale": 1.0
+  },
+  "berserker_roll_up": {
+   "display_scale": 1.0
+  },
+  "berserker_hit_up": {
+   "display_scale": 1.0
+  },
+  "berserker_death_up": {
+   "display_scale": 1.0
+  },
+  "berserker_idle_right": {
+   "display_scale": 1.0
+  },
+  "berserker_walk_right": {
+   "display_scale": 1.0
+  },
+  "berserker_attack_right": {
+   "display_scale": 1.0
+  },
+  "berserker_cast_right": {
+   "display_scale": 1.0
+  },
+  "berserker_roll_right": {
+   "display_scale": 1.0
+  },
+  "berserker_hit_right": {
+   "display_scale": 1.0
+  },
+  "berserker_death_right": {
+   "display_scale": 1.0
+  },
+  "druid_idle_down": {
+   "display_scale": 1.0
+  },
+  "druid_walk_down": {
+   "display_scale": 1.0
+  },
+  "druid_attack_down": {
+   "display_scale": 1.0
+  },
+  "druid_cast_down": {
+   "display_scale": 1.0
+  },
+  "druid_roll_down": {
+   "display_scale": 1.0
+  },
+  "druid_hit_down": {
+   "display_scale": 1.0
+  },
+  "druid_death_down": {
+   "display_scale": 1.0
+  },
+  "druid_idle_up": {
+   "display_scale": 1.0
+  },
+  "druid_walk_up": {
+   "display_scale": 1.0
+  },
+  "druid_attack_up": {
+   "display_scale": 1.0
+  },
+  "druid_cast_up": {
+   "display_scale": 1.0
+  },
+  "druid_roll_up": {
+   "display_scale": 1.0
+  },
+  "druid_hit_up": {
+   "display_scale": 1.0
+  },
+  "druid_death_up": {
+   "display_scale": 1.0
+  },
+  "druid_idle_right": {
+   "display_scale": 1.0
+  },
+  "druid_walk_right": {
+   "display_scale": 1.0
+  },
+  "druid_attack_right": {
+   "display_scale": 1.0
+  },
+  "druid_cast_right": {
+   "display_scale": 1.0
+  },
+  "druid_roll_right": {
+   "display_scale": 1.0
+  },
+  "druid_hit_right": {
+   "display_scale": 1.0
+  },
+  "druid_death_right": {
+   "display_scale": 1.0
+  },
+  "necromancer_idle_down": {
+   "display_scale": 1.0
+  },
+  "necromancer_walk_down": {
+   "display_scale": 1.0
+  },
+  "necromancer_attack_down": {
+   "display_scale": 1.0
+  },
+  "necromancer_cast_down": {
+   "display_scale": 1.0
+  },
+  "necromancer_roll_down": {
+   "display_scale": 1.0
+  },
+  "necromancer_hit_down": {
+   "display_scale": 1.0
+  },
+  "necromancer_death_down": {
+   "display_scale": 1.0
+  },
+  "necromancer_idle_up": {
+   "display_scale": 1.0
+  },
+  "necromancer_walk_up": {
+   "display_scale": 1.0
+  },
+  "necromancer_attack_up": {
+   "display_scale": 1.0
+  },
+  "necromancer_cast_up": {
+   "display_scale": 1.0
+  },
+  "necromancer_roll_up": {
+   "display_scale": 1.0
+  },
+  "necromancer_hit_up": {
+   "display_scale": 1.0
+  },
+  "necromancer_death_up": {
+   "display_scale": 1.0
+  },
+  "necromancer_idle_right": {
+   "display_scale": 1.0
+  },
+  "necromancer_walk_right": {
+   "display_scale": 1.0
+  },
+  "necromancer_attack_right": {
+   "display_scale": 1.0
+  },
+  "necromancer_cast_right": {
+   "display_scale": 1.0
+  },
+  "necromancer_roll_right": {
+   "display_scale": 1.0
+  },
+  "necromancer_hit_right": {
+   "display_scale": 1.0
+  },
+  "necromancer_death_right": {
+   "display_scale": 1.0
   }
  }
 }

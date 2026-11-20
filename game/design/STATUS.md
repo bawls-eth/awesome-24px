@@ -59,3 +59,10 @@ Backpack "Combine 3->next" button: 3 same gear + same rarity -> 1 of the next ra
 
 ## Art pipeline (2026-11-20)
 game/tools/art/ (specs, prompt builder, capped generator, processor, critic hooks, batch runner; README inside). Live calls need --live; cap in game/tools/art/config.json (TOTAL 4.00 USD, stop 3.60). Test: art-pipeline.test.js. OpenAI image credits: ledger total 1.96 USD, 0 images this session.
+
+### B04 enemy art
+
+B04 stages 72 validated enemy animation strips for the six Mad Maze IDs in the manifest. Integration and playback review are pending.
+### B05 enemy art
+
+B05 stages 72 validated animation strips for Mini Sprout and five Arcane Frontier enemies. Integration and playback review are pending.
