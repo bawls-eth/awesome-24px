@@ -24,3 +24,7 @@ Four original inventory icon atlases from the built-in image generator. The item
 ## Codex Frontier weapon expansion
 
 Five original inventory atlases from the built-in image generator. The pack includes the source prompts.
+
+## Codex B08 Headgear
+
+Three original inventory atlases from the built-in image generator. The pack includes the source prompts.

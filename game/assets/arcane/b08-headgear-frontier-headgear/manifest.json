@@ -1,0 +1,552 @@
+{
+  "name": "Arcane Frontier headgear",
+  "frame_size": 32,
+  "assets": [
+    {
+      "id": "helm_bronze_guard",
+      "category": "item",
+      "path": "items/helm_bronze_guard.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "headgear",
+        "helm"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        226,
+        309
+      ]
+    },
+    {
+      "id": "helm_iron_sallet",
+      "category": "item",
+      "path": "items/helm_iron_sallet.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "headgear",
+        "helm"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        291,
+        298
+      ]
+    },
+    {
+      "id": "helm_silver_bascinet",
+      "category": "item",
+      "path": "items/helm_silver_bascinet.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "headgear",
+        "helm"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        220,
+        306
+      ]
+    },
+    {
+      "id": "helm_dread",
+      "category": "item",
+      "path": "items/helm_dread.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "headgear",
+        "helm"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        281,
+        327
+      ]
+    },
+    {
+      "id": "helm_paladin",
+      "category": "item",
+      "path": "items/helm_paladin.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "headgear",
+        "helm"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        230,
+        302
+      ]
+    },
+    {
+      "id": "helm_frostguard",
+      "category": "item",
+      "path": "items/helm_frostguard.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "headgear",
+        "helm"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        236,
+        311
+      ]
+    },
+    {
+      "id": "helm_stormguard",
+      "category": "item",
+      "path": "items/helm_stormguard.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "headgear",
+        "helm"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        298,
+        269
+      ]
+    },
+    {
+      "id": "helm_berserker",
+      "category": "item",
+      "path": "items/helm_berserker.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "headgear",
+        "helm"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        349,
+        282
+      ]
+    },
+    {
+      "id": "helm_obsidian",
+      "category": "item",
+      "path": "items/helm_obsidian.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "headgear",
+        "helm"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        258,
+        299
+      ]
+    },
+    {
+      "id": "hood_scout",
+      "category": "item",
+      "path": "items/hood_scout.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "headgear",
+        "hood"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        284,
+        331
+      ]
+    },
+    {
+      "id": "hood_rogue",
+      "category": "item",
+      "path": "items/hood_rogue.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "headgear",
+        "hood"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        276,
+        332
+      ]
+    },
+    {
+      "id": "hood_frost",
+      "category": "item",
+      "path": "items/hood_frost.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "headgear",
+        "hood"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        286,
+        325
+      ]
+    },
+    {
+      "id": "hood_ember",
+      "category": "item",
+      "path": "items/hood_ember.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "headgear",
+        "hood"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        294,
+        333
+      ]
+    },
+    {
+      "id": "hood_void",
+      "category": "item",
+      "path": "items/hood_void.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "headgear",
+        "hood"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        284,
+        333
+      ]
+    },
+    {
+      "id": "hood_necromancer",
+      "category": "item",
+      "path": "items/hood_necromancer.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "headgear",
+        "hood"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        282,
+        325
+      ]
+    },
+    {
+      "id": "hood_druid",
+      "category": "item",
+      "path": "items/hood_druid.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "headgear",
+        "hood"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        320,
+        343
+      ]
+    },
+    {
+      "id": "coif_chain",
+      "category": "item",
+      "path": "items/coif_chain.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "headgear",
+        "coif"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        304,
+        323
+      ]
+    },
+    {
+      "id": "cap_wayfarer",
+      "category": "item",
+      "path": "items/cap_wayfarer.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "headgear",
+        "cap"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        362,
+        282
+      ]
+    },
+    {
+      "id": "circlet_copper",
+      "category": "item",
+      "path": "items/circlet_copper.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "headgear",
+        "circlet"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        279,
+        111
+      ]
+    },
+    {
+      "id": "circlet_moon",
+      "category": "item",
+      "path": "items/circlet_moon.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "headgear",
+        "circlet"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        293,
+        134
+      ]
+    },
+    {
+      "id": "crown_mire",
+      "category": "item",
+      "path": "items/crown_mire.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "headgear",
+        "crown"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        322,
+        178
+      ]
+    },
+    {
+      "id": "crown_crystal",
+      "category": "item",
+      "path": "items/crown_crystal.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "headgear",
+        "crown"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        303,
+        210
+      ]
+    },
+    {
+      "id": "crown_sun",
+      "category": "item",
+      "path": "items/crown_sun.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "headgear",
+        "crown"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        314,
+        235
+      ]
+    },
+    {
+      "id": "mask_thistle",
+      "category": "item",
+      "path": "items/mask_thistle.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "headgear",
+        "mask"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        302,
+        299
+      ]
+    },
+    {
+      "id": "mask_bone",
+      "category": "item",
+      "path": "items/mask_bone.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "headgear",
+        "mask"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        297,
+        216
+      ]
+    },
+    {
+      "id": "mask_storm",
+      "category": "item",
+      "path": "items/mask_storm.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "headgear",
+        "mask"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        292,
+        357
+      ]
+    }
+  ]
+}

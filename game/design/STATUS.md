@@ -74,3 +74,7 @@ Staged 16 validated equipment and potion icons matching the existing catalog IDs
 ### Frontier weapon expansion
 
 Staged 20 additional weapon icons. The two item packs cover 28 weapon IDs and eight other equipment and potion IDs.
+
+### B08 headgear
+
+Staged 26 validated headgear icons. Armor and runtime integration are pending.
