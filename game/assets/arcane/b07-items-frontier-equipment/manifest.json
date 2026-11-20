@@ -1,0 +1,342 @@
+{
+  "name": "Arcane Frontier equipment and potions",
+  "frame_size": 32,
+  "assets": [
+    {
+      "id": "sword_iron",
+      "category": "item",
+      "path": "items/sword_iron.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "weapon",
+        "sword",
+        "iron"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        515,
+        515
+      ]
+    },
+    {
+      "id": "sword_flame",
+      "category": "item",
+      "path": "items/sword_flame.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "weapon",
+        "sword",
+        "fire"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        514,
+        558
+      ]
+    },
+    {
+      "id": "dagger_shadow",
+      "category": "item",
+      "path": "items/dagger_shadow.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "weapon",
+        "dagger",
+        "shadow"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        359,
+        458
+      ]
+    },
+    {
+      "id": "bow_oak",
+      "category": "item",
+      "path": "items/bow_oak.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "weapon",
+        "bow",
+        "wood"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        510,
+        546
+      ]
+    },
+    {
+      "id": "bow_moon",
+      "category": "item",
+      "path": "items/bow_moon.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "weapon",
+        "bow",
+        "moon"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        490,
+        566
+      ]
+    },
+    {
+      "id": "staff_arcane",
+      "category": "item",
+      "path": "items/staff_arcane.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "weapon",
+        "staff",
+        "arcane"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        545,
+        562
+      ]
+    },
+    {
+      "id": "staff_frost",
+      "category": "item",
+      "path": "items/staff_frost.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "weapon",
+        "staff",
+        "ice"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        467,
+        581
+      ]
+    },
+    {
+      "id": "wand_spark",
+      "category": "item",
+      "path": "items/wand_spark.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "weapon",
+        "wand",
+        "lightning"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        427,
+        483
+      ]
+    },
+    {
+      "id": "shield_wood",
+      "category": "item",
+      "path": "items/shield_wood.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "shield",
+        "wood"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        475,
+        553
+      ]
+    },
+    {
+      "id": "shield_steel",
+      "category": "item",
+      "path": "items/shield_steel.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "shield",
+        "steel"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        408,
+        562
+      ]
+    },
+    {
+      "id": "helmet_knight",
+      "category": "item",
+      "path": "items/helmet_knight.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "helmet",
+        "steel"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        430,
+        571
+      ]
+    },
+    {
+      "id": "hood_mage",
+      "category": "item",
+      "path": "items/hood_mage.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "hood",
+        "cloth"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        490,
+        551
+      ]
+    },
+    {
+      "id": "armor_leather",
+      "category": "item",
+      "path": "items/armor_leather.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "armor",
+        "leather"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        441,
+        486
+      ]
+    },
+    {
+      "id": "armor_plate",
+      "category": "item",
+      "path": "items/armor_plate.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "armor",
+        "plate"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        501,
+        503
+      ]
+    },
+    {
+      "id": "potion_health",
+      "category": "item",
+      "path": "items/potion_health.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "consumable",
+        "potion",
+        "health"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        337,
+        496
+      ]
+    },
+    {
+      "id": "potion_mana",
+      "category": "item",
+      "path": "items/potion_mana.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "consumable",
+        "potion",
+        "mana"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        313,
+        494
+      ]
+    }
+  ]
+}
