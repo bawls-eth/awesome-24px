@@ -87,3 +87,7 @@ Staged 26 validated headgear icons. Runtime integration is pending.
 ### B08 armor
 
 Staged 50 validated armor icons alongside the 26 headgear icons. Runtime integration is pending.
+
+### B09 clothing and helmets
+
+Staged 30 clothing icons and four helmets. Catalog and runtime integration are pending.

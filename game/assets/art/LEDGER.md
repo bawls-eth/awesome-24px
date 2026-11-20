@@ -35,3 +35,7 @@ Three original inventory atlases from the built-in image generator. The pack inc
 ## Codex B08 armor
 
 Six original armor inventory atlases from the built-in image generator. The pack includes the source prompts.
+
+## Codex B09 clothing and helmets
+
+Four original inventory atlases from the built-in image generator. Source prompts are in the pack.
