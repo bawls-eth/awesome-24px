@@ -109,3 +109,6 @@ Owner said in chat: "$2 is good, I have a cap on the API side so you can over sp
 
 ## Jam + Stalk + class signatures (2026-11-20)
 New pages: games/jam (Campfire Jam: 4 songs, pixeltown-jam-v1), games/stalk (Stalk Market: play-money weekly prices, pixeltown-stalk-v1). Arena: MMClasses.arenaSignature + realm.setHeroSignature (F slot at level 7 replaces Overdrive; ?signature=0 off). Not yet: Jam calibration/12 songs, signature sounds/co-op sync, balance pass. OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
+
+## Test tiers + shards (2026-11-20)
+`node game/tests/run-all.js` (no flags) is unchanged: all tests, serial, sorted. New flags: `--tier smoke|full`, `--only node|browser|live`, `--shard i/n` (cost-balanced, deterministic; `--balance` uses measured times), `--list`, `--jobs N` (node-class only), `--lock-live` (wraps live tests in `flock /tmp/live.lock`; do NOT also wrap run-all itself in that flock, it would deadlock). Classes live in `game/tests/test-tiers.json` (node = pure require, browser = standalone pages, live = joins the town as ADMIN bot); `run-all-tiers.test.js` fails if a new test is not listed there. Smoke = all node + non-heavy browser + town-links/saves/integration, about 5 min. Timings go to `game/tests/.timings.json` (gitignored).
