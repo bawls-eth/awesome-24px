@@ -138,7 +138,8 @@
 
   const coarse = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
   const phone = coarse || window.innerWidth < 700;
-  const VIEW = phone ? 3 : 5;
+  const VIEW = phone ? 3 : 5; // base (maximum) view distance in chunks; the quality governor may lower `view` at run time
+  let view = VIEW;
 
   function hotbarItems() { return PLACEABLE.filter((p) => (inv[p[0]] | 0) > 0).map((p) => ({ item: p[0], count: inv[p[0]] | 0 })); }
   function renderHud() {
@@ -299,7 +300,7 @@
   }
   function afterEdit(dirty) {
     dirty.forEach((k) => stale.add(k));
-    lightDirty = true;
+    lightDirty = true; manageSkip = false; rayRev++;
     queueSave();
   }
   function mineBlock(wx, wy, wz) {
@@ -360,7 +361,8 @@
   let renderer = null, scene = null, camera = null, atlasTex = null, material = null, outline = null, torchGeo = null, torchMat = null;
   const meshes = new Map(); // key -> { mesh, torches }
   const stale = new Set();
-  let lightDirty = true, win = null;
+  let lightDirty = true, win = null, manageSkip = false, lastPc = '', backlog = 0;
+  const MAX_BUILDS = 3; // chunk meshes rebuilt per frame at most (the rest wait for the next frame)
   const WIN = 5; // light window in chunks (xz), full depth
   function makeAtlas() {
     const c = document.createElement('canvas'); c.width = 64; c.height = 64;
@@ -391,11 +393,11 @@
     try {
       renderer = new THREE.WebGLRenderer({ canvas: $('gl'), antialias: false, preserveDrawingBuffer: TEST });
     } catch (e) { renderer = null; say('WebGL is not available here'); return false; }
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setPixelRatio(pixelRatio());
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x8fd0ff);
-    scene.fog = new THREE.Fog(0x8fd0ff, 8, VIEW * SIZE);
-    camera = new THREE.PerspectiveCamera(70, 1, 0.05, VIEW * SIZE + 24);
+    scene.fog = new THREE.Fog(0x8fd0ff, 8, view * SIZE);
+    camera = new THREE.PerspectiveCamera(70, 1, 0.05, view * SIZE + 24);
     camera.rotation.order = 'YXZ';
     atlasTex = makeAtlas();
     material = new THREE.MeshBasicMaterial({ map: atlasTex, vertexColors: true, transparent: false });
@@ -406,6 +408,47 @@
     resize();
     return true;
   }
+  // ---------- adaptive quality governor ----------
+  // Lowers render scale, then view distance, when the rolling frame time is high; restores slowly when it is low.
+  // At most one change per MIN_GAP ms; restores wait longer (and back off further if they bounce straight back).
+  const GOV = { WINDOW: 30, MIN_SAMPLES: 20, HIGH: 40, LOW: 20, MIN_GAP: 2000, RESTORE_GAP: 6000, MAX_RESTORE_GAP: 60000 };
+  const LEVELS = (function () {
+    const L = [{ scale: 1, view: VIEW }, { scale: 0.75, view: VIEW }];
+    for (let v = VIEW - 1; v >= 3; v--) L.push({ scale: 0.75, view: v });
+    L.push({ scale: 0.6, view: Math.min(VIEW, 3) });
+    return L;
+  }());
+  const gov = { level: 0, samples: [], head: 0, count: 0, lastChange: -1e9, lastRaise: -1e9, restoreGap: GOV.RESTORE_GAP, changes: 0, auto: !TEST || params.get('perf') === '1' };
+  const pixelRatio = () => Math.min(window.devicePixelRatio || 1, 2) * LEVELS[gov.level].scale;
+  function govAvg() {
+    if (!gov.count) return 0;
+    let t = 0;
+    for (let i = 0; i < gov.count; i++) t += gov.samples[i];
+    return t / gov.count;
+  }
+  function govReset() { gov.count = 0; gov.head = 0; }
+  function applyLevel() {
+    const L = LEVELS[gov.level];
+    if (L.view !== view) { view = L.view; manageSkip = false; if (camera) { scene.fog.far = view * SIZE; camera.far = view * SIZE + 24; camera.updateProjectionMatrix(); } }
+    if (renderer) { renderer.setPixelRatio(pixelRatio()); resize(); }
+  }
+  // Feed one frame time (ms) at time `now` (ms). Returns true when quality changed.
+  function govFrame(ms, now) {
+    if (!(ms > 0) || ms > 500) return false; // tab switches and stalls are not render cost
+    gov.samples[gov.head] = ms; gov.head = (gov.head + 1) % GOV.WINDOW; gov.count = Math.min(GOV.WINDOW, gov.count + 1);
+    if (gov.count < GOV.MIN_SAMPLES || now - gov.lastChange < GOV.MIN_GAP) return false;
+    const avg = govAvg();
+    if (avg > GOV.HIGH && gov.level < LEVELS.length - 1) {
+      if (now - gov.lastRaise < 15000) gov.restoreGap = Math.min(GOV.MAX_RESTORE_GAP, gov.restoreGap * 2); // bounced back: wait longer next time
+      gov.level++;
+    } else if (avg < GOV.LOW && gov.level > 0 && now - gov.lastChange >= gov.restoreGap) {
+      gov.level--; gov.lastRaise = now;
+    } else return false;
+    gov.lastChange = now; gov.changes++; govReset(); applyLevel();
+    return true;
+  }
+  function govState() { const L = LEVELS[gov.level]; return { level: gov.level, levels: LEVELS.length, scale: L.scale, view: L.view, avg: govAvg(), changes: gov.changes, restoreGap: gov.restoreGap, auto: gov.auto }; }
+
   function resize() {
     if (!renderer) return;
     const c = $('gl'), w = c.clientWidth || 300, h = c.clientHeight || 300;
@@ -501,7 +544,7 @@
       if (!before || before.ox !== win.ox || before.oz !== win.oz) { lightDirty = true; for (const k of meshes.keys()) stale.add(k); }
     }
     if (lightDirty) {
-      relight();
+      relight(); manageSkip = false;
       // light spreads at most 15 cells: refresh chunks near the edits
       for (const k of Array.from(stale)) {
         const p = k.split(',').map(Number);
@@ -511,20 +554,25 @@
         }
       }
     }
-    const want = MMChunks.visible(pc, VIEW);
-    const wantKeys = new Set(want.map((c) => MMChunks.key(c.cx, c.cy, c.cz)));
+    // Nothing moved, nothing edited, nothing left to build: skip the chunk scan (and its allocations) entirely.
+    const pcKey = pc.cx + ',' + pc.cy + ',' + pc.cz;
+    if (manageSkip && pcKey === lastPc && !stale.size && !lightDirty) return;
+    lastPc = pcKey;
+    const want = MMChunks.visible(pc, view);
     const t0 = performance.now();
+    let built = 0, todo = 0;
     for (const c of want) {
       const k = MMChunks.key(c.cx, c.cy, c.cz);
       if (meshes.has(k) && !stale.has(k)) continue;
-      buildChunk(c.cx, c.cy, c.cz);
-      if (budgetMs !== Infinity && performance.now() - t0 > budgetMs) break;
+      if (budgetMs !== Infinity && (built >= MAX_BUILDS || performance.now() - t0 > budgetMs)) { todo++; continue; }
+      buildChunk(c.cx, c.cy, c.cz); built++;
     }
-    for (const k of MMChunks.unload(Array.from(meshes.keys()), pc, VIEW)) {
+    backlog = todo;
+    for (const k of MMChunks.unload(Array.from(meshes.keys()), pc, view)) {
       const e = meshes.get(k); if (e) disposeEntry(e);
       meshes.delete(k); stale.delete(k);
     }
-    void wantKeys;
+    manageSkip = todo === 0;
   }
 
   // ---------- main loop ----------
@@ -542,22 +590,36 @@
   }
   let atkCd = 0;
   let bobOffset = 0;
+  let skyX = NaN, skyZ = NaN, skySurf = 0, skyDeep = -1, rayRev = 0, rayPoseRev = -1, lastDepth = -1;
+  const rayPose = [NaN, 0, 0, 0, 0];
   function updateCamera() {
     if (!camera) return;
     const moving = Math.hypot(input.fwd, input.strafe) > 0.1 && player.onGround;
     bobOffset = reduced || !moving ? 0 : Math.sin(performance.now() / 110) * 0.035;
     camera.position.set(player.x, player.y + EYE + bobOffset, player.z);
     camera.rotation.set(player.pitch, player.yaw, 0);
-    const surf = MMChunks.surfaceY(Math.floor(player.x), Math.floor(player.z), SEED);
-    const deep = Math.max(0, Math.min(1, (-(player.y + EYE) - surf - 1) / 4));
-    const r = 0x8f / 255 * (1 - deep) + 0.02 * deep, g = 0xd0 / 255 * (1 - deep) + 0.03 * deep, b = 1 * (1 - deep) + 0.05 * deep;
-    scene.background.setRGB(r, g, b); scene.fog.color.setRGB(r, g, b);
-    const hit = raycast(5);
-    if (hit && hit.id !== B.AIR) { outline.visible = true; outline.position.set(hit.cell[0] + 0.5, -(hit.cell[1] + 0.5), hit.cell[2] + 0.5); } else outline.visible = false;
-    $('hud-depth').textContent = 'Depth ' + depthNow();
+    // sky/fog colour only depends on the column and depth: recompute when either changes
+    const fx = Math.floor(player.x), fz = Math.floor(player.z);
+    if (fx !== skyX || fz !== skyZ) { skyX = fx; skyZ = fz; skySurf = MMChunks.surfaceY(fx, fz, SEED); }
+    const deep = Math.max(0, Math.min(1, (-(player.y + EYE) - skySurf - 1) / 4));
+    if (Math.abs(deep - skyDeep) > 0.002) {
+      skyDeep = deep;
+      const r = 0x8f / 255 * (1 - deep) + 0.02 * deep, g = 0xd0 / 255 * (1 - deep) + 0.03 * deep, b = 1 * (1 - deep) + 0.05 * deep;
+      scene.background.setRGB(r, g, b); scene.fog.color.setRGB(r, g, b);
+    }
+    // the block outline only changes when the view ray or the world does
+    const ex = player.x, ey = player.y, ez = player.z, yw = player.yaw, pt = player.pitch;
+    if (ex !== rayPose[0] || ey !== rayPose[1] || ez !== rayPose[2] || yw !== rayPose[3] || pt !== rayPose[4] || rayRev !== rayPoseRev) {
+      rayPose[0] = ex; rayPose[1] = ey; rayPose[2] = ez; rayPose[3] = yw; rayPose[4] = pt; rayPoseRev = rayRev;
+      const hit = raycast(5);
+      if (hit && hit.id !== B.AIR) { outline.visible = true; outline.position.set(hit.cell[0] + 0.5, -(hit.cell[1] + 0.5), hit.cell[2] + 0.5); } else outline.visible = false;
+    }
+    const dn = depthNow();
+    if (dn !== lastDepth) { lastDepth = dn; $('hud-depth').textContent = 'Depth ' + dn; }
   }
   function frame(t) {
     requestAnimationFrame(frame);
+    if (gov.auto && last && backlog < 8) govFrame(t - last, t);
     const dt = Math.min(0.05, (t - last) / 1000 || 0); last = t;
     if (!world) return;
     if (!TEST) {
@@ -900,7 +962,8 @@
   }
   function exposeTest() {
     window.__dd = {
-      get world() { return world; }, player, input, inv, seed: SEED, view: VIEW, spawn, MMChunks,
+      get world() { return world; }, player, input, inv, seed: SEED, get view() { return view; }, baseView: VIEW,
+      perf: { frame: govFrame, state: govState, reset() { gov.level = 0; gov.lastChange = -1e9; gov.lastRaise = -1e9; gov.restoreGap = GOV.RESTORE_GAP; gov.changes = 0; govReset(); applyLevel(); }, setAuto(on) { gov.auto = !!on; }, LEVELS, GOV }, spawn, MMChunks,
       setPos(x, y, z) { player.x = x; player.y = y; player.z = z; player.vy = 0; player.peak = y; player.onGround = false; },
       step(dt, n) { for (let i = 0; i < (n || 1); i++) physics(dt || 1 / 60); },
       walk(fwd, strafe, n, jump) { input.fwd = fwd; input.strafe = strafe; input.jump = !!jump; this.step(1 / 60, n); input.fwd = 0; input.strafe = 0; input.jump = false; },
