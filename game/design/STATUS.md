@@ -117,3 +117,6 @@ Calibration (offsetMs in pixeltown-jam-v1, optional), 8 songs incl. secret Midni
 
 ## Unified Realm progress (2026-11-20)
 Done: generator, zones module, menu/restart/phone layout, test tiers. Next (NEXT-SLICES.md): 4 camera+world hook in realm.js, 5 realm-world.js controller + ?mode=world page, 6 wire zones, 7 portals to dungeons (first playable). Owner decisions pending: death rule, Gate default, online model (defaults: no-loss death, big map default with Classic button, single-player first).
+
+## First playable big map (2026-11-20)
+Open /game/games/mad-maze/index.html?mode=world[&seed=N]. realm.js: setWorld/setMode(world), camera, screenToWorld. New realm-world.js (terrain chunks, HUD, minimap, portals), pixeltown-realm-v1 save. Gaps: bag tier colours, death text says Wave, shallow-water slow, narrow shore band, only Warren portals, fog, events, Nexus, co-op, Codex terrain art.
