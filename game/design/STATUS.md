@@ -126,3 +126,6 @@ B10T is registered on this branch. The overworld loader uses 32 base variants an
 
 ## World restart and navigation (Codex)
 World restart describes the return to spawn and retains the existing no-loss policy. Restart clears world drop history and spawner and boss state. The overworld death recap omits the wave counter, while classic and dungeon recaps retain it. The HUD arrow points to the nearest dungeon portal, with the island centre as fallback. Offline syntax and targeted recap/navigation checks passed. Browser playback, zone loot changes, and later roadmap items remain pending.
+
+## Realm zone bag presentation (Codex)
+Overworld item drops use the six zone bag tier colors and the rolled lifetime. Item rarity still drives inventory and pickup. Syntax and offline pooled-bag metadata checks passed. Browser playback and Lantern stash payout remain pending.

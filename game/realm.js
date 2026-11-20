@@ -615,14 +615,16 @@ class RealmArena {
       c.beginPath(); c.arc(20, 20, 15 + pad, 0, Math.PI * 2); c.fill();
       c.fillRect(4 - pad, 18 - pad, 32 + pad * 2, 5 + pad * 2);
     }) || (g.fillStyle = '#fff', g.fillRect(13, 14, 5, 5), g.fillRect(22, 14, 5, 5), g.fillStyle = '#3a2a0f', g.fillRect(15, 16, 2, 3), g.fillRect(24, 16, 2, 3)));
-    this.sprites.bag = RM_RARITIES.map((r) => mk(26, 26, (g) => {
+    const makeBag = (color) => mk(26, 26, (g) => {
       const gr = g.createRadialGradient(13, 13, 2, 13, 13, 13);
-      gr.addColorStop(0, r.color); gr.addColorStop(1, 'rgba(0,0,0,0)');
+      gr.addColorStop(0, color); gr.addColorStop(1, 'rgba(0,0,0,0)');
       g.globalAlpha = 0.55; g.fillStyle = gr; g.fillRect(0, 0, 26, 26); g.globalAlpha = 1;
       g.fillStyle = '#1a0f2a'; g.fillRect(6, 9, 14, 12); g.fillRect(9, 6, 8, 4);
-      g.fillStyle = r.color; g.fillRect(7, 10, 12, 10); g.fillRect(10, 7, 6, 3);
+      g.fillStyle = color; g.fillRect(7, 10, 12, 10); g.fillRect(10, 7, 6, 3);
       g.fillStyle = '#fff'; g.fillRect(11, 13, 4, 4);
-    }));
+    });
+    this.sprites.bag = RM_RARITIES.map((rarity) => makeBag(rarity.color));
+    this.sprites.worldBag = ['#ad7950', '#ff91b8', '#ad87ec', '#64dfe4', '#f0f0fc', '#ffcf62'].map(makeBag);
     this.sprites.playerFallback = mk(32, 32, (g) => {
       g.fillStyle = '#1a2a1a'; g.beginPath(); g.arc(16, 16, 13, 0, Math.PI * 2); g.fill();
       g.fillStyle = '#6fbf73'; g.beginPath(); g.arc(16, 16, 11, 0, Math.PI * 2); g.fill();
@@ -1851,10 +1853,12 @@ class RealmArena {
     return r < rare ? 2 : r < rare + unc ? 1 : 0;
   }
 
-  dropBag(x, y, rarity, itemId) {
+  dropBag(x, y, rarity, itemId, worldLoot) {
     const b = this._take(this.bags);
     if (!b) return null;
     b.active = true; b.x = x; b.y = y; b.t = 0; b.r = rarity;
+    b.tier = worldLoot?.tierIndex;
+    b.lifetime = worldLoot?.lifetime || Infinity;
     b.id = itemId || RM_ITEMS[Math.floor(this.rng() * RM_ITEMS.length)].id;
     const a = this.rng() * Math.PI * 2; b.vx = Math.cos(a) * 60; b.vy = Math.sin(a) * 60;
     return b;
@@ -1882,6 +1886,7 @@ class RealmArena {
       const b = this.bags[i];
       if (!b.active) continue;
       b.t += dt;
+      if (b.t >= b.lifetime) { b.active = false; continue; }
       b.x += b.vx * dt; b.y += b.vy * dt; b.vx *= 0.93; b.vy *= 0.93;
       b.x = Math.max(14, Math.min(this._bw() - 14, b.x)); b.y = Math.max(14, Math.min(this._bh() - 14, b.y));
       const dx = p.x - b.x; const dy = p.y - b.y; const d = Math.hypot(dx, dy) || 1;
@@ -2377,7 +2382,7 @@ class RealmArena {
     }
     if (this._edGhosts) this._drawEnemyGhosts(g);
     if (this._bossGhost) this._drawBossGhost(g);
-    for (let i = 0; i < this.bags.length; i++) { const b = this.bags[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { const by = b.y - 13 + Math.sin(b.t * 5) * 2; g.drawImage(this.sprites.bag[b.r], b.x - 13, by); if (this._itemArt) { const ic = this._lootIcon(b.id, b.r); if (ic) g.drawImage(ic, b.x - 10, by - 18 + Math.sin(b.t * 5 + 1) * 1.5); } } }
+    for (let i = 0; i < this.bags.length; i++) { const b = this.bags[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { const by = b.y - 13 + Math.sin(b.t * 5) * 2; g.drawImage(this.sprites.worldBag[b.tier] || this.sprites.bag[b.r], b.x - 13, by); if (this._itemArt) { const ic = this._lootIcon(b.id, b.r); if (ic) g.drawImage(ic, b.x - 10, by - 18 + Math.sin(b.t * 5 + 1) * 1.5); } } }
     for (let i = 0; i < this.eBullets.length; i++) { const b = this.eBullets[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) g.drawImage(this.sprites.eBullet[b.kind], b.x - 8, b.y - 8); }
     for (let i = 0; i < this.pBullets.length; i++) { const b = this.pBullets[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) g.drawImage(this.sprites.pBullet, b.x - 8, b.y - 8); }
 
