@@ -109,3 +109,6 @@ Owner said in chat: "$2 is good, I have a cap on the API side so you can over sp
 
 ## Jam + Stalk + class signatures (2026-11-20)
 New pages: games/jam (Campfire Jam: 4 songs, pixeltown-jam-v1), games/stalk (Stalk Market: play-money weekly prices, pixeltown-stalk-v1). Arena: MMClasses.arenaSignature + realm.setHeroSignature (F slot at level 7 replaces Overdrive; ?signature=0 off). Not yet: Jam calibration/12 songs, signature sounds/co-op sync, balance pass. OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
+
+## Jam round two (2026-11-20)
+Calibration (offsetMs in pixeltown-jam-v1, optional), 8 songs incl. secret Midnight Campfire (Hard full combo), early/late feedback. Pending: biome enemy roster (map all 20 creatures by biome/wave; design in the agent report, needs b06c on its branch), Codex b06d assigned.

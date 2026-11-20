@@ -39,6 +39,31 @@
     const med = v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
     return Math.max(-200, Math.min(200, Math.round(med)));
   }
+  const OFFSET_MAX = 200;
+  const clampOffset = (v) => { v = Math.round(Number(v)); return Number.isFinite(v) ? Math.max(-OFFSET_MAX, Math.min(OFFSET_MAX, v)) : 0; };
+  const median = (a) => { const v = a.slice().sort((x, y) => x - y), m = v.length >> 1; return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2; };
+
+  // Metronome tap test: pair each tap with the nearest unused beat inside windowMs, drop wild outliers
+  // (>3 scaled MAD, at least 40 ms, only with 5+ samples), then take the clamped median. Positive = player taps late.
+  function calibrationFromTaps(taps, beats, windowMs) {
+    const tp = (taps || []).filter(Number.isFinite).slice().sort((a, b) => a - b);
+    const bt = (beats || []).filter(Number.isFinite).slice().sort((a, b) => a - b);
+    const win = windowMs > 0 ? windowMs : 350;
+    const used = new Set(), deltas = [];
+    for (const t of tp) {
+      let bi = -1, bd = Infinity;
+      for (let i = 0; i < bt.length; i++) { const d = Math.abs(t - bt[i]); if (d < bd) { bd = d; bi = i; } }
+      if (bi < 0 || bd > win || used.has(bi)) continue;
+      used.add(bi); deltas.push(t - bt[bi]);
+    }
+    let kept = deltas;
+    if (deltas.length >= 5) {
+      const med = median(deltas), mad = median(deltas.map((d) => Math.abs(d - med))) * 1.4826;
+      const lim = Math.max(40, 3 * mad);
+      kept = deltas.filter((d) => Math.abs(d - med) <= lim);
+    }
+    return { offset: calibrationOffset(kept), deltas, kept, used: kept.length, ok: kept.length >= 4 };
+  }
 
   // run: clock() returns audio-clock ms; offset (ms) is subtracted from the clock (positive = player runs late)
   function createRun(chart, opts) {
@@ -46,7 +71,7 @@
     const clock = opts.clock || (() => 0);
     const offset = opts.offset || 0;
     const notes = chart.notes.map((n, i) => ({ i, t: n.t, lane: n.lane, hold: n.hold || 0, state: 'pending', judge: null }));
-    const s = { score: 0, combo: 0, maxCombo: 0, counts: { perfect: 0, great: 0, good: 0, miss: 0 }, holds: {} };
+    const s = { score: 0, combo: 0, maxCombo: 0, counts: { perfect: 0, great: 0, good: 0, miss: 0 }, holds: {}, broken: 0, hits: 0, deltaSum: 0, lastDelta: null };
     const now = () => clock() - offset;
     function record(n, j) {
       n.judge = j; s.counts[j]++; s.score += POINTS[j];
@@ -63,6 +88,7 @@
       if (!best) return null;
       const j = judge(t - best.t);
       record(best, j);
+      s.lastDelta = Math.round(t - best.t); s.hits++; s.deltaSum += t - best.t;
       if (best.hold > 0) { best.state = 'holding'; s.holds[lane] = best; } else best.state = 'done';
       return j;
     }
@@ -71,7 +97,7 @@
       delete s.holds[lane];
       const ok = now() >= n.t + n.hold - WINDOWS.good;
       n.state = 'done';
-      if (!ok) { s.combo = 0; return 'broken'; }
+      if (!ok) { s.combo = 0; s.broken++; return 'broken'; }
       return 'held';
     }
     // call each frame: misses notes that passed the late window
@@ -85,7 +111,10 @@
     function result() {
       const max = notes.length * POINTS.perfect;
       const acc = max ? s.score / max : 0;
-      return { score: s.score, maxCombo: s.maxCombo, counts: Object.assign({}, s.counts), accuracy: acc, rank: rankFor(acc) };
+      const judged = s.counts.perfect + s.counts.great + s.counts.good + s.counts.miss;
+      const full = notes.length > 0 && s.counts.miss === 0 && s.broken === 0 && judged === notes.length;
+      return { score: s.score, maxCombo: s.maxCombo, counts: Object.assign({}, s.counts), accuracy: acc, rank: rankFor(acc),
+        fullCombo: full, hits: s.hits, avgDelta: s.hits ? Math.round(s.deltaSum / s.hits) : null };
     }
     return { press, release, update, result, state: s, notes };
   }
@@ -155,5 +184,5 @@
     return { ok: errors.length === 0, errors };
   }
 
-  return { LANES, WINDOWS, POINTS, DIFFS, judge, expired, rankFor, calibrationOffset, createRun, generateChart, lint };
+  return { LANES, WINDOWS, POINTS, DIFFS, judge, expired, rankFor, calibrationOffset, calibrationFromTaps, clampOffset, OFFSET_MAX, createRun, generateChart, lint };
 });

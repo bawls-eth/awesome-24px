@@ -1,0 +1,30 @@
+{
+  "batch": "b06c",
+  "label": "frontier-casters-and-undead",
+  "generated_utc": "2026-11-20T16:06:48.165256Z",
+  "files": 72,
+  "duplicate_ids": 0,
+  "blocking": {},
+  "warnings": {},
+  "standing_heights": {
+    "ember_imp/down": 96,
+    "ember_imp/up": 100,
+    "ember_imp/right": 100,
+    "ice_wraith/down": 116,
+    "ice_wraith/up": 112,
+    "ice_wraith/right": 104,
+    "goblin_shaman/down": 116,
+    "goblin_shaman/up": 112,
+    "goblin_shaman/right": 112,
+    "skeleton_archer/down": 112,
+    "skeleton_archer/up": 112,
+    "skeleton_archer/right": 112,
+    "bone_knight/down": 116,
+    "bone_knight/up": 116,
+    "bone_knight/right": 112,
+    "shadow_cultist/down": 112,
+    "shadow_cultist/up": 112,
+    "shadow_cultist/right": 112
+  },
+  "status": "provisional"
+}

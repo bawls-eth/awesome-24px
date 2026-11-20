@@ -441,3 +441,5 @@ and merged together. Highlights:
 - Realm: Combine in the backpack: 3 identical items fuse into one of the next rarity (Common > Uncommon > Rare > new Epic, +50% each step; the equipped copy is upgraded so damage rises at once). Epic cannot be bought or dropped.
 
 - Town: quick-chat chips are now 40 px tall (tap target), phone layout checked.
+
+- Campfire Jam: timing calibration (a tap test with a median offset, clamped to +-200 ms, offered on first run and from the song list, plus +/-5 ms nudges) stored as the optional `offsetMs` in `pixeltown-jam-v1` and applied to judging only. Four more original songs (Kettle Song, Owl Hour, Comet Tail, and the secret Midnight Campfire, opened by a full combo on any Hard chart, recorded as `fullCombo`) bring the total to eight, with new pattern kinds and star gates at 10, 13 and 16. Hit-flash lane glow and an early / late tag on every judgement (reduced-motion aware), and the results screen shows your average early / late timing with a one-tap "set offset" button. Page is documented in the README; the hub node still needs to link to `games/jam/index.html?from=hub`.

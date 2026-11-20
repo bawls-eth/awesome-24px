@@ -9,8 +9,8 @@ function check(name, cond, extra = '') { console.log((cond ? 'PASS ' : 'FAIL ') 
 const done = () => { console.log(failed ? `${failed} FAILED` : 'ALL PASSED'); process.exitCode = failed ? 1 : 0; };
 
 // songs as data
-check('4 original songs with unique ids', SG.SONGS.length === 4 && new Set(SG.songIds()).size === 4);
-check('BPMs ascend within 80..160', SG.SONGS.every((s, i) => s.bpm >= 80 && s.bpm <= 160 && (!i || s.bpm > SG.SONGS[i - 1].bpm)));
+check('8 original songs with unique ids', SG.SONGS.length === 8 && new Set(SG.songIds()).size === 8);
+check('BPMs within 80..160 and the first ladder ascends', SG.SONGS.every((s) => s.bpm >= 80 && s.bpm <= 160) && SG.SONGS.slice(0, 4).every((s, i) => !i || s.bpm > SG.SONGS[i - 1].bpm));
 check('3 difficulty tiers', SG.TIERS.join() === 'easy,normal,hard');
 
 // judging windows (re-checked through the page's own run)
@@ -43,7 +43,7 @@ check('3 difficulty tiers', SG.TIERS.join() === 'easy,normal,hard');
     const l = Jam.lint(c); counts[s.id + t] = c.count;
     if (!l.ok || c.count < 40) { allOk = false; bad += s.id + '/' + t + ':' + l.errors.join(',') + c.count + ' '; }
   }
-  check('all 12 charts lint clean with >= 40 notes', allOk, bad);
+  check('all 24 charts lint clean with >= 40 notes', allOk, bad);
   check('density rises with tier', SG.SONGS.every((s) => counts[s.id + 'easy'] < counts[s.id + 'hard']));
   const hard = SG.chartFor('starlit-stomp', 'hard');
   let minGap = 1e9; for (let i = 1; i < hard.notes.length; i++) minGap = Math.min(minGap, hard.notes[i].t - hard.notes[i - 1].t);
@@ -108,6 +108,128 @@ check('rank thresholds S 95, A 85, B 70, C 50', Jam.rankFor(0.95) === 'S' && Jam
   check('Starlit Stomp opens at 8 stars', SG.totalStars(save) === 8 && SG.songUnlocked(save, 'starlit-stomp') && save.unlocked.length === 4);
   check('record of an unknown song is ignored', SG.record(save, 'nope', 'easy', { score: 5, maxCombo: 1, accuracy: 1, rank: 'S' }).starsGained === 0 && !save.best.nope);
   check('saved record survives cleanSave round trip', JSON.stringify(SG.cleanSave(JSON.parse(JSON.stringify(save)))) === JSON.stringify(save));
+}
+
+
+// ---- 8 songs: distinct data, deterministic charts, sensible counts ----
+{
+  check('every song has distinct BPM, scale and chord loop', new Set(SG.SONGS.map((s) => s.bpm)).size === 8 && new Set(SG.SONGS.map((s) => s.scale.join())).size >= 6 && new Set(SG.SONGS.map((s) => s.prog.join())).size === 8);
+  check('exactly one secret song: Midnight Campfire, last in the list', SG.SONGS.filter((s) => s.secret).length === 1 && SG.SONGS[7].id === 'midnight-campfire' && SG.SONGS[7].name === 'Midnight Campfire');
+  check('new songs use more than the old pattern kinds', new Set([].concat(...SG.SONGS.map((s) => s.patterns))).size >= 8);
+  const bounds = { easy: [35, 160], normal: [60, 220], hard: [90, 330] };
+  let okB = true, okD = true, bad = '';
+  for (const s of SG.SONGS) for (const t of SG.TIERS) {
+    const a = SG.chartFor(s.id, t), b = SG.chartFor(s.id, t);
+    if (JSON.stringify(a) !== JSON.stringify(b)) okD = false;
+    if (a.count < bounds[t][0] || a.count > bounds[t][1] || !Jam.lint(a).ok) { okB = false; bad += s.id + '/' + t + ':' + a.count + ' '; }
+  }
+  check('all 8 songs chart deterministically on every tier', okD);
+  check('note counts within per-tier bounds (easy 35-160, normal 60-220, hard 90-330)', okB, bad);
+  let notesSane = true;
+  for (const s of SG.SONGS) { const c = SG.chartFor(s.id, 'hard'); const last = c.notes[c.notes.length - 1]; if (c.bpm !== s.bpm || last.t + (last.hold || 0) > c.lengthMs) notesSane = false; }
+  check('chart carries its song BPM and ends inside lengthMs', notesSane);
+  check('new songs have audible bass and tones', ['kettle-song', 'owl-hour', 'comet-tail', 'midnight-campfire'].every((id) => SG.backing(id, 'hard').filter((e) => e.kind === 'bass').every((e) => e.hz > 20 && e.hz < 400) && SG.toneHz(id, 3, 40000) > 100 && SG.toneHz(id, 3, 40000) < 4000));
+  check('the second ladder is reachable (a song gives at most 3 stars)', SG.SONGS.every((s, i) => s.secret || s.needStars <= 3 * i) && SG.SONGS.filter((s) => !s.secret).every((s, i, a) => !i || s.needStars > a[i - 1].needStars));
+}
+
+// ---- unlock ladder 0/2/5/8/10/13/16 and the secret ----
+{
+  const ladder = { 'warm-embers': 0, 'lantern-shuffle': 2, 'moth-parade': 5, 'starlit-stomp': 8, 'kettle-song': 10, 'owl-hour': 13, 'comet-tail': 16 };
+  check('ladder needs match the rules', Object.keys(ladder).every((id) => SG.song(id).needStars === ladder[id]));
+  const save = SG.emptySave();
+  const ids = SG.songIds().slice(0, 7);
+  let ok = true;
+  for (const id of ids) { // 3 stars on Easy for each song as it opens
+    if (!SG.songUnlocked(save, id)) { ok = false; break; }
+    SG.record(save, id, 'easy', { score: 9000, maxCombo: 40, accuracy: 0.95, rank: 'S', counts: { miss: 0 } });
+  }
+  check('earning 3 stars per song walks the whole ladder to Comet Tail', ok && SG.totalStars(save) === 21 && SG.songUnlocked(save, 'comet-tail') && !SG.songUnlocked(save, 'midnight-campfire'));
+  const s2 = SG.emptySave(); SG.record(s2, 'warm-embers', 'easy', { score: 1, maxCombo: 1, accuracy: 0.95, rank: 'S' });
+  SG.record(s2, 'lantern-shuffle', 'easy', { score: 1, maxCombo: 1, accuracy: 0.95, rank: 'S' });
+  SG.record(s2, 'moth-parade', 'easy', { score: 1, maxCombo: 1, accuracy: 0.95, rank: 'S' });
+  check('9 stars: Starlit open, Kettle Song (10) still locked', SG.totalStars(s2) === 9 && SG.songUnlocked(s2, 'starlit-stomp') && !SG.songUnlocked(s2, 'kettle-song'));
+  const rep = SG.record(s2, 'starlit-stomp', 'easy', { score: 1, maxCombo: 1, accuracy: 0.6, rank: 'C' });
+  check('10th star unlocks Kettle Song and reports it', SG.totalStars(s2) === 10 && rep.newlyUnlocked.join() === 'kettle-song');
+
+  // secret: full combo on Hard only
+  const sc = SG.emptySave();
+  SG.record(sc, 'warm-embers', 'normal', { score: 9000, maxCombo: 90, accuracy: 0.9, rank: 'A', fullCombo: true });
+  check('full combo on Normal does not open the secret', !SG.songUnlocked(sc, 'midnight-campfire') && sc.fullCombo === undefined);
+  SG.record(sc, 'warm-embers', 'hard', { score: 9000, maxCombo: 90, accuracy: 0.9, rank: 'A', fullCombo: false });
+  check('a Hard run with misses does not open the secret', !SG.songUnlocked(sc, 'midnight-campfire'));
+  SG.record(sc, 'warm-embers', 'hard', { score: 9000, maxCombo: 5, accuracy: 0.9, rank: 'A', fullCombo: true });
+  check('a tiny fake "full combo" (combo under 20) does not count', !SG.songUnlocked(sc, 'midnight-campfire'));
+  const r3 = SG.record(sc, 'warm-embers', 'hard', { score: 12000, maxCombo: 150, accuracy: 0.97, rank: 'S', fullCombo: true });
+  check('full combo on any Hard chart opens the secret and reports it', SG.songUnlocked(sc, 'midnight-campfire') && sc.fullCombo === true && r3.newlyUnlocked.join() === 'midnight-campfire' && sc.unlocked.includes('midnight-campfire'));
+  check('secret stays open after save round trip', SG.cleanSave(JSON.parse(JSON.stringify(sc))).fullCombo === true && SG.songUnlocked(SG.cleanSave(JSON.parse(JSON.stringify(sc))), 'midnight-campfire'));
+  const r4 = SG.record(sc, 'owl-hour', 'hard', { score: 1, maxCombo: 50, accuracy: 0.5, rank: 'C', fullCombo: true });
+  check('re-earning the secret does not announce it twice', !r4.newlyUnlocked.includes('midnight-campfire'));
+  // tamper resistance
+  check('tamper: bare fullCombo flag is ignored', SG.cleanSave({ fullCombo: true }).fullCombo === undefined && !SG.songUnlocked(SG.cleanSave({ fullCombo: true }), 'midnight-campfire'));
+  check('tamper: unlocked list naming the secret is ignored', !SG.cleanSave({ unlocked: ['midnight-campfire'] }).unlocked.includes('midnight-campfire'));
+  check('tamper: fullCombo with only Easy/Normal entries is ignored', SG.cleanSave({ fullCombo: true, best: { 'warm-embers': { easy: { score: 5, stars: 1, rank: 'C', combo: 99 }, normal: { score: 5, stars: 1, rank: 'C', combo: 99 } } } }).fullCombo === undefined);
+  check('tamper: fullCombo with a short Hard combo is ignored', SG.cleanSave({ fullCombo: true, best: { 'warm-embers': { hard: { score: 5, stars: 1, rank: 'C', combo: 3 } } } }).fullCombo === undefined);
+  check('fullCombo "true" strings / 1 are ignored', ['true', 1, {}, [], 'yes'].every((v) => SG.cleanSave({ fullCombo: v, best: { 'warm-embers': { hard: { score: 5, stars: 1, rank: 'C', combo: 99 } } } }).fullCombo === undefined));
+  check('fullCombo with real Hard evidence loads true', SG.cleanSave({ fullCombo: true, best: { 'owl-hour': { hard: { score: 5000, stars: 2, rank: 'A', combo: 120 } } } }).fullCombo === true);
+  check('Hard still needs 2 stars on Normal for the secret song', !SG.tierUnlocked(sc, 'midnight-campfire', 'hard') && SG.tierUnlocked(sc, 'midnight-campfire', 'normal'));
+}
+
+// ---- save: offsetMs ----
+{
+  check('empty / old saves have no offsetMs and read as 0', !('offsetMs' in SG.emptySave()) && SG.offsetOf(SG.cleanSave({ v: 1, plays: 2 })) === 0 && SG.offsetOf(null) === 0);
+  check('offsetMs round-trips', SG.cleanSave({ offsetMs: 35 }).offsetMs === 35 && SG.cleanSave({ offsetMs: -60 }).offsetMs === -60 && SG.cleanSave({ offsetMs: 0 }).offsetMs === 0);
+  check('offsetMs clamps to +-200 and rounds', SG.cleanSave({ offsetMs: 9999 }).offsetMs === 200 && SG.cleanSave({ offsetMs: -9999 }).offsetMs === -200 && SG.cleanSave({ offsetMs: 12.6 }).offsetMs === 13);
+  check('corrupt offsetMs falls back to the default (absent, reads 0)', ['12', null, NaN, Infinity, -Infinity, {}, [], true, 'abc'].every((v) => { const c = SG.cleanSave({ offsetMs: v }); return !('offsetMs' in c) && SG.offsetOf(c) === 0; }));
+  check('setOffset clamps and offsetOf re-validates', SG.setOffset({}, 5000) === 200 && SG.offsetOf({ offsetMs: 'x' }) === 0 && SG.offsetOf({ offsetMs: 9e9 }) === 200);
+  const sv = SG.cleanSave({ offsetMs: 20, best: { 'warm-embers': { hard: { score: 1, stars: 1, rank: 'C', combo: 30 } } }, fullCombo: true });
+  check('cleanSave with the new fields is idempotent', JSON.stringify(SG.cleanSave(sv)) === JSON.stringify(sv));
+}
+
+// ---- calibration math (pure) ----
+{
+  const beats = [1000, 1700, 2400, 3100, 3800, 4500, 5200, 5900];
+  const taps = (off, jit) => beats.map((b, i) => b + off + (jit ? jit[i % jit.length] : 0));
+  check('median of constant lateness', Jam.calibrationFromTaps(taps(30), beats).offset === 30);
+  check('early taps give a negative offset', Jam.calibrationFromTaps(taps(-45), beats).offset === -45);
+  check('jitter still lands on the median', Math.abs(Jam.calibrationFromTaps(taps(25, [-6, 4, 0, 7, -3]), beats).offset - 25) <= 4);
+  const t2 = taps(20); t2[2] += 250; t2[5] -= 200; // two wild taps
+  const c2 = Jam.calibrationFromTaps(t2, beats);
+  check('outliers are tolerated (2 wild taps of 8)', c2.offset === 20 && c2.ok && c2.kept.length === 6, JSON.stringify(c2));
+  check('median helper: odd and even counts', Jam.calibrationOffset([5, 1, 3]) === 3 && Jam.calibrationOffset([1, 3, 5, 9]) === 4);
+  check('clamp to +-200', Jam.calibrationOffset([900, 950, 1000]) === 200 && Jam.calibrationOffset([-900, -800]) === -200 && Jam.clampOffset(-1e6) === -200 && Jam.clampOffset(NaN) === 0);
+  check('empty and NaN inputs give 0', Jam.calibrationOffset([]) === 0 && Jam.calibrationOffset([NaN, undefined]) === 0 && Jam.calibrationFromTaps([], beats).offset === 0 && !Jam.calibrationFromTaps([], beats).ok);
+  check('fewer than 4 usable taps is not ok', !Jam.calibrationFromTaps([1010, 1710, 2410], beats).ok && Jam.calibrationFromTaps([1010, 1710, 2410, 3110], beats).ok);
+  const stray = Jam.calibrationFromTaps([1030, 1300, 1730, 2430, 3130, 3830], beats);
+  check('a tap far from any beat is ignored', stray.deltas.length === 5 && stray.offset === 30);
+  const dbl = Jam.calibrationFromTaps([1030, 1040, 1730, 2430, 3130], beats);
+  check('a double tap on one beat counts once', dbl.deltas.length === 4);
+  check('calibration inputs are not mutated', (() => { const a = [30, 10, 20], b = [0, 1]; Jam.calibrationFromTaps(a, b); return a.join() === '30,10,20' && b.join() === '0,1'; })());
+}
+
+// ---- judging with an offset, and per-hit timing in the result ----
+{
+  let now = 0;
+  const c = { notes: [{ t: 1000, lane: 'D' }, { t: 2000, lane: 'F' }, { t: 3000, lane: 'J' }, { t: 4000, lane: 'K' }] };
+  const late = Jam.createRun(c, { clock: () => now, offset: 60 });
+  now = 1060; check('offset +60: a press at note+60 judges Perfect', late.press('D') === 'perfect' && late.state.lastDelta === 0);
+  now = 2100; const j2 = late.press('F');
+  check('offset +60: press at +100 acts like +40 (Perfect)', j2 === 'perfect' && late.state.lastDelta === 40);
+  const none = Jam.createRun(c, { clock: () => now });
+  now = 2100; check('same press with no offset is only Good', none.press('F') === 'good');
+  const early = Jam.createRun(c, { clock: () => now, offset: -50 });
+  now = 3000 - 50; check('negative offset: early-by-50 press is Perfect', early.press('J') === 'perfect');
+  const r = Jam.createRun(c, { clock: () => now });
+  now = 990; r.press('D'); now = 2020; r.press('F'); now = 3030; r.press('J');
+  const res = r.result();
+  check('result reports hits and average delta (-10, +20, +30 -> +13)', res.hits === 3 && res.avgDelta === 13, JSON.stringify(res));
+  check('result with no hits has avgDelta null', Jam.createRun(c, { clock: () => 0 }).result().avgDelta === null);
+  const fcRun = Jam.createRun(c, { clock: () => now });
+  for (const n of c.notes) { now = n.t; fcRun.press(n.lane); }
+  check('result.fullCombo true only when every note is hit', fcRun.result().fullCombo === true && r.result().fullCombo === false);
+  const h = { notes: [{ t: 1000, lane: 'D', hold: 800 }] };
+  const hr = Jam.createRun(h, { clock: () => now });
+  now = 1000; hr.press('D'); now = 1200; hr.release('D');
+  check('a broken hold spoils the full combo', hr.result().fullCombo === false);
 }
 
 // song names are original (no real song or artist names)

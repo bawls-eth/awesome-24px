@@ -949,6 +949,34 @@ from the CDN.
   water, goals and medals, and carrying over the town cave. The in-town cave
   is unchanged.
 
+## Campfire Jam
+
+`games/jam/index.html` (add `?from=hub` for the map back-links). A four-lane
+rhythm game: notes fall down the lanes **D F J K** (or the arrow keys, or tap the
+lanes / the four pads on a phone); hold the long notes to their tail. Eight
+original songs, each with Easy / Normal / Hard and seeded, deterministic charts.
+Stars come from accuracy (50 / 75 / 90%). Songs open at 0, 2, 5, 8, 10, 13 and 16
+total stars; Hard needs 2 stars on that song's Normal. **Midnight Campfire** is a
+secret song that opens after a full combo (no misses, no broken holds) on any Hard
+chart.
+
+- **Timing calibration:** the song list has a *Timing offset* row with **-5 ms /
+  +5 ms** nudges and a **Calibrate** button; the first run offers it too. The tap
+  test plays 2 count-in clicks and 8 measured clicks; the median of your tap
+  errors (outliers dropped, clamped to +-200 ms) is the offset. Press Accept to
+  keep it. The offset shifts judging only, never the song clock.
+- **Feedback:** each hit lights its lane in the judgement colour and shows a tiny
+  early / late tag (also written as text in the HUD). The results screen shows the
+  average early / late of your hits and a button to apply it as the new offset.
+  Reduced motion gives a steady, shorter glow and no rings or shake.
+- **Saved in:** `pixeltown-jam-v1` (best per song and tier, `hint`, `plays`, and the
+  additive optional `offsetMs` and `fullCombo`; older saves load with offset 0).
+  Everything is re-validated on load: offsets are clamped, `fullCombo` only counts
+  with a long Hard combo behind it, and the unlock list is always derived.
+- **Hub link:** the page honours `?from=hub`; the world map node for Campfire Jam
+  still needs to be pointed at `games/jam/index.html?from=hub` (the hub files were
+  not touched here).
+
 ## New save keys (all local, additive)
 
 | Key | Written by | Holds |
@@ -959,6 +987,7 @@ from the CDN.
 | `pixeltown-angler-v1` | Lakeside Angler | journal, gear, bait, trophies |
 | `pixeltown-bugs-v1` | Bug Safari | stars and journal (plus `pixeltown-bugs-hint-v1`) |
 | `pixeltown-deepdelve-v1` | Deepdelve | IndexedDB chunk edits |
+| `pixeltown-jam-v1` | Campfire Jam | bests, stars, `offsetMs`, `fullCombo` |
 
 `pixeltown-save-v1` (the town save) is only **read** by the new pages (the hub,
 the Lantern import, `?from=hub` prefill). The single exception is the Lantern's

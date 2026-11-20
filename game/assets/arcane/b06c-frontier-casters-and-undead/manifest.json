@@ -1,0 +1,1698 @@
+{
+  "name": "ARCANE RPG B06C \u2014 Frontier Casters and Undead",
+  "frame_size": 256,
+  "assets": [
+    {
+      "id": "ember_imp_idle_down",
+      "category": "enemy",
+      "enemy": "ember_imp",
+      "action": "idle",
+      "dir": "down",
+      "path": "enemies/ember_imp/ember_imp_idle_down.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "ember_imp_move_down",
+      "category": "enemy",
+      "enemy": "ember_imp",
+      "action": "move",
+      "dir": "down",
+      "path": "enemies/ember_imp/ember_imp_move_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "ember_imp_attack_down",
+      "category": "enemy",
+      "enemy": "ember_imp",
+      "action": "attack",
+      "dir": "down",
+      "path": "enemies/ember_imp/ember_imp_attack_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 107,
+          "y": 177
+        },
+        {
+          "x": 106,
+          "y": 184
+        },
+        {
+          "x": 108,
+          "y": 177
+        },
+        {
+          "x": 101,
+          "y": 184
+        },
+        {
+          "x": 107,
+          "y": 179
+        }
+      ]
+    },
+    {
+      "id": "ember_imp_death_down",
+      "category": "enemy",
+      "enemy": "ember_imp",
+      "action": "death",
+      "dir": "down",
+      "path": "enemies/ember_imp/ember_imp_death_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "ember_imp_idle_up",
+      "category": "enemy",
+      "enemy": "ember_imp",
+      "action": "idle",
+      "dir": "up",
+      "path": "enemies/ember_imp/ember_imp_idle_up.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "ember_imp_move_up",
+      "category": "enemy",
+      "enemy": "ember_imp",
+      "action": "move",
+      "dir": "up",
+      "path": "enemies/ember_imp/ember_imp_move_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "ember_imp_attack_up",
+      "category": "enemy",
+      "enemy": "ember_imp",
+      "action": "attack",
+      "dir": "up",
+      "path": "enemies/ember_imp/ember_imp_attack_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 147,
+          "y": 176
+        },
+        {
+          "x": 146,
+          "y": 185
+        },
+        {
+          "x": 147,
+          "y": 178
+        },
+        {
+          "x": 149,
+          "y": 175
+        },
+        {
+          "x": 149,
+          "y": 179
+        }
+      ]
+    },
+    {
+      "id": "ember_imp_death_up",
+      "category": "enemy",
+      "enemy": "ember_imp",
+      "action": "death",
+      "dir": "up",
+      "path": "enemies/ember_imp/ember_imp_death_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "ember_imp_idle_right",
+      "category": "enemy",
+      "enemy": "ember_imp",
+      "action": "idle",
+      "dir": "right",
+      "path": "enemies/ember_imp/ember_imp_idle_right.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "ember_imp_move_right",
+      "category": "enemy",
+      "enemy": "ember_imp",
+      "action": "move",
+      "dir": "right",
+      "path": "enemies/ember_imp/ember_imp_move_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "ember_imp_attack_right",
+      "category": "enemy",
+      "enemy": "ember_imp",
+      "action": "attack",
+      "dir": "right",
+      "path": "enemies/ember_imp/ember_imp_attack_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 151,
+          "y": 180
+        },
+        {
+          "x": 160,
+          "y": 179
+        },
+        {
+          "x": 159,
+          "y": 171
+        },
+        {
+          "x": 170,
+          "y": 175
+        },
+        {
+          "x": 157,
+          "y": 184
+        }
+      ]
+    },
+    {
+      "id": "ember_imp_death_right",
+      "category": "enemy",
+      "enemy": "ember_imp",
+      "action": "death",
+      "dir": "right",
+      "path": "enemies/ember_imp/ember_imp_death_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "ice_wraith_idle_down",
+      "category": "enemy",
+      "enemy": "ice_wraith",
+      "action": "idle",
+      "dir": "down",
+      "path": "enemies/ice_wraith/ice_wraith_idle_down.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "ice_wraith_move_down",
+      "category": "enemy",
+      "enemy": "ice_wraith",
+      "action": "move",
+      "dir": "down",
+      "path": "enemies/ice_wraith/ice_wraith_move_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "ice_wraith_attack_down",
+      "category": "enemy",
+      "enemy": "ice_wraith",
+      "action": "attack",
+      "dir": "down",
+      "path": "enemies/ice_wraith/ice_wraith_attack_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 109,
+          "y": 177
+        },
+        {
+          "x": 110,
+          "y": 184
+        },
+        {
+          "x": 106,
+          "y": 177
+        },
+        {
+          "x": 104,
+          "y": 177
+        },
+        {
+          "x": 109,
+          "y": 177
+        }
+      ]
+    },
+    {
+      "id": "ice_wraith_death_down",
+      "category": "enemy",
+      "enemy": "ice_wraith",
+      "action": "death",
+      "dir": "down",
+      "path": "enemies/ice_wraith/ice_wraith_death_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "ice_wraith_idle_up",
+      "category": "enemy",
+      "enemy": "ice_wraith",
+      "action": "idle",
+      "dir": "up",
+      "path": "enemies/ice_wraith/ice_wraith_idle_up.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "ice_wraith_move_up",
+      "category": "enemy",
+      "enemy": "ice_wraith",
+      "action": "move",
+      "dir": "up",
+      "path": "enemies/ice_wraith/ice_wraith_move_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "ice_wraith_attack_up",
+      "category": "enemy",
+      "enemy": "ice_wraith",
+      "action": "attack",
+      "dir": "up",
+      "path": "enemies/ice_wraith/ice_wraith_attack_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 143,
+          "y": 175
+        },
+        {
+          "x": 144,
+          "y": 183
+        },
+        {
+          "x": 147,
+          "y": 178
+        },
+        {
+          "x": 152,
+          "y": 171
+        },
+        {
+          "x": 143,
+          "y": 175
+        }
+      ]
+    },
+    {
+      "id": "ice_wraith_death_up",
+      "category": "enemy",
+      "enemy": "ice_wraith",
+      "action": "death",
+      "dir": "up",
+      "path": "enemies/ice_wraith/ice_wraith_death_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "ice_wraith_idle_right",
+      "category": "enemy",
+      "enemy": "ice_wraith",
+      "action": "idle",
+      "dir": "right",
+      "path": "enemies/ice_wraith/ice_wraith_idle_right.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "ice_wraith_move_right",
+      "category": "enemy",
+      "enemy": "ice_wraith",
+      "action": "move",
+      "dir": "right",
+      "path": "enemies/ice_wraith/ice_wraith_move_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "ice_wraith_attack_right",
+      "category": "enemy",
+      "enemy": "ice_wraith",
+      "action": "attack",
+      "dir": "right",
+      "path": "enemies/ice_wraith/ice_wraith_attack_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 146,
+          "y": 178
+        },
+        {
+          "x": 152,
+          "y": 188
+        },
+        {
+          "x": 151,
+          "y": 184
+        },
+        {
+          "x": 172,
+          "y": 167
+        },
+        {
+          "x": 143,
+          "y": 178
+        }
+      ]
+    },
+    {
+      "id": "ice_wraith_death_right",
+      "category": "enemy",
+      "enemy": "ice_wraith",
+      "action": "death",
+      "dir": "right",
+      "path": "enemies/ice_wraith/ice_wraith_death_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "goblin_shaman_idle_down",
+      "category": "enemy",
+      "enemy": "goblin_shaman",
+      "action": "idle",
+      "dir": "down",
+      "path": "enemies/goblin_shaman/goblin_shaman_idle_down.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "goblin_shaman_move_down",
+      "category": "enemy",
+      "enemy": "goblin_shaman",
+      "action": "move",
+      "dir": "down",
+      "path": "enemies/goblin_shaman/goblin_shaman_move_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "goblin_shaman_attack_down",
+      "category": "enemy",
+      "enemy": "goblin_shaman",
+      "action": "attack",
+      "dir": "down",
+      "path": "enemies/goblin_shaman/goblin_shaman_attack_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 108,
+          "y": 184
+        },
+        {
+          "x": 110,
+          "y": 192
+        },
+        {
+          "x": 106,
+          "y": 176
+        },
+        {
+          "x": 100,
+          "y": 188
+        },
+        {
+          "x": 108,
+          "y": 184
+        }
+      ]
+    },
+    {
+      "id": "goblin_shaman_death_down",
+      "category": "enemy",
+      "enemy": "goblin_shaman",
+      "action": "death",
+      "dir": "down",
+      "path": "enemies/goblin_shaman/goblin_shaman_death_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "goblin_shaman_idle_up",
+      "category": "enemy",
+      "enemy": "goblin_shaman",
+      "action": "idle",
+      "dir": "up",
+      "path": "enemies/goblin_shaman/goblin_shaman_idle_up.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "goblin_shaman_move_up",
+      "category": "enemy",
+      "enemy": "goblin_shaman",
+      "action": "move",
+      "dir": "up",
+      "path": "enemies/goblin_shaman/goblin_shaman_move_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "goblin_shaman_attack_up",
+      "category": "enemy",
+      "enemy": "goblin_shaman",
+      "action": "attack",
+      "dir": "up",
+      "path": "enemies/goblin_shaman/goblin_shaman_attack_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 147,
+          "y": 183
+        },
+        {
+          "x": 144,
+          "y": 192
+        },
+        {
+          "x": 147,
+          "y": 173
+        },
+        {
+          "x": 154,
+          "y": 187
+        },
+        {
+          "x": 144,
+          "y": 183
+        }
+      ]
+    },
+    {
+      "id": "goblin_shaman_death_up",
+      "category": "enemy",
+      "enemy": "goblin_shaman",
+      "action": "death",
+      "dir": "up",
+      "path": "enemies/goblin_shaman/goblin_shaman_death_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "goblin_shaman_idle_right",
+      "category": "enemy",
+      "enemy": "goblin_shaman",
+      "action": "idle",
+      "dir": "right",
+      "path": "enemies/goblin_shaman/goblin_shaman_idle_right.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "goblin_shaman_move_right",
+      "category": "enemy",
+      "enemy": "goblin_shaman",
+      "action": "move",
+      "dir": "right",
+      "path": "enemies/goblin_shaman/goblin_shaman_move_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "goblin_shaman_attack_right",
+      "category": "enemy",
+      "enemy": "goblin_shaman",
+      "action": "attack",
+      "dir": "right",
+      "path": "enemies/goblin_shaman/goblin_shaman_attack_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 151,
+          "y": 188
+        },
+        {
+          "x": 151,
+          "y": 191
+        },
+        {
+          "x": 151,
+          "y": 171
+        },
+        {
+          "x": 176,
+          "y": 183
+        },
+        {
+          "x": 151,
+          "y": 179
+        }
+      ]
+    },
+    {
+      "id": "goblin_shaman_death_right",
+      "category": "enemy",
+      "enemy": "goblin_shaman",
+      "action": "death",
+      "dir": "right",
+      "path": "enemies/goblin_shaman/goblin_shaman_death_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "skeleton_archer_idle_down",
+      "category": "enemy",
+      "enemy": "skeleton_archer",
+      "action": "idle",
+      "dir": "down",
+      "path": "enemies/skeleton_archer/skeleton_archer_idle_down.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "skeleton_archer_move_down",
+      "category": "enemy",
+      "enemy": "skeleton_archer",
+      "action": "move",
+      "dir": "down",
+      "path": "enemies/skeleton_archer/skeleton_archer_move_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "skeleton_archer_attack_down",
+      "category": "enemy",
+      "enemy": "skeleton_archer",
+      "action": "attack",
+      "dir": "down",
+      "path": "enemies/skeleton_archer/skeleton_archer_attack_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 142,
+          "y": 165
+        },
+        {
+          "x": 143,
+          "y": 167
+        },
+        {
+          "x": 143,
+          "y": 165
+        },
+        {
+          "x": 145,
+          "y": 165
+        },
+        {
+          "x": 143,
+          "y": 167
+        }
+      ]
+    },
+    {
+      "id": "skeleton_archer_death_down",
+      "category": "enemy",
+      "enemy": "skeleton_archer",
+      "action": "death",
+      "dir": "down",
+      "path": "enemies/skeleton_archer/skeleton_archer_death_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "skeleton_archer_idle_up",
+      "category": "enemy",
+      "enemy": "skeleton_archer",
+      "action": "idle",
+      "dir": "up",
+      "path": "enemies/skeleton_archer/skeleton_archer_idle_up.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "skeleton_archer_move_up",
+      "category": "enemy",
+      "enemy": "skeleton_archer",
+      "action": "move",
+      "dir": "up",
+      "path": "enemies/skeleton_archer/skeleton_archer_move_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "skeleton_archer_attack_up",
+      "category": "enemy",
+      "enemy": "skeleton_archer",
+      "action": "attack",
+      "dir": "up",
+      "path": "enemies/skeleton_archer/skeleton_archer_attack_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 101,
+          "y": 165
+        },
+        {
+          "x": 104,
+          "y": 165
+        },
+        {
+          "x": 99,
+          "y": 163
+        },
+        {
+          "x": 100,
+          "y": 165
+        },
+        {
+          "x": 101,
+          "y": 165
+        }
+      ]
+    },
+    {
+      "id": "skeleton_archer_death_up",
+      "category": "enemy",
+      "enemy": "skeleton_archer",
+      "action": "death",
+      "dir": "up",
+      "path": "enemies/skeleton_archer/skeleton_archer_death_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "skeleton_archer_idle_right",
+      "category": "enemy",
+      "enemy": "skeleton_archer",
+      "action": "idle",
+      "dir": "right",
+      "path": "enemies/skeleton_archer/skeleton_archer_idle_right.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "skeleton_archer_move_right",
+      "category": "enemy",
+      "enemy": "skeleton_archer",
+      "action": "move",
+      "dir": "right",
+      "path": "enemies/skeleton_archer/skeleton_archer_move_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "skeleton_archer_attack_right",
+      "category": "enemy",
+      "enemy": "skeleton_archer",
+      "action": "attack",
+      "dir": "right",
+      "path": "enemies/skeleton_archer/skeleton_archer_attack_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 153,
+          "y": 164
+        },
+        {
+          "x": 160,
+          "y": 163
+        },
+        {
+          "x": 166,
+          "y": 161
+        },
+        {
+          "x": 163,
+          "y": 166
+        },
+        {
+          "x": 156,
+          "y": 164
+        }
+      ]
+    },
+    {
+      "id": "skeleton_archer_death_right",
+      "category": "enemy",
+      "enemy": "skeleton_archer",
+      "action": "death",
+      "dir": "right",
+      "path": "enemies/skeleton_archer/skeleton_archer_death_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "bone_knight_idle_down",
+      "category": "enemy",
+      "enemy": "bone_knight",
+      "action": "idle",
+      "dir": "down",
+      "path": "enemies/bone_knight/bone_knight_idle_down.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "bone_knight_move_down",
+      "category": "enemy",
+      "enemy": "bone_knight",
+      "action": "move",
+      "dir": "down",
+      "path": "enemies/bone_knight/bone_knight_move_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "bone_knight_attack_down",
+      "category": "enemy",
+      "enemy": "bone_knight",
+      "action": "attack",
+      "dir": "down",
+      "path": "enemies/bone_knight/bone_knight_attack_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 103,
+          "y": 181
+        },
+        {
+          "x": 104,
+          "y": 188
+        },
+        {
+          "x": 108,
+          "y": 169
+        },
+        {
+          "x": 98,
+          "y": 175
+        },
+        {
+          "x": 103,
+          "y": 181
+        }
+      ]
+    },
+    {
+      "id": "bone_knight_death_down",
+      "category": "enemy",
+      "enemy": "bone_knight",
+      "action": "death",
+      "dir": "down",
+      "path": "enemies/bone_knight/bone_knight_death_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "bone_knight_idle_up",
+      "category": "enemy",
+      "enemy": "bone_knight",
+      "action": "idle",
+      "dir": "up",
+      "path": "enemies/bone_knight/bone_knight_idle_up.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "bone_knight_move_up",
+      "category": "enemy",
+      "enemy": "bone_knight",
+      "action": "move",
+      "dir": "up",
+      "path": "enemies/bone_knight/bone_knight_move_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "bone_knight_attack_up",
+      "category": "enemy",
+      "enemy": "bone_knight",
+      "action": "attack",
+      "dir": "up",
+      "path": "enemies/bone_knight/bone_knight_attack_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 149,
+          "y": 180
+        },
+        {
+          "x": 147,
+          "y": 189
+        },
+        {
+          "x": 147,
+          "y": 169
+        },
+        {
+          "x": 157,
+          "y": 171
+        },
+        {
+          "x": 150,
+          "y": 179
+        }
+      ]
+    },
+    {
+      "id": "bone_knight_death_up",
+      "category": "enemy",
+      "enemy": "bone_knight",
+      "action": "death",
+      "dir": "up",
+      "path": "enemies/bone_knight/bone_knight_death_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "bone_knight_idle_right",
+      "category": "enemy",
+      "enemy": "bone_knight",
+      "action": "idle",
+      "dir": "right",
+      "path": "enemies/bone_knight/bone_knight_idle_right.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "bone_knight_move_right",
+      "category": "enemy",
+      "enemy": "bone_knight",
+      "action": "move",
+      "dir": "right",
+      "path": "enemies/bone_knight/bone_knight_move_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "bone_knight_attack_right",
+      "category": "enemy",
+      "enemy": "bone_knight",
+      "action": "attack",
+      "dir": "right",
+      "path": "enemies/bone_knight/bone_knight_attack_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 148,
+          "y": 178
+        },
+        {
+          "x": 154,
+          "y": 189
+        },
+        {
+          "x": 154,
+          "y": 169
+        },
+        {
+          "x": 177,
+          "y": 175
+        },
+        {
+          "x": 148,
+          "y": 178
+        }
+      ]
+    },
+    {
+      "id": "bone_knight_death_right",
+      "category": "enemy",
+      "enemy": "bone_knight",
+      "action": "death",
+      "dir": "right",
+      "path": "enemies/bone_knight/bone_knight_death_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "shadow_cultist_idle_down",
+      "category": "enemy",
+      "enemy": "shadow_cultist",
+      "action": "idle",
+      "dir": "down",
+      "path": "enemies/shadow_cultist/shadow_cultist_idle_down.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "shadow_cultist_move_down",
+      "category": "enemy",
+      "enemy": "shadow_cultist",
+      "action": "move",
+      "dir": "down",
+      "path": "enemies/shadow_cultist/shadow_cultist_move_down.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "shadow_cultist_attack_down",
+      "category": "enemy",
+      "enemy": "shadow_cultist",
+      "action": "attack",
+      "dir": "down",
+      "path": "enemies/shadow_cultist/shadow_cultist_attack_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 115,
+          "y": 179
+        },
+        {
+          "x": 112,
+          "y": 184
+        },
+        {
+          "x": 112,
+          "y": 179
+        },
+        {
+          "x": 106,
+          "y": 179
+        },
+        {
+          "x": 115,
+          "y": 179
+        }
+      ]
+    },
+    {
+      "id": "shadow_cultist_death_down",
+      "category": "enemy",
+      "enemy": "shadow_cultist",
+      "action": "death",
+      "dir": "down",
+      "path": "enemies/shadow_cultist/shadow_cultist_death_down.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "shadow_cultist_idle_up",
+      "category": "enemy",
+      "enemy": "shadow_cultist",
+      "action": "idle",
+      "dir": "up",
+      "path": "enemies/shadow_cultist/shadow_cultist_idle_up.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "shadow_cultist_move_up",
+      "category": "enemy",
+      "enemy": "shadow_cultist",
+      "action": "move",
+      "dir": "up",
+      "path": "enemies/shadow_cultist/shadow_cultist_move_up.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "shadow_cultist_attack_up",
+      "category": "enemy",
+      "enemy": "shadow_cultist",
+      "action": "attack",
+      "dir": "up",
+      "path": "enemies/shadow_cultist/shadow_cultist_attack_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 141,
+          "y": 178
+        },
+        {
+          "x": 140,
+          "y": 183
+        },
+        {
+          "x": 143,
+          "y": 178
+        },
+        {
+          "x": 147,
+          "y": 184
+        },
+        {
+          "x": 141,
+          "y": 178
+        }
+      ]
+    },
+    {
+      "id": "shadow_cultist_death_up",
+      "category": "enemy",
+      "enemy": "shadow_cultist",
+      "action": "death",
+      "dir": "up",
+      "path": "enemies/shadow_cultist/shadow_cultist_death_up.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "shadow_cultist_idle_right",
+      "category": "enemy",
+      "enemy": "shadow_cultist",
+      "action": "idle",
+      "dir": "right",
+      "path": "enemies/shadow_cultist/shadow_cultist_idle_right.png",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "shadow_cultist_move_right",
+      "category": "enemy",
+      "enemy": "shadow_cultist",
+      "action": "move",
+      "dir": "right",
+      "path": "enemies/shadow_cultist/shadow_cultist_move_right.png",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    },
+    {
+      "id": "shadow_cultist_attack_right",
+      "category": "enemy",
+      "enemy": "shadow_cultist",
+      "action": "attack",
+      "dir": "right",
+      "path": "enemies/shadow_cultist/shadow_cultist_attack_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas",
+      "muzzle": [
+        {
+          "x": 143,
+          "y": 180
+        },
+        {
+          "x": 146,
+          "y": 182
+        },
+        {
+          "x": 147,
+          "y": 180
+        },
+        {
+          "x": 155,
+          "y": 175
+        },
+        {
+          "x": 143,
+          "y": 180
+        }
+      ]
+    },
+    {
+      "id": "shadow_cultist_death_right",
+      "category": "enemy",
+      "enemy": "shadow_cultist",
+      "action": "death",
+      "dir": "right",
+      "path": "enemies/shadow_cultist/shadow_cultist_death_right.png",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "source": "original image-generated atlas"
+    }
+  ]
+}

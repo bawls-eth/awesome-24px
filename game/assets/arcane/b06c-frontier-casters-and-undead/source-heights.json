@@ -1,0 +1,506 @@
+{
+  "ember_imp_idle_down": [
+    155,
+    153,
+    153,
+    154
+  ],
+  "ember_imp_move_down": [
+    165,
+    164,
+    162,
+    150,
+    162,
+    164
+  ],
+  "ember_imp_attack_down": [
+    199,
+    171,
+    198,
+    180,
+    184
+  ],
+  "ember_imp_death_down": [
+    195,
+    190,
+    171,
+    141,
+    77
+  ],
+  "ember_imp_idle_up": [
+    159,
+    158,
+    163,
+    158
+  ],
+  "ember_imp_move_up": [
+    165,
+    158,
+    162,
+    144,
+    161,
+    163
+  ],
+  "ember_imp_attack_up": [
+    194,
+    164,
+    193,
+    176,
+    183
+  ],
+  "ember_imp_death_up": [
+    197,
+    192,
+    169,
+    131,
+    86
+  ],
+  "ember_imp_idle_right": [
+    162,
+    160,
+    161,
+    163
+  ],
+  "ember_imp_move_right": [
+    170,
+    170,
+    168,
+    156,
+    167,
+    171
+  ],
+  "ember_imp_attack_right": [
+    194,
+    170,
+    194,
+    179,
+    187
+  ],
+  "ember_imp_death_right": [
+    196,
+    188,
+    167,
+    127,
+    84
+  ],
+  "ice_wraith_idle_down": [
+    195,
+    191,
+    191,
+    191
+  ],
+  "ice_wraith_move_down": [
+    188,
+    184,
+    173,
+    186,
+    176,
+    182
+  ],
+  "ice_wraith_attack_down": [
+    207,
+    182,
+    206,
+    206,
+    203
+  ],
+  "ice_wraith_death_down": [
+    205,
+    191,
+    159,
+    111,
+    69
+  ],
+  "ice_wraith_idle_up": [
+    186,
+    182,
+    182,
+    185
+  ],
+  "ice_wraith_move_up": [
+    184,
+    175,
+    176,
+    187,
+    175,
+    174
+  ],
+  "ice_wraith_attack_up": [
+    205,
+    172,
+    201,
+    202,
+    205
+  ],
+  "ice_wraith_death_up": [
+    203,
+    181,
+    152,
+    106,
+    68
+  ],
+  "ice_wraith_idle_right": [
+    179,
+    177,
+    179,
+    178
+  ],
+  "ice_wraith_move_right": [
+    180,
+    179,
+    169,
+    181,
+    182,
+    181
+  ],
+  "ice_wraith_attack_right": [
+    201,
+    174,
+    201,
+    200,
+    199
+  ],
+  "ice_wraith_death_right": [
+    200,
+    182,
+    154,
+    109,
+    70
+  ],
+  "goblin_shaman_idle_down": [
+    176,
+    176,
+    175,
+    174
+  ],
+  "goblin_shaman_move_down": [
+    177,
+    170,
+    176,
+    166,
+    172,
+    175
+  ],
+  "goblin_shaman_attack_down": [
+    165,
+    140,
+    198,
+    155,
+    165
+  ],
+  "goblin_shaman_death_down": [
+    164,
+    166,
+    140,
+    102,
+    77
+  ],
+  "goblin_shaman_idle_up": [
+    172,
+    173,
+    174,
+    172
+  ],
+  "goblin_shaman_move_up": [
+    174,
+    167,
+    175,
+    168,
+    172,
+    178
+  ],
+  "goblin_shaman_attack_up": [
+    166,
+    136,
+    205,
+    156,
+    166
+  ],
+  "goblin_shaman_death_up": [
+    163,
+    169,
+    137,
+    102,
+    76
+  ],
+  "goblin_shaman_idle_right": [
+    170,
+    173,
+    175,
+    170
+  ],
+  "goblin_shaman_move_right": [
+    172,
+    173,
+    169,
+    159,
+    166,
+    173
+  ],
+  "goblin_shaman_attack_right": [
+    168,
+    139,
+    201,
+    152,
+    167
+  ],
+  "goblin_shaman_death_right": [
+    162,
+    166,
+    134,
+    104,
+    75
+  ],
+  "skeleton_archer_idle_down": [
+    177,
+    181,
+    177,
+    176
+  ],
+  "skeleton_archer_move_down": [
+    177,
+    183,
+    172,
+    178,
+    183,
+    185
+  ],
+  "skeleton_archer_attack_down": [
+    188,
+    182,
+    185,
+    188,
+    184
+  ],
+  "skeleton_archer_death_down": [
+    187,
+    181,
+    152,
+    125,
+    84
+  ],
+  "skeleton_archer_idle_up": [
+    173,
+    176,
+    177,
+    171
+  ],
+  "skeleton_archer_move_up": [
+    177,
+    178,
+    172,
+    174,
+    180,
+    173
+  ],
+  "skeleton_archer_attack_up": [
+    186,
+    186,
+    191,
+    186,
+    186
+  ],
+  "skeleton_archer_death_up": [
+    187,
+    180,
+    158,
+    130,
+    77
+  ],
+  "skeleton_archer_idle_right": [
+    175,
+    175,
+    175,
+    174
+  ],
+  "skeleton_archer_move_right": [
+    187,
+    189,
+    189,
+    185,
+    188,
+    188
+  ],
+  "skeleton_archer_attack_right": [
+    188,
+    187,
+    191,
+    184,
+    187
+  ],
+  "skeleton_archer_death_right": [
+    186,
+    183,
+    152,
+    117,
+    75
+  ],
+  "bone_knight_idle_down": [
+    171,
+    169,
+    172,
+    167
+  ],
+  "bone_knight_move_down": [
+    174,
+    166,
+    177,
+    174,
+    170,
+    176
+  ],
+  "bone_knight_attack_down": [
+    169,
+    146,
+    209,
+    153,
+    169
+  ],
+  "bone_knight_death_down": [
+    179,
+    168,
+    136,
+    113,
+    68
+  ],
+  "bone_knight_idle_up": [
+    170,
+    170,
+    172,
+    170
+  ],
+  "bone_knight_move_up": [
+    169,
+    163,
+    166,
+    163,
+    166,
+    168
+  ],
+  "bone_knight_attack_up": [
+    170,
+    142,
+    204,
+    150,
+    170
+  ],
+  "bone_knight_death_up": [
+    177,
+    158,
+    130,
+    111,
+    62
+  ],
+  "bone_knight_idle_right": [
+    167,
+    167,
+    172,
+    166
+  ],
+  "bone_knight_move_right": [
+    180,
+    168,
+    176,
+    174,
+    172,
+    176
+  ],
+  "bone_knight_attack_right": [
+    173,
+    143,
+    205,
+    147,
+    173
+  ],
+  "bone_knight_death_right": [
+    178,
+    158,
+    132,
+    96,
+    60
+  ],
+  "shadow_cultist_idle_down": [
+    187,
+    192,
+    185,
+    185
+  ],
+  "shadow_cultist_move_down": [
+    189,
+    189,
+    191,
+    191,
+    189,
+    188
+  ],
+  "shadow_cultist_attack_down": [
+    203,
+    183,
+    202,
+    202,
+    203
+  ],
+  "shadow_cultist_death_down": [
+    193,
+    180,
+    152,
+    118,
+    67
+  ],
+  "shadow_cultist_idle_up": [
+    187,
+    190,
+    185,
+    187
+  ],
+  "shadow_cultist_move_up": [
+    190,
+    188,
+    190,
+    191,
+    191,
+    191
+  ],
+  "shadow_cultist_attack_up": [
+    199,
+    178,
+    199,
+    197,
+    199
+  ],
+  "shadow_cultist_death_up": [
+    196,
+    179,
+    153,
+    113,
+    64
+  ],
+  "shadow_cultist_idle_right": [
+    185,
+    185,
+    185,
+    186
+  ],
+  "shadow_cultist_move_right": [
+    190,
+    187,
+    184,
+    186,
+    189,
+    187
+  ],
+  "shadow_cultist_attack_right": [
+    197,
+    187,
+    197,
+    193,
+    197
+  ],
+  "shadow_cultist_death_right": [
+    198,
+    190,
+    160,
+    104,
+    64
+  ]
+}

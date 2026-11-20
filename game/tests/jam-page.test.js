@@ -25,6 +25,14 @@ async function open(browser, opts, init, url) {
   await page.waitForFunction(() => window.__jam);
   return { ctx, page, errors, reqs, bad };
 }
+// plays the current chart in time order (presses and hold releases interleaved), shifted by `shift` ms; skip = note index to leave out
+const drive = (p, shift, skip) => p.evaluate(([sh, sk]) => {
+  const J = window.__jam, ev = [];
+  J.chart.notes.forEach((n, i) => { if (i === sk) return; ev.push({ t: n.t + sh, k: 0, n }); if (n.hold) ev.push({ t: n.t + n.hold + sh, k: 1, n }); });
+  ev.sort((a, b) => a.t - b.t || a.k - b.k);
+  for (const e of ev) { J.at(e.t); if (e.k === 0) J.press(e.n.lane); else J.release(e.n.lane); }
+  J.step(70000);
+}, [shift, skip === undefined ? -1 : skip]);
 const startChart = (p) => p.evaluate((c) => { window.__jam.start('warm-embers', 'easy', { chart: c }); }, CHART);
 
 (async () => {
@@ -34,8 +42,8 @@ const startChart = (p) => p.evaluate((c) => { window.__jam.start('warm-embers', 
   const p = d.page;
 
   // ---- load, menu, hint ----
-  check('page loads with 4 song cards', await p.evaluate(() => document.querySelectorAll('.card[data-song]').length === 4));
-  check('only Warm Embers is open at start', await p.evaluate(() => [...document.querySelectorAll('.card')].map((c) => !c.classList.contains('locked')).join() === 'true,false,false,false'));
+  check('page loads with 8 song cards', await p.evaluate(() => document.querySelectorAll('.card[data-song]').length === 8));
+  check('only Warm Embers is open at start', await p.evaluate(() => [...document.querySelectorAll('.card')].map((c) => !c.classList.contains('locked')).join() === 'true,false,false,false,false,false,false,false'));
   check('hard tier locked until Normal has 2 stars', await p.evaluate(() => document.querySelector('[data-song=warm-embers][data-tier=hard]').disabled && !document.querySelector('[data-song=warm-embers][data-tier=normal]').disabled));
   check('first-run hint card is shown', await p.evaluate(() => !!document.getElementById('hint') && document.getElementById('hint').textContent.includes('D F J K')));
   await p.click('#hint-ok');
@@ -104,7 +112,7 @@ const startChart = (p) => p.evaluate((c) => { window.__jam.start('warm-embers', 
   check('tab hidden pauses the song', await p.evaluate(() => window.__jam.mode === 'pause'));
   await p.evaluate(() => { Object.defineProperty(document, 'hidden', { value: false, configurable: true }); });
   await p.click('#quit');
-  check('quit returns to the song list without saving', await p.evaluate(() => window.__jam.mode === 'menu' && document.querySelectorAll('.card').length === 4));
+  check('quit returns to the song list without saving', await p.evaluate(() => window.__jam.mode === 'menu' && document.querySelectorAll('.card').length === 8));
 
   // ---- hold broken by early release ----
   await startChart(p);
@@ -162,6 +170,143 @@ const startChart = (p) => p.evaluate((c) => { window.__jam.start('warm-embers', 
   await rm2.page.reload(); await rm2.page.waitForFunction(() => window.__jam);
   check('shared mm-reduce-motion override is honoured', await rm2.page.evaluate(() => window.__jam.reduced === true));
   await rm2.ctx.close();
+
+  // ---- calibration screen (deterministic taps through the test hook) ----
+  const fresh = await open(browser, { viewport: { width: 1000, height: 700 } });
+  const f = fresh.page;
+  check('first run: calibrate card offered, no offsetMs stored yet', await f.evaluate((k) => !!document.getElementById('cal-card') && window.__jam.offset === 0 && !('offsetMs' in JSON.parse(localStorage.getItem(k))), KEY));
+  check('8 cards; the secret song shows as ??? and is locked', await f.evaluate(() => { const c = document.querySelector('.card[data-song=midnight-campfire]'); return document.querySelectorAll('.card').length === 8 && c.classList.contains('locked') && c.textContent.includes('???') && !c.textContent.includes('Midnight') && [...c.querySelectorAll('button')].every((b) => b.disabled); }));
+  check('locked new songs say how many stars they need', await f.evaluate(() => document.querySelector('.card[data-song=kettle-song]').textContent.includes('Needs 10 stars')));
+  await f.click('#cal-first');
+  check('calibrate button opens the intro screen', await f.evaluate(() => window.__jam.mode === 'calib' && !!document.getElementById('cal-start') && window.__jam.cal.state === 'intro'));
+  await f.click('#cal-start');
+  check('test starts: 8 measured beats listed', await f.evaluate(() => window.__jam.cal.state === 'run' && window.__jam.cal.beats.length === 8 && !!document.getElementById('cal-tap')));
+  await f.evaluate(() => { const b = window.__jam.cal.beats; for (const t of b) { window.__jam.calStep(t + 25 - window.__jam.cal.now); window.__jam.calTap(); } });
+  check('beat counter reached 8 / 8', await f.evaluate(() => document.getElementById('cal-count').textContent === 'Beat 8 / 8'));
+  await f.evaluate(() => window.__jam.calStep(2000));
+  check('result: median +25 ms, tap late, Accept and Retry offered', await f.evaluate(() => { const r = document.getElementById('cal-result').textContent; return window.__jam.cal.state === 'done' && r.includes('+25 ms') && r.includes('you tap late') && !!document.getElementById('cal-accept') && !!document.getElementById('cal-retry'); }));
+  await f.click('#cal-retry');
+  check('Retry returns to the intro with no stored change', await f.evaluate((k) => window.__jam.cal.state === 'intro' && !('offsetMs' in JSON.parse(localStorage.getItem(k))), KEY));
+  await f.click('#cal-start');
+  await f.evaluate(() => { const b = window.__jam.cal.beats; b.forEach((t, i) => { window.__jam.calStep(t - 30 + (i === 3 ? 260 : 0) - window.__jam.cal.now); window.__jam.calTap(); }); window.__jam.calStep(2000); });
+  check('second try: one wild tap is tolerated, median -30 ms (early)', await f.evaluate(() => { const r = document.getElementById('cal-result').textContent; return r.includes('-30 ms') && r.includes('you tap early'); }));
+  await f.click('#cal-accept');
+  check('Accept returns to the menu, stores offsetMs -30 and shows it', await f.evaluate((k) => window.__jam.mode === 'menu' && JSON.parse(localStorage.getItem(k)).offsetMs === -30 && window.__jam.offset === -30 && document.getElementById('offset-val').textContent === 'Timing offset: -30 ms' && !document.getElementById('cal-card'), KEY));
+  check('stored keys: only additive offsetMs on top of the known set', await f.evaluate((k) => Object.keys(JSON.parse(localStorage.getItem(k))).sort().join() === 'best,hint,offsetMs,plays,unlocked,v', KEY));
+  // too few taps: no Accept
+  await f.click('#btn-calibrate'); await f.click('#cal-start');
+  await f.evaluate(() => { const b = window.__jam.cal.beats; for (let i = 0; i < 2; i++) { window.__jam.calStep(b[i] - window.__jam.cal.now); window.__jam.calTap(); } window.__jam.calStep(6000); });
+  check('too few taps: asks to retry, no Accept button, offset untouched', await f.evaluate(() => document.getElementById('cal-result').textContent.includes('Try again') && !document.getElementById('cal-accept') && window.__jam.offset === -30));
+  await f.click('#cal-cancel');
+  check('Cancel leaves the offset alone', await f.evaluate(() => window.__jam.mode === 'menu' && window.__jam.offset === -30));
+  // keyboard taps and Esc
+  await f.click('#btn-calibrate'); await f.click('#cal-start');
+  await f.evaluate(() => window.__jam.calStep(window.__jam.cal.beats[0]));
+  await f.keyboard.press('Space'); await f.keyboard.press('KeyF');
+  check('Space and D/F/J/K register taps', await f.evaluate(() => window.__jam.cal.taps === 2));
+  await f.keyboard.press('Escape');
+  check('Esc leaves calibration', await f.evaluate(() => window.__jam.mode === 'menu' && window.__jam.cal === null));
+  // manual nudge
+  await f.click('#off-plus'); await f.click('#off-plus'); await f.click('#off-minus');
+  check('+/- 5 ms nudge updates the label and the save (-30 -> -25)', await f.evaluate((k) => document.getElementById('offset-val').textContent === 'Timing offset: -25 ms' && JSON.parse(localStorage.getItem(k)).offsetMs === -25, KEY));
+  check('fresh save no console errors (calibration)', fresh.errors.length === 0 && fresh.bad.length === 0, fresh.errors.concat(fresh.bad).join('|'));
+  await fresh.ctx.close();
+
+  // skip stores an explicit 0; old saves without offsetMs read as 0; hostile offsets are cleaned
+  const sk = await open(browser, { viewport: { width: 1000, height: 700 } }, JSON.stringify({ v: 1, hint: true, plays: 3 }));
+  check('old save without offsetMs: offset 0, calibrate card shown', await sk.page.evaluate(() => window.__jam.offset === 0 && !!document.getElementById('cal-card')));
+  await sk.page.click('#cal-skip');
+  check('Skip stores offsetMs 0 and hides the card', await sk.page.evaluate((k) => JSON.parse(localStorage.getItem(k)).offsetMs === 0 && !document.getElementById('cal-card') && JSON.parse(localStorage.getItem(k)).plays === 3, KEY));
+  await sk.ctx.close();
+  const ho = await open(browser, { viewport: { width: 1000, height: 700 } }, JSON.stringify({ v: 1, hint: true, offsetMs: 'abc' }));
+  check('hostile offsetMs string: default 0, rewritten without it', await ho.page.evaluate((k) => window.__jam.offset === 0 && !('offsetMs' in JSON.parse(localStorage.getItem(k))), KEY));
+  await ho.ctx.close();
+  const hi = await open(browser, { viewport: { width: 1000, height: 700 } }, JSON.stringify({ v: 1, hint: true, offsetMs: 99999 }));
+  check('huge offsetMs is clamped to 200 and stored clamped', await hi.page.evaluate((k) => window.__jam.offset === 200 && JSON.parse(localStorage.getItem(k)).offsetMs === 200 && document.getElementById('offset-val').textContent === 'Timing offset: +200 ms', KEY));
+  await hi.page.click('#off-plus');
+  check('nudge cannot go past +200', await hi.page.evaluate(() => window.__jam.offset === 200));
+  await hi.ctx.close();
+
+  // ---- offset applied to judging, hit glow and early/late indicator ----
+  const of = await open(browser, { viewport: { width: 1000, height: 700 } }, JSON.stringify({ v: 1, hint: true, offsetMs: 60 }));
+  const o = of.page;
+  await startChart(o);
+  await o.evaluate(() => window.__jam.at(1060)); await o.keyboard.down('KeyD'); await o.keyboard.up('KeyD');
+  check('offset +60: a press 60 ms after the note is Perfect and on time', await o.evaluate(() => window.__jam.lastJudge === 'perfect' && window.__jam.timing === 'on time' && document.getElementById('hud-timing').textContent === 'Perfect on time'));
+  check('hit glow spawns on a hit', await o.evaluate(() => window.__jam.glows === 1));
+  await o.evaluate(() => window.__jam.at(2100)); await o.keyboard.down('KeyF'); await o.keyboard.up('KeyF');
+  check('offset +60: press at +100 shows Perfect, late 40 ms', await o.evaluate(() => window.__jam.lastJudge === 'perfect' && window.__jam.timing === 'late 40 ms' && document.getElementById('hud-timing').textContent === 'Perfect late 40 ms'));
+  await o.evaluate(() => window.__jam.at(2940)); await o.keyboard.down('KeyJ'); await o.keyboard.up('KeyJ');
+  check('early press shows early (2940 vs 3000 with +60 -> -120)', await o.evaluate(() => window.__jam.timing === 'early 120 ms' && window.__jam.lastJudge === 'good'));
+  check('hud timing is text only (no markup)', await o.evaluate(() => document.getElementById('hud-timing').children.length === 0));
+  check('without an offset the same +100 press is only Good', await (async () => {
+    const n = await open(browser, { viewport: { width: 1000, height: 700 } }, JSON.stringify({ v: 1, hint: true, offsetMs: 0 }));
+    await startChart(n.page); await n.page.evaluate(() => { window.__jam.at(2100); window.__jam.press('F'); });
+    const r = await n.page.evaluate(() => window.__jam.lastJudge + '|' + window.__jam.timing);
+    await n.ctx.close(); return r === 'good|late 100 ms';
+  })());
+  check('offset run: no console errors', of.errors.length === 0 && of.bad.length === 0, of.errors.join('|'));
+  await of.ctx.close();
+
+  // results show the average early/late and offer to apply it
+  const rs = await open(browser, { viewport: { width: 1000, height: 700 } }, JSON.stringify({ v: 1, hint: true, offsetMs: 0 }));
+  await rs.page.evaluate(() => window.__jam.start('warm-embers', 'easy')); await drive(rs.page, 30);
+  check('results: average timing says 30 ms late', await rs.page.evaluate(() => { const t = document.getElementById('res-timing').textContent; return window.__jam.mode === 'results' && t.includes('30 ms late') && t.includes('hits') && window.__jam.summary.avgDelta === 30; }));
+  check('results offer "Set offset to +30 ms"', await rs.page.evaluate(() => document.getElementById('apply-suggest').textContent === 'Set offset to +30 ms'));
+  await rs.page.click('#apply-suggest');
+  check('applying the suggestion saves offsetMs 30', await rs.page.evaluate((k) => window.__jam.offset === 30 && JSON.parse(localStorage.getItem(k)).offsetMs === 30 && document.getElementById('apply-suggest').disabled, KEY));
+  await rs.page.evaluate(() => window.__jam.start('warm-embers', 'easy')); await drive(rs.page, -25);
+  check('with offset +30, presses at note-25 read as early 55', await rs.page.evaluate(() => document.getElementById('res-timing').textContent.includes('55 ms early') && document.getElementById('res-timing').textContent.includes('offset +30 ms')));
+  await rs.page.evaluate(() => { window.__jam.start('warm-embers', 'easy'); window.__jam.step(70000); });
+  check('all-miss run: "no hits to measure" and no suggestion', await rs.page.evaluate(() => document.getElementById('res-timing').textContent.includes('no hits') && !document.getElementById('apply-suggest')));
+  check('results timing: no console errors', rs.errors.length === 0 && rs.bad.length === 0, rs.errors.join('|'));
+  await rs.ctx.close();
+
+  // ---- secret song: full combo on Hard ----
+  const sc = await open(browser, { viewport: { width: 1000, height: 700 } }, JSON.stringify({ v: 1, hint: true, offsetMs: 0, fullCombo: true }));
+  check('tampered fullCombo with no Hard evidence: secret stays locked', await sc.page.evaluate(() => document.querySelector('.card[data-song=midnight-campfire]').classList.contains('locked') && !('fullCombo' in window.__jam.save)));
+  await sc.page.evaluate(() => window.__jam.start('warm-embers', 'hard')); await drive(sc.page, 0);
+  check('perfect Hard run: full combo shown and Midnight Campfire unlocked', await sc.page.evaluate(() => window.__jam.mode === 'results' && document.getElementById('res-acc').textContent.includes('Full combo') && document.getElementById('res-unlocked').textContent.includes('Midnight Campfire') && window.__jam.save.fullCombo === true));
+  await sc.page.reload(); await sc.page.waitForFunction(() => window.__jam);
+  check('secret persists: card shows its name and is playable on Easy', await sc.page.evaluate(() => { const c = document.querySelector('.card[data-song=midnight-campfire]'); return !c.classList.contains('locked') && c.textContent.includes('Midnight Campfire') && !document.querySelector('[data-song=midnight-campfire][data-tier=easy]').disabled && document.querySelector('[data-song=midnight-campfire][data-tier=hard]').disabled; }));
+  await sc.page.evaluate(() => { window.__jam.start('midnight-campfire', 'easy'); window.__jam.step(5000); });
+  check('Midnight Campfire plays with the shared engine', await sc.page.evaluate(() => window.__jam.mode === 'play' && window.__jam.chart.song === 'midnight-campfire' && window.__jam.chart.count > 30));
+  check('secret flow: no console errors', sc.errors.length === 0 && sc.bad.length === 0, sc.errors.join('|'));
+  await sc.ctx.close();
+  const nm = await open(browser, { viewport: { width: 1000, height: 700 } }, JSON.stringify({ v: 1, hint: true, offsetMs: 0 }));
+  await nm.page.evaluate(() => window.__jam.start('warm-embers', 'hard')); await drive(nm.page, 0, 5);
+  check('Hard run with one miss does not unlock the secret', await nm.page.evaluate(() => window.__jam.mode === 'results' && !('fullCombo' in window.__jam.save) && window.__jam.save.unlocked.indexOf('midnight-campfire') < 0 && !(document.getElementById('res-unlocked') || { textContent: '' }).textContent.includes('Midnight')));
+  await nm.ctx.close();
+
+  // ---- reduced motion: steadier, shorter hit glow ----
+  const rg = await open(browser, { viewport: { width: 1000, height: 700 }, reducedMotion: 'reduce' }, JSON.stringify({ v: 1, hint: true, offsetMs: 0 }));
+  await startChart(rg.page);
+  await rg.page.evaluate(() => { window.__jam.at(1010); window.__jam.press('D'); });
+  const g0 = await rg.page.evaluate(() => window.__jam.glows);
+  await rg.page.evaluate(() => window.__jam.step(250));
+  check('reduced motion: glow shows but is gone within 250 ms, no rings', g0 === 1 && await rg.page.evaluate(() => window.__jam.glows === 0 && window.__jam.rings === 0 && document.getElementById('hud-timing').textContent.length > 0));
+  await rg.ctx.close();
+  const ng = await open(browser, { viewport: { width: 1000, height: 700 } }, JSON.stringify({ v: 1, hint: true, offsetMs: 0 }));
+  await startChart(ng.page);
+  await ng.page.evaluate(() => { window.__jam.at(1010); window.__jam.press('D'); window.__jam.step(250); });
+  check('normal motion: glow still fading at 250 ms', await ng.page.evaluate(() => window.__jam.glows === 1));
+  await ng.ctx.close();
+
+  // ---- phone 390x844: menu, calibration, results ----
+  const pc = await open(browser, { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  check('phone: menu with calibrate card and offset row has no horizontal scroll', await pc.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth && !!document.getElementById('cal-card') && !!document.getElementById('btn-calibrate')));
+  check('phone: calibrate / nudge buttons are 48 px targets', await pc.page.evaluate(() => ['cal-first', 'cal-skip', 'off-minus', 'off-plus', 'btn-calibrate'].every((id) => { const r = document.getElementById(id).getBoundingClientRect(); return r.width >= 48 && r.height >= 48; })));
+  await pc.page.tap('#cal-first'); await pc.page.tap('#cal-start');
+  check('phone: calibration fits, tap button is big', await pc.page.evaluate(() => { const r = document.getElementById('cal-tap').getBoundingClientRect(); return document.documentElement.scrollWidth <= window.innerWidth && r.height >= 90 && r.width >= 200 && r.right <= window.innerWidth; }));
+  await pc.page.evaluate(() => window.__jam.calStep(window.__jam.cal.beats[0]));
+  await pc.page.tap('#cal-tap');
+  check('phone: touching the tap button registers a tap', await pc.page.evaluate(() => window.__jam.cal.taps === 1));
+  await pc.page.evaluate(() => { const b = window.__jam.cal.beats; for (let i = 1; i < 8; i++) { window.__jam.calStep(b[i] + 10 - window.__jam.cal.now); window.__jam.calTap(); } window.__jam.calStep(2000); });
+  check('phone: result screen fits and Accept works', await pc.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth && document.getElementById('cal-result').textContent.includes('ms') && !!document.getElementById('cal-accept')));
+  await pc.page.tap('#cal-accept');
+  check('phone: accepted offset is shown in the menu', await pc.page.evaluate(() => window.__jam.mode === 'menu' && /Timing offset: [+-]?\d+ ms/.test(document.getElementById('offset-val').textContent) && window.__jam.offset !== 0));
+  check('phone: no console errors (calibration)', pc.errors.length === 0 && pc.bad.length === 0, pc.errors.concat(pc.bad).join('|'));
+  await pc.ctx.close();
 
   // ---- ?from=hub ----
   const fh = await open(browser, { viewport: { width: 1000, height: 700 } }, undefined, PAGE + '?test=1&from=hub');

@@ -1,0 +1,506 @@
+{
+  "slime_green_idle_down": [
+    121,
+    98,
+    121,
+    138
+  ],
+  "slime_green_move_down": [
+    83,
+    112,
+    148,
+    125,
+    103,
+    108
+  ],
+  "slime_green_attack_down": [
+    136,
+    117,
+    162,
+    190,
+    142
+  ],
+  "slime_green_death_down": [
+    132,
+    124,
+    112,
+    91,
+    77
+  ],
+  "slime_green_idle_up": [
+    119,
+    91,
+    114,
+    133
+  ],
+  "slime_green_move_up": [
+    77,
+    111,
+    146,
+    124,
+    98,
+    109
+  ],
+  "slime_green_attack_up": [
+    134,
+    118,
+    158,
+    187,
+    140
+  ],
+  "slime_green_death_up": [
+    137,
+    131,
+    118,
+    92,
+    79
+  ],
+  "slime_green_idle_right": [
+    117,
+    93,
+    117,
+    138
+  ],
+  "slime_green_move_right": [
+    78,
+    106,
+    148,
+    129,
+    102,
+    108
+  ],
+  "slime_green_attack_right": [
+    135,
+    119,
+    160,
+    180,
+    140
+  ],
+  "slime_green_death_right": [
+    134,
+    129,
+    110,
+    86,
+    74
+  ],
+  "slime_red_idle_down": [
+    142,
+    124,
+    146,
+    142
+  ],
+  "slime_red_move_down": [
+    132,
+    100,
+    132,
+    153,
+    135,
+    134
+  ],
+  "slime_red_attack_down": [
+    149,
+    110,
+    170,
+    198,
+    158
+  ],
+  "slime_red_death_down": [
+    150,
+    132,
+    112,
+    90,
+    78
+  ],
+  "slime_red_idle_up": [
+    141,
+    118,
+    146,
+    140
+  ],
+  "slime_red_move_up": [
+    126,
+    101,
+    127,
+    154,
+    130,
+    129
+  ],
+  "slime_red_attack_up": [
+    148,
+    108,
+    167,
+    197,
+    155
+  ],
+  "slime_red_death_up": [
+    151,
+    132,
+    98,
+    78,
+    74
+  ],
+  "slime_red_idle_right": [
+    142,
+    117,
+    152,
+    140
+  ],
+  "slime_red_move_right": [
+    136,
+    99,
+    135,
+    152,
+    131,
+    133
+  ],
+  "slime_red_attack_right": [
+    143,
+    104,
+    149,
+    165,
+    141
+  ],
+  "slime_red_death_right": [
+    139,
+    120,
+    101,
+    75,
+    65
+  ],
+  "slime_blue_idle_down": [
+    149,
+    132,
+    166,
+    148
+  ],
+  "slime_blue_move_down": [
+    148,
+    109,
+    162,
+    163,
+    139,
+    147
+  ],
+  "slime_blue_attack_down": [
+    162,
+    132,
+    165,
+    210,
+    165
+  ],
+  "slime_blue_death_down": [
+    162,
+    143,
+    130,
+    106,
+    85
+  ],
+  "slime_blue_idle_up": [
+    149,
+    129,
+    163,
+    145
+  ],
+  "slime_blue_move_up": [
+    147,
+    103,
+    164,
+    164,
+    127,
+    150
+  ],
+  "slime_blue_attack_up": [
+    158,
+    127,
+    168,
+    206,
+    160
+  ],
+  "slime_blue_death_up": [
+    162,
+    141,
+    128,
+    100,
+    78
+  ],
+  "slime_blue_idle_right": [
+    145,
+    118,
+    149,
+    141
+  ],
+  "slime_blue_move_right": [
+    146,
+    104,
+    156,
+    159,
+    119,
+    145
+  ],
+  "slime_blue_attack_right": [
+    148,
+    114,
+    157,
+    187,
+    148
+  ],
+  "slime_blue_death_right": [
+    154,
+    131,
+    119,
+    92,
+    77
+  ],
+  "swamp_leech_idle_down": [
+    168,
+    140,
+    178,
+    160
+  ],
+  "swamp_leech_move_down": [
+    159,
+    164,
+    176,
+    167,
+    146,
+    133
+  ],
+  "swamp_leech_attack_down": [
+    205,
+    161,
+    205,
+    233,
+    200
+  ],
+  "swamp_leech_death_down": [
+    200,
+    173,
+    142,
+    122,
+    96
+  ],
+  "swamp_leech_idle_up": [
+    157,
+    135,
+    177,
+    155
+  ],
+  "swamp_leech_move_up": [
+    155,
+    157,
+    184,
+    172,
+    145,
+    128
+  ],
+  "swamp_leech_attack_up": [
+    176,
+    155,
+    201,
+    235,
+    183
+  ],
+  "swamp_leech_death_up": [
+    175,
+    163,
+    137,
+    99,
+    80
+  ],
+  "swamp_leech_idle_right": [
+    126,
+    114,
+    136,
+    123
+  ],
+  "swamp_leech_move_right": [
+    118,
+    99,
+    92,
+    126,
+    114,
+    116
+  ],
+  "swamp_leech_attack_right": [
+    112,
+    103,
+    132,
+    141,
+    114
+  ],
+  "swamp_leech_death_right": [
+    117,
+    117,
+    114,
+    83,
+    70
+  ],
+  "toxic_serpent_idle_down": [
+    152,
+    128,
+    151,
+    166
+  ],
+  "toxic_serpent_move_down": [
+    146,
+    132,
+    116,
+    114,
+    139,
+    152
+  ],
+  "toxic_serpent_attack_down": [
+    157,
+    116,
+    183,
+    129,
+    158
+  ],
+  "toxic_serpent_death_down": [
+    162,
+    146,
+    123,
+    96,
+    69
+  ],
+  "toxic_serpent_idle_up": [
+    155,
+    137,
+    158,
+    171
+  ],
+  "toxic_serpent_move_up": [
+    152,
+    135,
+    125,
+    130,
+    149,
+    160
+  ],
+  "toxic_serpent_attack_up": [
+    162,
+    117,
+    178,
+    198,
+    158
+  ],
+  "toxic_serpent_death_up": [
+    167,
+    153,
+    120,
+    95,
+    58
+  ],
+  "toxic_serpent_idle_right": [
+    147,
+    133,
+    147,
+    159
+  ],
+  "toxic_serpent_move_right": [
+    148,
+    128,
+    114,
+    99,
+    141,
+    154
+  ],
+  "toxic_serpent_attack_right": [
+    156,
+    111,
+    168,
+    131,
+    155
+  ],
+  "toxic_serpent_death_right": [
+    153,
+    145,
+    124,
+    86,
+    63
+  ],
+  "sand_scorpion_idle_down": [
+    180,
+    165,
+    185,
+    181
+  ],
+  "sand_scorpion_move_down": [
+    175,
+    161,
+    174,
+    180,
+    178,
+    178
+  ],
+  "sand_scorpion_attack_down": [
+    197,
+    175,
+    191,
+    206,
+    190
+  ],
+  "sand_scorpion_death_down": [
+    198,
+    178,
+    163,
+    132,
+    94
+  ],
+  "sand_scorpion_idle_up": [
+    160,
+    151,
+    165,
+    157
+  ],
+  "sand_scorpion_move_up": [
+    161,
+    155,
+    160,
+    155,
+    166,
+    164
+  ],
+  "sand_scorpion_attack_up": [
+    184,
+    163,
+    196,
+    203,
+    171
+  ],
+  "sand_scorpion_death_up": [
+    180,
+    169,
+    152,
+    129,
+    84
+  ],
+  "sand_scorpion_idle_right": [
+    159,
+    143,
+    158,
+    151
+  ],
+  "sand_scorpion_move_right": [
+    161,
+    151,
+    157,
+    169,
+    159,
+    165
+  ],
+  "sand_scorpion_attack_right": [
+    170,
+    165,
+    163,
+    176,
+    165
+  ],
+  "sand_scorpion_death_right": [
+    169,
+    160,
+    139,
+    106,
+    69
+  ]
+}

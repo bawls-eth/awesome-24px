@@ -104,6 +104,7 @@ const stored = (p) => p.evaluate((k) => JSON.parse(localStorage.getItem(k)), KEY
   await ph.page.evaluate(() => { window.__stalk.buy(10); window.__stalk.setTime(100, 12); });
   check('phone: no horizontal scroll', await ph.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
   check('phone: trade buttons are big (>=48 px) and visible', await ph.page.evaluate(() => ['buy1', 'buy10', 'sell1', 'sellall'].every((id) => { const r = document.getElementById(id).getBoundingClientRect(); return r.width >= 48 && r.height >= 48 && r.right <= window.innerWidth; })));
+  check('header shows the Town link once (no duplicate) when not launched from the hub', await (await open(browser, { viewport: { width: 800, height: 600 } })).page.evaluate(() => [...document.querySelectorAll('#top a')].filter((a) => a.offsetParent !== null && /Town/.test(a.textContent)).length === 1));
   check('?from=hub back link goes to the hub', (await ph.page.getAttribute('#back', 'href')) === '../../hub/index.html' && (await ph.page.getAttribute('#town', 'href')) === '../../index.html');
   await ph.page.tap('#sellall');
   check('phone: tap sells', await ph.page.evaluate(() => window.__stalk.save.holdings === 0));

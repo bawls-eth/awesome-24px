@@ -30,7 +30,7 @@
   var overlay = document.getElementById('overlay');
   var mode = 'menu'; // menu | play | pause | results
   var songId = null, tier = null, chart = null, run = null, lastReport = null, lastResult = null;
-  var paused = false, popups = [], flashes = [0, 0, 0, 0], rings = [], shake = 0, lastJudge = null;
+  var paused = false, popups = [], flashes = [0, 0, 0, 0], rings = [], glows = [], shake = 0, lastJudge = null, lastTiming = null;
   var held = {}, laneKeys = {}, ptrLane = {};
   var testNow = 0;
   var stars = [];
@@ -139,9 +139,10 @@
     ensureAudio();
     songId = id; tier = SG.TIERS.indexOf(tr) >= 0 ? tr : 'normal';
     chart = opts.chart || SG.chartFor(id, tier, opts.seed !== undefined ? opts.seed : qs.get('seed') || undefined);
-    run = Jam.createRun(chart, { clock: songNow });
-    popups = []; rings = []; flashes = [0, 0, 0, 0]; shake = 0; held = {}; laneKeys = {}; ptrLane = {};
+    run = Jam.createRun(chart, { clock: songNow, offset: SG.offsetOf(save) }); // offset shifts judging only, never the clock
+    popups = []; rings = []; glows = []; lastTiming = null; flashes = [0, 0, 0, 0]; shake = 0; held = {}; laneKeys = {}; ptrLane = {};
     lastJudge = null;
+    $('hud-timing').textContent = '';
     paused = false; pausedTotal = 0; testNow = 0; frozenAt = 0; evIdx = 0;
     events = SG.backing(id, tier);
     audioMode = !!(actx && !TEST && actx.state === 'running');
@@ -187,7 +188,9 @@
     var j = run.press(lane);
     if (j) {
       held[lane] = run.state.holds[lane] ? true : false;
-      popup(j, idx);
+      var dl = run.state.lastDelta;
+      popup(j, idx, dl);
+      glows.push({ lane: idx, t: 0, col: JUDGE_COL[j] }); if (glows.length > 8) glows.shift();
       if (!reduced) rings.push({ lane: idx, t: 0 });
       if (j !== 'miss') hitTone(idx, j);
     } else hitTone(idx, 'tap');
@@ -201,13 +204,25 @@
     updateHud();
     return r;
   }
-  function popup(j, idx) { popups.push({ text: JUDGE_LABEL[j], col: JUDGE_COL[j], x: idx * LANE_W + LANE_W / 2, t: 0 }); if (popups.length > 8) popups.shift(); }
+  // early/late tag: negative delta = early. Within 8 ms counts as on time (no tag).
+  function timingTag(d) { if (typeof d !== 'number' || Math.abs(d) < 8) return ''; return d < 0 ? 'early' : 'late'; }
+  function popup(j, idx, delta) {
+    var tag = j === 'miss' ? '' : timingTag(delta);
+    popups.push({ text: JUDGE_LABEL[j], tag: tag, col: JUDGE_COL[j], x: idx * LANE_W + LANE_W / 2, t: 0 }); if (popups.length > 8) popups.shift();
+    lastTiming = tag ? tag + ' ' + Math.abs(delta) + ' ms' : (j === 'miss' ? null : 'on time');
+    var h = $('hud-timing'); if (h) h.textContent = lastTiming ? JUDGE_LABEL[j] + ' ' + lastTiming : JUDGE_LABEL[j];
+  }
   function pressSource(key, lane) { if (!laneKeys[key]) { laneKeys[key] = lane; press(lane); } }
   function releaseSource(key) { var l = laneKeys[key]; if (l) { delete laneKeys[key]; var still = Object.keys(laneKeys).some(function (k) { return laneKeys[k] === l; }); if (!still) release(l); pad(l, still); } }
   function pad(lane, on) { var b = $('pad-' + lane); if (b) b.classList.toggle('on', !!on); }
 
   window.addEventListener('keydown', function (e) {
     if (mode !== 'play') ensureAudio();
+    if (mode === 'calib') {
+      if (e.code === 'Escape') { calCancel(); return; }
+      if (cal && cal.state === 'run' && (e.code === 'Space' || KEYMAP[e.code])) { e.preventDefault(); if (!e.repeat) calTap(); }
+      return;
+    }
     if (e.code === 'Escape' || e.code === 'KeyP') { if (mode === 'play') pause(); else if (mode === 'pause') resume(); return; }
     var lane = KEYMAP[e.code];
     if (!lane) return;
@@ -276,6 +291,7 @@
     for (var i = 0; i < 4; i++) flashes[i] = Math.max(0, flashes[i] - dt * 5);
     popups.forEach(function (p) { p.t += dt; }); popups = popups.filter(function (p) { return p.t < 0.6; });
     rings.forEach(function (r) { r.t += dt; }); rings = rings.filter(function (r) { return r.t < 0.3; });
+    var gl = reduced ? 0.2 : 0.35; glows.forEach(function (q) { q.t += dt; }); glows = glows.filter(function (q) { return q.t < gl; });
     shake = Math.max(0, shake - dt);
   }
   function updateHud() {
@@ -320,6 +336,12 @@
       if (flashes[i] > 0) { g.fillStyle = LANE_COL[i]; g.globalAlpha = reduced ? 0.25 : flashes[i] * 0.35; g.fillRect(i * LANE_W, 0, LANE_W, HIT_Y + 20); g.globalAlpha = 1; }
       g.strokeStyle = 'rgba(255,255,255,0.12)'; g.beginPath(); g.moveTo(i * LANE_W + 0.5, 0); g.lineTo(i * LANE_W + 0.5, CH); g.stroke();
     }
+    // hit-flash lane glow: a colour-coded column rising from the hit line; steady and short when reduced
+    glows.forEach(function (q) {
+      var a = reduced ? 0.4 : 0.55 * (1 - q.t / 0.35), gg = g.createLinearGradient(0, HIT_Y, 0, HIT_Y - 170);
+      gg.addColorStop(0, q.col); gg.addColorStop(1, 'rgba(255,255,255,0)');
+      g.globalAlpha = Math.max(0, a); g.fillStyle = gg; g.fillRect(q.lane * LANE_W, HIT_Y - 170, LANE_W, 175); g.globalAlpha = 1;
+    });
     g.fillStyle = 'rgba(255,255,255,0.7)'; g.fillRect(0, HIT_Y - 1, CW, 3);
     g.font = 'bold 16px monospace'; g.textAlign = 'center';
     for (i = 0; i < 4; i++) {
@@ -343,12 +365,22 @@
       });
       rings.forEach(function (r) { g.strokeStyle = LANE_COL[r.lane]; g.globalAlpha = 1 - r.t / 0.3; g.beginPath(); g.arc(r.lane * LANE_W + LANE_W / 2, HIT_Y, 14 + r.t * 90, 0, 6.283); g.stroke(); g.globalAlpha = 1; });
       g.font = 'bold 14px monospace';
-      popups.forEach(function (p) { var y = HIT_Y - 40 - (reduced ? 0 : p.t * 40); g.globalAlpha = reduced ? 1 : 1 - p.t / 0.6; g.fillStyle = '#000'; g.fillText(p.text, p.x + 1, y + 1); g.fillStyle = p.col; g.fillText(p.text, p.x, y); g.globalAlpha = 1; });
+      popups.forEach(function (p) { var y = HIT_Y - 40 - (reduced ? 0 : p.t * 40); g.globalAlpha = reduced ? 1 : 1 - p.t / 0.6; g.fillStyle = '#000'; g.fillText(p.text, p.x + 1, y + 1); g.fillStyle = p.col; g.fillText(p.text, p.x, y);
+        if (p.tag) { g.font = 'bold 10px monospace'; g.fillStyle = p.tag === 'early' ? '#9bf6ff' : '#ffadad'; g.fillText(p.tag, p.x, y + 12); g.font = 'bold 14px monospace'; }
+        g.globalAlpha = 1; });
     }
     g.restore();
   }
 
   // ---------- overlays ----------
+  function fmtOff(v) { return (v > 0 ? '+' : '') + v + ' ms'; }
+  // average of (press - note) over all hits after the current offset: negative = early, positive = late
+  function timingText(res) {
+    if (!res.hits) return 'Timing: no hits to measure.';
+    var a = res.avgDelta;
+    var how = Math.abs(a) < 5 ? 'right on time' : Math.abs(a) + ' ms ' + (a < 0 ? 'early' : 'late');
+    return 'Timing: you averaged ' + how + ' over ' + res.hits + ' hits (offset ' + fmtOff(SG.offsetOf(save)) + ').';
+  }
   function showMenu() {
     mode = 'menu'; run = null; chart = null; paused = false;
     clear(overlay); overlay.hidden = false;
@@ -360,15 +392,23 @@
       var ok = btn('Got it', function () { save.hint = true; persist(); showMenu(); }); ok.id = 'hint-ok'; h.appendChild(ok);
       overlay.appendChild(h);
     }
+    if (!('offsetMs' in save)) {
+      var cc = el('div', undefined, 'note'); cc.id = 'cal-card'; cc.setAttribute('role', 'note');
+      cc.appendChild(el('strong', 'Check your timing'));
+      cc.appendChild(el('p', 'Screens and speakers run a little late. A 10 second tap test lines the notes up with your ears.'));
+      var cb = btn('Calibrate now', showCalibration); cb.id = 'cal-first'; cc.appendChild(cb);
+      var sk = btn('Skip for now', function () { SG.setOffset(save, 0); persist(); showMenu(); }); sk.id = 'cal-skip'; sk.style.marginLeft = '8px'; cc.appendChild(sk);
+      overlay.appendChild(cc);
+    }
     overlay.appendChild(el('p', 'Stars: ' + SG.totalStars(save) + ' / ' + (SG.SONGS.length * 3), 'dim'));
     var list = el('div', undefined, 'songs');
     SG.SONGS.forEach(function (s) {
       var open = SG.songUnlocked(save, s.id);
       var card = el('div', undefined, 'card' + (open ? '' : ' locked')); card.dataset.song = s.id;
-      card.appendChild(el('strong', s.name + '  (' + s.bpm + ' BPM)'));
+      card.appendChild(el('strong', open || !s.secret ? s.name + '  (' + s.bpm + ' BPM)' : '???  (secret song)'));
       card.appendChild(el('span', open ? starText(SG.songStars(save, s.id)) : 'Locked', 'cardstars'));
       var b = save.best[s.id];
-      var best = open ? (b ? SG.TIERS.filter(function (t) { return b[t]; }).map(function (t) { return SG.TIER_NAMES[t] + ' ' + b[t].score + ' ' + b[t].rank; }).join('  |  ') : s.blurb) : 'Needs ' + s.needStars + ' stars (you have ' + SG.totalStars(save) + ')';
+      var best = open ? (b ? SG.TIERS.filter(function (t) { return b[t]; }).map(function (t) { return SG.TIER_NAMES[t] + ' ' + b[t].score + ' ' + b[t].rank; }).join('  |  ') : s.blurb) : (s.secret ? 'Full-combo any Hard chart to find it' : 'Needs ' + s.needStars + ' stars (you have ' + SG.totalStars(save) + ')');
       card.appendChild(el('small', best));
       var row = el('div', undefined, 'tiers');
       SG.TIERS.forEach(function (t) {
@@ -381,10 +421,92 @@
       list.appendChild(card);
     });
     overlay.appendChild(list);
-    var rule = el('p', 'Unlock rule: Warm Embers is always open. Lantern Shuffle opens at 2 total stars, Moth Parade at 5, Starlit Stomp at 8. Hard needs 2 stars on that song’s Normal. Stars come from accuracy: 50%, 75%, 90%.', 'dim'); rule.id = 'unlock-rule';
+    var off = el('div', undefined, 'row'); off.id = 'offset-row';
+    var ov = el('span', undefined, 'dim'); ov.id = 'offset-val'; off.appendChild(ov);
+    function showOff() { ov.textContent = 'Timing offset: ' + fmtOff(SG.offsetOf(save)); }
+    function nudge(d) { SG.setOffset(save, SG.offsetOf(save) + d); persist(); showOff(); }
+    var om = btn('-5 ms', function () { nudge(-5); }); om.id = 'off-minus'; off.appendChild(om);
+    var op = btn('+5 ms', function () { nudge(5); }); op.id = 'off-plus'; off.appendChild(op);
+    var oc = btn('Calibrate', showCalibration); oc.id = 'btn-calibrate'; off.appendChild(oc);
+    showOff(); overlay.appendChild(off);
+    var rule = el('p', 'Unlock rule: Warm Embers is always open. Lantern Shuffle opens at 2 total stars, Moth Parade at 5, Starlit Stomp at 8, then Kettle Song at 10, Owl Hour at 13 and Comet Tail at 16. A secret song waits for a full combo on any Hard chart. Hard needs 2 stars on that song’s Normal. Stars come from accuracy: 50%, 75%, 90%.', 'dim'); rule.id = 'unlock-rule';
     overlay.appendChild(rule);
     var row2 = el('div', undefined, 'row'); row2.appendChild(homeLink('menu-back')); overlay.appendChild(row2);
   }
+  // ---------- calibration (tap test) ----------
+  // 2 count-in clicks + 8 measured clicks. Positive result = you tap late; judging subtracts it.
+  var CAL_INT = 700, CAL_LEAD = 1000, CAL_IN = 2, CAL_N = 8;
+  var cal = null, calNow = 0;
+  function calClock() { return TEST ? calNow : src(); }
+  function calBeat(i) { return cal.t0 + CAL_LEAD + i * CAL_INT; }
+  function calMeasured() { var b = []; for (var i = CAL_IN; i < CAL_IN + CAL_N; i++) b.push(calBeat(i)); return b; }
+  function calPassed() { var n = 0, now = calClock(); for (var i = CAL_IN; i < CAL_IN + CAL_N; i++) if (now >= calBeat(i)) n++; return n; }
+  function showCalibration() {
+    mode = 'calib'; cal = { state: 'intro', t0: 0, taps: [], result: null, shown: -1 };
+    clear(overlay); overlay.hidden = false;
+    overlay.appendChild(el('h2', 'Timing check'));
+    overlay.appendChild(el('p', 'You will hear (and see) ' + (CAL_IN + CAL_N) + ' clicks. Tap on each click after the first ' + CAL_IN + ': press the big button, or D F J K / Space.'));
+    overlay.appendChild(el('p', 'Play it the way you play the game, with the same speakers or headphones.', 'dim'));
+    var row = el('div', undefined, 'row');
+    var go = btn('Start', calStart); go.id = 'cal-start'; row.appendChild(go);
+    var no = btn('Cancel', calCancel); no.id = 'cal-cancel'; row.appendChild(no);
+    overlay.appendChild(row);
+  }
+  function calStart() {
+    ensureAudio();
+    audioMode = !!(actx && !TEST && actx.state === 'running');
+    cal = { state: 'run', t0: TEST ? 0 : src() + (audioMode ? 150 : 0), taps: [], result: null, shown: -1 };
+    calNow = 0;
+    if (audioMode) { for (var i = 0; i < CAL_IN + CAL_N; i++) { try { osc('square', i < CAL_IN ? 700 : 1100, i < CAL_IN ? 700 : 1100, calBeat(i) / 1000, 0.06, 0.2); } catch (e) { /* ignore */ } } }
+    clear(overlay);
+    overlay.appendChild(el('h2', 'Tap on each click'));
+    var pu = el('p', 'Get ready', 'calpulse'); pu.id = 'cal-pulse'; overlay.appendChild(pu);
+    var bt = el('p', 'Beat 0 / ' + CAL_N, 'dim'); bt.id = 'cal-count'; overlay.appendChild(bt);
+    var tb = btn('TAP', function () { /* taps come from pointerdown so they are not delayed by click */ }); tb.id = 'cal-tap'; tb.className = 'caltap';
+    tb.addEventListener('pointerdown', function (e) { e.preventDefault(); calTap(); });
+    overlay.appendChild(tb);
+    var row = el('div', undefined, 'row'); var no = btn('Cancel', calCancel); no.id = 'cal-cancel'; row.appendChild(no); overlay.appendChild(row);
+  }
+  function calTap() {
+    if (!cal || cal.state !== 'run') return false;
+    cal.taps.push(calClock());
+    return true;
+  }
+  function calTick() {
+    if (mode !== 'calib' || !cal || cal.state !== 'run') return;
+    var now = calClock(), passed = calPassed();
+    var c = $('cal-count'), pu = $('cal-pulse');
+    if (passed !== cal.shown && c) { cal.shown = passed; c.textContent = 'Beat ' + passed + ' / ' + CAL_N; }
+    if (pu) {
+      var near = false; for (var i = 0; i < CAL_IN + CAL_N; i++) { var d = now - calBeat(i); if (d >= 0 && d < 140) near = true; }
+      pu.textContent = near ? 'CLICK' : (now < calBeat(0) ? 'Get ready' : '...');
+      pu.classList.toggle('on', near && !reduced);
+    }
+    if (now > calBeat(CAL_IN + CAL_N - 1) + 450) calFinish();
+  }
+  function calFinish() {
+    cal.state = 'done';
+    var r = Jam.calibrationFromTaps(cal.taps, calMeasured(), CAL_INT / 2);
+    cal.result = r;
+    clear(overlay);
+    overlay.appendChild(el('h2', 'Timing result'));
+    var msg;
+    if (!r.ok) msg = 'Only ' + r.used + ' good taps out of ' + CAL_N + '. Try again and tap on every click.';
+    else msg = 'Your offset: ' + fmtOff(r.offset) + (Math.abs(r.offset) < 5 ? ' (right on time)' : r.offset > 0 ? ' (you tap late)' : ' (you tap early)') + '. From ' + r.used + ' taps.';
+    var rs = el('p', msg); rs.id = 'cal-result'; overlay.appendChild(rs);
+    var row = el('div', undefined, 'row');
+    if (r.ok) { var ac = btn('Accept', calAccept); ac.id = 'cal-accept'; row.appendChild(ac); }
+    var re = btn('Retry', showCalibration); re.id = 'cal-retry'; row.appendChild(re);
+    var no = btn('Cancel', calCancel); no.id = 'cal-cancel'; row.appendChild(no);
+    overlay.appendChild(row);
+  }
+  function calAccept() { if (!cal || !cal.result || !cal.result.ok) return; SG.setOffset(save, cal.result.offset); persist(); cal = null; stopAudioForMenu(); showMenu(); }
+  function calCancel() { cal = null; stopAudioForMenu(); showMenu(); }
+  function calStep(ms) {
+    if (!TEST || mode !== 'calib' || !cal || cal.state !== 'run') return;
+    var left = ms; while (left > 0 && cal && cal.state === 'run') { var d = Math.min(left, 16); calNow += d; left -= d; calTick(); }
+  }
+
   function showPause() {
     clear(overlay); overlay.hidden = false;
     overlay.appendChild(el('h2', 'Paused'));
@@ -406,6 +528,11 @@
     var cl = el('div'); cl.id = 'res-counts';
     ['perfect', 'great', 'good', 'miss'].forEach(function (j) { var d = el('div', JUDGE_LABEL[j] + ' ' + res.counts[j]); d.dataset.judge = j; cl.appendChild(d); });
     overlay.appendChild(cl);
+    var tm = el('p', timingText(res)); tm.id = 'res-timing'; overlay.appendChild(tm);
+    var sug = SG.offsetOf(save) + (res.avgDelta || 0);
+    if (res.hits >= 8 && Math.abs(res.avgDelta) >= 5 && Math.abs(sug) <= Jam.OFFSET_MAX) {
+      var ab = btn('Set offset to ' + fmtOff(sug), function () { SG.setOffset(save, sug); persist(); ab.disabled = true; ab.textContent = 'Offset is ' + fmtOff(SG.offsetOf(save)); }); ab.id = 'apply-suggest'; overlay.appendChild(ab);
+    }
     var un = rep.newlyUnlocked.map(function (id) { return SG.song(id).name; });
     if (un.length) { var u = el('p', 'Unlocked: ' + un.join(', ')); u.id = 'res-unlocked'; overlay.appendChild(u); }
     var row = el('div', undefined, 'row');
@@ -418,7 +545,7 @@
   // ---------- loop ----------
   function frame(ts) {
     pollGamepad();
-    if (!TEST) { tick(); animate(1 / 60); }
+    if (!TEST) { tick(); calTick(); animate(1 / 60); }
     render(ts / 1000);
     requestAnimationFrame(frame);
   }
@@ -438,6 +565,11 @@
       get rings() { return rings.length; },
       get paused() { return paused; },
       get lastJudge() { return lastJudge; },
+      get offset() { return SG.offsetOf(save); },
+      get glows() { return glows.length; },
+      get timing() { return lastTiming; },
+      get cal() { return cal ? { state: cal.state, taps: cal.taps.length, now: calNow, beats: cal.state === 'run' || cal.state === 'done' ? calMeasured() : [], result: cal.result } : null; },
+      calStep: calStep, calTap: calTap,
       get sfx() { return sfx; },
       get audio() { return !!actx; },
       start: startSong, step: step, press: press, release: release, pause: pause, resume: resume, menu: showMenu,
