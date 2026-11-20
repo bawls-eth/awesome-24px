@@ -62,3 +62,7 @@
 - 2026-11-20T18:53Z activity (counts only): playerCount=0, online players=0, chat messages stored=13, open realm invites=2, tournament nodes=2
 
 - 2026-11-20 (11 AM PT): OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0 (cap 4.00 total, stop 3.96). Shipped toward the unified Realm: overworld generator (shared/mm-overworld.js), zones module (shared/mm-zones.js), Realm menu + restart + phone layout, test tiers (smoke 63 files ~5 min, shards). Research + planner docs: RESEARCH-REALM-WORLD.md, NEXT-SLICES.md. Codex queue posted (CODEX-WORK-QUEUE.md). Full suite 98/98 on 055209e.
+
+- 2026-11-20T20:02Z activity (counts only): playerCount=0, online players=0, chat messages stored=13, open realm invites=2, tournament nodes=2
+
+- 2026-11-20 (noon PT): OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0 (cap 4.00 total, stop 3.96). FIRST PLAYABLE unified Realm: /game/games/mad-maze/index.html?mode=world (camera, generated 256x256 island, zones, drops, boss sites, portal into Warren and back, restart). Codex b06e/b10 relics/b21 NPCs/b22 items registered; scope change posted (terrain/props/UI now in Codex brief). Full suite 100/100 on fef1e05.

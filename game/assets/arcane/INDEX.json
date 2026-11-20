@@ -213,6 +213,60 @@
       "ingested_utc": "2026-11-20T17:20:00Z",
       "source": "codex",
       "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "b06e",
+      "label": "frontier-misc",
+      "path": "assets/arcane/b06e-frontier-misc",
+      "manifest": "assets/arcane/b06e-frontier-misc/manifest.json",
+      "files": 60,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T19:20:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "b10r",
+      "label": "relics-and-runes",
+      "path": "assets/arcane/b10-relics-and-runes",
+      "manifest": "assets/arcane/b10-relics-and-runes/manifest.json",
+      "files": 9,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T19:20:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "b21",
+      "label": "npcs-and-vendors",
+      "path": "assets/arcane/b21-npcs-and-vendors",
+      "manifest": "assets/arcane/b21-npcs-and-vendors/manifest.json",
+      "files": 14,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T19:20:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "b22",
+      "label": "items-relics-keys",
+      "path": "assets/arcane/b22-items-relics-keys",
+      "manifest": "assets/arcane/b22-items-relics-keys/manifest.json",
+      "files": 85,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T19:20:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "b10t",
+      "label": "overworld-terrain-1",
+      "path": "assets/arcane/b10t-overworld-terrain-1",
+      "manifest": "assets/arcane/b10t-overworld-terrain-1/manifest.json",
+      "files": 160,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T19:49:09.264586Z",
+      "source": "codex"
     }
   ]
 }

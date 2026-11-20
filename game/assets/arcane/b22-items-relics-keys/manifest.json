@@ -1,0 +1,1706 @@
+{
+  "name": "Arcane Frontier items, relics and keys",
+  "frame_size": 32,
+  "assets": [
+    {
+      "id": "relic_1",
+      "category": "item",
+      "path": "items/relic_1.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        220,
+        243
+      ]
+    },
+    {
+      "id": "relic_2",
+      "category": "item",
+      "path": "items/relic_2.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        218,
+        227
+      ]
+    },
+    {
+      "id": "relic_3",
+      "category": "item",
+      "path": "items/relic_3.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        215,
+        254
+      ]
+    },
+    {
+      "id": "relic_4",
+      "category": "item",
+      "path": "items/relic_4.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        217,
+        225
+      ]
+    },
+    {
+      "id": "relic_5",
+      "category": "item",
+      "path": "items/relic_5.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        228,
+        221
+      ]
+    },
+    {
+      "id": "relic_6",
+      "category": "item",
+      "path": "items/relic_6.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        214,
+        232
+      ]
+    },
+    {
+      "id": "relic_7",
+      "category": "item",
+      "path": "items/relic_7.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        224,
+        242
+      ]
+    },
+    {
+      "id": "relic_8",
+      "category": "item",
+      "path": "items/relic_8.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        222,
+        235
+      ]
+    },
+    {
+      "id": "relic_9",
+      "category": "item",
+      "path": "items/relic_9.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        187,
+        248
+      ]
+    },
+    {
+      "id": "relic_10",
+      "category": "item",
+      "path": "items/relic_10.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        182,
+        248
+      ]
+    },
+    {
+      "id": "relic_11",
+      "category": "item",
+      "path": "items/relic_11.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        216,
+        215
+      ]
+    },
+    {
+      "id": "relic_12",
+      "category": "item",
+      "path": "items/relic_12.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        208,
+        211
+      ]
+    },
+    {
+      "id": "relic_13",
+      "category": "item",
+      "path": "items/relic_13.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        209,
+        211
+      ]
+    },
+    {
+      "id": "relic_14",
+      "category": "item",
+      "path": "items/relic_14.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        230,
+        246
+      ]
+    },
+    {
+      "id": "relic_15",
+      "category": "item",
+      "path": "items/relic_15.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        227,
+        248
+      ]
+    },
+    {
+      "id": "relic_16",
+      "category": "item",
+      "path": "items/relic_16.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        234,
+        255
+      ]
+    },
+    {
+      "id": "relic_17",
+      "category": "item",
+      "path": "items/relic_17.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        278,
+        192
+      ]
+    },
+    {
+      "id": "relic_18",
+      "category": "item",
+      "path": "items/relic_18.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        282,
+        180
+      ]
+    },
+    {
+      "id": "relic_19",
+      "category": "item",
+      "path": "items/relic_19.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        262,
+        240
+      ]
+    },
+    {
+      "id": "relic_20",
+      "category": "item",
+      "path": "items/relic_20.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        240,
+        245
+      ]
+    },
+    {
+      "id": "relic_21",
+      "category": "item",
+      "path": "items/relic_21.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        215,
+        241
+      ]
+    },
+    {
+      "id": "relic_22",
+      "category": "item",
+      "path": "items/relic_22.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        210,
+        240
+      ]
+    },
+    {
+      "id": "relic_23",
+      "category": "item",
+      "path": "items/relic_23.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        253,
+        230
+      ]
+    },
+    {
+      "id": "relic_24",
+      "category": "item",
+      "path": "items/relic_24.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "relic",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        241,
+        235
+      ]
+    },
+    {
+      "id": "rune_fire",
+      "category": "item",
+      "path": "items/rune_fire.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "rune",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        206,
+        225
+      ]
+    },
+    {
+      "id": "rune_ice",
+      "category": "item",
+      "path": "items/rune_ice.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "rune",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        217,
+        225
+      ]
+    },
+    {
+      "id": "rune_water",
+      "category": "item",
+      "path": "items/rune_water.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "rune",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        216,
+        225
+      ]
+    },
+    {
+      "id": "rune_earth",
+      "category": "item",
+      "path": "items/rune_earth.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "rune",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        215,
+        222
+      ]
+    },
+    {
+      "id": "rune_air",
+      "category": "item",
+      "path": "items/rune_air.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "rune",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        218,
+        222
+      ]
+    },
+    {
+      "id": "rune_lightning",
+      "category": "item",
+      "path": "items/rune_lightning.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "rune",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        216,
+        222
+      ]
+    },
+    {
+      "id": "rune_nature",
+      "category": "item",
+      "path": "items/rune_nature.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "rune",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        214,
+        238
+      ]
+    },
+    {
+      "id": "rune_shadow",
+      "category": "item",
+      "path": "items/rune_shadow.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "rune",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        210,
+        238
+      ]
+    },
+    {
+      "id": "rune_light",
+      "category": "item",
+      "path": "items/rune_light.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "rune",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        211,
+        238
+      ]
+    },
+    {
+      "id": "rune_poison",
+      "category": "item",
+      "path": "items/rune_poison.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "rune",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        217,
+        235
+      ]
+    },
+    {
+      "id": "rune_arcane",
+      "category": "item",
+      "path": "items/rune_arcane.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "rune",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        213,
+        235
+      ]
+    },
+    {
+      "id": "rune_blood",
+      "category": "item",
+      "path": "items/rune_blood.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "rune",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        215,
+        235
+      ]
+    },
+    {
+      "id": "key_bronze",
+      "category": "item",
+      "path": "items/key_bronze.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "key",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        139,
+        267
+      ]
+    },
+    {
+      "id": "key_silver",
+      "category": "item",
+      "path": "items/key_silver.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "key",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        149,
+        274
+      ]
+    },
+    {
+      "id": "key_gold",
+      "category": "item",
+      "path": "items/key_gold.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "key",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        179,
+        283
+      ]
+    },
+    {
+      "id": "key_boss",
+      "category": "item",
+      "path": "items/key_boss.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "key",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        195,
+        287
+      ]
+    },
+    {
+      "id": "token_shard",
+      "category": "item",
+      "path": "items/token_shard.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "token",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        150,
+        239
+      ]
+    },
+    {
+      "id": "token_gem",
+      "category": "item",
+      "path": "items/token_gem.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "token",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        182,
+        192
+      ]
+    },
+    {
+      "id": "token_star",
+      "category": "item",
+      "path": "items/token_star.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "token",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        220,
+        212
+      ]
+    },
+    {
+      "id": "scroll_1",
+      "category": "item",
+      "path": "items/scroll_1.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "scroll",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        239,
+        207
+      ]
+    },
+    {
+      "id": "scroll_2",
+      "category": "item",
+      "path": "items/scroll_2.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "scroll",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        239,
+        207
+      ]
+    },
+    {
+      "id": "scroll_3",
+      "category": "item",
+      "path": "items/scroll_3.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "scroll",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        242,
+        207
+      ]
+    },
+    {
+      "id": "scroll_4",
+      "category": "item",
+      "path": "items/scroll_4.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "scroll",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        241,
+        211
+      ]
+    },
+    {
+      "id": "scroll_5",
+      "category": "item",
+      "path": "items/scroll_5.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "scroll",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        240,
+        208
+      ]
+    },
+    {
+      "id": "scroll_6",
+      "category": "item",
+      "path": "items/scroll_6.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "scroll",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        241,
+        208
+      ]
+    },
+    {
+      "id": "scroll_7",
+      "category": "item",
+      "path": "items/scroll_7.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "scroll",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        241,
+        209
+      ]
+    },
+    {
+      "id": "scroll_8",
+      "category": "item",
+      "path": "items/scroll_8.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "scroll",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        241,
+        209
+      ]
+    },
+    {
+      "id": "tome_1",
+      "category": "item",
+      "path": "items/tome_1.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "tome",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        186,
+        190
+      ]
+    },
+    {
+      "id": "tome_2",
+      "category": "item",
+      "path": "items/tome_2.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "tome",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        186,
+        190
+      ]
+    },
+    {
+      "id": "tome_3",
+      "category": "item",
+      "path": "items/tome_3.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "tome",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        186,
+        190
+      ]
+    },
+    {
+      "id": "tome_4",
+      "category": "item",
+      "path": "items/tome_4.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "tome",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        188,
+        190
+      ]
+    },
+    {
+      "id": "tome_5",
+      "category": "item",
+      "path": "items/tome_5.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "tome",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        187,
+        190
+      ]
+    },
+    {
+      "id": "tome_6",
+      "category": "item",
+      "path": "items/tome_6.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "tome",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        187,
+        189
+      ]
+    },
+    {
+      "id": "tome_7",
+      "category": "item",
+      "path": "items/tome_7.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "tome",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        188,
+        190
+      ]
+    },
+    {
+      "id": "tome_8",
+      "category": "item",
+      "path": "items/tome_8.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "tome",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        188,
+        190
+      ]
+    },
+    {
+      "id": "food_1",
+      "category": "item",
+      "path": "items/food_1.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "food",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        178,
+        219
+      ]
+    },
+    {
+      "id": "food_2",
+      "category": "item",
+      "path": "items/food_2.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "food",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        176,
+        228
+      ]
+    },
+    {
+      "id": "food_3",
+      "category": "item",
+      "path": "items/food_3.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "food",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        199,
+        227
+      ]
+    },
+    {
+      "id": "food_4",
+      "category": "item",
+      "path": "items/food_4.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "food",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        246,
+        194
+      ]
+    },
+    {
+      "id": "food_5",
+      "category": "item",
+      "path": "items/food_5.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "food",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        217,
+        193
+      ]
+    },
+    {
+      "id": "food_6",
+      "category": "item",
+      "path": "items/food_6.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "food",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        297,
+        141
+      ]
+    },
+    {
+      "id": "food_7",
+      "category": "item",
+      "path": "items/food_7.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "food",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        225,
+        236
+      ]
+    },
+    {
+      "id": "food_8",
+      "category": "item",
+      "path": "items/food_8.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "food",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        215,
+        251
+      ]
+    },
+    {
+      "id": "food_9",
+      "category": "item",
+      "path": "items/food_9.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "food",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        236,
+        205
+      ]
+    },
+    {
+      "id": "food_10",
+      "category": "item",
+      "path": "items/food_10.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "food",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        220,
+        238
+      ]
+    },
+    {
+      "id": "food_11",
+      "category": "item",
+      "path": "items/food_11.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "food",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        224,
+        245
+      ]
+    },
+    {
+      "id": "food_12",
+      "category": "item",
+      "path": "items/food_12.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "food",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        266,
+        221
+      ]
+    },
+    {
+      "id": "gem_red",
+      "category": "item",
+      "path": "items/gem_red.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "gem",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        198,
+        178
+      ]
+    },
+    {
+      "id": "gem_blue",
+      "category": "item",
+      "path": "items/gem_blue.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "gem",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        198,
+        178
+      ]
+    },
+    {
+      "id": "gem_green",
+      "category": "item",
+      "path": "items/gem_green.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "gem",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        198,
+        178
+      ]
+    },
+    {
+      "id": "gem_yellow",
+      "category": "item",
+      "path": "items/gem_yellow.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "gem",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        200,
+        177
+      ]
+    },
+    {
+      "id": "gem_purple",
+      "category": "item",
+      "path": "items/gem_purple.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "gem",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        199,
+        177
+      ]
+    },
+    {
+      "id": "gem_cyan",
+      "category": "item",
+      "path": "items/gem_cyan.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "gem",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        199,
+        177
+      ]
+    },
+    {
+      "id": "gem_white",
+      "category": "item",
+      "path": "items/gem_white.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "gem",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        200,
+        176
+      ]
+    },
+    {
+      "id": "gem_black",
+      "category": "item",
+      "path": "items/gem_black.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "gem",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        198,
+        178
+      ]
+    },
+    {
+      "id": "egg_1",
+      "category": "item",
+      "path": "items/egg_1.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "egg",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        198,
+        230
+      ]
+    },
+    {
+      "id": "egg_2",
+      "category": "item",
+      "path": "items/egg_2.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "egg",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        195,
+        230
+      ]
+    },
+    {
+      "id": "egg_3",
+      "category": "item",
+      "path": "items/egg_3.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "egg",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        196,
+        231
+      ]
+    },
+    {
+      "id": "egg_4",
+      "category": "item",
+      "path": "items/egg_4.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "egg",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        198,
+        231
+      ]
+    },
+    {
+      "id": "egg_5",
+      "category": "item",
+      "path": "items/egg_5.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "egg",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        194,
+        232
+      ]
+    },
+    {
+      "id": "egg_6",
+      "category": "item",
+      "path": "items/egg_6.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "egg",
+        "inventory"
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        196,
+        232
+      ]
+    }
+  ]
+}
