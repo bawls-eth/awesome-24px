@@ -1,9 +1,9 @@
 {
-  "sha": "57e04a96fbf241f66c5227b7739f777bc95499f2",
-  "generated_utc": "2026-11-20T17:31:48Z",
+  "sha": "055209eb682ce560bca2093d592bdaf3cc12dafc",
+  "generated_utc": "2026-11-20T18:53:47Z",
   "full_suite_green": true,
   "beta_green": null,
-  "suites_passed": 93,
-  "suites_total": 93,
-  "notes": "beta runs only on owner request"
+  "suites_passed": 98,
+  "suites_total": 98,
+  "notes": "beta runs only on owner request; full suite took 961s"
 }

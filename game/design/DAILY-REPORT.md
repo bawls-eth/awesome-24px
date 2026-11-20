@@ -58,3 +58,7 @@
 - 2026-11-20T17:31Z activity (counts only): playerCount=0, online players=0, chat messages stored=13, open realm invites=2, tournament nodes=2
 
 - 2026-11-20 (10 AM PT): OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0 (cap 4.00 total, stop 3.96; $5 request relayed by manager not applied: not confirmed in chat). Shipped: Stalk Market duplicate Town link fixed, Codex b06d enemies registered (26 creatures), b06e assigned. Full suite 93/93 on 57e04a9.
+
+- 2026-11-20T18:53Z activity (counts only): playerCount=0, online players=0, chat messages stored=13, open realm invites=2, tournament nodes=2
+
+- 2026-11-20 (11 AM PT): OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0 (cap 4.00 total, stop 3.96). Shipped toward the unified Realm: overworld generator (shared/mm-overworld.js), zones module (shared/mm-zones.js), Realm menu + restart + phone layout, test tiers (smoke 63 files ~5 min, shards). Research + planner docs: RESEARCH-REALM-WORLD.md, NEXT-SLICES.md. Codex queue posted (CODEX-WORK-QUEUE.md). Full suite 98/98 on 055209e.
