@@ -24,6 +24,28 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 ARCANE = os.path.join(ROOT, 'game', 'assets', 'arcane')
 
 
+def _cleanup_mod():
+    import importlib.util
+    sp = importlib.util.spec_from_file_location('art_cleanup', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'art-cleanup.py'))
+    m = importlib.util.module_from_spec(sp); sp.loader.exec_module(m)
+    return m
+
+
+def sliver_frames(arr, fw):
+    """Frames holding a thin vertical sliver (non-largest component <= 8 px wide and > 80 px tall; BLOCKING)."""
+    cm = _cleanup_mod()
+    g = cm.G if fw >= 128 else 1
+    bad = []
+    for f in range(arr.shape[1] // fw):
+        m = arr[::g, f * fw:(f + 1) * fw:g, 3] > 0
+        comps = sorted(cm.components(m), key=len, reverse=True)
+        for cells in comps[1:]:
+            _, _, w, h = cm.bbox(cells)
+            if w * g <= cm.SLIVER_MAX_W and h * g > cm.SLIVER_MIN_H:
+                bad.append(f); break
+    return bad
+
+
 def safe_extract(zpath, dest):
     z = zipfile.ZipFile(zpath)
     for n in z.namelist():
@@ -70,6 +92,9 @@ def check_asset(base, a, palette):
         info['off_palette'] = off
         if off:
             warn.append('%d colors outside palette.json' % off)
+    sl = sliver_frames(arr, fw)
+    if sl:
+        block.append('thin vertical sliver in frame(s) %s (component <= 8 px wide and > 80 px tall)' % sl)
     heights, edge, empty, diffs = [], 0, 0, []
     prev = None
     for f in range(n):
@@ -98,7 +123,34 @@ def check_asset(base, a, palette):
     return block, warn, info
 
 
+def revalidate(base):
+    """Re-run every check on an already filed batch dir and refresh its validation-report.json (art left untouched)."""
+    m = json.load(open(os.path.join(base, 'manifest.json')))
+    rp = os.path.join(base, 'validation-report.json')
+    old = json.load(open(rp)) if os.path.exists(rp) else {}
+    palette = load_palette(base)
+    rep = {'batch': old.get('batch', ''), 'label': old.get('label', ''), 'generated_utc': datetime.datetime.utcnow().isoformat() + 'Z',
+           'files': len(m['assets']), 'duplicate_ids': 0, 'blocking': {}, 'warnings': {}, 'standing_heights': {}}
+    for a in m['assets']:
+        bl, wr, info = check_asset(base, a, palette)
+        if bl: rep['blocking'][a['id']] = bl
+        if wr: rep['warnings'][a['id']] = wr
+        if 'standing_h' in info:
+            rep['standing_heights']['%s/%s' % (a.get('class') or a.get('enemy') or a.get('boss'), a.get('dir'))] = info['standing_h']
+    rep['status'] = 'needs-fix' if rep['blocking'] else 'provisional'
+    print(os.path.basename(base), 'blocking:', len(rep['blocking']), 'warnings:', len(rep['warnings']), 'status:', rep['status'])
+    for k, v in list(rep['blocking'].items())[:8]:
+        print('  BLOCK', k, v)
+    return rep
+
+
 def main():
+    if len(sys.argv) >= 3 and sys.argv[1] == '--revalidate':
+        base = os.path.abspath(sys.argv[2])
+        rep = revalidate(base)
+        if '--write' in sys.argv:
+            json.dump(rep, open(os.path.join(base, 'validation-report.json'), 'w'), indent=2)
+        sys.exit(2 if rep['blocking'] else 0)
     args = [x for x in sys.argv[1:] if not x.startswith('--')]
     dry = '--dry' in sys.argv
     if len(args) < 3:

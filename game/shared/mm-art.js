@@ -65,6 +65,9 @@
     if (!ctx || !anim || !anim.img) return -1;
     var f = frameAt(anim, t);
     var s = num(scale, 1) > 0 ? num(scale, 1) : 1;
+    // Per-view display scale (scales.json) equalises standing height; the feet anchor stays put because ax/ay scale with it.
+    var k = num(anim.scale, 1); if (!(k > 0)) k = 1;
+    s *= k;
     var smooth = ctx.imageSmoothingEnabled;
     ctx.save();
     ctx.imageSmoothingEnabled = false;
@@ -102,6 +105,18 @@
     return root.fetch(url).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
   }
 
+  // scales.json: { scales: { <asset id>: { display_scale } } }. Missing or malformed file -> every scale is 1.
+  function scaleFor(table, id) {
+    var e = table && typeof id === 'string' && Object.prototype.hasOwnProperty.call(table, id) ? table[id] : null;
+    var v = e && typeof e === 'object' ? Number(e.display_scale) : NaN;
+    return isFinite(v) && v > 0.25 && v < 4 ? v : 1;
+  }
+  function loadScales(assetRoot) {
+    return fetchJson(join(assetRoot || ASSET_ROOT, 'scales.json')).then(function (j) {
+      return j && typeof j === 'object' && j.scales && typeof j.scales === 'object' ? j.scales : {};
+    }).catch(function () { return {}; });
+  }
+
   // load(baseUrl, manifestUrl, opts?) -> Promise<ArtSet>. Never rejects.
   // opts.only: array of classes to load; opts.actions: array of actions to load (e.g. ['idle']); opts.dirs likewise.
   function load(baseUrl, manifestUrl, opts) {
@@ -129,7 +144,7 @@
           var muz = Array.isArray(a.muzzle) ? a.muzzle.filter(function (p) { return p && isFinite(p.x) && isFinite(p.y); }) : [];
           entry.anim = {
             id: String(a.id || ''), img: img, frames: frames, fw: fw, fh: fh,
-            fps: num(a.fps, 8), loop: !!a.loop, ax: num(anc.x, fw / 2), ay: num(anc.y, fh - 25), muzzle: muz
+            fps: num(a.fps, 8), loop: !!a.loop, scale: scaleFor(opts.scales, a.id), ax: num(anc.x, fw / 2), ay: num(anc.y, fh - 25), muzzle: muz
           };
           entry.ready = true;
         }));
@@ -150,8 +165,10 @@
     });
   }
   function loadPacks(assetRoot, opts) {
-    return packIds(assetRoot).then(function (ids) {
-      return Promise.all(ids.map(function (id) { return load(join(assetRoot || ASSET_ROOT, id), 'manifest.json', opts); }));
+    return Promise.all([packIds(assetRoot), loadScales(assetRoot)]).then(function (r) {
+      var ids = r[0], o = {}; for (var k in opts || {}) o[k] = opts[k];
+      if (!o.scales) o.scales = r[1];
+      return Promise.all(ids.map(function (id) { return load(join(assetRoot || ASSET_ROOT, id), 'manifest.json', o); }));
     }).then(function (sets) { var s = new ArtSet(); sets.forEach(function (x) { s.merge(x); }); return s; });
   }
   // loadClass(assetRoot, artClass, opts?) -> Promise<ArtSet>: only that class's strips are loaded (every pack's manifest is read).
@@ -164,5 +181,5 @@
   // loadAll(assetRoot, opts?) -> one set holding every pack listed in INDEX.json (plus the registered ones).
   function loadAll(assetRoot, opts) { return loadPacks(assetRoot, opts); }
 
-  return { load: load, loadClass: loadClass, loadAll: loadAll, packIds: packIds, artClassFor: artClassFor, packFor: packFor, frameAt: frameAt, duration: duration, PACKS: PACKS, CLASS_MAP: CLASS_MAP, ArtSet: ArtSet };
+  return { load: load, loadClass: loadClass, loadAll: loadAll, packIds: packIds, artClassFor: artClassFor, packFor: packFor, frameAt: frameAt, scaleFor: scaleFor, duration: duration, PACKS: PACKS, CLASS_MAP: CLASS_MAP, ArtSet: ArtSet };
 }));
