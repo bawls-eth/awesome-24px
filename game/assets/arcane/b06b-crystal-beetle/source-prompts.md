@@ -1,0 +1,9 @@
+# Crystal Beetle source prompts
+
+## Movement
+
+Original 16-bit pixel sprite sheet for a top-down fantasy RPG, on true transparency. Crystal Beetle: one low squat six-legged beetle with a dark navy-black shell, three bright angular cyan quartz spines anchored to its shell, tiny amber forward eyes, dark outlines and chunky palette. Same exact species, shape and colors every pose. Front faces viewer, back shows rear and no eyes, right is strict right profile. Keep every sprite isolated in its own evenly spaced cell with generous empty gutters. Large crisp sprites across the image. No labels, borders, floor, glow, shadows, shards or effects. Six rows in a six-column grid. Row 1 front idle four poses then two blanks. Row 2 front crawl six alternating leg poses. Row 3 rear idle four then two blanks. Row 4 rear crawl six poses. Row 5 right profile idle four then two blanks. Row 6 right crawl six poses. Each pose distinct.
+
+## Battle
+
+Original 16-bit pixel sprite sheet for a top-down fantasy RPG, on true transparency. Crystal Beetle: one low squat six-legged beetle with a dark navy-black shell, three bright angular cyan quartz spines anchored to its shell, tiny amber forward eyes, dark outlines and chunky palette. Same exact species, shape and colors every pose. Front faces viewer, back shows rear and no eyes, right is strict right profile. Keep every sprite isolated in its own evenly spaced cell with generous empty gutters. Large crisp sprites across the image. No labels, borders, floor, glow, shadows, shards or effects. Six rows, five evenly spaced separated sprites per row. Rows 1, 2, 3 attack from front, back, right respectively; ready, compress legs, lift front legs high, lunge, recover. Rows 4, 5, 6 death from front, back, right respectively; alert, stagger, tilt toward ground, curl legs, flatten with legs tucked and spines attached. Strict grid.
