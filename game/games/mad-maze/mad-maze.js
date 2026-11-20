@@ -84,6 +84,11 @@
     MMArt.loadClass('../../assets/arcane/', artClass).then((set) => { if (set.has(artClass)) arena.setHeroArt(set, artClass); }).catch(() => {});
   }
 
+  // Enemy art: only the mapped arena creatures (idle/move/attack); any failure keeps the procedural sprites.
+  if (window.MMArt && MMArt.loadEnemies && params.get('enemyart') !== '0') {
+    MMArt.loadEnemies('../../assets/arcane/').then((set) => { if (set.classes().length) arena.setEnemyArt(set); }).catch(() => {});
+  }
+
   if (TEST) window.__mm = { arena, dungeon: dungeon ? dungeon.api : null };
   arena.start();
 })();

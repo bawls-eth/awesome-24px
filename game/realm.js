@@ -193,6 +193,7 @@ class RealmArena {
     this.run = { wave: 0, kills: 0, shards: 0 };
     this.displayShards = this.save.shards;
     this._avatar = null;
+    this._enemyArt = null; this._enemyMap = null; this._driftMap = null; this._enemyDbgOn = false; // optional enemy animations (setEnemyArt)
     this._heroArt = null; this._heroClass = null; this._heroSt = null; this._heroDbg = null; this._heroHurtAt = -9; this._heroAtkAt = -9; // optional hero animations (setHeroArt)
     this.team = null; this.role = 'solo'; this.down = false; this.reviveT = 0; this._firing = false;
 
@@ -635,6 +636,53 @@ class RealmArena {
     this._heroClass = this._heroArt ? heroClass : null;
     this._heroScale = Number.isFinite(scale) && scale > 0 ? scale : 0.3125;
     this._heroSt = null; this._heroDbg = null;
+  }
+  // Additive hook: draw arena enemies / drifters with creature animations (MMArt.loadEnemies). Pass (null) to go back to the procedural sprites.
+  // `map` / `driftMap` default to MMArt's ENEMY_MAP / DRIFTER_MAP. Never attached by the in-town gate.
+  setEnemyArt(artSet, map, driftMap) {
+    const ok = artSet && typeof artSet.anim === 'function' && typeof artSet.draw === 'function';
+    this._enemyArt = ok ? artSet : null;
+    const A = typeof MMArt !== 'undefined' ? MMArt : null;
+    this._enemyMap = ok ? (map || (A && A.ENEMY_MAP) || null) : null;
+    this._driftMap = ok ? (driftMap || (A && A.DRIFTER_MAP) || null) : null;
+    this._enemyVis = (A && A.ENEMY_VISIBLE_W) || 130;
+    this._enemyDbg = null;
+  }
+  // Draws one enemy's creature animation; per-enemy state lives on the pooled enemy object (no allocation). Returns true when drawn.
+  // Timing uses e.t (advanced only while the game runs), so pausing freezes the animation.
+  _drawEnemyArt(g, e, def) {
+    const art = this._enemyArt, name = this._enemyMap && this._enemyMap[e.type];
+    if (!name) return false;
+    if (e._at === undefined || e.t < e._lt) { e._at = -9; e._px = e.x; e._py = e.y; e._mvT = -9; e._dir = 'down'; e._flip = false; e._key = ''; e._t0 = 0; e._pcd = e.cd; e._atSeen = -9; }
+    e._lt = e.t;
+    const dx = e.x - e._px, dy = e.y - e._py; e._px = e.x; e._py = e.y;
+    if (e.cd > e._pcd + 0.001) e._at = e.t; // the cooldown jumped up: it just fired
+    e._pcd = e.cd;
+    let moving = false;
+    if (dx * dx + dy * dy > 0.0004) { e._mvT = e.t; moving = true; }
+    const attacking = e.t - e._at < 0.3;
+    let vx = dx, vy = dy;
+    if (attacking || (!moving && e.t - e._mvT >= 0.15)) { const p = this.player; vx = p.x - e.x; vy = p.y - e.y; } // shooting / standing: face the player
+    if (attacking || moving || e._key === '') { if (Math.abs(vy) > Math.abs(vx)) { e._dir = vy > 0 ? 'down' : 'up'; } else { e._dir = 'right'; e._flip = vx < 0; } }
+    const action = attacking ? 'attack' : (e.t - e._mvT < 0.15 ? 'move' : 'idle');
+    let a = art.anim(name, action, e._dir);
+    let act = action;
+    if (!a && action !== 'idle') { a = art.anim(name, 'idle', e._dir); act = 'idle'; }
+    if (!a) return false;
+    const key = act + e._dir;
+    if (key !== e._key) { e._key = key; e._t0 = e.t; }
+    if (act === 'attack' && e._atSeen !== e._at) { e._atSeen = e._at; e._t0 = e.t; }
+    const t = this._reduced && act === 'idle' ? 0 : e.t - e._t0;
+    const f = art.draw(g, a, t, e.x, e.y + def.r * 0.9, 2.8 * def.r / this._enemyVis, e._flip);
+    if (this._enemyDbgOn) this._enemyDbg = { type: e.type, name, action: act, dir: e._dir, flip: e._flip, frame: f, id: a.id };
+    return f >= 0;
+  }
+  _drawDrifterArt(g, d) {
+    const name = this._driftMap && this._driftMap[d.kind];
+    if (!name) return false;
+    const a = this._enemyArt.anim(name, 'move', 'down') || this._enemyArt.anim(name, 'idle', 'down');
+    if (!a) return false;
+    return this._enemyArt.draw(g, a, this._reduced ? 0 : d.t, d.x, d.y + 12, 31 / this._enemyVis, false) >= 0;
   }
   // Picks the animation (dead > hurt > attack > walk > idle) and draws it feet-anchored at the player. Returns true when drawn.
   _drawHero(g, p) {
@@ -1673,15 +1721,16 @@ class RealmArena {
     if (this.walls) { const w = this.walls; for (let r = 0; r < w.rows; r++) for (let c = 0; c < w.cols; c++) if (w.cells[r][c] === 1) { g.fillStyle = '#1b1430'; g.fillRect(c * RM_TILE, r * RM_TILE, RM_TILE, RM_TILE); g.fillStyle = RM_BIOMES[this.biome].border; g.fillRect(c * RM_TILE, r * RM_TILE, RM_TILE, 3); g.fillRect(c * RM_TILE, r * RM_TILE, 3, RM_TILE); } }
     if (this.dungeon) this.dungeon.drawUnder(g);
     for (let i = 0; i < this.hazards.length; i++) { const h = this.hazards[i]; if (h.active) { g.globalAlpha = h.kind === 'lava' ? 0.85 + Math.sin(this.clock * 4 + i) * 0.1 : 0.9; g.drawImage(this.sprites.hazard[h.kind], h.x - 48, h.y - 48); g.globalAlpha = 1; } }
-    for (let i = 0; i < this.drifters.length; i++) { const d = this.drifters[i]; if (d.active) g.drawImage(this.sprites.drifter[d.kind], d.x - 12, d.y - 12 + Math.sin(d.t * 3) * 3); }
+    for (let i = 0; i < this.drifters.length; i++) { const d = this.drifters[i]; if (d.active && !(this._enemyArt && this._drawDrifterArt(g, d))) g.drawImage(this.sprites.drifter[d.kind], d.x - 12, d.y - 12 + Math.sin(d.t * 3) * 3); }
 
     for (let i = 0; i < this.enemies.length; i++) {
       const e = this.enemies[i];
       if (!e.active) continue;
       const spr = this.sprites[e.type];
       const bob = e.type === 'boss' ? 0 : Math.sin(e.t * 4) * 2;
-      g.drawImage(spr, e.x - spr.width / 2, e.y - spr.height / 2 + bob);
-      if (e.flash > 0) { g.globalAlpha = e.flash * 0.7; g.fillStyle = '#fff'; g.beginPath(); g.arc(e.x, e.y + bob, RM_ENEMIES[e.type].r, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1; }
+      const art = this._enemyArt && e.type !== 'boss' && this._drawEnemyArt(g, e, RM_ENEMIES[e.type]);
+      if (!art) g.drawImage(spr, e.x - spr.width / 2, e.y - spr.height / 2 + bob);
+      if (e.flash > 0) { g.globalAlpha = e.flash * 0.7; g.fillStyle = '#fff'; g.beginPath(); g.arc(e.x, e.y + (art ? 0 : bob), RM_ENEMIES[e.type].r, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1; }
       if (e.type === 'boss' && e.invuln > 0) { g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 3; g.beginPath(); g.arc(e.x, e.y, 40 + Math.sin(e.t * 20) * 2, 0, Math.PI * 2); g.stroke(); }
       if (e.hp < e.maxHp && e.type !== 'boss') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(e.x - 14, e.y - spr.height / 2 - 6, 28, 4); g.fillStyle = RM_ENEMIES[e.type].color; g.fillRect(e.x - 14, e.y - spr.height / 2 - 6, 28 * (e.hp / e.maxHp), 4); }
     }
