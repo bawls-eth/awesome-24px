@@ -12,6 +12,8 @@
   if (qs.get('from') === 'hub') {
     var back = document.getElementById('back');
     back.setAttribute('href', '../../hub/index.html'); back.textContent = '← Hub';
+  } else {
+    var townLink = document.getElementById('town'); if (townLink) townLink.hidden = true; // the back link already goes to the town: don't show it twice
   }
 
   // Time: real calendar by default. Test mode (?test=1) may pin week and slot.
