@@ -142,7 +142,7 @@
       var assets = m && Array.isArray(m.assets) ? m.assets : [];
       var jobs = [];
       assets.forEach(function (a) {
-        var key = a && typeof a.class === 'string' ? a.class : (a && typeof a.enemy === 'string' ? a.enemy : null); // heroes are keyed by class, enemies by creature name
+        var key = a && typeof a.class === 'string' ? a.class : (a && typeof a.enemy === 'string' ? a.enemy : (a && typeof a.boss === 'string' ? a.boss : null)); // heroes are keyed by class, enemies by creature name, bosses by boss id (items have no action/dir and are skipped here)
         if (!a || typeof a !== 'object' || typeof a.path !== 'string' || !key || typeof a.action !== 'string' || !DIRS[a.dir]) return;
         if (opts.only && opts.only.indexOf(key) < 0) return;
         if (opts.actions && opts.actions.indexOf(a.action) < 0) return;
