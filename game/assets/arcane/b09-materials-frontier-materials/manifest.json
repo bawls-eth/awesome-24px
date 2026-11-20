@@ -1,0 +1,998 @@
+{
+  "name": "Arcane Frontier materials",
+  "frame_size": 32,
+  "assets": [
+    {
+      "id": "material_raw_iron_ore",
+      "category": "item",
+      "path": "items/material_raw_iron_ore.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "material",
+        [
+          [
+            "material_raw_iron_ore",
+            "raw iron ore",
+            1
+          ],
+          [
+            "material_copper_ore_with_teal_patina",
+            "copper ore with teal patina",
+            2
+          ],
+          [
+            "material_gold_nugget",
+            "gold nugget",
+            3
+          ],
+          [
+            "material_silver_ingot",
+            "silver ingot",
+            1
+          ],
+          [
+            "material_blue_azurite_cluster",
+            "blue azurite cluster",
+            2
+          ],
+          [
+            "material_rough_crimson_ruby",
+            "rough crimson ruby",
+            3
+          ],
+          [
+            "material_black_obsidian_shard",
+            "black obsidian shard",
+            1
+          ],
+          [
+            "material_ivory_salt_crystal",
+            "ivory salt crystal",
+            2
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        289,
+        286
+      ]
+    },
+    {
+      "id": "material_copper_ore_with_teal_patina",
+      "category": "item",
+      "path": "items/material_copper_ore_with_teal_patina.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "material",
+        [
+          [
+            "material_raw_iron_ore",
+            "raw iron ore",
+            1
+          ],
+          [
+            "material_copper_ore_with_teal_patina",
+            "copper ore with teal patina",
+            2
+          ],
+          [
+            "material_gold_nugget",
+            "gold nugget",
+            3
+          ],
+          [
+            "material_silver_ingot",
+            "silver ingot",
+            1
+          ],
+          [
+            "material_blue_azurite_cluster",
+            "blue azurite cluster",
+            2
+          ],
+          [
+            "material_rough_crimson_ruby",
+            "rough crimson ruby",
+            3
+          ],
+          [
+            "material_black_obsidian_shard",
+            "black obsidian shard",
+            1
+          ],
+          [
+            "material_ivory_salt_crystal",
+            "ivory salt crystal",
+            2
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        307,
+        261
+      ]
+    },
+    {
+      "id": "material_gold_nugget",
+      "category": "item",
+      "path": "items/material_gold_nugget.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "material",
+        [
+          [
+            "material_raw_iron_ore",
+            "raw iron ore",
+            1
+          ],
+          [
+            "material_copper_ore_with_teal_patina",
+            "copper ore with teal patina",
+            2
+          ],
+          [
+            "material_gold_nugget",
+            "gold nugget",
+            3
+          ],
+          [
+            "material_silver_ingot",
+            "silver ingot",
+            1
+          ],
+          [
+            "material_blue_azurite_cluster",
+            "blue azurite cluster",
+            2
+          ],
+          [
+            "material_rough_crimson_ruby",
+            "rough crimson ruby",
+            3
+          ],
+          [
+            "material_black_obsidian_shard",
+            "black obsidian shard",
+            1
+          ],
+          [
+            "material_ivory_salt_crystal",
+            "ivory salt crystal",
+            2
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        298,
+        265
+      ]
+    },
+    {
+      "id": "material_silver_ingot",
+      "category": "item",
+      "path": "items/material_silver_ingot.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "material",
+        [
+          [
+            "material_raw_iron_ore",
+            "raw iron ore",
+            1
+          ],
+          [
+            "material_copper_ore_with_teal_patina",
+            "copper ore with teal patina",
+            2
+          ],
+          [
+            "material_gold_nugget",
+            "gold nugget",
+            3
+          ],
+          [
+            "material_silver_ingot",
+            "silver ingot",
+            1
+          ],
+          [
+            "material_blue_azurite_cluster",
+            "blue azurite cluster",
+            2
+          ],
+          [
+            "material_rough_crimson_ruby",
+            "rough crimson ruby",
+            3
+          ],
+          [
+            "material_black_obsidian_shard",
+            "black obsidian shard",
+            1
+          ],
+          [
+            "material_ivory_salt_crystal",
+            "ivory salt crystal",
+            2
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        312,
+        271
+      ]
+    },
+    {
+      "id": "material_blue_azurite_cluster",
+      "category": "item",
+      "path": "items/material_blue_azurite_cluster.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "material",
+        [
+          [
+            "material_raw_iron_ore",
+            "raw iron ore",
+            1
+          ],
+          [
+            "material_copper_ore_with_teal_patina",
+            "copper ore with teal patina",
+            2
+          ],
+          [
+            "material_gold_nugget",
+            "gold nugget",
+            3
+          ],
+          [
+            "material_silver_ingot",
+            "silver ingot",
+            1
+          ],
+          [
+            "material_blue_azurite_cluster",
+            "blue azurite cluster",
+            2
+          ],
+          [
+            "material_rough_crimson_ruby",
+            "rough crimson ruby",
+            3
+          ],
+          [
+            "material_black_obsidian_shard",
+            "black obsidian shard",
+            1
+          ],
+          [
+            "material_ivory_salt_crystal",
+            "ivory salt crystal",
+            2
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        319,
+        295
+      ]
+    },
+    {
+      "id": "material_rough_crimson_ruby",
+      "category": "item",
+      "path": "items/material_rough_crimson_ruby.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "material",
+        [
+          [
+            "material_raw_iron_ore",
+            "raw iron ore",
+            1
+          ],
+          [
+            "material_copper_ore_with_teal_patina",
+            "copper ore with teal patina",
+            2
+          ],
+          [
+            "material_gold_nugget",
+            "gold nugget",
+            3
+          ],
+          [
+            "material_silver_ingot",
+            "silver ingot",
+            1
+          ],
+          [
+            "material_blue_azurite_cluster",
+            "blue azurite cluster",
+            2
+          ],
+          [
+            "material_rough_crimson_ruby",
+            "rough crimson ruby",
+            3
+          ],
+          [
+            "material_black_obsidian_shard",
+            "black obsidian shard",
+            1
+          ],
+          [
+            "material_ivory_salt_crystal",
+            "ivory salt crystal",
+            2
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        280,
+        282
+      ]
+    },
+    {
+      "id": "material_black_obsidian_shard",
+      "category": "item",
+      "path": "items/material_black_obsidian_shard.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "material",
+        [
+          [
+            "material_raw_iron_ore",
+            "raw iron ore",
+            1
+          ],
+          [
+            "material_copper_ore_with_teal_patina",
+            "copper ore with teal patina",
+            2
+          ],
+          [
+            "material_gold_nugget",
+            "gold nugget",
+            3
+          ],
+          [
+            "material_silver_ingot",
+            "silver ingot",
+            1
+          ],
+          [
+            "material_blue_azurite_cluster",
+            "blue azurite cluster",
+            2
+          ],
+          [
+            "material_rough_crimson_ruby",
+            "rough crimson ruby",
+            3
+          ],
+          [
+            "material_black_obsidian_shard",
+            "black obsidian shard",
+            1
+          ],
+          [
+            "material_ivory_salt_crystal",
+            "ivory salt crystal",
+            2
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        261,
+        301
+      ]
+    },
+    {
+      "id": "material_ivory_salt_crystal",
+      "category": "item",
+      "path": "items/material_ivory_salt_crystal.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "material",
+        [
+          [
+            "material_raw_iron_ore",
+            "raw iron ore",
+            1
+          ],
+          [
+            "material_copper_ore_with_teal_patina",
+            "copper ore with teal patina",
+            2
+          ],
+          [
+            "material_gold_nugget",
+            "gold nugget",
+            3
+          ],
+          [
+            "material_silver_ingot",
+            "silver ingot",
+            1
+          ],
+          [
+            "material_blue_azurite_cluster",
+            "blue azurite cluster",
+            2
+          ],
+          [
+            "material_rough_crimson_ruby",
+            "rough crimson ruby",
+            3
+          ],
+          [
+            "material_black_obsidian_shard",
+            "black obsidian shard",
+            1
+          ],
+          [
+            "material_ivory_salt_crystal",
+            "ivory salt crystal",
+            2
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        302,
+        299
+      ]
+    },
+    {
+      "id": "material_oak_timber_bundle",
+      "category": "item",
+      "path": "items/material_oak_timber_bundle.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "material",
+        [
+          [
+            "material_oak_timber_bundle",
+            "oak timber bundle",
+            1
+          ],
+          [
+            "material_rolled_tanned_hide",
+            "rolled tanned hide",
+            2
+          ],
+          [
+            "material_spool_of_linen_thread",
+            "spool of linen thread",
+            3
+          ],
+          [
+            "material_green_medicinal_herb_sprig",
+            "green medicinal herb sprig",
+            1
+          ],
+          [
+            "material_amber_resin_lump",
+            "amber resin lump",
+            2
+          ],
+          [
+            "material_white_bird_feather",
+            "white bird feather",
+            3
+          ],
+          [
+            "material_small_animal_bone",
+            "small animal bone",
+            1
+          ],
+          [
+            "material_purple_silk_cocoon",
+            "purple silk cocoon",
+            2
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        351,
+        296
+      ]
+    },
+    {
+      "id": "material_rolled_tanned_hide",
+      "category": "item",
+      "path": "items/material_rolled_tanned_hide.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "material",
+        [
+          [
+            "material_oak_timber_bundle",
+            "oak timber bundle",
+            1
+          ],
+          [
+            "material_rolled_tanned_hide",
+            "rolled tanned hide",
+            2
+          ],
+          [
+            "material_spool_of_linen_thread",
+            "spool of linen thread",
+            3
+          ],
+          [
+            "material_green_medicinal_herb_sprig",
+            "green medicinal herb sprig",
+            1
+          ],
+          [
+            "material_amber_resin_lump",
+            "amber resin lump",
+            2
+          ],
+          [
+            "material_white_bird_feather",
+            "white bird feather",
+            3
+          ],
+          [
+            "material_small_animal_bone",
+            "small animal bone",
+            1
+          ],
+          [
+            "material_purple_silk_cocoon",
+            "purple silk cocoon",
+            2
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        342,
+        293
+      ]
+    },
+    {
+      "id": "material_spool_of_linen_thread",
+      "category": "item",
+      "path": "items/material_spool_of_linen_thread.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "material",
+        [
+          [
+            "material_oak_timber_bundle",
+            "oak timber bundle",
+            1
+          ],
+          [
+            "material_rolled_tanned_hide",
+            "rolled tanned hide",
+            2
+          ],
+          [
+            "material_spool_of_linen_thread",
+            "spool of linen thread",
+            3
+          ],
+          [
+            "material_green_medicinal_herb_sprig",
+            "green medicinal herb sprig",
+            1
+          ],
+          [
+            "material_amber_resin_lump",
+            "amber resin lump",
+            2
+          ],
+          [
+            "material_white_bird_feather",
+            "white bird feather",
+            3
+          ],
+          [
+            "material_small_animal_bone",
+            "small animal bone",
+            1
+          ],
+          [
+            "material_purple_silk_cocoon",
+            "purple silk cocoon",
+            2
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        244,
+        320
+      ]
+    },
+    {
+      "id": "material_green_medicinal_herb_sprig",
+      "category": "item",
+      "path": "items/material_green_medicinal_herb_sprig.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "material",
+        [
+          [
+            "material_oak_timber_bundle",
+            "oak timber bundle",
+            1
+          ],
+          [
+            "material_rolled_tanned_hide",
+            "rolled tanned hide",
+            2
+          ],
+          [
+            "material_spool_of_linen_thread",
+            "spool of linen thread",
+            3
+          ],
+          [
+            "material_green_medicinal_herb_sprig",
+            "green medicinal herb sprig",
+            1
+          ],
+          [
+            "material_amber_resin_lump",
+            "amber resin lump",
+            2
+          ],
+          [
+            "material_white_bird_feather",
+            "white bird feather",
+            3
+          ],
+          [
+            "material_small_animal_bone",
+            "small animal bone",
+            1
+          ],
+          [
+            "material_purple_silk_cocoon",
+            "purple silk cocoon",
+            2
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        333,
+        337
+      ]
+    },
+    {
+      "id": "material_amber_resin_lump",
+      "category": "item",
+      "path": "items/material_amber_resin_lump.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "material",
+        [
+          [
+            "material_oak_timber_bundle",
+            "oak timber bundle",
+            1
+          ],
+          [
+            "material_rolled_tanned_hide",
+            "rolled tanned hide",
+            2
+          ],
+          [
+            "material_spool_of_linen_thread",
+            "spool of linen thread",
+            3
+          ],
+          [
+            "material_green_medicinal_herb_sprig",
+            "green medicinal herb sprig",
+            1
+          ],
+          [
+            "material_amber_resin_lump",
+            "amber resin lump",
+            2
+          ],
+          [
+            "material_white_bird_feather",
+            "white bird feather",
+            3
+          ],
+          [
+            "material_small_animal_bone",
+            "small animal bone",
+            1
+          ],
+          [
+            "material_purple_silk_cocoon",
+            "purple silk cocoon",
+            2
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        320,
+        283
+      ]
+    },
+    {
+      "id": "material_white_bird_feather",
+      "category": "item",
+      "path": "items/material_white_bird_feather.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 3,
+      "tags": [
+        "equipment",
+        "material",
+        [
+          [
+            "material_oak_timber_bundle",
+            "oak timber bundle",
+            1
+          ],
+          [
+            "material_rolled_tanned_hide",
+            "rolled tanned hide",
+            2
+          ],
+          [
+            "material_spool_of_linen_thread",
+            "spool of linen thread",
+            3
+          ],
+          [
+            "material_green_medicinal_herb_sprig",
+            "green medicinal herb sprig",
+            1
+          ],
+          [
+            "material_amber_resin_lump",
+            "amber resin lump",
+            2
+          ],
+          [
+            "material_white_bird_feather",
+            "white bird feather",
+            3
+          ],
+          [
+            "material_small_animal_bone",
+            "small animal bone",
+            1
+          ],
+          [
+            "material_purple_silk_cocoon",
+            "purple silk cocoon",
+            2
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        307,
+        337
+      ]
+    },
+    {
+      "id": "material_small_animal_bone",
+      "category": "item",
+      "path": "items/material_small_animal_bone.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 1,
+      "tags": [
+        "equipment",
+        "material",
+        [
+          [
+            "material_oak_timber_bundle",
+            "oak timber bundle",
+            1
+          ],
+          [
+            "material_rolled_tanned_hide",
+            "rolled tanned hide",
+            2
+          ],
+          [
+            "material_spool_of_linen_thread",
+            "spool of linen thread",
+            3
+          ],
+          [
+            "material_green_medicinal_herb_sprig",
+            "green medicinal herb sprig",
+            1
+          ],
+          [
+            "material_amber_resin_lump",
+            "amber resin lump",
+            2
+          ],
+          [
+            "material_white_bird_feather",
+            "white bird feather",
+            3
+          ],
+          [
+            "material_small_animal_bone",
+            "small animal bone",
+            1
+          ],
+          [
+            "material_purple_silk_cocoon",
+            "purple silk cocoon",
+            2
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        325,
+        275
+      ]
+    },
+    {
+      "id": "material_purple_silk_cocoon",
+      "category": "item",
+      "path": "items/material_purple_silk_cocoon.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "tier": 2,
+      "tags": [
+        "equipment",
+        "material",
+        [
+          [
+            "material_oak_timber_bundle",
+            "oak timber bundle",
+            1
+          ],
+          [
+            "material_rolled_tanned_hide",
+            "rolled tanned hide",
+            2
+          ],
+          [
+            "material_spool_of_linen_thread",
+            "spool of linen thread",
+            3
+          ],
+          [
+            "material_green_medicinal_herb_sprig",
+            "green medicinal herb sprig",
+            1
+          ],
+          [
+            "material_amber_resin_lump",
+            "amber resin lump",
+            2
+          ],
+          [
+            "material_white_bird_feather",
+            "white bird feather",
+            3
+          ],
+          [
+            "material_small_animal_bone",
+            "small animal bone",
+            1
+          ],
+          [
+            "material_purple_silk_cocoon",
+            "purple silk cocoon",
+            2
+          ]
+        ]
+      ],
+      "source": "original image-generated atlas",
+      "source_size": [
+        298,
+        314
+      ]
+    }
+  ]
+}
