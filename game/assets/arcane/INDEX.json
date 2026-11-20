@@ -68,8 +68,8 @@
       "path": "assets/arcane/i01-items-v2",
       "manifest": "assets/arcane/i01-items-v2/manifest.json",
       "files": 58,
-      "status": "needs-fix",
-      "ingested_utc": "2026-11-20T07:36:25.139176Z"
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T07:36:39.463363Z"
     }
   ]
 }
