@@ -1,0 +1,210 @@
+{
+  "schema_version": 1,
+  "id": "warlock",
+  "category": "hero",
+  "title": "Warlock (hex caller)",
+  "batch": "b02",
+  "design": {
+    "summary": "Robed dark caster in black and magenta with a horned helm and a floating dark orb cupped in one hand.",
+    "silhouette": "Two tall curved horns on a rounded helm, wide bell-shaped robe flaring to the ground, one glowing dark orb held out at hip height.",
+    "headgear": {
+      "shape": "horned helm",
+      "description": "Round black iron helm with a narrow glowing eye-slit and two thick curved bone horns sweeping up and outward."
+    },
+    "armour": [
+      {
+        "part": "shoulders",
+        "description": "Round magenta-edged black shoulder plates.",
+        "color": "#64278c"
+      },
+      {
+        "part": "chest",
+        "description": "Black quilted robe front with a magenta sash and a glowing rune clasp.",
+        "color": "#19101d"
+      },
+      {
+        "part": "belt",
+        "description": "Magenta cord belt with three small hanging skull charms.",
+        "color": "#8336b9"
+      },
+      {
+        "part": "boots",
+        "description": "Pointed black boots with magenta toe caps.",
+        "color": "#291c24"
+      }
+    ],
+    "cloth": "Long black robe hem flaring around the legs with a magenta lining; a short black cape with a magenta inner side hangs from the shoulders.",
+    "weapon_summary": "A sphere of near-black glass with a bright magenta rim light, floating just above the right palm."
+  },
+  "palette": {
+    "outline": "#080706",
+    "robe_black": "#19101d",
+    "robe_mid": "#291c24",
+    "magenta_dark": "#64278c",
+    "magenta": "#8336b9",
+    "magenta_light": "#c570e7",
+    "glow": "#de98f0",
+    "horn": "#d5c8c7",
+    "orb_core": "#2f1539",
+    "orb_rim": "#de98f0",
+    "skin": "#ecc6a1",
+    "boot": "#291c24"
+  },
+  "proportions": {
+    "style": "short wide chibi: big head (about 1/3 of the height), stocky wide torso, short thick limbs, big hands and boots",
+    "standing_height_px": 148,
+    "cell_px": 256,
+    "notes": "Standing height is equal in the down, up and right views. Feet of every frame rest on ONE baseline row."
+  },
+  "weapon": {
+    "name": "dark orb",
+    "hand": "right",
+    "description": "A sphere of near-black glass with a bright magenta rim light, floating just above the right palm.",
+    "region_hexes": [
+      "#de98f0",
+      "#f4c9fa"
+    ]
+  },
+  "views": {
+    "down": {
+      "descriptor": "FRONT view (down): the figure faces the camera, face and chest visible, both boots visible, toes toward the viewer.",
+      "face_visible": true
+    },
+    "up": {
+      "descriptor": "BACK view (up): the figure faces away from the camera. NO face, NO eyes, NO mouth anywhere: show only the back of the head/headgear, the back of the torso, back armour and the cape/cloth hanging down the back, and the heels of both boots. Back view: two horns from behind, plain helm back with a magenta stripe, cape with a magenta rune on the back, robe hem.",
+      "face_visible": false
+    },
+    "right": {
+      "descriptor": "RIGHT side view (right): a TRUE side profile facing the right edge of the image, body turned exactly 90 degrees, one eye only, nose/brow in profile; the NEAR arm and NEAR leg are drawn IN FRONT of the torso, the far limbs partly hidden behind it.",
+      "true_profile": true
+    }
+  },
+  "actions": {
+    "idle": {
+      "frames": 4,
+      "fps": 6,
+      "loop": true,
+      "ref_frames": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "poses": [
+        "Stand relaxed, feet shoulder-width apart, the dark orb floating over the right palm, left hand relaxed, chest rests low.",
+        "Breathe in: torso rises one pixel step, shoulders lift slightly, the robe hem and cape.",
+        "Peak of the breath: head and chest at their highest, arms swing a hair outward, the robe hem and cape sways a little.",
+        "Breathe out: torso sinks back lower than frame 1, weight shifts slightly, the robe hem and cape settles."
+      ]
+    },
+    "walk": {
+      "frames": 6,
+      "fps": 10,
+      "loop": true,
+      "ref_frames": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "poses": [
+        "Contact: left boot planted forward, right boot behind on its toes, arms opposite to legs, the dark orb floating over the right palm, left hand relaxed.",
+        "Down: body at its lowest, left boot flat under the body, right boot lifting off, right knee bent.",
+        "Passing: right leg swings through beside the planted left leg, body at its highest, the robe hem and cape.",
+        "Contact: right boot planted forward, left boot behind on its toes, arms swapped, the dark orb floating over the right palm, left hand relaxed.",
+        "Down: body at its lowest, right boot flat under the body, left boot lifting off, left knee bent.",
+        "Passing: left leg swings through beside the planted right leg, body at its highest, the robe hem and cape flares."
+      ]
+    },
+    "attack": {
+      "frames": 5,
+      "fps": 12,
+      "loop": false,
+      "ref_frames": [
+        0
+      ],
+      "poses": [
+        "Wind-up: right arm pulled back at the hip, orb held close, body coiled, horns tilted down.",
+        "Step in with the front foot, right arm swinging forward, orb leading, a lunge forward.",
+        "Strike: right arm fully extended ahead at chest height, orb at the far end of the arm, robe snapping.",
+        "Follow-through: body leaning far forward, orb at the end of the extended arm, left hand flung back.",
+        "Recover: arm drawing back, orb returning above the palm, robe settling."
+      ],
+      "weapon_frames": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "cast": {
+      "frames": 5,
+      "fps": 10,
+      "loop": false,
+      "ref_frames": [
+        0
+      ],
+      "poses": [
+        "Gather: both hands rise to chest height, the orb floating between them, head bowed.",
+        "Orb lifts overhead in the right hand, left hand points at the target, knees bending.",
+        "Arms spread wide, orb held high above the horns, chest thrust out, robe flaring upward.",
+        "Thrust: both arms snap forward, orb at the end of the right arm far ahead of the body.",
+        "Recover: arms lowering, orb dropping back over the right palm, cape settling."
+      ],
+      "weapon_frames": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "roll": {
+      "frames": 6,
+      "fps": 12,
+      "loop": true,
+      "ref_frames": [
+        0
+      ],
+      "poses": [
+        "Crouch low, knees bent deeply, head ducked forward, the dark orb floating over the right palm, left hand relaxed pulled in tight.",
+        "Launch: body tipping forward, head tucked, back arching, both boots still visible leaving the floor.",
+        "Tumble 1: figure curled into a compact ball, head near the knees, back toward the camera side, boots tucked.",
+        "Tumble 2: the ball has rotated half a turn, upside down, boots up top, head tucked below.",
+        "Tumble 3: rotating up out of the ball, legs reaching down toward the ground, head coming up.",
+        "Landing: one knee bent, other boot planted, rising out of the roll, the dark orb floating over the right palm, left hand relaxed back in hand."
+      ]
+    },
+    "hit": {
+      "frames": 2,
+      "fps": 8,
+      "loop": false,
+      "ref_frames": [
+        0
+      ],
+      "poses": [
+        "Struck: head snaps back, torso leans away from the blow, eyes squeezed shut, arms flung outward, the dark orb floating over the right palm, left hand relaxed.",
+        "Recoil: body bent at the waist, knees buckled, one boot sliding back, wincing, the dark orb floating over the right palm, left hand relaxed."
+      ]
+    },
+    "death": {
+      "frames": 6,
+      "fps": 8,
+      "loop": false,
+      "ref_frames": [
+        0
+      ],
+      "poses": [
+        "Fatal hit: head snaps back, torso arching, the dark orb floating over the right palm, left hand relaxed loosening in the grip.",
+        "Stumble: knees give way, one knee drops, a hand drops the weapon, head hangs.",
+        "Fall: body topples sideways, both arms flailing, boots leaving the ground.",
+        "Impact: the body lands on its side, weapon clattering beside it, cloth settling.",
+        "Slump: the body flat on the ground, one arm stretched out, legs straight, head turned.",
+        "Final: lying completely still on the ground, weapon at rest next to the hand, cloth lying flat. Feet on the baseline row."
+      ]
+    }
+  }
+}

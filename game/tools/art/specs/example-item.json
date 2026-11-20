@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": "moon_lantern_charm",
+  "category": "item",
+  "title": "Moon Lantern Charm (example item)",
+  "batch": "b99",
+  "design": {
+    "summary": "A tiny brass lantern charm on a short chain with a pale blue crescent-moon glass.",
+    "silhouette": "Small rounded lantern body with a ring on top and a crescent glow inside; one object, centred, about 80 percent of the cell."
+  },
+  "palette": {
+    "outline": "#080706",
+    "brass": "#d99125",
+    "brass_dark": "#a16925",
+    "glass": "#b6e8f0",
+    "glow": "#f4f0e9",
+    "chain": "#938b95"
+  },
+  "proportions": {
+    "style": "flat icon, bold dark outline, 3 flat colours per area",
+    "standing_height_px": 26,
+    "cell_px": 32
+  },
+  "single": {
+    "subject": "lantern charm item icon, single object",
+    "pose": "upright, hanging by its ring",
+    "output_px": 32,
+    "fill_percent": 80
+  }
+}
