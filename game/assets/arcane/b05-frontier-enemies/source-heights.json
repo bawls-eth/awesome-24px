@@ -1,0 +1,506 @@
+{
+  "sprout_mini_idle_down": [
+    110,
+    117,
+    110,
+    101
+  ],
+  "sprout_mini_move_down": [
+    112,
+    105,
+    101,
+    82,
+    102,
+    115
+  ],
+  "sprout_mini_attack_down": [
+    127,
+    127,
+    116,
+    95,
+    127
+  ],
+  "sprout_mini_death_down": [
+    133,
+    122,
+    105,
+    89,
+    80
+  ],
+  "sprout_mini_idle_up": [
+    113,
+    121,
+    111,
+    102
+  ],
+  "sprout_mini_move_up": [
+    110,
+    102,
+    95,
+    77,
+    103,
+    118
+  ],
+  "sprout_mini_attack_up": [
+    123,
+    123,
+    110,
+    81,
+    123
+  ],
+  "sprout_mini_death_up": [
+    131,
+    117,
+    102,
+    84,
+    76
+  ],
+  "sprout_mini_idle_right": [
+    117,
+    122,
+    114,
+    103
+  ],
+  "sprout_mini_move_right": [
+    114,
+    106,
+    96,
+    87,
+    106,
+    121
+  ],
+  "sprout_mini_attack_right": [
+    128,
+    128,
+    116,
+    87,
+    124
+  ],
+  "sprout_mini_death_right": [
+    134,
+    119,
+    104,
+    86,
+    76
+  ],
+  "goblin_scout_idle_down": [
+    162,
+    158,
+    160,
+    163
+  ],
+  "goblin_scout_move_down": [
+    163,
+    161,
+    158,
+    162,
+    168,
+    160
+  ],
+  "goblin_scout_attack_down": [
+    177,
+    180,
+    199,
+    166,
+    170
+  ],
+  "goblin_scout_death_down": [
+    162,
+    155,
+    151,
+    128,
+    104
+  ],
+  "goblin_scout_idle_up": [
+    159,
+    156,
+    153,
+    158
+  ],
+  "goblin_scout_move_up": [
+    163,
+    161,
+    156,
+    163,
+    164,
+    159
+  ],
+  "goblin_scout_attack_up": [
+    171,
+    172,
+    198,
+    165,
+    167
+  ],
+  "goblin_scout_death_up": [
+    163,
+    157,
+    155,
+    122,
+    104
+  ],
+  "goblin_scout_idle_right": [
+    162,
+    161,
+    161,
+    161
+  ],
+  "goblin_scout_move_right": [
+    159,
+    160,
+    157,
+    157,
+    159,
+    158
+  ],
+  "goblin_scout_attack_right": [
+    180,
+    180,
+    207,
+    172,
+    172
+  ],
+  "goblin_scout_death_right": [
+    175,
+    168,
+    157,
+    123,
+    99
+  ],
+  "skeleton_idle_down": [
+    175,
+    162,
+    171,
+    166
+  ],
+  "skeleton_move_down": [
+    172,
+    173,
+    169,
+    173,
+    170,
+    169
+  ],
+  "skeleton_attack_down": [
+    173,
+    171,
+    182,
+    190,
+    159
+  ],
+  "skeleton_death_down": [
+    160,
+    142,
+    122,
+    95,
+    70
+  ],
+  "skeleton_idle_up": [
+    174,
+    172,
+    175,
+    177
+  ],
+  "skeleton_move_up": [
+    173,
+    170,
+    182,
+    179,
+    177,
+    177
+  ],
+  "skeleton_attack_up": [
+    183,
+    174,
+    188,
+    204,
+    156
+  ],
+  "skeleton_death_up": [
+    162,
+    139,
+    114,
+    88,
+    69
+  ],
+  "skeleton_idle_right": [
+    171,
+    163,
+    172,
+    173
+  ],
+  "skeleton_move_right": [
+    171,
+    173,
+    173,
+    170,
+    173,
+    169
+  ],
+  "skeleton_attack_right": [
+    182,
+    176,
+    175,
+    202,
+    165
+  ],
+  "skeleton_death_right": [
+    177,
+    160,
+    133,
+    100,
+    70
+  ],
+  "cave_bat_idle_down": [
+    123,
+    121,
+    121,
+    120
+  ],
+  "cave_bat_move_down": [
+    121,
+    114,
+    112,
+    108,
+    108,
+    110
+  ],
+  "cave_bat_attack_down": [
+    144,
+    135,
+    128,
+    144,
+    123
+  ],
+  "cave_bat_death_down": [
+    124,
+    117,
+    98,
+    81,
+    72
+  ],
+  "cave_bat_idle_up": [
+    116,
+    115,
+    117,
+    112
+  ],
+  "cave_bat_move_up": [
+    113,
+    110,
+    115,
+    109,
+    108,
+    111
+  ],
+  "cave_bat_attack_up": [
+    143,
+    131,
+    132,
+    144,
+    120
+  ],
+  "cave_bat_death_up": [
+    126,
+    117,
+    101,
+    82,
+    66
+  ],
+  "cave_bat_idle_right": [
+    127,
+    118,
+    118,
+    119
+  ],
+  "cave_bat_move_right": [
+    125,
+    119,
+    121,
+    120,
+    118,
+    123
+  ],
+  "cave_bat_attack_right": [
+    148,
+    120,
+    104,
+    145,
+    122
+  ],
+  "cave_bat_death_right": [
+    141,
+    105,
+    87,
+    73,
+    65
+  ],
+  "forest_wolf_idle_down": [
+    168,
+    163,
+    165,
+    166
+  ],
+  "forest_wolf_move_down": [
+    166,
+    172,
+    169,
+    156,
+    175,
+    169
+  ],
+  "forest_wolf_attack_down": [
+    179,
+    169,
+    160,
+    177,
+    179
+  ],
+  "forest_wolf_death_down": [
+    165,
+    145,
+    139,
+    120,
+    90
+  ],
+  "forest_wolf_idle_up": [
+    166,
+    167,
+    162,
+    170
+  ],
+  "forest_wolf_move_up": [
+    172,
+    170,
+    170,
+    167,
+    176,
+    176
+  ],
+  "forest_wolf_attack_up": [
+    178,
+    148,
+    141,
+    154,
+    175
+  ],
+  "forest_wolf_death_up": [
+    169,
+    149,
+    130,
+    116,
+    92
+  ],
+  "forest_wolf_idle_right": [
+    142,
+    134,
+    131,
+    140
+  ],
+  "forest_wolf_move_right": [
+    136,
+    134,
+    134,
+    133,
+    129,
+    134
+  ],
+  "forest_wolf_attack_right": [
+    133,
+    110,
+    109,
+    104,
+    130
+  ],
+  "forest_wolf_death_right": [
+    138,
+    110,
+    91,
+    76,
+    65
+  ],
+  "stone_golem_idle_down": [
+    149,
+    138,
+    149,
+    151
+  ],
+  "stone_golem_move_down": [
+    153,
+    153,
+    156,
+    151,
+    161,
+    160
+  ],
+  "stone_golem_attack_down": [
+    160,
+    160,
+    183,
+    166,
+    162
+  ],
+  "stone_golem_death_down": [
+    157,
+    146,
+    125,
+    99,
+    87
+  ],
+  "stone_golem_idle_up": [
+    153,
+    143,
+    152,
+    157
+  ],
+  "stone_golem_move_up": [
+    152,
+    153,
+    150,
+    147,
+    154,
+    163
+  ],
+  "stone_golem_attack_up": [
+    158,
+    158,
+    187,
+    156,
+    155
+  ],
+  "stone_golem_death_up": [
+    161,
+    153,
+    123,
+    100,
+    89
+  ],
+  "stone_golem_idle_right": [
+    155,
+    147,
+    155,
+    159
+  ],
+  "stone_golem_move_right": [
+    162,
+    150,
+    151,
+    146,
+    161,
+    168
+  ],
+  "stone_golem_attack_right": [
+    169,
+    169,
+    198,
+    151,
+    169
+  ],
+  "stone_golem_death_right": [
+    177,
+    167,
+    142,
+    120,
+    99
+  ]
+}

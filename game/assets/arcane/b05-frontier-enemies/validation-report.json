@@ -1,0 +1,30 @@
+{
+  "batch": "b05",
+  "label": "frontier-enemies",
+  "generated_utc": "2026-11-20T04:14:41.269077Z",
+  "files": 72,
+  "duplicate_ids": 0,
+  "blocking": {},
+  "warnings": {},
+  "standing_heights": {
+    "sprout_mini/down": 68,
+    "sprout_mini/up": 68,
+    "sprout_mini/right": 72,
+    "goblin_scout/down": 120,
+    "goblin_scout/up": 116,
+    "goblin_scout/right": 120,
+    "skeleton/down": 132,
+    "skeleton/up": 132,
+    "skeleton/right": 128,
+    "cave_bat/down": 88,
+    "cave_bat/up": 84,
+    "cave_bat/right": 92,
+    "forest_wolf/down": 108,
+    "forest_wolf/up": 108,
+    "forest_wolf/right": 92,
+    "stone_golem/down": 136,
+    "stone_golem/up": 140,
+    "stone_golem/right": 140
+  },
+  "status": "provisional"
+}
