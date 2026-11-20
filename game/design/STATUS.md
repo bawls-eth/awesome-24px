@@ -132,3 +132,6 @@ Overworld item drops use the six zone bag tier colors and the rolled lifetime. I
 
 ## Shallow water movement
 Overworld players move at 70% speed on shallow water. Targeted checks covered shallow water, land and map bounds. Browser playback and stash payout remain pending.
+
+## Portal dungeon exits
+Portal dungeon summaries return players to their originating overworld tile. Standalone dungeon summaries keep the New dungeon option. Syntax and offline summary routing checks passed for world, hub, and town. Browser playthrough and Lantern rewards remain pending.
