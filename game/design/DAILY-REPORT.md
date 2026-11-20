@@ -22,3 +22,7 @@
 - 2026-11-20 (late): OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0. Codex art merged and registered provisional: B2 v2, B3 heroes, B04/B05 enemies. Full suite 75/75 on 8241cbd.
 
 - 2026-11-20T06:28Z activity (counts only): playerCount=0, online players=0, chat messages stored=13, open realm invites=2, tournament nodes=2
+
+- 2026-11-20T07:29Z activity (counts only): playerCount=0, online players=0, chat messages stored=13, open realm invites=2, tournament nodes=2
+
+- 2026-11-20 (night): OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0. Shipped: six new playable heroes (rogue, warlock, paladin, berserker, druid, necromancer) with art, enemy art in the Mad Maze arena, 40 px quick-chat chips. Full suite 78/78 on e45696f.
