@@ -169,6 +169,17 @@
       "ingested_utc": "2026-11-20T10:15:00Z",
       "source": "codex",
       "note": "approved provisional by Claude 2026-11-20"
+    },
+    {
+      "id": "b06",
+      "label": "dark-spider",
+      "path": "assets/arcane/b06-dark-spider",
+      "manifest": "assets/arcane/b06-dark-spider/manifest.json",
+      "files": 12,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T11:20:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20"
     }
   ]
 }
