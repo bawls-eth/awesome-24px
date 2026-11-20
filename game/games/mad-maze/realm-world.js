@@ -256,6 +256,130 @@
       drawMini(force);
     }
 
+    // ---------- zone spawner (MMZones) -> arena enemies; drops; boss sites (slice 6) ----------
+    let zones = null; const live = new Map(); // spawner enemy id -> pooled arena enemy
+    const bossLive = world.bossSites.map(() => null);
+    let kills = 0; let bossT = 0; let dropAll = false; const lastDrops = []; let spawned = 0; let despawned = 0;
+    const pretty = (id) => String(id).split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    const BOSS_NAME = world.bossSites.map((b) => pretty(b.boss));
+    const groups = world.spawnGroups;
+    function resetZones() {
+      // despawn at 1.4x the activation radius (not 2.5x): otherwise the groups you just walked past fill the 60-enemy cap and the
+      // next zone stays empty until you are 3750 px away
+      zones = Z.createSpawner(world, { tile: TILE, deactivateMul: 1.4 });
+      live.clear(); for (let i = 0; i < bossLive.length; i++) bossLive[i] = null;
+    }
+    // An arena enemy that vanished without dying through _hitEnemy (pool cleared, a test, a future hook): tell the spawner it is gone
+    // (no drop, no kill credit) so its slot frees up and the group can respawn later.
+    let sweepT = 0;
+    function sweepLost() {
+      live.forEach((e, id) => { if (!e.active || e.zid !== id) { live.delete(id); zones.markDead(id, arena.clock); } });
+    }
+    function spawnZ(rec) {
+      let x = rec.x; let y = rec.y;
+      if (solidAt(x, y)) { const g = groups[rec.group]; x = (g.x + 0.5) * TILE; y = (g.y + 0.5) * TILE; }
+      const e = arena.spawnEnemy(rec.type, x, y);
+      if (!e) return null;
+      const def = RM_ENEMIES[rec.type];
+      e.maxHp = Math.max(1, Math.ceil(def.hp * rec.hpMul)); e.hp = e.maxHp;
+      e.spdMul = rec.speedMul; e.dmgMul = rec.dmgMul; e.xpMul = rec.xpMul; e.shardMul = rec.shardMul;
+      e.art = rec.creature; e.zid = rec.id; e.zone = rec.zone; e.tier = rec.tier;
+      live.set(rec.id, e); spawned++;
+      return e;
+    }
+    function giveBag(x, y, bag, info) {
+      const got = { zone: info.zone, boss: !!info.boss, tier: bag.tier, items: [], shards: bag.shards, potions: bag.potions };
+      bag.items.forEach((it, k) => { const b = arena.dropBag(x + (k - (bag.items.length - 1) / 2) * 18, y + 10, it.r, it.id); if (b) got.items.push({ id: it.id, r: it.r }); });
+      if (bag.shards > 0) { arena.save.shards += bag.shards; arena.run.shards += bag.shards; arena._floatText(x, y - 34, `+${bag.shards} 💎`, '#8fe9ff'); }
+      if (bag.potions > 0) arena._sigHeal(12 * bag.potions);
+      lastDrops.push(got); if (lastDrops.length > 12) lastDrops.shift();
+      arena.onSave(arena.save); arena._syncHud();
+      return got;
+    }
+    function rollFor(info, x, y, tag) {
+      const rs = seed + ':' + tag + ':' + kills;
+      if (!dropAll && MMRng.create('dropchance:' + rs).next() >= Z.dropChance(info)) return null;
+      return giveBag(x, y, Z.rollDrop(info, rs).bag, info);
+    }
+    function onEnemyHit(e) { if (zones && e.zid >= 0) zones.markCombat(e.zid); }
+    function onEnemyKilled(e) {
+      if (!zones) return;
+      if (e.zid >= 0) {
+        const info = zones.markDead(e.zid, arena.clock); live.delete(e.zid); e.zid = -1;
+        if (!info) return;
+        kills++; save.stats.kills++;
+        rollFor({ zone: info.zone, tier: info.tier }, e.x, e.y, 'g' + info.group);
+        return;
+      }
+      for (let i = 0; i < bossLive.length; i++) {
+        if (bossLive[i] !== e) continue;
+        const site = world.bossSites[i]; bossLive[i] = null; miniKey = '';
+        zones.bossDefeated(site, arena.clock); kills++; save.stats.bossKills++;
+        rollFor({ zone: site.zone, tier: site.zone, boss: true }, e.x, e.y + 30, 'boss' + i);
+        writeSave(save);
+      }
+    }
+    function bossAlive() { for (let i = 0; i < bossLive.length; i++) if (bossLive[i] && bossLive[i].active) return i; return -1; }
+    function spawnBoss(i) {
+      const site = world.bossSites[i]; const rec = Z.bossEnemy(site, TILE);
+      const e = arena.spawnEnemy('boss', rec.x, rec.y);
+      if (!e) return null;
+      e.maxHp = Math.max(1, Math.ceil(RM_BOSS_HP * rec.hpMul / Z.TABLES.BOSS.hp)); e.hp = e.maxHp;
+      e.phase = 1; e.invuln = 1.2; e.cd = 1.2; e.cd2 = 2.4; e.angle = 0;
+      e.dmgMul = rec.dmgMul; e.bossName = BOSS_NAME[i]; e.bossTier = site.zone + 1; e.art = site.boss;
+      arena.bossT0 = arena.clock; bossLive[i] = e; arena._syncBoss();
+      arena._showBanner(`${BOSS_NAME[i]} awakens!`, 1.8);
+      miniKey = '';
+      return e;
+    }
+    function bossTick() {
+      const p = arena.player; const alive = bossAlive();
+      for (let i = 0; i < bossLive.length; i++) {
+        const b = world.bossSites[i]; const bx = (b.x + 0.5) * TILE; const by = (b.y + 0.5) * TILE; const d = Math.hypot(p.x - bx, p.y - by);
+        const e = bossLive[i];
+        if (e && !e.active) { bossLive[i] = null; miniKey = ''; continue; }
+        if (e) { if (d > 40 * TILE) { e.active = false; bossLive[i] = null; arena._syncBoss(); miniKey = ''; } continue; } // walked away: it rests (no cooldown)
+        if (alive < 0 && d < 9 * TILE && zones.bossReady(b, arena.clock)) spawnBoss(i);
+      }
+    }
+    function bossesKey() { let k = ''; for (let i = 0; i < bossLive.length; i++) k += bossLive[i] ? 'L' : zones && zones.bossReady(world.bossSites[i], arena.clock) ? 'R' : 'c'; return k; }
+    function bossMarkCol(i) { return bossLive[i] ? '#ff5fa2' : zones && zones.bossReady(world.bossSites[i], arena.clock) ? '#ff3b3b' : '#6b6b6b'; }
+
+    // ---------- portals into Warren dungeons and back (slice 7) ----------
+    const RETURN_RE = /^index\.html\?mode=world&seed=[A-Za-z0-9_-]{1,24}&at=\d{1,4},\d{1,4}(&test=1)?$/;
+    const portalBtn = document.createElement('button'); portalBtn.id = 'rw-portal'; portalBtn.type = 'button'; portalBtn.className = 'hidden'; portalBtn.textContent = 'Enter Warren dungeon';
+    ov.appendChild(portalBtn);
+    let promptFor = -1; let leaving = false;
+    function portalSeed(i) { return String(MMRng.hash(seed + ':portal:' + i) % 100000); }
+    function portalUrls(i) {
+      const q = portals[i];
+      const ret = 'index.html?mode=world&seed=' + seed + '&at=' + q.tx + ',' + q.ty + (opts.test ? '&test=1' : '');
+      const url = 'index.html?mode=dungeon&seed=' + portalSeed(i) + '&lv=2&return=' + encodeURIComponent(ret) + (opts.test ? '&test=1' : '');
+      return { ret: RETURN_RE.test(ret) ? ret : null, url };
+    }
+    function enterPortal(i) {
+      if (leaving || !(i >= 0 && i < portals.length) || !arena.active) return null;
+      const q = portals[i]; const u = portalUrls(i);
+      if (!u.ret) return null;
+      leaving = true;
+      save.pos = { x: q.tx, y: q.ty }; save.returnTo = { x: q.tx, y: q.ty, seed }; save.stats.portals++;
+      writeSave(save); arena.onSave(arena.save);
+      api.lastPortalUrl = u.url;
+      arena.stop(); portalBtn.classList.add('hidden');
+      if (opts.navigate !== false) location.href = u.url;
+      return u.url;
+    }
+    portalBtn.addEventListener('click', () => { if (promptFor >= 0) enterPortal(promptFor); });
+    window.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' && promptFor >= 0 && arena.active && !arena.paused && arena.state === 'play') { ev.preventDefault(); enterPortal(promptFor); } });
+    function portalTick() {
+      const p = arena.player; let near = -1;
+      if (arena.state === 'play' && !arena.paused) for (let i = 0; i < portals.length; i++) { const dx = p.x - portals[i].x; const dy = p.y - portals[i].y; if (dx * dx + dy * dy < 40 * 40) { near = i; break; } }
+      if (near !== promptFor) {
+        promptFor = near; portalBtn.classList.toggle('hidden', near < 0);
+        if (near >= 0) portalBtn.setAttribute('aria-label', `Enter Warren dungeon (${portals[near].label}, Enter)`);
+      }
+    }
+
     // ---------- the hooks the arena calls ----------
     let pendingAt = null;
     if (typeof opts.at === 'string' && AT_RE.test(opts.at)) { const m = AT_RE.exec(opts.at); pendingAt = { x: Math.min(ww - 1, Number(m[1])), y: Math.min(wh - 1, Number(m[2])) }; }
@@ -274,10 +398,20 @@
       onStart() {
         if (pendingAt) { placeAt(pendingAt.x, pendingAt.y); pendingAt = null; } else placeAt(world.spawnPoint.x, world.spawnPoint.y);
         arena.run.wave = 0; arena.biome = 0;
+        resetZones(); kills = 0; promptFor = -2; leaving = false;
+        if (save.returnTo) { save.returnTo = null; writeSave(save); } // back from a dungeon: the trip is over
         arena._showBanner(`The Realm · island #${seed}`, 1.8);
         savePos(true); syncHud(true);
       },
       tick(dt) {
+        if (zones) {
+          const p = arena.player; const out = zones.update(p.x, p.y, Math.min(dt, 0.1), arena.clock);
+          for (let k = 0; k < out.despawn.length; k++) { const id = out.despawn[k]; const e = live.get(id); if (e && e.active && e.zid === id) { e.active = false; e.zid = -1; despawned++; } live.delete(id); } // free pool slots first
+          for (let k = 0; k < out.spawn.length; k++) if (!spawnZ(out.spawn[k])) zones.markDead(out.spawn[k].id, arena.clock); // pool full: the spawner must not count it
+          bossT -= dt; if (bossT <= 0) { bossT = 0.5; bossTick(); }
+          sweepT -= dt; if (sweepT <= 0) { sweepT = 1; sweepLost(); }
+        }
+        portalTick();
         hudT -= dt; saveT -= dt;
         if (hudT <= 0) { hudT = 0.25; syncHud(false); }
         if (saveT <= 0) { saveT = 2; savePos(false); }
@@ -299,12 +433,16 @@
         evict();
         const vx0 = cam.x - 80; const vy0 = cam.y - 80; const vx1 = cam.x + arena.W + 80; const vy1 = cam.y + arena.H + 80;
         for (let i = 0; i < portals.length; i++) { const q = portals[i]; if (q.x > vx0 && q.x < vx1 && q.y > vy0 && q.y < vy1) drawPortal(g, q, tt, reduced); }
+        for (let i = 0; i < world.bossSites.length; i++) { // a ready altar glows (the boss wakes when you come close)
+          const b = world.bossSites[i]; const bx = (b.x + 0.5) * TILE; const by = (b.y + 0.5) * TILE;
+          if (bx < vx0 || bx > vx1 || by < vy0 || by > vy1 || bossLive[i] || !zones || !zones.bossReady(b, tt)) continue;
+          g.globalAlpha = reduced ? 0.5 : 0.35 + 0.25 * Math.sin(tt * 3); g.strokeStyle = '#ff3b3b'; g.lineWidth = 3; g.beginPath(); g.arc(bx, by, 22, 0, Math.PI * 2); g.stroke(); g.globalAlpha = 1;
+          g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(BOSS_NAME[i], bx + 1, by - 29); g.fillStyle = '#ff8a8a'; g.fillText(BOSS_NAME[i], bx, by - 30);
+        }
       },
       drawOver() {},
     };
-    function bossesKey() { return ''; }
-    function bossMarkCol() { return '#d94b4b'; }
-
+    arena.onEnemyKilled = onEnemyKilled; arena.onEnemyHit = onEnemyHit;
     arena.setMode('world');
     arena.setWorld({ w: WW, h: WH, tile: TILE, camera: true, solidAt, shotSolidAt, onStart: hooks.onStart, tick: hooks.tick, drawUnder: hooks.drawUnder, drawOver: hooks.drawOver, pools: { enemies: 72, eBullets: 700 } });
     if (typeof window !== 'undefined') window.addEventListener('pagehide', () => savePos(true));
@@ -318,6 +456,15 @@
       tileCenter: (tx, ty) => ({ x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE }),
       save: () => readSave(), savePos, portals: () => portals.map((q) => ({ i: q.i, x: q.x, y: q.y, tx: q.tx, ty: q.ty, biome: q.biome })),
       syncHud, loadTileArt,
+      // slice 6
+      spawner: () => zones, spawned: () => spawned, despawned: () => despawned,
+      liveCount: () => { let n = 0; live.forEach((e, id) => { if (e.active && e.zid === id) n++; }); return n; },
+      liveEnemies: () => { const o = []; live.forEach((e, id) => { if (e.active && e.zid === id) o.push({ id, x: e.x, y: e.y, type: e.type, zone: e.zone, tier: e.tier, art: e.art, hp: e.maxHp, spd: e.spdMul, dmg: e.dmgMul }); }); return o; },
+      enemyById: (id) => live.get(id) || null, setDropAll: (on) => { dropAll = !!on; }, lastDrops: () => lastDrops.slice(), kills: () => kills,
+      bossSites: () => world.bossSites.map((b, i) => ({ i, x: b.x, y: b.y, zone: b.zone, boss: b.boss, name: BOSS_NAME[i], live: !!(bossLive[i] && bossLive[i].active), ready: !!zones && zones.bossReady(b, arena.clock) })),
+      bossEntity: (i) => bossLive[i] || null, bossTick,
+      // slice 7
+      portalPrompt: () => promptFor, portalUrls, portalSeed, enterPortal, lastPortalUrl: null, RETURN_RE,
     };
     return { api, hooks };
   }
