@@ -16,3 +16,7 @@ Twelve source atlases from the built-in image generator. Each enemy has one move
 ## Codex B05 · 2026-11-19
 
 Twelve atlases from the built-in image generator, one movement sheet and one battle sheet per enemy. Mini Sprout uses the B04 parent sprite as its visual reference. The B05 folder includes the source prompts.
+
+## Codex B07 bosses · 2026-11-19
+
+Sixteen original atlases from the built-in image generator, two per boss. Source prompts are included with the batch.

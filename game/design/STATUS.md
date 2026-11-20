@@ -66,3 +66,7 @@ B04 stages 72 validated enemy animation strips for the six Mad Maze IDs in the m
 ### B05 enemy art
 
 B05 stages 72 validated animation strips for Mini Sprout and five Arcane Frontier enemies. Integration and playback review are pending.
+
+### B07 boss art
+
+B07 stages 48 validated animation strips for all eight Arcane Frontier boss IDs. Runtime integration and playback review are pending.

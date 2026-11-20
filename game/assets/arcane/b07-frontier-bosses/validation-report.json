@@ -1,0 +1,20 @@
+{
+  "batch": "b07",
+  "label": "frontier-bosses",
+  "generated_utc": "2026-11-20T06:53:21.813063Z",
+  "files": 48,
+  "duplicate_ids": 0,
+  "blocking": {},
+  "warnings": {},
+  "standing_heights": {
+    "bone_colossus/down": 228,
+    "inferno_wyrm/down": 212,
+    "void_oracle/down": 220,
+    "crystal_titan/down": 228,
+    "forest_warden/down": 236,
+    "dread_knight/down": 228,
+    "storm_harbinger/down": 216,
+    "mire_queen/down": 188
+  },
+  "status": "provisional"
+}

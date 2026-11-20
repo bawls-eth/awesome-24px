@@ -1,0 +1,6 @@
+[
+  {"id":"boss_origin_calibration","description":"Attack origin coordinates are provisional. Verify timing and placement against the actual game effects."},
+  {"id":"boss_atlas_continuity","description":"Storm Harbinger's gold chest and shoulder ornament differs slightly between the two atlas groups. Crystal Titan's crystal and trim details also vary across groups. Check the transitions at gameplay scale."},
+  {"id":"boss_dread_knight_windup","description":"Two Dread Knight frames use alternate illustrated poses from the same boss atlases to avoid clipped sword tips. Review both attack wind-ups in motion."},
+  {"id":"boss_in_game","description":"Intake and contact-sheet review are complete. Live playback and runtime integration are pending."}
+]
