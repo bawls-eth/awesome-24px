@@ -257,5 +257,34 @@
     return out;
   }
 
-  return { CLASSES, START, arenaProfile, cast, blink, shieldBlocks, unlocks, isStart, focusRegen, maxFocus, abilityCost, regenFocus, spend, siphonHeal };
+  // arenaSignature(classId): the class SIGNATURE ability of the standalone Mad Maze arena. It takes the F slot (the fourth
+  // ability, unlocked at level 7) in place of Overdrive. Pure data; realm.js (setHeroSignature) implements each `kind`.
+  // Fields: id, name, short (<= 9 chars, for the ability bar), icon, slot 'F', level 7, cooldown (s), kind, variant, and tuning:
+  // dmg = per-hit multiplier of the hero's bolt damage, radius/range/dist/knock in arena px, dur seconds, count, heal (hp, capped),
+  // healFrac of damage dealt (capped by heal), shield hits, slow = enemy speed factor while slowed, powMul/powSec = bolt damage buff.
+  // Unknown id -> null (no signature: the arena keeps its four generic abilities).
+  const SIG_KINDS = ['dash-volley', 'drain-orb', 'oath-shield', 'rage-slam', 'thorn-bloom', 'bone-guard', 'volley'];
+  const sg = (kind, variant, id, name, short, icon, cooldown, t) => Object.assign({ id, name, short, icon, slot: 'F', level: 7, cooldown, kind, variant: variant || '' }, t);
+  const SIGNATURES = {
+    ranger: sg('volley', '', 'thicketVolley', 'Thicket Volley', 'Volley', '🏹', 12, { count: 12, spread: 1.0, dmg: 1.2 }),
+    rogue: sg('dash-volley', 'shadow', 'shadowDash', 'Shadow Dash', 'Dash', '🗡️', 10, { count: 7, spread: 0.7, dmg: 1.6, dist: 150 }),
+    trickster: sg('dash-volley', 'blink', 'blinkVolley', 'Blink Volley', 'Blink', '🛸', 11, { count: 5, spread: 0.6, dmg: 1.4, dist: 140 }),
+    shadowPaw: sg('dash-volley', 'smoke', 'smokeStep', 'Smoke Step', 'Smoke', '🥷', 11, { count: 7, spread: 0.7, dmg: 1.5, dist: 150 }),
+    warlock: sg('drain-orb', '', 'drainOrb', 'Drain Orb', 'Drain', '🔮', 12, { range: 260, radius: 90, dmg: 3.5, healFrac: 0.6, heal: 25 }),
+    graveTender: sg('drain-orb', 'siphon', 'graveSiphon', 'Grave Siphon', 'Siphon', '🪦', 13, { range: 240, radius: 100, dmg: 3.5, healFrac: 0.5, heal: 25 }),
+    frostcaller: sg('drain-orb', 'blizzard', 'blizzardRing', 'Blizzard Ring', 'Blizzard', '❄️', 13, { range: 0, radius: 150, dmg: 2.5, healFrac: 0, heal: 0, slow: 0.45, dur: 3 }),
+    paladin: sg('oath-shield', '', 'bulwarkOath', 'Bulwark Oath', 'Oath', '⚜️', 16, { shield: 4, dur: 6, radius: 100, heal: 18 }),
+    herald: sg('oath-shield', 'aura-heal', 'goodBoyAura', 'Good Boy Aura', 'Aura', '🐕', 16, { shield: 1, dur: 6, radius: 100, heal: 30 }),
+    punk: sg('oath-shield', 'mosh', 'moshShield', 'Mosh Shield', 'Mosh', '🎸', 15, { shield: 3, dur: 5, radius: 80, heal: 8 }),
+    berserker: sg('rage-slam', '', 'rageSlam', 'Rage Slam', 'Slam', '🔨', 14, { radius: 120, dmg: 5, knock: 70, powMul: 1.25, powSec: 5 }),
+    bruiser: sg('rage-slam', 'ground-pound', 'groundPound', 'Ground Pound', 'Pound', '🦍', 13, { radius: 130, dmg: 6, knock: 90, powMul: 1, powSec: 0 }),
+    druid: sg('thorn-bloom', '', 'thornBloom', 'Thorn Bloom', 'Bloom', '🌿', 16, { range: 240, radius: 100, dur: 5, slow: 0.15, dmg: 1.5, heal: 15 }),
+    necromancer: sg('bone-guard', '', 'raiseBones', 'Raise Bones', 'Bones', '💀', 15, { count: 3, dur: 10, radius: 56, dmg: 2, healFrac: 0.3, heal: 20 }),
+  };
+  function arenaSignature(classId) {
+    if (typeof classId !== 'string' || !Object.prototype.hasOwnProperty.call(SIGNATURES, classId)) return null;
+    return Object.assign({}, SIGNATURES[classId]);
+  }
+
+  return { CLASSES, START, arenaProfile, arenaSignature, SIG_KINDS, cast, blink, shieldBlocks, unlocks, isStart, focusRegen, maxFocus, abilityCost, regenFocus, spend, siphonHeal };
 });
