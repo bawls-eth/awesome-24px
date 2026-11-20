@@ -77,4 +77,8 @@ Staged 20 additional weapon icons. The two item packs cover 28 weapon IDs and ei
 
 ### B08 headgear
 
-Staged 26 validated headgear icons. Armor and runtime integration are pending.
+Staged 26 validated headgear icons. Runtime integration is pending.
+
+### B08 armor
+
+Staged 50 validated armor icons alongside the 26 headgear icons. Runtime integration is pending.
