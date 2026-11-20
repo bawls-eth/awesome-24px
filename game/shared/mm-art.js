@@ -11,10 +11,13 @@
   // Registry of shipped packs: which classes each one carries. Add b02.. here as they land.
   var PACKS = [
     { id: 'b00-warrior', classes: ['warrior'] },
-    { id: 'b01-ranger-mage-cleric', classes: ['ranger', 'mage', 'cleric'] }
+    { id: 'b01-ranger-mage-cleric', classes: ['ranger', 'mage', 'cleric'] },
+    { id: 'b02-rogue-warlock-paladin', classes: ['rogue', 'warlock', 'paladin'] },
+    { id: 'b03-berserker-druid-necromancer', classes: ['berserker', 'druid', 'necromancer'] }
   ];
   // Mad Maze class id -> art class id (classes without art are absent: callers keep their sprite).
-  var CLASS_MAP = { bruiser: 'warrior', ranger: 'ranger', frostcaller: 'mage', herald: 'cleric' };
+  var CLASS_MAP = { bruiser: 'warrior', ranger: 'ranger', frostcaller: 'mage', herald: 'cleric',
+    rogue: 'rogue', warlock: 'warlock', paladin: 'paladin', berserker: 'berserker', druid: 'druid', necromancer: 'necromancer' };
   var DIRS = { down: 1, up: 1, right: 1 };
   // Mad Maze arena enemy type (RM_ENEMIES key) -> art creature id. The boss and unknown types are absent (procedural sprite stays).
   var ENEMY_MAP = { spiral: 'moth', aimed: 'archer', ring: 'puffcap' };

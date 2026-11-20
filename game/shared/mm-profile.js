@@ -14,7 +14,7 @@
   const MAX_ITEMS = 24;
   const MAX_LEVEL = 20;
   const MAX_FAME = 99999999;
-  const CLASSES = ['ranger', 'frostcaller', 'herald', 'punk', 'bruiser'];
+  const CLASSES = ['ranger', 'frostcaller', 'herald', 'punk', 'bruiser', 'rogue', 'warlock', 'paladin', 'berserker', 'druid', 'necromancer'];
   const MODES = ['classic', 'picnic'];
   const HERO_MODES = ['classic', 'picnic', 'hardcore'];
 
