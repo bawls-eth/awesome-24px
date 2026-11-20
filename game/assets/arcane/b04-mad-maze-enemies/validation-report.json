@@ -1,0 +1,30 @@
+{
+  "batch": "b04",
+  "label": "mad-maze-enemies",
+  "generated_utc": "2026-11-20T03:52:02.806029Z",
+  "files": 72,
+  "duplicate_ids": 0,
+  "blocking": {},
+  "warnings": {},
+  "standing_heights": {
+    "puffcap/down": 112,
+    "puffcap/up": 112,
+    "puffcap/right": 108,
+    "beetle/down": 112,
+    "beetle/up": 108,
+    "beetle/right": 100,
+    "archer/down": 136,
+    "archer/up": 132,
+    "archer/right": 132,
+    "moth/down": 104,
+    "moth/up": 108,
+    "moth/right": 104,
+    "sprout/down": 100,
+    "sprout/up": 100,
+    "sprout/right": 104,
+    "mothling/down": 64,
+    "mothling/up": 64,
+    "mothling/right": 76
+  },
+  "status": "provisional"
+}
