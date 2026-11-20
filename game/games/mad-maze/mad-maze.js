@@ -93,6 +93,12 @@
   if (window.MMArt && MMArt.loadItems && params.get('itemart') !== '0') {
     MMArt.loadItems('../../assets/arcane/').then((set) => { if (set.ids().length) arena.setItemArt(set); }).catch(() => {});
   }
+  // Boss art: loaded lazily, one boss at a time (the realm asks for a boss id the first time that boss is drawn); ?bossart=0 disables it.
+  if (window.MMArt && MMArt.loadBosses && params.get('bossart') !== '0') {
+    MMArt.loadBosses('../../assets/arcane/', [MMArt.bossArtFor(0)]).then((set) => {
+      arena.setBossArt(set, (id) => { MMArt.loadBosses('../../assets/arcane/', [id]).then((s2) => set.merge(s2)).catch(() => {}); });
+    }).catch(() => {});
+  }
 
   if (TEST) window.__mm = { arena, dungeon: dungeon ? dungeon.api : null };
   arena.start();

@@ -25,6 +25,11 @@
   var DRIFTER_MAP = { wisp: 'mothling', cinder: 'beetle', puff: 'sprout' };
   // Visible creature width in px at scale 1 (cells are 256 wide, creatures fill about half): callers size the art off this.
   var ENEMY_VISIBLE_W = 130;
+  // Arena boss art (batch b07-frontier-bosses, 384px cells, 'down' only). BOSS_MAP is indexed by boss tier (0 = the first boss, Gloomheart ->
+  // void_oracle, whose pink/purple fits); later tiers walk the rest of the list and wrap. Deterministic: no randomness, same tier -> same boss.
+  var BOSS_MAP = ['void_oracle', 'bone_colossus', 'inferno_wyrm', 'crystal_titan', 'forest_warden', 'dread_knight', 'storm_harbinger', 'mire_queen'];
+  var BOSS_ACTIONS = ['idle', 'move', 'attack_a', 'attack_b', 'hit', 'death'];
+  var BOSS_VISIBLE_W = 220; // typical visible body width in px inside a 384 cell
 
   function artClassFor(mmClass) {
     return typeof mmClass === 'string' && Object.prototype.hasOwnProperty.call(CLASS_MAP, mmClass) ? CLASS_MAP[mmClass] : null;
@@ -34,6 +39,11 @@
   }
   function drifterArtFor(kind) {
     return typeof kind === 'string' && Object.prototype.hasOwnProperty.call(DRIFTER_MAP, kind) ? DRIFTER_MAP[kind] : null;
+  }
+  function bossArtFor(tier) {
+    var t = Math.floor(Number(tier));
+    if (!isFinite(t) || t < 0) t = 0;
+    return BOSS_MAP[t % BOSS_MAP.length];
   }
   function packFor(artClass) {
     for (var i = 0; i < PACKS.length; i++) if (PACKS[i].classes.indexOf(artClass) >= 0) return PACKS[i];
@@ -274,5 +284,14 @@
     try { var s = set || lastItemSet; return s && typeof s.iconUrl === 'function' ? s.iconUrl(id) : null; } catch (e) { return null; }
   }
 
-  return { loadItems: loadItems, itemIconUrl: itemIconUrl, ITEM_ICON_MAP: ITEM_ICON_MAP, ItemSet: ItemSet, enemyArtFor: enemyArtFor, drifterArtFor: drifterArtFor, loadEnemies: loadEnemies, ENEMY_MAP: ENEMY_MAP, DRIFTER_MAP: DRIFTER_MAP, ENEMY_VISIBLE_W: ENEMY_VISIBLE_W, load: load, loadClass: loadClass, loadAll: loadAll, packIds: packIds, artClassFor: artClassFor, packFor: packFor, frameAt: frameAt, scaleFor: scaleFor, duration: duration, PACKS: PACKS, CLASS_MAP: CLASS_MAP, ArtSet: ArtSet };
+  // loadBosses(assetRoot, ids?, opts?) -> Promise<ArtSet> holding only the named bosses (default: the tier-0 boss), idle/move/attack_a/attack_b/hit/death.
+  function loadBosses(assetRoot, ids, opts) {
+    var o = {}; for (var k in opts || {}) o[k] = opts[k];
+    var only = (Array.isArray(ids) ? ids : [BOSS_MAP[0]]).filter(function (x) { return BOSS_MAP.indexOf(x) >= 0; });
+    if (!only.length) return Promise.resolve(new ArtSet());
+    o.only = only; o.actions = o.actions || BOSS_ACTIONS;
+    return loadPacks(assetRoot, o);
+  }
+
+  return { bossArtFor: bossArtFor, loadBosses: loadBosses, BOSS_MAP: BOSS_MAP, BOSS_VISIBLE_W: BOSS_VISIBLE_W, BOSS_ACTIONS: BOSS_ACTIONS, loadItems: loadItems, itemIconUrl: itemIconUrl, ITEM_ICON_MAP: ITEM_ICON_MAP, ItemSet: ItemSet, enemyArtFor: enemyArtFor, drifterArtFor: drifterArtFor, loadEnemies: loadEnemies, ENEMY_MAP: ENEMY_MAP, DRIFTER_MAP: DRIFTER_MAP, ENEMY_VISIBLE_W: ENEMY_VISIBLE_W, load: load, loadClass: loadClass, loadAll: loadAll, packIds: packIds, artClassFor: artClassFor, packFor: packFor, frameAt: frameAt, scaleFor: scaleFor, duration: duration, PACKS: PACKS, CLASS_MAP: CLASS_MAP, ArtSet: ArtSet };
 }));
