@@ -91,3 +91,7 @@ Existing types stay (`RM_ENEMIES`: `spiral` Whirler, `aimed` Sniper, `ring` Burs
 | U5 | Nexus, restart, settings, phone controls, polish | save key `pixeltown-realm-v1`, Survivor's Cache respawn, tutorial banner |
 
 Each slice ships behind a link from the hub, keeps the existing Realm and Mad Maze entry points working, and must pass `node game/tests/run-all.js` before merge.
+
+## 10. Zone engine (`game/shared/mm-zones.js`, global `MMZones`)
+
+Pure and seeded. `createSpawner(world, opts)` activates spawn groups within 1500 px of the player, despawns them beyond 2.5x that (unless `markCombat`), caps active enemies at 60 (nearest groups first), and respawns cleared groups after a zone cooldown (60/90/120/180 s). Per-group RNG is seeded from `(seed, groupIndex, respawnCount)`. `update(px, py, dt, tNow)` returns a reused `{spawn, despawn}`. `rollDrop` / `rollDropForPlayers` give brown..gold bags (items from the 7 realm item ids, epic only from godlands bosses); `zoneInfoAt` feeds the minimap/HUD; `eventsFor` schedules timed boss events per region. All tunables are in `MMZones.TABLES`.
