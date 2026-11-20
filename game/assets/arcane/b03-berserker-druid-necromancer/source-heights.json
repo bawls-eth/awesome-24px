@@ -1,0 +1,434 @@
+{
+  "berserker_idle_down": [
+    151,
+    151,
+    151,
+    151
+  ],
+  "berserker_walk_down": [
+    156,
+    156,
+    153,
+    148,
+    155,
+    157
+  ],
+  "berserker_idle_up": [
+    154,
+    155,
+    154,
+    154
+  ],
+  "berserker_walk_up": [
+    162,
+    162,
+    159,
+    162,
+    163,
+    163
+  ],
+  "berserker_idle_right": [
+    159,
+    159,
+    159,
+    160
+  ],
+  "berserker_walk_right": [
+    152,
+    156,
+    159,
+    156,
+    161,
+    161
+  ],
+  "druid_idle_down": [
+    148,
+    148,
+    147,
+    149
+  ],
+  "druid_walk_down": [
+    152,
+    155,
+    153,
+    154,
+    158,
+    156
+  ],
+  "druid_idle_up": [
+    150,
+    147,
+    149,
+    152
+  ],
+  "druid_walk_up": [
+    151,
+    157,
+    156,
+    155,
+    158,
+    155
+  ],
+  "druid_idle_right": [
+    157,
+    157,
+    155,
+    158
+  ],
+  "druid_walk_right": [
+    155,
+    158,
+    155,
+    161,
+    161,
+    161
+  ],
+  "necromancer_idle_down": [
+    158,
+    158,
+    158,
+    151
+  ],
+  "necromancer_walk_down": [
+    156,
+    160,
+    157,
+    154,
+    158,
+    158
+  ],
+  "necromancer_idle_up": [
+    155,
+    158,
+    155,
+    151
+  ],
+  "necromancer_walk_up": [
+    154,
+    157,
+    155,
+    153,
+    157,
+    157
+  ],
+  "necromancer_idle_right": [
+    154,
+    157,
+    154,
+    149
+  ],
+  "necromancer_walk_right": [
+    154,
+    154,
+    149,
+    149,
+    149,
+    148
+  ],
+  "berserker_attack_down": [
+    145,
+    147,
+    147,
+    135,
+    144
+  ],
+  "berserker_cast_down": [
+    135,
+    137,
+    163,
+    133,
+    137
+  ],
+  "berserker_roll_down": [
+    117,
+    104,
+    93,
+    100,
+    119,
+    117
+  ],
+  "berserker_hit_down": [
+    126,
+    114
+  ],
+  "berserker_death_down": [
+    122,
+    116,
+    93,
+    70,
+    61,
+    57
+  ],
+  "berserker_attack_up": [
+    147,
+    147,
+    130,
+    127,
+    148
+  ],
+  "berserker_cast_up": [
+    139,
+    135,
+    171,
+    130,
+    139
+  ],
+  "berserker_roll_up": [
+    119,
+    105,
+    96,
+    94,
+    119,
+    120
+  ],
+  "berserker_hit_up": [
+    123,
+    113
+  ],
+  "berserker_death_up": [
+    127,
+    118,
+    99,
+    74,
+    63,
+    58
+  ],
+  "berserker_attack_right": [
+    144,
+    153,
+    133,
+    129,
+    144
+  ],
+  "berserker_cast_right": [
+    148,
+    154,
+    178,
+    133,
+    147
+  ],
+  "berserker_roll_right": [
+    131,
+    111,
+    98,
+    88,
+    129,
+    123
+  ],
+  "berserker_hit_right": [
+    120,
+    121
+  ],
+  "berserker_death_right": [
+    136,
+    127,
+    97,
+    71,
+    61,
+    59
+  ],
+  "druid_attack_down": [
+    120,
+    122,
+    116,
+    112,
+    120
+  ],
+  "druid_cast_down": [
+    111,
+    112,
+    123,
+    107,
+    112
+  ],
+  "druid_roll_down": [
+    117,
+    100,
+    97,
+    97,
+    116,
+    120
+  ],
+  "druid_hit_down": [
+    146,
+    136
+  ],
+  "druid_death_down": [
+    138,
+    120,
+    100,
+    74,
+    71,
+    64
+  ],
+  "druid_attack_up": [
+    114,
+    114,
+    106,
+    108,
+    114
+  ],
+  "druid_cast_up": [
+    114,
+    117,
+    134,
+    110,
+    115
+  ],
+  "druid_roll_up": [
+    120,
+    108,
+    100,
+    108,
+    122,
+    120
+  ],
+  "druid_hit_up": [
+    141,
+    135
+  ],
+  "druid_death_up": [
+    138,
+    125,
+    103,
+    72,
+    61,
+    52
+  ],
+  "druid_attack_right": [
+    112,
+    115,
+    110,
+    108,
+    109
+  ],
+  "druid_cast_right": [
+    115,
+    119,
+    127,
+    110,
+    114
+  ],
+  "druid_roll_right": [
+    132,
+    110,
+    95,
+    101,
+    121,
+    125
+  ],
+  "druid_hit_right": [
+    131,
+    131
+  ],
+  "druid_death_right": [
+    149,
+    126,
+    97,
+    69,
+    64,
+    60
+  ],
+  "necromancer_attack_down": [
+    168,
+    168,
+    157,
+    153,
+    168
+  ],
+  "necromancer_cast_down": [
+    161,
+    163,
+    191,
+    174,
+    161
+  ],
+  "necromancer_roll_down": [
+    133,
+    114,
+    98,
+    101,
+    128,
+    132
+  ],
+  "necromancer_hit_down": [
+    148,
+    123
+  ],
+  "necromancer_death_down": [
+    142,
+    122,
+    98,
+    78,
+    73,
+    63
+  ],
+  "necromancer_attack_up": [
+    168,
+    194,
+    158,
+    151,
+    168
+  ],
+  "necromancer_cast_up": [
+    167,
+    184,
+    207,
+    183,
+    167
+  ],
+  "necromancer_roll_up": [
+    135,
+    112,
+    100,
+    99,
+    123,
+    131
+  ],
+  "necromancer_hit_up": [
+    145,
+    131
+  ],
+  "necromancer_death_up": [
+    135,
+    107,
+    92,
+    84,
+    70,
+    65
+  ],
+  "necromancer_attack_right": [
+    162,
+    178,
+    150,
+    145,
+    163
+  ],
+  "necromancer_cast_right": [
+    164,
+    183,
+    206,
+    180,
+    163
+  ],
+  "necromancer_roll_right": [
+    140,
+    120,
+    103,
+    99,
+    135,
+    130
+  ],
+  "necromancer_hit_right": [
+    134,
+    132
+  ],
+  "necromancer_death_right": [
+    141,
+    120,
+    94,
+    75,
+    72,
+    72
+  ]
+}
