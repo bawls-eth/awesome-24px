@@ -87,6 +87,7 @@ const RM_WPN_CAP = 40; // live styled bolts per hero
 const RM_WPN_ST = ['slowed', 'weak', 'dazed', 'armorBroken', 'curse', 'bleed', 'rooted', 'marked']; // bolt `st` = index + 1 (0 = none); applied by the status wiring
 const RM_BOLT_D = { player: 26, enemy: 24 }; // art bolt draw sizes in px (enemy never above 1.3x the player bolt)
 const RM_SPARK_MAX = 24, RM_SPARK_LIFE = 0.25;
+const RM_FX_MAX = 16; // live one-shot effect sprites (setFxArt)
 const RM_SPARK_CLASS = { ranger: 'a', bruiser: 'a', berserker: 'a', punk: 'a', rogue: 'a', paladin: 'a', frostcaller: 'b', herald: 'b', druid: 'b', warlock: 'c', necromancer: 'c', trickster: 'c', gravetender: 'c', shadowpaw: 'c' };
 const RM_EB_ROT = { ebolt_shard: 1, ebolt_arrow: 1, ebolt_fire: 1, ebolt_frost: 1, ebolt_laser_h: 1, ebolt_skull: 0 };
 const RM_WPN_COLOR = { dot: '#ffe27a', arrow: '#f3d9a4', shard: '#9fe3ff', orb: '#c59bff', star: '#ffd24a', blade: '#e6edf3', page: '#fff3c4', axe: '#ff9a6a', hammer: '#ffcf5a', fist: '#ffb38a', ray: '#7ee7ff' };
@@ -280,6 +281,8 @@ class RealmArena {
     this._avatar = null;
     this._itemArt = null; this._enemyArt = null; this._enemyMap = null; this._driftMap = null; this._enemyDbgOn = false; this._bossArt = null; this._bossLoad = null; this._bossDbg = null; this._bossGhost = null; this._bossReq = null; this._biomeEnemyMap = null; this._edGhosts = null; // optional enemy animations (setEnemyArt)
     this._boltArt = null; this._boltCls = null; this._baCache = null; this._sparks = null; this._curE = null; this._baDraws = 0; this._baeDraws = 0; this._sparkSpawned = 0; this._sparkDraws = 0; // optional bolt art (setBoltArt)
+    this._abIconRoot = null; // setAbilityIcons
+    this._fx = null; this._fxPool = null; this._fxDraws = 0; // optional one-shot effect art (setFxArt)
     this.heroProfile = null; // setHeroProfile
     this._heroSrc = null; this._hu = null; // setHeroLevelSource: the active hero {cls, level} (null = classic: account level, no unlock nodes)
     this.weapon = null; this._wq = []; this._wOrbT = [0, 0, 0]; this._wOrbA = 0; this._wCache = null; this._kIn = {}; this._kHero = { x: 0, y: 0 }; this._kWall = 0; this._kW = null; // setHeroWeapon (null = today's fire)
@@ -946,6 +949,77 @@ class RealmArena {
       if (red) g.globalAlpha = 1 - q.t / RM_SPARK_LIFE;
       g.drawImage(cv, q.x - cv.width / 2, q.y - cv.height / 2); this._sparkDraws++;
       if (red) g.globalAlpha = 1;
+    }
+  }
+
+  // Additive hook: one-shot effect art (MMArt.loadFx FxSet, batch b18). null / ?fxart=0 = no effect sprites. Missing ids are skipped silently.
+  // Sprites come from a fixed pool of RM_FX_MAX slots (the oldest is reused when full) and are blitted straight from the strip: no per-effect canvas.
+  setFxArt(set) {
+    let off = false;
+    try { off = typeof location !== 'undefined' && /[?&]fxart=0(&|$)/.test(location.search || ''); } catch (e) { off = false; }
+    const ok = !off && set && typeof set.anim === 'function' && typeof set.has === 'function';
+    this._fx = ok ? set : null;
+    if (ok && !this._fxPool) this._fxPool = Array.from({ length: RM_FX_MAX }, () => ({ active: false, id: '', x: 0, y: 0, t: 0, dur: 0.5, w: 64, h: 64, rot: 0, follow: false, oy: 0 }));
+    if (!ok && this._fxPool) this._fxPool.forEach((q) => { q.active = false; });
+    return ok;
+  }
+  // Additive hook: ability bar icons (b20 ability_dash / nova / shield / overdrive and ability_<class>_sig). `root` is the b20 abilities folder URL
+  // ('' / null / ?uiicons=0 = emoji only). The emoji span and the Q/E/R/F letter stay in the button; a failed image is removed and never retried.
+  setAbilityIcons(root) {
+    let off = false;
+    try { off = typeof location !== 'undefined' && /[?&]uiicons=0(&|$)/.test(location.search || ''); } catch (e) { off = false; }
+    this._abIconRoot = !off && typeof root === 'string' && /^[A-Za-z0-9_.\/:-]+\/$/.test(root) ? root : null;
+    this._syncAbilities();
+    return !!this._abIconRoot;
+  }
+  _abIconId(i) {
+    if (i === 3 && this._sigOn()) { const c = (this.heroClass() || this._boltCls || '').toLowerCase(); return /^[a-z]+$/.test(c) ? 'ability_' + c + '_sig' : null; }
+    return ['ability_dash', 'ability_nova', 'ability_shield', 'ability_overdrive'][i] || null;
+  }
+  _syncAbilityIcon(el, i) {
+    const id = this._abIconRoot ? this._abIconId(i) : null;
+    let img = el.querySelector(':scope > img.realm-ab-img');
+    const ico = el.querySelector('.ico');
+    if (!id || (el.dataset.abBad || '').split(',').indexOf(id) >= 0) { if (img) img.remove(); if (ico) ico.style.opacity = ''; delete el.dataset.abImg; return; }
+    if (img && img.dataset.id === id) return;
+    if (img) img.remove();
+    img = document.createElement('img'); img.className = 'realm-ab-img mm-ico'; // mm-ico: our own UI icon (tests tell it from an injected <img>)
+    img.alt = ''; img.draggable = false; img.dataset.id = id; img.setAttribute('aria-hidden', 'true');
+    img.style.cssText = 'position:absolute;left:50%;top:50%;width:70%;height:70%;transform:translate(-50%,-50%);object-fit:contain;image-rendering:pixelated;pointer-events:none';
+    img.addEventListener('load', () => { el.dataset.abImg = id; if (ico) ico.style.opacity = '0'; });
+    img.addEventListener('error', () => { el.dataset.abBad = (el.dataset.abBad ? el.dataset.abBad + ',' : '') + id; img.remove(); if (ico) ico.style.opacity = ''; delete el.dataset.abImg; });
+    img.src = this._abIconRoot + id + '.png';
+    el.insertBefore(img, el.firstChild);
+  }
+  fxDraws() { return this._fxDraws; }
+  fxLive() { return this._fxPool ? this._fxPool.filter((q) => q.active).length : 0; }
+  // Plays effect `id` once at (x, y). opt: { w, h (draw size), rot (radians), follow (track the hero), oy (offset), dur (seconds) }.
+  fxPlay(id, x, y, opt) {
+    const A = this._fx, pool = this._fxPool; if (!A || !pool) return false;
+    const an = A.anim(id); if (!an) return false;
+    const o = opt || {};
+    let q = null, old = pool[0];
+    for (let i = 0; i < pool.length; i++) { const c = pool[i]; if (!c.active) { q = c; break; } if (c.t / c.dur > old.t / old.dur) old = c; }
+    if (!q) q = old;
+    q.active = true; q.id = id; q.x = x; q.y = y; q.t = 0; q.dur = o.dur > 0 ? o.dur : an.frames / an.fps;
+    q.w = o.w || an.fw; q.h = o.h || o.w || an.fh; q.rot = o.rot || 0; q.follow = !!o.follow; q.oy = o.oy || 0;
+    return true;
+  }
+  fxHeal() { const p = this.player; return this.fxPlay('fx_heal_pulse', p.x, p.y, { follow: true, w: 80, oy: -4 }); }
+  _fxUpdate(dt) { const pool = this._fxPool; if (!pool) return; for (let i = 0; i < pool.length; i++) { const q = pool[i]; if (q.active) { q.t += dt; if (q.t >= q.dur) q.active = false; } } }
+  _fxDraw(g) {
+    const pool = this._fxPool, A = this._fx; if (!pool || !A) return;
+    const red = this._reduced, p = this.player;
+    for (let i = 0; i < pool.length; i++) {
+      const q = pool[i]; if (!q.active) continue;
+      const an = A.anim(q.id); if (!an) { q.active = false; continue; }
+      const f = red ? Math.min(an.frames - 1, 1) : Math.min(an.frames - 1, Math.floor(q.t * an.fps)); // reduce-motion: one frame, fading out
+      const x = q.follow ? p.x : q.x, y = (q.follow ? p.y : q.y) + q.oy;
+      if (red) g.globalAlpha = Math.max(0, 1 - q.t / q.dur);
+      if (q.rot) { g.save(); g.translate(x, y); g.rotate(q.rot); g.drawImage(an.img, f * an.fw, 0, an.fw, an.fh, -q.w / 2, -q.h / 2, q.w, q.h); g.restore(); }
+      else g.drawImage(an.img, f * an.fw, 0, an.fw, an.fh, x - q.w / 2, y - q.h / 2, q.w, q.h);
+      if (red) g.globalAlpha = 1;
+      this._fxDraws++;
     }
   }
 
@@ -1659,7 +1733,7 @@ class RealmArena {
 
   // Everything a fresh run needs (shared by start() and restart()); never touches the loop or the save.
   _beginRun() {
-    [this.pBullets, this.eBullets, this.enemies, this._edGhosts || [], this.particles, this.texts, this.bags, this.drifters, this.hazards, this._sparks || []].forEach((pool) => pool.forEach((o) => { o.active = false; }));
+    [this.pBullets, this.eBullets, this.enemies, this._edGhosts || [], this.particles, this.texts, this.bags, this.drifters, this.hazards, this._sparks || [], this._fxPool || []].forEach((pool) => pool.forEach((o) => { o.active = false; }));
     this._wireRefresh(); this._padPrev.fill(false); this._wq.length = 0;
     this.keys = {}; this.mouse.down = false; this.moveVec.x = 0; this.moveVec.y = 0; this.aimVec.on = false; this.aimVec.x = 0; this.aimVec.y = 0; // no stuck input from the last run
     const p = this.player;
@@ -2153,6 +2227,7 @@ class RealmArena {
     this.eBullets.forEach((b) => { if (b.active) { b.active = false; this._burst(b.x, b.y, '#ffe27a', 1, 60); } });
     this._burst(e.x, e.y, '#ff5fa2', 40, 340); this._burst(e.x, e.y, '#ffe27a', 30, 260);
     this.shake = 14;
+    if (this._fxPool) this.fxPlay('fx_explosion_big', e.x, e.y, { w: 160 });
     this._floatText(e.x, e.y - 30, `+${gain} 💎`, '#8fe9ff');
     this._gainXp(Math.round(RM_XP.boss * tier * this.stats.xp));
     this.dropBag(e.x - 20, e.y + 20, 2); this.dropBag(e.x + 20, e.y + 20, this.rollRarity()); // a guaranteed rare, plus one more
@@ -2257,7 +2332,7 @@ class RealmArena {
         if (d.active && (b.x - d.x) * (b.x - d.x) + (b.y - d.y) * (b.y - d.y) < 15 * 15) { b.active = false; this._hitDrifter(d, b.dmg || this.stats.dmg); break; }
       }
     }
-    this._updateSparks(dt);
+    this._updateSparks(dt); this._fxUpdate(dt);
     // Enemy bullets: move, hit the player. World mode: a bullet more than one view diagonal from the player can never matter: it is dropped.
     const pr = RM_PLAYER.r + 4;
     const cull = this.world && this.mode === 'world' && !this.dungeon ? (this.W * this.W + this.H * this.H) : 0;
@@ -2309,6 +2384,7 @@ class RealmArena {
     this.save.kills += 1; this.save.shards += gain; this.save.kb[e.type] += 1;
     if (this.team) this.team.ev('rew', [def.shards, RM_XP[e.type] * (1 + 0.1 * Math.max(0, this.run.wave - 1)), e.type]);
     this._burst(e.x, e.y, def.color, 16, 230);
+    if (this._fxPool) { if (e.type === 'spiral') this.fxPlay('fx_explosion_small', e.x, e.y, { w: 72 }); else this.fxPlay('fx_poof_death', e.x, e.y, { w: 64 }); }
     this._floatText(e.x, e.y - 22, `+${gain} 💎`, '#8fe9ff');
     this._gainXp(Math.round(RM_XP[e.type] * (1 + 0.1 * Math.max(0, this.run.wave - 1)) * (e.xpMul || 1) * this.stats.xp));
     if (this.mode !== 'world' && this.rng() < RM_BAG_CHANCE) this.dropBag(e.x, e.y, this.rollRarity()); // a world rolls its own zone drops (onEnemyKilled)
@@ -2488,6 +2564,7 @@ class RealmArena {
     p.hp = Math.min(this.stats.maxHp, p.hp + Math.round(this.stats.maxHp * 0.3) + (this.stats.maxHp - before)); // a level heals a bit and the new max HP is free
     this.shake = Math.max(this.shake, 4);
     this._burst(p.x, p.y, '#ffe27a', 28, 260);
+    if (this._fxPool) this.fxPlay('fx_levelup', p.x, p.y, { follow: true, w: 112, oy: -8 });
     const unlocked = [0, 1, 2, 3].map((i) => this._ab(i)).filter((a) => a.level === this.save.level);
     this._showBanner(`Level ${this.save.level}!${unlocked.length ? `  ${unlocked[0].icon} ${unlocked[0].name} unlocked` : ''}`, 2);
     this._syncAbilities();
@@ -2508,19 +2585,21 @@ class RealmArena {
     b.lifetime = worldLoot?.lifetime || Infinity;
     b.id = this._wpnDrop(itemId || RM_BASE_ITEMS[Math.floor(this.rng() * RM_BASE_ITEMS.length)].id, worldLoot);
     const a = this.rng() * Math.PI * 2; b.vx = Math.cos(a) * 60; b.vy = Math.sin(a) * 60;
+    if (this._fxPool) this.fxPlay('fx_loot_spawn', x, y, { w: 48 });
     return b;
   }
 
   // Styled weapon drops (S12): in a world or dungeon run with an active hero, a rolled classic weapon (Spark / Quickfire Wand) becomes a
   // `wpn_<style>` item with a chance that grows with the bag tier; MMWeaponItems.dropItem picks it (70% the hero's family, 30% any).
   // Seeded (_wpnRng), rarity unchanged. Classic waves, duels, no hero, ?weapons=0 or a page without mm-weapon-items.js: the id is unchanged.
-  _wpnDrop(id, worldLoot) {
+  _wpnDrop(id, worldLoot, rng) { // `rng` (optional function) replaces the shared _wpnRng stream, e.g. a per-chest seeded stream
     if (!RM_WPN_ITEMS.length || !(worldLoot || this.dungeon) || (this.team && this.team.isPvp) || typeof MMWeaponItems === 'undefined') return id;
     const def = RM_ITEM_BY_ID[id], cls = this.heroClass();
     if (!def || def.slot !== 'weapon' || def.wpn || !cls) return id;
     const tier = worldLoot && Number.isFinite(worldLoot.tierIndex) ? Math.max(0, Math.min(4, worldLoot.tierIndex)) : 1;
-    if (this._wpnRng() >= Math.min(0.85, 0.45 + 0.1 * tier)) return id;
-    let w = null; try { w = MMWeaponItems.dropItem(this._wpnRng, cls); } catch (e) { w = null; }
+    const R = typeof rng === 'function' ? rng : this._wpnRng;
+    if (R() >= Math.min(0.85, 0.45 + 0.1 * tier)) return id;
+    let w = null; try { w = MMWeaponItems.dropItem(R, cls); } catch (e) { w = null; }
     return typeof w === 'string' && RM_ITEM_BY_ID[w] && RM_ITEM_BY_ID[w].wpn ? w : id;
   }
 
@@ -2574,18 +2653,22 @@ class RealmArena {
       if (Math.hypot(dx, dy) < 0.1) { dx = Math.cos(p.aim); dy = Math.sin(p.aim); }
       const len = Math.hypot(dx, dy) || 1;
       this._burst(p.x, p.y, '#8fe9ff', 8, 120);
+      const sx0 = p.x, sy0 = p.y;
       if (this._coll()) { for (let k = 0; k < 15; k++) this._movePlayer((dx / len) * 10, (dy / len) * 10); } // stepwise so a dash cannot tunnel through a wall
       else {
         p.x = Math.max(RM_PLAYER.r, Math.min(this._bw() - RM_PLAYER.r, p.x + (dx / len) * 150));
         p.y = Math.max(RM_PLAYER.r, Math.min(this._bh() - RM_PLAYER.r, p.y + (dy / len) * 150));
       }
+      this._fxDashTrail(sx0, sy0);
       p.iframes = Math.max(p.iframes, 0.4);
     } else if (ab.id === 'nova') {
       const nb = this._novaBolts();
       for (let k = 0; k < nb; k++) this.firePlayerBullet((k / nb) * Math.PI * 2);
       this.shake = Math.max(this.shake, 3);
+      if (this._fxPool) this.fxPlay(this.heroClass() === 'frostcaller' || this._boltCls === 'frostcaller' ? 'fx_blizzard_ring' : 'fx_slam_ring', p.x, p.y, { w: 128 });
     } else if (ab.id === 'shield') {
       this.shield.hits = 3; this.shield.t = 6;
+      if (this._fxPool) this.fxPlay('fx_shield_up', p.x, p.y, { follow: true, w: 80 });
     } else if (ab.id === 'overdrive') {
       this.overdriveT = 4;
     }
@@ -2595,6 +2678,13 @@ class RealmArena {
     if (ab === this._sigAb) this._showBanner(`${ab.icon} ${ab.name}!`, 1.1);
     this._syncAbilities();
     return true;
+  }
+
+  // Dash trail: a horizontal strip laid along the dash line (rotated to the heading), centred between where the hero left and where they landed.
+  _fxDashTrail(sx, sy) {
+    if (!this._fxPool) return;
+    const p = this.player, len = Math.hypot(p.x - sx, p.y - sy); if (len < 8) return;
+    this.fxPlay('fx_dash_trail', (sx + p.x) / 2, (sy + p.y) / 2, { w: Math.max(64, len + 24), h: 48, rot: Math.atan2(p.y - sy, p.x - sx) });
   }
 
   _updateAbilities(dt) {
@@ -2615,7 +2705,7 @@ class RealmArena {
   _sigHeal(n) {
     const p = this.player; if (this.down || n <= 0 || p.hp >= this.stats.maxHp || (p._stm && p._stm.noHeal)) return 0; // sick: no healing
     const got = Math.min(Math.round(n), this.stats.maxHp - p.hp); if (got <= 0) return 0;
-    p.hp += got; this._floatText(p.x, p.y - 40, `+${got}`, '#7ee787'); this._syncHud(); return got;
+    p.hp += got; this._floatText(p.x, p.y - 40, `+${got}`, '#7ee787'); if (this._fxPool) this.fxHeal(); this._syncHud(); return got;
   }
 
   _sigFx(x, y, r, color, sec) { const f = this.sg.fx; f.x = x; f.y = y; f.r = r; f.color = color; f.t = f.max = sec; }
@@ -2657,9 +2747,11 @@ class RealmArena {
       if (Math.hypot(dx, dy) < 0.1) { dx = ax; dy = ay; }
       const len = Math.hypot(dx, dy) || 1;
       this._burst(p.x, p.y, '#b69cff', 10, 150);
+      const sx0 = p.x, sy0 = p.y;
       if (this._coll()) { for (let k = 0; k < 15; k++) this._movePlayer((dx / len) * (s.dist / 15), (dy / len) * (s.dist / 15)); }
       else { p.x = Math.max(RM_PLAYER.r, Math.min(this._bw() - RM_PLAYER.r, p.x + (dx / len) * s.dist)); p.y = Math.max(RM_PLAYER.r, Math.min(this._bh() - RM_PLAYER.r, p.y + (dy / len) * s.dist)); }
       p.iframes = Math.max(p.iframes, s.variant === 'smoke' ? 0.8 : 0.5);
+      this._fxDashTrail(sx0, sy0);
       this._burst(p.x, p.y, '#b69cff', 8, 150);
       this._sigVolley(s.count, s.spread, s.dmg);
     } else if (s.kind === 'drain-orb') {
@@ -2674,6 +2766,7 @@ class RealmArena {
       this.shield.hits = Math.max(this.shield.hits, s.shield); this.shield.t = Math.max(this.shield.t, s.dur);
       p.iframes = Math.max(p.iframes, 0.3);
       this._sigCancelBullets(p.x, p.y, s.radius);
+      if (this._fxPool) this.fxPlay('fx_shield_up', p.x, p.y, { follow: true, w: 80 });
       this._sigFx(p.x, p.y, s.radius, '#ffe27a', 0.5);
       this._burst(p.x, p.y, '#ffe27a', 12, 170);
       this._sigHeal(s.heal);
@@ -3111,6 +3204,7 @@ class RealmArena {
       g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(p.x, p.y + 14, 13, 5, 0, 0, Math.PI * 2); g.fill();
       this._drawHero(g, p);
     }
+    if (this._fxPool) this._fxDraw(g);
     if (this.sig) this._drawSignature(g);
     if (this.dungeon) this.dungeon.drawOver(g);
     if (wd && wd.drawOver) wd.drawOver(g, cam);
@@ -3206,6 +3300,7 @@ class RealmArena {
       if (!el) continue;
       const ab = this._ab(i); const unlocked = this.abilityUnlocked(i); const cd = this.abilityCd[i];
       el.classList.toggle('locked', !unlocked);
+      if (this._abIconRoot !== null || el.dataset.abImg || el.querySelector(':scope > img.realm-ab-img')) this._syncAbilityIcon(el, i);
       el.classList.toggle('cooling', unlocked && cd > 0);
       const cdEl = el.querySelector('.cd');
       if (cdEl) cdEl.textContent = !unlocked ? `Lv${ab.level}` : cd > 0 ? String(Math.ceil(cd)) : '';

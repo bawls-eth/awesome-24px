@@ -169,7 +169,7 @@
     const unlocked = {}; const granted = [];
     let keyFound = 0; let current = null; let finished = false; let sig = ''; let mapSig = '';
     let lockMsgAt = -9; let hudText = ''; let queue = []; let nextSweep = 0; let nextWall = 0; let sweepN = 0;
-    const api = { seed, biome, layoutVersion: layoutV, narrow: narrowOn, graph: dungeon, state, arena, granted };
+    const api = { seed, biome, layoutVersion: layoutV, narrow: narrowOn, graph: dungeon, state, arena, granted, grantItem };
     // Lantern stash payout (MMStash): every kept find of this run is paid into the stash when the summary shows (win or fall)
     const ST = window.MMStash && window.MMProfile ? window.MMStash : null; const shards0 = arena.save.shards;
     if (ST) {
@@ -271,7 +271,10 @@
 
     // ---------- loot ----------
     function grantItem(slot, tier) {
-      const ids = SLOT_ITEMS[slot] || SLOT_ITEMS.trinket; const id = lootRng.pick(ids); const rar = Math.max(0, Math.min(2, tier - 1));
+      const ids = SLOT_ITEMS[slot] || SLOT_ITEMS.trinket; let id = lootRng.pick(ids); const rar = Math.max(0, Math.min(2, tier - 1));
+      // A weapon chest can hold a styled wpn_ weapon (same rules as world drops: hero family 70%, none in classic or without a hero). Its own seeded stream
+      // per chest keeps lootRng, and so every old seed's other contents, unchanged.
+      if (slot === 'weapon' && arena._wpnDrop && typeof MMRng !== 'undefined') { const wr = MMRng.create('chestwpn:' + seed + ':' + granted.length); id = arena._wpnDrop(id, null, () => wr.next()); }
       const full = arena.save.items.length >= RM_BACKPACK;
       arena.collectItem(id, rar);
       const def = RM_ITEM_BY_ID[id];
@@ -433,7 +436,7 @@
         if (left === 0) ctrl.cleared();
       },
       cleared() {
-        arena.player.hp = Math.min(arena.stats.maxHp, arena.player.hp + Math.round(arena.stats.maxHp * 0.15));
+        arena.player.hp = Math.min(arena.stats.maxHp, arena.player.hp + Math.round(arena.stats.maxHp * 0.15)); if (arena.fxHeal) arena.fxHeal();
         arena._showBanner('Room cleared!', 1.4); arena.eBullets.forEach((b) => { if (b.active) { b.active = false; arena._burst(b.x, b.y, '#8fe9ff', 1, 40); } });
         arena._syncHud(); mapSig = '';
       },

@@ -715,6 +715,18 @@
     "class": "browser",
     "tier": "full"
   },
+  "fx-art.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "ability-icons.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "drop-recap.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "world-pickups.test.js": {
     "class": "browser",
     "tier": "full"
