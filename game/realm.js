@@ -665,11 +665,12 @@ class RealmArena {
   }
 
   // Where the HUD icon row goes (logical arena units): just under the XP bar on the left, and under the boss bar if they would overlap.
-  // DOM rects are read at most twice a second (never every frame).
+  // Also the HUD-safe band of the top-right buttons (bL..right edge, down to bB), kept clear of floating numbers.
+  // DOM rects are read at most twice a second (never every frame) and again after a resize.
   _stAnchorAt() {
     if (this._stAnchor && this._stT - this._stAnchorT < 0.5 && this._stAnchorT <= this._stT) return this._stAnchor;
     this._stAnchorT = this._stT;
-    const k = this._cssK || 1; const a = this._stAnchor || (this._stAnchor = { x: 8, y: 64, px: 20, k: 1, cl: 0, ct: 0 });
+    const k = this._cssK || 1; const a = this._stAnchor || (this._stAnchor = { x: 8, y: 64, px: 20, k: 1, cl: 0, ct: 0, bL: 1e9, bB: -1 });
     a.k = k;
     try {
       const cr = this.canvas.getBoundingClientRect(); a.cl = cr.left; a.ct = cr.top;
@@ -680,7 +681,10 @@ class RealmArena {
       const boss = vis(document.getElementById('realm-boss'));
       if (boss && boss.left < rowR && boss.right > left && boss.bottom > top - 2 && boss.top < top + a.px) top = boss.bottom + 4;
       a.x = Math.max(0, (left - cr.left) / k); a.y = Math.max(0, (top - cr.top) / k);
-    } catch (e) { a.x = 8; a.y = 64; }
+      let bl = 1e9; let bb = -1;
+      ['realm-bp-btn', 'realm-board-btn', 'realm-menu-btn', 'realm-leave-btn'].forEach((id) => { const r = vis(document.getElementById(id)); if (r && r.width > 0 && r.left > cr.left + cr.width * 0.4) { bl = Math.min(bl, r.left); bb = Math.max(bb, r.bottom); } });
+      a.bL = bl < 1e9 ? (bl - cr.left) / k - 4 : 1e9; a.bB = bb >= 0 ? (bb - cr.top) / k + 4 : -1;
+    } catch (e) { a.x = 8; a.y = 64; a.bL = 1e9; a.bB = -1; }
     return a;
   }
 
@@ -1441,7 +1445,7 @@ class RealmArena {
       this._cvKey = ckey; const cs = this.canvas.style;
       cs.position = 'absolute'; cs.width = `${cw}px`; cs.height = `${ch}px`; cs.left = `${Math.floor((w - cw) / 2)}px`; cs.top = `${Math.floor((h - ch) / 2)}px`;
     }
-    this._applyBacking();
+    this._applyBacking(); this._stAnchorT = -1e9; // the HUD rects moved
     const p = this.player; const bw = this._bw(); const bh = this._bh();
     p.x = Math.max(RM_PLAYER.r, Math.min(bw - RM_PLAYER.r, p.x || bw / 2));
     p.y = Math.max(RM_PLAYER.r, Math.min(bh - RM_PLAYER.r, p.y || bh / 2));
@@ -2934,9 +2938,11 @@ class RealmArena {
     }
     g.globalAlpha = 1;
     g.font = 'bold 14px system-ui, sans-serif'; g.textAlign = 'center';
+    const hs = this._stAnchorAt(); const ox = wd ? cam.x : 0; const oy = wd ? cam.y : 0; // floating numbers never sit under the top-right HUD buttons
     for (let i = 0; i < this.texts.length; i++) {
       const t = this.texts[i];
       if (!t.active) continue;
+      const ty0 = t.y; if (hs.bB > 0 && t.y - oy < hs.bB + 10 && t.x - ox > hs.bL - 40) t.y = oy + hs.bB + 10; // drawn just below them (restored after)
       g.globalAlpha = Math.min(1, t.life * 2.5);
       const ic = t.ico && this._itemArt ? this._lootIcon(t.ico, t.ir) : null;
       if (ic) { // icon + name: the icon replaces the emoji
@@ -2945,6 +2951,7 @@ class RealmArena {
         g.fillStyle = '#000'; g.fillText(t.plain, x0 + 23, t.y + 1); g.fillStyle = t.color; g.fillText(t.plain, x0 + 22, t.y);
         g.textAlign = 'center';
       } else { g.fillStyle = '#000'; g.fillText(t.text, t.x + 1, t.y + 1); g.fillStyle = t.color; g.fillText(t.text, t.x, t.y); }
+      t.y = ty0;
     }
     g.globalAlpha = 1;
     g.restore();

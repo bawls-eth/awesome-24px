@@ -1,6 +1,7 @@
-// World-mode wording (PLAYTEST-REVIEW #15, #16).
+// World-mode wording (PLAYTEST-REVIEW #15, #16) and HUD-safe floating numbers (#18).
 // In the world (no waves) the HUD, banners, death screen and shop footer never say 'wave' / 'Get ready' / 'Reach wave 2'; the death
 // screen names the zone; the shop also unlocks by hero level there. The classic arena keeps its wave wording.
+// Floating numbers are drawn below the top-right HUD buttons, never under them.
 // Run: BASE=http://localhost:8440/game/index.html NODE_PATH=$(npm root -g) node game/tests/world-wording.test.js
 const { chromium } = require('playwright');
 const { check, done } = require('./helpers');
@@ -59,6 +60,27 @@ const txt = (id) => { const e = document.getElementById(id); return e ? e.textCo
   check('world death banner names the zone and never says wave', d.state === 'dead' && /in Shore/.test(d.banner) && !/wave/i.test(d.banner), d.banner);
   check('world HUD after a death does not say "Get ready" or "Wave"', !/get ready|wave/i.test(d.hudWave), d.hudWave);
   check('world death screen shows the zone row (Shore) and no "Wave reached"', d.zoneRow === 'Shore' && !/wave/i.test(d.recap), JSON.stringify(d));
+  // (6) floating numbers under the top-right HUD buttons are drawn just below them
+  const ft = await W.page.evaluate(() => {
+    const a = window.__mm.arena; a.restart(); a.paused = true;
+    const cr = a.canvas.getBoundingClientRect(); const k = a._cssK;
+    const ids = ['realm-bp-btn', 'realm-board-btn', 'realm-menu-btn', 'realm-leave-btn'].map((id) => document.getElementById(id)).filter((e) => e && e.getClientRects().length);
+    const rs = ids.map((e) => e.getBoundingClientRect()); const bottom = Math.max(...rs.map((r) => r.bottom)); const left = Math.min(...rs.map((r) => r.left));
+    const r0 = rs[0];
+    a._stAnchorT = -1e9; a._draw();
+    const sx = (r0.left + r0.width / 2 - cr.left) / k, sy = (r0.top + r0.height / 2 - cr.top) / k;
+    a.texts.forEach((t) => { t.active = false; });
+    const t = a._floatText(a.camera.x + sx, a.camera.y + sy, '42', '#fff'); t.vy = 0;
+    const g = a.ctx; const orig = g.fillText; const ys = [];
+    g.fillText = function (s, x, y) { if (s === '42') { const m = g.getTransform(); ys.push(cr.top + (m.f + m.d * y) / (a.canvas.height / cr.height)); } return orig.apply(this, arguments); };
+    a._draw(); g.fillText = orig;
+    const kept = t.y === a.camera.y + sy; // the number's own position is untouched (only where it is drawn)
+    const low = a._floatText(a.camera.x + sx, a.camera.y + a.H / 2, '43', '#fff'); const lowY = low.y; a._draw();
+    t.active = false; low.active = false; a.paused = false;
+    return { ys, bottom, left, n: ids.length, kept, lowSame: low.y === lowY };
+  });
+  check('a floating number under the top-right buttons is drawn below them', ft.n >= 2 && ft.ys.length > 0 && ft.ys.every((y) => y - 12 >= ft.bottom - 1), JSON.stringify(ft));
+  check('... only where it is drawn: its position and numbers elsewhere are untouched', ft.kept && ft.lowSame, JSON.stringify(ft));
   errs.push(...W.page.errors); await W.ctx.close();
 
   // ===== classic arena keeps its wave wording =====
