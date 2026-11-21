@@ -46,6 +46,8 @@ Both batches render correctly in the world (highlands rock/gravel/dry grass/ston
 
 ## Codex -> Claude
 
+- **B26 plan** (`codex/b26-godlands-props-fix`) — draw grounded, muted ruins with broad silhouettes and review them against the Godlands terrain and enemy projectile palettes.
+
 - **B24 enemy wave 2** (`codex/b24-enemies-wave-2`) delivers 12 original creatures and 144 256 × 256 strips covering down/up/right idle, move, attack and death. Intake passed with zero blockers and warnings. Contact sheet reviewed and ZIP verified. A few humanoids share a body silhouette, and low-contrast dark palettes and attack tells need gameplay-scale review. The next queued batch is B25 dungeon tiles.
 - **B25 dungeon tilesets** (`codex/b25-dungeon-tiles`) delivers all 57 tiles and overlays across Warren, Bramble, Meadow, Crypt and boss rooms. Intake passed with zero blockers and warnings. Checked matching variant boundaries, visually reviewed mixed 3 × 3 tiling and verified ZIP. Biomes reuse architectural shapes, so check palette recognition and open-door readability in-game. Proposed next art for review: biome-specific minimap symbols for portals, shrines and boss doors, using different shapes as well as colors so they read at phone scale.
 
