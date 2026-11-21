@@ -246,7 +246,7 @@
     const unlocked = {}; const granted = [];
     let keyFound = 0; let current = null; let finished = false; let sig = ''; let mapSig = '';
     let lockMsgAt = -9; let hudText = ''; let queue = []; let nextSweep = 0; let nextWall = 0; let sweepN = 0; let sigNext = 0; let sigWind = null; let sigN = 0;
-    const api = { lair, seed, biome, bossBolt, bossSig, sigCount: () => sigN, layoutVersion: layoutV, narrow: narrowOn, graph: dungeon, state, arena, granted, grantItem };
+    const api = { pickups: () => drops.map((q) => ({ type: q.type, x: q.x, y: q.y, value: q.value, tier: q.tier })), pickStats: () => ({ live: drops.length, total: pickTotal, got: Object.assign({}, pickGot), magnet: MAGNET_R, on: pickOn }), lair, seed, biome, bossBolt, bossSig, sigCount: () => sigN, layoutVersion: layoutV, narrow: narrowOn, graph: dungeon, state, arena, granted, grantItem };
     // Lantern stash payout (MMStash): every kept find of this run is paid into the stash when the summary shows (win or fall)
     const ST = window.MMStash && window.MMProfile ? window.MMStash : null; const shards0 = arena.save.shards;
     if (ST) {
@@ -334,6 +334,7 @@
     }
 
     function clearTransient() {
+      drops.length = 0; // loose pickups do not follow you through a door
       [arena.pBullets, arena.eBullets, arena.bags, arena.drifters].forEach((pool) => pool.forEach((o) => { o.active = false; }));
       queue = [];
     }
@@ -365,6 +366,74 @@
       return res;
     }
 
+    // ---------- pickups (DP3, MMPickups): room clears and chests drop coins / XP orbs / hearts / life potions with the world's rules ----------
+    // Rolls are seeded per (seed, room, source) by MMPickups itself, positions by their own MMRng stream: no run / loot / boss stream is touched, so every old seed keeps its
+    // layout and enemy plans. Magnet radius = the world's 120 px (MMPickups.MAGNET_RADIUS_WORLD), cap 60, lifetime per tier. Focus orbs need arena.restoreFocus (not in the arena
+    // yet): they are only spawned when it exists. ?pickups=0 turns it all off. Sprites are cached 24 px canvases blitted by drawUnder (no per-frame Graphics).
+    const PK = window.MMPickups || null;
+    let pickOn = !!PK; try { if (/[?&]pickups=0(&|$)/.test(location.search)) pickOn = false; } catch (e) { /* no location */ }
+    const PICK_CAP = 60; const MAGNET_R = PK && PK.MAGNET_RADIUS_WORLD > 0 ? PK.MAGNET_RADIUS_WORLD : 64;
+    const drops = []; let pickSave = false; const pickGot = { coin: 0, xp: 0, heart: 0, potion: 0, focus: 0 }; let pickTotal = 0; const pickSpr = {};
+    function pickSprite(type) {
+      if (pickSpr[type]) return pickSpr[type];
+      const c = document.createElement('canvas'); c.width = c.height = 24; const g = c.getContext('2d');
+      if (type === 'coin') { g.fillStyle = '#7a5a12'; g.beginPath(); g.arc(12, 12, 8, 0, 7); g.fill(); g.fillStyle = '#ffd45a'; g.beginPath(); g.arc(12, 12, 6.5, 0, 7); g.fill(); g.fillStyle = '#fff0a8'; g.fillRect(9, 8, 2, 6); }
+      else if (type === 'xp') { g.fillStyle = '#4a2a8a'; g.beginPath(); g.arc(12, 12, 8, 0, 7); g.fill(); g.fillStyle = '#b48cff'; g.beginPath(); g.arc(12, 12, 6, 0, 7); g.fill(); g.fillStyle = '#efe0ff'; g.fillRect(9, 8, 3, 3); }
+      else if (type === 'heart') { g.fillStyle = '#7a1022'; g.beginPath(); g.arc(8, 9, 5.5, 0, 7); g.arc(16, 9, 5.5, 0, 7); g.fill(); g.beginPath(); g.moveTo(3, 11); g.lineTo(21, 11); g.lineTo(12, 21); g.fill(); g.fillStyle = '#ff5f6b'; g.beginPath(); g.arc(8, 9, 4, 0, 7); g.arc(16, 9, 4, 0, 7); g.fill(); g.beginPath(); g.moveTo(5, 11); g.lineTo(19, 11); g.lineTo(12, 19); g.fill(); }
+      else if (type === 'focus') { g.fillStyle = '#12335a'; g.beginPath(); g.arc(12, 12, 8, 0, 7); g.fill(); g.fillStyle = '#5bb8ff'; g.beginPath(); g.arc(12, 12, 6, 0, 7); g.fill(); g.fillStyle = '#e0f4ff'; g.fillRect(10, 7, 3, 3); }
+      else { g.fillStyle = '#143a24'; g.fillRect(9, 4, 6, 5); g.fillRect(6, 9, 12, 12); g.fillStyle = '#5be38a'; g.fillRect(8, 11, 8, 8); g.fillStyle = '#d8ffe6'; g.fillRect(9, 12, 2, 4); }
+      pickSpr[type] = c; return c;
+    }
+    const pickOk = (d) => d.type === 'coin' || (d.type === 'xp' && typeof arena._gainXp === 'function') || d.type === 'heart' || (d.type === 'potion' && d.art === 'potion_life') || (d.type === 'focus' && typeof arena.restoreFocus === 'function');
+    function spawnPickups(x, y, group, killIdx, tier) { // returns how many pickups were placed
+      if (!pickOn) return 0;
+      const list = PK.roll(seed, group, killIdx, tier).filter(pickOk);
+      const r = MMRng.create('pickpos:' + seed + ':' + group + ':' + killIdx); let n = 0;
+      for (let i = 0; i < list.length; i++) {
+        const d = list[i]; const a = r.next() * Math.PI * 2; const rad = 12 + r.next() * 26;
+        let px = x + Math.cos(a) * rad; let py = y + Math.sin(a) * rad;
+        if (arena._blocked(px, py, 6)) { px = x; py = y; }
+        if (drops.length >= PICK_CAP) drops.shift();
+        drops.push({ type: d.type, art: d.art, value: d.value, tier: d.tier, x: px, y: py, bornMs: arena.clock * 1000, lifeMs: d.lifeMs, ph: r.next() * 6.28 });
+        n++; pickTotal++;
+      }
+      return n;
+    }
+    function pickTier(id) { return Math.max(1, Math.min(5, (depth[id] || 1) + (lair ? 1 : 0))); }
+    function dropClearPickups(id, x, y) { let n = 0; for (let k = 0; k < 3; k++) n += spawnPickups(x, y, 'clear:' + id, k, pickTier(id)); return n; } // a cleared room pays three kills' worth
+    function collectPick(q) {
+      const p = arena.player; pickGot[q.type] = (pickGot[q.type] || 0) + 1;
+      if (q.type === 'coin') { arena.save.shards += q.value; arena.run.shards += q.value; arena._floatText(p.x, p.y - 26, `+${q.value} 💎`, '#8fe9ff'); pickSave = true; }
+      else if (q.type === 'xp') { arena._gainXp(Math.max(1, Math.round(q.value * (arena.stats ? arena.stats.xp : 1)))); pickSave = true; }
+      else if (q.type === 'focus') { if (typeof arena.restoreFocus === 'function') arena.restoreFocus(q.value); }
+      else {
+        const o = PK.use(q, { hp: p.hp, maxHp: arena.stats.maxHp, focus: 0, maxFocus: 0 });
+        if (o.hp > p.hp) { arena._floatText(p.x, p.y - 26, `+${Math.round(o.hp - p.hp)}`, '#5be38a'); p.hp = o.hp; arena._syncHud(); }
+      }
+    }
+    function pickTick(dt) {
+      if (!drops.length) return;
+      const p = arena.player; const now = arena.clock * 1000; const d = Math.min(dt, 0.1);
+      for (let i = drops.length - 1; i >= 0; i--) {
+        const q = drops[i];
+        if (PK.expired(q, now)) { drops.splice(i, 1); continue; }
+        if (arena.state !== 'play') continue;
+        const m = PK.magnetStep(q, p, d, MAGNET_R); q.x = m.x; q.y = m.y;
+        if (m.collected) { drops.splice(i, 1); collectPick(q); }
+      }
+      if (pickSave) { pickSave = false; arena.onSave(arena.save); arena._syncHud(); }
+    }
+    function drawPicks(g) {
+      if (!drops.length) return;
+      const tt = arena.clock; const reduced = arena._reduced; const now = tt * 1000;
+      for (let i = 0; i < drops.length; i++) {
+        const q = drops[i]; const left = q.lifeMs - (now - q.bornMs);
+        if (left < 4000 && !reduced && Math.floor(tt * 8) % 2) continue; // blinks out in the last 4 s
+        const bob = reduced ? 0 : Math.round(Math.sin(tt * 4 + q.ph) * 2);
+        g.drawImage(pickSprite(q.type), Math.round(q.x - 12), Math.round(q.y - 12 + bob));
+      }
+    }
+
     // ---------- loot ----------
     function grantItem(slot, tier) {
       const ids = SLOT_ITEMS[slot] || SLOT_ITEMS.trinket; let id = lootRng.pick(ids); const rar = Math.max(0, Math.min(2, tier - 1));
@@ -383,6 +452,7 @@
       if (l.kind === 'gold') { arena.save.shards += l.amount; arena._floatText(arena.player.x, arena.player.y - 44, `+${l.amount} 💎`, '#8fe9ff'); arena.onSave(arena.save); grantItem('trinket', 1); }
       else grantItem(l.slot, l.tier);
       arena._burst(arena.player.x, arena.player.y, '#ffd45a', 22, 240);
+      { const c = chestSpot(); for (let k = 0; k < 2; k++) spawnPickups(c.x, c.y + 18, 'chest:' + current, k, pickTier(current) + 1); } // a chest pays two kills' worth, a tier up
       mapSig = '';
       return l;
     }
@@ -555,11 +625,12 @@
         const before = state.room(current).enemiesAlive; if (before <= 0) return;
         const left = state.killEnemy();
         if (e.did === 'sprout') MMEnemies.onDeath({ id: 'sprout', x: 0, y: 0 }).forEach((m, i) => spawnMob('aimed', m.id, e.x + (i ? 16 : -16), e.y, Math.max(2, Math.ceil(m.hp / HP_DIV)), false, DIFF && current !== null ? L[current].sc : null));
-        if (left === 0) ctrl.cleared();
+        if (left === 0) ctrl.cleared(e.x, e.y);
       },
-      cleared() {
+      cleared(kx, ky) {
         arena.player.hp = Math.min(arena.stats.maxHp, arena.player.hp + Math.round(arena.stats.maxHp * 0.15)); if (arena.fxHeal) arena.fxHeal();
         arena._showBanner('Room cleared!', 1.4); arena.eBullets.forEach((b) => { if (b.active) { b.active = false; arena._burst(b.x, b.y, '#8fe9ff', 1, 40); } });
+        if (current !== null && byId[current].type !== 'boss') { const q = typeof kx === 'number' ? { x: kx, y: ky } : { x: arena.player.x, y: arena.player.y }; dropClearPickups(current, q.x, q.y); }
         arena._syncHud(); mapSig = '';
       },
       tick(dt) {
@@ -585,6 +656,7 @@
           }
         }
         if (current === null || finished) return;
+        pickTick(dt);
         // pick-ups
         const near = (s, r) => Math.hypot(p.x - s.x, p.y - s.y) < r;
         if (hasKey() && !state.doorsClosed() && near(keySpot(), 26)) { L[current].keyTaken = true; keyFound = state.pickKey(); arena._snd('pickup'); arena._floatText(p.x, p.y - 30, '🗝 Key!', '#ffd45a'); mapSig = ''; }
@@ -631,6 +703,7 @@
           const ts = dimg(biome + '_torch'); const fr = arena._reduced ? 0 : Math.floor(tt * 4) & 3;
           if (ts) L[current].torches.forEach((q) => g.drawImage(ts, fr * 32, 0, 32, 32, q.x * T, q.y * T, T, T));
         }
+        drawPicks(g);
         if (hasKey()) { const k = keySpot(); g.drawImage(S.key, k.x - 11, k.y - 11 + Math.sin(tt * 3) * 3); }
         if (hasChest()) { const c = chestSpot(); const open = state.room(current).chestOpen; const ci = dimg(open ? 'chest_open' : 'chest_closed'); if (ci) g.drawImage(ci, 0, 0, 32, 32, c.x - 18, c.y - 20, 36, 36); else g.drawImage(S.chest[open ? 1 : 0], c.x - 16, c.y - 14); }
         if (hasPortal()) { const q = portalSpot(); g.save(); g.translate(q.x, q.y); g.rotate(tt * 1.2); g.drawImage(S.portal, -36, -36); g.rotate(-tt * 2.4); g.globalAlpha = 0.6; g.drawImage(S.portal, -26, -26, 52, 52); g.restore(); g.globalAlpha = 1; }
