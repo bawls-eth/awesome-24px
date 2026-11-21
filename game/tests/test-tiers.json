@@ -858,5 +858,17 @@
   "realm-lowgfx.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "focus-arena.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "backpack-compare.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "telegraph-arena.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
