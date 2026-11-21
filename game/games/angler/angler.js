@@ -1,7 +1,7 @@
 // Lakeside Angler page. Canvas + DOM, no network. Logic lives in shared/mm-angler.js.
 (function () {
   'use strict';
-  const A = window.MMAngler, D = window.MMAnglerDepth, Store = window.MMStore, Rng = window.MMRng;
+  const A = window.MMAngler, D = window.MMAnglerDepth, B = window.MMAnglerBoss, Store = window.MMStore, Rng = window.MMRng;
   const KEY = 'pixeltown-angler-v1';
   const W = 320, H = 480, WATER = 170;
   const params = new URLSearchParams(location.search);
@@ -12,6 +12,7 @@
   const $ = (id) => document.getElementById(id);
   const cv = $('scene'), ctx = cv.getContext('2d');
   ctx.imageSmoothingEnabled = false;
+  const todayStr = () => (dateOverride && B.validDate(dateOverride.str) ? dateOverride.str : B.dateStr(new Date()));
   const mq = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
   const reduced = () => !!(mq && mq.matches);
 
@@ -25,7 +26,7 @@
     if (!m) { dateOverride = null; return false; }
     const month = +m[2];
     if (month < 1 || month > 12) return false;
-    dateOverride = { month, hour: m[4] === undefined ? 12 : Math.min(23, +m[4]) };
+    dateOverride = { month, hour: m[4] === undefined ? 12 : Math.min(23, +m[4]), str: m[1] + '-' + m[2] + '-' + m[3] };
     if (ready) renderSpots();
     return true;
   }
@@ -77,10 +78,10 @@
   // ---- state ----
   const g = {
     state: 'idle', spot: 'west', bite: null, reel: null, fish: null, size: 0, forced: null,
-    result: null, t: 0, hooked: 0, tour: false, tourResult: null, cf: null, baitUsed: null, calm: false, fx: [], bobY: 0, baited: false, bossChance: 0.25, boss: false,
+    result: null, t: 0, hooked: 0, tour: false, tourResult: null, cf: null, baitUsed: null, calm: false, fx: [], bobY: 0, baited: false, bossChance: 0.25, boss: false, bossGate: true, surge: null, strain: 0, splash: null, bossLog: [],
   };
-  const held = { ptr: false, key: false, pad: false, test: false };
-  const anyHeld = () => held.ptr || held.key || held.pad || held.test;
+  const held = { ptr: false, key: false, pad: false, test: false, btn: false };
+  const anyHeld = () => held.ptr || held.key || held.pad || held.test || held.btn;
 
   function spotLocked(id) {
     const c = nowCtx();
@@ -137,7 +138,7 @@
   }
   function dismiss() {
     if (g.state !== 'result') return;
-    $('result').hidden = true; g.fan = null; g.boss = false; g.state = 'idle'; g.reel = null; g.bite = null; g.fish = null; g.cf = null;
+    $('result').hidden = true; g.fan = null; g.boss = false; g.surge = null; g.strain = 0; g.splash = null; bossUi(); g.state = 'idle'; g.reel = null; g.bite = null; g.fish = null; g.cf = null;
     setMsg(g.tour ? 'Tournament: cast ' + (journal.tour.run ? journal.tour.run.used + 1 : '?') + '/' + D.CASTS + ' at ' + A.SPOT_NAMES[g.spot] + '.' : idleMsg()); renderSpots();
     if (g.tourResult) openTourney();
   }
@@ -158,21 +159,32 @@
     let f;
     if (g.cf) f = A.BY_ID[g.cf.fish];
     else if (g.forced) f = A.BY_ID[g.forced];
-    else if (lair && lair.ready && rng() < g.bossChance) f = A.BY_ID[lair.boss];
+    else if (lair && lair.ready && (!g.bossGate || B.gateOpen(journal, lair.boss)) && rng() < g.bossChance) f = A.BY_ID[lair.boss];
     else f = A.rollFish(rng, g.spot, c, { lure: journal.gear.lure, bait: g.baitUsed === 'plain', baitType: g.baitUsed });
     g.forced = null;
     if (!f) { finish('none', 'Nothing here', 'This spot is closed.'); return; }
     g.fish = f; g.size = g.cf ? g.cf.size : A.rollSize(rng, f, { big: g.baitUsed === 'big' }); g.boss = !!f.boss;
-    g.reel = A.reel.create(f, journal.gear.rod, { seed: g.cf ? g.cf.seed : Math.floor(rng() * 1e9), calm: g.calm });
+    g.reelSeed = g.cf ? g.cf.seed : Math.floor(rng() * 1e9);
+    g.reel = A.reel.create(f, journal.gear.rod, { seed: g.reelSeed, calm: g.calm, fillMult: g.boss && g.bossGate ? B.CFG.fillMult : 1 });
     g.state = 'reeling'; g.t = 0; g.lastPhase = 0; g.phaseAt = 0;
-    setMsg(g.boss ? 'BOSS! ' + f.name + ' takes the line. The line snaps after 1.5 s at max tension.' : 'Hooked! Hold to reel. Keep the zone on the fish.');
+    g.surge = null; g.strain = 0; g.splash = null;
+    if (g.boss) {
+      if (g.bossGate) {
+        g.surge = B.schedule(f.id, g.cf ? g.cf.seed : g.reelSeed);
+        g.splash = { t: 0 };
+        journal = B.resetLair(journal, B.spotOf(f.id)); saveJournal();
+      }
+      setMsg('BOSS! ' + (B.INTRO[f.id] || f.name + ' takes the line.') + (g.surge ? ' Ease off during surges.' : ' The line snaps after 1.5 s at max tension.'));
+    } else setMsg('Hooked! Hold to reel. Keep the zone on the fish.');
+    bossUi();
     renderSpots();
   }
   function land() {
     const f = g.fish, isNew = !journal.caught[f.id];
     const firstTrophy = f.boss && !journal.trophies[f.id];
     journal = A.journal.record(journal, f.id, g.size);
-    if (f.boss) journal = A.journal.addTrophy(journal, f.id);
+    if (f.boss) { journal = A.journal.addTrophy(journal, f.id); journal = B.addHall(journal, f.id, g.size, todayStr()); }
+    else if (!g.cf) journal = B.noteCatch(journal, f.id, g.spot);
     journal = D.economy.addStock(journal, f.id);
     const drop = D.economy.baitDrop(f.id, g.size, totalCaught() + 1);
     g.dropMsg = '';
@@ -182,7 +194,7 @@
     saveJournal(); renderJournalCount(); renderStatus();
     g.fan = { t: 0, big: f.rarity >= 4 };
     finish('caught', (f.boss ? (firstTrophy ? 'TROPHY! ' : 'Boss beaten! ') : isNew ? 'New! ' : '') + f.name,
-      RARITY[f.rarity] + ' (' + f.rarity + '/5) - ' + sizeWord(f, g.size) + ', ' + g.size + ' cm' + (f.boss ? ' - trophy in your journal' : '') + g.dropMsg + (g.tourPts ? ' - +' + g.tourPts + ' points' : ''));
+      RARITY[f.rarity] + ' (' + f.rarity + '/5) - ' + sizeWord(f, g.size) + ', ' + g.size + ' cm' + (f.boss ? ' - trophy in the Hall of Records' : '') + g.dropMsg + (g.tourPts ? ' - +' + g.tourPts + ' points' : ''));
   }
 
   function sizeWord(f, cm) {
@@ -192,6 +204,7 @@
   function step(dt) {
     g.t += dt;
     if (g.fan) g.fan.t += dt;
+    if (g.splash) g.splash.t += dt;
     if (g.state === 'waiting' || g.state === 'biting') {
       const s = g.bite.tick(dt);
       if (s === 'biting' && g.state === 'waiting') { g.state = 'biting'; setMsg('A bite! Press now!'); }
@@ -199,6 +212,12 @@
     } else if (g.state === 'reeling') {
       const r = g.reel.tick(dt, anyHeld());
       if (g.boss && r.phase !== g.lastPhase) { g.lastPhase = r.phase; g.phaseAt = g.t; }
+      if (r.status === 'reeling' && g.surge) {
+        const sp = B.phaseAt(g.surge, g.t), ts = B.tensionStep(g.strain, dt, anyHeld(), sp === 'surge');
+        g.strain = ts.strain;
+        if (ts.snapped) { finish('snapped', 'Line snapped!', 'The boss surged and you kept reeling. Ease off during a surge, then reel again.'); bossUi(); return; }
+      }
+      bossUi();
       if (r.status === 'snapped') finish('snapped', 'Line snapped!', g.boss ? 'The boss won this round. At max tension the line lasts only 1.5 s.' : 'Tension stayed at max too long. Release more often.');
       else if (r.status === 'caught') land();
     }
@@ -215,7 +234,7 @@
   document.addEventListener('pointerdown', (e) => { if (ignoreEl(e.target)) return; setInput('ptr', true); });
   const up = () => setInput('ptr', false);
   document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
-  window.addEventListener('blur', () => { held.ptr = held.key = held.pad = false; });
+  window.addEventListener('blur', () => { held.ptr = held.key = held.pad = held.btn = false; });
   document.addEventListener('keydown', (e) => {
     if (e.code !== 'Space' || e.repeat) return;
     if (overlayOpen()) return;
@@ -234,6 +253,26 @@
     } catch (e) { /* ignore */ }
   }
   $('res-ok').addEventListener('click', dismiss);
+  // on-screen reel button (shown during a boss fight): hold to reel, release to ease off
+  const reelBtn = $('reel-btn');
+  reelBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); setInput('btn', true); });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => reelBtn.addEventListener(ev, () => setInput('btn', false)));
+  reelBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+  let uiCache = '';
+  function bossUi() {
+    const on = g.state === 'reeling' && g.boss && !!g.surge;
+    const ph = on ? B.phaseAt(g.surge, g.t) : 'calm';
+    const label = !on ? '' : ph === 'surge' ? 'EASE OFF! Let go of the line' : ph === 'warn' ? 'Surge coming - get ready to ease off' : 'Steady - reel in the zone';
+    const pct = on ? Math.round(g.strain * 100) : 0;
+    const key = on + '|' + ph + '|' + pct;
+    if (key === uiCache) return;
+    uiCache = key;
+    $('boss-ui').hidden = !on;
+    const bar = $('boss-bar');
+    bar.dataset.phase = ph; bar.setAttribute('aria-valuenow', String(pct));
+    $('boss-fill').style.width = pct + '%';
+    if ($('boss-label').textContent !== label) $('boss-label').textContent = label;
+  }
 
   // ---- DOM: spots / journal ----
   function renderSpots() {
@@ -302,7 +341,7 @@
       const b = A.journal.bossFor(journal, sp); if (!b) return;
       const p = document.createElement('p'); p.style.margin = '2px 0';
       const won = journal.trophies[b.boss];
-      p.textContent = (won ? '\uD83C\uDFC6 ' : '') + BOSS_NAMES[b.boss] + ' (' + A.SPOT_NAMES[sp] + '): ' + (b.ready ? 'lurking now' : 'catch ' + b.need + ' species here to lure it out') + ' - ' + Math.min(b.have, b.need) + '/' + b.need + (won ? ' - TROPHY' : '');
+      p.textContent = (won ? '\uD83C\uDFC6 ' : '') + BOSS_NAMES[b.boss] + ' (' + A.SPOT_NAMES[sp] + '): ' + (b.ready ? 'lurking now' : 'catch ' + b.need + ' species here to lure it out') + ' - ' + Math.min(b.have, b.need) + '/' + b.need + (won ? ' - TROPHY - CAUGHT' : '');
       if (won) p.className = 'trophy';
       box.appendChild(p);
     });
@@ -331,7 +370,8 @@
       const c = document.createElement('canvas'); c.width = 48; c.height = 28;
       const cx = c.getContext('2d'); cx.imageSmoothingEnabled = false;
       drawFish(cx, 24, 14, 16, f, !e);
-      const nm = document.createElement('div'); nm.className = 'nm' + (e ? ' r' + f.rarity : ''); nm.textContent = e ? f.name : '???';
+      const nm = document.createElement('div'); nm.className = 'nm' + (e ? ' r' + f.rarity : ''); nm.textContent = e ? f.name + (f.boss ? ' (CAUGHT)' : '') : '???';
+      if (e && f.boss) card.classList.add('boss-caught');
       const sub = document.createElement('div'); sub.className = 'sub';
       sub.textContent = e ? 'x' + e.n + ' best ' + e.best + ' cm - ' + RARITY[f.rarity] : RARITY[f.rarity];
       card.appendChild(c); card.appendChild(nm); card.appendChild(sub); grid.appendChild(card);
@@ -450,7 +490,8 @@
     });
     const hall = mk('section', 'aqspot'); hall.id = 'hall'; hall.appendChild(mk('h3', '', 'Hall of Records (boss fish, kept on this device only)'));
     D.aquarium.hallOfRecords(journal).forEach((b) => {
-      const r = mk('p', 'rule' + (b.trophy ? ' trophy' : ''), (b.trophy ? '🏆 ' : '') + b.name + ' (' + A.SPOT_NAMES[b.spot] + '): ' + (b.caught ? 'caught x' + b.n + ', record ' + b.best + ' cm' : 'not yet caught'));
+      const he = B.hallEntry(journal, b.id);
+      const r = mk('p', 'rule' + (b.trophy ? ' trophy' : ''), (b.trophy ? '🏆 ' : '') + b.name + ' (' + A.SPOT_NAMES[b.spot] + '): ' + (b.caught ? 'caught x' + b.n + ', record ' + b.best + ' cm' + (he ? ' - trophy: ' + he.size + ' cm on ' + he.date : '') : 'not yet caught'));
       r.dataset.id = b.id; hall.appendChild(r);
     });
     box.appendChild(hall);
@@ -529,11 +570,29 @@
       c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = 1; c.beginPath(); c.moveTo(tipX, tipY); c.lineTo(tipX + 4, 150); c.stroke();
     }
     if (g.state === 'reeling' && g.reel) drawReel(c);
+    if (g.splash && g.state === 'reeling') drawSplash(c);
     if (g.fan && g.state === 'result') drawFanfare(c);
     if (g.state === 'result' && g.result && g.result.outcome === 'caught') drawFish(c, W / 2, 290, 46, g.fish, false);
     if (g.state === 'idle' || g.state === 'result') {
       c.fillStyle = 'rgba(0,0,0,.35)'; c.font = '12px sans-serif'; c.textAlign = 'left'; c.fillText(A.SPOT_NAMES[g.spot], 8, 18);
     }
+  }
+  // boss splash: expanding ripple rings; with reduce-motion one static ring and a label
+  function drawSplash(c) {
+    const t = g.splash.t, cx = BX - 20, cy = 215 + 24;
+    c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = 2;
+    if (reduced()) {
+      c.beginPath(); c.ellipse(cx, cy, 34, 12, 0, 0, Math.PI * 2); c.stroke();
+      c.fillStyle = '#fff'; c.font = 'bold 12px sans-serif'; c.textAlign = 'center'; c.fillText('SPLASH!', cx, cy - 18);
+      return;
+    }
+    if (t > 2) return;
+    for (let i = 0; i < 3; i++) {
+      const k = t - i * 0.25; if (k < 0) continue;
+      c.globalAlpha = Math.max(0, 1 - k / 1.4);
+      c.beginPath(); c.ellipse(cx, cy, 8 + k * 50, 3 + k * 18, 0, 0, Math.PI * 2); c.stroke();
+    }
+    c.globalAlpha = 1;
   }
   function drawFanfare(c) {
     const f = g.fan, rare = ['', '#cfd8dc', '#8fe08f', '#6db8ff', '#c88bff', '#ffc24a'][g.fish.rarity];
@@ -611,7 +670,8 @@
       tourney: { start: startTournament, open: openTourney, info: () => D.tournament.forDay(today()), get active() { return g.tour; }, get run() { return journal.tour.run; }, get result() { return g.tourResult; }, get state() { return journal.tour; } },
       market: { open: openMarket, sell: marketSell, buy: marketBuy, equip: marketEquip, get bells() { return journal.bells; }, get stock() { return journal.stock; }, get baits() { return journal.baits; }, get baitType() { return journal.baitType; } },
       aquarium: { open: openAquarium, claim: claimSet },
-      setBossChance(p) { g.bossChance = p; }, bossFor(sp) { return A.journal.bossFor(journal, sp || g.spot); },
+      setBossChance(p) { g.bossChance = p; if (p >= 1) g.bossGate = false; }, setBossGate(v) { g.bossGate = !!v; },
+      boss2: { get gate() { return g.bossGate; }, get surge() { return g.surge; }, get strain() { return g.strain; }, get splash() { return g.splash; }, get lair() { return journal.lair; }, get hall() { return journal.hall; }, phase() { return g.surge ? B.phaseAt(g.surge, g.t) : 'calm'; }, get time() { return g.t; }, openJournal, todayStr }, bossFor(sp) { return A.journal.bossFor(journal, sp || g.spot); },
       poolInfo() {
         const c = nowCtx(), p = A.pool(g.spot, c, {}), gear = { lure: journal.gear.lure, bait: false };
         return { ids: p.map((f) => f.id), weights: p.map((f) => A.weightOf(f, c, gear)) };
