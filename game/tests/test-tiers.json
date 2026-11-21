@@ -874,5 +874,13 @@
   "telegraph-arena.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "world-bosskey.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "world-rewards.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
