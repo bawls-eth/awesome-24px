@@ -598,5 +598,9 @@
   "town-perf.test.js": {
     "class": "live",
     "tier": "full"
+  },
+  "class-status-arena.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
