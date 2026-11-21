@@ -1022,5 +1022,9 @@
   "shared-mm-creature-strips.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "gear-default-on.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

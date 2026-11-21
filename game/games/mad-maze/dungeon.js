@@ -9,11 +9,12 @@
   const GEAR_DEFAULT_ON = true;
   const gearWanted = () => { let v = null; try { v = new URLSearchParams(window.location.search).get('gear'); } catch (e) { /* no location */ } return v === '1' ? true : v === '0' ? false : GEAR_DEFAULT_ON; };
   // The gear modules are not in the page's script list yet (the index.html tags belong to the save-tolerance slice): load them here, in order, only when gear is on.
+  // mm-backup.js rides along for the one-time pre-gear snapshot (MMBackup.snapshotPregear) before the first tiered item reaches a gear-less save.
   try {
     const cs = document.currentScript;
     if (cs && cs.src && gearWanted() && document.readyState === 'loading') {
       const base = cs.src.replace(/games\/mad-maze\/dungeon\.js.*$/, 'shared/');
-      ['mm-gear.js', 'mm-gear-drops.js'].forEach((f) => { if (!document.querySelector('script[src$="shared/' + f + '"]')) document.write('<script src="' + base + f + '"><\/script>'); });
+      ['mm-gear.js', 'mm-gear-drops.js', 'mm-backup.js'].forEach((f) => { if (!document.querySelector('script[src$="shared/' + f + '"]')) document.write('<script src="' + base + f + '"><\/script>'); });
     }
   } catch (e) { /* gear stays off */ }
   const T = 40; // RM_TILE
@@ -500,6 +501,7 @@
       // collectItem's burst and text draw the arena rng: swap in a throwaway seeded stream so no later arena draw (bags, enemy AI) shifts when gear drops
       const keep = arena.rng; const fx = MMRng.create('dgearfx:' + seed + ':' + gearGot.length); arena.rng = () => fx.next();
       try {
+        if (!full && !sv.gv && window.MMBackup && MMBackup.snapshotPregear) MMBackup.snapshotPregear(localStorage); // GH: once, before the first tiered item is written
         arena.collectItem(g.id, g.r);
         if (!full && sv.items.length > n0 && sv.items[sv.items.length - 1].id === g.id) { const it = sv.items[sv.items.length - 1]; it.t = g.t; if (g.a) it.a = g.a; }
         arena.onSave(sv);
