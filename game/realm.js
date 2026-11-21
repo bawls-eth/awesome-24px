@@ -1485,7 +1485,7 @@ class RealmArena {
     this._calcStats();
     this.abilityCd = [0, 0, 0, 0]; this.shield.hits = 0; this.shield.t = 0; this.overdriveT = 0; this.paused = false; this._sigReset();
     p.x = this.W / 2; p.y = this.H / 2; p.hp = this.stats.maxHp; p.dashT = 0; p.iframes = 1; p.fireCd = 0; p.aim = -Math.PI / 2;
-    this.run = { wave: 0, kills: 0, shards: 0 };
+    this.run = { wave: 0, kills: 0, shards: 0 }; this._waveSc = null;
     this.biome = 0; this.clock = 0; this._speedMul = 1; this.down = false; this.reviveT = 0; this._syncBoss();
     this.shake = 0; this.flash = 0;
     this.displayShards = this.save.shards;
@@ -1569,23 +1569,40 @@ class RealmArena {
     e.dg = null; e._at = undefined; e.t = 0; e.flash = 0; e.angle = this.rng() * Math.PI * 2; e.dir = this.rng() < 0.5 ? 1 : -1;
     e.cd = 0.8 + this.rng() * 0.8; // first shot is never instant
     if (this.world) { e.ax = x + (this.rng() - 0.5) * 220; e.ay = y + (this.rng() - 0.5) * 220; } else { e.ax = 80 + this.rng() * (this.W - 160); e.ay = 80 + this.rng() * (this.H - 160); } // drift target for Whirlers (near home in a world)
-    e.spdMul = 1; e.dmgMul = 1; e.xpMul = 1; e.shardMul = 1; e.art = null; e.bossArt = null; e.zid = -1; e.evid = null; e.campId = null; e.bossName = null; e.bossTier = 0; // world-mode extras (multipliers 1 = unchanged)
+    e.spdMul = 1; e.dmgMul = 1; e.xpMul = 1; e.shardMul = 1; e.art = null; e.bossArt = null; e.zid = -1; e.evid = null; e.campId = null; e.bossName = null; e.bossTier = 0; e.diff = null; // world-mode extras (multipliers 1 = unchanged)
     if (this.world && type === 'boss') { e.ax = x; e.ay = y; }
+    return e;
+  }
+
+  // Classic-arena difficulty curve (MMDifficulty.waveScale), applied to the wave's spawns at spawn time on top of the old wave scaling.
+  // null (= exactly the old numbers) without the module, with ?difficulty=off, and outside the classic waves (world, dungeon, duel).
+  _waveScaleFor(wave) {
+    if (typeof MMDifficulty === 'undefined' || this.world || this.dungeon || this.mode === 'world' || (this.team && this.team.isPvp)) return null;
+    let off = false; try { off = MMDifficulty.isOff(typeof location !== 'undefined' ? location.search : ''); } catch (e) { off = false; }
+    if (off) return null;
+    let mode = 'classic'; try { if (typeof MMProfile !== 'undefined' && MMProfile.clean && MMProfile.KEY) mode = MMProfile.clean(localStorage.getItem(MMProfile.KEY)).mode; } catch (e) { mode = 'classic'; }
+    return MMDifficulty.waveScale(wave, { mode });
+  }
+  _scaleWaveEnemy(e, sc) {
+    if (!e || !sc) return e;
+    e.maxHp = Math.max(1, Math.ceil(e.maxHp * sc.hp)); e.hp = e.maxHp;
+    e.dmgMul = sc.dmg; e.spdMul = sc.spd; e.fireMul = sc.fire; e.diff = sc;
     return e;
   }
 
   _startWave() {
     this.run.wave += 1;
     const wave = this.run.wave;
+    const sc = this._waveSc = this._waveScaleFor(wave);
     const bi = rmBiomeIndex(wave); const biome = RM_BIOMES[bi]; const changed = bi !== this.biome || wave === 1;
     this.biome = bi;
     this.drifters.forEach((d) => { d.active = false; });
     this._layHazards(biome);
     this._spawnDrifters(biome);
     if (wave % RM_BOSS_EVERY === 0) {
-      this._spawnBoss();
+      this._scaleWaveEnemy(this._spawnBoss(), sc);
     } else {
-      const n = Math.min(2 + wave, 10);
+      const n0 = Math.min(2 + wave, 10); const n = sc ? Math.max(1, Math.min(14, Math.round(n0 * sc.count))) : n0;
       const order = biome.mix;
       for (let i = 0; i < n; i++) {
         const type = wave === 1 ? ['aimed', 'aimed', 'ring'][i % 3] : order[(i + Math.floor(this.rng() * order.length)) % order.length];
@@ -1595,7 +1612,7 @@ class RealmArena {
           x = this.W / 2 + Math.cos(a) * (this.W / 2 - 40);
           y = this.H / 2 + Math.sin(a) * (this.H / 2 - 40);
         } while (Math.hypot(x - this.player.x, y - this.player.y) < 220 && ++tries < 12);
-        this.spawnEnemy(type, x, y);
+        this._scaleWaveEnemy(this.spawnEnemy(type, x, y), sc);
       }
     }
     this._syncBoss();
@@ -1941,7 +1958,7 @@ class RealmArena {
     const bn = e.bossName || 'Gloomheart';
     this._showBanner(phase === 2 ? `${bn} — it summons help!` : `${bn} — ENRAGED!`, 1.6, true);
     if (this.team) { this.team.ev('clr', []); this.team.ev('fx', [12]); }
-    if (phase === 2) { for (let k = 0; k < 2; k++) { const a = this.world ? this.spawnEnemy('aimed', e.ax + (k ? 140 : -140), e.ay + 60) : this.spawnEnemy('aimed', k ? this.W - 60 : 60, 140); if (a) a.cd = 1.5; } }
+    if (phase === 2) { for (let k = 0; k < 2; k++) { const a = this.world ? this.spawnEnemy('aimed', e.ax + (k ? 140 : -140), e.ay + 60) : this._scaleWaveEnemy(this.spawnEnemy('aimed', k ? this.W - 60 : 60, 140), this._waveSc); if (a) a.cd = 1.5; } }
   }
 
   _bossDefeated(e) {

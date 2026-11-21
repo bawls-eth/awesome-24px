@@ -602,5 +602,9 @@
   "class-status-arena.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "difficulty-waves.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
