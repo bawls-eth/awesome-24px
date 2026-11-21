@@ -3,13 +3,14 @@
 // tests whether the hero stands inside an attack shape, rolls a seeded wild level, and picks food from the pouch.
 // No DOM, no storage, no network, no unseeded randomness. UMD: browser global IsleCreatures, or require().
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory(require('../../shared/rng.js'), require('../../shared/mm-creatures.js'));
-  else root.IsleCreatures = factory(root.MMRng, root.MMCreatures);
-}(typeof self !== 'undefined' ? self : this, function (MMRng, MMCreatures) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('../../shared/rng.js'), require('../../shared/mm-creatures.js'), require('../../shared/mm-biome-packs.js'));
+  else root.IsleCreatures = factory(root.MMRng, root.MMCreatures, root.MMBiomePacks);
+}(typeof self !== 'undefined' ? self : this, function (MMRng, MMCreatures, MMBiomePacks) {
   'use strict';
   const has = (o, k) => !!o && Object.prototype.hasOwnProperty.call(o, k);
 
-  // pack placeholder id -> the MMCreatures species it plays as (behaviour, attack, taming). The spawn id itself is kept on the creature.
+  // X1: the species canon lives in MMBiomePacks.CANON / canon(id). This table is only the fallback when that module is missing
+  // (an old cached page); it stays exported. pack placeholder id -> the MMCreatures species it plays as. The spawn id is kept on the creature.
   const ALIAS = { parrotlet: 'chompbill', shellback: 'canopy_glider', raptor_jr: 'fernraptor', raptor: 'fernraptor', stegolith: 'stegolith' };
   // a herd that plays as a bigger species in every Nth spawn group (seed-stable: decided by the group index only)
   const GROUP_ALIAS = { boarhog: { kind: 'tusktop', every: 3 } };
@@ -25,8 +26,12 @@
   const LINE_HALF = 16;                             // px half width of a line attack
   const STARTER_POUCH = { jungle_berry: 12, raw_meat: 12, bug: 8 }; // free play: every visit starts with a full pouch
 
+  const canonOf = (sp) => (MMBiomePacks && typeof MMBiomePacks.canon === 'function' ? MMBiomePacks.canon(sp) : null);
+  // kindOf(sp, gi): the MMCreatures species a spawn id plays as. MMBiomePacks.canon() first; then (fallback only) the local tables.
   function kindOf(sp, gi) {
     if (typeof sp !== 'string') return null;
+    const k = canonOf(sp);
+    if (k && MMCreatures && MMCreatures.get(k)) return k;
     if (has(GROUP_ALIAS, sp)) { const ga = GROUP_ALIAS[sp]; if (typeof gi === 'number' && gi >= 0 && gi % ga.every === 0) return ga.kind; }
     if (has(ALIAS, sp)) return ALIAS[sp];
     return MMCreatures && MMCreatures.get(sp) ? sp : null;
@@ -73,6 +78,26 @@
   }
   const foodName = (id) => String(id || '').replace(/_/g, ' ');
 
+  // X1 rare spawns: rareSpot(world, pack, seed, walkable(tx,ty)) -> {creature, zone, x, y} or null. One rare per island (the pack's
+  // first `rare` entry), placed on a seeded walkable tile of its zone at least 20 tiles from the spawn point. Pure and seed-stable:
+  // the candidate tiles are scanned in grid order and one is picked with MMRng('isles|rare|<pack>|<seed>').
+  function rareSpot(world, pack, seed, walkable) {
+    if (!world || !pack || !pack.rare || typeof walkable !== 'function') return null;
+    const ids = Object.keys(pack.rare).sort();
+    if (!ids.length) return null;
+    const id = ids[0], zone = pack.rare[id] && pack.rare[id].zone;
+    if (!(zone >= 0)) return null;
+    const W = world.w, H = world.h, sp = world.spawnPoint || { x: -999, y: -999 };
+    let n = 0;
+    const ok = (x, y) => world.zone[y * W + x] === zone && Math.hypot(x - sp.x, y - sp.y) >= 20 && walkable(x, y);
+    for (let y = 2; y < H - 2; y++) for (let x = 2; x < W - 2; x++) if (ok(x, y)) n++;
+    if (!n) return null;
+    let pick = Math.floor(MMRng.create('isles|rare|' + pack.id + '|' + seed).next() * n);
+    for (let y = 2; y < H - 2; y++) for (let x = 2; x < W - 2; x++) if (ok(x, y) && pick-- === 0) return { creature: id, zone: zone, x: x, y: y };
+    return null;
+  }
+
   return Object.freeze({ ALIAS: ALIAS, GROUP_ALIAS: GROUP_ALIAS, ARCH: ARCH, SHAPE: SHAPE, REACH: REACH, CONE_HALF: CONE_HALF, LINE_HALF: LINE_HALF,
-    STARTER_POUCH: STARTER_POUCH, kindOf: kindOf, shapeOf: shapeOf, attackOf: attackOf, inShape: inShape, levelFor: levelFor, foodFor: foodFor, foodName: foodName, big: big });
+    STARTER_POUCH: STARTER_POUCH, kindOf: kindOf, shapeOf: shapeOf, attackOf: attackOf, inShape: inShape, levelFor: levelFor, foodFor: foodFor, foodName: foodName, big: big,
+    rareSpot: rareSpot, canonOf: canonOf });
 }));
