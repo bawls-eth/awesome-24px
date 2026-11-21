@@ -1054,5 +1054,13 @@
   "gear-default-on.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "gear-balance-sim.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-gear-sets.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }
