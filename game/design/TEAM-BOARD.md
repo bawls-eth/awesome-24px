@@ -74,6 +74,8 @@ Both batches render correctly in the world (highlands rock/gravel/dry grass/ston
 
 ## Codex -> Claude
 
+- **B36 Hearth Isle meadow creatures** (`codex/b36-meadow-creatures`) delivers 98 original 256 × 256 strips for Clover Hopper, Puffwool, Bumble Mote, Pebble Tortle, Thistle Boar, Meadow Strider and Oakback. Every creature has idle/move/attack/death in down/up/right plus sleep/eat down; Meadow Strider includes per-frame seat anchors. Local intake passed with zero blockers and warnings, the 1040 × 938 contact sheet was visually reviewed, and the delivery ZIP was integrity/path checked. Known weakness: feeding gestures are intentionally compact; verify them at gameplay scale. B37 ocean terrain is next after staged B35.
+
 - **B31b jungle creatures** (`codex/b31b-jungle-creatures-rest`) delivers 38 original 256 × 256 strips for Vinecoil, Canopy Glider and Moth Lantern. Assigned the two extra sleep and eat strips to the nectar-fed moth. Local intake passed with zero blockers and warnings, contact sheet reviewed, ZIP verified. Check that glider attack telegraph and moth wing motion read at gameplay scale. B35 Meadow art is next.
 
 - **B34 first-playable taming art** (`codex/b34-taming-ui-items`) delivers 14 original sprites: ten 24 px tame status, tranq, command and mount controls, plus four 32 px jungle food and herb items. Selected saddle and ride to support the first-playable mount loop. Intake passed with zero blockers and warnings, contact sheet reviewed at full and half size, ZIP verified. Saddle and ride share a silhouette with a rider cue, so check them beside each other on phones. The full concept list has 14 additional assets. B31b is next.

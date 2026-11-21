@@ -1,0 +1,2504 @@
+{
+  "batch": "b36",
+  "label": "meadow-creatures",
+  "assets": [
+    {
+      "id": "clover_hopper_idle_down",
+      "path": "enemies/clover_hopper/clover_hopper_idle_down.png",
+      "category": "enemy",
+      "enemy": "clover_hopper",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "clover_hopper_move_down",
+      "path": "enemies/clover_hopper/clover_hopper_move_down.png",
+      "category": "enemy",
+      "enemy": "clover_hopper",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "clover_hopper_attack_down",
+      "path": "enemies/clover_hopper/clover_hopper_attack_down.png",
+      "category": "enemy",
+      "enemy": "clover_hopper",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "clover_hopper_death_down",
+      "path": "enemies/clover_hopper/clover_hopper_death_down.png",
+      "category": "enemy",
+      "enemy": "clover_hopper",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 9,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "clover_hopper_idle_up",
+      "path": "enemies/clover_hopper/clover_hopper_idle_up.png",
+      "category": "enemy",
+      "enemy": "clover_hopper",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "clover_hopper_move_up",
+      "path": "enemies/clover_hopper/clover_hopper_move_up.png",
+      "category": "enemy",
+      "enemy": "clover_hopper",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "clover_hopper_attack_up",
+      "path": "enemies/clover_hopper/clover_hopper_attack_up.png",
+      "category": "enemy",
+      "enemy": "clover_hopper",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "clover_hopper_death_up",
+      "path": "enemies/clover_hopper/clover_hopper_death_up.png",
+      "category": "enemy",
+      "enemy": "clover_hopper",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 9,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "clover_hopper_idle_right",
+      "path": "enemies/clover_hopper/clover_hopper_idle_right.png",
+      "category": "enemy",
+      "enemy": "clover_hopper",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "clover_hopper_move_right",
+      "path": "enemies/clover_hopper/clover_hopper_move_right.png",
+      "category": "enemy",
+      "enemy": "clover_hopper",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "clover_hopper_attack_right",
+      "path": "enemies/clover_hopper/clover_hopper_attack_right.png",
+      "category": "enemy",
+      "enemy": "clover_hopper",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "clover_hopper_death_right",
+      "path": "enemies/clover_hopper/clover_hopper_death_right.png",
+      "category": "enemy",
+      "enemy": "clover_hopper",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 9,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "clover_hopper_sleep_down",
+      "path": "enemies/clover_hopper/clover_hopper_sleep_down.png",
+      "category": "enemy",
+      "enemy": "clover_hopper",
+      "action": "sleep",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "clover_hopper_eat_down",
+      "path": "enemies/clover_hopper/clover_hopper_eat_down.png",
+      "category": "enemy",
+      "enemy": "clover_hopper",
+      "action": "eat",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "puffwool_idle_down",
+      "path": "enemies/puffwool/puffwool_idle_down.png",
+      "category": "enemy",
+      "enemy": "puffwool",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "puffwool_move_down",
+      "path": "enemies/puffwool/puffwool_move_down.png",
+      "category": "enemy",
+      "enemy": "puffwool",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "puffwool_attack_down",
+      "path": "enemies/puffwool/puffwool_attack_down.png",
+      "category": "enemy",
+      "enemy": "puffwool",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "puffwool_death_down",
+      "path": "enemies/puffwool/puffwool_death_down.png",
+      "category": "enemy",
+      "enemy": "puffwool",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 9,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "puffwool_idle_up",
+      "path": "enemies/puffwool/puffwool_idle_up.png",
+      "category": "enemy",
+      "enemy": "puffwool",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "puffwool_move_up",
+      "path": "enemies/puffwool/puffwool_move_up.png",
+      "category": "enemy",
+      "enemy": "puffwool",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "puffwool_attack_up",
+      "path": "enemies/puffwool/puffwool_attack_up.png",
+      "category": "enemy",
+      "enemy": "puffwool",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "puffwool_death_up",
+      "path": "enemies/puffwool/puffwool_death_up.png",
+      "category": "enemy",
+      "enemy": "puffwool",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 9,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "puffwool_idle_right",
+      "path": "enemies/puffwool/puffwool_idle_right.png",
+      "category": "enemy",
+      "enemy": "puffwool",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "puffwool_move_right",
+      "path": "enemies/puffwool/puffwool_move_right.png",
+      "category": "enemy",
+      "enemy": "puffwool",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "puffwool_attack_right",
+      "path": "enemies/puffwool/puffwool_attack_right.png",
+      "category": "enemy",
+      "enemy": "puffwool",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "puffwool_death_right",
+      "path": "enemies/puffwool/puffwool_death_right.png",
+      "category": "enemy",
+      "enemy": "puffwool",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 9,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "puffwool_sleep_down",
+      "path": "enemies/puffwool/puffwool_sleep_down.png",
+      "category": "enemy",
+      "enemy": "puffwool",
+      "action": "sleep",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "puffwool_eat_down",
+      "path": "enemies/puffwool/puffwool_eat_down.png",
+      "category": "enemy",
+      "enemy": "puffwool",
+      "action": "eat",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "bumble_mote_idle_down",
+      "path": "enemies/bumble_mote/bumble_mote_idle_down.png",
+      "category": "enemy",
+      "enemy": "bumble_mote",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "bumble_mote_move_down",
+      "path": "enemies/bumble_mote/bumble_mote_move_down.png",
+      "category": "enemy",
+      "enemy": "bumble_mote",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "bumble_mote_attack_down",
+      "path": "enemies/bumble_mote/bumble_mote_attack_down.png",
+      "category": "enemy",
+      "enemy": "bumble_mote",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "bumble_mote_death_down",
+      "path": "enemies/bumble_mote/bumble_mote_death_down.png",
+      "category": "enemy",
+      "enemy": "bumble_mote",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 9,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "bumble_mote_idle_up",
+      "path": "enemies/bumble_mote/bumble_mote_idle_up.png",
+      "category": "enemy",
+      "enemy": "bumble_mote",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "bumble_mote_move_up",
+      "path": "enemies/bumble_mote/bumble_mote_move_up.png",
+      "category": "enemy",
+      "enemy": "bumble_mote",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "bumble_mote_attack_up",
+      "path": "enemies/bumble_mote/bumble_mote_attack_up.png",
+      "category": "enemy",
+      "enemy": "bumble_mote",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "bumble_mote_death_up",
+      "path": "enemies/bumble_mote/bumble_mote_death_up.png",
+      "category": "enemy",
+      "enemy": "bumble_mote",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 9,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "bumble_mote_idle_right",
+      "path": "enemies/bumble_mote/bumble_mote_idle_right.png",
+      "category": "enemy",
+      "enemy": "bumble_mote",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "bumble_mote_move_right",
+      "path": "enemies/bumble_mote/bumble_mote_move_right.png",
+      "category": "enemy",
+      "enemy": "bumble_mote",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "bumble_mote_attack_right",
+      "path": "enemies/bumble_mote/bumble_mote_attack_right.png",
+      "category": "enemy",
+      "enemy": "bumble_mote",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "bumble_mote_death_right",
+      "path": "enemies/bumble_mote/bumble_mote_death_right.png",
+      "category": "enemy",
+      "enemy": "bumble_mote",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 9,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "bumble_mote_sleep_down",
+      "path": "enemies/bumble_mote/bumble_mote_sleep_down.png",
+      "category": "enemy",
+      "enemy": "bumble_mote",
+      "action": "sleep",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "bumble_mote_eat_down",
+      "path": "enemies/bumble_mote/bumble_mote_eat_down.png",
+      "category": "enemy",
+      "enemy": "bumble_mote",
+      "action": "eat",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "pebble_tortle_idle_down",
+      "path": "enemies/pebble_tortle/pebble_tortle_idle_down.png",
+      "category": "enemy",
+      "enemy": "pebble_tortle",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "pebble_tortle_move_down",
+      "path": "enemies/pebble_tortle/pebble_tortle_move_down.png",
+      "category": "enemy",
+      "enemy": "pebble_tortle",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "pebble_tortle_attack_down",
+      "path": "enemies/pebble_tortle/pebble_tortle_attack_down.png",
+      "category": "enemy",
+      "enemy": "pebble_tortle",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "pebble_tortle_death_down",
+      "path": "enemies/pebble_tortle/pebble_tortle_death_down.png",
+      "category": "enemy",
+      "enemy": "pebble_tortle",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 9,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "pebble_tortle_idle_up",
+      "path": "enemies/pebble_tortle/pebble_tortle_idle_up.png",
+      "category": "enemy",
+      "enemy": "pebble_tortle",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "pebble_tortle_move_up",
+      "path": "enemies/pebble_tortle/pebble_tortle_move_up.png",
+      "category": "enemy",
+      "enemy": "pebble_tortle",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "pebble_tortle_attack_up",
+      "path": "enemies/pebble_tortle/pebble_tortle_attack_up.png",
+      "category": "enemy",
+      "enemy": "pebble_tortle",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "pebble_tortle_death_up",
+      "path": "enemies/pebble_tortle/pebble_tortle_death_up.png",
+      "category": "enemy",
+      "enemy": "pebble_tortle",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 9,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "pebble_tortle_idle_right",
+      "path": "enemies/pebble_tortle/pebble_tortle_idle_right.png",
+      "category": "enemy",
+      "enemy": "pebble_tortle",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "pebble_tortle_move_right",
+      "path": "enemies/pebble_tortle/pebble_tortle_move_right.png",
+      "category": "enemy",
+      "enemy": "pebble_tortle",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "pebble_tortle_attack_right",
+      "path": "enemies/pebble_tortle/pebble_tortle_attack_right.png",
+      "category": "enemy",
+      "enemy": "pebble_tortle",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "pebble_tortle_death_right",
+      "path": "enemies/pebble_tortle/pebble_tortle_death_right.png",
+      "category": "enemy",
+      "enemy": "pebble_tortle",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 9,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "pebble_tortle_sleep_down",
+      "path": "enemies/pebble_tortle/pebble_tortle_sleep_down.png",
+      "category": "enemy",
+      "enemy": "pebble_tortle",
+      "action": "sleep",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "pebble_tortle_eat_down",
+      "path": "enemies/pebble_tortle/pebble_tortle_eat_down.png",
+      "category": "enemy",
+      "enemy": "pebble_tortle",
+      "action": "eat",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "thistle_boar_idle_down",
+      "path": "enemies/thistle_boar/thistle_boar_idle_down.png",
+      "category": "enemy",
+      "enemy": "thistle_boar",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "thistle_boar_move_down",
+      "path": "enemies/thistle_boar/thistle_boar_move_down.png",
+      "category": "enemy",
+      "enemy": "thistle_boar",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "thistle_boar_attack_down",
+      "path": "enemies/thistle_boar/thistle_boar_attack_down.png",
+      "category": "enemy",
+      "enemy": "thistle_boar",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "thistle_boar_death_down",
+      "path": "enemies/thistle_boar/thistle_boar_death_down.png",
+      "category": "enemy",
+      "enemy": "thistle_boar",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 9,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "thistle_boar_idle_up",
+      "path": "enemies/thistle_boar/thistle_boar_idle_up.png",
+      "category": "enemy",
+      "enemy": "thistle_boar",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "thistle_boar_move_up",
+      "path": "enemies/thistle_boar/thistle_boar_move_up.png",
+      "category": "enemy",
+      "enemy": "thistle_boar",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "thistle_boar_attack_up",
+      "path": "enemies/thistle_boar/thistle_boar_attack_up.png",
+      "category": "enemy",
+      "enemy": "thistle_boar",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "thistle_boar_death_up",
+      "path": "enemies/thistle_boar/thistle_boar_death_up.png",
+      "category": "enemy",
+      "enemy": "thistle_boar",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 9,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "thistle_boar_idle_right",
+      "path": "enemies/thistle_boar/thistle_boar_idle_right.png",
+      "category": "enemy",
+      "enemy": "thistle_boar",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "thistle_boar_move_right",
+      "path": "enemies/thistle_boar/thistle_boar_move_right.png",
+      "category": "enemy",
+      "enemy": "thistle_boar",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "thistle_boar_attack_right",
+      "path": "enemies/thistle_boar/thistle_boar_attack_right.png",
+      "category": "enemy",
+      "enemy": "thistle_boar",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "thistle_boar_death_right",
+      "path": "enemies/thistle_boar/thistle_boar_death_right.png",
+      "category": "enemy",
+      "enemy": "thistle_boar",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 9,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "thistle_boar_sleep_down",
+      "path": "enemies/thistle_boar/thistle_boar_sleep_down.png",
+      "category": "enemy",
+      "enemy": "thistle_boar",
+      "action": "sleep",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "thistle_boar_eat_down",
+      "path": "enemies/thistle_boar/thistle_boar_eat_down.png",
+      "category": "enemy",
+      "enemy": "thistle_boar",
+      "action": "eat",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "meadow_strider_idle_down",
+      "path": "enemies/meadow_strider/meadow_strider_idle_down.png",
+      "category": "enemy",
+      "enemy": "meadow_strider",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable",
+        "mount"
+      ],
+      "source": "original code-drawn pixel art",
+      "seat": [
+        {
+          "x": 128,
+          "y": 110
+        },
+        {
+          "x": 128,
+          "y": 114
+        },
+        {
+          "x": 128,
+          "y": 110
+        },
+        {
+          "x": 128,
+          "y": 106
+        }
+      ]
+    },
+    {
+      "id": "meadow_strider_move_down",
+      "path": "enemies/meadow_strider/meadow_strider_move_down.png",
+      "category": "enemy",
+      "enemy": "meadow_strider",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable",
+        "mount"
+      ],
+      "source": "original code-drawn pixel art",
+      "seat": [
+        {
+          "x": 128,
+          "y": 106
+        },
+        {
+          "x": 128,
+          "y": 114
+        },
+        {
+          "x": 128,
+          "y": 110
+        },
+        {
+          "x": 128,
+          "y": 102
+        },
+        {
+          "x": 128,
+          "y": 110
+        },
+        {
+          "x": 128,
+          "y": 114
+        }
+      ]
+    },
+    {
+      "id": "meadow_strider_attack_down",
+      "path": "enemies/meadow_strider/meadow_strider_attack_down.png",
+      "category": "enemy",
+      "enemy": "meadow_strider",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable",
+        "mount"
+      ],
+      "source": "original code-drawn pixel art",
+      "seat": [
+        {
+          "x": 128,
+          "y": 110
+        },
+        {
+          "x": 128,
+          "y": 114
+        },
+        {
+          "x": 128,
+          "y": 110
+        },
+        {
+          "x": 128,
+          "y": 106
+        },
+        {
+          "x": 128,
+          "y": 110
+        }
+      ]
+    },
+    {
+      "id": "meadow_strider_death_down",
+      "path": "enemies/meadow_strider/meadow_strider_death_down.png",
+      "category": "enemy",
+      "enemy": "meadow_strider",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 9,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable",
+        "mount"
+      ],
+      "source": "original code-drawn pixel art",
+      "seat": [
+        {
+          "x": 128,
+          "y": 110
+        },
+        {
+          "x": 128,
+          "y": 114
+        },
+        {
+          "x": 128,
+          "y": 110
+        },
+        {
+          "x": 128,
+          "y": 106
+        },
+        {
+          "x": 128,
+          "y": 110
+        }
+      ]
+    },
+    {
+      "id": "meadow_strider_idle_up",
+      "path": "enemies/meadow_strider/meadow_strider_idle_up.png",
+      "category": "enemy",
+      "enemy": "meadow_strider",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable",
+        "mount"
+      ],
+      "source": "original code-drawn pixel art",
+      "seat": [
+        {
+          "x": 128,
+          "y": 110
+        },
+        {
+          "x": 128,
+          "y": 114
+        },
+        {
+          "x": 128,
+          "y": 110
+        },
+        {
+          "x": 128,
+          "y": 106
+        }
+      ]
+    },
+    {
+      "id": "meadow_strider_move_up",
+      "path": "enemies/meadow_strider/meadow_strider_move_up.png",
+      "category": "enemy",
+      "enemy": "meadow_strider",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable",
+        "mount"
+      ],
+      "source": "original code-drawn pixel art",
+      "seat": [
+        {
+          "x": 128,
+          "y": 106
+        },
+        {
+          "x": 128,
+          "y": 114
+        },
+        {
+          "x": 128,
+          "y": 110
+        },
+        {
+          "x": 128,
+          "y": 102
+        },
+        {
+          "x": 128,
+          "y": 110
+        },
+        {
+          "x": 128,
+          "y": 114
+        }
+      ]
+    },
+    {
+      "id": "meadow_strider_attack_up",
+      "path": "enemies/meadow_strider/meadow_strider_attack_up.png",
+      "category": "enemy",
+      "enemy": "meadow_strider",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable",
+        "mount"
+      ],
+      "source": "original code-drawn pixel art",
+      "seat": [
+        {
+          "x": 128,
+          "y": 110
+        },
+        {
+          "x": 128,
+          "y": 114
+        },
+        {
+          "x": 128,
+          "y": 110
+        },
+        {
+          "x": 128,
+          "y": 106
+        },
+        {
+          "x": 128,
+          "y": 110
+        }
+      ]
+    },
+    {
+      "id": "meadow_strider_death_up",
+      "path": "enemies/meadow_strider/meadow_strider_death_up.png",
+      "category": "enemy",
+      "enemy": "meadow_strider",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 9,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable",
+        "mount"
+      ],
+      "source": "original code-drawn pixel art",
+      "seat": [
+        {
+          "x": 128,
+          "y": 110
+        },
+        {
+          "x": 128,
+          "y": 114
+        },
+        {
+          "x": 128,
+          "y": 110
+        },
+        {
+          "x": 128,
+          "y": 106
+        },
+        {
+          "x": 128,
+          "y": 110
+        }
+      ]
+    },
+    {
+      "id": "meadow_strider_idle_right",
+      "path": "enemies/meadow_strider/meadow_strider_idle_right.png",
+      "category": "enemy",
+      "enemy": "meadow_strider",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable",
+        "mount"
+      ],
+      "source": "original code-drawn pixel art",
+      "seat": [
+        {
+          "x": 126,
+          "y": 110
+        },
+        {
+          "x": 126,
+          "y": 114
+        },
+        {
+          "x": 126,
+          "y": 110
+        },
+        {
+          "x": 126,
+          "y": 106
+        }
+      ]
+    },
+    {
+      "id": "meadow_strider_move_right",
+      "path": "enemies/meadow_strider/meadow_strider_move_right.png",
+      "category": "enemy",
+      "enemy": "meadow_strider",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable",
+        "mount"
+      ],
+      "source": "original code-drawn pixel art",
+      "seat": [
+        {
+          "x": 126,
+          "y": 106
+        },
+        {
+          "x": 126,
+          "y": 114
+        },
+        {
+          "x": 126,
+          "y": 110
+        },
+        {
+          "x": 126,
+          "y": 102
+        },
+        {
+          "x": 126,
+          "y": 110
+        },
+        {
+          "x": 126,
+          "y": 114
+        }
+      ]
+    },
+    {
+      "id": "meadow_strider_attack_right",
+      "path": "enemies/meadow_strider/meadow_strider_attack_right.png",
+      "category": "enemy",
+      "enemy": "meadow_strider",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable",
+        "mount"
+      ],
+      "source": "original code-drawn pixel art",
+      "seat": [
+        {
+          "x": 126,
+          "y": 110
+        },
+        {
+          "x": 126,
+          "y": 114
+        },
+        {
+          "x": 126,
+          "y": 110
+        },
+        {
+          "x": 126,
+          "y": 106
+        },
+        {
+          "x": 126,
+          "y": 110
+        }
+      ]
+    },
+    {
+      "id": "meadow_strider_death_right",
+      "path": "enemies/meadow_strider/meadow_strider_death_right.png",
+      "category": "enemy",
+      "enemy": "meadow_strider",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 9,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable",
+        "mount"
+      ],
+      "source": "original code-drawn pixel art",
+      "seat": [
+        {
+          "x": 126,
+          "y": 110
+        },
+        {
+          "x": 126,
+          "y": 114
+        },
+        {
+          "x": 126,
+          "y": 110
+        },
+        {
+          "x": 126,
+          "y": 106
+        },
+        {
+          "x": 126,
+          "y": 110
+        }
+      ]
+    },
+    {
+      "id": "meadow_strider_sleep_down",
+      "path": "enemies/meadow_strider/meadow_strider_sleep_down.png",
+      "category": "enemy",
+      "enemy": "meadow_strider",
+      "action": "sleep",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable",
+        "mount"
+      ],
+      "source": "original code-drawn pixel art",
+      "seat": [
+        {
+          "x": 128,
+          "y": 114
+        },
+        {
+          "x": 128,
+          "y": 118
+        },
+        {
+          "x": 128,
+          "y": 114
+        },
+        {
+          "x": 128,
+          "y": 110
+        }
+      ]
+    },
+    {
+      "id": "meadow_strider_eat_down",
+      "path": "enemies/meadow_strider/meadow_strider_eat_down.png",
+      "category": "enemy",
+      "enemy": "meadow_strider",
+      "action": "eat",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable",
+        "mount"
+      ],
+      "source": "original code-drawn pixel art",
+      "seat": [
+        {
+          "x": 128,
+          "y": 110
+        },
+        {
+          "x": 128,
+          "y": 114
+        },
+        {
+          "x": 128,
+          "y": 110
+        },
+        {
+          "x": 128,
+          "y": 106
+        }
+      ]
+    },
+    {
+      "id": "oakback_idle_down",
+      "path": "enemies/oakback/oakback_idle_down.png",
+      "category": "enemy",
+      "enemy": "oakback",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable",
+        "legendary",
+        "giant"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "oakback_move_down",
+      "path": "enemies/oakback/oakback_move_down.png",
+      "category": "enemy",
+      "enemy": "oakback",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable",
+        "legendary",
+        "giant"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "oakback_attack_down",
+      "path": "enemies/oakback/oakback_attack_down.png",
+      "category": "enemy",
+      "enemy": "oakback",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable",
+        "legendary",
+        "giant"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "oakback_death_down",
+      "path": "enemies/oakback/oakback_death_down.png",
+      "category": "enemy",
+      "enemy": "oakback",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 9,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable",
+        "legendary",
+        "giant"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "oakback_idle_up",
+      "path": "enemies/oakback/oakback_idle_up.png",
+      "category": "enemy",
+      "enemy": "oakback",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable",
+        "legendary",
+        "giant"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "oakback_move_up",
+      "path": "enemies/oakback/oakback_move_up.png",
+      "category": "enemy",
+      "enemy": "oakback",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable",
+        "legendary",
+        "giant"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "oakback_attack_up",
+      "path": "enemies/oakback/oakback_attack_up.png",
+      "category": "enemy",
+      "enemy": "oakback",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable",
+        "legendary",
+        "giant"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "oakback_death_up",
+      "path": "enemies/oakback/oakback_death_up.png",
+      "category": "enemy",
+      "enemy": "oakback",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 9,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable",
+        "legendary",
+        "giant"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "oakback_idle_right",
+      "path": "enemies/oakback/oakback_idle_right.png",
+      "category": "enemy",
+      "enemy": "oakback",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable",
+        "legendary",
+        "giant"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "oakback_move_right",
+      "path": "enemies/oakback/oakback_move_right.png",
+      "category": "enemy",
+      "enemy": "oakback",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable",
+        "legendary",
+        "giant"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "oakback_attack_right",
+      "path": "enemies/oakback/oakback_attack_right.png",
+      "category": "enemy",
+      "enemy": "oakback",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable",
+        "legendary",
+        "giant"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "oakback_death_right",
+      "path": "enemies/oakback/oakback_death_right.png",
+      "category": "enemy",
+      "enemy": "oakback",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 9,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable",
+        "legendary",
+        "giant"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "oakback_sleep_down",
+      "path": "enemies/oakback/oakback_sleep_down.png",
+      "category": "enemy",
+      "enemy": "oakback",
+      "action": "sleep",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable",
+        "legendary",
+        "giant"
+      ],
+      "source": "original code-drawn pixel art"
+    },
+    {
+      "id": "oakback_eat_down",
+      "path": "enemies/oakback/oakback_eat_down.png",
+      "category": "enemy",
+      "enemy": "oakback",
+      "action": "eat",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      },
+      "tags": [
+        "hearth-isle",
+        "tameable",
+        "legendary",
+        "giant"
+      ],
+      "source": "original code-drawn pixel art"
+    }
+  ]
+}
