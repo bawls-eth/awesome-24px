@@ -1,4 +1,4 @@
-// G9: tiered gear drops in the Realm World. Off by default (GEAR_DEFAULT_ON = false); ?gear=1 (or save.gearOn) turns them on, ?gear=0 is always off.
+// G9: tiered gear drops in the Realm World. On by default (GEAR_DEFAULT_ON = true since G7 shipped); ?gear=1 (or save.gearOn) forces them on, ?gear=0 is always off.
 // Per-kill, per-player seeded rolls through MMGearDrops.rollGear; visible pity `gp` saved additively in pixeltown-realm-v1 (garbage -> defaults).
 // Offline (blockDb), deterministic seed, phone 390x844, no console errors.
 // Run: BASE=http://localhost:8702/game/index.html NODE_PATH=$(npm root -g) node game/tests/gear-world-drops.test.js
@@ -38,15 +38,21 @@ const sig = (l) => JSON.stringify(l.map((i) => [i.id, i.r, i.t || 0, i.a || 0]))
 (async () => {
   const browser = await chromium.launch();
 
-  // ---- default: no flag behaves exactly as today ----
+  // ---- default: gear drops are on (GEAR_DEFAULT_ON = true), the same stream as ?gear=1; an old classic save loads untouched ----
   let o = await open(browser, URL(''));
-  const defCfg = await W(o.page, (a, w) => ({ on: w.gearOn, def: w.gearDefaultOn, pity: w.gearPity() }));
+  const defCfg = await W(o.page, (a, w) => ({ on: w.gearOn, def: w.gearDefaultOn, pity: w.gearPity(), first: JSON.stringify(a.save.items[0]), eq: a.save.eq.weapon }));
   const defItems = await series(o.page, { n: 25, info: { zone: 3, tier: 3, src: 'mob' }, tag: 'g1' });
   const defRaw = await raw(o.page);
-  check('default: gear drops are off (GEAR_DEFAULT_ON = false)', defCfg.on === false && defCfg.def === false && defCfg.pity.on === false);
-  check('default: 25 kills drop only classic items (no t, no tier name)', defItems.length > 0 && defItems.every((i) => i.t === undefined && !/^T\d+ /.test(i.name)), defItems.length + ' items');
-  check('default: no gp is written to the save', !defRaw || defRaw.gp === undefined);
+  check('default: gear drops are on (GEAR_DEFAULT_ON = true) and the pity view is live', defCfg.on === true && defCfg.def === true && defCfg.pity.on === true && defCfg.pity.b === 0);
+  check('default: an old classic save (no t, no gp) loads unchanged: its Spark Wand stays {n, id, r} and stays equipped', defCfg.first === JSON.stringify({ n: 1, id: 'sparkwand', r: 0 }) && defCfg.eq === 1, defCfg.first);
+  const defT = defItems.filter((i) => i.t !== undefined);
+  check('default: 25 zone-3 kills drop tiered items inside T7-T10 with tier names', defT.length > 5 && defT.every((i) => i.t >= 7 && i.t <= 10 && new RegExp('^T' + i.t + ' ').test(i.name)), defItems.length + ' items, ' + defT.length + ' tiered');
+  check('default: mob kills never write a gp key (only boss kills move pity)', !defRaw || defRaw.gp === undefined);
   check('default: no console errors', o.errors.length === 0, o.errors.join(' | '));
+  await o.ctx.close();
+  o = await open(browser, URL('&gear=1'));
+  const forcedItems = await series(o.page, { n: 25, info: { zone: 3, tier: 3, src: 'mob' }, tag: 'g1' });
+  check('default drops are exactly the ?gear=1 drops (same seed, same kills)', sig(defItems) === sig(forcedItems), defItems.length + ' vs ' + forcedItems.length);
   await o.ctx.close();
 
   // ---- ?gear=0 always off, even with the save flag ----
@@ -58,7 +64,7 @@ const sig = (l) => JSON.stringify(l.map((i) => [i.id, i.r, i.t || 0, i.a || 0]))
 
   // ---- save flag turns it on ----
   o = await open(browser, URL(''), { realm: JSON.stringify({ gearOn: true }) });
-  check('save.gearOn enables gear drops', (await W(o.page, (a, w) => w.gearOn)) === true);
+  check('save.gearOn keeps gear drops on', (await W(o.page, (a, w) => w.gearOn)) === true);
   await o.ctx.close();
 
   // ---- ?gear=1: tiers within the table bounds per zone ----

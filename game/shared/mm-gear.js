@@ -54,8 +54,27 @@
     ARMOR_IDS[a[1]].push(a[0]); ARMOR_ART[a[0]] = a[2]; ARMOR_NAMES[a[0]] = a[3];
     ARMOR_INFO[a[0]] = Object.freeze({ id: a[0], family: a[1], band: band, art: a[2], name: a[3] });
   });
-  FAMILY_KEYS.forEach((f) => Object.freeze(ARMOR_IDS[f]));
-  Object.freeze(ARMOR_IDS); Object.freeze(ARMOR_ART); Object.freeze(ARMOR_NAMES);
+  // ---------- boss signature relics (b29 `sig_*` art) ----------
+  // One per godlands (z3) boss: a T12 body-slot piece any class may wear. Stats = the T12 armor of its family profile; its affixes are the T12 pair
+  // plus the boss's fixed signature affix (MMGearAffix derives it from the id). Soulbound like every T11+ item. Lookup-only: never in ARMOR_IDS
+  // (the 18 tier pieces), so the band tables, shop and classic pools never see them; MMGearDrops rolls them rarely from a z3 boss T12.
+  // [id, boss, family profile, art id, name, signature affix]
+  const SIG_LIST = [
+    ['arm_sig_dread', 'dread_knight', 'heavy', 'sig_dread_plate', 'Dread Plate', 'ward'],
+    ['arm_sig_wyrm', 'inferno_wyrm', 'heavy', 'sig_wyrm_core', 'Wyrm Core', 'blast'],
+    ['arm_sig_oracle', 'void_oracle', 'robe', 'sig_oracle_eye', 'Oracle Eye', 'venom'],
+    ['arm_sig_lich', 'lich_king', 'robe', 'sig_lich_phylactery', 'Lich Phylactery', 'leech'],
+    ['arm_sig_hydra', 'shadow_hydra', 'light', 'sig_hydra_fang', 'Hydra Fang', 'pierce'],
+    ['arm_sig_maw', 'void_maw', 'light', 'sig_maw_shard', 'Maw Shard', 'blast'],
+  ];
+  const SIG_T = 12;
+  const SIG_IDS = [], SIG_BY_BOSS = {}, SIG_BY_FAMILY = {}; FAMILY_KEYS.forEach((f) => { SIG_BY_FAMILY[f] = []; });
+  SIG_LIST.forEach((a) => {
+    SIG_IDS.push(a[0]); SIG_BY_BOSS[a[1]] = a[0]; SIG_BY_FAMILY[a[2]].push(a[0]); ARMOR_ART[a[0]] = a[3]; ARMOR_NAMES[a[0]] = a[4];
+    ARMOR_INFO[a[0]] = Object.freeze({ id: a[0], family: a[2], band: 6, art: a[3], name: a[4], sig: true, boss: a[1], affix: a[5] });
+  });
+  FAMILY_KEYS.forEach((f) => { Object.freeze(ARMOR_IDS[f]); Object.freeze(SIG_BY_FAMILY[f]); });
+  Object.freeze(ARMOR_IDS); Object.freeze(ARMOR_ART); Object.freeze(ARMOR_NAMES); Object.freeze(SIG_IDS); Object.freeze(SIG_BY_BOSS); Object.freeze(SIG_BY_FAMILY);
   const GEAR_ID_RE = /^arm_[a-z]{3,8}_[a-z]{3,10}$/;
   const WPN_ID_RE = /^wpn_[a-z_]{3,24}$/;
   const SAFE_ID_RE = /^[a-z][a-z0-9_]{1,31}$/;
@@ -87,6 +106,9 @@
     return ARMOR_IDS[fam][band(t) - 1];
   }
   const armorInfo = (id) => (typeof id === 'string' && has(ARMOR_INFO, id) ? ARMOR_INFO[id] : null);
+  // sigInfo(id) -> frozen { id, boss, family, art, name, affix, ... } for a signature relic id, else null. isSig(id) -> boolean.
+  const sigInfo = (id) => { const i = armorInfo(id); return i && i.sig ? i : null; };
+  const isSig = (id) => !!sigInfo(id);
   const isWeaponId = (id) => typeof id === 'string' && (id === 'sparkwand' || WPN_ID_RE.test(id));
 
   // alias(id): legacy MMItems/quest id armor_<fam>_t<n> -> { id: 'arm_<fam>_<band>', t: max(1, n) }; null for anything else (or n > 12).
@@ -114,7 +136,8 @@
     const rn = Number(raw.r);
     const r = typeof raw.r === 'number' && Number.isFinite(rn) ? clampInt(Math.floor(rn), 0, MAX_R) : 0;
     const info = armorInfo(id);
-    if (info) {
+    if (info && info.sig) t = SIG_T; // a signature relic is always T12
+    else if (info) {
       if (!t) t = info.band * 2 - 1; // an armor piece always has a tier
       t = clampInt(t, info.band * 2 - 1, info.band * 2);
     } else if (GEAR_ID_RE.test(id)) { /* unknown arm_ id: inert, t kept as given */ }
@@ -141,7 +164,7 @@
   function armorStats(id, t, r) {
     const info = armorInfo(id);
     if (!info || !isInt(t) || t < 1 || t > MAX_T) return null;
-    const tt = clampInt(t, info.band * 2 - 1, info.band * 2), row = TIERS[tt - 1], fam = FAMILIES[info.family], rr = clampR(r);
+    const tt = info.sig ? SIG_T : clampInt(t, info.band * 2 - 1, info.band * 2), row = TIERS[tt - 1], fam = FAMILIES[info.family], rr = clampR(r);
     const hp = Math.max(1, Math.round(row.hp * Q[rr] * fam.hp));
     const guard = Math.max(1, Math.round((row.grd + (rr >= 2 ? 1 : 0)) * fam.grd));
     return Object.freeze({ hp: hp, guard: guard, speed: fam.speed[info.band - 1], res: row.res / 100, statusChance: fam.statusChance[info.band - 1], family: info.family, t: tt });
@@ -154,7 +177,7 @@
     const info = armorInfo(id);
     if (info) {
       const fam = armorFamilyOf(cls);
-      if (!fam || fam !== info.family) return no('class');
+      if (!info.sig && (!fam || fam !== info.family)) return no('class'); // a signature relic fits every class (only the level gate applies)
     } else if (WPN_ID_RE.test(id) && MMWeaponItems && MMWeaponItems.get(id)) {
       if (!MMWeaponItems.canEquip(id, cls)) return no('class');
     } else if (id !== 'sparkwand' && !isWeaponId(id) && !GEAR_ID_RE.test(id)) return no('unknown');
@@ -204,6 +227,7 @@
 
   return Object.freeze({
     TIERS, Q, TIER_COLORS, FAMILIES, FAMILY_KEYS, CLASS_ARMOR, ARMOR_IDS, ARMOR_ART, ARMOR_NAMES, GEAR_ID_RE, MAX_T, AFFIX_MIN_T,
+    SIG_IDS, SIG_BY_BOSS, SIG_BY_FAMILY, SIG_T, sigInfo, isSig,
     tierOf, gate, band, bagFor, soulbound, armorId, armorFamilyOf, alias, clean, sellValue, weaponBonus, armorStats, canEquip, describe, gearStats,
   });
 });

@@ -6,9 +6,9 @@
 (function () {
   'use strict';
   const SAVE_KEY = 'pixeltown-realm-v1';
-  // Tiered gear drops (G9): OFF by default until the save-tolerance slice (G7) has been live for one deploy. The lead flips this constant later.
-  // ?gear=1 or the save flag `gearOn` turns them on (tests); ?gear=0 is always off.
-  const GEAR_DEFAULT_ON = false;
+  // Tiered gear drops (G9): ON by default since the save-tolerance slice (G7) shipped (PR #32): every build since keeps `t` / `a` / `gp` / `eq.armor`.
+  // ?gear=0 is the kill switch and always wins (also over save.gearOn); ?gear=1 forces it on.
+  const GEAR_DEFAULT_ON = true;
   const TILE = 32; const CH = 16; const CPX = TILE * CH; const MAX_CHUNKS = 24;
   const SEED_RE = /^[A-Za-z0-9_-]{1,24}$/;
   const AT_RE = /^(\d{1,4}),(\d{1,4})$/;
@@ -627,7 +627,7 @@
       live.set(rec.id, e); spawned++;
       return e;
     }
-    // ---------- tiered gear drops (G9): MMGearDrops.rollGear per bag item, per-player seeded; off unless ?gear=1 / save.gearOn / GEAR_DEFAULT_ON ----------
+    // ---------- tiered gear drops (G9): MMGearDrops.rollGear per bag item, per-player seeded; on by default (GEAR_DEFAULT_ON), ?gear=0 turns it off ----------
     const GM = window.MMGear; const GD = window.MMGearDrops;
     const gearQs = /[?&]gear=(\d)(&|$)/.exec(qs0); const gearQ = gearQs ? gearQs[1] : null;
     const GEAR_ON = !!(GM && GD) && gearQ !== '0' && (gearQ === '1' || save.gearOn === true || GEAR_DEFAULT_ON);
@@ -655,18 +655,20 @@
         let id = it.id; let gear = null;
         if (g) {
           id = g.id;
-          if (typeof RM_ITEM_BY_ID !== 'undefined' && !RM_ITEM_BY_ID[id]) id = 'sparkwand'; // an arena without the armor slot yet: the tier stays, as a wand
+          const usable = (x) => typeof RM_ITEM_BY_ID === 'undefined' || !!(RM_ITEM_BY_ID[x] && !RM_ITEM_BY_ID[x].inert); // an inert def is a saved id this build cannot use
+          if (!usable(id) && GM.isSig && GM.isSig(id)) id = GM.armorId(GM.sigInfo(id).family, 12); // a boss relic on an arena that does not register relics yet: its family's T12 piece
+          if (!usable(id)) id = 'sparkwand'; // an arena without the armor slot yet: the tier stays, as a wand
           gear = { t: g.t }; if (g.a) gear.a = g.a;
         }
         const b = arena.dropBag(x + (k - (bag.items.length - 1) / 2) * 18, y + 10, it.r, id, bag, gear);
         if (!b) return;
-        if (gear) { b.gear = gear; }
+        b.gear = gear || null; // pooled bags are reused: never leave an earlier drop's tier on a classic bag
         const dd = typeof RM_ITEM_BY_ID !== 'undefined' ? RM_ITEM_BY_ID[b.id] : null;
         const ent = { id: b.id, r: it.r, name: dd ? dd.name : b.id, rolled: it.id };
         if (gear) {
           const d = GM.describe({ id: b.id, r: it.r, t: gear.t, a: gear.a });
           ent.t = gear.t; if (gear.a) ent.a = gear.a; ent.name = d ? d.name : ent.name; ent.tierLabel = d ? d.tierLabel : 'T' + gear.t; ent.tierColor = d ? d.tierColor : '#fff';
-          ent.soulbound = !!(d && d.soulbound); ent.gate = d ? d.gate : 0; ent.locked = (arena.heroLevel ? arena.heroLevel() : 1) < ent.gate; if (g && g.sig) ent.sig = g.sig;
+          ent.soulbound = !!(d && d.soulbound); ent.gate = d ? d.gate : 0; ent.locked = (arena.heroLevel ? arena.heroLevel() : 1) < ent.gate; if (g && g.sig) ent.sig = g.sig; if (GM.isSig && GM.isSig(b.id)) ent.relic = true;
           if (!toasted) { toasted = true; arena._floatText(x, y - 48, ent.name + (ent.soulbound ? ' (soulbound)' : ''), ent.tierColor); }
         }
         got.items.push(ent);
@@ -951,6 +953,19 @@
       arena.onDeathCache = (c) => { try { if (c && c.n) ST.recordTo(localStorage, { n: c.n, id: c.id, r: c.rarity }, 'cache'); } catch (e) { /* storage blocked */ } settle('death'); }; // Survivor's Cache: shards kept, the cache item is a find
       arena.onMenuOpen = () => settle('menu');
       arena.menuNote = stashNote;
+    }
+    // Tiered gear rides on the world bag (b.gear = { t, a? }); the arena's pickup pushes a plain { n, id, r }, so the tier and affix seed are put on the
+    // new backpack entry here, BEFORE the stash record and the save write that follow onItem. Only the bag just picked up (inactive, under the hero) matches.
+    if (GEAR_ON) {
+      const prevOnItem = arena.onItem;
+      arena.onItem = (it) => {
+        try {
+          let best = null, bd = 30;
+          arena.bags.forEach((b) => { if (b.active || !b.gear || b.id !== it.id || b.r !== it.r) return; const d = Math.hypot(b.x - arena.player.x, b.y - arena.player.y); if (d < bd) { bd = d; best = b; } });
+          if (best && !it.t) { const c = GM.clean({ n: it.n, id: it.id, r: it.r, t: best.gear.t, a: best.gear.a }); if (c && c.t) { it.t = c.t; if (c.a) it.a = c.a; } best.gear = null; }
+        } catch (e) { /* the item stays classic */ }
+        if (prevOnItem) prevOnItem(it);
+      };
     }
 
     // ---------- the hooks the arena calls ----------

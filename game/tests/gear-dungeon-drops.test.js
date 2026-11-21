@@ -1,5 +1,5 @@
 // G10 gear drops in dungeons: room clears, chests and the boss roll MMGearDrops.rollGear ({src: 'dungeon' | 'dboss', biome}); gp.d pity; separate seeded streams.
-// Gear is OFF by default (GEAR_DEFAULT_ON = false); ?gear=1 enables it, ?gear=0 always disables.
+// Gear is ON by default (GEAR_DEFAULT_ON = true since G7 shipped); ?gear=1 forces it on, ?gear=0 always disables.
 // Serve the repo root, then:  BASE=http://localhost:8703/game/index.html NODE_PATH=$(npm root -g) node game/tests/gear-dungeon-drops.test.js
 const { chromium } = require('playwright');
 const { check, done } = require('./helpers');
@@ -61,12 +61,15 @@ async function runToBoss(browser, q, gp) {
   const bossT = (biome) => GD.table({ src: 'dboss', biome }).map((e) => e.t);
   const roomT = (biome) => GD.table({ src: 'dungeon', biome }).map((e) => e.t);
 
-  // ---- default off, ?gear=0 off, ?gear=1 on ----
+  // ---- default on (same drops as ?gear=1), ?gear=0 off ----
   const def = await runToBoss(browser, 'biome=warren&seed=11'); errs.push(...def.p.errors);
   const off = await runToBoss(browser, 'biome=warren&seed=11&gear=0'); errs.push(...off.p.errors);
-  check('gear is off by default (GEAR_DEFAULT_ON = false): no gear, no t on any item', def.data.dead && def.data.on === false && def.data.gear.length === 0 && def.data.itemsT.length === 0, JSON.stringify(def.data.gear));
-  check('?gear=0 is off too and never writes a gp key', off.data.on === false && off.data.gear.length === 0 && off.data.itemsT.length === 0 && off.data.saveGp === null, JSON.stringify(off.data));
-  await def.r.ctx.close(); await off.r.ctx.close();
+  const forced = await runToBoss(browser, 'biome=warren&seed=11&gear=1'); errs.push(...forced.p.errors);
+  check('gear is on by default (GEAR_DEFAULT_ON = true): the warren boss yields its T4 item and the pack carries t', def.data.dead && def.data.on === true && def.data.gear.some((g) => g.t === 4) && def.data.itemsT.length >= 1 && def.data.itemsT.every((x) => x[2] >= 2 && x[2] <= 4), JSON.stringify(def.data.gear));
+  check('the default run drops exactly what ?gear=1 drops (same seed, same stream)', JSON.stringify(def.data.gear) === JSON.stringify(forced.data.gear) && JSON.stringify(def.data.itemsT) === JSON.stringify(forced.data.itemsT), JSON.stringify(forced.data.gear));
+  check('?gear=0 is the kill switch: no gear, no t on any item, never writes a gp key', off.data.dead && off.data.on === false && off.data.gear.length === 0 && off.data.itemsT.length === 0 && off.data.saveGp === null, JSON.stringify(off.data));
+  check('old seed (warren 11): the classic boss bags and granted loot match between the default and ?gear=0', JSON.stringify([def.data.granted, def.data.bags.length, def.data.picks]) === JSON.stringify([off.data.granted, off.data.bags.length, off.data.picks]), JSON.stringify({ def: [def.data.granted, def.data.bags, def.data.picks], off: [off.data.granted, off.data.bags, off.data.picks] }));
+  await def.r.ctx.close(); await off.r.ctx.close(); await forced.r.ctx.close();
 
   // ---- warren boss: a tiered item within the table (T4), rooms within T2-3 ----
   const w1 = await runToBoss(browser, 'biome=warren&seed=11&gear=1'); errs.push(...w1.p.errors);
