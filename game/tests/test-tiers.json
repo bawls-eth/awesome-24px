@@ -698,5 +698,13 @@
   "bolt-art.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "world-pickups.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "world-nexus.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
