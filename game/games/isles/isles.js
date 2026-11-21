@@ -85,7 +85,9 @@
   window.addEventListener('resize', resize);
 
   // ---------- chunk art ----------
-  const chunkCache = CB.makeCache(LOW ? 12 : 24);
+  let chunkCache = CB.makeCache(LOW ? 12 : 24);
+  const IA = (ART && window.MMIsleArt) ? window.MMIsleArt.create({ art: true }) : null; // b30 jungle tile art (falls back to the code palette per tile)
+  if (IA) IA.ready.then(() => { if (IA.active()) chunkCache = CB.makeCache(LOW ? 12 : 24); });
   let bakesLeft = 0;
   const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
   const PROP_ART = {
@@ -110,7 +112,9 @@
     return cv;
   }
   function bakeArt(cx, cy) {
-    const cv = CB.bakeChunkCanvas(mk, world.terrain, W, cx, cy, PAL, null, { names: NAMES, h: H });
+    let cv = null;
+    if (IA && IA.active()) { const src = IA.chunk(world.terrain, W, cx, cy); if (src) { cv = mk(CPX, CPX); cv.getContext('2d').drawImage(src, 0, 0, CPX, CPX); } }
+    if (!cv) cv = CB.bakeChunkCanvas(mk, world.terrain, W, cx, cy, PAL, null, { names: NAMES, h: H });
     if (!cv) return bakeFlat(cx, cy);
     const c = cv.getContext('2d');
     (chunkProps.get(cx + ',' + cy) || []).forEach((p) => drawProp(c, p.kind, (p.x - cx * CH) * TILE, (p.y - cy * CH) * TILE));
