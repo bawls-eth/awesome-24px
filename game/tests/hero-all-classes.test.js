@@ -37,11 +37,12 @@ function watch(page, errs) {
       const p = MMProfile.clean(localStorage.getItem(k));
       const a = window.__mm.arena;
       const exp = MMClasses.arenaProfile(c);
-      return { cls: p.heroes[0].cls, n: p.heroes.length, name: a.heroProfile && a.heroProfile.name, expName: exp.name, expHp: exp.hp, maxHp: a.stats.maxHp, art: MMArt.artClassFor(c) };
+      return { cls: p.heroes[0].cls, n: p.heroes.length, name: a.heroProfile && a.heroProfile.name, expName: exp.name, expHp: exp.hp, nodeHp: window.MMUnlocks ? (MMUnlocks.aggregate(c, 20).mul.hp || 1) : 1, maxHp: a.stats.maxHp, art: MMArt.artClassFor(c) };
     }, [MM, cls]);
     check(cls + ': survives MMProfile.clean', r.cls === cls && r.n === 2, JSON.stringify(r));
     check(cls + ': arena profile matches the class', !!r.name && r.name === r.expName, r.name + ' vs ' + r.expName);
-    check(cls + ': arena stats follow the class hp', r.maxHp === Math.round(100 * r.expHp), r.maxHp + ' vs ' + r.expHp);
+    // S12: a level-20 hero also carries its unlocked passive hp node (bruiser Thick Hide x1.06), applied after the class profile.
+    check(cls + ': arena stats follow the class hp', r.maxHp === Math.round(Math.round(100 * r.expHp) * r.nodeHp), r.maxHp + ' vs ' + r.expHp + ' x ' + r.nodeHp);
     check(cls + ': art lookup is safe (mapped or sprite fallback)', r.art === null || typeof r.art === 'string');
 
     // Pick the filler ranger, then the class hero again through the picker.

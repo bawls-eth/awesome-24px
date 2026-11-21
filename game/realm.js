@@ -90,6 +90,8 @@ const RM_SPARK_MAX = 24, RM_SPARK_LIFE = 0.25;
 const RM_SPARK_CLASS = { ranger: 'a', bruiser: 'a', berserker: 'a', punk: 'a', rogue: 'a', paladin: 'a', frostcaller: 'b', herald: 'b', druid: 'b', warlock: 'c', necromancer: 'c', trickster: 'c', gravetender: 'c', shadowpaw: 'c' };
 const RM_EB_ROT = { ebolt_shard: 1, ebolt_arrow: 1, ebolt_fire: 1, ebolt_frost: 1, ebolt_laser_h: 1, ebolt_skull: 0 };
 const RM_WPN_COLOR = { dot: '#ffe27a', arrow: '#f3d9a4', shard: '#9fe3ff', orb: '#c59bff', star: '#ffd24a', blade: '#e6edf3', page: '#fff3c4', axe: '#ff9a6a', hammer: '#ffcf5a', fist: '#ffb38a', ray: '#7ee7ff' };
+// URL kill switches (S12): ?unlocks=0 turns off the unlock-tree passives / Nova II / Dash II, ?weapons=0 the styled weapon items.
+function rmFlagOff(name) { try { return typeof location !== 'undefined' && new RegExp('[?&]' + name + '=0(&|$)').test(location.search || ''); } catch (e) { return false; } }
 function rmInertDef(id) {
   if (RM_ITEM_BY_ID[id]) return RM_ITEM_BY_ID[id];
   const name = id.slice(4).split('_').filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ').slice(0, 24) || 'Weapon';
@@ -97,6 +99,20 @@ function rmInertDef(id) {
   RM_ITEM_BY_ID[id] = def; // lookup only: never in RM_ITEMS, so never dropped or sold in the shop
   return def;
 }
+// Styled weapon items (S12): the 26 MMWeaponItems `wpn_<style>` defs become real weapon-slot items (dmg +0.45 x rarity, a sidegrade of the
+// Spark Wand) whose style drives setHeroWeapon. Only when mm-weapon-items.js is on the page and not ?weapons=0; otherwise saved wpn_ ids stay
+// the inert items above. RM_BASE_ITEMS keeps the 7 classic items for every classic pool (death cache, wave bags, the classic shop).
+const RM_BASE_ITEMS = RM_ITEMS.slice();
+const RM_WPN_ITEMS = [];
+(function rmRegisterWeapons() {
+  if (rmFlagOff('weapons') || typeof MMWeaponItems === 'undefined' || typeof MMWeapons === 'undefined' || !MMWeaponItems || !Array.isArray(MMWeaponItems.ITEMS)) return;
+  MMWeaponItems.ITEMS.forEach((it) => {
+    if (!it || typeof it.id !== 'string' || !RM_WPN_ID.test(it.id) || RM_ITEM_BY_ID[it.id] || typeof it.style !== 'string' || typeof it.family !== 'string') return;
+    const def = { id: it.id, slot: 'weapon', name: String(it.name || it.style).slice(0, 24), icon: typeof it.icon === 'string' && it.icon ? it.icon : '🗡️', art: typeof it.art === 'string' && it.art ? it.art : null,
+      stat: 'dmg', amount: 0.45, text: 'damage', style: it.style, family: it.family, wpn: true };
+    RM_ITEMS.push(def); RM_ITEM_BY_ID[def.id] = def; RM_WPN_ITEMS.push(def);
+  });
+})();
 // A resolved MMWeapons spec, re-clamped into a plain frozen object the engine trusts. Only the 26 alternate styles count (bases keep today's fire).
 function rmWpnSpec(s) {
   const n = (v, lo, hi, d) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : d);
@@ -247,7 +263,9 @@ class RealmArena {
     this.world = null; this.mode = 'waves'; this.camera = { x: 0, y: 0, vw: 960, vh: RM_SHORT }; this._camF = { x: 0, y: 0 }; // setWorld / setMode: a scrolling world with a camera (null = the screen is the world, today's behaviour)
     this._solidAt = null; this._shotSolidAt = null; this._curDm = 1; this.onEnemyKilled = null; this.onEnemyHit = null; // world tile collision + additive kill / hit callbacks (default null)
     this.onHeroPanel = null; this._heroTab = 'pick'; this.onItem = null; this.onDeathCache = null; this.onMenuOpen = null; this.menuNote = null; // additive loot hooks (Lantern stash payout); null = off (classic arena, town gate)
-    this.rng = rmRng(seed === undefined ? (Date.now() & 0xffffffff) : seed);
+    const sd = seed === undefined ? (Date.now() & 0xffffffff) : seed;
+    this.rng = rmRng(sd);
+    this._wpnRng = rmRng(((Number(sd) >>> 0) ^ 0x5bd1e995) >>> 0); // styled-weapon drop rolls (S12): their own seeded stream, so the main rng sequence is unchanged
     this.active = false;
     this.state = 'idle'; // idle | banner | play | dead
     this.W = 960; this.H = RM_SHORT;
@@ -263,6 +281,7 @@ class RealmArena {
     this._itemArt = null; this._enemyArt = null; this._enemyMap = null; this._driftMap = null; this._enemyDbgOn = false; this._bossArt = null; this._bossLoad = null; this._bossDbg = null; this._bossGhost = null; this._bossReq = null; this._biomeEnemyMap = null; this._edGhosts = null; // optional enemy animations (setEnemyArt)
     this._boltArt = null; this._boltCls = null; this._baCache = null; this._sparks = null; this._curE = null; this._baDraws = 0; this._baeDraws = 0; this._sparkSpawned = 0; this._sparkDraws = 0; // optional bolt art (setBoltArt)
     this.heroProfile = null; // setHeroProfile
+    this._heroSrc = null; this._hu = null; // setHeroLevelSource: the active hero {cls, level} (null = classic: account level, no unlock nodes)
     this.weapon = null; this._wq = []; this._wOrbT = [0, 0, 0]; this._wOrbA = 0; this._wCache = null; this._kIn = {}; this._kHero = { x: 0, y: 0 }; this._kWall = 0; this._kW = null; // setHeroWeapon (null = today's fire)
     this.sig = null; this._sigAb = { id: 'sig', key: 'f', icon: '🔥', name: 'Signature', short: '', level: 7, cd: 15 }; // setHeroSignature: the class signature takes the F slot (null = Overdrive, today's behaviour)
     this.sg = { powT: 0, powMul: 1, fx: { t: 0, max: 0.5, x: 0, y: 0, r: 0, color: '#fff' }, bloom: { t: 0, x: 0, y: 0, r: 0, tick: 0 }, bones: { t: 0, a: 0, n: 0, heal: 0, frac: 0 } }; // signature runtime state (preallocated)
@@ -571,6 +590,8 @@ class RealmArena {
     });
     const hp = this.heroProfile; // additive class profile (setHeroProfile), applied after gear and level; never in duels (returned above)
     if (hp) { st.maxHp = Math.max(1, Math.round(st.maxHp * hp.hp)); st.dmg *= hp.dmg; st.rate *= hp.rate; st.speed *= hp.speed; st.iframes *= hp.iframes; }
+    const um = this._unl(); // unlocked passive nodes (MMUnlocks, S12) at the active hero's level; null = classic / ?unlocks=0 / no hero
+    if (um) { const m = um.mul; if (m.hp) st.maxHp = Math.max(1, Math.round(st.maxHp * m.hp)); if (m.dmg) st.dmg *= m.dmg; if (m.rate) st.rate *= m.rate; if (m.speed) st.speed *= m.speed; if (m.iframes) st.iframes *= m.iframes; }
     const hs = this._heroWorldScale(); // world mode only: MMDifficulty.heroScale (easy start); 1x in the classic arena, dungeons, ?difficulty=off
     if (hs) { st.dmg *= hs.dmg; st.rate *= hs.rate; }
     let dm = this.buffDmg > 1 && this.buffDmg <= 1.5 ? this.buffDmg : 1; // additive timed buff (world shrine of Fury), set by realm-world.js
@@ -944,6 +965,52 @@ class RealmArena {
       shotDmg: Math.max(0.2, Math.min(1.5, Number(profile.shotDmg) || 1)), critChance: Math.max(0, Math.min(0.5, Number(profile.critChance) || 0)), boltSpeed: Math.max(0.5, Math.min(1.3, Number(profile.boltSpeed) || 1)) } : null;
     if (this.save) { this._calcStats(); if (this.player && this.player.hp > this.stats.maxHp) this.player.hp = this.stats.maxHp; if (this.active) this._syncHud(); }
   }
+  // Additive hook (S12): fn() -> the active hero {cls, level} (MMProfile). With a hero, the unlock-tree nodes (MMUnlocks: class passives,
+  // Nova II, Dash II) and the styled weapon items follow THAT hero's class and level; without one (null fn / null result) the arena is the
+  // classic one: account level only, no nodes. The four ability slots keep their account-level gates (abilityUnlocked) so nothing is lost.
+  setHeroLevelSource(fn) { this._heroSrc = typeof fn === 'function' ? fn : null; return this.refreshHeroLevel(); }
+  refreshHeroLevel() {
+    let h = null;
+    if (this._heroSrc) { try { h = this._heroSrc(); } catch (e) { h = null; } }
+    const cls = h && typeof h === 'object' && typeof h.cls === 'string' && /^[A-Za-z]{2,16}$/.test(h.cls) ? h.cls : null;
+    const lv = h && typeof h === 'object' ? Math.floor(Number(h.level)) : NaN;
+    this._hu = cls ? { cls, level: Number.isFinite(lv) && lv >= 1 ? Math.min(RM_MAX_LEVEL, lv) : 0, key: '', agg: null } : null;
+    const wu = this.save && this._heroSrc && !(this.team && this.team.isPvp) ? this.save.eq.weapon : 0; // switching to a hero of another family takes a styled weapon off (it stays in the backpack)
+    const wi = wu ? this.save.items.find((x) => x.n === wu) : null;
+    if (wi && RM_ITEM_BY_ID[wi.id] && RM_ITEM_BY_ID[wi.id].wpn && !this._wpnCanEquip(RM_ITEM_BY_ID[wi.id])) delete this.save.eq.weapon;
+    if (this.save) { this._calcStats(); if (this.player && this.player.hp > this.stats.maxHp) this.player.hp = this.stats.maxHp; if (this.active) this._syncHud(); }
+    return this._hu ? { cls: this._hu.cls, level: this.heroLevel() } : null;
+  }
+  heroClass() { return this._hu ? this._hu.cls : null; }
+  // A styled weapon item needs an active hero of its family (MMWeapons.CLASS_FAMILY); never in duels.
+  _wpnCanEquip(def) {
+    const cls = this.heroClass();
+    if (!def || !def.wpn || !cls || (this.team && this.team.isPvp) || typeof MMWeapons === 'undefined') return false;
+    try { return MMWeapons.familyOf(cls) === def.family; } catch (e) { return false; }
+  }
+  _wpnHint(def) { try { return (typeof MMWeaponItems !== 'undefined' && MMWeaponItems.equipHint(def.id)) || def.family; } catch (e) { return def.family; } }
+  // The level the unlock nodes read: the active hero's level when a hero is set (and has one), else the account-wide arena level.
+  heroLevel() { return this._hu && this._hu.level ? this._hu.level : (this.save ? this.save.level : 1); }
+  // Aggregated unlocked mods for the active hero (cached per class+level). null in duels, with ?unlocks=0, without MMUnlocks or a hero.
+  _unl() {
+    const u = this._hu;
+    if (!u || (this.team && this.team.isPvp) || typeof MMUnlocks === 'undefined' || typeof MMUnlocks.aggregate !== 'function' || rmFlagOff('unlocks')) return null;
+    const lv = this.heroLevel(), key = u.cls + ':' + lv;
+    if (u.key !== key) { try { u.agg = MMUnlocks.aggregate(u.cls, lv); } catch (e) { u.agg = null; } u.key = key; }
+    return u.agg;
+  }
+  // Nova bolts: 16, or 20 once Nova II is unlocked (L11). A co-op guest keeps 16 (the host fires a guest's Nova with 16).
+  _novaBolts() { return this._unl() && this.role !== 'guest' && typeof MMUnlocks.novaBolts === 'function' ? MMUnlocks.novaBolts(this.heroLevel()) : 16; }
+  // An ability's cooldown after the unlock nodes: Dash II (L16: 3 -> 2.5 s) and `ab` cooldown mods (e.g. trickster Slippery x0.87). 'set' first, then 'mul'.
+  _abCd(ab) {
+    const u = ab && ab.id === 'dash' ? this._unl() : null;
+    if (!u) return ab.cd;
+    let cd = typeof MMUnlocks.dashCooldown === 'function' ? MMUnlocks.dashCooldown(this.heroLevel()) : ab.cd;
+    u.ab.forEach((m) => { if (m.ability === 'dash' && m.field === 'cooldown' && m.mode === 'set' && Number.isFinite(m.v)) cd = m.v; });
+    u.ab.forEach((m) => { if (m.ability === 'dash' && m.field === 'cooldown' && m.mode === 'mul' && Number.isFinite(m.v)) cd *= m.v; });
+    cd = Math.max(1, Math.min(ab.cd, cd));
+    return this.role === 'guest' ? Math.max(2.4, cd) : cd; // the host enforces 2.4 s between a guest's dashes
+  }
   // Additive hook: the class signature ability from MMClasses.arenaSignature(classId). It replaces the F slot (Overdrive) at its level.
   // null / unknown kind = today's behaviour. Never active in team duels (the Dash is the only ability there).
   setHeroSignature(desc) {
@@ -1186,7 +1253,7 @@ class RealmArena {
   // Icon markup for an item id: <img> from a trusted manifest url (never user data), else the emoji. Fallback on load error is wired by _fixIcons.
   _icon(def) {
     let url = null;
-    try { url = this._itemArt ? this._itemArt.iconUrl(def.id) : null; } catch (e) { url = null; }
+    try { url = this._itemArt ? this._itemArt.iconUrl(def.wpn && def.art ? def.art : def.id) : null; } catch (e) { url = null; }
     if (!url || !/^[A-Za-z0-9_.\/-]+$/.test(url)) return def.icon;
     return `<img class="realm-ico" src="${url}" alt="" width="32" height="32" data-item="${def.id}" style="image-rendering:pixelated">`;
   }
@@ -1198,7 +1265,7 @@ class RealmArena {
     let e = c[id];
     if (e === undefined) {
       let url = null;
-      try { url = this._itemArt.iconUrl(id); } catch (err) { url = null; }
+      try { const d = RM_ITEM_BY_ID[id]; url = this._itemArt.iconUrl(d && d.wpn && d.art ? d.art : id); } catch (err) { url = null; }
       if (!url || !/^[A-Za-z0-9_.\/-]+$/.test(url)) return null; // not cached: may become available later
       const img = new Image(); e = c[id] = { img, cv: [null, null, null, null], dead: false };
       img.onerror = () => { e.dead = true; if (this._itemArt && this._itemArt.markBad) this._itemArt.markBad(id); };
@@ -2305,7 +2372,7 @@ class RealmArena {
   _deathBonus() {
     const sv = this.save; const w = Math.max(1, this.run.wave);
     const rarity = w >= 6 ? 2 : w >= 3 ? 1 : 0;
-    const def = RM_ITEMS[(sv.deaths + w) % RM_ITEMS.length]; const rar = RM_RARITIES[rarity];
+    const def = RM_BASE_ITEMS[(sv.deaths + w) % RM_BASE_ITEMS.length]; const rar = RM_RARITIES[rarity];
     let text;
     let n = 0;
     if (sv.items.length >= RM_BACKPACK) { sv.shards += rar.sell; text = `pack full, cache sold +${rar.sell} 💎`; } else { n = sv.nextUid++; sv.items.push({ n, id: def.id, r: rarity }); text = `cache: ${def.icon} ${rar.name} ${def.name}`; }
@@ -2317,7 +2384,13 @@ class RealmArena {
   // Offers: every item at each rarity your best wave has unlocked, priced at sell value x RM_SHOP_MULT. Fixed stock, no luck.
   shopStock() {
     const best = this.save.bestWave; const out = []; const wc = this._worldCopy(); const lv = this.save.level;
-    RM_RARITIES.forEach((rar, r) => { if (r < RM_SHOP_UNLOCK.length && (best >= RM_SHOP_UNLOCK[r] || (wc && lv >= RM_SHOP_UNLOCK_LV[r]))) RM_ITEMS.forEach((def) => out.push({ id: def.id, r, price: rar.sell * RM_SHOP_MULT })); });
+    RM_RARITIES.forEach((rar, r) => { if (r < RM_SHOP_UNLOCK.length && (best >= RM_SHOP_UNLOCK[r] || (wc && lv >= RM_SHOP_UNLOCK_LV[r]))) RM_BASE_ITEMS.forEach((def) => out.push({ id: def.id, r, price: rar.sell * RM_SHOP_MULT })); });
+    // S12: with an active hero, the styled weapons of the hero's family at the same unlocked rarities (never Epic), sell value x RM_SHOP_MULT.
+    const fam = RM_WPN_ITEMS.length && this.heroClass() && typeof MMWeapons !== 'undefined' ? MMWeapons.familyOf(this.heroClass()) : null;
+    if (fam) {
+      const rs = []; out.forEach((o) => { if (rs.indexOf(o.r) < 0) rs.push(o.r); });
+      rs.forEach((r) => RM_WPN_ITEMS.forEach((def) => { if (def.family === fam) out.push({ id: def.id, r, price: RM_RARITIES[r].sell * RM_SHOP_MULT }); }));
+    }
     return out;
   }
 
@@ -2433,9 +2506,22 @@ class RealmArena {
     b.active = true; b.x = x; b.y = y; b.t = 0; b.r = rarity;
     b.tier = worldLoot?.tierIndex;
     b.lifetime = worldLoot?.lifetime || Infinity;
-    b.id = itemId || RM_ITEMS[Math.floor(this.rng() * RM_ITEMS.length)].id;
+    b.id = this._wpnDrop(itemId || RM_BASE_ITEMS[Math.floor(this.rng() * RM_BASE_ITEMS.length)].id, worldLoot);
     const a = this.rng() * Math.PI * 2; b.vx = Math.cos(a) * 60; b.vy = Math.sin(a) * 60;
     return b;
+  }
+
+  // Styled weapon drops (S12): in a world or dungeon run with an active hero, a rolled classic weapon (Spark / Quickfire Wand) becomes a
+  // `wpn_<style>` item with a chance that grows with the bag tier; MMWeaponItems.dropItem picks it (70% the hero's family, 30% any).
+  // Seeded (_wpnRng), rarity unchanged. Classic waves, duels, no hero, ?weapons=0 or a page without mm-weapon-items.js: the id is unchanged.
+  _wpnDrop(id, worldLoot) {
+    if (!RM_WPN_ITEMS.length || !(worldLoot || this.dungeon) || (this.team && this.team.isPvp) || typeof MMWeaponItems === 'undefined') return id;
+    const def = RM_ITEM_BY_ID[id], cls = this.heroClass();
+    if (!def || def.slot !== 'weapon' || def.wpn || !cls) return id;
+    const tier = worldLoot && Number.isFinite(worldLoot.tierIndex) ? Math.max(0, Math.min(4, worldLoot.tierIndex)) : 1;
+    if (this._wpnRng() >= Math.min(0.85, 0.45 + 0.1 * tier)) return id;
+    let w = null; try { w = MMWeaponItems.dropItem(this._wpnRng, cls); } catch (e) { w = null; }
+    return typeof w === 'string' && RM_ITEM_BY_ID[w] && RM_ITEM_BY_ID[w].wpn ? w : id;
   }
 
   // Picks an item up. A full backpack sells it on the spot for shards.
@@ -2495,14 +2581,15 @@ class RealmArena {
       }
       p.iframes = Math.max(p.iframes, 0.4);
     } else if (ab.id === 'nova') {
-      for (let k = 0; k < 16; k++) this.firePlayerBullet((k / 16) * Math.PI * 2);
+      const nb = this._novaBolts();
+      for (let k = 0; k < nb; k++) this.firePlayerBullet((k / nb) * Math.PI * 2);
       this.shake = Math.max(this.shake, 3);
     } else if (ab.id === 'shield') {
       this.shield.hits = 3; this.shield.t = 6;
     } else if (ab.id === 'overdrive') {
       this.overdriveT = 4;
     }
-    this.abilityCd[i] = ab.cd;
+    this.abilityCd[i] = this._abCd(ab);
     if (this.team && this.role === 'guest' && ab !== this._sigAb) this.team.sendAbility(ab.id);
     this._floatText(p.x, p.y - 30, `${ab.icon} ${ab.name}`, '#fff');
     if (ab === this._sigAb) this._showBanner(`${ab.icon} ${ab.name}!`, 1.1);
@@ -2848,6 +2935,7 @@ class RealmArena {
     if (!it) return false;
     const slot = RM_ITEM_BY_ID[it.id].slot;
     if (RM_SLOTS.indexOf(slot) < 0) return false; // inert wpn_ item from a newer build: kept, never equipped
+    if (this.save.eq[slot] !== uid && RM_ITEM_BY_ID[it.id].wpn && !this._wpnCanEquip(RM_ITEM_BY_ID[it.id])) return false; // styled weapon: the hero's family only
     if (this.save.eq[slot] === uid) delete this.save.eq[slot]; else this.save.eq[slot] = uid;
     this._afterGearChange();
     return true;
@@ -2927,7 +3015,7 @@ class RealmArena {
     if (!sv.items.length) html += '<li class="dim">Nothing yet — defeat enemies to find loot bags.</li>';
     sv.items.forEach((it) => {
       const def = RM_ITEM_BY_ID[it.id]; const rar = RM_RARITIES[it.r]; const on = eqUids.has(it.n);
-      html += `<li data-uid="${it.n}" class="${on ? 'on' : ''}"><span class="nm" style="color:${rar.color}">${this._icon(def)} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(it)}</span>${def.inert ? '<button type="button" class="eq" disabled aria-label="Not usable yet">Equip</button>' : `<button type="button" class="eq" data-act="equip" data-uid="${it.n}">${on ? 'Unequip' : 'Equip'}</button>`}${this.combinable(it.n) ? `<button type="button" class="eq" data-combine="${it.n}" aria-label="Combine ${RM_COMBINE_COUNT} ${rar.name} ${def.name} into one ${RM_RARITIES[it.r + 1].name}">Combine ${RM_COMBINE_COUNT}→${RM_RARITIES[it.r + 1].name}</button>` : ''}<button type="button" class="dc" data-act="discard" data-uid="${it.n}" aria-label="Sell ${def.name} for ${rar.sell} shards">Sell ${rar.sell}💎</button></li>`;
+      html += `<li data-uid="${it.n}" class="${on ? 'on' : ''}"><span class="nm" style="color:${rar.color}">${this._icon(def)} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(it)}</span>${def.inert ? '<button type="button" class="eq" disabled aria-label="Not usable yet">Equip</button>' : def.wpn && !on && !this._wpnCanEquip(def) ? `<button type="button" class="eq" disabled data-wpn-lock="1" aria-label="${this._wpnHint(def)} only" title="${this._wpnHint(def)}">🔒 ${def.family.charAt(0).toUpperCase() + def.family.slice(1)}</button>` : `<button type="button" class="eq" data-act="equip" data-uid="${it.n}">${on ? 'Unequip' : 'Equip'}</button>`}${this.combinable(it.n) ? `<button type="button" class="eq" data-combine="${it.n}" aria-label="Combine ${RM_COMBINE_COUNT} ${rar.name} ${def.name} into one ${RM_RARITIES[it.r + 1].name}">Combine ${RM_COMBINE_COUNT}→${RM_RARITIES[it.r + 1].name}</button>` : ''}<button type="button" class="dc" data-act="discard" data-uid="${it.n}" aria-label="Sell ${def.name} for ${rar.sell} shards">Sell ${rar.sell}💎</button></li>`;
     });
     html += '</ul>';
     root.innerHTML = html; this._fixIcons(root);

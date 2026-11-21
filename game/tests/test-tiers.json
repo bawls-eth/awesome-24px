@@ -667,6 +667,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "class-unlocks-arena.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "difficulty-waves.test.js": {
     "class": "browser",
     "tier": "full"
