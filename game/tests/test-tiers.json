@@ -1022,5 +1022,13 @@
   "shared-mm-creature-strips.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "shared-mm-isle-boss.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "isle-boss-sim.test.js": {
+    "class": "node",
+    "tier": "full"
   }
 }
