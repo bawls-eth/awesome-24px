@@ -766,5 +766,9 @@
   "dungeon-tiles.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "shared-mm-tutorial-realm.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }
