@@ -1,0 +1,174 @@
+{
+  "batch": "b34",
+  "label": "taming-ui-items",
+  "assets": [
+    {
+      "id": "ui_tame_trust",
+      "path": "ui/ui_tame_trust.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "ui_tame_torpor",
+      "path": "ui/ui_tame_torpor.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "ui_tame_bond",
+      "path": "ui/ui_tame_bond.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "ui_tranq_on",
+      "path": "ui/ui_tranq_on.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "ui_tranq_off",
+      "path": "ui/ui_tranq_off.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "ui_cmd_follow",
+      "path": "ui/ui_cmd_follow.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "ui_cmd_stay",
+      "path": "ui/ui_cmd_stay.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "ui_cmd_attack",
+      "path": "ui/ui_cmd_attack.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "ui_saddle",
+      "path": "ui/ui_saddle.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "ui_ride",
+      "path": "ui/ui_ride.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "item_raw_meat",
+      "path": "items/item_raw_meat.png",
+      "category": "item",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "item_jungle_berries",
+      "path": "items/item_jungle_berries.png",
+      "category": "item",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "item_feast",
+      "path": "items/item_feast.png",
+      "category": "item",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "item_sleepy_herb",
+      "path": "items/item_sleepy_herb.png",
+      "category": "item",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": [
+        16,
+        16
+      ]
+    }
+  ]
+}
