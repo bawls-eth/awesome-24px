@@ -2866,6 +2866,35 @@ class TownScene extends Phaser.Scene {
 
   // ---------- Realm gate menu, invites and team link ----------
 
+  // The big Realm runs in a same-origin full-screen frame over the town, so the player never leaves the game page.
+  openRealmEmbed(href) {
+    if (this.realmEmbed) return;
+    const wrap = document.createElement('div');
+    wrap.id = 'realm-embed';
+    const frame = document.createElement('iframe');
+    frame.title = 'The Realm';
+    frame.setAttribute('allow', 'fullscreen');
+    frame.src = href;
+    wrap.appendChild(frame);
+    document.body.appendChild(wrap);
+    this.realmEmbed = wrap;
+    document.getElementById('realm-menu').classList.add('hidden');
+    this.realmMenuOpen = false;
+    try { this.game.loop.sleep(); } catch (e) { /* ignore */ }
+    if (!this._realmEmbedMsg) {
+      this._realmEmbedMsg = (ev) => { if (ev.origin === location.origin && ev.data && ev.data.pixeltown === 'close-realm') this.closeRealmEmbed(); };
+      window.addEventListener('message', this._realmEmbedMsg);
+    }
+  }
+
+  closeRealmEmbed() {
+    if (!this.realmEmbed) return;
+    this.realmEmbed.remove();
+    this.realmEmbed = null;
+    try { this.game.loop.wake(); } catch (e) { /* ignore */ }
+    try { const f = JSON.parse(localStorage.getItem('pixeltown-save-v1') || 'null'); if (f && f.realm && this.save) this.save.realm = f.realm; } catch (e) { /* ignore */ }
+  }
+
   openRealmGateMenu() {
     if (this.realmMenuOpen || this.inRealm || this.inUnderground) return;
     this.realmMenuOpen = true;
@@ -2873,7 +2902,7 @@ class TownScene extends Phaser.Scene {
     const mm = document.getElementById('realm-menu-madmaze');
     if (mm && !mm.dataset.bound) {
       mm.dataset.bound = '1';
-      mm.addEventListener('click', () => { location.href = mm.dataset.href; });
+      mm.addEventListener('click', () => this.openRealmEmbed(mm.dataset.href));
     }
     this.renderRealmGateMenu();
   }

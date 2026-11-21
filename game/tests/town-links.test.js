@@ -27,9 +27,12 @@ const overlap = (a, b) => a && b && a.vis && b.vis && a.l < b.r && a.r > b.l && 
   check('gate menu opens the unified Realm overworld', gate.open && gate.mm === './games/mad-maze/index.html?mode=world' && /Enter the Realm/.test(gate.text), JSON.stringify(gate));
   await page.click('#realm-menu-madmaze');
   const cf = await page.evaluate(() => ({ c: window.__confirms, url: location.href }));
-  check('clicking asks a confirm mentioning shared progress and the town closing', cf.c.length === 1 && /progress is shared/.test(cf.c[0]) && /town will close/.test(cf.c[0]), JSON.stringify(cf));
-  check('declining the confirm stays in town', /\/game\/index\.html/.test(cf.url));
+  check('clicking opens the Realm in an in-page frame with no confirm and no navigation', cf.c.length === 0 && await page.locator('#realm-embed iframe').count() === 1, JSON.stringify(cf));
+  check('the town page URL is unchanged', /\/game\/index\.html$/.test(cf.url));
   check('Go in alone and co-op/duel/2v2 list still present', gate.solo && gate.players);
+  await page.evaluate(() => window.postMessage({ pixeltown: 'close-realm' }, location.origin));
+  await page.waitForSelector('#realm-embed', { state: 'detached', timeout: 5000 });
+  await scene(page, (s) => { s.realmMenuOpen = false; s.openRealmGateMenu(); });
   await page.click('#realm-menu-solo');
   await page.waitForTimeout(1500);
   const inRealm = await scene(page, (s) => !!s.inRealm);

@@ -10,6 +10,10 @@
   const RETURN_RE = /^index\.html\?mode=world&seed=[A-Za-z0-9_-]{1,24}&at=\d{1,4},\d{1,4}(&test=1)?$/;
   const RETURN = params.get('mode') === 'dungeon' && RETURN_RE.test(params.get('return') || '') ? params.get('return') : null;
   const HOME = RETURN || (FROM_HUB ? '../../hub/index.html' : '../../index.html');
+  // Embedded in the town page (same-origin iframe): leaving to town closes the overlay instead of navigating away.
+  const EMBED = (() => { try { return window.self !== window.top; } catch (e) { return false; } })();
+  function leaveToTown() { if (EMBED) { try { window.parent.postMessage({ pixeltown: 'close-realm' }, location.origin); return; } catch (e) { /* fall through */ } } location.href = HOME; }
+  if (EMBED) document.addEventListener('click', (ev) => { const a = ev.target.closest && ev.target.closest('a[href$="../../index.html"]'); if (a) { ev.preventDefault(); leaveToTown(); } }, true);
   const HOME_LABEL = RETURN ? 'Back to the world' : FROM_HUB ? 'Back to the map' : 'Back to town';
 
   function loadSave() {
@@ -31,7 +35,7 @@
     container: document.getElementById('realm-canvas-wrap'),
     save: rmCleanSave(loadSave().realm),
     onSave: (s) => writeSave({ realm: s }),
-    onExit: (why) => { if (dungeon && why === 'death') dungeon.onDeath(); else location.href = HOME; },
+    onExit: (why) => { if (dungeon && why === 'death') dungeon.onDeath(); else leaveToTown(); },
   });
 
   arena.setMenuMode(true); // the standalone page opts in to the in-game menu (Esc / ☰) and the death screen; the town gate keeps the old behaviour
