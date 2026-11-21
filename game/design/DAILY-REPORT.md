@@ -81,3 +81,5 @@
 - OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
 - 2026-11-21 night: merged hero picker + class-id fix, weapon/projectile/status/unlock modules (S1-S8), Lantern unlock viewer, difficulty curve, narrow dungeon rooms, Deepdelve/Town fps work, cave-coloured Realm UI, playtest bot + PLAYTEST-REVIEW.md. Full suite 150/150 on 3bdb47d. Incident: playtest bot's first run joined the live town ~1 min as "BotDesk" (presence only, no chat); fixed with routeWebSocket.
 - OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
+- 2026-11-21 (06:xx UTC): merged Codex b12-b15 art wiring (portals/shrines/chests/props), weapon-style wiring in the Realm page, dungeon polish (room count, exit label, door cue), status effects wiring, classic-arena difficulty ramp, shot readability, easy shore start, world wording, Town offline join, Jam/Stalk/Deepdelve fixes, 5 pure modules (nexus, quests, portals, pickups, wpn items). Full suite 168/168 on 17252ab.
+- OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
