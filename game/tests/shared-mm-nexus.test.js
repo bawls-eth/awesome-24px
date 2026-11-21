@@ -33,6 +33,7 @@ const p = N.portalById('vault');
 check('portalAt finds portal', N.portalAt(p.x + 5, p.y - 5) === p && N.portalAt(0, 0) === null);
 check('portalAt/npcAt hostile -> null', N.portalAt(NaN, 1) === null && N.npcAt(undefined, undefined) === null && N.portalById('__proto__') === null && N.portalById(5) === null);
 check('npcAt finds vendor', N.npcAt(L.vendorSlots[0].x, L.vendorSlots[0].y).id === 'vendor');
+check('walkable plaza: every NPC stands at least 3 tiles from every portal and off the spawn pad (walk-up prompts never overlap)', L.npcs.every((n) => L.portals.every((q) => Math.hypot(n.tx - q.tx, n.ty - q.ty) >= 3) && Math.hypot(n.tx - L.spawn.tx, n.ty - L.spawn.ty) >= 2.5));
 check('portal ring clear of fountain', L.portals.every((q) => Math.hypot(q.tx - 20, q.ty - 15) > 5));
 check('input never mutated by calls', (() => { const a = { x: 1, y: 2 }; const s = JSON.stringify(a); N.clampPoint(a.x, a.y); return JSON.stringify(a) === s; })());
 console.log((bad ? 'FAILED ' + bad + ' of ' : 'ok ') + n + ' assertions'); process.exit(bad ? 1 : 0);
