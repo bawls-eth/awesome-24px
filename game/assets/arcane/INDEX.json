@@ -387,6 +387,16 @@
    "status": "provisional",
    "ingested_utc": "2026-11-21T11:12:22Z",
    "source": "codex"
+  },
+  {
+   "id": "b24",
+   "label": "enemies-wave-2",
+   "path": "assets/arcane/b24-enemies-wave-2",
+   "manifest": "assets/arcane/b24-enemies-wave-2/manifest.json",
+   "files": 144,
+   "status": "provisional",
+   "ingested_utc": "2026-11-21T12:12:06Z",
+   "source": "codex"
   }
  ]
 }
