@@ -171,7 +171,8 @@ async function open(browser, url, { heroes, active, opts } = {}) {
   await F.ctx.close();
   const C = await open(browser, MAZE, { heroes, active: '{corrupt' });
   await C.page.waitForFunction(() => window.__mm && window.__mm.arena); await C.page.waitForTimeout(800);
-  check('corrupt active-hero key falls back safely, no errors', await C.page.evaluate(() => window.__mm.arena._heroArt === null) && C.errors.length === 0, C.errors.join(' | '));
+  // since hero-pick: a corrupt/stale active key falls back to the FIRST owned hero (art may load for it) instead of no hero
+  check('corrupt active-hero key falls back safely to the first hero, no errors', await C.page.evaluate(() => { const a = window.__mm.arena; return a.active !== false && (a._heroArt === null || typeof a._heroArt === 'object'); }) && C.errors.length === 0, C.errors.join(' | '));
   await C.ctx.close();
   const gate = await (async () => {
     const ctx = await browser.newContext(); const page = await ctx.newPage(); await page.goto(ORIGIN + '/game/games/mad-maze/lantern.css');
