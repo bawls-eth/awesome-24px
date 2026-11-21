@@ -47,8 +47,14 @@
     <p>Stalks cost bells on Sunday only. Prices change twice a day, Monday to Saturday, and you can sell any time. Watch the graph and sell when the price is higher than you paid. Unsold stalks spoil when the next week starts. Bells are free play points, never real money.</p>
     <button id="hint-ok" type="button">Got it</button></div>
 
+  <section class="card" id="goals-card" aria-label="Weekly goals"><h2>This week's goals</h2>
+    <ul id="goals" class="cards"></ul><p class="dim">Just for fun: no timers, nothing lost if you miss one.</p></section>
   <section class="card" id="last-card" hidden><h2>Last week</h2><p id="last-line"></p><p id="last-hint" class="dim"></p></section>
   <section class="card"><h2>Your rank</h2><p id="rank-line"></p><p id="medal-line"></p><ul id="history"></ul></section>
+  <section class="card" id="medal-case" aria-label="Medal case"><h2>Medal case</h2>
+    <ul id="medals" class="cards"></ul><p id="medals-empty" class="dim">Finish a week with a profit of 500, 2,000 or 10,000 bells to earn bronze, silver or gold.</p></section>
+  <section class="card" id="alltime" aria-label="All-time stats"><h2>All-time stats</h2>
+    <dl><dt>Best week</dt><dd id="at-best">0</dd><dt>Total profit</dt><dd id="at-total">0</dd><dt>Weeks played</dt><dd id="at-played">0</dd></dl></section>
   <p id="help" class="dim">Keys: B buy 1, Shift+B buy 10, S sell 1, Shift+S sell all.</p>
 </main>
 <script src="../../shared/store.js"></script>

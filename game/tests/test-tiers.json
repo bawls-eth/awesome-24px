@@ -383,6 +383,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "stalk-goals.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "stalk-page.test.js": {
     "class": "browser",
     "tier": "smoke"

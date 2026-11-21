@@ -65,7 +65,7 @@ const stored = (p) => p.evaluate((k) => JSON.parse(localStorage.getItem(k)), KEY
   }));
   check('spoilage message shown', (await p.textContent('#msg')).includes('spoiled'));
   const sv = await stored(p);
-  check('persisted only under pixeltown-stalk-v1 with known keys', Object.keys(sv).sort().join() === 'balance,best,earned,hint,history,holdings,invested,last,medals,v,week', Object.keys(sv).join());
+  check('persisted only under pixeltown-stalk-v1 with known keys', Object.keys(sv).sort().join() === 'balance,best,earned,goals,hint,history,holdings,invested,last,medals,played,total,v,week,wkBest', Object.keys(sv).join());
   await p.reload(); await p.waitForFunction(() => window.__stalk);
   check('reload keeps history from storage (URL week 100 differs, so it rolls over)', await p.evaluate(() => window.__stalk.save.week === 100 && window.__stalk.save.history.some((h) => h.week === 200)));
   check('no console errors / no 404s / zero off-origin', d.errors.length === 0 && d.bad.length === 0 && d.reqs.every((u) => u.startsWith(ORIGIN + '/') || u.startsWith('data:')), d.errors.concat(d.bad).join('|'));

@@ -72,5 +72,8 @@ check('no week means no holdings', M.cleanSave({ week: -1, holdings: 9 }).holdin
 check('every pattern has a name and hint', M.PATTERNS.every((p) => M.PATTERN_NAMES[p] && M.PATTERN_HINTS[p]));
 function PATTERN_SUM(a) { return Math.abs(Object.values(a.probs).reduce((x, y) => x + y, 0) - 1) < 0.01; }
 check('advise is exported, pure and bounded', typeof M.advise === 'function' && (() => { const a = M.advise(M.knownPrices(M.generateWeek(11), 3)); return a.ready && PATTERN_SUM(a) && /estimate/.test(a.text); })());
+check('goals: three defined, break-even needs a sale and an empty stall', (() => { const w = M.generateWeek(100); let x = M.syncWeek(M.defaultSave(), 100).save; const open = (z) => M.goalStatus(z, w).filter((g) => !g.done).length; return M.GOALS.length === 3 && open(x) === 3 && open(M.buy(x, w, 0, 5).save) === 3; })());
+check('goals: profit goal at 500', (() => { const w = M.generateWeek(100); const x = Object.assign(M.syncWeek(M.defaultSave(), 100).save, { invested: 100, earned: 600 }); return M.goalStatus(x, w).find((g) => g.id === 'profit').done; })());
+check('lifetime stats and goal fields clamp', (() => { const c = M.cleanSave({ week: 3, goals: 99, wkBest: 1e9, total: 1e99, played: -3 }); return c.goals === 7 && c.wkBest === M.MAX_PRICE && c.total === 99999999 && c.played === 0 && M.lifetime(c).played === 0; })());
 console.log(failed ? `${failed} FAILED` : 'ALL PASSED');
 process.exitCode = failed ? 1 : 0;

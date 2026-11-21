@@ -140,6 +140,30 @@
     return a;
   }
 
+  var MEDAL_NAMES = { none: 'no medal', bronze: 'bronze', silver: 'silver', gold: 'gold' };
+  function renderGoals() {
+    var ul = $('goals'); ul.textContent = '';
+    M.goalStatus(save, wk).forEach(function (g) {
+      var li = document.createElement('li'); li.className = g.done ? 'done' : ''; li.setAttribute('data-goal', g.id);
+      var t = document.createElement('strong'); t.textContent = g.title;
+      var d = document.createElement('span'); d.className = 'tag'; d.textContent = (g.done ? 'Done. ' : 'Open. ') + g.desc;
+      li.appendChild(t); li.appendChild(d); ul.appendChild(li);
+    });
+    var mu = $('medals'); mu.textContent = '';
+    var hist = save.history.slice().reverse();
+    hist.forEach(function (h) {
+      var m = M.medalFor(h.profit);
+      var li = document.createElement('li'); li.className = m === 'none' ? '' : 'done'; li.setAttribute('data-medal', m);
+      var dot = document.createElement('span'); dot.className = 'medal ' + m; dot.setAttribute('aria-hidden', 'true');
+      var t = document.createElement('strong'); t.textContent = 'Week ' + h.week;
+      var d = document.createElement('span'); d.className = 'tag'; d.textContent = MEDAL_NAMES[m] + ', ' + (h.profit > 0 ? '+' : '') + fmt(h.profit) + ' bells';
+      li.appendChild(dot); li.appendChild(t); li.appendChild(d); mu.appendChild(li);
+    });
+    $('medals-empty').hidden = hist.length > 0;
+    var L = M.lifetime(save);
+    $('at-best').textContent = fmt(L.best) + ' bells'; $('at-total').textContent = (L.total > 0 ? '+' : '') + fmt(L.total) + ' bells'; $('at-played').textContent = fmt(L.played);
+  }
+
   function render() {
     var slot = curSlot(), price = M.priceAt(wk, slot), sunday = slot === 0;
     $('st-bells').textContent = fmt(save.balance);
@@ -160,7 +184,7 @@
     var known = M.knownPrices(wk, slot);
     $('chart-alt').textContent = 'Known prices: ' + known.join(', ') + '. Price history changes twice a day, Monday to Saturday.';
     if (!anim.running) drawChart();
-    renderAdvisor();
+    renderAdvisor(); renderGoals();
     // last week reveal
     $('last-card').hidden = !save.last;
     if (save.last) {
@@ -190,15 +214,16 @@
     sync();
     var r = M.buy(save, wk, curSlot(), n);
     if (!r.ok) { say(REASONS[r.reason] || 'Cannot do that.'); render(); return r; }
-    save = r.save; persist(); beep('pickup'); // buy cue
+    save = M.latchGoals(r.save, wk); persist(); beep('pickup'); // buy cue
     say('Bought ' + r.qty + ' for ' + fmt(r.cost) + ' bells.'); render(); return r;
   }
   function doSell(n) {
     sync();
     var r = M.sell(save, wk, curSlot(), n);
     if (!r.ok) { say(REASONS[r.reason] || 'Cannot do that.'); render(); return r; }
-    save = r.save; persist(); beep('levelup'); // sell cue
-    say('Sold ' + r.qty + ' for ' + fmt(r.gain) + ' bells.'); render(); return r;
+    var before = M.goalsDone(save, wk);
+    save = M.latchGoals(r.save, wk); persist(); beep('levelup'); // sell cue
+    say('Sold ' + r.qty + ' for ' + fmt(r.gain) + ' bells.' + (save.goals !== before ? ' A weekly goal is done!' : '')); render(); return r;
   }
   $('buy1').addEventListener('click', function () { doBuy(1); });
   $('buy10').addEventListener('click', function () { doBuy(10); });
