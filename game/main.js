@@ -6915,7 +6915,7 @@ class TownScene extends Phaser.Scene {
       return;
     }
 
-    this.net.leaveGuestbookNote(text);
+    if (!this.net.offline) this.net.leaveGuestbookNote(text);
     this.lastGuestbookAt = now;
     input.value = '';
   }
@@ -8523,6 +8523,12 @@ class TownScene extends Phaser.Scene {
       this.addChatLine({ system: true, text: 'Whoa, slow down a little — try again in a few seconds.' });
       return;
     }
+    if (text && this.net.offline) {
+      this.addChatLine({ system: true, text: 'Chat needs the online town. You are playing offline.' });
+      chatInput.value = '';
+      chatInput.blur();
+      return;
+    }
     if (text) {
       this.chatSentTimes.push(now);
       this.net.sendChat(text.slice(0, 140));
@@ -8744,6 +8750,45 @@ class TownScene extends Phaser.Scene {
   }
 }
 
+// ---------------- offline town ----------------
+// Stand-in for TownNet when the town database can't be reached: it has the same
+// surface but sends NOTHING (no presence, chat, blocks, scores, walkie...). Blocks
+// echo locally so building still works for this session. `offline` lets scene code
+// guard the few places that talk to the network directly.
+class OfflineNet {
+  constructor(profile) {
+    this.offline = true;
+    this.handlers = {};
+    this.id = 'offline';
+    this.name = profile.name;
+    this.db = null;
+    this.tournamentRef = null;
+  }
+  serverNow() { return Date.now(); }
+  on(event, cb) { this.handlers[event] = cb; }
+  emit(event, payload) { if (this.handlers[event]) this.handlers[event](payload); }
+  startListening() {}
+  move() {}
+  emote() {}
+  addScore() { return Promise.resolve(); }
+  updateAppearance() {}
+  updateTitle() {}
+  sendChat() {}
+  sendWalkie() {}
+  leaveGuestbookNote() {}
+  watchScavenger() {}
+  watchTournament() {}
+  claimScavengerSpot() { return Promise.resolve({ success: false, claim: null }); }
+  submitTournamentCatch() { return Promise.resolve({ success: false }); }
+  placeBlock(x, y, type = 'wood') {
+    this.emit('blockAdded', { key: `${x}_${y}`, x, y, type, ownerId: this.id });
+  }
+  removeBlock(key) {
+    this.emit('blockRemoved', { key });
+  }
+  realmCancel() {}
+}
+
 // ---------------- join overlay ----------------
 
 const nameInput = document.getElementById('name-input');
@@ -8751,6 +8796,8 @@ const speciesTabsEl = document.getElementById('species-tabs');
 const avatarGridEl = document.getElementById('avatar-grid');
 const joinBtn = document.getElementById('join-btn');
 const joinError = document.getElementById('join-error');
+const joinStatus = document.getElementById('join-status');
+const joinOfflineBtn = document.getElementById('join-offline-btn');
 const joinOverlay = document.getElementById('join-overlay');
 const hud = document.getElementById('hud');
 
@@ -8825,6 +8872,39 @@ nameInput.addEventListener('keydown', (e) => {
 });
 joinBtn.addEventListener('click', attemptJoin);
 
+const JOIN_TIMEOUT_MS = 6000;
+let joinDone = false; // true once the player is in town (online or offline)
+let joinTimer = null;
+
+function showOfflineOption(message) {
+  if (joinDone) return;
+  joinStatus.textContent = message;
+  joinOfflineBtn.classList.remove('hidden');
+}
+
+function enterTown(net, data) {
+  if (joinDone) return;
+  joinDone = true;
+  clearTimeout(joinTimer);
+  joinOverlay.classList.add('hidden');
+  { const bp = document.getElementById('back-to-map-pill'); if (bp) bp.classList.add('hidden'); } // the pill is for the join screen only (it would cover the inventory bar and leave lobbies without a confirm)
+  hud.classList.remove('hidden');
+  startTown(net, data);
+}
+
+// Offline: walk the town alone. Anything pending or listening on the database is
+// paused first (goOffline queues locally and never sends while offline).
+function playOffline() {
+  if (joinDone) return;
+  const name = nameInput.value.trim() || savedProfile.name || 'Villager';
+  try { if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length) firebase.database().goOffline(); } catch (e) { /* no SDK or no app: nothing to pause */ }
+  const self = { id: 'offline', name: name.slice(0, 16), species: selectedSpecies, frame: selectedFrame, x: 1200, y: 600, facing: 1, score: 0, emote: null, emoteAt: 0 };
+  const net = new OfflineNet({ name: self.name });
+  writeSave({ name: self.name, species: selectedSpecies, frame: selectedFrame });
+  enterTown(net, { self, players: { [self.id]: self }, world: WORLD });
+}
+joinOfflineBtn.addEventListener('click', playOffline);
+
 function attemptJoin() {
   const name = nameInput.value.trim();
   if (!name) return;
@@ -8834,33 +8914,41 @@ function attemptJoin() {
   }
   joinBtn.disabled = true;
   joinError.textContent = '';
+  joinStatus.textContent = 'Connecting to the town…';
+  joinOfflineBtn.classList.add('hidden');
   writeSave({ name, species: selectedSpecies, frame: selectedFrame });
 
   const net = new TownNet();
-  let joined = false;
+  const offlineMsg = "Can't reach the town server. Check your connection, or play offline.";
+  clearTimeout(joinTimer);
+  joinTimer = setTimeout(() => showOfflineOption(offlineMsg), JOIN_TIMEOUT_MS);
 
   net.on('configMissing', () => {
     joinError.textContent = 'Not connected to a Firebase project yet — see game/firebase-config.js.';
     joinBtn.disabled = false;
+    clearTimeout(joinTimer);
+    showOfflineOption('');
   });
   net.on('townFull', () => {
     joinError.textContent = 'Town is full right now (10 max) — try again shortly.';
     joinBtn.disabled = false;
+    clearTimeout(joinTimer);
+    joinStatus.textContent = '';
   });
   net.on('error', (text) => {
     joinError.textContent = text;
     joinBtn.disabled = false;
+    clearTimeout(joinTimer);
+    showOfflineOption(offlineMsg);
   });
   net.on('init', (data) => {
-    if (joined) return;
-    joined = true;
-    joinOverlay.classList.add('hidden');
-    { const bp = document.getElementById('back-to-map-pill'); if (bp) bp.classList.add('hidden'); } // the pill is for the join screen only (it would cover the inventory bar and leave lobbies without a confirm)
-    hud.classList.remove('hidden');
-    startTown(net, data);
+    if (joinDone) return;
+    enterTown(net, data);
   });
 
-  net.join({ name, species: selectedSpecies, frame: selectedFrame });
+  Promise.resolve().then(() => net.join({ name, species: selectedSpecies, frame: selectedFrame })).catch(() => {
+    net.emit('error', 'Could not reach the town database.');
+  });
 }
 
 function viewportSize() {
@@ -8979,7 +9067,9 @@ updateJoinButtonState();
 // now, shown on the join screen before this player has actually joined.
 const joinScreenNet = new TownNet();
 const onlineCountEl = document.getElementById('online-count');
-joinScreenNet.watchOnlineCount((count) => {
-  if (!onlineCountEl) return;
-  onlineCountEl.textContent = count === null ? '' : `🟢 ${count} villager${count === 1 ? '' : 's'} in town right now`;
-});
+try {
+  joinScreenNet.watchOnlineCount((count) => {
+    if (!onlineCountEl) return;
+    onlineCountEl.textContent = count === null ? '' : `🟢 ${count} villager${count === 1 ? '' : 's'} in town right now`;
+  });
+} catch (e) { /* database SDK unavailable: the join screen simply shows no count */ }
