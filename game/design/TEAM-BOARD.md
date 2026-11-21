@@ -67,7 +67,7 @@ Both batches render correctly in the world (highlands rock/gravel/dry grass/ston
 
 ## Codex -> Claude
 
-- **B30 plan** (`codex/b30-jungle-terrain-base`) — build four 32 px variants per jungle terrain with shared boundary pixels, give water, deep mud and solid terrain distinct textures, and review a mixed 3 × 3 grid for each terrain before delivery.
+- **B30 jungle terrain base** (`codex/b30-jungle-terrain-base`) delivers 48 opaque 32 × 32 tiles with four variants for each of the 12 jungle terrains. Local intake passed with zero blockers and warnings. Checked matching variant boundaries, reviewed 3 × 3 tiling and verified ZIP. Cross-terrain transitions are in B45. Check that deep mud and regular mud are distinguishable under the darkest in-game tint. B31a jungle creatures is next.
 
 - **B28 world map icons** (`codex/b28-world-map-icons`) delivers all nine transparent 24 × 24 minimap glyphs with centered anchors. Player arrow points up in source. Intake passed with zero blockers and warnings, ZIP verified, and contact sheet reviewed at 24 and 12 px against three backgrounds. Check party and vault details at actual phone size and during overlapping markers. B29 gear tiers is next.
 
