@@ -1,0 +1,38 @@
+{
+  "about": "FT1 first-ten-minutes phone fun-gate (NEXT-SLICES-2 Wave 2). Profiles are fresh (localStorage cleared, no hero, no realm save). Simulated time: the test stops the page's own loop and steps the real update with a fixed dt. targets = the FT1 acceptance numbers. knownIssues = the measured value on the base branch for a target the game misses today (assert: not worse than this baseline, and print the gap to the target). Remove an entry once the game meets its target (FT2).",
+  "viewport": { "width": 390, "height": 844, "hasTouch": true, "isMobile": true },
+  "wallBudgetMs": 90000,
+  "dt": 0.016666666666666666,
+  "targets": {
+    "world": { "firstKill": 20, "firstBag": 60, "firstLevel": 180, "firstAbility": 240, "portalWalk": 600, "maxRewardGap": 45, "maxDeaths": 1, "simSeconds": 600 },
+    "isles": { "firstTame": 180, "hintActionPct": 100, "simSeconds": 300 },
+    "layout": { "minButtonPx": 44, "minFontPx": 12, "firstFrameMs": 3000, "consoleErrors": 0 }
+  },
+  "knownIssues": {
+    "_notes": "Measured on claude/animal-crossing-game-7z3roh @ 668bf8c (QA FT1). firstBag: world drops are pure rolls, no first-bag guarantee yet (FT2). maxRewardGap: at level 11 the bot enters the Highlands (recLv 10) and meets the Frost Dragon + 60-90 hp ring casters, 49 s without a kill. hintActionPct: the isles hint is blank whenever no tameable creature is within 5 tiles (it never says where to go next). layout.tinyText: world HUD #realm-xp-text 10px, #rw-zname / #rw-arrow / #rw-event 11px, the Leave button (#realm-leave-btn and its ✖ glyph) 11.7px; isles #hp-text 10px.",
+    "world-shore-a": { "layout.tinyText": 6 },
+    "world-shore-b": { "layout.tinyText": 6 },
+    "world-shore-c": { "layout.tinyText": 6 },
+    "world-shore-d": { "firstBag": 67.8, "layout.tinyText": 6 },
+    "world-shore-e": { "maxRewardGap": 49, "layout.tinyText": 6 },
+    "world-shore-f": { "layout.tinyText": 6 },
+    "isles-jungle-a": { "hintActionPct": 67, "layout.tinyText": 1 },
+    "isles-jungle-b": { "hintActionPct": 91, "layout.tinyText": 1 },
+    "isles-jungle-c": { "hintActionPct": 83, "layout.tinyText": 1 },
+    "isles-jungle-d": { "hintActionPct": 84, "layout.tinyText": 1 }
+  },
+  "world": [
+    { "id": "world-shore-a", "seed": "12345", "clock": 0 },
+    { "id": "world-shore-b", "seed": "4242", "clock": 0 },
+    { "id": "world-shore-c", "seed": "12345", "clock": 7919 },
+    { "id": "world-shore-d", "seed": "4242", "clock": 104729 },
+    { "id": "world-shore-e", "seed": "31337", "clock": 2026 },
+    { "id": "world-shore-f", "seed": "777", "clock": 65537 }
+  ],
+  "isles": [
+    { "id": "isles-jungle-a", "seed": "123", "clock": 0 },
+    { "id": "isles-jungle-b", "seed": "777", "clock": 0 },
+    { "id": "isles-jungle-c", "seed": "4242", "clock": 7919 },
+    { "id": "isles-jungle-d", "seed": "31337", "clock": 65537 }
+  ]
+}
