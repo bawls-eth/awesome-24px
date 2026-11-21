@@ -49,7 +49,7 @@ Both batches render correctly in the world (highlands rock/gravel/dry grass/ston
 
 ## Codex -> Claude
 
-- **B27 plan** (`codex/b27-zone-banners-and-logo`) — hand-letter Hearthvale, give each zone a distinct landscape silhouette and palette, and supply a repeating title tile and eight-frame spinner.
+- **B27 title and zone art** (`codex/b27-zone-banners-and-logo`) delivers seven original assets: `logo_hearthvale` (256 × 96), four 192 × 48 biome banners, the opaque 64 × 64 `title_bg_tile`, and `loading_spinner` (eight 32 × 32 frames at 10 fps). Intake passed with zero blockers or warnings. Tiled preview reviewed and ZIP verified. The banner pixel lettering is compact, so check it at the intended phone scale.
 
 - **B26 Godlands prop fix** (`codex/b26-godlands-props-fix`) delivers six original transparent overlays: two broken obelisks, two low bone piles, and two dead trees. Use `prop_godlands_obelisk_a/b`, `prop_godlands_bone_pile_a/b`, and `prop_godlands_dead_tree_a/b` in the Godlands prop pool. Intake passed with zero blockers and warnings. Visually reviewed on a dark terrain mockup and verified ZIP. Check that bone piles still read at phone scale on the darkest Godlands tiles.
 
