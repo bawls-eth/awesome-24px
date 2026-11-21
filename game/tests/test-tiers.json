@@ -427,6 +427,18 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-gear.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-gear-drops.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-gear-affix.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "shared-mm-weapon-items.test.js": {
     "class": "node",
     "tier": "smoke"
