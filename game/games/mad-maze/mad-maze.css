@@ -265,7 +265,7 @@ body.touch-device .realm-ab .key { display: none; }
 /* ---------- Warren dungeon mode (?mode=dungeon) ---------- */
 #mm-map { position: fixed; right: calc(10px + env(safe-area-inset-right, 0px)); top: calc(112px + env(safe-area-inset-top, 0px)); z-index: 33; border: 2px solid rgba(255, 255, 255, 0.35); border-radius: 8px; pointer-events: none; }
 #mm-map.hidden, #mm-summary.hidden { display: none; }
-#mm-map-btn { position: fixed; left: calc(10px + env(safe-area-inset-left, 0px)); top: calc(58px + env(safe-area-inset-top, 0px)); z-index: 33; width: 44px; height: 44px; border-radius: 22px; border: 2px solid rgba(255, 255, 255, 0.6); background: rgba(0, 0, 0, 0.55); color: #fff; font-size: 20px; }
+#mm-map-btn { position: fixed; left: calc(10px + env(safe-area-inset-left, 0px)); top: calc(78px + env(safe-area-inset-top, 0px)); z-index: 33; width: 44px; height: 44px; border-radius: 22px; border: 2px solid rgba(255, 255, 255, 0.6); background: rgba(0, 0, 0, 0.55); color: #fff; font-size: 20px; }
 @media (max-width: 600px) { #mm-map-btn { top: calc(112px + env(safe-area-inset-top, 0px)); } #mm-map { top: calc(150px + env(safe-area-inset-top, 0px)); } } /* beta gate: the minimap sat under the aim-assist button */
 #mm-summary { position: fixed; inset: 0; z-index: 50; background: rgba(8, 4, 20, 0.88); display: flex; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box; overflow: auto; }
 .mm-sum-card { width: min(420px, 100%); background: #1b1430; border: 3px solid #8a63e0; border-radius: 14px; padding: 18px 20px; color: #fff; font: 600 14px system-ui, sans-serif; box-sizing: border-box; }

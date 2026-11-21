@@ -198,6 +198,7 @@ const PAGES = [
   },
   arenaCfg('Mad Maze (solo arena)', 'mad-maze-solo', '?offline=1'),
   arenaCfg('Mad Maze (dungeon, seed 1)', 'mad-maze-dungeon', '?mode=dungeon&seed=1'),
+  Object.assign(arenaCfg('Realm overworld (seed 4242)', 'realm-world', '?mode=world&seed=4242&heropick=0'), { back: null }),
   {
     name: 'The Lantern', slug: 'lantern', url: () => GAME('games/mad-maze/lantern.html'),
     hud: ['header', '#heroes-card', '#fountain-card'], ctrl: ['#back-hub', '#back-town', '#start'],
