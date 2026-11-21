@@ -778,5 +778,9 @@
   "party-bc.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "class-weapon-playtest.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
