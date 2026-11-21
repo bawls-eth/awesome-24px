@@ -57,5 +57,42 @@ check('backup round-trips the access prefs', (() => { const st = fake(); const r
 check('backup cleans the gift save', (() => { const st = fake(); const r = B.restore(st, key('pixeltown-gift-v1', '{"days":1e99,"evil":1}')); const v = JSON.parse(st._m['pixeltown-gift-v1']); return r.ok && v.days === 99999 && v.evil === undefined; })());
 check('a bundle without the new keys still restores', B.restore(fake(), key('pixeltown-jam-v1', '{}')).ok);
 
+// A5: Biome Archipelago keys (tames, archipelago progress, isles medals)
+const ISLE_KEYS = ['pixeltown-tames-v1', 'pixeltown-archipelago-v1', 'pixeltown-medals-isles-v1'];
+ISLE_KEYS.forEach((k) => check('KNOWN includes ' + k, B.KNOWN.indexOf(k) >= 0));
+check('version stays 2', B.VERSION === 2);
+const isleSrc = fake({
+  'pixeltown-save-v1': '{"name":"Bo"}',
+  'pixeltown-tames-v1': JSON.stringify({ v: 1, n: 1, roster: [{ id: 't1', sp: 'raptor', nm: 'Rex', lv: 3 }], party: ['t1'], mount: null }),
+  'pixeltown-archipelago-v1': JSON.stringify({ v: 1, at: 'jungle', unlock: ['jungle', 'ice'], isles: { jungle: { pos: { x: 10, y: 20 } } } }),
+  'pixeltown-medals-isles-v1': '{"v":1,"m":["tame1"]}'
+});
+const isleBun = B.bundle(isleSrc);
+check('export includes the three new keys', ISLE_KEYS.every((k) => typeof isleBun.keys[k] === 'string'));
+const isleDst = fake();
+const isleR = B.restore(isleDst, JSON.parse(JSON.stringify(isleBun)));
+check('bundle -> plan -> apply keeps all three keys', isleR.ok && ISLE_KEYS.every((k) => k in isleDst._m) && JSON.parse(isleDst._m['pixeltown-tames-v1']).roster[0].nm === 'Rex' && JSON.parse(isleDst._m['pixeltown-archipelago-v1']).isles.jungle.pos.x === 10 && JSON.parse(isleDst._m['pixeltown-medals-isles-v1']).m[0] === 'tame1');
+check('restore writes only keys that were in the bundle', (() => { const st = fake({ 'pixeltown-save-v1': '{"keep":1}' }); const r = B.restore(st, key('pixeltown-tames-v1', '{}')); return r.ok && st._m['pixeltown-save-v1'] === '{"keep":1}' && Object.keys(st._m).length === 2; })());
+check('tames are cleaned on restore (caps, bad names, bad party)', (() => {
+  const roster = []; for (let i = 0; i < 100; i++) roster.push({ id: 't' + i.toString(36), sp: 'raptor', nm: '<b>' + 'x'.repeat(40), lv: 99 });
+  const p = B.plan(key('pixeltown-tames-v1', JSON.stringify({ roster, party: ['t0', 't1', 't2', 'zz'], mount: 'nope' })));
+  const v = p.ok && JSON.parse(p.entries['pixeltown-tames-v1']);
+  return p.ok && v.roster.length === 60 && v.party.length === 2 && v.mount === null && v.roster[0].lv === 30 && v.roster[0].nm.length <= 16 && v.roster[0].nm.indexOf('<') < 0;
+})());
+check('archipelago is cleaned on restore (grid cap, wild cap, junk dropped)', (() => {
+  const grid = []; for (let i = 0; i < 700; i++) grid.push([i % 20, Math.floor(i / 20) % 20, 'fence']);
+  const wild = {}; for (let i = 0; i < 9; i++) wild['jungle:g' + i + ':1'] = { torpor: 5, prog: 1, eff: 0.5, until: 5000 + i };
+  const p = B.plan(key('pixeltown-archipelago-v1', JSON.stringify({ at: 'moon', evil: 1, home: { grid }, wild, unlock: ['ice', 'bogus'] })));
+  const v = p.ok && JSON.parse(p.entries['pixeltown-archipelago-v1']);
+  return p.ok && v.at === 'home' && v.evil === undefined && v.home.grid.length === 400 && Object.keys(v.wild).length === 4 && v.unlock.indexOf('bogus') < 0 && v.unlock.indexOf('ice') >= 0;
+})());
+check('medals are whitelisted on restore', (() => { const p = B.plan(key('pixeltown-medals-isles-v1', '{"v":1,"m":["tame1","evil","tame1"]}')); return p.ok && JSON.parse(p.entries['pixeltown-medals-isles-v1']).m.join() === 'tame1'; })());
+check('non-object values for the new keys are refused, nothing written', ISLE_KEYS.every((k) => { const st = fake(); const r = B.restore(st, key(k, '[1,2]')); return !r.ok && r.error === 'bad-value' && Object.keys(st._m).length === 0; }) && ISLE_KEYS.every((k) => B.plan(key(k, 'garbage{')).error === 'bad-value'));
+check('oversized new-key value rejected', B.plan(key('pixeltown-archipelago-v1', '{"a":"' + 'x'.repeat(2100000) + '"}')).error === 'bad-value');
+check('hostile new-key values never throw', [null, 5, '"x"', '{"__proto__":{"a":1}}', '{"roster":{"length":1e9}}'].every((v) => { try { B.plan(key('pixeltown-tames-v1', v)); B.plan(key('pixeltown-archipelago-v1', v)); return true; } catch (e) { return false; } }));
+check('an old v2 bundle without the new keys restores identically', (() => { const st = fake(); const r = B.restore(st, { format: 'pixeltown-backup', v: 2, keys: { 'pixeltown-save-v1': '{"name":"Old"}', 'pixeltown-jam-v1': '{"offset":0}' } }); return r.ok && r.restored.length === 2 && st._m['pixeltown-jam-v1'] === '{"offset":0}' && !ISLE_KEYS.some((k) => k in st._m); })());
+check('old bundle plus new keys together round trip', (() => { const st = fake(); const bk = JSON.parse(JSON.stringify(bun)); ISLE_KEYS.forEach((k) => { bk.keys[k] = isleBun.keys[k]; }); const r = B.restore(st, bk); return r.ok && r.restored.length === 8; })());
+check('the new keys have readable labels', ISLE_KEYS.every((k) => B.labelOf(k) !== k));
+
 console.log(pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
