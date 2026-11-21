@@ -1137,11 +1137,22 @@
     const BOT = 'env(safe-area-inset-bottom, 0px)';
     [portalBtn, siteBtn].forEach((b) => { b.style.whiteSpace = 'nowrap'; });
     function layoutPrompts() {
-      const both = !portalBtn.classList.contains('hidden') && !siteBtn.classList.contains('hidden');
-      siteBtn.style.bottom = both ? `calc(170px + ${BOT})` : '';
-      portalBtn.style.bottom = both ? `calc(236px + ${BOT})` : '';
+      const pv = !portalBtn.classList.contains('hidden'); const sv = !siteBtn.classList.contains('hidden');
+      const phone = typeof matchMedia === 'function' && matchMedia('(max-width: 560px)').matches;
+      const ab = phone ? document.getElementById('realm-abilities') : null; const ar = ab ? ab.getBoundingClientRect() : null;
+      if (ar && ar.height > 0) { // phone: the prompts stack in the free band ABOVE the 2x2 ability grid (never over it or a stick), centred
+        const base = Math.max(8, Math.round(innerHeight - ar.top + 8)); const px = (n) => `${n}px`;
+        siteBtn.style.bottom = sv ? px(base) : ''; portalBtn.style.bottom = pv ? px(sv ? base + 56 : base) : ''; // hidden prompts keep no inline override
+        const n = (pv ? 1 : 0) + (sv ? 1 : 0); const top = base + n * 56;
+        hintEl.style.bottom = px(top); siteNote.style.bottom = px(top + (hintEl.classList.contains('hidden') ? 0 : 40));
+        return;
+      }
+      siteBtn.style.bottom = pv && sv ? `calc(170px + ${BOT})` : '';
+      portalBtn.style.bottom = pv && sv ? `calc(236px + ${BOT})` : '';
+      hintEl.style.bottom = ''; siteNote.style.bottom = '';
     }
-    if (typeof MutationObserver === 'function') { const po = new MutationObserver(layoutPrompts); po.observe(portalBtn, { attributes: true, attributeFilter: ['class'] }); po.observe(siteBtn, { attributes: true, attributeFilter: ['class'] }); }
+    if (typeof MutationObserver === 'function') { const po = new MutationObserver(layoutPrompts); [portalBtn, siteBtn, hintEl].forEach((b) => po.observe(b, { attributes: true, attributeFilter: ['class'] })); }
+    if (typeof window !== 'undefined') { window.addEventListener('resize', layoutPrompts); window.addEventListener('orientationchange', layoutPrompts); }
     // ---------- the minimap and zone text step aside while a panel (backpack / board / menu / shop / hero) is open ----------
     const PANEL_IDS = { 'realm-backpack': 1, 'realm-board': 1, 'realm-pause': 1, 'realm-shop': 1, 'realm-hero': 1, 'realm-death': 1 };
     let panelHid = false;

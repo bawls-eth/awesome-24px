@@ -758,5 +758,9 @@
   "world-props-godlands.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "world-phone-hud.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
