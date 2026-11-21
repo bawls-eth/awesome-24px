@@ -175,7 +175,7 @@ for (const boss of [false, true]) {
   const tiers = O.CREATURE_TIERS;
   const sp = Z.createSpawner(world, { radius: 100000, cap: 100000 }); const r = sp.update(128 * TILE, 128 * TILE, 0.016, 0);
   check('every spawned creature id is in CREATURE_TIERS for its type/tier', r.spawn.length > 100 && r.spawn.every((e) => tiers[e.type] && tiers[e.type][e.tier].includes(e.creature)));
-  check('every boss site boss id is a known boss', world.bossSites.every((b) => O.BOSSES.some((x) => x.boss === Z.bossEnemy(b).creature)));
+  check('every boss site boss id is a known boss', world.bossSites.every((b) => [].concat(O.BOSSES.map((x) => x.boss), O.BOSS_POOLS[1], O.BOSS_POOLS[2], O.BOSS_POOLS[3]).includes(Z.bossEnemy(b).creature))); // b23: default pools add the bosses-extra ids
 }
 
 // ---- zoneInfoAt / eventsFor ----

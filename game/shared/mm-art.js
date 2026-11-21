@@ -31,6 +31,11 @@
   // Arena boss art (batch b07-frontier-bosses, 384px cells, 'down' only). BOSS_MAP is indexed by boss tier (0 = the first boss, Gloomheart ->
   // void_oracle, whose pink/purple fits); later tiers walk the rest of the list and wrap. Deterministic: no randomness, same tier -> same boss.
   var BOSS_MAP = ['void_oracle', 'bone_colossus', 'inferno_wyrm', 'crystal_titan', 'forest_warden', 'dread_knight', 'storm_harbinger', 'mire_queen'];
+  // b23 bosses-extra (384px, 'down' only, same six actions). Appended AFTER the 8 tier bosses: bossArtFor() still wraps at BOSS_TIER_COUNT so old tiers/seeds are unchanged;
+  // these are picked by id (world boss sites in mm-overworld.js, the Crypt alternate boss in mm-biomes.js).
+  var BOSS_EXTRA = ['lich_king', 'hydra', 'treant_elder', 'sand_titan', 'frost_dragon', 'shadow_hydra', 'clockwork_golem', 'void_maw'];
+  var BOSS_TIER_COUNT = BOSS_MAP.length;
+  BOSS_MAP = BOSS_MAP.concat(BOSS_EXTRA);
   var BOSS_ACTIONS = ['idle', 'move', 'attack_a', 'attack_b', 'hit', 'death'];
   var BOSS_VISIBLE_W = 220; // typical visible body width in px inside a 384 cell
 
@@ -50,7 +55,7 @@
   function bossArtFor(tier) {
     var t = Math.floor(Number(tier));
     if (!isFinite(t) || t < 0) t = 0;
-    return BOSS_MAP[t % BOSS_MAP.length];
+    return BOSS_MAP[t % BOSS_TIER_COUNT];
   }
   function packFor(artClass) {
     for (var i = 0; i < PACKS.length; i++) if (PACKS[i].classes.indexOf(artClass) >= 0) return PACKS[i];
@@ -338,5 +343,5 @@
     }).then(function () { return set; }).catch(function () { return set; });
   }
 
-  return { loadBolts: loadBolts, boltIdFor: boltIdFor, BoltSet: BoltSet, PLAYER_BOLT_CLASSES: PLAYER_BOLT_CLASSES, bossArtFor: bossArtFor, loadBosses: loadBosses, BOSS_MAP: BOSS_MAP, BOSS_VISIBLE_W: BOSS_VISIBLE_W, BOSS_ACTIONS: BOSS_ACTIONS, loadItems: loadItems, itemIconUrl: itemIconUrl, ITEM_ICON_MAP: ITEM_ICON_MAP, ItemSet: ItemSet, enemyArtFor: enemyArtFor, drifterArtFor: drifterArtFor, loadEnemies: loadEnemies, ENEMY_MAP: ENEMY_MAP, BIOME_ENEMY_MAP: BIOME_ENEMY_MAP, DRIFTER_MAP: DRIFTER_MAP, ENEMY_VISIBLE_W: ENEMY_VISIBLE_W, load: load, loadClass: loadClass, loadAll: loadAll, packIds: packIds, artClassFor: artClassFor, packFor: packFor, frameAt: frameAt, scaleFor: scaleFor, duration: duration, PACKS: PACKS, CLASS_MAP: CLASS_MAP, ArtSet: ArtSet };
+  return { loadBolts: loadBolts, boltIdFor: boltIdFor, BoltSet: BoltSet, PLAYER_BOLT_CLASSES: PLAYER_BOLT_CLASSES, bossArtFor: bossArtFor, loadBosses: loadBosses, BOSS_MAP: BOSS_MAP, BOSS_EXTRA: BOSS_EXTRA, BOSS_VISIBLE_W: BOSS_VISIBLE_W, BOSS_ACTIONS: BOSS_ACTIONS, loadItems: loadItems, itemIconUrl: itemIconUrl, ITEM_ICON_MAP: ITEM_ICON_MAP, ItemSet: ItemSet, enemyArtFor: enemyArtFor, drifterArtFor: drifterArtFor, loadEnemies: loadEnemies, ENEMY_MAP: ENEMY_MAP, BIOME_ENEMY_MAP: BIOME_ENEMY_MAP, DRIFTER_MAP: DRIFTER_MAP, ENEMY_VISIBLE_W: ENEMY_VISIBLE_W, load: load, loadClass: loadClass, loadAll: loadAll, packIds: packIds, artClassFor: artClassFor, packFor: packFor, frameAt: frameAt, scaleFor: scaleFor, duration: duration, PACKS: PACKS, CLASS_MAP: CLASS_MAP, ArtSet: ArtSet };
 }));

@@ -44,6 +44,8 @@
       tint: 'rgba(100,140,220,0.09)', particles: { kind: 'mote', color: '#bcd4ff', n: 14, dir: -1 },
       ids: ['puffcap', 'beetle', 'archer', 'moth'], skin: { puffcap: 'skeleton', beetle: 'bone_knight', archer: 'shadow_cultist', moth: 'ice_wraith' },
       boss_art: 'bone_colossus', boss_name: 'The Bone Colossus', boss_room: 'Ossuary', mapCol: '#7a8ab0',
+      // b23: odd seeds (see bossFor) face the Lich King instead of the Bone Colossus; even seeds keep the original boss.
+      alt: { boss_art: 'lich_king', boss_name: 'The Lich King' },
     },
   };
 
@@ -53,5 +55,19 @@
   // Art creature ids the biome's enemies wear (for the page to preload).
   function creatures(v) { const b = get(v); return b.ids.map((i) => b.skin[i]).filter(Boolean); }
 
-  return { IDS, BIOMES, clean, get, creatures };
+  // Seed parity: a numeric seed uses its own parity, any other string the parity of its char-code sum. Deterministic, no RNG.
+  function seedParity(seed) {
+    const n = Number(seed);
+    if (typeof seed !== 'object' && seed !== '' && isFinite(n)) return Math.abs(Math.floor(n)) % 2;
+    const s = String(seed); let h = 0; for (let i = 0; i < s.length; i++) h += s.charCodeAt(i);
+    return h % 2;
+  }
+  // { boss_art, boss_name, alt } for the biome + seed: the biome's `alt` boss on odd seeds, otherwise the primary. `classic` (or no alt) = primary.
+  function bossFor(v, seed, classic) {
+    const b = get(v);
+    if (!classic && b.alt && seedParity(seed) === 1) return { boss_art: b.alt.boss_art, boss_name: b.alt.boss_name, alt: true };
+    return { boss_art: b.boss_art, boss_name: b.boss_name, alt: false };
+  }
+
+  return { IDS, BIOMES, clean, get, creatures, bossFor, seedParity };
 }));
