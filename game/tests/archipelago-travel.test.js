@@ -56,7 +56,8 @@ const ready = (page) => page.waitForFunction(() => window.__isles && window.__is
   }
 
   // ---- 2. dock -> sea chart -> sail -> home ----
-  const T = await open(browser, DESK, '&isle=jungle&seed=123');
+  // X4: the reef needs a crafted raft on the sea chart (isles-craft.test.js covers the locked rows); this trip starts with it unlocked
+  const T = await open(browser, DESK, '&isle=jungle&seed=123', { 'pixeltown-archipelago-v1': JSON.stringify({ v: 1, unlock: ['jungle', 'reef'] }) });
   const pg = T.page;
   await ev(pg, (I) => { I.god(true); I.clearCreatures(); });
   const dock = await ev(pg, (I) => { const d = I.dock(); I.teleport(d.x, d.y); return { d, near: I.nearDock() }; });

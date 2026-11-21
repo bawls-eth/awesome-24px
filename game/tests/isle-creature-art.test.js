@@ -70,7 +70,7 @@ const PIXELS = (I, a) => {
   // ---- 1 desktop: PNG strips on ----
   const d = await open(browser, { viewport: { width: 1000, height: 700 } });
   const ready = await ev(d.page, (I) => I.stripsReady());
-  check('1a strips: all five b31a / b32 species load (83 strips baked once)', ready.on && ready.kinds.length === 5 && ready.count === 83, JSON.stringify(ready));
+  check('1a strips: all seven b31a / b31b / b32 species load (107 strips baked once)', ready.on && ready.kinds.length === 7 && ready.count === 107, JSON.stringify(ready));
   await ev(d.page, SETUP);
   const px = await ev(d.page, PIXELS, { sp: 'fernraptor', pal: B31A_PAL });
   check('1b a Fern Raptor draws from its PNG strip (src png, fernraptor_* strip)', px.src === 'png' && /^fernraptor_(idle|move)_(down|up|right)$/.test(px.drawn), JSON.stringify(px));
@@ -145,7 +145,7 @@ const PIXELS = (I, a) => {
   const miss = await ev(mp, (I) => Promise.resolve(I.stripsReady()).then((r) => { I.pause(true); I.god(true); I.clearCreatures(); const t = I.findTile('jungle_floor', 10); I.teleport(t.x, t.y);
     const a = I.spawn('glimmerfrog', t.x + 2, t.y), b = I.spawn('fernraptor', t.x - 2, t.y); I.step(0, 0, 0.05); I.render();
     const cs = I.creatures(); return { kinds: r.kinds, frog: cs.find((c) => c.uid === a).src, raptor: cs.find((c) => c.uid === b).src }; }));
-  check('2d a missing strip drops only that creature to the code bake', miss.kinds.indexOf('glimmerfrog') < 0 && miss.kinds.length === 4 && miss.frog === 'code' && miss.raptor === 'png' && merr.length === 0 && mdb.count() === 0, JSON.stringify(miss) + merr.join(' | '));
+  check('2d a missing strip drops only that creature to the code bake', miss.kinds.indexOf('glimmerfrog') < 0 && miss.kinds.length === 6 && miss.frog === 'code' && miss.raptor === 'png' && merr.length === 0 && mdb.count() === 0, JSON.stringify(miss) + merr.join(' | '));
   await mctx.close();
 
   // ---- 3 ridden tusktop uses the saddle overlay ----

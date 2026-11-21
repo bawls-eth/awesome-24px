@@ -1,4 +1,5 @@
-// MMCreatureStrips: real PNG animation strips for the Hearthvale Isles creatures (Codex b31a jungle-creatures-core, b32 jungle-big-and-boss).
+// MMCreatureStrips: real PNG animation strips for the Hearthvale Isles creatures (Codex b31a jungle-creatures-core, b32 jungle-big-and-boss,
+// b31b jungle-creatures-rest: vinecoil + canopy_glider, provisional; its moth_lantern has no MMCreatures def yet, so it is not wired).
 // The strip table below mirrors the batch manifests (the node test checks it against manifest.json). Each strip is one row of square
 // cells (4x pixel art: 256 / 384 / 512 px cells hold 64 / 96 / 128 px native art), facing down / up / right; left is the mirrored right.
 // Pure helpers (no DOM): dirCode (facing from a movement vector, with hysteresis), actionFor (which action a creature state shows, with
@@ -12,10 +13,11 @@
   'use strict';
   const B31A = '../../assets/arcane/b31a-jungle-creatures-core/enemies/';
   const B32 = '../../assets/arcane/b32-jungle-big-and-boss/creatures/';
+  const B31B = '../../assets/arcane/b31b-jungle-creatures-rest/enemies/';
   const DIRS = ['down', 'up', 'right'];       // dir codes 0 1 2; code 3 = left (the right strip, mirrored)
   const DOWN = 0, UP = 1, RIGHT = 2, LEFT = 3;
   const SCALE = 4;                            // cells are 4x upscaled pixel art: draw at 1/4 (native) so every pixel stays crisp
-  // per-action [frames, fps, loop, onlyDown]; the same timing in every b31a / b32 manifest
+  // per-action [frames, fps, loop, onlyDown]; the same timing in every b31a / b31b / b32 manifest
   const ACT = { idle: [4, 6, 1, 0], move: [6, 10, 1, 0], attack: [5, 12, 0, 0], death: [5, 10, 0, 0], sleep: [4, 6, 1, 1], eat: [4, 8, 1, 1],
     roar: [5, 12, 0, 0], saddle_idle: [4, 6, 1, 0], saddle_move: [6, 10, 1, 0] };
   const CORE = ['idle', 'move', 'attack', 'death'];
@@ -24,6 +26,9 @@
     chompbill: { dir: B31A + 'chompbill/', cell: 256, ax: 128, ay: 231, acts: CORE.concat(['sleep', 'eat']) },
     fernraptor: { dir: B31A + 'fernraptor/', cell: 256, ax: 128, ay: 231, acts: CORE.concat(['sleep', 'eat']) },
     glimmerfrog: { dir: B31A + 'glimmerfrog/', cell: 256, ax: 128, ay: 231, acts: CORE.slice() },
+    // b31b (same conventions as b31a: 256 px cells, feet anchor 128,231, the 12 core strips)
+    vinecoil: { dir: B31B + 'vinecoil/', cell: 256, ax: 128, ay: 231, acts: CORE.slice() },
+    canopy_glider: { dir: B31B + 'canopy_glider/', cell: 256, ax: 128, ay: 231, acts: CORE.slice() },
     tusktop: { dir: B32 + 'tusktop/', cell: 384, ax: 192, ay: 350, acts: CORE.concat(['sleep', 'eat', 'saddle_idle', 'saddle_move']),
       seat: { x: [192, 192, 172], idle: [[160, 156, 152, 156], [184, 180, 176, 180], [212, 208, 204, 208]],
         move: [[160, 152, 148, 156, 152, 148], [184, 176, 172, 180, 176, 172], [212, 204, 200, 208, 204, 200]] } },
