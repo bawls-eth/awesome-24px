@@ -974,5 +974,9 @@
   "isle-art-bake.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "isles-taming.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
