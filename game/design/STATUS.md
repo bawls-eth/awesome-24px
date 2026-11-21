@@ -120,3 +120,15 @@ Done: generator, zones module, menu/restart/phone layout, test tiers. Next (NEXT
 
 ## First playable big map (2026-11-20)
 Open /game/games/mad-maze/index.html?mode=world[&seed=N]. realm.js: setWorld/setMode(world), camera, screenToWorld. New realm-world.js (terrain chunks, HUD, minimap, portals), pixeltown-realm-v1 save. Gaps: bag tier colours, death text says Wave, shallow-water slow, narrow shore band, only Warren portals, fog, events, Nexus, co-op, Codex terrain art.
+
+## Overworld terrain transitions (Codex, 2026-11-20)
+B10T is registered on this branch. The overworld loader uses 32 base variants and 120 transition tiles when all differing cardinal neighbors match the manifest blend. Fully surrounded tiles use base variants. Mixed boundaries, missing art and map borders use the existing fallback. Node syntax and offline manifest/mask checks passed. Browser playback and integration CI remain pending. Next Realm gameplay slice: verify the death and restart loop, then zone loot presentation.
+
+## World restart and navigation (Codex)
+World restart describes the return to spawn and retains the existing no-loss policy. Restart clears world drop history and spawner and boss state. The overworld death recap omits the wave counter, while classic and dungeon recaps retain it. The HUD arrow points to the nearest dungeon portal, with the island centre as fallback. Offline syntax and targeted recap/navigation checks passed. Browser playback, zone loot changes, and later roadmap items remain pending.
+
+## Realm zone bag presentation (Codex)
+Overworld item drops use the six zone bag tier colors and the rolled lifetime. Item rarity still drives inventory and pickup. Syntax and offline pooled-bag metadata checks passed. Browser playback and Lantern stash payout remain pending.
+
+## Shallow water movement
+Overworld players move at 70% speed on shallow water. Targeted checks covered shallow water, land and map bounds. Browser playback and stash payout remain pending.

@@ -2874,7 +2874,7 @@ class TownScene extends Phaser.Scene {
     if (mm && !mm.dataset.bound) {
       mm.dataset.bound = '1';
       mm.addEventListener('click', () => {
-        if (window.confirm('Open the new Mad Maze? Your progress is shared, and the town will close.')) location.href = mm.dataset.href;
+        if (window.confirm('Enter the Realm overworld? Your progress is shared, and the town will close.')) location.href = mm.dataset.href;
       });
     }
     this.renderRealmGateMenu();

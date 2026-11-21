@@ -615,14 +615,16 @@ class RealmArena {
       c.beginPath(); c.arc(20, 20, 15 + pad, 0, Math.PI * 2); c.fill();
       c.fillRect(4 - pad, 18 - pad, 32 + pad * 2, 5 + pad * 2);
     }) || (g.fillStyle = '#fff', g.fillRect(13, 14, 5, 5), g.fillRect(22, 14, 5, 5), g.fillStyle = '#3a2a0f', g.fillRect(15, 16, 2, 3), g.fillRect(24, 16, 2, 3)));
-    this.sprites.bag = RM_RARITIES.map((r) => mk(26, 26, (g) => {
+    const makeBag = (color) => mk(26, 26, (g) => {
       const gr = g.createRadialGradient(13, 13, 2, 13, 13, 13);
-      gr.addColorStop(0, r.color); gr.addColorStop(1, 'rgba(0,0,0,0)');
+      gr.addColorStop(0, color); gr.addColorStop(1, 'rgba(0,0,0,0)');
       g.globalAlpha = 0.55; g.fillStyle = gr; g.fillRect(0, 0, 26, 26); g.globalAlpha = 1;
       g.fillStyle = '#1a0f2a'; g.fillRect(6, 9, 14, 12); g.fillRect(9, 6, 8, 4);
-      g.fillStyle = r.color; g.fillRect(7, 10, 12, 10); g.fillRect(10, 7, 6, 3);
+      g.fillStyle = color; g.fillRect(7, 10, 12, 10); g.fillRect(10, 7, 6, 3);
       g.fillStyle = '#fff'; g.fillRect(11, 13, 4, 4);
-    }));
+    });
+    this.sprites.bag = RM_RARITIES.map((rarity) => makeBag(rarity.color));
+    this.sprites.worldBag = ['#ad7950', '#ff91b8', '#ad87ec', '#64dfe4', '#f0f0fc', '#ffcf62'].map(makeBag);
     this.sprites.playerFallback = mk(32, 32, (g) => {
       g.fillStyle = '#1a2a1a'; g.beginPath(); g.arc(16, 16, 13, 0, Math.PI * 2); g.fill();
       g.fillStyle = '#6fbf73'; g.beginPath(); g.arc(16, 16, 11, 0, Math.PI * 2); g.fill();
@@ -972,7 +974,7 @@ class RealmArena {
     const n = (v, d) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Math.min(1 << 20, Math.floor(Number(v))) : d);
     const fn = (f) => (typeof f === 'function' ? f : null);
     this.world = Object.freeze({ w: n(opts.w, this.W), h: n(opts.h, this.H), tile: n(opts.tile, 32), camera: opts.camera !== false, wake: n(opts.wake, 0),
-      drawUnder: fn(opts.drawUnder), drawOver: fn(opts.drawOver), tick: fn(opts.tick), onStart: fn(opts.onStart) });
+      drawUnder: fn(opts.drawUnder), drawOver: fn(opts.drawOver), tick: fn(opts.tick), moveScaleAt: fn(opts.moveScaleAt), onStart: fn(opts.onStart) });
     this._solidAt = fn(opts.solidAt); this._shotSolidAt = fn(opts.shotSolidAt) || this._solidAt;
     const pl = opts.pools && typeof opts.pools === 'object' ? opts.pools : {};
     const grow = (pool, want, max, f) => { const k = Math.min(max, n(want, 0)); while (pool.length < k) pool.push(f()); };
@@ -1431,7 +1433,10 @@ class RealmArena {
     const len = Math.hypot(mx, my);
     p.moving = len > 0.05;
     if (len > 1) { mx /= len; my /= len; }
-    this._movePlayer(mx * this.stats.speed * this._speedMul * dt, my * this.stats.speed * this._speedMul * dt);
+    const terrainScale = this.mode === 'world' && !this.dungeon && !this.team && this.world?.moveScaleAt
+      ? this.world.moveScaleAt(p.x, p.y) : 1;
+    const step = this.stats.speed * this._speedMul * dt * terrainScale;
+    this._movePlayer(mx * step, my * step);
     this._mx = mx; this._my = my;
     if (mx) p.facing = mx > 0 ? 1 : -1;
     p.bob = p.moving ? p.bob + dt * 14 : 0;
@@ -1851,10 +1856,12 @@ class RealmArena {
     return r < rare ? 2 : r < rare + unc ? 1 : 0;
   }
 
-  dropBag(x, y, rarity, itemId) {
+  dropBag(x, y, rarity, itemId, worldLoot) {
     const b = this._take(this.bags);
     if (!b) return null;
     b.active = true; b.x = x; b.y = y; b.t = 0; b.r = rarity;
+    b.tier = worldLoot?.tierIndex;
+    b.lifetime = worldLoot?.lifetime || Infinity;
     b.id = itemId || RM_ITEMS[Math.floor(this.rng() * RM_ITEMS.length)].id;
     const a = this.rng() * Math.PI * 2; b.vx = Math.cos(a) * 60; b.vy = Math.sin(a) * 60;
     return b;
@@ -1882,6 +1889,7 @@ class RealmArena {
       const b = this.bags[i];
       if (!b.active) continue;
       b.t += dt;
+      if (b.t >= b.lifetime) { b.active = false; continue; }
       b.x += b.vx * dt; b.y += b.vy * dt; b.vx *= 0.93; b.vy *= 0.93;
       b.x = Math.max(14, Math.min(this._bw() - 14, b.x)); b.y = Math.max(14, Math.min(this._bh() - 14, b.y));
       const dx = p.x - b.x; const dy = p.y - b.y; const d = Math.hypot(dx, dy) || 1;
@@ -2173,7 +2181,7 @@ class RealmArena {
     wrap.id = 'realm-pause'; wrap.className = 'rm-panel hidden'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-label', 'Menu'); wrap.style.display = 'none';
     wrap.innerHTML = '<div class="realm-bp-card rm-card"><div class="realm-bp-head"><strong>☰ Menu</strong><button id="realm-menu-close" type="button" data-m="resume" aria-label="Close menu">✖</button></div>'
       + '<div class="rm-main"><button type="button" class="rm-btn" data-m="resume">▶ Resume</button><button type="button" class="rm-btn" data-m="restart">↻ Restart run</button><p class="rm-note dim"></p><button type="button" class="rm-btn" data-m="leave">🚪 Leave to start</button></div>'
-      + '<div class="rm-confirm hidden"><p>Restart? You keep your items and shards; your wave resets.</p><button type="button" class="rm-btn" data-m="restart-yes">Yes, restart</button><button type="button" class="rm-btn" data-m="restart-no">Keep playing</button></div>'
+      + '<div class="rm-confirm hidden"><p class="rm-restart-copy"></p><button type="button" class="rm-btn" data-m="restart-yes">Yes, restart</button><button type="button" class="rm-btn" data-m="restart-no">Keep playing</button></div>'
       + '<div class="rm-settings"><strong>Settings</strong><button type="button" class="rm-tog" data-set="sound"></button><button type="button" class="rm-tog" data-set="motion"></button><button type="button" class="rm-tog" data-set="aim"></button></div></div>';
     ov.appendChild(wrap);
     wrap.addEventListener('click', (e) => {
@@ -2201,6 +2209,9 @@ class RealmArena {
 
   _syncMenu() {
     const d = this._menuDom; if (!d) return;
+    d.querySelector('.rm-restart-copy').textContent = this.mode === 'world' && !this.dungeon
+      ? 'Return to the island spawn? You keep your items and shards.'
+      : 'Restart? You keep your items and shards; your wave resets.';
     const rs = d.querySelector('button[data-m="restart"]'); const note = d.querySelector('.rm-note');
     const can = this.canRestart(); rs.disabled = !can;
     note.textContent = can ? '' : this.team ? 'Restart is off during a shared run: your partner is fighting too.' : this.dungeon ? 'Restart is off in a Warren: leave and enter again for a new one.' : '';
@@ -2224,7 +2235,9 @@ class RealmArena {
   _showDeath() {
     const d = this._ensureDeathDom(); if (!d) { this.stop(); this.onExit('death'); return; }
     this._deathShown = true; this.keys = {}; this.mouse.down = false; this.aimVec.on = false; this.moveVec.x = 0; this.moveVec.y = 0;
-    d.querySelector('.rm-recap').innerHTML = `<div class="realm-board-row"><span>🌊 Wave reached</span><b>${Math.max(1, this.run.wave)}</b></div><div class="realm-board-row"><span>⚔️ Kills</span><b>${this.run.kills}</b></div><div class="realm-board-row"><span>💎 Shards this run</span><b>+${this.run.shards}</b></div><div class="realm-board-row"><span>🎁 Survivor's cache</span><b>${this._lastCache.replace(/^cache: /, '')}</b></div>`;
+    const showWave = this.mode !== 'world' || !!this.dungeon;
+    const waveRow = showWave ? `<div class="realm-board-row"><span>🌊 Wave reached</span><b>${Math.max(1, this.run.wave)}</b></div>` : '';
+    d.querySelector('.rm-recap').innerHTML = `${waveRow}<div class="realm-board-row"><span>⚔️ Kills</span><b>${this.run.kills}</b></div><div class="realm-board-row"><span>💎 Shards this run</span><b>+${this.run.shards}</b></div><div class="realm-board-row"><span>🎁 Survivor's cache</span><b>${this._lastCache.replace(/^cache: /, '')}</b></div>`;
     d.classList.remove('hidden'); d.style.display = 'flex';
     const f = d.querySelector('button[data-d="again"]'); if (f && f.focus) f.focus({ preventScroll: true });
   }
@@ -2372,7 +2385,7 @@ class RealmArena {
     }
     if (this._edGhosts) this._drawEnemyGhosts(g);
     if (this._bossGhost) this._drawBossGhost(g);
-    for (let i = 0; i < this.bags.length; i++) { const b = this.bags[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { const by = b.y - 13 + Math.sin(b.t * 5) * 2; g.drawImage(this.sprites.bag[b.r], b.x - 13, by); if (this._itemArt) { const ic = this._lootIcon(b.id, b.r); if (ic) g.drawImage(ic, b.x - 10, by - 18 + Math.sin(b.t * 5 + 1) * 1.5); } } }
+    for (let i = 0; i < this.bags.length; i++) { const b = this.bags[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { const by = b.y - 13 + Math.sin(b.t * 5) * 2; g.drawImage(this.sprites.worldBag[b.tier] || this.sprites.bag[b.r], b.x - 13, by); if (this._itemArt) { const ic = this._lootIcon(b.id, b.r); if (ic) g.drawImage(ic, b.x - 10, by - 18 + Math.sin(b.t * 5 + 1) * 1.5); } } }
     for (let i = 0; i < this.eBullets.length; i++) { const b = this.eBullets[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) g.drawImage(this.sprites.eBullet[b.kind], b.x - 8, b.y - 8); }
     for (let i = 0; i < this.pBullets.length; i++) { const b = this.pBullets[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) g.drawImage(this.sprites.pBullet, b.x - 8, b.y - 8); }
 

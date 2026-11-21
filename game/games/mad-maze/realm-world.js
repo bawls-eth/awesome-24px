@@ -74,6 +74,10 @@
     const terrain = world.terrain; const solid = world.solid;
 
     // ---------- collision: every solid tile blocks walking; deep water lets bolts fly over it ----------
+    const moveScaleAt = (x, y) => {
+      const tx = Math.floor(x / TILE); const ty = Math.floor(y / TILE);
+      return tx >= 0 && ty >= 0 && tx < ww && ty < wh && terrain[ty * ww + tx] === T.shallow_water ? 0.7 : 1;
+    };
     const solidAt = (x, y) => { const tx = Math.floor(x / TILE); const ty = Math.floor(y / TILE); return tx < 0 || ty < 0 || tx >= ww || ty >= wh || solid[ty * ww + tx] === 1; };
     const shotSolidAt = (x, y) => { const tx = Math.floor(x / TILE); const ty = Math.floor(y / TILE); if (tx < 0 || ty < 0 || tx >= ww || ty >= wh) return true; const i = ty * ww + tx; return solid[i] === 1 && terrain[i] !== T.deep_water; };
     const tileFree = (tx, ty) => tx >= 0 && ty >= 0 && tx < ww && ty < wh && solid[ty * ww + tx] === 0;
@@ -90,7 +94,8 @@
     world.structures.forEach((s) => { if (s.kind !== 'event_site') return; const k = Math.floor(s.y / CH) * ccols + Math.floor(s.x / CH); (propsBy[k] = propsBy[k] || []).push({ x: s.x, y: s.y, kind: 'event_ring' }); });
 
     // ---------- optional terrain art: tile_<terrain>_a..d from any registered batch (none delivered yet: code fallback) ----------
-    const tileArt = Object.create(null); // terrain id -> [img...]
+    const tileArt = Object.create(null); // terrain id -> fixed a-d slots
+    const edgeArt = Object.create(null); // terrain id -> blend id -> mask slots
     let artTiles = 0;
     function loadTileArt(root) {
       if (!root || typeof fetch !== 'function') return Promise.resolve(0);
@@ -104,11 +109,24 @@
           return fetch(join(join(root, id), 'manifest.json')).then((r) => (r.ok ? r.json() : null)).then((m) => {
             const assets = m && Array.isArray(m.assets) ? m.assets : [];
             return Promise.all(assets.map((a) => {
-              const mt = a && typeof a.id === 'string' ? /^tile_([a-z_]+)_([a-d])$/.exec(a.id) : null;
+              const mt = a && typeof a.id === 'string' ? /^tile_([a-z_]+)_([a-d]|edge_\d{2})$/.exec(a.id) : null;
               if (!mt || !Object.prototype.hasOwnProperty.call(T, mt[1]) || !okPath(a.path)) return null;
+              const tid = T[mt[1]];
+              const variant = mt[2].length === 1;
+              const slot = variant ? mt[2].charCodeAt(0) - 97 : Number(mt[2].slice(5));
+              if (!variant && (slot >= 15 || slot !== a.edge_mask || a.blend === mt[1] ||
+                !Object.prototype.hasOwnProperty.call(T, a.blend))) return null;
               return new Promise((res) => {
                 const img = new Image();
-                img.onload = () => { if (img.naturalWidth >= 16) { const tid = T[mt[1]]; (tileArt[tid] = tileArt[tid] || []).push(img); artTiles++; } res(); };
+                img.onload = () => {
+                  if (img.naturalWidth === TILE && img.naturalHeight === TILE) {
+                    const banks = variant ? tileArt : (edgeArt[tid] ||= Object.create(null));
+                    const bank = (banks[variant ? tid : T[a.blend]] ||= []);
+                    if (!bank[slot]) artTiles++;
+                    bank[slot] = img;
+                  }
+                  res();
+                };
                 img.onerror = () => res();
                 img.src = join(join(root, id), a.path);
               });
@@ -116,6 +134,22 @@
           }).catch(() => null);
         }));
       }).then(() => { if (artTiles) dropChunks(); return artTiles; }).catch(() => 0);
+    }
+
+    function transitionAt(x, y, t) {
+      const blends = edgeArt[t];
+      if (!blends || x === 0 || y === 0 || x === ww - 1 || y === wh - 1) return null;
+      const i = y * ww + x;
+      const neighbours = [terrain[i - ww], terrain[i + 1], terrain[i + ww], terrain[i - 1]];
+      let mask = 0;
+      let blend = null;
+      for (let dir = 0; dir < neighbours.length; dir++) {
+        const other = neighbours[dir];
+        if (other === t) mask |= 1 << dir;
+        else if (blend === null) blend = other;
+        else if (blend !== other) return null;
+      }
+      return blend === null ? null : blends[blend]?.[mask] || null;
     }
 
     // ---------- chunk renderer: 16x16 tiles into a cached 512x512 canvas, LRU-evicted (max MAX_CHUNKS) ----------
@@ -156,9 +190,11 @@
         const wx = x0 + tx; const wy = y0 + ty; const px = tx * TILE; const py = ty * TILE;
         if (wx >= ww || wy >= wh) { rect(g, PAL.deep_water[0], px, py, TILE, TILE); continue; }
         const i = wy * ww + wx; const t = terrain[i]; const pal = PAL[TN[t]] || PAL.grass;
-        const art = tileArt[t];
+        const art = tileArt[t]?.filter(Boolean);
         if (t === T.deep_water || t === T.shallow_water) water = true;
-        if (art && art.length) g.drawImage(art[Math.floor(h2(wx, wy, 91) * art.length)], px, py, TILE, TILE);
+        const transition = transitionAt(wx, wy, t);
+        if (transition) g.drawImage(transition, px, py, TILE, TILE);
+        else if (art && art.length) g.drawImage(art[Math.floor(h2(wx, wy, 91) * art.length)], px, py, TILE, TILE);
         else {
           rect(g, pal[0], px, py, TILE, TILE);
           for (let k = 0; k < 3; k++) { const r = h2(wx * 3 + k, wy, 7); if (r < 0.55) rect(g, r < 0.27 ? pal[1] : pal[2], px + Math.floor(h2(wx, wy * 5 + k, 11) * 26), py + Math.floor(h2(wx * 7 + k, wy, 13) * 26), t === T.flower_meadow ? 3 : 6, t === T.flower_meadow ? 3 : 4); }
@@ -168,7 +204,9 @@
       // darker edge line where neighbouring terrain differs
       for (let ty = 0; ty < CH; ty++) for (let tx = 0; tx < CH; tx++) {
         const wx = x0 + tx; const wy = y0 + ty; if (wx >= ww || wy >= wh) continue;
-        const t = terrain[wy * ww + wx]; const e = (PAL[TN[t]] || PAL.grass)[3]; const px = tx * TILE; const py = ty * TILE;
+        const t = terrain[wy * ww + wx];
+        if (transitionAt(wx, wy, t)) continue;
+        const e = (PAL[TN[t]] || PAL.grass)[3]; const px = tx * TILE; const py = ty * TILE;
         if (wx + 1 < ww && terrain[wy * ww + wx + 1] !== t) rect(g, e, px + TILE - 2, py, 2, TILE);
         if (wx > 0 && terrain[wy * ww + wx - 1] !== t) rect(g, e, px, py, 2, TILE);
         if (wy + 1 < wh && terrain[(wy + 1) * ww + wx] !== t) rect(g, e, px, py + TILE - 2, TILE, 2);
@@ -247,7 +285,16 @@
       const txt = `${zi.name} · ${zi.danger}`;
       if (txt !== zoneTxt || force) { zoneTxt = txt; zName.textContent = txt; zName.style.color = zi.color; zoneEl.dataset.zone = String(zi.zone); }
       const dx = world.center.x - tx; const dy = world.center.y - ty; const dist = Math.round(Math.hypot(dx, dy));
-      const deg = Math.round(Math.atan2(dy, dx) * 180 / Math.PI / 5) * 5;
+      let goal = null;
+      let goalDistance = Infinity;
+      for (const portal of portals) {
+        const distance = (portal.tx - tx) ** 2 + (portal.ty - ty) ** 2;
+        if (distance < goalDistance) { goal = portal; goalDistance = distance; }
+      }
+      zArrow.title = goal ? 'Nearest dungeon portal' : 'Island centre';
+      zArrow.setAttribute('aria-label', zArrow.title);
+      const heading = goal ? Math.atan2(goal.ty - ty, goal.tx - tx) : Math.atan2(dy, dx);
+      const deg = Math.round(heading * 180 / Math.PI / 5) * 5;
       if (deg !== arrowDeg) { arrowDeg = deg; zArrow.style.transform = `rotate(${deg}deg)`; }
       const ct = `${tx},${ty} · centre ${dist}`;
       if (zCoords.textContent !== ct) zCoords.textContent = ct;
@@ -289,7 +336,7 @@
     }
     function giveBag(x, y, bag, info) {
       const got = { zone: info.zone, boss: !!info.boss, tier: bag.tier, items: [], shards: bag.shards, potions: bag.potions };
-      bag.items.forEach((it, k) => { const b = arena.dropBag(x + (k - (bag.items.length - 1) / 2) * 18, y + 10, it.r, it.id); if (b) got.items.push({ id: it.id, r: it.r }); });
+      bag.items.forEach((it, k) => { const b = arena.dropBag(x + (k - (bag.items.length - 1) / 2) * 18, y + 10, it.r, it.id, bag); if (b) got.items.push({ id: it.id, r: it.r }); });
       if (bag.shards > 0) { arena.save.shards += bag.shards; arena.run.shards += bag.shards; arena._floatText(x, y - 34, `+${bag.shards} 💎`, '#8fe9ff'); }
       if (bag.potions > 0) arena._sigHeal(12 * bag.potions);
       lastDrops.push(got); if (lastDrops.length > 12) lastDrops.shift();
@@ -400,7 +447,10 @@
       onStart() {
         if (pendingAt) { placeAt(pendingAt.x, pendingAt.y); pendingAt = null; } else placeAt(world.spawnPoint.x, world.spawnPoint.y);
         arena.run.wave = 0; arena.biome = 0;
-        resetZones(); kills = 0; promptFor = -2; leaving = false;
+        resetZones();
+        kills = 0; spawned = 0; despawned = 0; lastDrops.length = 0;
+        bossReadyNow.fill(0); bossT = 0; sweepT = 0;
+        promptFor = -2; leaving = false;
         if (save.returnTo) { save.returnTo = null; writeSave(save); } // back from a dungeon: the trip is over
         arena._showBanner(`The Realm · island #${seed}`, 1.8);
         savePos(true); syncHud(true);
@@ -446,7 +496,7 @@
     };
     arena.onEnemyKilled = onEnemyKilled; arena.onEnemyHit = onEnemyHit;
     arena.setMode('world');
-    arena.setWorld({ w: WW, h: WH, tile: TILE, camera: true, solidAt, shotSolidAt, onStart: hooks.onStart, tick: hooks.tick, drawUnder: hooks.drawUnder, drawOver: hooks.drawOver, pools: { enemies: 72, eBullets: 700 } });
+    arena.setWorld({ w: WW, h: WH, tile: TILE, camera: true, solidAt, shotSolidAt, moveScaleAt, onStart: hooks.onStart, tick: hooks.tick, drawUnder: hooks.drawUnder, drawOver: hooks.drawOver, pools: { enemies: 72, eBullets: 700 } });
     if (typeof window !== 'undefined') window.addEventListener('pagehide', () => savePos(true));
     if (opts.assetRoot && opts.tileArt !== false) loadTileArt(opts.assetRoot);
 

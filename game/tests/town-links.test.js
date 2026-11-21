@@ -24,7 +24,7 @@ const overlap = (a, b) => a && b && a.vis && b.vis && a.l < b.r && a.r > b.l && 
   await page.evaluate(() => { window.__confirms = []; window.confirm = (m) => { window.__confirms.push(m); return false; }; });
   await scene(page, (s) => { s.realmMenuOpen = false; s.inRealm = false; s.inUnderground = false; s.openRealmGateMenu(); });
   const gate = await page.evaluate(() => ({ open: !document.getElementById('realm-menu').classList.contains('hidden'), mm: document.getElementById('realm-menu-madmaze').dataset.href, text: document.getElementById('realm-menu-madmaze').textContent, solo: !!document.getElementById('realm-menu-solo'), players: !!document.getElementById('realm-menu-players') }));
-  check('gate menu shows Open Mad Maze (new) with the right href', gate.open && gate.mm === './games/mad-maze/index.html' && /Open Mad Maze \(new\)/.test(gate.text), JSON.stringify(gate));
+  check('gate menu opens the unified Realm overworld', gate.open && gate.mm === './games/mad-maze/index.html?mode=world' && /Enter the Realm/.test(gate.text), JSON.stringify(gate));
   await page.click('#realm-menu-madmaze');
   const cf = await page.evaluate(() => ({ c: window.__confirms, url: location.href }));
   check('clicking asks a confirm mentioning shared progress and the town closing', cf.c.length === 1 && /progress is shared/.test(cf.c[0]) && /town will close/.test(cf.c[0]), JSON.stringify(cf));
