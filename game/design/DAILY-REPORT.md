@@ -85,3 +85,5 @@
 - OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
 - 2026-11-21 (08:xx UTC): master at bf49e61 (PR #26). New on dev: Codex b16/b17 projectile art wired (class bolts, enemy bullets, hit sparks), world status effects (shrine buffs, creature debuffs, safe shore), backup v2 (realm/arms/stalk/jam keys), DB-blocking test helper, world-party protocol module, world phone perf probe. Full suite 174/174 on 0352708.
 - OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
+- 2026-11-21 (10:xx UTC): merged Codex b18 effects + b19 UI icons (registered), S13 unlock toast/ability sheet/UI icons, Nexus + pickups + daily quests in the Realm, Deepdelve goals + hub medals, S12 (hero-level passives, Nova II/Dash II, real wpn_ items, drops, shop). Test fixes: class-weapon-engine lifetime check made deterministic; dungeon image-injection checks now ignore our own HUD icons. Full suite 180/180 on 99e21ac.
+- OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
