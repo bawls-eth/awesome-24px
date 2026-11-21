@@ -907,6 +907,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "arena-world-hooks.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "world-bosskey.test.js": {
     "class": "browser",
     "tier": "full"
