@@ -116,7 +116,7 @@ const volley = (page) => page.evaluate(() => {
     a.setHeroWeapon(null); [a.enemies, a.pBullets].forEach((pool) => pool.forEach((o) => { o.active = false; }));
     return out;
   });
-  check('all 26 styles fire and deal damage', all.length === 26 && all.every((r) => r.dmg > 0), JSON.stringify(all.filter((r) => !(r.dmg > 0))));
+  check('all 30 styles fire and deal damage', all.length === 30 && all.every((r) => r.dmg > 0), JSON.stringify(all.filter((r) => !(r.dmg > 0))));
   await R.ctx.close();
 
   // (2) hammer_throw: the boomerang returns to the hero (ends within 16 px).

@@ -367,6 +367,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-splash.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "shared-mm-weapons.test.js": {
     "class": "node",
     "tier": "smoke"
