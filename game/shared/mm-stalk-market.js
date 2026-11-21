@@ -266,6 +266,40 @@
     s.wkBest = Math.max(s.wkBest, Math.min(MAX_PRICE, price));
     return { ok: true, qty, gain, save: s };
   }
+  // ---- neighbours (slice 3): offline NPC villagers with their own seeded prices; no network, no real players ----
+  const NEIGHBOURS = [
+    { id: 'pip', name: 'Pip the Mole' },
+    { id: 'maple', name: 'Maple' },
+    { id: 'bramble', name: 'Bramble' },
+  ];
+  const NEIGHBOUR_FEE = 15; // bells, fixed per deal
+  function neighbourWeek(id, week) { return generateWeek('neighbour|' + String(id) + '|' + int(week, 0, MAX_WEEK, 0)); }
+  function neighbourPrice(id, week, slot) {
+    slot = clampSlot(slot);
+    if (slot === 0) return 0; // neighbours only buy Monday to Saturday
+    return Math.min(MAX_PRICE, neighbourWeek(id, week).sell[slot - 1]);
+  }
+  // Offers at `slot`, plus which neighbour pays the most (ties go to the first listed).
+  function neighbourOffers(week, slot) {
+    const offers = NEIGHBOURS.map((n) => ({ id: n.id, name: n.name, price: neighbourPrice(n.id, week, slot), best: false }));
+    if (clampSlot(slot) > 0) { let b = offers[0]; offers.forEach((o) => { if (o.price > b.price) b = o; }); b.best = true; }
+    return offers;
+  }
+  function sellToNeighbour(save, id, week, slot, qty) {
+    const s = clone(cleanSave(save));
+    qty = int(qty, 0, MAX_HOLD, 0);
+    if (!NEIGHBOURS.some((n) => n.id === id)) return { ok: false, reason: 'neighbour', save: s };
+    if (qty < 1) return { ok: false, reason: 'quantity', save: s };
+    if (clampSlot(slot) === 0) return { ok: false, reason: 'no-sunday-sales', save: s };
+    if (qty > s.holdings) return { ok: false, reason: 'holdings', save: s };
+    const price = neighbourPrice(id, week, slot), gross = qty * price;
+    if (gross <= NEIGHBOUR_FEE) return { ok: false, reason: 'fee', save: s };
+    const gain = gross - NEIGHBOUR_FEE;
+    s.balance = Math.min(MAX_BALANCE, s.balance + gain); s.holdings -= qty; s.earned += gain;
+    s.wkBest = Math.max(s.wkBest, price);
+    return { ok: true, qty, price, gross, fee: NEIGHBOUR_FEE, gain, save: s };
+  }
+
   function maxBuy(save, wk) {
     return Math.max(0, Math.min(MAX_HOLD - save.holdings, Math.floor(save.balance / wk.buyPrice)));
   }
@@ -273,6 +307,6 @@
   return {
     CURRENCY, PATTERNS, PATTERN_NAMES, PATTERN_HINTS, SLOTS, SELL_SLOTS, MAX_HOLD, START_BALANCE, ALLOWANCE_FLOOR, MEDALS,
     clampWeek, weekNumber, slotOf, clampSlot, slotLabel, generateWeek, priceAt, knownPrices,
-    defaultSave, cleanSave, syncWeek, buy, sell, maxBuy, weekProfit, medalFor, rankFor, advise, GOALS, MAX_PRICE, goalsDone, latchGoals, goalStatus, lifetime,
+    defaultSave, cleanSave, syncWeek, buy, sell, maxBuy, weekProfit, medalFor, rankFor, advise, GOALS, MAX_PRICE, goalsDone, latchGoals, goalStatus, lifetime, NEIGHBOURS, NEIGHBOUR_FEE, neighbourWeek, neighbourPrice, neighbourOffers, sellToNeighbour,
   };
 }));

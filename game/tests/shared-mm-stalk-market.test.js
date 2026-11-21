@@ -75,5 +75,7 @@ check('advise is exported, pure and bounded', typeof M.advise === 'function' && 
 check('goals: three defined, break-even needs a sale and an empty stall', (() => { const w = M.generateWeek(100); let x = M.syncWeek(M.defaultSave(), 100).save; const open = (z) => M.goalStatus(z, w).filter((g) => !g.done).length; return M.GOALS.length === 3 && open(x) === 3 && open(M.buy(x, w, 0, 5).save) === 3; })());
 check('goals: profit goal at 500', (() => { const w = M.generateWeek(100); const x = Object.assign(M.syncWeek(M.defaultSave(), 100).save, { invested: 100, earned: 600 }); return M.goalStatus(x, w).find((g) => g.id === 'profit').done; })());
 check('lifetime stats and goal fields clamp', (() => { const c = M.cleanSave({ week: 3, goals: 99, wkBest: 1e9, total: 1e99, played: -3 }); return c.goals === 7 && c.wkBest === M.MAX_PRICE && c.total === 99999999 && c.played === 0 && M.lifetime(c).played === 0; })());
+check('neighbours: 3 offline NPCs, bounded prices, fixed fee', M.NEIGHBOURS.length === 3 && M.NEIGHBOUR_FEE > 0 && M.NEIGHBOURS.every((n) => M.neighbourWeek(n.id, 7).sell.every((v) => v >= 1 && v <= M.MAX_PRICE)));
+check('neighbours: sale nets price*qty minus fee', (() => { const w = M.generateWeek(100); const x = M.buy(M.syncWeek(M.defaultSave(), 100).save, w, 0, 5).save; const r = M.sellToNeighbour(x, 'pip', 100, 3, 5); return r.ok && r.gain === 5 * M.neighbourPrice('pip', 100, 3) - M.NEIGHBOUR_FEE; })());
 console.log(failed ? `${failed} FAILED` : 'ALL PASSED');
 process.exitCode = failed ? 1 : 0;

@@ -140,6 +140,21 @@
     return a;
   }
 
+  function renderNeighbours() {
+    var slot = curSlot(), ul = $('nb-list'); ul.textContent = '';
+    $('nb-fee').textContent = String(M.NEIGHBOUR_FEE);
+    M.neighbourOffers(curWeek(), slot).forEach(function (o) {
+      var li = document.createElement('li'); li.setAttribute('data-nb', o.id); li.className = o.best ? 'best' : '';
+      var t = document.createElement('strong'); t.textContent = o.name;
+      var d = document.createElement('span'); d.className = 'tag';
+      d.textContent = slot === 0 ? 'Not buying on Sunday' : o.price + ' bells each' + (o.best ? ' (best price today)' : '');
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'nb-sell';
+      b.textContent = 'Sell all here';
+      b.disabled = slot === 0 || save.holdings < 1 || save.holdings * o.price <= M.NEIGHBOUR_FEE;
+      b.addEventListener('click', function () { doSellNb(o.id); });
+      li.appendChild(t); li.appendChild(d); li.appendChild(b); ul.appendChild(li);
+    });
+  }
   var MEDAL_NAMES = { none: 'no medal', bronze: 'bronze', silver: 'silver', gold: 'gold' };
   function renderGoals() {
     var ul = $('goals'); ul.textContent = '';
@@ -184,7 +199,7 @@
     var known = M.knownPrices(wk, slot);
     $('chart-alt').textContent = 'Known prices: ' + known.join(', ') + '. Price history changes twice a day, Monday to Saturday.';
     if (!anim.running) drawChart();
-    renderAdvisor(); renderGoals();
+    renderAdvisor(); renderGoals(); renderNeighbours();
     // last week reveal
     $('last-card').hidden = !save.last;
     if (save.last) {
@@ -224,6 +239,15 @@
     var before = M.goalsDone(save, wk);
     save = M.latchGoals(r.save, wk); persist(); beep('levelup'); // sell cue
     say('Sold ' + r.qty + ' for ' + fmt(r.gain) + ' bells.' + (save.goals !== before ? ' A weekly goal is done!' : '')); render(); return r;
+  }
+  function doSellNb(id, n) {
+    sync();
+    var qty = n === undefined ? save.holdings : n;
+    var r = M.sellToNeighbour(save, id, curWeek(), curSlot(), qty);
+    if (!r.ok) { say(r.reason === 'fee' ? 'That deal would not cover the fee.' : (REASONS[r.reason] || 'Cannot do that.')); render(); return r; }
+    var before = M.goalsDone(save, wk);
+    save = M.latchGoals(r.save, wk); persist(); beep('levelup');
+    say('Sold ' + r.qty + ' to a neighbour at ' + r.price + ' each, fee ' + r.fee + ': +' + fmt(r.gain) + ' bells.' + (save.goals !== before ? ' A weekly goal is done!' : '')); render(); return r;
   }
   $('buy1').addEventListener('click', function () { doBuy(1); });
   $('buy10').addEventListener('click', function () { doBuy(10); });
@@ -273,6 +297,7 @@
       get anim() { return anim; }, get advice() { return M.advise(M.knownPrices(wk, curSlot())); },
       get sounds() { return sounds; },
       buy: function (n) { return doBuy(n); },
+      sellNeighbour: function (id, n) { return doSellNb(id, n); },
       sell: function (n) { return doSell(n); }
     };
   }

@@ -130,6 +130,11 @@ const stored = (p) => p.evaluate((k) => JSON.parse(localStorage.getItem(k)), KEY
   check('reduced motion: chart is static, no animation frames', await a2.page.evaluate(() => window.__stalk.anim.count === 0 && !window.__stalk.anim.running));
   await a2.ctx.close();
 
+  // slice 3: neighbours panel, goals, medal case present
+  const n1 = await open(browser, { viewport: { width: 800, height: 600 } }, '?test=1&week=100');
+  check('page lists neighbours, goal cards, medal case and all-time stats', await n1.page.evaluate(() => document.querySelectorAll('#nb-list li').length === 3 && document.querySelectorAll('#goals li').length === 3 && !!document.getElementById('medal-case') && !!document.getElementById('alltime')));
+  await n1.ctx.close();
+
   await browser.close();
   console.log(failed ? `${failed} FAILED` : 'ALL PASSED');
   process.exitCode = failed ? 1 : 0;
