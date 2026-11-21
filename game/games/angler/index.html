@@ -15,7 +15,11 @@
 </header>
 <div id="status" aria-label="Status">
   <span id="weather" title="Weather"><span id="weather-icon" aria-hidden="true"></span> <span id="weather-name"></span></span>
-  <span id="bait-box">Bait <output id="bait-val">0</output></span>
+  <span id="bait-box">Bait <output id="bait-val">0</output> <small id="bait-type"></small></span>
+  <span id="bells-box">Bells <output id="bells-val">0</output></span>
+  <button class="btn" id="tourney-btn" type="button">Tournament</button>
+  <button class="btn" id="market-btn" type="button">Market</button>
+  <button class="btn" id="aquarium-btn" type="button">Aquarium</button>
   <button class="btn" id="gear-btn" type="button">Gear <span id="gear-sum"></span></button>
 </div>
 <main id="stage">
@@ -36,7 +40,26 @@
     <div id="rods" class="gearrow"></div>
     <h3>Lures <small>(shift what bites)</small></h3>
     <div id="lures" class="gearrow"></div>
-    <p class="rule">Bait: add ?bait=N (0-99) to the page address. Each cast uses one bait for a quicker, richer bite.</p>
+    <p class="rule">Bait comes from catches and the Market. Each cast uses one equipped bait for a quicker, richer bite.</p>
+  </div>
+</section>
+<section id="tourney" class="overlay" hidden>
+  <div class="panel wide">
+    <div class="jhead"><h2>Daily Angler Tournament</h2><button class="btn" id="tourney-close" type="button">Close</button></div>
+    <div id="tourney-body"></div>
+  </div>
+</section>
+<section id="market" class="overlay" hidden>
+  <div class="panel wide">
+    <div class="jhead"><h2>Fish Market <span id="msum">Bells <output id="market-bells">0</output></span></h2><button class="btn" id="market-close" type="button">Close</button></div>
+    <h3>Sell fish</h3><div id="market-sell"></div>
+    <h3>Buy bait</h3><div id="market-buy"></div>
+  </div>
+</section>
+<section id="aquarium" class="overlay" hidden>
+  <div class="panel wide">
+    <div class="jhead"><h2>Aquarium</h2><button class="btn" id="aquarium-close" type="button">Close</button></div>
+    <div id="aq-body"></div>
   </div>
 </section>
 <section id="journal" class="overlay" hidden>
@@ -57,6 +80,7 @@
 <script src="../../shared/rng.js"></script>
 <script src="../../shared/store.js"></script>
 <script src="../../shared/mm-angler.js"></script>
+<script src="../../shared/mm-angler-depth.js"></script>
 <script src="angler.js"></script>
 </body>
 </html>

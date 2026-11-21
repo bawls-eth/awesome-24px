@@ -202,6 +202,43 @@ for (const boss of [false, true]) {
   check('different seed => different event schedule', JSON.stringify(Z.eventsFor(world, 1000)) !== JSON.stringify(Z.eventsFor(world2, 1000)) || JSON.stringify(Z.eventsFor(world, 5000)) !== JSON.stringify(Z.eventsFor(world2, 5000)));
 }
 
+// ---- eventPlan / eventTier / eventReward (live world events) ----
+{
+  const evs = []; for (let s = 0; s < 120; s++) Z.eventsFor(world, s * Z.EVENT_PERIOD).forEach((e) => evs.push(e));
+  const plans = evs.map((e) => Z.eventPlan(world, e));
+  check('eventPlan deterministic', JSON.stringify(plans) === JSON.stringify(evs.map((e) => Z.eventPlan(world, e))));
+  const kinds = new Set(plans.map((p) => p.kind));
+  check('eventPlan yields both kinds (boss raid and swarm)', kinds.has('boss') && kinds.has('swarm'), [...kinds].join(','));
+  const sites = world.structures.filter((s) => s.kind === 'event_site');
+  check('event plans happen at an event_site of their region (or the boss site when the region has none)', plans.every((p, i) => {
+    const own = sites.filter((s) => s.zone === p.region);
+    return own.length ? own.some((s) => s.x === p.site.x && s.y === p.site.y) : (p.site.x === evs[i].x && p.site.y === evs[i].y);
+  }));
+  check('boss plans use a boss of the region boss list', plans.every((p, i) => world.bossSites.some((b) => b.boss === p.boss && b.zone === p.region) && p.boss === evs[i].boss));
+  const sw = plans.filter((p) => p.kind === 'swarm');
+  const ct = O.CREATURE_TIERS;
+  check('swarm plans: region-sized wave of that region\'s creatures near the site, finite stats', sw.length > 0 && sw.every((p) => p.swarm.length === T.EVENT_SWARM_COUNT[p.region] &&
+    p.swarm.every((e) => ct[e.type] && ct[e.type][p.region].includes(e.creature) && e.zone === p.region && Math.hypot(e.x - (p.site.x + 0.5) * TILE, e.y - (p.site.y + 0.5) * TILE) <= T.EVENT_SWARM_SPREAD + 1 && Number.isFinite(e.hpMul) && e.hpMul > 1)));
+  check('boss plans carry no swarm', plans.filter((p) => p.kind === 'boss').every((p) => p.swarm.length === 0));
+  check('eventTier thresholds: none / participate / contribute / hero', Z.eventTier(0, 100) === 0 && Z.eventTier(0.5, 100) === 0 && Z.eventTier(1, 100) === 1 && Z.eventTier(24.9, 100) === 1 &&
+    Z.eventTier(25, 100) === 2 && Z.eventTier(59, 100) === 2 && Z.eventTier(60, 100) === 3 && Z.eventTier(500, 100) === 3 && Z.eventTier(5, 0) === 0 && Z.eventTier(NaN, 10) === 0);
+  const ev = evs[0];
+  check('eventReward: none for tier 0, deterministic otherwise', Z.eventReward(ev, 0, 's') === null && JSON.stringify(Z.eventReward(ev, 2, 's')) === JSON.stringify(Z.eventReward(ev, 2, 's')));
+  let okR = true;
+  evs.slice(0, 40).forEach((e, i) => {
+    let prev = null;
+    for (let t = 1; t <= 3; t++) {
+      const r = Z.eventReward(e, t, 'seed' + i);
+      const floor = Math.min(5, T.EVENT_MIN_BAG[t - 1] + e.region - 1);
+      if (!(r.bag.items.length >= 1 && r.bag.tierIndex >= floor && r.bag.tier === T.BAG_TIERS[r.bag.tierIndex] && r.tierName === T.EVENT_TIERS[t] && r.shards === T.EVENT_SHARDS[t - 1] * e.region && r.fame === T.EVENT_FAME[t - 1] * e.region)) okR = false;
+      if (r.bag.items.some((it) => !T.ITEM_IDS.includes(it.id) || (it.r === 3 && e.region !== 3))) okR = false;
+      if (prev && !(r.fame > prev.fame && r.shards > prev.shards)) okR = false;
+      prev = r;
+    }
+  });
+  check('eventReward: guaranteed bag (>=1 item) at or above the tier floor; fame/shards grow with the tier and region; epic only in the Godlands', okR);
+}
+
 // ---- source hygiene ----
 {
   const src = fs.readFileSync(path.join(__dirname, '../shared/mm-zones.js'), 'utf8');

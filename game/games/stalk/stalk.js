@@ -46,7 +46,8 @@
     syncMute();
     return sfx;
   }
-  function beep(n) { if (sfx) { try { sfx.play(n); } catch (e) { /* ignore */ } } }
+  var sounds = [];
+  function beep(n) { sounds.push(n); if (sounds.length > 20) sounds.shift(); if (sfx) { try { sfx.play(n); } catch (e) { /* ignore */ } } }
   function mutedStored() { try { return localStorage.getItem('mm-sfx-muted') === '1'; } catch (e) { return false; } }
   function syncMute() {
     var b = document.getElementById('btn-mute'); if (!b) return;
@@ -72,7 +73,8 @@
     c.fillStyle = '#8a6a4a'; c.fillRect(23, 42, 2, 5); // root
   }
 
-  function drawChart() {
+  function drawChart(prog) {
+    if (prog === undefined) prog = 1;
     var cv = $('chart'), c = cv.getContext('2d'), W = cv.width, H = cv.height;
     var slot = curSlot(), known = M.knownPrices(wk, slot);
     var L = 34, R = 10, T = 12, B = 26, pw = W - L - R, ph = H - T - B;
@@ -100,13 +102,81 @@
     // known prices
     c.strokeStyle = '#7fd18b'; c.lineWidth = 2;
     c.beginPath();
-    known.forEach(function (v, i) { if (i === 0) c.moveTo(X(i), Y(v)); else c.lineTo(X(i), Y(v)); });
+    // the newest point glides in from the previous one (prog 0..1); reduce-motion draws it final
+    function PX(i) { return i === slot && slot > 0 ? X(slot - 1) + (X(slot) - X(slot - 1)) * prog : X(i); }
+    function PY(i) { return i === slot && slot > 0 ? Y(known[slot - 1]) + (Y(known[slot]) - Y(known[slot - 1])) * prog : Y(known[i]); }
+    known.forEach(function (v, i) { if (i === 0) c.moveTo(PX(i), PY(i)); else c.lineTo(PX(i), PY(i)); });
     c.stroke();
     known.forEach(function (v, i) {
       c.fillStyle = i === slot ? '#ffd166' : '#7fd18b';
-      c.beginPath(); c.arc(X(i), Y(v), i === slot ? 5 : 3, 0, Math.PI * 2); c.fill();
+      c.beginPath(); c.arc(PX(i), PY(i), i === slot ? 5 : 3, 0, Math.PI * 2); c.fill();
     });
     c.lineWidth = 1;
+  }
+
+  var anim = { running: false, count: 0 };
+  function animateChart() {
+    if (reduced || curSlot() === 0 || typeof requestAnimationFrame !== 'function') { drawChart(1); return; }
+    anim.count++; anim.running = true;
+    var t0 = null, id = anim.count;
+    function frame(t) {
+      if (id !== anim.count) return;
+      if (t0 === null) t0 = t;
+      var p = Math.min(1, (t - t0) / 450);
+      drawChart(1 - Math.pow(1 - p, 3));
+      if (p < 1) requestAnimationFrame(frame); else anim.running = false;
+    }
+    drawChart(0); requestAnimationFrame(frame);
+  }
+  function renderAdvisor() {
+    var a = M.advise(M.knownPrices(wk, curSlot()));
+    $('advisor-text').textContent = a.text;
+    var ul = $('advisor-bars'); ul.textContent = '';
+    if (a.ready) M.PATTERNS.forEach(function (p) {
+      var li = document.createElement('li'); li.textContent = M.PATTERN_NAMES[p] + ': ' + Math.round(a.probs[p] * 100) + '%';
+      var bar = document.createElement('span'); bar.className = 'bar'; bar.style.width = Math.round(a.probs[p] * 100) + '%'; li.appendChild(bar);
+      ul.appendChild(li);
+    });
+    return a;
+  }
+
+  function renderNeighbours() {
+    var slot = curSlot(), ul = $('nb-list'); ul.textContent = '';
+    $('nb-fee').textContent = String(M.NEIGHBOUR_FEE);
+    M.neighbourOffers(curWeek(), slot).forEach(function (o) {
+      var li = document.createElement('li'); li.setAttribute('data-nb', o.id); li.className = o.best ? 'best' : '';
+      var t = document.createElement('strong'); t.textContent = o.name;
+      var d = document.createElement('span'); d.className = 'tag';
+      d.textContent = slot === 0 ? 'Not buying on Sunday' : o.price + ' bells each' + (o.best ? ' (best price today)' : '');
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'nb-sell';
+      b.textContent = 'Sell all here';
+      b.disabled = slot === 0 || save.holdings < 1 || save.holdings * o.price <= M.NEIGHBOUR_FEE;
+      b.addEventListener('click', function () { doSellNb(o.id); });
+      li.appendChild(t); li.appendChild(d); li.appendChild(b); ul.appendChild(li);
+    });
+  }
+  var MEDAL_NAMES = { none: 'no medal', bronze: 'bronze', silver: 'silver', gold: 'gold' };
+  function renderGoals() {
+    var ul = $('goals'); ul.textContent = '';
+    M.goalStatus(save, wk).forEach(function (g) {
+      var li = document.createElement('li'); li.className = g.done ? 'done' : ''; li.setAttribute('data-goal', g.id);
+      var t = document.createElement('strong'); t.textContent = g.title;
+      var d = document.createElement('span'); d.className = 'tag'; d.textContent = (g.done ? 'Done. ' : 'Open. ') + g.desc;
+      li.appendChild(t); li.appendChild(d); ul.appendChild(li);
+    });
+    var mu = $('medals'); mu.textContent = '';
+    var hist = save.history.slice().reverse();
+    hist.forEach(function (h) {
+      var m = M.medalFor(h.profit);
+      var li = document.createElement('li'); li.className = m === 'none' ? '' : 'done'; li.setAttribute('data-medal', m);
+      var dot = document.createElement('span'); dot.className = 'medal ' + m; dot.setAttribute('aria-hidden', 'true');
+      var t = document.createElement('strong'); t.textContent = 'Week ' + h.week;
+      var d = document.createElement('span'); d.className = 'tag'; d.textContent = MEDAL_NAMES[m] + ', ' + (h.profit > 0 ? '+' : '') + fmt(h.profit) + ' bells';
+      li.appendChild(dot); li.appendChild(t); li.appendChild(d); mu.appendChild(li);
+    });
+    $('medals-empty').hidden = hist.length > 0;
+    var L = M.lifetime(save);
+    $('at-best').textContent = fmt(L.best) + ' bells'; $('at-total').textContent = (L.total > 0 ? '+' : '') + fmt(L.total) + ' bells'; $('at-played').textContent = fmt(L.played);
   }
 
   function render() {
@@ -128,7 +198,8 @@
     $('sellall').textContent = save.holdings > 0 && !sunday ? 'Sell all (' + save.holdings + ')' : 'Sell all';
     var known = M.knownPrices(wk, slot);
     $('chart-alt').textContent = 'Known prices: ' + known.join(', ') + '. Price history changes twice a day, Monday to Saturday.';
-    drawChart();
+    if (!anim.running) drawChart();
+    renderAdvisor(); renderGoals(); renderNeighbours();
     // last week reveal
     $('last-card').hidden = !save.last;
     if (save.last) {
@@ -158,15 +229,25 @@
     sync();
     var r = M.buy(save, wk, curSlot(), n);
     if (!r.ok) { say(REASONS[r.reason] || 'Cannot do that.'); render(); return r; }
-    save = r.save; persist(); beep('pickup');
+    save = M.latchGoals(r.save, wk); persist(); beep('pickup'); // buy cue
     say('Bought ' + r.qty + ' for ' + fmt(r.cost) + ' bells.'); render(); return r;
   }
   function doSell(n) {
     sync();
     var r = M.sell(save, wk, curSlot(), n);
     if (!r.ok) { say(REASONS[r.reason] || 'Cannot do that.'); render(); return r; }
-    save = r.save; persist(); beep('pickup');
-    say('Sold ' + r.qty + ' for ' + fmt(r.gain) + ' bells.'); render(); return r;
+    var before = M.goalsDone(save, wk);
+    save = M.latchGoals(r.save, wk); persist(); beep('levelup'); // sell cue
+    say('Sold ' + r.qty + ' for ' + fmt(r.gain) + ' bells.' + (save.goals !== before ? ' A weekly goal is done!' : '')); render(); return r;
+  }
+  function doSellNb(id, n) {
+    sync();
+    var qty = n === undefined ? save.holdings : n;
+    var r = M.sellToNeighbour(save, id, curWeek(), curSlot(), qty);
+    if (!r.ok) { say(r.reason === 'fee' ? 'That deal would not cover the fee.' : (REASONS[r.reason] || 'Cannot do that.')); render(); return r; }
+    var before = M.goalsDone(save, wk);
+    save = M.latchGoals(r.save, wk); persist(); beep('levelup');
+    say('Sold ' + r.qty + ' to a neighbour at ' + r.price + ' each, fee ' + r.fee + ': +' + fmt(r.gain) + ' bells.' + (save.goals !== before ? ' A weekly goal is done!' : '')); render(); return r;
   }
   $('buy1').addEventListener('click', function () { doBuy(1); });
   $('buy10').addEventListener('click', function () { doBuy(10); });
@@ -183,12 +264,12 @@
   });
 
   // Real-time week/slot changes while the page stays open (no nagging, just keeps the numbers right).
-  function tick() { var before = curSlot(); var rolled = sync(); if (rolled || before !== lastSlot) { lastSlot = before; if (rolled && spoiledNote) { say(spoiledNote + ' stalks spoiled over the weekend. A fresh week has started.'); spoiledNote = 0; } render(); } }
-  var lastSlot = -1;
+  function tick() { var before = curSlot(); var rolled = sync(); if (rolled || before !== lastSlot) { lastSlot = before; animateChartSoon = true; if (rolled && spoiledNote) { say(spoiledNote + ' stalks spoiled over the weekend. A fresh week has started.'); spoiledNote = 0; } render(); if (animateChartSoon) { animateChartSoon = false; animateChart(); } } }
+  var lastSlot = -1, animateChartSoon = false;
   sync();
   if (spoiledNote) { say(spoiledNote + ' stalks spoiled over the weekend. A fresh week has started.'); spoiledNote = 0; }
   persist();
-  drawIcon(); syncMute(); lastSlot = curSlot(); render();
+  drawIcon(); syncMute(); lastSlot = curSlot(); render(); animateChart();
   if (testWeek === null && testSlot === null) setInterval(tick, 20000);
   document.addEventListener('visibilitychange', function () { if (!document.hidden && testSlot === null) tick(); });
 
@@ -204,7 +285,7 @@
         if (testWeek === null) testWeek = M.weekNumber(new Date());
         var before = save.week; sync();
         if (spoiledNote) { say(spoiledNote + ' stalks spoiled over the weekend. A fresh week has started.'); spoiledNote = 0; }
-        void before; persist(); render();
+        void before; persist(); render(); animateChart();
       },
       step: function (n) {
         n = n === undefined ? 1 : Math.trunc(Number(n)) || 0;
@@ -213,7 +294,10 @@
         while (s < 0) { s += M.SLOTS; w = Math.max(0, w - 1); }
         this.setTime(w, s);
       },
+      get anim() { return anim; }, get advice() { return M.advise(M.knownPrices(wk, curSlot())); },
+      get sounds() { return sounds; },
       buy: function (n) { return doBuy(n); },
+      sellNeighbour: function (id, n) { return doSellNb(id, n); },
       sell: function (n) { return doSell(n); }
     };
   }

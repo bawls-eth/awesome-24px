@@ -1,4 +1,16 @@
 {
+  "angler-tournament.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "angler-economy.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "angler-aquarium.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "angler-page.test.js": {
     "class": "browser",
     "tier": "smoke"
@@ -91,6 +103,18 @@
     "class": "live",
     "tier": "full"
   },
+  "deepdelve-crafting.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "deepdelve-daynight.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "deepdelve-mobs.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "deepdelve-page.test.js": {
     "class": "browser",
     "tier": "smoke"
@@ -100,6 +124,10 @@
     "tier": "full"
   },
   "deepdelve-polish.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "dungeon-biomes.test.js": {
     "class": "browser",
     "tier": "full"
   },
@@ -132,6 +160,18 @@
     "tier": "smoke"
   },
   "jam-page.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "jam-concert.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "jam-practice.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "jam-results.test.js": {
     "class": "browser",
     "tier": "smoke"
   },
@@ -251,6 +291,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-angler-tournament.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "shared-mm-angler.test.js": {
     "class": "node",
     "tier": "smoke"
@@ -260,6 +304,10 @@
     "tier": "smoke"
   },
   "shared-mm-arena-signature.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-biomes.test.js": {
     "class": "node",
     "tier": "smoke"
   },
@@ -276,6 +324,18 @@
     "tier": "smoke"
   },
   "shared-mm-daily-ghost-board-access.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-dd-craft.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-dd-mobs.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-dd-time.test.js": {
     "class": "node",
     "tier": "smoke"
   },
@@ -347,6 +407,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-stash.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "shared-mm-stats-patterns.test.js": {
     "class": "node",
     "tier": "smoke"
@@ -379,6 +443,18 @@
     "class": "live",
     "tier": "full"
   },
+  "stalk-advisor.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "stalk-goals.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "stalk-neighbours.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "stalk-page.test.js": {
     "class": "browser",
     "tier": "smoke"
@@ -399,7 +475,15 @@
     "class": "browser",
     "tier": "full"
   },
+  "world-events.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "world-page.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "world-stash.test.js": {
     "class": "browser",
     "tier": "smoke"
   }

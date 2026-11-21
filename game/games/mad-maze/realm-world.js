@@ -39,7 +39,7 @@
     if (typeof o === 'string') { try { o = JSON.parse(o); } catch (e) { o = null; } }
     if (!o || typeof o !== 'object' || Array.isArray(o)) o = {};
     const out = {};
-    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
+    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo|evT|evDone|finds)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
     out.v = 1;
     out.seed = cleanSeed(o.seed);
     out.version = Number.isInteger(o.version) && o.version > 0 && o.version < 1000 ? o.version : 0;
@@ -47,13 +47,24 @@
     out.pos = p && Number.isInteger(p.x) && Number.isInteger(p.y) && p.x >= 0 && p.y >= 0 && p.x < 4096 && p.y < 4096 ? { x: p.x, y: p.y } : null;
     const st = o.stats && typeof o.stats === 'object' ? o.stats : {};
     const n = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Math.min(Math.floor(Number(v)), 9999999) : 0);
-    out.stats = { kills: n(st.kills), bossKills: n(st.bossKills), portals: n(st.portals) };
+    out.stats = { kills: n(st.kills), bossKills: n(st.bossKills), portals: n(st.portals), events: n(st.events), eventWins: n(st.eventWins) };
+    // world events (additive): the event clock (s) and the ids of events already finished on it, so a reload never replays them
+    out.evT = Number.isFinite(Number(o.evT)) && Number(o.evT) > 0 ? Math.min(Math.floor(Number(o.evT)), 1e9) : 0;
+    out.evDone = (Array.isArray(o.evDone) ? o.evDone : []).filter((id) => typeof id === 'string' && /^ev:\d{1,9}:[1-3]$/.test(id)).slice(-12);
     const r = o.returnTo && typeof o.returnTo === 'object' ? o.returnTo : null;
+    if (o.finds !== undefined) out.finds = window.MMStash ? MMStash.cleanFinds(o.finds) : o.finds; // owned by MMStash (Lantern payout)
     out.returnTo = r && Number.isInteger(r.x) && Number.isInteger(r.y) && r.x >= 0 && r.y >= 0 && r.x < 4096 && r.y < 4096 && cleanSeed(r.seed) ? { x: r.x, y: r.y, seed: cleanSeed(r.seed) } : null;
     return out;
   }
   function readSave() { try { return cleanSave(localStorage.getItem(SAVE_KEY)); } catch (e) { return cleanSave(null); } }
-  function writeSave(s) { try { localStorage.setItem(SAVE_KEY, JSON.stringify(cleanSave(s))); return true; } catch (e) { return false; } }
+  function writeSave(s) {
+    try {
+      const c = cleanSave(s); // `finds` belongs to MMStash: always keep what storage holds (never an older in-memory copy)
+      let cur = null; try { cur = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) { cur = null; }
+      if (cur && typeof cur === 'object' && cur.finds !== undefined) c.finds = window.MMStash ? MMStash.cleanFinds(cur.finds) : cur.finds; else delete c.finds;
+      localStorage.setItem(SAVE_KEY, JSON.stringify(c)); return true;
+    } catch (e) { return false; }
+  }
 
   function create(arena, opts) {
     opts = opts || {};
@@ -276,7 +287,7 @@
     let miniKey = ''; let hudT = 0; let zoneTxt = ''; let arrowDeg = -1; let miniDraws = 0; let lastZone = null;
     function drawMini(force) {
       const p = arena.player; const tx = Math.floor(p.x / TILE); const ty = Math.floor(p.y / TILE);
-      const key = (tx >> 1) + ',' + (ty >> 1) + ',' + bossesKey();
+      const key = (tx >> 1) + ',' + (ty >> 1) + ',' + bossesKey() + ',' + evMiniKey;
       if (!force && key === miniKey) return;
       miniKey = key; miniDraws++;
       if (!miniBase) miniBase = buildMiniBase();
@@ -284,6 +295,7 @@
       g.imageSmoothingEnabled = true; g.drawImage(miniBase, 0, 0, ww, wh, 0, 0, mini.width, mini.height);
       for (let i = 0; i < portals.length; i++) { const q = portals[i]; g.fillStyle = '#000'; g.fillRect(q.tx * sx - 2.5, q.ty * sy - 2.5, 5, 5); g.fillStyle = q.col; g.fillRect(q.tx * sx - 1.5, q.ty * sy - 1.5, 3, 3); }
       for (let i = 0; i < world.bossSites.length; i++) { const b = world.bossSites[i]; g.fillStyle = bossMarkCol(i); g.beginPath(); g.arc(b.x * sx, b.y * sy, 2, 0, Math.PI * 2); g.fill(); }
+      evState.forEach((st) => { if (st.phase === 'upcoming' || st.phase === 'active') drawBeacon(g, st.plan.site.x * sx, st.plan.site.y * sy, st.phase === 'active' ? 4 : 3, st.phase === 'active' ? '#ff8a2a' : '#ffe27a', 0, true); });
       g.fillStyle = '#000'; g.fillRect(tx * sx - 2.5, ty * sy - 2.5, 5, 5); g.fillStyle = '#fff'; g.fillRect(tx * sx - 1.5, ty * sy - 1.5, 3, 3);
     }
     function syncHud(force) {
@@ -355,8 +367,9 @@
       if (!dropAll && MMRng.create('dropchance:' + rs).next() >= Z.dropChance(info)) return null;
       return giveBag(x, y, Z.rollDrop(info, rs).bag, info);
     }
-    function onEnemyHit(e) { if (zones && e.zid >= 0) zones.markCombat(e.zid); }
+    function onEnemyHit(e, dmg) { if (evOnHit(e, dmg)) return; if (zones && e.zid >= 0) zones.markCombat(e.zid); }
     function onEnemyKilled(e) {
+      if (e.evid) { evOnKilled(e); return; }
       if (!zones) return;
       if (e.zid >= 0) {
         const info = zones.markDead(e.zid, arena.clock); live.delete(e.zid); e.zid = -1;
@@ -395,22 +408,185 @@
         bossReadyNow[i] = !e && zones.bossReady(b, arena.clock) ? 1 : 0;
         if (e && !e.active) { bossLive[i] = null; miniKey = ''; continue; }
         if (e) { if (d > 40 * TILE) { e.active = false; bossLive[i] = null; arena._syncBoss(); miniKey = ''; } continue; } // walked away: it rests (no cooldown)
-        if (alive < 0 && d < 9 * TILE && zones.bossReady(b, arena.clock)) spawnBoss(i);
+        if (alive < 0 && !arena._boss() && d < 9 * TILE && zones.bossReady(b, arena.clock)) spawnBoss(i); // never next to a raid boss
       }
     }
     function bossesKey() { let k = ''; for (let i = 0; i < bossLive.length; i++) k += bossLive[i] ? 'L' : zones && zones.bossReady(world.bossSites[i], arena.clock) ? 'R' : 'c'; return k; }
     function bossMarkCol(i) { return bossLive[i] ? '#ff5fa2' : zones && zones.bossReady(world.bossSites[i], arena.clock) ? '#ff3b3b' : '#6b6b6b'; }
 
+    // ---------- world events (MMZones.eventsFor + eventPlan): announce, beacon, spawn at the site, contribution, reward, expiry ----------
+    // Time source: the event clock = evBase + arena.clock (game time: pause freezes it). evBase carries the saved clock across visits and
+    // is what the test hook setEventClock moves. Everything else is seeded (eventsFor / eventPlan / eventReward): no Math.random here.
+    const ZT = Z.TABLES;
+    const REGION_NAME = ['Shore', 'Midlands', 'Highlands', 'Godlands'];
+    const KIND_NAME = { boss: 'Raid', swarm: 'Swarm' };
+    const evState = new Map(); // event id -> {id, ev, plan, phase: upcoming|active|won|expired, ents, total, dealt, announced, reward}
+    const evDone = new Set(save.evDone);
+    let evBase = 0; let evT = 0; let evStarted = false; let lastEvClock = 0; let evCredit = true; let evList = []; let evFocus = null; let lastEvReward = null; let evMiniKey = ''; let hintT = 0; let spawnHint = '';
+    const evEl = document.createElement('div'); evEl.className = 'rw-event hidden'; evEl.id = 'rw-event'; zoneEl.appendChild(evEl);
+    const hintEl = document.createElement('div'); hintEl.id = 'rw-event-hint'; hintEl.className = 'hidden'; hintEl.setAttribute('role', 'status'); ov.appendChild(hintEl);
+    const eventClock = () => evBase + arena.clock;
+    const fmtT = (s) => { s = Math.max(0, Math.ceil(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+    const siteXY = (st) => ({ x: (st.plan.site.x + 0.5) * TILE, y: (st.plan.site.y + 0.5) * TILE });
+    function evTitle(st) { return st.plan.kind === 'boss' ? `${pretty(st.plan.boss)} raid` : `${REGION_NAME[st.plan.region]} swarm`; }
+    function evStateFor(ev) {
+      let st = evState.get(ev.id);
+      if (!st) {
+        st = { id: ev.id, ev, plan: Z.eventPlan(world, ev), phase: evDone.has(ev.id) ? 'won' : 'upcoming', ents: [], total: 0, dealt: 0, announced: false, reward: null, spawns: 0 };
+        evState.set(ev.id, st);
+      } else st.ev = ev;
+      return st;
+    }
+    function evAliveEnts(st) { let n = 0; for (let i = 0; i < st.ents.length; i++) { const e = st.ents[i]; if (e.active && e.evid === st.id) n++; } return n; }
+    function evRest(st) { // despawn its creatures without a result (walked away, restart): it can spawn again while it lasts
+      for (let i = 0; i < st.ents.length; i++) { const e = st.ents[i]; if (e.active && e.evid === st.id) e.active = false; if (e.evid === st.id) e.evid = null; }
+      st.ents = []; st.total = 0; st.dealt = 0; arena._syncBoss();
+    }
+    function evFinish(st, phase) {
+      st.phase = phase; evMiniKey = ''; miniKey = '';
+      if (phase === 'won') { evDone.add(st.id); save.evDone = Array.from(evDone).slice(-12); } // expired ones drop out of eventsFor by themselves
+      if (phase === 'expired') evRest(st);
+      writeSave(save);
+    }
+    function spawnEvent(st) {
+      const p = st.plan; st.ents = []; st.total = 0; st.dealt = 0; st.spawns++;
+      if (p.kind === 'boss') {
+        const rec = Z.bossEnemy({ x: p.site.x, y: p.site.y, zone: p.region }, TILE);
+        const e = arena.spawnEnemy('boss', rec.x, rec.y);
+        if (!e) return false;
+        e.maxHp = Math.max(1, Math.ceil(RM_BOSS_HP * rec.hpMul / ZT.BOSS.hp)); e.hp = e.maxHp;
+        e.phase = 1; e.invuln = 1.2; e.cd = 1.2; e.cd2 = 2.4; e.angle = 0;
+        e.dmgMul = rec.dmgMul; e.bossName = pretty(p.boss); e.bossTier = p.region + 1; e.art = p.boss; e.evid = st.id;
+        st.ents.push(e); st.total = e.maxHp; arena.bossT0 = arena.clock; arena._syncBoss();
+        hintT = 3.5; spawnHint = hintEl.textContent = `⚠ ${e.bossName}: a red ring flashes 1 s before each burst. Move when you see it.`;
+      } else {
+        for (let k = 0; k < p.swarm.length; k++) {
+          const r = p.swarm[k]; let x = r.x; let y = r.y;
+          if (solidAt(x, y)) { const f = nearestFree(Math.floor(x / TILE), Math.floor(y / TILE), 6) || nearestFree(p.site.x, p.site.y, 6); if (!f) continue; x = (f.x + 0.5) * TILE; y = (f.y + 0.5) * TILE; }
+          const e = arena.spawnEnemy(r.type, x, y);
+          if (!e) break; // pool full: the swarm is smaller
+          const def = RM_ENEMIES[r.type];
+          e.maxHp = Math.max(1, Math.ceil(def.hp * r.hpMul)); e.hp = e.maxHp;
+          e.spdMul = r.speedMul; e.dmgMul = r.dmgMul; e.xpMul = r.xpMul; e.shardMul = r.shardMul; e.art = r.creature; e.zone = r.zone; e.tier = r.tier; e.evid = st.id;
+          st.ents.push(e); st.total += e.maxHp;
+        }
+        if (!st.ents.length) return false;
+        hintT = 3; spawnHint = hintEl.textContent = `⚠ ${st.ents.length} creatures swarm the site. Clear them all before the timer ends!`;
+      }
+      arena._showBanner(`${evTitle(st)}! ${fmtT(st.ev.endsAt - eventClock())} to win it`, 1.8);
+      evMiniKey = ''; miniKey = '';
+      return true;
+    }
+    function evWin(st) {
+      const tier = Z.eventTier(st.dealt, st.total);
+      const rew = tier ? Z.eventReward(st.ev, tier, seed + ':' + st.id) : null;
+      const p = arena.player;
+      const res = { id: st.id, kind: st.plan.kind, region: st.plan.region, tier, tierName: ZT.EVENT_TIERS[tier], dealt: st.dealt, total: st.total, share: st.total ? st.dealt / st.total : 0, shards: 0, fame: 0, bag: null };
+      save.stats.events++;
+      if (rew) {
+        res.bag = giveBag(p.x, p.y - 26, rew.bag, { zone: st.plan.region, boss: true, event: true });
+        arena.save.shards += rew.shards; arena.run.shards += rew.shards; res.shards = rew.shards; res.fame = rew.fame;
+        save.stats.eventWins++;
+        if (api.onEventFame) api.onEventFame(rew.fame, res);
+        arena.onSave(arena.save); arena._syncHud();
+        arena._showBanner(`🏆 ${evTitle(st)} won! ${ZT.EVENT_TIERS[tier]} · +${rew.shards} 💎 · +${rew.fame} fame`, 2.6);
+      } else arena._showBanner(`${evTitle(st)} is over. Deal damage to earn a share of the reward.`, 2.2);
+      st.reward = res; lastEvReward = res;
+      evFinish(st, 'won');
+      return res;
+    }
+    function evTick() {
+      const now = eventClock(); const p = arena.player;
+      evList = Z.eventsFor(world, now);
+      const seen = new Set();
+      for (let i = 0; i < evList.length; i++) {
+        const ev = evList[i]; seen.add(ev.id);
+        const st = evStateFor(ev);
+        if (st.phase === 'won' || st.phase === 'expired') continue;
+        if (!ev.active) {
+          st.phase = 'upcoming';
+          if (!st.announced && ev.countdown <= ZT.EVENT_ANNOUNCE) { st.announced = true; arena._showBanner(`⚑ ${evTitle(st)} in ${Math.ceil(ev.countdown)} s (${REGION_NAME[st.plan.region]}, see the map)`, 2); }
+          continue;
+        }
+        if (st.phase === 'upcoming') { st.phase = 'active'; st.announced = true; evMiniKey = ''; }
+        const c = siteXY(st); const d = Math.hypot(p.x - c.x, p.y - c.y);
+        if (st.ents.length) {
+          if (evAliveEnts(st) === 0) evRest(st); // its creatures vanished without dying (restart, pool cleared): it can spawn again
+          else if (d > ZT.EVENT_LEASH * TILE) evRest(st); // walked away: it rests
+        }
+        if (!st.ents.length && d < ZT.EVENT_SPAWN_RADIUS * TILE && arena.state === 'play' && !(st.plan.kind === 'boss' && (bossAlive() >= 0 || arena._boss()))) spawnEvent(st);
+      }
+      evState.forEach((st, id) => { // eventsFor omits finished events: an unresolved one that dropped out has expired
+        if (seen.has(id)) return;
+        if (st.phase === 'active' || st.phase === 'upcoming') {
+          const was = st.phase === 'active' && (st.ents.length > 0 || st.dealt > 0);
+          evFinish(st, 'expired');
+          if (was) arena._showBanner(`⌛ The ${evTitle(st)} faded away.`, 2);
+        } else if (now > st.ev.endsAt + ZT.EVENT_PERIOD || now < st.ev.startsAt - ZT.EVENT_PERIOD) evState.delete(id);
+      });
+      evFocus = null; let best = Infinity; // the HUD follows the event you are in, else the nearest active one, else the next to start
+      for (let i = 0; i < evList.length; i++) {
+        const st = evState.get(evList[i].id); if (!st || st.phase === 'won' || st.phase === 'expired') continue;
+        const c = siteXY(st); const d = Math.hypot(p.x - c.x, p.y - c.y);
+        const score = st.ents.length ? d : st.phase === 'active' ? 1e7 + d : 2e7 + st.ev.startsAt;
+        if (score < best) { best = score; evFocus = st; }
+      }
+      syncEventHud();
+      const k = evKey(); if (k !== evMiniKey) { evMiniKey = k; miniKey = ''; }
+    }
+    function evKey() { let k = ''; evState.forEach((st) => { if (st.phase === 'upcoming' || st.phase === 'active') k += st.id + st.phase[0] + (st.ents.length ? 'L' : '') + ';'; }); return k; }
+    function syncEventHud() {
+      const st = evFocus;
+      if (!st) { if (!evEl.classList.contains('hidden')) { evEl.classList.add('hidden'); evEl.textContent = ''; } evEl.dataset.state = ''; return; }
+      const now = eventClock();
+      const share = st.total ? Math.floor(st.dealt / st.total * 100) : 0;
+      const txt = st.phase === 'active'
+        ? `⚑ ${KIND_NAME[st.plan.kind]}: ${st.plan.kind === 'boss' ? pretty(st.plan.boss) : REGION_NAME[st.plan.region]} · ${fmtT(st.ev.endsAt - now)} left${st.ents.length ? ` · you ${share}%` : ''}`
+        : `⚑ ${KIND_NAME[st.plan.kind]} in ${fmtT(st.ev.startsAt - now)} · ${REGION_NAME[st.plan.region]}`;
+      if (evEl.textContent !== txt) evEl.textContent = txt;
+      evEl.classList.remove('hidden');
+      evEl.dataset.state = st.phase; evEl.dataset.kind = st.plan.kind; evEl.dataset.id = st.id;
+    }
+    function evHint(dt) { // the telegraphed-attack banner: a boss raid's next burst, and the spawn hints
+      let show = false; let incoming = '';
+      if (hintT > 0) { hintT -= dt; show = true; }
+      evState.forEach((st) => { // an incoming burst outranks the spawn hint
+        if (st.phase !== 'active' || st.plan.kind !== 'boss') return;
+        const e = st.ents[0]; if (!e || !e.active || e.evid !== st.id || e.invuln > 0) return;
+        if (e.cd2 < 1 && Math.hypot(arena.player.x - e.x, arena.player.y - e.y) < 20 * TILE) incoming = e.phase === 1 ? `⚠ ${e.bossName}: aimed fan incoming. Sidestep!` : `⚠ ${e.bossName}: ring burst incoming. Slip through a gap!`;
+      });
+      if (incoming) { show = true; if (hintEl.textContent !== incoming) hintEl.textContent = incoming; } else if (show && hintT > 0 && spawnHint && hintEl.textContent !== spawnHint) hintEl.textContent = spawnHint;
+      if (show === hintEl.classList.contains('hidden')) hintEl.classList.toggle('hidden', !show);
+    }
+    function evOnHit(e, dmg) {
+      if (!e.evid) return false;
+      const st = evState.get(e.evid); if (!st || st.ents.indexOf(e) < 0) return true;
+      if (evCredit && dmg > 0) st.dealt = Math.min(st.total, st.dealt + Math.min(dmg, Math.max(0, e.hp)));
+      return true;
+    }
+    function evOnKilled(e) {
+      const st = evState.get(e.evid); e.evid = null;
+      if (!st || st.ents.indexOf(e) < 0 || st.phase !== 'active') return;
+      let left = 0; for (let i = 0; i < st.ents.length; i++) if (st.ents[i].active && st.ents[i].evid === st.id) left++;
+      if (left === 0) evWin(st);
+    }
+    function drawBeacon(g, x, y, r, col, tt, reduced) { // the event_beacon marker, drawn in code (minimap and world)
+      const k = reduced ? 1 : 0.8 + 0.2 * Math.sin(tt * 4);
+      g.fillStyle = '#000'; g.beginPath(); g.moveTo(x, y - r - 1.5); g.lineTo(x + r + 1.5, y); g.lineTo(x, y + r + 1.5); g.lineTo(x - r - 1.5, y); g.closePath(); g.fill();
+      g.fillStyle = col; g.globalAlpha = k; g.beginPath(); g.moveTo(x, y - r); g.lineTo(x + r, y); g.lineTo(x, y + r); g.lineTo(x - r, y); g.closePath(); g.fill(); g.globalAlpha = 1;
+    }
+    function evMarkers() { const o = []; evState.forEach((st) => { if (st.phase === 'upcoming' || st.phase === 'active') o.push({ id: st.id, x: st.plan.site.x, y: st.plan.site.y, phase: st.phase, kind: st.plan.kind }); }); return o; }
+
     // ---------- portals into Warren dungeons and back (slice 7) ----------
     const RETURN_RE = /^index\.html\?mode=world&seed=[A-Za-z0-9_-]{1,24}&at=\d{1,4},\d{1,4}(&test=1)?$/;
-    const portalBtn = document.createElement('button'); portalBtn.id = 'rw-portal'; portalBtn.type = 'button'; portalBtn.className = 'hidden'; portalBtn.textContent = 'Enter Warren dungeon';
+    const portalBtn = document.createElement('button'); portalBtn.id = 'rw-portal'; portalBtn.type = 'button'; portalBtn.className = 'hidden'; portalBtn.textContent = 'Enter Warren dungeon'; // retitled per portal biome in portalTick
     ov.appendChild(portalBtn);
     let promptFor = -1; let leaving = false;
     function portalSeed(i) { return String(MMRng.hash(seed + ':portal:' + i) % 100000); }
     function portalUrls(i) {
       const q = portals[i];
       const ret = 'index.html?mode=world&seed=' + seed + '&at=' + q.tx + ',' + q.ty + (opts.test ? '&test=1' : '');
-      const url = 'index.html?mode=dungeon&seed=' + portalSeed(i) + '&lv=2&return=' + encodeURIComponent(ret) + (opts.test ? '&test=1' : '');
+      const url = 'index.html?mode=dungeon&seed=' + portalSeed(i) + '&lv=2&biome=' + (BIOME_NAME[q.biome] ? q.biome : 'warren') + '&return=' + encodeURIComponent(ret) + (opts.test ? '&test=1' : '');
       return { ret: RETURN_RE.test(ret) ? ret : null, url };
     }
     function enterPortal(i) {
@@ -419,7 +595,7 @@
       if (!u.ret) return null;
       leaving = true;
       save.pos = { x: q.tx, y: q.ty }; save.returnTo = { x: q.tx, y: q.ty, seed }; save.stats.portals++;
-      writeSave(save); arena.onSave(arena.save);
+      writeSave(save); arena.onSave(arena.save); settle('portal');
       api.lastPortalUrl = u.url;
       arena.stop(); portalBtn.classList.add('hidden');
       if (opts.navigate !== false) location.href = u.url;
@@ -432,8 +608,26 @@
       if (arena.state === 'play' && !arena.paused) for (let i = 0; i < portals.length; i++) { const dx = p.x - portals[i].x; const dy = p.y - portals[i].y; if (dx * dx + dy * dy < 40 * 40) { near = i; break; } }
       if (near !== promptFor) {
         promptFor = near; portalBtn.classList.toggle('hidden', near < 0);
-        if (near >= 0) portalBtn.setAttribute('aria-label', `Enter Warren dungeon (${portals[near].label}, Enter)`);
+        if (near >= 0) { const bn = BIOME_NAME[portals[near].biome] || 'Warren'; portalBtn.textContent = `Enter ${bn} dungeon`; portalBtn.setAttribute('aria-label', `Enter ${bn} dungeon (${portals[near].label}, Enter)`); }
       }
+    }
+
+    // ---------- Lantern stash payout (MMStash): finds recorded on pickup, settled at the end of a leg ----------
+    const ST = window.MMStash && window.MMProfile ? window.MMStash : null;
+    const shards0 = arena.save.shards; const sess = { items: 0, fame: 0, waiting: 0 }; let lastSettle = null;
+    const shardsGained = () => Math.max(0, arena.save.shards - shards0);
+    function settle(src) {
+      if (!ST) return null;
+      let r = null; try { r = ST.settle(localStorage, { Profile: MMProfile, realmItems: arena.save.items, shards: shardsGained(), src: 'world', force: src === 'test' }); } catch (e) { r = null; }
+      if (r && r.ok) { sess.items += r.items; sess.fame += r.fame; sess.waiting = r.waiting; lastSettle = { src, items: r.items, stash: r.stash, hero: r.hero, waiting: r.waiting, fame: r.fame, dropped: r.dropped }; }
+      return r;
+    }
+    const stashNote = () => (ST ? ST.text({ items: sess.items, shards: shardsGained(), fame: sess.fame, waiting: sess.waiting }) : '');
+    if (ST) {
+      arena.onItem = (it) => { try { ST.recordTo(localStorage, it, 'world'); } catch (e) { /* storage blocked */ } };
+      arena.onDeathCache = (c) => { try { if (c && c.n) ST.recordTo(localStorage, { n: c.n, id: c.id, r: c.rarity }, 'cache'); } catch (e) { /* storage blocked */ } settle('death'); }; // Survivor's Cache: shards kept, the cache item is a find
+      arena.onMenuOpen = () => settle('menu');
+      arena.menuNote = stashNote;
     }
 
     // ---------- the hooks the arena calls ----------
@@ -444,7 +638,7 @@
       const p = arena.player; const pos = { x: Math.floor(p.x / TILE), y: Math.floor(p.y / TILE) };
       const k = pos.x + ',' + pos.y;
       if (!force && k === lastSavedKey) return;
-      lastSavedKey = k; save.pos = pos; writeSave(save);
+      lastSavedKey = k; save.pos = pos; save.evT = Math.floor(eventClock()); writeSave(save);
     }
     function placeAt(tx, ty) {
       const f = nearestFree(tx, ty, 8) || world.spawnPoint;
@@ -459,8 +653,13 @@
         bossReadyNow.fill(0); bossT = 0; sweepT = 0;
         promptFor = -2; leaving = false;
         if (save.returnTo) { save.returnTo = null; writeSave(save); } // back from a dungeon: the trip is over
+        // events: the clock continues from the save (or from where this visit was, on a restart); creatures of a running event rest
+        if (evStarted) settle('restart'); // a restart ends the leg too
+        evBase = Math.max(save.evT, evStarted ? lastEvClock : 0) - arena.clock; evStarted = true;
+        evState.forEach((st) => { if (st.phase === 'active' || st.phase === 'upcoming') evRest(st); });
+        evT = 0; hintT = 0; hintEl.classList.add('hidden');
         arena._showBanner(`The Realm · island #${seed}`, 1.8);
-        savePos(true); syncHud(true);
+        savePos(true); evTick(); syncHud(true);
       },
       tick(dt) {
         if (zones) {
@@ -471,6 +670,9 @@
           sweepT -= dt; if (sweepT <= 0) { sweepT = 1; sweepLost(); }
         }
         portalTick();
+        lastEvClock = eventClock();
+        evT -= dt; if (evT <= 0) { evT = 0.25; evTick(); }
+        evHint(dt);
         hudT -= dt; saveT -= dt;
         if (hudT <= 0) { hudT = 0.25; syncHud(false); }
         if (saveT <= 0) { saveT = 2; savePos(false); }
@@ -498,13 +700,29 @@
           g.globalAlpha = reduced ? 0.5 : 0.35 + 0.25 * Math.sin(tt * 3); g.strokeStyle = '#ff3b3b'; g.lineWidth = 3; g.beginPath(); g.arc(bx, by, 22, 0, Math.PI * 2); g.stroke(); g.globalAlpha = 1;
           g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(BOSS_NAME[i], bx + 1, by - 29); g.fillStyle = '#ff8a8a'; g.fillText(BOSS_NAME[i], bx, by - 30);
         }
+        evState.forEach((st) => { // event sites: a beacon (upcoming: gold, active: orange) above the ring of stones
+          if (st.phase !== 'upcoming' && st.phase !== 'active') return;
+          const c = siteXY(st); if (c.x < vx0 - 80 || c.x > vx1 + 80 || c.y < vy0 - 80 || c.y > vy1 + 80) return;
+          const col = st.phase === 'active' ? '#ff8a2a' : '#ffe27a';
+          g.globalAlpha = reduced ? 0.3 : 0.2 + 0.12 * Math.sin(tt * 2.5); g.fillStyle = col; g.beginPath(); g.arc(c.x, c.y, 70, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1;
+          drawBeacon(g, c.x, c.y - 30 + (reduced ? 0 : Math.sin(tt * 2) * 4), 12, col, tt, reduced);
+          const label = `${evTitle(st)} · ${st.phase === 'active' ? fmtT(st.ev.endsAt - eventClock()) + ' left' : 'in ' + fmtT(st.ev.startsAt - eventClock())}`;
+          g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(label, c.x + 1, c.y - 51); g.fillStyle = col; g.fillText(label, c.x, c.y - 52);
+        });
       },
-      drawOver() {},
+      drawOver(g) { // a raid boss telegraphs its next burst: a red ring that closes in during the last second
+        evState.forEach((st) => {
+          if (st.phase !== 'active' || st.plan.kind !== 'boss') return;
+          const e = st.ents[0]; if (!e || !e.active || e.evid !== st.id || e.invuln > 0 || !(e.cd2 < 1)) return;
+          const k = Math.max(0, Math.min(1, e.cd2));
+          g.strokeStyle = '#ff3b3b'; g.globalAlpha = 0.85 - 0.5 * k; g.lineWidth = 4; g.beginPath(); g.arc(e.x, e.y, 44 + 90 * k, 0, Math.PI * 2); g.stroke(); g.globalAlpha = 1;
+        });
+      },
     };
     arena.onEnemyKilled = onEnemyKilled; arena.onEnemyHit = onEnemyHit;
     arena.setMode('world');
     arena.setWorld({ w: WW, h: WH, tile: TILE, camera: true, solidAt, shotSolidAt, moveScaleAt, onStart: hooks.onStart, tick: hooks.tick, drawUnder: hooks.drawUnder, drawOver: hooks.drawOver, pools: { enemies: 72, eBullets: 700 } });
-    if (typeof window !== 'undefined') window.addEventListener('pagehide', () => savePos(true));
+    if (typeof window !== 'undefined') window.addEventListener('pagehide', () => { savePos(true); settle('leave'); });
     if (opts.assetRoot && opts.tileArt !== false) loadTileArt(opts.assetRoot);
 
     const api = {
@@ -524,6 +742,17 @@
       bossEntity: (i) => bossLive[i] || null, bossTick,
       // slice 7
       portalPrompt: () => promptFor, portalUrls, portalSeed, enterPortal, lastPortalUrl: null, RETURN_RE,
+      // world events (slice A): the clock hook moves the event clock (deterministic: same clock => same events, plans and rewards)
+      eventClock, setEventClock: (t) => { evBase = Math.max(0, Number(t) || 0) - arena.clock; evT = 0; evTick(); return eventClock(); },
+      jumpEventClock: (dt) => { evBase += Number(dt) || 0; evT = 0; evTick(); return eventClock(); },
+      eventTick: () => evTick(), eventsNow: () => Z.eventsFor(world, eventClock()), eventMarkers: evMarkers,
+      events: () => { const o = []; evState.forEach((st) => o.push({ id: st.id, kind: st.plan.kind, region: st.plan.region, boss: st.plan.boss, site: st.plan.site, phase: st.phase, startsAt: st.ev.startsAt, endsAt: st.ev.endsAt, alive: evAliveEnts(st), spawned: st.ents.length, total: st.total, dealt: st.dealt, reward: st.reward })); return o; },
+      eventEntities: (id) => { const st = evState.get(id); return st ? st.ents.filter((e) => e.active && e.evid === id) : []; },
+      eventHud: () => ({ text: evEl.textContent, hidden: evEl.classList.contains('hidden'), state: evEl.dataset.state || '', hint: hintEl.classList.contains('hidden') ? '' : hintEl.textContent }),
+      setEventCredit: (on) => { evCredit = !!on; }, lastEventReward: () => lastEvReward,
+      onEventFame: ST ? (n) => { try { ST.addFameTo(localStorage, n); } catch (e) { /* storage blocked */ } } : null,
+      // Lantern stash payout (slice B)
+      settle, stashNote, lastSettle: () => lastSettle, finds: () => (ST ? ST.readFinds(localStorage) : null),
     };
     return { api, hooks };
   }

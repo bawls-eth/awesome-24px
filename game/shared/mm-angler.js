@@ -117,6 +117,7 @@
     const lure = LURES[gear.lure];
     if (lure && lure.mult) w *= lure.mult(f);
     if (gear.bait && f.rarity >= 2) w *= 1.2;
+    if (gear.baitType === 'rare' && f.rarity >= 3) w *= 2.5;
     return w;
   }
   function rollFish(rng, spot, ctx, gear) {
@@ -128,10 +129,19 @@
     for (let i = 0; i < p.length; i++) { r -= ws[i]; if (r < 0) return p[i]; }
     return p[p.length - 1];
   }
-  function rollSize(rng, fish) {
+  function rollSize(rng, fish, opts) {
     const s = fish.size || [10, 30];
-    return Math.round(s[0] + rng() * (s[1] - s[0]));
+    let r = rng();
+    if (opts && opts.big) r = 1 - (1 - r) * (1 - r); // big-fish bait skews toward the top of the range
+    return Math.round(s[0] + r * (s[1] - s[0]));
   }
+  // Bait types: plain = the original bait counter (journal.bait); the others live in journal.baits.
+  const BAITS = {
+    plain: { id: 'plain', waitMult: 0.7 },
+    quick: { id: 'quick', waitMult: 0.45 },
+    rare: { id: 'rare', waitMult: 0.9 },
+    big: { id: 'big', waitMult: 0.9 },
+  };
 
   // seeded rng for fish paths (mulberry32)
   function seedRng(seed) {
@@ -261,7 +271,8 @@
     return b;
   }
 
-  // ---- journal: {caught: {id: {n, best}}, bosses: {id: true}, trophies: {id: true}, gear: {rod, lure}, bait: 0-99} ----
+  // ---- journal: {caught: {id: {n, best}}, bosses, trophies, gear: {rod, lure}, bait: 0-99, plus additive keys:
+  // bells, stock, baits, baitType, sets, badges, tour (see mm-angler-depth.js)} ----
   // Gear unlocks by journal milestones (species caught / trophies). Own rule, shown on the page.
   const GEAR_RULES = {
     rod: { stick: { species: 0 }, bamboo: { species: 5 }, steel: { species: 12 }, golden: { trophies: 1 } },
@@ -287,10 +298,27 @@
     const have = spotSpecies(journal, spot);
     return { boss: b.boss, need: b.need, have, ready: have >= b.need };
   }
-  function clean(raw) {
+  function cleanTour(t) {
+    const out = { last: -1, streak: 0, played: 0, best: { day: -1, score: 0 }, medals: { bronze: 0, silver: 0, gold: 0 }, run: null };
+    if (!t || typeof t !== 'object' || Array.isArray(t)) return out;
+    const lastRaw = Number(t.last);
+    out.last = isFinite(lastRaw) && lastRaw >= 0 ? clampInt(lastRaw, 0, 99999) : -1;
+    out.streak = clampInt(t.streak, 0, 9999);
+    out.played = clampInt(t.played, 0, 99999);
+    if (t.best && typeof t.best === 'object') {
+      const bd = Number(t.best.day);
+      out.best = { day: isFinite(bd) && bd >= 0 ? clampInt(bd, 0, 99999) : -1, score: clampInt(t.best.score, 0, 99999) };
+    }
+    if (t.medals && typeof t.medals === 'object') Object.keys(out.medals).forEach((k) => { out.medals[k] = clampInt(t.medals[k], 0, 99999); });
+    if (t.run && typeof t.run === 'object' && isFinite(Number(t.run.day)) && Number(t.run.day) >= 0) {
+      out.run = { day: clampInt(t.run.day, 0, 99999), used: clampInt(t.run.used, 0, 5), score: clampInt(t.run.score, 0, 99999) };
+    }
+    return out;
+  }
+  function cleanFull(raw) {
     let o = raw;
     if (typeof raw === 'string') { try { o = JSON.parse(raw); } catch (e) { o = null; } }
-    const out = { caught: {}, bosses: {}, trophies: {}, gear: { rod: 'stick', lure: 'none' }, bait: 0 };
+    const out = { caught: {}, bosses: {}, trophies: {}, gear: { rod: 'stick', lure: 'none' }, bait: 0, bells: 0, stock: {}, baits: { quick: 0, rare: 0, big: 0 }, baitType: 'plain', sets: {}, badges: {}, tour: cleanTour(null) };
     if (!o || typeof o !== 'object' || Array.isArray(o)) return out;
     const c = o.caught && typeof o.caught === 'object' ? o.caught : {};
     Object.keys(c).forEach((id) => {
@@ -307,7 +335,30 @@
     if (typeof g.rod === 'string' && ownKey(RODS, g.rod)) out.gear.rod = g.rod;
     if (typeof g.lure === 'string' && ownKey(LURES, g.lure)) out.gear.lure = g.lure;
     out.bait = clampInt(o.bait, 0, 99);
+    // additive depth keys (all optional; corrupt -> defaults)
+    out.bells = clampInt(o.bells, 0, 99999);
+    out.stock = {};
+    const st = o.stock && typeof o.stock === 'object' && !Array.isArray(o.stock) ? o.stock : {};
+    Object.keys(st).forEach((id) => { if (BY_ID[id] && !BY_ID[id].boss) { const n = clampInt(st[id], 0, 99); if (n > 0) out.stock[id] = n; } });
+    out.baits = { quick: 0, rare: 0, big: 0 };
+    const bt = o.baits && typeof o.baits === 'object' && !Array.isArray(o.baits) ? o.baits : {};
+    Object.keys(out.baits).forEach((k) => { out.baits[k] = clampInt(bt[k], 0, 99); });
+    out.baitType = typeof o.baitType === 'string' && ownKey(BAITS, o.baitType) ? o.baitType : 'plain';
+    out.sets = {}; out.badges = {};
+    const se = o.sets && typeof o.sets === 'object' && !Array.isArray(o.sets) ? o.sets : {};
+    SPOTS.forEach((sp) => { if (se[sp] === true) out.sets[sp] = true; });
+    const bd = o.badges && typeof o.badges === 'object' && !Array.isArray(o.badges) ? o.badges : {};
+    Object.keys(bd).forEach((k) => { if (/^[a-z0-9_]{1,24}$/.test(k) && bd[k] === true && Object.keys(out.badges).length < 40) out.badges[k] = true; });
+    out.tour = cleanTour(o.tour);
     return out;
+  }
+  // Public clean: depth keys that still hold their defaults are left out, so a plain save stays byte-compatible
+  // with the older format. cleanFull always carries every key (the page and mm-angler-depth.js work on it).
+  const DEPTH_DEFAULTS = JSON.stringify(cleanFull(null));
+  function clean(raw) {
+    const o = cleanFull(raw), d = JSON.parse(DEPTH_DEFAULTS);
+    ['bells', 'stock', 'baits', 'baitType', 'sets', 'badges', 'tour'].forEach((k) => { if (JSON.stringify(o[k]) === JSON.stringify(d[k])) delete o[k]; });
+    return o;
   }
   function addTrophy(journal, bossId) {
     const j = clean(journal);
@@ -328,10 +379,10 @@
   function speciesCount(journal) { return Object.keys(clean(journal).caught).length; }
 
   return {
-    SPOTS, SPOT_NAMES, ICE_MONTHS, RATES, BITE, SEASONS, FISH, BY_ID, EXISTING_IDS, RODS, LURES, BOSSES,
+    SPOTS, SPOT_NAMES, ICE_MONTHS, RATES, BITE, SEASONS, FISH, BY_ID, EXISTING_IDS, RODS, LURES, BOSSES, BAITS,
     seasonOf, timeOf, iceOpen, pool, weightOf, rollFish, rollSize, seedRng,
     reel: { create },
-    bite, journal: { clean, record, serialize, speciesCount, addTrophy, gearUnlocked, bossFor, trophyCount }, clean, serialize,
+    bite, journal: { clean, cleanFull, record, serialize, speciesCount, addTrophy, gearUnlocked, bossFor, trophyCount }, clean, serialize,
     GEAR_RULES, BOSS_SPOTS,
   };
 }));

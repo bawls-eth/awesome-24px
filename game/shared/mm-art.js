@@ -222,6 +222,7 @@
     var maps = [ENEMY_MAP, DRIFTER_MAP];
     Object.keys(BIOME_ENEMY_MAP).forEach(function (b) { maps.push(BIOME_ENEMY_MAP[b]); });
     maps.forEach(function (m) { Object.keys(m).forEach(function (t) { if (only.indexOf(m[t]) < 0) only.push(m[t]); }); });
+    (Array.isArray(o.extra) ? o.extra : []).forEach(function (id) { if (typeof id === 'string' && only.indexOf(id) < 0) only.push(id); }); // additive: a dungeon biome's own creatures
     o.only = only; o.actions = ['idle', 'move', 'attack', 'death']; o.actionDirs = { death: ['down', 'right'] };
     return loadPacks(assetRoot, o);
   }

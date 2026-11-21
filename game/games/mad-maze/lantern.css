@@ -73,3 +73,7 @@ legend{color:var(--gold);font-size:.9rem;padding:0 6px}
 .classrow{display:flex;align-items:center;gap:10px}
 .classrow select{flex:1;min-width:0}
 .classrow .heroart{float:none;margin:0;flex:none}
+/* recent finds (Realm World / Warren loot paid into the stash) */
+.find{display:flex;align-items:center;flex-wrap:wrap;gap:4px}
+.find .item{cursor:default;display:inline-flex;align-items:center}
+.tag.src{background:#24456a}

@@ -70,3 +70,10 @@
 - 2026-11-21T01:05Z activity (counts only): playerCount=0, online players=0, chat messages stored=13, open realm invites=2, tournament nodes=2
 
 - 2026-11-21 (4 PM PT 11/20): OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0 (cap 4.00 total, stop 3.96). Integration: master (Codex PRs 22, 23) + staged chunk-rendering/portal-return merged into the Pages branch; unified game live on the public site (Town Gate: Enter the Realm; Classic arena kept); offline playthrough test added. Codex b10t terrain registered and rendering. Full suite 101/101 on cb7f2eb.
+
+## 2026-11-21 (evening session)
+- Merged: Town Gate in-page Realm frame (bb1e44a), stalk-depth, angler-depth, dungeon-biomes (4 portal biomes), jam-depth (12 songs, Concert, Practice), deepdelve-depth (crafting, day/night, mobs), world-events-stash (world events + Lantern stash). Full suite 122/122 on 805561f.
+- Open: stash copies (not moves) found items to the Lantern; planner queue in NEXT-SLICES.md (28 slices).
+- OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
+
+- 2026-11-21T01:58Z activity (counts only): playerCount=0, online players=0, chat messages stored=13, open realm invites=2, tournament nodes=2

@@ -46,11 +46,16 @@ const vis = (page, sel) => page.evaluate((s) => { const e = document.querySelect
 
   // ---- Enter the Realm from the gate (confirm accepted) ----
   await scene((s) => { s.localBody.setPosition(REALM_GATE_POS.x, REALM_GATE_POS.y + 30); s.interact(); });
-  page.once('dialog', (d) => d.accept());
-  await Promise.all([page.waitForURL(/games\/mad-maze\/index\.html\?mode=world/, { timeout: 15000 }), page.click('#realm-menu-madmaze')]);
-  check('Enter the Realm navigates to the overworld page', /mode=world/.test(page.url()), page.url());
-  await page.waitForSelector('#rw-minimap', { timeout: 15000 });
-  check('the overworld page shows the world HUD (minimap) and a canvas', await vis(page, '#rw-minimap') && await page.evaluate(() => !!document.querySelector('canvas')));
+  const townUrl = page.url();
+  await page.click('#realm-menu-madmaze');
+  await page.waitForSelector('#realm-embed iframe', { timeout: 10000 });
+  check('Enter the Realm opens the overworld inside the game page (no navigation)', page.url() === townUrl && /mode=world/.test(await page.getAttribute('#realm-embed iframe', 'src')), page.url());
+  const fr = page.frameLocator('#realm-embed iframe');
+  await fr.locator('#rw-minimap').waitFor({ state: 'visible', timeout: 15000 });
+  check('the embedded overworld shows the world HUD (minimap) and a canvas', await fr.locator('canvas').count() > 0);
+  await page.evaluate(() => window.postMessage({ pixeltown: 'close-realm' }, location.origin));
+  await page.waitForSelector('#realm-embed', { state: 'detached', timeout: 5000 });
+  check('closing the Realm returns to the town on the same page', page.url() === townUrl && await scene((s) => !s.inRealm && !s.realmEmbed));
 
   // ---- World with hooks (same storage, add test=1) ----
   await page.goto(ORIGIN + '/game/games/mad-maze/index.html?mode=world&test=1&seed=4242');

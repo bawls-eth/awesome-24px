@@ -60,8 +60,7 @@
     return { doorSealed, doorLocked, crack: [crack(0), crack(1), crack(2)], chest: [chest(false), chest(true)], key, portal };
   }
 
-  function bakeRoom(rid, tpl, type, seed) {
-    const pal = PAL[type] || PAL.combat;
+  function bakeRoom(rid, tpl, pal, seed) {
     const grid = tpl.rows.map((r) => r.replace(/D/g, '#').replace(/S/g, '.'));
     const masks = MMRooms.autotile(grid);
     const rng = MMRng.create('bake:' + seed + ':' + rid);
@@ -96,13 +95,23 @@
     // set only by mad-maze.js from a regex-checked ?return= (a Realm World portal): the exit goes back to that portal tile
     const backWorld = typeof opts.returnTo === 'string' && /^index\.html\?mode=world&seed=[A-Za-z0-9_-]{1,24}&at=\d{1,4},\d{1,4}(&test=1)?$/.test(opts.returnTo) ? opts.returnTo : null;
     const seed = String(opts.seed === undefined ? '1' : opts.seed);
-    const layoutV = opts.layout === 2 ? 2 : 1; // 1 = original room selection (old seeds/links), 2 = variety pool (new runs only)
+    const biome = MMBiomes.clean(opts.biome); const B = MMBiomes.get(biome); // unknown / missing biome -> warren
+    const layoutV = opts.layout === 2 || biome !== 'warren' ? 2 : 1; // a biome run is new content: it always uses the layout-2 pool
+    const palCache = {};
+    function palOf(type) { // warren: the original palette untouched; other biomes recolour start / normal / boss rooms, the coded rooms (key, treasure, secret) keep theirs
+      if (palCache[type]) return palCache[type];
+      const base = PAL[type] || PAL.combat; const o = biome === 'warren' ? null : type === 'start' ? B.start : type === 'combat' ? B.normal : type === 'boss' ? B.boss : null;
+      const nm = biome === 'warren' ? base.name : type === 'start' ? B.name + ' Gate' : type === 'combat' ? B.room : type === 'boss' ? B.boss_room : base.name;
+      palCache[type] = o ? { f: o.f, w: o.w, hi: o.hi, name: nm } : base; return palCache[type];
+    } // 1 = original room selection (old seeds/links), 2 = variety pool (new runs only)
     const dungeon = MMWarren.generate(seed, { layout: layoutV });
-    const picks = MMRooms.select(dungeon, seed, layoutV, 'warren');
+    const picks = MMRooms.select(dungeon, seed, layoutV, biome);
     const rngRun = MMRng.create('run:' + seed);
     const lootRng = MMRng.create('loot:' + seed);
     const bossRng = MMRng.create('boss:' + seed);
     const S = bakeShared();
+    const ambient = []; if (B.particles) { const ar = MMRng.create('amb:' + biome + ':' + seed); for (let i = 0; i < B.particles.n; i++) ambient.push({ x: ar.int(0, MMRooms.W * T), y: ar.int(0, MMRooms.H * T), v: 0.6 + ar.next(), ph: ar.next() * 6.28, sz: ar.int(2, 4) }); }
+    document.body.dataset.dungeonBiome = biome;
     const byId = {}; dungeon.rooms.forEach((r) => { byId[r.id] = r; });
     const ROOMS = dungeon.rooms.length;
 
@@ -120,7 +129,7 @@
       const tplDef = picks.defs[r.id];
       const tpl = MMRooms.parse(tplDef);
       let plan = [];
-      if (r.type === 'combat' || r.type === 'key') plan = MMEnemies.plan(seed + ':' + r.id, Math.max(1, depth[r.id] || 1), tpl.spawns.map((s) => ({ x: s.x, y: s.y })), null).enemies;
+      if (r.type === 'combat' || r.type === 'key') plan = MMEnemies.plan(seed + ':' + r.id, Math.max(1, depth[r.id] || 1), tpl.spawns.map((s) => ({ x: s.x, y: s.y })), null, biome === 'warren' ? undefined : B.ids).enemies;
       const extra = plan.reduce((n, e) => n + (e.id === 'sprout' ? 2 : 0), 0); // each Sprout leaves two minis behind
       counts[r.id] = r.type === 'boss' ? 1 : plan.length + extra;
       L[r.id] = { tpl, plan, baked: null, spawned: false, keyTaken: false };
@@ -139,7 +148,13 @@
     const unlocked = {}; const granted = [];
     let keyFound = 0; let current = null; let finished = false; let sig = ''; let mapSig = '';
     let lockMsgAt = -9; let hudText = ''; let queue = []; let nextSweep = 0; let nextWall = 0; let sweepN = 0;
-    const api = { seed, layoutVersion: layoutV, graph: dungeon, state, arena, granted };
+    const api = { seed, biome, layoutVersion: layoutV, graph: dungeon, state, arena, granted };
+    // Lantern stash payout (MMStash): every kept find of this run is paid into the stash when the summary shows (win or fall)
+    const ST = window.MMStash && window.MMProfile ? window.MMStash : null; const shards0 = arena.save.shards;
+    if (ST) {
+      arena.onItem = (it) => { try { ST.recordTo(localStorage, it, 'dungeon'); } catch (e) { /* storage blocked */ } };
+      arena.onDeathCache = (c) => { try { if (c && c.n) ST.recordTo(localStorage, { n: c.n, id: c.id, r: c.rarity }, 'cache'); } catch (e) { /* storage blocked */ } };
+    }
 
     // ---------- doors ----------
     function doorsOf(id) {
@@ -175,7 +190,7 @@
 
     function spawnMob(type, id, x, y, hp, elite) {
       const e = arena.spawnEnemy(type, x, y); if (!e) return null;
-      e.dg = 'mob'; e.did = id; e.elite = !!elite; e.maxHp = hp; e.hp = hp; e.lx = x; e.ly = y;
+      e.dg = 'mob'; e.did = id; e.art = B.skin[id] || (id === 'sprout_mini' ? B.skin.sprout : null) || null; e.elite = !!elite; e.maxHp = hp; e.hp = hp; e.lx = x; e.ly = y;
       return e;
     }
     function spawnRoom(id, entry) {
@@ -196,7 +211,7 @@
     function spawnBoss() {
       const e = arena.spawnEnemy('boss', arena.W / 2, 132); if (!e) return;
       e.dg = 'boss'; e.maxHp = state.boss.maxHp; e.hp = state.boss.hp; e.phase = state.boss.phase; e.invuln = 1.2; e.cd = 1.2; e.cd2 = 2.4; e.angle = 0;
-      arena.bossT0 = arena.clock; arena._syncBoss(); nextSweep = arena.clock + 4; nextWall = arena.clock + 6;
+      arena.bossT0 = arena.clock; e.bossArt = B.boss_art; arena._syncBoss(); nextSweep = arena.clock + 4; nextWall = arena.clock + 6;
     }
 
     function clearTransient() {
@@ -206,7 +221,7 @@
     function loadRoom(id, travel) {
       current = id;
       const lay = L[id]; const r = byId[id];
-      if (!lay.baked) lay.baked = bakeRoom(id, lay.tpl, r.type, seed);
+      if (!lay.baked) lay.baked = bakeRoom(id, lay.tpl, palOf(r.type), seed);
       clearTransient();
       arena.biome = r.type === 'boss' ? 1 : r.type === 'treasure' ? 2 : 0;
       const p = arena.player; let entry = { x: 8, y: 6 };
@@ -216,8 +231,8 @@
       const rs = state.room(id);
       if (!lay.spawned && rs.enemiesAlive > 0) {
         if (r.type === 'boss') { spawnBoss(); lay.spawned = true; } else spawnRoom(id, entry);
-        arena._showBanner(r.type === 'boss' ? 'Queen Burrowmole!' : 'The doors seal!', 1.6);
-      } else if (r.type === 'treasure' || r.type === 'secret' || r.type === 'key') arena._showBanner(PAL[r.type].name, 1.6);
+        arena._showBanner(r.type === 'boss' ? B.boss_name + '!' : 'The doors seal!', 1.6);
+      } else if (r.type === 'treasure' || r.type === 'secret' || r.type === 'key') arena._showBanner(palOf(r.type).name, 1.6);
       arena._syncBoss(); mapSig = '';
     }
     function tryEnter(id) {
@@ -261,7 +276,7 @@
         e.phase = r.phase; e.invuln = 1.5; e.cd = 1.1; e.cd2 = 2.0; queue = [];
         arena.eBullets.forEach((b) => { if (b.active) { b.active = false; arena._burst(b.x, b.y, '#ff6a4a', 1, 60); } });
         arena.shake = 12; arena._burst(e.x, e.y, '#ff6a4a', 30, 280);
-        arena._showBanner(r.phase === 2 ? 'Burrowmole — the floor shakes!' : 'Burrowmole — ENRAGED!', 1.6);
+        arena._showBanner(r.phase === 2 ? B.boss_name.replace(/^The /, '').split(' ').pop() + ' — the floor shakes!' : B.boss_name.replace(/^The /, '').split(' ').pop() + ' — ENRAGED!', 1.6);
         nextSweep = arena.clock + 2.5; nextWall = arena.clock + 5;
       }
       if (r.dead) {
@@ -271,7 +286,7 @@
         arena.save.shards += 60; arena.save.kills += 1; arena.save.kb.boss += 1; arena._floatText(e.x, e.y - 30, '+60 💎', '#8fe9ff');
         arena._gainXp(Math.round(RM_XP.boss * arena.stats.xp));
         arena.dropBag(e.x - 20, e.y + 20, 2); arena.dropBag(e.x + 20, e.y + 20, arena.rollRarity());
-        arena._showBanner('Queen Burrowmole defeated! The portal opens.', 2.6);
+        arena._showBanner(B.boss_name + ' defeated! The portal opens.', 2.6);
         arena.onSave(arena.save); mapSig = '';
       }
       arena._syncBoss();
@@ -311,7 +326,7 @@
       });
       vis.forEach((id) => {
         const r = byId[id]; const p = pos(r); const seen = state.room(id).visited;
-        rect(g, seen ? MAP_COL[r.type] : '#3a3358', p.x, p.y, 12, 12);
+        rect(g, seen ? (r.type === 'combat' ? B.mapCol : MAP_COL[r.type]) : '#3a3358', p.x, p.y, 12, 12);
         if (!seen) { g.fillStyle = '#c9c2e8'; g.font = 'bold 10px system-ui'; g.textAlign = 'center'; g.fillText('?', p.x + 6, p.y + 10); }
         else if (r.type === 'boss') rect(g, '#2a0f0f', p.x + 4, p.y + 4, 4, 4);
         else if (r.type === 'key' && !L[id].keyTaken) rect(g, '#fff', p.x + 5, p.y + 5, 3, 3);
@@ -327,13 +342,15 @@
     function showSummary(died) {
       if (finished) return; finished = true;
       const s = state.exit(); arena.onSave(arena.save);
+      let paid = null; if (ST) { try { paid = ST.settle(localStorage, { Profile: MMProfile, realmItems: arena.save.items, shards: Math.max(0, arena.save.shards - shards0), src: 'dungeon', force: true }); } catch (e) { paid = null; } }
+      api.stash = paid ? { items: paid.items, stash: paid.stash, hero: paid.hero, waiting: paid.waiting, shards: paid.shards, fame: paid.fame } : null;
       const secs = Math.round(arena.clock); const mm = Math.floor(secs / 60); const ss = String(secs % 60).padStart(2, '0');
       const items = granted.length ? granted.map((it) => `<li style="color:${it.color}">${it.icon} ${it.name} <small>${it.rarName}${it.sold ? ' (sold, pack full)' : ''}</small></li>`).join('') : '<li class="none">no items</li>';
-      sumEl.innerHTML = `<div class="mm-sum-card"><h2>${died ? '💀 You fell in the Warren' : '🌀 Warren cleared!'}</h2>
+      sumEl.innerHTML = `<div class="mm-sum-card"><h2>${died ? '💀 ' + B.fell : '🌀 ' + B.clear}</h2>
         <p class="mm-sum-sub">Seed ${String(seed).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24)} · ${mm}:${ss}</p>
-        <ul class="mm-sum-stats"><li>Rooms visited <b>${s.roomsVisited}/${ROOMS}</b></li><li>Rooms cleared <b>${s.roomsCleared}</b></li><li>Chests opened <b>${s.chestsOpened}</b></li><li>Keys found <b>${s.keysFound}</b></li><li>Secret room <b>${s.secretFound ? 'found' : 'hidden'}</b></li><li>Queen Burrowmole <b>${s.bossDefeated ? 'defeated' : 'alive'}</b></li><li>Chest gold <b>${s.gold} 💎</b></li></ul>
-        <h3>Loot</h3><ul class="mm-sum-loot" id="mm-sum-loot">${items}</ul>
-        <div class="mm-sum-btns">${backWorld ? '' : `<a class="mm-btn" id="mm-sum-again" href="?mode=dungeon&seed=${Number(seed) + 1 || ''}${layoutV === 2 ? '&lv=2' : ''}${opts.test ? '&test=1' : ''}${hubExit ? '&from=hub' : ''}">New dungeon</a>`}<a class="mm-btn${backWorld ? '' : ' alt'}" id="mm-sum-home" href="${backWorld || (hubExit ? '../../hub/index.html' : '../../index.html')}">${backWorld ? 'Back to the world' : hubExit ? 'Back to the map' : 'Back to town'}</a></div></div>`;
+        <ul class="mm-sum-stats"><li>Rooms visited <b>${s.roomsVisited}/${ROOMS}</b></li><li>Rooms cleared <b>${s.roomsCleared}</b></li><li>Chests opened <b>${s.chestsOpened}</b></li><li>Keys found <b>${s.keysFound}</b></li><li>Secret room <b>${s.secretFound ? 'found' : 'hidden'}</b></li><li>${B.boss_name} <b>${s.bossDefeated ? 'defeated' : 'alive'}</b></li><li>Chest gold <b>${s.gold} 💎</b></li></ul>
+        <h3>Loot</h3><ul class="mm-sum-loot" id="mm-sum-loot">${items}</ul>${paid && paid.ok ? `<p class="mm-sum-stash" id="mm-sum-stash">🏮 ${ST.text(paid)} (Lantern)</p>` : ''}
+        <div class="mm-sum-btns">${backWorld ? '' : `<a class="mm-btn" id="mm-sum-again" href="?mode=dungeon&seed=${Number(seed) + 1 || ''}${layoutV === 2 ? '&lv=2' : ''}${biome !== 'warren' ? '&biome=' + biome : ''}${opts.test ? '&test=1' : ''}${hubExit ? '&from=hub' : ''}">New dungeon</a>`}<a class="mm-btn${backWorld ? '' : ' alt'}" id="mm-sum-home" href="${backWorld || (hubExit ? '../../hub/index.html' : '../../index.html')}">${backWorld ? 'Back to the world' : hubExit ? 'Back to the map' : 'Back to town'}</a></div></div>`;
       sumEl.classList.remove('hidden');
       api.summary = s;
     }
@@ -346,7 +363,7 @@
         arena.state = 'play'; arena.run.wave = 0; arena.biome = 0;
         const res = state.enter(dungeon.rooms.find((r) => r.type === 'start').id);
         loadRoom(res.ok ? state.current : 0, null);
-        arena._showBanner(`Warren #${seed}`, 1.8);
+        arena._showBanner(`${B.name} #${seed}`, 1.8);
         drawMap();
       },
       onBoltWall(x, y) {
@@ -400,11 +417,11 @@
         if (hasChest() && !rs.chestOpen && !state.doorsClosed() && near(chestSpot(), 30)) openChest();
         if (hasPortal() && near(portalSpot(), 30)) { finish(); return; }
         // HUD text (the arena rewrites it from time to time)
-        const txt = `Room ${dungeon.rooms.filter((r) => state.room(r.id).visited).length}/${ROOMS - 1} · 🗝 ${state.keys}${state.room(current).enemiesAlive > 0 && byId[current].type !== 'boss' ? ` · ${state.room(current).enemiesAlive} left` : ''}`;
+        const txt = `${B.name} · Room ${dungeon.rooms.filter((r) => state.room(r.id).visited).length}/${ROOMS - 1} · 🗝 ${state.keys}${state.room(current).enemiesAlive > 0 && byId[current].type !== 'boss' ? ` · ${state.room(current).enemiesAlive} left` : ''}`;
         if (txt !== hudText) { hudText = txt; }
         const w = document.getElementById('realm-wave'); if (w && w.textContent !== hudText) w.textContent = hudText;
-        const b = document.getElementById('realm-biome'); const bn = window.innerWidth < 600 ? '' : PAL[byId[current].type].name; if (b && b.textContent !== bn) b.textContent = bn;
-        const be = bossEntity(); if (be) { const n = document.getElementById('realm-boss-name'); const nt = `Queen Burrowmole · phase ${be.phase}`; if (n && n.textContent !== nt) n.textContent = nt; }
+        const b = document.getElementById('realm-biome'); const bn = window.innerWidth < 600 ? '' : palOf(byId[current].type).name; if (b && b.textContent !== bn) b.textContent = bn;
+        const be = bossEntity(); if (be) { const n = document.getElementById('realm-boss-name'); const nt = `${B.boss_name} · phase ${be.phase}`; if (n && n.textContent !== nt) n.textContent = nt; }
         const ms = current + '|' + state.visibleRooms().join(',') + '|' + state.keys + '|' + state.secretOpen + '|' + rs.cleared;
         if (ms !== mapSig) { mapSig = ms; drawMap(); }
       },
@@ -412,7 +429,7 @@
       drawUnder(g) {
         if (current === null) return;
         g.drawImage(L[current].baked, 0, 0);
-        const pal = PAL[byId[current].type]; const tt = performance.now() / 1000;
+        const pal = palOf(byId[current].type); const tt = performance.now() / 1000;
         curDoors().forEach((o) => {
           const x = o.tile.x * T; const y = o.tile.y * T;
           if (o.status === 'open') { rect(g, pal.f[0], x, y, T, T); rect(g, 'rgba(255,255,255,0.12)', x, y, T, T); }
@@ -425,6 +442,15 @@
         if (hasPortal()) { const q = portalSpot(); g.save(); g.translate(q.x, q.y); g.rotate(tt * 1.2); g.drawImage(S.portal, -36, -36); g.rotate(-tt * 2.4); g.globalAlpha = 0.6; g.drawImage(S.portal, -26, -26, 52, 52); g.restore(); g.globalAlpha = 1; }
       },
       drawOver(g) {
+        if (B.tint) { g.fillStyle = B.tint; g.fillRect(0, 0, arena.W, arena.H); }
+        if (B.particles && current !== null) { // seeded drift: positions come from a table made with MMRng, only the clock moves them
+          const P = B.particles; const tt = arena._reduced ? 0 : performance.now() / 1000; g.fillStyle = P.color; const ga = g.globalAlpha; g.globalAlpha = 0.5;
+          for (let i = 0; i < ambient.length; i++) {
+            const q = ambient[i]; const x = ((q.x + tt * q.v * 14 * P.dir) % arena.W + arena.W) % arena.W; const y = ((q.y + tt * q.v * 9 + Math.sin(tt * q.v + q.ph) * 14) % arena.H + arena.H) % arena.H;
+            g.fillRect(Math.round(x), Math.round(y), q.sz, q.sz);
+          }
+          g.globalAlpha = ga;
+        }
         for (let i = 0; i < arena.enemies.length; i++) {
           const e = arena.enemies[i]; if (!e.active || !e.elite) continue;
           g.fillStyle = '#ffd45a'; const y = e.y - 26; g.beginPath(); g.moveTo(e.x - 8, y + 8); g.lineTo(e.x - 8, y); g.lineTo(e.x - 4, y + 4); g.lineTo(e.x, y - 2); g.lineTo(e.x + 4, y + 4); g.lineTo(e.x + 8, y); g.lineTo(e.x + 8, y + 8); g.closePath(); g.fill();

@@ -54,3 +54,22 @@ body { min-height:100vh; display:flex; flex-direction:column; align-items:center
 .calpulse.on { background:var(--accent); color:#1a1626; }
 #overlay .caltap { width:100%; min-height:96px; font-size:28px; font-weight:bold; touch-action:none; }
 #offset-row span { flex:1 1 100%; }
+
+#overlay button.pick { background:var(--panel); color:var(--ink); border:2px solid #0d0a16; text-align:left; }
+#overlay button.pick.sel { background:var(--accent); color:#1a1626; border-color:#fff; }
+#concert-songs { grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); }
+.bigrank { font-size:56px; font-weight:bold; color:var(--accent); margin:0; }
+.cline { background:var(--panel); padding:8px 10px; border-radius:6px; margin:4px 0; }
+#hud-speed:empty { display:none; }
+body[data-practice="1"] #hud-score, body[data-practice="1"] #hud-acc { display:none; }
+#overlay .tiers button.practice-btn:not([disabled]) { background:var(--panel); color:var(--ink); border:2px solid var(--accent); }
+.stepper { display:inline-flex; gap:6px; align-items:center; }
+#pref-row button { flex:1 1 150px; }
+#pads .pad { font-size:20px; }
+#res-breakdown { display:grid; gap:4px; margin:6px 0; }
+.brow { display:grid; grid-template-columns:64px 1fr 76px; gap:8px; align-items:center; font-size:13px; }
+.brow .bar { display:block; height:12px; background:var(--panel); border-radius:6px; overflow:hidden; }
+.brow .bar i { display:block; height:100%; }
+.f-perfect { background:#fff3b0; } .f-great { background:#9bf6ff; } .f-good { background:#caffbf; } .f-miss { background:#ff6b6b; }
+.brow .bn { text-align:right; }
+#res-histo, #res-spark { display:block; width:100%; max-width:320px; height:auto; border-radius:6px; margin:6px 0 2px; }

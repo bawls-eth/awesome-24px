@@ -9,7 +9,7 @@ function check(name, cond, extra = '') { console.log((cond ? 'PASS ' : 'FAIL ') 
 const done = () => { console.log(failed ? `${failed} FAILED` : 'ALL PASSED'); process.exitCode = failed ? 1 : 0; };
 
 // songs as data
-check('8 original songs with unique ids', SG.SONGS.length === 8 && new Set(SG.songIds()).size === 8);
+check('12 original songs with unique ids', SG.SONGS.length === 12 && new Set(SG.songIds()).size === 12);
 check('BPMs within 80..160 and the first ladder ascends', SG.SONGS.every((s) => s.bpm >= 80 && s.bpm <= 160) && SG.SONGS.slice(0, 4).every((s, i) => !i || s.bpm > SG.SONGS[i - 1].bpm));
 check('3 difficulty tiers', SG.TIERS.join() === 'easy,normal,hard');
 
@@ -43,7 +43,7 @@ check('3 difficulty tiers', SG.TIERS.join() === 'easy,normal,hard');
     const l = Jam.lint(c); counts[s.id + t] = c.count;
     if (!l.ok || c.count < 40) { allOk = false; bad += s.id + '/' + t + ':' + l.errors.join(',') + c.count + ' '; }
   }
-  check('all 24 charts lint clean with >= 40 notes', allOk, bad);
+  check('all 36 charts lint clean with >= 40 notes', allOk, bad);
   check('density rises with tier', SG.SONGS.every((s) => counts[s.id + 'easy'] < counts[s.id + 'hard']));
   const hard = SG.chartFor('starlit-stomp', 'hard');
   let minGap = 1e9; for (let i = 1; i < hard.notes.length; i++) minGap = Math.min(minGap, hard.notes[i].t - hard.notes[i - 1].t);
@@ -111,10 +111,10 @@ check('rank thresholds S 95, A 85, B 70, C 50', Jam.rankFor(0.95) === 'S' && Jam
 }
 
 
-// ---- 8 songs: distinct data, deterministic charts, sensible counts ----
+// ---- 12 songs: distinct data, deterministic charts, sensible counts ----
 {
-  check('every song has distinct BPM, scale and chord loop', new Set(SG.SONGS.map((s) => s.bpm)).size === 8 && new Set(SG.SONGS.map((s) => s.scale.join())).size >= 6 && new Set(SG.SONGS.map((s) => s.prog.join())).size === 8);
-  check('exactly one secret song: Midnight Campfire, last in the list', SG.SONGS.filter((s) => s.secret).length === 1 && SG.SONGS[7].id === 'midnight-campfire' && SG.SONGS[7].name === 'Midnight Campfire');
+  check('every song has distinct BPM, scale and chord loop', new Set(SG.SONGS.map((s) => s.bpm)).size === 12 && new Set(SG.SONGS.map((s) => s.scale.join())).size >= 10 && new Set(SG.SONGS.map((s) => s.prog.join())).size === 12);
+  check('exactly one secret song: Midnight Campfire, last in the list', SG.SONGS.filter((s) => s.secret).length === 1 && SG.SONGS[11].id === 'midnight-campfire' && SG.SONGS[11].name === 'Midnight Campfire');
   check('new songs use more than the old pattern kinds', new Set([].concat(...SG.SONGS.map((s) => s.patterns))).size >= 8);
   const bounds = { easy: [35, 160], normal: [60, 220], hard: [90, 330] };
   let okB = true, okD = true, bad = '';
@@ -123,7 +123,7 @@ check('rank thresholds S 95, A 85, B 70, C 50', Jam.rankFor(0.95) === 'S' && Jam
     if (JSON.stringify(a) !== JSON.stringify(b)) okD = false;
     if (a.count < bounds[t][0] || a.count > bounds[t][1] || !Jam.lint(a).ok) { okB = false; bad += s.id + '/' + t + ':' + a.count + ' '; }
   }
-  check('all 8 songs chart deterministically on every tier', okD);
+  check('all 12 songs chart deterministically on every tier', okD);
   check('note counts within per-tier bounds (easy 35-160, normal 60-220, hard 90-330)', okB, bad);
   let notesSane = true;
   for (const s of SG.SONGS) { const c = SG.chartFor(s.id, 'hard'); const last = c.notes[c.notes.length - 1]; if (c.bpm !== s.bpm || last.t + (last.hold || 0) > c.lengthMs) notesSane = false; }
@@ -230,6 +230,85 @@ check('rank thresholds S 95, A 85, B 70, C 50', Jam.rankFor(0.95) === 'S' && Jam
   const hr = Jam.createRun(h, { clock: () => now });
   now = 1000; hr.press('D'); now = 1200; hr.release('D');
   check('a broken hold spoils the full combo', hr.result().fullCombo === false);
+}
+
+// ---- depth slice 1: 4 more songs, extended ladder, concert ----
+{
+  const ids = SG.songIds();
+  check('4 new songs sit before the secret one', ['fern-lullaby', 'spark-reel', 'dewdrop-drift', 'harvest-moonrise'].every((id, i) => ids[7 + i] === id) && SG.SONGS.filter((s) => s.secret).length === 1);
+  const nonSecret = SG.SONGS.filter((s) => !s.secret);
+  check('extended ladder 19/22/25/28 ascends and a song gives at most 3 stars', [19, 22, 25, 28].every((n, i) => SG.song(ids[7 + i]).needStars === n) && nonSecret.every((s, i, a) => !i || s.needStars > a[i - 1].needStars) && nonSecret.every((s, i) => s.needStars <= 3 * i));
+  const save = SG.emptySave();
+  let ok = true;
+  for (const s of nonSecret) { if (!SG.songUnlocked(save, s.id)) { ok = false; break; } SG.record(save, s.id, 'easy', { score: 900, maxCombo: 30, accuracy: 0.95, rank: 'S' }); }
+  check('3 stars per song reaches all 11 regular songs (33 stars)', ok && SG.totalStars(save) === 33 && save.unlocked.length === 11);
+  const stuck = SG.emptySave(); let n = 0;
+  for (const s of nonSecret) { if (SG.songUnlocked(stuck, s.id)) { SG.record(stuck, s.id, 'easy', { score: 1, maxCombo: 1, accuracy: 0.5, rank: 'C' }); n++; } }
+  check('1 star per song cannot skip ahead the ladder', n < 11 && SG.totalStars(stuck) === n);
+  check('new songs have distinct pattern mixes and hit the tier caps', ['fern-lullaby', 'spark-reel', 'dewdrop-drift', 'harvest-moonrise'].every((id) => {
+    const c = SG.chartFor(id, 'hard'); let g = 1e9; for (let i = 1; i < c.notes.length; i++) g = Math.min(g, c.notes[i].t - c.notes[i - 1].t);
+    return g >= 1000 / 5.5 - 1 && Jam.lint(c).ok;
+  }) && new Set(['fern-lullaby', 'spark-reel', 'dewdrop-drift', 'harvest-moonrise'].map((id) => SG.song(id).patterns.join())).size === 4);
+
+  // concert logic
+  const cs = SG.emptySave();
+  ['warm-embers', 'lantern-shuffle', 'moth-parade'].forEach((id) => SG.record(cs, id, 'easy', { score: 900, maxCombo: 30, accuracy: 0.95, rank: 'S' }));
+  const pick = ['warm-embers', 'lantern-shuffle', 'moth-parade'];
+  check('concert: 3 distinct unlocked songs on an open tier are valid', SG.concertCheck(cs, pick, 'easy').ok && SG.concertCheck(cs, pick, 'normal').ok);
+  check('concert rejects locked songs, duplicates, wrong size, locked hard', !SG.concertCheck(cs, ['warm-embers', 'lantern-shuffle', 'kettle-song'], 'easy').ok && !SG.concertCheck(cs, ['warm-embers', 'warm-embers', 'moth-parade'], 'easy').ok && !SG.concertCheck(cs, pick.slice(0, 2), 'easy').ok && !SG.concertCheck(cs, pick, 'hard').ok && !SG.concertCheck(cs, pick, 'bogus').ok && !SG.concertCheck(cs, ['x', 'y', 'z'], 'easy').ok);
+  const cr = SG.concertResult([{ id: 'a', score: 7000, max: 8000, maxCombo: 40 }, { id: 'b', score: 6500, max: 8000, maxCombo: 70 }, { id: 'c', score: 8000, max: 8000, maxCombo: 10 }]);
+  check('concert result sums scores and ranks by combined accuracy', cr.score === 21500 && cr.max === 24000 && Math.abs(cr.accuracy - 21500 / 24000) < 1e-9 && cr.rank === 'A' && cr.maxCombo === 70 && cr.songs === 3);
+  check('concert rank ladder S/B/D', SG.concertResult([{ score: 96, max: 100 }]).rank === 'S' && SG.concertResult([{ score: 71, max: 100 }]).rank === 'B' && SG.concertResult([]).rank === 'D');
+  const r1 = SG.recordConcert(cs, 'easy', cr), r2 = SG.recordConcert(cs, 'easy', { score: 100, rank: 'D' });
+  check('concert best only rises; plays counted', r1.newBest && !r2.newBest && cs.concert.easy.score === 21500 && cs.concert.easy.rank === 'A' && cs.concert.plays === 2);
+  const rt = SG.cleanSave(JSON.parse(JSON.stringify(cs)));
+  check('concert best survives a save round trip', rt.concert.easy.score === 21500 && rt.concert.plays === 2);
+  const bad = SG.cleanSave({ concert: { plays: 'x', easy: { score: -5, rank: 'Z' }, hard: { score: 1e12, rank: 'Z' }, evil: 1 } });
+  check('corrupt concert data is clamped or dropped', !bad.concert || (!bad.concert.easy && (!bad.concert.hard || bad.concert.hard.score <= 3 * 999999 && bad.concert.hard.rank === 'D') && !('evil' in bad.concert)));
+  check('non-object concert/prefs are ignored', !('concert' in SG.cleanSave({ concert: 5, prefs: 'x' })) && !('prefs' in SG.cleanSave({ concert: [], prefs: [1] })));
+}
+
+// ---- depth slice 2: prefs (colour-blind lanes, left-handed order) ----
+{
+  const sv = SG.emptySave();
+  check('prefs default off', !SG.prefOf(sv, 'shapes') && !SG.prefOf(sv, 'lefty') && !('prefs' in sv));
+  SG.setPref(sv, 'shapes', true); SG.setPref(sv, 'lefty', true);
+  check('setPref stores true flags only and unknown keys are refused', SG.prefOf(sv, 'shapes') && SG.prefOf(sv, 'lefty') && SG.setPref(sv, 'evil', true) === false && !('evil' in sv.prefs));
+  check('prefs survive cleanSave', JSON.stringify(SG.cleanSave(JSON.parse(JSON.stringify(sv))).prefs) === JSON.stringify({ shapes: true, lefty: true }));
+  check('bad pref values are dropped', !('prefs' in SG.cleanSave({ prefs: { shapes: 'yes', lefty: 1, ghost: 0 } })) && !('prefs' in SG.cleanSave({ prefs: 'x' })));
+  SG.setPref(sv, 'shapes', false); SG.setPref(sv, 'lefty', false);
+  check('turning every pref off removes the key (old saves stay identical)', !('prefs' in sv));
+}
+
+// ---- depth slice 3: histogram, history, ghost ----
+{
+  let now = 0;
+  const c = { notes: [{ t: 1000, lane: 'D' }, { t: 2000, lane: 'F' }, { t: 3000, lane: 'J' }, { t: 4000, lane: 'K' }] };
+  const run = Jam.createRun(c, { clock: () => now });
+  now = 960; run.press('D'); now = 2000; run.press('F'); now = 3125; run.press('J'); now = 4200; run.update();
+  check('run.deltas lists early/late per note and null for a missed note', JSON.stringify(run.deltas()) === JSON.stringify([-40, 0, 125, null]));
+  const h = Jam.histogram(run.deltas());
+  check('histogram: 13 bins, early/on-time/late split, misses ignored', h.bins.length === 13 && h.early === 1 && h.onTime === 1 && h.late === 1 && h.total === 3 && h.bins.reduce((a, b) => a + b, 0) === 3);
+  check('histogram bins: -40 -> bin 4, 0 -> centre bin 6, +125 -> last bin 12', h.bins[4] === 1 && h.bins[6] === 1 && h.bins[12] === 1);
+  check('histogram tolerates junk', Jam.histogram([NaN, 'x', undefined, null, 9999, -9999]).bins[12] === 1 && Jam.histogram(null).total === 0);
+
+  const sv = SG.emptySave();
+  const res = (score, deltas) => ({ score, maxCombo: 10, accuracy: score / 1000, rank: 'B', deltas });
+  for (let i = 1; i <= 7; i++) SG.record(sv, 'warm-embers', 'easy', res(i * 100, [i, -i, null]));
+  check('history keeps the last 5 runs in order', SG.histOf(sv, 'warm-embers', 'easy').map((e) => e.score).join() === '300,400,500,600,700' && SG.histOf(sv, 'warm-embers', 'easy')[4].acc === 70);
+  check('ghost holds the best run (the last, highest) with 999 for no-hit', JSON.stringify(SG.ghostOf(sv, 'warm-embers', 'easy')) === JSON.stringify([7, -7, 999]));
+  SG.record(sv, 'warm-embers', 'easy', res(50, [1, 1, 1]));
+  check('a worse run adds history but keeps the ghost', SG.histOf(sv, 'warm-embers', 'easy').length === 5 && SG.ghostOf(sv, 'warm-embers', 'easy')[0] === 7);
+  check('history/ghost survive cleanSave', JSON.stringify(SG.cleanSave(JSON.parse(JSON.stringify(sv))).hist) === JSON.stringify(sv.hist) && JSON.stringify(SG.cleanSave(JSON.parse(JSON.stringify(sv))).ghost) === JSON.stringify(sv.ghost));
+  SG.record(sv, 'lantern-shuffle', 'normal', res(10, null));
+  check('no deltas means no ghost, but history still records', !SG.ghostOf(sv, 'lantern-shuffle', 'normal') && SG.histOf(sv, 'lantern-shuffle', 'normal').length === 1);
+  const dirty = SG.cleanSave({ best: { 'warm-embers': { easy: { score: 10, stars: 1, rank: 'C', combo: 1 } } }, hist: { 'warm-embers': { easy: [{ score: -5, acc: 500, rank: 'Z' }, 'x', { score: 1e12, acc: 'q', rank: 'S' }, null, {}, 1, 2, 3] }, nope: { easy: [{ score: 1, acc: 1, rank: 'A' }] } },
+    ghost: { 'warm-embers': { easy: [5, 'x', 1e9, null, -300, 12.7] }, 'lantern-shuffle': { easy: [1, 2] }, nope: { easy: [1] } } });
+  const dh = dirty.hist['warm-embers'].easy;
+  check('dirty history is clamped (acc 0..100, valid rank, <= 5 entries) and unknown songs dropped', dh.length <= 5 && dh.every((e) => e.acc >= 0 && e.acc <= 100 && e.score >= 0 && e.score <= 999999 && 'SABCD'.includes(e.rank)) && !dirty.hist.nope);
+  check('dirty ghost: junk becomes 999, floats round, tiers without a best are dropped', JSON.stringify(dirty.ghost['warm-embers'].easy) === JSON.stringify([5, 999, 999, 999, 999, 13]) && !dirty.ghost['lantern-shuffle'] && !dirty.ghost.nope);
+  check('an all-miss or oversized ghost is rejected', !('ghost' in SG.cleanSave({ best: { 'warm-embers': { easy: { score: 10, stars: 1, rank: 'C', combo: 1 } } }, ghost: { 'warm-embers': { easy: [999, 999] } } })) && !('ghost' in SG.cleanSave({ best: { 'warm-embers': { easy: { score: 10, stars: 1, rank: 'C', combo: 1 } } }, ghost: { 'warm-embers': { easy: new Array(601).fill(3) } } })));
+  check('hist/ghost non-objects are ignored', !('hist' in SG.cleanSave({ hist: 7, ghost: [1] })) && !('ghost' in SG.cleanSave({ hist: 'x', ghost: 'y' })));
 }
 
 // song names are original (no real song or artist names)

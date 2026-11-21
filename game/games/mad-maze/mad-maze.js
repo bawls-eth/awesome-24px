@@ -10,6 +10,10 @@
   const RETURN_RE = /^index\.html\?mode=world&seed=[A-Za-z0-9_-]{1,24}&at=\d{1,4},\d{1,4}(&test=1)?$/;
   const RETURN = params.get('mode') === 'dungeon' && RETURN_RE.test(params.get('return') || '') ? params.get('return') : null;
   const HOME = RETURN || (FROM_HUB ? '../../hub/index.html' : '../../index.html');
+  // Embedded in the town page (same-origin iframe): leaving to town closes the overlay instead of navigating away.
+  const EMBED = (() => { try { return window.self !== window.top; } catch (e) { return false; } })();
+  function leaveToTown() { if (EMBED) { try { window.parent.postMessage({ pixeltown: 'close-realm' }, location.origin); return; } catch (e) { /* fall through */ } } location.href = HOME; }
+  if (EMBED) document.addEventListener('click', (ev) => { const a = ev.target.closest && ev.target.closest('a[href$="../../index.html"]'); if (a) { ev.preventDefault(); leaveToTown(); } }, true);
   const HOME_LABEL = RETURN ? 'Back to the world' : FROM_HUB ? 'Back to the map' : 'Back to town';
 
   function loadSave() {
@@ -24,6 +28,7 @@
 
   if ((window.matchMedia && matchMedia('(pointer: coarse)').matches) || 'ontouchstart' in window) document.body.classList.add('touch-device');
 
+  const DBIOME = window.MMBiomes ? MMBiomes.clean(params.get('biome')) : 'warren'; // ?biome=warren|bramble|meadow|crypt (dungeon runs only; anything else = warren)
   let dungeon = null; // ?mode=dungeon&seed=N turns the arena into a Warren run; the default stays the solo arena
   let realmWorld = null; // ?mode=world (or ?world=1) turns it into the big scrolling Realm overworld (realm-world.js)
   const WORLD = (params.get('mode') === 'world' || params.get('world') === '1') && params.get('mode') !== 'dungeon' && !!window.RealmWorld && !!window.MMOverworld && !!window.MMZones;
@@ -31,7 +36,7 @@
     container: document.getElementById('realm-canvas-wrap'),
     save: rmCleanSave(loadSave().realm),
     onSave: (s) => writeSave({ realm: s }),
-    onExit: (why) => { if (dungeon && why === 'death') dungeon.onDeath(); else location.href = HOME; },
+    onExit: (why) => { if (dungeon && why === 'death') dungeon.onDeath(); else { if (realmWorld) realmWorld.api.settle('leave'); leaveToTown(); } }, // leaving the world pays the Lantern stash
   });
 
   arena.setMenuMode(true); // the standalone page opts in to the in-game menu (Esc / ☰) and the death screen; the town gate keeps the old behaviour
@@ -75,7 +80,7 @@
   if (params.get('mode') === 'dungeon' && window.MMDungeonRun) {
     const hasSeed = /^[A-Za-z0-9_-]{1,24}$/.test(params.get('seed') || '');
     // layout version: explicit ?lv=2, or a fresh random seed (new run); a link with a seed and no lv keeps the original layouts
-    dungeon = MMDungeonRun.create(arena, { layout: (params.get('lv') === '2' || !hasSeed) ? 2 : 1, seed: hasSeed ? params.get('seed') : String(Date.now() % 100000), home: HOME, homeLabel: HOME_LABEL, test: TEST, returnTo: RETURN });
+    dungeon = MMDungeonRun.create(arena, { layout: (params.get('lv') === '2' || !hasSeed) ? 2 : 1, seed: hasSeed ? params.get('seed') : String(Date.now() % 100000), home: HOME, homeLabel: HOME_LABEL, test: TEST, returnTo: RETURN, biome: DBIOME });
     document.body.classList.add('dungeon-mode');
   }
   if (WORLD) {
@@ -105,7 +110,7 @@
 
   // Enemy art: only the mapped arena creatures (idle/move/attack); any failure keeps the procedural sprites.
   if (window.MMArt && MMArt.loadEnemies && params.get('enemyart') !== '0' && !realmWorld) {
-    MMArt.loadEnemies('../../assets/arcane/').then((set) => { if (set.classes().length) arena.setEnemyArt(set); }).catch(() => {});
+    MMArt.loadEnemies('../../assets/arcane/', { extra: dungeon ? MMBiomes.creatures(DBIOME) : [] }).then((set) => { if (set.classes().length) arena.setEnemyArt(set); }).catch(() => {});
   } else if (window.MMArt && MMArt.loadAll && params.get('enemyart') !== '0' && realmWorld) { // world: the zone creatures too (every enemy carries its creature id)
     const only = []; const add = (id) => { if (typeof id === 'string' && only.indexOf(id) < 0) only.push(id); };
     [MMArt.ENEMY_MAP, MMArt.DRIFTER_MAP].forEach((m) => Object.keys(m || {}).forEach((k) => add(m[k])));

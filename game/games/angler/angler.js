@@ -1,7 +1,7 @@
 // Lakeside Angler page. Canvas + DOM, no network. Logic lives in shared/mm-angler.js.
 (function () {
   'use strict';
-  const A = window.MMAngler, Store = window.MMStore, Rng = window.MMRng;
+  const A = window.MMAngler, D = window.MMAnglerDepth, Store = window.MMStore, Rng = window.MMRng;
   const KEY = 'pixeltown-angler-v1';
   const W = 320, H = 480, WATER = 170;
   const params = new URLSearchParams(location.search);
@@ -54,8 +54,13 @@
     return { month: d.getMonth() + 1, hour: d.getHours(), weather: weatherOverride || (TEST ? 'clear' : forecast(d)) };
   }
 
+  // ---- tournament day: real calendar day; ?day=N (test mode only) is clamped to an integer ----
+  const realDay = () => { const d = new Date(); return D.dayNumber(d.getFullYear(), d.getMonth() + 1, d.getDate()); };
+  let dayOverride = TEST ? D.clampDay(params.get('day'), null) : null;
+  const today = () => (dayOverride === null ? realDay() : dayOverride);
+
   // ---- journal ----
-  let journal = A.journal.clean(Store.get(KEY, null));
+  let journal = A.journal.cleanFull(Store.get(KEY, null));
   // gear that is not unlocked (hand-edited storage) falls back to the starter kit
   function fixGear() {
     if (!A.journal.gearUnlocked(journal, 'rod', journal.gear.rod)) journal.gear.rod = 'stick';
@@ -67,12 +72,12 @@
     const raw = params.get('bait');
     if (raw !== null && /^\d{1,6}$/.test(raw)) { journal.bait = Math.max(0, Math.min(99, Number(raw))); Store.set(KEY, A.journal.clean(journal)); }
   })();
-  function saveJournal() { journal = A.journal.clean(journal); Store.set(KEY, journal); }
+  function saveJournal() { journal = A.journal.cleanFull(journal); Store.set(KEY, journal); }
 
   // ---- state ----
   const g = {
     state: 'idle', spot: 'west', bite: null, reel: null, fish: null, size: 0, forced: null,
-    result: null, t: 0, hooked: 0, calm: false, fx: [], bobY: 0, baited: false, bossChance: 0.25, boss: false,
+    result: null, t: 0, hooked: 0, tour: false, tourResult: null, cf: null, baitUsed: null, calm: false, fx: [], bobY: 0, baited: false, bossChance: 0.25, boss: false,
   };
   const held = { ptr: false, key: false, pad: false, test: false };
   const anyHeld = () => held.ptr || held.key || held.pad || held.test;
@@ -93,6 +98,7 @@
   function pickSpot(id) {
     if (A.SPOTS.indexOf(id) < 0 || spotLocked(id)) return false;
     if (g.state !== 'idle') return false;
+    if (g.tour && id !== D.tournament.forDay(today()).spot) return false;
     g.spot = id; renderSpots(); setMsg(idleMsg()); $('spot-title').textContent = A.SPOT_NAMES[id];
     return true;
   }
@@ -102,10 +108,21 @@
   function cast() {
     if (g.state !== 'idle') return;
     if (spotLocked(g.spot)) { setMsg('This spot is closed right now.'); return; }
-    g.bite = A.bite(rng); g.state = 'waiting'; g.t = 0;
-    g.baited = journal.bait > 0;
-    if (g.baited) { journal.bait -= 1; g.bite.wait *= 0.7; saveJournal(); }
-    setMsg(g.baited ? 'Bait on the hook! Waiting for a bite...' : 'Waiting for a bite... (do not press yet)');
+    g.cf = null; g.baitUsed = null;
+    if (g.tour) {
+      const tk = D.tournament.takeCast(journal, today());
+      if (tk.n < 0) { setMsg('No casts left in the tournament.'); return; }
+      journal = tk.journal; saveJournal();
+      g.cf = D.tournament.castFor(today(), tk.n);
+      g.bite = A.bite(rng); g.bite.wait = g.cf.wait; // same bite for everyone; no bait in the tournament
+    } else {
+      g.bite = A.bite(rng);
+      const u = D.economy.useBait(journal);
+      if (u.type) { journal = u.journal; g.baitUsed = u.type; g.bite.wait *= A.BAITS[u.type].waitMult; saveJournal(); }
+    }
+    g.state = 'waiting'; g.t = 0;
+    g.baited = !!g.baitUsed;
+    setMsg(g.tour ? 'Tournament cast ' + journal.tour.run.used + '/' + D.CASTS + '. Waiting for a bite...' : g.baited ? 'Bait on the hook! Waiting for a bite...' : 'Waiting for a bite... (do not press yet)');
     renderSpots();
   }
   function finish(outcome, title, detail) {
@@ -115,14 +132,17 @@
     $('result').hidden = false; g.resultAt = g.t;
     $('res-title').className = outcome === 'caught' && g.fish ? 'r' + g.fish.rarity : '';
     setMsg(title); renderSpots();
+    if (g.tour) afterTourCast();
     if (!TEST) setTimeout(() => { try { $('res-ok').focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 0);
   }
   function dismiss() {
     if (g.state !== 'result') return;
-    $('result').hidden = true; g.fan = null; g.boss = false; g.state = 'idle'; g.reel = null; g.bite = null; g.fish = null;
-    setMsg(idleMsg()); renderSpots();
+    $('result').hidden = true; g.fan = null; g.boss = false; g.state = 'idle'; g.reel = null; g.bite = null; g.fish = null; g.cf = null;
+    setMsg(g.tour ? 'Tournament: cast ' + (journal.tour.run ? journal.tour.run.used + 1 : '?') + '/' + D.CASTS + ' at ' + A.SPOT_NAMES[g.spot] + '.' : idleMsg()); renderSpots();
+    if (g.tourResult) openTourney();
   }
-  const overlayOpen = () => !$('journal').hidden || !$('gear').hidden;
+  const OVERLAYS = ['journal', 'gear', 'tourney', 'market', 'aquarium'];
+  const overlayOpen = () => OVERLAYS.some((id) => !$(id).hidden);
   function onDown() {
     if (overlayOpen()) return;
     if (g.state === 'idle') cast();
@@ -136,13 +156,14 @@
     const c = nowCtx();
     const lair = A.journal.bossFor(journal, g.spot);
     let f;
-    if (g.forced) f = A.BY_ID[g.forced];
+    if (g.cf) f = A.BY_ID[g.cf.fish];
+    else if (g.forced) f = A.BY_ID[g.forced];
     else if (lair && lair.ready && rng() < g.bossChance) f = A.BY_ID[lair.boss];
-    else f = A.rollFish(rng, g.spot, c, { lure: journal.gear.lure, bait: g.baited });
+    else f = A.rollFish(rng, g.spot, c, { lure: journal.gear.lure, bait: g.baitUsed === 'plain', baitType: g.baitUsed });
     g.forced = null;
     if (!f) { finish('none', 'Nothing here', 'This spot is closed.'); return; }
-    g.fish = f; g.size = A.rollSize(rng, f); g.boss = !!f.boss;
-    g.reel = A.reel.create(f, journal.gear.rod, { seed: Math.floor(rng() * 1e9), calm: g.calm });
+    g.fish = f; g.size = g.cf ? g.cf.size : A.rollSize(rng, f, { big: g.baitUsed === 'big' }); g.boss = !!f.boss;
+    g.reel = A.reel.create(f, journal.gear.rod, { seed: g.cf ? g.cf.seed : Math.floor(rng() * 1e9), calm: g.calm });
     g.state = 'reeling'; g.t = 0; g.lastPhase = 0; g.phaseAt = 0;
     setMsg(g.boss ? 'BOSS! ' + f.name + ' takes the line. The line snaps after 1.5 s at max tension.' : 'Hooked! Hold to reel. Keep the zone on the fish.');
     renderSpots();
@@ -152,10 +173,16 @@
     const firstTrophy = f.boss && !journal.trophies[f.id];
     journal = A.journal.record(journal, f.id, g.size);
     if (f.boss) journal = A.journal.addTrophy(journal, f.id);
+    journal = D.economy.addStock(journal, f.id);
+    const drop = D.economy.baitDrop(f.id, g.size, totalCaught() + 1);
+    g.dropMsg = '';
+    if (drop) { const r = D.economy.addBait(journal, drop); if (r.ok) { journal = r.journal; g.dropMsg = ' +1 ' + BAIT_NAMES[drop] + ' bait'; } }
+    g.tourPts = 0;
+    if (g.tour && g.cf) { g.tourPts = D.tournament.scoreCatch(f.id, g.size, today()); journal = D.tournament.addScore(journal, g.tourPts); }
     saveJournal(); renderJournalCount(); renderStatus();
     g.fan = { t: 0, big: f.rarity >= 4 };
     finish('caught', (f.boss ? (firstTrophy ? 'TROPHY! ' : 'Boss beaten! ') : isNew ? 'New! ' : '') + f.name,
-      RARITY[f.rarity] + ' (' + f.rarity + '/5) - ' + sizeWord(f, g.size) + ', ' + g.size + ' cm' + (f.boss ? ' - trophy in your journal' : ''));
+      RARITY[f.rarity] + ' (' + f.rarity + '/5) - ' + sizeWord(f, g.size) + ', ' + g.size + ' cm' + (f.boss ? ' - trophy in your journal' : '') + g.dropMsg + (g.tourPts ? ' - +' + g.tourPts + ' points' : ''));
   }
 
   function sizeWord(f, cm) {
@@ -236,6 +263,8 @@
     const w = weatherLabel();
     $('weather-icon').textContent = w.icon; $('weather-name').textContent = w.name;
     $('bait-val').textContent = String(journal.bait);
+    $('bells-val').textContent = String(journal.bells);
+    $('bait-type').textContent = BAIT_NAMES[journal.baitType] + ' x' + D.economy.baitCount(journal, journal.baitType);
     $('gear-sum').textContent = GEAR_NAMES[journal.gear.rod] + ' / ' + GEAR_NAMES[journal.gear.lure];
     $('gear-btn').disabled = g.state !== 'idle';
   }
@@ -316,7 +345,122 @@
   function closeGear() { $('gear').hidden = true; $('gear-btn').focus(); }
   $('gear-btn').addEventListener('click', openGear);
   $('gear-close').addEventListener('click', closeGear);
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { if (!$('journal').hidden) closeJournal(); else if (!$('gear').hidden) closeGear(); } });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (!$('journal').hidden) closeJournal(); else if (!$('gear').hidden) closeGear();
+    else ['tourney', 'market', 'aquarium'].forEach((id) => { if (!$(id).hidden) closeOverlay(id); });
+  });
+
+  // ---- depth: tournament / market / aquarium ----
+  const BAIT_NAMES = { plain: 'Plain', quick: 'Quick-bite', rare: 'Rare-lure', big: 'Big-fish' };
+  function totalCaught() { let n = 0; Object.keys(journal.caught).forEach((id) => { n += journal.caught[id].n; }); return n; }
+  function afterTourCast() {
+    const run = journal.tour.run;
+    if (run && run.used >= D.CASTS) {
+      const r = D.tournament.finish(journal, today());
+      if (r.result) { journal = r.journal; saveJournal(); g.tourResult = r.result; g.tour = false; renderStatus(); }
+    }
+  }
+  function mk(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+  function btn(text, fn, disabled) {
+    const b = mk('button', 'btn', text); b.type = 'button'; b.disabled = !!disabled;
+    b.addEventListener('click', fn); return b;
+  }
+  const fishName = (id) => A.BY_ID[id].icon + ' ' + A.BY_ID[id].name;
+  function startTournament() {
+    if (g.state !== 'idle') return false;
+    const day = today(), r = D.tournament.start(journal, day);
+    if (!r.ok) return false;
+    journal = r.journal; saveJournal();
+    g.tour = true; g.tourResult = null;
+    g.spot = D.tournament.forDay(day).spot; $('spot-title').textContent = A.SPOT_NAMES[g.spot];
+    closeOverlay('tourney'); renderSpots(); renderStatus();
+    setMsg('Tournament: cast ' + (journal.tour.run.used + 1) + '/' + D.CASTS + ' at ' + A.SPOT_NAMES[g.spot] + '.');
+    return true;
+  }
+  function renderTourney() {
+    const box = $('tourney-body'); box.textContent = '';
+    const day = today(), t = D.tournament.forDay(day), tr = journal.tour, done = tr.last === day;
+    box.appendChild(mk('p', 'rule', 'Day ' + day + ' - same fish and bites for every angler. ' + D.CASTS + ' casts, score = size x rarity (target species counts double).'));
+    box.appendChild(mk('p', '', 'Spot: ' + A.SPOT_NAMES[t.spot] + ' - Target: ' + fishName(t.target)));
+    box.appendChild(mk('p', 'rule', 'Ranks: bronze ' + D.RANKS.bronze + ', silver ' + D.RANKS.silver + ', gold ' + D.RANKS.gold + ' points.'));
+    box.appendChild(mk('p', '', 'Streak: ' + D.tournament.liveStreak(journal, day) + ' day(s) - Played: ' + tr.played + ' - Best: ' + tr.best.score));
+    box.appendChild(mk('p', 'rule', 'Medals: ' + tr.medals.bronze + ' bronze, ' + tr.medals.silver + ' silver, ' + tr.medals.gold + ' gold.'));
+    const bd = Object.keys(journal.badges).map((k) => D.BADGE_TITLES[k] || (k.indexOf('set_') === 0 ? A.SPOT_NAMES[k.slice(4)] + ' set' : k));
+    box.appendChild(mk('p', 'rule', 'Badges: ' + (bd.length ? bd.join(', ') : 'none yet') + '. Cosmetic only.'));
+    if (g.tourResult) {
+      const r = g.tourResult, rp = mk('p', 'rank rank-' + r.rank);
+      rp.id = 'tour-result';
+      rp.textContent = 'Final: ' + r.score + ' points - ' + (r.rank === 'none' ? 'no medal this time' : r.rank.toUpperCase() + ' medal') + ' - streak ' + r.streak
+        + (r.badges.length ? ' - new badge: ' + r.badges.map((k) => D.BADGE_TITLES[k]).join(', ') : '');
+      box.appendChild(rp);
+    } else if (g.tour && tr.run) {
+      box.appendChild(mk('p', '', 'In progress: ' + tr.run.used + '/' + D.CASTS + ' casts, ' + tr.run.score + ' points.'));
+    } else if (done) {
+      box.appendChild(mk('p', 'rule', 'Today\'s tournament is complete. A new one starts with the next calendar day.'));
+    } else {
+      const b = btn(tr.run && tr.run.day === day ? 'Resume (' + tr.run.used + '/' + D.CASTS + ')' : 'Start tournament', startTournament, g.state !== 'idle');
+      b.id = 'tour-start'; b.classList.add('primary'); box.appendChild(b);
+    }
+  }
+  function openOverlay(id, render) { if (g.state !== 'idle' && g.state !== 'result') return false; render(); $(id).hidden = false; const c = $(id + '-close'); if (c) c.focus(); return true; }
+  function closeOverlay(id) { $(id).hidden = true; const o = $(id + '-btn'); if (o && !TEST) o.focus(); }
+  function openTourney() { return openOverlay('tourney', renderTourney); }
+  function renderMarket() {
+    $('market-bells').textContent = String(journal.bells);
+    const sb = $('market-sell'); sb.textContent = '';
+    const ids = Object.keys(journal.stock);
+    if (!ids.length) sb.appendChild(mk('p', 'rule', 'No fish to sell. Catch some first.'));
+    ids.forEach((id) => {
+      const row = mk('div', 'row'); row.dataset.id = id;
+      row.appendChild(mk('span', 'grow', fishName(id) + ' x' + journal.stock[id] + ' (' + D.economy.sellPrice(id) + ' bells each)'));
+      const b1 = btn('Sell 1', () => marketSell(id, 1)); b1.dataset.act = 'sell1';
+      const b2 = btn('Sell all', () => marketSell(id, 99)); b2.dataset.act = 'sellall';
+      row.appendChild(b1); row.appendChild(b2); sb.appendChild(row);
+    });
+    const bb = $('market-buy'); bb.textContent = '';
+    Object.keys(D.BAIT_PRICE).forEach((type) => {
+      const row = mk('div', 'row'); row.dataset.bait = type;
+      row.appendChild(mk('span', 'grow', BAIT_NAMES[type] + ' bait x' + D.economy.baitCount(journal, type) + ' - ' + D.BAIT_INFO[type] + ' - ' + D.BAIT_PRICE[type] + ' bells'));
+      const bu = btn('Buy 1', () => marketBuy(type, 1)); bu.dataset.act = 'buy';
+      const eq = btn(journal.baitType === type ? 'Equipped' : 'Equip', () => marketEquip(type)); eq.dataset.act = 'equip';
+      if (journal.baitType === type) eq.classList.add('sel');
+      row.appendChild(bu); row.appendChild(eq); bb.appendChild(row);
+    });
+    bb.appendChild(mk('p', 'rule', 'Caps: ' + D.CAPS.bait + ' of each bait, ' + D.CAPS.bells + ' bells. Bells are play money earned only by selling fish.'));
+  }
+  function marketSell(id, n) { const r = D.economy.sell(journal, id, n); journal = r.journal; saveJournal(); renderMarket(); renderStatus(); return r.ok; }
+  function marketBuy(type, n) { const r = D.economy.buy(journal, type, n); journal = r.journal; saveJournal(); renderMarket(); renderStatus(); return r.ok; }
+  function marketEquip(type) { journal = D.economy.setBaitType(journal, type); saveJournal(); renderMarket(); renderStatus(); return true; }
+  function openMarket() { return openOverlay('market', renderMarket); }
+  function renderAquarium() {
+    const box = $('aq-body'); box.textContent = '';
+    A.SPOTS.forEach((sp) => {
+      const st = D.aquarium.spotSet(journal, sp), sec = mk('section', 'aqspot'); sec.dataset.spot = sp;
+      sec.appendChild(mk('h3', '', A.SPOT_NAMES[sp] + ' ' + st.have + '/' + st.total + (st.claimed ? ' - complete set' : '')));
+      const grid = mk('div', 'aqgrid');
+      A.FISH.filter((f) => f.spots.indexOf(sp) >= 0 && !f.boss && !f.secret).forEach((f) => {
+        const e = journal.caught[f.id], c = mk('span', 'chip' + (e ? ' r' + f.rarity : ' unk'), e ? f.icon + ' ' + f.name + ' ' + e.best + ' cm' : '???');
+        c.dataset.id = f.id; grid.appendChild(c);
+      });
+      sec.appendChild(grid);
+      if (st.complete && !st.claimed) { const b = btn('Complete set! Claim +' + st.bonus + ' bells', () => claimSet(sp)); b.dataset.act = 'claim'; b.classList.add('primary'); sec.appendChild(b); }
+      else if (!st.complete) sec.appendChild(mk('p', 'rule', 'Catch every regular species here for a set bonus of ' + st.bonus + ' bells and a badge.'));
+      box.appendChild(sec);
+    });
+    const hall = mk('section', 'aqspot'); hall.id = 'hall'; hall.appendChild(mk('h3', '', 'Hall of Records (boss fish, kept on this device only)'));
+    D.aquarium.hallOfRecords(journal).forEach((b) => {
+      const r = mk('p', 'rule' + (b.trophy ? ' trophy' : ''), (b.trophy ? '🏆 ' : '') + b.name + ' (' + A.SPOT_NAMES[b.spot] + '): ' + (b.caught ? 'caught x' + b.n + ', record ' + b.best + ' cm' : 'not yet caught'));
+      r.dataset.id = b.id; hall.appendChild(r);
+    });
+    box.appendChild(hall);
+  }
+  function claimSet(sp) { const r = D.aquarium.claimSet(journal, sp); journal = r.journal; saveJournal(); renderAquarium(); renderStatus(); return r.ok; }
+  function openAquarium() { return openOverlay('aquarium', renderAquarium); }
+  ['tourney', 'market', 'aquarium'].forEach((id) => {
+    $(id + '-btn').addEventListener('click', () => { if (id === 'tourney') openTourney(); else if (id === 'market') openMarket(); else openAquarium(); });
+    $(id + '-close').addEventListener('click', () => closeOverlay(id));
+  });
 
   // ---- drawing ----
   function hashOf(s) { let h = 7; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; }
@@ -453,7 +597,7 @@
   if (TEST) {
     window.__angler = {
       get state() { return g.state; }, get result() { return g.result; }, get reel() { return g.reel; },
-      get bite() { return g.bite; }, get journal() { return journal; }, get spot() { return g.spot; },
+      get bite() { return g.bite; }, get journal() { return A.journal.clean(journal); }, get full() { return journal; }, get spot() { return g.spot; },
       get reduced() { return reduced(); }, get bobY() { return g.bobY; },
       setHold(v) { setInput('test', !!v); },
       tap() { setInput('test', true); setInput('test', false); },
@@ -463,12 +607,16 @@
       get gear() { return journal.gear; }, get bait() { return journal.bait; }, get weather() { return nowCtx().weather; },
       get boss() { return g.boss; }, get phase() { return g.reel ? g.reel.phase : -1; }, get fish() { return g.fish && g.fish.id; },
       get fanfare() { return { reduced: reduced(), active: !!g.fan, t: g.fan ? g.fan.t : 0 }; },
+      get day() { return today(); }, setDay(n) { dayOverride = D.clampDay(n, null); if (ready) { renderStatus(); } return today(); },
+      tourney: { start: startTournament, open: openTourney, info: () => D.tournament.forDay(today()), get active() { return g.tour; }, get run() { return journal.tour.run; }, get result() { return g.tourResult; }, get state() { return journal.tour; } },
+      market: { open: openMarket, sell: marketSell, buy: marketBuy, equip: marketEquip, get bells() { return journal.bells; }, get stock() { return journal.stock; }, get baits() { return journal.baits; }, get baitType() { return journal.baitType; } },
+      aquarium: { open: openAquarium, claim: claimSet },
       setBossChance(p) { g.bossChance = p; }, bossFor(sp) { return A.journal.bossFor(journal, sp || g.spot); },
       poolInfo() {
         const c = nowCtx(), p = A.pool(g.spot, c, {}), gear = { lure: journal.gear.lure, bait: false };
         return { ids: p.map((f) => f.id), weights: p.map((f) => A.weightOf(f, c, gear)) };
       },
-      setJournal(j) { journal = A.journal.clean(j); fixGear(); saveJournal(); renderStatus(); renderJournalCount(); renderSpots(); },
+      setJournal(j) { journal = A.journal.cleanFull(j); fixGear(); saveJournal(); renderStatus(); renderJournalCount(); renderSpots(); },
     };
   } else {
     requestAnimationFrame(frame);
