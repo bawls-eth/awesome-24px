@@ -159,6 +159,7 @@ async function open(browser, q, opts) {
   }
 
   // 12. no console errors, no off-origin requests except the pinned three.js script
+  check('spawn opens beside a cave mouth and the outline is hidden until aimed', await p.evaluate(() => { const d = window.__dd, m = d.mouthSite(); return !!m && Math.hypot(d.spawn.x - m.x, d.spawn.z - m.z) <= 24 && d.outlineVisible() === false; }));
   const all = [a, ph, hs];
   const offs = [];
   all.forEach((o) => o.reqs.forEach((u) => { if (!u.startsWith(ORIGIN) && !u.startsWith('data:') && !u.startsWith('blob:') && u !== THREE_URL) offs.push(u); }));
