@@ -2,7 +2,7 @@
 // medals summary (`pixeltown-medals-isles-v1` = {"v":1,"m":[ids]}, the page is its single writer). Pure data + validation, no DOM.
 // A save is { v, at, returnTo, unlock[], isles{id:{seed,pos,fog,chests}}, home{grid[<=400],stable{slots}}, log{seen,ko,tamed,bugs,fish},
 // rides, wild{<=4} }. B10 adds (all additive): home.inv{kind:n} + home.seeded (MMHomestead decor), visited[isle], bosses[id],
-// gather{day, got{isle:[idx]}, log{res:n}} (daily-free gather spots). X2 adds inv{item:n} (crafting stacks, <=64 x 999). clean() always returns a valid save (corrupt -> defaults) and keeps the whole key under 20 KB.
+// gather{day, got{isle:[idx]}, log{res:n}} (daily-free gather spots). X2 adds inv{item:n} (crafting stacks, <=64 x 999). X4 adds sg:1 (the one-time saddle grandfather gift was given; absent = not yet). clean() always returns a valid save (corrupt -> defaults) and keeps the whole key under 20 KB.
 // This module never touches `pixeltown-save-v1`.
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -158,6 +158,7 @@
       (Array.isArray(raw.bosses) ? raw.bosses.slice(0, 64) : []).forEach((id) => { if (out.bosses.length < MAX_BOSSES && typeof id === 'string' && KEY_RE.test(id) && BAD.indexOf(id) < 0 && out.bosses.indexOf(id) < 0) out.bosses.push(id); });
       out.gather = cleanGather(raw.gather);
       out.inv = cleanInvX(raw.inv);
+      if (raw.sg === 1 || raw.sg === true) out.sg = 1;
       // size guard: shed the least valuable data first until the key fits
       const size = () => JSON.stringify(out).length;
       if (size() > MAX_BYTES) out.inv = {};

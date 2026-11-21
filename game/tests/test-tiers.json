@@ -1043,6 +1043,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "isles-craft.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "gear-default-on.test.js": {
     "class": "browser",
     "tier": "full"

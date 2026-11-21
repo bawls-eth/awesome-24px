@@ -39,7 +39,7 @@ body.touch .hint { bottom: calc(176px + env(safe-area-inset-bottom)); }
 /* B10: home / travel / cozy panels (44 px targets, calm text) */
 .hud-btns { display: flex; gap: 6px; margin-top: 4px; }
 .hud-btns button { min-width: 56px; font-size: 13px; }
-.panel { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(420px, calc(100% - 32px)); max-height: calc(100% - 32px); overflow-y: auto; background: rgba(16,32,24,.96); border: 2px solid var(--accent); padding: 10px 12px; z-index: 6; }
+.panel { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(420px, calc(100% - 32px)); max-height: calc(100% - 32px); overflow-y: auto; background: #10201a; border: 2px solid var(--accent); padding: 10px 12px; z-index: 6; }
 .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .panel h2 { margin: 0; font-size: 16px; }
 .panel h3 { margin: 10px 0 4px; font-size: 13px; color: var(--accent); }
@@ -65,3 +65,15 @@ body.touch .decor { bottom: calc(176px + env(safe-area-inset-bottom)); }
 /* X1: on desktop the key help stays left of the action buttons (it used to run under them) */
 body:not(.touch) .help { max-width: min(520px, calc(100% - 420px)); }
 @media (max-width: 860px) { body:not(.touch) .help { display: none; } }
+/* X4: craft panel (DOM, 44 px targets) and locked sea chart rows */
+.panel .dest.locked, .panel button:disabled { background: #4a5248; color: #d8dccf; cursor: default; }
+.recipe { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid rgba(243,236,210,.14); }
+.recipe.ready .rc-name { color: #b9e08a; }
+.rc-info { flex: 1 1 auto; min-width: 0; }
+.rc-name { font-weight: bold; overflow-wrap: anywhere; }
+.rc-note { font-size: 11px; color: var(--dim); overflow-wrap: anywhere; }
+.rc-need { list-style: none; margin: 2px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 2px 10px; font-size: 12px; }
+.rc-need li.ok { color: #b9e08a; }
+.rc-need li.short { color: #f0b0a0; }
+.rc-btn { flex: 0 0 auto; min-width: 72px; }
+#craft-inv { columns: auto; display: flex; flex-wrap: wrap; gap: 2px 14px; }

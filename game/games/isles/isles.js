@@ -22,8 +22,16 @@
 // kelp) blocks on foot and is crossed on a swim mount, dismounting in it steps ashore; the pack `rare` entry spawns once per island at
 // a seeded spot (IsleCreatures.rareSpot); b30 tile art is jungle-only (other islands bake with their pack palette); the b34 taming
 // icons (trust / torpor / bond / saddle meters, tranq, ride, follow / stay / attack party command) load by id over the text labels.
+// X4 (NEXT-SLICES-2): every pack resource node (world.resources, minus the daily-free gather spots) is picked up by walking over it into
+// the archipelago save's `inv` (MMIsleCraft.cleanInv caps) and grows back after its pack `respawn` seconds; kills roll the creature's
+// MMCreatures DROP_TABLES into `inv`. The Craft panel (K / Craft button, DOM + textContent only, 44 px targets, Esc closes) lists every
+// MMIsleCraft recipe with have / need counts. A mount whose ride.saddle is set needs that saddle in `inv`; the first X4 load gives one
+// free saddle for the mount you already had (save.sg marks it done), and ?saddles=0 restores free riding. Crafting a raft adds `reef` to
+// `unlock`, a rocket core adds `mars`; the sea chart lists locked islands with their cost (home, jungle and tundra are open by default,
+// an island you already visited stays open). b31b: the vinecoil and canopy glider PNG strips come in through MMCreatureStrips.
 (function () {
   'use strict';
+  const CRAFT = window.MMIsleCraft || null;
   const O = window.MMOverworld, BP = window.MMBiomePacks, CB = window.MMChunkBake, CR = window.MMCreatures, CD = window.MMCreatureDraw;
   const FOG = window.MMFog, PROF = window.MMProfile, ISL = window.MMIsles, TAMES = window.MMTames, RNG = window.MMRng;
   const TM = window.MMTame, CMP = window.MMCompanion, IC = window.IsleCreatures, HS = window.MMHomestead, MS = window.MMCreatureStrips;
@@ -37,6 +45,7 @@
   const ART = Q.get('art') !== '0';
   const LOW = Q.get('perf') === 'low';
   const TAME = Q.get('tame') !== '0', COMPANIONS = Q.get('companions') !== '0', MOUNTS = Q.get('mounts') !== '0';
+  const SADDLES = Q.get('saddles') !== '0' && !!CRAFT; // X4: ?saddles=0 rides every mount bareback (today's free riding)
   const TILE = CB.TILE, CPX = CB.CPX, CH = CB.CH;
 
   // ---------- storage (own keys only; every access guarded) ----------
@@ -491,17 +500,31 @@
     if (bolts.length < 60) bolts.push({ x: hero.x, y: hero.y - 6, vx: dx / l * BOLT_SPEED, vy: dy / l * BOLT_SPEED, life: BOLT_LIFE, soothe: soothe && TAME });
     return true;
   }
+  // X4 drops: the creature's MMCreatures DROP_TABLES (its first table always rolls, a second one half the time), one weighted row each
+  // with a count in [min, max], from a seeded drop stream. Everything goes into `inv` (crafting); food also refills the taming pouch.
+  const DEFAULT_DROPS = { jungle: 'jungle_loot', reef: 'reef_loot', tundra: 'frost_loot', mars: 'mars_loot', meadow: 'fluff' };
+  const dropRng = RNG.create('isles|' + PACK_ID + '|' + SEED + '|drops');
+  const DROP_LOG = []; // last few drops {sp, item, n} (test handle; fixed size)
   function rollLoot(c) {
     const s = specOf(c.sp, c.kind);
-    const tables = s.drops && s.drops.length ? s.drops : ['jungle_loot'];
-    const tab = CR.dropTable ? CR.dropTable(tables[0]) : null;
-    if (!Array.isArray(tab) || !tab.length) return;
-    if (rng.next() > 0.5) return; // minimal loot: half the kills drop one item
-    let tw = 0; tab.forEach((r) => { tw += r[3] || 1; });
-    let pick = rng.next() * tw, row = tab[0];
-    for (let i = 0; i < tab.length; i++) { pick -= tab[i][3] || 1; if (pick <= 0) { row = tab[i]; break; } }
-    loot[row[0]] = (loot[row[0]] || 0) + 1;
-    if (has(pouch, row[0])) pouch[row[0]] = Math.min(99, pouch[row[0]] + 1); // food drops refill the pouch
+    const tables = s.drops && s.drops.length ? s.drops : [DEFAULT_DROPS[PACK_ID] || 'jungle_loot'];
+    const got = [];
+    for (let t = 0; t < tables.length && t < 2; t++) {
+      const tab = CR.dropTable ? CR.dropTable(tables[t]) : null;
+      if (!Array.isArray(tab) || !tab.length) continue;
+      if (t > 0 && dropRng.next() > 0.5) continue;
+      let tw = 0; tab.forEach((r) => { tw += r[3] || 1; });
+      let pick = dropRng.next() * tw, row = tab[0];
+      for (let i = 0; i < tab.length; i++) { pick -= tab[i][3] || 1; if (pick <= 0) { row = tab[i]; break; } }
+      const n = dropRng.int(Math.max(1, row[1] | 0), Math.max(1, row[2] | 0, row[1] | 0));
+      loot[row[0]] = (loot[row[0]] || 0) + n;
+      if (has(pouch, row[0])) pouch[row[0]] = Math.min(99, pouch[row[0]] + 1); // food drops refill the pouch
+      const added = invAdd(row[0], n);
+      if (DROP_LOG.length >= 8) DROP_LOG.shift();
+      DROP_LOG.push({ sp: c.kind || c.sp, item: row[0], n: n, added: added });
+      if (added) got.push(itemName(row[0]) + ' x' + added);
+    }
+    if (got.length) toast('Dropped ' + got.join(', ') + '.');
   }
   function killCreature(c) {
     const s = specOf(c.sp, c.kind);
@@ -674,6 +697,8 @@
     if (!MOUNTS || ride || hero.dead) return false;
     if (!mountEnt) { toast('Tame a Tusktop to ride it.'); return false; }
     const def = CR.get(mountEnt.sp);
+    const need = saddleNeed(def);
+    if (need && !hasSaddle(need)) { toast((mountEnt.nm || def.name) + ' needs a ' + itemName(need).toLowerCase() + ' to ride. Craft one (K).'); return false; }
     ride = CMP.ride(def, mountEnt.id);
     if (!ride) return false;
     dropCompanion(mountEnt.id);
@@ -696,6 +721,9 @@
     return true;
   }
   let lastShore = null;
+  // X4 saddles: the saddle id a mount needs (null for saddle:null mounts and with ?saddles=0); a saddle is kept, not used up
+  const saddleNeed = (def) => (SADDLES && def && def.ride && def.ride.saddle ? def.ride.saddle : null);
+  const hasSaddle = (id) => !!id && has(save.inv, id) && save.inv[id] > 0;
   const toggleRide = () => (ride ? (dismount(), false) : mountUp());
   refreshMount();
 
@@ -1005,9 +1033,127 @@
     const p = spotNear();
     if (!p || hero.dead) return { ok: false, why: 'none' };
     const r = HS.gather(save.gather, ISLE, p, DAY);
-    if (r.ok) { toast('You found ' + HS.resName(r.kind) + '. (' + r.total + ' in your log)'); dirty = true; persist(); }
+    if (r.ok) { invAdd(r.kind, 1); toast('You found ' + HS.resName(r.kind) + '. (' + r.total + ' in your log)'); dirty = true; persist(); }
     else if (r.why === 'today') toast('Already gathered here today. It grows back tomorrow.');
     return r;
+  }
+
+  // ---------- X4: inventory, walk-over resource nodes, crafting, island unlocks ----------
+  if (!save.inv || typeof save.inv !== 'object') save.inv = {};
+  const ITEM_NAME = { raft: 'Raft', rocket_core: 'Rocket core', feast: 'Feast', sleepy_herb: 'Sleepy herb', warm_cloak: 'Warm cloak', o2_tank: 'O2 tank' };
+  const SADDLE_OF = {};
+  CR.list().forEach((d) => { if (d.ride && d.ride.saddle) SADDLE_OF[d.ride.saddle] = d.name; });
+  const itemName = (id) => (has(ITEM_NAME, id) ? ITEM_NAME[id] : has(SADDLE_OF, id) ? SADDLE_OF[id] + ' saddle' : HS.resName(id));
+  const invCount = (id) => (has(save.inv, id) && save.inv[id] > 0 ? save.inv[id] : 0);
+  // add n of an item to `inv` through MMIsleCraft.cleanInv (unknown ids, a full stack or 64 stacks add nothing); returns how many went in
+  function invAdd(id, n) {
+    if (!CRAFT || !(n > 0) || typeof id !== 'string') return 0;
+    const cur = invCount(id), want = {};
+    Object.keys(save.inv).forEach((k) => { want[k] = save.inv[k]; });
+    want[id] = Math.min(CRAFT.MAX_COUNT, cur + Math.floor(n));
+    const next = CRAFT.cleanInv(want);
+    const got = (next[id] | 0) - cur;
+    if (got <= 0) return 0;
+    save.inv = next; dirty = true;
+    if (panelKind === 'craft') craftDirty = true;
+    return got;
+  }
+  // walk-over nodes: every pack resource node except today's gather spots (those stay a G pick, once a day). In memory only: a node
+  // you picked grows back after its pack `respawn` seconds (and a reload grows everything back; nothing is ever lost).
+  const RESPAWN = {};
+  (PACK.resources || []).forEach((r) => { RESPAWN[r.id] = r.respawn > 0 ? r.respawn : 300; });
+  const spotSet = new Set(spots.map((p) => p.idx));
+  const nodes = [], nodeAt = new Map(), nodeChunks = new Map();
+  (world.resources || []).forEach((r, i) => {
+    if (spotSet.has(i)) return;
+    const n = { i: i, x: r.x, y: r.y, kind: r.kind, until: 0, picks: 0 };
+    nodes.push(n); nodeAt.set(r.y * W + r.x, n);
+    const ck = Math.floor(r.y / CH) * 4096 + Math.floor(r.x / CH);
+    if (!nodeChunks.has(ck)) nodeChunks.set(ck, []);
+    nodeChunks.get(ck).push(n);
+  });
+  let picked = 0, lastNodeTile = -1;
+  const nodeReady = (n) => n.until <= clock.now();
+  // called every sim step: one Map lookup by the hero's tile index (no allocation); a node fires once per arrival on its tile
+  function nodeTick() {
+    if (hero.dead || !CRAFT || !nodes.length) return;
+    const k = tileOf(hero.y) * W + tileOf(hero.x);
+    const n = nodeAt.get(k);
+    if (!n) { lastNodeTile = -1; return; }
+    if (lastNodeTile === k) return;
+    lastNodeTile = k;
+    if (!nodeReady(n)) return;
+    const got = invAdd(n.kind, 1);
+    if (!got) { toast('Your pack has no room for more ' + HS.resName(n.kind) + '.'); return; }
+    n.until = clock.now() + RESPAWN[n.kind] * 1000; n.picks++; picked++;
+    toast('+1 ' + HS.resName(n.kind) + ' (' + invCount(n.kind) + ' in your pack)');
+  }
+  // node art: one small canvas per resource kind, baked once (code art; shape by kind family)
+  const NODE_COL = { wood: ['#8a5a32', '#5a3a1e'], driftwood: ['#b09070', '#7a5a3a'], stone: ['#a0a4a8', '#6a6e72'], iron: ['#7a6a66', '#b0603a'],
+    oxide_dust: ['#d0643a', '#8a3a22'], pearl: ['#f4eef8', '#b8a8c8'], shell: ['#f6c8c0', '#c08a80'], fiber: ['#9ac05a', '#5a8a2a'],
+    clover: ['#6ac05a', '#3a8a2a'], kelp: ['#4a9a6a', '#2a6a4a'], vine_rope: ['#5aa04a', '#2f6a2a'], apple: ['#e0443a', '#5a8a2a'],
+    jungle_berry: ['#b03a8a', '#5a8a2a'], frostberry: ['#5a8ae0', '#3a6a5a'], cocoa: ['#a0602a', '#5a3a1a'], amber: ['#f2a83a', '#a0601a'],
+    frost_crystal: ['#bfe8ff', '#5a9ad0'], ice: ['#e4f4ff', '#9ac4e0'], ice_core: ['#8ae8f0', '#3a9aa8'], meteor_glass: ['#8a5ac0', '#4a2a6a'],
+    salt: ['#f8f8f0', '#c0c0b0'], spring_salt: ['#f0f8f8', '#a8c8c8'] };
+  const NODE_SHAPE = { wood: 'log', driftwood: 'log', amber: 'gem', frost_crystal: 'gem', ice: 'gem', ice_core: 'gem', meteor_glass: 'gem', salt: 'gem', spring_salt: 'gem',
+    apple: 'berry', jungle_berry: 'berry', frostberry: 'berry', cocoa: 'berry', fiber: 'tuft', clover: 'tuft', kelp: 'tuft', vine_rope: 'tuft' };
+  const nodeArt = {};
+  function bakeNode(kind) {
+    if (nodeArt[kind]) return nodeArt[kind];
+    const s = Math.round(26 * DPR), cv = mk(s, s), c = cv.getContext('2d'), col = NODE_COL[kind] || ['#d8c89a', '#8a7a5a'], sh = NODE_SHAPE[kind] || 'rock';
+    c.scale(DPR * 1.3, DPR * 1.3); // drawn on a 20 px grid, shown at 26 px
+    c.fillStyle = 'rgba(255,244,168,0.22)'; c.beginPath(); c.ellipse(10, 16, 9.5, 3.5, 0, 0, Math.PI * 2); c.fill(); // a soft pickup halo
+    c.fillStyle = 'rgba(0,0,0,0.3)'; c.beginPath(); c.ellipse(10, 17, 7, 2, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = col[1];
+    if (sh === 'log') { c.fillRect(3, 10, 14, 6); c.fillStyle = col[0]; c.fillRect(3, 9, 14, 4); c.fillStyle = '#e8c890'; c.fillRect(15, 10, 3, 5); }
+    else if (sh === 'gem') { c.beginPath(); c.moveTo(10, 2); c.lineTo(15, 10); c.lineTo(10, 17); c.lineTo(5, 10); c.closePath(); c.fill(); c.fillStyle = col[0]; c.beginPath(); c.moveTo(10, 3); c.lineTo(14, 10); c.lineTo(10, 10); c.closePath(); c.fill(); }
+    else if (sh === 'berry') { c.fillRect(9, 5, 2, 5); c.fillStyle = col[0]; [[7, 12], [13, 12], [10, 8.5]].forEach((p) => { c.beginPath(); c.arc(p[0], p[1], 3.5, 0, Math.PI * 2); c.fill(); }); c.fillStyle = '#fff'; c.fillRect(6, 10, 1, 1); }
+    else if (sh === 'tuft') { [[5, 16, 7], [9, 16, 4], [13, 16, 8]].forEach((p) => { c.fillStyle = col[1]; c.fillRect(p[0], p[2], 3, p[1] - p[2]); c.fillStyle = col[0]; c.fillRect(p[0], p[2], 3, 3); }); }
+    else { c.beginPath(); c.ellipse(10, 13, 7, 4.5, 0, 0, Math.PI * 2); c.fill(); c.fillStyle = col[0]; c.beginPath(); c.ellipse(9, 12, 5, 3, 0, 0, Math.PI * 2); c.fill(); }
+    nodeArt[kind] = cv;
+    return cv;
+  }
+  function drawNodes() {
+    if (!nodes.length) return;
+    const c0 = Math.floor(camX / CPX), c1 = Math.floor((camX + VW) / CPX), r0 = Math.floor(camY / CPX), r1 = Math.floor((camY + VH) / CPX), now = clock.now();
+    const tw = REDUCED ? 0 : Math.sin(simT * 3) * 1.5;
+    for (let cy = r0; cy <= r1; cy++) for (let cx = c0; cx <= c1; cx++) {
+      const l = nodeChunks.get(cy * 4096 + cx);
+      if (!l) continue;
+      for (let i = 0; i < l.length; i++) {
+        const n = l[i];
+        if (n.until > now) continue;
+        const sx = n.x * TILE - camX, sy = n.y * TILE - camY;
+        g.drawImage(bakeNode(n.kind), sx + 3, sy + 3, 26, 26);
+        g.fillStyle = '#fff4a8'; g.fillRect(sx + 24, sy + 3 - tw, 3, 3); // a small glint
+      }
+    }
+  }
+  // crafting (MMIsleCraft): never RNG, never currency; crafted travel items open an island in `unlock`
+  const UNLOCK_BY_ITEM = { raft: 'reef', rocket_core: 'mars' };
+  const ITEM_FOR_ISLE = { reef: 'raft', mars: 'rocket_core' };
+  const OPEN_ISLES = ['home', 'jungle', 'ice']; // open by default (NEXT-SLICES-2 X4); reef needs a raft, mars a rocket core
+  // an island is open by default, through `unlock`, or because you have already been there (nobody loses a trip they had)
+  const isleOpen = (id) => OPEN_ISLES.indexOf(id) >= 0 || ISL.isUnlocked(save, id) || (Array.isArray(save.visited) && save.visited.indexOf(id) >= 0);
+  let craftDirty = false;
+  function doCraft(id) {
+    if (!CRAFT) return { ok: false, why: 'off' };
+    const c = CRAFT.canCraft(save.inv, id);
+    if (!c.ok) {
+      if (c.reason === 'full') toast('Your pack is full. Nothing was used.');
+      else if (c.missing && c.missing.length) toast('Still need ' + c.missing.map((m) => HS.resName(m.id) + ' ' + m.have + '/' + m.need).join(', ') + '.');
+      return { ok: false, why: c.reason || 'missing', missing: c.missing };
+    }
+    const next = CRAFT.craft(save.inv, id), copy = {};
+    Object.keys(next).forEach((k) => { copy[k] = next[k]; });
+    save.inv = copy;
+    let opened = '';
+    const isle = has(UNLOCK_BY_ITEM, id) ? UNLOCK_BY_ITEM[id] : '';
+    if (isle) { if (!Array.isArray(save.unlock)) save.unlock = ['jungle']; if (save.unlock.indexOf(isle) < 0) { save.unlock.push(isle); opened = isle; } }
+    dirty = true; persist();
+    toast('Crafted ' + itemName(id).toLowerCase() + '.' + (opened ? ' ' + isleName(opened) + ' is on the sea chart now.' : ''));
+    if (panelKind === 'craft') renderCraft(id);
+    return { ok: true, id: id, unlocked: opened, have: invCount(id) };
   }
   // dock + sea chart
   const DOCK_R = 2.5 * TILE;
@@ -1016,6 +1162,7 @@
   let travelling = '';
   function travelTo(id) {
     if (DESTS.indexOf(id) < 0 || id === ISLE || travelling) return false;
+    if (!isleOpen(id)) { toast(isleName(id) + ' needs a ' + itemName(ITEM_FOR_ISLE[id] || '').toLowerCase() + '. Craft it (K).'); return false; }
     const q = new URLSearchParams(location.search);
     q.set('isle', ISLE_PARAM[id] || id); q.set('at', 'dock'); q.delete('seed'); q.delete('from');
     travelling = id;
@@ -1065,6 +1212,7 @@
         else { g.fillStyle = '#9ae07a'; g.beginPath(); g.arc(sx, sy - 6, 6, 0, Math.PI * 2); g.fill(); }
       }
     }
+    drawNodes();
     const tw = REDUCED ? 0 : Math.sin(simT * 4) * 2;
     for (let i = 0; i < spots.length; i++) {
       const p = spots[i];
@@ -1090,11 +1238,16 @@
       panelTitle.textContent = 'Sea chart';
       panelBody.appendChild(el('p', 'calm', 'The boat is ready whenever you are. Where to?'));
       DESTS.filter((id) => id !== ISLE).forEach((id) => {
-        const b = el('button', 'dest', (id === 'home' ? 'Home: ' : 'Sail to ') + isleName(id));
+        const open = isleOpen(id), need = ITEM_FOR_ISLE[id];
+        const b = el('button', open ? 'dest' : 'dest locked', open ? (id === 'home' ? 'Home: ' : 'Sail to ') + isleName(id) : isleName(id) + ': needs a ' + itemName(need).toLowerCase() + ' (craft it)');
         b.type = 'button'; b.dataset.isle = id;
+        if (!open) { b.disabled = true; b.setAttribute('aria-disabled', 'true'); b.dataset.need = need || ''; }
         b.addEventListener('click', () => travelTo(id));
         panelBody.appendChild(b);
       });
+    } else if (kind === 'craft') {
+      panelTitle.textContent = 'Craft';
+      renderCraft('');
     } else {
       panelTitle.textContent = 'Island log';
       const gl = save.gather.log, keys = Object.keys(gl).sort();
@@ -1118,6 +1271,53 @@
     try { first.focus(); } catch (e) { /* ignore */ }
   }
   $('panel-close').addEventListener('click', closePanel);
+  // the craft panel: your pack, then every recipe grouped (travel, saddles, supplies) with have / need per input and a Craft button.
+  // Rebuilt only when it opens or the pack changes (never per frame); plain text nodes only.
+  const CRAFT_GROUPS = [['Travel', (id) => has(UNLOCK_BY_ITEM, id)], ['Saddles', (id) => /^saddle_/.test(id)], ['Supplies', (id) => !has(UNLOCK_BY_ITEM, id) && !/^saddle_/.test(id)]];
+  function renderCraft(focusId) {
+    const top = panel.scrollTop;
+    while (panelBody.firstChild) panelBody.removeChild(panelBody.firstChild);
+    craftDirty = false;
+    if (!CRAFT) { panelBody.appendChild(el('p', 'dim', 'Crafting is not available here.')); return; }
+    panelBody.appendChild(el('p', 'calm', 'Walk over glints to gather. Creatures drop materials too. Take your time.'));
+    panelBody.appendChild(el('h3', '', 'Your pack'));
+    const ul = el('ul', 'log-list'); ul.id = 'craft-inv';
+    const ks = Object.keys(save.inv).sort();
+    if (!ks.length) ul.appendChild(el('li', 'dim', 'Empty so far.'));
+    ks.forEach((k) => { const li = el('li', '', itemName(k) + ' x' + save.inv[k]); li.dataset.item = k; ul.appendChild(li); });
+    panelBody.appendChild(ul);
+    let focusBtn = null;
+    CRAFT_GROUPS.forEach((gr) => {
+      const ids = CRAFT.IDS.filter(gr[1]);
+      if (!ids.length) return;
+      panelBody.appendChild(el('h3', '', gr[0]));
+      ids.forEach((id) => {
+        const r = CRAFT.get(id), can = CRAFT.canCraft(save.inv, id), own = invCount(id);
+        const row = el('div', can.ok ? 'recipe ready' : 'recipe'); row.dataset.recipe = id;
+        const info = el('div', 'rc-info');
+        info.appendChild(el('div', 'rc-name', itemName(id) + (own ? ' (have ' + own + ')' : '')));
+        const isle = has(UNLOCK_BY_ITEM, id) ? UNLOCK_BY_ITEM[id] : '';
+        info.appendChild(el('div', 'rc-note', isle ? (isleOpen(isle) ? isleName(isle) + ' is open' : 'opens ' + isleName(isle)) : r.note));
+        const need = el('ul', 'rc-need');
+        Object.keys(r.in).forEach((k) => {
+          const have = invCount(k), li = el('li', have >= r.in[k] ? 'ok' : 'short', HS.resName(k) + ' ' + have + '/' + r.in[k]);
+          li.dataset.item = k; li.dataset.have = String(have); li.dataset.need = String(r.in[k]);
+          need.appendChild(li);
+        });
+        info.appendChild(need);
+        row.appendChild(info);
+        const b = el('button', 'rc-btn', 'Craft'); b.type = 'button'; b.dataset.recipe = id;
+        b.setAttribute('aria-label', 'Craft ' + itemName(id));
+        if (!can.ok) { b.disabled = true; b.setAttribute('aria-disabled', 'true'); }
+        b.addEventListener('click', () => doCraft(id));
+        row.appendChild(b);
+        panelBody.appendChild(row);
+        if (id === focusId) focusBtn = b;
+      });
+    });
+    panel.scrollTop = top;
+    if (focusId) { try { (focusBtn && !focusBtn.disabled ? focusBtn : $('panel-close')).focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+  }
   // the decor bar (home only)
   const decorBar = $('decor');
   const decorBtns = {};
@@ -1230,7 +1430,7 @@
     if (hud.hint.hidden !== !h) hud.hint.hidden = !h;
   }
   // the tame meters: trust (befriending progress) / torpor (knockout sleepiness) of the creature you are taming, bond of your lead
-  // companion, and the saddle while riding (saddles are crafted later; a saddle mount rides bareback until then)
+  // companion, and the saddle while riding (fitted = the crafted saddle is in your pack; bareback only with ?saddles=0)
   function tameHud(ft) {
     let c = ft;
     if (!c && TAME) { let bd = 5 * TILE; for (let i = 0; i < creatures.length; i++) { const x = creatures[i]; if (!x.tm) continue; const d = Math.hypot(hero.x - x.x, hero.y - x.y); if (d < bd) { bd = d; c = x; } } }
@@ -1239,7 +1439,7 @@
     setMeter('torpor', tm && tm.torporMax > 0 && (tm.torpor > 0 || c.ko) ? (c.ko ? 'asleep ' + Math.ceil(TM.sleepLeft(tm)) + 's' : Math.round(100 * clamp(tm.torpor / tm.torporMax, 0, 1)) + '%') : '');
     setMeter('bond', party.length ? String(party[0].ent.bond | 0) : '');
     const md = ride && mountEnt ? CR.get(mountEnt.sp) : null;
-    setMeter('saddle', md && md.ride ? (md.ride.saddle ? 'none yet' : 'not needed') : '');
+    setMeter('saddle', md && md.ride ? (md.ride.saddle ? (hasSaddle(md.ride.saddle) ? 'fitted' : 'bareback') : 'not needed') : '');
   }
   function hintText(ft) {
     if (build) return 'Decorating: tap open ground to place, tap an item to pick it up. E works too.';
@@ -1298,6 +1498,7 @@
     if (e.code === 'KeyC' && !e.repeat) cycleCommand();
     if (e.code === 'KeyT' && !e.repeat && nearDock()) openPanel('sail');
     if (e.code === 'KeyL' && !e.repeat) { if (panelKind === 'log') closePanel(); else openPanel('log'); }
+    if (e.code === 'KeyK' && !e.repeat) { if (panelKind === 'craft') closePanel(); else openPanel('craft'); }
     if (e.code === 'KeyB' && !e.repeat && HOME) setBuild(!build);
     if (e.code === 'KeyE' && !e.repeat && build) buildAt(tileOf(hero.x + hero.face.x * TILE), tileOf(hero.y + hero.face.y * TILE));
     if (e.code === 'Escape' && !panel.hidden) closePanel();
@@ -1340,6 +1541,7 @@
   btn.build.addEventListener('click', () => { setBuild(!build); });
   btn.home.addEventListener('click', () => { travelTo('home'); });
   btn.log.addEventListener('click', () => { if (panelKind === 'log') closePanel(); else openPanel('log'); });
+  $('btn-craft').addEventListener('click', () => { if (panelKind === 'craft') closePanel(); else openPanel('craft'); });
   const coarse = (() => { try { return window.matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } })();
   if (coarse || Q.get('touch') === '1' || ('ontouchstart' in window && window.innerWidth <= 700)) document.body.classList.add('touch');
 
@@ -1362,6 +1564,7 @@
     if (ride) CMP.rideStep(ride, dt);
     if (!hero.dead) moveHero(mx, my, dt);
     revealFog();
+    nodeTick();
     spawnT -= dt;
     if (spawnT <= 0) { spawnT = 0.5; spawnTick(); bossCheck(); }
     stepCreatures(dt);
@@ -1383,8 +1586,18 @@
     render();
     miniT -= dt; hudT -= dt;
     if (miniT <= 0) { miniT = LOW ? 0.5 : 0.25; drawMini(); }
-    if (hudT <= 0) { hudT = 0.2; drawHud(); }
+    if (hudT <= 0) { hudT = 0.2; drawHud(); if (craftDirty && panelKind === 'craft') renderCraft(''); }
     requestAnimationFrame(frame);
+  }
+  // X4 grandfathering, once per save (sg): the mount you already had (tames.mount, else your first rideable tame) gets its saddle for
+  // free, so nobody loses a ride. Skipped with ?saddles=0 (nothing is written, the gift waits for a normal visit).
+  let saddleGift = null;
+  if (SADDLES && save.sg !== 1) {
+    const pick = (t) => { const d = t && CR.get(t.sp); return d && d.rideable ? t : null; };
+    const ent = pick(tames.mount ? TAMES.find(tames, tames.mount) : null) || tames.roster.map(pick).filter(Boolean)[0] || null;
+    const d = ent ? CR.get(ent.sp) : null, sid = d && d.ride && d.ride.saddle;
+    if (sid && !hasSaddle(sid) && invAdd(sid, 1)) saddleGift = sid;
+    save.sg = 1; dirty = true; persist();
   }
   loadParty();
   revealFog();
@@ -1393,6 +1606,7 @@
   drawMini(); drawHud();
   requestAnimationFrame(frame);
   if (!savedIsle && !medalLog.length) toast(HOME ? 'Welcome home to ' + PACK.name + '.' : 'Welcome to the ' + PACK.name + '!');
+  if (saddleGift) toast('A ' + itemName(saddleGift).toLowerCase() + ' for your mount is in your pack, free.');
 
   // ---------- test handle ----------
   if (TEST) {
@@ -1431,7 +1645,7 @@
       render: () => { render(); return true; },
       face: (x, y) => { const l = Math.hypot(x, y) || 1; hero.face.x = x / l; hero.face.y = y / l; return true; },
       spawn: (sp, tx, ty) => (SPAWNABLE.indexOf(sp) >= 0 && creatures.length < CAP ? addCreature(sp, (tx + 0.5) * TILE, (ty + 0.5) * TILE, -1).uid : null),
-      flags: () => ({ tame: TAME, companions: COMPANIONS, mounts: MOUNTS }),
+      flags: () => ({ tame: TAME, companions: COMPANIONS, mounts: MOUNTS, saddles: SADDLES }),
       anger: (id) => { const c = creatures.find((x) => x.uid === id); if (c) c.angry = 30; return !!c; },
       soothe: (on) => { if (!TAME) return false; soothe = on !== false; setIco(btn.soothe.querySelector('.ico'), soothe ? 'ui_tranq_on' : 'ui_tranq_off'); return soothe; },
       feed: () => feed(),
@@ -1461,7 +1675,7 @@
       undo: () => undoBuild(),
       dock: () => (world.dock ? { x: world.dock.x, y: world.dock.y } : null),
       nearDock: () => nearDock(),
-      openPanel: (k) => { openPanel(k === 'sail' ? 'sail' : 'log'); return panelKind; },
+      openPanel: (k) => { openPanel(k === 'sail' ? 'sail' : k === 'craft' ? 'craft' : 'log'); return panelKind; },
       closePanel: () => closePanel(),
       destinations: () => DESTS.filter((id) => id !== ISLE),
       travel: (id) => travelTo(id),
@@ -1486,6 +1700,17 @@
       icons: () => ({ loaded: Object.keys(iconOk).sort(), shown: Array.prototype.map.call(document.querySelectorAll('.ico.on'), (e) => e.dataset.ico) }),
       meters: () => { drawHud(); const o = {}; Object.keys(meters).forEach((k) => { o[k] = meters[k].hidden ? null : meters[k].querySelector('.val').textContent; }); return o; },
       // find a tile of terrain `name` that has a walkable neighbour (a shore tile), for the swim tests
+      // X4
+      inv: () => Object.assign({}, save.inv),
+      unlock: () => save.unlock.slice(),
+      isleOpen: (id) => isleOpen(id),
+      give: (id, n) => invAdd(id, n === undefined ? 1 : Number(n)),
+      craft: (id) => doCraft(id),
+      canCraft: (id) => (CRAFT ? CRAFT.canCraft(save.inv, id) : null),
+      nodes: () => nodes.map((n) => ({ i: n.i, x: n.x, y: n.y, kind: n.kind, ready: nodeReady(n), picks: n.picks, respawn: RESPAWN[n.kind] })),
+      picked: () => picked,
+      drops: () => DROP_LOG.slice(),
+      saddles: () => ({ on: SADDLES, gift: saddleGift, sg: save.sg === 1 }),
       findShore: (name) => {
         const want = O.TERRAIN_ALL[name];
         for (let y = 3; y < H - 3; y++) for (let x = 3; x < W - 3; x++) {
