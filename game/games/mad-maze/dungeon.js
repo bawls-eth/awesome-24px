@@ -158,22 +158,33 @@
     // set only by mad-maze.js from a regex-checked ?return= (a Realm World portal): the exit goes back to that portal tile
     const backWorld = typeof opts.returnTo === 'string' && /^index\.html\?mode=world&seed=[A-Za-z0-9_-]{1,24}&at=\d{1,4},\d{1,4}(&test=1)?$/.test(opts.returnTo) ? opts.returnTo : null;
     const seed = String(opts.seed === undefined ? '1' : opts.seed);
+    // BL2: ?lair=1 (read here; the BK2 boss-key portal passes it) = a 2-room dungeon: an antechamber guarding the key + the biome boss hall behind a key door
+    let lair = opts.lair === true || opts.lair === '1'; try { if (new URLSearchParams(location.search).get('lair') === '1') lair = true; } catch (e) { /* node / no location */ }
     const biome = MMBiomes.clean(opts.biome); const B = Object.assign({}, MMBiomes.get(biome)); // unknown / missing biome -> warren
-    { const bf = MMBiomes.bossFor(biome, seed, opts.bosses === 'classic'); B.boss_art = bf.boss_art; B.boss_name = bf.boss_name; } // b23: odd crypt seeds face the Lich King (?bosses=classic keeps the original)
+    // BI1: each biome boss fires its own b17 ebolt_ art and has one signature attack (MMBiomes bossBolt / sig); ?bosses=classic keeps the plain boss
+    let bossBolt = null; let bossSig = null;
+    { const bf = MMBiomes.bossFor(biome, seed, opts.bosses === 'classic'); B.boss_art = bf.boss_art; B.boss_name = bf.boss_name; if (opts.bosses !== 'classic') { bossBolt = bf.bossBolt || null; bossSig = bf.sig || null; } } // b23: odd crypt seeds face the Lich King (?bosses=classic keeps the original)
     let rosterClassic = opts.roster === 'classic'; try { if (/[?&]roster=classic(&|$)/.test(location.search)) rosterClassic = true; } catch (e) { /* node / no location */ } // b24: ?roster=classic = no wave-2 skins
-    const layoutV = opts.layout === 2 || biome !== 'warren' ? 2 : 1; // a biome run is new content: it always uses the layout-2 pool
+    const layoutV = opts.layout === 2 || biome !== 'warren' || lair ? 2 : 1; // a biome run is new content: it always uses the layout-2 pool
     const palCache = {};
     function palOf(type) { // warren: the original palette untouched; other biomes recolour start / normal / boss rooms, the coded rooms (key, treasure, secret) keep theirs
       if (palCache[type]) return palCache[type];
       const base = PAL[type] || PAL.combat; const o = biome === 'warren' ? null : type === 'start' ? B.start : type === 'combat' ? B.normal : type === 'boss' ? B.boss : null;
-      const nm = biome === 'warren' ? base.name : type === 'start' ? B.name + ' Gate' : type === 'combat' ? B.room : type === 'boss' ? B.boss_room : base.name;
+      const nm = lair && type === 'start' ? 'Antechamber' : biome === 'warren' ? base.name : type === 'start' ? B.name + ' Gate' : type === 'combat' ? B.room : type === 'boss' ? B.boss_room : base.name;
       palCache[type] = o ? { f: o.f, w: o.w, hi: o.hi, name: nm } : base; return palCache[type];
     } // 1 = original room selection (old seeds/links), 2 = variety pool (new runs only)
-    const dungeon = MMWarren.generate(seed, { layout: layoutV });
+    // The lair graph is hand-built (no generator stream consumed): room 0 = antechamber (type 'start', holds the key), room 1 = boss hall north of it behind a locked door.
+    const dungeon = lair
+      ? { seed, layout: 2, w: 1, h: 2, rooms: [{ id: 0, x: 0, y: 1, w: 17, h: 13, type: 'start', doors: [0], locked: false }, { id: 1, x: 0, y: 0, w: 17, h: 13, type: 'boss', doors: [0], locked: false }], doors: [{ id: 0, a: 0, b: 1, dir: 'N', locked: true, cracked: false }], bossRoomId: 1, lair: true }
+      : MMWarren.generate(seed, { layout: layoutV });
     // Narrow profile (Realm-style tight dungeons): layout-2 runs only; ?narrow=0 (or opts.narrow === false) restores the old room pool.
     let narrowQ = true; try { narrowQ = new URLSearchParams(window.location.search).get('narrow') !== '0'; } catch (e) { /* no location */ }
     const narrowOn = layoutV === 2 && opts.narrow !== false && narrowQ;
-    const picks = MMRooms.select(dungeon, seed, layoutV, biome, narrowOn ? { narrow: true } : undefined);
+    const picks = lair ? (() => { // pick the antechamber as a normal fighting room and the hall as a boss room, through a 3-room stand-in graph (same selector, same biome bias)
+      const fake = { rooms: [{ id: 0, type: 'start', doors: [0] }, { id: 1, type: 'combat', doors: [0, 1] }, { id: 2, type: 'boss', doors: [1] }], doors: [{ id: 0, a: 0, b: 1, dir: 'N' }, { id: 1, a: 1, b: 2, dir: 'N' }] };
+      const sel = MMRooms.select(fake, 'lair:' + seed, 2, biome, narrowOn ? { narrow: true } : undefined);
+      return { defs: { 0: sel.defs[1], 1: sel.defs[2] } };
+    })() : MMRooms.select(dungeon, seed, layoutV, biome, narrowOn ? { narrow: true } : undefined);
     const rngRun = MMRng.create('run:' + seed);
     const lootRng = MMRng.create('loot:' + seed);
     const bossRng = MMRng.create('boss:' + seed);
@@ -208,12 +219,12 @@
       const tplDef = picks.defs[r.id];
       const tpl = MMRooms.parse(tplDef);
       let plan = [];
-      if (r.type === 'combat' || r.type === 'key') {
+      if (r.type === 'combat' || r.type === 'key' || (lair && r.type === 'start')) {
         let allowed = biome === 'warren' ? undefined : B.ids;
         if (tpl.tight) { // cramped room: no ring-bullet puffcaps / splitting sprouts (they add 3+ shooters) and at most 3 enemies at once
           const calm = (allowed || MMEnemies.IDS).filter((q) => q !== 'puffcap' && q !== 'sprout'); if (calm.length) allowed = calm;
         }
-        plan = MMEnemies.plan(seed + ':' + r.id, Math.max(1, depth[r.id] || 1), tpl.spawns.map((s) => ({ x: s.x, y: s.y })), null, allowed).enemies;
+        plan = MMEnemies.plan(seed + ':' + r.id, lair ? 2 : Math.max(1, depth[r.id] || 1), tpl.spawns.map((s) => ({ x: s.x, y: s.y })), null, allowed).enemies;
         if (tpl.tight && plan.length > TIGHT_MAX_SHOOTERS) plan = plan.slice(0, TIGHT_MAX_SHOOTERS);
         if (DIFF) plan = plan.slice(0, Math.max(1, Math.min(plan.length, Math.round(plan.length * scaleOf(r.id).count)))); // early rooms hold fewer enemies (the plan order is seeded)
       }
@@ -221,7 +232,7 @@
       counts[r.id] = r.type === 'boss' ? 1 : plan.length + extra;
       L[r.id] = { tpl, plan, baked: null, spawned: false, keyTaken: false, sc: scaleOf(r.id, r.type === 'boss') };
     });
-    const state = MMDungeonState.create(dungeon, rngRun, { enemies: counts, bossHp: Math.max(1, Math.ceil((opts.bossHp || 260) * (DIFF ? scaleOf(dungeon.rooms.find((q) => q.type === 'boss').id, true).hp : 1))) });
+    const state = MMDungeonState.create(dungeon, rngRun, { enemies: counts, bossHp: Math.max(1, Math.ceil((opts.bossHp || 260) * (DIFF ? scaleOf(dungeon.rooms.find((q) => q.type === 'boss').id, true).hp : 1) * (lair ? 1.3 : 1))) }); // lair boss: 1.3x HP
 
     const freeSpot = (tpl, tx, ty) => {
       let best = null; let bd = 1e9;
@@ -234,8 +245,8 @@
 
     const unlocked = {}; const granted = [];
     let keyFound = 0; let current = null; let finished = false; let sig = ''; let mapSig = '';
-    let lockMsgAt = -9; let hudText = ''; let queue = []; let nextSweep = 0; let nextWall = 0; let sweepN = 0;
-    const api = { seed, biome, layoutVersion: layoutV, narrow: narrowOn, graph: dungeon, state, arena, granted, grantItem };
+    let lockMsgAt = -9; let hudText = ''; let queue = []; let nextSweep = 0; let nextWall = 0; let sweepN = 0; let sigNext = 0; let sigWind = null; let sigN = 0;
+    const api = { pickups: () => drops.map((q) => ({ type: q.type, x: q.x, y: q.y, value: q.value, tier: q.tier })), pickStats: () => ({ live: drops.length, total: pickTotal, got: Object.assign({}, pickGot), magnet: MAGNET_R, on: pickOn }), lair, seed, biome, bossBolt, bossSig, sigCount: () => sigN, layoutVersion: layoutV, narrow: narrowOn, graph: dungeon, state, arena, granted, grantItem };
     // Lantern stash payout (MMStash): every kept find of this run is paid into the stash when the summary shows (win or fall)
     const ST = window.MMStash && window.MMProfile ? window.MMStash : null; const shards0 = arena.save.shards;
     if (ST) {
@@ -291,7 +302,7 @@
     function chestSpot() { return spotPx(freeSpot(L[current].tpl, 8, 6)); }
     function portalSpot() { return spotPx(freeSpot(L[current].tpl, 8, 8)); }
     const hasChest = () => current !== null && (byId[current].type === 'treasure' || byId[current].type === 'secret');
-    const hasKey = () => current !== null && byId[current].type === 'key' && !L[current].keyTaken;
+    const hasKey = () => current !== null && (byId[current].type === 'key' || (lair && byId[current].type === 'start')) && !L[current].keyTaken;
     const hasPortal = () => current !== null && byId[current].type === 'boss' && state.boss.dead;
 
     function spawnMob(type, id, x, y, hp, elite, sc) {
@@ -319,10 +330,11 @@
       const e = arena.spawnEnemy('boss', arena.W / 2, 132); if (!e) return;
       if (DIFF && current !== null) { e.dmgMul = L[current].sc.dmg; e.diff = L[current].sc; }
       e.dg = 'boss'; e.maxHp = state.boss.maxHp; e.hp = state.boss.hp; e.phase = state.boss.phase; e.invuln = 1.2; e.cd = 1.2; e.cd2 = 2.4; e.angle = 0;
-      arena.bossT0 = arena.clock; e.bossArt = B.boss_art; arena._syncBoss(); nextSweep = arena.clock + 4; nextWall = arena.clock + 6;
+      arena.bossT0 = arena.clock; e.bossArt = B.boss_art; arena._syncBoss(); nextSweep = arena.clock + 4; nextWall = arena.clock + 6; sigNext = arena.clock + 4.5; sigWind = null;
     }
 
     function clearTransient() {
+      drops.length = 0; // loose pickups do not follow you through a door
       [arena.pBullets, arena.eBullets, arena.bags, arena.drifters].forEach((pool) => pool.forEach((o) => { o.active = false; }));
       queue = [];
     }
@@ -354,6 +366,74 @@
       return res;
     }
 
+    // ---------- pickups (DP3, MMPickups): room clears and chests drop coins / XP orbs / hearts / life potions with the world's rules ----------
+    // Rolls are seeded per (seed, room, source) by MMPickups itself, positions by their own MMRng stream: no run / loot / boss stream is touched, so every old seed keeps its
+    // layout and enemy plans. Magnet radius = the world's 120 px (MMPickups.MAGNET_RADIUS_WORLD), cap 60, lifetime per tier. Focus orbs need arena.restoreFocus (not in the arena
+    // yet): they are only spawned when it exists. ?pickups=0 turns it all off. Sprites are cached 24 px canvases blitted by drawUnder (no per-frame Graphics).
+    const PK = window.MMPickups || null;
+    let pickOn = !!PK; try { if (/[?&]pickups=0(&|$)/.test(location.search)) pickOn = false; } catch (e) { /* no location */ }
+    const PICK_CAP = 60; const MAGNET_R = PK && PK.MAGNET_RADIUS_WORLD > 0 ? PK.MAGNET_RADIUS_WORLD : 64;
+    const drops = []; let pickSave = false; const pickGot = { coin: 0, xp: 0, heart: 0, potion: 0, focus: 0 }; let pickTotal = 0; const pickSpr = {};
+    function pickSprite(type) {
+      if (pickSpr[type]) return pickSpr[type];
+      const c = document.createElement('canvas'); c.width = c.height = 24; const g = c.getContext('2d');
+      if (type === 'coin') { g.fillStyle = '#7a5a12'; g.beginPath(); g.arc(12, 12, 8, 0, 7); g.fill(); g.fillStyle = '#ffd45a'; g.beginPath(); g.arc(12, 12, 6.5, 0, 7); g.fill(); g.fillStyle = '#fff0a8'; g.fillRect(9, 8, 2, 6); }
+      else if (type === 'xp') { g.fillStyle = '#4a2a8a'; g.beginPath(); g.arc(12, 12, 8, 0, 7); g.fill(); g.fillStyle = '#b48cff'; g.beginPath(); g.arc(12, 12, 6, 0, 7); g.fill(); g.fillStyle = '#efe0ff'; g.fillRect(9, 8, 3, 3); }
+      else if (type === 'heart') { g.fillStyle = '#7a1022'; g.beginPath(); g.arc(8, 9, 5.5, 0, 7); g.arc(16, 9, 5.5, 0, 7); g.fill(); g.beginPath(); g.moveTo(3, 11); g.lineTo(21, 11); g.lineTo(12, 21); g.fill(); g.fillStyle = '#ff5f6b'; g.beginPath(); g.arc(8, 9, 4, 0, 7); g.arc(16, 9, 4, 0, 7); g.fill(); g.beginPath(); g.moveTo(5, 11); g.lineTo(19, 11); g.lineTo(12, 19); g.fill(); }
+      else if (type === 'focus') { g.fillStyle = '#12335a'; g.beginPath(); g.arc(12, 12, 8, 0, 7); g.fill(); g.fillStyle = '#5bb8ff'; g.beginPath(); g.arc(12, 12, 6, 0, 7); g.fill(); g.fillStyle = '#e0f4ff'; g.fillRect(10, 7, 3, 3); }
+      else { g.fillStyle = '#143a24'; g.fillRect(9, 4, 6, 5); g.fillRect(6, 9, 12, 12); g.fillStyle = '#5be38a'; g.fillRect(8, 11, 8, 8); g.fillStyle = '#d8ffe6'; g.fillRect(9, 12, 2, 4); }
+      pickSpr[type] = c; return c;
+    }
+    const pickOk = (d) => d.type === 'coin' || (d.type === 'xp' && typeof arena._gainXp === 'function') || d.type === 'heart' || (d.type === 'potion' && d.art === 'potion_life') || (d.type === 'focus' && typeof arena.restoreFocus === 'function');
+    function spawnPickups(x, y, group, killIdx, tier) { // returns how many pickups were placed
+      if (!pickOn) return 0;
+      const list = PK.roll(seed, group, killIdx, tier).filter(pickOk);
+      const r = MMRng.create('pickpos:' + seed + ':' + group + ':' + killIdx); let n = 0;
+      for (let i = 0; i < list.length; i++) {
+        const d = list[i]; const a = r.next() * Math.PI * 2; const rad = 12 + r.next() * 26;
+        let px = x + Math.cos(a) * rad; let py = y + Math.sin(a) * rad;
+        if (arena._blocked(px, py, 6)) { px = x; py = y; }
+        if (drops.length >= PICK_CAP) drops.shift();
+        drops.push({ type: d.type, art: d.art, value: d.value, tier: d.tier, x: px, y: py, bornMs: arena.clock * 1000, lifeMs: d.lifeMs, ph: r.next() * 6.28 });
+        n++; pickTotal++;
+      }
+      return n;
+    }
+    function pickTier(id) { return Math.max(1, Math.min(5, (depth[id] || 1) + (lair ? 1 : 0))); }
+    function dropClearPickups(id, x, y) { let n = 0; for (let k = 0; k < 3; k++) n += spawnPickups(x, y, 'clear:' + id, k, pickTier(id)); return n; } // a cleared room pays three kills' worth
+    function collectPick(q) {
+      const p = arena.player; pickGot[q.type] = (pickGot[q.type] || 0) + 1;
+      if (q.type === 'coin') { arena.save.shards += q.value; arena.run.shards += q.value; arena._floatText(p.x, p.y - 26, `+${q.value} 💎`, '#8fe9ff'); pickSave = true; }
+      else if (q.type === 'xp') { arena._gainXp(Math.max(1, Math.round(q.value * (arena.stats ? arena.stats.xp : 1)))); pickSave = true; }
+      else if (q.type === 'focus') { if (typeof arena.restoreFocus === 'function') arena.restoreFocus(q.value); }
+      else {
+        const o = PK.use(q, { hp: p.hp, maxHp: arena.stats.maxHp, focus: 0, maxFocus: 0 });
+        if (o.hp > p.hp) { arena._floatText(p.x, p.y - 26, `+${Math.round(o.hp - p.hp)}`, '#5be38a'); p.hp = o.hp; arena._syncHud(); }
+      }
+    }
+    function pickTick(dt) {
+      if (!drops.length) return;
+      const p = arena.player; const now = arena.clock * 1000; const d = Math.min(dt, 0.1);
+      for (let i = drops.length - 1; i >= 0; i--) {
+        const q = drops[i];
+        if (PK.expired(q, now)) { drops.splice(i, 1); continue; }
+        if (arena.state !== 'play') continue;
+        const m = PK.magnetStep(q, p, d, MAGNET_R); q.x = m.x; q.y = m.y;
+        if (m.collected) { drops.splice(i, 1); collectPick(q); }
+      }
+      if (pickSave) { pickSave = false; arena.onSave(arena.save); arena._syncHud(); }
+    }
+    function drawPicks(g) {
+      if (!drops.length) return;
+      const tt = arena.clock; const reduced = arena._reduced; const now = tt * 1000;
+      for (let i = 0; i < drops.length; i++) {
+        const q = drops[i]; const left = q.lifeMs - (now - q.bornMs);
+        if (left < 4000 && !reduced && Math.floor(tt * 8) % 2) continue; // blinks out in the last 4 s
+        const bob = reduced ? 0 : Math.round(Math.sin(tt * 4 + q.ph) * 2);
+        g.drawImage(pickSprite(q.type), Math.round(q.x - 12), Math.round(q.y - 12 + bob));
+      }
+    }
+
     // ---------- loot ----------
     function grantItem(slot, tier) {
       const ids = SLOT_ITEMS[slot] || SLOT_ITEMS.trinket; let id = lootRng.pick(ids); const rar = Math.max(0, Math.min(2, tier - 1));
@@ -372,6 +452,7 @@
       if (l.kind === 'gold') { arena.save.shards += l.amount; arena._floatText(arena.player.x, arena.player.y - 44, `+${l.amount} 💎`, '#8fe9ff'); arena.onSave(arena.save); grantItem('trinket', 1); }
       else grantItem(l.slot, l.tier);
       arena._burst(arena.player.x, arena.player.y, '#ffd45a', 22, 240);
+      { const c = chestSpot(); for (let k = 0; k < 2; k++) spawnPickups(c.x, c.y + 18, 'chest:' + current, k, pickTier(current) + 1); } // a chest pays two kills' worth, a tier up
       mapSig = '';
       return l;
     }
@@ -388,7 +469,7 @@
         arena.eBullets.forEach((b) => { if (b.active) { b.active = false; arena._burst(b.x, b.y, '#ff6a4a', 1, 60); } });
         arena.shake = 12; arena._burst(e.x, e.y, '#ff6a4a', 30, 280);
         arena._showBanner(r.phase === 2 ? B.boss_name.replace(/^The /, '').split(' ').pop() + ' — the floor shakes!' : B.boss_name.replace(/^The /, '').split(' ').pop() + ' — ENRAGED!', 1.6);
-        nextSweep = arena.clock + 2.5; nextWall = arena.clock + 5;
+        nextSweep = arena.clock + 2.5; nextWall = arena.clock + 5; sigWind = null; sigNext = arena.clock + 3;
       }
       if (r.dead) {
         e.active = false; state.killEnemy();
@@ -396,15 +477,40 @@
         arena._burst(e.x, e.y, '#ff6a4a', 40, 340); arena._burst(e.x, e.y, '#ffe27a', 30, 260); arena.shake = 14;
         arena.save.shards += 60; arena.save.kills += 1; arena.save.kb.boss += 1; arena._floatText(e.x, e.y - 30, '+60 💎', '#8fe9ff');
         arena._gainXp(Math.round(RM_XP.boss * arena.stats.xp));
-        arena.dropBag(e.x - 20, e.y + 20, 2); arena.dropBag(e.x + 20, e.y + 20, arena.rollRarity());
+        arena.dropBag(e.x - 20, e.y + 20, lair ? 3 : 2); arena.dropBag(e.x + 20, e.y + 20, lair ? Math.min(3, arena.rollRarity() + 1) : arena.rollRarity()); // a lair bag is one tier higher
         arena._showBanner(B.boss_name + ' defeated! The portal opens.', 2.6);
         arena.onSave(arena.save); mapSig = '';
       }
       arena._syncBoss();
     }
+    const SIG_WIND = 0.6;
+    const TAU2 = Math.PI * 2;
+    // The signature patterns: no RNG (they aim at the player), built from the existing bullet kinds (0 aimed, 1 spiral / drop, 2 ring).
+    function fireSig(e, t) {
+      const pl = arena.player; const aim = Math.atan2(pl.y - e.y, pl.x - e.x); const ph = e.phase; const q = (d, x, y, a, sp, k) => queue.push({ at: t + d, x, y, a, s: sp, k });
+      if (bossSig === 'burrow') { // Queen Burrowmole: three aimed fans, each a little wider
+        for (let w = 0; w < 3; w++) for (let i = 0; i < 5; i++) q(w * 0.18, e.x, e.y, aim + (i - 2) * (0.2 + 0.06 * w), 215, 0);
+      } else if (bossSig === 'thorns') { // Forest Warden: a wide thorn fan, then the gaps are filled by a second fan half a step over
+        const n = 7 + (ph >= 3 ? 2 : 0); for (let w = 0; w < 2; w++) for (let i = 0; i < n; i++) q(w * 0.35, e.x, e.y, aim + ((i + w * 0.5) / (n - 1) - 0.5) * 1.7, 190, 0);
+      } else if (bossSig === 'bloom') { // Mire Queen: a slow blooming flower of poison, then a second one turned half a petal
+        for (let w = 0; w < 2; w++) for (let i = 0; i < 16; i++) q(w * 0.5, e.x, e.y, (i / 16) * TAU2 + w * (Math.PI / 16), 95 + 45 * (1 + Math.sin(i * 4 * TAU2 / 16)) / 2, 2);
+      } else if (bossSig === 'bonerain') { // Bone Colossus: bones fall from the top edge in columns around the player, then the columns in between
+        for (let w = 0; w < 2; w++) for (let i = -3; i <= 3; i++) q(w * 0.5, Math.max(T * 1.5, Math.min(arena.W - T * 1.5, pl.x + i * 52 + w * 26)), T * 1.4, Math.PI / 2, 150, 1);
+      } else if (bossSig === 'souls') { // Lich King: a sweeping fan of souls across the player, then a ring
+        MMPatterns2.sweep({ x: e.x, y: e.y }, aim, { count: 7, arc: 1.2, speed: 200, every: 0.08, call: sigN }).forEach((b) => q(b.delay, b.x, b.y, Math.atan2(b.vy, b.vx), Math.hypot(b.vx, b.vy), 0));
+        for (let i = 0; i < 10; i++) q(0.9, e.x, e.y, (i / 10) * TAU2, 120, 2);
+      }
+    }
     function bossExtras() {
       const e = bossEntity(); if (!e || e.invuln > 0 || arena.state !== 'play') return;
       const t = arena.clock;
+      if (bossSig) { // BI1: one signature attack per biome boss, announced by a 0.6 s wind-up (MMPatterns2.telegraph) before the shots leave
+        if (!sigWind && t >= sigNext) {
+          sigWind = Object.assign(MMPatterns2.telegraph(bossSig, { x: e.x, y: e.y }), { duration: SIG_WIND, life: SIG_WIND, at: t + SIG_WIND });
+          arena._floatText(e.x, e.y - 44, '!', '#ff4a4a'); arena._burst(e.x, e.y, '#ff4a4a', 10, 150); arena._snd('hit'); api.sigWind = sigWind;
+        }
+        if (sigWind && t >= sigWind.at) { fireSig(e, t); sigWind = null; sigN++; sigNext = t + (e.phase >= 3 ? 4.2 : 5.2); }
+      }
       if (e.phase >= 2 && t >= nextSweep) {
         nextSweep = t + (e.phase === 2 ? 3.4 : 4.2);
         const c = Math.atan2(arena.player.y - e.y, arena.player.x - e.x);
@@ -436,6 +542,7 @@
       let route = routeDoors(startId, dungeon.bossRoomId); if (!route || !route.length) return null;
       let hint = ''; let target = 'boss';
       const gated = route.some((d) => d.locked && !unlocked[d.id]);
+      if (lair && gated && state.keys === 0 && !L[startId].keyTaken) hint = 'Take the key';
       if (gated && state.keys === 0 && dungeon.keyRoomId !== undefined && !L[dungeon.keyRoomId].keyTaken) {
         const kr = routeDoors(startId, dungeon.keyRoomId); if (kr && kr.length) { route = kr; hint = 'Find the key'; target = 'key'; }
       }
@@ -518,11 +625,12 @@
         const before = state.room(current).enemiesAlive; if (before <= 0) return;
         const left = state.killEnemy();
         if (e.did === 'sprout') MMEnemies.onDeath({ id: 'sprout', x: 0, y: 0 }).forEach((m, i) => spawnMob('aimed', m.id, e.x + (i ? 16 : -16), e.y, Math.max(2, Math.ceil(m.hp / HP_DIV)), false, DIFF && current !== null ? L[current].sc : null));
-        if (left === 0) ctrl.cleared();
+        if (left === 0) ctrl.cleared(e.x, e.y);
       },
-      cleared() {
+      cleared(kx, ky) {
         arena.player.hp = Math.min(arena.stats.maxHp, arena.player.hp + Math.round(arena.stats.maxHp * 0.15)); if (arena.fxHeal) arena.fxHeal();
         arena._showBanner('Room cleared!', 1.4); arena.eBullets.forEach((b) => { if (b.active) { b.active = false; arena._burst(b.x, b.y, '#8fe9ff', 1, 40); } });
+        if (current !== null && byId[current].type !== 'boss') { const q = typeof kx === 'number' ? { x: kx, y: ky } : { x: arena.player.x, y: arena.player.y }; dropClearPickups(current, q.x, q.y); }
         arena._syncHud(); mapSig = '';
       },
       tick(dt) {
@@ -548,6 +656,7 @@
           }
         }
         if (current === null || finished) return;
+        pickTick(dt);
         // pick-ups
         const near = (s, r) => Math.hypot(p.x - s.x, p.y - s.y) < r;
         if (hasKey() && !state.doorsClosed() && near(keySpot(), 26)) { L[current].keyTaken = true; keyFound = state.pickKey(); arena._snd('pickup'); arena._floatText(p.x, p.y - 30, '🗝 Key!', '#ffd45a'); mapSig = ''; }
@@ -594,6 +703,7 @@
           const ts = dimg(biome + '_torch'); const fr = arena._reduced ? 0 : Math.floor(tt * 4) & 3;
           if (ts) L[current].torches.forEach((q) => g.drawImage(ts, fr * 32, 0, 32, 32, q.x * T, q.y * T, T, T));
         }
+        drawPicks(g);
         if (hasKey()) { const k = keySpot(); g.drawImage(S.key, k.x - 11, k.y - 11 + Math.sin(tt * 3) * 3); }
         if (hasChest()) { const c = chestSpot(); const open = state.room(current).chestOpen; const ci = dimg(open ? 'chest_open' : 'chest_closed'); if (ci) g.drawImage(ci, 0, 0, 32, 32, c.x - 18, c.y - 20, 36, 36); else g.drawImage(S.chest[open ? 1 : 0], c.x - 16, c.y - 14); }
         if (hasPortal()) { const q = portalSpot(); g.save(); g.translate(q.x, q.y); g.rotate(tt * 1.2); g.drawImage(S.portal, -36, -36); g.rotate(-tt * 2.4); g.globalAlpha = 0.6; g.drawImage(S.portal, -26, -26, 52, 52); g.restore(); g.globalAlpha = 1; }
@@ -646,7 +756,7 @@
         arena.enemies.forEach((e) => { if (e.active && e.dg === 'mob') e.active = false; });
         while (current !== null && state.room(current).enemiesAlive > 0 && byId[current].type !== 'boss') { if (state.killEnemy() === 0) { ctrl.cleared(); break; } }
       },
-      keyPos: () => (current !== null && byId[current].type === 'key' ? keySpot() : null),
+      keyPos: () => (hasKey() ? keySpot() : null),
       chestPos: () => (hasChest() ? chestSpot() : null),
       portalPos: () => (hasPortal() ? portalSpot() : null),
       crackTile: () => { const o = curDoors().find((q) => q.status === 'cracked'); return o ? o.tile : null; },
@@ -681,6 +791,12 @@
     Object.defineProperties(api, { room: { get: () => current }, finished: { get: () => finished } });
     ctrl.api = api;
     arena.dungeon = ctrl;
+    // The arena picks an enemy bullet's art in _ebSelect (realm.js has no per-boss override): this instance-level wrapper answers for the dungeon boss's own
+    // bolts (and the bullets this controller queues, fired with no enemy set) and leaves every mob's bullet art to the arena.
+    if (bossBolt && typeof arena._ebSelect === 'function' && !arena._dgEbWrapped) {
+      const baseSel = arena._ebSelect.bind(arena); arena._dgEbWrapped = true;
+      arena._ebSelect = function (kind) { const e = this._curE; if ((!e || e.dg === 'boss') && this._boltArt && this._boltArt.has(bossBolt)) return bossBolt; return baseSel(kind); };
+    }
     arena.fixedWorld = { w: MMRooms.W * T, h: MMRooms.H * T };
     return ctrl;
   }
