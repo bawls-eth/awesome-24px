@@ -77,3 +77,19 @@ legend{color:var(--gold);font-size:.9rem;padding:0 6px}
 .find{display:flex;align-items:center;flex-wrap:wrap;gap:4px}
 .find .item{cursor:default;display:inline-flex;align-items:center}
 .tag.src{background:#24456a}
+
+/* abilities and unlocks viewer (read-only) */
+.btn.abil{min-height:48px}
+.overlay{position:fixed;inset:0;z-index:50;background:rgba(10,4,24,.8);display:flex;align-items:center;justify-content:center;padding:12px}
+.overlay[hidden]{display:none}
+.sheet{width:100%;max-width:520px;max-height:100%;display:flex;flex-direction:column;background:var(--card);border:2px solid var(--gold);border-radius:14px;min-width:0}
+.sheethead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.sheethead h2{margin:0;overflow-wrap:anywhere}
+.sheetbody{overflow-y:auto;overflow-x:hidden;padding:4px 12px 14px;overscroll-behavior:contain}
+.sheetbody h3{margin:12px 0 4px;font-size:1rem;color:var(--gold)}
+.alist{list-style:none;margin:0;padding:0}
+.anode{border:1px solid var(--line);border-radius:10px;padding:8px;margin:6px 0;background:#2a1b47;overflow-wrap:anywhere}
+.anode.locked{opacity:.75;border-style:dashed}
+.anode.reached{border-color:var(--ok)}
+.atitle{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;justify-content:space-between}
+.tag.reached{background:#1f5a3a}

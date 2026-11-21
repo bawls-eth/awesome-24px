@@ -3,7 +3,7 @@
 // `pixeltown-save-v1` is only READ (legacy import) or written by a confirmed Restore.
 (function () {
   'use strict';
-  var A = window.MMArt, P = window.MMProfile, B = window.MMBackup, C = window.MMClasses, I = window.MMItems;
+  var A = window.MMArt, P = window.MMProfile, B = window.MMBackup, C = window.MMClasses, I = window.MMItems, U = window.MMUnlocks, W = window.MMWeapons;
   var KEY = P.KEY, LEGACY = P.LEGACY_KEY;
   var CARRY_MAX = 24;
   var CLS_ORDER = C && C.CLASSES ? Object.keys(C.CLASSES) : ['ranger', 'frostcaller', 'herald', 'punk', 'bruiser', 'graveTender', 'trickster', 'shadowPaw', 'rogue', 'warlock', 'paladin', 'berserker', 'druid', 'necromancer'];
@@ -272,11 +272,82 @@
     try { fr.readAsText(file); } catch (e) { say('Could not read that file.', true); }
   }
 
+  // ---------- read-only Abilities and unlocks panel ----------
+  var abilFrom = null;
+  function abilRow(cls, titleText, bodyText, state, stateText) {
+    var li = el('li', 'anode ' + state);
+    var t = el('div', 'atitle'); t.appendChild(el('strong', '', titleText)); t.appendChild(el('span', 'tag ' + state, stateText)); li.appendChild(t);
+    if (bodyText) li.appendChild(el('div', 'abtext', bodyText));
+    return li;
+  }
+  function openAbilities(heroId, from) {
+    var h = heroById(heroId), box = $('abil-panel'); if (!h || !U || !box) return;
+    abilFrom = from || null;
+    var lv = Math.max(1, Math.min(P.MAX_LEVEL, Math.floor(Number(h.level)) || 1));
+    var body = $('abil-body'); body.textContent = '';
+    $('abil-title').textContent = h.name + ' - ' + clsName(h.cls) + ', level ' + lv;
+    // slots
+    body.appendChild(el('h3', '', 'Ability slots'));
+    var sg = C && C.arenaSignature ? C.arenaSignature(h.cls) : null, sl = el('ul', 'alist'); sl.id = 'abil-slots';
+    U.activeSlots(lv).forEach(function (s) {
+      var cd = s.id === 'dash' ? U.dashCooldown(lv) + ' s' : s.id === 'nova' ? '8 s' : s.id === 'shield' ? '14 s' : sg ? sg.cooldown + ' s' : '';
+      var name = s.id === 'sig' && sg ? sg.name : s.name + (s.tier === 2 ? ' II' : '');
+      var li = abilRow('slot', s.key.toUpperCase() + ': ' + name, 'Unlocks at level ' + s.level + (cd ? ' - cooldown ' + cd : ''),
+        s.unlocked ? 'reached' : 'locked', s.unlocked ? 'Ready' : 'Unlocks at level ' + s.level);
+      li.setAttribute('data-slot', s.key); sl.appendChild(li);
+    });
+    body.appendChild(sl);
+    // tree
+    body.appendChild(el('h3', '', 'Unlock tree'));
+    var nl = el('ul', 'alist'); nl.id = 'abil-nodes';
+    U.nodes(h.cls).forEach(function (n) {
+      var got = lv >= n.lv;
+      var li = abilRow('node', n.name, n.text, got ? 'reached' : 'locked', got ? 'Reached' : 'Unlocks at level ' + n.lv);
+      li.setAttribute('data-node', n.id); li.setAttribute('data-lv', String(n.lv)); li.setAttribute('data-state', got ? 'reached' : 'locked');
+      nl.appendChild(li);
+    });
+    body.appendChild(nl);
+    // progress to next node
+    var nx = U.next(h.cls, lv), pw = el('div', 'xp'); pw.id = 'abil-next';
+    if (nx) {
+      var all = U.nodes(h.cls), prev = 1;
+      all.forEach(function (n) { if (n.lv <= lv && n.lv > prev) prev = n.lv; });
+      var pct = Math.max(0, Math.min(100, Math.floor((lv - prev) / (nx.lv - prev) * 100)));
+      var bar = el('div', 'bar'); bar.setAttribute('role', 'progressbar'); bar.setAttribute('aria-label', 'Progress to ' + nx.name);
+      bar.setAttribute('aria-valuemin', '0'); bar.setAttribute('aria-valuemax', '100'); bar.setAttribute('aria-valuenow', String(pct));
+      var fill = el('div', 'fill'); fill.style.width = pct + '%'; bar.appendChild(fill); pw.appendChild(bar);
+      pw.appendChild(el('span', 'xptext', 'Next: ' + nx.name + ' at level ' + nx.lv + ' (' + (nx.lv - lv) + ' more level' + (nx.lv - lv === 1 ? '' : 's') + ')'));
+    } else pw.appendChild(el('span', 'xptext', 'Every unlock reached.'));
+    body.appendChild(pw);
+    // fire pattern
+    if (W && W.resolve && W.describe) {
+      var d = ''; try { d = W.describe(W.resolve(h.cls, 'base', 0)); } catch (e) { d = ''; }
+      if (d) { body.appendChild(el('h3', '', 'Fire pattern')); var fp = el('p', 'abtext', d); fp.id = 'abil-fire'; body.appendChild(fp); }
+    }
+    box.hidden = false; $('abil-close').focus(); body.scrollTop = 0;
+  }
+  function closeAbilities() {
+    var box = $('abil-panel'); if (!box || box.hidden) return;
+    box.hidden = true; $('abil-body').textContent = '';
+    var f = abilFrom; abilFrom = null;
+    if (f && f.isConnected && f.focus) { try { f.focus(); } catch (e) { /* ignore */ } }
+  }
+  document.addEventListener('keydown', function (e) {
+    var box = $('abil-panel'); if (!box || box.hidden) return;
+    if (e.key === 'Escape') { e.preventDefault(); closeAbilities(); return; }
+    if (e.key === 'Tab') { e.preventDefault(); $('abil-close').focus(); }
+  });
+  (function () {
+    var box = $('abil-panel'); if (!box) return;
+    $('abil-close').addEventListener('click', closeAbilities);
+    box.addEventListener('click', function (e) { if (e.target === box) closeAbilities(); });
+  })();
+
   // ---------- render ----------
   function focusKey() {
     var a = document.activeElement; if (!a || a === document.body) return null;
     var li = a.closest && a.closest('#heroes li[data-hero]');
-    if (li) return { t: 'hero', id: li.getAttribute('data-hero'), c: (String(a.className).match(/\b(pick|rekindle|retire|testfall|keep)\b/) || [])[1] || 'pick' };
+    if (li) return { t: 'hero', id: li.getAttribute('data-hero'), c: (String(a.className).match(/\b(pick|abil|rekindle|retire|testfall|keep)\b/) || [])[1] || 'pick' };
     if (a.classList.contains('slot')) return { t: 'slot', i: a.getAttribute('data-slot') };
     if (a.classList.contains('item')) return { t: 'item', i: a.getAttribute('data-idx') };
     return null;
@@ -336,6 +407,12 @@
       var pick = el('button', 'btn pick', h.id === selected ? 'Selected' : 'Select'); pick.type = 'button';
       pick.addEventListener('click', function () { selected = h.id; confirmRetire = null; confirmFall = null; render(); });
       row.appendChild(pick);
+      if (U) {
+        var ab = el('button', 'btn abil', 'Abilities'); ab.type = 'button';
+        ab.setAttribute('aria-label', 'Abilities and unlocks for ' + h.name); ab.setAttribute('aria-haspopup', 'dialog');
+        ab.addEventListener('click', function () { openAbilities(h.id, ab); });
+        row.appendChild(ab);
+      }
       var rk = el('button', 'btn rekindle', 'Rekindle'); rk.type = 'button';
       var rkWhy = h.mode === 'hardcore' ? REASONS['hardcore-no-rekindle'] : profile.heroes.length >= 12 ? REASONS['roster-full'] : '';
       if (rkWhy) { rk.disabled = true; rk.title = rkWhy; }
