@@ -818,5 +818,17 @@
   "class-weapon-playtest.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "lantern-backup-reminder.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "hub-gift.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "side-access.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

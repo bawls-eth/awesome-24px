@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Pixeltown Hub</title>
 <link rel="stylesheet" href="hub.css">
+<script src="../shared/mm-access.js"></script>
+<script src="../shared/mm-side-access.js"></script>
 </head>
 <body>
 <header id="hud">
@@ -24,6 +26,7 @@
 </main>
 <footer id="bar">
   <span id="hint" class="hint">Tap a node, or use arrows / WASD / D-pad. Enter or A opens a node.</span>
+  <button id="gift-btn" type="button" aria-expanded="false" aria-controls="gift-card">Daily gift</button>
   <button id="open-btn" type="button">Open</button>
 </footer>
 <section id="card" class="card" hidden aria-labelledby="card-title">
@@ -40,12 +43,27 @@
     <span id="card-soon" class="btn disabled" hidden>Coming soon</span>
   </div>
 </section>
+<section id="gift-card" class="card" hidden aria-labelledby="gift-title">
+  <div class="card-head">
+    <h2 id="gift-title">Daily gift</h2>
+    <button id="gift-close" type="button" aria-label="Close">&times;</button>
+  </div>
+  <p id="gift-today" class="card-sub"></p>
+  <p id="gift-total" class="card-sub"></p>
+  <p id="gift-note" class="card-sub" role="status" aria-live="polite"></p>
+  <div class="card-actions"><button id="gift-claim" type="button">Claim</button></div>
+</section>
 <div id="iris" aria-hidden="true"></div>
 <script src="../shared/mm-map.js"></script>
 <script src="../shared/profile.js"></script>
 <script src="../shared/mm-jam.js"></script>
 <script src="../shared/mm-jam-songs.js"></script>
+<script src="../shared/rng.js"></script>
+<script src="../shared/mm-daily.js"></script>
+<script src="../shared/mm-gift.js"></script>
+<script src="../shared/mm-profile.js"></script>
 <script src="medals.js"></script>
 <script src="hub.js"></script>
+<script src="gift.js"></script>
 </body>
 </html>

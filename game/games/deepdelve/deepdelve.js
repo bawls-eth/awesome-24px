@@ -89,7 +89,7 @@
   const input = { fwd: 0, strafe: 0, jump: false, mine: false, down: false };
   const keys = {};
   let world = null, spawn = null, mouthOn = false, mouthSite = null;
-  const reduced = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const reduced = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) || !!(window.MMSideAccess && window.MMSideAccess.reduced());
   const META_KEY = 'pixeltown-deepdelve-v1', TOWN_KEY = 'pixeltown-save-v1';
   const pick = { tier: 0, dur: 0 };
   const slimes = [];

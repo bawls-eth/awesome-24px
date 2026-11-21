@@ -194,6 +194,34 @@
     else say('Your roster is full (12 heroes), so the Legacy Ranger was not added. Retire or free a slot and try again.', true);
     render();
   }
+  // LB3: calm backup note. Own tiny key `pixeltown-backupnote-v1` = {v:1, at:'YYYY-MM-DD'} (UTC). Bad/oversized/future dates -> no note. Plain text only.
+  var NOTE_KEY = 'pixeltown-backupnote-v1';
+  function todayUtc() {
+    var m = TEST ? /[?&]bdate=(\d{4}-\d{2}-\d{2})(&|$)/.exec(location.search) : null;
+    if (m && cleanDay(m[1])) return m[1];
+    return new Date().toISOString().slice(0, 10);
+  }
+  function cleanDay(s) {
+    if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+    var d = new Date(s + 'T00:00:00Z');
+    return isFinite(d.getTime()) && d.toISOString().slice(0, 10) === s ? s : null;
+  }
+  function loadNote() {
+    try {
+      var raw = localStorage.getItem(NOTE_KEY);
+      if (typeof raw !== 'string' || raw.length > 200) return null;
+      var o = JSON.parse(raw);
+      var at = o && typeof o === 'object' && !Array.isArray(o) ? cleanDay(o.at) : null;
+      return at && at <= todayUtc() ? at : null;
+    } catch (e) { return null; }
+  }
+  function noteText() {
+    var at = loadNote();
+    if (!at) return 'Last backup: none yet';
+    var n = Math.round((Date.parse(todayUtc() + 'T00:00:00Z') - Date.parse(at + 'T00:00:00Z')) / 86400000);
+    return 'Last backup: ' + (n <= 0 ? 'today' : n === 1 ? '1 day ago' : n + ' days ago');
+  }
+  function renderNote() { var el = $('backup-last'); if (el) el.textContent = noteText(); }
   function downloadBackup() {
     // Raw stored values, read before anything is cleaned or saved, so a corrupt key is backed up as it was.
     var data = JSON.stringify(B.bundle(localStorage), null, 1);
@@ -203,6 +231,8 @@
       a.href = url; a.download = 'mad-maze-backup.json';
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+      try { localStorage.setItem(NOTE_KEY, JSON.stringify({ v: 1, at: todayUtc() })); } catch (e2) { /* blocked: the note just stays as it was */ }
+      renderNote();
       say('Backup file saved. Keep it somewhere safe.');
     } catch (e) { say('Could not make the backup file.', true); }
   }
@@ -603,6 +633,7 @@
   window.addEventListener('storage', function (e) { if (e.key === KEY || e.key === null) { profile = load(); render(); } });
   selected = loadActive().heroId;
   render();
+  renderNote();
   if (settled && settled.ok && (settled.items || settled.fame)) say(S.text(settled).replace(/, \+\d+ shards/, '') + ' from your travels.');
   startScene();
   loadArt();
