@@ -130,6 +130,22 @@ check('128x128 world verifies', O.verify(O.generate('small', { size: 128 })).ok)
   check('128x128 wide world: safe radius scales with the size and still verifies', (function () { const sw = O.generate('small-b', { size: 128 }); return O.verify(sw).ok && minMid(sw) >= 20; })());
 }
 
+// BIOME-ARCH-PLAN 1.2 / slice A1 (added checks): the pack refactor leaves the Realm generator alone. Golden hashes: shared-mm-overworld-golden.test.js.
+{
+  check('TERRAIN keeps the 18 realm ids; TERRAIN_NAMES starts with them in order and only appends', O.TERRAIN_NAMES.slice(0, 18).join() === Object.keys(O.TERRAIN).join() && O.TERRAIN_NAMES.length > 18 &&
+    O.TERRAIN_NAMES.every(function (n, i) { return O.TERRAIN_ALL[n] === i; }) && new Set(O.TERRAIN_NAMES).size === O.TERRAIN_NAMES.length);
+  const dw = O.generate('ids-1');
+  check('a Realm world carries no pack, roster or bosses key and uses only ids 0..17', dw.pack === undefined && dw.roster === undefined && dw.bosses === undefined && dw.dock === undefined && dw.terrain.every(function (t) { return t < 18; }));
+  check('generate(seed) === generateWith(seed, {}, paramsFor({})) and paramsFor({}) is the Realm', O.hash(O.generateWith('ids-1', {}, O.paramsFor({}))) === O.hash(dw) && O.paramsFor({}).id === null);
+  const rc = O.generate('ids-1', { roster: 'classic' }), bc = O.generate('ids-1', { bosses: 'classic' });
+  check('roster/bosses classic worlds record their switch and now pass verify (determinism re-generates with it)', rc.roster === 'classic' && bc.bosses === 'classic' && O.verify(rc).ok && O.verify(bc).ok, O.verify(rc).problems.concat(O.verify(bc).problems).slice(0, 2).join('; '));
+  const pos = function (wd) { return JSON.stringify(wd.spawnGroups.map(function (g) { return [g.x, g.y, g.type]; })); };
+  check('roster classic still changes only creature ids (same group positions and types)', pos(rc) === pos(dw) && rc.spawnGroups.some(function (g, i) { return g.creature !== dw.spawnGroups[i].creature; }));
+  check('a hostile opts.pack leaves the Realm world untouched', O.hash(O.generate('ids-1', { pack: '__proto__' })) === O.hash(dw) && O.hash(O.generate('ids-1', { pack: { id: 'jungle' } })) === O.hash(dw));
+  const jw = O.generate('ids-1', { pack: 'jungle' });
+  check('a pack world verifies and is not the Realm world', jw.pack === 'jungle' && O.verify(jw).ok && O.hash(jw) !== O.hash(dw));
+}
+
 // source hygiene
 const src = fs.readFileSync(path.join(__dirname, '..', 'shared', 'mm-overworld.js'), 'utf8');
 check('no Math.random in source', src.indexOf('Math.random') < 0);
