@@ -99,6 +99,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "deepdelve-mobs.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "deepdelve-page.test.js": {
     "class": "browser",
     "tier": "smoke"
@@ -288,6 +292,10 @@
     "tier": "smoke"
   },
   "shared-mm-dd-craft.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-dd-mobs.test.js": {
     "class": "node",
     "tier": "smoke"
   },

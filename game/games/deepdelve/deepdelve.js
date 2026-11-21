@@ -71,6 +71,8 @@
   const PLACEABLE = [['dirt', B.DIRT], ['stone', B.STONE], ['coal', B.COAL], ['iron_ore', B.IRON], ['gold_ore', B.GOLD], ['crystal', B.CRYSTAL], ['furnace', B.FURNACE], ['torch', B.TORCH]];
   const BLOCK_OF = {}; PLACEABLE.forEach((p) => { BLOCK_OF[p[0]] = p[1]; });
   const benches = [];
+  const creatures = [], slain = new Set(); // seeded cave creatures (crawler, bat); slain ids are saved additively
+  let deathCause = '';
   const clock = { t: MMDDTime.NOON, step: -1, k: 1 }; // world clock in seconds; saved additively as `t`
   const HARDNESS = {}; HARDNESS[B.GRASS] = 0.3; HARDNESS[B.DIRT] = 0.3; HARDNESS[B.STONE] = 0.7; HARDNESS[B.COAL] = 0.9; HARDNESS[B.IRON] = 1.1;
   HARDNESS[B.GOLD] = 1.3; HARDNESS[B.CRYSTAL] = 1.5; HARDNESS[B.TORCH] = 0.1; HARDNESS[B.FURNACE] = 0.6;
@@ -213,6 +215,12 @@
   }
   // Any death voids the secret Lava Lake bridge for good (it is a no-death challenge).
   function die(msg) {
+    if (deathCause === 'creature' && meta.mode === 'survival') {
+      const k = MMDDMobs.deathKeep(inv), names = Object.keys(k.lost);
+      names.forEach((n) => { inv[n] = k.inv[n]; });
+      if (names.length) msg = (msg || '') + ' You kept your tools and ores but lost half your ' + names.join(' and ') + '.';
+    }
+    deathCause = '';
     meta.goals.deaths = Math.min(9999, meta.goals.deaths + 1);
     meta.goals.secretVoid = true;
     saveMeta();
@@ -221,6 +229,7 @@
   function respawn(msg) {
     player.x = spawn.x; player.y = spawn.y; player.z = spawn.z; player.vy = 0; player.hp = 10; player.peak = player.y; player.iframes = 1; lavaT = 0;
     slimes.forEach((m) => { m.dead = true; removeMesh(m); }); slimes.length = 0;
+    clearCreatures();
     if (msg) toast(msg);
     renderHud();
   }
@@ -355,7 +364,7 @@
     clearTimeout(saveTimer);
     if (!world) return Promise.resolve(false);
     savePending = false;
-    const doc = { inv: Object.assign({}, inv), pos: [player.x, player.y, player.z], sel, hp: player.hp, pick: { tier: pick.tier, dur: pick.dur }, benches: benches.map((b) => b.slice()), t: clock.t };
+    const doc = { inv: Object.assign({}, inv), pos: [player.x, player.y, player.z], sel, hp: player.hp, pick: { tier: pick.tier, dur: pick.dur }, benches: benches.map((b) => b.slice()), t: clock.t, slain: Array.from(slain).slice(-300) };
     return Promise.all([kvSet('world:' + SEED, world.serialise()), kvSet('player:' + SEED, JSON.stringify(doc))]).then((r) => !!r[0]);
   }
   window.addEventListener('pagehide', () => { if (savePending) flush(); });
@@ -601,7 +610,7 @@
   let mineTarget = null, mineProg = 0, last = 0, spawnT = 6;
   function updateMining(dt) {
     if (atkCd > 0) atkCd -= dt;
-    if (input.mine && attackSlime(true)) { mineTarget = null; mineProg = 0; return; }
+    if (input.mine && (attackSlime(true) || attackCreature(true))) { mineTarget = null; mineProg = 0; return; }
     if (input.mine && benches.length) { const bi = benchAtLook(); if (bi >= 0) { pickUpBench(bi); input.mine = false; return; } }
     const hit = input.mine ? raycast(5) : null;
     if (!hit || hit.id === B.BEDROCK || hit.id === B.LAVA) { mineTarget = null; mineProg = 0; return; }
@@ -651,12 +660,15 @@
     if (!world) return;
     if (!TEST) {
       physics(dt); updateMining(dt); tickMobs(dt); tickTime(dt);
+      creatureT -= dt;
+      if (creatureT <= 0) { creatureT = 1.5; scanSpawns(); }
+      if (creatures.length) tickCreatures(dt);
       spawnT -= dt;
       if (spawnT <= 0) { spawnT = 4; if (Math.random() < 0.6) autoSpawn(); }
     }
     checkGoals();
     manage(8);
-    if (renderer) { syncBenches(); syncSlimeMeshes(); updateCamera(); renderer.render(scene, camera); }
+    if (renderer) { syncBenches(); syncSlimeMeshes(); if (creatures.length || creatureMeshes) syncCreatureMeshes(); updateCamera(); renderer.render(scene, camera); }
   }
 
   // ---------- controls ----------
@@ -1028,6 +1040,166 @@
     m.mesh = null;
   }
 
+  // ---------- Cave creatures (seeded) ----------
+  // A crawler (slow ground walker) and a bat (flier) live in dark cave air. Which cells hold one is a pure function of
+  // (seed, chunk); no ambient randomness is used here. At most MAX_ACTIVE are alive; they are culled by distance.
+  let creatureT = 1, creatureMeshes = 0, creatureTex = null;
+  const candCache = new Map();
+  function chunkCands(cx, cy, cz) {
+    const k = cx + ',' + cy + ',' + cz;
+    let c = candCache.get(k);
+    if (!c) { c = MMDDMobs.chunkSpawns(SEED, cx, cy, cz); candCache.set(k, c); }
+    return c;
+  }
+  // Dark = neither sky nor torch light reaches the cell at full strength (clock-independent, so night does not matter underground).
+  function caveDark(wx, wy, wz) {
+    if (!win) fillWindow(Math.floor(wx / SIZE), Math.floor(wz / SIZE));
+    if (!win.light || lightDirty) relight();
+    const x = wx - win.ox * SIZE, z = wz - win.oz * SIZE, w = win.w;
+    if (x < 0 || z < 0 || x >= w || z >= w || wy < 0 || wy >= win.h) return false;
+    const i = x + z * w + wy * w * w;
+    return Math.max(win.sky[i], win.block[i]) < 8;
+  }
+  function spawnCreature(kind, x, y, z, id, phase) {
+    const K = MMDDMobs.KINDS[kind];
+    if (!K || creatures.length >= MMDDMobs.MAX_ACTIVE) return null;
+    const m = { id: id || ('t' + creatures.length + ':' + kind), kind, x, y, z, vx: 0, vy: 0, vz: 0, hp: K.hp, ground: false, mesh: null, dead: false, phase: phase || 0, age: 0, hitT: 0, hurtCd: 0 };
+    creatures.push(m);
+    return m;
+  }
+  // Brings candidates near the player to life: only in dark air, underground, never inside blocks.
+  function scanSpawns() {
+    if (!world) return 0;
+    const pc = playerChunk();
+    const px = Math.floor(player.x), py = Math.floor(-(player.y + 0.9)), pz = Math.floor(player.z);
+    if (player.y > -MMChunks.surfaceY(px, pz, SEED) - 2) return 0; // only below the surface
+    const cands = [];
+    for (let cy = 0; cy < MMChunks.WORLD.cy; cy++) for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) {
+      const cx = pc.cx + dx, cz = pc.cz + dz;
+      if (cx < 0 || cz < 0 || cx >= MMChunks.WORLD.cx || cz >= MMChunks.WORLD.cz) continue;
+      chunkCands(cx, cy, cz).forEach((c) => cands.push(c));
+    }
+    const pick = MMDDMobs.select(cands, { px, py, pz, active: creatures.length, activeIds: creatures.map((m) => m.id), slain, cap: MMDDMobs.MAX_ACTIVE });
+    let n = 0;
+    for (const c of pick) {
+      const K = MMDDMobs.KINDS[c.kind];
+      if (world.getBlock(c.wx, c.wy, c.wz) !== B.AIR) continue;
+      if (c.wy < MMChunks.surfaceY(c.wx, c.wz, SEED) + 2) continue; // deep enough to count as a cave
+      if (!K.flies && !solidAt(c.wx, c.wy + 1, c.wz)) continue; // crawlers need a floor
+      if (world.getBlock(c.wx, c.wy - 1, c.wz) !== B.AIR && K.flies) continue; // bats need a little headroom
+      if (!caveDark(c.wx, c.wy, c.wz)) continue;
+      const m = spawnCreature(c.kind, c.wx + 0.5, K.flies ? -(c.wy + 0.5) - K.h / 2 : -(c.wy + 1) + 0.01, c.wz + 0.5, c.id, c.phase);
+      if (m) n++;
+    }
+    return n;
+  }
+  function clearCreatures() { creatures.forEach((m) => removeCreatureMesh(m)); creatures.length = 0; }
+  function creatureHit(m) {
+    const K = MMDDMobs.KINDS[m.kind];
+    return Math.abs(player.x - m.x) < K.half + HALF && Math.abs(player.z - m.z) < K.half + HALF && player.y < m.y + K.h && player.y + HEIGHT > m.y;
+  }
+  function tickCreatures(dt) {
+    for (let i = creatures.length - 1; i >= 0; i--) {
+      const m = creatures[i], K = MMDDMobs.KINDS[m.kind];
+      const dx = player.x - m.x, dz = player.z - m.z, dy = (player.y + 0.9) - (m.y + K.h / 2), d = Math.hypot(dx, dy, dz);
+      if (m.dead || MMDDMobs.shouldCull(d)) { removeCreatureMesh(m); creatures.splice(i, 1); continue; }
+      m.age += dt; m.hitT = Math.max(0, m.hitT - dt); m.hurtCd = Math.max(0, m.hurtCd - dt);
+      if (m.hitT > 0) { /* knocked back: keep the push velocity */ }
+      else if (K.flies) {
+        const v = d < K.aggro ? MMDDMobs.batMove(m.phase, m.age, dx, dy, dz, K.speed) : { vx: 0, vy: Math.sin(m.age * 2 + m.phase) * 0.4, vz: 0 };
+        m.vx = v.vx; m.vy = v.vy; m.vz = v.vz;
+      } else if (m.ground) {
+        const h = Math.hypot(dx, dz) || 1;
+        m.vx = d < K.aggro ? dx / h * K.speed : 0; m.vz = d < K.aggro ? dz / h * K.speed : 0;
+      }
+      const nx = m.x + m.vx * dt; if (!collides(nx, m.y, m.z, K.half, K.h)) m.x = nx; else m.vx = 0;
+      const nz = m.z + m.vz * dt; if (!collides(m.x, m.y, nz, K.half, K.h)) m.z = nz; else m.vz = 0;
+      if (K.flies) {
+        const ny = m.y + m.vy * dt; if (!collides(m.x, ny, m.z, K.half, K.h)) m.y = ny; else m.vy = 0;
+        if (m.hitT > 0) { m.vx *= 0.9; m.vz *= 0.9; m.vy *= 0.9; }
+      } else {
+        m.vy = Math.max(-30, m.vy - GRAV * dt);
+        const ny = m.y + m.vy * dt;
+        if (!collides(m.x, ny, m.z, K.half, K.h)) { m.y = ny; m.ground = false; }
+        else {
+          let lo = m.y, hi = ny;
+          for (let k = 0; k < 10; k++) { const mid = (lo + hi) / 2; if (collides(m.x, mid, m.z, K.half, K.h)) hi = mid; else lo = mid; }
+          m.y = lo; if (m.vy < 0) { m.ground = true; if (m.hitT <= 0) { m.vx = 0; m.vz = 0; } else { m.vx *= 0.6; m.vz *= 0.6; } }
+          m.vy = 0;
+        }
+      }
+      if (m.hurtCd <= 0 && creatureHit(m)) {
+        m.hurtCd = 0.8;
+        deathCause = 'creature';
+        hurt(K.dmg, 'A cave ' + m.kind + ' bit you!', 'A cave ' + m.kind + ' got you. Back to the surface.');
+        deathCause = '';
+      }
+    }
+  }
+  // Melee: hit the creature in front of you (cone check) or, without needCone, the nearest within reach.
+  function attackCreature(needCone) {
+    if (atkCd > 0 && needCone) return false;
+    const e = eyePos(), ld = lookDir();
+    let best = null, bd = 99;
+    for (const m of creatures) {
+      const K = MMDDMobs.KINDS[m.kind];
+      const vx = m.x - e[0], vy = (m.y + K.h / 2) - e[1], vz = m.z - e[2], d = Math.hypot(vx, vy, vz);
+      if (d > 3.5 || d >= bd) continue;
+      if (needCone && (vx * ld[0] + vy * ld[1] + vz * ld[2]) / (d || 1) < 0.7) continue;
+      best = m; bd = d;
+    }
+    if (!best) return false;
+    atkCd = 0.4;
+    best.hp -= MMDDMobs.meleeDamage(pick.tier); best.hitT = 0.35;
+    const k = MMDDMobs.knockback(best.x - player.x, best.z - player.z, 5);
+    best.vx = k.vx; best.vz = k.vz; best.vy = best.kind === 'bat' ? 1.5 : k.vy; best.ground = false;
+    if (best.hp <= 0) {
+      best.dead = true; slain.add(best.id);
+      if (best.kind === 'crawler') { inv.coal = (inv.coal | 0) + 1; found.coal = 1; toast('The crawler dropped coal.'); } else toast('You swatted the bat.');
+      queueSave(); renderHud();
+    }
+    return true;
+  }
+  function makeCreatureTex() {
+    const c = document.createElement('canvas'); c.width = 32; c.height = 32;
+    const g = c.getContext('2d');
+    g.fillStyle = '#3a2a4a'; g.fillRect(0, 0, 32, 32);
+    g.fillStyle = '#5a4470'; g.fillRect(2, 2, 28, 8);
+    g.fillStyle = '#ff4a3a'; g.fillRect(7, 13, 5, 5); g.fillRect(20, 13, 5, 5);
+    g.fillStyle = '#1a1020'; g.fillRect(10, 22, 12, 3);
+    const t = new THREE.CanvasTexture(c);
+    t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.generateMipmaps = false;
+    return t;
+  }
+  function syncCreatureMeshes() {
+    if (!scene) return;
+    if (!creatureTex) creatureTex = makeCreatureTex();
+    creatureMeshes = 0;
+    for (const m of creatures) {
+      const K = MMDDMobs.KINDS[m.kind];
+      if (!m.mesh) {
+        const g = new THREE.Group(), mat = new THREE.MeshBasicMaterial({ map: creatureTex });
+        if (m.kind === 'crawler') { const b = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.45, 0.9), mat); b.position.y = 0.23; g.add(b); }
+        else {
+          const b = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.25, 0.3), mat); g.add(b);
+          const wing = new THREE.BoxGeometry(0.5, 0.04, 0.3), l = new THREE.Mesh(wing, mat), r = new THREE.Mesh(wing, mat);
+          l.position.x = -0.4; r.position.x = 0.4; g.add(l); g.add(r); g.userData.wings = [l, r];
+        }
+        g.userData.mat = mat; scene.add(g); m.mesh = g;
+      }
+      const yoff = m.kind === 'bat' ? K.h / 2 : 0;
+      m.mesh.position.set(m.x, m.y + yoff, m.z);
+      m.mesh.rotation.y = Math.atan2(player.x - m.x, player.z - m.z);
+      const w = m.mesh.userData.wings;
+      if (w) { const fl = reduced ? 0.2 : Math.sin(m.age * 18 + m.phase) * 0.6; w[0].rotation.z = fl; w[1].rotation.z = -fl; }
+      creatureMeshes++;
+    }
+  }
+  function removeCreatureMesh(m) {
+    if (m.mesh && scene) { scene.remove(m.mesh); if (m.mesh.userData.mat) m.mesh.userData.mat.dispose(); m.mesh.children.forEach((c) => { if (c.geometry) c.geometry.dispose(); }); }
+    m.mesh = null;
+  }
+
   // ---------- test hooks ----------
   function hashData(w, cs) {
     let h = 2166136261 >>> 0;
@@ -1056,6 +1228,7 @@
       cellLight, panel: togglePanel, setPick(t, dur) { pick.tier = t; pick.dur = dur === undefined ? PICK_DUR[t] : dur; renderHud(); },
       benches, benchNear, benchAtLook, pickUpBench, placeBench, craftRows: () => MMDDCraft.annotate(inv, { furnace: furnaceNear(), bench: benchNear() }),
       clock, setTime, tickTime, timeStage: () => MMDDTime.stage(clock.t), skyScale: () => clock.k, bg: () => scene ? scene.background.getHex() : 0, fogHex: () => scene ? scene.fog.color.getHex() : 0, MMDDTime,
+      creatures, slain, MMDDMobs, scanSpawns, tickCreatures, attackCreature, spawnCreature, clearCreatures, creatureCands: chunkCands, caveDark, deathCause: (c) => { deathCause = c; },
       craft: craftTorch, surfaceY: (x, z) => MMChunks.surfaceY(x, z, SEED), ready: true,
     };
   }
@@ -1079,6 +1252,7 @@
         if (typeof d.sel === 'string') sel = d.sel;
         MMDDCraft.cleanBenches(d.benches).forEach((b) => benches.push(b));
         if (typeof d.t === 'number' && isFinite(d.t)) clock.t = MMDDTime.norm(d.t);
+        if (Array.isArray(d.slain)) d.slain.slice(-300).forEach((x) => { if (typeof x === 'string' && x.length < 40 && /^[0-9,#]+$/.test(x)) slain.add(x); });
         if (typeof d.hp === 'number' && d.hp > 0) player.hp = Math.min(10, d.hp | 0);
         if (d.pick && typeof d.pick === 'object') { pick.tier = clampInt(d.pick.tier, 0, 3); pick.dur = pick.tier ? clampInt(d.pick.dur, 1, PICK_DUR[pick.tier]) : 0; }
       } catch (e) { /* ignore corrupt save */ }
