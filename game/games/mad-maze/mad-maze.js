@@ -134,6 +134,9 @@
     MMArt.loadFx('../../assets/arcane/').then((set) => { if (set.ids().length) arena.setFxArt(set); }).catch(() => {});
   }
 
+  // Ability bar icons (b20 ability art in the .realm-ab buttons); ?uiicons=0 keeps the emoji. The F slot follows the class signature.
+  if (arena.setAbilityIcons) arena.setAbilityIcons('../../assets/arcane/b20-class-portraits-and-ability-icons/abilities/');
+
   // Class stats: the active hero's class nudges HP/speed/damage/fire rate/safe time (MMClasses.arenaProfile); ?classstats=0 disables it.
   if (window.MMClasses && MMClasses.arenaProfile && params.get('classstats') !== '0' && activeHeroClass()) arena.setHeroProfile(MMClasses.arenaProfile(activeHeroClass()));
   // Class signature: the active hero's class gets a signature ability in the F slot (level 7, replaces Overdrive); ?signature=0 disables it.
@@ -265,6 +268,17 @@
     card.append(head, tabs, status, body); wrap.appendChild(card); ov.appendChild(wrap);
     let tab = 'pick'; let creating = false; const arts = new Map(); let artLoading = false;
     const SW = { ranger: '#6fbf73', frostcaller: '#7ec8f0', herald: '#e8b86a', punk: '#e0679a', bruiser: '#a9784f', rogue: '#8a7ac8', warlock: '#7a3fb0', paladin: '#f0d36a', berserker: '#e8643c', druid: '#5aa05a', necromancer: '#6a8a7a', graveTender: '#7f9a5a', trickster: '#5ad0b0', shadowPaw: '#6a5a8a' };
+    // b20 class portrait: replaces the colour swatch (and the animated canvas) once the image loads; a missing image keeps today's swatch / canvas.
+    const PORTRAIT_ROOT = '../../assets/arcane/b20-class-portraits-and-ability-icons/portraits/portrait_';
+    function portraitImg(cls, sw, cv, size) {
+      const c = String(cls || '').toLowerCase(); if (params.get('uiicons') === '0' || !/^[a-z]+$/.test(c)) return null;
+      const im = document.createElement('img'); im.className = 'hp-portrait'; im.alt = ''; im.setAttribute('aria-hidden', 'true'); im.draggable = false; im.hidden = true; im.dataset.cls = c;
+      if (size) { im.style.width = im.style.height = size + 'px'; }
+      im.addEventListener('load', () => { im.hidden = false; if (sw) sw.hidden = true; if (cv) { cv.hidden = true; cv.removeAttribute('data-art'); } });
+      im.addEventListener('error', () => { im.remove(); });
+      im.src = PORTRAIT_ROOT + c + '.png';
+      return im;
+    }
     function paintArts() {
       body.querySelectorAll('canvas.hp-art').forEach((cv) => {
         const ac = cv.getAttribute('data-art'); const set = arts.get(ac); const a = set && set.anim ? set.anim(ac, 'idle', 'down') : null;
@@ -285,7 +299,7 @@
       Object.keys(MMClasses.CLASSES).forEach((id) => {
         const lk = !ok[id]; const b = mk('button', 'hp-hero hp-new' + (lk ? ' locked' : '')); b.type = 'button'; b.dataset.newcls = id; if (lk) { b.disabled = true; b.setAttribute('aria-disabled', 'true'); }
         const sw = mk('span', 'hp-swatch', HS.className(MMClasses, id).charAt(0)); sw.style.background = SW[id] || '#8a63e0'; sw.setAttribute('aria-hidden', 'true');
-        b.append(sw, mk('span', 'hp-name', HS.className(MMClasses, id)), mk('span', 'hp-sub', MMClasses.CLASSES[id].ability.name));
+        const pt0 = portraitImg(id, sw, null); if (pt0) b.append(sw, pt0, mk('span', 'hp-name', HS.className(MMClasses, id)), mk('span', 'hp-sub', MMClasses.CLASSES[id].ability.name)); else b.append(sw, mk('span', 'hp-name', HS.className(MMClasses, id)), mk('span', 'hp-sub', MMClasses.CLASSES[id].ability.name));
         if (lk) b.appendChild(mk('span', 'hp-hint', '🔒 ' + HS.lockHint(MMClasses, id)));
         grid.appendChild(b);
       });
@@ -304,6 +318,7 @@
         const sw = mk('span', 'hp-swatch', (h.name || '?').charAt(0).toUpperCase()); sw.style.background = SW[h.cls] || '#8a63e0'; sw.setAttribute('aria-hidden', 'true');
         const cv = mk('canvas', 'hp-art'); cv.width = cv.height = 64; cv.hidden = true; cv.setAttribute('aria-hidden', 'true'); const ac = window.MMArt ? MMArt.artClassFor(h.cls) : null; if (ac) cv.setAttribute('data-art', ac);
         b.append(sw, cv, mk('span', 'hp-name', h.name), mk('span', 'hp-sub', h.clsName + (h.locked ? '' : ' · Lv ' + h.level)));
+        const pt = portraitImg(h.cls, sw, cv); if (pt) b.insertBefore(pt, cv.nextSibling);
         if (h.locked) b.appendChild(mk('span', 'hp-hint', '🔒 ' + h.hint)); else if (h.active) b.appendChild(mk('span', 'hp-tag', 'Active'));
         grid.appendChild(b);
       });
@@ -323,6 +338,7 @@
         const row = mk('div', 'realm-board-row'); const lab = mk('span', '', r.label); row.append(lab, mk('b', '', r.value)); dl.appendChild(row);
         if (ICONS_ON && STAT_ICON[r.label]) { const im = iconImg(STAT_ICON[r.label], lab); im.classList.add('stat'); lab.insertBefore(im, lab.firstChild); }
       });
+      if (st.hero) { const pt = portraitImg(hero.cls, null, null, 64); if (pt) { pt.classList.add('hp-portrait-stats'); body.insertBefore(pt, body.firstChild); } }
       if (!st.hero) body.insertBefore(mk('p', 'dim', 'No hero is active, so base stats apply. Pick one on the Pick hero tab.'), body.firstChild);
     }
     function render() {

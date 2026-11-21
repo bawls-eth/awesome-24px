@@ -281,6 +281,7 @@ class RealmArena {
     this._avatar = null;
     this._itemArt = null; this._enemyArt = null; this._enemyMap = null; this._driftMap = null; this._enemyDbgOn = false; this._bossArt = null; this._bossLoad = null; this._bossDbg = null; this._bossGhost = null; this._bossReq = null; this._biomeEnemyMap = null; this._edGhosts = null; // optional enemy animations (setEnemyArt)
     this._boltArt = null; this._boltCls = null; this._baCache = null; this._sparks = null; this._curE = null; this._baDraws = 0; this._baeDraws = 0; this._sparkSpawned = 0; this._sparkDraws = 0; // optional bolt art (setBoltArt)
+    this._abIconRoot = null; // setAbilityIcons
     this._fx = null; this._fxPool = null; this._fxDraws = 0; // optional one-shot effect art (setFxArt)
     this.heroProfile = null; // setHeroProfile
     this._heroSrc = null; this._hu = null; // setHeroLevelSource: the active hero {cls, level} (null = classic: account level, no unlock nodes)
@@ -961,6 +962,33 @@ class RealmArena {
     if (ok && !this._fxPool) this._fxPool = Array.from({ length: RM_FX_MAX }, () => ({ active: false, id: '', x: 0, y: 0, t: 0, dur: 0.5, w: 64, h: 64, rot: 0, follow: false, oy: 0 }));
     if (!ok && this._fxPool) this._fxPool.forEach((q) => { q.active = false; });
     return ok;
+  }
+  // Additive hook: ability bar icons (b20 ability_dash / nova / shield / overdrive and ability_<class>_sig). `root` is the b20 abilities folder URL
+  // ('' / null / ?uiicons=0 = emoji only). The emoji span and the Q/E/R/F letter stay in the button; a failed image is removed and never retried.
+  setAbilityIcons(root) {
+    let off = false;
+    try { off = typeof location !== 'undefined' && /[?&]uiicons=0(&|$)/.test(location.search || ''); } catch (e) { off = false; }
+    this._abIconRoot = !off && typeof root === 'string' && /^[A-Za-z0-9_.\/:-]+\/$/.test(root) ? root : null;
+    this._syncAbilities();
+    return !!this._abIconRoot;
+  }
+  _abIconId(i) {
+    if (i === 3 && this._sigOn()) { const c = (this.heroClass() || this._boltCls || '').toLowerCase(); return /^[a-z]+$/.test(c) ? 'ability_' + c + '_sig' : null; }
+    return ['ability_dash', 'ability_nova', 'ability_shield', 'ability_overdrive'][i] || null;
+  }
+  _syncAbilityIcon(el, i) {
+    const id = this._abIconRoot ? this._abIconId(i) : null;
+    let img = el.querySelector(':scope > img.realm-ab-img');
+    const ico = el.querySelector('.ico');
+    if (!id || (el.dataset.abBad || '').split(',').indexOf(id) >= 0) { if (img) img.remove(); if (ico) ico.style.opacity = ''; delete el.dataset.abImg; return; }
+    if (img && img.dataset.id === id) return;
+    if (img) img.remove();
+    img = document.createElement('img'); img.className = 'realm-ab-img'; img.alt = ''; img.draggable = false; img.dataset.id = id; img.setAttribute('aria-hidden', 'true');
+    img.style.cssText = 'position:absolute;left:50%;top:50%;width:70%;height:70%;transform:translate(-50%,-50%);object-fit:contain;image-rendering:pixelated;pointer-events:none';
+    img.addEventListener('load', () => { el.dataset.abImg = id; if (ico) ico.style.opacity = '0'; });
+    img.addEventListener('error', () => { el.dataset.abBad = (el.dataset.abBad ? el.dataset.abBad + ',' : '') + id; img.remove(); if (ico) ico.style.opacity = ''; delete el.dataset.abImg; });
+    img.src = this._abIconRoot + id + '.png';
+    el.insertBefore(img, el.firstChild);
   }
   fxDraws() { return this._fxDraws; }
   fxLive() { return this._fxPool ? this._fxPool.filter((q) => q.active).length : 0; }
@@ -3270,6 +3298,7 @@ class RealmArena {
       if (!el) continue;
       const ab = this._ab(i); const unlocked = this.abilityUnlocked(i); const cd = this.abilityCd[i];
       el.classList.toggle('locked', !unlocked);
+      if (this._abIconRoot !== null || el.dataset.abImg || el.querySelector(':scope > img.realm-ab-img')) this._syncAbilityIcon(el, i);
       el.classList.toggle('cooling', unlocked && cd > 0);
       const cdEl = el.querySelector('.cd');
       if (cdEl) cdEl.textContent = !unlocked ? `Lv${ab.level}` : cd > 0 ? String(Math.ceil(cd)) : '';

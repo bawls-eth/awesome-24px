@@ -715,6 +715,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "ability-icons.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "world-pickups.test.js": {
     "class": "browser",
     "tier": "full"
