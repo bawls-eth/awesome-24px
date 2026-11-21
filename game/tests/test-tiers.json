@@ -910,5 +910,9 @@
   "shared-mm-creatures.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "shared-mm-tame.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }
