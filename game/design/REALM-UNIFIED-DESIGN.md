@@ -150,3 +150,18 @@ Twelve creatures join the world and the dungeon biomes. In the world a creature 
 Rare elite: a godland sniper group becomes ONE `giant_spider_queen` with 20% chance (a hash of seed + cell, not the stream); `group.elite` multiplies hp x3, xp x3, shards x2 in `MMZones.TABLES.ELITE` on top of the zone mults. It is listed last in `CREATURE_TIERS.aimed[3]` so its art preloads, but the plain pick skips it (`RARE_ONLY`). World status bolts (realm-world `BOLT_ST`): ghoul/thorn_vine sick, wraith_knight weak, fire_elemental and giant_spider_queen bleed; shore creatures never apply statuses.
 
 Dungeon biomes (`MMBiomes.extra`, `skinFor(biome, mobId, elite, seed, key, classic)`): art-only skin swap on a mob, chosen by a fixed string hash of seed + mob position (no RNG stream, no Math.random), so room plans, hp and behaviour are unchanged. Bramble: thorn_vine (sprout, puffcap), ogre (beetle) at 35%. Meadow: wind_sprite (archer), harpy (puffcap, sprout) at 35%. Crypt: ghoul (puffcap) 35%, wraith_knight (beetle, archer) 30%. Warren: giant_spider_queen on half of the elites. `?roster=classic` disables all of it.
+
+## Co-op wiring (CO2 controller, CO3 hookup)
+
+`games/mad-maze/world-team.js` (global `MMWorldTeam`) is the same-device co-op controller: `MMWorldTeam.create(arena, worldApi, { party: 'local', seed, seat?, name?, onBag? })` publishes the local hero position (8 Hz, `MMWorldParty.makeSender`) and hits (`arena.onEnemyHit` is chained; the world's own handler runs first) over `MMPartyBC` (BroadcastChannel `mm-party-<seed>`, same browser and origin). It draws up to 3 partners (party max 4) as code-drawn, cached ghost heroes on a transparent overlay canvas inside `#realm-canvas-wrap` (the arena's world object is frozen, so it does not touch `drawOver`), each with a DOM name tag set by `textContent`. Partners are drawn only within 40 tiles; a partner silent for 2.5 s (`STALE_MS`, tab closed) is removed. Every incoming message goes through `MMWorldParty.clean` again; a pos for our own seat, an out-of-order or replayed pos, a hit from an unknown seat, a 4th partner, and any bag whose owner seat is not ours (or a repeated id, or out of range) are rejected and counted in `stats()`. `shareKill(enemyId, item, x, y)` sends each partner in range a bag with ITS owner id (`b<owner>-<killerSeat*100000+n>`) and keeps one for the killer, so ids never collide. No host authority, nothing saved, no database, socket or fetch code (grep-asserted in `world-team.test.js`). It returns an inert controller (`ok: false` plus a `reason`) without the flag, with a seed that fails `MMPartyBC.seedOk`, or without BroadcastChannel. Until CO3, `tests/fixtures/world-party.html?seed=N&seat=S` loads the real world page in an iframe and attaches the controller itself.
+
+CO3 needs exactly these three lines (nothing else changes; without `?party=local` no BroadcastChannel is opened):
+
+1. `games/mad-maze/index.html`, after `<script src="../../shared/mm-portals.js"></script>`:
+   `<script src="../../shared/mm-party.js"></script><script src="../../shared/mm-world-party.js"></script><script src="../../shared/mm-party-bc.js"></script>`
+2. `games/mad-maze/index.html`, right before `<script src="mad-maze.js"></script>`:
+   `<script src="world-team.js"></script>`
+3. `games/mad-maze/mad-maze.js`, inside `if (WORLD) {` right after the `realmWorld = RealmWorld.create(...)` line:
+   `if (params.get('party') === 'local' && window.MMWorldTeam) realmWorld.team = MMWorldTeam.create(arena, realmWorld.api, { party: 'local', seed: realmWorld.api.seed });`
+
+CO3 can then add `team: realmWorld && realmWorld.team` to the `window.__mm` test hook, drop the fixture's wrapper and extend `world-team.test.js` (NEXT-SLICES calls it `world-party.test.js`).
