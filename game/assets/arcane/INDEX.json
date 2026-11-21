@@ -397,6 +397,16 @@
    "status": "provisional",
    "ingested_utc": "2026-11-21T12:12:06Z",
    "source": "codex"
+  },
+  {
+   "id": "b25",
+   "label": "dungeon-tilesets",
+   "path": "assets/arcane/b25-dungeon-tilesets",
+   "manifest": "assets/arcane/b25-dungeon-tilesets/manifest.json",
+   "files": 57,
+   "status": "provisional",
+   "ingested_utc": "2026-11-21T14:11:43Z",
+   "source": "codex"
   }
  ]
 }

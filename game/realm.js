@@ -710,6 +710,8 @@ class RealmArena {
       const rowR = left + 6 * (a.px + 3);
       const boss = vis(document.getElementById('realm-boss'));
       if (boss && boss.left < rowR && boss.right > left && boss.bottom > top - 2 && boss.top < top + a.px) top = boss.bottom + 4;
+      const zoneEl = vis(document.getElementById('rw-zone')); // the phone's one-line zone/raid text sits under the XP bar: the icon row steps below it, like it does for the boss bar
+      if (zoneEl && zoneEl.left < rowR && zoneEl.right > left && zoneEl.bottom > top - 2 && zoneEl.top < top + a.px) top = zoneEl.bottom + 4;
       a.x = Math.max(0, (left - cr.left) / k); a.y = Math.max(0, (top - cr.top) / k);
       let bl = 1e9; let bb = -1;
       ['realm-bp-btn', 'realm-board-btn', 'realm-menu-btn', 'realm-leave-btn'].forEach((id) => { const r = vis(document.getElementById(id)); if (r && r.width > 0 && r.left > cr.left + cr.width * 0.4) { bl = Math.min(bl, r.left); bb = Math.max(bb, r.bottom); } });

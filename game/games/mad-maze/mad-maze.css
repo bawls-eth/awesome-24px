@@ -298,9 +298,16 @@ body.touch-device .realm-ab .key { display: none; }
 #rw-zone .rw-event.hidden, #rw-event-hint.hidden { display: none; }
 #rw-event-hint { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(228px + env(safe-area-inset-bottom, 0px)); z-index: 3; max-width: min(92vw, 420px); box-sizing: border-box; padding: 6px 12px; border-radius: 10px; background: rgba(90, 10, 20, 0.82); border: 2px solid #ff6a6a; color: #fff; font: 700 13px system-ui, sans-serif; text-align: center; pointer-events: none; }
 @media (max-width: 560px) {
-  #rw-minimap { top: calc(132px + env(safe-area-inset-top, 0px)); }
-  #rw-zone { top: calc(234px + env(safe-area-inset-top, 0px)); }
-  #rw-minimap.big + #rw-zone { top: calc(330px + env(safe-area-inset-top, 0px)); }
+  /* Phone HUD (PLAYTEST-REVIEW-2 #7/#9): a 72 px minimap thumbnail (tap = large map overlay, tap again = back), the zone / raid text on ONE 11 px line at the
+     left under the XP bar (coords hidden: the thumbnail shows where you are), and the prompts sit above the ability grid (see layoutPrompts in realm-world.js). */
+  #rw-minimap { top: calc(132px + env(safe-area-inset-top, 0px)); width: 68px; height: 68px; }
+  #rw-minimap.big { width: 192px; height: 192px; z-index: 5; }
+  #rw-zone { top: calc(106px + env(safe-area-inset-top, 0px)); right: auto; left: calc(10px + env(safe-area-inset-left, 0px)); max-width: calc(100vw - 110px); text-align: left; font-size: 11px; line-height: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; gap: 6px; align-items: baseline; }
+  #rw-minimap.big + #rw-zone { top: calc(106px + env(safe-area-inset-top, 0px)); }
+  #rw-zone .rw-zname { font-size: 11px; flex: none; order: 1; }
+  #rw-zone .rw-zsub { order: 0; flex: none; }
+  #rw-zone .rw-coords { display: none; }
+  #rw-zone .rw-event { order: 2; margin-top: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 }
 
 /* Daily entry / badge */
