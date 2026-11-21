@@ -385,7 +385,7 @@
             }));
           }).catch(() => null);
         }));
-      }).then(() => { wArtLoading = false; if (got) dropChunks(); return got; }).catch(() => { wArtLoading = false; return 0; });
+      }).then(() => { wArtLoading = false; if (got) { dropChunks(); if (nxOpen) nxDrawPlaza(); } return got; }) // an open Nexus plaza redraws once with the art.catch(() => { wArtLoading = false; return 0; });
     }
 
     // ---------- decorative props (purely visual, baked into the chunk canvas; seeded per chunk, never blocks, world generation untouched) ----------
@@ -1259,8 +1259,17 @@
     // from the MMNexus layout (fountain, torches, banners, 6 portals, 7 NPCs). Everything is a real button; Back (or Escape) unfreezes the arena with the
     // player exactly where they stood, so Back returns to the same tile. The vault portal opens the Lantern stash page; biome portals enter a dungeon that
     // returns to this tile; the Realm portal is Back. Visuals come from the registered art with code fallbacks.
+    // PLAYTEST-REVIEW-2 #5 (walkable Nexus, default; ?nexuswalk=0 restores the button screen): the same overlay, but the stage is a camera view onto the
+    // plaza canvas (drawn ONCE, offscreen) and the hero walks around it with the arena's own input (arena.keys from WASD / arrows and arena.moveVec from
+    // the move stick, which is lifted above the overlay). A real arena.setWorld swap was studied and not used: it would rebuild the pools, the zone
+    // spawner, the event clock, the fog and the camera, and live enemies / bullets would have to be parked and restored; the frozen arena keeps the
+    // Realm position exactly, so the Realm portal (or Back) returns to the same tile. Portals and NPCs are walk-up interactables with one 44 px prompt
+    // button (E / Enter on a keyboard). No enemies and no firing in the plaza (fire / ability / panel keys are swallowed while walking).
     const NX = window.MMNexus || null;
     const NX_ON = !!NX && !!window.MMQuests && !/[?&]nexus=0(&|$)/.test(typeof location !== 'undefined' ? location.search : '');
+    const NX_WALK = NX_ON && !/[?&]nexuswalk=0(&|$)/.test(typeof location !== 'undefined' ? location.search : '');
+    const NX_VW = 640; const NX_VH = 480; const NX_R = 10; // walk view (world px, 4:3) and the hero's collision radius
+    const nxHero = { x: 0, y: 0, moving: false, aim: 0, mx: 0, my: 1, iframes: 0 }; let nxRaf = 0; let nxLast = 0; let nxNearI = null; const nxCam = { x: 0, y: 0 };
     const NX_NAME = { realm: 'The Realm', warren: 'Warren dungeon', bramble: 'Bramble dungeon', vault: 'Lantern stash (vault)', meadow: 'Meadow dungeon', crypt: 'Crypt dungeon' };
     const nxSite = NX_ON ? (() => { const f = nearestFree(world.spawnPoint.x + 3, world.spawnPoint.y - 1, 8) || nearestFree(world.spawnPoint.x - 3, world.spawnPoint.y, 8); return f ? { tx: f.x, ty: f.y, x: (f.x + 0.5) * TILE, y: (f.y + 0.5) * TILE } : null; })() : null;
     const nxBtn = document.createElement('button'); nxBtn.id = 'rw-nexus-go'; nxBtn.type = 'button'; nxBtn.className = 'hidden'; nxBtn.textContent = 'Visit the Nexus (Enter)'; nxBtn.setAttribute('aria-label', 'Visit the Nexus hub (Enter)'); ov.appendChild(nxBtn);
@@ -1275,6 +1284,8 @@
       + '#rw-nexus .nx-spot{position:absolute;transform:translate(-50%,-50%);padding:0;border-radius:50%;background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.25)}'
       + '#rw-nexus .nx-lists{max-width:760px;width:100%;margin:10px auto 0;display:flex;flex-direction:column;gap:8px}#rw-nexus .nx-row{display:flex;flex-wrap:wrap;gap:8px}#rw-nexus .nx-row>b{flex:0 0 100%;font-size:12px;color:#c9bff0;font-weight:600}'
       + '#rw-nexus .nx-talk{max-width:760px;width:100%;margin:10px auto;box-sizing:border-box;padding:10px 12px;border-radius:10px;background:#231b42;border:1px solid #4a3d85;min-height:44px}#rw-nexus .nx-talk b{color:#ffe27a}'
+      + '#rw-nx-act{display:block;margin:8px auto 0;min-height:48px !important;border-color:#ffe27a !important;background:#3a2c10 !important;max-width:100%;white-space:normal}#rw-nx-act.hidden{visibility:hidden}#rw-nexus .nx-stage:focus-visible{outline:3px solid #ffe27a}'
+      + 'body.nx-walking #realm-stick-move{z-index:90}body.touch-device.nx-walking #rw-nexus{padding-bottom:calc(170px + env(safe-area-inset-bottom,0px))}'
       + '#rw-nexus .nx-board{max-width:760px;width:100%;margin:0 auto 12px;box-sizing:border-box;padding:10px 12px;border-radius:10px;background:#1d2a2a;border:1px solid #3b6b5f}#rw-nexus .nx-board.hidden{display:none}#rw-nexus .nx-q{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid #2f4a45}#rw-nexus .nx-q:first-of-type{border-top:0}#rw-nexus .nx-q span{flex:1}#rw-nexus .nx-q em{color:#8fe9ff;font-style:normal}';
     document.head.appendChild(nxCss);
     function nxLoadPortrait(id, done) { // b21 idle_down, first frame, cached; the plaza redraws when one arrives
@@ -1286,7 +1297,7 @@
     }
     function nxDrawPlaza() { // one static draw per open / art arrival (1280x960 = the 40x30 tile plaza at 32 px)
       if (!nxDom) return;
-      const L = NX.layout(); const c = nxDom.cv; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
+      const L = NX.layout(); const c = nxDom.plaza; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
       g.fillStyle = '#0e0a18'; g.fillRect(0, 0, c.width, c.height);
       for (let ty = 1; ty < L.h - 1; ty++) for (let tx = 1; tx < L.w - 1; tx++) { g.fillStyle = (tx + ty) % 2 ? '#4b4660' : '#554f6c'; g.fillRect(tx * TILE, ty * TILE, TILE, TILE); }
       g.fillStyle = '#6d6788'; for (let i = 1; i < L.w - 1; i++) { g.fillRect(i * TILE, TILE, TILE, 2); g.fillRect(i * TILE, (L.h - 2) * TILE + 30, TILE, 2); }
@@ -1324,7 +1335,7 @@
     function nxLeaveTo(url) {
       if (leaving) return null; leaving = true;
       savePos(true); writeSave(save); arena.onSave(arena.save); settle('portal');
-      arena.stop(); nxDom.root.classList.add('hidden'); nxOpen = false;
+      arena.stop(); nxWalkStop(); nxDom.root.classList.add('hidden'); nxOpen = false;
       api.lastNexusUrl = url; if (opts.navigate !== false) location.href = url; return url;
     }
     function nxPortal(q) {
@@ -1361,26 +1372,119 @@
       const back = document.createElement('button'); back.type = 'button'; back.id = 'rw-nx-back'; back.textContent = 'Back to the Realm'; back.setAttribute('aria-label', 'Back to the Realm');
       const h = document.createElement('h2'); h.textContent = 'The Nexus'; head.appendChild(back); head.appendChild(h);
       const stage = document.createElement('div'); stage.className = 'nx-stage';
-      const cv = document.createElement('canvas'); cv.width = NX.W * TILE; cv.height = NX.H * TILE; cv.setAttribute('aria-hidden', 'true'); stage.appendChild(cv);
+      const cv = document.createElement('canvas'); cv.width = NX_WALK ? NX_VW : NX.W * TILE; cv.height = NX_WALK ? NX_VH : NX.H * TILE; cv.setAttribute('aria-hidden', 'true'); stage.appendChild(cv);
+      let plaza = cv; let act = null;
+      if (NX_WALK) { // the plaza is drawn once offscreen; the stage canvas shows a camera window onto it with the walking hero
+        plaza = document.createElement('canvas'); plaza.width = NX.W * TILE; plaza.height = NX.H * TILE;
+        root.classList.add('nx-walk'); stage.tabIndex = 0; stage.setAttribute('role', 'application'); stage.setAttribute('aria-label', 'The Nexus plaza: walk with WASD, the arrow keys or the move stick');
+        act = document.createElement('button'); act.type = 'button'; act.id = 'rw-nx-act'; act.className = 'hidden'; act.tabIndex = -1; act.addEventListener('click', () => nxAct());
+      }
       const L = NX.layout(); const lists = document.createElement('div'); lists.className = 'nx-lists';
       const rowP = document.createElement('div'); rowP.className = 'nx-row'; const rowPl = document.createElement('b'); rowPl.textContent = 'Portals'; rowP.appendChild(rowPl);
       const rowN = document.createElement('div'); rowN.className = 'nx-row'; const rowNl = document.createElement('b'); rowNl.textContent = 'Talk to'; rowN.appendChild(rowNl);
       const spot = (x, y, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'nx-spot'; b.tabIndex = -1; b.setAttribute('aria-hidden', 'true'); b.style.left = (x / cv.width * 100) + '%'; b.style.top = (y / cv.height * 100) + '%'; b.addEventListener('click', fn); stage.appendChild(b); };
-      L.portals.forEach((q) => {
+      if (!NX_WALK) L.portals.forEach((q) => {
         const b = document.createElement('button'); b.type = 'button'; b.dataset.portal = q.id; b.textContent = q.id === 'realm' ? 'Back to the Realm portal' : q.id === 'vault' ? 'Vault: Lantern stash' : q.label + ' portal'; b.setAttribute('aria-label', q.id === 'vault' ? 'Vault portal: open the Lantern stash' : q.id === 'realm' ? 'Realm portal: go back to the Realm' : 'Enter the ' + q.label + ' dungeon');
         b.addEventListener('click', () => nxPortal(q)); rowP.appendChild(b); spot(q.x, q.y, () => nxPortal(q));
       });
-      L.npcs.forEach((n) => {
+      if (!NX_WALK) L.npcs.forEach((n) => {
         const b = document.createElement('button'); b.type = 'button'; b.dataset.npc = n.id; b.textContent = NPC_NAME[n.npc] || n.id; b.setAttribute('aria-label', 'Talk to ' + (NPC_NAME[n.npc] || n.id));
         b.addEventListener('click', () => nxTalk(n)); rowN.appendChild(b); spot(n.x, n.y - 10, () => nxTalk(n));
       });
       lists.appendChild(rowP); lists.appendChild(rowN);
-      const talk = document.createElement('div'); talk.className = 'nx-talk'; talk.setAttribute('role', 'status'); talk.textContent = 'Pick a portal, or say hello to someone.';
+      const talk = document.createElement('div'); talk.className = 'nx-talk'; talk.setAttribute('role', 'status'); talk.textContent = nxHint();
       const board = document.createElement('div'); board.className = 'nx-board hidden'; board.id = 'rw-nx-board';
-      root.appendChild(head); root.appendChild(stage); root.appendChild(talk); root.appendChild(board); root.appendChild(lists); ov.appendChild(root);
+      root.appendChild(head); root.appendChild(stage); if (act) root.appendChild(act); root.appendChild(talk); root.appendChild(board); if (!NX_WALK) root.appendChild(lists); ov.appendChild(root);
       back.addEventListener('click', () => nexusClose());
-      nxDom = { root, cv, talk, board, back, last: null };
+      nxDom = { root, cv, plaza, act, stage, talk, board, back, last: null };
       return nxDom;
+    }
+    function nxTouch() { return document.body.classList.contains('touch-device'); }
+    function nxHint() {
+      if (!NX_WALK) return 'Pick a portal, or say hello to someone.';
+      return nxTouch() ? 'Walk with the move stick. Walk up to a portal or a person, then tap the button.' : 'Walk with WASD or the arrow keys. Walk up to a portal or a person and press E.';
+    }
+    function nxFree(x, y) { // inside the plaza walls, off solid props, not inside an NPC
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return false;
+      for (let k = 0; k < 4; k++) if (!NX.walkable(Math.floor((x + (k & 1 ? NX_R : -NX_R)) / TILE), Math.floor((y + (k & 2 ? NX_R : -NX_R)) / TILE))) return false;
+      const ns = NX.layout().npcs; for (let i = 0; i < ns.length; i++) if (Math.hypot(ns[i].x - x, ns[i].y - y) < 22) return false;
+      return true;
+    }
+    function nxLabel(it) {
+      if (!it) return '';
+      if (it.kind === 'npc') { const nm = NPC_NAME[it.ref.npc] || it.ref.id; return it.ref.role === 'quests' ? 'Quest board: ' + nm : 'Talk to ' + nm; }
+      const q = it.ref; return q.id === 'realm' ? 'Back to the Realm' : q.id === 'vault' ? 'Vault: open the Lantern stash' : 'Enter the ' + q.label + ' dungeon';
+    }
+    function nxNearest() {
+      const L = NX.layout(); const h = nxHero; let best = null; let bd = Infinity;
+      L.portals.forEach((q) => { const d = Math.hypot(q.x - h.x, q.y - h.y); if (d < 52 && d < bd) { bd = d; best = { kind: 'portal', ref: q }; } });
+      L.npcs.forEach((n) => { const d = Math.hypot(n.x - h.x, n.y - h.y); if (d < 60 && d < bd) { bd = d; best = { kind: 'npc', ref: n }; } });
+      return best;
+    }
+    function nxAct() {
+      const it = nxNearI; if (!nxOpen || !it) return null;
+      if (it.kind === 'npc') { nxTalk(it.ref); return 'talk'; }
+      return nxPortal(it.ref);
+    }
+    function nxSyncPrompt() {
+      const it = nxNearest(); const same = it && nxNearI && it.kind === nxNearI.kind && it.ref === nxNearI.ref;
+      if (same || (!it && !nxNearI)) return;
+      nxNearI = it; const b = nxDom.act; if (!b) return;
+      if (!it) { b.classList.add('hidden'); b.tabIndex = -1; return; }
+      const t = nxLabel(it); b.textContent = t + (nxTouch() ? '' : ' (E)'); b.setAttribute('aria-label', t); b.tabIndex = 0; b.classList.remove('hidden');
+    }
+    function nxWalkStep(dt, mxIn, myIn) { // one movement step with the arena's input (or injected mx / my), clamped to the plaza and its props
+      const h = nxHero; let mx = mxIn; let my = myIn;
+      if (!Number.isFinite(mx) || !Number.isFinite(my)) {
+        const k = arena.keys || {}; const mv = arena.moveVec || { x: 0, y: 0 }; mx = mv.x || 0; my = mv.y || 0;
+        if (k.a || k.arrowleft) mx -= 1;
+        if (k.d || k.arrowright) mx += 1;
+        if (k.w || k.arrowup) my -= 1;
+        if (k.s || k.arrowdown) my += 1;
+      }
+      const len = Math.hypot(mx, my); h.moving = len > 0.05;
+      if (len > 1) { mx /= len; my /= len; }
+      if (h.moving) {
+        h.mx = mx; h.my = my;
+        const sp = arena.stats && Number.isFinite(arena.stats.speed) && arena.stats.speed > 0 ? Math.min(arena.stats.speed, 600) : 220; const st = sp * Math.min(Math.max(dt, 0), 0.05);
+        const c = NX.clampPoint(h.x + mx * st, h.y + my * st);
+        if (nxFree(c.x, h.y)) h.x = c.x;
+        if (nxFree(h.x, c.y)) h.y = c.y;
+      }
+      nxSyncPrompt();
+    }
+    function nxWalkDraw() {
+      const c = nxDom.cv; const g = c.getContext('2d'); const h = nxHero; const L = NX.layout(); g.imageSmoothingEnabled = false;
+      nxCam.x = Math.round(Math.max(0, Math.min(L.w * TILE - NX_VW, h.x - NX_VW / 2))); nxCam.y = Math.round(Math.max(0, Math.min(L.h * TILE - NX_VH, h.y - NX_VH / 2)));
+      g.drawImage(nxDom.plaza, nxCam.x, nxCam.y, NX_VW, NX_VH, 0, 0, NX_VW, NX_VH);
+      g.save(); g.translate(-nxCam.x, -nxCam.y);
+      if (nxNearI) { const r = nxNearI.ref; g.strokeStyle = '#ffe27a'; g.lineWidth = 3; g.beginPath(); g.arc(r.x, r.y, nxNearI.kind === 'npc' ? 30 : 36, 0, Math.PI * 2); g.stroke(); }
+      let ok = false;
+      if (arena._heroArt && typeof arena._drawHero === 'function') { // the arena's own hero sprite (walk / idle, facing the move direction)
+        const m0 = arena._mx; const m1 = arena._my; arena._mx = h.mx; arena._my = h.my;
+        try { ok = !!arena._drawHero(g, h); } catch (e) { ok = false; }
+        arena._mx = m0; arena._my = m1;
+      }
+      if (!ok) { g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(h.x, h.y + 12, 12, 5, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#ffe27a'; g.beginPath(); g.arc(h.x, h.y, 12, 0, Math.PI * 2); g.fill(); g.fillStyle = '#2a2150'; g.beginPath(); g.arc(h.x + h.mx * 5, h.y + h.my * 5, 4, 0, Math.PI * 2); g.fill(); }
+      g.restore();
+    }
+    function nxWalkFrame(now) {
+      nxRaf = 0; if (!nxOpen || !NX_WALK) return;
+      const dt = Math.min(0.05, Math.max(0, (now - nxLast) / 1000)); nxLast = now;
+      nxWalkStep(dt); nxWalkDraw();
+      nxRaf = requestAnimationFrame(nxWalkFrame);
+    }
+    function nxWalkStart() {
+      const sp = NX.layout().spawn; nxHero.x = sp.x; nxHero.y = sp.y; nxHero.mx = 0; nxHero.my = 1; nxHero.moving = false; nxNearI = null;
+      if (nxDom.act) { nxDom.act.classList.add('hidden'); nxDom.act.tabIndex = -1; }
+      document.body.classList.add('nx-walking'); nxSyncPrompt(); nxWalkDraw();
+      nxDom.stage.focus({ preventScroll: true });
+      nxLast = performance.now(); if (!nxRaf) nxRaf = requestAnimationFrame(nxWalkFrame);
+    }
+    function nxWalkStop() {
+      if (nxRaf) cancelAnimationFrame(nxRaf);
+      nxRaf = 0; nxNearI = null;
+      document.body.classList.remove('nx-walking');
     }
     function nexusOpen() {
       if (!NX_ON || !nxSite || nxOpen || leaving || !arena.active || arena.state !== 'play' || arena.paused) return false;
@@ -1389,17 +1493,22 @@
       nxBtn.classList.add('hidden'); portalBtn.classList.add('hidden'); siteBtn.classList.add('hidden');
       nxDom.root.classList.remove('hidden'); nxDom.board.classList.add('hidden');
       NX.layout().npcs.forEach((n) => nxLoadPortrait(n.npc, nxDrawPlaza)); nxDrawPlaza();
-      nxDom.talk.textContent = 'Pick a portal, or say hello to someone.';
-      nxDom.back.focus({ preventScroll: true });
+      nxDom.talk.textContent = nxHint();
+      if (NX_WALK) nxWalkStart(); else nxDom.back.focus({ preventScroll: true });
       return true;
     }
     function nexusClose() {
       if (!nxOpen) return false;
-      nxOpen = false; nxDom.root.classList.add('hidden'); arena.paused = false; arena.player.iframes = Math.max(arena.player.iframes, 1.5);
+      nxOpen = false; nxWalkStop(); nxDom.root.classList.add('hidden'); arena.paused = false; arena.player.iframes = Math.max(arena.player.iframes, 1.5);
       nxNear = true; return true; // the prompt shows again next tick if the player is still beside the portal
     }
     window.addEventListener('keydown', (ev) => {
       if (nxOpen && ev.key === 'Escape') { ev.preventDefault(); ev.stopImmediatePropagation(); nexusClose(); return; }
+      if (nxOpen && NX_WALK) { // walking: E / Enter / Space use the nearby portal or NPC; fire, ability and panel keys do nothing in the plaza
+        const k = String(ev.key || '').toLowerCase(); const onBtn = !!(ev.target && ev.target.closest && ev.target.closest('button'));
+        if ((k === 'e' || ((k === 'enter' || k === ' ') && !onBtn)) && nxNearI && !ev.repeat) { ev.preventDefault(); ev.stopImmediatePropagation(); nxAct(); return; }
+        if (/^(e|q|r|f|b|i|k|v)$/.test(k) || (k === ' ' && !onBtn)) { ev.preventDefault(); ev.stopImmediatePropagation(); return; }
+      }
       if (ev.key === 'Enter' && !nxOpen && nxNear && promptFor < 0 && !siteFor && arena.active && !arena.paused && arena.state === 'play') { ev.preventDefault(); nexusOpen(); }
     }, true);
     nxBtn.addEventListener('click', () => nexusOpen());
@@ -1574,7 +1683,11 @@
       // slice 11: world debuffs (roll(creature, zone, force) = one bolt hit; table = creature -> status; shown by arena.statusOf)
       worldStatus: { on: STATUS_ON, table: BOLT_ST, forCreature: boltStatusFor, roll: boltRoll, log: stLog },
       ttk: { on: TTK_ON }, pickups: { on: PICK_ON, cap: PICK_CAP, magnet: MAGNET_R, list: () => picks.map((q) => ({ type: q.type, art: q.art, value: q.value, tier: q.tier, x: q.x, y: q.y, lifeMs: q.lifeMs })), spawn: spawnPickups, got: () => Object.assign({}, pickGot), total: () => pickTotal },
-      nexus: { on: NX_ON, site: nxSite, open: nexusOpen, close: nexusClose, isOpen: () => nxOpen, near: () => nxNear, enterTile: () => nxEnterTile, talk: (id) => { const n = NX_ON && NX.layout().npcs.find((x) => x.id === id); if (n) { nxBuild(); nxTalk(n); } return nxDom && nxDom.last; }, portal: (id) => { const q = NX_ON && NX.layout().portals.find((x) => x.id === id); return q ? nxPortal(q) : null; }, lastUrl: () => api.lastNexusUrl || null, today: todayUtc },
+      nexus: { on: NX_ON, site: nxSite, open: nexusOpen, close: nexusClose, isOpen: () => nxOpen, near: () => nxNear, enterTile: () => nxEnterTile, talk: (id) => { const n = NX_ON && NX.layout().npcs.find((x) => x.id === id); if (n) { nxBuild(); nxTalk(n); } return nxDom && nxDom.last; }, portal: (id) => { const q = NX_ON && NX.layout().portals.find((x) => x.id === id); return q ? nxPortal(q) : null; }, lastUrl: () => api.lastNexusUrl || null, today: todayUtc,
+        // walkable plaza (PLAYTEST-REVIEW-2 #5); step(mx, my, dt) injects input for tests, place() only accepts free plaza points
+        walk: { on: NX_WALK, view: { w: NX_VW, h: NX_VH }, hero: () => ({ x: nxHero.x, y: nxHero.y, tx: Math.floor(nxHero.x / TILE), ty: Math.floor(nxHero.y / TILE), moving: nxHero.moving }), cam: () => ({ x: nxCam.x, y: nxCam.y }),
+          near: () => (nxNearI ? { kind: nxNearI.kind, id: nxNearI.ref.id } : null), act: () => nxAct(), step: (mx, my, dt) => { if (nxOpen && NX_WALK) nxWalkStep(Number(dt) || 1 / 60, Number(mx) || 0, Number(my) || 0); return { x: nxHero.x, y: nxHero.y }; },
+          place: (x, y) => { if (!nxOpen || !NX_WALK || !nxFree(Number(x), Number(y))) return false; nxHero.x = Number(x); nxHero.y = Number(y); nxSyncPrompt(); return true; }, running: () => nxRaf !== 0 } },
       quests: { date: questDate, list: () => MMQuests.quests(questDate()), summary: () => MMQuests.summary(save.quests, questDate()), state: () => JSON.parse(JSON.stringify(save.quests || MMQuests.fresh(questDate()))), event: nxQuestEvent, claim: nxClaim, flush: () => { qDirty = false; return writeSave(save); } },
       settle, stashNote, lastSettle: () => lastSettle, finds: () => (ST ? ST.readFinds(localStorage) : null),
     };

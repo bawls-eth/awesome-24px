@@ -4,7 +4,9 @@
 const { chromium } = require('playwright');
 const { check, done } = require('./helpers');
 const ORIGIN = (process.env.BASE || 'http://localhost:8440/game/index.html').replace(/\/game\/index\.html.*$/, '');
-const WORLD = ORIGIN + '/game/games/mad-maze/index.html?mode=world&test=1&seed=12345&qdate=2030-05-01';
+// PLAYTEST-REVIEW-2 #5: the walkable plaza is now the default Nexus (tested in world-nexus-walk.test.js). This file keeps testing the
+// button screen, which `?nexuswalk=0` still restores, with every check unchanged.
+const WORLD = ORIGIN + '/game/games/mad-maze/index.html?mode=world&test=1&seed=12345&qdate=2030-05-01&nexuswalk=0';
 const SAVE = { realm: { level: 4, xp: 0, shards: 50, bestWave: 2, items: [{ n: 1, id: 'sparkwand', r: 0 }], nextUid: 2, eq: { weapon: 1 } } };
 const RKEY = 'pixeltown-realm-v1';
 
