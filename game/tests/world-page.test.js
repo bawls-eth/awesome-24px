@@ -235,7 +235,7 @@ const walk = (page, path) => A(page, async (a, w, path) => {
   await page.click('#rw-portal');
   await page.waitForURL(/mode=dungeon/, { timeout: 10000 });
   await page.waitForFunction(() => window.__mm && window.__mm.dungeon && window.__mm.arena.active, null, { timeout: 15000 });
-  const dg = await page.evaluate(() => ({ url: location.href, seed: window.__mm.dungeon.seed, leave: document.getElementById('realm-leave-btn').textContent, save: JSON.parse(localStorage.getItem('pixeltown-realm-v1')) }));
+  const dg = await page.evaluate(() => ({ url: location.href, seed: window.__mm.dungeon.seed, leave: document.getElementById('realm-leave-btn').textContent + ' | ' + document.getElementById('realm-leave-btn').getAttribute('aria-label'), save: JSON.parse(localStorage.getItem('pixeltown-realm-v1')) }));
   const ret = new URL(dg.url).searchParams.get('return');
   check('entering the portal starts a dungeon run of the portal biome with a seed derived from (world seed, portal)', /mode=dungeon/.test(dg.url) && new URL(dg.url).searchParams.get('biome') === portal.biome && /^\d{1,5}$/.test(dg.seed) && ret === `index.html?mode=world&seed=12345&at=${portal.tx},${portal.ty}&test=1`, JSON.stringify(dg));
   check('the world position and seed were saved before leaving', dg.save.seed === '12345' && dg.save.pos.x === portal.tx && dg.save.pos.y === portal.ty && dg.save.returnTo && dg.save.returnTo.x === portal.tx && dg.save.stats.portals === 1, JSON.stringify(dg.save));

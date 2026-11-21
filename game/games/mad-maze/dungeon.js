@@ -329,6 +329,32 @@
       }
     }
 
+    // ---------- start-room direction cue ----------
+    // In the start room a pulsing arrow marks the door on the shortest regular route to the boss; while the boss route needs a key the
+    // player has not found, it points at the route to the Keeper's Nook instead, with 'Find the key'. Code-drawn on the overlay layer.
+    const startId = dungeon.rooms.find((r) => r.type === 'start').id;
+    function routeDoors(from, to) { // doors of the shortest route over regular (non-cracked) doors, or null
+      const prev = { [from]: null }; const q = [from];
+      for (let i = 0; i < q.length; i++) {
+        const u = q[i]; if (u === to) break;
+        dungeon.doors.forEach((d) => { if (d.cracked || (d.a !== u && d.b !== u)) return; const v = d.a === u ? d.b : d.a; if (!(v in prev)) { prev[v] = { u, d }; q.push(v); } });
+      }
+      if (!(to in prev)) return null;
+      const out = []; for (let v = to; prev[v]; v = prev[v].u) out.unshift(prev[v].d);
+      return out;
+    }
+    function cue() {
+      if (current !== startId || finished) return null;
+      let route = routeDoors(startId, dungeon.bossRoomId); if (!route || !route.length) return null;
+      let hint = ''; let target = 'boss';
+      const gated = route.some((d) => d.locked && !unlocked[d.id]);
+      if (gated && state.keys === 0 && dungeon.keyRoomId !== undefined && !L[dungeon.keyRoomId].keyTaken) {
+        const kr = routeDoors(startId, dungeon.keyRoomId); if (kr && kr.length) { route = kr; hint = 'Find the key'; target = 'key'; }
+      }
+      const o = curDoors().find((q) => q.d === route[0]); if (!o) return null;
+      return { dir: o.dir, status: o.status, tile: o.tile, hint, target };
+    }
+
     // ---------- mini-map ----------
     const mapEl = document.createElement('canvas'); mapEl.id = 'mm-map'; mapEl.width = 9 * 16 + 8; mapEl.height = 8 * 16 + 8; mapEl.setAttribute('aria-label', 'Dungeon map');
     const mapBtn = document.createElement('button'); mapBtn.id = 'mm-map-btn'; mapBtn.type = 'button'; mapBtn.textContent = '🗺'; mapBtn.setAttribute('aria-label', 'Toggle map (Tab)');
@@ -474,6 +500,21 @@
           }
           g.globalAlpha = ga;
         }
+        const cu = cue();
+        if (cu) { // pulsing arrow just inside the door (static with reduced motion), pointing at it
+          const still = !!arena._reduced; const tt = still ? 0 : performance.now() / 1000; const v = DV[cu.dir]; const pulse = still ? 0 : Math.sin(tt * 4);
+          const cx = (cu.tile.x + 0.5) * T; const cy = (cu.tile.y + 0.5) * T; const d = T * 1.05 - pulse * 5; const ax = cx - v[0] * d; const ay = cy - v[1] * d;
+          g.save(); g.globalAlpha = still ? 1 : 0.9 + 0.1 * pulse;
+          g.fillStyle = 'rgba(255,212,90,0.28)'; g.fillRect(cu.tile.x * T, cu.tile.y * T, T, T); // door glow
+          g.translate(ax, ay); g.rotate(Math.atan2(v[1], v[0]));
+          g.fillStyle = '#ffd45a'; g.strokeStyle = '#2a1d44'; g.lineWidth = 3; g.beginPath(); g.moveTo(17, 0); g.lineTo(-9, -15); g.lineTo(-9, 15); g.closePath(); g.stroke(); g.fill();
+          g.restore();
+          if (cu.hint) {
+            g.save(); g.font = 'bold 15px system-ui, sans-serif'; g.textAlign = 'center'; g.lineWidth = 4; g.strokeStyle = '#120a22'; g.fillStyle = '#ffd45a';
+            const tx = Math.max(70, Math.min(arena.W - 70, ax)); const ty = Math.max(24, Math.min(arena.H - 16, ay + (cu.dir === 'N' ? 34 : cu.dir === 'S' ? -26 : 4)));
+            g.strokeText(cu.hint, tx, ty); g.fillText(cu.hint, tx, ty); g.restore();
+          }
+        }
         for (let i = 0; i < arena.enemies.length; i++) {
           const e = arena.enemies[i]; if (!e.active || !e.elite) continue;
           g.fillStyle = '#ffd45a'; const y = e.y - 26; g.beginPath(); g.moveTo(e.x - 8, y + 8); g.lineTo(e.x - 8, y); g.lineTo(e.x - 4, y + 4); g.lineTo(e.x, y - 2); g.lineTo(e.x + 4, y + 4); g.lineTo(e.x + 8, y); g.lineTo(e.x + 8, y + 8); g.closePath(); g.fill();
@@ -518,6 +559,7 @@
       },
       // test hook: put the player on a tile centre; true when the hero circle fits there (not inside a wall)
       teleport: (tx, ty) => { if (current !== null && sig !== doorSig()) refreshWalls(); const p = arena.player; p.x = (tx + 0.5) * T; p.y = (ty + 0.5) * T; return !arena._blocked(p.x, p.y, RM_PLAYER.r); },
+      cue,
       roomCount: () => ({ visited: visitedMain(), total: MAIN_ROOMS }),
       toggleMap,
       mapVisible: () => !mapEl.classList.contains('hidden'),

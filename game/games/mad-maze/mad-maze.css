@@ -316,5 +316,5 @@ div#mm-daily-btn { pointer-events: none; min-height: 28px; font-size: 12px; left
 @media (max-width: 600px) and (min-height: 760px) and (orientation: portrait) {
   body.dungeon-mode #realm-canvas { top: 215px !important; }
   body.dungeon-mode #realm-banner { top: 182px; left: calc(50% - 48px); max-width: calc(100% - 140px); }
-  body.dungeon-mode #mm-map { width: 96px; height: auto; top: calc(126px + env(safe-area-inset-top, 0px)); }
+  body.dungeon-mode #mm-map { width: 96px; height: auto; top: calc(124px + env(safe-area-inset-top, 0px)); }
 }
