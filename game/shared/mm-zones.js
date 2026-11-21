@@ -22,10 +22,11 @@
     SPREAD_PX: 48,            // enemies of a group scatter within this radius of the group centre
     MAX_GROUP: 8,             // enemy ids encode the in-group slot in 3 bits
     ZONES: [
-      { id: 0, name: 'Shore', color: '#e8d7a1', danger: 'Safe-ish', respawn: 60 },
-      { id: 1, name: 'Midlands', color: '#6fbf5a', danger: 'Dangerous', respawn: 90 },
-      { id: 2, name: 'Highlands', color: '#8d7ab8', danger: 'Deadly', respawn: 120 },
-      { id: 3, name: 'Godlands', color: '#c0392b', danger: 'Lethal', respawn: 180 },
+      // recLv: the recommended hero level the border toast names (realm-world.js zone gradient, PLAYTEST-REVIEW-2 #1)
+      { id: 0, name: 'Shore', color: '#e8d7a1', danger: 'Safe-ish', respawn: 60, recLv: 1 },
+      { id: 1, name: 'Midlands', color: '#6fbf5a', danger: 'Dangerous', respawn: 90, recLv: 5 },
+      { id: 2, name: 'Highlands', color: '#8d7ab8', danger: 'Deadly', respawn: 120, recLv: 10 },
+      { id: 3, name: 'Godlands', color: '#c0392b', danger: 'Lethal', respawn: 180, recLv: 15 },
     ],
     VOID: { id: 255, name: 'The Deep', color: '#0b1a33', danger: 'None' },
     // enemy stat multipliers = ZONE_MUL[zone] * TIER_MUL[tier]; hp/speed/dmg scale like realm.js waves (wave 1 -> ~15)

@@ -24,7 +24,8 @@
       count: [0.60, 0.80, 1.00, 1.20, 1.40],
       fire:  [0.80, 0.90, 1.00, 1.10, 1.20],
     },
-    BANDS: [{ min: 0.68, max: 0.97 }, { min: 0.40, max: 0.68 }, { min: 0.20, max: 0.40 }, { min: 0.00, max: 0.20 }], // MMOverworld.ZONE_BANDS (dw units)
+    BANDS: [{ min: 0.68, max: 0.97 }, { min: 0.40, max: 0.68 }, { min: 0.20, max: 0.40 }, { min: 0.00, max: 0.20 }], // MMOverworld.ZONE_BANDS_CLASSIC (dw units)
+    BANDS_WIDE: [{ min: 0.62, max: 0.97 }, { min: 0.34, max: 0.62 }, { min: 0.17, max: 0.34 }, { min: 0.00, max: 0.17 }], // MMOverworld.ZONE_BANDS_WIDE (opts.bands 'wide')
     EASY_ROOMS: 3,                               // the first three dungeon rooms are weak
     ROOM_EASY: { hp: [0.60, 0.65, 0.70], dmg: [0.70, 0.75, 0.80], spd: [0.85, 0.88, 0.90], count: [0.60, 0.70, 0.80], fire: [0.80, 0.85, 0.90] },
     ROOM_END: { hp: 1.40, dmg: 1.25, spd: 1.12, count: 1.30, fire: 1.25 },   // last room before the boss
@@ -67,7 +68,7 @@
   // missing / hostile -> the middle of the zone. Continuous across zone borders: the same dist in the outer zone and the inner one meet at the knot.
   function zoneScale(zone, distFromCentre, opts) {
     let z = Math.floor(num(zone, 0)); z = z < 0 ? 0 : z > 3 ? 3 : z;
-    const b = T.BANDS[z], d = num(distFromCentre, NaN);
+    const b = (opts && opts.bands === 'wide' ? T.BANDS_WIDE : T.BANDS)[z], d = num(distFromCentre, NaN);
     const s = d === d ? clamp((b.max - d) / (b.max - b.min), 0, 1) : 0.5;
     const raw = {}; for (let i = 0; i < KEYS.length; i++) raw[KEYS[i]] = knot(T.ZONE_KNOTS[KEYS[i]], z + s);
     return finish(raw, opts);

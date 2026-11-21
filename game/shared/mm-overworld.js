@@ -18,13 +18,26 @@
   const TERRAIN_NAMES = Object.keys(TERRAIN);
   const T = TERRAIN;
   const ZONES = { SHORE: 0, MIDLANDS: 1, HIGHLANDS: 2, GODLANDS: 3, VOID: 255 };
-  // radial bands in warped-distance units (0 = centre, 1 = nominal coast radius)
-  const ZONE_BANDS = [
+  // radial bands in warped-distance units (0 = centre, 1 = nominal coast radius).
+  // PLAYTEST-REVIEW-2 #1 (zone gradient): the default bands are WIDE (a much wider shore, the midlands pushed inward) and the zone field is
+  // bulged around the spawn so the first midlands tile is at least SAFE_SHORE tiles (x size/256) from it. ZONE_BANDS_CLASSIC is the original
+  // layout: generate(seed, { bands: 'classic' }) (page ?bands=classic) reproduces the old worlds byte for byte (same hash).
+  const ZONE_BANDS_CLASSIC = [
     { id: 0, name: 'shore', dwMin: 0.68, dwMax: 0.97 },
     { id: 1, name: 'midlands', dwMin: 0.40, dwMax: 0.68 },
     { id: 2, name: 'highlands', dwMin: 0.20, dwMax: 0.40 },
     { id: 3, name: 'godlands', dwMin: 0, dwMax: 0.20 },
   ];
+  const ZONE_BANDS_WIDE = [
+    { id: 0, name: 'shore', dwMin: 0.62, dwMax: 0.97 },
+    { id: 1, name: 'midlands', dwMin: 0.34, dwMax: 0.62 },
+    { id: 2, name: 'highlands', dwMin: 0.17, dwMax: 0.34 },
+    { id: 3, name: 'godlands', dwMin: 0, dwMax: 0.17 },
+  ];
+  const ZONE_BANDS = ZONE_BANDS_WIDE;
+  const SAFE_SHORE = 40;     // tiles (at 256x256): no midlands (or worse) tile closer than this to the spawn
+  const SAFE_FALLOFF = 1.6;  // beyond SAFE_SHORE the bulge sinks back to the natural field this many times faster than the radial slope
+  function bandsFor(opts) { return opts && opts.bands === 'classic' ? ZONE_BANDS_CLASSIC : ZONE_BANDS_WIDE; }
   const BIOMES = ['warren', 'bramble', 'meadow', 'crypt'];
   const BOSSES = [
     { boss: 'forest_warden', zone: 1 }, { boss: 'mire_queen', zone: 1 },
@@ -115,21 +128,63 @@
     const dwA = new Float32Array(area);
     const moistA = new Uint8Array(area);
     const detA = new Uint8Array(area);
+    const B = bandsFor(opts), classicBands = B === ZONE_BANDS_CLASSIC;
+    const b0 = B[0].dwMin, b1 = B[1].dwMin, b2 = B[2].dwMin;
 
-    // ---- 1. fields + base terrain ----
+    // ---- 1a. the warped-distance field (spawn placement only reads this, so it can run before the zones) ----
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
-        const i = y * w + x;
         const dx = x - cx, dy = y - cy;
         const d = Math.sqrt(dx * dx + dy * dy) / R;
         const warp = fbm(x / 38, y / 38, 4, sn + 1);
-        const dw = d + (warp - 0.5) * 0.24 + (fbm(x / 9, y / 9, 2, sn + 2) - 0.5) * 0.03;
-        dwA[i] = dw;
+        dwA[y * w + x] = d + (warp - 0.5) * 0.24 + (fbm(x / 9, y / 9, 2, sn + 2) - 0.5) * 0.03;
+      }
+    }
+    const inb = function (x, y) { return x >= 0 && y >= 0 && x < w && y < h; };
+    const isWater = function (t) { return t === T.deep_water || t === T.shallow_water; };
+    const isLandTile = function (i) { return !isWater(terrain[i]) && !solid[i]; };
+    const dist = function (ax, ay, bx, by) { const a = ax - bx, b = ay - by; return Math.sqrt(a * a + b * b); };
+
+    // ---- 2. spawn point on the shore ring (base terrain is water exactly where dw >= 0.90, so the field alone decides) ----
+    const rs = rngFor('spawn');
+    let spawn = null;
+    const a0 = rs.next() * Math.PI * 2;
+    for (let k = 0; k < 360 && !spawn; k++) {
+      const ang = a0 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * (Math.PI / 180) * 2;
+      for (let r = R * 0.9; r > R * 0.7 && !spawn; r -= 0.5) {
+        const x = Math.round(cx + Math.cos(ang) * r), y = Math.round(cy + Math.sin(ang) * r);
+        if (!inb(x, y)) continue;
+        const i = y * w + x;
+        if (dwA[i] < b0 || dwA[i] > 0.84 || dwA[i] < 0.74) continue;
+        let ok = true;
+        for (let oy = -4; oy <= 4 && ok; oy++) for (let ox = -4; ox <= 4; ox++) {
+          if (!inb(x + ox, y + oy) || dwA[(y + oy) * w + x + ox] >= 0.90) { ok = false; break; }
+        }
+        if (ok) spawn = { x: x, y: y };
+      }
+    }
+    if (!spawn) { // extreme fallback: walk the +x axis from the centre until the shore band
+      for (let x = Math.floor(cx + R * 0.8); x > cx && !spawn; x--) if (dwA[Math.floor(cy) * w + x] < 0.90) spawn = { x: x, y: Math.floor(cy) };
+    }
+    // the zone field: classic = dw; wide = dw bulged around the spawn (flat shore plateau out to SAFE tiles, then a steep fall back to dw)
+    const safeR = SAFE_SHORE * N / 256, plateau = b0 + 0.02;
+    const zoneField = function (x, y, dw) {
+      if (classicBands) return dw;
+      const ds = dist(x, y, spawn.x, spawn.y);
+      const bulge = ds <= safeR ? plateau : plateau - (ds - safeR) * SAFE_FALLOFF / R;
+      return dw > bulge ? dw : bulge;
+    };
+
+    // ---- 1b. fields + base terrain ----
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = y * w + x;
+        const dw = dwA[i], dz = zoneField(x, y, dw);
         const m = fbm(x / 22, y / 22, 3, sn + 3), det = fbm(x / 7, y / 7, 2, sn + 4);
         moistA[i] = (m * 255) | 0; detA[i] = (det * 255) | 0;
-        difficulty[i] = (smooth(1 - dw / 0.9) * 255 + 0.5) | 0;
+        difficulty[i] = (smooth(1 - dz / 0.9) * 255 + 0.5) | 0;
         height[i] = (Math.min(1, Math.max(0, (1 - dw) * 0.8 + (fbm(x / 16, y / 16, 3, sn + 5) - 0.5) * 0.4)) * 255) | 0;
-        const z = dw >= 0.68 ? 0 : dw >= 0.40 ? 1 : dw >= 0.20 ? 2 : 3;
+        const z = dz >= b0 ? 0 : dz >= b1 ? 1 : dz >= b2 ? 2 : 3;
         zone[i] = z;
         let t;
         if (dw >= 0.97) t = T.deep_water;
@@ -164,10 +219,6 @@
         if (t === T.deep_water) solid[i] = 1;
       }
     }
-    const inb = function (x, y) { return x >= 0 && y >= 0 && x < w && y < h; };
-    const isWater = function (t) { return t === T.deep_water || t === T.shallow_water; };
-    const isLandTile = function (i) { return !isWater(terrain[i]) && !solid[i]; };
-    const dist = function (ax, ay, bx, by) { const a = ax - bx, b = ay - by; return Math.sqrt(a * a + b * b); };
     function setTile(x, y, t, sol, open) {
       if (!inb(x, y)) return;
       const i = y * w + x;
@@ -176,27 +227,7 @@
     }
     function roadTerrain(i) { return zone[i] >= 2 ? T.stone_road : T.dirt_road; }
 
-    // ---- 2. spawn point on the shore ring ----
-    const rs = rngFor('spawn');
-    let spawn = null;
-    const a0 = rs.next() * Math.PI * 2;
-    for (let k = 0; k < 360 && !spawn; k++) {
-      const ang = a0 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * (Math.PI / 180) * 2;
-      for (let r = R * 0.9; r > R * 0.7 && !spawn; r -= 0.5) {
-        const x = Math.round(cx + Math.cos(ang) * r), y = Math.round(cy + Math.sin(ang) * r);
-        if (!inb(x, y)) continue;
-        const i = y * w + x;
-        if (zone[i] !== 0 || dwA[i] > 0.84 || dwA[i] < 0.74) continue;
-        let ok = true;
-        for (let oy = -4; oy <= 4 && ok; oy++) for (let ox = -4; ox <= 4; ox++) {
-          if (!inb(x + ox, y + oy) || isWater(terrain[(y + oy) * w + x + ox])) { ok = false; break; }
-        }
-        if (ok) spawn = { x: x, y: y };
-      }
-    }
-    if (!spawn) { // extreme fallback: walk the +x axis from the centre until the shore band
-      for (let x = Math.floor(cx + R * 0.8); x > cx && !spawn; x--) if (!isWater(terrain[Math.floor(cy) * w + x])) spawn = { x: x, y: Math.floor(cy) };
-    }
+    // ---- 2b. clear the spawn pad ----
     for (let oy = -3; oy <= 3; oy++) for (let ox = -3; ox <= 3; ox++) {
       if (ox * ox + oy * oy > 9) continue;
       const i = (spawn.y + oy) * w + spawn.x + ox;
@@ -287,7 +318,7 @@
       return true;
     }
     function findSite(z, minD, clr) {
-      const band = ZONE_BANDS[z];
+      const band = B[z];
       const rmin = Math.max(0, band.dwMin) * R * 0.9, rmax = Math.min(band.dwMax, 0.9) * R * 1.05;
       for (let relax = 0; relax < 6; relax++) {
         const md = minD * (1 - relax * 0.15);
@@ -463,7 +494,7 @@
     return {
       w: w, h: h, seed: seedStr, version: VERSION, terrain: terrain, zone: zone, solid: solid, height: height, difficulty: difficulty,
       props: props, structures: structures, spawnPoint: spawn, spawnGroups: spawnGroups, bossSites: bossSites, portalSites: portalSites,
-      center: { x: Math.round(cx), y: Math.round(cy) }, coastRadius: R,
+      center: { x: Math.round(cx), y: Math.round(cy) }, coastRadius: R, bands: classicBands ? 'classic' : 'wide',
     };
   }
 
@@ -587,14 +618,14 @@
     });
     world.bossSites.forEach(function (b) { if (BOSS_IDS.indexOf(b.boss) < 0) problems.push('unknown boss ' + b.boss); });
     if (vopts.determinism !== false) {
-      const again = generate(world.seed, { size: w });
+      const again = generate(world.seed, { size: w, bands: world.bands === 'classic' ? 'classic' : undefined });
       if (fnv(again) !== fnv(world)) problems.push('not deterministic: regenerating gives a different world');
     }
     return { ok: problems.length === 0, problems: problems };
   }
 
   return {
-    VERSION: VERSION, TERRAIN: TERRAIN, TERRAIN_NAMES: TERRAIN_NAMES, ZONES: ZONES, ZONE_BANDS: ZONE_BANDS, BIOMES: BIOMES,
+    VERSION: VERSION, TERRAIN: TERRAIN, TERRAIN_NAMES: TERRAIN_NAMES, ZONES: ZONES, ZONE_BANDS: ZONE_BANDS, ZONE_BANDS_CLASSIC: ZONE_BANDS_CLASSIC, ZONE_BANDS_WIDE: ZONE_BANDS_WIDE, SAFE_SHORE: SAFE_SHORE, BIOMES: BIOMES,
     BOSSES: BOSSES, BOSS_POOLS: BOSS_POOLS, bossIdsFor: bossIdsFor, CREATURE_TIERS: CREATURE_TIERS, CREATURE_TIERS_CLASSIC: CREATURE_TIERS_CLASSIC, RARE_ELITE: RARE_ELITE, WAVE2: WAVE2, generate: generate, tileAt: tileAt, isSolid: isSolid, zoneAt: zoneAt,
     difficultyAt: difficultyAt, nearestSpawnGroups: nearestSpawnGroups, chunk: chunk, verify: verify, hash: fnv,
   };

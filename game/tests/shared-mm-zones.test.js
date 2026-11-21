@@ -285,5 +285,8 @@ for (const boss of [false, true]) {
   check('40 seeds: valid spawner lifecycles, no NaN, live set consistent (' + spawned + ' spawns)', bad === 0 && spawned > 1000, 'bad=' + bad);
 }
 
+// PLAYTEST-REVIEW-2 #1 (added): each zone names the recommended hero level the border toast shows, rising inward
+check('zones carry recLv 1/5/10/15 (border toast), rising toward the centre', [0, 1, 2, 3].map((z) => T.ZONES[z].recLv).join() === '1,5,10,15');
+
 console.log(failed ? '\n' + failed + ' FAILED' : '\nALL PASSED');
 process.exit(failed ? 1 : 0);

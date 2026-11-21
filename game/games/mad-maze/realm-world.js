@@ -92,8 +92,13 @@
     const t0 = performance.now();
     let bossesClassic = false; try { bossesClassic = /[?&]bosses=classic(&|$)/.test(location.search); } catch (e) { bossesClassic = false; } // b23: ?bosses=classic restores the original eight boss ids
     let rosterClassic = false; try { rosterClassic = /[?&]roster=classic(&|$)/.test(location.search); } catch (e) { rosterClassic = false; } // b24: ?roster=classic restores the original creature table (positions are identical either way)
-    const gopts = {}; if (bossesClassic) gopts.bosses = 'classic'; if (rosterClassic) gopts.roster = 'classic';
-    const world = O.generate(seed, bossesClassic || rosterClassic ? gopts : undefined);
+    // PLAYTEST-REVIEW-2 #1: wide zone bands + border toasts/slow by default; ?zonegrad=0 restores all of today's behaviour (classic bands, no toasts),
+    // ?bands=classic only the old generation (the toasts stay)
+    const qs0 = typeof location !== 'undefined' ? location.search : '';
+    const ZGRAD = !/[?&]zonegrad=0(&|$)/.test(qs0);
+    const bandsClassic = !ZGRAD || /[?&]bands=classic(&|$)/.test(qs0);
+    const gopts = {}; if (bossesClassic) gopts.bosses = 'classic'; if (rosterClassic) gopts.roster = 'classic'; if (bandsClassic) gopts.bands = 'classic';
+    const world = O.generate(seed, bossesClassic || rosterClassic || bandsClassic ? gopts : undefined);
     const genMs = performance.now() - t0;
     save.version = world.version || O.VERSION;
     writeSave(save);
@@ -102,9 +107,11 @@
     const terrain = world.terrain; const solid = world.solid;
 
     // ---------- collision: every solid tile blocks walking; deep water lets bolts fly over it ----------
+    let slowUntil = 0; // zone gradient: a brief slow on the first crossing into a zone above the hero's level (arena clock, s)
     const moveScaleAt = (x, y) => {
       const tx = Math.floor(x / TILE); const ty = Math.floor(y / TILE);
-      return tx >= 0 && ty >= 0 && tx < ww && ty < wh && terrain[ty * ww + tx] === T.shallow_water ? 0.7 : 1;
+      const k = tx >= 0 && ty >= 0 && tx < ww && ty < wh && terrain[ty * ww + tx] === T.shallow_water ? 0.7 : 1;
+      return slowUntil > 0 && arena.clock < slowUntil ? k * ZSLOW : k;
     };
     const solidAt = (x, y) => { const tx = Math.floor(x / TILE); const ty = Math.floor(y / TILE); return tx < 0 || ty < 0 || tx >= ww || ty >= wh || solid[ty * ww + tx] === 1; };
     const shotSolidAt = (x, y) => { const tx = Math.floor(x / TILE); const ty = Math.floor(y / TILE); if (tx < 0 || ty < 0 || tx >= ww || ty >= wh) return true; const i = ty * ww + tx; return solid[i] === 1 && terrain[i] !== T.deep_water; };
@@ -447,9 +454,28 @@
       evState.forEach((st) => { if (st.phase === 'upcoming' || st.phase === 'active') drawBeacon(g, st.plan.site.x * sx, st.plan.site.y * sy, st.phase === 'active' ? 4 : 3, st.phase === 'active' ? '#ff8a2a' : '#ffe27a', 0, true); });
       g.fillStyle = '#000'; g.fillRect(tx * sx - 2.5, ty * sy - 2.5, 5, 5); g.fillStyle = '#fff'; g.fillRect(tx * sx - 1.5, ty * sy - 1.5, 3, 3);
     }
+    // ---------- zone gradient (PLAYTEST-REVIEW-2 #1): a toast at every border crossing, a 1 s slow on the first crossing above the hero's level ----------
+    const ZSLOW = 0.5; const ZSLOW_S = 1; const ZTOAST_GAP = 4; // move x0.5 for 1 s; the same border re-toasts at most every 4 s
+    let prevZ = null; let prevTx = 0; let prevTy = 0; let lastToastT = -1e9; let lastCross = null; let crossN = 0; const crossed = new Set();
+    const ZJUMP = 4; // tiles between two HUD syncs (0.25 s): more than this is a teleport (a placement, a test hook), not a walk: no toast
+    const recLv = (z) => { const Zd = Z.TABLES.ZONES[z]; return Zd && Zd.recLv > 0 ? Zd.recLv : 1; };
+    function zoneCross(zi, tx, ty) {
+      if (!ZGRAD || !(zi.zone >= 0 && zi.zone <= 3)) return; // the void (deep water) never counts as a zone
+      const jump = Math.abs(tx - prevTx) > ZJUMP || Math.abs(ty - prevTy) > ZJUMP; prevTx = tx; prevTy = ty;
+      if (prevZ === null || jump) { if (prevZ === null) crossed.add(zi.zone); prevZ = zi.zone; return; } // where the visit starts, or a teleport: no toast
+      if (zi.zone === prevZ) return;
+      prevZ = zi.zone; crossN++;
+      const first = !crossed.has(zi.zone); crossed.add(zi.zone);
+      const rec = recLv(zi.zone); const lv = Math.max(1, (arena.save && arena.save.level) | 0);
+      const slowed = first && lv < rec && arena.state === 'play';
+      if (slowed) slowUntil = arena.clock + ZSLOW_S;
+      const text = `${zi.name}: ${zi.danger}, recommended Lv ${rec}`;
+      if (first || arena.clock - lastToastT >= ZTOAST_GAP) { lastToastT = arena.clock; arena._showBanner(text, 2.2); }
+      lastCross = { zone: zi.zone, text, first, slowed, rec, lv, t: arena.clock };
+    }
     function syncHud(force) {
       const p = arena.player; const tx = Math.floor(p.x / TILE); const ty = Math.floor(p.y / TILE);
-      const zi = Z.zoneInfoAt(world, tx, ty); lastZone = zi;
+      const zi = Z.zoneInfoAt(world, tx, ty); lastZone = zi; zoneCross(zi, tx, ty);
       const txt = `${zi.name} · ${zi.danger}`;
       if (txt !== zoneTxt || force) { zoneTxt = txt; zName.textContent = txt; zName.style.color = zi.color; zoneEl.dataset.zone = String(zi.zone); }
       const dx = world.center.x - tx; const dy = world.center.y - ty; const dist = Math.round(Math.hypot(dx, dy));
@@ -498,7 +524,7 @@
     function diffAt(zone, px, py) { // px/py in pixels -> MMDifficulty.zoneScale for that spot (1x everywhere when off)
       if (!DIFF) return { hp: 1, dmg: 1, spd: 1, count: 1, fire: 1 };
       const d = Math.hypot(px / TILE - world.center.x, py / TILE - world.center.y) / REALM_R;
-      return DIFF.zoneScale(zone, d, { mode: diffMode });
+      return DIFF.zoneScale(zone, d, world.bands === 'wide' ? { mode: diffMode, bands: 'wide' } : { mode: diffMode });
     }
     function scaleEnemy(e, zone, hpBase) { // multiply an arena enemy already carrying its zone stats
       const s = diffAt(zone, e.x, e.y);
@@ -1302,6 +1328,7 @@
     const hooks = {
       onStart() {
         if (pendingAt) { placeAt(pendingAt.x, pendingAt.y); pendingAt = null; } else placeAt(world.spawnPoint.x, world.spawnPoint.y);
+        prevZ = null; slowUntil = 0; // a (re)start is not a border crossing
         arena.run.wave = 0; arena.biome = 0;
         resetZones();
         kills = 0; spawned = 0; despawned = 0; lastDrops.length = 0; picks.length = 0;
@@ -1392,7 +1419,7 @@
     const api = {
       seed, world, genMs, SAVE_KEY, TILE, CPX, MAX_CHUNKS,
       chunkCount: () => chunks.size, chunkBuilds: () => chunkBuilds, artTiles: () => artTiles, miniDraws: () => miniDraws,
-      zone: () => lastZone, hudText: () => ({ zone: zName.textContent, coords: zCoords.textContent, arrow: arrowDeg }),
+      zone: () => lastZone, zoneGrad: { on: ZGRAD, bands: world.bands || 'classic', recLv, last: () => lastCross, crossings: () => crossN, slowLeft: () => Math.max(0, slowUntil - arena.clock), moveScale: () => moveScaleAt(arena.player.x, arena.player.y) }, hudText: () => ({ zone: zName.textContent, coords: zCoords.textContent, arrow: arrowDeg }),
       tileAt: (x, y) => O.tileAt(world, Math.floor(x / TILE), Math.floor(y / TILE)), solidAt, shotSolidAt, nearestFree,
       tileCenter: (tx, ty) => ({ x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE }),
       save: () => readSave(), savePos, portals: () => portals.map((q) => ({ i: q.i, x: q.x, y: q.y, tx: q.tx, ty: q.ty, biome: q.biome })),
@@ -1407,7 +1434,7 @@
       liveCount: () => { let n = 0; live.forEach((e, id) => { if (e.active && e.zid === id) n++; }); return n; },
       liveEnemies: () => { const o = []; live.forEach((e, id) => { if (e.active && e.zid === id) o.push({ id, x: e.x, y: e.y, type: e.type, zone: e.zone, tier: e.tier, art: e.art, hp: e.maxHp, spd: e.spdMul, dmg: e.dmgMul, diff: e.diff || null }); }); return o; },
       enemyById: (id) => live.get(id) || null, setDropAll: (on) => { dropAll = !!on; }, lastDrops: () => lastDrops.slice(), kills: () => kills,
-      bossesClassic, rosterClassic, bossArtIds: () => world.bossSites.map((b) => b.boss),
+      bossesClassic, rosterClassic, bandsClassic, bossArtIds: () => world.bossSites.map((b) => b.boss),
       bossSites: () => world.bossSites.map((b, i) => ({ i, x: b.x, y: b.y, zone: b.zone, boss: b.boss, name: BOSS_NAME[i], live: !!(bossLive[i] && bossLive[i].active), ready: !!zones && zones.bossReady(b, arena.clock) })),
       bossEntity: (i) => bossLive[i] || null, bossTick,
       // slice 7

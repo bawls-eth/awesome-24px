@@ -738,5 +738,9 @@
   "world-roster.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "world-gradient.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
