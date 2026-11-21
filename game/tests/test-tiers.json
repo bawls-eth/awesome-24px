@@ -786,5 +786,21 @@
   "shared-mm-perf.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "shared-mm-tutorial-realm.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-party-bc.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "party-bc.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "class-weapon-playtest.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
