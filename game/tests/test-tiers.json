@@ -906,5 +906,9 @@
   "world-rewards.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "shared-mm-creatures.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }
