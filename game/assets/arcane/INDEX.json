@@ -367,6 +367,26 @@
    "status": "provisional",
    "ingested_utc": "2026-11-21T09:12:01Z",
    "source": "codex"
+  },
+  {
+   "id": "b20",
+   "label": "class-portraits-and-ability-icons",
+   "path": "assets/arcane/b20-class-portraits-and-ability-icons",
+   "manifest": "assets/arcane/b20-class-portraits-and-ability-icons/manifest.json",
+   "files": 32,
+   "status": "provisional",
+   "ingested_utc": "2026-11-21T11:12:22Z",
+   "source": "codex"
+  },
+  {
+   "id": "b23",
+   "label": "bosses-extra",
+   "path": "assets/arcane/b23-bosses-extra",
+   "manifest": "assets/arcane/b23-bosses-extra/manifest.json",
+   "files": 48,
+   "status": "provisional",
+   "ingested_utc": "2026-11-21T11:12:22Z",
+   "source": "codex"
   }
  ]
 }
