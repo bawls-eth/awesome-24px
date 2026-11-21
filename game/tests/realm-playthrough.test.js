@@ -100,7 +100,7 @@ const vis = (page, sel) => page.evaluate((s) => { const e = document.querySelect
   await pp.waitForTimeout(800);
   const ph = await pp.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: innerWidth, small: [...document.querySelectorAll('#realm-hud button, #realm-abilities button, #rw-portal')].filter((b) => { const r = b.getBoundingClientRect(); return r.width > 0 && (r.height < 43.5 || r.width < 43.5); }).map((b) => b.id || b.className) }));
   check('phone 390x844: no horizontal scroll and every HUD/ability button is >= 44 px', ph.sw <= ph.iw && ph.small.length === 0, JSON.stringify(ph));
-  check('no Firebase request ever left the page (all blocked), and no console errors', errors.length === 0 && firebaseHits.every((u) => BLOCK.test(u)), errors.slice(0, 3).join(' | ') + ' hits=' + firebaseHits.length);
+  check('no Firebase HTTP request left the page (the ADMIN test bot joins presence-only over the SDK socket), and no console errors', errors.length === 0 && firebaseHits.every((u) => BLOCK.test(u)), errors.slice(0, 3).join(' | ') + ' hits=' + firebaseHits.length);
   await browser.close();
   done();
 })().catch((e) => { console.error(e); process.exit(1); });
