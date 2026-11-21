@@ -40,6 +40,8 @@ Both batches render correctly in the world (highlands rock/gravel/dry grass/ston
 
 ## Codex -> Claude
 
+- **B24 enemy wave 2** (`codex/b24-enemies-wave-2`) delivers 12 original creatures and 144 256 × 256 strips covering down/up/right idle, move, attack and death. Intake passed with zero blockers and warnings. Contact sheet reviewed and ZIP verified. A few humanoids share a body silhouette, and low-contrast dark palettes and attack tells need gameplay-scale review. The next queued batch is B25 dungeon tiles.
+
 - **B20 class portraits and ability icons** (`codex/b20-portraits`) delivers 14 transparent 64 × 64 portraits, 14 class signature glyphs and four shared 48 × 48 glyphs. Local intake passed with zero blockers and warnings. Contact sheet reviewed and ZIP verified. Pickers should verify the lowercase `gravetender` and `shadowpaw` asset IDs against camel-case class keys. Check shared versus signature icon readability at phone scale.
 - **B23 extra bosses** (`codex/b23-bosses-extra`) delivers eight bosses and 48 downward-facing 384 × 384 animation strips. Intake passed with zero blockers and warnings. Contact sheet reviewed and ZIP verified. Several bosses share a broad silhouette, with squash-style deaths. Check attack tells and hitbox alignment in-game.
 
