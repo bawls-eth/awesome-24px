@@ -71,5 +71,50 @@
     try { b.sp = 1; } catch (e) { return false; }
     return b.sp === 1;
   }
-  return { MAX_TARGETS, MAX_R, MAX_FRAC, DEF_INNER, DEF_EDGE, dist, clean, frac, dmg, pick, claim };
+  // ---- G12 boss ground-slam: pure helpers shared by the world bosses (realm-world.js) and the dungeon bosses (dungeon.js) ----
+  //  - the warning (ring zone) is shown SLAM.WIND seconds before the damage lands; damage = round(8 x dmgMul x 1.5 x falloff), capped at SLAM.CAP
+  //    (dmgMul already carries MMDifficulty); outside the radius it is 0. slamStep() is the wind-up clock: 0 idle, 1 wind-up starts, 2 winding, 3 lands.
+  const SLAM = { WIND: 0.9, BASE: 8, MUL: 1.5, CAP: 30, FIRST: 0.6, EDGE: 0.7, INNER: 0.5 };
+  function slamR(tier) { const t = clamp(Math.floor(num(tier, 1)), 1, 6); return 88 + 6 * t; }
+  function slamDmg(dmgMul, d, r) {
+    const m = dmgMul, rr = num(r, 0);
+    if (!(rr > 0) || !fin(d) || d > rr || !fin(m) || !(m > 0)) return 0;
+    const f = frac(d, { r: rr, inner: SLAM.INNER, edge: SLAM.EDGE });
+    return Math.min(SLAM.CAP, Math.max(1, Math.round(SLAM.BASE * m * SLAM.MUL * f)));
+  }
+  function slamNew(every) { return { t: num(every, 6) * SLAM.FIRST, w: 0 }; }
+  function slamStep(s, dt, can, every) {
+    if (!s || !fin(dt) || dt < 0) return 0;
+    if (s.w > 0) { s.w -= dt; if (s.w > 0) return 2; s.w = 0; s.t = num(every, 6); return 3; }
+    if (!can) return 0;
+    s.t -= dt;
+    if (s.t > 0) return 0;
+    s.w = SLAM.WIND; return 1;
+  }
+  // Baked once per colour (no per-frame paths): a filled disc and a ring, 128 px. drawSlam stretches them to the slam radius `r`.
+  let spr = null;
+  function slamSprites(color) {
+    if (spr && spr.color === color) return spr;
+    if (typeof document === 'undefined') return null;
+    const mk = (draw) => { const c = document.createElement('canvas'); c.width = 128; c.height = 128; draw(c.getContext('2d')); return c; };
+    spr = {
+      color,
+      disc: mk((g) => { g.fillStyle = color; g.beginPath(); g.arc(64, 64, 62, 0, Math.PI * 2); g.fill(); }),
+      ring: mk((g) => {
+        g.strokeStyle = '#140a14'; g.lineWidth = 8; g.beginPath(); g.arc(64, 64, 59, 0, Math.PI * 2); g.stroke();
+        g.strokeStyle = color; g.lineWidth = 4; g.beginPath(); g.arc(64, 64, 59, 0, Math.PI * 2); g.stroke();
+      })
+    };
+    return spr;
+  }
+  // p = 0..1 wind-up progress. reduced: one static look (no fill growth, no pulse). Draws on a 2D canvas context; a no-op without a document.
+  function drawSlam(g, x, y, r, p, reduced, color) {
+    const sp = slamSprites(color || '#ff4a4a'); if (!sp || !g || !(r > 0)) return false;
+    const q = clamp(num(p, 0), 0, 1); const a0 = g.globalAlpha;
+    g.globalAlpha = reduced ? 0.22 : 0.1 + 0.1 * q; g.drawImage(sp.disc, x - r, y - r, r * 2, r * 2);
+    if (!reduced) { const k = Math.max(0.05, q) * r; g.globalAlpha = 0.28 + 0.2 * q; g.drawImage(sp.disc, x - k, y - k, k * 2, k * 2); }
+    g.globalAlpha = reduced ? 0.8 : 0.6 + 0.4 * q; g.drawImage(sp.ring, x - r, y - r, r * 2, r * 2);
+    g.globalAlpha = a0; return true;
+  }
+  return { MAX_TARGETS, MAX_R, MAX_FRAC, DEF_INNER, DEF_EDGE, dist, clean, frac, dmg, pick, claim, SLAM, slamR, slamDmg, slamNew, slamStep, drawSlam };
 });

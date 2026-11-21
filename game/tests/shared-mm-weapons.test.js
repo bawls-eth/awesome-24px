@@ -126,5 +126,21 @@ check('G4 resolve keeps splash styles inside [.95,1.10] of base at every rarity'
 check('G4 resolved splash style carries splash through', W.resolve('ranger', 'bow_blast', 3).splash.r === 36 && W.resolve('ranger', 'bow_blast', 3).affixes.join() === 'reach,keen,venom' && W.resolve('ranger', 'base', 0).splash.r === 0);
 check('G4 splash hostile index input is safe', [null, 5, 'x', { splash: null }, { dmg: 1, splash: { r: NaN, frac: 'x', max: {} } }, { dmg: 1, splash: { r: Infinity, frac: Infinity, max: Infinity } }].every((x) => { const v = W.shapeIdx(x); return typeof v === 'number' && Number.isFinite(v); }));
 check('G4 splash styles stay inside the bolt budget and wire limit (128 styles)', ['bow_blast', 'wand_burst', 'staff_comet', 'pistol_flak'].every((i) => W.boltBound(S[i]) <= W.BOLT_BUDGET) && W.altIds().length <= 128);
+// G15 balance: single-target DPS equivalence of the 4 splash styles vs the class base, target 0.85, band 0.80-0.90 for EVERY class x rarity.
+// The raw bolt ratio is divided by the base's pierce premium (1 + 0.25 pierce): pierce is multi-target value the shapeIdx already credits to the base,
+// and the G4 test above pins every style to [.95, 1.10] of the base index, so the raw ratio of a pierce class (frostcaller / graveTender / necromancer) cannot be equalised.
+{
+  const SPL = ['bow_blast', 'wand_burst', 'staff_comet', 'pistol_flak']; const all = {}; const raw = [];
+  SPL.forEach((sid) => { all[sid] = []; classes.forEach((c) => { if (W.stylesFor(c).indexOf(sid) < 0) return; [0, 1, 2, 3].forEach((r) => {
+    const a = W.resolve(c, sid, r), b = W.resolve(c, 'base', r);
+    const q = (a.dmg * a.rate * a.count * a.burst.n * (1 + a.crit)) / (b.dmg * b.rate * b.count * (1 + b.crit)); raw.push(q); all[sid].push(q / (1 + 0.25 * b.pierce));
+  }); }); });
+  check('G15 every splash style is covered by at least one class and 4 rarities', SPL.every((sid) => all[sid].length >= 4));
+  check('G15 every splash style x class x rarity single-target DPS equivalence is within 0.80-0.90 of the base (target 0.85)', SPL.every((sid) => all[sid].every((v) => v >= 0.80 && v <= 0.90)));
+  check('G15 per-style mean is within 0.81-0.89', SPL.every((sid) => { const m = all[sid].reduce((x, y) => x + y, 0) / all[sid].length; return m >= 0.81 && m <= 0.89; }));
+  check('G15 raw single-target ratio stays within 0.6-1.4 of the base for every class', raw.every((v) => v >= 0.6 && v <= 1.4));
+  check('G15 the splash weight is a validated per-style field and the default stays 0.25', SPL.every((sid) => S[sid].splash.w >= 0.05 && S[sid].splash.w <= 0.45) && W.validate(Object.assign({}, S.bow_blast, { splash: Object.assign({}, S.bow_blast.splash, { w: 0.6 }) })).length > 0 && near(W.shapeIdx({ dmg: 1, splash: { r: 36, frac: 0.5, max: 4 } }), 1 + 0.25 * 0.5 * 2.5));
+  check('G15 non-splash styles are untouched (no splash)', W.styleIds().filter((i) => SPL.indexOf(i) < 0).every((i) => S[i].splash.r === 0));
+}
 console.log(n - bad + '/' + n + ' passed');
 process.exit(bad ? 1 : 0);

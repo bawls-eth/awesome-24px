@@ -1813,6 +1813,40 @@
       return n;
     }
 
+    // G12 boss ground-slam: from phase 2 a non-shore world boss winds up a ring zone for MMSplash.SLAM.WIND (0.9 s, shown by tgFor + a drawn zone),
+    // then hits whoever is still inside it. Needs the visible telegraph (solo world, not ?telegraph=0), so there is never an unwarned hit;
+    // ?bosses=classic and ?bossslam=0 turn it off. One slam per boss at a time. Damage: MMSplash.slamDmg (capped, dmgMul carries MMDifficulty).
+    const SLAM_ON = typeof MMSplash !== 'undefined' && !!MMSplash.slamStep && !bossesClassic && !/[?&]bossslam=0(&|$)/.test(typeof location !== 'undefined' ? location.search : '');
+    let slamHits = 0; let slamWinds = 0;
+    const slamEvery = (e) => (e.phase >= 3 ? 5.5 : 7.5);
+    function slamTick(dt) {
+      if (!SLAM_ON || arena.state !== 'play' || !arena._tgOn()) return;
+      for (let i = 0; i < arena.enemies.length; i++) {
+        const e = arena.enemies[i];
+        if (!e.active || e.type !== 'boss' || !(e.bossTier >= 2)) continue; // tier 1 = the shore: never slams
+        if (!(e.phase >= 2)) { e._sl = null; continue; }
+        if (!e._sl) e._sl = MMSplash.slamNew(slamEvery(e));
+        const r = MMSplash.slamStep(e._sl, dt, e.invuln <= 0, slamEvery(e));
+        if (r === 1) slamWinds++;
+        if (r !== 3) continue;
+        const R = MMSplash.slamR(e.bossTier); const p = arena.player; const d = Math.hypot(p.x - e.x, p.y - e.y) - 12;
+        arena._burst(e.x, e.y, '#ff4a4a', 14, 170); arena._snd('hit');
+        const dmg = MMSplash.slamDmg(e.dmgMul || 1, Math.max(0, d), R);
+        if (dmg > 0) { slamHits++; arena._hitPlayer(arena._guarded(dmg)); }
+      }
+    }
+    function drawSlams(g) {
+      if (!SLAM_ON || !arena._tgOn()) return;
+      const look = typeof MMTelegraph !== 'undefined' ? MMTelegraph.forVolley('ring', 3, true, { reduced: !!arena._reduced, palette: arena.acc ? arena.acc.palette : 'normal' }) : null;
+      for (let i = 0; i < arena.enemies.length; i++) {
+        const e = arena.enemies[i];
+        if (e.active && e._sl && e._sl.w > 0) MMSplash.drawSlam(g, e.x, e.y, MMSplash.slamR(e.bossTier), 1 - e._sl.w / MMSplash.SLAM.WIND, !!arena._reduced, look ? look.color : null);
+      }
+    }
+    if (SLAM_ON && typeof arena._tgBoss === 'function' && !arena._slamWrapped) { // the arena clears a boss's telegraph each frame it has no volley coming: re-raise the slam ring after it
+      arena._slamWrapped = true; const tgBoss0 = arena._tgBoss.bind(arena);
+      arena._tgBoss = (e, hold, p) => { tgBoss0(e, hold, p); if (e._sl && e._sl.w > 0 && e.active) arena.tgFor(e, 'ring', e._sl.w); };
+    }
     const hooks = {
       onStart() {
         const back = !!pendingAt; // an arrival through ?at= (the return from a dungeon portal)
@@ -1835,6 +1869,7 @@
         savePos(true); evTick(); syncHud(true);
       },
       tick(dt) {
+        slamTick(dt);
         if (zones) {
           const p = arena.player; const out = zones.update(p.x, p.y, Math.min(dt, 0.1), arena.clock);
           for (let k = 0; k < out.despawn.length; k++) { const id = out.despawn[k]; const e = live.get(id); if (e && e.active && e.zid === id) { e.active = false; e.zid = -1; despawned++; } live.delete(id); } // free pool slots first
@@ -1892,7 +1927,7 @@
           g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(label, c.x + 1, c.y - 51); g.fillStyle = col; g.fillText(label, c.x, c.y - 52);
         });
       },
-      drawOver(g, cam) { drawPicks(g, cam); drawKeys(g, cam); // a raid boss telegraphs its next burst: a red ring that closes in during the last second
+      drawOver(g, cam) { drawPicks(g, cam); drawKeys(g, cam); drawSlams(g); // a raid boss telegraphs its next burst: a red ring that closes in during the last second
         evState.forEach((st) => {
           if (st.phase !== 'active' || st.plan.kind !== 'boss') return;
           const e = st.ents[0]; if (!e || !e.active || e.evid !== st.id || e.invuln > 0 || !(e.cd2 < 1)) return;
@@ -1911,7 +1946,7 @@
     const api = {
       seed, world, genMs, SAVE_KEY, TILE, CPX, MAX_CHUNKS,
       chunkCount: () => chunks.size, chunkBuilds: () => chunkBuilds, artTiles: () => artTiles, miniDraws: () => miniDraws,
-      zone: () => lastZone, fireBudget: { on: FB_ON, capFor: ebCapFor, now: () => (arena.fireBudget ? Object.assign({}, arena.fireBudget) : null), live: () => arena._ebLive, capped: () => arena._ebCapped }, zoneGrad: { on: ZGRAD, bands: world.bands || 'classic', recLv, last: () => lastCross, crossings: () => crossN, slowLeft: () => Math.max(0, slowUntil - arena.clock), moveScale: () => moveScaleAt(arena.player.x, arena.player.y) }, hudText: () => ({ zone: zName.textContent, coords: zCoords.textContent, arrow: arrowDeg }),
+      slam: { on: SLAM_ON, hits: () => slamHits, winds: () => slamWinds }, zone: () => lastZone, fireBudget: { on: FB_ON, capFor: ebCapFor, now: () => (arena.fireBudget ? Object.assign({}, arena.fireBudget) : null), live: () => arena._ebLive, capped: () => arena._ebCapped }, zoneGrad: { on: ZGRAD, bands: world.bands || 'classic', recLv, last: () => lastCross, crossings: () => crossN, slowLeft: () => Math.max(0, slowUntil - arena.clock), moveScale: () => moveScaleAt(arena.player.x, arena.player.y) }, hudText: () => ({ zone: zName.textContent, coords: zCoords.textContent, arrow: arrowDeg }),
       tileAt: (x, y) => O.tileAt(world, Math.floor(x / TILE), Math.floor(y / TILE)), solidAt, shotSolidAt, nearestFree,
       tileCenter: (tx, ty) => ({ x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE }),
       save: () => readSave(), savePos, portals: () => portals.map((q) => ({ i: q.i, x: q.x, y: q.y, tx: q.tx, ty: q.ty, biome: q.biome })),
