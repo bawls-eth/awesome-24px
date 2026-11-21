@@ -44,7 +44,7 @@
     if (typeof o === 'string') { try { o = JSON.parse(o); } catch (e) { o = null; } }
     if (!o || typeof o !== 'object' || Array.isArray(o)) o = {};
     const out = {};
-    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo|evT|evDone|finds|discovered|shrineAt|chests|quests)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
+    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo|evT|evDone|finds|discovered|shrineAt|chests|quests|bossKeys|bossPortal)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
     out.v = 1;
     out.seed = cleanSeed(o.seed);
     out.version = Number.isInteger(o.version) && o.version > 0 && o.version < 1000 ? o.version : 0;
@@ -65,6 +65,9 @@
     const disc = window.MMFog ? MMFog.clean(o.discovered) : '';
     if (disc) out.discovered = disc;
     if (o.quests !== undefined && window.MMQuests) out.quests = window.MMQuests.clean(o.quests, questDate()); // daily quests (additive): bad shape or another day -> fresh
+    // boss keys (additive, BK2): keys held (0..9) and an open boss portal ({boss:{x,y,openedAt,expiresAt}} on the event clock, ms), cleaned by MMPortals
+    if (o.bossKeys !== undefined) { const k = Math.floor(Number(o.bossKeys)); out.bossKeys = Number.isFinite(k) ? Math.max(0, Math.min(9, k)) : 0; }
+    if (o.bossPortal !== undefined && window.MMPortals) { const bp = window.MMPortals.clean(o.bossPortal); if (bp.boss) out.bossPortal = bp; }
     const r = o.returnTo && typeof o.returnTo === 'object' ? o.returnTo : null;
     if (o.finds !== undefined) out.finds = window.MMStash ? MMStash.cleanFinds(o.finds) : o.finds; // owned by MMStash (Lantern payout)
     out.returnTo = r && Number.isInteger(r.x) && Number.isInteger(r.y) && r.x >= 0 && r.y >= 0 && r.x < 4096 && r.y < 4096 && cleanSeed(r.seed) ? { x: r.x, y: r.y, seed: cleanSeed(r.seed) } : null;
@@ -87,7 +90,7 @@
     const save = readSave();
     let seed = cleanSeed(opts.seed) || save.seed;
     if (!seed) seed = String(Math.floor(Math.random() * 900000) + 100000); // first visit: a fresh island, remembered below
-    if (save.seed !== seed) { save.pos = null; save.returnTo = null; delete save.discovered; delete save.shrineAt; delete save.chests; } // a new island starts fully fogged (one seed's discovery is kept at a time)
+    if (save.seed !== seed) { save.pos = null; save.returnTo = null; delete save.discovered; delete save.shrineAt; delete save.chests; delete save.bossPortal; } // a new island starts fully fogged (one seed's discovery is kept at a time)
     save.seed = seed;
     const t0 = performance.now();
     let bossesClassic = false; try { bossesClassic = /[?&]bosses=classic(&|$)/.test(location.search); } catch (e) { bossesClassic = false; } // b23: ?bosses=classic restores the original eight boss ids
@@ -360,13 +363,13 @@
       wArtLoading = true;
       const join = (a, b) => a.replace(/\/+$/, '') + '/' + String(b).replace(/^\/+/, '');
       const okPath = (p) => typeof p === 'string' && /^[A-Za-z0-9_][A-Za-z0-9_.\/-]*\.png$/.test(p) && p.indexOf('..') < 0;
-      const WANT = /^(portal_[a-z]+|spawn_pad|shrine_(heal|rage|ward)|event_beacon|loot_chest_gold|prop_[a-z0-9_]+|coin_f[1-4]|xp_orb_f[1-4]|heart_pickup|potion_life)$/;
+      const WANT = /^(portal_[a-z]+|spawn_pad|shrine_(heal|rage|ward)|event_beacon|loot_chest_gold|prop_[a-z0-9_]+|coin_f[1-4]|xp_orb_f[1-4]|heart_pickup|focus_pickup|potion_(life|focus|power|swift|guard|wit)|key_boss)$/;
       let got = 0;
       return fetch(join(root, 'INDEX.json')).then((r) => (r.ok ? r.json() : null)).then((idx) => {
         const batches = idx && Array.isArray(idx.batches) ? idx.batches : [];
         return Promise.all(batches.map((b) => {
           const id = b && typeof b.path === 'string' ? b.path.replace(/\/+$/, '').split('/').pop() : '';
-          if (!/^(b1[2345]|b26)-[a-z0-9-]{1,48}$/.test(id)) return null; // b26 = the Godlands prop fix
+          if (!/^(b1[2345]|b2[26])-[a-z0-9-]{1,48}$/.test(id)) return null; // b26 = the Godlands prop fix, b22 = key_boss (BK2)
           return fetch(join(join(root, id), 'manifest.json')).then((r) => (r.ok ? r.json() : null)).then((m) => {
             const assets = m && Array.isArray(m.assets) ? m.assets : [];
             return Promise.all(assets.map((a) => {
@@ -493,7 +496,7 @@
     let miniKey = ''; let hudT = 0; let zoneTxt = ''; let arrowDeg = -1; let miniDraws = 0; let lastZone = null;
     function drawMini(force) {
       const p = arena.player; const tx = Math.floor(p.x / TILE); const ty = Math.floor(p.y / TILE);
-      const key = (tx >> 1) + ',' + (ty >> 1) + ',' + bossesKey() + ',' + evMiniKey + ',' + siteMiniKey();
+      const key = (tx >> 1) + ',' + (ty >> 1) + ',' + bossesKey() + ',' + evMiniKey + ',' + siteMiniKey() + ',' + lairMiniKey();
       if (!force && key === miniKey) return;
       miniKey = key; miniDraws++;
       if (!miniBase) miniBase = buildMiniBase();
@@ -511,6 +514,8 @@
         SITES.npcs.forEach((q) => { if (fogged(q.x, q.y)) return; g.fillStyle = '#7fe0ff'; g.fillRect(q.x * sx - 1, q.y * sy - 1, 2, 2); });
       }
       evState.forEach((st) => { if (st.phase === 'upcoming' || st.phase === 'active') drawBeacon(g, st.plan.site.x * sx, st.plan.site.y * sy, st.phase === 'active' ? 4 : 3, st.phase === 'active' ? '#ff8a2a' : '#ffe27a', 0, true); });
+      const lq = KEYS_ON && save.bossPortal ? save.bossPortal.boss : null; // BK2: an open boss portal is pinged (always shown, fog or not)
+      if (lq) { const lx = lq.x / TILE * sx; const ly = lq.y / TILE * sy; g.strokeStyle = '#000'; g.lineWidth = 3; g.beginPath(); g.arc(lx, ly, 5, 0, Math.PI * 2); g.stroke(); g.strokeStyle = '#ff5fa2'; g.lineWidth = 2; g.beginPath(); g.arc(lx, ly, 5, 0, Math.PI * 2); g.stroke(); g.fillStyle = '#ffd45a'; g.fillRect(lx - 1.5, ly - 1.5, 3, 3); }
       g.fillStyle = '#000'; g.fillRect(tx * sx - 2.5, ty * sy - 2.5, 5, 5); g.fillStyle = '#fff'; g.fillRect(tx * sx - 1.5, ty * sy - 1.5, 3, 3);
     }
     // ---------- zone gradient (PLAYTEST-REVIEW-2 #1): a toast at every border crossing, a 1 s slow on the first crossing above the hero's level ----------
@@ -647,6 +652,7 @@
         zones.bossDefeated(site, arena.clock); kills++; save.stats.bossKills++; nxQuestEvent({ type: 'kill', zone: site.zone, boss: true, n: 1 });
         rollFor({ zone: site.zone, tier: site.zone, boss: true }, e.x, e.y + 30, 'boss' + i);
         spawnPickups(e.x, e.y + 20, 'boss' + i, kills, 5);
+        dropKey(e.x + 24, e.y + 26, 'boss' + i); // BK2: every world boss drops a boss key
         writeSave(save);
       }
     }
@@ -751,6 +757,7 @@
         res.bag = giveBag(p.x, p.y - 26, rew.bag, { zone: st.plan.region, boss: true, event: true });
         arena.save.shards += rew.shards; arena.run.shards += rew.shards; res.shards = rew.shards; res.fame = rew.fame;
         save.stats.eventWins++;
+        dropKey(p.x + 24, p.y - 30, st.id); // BK2: a won world event drops a boss key
         if (api.onEventFame) api.onEventFame(rew.fame, res);
         arena.onSave(arena.save); arena._syncHud();
         arena._showBanner(`🏆 ${evTitle(st)} won! ${ZT.EVENT_TIERS[tier]} · +${rew.shards} 💎 · +${rew.fame} fame`, 2.6);
@@ -846,6 +853,8 @@
     const portalBtn = document.createElement('button'); portalBtn.id = 'rw-portal'; portalBtn.type = 'button'; portalBtn.className = 'hidden'; portalBtn.textContent = 'Enter Warren dungeon'; // retitled per portal biome in portalTick
     ov.appendChild(portalBtn);
     let promptFor = -1; let leaving = false;
+    // PLAYTEST-REVIEW-2 #14: no keyboard hints ("(Enter)", "(E)") on a coarse pointer / touch device
+    const isCoarse = () => (typeof document !== 'undefined' && document.body.classList.contains('touch-device')) || (typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches);
     function portalSeed(i) { return String(MMRng.hash(seed + ':portal:' + i) % 100000); }
     function portalUrls(i) {
       const q = portals[i];
@@ -872,7 +881,7 @@
       if (arena.state === 'play' && !arena.paused) for (let i = 0; i < portals.length; i++) { const dx = p.x - portals[i].x; const dy = p.y - portals[i].y; if (dx * dx + dy * dy < 40 * 40) { near = i; break; } }
       if (near !== promptFor) {
         promptFor = near; portalBtn.classList.toggle('hidden', near < 0);
-        if (near >= 0) { const bn = BIOME_NAME[portals[near].biome] || 'Warren'; portalBtn.textContent = `Enter ${bn} dungeon`; portalBtn.setAttribute('aria-label', `Enter ${bn} dungeon (${portals[near].label}, Enter)`); }
+        if (near >= 0) { const bn = BIOME_NAME[portals[near].biome] || 'Warren'; portalBtn.textContent = `Enter ${bn} dungeon`; portalBtn.setAttribute('aria-label', `Enter ${bn} dungeon (${portals[near].label}${isCoarse() ? '' : ', Enter'})`); }
       }
     }
 
@@ -1138,8 +1147,8 @@
       siteFor = best;
       let key = ''; let txt = '';
       if (best) {
-        if (best.kind === 'shrine') { const l = shrineLeft(best.q); txt = l ? `${SHRINE_TXT[best.q.kind]} (${fmtT(l / 1000)})` : `Pray at ${SHRINE_TXT[best.q.kind]} (E)`; }
-        else if (best.kind === 'chest') txt = 'Open chest (E)'; else txt = `Talk to ${NPC_NAME[best.q.npc] || 'traveller'} (E)`;
+        if (best.kind === 'shrine') { const l = shrineLeft(best.q); const ek = isCoarse() ? '' : ' (E)'; txt = l ? `${SHRINE_TXT[best.q.kind]} (${fmtT(l / 1000)})` : `Pray at ${SHRINE_TXT[best.q.kind]}${ek}`; }
+        else if (best.kind === 'chest') txt = 'Open chest' + (isCoarse() ? '' : ' (E)'); else txt = `Talk to ${NPC_NAME[best.q.npc] || 'traveller'}` + (isCoarse() ? '' : ' (E)');
         key = best.kind + best.i + txt;
       }
       if (key !== siteKeyShown) { siteKeyShown = key; siteBtn.classList.toggle('hidden', !best); if (best) { siteBtn.textContent = txt; siteBtn.setAttribute('aria-label', txt); } }
@@ -1155,20 +1164,23 @@
     [portalBtn, siteBtn].forEach((b) => { b.style.whiteSpace = 'nowrap'; });
     function layoutPrompts() {
       const pv = !portalBtn.classList.contains('hidden'); const sv = !siteBtn.classList.contains('hidden');
+      const lb = document.getElementById('rw-lair'); const lv = !!lb && !lb.classList.contains('hidden'); // BK2: the boss key / lair prompt stacks on top
       const phone = typeof matchMedia === 'function' && matchMedia('(max-width: 560px)').matches;
       const ab = phone ? document.getElementById('realm-abilities') : null; const ar = ab ? ab.getBoundingClientRect() : null;
       if (ar && ar.height > 0) { // phone: the prompts stack in the free band ABOVE the 2x2 ability grid (never over it or a stick), centred
         const base = Math.max(8, Math.round(innerHeight - ar.top + 8)); const px = (n) => `${n}px`;
         siteBtn.style.bottom = sv ? px(base) : ''; portalBtn.style.bottom = pv ? px(sv ? base + 56 : base) : ''; // hidden prompts keep no inline override
-        const n = (pv ? 1 : 0) + (sv ? 1 : 0); const top = base + n * 56;
+        const n0 = (pv ? 1 : 0) + (sv ? 1 : 0); if (lb) lb.style.bottom = lv ? px(base + n0 * 56) : '';
+        const n = n0 + (lv ? 1 : 0); const top = base + n * 56;
         hintEl.style.bottom = px(top); siteNote.style.bottom = px(top + (hintEl.classList.contains('hidden') ? 0 : 40));
         return;
       }
       siteBtn.style.bottom = pv && sv ? `calc(170px + ${BOT})` : '';
       portalBtn.style.bottom = pv && sv ? `calc(236px + ${BOT})` : '';
+      if (lb) lb.style.bottom = lv && (pv || sv) ? `calc(${pv && sv ? 302 : 236}px + ${BOT})` : '';
       hintEl.style.bottom = ''; siteNote.style.bottom = '';
     }
-    if (typeof MutationObserver === 'function') { const po = new MutationObserver(layoutPrompts); [portalBtn, siteBtn, hintEl].forEach((b) => po.observe(b, { attributes: true, attributeFilter: ['class'] })); }
+    let promptObs = null; if (typeof MutationObserver === 'function') { promptObs = new MutationObserver(layoutPrompts); [portalBtn, siteBtn, hintEl].forEach((b) => promptObs.observe(b, { attributes: true, attributeFilter: ['class'] })); }
     if (typeof window !== 'undefined') { window.addEventListener('resize', layoutPrompts); window.addEventListener('orientationchange', layoutPrompts); }
     // ---------- the minimap and zone text step aside while a panel (backpack / board / menu / shop / hero) is open ----------
     const PANEL_IDS = { 'realm-backpack': 1, 'realm-board': 1, 'realm-pause': 1, 'realm-shop': 1, 'realm-hero': 1, 'realm-death': 1 };
@@ -1272,7 +1284,7 @@
     const nxHero = { x: 0, y: 0, moving: false, aim: 0, mx: 0, my: 1, iframes: 0 }; let nxRaf = 0; let nxLast = 0; let nxNearI = null; const nxCam = { x: 0, y: 0 };
     const NX_NAME = { realm: 'The Realm', warren: 'Warren dungeon', bramble: 'Bramble dungeon', vault: 'Lantern stash (vault)', meadow: 'Meadow dungeon', crypt: 'Crypt dungeon' };
     const nxSite = NX_ON ? (() => { const f = nearestFree(world.spawnPoint.x + 3, world.spawnPoint.y - 1, 8) || nearestFree(world.spawnPoint.x - 3, world.spawnPoint.y, 8); return f ? { tx: f.x, ty: f.y, x: (f.x + 0.5) * TILE, y: (f.y + 0.5) * TILE } : null; })() : null;
-    const nxBtn = document.createElement('button'); nxBtn.id = 'rw-nexus-go'; nxBtn.type = 'button'; nxBtn.className = 'hidden'; nxBtn.textContent = 'Visit the Nexus (Enter)'; nxBtn.setAttribute('aria-label', 'Visit the Nexus hub (Enter)'); ov.appendChild(nxBtn);
+    const nxBtn = document.createElement('button'); nxBtn.id = 'rw-nexus-go'; nxBtn.type = 'button'; nxBtn.className = 'hidden'; nxBtn.textContent = 'Visit the Nexus (Enter)'; nxBtn.setAttribute('aria-label', 'Visit the Nexus hub'); ov.appendChild(nxBtn);
     let nxNear = false; let nxOpen = false; let nxEnterTile = null; let nxTalkN = 0; const nxPortrait = {}; let nxDom = null;
     const todayUtc = questDate;
     const nxCss = document.createElement('style');
@@ -1490,7 +1502,7 @@
       if (!NX_ON || !nxSite || nxOpen || leaving || !arena.active || arena.state !== 'play' || arena.paused) return false;
       nxBuild(); nxEnterTile = { x: Math.floor(arena.player.x / TILE), y: Math.floor(arena.player.y / TILE) };
       nxOpen = true; arena.paused = true; savePos(true);
-      nxBtn.classList.add('hidden'); portalBtn.classList.add('hidden'); siteBtn.classList.add('hidden');
+      nxBtn.classList.add('hidden'); portalBtn.classList.add('hidden'); siteBtn.classList.add('hidden'); if (typeof lairBtn !== 'undefined') { lairBtn.classList.add('hidden'); lairTxt = ''; }
       nxDom.root.classList.remove('hidden'); nxDom.board.classList.add('hidden');
       NX.layout().npcs.forEach((n) => nxLoadPortrait(n.npc, nxDrawPlaza)); nxDrawPlaza();
       nxDom.talk.textContent = nxHint();
@@ -1516,7 +1528,9 @@
       if (!NX_ON || !nxSite || nxOpen) return;
       const p = arena.player; const near = arena.state === 'play' && !arena.paused && (p.x - nxSite.x) ** 2 + (p.y - nxSite.y) ** 2 < 48 * 48;
       nxNear = near;
-      nxBtn.classList.toggle('hidden', !(near && promptFor < 0 && !siteFor));
+      const show = near && promptFor < 0 && !siteFor;
+      if (show) { const t = 'Visit the Nexus' + (isCoarse() ? '' : ' (Enter)'); if (nxBtn.textContent !== t) nxBtn.textContent = t; }
+      nxBtn.classList.toggle('hidden', !show);
     }
     function drawNexusPortal(g, tt, reduced) {
       const a = wArt.portal_nexus; const q = nxSite;
@@ -1524,6 +1538,128 @@
       else drawPortalCode(g, { x: q.x, y: q.y, col: '#ffd45a' }, tt, reduced);
       g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText('Nexus', q.x + 1, q.y - 37); g.fillStyle = '#ffd45a'; g.fillText('Nexus', q.x, q.y - 38);
     }
+
+    // ---------- boss keys and the boss portal (NEXT-SLICES BK2, MMPortals N3 rules) ----------
+    // World bosses and won world events drop a `key_boss` (b22) on the ground: walk over it (the pickup magnet pulls it in) and it is saved under the
+    // additive `bossKeys` count. Holding a key beside the Nexus portal or a boss altar shows "Use boss key": MMPortals.openBoss opens a `portal_boss`
+    // (b14) next to that spot for 120 s (Realm only: the Nexus overlay and dungeons never open one), with a minimap ping and the `portal` cue.
+    // The open portal is saved under `bossPortal` (event clock, ms; MMPortals.clean), so a reload keeps the time it has left. Entering it opens a
+    // dungeon through the usual portal URL flow plus `&lair=1` (read by a later dungeon slice, ignored until then) and returns to the portal tile.
+    // ?keys=0: no key drops, no prompt, no portal.
+    const PT = window.MMPortals || null;
+    const KEYS_ON = !!PT && !/[?&]keys=0(&|$)/.test(qs0);
+    const KEY_MAX = 9; const KEY_USE_R = 6 * TILE; const LAIR_R = 40; const KEY_GROUND = 4;
+    const LAIR_BIOME = ['warren', 'bramble', 'meadow', 'crypt']; // zone 0..3 -> the dungeon biome of a lair opened there
+    const keyDrops = []; let keyGot = 0; let lairNear = false; let keyNear = null; let lairTxt = ''; let lastLair = null; let lairT = 0;
+    const lairBtn = document.createElement('button'); lairBtn.id = 'rw-lair'; lairBtn.type = 'button'; lairBtn.className = 'hidden'; ov.appendChild(lairBtn);
+    const lairCss = document.createElement('style');
+    lairCss.textContent = '#rw-lair{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(170px + env(safe-area-inset-bottom,0px));z-index:3;min-height:48px;min-width:44px;max-width:92vw;padding:0 18px;border-radius:24px;border:2px solid #ffd45a;background:#7a1f4a;color:#fff;font:700 15px system-ui,sans-serif;white-space:nowrap;pointer-events:auto;touch-action:manipulation;box-shadow:0 0 12px rgba(255,95,162,.6)}#rw-lair.hidden{display:none}'
+      // PLAYTEST-REVIEW-2 #14: on a phone the banner ("The Realm · island #N", zone toasts) stays below the zone line and the minimap (never clipped under them)
+      + '@media (max-width:560px){body.world-mode #realm-banner{top:max(34%,calc(250px + env(safe-area-inset-top,0px)));max-width:calc(100vw - 32px);box-sizing:border-box}}';
+    document.head.appendChild(lairCss);
+    const keyNow = () => Math.floor(eventClock() * 1000);
+    const keySec = () => Math.floor(eventClock()) * 1000; // whole seconds: the saved event clock (evT) is whole seconds, so a reload never lands before openedAt
+    const keyCount = () => (KEYS_ON ? Math.max(0, Math.min(KEY_MAX, save.bossKeys | 0)) : 0);
+    const lairPortal = () => (KEYS_ON ? PT.bossPortal(save.bossPortal, keyNow()) : null);
+    let keySpr = null;
+    function keySprite() { // 24x24 code key until the b22 art loads (or with ?art=0)
+      if (keySpr) return keySpr;
+      const c = mk(24, 24); const g = c.getContext('2d');
+      g.fillStyle = '#5a3a08'; g.beginPath(); g.arc(7, 12, 6, 0, 7); g.fill(); g.fillRect(10, 10, 13, 5);
+      g.fillStyle = '#ffd45a'; g.beginPath(); g.arc(7, 12, 4.5, 0, 7); g.fill(); g.fillRect(10, 11, 12, 3); g.fillRect(17, 14, 2, 4); g.fillRect(20, 14, 2, 3);
+      g.fillStyle = '#5a3a08'; g.beginPath(); g.arc(7, 12, 1.8, 0, 7); g.fill();
+      keySpr = c; return c;
+    }
+    function dropKey(x, y, src) { // a key on the ground (at most 4; it never expires while you are on the island)
+      if (!KEYS_ON) return null;
+      let px = x; let py = y; if (solidAt(px, py)) { px = arena.player.x; py = arena.player.y; }
+      if (keyDrops.length >= KEY_GROUND) keyDrops.shift();
+      const k = { x: px, y: py, src: String(src || ''), ph: keyDrops.length * 1.7 }; keyDrops.push(k); return { x: k.x, y: k.y, src: k.src };
+    }
+    function collectKey() {
+      const p = arena.player; save.bossKeys = Math.min(KEY_MAX, keyCount() + 1); keyGot++; writeSave(save);
+      arena._floatText(p.x, p.y - 30, '+1 boss key', '#ffd45a');
+      say('Boss key! Use it beside the Nexus portal or a boss altar to open a boss portal for 2 minutes.');
+      lairTxt = '-'; lairT = 0; // the prompt re-evaluates now
+    }
+    function keyAnchor() { // the Nexus portal or a boss altar within 6 tiles: where a key can be used
+      const p = arena.player; let best = null; let bd = KEY_USE_R * KEY_USE_R;
+      const test = (kind, x, y, i) => { const d = (p.x - x) ** 2 + (p.y - y) ** 2; if (d < bd) { bd = d; best = { kind, x, y, i }; } };
+      if (NX_ON && nxSite) test('nexus', nxSite.x, nxSite.y, -1);
+      for (let i = 0; i < world.bossSites.length; i++) { const b = world.bossSites[i]; test('boss', (b.x + 0.5) * TILE, (b.y + 0.5) * TILE, i); }
+      return best;
+    }
+    function useKey() { // -> the open portal descriptor, or null (no key, nothing near, one already open, not playing)
+      if (!KEYS_ON || keyCount() < 1 || leaving || nxOpen || !arena.active || arena.state !== 'play' || arena.paused || lairPortal()) return null;
+      const a = keyAnchor(); if (!a) return null;
+      const p = arena.player; const ang = Math.atan2(p.y - a.y, p.x - a.x) || 0; // three tiles from the anchor, on the hero's side
+      const f = nearestFree(Math.floor((a.x + Math.cos(ang) * 3 * TILE) / TILE), Math.floor((a.y + Math.sin(ang) * 3 * TILE) / TILE), 4) || { x: Math.floor(p.x / TILE), y: Math.floor(p.y / TILE) };
+      const r = PT.openBoss(save.bossPortal, PT.BOSS_KEY, { x: (f.x + 0.5) * TILE, y: (f.y + 0.5) * TILE }, keySec(), 'realm');
+      if (!r.ok) return null;
+      if (r.consume) save.bossKeys = keyCount() - 1;
+      save.bossPortal = r.state; save.evT = Math.max(save.evT || 0, Math.floor(eventClock())); writeSave(save); miniKey = ''; lairTxt = '-'; lairT = 0;
+      if (typeof arena._snd === 'function') arena._snd('portal');
+      arena._showBanner('A boss portal opens! It stays for 2:00', 1.8);
+      return r.portal;
+    }
+    function lairUrl(q) {
+      const tx = Math.floor(q.x / TILE); const ty = Math.floor(q.y / TILE);
+      const ret = 'index.html?mode=world&seed=' + seed + '&at=' + tx + ',' + ty + (opts.test ? '&test=1' : '');
+      const z = Z.zoneInfoAt(world, tx, ty).zone; const biome = LAIR_BIOME[z >= 0 && z <= 3 ? z : 0];
+      const url = 'index.html?mode=dungeon&seed=' + String(MMRng.hash(seed + ':lair:' + tx + ',' + ty) % 100000) + '&lv=2&biome=' + biome + '&lair=1&return=' + encodeURIComponent(ret) + (opts.test ? '&test=1' : '');
+      return { tx, ty, biome, ret: RETURN_RE.test(ret) ? ret : null, url };
+    }
+    function enterLair() {
+      if (!KEYS_ON || leaving || nxOpen || !arena.active) return null;
+      const c = PT.canEnter('boss', save.bossPortal, 'realm', keyNow()); const q = lairPortal();
+      if (!c.ok || !q) return null;
+      const u = lairUrl(q); if (!u.ret) return null;
+      leaving = true; lastLair = u;
+      save.bossPortal = null; save.pos = { x: u.tx, y: u.ty }; save.returnTo = { x: u.tx, y: u.ty, seed }; save.stats.portals++; nxQuestEvent({ type: 'portal' });
+      writeSave(save); arena.onSave(arena.save); settle('portal');
+      api.lastLairUrl = u.url;
+      arena.stop(); lairBtn.classList.add('hidden'); portalBtn.classList.add('hidden');
+      if (opts.navigate !== false) location.href = u.url;
+      return u.url;
+    }
+    function lairAct() { if (lairNear) return enterLair(); if (keyNear) return useKey(); return null; }
+    lairBtn.addEventListener('click', lairAct);
+    if (promptObs) promptObs.observe(lairBtn, { attributes: true, attributeFilter: ['class'] });
+    function keyTick(dt) {
+      if (!KEYS_ON) return;
+      const p = arena.player; const play = arena.state === 'play' && !arena.paused && !nxOpen;
+      if (play) for (let i = keyDrops.length - 1; i >= 0; i--) { // ground keys ride the pickup magnet
+        const k = keyDrops[i]; let got = false;
+        if (PK) { const m = PK.magnetStep(k, p, Math.min(dt, 0.1), MAGNET_R); k.x = m.x; k.y = m.y; got = m.collected; } else got = Math.hypot(p.x - k.x, p.y - k.y) < 20;
+        if (got) { keyDrops.splice(i, 1); collectKey(); }
+      }
+      lairT -= dt; if (lairT > 0) return; lairT = 0.25;
+      if (save.bossPortal && !lairPortal()) { save.bossPortal = null; writeSave(save); miniKey = ''; } // the 120 s ran out (PT.tick rule)
+      const q = lairPortal();
+      lairNear = !!(play && q && (p.x - q.x) ** 2 + (p.y - q.y) ** 2 < LAIR_R * LAIR_R);
+      keyNear = play && !q && keyCount() > 0 ? keyAnchor() : null;
+      const hint = isCoarse() ? '' : ' (Enter)';
+      const txt = lairNear ? `Enter the boss lair (${fmtT(q.leftMs / 1000)} left)${hint}` : keyNear ? `Use boss key (${keyCount()})${hint}` : '';
+      if (txt !== lairTxt) { lairTxt = txt; lairBtn.classList.toggle('hidden', !txt); if (txt) { lairBtn.textContent = txt; lairBtn.setAttribute('aria-label', txt.replace(' (Enter)', '')); } }
+    }
+    window.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' && !ev.repeat && lairTxt && promptFor < 0 && !nxNear && !nxOpen && arena.active && !arena.paused && arena.state === 'play') { ev.preventDefault(); lairAct(); } });
+    function drawLair(g, vx0, vy0, vx1, vy1, tt, reduced) {
+      const q = lairPortal(); if (!q || q.x < vx0 || q.x > vx1 || q.y < vy0 || q.y > vy1) return;
+      const a = wArt.portal_boss;
+      if (a) { drawArt(g, a, frameOf(a, tt, reduced), q.x, q.y + 23); artDraws.portal++; } else drawPortalCode(g, { x: q.x, y: q.y, col: '#ff5fa2' }, tt, reduced);
+      const label = `Boss lair · ${fmtT(q.leftMs / 1000)}`;
+      g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(label, q.x + 1, q.y - 37); g.fillStyle = '#ff8ac0'; g.fillText(label, q.x, q.y - 38);
+    }
+    function drawKeys(g, cam) {
+      if (!keyDrops.length) return;
+      const tt = arena.clock; const reduced = arena._reduced; const a = wArt.key_boss;
+      for (let i = 0; i < keyDrops.length; i++) {
+        const k = keyDrops[i]; if (k.x < cam.x - 32 || k.x > cam.x + arena.W + 32 || k.y < cam.y - 32 || k.y > cam.y + arena.H + 32) continue;
+        const bob = reduced ? 0 : Math.round(Math.sin(tt * 3 + k.ph) * 2);
+        if (a) drawArt(g, a, 0, k.x, k.y + 14 + bob); else g.drawImage(keySprite(), Math.round(k.x - 12), Math.round(k.y - 12 + bob));
+      }
+    }
+    const lairMiniKey = () => { const q = KEYS_ON && save.bossPortal ? save.bossPortal.boss : null; return q ? Math.floor(q.x / TILE) + ':' + Math.floor(q.y / TILE) : ''; };
 
     // ---------- daily quests (MMQuests): 3 per UTC day, progress from kills / boss kills / portals, claimed at the Quest Giver in the Nexus ----------
     let qDirty = false;
@@ -1558,7 +1694,7 @@
         prevZ = null; slowUntil = 0; // a (re)start is not a border crossing
         arena.run.wave = 0; arena.biome = 0;
         resetZones();
-        kills = 0; spawned = 0; despawned = 0; lastDrops.length = 0; picks.length = 0;
+        kills = 0; spawned = 0; despawned = 0; lastDrops.length = 0; picks.length = 0; lairTxt = '-'; lairT = 0;
         bossReadyNow.fill(0); bossT = 0; sweepT = 0;
         promptFor = -2; leaving = false;
         rageEnd = 0; wardEnd = 0; arena.buffDmg = 1; arena.buffTaken = 1; campSt.clear(); siteKeyShown = '';
@@ -1580,7 +1716,7 @@
           bossT -= dt; if (bossT <= 0) { bossT = 0.5; bossTick(); }
           sweepT -= dt; if (sweepT <= 0) { sweepT = 1; sweepLost(); }
         }
-        portalTick(); pickTick(dt); nexusTick();
+        portalTick(); pickTick(dt); nexusTick(); keyTick(dt);
         if (SITES) siteTick(dt);
         lastEvClock = eventClock();
         evT -= dt; if (evT <= 0) { evT = 0.25; evTick(); }
@@ -1616,6 +1752,7 @@
         const pad = wArt.spawn_pad; const padX = (world.spawnPoint.x + 0.5) * TILE; const padY = (world.spawnPoint.y + 0.5) * TILE;
         if (pad && padX > vx0 && padX < vx1 && padY > vy0 && padY < vy1) { drawArt(g, pad, frameOf(pad, tt, reduced), padX, padY + 16); artDraws.pad++; }
         if (SITES) drawSites(g, vx0, vy0, vx1, vy1, tt, reduced);
+        if (KEYS_ON) drawLair(g, vx0, vy0, vx1, vy1, tt, reduced);
         evState.forEach((st) => { // event sites: a beacon (upcoming: gold, active: orange) above the ring of stones
           if (st.phase !== 'upcoming' && st.phase !== 'active') return;
           const c = siteXY(st); if (c.x < vx0 - 80 || c.x > vx1 + 80 || c.y < vy0 - 80 || c.y > vy1 + 80) return;
@@ -1628,7 +1765,7 @@
           g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(label, c.x + 1, c.y - 51); g.fillStyle = col; g.fillText(label, c.x, c.y - 52);
         });
       },
-      drawOver(g, cam) { drawPicks(g, cam); // a raid boss telegraphs its next burst: a red ring that closes in during the last second
+      drawOver(g, cam) { drawPicks(g, cam); drawKeys(g, cam); // a raid boss telegraphs its next burst: a red ring that closes in during the last second
         evState.forEach((st) => {
           if (st.phase !== 'active' || st.plan.kind !== 'boss') return;
           const e = st.ents[0]; if (!e || !e.active || e.evid !== st.id || e.invuln > 0 || !(e.cd2 < 1)) return;
@@ -1689,6 +1826,8 @@
           near: () => (nxNearI ? { kind: nxNearI.kind, id: nxNearI.ref.id } : null), act: () => nxAct(), step: (mx, my, dt) => { if (nxOpen && NX_WALK) nxWalkStep(Number(dt) || 1 / 60, Number(mx) || 0, Number(my) || 0); return { x: nxHero.x, y: nxHero.y }; },
           place: (x, y) => { if (!nxOpen || !NX_WALK || !nxFree(Number(x), Number(y))) return false; nxHero.x = Number(x); nxHero.y = Number(y); nxSyncPrompt(); return true; }, running: () => nxRaf !== 0 } },
       quests: { date: questDate, list: () => MMQuests.quests(questDate()), summary: () => MMQuests.summary(save.quests, questDate()), state: () => JSON.parse(JSON.stringify(save.quests || MMQuests.fresh(questDate()))), event: nxQuestEvent, claim: nxClaim, flush: () => { qDirty = false; return writeSave(save); } },
+      // BK2: boss keys and the boss lair portal
+      bossKeys: { on: KEYS_ON, count: keyCount, drop: dropKey, ground: () => keyDrops.map((k) => ({ x: k.x, y: k.y, src: k.src })), got: () => keyGot, use: useKey, anchor: keyAnchor, portal: lairPortal, enter: enterLair, url: (q) => lairUrl(q || lairPortal() || arena.player), last: () => lastLair, prompt: () => ({ text: lairBtn.textContent, hidden: lairBtn.classList.contains('hidden') }), now: keyNow, tick: () => { lairT = 0; keyTick(0); } },
       settle, stashNote, lastSettle: () => lastSettle, finds: () => (ST ? ST.readFinds(localStorage) : null),
     };
     return { api, hooks };
