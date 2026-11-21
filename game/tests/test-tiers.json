@@ -554,5 +554,13 @@
   "hero-pick.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "shared-mm-unlocks.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-fx-draw.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }
