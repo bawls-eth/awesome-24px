@@ -750,5 +750,9 @@
   "world-ttk.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "world-safereturn.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

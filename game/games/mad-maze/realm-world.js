@@ -849,6 +849,40 @@
       const f = nearestFree(tx, ty, 8) || world.spawnPoint;
       const p = arena.player; p.x = (f.x + 0.5) * TILE; p.y = (f.y + 0.5) * TILE; p.iframes = Math.max(p.iframes, 2);
     }
+    // ---------- safe return from a portal (PLAYTEST-REVIEW-2 #4): a 3 s spawn shield, and a hop away from a live event in view ----------
+    // Only for an arrival through ?at= (back from a dungeon). The hero still lands on the returnTo tile; only when a live (active, unfinished)
+    // event's site is inside the view (+64 px) does it move to the nearest quiet tile within SAFE_HOP tiles: free and at least the event's
+    // spawn radius from every such site (else the free tile there farthest from them). ?safereturn=0 = today's 2 s and no hop.
+    const SAFE_ON = !/[?&]safereturn=0(&|$)/.test(qs0);
+    const SAFE_SHIELD = 3; const SAFE_HOP = 6; const SAFE_MARGIN = 64;
+    let lastReturn = null;
+    function safeReturn() {
+      const p = arena.player; const now = eventClock();
+      const from = { x: Math.floor(p.x / TILE), y: Math.floor(p.y / TILE) };
+      p.iframes = Math.max(p.iframes, SAFE_SHIELD);
+      const hw = arena.W / 2 + SAFE_MARGIN; const hh = arena.H / 2 + SAFE_MARGIN; const sites = [];
+      const evs = Z.eventsFor(world, now);
+      for (let i = 0; i < evs.length; i++) {
+        const ev = evs[i]; if (!ev.active || evDone.has(ev.id)) continue;
+        const st = evStateFor(ev); if (st.phase === 'won' || st.phase === 'expired') continue;
+        const c = siteXY(st); if (Math.abs(c.x - p.x) <= hw && Math.abs(c.y - p.y) <= hh) sites.push({ id: ev.id, tx: st.plan.site.x, ty: st.plan.site.y });
+      }
+      let to = from;
+      if (sites.length) {
+        const R = ZT.EVENT_SPAWN_RADIUS; let best = null; let bestD = Infinity; let far = null; let farD = -1;
+        const minSite = (x, y) => { let m = Infinity; for (let k = 0; k < sites.length; k++) m = Math.min(m, Math.hypot(x - sites[k].tx, y - sites[k].ty)); return m; };
+        for (let oy = -SAFE_HOP; oy <= SAFE_HOP; oy++) for (let ox = -SAFE_HOP; ox <= SAFE_HOP; ox++) {
+          const x = from.x + ox; const y = from.y + oy; if (!tileFree(x, y)) continue;
+          const ms = minSite(x, y); const d = Math.hypot(ox, oy);
+          if (ms >= R + 0.5 && (d < bestD || (d === bestD && best && (y < best.y || (y === best.y && x < best.x))))) { best = { x, y }; bestD = d; }
+          if (ms > farD) { far = { x, y }; farD = ms; }
+        }
+        to = best || far || from;
+        if (to !== from) { p.x = (to.x + 0.5) * TILE; p.y = (to.y + 0.5) * TILE; }
+      }
+      lastReturn = { from, to: { x: to.x, y: to.y }, moved: to.x !== from.x || to.y !== from.y, events: sites.map((q) => q.id), shield: SAFE_SHIELD };
+      return lastReturn;
+    }
     // ---------- world sites (MMSites): shrines (timed buffs), camps (chest + patrol), NPC greeters ----------
     const SITES = window.MMSites && !/[?&]sites=0(&|$)/.test(typeof location !== 'undefined' ? location.search : '') ? MMSites.generate(world, seed) : null;
     const NPC_IDS = window.MMSites ? MMSites.NPC_IDS : [];
@@ -1340,6 +1374,7 @@
 
     const hooks = {
       onStart() {
+        const back = !!pendingAt; // an arrival through ?at= (the return from a dungeon portal)
         if (pendingAt) { placeAt(pendingAt.x, pendingAt.y); pendingAt = null; } else placeAt(world.spawnPoint.x, world.spawnPoint.y);
         prevZ = null; slowUntil = 0; // a (re)start is not a border crossing
         arena.run.wave = 0; arena.biome = 0;
@@ -1354,6 +1389,7 @@
         evBase = Math.max(save.evT, evStarted ? lastEvClock : 0) - arena.clock; evStarted = true;
         evState.forEach((st) => { if (st.phase === 'active' || st.phase === 'upcoming') evRest(st); });
         evT = 0; hintT = 0; hintEl.classList.add('hidden');
+        if (back && SAFE_ON) safeReturn(); // before the first evTick, so a raid in view never spawns on top of the arrival
         arena._showBanner(`The Realm · island #${seed}`, 1.8);
         savePos(true); evTick(); syncHud(true);
       },
@@ -1451,7 +1487,7 @@
       bossSites: () => world.bossSites.map((b, i) => ({ i, x: b.x, y: b.y, zone: b.zone, boss: b.boss, name: BOSS_NAME[i], live: !!(bossLive[i] && bossLive[i].active), ready: !!zones && zones.bossReady(b, arena.clock) })),
       bossEntity: (i) => bossLive[i] || null, bossTick,
       // slice 7
-      portalPrompt: () => promptFor, portalUrls, portalSeed, enterPortal, lastPortalUrl: null, RETURN_RE,
+      safeReturn: { on: SAFE_ON, shield: SAFE_SHIELD, hop: SAFE_HOP, last: () => lastReturn }, portalPrompt: () => promptFor, portalUrls, portalSeed, enterPortal, lastPortalUrl: null, RETURN_RE,
       // world events (slice A): the clock hook moves the event clock (deterministic: same clock => same events, plans and rewards)
       eventClock, setEventClock: (t) => { evBase = Math.max(0, Number(t) || 0) - arena.clock; evT = 0; evTick(); return eventClock(); },
       jumpEventClock: (dt) => { evBase += Number(dt) || 0; evT = 0; evTick(); return eventClock(); },
