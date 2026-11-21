@@ -690,7 +690,7 @@ class RealmArena {
 
   // HUD: up to 6 player status icons (20 css px), negatives first; each is a cached MMFxDraw.drawIcon canvas (the clock pie in 12 steps).
   _drawStatusIcons(g) {
-    const out = this._stDrawn; out.length = 0;
+    const out = this._stDrawn; out.length = 0; const pool = this._stPool || (this._stPool = Array.from({ length: 6 }, () => ({ id: '', x: 0, y: 0, size: 0, neg: false }))); // reused: no per-frame objects
     const p = this.player;
     if (!p.status || !p._stm || typeof MMFxDraw === 'undefined' || typeof MMStatus === 'undefined' || this.state === 'dead') return;
     if (!this._stList || this._stT - this._stListT >= 0.1 || this._stListT > this._stT) { this._stList = MMStatus.iconList(p.status, this._stT * 1000, 6); this._stListT = this._stT; }
@@ -707,7 +707,7 @@ class RealmArena {
       if (blink) g.globalAlpha = 0.45;
       g.drawImage(cv, x, y, L, L);
       if (blink) g.globalAlpha = 1;
-      out.push({ id: it.id, x: a.cl + x * a.k, y: a.ct + y * a.k, size: a.px, neg: it.neg });
+      const o = pool[out.length]; o.id = it.id; o.x = a.cl + x * a.k; o.y = a.ct + y * a.k; o.size = a.px; o.neg = it.neg; out.push(o);
     }
   }
   // Test / debug hook: the icons drawn on the last frame, in css px from the page's top-left.
@@ -2112,8 +2112,8 @@ class RealmArena {
         b.active = false;
         this._hitPlayer(this._guarded(b.dm > 0 && b.dm !== 1 ? Math.round(RM_ENEMY_BULLET_DAMAGE * b.dm) : RM_ENEMY_BULLET_DAMAGE));
       } else if (this.team && this.role === 'host' && this.team.partner && this.team.partner.ready) {
-        const q = this.team.partner;
-        if ((b.x - q.x) * (b.x - q.x) + (b.y - q.y) * (b.y - q.y) < pr * pr && this.team.hitPartner(RM_ENEMY_BULLET_DAMAGE)) b.active = false;
+        const q = this.team.partner; // the partner takes the same (wave-scaled) bolt damage as the host; dm 1 = the old 8
+        if ((b.x - q.x) * (b.x - q.x) + (b.y - q.y) * (b.y - q.y) < pr * pr && this.team.hitPartner(b.dm > 0 && b.dm !== 1 ? Math.round(RM_ENEMY_BULLET_DAMAGE * b.dm) : RM_ENEMY_BULLET_DAMAGE)) b.active = false;
       }
     }
   }
