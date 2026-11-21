@@ -286,6 +286,7 @@ for (const boss of [false, true]) {
 }
 
 // PLAYTEST-REVIEW-2 #1 (added): each zone names the recommended hero level the border toast shows, rising inward
+check('fire budget: live enemy-bullet caps 40/80/140/200 rise inward, bolt travel 0.6 of the view', T.EB_CAP.join() === '40,80,140,200' && T.EB_TRAVEL === 0.6);
 check('zones carry recLv 1/5/10/15 (border toast), rising toward the centre', [0, 1, 2, 3].map((z) => T.ZONES[z].recLv).join() === '1,5,10,15');
 
 console.log(failed ? '\n' + failed + ' FAILED' : '\nALL PASSED');

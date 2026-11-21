@@ -742,5 +742,9 @@
   "world-gradient.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "world-firebudget.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

@@ -29,6 +29,9 @@
       { id: 3, name: 'Godlands', color: '#c0392b', danger: 'Lethal', respawn: 180, recLv: 15 },
     ],
     VOID: { id: 255, name: 'The Deep', color: '#0b1a33', danger: 'None' },
+    // ---- world fire budget (PLAYTEST-REVIEW-2 #2, realm-world.js -> realm.js fireBudget; ?firebudget=0 = off) ----
+    EB_CAP: [40, 80, 140, 200],  // live enemy bullets allowed while the player stands in zone 0..3 (a full cap holds new bolts back)
+    EB_TRAVEL: 0.6,           // an enemy bolt flies at most this x the view's long side (its lifetime is cut to match)
     // enemy stat multipliers = ZONE_MUL[zone] * TIER_MUL[tier]; hp/speed/dmg scale like realm.js waves (wave 1 -> ~15)
     ZONE_MUL: {
       hp:    [1.0, 1.8, 3.2, 5.5],

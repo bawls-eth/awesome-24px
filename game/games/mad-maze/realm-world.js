@@ -473,9 +473,17 @@
       if (first || arena.clock - lastToastT >= ZTOAST_GAP) { lastToastT = arena.clock; arena._showBanner(text, 2.2); }
       lastCross = { zone: zi.zone, text, first, slowed, rec, lv, t: arena.clock };
     }
+    // ---------- enemy fire budget (PLAYTEST-REVIEW-2 #2): per-zone live enemy-bullet cap + capped bolt travel; ?firebudget=0 = today's bullets ----------
+    const FB_ON = !/[?&]firebudget=0(&|$)/.test(qs0);
+    const ebCapFor = (z) => { const c = Z.TABLES.EB_CAP; return c && c[z] > 0 ? c[z] : (c ? c[c.length - 1] : 0); };
+    function fireBudgetFor(zi) {
+      if (!FB_ON || !(zi.zone >= 0 && zi.zone <= 3)) return; // the void keeps the last zone's budget
+      const cap = ebCapFor(zi.zone);
+      if (!arena.fireBudget || arena.fireBudget.cap !== cap) arena.fireBudget = { cap, travel: Z.TABLES.EB_TRAVEL || 0.6, zone: zi.zone };
+    }
     function syncHud(force) {
       const p = arena.player; const tx = Math.floor(p.x / TILE); const ty = Math.floor(p.y / TILE);
-      const zi = Z.zoneInfoAt(world, tx, ty); lastZone = zi; zoneCross(zi, tx, ty);
+      const zi = Z.zoneInfoAt(world, tx, ty); lastZone = zi; zoneCross(zi, tx, ty); fireBudgetFor(zi);
       const txt = `${zi.name} · ${zi.danger}`;
       if (txt !== zoneTxt || force) { zoneTxt = txt; zName.textContent = txt; zName.style.color = zi.color; zoneEl.dataset.zone = String(zi.zone); }
       const dx = world.center.x - tx; const dy = world.center.y - ty; const dist = Math.round(Math.hypot(dx, dy));
@@ -1419,7 +1427,7 @@
     const api = {
       seed, world, genMs, SAVE_KEY, TILE, CPX, MAX_CHUNKS,
       chunkCount: () => chunks.size, chunkBuilds: () => chunkBuilds, artTiles: () => artTiles, miniDraws: () => miniDraws,
-      zone: () => lastZone, zoneGrad: { on: ZGRAD, bands: world.bands || 'classic', recLv, last: () => lastCross, crossings: () => crossN, slowLeft: () => Math.max(0, slowUntil - arena.clock), moveScale: () => moveScaleAt(arena.player.x, arena.player.y) }, hudText: () => ({ zone: zName.textContent, coords: zCoords.textContent, arrow: arrowDeg }),
+      zone: () => lastZone, fireBudget: { on: FB_ON, capFor: ebCapFor, now: () => (arena.fireBudget ? Object.assign({}, arena.fireBudget) : null), live: () => arena._ebLive, capped: () => arena._ebCapped }, zoneGrad: { on: ZGRAD, bands: world.bands || 'classic', recLv, last: () => lastCross, crossings: () => crossN, slowLeft: () => Math.max(0, slowUntil - arena.clock), moveScale: () => moveScaleAt(arena.player.x, arena.player.y) }, hudText: () => ({ zone: zName.textContent, coords: zCoords.textContent, arrow: arrowDeg }),
       tileAt: (x, y) => O.tileAt(world, Math.floor(x / TILE), Math.floor(y / TILE)), solidAt, shotSolidAt, nearestFree,
       tileCenter: (tx, ty) => ({ x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE }),
       save: () => readSave(), savePos, portals: () => portals.map((q) => ({ i: q.i, x: q.x, y: q.y, tx: q.tx, ty: q.ty, biome: q.biome })),
