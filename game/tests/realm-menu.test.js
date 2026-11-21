@@ -97,7 +97,7 @@ const vis = (page, sel) => page.evaluate((s) => { const e = document.querySelect
 
   // ---------- co-op / duel: Restart disabled with an explanation ----------
   await page.click('#realm-menu-btn');
-  await A(page, (a) => { a.team = { isPvp: false, badge: () => null, close() {} }; a._syncMenu(); });
+  await A(page, (a) => { a.team = { isPvp: false, badge: () => null, close() {}, drawList: () => [] }; a._syncMenu(); }); // drawList: a frame may render while this stub is set
   const co = await page.evaluate(() => ({ dis: document.querySelector('#realm-pause button[data-m="restart"]').disabled, note: document.querySelector('#realm-pause .rm-note').innerText, can: window.__mm.arena.canRestart(), r: window.__mm.arena.restart() }));
   check('co-op/duel run: Restart is disabled with an explanation, restart() refuses', co.dis && /shared run/.test(co.note) && co.can === false && co.r === false, JSON.stringify(co));
   await A(page, (a) => { a.team = null; a._syncMenu(); });

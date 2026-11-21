@@ -14,6 +14,10 @@
     'roster-full': 'Your roster is full (12 heroes)',
     'no-hero': 'That hero is gone'
   };
+  // Coming back to the Lantern settles the loot of the Realm World and its Warrens (MMStash): kept finds are copied into the stash
+  // (then the active hero's pack); `pixeltown-save-v1` is only read for the realm backpack, never written.
+  var S = window.MMStash, settled = null;
+  if (S) { try { settled = S.settle(localStorage, { Profile: P, src: 'lantern' }); } catch (e) { settled = null; } }
   var profile = load();
   var selected = null;
   var offerHidden = false;
@@ -37,6 +41,7 @@
     thornBloom: 'Thorny vines root enemies, prick them back and heal you.',
     raiseBones: 'Raises bone minions that fight for you and siphon life.'
   };
+  var SRC_NAME = { world: 'World', dungeon: 'Warren', event: 'Event', cache: "Survivor's Cache" };
   var STAT_NAMES = [['pow', 'POW'], ['grd', 'GRD'], ['swf', 'SWF'], ['knk', 'KNK'], ['vig', 'VIG'], ['wit', 'WIT']];
 
   function $(id) { return document.getElementById(id); }
@@ -415,6 +420,19 @@
       hall.appendChild(li);
     });
     $('hall-empty').hidden = profile.hall.length > 0;
+
+    // recent finds (pixeltown-realm-v1 `finds`, newest first)
+    var fl = $('finds'), recent = [];
+    if (fl) {
+      try { recent = S ? S.readFinds(localStorage).recent : []; } catch (e) { recent = []; }
+      fl.textContent = '';
+      recent.forEach(function (it) {
+        var li = el('li', 'find'); var b = el('span', 'item'); fillItem(b, it);
+        li.appendChild(b); li.appendChild(el('span', 'tag src', SRC_NAME[it.src] || 'World'));
+        fl.appendChild(li);
+      });
+      $('finds-empty').hidden = recent.length > 0;
+    }
     restoreFocus(fk);
   }
   // ---------- hero art (real class animations; the canvas stays hidden when a class has none) ----------
@@ -502,10 +520,13 @@
   });
 
   if (TEST) {
-    window.__lantern = { active: loadActive, fall: doFall, get: function () { return JSON.parse(JSON.stringify(profile)); }, reload: function () { profile = load(); render(); } };
+    window.__lantern = { active: loadActive, fall: doFall, get: function () { return JSON.parse(JSON.stringify(profile)); }, settled: function () { return settled ? { items: settled.items, stash: settled.stash, hero: settled.hero, waiting: settled.waiting, fame: settled.fame } : null; }, reload: function () { profile = load(); render(); } };
   }
+  // another tab (a Realm World or Warren run) paid finds into the stash: reload, so a later save here never writes an older copy
+  window.addEventListener('storage', function (e) { if (e.key === KEY || e.key === null) { profile = load(); render(); } });
   selected = loadActive().heroId;
   render();
+  if (settled && settled.ok && (settled.items || settled.fame)) say(S.text(settled).replace(/, \+\d+ shards/, '') + ' from your travels.');
   startScene();
   loadArt();
 }());

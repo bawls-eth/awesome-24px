@@ -347,6 +347,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-stash.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "shared-mm-stats-patterns.test.js": {
     "class": "node",
     "tier": "smoke"
@@ -404,6 +408,10 @@
     "tier": "smoke"
   },
   "world-page.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "world-stash.test.js": {
     "class": "browser",
     "tier": "smoke"
   }

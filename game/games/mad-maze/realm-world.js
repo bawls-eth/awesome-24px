@@ -39,7 +39,7 @@
     if (typeof o === 'string') { try { o = JSON.parse(o); } catch (e) { o = null; } }
     if (!o || typeof o !== 'object' || Array.isArray(o)) o = {};
     const out = {};
-    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo|evT|evDone)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
+    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo|evT|evDone|finds)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
     out.v = 1;
     out.seed = cleanSeed(o.seed);
     out.version = Number.isInteger(o.version) && o.version > 0 && o.version < 1000 ? o.version : 0;
@@ -52,11 +52,19 @@
     out.evT = Number.isFinite(Number(o.evT)) && Number(o.evT) > 0 ? Math.min(Math.floor(Number(o.evT)), 1e9) : 0;
     out.evDone = (Array.isArray(o.evDone) ? o.evDone : []).filter((id) => typeof id === 'string' && /^ev:\d{1,9}:[1-3]$/.test(id)).slice(-12);
     const r = o.returnTo && typeof o.returnTo === 'object' ? o.returnTo : null;
+    if (o.finds !== undefined) out.finds = window.MMStash ? MMStash.cleanFinds(o.finds) : o.finds; // owned by MMStash (Lantern payout)
     out.returnTo = r && Number.isInteger(r.x) && Number.isInteger(r.y) && r.x >= 0 && r.y >= 0 && r.x < 4096 && r.y < 4096 && cleanSeed(r.seed) ? { x: r.x, y: r.y, seed: cleanSeed(r.seed) } : null;
     return out;
   }
   function readSave() { try { return cleanSave(localStorage.getItem(SAVE_KEY)); } catch (e) { return cleanSave(null); } }
-  function writeSave(s) { try { localStorage.setItem(SAVE_KEY, JSON.stringify(cleanSave(s))); return true; } catch (e) { return false; } }
+  function writeSave(s) {
+    try {
+      const c = cleanSave(s); // `finds` belongs to MMStash: always keep what storage holds (never an older in-memory copy)
+      let cur = null; try { cur = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) { cur = null; }
+      if (cur && typeof cur === 'object' && cur.finds !== undefined) c.finds = window.MMStash ? MMStash.cleanFinds(cur.finds) : cur.finds; else delete c.finds;
+      localStorage.setItem(SAVE_KEY, JSON.stringify(c)); return true;
+    } catch (e) { return false; }
+  }
 
   function create(arena, opts) {
     opts = opts || {};
@@ -587,7 +595,7 @@
       if (!u.ret) return null;
       leaving = true;
       save.pos = { x: q.tx, y: q.ty }; save.returnTo = { x: q.tx, y: q.ty, seed }; save.stats.portals++;
-      writeSave(save); arena.onSave(arena.save);
+      writeSave(save); arena.onSave(arena.save); settle('portal');
       api.lastPortalUrl = u.url;
       arena.stop(); portalBtn.classList.add('hidden');
       if (opts.navigate !== false) location.href = u.url;
@@ -602,6 +610,24 @@
         promptFor = near; portalBtn.classList.toggle('hidden', near < 0);
         if (near >= 0) portalBtn.setAttribute('aria-label', `Enter Warren dungeon (${portals[near].label}, Enter)`);
       }
+    }
+
+    // ---------- Lantern stash payout (MMStash): finds recorded on pickup, settled at the end of a leg ----------
+    const ST = window.MMStash && window.MMProfile ? window.MMStash : null;
+    const shards0 = arena.save.shards; const sess = { items: 0, fame: 0, waiting: 0 }; let lastSettle = null;
+    const shardsGained = () => Math.max(0, arena.save.shards - shards0);
+    function settle(src) {
+      if (!ST) return null;
+      let r = null; try { r = ST.settle(localStorage, { Profile: MMProfile, realmItems: arena.save.items, shards: shardsGained(), src: 'world', force: src === 'test' }); } catch (e) { r = null; }
+      if (r && r.ok) { sess.items += r.items; sess.fame += r.fame; sess.waiting = r.waiting; lastSettle = { src, items: r.items, stash: r.stash, hero: r.hero, waiting: r.waiting, fame: r.fame, dropped: r.dropped }; }
+      return r;
+    }
+    const stashNote = () => (ST ? ST.text({ items: sess.items, shards: shardsGained(), fame: sess.fame, waiting: sess.waiting }) : '');
+    if (ST) {
+      arena.onItem = (it) => { try { ST.recordTo(localStorage, it, 'world'); } catch (e) { /* storage blocked */ } };
+      arena.onDeathCache = (c) => { try { if (c && c.n) ST.recordTo(localStorage, { n: c.n, id: c.id, r: c.rarity }, 'cache'); } catch (e) { /* storage blocked */ } settle('death'); }; // Survivor's Cache: shards kept, the cache item is a find
+      arena.onMenuOpen = () => settle('menu');
+      arena.menuNote = stashNote;
     }
 
     // ---------- the hooks the arena calls ----------
@@ -628,6 +654,7 @@
         promptFor = -2; leaving = false;
         if (save.returnTo) { save.returnTo = null; writeSave(save); } // back from a dungeon: the trip is over
         // events: the clock continues from the save (or from where this visit was, on a restart); creatures of a running event rest
+        if (evStarted) settle('restart'); // a restart ends the leg too
         evBase = Math.max(save.evT, evStarted ? lastEvClock : 0) - arena.clock; evStarted = true;
         evState.forEach((st) => { if (st.phase === 'active' || st.phase === 'upcoming') evRest(st); });
         evT = 0; hintT = 0; hintEl.classList.add('hidden');
@@ -695,7 +722,7 @@
     arena.onEnemyKilled = onEnemyKilled; arena.onEnemyHit = onEnemyHit;
     arena.setMode('world');
     arena.setWorld({ w: WW, h: WH, tile: TILE, camera: true, solidAt, shotSolidAt, moveScaleAt, onStart: hooks.onStart, tick: hooks.tick, drawUnder: hooks.drawUnder, drawOver: hooks.drawOver, pools: { enemies: 72, eBullets: 700 } });
-    if (typeof window !== 'undefined') window.addEventListener('pagehide', () => savePos(true));
+    if (typeof window !== 'undefined') window.addEventListener('pagehide', () => { savePos(true); settle('leave'); });
     if (opts.assetRoot && opts.tileArt !== false) loadTileArt(opts.assetRoot);
 
     const api = {
@@ -722,7 +749,10 @@
       events: () => { const o = []; evState.forEach((st) => o.push({ id: st.id, kind: st.plan.kind, region: st.plan.region, boss: st.plan.boss, site: st.plan.site, phase: st.phase, startsAt: st.ev.startsAt, endsAt: st.ev.endsAt, alive: evAliveEnts(st), spawned: st.ents.length, total: st.total, dealt: st.dealt, reward: st.reward })); return o; },
       eventEntities: (id) => { const st = evState.get(id); return st ? st.ents.filter((e) => e.active && e.evid === id) : []; },
       eventHud: () => ({ text: evEl.textContent, hidden: evEl.classList.contains('hidden'), state: evEl.dataset.state || '', hint: hintEl.classList.contains('hidden') ? '' : hintEl.textContent }),
-      setEventCredit: (on) => { evCredit = !!on; }, lastEventReward: () => lastEvReward, onEventFame: null,
+      setEventCredit: (on) => { evCredit = !!on; }, lastEventReward: () => lastEvReward,
+      onEventFame: ST ? (n) => { try { ST.addFameTo(localStorage, n); } catch (e) { /* storage blocked */ } } : null,
+      // Lantern stash payout (slice B)
+      settle, stashNote, lastSettle: () => lastSettle, finds: () => (ST ? ST.readFinds(localStorage) : null),
     };
     return { api, hooks };
   }

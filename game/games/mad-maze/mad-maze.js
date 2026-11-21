@@ -31,7 +31,7 @@
     container: document.getElementById('realm-canvas-wrap'),
     save: rmCleanSave(loadSave().realm),
     onSave: (s) => writeSave({ realm: s }),
-    onExit: (why) => { if (dungeon && why === 'death') dungeon.onDeath(); else location.href = HOME; },
+    onExit: (why) => { if (dungeon && why === 'death') dungeon.onDeath(); else { if (realmWorld) realmWorld.api.settle('leave'); location.href = HOME; } }, // leaving the world pays the Lantern stash
   });
 
   arena.setMenuMode(true); // the standalone page opts in to the in-game menu (Esc / ☰) and the death screen; the town gate keeps the old behaviour

@@ -276,6 +276,7 @@ body.touch-device .realm-ab .key { display: none; }
 .mm-sum-stats li { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
 .mm-sum-loot li { padding: 3px 0; }
 .mm-sum-loot li.none { opacity: 0.6; }
+.mm-sum-stash { margin: 10px 0 0; color: #7ee787; font-weight: 700; }
 .mm-sum-btns { display: flex; gap: 10px; margin-top: 16px; }
 .mm-btn { flex: 1; text-align: center; padding: 12px 8px; border-radius: 10px; background: #8a63e0; color: #fff; text-decoration: none; font-weight: 700; min-height: 20px; }
 .mm-btn.alt { background: transparent; border: 2px solid rgba(255, 255, 255, 0.5); }
