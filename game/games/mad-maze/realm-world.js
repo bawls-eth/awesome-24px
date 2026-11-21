@@ -91,7 +91,9 @@
     save.seed = seed;
     const t0 = performance.now();
     let bossesClassic = false; try { bossesClassic = /[?&]bosses=classic(&|$)/.test(location.search); } catch (e) { bossesClassic = false; } // b23: ?bosses=classic restores the original eight boss ids
-    const world = O.generate(seed, bossesClassic ? { bosses: 'classic' } : undefined);
+    let rosterClassic = false; try { rosterClassic = /[?&]roster=classic(&|$)/.test(location.search); } catch (e) { rosterClassic = false; } // b24: ?roster=classic restores the original creature table (positions are identical either way)
+    const gopts = {}; if (bossesClassic) gopts.bosses = 'classic'; if (rosterClassic) gopts.roster = 'classic';
+    const world = O.generate(seed, bossesClassic || rosterClassic ? gopts : undefined);
     const genMs = performance.now() - t0;
     save.version = world.version || O.VERSION;
     writeSave(save);
@@ -903,6 +905,8 @@
       goblin_shaman: { id: 'curse', ch: 0.2, sec: 4 },
       storm_harbinger: { id: 'dazed', ch: 0.25, sec: 2 }, dread_knight: { id: 'armorBroken', ch: 0.25, sec: 3 },
       void_oracle: { id: 'curse', ch: 0.3, sec: 4 }, bone_colossus: { id: 'slowed', ch: 0.25, sec: 2 },
+      ghoul: { id: 'sick', ch: 0.25, sec: 3 }, thorn_vine: { id: 'sick', ch: 0.2, sec: 3 }, wraith_knight: { id: 'weak', ch: 0.2, sec: 2 }, // b24 wave 2 (shore ones stay absent)
+      fire_elemental: { id: 'bleed', ch: 0.25, sec: 3 }, giant_spider_queen: { id: 'bleed', ch: 0.3, sec: 3 },
     };
     let stRolls = 0; const stLog = { applied: 0, last: null };
     const zoneAtPx = (x, y) => { const tx = Math.floor(x / TILE); const ty = Math.floor(y / TILE); return tx < 0 || ty < 0 || tx >= world.w || ty >= world.h ? 0 : world.zone[ty * world.w + tx]; };
@@ -1403,7 +1407,7 @@
       liveCount: () => { let n = 0; live.forEach((e, id) => { if (e.active && e.zid === id) n++; }); return n; },
       liveEnemies: () => { const o = []; live.forEach((e, id) => { if (e.active && e.zid === id) o.push({ id, x: e.x, y: e.y, type: e.type, zone: e.zone, tier: e.tier, art: e.art, hp: e.maxHp, spd: e.spdMul, dmg: e.dmgMul, diff: e.diff || null }); }); return o; },
       enemyById: (id) => live.get(id) || null, setDropAll: (on) => { dropAll = !!on; }, lastDrops: () => lastDrops.slice(), kills: () => kills,
-      bossesClassic, bossArtIds: () => world.bossSites.map((b) => b.boss),
+      bossesClassic, rosterClassic, bossArtIds: () => world.bossSites.map((b) => b.boss),
       bossSites: () => world.bossSites.map((b, i) => ({ i, x: b.x, y: b.y, zone: b.zone, boss: b.boss, name: BOSS_NAME[i], live: !!(bossLive[i] && bossLive[i].active), ready: !!zones && zones.bossReady(b, arena.clock) })),
       bossEntity: (i) => bossLive[i] || null, bossTick,
       // slice 7

@@ -38,6 +38,7 @@
     },
     TIER_MUL: { hp: [1.0, 1.1, 1.25, 1.5], speed: [1.0, 1.0, 1.03, 1.06], dmg: [1.0, 1.05, 1.15, 1.3], xp: [1, 1.1, 1.25, 1.5], shard: [1, 1, 1.1, 1.25] },
     HP_JITTER: 0.1,           // +-5% per-enemy hp variation (seeded)
+    ELITE: { hp: 3, xp: 3, shard: 2 }, // rare elite group (g.elite, e.g. giant_spider_queen): one creature, hp/xp/shard on top of the zone mults
     BOSS: { hp: 12, dmg: 1.4, xp: 12, shard: 13, cooldown: [0, 600, 900, 1200] }, // extra mults on top of zone mults; respawn s by zone
     // ---- drops ----
     BAG_TIERS: ['brown', 'pink', 'purple', 'cyan', 'white', 'gold'],
@@ -144,6 +145,7 @@
       const g = groups[gi], r = rc[gi], rng = MMRng.create(seed + ':grp:' + gi + ':' + r);
       const n = Math.min(T.MAX_GROUP, Math.max(1, g.count | 0));
       const mul = statMultipliers(g.zone, g.tier, false);
+      if (g.elite) { mul.hpMul *= T.ELITE.hp; mul.xpMul *= T.ELITE.xp; mul.shardMul *= T.ELITE.shard; }
       for (let k = 0; k < n; k++) {
         const a = rng.next() * Math.PI * 2, rad = Math.sqrt(rng.next()) * T.SPREAD_PX, j = 1 + (rng.next() - 0.5) * T.HP_JITTER;
         out.spawn.push({

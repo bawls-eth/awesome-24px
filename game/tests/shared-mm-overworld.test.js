@@ -5,7 +5,9 @@ const O = require('../shared/mm-overworld.js');
 let failed = 0;
 function check(name, cond, extra = '') { console.log((cond ? 'PASS ' : 'FAIL ') + name + (cond ? '' : ' ' + extra)); if (!cond) failed++; }
 
-const ART_IDS = ['puffcap', 'beetle', 'archer', 'moth', 'sprout', 'mothling', 'sprout_mini', 'goblin_scout', 'skeleton', 'cave_bat', 'forest_wolf', 'stone_golem', 'dark_spider', 'crystal_beetle', 'ember_imp', 'ice_wraith', 'goblin_shaman', 'skeleton_archer', 'bone_knight', 'shadow_cultist', 'slime_green', 'slime_red', 'slime_blue', 'swamp_leech', 'toxic_serpent', 'sand_scorpion'];
+const ART_IDS = ['puffcap', 'beetle', 'archer', 'moth', 'sprout', 'mothling', 'sprout_mini', 'goblin_scout', 'skeleton', 'cave_bat', 'forest_wolf', 'stone_golem', 'dark_spider', 'crystal_beetle', 'ember_imp', 'ice_wraith', 'goblin_shaman', 'skeleton_archer', 'bone_knight', 'shadow_cultist', 'slime_green', 'slime_red', 'slime_blue', 'swamp_leech', 'toxic_serpent', 'sand_scorpion',
+  // b24 enemies-wave-2 (world roster; ?roster=classic keeps the older ids only, see world-roster.test.js)
+  'ghoul', 'harpy', 'minotaur', 'ogre', 'wraith_knight', 'fire_elemental', 'water_elemental', 'wind_sprite', 'thorn_vine', 'giant_spider_queen', 'golem_lava', 'crab_giant'];
 const BOSS_ART = ['bone_colossus', 'inferno_wyrm', 'void_oracle', 'crystal_titan', 'forest_warden', 'dread_knight', 'storm_harbinger', 'mire_queen',
   // b23 bosses-extra: the default boss pools now also draw these (honest update; generate(seed, { bosses: 'classic' }) still yields only the 8 above)
   'lich_king', 'hydra', 'treant_elder', 'sand_titan', 'frost_dragon', 'shadow_hydra', 'clockwork_golem', 'void_maw'];

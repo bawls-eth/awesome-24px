@@ -40,12 +40,25 @@
     3: ['dread_knight', 'inferno_wyrm', 'void_oracle', 'lich_king', 'shadow_hydra', 'void_maw'],
   };
   const PORTAL_ZONES = { warren: 1, bramble: 1, meadow: 2, crypt: 2 };
-  // existing enemy TYPES (realm.js RM_ENEMIES: spiral/aimed/ring) -> art creature ids by zone tier 0..3
-  const CREATURE_TIERS = {
+  // existing enemy TYPES (realm.js RM_ENEMIES: spiral = whirler / aimed = sniper / ring = burster) -> art creature ids by zone tier 0..3.
+  // CREATURE_TIERS_CLASSIC is the original table (page ?roster=classic, generate opts.roster === 'classic'). CREATURE_TIERS adds the b24 wave-2 creatures,
+  // each under the behaviour that fits it: shore crab_giant / wind_sprite / water_elemental (weak); midlands ghoul, ogre, harpy, thorn_vine; highlands
+  // minotaur, golem_lava, wraith_knight, fire_elemental. The selection still consumes exactly one 'groups' RNG draw per cell, so spawn POSITIONS never change.
+  const CREATURE_TIERS_CLASSIC = {
     spiral: [['mothling', 'sprout_mini'], ['moth', 'cave_bat', 'sprout'], ['ice_wraith', 'goblin_shaman', 'skeleton'], ['shadow_cultist', 'ember_imp']],
     aimed: [['goblin_scout', 'sprout'], ['archer', 'forest_wolf'], ['skeleton_archer', 'dark_spider', 'sand_scorpion'], ['dark_spider', 'skeleton_archer', 'bone_knight']],
     ring: [['puffcap', 'slime_green'], ['beetle', 'slime_blue', 'swamp_leech'], ['stone_golem', 'crystal_beetle', 'slime_red'], ['bone_knight', 'toxic_serpent', 'stone_golem']],
   };
+  const CREATURE_TIERS = {
+    spiral: [['mothling', 'sprout_mini', 'wind_sprite'], ['moth', 'cave_bat', 'sprout', 'harpy'], ['ice_wraith', 'goblin_shaman', 'skeleton', 'wraith_knight'], ['shadow_cultist', 'ember_imp']],
+    aimed: [['goblin_scout', 'sprout', 'water_elemental'], ['archer', 'forest_wolf', 'thorn_vine'], ['skeleton_archer', 'dark_spider', 'sand_scorpion', 'fire_elemental'], ['dark_spider', 'skeleton_archer', 'bone_knight', 'giant_spider_queen']],
+    ring: [['puffcap', 'slime_green', 'crab_giant'], ['beetle', 'slime_blue', 'swamp_leech', 'ghoul', 'ogre'], ['stone_golem', 'crystal_beetle', 'slime_red', 'minotaur', 'golem_lava'], ['bone_knight', 'toxic_serpent', 'stone_golem']],
+  };
+  // The one rare elite: a godland sniper group (zone 3, type 'aimed') becomes a lone giant_spider_queen with this chance, drawn from a seeded hash of its cell
+  // (NOT from the stream), so nothing else shifts. It is listed last in aimed[3] so the page preloads its art and validate() accepts it, but the plain pick skips it (RARE_ONLY). Elite = a single creature with extra hp (MMZones, group.elite).
+  const RARE_ELITE = { zone: 3, type: 'aimed', creature: 'giant_spider_queen', chance: 0.2 };
+  const RARE_ONLY = ['giant_spider_queen'];
+  const WAVE2 = ['ghoul', 'harpy', 'minotaur', 'ogre', 'wraith_knight', 'fire_elemental', 'water_elemental', 'wind_sprite', 'thorn_vine', 'giant_spider_queen', 'golem_lava', 'crab_giant'];
   const BOSS_IDS = BOSSES.map(function (b) { return b.boss; }).concat([].concat(BOSS_POOLS[1], BOSS_POOLS[2], BOSS_POOLS[3]).filter(function (id) { return !BOSSES.some(function (b) { return b.boss === id; }); }));
   // site boss ids for a seed: per zone, the zone pool ordered by a seeded hash, assigned to that zone's sites in BOSSES order (distinct per zone).
   function bossIdsFor(seedStr, classic) {
@@ -429,18 +442,21 @@
     // ---- 10. spawn groups from the zone/tier tables ----
     const rg = rngFor('groups');
     const spawnGroups = [];
+    const classicRoster = opts.roster === 'classic';
     const TYPES = ['spiral', 'aimed', 'ring'];
     for (let z = 0; z < 4; z++) {
       const cell = GROUP_CELL[z];
       for (let gy = 0; gy < h; gy += cell) for (let gx = 0; gx < w; gx += cell) {
         const x = gx + rg.int(0, cell - 1), y = gy + rg.int(0, cell - 1);
         const roll = rg.next(), type = rg.pick(TYPES), cnt = rg.int(GROUP_COUNT[z][0], GROUP_COUNT[z][1]);
-        const creatures = CREATURE_TIERS[type][z], creature = creatures[rg.int(0, creatures.length - 1)];
+        const creatures = (classicRoster ? CREATURE_TIERS_CLASSIC : CREATURE_TIERS)[type][z].filter(function (id) { return RARE_ONLY.indexOf(id) < 0; }), creature = creatures[rg.int(0, creatures.length - 1)];
         if (!inb(x, y)) continue;
         const i = y * w + x;
         if (zone[i] !== z || roll > GROUP_PROB[z] || solid[i] || isWater(terrain[i]) || (flags[i] & FLAG_OPEN)) continue;
         if (dist(x, y, spawn.x, spawn.y) < 20) continue;
-        spawnGroups.push({ x: x, y: y, zone: z, tier: z, creature: creature, type: type, count: cnt, difficulty: difficulty[i] / 255 });
+        const grp = { x: x, y: y, zone: z, tier: z, creature: creature, type: type, count: cnt, difficulty: difficulty[i] / 255 };
+        if (!classicRoster && z === RARE_ELITE.zone && type === RARE_ELITE.type && (MMRng.hash(seedStr + ':elite:' + x + ',' + y) >>> 0) / 4294967296 < RARE_ELITE.chance) { grp.creature = RARE_ELITE.creature; grp.count = 1; grp.elite = true; }
+        spawnGroups.push(grp);
       }
     }
 
@@ -567,7 +583,7 @@
     if (land === 0 || got / land < 0.95) problems.push('only ' + got + '/' + land + ' land tiles in zones 0-2 reachable');
     world.spawnGroups.forEach(function (g) {
       const list = CREATURE_TIERS[g.type] && CREATURE_TIERS[g.type][g.tier];
-      if (!list || list.indexOf(g.creature) < 0) problems.push('bad creature ' + g.creature + ' for ' + g.type + ' tier ' + g.tier);
+      if ((!list || list.indexOf(g.creature) < 0) && !(g.elite && g.creature === RARE_ELITE.creature)) problems.push('bad creature ' + g.creature + ' for ' + g.type + ' tier ' + g.tier);
     });
     world.bossSites.forEach(function (b) { if (BOSS_IDS.indexOf(b.boss) < 0) problems.push('unknown boss ' + b.boss); });
     if (vopts.determinism !== false) {
@@ -579,7 +595,7 @@
 
   return {
     VERSION: VERSION, TERRAIN: TERRAIN, TERRAIN_NAMES: TERRAIN_NAMES, ZONES: ZONES, ZONE_BANDS: ZONE_BANDS, BIOMES: BIOMES,
-    BOSSES: BOSSES, BOSS_POOLS: BOSS_POOLS, bossIdsFor: bossIdsFor, CREATURE_TIERS: CREATURE_TIERS, generate: generate, tileAt: tileAt, isSolid: isSolid, zoneAt: zoneAt,
+    BOSSES: BOSSES, BOSS_POOLS: BOSS_POOLS, bossIdsFor: bossIdsFor, CREATURE_TIERS: CREATURE_TIERS, CREATURE_TIERS_CLASSIC: CREATURE_TIERS_CLASSIC, RARE_ELITE: RARE_ELITE, WAVE2: WAVE2, generate: generate, tileAt: tileAt, isSolid: isSolid, zoneAt: zoneAt,
     difficultyAt: difficultyAt, nearestSpawnGroups: nearestSpawnGroups, chunk: chunk, verify: verify, hash: fnv,
   };
 }));

@@ -734,5 +734,9 @@
   "world-nexus.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "world-roster.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
