@@ -655,6 +655,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "gear-boss-splash.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "gear-world-drops.test.js": {
     "class": "browser",
     "tier": "full"

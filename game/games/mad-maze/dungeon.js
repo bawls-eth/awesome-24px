@@ -258,6 +258,22 @@
     const unlocked = {}; const granted = [];
     let keyFound = 0; let current = null; let finished = false; let sig = ''; let mapSig = '';
     let lockMsgAt = -9; let hudText = ''; let queue = []; let nextSweep = 0; let nextWall = 0; let sweepN = 0; let sigNext = 0; let sigWind = null; let sigN = 0;
+    // G12 boss ground-slam: from phase 2 the boss winds up a ring zone for MMSplash.SLAM.WIND (0.9 s, drawn in drawOver), then hits whoever is still inside.
+    // ?bosses=classic, ?telegraph=0 (no warning, so no slam) and ?bossslam=0 turn it off. Damage: MMSplash.slamDmg of the boss dmgMul (MMDifficulty), capped.
+    const SLAM_ON = typeof MMSplash !== 'undefined' && !!MMSplash.slamStep && opts.bosses !== 'classic' && !(() => { try { return /[?&](telegraph|bossslam)=0(&|$)/.test(location.search); } catch (er) { return false; } })();
+    let slam = null; let slamHits = 0; let slamWinds = 0;
+    const slamEvery = (e) => (e.phase >= 3 ? 5.5 : 7.5);
+    function slamTick(e, dt) {
+      if (!SLAM_ON || !(e.phase >= 2)) { slam = null; return; }
+      if (!slam) slam = MMSplash.slamNew(slamEvery(e));
+      const r = MMSplash.slamStep(slam, dt, true, slamEvery(e));
+      if (r === 1) { slamWinds++; arena._snd('warn'); }
+      if (r !== 3) return;
+      const p = arena.player; const d = Math.hypot(p.x - e.x, p.y - e.y) - 12;
+      arena._burst(e.x, e.y, '#ff4a4a', 14, 170); arena._snd('hit');
+      const dmg = MMSplash.slamDmg(e.dmgMul || 1, Math.max(0, d), MMSplash.slamR(2));
+      if (dmg > 0) { slamHits++; arena._hitPlayer(arena._guarded(dmg)); }
+    }
     const api = { pickups: () => drops.map((q) => ({ type: q.type, x: q.x, y: q.y, value: q.value, tier: q.tier })), pickStats: () => ({ live: drops.length, total: pickTotal, got: Object.assign({}, pickGot), magnet: MAGNET_R, on: pickOn }), lair, seed, biome, bossBolt, bossSig, sigCount: () => sigN, layoutVersion: layoutV, narrow: narrowOn, graph: dungeon, state, arena, granted, grantItem, get gearOn() { return gearOn; }, get gear() { return gearGot; }, gp: () => gpNow() };
     // Lantern stash payout (MMStash): every kept find of this run is paid into the stash when the summary shows (win or fall)
     const ST = window.MMStash && window.MMProfile ? window.MMStash : null; const shards0 = arena.save.shards;
@@ -342,7 +358,7 @@
       const e = arena.spawnEnemy('boss', arena.W / 2, 132); if (!e) return;
       if (DIFF && current !== null) { e.dmgMul = L[current].sc.dmg; e.diff = L[current].sc; }
       e.dg = 'boss'; e.maxHp = state.boss.maxHp; e.hp = state.boss.hp; e.phase = state.boss.phase; e.invuln = 1.2; e.cd = 1.2; e.cd2 = 2.4; e.angle = 0;
-      arena.bossT0 = arena.clock; e.bossArt = B.boss_art; arena._syncBoss(); nextSweep = arena.clock + 4; nextWall = arena.clock + 6; sigNext = arena.clock + 4.5; sigWind = null;
+      arena.bossT0 = arena.clock; e.bossArt = B.boss_art; arena._syncBoss(); nextSweep = arena.clock + 4; nextWall = arena.clock + 6; sigNext = arena.clock + 4.5; sigWind = null; slam = null;
     }
 
     function clearTransient() {
@@ -561,9 +577,11 @@
         for (let i = 0; i < 10; i++) q(0.9, e.x, e.y, (i / 10) * TAU2, 120, 2);
       }
     }
-    function bossExtras() {
-      const e = bossEntity(); if (!e || e.invuln > 0 || arena.state !== 'play') return;
+    function bossExtras(dt) {
+      const e = bossEntity(); if (!e || arena.state !== 'play') return;
+      if (e.invuln > 0) { slam = null; return; }
       const t = arena.clock;
+      slamTick(e, dt);
       if (bossSig) { // BI1: one signature attack per biome boss, announced by a 0.6 s wind-up (MMPatterns2.telegraph) before the shots leave
         if (!sigWind && t >= sigNext) {
           sigWind = Object.assign(MMPatterns2.telegraph(bossSig, { x: e.x, y: e.y }), { duration: SIG_WIND, life: SIG_WIND, at: t + SIG_WIND });
@@ -708,7 +726,7 @@
         }
         // scheduled boss bullets
         if (queue.length) { const now = arena.clock; queue = queue.filter((q) => { if (q.at > now) return true; arena.fireEnemyBullet(q.x, q.y, q.a, q.s, q.k); return false; }); }
-        bossExtras();
+        bossExtras(dt);
         // doors: walking into an open door, or bumping a locked one
         const sealed = state.doorsClosed();
         if (!sealed) for (const o of curDoors()) {
@@ -774,6 +792,7 @@
         if (useT) g.imageSmoothingEnabled = sm;
       },
       drawOver(g) {
+        if (slam && slam.w > 0) { const be = bossEntity(); if (be) { const look = typeof MMTelegraph !== 'undefined' ? MMTelegraph.forVolley('ring', 3, true, { reduced: !!arena._reduced, palette: arena.acc ? arena.acc.palette : 'normal' }) : null; MMSplash.drawSlam(g, be.x, be.y, MMSplash.slamR(2), 1 - slam.w / MMSplash.SLAM.WIND, !!arena._reduced, look ? look.color : null); } }
         if (B.tint) { g.fillStyle = B.tint; g.fillRect(0, 0, arena.W, arena.H); }
         if (B.particles && current !== null) { // seeded drift: positions come from a table made with MMRng, only the clock moves them
           const P = B.particles; const tt = arena._reduced ? 0 : performance.now() / 1000; g.fillStyle = P.color; const ga = g.globalAlpha; g.globalAlpha = 0.5;
@@ -826,6 +845,7 @@
       crackTile: () => { const o = curDoors().find((q) => q.status === 'cracked'); return o ? o.tile : null; },
       boltWall: (x, y) => ctrl.onBoltWall(x, y),
       boss: () => bossEntity(),
+      slam: { on: SLAM_ON, wind: () => (slam && slam.w > 0 ? { left: slam.w, total: MMSplash.SLAM.WIND } : null), hits: () => slamHits, winds: () => slamWinds, r: () => MMSplash.slamR(2) },
       finish,
       scaleFor: (id) => L[id].sc, depthOf: (id) => depth[id], maxDepth, diffOn: !!DIFF, mobsInfo: () => arena.enemies.filter((e) => e.active && e.dg).map((e) => ({ dg: e.dg, hp: e.maxHp, dmg: e.dmgMul, spd: e.spdMul })),
       layout: (id) => ({ tpl: L[id].tpl.id, plan: L[id].plan.length, count: counts[id], tight: !!L[id].tpl.tight }),
