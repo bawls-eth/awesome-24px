@@ -99,6 +99,10 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "class-weapon-engine.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "class-stats-arena.test.js": {
     "class": "browser",
     "tier": "smoke"

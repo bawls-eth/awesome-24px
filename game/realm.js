@@ -74,6 +74,57 @@ const RM_ABILITIES = [
 function rmXpNeeded(level) { return 30 + 20 * (level - 1); }
 const RM_SIG_KINDS = ['dash-volley', 'drain-orb', 'oath-shield', 'rage-slam', 'thorn-bloom', 'bone-guard', 'volley']; // class signature kinds (setHeroSignature)
 const RM_WAVE_PAUSE = 2.4; // seconds between waves (shows the banner)
+// Weapon styles (setHeroWeapon, MMWeapons/MMProjectile/MMFxDraw). Saved `wpn_<style>` ids the build does not know yet are kept as inert items.
+const RM_WPN_ID = /^wpn_[a-z_]{3,24}$/;
+const RM_WPN_CAP = 40; // live styled bolts per hero
+const RM_WPN_ST = ['slowed', 'weak', 'dazed', 'armorBroken', 'curse', 'bleed', 'rooted', 'marked']; // bolt `st` = index + 1 (0 = none); applied by the status wiring
+const RM_WPN_COLOR = { dot: '#ffe27a', arrow: '#f3d9a4', shard: '#9fe3ff', orb: '#c59bff', star: '#ffd24a', blade: '#e6edf3', page: '#fff3c4', axe: '#ff9a6a', hammer: '#ffcf5a', fist: '#ffb38a', ray: '#7ee7ff' };
+function rmInertDef(id) {
+  if (RM_ITEM_BY_ID[id]) return RM_ITEM_BY_ID[id];
+  const name = id.slice(4).split('_').filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ').slice(0, 24) || 'Weapon';
+  const def = { id, slot: 'none', name, icon: '🗡️', stat: 'none', amount: 0, text: 'not usable yet', inert: true };
+  RM_ITEM_BY_ID[id] = def; // lookup only: never in RM_ITEMS, so never dropped or sold in the shop
+  return def;
+}
+// A resolved MMWeapons spec, re-clamped into a plain frozen object the engine trusts. Only the 26 alternate styles count (bases keep today's fire).
+function rmWpnSpec(s) {
+  const n = (v, lo, hi, d) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : d);
+  const o = (v) => (v && typeof v === 'object' ? v : {});
+  const id = typeof s.id === 'string' ? s.id : '';
+  const sidx = MMWeapons.altIds().indexOf(id);
+  if (sidx < 0) return null;
+  const wv = o(s.wave), ch = o(s.chain), ob = o(s.orbit), bu = o(s.burst), lo = o(s.lob), oh = o(s.onHit);
+  return Object.freeze({
+    id, sidx, rarity: Math.floor(n(s.rarity, 0, 3, 0)), shape: MMWeapons.SHAPES.indexOf(s.shape) >= 0 ? s.shape : 'dot',
+    count: Math.floor(n(s.count, 1, 5, 1)), spread: n(s.spread, 0, 1, 0), spd: n(s.spd, 0.3, 2, 1), life: n(s.life, 0.1, 2, 0.85), size: n(s.size, 0.5, 3, 1), rate: n(s.rate, 0.3, 1.5, 1),
+    dmg: n(s.dmg, 0.02, 3, 1), crit: n(s.crit, 0, 0.5, 0), pierce: Math.floor(n(s.pierce, 0, 3, 0)), bounce: Math.floor(n(s.bounce, 0, 3, 0)), homing: n(s.homing, 0, 8, 0),
+    wave: Object.freeze({ amp: n(wv.amp, 0, 40, 0), cycles: n(wv.cycles, 0.5, 8, 2.75), alt: wv.alt === true }), boomerang: s.boomerang === true,
+    chain: Object.freeze({ n: Math.floor(n(ch.n, 0, 3, 0)), range: n(ch.range, 0, 400, 120), falloff: n(ch.falloff, 0, 1, 0.7) }),
+    orbit: Object.freeze({ n: Math.floor(n(ob.n, 0, 3, 0)), radius: n(ob.radius, 8, 120, 34), period: n(ob.period, 0.2, 5, 0.9), dmg: n(ob.dmg, 0, 3, 0), rehit: n(ob.rehit, 0.1, 2, 0.3) }),
+    burst: Object.freeze({ n: Math.floor(n(bu.n, 1, 5, 1)), gap: n(bu.gap, 0, 0.5, 0) }),
+    lob: Object.freeze({ radius: n(lo.radius, 0, 100, 0), maxRange: n(lo.maxRange, 40, 600, 260) }),
+    knock: n(s.knock, 0, 40, 0), onHit: Object.freeze({ status: RM_WPN_ST.indexOf(oh.status) >= 0 ? oh.status : null, chance: n(oh.chance, 0, 1, 0), sec: n(oh.sec, 0, 10, 0) }),
+  });
+}
+// Wire code: the optional 5th `fp` element. low 10 bits = ((alt style index * 4 + rarity) * 2 + helix phase); the rest = lob distance in px.
+function rmWpnWire(w, ph, lobD) { return ((w.sidx * 4 + w.rarity) * 2 + (ph ? 1 : 0)) + 1024 * Math.max(0, Math.min(600, Math.round(lobD || 0))); }
+const RM_WPN_REMOTE = Object.create(null); // guest: wire key -> spec (at most 26 x 4)
+function rmWpnUnwire(code) {
+  if (typeof MMWeapons === 'undefined' || typeof MMProjectile === 'undefined' || typeof code !== 'number') return null;
+  const c = Math.floor(code);
+  if (!Number.isFinite(c) || c < 0 || c >= 1024 * 601) return null;
+  const sc = c % 1024, key = sc >> 1, id = MMWeapons.altIds()[key >> 2];
+  if (!id) return null;
+  if (RM_WPN_REMOTE[key] === undefined) {
+    const st = MMWeapons.get(id), fam = MMWeapons.CLASS_FAMILY;
+    const cls = st ? Object.keys(fam).find((k) => fam[k] === st.family) : null;
+    RM_WPN_REMOTE[key] = cls ? rmWpnSpec(MMWeapons.resolve(cls, id, key & 3)) : null;
+  }
+  const w = RM_WPN_REMOTE[key];
+  if (!w) return null;
+  const lobD = Math.floor(c / 1024);
+  return { w, ph: sc & 1, lobD: w.lob.radius > 0 ? Math.max(24, lobD || w.lob.maxRange) : 0 };
+}
 
 // Tiny seeded PRNG so a run can be reproduced in tests.
 function rmRng(seed) {
@@ -105,7 +156,7 @@ function rmCleanSave(s) {
   (Array.isArray(s.items) ? s.items.slice(0, 200) : []).forEach((it) => {
     if (out.items.length >= RM_BACKPACK || !it || typeof it !== 'object') return;
     const uid = rmCleanCount(it.n);
-    const def = typeof it.id === 'string' ? RM_ITEM_BY_ID[it.id] : null;
+    const def = typeof it.id === 'string' ? (RM_ITEM_BY_ID[it.id] || (RM_WPN_ID.test(it.id) ? rmInertDef(it.id) : null)) : null;
     const rar = Math.floor(Number(it.r));
     if (!uid || seen.has(uid) || !def || !(rar >= 0 && rar < RM_RARITIES.length)) return;
     seen.add(uid);
@@ -200,6 +251,7 @@ class RealmArena {
     this._avatar = null;
     this._itemArt = null; this._enemyArt = null; this._enemyMap = null; this._driftMap = null; this._enemyDbgOn = false; this._bossArt = null; this._bossLoad = null; this._bossDbg = null; this._bossGhost = null; this._bossReq = null; this._biomeEnemyMap = null; this._edGhosts = null; // optional enemy animations (setEnemyArt)
     this.heroProfile = null; // setHeroProfile
+    this.weapon = null; this._wq = []; this._wOrbT = [0, 0, 0]; this._wOrbA = 0; this._wCache = null; this._kIn = {}; this._kHero = { x: 0, y: 0 }; this._kWall = 0; this._kW = null; // setHeroWeapon (null = today's fire)
     this.sig = null; this._sigAb = { id: 'sig', key: 'f', icon: '🔥', name: 'Signature', short: '', level: 7, cd: 15 }; // setHeroSignature: the class signature takes the F slot (null = Overdrive, today's behaviour)
     this.sg = { powT: 0, powMul: 1, fx: { t: 0, max: 0.5, x: 0, y: 0, r: 0, color: '#fff' }, bloom: { t: 0, x: 0, y: 0, r: 0, tick: 0 }, bones: { t: 0, a: 0, n: 0, heal: 0, frac: 0 } }; // signature runtime state (preallocated)
     this._heroArt = null; this._heroClass = null; this._heroSt = null; this._heroDbg = null; this._heroHurtAt = -9; this._heroAtkAt = -9; // optional hero animations (setHeroArt)
@@ -315,7 +367,7 @@ class RealmArena {
 
   _makePools() {
     const make = (n, f) => Array.from({ length: n }, f);
-    this.pBullets = make(RM_POOL.pBullets, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0 }));
+    this.pBullets = make(RM_POOL.pBullets, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, ws: null, st: 0, age: 0, cx: 0, cy: 0, ph: 0, bc: 0, ch: 0, ux: 1, uy: 0, sp: 0, bk: false, tx: 0, ty: 0, lb: 0, ho: 0 })); // ws..ho: weapon-style bolt state (setHeroWeapon)
     this.eBullets = make(RM_POOL.eBullets, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, kind: 0 }));
     this.enemies = make(RM_POOL.enemies, () => ({ active: false, type: 'aimed', x: 0, y: 0, hp: 0, maxHp: 0, t: 0, cd: 0, cd2: 0, angle: 0, flash: 0, ax: 0, ay: 0, dir: 1, phase: 0, invuln: 0 }));
     this.drifters = make(RM_POOL.drifters, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, t: 0, turn: 0, kind: 'wisp' }));
@@ -686,6 +738,204 @@ class RealmArena {
 
   _sigOn() { return !!this.sig && !(this.team && this.team.isPvp); }
   _ab(i) { return i === 3 && this._sigOn() ? this._sigAb : RM_ABILITIES[i]; }
+  // Additive hook (S8): the hero's weapon style, a spec from MMWeapons.resolve(classId, styleId, rarity).
+  // null, a base style (spec.base), ?weapons=0, or missing MMWeapons/MMProjectile = today's fire. Never used in team duels.
+  setHeroWeapon(spec) {
+    let off = false;
+    try { off = typeof location !== 'undefined' && /[?&]weapons=0(&|$)/.test(location.search || ''); } catch (e) { off = false; }
+    const w = !off && spec && typeof spec === 'object' && !spec.base && !spec.plain && typeof MMProjectile !== 'undefined' && typeof MMWeapons !== 'undefined' ? rmWpnSpec(spec) : null;
+    this.weapon = w; this._wq.length = 0; this._wOrbT.fill(0);
+    if (this.pBullets) this.pBullets.forEach((b) => { if (b.active && b.ws && !b.ho) b.active = false; }); // our old-style bolts in flight end
+    return !!w;
+  }
+  _wpnOn() { return !!this.weapon && !(this.team && this.team.isPvp); }
+  _wpnRate() { return this._wpnOn() ? this.weapon.rate : 1; }
+
+  // One trigger pull with a weapon style: the first shot now, burst follow-ups queued (fired from where the hero is then).
+  _fireWeapon(aim) {
+    const w = this.weapon;
+    const base = this.stats.dmg * (this.sg.powT > 0 ? this.sg.powMul : 1) * w.dmg;
+    this._wShot(aim, base);
+    for (let i = 1; i < w.burst.n && this._wq.length < 12; i++) this._wq.push({ t: i * w.burst.gap, aim, base });
+  }
+  _wShot(aim, base) {
+    const w = this.weapon, p = this.player, n = w.count;
+    let live = 0;
+    for (let i = 0; i < this.pBullets.length; i++) { const b = this.pBullets[i]; if (b.active && b.ws && !b.own && !b.ho) live++; }
+    const lobD = w.lob.radius > 0 ? this._lobDist(aim, w) : 0;
+    for (let k = 0; k < n && live < RM_WPN_CAP; k++) {
+      const ang = aim + (n > 1 ? (k / (n - 1) - 0.5) * w.spread : 0);
+      const d = w.crit > 0 && this.rng() < w.crit ? base * 2 : base;
+      const ph = w.wave.alt && (k & 1) ? 1 : 0;
+      const b = this.firePlayerBulletFrom(p.x, p.y, ang, d, 0, rmWpnWire(w, ph, lobD));
+      if (!b) continue;
+      this._styleBolt(b, w, ang, ph, lobD); live++;
+    }
+  }
+  // How far a lobbed shot flies: to the nearest enemy within 0.35 rad of the aim, else its max range.
+  _lobDist(aim, w) {
+    const p = this.player; let best = w.lob.maxRange;
+    for (let i = 0; i < this.enemies.length; i++) {
+      const e = this.enemies[i]; if (!e.active) continue;
+      const dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy);
+      let da = Math.atan2(dy, dx) - aim; while (da > Math.PI) da -= Math.PI * 2; while (da < -Math.PI) da += Math.PI * 2;
+      if (d < best && Math.abs(da) < 0.35) best = d;
+    }
+    return Math.max(24, Math.min(600, Math.round(best)));
+  }
+  // Turn a fresh pooled bolt (from firePlayerBulletFrom) into a weapon-style bolt. ph: 1 = the alternate helix phase.
+  _styleBolt(b, w, ang, ph, lobD) {
+    const k = MMProjectile.make(b.x, b.y, ang, w, ph ? Math.PI : 0);
+    b.ws = w; b.age = 0; b.ph = k.ph; b.bc = 0; b.ch = w.chain.n; b.bk = false; b.ho = 0;
+    b.cx = k.cx; b.cy = k.cy; b.ux = k.ux; b.uy = k.uy; b.vx = k.vx; b.vy = k.vy; b.sp = k.sp; b.tx = 0; b.ty = 0;
+    b.life = w.life; b.pr = w.pierce; b.hn = 0; b.h0 = b.h1 = b.h2 = -1;
+    b.st = w.onHit.status ? RM_WPN_ST.indexOf(w.onHit.status) + 1 : 0;
+    b.lb = lobD > 0 ? 1 : 0;
+    if (b.lb) { b.tx = b.x + Math.cos(ang) * lobD; b.ty = b.y + Math.sin(ang) * lobD; }
+  }
+  // Guest: style a bolt from the host's `fp` event (its optional 5th element). Unknown or missing code = a plain bolt, as before.
+  _wpnRemote(b, code, ang) {
+    const r = rmWpnUnwire(code);
+    if (!r) return;
+    this._styleBolt(b, r.w, ang, r.ph, r.lobD);
+    b.ho = 1; // boomerangs fly back to the host, not to us
+  }
+  // The point a boomerang returns to.
+  _wpnHero(b) {
+    const h = this._kHero, tm = this.team;
+    let src = this.player;
+    if (b.ho && tm && tm.hostPl) src = tm.hostPl;
+    else if (b.own && tm && tm.guests && tm.guests[b.own]) src = tm.guests[b.own];
+    h.x = src.x; h.y = src.y;
+    return h;
+  }
+  _wpnWorld() {
+    if (this._kW) return this._kW;
+    const W = { bw: 0, bh: 0, hero: null };
+    W.isWall = (x, y) => {
+      if (x < 0 || y < 0 || x > W.bw || y > W.bh) { this._kWall = 1; return true; }
+      if (this.walls) { if (this.isWallAt(x, y)) { this._kWall = 2; return true; } return false; }
+      if (this._shotSolidAt && this._shotSolidAt(x, y)) { this._kWall = 3; return true; }
+      return false;
+    };
+    W.nearest = (x, y, range, cone, dir) => {
+      let best = null, bd = range;
+      for (let i = 0; i < this.enemies.length; i++) {
+        const e = this.enemies[i]; if (!e.active) continue;
+        const dx = e.x - x, dy = e.y - y, d = Math.hypot(dx, dy);
+        if (d >= bd) continue;
+        let da = Math.atan2(dy, dx) - dir; while (da > Math.PI) da -= Math.PI * 2; while (da < -Math.PI) da += Math.PI * 2;
+        if (Math.abs(da) <= cone) { bd = d; best = e; }
+      }
+      return best;
+    };
+    this._kW = W;
+    return W;
+  }
+  // Advance one weapon-style bolt (host, solo and guest). Returns true when it is still flying and may hit something this frame.
+  _stepWpn(b, dt, bw, bh) {
+    const w = b.ws;
+    if (b.lb) { // lob: flies without colliding, a 0.25 s ring on the ground, then an area hit
+      const l = MMProjectile.lobStep({ sx: b.cx, sy: b.cy, ax: b.tx, ay: b.ty, age: b.age }, w, dt);
+      b.age = l.age; b.x = l.x; b.y = l.y; b.lb = l.phase === 'telegraph' ? 2 : 1;
+      if (l.phase === 'land') { b.active = false; this._lobLand(b, l.lx, l.ly); }
+      return false;
+    }
+    const W = this._wpnWorld(); W.bw = bw; W.bh = bh; W.hero = w.boomerang ? this._wpnHero(b) : null;
+    const k = this._kIn;
+    k.x = b.x; k.y = b.y; k.cx = b.cx; k.cy = b.cy; k.ux = b.ux; k.uy = b.uy; k.vx = b.vx; k.vy = b.vy; k.sp = b.sp;
+    k.age = b.age; k.ph = b.ph; k.bounces = b.bc; k.back = b.bk; k.tx = b.tx; k.ty = b.ty;
+    this._kWall = 0;
+    const r = MMProjectile.step(k, w, dt, W), o = r.bolt;
+    const turned = !b.bk && o.back;
+    b.x = o.x; b.y = o.y; b.cx = o.cx; b.cy = o.cy; b.ux = o.ux; b.uy = o.uy; b.vx = o.vx; b.vy = o.vy; b.sp = o.sp;
+    b.age = o.age; b.bc = o.bounces; b.bk = o.back; b.tx = o.tx; b.ty = o.ty; b.life = w.life - o.age;
+    if (r.state === 'dead' || r.state === 'returned') {
+      b.active = false;
+      if (r.state === 'dead' && !(this.role === 'guest' && this.team)) {
+        if (this._kWall === 2 && this.dungeon) this.dungeon.onBoltWall(o.cx + o.vx * dt, o.cy + o.vy * dt);
+        else if (this._kWall === 3) this._burst(b.x, b.y, '#c9d1d9', 2, 60);
+      }
+      return false;
+    }
+    if (turned) { b.hn = 0; b.h0 = b.h1 = b.h2 = -1; } // a boomerang may hit each enemy once more on the way back
+    return true;
+  }
+  // Extra effects of a weapon-style hit (host / solo only): knockback (never bosses) and one chain jump.
+  _wpnHit(b, e, idx) {
+    const w = b.ws;
+    if (w.knock > 0 && e.type !== 'boss' && e.dg !== 'boss') {
+      const nx = e.x + b.ux * w.knock, ny = e.y + b.uy * w.knock;
+      if (!this._blocked(nx, ny, 8)) { e.x = nx; e.y = ny; }
+    }
+    if (b.ch > 0) {
+      const list = [];
+      for (let i = 0; i < this.enemies.length; i++) { const q = this.enemies[i]; if (q.active) list.push({ id: i, x: q.x, y: q.y }); }
+      const hit = [idx]; if (b.hn > 0) hit.push(b.h0); if (b.hn > 1) hit.push(b.h1); if (b.hn > 2) hit.push(b.h2);
+      const nx = MMProjectile.chainNext({ x: b.x, y: b.y }, list, hit, { chain: { n: b.ch, range: w.chain.range, falloff: w.chain.falloff } }, b.dmg || this.stats.dmg);
+      b.ch = 0; // one jump per bolt
+      if (nx) {
+        const a = Math.atan2(nx.target.y - b.y, nx.target.x - b.x);
+        const c = this.firePlayerBulletFrom(b.x - Math.cos(a) * 14, b.y - Math.sin(a) * 14, a, nx.dmg, b.own, rmWpnWire(w, 0, 0));
+        if (c) { this._styleBolt(c, w, a, 0, 0); c.ch = nx.chainLeft; c.pr = 0; c.hn = 1; c.h0 = idx; }
+      }
+    }
+  }
+  // A lobbed shot lands: area damage on the host / solo, the burst everywhere.
+  _lobLand(b, x, y) {
+    const w = b.ws;
+    this._burst(x, y, RM_WPN_COLOR[w.shape] || '#fff', 10, 160);
+    if (this.role === 'guest' && this.team) return;
+    const r = w.lob.radius;
+    for (let i = 0; i < this.enemies.length; i++) {
+      const e = this.enemies[i]; if (!e.active) continue;
+      const rr = r + RM_ENEMIES[e.type].r;
+      if ((e.x - x) * (e.x - x) + (e.y - y) * (e.y - y) <= rr * rr) this._hitEnemy(e, b.dmg || this.stats.dmg);
+    }
+  }
+  // Burst follow-ups and orbiters (at most 3; they only hit on the host / solo, a guest just draws its own).
+  _updateWeapon(dt) {
+    const q = this._wq;
+    if (!this._wpnOn()) { q.length = 0; return; }
+    for (let i = q.length - 1; i >= 0; i--) {
+      q[i].t -= dt;
+      if (q[i].t <= 0) { const s = q[i]; q.splice(i, 1); if (this.state !== 'dead' && !this.down) this._wShot(s.aim, s.base); }
+    }
+    const w = this.weapon, n = w.orbit.n;
+    if (n <= 0) return;
+    this._wOrbA += dt;
+    if ((this.role === 'guest' && this.team) || this.state === 'dead' || this.down) return;
+    for (let i = 0; i < n; i++) {
+      this._wOrbT[i] -= dt;
+      if (this._wOrbT[i] > 0) continue;
+      const o = MMProjectile.orbitPos(i, n, this._wOrbA, w, this.player);
+      const hj = this._boltHitIndex(o.x, o.y);
+      if (hj >= 0) { this._wOrbT[i] = w.orbit.rehit; this._hitEnemy(this.enemies[hj], this.stats.dmg * (this.sg.powT > 0 ? this.sg.powMul : 1) * w.orbit.dmg); }
+    }
+  }
+  // Code-drawn bolt shapes (MMFxDraw): drawn once per (shape, size, one of 16 headings) into a small cached canvas, then blitted.
+  _wpnSprite(shape, size, rot) {
+    if (typeof MMFxDraw === 'undefined') return null;
+    if (!this._wCache) this._wCache = MMFxDraw.makeCache(MMFxDraw.defaultCreate, 256);
+    const r = 5 * size, S = Math.ceil(r * 3.2) + 4;
+    return this._wCache.get(shape + '|' + size + '|' + rot, S, S, (c, W, H) => MMFxDraw.drawShape(c, shape, W / 2, H / 2, r, rot * Math.PI / 8, RM_WPN_COLOR[shape] || '#fff'));
+  }
+  _drawWpnBolt(g, b) {
+    const w = b.ws;
+    if (b.lb === 2) { g.strokeStyle = 'rgba(255,90,90,0.8)'; g.lineWidth = 2; g.beginPath(); g.arc(b.tx, b.ty, w.lob.radius, 0, Math.PI * 2); g.stroke(); }
+    const rot = (Math.round(Math.atan2(b.vy, b.vx) / (Math.PI / 8)) + 16) & 15;
+    const cv = this._wpnSprite(w.shape, w.size, w.shape === 'dot' || w.shape === 'orb' ? 0 : rot);
+    if (cv) g.drawImage(cv, b.x - cv.width / 2, b.y - cv.height / 2); else g.drawImage(this.sprites.pBullet, b.x - 8, b.y - 8);
+  }
+  _drawWpnOrbs(g) {
+    if (!this._wpnOn() || this.weapon.orbit.n <= 0 || this.state === 'dead') return;
+    const w = this.weapon, n = w.orbit.n, cv = this._wpnSprite(w.shape, w.size, 0);
+    for (let i = 0; i < n; i++) {
+      const o = MMProjectile.orbitPos(i, n, this._wOrbA, w, this.player);
+      if (cv) g.drawImage(cv, o.x - cv.width / 2, o.y - cv.height / 2); else g.drawImage(this.sprites.pBullet, o.x - 8, o.y - 8);
+    }
+  }
+
   _sigReset() { const g = this.sg; g.powT = 0; g.powMul = 1; g.fx.t = 0; g.bloom.t = 0; g.bones.t = 0; g.bones.n = 0; }
 
   // Additive hook: draw arena enemies / drifters with creature animations (MMArt.loadEnemies). Pass (null) to go back to the procedural sprites.
@@ -1106,7 +1356,7 @@ class RealmArena {
   // Everything a fresh run needs (shared by start() and restart()); never touches the loop or the save.
   _beginRun() {
     [this.pBullets, this.eBullets, this.enemies, this._edGhosts || [], this.particles, this.texts, this.bags, this.drifters, this.hazards].forEach((pool) => pool.forEach((o) => { o.active = false; }));
-    this._wireRefresh(); this._padPrev.fill(false);
+    this._wireRefresh(); this._padPrev.fill(false); this._wq.length = 0;
     this.keys = {}; this.mouse.down = false; this.moveVec.x = 0; this.moveVec.y = 0; this.aimVec.on = false; this.aimVec.x = 0; this.aimVec.y = 0; // no stuck input from the last run
     const p = this.player;
     this._calcStats();
@@ -1289,6 +1539,7 @@ class RealmArena {
 
   // Class fire tags (heroProfile.shots/spread/pierce/shotDmg/critChance/boltSpeed). Default / duel / no profile = the plain single bolt.
   _firePlayerVolley(aim) {
+    if (this._wpnOn()) { this._fireWeapon(aim); return; }
     const hp = this.heroProfile;
     if (!hp || (this.team && this.team.isPvp) || (hp.shots === 1 && hp.pierce === 0 && hp.shotDmg === 1 && hp.critChance === 0 && hp.boltSpeed === 1)) { this.firePlayerBullet(aim); return; }
     const base = this.stats.dmg * (this.sg.powT > 0 ? this.sg.powMul : 1) * hp.shotDmg;
@@ -1305,10 +1556,12 @@ class RealmArena {
   firePlayerBullet(angle) { this.firePlayerBulletFrom(this.player.x, this.player.y, angle, this.stats.dmg * (this.sg.powT > 0 ? this.sg.powMul : 1), 0); }
 
   // owner 0 = you (host), 1 = your partner. Everything a bolt does is decided on the host; guests only draw them.
-  firePlayerBulletFrom(x, y, angle, dmg, owner) {
+  // wcode (optional): weapon-style wire code, sent as the 5th `fp` element so guests draw the same path (old guests ignore it).
+  firePlayerBulletFrom(x, y, angle, dmg, owner, wcode) {
     const b = this._take(this.pBullets);
     if (!b) return null;
-    if (this.team && this.role === 'host') this.team.ev('fp', [Math.round(x), Math.round(y), Math.round(angle * 1000) / 1000, Math.round(dmg * 10) / 10], owner);
+    if (this.team && this.role === 'host') this.team.ev('fp', wcode >= 0 ? [Math.round(x), Math.round(y), Math.round(angle * 1000) / 1000, Math.round(dmg * 10) / 10, wcode] : [Math.round(x), Math.round(y), Math.round(angle * 1000) / 1000, Math.round(dmg * 10) / 10], owner);
+    b.ws = null; b.ho = 0; b.lb = 0; b.st = 0;
     b.active = true; b.x = x + Math.cos(angle) * 14; b.y = y + Math.sin(angle) * 14; b.dmg = dmg; b.own = owner;
     b.vx = Math.cos(angle) * RM_PLAYER.bulletSpeed; b.vy = Math.sin(angle) * RM_PLAYER.bulletSpeed; b.life = RM_PLAYER.bulletLife;
     b.pr = 0; b.hn = 0; b.h0 = b.h1 = b.h2 = -1; // class pierce: bolts left to pass through, and the enemies already hit
@@ -1367,6 +1620,7 @@ class RealmArena {
       this._updatePlayer(dt);
       this._updateAbilities(dt);
       this.team.guestTick(dt);
+      this._updateWeapon(dt);
       this._syncBoss();
       return;
     }
@@ -1397,6 +1651,7 @@ class RealmArena {
     this._updateEnemies(dt);
     this._updateDrifters(dt);
     this._updateBullets(dt);
+    this._updateWeapon(dt);
     this._updateBags(dt);
     if (this.dungeon) this.dungeon.tick(dt);
     if (this.world && this.world.tick) this.world.tick(dt);
@@ -1481,7 +1736,7 @@ class RealmArena {
     this._firing = firing;
     p.fireCd -= dt;
     if (firing && p.fireCd <= 0 && this.state !== 'dead') {
-      p.fireCd = 1 / (this.stats.rate * (this.overdriveT > 0 ? 2 : 1));
+      p.fireCd = 1 / (this.stats.rate * (this.overdriveT > 0 ? 2 : 1) * this._wpnRate());
       this._firePlayerVolley(p.aim);
       this._heroAtkAt = performance.now() / 1000;
       this._snd('shot');
@@ -1641,16 +1896,21 @@ class RealmArena {
     for (let i = 0; i < this.pBullets.length; i++) {
       const b = this.pBullets[i];
       if (!b.active) continue;
+      if (b.ws) { if (!this._stepWpn(b, dt, bw, bh)) continue; } // weapon-style bolt: MMProjectile kernels (walls and edges handled there)
+      else {
       b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
       if (b.life <= 0 || b.x < -10 || b.y < -10 || b.x > bw + 10 || b.y > bh + 10) { b.active = false; continue; }
       if (this.walls && this.isWallAt(b.x, b.y)) { if (this.dungeon) this.dungeon.onBoltWall(b.x, b.y); b.active = false; continue; }
       if (!this.walls && this._shotSolidAt && this._shotSolidAt(b.x, b.y)) { b.active = false; this._burst(b.x, b.y, '#c9d1d9', 2, 60); continue; } // world: solid tiles absorb bolts
+      }
       if (this.team && this.role === 'host' && this.team.isPvp) { if (this.team.duelBoltHit(b)) b.active = false; continue; }
       let hj = this._boltHitIndex(b.x, b.y);
       if (hj >= 0 && b.hn > 0 && (hj === b.h0 || hj === b.h1 || hj === b.h2)) hj = -1; // a piercing bolt hits each enemy once
       if (hj >= 0) {
         if (b.pr > 0) { b.pr--; if (b.hn === 0) b.h0 = hj; else if (b.hn === 1) b.h1 = hj; else b.h2 = hj; b.hn++; } else b.active = false;
-        this._hitEnemy(this.enemies[hj], b.dmg || this.stats.dmg);
+        const he = this.enemies[hj];
+        if (b.ws) this._wpnHit(b, he, hj);
+        this._hitEnemy(he, b.dmg || this.stats.dmg);
       }
       if (!b.active) continue;
       for (let j = 0; j < this.drifters.length; j++) {
@@ -2302,6 +2562,7 @@ class RealmArena {
     const it = this.save.items.find((x) => x.n === uid);
     if (!it) return false;
     const slot = RM_ITEM_BY_ID[it.id].slot;
+    if (RM_SLOTS.indexOf(slot) < 0) return false; // inert wpn_ item from a newer build: kept, never equipped
     if (this.save.eq[slot] === uid) delete this.save.eq[slot]; else this.save.eq[slot] = uid;
     this._afterGearChange();
     return true;
@@ -2310,7 +2571,7 @@ class RealmArena {
   // Fuse RM_COMBINE_COUNT identical items (same gear + rarity) into ONE of the next rarity: +50%..+80% of the stat. The item you clicked survives upgraded.
   combinable(uid) {
     const it = this.save.items.find((x) => x.n === uid);
-    if (!it || it.r >= RM_RARITIES.length - 1) return null;
+    if (!it || it.r >= RM_RARITIES.length - 1 || RM_ITEM_BY_ID[it.id].inert) return null;
     const group = this.save.items.filter((x) => x.id === it.id && x.r === it.r);
     return group.length >= RM_COMBINE_COUNT ? { keep: it, group } : null;
   }
@@ -2362,6 +2623,7 @@ class RealmArena {
 
   _itemText(it) {
     const def = RM_ITEM_BY_ID[it.id]; const v = def.amount * RM_RARITIES[it.r].mult;
+    if (def.inert) return def.text;
     const num = def.pct ? `+${Math.round(v * 100)}%` : `+${Math.round(v * 10) / 10}`;
     return `${num} ${def.text}`;
   }
@@ -2380,7 +2642,7 @@ class RealmArena {
     if (!sv.items.length) html += '<li class="dim">Nothing yet — defeat enemies to find loot bags.</li>';
     sv.items.forEach((it) => {
       const def = RM_ITEM_BY_ID[it.id]; const rar = RM_RARITIES[it.r]; const on = eqUids.has(it.n);
-      html += `<li data-uid="${it.n}" class="${on ? 'on' : ''}"><span class="nm" style="color:${rar.color}">${this._icon(def)} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(it)}</span><button type="button" class="eq" data-act="equip" data-uid="${it.n}">${on ? 'Unequip' : 'Equip'}</button>${this.combinable(it.n) ? `<button type="button" class="eq" data-combine="${it.n}" aria-label="Combine ${RM_COMBINE_COUNT} ${rar.name} ${def.name} into one ${RM_RARITIES[it.r + 1].name}">Combine ${RM_COMBINE_COUNT}→${RM_RARITIES[it.r + 1].name}</button>` : ''}<button type="button" class="dc" data-act="discard" data-uid="${it.n}" aria-label="Sell ${def.name} for ${rar.sell} shards">Sell ${rar.sell}💎</button></li>`;
+      html += `<li data-uid="${it.n}" class="${on ? 'on' : ''}"><span class="nm" style="color:${rar.color}">${this._icon(def)} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(it)}</span>${def.inert ? '<button type="button" class="eq" disabled aria-label="Not usable yet">Equip</button>' : `<button type="button" class="eq" data-act="equip" data-uid="${it.n}">${on ? 'Unequip' : 'Equip'}</button>`}${this.combinable(it.n) ? `<button type="button" class="eq" data-combine="${it.n}" aria-label="Combine ${RM_COMBINE_COUNT} ${rar.name} ${def.name} into one ${RM_RARITIES[it.r + 1].name}">Combine ${RM_COMBINE_COUNT}→${RM_RARITIES[it.r + 1].name}</button>` : ''}<button type="button" class="dc" data-act="discard" data-uid="${it.n}" aria-label="Sell ${def.name} for ${rar.sell} shards">Sell ${rar.sell}💎</button></li>`;
     });
     html += '</ul>';
     root.innerHTML = html; this._fixIcons(root);
@@ -2428,7 +2690,8 @@ class RealmArena {
     if (this._bossGhost) this._drawBossGhost(g);
     for (let i = 0; i < this.bags.length; i++) { const b = this.bags[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { const by = b.y - 13 + Math.sin(b.t * 5) * 2; g.drawImage(this.sprites.worldBag[b.tier] || this.sprites.bag[b.r], b.x - 13, by); if (this._itemArt) { const ic = this._lootIcon(b.id, b.r); if (ic) g.drawImage(ic, b.x - 10, by - 18 + Math.sin(b.t * 5 + 1) * 1.5); } } }
     for (let i = 0; i < this.eBullets.length; i++) { const b = this.eBullets[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) g.drawImage(this.sprites.eBullet[b.kind], b.x - 8, b.y - 8); }
-    for (let i = 0; i < this.pBullets.length; i++) { const b = this.pBullets[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) g.drawImage(this.sprites.pBullet, b.x - 8, b.y - 8); }
+    for (let i = 0; i < this.pBullets.length; i++) { const b = this.pBullets[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { if (b.ws) this._drawWpnBolt(g, b); else g.drawImage(this.sprites.pBullet, b.x - 8, b.y - 8); } }
+    if (this.weapon) this._drawWpnOrbs(g);
 
     // Your partner: a tinted villager with a name tag, a small HP bar, and a revive ring while they are down.
     const tm = this.team;
