@@ -1,0 +1,78 @@
+{
+  "batch": "b26",
+  "label": "godlands-props-fix",
+  "assets": [
+    {
+      "id": "prop_godlands_obelisk_a",
+      "path": "props/prop_godlands_obelisk_a.png",
+      "category": "prop",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 64,
+      "anchor": [
+        16,
+        63
+      ]
+    },
+    {
+      "id": "prop_godlands_obelisk_b",
+      "path": "props/prop_godlands_obelisk_b.png",
+      "category": "prop",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 64,
+      "anchor": [
+        16,
+        63
+      ]
+    },
+    {
+      "id": "prop_godlands_bone_pile_a",
+      "path": "props/prop_godlands_bone_pile_a.png",
+      "category": "prop",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": [
+        16,
+        31
+      ]
+    },
+    {
+      "id": "prop_godlands_bone_pile_b",
+      "path": "props/prop_godlands_bone_pile_b.png",
+      "category": "prop",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": [
+        16,
+        31
+      ]
+    },
+    {
+      "id": "prop_godlands_dead_tree_a",
+      "path": "props/prop_godlands_dead_tree_a.png",
+      "category": "prop",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 64,
+      "anchor": [
+        16,
+        63
+      ]
+    },
+    {
+      "id": "prop_godlands_dead_tree_b",
+      "path": "props/prop_godlands_dead_tree_b.png",
+      "category": "prop",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 64,
+      "anchor": [
+        16,
+        63
+      ]
+    }
+  ]
+}
