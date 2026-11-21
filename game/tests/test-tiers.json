@@ -534,5 +534,13 @@
   "world-sites.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "shared-mm-hero-stats.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "hero-pick.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

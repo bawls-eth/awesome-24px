@@ -116,3 +116,26 @@ body.touch-device #realm-stick-aim { right: calc(20px + var(--sr)); }
 .rm-confirm p { margin: 0 0 4px; line-height: 1.35; }
 .rm-recap { margin-bottom: 8px; }
 #realm-menu-close, #realm-shop-close { border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.5); background: rgba(0, 0, 0, 0.4); color: #fff; font-size: 16px; padding: 0; }
+
+/* ---------- hero picker + stats panel ---------- */
+.rm-btn.hidden { display: none; }
+.hp-open { min-height: 44px; margin-top: 8px; width: 100%; }
+#realm-hero .rm-card { display: flex; flex-direction: column; max-height: 100%; overflow: hidden; }
+#realm-hero-close { width: 44px; height: 44px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.5); background: rgba(0, 0, 0, 0.4); color: #fff; font-size: 16px; padding: 0; }
+.hp-tabs { display: flex; gap: 8px; margin-top: 8px; }
+.hp-tab { flex: 1; min-height: 44px; border-radius: 12px; border: 2px solid rgba(255, 255, 255, 0.4); background: rgba(255, 255, 255, 0.08); color: #fff; font: 700 14px system-ui, sans-serif; }
+.hp-tab.on { background: #8a63e0; border-color: #c9a7ff; }
+.hp-status { min-height: 1.2em; margin: 6px 0 0; font-size: 13px; }
+.hp-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; margin-top: 6px; }
+.hp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+.hp-hero { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 44px; padding: 8px 6px; border-radius: 12px; border: 2px solid rgba(255, 255, 255, 0.35); background: rgba(255, 255, 255, 0.08); color: #fff; font: 600 13px system-ui, sans-serif; text-align: center; touch-action: manipulation; }
+.hp-hero.on { border-color: #7ee787; background: rgba(126, 231, 135, 0.14); }
+.hp-hero.locked { opacity: 0.45; filter: grayscale(0.6); }
+.hp-swatch { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; color: #1a1030; font: 800 22px system-ui, sans-serif; }
+.hp-art { width: 64px; height: 64px; }
+.hp-art[hidden], .hp-swatch[hidden] { display: none; }
+.hp-name { font-weight: 800; overflow-wrap: anywhere; }
+.hp-sub, .hp-hint { font-size: 12px; opacity: 0.85; overflow-wrap: anywhere; }
+.hp-tag { font-size: 11px; font-weight: 800; color: #7ee787; }
+.hp-h { margin: 10px 0 2px; font-size: 13px; color: #c9a7ff; }
+.hp-rows .realm-board-row { overflow-wrap: anywhere; }

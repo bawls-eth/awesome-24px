@@ -184,7 +184,7 @@ class RealmArena {
     this.dungeon = null; this.fixedWorld = null; // optional run controller + fixed-size world (Mad Maze dungeons); null = classic waves
     this.world = null; this.mode = 'waves'; this.camera = { x: 0, y: 0, vw: 960, vh: RM_SHORT }; this._camF = { x: 0, y: 0 }; // setWorld / setMode: a scrolling world with a camera (null = the screen is the world, today's behaviour)
     this._solidAt = null; this._shotSolidAt = null; this._curDm = 1; this.onEnemyKilled = null; this.onEnemyHit = null; // world tile collision + additive kill / hit callbacks (default null)
-    this.onItem = null; this.onDeathCache = null; this.onMenuOpen = null; this.menuNote = null; // additive loot hooks (Lantern stash payout); null = off (classic arena, town gate)
+    this.onHeroPanel = null; this._heroTab = 'pick'; this.onItem = null; this.onDeathCache = null; this.onMenuOpen = null; this.menuNote = null; // additive loot hooks (Lantern stash payout); null = off (classic arena, town gate)
     this.rng = rmRng(seed === undefined ? (Date.now() & 0xffffffff) : seed);
     this.active = false;
     this.state = 'idle'; // idle | banner | play | dead
@@ -2137,12 +2137,16 @@ class RealmArena {
     const bd = document.getElementById('realm-board'); if (bd) bd.classList.toggle('hidden', name !== 'board');
     if (this._menuDom || name === 'menu') { const mn = this._ensureMenuDom(); if (mn) { mn.classList.toggle('hidden', name !== 'menu'); mn.style.display = name === 'menu' ? 'flex' : 'none'; if (name !== 'menu') this._menuConfirm(false); } }
     const shopEl = this._ensureShopDom(); if (shopEl) { shopEl.classList.toggle('hidden', name !== 'shop'); shopEl.style.display = name === 'shop' ? 'flex' : 'none'; }
+    const heroEl = document.getElementById('realm-hero'); if (heroEl) { heroEl.classList.toggle('hidden', name !== 'hero'); heroEl.style.display = name === 'hero' ? 'flex' : 'none'; } // hero picker / stats (mad-maze.js owns the DOM)
+    if (name === 'hero') { this.keys = {}; this.mouse.down = false; this.aimVec.on = false; if (this.onHeroPanel) this.onHeroPanel(this._heroTab || 'pick'); return; }
     if (name) { this.keys = {}; this.mouse.down = false; this.aimVec.on = false; if (name === 'bp') this.renderBackpack(); else if (name === 'shop') this.renderShop(); else if (name === 'menu') this._syncMenu(); else this.renderBoard(); }
   }
 
   setPaused(on) { this._panel(on ? 'bp' : null); } // false closes whichever panel is open
 
   setBoard(on) { this._panel(on ? 'board' : null); }
+  // Hero picker / stats panel (only when the page wired onHeroPanel): tab 'pick' or 'stats'.
+  openHeroPanel(tab) { if (!this.onHeroPanel || !this.active || this.team) return false; this._heroTab = tab === 'stats' ? 'stats' : 'pick'; this._panel('hero'); return true; }
 
   // ---------- in-game menu, settings and death screen (opt-in: setMenuMode(true); the town gate keeps the old behaviour) ----------
 
@@ -2210,7 +2214,7 @@ class RealmArena {
     const wrap = document.createElement('div');
     wrap.id = 'realm-pause'; wrap.className = 'rm-panel hidden'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-label', 'Menu'); wrap.style.display = 'none';
     wrap.innerHTML = '<div class="realm-bp-card rm-card"><div class="realm-bp-head"><strong>☰ Menu</strong><button id="realm-menu-close" type="button" data-m="resume" aria-label="Close menu">✖</button></div>'
-      + '<div class="rm-main"><button type="button" class="rm-btn" data-m="resume">▶ Resume</button><button type="button" class="rm-btn" data-m="restart">↻ Restart run</button><p class="rm-note dim"></p><p class="rm-stash dim hidden" aria-live="polite"></p><button type="button" class="rm-btn" data-m="leave">🚪 Leave to start</button></div>'
+      + '<div class="rm-main"><button type="button" class="rm-btn" data-m="resume">▶ Resume</button><button type="button" class="rm-btn" data-m="heroes">🦸 Pick hero</button><button type="button" class="rm-btn" data-m="herostats">📊 Hero stats</button><button type="button" class="rm-btn" data-m="restart">↻ Restart run</button><p class="rm-note dim"></p><p class="rm-stash dim hidden" aria-live="polite"></p><button type="button" class="rm-btn" data-m="leave">🚪 Leave to start</button></div>'
       + '<div class="rm-confirm hidden"><p class="rm-restart-copy"></p><button type="button" class="rm-btn" data-m="restart-yes">Yes, restart</button><button type="button" class="rm-btn" data-m="restart-no">Keep playing</button></div>'
       + '<div class="rm-settings"><strong>Settings</strong><button type="button" class="rm-tog" data-set="sound"></button><button type="button" class="rm-tog" data-set="motion"></button><button type="button" class="rm-tog" data-set="aim"></button></div></div>';
     ov.appendChild(wrap);
@@ -2219,6 +2223,8 @@ class RealmArena {
       const m = b.dataset.m; const st = b.dataset.set;
       if (m === 'resume') this.setMenu(false);
       else if (m === 'restart') { if (this.canRestart()) this._menuConfirm(true); }
+      else if (m === 'heroes') this.openHeroPanel('pick');
+      else if (m === 'herostats') this.openHeroPanel('stats');
       else if (m === 'restart-yes') this.restart();
       else if (m === 'restart-no') this._menuConfirm(false);
       else if (m === 'leave') this.leave();
@@ -2242,6 +2248,7 @@ class RealmArena {
     d.querySelector('.rm-restart-copy').textContent = this.mode === 'world' && !this.dungeon
       ? 'Return to the island spawn? You keep your items and shards.'
       : 'Restart? You keep your items and shards; your wave resets.';
+    ['heroes', 'herostats'].forEach((k) => { const hb = d.querySelector(`button[data-m="${k}"]`); if (hb) hb.classList.toggle('hidden', !this.onHeroPanel || !!this.team); });
     const rs = d.querySelector('button[data-m="restart"]'); const note = d.querySelector('.rm-note');
     const can = this.canRestart(); rs.disabled = !can;
     note.textContent = can ? '' : this.team ? 'Restart is off during a shared run: your partner is fighting too.' : this.dungeon ? 'Restart is off in a Warren: leave and enter again for a new one.' : '';
