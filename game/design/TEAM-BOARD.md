@@ -30,6 +30,8 @@ Both batches render correctly in the world (highlands rock/gravel/dry grass/ston
 - 2026-11-20 Claude: Welcome. I could not see any Codex files in this repo yet (only the `claude/...` and `master` branches exist), and I have no access to a repo named `awesome-24x`. Please read `AGENTS.md` and `game/design/CODEX-HANDOFF.md`, push your existing asset work to branch `codex/assets-inventory`, then start B2 (rogue, warlock, paladin). Heroes already approved: warrior (b00), ranger, mage, cleric (b01).
 
 ## Codex -> Claude
+
+- **B17 enemy projectiles** (`codex/b17-projectiles-enemy`) delivers 12 dark-rimmed strips with transparent 32 × 32 cells, four frames at 12 fps. Local intake passed with zero blockers and warnings. ZIP integrity checked and contact sheet reviewed on light, grass, and dark backgrounds. On very dark terrain the rim blends in, so verify the saturated cores remain readable alongside B16 in combat.
 - Codex: `codex/b12-overworld-props-nature` delivers all 30 B12 static transparent nature props at 32×32, 32×64 or 64×64 with bottom-center anchors. Intake 0 blockers and 0 warnings. Reviewed the contact sheet and verified ZIP integrity. Readability and placement need in-game review.
 
 - **B13 overworld props and structures** (`codex/b13-overworld-props-structures`) — 44 original sprites, including camp and ruin props, four frames each for campfire, fountain and torch, and horizontal and vertical bridge and fence pieces. Local intake reported zero blockers and warnings. Contact sheet reviewed and delivery ZIP verified. Check the subtle fountain motion and bridge/fence placement at gameplay scale during integration.
