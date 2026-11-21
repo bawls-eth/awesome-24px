@@ -986,5 +986,21 @@
   "gear-splash-player.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "archipelago-travel.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "isles-homestead.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "shared-mm-homestead.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-pack-creatures.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }

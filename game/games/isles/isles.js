@@ -9,11 +9,16 @@
 // with a code-drawn telegraph (line / ring / cone, bigger for L/XL) before it lands. Torpor and KO, befriending and feeding follow
 // MMTame step for step; a finished tame is added through MMTames, joins the party (MMCompanion follow / attack) and a rideable tame
 // (the Tusktop) can be mounted with R / the Ride button (MMCompanion.ride: speed and lift) and dismounted the same way.
+// B10 (home, travel, cozy, medals): ?isle= also takes pack ids (meadow|jungle|reef|tundra|mars); Hearth Isle (meadow, 96 tiles) is the
+// hub with a LOCAL-ONLY homestead (MMHomestead: decor + a tame pen on a seeded starter layout, saved inside pixeltown-archipelago-v1);
+// every island has a dock on its beach band with a calm sea chart to the other islands, plus a Home button (fast travel to the
+// home dock, ?at=dock). Daily-free gather spots come from each pack's resources table (?today=YYYY-MM-DD) with a collection log,
+// and medals (first tame per size class, each island visited, each boss lair seen) go to pixeltown-medals-isles-v1 for the Hub card.
 (function () {
   'use strict';
   const O = window.MMOverworld, BP = window.MMBiomePacks, CB = window.MMChunkBake, CR = window.MMCreatures, CD = window.MMCreatureDraw;
   const FOG = window.MMFog, PROF = window.MMProfile, ISL = window.MMIsles, TAMES = window.MMTames, RNG = window.MMRng;
-  const TM = window.MMTame, CMP = window.MMCompanion, IC = window.IsleCreatures;
+  const TM = window.MMTame, CMP = window.MMCompanion, IC = window.IsleCreatures, HS = window.MMHomestead;
   const $ = (id) => document.getElementById(id);
   const has = (o, k) => !!o && Object.prototype.hasOwnProperty.call(o, k);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -25,11 +30,6 @@
   const LOW = Q.get('perf') === 'low';
   const TAME = Q.get('tame') !== '0', COMPANIONS = Q.get('companions') !== '0', MOUNTS = Q.get('mounts') !== '0';
   const TILE = CB.TILE, CPX = CB.CPX, CH = CB.CH;
-  const rawIsle = Q.get('isle');
-  const ISLE = rawIsle && has(ISL.ISLES, rawIsle) && ISL.ISLES[rawIsle].pack && BP.resolveId(ISL.ISLES[rawIsle].pack) ? rawIsle : 'jungle';
-  const PACK_ID = BP.resolveId(ISL.ISLES[ISLE].pack);
-  const PACK = BP.get(PACK_ID);
-  const DRAW_BIOME = { meadow: 'home', tundra: 'ice' }[PACK_ID] || PACK_ID;
 
   // ---------- storage (own keys only; every access guarded) ----------
   const store = (() => { try { return window.localStorage; } catch (e) { return null; } })();
@@ -38,6 +38,18 @@
   const readJson = (k) => { try { const s = S.getItem(k); return typeof s === 'string' ? JSON.parse(s) : null; } catch (e) { return null; } };
   let save = ISL.load(S, Date.now());
   const tames = TAMES.load(S); // corrupt -> the empty stable; written only on a tame / party / mount change
+
+  // the island: ?isle= (isle id or pack id), else from the Hub the island you were last on (Hearth Isle for a new save), else the jungle (B8)
+  const rawIsle = Q.get('isle');
+  const wantIsle = rawIsle ? ISL.isleFor(rawIsle) : (Q.get('from') === 'hub' ? save.at : '');
+  const ISLE = wantIsle && has(ISL.ISLES, wantIsle) && ISL.ISLES[wantIsle].pack && BP.resolveId(ISL.ISLES[wantIsle].pack) ? wantIsle : 'jungle';
+  const PACK_ID = BP.resolveId(ISL.ISLES[ISLE].pack);
+  const PACK = BP.get(PACK_ID);
+  const DRAW_BIOME = { meadow: 'home', tundra: 'ice' }[PACK_ID] || PACK_ID;
+  const HOME = ISLE === 'home';
+  const ISLE_PARAM = { home: 'meadow', ice: 'tundra' };
+  const isleName = (id) => { const isle = ISL.ISLES[id]; const pk = isle && BP.get(isle.pack); return pk ? pk.name : id; };
+  const todayQ = Q.get('today');
 
   const seedQ = Q.get('seed');
   const savedIsle = save.isles[ISLE] || null;
@@ -55,7 +67,7 @@
   const HERO = readHero();
 
   // ---------- world ----------
-  const world = O.generate(SEED, { pack: PACK_ID });
+  const world = O.generate(SEED, { pack: PACK_ID, size: ISL.ISLES[ISLE].size });
   const NAMES = O.TERRAIN_NAMES;
   const W = world.w, H = world.h;
   const SLOW = new Array(NAMES.length).fill(1); // plain numbers: mud is exactly 0.6
@@ -152,6 +164,7 @@
     } else if (has(LOCAL, sp)) s = Object.assign({}, LOCAL[sp]);
     else s = Object.assign({}, BASE_FALLBACK[base] || BASE_FALLBACK.ring);
     s.base = base;
+    if (HOME) { s.dmg = 0; if (s.mood === 'hostile') s.mood = 'neutral'; } // Hearth Isle is safe: nothing there attacks
     s.def = d;
     s.rad = (CD.HIT_RADIUS[s.size] || 12);
     s.name = d ? d.name : sp.replace(/_/g, ' ');
@@ -301,6 +314,7 @@
     const tx = Math.floor(savedIsle.pos.x), ty = Math.floor(savedIsle.pos.y);
     if (tx >= 0 && ty >= 0 && tx < W && ty < H && !solidAt(tx, ty)) { hero.x = (savedIsle.pos.x) * TILE; hero.y = (savedIsle.pos.y) * TILE; }
   }
+  if (Q.get('at') === 'dock' && world.dock) { hero.x = (world.dock.x + 0.5) * TILE; hero.y = (world.dock.y + 0.5) * TILE; }
   let god = false, xp = 0, kills = 0, tamedN = 0;
   const loot = {};
   const pouch = Object.assign({}, IC.STARTER_POUCH);
@@ -523,6 +537,7 @@
     removeWhere((x) => x === c, 90000);
     toast(ent ? def.name + ' joined you!' : def.name + ' is happy. Your bond grows.');
     refreshMount();
+    checkMedals();
   }
 
   // mount: the tames.mount entry (else the first rideable tame) through MMCompanion.ride
@@ -592,6 +607,8 @@
     mg.fillStyle = '#ff5a4a';
     creatures.forEach((c) => { const tx = tileOf(c.x), ty = tileOf(c.y); if (FOG.has(fog, FOG.cellOf(tx), FOG.cellOf(ty)) && c.mood === 'hostile') mg.fillRect(tx * k - 1, ty * k - 1, 2, 2); });
     if (world.dock) { mg.fillStyle = '#f2b84b'; mg.fillRect(world.dock.x * k - 2, world.dock.y * k - 2, 4, 4); }
+    mg.fillStyle = '#fff4a8';
+    spots.forEach((p) => { if (!HS.taken(save.gather, ISLE, p.idx) && FOG.has(fog, FOG.cellOf(p.x), FOG.cellOf(p.y))) mg.fillRect(p.x * k - 1, p.y * k - 1, 3, 3); });
     mg.fillStyle = '#ffffff'; mg.fillRect(hero.x / TILE * k - 2, hero.y / TILE * k - 2, 5, 5);
   }
 
@@ -631,6 +648,7 @@
       const cv = chunkCanvas(cx, cy);
       if (cv) g.drawImage(cv, cx * CPX - camX, cy * CPX - camY, CPX, CPX);
     }
+    drawGround();
     // telegraphs first (on the ground, under every body)
     for (let i = 0; i < creatures.length; i++) { const c = creatures[i]; if (c.ph === 'wind') drawTelegraph(c, c.x - camX, c.y - camY); }
     // creatures, y-sorted into a reused buffer (insertion sort: at most 24, nearly sorted frame to frame, no per-frame arrays)
@@ -735,9 +753,224 @@
     if (tm.need > 0 && (c.ko || c.calm)) { g.fillStyle = '#1b2a1b'; g.fillRect(sx - bw / 2, top + 4, bw, 4); g.fillStyle = '#7ae07a'; g.fillRect(sx - bw / 2, top + 4, bw * clamp(tm.prog / tm.need, 0, 1), 4); }
   }
 
+  // ---------- B10: homestead (Hearth Isle only, local save), gather spots, travel, medals ----------
+  const DAY = todayQ && /^\d{4}-\d{2}-\d{2}$/.test(todayQ) ? todayQ : (() => { try { return new Date().toISOString().slice(0, 10); } catch (e) { return ''; } })();
+  const tileName = (tx, ty) => NAMES[O.tileAt(world, tx, ty)] || '';
+  const WET = { deep_water: 1, shallow_water: 1, abyss: 1, lagoon: 1, dust_sea: 1 };
+  const homeO = HOME ? HS.origin(world.spawnPoint, world.center, W, H) : null;
+  // a grid cell is free ground when it is open, dry land that is not the dock or the spawn pad
+  function cellFree(x, y) {
+    if (!homeO) return false;
+    const tx = homeO.x + x, ty = homeO.y + y;
+    if (tx < 1 || ty < 1 || tx >= W - 1 || ty >= H - 1 || solidAt(tx, ty) || WET[tileName(tx, ty)]) return false;
+    if (world.dock && Math.abs(tx - world.dock.x) <= 1 && Math.abs(ty - world.dock.y) <= 1) return false;
+    return !(tx === world.spawnPoint.x && ty === world.spawnPoint.y);
+  }
+  if (!save.home || typeof save.home !== 'object') save.home = ISL.defaults().home;
+  HS.ensure(save.home);
+  if (HOME) HS.seedLayout(save.home, SEED, cellFree); // the first save tick (dirty starts true) writes it
+  let lastAct = null;
+  let build = false, buildKind = 'flowerbed';
+  const toGrid = (tx, ty) => (homeO ? { x: tx - homeO.x, y: ty - homeO.y } : null);
+  // tap / E in build mode: an item on the cell is picked up, an empty cell gets the selected item
+  function buildAt(tx, ty) {
+    if (!HOME) return { ok: false, why: 'away' };
+    const c = toGrid(tx, ty);
+    const now = clock.now();
+    let r;
+    if (HS.itemAt(save.home, c.x, c.y)) { r = HS.pickUp(save.home, c.x, c.y, now); if (r.ok) toast(HS.KINDS[r.kind].name + ' picked up.'); }
+    else {
+      r = HS.place(save.home, c.x, c.y, buildKind, cellFree, now);
+      if (r.ok) toast(HS.KINDS[buildKind].name + ' placed.');
+      else toast({ none: 'No ' + HS.KINDS[buildKind].name.toLowerCase() + ' left. Pick one up to move it.', ground: 'That spot is not open ground.', outside: 'Decorate inside the garden square.', taken: 'Something is already there.', full: 'The garden is full.' }[r.why] || 'Not here.');
+    }
+    if (r.ok) { lastAct = r.act; dirty = true; persist(); refreshDecor(); refreshGuests(); }
+    return r;
+  }
+  function undoBuild() {
+    if (!lastAct || !HS.undo(save.home, lastAct, clock.now())) { toast('Nothing to undo.'); return false; }
+    lastAct = null; dirty = true; persist(); refreshDecor(); refreshGuests(); toast('Undone.');
+    return true;
+  }
+  // decor art: one small canvas per kind, baked once
+  const decorArt = {};
+  function bakeDecor(kind) {
+    if (decorArt[kind]) return decorArt[kind];
+    const k = HS.KINDS[kind], s = Math.round(TILE * DPR), cv = mk(s, s), c = cv.getContext('2d');
+    c.scale(DPR, DPR);
+    c.fillStyle = 'rgba(0,0,0,0.2)'; c.fillRect(5, 25, 22, 4);
+    if (kind === 'flowerbed') { c.fillStyle = k.alt; c.fillRect(4, 18, 24, 8); c.fillStyle = k.col; [[8, 15], [15, 12], [22, 15], [12, 19], [19, 19]].forEach((p) => c.fillRect(p[0] - 2, p[1] - 2, 5, 5)); c.fillStyle = '#fff4a8'; c.fillRect(14, 11, 2, 2); }
+    else if (kind === 'lantern') { c.fillStyle = k.alt; c.fillRect(15, 10, 3, 17); c.fillStyle = k.col; c.fillRect(11, 4, 11, 9); c.fillStyle = '#fffbe0'; c.fillRect(14, 6, 5, 5); }
+    else if (kind === 'bench') { c.fillStyle = k.col; c.fillRect(4, 14, 24, 5); c.fillRect(4, 8, 24, 3); c.fillStyle = k.alt; c.fillRect(6, 19, 3, 7); c.fillRect(23, 19, 3, 7); }
+    else if (kind === 'fence') { c.fillStyle = k.col; c.fillRect(2, 12, 28, 3); c.fillRect(2, 19, 28, 3); c.fillStyle = k.alt; c.fillRect(5, 8, 4, 18); c.fillRect(23, 8, 4, 18); }
+    else if (kind === 'birdbath') { c.fillStyle = k.alt; c.fillRect(13, 14, 6, 12); c.fillRect(7, 8, 18, 6); c.fillStyle = k.col; c.fillRect(9, 9, 14, 3); }
+    else { c.fillStyle = k.col; c.fillRect(1, 1, 30, 3); c.fillRect(1, 27, 30, 3); c.fillRect(1, 1, 3, 29); c.fillRect(28, 1, 3, 29); c.fillStyle = k.alt; c.fillRect(6, 6, 20, 20); }
+    decorArt[kind] = cv;
+    return cv;
+  }
+  // pen guests: benched tames (not in the party, not the mount) rest in the pens, drawn from cached art
+  let guests = [];
+  function refreshGuests() {
+    guests = [];
+    if (!HOME) return;
+    const list = HS.penGuests(save.home, tames), pp = HS.pens(save.home);
+    list.forEach((t, i) => {
+      const def = CR.get(t.sp), pen = pp[Math.floor(i / HS.PEN_GUESTS)];
+      if (!pen) return;
+      const art = ART && def ? baker.bake({ id: def.id, archetype: IC.ARCH[def.id] || ARCH_BY_SIZE[def.size] || 'blob', size: def.size, biome: DRAW_BIOME }, { dpr: DPR }) : null;
+      guests.push({ id: t.id, sp: t.sp, art: art, x: (homeO.x + pen.x + 0.5) * TILE + ((i % 3) - 1) * 10, y: (homeO.y + pen.y + 0.5) * TILE + 6, t: i });
+    });
+  }
+  // gather spots: daily-free, seeded by island + seed + day
+  HS.rollDay(save.gather, DAY);
+  const spots = HS.dailySpots(world.resources, ISLE + '|' + SEED, DAY, HS.MAX_SPOTS);
+  const GATHER_R = 1.6 * TILE;
+  function spotNear() {
+    let best = null, bd = GATHER_R;
+    spots.forEach((p) => { if (HS.taken(save.gather, ISLE, p.idx)) return; const d = Math.hypot((p.x + 0.5) * TILE - hero.x, (p.y + 0.5) * TILE - hero.y); if (d < bd) { bd = d; best = p; } });
+    return best;
+  }
+  function gatherNear() {
+    const p = spotNear();
+    if (!p || hero.dead) return { ok: false, why: 'none' };
+    const r = HS.gather(save.gather, ISLE, p, DAY);
+    if (r.ok) { toast('You found ' + HS.resName(r.kind) + '. (' + r.total + ' in your log)'); dirty = true; persist(); }
+    else if (r.why === 'today') toast('Already gathered here today. It grows back tomorrow.');
+    return r;
+  }
+  // dock + sea chart
+  const DOCK_R = 2.5 * TILE;
+  const nearDock = () => !!world.dock && !hero.dead && Math.hypot((world.dock.x + 0.5) * TILE - hero.x, (world.dock.y + 0.5) * TILE - hero.y) <= DOCK_R;
+  const DESTS = ISL.SAVED_ISLES.filter((id) => ISL.ISLES[id] && BP.resolveId(ISL.ISLES[id].pack));
+  let travelling = '';
+  function travelTo(id) {
+    if (DESTS.indexOf(id) < 0 || id === ISLE || travelling) return false;
+    const q = new URLSearchParams(location.search);
+    q.set('isle', ISLE_PARAM[id] || id); q.set('at', 'dock'); q.delete('seed'); q.delete('from');
+    travelling = id;
+    if (ride) dismount();
+    persist();
+    toast('Sailing to ' + isleName(id) + '...');
+    location.href = location.pathname + '?' + q.toString();
+    return true;
+  }
+  // medals: computed from the saves, the summary key is additive and each new medal is announced once
+  const sizeOf = (sp) => { const d = CR.get(sp); return d ? d.size : null; };
+  let medals = ISL.cleanMedals(readJson(ISL.MEDALS_KEY)).m;
+  const medalLog = [];
+  function checkMedals() {
+    const fresh = ISL.medalsFor(save, tames, sizeOf).filter((id) => medals.indexOf(id) < 0);
+    if (!fresh.length) return [];
+    const m = ISL.writeMedals(S, fresh);
+    if (m) medals = m; else medals = medals.concat(fresh);
+    fresh.forEach((id) => medalLog.push(id));
+    toast('Medal: ' + fresh.map((id) => ISL.MEDAL_NAMES[id] || id).join(', '));
+    return fresh;
+  }
+  const BOSS_SEE_R = 10 * TILE;
+  function bossCheck() {
+    (world.bossSites || []).forEach((b) => {
+      if (Math.hypot((b.x + 0.5) * TILE - hero.x, (b.y + 0.5) * TILE - hero.y) > BOSS_SEE_R) return;
+      if (ISL.noteBoss(save, b.boss)) { dirty = true; toast('You spotted the lair of the ' + b.boss.replace(/_/g, ' ') + '.'); checkMedals(); }
+    });
+  }
+  const firstVisit = ISL.noteVisit(save, ISLE); // saved by the first save tick
+  // ground layer drawn each frame from cached canvases: decor, pen guests, gather sparkles
+  function drawGround() {
+    if (HOME) {
+      const g0 = save.home.grid;
+      for (let i = 0; i < g0.length; i++) {
+        const sx = (homeO.x + g0[i][0]) * TILE - camX, sy = (homeO.y + g0[i][1]) * TILE - camY;
+        if (sx < -TILE || sy < -TILE || sx > VW || sy > VH) continue;
+        g.drawImage(bakeDecor(g0[i][2]), sx, sy, TILE, TILE);
+      }
+      if (build) { g.strokeStyle = 'rgba(255,244,214,0.55)'; g.lineWidth = 2; g.strokeRect(homeO.x * TILE - camX, homeO.y * TILE - camY, HS.GRID_W * TILE, HS.GRID_W * TILE); }
+      for (let i = 0; i < guests.length; i++) {
+        const q = guests[i], sx = q.x - camX, sy = q.y - camY + Math.sin(simT * 2 + q.t) * 1.5;
+        if (sx < -80 || sy < -80 || sx > VW + 80 || sy > VH + 80) continue;
+        if (q.art) { const a = q.art, fr = a.frames.idle[CD.frameAt('idle', simT + q.t)], w = a.w / a.dpr * 0.45, h = a.h / a.dpr * 0.45; g.drawImage(fr, sx - w / 2, sy - a.ay / a.dpr * 0.45, w, h); }
+        else { g.fillStyle = '#9ae07a'; g.beginPath(); g.arc(sx, sy - 6, 6, 0, Math.PI * 2); g.fill(); }
+      }
+    }
+    const tw = REDUCED ? 0 : Math.sin(simT * 4) * 2;
+    for (let i = 0; i < spots.length; i++) {
+      const p = spots[i];
+      if (HS.taken(save.gather, ISLE, p.idx)) continue;
+      const sx = (p.x + 0.5) * TILE - camX, sy = (p.y + 0.5) * TILE - camY;
+      if (sx < -TILE || sy < -TILE || sx > VW + TILE || sy > VH + TILE) continue;
+      g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(sx - 7, sy + 5, 14, 3);
+      g.fillStyle = '#fff4a8'; g.fillRect(sx - 1, sy - 8 - tw, 3, 11); g.fillRect(sx - 6, sy - 4 - tw, 13, 3);
+      g.fillStyle = '#f2b84b'; g.fillRect(sx - 2, sy - 5 - tw, 5, 5);
+    }
+  }
+  // ---- panels: sea chart, collection log, decor bar (44 px targets, plain text) ----
+  const panel = $('panel'), panelBody = $('panel-body'), panelTitle = $('panel-title');
+  let panelKind = '';
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+  function closePanel() { panel.hidden = true; panelKind = ''; paused = false; }
+  function openPanel(kind) {
+    while (panelBody.firstChild) panelBody.removeChild(panelBody.firstChild);
+    panelKind = kind;
+    if (kind === 'sail') {
+      panelTitle.textContent = 'Sea chart';
+      panelBody.appendChild(el('p', 'calm', 'The boat is ready whenever you are. Where to?'));
+      DESTS.filter((id) => id !== ISLE).forEach((id) => {
+        const b = el('button', 'dest', (id === 'home' ? 'Home: ' : 'Sail to ') + isleName(id));
+        b.type = 'button'; b.dataset.isle = id;
+        b.addEventListener('click', () => travelTo(id));
+        panelBody.appendChild(b);
+      });
+    } else {
+      panelTitle.textContent = 'Island log';
+      const gl = save.gather.log, keys = Object.keys(gl).sort();
+      panelBody.appendChild(el('h3', '', 'Collection'));
+      const ul = el('ul', 'log-list'); ul.id = 'log-collection';
+      if (!keys.length) ul.appendChild(el('li', 'dim', 'Nothing gathered yet. Look for sparkles.'));
+      keys.forEach((k) => { const li = el('li', '', HS.resName(k) + ' x' + gl[k]); li.dataset.res = k; ul.appendChild(li); });
+      panelBody.appendChild(ul);
+      const left = spots.filter((p) => !HS.taken(save.gather, ISLE, p.idx)).length;
+      panelBody.appendChild(el('p', 'dim', 'Gather spots here today: ' + left + ' of ' + spots.length + '.'));
+      panelBody.appendChild(el('h3', '', 'Creatures'));
+      panelBody.appendChild(el('p', '', 'Seen ' + ISL.logCount(save, 'seen') + ', tamed ' + ISL.logCount(save, 'tamed') + ', in your stable ' + tames.roster.length + '.'));
+      panelBody.appendChild(el('h3', '', 'Medals ' + medals.length + ' of ' + ISL.MEDAL_IDS.length));
+      const ml = el('ul', 'log-list'); ml.id = 'log-medals';
+      ISL.MEDAL_IDS.forEach((id) => { const on = medals.indexOf(id) >= 0; const li = el('li', on ? 'on' : 'dim', (on ? '[x] ' : '[ ] ') + (ISL.MEDAL_NAMES[id] || id)); li.dataset.medal = id; ml.appendChild(li); });
+      panelBody.appendChild(ml);
+    }
+    panel.hidden = false;
+    paused = true;
+    const first = panelBody.querySelector('button') || $('panel-close');
+    try { first.focus(); } catch (e) { /* ignore */ }
+  }
+  $('panel-close').addEventListener('click', closePanel);
+  // the decor bar (home only)
+  const decorBar = $('decor');
+  const decorBtns = {};
+  function refreshDecor() {
+    HS.ORDER.forEach((k) => { const b = decorBtns[k]; if (!b) return; b.textContent = HS.KINDS[k].name + ' ' + (save.home.inv[k] | 0); b.setAttribute('aria-pressed', String(buildKind === k)); });
+  }
+  if (HOME) {
+    HS.ORDER.forEach((k) => {
+      const b = el('button', 'decor-btn'); b.type = 'button'; b.dataset.kind = k;
+      b.addEventListener('click', () => { buildKind = k; refreshDecor(); });
+      decorBtns[k] = b; decorBar.insertBefore(b, $('decor-undo'));
+    });
+    $('decor-undo').addEventListener('click', undoBuild);
+    $('decor-done').addEventListener('click', () => setBuild(false));
+    refreshDecor(); refreshGuests();
+  }
+  function setBuild(on) {
+    if (!HOME) return false;
+    build = on !== false;
+    decorBar.hidden = !build;
+    btn.build.setAttribute('aria-pressed', String(build));
+    if (build) toast('Tap open ground in the garden square to place. Tap an item to pick it up.');
+    return build;
+  }
+
   // ---------- HUD ----------
   const hud = { hero: $('hud-hero'), isle: $('hud-isle'), info: $('hud-info'), ground: $('hud-ground'), fill: $('hp-fill'), hp: $('hp-text'), hint: $('hint') };
-  const btn = { feed: $('btn-feed'), soothe: $('btn-soothe'), ride: $('btn-ride') };
+  const btn = { feed: $('btn-feed'), soothe: $('btn-soothe'), ride: $('btn-ride'), gather: $('btn-gather'), sail: $('btn-sail'), build: $('btn-build'), home: $('btn-home'), log: $('btn-log') };
   const lastBtn = {};
   const showBtn = (k, on) => { if (lastBtn[k] !== on) { lastBtn[k] = on; btn[k].hidden = !on; } };
   hud.hero.textContent = HERO.name + ' - ' + HERO.cls + ' Lv ' + HERO.level;
@@ -757,11 +990,18 @@
     showBtn('feed', !!ft);
     showBtn('soothe', TAME);
     showBtn('ride', MOUNTS && !!mountEnt);
+    showBtn('gather', !!spotNear());
+    showBtn('sail', nearDock());
+    showBtn('build', HOME);
+    showBtn('home', !HOME);
     const h = hintText(ft);
     setText('hint', h);
     if (hud.hint.hidden !== !h) hud.hint.hidden = !h;
   }
   function hintText(ft) {
+    if (build) return 'Decorating: tap open ground to place, tap an item to pick it up. E works too.';
+    if (nearDock() && !ride) return 'The dock. Press T or Sail to open the sea chart.';
+    if (spotNear()) return 'Something to gather here. Press G or Gather.';
     if (ride) return 'Riding ' + (mountEnt ? mountEnt.nm || 'your mount' : 'your mount') + '. Press R or Ride to get off.';
     if (!TAME) return '';
     if (ft) {
@@ -810,10 +1050,20 @@
     if (e.code === 'KeyF' && !e.repeat) feed();
     if (e.code === 'KeyQ' && !e.repeat) toggleSoothe();
     if (e.code === 'KeyR' && !e.repeat) toggleRide();
+    if (e.code === 'KeyG' && !e.repeat) gatherNear();
+    if (e.code === 'KeyT' && !e.repeat && nearDock()) openPanel('sail');
+    if (e.code === 'KeyL' && !e.repeat) { if (panelKind === 'log') closePanel(); else openPanel('log'); }
+    if (e.code === 'KeyB' && !e.repeat && HOME) setBuild(!build);
+    if (e.code === 'KeyE' && !e.repeat && build) buildAt(tileOf(hero.x + hero.face.x * TILE), tileOf(hero.y + hero.face.y * TILE));
+    if (e.code === 'Escape' && !panel.hidden) closePanel();
   });
   document.addEventListener('keyup', (e) => { if (KEYMAP[e.code]) keys[KEYMAP[e.code]] = false; if (e.code === 'Space') firing = false; });
   window.addEventListener('blur', () => { Object.keys(keys).forEach((k) => { keys[k] = false; }); firing = false; stick.x = stick.y = 0; });
-  view.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch') return; firing = true; aim = { x: e.clientX, y: e.clientY }; });
+  view.addEventListener('pointerdown', (e) => {
+    if (build) { buildAt(tileOf(e.clientX + camX), tileOf(e.clientY + camY)); return; } // decorating: taps place / pick up, never fire
+    if (e.pointerType === 'touch') return;
+    firing = true; aim = { x: e.clientX, y: e.clientY };
+  });
   view.addEventListener('pointermove', (e) => { if (aim) aim = { x: e.clientX, y: e.clientY }; });
   window.addEventListener('pointerup', (e) => { if (e.pointerType !== 'touch') { firing = false; aim = null; } });
   const stick = { x: 0, y: 0, id: null };
@@ -839,6 +1089,11 @@
   btn.feed.addEventListener('click', () => { feed(); });
   btn.soothe.addEventListener('click', () => { toggleSoothe(); });
   btn.ride.addEventListener('click', () => { toggleRide(); btn.ride.setAttribute('aria-pressed', String(!!ride)); });
+  btn.gather.addEventListener('click', () => { gatherNear(); });
+  btn.sail.addEventListener('click', () => { openPanel('sail'); });
+  btn.build.addEventListener('click', () => { setBuild(!build); });
+  btn.home.addEventListener('click', () => { travelTo('home'); });
+  btn.log.addEventListener('click', () => { if (panelKind === 'log') closePanel(); else openPanel('log'); });
   const coarse = (() => { try { return window.matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } })();
   if (coarse || Q.get('touch') === '1' || ('ontouchstart' in window && window.innerWidth <= 700)) document.body.classList.add('touch');
 
@@ -862,7 +1117,7 @@
     if (!hero.dead) moveHero(mx, my, dt);
     revealFog();
     spawnT -= dt;
-    if (spawnT <= 0) { spawnT = 0.5; spawnTick(); }
+    if (spawnT <= 0) { spawnT = 0.5; spawnTick(); bossCheck(); }
     stepCreatures(dt);
     stepBolts(dt);
     if (party.length) stepParty(dt);
@@ -887,9 +1142,11 @@
   }
   loadParty();
   revealFog();
+  ISL.writeMedals(S, []); // the summary key exists from the first visit (additive)
+  checkMedals();
   drawMini(); drawHud();
   requestAnimationFrame(frame);
-  if (!savedIsle) toast('Welcome to the ' + PACK.name + '!');
+  if (!savedIsle && !medalLog.length) toast(HOME ? 'Welcome home to ' + PACK.name + '.' : 'Welcome to the ' + PACK.name + '!');
 
   // ---------- test handle ----------
   if (TEST) {
@@ -941,6 +1198,28 @@
       fire: (dx, dy) => { hero.cd = 0; return fire(dx, dy); },
       stats: () => ({ xp: xp, kills: kills, tamed: tamedN, loot: Object.assign({}, loot), bolts: bolts.length, chunks: chunkCache.size(), fog: FOG.count(fog), cap: CAP, dpr: DPR }),
       save: () => { persist(); return JSON.parse(S.getItem(ISL.KEY) || 'null'); },
+      // B10
+      home: () => (HOME ? { origin: Object.assign({}, homeO), grid: save.home.grid.map((c) => c.slice()), inv: Object.assign({}, save.home.inv), seeded: save.home.seeded,
+        guests: guests.map((q) => q.sp), pens: HS.pens(save.home).length } : null),
+      cellFree: (x, y) => cellFree(x, y),
+      buildMode: (on) => setBuild(on),
+      buildKind: (k) => { if (has(HS.KINDS, k)) buildKind = k; return buildKind; },
+      buildAt: (x, y) => { const r = buildAt(homeO.x + x, homeO.y + y); return { ok: r.ok, why: r.why }; },
+      undo: () => undoBuild(),
+      dock: () => (world.dock ? { x: world.dock.x, y: world.dock.y } : null),
+      nearDock: () => nearDock(),
+      openPanel: (k) => { openPanel(k === 'sail' ? 'sail' : 'log'); return panelKind; },
+      closePanel: () => closePanel(),
+      destinations: () => DESTS.filter((id) => id !== ISLE),
+      travel: (id) => travelTo(id),
+      day: DAY,
+      spots: () => spots.map((p) => ({ idx: p.idx, x: p.x, y: p.y, kind: p.kind, taken: HS.taken(save.gather, ISLE, p.idx) })),
+      gather: () => gatherNear(),
+      gatherLog: () => Object.assign({}, save.gather.log),
+      medals: () => medals.slice(),
+      medalLog: () => medalLog.slice(),
+      checkMedals: () => checkMedals(),
+      bossCheck: () => { bossCheck(); return save.bosses.slice(); },
     };
   }
 }());

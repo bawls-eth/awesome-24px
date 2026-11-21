@@ -93,10 +93,13 @@
       lakes: { per64k: 6, min: 3, rivers: 2, skipBand: 3 },
       structures: [['camp', [2, 2, 0, 0], 3], ['temple_ruin', [0, 2, 2, 2], 5, 'ruin'], ['shrine', [0, 1, 2, 1], 3], ['totem', [0, 0, 1, 1], 4, 'tower'], ['event_site', [1, 1, 1, 1], 6]],
       portals: [{ biome: 'rift', zone: 2 }],
-      bosses: [{ boss: 'canopy_queen', zone: 3 }],
+      bosses: [{ boss: 'fernjaw_tyrant', zone: 3 }],
       groups: { cell: [11, 10, 9, 8], count: [[1, 3], [2, 3], [2, 4], [1, 3]], prob: [0.5, 0.62, 0.7, 0.75] },
       creatures: { 0: ['parrotlet', 'shellback'], 1: ['raptor_jr', 'boarhog', 'shellback'], 2: ['raptor', 'stegolith', 'boarhog'], 3: ['raptor', 'stegolith'] },
-      base: { parrotlet: 'spiral', shellback: 'ring', boarhog: 'ring', raptor_jr: 'aimed', raptor: 'aimed', stegolith: 'ring', canopy_queen: 'aimed' },
+      base: { parrotlet: 'spiral', shellback: 'ring', boarhog: 'ring', raptor_jr: 'aimed', raptor: 'aimed', stegolith: 'ring', fernjaw_tyrant: 'aimed' },
+      // the jungle keeps its first-playable spawn ids (saves, tests and seeds use them); each one plays as this MMCreatures species
+      // (games/isles/isle-creatures.js ALIAS mirrors it; boarhog herds are plain boars except every 3rd group, which is a full tusktop)
+      species: { parrotlet: 'chompbill', shellback: 'canopy_glider', raptor_jr: 'fernraptor', raptor: 'fernraptor', boarhog: 'tusktop' },
       props: { jungle_floor: ['jungle_tree', 0.05], jungle_moss: ['giant_fern', 0.05], fern_thicket: ['hanging_vine', 0.04], mud: ['reeds', 0.02], black_sand: ['log', 0.01],
         sand: ['tree_palm', 0.012], wet_sand: ['shell', 0.005], temple_stone: ['temple_pillar', 0.015], temple_moss: ['temple_idol', 0.006], orchid_moss: ['banana_plant', 0.03] },
       resources: [{ id: 'wood', terrain: ['jungle_floor'], chance: 0.006, respawn: 300 }, { id: 'vine_rope', terrain: ['fern_thicket', 'jungle_moss'], chance: 0.008, respawn: 240 },
@@ -170,8 +173,8 @@
       portals: [{ biome: 'rift', zone: 2 }],
       bosses: [{ boss: 'frost_dragon', zone: 3 }],
       groups: { cell: [11, 10, 9, 8], count: [[1, 3], [2, 3], [2, 4], [1, 3]], prob: [0.5, 0.62, 0.7, 0.75] },
-      creatures: { 0: ['pengling', 'shellback_glacier'], 1: ['frostfox', 'shellback_glacier', 'icicle_bat'], 2: ['rimewolf', 'shagtusk', 'icicle_bat'], 3: ['sabrefang', 'rimewolf'] },
-      base: { pengling: 'spiral', frostfox: 'aimed', icicle_bat: 'spiral', rimewolf: 'aimed', shellback_glacier: 'ring', shagtusk: 'ring', sabrefang: 'aimed', frost_dragon: 'ring' },
+      creatures: { 0: ['pengling', 'glacier_shellback'], 1: ['frostfox', 'glacier_shellback', 'icicle_bat'], 2: ['rimewolf', 'shagtusk', 'icicle_bat'], 3: ['sabrefang', 'rimewolf'] },
+      base: { pengling: 'spiral', frostfox: 'aimed', icicle_bat: 'spiral', rimewolf: 'aimed', glacier_shellback: 'ring', shagtusk: 'ring', sabrefang: 'aimed', frost_dragon: 'ring' },
       props: { packed_snow: ['pine_snowy', 0.03], snow: ['snow_drift', 0.03], powder_snow: ['pine_snowy', 0.02], tundra_moss: ['frostberry_bush', 0.02], permafrost: ['ice_spike', 0.02],
         ice_sheet: ['frozen_mammoth_tusk', 0.003], hot_spring: ['hot_spring_steam', 0.2], frost_rock: ['crystal_blue', 0.02] },
       resources: [{ id: 'frost_crystal', terrain: ['permafrost', 'frost_rock'], chance: 0.01, respawn: 600 }, { id: 'ice', terrain: ['ice_sheet'], chance: 0.01, respawn: 240 },
@@ -297,5 +300,18 @@
     return s;
   }
 
-  return { VERSION: VERSION, IDS: IDS, ALIASES: ALIASES, get: get, resolveId: resolveId, validate: validate, creatureIds: creatureIds, palette: pal };
+  // the MMCreatures species id a pack creature or boss id stands for: the pack's species table, else the id itself
+  function speciesOf(id, cid) {
+    const p = get(id); if (!p || typeof cid !== 'string') return null;
+    return p.species && own.call(p.species, cid) ? p.species[cid] : cid;
+  }
+  // every id a pack places: spawn tables, rares and bosses
+  function allIds(id) {
+    const p = get(id); if (!p) return [];
+    const s = creatureIds(id);
+    (p.bosses || []).forEach(function (b) { if (s.indexOf(b.boss) < 0) s.push(b.boss); });
+    return s;
+  }
+
+  return { VERSION: VERSION, IDS: IDS, ALIASES: ALIASES, get: get, resolveId: resolveId, validate: validate, creatureIds: creatureIds, allIds: allIds, speciesOf: speciesOf, palette: pal };
 }));

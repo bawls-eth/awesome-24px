@@ -12,6 +12,11 @@
     jam: { node: 'w5-jam', name: 'Campfire Jam', medals: [['star1', 'First star'], ['stars12', '12 stars'], ['fullcombo', 'Full combo']] },
     stalk: { node: 'w5-stalk', name: 'Stalk Market', medals: [['bronze', 'Bronze'], ['silver', 'Silver'], ['gold', 'Gold']] },
     deepdelve: { node: 'w3-deepdelve', name: 'Deepdelve', medals: [['bronze', 'Depth 8'], ['silver', 'Iron pick'], ['secret', 'Lava Lake'], ['depth20', 'Depth 20'], ['depth40', 'Depth 40'], ['crawler', 'Crawler slain'], ['wyrm', 'Rock Wyrm'], ['torches10', '10 torches']] },
+    // Hearthvale Isles (games/isles, MMIsles.MEDAL_IDS): first tames, a tame per size class, each island visited, each boss lair seen
+    isles: { node: 'w7-isles', name: 'Hearthvale Isles', medals: [['tame1', 'First tame'], ['log6', '6 creatures seen'], ['ride1', 'First ride'], ['stable5', '5 tames'],
+      ['tame_s', 'Small friend'], ['tame_m', 'Medium friend'], ['tame_l', 'Large friend'], ['tame_xl', 'Giant friend'], ['visit_home', 'Hearth Isle'],
+      ['visit_jungle', 'Verdant Jungle'], ['visit_reef', 'Coral Reef'], ['visit_ice', 'Frostfang Tundra'], ['visit_mars', 'Red Waste'],
+      ['boss_fernjaw_tyrant', 'Fernjaw Tyrant seen'], ['boss_tide_hydra', 'Tide Hydra seen'], ['boss_frost_dragon', 'Frost Dragon seen'], ['boss_red_titan', 'Red Titan seen']] },
   };
   const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
   const keyOf = (game) => 'pixeltown-medals-' + game + '-v1';
