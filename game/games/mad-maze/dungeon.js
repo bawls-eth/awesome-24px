@@ -123,18 +123,27 @@
       if (depth[d.b] !== undefined && depth[d.a] === undefined) depth[d.a] = depth[d.b] + 1;
     });
 
+    // difficulty curve (MMDifficulty): room 1 = first room after the gate, last = the deepest room; applied at spawn time only (?difficulty=off = 1x)
+    const DIFF = window.MMDifficulty && !MMDifficulty.isOff(typeof location !== 'undefined' ? location.search : '') ? MMDifficulty : null;
+    let dMode = 'classic'; try { if (window.MMProfile) dMode = MMProfile.clean(localStorage.getItem(MMProfile.KEY)).mode; } catch (e) { dMode = 'classic'; }
+    const maxDepth = Math.max(1, ...Object.keys(depth).map((k) => depth[k]));
+    const scaleOf = (id, boss) => (DIFF ? DIFF.dungeonScale(biome, Math.max(1, depth[id] || 1), maxDepth, !!boss, { mode: dMode }) : { hp: 1, dmg: 1, spd: 1, count: 1, fire: 1 });
+
     // ---- per-room layout: template, plan, counts ----
     const L = {}; const counts = {};
     dungeon.rooms.forEach((r) => {
       const tplDef = picks.defs[r.id];
       const tpl = MMRooms.parse(tplDef);
       let plan = [];
-      if (r.type === 'combat' || r.type === 'key') plan = MMEnemies.plan(seed + ':' + r.id, Math.max(1, depth[r.id] || 1), tpl.spawns.map((s) => ({ x: s.x, y: s.y })), null, biome === 'warren' ? undefined : B.ids).enemies;
+      if (r.type === 'combat' || r.type === 'key') {
+        plan = MMEnemies.plan(seed + ':' + r.id, Math.max(1, depth[r.id] || 1), tpl.spawns.map((s) => ({ x: s.x, y: s.y })), null, biome === 'warren' ? undefined : B.ids).enemies;
+        if (DIFF) plan = plan.slice(0, Math.max(1, Math.min(plan.length, Math.round(plan.length * scaleOf(r.id).count)))); // early rooms hold fewer enemies (the plan order is seeded)
+      }
       const extra = plan.reduce((n, e) => n + (e.id === 'sprout' ? 2 : 0), 0); // each Sprout leaves two minis behind
       counts[r.id] = r.type === 'boss' ? 1 : plan.length + extra;
-      L[r.id] = { tpl, plan, baked: null, spawned: false, keyTaken: false };
+      L[r.id] = { tpl, plan, baked: null, spawned: false, keyTaken: false, sc: scaleOf(r.id, r.type === 'boss') };
     });
-    const state = MMDungeonState.create(dungeon, rngRun, { enemies: counts, bossHp: opts.bossHp || 260 });
+    const state = MMDungeonState.create(dungeon, rngRun, { enemies: counts, bossHp: Math.max(1, Math.ceil((opts.bossHp || 260) * (DIFF ? scaleOf(dungeon.rooms.find((q) => q.type === 'boss').id, true).hp : 1))) });
 
     const freeSpot = (tpl, tx, ty) => {
       let best = null; let bd = 1e9;
@@ -188,8 +197,9 @@
     const hasKey = () => current !== null && byId[current].type === 'key' && !L[current].keyTaken;
     const hasPortal = () => current !== null && byId[current].type === 'boss' && state.boss.dead;
 
-    function spawnMob(type, id, x, y, hp, elite) {
+    function spawnMob(type, id, x, y, hp, elite, sc) {
       const e = arena.spawnEnemy(type, x, y); if (!e) return null;
+      if (sc) { hp = Math.max(1, Math.ceil(hp * sc.hp)); e.dmgMul = sc.dmg; e.spdMul = sc.spd; e.diff = sc; }
       e.dg = 'mob'; e.did = id; e.art = B.skin[id] || (id === 'sprout_mini' ? B.skin.sprout : null) || null; e.elite = !!elite; e.maxHp = hp; e.hp = hp; e.lx = x; e.ly = y;
       return e;
     }
@@ -205,11 +215,12 @@
         }
         used.add(pos.x + ',' + pos.y);
         const px = spotPx(pos);
-        spawnMob(ENEMY_MAP[p.id], p.id, px.x, px.y, Math.max(3, Math.ceil(p.hp / HP_DIV)), p.elite);
+        spawnMob(ENEMY_MAP[p.id], p.id, px.x, px.y, Math.max(3, Math.ceil(p.hp / HP_DIV)), p.elite, DIFF ? lay.sc : null);
       });
     }
     function spawnBoss() {
       const e = arena.spawnEnemy('boss', arena.W / 2, 132); if (!e) return;
+      if (DIFF && current !== null) { e.dmgMul = L[current].sc.dmg; e.diff = L[current].sc; }
       e.dg = 'boss'; e.maxHp = state.boss.maxHp; e.hp = state.boss.hp; e.phase = state.boss.phase; e.invuln = 1.2; e.cd = 1.2; e.cd2 = 2.4; e.angle = 0;
       arena.bossT0 = arena.clock; e.bossArt = B.boss_art; arena._syncBoss(); nextSweep = arena.clock + 4; nextWall = arena.clock + 6;
     }
@@ -380,7 +391,7 @@
         if (e.dg !== 'mob' || current === null) return;
         const before = state.room(current).enemiesAlive; if (before <= 0) return;
         const left = state.killEnemy();
-        if (e.did === 'sprout') MMEnemies.onDeath({ id: 'sprout', x: 0, y: 0 }).forEach((m, i) => spawnMob('aimed', m.id, e.x + (i ? 16 : -16), e.y, Math.max(2, Math.ceil(m.hp / HP_DIV)), false));
+        if (e.did === 'sprout') MMEnemies.onDeath({ id: 'sprout', x: 0, y: 0 }).forEach((m, i) => spawnMob('aimed', m.id, e.x + (i ? 16 : -16), e.y, Math.max(2, Math.ceil(m.hp / HP_DIV)), false, DIFF && current !== null ? L[current].sc : null));
         if (left === 0) ctrl.cleared();
       },
       cleared() {
@@ -475,6 +486,7 @@
       boltWall: (x, y) => ctrl.onBoltWall(x, y),
       boss: () => bossEntity(),
       finish,
+      scaleFor: (id) => L[id].sc, depthOf: (id) => depth[id], maxDepth, diffOn: !!DIFF, mobsInfo: () => arena.enemies.filter((e) => e.active && e.dg).map((e) => ({ dg: e.dg, hp: e.maxHp, dmg: e.dmgMul, spd: e.spdMul })),
       layout: (id) => ({ tpl: L[id].tpl.id, plan: L[id].plan.length, count: counts[id] }),
       toggleMap,
       mapVisible: () => !mapEl.classList.contains('hidden'),

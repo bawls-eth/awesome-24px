@@ -574,5 +574,13 @@
   "hero-all-classes.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "shared-mm-difficulty.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "difficulty-curve.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

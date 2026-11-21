@@ -371,6 +371,19 @@
     function sweepLost() {
       live.forEach((e, id) => { if (!e.active || e.zid !== id) { live.delete(id); zones.markDead(id, arena.clock); } });
     }
+    // ---------- difficulty curve (MMDifficulty, applied at spawn time only: generation and seeded rolls are untouched; ?difficulty=off = 1x) ----------
+    const DIFF = window.MMDifficulty && !MMDifficulty.isOff(typeof location !== 'undefined' ? location.search : '') ? MMDifficulty : null;
+    let diffMode = 'classic'; try { if (window.MMProfile) diffMode = MMProfile.clean(localStorage.getItem(MMProfile.KEY)).mode; } catch (e) { diffMode = 'classic'; }
+    const REALM_R = world.w * 0.47; // nominal coast radius in tiles (MMOverworld.generate)
+    function diffAt(zone, px, py) { // px/py in pixels -> MMDifficulty.zoneScale for that spot (1x everywhere when off)
+      if (!DIFF) return { hp: 1, dmg: 1, spd: 1, count: 1, fire: 1 };
+      const d = Math.hypot(px / TILE - world.center.x, py / TILE - world.center.y) / REALM_R;
+      return DIFF.zoneScale(zone, d, { mode: diffMode });
+    }
+    function scaleEnemy(e, zone, hpBase) { // multiply an arena enemy already carrying its zone stats
+      const s = diffAt(zone, e.x, e.y);
+      e.maxHp = Math.max(1, Math.ceil(hpBase * s.hp)); e.hp = e.maxHp; e.spdMul = (e.spdMul || 1) * s.spd; e.dmgMul = (e.dmgMul || 1) * s.dmg; e.diff = DIFF ? s : null;
+    }
     function spawnZ(rec) {
       let x = rec.x; let y = rec.y;
       if (solidAt(x, y)) { const g = groups[rec.group]; x = (g.x + 0.5) * TILE; y = (g.y + 0.5) * TILE; }
@@ -379,6 +392,7 @@
       const def = RM_ENEMIES[rec.type];
       e.maxHp = Math.max(1, Math.ceil(def.hp * rec.hpMul)); e.hp = e.maxHp;
       e.spdMul = rec.speedMul; e.dmgMul = rec.dmgMul; e.xpMul = rec.xpMul; e.shardMul = rec.shardMul;
+      scaleEnemy(e, rec.zone, def.hp * rec.hpMul);
       e.art = rec.creature; e.zid = rec.id; e.zone = rec.zone; e.tier = rec.tier;
       live.set(rec.id, e); spawned++;
       return e;
@@ -498,7 +512,7 @@
           if (!e) break; // pool full: the swarm is smaller
           const def = RM_ENEMIES[r.type];
           e.maxHp = Math.max(1, Math.ceil(def.hp * r.hpMul)); e.hp = e.maxHp;
-          e.spdMul = r.speedMul; e.dmgMul = r.dmgMul; e.xpMul = r.xpMul; e.shardMul = r.shardMul; e.art = r.creature; e.zone = r.zone; e.tier = r.tier; e.evid = st.id;
+          e.spdMul = r.speedMul; e.dmgMul = r.dmgMul; e.xpMul = r.xpMul; e.shardMul = r.shardMul; scaleEnemy(e, r.zone, def.hp * r.hpMul); e.art = r.creature; e.zone = r.zone; e.tier = r.tier; e.evid = st.id;
           st.ents.push(e); st.total += e.maxHp;
         }
         if (!st.ents.length) return false;
@@ -786,7 +800,7 @@
         } else if (!st.cleared && d < 15 * TILE) {
           q.patrol.forEach((m) => {
             const e = arena.spawnEnemy(m.type, (m.x + 0.5) * TILE, (m.y + 0.5) * TILE); if (!e) return;
-            e.art = m.art; e.zone = q.zone; e.tier = q.zone; e.campId = q.id; e.zid = -1; st.ents.push(e);
+            scaleEnemy(e, q.zone, e.maxHp); e.art = m.art; e.zone = q.zone; e.tier = q.zone; e.campId = q.id; e.zid = -1; st.ents.push(e);
           });
         }
       });
@@ -918,9 +932,9 @@
       discovered: () => ({ on: fogOn, count: FOG ? FOG.count(fogBits) : 0, b64: FOG ? FOG.encode(fogBits) : '', has: (cx, cy) => (FOG ? FOG.has(fogBits, cx, cy) : false) }),
       revealAt: (tx, ty) => { const n = revealAt(tx, ty); if (n > 0) drawMini(false); return n; },
       // slice 6
-      spawner: () => zones, spawned: () => spawned, despawned: () => despawned,
+      diffOn: !!DIFF, diffMode, diffAt, spawner: () => zones, spawned: () => spawned, despawned: () => despawned,
       liveCount: () => { let n = 0; live.forEach((e, id) => { if (e.active && e.zid === id) n++; }); return n; },
-      liveEnemies: () => { const o = []; live.forEach((e, id) => { if (e.active && e.zid === id) o.push({ id, x: e.x, y: e.y, type: e.type, zone: e.zone, tier: e.tier, art: e.art, hp: e.maxHp, spd: e.spdMul, dmg: e.dmgMul }); }); return o; },
+      liveEnemies: () => { const o = []; live.forEach((e, id) => { if (e.active && e.zid === id) o.push({ id, x: e.x, y: e.y, type: e.type, zone: e.zone, tier: e.tier, art: e.art, hp: e.maxHp, spd: e.spdMul, dmg: e.dmgMul, diff: e.diff || null }); }); return o; },
       enemyById: (id) => live.get(id) || null, setDropAll: (on) => { dropAll = !!on; }, lastDrops: () => lastDrops.slice(), kills: () => kills,
       bossSites: () => world.bossSites.map((b, i) => ({ i, x: b.x, y: b.y, zone: b.zone, boss: b.boss, name: BOSS_NAME[i], live: !!(bossLive[i] && bossLive[i].active), ready: !!zones && zones.bossReady(b, arena.clock) })),
       bossEntity: (i) => bossLive[i] || null, bossTick,
