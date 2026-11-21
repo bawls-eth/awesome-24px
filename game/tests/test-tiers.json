@@ -842,5 +842,21 @@
   "side-access.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "realm-settings.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "realm-tutorial.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "realm-audio.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "realm-lowgfx.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

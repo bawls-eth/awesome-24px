@@ -78,4 +78,28 @@ check('reduced low-HP border is static', b1.visible && !b1.pulse && b1.alpha ===
 const p1 = MMMotion.lowHpBorder(20, 100, false, 0), p2 = MMMotion.lowHpBorder(20, 100, false, 0.25);
 check('normal low-HP border pulses', p1.pulse && p1.alpha !== p2.alpha);
 check('no border above 25% HP', MMMotion.lowHpBorder(50, 100, false, 0).visible === false);
+
+// SF1: new cues + ambience
+{
+  const L = MMSfx.LIMITS;
+  ['portal', 'bag_rare', 'boss_awaken', 'warn', 'claim', 'ui_tap'].forEach((n) => check('LIMITS has ' + n, L[n] > 0 && L[n] <= 12));
+  const c = fakeCtx(); const sx = MMSfx.create({ ctxFactory: () => c, storage: memStore() });
+  ['portal', 'bag_rare', 'boss_awaken', 'warn', 'claim', 'ui_tap'].forEach((n) => check('play(' + n + ') returns true', sx.play(n) === true));
+  const o0 = c.oscStarts;
+  for (let i = 0; i < 20; i++) { c.currentTime = 10 + i * 0.01; sx.play('ui_tap'); }
+  check('ui_tap is throttled to its limit per second', c.oscStarts - o0 === L.ui_tap);
+  let made = 0; const lazy = MMSfx.create({ ctxFactory: () => { made++; return fakeCtx(); }, storage: memStore() });
+  check('no AudioContext at construction', made === 0);
+  check('ambience refuses while music is off', lazy.ambience(1) === false && made === 0 && lazy.ambienceOn() === false);
+  lazy.setMusic(true);
+  check('ambience starts with music on', lazy.ambience(1) === true && lazy.ambienceOn() === true);
+  check('ambience zone change keeps one drone', lazy.ambience(3) === true && lazy.ambienceOn() === true && made === 1);
+  lazy.setMuted(true);
+  check('mute stops the ambience', lazy.ambienceOn() === false && lazy.ambience(2) === false);
+  lazy.setMuted(false); lazy.ambience(2); lazy.setMusic(false);
+  check('music off stops the ambience', lazy.ambienceOn() === false);
+  check('stopAmbience is idempotent', lazy.stopAmbience() === false);
+  let ok2 = true; try { MMSfx.create({ ctxFactory: () => null, storage: memStore() }).setMusic(true); MMSfx.create({ ctxFactory: () => null }).ambience(1); } catch (e) { ok2 = false; }
+  check('ambience without an AudioContext does not throw', ok2);
+}
 done();
