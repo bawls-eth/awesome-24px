@@ -1,0 +1,686 @@
+{
+  "batch": "b31a",
+  "label": "jungle-creatures-core",
+  "assets": [
+    {
+      "id": "chompbill_idle_down",
+      "path": "enemies/chompbill/chompbill_idle_down.png",
+      "category": "enemy",
+      "enemy": "chompbill",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "chompbill_move_down",
+      "path": "enemies/chompbill/chompbill_move_down.png",
+      "category": "enemy",
+      "enemy": "chompbill",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "chompbill_attack_down",
+      "path": "enemies/chompbill/chompbill_attack_down.png",
+      "category": "enemy",
+      "enemy": "chompbill",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "chompbill_death_down",
+      "path": "enemies/chompbill/chompbill_death_down.png",
+      "category": "enemy",
+      "enemy": "chompbill",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "chompbill_idle_up",
+      "path": "enemies/chompbill/chompbill_idle_up.png",
+      "category": "enemy",
+      "enemy": "chompbill",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "chompbill_move_up",
+      "path": "enemies/chompbill/chompbill_move_up.png",
+      "category": "enemy",
+      "enemy": "chompbill",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "chompbill_attack_up",
+      "path": "enemies/chompbill/chompbill_attack_up.png",
+      "category": "enemy",
+      "enemy": "chompbill",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "chompbill_death_up",
+      "path": "enemies/chompbill/chompbill_death_up.png",
+      "category": "enemy",
+      "enemy": "chompbill",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "chompbill_idle_right",
+      "path": "enemies/chompbill/chompbill_idle_right.png",
+      "category": "enemy",
+      "enemy": "chompbill",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "chompbill_move_right",
+      "path": "enemies/chompbill/chompbill_move_right.png",
+      "category": "enemy",
+      "enemy": "chompbill",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "chompbill_attack_right",
+      "path": "enemies/chompbill/chompbill_attack_right.png",
+      "category": "enemy",
+      "enemy": "chompbill",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "chompbill_death_right",
+      "path": "enemies/chompbill/chompbill_death_right.png",
+      "category": "enemy",
+      "enemy": "chompbill",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "chompbill_sleep_down",
+      "path": "enemies/chompbill/chompbill_sleep_down.png",
+      "category": "enemy",
+      "enemy": "chompbill",
+      "action": "sleep",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "chompbill_eat_down",
+      "path": "enemies/chompbill/chompbill_eat_down.png",
+      "category": "enemy",
+      "enemy": "chompbill",
+      "action": "eat",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "fernraptor_idle_down",
+      "path": "enemies/fernraptor/fernraptor_idle_down.png",
+      "category": "enemy",
+      "enemy": "fernraptor",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "fernraptor_move_down",
+      "path": "enemies/fernraptor/fernraptor_move_down.png",
+      "category": "enemy",
+      "enemy": "fernraptor",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "fernraptor_attack_down",
+      "path": "enemies/fernraptor/fernraptor_attack_down.png",
+      "category": "enemy",
+      "enemy": "fernraptor",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "fernraptor_death_down",
+      "path": "enemies/fernraptor/fernraptor_death_down.png",
+      "category": "enemy",
+      "enemy": "fernraptor",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "fernraptor_idle_up",
+      "path": "enemies/fernraptor/fernraptor_idle_up.png",
+      "category": "enemy",
+      "enemy": "fernraptor",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "fernraptor_move_up",
+      "path": "enemies/fernraptor/fernraptor_move_up.png",
+      "category": "enemy",
+      "enemy": "fernraptor",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "fernraptor_attack_up",
+      "path": "enemies/fernraptor/fernraptor_attack_up.png",
+      "category": "enemy",
+      "enemy": "fernraptor",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "fernraptor_death_up",
+      "path": "enemies/fernraptor/fernraptor_death_up.png",
+      "category": "enemy",
+      "enemy": "fernraptor",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "fernraptor_idle_right",
+      "path": "enemies/fernraptor/fernraptor_idle_right.png",
+      "category": "enemy",
+      "enemy": "fernraptor",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "fernraptor_move_right",
+      "path": "enemies/fernraptor/fernraptor_move_right.png",
+      "category": "enemy",
+      "enemy": "fernraptor",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "fernraptor_attack_right",
+      "path": "enemies/fernraptor/fernraptor_attack_right.png",
+      "category": "enemy",
+      "enemy": "fernraptor",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "fernraptor_death_right",
+      "path": "enemies/fernraptor/fernraptor_death_right.png",
+      "category": "enemy",
+      "enemy": "fernraptor",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "fernraptor_sleep_down",
+      "path": "enemies/fernraptor/fernraptor_sleep_down.png",
+      "category": "enemy",
+      "enemy": "fernraptor",
+      "action": "sleep",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "fernraptor_eat_down",
+      "path": "enemies/fernraptor/fernraptor_eat_down.png",
+      "category": "enemy",
+      "enemy": "fernraptor",
+      "action": "eat",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "glimmerfrog_idle_down",
+      "path": "enemies/glimmerfrog/glimmerfrog_idle_down.png",
+      "category": "enemy",
+      "enemy": "glimmerfrog",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "glimmerfrog_move_down",
+      "path": "enemies/glimmerfrog/glimmerfrog_move_down.png",
+      "category": "enemy",
+      "enemy": "glimmerfrog",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "glimmerfrog_attack_down",
+      "path": "enemies/glimmerfrog/glimmerfrog_attack_down.png",
+      "category": "enemy",
+      "enemy": "glimmerfrog",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "glimmerfrog_death_down",
+      "path": "enemies/glimmerfrog/glimmerfrog_death_down.png",
+      "category": "enemy",
+      "enemy": "glimmerfrog",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "glimmerfrog_idle_up",
+      "path": "enemies/glimmerfrog/glimmerfrog_idle_up.png",
+      "category": "enemy",
+      "enemy": "glimmerfrog",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "glimmerfrog_move_up",
+      "path": "enemies/glimmerfrog/glimmerfrog_move_up.png",
+      "category": "enemy",
+      "enemy": "glimmerfrog",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "glimmerfrog_attack_up",
+      "path": "enemies/glimmerfrog/glimmerfrog_attack_up.png",
+      "category": "enemy",
+      "enemy": "glimmerfrog",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "glimmerfrog_death_up",
+      "path": "enemies/glimmerfrog/glimmerfrog_death_up.png",
+      "category": "enemy",
+      "enemy": "glimmerfrog",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "glimmerfrog_idle_right",
+      "path": "enemies/glimmerfrog/glimmerfrog_idle_right.png",
+      "category": "enemy",
+      "enemy": "glimmerfrog",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "glimmerfrog_move_right",
+      "path": "enemies/glimmerfrog/glimmerfrog_move_right.png",
+      "category": "enemy",
+      "enemy": "glimmerfrog",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "glimmerfrog_attack_right",
+      "path": "enemies/glimmerfrog/glimmerfrog_attack_right.png",
+      "category": "enemy",
+      "enemy": "glimmerfrog",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "glimmerfrog_death_right",
+      "path": "enemies/glimmerfrog/glimmerfrog_death_right.png",
+      "category": "enemy",
+      "enemy": "glimmerfrog",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    }
+  ]
+}
