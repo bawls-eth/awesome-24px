@@ -110,6 +110,9 @@ body.touch-device #realm-stick-aim { right: calc(20px + var(--sr)); }
 .rm-tog.on { border-color: #7ee787; }
 .rm-settings { border-top: 1px solid rgba(255, 255, 255, 0.15); padding-top: 10px; margin-top: 12px; }
 .rm-note { margin: 0; font-size: 12px; }
+.rm-stash { margin: 0; font-size: 13px; color: #7ee787; opacity: 1; }
+.rm-stash.hidden { display: none; }
+.rm-stash-row { color: #7ee787; font-weight: 700; }
 .rm-confirm p { margin: 0 0 4px; line-height: 1.35; }
 .rm-recap { margin-bottom: 8px; }
 #realm-menu-close, #realm-shop-close { border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.5); background: rgba(0, 0, 0, 0.4); color: #fff; font-size: 16px; padding: 0; }

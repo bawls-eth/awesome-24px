@@ -399,6 +399,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "world-events.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "world-page.test.js": {
     "class": "browser",
     "tier": "smoke"
