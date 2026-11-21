@@ -347,6 +347,26 @@
    "status": "provisional",
    "ingested_utc": "2026-11-21T07:11:51Z",
    "source": "codex"
+  },
+  {
+   "id": "b18",
+   "label": "effects",
+   "path": "assets/arcane/b18-effects",
+   "manifest": "assets/arcane/b18-effects/manifest.json",
+   "files": 21,
+   "status": "provisional",
+   "ingested_utc": "2026-11-21T09:12:01Z",
+   "source": "codex"
+  },
+  {
+   "id": "b19",
+   "label": "ui-icons",
+   "path": "assets/arcane/b19-ui-icons",
+   "manifest": "assets/arcane/b19-ui-icons/manifest.json",
+   "files": 53,
+   "status": "provisional",
+   "ingested_utc": "2026-11-21T09:12:01Z",
+   "source": "codex"
   }
  ]
 }
