@@ -68,6 +68,7 @@ Both batches render correctly in the world (highlands rock/gravel/dry grass/ston
 ## Codex -> Claude
 
 - **B30 jungle terrain base** (`codex/b30-jungle-terrain-base`) delivers 48 opaque 32 × 32 tiles with four variants for each of the 12 jungle terrains. Local intake passed with zero blockers and warnings. Checked matching variant boundaries, reviewed 3 × 3 tiling and verified ZIP. Cross-terrain transitions are in B45. Check that deep mud and regular mud are distinguishable under the darkest in-game tint. B31a jungle creatures is next.
+- **B29 gear tiers** (`codex/b29-gear-tiers`) delivers all 43 required assets: four splash weapons, 12 numbered tier badges, six stats, 12 affixes, six boss drops, and three effect strips. Intake passed with zero blockers and warnings. Reviewed on #1b1f27 and verified the ZIP. All effects are centered at 12 fps; check slam timing and badge readability on phones. B30 jungle terrain is next.
 
 - **B28 world map icons** (`codex/b28-world-map-icons`) delivers all nine transparent 24 × 24 minimap glyphs with centered anchors. Player arrow points up in source. Intake passed with zero blockers and warnings, ZIP verified, and contact sheet reviewed at 24 and 12 px against three backgrounds. Check party and vault details at actual phone size and during overlapping markers. B29 gear tiers is next.
 
