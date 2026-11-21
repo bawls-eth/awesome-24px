@@ -503,7 +503,7 @@
       try {
         if (!full && !sv.gv && window.MMBackup && MMBackup.snapshotPregear) MMBackup.snapshotPregear(localStorage); // GH: once, before the first tiered item is written
         arena.collectItem(g.id, g.r);
-        if (!full && sv.items.length > n0 && sv.items[sv.items.length - 1].id === g.id) { const it = sv.items[sv.items.length - 1]; it.t = g.t; if (g.a) it.a = g.a; }
+        if (!full && sv.items.length > n0 && sv.items[sv.items.length - 1].id === g.id) { const it = sv.items[sv.items.length - 1]; it.t = g.t; if (g.a) it.a = g.a; if (g.sig) { const cs = MMGear.clean({ n: it.n, id: it.id, r: it.r, t: g.t, a: g.a, sig: g.sig }); if (cs && cs.sig) it.sig = cs.sig; } } // GW: a T12 boss signature is kept
         arena.onSave(sv);
       } finally { arena.rng = keep; }
       const d = MMGear.describe({ id: g.id, r: g.r, t: g.t, a: g.a }); const rar = RM_RARITIES[g.r] || RM_RARITIES[0];

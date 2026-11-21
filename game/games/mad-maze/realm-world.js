@@ -666,7 +666,7 @@
           const usable = (x) => typeof RM_ITEM_BY_ID === 'undefined' || !!(RM_ITEM_BY_ID[x] && !RM_ITEM_BY_ID[x].inert); // an inert def is a saved id this build cannot use
           if (!usable(id) && GM.isSig && GM.isSig(id)) id = GM.armorId(GM.sigInfo(id).family, 12); // a boss relic on an arena that does not register relics yet: its family's T12 piece
           if (!usable(id)) id = 'sparkwand'; // an arena without the armor slot yet: the tier stays, as a wand
-          gear = { t: g.t }; if (g.a) gear.a = g.a;
+          gear = { t: g.t }; if (g.a) gear.a = g.a; if (g.sig && id === g.id) gear.sig = g.sig; // GW: the T12 boss signature rides on the bag (MMGear.clean drops it where it does not fit)
         }
         const b = arena.dropBag(x + (k - (bag.items.length - 1) / 2) * 18, y + 10, it.r, id, bag, gear);
         if (!b) return;
@@ -971,10 +971,10 @@
           let best = null, bd = 30;
           arena.bags.forEach((b) => { if (b.active || !b.gear || b.id !== it.id || b.r !== it.r) return; const d = Math.hypot(b.x - arena.player.x, b.y - arena.player.y); if (d < bd) { bd = d; best = b; } });
           if (best && !it.t) {
-            const c = GM.clean({ n: it.n, id: it.id, r: it.r, t: best.gear.t, a: best.gear.a });
+            const c = GM.clean({ n: it.n, id: it.id, r: it.r, t: best.gear.t, a: best.gear.a, sig: best.gear.sig });
             if (c && c.t) {
               if (!arena.save.gv && window.MMBackup && MMBackup.snapshotPregear) MMBackup.snapshotPregear(localStorage); // GH: once, before the first tiered item is written to a gear-less save
-              it.t = c.t; if (c.a) it.a = c.a;
+              it.t = c.t; if (c.a) it.a = c.a; if (c.sig) it.sig = c.sig;
             }
             best.gear = null;
           }

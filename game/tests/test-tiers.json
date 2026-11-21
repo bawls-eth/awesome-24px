@@ -1062,5 +1062,13 @@
   "shared-mm-gear-sets.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "gear-sets-wired.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "gear-forge-ui.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
