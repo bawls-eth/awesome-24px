@@ -138,3 +138,5 @@ The minimap opens with mouse, touch or keyboard and exposes its zoom state. Hori
 
 ## Realm chunk rendering
 Chunk builds now resolve terrain transitions once per cell and compact sprite variants once per terrain. Offline mocked-canvas checks passed for base art, transitions, and fallback borders. Phone performance and browser playback remain pending.
+## Portal dungeon exits
+Portal dungeon summaries return players to their originating overworld tile. Standalone dungeon summaries keep the New dungeon option. Syntax and offline summary routing checks passed for world, hub, and town. Browser playthrough and Lantern rewards remain pending.
