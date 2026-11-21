@@ -44,7 +44,7 @@
     if (typeof o === 'string') { try { o = JSON.parse(o); } catch (e) { o = null; } }
     if (!o || typeof o !== 'object' || Array.isArray(o)) o = {};
     const out = {};
-    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo|evT|evDone|finds|discovered|shrineAt|chests|quests|bossKeys|bossPortal)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
+    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo|evT|evDone|finds|discovered|shrineAt|chests|quests|bossKeys|bossPortal|questBags)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
     out.v = 1;
     out.seed = cleanSeed(o.seed);
     out.version = Number.isInteger(o.version) && o.version > 0 && o.version < 1000 ? o.version : 0;
@@ -67,6 +67,8 @@
     if (o.quests !== undefined && window.MMQuests) out.quests = window.MMQuests.clean(o.quests, questDate()); // daily quests (additive): bad shape or another day -> fresh
     // boss keys (additive, BK2): keys held (0..9) and an open boss portal ({boss:{x,y,openedAt,expiresAt}} on the event clock, ms), cleaned by MMPortals
     if (o.bossKeys !== undefined) { const k = Math.floor(Number(o.bossKeys)); out.bossKeys = Number.isFinite(k) ? Math.max(0, Math.min(9, k)) : 0; }
+    // quest reward bags waiting to drop (additive, RB3): [{ q: quest id, d: 'YYYY-MM-DD' }]; the items are re-derived from MMQuests.rewardBag, never stored
+    if (Array.isArray(o.questBags)) { const qb = []; o.questBags.forEach((b) => { if (b && typeof b === 'object' && typeof b.q === 'string' && /^[a-z_]{1,24}$/.test(b.q) && typeof b.d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(b.d) && !qb.some((x) => x.q === b.q && x.d === b.d) && qb.length < 3) qb.push({ q: b.q, d: b.d }); }); if (qb.length) out.questBags = qb; }
     if (o.bossPortal !== undefined && window.MMPortals) { const bp = window.MMPortals.clean(o.bossPortal); if (bp.boss) out.bossPortal = bp; }
     const r = o.returnTo && typeof o.returnTo === 'object' ? o.returnTo : null;
     if (o.finds !== undefined) out.finds = window.MMStash ? MMStash.cleanFinds(o.finds) : o.finds; // owned by MMStash (Lantern payout)
@@ -1196,23 +1198,48 @@
 
     // ---------- live pickups (MMPickups): coins, XP orbs, hearts and life potions rolled per kill, seeded by (world seed, group, kill index) ----------
     // World sprites on the overlay layer (drawImage from the loaded b15 art, or a tiny cached code sprite). Magnet 120 px (64 px with ?ttk=0), cap 60 (oldest culled),
-    // lifetime per tier, no per-frame Graphics. Focus orbs and stat-buff potions need arena resources that do not exist yet: they are never spawned.
+    // lifetime per tier, no per-frame Graphics. RB3: focus orbs and all 6 potions spawn too. Focus (orb, potion_focus) goes through arena.restoreFocus(amount)
+    // when the arena has a focus bar (else it is picked up with no effect); power / swift / guard / wit are timed statuses through arena.applyStatus
+    // (damaging / swift / armored / inspired, MMStatus), so they show in the status icon row with their time left.
     const PK = window.MMPickups || null;
     const PICK_ON = !!PK && !/[?&]pickups=0(&|$)/.test(typeof location !== 'undefined' ? location.search : '');
     const PICK_CAP = 60;
     const MAGNET_R = TTK_ON && PK && PK.MAGNET_RADIUS_WORLD > 0 ? PK.MAGNET_RADIUS_WORLD : (PK ? PK.MAGNET_RADIUS : 64);
-    const picks = []; let pickSave = false; let pickTotal = 0; const pickGot = { coin: 0, xp: 0, heart: 0, potion: 0 };
+    const picks = []; let pickSave = false; let pickTotal = 0; const pickGot = { coin: 0, xp: 0, heart: 0, potion: 0, focus: 0 };
+    const POTION_STATUS = { pow: 'damaging', swf: 'swift', grd: 'armored', wit: 'inspired' }; // MMPickups buff stat -> MMStatus id
+    const POTION_COL = { potion_life: '#5be38a', potion_focus: '#6ab8ff', potion_power: '#ff6a4a', potion_swift: '#7ee7ff', potion_guard: '#c9d1d9', potion_wit: '#ffe27a' };
+    const POTION_NAME = { potion_life: 'Life', potion_focus: 'Focus', potion_power: 'Power', potion_swift: 'Swift', potion_guard: 'Guard', potion_wit: 'Wit' };
     const pickSpr = {};
     function pickSprite(type, art) { // cached code sprite (24x24) used until the art loads or when art is off
-      const k = type === 'potion' ? 'potion' : type; if (pickSpr[k]) return pickSpr[k];
+      const k = type === 'potion' ? (POTION_COL[art] ? art : 'potion_life') : type; if (pickSpr[k]) return pickSpr[k];
       const c = mk(24, 24); const g = c.getContext('2d');
       if (type === 'coin') { g.fillStyle = '#7a5a12'; g.beginPath(); g.arc(12, 12, 8, 0, 7); g.fill(); g.fillStyle = '#ffd45a'; g.beginPath(); g.arc(12, 12, 6.5, 0, 7); g.fill(); g.fillStyle = '#fff0a8'; g.fillRect(9, 8, 2, 6); }
       else if (type === 'xp') { g.fillStyle = '#4a2a8a'; g.beginPath(); g.arc(12, 12, 8, 0, 7); g.fill(); g.fillStyle = '#b48cff'; g.beginPath(); g.arc(12, 12, 6, 0, 7); g.fill(); g.fillStyle = '#efe0ff'; g.fillRect(9, 8, 3, 3); }
       else if (type === 'heart') { g.fillStyle = '#7a1022'; g.beginPath(); g.arc(8, 9, 5.5, 0, 7); g.arc(16, 9, 5.5, 0, 7); g.fill(); g.beginPath(); g.moveTo(3, 11); g.lineTo(21, 11); g.lineTo(12, 21); g.fill(); g.fillStyle = '#ff5f6b'; g.beginPath(); g.arc(8, 9, 4, 0, 7); g.arc(16, 9, 4, 0, 7); g.fill(); g.beginPath(); g.moveTo(5, 11); g.lineTo(19, 11); g.lineTo(12, 19); g.fill(); }
-      else { g.fillStyle = '#143a24'; g.fillRect(9, 4, 6, 5); g.fillRect(6, 9, 12, 12); g.fillStyle = '#5be38a'; g.fillRect(8, 11, 8, 8); g.fillStyle = '#d8ffe6'; g.fillRect(9, 12, 2, 4); }
+      else if (type === 'focus') { g.fillStyle = '#10264a'; g.beginPath(); g.arc(12, 12, 8, 0, 7); g.fill(); g.fillStyle = '#6ab8ff'; g.beginPath(); g.arc(12, 12, 6, 0, 7); g.fill(); g.fillStyle = '#e0f0ff'; g.fillRect(9, 8, 3, 3); }
+      else { g.fillStyle = '#1a1a24'; g.fillRect(9, 4, 6, 5); g.fillRect(6, 9, 12, 12); g.fillStyle = POTION_COL[k] || '#5be38a'; g.fillRect(8, 11, 8, 8); g.fillStyle = '#ffffff'; g.fillRect(9, 12, 2, 4); }
       pickSpr[k] = c; return c;
     }
-    const pickOk = (d) => d.type === 'coin' || (d.type === 'xp' && typeof arena._gainXp === 'function') || d.type === 'heart' || (d.type === 'potion' && d.art === 'potion_life');
+    const pickOk = (d) => d.type === 'coin' || (d.type === 'xp' && typeof arena._gainXp === 'function') || d.type === 'heart' || d.type === 'focus' || (d.type === 'potion' && !!POTION_COL[d.art]);
+    const focusMax = () => { let m = 0; try { const f = typeof arena.focusState === 'function' ? arena.focusState() : null; m = f && Number(f.max) > 0 ? Number(f.max) : 0; } catch (e) { m = 0; } return m || 100; };
+    function giveFocus(n) { // -> true when the arena has a focus bar to fill (defensive: the focus bar lands in its own slice)
+      if (typeof arena.restoreFocus !== 'function' || !(n > 0)) return false;
+      try { arena.restoreFocus(n); } catch (e) { return false; }
+      return true;
+    }
+    const potionLog = [];
+    function drinkPotion(art) { // the 6 potions (MMPickups.POTIONS): heal, focus, or a 30 s status. Returns what happened, for tests
+      const p = arena.player; const o = PK.use({ type: 'potion', art }, { hp: p.hp, maxHp: arena.stats.maxHp, focus: 0, maxFocus: focusMax() });
+      const res = { art, hp: 0, focus: 0, status: '', ok: false };
+      if (o.hp > p.hp) { res.hp = Math.round(o.hp - p.hp); arena._floatText(p.x, p.y - 26, `+${res.hp}`, '#5be38a'); p.hp = o.hp; res.ok = true; }
+      else if (o.focus > 0) { res.focus = Math.round(o.focus); res.ok = giveFocus(res.focus); if (res.ok) arena._floatText(p.x, p.y - 26, `+${res.focus} focus`, '#6ab8ff'); }
+      else if (o.buff && POTION_STATUS[o.buff.stat] && typeof arena.applyStatus === 'function') {
+        res.status = POTION_STATUS[o.buff.stat]; res.ok = arena.applyStatus('player', res.status, { sec: o.buff.sec, src: 'potion' }) !== false;
+        arena._floatText(p.x, p.y - 26, `${POTION_NAME[art] || 'Potion'}!`, POTION_COL[art] || '#fff');
+      }
+      potionLog.push(res); if (potionLog.length > 12) potionLog.shift();
+      arena._syncHud(); return res;
+    }
     function spawnPickups(x, y, group, killIdx, tier) {
       if (!PICK_ON) return 0;
       const list = PK.roll(seed, group, killIdx, tier).filter(pickOk);
@@ -1232,6 +1259,8 @@
       const p = arena.player; pickGot[q.type] = (pickGot[q.type] || 0) + 1;
       if (q.type === 'coin') { arena.save.shards += q.value; arena.run.shards += q.value; arena._floatText(p.x, p.y - 26, `+${q.value} 💎`, '#8fe9ff'); pickSave = true; }
       else if (q.type === 'xp') { arena._gainXp(Math.max(1, Math.round(q.value * (arena.stats ? arena.stats.xp : 1)))); pickSave = true; }
+      else if (q.type === 'focus') { if (giveFocus(q.value)) arena._floatText(p.x, p.y - 26, `+${q.value} focus`, '#6ab8ff'); }
+      else if (q.type === 'potion') drinkPotion(q.art);
       else {
         const o = PK.use(q, { hp: p.hp, maxHp: arena.stats.maxHp, focus: 0, maxFocus: 0 });
         if (o.hp > p.hp) { arena._floatText(p.x, p.y - 26, `+${Math.round(o.hp - p.hp)}`, '#5be38a'); p.hp = o.hp; arena._syncHud(); }
@@ -1298,7 +1327,9 @@
       + '#rw-nexus .nx-talk{max-width:760px;width:100%;margin:10px auto;box-sizing:border-box;padding:10px 12px;border-radius:10px;background:#231b42;border:1px solid #4a3d85;min-height:44px}#rw-nexus .nx-talk b{color:#ffe27a}'
       + '#rw-nx-act{display:block;margin:8px auto 0;min-height:48px !important;border-color:#ffe27a !important;background:#3a2c10 !important;max-width:100%;white-space:normal}#rw-nx-act.hidden{visibility:hidden}#rw-nexus .nx-stage:focus-visible{outline:3px solid #ffe27a}'
       + 'body.nx-walking #realm-stick-move{z-index:90}body.touch-device.nx-walking #rw-nexus{padding-bottom:calc(170px + env(safe-area-inset-bottom,0px))}'
-      + '#rw-nexus .nx-board{max-width:760px;width:100%;margin:0 auto 12px;box-sizing:border-box;padding:10px 12px;border-radius:10px;background:#1d2a2a;border:1px solid #3b6b5f}#rw-nexus .nx-board.hidden{display:none}#rw-nexus .nx-q{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid #2f4a45}#rw-nexus .nx-q:first-of-type{border-top:0}#rw-nexus .nx-q span{flex:1}#rw-nexus .nx-q em{color:#8fe9ff;font-style:normal}';
+      + '#rw-nexus .nx-board{max-width:760px;width:100%;margin:0 auto 12px;box-sizing:border-box;padding:10px 12px;border-radius:10px;background:#1d2a2a;border:1px solid #3b6b5f}#rw-nexus .nx-board.hidden{display:none}#rw-nexus .nx-q{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid #2f4a45}#rw-nexus .nx-q:first-of-type{border-top:0}#rw-nexus .nx-q span{flex:1}#rw-nexus .nx-q em{color:#8fe9ff;font-style:normal}'
+      // PLAYTEST-REVIEW-2 #8: an unfinished quest's Claim is outline-only (dashed, muted, no fill) and the row carries a progress bar
+      + '#rw-nexus .nx-q button:disabled{background:transparent;border-style:dashed;border-color:#6b6390;color:#a59cc4;cursor:not-allowed}#rw-nexus .nx-bar{display:block;height:6px;margin-top:5px;border-radius:3px;background:#2f4a45;overflow:hidden}#rw-nexus .nx-bar>i{display:block;height:100%;background:#5be38a}';
     document.head.appendChild(nxCss);
     function nxLoadPortrait(id, done) { // b21 idle_down, first frame, cached; the plaza redraws when one arrives
       if (nxPortrait[id] !== undefined || !opts.assetRoot || !artOn) return;
@@ -1673,7 +1704,9 @@
       const h = document.createElement('b'); h.textContent = 'Daily quests · ' + questDate(); b.appendChild(h);
       MMQuests.summary(save.quests, questDate()).forEach((q) => {
         const row = document.createElement('div'); row.className = 'nx-q'; row.dataset.quest = q.id;
-        const t = document.createElement('span'); t.textContent = q.text + ' (' + q.p + '/' + q.need + ') '; const r = document.createElement('em'); r.textContent = '+' + q.reward.shards + ' 💎'; t.appendChild(r); row.appendChild(t);
+        const t = document.createElement('span'); t.textContent = q.text + ' (' + q.p + '/' + q.need + ') '; const r = document.createElement('em'); r.textContent = '+' + q.reward.shards + ' 💎' + (QBAG_ON && q.reward.bag ? ' · ' + q.reward.bag + ' bag' : ''); t.appendChild(r);
+        if (!q.claimed) { const bar = document.createElement('i'); bar.className = 'nx-bar'; bar.setAttribute('aria-hidden', 'true'); const fill = document.createElement('i'); fill.style.width = Math.round(100 * Math.min(1, q.p / Math.max(1, q.need))) + '%'; bar.appendChild(fill); t.appendChild(bar); } // PLAYTEST-REVIEW-2 #8: progress in the row
+        row.appendChild(t);
         if (q.claimed) { const d = document.createElement('span'); d.textContent = 'Claimed'; d.style.flex = '0 0 auto'; row.appendChild(d); }
         else { const c = document.createElement('button'); c.type = 'button'; c.dataset.claim = q.id; c.textContent = 'Claim'; c.disabled = !q.done; c.setAttribute('aria-label', q.done ? 'Claim ' + q.text : q.text + ', not finished yet'); c.addEventListener('click', () => nxClaim(q.id)); row.appendChild(c); }
         b.appendChild(row);
@@ -1682,9 +1715,54 @@
     function nxBoardOpen() { nxBuild(); nxBoardRender(); nxDom.board.classList.remove('hidden'); }
     function nxClaim(id) {
       const out = MMQuests.claim(save.quests, id, questDate()); save.quests = out.state;
-      if (out.reward) { arena.save.shards += out.reward.shards; arena.run.shards += out.reward.shards; arena.onSave(arena.save); arena._syncHud(); nxSay('Quest Giver', 'Well earned. +' + out.reward.shards + ' shards.'); }
+      if (out.reward) {
+        arena.save.shards += out.reward.shards; arena.run.shards += out.reward.shards; arena.onSave(arena.save); arena._syncHud();
+        const bagged = QBAG_ON && out.reward.bagItems && out.reward.bagItems.length > 0;
+        if (bagged) { const qb = (save.questBags || []).filter((b) => !(b.q === id && b.d === questDate())); qb.push({ q: id, d: questDate() }); save.questBags = qb.slice(-3); }
+        if (nxDom) nxSay('Quest Giver', 'Well earned. +' + out.reward.shards + ' shards.' + (bagged ? ' Your ' + out.reward.bag + ' bag waits by the Nexus portal.' : ''));
+      }
       writeSave(save); qDirty = false; if (nxDom) nxBoardRender();
       return out.reward;
+    }
+
+    // ---------- quest reward bags (RB3, QB1 MMQuests.rewardBag): a claim queues the bag in the save (`questBags`), it drops as a real loot bag beside the
+    // hero as soon as the Realm runs again (Back from the Nexus, or the next start after a reload) and leaves the queue when it drops: one bag per claim.
+    // Gear goes through giveBag / arena.dropBag, so picking it up records it for the Lantern stash (arena.onItem). The realm backpack has no armour slot:
+    // armour pieces become the charm / ring of the same feel (light -> Swift Charm, robe -> Scholar Ring, heavy -> Hearty Charm) at the bag's rarity;
+    // a wpn_ style the build does not know becomes a Spark Wand. The bag's potions drop beside it as potion pickups.
+    const QBAG_ON = !!(window.MMQuests && MMQuests.rewardBag);
+    const ARMOR_AS = { light: 'swiftcharm', robe: 'scholarring', heavy: 'heartcharm' };
+    const QBAG_TIER = { brown: 0, pink: 1, purple: 2 };
+    let lastQuestBag = null;
+    function questBagFor(qid, date) {
+      const q = MMQuests.quests(date).find((x) => x.id === qid); if (!q) return null;
+      const b = MMQuests.rewardBag(q.reward, date + ':' + q.id); if (!b) return null; // the same seed MMQuests.claim uses for bagItems
+      const known = (id) => typeof RM_ITEM_BY_ID !== 'undefined' && !!RM_ITEM_BY_ID[id];
+      const items = []; const potions = [];
+      b.items.forEach((it) => {
+        if (/^potion_/.test(it.id)) { for (let k = 0; k < Math.max(1, it.n | 0); k++) potions.push(it.id); return; }
+        const am = /^armor_([a-z]+)_t\d$/.exec(it.id);
+        const id = am ? ARMOR_AS[am[1]] || 'heartcharm' : known(it.id) ? it.id : 'sparkwand';
+        items.push({ id, r: Math.max(0, Math.min(2, it.r | 0)), from: it.id });
+      });
+      return { quest: qid, date, tier: b.tier, tierIndex: QBAG_TIER[b.tier] || 0, items, potions, raw: b.items };
+    }
+    function deliverQuestBags() {
+      if (!QBAG_ON || !save.questBags || !save.questBags.length || leaving || nxOpen || !arena.active || arena.state !== 'play' || arena.paused) return 0;
+      const p = arena.player; const list = save.questBags; let n = 0;
+      delete save.questBags;
+      list.forEach((qb, j) => {
+        const b = questBagFor(qb.q, qb.d); if (!b) return;
+        const x = p.x + (j - (list.length - 1) / 2) * 36; const y = p.y - 34;
+        const asPick = PICK_ON && !!PK; // ?pickups=0: the bag's potions are plain bag potions (a small heal each, the classic bag rule)
+        const got = b.items.length || !asPick ? giveBag(x, y, { tier: b.tier, tierIndex: b.tierIndex, items: b.items, shards: 0, potions: asPick ? 0 : b.potions.length, lifetime: 180 }, { zone: 0, boss: false, quest: b.quest }) : null;
+        if (asPick) b.potions.forEach((art, k) => { if (picks.length >= PICK_CAP) picks.shift(); picks.push({ type: 'potion', art, frames: null, value: 1, tier: 3, x: x + (k ? 14 : -14), y: y + 24, bornMs: arena.clock * 1000, lifeMs: PK ? PK.LIFETIME_MS[5] : 40000, ph: k * 2 }); pickTotal++; });
+        lastQuestBag = { quest: b.quest, date: b.date, tier: b.tier, raw: b.raw, items: b.items.map((it) => ({ id: it.id, r: it.r, from: it.from })), potions: b.potions.slice(), dropped: got ? got.items.length : 0 };
+        n++;
+      });
+      writeSave(save);
+      if (n) arena._showBanner(n > 1 ? `${n} quest bags!` : `Quest bag (${lastQuestBag.tier})!`, 1.6);
+      return n;
     }
 
     const hooks = {
@@ -1717,6 +1795,7 @@
           sweepT -= dt; if (sweepT <= 0) { sweepT = 1; sweepLost(); }
         }
         portalTick(); pickTick(dt); nexusTick(); keyTick(dt);
+        if (save.questBags) deliverQuestBags();
         if (SITES) siteTick(dt);
         lastEvClock = eventClock();
         evT -= dt; if (evT <= 0) { evT = 0.25; evTick(); }
@@ -1828,6 +1907,8 @@
       quests: { date: questDate, list: () => MMQuests.quests(questDate()), summary: () => MMQuests.summary(save.quests, questDate()), state: () => JSON.parse(JSON.stringify(save.quests || MMQuests.fresh(questDate()))), event: nxQuestEvent, claim: nxClaim, flush: () => { qDirty = false; return writeSave(save); } },
       // BK2: boss keys and the boss lair portal
       bossKeys: { on: KEYS_ON, count: keyCount, drop: dropKey, ground: () => keyDrops.map((k) => ({ x: k.x, y: k.y, src: k.src })), got: () => keyGot, use: useKey, anchor: keyAnchor, portal: lairPortal, enter: enterLair, url: (q) => lairUrl(q || lairPortal() || arena.player), last: () => lastLair, prompt: () => ({ text: lairBtn.textContent, hidden: lairBtn.classList.contains('hidden') }), now: keyNow, tick: () => { lairT = 0; keyTick(0); } },
+      // RB3: quest bags, focus orbs and buff potions
+      rewards: { questBags: () => (save.questBags || []).map((b) => ({ q: b.q, d: b.d })), bagFor: questBagFor, deliver: deliverQuestBags, lastBag: () => lastQuestBag, drink: (art) => (PK && POTION_COL[art] ? drinkPotion(art) : null), potions: () => potionLog.slice(), focusApi: () => typeof arena.restoreFocus === 'function', statusApi: () => typeof arena.applyStatus === 'function' },
       settle, stashNote, lastSettle: () => lastSettle, finds: () => (ST ? ST.readFinds(localStorage) : null),
     };
     return { api, hooks };
