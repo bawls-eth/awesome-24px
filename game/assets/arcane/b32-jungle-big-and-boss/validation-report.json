@@ -1,0 +1,21 @@
+{
+  "batch": "b32",
+  "label": "jungle-big-and-boss",
+  "generated_utc": "2026-11-21T20:49:48.300269Z",
+  "files": 43,
+  "duplicate_ids": 0,
+  "blocking": {},
+  "warnings": {},
+  "standing_heights": {
+    "tusktop/down": 260,
+    "tusktop/up": 260,
+    "tusktop/right": 268,
+    "None/down": 76,
+    "None/up": 76,
+    "None/right": 76,
+    "fernjaw_tyrant/down": 276,
+    "fernjaw_tyrant/up": 352,
+    "fernjaw_tyrant/right": 332
+  },
+  "status": "provisional"
+}

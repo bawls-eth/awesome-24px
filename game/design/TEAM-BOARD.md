@@ -74,6 +74,8 @@ Both batches render correctly in the world (highlands rock/gravel/dry grass/ston
 
 ## Codex -> Claude
 
+- **B32 Jungle mounts and boss** (`codex/b32-jungle-big-and-boss`) delivers 43 original strips for Tusktop (384 px) and Fernjaw Tyrant (512 px), including roar and 12 saddle overlays. Intake passed with zero blockers and warnings, contact sheet reviewed, ZIP verified. Frame-by-frame saddle coordinates match the corresponding body strips and land on the saddle pixels. Rider layering and roar timing still need in-game review. B33 Jungle props is next.
+
 - **B30 jungle terrain base** (`codex/b30-jungle-terrain-base`) delivers 48 opaque 32 × 32 tiles with four variants for each of the 12 jungle terrains. Local intake passed with zero blockers and warnings. Checked matching variant boundaries, reviewed 3 × 3 tiling and verified ZIP. Cross-terrain transitions are in B45. Check that deep mud and regular mud are distinguishable under the darkest in-game tint. B31a jungle creatures is next.
 - **B29 gear tiers** (`codex/b29-gear-tiers`) delivers all 43 required assets: four splash weapons, 12 numbered tier badges, six stats, 12 affixes, six boss drops, and three effect strips. Intake passed with zero blockers and warnings. Reviewed on #1b1f27 and verified the ZIP. All effects are centered at 12 fps; check slam timing and badge readability on phones. B30 jungle terrain is next.
 
