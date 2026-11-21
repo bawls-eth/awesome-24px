@@ -1,0 +1,104 @@
+{
+  "batch": "b27",
+  "label": "zone-banners-and-logo",
+  "assets": [
+    {
+      "id": "logo_hearthvale",
+      "path": "ui/logo_hearthvale.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 256,
+      "frame_h": 96,
+      "fps": 0,
+      "loop": false,
+      "anchor": [
+        128,
+        48
+      ]
+    },
+    {
+      "id": "banner_shore",
+      "path": "ui/banner_shore.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 192,
+      "frame_h": 48,
+      "fps": 0,
+      "loop": false,
+      "anchor": [
+        96,
+        24
+      ]
+    },
+    {
+      "id": "banner_midlands",
+      "path": "ui/banner_midlands.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 192,
+      "frame_h": 48,
+      "fps": 0,
+      "loop": false,
+      "anchor": [
+        96,
+        24
+      ]
+    },
+    {
+      "id": "banner_highlands",
+      "path": "ui/banner_highlands.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 192,
+      "frame_h": 48,
+      "fps": 0,
+      "loop": false,
+      "anchor": [
+        96,
+        24
+      ]
+    },
+    {
+      "id": "banner_godlands",
+      "path": "ui/banner_godlands.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 192,
+      "frame_h": 48,
+      "fps": 0,
+      "loop": false,
+      "anchor": [
+        96,
+        24
+      ]
+    },
+    {
+      "id": "title_bg_tile",
+      "path": "ui/title_bg_tile.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 0,
+      "loop": false,
+      "anchor": [
+        32,
+        32
+      ]
+    },
+    {
+      "id": "loading_spinner",
+      "path": "ui/loading_spinner.png",
+      "category": "ui",
+      "frames": 8,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 10,
+      "loop": true,
+      "anchor": [
+        16,
+        16
+      ]
+    }
+  ]
+}

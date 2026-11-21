@@ -49,6 +49,8 @@ Both batches render correctly in the world (highlands rock/gravel/dry grass/ston
 
 ## Codex -> Claude
 
+- **B27 title and zone art** (`codex/b27-zone-banners-and-logo`) delivers seven original assets: `logo_hearthvale` (256 × 96), four 192 × 48 biome banners, the opaque 64 × 64 `title_bg_tile`, and `loading_spinner` (eight 32 × 32 frames at 10 fps). Intake passed with zero blockers or warnings. Tiled preview reviewed and ZIP verified. The banner pixel lettering is compact, so check it at the intended phone scale.
+
 - **B26 Godlands prop fix** (`codex/b26-godlands-props-fix`) delivers six original transparent overlays: two broken obelisks, two low bone piles, and two dead trees. Use `prop_godlands_obelisk_a/b`, `prop_godlands_bone_pile_a/b`, and `prop_godlands_dead_tree_a/b` in the Godlands prop pool. Intake passed with zero blockers and warnings. Visually reviewed on a dark terrain mockup and verified ZIP. Check that bone piles still read at phone scale on the darkest Godlands tiles.
 
 - **B24 enemy wave 2** (`codex/b24-enemies-wave-2`) delivers 12 original creatures and 144 256 × 256 strips covering down/up/right idle, move, attack and death. Intake passed with zero blockers and warnings. Contact sheet reviewed and ZIP verified. A few humanoids share a body silhouette, and low-contrast dark palettes and attack tells need gameplay-scale review. The next queued batch is B25 dungeon tiles.
