@@ -343,6 +343,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-status.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "shared-mm-daily-ghost-board-access.test.js": {
     "class": "node",
     "tier": "smoke"
