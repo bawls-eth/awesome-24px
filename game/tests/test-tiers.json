@@ -818,5 +818,9 @@
   "hub-gift.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "side-access.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

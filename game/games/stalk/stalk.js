@@ -6,7 +6,7 @@
   var qs = new URLSearchParams(location.search);
   var TEST = qs.get('test') === '1';
   var reduced = false;
-  try { reduced = window.MMMotion ? window.MMMotion.reduced(window, window.localStorage) : false; } catch (e) { reduced = false; }
+  try { reduced = (window.MMMotion ? window.MMMotion.reduced(window, window.localStorage) : false) || !!(window.MMSideAccess && window.MMSideAccess.reduced()); } catch (e) { reduced = false; }
 
   // Back link: hub when launched from the hub, otherwise the town.
   if (qs.get('from') === 'hub') {

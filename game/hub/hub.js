@@ -194,7 +194,7 @@
   let cardFor = null;
 
   function reducedMotion() {
-    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) || profile.settings.reduceMotion === true;
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) || profile.settings.reduceMotion === true || !!(window.MMSideAccess && window.MMSideAccess.reduced());
   }
 
   function neighbors(id) {
