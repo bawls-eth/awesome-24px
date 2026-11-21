@@ -407,6 +407,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-fog.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "shared-mm-stash.test.js": {
     "class": "node",
     "tier": "smoke"
@@ -478,6 +482,10 @@
   "world-events.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "world-fog.test.js": {
+    "class": "browser",
+    "tier": "full"
   },
   "world-page.test.js": {
     "class": "browser",
