@@ -287,6 +287,46 @@
    "status": "provisional",
    "ingested_utc": "2026-11-21T02:11:56Z",
    "source": "codex"
+  },
+  {
+   "id": "b12",
+   "label": "overworld-props-nature",
+   "path": "assets/arcane/b12-overworld-props-nature",
+   "manifest": "assets/arcane/b12-overworld-props-nature/manifest.json",
+   "files": 30,
+   "status": "provisional",
+   "ingested_utc": "2026-11-21T05:11:48Z",
+   "source": "codex"
+  },
+  {
+   "id": "b13",
+   "label": "overworld-props-structures",
+   "path": "assets/arcane/b13-overworld-props-structures",
+   "manifest": "assets/arcane/b13-overworld-props-structures/manifest.json",
+   "files": 44,
+   "status": "provisional",
+   "ingested_utc": "2026-11-21T05:11:48Z",
+   "source": "codex"
+  },
+  {
+   "id": "b14",
+   "label": "portals-and-world-objects",
+   "path": "assets/arcane/b14-portals-and-world-objects",
+   "manifest": "assets/arcane/b14-portals-and-world-objects/manifest.json",
+   "files": 16,
+   "status": "provisional",
+   "ingested_utc": "2026-11-21T05:11:48Z",
+   "source": "codex"
+  },
+  {
+   "id": "b15",
+   "label": "loot-bags-and-drops",
+   "path": "assets/arcane/b15-loot-bags-and-drops",
+   "manifest": "assets/arcane/b15-loot-bags-and-drops/manifest.json",
+   "files": 25,
+   "status": "provisional",
+   "ingested_utc": "2026-11-21T05:11:48Z",
+   "source": "codex"
   }
  ]
 }
