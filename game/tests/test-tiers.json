@@ -962,5 +962,9 @@
   "gear-stats-pipeline.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "archipelago-page.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

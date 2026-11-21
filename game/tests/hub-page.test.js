@@ -95,6 +95,17 @@ async function tap(page, id) {
     check('hub ' + at + ' Play link is ' + want, (await l.page.getAttribute('#card-play', 'href')) === want);
     await l.ctx.close();
   }
+  // B8: the w7-isles card links to the Hearthvale Isles page, and its open boat path from Hearthvale is shown.
+  {
+    const l = await open(browser, { viewport: { width: 1100, height: 760 } }, { 'pixeltown-save-v1': TOWN, 'pixeltown-hub-v1': JSON.stringify({ v: 1, at: 'w7-isles' }) });
+    await l.page.keyboard.press('Enter');
+    const href = await l.page.getAttribute('#card-play', 'href');
+    check('hub w7-isles card links to the isles page', href === '../games/isles/index.html?from=hub' && (await l.page.textContent('#card-title')) === 'Hearthvale Isles' && (await l.page.locator('#card-play').isVisible()), String(href));
+    const reach = await l.page.evaluate(() => MMMap.openPathIds(MMMap.MAP, MMMap.sanitizeState(null)).includes('w1-hearthvale>w7-isles') && MMMap.validate(MMMap.MAP).ok);
+    check('w7-isles is reachable on an open path from Hearthvale (map validates)', reach);
+    check('w7-isles view: no console errors', l.errors.length === 0, l.errors.join(' | '));
+    await l.ctx.close();
+  }
   // Hostile saved positions fall back to the start node (never Object.prototype members).
   for (const bad of ['constructor', 'toString', '__proto__']) {
     const h = await open(browser, { viewport: { width: 1100, height: 760 } }, { 'pixeltown-save-v1': TOWN, 'pixeltown-hub-v1': '{"v":1,"at":"' + bad + '"}' });

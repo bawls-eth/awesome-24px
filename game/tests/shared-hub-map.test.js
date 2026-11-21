@@ -43,7 +43,7 @@ const memStore = (init) => { const d = Object.assign({}, init); return { d, getI
 
 // ---- map validation
 check('shipped map validates', M.validate(M.MAP).ok, JSON.stringify(M.validate(M.MAP).errors));
-check('shipped map has worlds W0..W6', ['w0', 'w1', 'w2', 'w3', 'w4', 'w5', 'w6'].every((w) => M.MAP.nodes.some((n) => n.world === w)));
+check('shipped map has worlds W0..W7', ['w0', 'w1', 'w2', 'w3', 'w4', 'w5', 'w6', 'w7'].every((w) => M.MAP.nodes.some((n) => n.world === w)));
 {
   const c = (f) => { const m = JSON.parse(JSON.stringify(M.MAP)); f(m); return M.validate(m); };
   check('duplicate node id fails', !c((m) => m.nodes.push(Object.assign({}, m.nodes[0]))).ok);
