@@ -68,7 +68,7 @@ const cluster = (page) => page.evaluate(() => {
     const c = await cluster(A.page);
     const hitIdx = c.took.map((v, i) => (v > 0 ? i : -1)).filter((i) => i >= 0);
     check('splash style: staff_comet resolves with splash {r 56, frac 0.6, max 6} and the primary takes the full hit (10)', c.on && c.sp.r === 56 && Math.abs(c.sp.frac - 0.6) < 1e-9 && c.sp.max === 6 && Math.abs(c.primary - 10) < 1e-6, JSON.stringify(c));
-    check('neighbours inside the radius take hit x frac x falloff (nearest one gets the full 6 = 10 x 0.6, further ones less)', c.events === 1 && hitIdx.every((i) => Math.abs(c.took[i] - c.want[i]) < 1e-4) && Math.abs(c.took[0] - 6) < 1e-4 && c.took[0] >= c.took[hitIdx[hitIdx.length - 1]], JSON.stringify(c));
+    check('neighbours inside the radius take hit x frac x falloff (nearest one gets about 6 = 10 x 0.6 minus the small inner falloff, further ones less)', c.events === 1 && hitIdx.every((i) => Math.abs(c.took[i] - c.want[i]) < 1e-4) && c.took[0] <= 6 + 1e-4 && c.took[0] >= 6 * (1 - 2 * c.sp.inner - 0.05) && c.took[0] >= c.took[hitIdx[hitIdx.length - 1]], JSON.stringify(c));
     check('cap: 7 neighbours inside r but only the nearest 6 (spec max) are splashed', hitIdx.length === 6 && JSON.stringify(hitIdx.slice().sort()) === JSON.stringify(c.order.slice().sort()), JSON.stringify({ hitIdx, order: c.order }));
     check('outside the radius, an inactive pool slot and the player take nothing', c.far.every((v) => v === 0) && c.off === 0 && c.player === 0, JSON.stringify(c));
     check('one ring and one combined orange number ("6 ×6"-style) per splash event', c.rings >= 1 && c.texts.length === 1 && /^[0-9.]+ ×6$/.test(c.texts[0]), JSON.stringify(c.texts));
