@@ -128,7 +128,7 @@ const frames = (page, n) => page.evaluate((k) => new Promise((res) => { let i = 
   const pvp = await A.page.evaluate(() => { const a = window.__mm.arena; const keep = a.team; a.team = { isPvp: true, ev() {} }; const r = a.applyStatus('player', 'weak'); a.team = keep; return r; });
   check('a duel ignores statuses', pvp === false);
 
-  // (4) HUD icons: drawn at 18-22 px, at most 6, under the XP bar; expiry clears them and restores the stats.
+  // (4) HUD icons: drawn at 22-26 px (24 px since PLAYTEST-REVIEW-2 #11 / FO2), at most 6, under the XP bar; expiry clears them and restores the stats.
   const hud = await A.page.evaluate(async () => {
     const a = window.__mm.arena, p = a.player;
     p.status = null; p._stm = null; p._stNext = Infinity; a._calcStats(); const base = a.stats.dmg;
@@ -149,7 +149,7 @@ const frames = (page, n) => page.evaluate((k) => new Promise((res) => { let i = 
     return { icons, px: Array.from(px), hpR, xpR, cache0, firstNeg, after, dmgAfter };
   });
   const over = (ic, r) => r && ic.x < r.r && ic.x + ic.size > r.l && ic.y < r.b && ic.y + ic.size > r.t;
-  check('(4) icons are drawn at 18-22 px, at most 6, negatives first', hud.icons.length === 6 && hud.icons.every((i) => i.size >= 18 && i.size <= 22) && hud.firstNeg === true, JSON.stringify(hud.icons));
+  check('(4) icons are drawn at 22-26 px (PT2 #11: 24 px), at most 6, negatives first', hud.icons.length === 6 && hud.icons.every((i) => i.size >= 22 && i.size <= 26) && hud.firstNeg === true, JSON.stringify(hud.icons));
   check('the icon is really on the canvas (opaque pixel at its centre)', hud.px[3] > 200, JSON.stringify(hud.px));
   check('icons sit under the XP bar and overlap neither the HP nor the XP bar', hud.icons.every((i) => !over(i, hud.hpR) && !over(i, hud.xpR)) && (!hud.xpR || hud.icons[0].y >= hud.xpR.b), JSON.stringify({ i: hud.icons[0], hp: hud.hpR, xp: hud.xpR }));
   check('a 0.4 s weak expires on its own and the damage multiplier comes back', hud.after.indexOf('weak') < 0 && hud.after.length === 6 && Math.abs(hud.dmgAfter - 1) < 1e-9, JSON.stringify(hud));

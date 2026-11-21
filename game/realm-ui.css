@@ -147,3 +147,18 @@ body.touch-device #realm-stick-aim { right: calc(20px + var(--sr)); }
   display: block; width: 100%; min-height: 48px; border-radius: 12px; border: 2px solid rgba(255, 255, 255, 0.55); background: rgba(255, 255, 255, 0.12); color: #fff;
   font: 700 clamp(14px, 4vw, 16px) system-ui, sans-serif; padding: 0 14px; touch-action: manipulation; box-sizing: border-box;
 }
+
+/* ---------- focus bar (FO2): made by realm.js and placed under #realm-hp from its rect (left/top/width set in JS) ---------- */
+#realm-focus { position: absolute; z-index: 2; height: 12px; display: flex; align-items: center; gap: 2px; pointer-events: none; box-sizing: border-box; }
+#realm-focus.hidden { display: none; }
+#realm-focus .rf-ico { flex: none; width: 12px; height: 12px; image-rendering: pixelated; }
+#realm-focus .rf-bar {
+  position: relative; flex: 1 1 auto; height: 12px; box-sizing: border-box; overflow: hidden; border-radius: 3px;
+  background: rgba(0, 0, 0, 0.55); border: 2px solid #8fd0ff; border-image: var(--rf-frame) 4 / 2px stretch; image-rendering: pixelated;
+}
+#realm-focus-fill { height: 100%; width: 100%; background: linear-gradient(#9fdcff, #3f7dff); transition: width 0.1s; }
+#realm-focus.short .rf-bar { animation: rf-short 0.45s ease-out; }
+@keyframes rf-short { 0%, 50% { background: rgba(255, 70, 90, 0.85); box-shadow: 0 0 0 2px #ff6b6b; } 100% { background: rgba(0, 0, 0, 0.55); box-shadow: none; } }
+@media (prefers-reduced-motion: reduce) { #realm-focus.short .rf-bar { animation: none; box-shadow: 0 0 0 2px #ff6b6b; } }
+.realm-ab.nofocus { filter: saturate(0.35); }
+.realm-ab.nofocus .ico, .realm-ab.nofocus .realm-ab-img { opacity: 0.55; }

@@ -810,5 +810,9 @@
   "class-weapon-playtest.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "focus-arena.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

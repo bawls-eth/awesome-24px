@@ -11,6 +11,13 @@
 // Three enemy patterns: Whirlers fire a steady spiral, Snipers fire aimed three-bolt bursts and
 // circle you, Bursters drift in and fire rings. Survive waves, bank shards; dying costs 20% of the
 // banked shards and sends you back to the village.
+//
+// URL switches (each `=0` turns one additive layer off and restores the behaviour from before it):
+//   ?unlocks=0   unlock-tree passives / Nova II / Dash II (S12)        ?weapons=0  styled `wpn_` weapon items (S12)
+//   ?boltart=0   bolt art (code-drawn bolts)                           ?fxart=0    one-shot effect art
+//   ?uiicons=0   ability icon art (emoji only)                         ?difficulty=off  wave / world difficulty curve (MMDifficulty)
+//   ?focus=0     focus resource (FO2): abilities cost nothing, cooldowns only (as before); no focus bar
+// Focus only runs with an active Mad Maze hero (setHeroLevelSource); the town's classic arena, co-op and duels are unchanged.
 
 const RM_SHORT = 540; // logical arena short side; the long side follows the screen's shape
 const RM_PLAYER = { speed: 235, r: 11, hp: 100, fireRate: 7.5, bulletSpeed: 580, bulletLife: 0.85, dmg: 1, iframes: 0.5 };
@@ -93,6 +100,23 @@ const RM_EB_ROT = { ebolt_shard: 1, ebolt_arrow: 1, ebolt_fire: 1, ebolt_frost: 
 const RM_WPN_COLOR = { dot: '#ffe27a', arrow: '#f3d9a4', shard: '#9fe3ff', orb: '#c59bff', star: '#ffd24a', blade: '#e6edf3', page: '#fff3c4', axe: '#ff9a6a', hammer: '#ffcf5a', fist: '#ffb38a', ray: '#7ee7ff' };
 // URL kill switches (S12): ?unlocks=0 turns off the unlock-tree passives / Nova II / Dash II, ?weapons=0 the styled weapon items.
 function rmFlagOff(name) { try { return typeof location !== 'undefined' && new RegExp('[?&]' + name + '=0(&|$)').test(location.search || ''); } catch (e) { return false; } }
+// This file's folder (for shared modules and UI art), from the <script> tag that loaded it; '' when unknown (no art, no loader).
+const RM_DIR = (function () { try { const s = typeof document !== 'undefined' && document.currentScript && document.currentScript.src; return s ? String(s).replace(/[?#].*$/, '').replace(/[^/]*$/, '') : ''; } catch (e) { return ''; } })();
+// Shared modules the arena layers need (FO2: mm-focus): a page that does not list one gets it here (ordered, async=false). Every use checks
+// `typeof`, so the arena runs exactly as before until (or unless) they load. A page that already has the module loads nothing.
+(function rmLoadShared() {
+  try {
+    if (typeof document === 'undefined' || !RM_DIR || !document.head || typeof window === 'undefined') return;
+    [['MMFocus', 'mm-focus.js']].forEach((m) => {
+      if (typeof window[m[0]] !== 'undefined' || document.querySelector(`script[src*="${m[1]}"]`)) return;
+      const s = document.createElement('script'); s.src = RM_DIR + 'shared/' + m[1]; s.async = false; document.head.appendChild(s);
+    });
+  } catch (e) { /* the arena never depends on these */ }
+})();
+const RM_UI_ART = RM_DIR ? RM_DIR + 'assets/arcane/b19-ui-icons/ui/' : ''; // b19 UI art (focus bar frame + icon)
+// Focus (FO2): ability id -> MMFocus cost id (Dash 0, Nova 25, Shield 30, Overdrive 40, Signature 40). Cooldowns are kept on top.
+const RM_ST_ICON_PX = 24; // HUD status icon size in css px (was 20; PLAYTEST-REVIEW-2 #11: readable at a glance)
+const RM_FOCUS_ID = { dash: 'dash', nova: 'nova', shield: 'shield', overdrive: 'overdrive', sig: 'signature' };
 function rmInertDef(id) {
   if (RM_ITEM_BY_ID[id]) return RM_ITEM_BY_ID[id];
   const name = id.slice(4).split('_').filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ').slice(0, 24) || 'Weapon';
@@ -288,6 +312,7 @@ class RealmArena {
     this._heroSrc = null; this._hu = null; // setHeroLevelSource: the active hero {cls, level} (null = classic: account level, no unlock nodes)
     this.weapon = null; this._wq = []; this._wOrbT = [0, 0, 0]; this._wOrbA = 0; this._wCache = null; this._kIn = {}; this._kHero = { x: 0, y: 0 }; this._kWall = 0; this._kW = null; // setHeroWeapon (null = today's fire)
     this.sig = null; this._sigAb = { id: 'sig', key: 'f', icon: '🔥', name: 'Signature', short: '', level: 7, cd: 15 }; // setHeroSignature: the class signature takes the F slot (null = Overdrive, today's behaviour)
+    this.focus = null; this._focusOff = rmFlagOff('focus'); this._fDom = null; this._fHudT = 0; this._fShown = ''; this._fMask = -1; this._fPlaceT = -9; this.focusShorts = 0; // FO2 focus (MMFocus state; null = off)
     this.sg = { powT: 0, powMul: 1, fx: { t: 0, max: 0.5, x: 0, y: 0, r: 0, color: '#fff' }, bloom: { t: 0, x: 0, y: 0, r: 0, tick: 0 }, bones: { t: 0, a: 0, n: 0, heal: 0, frac: 0 } }; // signature runtime state (preallocated)
     this._heroArt = null; this._heroClass = null; this._heroSt = null; this._heroDbg = null; this._heroHurtAt = -9; this._heroAtkAt = -9; // optional hero animations (setHeroArt)
     this.team = null; this.role = 'solo'; this.down = false; this.reviveT = 0; this._firing = false;
@@ -700,12 +725,12 @@ class RealmArena {
   _stAnchorAt() {
     if (this._stAnchor && this._stT - this._stAnchorT < 0.5 && this._stAnchorT <= this._stT) return this._stAnchor;
     this._stAnchorT = this._stT;
-    const k = this._cssK || 1; const a = this._stAnchor || (this._stAnchor = { x: 8, y: 64, px: 20, k: 1, cl: 0, ct: 0, bL: 1e9, bB: -1 });
+    const k = this._cssK || 1; const a = this._stAnchor || (this._stAnchor = { x: 8, y: 64, px: RM_ST_ICON_PX, k: 1, cl: 0, ct: 0, bL: 1e9, bB: -1 });
     a.k = k;
     try {
       const cr = this.canvas.getBoundingClientRect(); a.cl = cr.left; a.ct = cr.top;
       const vis = (el) => (el && !el.classList.contains('hidden') && el.getClientRects().length ? el.getBoundingClientRect() : null);
-      const xp = vis(document.getElementById('realm-xp')) || vis(document.getElementById('realm-hp'));
+      const xp = vis(document.getElementById('realm-xp')) || vis(document.getElementById('realm-focus')) || vis(document.getElementById('realm-hp'));
       const left = xp ? xp.left : cr.left + 8; let top = (xp ? xp.bottom : cr.top + 56) + 4;
       const rowR = left + 6 * (a.px + 3);
       const boss = vis(document.getElementById('realm-boss'));
@@ -720,7 +745,7 @@ class RealmArena {
     return a;
   }
 
-  // HUD: up to 6 player status icons (20 css px), negatives first; each is a cached MMFxDraw.drawIcon canvas (the clock pie in 12 steps).
+  // HUD: up to 6 player status icons (RM_ST_ICON_PX = 24 css px, PLAYTEST-REVIEW-2 #11, with the stack digit from MMFxDraw.drawIcon), negatives first; each is a cached MMFxDraw.drawIcon canvas (the clock pie in 12 steps).
   _drawStatusIcons(g) {
     const out = this._stDrawn; out.length = 0; const pool = this._stPool || (this._stPool = Array.from({ length: 6 }, () => ({ id: '', x: 0, y: 0, size: 0, neg: false }))); // reused: no per-frame objects
     const p = this.player;
@@ -1743,6 +1768,7 @@ class RealmArena {
     p.status = null; p._stm = null; p._stNext = Infinity; p._stAcc = 0; this._stList = null; // statuses never carry over into a new run
     this._calcStats();
     this.abilityCd = [0, 0, 0, 0]; this.shield.hits = 0; this.shield.t = 0; this.overdriveT = 0; this.paused = false; this._sigReset();
+    this.focus = null; this._focusSync(); // FO2: every run starts with full focus (null when focus is off)
     p.x = this.W / 2; p.y = this.H / 2; p.hp = this.stats.maxHp; p.dashT = 0; p.iframes = 1; p.fireCd = 0; p.aim = -Math.PI / 2;
     this.run = { wave: 0, kills: 0, shards: 0 }; this._waveSc = null;
     this.biome = 0; this.clock = 0; this._speedMul = 1; this.down = false; this.reviveT = 0; this._syncBoss();
@@ -1765,7 +1791,7 @@ class RealmArena {
   }
 
   stop() {
-    this.active = false;
+    this.active = false; this._focusHud(true);
     if (this.team) { this.team.close(); this.team = null; this.role = 'solo'; }
     const pe = document.getElementById('realm-partner'); if (pe) pe.classList.add('hidden');
     this.keys = {};
@@ -1998,7 +2024,7 @@ class RealmArena {
     this._readReduced();
     if (this.paused) { this._readPad(); this._padPauseEdge(); return; } // backpack open (Start can still close it)
     const p = this.player;
-    this._stT += dt; this._stTick(dt);
+    this._stT += dt; this._stTick(dt); this._focusTick(dt);
     this.shake = Math.max(0, this.shake - dt * 30);
     this.flash = Math.max(0, this.flash - dt * 2.2);
     if (this.displayShards !== this.save.shards) { // the shard counter ticks up (or down) instead of jumping
@@ -2661,7 +2687,10 @@ class RealmArena {
     const ab = this._ab(i);
     if (!ab || !this.abilityUnlocked(i) || this.abilityCd[i] > 0) return false;
     if (this.team && this.team.isPvp && ab.id !== 'dash') return false; // duels allow only the Dash
+    const f = this._focusSync(); let paid = null; // FO2: short on focus = the bar flashes and nothing is cast (the cooldown is not started)
+    if (f) { paid = MMFocus.spend(f, RM_FOCUS_ID[ab.id] || 'signature'); if (!paid.ok) { this._focusShort(); return false; } }
     const p = this.player;
+    if (paid) { this.focus = paid.state; this._focusHud(true); }
     if (ab === this._sigAb) this._castSignature();
     else if (ab.id === 'dash') {
       let dx = this._mx || 0; let dy = this._my || 0;
@@ -2711,6 +2740,101 @@ class RealmArena {
     this._updateSignature(dt);
     this._abTick = (this._abTick || 0) + dt;
     if (changed && this._abTick > 0.1) { this._abTick = 0; this._syncAbilities(); }
+  }
+
+  // ---------- focus (FO2, MMFocus): a blue bar under HP; Nova/Shield/Overdrive/Signature cost focus, the Dash is free ----------
+  // On only with MMFocus loaded, an active Mad Maze hero, no ?focus=0 and never in duels. Off = null state = today's cooldown-only play.
+  _focusOn() { return !this._focusOff && typeof MMFocus !== 'undefined' && !!this._hu && !(this.team && this.team.isPvp); }
+  // The live focus state for the active hero (made / resized on a hero or level change, keeping what you had), or null when off.
+  _focusSync() {
+    if (!this._focusOn()) { if (this.focus) { this.focus = null; this._focusHud(true); } return null; }
+    const lv = Math.max(1, this.heroLevel()); const cls = this._hu.cls; let f = this.focus;
+    if (!f || f.level !== lv || f.classId !== cls) {
+      const n = MMFocus.create(cls, lv);
+      if (f && f.classId === cls) n.cur = Math.min(n.max, f.cur);
+      this.focus = f = n; this._focusHud(true);
+    }
+    return f;
+  }
+  // Regen in place (our own copy; no per-frame allocation). The HUD is touched at most 10x a second and only when the number changes.
+  _focusTick(dt) {
+    const f = this._focusSync();
+    if (f && f.cur < f.max && this.state !== 'dead') f.cur = Math.min(f.max, f.cur + f.regen * Math.min(0.25, Math.max(0, dt)));
+    this._fHudT += dt;
+    if (this._fHudT >= 0.1) { this._fHudT = 0; this._focusHud(false); }
+  }
+  // Public hook for world pickups (RB3 / DP3): kind 'focus' (orb, +15) or 'potion_focus' (half the max). Returns true when focus is on.
+  restoreFocus(kind) {
+    const f = this._focusSync();
+    if (!f) return false;
+    this.focus = MMFocus.restore(f, kind); this._focusHud(true);
+    return true;
+  }
+  // Test / debug hook: {on, cur, max, regen} (cur rounded to 0.1).
+  focusState() { const f = this._focusSync(); return f ? { on: true, cur: Math.round(f.cur * 10) / 10, max: f.max, regen: f.regen } : { on: false, cur: 0, max: 0, regen: 0 }; }
+  _focusShort() {
+    this.focusShorts++;
+    const d = this._ensureFocusDom(); if (!d) return;
+    d.el.classList.remove('short'); void d.el.offsetWidth; d.el.classList.add('short'); // restart the flash
+    clearTimeout(this._fShortTimer); this._fShortTimer = setTimeout(() => d.el.classList.remove('short'), 450);
+  }
+  // The bar: made by realm.js inside the overlay (the pages' HTML is unchanged), placed under #realm-hp from its rect.
+  _ensureFocusDom() {
+    if (this._fDom && this._fDom.el.isConnected) return this._fDom;
+    if (typeof document === 'undefined') return null;
+    const host = document.getElementById('realm-overlay') || (this.container && this.container.parentNode);
+    if (!host) return null;
+    let el = document.getElementById('realm-focus');
+    if (!el) {
+      el = document.createElement('div'); el.id = 'realm-focus'; el.className = 'hidden';
+      el.setAttribute('role', 'meter'); el.setAttribute('aria-label', 'Focus'); el.setAttribute('aria-valuemin', '0');
+      if (RM_UI_ART) {
+        const ico = document.createElement('img'); ico.className = 'rf-ico mm-ico'; ico.alt = ''; ico.draggable = false; ico.setAttribute('aria-hidden', 'true');
+        ico.addEventListener('error', () => ico.remove(), { once: true }); ico.src = RM_UI_ART + 'ui_stat_focus.png';
+        el.appendChild(ico);
+      }
+      const bar = document.createElement('div'); bar.className = 'rf-bar';
+      if (RM_UI_ART && /^[A-Za-z0-9_.:\/%-]+$/.test(RM_UI_ART)) bar.style.setProperty('--rf-frame', `url("${RM_UI_ART}ui_bar_focus_frame.png")`);
+      const fill = document.createElement('div'); fill.id = 'realm-focus-fill'; bar.appendChild(fill);
+      el.appendChild(bar);
+      host.appendChild(el);
+    }
+    this._fDom = { el, fill: el.querySelector('#realm-focus-fill') };
+    this._fShown = ''; this._fPlaceT = -9;
+    return this._fDom;
+  }
+  _focusHud(force) {
+    const f = this.focus;
+    if (!f && !this._fDom) return;
+    const d = this._ensureFocusDom(); if (!d) return;
+    const on = !!f && this.active;
+    const key = on ? `${Math.floor(f.cur)}/${f.max}` : 'off';
+    if (key !== this._fShown || force) {
+      this._fShown = key;
+      d.el.classList.toggle('hidden', !on);
+      if (on) {
+        d.fill.style.width = `${(f.cur / f.max) * 100}%`;
+        d.el.setAttribute('aria-valuemax', String(f.max)); d.el.setAttribute('aria-valuenow', String(Math.floor(f.cur)));
+        d.el.title = `Focus ${Math.floor(f.cur)} / ${f.max}`;
+      }
+    }
+    if (!on) return;
+    let mask = 0; // which ability slots are short on focus right now (dimmed in the bar)
+    for (let i = 0; i < 4; i++) { const ab = this._ab(i); const c = ab ? MMFocus.cost(RM_FOCUS_ID[ab.id] || 'signature') : 0; if (c > f.cur) mask |= 1 << i; }
+    if (mask !== this._fMask) { this._fMask = mask; this._syncAbilities(); }
+    if (force || this.clock - this._fPlaceT > 0.5 || this._fPlaceT > this.clock) { this._fPlaceT = this.clock; this._focusPlace(d.el); }
+  }
+  // Under the HP bar: same left edge and width, 2 px below it (DOM rects read at most twice a second).
+  _focusPlace(el) {
+    try {
+      const hp = document.getElementById('realm-hp'); const host = el.parentNode;
+      if (!hp || !host || !hp.getClientRects().length) return;
+      const r = hp.getBoundingClientRect(); const hr = host.getBoundingClientRect();
+      const l = `${Math.round(r.left - hr.left)}px`, t = `${Math.round(r.bottom - hr.top + 2)}px`, w = `${Math.round(r.width)}px`;
+      if (el.style.left !== l) el.style.left = l;
+      if (el.style.top !== t) el.style.top = t;
+      if (el.style.width !== w) el.style.width = w;
+    } catch (e) { /* layout only */ }
   }
 
   // ---------- class signature (F slot) ----------
@@ -3303,7 +3427,7 @@ class RealmArena {
     if (xpf) xpf.style.width = this.save.level >= RM_MAX_LEVEL ? '100%' : `${(this.save.xp / rmXpNeeded(this.save.level)) * 100}%`;
     const xpt = document.getElementById('realm-xp-text');
     if (xpt) xpt.textContent = this.save.level >= RM_MAX_LEVEL ? 'MAX' : `${this.save.xp} / ${rmXpNeeded(this.save.level)} xp`;
-    this._syncAbilities();
+    this._syncAbilities(); this._focusHud(!!force);
     const best = document.getElementById('realm-best');
     if (best) best.textContent = this.save.bestWave > 0 && !wc ? `Best wave ${this.save.bestWave}` : '';
     if (force) this._hideBanner();
@@ -3317,6 +3441,7 @@ class RealmArena {
       el.classList.toggle('locked', !unlocked);
       if (this._abIconRoot !== null || el.dataset.abImg || el.querySelector(':scope > img.realm-ab-img')) this._syncAbilityIcon(el, i);
       el.classList.toggle('cooling', unlocked && cd > 0);
+      el.classList.toggle('nofocus', !!this.focus && unlocked && ((this._fMask >> i) & 1) === 1); // FO2: not enough focus for this one
       const cdEl = el.querySelector('.cd');
       if (cdEl) cdEl.textContent = !unlocked ? `Lv${ab.level}` : cd > 0 ? String(Math.ceil(cd)) : '';
       el.setAttribute('aria-label', `${ab.name} (${ab.key.toUpperCase()})${unlocked ? '' : ` — unlocks at level ${ab.level}`}`);
