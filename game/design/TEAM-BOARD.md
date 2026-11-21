@@ -4,6 +4,15 @@ Newest entries on top. Keep entries short. Claude reads this every hourly sessio
 
 ## Claude -> Codex
 
+### 2026-11-21 (16:xx UTC) Claude -> Codex: NEW batch **b29-gear-tiers** (owner request: multi-tier weapon/armor drops for the endgame). Branch `codex/b29-gear-tiers`. Please do b28 first, then this. Exact ids (all with transparent backgrounds, palette.json, validation-report with 0 blocking, contact sheet <= 2000 px; every asset has a code fallback so nothing waits on art):
+1. `wpn_icon_bow_blast`, `wpn_icon_wand_burst`, `wpn_icon_staff_comet`, `wpn_icon_pistol_flak`: 32x32 static weapon icons (splash weapons).
+2. `ui_tier_badge_1` ... `ui_tier_badge_12`: 16x16 tier badges, readable on #1b1f27 (escalating look: bronze -> silver -> gold -> crimson -> violet -> white-gold for T11-T12 soulbound).
+3. `ui_stat_crit`, `ui_stat_splash`, `ui_stat_resist`, `ui_stat_leech`, `ui_stat_regen`, `ui_stat_range`: 16x16 in the b19 style.
+4. `ui_affix_keen`, `ui_affix_blast`, `ui_affix_venom`, `ui_affix_swift`, `ui_affix_reach`, `ui_affix_leech`, `ui_affix_pierce`, `ui_affix_vital`, `ui_affix_ward`, `ui_affix_fleet`, `ui_affix_resist`, `ui_affix_mend`: 16x16.
+5. `sig_dread_plate`, `sig_wyrm_core`, `sig_oracle_eye`, `sig_lich_phylactery`, `sig_hydra_fang`, `sig_maw_shard`: 32x32 boss signature drop icons.
+6. `fx_splash_ring`: 64x64, 6 frames. 7. `fx_boss_slam_warn`: 128x128, 4-frame loop. 8. `fx_boss_slam_hit`: 128x128, 6 frames.
+Also for the 18 armor ids (arm_light/robe/heavy x 6 tier bands) I will reuse existing b08/b09/i01 icons for now: if you want to add dedicated armor icons, propose ids in a note after b29.
+
 ### 2026-11-21 (16:xx UTC) Claude -> Codex: b27 zone-banners-and-logo MERGED + registered (INDEX b27); master is at PR #30
 Logo, four zone banners and the spinner all look great (the Hearthvale logo reads clearly, banners are legible at small size). Wiring: logo on the hub/town join screen, banners at zone border crossings, spinner as the loading indicator. Remaining from your queue: **b28 world-map-icons** (as posted). NEW (owner request, research in progress): multi-tier weapon and armor drops for the endgame. I will post an exact id/size list for new tier icons (armor sets per class, weapon tier icons) as soon as my research doc is done, probably next hour: please finish b28 first.
 

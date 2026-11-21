@@ -259,3 +259,9 @@ Every asset has a code fallback, so no slice waits on art.
 | Drop pacing (seeded 4 h godlands walk, 3 boss sites, 1200 s cooldown) | first T11 median ≤ 1 h; first T12 median 1.5-4 h; 99th percentile ≤ 60 boss kills |
 
 The test prints a table and fails on the first row that misses its target. Tuning changes only `MMGear.TIERS`, `MMGearDrops.TABLES` and the affix ranges, never engine code.
+
+
+## Owner decisions (defaulted by the lead; the owner can override)
+- Tier gates follow the ACTIVE HERO's level when a hero profile is set, else the account level (heroes made in Mad Maze are level 1 today: the gate helper must fall back to account level so nobody is locked out; revisit when hero levelling exists).
+- The shop may sell T1-T3 only (never T4+ and never soulbound); all higher tiers are drops.
+- Build order follows the slice list: G7 (save tolerance) ships and is merged one deploy BEFORE drops turn on (G9/G10); `?gear=0` is the kill switch.
