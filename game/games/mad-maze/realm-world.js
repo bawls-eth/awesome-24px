@@ -39,7 +39,7 @@
     if (typeof o === 'string') { try { o = JSON.parse(o); } catch (e) { o = null; } }
     if (!o || typeof o !== 'object' || Array.isArray(o)) o = {};
     const out = {};
-    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo|evT|evDone|finds)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
+    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo|evT|evDone|finds|discovered)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
     out.v = 1;
     out.seed = cleanSeed(o.seed);
     out.version = Number.isInteger(o.version) && o.version > 0 && o.version < 1000 ? o.version : 0;
@@ -51,6 +51,9 @@
     // world events (additive): the event clock (s) and the ids of events already finished on it, so a reload never replays them
     out.evT = Number.isFinite(Number(o.evT)) && Number(o.evT) > 0 ? Math.min(Math.floor(Number(o.evT)), 1e9) : 0;
     out.evDone = (Array.isArray(o.evDone) ? o.evDone : []).filter((id) => typeof id === 'string' && /^ev:\d{1,9}:[1-3]$/.test(id)).slice(-12);
+    // minimap fog (additive): base64 bitset of discovered 8x8-tile cells; absent or corrupt -> fully fogged (key left out)
+    const disc = window.MMFog ? MMFog.clean(o.discovered) : '';
+    if (disc) out.discovered = disc;
     const r = o.returnTo && typeof o.returnTo === 'object' ? o.returnTo : null;
     if (o.finds !== undefined) out.finds = window.MMStash ? MMStash.cleanFinds(o.finds) : o.finds; // owned by MMStash (Lantern payout)
     out.returnTo = r && Number.isInteger(r.x) && Number.isInteger(r.y) && r.x >= 0 && r.y >= 0 && r.x < 4096 && r.y < 4096 && cleanSeed(r.seed) ? { x: r.x, y: r.y, seed: cleanSeed(r.seed) } : null;
@@ -73,7 +76,7 @@
     const save = readSave();
     let seed = cleanSeed(opts.seed) || save.seed;
     if (!seed) seed = String(Math.floor(Math.random() * 900000) + 100000); // first visit: a fresh island, remembered below
-    if (save.seed !== seed) { save.pos = null; save.returnTo = null; }
+    if (save.seed !== seed) { save.pos = null; save.returnTo = null; delete save.discovered; } // a new island starts fully fogged (one seed's discovery is kept at a time)
     save.seed = seed;
     const t0 = performance.now();
     const world = O.generate(seed);
@@ -276,6 +279,18 @@
     });
     const zName = zoneEl.querySelector('.rw-zname'); const zArrow = zoneEl.querySelector('.rw-arrow'); const zCoords = zoneEl.querySelector('.rw-coords');
     let miniBase = null;
+    // fog of discovered tiles: 8x8-tile cells (MMFog), revealed within ~12 tiles of the player, saved in `discovered`; ?fog=0 turns it off
+    const FOG = window.MMFog; const FOG_R = 12;
+    const fogOn = !!FOG && !/[?&]fog=0(&|$)/.test(typeof location !== 'undefined' ? location.search : '');
+    const fogBits = FOG ? (FOG.decode(save.discovered) || FOG.make()) : null;
+    let fogKey = '';
+    const fogged = (tx, ty) => fogOn && !FOG.has(fogBits, FOG.cellOf(tx), FOG.cellOf(ty));
+    function revealAt(tx, ty) { // -> number of newly revealed cells; the minimap redraws (and the save updates) only when it is > 0
+      if (!FOG) return 0;
+      const n = FOG.reveal(fogBits, Math.floor(tx), Math.floor(ty), FOG_R);
+      if (n > 0) { save.discovered = FOG.encode(fogBits); miniKey = ''; writeSave(save); }
+      return n;
+    }
     function buildMiniBase() {
       const c = document.createElement('canvas'); c.width = ww; c.height = wh;
       const g = c.getContext('2d'); const img = g.createImageData(ww, wh); const d = img.data;
@@ -293,8 +308,12 @@
       if (!miniBase) miniBase = buildMiniBase();
       const g = mini.getContext('2d'); const sx = mini.width / ww; const sy = mini.height / wh;
       g.imageSmoothingEnabled = true; g.drawImage(miniBase, 0, 0, ww, wh, 0, 0, mini.width, mini.height);
-      for (let i = 0; i < portals.length; i++) { const q = portals[i]; g.fillStyle = '#000'; g.fillRect(q.tx * sx - 2.5, q.ty * sy - 2.5, 5, 5); g.fillStyle = q.col; g.fillRect(q.tx * sx - 1.5, q.ty * sy - 1.5, 3, 3); }
-      for (let i = 0; i < world.bossSites.length; i++) { const b = world.bossSites[i]; g.fillStyle = bossMarkCol(i); g.beginPath(); g.arc(b.x * sx, b.y * sy, 2, 0, Math.PI * 2); g.fill(); }
+      if (fogOn) {
+        const cw = FOG.CELL * sx; const ch = FOG.CELL * sy; g.fillStyle = '#0a0d14';
+        for (let cy = 0; cy < FOG.SIDE; cy++) for (let cx = 0; cx < FOG.SIDE; cx++) if (!FOG.has(fogBits, cx, cy)) g.fillRect(Math.floor(cx * cw), Math.floor(cy * ch), Math.ceil(cw), Math.ceil(ch));
+      }
+      for (let i = 0; i < portals.length; i++) { const q = portals[i]; if (fogged(q.tx, q.ty)) continue; g.fillStyle = '#000'; g.fillRect(q.tx * sx - 2.5, q.ty * sy - 2.5, 5, 5); g.fillStyle = q.col; g.fillRect(q.tx * sx - 1.5, q.ty * sy - 1.5, 3, 3); }
+      for (let i = 0; i < world.bossSites.length; i++) { const b = world.bossSites[i]; if (fogged(b.x, b.y)) continue; g.fillStyle = bossMarkCol(i); g.beginPath(); g.arc(b.x * sx, b.y * sy, 2, 0, Math.PI * 2); g.fill(); }
       evState.forEach((st) => { if (st.phase === 'upcoming' || st.phase === 'active') drawBeacon(g, st.plan.site.x * sx, st.plan.site.y * sy, st.phase === 'active' ? 4 : 3, st.phase === 'active' ? '#ff8a2a' : '#ffe27a', 0, true); });
       g.fillStyle = '#000'; g.fillRect(tx * sx - 2.5, ty * sy - 2.5, 5, 5); g.fillStyle = '#fff'; g.fillRect(tx * sx - 1.5, ty * sy - 1.5, 3, 3);
     }
@@ -319,6 +338,7 @@
       if (zCoords.textContent !== ct) zCoords.textContent = ct;
       const w = document.getElementById('realm-wave'); if (w && w.textContent !== zi.name) w.textContent = zi.name;
       const b = document.getElementById('realm-biome'); if (b && b.textContent !== zi.danger) b.textContent = zi.danger;
+      if (fogOn) { const fk = tx + ',' + ty; if (fk !== fogKey) { fogKey = fk; revealAt(tx, ty); } }
       drawMini(force);
     }
 
@@ -733,6 +753,9 @@
       tileCenter: (tx, ty) => ({ x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE }),
       save: () => readSave(), savePos, portals: () => portals.map((q) => ({ i: q.i, x: q.x, y: q.y, tx: q.tx, ty: q.ty, biome: q.biome })),
       syncHud, loadTileArt,
+      // minimap fog (slice A1)
+      discovered: () => ({ on: fogOn, count: FOG ? FOG.count(fogBits) : 0, b64: FOG ? FOG.encode(fogBits) : '', has: (cx, cy) => (FOG ? FOG.has(fogBits, cx, cy) : false) }),
+      revealAt: (tx, ty) => { const n = revealAt(tx, ty); if (n > 0) drawMini(false); return n; },
       // slice 6
       spawner: () => zones, spawned: () => spawned, despawned: () => despawned,
       liveCount: () => { let n = 0; live.forEach((e, id) => { if (e.active && e.zid === id) n++; }); return n; },
