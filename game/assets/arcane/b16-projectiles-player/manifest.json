@@ -1,0 +1,244 @@
+{
+  "batch": "b16",
+  "label": "projectiles-player",
+  "assets": [
+    {
+      "id": "bolt_ranger",
+      "path": "sprites/bolt_ranger.png",
+      "category": "projectile",
+      "frames": 4,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 12,
+      "loop": true,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "bolt_frostcaller",
+      "path": "sprites/bolt_frostcaller.png",
+      "category": "projectile",
+      "frames": 4,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 12,
+      "loop": true,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "bolt_herald",
+      "path": "sprites/bolt_herald.png",
+      "category": "projectile",
+      "frames": 4,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 12,
+      "loop": true,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "bolt_punk",
+      "path": "sprites/bolt_punk.png",
+      "category": "projectile",
+      "frames": 4,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 12,
+      "loop": true,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "bolt_bruiser",
+      "path": "sprites/bolt_bruiser.png",
+      "category": "projectile",
+      "frames": 4,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 12,
+      "loop": true,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "bolt_rogue",
+      "path": "sprites/bolt_rogue.png",
+      "category": "projectile",
+      "frames": 4,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 12,
+      "loop": true,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "bolt_warlock",
+      "path": "sprites/bolt_warlock.png",
+      "category": "projectile",
+      "frames": 4,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 12,
+      "loop": true,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "bolt_paladin",
+      "path": "sprites/bolt_paladin.png",
+      "category": "projectile",
+      "frames": 4,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 12,
+      "loop": true,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "bolt_berserker",
+      "path": "sprites/bolt_berserker.png",
+      "category": "projectile",
+      "frames": 4,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 12,
+      "loop": true,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "bolt_druid",
+      "path": "sprites/bolt_druid.png",
+      "category": "projectile",
+      "frames": 4,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 12,
+      "loop": true,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "bolt_necromancer",
+      "path": "sprites/bolt_necromancer.png",
+      "category": "projectile",
+      "frames": 4,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 12,
+      "loop": true,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "bolt_trickster",
+      "path": "sprites/bolt_trickster.png",
+      "category": "projectile",
+      "frames": 4,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 12,
+      "loop": true,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "bolt_gravetender",
+      "path": "sprites/bolt_gravetender.png",
+      "category": "projectile",
+      "frames": 4,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 12,
+      "loop": true,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "bolt_shadowpaw",
+      "path": "sprites/bolt_shadowpaw.png",
+      "category": "projectile",
+      "frames": 4,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 12,
+      "loop": true,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "hit_spark_a",
+      "path": "sprites/hit_spark_a.png",
+      "category": "effect",
+      "frames": 4,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 12,
+      "loop": false,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "hit_spark_b",
+      "path": "sprites/hit_spark_b.png",
+      "category": "effect",
+      "frames": 4,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 12,
+      "loop": false,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "hit_spark_c",
+      "path": "sprites/hit_spark_c.png",
+      "category": "effect",
+      "frames": 4,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 12,
+      "loop": false,
+      "anchor": [
+        16,
+        16
+      ]
+    }
+  ]
+}
