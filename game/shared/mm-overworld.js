@@ -753,6 +753,10 @@
     mix(world.terrain); mix(world.zone); mix(world.solid);
     const s = JSON.stringify([world.spawnPoint, world.spawnGroups, world.props, world.structures, world.bossSites, world.portalSites]);
     for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+    if (world.pack !== undefined) { // pack worlds only (a Realm world has no pack key, so its hash input is unchanged)
+      const s2 = JSON.stringify([world.pack, world.dock, world.resources]);
+      for (let i = 0; i < s2.length; i++) { h ^= s2.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+    }
     return h >>> 0;
   }
   function reach(world) {

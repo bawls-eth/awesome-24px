@@ -515,6 +515,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-biome-packs.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "shared-mm-pad-aim.test.js": {
     "class": "node",
     "tier": "smoke"
