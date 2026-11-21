@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hearthvale Isles - Pixeltown</title>
+<link rel="stylesheet" href="isles.css">
+<!-- Local-only page: no database, no network module, no game engine. Pure shared modules + one light canvas loop. -->
+<script src="../../shared/rng.js"></script>
+<script src="../../shared/mm-biome-packs.js"></script>
+<script src="../../shared/mm-overworld.js"></script>
+<script src="../../shared/mm-chunk-bake.js"></script>
+<script src="../../shared/mm-creatures.js"></script>
+<script src="../../shared/mm-creature-draw.js"></script>
+<script src="../../shared/mm-fog.js"></script>
+<script src="../../shared/mm-profile.js"></script>
+<script src="../../shared/mm-isles.js"></script>
+<script src="../../shared/mm-tames.js"></script>
+</head>
+<body>
+<canvas id="view" aria-label="Island view" role="img"></canvas>
+<header id="hud">
+  <div class="hud-row">
+    <a class="btn small" id="back" href="../../hub/index.html" aria-label="Back to the hub">&larr;</a>
+    <div class="hud-main">
+      <div id="hud-hero" class="hud-hero">Wanderer</div>
+      <div id="hud-isle" class="hud-isle">Verdant Jungle</div>
+    </div>
+  </div>
+  <div class="bar" aria-label="Health"><div id="hp-fill" class="fill"></div><span id="hp-text" class="bar-text">20 / 20</span></div>
+  <div id="hud-info" class="hud-info">XP 0</div>
+  <div id="hud-ground" class="hud-info"></div>
+</header>
+<div id="mini-wrap">
+  <canvas id="mini" width="160" height="160" aria-label="Minimap" role="img"></canvas>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="touch">
+  <div id="stick" aria-label="Move joystick"><div id="knob"></div></div>
+  <div id="touch-btns">
+    <button id="btn-map" type="button" aria-pressed="true">Map</button>
+    <button id="btn-fire" type="button" aria-label="Fire bolt">Fire</button>
+  </div>
+</div>
+<p id="help" class="help">WASD / arrows move. Click or Space to fire. M toggles the map.</p>
+<script src="isles.js"></script>
+</body>
+</html>

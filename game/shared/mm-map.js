@@ -1,4 +1,4 @@
-// MMMap: hub map data (worlds W0..W6) + pure helpers: validate, bfs, unlock, medalGate, completion.
+// MMMap: hub map data (worlds W0..W7) + pure helpers: validate, bfs, unlock, medalGate, completion.
 // Paths are undirected edges with an optional unlock: null (open) | {node, exit} | {medals: n} | {key: lockId}.
 // State shape: { nodes, seenPaths, keys, keysUsed, comets } (a hub profile can be passed directly).
 // UMD: browser global MMMap, or require().
@@ -65,6 +65,8 @@
     N('w6-hardcore', 'level', 18, 8, 'Deepdelve Hardcore', { comet: true }),
     N('w6-trout', 'level', 24, 12, 'Legendary Fish', { comet: true }),
     N('w6-expert', 'level', 30, 6, 'Jam Expert', { comet: true }),
+    // W7 Hearthvale Isles: the biome archipelago page (games/isles/), reached from the Hearthvale dock
+    N('w7-isles', 'game', 8, 11, 'Hearthvale Isles', { game: 'games/isles/index.html?from=hub' }),
   ];
 
   const paths = [
@@ -100,6 +102,8 @@
     P('w2-keep', 'w6-night', ex('w2-burrow', 'secret')),
     P('w6-night', 'w6-remix', ex('w6-night')), P('w6-remix', 'w6-hardcore', ex('w6-remix')),
     P('w6-hardcore', 'w6-trout', ex('w6-hardcore')), P('w6-trout', 'w6-expert', ex('w6-trout')),
+    // W7: an open boat path from Hearthvale
+    P('w1-hearthvale', 'w7-isles'),
   ];
 
   const MAP = {
@@ -107,7 +111,7 @@
     worlds: [
       { id: 'w0', name: 'Pixeltown Crossroads' }, { id: 'w1', name: 'Hearthvale Meadows' },
       { id: 'w2', name: 'Mad Maze Wilds' }, { id: 'w3', name: 'Deep Cave' }, { id: 'w4', name: 'Lakeside' },
-      { id: 'w5', name: 'Festival Fields' }, { id: 'w6', name: 'Comet Trail' },
+      { id: 'w5', name: 'Festival Fields' }, { id: 'w6', name: 'Comet Trail' }, { id: 'w7', name: 'Hearthvale Isles' },
     ],
     nodes, paths,
   };
