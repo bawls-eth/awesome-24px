@@ -118,6 +118,9 @@
     document.body.dataset.dungeonBiome = biome;
     const byId = {}; dungeon.rooms.forEach((r) => { byId[r.id] = r; });
     const ROOMS = dungeon.rooms.length;
+    // One count for the HUD and the summary: the regular rooms (start .. boss, boss included); the hidden secret room is reported on its own row.
+    const MAIN_ROOMS = dungeon.rooms.filter((r) => r.type !== 'secret').length;
+    const visitedMain = () => dungeon.rooms.filter((r) => r.type !== 'secret' && state.room(r.id).visited).length;
 
     // depth from the start over the regular doors, for the encounter tier
     const depth = {}; depth[dungeon.rooms.find((r) => r.type === 'start').id] = 0;
@@ -366,13 +369,13 @@
       api.stash = paid ? { items: paid.items, stash: paid.stash, hero: paid.hero, waiting: paid.waiting, shards: paid.shards, fame: paid.fame } : null;
       const secs = Math.round(arena.clock); const mm = Math.floor(secs / 60); const ss = String(secs % 60).padStart(2, '0');
       const items = granted.length ? granted.map((it) => `<li style="color:${it.color}">${it.icon} ${it.name} <small>${it.rarName}${it.sold ? ' (sold, pack full)' : ''}</small></li>`).join('') : '<li class="none">no items</li>';
-      sumEl.innerHTML = `<div class="mm-sum-card"><h2>${died ? '💀 ' + B.fell : '🌀 ' + B.clear}</h2>
+      sumEl.innerHTML = `<div class="mm-sum-card"><h2>${died ? '💀 ' + B.fell : s.bossDefeated ? '🌀 ' + B.clear : '🚪 Left the ' + B.name}</h2>
         <p class="mm-sum-sub">Seed ${String(seed).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24)} · ${mm}:${ss}</p>
-        <ul class="mm-sum-stats"><li>Rooms visited <b>${s.roomsVisited}/${ROOMS}</b></li><li>Rooms cleared <b>${s.roomsCleared}</b></li><li>Chests opened <b>${s.chestsOpened}</b></li><li>Keys found <b>${s.keysFound}</b></li><li>Secret room <b>${s.secretFound ? 'found' : 'hidden'}</b></li><li>${B.boss_name} <b>${s.bossDefeated ? 'defeated' : 'alive'}</b></li><li>Chest gold <b>${s.gold} 💎</b></li></ul>
+        <ul class="mm-sum-stats"><li>Rooms visited <b>${visitedMain()}/${MAIN_ROOMS}</b></li><li>Rooms cleared <b>${s.roomsCleared}</b></li><li>Chests opened <b>${s.chestsOpened}</b></li><li>Keys found <b>${s.keysFound}</b></li><li>Secret room <b>${s.secretFound ? 'found' : 'hidden'}</b></li><li>${B.boss_name} <b>${s.bossDefeated ? 'defeated' : 'alive'}</b></li><li>Chest gold <b>${s.gold} 💎</b></li></ul>
         <h3>Loot</h3><ul class="mm-sum-loot" id="mm-sum-loot">${items}</ul>${paid && paid.ok ? `<p class="mm-sum-stash" id="mm-sum-stash">🏮 ${ST.text(paid)} (Lantern)</p>` : ''}
         <div class="mm-sum-btns">${backWorld ? '' : `<a class="mm-btn" id="mm-sum-again" href="?mode=dungeon&seed=${Number(seed) + 1 || ''}${layoutV === 2 ? '&lv=2' : ''}${biome !== 'warren' ? '&biome=' + biome : ''}${opts.test ? '&test=1' : ''}${hubExit ? '&from=hub' : ''}">New dungeon</a>`}<a class="mm-btn${backWorld ? '' : ' alt'}" id="mm-sum-home" href="${backWorld || (hubExit ? '../../hub/index.html' : '../../index.html')}">${backWorld ? 'Back to the world' : hubExit ? 'Back to the map' : 'Back to town'}</a></div></div>`;
       sumEl.classList.remove('hidden');
-      api.summary = s;
+      api.summary = s; api.summaryTitle = sumEl.querySelector('h2').textContent;
     }
     function finish() { if (finished) return; arena.stop(); showSummary(false); }
 
@@ -437,7 +440,7 @@
         if (hasChest() && !rs.chestOpen && !state.doorsClosed() && near(chestSpot(), 30)) openChest();
         if (hasPortal() && near(portalSpot(), 30)) { finish(); return; }
         // HUD text (the arena rewrites it from time to time)
-        const txt = `${B.name} · Room ${dungeon.rooms.filter((r) => state.room(r.id).visited).length}/${ROOMS - 1} · 🗝 ${state.keys}${state.room(current).enemiesAlive > 0 && byId[current].type !== 'boss' ? ` · ${state.room(current).enemiesAlive} left` : ''}`;
+        const txt = `${B.name} · Room ${visitedMain()}/${MAIN_ROOMS} · 🗝 ${state.keys}${state.room(current).enemiesAlive > 0 && byId[current].type !== 'boss' ? ` · ${state.room(current).enemiesAlive} left` : ''}`;
         if (txt !== hudText) { hudText = txt; }
         const w = document.getElementById('realm-wave'); if (w && w.textContent !== hudText) w.textContent = hudText;
         const b = document.getElementById('realm-biome'); const bn = window.innerWidth < 600 ? '' : palOf(byId[current].type).name; if (b && b.textContent !== bn) b.textContent = bn;
@@ -515,6 +518,7 @@
       },
       // test hook: put the player on a tile centre; true when the hero circle fits there (not inside a wall)
       teleport: (tx, ty) => { if (current !== null && sig !== doorSig()) refreshWalls(); const p = arena.player; p.x = (tx + 0.5) * T; p.y = (ty + 0.5) * T; return !arena._blocked(p.x, p.y, RM_PLAYER.r); },
+      roomCount: () => ({ visited: visitedMain(), total: MAIN_ROOMS }),
       toggleMap,
       mapVisible: () => !mapEl.classList.contains('hidden'),
     });
