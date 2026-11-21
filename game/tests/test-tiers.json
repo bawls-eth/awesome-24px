@@ -511,6 +511,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-overworld-golden.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "shared-mm-pad-aim.test.js": {
     "class": "node",
     "tier": "smoke"
