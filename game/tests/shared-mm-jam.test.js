@@ -268,6 +268,18 @@ check('rank thresholds S 95, A 85, B 70, C 50', Jam.rankFor(0.95) === 'S' && Jam
   check('non-object concert/prefs are ignored', !('concert' in SG.cleanSave({ concert: 5, prefs: 'x' })) && !('prefs' in SG.cleanSave({ concert: [], prefs: [1] })));
 }
 
+// ---- depth slice 2: prefs (colour-blind lanes, left-handed order) ----
+{
+  const sv = SG.emptySave();
+  check('prefs default off', !SG.prefOf(sv, 'shapes') && !SG.prefOf(sv, 'lefty') && !('prefs' in sv));
+  SG.setPref(sv, 'shapes', true); SG.setPref(sv, 'lefty', true);
+  check('setPref stores true flags only and unknown keys are refused', SG.prefOf(sv, 'shapes') && SG.prefOf(sv, 'lefty') && SG.setPref(sv, 'evil', true) === false && !('evil' in sv.prefs));
+  check('prefs survive cleanSave', JSON.stringify(SG.cleanSave(JSON.parse(JSON.stringify(sv))).prefs) === JSON.stringify({ shapes: true, lefty: true }));
+  check('bad pref values are dropped', !('prefs' in SG.cleanSave({ prefs: { shapes: 'yes', lefty: 1, ghost: 0 } })) && !('prefs' in SG.cleanSave({ prefs: 'x' })));
+  SG.setPref(sv, 'shapes', false); SG.setPref(sv, 'lefty', false);
+  check('turning every pref off removes the key (old saves stay identical)', !('prefs' in sv));
+}
+
 // song names are original (no real song or artist names)
 check('song names are not borrowed', SG.SONGS.every((s) => !/slider|k\.k\.|animal|nintendo/i.test(s.name + s.blurb)));
 // source hygiene

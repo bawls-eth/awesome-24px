@@ -8,7 +8,15 @@
   var FROM_HUB = qs.get('from') === 'hub'; // exact match only
   var LANES = Jam.LANES;
   var CW = 320, CH = 420, LANE_W = CW / 4, HIT_Y = 340, APPROACH_MS = 1400;
-  var LANE_COL = ['#ef476f', '#ffd166', '#06d6a0', '#4cc9f0'];
+  var BASE_COL = ['#ef476f', '#ffd166', '#06d6a0', '#4cc9f0'];
+  var CB_COL = ['#0072b2', '#e69f00', '#f0e442', '#cc79a7']; // colour-blind safe set (Okabe-Ito based)
+  var LANE_COL = BASE_COL.slice();
+  var GLYPH = ['\u25CF', '\u25C6', '\u25A0', '\u25B2']; // circle, diamond, square, triangle: same silhouettes as the notes
+  var prefShapes = false, prefLefty = false;
+  // lane <-> screen column. Left-handed order mirrors the lanes; the key under each column keeps its position. Involution.
+  function laneAt(c) { return prefLefty ? 3 - c : c; }
+  function colOf(idx) { return prefLefty ? 3 - idx : idx; }
+  function L(lane) { var i = LANES.indexOf(lane); return i < 0 ? lane : LANES[laneAt(i)]; }
   var JUDGE_LABEL = { perfect: 'Perfect', great: 'Great', good: 'Good', miss: 'Miss' };
   var JUDGE_COL = { perfect: '#fff3b0', great: '#9bf6ff', good: '#caffbf', miss: '#ff6b6b' };
   var KEYMAP = { KeyD: 'D', KeyF: 'F', KeyJ: 'J', KeyK: 'K', ArrowLeft: 'D', ArrowDown: 'F', ArrowUp: 'J', ArrowRight: 'K' };
@@ -24,11 +32,24 @@
   var save = SG.cleanSave(S.get(KEY, null));
   function persist() { S.set(KEY, save); }
   persist();
+  function applyPrefs() {
+    prefShapes = SG.prefOf(save, 'shapes'); prefLefty = SG.prefOf(save, 'lefty');
+    LANE_COL = (prefShapes ? CB_COL : BASE_COL).slice();
+    document.body.dataset.shapes = prefShapes ? '1' : '0'; document.body.dataset.lefty = prefLefty ? '1' : '0';
+    LANES.forEach(function (key, c) {
+      var b = document.getElementById('pad-' + key); if (!b) return;
+      var li = laneAt(c);
+      b.style.background = LANE_COL[li]; b.style.color = prefShapes ? '#0b0814' : '';
+      b.textContent = prefShapes ? GLYPH[li] + ' ' + key : key;
+    });
+  }
 
   // ---------- state ----------
   var cv = document.getElementById('game'), ctx = cv.getContext('2d');
   var overlay = document.getElementById('overlay');
   var mode = 'menu'; // menu | play | pause | results | interlude | calib
+  var practice = null; // { speed, loop:{a,b}|null, loopBars, loops } while practising (no scoring, nothing saved)
+  var practiceCfg = { tier: 'normal', speed: 1, loop: false, a: 1, b: 4 }, practiceLast = null;
   var concert = null; // { ids, tier, idx, parts[] } while a concert is running
   var songId = null, tier = null, chart = null, run = null, lastReport = null, lastResult = null;
   var paused = false, popups = [], flashes = [0, 0, 0, 0], rings = [], glows = [], shake = 0, lastJudge = null, lastTiming = null;
@@ -44,7 +65,7 @@
   function songNow() {
     if (TEST) return testNow;
     if (paused || mode !== 'play') return frozenAt;
-    return src() - t0 - pausedTotal;
+    return (src() - t0 - pausedTotal) * (practice ? practice.speed : 1);
   }
 
   // ---------- sound ----------
@@ -112,10 +133,11 @@
   // schedule backing events up to 1.5 s ahead of the song clock
   function pumpBacking() {
     if (!audioMode || !events || paused) return;
-    var horizon = songNow() + 1500;
+    var sp = practice ? practice.speed : 1, horizon = songNow() + 1500 * sp;
+    if (practice && practice.loop) horizon = Math.min(horizon, practice.loop.b);
     while (evIdx < events.length && events[evIdx].t <= horizon) {
       var e = events[evIdx++];
-      voice(e.kind, t0 / 1000 + e.t / 1000, e.hz);
+      voice(e.kind, (t0 + pausedTotal) / 1000 + e.t / (1000 * sp), e.hz);
     }
   }
 
@@ -140,7 +162,10 @@
     ensureAudio();
     songId = id; tier = SG.TIERS.indexOf(tr) >= 0 ? tr : 'normal';
     chart = opts.chart || SG.chartFor(id, tier, opts.seed !== undefined ? opts.seed : qs.get('seed') || undefined);
-    run = Jam.createRun(chart, { clock: songNow, offset: SG.offsetOf(save) }); // offset shifts judging only, never the clock
+    practice = opts.practice ? makePractice(id, opts.practice) : null;
+    if (practice) concert = null;
+    document.body.dataset.practice = practice ? '1' : '0';
+    run = makeRun();
     popups = []; rings = []; glows = []; lastTiming = null; flashes = [0, 0, 0, 0]; shake = 0; held = {}; laneKeys = {}; ptrLane = {};
     lastJudge = null;
     $('hud-timing').textContent = '';
@@ -148,13 +173,18 @@
     events = SG.backing(id, tier);
     audioMode = !!(actx && !TEST && actx.state === 'running');
     t0 = src() + (audioMode ? 150 : 0);
+    var startAt = practice && practice.loop ? loopStart() : 0;
+    if (startAt) { pausedTotal = -startAt / practice.speed; testNow = startAt; frozenAt = startAt; }
+    evIdx = firstEvent(startAt);
     mode = 'play'; overlay.hidden = true;
-    $('hud-song').textContent = (concert ? 'Concert ' + (concert.idx + 1) + '/' + concert.ids.length + ': ' : '') + SG.song(id).name + ' / ' + SG.TIER_NAMES[tier];
+    $('hud-speed').textContent = practice ? 'Speed ' + Math.round(practice.speed * 100) + '%' : '';
+    $('hud-song').textContent = (practice ? 'Practice: ' : '') + (concert ? 'Concert ' + (concert.idx + 1) + '/' + concert.ids.length + ': ' : '') + SG.song(id).name + ' / ' + SG.TIER_NAMES[tier];
     updateHud();
     return run;
   }
   function finish() {
     if (mode !== 'play') return;
+    if (practice) { finishPractice(); return; }
     releaseAll();
     run.update();
     var res = run.result();
@@ -165,8 +195,50 @@
     if (concert) { concertAfterSong(res); return; }
     showResults();
   }
+  // ---------- practice: slower song, A-B bar loop, no scoring ----------
+  var PRACTICE_SPEEDS = [0.5, 0.75, 1];
+  function maxBar(id) { return Math.max(1, SG.song(id).bars - 2); }
+  function makePractice(id, o) {
+    var sp = PRACTICE_SPEEDS.indexOf(Number(o.speed)) >= 0 ? Number(o.speed) : 1;
+    var pr = { speed: sp, loop: null, loopBars: null, loops: 0 };
+    if (Array.isArray(o.loop) && o.loop.length === 2) {
+      var mb = maxBar(id), bm = SG.beatMs(SG.song(id));
+      var a = Math.max(1, Math.min(mb, Math.floor(Number(o.loop[0])) || 1)), b = Math.max(1, Math.min(mb, Math.floor(Number(o.loop[1])) || a));
+      if (b < a) b = a;
+      pr.loopBars = [a, b];
+      pr.loop = { a: Math.round((SG.LEAD_BEATS + (a - 1) * 4) * bm), b: Math.round((SG.LEAD_BEATS + b * 4) * bm) };
+    }
+    return pr;
+  }
+  function loopStart() { return Math.max(0, practice.loop.a - Math.round(2 * SG.beatMs(SG.song(songId)))); }
+  function makeRun() {
+    var c = chart, sp = practice ? practice.speed : 1;
+    if (practice && practice.loop) {
+      var lp = practice.loop;
+      c = Object.assign({}, chart, { notes: chart.notes.filter(function (n) { return n.t >= lp.a - 1 && n.t < lp.b; }) });
+      c.count = c.notes.length;
+    }
+    return Jam.createRun(c, { clock: songNow, offset: SG.offsetOf(save) * sp }); // offset shifts judging only, never the clock
+  }
+  function firstEvent(t) { if (!events) return 0; var i = 0; while (i < events.length && events[i].t < t) i++; return i; }
+  function loopBack() {
+    releaseAll();
+    var at = loopStart();
+    run = makeRun(); practice.loops++;
+    popups = []; rings = []; glows = []; held = {}; laneKeys = {}; ptrLane = {}; lastJudge = null;
+    testNow = at; frozenAt = at; pausedTotal = (src() - t0) - at / practice.speed;
+    evIdx = firstEvent(at);
+    updateHud();
+  }
+  function finishPractice() {
+    releaseAll(); run.update();
+    var res = run.result();
+    practiceLast = { hits: res.hits, counts: res.counts, speed: practice.speed, loops: practice.loops, saved: false };
+    frozenAt = songNow(); mode = 'results';
+    showPracticeDone(res);
+  }
   function releaseAll() { Object.keys(held).forEach(function (l) { if (held[l]) { run.release(l); held[l] = false; } }); }
-  function quit() { if (run) { releaseAll(); } concert = null; paused = false; stopAudioForMenu(); showMenu(); }
+  function quit() { if (run) { releaseAll(); } concert = null; practice = null; paused = false; stopAudioForMenu(); showMenu(); }
   // drop the context so already-scheduled backing notes cannot ring on after quitting
   function stopAudioForMenu() { audioMode = false; events = null; if (actx) { try { actx.close(); } catch (e) { /* ignore */ } actx = null; master = null; noiseBuf = null; } }
 
@@ -210,13 +282,13 @@
   function timingTag(d) { if (typeof d !== 'number' || Math.abs(d) < 8) return ''; return d < 0 ? 'early' : 'late'; }
   function popup(j, idx, delta) {
     var tag = j === 'miss' ? '' : timingTag(delta);
-    popups.push({ text: JUDGE_LABEL[j], tag: tag, col: JUDGE_COL[j], x: idx * LANE_W + LANE_W / 2, t: 0 }); if (popups.length > 8) popups.shift();
+    popups.push({ text: JUDGE_LABEL[j], tag: tag, col: JUDGE_COL[j], x: colOf(idx) * LANE_W + LANE_W / 2, t: 0 }); if (popups.length > 8) popups.shift();
     lastTiming = tag ? tag + ' ' + Math.abs(delta) + ' ms' : (j === 'miss' ? null : 'on time');
     var h = $('hud-timing'); if (h) h.textContent = lastTiming ? JUDGE_LABEL[j] + ' ' + lastTiming : JUDGE_LABEL[j];
   }
-  function pressSource(key, lane) { if (!laneKeys[key]) { laneKeys[key] = lane; press(lane); } }
+  function pressSource(key, lane) { if (!laneKeys[key]) { laneKeys[key] = lane; press(lane); pad(lane, true); } }
   function releaseSource(key) { var l = laneKeys[key]; if (l) { delete laneKeys[key]; var still = Object.keys(laneKeys).some(function (k) { return laneKeys[k] === l; }); if (!still) release(l); pad(l, still); } }
-  function pad(lane, on) { var b = $('pad-' + lane); if (b) b.classList.toggle('on', !!on); }
+  function pad(lane, on) { var b = $('pad-' + L(lane)); if (b) b.classList.toggle('on', !!on); }
 
   window.addEventListener('keydown', function (e) {
     if (mode !== 'play') ensureAudio();
@@ -228,9 +300,10 @@
     if (e.code === 'Escape' || e.code === 'KeyP') { if (mode === 'play') pause(); else if (mode === 'pause') resume(); return; }
     var lane = KEYMAP[e.code];
     if (!lane) return;
+    lane = L(lane);
     if (mode === 'play') e.preventDefault();
     if (e.repeat) return;
-    pressSource('k:' + e.code, lane); pad(lane, true);
+    pressSource('k:' + e.code, lane);
   });
   window.addEventListener('keyup', function (e) { if (KEYMAP[e.code]) releaseSource('k:' + e.code); });
   window.addEventListener('blur', function () { Object.keys(laneKeys).forEach(releaseSource); if (mode === 'play' && !TEST) pause(); });
@@ -242,13 +315,13 @@
       e.preventDefault();
       var lane = laneOf(e); if (!lane) return;
       try { node.setPointerCapture(e.pointerId); } catch (x) { /* ignore */ }
-      ptrLane[e.pointerId] = lane; pressSource('p:' + e.pointerId, lane); pad(lane, true);
+      ptrLane[e.pointerId] = lane; pressSource('p:' + e.pointerId, lane);
     });
     function up(e) { if (ptrLane[e.pointerId]) { var l = ptrLane[e.pointerId]; delete ptrLane[e.pointerId]; releaseSource('p:' + e.pointerId); pad(l, false); } }
     node.addEventListener('pointerup', up); node.addEventListener('pointercancel', up);
   }
-  bindPointer(cv, function (e) { var r = cv.getBoundingClientRect(); return LANES[Math.max(0, Math.min(3, Math.floor((e.clientX - r.left) / r.width * 4)))]; });
-  LANES.forEach(function (l) { bindPointer($('pad-' + l), function () { return l; }); });
+  bindPointer(cv, function (e) { var r = cv.getBoundingClientRect(); return LANES[laneAt(Math.max(0, Math.min(3, Math.floor((e.clientX - r.left) / r.width * 4))))]; });
+  LANES.forEach(function (l) { bindPointer($('pad-' + l), function () { return L(l); }); });
   $('btn-mute').addEventListener('click', function () { ensureAudio(); if (sfx) sfx.setMuted(!sfx.isMuted()); syncMute(); });
   if (!window.MMSfx) $('btn-mute').hidden = true;
   syncMute();
@@ -265,7 +338,7 @@
       padPrev['start' + gi] = gp.buttons[9] && gp.buttons[9].pressed;
       for (var li = 0; li < 4; li++) {
         var on = maps[li].some(function (b) { return gp.buttons[b] && gp.buttons[b].pressed; }), k = 'g:' + gi + ':' + li;
-        if (on && !padPrev[k]) pressSource(k, LANES[li]);
+        if (on && !padPrev[k]) pressSource(k, LANES[laneAt(li)]);
         if (!on && padPrev[k]) releaseSource(k);
         padPrev[k] = on;
       }
@@ -280,6 +353,7 @@
     run.notes.forEach(function (n) { if (n.judge === 'miss' && !n.shown) { n.shown = true; fresh = true; popup('miss', LANES.indexOf(n.lane)); } });
     if (fresh) { if (!reduced) shake = 0.08; lastJudge = 'miss'; }
     pumpBacking();
+    if (practice && practice.loop && songNow() >= practice.loop.b) { loopBack(); return; }
     if (songNow() >= chart.lengthMs) finish();
     updateHud();
   }
@@ -287,7 +361,8 @@
   function step(ms) {
     if (!TEST || mode !== 'play') return;
     var left = ms;
-    while (left > 0 && mode === 'play') { var d = Math.min(left, 16); testNow += d; left -= d; tick(); animate(d / 1000); }
+    var sp = practice ? practice.speed : 1;
+    while (left > 0 && mode === 'play') { var d = Math.min(left, 16); testNow += d * sp; left -= d; tick(); animate(d / 1000); }
   }
   function animate(dt) {
     for (var i = 0; i < 4; i++) flashes[i] = Math.max(0, flashes[i] - dt * 5);
@@ -297,6 +372,7 @@
     shake = Math.max(0, shake - dt);
   }
   function updateHud() {
+    if (practice && run) { $('hud-score').textContent = ''; $('hud-acc').textContent = ''; $('hud-combo').textContent = 'Combo ' + run.state.combo; $('progress-bar').style.width = Math.max(0, Math.min(100, songNow() / chart.lengthMs * 100)).toFixed(1) + '%'; return; }
     if (!run) { $('hud-score').textContent = '0'; $('hud-combo').textContent = 'Combo 0'; $('hud-acc').textContent = '100%'; return; }
     var s = run.state, judged = s.counts.perfect + s.counts.great + s.counts.good + s.counts.miss;
     var accNow = judged ? Math.round(s.score / (judged * Jam.POINTS.perfect) * 100) : 100;
@@ -316,6 +392,7 @@
     else if (idx === 2) g.rect(x - r * 0.85, y - r * 0.85, r * 1.7, r * 1.7);
     else { g.moveTo(x, y - r); g.lineTo(x + r, y + r * 0.8); g.lineTo(x - r, y + r * 0.8); g.closePath(); }
     g.fill();
+    if (prefShapes) { g.lineWidth = 3; g.strokeStyle = '#0b0814'; g.stroke(); g.lineWidth = 1; }
   }
   function render(time) {
     var g = ctx; g.setTransform(1, 0, 0, 1, 0, 0);
@@ -335,25 +412,26 @@
     // lanes
     for (var i = 0; i < 4; i++) {
       g.fillStyle = i % 2 ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.09)'; g.fillRect(i * LANE_W, 0, LANE_W, CH);
-      if (flashes[i] > 0) { g.fillStyle = LANE_COL[i]; g.globalAlpha = reduced ? 0.25 : flashes[i] * 0.35; g.fillRect(i * LANE_W, 0, LANE_W, HIT_Y + 20); g.globalAlpha = 1; }
+      var fl = laneAt(i);
+      if (flashes[fl] > 0) { g.fillStyle = LANE_COL[fl]; g.globalAlpha = reduced ? 0.25 : flashes[fl] * 0.35; g.fillRect(i * LANE_W, 0, LANE_W, HIT_Y + 20); g.globalAlpha = 1; }
       g.strokeStyle = 'rgba(255,255,255,0.12)'; g.beginPath(); g.moveTo(i * LANE_W + 0.5, 0); g.lineTo(i * LANE_W + 0.5, CH); g.stroke();
     }
     // hit-flash lane glow: a colour-coded column rising from the hit line; steady and short when reduced
     glows.forEach(function (q) {
       var a = reduced ? 0.4 : 0.55 * (1 - q.t / 0.35), gg = g.createLinearGradient(0, HIT_Y, 0, HIT_Y - 170);
       gg.addColorStop(0, q.col); gg.addColorStop(1, 'rgba(255,255,255,0)');
-      g.globalAlpha = Math.max(0, a); g.fillStyle = gg; g.fillRect(q.lane * LANE_W, HIT_Y - 170, LANE_W, 175); g.globalAlpha = 1;
+      g.globalAlpha = Math.max(0, a); g.fillStyle = gg; g.fillRect(colOf(q.lane) * LANE_W, HIT_Y - 170, LANE_W, 175); g.globalAlpha = 1;
     });
     g.fillStyle = 'rgba(255,255,255,0.7)'; g.fillRect(0, HIT_Y - 1, CW, 3);
     g.font = 'bold 16px monospace'; g.textAlign = 'center';
     for (i = 0; i < 4; i++) {
-      g.fillStyle = LANE_COL[i]; g.globalAlpha = 0.9; shape(g, i, i * LANE_W + LANE_W / 2, HIT_Y + 30, 14); g.globalAlpha = 1;
+      g.fillStyle = LANE_COL[laneAt(i)]; g.globalAlpha = 0.9; shape(g, laneAt(i), i * LANE_W + LANE_W / 2, HIT_Y + 30, 14); g.globalAlpha = 1;
       g.fillStyle = '#1a1626'; g.fillText(LANES[i], i * LANE_W + LANE_W / 2, HIT_Y + 36);
     }
     if (run) {
       run.notes.forEach(function (n) {
         if (n.state === 'done' && n.judge === 'miss') { /* fall away dimmed */ }
-        var idx = LANES.indexOf(n.lane), x = idx * LANE_W + LANE_W / 2, y = noteY(n.t, now);
+        var idx = LANES.indexOf(n.lane), x = colOf(idx) * LANE_W + LANE_W / 2, y = noteY(n.t, now);
         var yTail = n.hold ? noteY(n.t + n.hold, now) : y;
         if (yTail > CH + 20 || y < -20 && yTail < -20) return;
         if (n.state === 'done' && n.judge !== 'miss') return;
@@ -361,11 +439,11 @@
         g.globalAlpha = dim ? 0.3 : 1;
         if (n.hold) { g.fillStyle = LANE_COL[idx]; g.globalAlpha = (dim ? 0.15 : 0.45); g.fillRect(x - 12, Math.min(yTail, y), 24, Math.abs(y - yTail)); g.globalAlpha = dim ? 0.3 : 1; }
         var yy = n.state === 'holding' ? HIT_Y : y;
-        g.fillStyle = LANE_COL[idx]; shape(g, idx, x, yy, 15);
+        g.fillStyle = LANE_COL[idx]; shape(g, idx, x, yy, prefShapes ? 17 : 15);
         g.strokeStyle = '#fff'; g.lineWidth = 2; g.beginPath(); g.arc(x, yy, 3, 0, 6.283); g.stroke(); g.lineWidth = 1;
         g.globalAlpha = 1;
       });
-      rings.forEach(function (r) { g.strokeStyle = LANE_COL[r.lane]; g.globalAlpha = 1 - r.t / 0.3; g.beginPath(); g.arc(r.lane * LANE_W + LANE_W / 2, HIT_Y, 14 + r.t * 90, 0, 6.283); g.stroke(); g.globalAlpha = 1; });
+      rings.forEach(function (r) { g.strokeStyle = LANE_COL[r.lane]; g.globalAlpha = 1 - r.t / 0.3; g.beginPath(); g.arc(colOf(r.lane) * LANE_W + LANE_W / 2, HIT_Y, 14 + r.t * 90, 0, 6.283); g.stroke(); g.globalAlpha = 1; });
       g.font = 'bold 14px monospace';
       popups.forEach(function (p) { var y = HIT_Y - 40 - (reduced ? 0 : p.t * 40); g.globalAlpha = reduced ? 1 : 1 - p.t / 0.6; g.fillStyle = '#000'; g.fillText(p.text, p.x + 1, y + 1); g.fillStyle = p.col; g.fillText(p.text, p.x, y);
         if (p.tag) { g.font = 'bold 10px monospace'; g.fillStyle = p.tag === 'early' ? '#9bf6ff' : '#ffadad'; g.fillText(p.tag, p.x, y + 12); g.font = 'bold 14px monospace'; }
@@ -384,7 +462,7 @@
     return 'Timing: you averaged ' + how + ' over ' + res.hits + ' hits (offset ' + fmtOff(SG.offsetOf(save)) + ').';
   }
   function showMenu() {
-    mode = 'menu'; run = null; chart = null; paused = false; concert = null;
+    mode = 'menu'; run = null; chart = null; paused = false; concert = null; practice = null; document.body.dataset.practice = '0';
     clear(overlay); overlay.hidden = false;
     overlay.appendChild(el('h2', 'Campfire Jam'));
     if (!save.hint) {
@@ -427,6 +505,8 @@
         tb.dataset.song = s.id; tb.dataset.tier = t;
         row.appendChild(tb);
       });
+      var pb = btn('Practice', function () { showPracticeSetup(s.id); }, !open); pb.dataset.practice = s.id; pb.className = 'practice-btn';
+      row.appendChild(pb);
       card.appendChild(row);
       list.appendChild(card);
     });
@@ -439,10 +519,70 @@
     var op = btn('+5 ms', function () { nudge(5); }); op.id = 'off-plus'; off.appendChild(op);
     var oc = btn('Calibrate', showCalibration); oc.id = 'btn-calibrate'; off.appendChild(oc);
     showOff(); overlay.appendChild(off);
+    var prow = el('div', undefined, 'row'); prow.id = 'pref-row';
+    [['shapes', 'Colour-blind lanes', 'Safe colours, thick outlines and a shape on each touch pad.'], ['lefty', 'Left-handed order', 'Mirrors the lane order. The key under each column stays the same.']].forEach(function (d) {
+      var b = el('button'); b.type = 'button'; b.className = 'pick'; b.id = 'pref-' + d[0]; b.title = d[2];
+      function lab() { var on = SG.prefOf(save, d[0]); b.textContent = d[1] + ': ' + (on ? 'On' : 'Off'); b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.classList.toggle('sel', on); }
+      b.addEventListener('click', function () { SG.setPref(save, d[0], !SG.prefOf(save, d[0])); persist(); applyPrefs(); lab(); });
+      lab(); prow.appendChild(b);
+    });
+    overlay.appendChild(prow);
     var rule = el('p', 'Unlock rule: Warm Embers is always open. Lantern Shuffle opens at 2 total stars, Moth Parade at 5, Starlit Stomp at 8, then Kettle Song at 10, Owl Hour at 13, Comet Tail at 16, Fern Lullaby at 19, Spark Reel at 22, Dewdrop Drift at 25 and Harvest Moonrise at 28. A secret song waits for a full combo on any Hard chart. Hard needs 2 stars on that song’s Normal. Stars come from accuracy: 50%, 75%, 90%.', 'dim'); rule.id = 'unlock-rule';
     overlay.appendChild(rule);
     var row2 = el('div', undefined, 'row'); row2.appendChild(homeLink('menu-back')); overlay.appendChild(row2);
   }
+  function showPracticeSetup(id) {
+    var sg = SG.song(id); if (!sg || !SG.songUnlocked(save, id)) return;
+    mode = 'menu'; practiceCfg.b = Math.min(practiceCfg.b, maxBar(id)); practiceCfg.a = Math.min(practiceCfg.a, practiceCfg.b);
+    if (!SG.tierUnlocked(save, id, practiceCfg.tier)) practiceCfg.tier = 'normal';
+    clear(overlay); overlay.hidden = false;
+    overlay.appendChild(el('h2', 'Practice: ' + sg.name));
+    overlay.appendChild(el('p', 'Slow the song down and loop a part. Nothing is scored or saved.', 'dim'));
+    var tr = el('div', undefined, 'row'); tr.id = 'practice-tiers';
+    SG.TIERS.forEach(function (t) { var b = btn(SG.TIER_NAMES[t], function () { practiceCfg.tier = t; refresh(); }, !SG.tierUnlocked(save, id, t)); b.dataset.tier = t; b.className = 'pick'; tr.appendChild(b); });
+    overlay.appendChild(tr);
+    var sr = el('div', undefined, 'row'); sr.id = 'practice-speeds';
+    PRACTICE_SPEEDS.forEach(function (v) { var b = btn(Math.round(v * 100) + '%', function () { practiceCfg.speed = v; refresh(); }); b.dataset.speed = String(v); b.className = 'pick'; sr.appendChild(b); });
+    overlay.appendChild(sr);
+    var lr = el('div', undefined, 'row'); lr.id = 'practice-loop-row';
+    var lt = btn('Loop', function () { practiceCfg.loop = !practiceCfg.loop; refresh(); }); lt.id = 'practice-loop'; lt.className = 'pick'; lr.appendChild(lt);
+    function stepper(key, label) {
+      var wrap = el('span', undefined, 'stepper');
+      var m = btn('-', function () { practiceCfg[key] = Math.max(1, practiceCfg[key] - 1); fix(key); refresh(); }); m.id = 'loop-' + key + '-minus'; m.setAttribute('aria-label', label + ' bar minus');
+      var v = el('span', undefined, 'dim'); v.id = 'loop-' + key + '-val';
+      var pl = btn('+', function () { practiceCfg[key] = Math.min(maxBar(id), practiceCfg[key] + 1); fix(key); refresh(); }); pl.id = 'loop-' + key + '-plus'; pl.setAttribute('aria-label', label + ' bar plus');
+      wrap.appendChild(m); wrap.appendChild(v); wrap.appendChild(pl); lr.appendChild(wrap);
+    }
+    function fix(key) { if (practiceCfg.b < practiceCfg.a) { if (key === 'a') practiceCfg.b = practiceCfg.a; else practiceCfg.a = practiceCfg.b; } }
+    stepper('a', 'Start'); stepper('b', 'End');
+    overlay.appendChild(lr);
+    var sum = el('p', undefined, 'dim'); sum.id = 'practice-summary'; overlay.appendChild(sum);
+    var row = el('div', undefined, 'row');
+    var go = btn('Start practice', function () { startSong(id, practiceCfg.tier, { practice: { speed: practiceCfg.speed, loop: practiceCfg.loop ? [practiceCfg.a, practiceCfg.b] : null } }); }); go.id = 'practice-start'; row.appendChild(go);
+    var bk = btn('Songs', showMenu); bk.id = 'to-menu'; row.appendChild(bk);
+    overlay.appendChild(row);
+    function refresh() {
+      Array.prototype.forEach.call(tr.children, function (b) { var on = b.dataset.tier === practiceCfg.tier; b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.classList.toggle('sel', on); });
+      Array.prototype.forEach.call(sr.children, function (b) { var on = Number(b.dataset.speed) === practiceCfg.speed; b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.classList.toggle('sel', on); });
+      lt.setAttribute('aria-pressed', practiceCfg.loop ? 'true' : 'false'); lt.classList.toggle('sel', practiceCfg.loop); lt.textContent = 'Loop: ' + (practiceCfg.loop ? 'On' : 'Off');
+      $('loop-a-val').textContent = 'A bar ' + practiceCfg.a; $('loop-b-val').textContent = 'B bar ' + practiceCfg.b;
+      sum.textContent = 'Speed ' + Math.round(practiceCfg.speed * 100) + '%, ' + SG.TIER_NAMES[practiceCfg.tier] + (practiceCfg.loop ? ', looping bars ' + practiceCfg.a + ' to ' + practiceCfg.b + ' of ' + maxBar(id) : ', whole song (' + maxBar(id) + ' bars)');
+    }
+    refresh();
+  }
+  function showPracticeDone(res) {
+    clear(overlay); overlay.hidden = false;
+    overlay.appendChild(el('h2', 'Practice done: ' + SG.song(songId).name));
+    var n = el('p', 'Speed ' + Math.round(practice.speed * 100) + '%. No score, no stars, nothing saved.'); n.id = 'practice-note'; overlay.appendChild(n);
+    var c = el('p', 'You hit ' + res.hits + ' notes: ' + res.counts.perfect + ' perfect, ' + res.counts.great + ' great, ' + res.counts.good + ' good, ' + res.counts.miss + ' missed.', 'dim'); c.id = 'practice-counts'; overlay.appendChild(c);
+    var cfg = { speed: practice.speed, loop: practice.loopBars }, sid = songId, tr = tier;
+    var row = el('div', undefined, 'row');
+    var again = btn('Practice again', function () { startSong(sid, tr, { practice: cfg }); }); again.id = 'again'; row.appendChild(again);
+    var back = btn('Songs', showMenu); back.id = 'to-menu'; row.appendChild(back);
+    row.appendChild(homeLink('menu-back'));
+    overlay.appendChild(row);
+  }
+
   // ---------- concert: 3 songs back to back ----------
   var concertPick = [], concertTier = 'normal';
   function showConcertSetup() {
@@ -600,7 +740,7 @@
   function showPause() {
     clear(overlay); overlay.hidden = false;
     overlay.appendChild(el('h2', 'Paused'));
-    overlay.appendChild(el('p', 'The song waits for you.', 'dim'));
+    overlay.appendChild(el('p', practice ? 'Practice at ' + Math.round(practice.speed * 100) + '% speed. Nothing is scored.' : 'The song waits for you.', 'dim'));
     var row = el('div', undefined, 'row');
     var r = btn('Resume', resume); r.id = 'resume'; row.appendChild(r);
     var q = btn('Quit to songs', quit); q.id = 'quit'; row.appendChild(q);
@@ -639,6 +779,7 @@
     render(ts / 1000);
     requestAnimationFrame(frame);
   }
+  applyPrefs();
   showMenu();
   requestAnimationFrame(frame);
 
@@ -654,6 +795,12 @@
       get shake() { return shake; },
       get rings() { return rings.length; },
       get paused() { return paused; },
+      get practice() { return practice ? { speed: practice.speed, loop: practice.loop ? { a: practice.loop.a, b: practice.loop.b, aBar: practice.loopBars[0], bBar: practice.loopBars[1] } : null, loops: practice.loops } : null; },
+      get practiceResult() { return practiceLast ? JSON.parse(JSON.stringify(practiceLast)) : null; },
+      get prefs() { return { shapes: prefShapes, lefty: prefLefty }; },
+      get laneColors() { return LANE_COL.slice(); },
+      get columns() { return LANES.map(function (l) { return colOf(LANES.indexOf(l)); }); },
+      setPref: function (k, v) { var r = SG.setPref(save, k, !!v); persist(); applyPrefs(); return r; },
       get concert() { return concert ? { ids: concert.ids.slice(), tier: concert.tier, idx: concert.idx, parts: concert.parts.map(function (p) { return Object.assign({}, p); }) } : null; },
       get concertResult() { return concertLast ? JSON.parse(JSON.stringify(concertLast)) : null; },
       startConcert: startConcert,
@@ -666,7 +813,7 @@
       get sfx() { return sfx; },
       get audio() { return !!actx; },
       start: startSong, step: step, press: press, release: release, pause: pause, resume: resume, menu: showMenu,
-      at: function (ms) { if (ms > testNow) step(ms - testNow); }
+      at: function (ms) { if (ms > testNow) step((ms - testNow) / (practice ? practice.speed : 1)); }
     };
   }
 })();

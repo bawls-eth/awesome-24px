@@ -51,6 +51,7 @@ const startChart = (p) => p.evaluate((c) => { window.__jam.start('warm-embers', 
   check('unlock rule text is shown', await p.evaluate(() => document.getElementById('unlock-rule').textContent.includes('Lantern Shuffle opens at 2 total stars')));
   check('unlock rule lists the extended ladder (19/22/25/28) and the new songs show their star needs', await p.evaluate(() => { const t = document.getElementById('unlock-rule').textContent; return ['Fern Lullaby at 19', 'Spark Reel at 22', 'Dewdrop Drift at 25', 'Harvest Moonrise at 28'].every((x) => t.includes(x)) && document.querySelector('.card[data-song=harvest-moonrise]').textContent.includes('Needs 28 stars'); }));
   check('Concert button exists and is locked with one open song; secret card is last', await p.evaluate(() => document.getElementById('btn-concert').disabled && [...document.querySelectorAll('.card')].pop().dataset.song === 'midnight-campfire'));
+  check('Practice buttons and the two accessibility toggles exist on the menu', await p.evaluate(() => document.querySelectorAll('.practice-btn').length === 12 && !!document.getElementById('pref-shapes') && !!document.getElementById('pref-lefty') && document.getElementById('hud-speed').textContent === ''));
 
   // ---- judging windows via the keyboard (deterministic clock) ----
   await startChart(p);
