@@ -759,6 +759,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "world-props-b26.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "world-phone-hud.test.js": {
     "class": "browser",
     "tier": "full"

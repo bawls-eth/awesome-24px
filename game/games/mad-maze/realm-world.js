@@ -225,7 +225,7 @@
     }
     function godPropPalette() { // every opaque colour a dimmed Godlands prop can show ([r,g,b] strings), for the readability test
       const out = new Set(['94,90,85', '74,58,52', '26,16,16', '42,32,34']);
-      const ids = {}; Object.keys(GOD_POOL).forEach((k) => GOD_POOL[k].forEach((id) => { ids[id] = 1; })); ids.prop_skeleton_bones = 1; ids.prop_crystal_red = 1;
+      const ids = {}; Object.keys(GOD_POOL).forEach((k) => GOD_POOL[k].forEach((id) => { ids[id] = 1; })); ids.prop_skeleton_bones = 1; ids.prop_crystal_red = 1; Object.keys(B26_SET).forEach((id) => { ids[id] = 1; });
       Object.keys(ids).forEach((id) => {
         const a = wArt[id]; if (!a) return; const d = dimOf(a); if (!d.ok) return;
         const px = d.img.getContext('2d').getImageData(0, 0, d.img.width, d.img.height).data;
@@ -286,10 +286,14 @@
         if (wy > 0 && terrain[(wy - 1) * ww + wx] !== t) rect(g, e, px, py, TILE, 2);
       }
       const list = propsBy[cy * ccols + cx];
-      if (list) for (let k = 0; k < list.length; k++) drawProp(g, list[k].kind, (list[k].x - x0) * TILE, (list[k].y - y0) * TILE, false);
+      if (list) for (let k = 0; k < list.length; k++) {
+        const b = b26Code(list[k]); // b26: Godlands bones / dead trees as the muted Codex sprites; the dim code drawing stays the fallback
+        if (b) { const d = dimOf(b); g.drawImage(d.ok ? d.img : b.img, 0, 0, b.fw, b.fh, (list[k].x - x0) * TILE + 16 - b.ax, (list[k].y - y0) * TILE + 30 - b.ay, b.fw, b.fh); artDraws.b26++; continue; }
+        drawProp(g, list[k].kind, (list[k].x - x0) * TILE, (list[k].y - y0) * TILE, false);
+      }
       if (artOn) {
         const al = chunkProps(cx, cy);
-        for (let k = 0; k < al.length; k++) { let a = wArt[al[k].id]; if (a && al[k].dim) { a = dimOf(a); if (!a.ok) g.globalAlpha = 0.5; } if (a) g.drawImage(a.img, 0, 0, a.fw, a.fh, (al[k].x - x0) * TILE + 16 - a.ax, (al[k].y - y0) * TILE + 30 - a.ay, a.fw, a.fh); g.globalAlpha = 1; }
+        for (let k = 0; k < al.length; k++) { let a = wArt[al[k].id] || (al[k].base ? wArt[al[k].base] : null); if (a && al[k].id !== al[k].base && B26_SET[al[k].id] && wArt[al[k].id]) artDraws.b26++; if (a && al[k].dim) { a = dimOf(a); if (!a.ok) g.globalAlpha = 0.5; } if (a) g.drawImage(a.img, 0, 0, a.fw, a.fh, (al[k].x - x0) * TILE + 16 - a.ax, (al[k].y - y0) * TILE + 30 - a.ay, a.fw, a.fh); g.globalAlpha = 1; }
       }
       let wcv = null;
       if (water) { // a sparse highlight layer, faded / nudged per frame for a cheap shimmer
@@ -335,7 +339,19 @@
     // Everything draws from sprite strips with drawImage (no Graphics); the code visuals stay as the fallback (art missing or ?art=0).
     const artOn = !!opts.assetRoot && !/[?&]art=0(&|$)/.test(typeof location !== 'undefined' ? location.search : '');
     const wArt = Object.create(null); // id -> { img, frames, fw, fh, fps, ax, ay }
-    const artDraws = { portal: 0, shrine: 0, chest: 0, beacon: 0, pad: 0 };
+    const artDraws = { portal: 0, shrine: 0, chest: 0, beacon: 0, pad: 0, b26: 0 };
+    // b26 (Codex godlands-props-fix): muted obelisks, bone piles and dead trees replace the Godlands props BY ID. The art pool keeps its seeded
+    // positions (only the id changes, the old id stays as `base` and is drawn dimmed if the new strip is missing); the generator's code-drawn
+    // `bones` / `dead_tree` on Godlands ground draw the bone-pile / dead-tree strips when loaded, else the dim code drawing. ?props=classic or ?art=0: off.
+    const B26_ON = artOn && !PROPS_CLASSIC;
+    const B26_SWAP = { prop_obelisk: ['prop_godlands_obelisk_a', 'prop_godlands_obelisk_b'], prop_tree_dead: ['prop_godlands_dead_tree_a', 'prop_godlands_dead_tree_b'] };
+    const B26_CODE = { bones: ['prop_godlands_bone_pile_a', 'prop_godlands_bone_pile_b'], dead_tree: ['prop_godlands_dead_tree_a', 'prop_godlands_dead_tree_b'] };
+    const B26_SET = {}; [B26_SWAP, B26_CODE].forEach((m) => Object.keys(m).forEach((k) => m[k].forEach((id) => { B26_SET[id] = 1; })));
+    const b26Pick = (pair, x, y) => pair[h2(x, y, 261) < 0.5 ? 0 : 1];
+    function b26Code(p) { // a loaded b26 strip for a generator prop on Godlands ground, or null (code fallback)
+      if (!B26_ON || !B26_CODE[p.kind] || p.x < 0 || p.y < 0 || p.x >= ww || p.y >= wh || GOD_TERRAIN[TN[terrain[p.y * ww + p.x]]] !== 1) return null;
+      return wArt[b26Pick(B26_CODE[p.kind], p.x, p.y)] || null;
+    }
     let wArtLoading = false;
     function drawArt(g, a, f, x, y) { g.drawImage(a.img, f * a.fw, 0, a.fw, a.fh, Math.round(x - a.ax), Math.round(y - a.ay), a.fw, a.fh); }
     function frameOf(a, tt, reduced) { return reduced || a.frames < 2 ? 0 : Math.floor(tt * a.fps) % a.frames; } // time-sliced, reduce-motion = frame 0
@@ -350,7 +366,7 @@
         const batches = idx && Array.isArray(idx.batches) ? idx.batches : [];
         return Promise.all(batches.map((b) => {
           const id = b && typeof b.path === 'string' ? b.path.replace(/\/+$/, '').split('/').pop() : '';
-          if (!/^b1[2345]-[a-z0-9-]{1,48}$/.test(id)) return null;
+          if (!/^(b1[2345]|b26)-[a-z0-9-]{1,48}$/.test(id)) return null; // b26 = the Godlands prop fix
           return fetch(join(join(root, id), 'manifest.json')).then((r) => (r.ok ? r.json() : null)).then((m) => {
             const assets = m && Array.isArray(m.assets) ? m.assets : [];
             return Promise.all(assets.map((a) => {
@@ -427,7 +443,8 @@
           for (let oy = -2; oy <= 2 && !near; oy++) for (let ox = -2; ox <= 2 && !near; ox++) { const x2 = wx + ox; const y2 = wy + oy; if (x2 >= 0 && y2 >= 0 && x2 < ww && y2 < wh && isRoad(terrain[y2 * ww + x2])) near = true; }
           for (let k = 0; k < campPts.length && !near; k++) if (Math.abs(campPts[k].x - wx) <= 7 && Math.abs(campPts[k].y - wy) <= 7) near = true;
           const id = near && roll < 0.6 ? STRUCT[Math.floor(roll2 * STRUCT.length)] : pool[Math.floor(roll2 * pool.length)];
-          L.push({ x: wx, y: wy, id, dim: !PROPS_CLASSIC && (god || id === 'prop_skeleton_bones' || /^prop_crystal_/.test(id)) });
+          const sw = B26_ON && god && B26_SWAP[id] ? b26Pick(B26_SWAP[id], wx, wy) : null;
+          L.push({ x: wx, y: wy, id: sw || id, base: sw ? id : undefined, dim: !PROPS_CLASSIC && (god || id === 'prop_skeleton_bones' || /^prop_crystal_/.test(id)) });
         }
         L.sort((a, b) => a.y - b.y || a.x - b.x);
       }
@@ -1526,7 +1543,8 @@
       tileCenter: (tx, ty) => ({ x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE }),
       save: () => readSave(), savePos, portals: () => portals.map((q) => ({ i: q.i, x: q.x, y: q.y, tx: q.tx, ty: q.ty, biome: q.biome })),
       syncHud, loadTileArt, loadWorldArt,
-      artState: () => ({ on: artOn, loaded: Object.keys(wArt), draws: Object.assign({}, artDraws), loading: wArtLoading }), artProps: (cx, cy) => chunkProps(cx, cy).map((q) => ({ x: q.x, y: q.y, id: q.id, dim: q.dim })), propsClassic: () => PROPS_CLASSIC, godPropPalette: () => godPropPalette(), chunkGrid: () => ({ cols: ccols, rows: crows }),
+      artState: () => ({ on: artOn, loaded: Object.keys(wArt), draws: Object.assign({}, artDraws), loading: wArtLoading }), artProps: (cx, cy) => chunkProps(cx, cy).map((q) => ({ x: q.x, y: q.y, id: q.id, dim: q.dim, base: q.base || null })),
+      b26: () => ({ on: B26_ON, ids: Object.keys(B26_SET), loaded: Object.keys(B26_SET).filter((id) => !!wArt[id]), draws: artDraws.b26, codeProps: world.props.filter((p) => b26Code(p)).length, codeCandidates: world.props.filter((p) => B26_CODE[p.kind] && GOD_TERRAIN[TN[terrain[p.y * ww + p.x]]] === 1).length, codeIds: Array.from(new Set(world.props.filter((p) => b26Code(p)).map((p) => b26Pick(B26_CODE[p.kind], p.x, p.y)))) }), propsClassic: () => PROPS_CLASSIC, godPropPalette: () => godPropPalette(), chunkGrid: () => ({ cols: ccols, rows: crows }),
       panelHidden: () => panelHid,
       // minimap fog (slice A1)
       discovered: () => ({ on: fogOn, count: FOG ? FOG.count(fogBits) : 0, b64: FOG ? FOG.encode(fogBits) : '', has: (cx, cy) => (FOG ? FOG.has(fogBits, cx, cy) : false) }),
