@@ -34,12 +34,17 @@
     if (/^\d{1,15}$/.test(s)) return String(Math.min(Number(s), 2147483647)); // numeric seeds are clamped to int32
     return SEED_RE.test(s) ? s : null;
   }
+  function questDate() { // UTC day of the daily quests; ?qdate=YYYY-MM-DD only under ?test=1 (tests pin a day)
+    let d = null;
+    try { const m = /[?&]qdate=(\d{4}-\d{2}-\d{2})(&|$)/.exec(location.search); if (m && /[?&]test=1(&|$)/.test(location.search) && window.MMDaily) d = window.MMDaily.cleanDate(m[1]); } catch (e) { d = null; }
+    return d || new Date().toISOString().slice(0, 10);
+  }
   function cleanSave(raw) {
     let o = raw;
     if (typeof o === 'string') { try { o = JSON.parse(o); } catch (e) { o = null; } }
     if (!o || typeof o !== 'object' || Array.isArray(o)) o = {};
     const out = {};
-    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo|evT|evDone|finds|discovered|shrineAt|chests)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
+    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo|evT|evDone|finds|discovered|shrineAt|chests|quests)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
     out.v = 1;
     out.seed = cleanSeed(o.seed);
     out.version = Number.isInteger(o.version) && o.version > 0 && o.version < 1000 ? o.version : 0;
@@ -59,6 +64,7 @@
     if (ch.length) out.chests = ch;
     const disc = window.MMFog ? MMFog.clean(o.discovered) : '';
     if (disc) out.discovered = disc;
+    if (o.quests !== undefined && window.MMQuests) out.quests = window.MMQuests.clean(o.quests, questDate()); // daily quests (additive): bad shape or another day -> fresh
     const r = o.returnTo && typeof o.returnTo === 'object' ? o.returnTo : null;
     if (o.finds !== undefined) out.finds = window.MMStash ? MMStash.cleanFinds(o.finds) : o.finds; // owned by MMStash (Lantern payout)
     out.returnTo = r && Number.isInteger(r.x) && Number.isInteger(r.y) && r.x >= 0 && r.y >= 0 && r.x < 4096 && r.y < 4096 && cleanSeed(r.seed) ? { x: r.x, y: r.y, seed: cleanSeed(r.seed) } : null;
@@ -530,7 +536,7 @@
       if (e.zid >= 0) {
         const info = zones.markDead(e.zid, arena.clock); live.delete(e.zid); e.zid = -1;
         if (!info) return;
-        kills++; save.stats.kills++;
+        kills++; save.stats.kills++; nxQuestEvent({ type: 'kill', zone: info.zone, n: 1 });
         rollFor({ zone: info.zone, tier: info.tier }, e.x, e.y, 'g' + info.group);
         spawnPickups(e.x, e.y, 'g' + info.group, kills, info.tier);
         return;
@@ -538,7 +544,7 @@
       for (let i = 0; i < bossLive.length; i++) {
         if (bossLive[i] !== e) continue;
         const site = world.bossSites[i]; bossLive[i] = null; bossReadyNow[i] = 0; miniKey = '';
-        zones.bossDefeated(site, arena.clock); kills++; save.stats.bossKills++;
+        zones.bossDefeated(site, arena.clock); kills++; save.stats.bossKills++; nxQuestEvent({ type: 'kill', zone: site.zone, boss: true, n: 1 });
         rollFor({ zone: site.zone, tier: site.zone, boss: true }, e.x, e.y + 30, 'boss' + i);
         spawnPickups(e.x, e.y + 20, 'boss' + i, kills, 5);
         writeSave(save);
@@ -752,7 +758,7 @@
       const q = portals[i]; const u = portalUrls(i);
       if (!u.ret) return null;
       leaving = true;
-      save.pos = { x: q.tx, y: q.ty }; save.returnTo = { x: q.tx, y: q.ty, seed }; save.stats.portals++;
+      save.pos = { x: q.tx, y: q.ty }; save.returnTo = { x: q.tx, y: q.ty, seed }; save.stats.portals++; nxQuestEvent({ type: 'portal' });
       writeSave(save); arena.onSave(arena.save); settle('portal');
       api.lastPortalUrl = u.url;
       arena.stop(); portalBtn.classList.add('hidden');
@@ -1111,7 +1117,7 @@
     const nxSite = NX_ON ? (() => { const f = nearestFree(world.spawnPoint.x + 3, world.spawnPoint.y - 1, 8) || nearestFree(world.spawnPoint.x - 3, world.spawnPoint.y, 8); return f ? { tx: f.x, ty: f.y, x: (f.x + 0.5) * TILE, y: (f.y + 0.5) * TILE } : null; })() : null;
     const nxBtn = document.createElement('button'); nxBtn.id = 'rw-nexus-go'; nxBtn.type = 'button'; nxBtn.className = 'hidden'; nxBtn.textContent = 'Visit the Nexus (Enter)'; nxBtn.setAttribute('aria-label', 'Visit the Nexus hub (Enter)'); ov.appendChild(nxBtn);
     let nxNear = false; let nxOpen = false; let nxEnterTile = null; let nxTalkN = 0; const nxPortrait = {}; let nxDom = null;
-    const todayUtc = () => { let d = null; try { if (opts.test && /[?&]qdate=(\d{4}-\d{2}-\d{2})(&|$)/.test(location.search)) d = window.MMDaily.cleanDate(RegExp.$1); } catch (e) { d = null; } return d || new Date().toISOString().slice(0, 10); };
+    const todayUtc = questDate;
     const nxCss = document.createElement('style');
     nxCss.textContent = '#rw-nexus-go{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(290px + env(safe-area-inset-bottom,0px));z-index:3;min-height:48px;min-width:44px;padding:0 18px;border-radius:24px;border:2px solid #a98bff;background:rgba(30,20,60,.92);color:#fff;font:700 15px system-ui,sans-serif;white-space:nowrap}#rw-nexus-go.hidden{display:none}'
       + '#rw-nexus{position:fixed;inset:0;z-index:80;background:#120e1f;color:#f3eefc;display:flex;flex-direction:column;overflow-x:hidden;overflow-y:auto;font:14px/1.4 system-ui,sans-serif;padding:env(safe-area-inset-top,0px) 16px env(safe-area-inset-bottom,0px);box-sizing:border-box}#rw-nexus.hidden{display:none}'
@@ -1262,6 +1268,32 @@
       g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText('Nexus', q.x + 1, q.y - 37); g.fillStyle = '#ffd45a'; g.fillText('Nexus', q.x, q.y - 38);
     }
 
+    // ---------- daily quests (MMQuests): 3 per UTC day, progress from kills / boss kills / portals, claimed at the Quest Giver in the Nexus ----------
+    let qDirty = false;
+    function nxQuestEvent(ev) {
+      if (!window.MMQuests) return;
+      save.quests = MMQuests.progress(save.quests, ev, questDate()); qDirty = true;
+      if (nxOpen && nxDom && !nxDom.board.classList.contains('hidden')) nxBoardRender();
+    }
+    function nxBoardRender() {
+      const b = nxDom.board; b.textContent = '';
+      const h = document.createElement('b'); h.textContent = 'Daily quests · ' + questDate(); b.appendChild(h);
+      MMQuests.summary(save.quests, questDate()).forEach((q) => {
+        const row = document.createElement('div'); row.className = 'nx-q'; row.dataset.quest = q.id;
+        const t = document.createElement('span'); t.textContent = q.text + ' (' + q.p + '/' + q.need + ') '; const r = document.createElement('em'); r.textContent = '+' + q.reward.shards + ' 💎'; t.appendChild(r); row.appendChild(t);
+        if (q.claimed) { const d = document.createElement('span'); d.textContent = 'Claimed'; d.style.flex = '0 0 auto'; row.appendChild(d); }
+        else { const c = document.createElement('button'); c.type = 'button'; c.dataset.claim = q.id; c.textContent = 'Claim'; c.disabled = !q.done; c.setAttribute('aria-label', q.done ? 'Claim ' + q.text : q.text + ', not finished yet'); c.addEventListener('click', () => nxClaim(q.id)); row.appendChild(c); }
+        b.appendChild(row);
+      });
+    }
+    function nxBoardOpen() { nxBuild(); nxBoardRender(); nxDom.board.classList.remove('hidden'); }
+    function nxClaim(id) {
+      const out = MMQuests.claim(save.quests, id, questDate()); save.quests = out.state;
+      if (out.reward) { arena.save.shards += out.reward.shards; arena.run.shards += out.reward.shards; arena.onSave(arena.save); arena._syncHud(); nxSay('Quest Giver', 'Well earned. +' + out.reward.shards + ' shards.'); }
+      writeSave(save); qDirty = false; if (nxDom) nxBoardRender();
+      return out.reward;
+    }
+
     const hooks = {
       onStart() {
         if (pendingAt) { placeAt(pendingAt.x, pendingAt.y); pendingAt = null; } else placeAt(world.spawnPoint.x, world.spawnPoint.y);
@@ -1295,7 +1327,7 @@
         evHint(dt);
         hudT -= dt; saveT -= dt;
         if (hudT <= 0) { hudT = 0.25; syncHud(false); }
-        if (saveT <= 0) { saveT = 2; savePos(false); }
+        if (saveT <= 0) { saveT = 2; savePos(false); if (qDirty) { qDirty = false; writeSave(save); } }
       },
       drawUnder(g, cam) {
         frameNo++;
@@ -1390,6 +1422,7 @@
       worldStatus: { on: STATUS_ON, table: BOLT_ST, forCreature: boltStatusFor, roll: boltRoll, log: stLog },
       pickups: { on: PICK_ON, cap: PICK_CAP, list: () => picks.map((q) => ({ type: q.type, art: q.art, value: q.value, tier: q.tier, x: q.x, y: q.y, lifeMs: q.lifeMs })), spawn: spawnPickups, got: () => Object.assign({}, pickGot), total: () => pickTotal },
       nexus: { on: NX_ON, site: nxSite, open: nexusOpen, close: nexusClose, isOpen: () => nxOpen, near: () => nxNear, enterTile: () => nxEnterTile, talk: (id) => { const n = NX_ON && NX.layout().npcs.find((x) => x.id === id); if (n) { nxBuild(); nxTalk(n); } return nxDom && nxDom.last; }, portal: (id) => { const q = NX_ON && NX.layout().portals.find((x) => x.id === id); return q ? nxPortal(q) : null; }, lastUrl: () => api.lastNexusUrl || null, today: todayUtc },
+      quests: { date: questDate, list: () => MMQuests.quests(questDate()), summary: () => MMQuests.summary(save.quests, questDate()), state: () => JSON.parse(JSON.stringify(save.quests || MMQuests.fresh(questDate()))), event: nxQuestEvent, claim: nxClaim, flush: () => { qDirty = false; return writeSave(save); } },
       settle, stashNote, lastSettle: () => lastSettle, finds: () => (ST ? ST.readFinds(localStorage) : null),
     };
     return { api, hooks };
