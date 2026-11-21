@@ -1,4 +1,16 @@
 {
+  "angler-tournament.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "angler-economy.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "angler-aquarium.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "angler-page.test.js": {
     "class": "browser",
     "tier": "smoke"
@@ -248,6 +260,10 @@
     "tier": "full"
   },
   "shared-hub-map.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-angler-tournament.test.js": {
     "class": "node",
     "tier": "smoke"
   },
