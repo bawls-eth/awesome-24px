@@ -112,4 +112,41 @@ check('difficulty ramps with depth (deep mean > shallow mean + 0.5)', mean(deep)
 check('selection uses no Math.random', (() => { const orig = Math.random; let hit = false; Math.random = () => { hit = true; return 0.5; }; try { SEEDS.slice(0, 20).forEach((s) => MMRooms.select(MMWarren.generate(s, { layout: 2 }), s, 2, 'warren')); } finally { Math.random = orig; } return !hit; })());
 check('the old Warren graph is unaffected by the layout version (same rooms and doors)', SEEDS.slice(0, 30).every((s) => { const a = MMWarren.generate(s), b = MMWarren.generate(s, { layout: 2 }); return JSON.stringify(a.rooms) === JSON.stringify(b.rooms) && JSON.stringify(a.doors) === JSON.stringify(b.doors) && MMWarren.validate(b).length === 0; }));
 
+
+// ---- narrow profile (Realm-style tight dungeons): additive checks ----
+check('at least 12 new narrow templates', MMRooms.NARROW_TEMPLATES.length >= 12, String(MMRooms.NARROW_TEMPLATES.length));
+check('narrow template ids are unique, prefixed n- and collide with nothing else', (() => { const ids = MMRooms.NARROW_TEMPLATES.map((t) => t.id); return new Set(ids).size === ids.length && ids.every((id) => id.indexOf('n-') === 0 && !MMRooms.get(id) && !MMRooms.NEW_TEMPLATES.some((t) => t.id === id)); })());
+const nkinds = new Set(MMRooms.NARROW_TEMPLATES.map((t) => t.kind));
+check('narrow templates cover normal/key/treasure/start', ['normal', 'key', 'treasure', 'start'].every((k) => nkinds.has(k)), [...nkinds].join());
+check('narrow templates carry >= 4 flavours', new Set(MMRooms.NARROW_TEMPLATES.map((t) => t.tags[1])).size >= 4);
+const nerrs = []; MMRooms.POOL_NARROW.forEach((t) => { const e = MMRooms.validateTemplate(t); if (e.length) nerrs.push(t.id + ': ' + e[0]); });
+check('every narrow template (and mirror) passes the validator', nerrs.length === 0, nerrs.join('; '));
+check('every narrow template is reachable: BFS from each door reaches all open tiles, doors, spawns', MMRooms.POOL_NARROW.every((t) => {
+  const p = MMRooms.parse(t); const open = (x, y) => x >= 0 && y >= 0 && x < 17 && y < 13 && p.rows[y][x] !== '#'; let total = 0; for (let y = 0; y < 13; y++) for (let x = 0; x < 17; x++) if (open(x, y)) total++;
+  return Object.values(p.doors).every((d0) => { const seen = new Set([d0.x + ',' + d0.y]); const q = [[d0.x, d0.y]]; for (let i = 0; i < q.length; i++) { const [x, y] = q[i]; [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dx, dy]) => { const k = (x + dx) + ',' + (y + dy); if (open(x + dx, y + dy) && !seen.has(k)) { seen.add(k); q.push([x + dx, y + dy]); } }); } return seen.size === total && Object.values(p.doors).every((d) => seen.has(d.x + ',' + d.y)) && p.spawns.every((s) => seen.has(s.x + ',' + s.y)); });
+}));
+check('key/treasure/start narrow templates keep the centre tile open (key, chest, portal land there)', MMRooms.POOL_NARROW.filter((t) => t.kind !== 'normal').every((t) => MMRooms.parse(t).rows[6][8] !== '#'));
+check('tight flag survives parse and mirroring', MMRooms.POOL_NARROW.every((t) => !!MMRooms.parse(t).tight === !!t.tight) && MMRooms.POOL_NARROW.some((t) => t.tight) && !MMRooms.parse(MMRooms.get('open')).tight);
+const nst = MMRooms.NARROW_TEMPLATES.map((t) => MMRooms.templateStats(t));
+check('narrow templates are small: mean long side <= 12, mean corridor width <= 5', mean(nst.map((s) => s.long)) <= 12 && mean(nst.map((s) => s.width)) <= 5, mean(nst.map((s) => s.long)).toFixed(1) + ' / ' + mean(nst.map((s) => s.width)).toFixed(1));
+check('the old open hall is clearly bigger than every narrow normal on corridor width', MMRooms.templateStats(MMRooms.get('open')).width > Math.max.apply(null, MMRooms.NARROW_TEMPLATES.filter((t) => t.kind === 'normal').map((t) => MMRooms.templateStats(t).width)));
+const NSEEDS = []; for (let i = 0; i < 50; i++) NSEEDS.push(String(300 + i * 11));
+let nTotal = 0, nNarrow = 0, nBigMax = 0, nNondet = 0, nBad = 0;
+['warren', 'bramble', 'meadow', 'crypt'].forEach((biome) => NSEEDS.forEach((seed) => {
+  const g = MMWarren.generate(seed, { layout: 2 }); const a = MMRooms.select(g, seed, 2, biome, { narrow: true }); const b = MMRooms.select(MMWarren.generate(seed, { layout: 2 }), seed, 2, biome, { narrow: true });
+  if (JSON.stringify(a) !== JSON.stringify(b)) nNondet++;
+  let big = 0; g.rooms.forEach((r) => { nTotal++; if (MMRooms.isNarrow(a.ids[r.id])) nNarrow++; else if (r.type !== 'boss') big++; });
+  nBigMax = Math.max(nBigMax, big);
+  if (!g.rooms.every((r) => { const t = MMRooms.POOL_NARROW.concat(MMRooms.POOL_V2).find((x) => x.id === a.ids[r.id]); const want = r.type === 'treasure' || r.type === 'secret' ? ['treasure'] : r.type === 'boss' ? ['boss'] : r.type === 'start' ? ['start'] : r.type === 'key' ? ['key', 'normal'] : ['normal']; return t && want.indexOf(t.kind) >= 0; })) nBad++; try { g.rooms.forEach((r) => MMRooms.parse(a.defs[r.id])); } catch (e) { nBad++; }
+}));
+check('narrow share >= 70% of rooms in v2 biome layouts (50 seeds x 4 biomes)', nNarrow / nTotal >= 0.7, (100 * nNarrow / nTotal).toFixed(1) + '%');
+check('at most 1 big hall per floor besides the boss hall', nBigMax <= 1, String(nBigMax));
+check('narrow selection is deterministic per seed and every room gets a valid role template', nNondet === 0 && nBad === 0, nNondet + '/' + nBad);
+check('narrow selection keeps the repeat rules (no shared base between neighbours)', (() => { let bad = 0; NSEEDS.forEach((seed) => { const g = MMWarren.generate(seed, { layout: 2 }); const a = MMRooms.select(g, seed, 2, 'crypt', { narrow: true }); g.doors.forEach((d) => { if (baseOf(a.ids[d.a]) === baseOf(a.ids[d.b])) bad++; }); }); return bad === 0; })());
+check('biomes get their flavour: crypt favours chambers, bramble lanes, meadow glades', (() => {
+  const share = (biome, fl) => { let n = 0, m = 0; NSEEDS.forEach((seed) => { const g = MMWarren.generate(seed, { layout: 2 }); const a = MMRooms.select(g, seed, 2, biome, { narrow: true }); g.rooms.forEach((r) => { const t = MMRooms.POOL_NARROW.find((x) => x.id === a.ids[r.id]); if (!t) return; m++; if (t.tags[1] === fl) n++; }); }); return n / m; };
+  return share('crypt', 'chambers') > share('bramble', 'chambers') && share('bramble', 'lanes') > share('crypt', 'lanes') && share('meadow', 'glade') > share('crypt', 'glade');
+})());
+check('selecting without { narrow } is unchanged: layout 2 never returns narrow templates, v1 ignores the option', NSEEDS.every((seed) => { const g = MMWarren.generate(seed, { layout: 2 }); const a = MMRooms.select(g, seed, 2, 'crypt'); const c = MMRooms.select(MMWarren.generate(seed), seed, 1, undefined, { narrow: true }); const d = MMRooms.select(MMWarren.generate(seed), seed, 1); return g.rooms.every((r) => !MMRooms.isNarrow(a.ids[r.id])) && JSON.stringify(c.ids) === JSON.stringify(d.ids); }));
+
 done();

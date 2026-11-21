@@ -9,6 +9,7 @@
   const DV = { N: [0, -1], E: [1, 0], S: [0, 1], W: [-1, 0] };
   // Bramble enemies reuse the arena's three attack patterns (spiral / aimed / ring).
   const ENEMY_MAP = { puffcap: 'ring', beetle: 'aimed', archer: 'aimed', moth: 'spiral', sprout: 'ring' };
+  const TIGHT_MAX_SHOOTERS = 3; // narrow `tight` rooms: simultaneous shooters cap (bullets must stay dodgeable)
   const HP_DIV = 8; // MMEnemies hp is for a 1 dmg/hit-per-10 game; the arena's bolts are 1 dmg
   const SLOT_ITEMS = { weapon: ['sparkwand', 'quickwand'], armor: ['heartcharm', 'swiftcharm'], trinket: ['heartcharm', 'swiftcharm'], ring: ['luckring', 'scholarring', 'wardring'] };
   const PAL = {
@@ -105,7 +106,10 @@
       palCache[type] = o ? { f: o.f, w: o.w, hi: o.hi, name: nm } : base; return palCache[type];
     } // 1 = original room selection (old seeds/links), 2 = variety pool (new runs only)
     const dungeon = MMWarren.generate(seed, { layout: layoutV });
-    const picks = MMRooms.select(dungeon, seed, layoutV, biome);
+    // Narrow profile (Realm-style tight dungeons): layout-2 runs only; ?narrow=0 (or opts.narrow === false) restores the old room pool.
+    let narrowQ = true; try { narrowQ = new URLSearchParams(window.location.search).get('narrow') !== '0'; } catch (e) { /* no location */ }
+    const narrowOn = layoutV === 2 && opts.narrow !== false && narrowQ;
+    const picks = MMRooms.select(dungeon, seed, layoutV, biome, narrowOn ? { narrow: true } : undefined);
     const rngRun = MMRng.create('run:' + seed);
     const lootRng = MMRng.create('loot:' + seed);
     const bossRng = MMRng.create('boss:' + seed);
@@ -129,7 +133,14 @@
       const tplDef = picks.defs[r.id];
       const tpl = MMRooms.parse(tplDef);
       let plan = [];
-      if (r.type === 'combat' || r.type === 'key') plan = MMEnemies.plan(seed + ':' + r.id, Math.max(1, depth[r.id] || 1), tpl.spawns.map((s) => ({ x: s.x, y: s.y })), null, biome === 'warren' ? undefined : B.ids).enemies;
+      if (r.type === 'combat' || r.type === 'key') {
+        let allowed = biome === 'warren' ? undefined : B.ids;
+        if (tpl.tight) { // cramped room: no ring-bullet puffcaps / splitting sprouts (they add 3+ shooters) and at most 3 enemies at once
+          const calm = (allowed || MMEnemies.IDS).filter((q) => q !== 'puffcap' && q !== 'sprout'); if (calm.length) allowed = calm;
+        }
+        plan = MMEnemies.plan(seed + ':' + r.id, Math.max(1, depth[r.id] || 1), tpl.spawns.map((s) => ({ x: s.x, y: s.y })), null, allowed).enemies;
+        if (tpl.tight && plan.length > TIGHT_MAX_SHOOTERS) plan = plan.slice(0, TIGHT_MAX_SHOOTERS);
+      }
       const extra = plan.reduce((n, e) => n + (e.id === 'sprout' ? 2 : 0), 0); // each Sprout leaves two minis behind
       counts[r.id] = r.type === 'boss' ? 1 : plan.length + extra;
       L[r.id] = { tpl, plan, baked: null, spawned: false, keyTaken: false };
@@ -148,7 +159,7 @@
     const unlocked = {}; const granted = [];
     let keyFound = 0; let current = null; let finished = false; let sig = ''; let mapSig = '';
     let lockMsgAt = -9; let hudText = ''; let queue = []; let nextSweep = 0; let nextWall = 0; let sweepN = 0;
-    const api = { seed, biome, layoutVersion: layoutV, graph: dungeon, state, arena, granted };
+    const api = { seed, biome, layoutVersion: layoutV, narrow: narrowOn, graph: dungeon, state, arena, granted };
     // Lantern stash payout (MMStash): every kept find of this run is paid into the stash when the summary shows (win or fall)
     const ST = window.MMStash && window.MMProfile ? window.MMStash : null; const shards0 = arena.save.shards;
     if (ST) {
@@ -475,7 +486,25 @@
       boltWall: (x, y) => ctrl.onBoltWall(x, y),
       boss: () => bossEntity(),
       finish,
-      layout: (id) => ({ tpl: L[id].tpl.id, plan: L[id].plan.length, count: counts[id] }),
+      layout: (id) => ({ tpl: L[id].tpl.id, plan: L[id].plan.length, count: counts[id], tight: !!L[id].tpl.tight }),
+      // narrow-profile stats: per room (long side of the largest empty rectangle, mean corridor width) + the floor averages
+      narrowStats: () => {
+        const rows = dungeon.rooms.map((r) => { const st = MMRooms.templateStats(L[r.id].tpl); return { id: r.id, type: r.type, tpl: L[r.id].tpl.id, long: st.long, short: st.short, width: st.width, tight: !!L[r.id].tpl.tight, narrow: MMRooms.isNarrow(L[r.id].tpl.id), shooters: L[r.id].plan.length }; });
+        const body = rows.filter((q) => q.type !== 'boss');
+        const avg = (a, k) => (a.length ? a.reduce((n, q) => n + q[k], 0) / a.length : 0);
+        return { on: narrowOn, rooms: rows, avgLong: avg(body, 'long'), avgWidth: avg(body, 'width'), narrowCount: rows.filter((q) => q.narrow).length, big: rows.filter((q) => !q.narrow && q.type !== 'boss').length };
+      },
+      // BFS over the CURRENT room's wall grid between two tiles (door tiles are open only when the door is); null = no route
+      path: (a, b) => {
+        if (current === null) return null; const g = wallRows(); const key = (x, y) => x + ',' + y; const prev = { [key(a.x, a.y)]: null }; const q = [a];
+        for (let i = 0; i < q.length; i++) {
+          const c = q[i]; if (c.x === b.x && c.y === b.y) { const out = []; for (let k = key(c.x, c.y); k; ) { const [x, y] = k.split(',').map(Number); out.unshift({ x, y }); k = prev[k]; } return out; }
+          [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dx, dy]) => { const x = c.x + dx, y = c.y + dy; if (y < 0 || x < 0 || y >= g.length || x >= g[0].length || g[y][x] === '#' || (key(x, y) in prev)) return; prev[key(x, y)] = key(c.x, c.y); q.push({ x, y }); });
+        }
+        return null;
+      },
+      // test hook: put the player on a tile centre; true when the hero circle fits there (not inside a wall)
+      teleport: (tx, ty) => { if (current !== null && sig !== doorSig()) refreshWalls(); const p = arena.player; p.x = (tx + 0.5) * T; p.y = (ty + 0.5) * T; return !arena._blocked(p.x, p.y, RM_PLAYER.r); },
       toggleMap,
       mapVisible: () => !mapEl.classList.contains('hidden'),
     });
