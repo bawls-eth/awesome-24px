@@ -966,5 +966,13 @@
   "archipelago-page.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "shared-mm-isle-art.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "isle-art-bake.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
