@@ -1,7 +1,8 @@
 // MMIsles: the island graph and the archipelago save (key `pixeltown-archipelago-v1`, BIOME-ARCH-PLAN 1.3 and 2.6) plus the
 // medals summary (`pixeltown-medals-isles-v1` = {"v":1,"m":[ids]}, the page is its single writer). Pure data + validation, no DOM.
 // A save is { v, at, returnTo, unlock[], isles{id:{seed,pos,fog,chests}}, home{grid[<=400],stable{slots}}, log{seen,ko,tamed,bugs,fish},
-// rides, wild{<=4} }. clean() always returns a valid save (corrupt -> defaults) and keeps the whole key under 20 KB.
+// rides, wild{<=4} }. B10 adds (all additive): home.inv{kind:n} + home.seeded (MMHomestead decor), visited[isle], bosses[id],
+// gather{day, got{isle:[idx]}, log{res:n}} (daily-free gather spots). clean() always returns a valid save (corrupt -> defaults) and keeps the whole key under 20 KB.
 // This module never touches `pixeltown-save-v1`.
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -14,7 +15,15 @@
   const MAX_WILD = 4, WILD_KEEP_MS = 10 * 60 * 1000;
   const MAX_LOG = 60, MAX_CHESTS = 64, MAX_FOG = 512;
   const LOG_KINDS = ['seen', 'ko', 'tamed', 'bugs', 'fish'];
-  const MEDAL_IDS = ['tame1', 'log6', 'ride1', 'stable5'];
+  // medal ids are append-only. B10: first tame of each size class, each island visited, each island boss seen (no streaks, no timers).
+  const MEDAL_IDS = ['tame1', 'log6', 'ride1', 'stable5', 'tame_s', 'tame_m', 'tame_l', 'tame_xl',
+    'visit_home', 'visit_jungle', 'visit_reef', 'visit_ice', 'visit_mars', 'boss_fernjaw_tyrant', 'boss_tide_hydra', 'boss_frost_dragon', 'boss_red_titan'];
+  const MEDAL_NAMES = { tame1: 'First tame', log6: '6 creatures seen', ride1: 'First ride', stable5: '5 tames', tame_s: 'Small friend', tame_m: 'Medium friend',
+    tame_l: 'Large friend', tame_xl: 'Giant friend', visit_home: 'Hearth Isle', visit_jungle: 'Verdant Jungle', visit_reef: 'Coral Reef', visit_ice: 'Frostfang Tundra',
+    visit_mars: 'Red Waste', boss_fernjaw_tyrant: 'Fernjaw Tyrant seen', boss_tide_hydra: 'Tide Hydra seen', boss_frost_dragon: 'Frost Dragon seen', boss_red_titan: 'Red Titan seen' };
+  const SIZE_MEDAL = { S: 'tame_s', M: 'tame_m', L: 'tame_l', XL: 'tame_xl' };
+  const MAX_BOSSES = 16, MAX_GOT = 16;
+  const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
   const BAD = ['__proto__', 'constructor', 'prototype'];
 
   const ISLES = {
@@ -39,7 +48,7 @@
 
   function defaults() {
     return { v: 1, at: 'home', returnTo: null, unlock: ['jungle'], isles: {}, home: { grid: [], stable: { slots: 12 } },
-      log: { seen: {}, ko: {}, tamed: {}, bugs: {}, fish: {} }, rides: 0, wild: {} };
+      log: { seen: {}, ko: {}, tamed: {}, bugs: {}, fish: {} }, rides: 0, wild: {}, visited: [], bosses: [], gather: { day: '', got: {}, log: {} } };
   }
 
   function cleanPos(p) {
@@ -99,6 +108,20 @@
     return out;
   }
 
+  function cleanGather(g) {
+    const out = { day: '', got: {}, log: {} };
+    if (!isObj(g)) return out;
+    out.day = typeof g.day === 'string' && DAY_RE.test(g.day) ? g.day : '';
+    if (isObj(g.got)) SAVED_ISLES.forEach((id) => {
+      if (!has(g.got, id) || !Array.isArray(g.got[id])) return;
+      const a = [];
+      g.got[id].slice(0, MAX_GOT * 2).forEach((i) => { if (a.length < MAX_GOT && Number.isInteger(i) && i >= 0 && i <= 99999 && a.indexOf(i) < 0) a.push(i); });
+      out.got[id] = a;
+    });
+    out.log = cleanCounts(g.log);
+    return out;
+  }
+
   function clean(raw, nowMs) {
     const out = defaults();
     try {
@@ -114,10 +137,15 @@
       if (isObj(raw.home)) {
         out.home.grid = cleanGrid(raw.home.grid);
         out.home.stable.slots = int(isObj(raw.home.stable) ? raw.home.stable.slots : 12, 12, 24, 12);
+        if (isObj(raw.home.inv)) { const inv = cleanCounts(raw.home.inv); Object.keys(raw.home.inv).forEach((k) => { if (KEY_RE.test(k) && BAD.indexOf(k) < 0 && raw.home.inv[k] === 0 && Object.keys(inv).length < MAX_LOG) inv[k] = 0; }); out.home.inv = inv; }
+        if (raw.home.seeded === 1 || raw.home.seeded === true) out.home.seeded = 1;
       }
       if (isObj(raw.log)) LOG_KINDS.forEach((k) => { out.log[k] = cleanCounts(raw.log[k]); });
       out.rides = int(raw.rides, 0, 99999, 0);
       out.wild = cleanWild(raw.wild, nowMs);
+      (Array.isArray(raw.visited) ? raw.visited.slice(0, 16) : []).forEach((id) => { if (SAVED_ISLES.indexOf(id) >= 0 && out.visited.indexOf(id) < 0) out.visited.push(id); });
+      (Array.isArray(raw.bosses) ? raw.bosses.slice(0, 64) : []).forEach((id) => { if (out.bosses.length < MAX_BOSSES && typeof id === 'string' && KEY_RE.test(id) && BAD.indexOf(id) < 0 && out.bosses.indexOf(id) < 0) out.bosses.push(id); });
+      out.gather = cleanGather(raw.gather);
       // size guard: shed the least valuable data first until the key fits
       const size = () => JSON.stringify(out).length;
       if (size() > MAX_BYTES) out.wild = {};
@@ -195,8 +223,8 @@
     if (isObj(o) && Array.isArray(o.m)) o.m.slice(0, 64).forEach((id) => { if (typeof id === 'string' && MEDAL_IDS.indexOf(id) >= 0 && m.indexOf(id) < 0) m.push(id); });
     return { v: 1, m: MEDAL_IDS.filter((id) => m.indexOf(id) >= 0) };
   }
-  // earned medal ids from the archipelago save and the tames save ({roster:[...]}).
-  function medalsFor(save, tames) {
+  // earned medal ids from the archipelago save and the tames save ({roster:[...]}); sizeOf(sp) -> 'S'|'M'|'L'|'XL' (optional, MMCreatures).
+  function medalsFor(save, tames, sizeOf) {
     const s = isObj(save) ? save : defaults();
     const roster = isObj(tames) && Array.isArray(tames.roster) ? tames.roster.length : 0;
     const tamedSpecies = logCount(s, 'tamed');
@@ -205,6 +233,16 @@
     if (logCount(s, 'seen') >= 6) m.push('log6');
     if (num(s.rides, 0) >= 1 || (isObj(tames) && typeof tames.mount === 'string')) m.push('ride1');
     if (roster >= 5) m.push('stable5');
+    if (typeof sizeOf === 'function') {
+      const sps = [];
+      if (isObj(tames) && Array.isArray(tames.roster)) tames.roster.forEach((t) => { if (isObj(t) && typeof t.sp === 'string') sps.push(t.sp); });
+      if (isObj(s.log) && isObj(s.log.tamed)) Object.keys(s.log.tamed).forEach((k) => sps.push(k));
+      const got = {};
+      sps.forEach((sp) => { let z = null; try { z = sizeOf(sp); } catch (e) { z = null; } if (typeof z === 'string' && has(SIZE_MEDAL, z)) got[SIZE_MEDAL[z]] = 1; });
+      ['tame_s', 'tame_m', 'tame_l', 'tame_xl'].forEach((id) => { if (got[id]) m.push(id); });
+    }
+    (Array.isArray(s.visited) ? s.visited : []).forEach((id) => { const k = 'visit_' + id; if (MEDAL_IDS.indexOf(k) >= 0 && m.indexOf(k) < 0) m.push(k); });
+    (Array.isArray(s.bosses) ? s.bosses : []).forEach((id) => { const k = 'boss_' + id; if (MEDAL_IDS.indexOf(k) >= 0 && m.indexOf(k) < 0) m.push(k); });
     return m;
   }
   // Additive write of the summary key: existing medals are kept, new ones added. Never throws.
@@ -218,6 +256,23 @@
     } catch (e) { return null; }
   }
 
+  // B10 progress helpers: true only the first time (so a medal can be announced exactly once)
+  function noteVisit(save, id) {
+    if (!isObj(save) || SAVED_ISLES.indexOf(id) < 0) return false;
+    if (!Array.isArray(save.visited)) save.visited = [];
+    if (save.visited.indexOf(id) >= 0) return false;
+    save.visited.push(id); return true;
+  }
+  function noteBoss(save, id) {
+    if (!isObj(save) || typeof id !== 'string' || !KEY_RE.test(id) || BAD.indexOf(id) >= 0) return false;
+    if (!Array.isArray(save.bosses)) save.bosses = [];
+    if (save.bosses.indexOf(id) >= 0 || save.bosses.length >= MAX_BOSSES) return false;
+    save.bosses.push(id); return true;
+  }
+  // map a page ?isle= value (isle id or pack id / alias) to the isle id: meadow -> home, tundra -> ice
+  const PACK_TO_ISLE = { meadow: 'home', home: 'home', tundra: 'ice', ice: 'ice', jungle: 'jungle', reef: 'reef', mars: 'mars' };
+  const isleFor = (v) => (typeof v === 'string' && has(PACK_TO_ISLE, v) ? PACK_TO_ISLE[v] : '');
+
   function load(storage, nowMs) {
     try { const s = storage.getItem(KEY); return clean(typeof s === 'string' ? JSON.parse(s) : null, nowMs); } catch (e) { return defaults(); }
   }
@@ -227,7 +282,8 @@
 
   return {
     KEY: KEY, MEDALS_KEY: MEDALS_KEY, ISLES: ISLES, ROUTES: ROUTES, MAX_GRID: MAX_GRID, MAX_WILD: MAX_WILD, MAX_BYTES: MAX_BYTES,
-    LOG_KINDS: LOG_KINDS, MEDAL_IDS: MEDAL_IDS, WILD_KEEP_MS: WILD_KEEP_MS,
+    LOG_KINDS: LOG_KINDS, MEDAL_IDS: MEDAL_IDS, MEDAL_NAMES: MEDAL_NAMES, WILD_KEEP_MS: WILD_KEEP_MS, SAVED_ISLES: SAVED_ISLES,
+    noteVisit: noteVisit, noteBoss: noteBoss, isleFor: isleFor, cleanGather: cleanGather,
     defaults: defaults, clean: clean, isUnlocked: isUnlocked, meetsUnlock: meetsUnlock, unlockIsle: unlockIsle, routeBetween: routeBetween,
     destinations: destinations, noteLog: noteLog, logCount: logCount, setPos: setPos, lastPos: lastPos, cleanMedals: cleanMedals,
     medalsFor: medalsFor, writeMedals: writeMedals, load: load, write: write

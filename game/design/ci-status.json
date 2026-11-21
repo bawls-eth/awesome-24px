@@ -1,9 +1,9 @@
 {
-  "sha": "6c27fe37a6920ad7b3654252cf7e3be8fcd86ffd",
-  "generated_utc": "2026-11-21T20:44:43Z",
+  "sha": "88467c0ba9d299a7441a7b9c44712cff2a14e9a8",
+  "generated_utc": "2026-11-21T22:00:16Z",
   "full_suite_green": true,
   "beta_green": null,
-  "suites_passed": 247,
-  "suites_total": 247,
-  "notes": "Full run on parent d6f8c75 was 246/247; the single failure (gear-splash-player nearest-neighbour check, stale after the G15 splash falloff tuning) was fixed by a test-only commit (this sha) and passes alone. Beta runs only on owner request."
+  "suites_passed": 254,
+  "suites_total": 254,
+  "notes": "Full run was 252/254 on the tip before the isles art-wiring merge (isles-aw1, merged mid-run); the 2 failures (art-integration: b32 saddle overlays; drop-recap: tier-prefixed names with gear on by default) were fixed in test-only commits, and those two plus every isles/art/gear-signature suite were re-run green on this sha. Gear drops are ON by default. Beta runs only on owner request."
 }

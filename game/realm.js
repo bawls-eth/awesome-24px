@@ -21,7 +21,8 @@
 // Focus only runs with an active Mad Maze hero (setHeroLevelSource); telegraphs only in the solo world (mode 'world', no dungeon).
 // The town's classic arena, co-op (wire format) and duels are unchanged by both.
 // Accessibility prefs (AC1, MMAccess.prefs on `pixeltown-access-v1`, re-read once a second): a colour-blind `palette` gives enemy bullets
-// that palette's colours (plus a 2 px dark outline while `bulletOutline` is on); `flashes: false` drops the red hit vignette and the
+// that palette's colours (plus a 2 px dark outline while `bulletOutline` is on; with the normal palette, `bulletOutline: false` drops the
+// usual dark bullet rim); `flashes: false` drops the red hit vignette and the
 // white enemy hit flash. Reduce motion (MMMotion) makes telegraphs static (no pulse or growth). Bullet counts and timings never change.
 
 const RM_SHORT = 540; // logical arena short side; the long side follows the screen's shape
@@ -169,7 +170,7 @@ const RM_SPLASH_ON = RM_GEAR_ON && !rmFlagOff('splash') && typeof MMSplash !== '
 const RM_ARMOR_ICON = { light: '🦺', robe: '👘', heavy: '🛡️' };
 (function rmRegisterArmor() {
   if (!RM_GEAR_ON || !MMGear.ARMOR_IDS) return;
-  MMGear.FAMILY_KEYS.forEach((fam) => (MMGear.ARMOR_IDS[fam] || []).forEach((id) => {
+  MMGear.FAMILY_KEYS.forEach((fam) => (MMGear.ARMOR_IDS[fam] || []).concat((MMGear.SIG_BY_FAMILY || {})[fam] || []).forEach((id) => {
     if (!RM_ARM_ID.test(id) || RM_ITEM_BY_ID[id]) return;
     RM_ITEM_BY_ID[id] = { id, slot: 'armor', name: String(MMGear.ARMOR_NAMES[id] || id).slice(0, 24), icon: RM_ARMOR_ICON[fam] || '🛡️', art: MMGear.ARMOR_ART[id] || null, stat: 'armor', amount: 0, text: 'armor', family: fam, arm: true };
   }));
@@ -597,7 +598,7 @@ class RealmArena {
       if (!this._gesture || typeof MMSfx === 'undefined') return;
       try { f = this.sfx = MMSfx.create({ storage: localStorage, ctxFactory: () => this._actx }); f.setMusic(false); } catch (e) { return; }
     }
-    try { f.play(name); } catch (e) { /* audio must never break the game */ }
+    try { if (f.isMuted && f.isMuted()) return; f.play(name); } catch (e) { /* audio must never break the game */ } // the Sound (mute) setting wins
   }
 
   // Effective screen shake in px (0 under reduced motion).
@@ -2107,6 +2108,7 @@ class RealmArena {
     e.spdMul = 1; e.dmgMul = 1; e.xpMul = 1; e.shardMul = 1; e.art = null; e.bossArt = null; e.zid = -1; e.evid = null; e.campId = null; e.bossName = null; e.bossTier = 0; e.diff = null; // world-mode extras (multipliers 1 = unchanged)
     e.rad = 0; e.cre = null; e.tame = null; // B7: per-creature hit radius (0 = the type's), creature tag (enemyStep runs only for these), taming state
     if (this.world && type === 'boss') { e.ax = x; e.ay = y; }
+    if (type === 'boss') this._snd('boss_awaken'); // NEXT-SLICES SF1 cue: any boss spawn (classic wave, world altar / event, dungeon)
     return e;
   }
 
@@ -2526,6 +2528,7 @@ class RealmArena {
 
   _bossPhase(e, phase) {
     e.phase = phase; e.invuln = 1.0; e.cd = 1.1; e.cd2 = 2.0;
+    this._snd('boss_awaken'); // the phase change roar (same SF1 cue as the spawn)
     this.eBullets.forEach((b) => { if (b.active) { b.active = false; this._burst(b.x, b.y, '#ff5fa2', 1, 60); } });
     this.shake = 12; this._burst(e.x, e.y, '#ff5fa2', 30, 280);
     const bn = e.bossName || 'Gloomheart';
@@ -3019,6 +3022,7 @@ class RealmArena {
     b.id = this._wpnDrop(itemId || RM_BASE_ITEMS[Math.floor(this.rng() * RM_BASE_ITEMS.length)].id, worldLoot);
     const a = this.rng() * Math.PI * 2; b.vx = Math.cos(a) * 60; b.vy = Math.sin(a) * 60;
     if (this._fxPool) this.fxPlay('fx_loot_spawn', x, y, { w: 48 });
+    if (rarity >= 2) this._snd('bag_rare'); // SF1 cue: a Rare-or-better bag appears (MMSfx rate-limits it)
     return b;
   }
 
@@ -3332,13 +3336,27 @@ class RealmArena {
   _flashesOn() { return !this.acc || this.acc.flashes !== false; }
   // Colour-blind enemy bullets: with a non-normal palette the three bullet kinds take its colours (aimed = `bullet`, spiral / ring =
   // `enemy`), with a 2 px dark outline while bulletOutline is on. Same 16 px sprites, same hit size; null = today's hues and art.
+  // The normal palette with bulletOutline OFF bakes today's three hues with no dark rim (and no bolt art, which carries its own rim), so
+  // the outline pref works on every palette. Baked once per pref change (3 canvases); the draw loop only picks a cached canvas.
   _bakeCBBullets() {
     const a = this.acc; const on = a && a.palette && a.palette !== 'normal';
-    const key = on ? `${a.palette}|${a.bulletOutline ? 1 : 0}` : '';
+    const bare = !!(a && !on && a.bulletOutline === false);
+    const key = on ? `${a.palette}|${a.bulletOutline ? 1 : 0}` : bare ? 'normal|0' : '';
     if (key === this._ebCBKey) return;
     this._ebCBKey = key; this._ebCB = null;
-    if (!on || typeof document === 'undefined') return;
-    const pal = MMAccess.palette(a.palette); const R = RM_BOLT_R.enemy;
+    if (typeof document === 'undefined') return;
+    const R = RM_BOLT_R.enemy;
+    if (bare) {
+      this._ebCB = RM_EB_HUES.map(([hue, tint]) => {
+        const c = document.createElement('canvas'); c.width = 16; c.height = 16; const g = c.getContext('2d');
+        g.fillStyle = hue; g.beginPath(); g.arc(8, 8, R, 0, Math.PI * 2); g.fill();
+        g.fillStyle = tint; g.beginPath(); g.arc(8, 8, 1.6, 0, Math.PI * 2); g.fill();
+        return c;
+      });
+      return;
+    }
+    if (!on) return;
+    const pal = MMAccess.palette(a.palette);
     this._ebCB = [pal.bullet, pal.enemy, pal.enemy].map((col, k) => {
       const c = document.createElement('canvas'); c.width = 16; c.height = 16; const g = c.getContext('2d');
       g.fillStyle = col; g.beginPath(); g.arc(8, 8, R, 0, Math.PI * 2); g.fill();
@@ -3781,7 +3799,7 @@ class RealmArena {
     const sv = this.save;
     const eqUids = new Set(RM_SLOTS.map((sl) => sv.eq[sl]).filter(Boolean));
     const grid = RM_SLOTS.length > 3 ? ' style="grid-template-columns:repeat(auto-fit,minmax(78px,1fr))"' : ''; // 4 slots (armor): wraps to 2x2 on a phone
-    let html = `<div id="realm-bp-stats">${this._statLine()}</div><button type="button" class="eq" data-open-shop="1" aria-label="Open the shop (V)" style="min-height:44px;margin:4px 0">🛒 Shop (V)</button><div class="realm-bp-slots"${grid}>`;
+    let html = `<div id="realm-bp-stats">${this._statLine()}</div>${this._statsDropHtml()}<button type="button" class="eq" data-open-shop="1" aria-label="Open the shop (V)" style="min-height:44px;margin:4px 0">🛒 Shop (V)</button><div class="realm-bp-slots"${grid}>`;
     RM_SLOTS.forEach((slot) => {
       const it = sv.items.find((x) => x.n === sv.eq[slot]);
       const cw = !it && slot === 'weapon' ? this._classWeaponName() : ''; // PT2 #15: the class weapon the hero fires, not "weapon: empty"
@@ -3794,9 +3812,86 @@ class RealmArena {
       html += `<li data-uid="${it.n}" class="${on ? 'on' : ''}"><span class="nm" style="color:${rar.color}">${this._icon(def)} ${this._tierTag(it)}${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(it)}</span>${this._affixHtml(it, def)}${def.slot === 'weapon' ? this._cmpHtml(it, on) : ''}${def.inert ? '<button type="button" class="eq" disabled aria-label="Not usable yet">Equip</button>' : def.wpn && !on && !this._wpnCanEquip(def) ? `<button type="button" class="eq" disabled data-wpn-lock="1" aria-label="${this._wpnHint(def)} only" title="${this._wpnHint(def)}">🔒 ${def.family.charAt(0).toUpperCase() + def.family.slice(1)}</button>` : why ? this._gearLockHtml(it, def, why) : `<button type="button" class="eq" data-act="equip" data-uid="${it.n}">${on ? 'Unequip' : 'Equip'}</button>`}${this.combinable(it.n) ? `<button type="button" class="eq" data-combine="${it.n}" aria-label="Combine ${RM_COMBINE_COUNT} ${rar.name} ${def.name} into one ${RM_RARITIES[it.r + 1].name}">Combine ${RM_COMBINE_COUNT}→${RM_RARITIES[it.r + 1].name}</button>` : ''}<button type="button" class="dc" data-act="discard" data-uid="${it.n}" aria-label="Sell ${def.name} for ${sell} shards">Sell ${sell}💎</button></li>`;
     });
     html += '</ul>';
-    root.innerHTML = html; this._fixIcons(root); this._bindCmp(root);
+    root.innerHTML = html; this._fixIcons(root); this._bindCmp(root); this._bindStatsDrop(root);
     if (this._cmpOnUid) { const on = root.querySelector(`#realm-bp-list li[data-uid="${this._cmpOnUid}"]`); if (on) on.classList.add('cmp-on'); } // a long-pressed compare line survives a re-render
     root.querySelectorAll('img.rm-slot-ico, img.rm-gear-ico').forEach((img) => { if (img.complete && !img.naturalWidth) img.remove(); else img.addEventListener('error', () => img.remove(), { once: true }); });
+  }
+
+  // ---------- backpack Stats drop-down (G13) ----------
+  // A collapsible "Stats" section: a 44 px toggle (aria-expanded) over its own scrolling table of every _calcStats number as total / base / gear
+  // (base = _calcStats({noGear}); gear = total - base, with an up/down arrow and an aria-label such as "Damage up 1.2 from gear"), plus the
+  // equipped items. Open/closed is remembered for this browser session only (sessionStorage `pixeltown-bp-stats-open`, never the save).
+  // ?gear=0 hides the gear-only rows (crit, status, splash, resist, guard, leech, regen, reach, pierce). Built only while open.
+  statsRows() {
+    if (!this.save) return [];
+    let tot = null, base = null;
+    try { tot = this._calcStats({ eqOverride: {} }); base = this._calcStats({ noGear: true }); } catch (e) { return []; }
+    const n1 = (v) => String(Math.round(v * 10) / 10), pc = (v) => `${Math.round(v * 1000) / 10}%`, i0 = (v) => String(Math.round(v));
+    const defs = [ // [key, label, icon ('ui_*' = b29 via _gearIco, 'b19:<k>' = b19 ui_stat_<k>), format, delta unit, gear-only]
+      ['maxHp', 'Max HP', 'b19:life', i0, '', false], ['dmg', 'Damage', 'b19:power', n1, '', false], ['rate', 'Fire rate', 'ui_affix_swift', (v) => `${n1(v)}/s`, '/s', false],
+      ['speed', 'Speed', 'b19:swift', i0, '', false], ['crit', 'Crit', 'ui_stat_crit', pc, '%', true], ['status', 'Status chance', 'ui_affix_venom', pc, '%', true],
+      ['splashR', 'Splash radius', 'ui_stat_splash', (v) => `${i0(v)} px`, ' px', true], ['splashFrac', 'Splash share', 'ui_stat_splash', pc, '%', true],
+      ['resist', 'Resist', 'ui_stat_resist', pc, '%', true], ['guard', 'Guard', 'b19:guard', n1, '', true], ['leech', 'Leech', 'ui_stat_leech', pc, '%', true],
+      ['regen', 'Regen', 'ui_stat_regen', (v) => `${n1(v)}/s`, '/s', true], ['reach', 'Reach', 'ui_stat_range', pc, '%', true], ['pierce', 'Pierce', 'ui_affix_pierce', i0, '', true],
+      ['shards', 'Shard bonus', '', (v) => pc(v - 1), '%', false], ['xp', 'XP bonus', 'b19:xp', (v) => pc(v - 1), '%', false], ['iframes', 'Safe time', '', (v) => `${Math.round(v * 100) / 100} s`, ' s', false],
+    ];
+    const out = [];
+    defs.forEach(([k, label, ico, fmt, unit, gearOnly]) => {
+      if (gearOnly && !RM_GEAR_ON) return;
+      const t = Number(tot[k]) || 0, b = Number(base[k]) || 0, d = t - b;
+      const dv = unit === '%' ? Math.round(d * 1000) / 10 : unit === ' px' || k === 'maxHp' || k === 'speed' || k === 'pierce' ? Math.round(d) : Math.round(d * 100) / 100;
+      const dir = dv > 0 ? 'up' : dv < 0 ? 'down' : 'same';
+      out.push({ key: k, label, ico, total: fmt(t), base: fmt(b), delta: dir === 'same' ? '0' : `${dv > 0 ? '+' : ''}${dv}${unit}`, dir, gear: gearOnly });
+    });
+    return out;
+  }
+  _statsOpen() {
+    if (typeof this._bpStatsOpen === 'boolean') return this._bpStatsOpen;
+    let v = false; try { v = sessionStorage.getItem('pixeltown-bp-stats-open') === '1'; } catch (e) { v = false; }
+    return (this._bpStatsOpen = v);
+  }
+  setStatsOpen(on) {
+    this._bpStatsOpen = !!on;
+    try { sessionStorage.setItem('pixeltown-bp-stats-open', on ? '1' : '0'); } catch (e) { /* blocked storage: remembered for this page only */ }
+    const btn = document.getElementById('realm-bp-stats-toggle'); const box = document.getElementById('realm-bp-stats-box');
+    if (btn) { btn.setAttribute('aria-expanded', on ? 'true' : 'false'); const ar = btn.querySelector('.ar'); if (ar) ar.textContent = on ? '▾' : '▸'; }
+    if (box) { box.hidden = !on; box.innerHTML = on ? this._statsBoxHtml() : ''; if (on) { this._fixIcons(box); box.querySelectorAll('img.rm-gear-ico').forEach((img) => { if (img.complete && !img.naturalWidth) img.remove(); else img.addEventListener('error', () => img.remove(), { once: true }); }); } }
+    return this._bpStatsOpen;
+  }
+  _statIco(id) {
+    if (!id) return '';
+    if (id.indexOf('b19:') === 0) {
+      const k = id.slice(4); if (!RM_UI_ART || rmFlagOff('art') || !/^[a-z]+$/.test(k) || !/^[A-Za-z0-9_.:\/%-]+$/.test(RM_UI_ART)) return '';
+      return `<img class="rm-gear-ico mm-ico" src="${RM_UI_ART}ui_stat_${k}.png" alt="" aria-hidden="true" width="16" height="16" style="vertical-align:-3px;margin-right:2px;image-rendering:pixelated">`;
+    }
+    return this._gearIco(id);
+  }
+  _statsDropHtml() {
+    const on = this._statsOpen();
+    return `<div class="rm-bp-statsdrop" style="margin:4px 0;max-width:100%"><button type="button" id="realm-bp-stats-toggle" class="eq" aria-expanded="${on ? 'true' : 'false'}" aria-controls="realm-bp-stats-box" style="min-height:44px;min-width:44px;width:100%;text-align:left;box-sizing:border-box;padding:6px 10px;border-radius:10px;border:2px solid rgba(255,255,255,.45);background:rgba(255,255,255,.1);color:#fff;font:700 13px system-ui,sans-serif;cursor:pointer"><span class="ar" aria-hidden="true">${on ? '▾' : '▸'}</span> 📊 Stats</button>`
+      + `<div id="realm-bp-stats-box" role="region" aria-label="Stats"${on ? '' : ' hidden'} style="max-height:min(45vh,360px);overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;margin-top:4px;padding-right:2px;box-sizing:border-box;max-width:100%">${on ? this._statsBoxHtml() : ''}</div></div>`;
+  }
+  _statsBoxHtml() {
+    const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+    const td = 'padding:3px 4px;border-bottom:1px solid rgba(255,255,255,.08);overflow-wrap:anywhere';
+    let h = `<table class="rm-stats-tbl" style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:12px;line-height:1.3"><thead><tr style="color:#8b949e;text-align:right"><th scope="col" style="text-align:left;width:40%;${td}">Stat</th><th scope="col" style="${td}">Total</th><th scope="col" style="${td}">Base</th><th scope="col" style="${td}">Gear</th></tr></thead><tbody>`;
+    this.statsRows().forEach((r) => {
+      const col = r.dir === 'up' ? '#7ee787' : r.dir === 'down' ? '#ff7b72' : '#8b949e'; const ar = r.dir === 'up' ? '▲' : r.dir === 'down' ? '▼' : '–';
+      const lab = `${r.label} ${r.dir === 'same' ? 'no change from gear' : `${r.dir} ${r.delta.replace(/^[+-]/, '')} from gear`}`;
+      h += `<tr data-stat="${r.key}"${r.gear ? ' data-gear="1"' : ''}><th scope="row" style="text-align:left;font-weight:600;${td}">${this._statIco(r.ico)}${esc(r.label)}</th><td class="tt" style="text-align:right;${td}">${esc(r.total)}</td><td class="bs" style="text-align:right;color:#8b949e;${td}">${esc(r.base)}</td><td class="gd ${r.dir}" style="text-align:right;color:${col};${td}" aria-label="${esc(lab)}"><span aria-hidden="true">${ar}</span> ${esc(r.delta)}</td></tr>`;
+    });
+    h += '</tbody></table><div class="rm-stats-eq" style="margin-top:6px;font-size:12px"><div style="color:#8b949e;margin-bottom:2px">Equipped</div><ul style="list-style:none;margin:0;padding:0">';
+    const sv = this.save;
+    RM_SLOTS.forEach((slot) => {
+      const it = sv.items.find((x) => x.n === sv.eq[slot]); const def = it && RM_ITEM_BY_ID[it.id];
+      h += def ? `<li data-eq-slot="${slot}" style="padding:2px 0;overflow-wrap:anywhere"><span style="color:${RM_RARITIES[it.r].color}">${this._icon(def)} ${this._tierTag(it)}${esc(def.name)}</span> <span class="dim">${esc(this._itemText(it))}</span></li>` : `<li data-eq-slot="${slot}" class="dim" style="padding:2px 0">${esc(slot)}: empty</li>`;
+    });
+    return h + '</ul></div>';
+  }
+  _bindStatsDrop(root) {
+    if (!root || root.dataset.statsBound) return;
+    root.dataset.statsBound = '1';
+    root.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('#realm-bp-stats-toggle')) this.setStatsOpen(!this._statsOpen()); });
   }
 
   // G7: a small "T7" tier label (tier colour + text, never colour alone) in front of a tiered item's name; '' for T0 or with gear off.

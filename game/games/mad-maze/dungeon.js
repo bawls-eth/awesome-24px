@@ -4,9 +4,9 @@
 // Needs: MMRng, MMWarren, MMRooms, MMEnemies, MMDungeonState, MMPatterns2 and realm.js (RM_* globals).
 (function () {
   'use strict';
-  // Tiered gear drops (GEAR-DROPS-BUILD-PLAN slice G10). OFF by default: the lead flips GEAR_DEFAULT_ON after the save-tolerance slice (G7) ships.
-  // ?gear=1 turns it on (tests), ?gear=0 is the kill switch and always wins.
-  const GEAR_DEFAULT_ON = false;
+  // Tiered gear drops (GEAR-DROPS-BUILD-PLAN slice G10). ON by default since the save-tolerance slice (G7) shipped (PR #32).
+  // ?gear=1 forces it on, ?gear=0 is the kill switch and always wins.
+  const GEAR_DEFAULT_ON = true;
   const gearWanted = () => { let v = null; try { v = new URLSearchParams(window.location.search).get('gear'); } catch (e) { /* no location */ } return v === '1' ? true : v === '0' ? false : GEAR_DEFAULT_ON; };
   // The gear modules are not in the page's script list yet (the index.html tags belong to the save-tolerance slice): load them here, in order, only when gear is on.
   try {
@@ -491,7 +491,7 @@
       for (let i = 0; i < (o.always ? 8 : 1); i++) { // an always-drop retries (new stream) when the pick is an id this build cannot hold yet; pity still applies (k stays 0)
         const g = MMGearDrops.rollGear(ctx, MMGearDrops.seedFor(seed, i ? tag + ':try' + i : tag, ctx.k, 'solo'));
         if (!g) { if (!o.always) return null; continue; }
-        if (RM_ITEM_BY_ID[g.id]) return g;
+        if (RM_ITEM_BY_ID[g.id] && !RM_ITEM_BY_ID[g.id].inert) return g; // an inert def is a saved id this build cannot use: retry
       }
       return null;
     }

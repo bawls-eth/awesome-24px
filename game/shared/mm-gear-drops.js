@@ -46,6 +46,13 @@
     2: row([[8, 0.40], [9, 0.35], [10, 0.25]]),
     3: row([[10, 0.60], [11, 0.35], [12, 0.05]]),
   });
+  // G15 pacing: a z3 boss bag holds at most ONE T12 chance. The first item (k = 0, the one pity works on) uses BOSS[3]; the extra items of the bag
+  // (k >= 1) use this row (T12's weight moved to T11), so a gold bag's 2-3 items cannot triple the T12 odds and the first T12 lands in the
+  // plan's 1.5-4 h window instead of under an hour (see the drop-pacing sim in shared-mm-gear-drops.test.js).
+  const BOSS_EXTRA = Object.freeze({ 3: row([[10, 0.60], [11, 0.40]]) });
+  // Boss signature relics: a z3 boss T12 on the first item becomes that boss's relic (MMGear.SIG_BY_BOSS) with this share, from an extra seeded draw.
+  // Never guaranteed: a pity-forced T12 takes the same share. ~0.9% of z3 boss kills at gp 0.
+  const SIG_ITEM_SHARE = 0.25;
   const ELITE = Object.freeze({ giant_spider_queen: row([[9, 0.50], [10, 0.40], [11, 0.10]]) });
   const DUNGEON = Object.freeze({
     warren: row([[2, 1], [3, 1]]), bramble: row([[3, 1], [4, 1], [5, 1]]), meadow: row([[5, 1], [6, 1], [7, 1]]), crypt: row([[7, 1], [8, 1], [9, 1]]),
@@ -61,7 +68,7 @@
     return row(pairs);
   }
   const EVENT = Object.freeze([0, 1, 2, 3].map((z) => Object.freeze([0, 1, 2].map((s) => eventRow(z, s)))));
-  const TABLES = Object.freeze({ MOB, BOSS, ELITE, DUNGEON, DBOSS, EVENT, CHEST: MOB, GEAR_CHANCE, BOSS_ZONE, SIGNATURE, BIOMES });
+  const TABLES = Object.freeze({ MOB, BOSS, BOSS_EXTRA, ELITE, DUNGEON, DBOSS, EVENT, CHEST: MOB, GEAR_CHANCE, BOSS_ZONE, SIGNATURE, BIOMES, SIG_ITEM_SHARE });
 
   // ---------- context ----------
   const SRCS = ['mob', 'boss', 'elite', 'event', 'chest', 'dungeon', 'dboss'];
@@ -82,7 +89,7 @@
   function rowFor(c) {
     switch (c.src) {
       case 'mob': case 'chest': return MOB[c.zone];
-      case 'boss': return BOSS[Math.max(1, c.zone)];
+      case 'boss': return c.k >= 1 && has(BOSS_EXTRA, c.zone) ? BOSS_EXTRA[c.zone] : BOSS[Math.max(1, c.zone)];
       case 'elite': return ELITE[c.boss && has(ELITE, c.boss) ? c.boss : 'giant_spider_queen'];
       case 'event': return EVENT[c.zone][c.eventTier];
       case 'dungeon': return c.biome ? DUNGEON[c.biome] : null;
@@ -144,7 +151,7 @@
   }
   const pickFrom = (arr, u) => arr[Math.min(arr.length - 1, Math.floor(u * arr.length))];
 
-  // rollGear(ctx, seed) -> frozen { id, r, t, a?, sig?, slot, pity } or null (the item stays classic).
+  // rollGear(ctx, seed) -> frozen { id, r, t, a?, sig?, relic?, slot, pity } or null (the item stays classic). relic: the id is a boss signature relic.
   //  ctx: { src: mob|boss|elite|event|chest|dungeon|dboss, zone 0-3, boss (id), biome, eventTier 0-2, cls, r (quality 0-3, the MMZones rarity roll),
   //         bagTier 0-5 (MMZones tier index of the bag), k (item index within the kill), gp {b,d}, always (skip the gear chance), gear (false = kill switch) }
   //  Pity applies to the FIRST item of a kill (k = 0) so a bag cannot hold several guaranteed drops.
@@ -178,12 +185,16 @@
     }
     const out = { id: id, r: c.r, t: t, slot: slot, pity: forced };
     if (t >= MMGear.AFFIX_MIN_T) out.a = 1 + Math.floor(uAff * 4294967295); // uint32 in 1..2^32-1 (uAff < 1)
-    if (t === 12 && c.src === 'boss' && c.boss && has(SIGNATURE, c.boss)) out.sig = SIGNATURE[c.boss];
+    if (t === 12 && c.src === 'boss' && c.boss && has(SIGNATURE, c.boss)) {
+      out.sig = SIGNATURE[c.boss];
+      const relic = MMGear.SIG_BY_BOSS && has(MMGear.SIG_BY_BOSS, c.boss) ? MMGear.SIG_BY_BOSS[c.boss] : null;
+      if (relic && c.k === 0 && rng.next() < SIG_ITEM_SHARE) { out.id = relic; out.slot = 'armor'; out.relic = true; } // drawn last: every other roll is unchanged
+    }
     return Object.freeze(out);
   }
 
   return Object.freeze({
-    TABLES, GEAR_CHANCE, PITY, ARMOR_SHARE, WEAPON_FAMILY_SHARE, ARMOR_FAMILY_SHARE, BOSS_ZONE, SIGNATURE,
+    TABLES, GEAR_CHANCE, PITY, ARMOR_SHARE, WEAPON_FAMILY_SHARE, ARMOR_FAMILY_SHARE, BOSS_ZONE, SIGNATURE, SIG_ITEM_SHARE,
     table, rollGear, pityStep, pityView, cleanGp, seedFor,
   });
 });

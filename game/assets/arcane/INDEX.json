@@ -457,6 +457,36 @@
       "status": "provisional",
       "ingested_utc": "2026-11-21T19:20:00Z",
       "source": "codex"
+    },
+    {
+      "id": "b31a",
+      "label": "jungle-creatures-core",
+      "path": "assets/arcane/b31a-jungle-creatures-core",
+      "manifest": "assets/arcane/b31a-jungle-creatures-core/manifest.json",
+      "files": 40,
+      "status": "provisional",
+      "ingested_utc": "2026-11-21T21:20:00Z",
+      "source": "codex"
+    },
+    {
+      "id": "b32",
+      "label": "jungle-big-and-boss",
+      "path": "assets/arcane/b32-jungle-big-and-boss",
+      "manifest": "assets/arcane/b32-jungle-big-and-boss/manifest.json",
+      "files": 43,
+      "status": "provisional",
+      "ingested_utc": "2026-11-21T21:20:00Z",
+      "source": "codex"
+    },
+    {
+      "id": "b33",
+      "label": "jungle-props",
+      "path": "assets/arcane/b33-jungle-props",
+      "manifest": "assets/arcane/b33-jungle-props/manifest.json",
+      "files": 8,
+      "status": "provisional",
+      "ingested_utc": "2026-11-21T21:20:00Z",
+      "source": "codex"
     }
   ]
 }

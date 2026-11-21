@@ -36,3 +36,20 @@ body.touch .hint { bottom: calc(176px + env(safe-area-inset-bottom)); }
   #mini { width: 112px; height: 112px; }
   #hud { max-width: calc(100% - 136px); }
 }
+/* B10: home / travel / cozy panels (44 px targets, calm text) */
+.hud-btns { display: flex; gap: 6px; margin-top: 4px; }
+.hud-btns button { min-width: 56px; font-size: 13px; }
+.panel { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(420px, calc(100% - 32px)); max-height: calc(100% - 32px); overflow-y: auto; background: rgba(16,32,24,.96); border: 2px solid var(--accent); padding: 10px 12px; z-index: 6; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.panel h2 { margin: 0; font-size: 16px; }
+.panel h3 { margin: 10px 0 4px; font-size: 13px; color: var(--accent); }
+.panel p { margin: 6px 0; overflow-wrap: anywhere; }
+.panel .dim, .log-list .dim { color: var(--dim); }
+.panel .dest { display: flex; width: 100%; margin: 6px 0; justify-content: flex-start; }
+.log-list { list-style: none; margin: 0; padding: 0; columns: 2; font-size: 12px; }
+.log-list li { padding: 2px 0; overflow-wrap: anywhere; }
+.log-list li.on { color: #b9e08a; }
+.decor { position: absolute; left: 8px; right: 8px; bottom: calc(64px + env(safe-area-inset-bottom)); display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; z-index: 4; pointer-events: none; }
+.decor button { pointer-events: auto; font-size: 12px; padding: 0 8px; }
+.decor button[aria-pressed="true"] { background: #b9e08a; }
+body.touch .decor { bottom: calc(176px + env(safe-area-inset-bottom)); }
