@@ -24,6 +24,7 @@
   const AFFIX_CAP = [1, 1.03, 1.06, 1.10]; // max index gain by rarity
   const AFFIX_IDS = ['reach', 'velocity', 'pierce', 'keen', 'venom', 'extra', 'seek'];
   const BOLT_BUDGET = 40;
+  const SPLASH_W = 0.25; // default weight of the splash term in shapeIdx; the four splash styles carry their own (G15 balance)
   const FIRE_RATE = 7.5, SPEED_PX = 580;
 
   // Fill a (possibly partial) style with schema defaults. Pure; returns a new plain object.
@@ -40,7 +41,7 @@
       orbit: { n: ob.n || 0, radius: ob.radius === undefined ? 34 : ob.radius, period: ob.period === undefined ? 0.9 : ob.period, dmg: ob.dmg || 0, rehit: ob.rehit === undefined ? 0.3 : ob.rehit },
       burst: { n: bu.n === undefined ? 1 : bu.n, gap: bu.gap || 0 },
       lob: { radius: lo.radius || 0, maxRange: lo.maxRange === undefined ? 260 : lo.maxRange },
-      splash: { r: sp.r || 0, frac: sp.frac || 0, inner: sp.inner === undefined ? 0.35 : sp.inner, edge: sp.edge === undefined ? 0.5 : sp.edge, max: sp.max || 0 },
+      splash: { r: sp.r || 0, frac: sp.frac || 0, inner: sp.inner === undefined ? 0.35 : sp.inner, edge: sp.edge === undefined ? 0.5 : sp.edge, max: sp.max || 0, w: sp.w === undefined ? SPLASH_W : sp.w },
       knock: s.knock || 0,
       onHit: { status: oh.status || null, chance: oh.chance || 0, sec: oh.sec || 0 },
       tune: s.tune === undefined ? 1 : s.tune,
@@ -67,7 +68,7 @@
     if (count * burstN === 1 && num(w.amp, 0) > 0) v *= 0.95;
     v *= 1 + Math.min(0.4, num(lo.radius, 0) / 100);
     // splash (plan section d): a bolt that also hits up to `max` neighbours is worth a capped bonus; resolve() normalises it away from the base.
-    if (num(sp.r, 0) > 0) v *= 1 + Math.min(0.45, 0.25 * num(sp.frac, 0) * Math.min(num(sp.max, 0), 1 + num(sp.r, 0) / 24));
+    if (num(sp.r, 0) > 0) v *= 1 + Math.min(0.45, num(sp.w, SPLASH_W) * num(sp.frac, 0) * Math.min(num(sp.max, 0), 1 + num(sp.r, 0) / 24));
     if (oh.status && has(STATUS_VALUE, oh.status)) v *= 1 + num(oh.chance, 0) * STATUS_VALUE[oh.status];
     if (num(ob.n, 0) > 0) v += num(ob.n, 0) * num(ob.dmg, 0) / Math.max(0.05, num(ob.rehit, 0.3)) / FIRE_RATE;
     return v;
@@ -101,11 +102,13 @@
     { id: 'star_seeker', family: 'star', name: 'Seeker Stars', shape: 'star', count: 3, spread: 0.5, life: 0.9, homing: 3.0, crit: 0.10, dmg: 0.32, tune: 0.95, affix: ['reach', 'keen', 'velocity'] },
     { id: 'pistol_ricochet', family: 'pistol', name: 'Ricochet', shape: 'ray', spd: 1.2, bounce: 3, dmg: 0.80, affix: ['reach', 'keen', 'velocity'] },
     { id: 'pistol_burst', family: 'pistol', name: 'Burst Pistol', shape: 'ray', spd: 1.2, life: 0.7, burst: { n: 3, gap: 0.06 }, dmg: 0.38, rate: 0.9, affix: ['reach', 'keen', 'velocity'] },
-    // appended after the original 26 (wire codes follow ALT order, so these must stay last); splash per plan section d
-    { id: 'bow_blast', family: 'bow', name: 'Blast Arrow', shape: 'arrow', spd: 1, life: 0.8, splash: { r: 36, frac: 0.5, max: 4 }, dmg: 0.85, rate: 0.9, affix: ['reach', 'keen', 'venom'] },
-    { id: 'wand_burst', family: 'wand', name: 'Ember Burst', shape: 'orb', spd: 0.9, life: 0.9, splash: { r: 44, frac: 0.55, max: 5 }, dmg: 0.8, rate: 0.85, affix: ['reach', 'velocity', 'keen'] },
-    { id: 'staff_comet', family: 'staff', name: 'Comet Staff', shape: 'orb', size: 1.5, spd: 0.75, life: 1.1, splash: { r: 56, frac: 0.6, max: 6 }, dmg: 0.9, rate: 0.6, affix: ['reach', 'keen', 'venom'] },
-    { id: 'pistol_flak', family: 'pistol', name: 'Flak Pistol', shape: 'ray', count: 2, spread: 0.12, splash: { r: 28, frac: 0.4, max: 3 }, dmg: 0.5, affix: ['reach', 'keen', 'velocity'] },
+    // appended after the original 26 (wire codes follow ALT order, so these must stay last); splash per plan section d.
+    // G15: splash.w (the index weight, default 0.25) is tuned per style so single-target DPS lands at 0.80-0.90 of the base (target 0.85); staff_comet also takes the
+    // tune ceiling and a tight falloff (inner/edge) so its group clear stays >= 0.7x of the ranger base (class-weapon-sim).
+    { id: 'bow_blast', family: 'bow', name: 'Blast Arrow', shape: 'arrow', spd: 1, life: 0.8, splash: { r: 36, frac: 0.5, max: 4, w: 0.17 }, dmg: 0.85, rate: 0.9, affix: ['reach', 'keen', 'venom'] },
+    { id: 'wand_burst', family: 'wand', name: 'Ember Burst', shape: 'orb', spd: 0.9, life: 0.9, splash: { r: 44, frac: 0.55, max: 5, w: 0.13 }, dmg: 0.8, rate: 0.85, affix: ['reach', 'velocity', 'keen'] },
+    { id: 'staff_comet', family: 'staff', name: 'Comet Staff', shape: 'orb', size: 1.5, spd: 0.75, life: 1.1, splash: { r: 56, frac: 0.6, max: 6, w: 0.165, inner: 0.05, edge: 0.15 }, dmg: 0.9, rate: 0.6, tune: 1.08, affix: ['reach', 'keen', 'venom'] },
+    { id: 'pistol_flak', family: 'pistol', name: 'Flak Pistol', shape: 'ray', count: 2, spread: 0.12, splash: { r: 28, frac: 0.4, max: 3, w: 0.25 }, dmg: 0.5, affix: ['reach', 'keen', 'velocity'] },
   ];
 
   // ---- the 14 base styles, generated from MMClasses.arenaProfile (FIRE tags); never copied.
@@ -263,7 +266,7 @@
       if (!sp || typeof sp !== 'object') bad.push('splash');
       else {
         rng('splash.r', sp.r, 0, 80, false); rng('splash.frac', sp.frac, 0, 0.8, false); rng('splash.max', sp.max, 0, 6, true);
-        rng('splash.inner', sp.inner, 0, 1, false); rng('splash.edge', sp.edge, 0, 1, false);
+        rng('splash.w', sp.w === undefined ? SPLASH_W : sp.w, 0.05, 0.45, false); rng('splash.inner', sp.inner, 0, 1, false); rng('splash.edge', sp.edge, 0, 1, false);
         if (num(sp.r, 0) > 0 && s.lob && num(s.lob.radius, 0) > 0) bad.push('splash+lob');
       }
     }
