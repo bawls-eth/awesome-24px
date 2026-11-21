@@ -42,13 +42,17 @@ const startChart = (p) => p.evaluate((c) => { window.__jam.start('warm-embers', 
   const p = d.page;
 
   // ---- load, menu, hint ----
-  check('page loads with 8 song cards', await p.evaluate(() => document.querySelectorAll('.card[data-song]').length === 8));
-  check('only Warm Embers is open at start', await p.evaluate(() => [...document.querySelectorAll('.card')].map((c) => !c.classList.contains('locked')).join() === 'true,false,false,false,false,false,false,false'));
+  check('page loads with 12 song cards', await p.evaluate(() => document.querySelectorAll('.card[data-song]').length === 12));
+  check('only Warm Embers is open at start', await p.evaluate(() => [...document.querySelectorAll('.card')].map((c) => !c.classList.contains('locked')).join() === 'true,false,false,false,false,false,false,false,false,false,false,false'));
   check('hard tier locked until Normal has 2 stars', await p.evaluate(() => document.querySelector('[data-song=warm-embers][data-tier=hard]').disabled && !document.querySelector('[data-song=warm-embers][data-tier=normal]').disabled));
   check('first-run hint card is shown', await p.evaluate(() => !!document.getElementById('hint') && document.getElementById('hint').textContent.includes('D F J K')));
   await p.click('#hint-ok');
   check('hint dismissed and remembered in the jam key', await p.evaluate((k) => !document.getElementById('hint') && JSON.parse(localStorage.getItem(k)).hint === true, KEY));
   check('unlock rule text is shown', await p.evaluate(() => document.getElementById('unlock-rule').textContent.includes('Lantern Shuffle opens at 2 total stars')));
+  check('unlock rule lists the extended ladder (19/22/25/28) and the new songs show their star needs', await p.evaluate(() => { const t = document.getElementById('unlock-rule').textContent; return ['Fern Lullaby at 19', 'Spark Reel at 22', 'Dewdrop Drift at 25', 'Harvest Moonrise at 28'].every((x) => t.includes(x)) && document.querySelector('.card[data-song=harvest-moonrise]').textContent.includes('Needs 28 stars'); }));
+  check('Concert button exists and is locked with one open song; secret card is last', await p.evaluate(() => document.getElementById('btn-concert').disabled && [...document.querySelectorAll('.card')].pop().dataset.song === 'midnight-campfire'));
+  check('Practice buttons and the two accessibility toggles exist on the menu', await p.evaluate(() => document.querySelectorAll('.practice-btn').length === 12 && !!document.getElementById('pref-shapes') && !!document.getElementById('pref-lefty') && document.getElementById('hud-speed').textContent === ''));
+  check('Best-run ghost toggle exists and is off by default; results have no stale data on the menu', await p.evaluate(() => document.getElementById('pref-ghost').getAttribute('aria-pressed') === 'false' && window.__jam.results === null && window.__jam.ghost.active === false));
 
   // ---- judging windows via the keyboard (deterministic clock) ----
   await startChart(p);
@@ -85,7 +89,7 @@ const startChart = (p) => p.evaluate((c) => { window.__jam.start('warm-embers', 
   // ---- persistence ----
   const stored = await p.evaluate((k) => JSON.parse(localStorage.getItem(k)), KEY);
   check('best score written to pixeltown-jam-v1', stored.best['warm-embers'].easy.score === 310 && stored.best['warm-embers'].easy.rank === 'C' && stored.best['warm-embers'].easy.stars === 1 && stored.plays === 1);
-  check('stored save has only known keys', Object.keys(stored).sort().join() === 'best,hint,plays,unlocked,v', Object.keys(stored).join());
+  check('stored save has only known keys', ['best', 'hint', 'plays', 'unlocked', 'v'].every((k) => k in stored) && Object.keys(stored).every((k) => ['best', 'hint', 'plays', 'unlocked', 'v', 'hist', 'ghost', 'offsetMs', 'fullCombo', 'prefs', 'concert'].includes(k)), Object.keys(stored).join());
   check('no other localStorage keys written', await p.evaluate(() => Object.keys(localStorage).every((k) => k === 'pixeltown-jam-v1')), await p.evaluate(() => Object.keys(localStorage).join()));
   await p.reload(); await p.waitForFunction(() => window.__jam);
   check('best survives reload and shows on the card', await p.evaluate(() => window.__jam.save.best['warm-embers'].easy.score === 310 && document.querySelector('.card[data-song=warm-embers]').textContent.includes('Easy 310 C')));
@@ -112,7 +116,7 @@ const startChart = (p) => p.evaluate((c) => { window.__jam.start('warm-embers', 
   check('tab hidden pauses the song', await p.evaluate(() => window.__jam.mode === 'pause'));
   await p.evaluate(() => { Object.defineProperty(document, 'hidden', { value: false, configurable: true }); });
   await p.click('#quit');
-  check('quit returns to the song list without saving', await p.evaluate(() => window.__jam.mode === 'menu' && document.querySelectorAll('.card').length === 8));
+  check('quit returns to the song list without saving', await p.evaluate(() => window.__jam.mode === 'menu' && document.querySelectorAll('.card').length === 12));
 
   // ---- hold broken by early release ----
   await startChart(p);
@@ -175,7 +179,7 @@ const startChart = (p) => p.evaluate((c) => { window.__jam.start('warm-embers', 
   const fresh = await open(browser, { viewport: { width: 1000, height: 700 } });
   const f = fresh.page;
   check('first run: calibrate card offered, no offsetMs stored yet', await f.evaluate((k) => !!document.getElementById('cal-card') && window.__jam.offset === 0 && !('offsetMs' in JSON.parse(localStorage.getItem(k))), KEY));
-  check('8 cards; the secret song shows as ??? and is locked', await f.evaluate(() => { const c = document.querySelector('.card[data-song=midnight-campfire]'); return document.querySelectorAll('.card').length === 8 && c.classList.contains('locked') && c.textContent.includes('???') && !c.textContent.includes('Midnight') && [...c.querySelectorAll('button')].every((b) => b.disabled); }));
+  check('12 cards; the secret song shows as ??? and is locked', await f.evaluate(() => { const c = document.querySelector('.card[data-song=midnight-campfire]'); return document.querySelectorAll('.card').length === 12 && c.classList.contains('locked') && c.textContent.includes('???') && !c.textContent.includes('Midnight') && [...c.querySelectorAll('button')].every((b) => b.disabled); }));
   check('locked new songs say how many stars they need', await f.evaluate(() => document.querySelector('.card[data-song=kettle-song]').textContent.includes('Needs 10 stars')));
   await f.click('#cal-first');
   check('calibrate button opens the intro screen', await f.evaluate(() => window.__jam.mode === 'calib' && !!document.getElementById('cal-start') && window.__jam.cal.state === 'intro'));

@@ -151,6 +151,18 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "jam-concert.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "jam-practice.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "jam-results.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "lantern-page.test.js": {
     "class": "browser",
     "tier": "smoke"

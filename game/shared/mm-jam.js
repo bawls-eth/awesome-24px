@@ -87,6 +87,7 @@
       }
       if (!best) return null;
       const j = judge(t - best.t);
+      best.delta = Math.round(t - best.t);
       record(best, j);
       s.lastDelta = Math.round(t - best.t); s.hits++; s.deltaSum += t - best.t;
       if (best.hold > 0) { best.state = 'holding'; s.holds[lane] = best; } else best.state = 'done';
@@ -116,7 +117,23 @@
       return { score: s.score, maxCombo: s.maxCombo, counts: Object.assign({}, s.counts), accuracy: acc, rank: rankFor(acc),
         fullCombo: full, hits: s.hits, avgDelta: s.hits ? Math.round(s.deltaSum / s.hits) : null };
     }
-    return { press, release, update, result, state: s, notes };
+    // per-note press offset in ms (negative = early) in chart order; null where the note was never hit
+    function deltas() { return notes.map((n) => (typeof n.delta === 'number' ? n.delta : null)); }
+    return { press, release, update, result, deltas, state: s, notes };
+  }
+
+  // Early/late histogram: 13 bins of 20 ms from -130 to +130 (bin 6 is the on-time centre). Within 8 ms counts as on time.
+  const HIST_BINS = 13, HIST_WIDTH = 20, ON_TIME = 8;
+  function histogram(deltas) {
+    const bins = new Array(HIST_BINS).fill(0);
+    let early = 0, late = 0, onTime = 0;
+    for (const d of deltas || []) {
+      if (typeof d !== 'number' || !Number.isFinite(d)) continue;
+      const i = Math.max(0, Math.min(HIST_BINS - 1, Math.floor((d + WINDOWS.good) / HIST_WIDTH)));
+      bins[i]++;
+      if (Math.abs(d) < ON_TIME) onTime++; else if (d < 0) early++; else late++;
+    }
+    return { bins, early, late, onTime, total: early + late + onTime };
   }
 
   // small seeded PRNG (mulberry32 over a string hash), local so the file stands alone
@@ -184,5 +201,5 @@
     return { ok: errors.length === 0, errors };
   }
 
-  return { LANES, WINDOWS, POINTS, DIFFS, judge, expired, rankFor, calibrationOffset, calibrationFromTaps, clampOffset, OFFSET_MAX, createRun, generateChart, lint };
+  return { LANES, WINDOWS, POINTS, DIFFS, judge, expired, rankFor, calibrationOffset, calibrationFromTaps, clampOffset, OFFSET_MAX, createRun, generateChart, lint, histogram, HIST_BINS, HIST_WIDTH, ON_TIME };
 });
