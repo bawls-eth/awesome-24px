@@ -363,6 +363,26 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-nexus.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-quests.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-portals.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-pickups.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-weapon-items.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "shared-mm-classes.test.js": {
     "class": "node",
     "tier": "smoke"
