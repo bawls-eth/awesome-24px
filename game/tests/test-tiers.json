@@ -675,6 +675,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "world-perf.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "shared-mm-world-party.test.js": {
     "class": "node",
     "tier": "smoke"
