@@ -68,19 +68,62 @@
     const names = Array.isArray(o.names) ? o.names : NAMES;
     const palette = o.palette || PALETTE;
     const cache = Bake.makeCache(o.cap);
-    let art = null;
+    let art = null, props = null;
     const self = {
       palette: palette, names: names,
       active: () => !!art,
+      props: () => props,
+      propsActive: () => !!props,
       bake: (ctx, terrain, w, cx, cy) => Bake.bakeChunk(ctx, terrain, w, cx, cy, palette, art, { names: names }),
       chunk: (terrain, w, cx, cy) => cache.get(cx + ',' + cy, () => Bake.bakeChunkCanvas(o.create, terrain, w, cx, cy, palette, art, { names: names })),
       clear: () => cache.clear(),
       cacheSize: () => cache.size()
     };
+    // props load beside the tiles only when asked (opts.props), so callers that bake terrain only keep their exact request set
     self.ready = o.art === false ? Promise.resolve(self)
-      : load({ base: o.base, names: names, loadImage: o.loadImage }).then((a) => { art = a; cache.clear(); return self; }, () => self);
+      : Promise.all([load({ base: o.base, names: names, loadImage: o.loadImage }),
+        o.props ? loadProps({ propBase: o.propBase, loadImage: o.loadImage }) : null])
+        .then((r) => { art = r[0]; props = r[1] || null; cache.clear(); return self; }, () => self);
     return self;
   }
 
-  return { BASE: BASE, VARIANTS: VARIANTS, NAMES: NAMES, TERRAINS: TERRAINS, PALETTE: PALETTE, tileId: tileId, idMap: idMap, load: load, create: create };
+  // ---- b33 jungle props (one transparent PNG each, ground anchor; the hanging vine hangs from its top-centre anchor) ----
+  const PROP_BASE = '../../assets/arcane/b33-jungle-props/props/';
+  const PROPS = {
+    jungle_tree_a: [64, 64, 32, 62], jungle_tree_b: [64, 64, 32, 62], giant_fern: [32, 64, 16, 62], banana_plant: [32, 64, 16, 62],
+    hanging_vine: [32, 64, 16, 4], temple_pillar: [32, 64, 16, 62], temple_idol: [32, 32, 16, 30], amber_node: [32, 32, 16, 30]
+  };
+  // pack prop id -> b33 ids (a list picks one by the world tile hash, so a forest mixes both trees)
+  const PROP_ALIAS = { jungle_tree: ['jungle_tree_a', 'jungle_tree_b'] };
+  const HANGING = { hanging_vine: true };
+  // loadProps(opts) -> Promise<{id: {img, w, h, ax, ay}} | null>; never rejects, a failed PNG is simply absent (the code prop stays)
+  function loadProps(opts) {
+    const o = opts && typeof opts === 'object' ? opts : {};
+    const base = typeof o.propBase === 'string' ? o.propBase : PROP_BASE;
+    const li = typeof o.loadImage === 'function' ? o.loadImage : defaultLoadImage;
+    const out = {};
+    return Promise.all(Object.keys(PROPS).map((id) => Promise.resolve().then(() => li(base + id + '.png')).then((im) => {
+      if (im) { const p = PROPS[id]; out[id] = { img: im, w: p[0], h: p[1], ax: p[2], ay: p[3] }; }
+    }, () => {}))).then(() => (Object.keys(out).length ? out : null));
+  }
+  // propFor(props, kind, wx, wy) -> the loaded b33 prop for a pack prop id at world tile (wx, wy), or null (draw the code prop)
+  function propFor(props, kind, wx, wy) {
+    if (!props || typeof kind !== 'string') return null;
+    if (Object.prototype.hasOwnProperty.call(PROP_ALIAS, kind)) {
+      const list = PROP_ALIAS[kind].filter((id) => !!props[id]);
+      return list.length ? props[list[Math.floor(Bake.hash(wx | 0, wy | 0, 57) * list.length)]] : null;
+    }
+    return Object.prototype.hasOwnProperty.call(props, kind) ? props[kind] : null;
+  }
+  // drawPropArt(ctx, p, kind, px, py, tile): a ground prop stands on the tile's bottom centre, a hanging one hangs from its top centre
+  function drawPropArt(ctx, p, kind, px, py, tile) {
+    if (!ctx || !p || typeof ctx.drawImage !== 'function') return false;
+    const T = tile > 0 ? tile : Bake.TILE;
+    const x = Math.round(px + T / 2 - p.ax), y = Math.round(HANGING[kind] ? py - p.ay + 2 : py + T - 2 - p.ay);
+    ctx.drawImage(p.img, x, y, p.w, p.h);
+    return true;
+  }
+
+  return { PROP_BASE: PROP_BASE, PROPS: PROPS, PROP_ALIAS: PROP_ALIAS, loadProps: loadProps, propFor: propFor, drawPropArt: drawPropArt,
+    BASE: BASE, VARIANTS: VARIANTS, NAMES: NAMES, TERRAINS: TERRAINS, PALETTE: PALETTE, tileId: tileId, idMap: idMap, load: load, create: create };
 });

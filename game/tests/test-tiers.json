@@ -1014,5 +1014,13 @@
   "shared-mm-pack-creatures.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "isle-creature-art.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "shared-mm-creature-strips.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }

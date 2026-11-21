@@ -14,11 +14,15 @@
 // every island has a dock on its beach band with a calm sea chart to the other islands, plus a Home button (fast travel to the
 // home dock, ?at=dock). Daily-free gather spots come from each pack's resources table (?today=YYYY-MM-DD) with a collection log,
 // and medals (first tame per size class, each island visited, each boss lair seen) go to pixeltown-medals-isles-v1 for the Hub card.
+// Art (b31a / b32 / b33): creatures with PNG strips (MMCreatureStrips: chompbill, fernraptor, glimmerfrog, tusktop, fernjaw_tyrant) draw
+// idle / move / attack / death by facing (left = mirrored right), sleep when knocked out, eat when fed, the saddle overlay while ridden
+// and the roar strip during the boss wind-up; anything without strips (or ?art=0) draws the MMCreatureDraw code bake. On the jungle the
+// b33 prop PNGs replace the code props by id inside the baked chunks.
 (function () {
   'use strict';
   const O = window.MMOverworld, BP = window.MMBiomePacks, CB = window.MMChunkBake, CR = window.MMCreatures, CD = window.MMCreatureDraw;
   const FOG = window.MMFog, PROF = window.MMProfile, ISL = window.MMIsles, TAMES = window.MMTames, RNG = window.MMRng;
-  const TM = window.MMTame, CMP = window.MMCompanion, IC = window.IsleCreatures, HS = window.MMHomestead;
+  const TM = window.MMTame, CMP = window.MMCompanion, IC = window.IsleCreatures, HS = window.MMHomestead, MS = window.MMCreatureStrips;
   const $ = (id) => document.getElementById(id);
   const has = (o, k) => !!o && Object.prototype.hasOwnProperty.call(o, k);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -98,8 +102,9 @@
 
   // ---------- chunk art ----------
   let chunkCache = CB.makeCache(LOW ? 12 : 24);
-  const IA = (ART && window.MMIsleArt) ? window.MMIsleArt.create({ art: true }) : null; // b30 jungle tile art (falls back to the code palette per tile)
-  if (IA) IA.ready.then(() => { if (IA.active()) chunkCache = CB.makeCache(LOW ? 12 : 24); });
+  // b30 jungle tile art (falls back to the code palette per tile) + on the jungle the b33 prop PNGs (fall back to the code props by id)
+  const IA = (ART && window.MMIsleArt) ? window.MMIsleArt.create({ art: true, props: PACK_ID === 'jungle' }) : null;
+  if (IA) IA.ready.then(() => { if (IA.active() || IA.propsActive()) chunkCache = CB.makeCache(LOW ? 12 : 24); });
   let bakesLeft = 0;
   const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
   const PROP_ART = {
@@ -129,9 +134,20 @@
     if (!cv) cv = CB.bakeChunkCanvas(mk, world.terrain, W, cx, cy, PAL, null, { names: NAMES, h: H });
     if (!cv) return bakeFlat(cx, cy);
     const c = cv.getContext('2d');
-    (chunkProps.get(cx + ',' + cy) || []).forEach((p) => drawProp(c, p.kind, (p.x - cx * CH) * TILE, (p.y - cy * CH) * TILE));
+    // props of this chunk and its 8 neighbours, back to front: a 64 px tree near a chunk edge is painted on both sides of the seam
+    const pa = IA && IA.propsActive() ? IA.props() : null, list = [];
+    for (let ny = cy - 1; ny <= cy + 1; ny++) for (let nx = cx - 1; nx <= cx + 1; nx++) { const l = chunkProps.get(nx + ',' + ny); if (l) for (let i = 0; i < l.length; i++) list.push(l[i]); }
+    list.sort((a, b) => a.y - b.y || a.x - b.x);
+    for (let i = 0; i < list.length; i++) {
+      const p = list[i], px = (p.x - cx * CH) * TILE, py = (p.y - cy * CH) * TILE;
+      if (px < -3 * TILE || py < -3 * TILE || px > CPX + 2 * TILE || py > CPX + 2 * TILE) continue;
+      const art = pa ? window.MMIsleArt.propFor(pa, p.kind, p.x, p.y) : null;
+      if (art) { propsBaked.png++; window.MMIsleArt.drawPropArt(c, art, p.kind, px, py, TILE); }
+      else if (p.x >= cx * CH && p.x < (cx + 1) * CH && p.y >= cy * CH && p.y < (cy + 1) * CH) { propsBaked.code++; drawProp(c, p.kind, px, py); }
+    }
     return cv;
   }
+  const propsBaked = { png: 0, code: 0 }; // test handle counters (bake time only)
   function chunkCanvas(cx, cy) {
     return chunkCache.get(cx + ',' + cy, () => { if (bakesLeft <= 0) return null; bakesLeft--; return ART ? bakeArt(cx, cy) : bakeFlat(cx, cy); });
   }
@@ -174,6 +190,40 @@
     return s;
   }
   const baker = CD.makeBaker(mk, 64);
+  // b31a / b32 PNG strips: loaded once (the jungle loads all five species, other isles only the species in your stable), baked to native
+  // size; a creature without a complete set (or ?art=0) keeps the code-drawn MMCreatureDraw bake above.
+  const STRIP_KINDS = MS ? (PACK_ID === 'jungle' ? MS.KINDS.slice() : MS.KINDS.filter((k) => tames.roster.some((t) => t.sp === k))) : [];
+  const STRIPS = ART && MS && STRIP_KINDS.length ? MS.create({ kinds: STRIP_KINDS, create: mk }) : null;
+  const stripKind = (k) => (MS && k && has(MS.SPECS, k) ? k : null);
+  const stState = { dying: false, ko: false, eating: false, ph: '', moving: false }; // reused every frame
+  const seat = { x: 0, y: 0 };
+  // the strip a creature shows now (null -> code bake). Updates c.dir / c.act / c.at0 in place; no allocation.
+  function stripOf(c, moving) {
+    if (!STRIPS || !c.sk || !STRIPS.has(c.sk)) return null;
+    if (c.ph === 'wind' || c.ph === 'strike') c.dir = MS.dirCode(Math.cos(c.ang), Math.sin(c.ang), c.dir, 0.01);
+    else if (!c.ko) c.dir = MS.dirCode(c.vx, c.vy, c.dir);
+    stState.dying = false; stState.ko = c.ko; stState.eating = c.eatT > 0; stState.ph = c.ph; stState.moving = moving;
+    const act = MS.actionFor(c.sk, stState);
+    if (act !== c.act) { c.act = act; c.at0 = simT; }
+    return STRIPS.get(c.sk, act, c.dir);
+  }
+  // frame for a creature's current action: loops run on its own clock, a wind-up (roar / attack) is stretched over the wind-up time
+  function stripFrame(c) {
+    const a = c.act;
+    if (a === 'idle' || a === 'move' || a === 'sleep' || a === 'eat') return MS.frameIndex(a, c.t);
+    const el = simT - c.at0;
+    if (c.ph === 'wind') { const w = specOf(c.sp, c.kind).atk.windup || 0.5; return MS.frameIndex(a, el * MS.duration(a) / w); }
+    return MS.frameIndex(a, el);
+  }
+  // dying creatures play their death strip from a fixed pool (6 slots, reused)
+  const deadPool = []; for (let i = 0; i < 6; i++) deadPool.push({ on: false, sk: '', x: 0, y: 0, dir: 0, t0: 0, id: '' });
+  let deathsShown = 0;
+  function addDeath(c) {
+    if (!STRIPS || !c.sk || !STRIPS.has(c.sk)) return;
+    let slot = deadPool[0];
+    for (let i = 0; i < deadPool.length; i++) { if (!deadPool[i].on) { slot = deadPool[i]; break; } if (deadPool[i].t0 < slot.t0) slot = deadPool[i]; }
+    slot.on = true; slot.sk = c.sk; slot.x = c.x; slot.y = c.y; slot.dir = c.dir; slot.t0 = simT; slot.id = '';
+  }
   const PACK_SPECIES = BP.creatureIds(PACK_ID);
   // species the test handle may place: the pack ids plus the MMCreatures species of this island's biome
   const SPAWNABLE = PACK_SPECIES.concat(CR.byBiome(PACK_ID).map((d) => d.id));
@@ -193,11 +243,12 @@
     const c = { uid: ++uid, sp: sp, kind: kind, base: s.base, x: x, y: y, hx: x, hy: y, vx: 0, vy: 0, hp: s.hp, maxHp: s.hp, rad: s.rad, size: s.size, mood: s.mood,
       angry: 0, think: rng.next() * 0.1, cd: 0, flash: 0, moving: false, t: rng.next() * 4, gi: gi, seen: false, art: null,
       ph: '', pt: 0, ang: 0, ox: x, oy: y, hitDone: false, tgAt: -1, ko: false, calm: false, hostile: s.mood === 'hostile', awake: true,
-      tm: null, tmAcc: 0, leaving: 0, wid: gi >= 0 ? 'g' + gi + '_' + (j | 0) : 'u' + uid, lv: 1 };
+      tm: null, tmAcc: 0, leaving: 0, wid: gi >= 0 ? 'g' + gi + '_' + (j | 0) : 'u' + uid, lv: 1,
+      sk: stripKind(kind), dir: 0, act: '', at0: 0, eatT: 0, drawn: '', src: '' };
     c.def = s.def;
     if (s.def) c.lv = IC.levelFor(s.def, SEED, c.wid);
     if (TAME && s.def && s.def.tame) c.tm = TM.init(s.def, { seed: 'isles|' + SEED, wildId: c.wid, level: c.lv });
-    if (ART) c.art = baker.bake({ id: kind || sp, archetype: s.arch, size: s.size, biome: DRAW_BIOME }, { dpr: DPR });
+    c.art = baker.bake({ id: kind || sp, archetype: s.arch, size: s.size, biome: DRAW_BIOME }, { dpr: DPR }); // the code bake: always there as the fallback
     creatures.push(c);
     return c;
   }
@@ -282,7 +333,7 @@
     for (let i = 0; i < creatures.length; i++) {
       const c = creatures[i];
       const s = specOf(c.sp, c.kind);
-      c.t += dt; c.cd -= dt; c.flash -= dt; c.angry -= dt; c.tmAcc += dt;
+      c.t += dt; c.cd -= dt; c.flash -= dt; c.angry -= dt; c.tmAcc += dt; if (c.eatT > 0) c.eatT -= dt;
       if (c.leaving > 0) c.leaving = Math.max(0.01, c.leaving - dt);
       c.think -= dt;
       if (c.think <= 0) { c.think += 0.1; think(c); } // 10 Hz, staggered by the random start phase
@@ -386,6 +437,7 @@
   function killCreature(c) {
     const s = specOf(c.sp, c.kind);
     xp += XP_BY_SIZE[s.size] || 4; kills++;
+    addDeath(c);
     rollLoot(c);
     removeWhere((x) => x === c, 90000);
   }
@@ -472,7 +524,7 @@
     c.tmAcc = 0;
     c.tm = r.state;
     const ev = r.events;
-    if (ev.indexOf('fed') >= 0) pouch[f.id] = Math.max(0, pouch[f.id] - 1);
+    if (ev.indexOf('fed') >= 0) { pouch[f.id] = Math.max(0, pouch[f.id] - 1); c.eatT = 0.8; }
     if (ev.indexOf('toofast') >= 0) toast(nm + ' is still chewing.');
     if (ev.indexOf('refused') >= 0) toast(nm + ' turns its nose up.');
     if (c.tm.st === 'tamed') { finishTame(c); return { ok: true, tamed: true, events: ev }; }
@@ -494,7 +546,8 @@
     if (!CMP.activate(partyStates, cs, LOW)) return null;
     const p = { cs: cs, ent: ent, def: def, ctxDef: { companion: def.companion, speed: 1.15 }, dmg: CMP.damage(def, ent.bond, HERO_DPS), art: null };
     const sz = def.size, arch = IC.ARCH[def.id] || ARCH_BY_SIZE[sz] || 'blob';
-    if (ART) p.art = baker.bake({ id: def.id, archetype: arch, size: sz, biome: DRAW_BIOME }, { dpr: DPR });
+    p.art = baker.bake({ id: def.id, archetype: arch, size: sz, biome: DRAW_BIOME }, { dpr: DPR });
+    p.sk = stripKind(def.id); p.lx = x; p.ly = y; p.dir = 0;
     party.push(p);
     return p;
   }
@@ -541,7 +594,7 @@
   }
 
   // mount: the tames.mount entry (else the first rideable tame) through MMCompanion.ride
-  let ride = null, rideArt = null, mountEnt = null;
+  let ride = null, rideArt = null, mountEnt = null, rideKind = null, rideDir = 0, rideDrawn = '', saddleDrawn = '';
   function refreshMount() {
     mountEnt = null;
     if (!MOUNTS) return;
@@ -555,7 +608,8 @@
     ride = CMP.ride(def, mountEnt.id);
     if (!ride) return false;
     dropCompanion(mountEnt.id);
-    if (ART) rideArt = baker.bake({ id: def.id, archetype: IC.ARCH[def.id] || 'quadruped', size: def.size, biome: DRAW_BIOME }, { dpr: DPR });
+    rideArt = baker.bake({ id: def.id, archetype: IC.ARCH[def.id] || 'quadruped', size: def.size, biome: DRAW_BIOME }, { dpr: DPR });
+    rideKind = stripKind(def.id);
     if (tames.mount !== mountEnt.id) { TAMES.setMount(tames, mountEnt.id); TAMES.write(S, tames); }
     hero.scale = CMP.moveScale(ride, moveScaleAt(tileOf(hero.x), tileOf(hero.y)));
     toast('Riding ' + (mountEnt.nm || def.name) + '. R to get off.');
@@ -564,7 +618,7 @@
   function dismount() {
     if (!ride) return false;
     const id = ride.id;
-    ride = null; rideArt = null;
+    ride = null; rideArt = null; rideKind = null; rideDrawn = ''; saddleDrawn = '';
     hero.scale = moveScaleAt(tileOf(hero.x), tileOf(hero.y));
     if (tames.party.indexOf(id) >= 0) spawnCompanion(TAMES.find(tames, id), hero.x + 36, hero.y + 12);
     return true;
@@ -659,27 +713,45 @@
       while (j >= 0 && list[j].y > c.y) { list[j + 1] = list[j]; j--; }
       list[j + 1] = c;
     }
+    drawDeaths();
     for (let i = 0; i < list.length; i++) {
       const c = list[i], sx = c.x - camX, sy = c.y - camY;
       if (sx < -140 || sy < -140 || sx > VW + 140 || sy > VH + 140) continue;
-      if (c.art) {
+      const st = stripOf(c, c.moving);
+      let top = sy - c.rad * 2.4;
+      if (st) {
+        const a = c.art;
+        if (a && a.shadow && !LOW) { const w = a.w / a.dpr; g.drawImage(a.shadow, sx - w / 2, sy - (a.shadow.height / a.dpr) / 2, w, a.shadow.height / a.dpr); }
+        STRIPS.draw(g, st, stripFrame(c), sx, sy, 1, MS.flipFor(c.act, c.dir));
+        c.drawn = st.id; c.src = 'png';
+        top = Math.min(top, sy - (st.ay - st.top) - 2);
+      } else if (c.art) {
         const a = c.art, act = c.moving ? 'move' : 'idle', fr = a.frames[act][CD.frameAt(act, c.t)];
         const w = a.w / a.dpr, h = a.h / a.dpr;
         if (a.shadow && !LOW) g.drawImage(a.shadow, sx - w / 2, sy - (a.shadow.height / a.dpr) / 2, w, a.shadow.height / a.dpr);
         if (c.vx < -4) { g.save(); g.translate(sx, 0); g.scale(-1, 1); g.drawImage(fr, -w / 2, sy - a.ay / a.dpr, w, h); g.restore(); }
         else g.drawImage(fr, sx - w / 2, sy - a.ay / a.dpr, w, h);
+        c.drawn = a.id; c.src = 'code';
       } else {
         g.fillStyle = MOOD_COL[c.mood] || '#ccc'; g.beginPath(); g.arc(sx, sy - c.rad * 0.6, c.rad, 0, Math.PI * 2); g.fill();
+        c.drawn = ''; c.src = 'plain';
       }
       if (c.flash > 0) { g.fillStyle = 'rgba(255,255,255,0.55)'; g.beginPath(); g.arc(sx, sy - c.rad, c.rad, 0, Math.PI * 2); g.fill(); }
-      if (c.hp < c.maxHp) { const bw = Math.max(20, c.rad * 1.6); g.fillStyle = '#2a1b1b'; g.fillRect(sx - bw / 2, sy - c.rad * 2.4 - 6, bw, 4); g.fillStyle = MOOD_COL[c.mood] || '#e0604a'; g.fillRect(sx - bw / 2, sy - c.rad * 2.4 - 6, bw * Math.max(0, c.hp / c.maxHp), 4); }
-      if (c.tm) drawTameState(c, sx, sy);
+      if (c.hp < c.maxHp) { const bw = Math.max(20, c.rad * 1.6); g.fillStyle = '#2a1b1b'; g.fillRect(sx - bw / 2, top - 6, bw, 4); g.fillStyle = MOOD_COL[c.mood] || '#e0604a'; g.fillRect(sx - bw / 2, top - 6, bw * Math.max(0, c.hp / c.maxHp), 4); }
+      if (c.tm) drawTameState(c, sx, sy, top);
     }
     // companions
     for (let i = 0; i < party.length; i++) {
       const p = party[i], cs = p.cs, sx = cs.x - camX, sy = cs.y - camY;
       if (sx < -140 || sy < -140 || sx > VW + 140 || sy > VH + 140) continue;
       g.strokeStyle = cs.down > 0 ? '#8a8a8a' : '#9ae07a'; g.lineWidth = 2; g.beginPath(); g.ellipse(sx, sy, 14, 5, 0, 0, Math.PI * 2); g.stroke();
+      const pm = Math.abs(cs.x - p.lx) + Math.abs(cs.y - p.ly) > 0.4; p.lx = cs.x; p.ly = cs.y;
+      const pst = STRIPS && p.sk && STRIPS.has(p.sk) ? STRIPS.get(p.sk, pm ? 'move' : 'idle', (p.dir = cs.face < 0 ? MS.LEFT : MS.RIGHT)) : null;
+      if (pst) {
+        STRIPS.draw(g, pst, MS.frameIndex(pm ? 'move' : 'idle', hero.t), sx, sy, 1, p.dir === MS.LEFT);
+        drawHeart(sx, sy - (pst.ay - pst.top) - 8, '#ff7aa8');
+        continue;
+      }
       if (p.art) {
         const a = p.art, fr = a.frames.move[CD.frameAt('move', hero.t)], w = a.w / a.dpr, h = a.h / a.dpr;
         if (cs.face < 0) { g.save(); g.translate(sx, 0); g.scale(-1, 1); g.drawImage(fr, -w / 2, sy - a.ay / a.dpr, w, h); g.restore(); }
@@ -693,9 +765,21 @@
     // hero (on the mount when riding: the mount at the feet, the hero lifted by MMCompanion.overlay)
     const hx = hero.x - camX, hy = hero.y - camY;
     let lift = 0;
+    let rdx = 0;
     if (ride && !hero.dead) {
       lift = CMP.overlay(ride, heroMoving).dy;
-      if (rideArt) {
+      const rst = STRIPS && rideKind && STRIPS.has(rideKind) ? STRIPS.get(rideKind, heroMoving ? 'move' : 'idle', (rideDir = MS.dirCode(hero.face.x * 100, hero.face.y * 100, rideDir))) : null;
+      const sad = rst ? STRIPS.get(rideKind, MS.saddleFor(rideKind, heroMoving) || 'idle', rideDir) : null;
+      if (rst) {
+        // the mount's own strip, then the separate saddle overlay (same view, same frame), then the hero on the manifest seat
+        const ra = heroMoving ? 'move' : 'idle', fr = MS.frameIndex(ra, hero.t), flip = rideDir === MS.LEFT;
+        if (rideArt && rideArt.shadow && !LOW) { const a = rideArt, w = a.w / a.dpr; g.drawImage(a.shadow, hx - w / 2, hy - (a.shadow.height / a.dpr) / 2, w, a.shadow.height / a.dpr); }
+        STRIPS.draw(g, rst, fr, hx, hy, 1, flip);
+        if (sad && sad !== rst) STRIPS.draw(g, sad, fr, hx, hy, 1, flip);
+        rideDrawn = rst.id; saddleDrawn = sad && sad !== rst ? sad.id : '';
+        if (MS.seatOffset(rideKind, heroMoving, rideDir, fr, seat)) { lift = -seat.y + 5; rdx = Math.round(seat.x); }
+      } else if (rideArt) {
+        rideDrawn = rideArt.id; saddleDrawn = '';
         const a = rideArt, act = heroMoving ? 'move' : 'idle', fr = a.frames[act][CD.frameAt(act, hero.t)], w = a.w / a.dpr, h = a.h / a.dpr;
         if (a.shadow && !LOW) g.drawImage(a.shadow, hx - w / 2, hy - (a.shadow.height / a.dpr) / 2, w, a.shadow.height / a.dpr);
         if (hero.face.x < 0) { g.save(); g.translate(hx, 0); g.scale(-1, 1); g.drawImage(fr, -w / 2, hy - a.ay / a.dpr, w, h); g.restore(); }
@@ -705,7 +789,7 @@
     if (!hero.dead && !(hero.iframes > 0 && Math.floor(hero.iframes * 12) % 2)) {
       if (ART) {
         if (!LOW && !ride) g.drawImage(heroArt.shadow, hx - 12, hy - 2, 24, 8);
-        g.drawImage(heroArt.frames[Math.floor(hero.t * 6) % 2], hx - 16, hy - 28 + lift, 32, 32);
+        g.drawImage(heroArt.frames[Math.floor(hero.t * 6) % 2], hx - 16 + rdx, hy - 28 + lift, 32, 32);
       } else { g.fillStyle = CLASS_COL[HERO.cls] || '#4f9a45'; g.beginPath(); g.arc(hx, hy - 8 + lift, HERO_R, 0, Math.PI * 2); g.fill(); }
     }
   }
@@ -738,12 +822,26 @@
     g.restore();
     if (a.big) { g.fillStyle = col; g.fillRect(sx - 2, sy - c.rad * 2.6 - 18, 4, 9); g.fillRect(sx - 2, sy - c.rad * 2.6 - 7, 4, 3); } // "!"
   }
+  // death strips of the pooled dying creatures (held on the last frame briefly, then the slot frees)
+  function drawDeaths() {
+    if (!STRIPS) return;
+    for (let i = 0; i < deadPool.length; i++) {
+      const d = deadPool[i];
+      if (!d.on) continue;
+      const el = simT - d.t0;
+      if (el > MS.duration('death') + 0.35) { d.on = false; continue; }
+      const st = STRIPS.get(d.sk, 'death', d.dir);
+      if (!st) { d.on = false; continue; }
+      STRIPS.draw(g, st, MS.frameIndex('death', el), d.x - camX, d.y - camY, 1, MS.flipFor('death', d.dir));
+      if (d.id !== st.id) { d.id = st.id; deathsShown++; }
+    }
+  }
   function drawHeart(x, y, col) {
     g.fillStyle = col; g.fillRect(x - 5, y - 3, 4, 4); g.fillRect(x + 1, y - 3, 4, 4); g.fillRect(x - 4, y, 8, 3); g.fillRect(x - 2, y + 3, 4, 2);
   }
   // sleeping Zs, a heart while befriending, a purple torpor bar and a green taming bar
-  function drawTameState(c, sx, sy) {
-    const tm = c.tm, bw = Math.max(20, c.rad * 1.6), top = sy - c.rad * 2.4;
+  function drawTameState(c, sx, sy, top) {
+    const tm = c.tm, bw = Math.max(20, c.rad * 1.6);
     if (c.ko) {
       g.fillStyle = '#e8e0ff'; g.font = 'bold 12px monospace';
       const k = Math.floor(simT * 2) % 3;
@@ -817,8 +915,8 @@
     list.forEach((t, i) => {
       const def = CR.get(t.sp), pen = pp[Math.floor(i / HS.PEN_GUESTS)];
       if (!pen) return;
-      const art = ART && def ? baker.bake({ id: def.id, archetype: IC.ARCH[def.id] || ARCH_BY_SIZE[def.size] || 'blob', size: def.size, biome: DRAW_BIOME }, { dpr: DPR }) : null;
-      guests.push({ id: t.id, sp: t.sp, art: art, x: (homeO.x + pen.x + 0.5) * TILE + ((i % 3) - 1) * 10, y: (homeO.y + pen.y + 0.5) * TILE + 6, t: i });
+      const art = def ? baker.bake({ id: def.id, archetype: IC.ARCH[def.id] || ARCH_BY_SIZE[def.size] || 'blob', size: def.size, biome: DRAW_BIOME }, { dpr: DPR }) : null;
+      guests.push({ id: t.id, sp: t.sp, art: art, sk: stripKind(t.sp), x: (homeO.x + pen.x + 0.5) * TILE + ((i % 3) - 1) * 10, y: (homeO.y + pen.y + 0.5) * TILE + 6, t: i });
     });
   }
   // gather spots: daily-free, seeded by island + seed + day
@@ -888,7 +986,9 @@
       for (let i = 0; i < guests.length; i++) {
         const q = guests[i], sx = q.x - camX, sy = q.y - camY + Math.sin(simT * 2 + q.t) * 1.5;
         if (sx < -80 || sy < -80 || sx > VW + 80 || sy > VH + 80) continue;
-        if (q.art) { const a = q.art, fr = a.frames.idle[CD.frameAt('idle', simT + q.t)], w = a.w / a.dpr * 0.45, h = a.h / a.dpr * 0.45; g.drawImage(fr, sx - w / 2, sy - a.ay / a.dpr * 0.45, w, h); }
+        const qs = STRIPS && q.sk && STRIPS.has(q.sk) ? STRIPS.get(q.sk, 'idle', MS.DOWN) : null;
+        if (qs) STRIPS.draw(g, qs, MS.frameIndex('idle', simT + q.t), sx, sy, 0.6, false);
+        else if (q.art) { const a = q.art, fr = a.frames.idle[CD.frameAt('idle', simT + q.t)], w = a.w / a.dpr * 0.45, h = a.h / a.dpr * 0.45; g.drawImage(fr, sx - w / 2, sy - a.ay / a.dpr * 0.45, w, h); }
         else { g.fillStyle = '#9ae07a'; g.beginPath(); g.arc(sx, sy - 6, 6, 0, Math.PI * 2); g.fill(); }
       }
     }
@@ -898,7 +998,9 @@
       if (HS.taken(save.gather, ISLE, p.idx)) continue;
       const sx = (p.x + 0.5) * TILE - camX, sy = (p.y + 0.5) * TILE - camY;
       if (sx < -TILE || sy < -TILE || sx > VW + TILE || sy > VH + TILE) continue;
-      g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(sx - 7, sy + 5, 14, 3);
+      const amb = p.kind === 'amber' && IA && IA.propsActive() ? IA.props().amber_node : null; // b33 amber node under the amber sparkle
+      if (amb) g.drawImage(amb.img, Math.round(sx - amb.ax), Math.round(sy + TILE / 2 - 2 - amb.ay), amb.w, amb.h);
+      else { g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(sx - 7, sy + 5, 14, 3); }
       g.fillStyle = '#fff4a8'; g.fillRect(sx - 1, sy - 8 - tw, 3, 11); g.fillRect(sx - 6, sy - 4 - tw, 13, 3);
       g.fillStyle = '#f2b84b'; g.fillRect(sx - 2, sy - 5 - tw, 5, 5);
     }
@@ -1176,7 +1278,14 @@
       creatures: () => creatures.map((c) => ({ uid: c.uid, sp: c.sp, kind: c.kind, base: c.base, x: c.x, y: c.y, hp: c.hp, maxHp: c.maxHp, mood: c.mood, size: c.size, art: !!c.art,
         ph: c.ph, tg: c.ph === 'wind' ? { shape: specOf(c.sp, c.kind).atk.shape, left: c.pt, windup: specOf(c.sp, c.kind).atk.windup, big: specOf(c.sp, c.kind).atk.big } : null,
         ko: c.ko, calm: c.calm, hostile: c.hostile, lv: c.lv, st: c.tm ? c.tm.st : null, torpor: c.tm ? c.tm.torpor : 0, torporMax: c.tm ? c.tm.torporMax : 0,
-        prog: c.tm ? c.tm.prog : 0, need: c.tm ? c.tm.need : 0 })),
+        prog: c.tm ? c.tm.prog : 0, need: c.tm ? c.tm.need : 0, src: c.src, drawn: c.drawn, act: c.act, dir: c.dir })),
+      // PNG creature strips (b31a / b32) and b33 props: readiness, what was drawn, death strips shown, props baked from PNG vs code
+      stripsReady: () => (STRIPS ? STRIPS.ready.then(() => ({ on: true, kinds: STRIPS.kinds.filter((k) => STRIPS.has(k)), count: STRIPS.count() })) : { on: false, kinds: [], count: 0 }),
+      propsReady: () => (IA ? IA.ready.then(() => ({ props: IA.propsActive() ? Object.keys(IA.props()).sort() : [], tiles: IA.active() })) : { props: [], tiles: false }),
+      propsBaked: () => Object.assign({}, propsBaked),
+      deathsShown: () => deathsShown,
+      render: () => { render(); return true; },
+      face: (x, y) => { const l = Math.hypot(x, y) || 1; hero.face.x = x / l; hero.face.y = y / l; return true; },
       spawn: (sp, tx, ty) => (SPAWNABLE.indexOf(sp) >= 0 && creatures.length < CAP ? addCreature(sp, (tx + 0.5) * TILE, (ty + 0.5) * TILE, -1).uid : null),
       flags: () => ({ tame: TAME, companions: COMPANIONS, mounts: MOUNTS }),
       anger: (id) => { const c = creatures.find((x) => x.uid === id); if (c) c.angry = 30; return !!c; },
@@ -1185,7 +1294,7 @@
       pouch: () => Object.assign({}, pouch),
       party: () => party.map((p) => ({ id: p.ent.id, sp: p.ent.sp, x: p.cs.x, y: p.cs.y, mode: p.cs.mode, hits: p.cs.hits || 0, dmg: p.dmg, down: p.cs.down })),
       ride: () => toggleRide(),
-      riding: () => (ride ? { id: ride.id, speed: ride.m.speed, lift: ride.m.lift, overlay: CMP.overlay(ride, false).dy } : null),
+      riding: () => (ride ? { id: ride.id, speed: ride.m.speed, lift: ride.m.lift, overlay: CMP.overlay(ride, false).dy, drawn: rideDrawn, saddle: saddleDrawn } : null),
       mountId: () => (mountEnt ? mountEnt.id : null),
       tames: () => JSON.parse(S.getItem(TAMES.KEY) || 'null'),
       tamesLive: () => JSON.parse(JSON.stringify(tames)),
