@@ -1,9 +1,9 @@
 {
-  "sha": "17ff28f29f73e268237e443e39c45e2453b970af",
-  "generated_utc": "2026-11-21T18:48:28Z",
+  "sha": "6c27fe37a6920ad7b3654252cf7e3be8fcd86ffd",
+  "generated_utc": "2026-11-21T20:44:43Z",
   "full_suite_green": true,
   "beta_green": null,
-  "suites_passed": 239,
-  "suites_total": 239,
-  "notes": "Full run on parent (tg-flake merge) was 238/239; the one failure (phone-panel 640x360, Town bag bar vs chat bar) was fixed by a CSS-only commit (this sha) and re-verified alone (2 runs) with 5 related town/phone suites. Beta runs only on owner request."
+  "suites_passed": 247,
+  "suites_total": 247,
+  "notes": "Full run on parent d6f8c75 was 246/247; the single failure (gear-splash-player nearest-neighbour check, stale after the G15 splash falloff tuning) was fixed by a test-only commit (this sha) and passes alone. Beta runs only on owner request."
 }

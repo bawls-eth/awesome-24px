@@ -97,3 +97,5 @@
 - OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
 - 2026-11-21 (18:xx UTC): merged gear G7/G8 (save tolerance, armor slot, stats pipeline; gear drops still OFF), biome A1 (golden fixture, generateWith, 5 biome packs), creatures + taming engine; fixed pity-merge (three-way gp), telegraph-arena flake (test setup rng dir), Town bag bar vs chat bar on short landscape. Full suite 238/239 then phone-panel fixed. 
 - OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
+- 2026-11-21 (20:xx UTC): merged gear G11 (player splash, b29 art wired), G12 (boss ground-slam, telegraphed), G14/G16 (armor row, soulbound stash), G15 splash tuning; biome B7 (arena hooks), B8 (isles page, jungle), B9 (taming/party/mount), b30 jungle tile art wired; Codex b29+b30 registered. Full suite 246/247 then test-only fix. Gear drops still OFF. Next: flip gear defaults after one deploy, G13 stats dropdown, B10 home/travel, wire b31+ creature art.
+- OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
