@@ -287,13 +287,13 @@
       wArtLoading = true;
       const join = (a, b) => a.replace(/\/+$/, '') + '/' + String(b).replace(/^\/+/, '');
       const okPath = (p) => typeof p === 'string' && /^[A-Za-z0-9_][A-Za-z0-9_.\/-]*\.png$/.test(p) && p.indexOf('..') < 0;
-      const WANT = /^(portal_[a-z]+|spawn_pad|shrine_(heal|rage|ward)|event_beacon|loot_chest_gold|prop_[a-z0-9_]+)$/;
+      const WANT = /^(portal_[a-z]+|spawn_pad|shrine_(heal|rage|ward)|event_beacon|loot_chest_gold|prop_[a-z0-9_]+|coin_f[1-4]|xp_orb_f[1-4]|heart_pickup|potion_life)$/;
       let got = 0;
       return fetch(join(root, 'INDEX.json')).then((r) => (r.ok ? r.json() : null)).then((idx) => {
         const batches = idx && Array.isArray(idx.batches) ? idx.batches : [];
         return Promise.all(batches.map((b) => {
           const id = b && typeof b.path === 'string' ? b.path.replace(/\/+$/, '').split('/').pop() : '';
-          if (!/^b1[234]-[a-z0-9-]{1,48}$/.test(id)) return null;
+          if (!/^b1[2345]-[a-z0-9-]{1,48}$/.test(id)) return null;
           return fetch(join(join(root, id), 'manifest.json')).then((r) => (r.ok ? r.json() : null)).then((m) => {
             const assets = m && Array.isArray(m.assets) ? m.assets : [];
             return Promise.all(assets.map((a) => {
@@ -532,6 +532,7 @@
         if (!info) return;
         kills++; save.stats.kills++;
         rollFor({ zone: info.zone, tier: info.tier }, e.x, e.y, 'g' + info.group);
+        spawnPickups(e.x, e.y, 'g' + info.group, kills, info.tier);
         return;
       }
       for (let i = 0; i < bossLive.length; i++) {
@@ -539,6 +540,7 @@
         const site = world.bossSites[i]; bossLive[i] = null; bossReadyNow[i] = 0; miniKey = '';
         zones.bossDefeated(site, arena.clock); kills++; save.stats.bossKills++;
         rollFor({ zone: site.zone, tier: site.zone, boss: true }, e.x, e.y + 30, 'boss' + i);
+        spawnPickups(e.x, e.y + 20, 'boss' + i, kills, 5);
         writeSave(save);
       }
     }
@@ -1027,12 +1029,82 @@
     if (typeof MutationObserver === 'function') new MutationObserver((recs) => { for (let i = 0; i < recs.length; i++) if (PANEL_IDS[recs[i].target.id]) { syncPanels(); return; } }).observe(ov, { attributes: true, subtree: true, attributeFilter: ['class', 'style'] });
     window.addEventListener('keydown', (ev) => { if ((ev.key === 'e' || ev.key === 'E') && !ev.repeat && siteFor && arena.active && !arena.paused && arena.state === 'play') { ev.preventDefault(); siteAct(); } });
 
+    // ---------- live pickups (MMPickups): coins, XP orbs, hearts and life potions rolled per kill, seeded by (world seed, group, kill index) ----------
+    // World sprites on the overlay layer (drawImage from the loaded b15 art, or a tiny cached code sprite). Magnet 64 px, cap 60 (oldest culled),
+    // lifetime per tier, no per-frame Graphics. Focus orbs and stat-buff potions need arena resources that do not exist yet: they are never spawned.
+    const PK = window.MMPickups || null;
+    const PICK_ON = !!PK && !/[?&]pickups=0(&|$)/.test(typeof location !== 'undefined' ? location.search : '');
+    const PICK_CAP = 60;
+    const picks = []; let pickSave = false; let pickTotal = 0; const pickGot = { coin: 0, xp: 0, heart: 0, potion: 0 };
+    const pickSpr = {};
+    function pickSprite(type, art) { // cached code sprite (24x24) used until the art loads or when art is off
+      const k = type === 'potion' ? 'potion' : type; if (pickSpr[k]) return pickSpr[k];
+      const c = mk(24, 24); const g = c.getContext('2d');
+      if (type === 'coin') { g.fillStyle = '#7a5a12'; g.beginPath(); g.arc(12, 12, 8, 0, 7); g.fill(); g.fillStyle = '#ffd45a'; g.beginPath(); g.arc(12, 12, 6.5, 0, 7); g.fill(); g.fillStyle = '#fff0a8'; g.fillRect(9, 8, 2, 6); }
+      else if (type === 'xp') { g.fillStyle = '#4a2a8a'; g.beginPath(); g.arc(12, 12, 8, 0, 7); g.fill(); g.fillStyle = '#b48cff'; g.beginPath(); g.arc(12, 12, 6, 0, 7); g.fill(); g.fillStyle = '#efe0ff'; g.fillRect(9, 8, 3, 3); }
+      else if (type === 'heart') { g.fillStyle = '#7a1022'; g.beginPath(); g.arc(8, 9, 5.5, 0, 7); g.arc(16, 9, 5.5, 0, 7); g.fill(); g.beginPath(); g.moveTo(3, 11); g.lineTo(21, 11); g.lineTo(12, 21); g.fill(); g.fillStyle = '#ff5f6b'; g.beginPath(); g.arc(8, 9, 4, 0, 7); g.arc(16, 9, 4, 0, 7); g.fill(); g.beginPath(); g.moveTo(5, 11); g.lineTo(19, 11); g.lineTo(12, 19); g.fill(); }
+      else { g.fillStyle = '#143a24'; g.fillRect(9, 4, 6, 5); g.fillRect(6, 9, 12, 12); g.fillStyle = '#5be38a'; g.fillRect(8, 11, 8, 8); g.fillStyle = '#d8ffe6'; g.fillRect(9, 12, 2, 4); }
+      pickSpr[k] = c; return c;
+    }
+    const pickOk = (d) => d.type === 'coin' || (d.type === 'xp' && typeof arena._gainXp === 'function') || d.type === 'heart' || (d.type === 'potion' && d.art === 'potion_life');
+    function spawnPickups(x, y, group, killIdx, tier) {
+      if (!PICK_ON) return 0;
+      const list = PK.roll(seed, group, killIdx, tier).filter(pickOk);
+      const r = MMRng.create('pickpos:' + seed + ':' + group + ':' + killIdx);
+      let n = 0;
+      for (let i = 0; i < list.length; i++) {
+        const d = list[i]; const a = r.next() * Math.PI * 2; const rad = 10 + r.next() * 22;
+        let px = x + Math.cos(a) * rad; let py = y + Math.sin(a) * rad;
+        if (solidAt(px, py)) { px = x; py = y; }
+        if (picks.length >= PICK_CAP) picks.shift();
+        picks.push({ type: d.type, art: d.art, frames: d.frames || null, value: d.value, tier: d.tier, x: px, y: py, bornMs: arena.clock * 1000, lifeMs: d.lifeMs, ph: r.next() * 6.28 });
+        n++; pickTotal++;
+      }
+      return n;
+    }
+    function collectPick(q) {
+      const p = arena.player; pickGot[q.type] = (pickGot[q.type] || 0) + 1;
+      if (q.type === 'coin') { arena.save.shards += q.value; arena.run.shards += q.value; arena._floatText(p.x, p.y - 26, `+${q.value} 💎`, '#8fe9ff'); pickSave = true; }
+      else if (q.type === 'xp') { arena._gainXp(Math.max(1, Math.round(q.value * (arena.stats ? arena.stats.xp : 1)))); pickSave = true; }
+      else {
+        const o = PK.use(q, { hp: p.hp, maxHp: arena.stats.maxHp, focus: 0, maxFocus: 0 });
+        if (o.hp > p.hp) { arena._floatText(p.x, p.y - 26, `+${Math.round(o.hp - p.hp)}`, '#5be38a'); p.hp = o.hp; arena._syncHud(); }
+      }
+    }
+    function pickTick(dt) {
+      if (!picks.length) return;
+      const p = arena.player; const now = arena.clock * 1000; const d = Math.min(dt, 0.1);
+      for (let i = picks.length - 1; i >= 0; i--) {
+        const q = picks[i];
+        if (PK.expired(q, now)) { picks.splice(i, 1); continue; }
+        if (arena.state !== 'play') continue;
+        const m = PK.magnetStep(q, p, d); q.x = m.x; q.y = m.y;
+        if (m.collected) { picks.splice(i, 1); collectPick(q); }
+      }
+      if (pickSave) { pickSave = false; arena.onSave(arena.save); arena._syncHud(); }
+    }
+    function drawPicks(g, cam) {
+      if (!picks.length) return;
+      const tt = arena.clock; const reduced = arena._reduced; const now = tt * 1000;
+      const x0 = cam.x - 24; const y0 = cam.y - 24; const x1 = cam.x + arena.W + 24; const y1 = cam.y + arena.H + 24;
+      for (let i = 0; i < picks.length; i++) {
+        const q = picks[i]; if (q.x < x0 || q.x > x1 || q.y < y0 || q.y > y1) continue;
+        const left = q.lifeMs - (now - q.bornMs);
+        if (left < 4000 && !reduced && Math.floor(tt * 8) % 2) continue; // blinks out in the last 4 s
+        const bob = reduced ? 0 : Math.round(Math.sin(tt * 4 + q.ph) * 2);
+        let art = null;
+        if (q.frames) art = wArt[q.frames[reduced ? 0 : Math.floor(tt * 10 + q.ph) % q.frames.length]]; else art = wArt[q.art];
+        if (art) drawArt(g, art, 0, q.x, q.y + 8 + bob);
+        else g.drawImage(pickSprite(q.type, q.art), Math.round(q.x - 12), Math.round(q.y - 12 + bob));
+      }
+    }
+
     const hooks = {
       onStart() {
         if (pendingAt) { placeAt(pendingAt.x, pendingAt.y); pendingAt = null; } else placeAt(world.spawnPoint.x, world.spawnPoint.y);
         arena.run.wave = 0; arena.biome = 0;
         resetZones();
-        kills = 0; spawned = 0; despawned = 0; lastDrops.length = 0;
+        kills = 0; spawned = 0; despawned = 0; lastDrops.length = 0; picks.length = 0;
         bossReadyNow.fill(0); bossT = 0; sweepT = 0;
         promptFor = -2; leaving = false;
         rageEnd = 0; wardEnd = 0; arena.buffDmg = 1; arena.buffTaken = 1; campSt.clear(); siteKeyShown = '';
@@ -1053,7 +1125,7 @@
           bossT -= dt; if (bossT <= 0) { bossT = 0.5; bossTick(); }
           sweepT -= dt; if (sweepT <= 0) { sweepT = 1; sweepLost(); }
         }
-        portalTick();
+        portalTick(); pickTick(dt);
         if (SITES) siteTick(dt);
         lastEvClock = eventClock();
         evT -= dt; if (evT <= 0) { evT = 0.25; evTick(); }
@@ -1100,7 +1172,7 @@
           g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(label, c.x + 1, c.y - 51); g.fillStyle = col; g.fillText(label, c.x, c.y - 52);
         });
       },
-      drawOver(g) { // a raid boss telegraphs its next burst: a red ring that closes in during the last second
+      drawOver(g, cam) { drawPicks(g, cam); // a raid boss telegraphs its next burst: a red ring that closes in during the last second
         evState.forEach((st) => {
           if (st.phase !== 'active' || st.plan.kind !== 'boss') return;
           const e = st.ents[0]; if (!e || !e.active || e.evid !== st.id || e.invuln > 0 || !(e.cd2 < 1)) return;
@@ -1152,6 +1224,7 @@
       useShrine, openChest, talkNpc: talk, sitePrompt: () => (siteFor ? { kind: siteFor.kind, i: siteFor.i, text: siteBtn.textContent, hidden: siteBtn.classList.contains('hidden') } : null), siteNote: () => ({ text: siteNote.textContent, hidden: siteNote.classList.contains('hidden') }), siteTick,
       // slice 11: world debuffs (roll(creature, zone, force) = one bolt hit; table = creature -> status; shown by arena.statusOf)
       worldStatus: { on: STATUS_ON, table: BOLT_ST, forCreature: boltStatusFor, roll: boltRoll, log: stLog },
+      pickups: { on: PICK_ON, cap: PICK_CAP, list: () => picks.map((q) => ({ type: q.type, art: q.art, value: q.value, tier: q.tier, x: q.x, y: q.y, lifeMs: q.lifeMs })), spawn: spawnPickups, got: () => Object.assign({}, pickGot), total: () => pickTotal },
       settle, stashNote, lastSettle: () => lastSettle, finds: () => (ST ? ST.readFinds(localStorage) : null),
     };
     return { api, hooks };
