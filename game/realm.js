@@ -37,6 +37,7 @@ const RM_DEATH_PENALTY = 0; // dying never costs banked shards any more: you get
 const RM_SHOP_MULT = 8; // shop price = the item's sell value x this
 const RM_COMBINE_COUNT = 3; // identical items (same gear, same rarity) fuse into one of the next rarity
 const RM_SHOP_UNLOCK = [0, 2, 5]; // best wave needed before the shop stocks Common / Uncommon / Rare
+const RM_SHOP_UNLOCK_LV = [1, 4, 8]; // world mode (no waves): the hero level that also unlocks them (either one unlocks; never fewer items than before)
 const RM_ED_GHOSTS = 24; const RM_ED_REDUCED = 0.25; // enemy death-ghost pool size; reduced-motion fade seconds
 // Shot readability: the player's bolt is a white core with a light outline (solid radius 5 + a soft glow); enemy bullets have a dark
 // rim and their own hue per pattern and are never more than 1.3x the player's bolt. At most RM_EB_DRAW enemy bullets are drawn.
@@ -1509,7 +1510,7 @@ class RealmArena {
     this.displayShards = this.save.shards;
     this.state = 'banner';
     this.bannerT = 1.4;
-    this.bannerText = this.team && this.team.isPvp ? (this.team.mode === '2v2' ? '2v2 — first to 2 rounds!' : 'Duel — first to 2 rounds!') : 'Realm — survive the waves!';
+    this.bannerText = this.team && this.team.isPvp ? (this.team.mode === '2v2' ? '2v2 — first to 2 rounds!' : 'Duel — first to 2 rounds!') : this._worldCopy() ? 'The Realm' : 'Realm — survive the waves!';
     if (this.team && this.team.isPvp) { this.state = 'play'; this.run.wave = 1; this.team.duelReset(); }
     this.nextWaveIn = 1.4;
     this._syncHud(true);
@@ -2217,8 +2218,8 @@ class RealmArena {
 
   // Offers: every item at each rarity your best wave has unlocked, priced at sell value x RM_SHOP_MULT. Fixed stock, no luck.
   shopStock() {
-    const best = this.save.bestWave; const out = [];
-    RM_RARITIES.forEach((rar, r) => { if (r < RM_SHOP_UNLOCK.length && best >= RM_SHOP_UNLOCK[r]) RM_ITEMS.forEach((def) => out.push({ id: def.id, r, price: rar.sell * RM_SHOP_MULT })); });
+    const best = this.save.bestWave; const out = []; const wc = this._worldCopy(); const lv = this.save.level;
+    RM_RARITIES.forEach((rar, r) => { if (r < RM_SHOP_UNLOCK.length && (best >= RM_SHOP_UNLOCK[r] || (wc && lv >= RM_SHOP_UNLOCK_LV[r]))) RM_ITEMS.forEach((def) => out.push({ id: def.id, r, price: rar.sell * RM_SHOP_MULT })); });
     return out;
   }
 
@@ -2267,8 +2268,12 @@ class RealmArena {
       const def = RM_ITEM_BY_ID[o.id]; const rar = RM_RARITIES[o.r]; const can = sv.shards >= o.price && !full;
       html += `<li><span class="nm" style="color:${rar.color}">${this._icon(def)} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText({ id: o.id, r: o.r })}</span><button type="button" class="eq" data-buy="${def.id}" data-r="${o.r}"${can ? '' : ' disabled'} aria-label="Buy ${rar.name} ${def.name} for ${o.price} shards">Buy ${o.price}💎</button></li>`;
     });
-    const nextR = RM_SHOP_UNLOCK.findIndex((w) => sv.bestWave < w);
-    html += `</ul>${nextR > 0 ? `<div class="dim">Reach wave ${RM_SHOP_UNLOCK[nextR]} to unlock ${RM_RARITIES[nextR].name} gear.</div>` : ''}`;
+    let foot = '';
+    if (this._worldCopy()) { const nr = RM_SHOP_UNLOCK_LV.findIndex((l, r) => sv.level < l && sv.bestWave < RM_SHOP_UNLOCK[r]); if (nr > 0) foot = `Reach level ${RM_SHOP_UNLOCK_LV[nr]} to unlock ${RM_RARITIES[nr].name} gear.`; } else {
+      const nextR = RM_SHOP_UNLOCK.findIndex((w) => sv.bestWave < w);
+      if (nextR > 0) foot = `Reach wave ${RM_SHOP_UNLOCK[nextR]} to unlock ${RM_RARITIES[nextR].name} gear.`;
+    }
+    html += `</ul>${foot ? `<div class="dim">${foot}</div>` : ''}`;
     root.innerHTML = html; this._fixIcons(root);
   }
 
@@ -2283,7 +2288,8 @@ class RealmArena {
     this.deadT = 2.6;
     this.shake = 14;
     this._burst(this.player.x, this.player.y, '#ff6f91', 30, 300);
-    this._showBanner(`You fell in the Realm…  no 💎 lost — ${cache.text}  ·  wave ${Math.max(1, this.run.wave)}, ${this.run.kills} kills, +${this.run.shards} 💎 this run`, 2.6);
+    this._deathZone = this._worldCopy() ? this._zoneLabel() : '';
+    this._showBanner(`You fell in the Realm…  no 💎 lost — ${cache.text}  ·  ${this._deathZone ? `in ${this._deathZone}` : `wave ${Math.max(1, this.run.wave)}`}, ${this.run.kills} kills, +${this.run.shards} 💎 this run`, 2.6);
     this.onSave(this.save);
     this._syncHud();
   }
@@ -2715,8 +2721,9 @@ class RealmArena {
     const d = this._ensureDeathDom(); if (!d) { this.stop(); this.onExit('death'); return; }
     this._deathShown = true; this.keys = {}; this.mouse.down = false; this.aimVec.on = false; this.moveVec.x = 0; this.moveVec.y = 0;
     const showWave = this.mode !== 'world' || !!this.dungeon;
-    const waveRow = showWave ? `<div class="realm-board-row"><span>🌊 Wave reached</span><b>${Math.max(1, this.run.wave)}</b></div>` : '';
+    const waveRow = showWave ? `<div class="realm-board-row"><span>🌊 Wave reached</span><b>${Math.max(1, this.run.wave)}</b></div>` : '<div class="realm-board-row rm-zone-row"><span>🗺️ Zone</span><b></b></div>';
     d.querySelector('.rm-recap').innerHTML = `${waveRow}<div class="realm-board-row"><span>⚔️ Kills</span><b>${this.run.kills}</b></div><div class="realm-board-row"><span>💎 Shards this run</span><b>+${this.run.shards}</b></div><div class="realm-board-row"><span>🎁 Survivor's cache</span><b>${this._lastCache.replace(/^cache: /, '')}</b></div>`;
+    if (!showWave) { const zb = d.querySelector('.rm-zone-row b'); if (zb) zb.textContent = this._deathZone || this._zoneLabel(); } // textContent: the zone name comes from the page
     const sn = this.menuNote ? String(this.menuNote() || '') : '';
     if (sn) { const row = document.createElement('div'); row.className = 'realm-board-row rm-stash-row'; row.textContent = sn; d.querySelector('.rm-recap').appendChild(row); }
     d.classList.remove('hidden'); d.style.display = 'flex';
@@ -2954,17 +2961,33 @@ class RealmArena {
 
   // ---------- HUD (plain DOM, only touched when a value changes) ----------
 
+  _worldCopy() { return this.mode === 'world' && !this.dungeon && !(this.team && this.team.isPvp); } // world mode: zone / level wording, never 'wave'
+
+  // The zone the hero is in, for world-mode copy: an optional hook (zoneLabel), else the zone HUD the world draws (#rw-zone / #realm-wave).
+  _zoneLabel() {
+    try {
+      if (typeof this.zoneLabel === 'function') { const z = String(this.zoneLabel() || '').slice(0, 40); if (z) return z; }
+      const zn = document.querySelector('#rw-zone .rw-zname'); const t = zn ? zn.textContent.split(' · ')[0].trim() : '';
+      if (t) return t.slice(0, 40);
+      const w = document.getElementById('realm-wave'); const wt = w ? w.textContent.trim() : '';
+      if (wt && !/wave|get ready/i.test(wt)) return wt.slice(0, 40);
+    } catch (e) { /* no DOM */ }
+    return 'the Realm';
+  }
+
   _syncHud(force) {
     const hp = document.getElementById('realm-hp-fill');
     if (hp) hp.style.width = `${Math.max(0, this.player.hp) / this.stats.maxHp * 100}%`;
     const hpText = document.getElementById('realm-hp-text');
     if (hpText) hpText.textContent = `${Math.ceil(this.player.hp)} / ${this.stats.maxHp}`;
+    const wc = this._worldCopy();
     const wave = document.getElementById('realm-wave');
-    if (wave) wave.textContent = this.team && this.team.isPvp ? this.team.duelLabel() : this.run.wave > 0 ? `Wave ${this.run.wave}` : 'Get ready';
+    if (wave && !wc) wave.textContent = this.team && this.team.isPvp ? this.team.duelLabel() : this.run.wave > 0 ? `Wave ${this.run.wave}` : 'Get ready'; // world mode: the world writes the zone here
+    else if (wave && /wave|get ready/i.test(wave.textContent)) wave.textContent = '';
     const shards = document.getElementById('realm-shards');
     if (shards) shards.textContent = `💎 ${Math.floor(this.displayShards)}`;
     const bio = document.getElementById('realm-biome');
-    if (bio) bio.textContent = this.run.wave > 0 && !(this.team && this.team.isPvp) ? RM_BIOMES[this.biome].name : '';
+    if (bio && !wc) bio.textContent = this.run.wave > 0 && !(this.team && this.team.isPvp) ? RM_BIOMES[this.biome].name : '';
     const pe = document.getElementById('realm-partner');
     if (pe) {
       const t = this.team; const q = t ? t.badge() : null;
@@ -2983,7 +3006,7 @@ class RealmArena {
     if (xpt) xpt.textContent = this.save.level >= RM_MAX_LEVEL ? 'MAX' : `${this.save.xp} / ${rmXpNeeded(this.save.level)} xp`;
     this._syncAbilities();
     const best = document.getElementById('realm-best');
-    if (best) best.textContent = this.save.bestWave > 0 ? `Best wave ${this.save.bestWave}` : '';
+    if (best) best.textContent = this.save.bestWave > 0 && !wc ? `Best wave ${this.save.bestWave}` : '';
     if (force) this._hideBanner();
   }
 
