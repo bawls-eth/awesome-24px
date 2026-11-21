@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>World party fixture</title>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #0b0716; overflow: hidden; }
+  #world { display: block; border: 0; width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+<!-- CO2 fixture (tests only): the real Mad Maze world page in an iframe; world-team.js is attached from here until CO3 hooks it
+     into the page. URL: world-party.html?seed=N&seat=S (seat optional, 0-3). Same origin only; no network code. -->
+<iframe id="world" title="Mad Maze world"></iframe>
+<script src="../../shared/mm-party.js"></script>
+<script src="../../shared/mm-world-party.js"></script>
+<script src="../../shared/mm-party-bc.js"></script>
+<script src="../../games/mad-maze/world-team.js"></script>
+<script>
+(function () {
+  const q = new URLSearchParams(location.search);
+  const seed = q.get('seed') || '12345';
+  const seatRaw = q.get('seat');
+  const seat = seatRaw !== null && /^[0-3]$/.test(seatRaw) ? Number(seatRaw) : undefined;
+  const frame = document.getElementById('world');
+  window.__fixture = { seed: seed, seat: seat, team: null, bagsSeen: [] };
+  if (!MMPartyBC.seedOk(seed)) { window.__fixture.error = 'bad seed'; return; }
+  frame.src = '../../games/mad-maze/index.html?mode=world&test=1&party=local&seed=' + encodeURIComponent(seed);
+  // the tiny wrapper CO3 replaces: wait for the world page's test hooks, then attach the team controller
+  const t0 = Date.now();
+  (function wait() {
+    const w = frame.contentWindow; const mm = w && w.__mm;
+    if (mm && mm.arena && mm.world && mm.arena.world) {
+      // once CO3 hooks the page itself (window.__mm.team), the fixture must not open a second controller
+      window.__fixture.team = mm.team || MMWorldTeam.create(mm.arena, mm.world, { party: 'local', seed: seed, seat: seat, onBag: (b) => window.__fixture.bagsSeen.push(b) });
+      return;
+    }
+    if (Date.now() - t0 < 30000) setTimeout(wait, 100);
+  })();
+})();
+</script>
+</body>
+</html>

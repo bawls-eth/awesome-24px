@@ -90,6 +90,7 @@
   <section class="card" id="backup-card">
     <h2>Back up my progress</h2>
     <p class="muted">Saves everything to a file you keep. Restore accepts a backup file or an old single save file.</p>
+    <p id="backup-last" class="muted" role="status"></p>
     <div class="row">
       <button id="backup" type="button" class="btn" aria-label="Back up my progress to a file">Back up my progress</button>
       <label class="btn file" for="restore">Restore<input id="restore" type="file" accept=".json,application/json" aria-label="Restore from a backup file"></label>
@@ -122,6 +123,10 @@
 <script src="../../shared/mm-angler.js"></script>
 <script src="../../shared/mm-bugs.js"></script>
 <script src="../../shared/profile.js"></script>
+<script src="../../shared/rng.js"></script>
+<script src="../../shared/mm-daily.js"></script>
+<script src="../../shared/mm-access.js"></script>
+<script src="../../shared/mm-gift.js"></script>
 <script src="../../shared/mm-backup.js"></script>
 <script src="lantern.js"></script>
 </body>

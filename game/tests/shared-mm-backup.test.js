@@ -51,5 +51,11 @@ check('plan alone writes nothing', (() => { const s = fake(); B.plan(key('pixelt
 const failing = fake(); failing.setItem = () => { throw new Error('quota'); };
 check('write failure reports, no throw', B.restore(failing, key('pixeltown-jam-v1', '{}')).ok === false);
 
+// AC1/GF1: the two new additive keys
+['pixeltown-access-v1', 'pixeltown-gift-v1'].forEach((k) => check('KNOWN includes ' + k, B.KNOWN.indexOf(k) >= 0));
+check('backup round-trips the access prefs', (() => { const st = fake(); const r = B.restore(st, key('pixeltown-access-v1', '{"palette":"protanopia","lowGfx":true}')); return r.ok && JSON.parse(st._m['pixeltown-access-v1']).palette === 'protanopia'; })());
+check('backup cleans the gift save', (() => { const st = fake(); const r = B.restore(st, key('pixeltown-gift-v1', '{"days":1e99,"evil":1}')); const v = JSON.parse(st._m['pixeltown-gift-v1']); return r.ok && v.days === 99999 && v.evil === undefined; })());
+check('a bundle without the new keys still restores', B.restore(fake(), key('pixeltown-jam-v1', '{}')).ok);
+
 console.log(pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

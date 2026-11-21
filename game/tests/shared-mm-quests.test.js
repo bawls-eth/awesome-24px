@@ -51,4 +51,18 @@ check('claimed requires done', Q.clean({ date: D, q: { kill_zone: { p: 1, claime
 check('summary rows', Q.summary(done, D).length === 3 && Q.summary(done, D)[2].done && Q.summary(null, D)[0].p === 0 && Q.summary(null, 'bad').length === 0);
 const o = Q.oracle(D);
 check('oracle deterministic text uses ghost guide', o.npc === 'npc_ghost_guide' && typeof o.text === 'string' && o.text.length > 10 && o.zone === qs[0].zone && o.biome === qs[2].biome);
+
+// QB1: rewardBag
+const WI = require('../shared/mm-weapon-items.js');
+const bk = (t, sd) => Q.rewardBag({ bag: t }, sd);
+check('QB1 brown bag: 2 potions', bk('brown', 'a').tier === 'brown' && bk('brown', 'a').items.length === 2 && bk('brown', 'a').items.every((i) => /^potion_/.test(i.id) && i.r === 0 && i.n === 1));
+check('QB1 pink bag: 1 uncommon gear', bk('pink', 'a').items.length === 1 && bk('pink', 'a').items[0].r === 1 && /^armor_(light|robe|heavy)_t[23]$/.test(bk('pink', 'a').items[0].id));
+check('QB1 purple bag: 1 rare gear or wpn_', (() => { for (let i = 0; i < 60; i++) { const it = bk('purple', 's' + i).items; if (it.length !== 1 || it[0].r !== 2 || !(/^armor_(light|robe|heavy)_t[45]$/.test(it[0].id) || WI.get(it[0].id))) return false; } return true; })());
+check('QB1 purple sometimes a wpn_ style and sometimes armor', (() => { let w = 0, a = 0; for (let i = 0; i < 80; i++) { if (/^wpn_/.test(bk('purple', i).items[0].id)) w++; else a++; } return w > 5 && a > 5; })());
+check('QB1 stable for the same seed, varies across seeds', JSON.stringify(bk('pink', 'x')) === JSON.stringify(bk('pink', 'x')) && (() => { const s = new Set(); for (let i = 0; i < 40; i++) s.add(bk('brown', i).items.map((x) => x.id).join()); return s.size > 3; })());
+check('QB1 hostile reward/tier/seed -> null or safe', Q.rewardBag(null, 1) === null && Q.rewardBag('x', 1) === null && Q.rewardBag({ bag: 'gold' }, 1) === null && Q.rewardBag({ bag: '__proto__' }, 1) === null && Q.rewardBag({ bag: ['brown'] }, 1) === null && Q.rewardBag({ bag: 'brown' }, { a: 1 }).items.length === 2 && Q.rewardBag({ bag: 'brown' }, NaN).items.length === 2);
+check('QB1 does not mutate reward and ignores extra keys', (() => { const rw = Object.freeze({ bag: 'pink', shards: 5, evil: 1 }); return Q.rewardBag(rw, 1).tier === 'pink'; })());
+check('QB1 item ids are real (potions in b15, gear matches save id patterns)', (() => { const pots = new Set(man('b15-loot-bags-and-drops').map((a) => a.id)); for (let i = 0; i < 30; i++) { if (!bk('brown', i).items.every((x) => pots.has(x.id))) return false; } return true; })());
+check('QB1 claim keeps old shape plus bagItems', Object.keys(c1.reward).sort().join() === 'bag,bagItems,quest,shards' && c1.reward.bagItems.length === 1 && JSON.stringify(c1.reward.bagItems) === JSON.stringify(Q.rewardBag(qs[2].reward, D + ':open_portal').items));
+check('QB1 old saves (no bagItems anywhere) still load and claim once', Q.clean({ date: D, q: { open_portal: { p: 1, done: true, claimed: false } } }, D).q.open_portal.done === true && Q.claim({ date: D, q: { open_portal: { p: 1 } } }, 'open_portal', D).reward.bagItems.length === 1);
 console.log((bad ? 'FAILED ' + bad + ' of ' : 'ok ') + n + ' assertions'); process.exit(bad ? 1 : 0);

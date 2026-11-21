@@ -407,6 +407,26 @@
    "status": "provisional",
    "ingested_utc": "2026-11-21T14:11:43Z",
    "source": "codex"
+  },
+  {
+   "id": "b26",
+   "label": "godlands-props-fix",
+   "path": "assets/arcane/b26-godlands-props-fix",
+   "manifest": "assets/arcane/b26-godlands-props-fix/manifest.json",
+   "files": 6,
+   "status": "provisional",
+   "ingested_utc": "2026-11-21T15:11:48Z",
+   "source": "codex"
+  },
+  {
+   "id": "b27",
+   "label": "zone-banners-and-logo",
+   "path": "assets/arcane/b27-zone-banners-and-logo",
+   "manifest": "assets/arcane/b27-zone-banners-and-logo/manifest.json",
+   "files": 7,
+   "status": "provisional",
+   "ingested_utc": "2026-11-21T16:11:51Z",
+   "source": "codex"
   }
  ]
 }

@@ -337,6 +337,18 @@ const SPARKLE_CATCH_RADIUS = 26;
 const IS_TOUCH = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 if (IS_TOUCH) document.body.classList.add('touch-device');
 
+// Shared accessibility prefs (pixeltown-access-v1, written by the Realm settings): the town only mirrors them
+// as body classes + a CSS variable. Reading never throws; missing/corrupt prefs fall back to defaults.
+(function applyTownAccess() {
+  try {
+    const p = (typeof MMAccess !== 'undefined' && MMAccess.prefs) ? MMAccess.prefs.load(window.localStorage) : { hudScale: 1, flashes: true, lowGfx: false };
+    const osReduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    document.body.classList.toggle('a11y-reduce-motion', osReduce || p.flashes === false || p.lowGfx === true);
+    document.body.classList.toggle('a11y-hud-scaled', p.hudScale > 1);
+    document.body.style.setProperty('--hud-scale', String(p.hudScale || 1));
+  } catch (e) { /* prefs are optional */ }
+})();
+
 const TILT_DEADZONE_DEG = 8;
 const TILT_RANGE_DEG = 36;
 // Radial dead zone for gamepad sticks and the on-screen joystick (0..1 of
@@ -1574,6 +1586,10 @@ class TownScene extends Phaser.Scene {
     const bobDelta = running ? delta * (RUN_SPEED / WALK_SPEED) : delta;
     this.applyBob(this.localBobState, this.localVisual, this.localShadow, this.localBody.x, this.localBody.y, moving, bobDelta);
     this.localNameText.setPosition(this.localBody.x, this.localVisual.y - 22);
+    if (this.realmGateSign) { // fade the local name label while it would sit on the Realm Gate sign
+      const ov = Math.abs(this.localNameText.x - this.realmGateSign.x) < 60 && Math.abs(this.localNameText.y - this.realmGateSign.y) < 18;
+      this.localNameText.setAlpha(ov ? 0.15 : 1);
+    }
     if (moving) this.spawnFootstepDust(time, this.localBody.x, this.localBody.y + 10, running);
 
     // Only write when something changed — standing still used to fire a
@@ -2881,7 +2897,7 @@ class TownScene extends Phaser.Scene {
     this.tweens.add({ targets: img, alpha: { from: 0.9, to: 1 }, duration: 1200, yoyo: true, repeat: -1 }); // one cheap tween, no per-frame drawing
     this.addObstacleRect({ x: x - 34, y: y + 6, width: 20, height: 34 });
     this.addObstacleRect({ x: x + 34, y: y + 6, width: 20, height: 34 });
-    this.add.text(x, y - 34, '🌀 Realm Gate', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
+    this.realmGateSign = this.add.text(x, y - 34, '🌀 Realm Gate', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
   }
 
   isNearRealmGate() {

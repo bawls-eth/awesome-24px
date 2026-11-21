@@ -95,16 +95,113 @@
     return { owned, locked };
   }
 
-  // Equipped items: items = realm save items [{n,id,r}], eq = {weapon:uid,...}, defs = id -> {name, slot}.
+  // Gear tier (1-12) of a save item: absent / junk -> 0 (a classic T0 item). Soulbound = T11+ (derived, as in the gear plan).
+  function tierOf(it) { const t = it && typeof it === 'object' ? it.t : 0; return typeof t === 'number' && t === Math.floor(t) && t >= 1 && t <= 12 ? t : 0; }
+  // Equipped items: items = realm save items [{n,id,r,t?}], eq = {weapon:uid,...}, defs = id -> {name, slot}. Four slots (armor added).
   function itemRows(items, eq, defs) {
     const out = [];
     if (!eq || typeof eq !== 'object' || !Array.isArray(items)) return out;
-    ['weapon', 'charm', 'ring'].forEach((slot) => {
+    ['weapon', 'armor', 'charm', 'ring'].forEach((slot) => {
       const it = items.find((x) => x && x.n === eq[slot]);
       const d = it && has(defs, it.id) ? defs[it.id] : null;
-      out.push({ slot, name: d ? clean(d.name, 30) : '', rarity: d ? rarityName(it.r) : '', text: d ? clean(d.name, 30) + ' (' + rarityName(it.r) + ')' : 'empty' });
+      const t = d ? tierOf(it) : 0, tier = t ? 'T' + t : '';
+      const nm = d ? clean(d.name, 30) : '';
+      out.push({ slot, name: nm, rarity: d ? rarityName(it.r) : '', tier, soulbound: t >= 11, text: d ? (tier ? tier + ' ' : '') + nm + ' (' + rarityName(it.r) + ')' : 'empty' });
     });
     return out;
+  }
+
+  // ---- Stats table builders (plan section e). Pure, never throw, output text never contains '<'.
+  // A stats object uses the arena names: maxHp|hp, dmg, rate, count, speed, range, guard, crit, splashR, splashFrac, status, resist, leech, regen, bonus.
+  // pct values are fractions (0.1 = 10%). est. DPS = dmg x rate x count x (1 + crit).
+  const STAT_DEFS = [
+    { key: 'hp', label: 'HP', short: 'HP', unit: '', p: 0, from: ['maxHp', 'hp'], core: true },
+    { key: 'dmg', label: 'Damage per bolt', short: 'Damage', unit: '', p: 2, from: ['dmg'], core: true },
+    { key: 'rate', label: 'Attack rate', short: 'Attack rate', unit: '/s', p: 1, from: ['rate'], core: true },
+    { key: 'dps', label: 'Est. DPS', short: 'DPS', unit: '', p: 1, from: [], core: true },
+    { key: 'speed', label: 'Speed', short: 'Speed', unit: ' px/s', p: 0, from: ['speed'], core: true },
+    { key: 'range', label: 'Range', short: 'Range', unit: ' px', p: 0, from: ['range'], core: true },
+    { key: 'guard', label: 'Guard', short: 'Guard', unit: '', p: 0, from: ['guard'], core: true },
+    { key: 'crit', label: 'Crit chance', short: 'Crit chance', unit: 'pct', p: 1, from: ['crit'] },
+    { key: 'splash', label: 'Splash', short: 'Splash radius', unit: ' px', p: 0, from: ['splashR'] },
+    { key: 'status', label: 'Status chance', short: 'Status chance', unit: 'pct', p: 1, from: ['status'] },
+    { key: 'resist', label: 'Resists', short: 'Resists', unit: 'pct', p: 1, from: ['resist'] },
+    { key: 'leech', label: 'Lifesteal', short: 'Lifesteal', unit: 'pct', p: 1, from: ['leech'] },
+    { key: 'regen', label: 'Regen', short: 'Regen', unit: ' HP/s', p: 1, from: ['regen'] },
+    { key: 'bonus', label: 'Shard/XP bonus', short: 'Shard and XP bonus', unit: 'pct', p: 1, from: ['bonus'] },
+  ];
+  const sn = (v) => (typeof v === 'number' && v === v && v !== Infinity && v !== -Infinity ? v : null); // strict finite number or null
+  const rnd = (v, p) => { const k = Math.pow(10, p); return Math.round(v * k) / k; };
+  function statVal(o, d) {
+    if (!o || typeof o !== 'object') return null;
+    if (d.key === 'dps') {
+      const dm = sn(has(o, 'dmg') ? o.dmg : null), rt = sn(has(o, 'rate') ? o.rate : null);
+      if (dm === null || rt === null) return null;
+      const ct = has(o, 'count') ? sn(o.count) : 1, cr = has(o, 'crit') ? sn(o.crit) : 0;
+      return dm * rt * (ct === null || ct < 1 ? 1 : ct) * (1 + (cr === null ? 0 : cr));
+    }
+    for (let i = 0; i < d.from.length; i++) if (has(o, d.from[i])) { const v = sn(o[d.from[i]]); if (v !== null) return v; }
+    return null;
+  }
+  const fmtVal = (v, d) => (d.unit === 'pct' ? rnd(v * 100, d.p) + '%' : rnd(v, d.p) + d.unit);
+  // Signed delta text with an arrow so direction never relies on colour: 0.3 -> "▲ +0.3", -2 -> "▼ -2", 0 -> "= 0".
+  function fmtDelta(v, unit) {
+    const x = sn(typeof v === 'number' ? v : null);
+    const d = { unit: typeof unit === 'string' ? clean(unit, 12) : '', p: unit === 'pct' ? 1 : (unit === ' px' || unit === ' px/s') ? 0 : unit === ' HP/s' || unit === '/s' ? 1 : 2 };
+    if (x === null) return '= 0';
+    const r = rnd(unit === 'pct' ? x * 100 : x, d.p);
+    if (r === 0) return '= 0';
+    const body = Math.abs(r) + (unit === 'pct' ? '%' : d.unit);
+    return r > 0 ? '\u25B2 +' + body : '\u25BC -' + body;
+  }
+  // statTable(total, base) -> [{key, label, unit, total, base, gear, totalText, baseText, gearText, aria}] (gear = total - base).
+  function statTable(total, base) {
+    const out = [];
+    try {
+      STAT_DEFS.forEach((d) => {
+        const tv = statVal(total, d), bv = statVal(base, d);
+        if (tv === null && bv === null) return;
+        const t = tv === null ? (total && typeof total === 'object' ? 0 : bv) : tv, b = bv === null ? (base && typeof base === 'object' ? 0 : t) : bv;
+        if (!d.core && !t && !b) return;
+        const g = rnd(t - b, d.unit === 'pct' ? d.p + 2 : d.p);
+        let totalText = fmtVal(t, d);
+        if (d.key === 'splash') {
+          const fr = sn(total && has(total, 'splashFrac') ? total.splashFrac : null);
+          totalText = 'r ' + rnd(t, 0) + ' px' + (fr !== null && fr > 0 ? ', ' + rnd(fr * 100, 0) + '%' : '');
+        }
+        let baseTextS = null;
+        if (d.key === 'splash') baseTextS = 'r ' + rnd(b, 0) + ' px';
+        const gearText = fmtDelta(g, d.unit).replace(/^\u25B2 |^\u25BC /, '').replace(/^= 0$/, '0');
+        const baseText = baseTextS || fmtVal(b, d);
+        out.push({ key: d.key, label: d.label, unit: d.unit, total: rnd(t, 4), base: rnd(b, 4), gear: g, totalText, baseText, gearText,
+          aria: d.short + ': total ' + totalText + ', base ' + baseText + ', gear ' + (g === 0 ? 'none' : (g > 0 ? 'plus ' : 'minus ') + gearText.replace(/^[+-]/, '')) });
+      });
+    } catch (e) { return []; }
+    return out;
+  }
+  // compareRows(cur, cand) -> only the rows that change: [{key, label, cur, cand, delta, dir:'up'|'down', text:'▲ +0.3', aria:'Damage up 0.3'}].
+  function compareRows(cur, cand) {
+    const out = [];
+    try {
+      STAT_DEFS.forEach((d) => {
+        const a = statVal(cur, d), b = statVal(cand, d);
+        if (a === null && b === null) return;
+        const x = a === null ? 0 : a, y = b === null ? 0 : b;
+        const shown = d.unit === 'pct' ? rnd((y - x) * 100, d.p) : rnd(y - x, d.p);
+        if (shown === 0) return;
+        const up = shown > 0, mag = fmtVal(Math.abs(y - x), d).replace('%', ' percent');
+        out.push({ key: d.key, label: d.label, cur: rnd(x, 4), cand: rnd(y, 4), delta: rnd(y - x, 4), dir: up ? 'up' : 'down', text: fmtDelta(y - x, d.unit),
+          aria: d.short + (up ? ' up ' : ' down ') + mag });
+      });
+    } catch (e) { return []; }
+    return out;
+  }
+  // Boss-luck text from realm.gp {b, d}: "+7% (T12 guaranteed in 46 kills)"; "" when gp is not an object.
+  function bossLuck(gp) {
+    if (!gp || typeof gp !== 'object') return '';
+    const b = Math.max(0, Math.min(60, Math.floor(num(gp.b, 0))));
+    const left = 60 - b;
+    return '+' + Math.min(10, Math.floor(b * 5) / 10) + '% (T12 guaranteed in ' + left + (left === 1 ? ' kill)' : ' kills)');
   }
 
   // Weapon group rows (only when src.weapon is given): src.weapon = {style, family, pattern, rarity, affixes[]}.
@@ -180,6 +277,8 @@
     weaponRows(src.weapon).forEach((r) => add('Weapon', r.label, r.value));
     passiveRows(Classes, hero.cls, src.passives).forEach((r) => add('Passives', r.label, r.value));
     statusRows(src.status).forEach((r) => add('Status', r.label, r.value));
+    if (src.statsBase && typeof src.statsBase === 'object') statTable(st, src.statsBase).forEach((r) => add('Gear stats', r.label, r.totalText + ' (base ' + r.baseText + ', gear ' + (r.gear === 0 ? '0' : r.gearText) + ')'));
+    if (src.gp && typeof src.gp === 'object') add('Gear stats', 'Boss luck', bossLuck(src.gp));
     add('Gear', 'Shards', Math.max(0, Math.floor(num(sv.shards, 0))));
     itemRows(sv.items, sv.eq, src.defs).forEach((r) => add('Gear', r.slot.charAt(0).toUpperCase() + r.slot.slice(1), r.text));
     add('Run', 'Kills', Math.max(0, Math.floor(num(run.kills, 0))));
@@ -189,5 +288,5 @@
     return rows;
   }
 
-  return { RARITIES, ZONE_NAMES, clean, fmtTime, fmtMult, rarityName, zoneName, fireText, abilityRows, lockHint, pickerList, itemRows, weaponRows, passiveRows, statusRows, panelRows, className };
+  return { RARITIES, ZONE_NAMES, clean, fmtTime, fmtMult, rarityName, zoneName, fireText, abilityRows, lockHint, pickerList, itemRows, tierOf, statTable, compareRows, fmtDelta, bossLuck, STAT_DEFS, weaponRows, passiveRows, statusRows, panelRows, className };
 }));

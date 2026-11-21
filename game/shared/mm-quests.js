@@ -2,9 +2,9 @@
 // State shape (stored later under an additive `quests` key of pixeltown-realm-v1): { date:'YYYY-MM-DD', q:{ <questId>:{ p:int, done:bool, claimed:bool } } }
 // No DOM, no clock, no Math.random. Every function returns new objects; inputs are never mutated; hostile input is cleaned.
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory(require('./rng.js'), require('./mm-daily.js'));
-  else root.MMQuests = factory(root.MMRng, root.MMDaily);
-})(typeof self !== 'undefined' ? self : this, function (MMRng, MMDaily) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./rng.js'), require('./mm-daily.js'), require('./mm-weapon-items.js'));
+  else root.MMQuests = factory(root.MMRng, root.MMDaily, root.MMWeaponItems || null);
+})(typeof self !== 'undefined' ? self : this, function (MMRng, MMDaily, MMWeaponItems) {
   const ZONES = ['Shore', 'Meadows', 'Deeps', 'Godlands']; // zone 0..3 (REALM-UNIFIED-DESIGN)
   const BIOMES = ['warren', 'bramble', 'meadow', 'crypt'];
   const BAGS = ['brown', 'pink', 'purple']; // bag tier by quest kind; matches the b15 bag art ids bag_<colour>
@@ -78,7 +78,25 @@
     const q = quests(d).find((x) => x.id === questId);
     if (!q || !has(s.q, q.id) || !s.q[q.id].done || s.q[q.id].claimed) return { state: s, reward: null };
     s.q[q.id] = { p: s.q[q.id].p, done: true, claimed: true };
-    return { state: s, reward: { shards: q.reward.shards, bag: q.reward.bag, quest: q.id } };
+    return { state: s, reward: { shards: q.reward.shards, bag: q.reward.bag, quest: q.id, bagItems: rewardBag(q.reward, d + ':' + q.id).items } };
+  }
+
+  // rewardBag(reward, seed) -> { tier, items:[{id,n,r}] } (the realm backpack entry shape; r = rarity 0..3). Pure and stable for the same (bag tier, seed).
+  //  brown: 2 potions (r0). pink: 1 uncommon gear (r1). purple: 1 rare gear or wpn_ style (r2). A bad reward or tier -> null.
+  const POTIONS = ['potion_life', 'potion_focus', 'potion_power', 'potion_swift', 'potion_guard', 'potion_wit'];
+  const ARMOR_FAMILIES = ['light', 'robe', 'heavy'];
+  function rewardBag(reward, seed) {
+    const tier = reward && typeof reward === 'object' && typeof reward.bag === 'string' && BAGS.indexOf(reward.bag) >= 0 ? reward.bag : null;
+    if (!tier) return null;
+    const sd = typeof seed === 'string' || isInt(seed) ? String(seed).slice(0, 80) : '';
+    const r = MMRng.create('mm-bag:' + tier + ':' + sd);
+    const wpn = () => (MMWeaponItems && MMWeaponItems.ITEMS && MMWeaponItems.ITEMS.length ? r.pick(MMWeaponItems.ITEMS).id : null);
+    const armor = (lo, hi) => 'armor_' + r.pick(ARMOR_FAMILIES) + '_t' + r.int(lo, hi);
+    let items;
+    if (tier === 'brown') items = [{ id: r.pick(POTIONS), n: 1, r: 0 }, { id: r.pick(POTIONS), n: 1, r: 0 }];
+    else if (tier === 'pink') items = [{ id: armor(2, 3), n: 1, r: 1 }];
+    else { const useWpn = r.next() < 0.5, w = useWpn ? wpn() : null; items = [{ id: w || armor(4, 5), n: 1, r: 2 }]; }
+    return { tier: tier, items: items };
   }
 
   // oracle(dateUtc): one deterministic hint per date from the ghost guide. Points at today's kill zone and portal biome.
@@ -100,5 +118,5 @@
     const d = pad(dateUtc), s = clean(state, d);
     return quests(d).map((x) => ({ id: x.id, text: x.text, need: x.need, p: s.q[x.id].p, done: s.q[x.id].done, claimed: s.q[x.id].claimed, reward: x.reward }));
   }
-  return { ZONES, BIOMES, BAGS, NPC, ORACLE_NPC, quests, fresh, clean, progress, claim, oracle, summary };
+  return { ZONES, BIOMES, BAGS, NPC, ORACLE_NPC, quests, fresh, clean, progress, claim, rewardBag, oracle, summary };
 });

@@ -44,7 +44,7 @@
     if (typeof o === 'string') { try { o = JSON.parse(o); } catch (e) { o = null; } }
     if (!o || typeof o !== 'object' || Array.isArray(o)) o = {};
     const out = {};
-    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo|evT|evDone|finds|discovered|shrineAt|chests|quests)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
+    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo|evT|evDone|finds|discovered|shrineAt|chests|quests|bossKeys|bossPortal|questBags)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
     out.v = 1;
     out.seed = cleanSeed(o.seed);
     out.version = Number.isInteger(o.version) && o.version > 0 && o.version < 1000 ? o.version : 0;
@@ -65,6 +65,11 @@
     const disc = window.MMFog ? MMFog.clean(o.discovered) : '';
     if (disc) out.discovered = disc;
     if (o.quests !== undefined && window.MMQuests) out.quests = window.MMQuests.clean(o.quests, questDate()); // daily quests (additive): bad shape or another day -> fresh
+    // boss keys (additive, BK2): keys held (0..9) and an open boss portal ({boss:{x,y,openedAt,expiresAt}} on the event clock, ms), cleaned by MMPortals
+    if (o.bossKeys !== undefined) { const k = Math.floor(Number(o.bossKeys)); out.bossKeys = Number.isFinite(k) ? Math.max(0, Math.min(9, k)) : 0; }
+    // quest reward bags waiting to drop (additive, RB3): [{ q: quest id, d: 'YYYY-MM-DD' }]; the items are re-derived from MMQuests.rewardBag, never stored
+    if (Array.isArray(o.questBags)) { const qb = []; o.questBags.forEach((b) => { if (b && typeof b === 'object' && typeof b.q === 'string' && /^[a-z_]{1,24}$/.test(b.q) && typeof b.d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(b.d) && !qb.some((x) => x.q === b.q && x.d === b.d) && qb.length < 3) qb.push({ q: b.q, d: b.d }); }); if (qb.length) out.questBags = qb; }
+    if (o.bossPortal !== undefined && window.MMPortals) { const bp = window.MMPortals.clean(o.bossPortal); if (bp.boss) out.bossPortal = bp; }
     const r = o.returnTo && typeof o.returnTo === 'object' ? o.returnTo : null;
     if (o.finds !== undefined) out.finds = window.MMStash ? MMStash.cleanFinds(o.finds) : o.finds; // owned by MMStash (Lantern payout)
     out.returnTo = r && Number.isInteger(r.x) && Number.isInteger(r.y) && r.x >= 0 && r.y >= 0 && r.x < 4096 && r.y < 4096 && cleanSeed(r.seed) ? { x: r.x, y: r.y, seed: cleanSeed(r.seed) } : null;
@@ -87,7 +92,7 @@
     const save = readSave();
     let seed = cleanSeed(opts.seed) || save.seed;
     if (!seed) seed = String(Math.floor(Math.random() * 900000) + 100000); // first visit: a fresh island, remembered below
-    if (save.seed !== seed) { save.pos = null; save.returnTo = null; delete save.discovered; delete save.shrineAt; delete save.chests; } // a new island starts fully fogged (one seed's discovery is kept at a time)
+    if (save.seed !== seed) { save.pos = null; save.returnTo = null; delete save.discovered; delete save.shrineAt; delete save.chests; delete save.bossPortal; } // a new island starts fully fogged (one seed's discovery is kept at a time)
     save.seed = seed;
     const t0 = performance.now();
     let bossesClassic = false; try { bossesClassic = /[?&]bosses=classic(&|$)/.test(location.search); } catch (e) { bossesClassic = false; } // b23: ?bosses=classic restores the original eight boss ids
@@ -225,7 +230,7 @@
     }
     function godPropPalette() { // every opaque colour a dimmed Godlands prop can show ([r,g,b] strings), for the readability test
       const out = new Set(['94,90,85', '74,58,52', '26,16,16', '42,32,34']);
-      const ids = {}; Object.keys(GOD_POOL).forEach((k) => GOD_POOL[k].forEach((id) => { ids[id] = 1; })); ids.prop_skeleton_bones = 1; ids.prop_crystal_red = 1;
+      const ids = {}; Object.keys(GOD_POOL).forEach((k) => GOD_POOL[k].forEach((id) => { ids[id] = 1; })); ids.prop_skeleton_bones = 1; ids.prop_crystal_red = 1; Object.keys(B26_SET).forEach((id) => { ids[id] = 1; });
       Object.keys(ids).forEach((id) => {
         const a = wArt[id]; if (!a) return; const d = dimOf(a); if (!d.ok) return;
         const px = d.img.getContext('2d').getImageData(0, 0, d.img.width, d.img.height).data;
@@ -286,10 +291,14 @@
         if (wy > 0 && terrain[(wy - 1) * ww + wx] !== t) rect(g, e, px, py, TILE, 2);
       }
       const list = propsBy[cy * ccols + cx];
-      if (list) for (let k = 0; k < list.length; k++) drawProp(g, list[k].kind, (list[k].x - x0) * TILE, (list[k].y - y0) * TILE, false);
+      if (list) for (let k = 0; k < list.length; k++) {
+        const b = b26Code(list[k]); // b26: Godlands bones / dead trees as the muted Codex sprites; the dim code drawing stays the fallback
+        if (b) { const d = dimOf(b); g.drawImage(d.ok ? d.img : b.img, 0, 0, b.fw, b.fh, (list[k].x - x0) * TILE + 16 - b.ax, (list[k].y - y0) * TILE + 30 - b.ay, b.fw, b.fh); artDraws.b26++; continue; }
+        drawProp(g, list[k].kind, (list[k].x - x0) * TILE, (list[k].y - y0) * TILE, false);
+      }
       if (artOn) {
         const al = chunkProps(cx, cy);
-        for (let k = 0; k < al.length; k++) { let a = wArt[al[k].id]; if (a && al[k].dim) { a = dimOf(a); if (!a.ok) g.globalAlpha = 0.5; } if (a) g.drawImage(a.img, 0, 0, a.fw, a.fh, (al[k].x - x0) * TILE + 16 - a.ax, (al[k].y - y0) * TILE + 30 - a.ay, a.fw, a.fh); g.globalAlpha = 1; }
+        for (let k = 0; k < al.length; k++) { let a = wArt[al[k].id] || (al[k].base ? wArt[al[k].base] : null); if (a && al[k].id !== al[k].base && B26_SET[al[k].id] && wArt[al[k].id]) artDraws.b26++; if (a && al[k].dim) { a = dimOf(a); if (!a.ok) g.globalAlpha = 0.5; } if (a) g.drawImage(a.img, 0, 0, a.fw, a.fh, (al[k].x - x0) * TILE + 16 - a.ax, (al[k].y - y0) * TILE + 30 - a.ay, a.fw, a.fh); g.globalAlpha = 1; }
       }
       let wcv = null;
       if (water) { // a sparse highlight layer, faded / nudged per frame for a cheap shimmer
@@ -335,7 +344,19 @@
     // Everything draws from sprite strips with drawImage (no Graphics); the code visuals stay as the fallback (art missing or ?art=0).
     const artOn = !!opts.assetRoot && !/[?&]art=0(&|$)/.test(typeof location !== 'undefined' ? location.search : '');
     const wArt = Object.create(null); // id -> { img, frames, fw, fh, fps, ax, ay }
-    const artDraws = { portal: 0, shrine: 0, chest: 0, beacon: 0, pad: 0 };
+    const artDraws = { portal: 0, shrine: 0, chest: 0, beacon: 0, pad: 0, b26: 0 };
+    // b26 (Codex godlands-props-fix): muted obelisks, bone piles and dead trees replace the Godlands props BY ID. The art pool keeps its seeded
+    // positions (only the id changes, the old id stays as `base` and is drawn dimmed if the new strip is missing); the generator's code-drawn
+    // `bones` / `dead_tree` on Godlands ground draw the bone-pile / dead-tree strips when loaded, else the dim code drawing. ?props=classic or ?art=0: off.
+    const B26_ON = artOn && !PROPS_CLASSIC;
+    const B26_SWAP = { prop_obelisk: ['prop_godlands_obelisk_a', 'prop_godlands_obelisk_b'], prop_tree_dead: ['prop_godlands_dead_tree_a', 'prop_godlands_dead_tree_b'] };
+    const B26_CODE = { bones: ['prop_godlands_bone_pile_a', 'prop_godlands_bone_pile_b'], dead_tree: ['prop_godlands_dead_tree_a', 'prop_godlands_dead_tree_b'] };
+    const B26_SET = {}; [B26_SWAP, B26_CODE].forEach((m) => Object.keys(m).forEach((k) => m[k].forEach((id) => { B26_SET[id] = 1; })));
+    const b26Pick = (pair, x, y) => pair[h2(x, y, 261) < 0.5 ? 0 : 1];
+    function b26Code(p) { // a loaded b26 strip for a generator prop on Godlands ground, or null (code fallback)
+      if (!B26_ON || !B26_CODE[p.kind] || p.x < 0 || p.y < 0 || p.x >= ww || p.y >= wh || GOD_TERRAIN[TN[terrain[p.y * ww + p.x]]] !== 1) return null;
+      return wArt[b26Pick(B26_CODE[p.kind], p.x, p.y)] || null;
+    }
     let wArtLoading = false;
     function drawArt(g, a, f, x, y) { g.drawImage(a.img, f * a.fw, 0, a.fw, a.fh, Math.round(x - a.ax), Math.round(y - a.ay), a.fw, a.fh); }
     function frameOf(a, tt, reduced) { return reduced || a.frames < 2 ? 0 : Math.floor(tt * a.fps) % a.frames; } // time-sliced, reduce-motion = frame 0
@@ -344,13 +365,13 @@
       wArtLoading = true;
       const join = (a, b) => a.replace(/\/+$/, '') + '/' + String(b).replace(/^\/+/, '');
       const okPath = (p) => typeof p === 'string' && /^[A-Za-z0-9_][A-Za-z0-9_.\/-]*\.png$/.test(p) && p.indexOf('..') < 0;
-      const WANT = /^(portal_[a-z]+|spawn_pad|shrine_(heal|rage|ward)|event_beacon|loot_chest_gold|prop_[a-z0-9_]+|coin_f[1-4]|xp_orb_f[1-4]|heart_pickup|potion_life)$/;
+      const WANT = /^(portal_[a-z]+|spawn_pad|shrine_(heal|rage|ward)|event_beacon|loot_chest_gold|prop_[a-z0-9_]+|coin_f[1-4]|xp_orb_f[1-4]|heart_pickup|focus_pickup|potion_(life|focus|power|swift|guard|wit)|key_boss)$/;
       let got = 0;
       return fetch(join(root, 'INDEX.json')).then((r) => (r.ok ? r.json() : null)).then((idx) => {
         const batches = idx && Array.isArray(idx.batches) ? idx.batches : [];
         return Promise.all(batches.map((b) => {
           const id = b && typeof b.path === 'string' ? b.path.replace(/\/+$/, '').split('/').pop() : '';
-          if (!/^b1[2345]-[a-z0-9-]{1,48}$/.test(id)) return null;
+          if (!/^(b1[2345]|b2[26])-[a-z0-9-]{1,48}$/.test(id)) return null; // b26 = the Godlands prop fix, b22 = key_boss (BK2)
           return fetch(join(join(root, id), 'manifest.json')).then((r) => (r.ok ? r.json() : null)).then((m) => {
             const assets = m && Array.isArray(m.assets) ? m.assets : [];
             return Promise.all(assets.map((a) => {
@@ -369,7 +390,7 @@
             }));
           }).catch(() => null);
         }));
-      }).then(() => { wArtLoading = false; if (got) dropChunks(); return got; }).catch(() => { wArtLoading = false; return 0; });
+      }).then(() => { wArtLoading = false; if (got) { dropChunks(); if (nxOpen) nxDrawPlaza(); } return got; }) // an open Nexus plaza redraws once with the art.catch(() => { wArtLoading = false; return 0; });
     }
 
     // ---------- decorative props (purely visual, baked into the chunk canvas; seeded per chunk, never blocks, world generation untouched) ----------
@@ -427,7 +448,8 @@
           for (let oy = -2; oy <= 2 && !near; oy++) for (let ox = -2; ox <= 2 && !near; ox++) { const x2 = wx + ox; const y2 = wy + oy; if (x2 >= 0 && y2 >= 0 && x2 < ww && y2 < wh && isRoad(terrain[y2 * ww + x2])) near = true; }
           for (let k = 0; k < campPts.length && !near; k++) if (Math.abs(campPts[k].x - wx) <= 7 && Math.abs(campPts[k].y - wy) <= 7) near = true;
           const id = near && roll < 0.6 ? STRUCT[Math.floor(roll2 * STRUCT.length)] : pool[Math.floor(roll2 * pool.length)];
-          L.push({ x: wx, y: wy, id, dim: !PROPS_CLASSIC && (god || id === 'prop_skeleton_bones' || /^prop_crystal_/.test(id)) });
+          const sw = B26_ON && god && B26_SWAP[id] ? b26Pick(B26_SWAP[id], wx, wy) : null;
+          L.push({ x: wx, y: wy, id: sw || id, base: sw ? id : undefined, dim: !PROPS_CLASSIC && (god || id === 'prop_skeleton_bones' || /^prop_crystal_/.test(id)) });
         }
         L.sort((a, b) => a.y - b.y || a.x - b.x);
       }
@@ -476,7 +498,7 @@
     let miniKey = ''; let hudT = 0; let zoneTxt = ''; let arrowDeg = -1; let miniDraws = 0; let lastZone = null;
     function drawMini(force) {
       const p = arena.player; const tx = Math.floor(p.x / TILE); const ty = Math.floor(p.y / TILE);
-      const key = (tx >> 1) + ',' + (ty >> 1) + ',' + bossesKey() + ',' + evMiniKey + ',' + siteMiniKey();
+      const key = (tx >> 1) + ',' + (ty >> 1) + ',' + bossesKey() + ',' + evMiniKey + ',' + siteMiniKey() + ',' + lairMiniKey();
       if (!force && key === miniKey) return;
       miniKey = key; miniDraws++;
       if (!miniBase) miniBase = buildMiniBase();
@@ -494,6 +516,8 @@
         SITES.npcs.forEach((q) => { if (fogged(q.x, q.y)) return; g.fillStyle = '#7fe0ff'; g.fillRect(q.x * sx - 1, q.y * sy - 1, 2, 2); });
       }
       evState.forEach((st) => { if (st.phase === 'upcoming' || st.phase === 'active') drawBeacon(g, st.plan.site.x * sx, st.plan.site.y * sy, st.phase === 'active' ? 4 : 3, st.phase === 'active' ? '#ff8a2a' : '#ffe27a', 0, true); });
+      const lq = KEYS_ON && save.bossPortal ? save.bossPortal.boss : null; // BK2: an open boss portal is pinged (always shown, fog or not)
+      if (lq) { const lx = lq.x / TILE * sx; const ly = lq.y / TILE * sy; g.strokeStyle = '#000'; g.lineWidth = 3; g.beginPath(); g.arc(lx, ly, 5, 0, Math.PI * 2); g.stroke(); g.strokeStyle = '#ff5fa2'; g.lineWidth = 2; g.beginPath(); g.arc(lx, ly, 5, 0, Math.PI * 2); g.stroke(); g.fillStyle = '#ffd45a'; g.fillRect(lx - 1.5, ly - 1.5, 3, 3); }
       g.fillStyle = '#000'; g.fillRect(tx * sx - 2.5, ty * sy - 2.5, 5, 5); g.fillStyle = '#fff'; g.fillRect(tx * sx - 1.5, ty * sy - 1.5, 3, 3);
     }
     // ---------- zone gradient (PLAYTEST-REVIEW-2 #1): a toast at every border crossing, a 1 s slow on the first crossing above the hero's level ----------
@@ -630,6 +654,7 @@
         zones.bossDefeated(site, arena.clock); kills++; save.stats.bossKills++; nxQuestEvent({ type: 'kill', zone: site.zone, boss: true, n: 1 });
         rollFor({ zone: site.zone, tier: site.zone, boss: true }, e.x, e.y + 30, 'boss' + i);
         spawnPickups(e.x, e.y + 20, 'boss' + i, kills, 5);
+        dropKey(e.x + 24, e.y + 26, 'boss' + i); // BK2: every world boss drops a boss key
         writeSave(save);
       }
     }
@@ -734,6 +759,7 @@
         res.bag = giveBag(p.x, p.y - 26, rew.bag, { zone: st.plan.region, boss: true, event: true });
         arena.save.shards += rew.shards; arena.run.shards += rew.shards; res.shards = rew.shards; res.fame = rew.fame;
         save.stats.eventWins++;
+        dropKey(p.x + 24, p.y - 30, st.id); // BK2: a won world event drops a boss key
         if (api.onEventFame) api.onEventFame(rew.fame, res);
         arena.onSave(arena.save); arena._syncHud();
         arena._showBanner(`🏆 ${evTitle(st)} won! ${ZT.EVENT_TIERS[tier]} · +${rew.shards} 💎 · +${rew.fame} fame`, 2.6);
@@ -829,6 +855,8 @@
     const portalBtn = document.createElement('button'); portalBtn.id = 'rw-portal'; portalBtn.type = 'button'; portalBtn.className = 'hidden'; portalBtn.textContent = 'Enter Warren dungeon'; // retitled per portal biome in portalTick
     ov.appendChild(portalBtn);
     let promptFor = -1; let leaving = false;
+    // PLAYTEST-REVIEW-2 #14: no keyboard hints ("(Enter)", "(E)") on a coarse pointer / touch device
+    const isCoarse = () => (typeof document !== 'undefined' && document.body.classList.contains('touch-device')) || (typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches);
     function portalSeed(i) { return String(MMRng.hash(seed + ':portal:' + i) % 100000); }
     function portalUrls(i) {
       const q = portals[i];
@@ -855,7 +883,7 @@
       if (arena.state === 'play' && !arena.paused) for (let i = 0; i < portals.length; i++) { const dx = p.x - portals[i].x; const dy = p.y - portals[i].y; if (dx * dx + dy * dy < 40 * 40) { near = i; break; } }
       if (near !== promptFor) {
         promptFor = near; portalBtn.classList.toggle('hidden', near < 0);
-        if (near >= 0) { const bn = BIOME_NAME[portals[near].biome] || 'Warren'; portalBtn.textContent = `Enter ${bn} dungeon`; portalBtn.setAttribute('aria-label', `Enter ${bn} dungeon (${portals[near].label}, Enter)`); }
+        if (near >= 0) { const bn = BIOME_NAME[portals[near].biome] || 'Warren'; portalBtn.textContent = `Enter ${bn} dungeon`; portalBtn.setAttribute('aria-label', `Enter ${bn} dungeon (${portals[near].label}${isCoarse() ? '' : ', Enter'})`); }
       }
     }
 
@@ -1121,8 +1149,8 @@
       siteFor = best;
       let key = ''; let txt = '';
       if (best) {
-        if (best.kind === 'shrine') { const l = shrineLeft(best.q); txt = l ? `${SHRINE_TXT[best.q.kind]} (${fmtT(l / 1000)})` : `Pray at ${SHRINE_TXT[best.q.kind]} (E)`; }
-        else if (best.kind === 'chest') txt = 'Open chest (E)'; else txt = `Talk to ${NPC_NAME[best.q.npc] || 'traveller'} (E)`;
+        if (best.kind === 'shrine') { const l = shrineLeft(best.q); const ek = isCoarse() ? '' : ' (E)'; txt = l ? `${SHRINE_TXT[best.q.kind]} (${fmtT(l / 1000)})` : `Pray at ${SHRINE_TXT[best.q.kind]}${ek}`; }
+        else if (best.kind === 'chest') txt = 'Open chest' + (isCoarse() ? '' : ' (E)'); else txt = `Talk to ${NPC_NAME[best.q.npc] || 'traveller'}` + (isCoarse() ? '' : ' (E)');
         key = best.kind + best.i + txt;
       }
       if (key !== siteKeyShown) { siteKeyShown = key; siteBtn.classList.toggle('hidden', !best); if (best) { siteBtn.textContent = txt; siteBtn.setAttribute('aria-label', txt); } }
@@ -1138,20 +1166,23 @@
     [portalBtn, siteBtn].forEach((b) => { b.style.whiteSpace = 'nowrap'; });
     function layoutPrompts() {
       const pv = !portalBtn.classList.contains('hidden'); const sv = !siteBtn.classList.contains('hidden');
+      const lb = document.getElementById('rw-lair'); const lv = !!lb && !lb.classList.contains('hidden'); // BK2: the boss key / lair prompt stacks on top
       const phone = typeof matchMedia === 'function' && matchMedia('(max-width: 560px)').matches;
       const ab = phone ? document.getElementById('realm-abilities') : null; const ar = ab ? ab.getBoundingClientRect() : null;
       if (ar && ar.height > 0) { // phone: the prompts stack in the free band ABOVE the 2x2 ability grid (never over it or a stick), centred
         const base = Math.max(8, Math.round(innerHeight - ar.top + 8)); const px = (n) => `${n}px`;
         siteBtn.style.bottom = sv ? px(base) : ''; portalBtn.style.bottom = pv ? px(sv ? base + 56 : base) : ''; // hidden prompts keep no inline override
-        const n = (pv ? 1 : 0) + (sv ? 1 : 0); const top = base + n * 56;
+        const n0 = (pv ? 1 : 0) + (sv ? 1 : 0); if (lb) lb.style.bottom = lv ? px(base + n0 * 56) : '';
+        const n = n0 + (lv ? 1 : 0); const top = base + n * 56;
         hintEl.style.bottom = px(top); siteNote.style.bottom = px(top + (hintEl.classList.contains('hidden') ? 0 : 40));
         return;
       }
       siteBtn.style.bottom = pv && sv ? `calc(170px + ${BOT})` : '';
       portalBtn.style.bottom = pv && sv ? `calc(236px + ${BOT})` : '';
+      if (lb) lb.style.bottom = lv && (pv || sv) ? `calc(${pv && sv ? 302 : 236}px + ${BOT})` : '';
       hintEl.style.bottom = ''; siteNote.style.bottom = '';
     }
-    if (typeof MutationObserver === 'function') { const po = new MutationObserver(layoutPrompts); [portalBtn, siteBtn, hintEl].forEach((b) => po.observe(b, { attributes: true, attributeFilter: ['class'] })); }
+    let promptObs = null; if (typeof MutationObserver === 'function') { promptObs = new MutationObserver(layoutPrompts); [portalBtn, siteBtn, hintEl].forEach((b) => promptObs.observe(b, { attributes: true, attributeFilter: ['class'] })); }
     if (typeof window !== 'undefined') { window.addEventListener('resize', layoutPrompts); window.addEventListener('orientationchange', layoutPrompts); }
     // ---------- the minimap and zone text step aside while a panel (backpack / board / menu / shop / hero) is open ----------
     const PANEL_IDS = { 'realm-backpack': 1, 'realm-board': 1, 'realm-pause': 1, 'realm-shop': 1, 'realm-hero': 1, 'realm-death': 1 };
@@ -1167,23 +1198,48 @@
 
     // ---------- live pickups (MMPickups): coins, XP orbs, hearts and life potions rolled per kill, seeded by (world seed, group, kill index) ----------
     // World sprites on the overlay layer (drawImage from the loaded b15 art, or a tiny cached code sprite). Magnet 120 px (64 px with ?ttk=0), cap 60 (oldest culled),
-    // lifetime per tier, no per-frame Graphics. Focus orbs and stat-buff potions need arena resources that do not exist yet: they are never spawned.
+    // lifetime per tier, no per-frame Graphics. RB3: focus orbs and all 6 potions spawn too. Focus (orb, potion_focus) goes through arena.restoreFocus(amount)
+    // when the arena has a focus bar (else it is picked up with no effect); power / swift / guard / wit are timed statuses through arena.applyStatus
+    // (damaging / swift / armored / inspired, MMStatus), so they show in the status icon row with their time left.
     const PK = window.MMPickups || null;
     const PICK_ON = !!PK && !/[?&]pickups=0(&|$)/.test(typeof location !== 'undefined' ? location.search : '');
     const PICK_CAP = 60;
     const MAGNET_R = TTK_ON && PK && PK.MAGNET_RADIUS_WORLD > 0 ? PK.MAGNET_RADIUS_WORLD : (PK ? PK.MAGNET_RADIUS : 64);
-    const picks = []; let pickSave = false; let pickTotal = 0; const pickGot = { coin: 0, xp: 0, heart: 0, potion: 0 };
+    const picks = []; let pickSave = false; let pickTotal = 0; const pickGot = { coin: 0, xp: 0, heart: 0, potion: 0, focus: 0 };
+    const POTION_STATUS = { pow: 'damaging', swf: 'swift', grd: 'armored', wit: 'inspired' }; // MMPickups buff stat -> MMStatus id
+    const POTION_COL = { potion_life: '#5be38a', potion_focus: '#6ab8ff', potion_power: '#ff6a4a', potion_swift: '#7ee7ff', potion_guard: '#c9d1d9', potion_wit: '#ffe27a' };
+    const POTION_NAME = { potion_life: 'Life', potion_focus: 'Focus', potion_power: 'Power', potion_swift: 'Swift', potion_guard: 'Guard', potion_wit: 'Wit' };
     const pickSpr = {};
     function pickSprite(type, art) { // cached code sprite (24x24) used until the art loads or when art is off
-      const k = type === 'potion' ? 'potion' : type; if (pickSpr[k]) return pickSpr[k];
+      const k = type === 'potion' ? (POTION_COL[art] ? art : 'potion_life') : type; if (pickSpr[k]) return pickSpr[k];
       const c = mk(24, 24); const g = c.getContext('2d');
       if (type === 'coin') { g.fillStyle = '#7a5a12'; g.beginPath(); g.arc(12, 12, 8, 0, 7); g.fill(); g.fillStyle = '#ffd45a'; g.beginPath(); g.arc(12, 12, 6.5, 0, 7); g.fill(); g.fillStyle = '#fff0a8'; g.fillRect(9, 8, 2, 6); }
       else if (type === 'xp') { g.fillStyle = '#4a2a8a'; g.beginPath(); g.arc(12, 12, 8, 0, 7); g.fill(); g.fillStyle = '#b48cff'; g.beginPath(); g.arc(12, 12, 6, 0, 7); g.fill(); g.fillStyle = '#efe0ff'; g.fillRect(9, 8, 3, 3); }
       else if (type === 'heart') { g.fillStyle = '#7a1022'; g.beginPath(); g.arc(8, 9, 5.5, 0, 7); g.arc(16, 9, 5.5, 0, 7); g.fill(); g.beginPath(); g.moveTo(3, 11); g.lineTo(21, 11); g.lineTo(12, 21); g.fill(); g.fillStyle = '#ff5f6b'; g.beginPath(); g.arc(8, 9, 4, 0, 7); g.arc(16, 9, 4, 0, 7); g.fill(); g.beginPath(); g.moveTo(5, 11); g.lineTo(19, 11); g.lineTo(12, 19); g.fill(); }
-      else { g.fillStyle = '#143a24'; g.fillRect(9, 4, 6, 5); g.fillRect(6, 9, 12, 12); g.fillStyle = '#5be38a'; g.fillRect(8, 11, 8, 8); g.fillStyle = '#d8ffe6'; g.fillRect(9, 12, 2, 4); }
+      else if (type === 'focus') { g.fillStyle = '#10264a'; g.beginPath(); g.arc(12, 12, 8, 0, 7); g.fill(); g.fillStyle = '#6ab8ff'; g.beginPath(); g.arc(12, 12, 6, 0, 7); g.fill(); g.fillStyle = '#e0f0ff'; g.fillRect(9, 8, 3, 3); }
+      else { g.fillStyle = '#1a1a24'; g.fillRect(9, 4, 6, 5); g.fillRect(6, 9, 12, 12); g.fillStyle = POTION_COL[k] || '#5be38a'; g.fillRect(8, 11, 8, 8); g.fillStyle = '#ffffff'; g.fillRect(9, 12, 2, 4); }
       pickSpr[k] = c; return c;
     }
-    const pickOk = (d) => d.type === 'coin' || (d.type === 'xp' && typeof arena._gainXp === 'function') || d.type === 'heart' || (d.type === 'potion' && d.art === 'potion_life');
+    const pickOk = (d) => d.type === 'coin' || (d.type === 'xp' && typeof arena._gainXp === 'function') || d.type === 'heart' || d.type === 'focus' || (d.type === 'potion' && !!POTION_COL[d.art]);
+    const focusMax = () => { let m = 0; try { const f = typeof arena.focusState === 'function' ? arena.focusState() : null; m = f && Number(f.max) > 0 ? Number(f.max) : 0; } catch (e) { m = 0; } return m || 100; };
+    function giveFocus(n) { // -> true when the arena has a focus bar to fill (defensive: the focus bar lands in its own slice)
+      if (typeof arena.restoreFocus !== 'function' || !(n > 0)) return false;
+      try { arena.restoreFocus(n); } catch (e) { return false; }
+      return true;
+    }
+    const potionLog = [];
+    function drinkPotion(art) { // the 6 potions (MMPickups.POTIONS): heal, focus, or a 30 s status. Returns what happened, for tests
+      const p = arena.player; const o = PK.use({ type: 'potion', art }, { hp: p.hp, maxHp: arena.stats.maxHp, focus: 0, maxFocus: focusMax() });
+      const res = { art, hp: 0, focus: 0, status: '', ok: false };
+      if (o.hp > p.hp) { res.hp = Math.round(o.hp - p.hp); arena._floatText(p.x, p.y - 26, `+${res.hp}`, '#5be38a'); p.hp = o.hp; res.ok = true; }
+      else if (o.focus > 0) { res.focus = Math.round(o.focus); res.ok = giveFocus(res.focus); if (res.ok) arena._floatText(p.x, p.y - 26, `+${res.focus} focus`, '#6ab8ff'); }
+      else if (o.buff && POTION_STATUS[o.buff.stat] && typeof arena.applyStatus === 'function') {
+        res.status = POTION_STATUS[o.buff.stat]; res.ok = arena.applyStatus('player', res.status, { sec: o.buff.sec, src: 'potion' }) !== false;
+        arena._floatText(p.x, p.y - 26, `${POTION_NAME[art] || 'Potion'}!`, POTION_COL[art] || '#fff');
+      }
+      potionLog.push(res); if (potionLog.length > 12) potionLog.shift();
+      arena._syncHud(); return res;
+    }
     function spawnPickups(x, y, group, killIdx, tier) {
       if (!PICK_ON) return 0;
       const list = PK.roll(seed, group, killIdx, tier).filter(pickOk);
@@ -1203,6 +1259,8 @@
       const p = arena.player; pickGot[q.type] = (pickGot[q.type] || 0) + 1;
       if (q.type === 'coin') { arena.save.shards += q.value; arena.run.shards += q.value; arena._floatText(p.x, p.y - 26, `+${q.value} 💎`, '#8fe9ff'); pickSave = true; }
       else if (q.type === 'xp') { arena._gainXp(Math.max(1, Math.round(q.value * (arena.stats ? arena.stats.xp : 1)))); pickSave = true; }
+      else if (q.type === 'focus') { if (giveFocus(q.value)) arena._floatText(p.x, p.y - 26, `+${q.value} focus`, '#6ab8ff'); }
+      else if (q.type === 'potion') drinkPotion(q.art);
       else {
         const o = PK.use(q, { hp: p.hp, maxHp: arena.stats.maxHp, focus: 0, maxFocus: 0 });
         if (o.hp > p.hp) { arena._floatText(p.x, p.y - 26, `+${Math.round(o.hp - p.hp)}`, '#5be38a'); p.hp = o.hp; arena._syncHud(); }
@@ -1242,11 +1300,20 @@
     // from the MMNexus layout (fountain, torches, banners, 6 portals, 7 NPCs). Everything is a real button; Back (or Escape) unfreezes the arena with the
     // player exactly where they stood, so Back returns to the same tile. The vault portal opens the Lantern stash page; biome portals enter a dungeon that
     // returns to this tile; the Realm portal is Back. Visuals come from the registered art with code fallbacks.
+    // PLAYTEST-REVIEW-2 #5 (walkable Nexus, default; ?nexuswalk=0 restores the button screen): the same overlay, but the stage is a camera view onto the
+    // plaza canvas (drawn ONCE, offscreen) and the hero walks around it with the arena's own input (arena.keys from WASD / arrows and arena.moveVec from
+    // the move stick, which is lifted above the overlay). A real arena.setWorld swap was studied and not used: it would rebuild the pools, the zone
+    // spawner, the event clock, the fog and the camera, and live enemies / bullets would have to be parked and restored; the frozen arena keeps the
+    // Realm position exactly, so the Realm portal (or Back) returns to the same tile. Portals and NPCs are walk-up interactables with one 44 px prompt
+    // button (E / Enter on a keyboard). No enemies and no firing in the plaza (fire / ability / panel keys are swallowed while walking).
     const NX = window.MMNexus || null;
     const NX_ON = !!NX && !!window.MMQuests && !/[?&]nexus=0(&|$)/.test(typeof location !== 'undefined' ? location.search : '');
+    const NX_WALK = NX_ON && !/[?&]nexuswalk=0(&|$)/.test(typeof location !== 'undefined' ? location.search : '');
+    const NX_VW = 640; const NX_VH = 480; const NX_R = 10; // walk view (world px, 4:3) and the hero's collision radius
+    const nxHero = { x: 0, y: 0, moving: false, aim: 0, mx: 0, my: 1, iframes: 0 }; let nxRaf = 0; let nxLast = 0; let nxNearI = null; const nxCam = { x: 0, y: 0 };
     const NX_NAME = { realm: 'The Realm', warren: 'Warren dungeon', bramble: 'Bramble dungeon', vault: 'Lantern stash (vault)', meadow: 'Meadow dungeon', crypt: 'Crypt dungeon' };
     const nxSite = NX_ON ? (() => { const f = nearestFree(world.spawnPoint.x + 3, world.spawnPoint.y - 1, 8) || nearestFree(world.spawnPoint.x - 3, world.spawnPoint.y, 8); return f ? { tx: f.x, ty: f.y, x: (f.x + 0.5) * TILE, y: (f.y + 0.5) * TILE } : null; })() : null;
-    const nxBtn = document.createElement('button'); nxBtn.id = 'rw-nexus-go'; nxBtn.type = 'button'; nxBtn.className = 'hidden'; nxBtn.textContent = 'Visit the Nexus (Enter)'; nxBtn.setAttribute('aria-label', 'Visit the Nexus hub (Enter)'); ov.appendChild(nxBtn);
+    const nxBtn = document.createElement('button'); nxBtn.id = 'rw-nexus-go'; nxBtn.type = 'button'; nxBtn.className = 'hidden'; nxBtn.textContent = 'Visit the Nexus (Enter)'; nxBtn.setAttribute('aria-label', 'Visit the Nexus hub'); ov.appendChild(nxBtn);
     let nxNear = false; let nxOpen = false; let nxEnterTile = null; let nxTalkN = 0; const nxPortrait = {}; let nxDom = null;
     const todayUtc = questDate;
     const nxCss = document.createElement('style');
@@ -1258,7 +1325,11 @@
       + '#rw-nexus .nx-spot{position:absolute;transform:translate(-50%,-50%);padding:0;border-radius:50%;background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.25)}'
       + '#rw-nexus .nx-lists{max-width:760px;width:100%;margin:10px auto 0;display:flex;flex-direction:column;gap:8px}#rw-nexus .nx-row{display:flex;flex-wrap:wrap;gap:8px}#rw-nexus .nx-row>b{flex:0 0 100%;font-size:12px;color:#c9bff0;font-weight:600}'
       + '#rw-nexus .nx-talk{max-width:760px;width:100%;margin:10px auto;box-sizing:border-box;padding:10px 12px;border-radius:10px;background:#231b42;border:1px solid #4a3d85;min-height:44px}#rw-nexus .nx-talk b{color:#ffe27a}'
-      + '#rw-nexus .nx-board{max-width:760px;width:100%;margin:0 auto 12px;box-sizing:border-box;padding:10px 12px;border-radius:10px;background:#1d2a2a;border:1px solid #3b6b5f}#rw-nexus .nx-board.hidden{display:none}#rw-nexus .nx-q{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid #2f4a45}#rw-nexus .nx-q:first-of-type{border-top:0}#rw-nexus .nx-q span{flex:1}#rw-nexus .nx-q em{color:#8fe9ff;font-style:normal}';
+      + '#rw-nx-act{display:block;margin:8px auto 0;min-height:48px !important;border-color:#ffe27a !important;background:#3a2c10 !important;max-width:100%;white-space:normal}#rw-nx-act.hidden{visibility:hidden}#rw-nexus .nx-stage:focus-visible{outline:3px solid #ffe27a}'
+      + 'body.nx-walking #realm-stick-move{z-index:90}body.touch-device.nx-walking #rw-nexus{padding-bottom:calc(170px + env(safe-area-inset-bottom,0px))}'
+      + '#rw-nexus .nx-board{max-width:760px;width:100%;margin:0 auto 12px;box-sizing:border-box;padding:10px 12px;border-radius:10px;background:#1d2a2a;border:1px solid #3b6b5f}#rw-nexus .nx-board.hidden{display:none}#rw-nexus .nx-q{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid #2f4a45}#rw-nexus .nx-q:first-of-type{border-top:0}#rw-nexus .nx-q span{flex:1}#rw-nexus .nx-q em{color:#8fe9ff;font-style:normal}'
+      // PLAYTEST-REVIEW-2 #8: an unfinished quest's Claim is outline-only (dashed, muted, no fill) and the row carries a progress bar
+      + '#rw-nexus .nx-q button:disabled{background:transparent;border-style:dashed;border-color:#6b6390;color:#a59cc4;cursor:not-allowed}#rw-nexus .nx-bar{display:block;height:6px;margin-top:5px;border-radius:3px;background:#2f4a45;overflow:hidden}#rw-nexus .nx-bar>i{display:block;height:100%;background:#5be38a}';
     document.head.appendChild(nxCss);
     function nxLoadPortrait(id, done) { // b21 idle_down, first frame, cached; the plaza redraws when one arrives
       if (nxPortrait[id] !== undefined || !opts.assetRoot || !artOn) return;
@@ -1269,7 +1340,7 @@
     }
     function nxDrawPlaza() { // one static draw per open / art arrival (1280x960 = the 40x30 tile plaza at 32 px)
       if (!nxDom) return;
-      const L = NX.layout(); const c = nxDom.cv; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
+      const L = NX.layout(); const c = nxDom.plaza; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
       g.fillStyle = '#0e0a18'; g.fillRect(0, 0, c.width, c.height);
       for (let ty = 1; ty < L.h - 1; ty++) for (let tx = 1; tx < L.w - 1; tx++) { g.fillStyle = (tx + ty) % 2 ? '#4b4660' : '#554f6c'; g.fillRect(tx * TILE, ty * TILE, TILE, TILE); }
       g.fillStyle = '#6d6788'; for (let i = 1; i < L.w - 1; i++) { g.fillRect(i * TILE, TILE, TILE, 2); g.fillRect(i * TILE, (L.h - 2) * TILE + 30, TILE, 2); }
@@ -1307,7 +1378,7 @@
     function nxLeaveTo(url) {
       if (leaving) return null; leaving = true;
       savePos(true); writeSave(save); arena.onSave(arena.save); settle('portal');
-      arena.stop(); nxDom.root.classList.add('hidden'); nxOpen = false;
+      arena.stop(); nxWalkStop(); nxDom.root.classList.add('hidden'); nxOpen = false;
       api.lastNexusUrl = url; if (opts.navigate !== false) location.href = url; return url;
     }
     function nxPortal(q) {
@@ -1344,45 +1415,143 @@
       const back = document.createElement('button'); back.type = 'button'; back.id = 'rw-nx-back'; back.textContent = 'Back to the Realm'; back.setAttribute('aria-label', 'Back to the Realm');
       const h = document.createElement('h2'); h.textContent = 'The Nexus'; head.appendChild(back); head.appendChild(h);
       const stage = document.createElement('div'); stage.className = 'nx-stage';
-      const cv = document.createElement('canvas'); cv.width = NX.W * TILE; cv.height = NX.H * TILE; cv.setAttribute('aria-hidden', 'true'); stage.appendChild(cv);
+      const cv = document.createElement('canvas'); cv.width = NX_WALK ? NX_VW : NX.W * TILE; cv.height = NX_WALK ? NX_VH : NX.H * TILE; cv.setAttribute('aria-hidden', 'true'); stage.appendChild(cv);
+      let plaza = cv; let act = null;
+      if (NX_WALK) { // the plaza is drawn once offscreen; the stage canvas shows a camera window onto it with the walking hero
+        plaza = document.createElement('canvas'); plaza.width = NX.W * TILE; plaza.height = NX.H * TILE;
+        root.classList.add('nx-walk'); stage.tabIndex = 0; stage.setAttribute('role', 'application'); stage.setAttribute('aria-label', 'The Nexus plaza: walk with WASD, the arrow keys or the move stick');
+        act = document.createElement('button'); act.type = 'button'; act.id = 'rw-nx-act'; act.className = 'hidden'; act.tabIndex = -1; act.addEventListener('click', () => nxAct());
+      }
       const L = NX.layout(); const lists = document.createElement('div'); lists.className = 'nx-lists';
       const rowP = document.createElement('div'); rowP.className = 'nx-row'; const rowPl = document.createElement('b'); rowPl.textContent = 'Portals'; rowP.appendChild(rowPl);
       const rowN = document.createElement('div'); rowN.className = 'nx-row'; const rowNl = document.createElement('b'); rowNl.textContent = 'Talk to'; rowN.appendChild(rowNl);
       const spot = (x, y, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'nx-spot'; b.tabIndex = -1; b.setAttribute('aria-hidden', 'true'); b.style.left = (x / cv.width * 100) + '%'; b.style.top = (y / cv.height * 100) + '%'; b.addEventListener('click', fn); stage.appendChild(b); };
-      L.portals.forEach((q) => {
+      if (!NX_WALK) L.portals.forEach((q) => {
         const b = document.createElement('button'); b.type = 'button'; b.dataset.portal = q.id; b.textContent = q.id === 'realm' ? 'Back to the Realm portal' : q.id === 'vault' ? 'Vault: Lantern stash' : q.label + ' portal'; b.setAttribute('aria-label', q.id === 'vault' ? 'Vault portal: open the Lantern stash' : q.id === 'realm' ? 'Realm portal: go back to the Realm' : 'Enter the ' + q.label + ' dungeon');
         b.addEventListener('click', () => nxPortal(q)); rowP.appendChild(b); spot(q.x, q.y, () => nxPortal(q));
       });
-      L.npcs.forEach((n) => {
+      if (!NX_WALK) L.npcs.forEach((n) => {
         const b = document.createElement('button'); b.type = 'button'; b.dataset.npc = n.id; b.textContent = NPC_NAME[n.npc] || n.id; b.setAttribute('aria-label', 'Talk to ' + (NPC_NAME[n.npc] || n.id));
         b.addEventListener('click', () => nxTalk(n)); rowN.appendChild(b); spot(n.x, n.y - 10, () => nxTalk(n));
       });
       lists.appendChild(rowP); lists.appendChild(rowN);
-      const talk = document.createElement('div'); talk.className = 'nx-talk'; talk.setAttribute('role', 'status'); talk.textContent = 'Pick a portal, or say hello to someone.';
+      const talk = document.createElement('div'); talk.className = 'nx-talk'; talk.setAttribute('role', 'status'); talk.textContent = nxHint();
       const board = document.createElement('div'); board.className = 'nx-board hidden'; board.id = 'rw-nx-board';
-      root.appendChild(head); root.appendChild(stage); root.appendChild(talk); root.appendChild(board); root.appendChild(lists); ov.appendChild(root);
+      root.appendChild(head); root.appendChild(stage); if (act) root.appendChild(act); root.appendChild(talk); root.appendChild(board); if (!NX_WALK) root.appendChild(lists); ov.appendChild(root);
       back.addEventListener('click', () => nexusClose());
-      nxDom = { root, cv, talk, board, back, last: null };
+      nxDom = { root, cv, plaza, act, stage, talk, board, back, last: null };
       return nxDom;
+    }
+    function nxTouch() { return document.body.classList.contains('touch-device'); }
+    function nxHint() {
+      if (!NX_WALK) return 'Pick a portal, or say hello to someone.';
+      return nxTouch() ? 'Walk with the move stick. Walk up to a portal or a person, then tap the button.' : 'Walk with WASD or the arrow keys. Walk up to a portal or a person and press E.';
+    }
+    function nxFree(x, y) { // inside the plaza walls, off solid props, not inside an NPC
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return false;
+      for (let k = 0; k < 4; k++) if (!NX.walkable(Math.floor((x + (k & 1 ? NX_R : -NX_R)) / TILE), Math.floor((y + (k & 2 ? NX_R : -NX_R)) / TILE))) return false;
+      const ns = NX.layout().npcs; for (let i = 0; i < ns.length; i++) if (Math.hypot(ns[i].x - x, ns[i].y - y) < 22) return false;
+      return true;
+    }
+    function nxLabel(it) {
+      if (!it) return '';
+      if (it.kind === 'npc') { const nm = NPC_NAME[it.ref.npc] || it.ref.id; return it.ref.role === 'quests' ? 'Quest board: ' + nm : 'Talk to ' + nm; }
+      const q = it.ref; return q.id === 'realm' ? 'Back to the Realm' : q.id === 'vault' ? 'Vault: open the Lantern stash' : 'Enter the ' + q.label + ' dungeon';
+    }
+    function nxNearest() {
+      const L = NX.layout(); const h = nxHero; let best = null; let bd = Infinity;
+      L.portals.forEach((q) => { const d = Math.hypot(q.x - h.x, q.y - h.y); if (d < 52 && d < bd) { bd = d; best = { kind: 'portal', ref: q }; } });
+      L.npcs.forEach((n) => { const d = Math.hypot(n.x - h.x, n.y - h.y); if (d < 60 && d < bd) { bd = d; best = { kind: 'npc', ref: n }; } });
+      return best;
+    }
+    function nxAct() {
+      const it = nxNearI; if (!nxOpen || !it) return null;
+      if (it.kind === 'npc') { nxTalk(it.ref); return 'talk'; }
+      return nxPortal(it.ref);
+    }
+    function nxSyncPrompt() {
+      const it = nxNearest(); const same = it && nxNearI && it.kind === nxNearI.kind && it.ref === nxNearI.ref;
+      if (same || (!it && !nxNearI)) return;
+      nxNearI = it; const b = nxDom.act; if (!b) return;
+      if (!it) { b.classList.add('hidden'); b.tabIndex = -1; return; }
+      const t = nxLabel(it); b.textContent = t + (nxTouch() ? '' : ' (E)'); b.setAttribute('aria-label', t); b.tabIndex = 0; b.classList.remove('hidden');
+    }
+    function nxWalkStep(dt, mxIn, myIn) { // one movement step with the arena's input (or injected mx / my), clamped to the plaza and its props
+      const h = nxHero; let mx = mxIn; let my = myIn;
+      if (!Number.isFinite(mx) || !Number.isFinite(my)) {
+        const k = arena.keys || {}; const mv = arena.moveVec || { x: 0, y: 0 }; mx = mv.x || 0; my = mv.y || 0;
+        if (k.a || k.arrowleft) mx -= 1;
+        if (k.d || k.arrowright) mx += 1;
+        if (k.w || k.arrowup) my -= 1;
+        if (k.s || k.arrowdown) my += 1;
+      }
+      const len = Math.hypot(mx, my); h.moving = len > 0.05;
+      if (len > 1) { mx /= len; my /= len; }
+      if (h.moving) {
+        h.mx = mx; h.my = my;
+        const sp = arena.stats && Number.isFinite(arena.stats.speed) && arena.stats.speed > 0 ? Math.min(arena.stats.speed, 600) : 220; const st = sp * Math.min(Math.max(dt, 0), 0.05);
+        const c = NX.clampPoint(h.x + mx * st, h.y + my * st);
+        if (nxFree(c.x, h.y)) h.x = c.x;
+        if (nxFree(h.x, c.y)) h.y = c.y;
+      }
+      nxSyncPrompt();
+    }
+    function nxWalkDraw() {
+      const c = nxDom.cv; const g = c.getContext('2d'); const h = nxHero; const L = NX.layout(); g.imageSmoothingEnabled = false;
+      nxCam.x = Math.round(Math.max(0, Math.min(L.w * TILE - NX_VW, h.x - NX_VW / 2))); nxCam.y = Math.round(Math.max(0, Math.min(L.h * TILE - NX_VH, h.y - NX_VH / 2)));
+      g.drawImage(nxDom.plaza, nxCam.x, nxCam.y, NX_VW, NX_VH, 0, 0, NX_VW, NX_VH);
+      g.save(); g.translate(-nxCam.x, -nxCam.y);
+      if (nxNearI) { const r = nxNearI.ref; g.strokeStyle = '#ffe27a'; g.lineWidth = 3; g.beginPath(); g.arc(r.x, r.y, nxNearI.kind === 'npc' ? 30 : 36, 0, Math.PI * 2); g.stroke(); }
+      let ok = false;
+      if (arena._heroArt && typeof arena._drawHero === 'function') { // the arena's own hero sprite (walk / idle, facing the move direction)
+        const m0 = arena._mx; const m1 = arena._my; arena._mx = h.mx; arena._my = h.my;
+        try { ok = !!arena._drawHero(g, h); } catch (e) { ok = false; }
+        arena._mx = m0; arena._my = m1;
+      }
+      if (!ok) { g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(h.x, h.y + 12, 12, 5, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#ffe27a'; g.beginPath(); g.arc(h.x, h.y, 12, 0, Math.PI * 2); g.fill(); g.fillStyle = '#2a2150'; g.beginPath(); g.arc(h.x + h.mx * 5, h.y + h.my * 5, 4, 0, Math.PI * 2); g.fill(); }
+      g.restore();
+    }
+    function nxWalkFrame(now) {
+      nxRaf = 0; if (!nxOpen || !NX_WALK) return;
+      const dt = Math.min(0.05, Math.max(0, (now - nxLast) / 1000)); nxLast = now;
+      nxWalkStep(dt); nxWalkDraw();
+      nxRaf = requestAnimationFrame(nxWalkFrame);
+    }
+    function nxWalkStart() {
+      const sp = NX.layout().spawn; nxHero.x = sp.x; nxHero.y = sp.y; nxHero.mx = 0; nxHero.my = 1; nxHero.moving = false; nxNearI = null;
+      if (nxDom.act) { nxDom.act.classList.add('hidden'); nxDom.act.tabIndex = -1; }
+      document.body.classList.add('nx-walking'); nxSyncPrompt(); nxWalkDraw();
+      nxDom.stage.focus({ preventScroll: true });
+      nxLast = performance.now(); if (!nxRaf) nxRaf = requestAnimationFrame(nxWalkFrame);
+    }
+    function nxWalkStop() {
+      if (nxRaf) cancelAnimationFrame(nxRaf);
+      nxRaf = 0; nxNearI = null;
+      document.body.classList.remove('nx-walking');
     }
     function nexusOpen() {
       if (!NX_ON || !nxSite || nxOpen || leaving || !arena.active || arena.state !== 'play' || arena.paused) return false;
       nxBuild(); nxEnterTile = { x: Math.floor(arena.player.x / TILE), y: Math.floor(arena.player.y / TILE) };
       nxOpen = true; arena.paused = true; savePos(true);
-      nxBtn.classList.add('hidden'); portalBtn.classList.add('hidden'); siteBtn.classList.add('hidden');
+      nxBtn.classList.add('hidden'); portalBtn.classList.add('hidden'); siteBtn.classList.add('hidden'); if (typeof lairBtn !== 'undefined') { lairBtn.classList.add('hidden'); lairTxt = ''; }
       nxDom.root.classList.remove('hidden'); nxDom.board.classList.add('hidden');
       NX.layout().npcs.forEach((n) => nxLoadPortrait(n.npc, nxDrawPlaza)); nxDrawPlaza();
-      nxDom.talk.textContent = 'Pick a portal, or say hello to someone.';
-      nxDom.back.focus({ preventScroll: true });
+      nxDom.talk.textContent = nxHint();
+      if (NX_WALK) nxWalkStart(); else nxDom.back.focus({ preventScroll: true });
       return true;
     }
     function nexusClose() {
       if (!nxOpen) return false;
-      nxOpen = false; nxDom.root.classList.add('hidden'); arena.paused = false; arena.player.iframes = Math.max(arena.player.iframes, 1.5);
+      nxOpen = false; nxWalkStop(); nxDom.root.classList.add('hidden'); arena.paused = false; arena.player.iframes = Math.max(arena.player.iframes, 1.5);
       nxNear = true; return true; // the prompt shows again next tick if the player is still beside the portal
     }
     window.addEventListener('keydown', (ev) => {
       if (nxOpen && ev.key === 'Escape') { ev.preventDefault(); ev.stopImmediatePropagation(); nexusClose(); return; }
+      if (nxOpen && NX_WALK) { // walking: E / Enter / Space use the nearby portal or NPC; fire, ability and panel keys do nothing in the plaza
+        const k = String(ev.key || '').toLowerCase(); const onBtn = !!(ev.target && ev.target.closest && ev.target.closest('button'));
+        if ((k === 'e' || ((k === 'enter' || k === ' ') && !onBtn)) && nxNearI && !ev.repeat) { ev.preventDefault(); ev.stopImmediatePropagation(); nxAct(); return; }
+        if (/^(e|q|r|f|b|i|k|v)$/.test(k) || (k === ' ' && !onBtn)) { ev.preventDefault(); ev.stopImmediatePropagation(); return; }
+      }
       if (ev.key === 'Enter' && !nxOpen && nxNear && promptFor < 0 && !siteFor && arena.active && !arena.paused && arena.state === 'play') { ev.preventDefault(); nexusOpen(); }
     }, true);
     nxBtn.addEventListener('click', () => nexusOpen());
@@ -1390,7 +1559,9 @@
       if (!NX_ON || !nxSite || nxOpen) return;
       const p = arena.player; const near = arena.state === 'play' && !arena.paused && (p.x - nxSite.x) ** 2 + (p.y - nxSite.y) ** 2 < 48 * 48;
       nxNear = near;
-      nxBtn.classList.toggle('hidden', !(near && promptFor < 0 && !siteFor));
+      const show = near && promptFor < 0 && !siteFor;
+      if (show) { const t = 'Visit the Nexus' + (isCoarse() ? '' : ' (Enter)'); if (nxBtn.textContent !== t) nxBtn.textContent = t; }
+      nxBtn.classList.toggle('hidden', !show);
     }
     function drawNexusPortal(g, tt, reduced) {
       const a = wArt.portal_nexus; const q = nxSite;
@@ -1398,6 +1569,128 @@
       else drawPortalCode(g, { x: q.x, y: q.y, col: '#ffd45a' }, tt, reduced);
       g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText('Nexus', q.x + 1, q.y - 37); g.fillStyle = '#ffd45a'; g.fillText('Nexus', q.x, q.y - 38);
     }
+
+    // ---------- boss keys and the boss portal (NEXT-SLICES BK2, MMPortals N3 rules) ----------
+    // World bosses and won world events drop a `key_boss` (b22) on the ground: walk over it (the pickup magnet pulls it in) and it is saved under the
+    // additive `bossKeys` count. Holding a key beside the Nexus portal or a boss altar shows "Use boss key": MMPortals.openBoss opens a `portal_boss`
+    // (b14) next to that spot for 120 s (Realm only: the Nexus overlay and dungeons never open one), with a minimap ping and the `portal` cue.
+    // The open portal is saved under `bossPortal` (event clock, ms; MMPortals.clean), so a reload keeps the time it has left. Entering it opens a
+    // dungeon through the usual portal URL flow plus `&lair=1` (read by a later dungeon slice, ignored until then) and returns to the portal tile.
+    // ?keys=0: no key drops, no prompt, no portal.
+    const PT = window.MMPortals || null;
+    const KEYS_ON = !!PT && !/[?&]keys=0(&|$)/.test(qs0);
+    const KEY_MAX = 9; const KEY_USE_R = 6 * TILE; const LAIR_R = 40; const KEY_GROUND = 4;
+    const LAIR_BIOME = ['warren', 'bramble', 'meadow', 'crypt']; // zone 0..3 -> the dungeon biome of a lair opened there
+    const keyDrops = []; let keyGot = 0; let lairNear = false; let keyNear = null; let lairTxt = ''; let lastLair = null; let lairT = 0;
+    const lairBtn = document.createElement('button'); lairBtn.id = 'rw-lair'; lairBtn.type = 'button'; lairBtn.className = 'hidden'; ov.appendChild(lairBtn);
+    const lairCss = document.createElement('style');
+    lairCss.textContent = '#rw-lair{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(170px + env(safe-area-inset-bottom,0px));z-index:3;min-height:48px;min-width:44px;max-width:92vw;padding:0 18px;border-radius:24px;border:2px solid #ffd45a;background:#7a1f4a;color:#fff;font:700 15px system-ui,sans-serif;white-space:nowrap;pointer-events:auto;touch-action:manipulation;box-shadow:0 0 12px rgba(255,95,162,.6)}#rw-lair.hidden{display:none}'
+      // PLAYTEST-REVIEW-2 #14: on a phone the banner ("The Realm · island #N", zone toasts) stays below the zone line and the minimap (never clipped under them)
+      + '@media (max-width:560px){body.world-mode #realm-banner{top:max(34%,calc(250px + env(safe-area-inset-top,0px)));max-width:calc(100vw - 32px);box-sizing:border-box}}';
+    document.head.appendChild(lairCss);
+    const keyNow = () => Math.floor(eventClock() * 1000);
+    const keySec = () => Math.floor(eventClock()) * 1000; // whole seconds: the saved event clock (evT) is whole seconds, so a reload never lands before openedAt
+    const keyCount = () => (KEYS_ON ? Math.max(0, Math.min(KEY_MAX, save.bossKeys | 0)) : 0);
+    const lairPortal = () => (KEYS_ON ? PT.bossPortal(save.bossPortal, keyNow()) : null);
+    let keySpr = null;
+    function keySprite() { // 24x24 code key until the b22 art loads (or with ?art=0)
+      if (keySpr) return keySpr;
+      const c = mk(24, 24); const g = c.getContext('2d');
+      g.fillStyle = '#5a3a08'; g.beginPath(); g.arc(7, 12, 6, 0, 7); g.fill(); g.fillRect(10, 10, 13, 5);
+      g.fillStyle = '#ffd45a'; g.beginPath(); g.arc(7, 12, 4.5, 0, 7); g.fill(); g.fillRect(10, 11, 12, 3); g.fillRect(17, 14, 2, 4); g.fillRect(20, 14, 2, 3);
+      g.fillStyle = '#5a3a08'; g.beginPath(); g.arc(7, 12, 1.8, 0, 7); g.fill();
+      keySpr = c; return c;
+    }
+    function dropKey(x, y, src) { // a key on the ground (at most 4; it never expires while you are on the island)
+      if (!KEYS_ON) return null;
+      let px = x; let py = y; if (solidAt(px, py)) { px = arena.player.x; py = arena.player.y; }
+      if (keyDrops.length >= KEY_GROUND) keyDrops.shift();
+      const k = { x: px, y: py, src: String(src || ''), ph: keyDrops.length * 1.7 }; keyDrops.push(k); return { x: k.x, y: k.y, src: k.src };
+    }
+    function collectKey() {
+      const p = arena.player; save.bossKeys = Math.min(KEY_MAX, keyCount() + 1); keyGot++; writeSave(save);
+      arena._floatText(p.x, p.y - 30, '+1 boss key', '#ffd45a');
+      say('Boss key! Use it beside the Nexus portal or a boss altar to open a boss portal for 2 minutes.');
+      lairTxt = '-'; lairT = 0; // the prompt re-evaluates now
+    }
+    function keyAnchor() { // the Nexus portal or a boss altar within 6 tiles: where a key can be used
+      const p = arena.player; let best = null; let bd = KEY_USE_R * KEY_USE_R;
+      const test = (kind, x, y, i) => { const d = (p.x - x) ** 2 + (p.y - y) ** 2; if (d < bd) { bd = d; best = { kind, x, y, i }; } };
+      if (NX_ON && nxSite) test('nexus', nxSite.x, nxSite.y, -1);
+      for (let i = 0; i < world.bossSites.length; i++) { const b = world.bossSites[i]; test('boss', (b.x + 0.5) * TILE, (b.y + 0.5) * TILE, i); }
+      return best;
+    }
+    function useKey() { // -> the open portal descriptor, or null (no key, nothing near, one already open, not playing)
+      if (!KEYS_ON || keyCount() < 1 || leaving || nxOpen || !arena.active || arena.state !== 'play' || arena.paused || lairPortal()) return null;
+      const a = keyAnchor(); if (!a) return null;
+      const p = arena.player; const ang = Math.atan2(p.y - a.y, p.x - a.x) || 0; // three tiles from the anchor, on the hero's side
+      const f = nearestFree(Math.floor((a.x + Math.cos(ang) * 3 * TILE) / TILE), Math.floor((a.y + Math.sin(ang) * 3 * TILE) / TILE), 4) || { x: Math.floor(p.x / TILE), y: Math.floor(p.y / TILE) };
+      const r = PT.openBoss(save.bossPortal, PT.BOSS_KEY, { x: (f.x + 0.5) * TILE, y: (f.y + 0.5) * TILE }, keySec(), 'realm');
+      if (!r.ok) return null;
+      if (r.consume) save.bossKeys = keyCount() - 1;
+      save.bossPortal = r.state; save.evT = Math.max(save.evT || 0, Math.floor(eventClock())); writeSave(save); miniKey = ''; lairTxt = '-'; lairT = 0;
+      if (typeof arena._snd === 'function') arena._snd('portal');
+      arena._showBanner('A boss portal opens! It stays for 2:00', 1.8);
+      return r.portal;
+    }
+    function lairUrl(q) {
+      const tx = Math.floor(q.x / TILE); const ty = Math.floor(q.y / TILE);
+      const ret = 'index.html?mode=world&seed=' + seed + '&at=' + tx + ',' + ty + (opts.test ? '&test=1' : '');
+      const z = Z.zoneInfoAt(world, tx, ty).zone; const biome = LAIR_BIOME[z >= 0 && z <= 3 ? z : 0];
+      const url = 'index.html?mode=dungeon&seed=' + String(MMRng.hash(seed + ':lair:' + tx + ',' + ty) % 100000) + '&lv=2&biome=' + biome + '&lair=1&return=' + encodeURIComponent(ret) + (opts.test ? '&test=1' : '');
+      return { tx, ty, biome, ret: RETURN_RE.test(ret) ? ret : null, url };
+    }
+    function enterLair() {
+      if (!KEYS_ON || leaving || nxOpen || !arena.active) return null;
+      const c = PT.canEnter('boss', save.bossPortal, 'realm', keyNow()); const q = lairPortal();
+      if (!c.ok || !q) return null;
+      const u = lairUrl(q); if (!u.ret) return null;
+      leaving = true; lastLair = u;
+      save.bossPortal = null; save.pos = { x: u.tx, y: u.ty }; save.returnTo = { x: u.tx, y: u.ty, seed }; save.stats.portals++; nxQuestEvent({ type: 'portal' });
+      writeSave(save); arena.onSave(arena.save); settle('portal');
+      api.lastLairUrl = u.url;
+      arena.stop(); lairBtn.classList.add('hidden'); portalBtn.classList.add('hidden');
+      if (opts.navigate !== false) location.href = u.url;
+      return u.url;
+    }
+    function lairAct() { if (lairNear) return enterLair(); if (keyNear) return useKey(); return null; }
+    lairBtn.addEventListener('click', lairAct);
+    if (promptObs) promptObs.observe(lairBtn, { attributes: true, attributeFilter: ['class'] });
+    function keyTick(dt) {
+      if (!KEYS_ON) return;
+      const p = arena.player; const play = arena.state === 'play' && !arena.paused && !nxOpen;
+      if (play) for (let i = keyDrops.length - 1; i >= 0; i--) { // ground keys ride the pickup magnet
+        const k = keyDrops[i]; let got = false;
+        if (PK) { const m = PK.magnetStep(k, p, Math.min(dt, 0.1), MAGNET_R); k.x = m.x; k.y = m.y; got = m.collected; } else got = Math.hypot(p.x - k.x, p.y - k.y) < 20;
+        if (got) { keyDrops.splice(i, 1); collectKey(); }
+      }
+      lairT -= dt; if (lairT > 0) return; lairT = 0.25;
+      if (save.bossPortal && !lairPortal()) { save.bossPortal = null; writeSave(save); miniKey = ''; } // the 120 s ran out (PT.tick rule)
+      const q = lairPortal();
+      lairNear = !!(play && q && (p.x - q.x) ** 2 + (p.y - q.y) ** 2 < LAIR_R * LAIR_R);
+      keyNear = play && !q && keyCount() > 0 ? keyAnchor() : null;
+      const hint = isCoarse() ? '' : ' (Enter)';
+      const txt = lairNear ? `Enter the boss lair (${fmtT(q.leftMs / 1000)} left)${hint}` : keyNear ? `Use boss key (${keyCount()})${hint}` : '';
+      if (txt !== lairTxt) { lairTxt = txt; lairBtn.classList.toggle('hidden', !txt); if (txt) { lairBtn.textContent = txt; lairBtn.setAttribute('aria-label', txt.replace(' (Enter)', '')); } }
+    }
+    window.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' && !ev.repeat && lairTxt && promptFor < 0 && !nxNear && !nxOpen && arena.active && !arena.paused && arena.state === 'play') { ev.preventDefault(); lairAct(); } });
+    function drawLair(g, vx0, vy0, vx1, vy1, tt, reduced) {
+      const q = lairPortal(); if (!q || q.x < vx0 || q.x > vx1 || q.y < vy0 || q.y > vy1) return;
+      const a = wArt.portal_boss;
+      if (a) { drawArt(g, a, frameOf(a, tt, reduced), q.x, q.y + 23); artDraws.portal++; } else drawPortalCode(g, { x: q.x, y: q.y, col: '#ff5fa2' }, tt, reduced);
+      const label = `Boss lair · ${fmtT(q.leftMs / 1000)}`;
+      g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(label, q.x + 1, q.y - 37); g.fillStyle = '#ff8ac0'; g.fillText(label, q.x, q.y - 38);
+    }
+    function drawKeys(g, cam) {
+      if (!keyDrops.length) return;
+      const tt = arena.clock; const reduced = arena._reduced; const a = wArt.key_boss;
+      for (let i = 0; i < keyDrops.length; i++) {
+        const k = keyDrops[i]; if (k.x < cam.x - 32 || k.x > cam.x + arena.W + 32 || k.y < cam.y - 32 || k.y > cam.y + arena.H + 32) continue;
+        const bob = reduced ? 0 : Math.round(Math.sin(tt * 3 + k.ph) * 2);
+        if (a) drawArt(g, a, 0, k.x, k.y + 14 + bob); else g.drawImage(keySprite(), Math.round(k.x - 12), Math.round(k.y - 12 + bob));
+      }
+    }
+    const lairMiniKey = () => { const q = KEYS_ON && save.bossPortal ? save.bossPortal.boss : null; return q ? Math.floor(q.x / TILE) + ':' + Math.floor(q.y / TILE) : ''; };
 
     // ---------- daily quests (MMQuests): 3 per UTC day, progress from kills / boss kills / portals, claimed at the Quest Giver in the Nexus ----------
     let qDirty = false;
@@ -1411,7 +1704,9 @@
       const h = document.createElement('b'); h.textContent = 'Daily quests · ' + questDate(); b.appendChild(h);
       MMQuests.summary(save.quests, questDate()).forEach((q) => {
         const row = document.createElement('div'); row.className = 'nx-q'; row.dataset.quest = q.id;
-        const t = document.createElement('span'); t.textContent = q.text + ' (' + q.p + '/' + q.need + ') '; const r = document.createElement('em'); r.textContent = '+' + q.reward.shards + ' 💎'; t.appendChild(r); row.appendChild(t);
+        const t = document.createElement('span'); t.textContent = q.text + ' (' + q.p + '/' + q.need + ') '; const r = document.createElement('em'); r.textContent = '+' + q.reward.shards + ' 💎' + (QBAG_ON && q.reward.bag ? ' · ' + q.reward.bag + ' bag' : ''); t.appendChild(r);
+        if (!q.claimed) { const bar = document.createElement('i'); bar.className = 'nx-bar'; bar.setAttribute('aria-hidden', 'true'); const fill = document.createElement('i'); fill.style.width = Math.round(100 * Math.min(1, q.p / Math.max(1, q.need))) + '%'; bar.appendChild(fill); t.appendChild(bar); } // PLAYTEST-REVIEW-2 #8: progress in the row
+        row.appendChild(t);
         if (q.claimed) { const d = document.createElement('span'); d.textContent = 'Claimed'; d.style.flex = '0 0 auto'; row.appendChild(d); }
         else { const c = document.createElement('button'); c.type = 'button'; c.dataset.claim = q.id; c.textContent = 'Claim'; c.disabled = !q.done; c.setAttribute('aria-label', q.done ? 'Claim ' + q.text : q.text + ', not finished yet'); c.addEventListener('click', () => nxClaim(q.id)); row.appendChild(c); }
         b.appendChild(row);
@@ -1420,9 +1715,54 @@
     function nxBoardOpen() { nxBuild(); nxBoardRender(); nxDom.board.classList.remove('hidden'); }
     function nxClaim(id) {
       const out = MMQuests.claim(save.quests, id, questDate()); save.quests = out.state;
-      if (out.reward) { arena.save.shards += out.reward.shards; arena.run.shards += out.reward.shards; arena.onSave(arena.save); arena._syncHud(); nxSay('Quest Giver', 'Well earned. +' + out.reward.shards + ' shards.'); }
+      if (out.reward) {
+        arena.save.shards += out.reward.shards; arena.run.shards += out.reward.shards; arena.onSave(arena.save); arena._syncHud();
+        const bagged = QBAG_ON && out.reward.bagItems && out.reward.bagItems.length > 0;
+        if (bagged) { const qb = (save.questBags || []).filter((b) => !(b.q === id && b.d === questDate())); qb.push({ q: id, d: questDate() }); save.questBags = qb.slice(-3); }
+        if (nxDom) nxSay('Quest Giver', 'Well earned. +' + out.reward.shards + ' shards.' + (bagged ? ' Your ' + out.reward.bag + ' bag waits by the Nexus portal.' : ''));
+      }
       writeSave(save); qDirty = false; if (nxDom) nxBoardRender();
       return out.reward;
+    }
+
+    // ---------- quest reward bags (RB3, QB1 MMQuests.rewardBag): a claim queues the bag in the save (`questBags`), it drops as a real loot bag beside the
+    // hero as soon as the Realm runs again (Back from the Nexus, or the next start after a reload) and leaves the queue when it drops: one bag per claim.
+    // Gear goes through giveBag / arena.dropBag, so picking it up records it for the Lantern stash (arena.onItem). The realm backpack has no armour slot:
+    // armour pieces become the charm / ring of the same feel (light -> Swift Charm, robe -> Scholar Ring, heavy -> Hearty Charm) at the bag's rarity;
+    // a wpn_ style the build does not know becomes a Spark Wand. The bag's potions drop beside it as potion pickups.
+    const QBAG_ON = !!(window.MMQuests && MMQuests.rewardBag);
+    const ARMOR_AS = { light: 'swiftcharm', robe: 'scholarring', heavy: 'heartcharm' };
+    const QBAG_TIER = { brown: 0, pink: 1, purple: 2 };
+    let lastQuestBag = null;
+    function questBagFor(qid, date) {
+      const q = MMQuests.quests(date).find((x) => x.id === qid); if (!q) return null;
+      const b = MMQuests.rewardBag(q.reward, date + ':' + q.id); if (!b) return null; // the same seed MMQuests.claim uses for bagItems
+      const known = (id) => typeof RM_ITEM_BY_ID !== 'undefined' && !!RM_ITEM_BY_ID[id];
+      const items = []; const potions = [];
+      b.items.forEach((it) => {
+        if (/^potion_/.test(it.id)) { for (let k = 0; k < Math.max(1, it.n | 0); k++) potions.push(it.id); return; }
+        const am = /^armor_([a-z]+)_t\d$/.exec(it.id);
+        const id = am ? ARMOR_AS[am[1]] || 'heartcharm' : known(it.id) ? it.id : 'sparkwand';
+        items.push({ id, r: Math.max(0, Math.min(2, it.r | 0)), from: it.id });
+      });
+      return { quest: qid, date, tier: b.tier, tierIndex: QBAG_TIER[b.tier] || 0, items, potions, raw: b.items };
+    }
+    function deliverQuestBags() {
+      if (!QBAG_ON || !save.questBags || !save.questBags.length || leaving || nxOpen || !arena.active || arena.state !== 'play' || arena.paused) return 0;
+      const p = arena.player; const list = save.questBags; let n = 0;
+      delete save.questBags;
+      list.forEach((qb, j) => {
+        const b = questBagFor(qb.q, qb.d); if (!b) return;
+        const x = p.x + (j - (list.length - 1) / 2) * 36; const y = p.y - 34;
+        const asPick = PICK_ON && !!PK; // ?pickups=0: the bag's potions are plain bag potions (a small heal each, the classic bag rule)
+        const got = b.items.length || !asPick ? giveBag(x, y, { tier: b.tier, tierIndex: b.tierIndex, items: b.items, shards: 0, potions: asPick ? 0 : b.potions.length, lifetime: 180 }, { zone: 0, boss: false, quest: b.quest }) : null;
+        if (asPick) b.potions.forEach((art, k) => { if (picks.length >= PICK_CAP) picks.shift(); picks.push({ type: 'potion', art, frames: null, value: 1, tier: 3, x: x + (k ? 14 : -14), y: y + 24, bornMs: arena.clock * 1000, lifeMs: PK ? PK.LIFETIME_MS[5] : 40000, ph: k * 2 }); pickTotal++; });
+        lastQuestBag = { quest: b.quest, date: b.date, tier: b.tier, raw: b.raw, items: b.items.map((it) => ({ id: it.id, r: it.r, from: it.from })), potions: b.potions.slice(), dropped: got ? got.items.length : 0 };
+        n++;
+      });
+      writeSave(save);
+      if (n) arena._showBanner(n > 1 ? `${n} quest bags!` : `Quest bag (${lastQuestBag.tier})!`, 1.6);
+      return n;
     }
 
     const hooks = {
@@ -1432,7 +1772,7 @@
         prevZ = null; slowUntil = 0; // a (re)start is not a border crossing
         arena.run.wave = 0; arena.biome = 0;
         resetZones();
-        kills = 0; spawned = 0; despawned = 0; lastDrops.length = 0; picks.length = 0;
+        kills = 0; spawned = 0; despawned = 0; lastDrops.length = 0; picks.length = 0; lairTxt = '-'; lairT = 0;
         bossReadyNow.fill(0); bossT = 0; sweepT = 0;
         promptFor = -2; leaving = false;
         rageEnd = 0; wardEnd = 0; arena.buffDmg = 1; arena.buffTaken = 1; campSt.clear(); siteKeyShown = '';
@@ -1454,7 +1794,8 @@
           bossT -= dt; if (bossT <= 0) { bossT = 0.5; bossTick(); }
           sweepT -= dt; if (sweepT <= 0) { sweepT = 1; sweepLost(); }
         }
-        portalTick(); pickTick(dt); nexusTick();
+        portalTick(); pickTick(dt); nexusTick(); keyTick(dt);
+        if (save.questBags) deliverQuestBags();
         if (SITES) siteTick(dt);
         lastEvClock = eventClock();
         evT -= dt; if (evT <= 0) { evT = 0.25; evTick(); }
@@ -1490,6 +1831,7 @@
         const pad = wArt.spawn_pad; const padX = (world.spawnPoint.x + 0.5) * TILE; const padY = (world.spawnPoint.y + 0.5) * TILE;
         if (pad && padX > vx0 && padX < vx1 && padY > vy0 && padY < vy1) { drawArt(g, pad, frameOf(pad, tt, reduced), padX, padY + 16); artDraws.pad++; }
         if (SITES) drawSites(g, vx0, vy0, vx1, vy1, tt, reduced);
+        if (KEYS_ON) drawLair(g, vx0, vy0, vx1, vy1, tt, reduced);
         evState.forEach((st) => { // event sites: a beacon (upcoming: gold, active: orange) above the ring of stones
           if (st.phase !== 'upcoming' && st.phase !== 'active') return;
           const c = siteXY(st); if (c.x < vx0 - 80 || c.x > vx1 + 80 || c.y < vy0 - 80 || c.y > vy1 + 80) return;
@@ -1502,7 +1844,7 @@
           g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(label, c.x + 1, c.y - 51); g.fillStyle = col; g.fillText(label, c.x, c.y - 52);
         });
       },
-      drawOver(g, cam) { drawPicks(g, cam); // a raid boss telegraphs its next burst: a red ring that closes in during the last second
+      drawOver(g, cam) { drawPicks(g, cam); drawKeys(g, cam); // a raid boss telegraphs its next burst: a red ring that closes in during the last second
         evState.forEach((st) => {
           if (st.phase !== 'active' || st.plan.kind !== 'boss') return;
           const e = st.ents[0]; if (!e || !e.active || e.evid !== st.id || e.invuln > 0 || !(e.cd2 < 1)) return;
@@ -1526,7 +1868,8 @@
       tileCenter: (tx, ty) => ({ x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE }),
       save: () => readSave(), savePos, portals: () => portals.map((q) => ({ i: q.i, x: q.x, y: q.y, tx: q.tx, ty: q.ty, biome: q.biome })),
       syncHud, loadTileArt, loadWorldArt,
-      artState: () => ({ on: artOn, loaded: Object.keys(wArt), draws: Object.assign({}, artDraws), loading: wArtLoading }), artProps: (cx, cy) => chunkProps(cx, cy).map((q) => ({ x: q.x, y: q.y, id: q.id, dim: q.dim })), propsClassic: () => PROPS_CLASSIC, godPropPalette: () => godPropPalette(), chunkGrid: () => ({ cols: ccols, rows: crows }),
+      artState: () => ({ on: artOn, loaded: Object.keys(wArt), draws: Object.assign({}, artDraws), loading: wArtLoading }), artProps: (cx, cy) => chunkProps(cx, cy).map((q) => ({ x: q.x, y: q.y, id: q.id, dim: q.dim, base: q.base || null })),
+      b26: () => ({ on: B26_ON, ids: Object.keys(B26_SET), loaded: Object.keys(B26_SET).filter((id) => !!wArt[id]), draws: artDraws.b26, codeProps: world.props.filter((p) => b26Code(p)).length, codeCandidates: world.props.filter((p) => B26_CODE[p.kind] && GOD_TERRAIN[TN[terrain[p.y * ww + p.x]]] === 1).length, codeIds: Array.from(new Set(world.props.filter((p) => b26Code(p)).map((p) => b26Pick(B26_CODE[p.kind], p.x, p.y)))) }), propsClassic: () => PROPS_CLASSIC, godPropPalette: () => godPropPalette(), chunkGrid: () => ({ cols: ccols, rows: crows }),
       panelHidden: () => panelHid,
       // minimap fog (slice A1)
       discovered: () => ({ on: fogOn, count: FOG ? FOG.count(fogBits) : 0, b64: FOG ? FOG.encode(fogBits) : '', has: (cx, cy) => (FOG ? FOG.has(fogBits, cx, cy) : false) }),
@@ -1556,8 +1899,16 @@
       // slice 11: world debuffs (roll(creature, zone, force) = one bolt hit; table = creature -> status; shown by arena.statusOf)
       worldStatus: { on: STATUS_ON, table: BOLT_ST, forCreature: boltStatusFor, roll: boltRoll, log: stLog },
       ttk: { on: TTK_ON }, pickups: { on: PICK_ON, cap: PICK_CAP, magnet: MAGNET_R, list: () => picks.map((q) => ({ type: q.type, art: q.art, value: q.value, tier: q.tier, x: q.x, y: q.y, lifeMs: q.lifeMs })), spawn: spawnPickups, got: () => Object.assign({}, pickGot), total: () => pickTotal },
-      nexus: { on: NX_ON, site: nxSite, open: nexusOpen, close: nexusClose, isOpen: () => nxOpen, near: () => nxNear, enterTile: () => nxEnterTile, talk: (id) => { const n = NX_ON && NX.layout().npcs.find((x) => x.id === id); if (n) { nxBuild(); nxTalk(n); } return nxDom && nxDom.last; }, portal: (id) => { const q = NX_ON && NX.layout().portals.find((x) => x.id === id); return q ? nxPortal(q) : null; }, lastUrl: () => api.lastNexusUrl || null, today: todayUtc },
+      nexus: { on: NX_ON, site: nxSite, open: nexusOpen, close: nexusClose, isOpen: () => nxOpen, near: () => nxNear, enterTile: () => nxEnterTile, talk: (id) => { const n = NX_ON && NX.layout().npcs.find((x) => x.id === id); if (n) { nxBuild(); nxTalk(n); } return nxDom && nxDom.last; }, portal: (id) => { const q = NX_ON && NX.layout().portals.find((x) => x.id === id); return q ? nxPortal(q) : null; }, lastUrl: () => api.lastNexusUrl || null, today: todayUtc,
+        // walkable plaza (PLAYTEST-REVIEW-2 #5); step(mx, my, dt) injects input for tests, place() only accepts free plaza points
+        walk: { on: NX_WALK, view: { w: NX_VW, h: NX_VH }, hero: () => ({ x: nxHero.x, y: nxHero.y, tx: Math.floor(nxHero.x / TILE), ty: Math.floor(nxHero.y / TILE), moving: nxHero.moving }), cam: () => ({ x: nxCam.x, y: nxCam.y }),
+          near: () => (nxNearI ? { kind: nxNearI.kind, id: nxNearI.ref.id } : null), act: () => nxAct(), step: (mx, my, dt) => { if (nxOpen && NX_WALK) nxWalkStep(Number(dt) || 1 / 60, Number(mx) || 0, Number(my) || 0); return { x: nxHero.x, y: nxHero.y }; },
+          place: (x, y) => { if (!nxOpen || !NX_WALK || !nxFree(Number(x), Number(y))) return false; nxHero.x = Number(x); nxHero.y = Number(y); nxSyncPrompt(); return true; }, running: () => nxRaf !== 0 } },
       quests: { date: questDate, list: () => MMQuests.quests(questDate()), summary: () => MMQuests.summary(save.quests, questDate()), state: () => JSON.parse(JSON.stringify(save.quests || MMQuests.fresh(questDate()))), event: nxQuestEvent, claim: nxClaim, flush: () => { qDirty = false; return writeSave(save); } },
+      // BK2: boss keys and the boss lair portal
+      bossKeys: { on: KEYS_ON, count: keyCount, drop: dropKey, ground: () => keyDrops.map((k) => ({ x: k.x, y: k.y, src: k.src })), got: () => keyGot, use: useKey, anchor: keyAnchor, portal: lairPortal, enter: enterLair, url: (q) => lairUrl(q || lairPortal() || arena.player), last: () => lastLair, prompt: () => ({ text: lairBtn.textContent, hidden: lairBtn.classList.contains('hidden') }), now: keyNow, tick: () => { lairT = 0; keyTick(0); } },
+      // RB3: quest bags, focus orbs and buff potions
+      rewards: { questBags: () => (save.questBags || []).map((b) => ({ q: b.q, d: b.d })), bagFor: questBagFor, deliver: deliverQuestBags, lastBag: () => lastQuestBag, drink: (art) => (PK && POTION_COL[art] ? drinkPotion(art) : null), potions: () => potionLog.slice(), focusApi: () => typeof arena.restoreFocus === 'function', statusApi: () => typeof arena.applyStatus === 'function' },
       settle, stashNote, lastSettle: () => lastSettle, finds: () => (ST ? ST.readFinds(localStorage) : null),
     };
     return { api, hooks };

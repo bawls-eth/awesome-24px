@@ -2676,3 +2676,24 @@ img.realm-ico { width: 32px; height: 32px; vertical-align: middle; image-renderi
   color: var(--ac-leaf-deep, var(--ac-leaf)); font-weight: 700; font-size: 14px; cursor: pointer;
 }
 #join-offline-btn.hidden { display: none; }
+
+/* ---------- Town polish (TP1): short windows, PTT pill, local name label, shared access prefs ---------- */
+#join-overlay .join-card { max-height: calc(100vh - 16px); max-height: calc(100dvh - 16px); overflow-y: auto; box-sizing: border-box; }
+@media (max-height: 800px) {
+  #join-overlay .join-card { padding: 16px 28px; }
+  #join-overlay .join-card h1 { font-size: 22px; }
+  #join-overlay .tagline { margin-bottom: 8px; }
+  #join-overlay .online-count { margin: -4px 0 8px; }
+  #join-overlay .join-tip { margin-top: 8px; }
+}
+/* Desktop: the push-to-talk pill sits below the inventory strip (same top row) instead of on top of it. */
+@media (min-width: 721px) and (min-height: 500px) {
+  #walkie-panel { top: calc(16px + 40px + 8px); left: auto; right: 212px; transform: none; }
+}
+/* Shared accessibility prefs (pixeltown-access-v1), applied by main.js as body classes / a CSS variable. */
+body { --hud-scale: 1; }
+body.a11y-hud-scaled #inventory-panel, body.a11y-hud-scaled #player-list-panel, body.a11y-hud-scaled #walkie-panel {
+  zoom: var(--hud-scale);
+}
+body.a11y-reduce-motion #join-decor { display: none; }
+body.a11y-reduce-motion *, body.a11y-reduce-motion *::before, body.a11y-reduce-motion *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; }

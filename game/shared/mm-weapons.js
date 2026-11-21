@@ -1,5 +1,5 @@
 // MMWeapons: pure weapon-style data for the Mad Maze arena (CLASS-WEAPON-BUILD-PLAN.md sections a, b).
-// 14 generated base styles (one per class, read from MMClasses FIRE tags) + 26 alternate styles = 40.
+// 14 generated base styles (one per class, read from MMClasses FIRE tags) + 30 alternate styles = 44 (the last 4 carry `splash`).
 // No DOM, no Math.random, inputs are never mutated, hostile input falls back to the class base style.
 // resolve(classId, styleId, rarity) returns a frozen spec whose damage index is normalised against the class base,
 // so every style is a sidegrade (index within [0.95, 1.10] of its base).
@@ -28,7 +28,7 @@
 
   // Fill a (possibly partial) style with schema defaults. Pure; returns a new plain object.
   function norm(s) {
-    const w = s.wave || {}, ch = s.chain || {}, ob = s.orbit || {}, bu = s.burst || {}, lo = s.lob || {}, oh = s.onHit || {};
+    const w = s.wave || {}, ch = s.chain || {}, ob = s.orbit || {}, bu = s.burst || {}, lo = s.lob || {}, oh = s.onHit || {}, sp = s.splash || {};
     return {
       id: s.id, family: s.family, name: s.name, shape: s.shape,
       count: s.count === undefined ? 1 : s.count, spread: s.spread || 0, spd: s.spd === undefined ? 1 : s.spd,
@@ -40,6 +40,7 @@
       orbit: { n: ob.n || 0, radius: ob.radius === undefined ? 34 : ob.radius, period: ob.period === undefined ? 0.9 : ob.period, dmg: ob.dmg || 0, rehit: ob.rehit === undefined ? 0.3 : ob.rehit },
       burst: { n: bu.n === undefined ? 1 : bu.n, gap: bu.gap || 0 },
       lob: { radius: lo.radius || 0, maxRange: lo.maxRange === undefined ? 260 : lo.maxRange },
+      splash: { r: sp.r || 0, frac: sp.frac || 0, inner: sp.inner === undefined ? 0.35 : sp.inner, edge: sp.edge === undefined ? 0.5 : sp.edge, max: sp.max || 0 },
       knock: s.knock || 0,
       onHit: { status: oh.status || null, chance: oh.chance || 0, sec: oh.sec || 0 },
       tune: s.tune === undefined ? 1 : s.tune,
@@ -50,7 +51,7 @@
   // Index of a (normalised) style: relative damage output per second at point-blank, ranger plain bolt = 1.
   function shapeIdx(s) {
     if (!s || typeof s !== 'object') return 0;
-    const w = s.wave || {}, ch = s.chain || {}, ob = s.orbit || {}, bu = s.burst || {}, lo = s.lob || {}, oh = s.onHit || {};
+    const w = s.wave || {}, ch = s.chain || {}, ob = s.orbit || {}, bu = s.burst || {}, lo = s.lob || {}, oh = s.onHit || {}, sp = s.splash || {};
     const count = num(s.count, 1), burstN = num(bu.n, 1);
     let v = count * burstN * num(s.dmg, 1) * num(s.rate, 1);
     // S15 calibration (class-weapon-sim.test.js, zone-1 group clear time vs the ranger must stay 0.7-1.4x): against a clustered
@@ -65,6 +66,8 @@
     v *= 1 + 0.4 * num(ch.n, 0) * num(ch.falloff, 0.7);
     if (count * burstN === 1 && num(w.amp, 0) > 0) v *= 0.95;
     v *= 1 + Math.min(0.4, num(lo.radius, 0) / 100);
+    // splash (plan section d): a bolt that also hits up to `max` neighbours is worth a capped bonus; resolve() normalises it away from the base.
+    if (num(sp.r, 0) > 0) v *= 1 + Math.min(0.45, 0.25 * num(sp.frac, 0) * Math.min(num(sp.max, 0), 1 + num(sp.r, 0) / 24));
     if (oh.status && has(STATUS_VALUE, oh.status)) v *= 1 + num(oh.chance, 0) * STATUS_VALUE[oh.status];
     if (num(ob.n, 0) > 0) v += num(ob.n, 0) * num(ob.dmg, 0) / Math.max(0.05, num(ob.rehit, 0.3)) / FIRE_RATE;
     return v;
@@ -98,6 +101,11 @@
     { id: 'star_seeker', family: 'star', name: 'Seeker Stars', shape: 'star', count: 3, spread: 0.5, life: 0.9, homing: 3.0, crit: 0.10, dmg: 0.32, tune: 0.95, affix: ['reach', 'keen', 'velocity'] },
     { id: 'pistol_ricochet', family: 'pistol', name: 'Ricochet', shape: 'ray', spd: 1.2, bounce: 3, dmg: 0.80, affix: ['reach', 'keen', 'velocity'] },
     { id: 'pistol_burst', family: 'pistol', name: 'Burst Pistol', shape: 'ray', spd: 1.2, life: 0.7, burst: { n: 3, gap: 0.06 }, dmg: 0.38, rate: 0.9, affix: ['reach', 'keen', 'velocity'] },
+    // appended after the original 26 (wire codes follow ALT order, so these must stay last); splash per plan section d
+    { id: 'bow_blast', family: 'bow', name: 'Blast Arrow', shape: 'arrow', spd: 1, life: 0.8, splash: { r: 36, frac: 0.5, max: 4 }, dmg: 0.85, rate: 0.9, affix: ['reach', 'keen', 'venom'] },
+    { id: 'wand_burst', family: 'wand', name: 'Ember Burst', shape: 'orb', spd: 0.9, life: 0.9, splash: { r: 44, frac: 0.55, max: 5 }, dmg: 0.8, rate: 0.85, affix: ['reach', 'velocity', 'keen'] },
+    { id: 'staff_comet', family: 'staff', name: 'Comet Staff', shape: 'orb', size: 1.5, spd: 0.75, life: 1.1, splash: { r: 56, frac: 0.6, max: 6 }, dmg: 0.9, rate: 0.6, affix: ['reach', 'keen', 'venom'] },
+    { id: 'pistol_flak', family: 'pistol', name: 'Flak Pistol', shape: 'ray', count: 2, spread: 0.12, splash: { r: 28, frac: 0.4, max: 3 }, dmg: 0.5, affix: ['reach', 'keen', 'velocity'] },
   ];
 
   // ---- the 14 base styles, generated from MMClasses.arenaProfile (FIRE tags); never copied.
@@ -223,6 +231,7 @@
     if (spec.boomerang) parts.push('boomerang');
     if (spec.chain && num(spec.chain.n, 0) > 0) parts.push('chains ' + spec.chain.n);
     if (spec.orbit && num(spec.orbit.n, 0) > 0) parts.push('orbits ' + spec.orbit.n);
+    if (spec.splash && num(spec.splash.r, 0) > 0) parts.push('splash ' + Math.round(spec.splash.r) + ' px');
     if (num(spec.knock, 0) > 0) parts.push('knockback');
     if (num(spec.crit, 0) > 0) parts.push('crit ' + Math.round(spec.crit * 100) + '%');
     const oh = spec.onHit;
@@ -249,6 +258,15 @@
     if (!s.orbit) bad.push('orbit'); else rng('orbit.n', s.orbit.n, 0, 3, true);
     if (!s.burst) bad.push('burst'); else { rng('burst.n', s.burst.n, 1, 5, true); rng('burst.gap', s.burst.gap, 0, 0.5, false); }
     if (!s.lob) bad.push('lob'); else rng('lob.radius', s.lob.radius, 0, 100, false);
+    if (s.splash !== undefined) {
+      const sp = s.splash;
+      if (!sp || typeof sp !== 'object') bad.push('splash');
+      else {
+        rng('splash.r', sp.r, 0, 80, false); rng('splash.frac', sp.frac, 0, 0.8, false); rng('splash.max', sp.max, 0, 6, true);
+        rng('splash.inner', sp.inner, 0, 1, false); rng('splash.edge', sp.edge, 0, 1, false);
+        if (num(sp.r, 0) > 0 && s.lob && num(s.lob.radius, 0) > 0) bad.push('splash+lob');
+      }
+    }
     if (!s.onHit) bad.push('onHit');
     else if (s.onHit.status !== null && !has(STATUS_VALUE, s.onHit.status)) bad.push('onHit.status');
     if (!Array.isArray(s.affix) || s.affix.length > 3 || s.affix.some((a) => AFFIX_IDS.indexOf(a) < 0)) bad.push('affix');

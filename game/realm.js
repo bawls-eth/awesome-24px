@@ -11,6 +11,18 @@
 // Three enemy patterns: Whirlers fire a steady spiral, Snipers fire aimed three-bolt bursts and
 // circle you, Bursters drift in and fire rings. Survive waves, bank shards; dying costs 20% of the
 // banked shards and sends you back to the village.
+//
+// URL switches (each `=0` turns one additive layer off and restores the behaviour from before it):
+//   ?unlocks=0   unlock-tree passives / Nova II / Dash II (S12)        ?weapons=0  styled `wpn_` weapon items (S12)
+//   ?boltart=0   bolt art (code-drawn bolts)                           ?fxart=0    one-shot effect art
+//   ?uiicons=0   ability icon art (emoji only)                         ?difficulty=off  wave / world difficulty curve (MMDifficulty)
+//   ?focus=0     focus resource (FO2): abilities cost nothing, cooldowns only (as before); no focus bar
+//   ?telegraph=0 enemy wind-ups (TG3): tier 3+ world enemies and world bosses fire with no ring/line/cone warning (as before)
+// Focus only runs with an active Mad Maze hero (setHeroLevelSource); telegraphs only in the solo world (mode 'world', no dungeon).
+// The town's classic arena, co-op (wire format) and duels are unchanged by both.
+// Accessibility prefs (AC1, MMAccess.prefs on `pixeltown-access-v1`, re-read once a second): a colour-blind `palette` gives enemy bullets
+// that palette's colours (plus a 2 px dark outline while `bulletOutline` is on); `flashes: false` drops the red hit vignette and the
+// white enemy hit flash. Reduce motion (MMMotion) makes telegraphs static (no pulse or growth). Bullet counts and timings never change.
 
 const RM_SHORT = 540; // logical arena short side; the long side follows the screen's shape
 const RM_PLAYER = { speed: 235, r: 11, hp: 100, fireRate: 7.5, bulletSpeed: 580, bulletLife: 0.85, dmg: 1, iframes: 0.5 };
@@ -93,6 +105,29 @@ const RM_EB_ROT = { ebolt_shard: 1, ebolt_arrow: 1, ebolt_fire: 1, ebolt_frost: 
 const RM_WPN_COLOR = { dot: '#ffe27a', arrow: '#f3d9a4', shard: '#9fe3ff', orb: '#c59bff', star: '#ffd24a', blade: '#e6edf3', page: '#fff3c4', axe: '#ff9a6a', hammer: '#ffcf5a', fist: '#ffb38a', ray: '#7ee7ff' };
 // URL kill switches (S12): ?unlocks=0 turns off the unlock-tree passives / Nova II / Dash II, ?weapons=0 the styled weapon items.
 function rmFlagOff(name) { try { return typeof location !== 'undefined' && new RegExp('[?&]' + name + '=0(&|$)').test(location.search || ''); } catch (e) { return false; } }
+// This file's folder (for shared modules and UI art), from the <script> tag that loaded it; '' when unknown (no art, no loader).
+const RM_DIR = (function () { try { const s = typeof document !== 'undefined' && document.currentScript && document.currentScript.src; return s ? String(s).replace(/[?#].*$/, '').replace(/[^/]*$/, '') : ''; } catch (e) { return ''; } })();
+// Shared modules the arena layers need (FO2 mm-focus, TG3 mm-access + mm-telegraph; mm-telegraph reads MMAccess, so it loads last): a page that does not list one gets it here (ordered, async=false). Every use checks
+// `typeof`, so the arena runs exactly as before until (or unless) they load. A page that already has the module loads nothing.
+(function rmLoadShared() {
+  try {
+    if (typeof document === 'undefined' || !RM_DIR || !document.head || typeof window === 'undefined') return;
+    [['MMAccess', 'mm-access.js'], ['MMFocus', 'mm-focus.js'], ['MMTelegraph', 'mm-telegraph.js']].forEach((m) => {
+      if (typeof window[m[0]] !== 'undefined' || document.querySelector(`script[src*="${m[1]}"]`)) return;
+      const s = document.createElement('script'); s.src = RM_DIR + 'shared/' + m[1]; s.async = false; document.head.appendChild(s);
+    });
+  } catch (e) { /* the arena never depends on these */ }
+})();
+const RM_UI_ART = RM_DIR ? RM_DIR + 'assets/arcane/b19-ui-icons/ui/' : ''; // b19 UI art (focus bar frame + icon)
+// Damage numbers (S14): crits gold, marked pink (MMStatus colours), armorBroken purple; everything else stays white.
+const RM_DMG_COL = { plain: '#fff', crit: '#ffd24a', marked: '#ff8fa8', armorBroken: '#b77bff' };
+const RM_PIP_MAX = 3, RM_PIP_PX = 8; // at most 3 status pips over an enemy; more collapse into "+n"
+// Telegraphs (TG3): MMTelegraph shape -> code on the pooled enemy (0 = none). Sprites are baked once per colour (no per-frame paths).
+const RM_TG_CODE = { ring: 1, line: 2, cone: 3 };
+const RM_TG_LINE = 220, RM_TG_CONE = 0.42; // aimed line length (px) and cone half-angle (rad; the boss fan is 0.72 wide)
+const RM_ST_ICON_PX = 24; // HUD status icon size in css px (was 20; PLAYTEST-REVIEW-2 #11: readable at a glance)
+// Focus (FO2): ability id -> MMFocus cost id (Dash 0, Nova 25, Shield 30, Overdrive 40, Signature 40). Cooldowns are kept on top.
+const RM_FOCUS_ID = { dash: 'dash', nova: 'nova', shield: 'shield', overdrive: 'overdrive', sig: 'signature' };
 function rmInertDef(id) {
   if (RM_ITEM_BY_ID[id]) return RM_ITEM_BY_ID[id];
   const name = id.slice(4).split('_').filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ').slice(0, 24) || 'Weapon';
@@ -288,6 +323,9 @@ class RealmArena {
     this._heroSrc = null; this._hu = null; // setHeroLevelSource: the active hero {cls, level} (null = classic: account level, no unlock nodes)
     this.weapon = null; this._wq = []; this._wOrbT = [0, 0, 0]; this._wOrbA = 0; this._wCache = null; this._kIn = {}; this._kHero = { x: 0, y: 0 }; this._kWall = 0; this._kW = null; // setHeroWeapon (null = today's fire)
     this.sig = null; this._sigAb = { id: 'sig', key: 'f', icon: '🔥', name: 'Signature', short: '', level: 7, cd: 15 }; // setHeroSignature: the class signature takes the F slot (null = Overdrive, today's behaviour)
+    this._tgOff = rmFlagOff('telegraph'); this._tgSpr = null; this._tgDesc = null; this._tgDescKey = ''; this._tgSndAt = -9; this.tgStarted = 0; this.tgDrawn = 0; this._tgLk = { scale: 1, alpha: 0, len: 0 }; // TG3 telegraphs
+    this.acc = null; this._accRaw = undefined; this._accT = 1; this._ebCB = null; this._ebCBKey = ''; // TG3 accessibility prefs (MMAccess.prefs; null = defaults)
+    this.focus = null; this._focusOff = rmFlagOff('focus'); this._fDom = null; this._fHudT = 0; this._fShown = ''; this._fMask = -1; this._fPlaceT = -9; this.focusShorts = 0; // FO2 focus (MMFocus state; null = off)
     this.sg = { powT: 0, powMul: 1, fx: { t: 0, max: 0.5, x: 0, y: 0, r: 0, color: '#fff' }, bloom: { t: 0, x: 0, y: 0, r: 0, tick: 0 }, bones: { t: 0, a: 0, n: 0, heal: 0, frac: 0 } }; // signature runtime state (preallocated)
     this._heroArt = null; this._heroClass = null; this._heroSt = null; this._heroDbg = null; this._heroHurtAt = -9; this._heroAtkAt = -9; // optional hero animations (setHeroArt)
     this.team = null; this.role = 'solo'; this.down = false; this.reviveT = 0; this._firing = false;
@@ -700,12 +738,12 @@ class RealmArena {
   _stAnchorAt() {
     if (this._stAnchor && this._stT - this._stAnchorT < 0.5 && this._stAnchorT <= this._stT) return this._stAnchor;
     this._stAnchorT = this._stT;
-    const k = this._cssK || 1; const a = this._stAnchor || (this._stAnchor = { x: 8, y: 64, px: 20, k: 1, cl: 0, ct: 0, bL: 1e9, bB: -1 });
+    const k = this._cssK || 1; const a = this._stAnchor || (this._stAnchor = { x: 8, y: 64, px: RM_ST_ICON_PX, k: 1, cl: 0, ct: 0, bL: 1e9, bB: -1 });
     a.k = k;
     try {
       const cr = this.canvas.getBoundingClientRect(); a.cl = cr.left; a.ct = cr.top;
       const vis = (el) => (el && !el.classList.contains('hidden') && el.getClientRects().length ? el.getBoundingClientRect() : null);
-      const xp = vis(document.getElementById('realm-xp')) || vis(document.getElementById('realm-hp'));
+      const xp = vis(document.getElementById('realm-xp')) || vis(document.getElementById('realm-focus')) || vis(document.getElementById('realm-hp'));
       const left = xp ? xp.left : cr.left + 8; let top = (xp ? xp.bottom : cr.top + 56) + 4;
       const rowR = left + 6 * (a.px + 3);
       const boss = vis(document.getElementById('realm-boss'));
@@ -720,7 +758,7 @@ class RealmArena {
     return a;
   }
 
-  // HUD: up to 6 player status icons (20 css px), negatives first; each is a cached MMFxDraw.drawIcon canvas (the clock pie in 12 steps).
+  // HUD: up to 6 player status icons (RM_ST_ICON_PX = 24 css px, PLAYTEST-REVIEW-2 #11, with the stack digit from MMFxDraw.drawIcon), negatives first; each is a cached MMFxDraw.drawIcon canvas (the clock pie in 12 steps).
   _drawStatusIcons(g) {
     const out = this._stDrawn; out.length = 0; const pool = this._stPool || (this._stPool = Array.from({ length: 6 }, () => ({ id: '', x: 0, y: 0, size: 0, neg: false }))); // reused: no per-frame objects
     const p = this.player;
@@ -742,6 +780,39 @@ class RealmArena {
       const o = pool[out.length]; o.id = it.id; o.x = a.cl + x * a.k; o.y = a.ct + y * a.k; o.size = a.px; o.neg = it.neg; out.push(o);
     }
   }
+  // Enemy status pips (S14): at most RM_PIP_MAX cached MMFxDraw.drawPip discs over the enemy, extra statuses collapse into "+n" (text, not
+  // colour only). The list is re-read at most 4x a second per enemy into fields preallocated on the pooled enemy (no per-frame arrays).
+  _pipsOf(e) {
+    if (!e.status || typeof MMStatus === 'undefined') { e._pipN = 0; e._pipMore = 0; return e; }
+    if (!(this._stT - e._pipAt < 0.25) || e._pipAt > this._stT) { // undefined / NaN (an enemy made outside spawnEnemy) refreshes too
+      e._pipAt = this._stT;
+      const list = MMStatus.iconList(e.status, this._stT * 1000, 6);
+      const ids = e._pipIds || (e._pipIds = ['', '', '']);
+      e._pipN = Math.min(RM_PIP_MAX, list.length); e._pipMore = Math.max(0, list.length - RM_PIP_MAX);
+      for (let i = 0; i < e._pipN; i++) ids[i] = list[i].id;
+    }
+    return e;
+  }
+  _drawEnemyPips(g, e, y) {
+    if (typeof MMFxDraw === 'undefined' || !this._stOn()) return;
+    this._pipsOf(e); const n = e._pipN; if (!n) return;
+    if (!this._pipCache) this._pipCache = MMFxDraw.makeCache(MMFxDraw.defaultCreate, 32);
+    const step = RM_PIP_PX + 2; const more = e._pipMore > 0;
+    const w = n * step - 2 + (more ? 14 : 0); let x = e.x - w / 2;
+    for (let i = 0; i < n; i++) {
+      const id = e._pipIds[i];
+      const cv = this._pipCache.get(id, RM_PIP_PX + 2, RM_PIP_PX + 2, (c, W) => MMFxDraw.drawPip(c, id, W / 2, W / 2, RM_PIP_PX));
+      if (cv) g.drawImage(cv, x - 1, y - 1);
+      x += step;
+    }
+    if (more) {
+      g.font = 'bold 9px system-ui, sans-serif'; g.textAlign = 'left';
+      const t = `+${e._pipMore}`; g.fillStyle = '#000'; g.fillText(t, x + 1, y + RM_PIP_PX + 1); g.fillStyle = '#fff'; g.fillText(t, x, y + RM_PIP_PX);
+    }
+  }
+  // Test / debug hook (S14): the pips an enemy shows now: {ids, more}.
+  enemyPips(e) { if (!e) return null; e._pipAt = -9; this._pipsOf(e); return { ids: (e._pipIds || []).slice(0, e._pipN), more: e._pipMore }; }
+
   // Test / debug hook: the icons drawn on the last frame, in css px from the page's top-left.
   statusIcons() { return this._stDrawn.map((o) => Object.assign({}, o)); }
 
@@ -1143,7 +1214,7 @@ class RealmArena {
       const ph = w.wave.alt && (k & 1) ? 1 : 0;
       const b = this.firePlayerBulletFrom(p.x, p.y, ang, d, 0, rmWpnWire(w, ph, lobD));
       if (!b) continue;
-      this._styleBolt(b, w, ang, ph, lobD); live++;
+      this._styleBolt(b, w, ang, ph, lobD); if (d !== base) b.cr = 1; live++;
     }
   }
   // How far a lobbed shot flies: to the nearest enemy within 0.35 rad of the aim, else its max range.
@@ -1265,7 +1336,7 @@ class RealmArena {
     for (let i = 0; i < this.enemies.length; i++) {
       const e = this.enemies[i]; if (!e.active) continue;
       const rr = r + RM_ENEMIES[e.type].r;
-      if ((e.x - x) * (e.x - x) + (e.y - y) * (e.y - y) <= rr * rr) { if (b.st > 0) this._wpnStatus(b, e); this._hitEnemy(e, b.dmg || this.stats.dmg); }
+      if ((e.x - x) * (e.x - x) + (e.y - y) * (e.y - y) <= rr * rr) { if (b.st > 0) this._wpnStatus(b, e); this._hitEnemy(e, b.dmg || this.stats.dmg, b.cr === 1); }
     }
   }
   // A weapon bolt's `st` (RM_WPN_ST index + 1) rolls its onHit chance and applies that status to the enemy it hit.
@@ -1743,6 +1814,7 @@ class RealmArena {
     p.status = null; p._stm = null; p._stNext = Infinity; p._stAcc = 0; this._stList = null; // statuses never carry over into a new run
     this._calcStats();
     this.abilityCd = [0, 0, 0, 0]; this.shield.hits = 0; this.shield.t = 0; this.overdriveT = 0; this.paused = false; this._sigReset();
+    this.focus = null; this._focusSync(); // FO2: every run starts with full focus (null when focus is off)
     p.x = this.W / 2; p.y = this.H / 2; p.hp = this.stats.maxHp; p.dashT = 0; p.iframes = 1; p.fireCd = 0; p.aim = -Math.PI / 2;
     this.run = { wave: 0, kills: 0, shards: 0 }; this._waveSc = null;
     this.biome = 0; this.clock = 0; this._speedMul = 1; this.down = false; this.reviveT = 0; this._syncBoss();
@@ -1765,7 +1837,7 @@ class RealmArena {
   }
 
   stop() {
-    this.active = false;
+    this.active = false; this._focusHud(true);
     if (this.team) { this.team.close(); this.team = null; this.role = 'solo'; }
     const pe = document.getElementById('realm-partner'); if (pe) pe.classList.add('hidden');
     this.keys = {};
@@ -1824,7 +1896,7 @@ class RealmArena {
     const scale = (1 + 0.15 * Math.max(0, this.run.wave - 1)) * (this.team && this.role === 'host' ? RT_HP_SCALE : 1); // tougher with a partner
     e.active = true; e.type = type; e.x = x; e.y = y;
     e.maxHp = Math.ceil(def.hp * scale); e.hp = e.maxHp;
-    e.slowT = 0; e.slowF = 1; e.boneT = 0; e.status = null; e._stm = null; e._stNext = Infinity; e._stAcc = 0; e.fireMul = 1;
+    e.slowT = 0; e.slowF = 1; e.boneT = 0; e.status = null; e._stm = null; e._stNext = Infinity; e._stAcc = 0; e.fireMul = 1; e._pipAt = -9; e._pipN = 0; e._pipMore = 0; e._tg = 0; e._tgW = 0; e._tgP = 0; e._tgA = 0;
     e.dg = null; e._at = undefined; e.t = 0; e.flash = 0; e.angle = this.rng() * Math.PI * 2; e.dir = this.rng() < 0.5 ? 1 : -1;
     e.cd = 0.8 + this.rng() * 0.8; // first shot is never instant
     if (this.world) { e.ax = x + (this.rng() - 0.5) * 220; e.ay = y + (this.rng() - 0.5) * 220; } else { e.ax = 80 + this.rng() * (this.W - 160); e.ay = 80 + this.rng() * (this.H - 160); } // drift target for Whirlers (near home in a world)
@@ -1956,7 +2028,7 @@ class RealmArena {
       const d = hp.critChance > 0 && this.rng() < hp.critChance ? base * 2 : base;
       const b = this.firePlayerBulletFrom(this.player.x, this.player.y, aim + (n > 1 ? (k / (n - 1) - 0.5) * hp.spread : 0), d, 0);
       if (!b) continue;
-      b.pr = hp.pierce;
+      b.pr = hp.pierce; if (d !== base) b.cr = 1;
       if (hp.boltSpeed !== 1) { b.vx *= hp.boltSpeed; b.vy *= hp.boltSpeed; b.life /= hp.boltSpeed; }
     }
   }
@@ -1969,7 +2041,7 @@ class RealmArena {
     const b = this._take(this.pBullets);
     if (!b) return null;
     if (this.team && this.role === 'host') this.team.ev('fp', wcode >= 0 ? [Math.round(x), Math.round(y), Math.round(angle * 1000) / 1000, Math.round(dmg * 10) / 10, wcode] : [Math.round(x), Math.round(y), Math.round(angle * 1000) / 1000, Math.round(dmg * 10) / 10], owner);
-    b.ws = null; b.ho = 0; b.lb = 0; b.st = 0;
+    b.ws = null; b.ho = 0; b.lb = 0; b.st = 0; b.cr = 0; // cr: this bolt rolled a crit (gold damage number)
     b.active = true; b.x = x + Math.cos(angle) * 14; b.y = y + Math.sin(angle) * 14; b.dmg = dmg; b.own = owner;
     b.vx = Math.cos(angle) * RM_PLAYER.bulletSpeed; b.vy = Math.sin(angle) * RM_PLAYER.bulletSpeed; b.life = RM_PLAYER.bulletLife;
     b.pr = 0; b.hn = 0; b.h0 = b.h1 = b.h2 = -1; // class pierce: bolts left to pass through, and the enemies already hit
@@ -1998,7 +2070,8 @@ class RealmArena {
     this._readReduced();
     if (this.paused) { this._readPad(); this._padPauseEdge(); return; } // backpack open (Start can still close it)
     const p = this.player;
-    this._stT += dt; this._stTick(dt);
+    this._stT += dt; this._stTick(dt); this._focusTick(dt);
+    this._accT += dt; if (this._accT >= 1) { this._accT = 0; this.refreshAccess(); }
     this.shake = Math.max(0, this.shake - dt * 30);
     this.flash = Math.max(0, this.flash - dt * 2.2);
     if (this.displayShards !== this.save.shards) { // the shard counter ticks up (or down) instead of jumping
@@ -2261,6 +2334,7 @@ class RealmArena {
 
   _updateEnemies(dt0) {
     const wd = this.world; const wake = wd ? (wd.wake || Math.max(this.W, this.H) * 0.75) : 0; const wake2 = wake * wake;
+    const tg = this._tgOn();
     for (let i = 0; i < this.enemies.length; i++) {
       const e = this.enemies[i];
       if (!e.active) continue;
@@ -2268,14 +2342,14 @@ class RealmArena {
       if (e.slowT > 0) { e.slowT -= dt0; dt = dt0 * e.slowF; } // a signature slow (Blizzard Ring / Thorn Bloom); never set otherwise
       const p = this._nearest(e.x, e.y);
       e.t += dt; e.flash = Math.max(0, e.flash - dt * 6);
-      if (wd && (p.x - e.x) * (p.x - e.x) + (p.y - e.y) * (p.y - e.y) > wake2) continue; // world: an enemy far from every player sleeps (no moving, no firing)
+      if (wd && (p.x - e.x) * (p.x - e.x) + (p.y - e.y) * (p.y - e.y) > wake2) { e._tg = 0; continue; } // world: an enemy far from every player sleeps (no moving, no firing)
       this._curE = e; this._curDm = e.dmgMul || 1; // bullets fired below carry this enemy's damage multiplier (1 = unchanged)
       let sm = null;
       if (e.status) { if (e._stNext <= this._stT * 1000) this._stRefresh(e); sm = e._stm; if (sm) { this._curDm *= sm.enemyDmg; if (sm.dot > 0) this._stEnemyDot(e, sm, dt0); if (!e.active) continue; } }
       const hold = wd && !this._canFire(e, p); // world: off-screen shooters hold their fire (cooldowns wait at 0.2 s)
       if (hold) { e.cd = Math.max(e.cd, 0.2); if (e.type === 'boss') e.cd2 = Math.max(e.cd2, 0.2); }
-      if (e.type === 'boss') { if (sm && sm.speed < 1) e.t -= dt * (1 - sm.speed); this._updateBoss(e, dt * (e.fireMul || 1) / (sm ? sm.enemyFire : 1)); this._curDm = 1; this._curE = null; continue; } // slowed: the sway runs slower
-      if (sm && sm.stun) continue; // stunned: no moving, no firing
+      if (e.type === 'boss') { if (sm && sm.speed < 1) e.t -= dt * (1 - sm.speed); this._updateBoss(e, dt * (e.fireMul || 1) / (sm ? sm.enemyFire : 1)); if (tg) this._tgBoss(e, hold, p); this._curDm = 1; this._curE = null; continue; } // slowed: the sway runs slower
+      if (sm && sm.stun) { e._tg = 0; continue; } // stunned: no moving, no firing
       if (!hold) e.cd -= dt * (e.fireMul || 1) / (sm ? sm.enemyFire : 1); // fireMul: classic wave scale; dazed makes fire cooldowns x1.5
       const ox = e.x; const oy = e.y; const sp = (e.spdMul || 1) * (sm ? sm.speed : 1);
       const dx = p.x - e.x; const dy = p.y - e.y; const dist = Math.hypot(dx, dy) || 1;
@@ -2304,6 +2378,7 @@ class RealmArena {
           for (let k = 0; k < 14; k++) this.fireEnemyBullet(e.x, e.y, MMPatterns.ringAngle(k, 14, phase), 140, 2);
         }
       }
+      if (tg) this._tgStep(e, hold, p);
       e.x = Math.max(20, Math.min(this._bw() - 20, e.x));
       e.y = Math.max(20, Math.min(this._bh() - 20, e.y));
       if (this._solidAt && this._blocked(e.x, e.y, 8)) { // world tiles block enemies too: slide along one axis, else stay
@@ -2336,7 +2411,7 @@ class RealmArena {
         const he = this.enemies[hj];
         if (this._sparks) this._spawnSpark(b);
         if (b.ws) this._wpnHit(b, he, hj);
-        this._hitEnemy(he, b.dmg || this.stats.dmg);
+        this._hitEnemy(he, b.dmg || this.stats.dmg, b.cr === 1);
       }
       if (!b.active) continue;
       for (let j = 0; j < this.drifters.length; j++) {
@@ -2369,7 +2444,17 @@ class RealmArena {
     this._ebLive = ebLive;
   }
 
-  _hitEnemy(e, dmg) {
+  // The damage-number colour for a hit on `e` (S14): a crit keeps gold, marked keeps its pink, armorBroken draws purple, else white.
+  _dmgColor(e, crit) {
+    if (crit) return RM_DMG_COL.crit;
+    const fx = e && e.status && e.status.fx; if (!fx) return RM_DMG_COL.plain;
+    const now = this._stT * 1000;
+    if (fx.marked && fx.marked.until > now) return RM_DMG_COL.marked;
+    if (fx.armorBroken && fx.armorBroken.until > now) return RM_DMG_COL.armorBroken;
+    return RM_DMG_COL.plain;
+  }
+
+  _hitEnemy(e, dmg, crit) {
     if (e._stm && e._stm.taken !== 1) dmg *= e._stm.taken; // status mods (marked / curse / armorBroken), capped at x1.5 by MMStatus
     if (this.dungeon && e.dg === 'boss') { this.dungeon.hitBoss(e, dmg); return; }
     if (e.type === 'boss' && e.invuln > 0) { this._floatText(e.x, e.y - 40, 'shielded', '#c9d1d9'); this._burst(e.x, e.y, '#fff', 1, 60); return; }
@@ -2388,7 +2473,8 @@ class RealmArena {
       if (this.onEnemyKilled) this.onEnemyKilled(e);
       return;
     }
-    this._floatText(e.x + (this.rng() - 0.5) * 14, e.y - 14, String(Math.round(dmg * 10) / 10), '#fff');
+    const dc = this._dmgColor(e, crit); this.lastDmgColor = dc; // S14 (test hook: the colour of the last enemy damage number)
+    this._floatText(e.x + (this.rng() - 0.5) * 14, e.y - 14, crit ? `${Math.round(dmg * 10) / 10}!` : String(Math.round(dmg * 10) / 10), dc);
     this._burst(e.x, e.y, RM_ENEMIES[e.type].color, 3, 110);
     if (e.hp > 0) return;
     e.active = false;
@@ -2661,7 +2747,10 @@ class RealmArena {
     const ab = this._ab(i);
     if (!ab || !this.abilityUnlocked(i) || this.abilityCd[i] > 0) return false;
     if (this.team && this.team.isPvp && ab.id !== 'dash') return false; // duels allow only the Dash
+    const f = this._focusSync(); let paid = null; // FO2: short on focus = the bar flashes and nothing is cast (the cooldown is not started)
+    if (f) { paid = MMFocus.spend(f, RM_FOCUS_ID[ab.id] || 'signature'); if (!paid.ok) { this._focusShort(); return false; } }
     const p = this.player;
+    if (paid) { this.focus = paid.state; this._focusHud(true); }
     if (ab === this._sigAb) this._castSignature();
     else if (ab.id === 'dash') {
       let dx = this._mx || 0; let dy = this._my || 0;
@@ -2711,6 +2800,219 @@ class RealmArena {
     this._updateSignature(dt);
     this._abTick = (this._abTick || 0) + dt;
     if (changed && this._abTick > 0.1) { this._abTick = 0; this._syncAbilities(); }
+  }
+
+  // ---------- focus (FO2, MMFocus): a blue bar under HP; Nova/Shield/Overdrive/Signature cost focus, the Dash is free ----------
+  // On only with MMFocus loaded, an active Mad Maze hero, no ?focus=0 and never in duels. Off = null state = today's cooldown-only play.
+  _focusOn() { return !this._focusOff && typeof MMFocus !== 'undefined' && !!this._hu && !(this.team && this.team.isPvp); }
+  // The live focus state for the active hero (made / resized on a hero or level change, keeping what you had), or null when off.
+  _focusSync() {
+    if (!this._focusOn()) { if (this.focus) { this.focus = null; this._focusHud(true); } return null; }
+    const lv = Math.max(1, this.heroLevel()); const cls = this._hu.cls; let f = this.focus;
+    if (!f || f.level !== lv || f.classId !== cls) {
+      const n = MMFocus.create(cls, lv);
+      if (f && f.classId === cls) n.cur = Math.min(n.max, f.cur);
+      this.focus = f = n; this._focusHud(true);
+    }
+    return f;
+  }
+  // Regen in place (our own copy; no per-frame allocation). The HUD is touched at most 10x a second and only when the number changes.
+  _focusTick(dt) {
+    const f = this._focusSync();
+    if (f && f.cur < f.max && this.state !== 'dead') f.cur = Math.min(f.max, f.cur + f.regen * Math.min(0.25, Math.max(0, dt)));
+    this._fHudT += dt;
+    if (this._fHudT >= 0.1) { this._fHudT = 0; this._focusHud(false); }
+  }
+  // Public hook for world pickups (RB3 / DP3): kind 'focus' (orb, +15) or 'potion_focus' (half the max). Returns true when focus is on.
+  restoreFocus(kind) {
+    const f = this._focusSync();
+    if (!f) return false;
+    this.focus = MMFocus.restore(f, kind); this._focusHud(true);
+    return true;
+  }
+  // Test / debug hook: {on, cur, max, regen} (cur rounded to 0.1).
+  focusState() { const f = this._focusSync(); return f ? { on: true, cur: Math.round(f.cur * 10) / 10, max: f.max, regen: f.regen } : { on: false, cur: 0, max: 0, regen: 0 }; }
+  _focusShort() {
+    this.focusShorts++;
+    const d = this._ensureFocusDom(); if (!d) return;
+    d.el.classList.remove('short'); void d.el.offsetWidth; d.el.classList.add('short'); // restart the flash
+    clearTimeout(this._fShortTimer); this._fShortTimer = setTimeout(() => d.el.classList.remove('short'), 450);
+  }
+  // The bar: made by realm.js inside the overlay (the pages' HTML is unchanged), placed under #realm-hp from its rect.
+  _ensureFocusDom() {
+    if (this._fDom && this._fDom.el.isConnected) return this._fDom;
+    if (typeof document === 'undefined') return null;
+    const host = document.getElementById('realm-overlay') || (this.container && this.container.parentNode);
+    if (!host) return null;
+    let el = document.getElementById('realm-focus');
+    if (!el) {
+      el = document.createElement('div'); el.id = 'realm-focus'; el.className = 'hidden';
+      el.setAttribute('role', 'meter'); el.setAttribute('aria-label', 'Focus'); el.setAttribute('aria-valuemin', '0');
+      if (RM_UI_ART) {
+        const ico = document.createElement('img'); ico.className = 'rf-ico mm-ico'; ico.alt = ''; ico.draggable = false; ico.setAttribute('aria-hidden', 'true');
+        ico.addEventListener('error', () => ico.remove(), { once: true }); ico.src = RM_UI_ART + 'ui_stat_focus.png';
+        el.appendChild(ico);
+      }
+      const bar = document.createElement('div'); bar.className = 'rf-bar';
+      if (RM_UI_ART && /^[A-Za-z0-9_.:\/%-]+$/.test(RM_UI_ART)) bar.style.setProperty('--rf-frame', `url("${RM_UI_ART}ui_bar_focus_frame.png")`);
+      const fill = document.createElement('div'); fill.id = 'realm-focus-fill'; bar.appendChild(fill);
+      el.appendChild(bar);
+      host.appendChild(el);
+    }
+    this._fDom = { el, fill: el.querySelector('#realm-focus-fill') };
+    this._fShown = ''; this._fPlaceT = -9;
+    return this._fDom;
+  }
+  _focusHud(force) {
+    const f = this.focus;
+    if (!f && !this._fDom) return;
+    const d = this._ensureFocusDom(); if (!d) return;
+    const on = !!f && this.active;
+    const key = on ? `${Math.floor(f.cur)}/${f.max}` : 'off';
+    if (key !== this._fShown || force) {
+      this._fShown = key;
+      d.el.classList.toggle('hidden', !on);
+      if (on) {
+        d.fill.style.width = `${(f.cur / f.max) * 100}%`;
+        d.el.setAttribute('aria-valuemax', String(f.max)); d.el.setAttribute('aria-valuenow', String(Math.floor(f.cur)));
+        d.el.title = `Focus ${Math.floor(f.cur)} / ${f.max}`;
+      }
+    }
+    if (!on) return;
+    let mask = 0; // which ability slots are short on focus right now (dimmed in the bar)
+    for (let i = 0; i < 4; i++) { const ab = this._ab(i); const c = ab ? MMFocus.cost(RM_FOCUS_ID[ab.id] || 'signature') : 0; if (c > f.cur) mask |= 1 << i; }
+    if (mask !== this._fMask) { this._fMask = mask; this._syncAbilities(); }
+    if (force || this.clock - this._fPlaceT > 0.5 || this._fPlaceT > this.clock) { this._fPlaceT = this.clock; this._focusPlace(d.el); }
+  }
+  // Under the HP bar: same left edge and width, 2 px below it (DOM rects read at most twice a second).
+  _focusPlace(el) {
+    try {
+      const hp = document.getElementById('realm-hp'); const host = el.parentNode;
+      if (!hp || !host || !hp.getClientRects().length) return;
+      const r = hp.getBoundingClientRect(); const hr = host.getBoundingClientRect();
+      const l = `${Math.round(r.left - hr.left)}px`, t = `${Math.round(r.bottom - hr.top + 2)}px`, w = `${Math.round(r.width)}px`;
+      if (el.style.left !== l) el.style.left = l;
+      if (el.style.top !== t) el.style.top = t;
+      if (el.style.width !== w) el.style.width = w;
+    } catch (e) { /* layout only */ }
+  }
+
+  // ---------- telegraphs (TG3, MMTelegraph) ----------
+  // A wind-up drawn over the LAST `windup` seconds of a volley's existing cooldown: nothing is delayed, added or removed, so bullet counts,
+  // timings and the rng stream are exactly the same with ?telegraph=0. Solo world only (never the classic arena, dungeons, co-op or duels).
+  _tgOn() { return !this._tgOff && typeof MMTelegraph !== 'undefined' && !!this.world && this.mode === 'world' && !this.dungeon && !this.team; }
+  // Ring (Burster) and aimed (Sniper) volleys of tier 3+ world enemies (zone tier 0..3 -> 1..4: the Highlands and the Godlands).
+  _tgStep(e, hold, p) {
+    if (e.type !== 'aimed' && e.type !== 'ring') { e._tg = 0; return; }
+    const tier = (Number(e.tier) || 0) + 1;
+    this._tgSet(e, MMTelegraph.windupFor(tier, false), e.cd, e.type, hold, p);
+  }
+  // World bosses (bossTier > 0): phase 1 aimed fans (cone), phase 2 rings / aimed triples (whichever fires next), phase 3 rings.
+  _tgBoss(e, hold, p) {
+    if (!(e.bossTier > 0) || e.invuln > 0 || !e.active) { e._tg = 0; return; }
+    let cd = e.cd2; let pat = 'fan';
+    if (e.phase === 2) { if (e.cd < e.cd2) { cd = e.cd; pat = 'ring'; } else pat = 'aimed'; } else if (e.phase >= 3) pat = 'ring';
+    this._tgSet(e, MMTelegraph.windupFor(0, true), cd, pat, hold, p);
+  }
+  _tgSet(e, w, cd, pattern, hold, p) {
+    if (!(w > 0) || hold || !(cd > 0) || cd > w) { e._tg = 0; return; }
+    const sc = this._tgCodes || (this._tgCodes = Object.create(null)); // pattern -> shape code, looked up once per pattern (no per-frame strings)
+    const code = sc[pattern] || (sc[pattern] = RM_TG_CODE[MMTelegraph.shapeFor(pattern)] || 1);
+    if (!e._tg) { // a new wind-up: count it and play the `warn` cue (at most every 0.6 s; a silent no-op until the cue exists)
+      this.tgStarted++;
+      if (this.clock - this._tgSndAt > 0.6 || this._tgSndAt > this.clock) { this._tgSndAt = this.clock; this._snd('warn'); }
+    }
+    e._tg = code; e._tgW = w; e._tgP = Math.max(0, Math.min(1, 1 - cd / w)); e._tgA = Math.atan2(p.y - e.y, p.x - e.x);
+  }
+  // The shared look (colour, alpha, pulse) from MMTelegraph.forVolley for the current palette / reduce-motion, made only when those change.
+  _tgLook() {
+    const pal = this.acc ? this.acc.palette : 'normal'; const red = !!this._reduced; const key = pal + (red ? '|r' : '');
+    if (key !== this._tgDescKey || !this._tgDesc) { this._tgDescKey = key; this._tgDesc = MMTelegraph.forVolley('ring', 3, false, { reduced: red, palette: pal }); this._tgSpr = null; }
+    return this._tgDesc;
+  }
+  _tgSprites(color) {
+    if (this._tgSpr && this._tgSpr.color === color) return this._tgSpr;
+    const mk = (w, h, draw) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); return c; };
+    const ring = mk(128, 128, (g) => {
+      g.globalAlpha = 0.16; g.fillStyle = color; g.beginPath(); g.arc(64, 64, 60, 0, Math.PI * 2); g.fill();
+      g.globalAlpha = 1; g.strokeStyle = '#140a14'; g.lineWidth = 6; g.beginPath(); g.arc(64, 64, 59, 0, Math.PI * 2); g.stroke();
+      g.strokeStyle = color; g.lineWidth = 3; g.beginPath(); g.arc(64, 64, 59, 0, Math.PI * 2); g.stroke();
+    });
+    const line = mk(256, 16, (g) => {
+      g.fillStyle = '#140a14'; g.fillRect(0, 4, 238, 8); g.fillStyle = color; g.fillRect(1, 6, 236, 4);
+      g.beginPath(); g.moveTo(236, 0); g.lineTo(256, 8); g.lineTo(236, 16); g.closePath(); g.fillStyle = '#140a14'; g.fill();
+      g.beginPath(); g.moveTo(238, 3); g.lineTo(252, 8); g.lineTo(238, 13); g.closePath(); g.fillStyle = color; g.fill();
+    });
+    const cone = mk(256, 256, (g) => {
+      g.beginPath(); g.moveTo(0, 128); g.arc(0, 128, 250, -RM_TG_CONE, RM_TG_CONE); g.closePath();
+      g.globalAlpha = 0.18; g.fillStyle = color; g.fill(); g.globalAlpha = 1; g.strokeStyle = color; g.lineWidth = 3; g.stroke();
+    });
+    return (this._tgSpr = { color, ring, line, cone });
+  }
+  // Scale and alpha for one telegraph (into a reused object): pulsing = it grows / tightens and brightens with the wind-up;
+  // static (reduce motion) = one fixed size and alpha for the whole wind-up.
+  _tgShape(e, d) {
+    const o = this._tgLk; const t = e._tgP;
+    o.scale = d.pulse ? 1.6 - 0.6 * t : 1;
+    o.alpha = d.pulse ? d.alpha * (0.45 + 0.55 * t) * (0.85 + 0.15 * Math.sin(this.clock * 24)) : d.alpha;
+    o.len = d.pulse ? RM_TG_LINE * (0.35 + 0.65 * t) : RM_TG_LINE;
+    return o;
+  }
+  _drawTelegraphs(g, vx0, vy0, vx1, vy1) {
+    let n = 0;
+    if (!this._tgOn()) { this.tgDrawn = 0; return; }
+    const d = this._tgLook(); const spr = this._tgSprites(d.color);
+    for (let i = 0; i < this.enemies.length; i++) {
+      const e = this.enemies[i];
+      if (!e.active || !e._tg || e.x < vx0 || e.x > vx1 || e.y < vy0 || e.y > vy1) continue;
+      const o = this._tgShape(e, d); g.globalAlpha = Math.max(0, Math.min(1, o.alpha));
+      if (e._tg === 1) { const R = (RM_ENEMIES[e.type].r + 26) * o.scale; g.drawImage(spr.ring, e.x - R, e.y - R, R * 2, R * 2); }
+      else {
+        g.save(); g.translate(e.x, e.y); g.rotate(e._tgA);
+        if (e._tg === 2) g.drawImage(spr.line, 0, -8, o.len, 16);
+        else { const L = RM_TG_LINE * (d.pulse ? 0.6 + 0.4 * e._tgP : 1); g.drawImage(spr.cone, 0, -L / 2, L, L); }
+        g.restore();
+      }
+      n++;
+    }
+    g.globalAlpha = 1; this.tgDrawn = n;
+  }
+  // Test / debug hook: the telegraph an enemy shows now, or null: {shape, windup, progress, color, pulse, scale, alpha}.
+  telegraphOf(e) {
+    if (!e || !e._tg || !this._tgOn()) return null;
+    const d = this._tgLook(); const o = this._tgShape(e, d);
+    return { shape: ['', 'ring', 'line', 'cone'][e._tg], windup: e._tgW, progress: e._tgP, color: d.color, pulse: d.pulse, scale: o.scale, alpha: d.pulse ? null : o.alpha, len: o.len };
+  }
+
+  // ---------- accessibility prefs (TG3, MMAccess.prefs / `pixeltown-access-v1`) ----------
+  // Re-read once a second (the settings sheet writes the key; another tab fires `storage`): only parsed when the raw string changed.
+  refreshAccess() {
+    if (typeof MMAccess === 'undefined' || !MMAccess.prefs) { this.acc = null; this._ebCB = null; return null; }
+    let raw = null; try { raw = localStorage.getItem(MMAccess.prefs.KEY); } catch (e) { raw = null; }
+    if (raw === this._accRaw && this.acc) return this.acc;
+    this._accRaw = raw;
+    let pr = null; try { pr = MMAccess.prefs.load(localStorage); } catch (e) { pr = null; }
+    this.acc = pr || MMAccess.prefs.defaults();
+    this._bakeCBBullets();
+    return this.acc;
+  }
+  _flashesOn() { return !this.acc || this.acc.flashes !== false; }
+  // Colour-blind enemy bullets: with a non-normal palette the three bullet kinds take its colours (aimed = `bullet`, spiral / ring =
+  // `enemy`), with a 2 px dark outline while bulletOutline is on. Same 16 px sprites, same hit size; null = today's hues and art.
+  _bakeCBBullets() {
+    const a = this.acc; const on = a && a.palette && a.palette !== 'normal';
+    const key = on ? `${a.palette}|${a.bulletOutline ? 1 : 0}` : '';
+    if (key === this._ebCBKey) return;
+    this._ebCBKey = key; this._ebCB = null;
+    if (!on || typeof document === 'undefined') return;
+    const pal = MMAccess.palette(a.palette); const R = RM_BOLT_R.enemy;
+    this._ebCB = [pal.bullet, pal.enemy, pal.enemy].map((col, k) => {
+      const c = document.createElement('canvas'); c.width = 16; c.height = 16; const g = c.getContext('2d');
+      g.fillStyle = col; g.beginPath(); g.arc(8, 8, R, 0, Math.PI * 2); g.fill();
+      if (k === 2) { g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.arc(8, 8, 2.4, 0, Math.PI * 2); g.fill(); } // rings get a dark core: told apart by shape, not hue
+      if (a.bulletOutline) { g.strokeStyle = '#000'; g.lineWidth = pal.outlinePx || 2; g.beginPath(); g.arc(8, 8, R + 1, 0, Math.PI * 2); g.stroke(); }
+      return c;
+    });
   }
 
   // ---------- class signature (F slot) ----------
@@ -3117,16 +3419,103 @@ class RealmArena {
     let html = `<div id="realm-bp-stats">${this._statLine()}</div><button type="button" class="eq" data-open-shop="1" aria-label="Open the shop (V)" style="min-height:44px;margin:4px 0">🛒 Shop (V)</button><div class="realm-bp-slots">`;
     RM_SLOTS.forEach((slot) => {
       const it = sv.items.find((x) => x.n === sv.eq[slot]);
-      html += `<div class="realm-bp-slot" data-slot="${slot}">${it ? `<span style="color:${RM_RARITIES[it.r].color}">${this._icon(RM_ITEM_BY_ID[it.id])} ${RM_ITEM_BY_ID[it.id].name}</span>` : `<span class="dim">${slot}: empty</span>`}</div>`;
+      const cw = !it && slot === 'weapon' ? this._classWeaponName() : ''; // PT2 #15: the class weapon the hero fires, not "weapon: empty"
+      html += `<div class="realm-bp-slot" data-slot="${slot}">${it ? `<span style="color:${RM_RARITIES[it.r].color}">${this._icon(RM_ITEM_BY_ID[it.id])} ${RM_ITEM_BY_ID[it.id].name}</span>` : cw ? `<span class="rm-classwpn" title="Class weapon">${this._slotIcon('weapon')}${cw}</span>` : `<span class="dim">${slot}: empty</span>`}</div>`;
     });
     html += `</div><div class="realm-bp-count">${sv.items.length} / ${RM_BACKPACK} items</div><ul id="realm-bp-list">`;
     if (!sv.items.length) html += '<li class="dim">Nothing yet — defeat enemies to find loot bags.</li>';
     sv.items.forEach((it) => {
       const def = RM_ITEM_BY_ID[it.id]; const rar = RM_RARITIES[it.r]; const on = eqUids.has(it.n);
-      html += `<li data-uid="${it.n}" class="${on ? 'on' : ''}"><span class="nm" style="color:${rar.color}">${this._icon(def)} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(it)}</span>${def.inert ? '<button type="button" class="eq" disabled aria-label="Not usable yet">Equip</button>' : def.wpn && !on && !this._wpnCanEquip(def) ? `<button type="button" class="eq" disabled data-wpn-lock="1" aria-label="${this._wpnHint(def)} only" title="${this._wpnHint(def)}">🔒 ${def.family.charAt(0).toUpperCase() + def.family.slice(1)}</button>` : `<button type="button" class="eq" data-act="equip" data-uid="${it.n}">${on ? 'Unequip' : 'Equip'}</button>`}${this.combinable(it.n) ? `<button type="button" class="eq" data-combine="${it.n}" aria-label="Combine ${RM_COMBINE_COUNT} ${rar.name} ${def.name} into one ${RM_RARITIES[it.r + 1].name}">Combine ${RM_COMBINE_COUNT}→${RM_RARITIES[it.r + 1].name}</button>` : ''}<button type="button" class="dc" data-act="discard" data-uid="${it.n}" aria-label="Sell ${def.name} for ${rar.sell} shards">Sell ${rar.sell}💎</button></li>`;
+      html += `<li data-uid="${it.n}" class="${on ? 'on' : ''}"><span class="nm" style="color:${rar.color}">${this._icon(def)} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(it)}</span>${def.slot === 'weapon' ? this._cmpHtml(it, on) : ''}${def.inert ? '<button type="button" class="eq" disabled aria-label="Not usable yet">Equip</button>' : def.wpn && !on && !this._wpnCanEquip(def) ? `<button type="button" class="eq" disabled data-wpn-lock="1" aria-label="${this._wpnHint(def)} only" title="${this._wpnHint(def)}">🔒 ${def.family.charAt(0).toUpperCase() + def.family.slice(1)}</button>` : `<button type="button" class="eq" data-act="equip" data-uid="${it.n}">${on ? 'Unequip' : 'Equip'}</button>`}${this.combinable(it.n) ? `<button type="button" class="eq" data-combine="${it.n}" aria-label="Combine ${RM_COMBINE_COUNT} ${rar.name} ${def.name} into one ${RM_RARITIES[it.r + 1].name}">Combine ${RM_COMBINE_COUNT}→${RM_RARITIES[it.r + 1].name}</button>` : ''}<button type="button" class="dc" data-act="discard" data-uid="${it.n}" aria-label="Sell ${def.name} for ${rar.sell} shards">Sell ${rar.sell}💎</button></li>`;
     });
     html += '</ul>';
-    root.innerHTML = html; this._fixIcons(root);
+    root.innerHTML = html; this._fixIcons(root); this._bindCmp(root);
+    root.querySelectorAll('img.rm-slot-ico').forEach((img) => { if (img.complete && !img.naturalWidth) img.remove(); else img.addEventListener('error', () => img.remove(), { once: true }); });
+  }
+
+  // ---------- backpack weapon compare (S14) ----------
+  // A weapon's numbers for the compare line. it = a save item, or null for the hero's class weapon with nothing equipped.
+  // With an active hero and MMWeapons the pattern comes from MMWeapons.resolve (the style the item would really fire), else today's plain bolt.
+  _wpnSummary(it) {
+    const def = it ? RM_ITEM_BY_ID[it.id] : null; const r = it ? it.r : 0;
+    const cls = this.heroClass(); let spec = null; let locked = false;
+    if (typeof MMWeapons !== 'undefined' && cls) {
+      try {
+        if (def && def.wpn && !this._wpnCanEquip(def)) { locked = true; spec = MMWeapons.get(def.style); }
+        else spec = MMWeapons.resolve(cls, def && def.wpn ? def.style : 'base', r);
+      } catch (e) { spec = null; }
+    }
+    const hp = this.heroProfile;
+    const v = def && !def.inert ? def.amount * RM_RARITIES[r].mult : 0;
+    const shots = spec ? Math.max(1, spec.count) * Math.max(1, spec.burst ? spec.burst.n : 1) : (hp ? hp.shots : 1);
+    const shotDmg = (RM_PLAYER.dmg + (def && def.stat === 'dmg' ? v : 0)) * (spec ? spec.dmg : (hp ? hp.shotDmg : 1));
+    const rate = (RM_PLAYER.fireRate + (def && def.stat === 'rate' ? v : 0)) * (spec && !spec.base ? spec.rate : 1);
+    const range = spec ? Math.round(spec.range || (spec.spd || 1) * RM_PLAYER.bulletSpeed * (spec.life || RM_PLAYER.bulletLife)) : Math.round(RM_PLAYER.bulletSpeed * RM_PLAYER.bulletLife);
+    let pattern = '';
+    try { pattern = spec ? MMWeapons.describe(spec) : ''; } catch (e) { pattern = ''; }
+    if (!pattern) pattern = `${shots} bolt${shots === 1 ? '' : 's'}, range ${range} px`;
+    return { pattern, shots, pierce: spec ? spec.pierce || 0 : (hp ? hp.pierce : 0), range, dps: shotDmg * shots * rate, locked };
+  }
+  // Compare a backpack weapon with what is equipped now (or the class weapon): {pattern, deltas: [{text, up}], equipped, locked}.
+  weaponCompare(uid) {
+    const it = this.save.items.find((x) => x.n === uid); const def = it && RM_ITEM_BY_ID[it.id];
+    if (!def || def.slot !== 'weapon') return null;
+    const eqUid = this.save.eq.weapon; const cur = eqUid ? this.save.items.find((x) => x.n === eqUid) : null;
+    const a = this._wpnSummary(it); const b = this._wpnSummary(cur || null);
+    const out = { pattern: a.pattern, deltas: [], equipped: eqUid === uid, locked: a.locked };
+    if (out.equipped || a.locked) return out;
+    const sgn = (d) => (d > 0 ? '+' : '');
+    const add = (d, text, min) => { if (Math.abs(d) >= (min || 1)) out.deltas.push({ text, up: d > 0 }); };
+    const ds = a.shots - b.shots, dp = a.pierce - b.pierce, dr = a.range - b.range;
+    add(ds, `${sgn(ds)}${ds} shot${Math.abs(ds) === 1 ? '' : 's'}`);
+    add(dp, `${sgn(dp)}${dp} pierce`);
+    const pct = b.dps > 0 ? Math.round((a.dps / b.dps - 1) * 100) : 0;
+    add(pct, `${sgn(pct)}${pct}% damage/s`);
+    add(dr, `${sgn(dr)}${dr} px range`, 10);
+    return out;
+  }
+  _cmpHtml(it, on) {
+    let c = null; try { c = this.weaponCompare(it.n); } catch (e) { c = null; }
+    if (!c) return '';
+    const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+    let d = '';
+    if (on || c.equipped) d = '<span class="dl eqd">equipped</span>';
+    else if (c.locked) d = '<span class="dl eqd">another class family</span>';
+    else if (!c.deltas.length) d = '<span class="dl eqd">same as equipped</span>';
+    else d = c.deltas.map((x) => `<span class="dl ${x.up ? 'up' : 'dn'}">${esc(x.text)}</span>`).join('');
+    return `<span class="rm-cmp" data-cmp="${it.n}"><span class="pat">${esc(c.pattern)}</span>${d}</span>`;
+  }
+  // Long-press (touch) toggles a row's compare line; hover / keyboard focus show it on desktop (realm-ui.css). Bound once per element.
+  _bindCmp(root) {
+    if (!root || root.dataset.cmpBound) return;
+    root.dataset.cmpBound = '1';
+    let timer = 0; let li = null;
+    const clear = () => { clearTimeout(timer); timer = 0; li = null; };
+    root.addEventListener('pointerdown', (e) => {
+      const row = e.target.closest && e.target.closest('#realm-bp-list li');
+      if (!row || !row.querySelector('.rm-cmp') || e.target.closest('button')) return;
+      clear(); li = row;
+      timer = setTimeout(() => {
+        const r = li; clear();
+        if (!r || !r.isConnected) return;
+        const was = r.classList.contains('cmp-on');
+        root.querySelectorAll('li.cmp-on').forEach((x) => x.classList.remove('cmp-on'));
+        if (!was) r.classList.add('cmp-on');
+      }, 420);
+    });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach((t) => root.addEventListener(t, clear));
+    root.addEventListener('contextmenu', (e) => { if (e.target.closest && e.target.closest('#realm-bp-list li .nm')) e.preventDefault(); }); // a long-press shows the compare line, not the menu
+  }
+  // The hero's class weapon name (MMWeapons base style, e.g. "Ranger Bolt"), or '' with no hero / module / in a duel.
+  _classWeaponName() {
+    const cls = this.heroClass();
+    if (!cls || typeof MMWeapons === 'undefined' || (this.team && this.team.isPvp)) return '';
+    try { const b = MMWeapons.resolve(cls, 'base', 0); return b && b.name ? String(b.name).replace(/[<>&"]/g, '').slice(0, 32) : ''; } catch (e) { return ''; }
+  }
+  // b19 slot art in front of the class weapon name (decorative; removed if it fails to load).
+  _slotIcon(slot) {
+    if (!RM_UI_ART || !/^[a-z]+$/.test(slot) || !/^[A-Za-z0-9_.:\/%-]+$/.test(RM_UI_ART)) return '';
+    return `<img class="rm-slot-ico mm-ico" src="${RM_UI_ART}ui_slot_${slot}.png" alt="" width="20" height="20">`;
   }
 
   // ---------- drawing ----------
@@ -3163,15 +3552,17 @@ class RealmArena {
       const bob = e.type === 'boss' ? 0 : Math.sin(e.t * 4) * 2;
       const art = e.type === 'boss' ? !!(this._bossArt && this._drawBossArt(g, e)) : !!(this._enemyArt && this._drawEnemyArt(g, e, RM_ENEMIES[e.type]));
       if (!art) g.drawImage(spr, e.x - spr.width / 2, e.y - spr.height / 2 + bob);
-      if (e.flash > 0) { g.globalAlpha = e.flash * 0.7; g.fillStyle = '#fff'; g.beginPath(); g.arc(e.x, e.y + (art ? 0 : bob), RM_ENEMIES[e.type].r, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1; }
+      if (e.flash > 0 && this._flashesOn()) { g.globalAlpha = e.flash * 0.7; g.fillStyle = '#fff'; g.beginPath(); g.arc(e.x, e.y + (art ? 0 : bob), RM_ENEMIES[e.type].r, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1; }
       if (e.type === 'boss' && e.invuln > 0) { g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 3; g.beginPath(); g.arc(e.x, e.y, 40 + Math.sin(e.t * 20) * 2, 0, Math.PI * 2); g.stroke(); }
       if (e.hp < e.maxHp && e.type !== 'boss') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(e.x - 14, e.y - spr.height / 2 - 6, 28, 4); g.fillStyle = RM_ENEMIES[e.type].color; g.fillRect(e.x - 14, e.y - spr.height / 2 - 6, 28 * (e.hp / e.maxHp), 4); }
+      if (e.status) this._drawEnemyPips(g, e, e.y - (e.type === 'boss' ? RM_ENEMIES.boss.r + 10 : spr.height / 2 + 13));
     }
+    this._drawTelegraphs(g, vx0, vy0, vx1, vy1);
     if (this._edGhosts) this._drawEnemyGhosts(g);
     if (this._bossGhost) this._drawBossGhost(g);
     for (let i = 0; i < this.bags.length; i++) { const b = this.bags[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { const by = b.y - 13 + Math.sin(b.t * 5) * 2; g.drawImage(this.sprites.worldBag[b.tier] || this.sprites.bag[b.r], b.x - 13, by); if (this._itemArt) { const ic = this._lootIcon(b.id, b.r); if (ic) g.drawImage(ic, b.x - 10, by - 18 + Math.sin(b.t * 5 + 1) * 1.5); } } }
-    let ebn = 0; const ebs = this.sprites.eBullet;
-    for (let i = 0; i < this.eBullets.length && ebn < RM_EB_DRAW; i++) { const b = this.eBullets[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { if (!(b.ea && this._drawEBoltArt(g, b))) g.drawImage(ebs[b.kind] || ebs[0], b.x - 8, b.y - 8); ebn++; } }
+    let ebn = 0; const ebs = this.sprites.eBullet; const cb = this._ebCB; // cb: colour-blind palette sprites (they replace hues and bolt art)
+    for (let i = 0; i < this.eBullets.length && ebn < RM_EB_DRAW; i++) { const b = this.eBullets[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { if (cb) g.drawImage(cb[b.kind] || cb[0], b.x - 8, b.y - 8); else if (!(b.ea && this._drawEBoltArt(g, b))) g.drawImage(ebs[b.kind] || ebs[0], b.x - 8, b.y - 8); ebn++; } }
     this._ebDrawn = ebn;
     for (let i = 0; i < this.pBullets.length; i++) { const b = this.pBullets[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { if (b.ws) this._drawWpnBolt(g, b); else if (!(this._boltArt && this._drawBoltArt(g, b))) g.drawImage(this.sprites.pBullet, b.x - 10, b.y - 10); } }
     if (this._sparks) this._drawSparks(g);
@@ -3248,7 +3639,7 @@ class RealmArena {
     g.globalAlpha = 1;
     g.restore();
     this._drawStatusIcons(g); // screen space, above the world and the floating numbers
-    if (this.flash > 0) { // red hit vignette (reduced motion: a steady tint while it lasts, no fade or blink): one baked gradient, faded with globalAlpha (no per-frame allocation)
+    if (this.flash > 0 && this._flashesOn()) { // red hit vignette (off with the `flashes: false` access pref) (reduced motion: a steady tint while it lasts, no fade or blink): one baked gradient, faded with globalAlpha (no per-frame allocation)
       if (!this._vignette) {
         const gr = g.createRadialGradient(this.W / 2, this.H / 2, Math.min(this.W, this.H) * 0.3, this.W / 2, this.H / 2, Math.max(this.W, this.H) * 0.7);
         gr.addColorStop(0, 'rgba(255,40,80,0)'); gr.addColorStop(1, 'rgba(255,40,80,0.55)');
@@ -3303,7 +3694,7 @@ class RealmArena {
     if (xpf) xpf.style.width = this.save.level >= RM_MAX_LEVEL ? '100%' : `${(this.save.xp / rmXpNeeded(this.save.level)) * 100}%`;
     const xpt = document.getElementById('realm-xp-text');
     if (xpt) xpt.textContent = this.save.level >= RM_MAX_LEVEL ? 'MAX' : `${this.save.xp} / ${rmXpNeeded(this.save.level)} xp`;
-    this._syncAbilities();
+    this._syncAbilities(); this._focusHud(!!force);
     const best = document.getElementById('realm-best');
     if (best) best.textContent = this.save.bestWave > 0 && !wc ? `Best wave ${this.save.bestWave}` : '';
     if (force) this._hideBanner();
@@ -3317,6 +3708,7 @@ class RealmArena {
       el.classList.toggle('locked', !unlocked);
       if (this._abIconRoot !== null || el.dataset.abImg || el.querySelector(':scope > img.realm-ab-img')) this._syncAbilityIcon(el, i);
       el.classList.toggle('cooling', unlocked && cd > 0);
+      el.classList.toggle('nofocus', !!this.focus && unlocked && ((this._fMask >> i) & 1) === 1); // FO2: not enough focus for this one
       const cdEl = el.querySelector('.cd');
       if (cdEl) cdEl.textContent = !unlocked ? `Lv${ab.level}` : cd > 0 ? String(Math.ceil(cd)) : '';
       el.setAttribute('aria-label', `${ab.name} (${ab.key.toUpperCase()})${unlocked ? '' : ` — unlocks at level ${ab.level}`}`);

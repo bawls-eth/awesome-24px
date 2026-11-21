@@ -26,7 +26,7 @@
     { id: 'quest', npc: 'npc_quest_giver', role: 'quests', x: 28, y: 24 },
   ];
   const OTHER_NPCS = [
-    { id: 'guide', npc: 'npc_nexus_guide', role: 'guide', x: 20, y: 21 },
+    { id: 'guide', npc: 'npc_nexus_guide', role: 'guide', x: 23, y: 19 }, // beside the spawn pad; (20,21) sat on the vault portal (20,22) in the walkable plaza
     { id: 'wanderer', npc: 'npc_wanderer', role: 'rumours', x: 6, y: 9 },
     { id: 'oracle', npc: 'npc_ghost_guide', role: 'oracle', x: 34, y: 9 },
   ];

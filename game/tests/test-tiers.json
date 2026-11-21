@@ -1,4 +1,8 @@
 {
+  "town-polish.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "town-offline.test.js": {
     "class": "browser",
     "tier": "full"
@@ -164,6 +168,18 @@
     "tier": "full"
   },
   "dungeon-biomes.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "dungeon-biome-bosses.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "dungeon-lair.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "dungeon-pickups.test.js": {
     "class": "browser",
     "tier": "full"
   },
@@ -351,6 +367,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-splash.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "shared-mm-weapons.test.js": {
     "class": "node",
     "tier": "smoke"
@@ -387,6 +407,14 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-access.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-gift.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "shared-mm-quests.test.js": {
     "class": "node",
     "tier": "smoke"
@@ -396,6 +424,18 @@
     "tier": "smoke"
   },
   "shared-mm-pickups.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-gear.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-gear-drops.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-gear-affix.test.js": {
     "class": "node",
     "tier": "smoke"
   },
@@ -759,11 +799,99 @@
     "class": "browser",
     "tier": "full"
   },
+  "world-props-b26.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "world-nexus-walk.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "world-phone-hud.test.js": {
     "class": "browser",
     "tier": "full"
   },
   "dungeon-tiles.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "shared-mm-focus.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-telegraph.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-perf.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-tutorial-realm.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-party-bc.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "party-bc.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "world-team.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "class-weapon-playtest.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "lantern-backup-reminder.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "hub-gift.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "side-access.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "realm-settings.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "realm-tutorial.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "realm-audio.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "realm-lowgfx.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "focus-arena.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "backpack-compare.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "telegraph-arena.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "world-bosskey.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "world-rewards.test.js": {
     "class": "browser",
     "tier": "full"
   }

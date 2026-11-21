@@ -14,7 +14,7 @@
   ctx.imageSmoothingEnabled = false;
   const todayStr = () => (dateOverride && B.validDate(dateOverride.str) ? dateOverride.str : B.dateStr(new Date()));
   const mq = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
-  const reduced = () => !!(mq && mq.matches);
+  const reduced = () => !!(mq && mq.matches) || !!(window.MMSideAccess && window.MMSideAccess.reduced());
 
   // ---- rng / clock / date (seeded and fake in test mode) ----
   let rng = Math.random;

@@ -32,5 +32,37 @@
     for (const a in cur) if (a !== action && cur[a] === key) return { ok: false, keys: Object.assign({}, cur), conflict: a };
     return { ok: true, keys: Object.assign({}, cur, { [action]: key }) };
   }
-  return { PALETTES, BG, MIN_CONTRAST, OUTLINE_PX, contrast, palette, passesContrast, remap, names: () => Object.keys(PALETTES) };
+  // Prefs (NEXT-SLICES AC1): saved under the NEW additive key `pixeltown-access-v1`. Anything invalid falls back to the default of that field.
+  const KEY = 'pixeltown-access-v1', HUD_SCALES = [1, 1.25, 1.5], MAX_RAW = 2000;
+  const DEFAULTS = Object.freeze({ v: 1, palette: 'normal', hudScale: 1, flashes: true, bulletOutline: true, lowGfx: false });
+  const prefs = {
+    KEY, HUD_SCALES, DEFAULTS,
+    defaults: () => Object.assign({}, DEFAULTS),
+    // clean(raw): any value -> a complete, valid prefs object (new object, input never mutated, unknown keys dropped).
+    clean(raw) {
+      const o = Object.assign({}, DEFAULTS);
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return o;
+      const own = (k) => (Object.prototype.hasOwnProperty.call(raw, k) ? raw[k] : undefined);
+      const pal = own('palette');
+      if (typeof pal === 'string' && Object.prototype.hasOwnProperty.call(PALETTES, pal)) o.palette = pal;
+      const hs = own('hudScale');
+      if (typeof hs === 'number' && HUD_SCALES.indexOf(hs) >= 0) o.hudScale = hs;
+      ['flashes', 'bulletOutline', 'lowGfx'].forEach((k) => { if (typeof own(k) === 'boolean') o[k] = own(k); });
+      return o;
+    },
+    // load(storage): corrupt / missing / oversized / throwing storage -> defaults. Never throws.
+    load(storage) {
+      try {
+        const s = storage && storage.getItem(KEY);
+        if (typeof s !== 'string' || s.length > MAX_RAW) return prefs.defaults();
+        return prefs.clean(JSON.parse(s));
+      } catch (e) { return prefs.defaults(); }
+    },
+    // save(storage, p): cleans p, writes it, returns the cleaned prefs (or null when storage refused). Never throws.
+    save(storage, p) {
+      const c = prefs.clean(p);
+      try { storage.setItem(KEY, JSON.stringify(c)); return c; } catch (e) { return null; }
+    }
+  };
+  return { prefs, PALETTES, BG, MIN_CONTRAST, OUTLINE_PX, contrast, palette, passesContrast, remap, names: () => Object.keys(PALETTES) };
 });

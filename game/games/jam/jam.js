@@ -23,7 +23,7 @@
 
   // ---------- reduced motion ----------
   var reduced = false;
-  function syncReduced() { try { reduced = window.MMMotion ? window.MMMotion.reduced(window, window.localStorage) : false; } catch (e) { reduced = false; } }
+  function syncReduced() { try { reduced = (window.MMMotion ? window.MMMotion.reduced(window, window.localStorage) : false) || !!(window.MMSideAccess && window.MMSideAccess.reduced()); } catch (e) { reduced = false; } }
   syncReduced();
   var mq = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
   if (mq && mq.addEventListener) mq.addEventListener('change', syncReduced);
