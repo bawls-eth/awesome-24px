@@ -87,3 +87,5 @@
 - OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
 - 2026-11-21 (10:xx UTC): merged Codex b18 effects + b19 UI icons (registered), S13 unlock toast/ability sheet/UI icons, Nexus + pickups + daily quests in the Realm, Deepdelve goals + hub medals, S12 (hero-level passives, Nova II/Dash II, real wpn_ items, drops, shop). Test fixes: class-weapon-engine lifetime check made deterministic; dungeon image-injection checks now ignore our own HUD icons. Full suite 180/180 on 99e21ac.
 - OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
+- 2026-11-21 (11:xx UTC): merged Codex b20 portraits/ability icons and b23 extra bosses (registered, wired: per-zone world boss pools, Crypt alt boss Lich King on odd seeds, ?bosses=classic), effects art (b18) wired, ability-bar icons + portraits in the hero picker, drop recap shows the real converted weapon, dungeon chests can give styled weapons. Full suite 184/184 on 3a49a2d.
+- OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
