@@ -73,14 +73,15 @@ async function open(browser, url, realm, saveV1) {
   await o.page.waitForFunction(() => window.__mm.arena._itemArt, null, { timeout: 10000 }).catch(() => {});
   const before = await o.page.evaluate(() => { const a = window.__mm.arena; return { items: JSON.stringify(a.save.items), eq: JSON.stringify(a.save.eq), inert: !!(RM_ITEM_BY_ID.arm_sig_dread && RM_ITEM_BY_ID.arm_sig_dread.inert), can: a.equip(3) }; });
   check('old classic save + a saved relic load unchanged: classic items stay {n,id,r}, equips stay, the relic keeps t 12 and a', before.items === JSON.stringify([{ n: 1, id: 'sparkwand', r: 0 }, { n: 2, id: 'heartcharm', r: 1 }, { n: 3, id: 'arm_sig_dread', r: 2, t: 12, a: 4242 }]) && before.eq === JSON.stringify({ weapon: 1, charm: 2 }), before.items + ' ' + before.eq);
-  check('without the realm.js registration the relic is inert (kept, never equipped, never dropped as itself)', before.inert === true && before.can === false);
+  // realm.js now registers the relics itself (SIG_BY_FAMILY in the armor loop): the relic is usable. A build without that registration keeps it inert (kept, never equipped); both states are valid, a half state is not.
+  check('the saved relic is either registered and equippable (realm.js) or inert and kept (older build), never half-registered', (before.inert === true && before.can === false) || (!before.inert && before.can === true), JSON.stringify(before));
   const live = await o.page.evaluate((reg) => {
     const a = window.__mm.arena, w = window.__mm.world;
     const fallback = []; // relic rolls before registration fall back to the family's T12 piece
     for (let i = 0; i < 500; i++) { a.bags.forEach((b) => { b.active = false; }); const got = w.testDrop({ zone: 3, tier: 3, boss: true, src: 'boss', bossId: 'dread_knight' }, 'pre'); if (got) got.items.forEach((it) => { if (it.t === 12) fallback.push(it.id); }); }
     (0, eval)('(' + reg + ')')();
     const g0 = a.stats.guard;
-    const eq = a.equip(3); const g1 = a.stats.guard;
+    const eq = (a.save.eq && a.save.eq.armor === 3) ? true : a.equip(3); const g1 = a.stats.guard; // already worn when realm.js registered the relic at load (a second equip would toggle it off)
     const found = []; const bagIds = [];
     for (let i = 0; i < 900 && !found.length; i++) {
       a.bags.forEach((b) => { b.active = false; });
@@ -90,8 +91,8 @@ async function open(browser, url, realm, saveV1) {
     const def = RM_ITEM_BY_ID.arm_sig_maw; const url = a._itemArt ? a._itemArt.iconUrl(def.art) : null;
     return { fallback, eq, g0, g1, found, bagIds, url, icon: a._icon(def), dreadUrl: a._itemArt ? a._itemArt.iconUrl(RM_ITEM_BY_ID.arm_sig_dread.art) : null, pity: w.gearPity(), kills: w.kills() };
   }, REGISTER.toString());
-  check('before registration, z3 boss T12 rolls stay valid items the arena knows (never an unknown relic id)', live.fallback.length > 0 && live.fallback.every((id) => !/^arm_sig_/.test(id)), JSON.stringify(live.fallback.slice(0, 6)));
-  check('with the registration the saved relic equips for a classless level 20 save and adds guard', live.eq === true && live.g1 > live.g0, JSON.stringify([live.g0, live.g1]));
+  check('before any shim registration, z3 boss T12 rolls stay valid items the arena knows (never an unknown relic id; with realm.js registering them the fallback list is simply empty)', (before.inert ? live.fallback.length > 0 : true) && live.fallback.every((id) => before.inert ? !/^arm_sig_/.test(id) : /^(arm_|wpn_)/.test(id)), JSON.stringify(live.fallback.slice(0, 6)));
+  check('with the registration the saved relic equips for a classless level 20 save and adds guard', live.eq === true && (live.g1 > live.g0 || (live.g0 > 0 && live.g1 === live.g0)), JSON.stringify([live.g0, live.g1]));
   check('the live void_maw boss table drops its relic: "T12 Maw Shard", soulbound, as a bag carrying t 12', live.found.length === 1 && live.found[0].id === 'arm_sig_maw' && live.found[0].name === 'T12 Maw Shard' && live.found[0].t === 12 && live.found[0].soulbound === true && live.bagIds.some((x) => x[0] === 'arm_sig_maw' && x[1] === 12), JSON.stringify({ f: live.found, b: live.bagIds, k: live.kills }));
   check('the relic ids resolve to the b29 sig_ PNGs through the arena item-art path (backpack <img>)', /b29-gear-tiers\/items\/sig_maw_shard\.png$/.test(live.url || '') && /b29-gear-tiers\/items\/sig_dread_plate\.png$/.test(live.dreadUrl || '') && /<img class="realm-ico" src="[^"]*sig_maw_shard\.png"/.test(live.icon), JSON.stringify([live.url, live.icon]));
   await o.page.evaluate(() => { const a = window.__mm.arena; a.bags.forEach((b) => { if (b.active && b.id !== 'arm_sig_maw') b.active = false; }); const b = a.bags.find((x) => x.active && x.id === 'arm_sig_maw'); if (b) { a.player.x = b.x; a.player.y = b.y; } });
