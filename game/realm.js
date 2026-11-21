@@ -975,7 +975,7 @@ class RealmArena {
     const cls = h && typeof h === 'object' && typeof h.cls === 'string' && /^[A-Za-z]{2,16}$/.test(h.cls) ? h.cls : null;
     const lv = h && typeof h === 'object' ? Math.floor(Number(h.level)) : NaN;
     this._hu = cls ? { cls, level: Number.isFinite(lv) && lv >= 1 ? Math.min(RM_MAX_LEVEL, lv) : 0, key: '', agg: null } : null;
-    const wu = this.save && this._heroSrc ? this.save.eq.weapon : 0; // switching to a hero of another family takes a styled weapon off (it stays in the backpack)
+    const wu = this.save && this._heroSrc && !(this.team && this.team.isPvp) ? this.save.eq.weapon : 0; // switching to a hero of another family takes a styled weapon off (it stays in the backpack)
     const wi = wu ? this.save.items.find((x) => x.n === wu) : null;
     if (wi && RM_ITEM_BY_ID[wi.id] && RM_ITEM_BY_ID[wi.id].wpn && !this._wpnCanEquip(RM_ITEM_BY_ID[wi.id])) delete this.save.eq.weapon;
     if (this.save) { this._calcStats(); if (this.player && this.player.hp > this.stats.maxHp) this.player.hp = this.stats.maxHp; if (this.active) this._syncHud(); }
