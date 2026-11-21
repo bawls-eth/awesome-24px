@@ -111,6 +111,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "class-unlock-ui.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "class-weapon-wire.test.js": {
     "class": "browser",
     "tier": "full"
