@@ -101,3 +101,5 @@
 - OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
 - 2026-11-21 (21:xx UTC): large push: G13 backpack stats dropdown + audio cues + bullet outline; gear drops ON by default + six boss relics + boss T12 balance; B10 home island/travel/cozy/medals (all 5 packs playable); Codex b29/b30/b31a/b32/b33 wired (jungle tiles, creature strips, props, gear icons); planner NEXT-SLICES-2. Full suite 252/254 then test-only fixes.
 - OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
+- 2026-11-22 (23:xx UTC): Wave 1 of NEXT-SLICES-2: X1 isles species canon + reef/tundra/mars/home polish + b34 icons, X2 crafting/saddles (pure), X3 big-creature boss engine (pure), GH2 gear-on hardening (pre-gear snapshot, downgrade hint, seat ids). Full suite 260/261 + targeted reruns. Known flake: dungeon-pickups coin magnet under load.
+- OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
