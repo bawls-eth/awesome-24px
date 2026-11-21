@@ -517,7 +517,7 @@ class RealmArena {
     this._spawnN = 0; this._hashN = -1; this._hq = { x: 0, y: 0, best: -1 };
     this._hitCb = (id) => { // exact circle test; the lowest pool index wins, like the old linear scan
       const e = this.enemies[id]; if (!e.active || (this._hq.best >= 0 && id > this._hq.best)) return;
-      const r = RM_ENEMIES[e.type].r + 5; const dx = this._hq.x - e.x; const dy = this._hq.y - e.y;
+      const r = this._er(e) + 5; const dx = this._hq.x - e.x; const dy = this._hq.y - e.y;
       if (dx * dx + dy * dy < r * r) this._hq.best = id;
     };
     this._padPrev = [false, false, false, false]; this._aimTargets = [];
@@ -597,7 +597,7 @@ class RealmArena {
   _boltHitIndex(x, y) {
     const h = this._hash;
     if (!h) { // fallback without the module
-      for (let j = 0; j < this.enemies.length; j++) { const e = this.enemies[j]; if (!e.active) continue; const r = RM_ENEMIES[e.type].r + 5; if ((x - e.x) * (x - e.x) + (y - e.y) * (y - e.y) < r * r) return j; }
+      for (let j = 0; j < this.enemies.length; j++) { const e = this.enemies[j]; if (!e.active) continue; const r = this._er(e) + 5; if ((x - e.x) * (x - e.x) + (y - e.y) * (y - e.y) < r * r) return j; }
       return -1;
     }
     if (this._hashN !== this._spawnN) this._buildHash();
@@ -608,7 +608,7 @@ class RealmArena {
 
   _buildHash() {
     const h = this._hash; h.clear();
-    for (let j = 0; j < this.enemies.length; j++) { const e = this.enemies[j]; if (e.active) h.insert(j, e.x, e.y, RM_ENEMIES[e.type].r + 5); }
+    for (let j = 0; j < this.enemies.length; j++) { const e = this.enemies[j]; if (e.active) h.insert(j, e.x, e.y, this._er(e) + 5); }
     this._hashN = this._spawnN;
   }
 
@@ -1495,7 +1495,7 @@ class RealmArena {
     const r = w.lob.radius;
     for (let i = 0; i < this.enemies.length; i++) {
       const e = this.enemies[i]; if (!e.active) continue;
-      const rr = r + RM_ENEMIES[e.type].r;
+      const rr = r + this._er(e);
       if ((e.x - x) * (e.x - x) + (e.y - y) * (e.y - y) <= rr * rr) { if (b.st > 0) this._wpnStatus(b, e); this._hitEnemy(e, b.dmg || this.stats.dmg, b.cr === 1); }
     }
   }
@@ -1635,7 +1635,7 @@ class RealmArena {
     let q = null;
     for (let i = 0; i < pool.length; i++) if (!pool[i].active) { q = pool[i]; break; }
     if (!q) { q = pool[0]; for (let i = 1; i < pool.length; i++) if (pool[i].t0 < q.t0) q = pool[i]; }
-    q.active = true; q.name = name; q.dir = dir; q.flip = !!e._flip; q.x = e.x; q.y = e.y + def.r * 0.9; q.k = 2.8 * def.r / this._enemyVis; q.t0 = this.clock;
+    q.active = true; q.name = name; q.dir = dir; q.flip = !!e._flip; q.x = e.x; q.y = e.y + this._er(e) * 0.9; q.k = 2.8 * this._er(e) / this._enemyVis; q.t0 = this.clock;
   }
   // Plays every live death ghost once, then frees the slot. Game time (this.clock) drives it, so pause freezes it; reduced motion = last frame, short fade.
   _drawEnemyGhosts(g) {
@@ -1683,7 +1683,7 @@ class RealmArena {
     if (key !== e._key) { e._key = key; e._t0 = e.t; }
     if (act === 'attack' && e._atSeen !== e._at) { e._atSeen = e._at; e._t0 = e.t; }
     const t = this._reduced && act === 'idle' ? 0 : e.t - e._t0;
-    const f = art.draw(g, a, t, e.x, e.y + def.r * 0.9, 2.8 * def.r / this._enemyVis, e._flip);
+    const er = this._er(e); const f = art.draw(g, a, t, e.x, e.y + er * 0.9, 2.8 * er / this._enemyVis, e._flip);
     if (this._enemyDbgOn) this._enemyDbg = { type: e.type, name, action: act, dir: e._dir, flip: e._flip, frame: f, id: a.id };
     return f >= 0;
   }
@@ -1831,18 +1831,49 @@ class RealmArena {
   setMoveStick(x, y) { this.moveVec.x = x; this.moveVec.y = y; }
   setAimStick(x, y, on) { this.aimVec.x = x; this.aimVec.y = y; this.aimVec.on = !!on; }
 
+  // B7: an enemy's hit radius: its own e.rad (a big creature) or its type's.
+  _er(e) { return e.rad > 0 ? e.rad : RM_ENEMIES[e.type].r; }
+  // B7 public helper: damage one live enemy from outside the arena (a companion, a world effect). Clamped to 1e6; returns the damage passed on.
+  damageEnemy(e, dmg, src) {
+    if (!e || !e.active || this.enemies.indexOf(e) < 0) return 0;
+    const d = Math.min(1e6, Number(dmg)); if (!(d > 0)) return 0;
+    this.lastDmgSrc = typeof src === 'string' ? src.slice(0, 16) : null;
+    this._hitEnemy(e, d); return d;
+  }
+  // B7 public helper: show a TG3 telegraph on `e`: shape 'ring' | 'line' | 'cone', `sec` = seconds until the attack lands (the first call
+  // of a wind-up sets its length). Falsy shape or sec <= 0 clears it. Reuses the TG3 sprites, palette and reduced-motion look; solo world only.
+  tgFor(e, shape, sec) {
+    if (!e) return false;
+    const code = RM_TG_CODE[shape] || 0; const s = Number(sec);
+    if (!code || !(s > 0) || !this._tgOn()) { e._tg = 0; return false; }
+    if (e._tg !== code || !(e._tgW >= s)) { // a new wind-up
+      this.tgStarted++;
+      if (this.clock - this._tgSndAt > 0.6 || this._tgSndAt > this.clock) { this._tgSndAt = this.clock; this._snd('warn'); }
+      e._tgW = s;
+    }
+    const p = this._nearest(e.x, e.y);
+    e._tg = code; e._tgP = Math.max(0, Math.min(1, 1 - s / e._tgW)); e._tgA = Math.atan2(p.y - e.y, p.x - e.x);
+    return true;
+  }
+
   // ---------- scrolling world + camera (additive; null world = the screen is the world, exactly as before) ----------
   // setWorld({w, h, tile, camera, solidAt(x,y), shotSolidAt(x,y), drawUnder(g,cam), drawOver(g,cam), tick(dt), onStart(), wake, pools:{enemies,eBullets}}):
   // the world is w x h logical px, larger than the screen; the camera follows the player (smoothed, clamped to the world, integer-snapped,
   // snapped instantly under reduced motion). Every world<->screen conversion goes through this.camera {x, y, vw, vh} (read it, never write it):
   // drawing translates once per frame, mouse aim maps screen -> world, the player / enemies / bags clamp to the world instead of the screen.
   // solidAt(x, y) (px) blocks the player and enemies; shotSolidAt (default solidAt) absorbs bullets. setWorld(null) turns it all off.
+  // B7 optional hooks (BIOME-ARCH-PLAN 2.4; every one null = unchanged; only a world page passes them, never the Town, duels or co-op):
+  //   enemyStep(e, dt, p) -> true: this creature (e.cre) moved itself this frame (the built-in AI and fire are skipped; clamp + slide still apply)
+  //   onLethal(e, dmg) -> true: a lethal hit knocks out instead of killing (e keeps 1 hp: no kill, shards, XP, kb or bag)
+  //   drawEnemy(g, e) -> true: the hook drew this enemy (the built-in sprite, flash, hp bar and pips are skipped)
+  //   drawMid(g, cam): drawn after the enemies / bolts, under the hero (a mount); heroLift() -> px the hero is drawn raised; dashMul() -> dash scale
   setWorld(opts) {
     if (!opts || typeof opts !== 'object') { this.world = null; this._solidAt = null; this._shotSolidAt = null; this._camF.x = 0; this._camF.y = 0; this.camera.x = 0; this.camera.y = 0; if (this.stats) this._calcStats(); return null; }
     const n = (v, d) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Math.min(1 << 20, Math.floor(Number(v))) : d);
     const fn = (f) => (typeof f === 'function' ? f : null);
     this.world = Object.freeze({ w: n(opts.w, this.W), h: n(opts.h, this.H), tile: n(opts.tile, 32), camera: opts.camera !== false, wake: n(opts.wake, 0),
-      drawUnder: fn(opts.drawUnder), drawOver: fn(opts.drawOver), tick: fn(opts.tick), moveScaleAt: fn(opts.moveScaleAt), onStart: fn(opts.onStart) });
+      drawUnder: fn(opts.drawUnder), drawOver: fn(opts.drawOver), tick: fn(opts.tick), moveScaleAt: fn(opts.moveScaleAt), onStart: fn(opts.onStart),
+      enemyStep: fn(opts.enemyStep), onLethal: fn(opts.onLethal), drawEnemy: fn(opts.drawEnemy), drawMid: fn(opts.drawMid), heroLift: fn(opts.heroLift), dashMul: fn(opts.dashMul) }); // B7 arena hooks (null = today's behaviour)
     this._solidAt = fn(opts.solidAt); this._shotSolidAt = fn(opts.shotSolidAt) || this._solidAt;
     const pl = opts.pools && typeof opts.pools === 'object' ? opts.pools : {};
     const grow = (pool, want, max, f) => { const k = Math.min(max, n(want, 0)); while (pool.length < k) pool.push(f()); };
@@ -2063,6 +2094,7 @@ class RealmArena {
     e.cd = 0.8 + this.rng() * 0.8; // first shot is never instant
     if (this.world) { e.ax = x + (this.rng() - 0.5) * 220; e.ay = y + (this.rng() - 0.5) * 220; } else { e.ax = 80 + this.rng() * (this.W - 160); e.ay = 80 + this.rng() * (this.H - 160); } // drift target for Whirlers (near home in a world)
     e.spdMul = 1; e.dmgMul = 1; e.xpMul = 1; e.shardMul = 1; e.art = null; e.bossArt = null; e.zid = -1; e.evid = null; e.campId = null; e.bossName = null; e.bossTier = 0; e.diff = null; // world-mode extras (multipliers 1 = unchanged)
+    e.rad = 0; e.cre = null; e.tame = null; // B7: per-creature hit radius (0 = the type's), creature tag (enemyStep runs only for these), taming state
     if (this.world && type === 'boss') { e.ax = x; e.ay = y; }
     return e;
   }
@@ -2519,6 +2551,7 @@ class RealmArena {
       if (hold) { e.cd = Math.max(e.cd, 0.2); if (e.type === 'boss') e.cd2 = Math.max(e.cd2, 0.2); }
       if (e.type === 'boss') { if (sm && sm.speed < 1) e.t -= dt * (1 - sm.speed); this._updateBoss(e, dt * (e.fireMul || 1) / (sm ? sm.enemyFire : 1)); if (tg) this._tgBoss(e, hold, p); this._curDm = 1; this._curE = null; continue; } // slowed: the sway runs slower
       if (sm && sm.stun) { e._tg = 0; continue; } // stunned: no moving, no firing
+      if (e.cre && wd && wd.enemyStep) { const cx = e.x; const cy = e.y; if (wd.enemyStep(e, dt, p)) { this._enemyClamp(e, cx, cy); continue; } } // B7: a creature moves itself
       if (!hold) e.cd -= dt * (e.fireMul || 1) / (sm ? sm.enemyFire : 1); // fireMul: classic wave scale; dazed makes fire cooldowns x1.5
       const ox = e.x; const oy = e.y; const sp = (e.spdMul || 1) * (sm ? sm.speed : 1);
       const dx = p.x - e.x; const dy = p.y - e.y; const dist = Math.hypot(dx, dy) || 1;
@@ -2548,14 +2581,18 @@ class RealmArena {
         }
       }
       if (tg) this._tgStep(e, hold, p);
-      e.x = Math.max(20, Math.min(this._bw() - 20, e.x));
-      e.y = Math.max(20, Math.min(this._bh() - 20, e.y));
-      if (this._solidAt && this._blocked(e.x, e.y, 8)) { // world tiles block enemies too: slide along one axis, else stay
-        if (!this._blocked(e.x, oy, 8)) e.y = oy; else if (!this._blocked(ox, e.y, 8)) e.x = ox; else { e.x = ox; e.y = oy; }
-        if (e.type === 'spiral') { e.ax = e.x; e.ay = e.y; }
-      }
+      this._enemyClamp(e, ox, oy);
     }
     this._curDm = 1; this._curE = null;
+  }
+  // Keep an enemy inside the world; world tiles block enemies too: slide along one axis, else stay at (ox, oy).
+  _enemyClamp(e, ox, oy) {
+    e.x = Math.max(20, Math.min(this._bw() - 20, e.x));
+    e.y = Math.max(20, Math.min(this._bh() - 20, e.y));
+    if (this._solidAt && this._blocked(e.x, e.y, 8)) {
+      if (!this._blocked(e.x, oy, 8)) e.y = oy; else if (!this._blocked(ox, e.y, 8)) e.x = ox; else { e.x = ox; e.y = oy; }
+      if (e.type === 'spiral') { e.ax = e.x; e.ay = e.y; }
+    }
   }
 
   _updateBullets(dt) {
@@ -2638,6 +2675,7 @@ class RealmArena {
         if (want > e.phase) { this._bossPhase(e, want); this._syncBoss(); }
         return;
       }
+      if (this.world && this.world.onLethal && this.world.onLethal(e, dmg)) { e.hp = 1; return; } // B7: knocked out, not killed
       e.active = false; this._bossDefeated(e);
       if (this._bossArt && e._bn && this._bossArt.anim(e._bn, 'death', 'down')) this._bossGhost = { name: e._bn, x: e.x, y: e.y, t0: this.clock };
       if (this.onEnemyKilled) this.onEnemyKilled(e);
@@ -2647,6 +2685,7 @@ class RealmArena {
     this._floatText(e.x + (this.rng() - 0.5) * 14, e.y - 14, crit ? `${Math.round(dmg * 10) / 10}!` : String(Math.round(dmg * 10) / 10), dc);
     this._burst(e.x, e.y, RM_ENEMIES[e.type].color, 3, 110);
     if (e.hp > 0) return;
+    if (this.world && this.world.onLethal && this.world.onLethal(e, dmg)) { e.hp = 1; return; } // B7: knocked out, not killed
     e.active = false;
     const def = RM_ENEMIES[e.type];
     if (this._edGhosts) this._spawnEnemyGhost(e, def);
@@ -2928,10 +2967,11 @@ class RealmArena {
       const len = Math.hypot(dx, dy) || 1;
       this._burst(p.x, p.y, '#8fe9ff', 8, 120);
       const sx0 = p.x, sy0 = p.y;
-      if (this._coll()) { for (let k = 0; k < 15; k++) this._movePlayer((dx / len) * 10, (dy / len) * 10); } // stepwise so a dash cannot tunnel through a wall
+      const wdm = this.world && this.world.dashMul ? Number(this.world.dashMul()) : 1; const dk = wdm > 0 ? Math.max(0.25, Math.min(3, wdm)) : 1; // B7: a mount's dash scale (1 = unchanged)
+      if (this._coll()) { const ns = Math.round(15 * dk); for (let k = 0; k < ns; k++) this._movePlayer((dx / len) * 10, (dy / len) * 10); } // stepwise so a dash cannot tunnel through a wall
       else {
-        p.x = Math.max(RM_PLAYER.r, Math.min(this._bw() - RM_PLAYER.r, p.x + (dx / len) * 150));
-        p.y = Math.max(RM_PLAYER.r, Math.min(this._bh() - RM_PLAYER.r, p.y + (dy / len) * 150));
+        p.x = Math.max(RM_PLAYER.r, Math.min(this._bw() - RM_PLAYER.r, p.x + (dx / len) * 150 * dk));
+        p.y = Math.max(RM_PLAYER.r, Math.min(this._bh() - RM_PLAYER.r, p.y + (dy / len) * 150 * dk));
       }
       this._fxDashTrail(sx0, sy0);
       p.iframes = Math.max(p.iframes, 0.4);
@@ -3136,7 +3176,7 @@ class RealmArena {
       const e = this.enemies[i];
       if (!e.active || !e._tg || e.x < vx0 || e.x > vx1 || e.y < vy0 || e.y > vy1) continue;
       const o = this._tgShape(e, d); g.globalAlpha = Math.max(0, Math.min(1, o.alpha));
-      if (e._tg === 1) { const R = (RM_ENEMIES[e.type].r + 26) * o.scale; g.drawImage(spr.ring, e.x - R, e.y - R, R * 2, R * 2); }
+      if (e._tg === 1) { const R = (this._er(e) + 26) * o.scale; g.drawImage(spr.ring, e.x - R, e.y - R, R * 2, R * 2); }
       else {
         g.save(); g.translate(e.x, e.y); g.rotate(e._tgA);
         if (e._tg === 2) g.drawImage(spr.line, 0, -8, o.len, 16);
@@ -3202,7 +3242,7 @@ class RealmArena {
     let dealt = 0;
     for (let i = 0; i < this.enemies.length; i++) {
       const e = this.enemies[i]; if (!e.active) continue;
-      const er = RM_ENEMIES[e.type].r; const dx = e.x - x; const dy = e.y - y; const rr = r + er;
+      const er = this._er(e); const dx = e.x - x; const dy = e.y - y; const rr = r + er;
       if (dx * dx + dy * dy > rr * rr) continue;
       if (slow < 1) { e.slowT = Math.max(e.slowT || 0, slowSec); e.slowF = slow; }
       if (knock > 0 && e.type !== 'boss') {
@@ -3300,7 +3340,7 @@ class RealmArena {
       for (let i = 0; i < this.enemies.length; i++) {
         const e = this.enemies[i]; if (!e.active) continue;
         if (e.boneT > 0) { e.boneT -= dt; continue; }
-        const rr = RM_ENEMIES[e.type].r + 8;
+        const rr = this._er(e) + 8;
         for (let k = 0; k < bn.n; k++) {
           const a = bn.a + k * Math.PI * 2 / bn.n; const bx = p.x + Math.cos(a) * s.radius; const by = p.y + Math.sin(a) * s.radius;
           if ((e.x - bx) * (e.x - bx) + (e.y - by) * (e.y - by) > rr * rr) continue;
@@ -3746,11 +3786,12 @@ class RealmArena {
     for (let i = 0; i < this.enemies.length; i++) {
       const e = this.enemies[i];
       if (!e.active || e.x < vx0 || e.x > vx1 || e.y < vy0 || e.y > vy1) continue;
+      if (wd && wd.drawEnemy && wd.drawEnemy(g, e)) continue; // B7: the world drew this one (a creature)
       const spr = this.sprites[e.type];
       const bob = e.type === 'boss' ? 0 : Math.sin(e.t * 4) * 2;
       const art = e.type === 'boss' ? !!(this._bossArt && this._drawBossArt(g, e)) : !!(this._enemyArt && this._drawEnemyArt(g, e, RM_ENEMIES[e.type]));
       if (!art) g.drawImage(spr, e.x - spr.width / 2, e.y - spr.height / 2 + bob);
-      if (e.flash > 0 && this._flashesOn()) { g.globalAlpha = e.flash * 0.7; g.fillStyle = '#fff'; g.beginPath(); g.arc(e.x, e.y + (art ? 0 : bob), RM_ENEMIES[e.type].r, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1; }
+      if (e.flash > 0 && this._flashesOn()) { g.globalAlpha = e.flash * 0.7; g.fillStyle = '#fff'; g.beginPath(); g.arc(e.x, e.y + (art ? 0 : bob), this._er(e), 0, Math.PI * 2); g.fill(); g.globalAlpha = 1; }
       if (e.type === 'boss' && e.invuln > 0) { g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 3; g.beginPath(); g.arc(e.x, e.y, 40 + Math.sin(e.t * 20) * 2, 0, Math.PI * 2); g.stroke(); }
       if (e.hp < e.maxHp && e.type !== 'boss') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(e.x - 14, e.y - spr.height / 2 - 6, 28, 4); g.fillStyle = RM_ENEMIES[e.type].color; g.fillRect(e.x - 14, e.y - spr.height / 2 - 6, 28 * (e.hp / e.maxHp), 4); }
       if (e.status) this._drawEnemyPips(g, e, e.y - (e.type === 'boss' ? RM_ENEMIES.boss.r + 10 : spr.height / 2 + 13));
@@ -3780,12 +3821,14 @@ class RealmArena {
         if (q.down && !tm.isPvp) { g.strokeStyle = '#7ee787'; g.lineWidth = 3; g.beginPath(); g.arc(q.x, q.y, RT_REVIVE_RANGE, -Math.PI / 2, -Math.PI / 2 + q.revive * Math.PI * 2); g.stroke(); g.strokeStyle = 'rgba(126,231,135,0.35)'; g.lineWidth = 1; g.beginPath(); g.arc(q.x, q.y, RT_REVIVE_RANGE, 0, Math.PI * 2); g.stroke(); }
       }
     }
+    if (wd && wd.drawMid) wd.drawMid(g, cam); // B7: under the hero (a mount)
     // Player: the villager sprite (flickers while invulnerable), with a soft shadow and aim marker.
     const p = this.player;
+    const lift0 = wd && wd.heroLift ? Number(wd.heroLift()) : 0; const lift = lift0 > 0 ? Math.min(96, lift0) : 0; // B7: hero drawn raised (riding)
     if (this.state !== 'dead' && (p.iframes <= 0 || this._reduced || Math.floor(p.iframes * 20) % 2 === 0)) {
       if (this.down) { g.globalAlpha = 0.45; g.strokeStyle = '#7ee787'; g.lineWidth = 3; g.beginPath(); g.arc(p.x, p.y, RT_REVIVE_RANGE, -Math.PI / 2, -Math.PI / 2 + Math.min(1, this.reviveT / RT_REVIVE_TIME) * Math.PI * 2); g.stroke(); }
       g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(p.x, p.y + 14, 13, 5, 0, 0, Math.PI * 2); g.fill();
-      let heroDrawn = false;
+      let heroDrawn = false; if (lift) { g.save(); g.translate(0, -lift); }
       if (this._heroArt) { const ga = g.globalAlpha; if (this._reduced && p.iframes > 0) g.globalAlpha = 0.6; heroDrawn = this._drawHero(g, p); g.globalAlpha = ga; }
       if (!heroDrawn) {
       const spr = this._avatar || this.sprites.playerFallback;
@@ -3796,6 +3839,7 @@ class RealmArena {
       g.drawImage(spr, -size / 2, -size / 2 - 4, size, size);
       g.restore();
       }
+      if (lift) g.restore();
       if (this.shield.hits > 0) { g.strokeStyle = `rgba(143,233,255,${0.5 + 0.1 * this.shield.hits})`; g.lineWidth = 3; g.beginPath(); g.arc(p.x, p.y, 26, 0, Math.PI * 2); g.stroke(); }
       if (this.overdriveT > 0) { g.strokeStyle = 'rgba(255,170,60,0.8)'; g.lineWidth = 2; g.beginPath(); g.arc(p.x, p.y, 21 + Math.sin(performance.now() / 60) * 2, 0, Math.PI * 2); g.stroke(); }
       g.strokeStyle = 'rgba(143,233,255,0.7)'; g.lineWidth = 2; g.beginPath();
