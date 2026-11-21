@@ -129,6 +129,11 @@
     MMArt.loadBolts('../../assets/arcane/').then((set) => { if (set.ids().length) arena.setBoltArt(set, activeHeroClass()); }).catch(() => {});
   }
 
+  // Effect art (b18 one-shot effects); ?fxart=0 turns it off. Missing art falls back silently.
+  if (window.MMArt && MMArt.loadFx && arena.setFxArt && params.get('fxart') !== '0') {
+    MMArt.loadFx('../../assets/arcane/').then((set) => { if (set.ids().length) arena.setFxArt(set); }).catch(() => {});
+  }
+
   // Class stats: the active hero's class nudges HP/speed/damage/fire rate/safe time (MMClasses.arenaProfile); ?classstats=0 disables it.
   if (window.MMClasses && MMClasses.arenaProfile && params.get('classstats') !== '0' && activeHeroClass()) arena.setHeroProfile(MMClasses.arenaProfile(activeHeroClass()));
   // Class signature: the active hero's class gets a signature ability in the F slot (level 7, replaces Overdrive); ?signature=0 disables it.

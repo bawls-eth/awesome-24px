@@ -711,6 +711,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "fx-art.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "world-pickups.test.js": {
     "class": "browser",
     "tier": "full"

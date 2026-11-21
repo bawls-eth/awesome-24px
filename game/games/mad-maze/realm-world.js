@@ -936,7 +936,7 @@
     function applyBuff(b) {
       const p = arena.player; const now = arena.clock; const sec = b.durationMs / 1000;
       if (b.kind === 'heal') {
-        const add = Math.ceil(arena.stats.maxHp * b.value); p.hp = Math.min(arena.stats.maxHp, p.hp + add); arena._floatText(p.x, p.y - 30, `+${add}`, '#5be38a');
+        const add = Math.ceil(arena.stats.maxHp * b.value); p.hp = Math.min(arena.stats.maxHp, p.hp + add); arena._floatText(p.x, p.y - 30, `+${add}`, '#5be38a'); if (arena.fxHeal) arena.fxHeal();
         arena.applyStatus('player', 'healing', { sec: 5, src: 'shrine' });
       } else if (b.kind === 'rage') {
         rageEnd = now + sec; const on = arena.applyStatus('player', 'damaging', { sec, src: 'shrine' });
