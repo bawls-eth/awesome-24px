@@ -310,3 +310,11 @@ div#mm-daily-btn { pointer-events: none; min-height: 28px; font-size: 12px; left
 #rw-site { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(230px + env(safe-area-inset-bottom, 0px)); z-index: 3; min-height: 48px; min-width: 44px; max-width: 92vw; padding: 0 18px; border-radius: 24px; border: 2px solid #ffe27a; background: #3b5a8f; color: #fff; font: 700 15px system-ui, sans-serif; pointer-events: auto; touch-action: manipulation; box-shadow: 0 0 12px rgba(255, 226, 122, 0.55); }
 #rw-site.hidden, #rw-site-note.hidden { display: none; }
 #rw-site-note { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(292px + env(safe-area-inset-bottom, 0px)); z-index: 3; max-width: min(92vw, 420px); box-sizing: border-box; padding: 6px 12px; border-radius: 10px; background: rgba(9, 12, 20, 0.85); color: #fff; font: 600 13px system-ui, sans-serif; text-align: center; pointer-events: none; }
+
+/* ---------- phone dungeon framing: the 17x13 room already spans the full portrait width, so sit it in the free band between the HUD and the
+   ability buttons (not behind the map / banner), and keep the banner and the mini-map above it ---------- */
+@media (max-width: 600px) and (min-height: 760px) and (orientation: portrait) {
+  body.dungeon-mode #realm-canvas { top: 215px !important; }
+  body.dungeon-mode #realm-banner { top: 182px; left: calc(50% - 48px); max-width: calc(100% - 140px); }
+  body.dungeon-mode #mm-map { width: 96px; height: auto; top: calc(126px + env(safe-area-inset-top, 0px)); }
+}
