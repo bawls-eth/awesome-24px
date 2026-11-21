@@ -100,6 +100,8 @@ async function run(ctx, vp, name, fn) {
 async function center(page, sel) { return page.evaluate((s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); if (!r.width) return null; return { x: r.left + r.width / 2, y: r.top + r.height / 2, r: Math.min(r.width, r.height) / 2 }; }, sel); }
 async function tap(page, sel, phone) { const c = await center(page, sel); if (!c) return false; if (phone) await page.touchscreen.tap(c.x, c.y); else await page.mouse.click(c.x, c.y); return true; }
 async function visible(page, sel) { return page.evaluate((s) => { const e = document.querySelector(s); if (!e || e.classList.contains('hidden')) return false; const cs = getComputedStyle(e); const r = e.getBoundingClientRect(); return cs.display !== 'none' && cs.visibility !== 'hidden' && r.width > 0 && r.height > 0; }, sel); }
+// tap/click by selector through a locator (re-resolves after re-renders), falling back to a DOM click
+async function tapSel(page, sel, phone) { const l = page.locator(sel).first(); if (!(await l.count())) return false; try { await l.scrollIntoViewIfNeeded({ timeout: 3000 }); if (phone) await l.tap({ timeout: 5000 }); else await l.click({ timeout: 5000 }); } catch (e) { await l.evaluate((el) => el.click()).catch(() => {}); } return true; }
 const A = (page, fn, arg) => page.evaluate(`(${fn.toString()})(window.__mm.arena, window.__mm.world, ${JSON.stringify(arg === undefined ? null : arg)})`);
 const waitWorld = (page) => page.waitForFunction(() => window.__mm && window.__mm.world && window.__mm.arena.active, null, { timeout: 20000 });
 
@@ -190,7 +192,15 @@ async function townToRealm(seg, page) {
   await seg.shot('join-filled');
   await tap(page, '#join-btn', phone);
   seg.step('town');
-  const joined = await page.waitForFunction(() => window.__g && window.__g.scene.getScene('Town') && window.__g.scene.getScene('Town').localBody, null, { timeout: 25000 }).then(() => true, () => false);
+  let joined = await page.waitForFunction(() => window.__g && window.__g.scene.getScene('Town') && window.__g.scene.getScene('Town').localBody, null, { timeout: 12000 }).then(() => true, () => false);
+  if (!joined && await visible(page, '#join-offline-btn')) {
+    // the join timed out (DB blocked): the join screen offers "Play offline" (OfflineNet, no database at all)
+    await seg.shot('join-offline-offer');
+    log('  NOTE join timed out, status:', JSON.stringify(await page.textContent('#join-status').catch(() => '')));
+    seg.step('town-offline'); await tap(page, '#join-offline-btn', phone);
+    joined = await page.waitForFunction(() => window.__g && window.__g.scene.getScene('Town') && window.__g.scene.getScene('Town').localBody, null, { timeout: 15000 }).then(() => true, () => false);
+    log('  town offline joined =', joined);
+  }
   if (!joined) {
     // With the database blocked the town cannot be joined (it waits for the database). Record what a player sees, then do what the
     // Town Gate's "Enter the Realm" does (the same page, normally inside an in-page frame) directly.
@@ -321,7 +331,8 @@ async function world(seg, page) {
   seg.step('dungeon-return');
   await page.evaluate(() => window.__mm.dungeon.finish());
   await page.waitForSelector('#mm-sum-home', { timeout: 8000 }); await wait(600); await seg.shot('dungeon-summary');
-  await Promise.all([page.waitForURL(/mode=world/, { timeout: 12000 }), tap(page, '#mm-sum-home', phone)]);
+  await Promise.all([page.waitForURL((u) => !/mode=dungeon/.test(String(u)), { timeout: 12000 }), tap(page, '#mm-sum-home', phone)]);
+  log('    returned to', page.url());
   await waitWorld(page); await wait(1500); await seg.shot('back-on-portal');
 }
 
@@ -336,7 +347,116 @@ async function dungeons(seg, page) {
     await playRealm(seg, page, phone ? 12000 : 16000);
     await seg.shot(b + '-after');
     if (!phone) { await page.keyboard.press('Tab'); await wait(500); await seg.shot(b + '-map'); await page.keyboard.press('Tab'); }
+    // the biome boss: walk the door graph to the boss room (clearing rooms on the way, as dungeon-biomes.test.js does), then fight
+    seg.step('boss-' + b);
+    await alive(page, phone);
+    const r = await page.evaluate(() => {
+      const d = window.__mm.dungeon; const g = d.graph; const target = g.bossRoomId; window.__mm.arena.player.iframes = 1e9;
+      const walk = (allowLocked) => {
+        const nbrs = (id) => g.doors.filter((x) => (!x.cracked || d.state.secretOpen) && (x.a === id || x.b === id) && (allowLocked || !x.locked)).map((x) => (x.a === id ? x.b : x.a));
+        const prev = { [d.room]: null }; const q = [d.room];
+        while (q.length) { const u = q.shift(); if (u === target) break; nbrs(u).forEach((v) => { if (!(v in prev)) { prev[v] = u; q.push(v); } }); }
+        if (!(target in prev)) return 'no path';
+        const path = []; for (let u = target; u !== null && u !== undefined; u = prev[u]) path.unshift(u);
+        for (let i = 1; i < path.length; i++) { if (d.state.room(d.room).enemiesAlive > 0) d.clearRoom(); const res = d.enter(path[i]); if (!res.ok) return 'blocked at ' + path[i] + ': ' + res.reason; }
+        return d.room;
+      };
+      let res = walk(false); if (res !== target) { const k = g.rooms.find((x) => x.type === 'key'); if (k) walk(false); res = walk(true); }
+      const e = d.boss && d.boss(); const a = window.__mm.arena;
+      return { res, target, boss: e ? (a._bossName ? a._bossName(e) : e.bossArt) : null, art: e ? e.bossArt : null, banner: (document.getElementById('realm-boss-name') || {}).textContent || '' };
+    }).catch((e) => ({ err: e.message }));
+    log('    boss', b, JSON.stringify(r));
+    await wait(1500); await seg.shot(b + '-boss-arrive');
+    await playRealm(seg, page, phone ? 9000 : 12000, { godAfterDeath: true });
+    await seg.shot(b + '-boss-fight');
   }
+}
+
+// hero create flow on a brand-new browser profile: picker -> create -> picker again (portraits) -> hero stats
+async function heroCreate(seg, page) {
+  const phone = seg.vp.phone;
+  seg.step('hero-fresh');
+  await page.goto(G('games/mad-maze/lantern.css')); await page.evaluate(() => localStorage.clear());
+  await page.goto(G('games/mad-maze/index.html?mode=world&test=1&heropick=1&seed=777'));
+  await waitWorld(page); await wait(1800); await seg.shot('hero-create-panel');
+  const cards = await page.evaluate(() => Array.from(document.querySelectorAll('#realm-hero button[data-newcls]')).map((b) => b.dataset.newcls + (b.disabled ? '(locked)' : '')));
+  log('    create cards:', cards.join(' '));
+  const cls = await page.$('#realm-hero button[data-newcls]:not([disabled])');
+  if (cls) { if (!phone) await cls.hover().catch(() => {}); await wait(400); await seg.shot('hero-create-hover'); await (phone ? cls.tap() : cls.click()); }
+  await wait(1500); await seg.shot('hero-created-first-frame');
+  seg.step('hero-picker-again');
+  await page.evaluate(() => window.__heroUi && window.__heroUi.open('pick')); await wait(900); await seg.shot('hero-picker-portraits');
+  await page.evaluate(() => window.__heroUi && window.__heroUi.open('stats')); await wait(900); await seg.shot('hero-stats-tab');
+  const hc = await page.$('#realm-hero-close'); if (hc && await hc.isVisible()) await (phone ? hc.tap() : hc.click()); await wait(500);
+  log('    hero create errors so far', STATS.consoleErrors.length + STATS.pageErrors.length);
+}
+
+// Nexus + quest claim, real kills + pickups, a status icon, the unlock toast and the ability sheet
+async function nexusQuests(seg, page) {
+  const phone = seg.vp.phone;
+  seg.step('nx-load');
+  await page.goto(G('games/mad-maze/index.html?mode=world&test=1&heropick=0&seed=12345'));
+  await waitWorld(page); await page.waitForFunction(() => window.__mm.arena.state === 'play', null, { timeout: 10000 }).catch(() => {});
+  await wait(1200); if (!phone) await page.mouse.click(seg.vp.w / 2, seg.vp.h / 2);
+  // the world keeps the last saved position (maybe a deadly zone from an earlier segment): start this one on the spawn shore, in god mode
+  await alive(page, phone);
+  await A(page, (a, w) => { const sp = w.world.spawnPoint; a.player.x = (sp.x + 0.5) * 32 + 64; a.player.y = (sp.y + 0.5) * 32; a.player.iframes = 1e9; a.player.hp = a.stats.maxHp; });
+  // ---- kills and pickups: play for real near the spawn (god mode so the run is about loot, not death) ----
+  seg.step('kills-pickups');
+  const k0 = await A(page, (a, w) => ({ kills: w.kills(), got: w.pickups.got(), total: w.pickups.total(), shards: a.save.shards, xp: a.save.xp, lvl: a.save.level }));
+  await playRealm(seg, page, phone ? 16000 : 20000, { godAfterDeath: true });
+  await alive(page, phone); await A(page, (a) => { a.player.iframes = 1e9; });
+  let k1 = await A(page, (a, w) => ({ kills: w.kills(), got: w.pickups.got(), total: w.pickups.total(), onGround: w.pickups.list().length }));
+  log('    real play: kills', k0.kills, '->', k1.kills, 'pickups total', k0.total, '->', k1.total, JSON.stringify(k1.got), 'on ground', k1.onGround);
+  // pull three live enemies next to the hero and finish them so their drops are on screen
+  const near = await A(page, (a, w) => { const out = []; for (const le of w.liveEnemies()) { if (out.length >= 3) break; const e = w.enemyById(le.id); if (!e || !e.active) continue; e.x = a.player.x + 90 + out.length * 40; e.y = a.player.y + (out.length - 1) * 50; a._hitEnemy(e, 99999); out.push(le.type); } return { out, ground: w.pickups.list().map((q) => q.type + ':' + q.art) }; });
+  log('    finished nearby:', JSON.stringify(near));
+  await wait(250); await seg.shot('pickups-dropped');
+  await wait(1800); await seg.shot('pickups-collected');
+  k1 = await A(page, (a, w) => ({ kills: w.kills(), got: w.pickups.got(), total: w.pickups.total(), quests: w.quests.summary() }));
+  log('    after collect:', JSON.stringify(k1));
+  // ---- a status icon on the hero (a bolt debuff and a shrine-style buff) ----
+  seg.step('status');
+  await A(page, (a) => { a.applyStatus('player', 'slowed', { sec: 6 }); a.applyStatus('player', 'swift', { sec: 6 }); a.applyStatus('player', 'bleed', { sec: 6, stacks: 2 }); return a.statusOf('player'); }).then((s) => log('    status:', JSON.stringify(s))).catch((e) => log('    status hook failed', e.message));
+  await wait(500); await seg.shot('status-icons');
+  // ---- the Nexus ----
+  seg.step('nexus');
+  const nx = await A(page, (a, w) => { const s = w.nexus.site; if (!s) return null; a.player.x = s.x - 20; a.player.y = s.y; return { on: w.nexus.on, x: s.x, y: s.y }; });
+  log('    nexus site', JSON.stringify(nx));
+  await wait(900); await seg.shot('nexus-portal-prompt');
+  if (await visible(page, '#rw-nexus-go')) await tap(page, '#rw-nexus-go', phone); else await A(page, (a, w) => w.nexus.open());
+  await wait(1200); await seg.shot('nexus-plaza');
+  const guide = await page.$('#rw-nexus [data-npc="guide"]'); if (guide) { await (phone ? guide.tap() : guide.click()); await wait(600); await seg.shot('nexus-guide-talk'); }
+  if (phone) { await page.evaluate(() => window.scrollTo(0, 0)); }
+  seg.step('quest-board');
+  const qb = await page.$('#rw-nexus [data-npc="quest"]'); if (qb) { await (phone ? qb.tap() : qb.click()); await wait(700); await seg.shot('quest-board-progress'); }
+  // finish the quests with the hook (the boss + portal quests take a long run), then claim one through the button
+  await A(page, (a, w) => { w.quests.event({ type: 'kill', zone: 0, n: 100 }); w.quests.event({ type: 'boss' }); w.quests.event({ type: 'portal' }); });
+  await tapSel(page, '#rw-nexus [data-npc="quest"]', phone); await wait(500);
+  await seg.shot('quest-board-done');
+  log('    board:', JSON.stringify(await page.evaluate(() => Array.from(document.querySelectorAll('#rw-nx-board .nx-q')).map((r) => r.textContent + (r.querySelector('[data-claim]') ? (r.querySelector('[data-claim]').disabled ? ' [claim disabled]' : ' [claim]') : '')))));
+  const sh0 = await A(page, (a) => a.save.shards);
+  const claim = await tapSel(page, '#rw-nx-board [data-claim="kill_boss"]', phone) || await tapSel(page, '#rw-nx-board [data-claim]:not([disabled])', phone);
+  await wait(700); await seg.shot('quest-claimed');
+  log('    quest claim shards', sh0, '->', await A(page, (a) => a.save.shards), 'claim button', !!claim);
+  await tapSel(page, '#rw-nx-back', phone);
+  await wait(900); await seg.shot('nexus-back');
+  // ---- the unlock toast (hook raises the level) ----
+  seg.step('unlock-toast');
+  const tl = await A(page, (a) => { const lv = (a.save.level || 1); a.save.level = Math.max(lv, 4) + 5; if (a._levelUp) a._levelUp(); return a.save.level; });
+  await wait(700);
+  const toast = await page.evaluate(() => { const t = document.getElementById('mm-unlock-toast'); return t && !t.classList.contains('hidden') ? t.textContent : null; });
+  log('    level ->', tl, 'toast:', JSON.stringify(toast));
+  await seg.shot('unlock-toast');
+  // ---- ability sheet: right-click (desktop) / long-press (phone) ----
+  seg.step('ability-sheet');
+  if (phone) { const c = await center(page, '#realm-ab-1'); if (c) { await page.evaluate(([x, y]) => window.__bt.down(5, x, y), [c.x, c.y]); await wait(750); await page.evaluate(([x, y]) => window.__bt.up(5, x, y), [c.x, c.y]); } }
+  else await page.click('#realm-ab-1', { button: 'right' }).catch(() => {});
+  await wait(600);
+  log('    ability sheet open:', await visible(page, '#mm-ab-sheet'));
+  await seg.shot('ability-sheet');
+  if (!phone) await page.keyboard.press('Escape'); else await page.mouse.click(20, 300).catch(() => {});
+  await wait(500); await seg.shot('ability-bar');
 }
 
 async function lantern(seg, page) {
@@ -403,11 +523,9 @@ async function games(seg, page) {
     await ctx.routeWebSocket(BLOCK, (ws) => { STATS.blockedWs++; ws.close(); }); // the Firebase SDK talks over a WebSocket: route() alone does NOT stop it
     await ctx.route('**/*', (r) => { if (BLOCK.test(r.request().url())) { STATS.blocked++; STATS._lastBlock = Date.now(); return r.abort(); } return r.continue(); });
     await ctx.addInitScript(INIT);
-    await run(ctx, vp, 'town-realm', townToRealm);
-    await run(ctx, vp, 'world', world);
-    await run(ctx, vp, 'dungeons', dungeons);
-    await run(ctx, vp, 'lantern', lantern);
-    await run(ctx, vp, 'games', games);
+    const SEGS = { 'hero-create': heroCreate, 'town-realm': townToRealm, world, 'nexus-quests': nexusQuests, dungeons, lantern, games };
+    const pickSegs = process.env.SEGS ? process.env.SEGS.split(',') : Object.keys(SEGS);
+    for (const n of pickSegs) if (SEGS[n]) await run(ctx, vp, n, SEGS[n]);
     await ctx.close();
   }
   await browser.close();
