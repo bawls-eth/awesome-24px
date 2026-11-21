@@ -127,6 +127,10 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "deepdelve-fps.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "deepdelve-perf.test.js": {
     "class": "browser",
     "tier": "full"
