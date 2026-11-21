@@ -134,6 +134,14 @@
   // Class signature: the active hero's class gets a signature ability in the F slot (level 7, replaces Overdrive); ?signature=0 disables it.
   if (window.MMClasses && MMClasses.arenaSignature && params.get('signature') !== '0' && activeHeroClass()) arena.setHeroSignature(MMClasses.arenaSignature(activeHeroClass()));
 
+  // Unlock nodes (S12): class passives, Nova II and Dash II (and the styled weapon items) follow the ACTIVE hero's class and level; ?unlocks=0 turns the nodes off.
+  if (arena.setHeroLevelSource) arena.setHeroLevelSource(() => {
+    if (!window.MMProfile) return null;
+    const active = MMProfile.cleanActive(localStorage.getItem(MMProfile.ACTIVE_KEY)); const prof = MMProfile.clean(localStorage.getItem(MMProfile.KEY));
+    const h = (prof.heroes || []).find((x) => x.id === active.heroId) || (prof.heroes || [])[0];
+    return h ? { cls: h.cls, level: h.level } : null;
+  });
+
   // Weapon styles (S10): the equipped weapon item's `wpn_<style>` id (or style/family fields) picks a MMWeapons spec for the active hero's class.
   // Base style / no styled weapon / ?weapons=0 / missing modules = today's fire (the arena hook decides). Re-applied on equip, hero switch and load.
   const WEAPONS_ON = params.get('weapons') !== '0' && !!(window.MMWeapons && window.MMProjectile && arena.setHeroWeapon);
@@ -208,6 +216,7 @@
     if (params.get('classstats') !== '0') arena.setHeroProfile(MMClasses.arenaProfile(h.cls));
     if (params.get('signature') !== '0') arena.setHeroSignature(MMClasses.arenaSignature(h.cls));
     const ac = window.MMArt ? MMArt.artClassFor(h.cls) : null;
+    if (arena.refreshHeroLevel) arena.refreshHeroLevel();
     applyWeapon();
     if (arena.setBoltClass) arena.setBoltClass(h.cls);
     arena.setHeroArt(null);
@@ -301,7 +310,7 @@
       const wapi = realmWorld ? realmWorld.api : null; let z = -1; try { const zi = wapi && wapi.zone(); z = zi && zi.zone < 4 ? zi.zone : -1; } catch (e) { z = -1; }
       deepest.z = Math.max(deepest.z, z);
       let portals = 0; try { portals = RealmWorld.readSave().stats.portals; } catch (e) { portals = 0; }
-      const rows = HS.panelRows(MMClasses, { hero, profile: arena.heroProfile || MMClasses.arenaProfile(null), stats: arena.stats, save: arena.save, defs, weapon: weaponPanel(hero), passives: window.MMUnlocks && hero.cls ? { level: arena.save.level, unlocks: MMUnlocks } : undefined, run: { kills: wapi ? wapi.kills() : 0, deepest: deepest.z < 0 ? null : deepest.z, portals, time: arena.clock } });
+      const rows = HS.panelRows(MMClasses, { hero, profile: arena.heroProfile || MMClasses.arenaProfile(null), stats: arena.stats, save: arena.save, defs, weapon: weaponPanel(hero), passives: window.MMUnlocks && hero.cls ? { level: arena.heroLevel ? arena.heroLevel() : arena.save.level, unlocks: MMUnlocks } : undefined, run: { kills: wapi ? wapi.kills() : 0, deepest: deepest.z < 0 ? null : deepest.z, portals, time: arena.clock } });
       body.textContent = ''; let grp = null, dl = null;
       rows.forEach((r) => {
         if (r.group !== grp) { grp = r.group; body.appendChild(mk('h3', 'hp-h', grp)); dl = mk('div', 'hp-rows'); body.appendChild(dl); }

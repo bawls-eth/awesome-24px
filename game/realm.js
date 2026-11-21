@@ -90,6 +90,8 @@ const RM_SPARK_MAX = 24, RM_SPARK_LIFE = 0.25;
 const RM_SPARK_CLASS = { ranger: 'a', bruiser: 'a', berserker: 'a', punk: 'a', rogue: 'a', paladin: 'a', frostcaller: 'b', herald: 'b', druid: 'b', warlock: 'c', necromancer: 'c', trickster: 'c', gravetender: 'c', shadowpaw: 'c' };
 const RM_EB_ROT = { ebolt_shard: 1, ebolt_arrow: 1, ebolt_fire: 1, ebolt_frost: 1, ebolt_laser_h: 1, ebolt_skull: 0 };
 const RM_WPN_COLOR = { dot: '#ffe27a', arrow: '#f3d9a4', shard: '#9fe3ff', orb: '#c59bff', star: '#ffd24a', blade: '#e6edf3', page: '#fff3c4', axe: '#ff9a6a', hammer: '#ffcf5a', fist: '#ffb38a', ray: '#7ee7ff' };
+// URL kill switches (S12): ?unlocks=0 turns off the unlock-tree passives / Nova II / Dash II, ?weapons=0 the styled weapon items.
+function rmFlagOff(name) { try { return typeof location !== 'undefined' && new RegExp('[?&]' + name + '=0(&|$)').test(location.search || ''); } catch (e) { return false; } }
 function rmInertDef(id) {
   if (RM_ITEM_BY_ID[id]) return RM_ITEM_BY_ID[id];
   const name = id.slice(4).split('_').filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ').slice(0, 24) || 'Weapon';
@@ -263,6 +265,7 @@ class RealmArena {
     this._itemArt = null; this._enemyArt = null; this._enemyMap = null; this._driftMap = null; this._enemyDbgOn = false; this._bossArt = null; this._bossLoad = null; this._bossDbg = null; this._bossGhost = null; this._bossReq = null; this._biomeEnemyMap = null; this._edGhosts = null; // optional enemy animations (setEnemyArt)
     this._boltArt = null; this._boltCls = null; this._baCache = null; this._sparks = null; this._curE = null; this._baDraws = 0; this._baeDraws = 0; this._sparkSpawned = 0; this._sparkDraws = 0; // optional bolt art (setBoltArt)
     this.heroProfile = null; // setHeroProfile
+    this._heroSrc = null; this._hu = null; // setHeroLevelSource: the active hero {cls, level} (null = classic: account level, no unlock nodes)
     this.weapon = null; this._wq = []; this._wOrbT = [0, 0, 0]; this._wOrbA = 0; this._wCache = null; this._kIn = {}; this._kHero = { x: 0, y: 0 }; this._kWall = 0; this._kW = null; // setHeroWeapon (null = today's fire)
     this.sig = null; this._sigAb = { id: 'sig', key: 'f', icon: '🔥', name: 'Signature', short: '', level: 7, cd: 15 }; // setHeroSignature: the class signature takes the F slot (null = Overdrive, today's behaviour)
     this.sg = { powT: 0, powMul: 1, fx: { t: 0, max: 0.5, x: 0, y: 0, r: 0, color: '#fff' }, bloom: { t: 0, x: 0, y: 0, r: 0, tick: 0 }, bones: { t: 0, a: 0, n: 0, heal: 0, frac: 0 } }; // signature runtime state (preallocated)
@@ -571,6 +574,8 @@ class RealmArena {
     });
     const hp = this.heroProfile; // additive class profile (setHeroProfile), applied after gear and level; never in duels (returned above)
     if (hp) { st.maxHp = Math.max(1, Math.round(st.maxHp * hp.hp)); st.dmg *= hp.dmg; st.rate *= hp.rate; st.speed *= hp.speed; st.iframes *= hp.iframes; }
+    const um = this._unl(); // unlocked passive nodes (MMUnlocks, S12) at the active hero's level; null = classic / ?unlocks=0 / no hero
+    if (um) { const m = um.mul; if (m.hp) st.maxHp = Math.max(1, Math.round(st.maxHp * m.hp)); if (m.dmg) st.dmg *= m.dmg; if (m.rate) st.rate *= m.rate; if (m.speed) st.speed *= m.speed; if (m.iframes) st.iframes *= m.iframes; }
     const hs = this._heroWorldScale(); // world mode only: MMDifficulty.heroScale (easy start); 1x in the classic arena, dungeons, ?difficulty=off
     if (hs) { st.dmg *= hs.dmg; st.rate *= hs.rate; }
     let dm = this.buffDmg > 1 && this.buffDmg <= 1.5 ? this.buffDmg : 1; // additive timed buff (world shrine of Fury), set by realm-world.js
@@ -943,6 +948,42 @@ class RealmArena {
       shots: Math.max(1, Math.min(5, Math.floor(Number(profile.shots)) || 1)), spread: Math.max(0, Math.min(1, Number(profile.spread) || 0)), pierce: Math.max(0, Math.min(3, Math.floor(Number(profile.pierce)) || 0)),
       shotDmg: Math.max(0.2, Math.min(1.5, Number(profile.shotDmg) || 1)), critChance: Math.max(0, Math.min(0.5, Number(profile.critChance) || 0)), boltSpeed: Math.max(0.5, Math.min(1.3, Number(profile.boltSpeed) || 1)) } : null;
     if (this.save) { this._calcStats(); if (this.player && this.player.hp > this.stats.maxHp) this.player.hp = this.stats.maxHp; if (this.active) this._syncHud(); }
+  }
+  // Additive hook (S12): fn() -> the active hero {cls, level} (MMProfile). With a hero, the unlock-tree nodes (MMUnlocks: class passives,
+  // Nova II, Dash II) and the styled weapon items follow THAT hero's class and level; without one (null fn / null result) the arena is the
+  // classic one: account level only, no nodes. The four ability slots keep their account-level gates (abilityUnlocked) so nothing is lost.
+  setHeroLevelSource(fn) { this._heroSrc = typeof fn === 'function' ? fn : null; return this.refreshHeroLevel(); }
+  refreshHeroLevel() {
+    let h = null;
+    if (this._heroSrc) { try { h = this._heroSrc(); } catch (e) { h = null; } }
+    const cls = h && typeof h === 'object' && typeof h.cls === 'string' && /^[A-Za-z]{2,16}$/.test(h.cls) ? h.cls : null;
+    const lv = h && typeof h === 'object' ? Math.floor(Number(h.level)) : NaN;
+    this._hu = cls ? { cls, level: Number.isFinite(lv) && lv >= 1 ? Math.min(RM_MAX_LEVEL, lv) : 0, key: '', agg: null } : null;
+    if (this.save) { this._calcStats(); if (this.player && this.player.hp > this.stats.maxHp) this.player.hp = this.stats.maxHp; if (this.active) this._syncHud(); }
+    return this._hu ? { cls: this._hu.cls, level: this.heroLevel() } : null;
+  }
+  heroClass() { return this._hu ? this._hu.cls : null; }
+  // The level the unlock nodes read: the active hero's level when a hero is set (and has one), else the account-wide arena level.
+  heroLevel() { return this._hu && this._hu.level ? this._hu.level : (this.save ? this.save.level : 1); }
+  // Aggregated unlocked mods for the active hero (cached per class+level). null in duels, with ?unlocks=0, without MMUnlocks or a hero.
+  _unl() {
+    const u = this._hu;
+    if (!u || (this.team && this.team.isPvp) || typeof MMUnlocks === 'undefined' || typeof MMUnlocks.aggregate !== 'function' || rmFlagOff('unlocks')) return null;
+    const lv = this.heroLevel(), key = u.cls + ':' + lv;
+    if (u.key !== key) { try { u.agg = MMUnlocks.aggregate(u.cls, lv); } catch (e) { u.agg = null; } u.key = key; }
+    return u.agg;
+  }
+  // Nova bolts: 16, or 20 once Nova II is unlocked (L11). A co-op guest keeps 16 (the host fires a guest's Nova with 16).
+  _novaBolts() { return this._unl() && this.role !== 'guest' && typeof MMUnlocks.novaBolts === 'function' ? MMUnlocks.novaBolts(this.heroLevel()) : 16; }
+  // An ability's cooldown after the unlock nodes: Dash II (L16: 3 -> 2.5 s) and `ab` cooldown mods (e.g. trickster Slippery x0.87). 'set' first, then 'mul'.
+  _abCd(ab) {
+    const u = ab && ab.id === 'dash' ? this._unl() : null;
+    if (!u) return ab.cd;
+    let cd = typeof MMUnlocks.dashCooldown === 'function' ? MMUnlocks.dashCooldown(this.heroLevel()) : ab.cd;
+    u.ab.forEach((m) => { if (m.ability === 'dash' && m.field === 'cooldown' && m.mode === 'set' && Number.isFinite(m.v)) cd = m.v; });
+    u.ab.forEach((m) => { if (m.ability === 'dash' && m.field === 'cooldown' && m.mode === 'mul' && Number.isFinite(m.v)) cd *= m.v; });
+    cd = Math.max(1, Math.min(ab.cd, cd));
+    return this.role === 'guest' ? Math.max(2.4, cd) : cd; // the host enforces 2.4 s between a guest's dashes
   }
   // Additive hook: the class signature ability from MMClasses.arenaSignature(classId). It replaces the F slot (Overdrive) at its level.
   // null / unknown kind = today's behaviour. Never active in team duels (the Dash is the only ability there).
@@ -2495,14 +2536,15 @@ class RealmArena {
       }
       p.iframes = Math.max(p.iframes, 0.4);
     } else if (ab.id === 'nova') {
-      for (let k = 0; k < 16; k++) this.firePlayerBullet((k / 16) * Math.PI * 2);
+      const nb = this._novaBolts();
+      for (let k = 0; k < nb; k++) this.firePlayerBullet((k / nb) * Math.PI * 2);
       this.shake = Math.max(this.shake, 3);
     } else if (ab.id === 'shield') {
       this.shield.hits = 3; this.shield.t = 6;
     } else if (ab.id === 'overdrive') {
       this.overdriveT = 4;
     }
-    this.abilityCd[i] = ab.cd;
+    this.abilityCd[i] = this._abCd(ab);
     if (this.team && this.role === 'guest' && ab !== this._sigAb) this.team.sendAbility(ab.id);
     this._floatText(p.x, p.y - 30, `${ab.icon} ${ab.name}`, '#fff');
     if (ab === this._sigAb) this._showBanner(`${ab.icon} ${ab.name}!`, 1.1);
