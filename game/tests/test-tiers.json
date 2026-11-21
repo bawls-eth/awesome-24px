@@ -894,5 +894,13 @@
   "world-rewards.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "gear-save-tolerance.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "gear-stats-pipeline.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
