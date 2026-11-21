@@ -1,0 +1,102 @@
+{
+  "batch": "b33",
+  "label": "jungle-props",
+  "assets": [
+    {
+      "id": "jungle_tree_a",
+      "path": "props/jungle_tree_a.png",
+      "category": "prop",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 64,
+      "anchor": [
+        32,
+        62
+      ]
+    },
+    {
+      "id": "jungle_tree_b",
+      "path": "props/jungle_tree_b.png",
+      "category": "prop",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 64,
+      "anchor": [
+        32,
+        62
+      ]
+    },
+    {
+      "id": "giant_fern",
+      "path": "props/giant_fern.png",
+      "category": "prop",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 64,
+      "anchor": [
+        16,
+        62
+      ]
+    },
+    {
+      "id": "banana_plant",
+      "path": "props/banana_plant.png",
+      "category": "prop",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 64,
+      "anchor": [
+        16,
+        62
+      ]
+    },
+    {
+      "id": "hanging_vine",
+      "path": "props/hanging_vine.png",
+      "category": "prop",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 64,
+      "anchor": [
+        16,
+        4
+      ]
+    },
+    {
+      "id": "temple_pillar",
+      "path": "props/temple_pillar.png",
+      "category": "prop",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 64,
+      "anchor": [
+        16,
+        62
+      ]
+    },
+    {
+      "id": "temple_idol",
+      "path": "props/temple_idol.png",
+      "category": "prop",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": [
+        16,
+        30
+      ]
+    },
+    {
+      "id": "amber_node",
+      "path": "props/amber_node.png",
+      "category": "prop",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": [
+        16,
+        30
+      ]
+    }
+  ]
+}
