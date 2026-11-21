@@ -99,6 +99,20 @@ function rmInertDef(id) {
   RM_ITEM_BY_ID[id] = def; // lookup only: never in RM_ITEMS, so never dropped or sold in the shop
   return def;
 }
+// Styled weapon items (S12): the 26 MMWeaponItems `wpn_<style>` defs become real weapon-slot items (dmg +0.45 x rarity, a sidegrade of the
+// Spark Wand) whose style drives setHeroWeapon. Only when mm-weapon-items.js is on the page and not ?weapons=0; otherwise saved wpn_ ids stay
+// the inert items above. RM_BASE_ITEMS keeps the 7 classic items for every classic pool (death cache, wave bags, the classic shop).
+const RM_BASE_ITEMS = RM_ITEMS.slice();
+const RM_WPN_ITEMS = [];
+(function rmRegisterWeapons() {
+  if (rmFlagOff('weapons') || typeof MMWeaponItems === 'undefined' || typeof MMWeapons === 'undefined' || !MMWeaponItems || !Array.isArray(MMWeaponItems.ITEMS)) return;
+  MMWeaponItems.ITEMS.forEach((it) => {
+    if (!it || typeof it.id !== 'string' || !RM_WPN_ID.test(it.id) || RM_ITEM_BY_ID[it.id] || typeof it.style !== 'string' || typeof it.family !== 'string') return;
+    const def = { id: it.id, slot: 'weapon', name: String(it.name || it.style).slice(0, 24), icon: typeof it.icon === 'string' && it.icon ? it.icon : '🗡️', art: typeof it.art === 'string' && it.art ? it.art : null,
+      stat: 'dmg', amount: 0.45, text: 'damage', style: it.style, family: it.family, wpn: true };
+    RM_ITEMS.push(def); RM_ITEM_BY_ID[def.id] = def; RM_WPN_ITEMS.push(def);
+  });
+})();
 // A resolved MMWeapons spec, re-clamped into a plain frozen object the engine trusts. Only the 26 alternate styles count (bases keep today's fire).
 function rmWpnSpec(s) {
   const n = (v, lo, hi, d) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : d);
@@ -959,10 +973,20 @@ class RealmArena {
     const cls = h && typeof h === 'object' && typeof h.cls === 'string' && /^[A-Za-z]{2,16}$/.test(h.cls) ? h.cls : null;
     const lv = h && typeof h === 'object' ? Math.floor(Number(h.level)) : NaN;
     this._hu = cls ? { cls, level: Number.isFinite(lv) && lv >= 1 ? Math.min(RM_MAX_LEVEL, lv) : 0, key: '', agg: null } : null;
+    const wu = this.save && this._heroSrc ? this.save.eq.weapon : 0; // switching to a hero of another family takes a styled weapon off (it stays in the backpack)
+    const wi = wu ? this.save.items.find((x) => x.n === wu) : null;
+    if (wi && RM_ITEM_BY_ID[wi.id] && RM_ITEM_BY_ID[wi.id].wpn && !this._wpnCanEquip(RM_ITEM_BY_ID[wi.id])) delete this.save.eq.weapon;
     if (this.save) { this._calcStats(); if (this.player && this.player.hp > this.stats.maxHp) this.player.hp = this.stats.maxHp; if (this.active) this._syncHud(); }
     return this._hu ? { cls: this._hu.cls, level: this.heroLevel() } : null;
   }
   heroClass() { return this._hu ? this._hu.cls : null; }
+  // A styled weapon item needs an active hero of its family (MMWeapons.CLASS_FAMILY); never in duels.
+  _wpnCanEquip(def) {
+    const cls = this.heroClass();
+    if (!def || !def.wpn || !cls || (this.team && this.team.isPvp) || typeof MMWeapons === 'undefined') return false;
+    try { return MMWeapons.familyOf(cls) === def.family; } catch (e) { return false; }
+  }
+  _wpnHint(def) { try { return (typeof MMWeaponItems !== 'undefined' && MMWeaponItems.equipHint(def.id)) || def.family; } catch (e) { return def.family; } }
   // The level the unlock nodes read: the active hero's level when a hero is set (and has one), else the account-wide arena level.
   heroLevel() { return this._hu && this._hu.level ? this._hu.level : (this.save ? this.save.level : 1); }
   // Aggregated unlocked mods for the active hero (cached per class+level). null in duels, with ?unlocks=0, without MMUnlocks or a hero.
@@ -1227,7 +1251,7 @@ class RealmArena {
   // Icon markup for an item id: <img> from a trusted manifest url (never user data), else the emoji. Fallback on load error is wired by _fixIcons.
   _icon(def) {
     let url = null;
-    try { url = this._itemArt ? this._itemArt.iconUrl(def.id) : null; } catch (e) { url = null; }
+    try { url = this._itemArt ? this._itemArt.iconUrl(def.wpn && def.art ? def.art : def.id) : null; } catch (e) { url = null; }
     if (!url || !/^[A-Za-z0-9_.\/-]+$/.test(url)) return def.icon;
     return `<img class="realm-ico" src="${url}" alt="" width="32" height="32" data-item="${def.id}" style="image-rendering:pixelated">`;
   }
@@ -1239,7 +1263,7 @@ class RealmArena {
     let e = c[id];
     if (e === undefined) {
       let url = null;
-      try { url = this._itemArt.iconUrl(id); } catch (err) { url = null; }
+      try { const d = RM_ITEM_BY_ID[id]; url = this._itemArt.iconUrl(d && d.wpn && d.art ? d.art : id); } catch (err) { url = null; }
       if (!url || !/^[A-Za-z0-9_.\/-]+$/.test(url)) return null; // not cached: may become available later
       const img = new Image(); e = c[id] = { img, cv: [null, null, null, null], dead: false };
       img.onerror = () => { e.dead = true; if (this._itemArt && this._itemArt.markBad) this._itemArt.markBad(id); };
@@ -2346,7 +2370,7 @@ class RealmArena {
   _deathBonus() {
     const sv = this.save; const w = Math.max(1, this.run.wave);
     const rarity = w >= 6 ? 2 : w >= 3 ? 1 : 0;
-    const def = RM_ITEMS[(sv.deaths + w) % RM_ITEMS.length]; const rar = RM_RARITIES[rarity];
+    const def = RM_BASE_ITEMS[(sv.deaths + w) % RM_BASE_ITEMS.length]; const rar = RM_RARITIES[rarity];
     let text;
     let n = 0;
     if (sv.items.length >= RM_BACKPACK) { sv.shards += rar.sell; text = `pack full, cache sold +${rar.sell} 💎`; } else { n = sv.nextUid++; sv.items.push({ n, id: def.id, r: rarity }); text = `cache: ${def.icon} ${rar.name} ${def.name}`; }
@@ -2358,7 +2382,7 @@ class RealmArena {
   // Offers: every item at each rarity your best wave has unlocked, priced at sell value x RM_SHOP_MULT. Fixed stock, no luck.
   shopStock() {
     const best = this.save.bestWave; const out = []; const wc = this._worldCopy(); const lv = this.save.level;
-    RM_RARITIES.forEach((rar, r) => { if (r < RM_SHOP_UNLOCK.length && (best >= RM_SHOP_UNLOCK[r] || (wc && lv >= RM_SHOP_UNLOCK_LV[r]))) RM_ITEMS.forEach((def) => out.push({ id: def.id, r, price: rar.sell * RM_SHOP_MULT })); });
+    RM_RARITIES.forEach((rar, r) => { if (r < RM_SHOP_UNLOCK.length && (best >= RM_SHOP_UNLOCK[r] || (wc && lv >= RM_SHOP_UNLOCK_LV[r]))) RM_BASE_ITEMS.forEach((def) => out.push({ id: def.id, r, price: rar.sell * RM_SHOP_MULT })); });
     return out;
   }
 
@@ -2474,7 +2498,7 @@ class RealmArena {
     b.active = true; b.x = x; b.y = y; b.t = 0; b.r = rarity;
     b.tier = worldLoot?.tierIndex;
     b.lifetime = worldLoot?.lifetime || Infinity;
-    b.id = itemId || RM_ITEMS[Math.floor(this.rng() * RM_ITEMS.length)].id;
+    b.id = itemId || RM_BASE_ITEMS[Math.floor(this.rng() * RM_BASE_ITEMS.length)].id;
     const a = this.rng() * Math.PI * 2; b.vx = Math.cos(a) * 60; b.vy = Math.sin(a) * 60;
     return b;
   }
@@ -2890,6 +2914,7 @@ class RealmArena {
     if (!it) return false;
     const slot = RM_ITEM_BY_ID[it.id].slot;
     if (RM_SLOTS.indexOf(slot) < 0) return false; // inert wpn_ item from a newer build: kept, never equipped
+    if (this.save.eq[slot] !== uid && RM_ITEM_BY_ID[it.id].wpn && !this._wpnCanEquip(RM_ITEM_BY_ID[it.id])) return false; // styled weapon: the hero's family only
     if (this.save.eq[slot] === uid) delete this.save.eq[slot]; else this.save.eq[slot] = uid;
     this._afterGearChange();
     return true;
@@ -2969,7 +2994,7 @@ class RealmArena {
     if (!sv.items.length) html += '<li class="dim">Nothing yet — defeat enemies to find loot bags.</li>';
     sv.items.forEach((it) => {
       const def = RM_ITEM_BY_ID[it.id]; const rar = RM_RARITIES[it.r]; const on = eqUids.has(it.n);
-      html += `<li data-uid="${it.n}" class="${on ? 'on' : ''}"><span class="nm" style="color:${rar.color}">${this._icon(def)} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(it)}</span>${def.inert ? '<button type="button" class="eq" disabled aria-label="Not usable yet">Equip</button>' : `<button type="button" class="eq" data-act="equip" data-uid="${it.n}">${on ? 'Unequip' : 'Equip'}</button>`}${this.combinable(it.n) ? `<button type="button" class="eq" data-combine="${it.n}" aria-label="Combine ${RM_COMBINE_COUNT} ${rar.name} ${def.name} into one ${RM_RARITIES[it.r + 1].name}">Combine ${RM_COMBINE_COUNT}→${RM_RARITIES[it.r + 1].name}</button>` : ''}<button type="button" class="dc" data-act="discard" data-uid="${it.n}" aria-label="Sell ${def.name} for ${rar.sell} shards">Sell ${rar.sell}💎</button></li>`;
+      html += `<li data-uid="${it.n}" class="${on ? 'on' : ''}"><span class="nm" style="color:${rar.color}">${this._icon(def)} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(it)}</span>${def.inert ? '<button type="button" class="eq" disabled aria-label="Not usable yet">Equip</button>' : def.wpn && !on && !this._wpnCanEquip(def) ? `<button type="button" class="eq" disabled data-wpn-lock="1" aria-label="${this._wpnHint(def)} only" title="${this._wpnHint(def)}">🔒 ${def.family.charAt(0).toUpperCase() + def.family.slice(1)}</button>` : `<button type="button" class="eq" data-act="equip" data-uid="${it.n}">${on ? 'Unequip' : 'Equip'}</button>`}${this.combinable(it.n) ? `<button type="button" class="eq" data-combine="${it.n}" aria-label="Combine ${RM_COMBINE_COUNT} ${rar.name} ${def.name} into one ${RM_RARITIES[it.r + 1].name}">Combine ${RM_COMBINE_COUNT}→${RM_RARITIES[it.r + 1].name}</button>` : ''}<button type="button" class="dc" data-act="discard" data-uid="${it.n}" aria-label="Sell ${def.name} for ${rar.sell} shards">Sell ${rar.sell}💎</button></li>`;
     });
     html += '</ul>';
     root.innerHTML = html; this._fixIcons(root);

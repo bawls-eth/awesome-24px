@@ -176,23 +176,24 @@ const volley = (page) => page.evaluate(() => {
   check('code-drawn shapes are cached (no new canvases while drawing the same bolts)', draw.n1 >= 1 && draw.n2 === draw.n1, JSON.stringify(draw));
   await S.ctx.close();
 
-  // (4) a save holding wpn_bow_leaf keeps it (inert, unequippable) and writes it back.
-  const realm = { shards: 5, level: 2, xp: 0, items: [{ n: 1, id: 'wpn_bow_leaf', r: 1 }, { n: 2, id: 'sparkwand', r: 0 }, { n: 3, id: 'wpn_X', r: 0 }, { n: 4, id: 'bogus', r: 0 }], nextUid: 5, eq: { weapon: 1 } };
+  // (4) a save holding wpn_bow_leaf keeps it and writes it back. Since S12 the 26 known styles are real weapon items, so the stale-tab
+  // tolerance is checked with a wpn_ id this build does not know (wpn_zz_future): kept, inert, never equipped.
+  const realm = { shards: 5, level: 2, xp: 0, items: [{ n: 1, id: 'wpn_bow_leaf', r: 1 }, { n: 2, id: 'sparkwand', r: 0 }, { n: 3, id: 'wpn_X', r: 0 }, { n: 4, id: 'bogus', r: 0 }, { n: 5, id: 'wpn_zz_future', r: 0 }], nextUid: 6, eq: { weapon: 5 } };
   const Sv = await open(browser, 'ranger', '', { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }, realm); errs.push(...Sv.errors);
   const sv = await Sv.page.evaluate(([k]) => {
     const a = window.__mm.arena;
     const ids = a.save.items.map((it) => it.id);
     const eq = a.save.eq.weapon || 0;
-    const eqOk = a.equip(1) === false && !a.save.eq.weapon;
+    const eqOk = a.equip(5) === false && !a.save.eq.weapon;
     a.setPaused(true); const html = (document.getElementById('realm-backpack-body') || {}).innerHTML || '';
     a.setPaused(false);
     a.onSave(a.save);
     const stored = JSON.parse(localStorage.getItem(k)).realm.items.map((it) => it.id);
-    return { ids, eq, eqOk, listed: /Bow Leaf/.test(html), stored, scroll: document.documentElement.scrollWidth <= window.innerWidth };
+    return { ids, eq, eqOk, listed: /Leaf Volley/.test(html) && /Zz Future/.test(html), stored, scroll: document.documentElement.scrollWidth <= window.innerWidth };
   }, [SAVE]);
-  check('a save holding wpn_bow_leaf keeps it (bad ids still dropped)', sv.ids.join() === 'wpn_bow_leaf,sparkwand', JSON.stringify(sv));
+  check('a save holding wpn_bow_leaf keeps it (bad ids still dropped)', sv.ids.join() === 'wpn_bow_leaf,sparkwand,wpn_zz_future', JSON.stringify(sv));
   check('the inert wpn_ item is never equipped', sv.eq === 0 && sv.eqOk, JSON.stringify(sv));
-  check('the inert item shows in the backpack and survives a save write', sv.listed && sv.stored.indexOf('wpn_bow_leaf') >= 0, JSON.stringify(sv));
+  check('the inert item shows in the backpack and survives a save write', sv.listed && sv.stored.indexOf('wpn_bow_leaf') >= 0 && sv.stored.indexOf('wpn_zz_future') >= 0, JSON.stringify(sv));
   check('390x844 phone: no horizontal scroll', sv.scroll);
   await Sv.ctx.close();
 
