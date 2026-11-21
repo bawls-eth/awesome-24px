@@ -90,7 +90,7 @@
     const dSeed = dailyFor('dungeon');
     const hasSeed = !!EXPLICIT_SEED || !!dSeed;
     // layout version: explicit ?lv=2, or a fresh random seed (new run); a link with a seed and no lv keeps the original layouts
-    dungeon = MMDungeonRun.create(arena, { layout: (params.get('lv') === '2' || !hasSeed || !!dSeed) ? 2 : 1, seed: hasSeed ? (EXPLICIT_SEED || dSeed) : String(Date.now() % 100000), home: HOME, homeLabel: HOME_LABEL, test: TEST, returnTo: RETURN, biome: DBIOME });
+    dungeon = MMDungeonRun.create(arena, { bosses: params.get('bosses') === 'classic' ? 'classic' : '', layout: (params.get('lv') === '2' || !hasSeed || !!dSeed) ? 2 : 1, seed: hasSeed ? (EXPLICIT_SEED || dSeed) : String(Date.now() % 100000), home: HOME, homeLabel: HOME_LABEL, test: TEST, returnTo: RETURN, biome: DBIOME });
     document.body.classList.add('dungeon-mode');
   }
   if (WORLD) {

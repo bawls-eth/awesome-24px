@@ -96,7 +96,8 @@
     // set only by mad-maze.js from a regex-checked ?return= (a Realm World portal): the exit goes back to that portal tile
     const backWorld = typeof opts.returnTo === 'string' && /^index\.html\?mode=world&seed=[A-Za-z0-9_-]{1,24}&at=\d{1,4},\d{1,4}(&test=1)?$/.test(opts.returnTo) ? opts.returnTo : null;
     const seed = String(opts.seed === undefined ? '1' : opts.seed);
-    const biome = MMBiomes.clean(opts.biome); const B = MMBiomes.get(biome); // unknown / missing biome -> warren
+    const biome = MMBiomes.clean(opts.biome); const B = Object.assign({}, MMBiomes.get(biome)); // unknown / missing biome -> warren
+    { const bf = MMBiomes.bossFor(biome, seed, opts.bosses === 'classic'); B.boss_art = bf.boss_art; B.boss_name = bf.boss_name; } // b23: odd crypt seeds face the Lich King (?bosses=classic keeps the original)
     const layoutV = opts.layout === 2 || biome !== 'warren' ? 2 : 1; // a biome run is new content: it always uses the layout-2 pool
     const palCache = {};
     function palOf(type) { // warren: the original palette untouched; other biomes recolour start / normal / boss rooms, the coded rooms (key, treasure, secret) keep theirs

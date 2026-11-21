@@ -87,7 +87,10 @@ const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
     await ev(p, (id) => window.__walk(id, true), bossRoom);
     await p.waitForTimeout(500);
     const bs = await ev(p, () => { const a = window.__mm.arena; const e = window.__mm.dungeon.boss(); return e ? { art: e.bossArt, name: a._bossName(e), banner: document.getElementById('realm-boss-name').textContent } : null; });
-    check(T('the boss is the biome boss'), !!bs && bs.art === BOSS[biome] && bs.name === (BOSS[biome] || 'void_oracle') && bs.banner.indexOf(B.boss_name) === 0, JSON.stringify(bs));
+    // b23: the Crypt has an alternate boss (the Lich King) on odd seeds: the expected boss is whatever the biome's own rule gives for THIS seed, and it must be the primary or that alternate and nothing else
+    const wantBoss = await ev(p, (b) => { const w = MMBiomes.bossFor(b, window.__mm.dungeon.seed); return { art: w.boss_art, name: w.boss_name, alt: w.alt }; }, biome);
+    const okIds = [BOSS[biome], biome === 'crypt' ? 'lich_king' : null].filter((x) => x);
+    check(T('the boss is the biome boss'), !!bs && (biome === 'warren' ? bs.art === null || bs.art === undefined || bs.art === BOSS.warren : (bs.art === wantBoss.art && okIds.indexOf(bs.art) >= 0)) && bs.name === (bs.art || 'void_oracle') && bs.banner.indexOf(wantBoss.name) === 0, JSON.stringify([bs, wantBoss]));
     check(T('no console errors'), p.errors.length === 0, p.errors.join(' | '));
     await ctx.close();
   }
