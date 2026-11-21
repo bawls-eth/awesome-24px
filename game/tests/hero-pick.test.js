@@ -3,7 +3,7 @@
 const { chromium } = require('playwright');
 const { check, done } = require('./helpers');
 const ORIGIN = (process.env.BASE || 'http://localhost:8440/game/index.html').replace(/\/game\/index\.html.*$/, '');
-const WORLD = ORIGIN + '/game/games/mad-maze/index.html?mode=world&test=1&offline=1';
+const WORLD = ORIGIN + '/game/games/mad-maze/index.html?mode=world&test=1&offline=1&heropick=1';
 const MM = 'pixeltown-mm-v1', ACTIVE = 'pixeltown-mm-active-v1';
 const hero = (id, name, cls, level) => ({ id, name, cls, level, xp: 0, fame: 0, bonus: 0, mode: 'classic', items: [] });
 const prof = (heroes) => ({ v: 1, heroes, stash: new Array(16).fill(null), fame: 0, mode: 'classic', hall: [], migratedFrom: null });
@@ -89,6 +89,43 @@ async function open(browser, heroes, opts, query) {
   await M.page.click('#realm-hero .hp-hero[data-hero="h-rogue"]');
   check('phone tap selects a hero', await M.page.evaluate((k) => JSON.parse(localStorage.getItem(k)).heroId === 'h-rogue', ACTIVE));
   errs.push(...M.errors); await M.ctx.close();
+
+  // Zero heroes: create mode, create a Frostcaller, run starts with it.
+  const Z = await open(browser, []);
+  await Z.page.waitForSelector('#realm-hero:not(.hidden) .hp-new');
+  const zc = await Z.page.$$eval('#realm-hero .hp-new', (els) => els.map((e) => ({ c: e.dataset.newcls, d: e.disabled })));
+  check('zero heroes: picker opens in create mode, starters open, others locked', ['ranger', 'frostcaller', 'herald'].every((c) => zc.some((x) => x.c === c && !x.d)) && zc.some((x) => x.c === 'rogue' && x.d), JSON.stringify(zc));
+  await Z.page.click('#realm-hero .hp-new[data-newcls="frostcaller"]');
+  const zr = await Z.page.evaluate(([k, ka]) => { const a = window.__mm.arena; const p = MMProfile.clean(localStorage.getItem(k)); return { n: p.heroes.length, cls: p.heroes[0] && p.heroes[0].cls, lvl: p.heroes[0] && p.heroes[0].level, active: JSON.parse(localStorage.getItem(ka)).heroId, id: p.heroes[0] && p.heroes[0].id, hp: a.heroProfile && a.heroProfile.hp, exp: MMClasses.arenaProfile('frostcaller').hp, paused: a.paused, hidden: document.getElementById('realm-hero').classList.contains('hidden') }; }, [MM, ACTIVE]);
+  check('creating Frostcaller saves the hero, makes it active, applies its arenaProfile and starts the run', zr.n === 1 && zr.cls === 'frostcaller' && zr.lvl === 1 && zr.active === zr.id && zr.hp === zr.exp && !zr.paused && zr.hidden, JSON.stringify(zr));
+  // New hero button + cap.
+  await Z.page.keyboard.press('Escape'); await Z.page.click('#realm-pause button[data-m="heroes"]');
+  const nbh = await Z.page.$eval('#realm-hero .hp-newbtn', (e) => e.getBoundingClientRect().height);
+  check('New hero button is 44px+', nbh >= 44, String(nbh));
+  await Z.page.click('#realm-hero .hp-newbtn'); await Z.page.click('#realm-hero .hp-new[data-newcls="herald"]');
+  check('New hero adds a second hero and selects it', await Z.page.evaluate(([k, ka]) => { const p = MMProfile.clean(localStorage.getItem(k)); return p.heroes.length === 2 && JSON.parse(localStorage.getItem(ka)).heroId === 'hero-herald-1'; }, [MM, ACTIVE]));
+  errs.push(...Z.errors); await Z.ctx.close();
+
+  // Cap respected.
+  const many = []; for (let i = 0; i < 12; i++) many.push(hero('h' + i, 'H' + i, 'ranger', 1));
+  const K = await open(browser, many);
+  await K.page.waitForSelector('#realm-hero:not(.hidden) .hp-hero');
+  check('roster cap: New hero disabled and createHero refuses at 12', await K.page.$eval('#realm-hero .hp-newbtn', (e) => e.disabled) && await K.page.evaluate(([k]) => window.__heroUi.create('frostcaller') === null && MMProfile.clean(localStorage.getItem(k)).heroes.length === 12, [MM]));
+  errs.push(...K.errors); await K.ctx.close();
+
+  // Stale active id falls back to the first hero (single hero: no picker).
+  const T = await open(browser, [hero('h-paladin', 'Bram', 'paladin', 4)]);
+  await T.page.evaluate((ka) => localStorage.setItem(ka, JSON.stringify({ v: 1, heroId: 'gone' })), ACTIVE);
+  await T.page.reload(); await T.page.waitForFunction(() => window.__mm && window.__mm.arena);
+  check('stale active id falls back to the first hero on load', await T.page.evaluate(() => window.__mm.arena.heroProfile && window.__mm.arena.heroProfile.name === 'Oathward Paladin'));
+  errs.push(...T.errors); await T.ctx.close();
+
+  // Phone, zero heroes.
+  const Q = await open(browser, [], { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  await Q.page.waitForSelector('#realm-hero:not(.hidden) .hp-new');
+  const qp = await Q.page.evaluate(() => ({ h: document.documentElement.scrollWidth <= window.innerWidth, small: [...document.querySelectorAll('#realm-hero button:not(:disabled)')].filter((b) => b.getBoundingClientRect().height < 43.5).length }));
+  check('390x844 create mode: no horizontal scroll, 44px targets', qp.h && qp.small === 0, JSON.stringify(qp));
+  errs.push(...Q.errors); await Q.ctx.close();
 
   check('no console errors', errs.length === 0, errs.join(' | '));
   await browser.close();
