@@ -2,7 +2,7 @@
 // medals summary (`pixeltown-medals-isles-v1` = {"v":1,"m":[ids]}, the page is its single writer). Pure data + validation, no DOM.
 // A save is { v, at, returnTo, unlock[], isles{id:{seed,pos,fog,chests}}, home{grid[<=400],stable{slots}}, log{seen,ko,tamed,bugs,fish},
 // rides, wild{<=4} }. B10 adds (all additive): home.inv{kind:n} + home.seeded (MMHomestead decor), visited[isle], bosses[id],
-// gather{day, got{isle:[idx]}, log{res:n}} (daily-free gather spots). clean() always returns a valid save (corrupt -> defaults) and keeps the whole key under 20 KB.
+// gather{day, got{isle:[idx]}, log{res:n}} (daily-free gather spots). X2 adds inv{item:n} (crafting stacks, <=64 x 999). clean() always returns a valid save (corrupt -> defaults) and keeps the whole key under 20 KB.
 // This module never touches `pixeltown-save-v1`.
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -48,7 +48,7 @@
 
   function defaults() {
     return { v: 1, at: 'home', returnTo: null, unlock: ['jungle'], isles: {}, home: { grid: [], stable: { slots: 12 } },
-      log: { seen: {}, ko: {}, tamed: {}, bugs: {}, fish: {} }, rides: 0, wild: {}, visited: [], bosses: [], gather: { day: '', got: {}, log: {} } };
+      log: { seen: {}, ko: {}, tamed: {}, bugs: {}, fish: {} }, rides: 0, wild: {}, visited: [], bosses: [], gather: { day: '', got: {}, log: {} }, inv: {} };
   }
 
   function cleanPos(p) {
@@ -122,6 +122,17 @@
     return out;
   }
 
+  // X2: crafting inventory { item: 1..999 }, <=64 stacks. Uses MMIsleCraft.cleanInv when loaded (drops ids no pack or drop table produces);
+  // otherwise a shape-only fallback (valid key, integer 1..999).
+  function cleanInvX(inv) {
+    let CR = null;
+    try { CR = typeof module === 'object' && module.exports ? require('./mm-isle-craft.js') : (typeof self !== 'undefined' ? self.MMIsleCraft : null); } catch (e) { CR = null; }
+    if (CR && CR.cleanInv) return CR.cleanInv(inv);
+    const out = {};
+    if (!isObj(inv)) return out;
+    Object.keys(inv).slice(0, 512).forEach((k) => { if (Object.keys(out).length < 64 && KEY_RE.test(k) && BAD.indexOf(k) < 0 && Number.isInteger(inv[k]) && inv[k] >= 1) out[k] = Math.min(999, inv[k]); });
+    return out;
+  }
   function clean(raw, nowMs) {
     const out = defaults();
     try {
@@ -146,8 +157,10 @@
       (Array.isArray(raw.visited) ? raw.visited.slice(0, 16) : []).forEach((id) => { if (SAVED_ISLES.indexOf(id) >= 0 && out.visited.indexOf(id) < 0) out.visited.push(id); });
       (Array.isArray(raw.bosses) ? raw.bosses.slice(0, 64) : []).forEach((id) => { if (out.bosses.length < MAX_BOSSES && typeof id === 'string' && KEY_RE.test(id) && BAD.indexOf(id) < 0 && out.bosses.indexOf(id) < 0) out.bosses.push(id); });
       out.gather = cleanGather(raw.gather);
+      out.inv = cleanInvX(raw.inv);
       // size guard: shed the least valuable data first until the key fits
       const size = () => JSON.stringify(out).length;
+      if (size() > MAX_BYTES) out.inv = {};
       if (size() > MAX_BYTES) out.wild = {};
       if (size() > MAX_BYTES) { out.log.bugs = {}; out.log.fish = {}; }
       if (size() > MAX_BYTES) Object.keys(out.isles).forEach((id) => { out.isles[id].chests = []; });
