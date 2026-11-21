@@ -379,6 +379,18 @@
     "class": "live",
     "tier": "full"
   },
+  "stalk-advisor.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "stalk-goals.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "stalk-neighbours.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "stalk-page.test.js": {
     "class": "browser",
     "tier": "smoke"

@@ -23,6 +23,7 @@
   const MAX_BALANCE = 99999999;
   const MAX_WEEK = 1000000;
   const MAX_HISTORY = 12;
+  const MAX_PRICE = 700;        // no price anywhere (town or neighbour) can exceed this
   const MEDALS = [['bronze', 500], ['silver', 2000], ['gold', 10000]];
   const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -113,14 +114,50 @@
     return out;
   }
 
+
+  // ---- advisor (slice 1): an ESTIMATE of which pattern family this week is, from prices seen so far ----
+  const PRIOR = { decreasing: 0.25, random: 0.30, largeSpike: 0.25, smallSpike: 0.20 };
+  const ADV_SIMS = 3000, ADV_USE = 6, ADV_SIGMA = 0.06;
+  let advBank = null;
+  function advisorBank() {
+    if (advBank) return advBank;
+    advBank = [];
+    for (let i = 0; i < ADV_SIMS; i++) {
+      const w = generateWeek('advisor|' + i);
+      advBank.push({ pattern: w.pattern, ratios: w.sell.slice(0, ADV_USE).map((v) => v / w.buyPrice) });
+    }
+    return advBank;
+  }
+  // known = prices seen so far, index 0 = Sunday buy price. Pure and deterministic (no Math.random).
+  function advise(known) {
+    const prices = Array.isArray(known) ? known.map(Number).filter((v) => isFinite(v) && v > 0) : [];
+    const sells = Math.max(0, prices.length - 1);
+    const probs = {}; PATTERNS.forEach((p) => { probs[p] = PRIOR[p]; });
+    if (sells < 2 || prices[0] <= 0) {
+      return { ready: false, sells, probs, top: null, topProb: 0, text: 'Sprout\'s tip: need two sell prices (Mon AM and PM) before I can estimate the pattern.' };
+    }
+    const obs = prices.slice(1, 1 + ADV_USE).map((v) => v / prices[0]);
+    const bank = advisorBank();
+    const logw = bank.map((b) => { let d = 0; for (let i = 0; i < obs.length; i++) { const e = (b.ratios[i] - obs[i]) / ADV_SIGMA; d += e * e; } return -d / 2; });
+    const mx = Math.max.apply(null, logw);
+    const acc = { decreasing: 0, random: 0, largeSpike: 0, smallSpike: 0 }; let tot = 0;
+    bank.forEach((b, i) => { const w = Math.exp(logw[i] - mx); acc[b.pattern] += w; tot += w; });
+    let top = null;
+    PATTERNS.forEach((p) => { probs[p] = Math.round((0.97 * (acc[p] / tot) + 0.03 * PRIOR[p]) * 1000) / 1000; if (!top || probs[p] > probs[top]) top = p; });
+    const pct = (p) => Math.round(probs[p] * 100) + '%';
+    const text = 'Sprout\'s tip (an estimate, not a promise): about ' + pct(top) + ' ' + PATTERN_NAMES[top] + '. ' +
+      PATTERNS.filter((p) => p !== top).sort((a, b) => probs[b] - probs[a]).map((p) => pct(p) + ' ' + PATTERN_NAMES[p]).join(', ') + '.';
+    return { ready: true, sells, probs, top, topProb: probs[top], text };
+  }
+
   // ---- save ----
   function int(v, lo, hi, def) { v = Math.trunc(Number(v)); return isFinite(v) ? Math.max(lo, Math.min(hi, v)) : def; }
   function defaultSave() {
-    return { v: 1, balance: START_BALANCE, holdings: 0, week: -1, invested: 0, earned: 0, history: [], last: null, best: 0, medals: { bronze: false, silver: false, gold: false }, hint: false };
+    return { v: 1, balance: START_BALANCE, holdings: 0, week: -1, invested: 0, earned: 0, history: [], last: null, best: 0, medals: { bronze: false, silver: false, gold: false }, hint: false, total: 0, played: 0, wkBest: 0, goals: 0 };
   }
   function cleanEntry(e) {
     if (!e || typeof e !== 'object' || PATTERNS.indexOf(e.pattern) < 0) return null;
-    return { week: int(e.week, 0, MAX_WEEK, 0), pattern: e.pattern, profit: int(e.profit, -MAX_BALANCE, MAX_BALANCE, 0) };
+    return { week: int(e.week, 0, MAX_WEEK, 0), pattern: e.pattern, profit: int(e.profit, -MAX_BALANCE, MAX_BALANCE, 0), goals: int(e.goals, 0, 7, 0) };
   }
   function cleanSave(raw) {
     const s = defaultSave();
@@ -137,6 +174,11 @@
     const m = raw.medals && typeof raw.medals === 'object' ? raw.medals : {};
     MEDALS.forEach((x) => { s.medals[x[0]] = m[x[0]] === true; });
     s.hint = raw.hint === true;
+    // additive (slice 2): lifetime stats; older saves derive them from the kept history
+    s.total = raw.total === undefined ? int(s.history.reduce((a, h) => a + h.profit, 0), -MAX_BALANCE, MAX_BALANCE, 0) : int(raw.total, -MAX_BALANCE, MAX_BALANCE, 0);
+    s.played = raw.played === undefined ? s.history.length : int(raw.played, 0, MAX_WEEK, 0);
+    s.wkBest = s.week < 0 ? 0 : int(raw.wkBest, 0, MAX_PRICE, 0);
+    s.goals = s.week < 0 ? 0 : int(raw.goals, 0, 7, 0);
     return s;
   }
   function clone(s) { return JSON.parse(JSON.stringify(s)); }
@@ -161,15 +203,44 @@
     if (s.week >= 0) {
       spoiled = s.holdings;
       const profit = weekProfit(s);
-      const entry = { week: s.week, pattern: generateWeek(s.week).pattern, profit };
+      const entry = { week: s.week, pattern: generateWeek(s.week).pattern, profit, goals: goalsDone(s, generateWeek(s.week)) };
       s.last = entry;
-      if (s.invested > 0 || s.earned > 0) s.history = s.history.concat([entry]).slice(-MAX_HISTORY);
+      if (s.invested > 0 || s.earned > 0) {
+        s.history = s.history.concat([entry]).slice(-MAX_HISTORY);
+        s.played = Math.min(MAX_WEEK, s.played + 1);
+        s.total = Math.max(-MAX_BALANCE, Math.min(MAX_BALANCE, s.total + profit));
+      }
       if (profit > s.best) s.best = profit;
       MEDALS.forEach((m) => { if (profit >= m[1]) s.medals[m[0]] = true; });
     }
-    s.week = week; s.holdings = 0; s.invested = 0; s.earned = 0;
+    s.week = week; s.holdings = 0; s.invested = 0; s.earned = 0; s.wkBest = 0; s.goals = 0;
     if (s.balance < ALLOWANCE_FLOOR) s.balance = ALLOWANCE_FLOOR;
     return { save: s, spoiled, rolled: true };
+  }
+
+
+  // ---- weekly goals (slice 2): plain targets, no timers, no penalties for missing them ----
+  const GOALS = [
+    { id: 'profit', bit: 1, title: 'Profit 500', desc: 'Finish the week 500 bells ahead.' },
+    { id: 'peak', bit: 2, title: 'Sell at the peak', desc: 'Sell at (nearly) the highest price of the week, at least what you paid.' },
+    { id: 'even', bit: 4, title: 'Break even', desc: 'Sell every stalk and end the week with no loss.' },
+  ];
+  function goalsDone(save, wk) {
+    const s = cleanSave(save), peak = Math.max.apply(null, wk.sell);
+    let bits = s.goals;
+    if (weekProfit(s) >= 500) bits |= 1;
+    if (s.wkBest > 0 && s.wkBest >= wk.buyPrice && s.wkBest >= Math.floor(peak * 0.95)) bits |= 2;
+    if (s.earned > 0 && s.holdings === 0 && weekProfit(s) >= 0) bits |= 4;
+    return bits;
+  }
+  function latchGoals(save, wk) { const s = clone(cleanSave(save)); s.goals = goalsDone(s, wk); return s; }
+  function goalStatus(save, wk) {
+    const bits = goalsDone(save, wk);
+    return GOALS.map((g) => ({ id: g.id, title: g.title, desc: g.desc, done: (bits & g.bit) !== 0 }));
+  }
+  function lifetime(save) {
+    const s = cleanSave(save);
+    return { best: s.best, total: s.total, played: s.played, rank: rankFor(s.best) };
   }
 
   // ---- trading ----
@@ -190,10 +261,45 @@
     if (qty < 1) return { ok: false, reason: 'quantity', save: s };
     if (clampSlot(slot) === 0) return { ok: false, reason: 'no-sunday-sales', save: s };
     if (qty > s.holdings) return { ok: false, reason: 'holdings', save: s };
-    const gain = qty * priceAt(wk, slot);
+    const price = priceAt(wk, slot), gain = qty * price;
     s.balance = Math.min(MAX_BALANCE, s.balance + gain); s.holdings -= qty; s.earned += gain;
+    s.wkBest = Math.max(s.wkBest, Math.min(MAX_PRICE, price));
     return { ok: true, qty, gain, save: s };
   }
+  // ---- neighbours (slice 3): offline NPC villagers with their own seeded prices; no network, no real players ----
+  const NEIGHBOURS = [
+    { id: 'pip', name: 'Pip the Mole' },
+    { id: 'maple', name: 'Maple' },
+    { id: 'bramble', name: 'Bramble' },
+  ];
+  const NEIGHBOUR_FEE = 15; // bells, fixed per deal
+  function neighbourWeek(id, week) { return generateWeek('neighbour|' + String(id) + '|' + int(week, 0, MAX_WEEK, 0)); }
+  function neighbourPrice(id, week, slot) {
+    slot = clampSlot(slot);
+    if (slot === 0) return 0; // neighbours only buy Monday to Saturday
+    return Math.min(MAX_PRICE, neighbourWeek(id, week).sell[slot - 1]);
+  }
+  // Offers at `slot`, plus which neighbour pays the most (ties go to the first listed).
+  function neighbourOffers(week, slot) {
+    const offers = NEIGHBOURS.map((n) => ({ id: n.id, name: n.name, price: neighbourPrice(n.id, week, slot), best: false }));
+    if (clampSlot(slot) > 0) { let b = offers[0]; offers.forEach((o) => { if (o.price > b.price) b = o; }); b.best = true; }
+    return offers;
+  }
+  function sellToNeighbour(save, id, week, slot, qty) {
+    const s = clone(cleanSave(save));
+    qty = int(qty, 0, MAX_HOLD, 0);
+    if (!NEIGHBOURS.some((n) => n.id === id)) return { ok: false, reason: 'neighbour', save: s };
+    if (qty < 1) return { ok: false, reason: 'quantity', save: s };
+    if (clampSlot(slot) === 0) return { ok: false, reason: 'no-sunday-sales', save: s };
+    if (qty > s.holdings) return { ok: false, reason: 'holdings', save: s };
+    const price = neighbourPrice(id, week, slot), gross = qty * price;
+    if (gross <= NEIGHBOUR_FEE) return { ok: false, reason: 'fee', save: s };
+    const gain = gross - NEIGHBOUR_FEE;
+    s.balance = Math.min(MAX_BALANCE, s.balance + gain); s.holdings -= qty; s.earned += gain;
+    s.wkBest = Math.max(s.wkBest, price);
+    return { ok: true, qty, price, gross, fee: NEIGHBOUR_FEE, gain, save: s };
+  }
+
   function maxBuy(save, wk) {
     return Math.max(0, Math.min(MAX_HOLD - save.holdings, Math.floor(save.balance / wk.buyPrice)));
   }
@@ -201,6 +307,6 @@
   return {
     CURRENCY, PATTERNS, PATTERN_NAMES, PATTERN_HINTS, SLOTS, SELL_SLOTS, MAX_HOLD, START_BALANCE, ALLOWANCE_FLOOR, MEDALS,
     clampWeek, weekNumber, slotOf, clampSlot, slotLabel, generateWeek, priceAt, knownPrices,
-    defaultSave, cleanSave, syncWeek, buy, sell, maxBuy, weekProfit, medalFor, rankFor,
+    defaultSave, cleanSave, syncWeek, buy, sell, maxBuy, weekProfit, medalFor, rankFor, advise, GOALS, MAX_PRICE, goalsDone, latchGoals, goalStatus, lifetime, NEIGHBOURS, NEIGHBOUR_FEE, neighbourWeek, neighbourPrice, neighbourOffers, sellToNeighbour,
   };
 }));

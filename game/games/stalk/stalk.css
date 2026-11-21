@@ -34,3 +34,20 @@ body { min-height:100vh; display:flex; flex-direction:column; align-items:center
 .card p { margin:4px 0; }
 #history { margin:4px 0; padding-left:18px; font-size:14px; }
 .dim { color:var(--dim); }
+ul.cards { list-style:none; margin:4px 0; padding:0; display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:8px; }
+ul.cards li { background:#18241b; border:2px solid #455; border-radius:8px; padding:8px; min-height:44px; font-size:14px; }
+ul.cards li.done { border-color:var(--buy); }
+ul.cards li .tag { display:block; font-size:12px; color:var(--dim); }
+ul.cards li.done .tag { color:var(--buy); }
+.medal { display:inline-block; width:14px; height:14px; border-radius:50%; margin-right:6px; vertical-align:-2px; border:2px solid #0d160f; }
+.medal.bronze { background:#c98b4e; } .medal.silver { background:#d7dde2; } .medal.gold { background:#ffd166; } .medal.none { background:transparent; border-color:#566; }
+#alltime dl { display:grid; grid-template-columns:1fr auto; gap:4px 12px; margin:4px 0; }
+#alltime dt { color:var(--dim); } #alltime dd { margin:0; font-weight:bold; text-align:right; }
+#nb-list li { display:flex; flex-direction:column; gap:4px; }
+#nb-list li.best { border-color:var(--accent); }
+#nb-list button { font:inherit; font-size:14px; font-weight:bold; color:#1d2b20; background:var(--sell); border:0; border-radius:8px; min-height:48px; min-width:48px; padding:6px 8px; cursor:pointer; }
+#nb-list button[disabled] { background:#566; color:#aab; cursor:not-allowed; }
+#nb-list button:focus-visible { outline:3px solid #fff; outline-offset:2px; }
+#advisor-bars { list-style:none; margin:4px 0; padding:0; font-size:13px; }
+#advisor-bars li { position:relative; padding:4px 0 8px; }
+#advisor-bars .bar { position:absolute; left:0; bottom:2px; height:4px; background:var(--accent); border-radius:2px; }
