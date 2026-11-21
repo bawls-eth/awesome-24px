@@ -51,9 +51,10 @@ const rowsOf = (pg) => pg.evaluate(() => {
   check('no underscores or markup in the panel text', rows.every((r) => !/_/.test(r.value) && !/[<>]/.test(r.value)));
 
   // Graceful degrade: no statsBase and no gp on the arena -> the group falls back to totals, no Boss luck row.
-  await pg.evaluate(() => { const a = window.__mm.arena; delete a.statsBase; delete a.save.gp; });
+  await pg.evaluate(() => { const a = window.__mm.arena; delete a.statsBase; delete a.save.gp; const orig = a._calcStats; a._calcStats = function () { return orig.apply(this, arguments); }; }); // arity 0 = an arena that does not expose the G8 noGear stats (the real arena now does, and its base correctly includes the hero-scale multiplier, so the panel would show a real gear delta)
   await statsTab(pg);
   rows = await rowsOf(pg);
+  await pg.evaluate(() => { delete window.__mm.arena._calcStats; });
   const g2 = rows.filter((r) => r.grp === 'Gear stats');
   check('without arena exposure the group still renders from stats', g2.length >= 5 && !g2.some((r) => r.label === 'Boss luck') && g2.every((r) => /gear 0/.test(r.value)), JSON.stringify(g2.slice(0, 2)));
   check('desktop: no console errors', A.errors.length === 0, A.errors.join('|'));

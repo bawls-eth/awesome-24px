@@ -233,6 +233,7 @@ function rmRng(seed) {
   };
 }
 
+function rmGpOf(g) { g = g && typeof g === 'object' && !Array.isArray(g) ? g : {}; return { b: rmCleanCount(g.b), d: rmCleanCount(g.d) }; } // cleaned pity counters (defaults when absent / corrupt)
 function rmCleanCount(v) {
   v = Math.floor(Number(v));
   return Number.isFinite(v) && v > 0 ? Math.min(v, 9999999) : 0;
@@ -329,7 +330,8 @@ function rmMergeSave(mine, stored, opts) {
   const eq = { ...a.eq }; Object.keys(eq).forEach((slot) => { if (remap[eq[slot]] !== undefined) eq[slot] = remap[eq[slot]]; });
   out.items = items; out.nextUid = next; out.eq = eq; // equipment is per-tab
   if (a.gv || b.gv) out.gv = 1;
-  if (a.gp || b.gp) { const ga = a.gp || { b: 0, d: 0 }, gb = b.gp || { b: 0, d: 0 }; out.gp = { b: Math.max(ga.b, gb.b), d: Math.max(ga.d, gb.d) }; } // pity only ever helps: the larger count wins
+  if (a.gp || b.gp) { const ga = a.gp || { b: 0, d: 0 }, gb = b.gp || { b: 0, d: 0 }; const bs = opts.baseGp; // storage's gp at this tab's last sync: three-way like shards, so an in-tab reset / increment survives while another tab's change is added
+    out.gp = bs ? { b: Math.max(0, gb.b + (ga.b - bs.b)), d: Math.max(0, gb.d + (ga.d - bs.d)) } : { b: Math.max(ga.b, gb.b), d: Math.max(ga.d, gb.d) }; }
   return rmCleanSave(out);
 }
 
@@ -340,7 +342,7 @@ class RealmArena {
     this.onSave = (sv) => this._persist(sv); // every save goes through the cross-tab merge first
     this.onExit = onExit || (() => {});
     this.save = rmCleanSave(save);
-    this._baseShards = this.save.shards; this._known = new Set(this.save.items.map((it) => it.n)); this.walls = null; this.extraGuard = 0;
+    this._baseShards = this.save.shards; this._baseGp = rmGpOf(this.save.gp); this._known = new Set(this.save.items.map((it) => it.n)); this.walls = null; this.extraGuard = 0;
     this.dungeon = null; this.fixedWorld = null; // optional run controller + fixed-size world (Mad Maze dungeons); null = classic waves
     this.world = null; this.mode = 'waves'; this.camera = { x: 0, y: 0, vw: 960, vh: RM_SHORT }; this._camF = { x: 0, y: 0 }; // setWorld / setMode: a scrolling world with a camera (null = the screen is the world, today's behaviour)
     this._solidAt = null; this._shotSolidAt = null; this._curDm = 1; this.onEnemyKilled = null; this.onEnemyHit = null; // world tile collision + additive kill / hit callbacks (default null)
@@ -404,14 +406,15 @@ class RealmArena {
   resyncSave() {
     const stored = rmReadStoredRealm();
     if (!stored) return false;
-    this._adopt(rmMergeSave(this.save, stored, { base: this._baseShards, known: this._known }));
+    this._adopt(rmMergeSave(this.save, stored, { base: this._baseShards, known: this._known, baseGp: this._baseGp }));
+    { this._baseGp = rmGpOf(rmCleanSave(stored).gp); } // storage's gp at this sync
     this._baseShards = this.save.shards; this._known = new Set(rmCleanSave(stored).items.map((it) => it.n)); // what storage held at this sync
     return true;
   }
 
   _persist(sv) {
     this.resyncSave();
-    this._baseShards = this.save.shards;
+    this._baseShards = this.save.shards; this._baseGp = rmGpOf(this.save.gp);
     this._known = new Set(this.save.items.map((it) => it.n)); // about to be written, so storage will hold exactly these
     this._onSave(this.save);
   }
