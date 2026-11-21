@@ -140,3 +140,6 @@ The minimap opens with mouse, touch or keyboard and exposes its zoom state. Hori
 Chunk builds now resolve terrain transitions once per cell and compact sprite variants once per terrain. Offline mocked-canvas checks passed for base art, transitions, and fallback borders. Phone performance and browser playback remain pending.
 ## Portal dungeon exits
 Portal dungeon summaries return players to their originating overworld tile. Standalone dungeon summaries keep the New dungeon option. Syntax and offline summary routing checks passed for world, hub, and town. Browser playthrough and Lantern rewards remain pending.
+
+## Unified game published (2026-11-21)
+Public: https://bawls-eth.github.io/awesome-24px/game/games/mad-maze/index.html?mode=world (Pages serves the claude/animal-crossing-game-7z3roh branch; 13 key files verified byte-identical to cb7f2eb). Town Gate: Enter the Realm (overworld) + Classic arena. Tests: realm-playthrough.test.js (offline, DB host blocked). Next: b11 terrain art (Codex), Lantern stash rewards from world/dungeon loot, other dungeon biomes, events, phone perf.

@@ -66,3 +66,7 @@
 - 2026-11-20T20:02Z activity (counts only): playerCount=0, online players=0, chat messages stored=13, open realm invites=2, tournament nodes=2
 
 - 2026-11-20 (noon PT): OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0 (cap 4.00 total, stop 3.96). FIRST PLAYABLE unified Realm: /game/games/mad-maze/index.html?mode=world (camera, generated 256x256 island, zones, drops, boss sites, portal into Warren and back, restart). Codex b06e/b10 relics/b21 NPCs/b22 items registered; scope change posted (terrain/props/UI now in Codex brief). Full suite 100/100 on fef1e05.
+
+- 2026-11-21T01:05Z activity (counts only): playerCount=0, online players=0, chat messages stored=13, open realm invites=2, tournament nodes=2
+
+- 2026-11-21 (4 PM PT 11/20): OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0 (cap 4.00 total, stop 3.96). Integration: master (Codex PRs 22, 23) + staged chunk-rendering/portal-return merged into the Pages branch; unified game live on the public site (Town Gate: Enter the Realm; Classic arena kept); offline playthrough test added. Codex b10t terrain registered and rendering. Full suite 101/101 on cb7f2eb.
