@@ -85,6 +85,10 @@ const RM_WAVE_PAUSE = 2.4; // seconds between waves (shows the banner)
 const RM_WPN_ID = /^wpn_[a-z_]{3,24}$/;
 const RM_WPN_CAP = 40; // live styled bolts per hero
 const RM_WPN_ST = ['slowed', 'weak', 'dazed', 'armorBroken', 'curse', 'bleed', 'rooted', 'marked']; // bolt `st` = index + 1 (0 = none); applied by the status wiring
+const RM_BOLT_D = { player: 26, enemy: 24 }; // art bolt draw sizes in px (enemy never above 1.3x the player bolt)
+const RM_SPARK_MAX = 24, RM_SPARK_LIFE = 0.25;
+const RM_SPARK_CLASS = { ranger: 'a', bruiser: 'a', berserker: 'a', punk: 'a', rogue: 'a', paladin: 'a', frostcaller: 'b', herald: 'b', druid: 'b', warlock: 'c', necromancer: 'c', trickster: 'c', gravetender: 'c', shadowpaw: 'c' };
+const RM_EB_ROT = { ebolt_shard: 1, ebolt_arrow: 1, ebolt_fire: 1, ebolt_frost: 1, ebolt_laser_h: 1, ebolt_skull: 0 };
 const RM_WPN_COLOR = { dot: '#ffe27a', arrow: '#f3d9a4', shard: '#9fe3ff', orb: '#c59bff', star: '#ffd24a', blade: '#e6edf3', page: '#fff3c4', axe: '#ff9a6a', hammer: '#ffcf5a', fist: '#ffb38a', ray: '#7ee7ff' };
 function rmInertDef(id) {
   if (RM_ITEM_BY_ID[id]) return RM_ITEM_BY_ID[id];
@@ -257,6 +261,7 @@ class RealmArena {
     this.displayShards = this.save.shards;
     this._avatar = null;
     this._itemArt = null; this._enemyArt = null; this._enemyMap = null; this._driftMap = null; this._enemyDbgOn = false; this._bossArt = null; this._bossLoad = null; this._bossDbg = null; this._bossGhost = null; this._bossReq = null; this._biomeEnemyMap = null; this._edGhosts = null; // optional enemy animations (setEnemyArt)
+    this._boltArt = null; this._boltCls = null; this._baCache = null; this._sparks = null; this._curE = null; this._baDraws = 0; this._baeDraws = 0; this._sparkSpawned = 0; this._sparkDraws = 0; // optional bolt art (setBoltArt)
     this.heroProfile = null; // setHeroProfile
     this.weapon = null; this._wq = []; this._wOrbT = [0, 0, 0]; this._wOrbA = 0; this._wCache = null; this._kIn = {}; this._kHero = { x: 0, y: 0 }; this._kWall = 0; this._kW = null; // setHeroWeapon (null = today's fire)
     this.sig = null; this._sigAb = { id: 'sig', key: 'f', icon: '🔥', name: 'Signature', short: '', level: 7, cd: 15 }; // setHeroSignature: the class signature takes the F slot (null = Overdrive, today's behaviour)
@@ -375,7 +380,7 @@ class RealmArena {
   _makePools() {
     const make = (n, f) => Array.from({ length: n }, f);
     this.pBullets = make(RM_POOL.pBullets, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, ws: null, st: 0, age: 0, cx: 0, cy: 0, ph: 0, bc: 0, ch: 0, ux: 1, uy: 0, sp: 0, bk: false, tx: 0, ty: 0, lb: 0, ho: 0 })); // ws..ho: weapon-style bolt state (setHeroWeapon)
-    this.eBullets = make(RM_POOL.eBullets, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, kind: 0 }));
+    this.eBullets = make(RM_POOL.eBullets, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, kind: 0, ea: null }));
     this.enemies = make(RM_POOL.enemies, () => ({ active: false, type: 'aimed', x: 0, y: 0, hp: 0, maxHp: 0, t: 0, cd: 0, cd2: 0, angle: 0, flash: 0, ax: 0, ay: 0, dir: 1, phase: 0, invuln: 0 }));
     this.drifters = make(RM_POOL.drifters, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, t: 0, turn: 0, kind: 'wisp' }));
     this.hazards = make(RM_POOL.hazards, () => ({ active: false, x: 0, y: 0, kind: 'lava', tick: 0 }));
@@ -834,6 +839,93 @@ class RealmArena {
       this._avatar = c;
     };
     img.src = url;
+  }
+
+  // Additive hook: bolt art (MMArt.loadBolts BoltSet, batches b16/b17) for the class bolt (`cls` = Mad Maze class id), enemy bullets and hit sparks.
+  // null / ?boltart=0 = today's code-drawn bolts. Missing ids fall back silently per bolt. Frames are baked lazily into small cached canvases (id x 16 headings x frame).
+  setBoltArt(set, cls) {
+    let off = false;
+    try { off = typeof location !== 'undefined' && /[?&]boltart=0(&|$)/.test(location.search || ''); } catch (e) { off = false; }
+    const ok = !off && set && typeof set.anim === 'function' && typeof set.has === 'function';
+    this._boltArt = ok ? set : null; this._boltCls = ok && typeof cls === 'string' ? cls : null;
+    this._baCache = ok ? Object.create(null) : null;
+    this._sparks = ok ? this._sparks || Array.from({ length: RM_SPARK_MAX }, () => ({ active: false, x: 0, y: 0, t: 0, id: '' })) : null;
+    if (!ok && this._sparks) this._sparks.forEach((q) => { q.active = false; });
+    return ok;
+  }
+  setBoltClass(cls) { this._boltCls = typeof cls === 'string' ? cls : null; } // hero switch: the class bolt follows the active hero
+  boltArtDraws() { return this._baDraws; }
+  boltArtStats() { return { player: this._baDraws, enemy: this._baeDraws, sparkSpawned: this._sparkSpawned, sparkDraws: this._sparkDraws, sparksLive: this._sparks ? this._sparks.filter((q) => q.active).length : 0 }; }
+  _boltPlayerId() { const c = this._boltCls; return c && this._boltArt && this._boltArt.has('bolt_' + c) ? 'bolt_' + c : null; }
+  // Enemy bullet art id for a pattern kind (0 aimed, 1 spiral, 2 ring) and the enemy firing it (this._curE): creature element / kind first, then the pattern.
+  _ebSelect(kind) {
+    const A = this._boltArt; if (!A) return null;
+    const e = this._curE;
+    let id = null;
+    const nm = e && e.type !== 'boss' ? String(e.art || this._enemyNameFor(e.type) || '') : '';
+    if (nm) {
+      if (/ice|frost|wraith|snow|yeti/.test(nm)) id = 'ebolt_frost';
+      else if (/fire|ember|cinder|flame|inferno|lava|magma/.test(nm)) id = 'ebolt_fire';
+      else if (/spider|slime|poison|toad|mire|bog|ooze/.test(nm)) id = 'ebolt_poison';
+      else if (/skelet|skull|bone|undead|ghoul|lich/.test(nm)) id = 'ebolt_skull';
+      else if (kind === 0 && /archer|arrow|bow|hunter/.test(nm)) id = 'ebolt_arrow';
+    }
+    if (!id) id = e && e.type === 'boss' && kind === 0 ? 'ebolt_shard' : kind === 1 ? 'ebolt_orb_purple' : kind === 2 ? 'ebolt_ring_pulse' : 'ebolt_orb_red';
+    return A.has(id) ? id : (A.has('ebolt_orb_red') && kind === 0 ? 'ebolt_orb_red' : null);
+  }
+  // Cached baked frame (id, heading 0..15, frame 0..3) at draw size d; created once, then blitted. null when the art is missing.
+  _boltCv(id, rot, f, d) {
+    let arr = this._baCache[id];
+    if (!arr) arr = this._baCache[id] = new Array(64).fill(null);
+    const i = rot * 4 + f; let cv = arr[i];
+    if (cv) return cv; if (cv === 0) return null;
+    const an = this._boltArt.anim(id);
+    if (!an || typeof document === 'undefined') { arr[i] = 0; return null; }
+    try {
+      const S = Math.ceil(d * 1.5) + 2;
+      cv = document.createElement('canvas'); cv.width = cv.height = S;
+      const c = cv.getContext('2d'); c.imageSmoothingEnabled = false;
+      c.translate(S / 2, S / 2); c.rotate(rot * Math.PI / 8);
+      c.drawImage(an.img, (f % an.frames) * an.fw, 0, an.fw, an.fh, -d / 2, -d / 2, d, d);
+      arr[i] = cv; return cv;
+    } catch (e) { arr[i] = 0; return null; }
+  }
+  _boltFrame() { return this._reduced ? 0 : Math.floor(this.clock * 12) & 3; }
+  _drawBoltArt(g, b) { // a class bolt (not weapon style) from art; returns true when drawn
+    const id = this._boltPlayerId(); if (!id) return false;
+    const rot = (Math.round(Math.atan2(b.vy, b.vx) / (Math.PI / 8)) + 16) & 15;
+    const cv = this._boltCv(id, rot, this._boltFrame(), RM_BOLT_D.player); if (!cv) return false;
+    g.drawImage(cv, b.x - cv.width / 2, b.y - cv.height / 2); this._baDraws++; return true;
+  }
+  _drawEBoltArt(g, b) {
+    const id = b.ea; if (!id) return false;
+    const rot = RM_EB_ROT[id] ? (Math.round(Math.atan2(b.vy, b.vx) / (Math.PI / 8)) + 16) & 15 : 0;
+    const cv = this._boltCv(id, rot, this._boltFrame(), RM_BOLT_D.enemy); if (!cv) return false;
+    g.drawImage(cv, b.x - cv.width / 2, b.y - cv.height / 2); this._baeDraws++; return true;
+  }
+  _sparkFamily(b) {
+    if (b.ws) { const h = RM_WPN_COLOR[b.ws.shape] || '#ffffff'; const r = parseInt(h.substr(1, 2), 16), gg = parseInt(h.substr(3, 2), 16), bb = parseInt(h.substr(5, 2), 16); return bb > r && bb >= gg ? (r > gg ? 'c' : 'b') : r > gg + 20 && bb > gg + 20 ? 'c' : 'a'; }
+    return RM_SPARK_CLASS[this._boltCls] || 'a';
+  }
+  _spawnSpark(b) { // pooled; the oldest slot is reused when all 24 are live
+    const A = this._boltArt, pool = this._sparks; if (!A || !pool) return;
+    const id = 'hit_spark_' + this._sparkFamily(b); if (!A.has(id)) return;
+    let q = null, old = pool[0];
+    for (let i = 0; i < pool.length; i++) { const c = pool[i]; if (!c.active) { q = c; break; } if (c.t > old.t) old = c; }
+    if (!q) q = old;
+    q.active = true; q.x = b.x; q.y = b.y; q.t = 0; q.id = id; this._sparkSpawned++;
+  }
+  _updateSparks(dt) { const p = this._sparks; if (!p) return; for (let i = 0; i < p.length; i++) { const q = p[i]; if (q.active) { q.t += dt; if (q.t >= RM_SPARK_LIFE) q.active = false; } } }
+  _drawSparks(g) {
+    const p = this._sparks; if (!p) return;
+    for (let i = 0; i < p.length; i++) {
+      const q = p[i]; if (!q.active) continue;
+      const red = this._reduced, f = red ? 0 : Math.min(3, Math.floor(q.t / RM_SPARK_LIFE * 4)); // reduce-motion: one frame, fading
+      const cv = this._boltCv(q.id, 0, f, 28); if (!cv) continue;
+      if (red) g.globalAlpha = 1 - q.t / RM_SPARK_LIFE;
+      g.drawImage(cv, q.x - cv.width / 2, q.y - cv.height / 2); this._sparkDraws++;
+      if (red) g.globalAlpha = 1;
+    }
   }
 
   // Additive hook: draw the player with a hero's animation set (MMArt). Pass (null) to go back to the plain sprite.
@@ -1378,7 +1470,7 @@ class RealmArena {
     const pl = opts.pools && typeof opts.pools === 'object' ? opts.pools : {};
     const grow = (pool, want, max, f) => { const k = Math.min(max, n(want, 0)); while (pool.length < k) pool.push(f()); };
     grow(this.enemies, pl.enemies, 96, () => ({ active: false, type: 'aimed', x: 0, y: 0, hp: 0, maxHp: 0, t: 0, cd: 0, cd2: 0, angle: 0, flash: 0, ax: 0, ay: 0, dir: 1, phase: 0, invuln: 0 }));
-    grow(this.eBullets, pl.eBullets, 900, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, kind: 0 }));
+    grow(this.eBullets, pl.eBullets, 900, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, kind: 0, ea: null }));
     const p = this.player; const R = RM_PLAYER.r;
     p.x = Math.max(R, Math.min(this.world.w - R, p.x)); p.y = Math.max(R, Math.min(this.world.h - R, p.y));
     this._camStep(-1); this._calcStats(); // the world hero scale depends on it
@@ -1500,7 +1592,7 @@ class RealmArena {
 
   // Everything a fresh run needs (shared by start() and restart()); never touches the loop or the save.
   _beginRun() {
-    [this.pBullets, this.eBullets, this.enemies, this._edGhosts || [], this.particles, this.texts, this.bags, this.drifters, this.hazards].forEach((pool) => pool.forEach((o) => { o.active = false; }));
+    [this.pBullets, this.eBullets, this.enemies, this._edGhosts || [], this.particles, this.texts, this.bags, this.drifters, this.hazards, this._sparks || []].forEach((pool) => pool.forEach((o) => { o.active = false; }));
     this._wireRefresh(); this._padPrev.fill(false); this._wq.length = 0;
     this.keys = {}; this.mouse.down = false; this.moveVec.x = 0; this.moveVec.y = 0; this.aimVec.on = false; this.aimVec.x = 0; this.aimVec.y = 0; // no stuck input from the last run
     const p = this.player;
@@ -1697,7 +1789,7 @@ class RealmArena {
     const b = this._take(this.eBullets);
     if (!b) return;
     if (this.team && this.role === 'host') this.team.ev('fe', [Math.round(x), Math.round(y), Math.round(angle * 1000) / 1000, speed, kind || 0]);
-    b.active = true; b.x = x; b.y = y; b.vx = Math.cos(angle) * speed; b.vy = Math.sin(angle) * speed; b.life = 6; b.kind = kind || 0; b.dm = this._curDm;
+    b.active = true; b.x = x; b.y = y; b.vx = Math.cos(angle) * speed; b.vy = Math.sin(angle) * speed; b.life = 6; b.kind = kind || 0; b.dm = this._curDm; b.ea = this._boltArt ? this._ebSelect(b.kind) : null;
   }
 
   // Class fire tags (heroProfile.shots/spread/pierce/shotDmg/critChance/boltSpeed). Default / duel / no profile = the plain single bolt.
@@ -2023,12 +2115,12 @@ class RealmArena {
       const p = this._nearest(e.x, e.y);
       e.t += dt; e.flash = Math.max(0, e.flash - dt * 6);
       if (wd && (p.x - e.x) * (p.x - e.x) + (p.y - e.y) * (p.y - e.y) > wake2) continue; // world: an enemy far from every player sleeps (no moving, no firing)
-      this._curDm = e.dmgMul || 1; // bullets fired below carry this enemy's damage multiplier (1 = unchanged)
+      this._curE = e; this._curDm = e.dmgMul || 1; // bullets fired below carry this enemy's damage multiplier (1 = unchanged)
       let sm = null;
       if (e.status) { if (e._stNext <= this._stT * 1000) this._stRefresh(e); sm = e._stm; if (sm) { this._curDm *= sm.enemyDmg; if (sm.dot > 0) this._stEnemyDot(e, sm, dt0); if (!e.active) continue; } }
       const hold = wd && !this._canFire(e, p); // world: off-screen shooters hold their fire (cooldowns wait at 0.2 s)
       if (hold) { e.cd = Math.max(e.cd, 0.2); if (e.type === 'boss') e.cd2 = Math.max(e.cd2, 0.2); }
-      if (e.type === 'boss') { if (sm && sm.speed < 1) e.t -= dt * (1 - sm.speed); this._updateBoss(e, dt * (e.fireMul || 1) / (sm ? sm.enemyFire : 1)); this._curDm = 1; continue; } // slowed: the sway runs slower
+      if (e.type === 'boss') { if (sm && sm.speed < 1) e.t -= dt * (1 - sm.speed); this._updateBoss(e, dt * (e.fireMul || 1) / (sm ? sm.enemyFire : 1)); this._curDm = 1; this._curE = null; continue; } // slowed: the sway runs slower
       if (sm && sm.stun) continue; // stunned: no moving, no firing
       if (!hold) e.cd -= dt * (e.fireMul || 1) / (sm ? sm.enemyFire : 1); // fireMul: classic wave scale; dazed makes fire cooldowns x1.5
       const ox = e.x; const oy = e.y; const sp = (e.spdMul || 1) * (sm ? sm.speed : 1);
@@ -2065,7 +2157,7 @@ class RealmArena {
         if (e.type === 'spiral') { e.ax = e.x; e.ay = e.y; }
       }
     }
-    this._curDm = 1;
+    this._curDm = 1; this._curE = null;
   }
 
   _updateBullets(dt) {
@@ -2088,6 +2180,7 @@ class RealmArena {
       if (hj >= 0) {
         if (b.pr > 0) { b.pr--; if (b.hn === 0) b.h0 = hj; else if (b.hn === 1) b.h1 = hj; else b.h2 = hj; b.hn++; } else b.active = false;
         const he = this.enemies[hj];
+        if (this._sparks) this._spawnSpark(b);
         if (b.ws) this._wpnHit(b, he, hj);
         this._hitEnemy(he, b.dmg || this.stats.dmg);
       }
@@ -2097,6 +2190,7 @@ class RealmArena {
         if (d.active && (b.x - d.x) * (b.x - d.x) + (b.y - d.y) * (b.y - d.y) < 15 * 15) { b.active = false; this._hitDrifter(d, b.dmg || this.stats.dmg); break; }
       }
     }
+    this._updateSparks(dt);
     // Enemy bullets: move, hit the player. World mode: a bullet more than one view diagonal from the player can never matter: it is dropped.
     const pr = RM_PLAYER.r + 4;
     const cull = this.world && this.mode === 'world' && !this.dungeon ? (this.W * this.W + this.H * this.H) : 0;
@@ -2881,9 +2975,10 @@ class RealmArena {
     if (this._bossGhost) this._drawBossGhost(g);
     for (let i = 0; i < this.bags.length; i++) { const b = this.bags[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { const by = b.y - 13 + Math.sin(b.t * 5) * 2; g.drawImage(this.sprites.worldBag[b.tier] || this.sprites.bag[b.r], b.x - 13, by); if (this._itemArt) { const ic = this._lootIcon(b.id, b.r); if (ic) g.drawImage(ic, b.x - 10, by - 18 + Math.sin(b.t * 5 + 1) * 1.5); } } }
     let ebn = 0; const ebs = this.sprites.eBullet;
-    for (let i = 0; i < this.eBullets.length && ebn < RM_EB_DRAW; i++) { const b = this.eBullets[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { g.drawImage(ebs[b.kind] || ebs[0], b.x - 8, b.y - 8); ebn++; } }
+    for (let i = 0; i < this.eBullets.length && ebn < RM_EB_DRAW; i++) { const b = this.eBullets[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { if (!(b.ea && this._drawEBoltArt(g, b))) g.drawImage(ebs[b.kind] || ebs[0], b.x - 8, b.y - 8); ebn++; } }
     this._ebDrawn = ebn;
-    for (let i = 0; i < this.pBullets.length; i++) { const b = this.pBullets[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { if (b.ws) this._drawWpnBolt(g, b); else g.drawImage(this.sprites.pBullet, b.x - 10, b.y - 10); } }
+    for (let i = 0; i < this.pBullets.length; i++) { const b = this.pBullets[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { if (b.ws) this._drawWpnBolt(g, b); else if (!(this._boltArt && this._drawBoltArt(g, b))) g.drawImage(this.sprites.pBullet, b.x - 10, b.y - 10); } }
+    if (this._sparks) this._drawSparks(g);
     if (this.weapon) this._drawWpnOrbs(g);
 
     // Your partner: a tinted villager with a name tag, a small HP bar, and a revive ring while they are down.

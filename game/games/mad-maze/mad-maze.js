@@ -124,6 +124,11 @@
     MMArt.loadClass('../../assets/arcane/', artClass).then((set) => { if (set.has(artClass)) arena.setHeroArt(set, artClass); }).catch(() => {});
   }
 
+  // Bolt art (b16 class bolts + hit sparks, b17 enemy bullets); ?boltart=0 keeps the code-drawn bolts. Missing art falls back silently.
+  if (window.MMArt && MMArt.loadBolts && arena.setBoltArt && params.get('boltart') !== '0') {
+    MMArt.loadBolts('../../assets/arcane/').then((set) => { if (set.ids().length) arena.setBoltArt(set, activeHeroClass()); }).catch(() => {});
+  }
+
   // Class stats: the active hero's class nudges HP/speed/damage/fire rate/safe time (MMClasses.arenaProfile); ?classstats=0 disables it.
   if (window.MMClasses && MMClasses.arenaProfile && params.get('classstats') !== '0' && activeHeroClass()) arena.setHeroProfile(MMClasses.arenaProfile(activeHeroClass()));
   // Class signature: the active hero's class gets a signature ability in the F slot (level 7, replaces Overdrive); ?signature=0 disables it.
@@ -204,6 +209,7 @@
     if (params.get('signature') !== '0') arena.setHeroSignature(MMClasses.arenaSignature(h.cls));
     const ac = window.MMArt ? MMArt.artClassFor(h.cls) : null;
     applyWeapon();
+    if (arena.setBoltClass) arena.setBoltClass(h.cls);
     arena.setHeroArt(null);
     if (ac) MMArt.loadClass('../../assets/arcane/', ac).then((set) => { const cur = heroState().hero; if (set.has(ac) && cur && cur.id === h.id) arena.setHeroArt(set, ac); }).catch(() => {});
   }

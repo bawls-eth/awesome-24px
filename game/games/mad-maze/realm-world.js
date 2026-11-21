@@ -879,11 +879,64 @@
         const s = npcSprite(q.npc); g.drawImage(s, c.x - s.width / 2, c.y + 14 - s.height);
       });
     }
+    // ---------- world status (S11): shrines show their buff as a status icon; world creatures apply debuffs from their bolts ----------
+    // realm.js enemy bolts carry no `st` field and have no player-hit callback, so this hooks the instance: arena._guarded is only ever called for an
+    // enemy-bolt hit (never lava or contact), so it flags the hit, and the wrapped arena._hitPlayer then attributes it to the nearest live enemy
+    // and rolls its table entry (seeded MMRng, never Math.random). The arena owns the 0.5 s limiter (fromBolt), boss immunities and Picnic halving
+    // (picnic), so this file only decides WHO may apply WHAT. realm.js is untouched.
+    const STATUS_ON = !/[?&]status=0(&|$)/.test(typeof location !== 'undefined' ? location.search : '');
+    // creature id -> { id: status, ch: chance 0..1, sec } (plan section c). Shore (zone 0) creatures are absent on purpose and are also gated by zone.
+    const BOLT_ST = {
+      ice_wraith: { id: 'slowed', ch: 0.3, sec: 1.5 },
+      skeleton_archer: { id: 'weak', ch: 0.2, sec: 2 }, bone_knight: { id: 'weak', ch: 0.2, sec: 2 },
+      ember_imp: { id: 'bleed', ch: 0.25, sec: 3 }, dark_spider: { id: 'bleed', ch: 0.2, sec: 3 },
+      toxic_serpent: { id: 'sick', ch: 0.25, sec: 3 }, swamp_leech: { id: 'sick', ch: 0.25, sec: 3 },
+      goblin_shaman: { id: 'curse', ch: 0.2, sec: 4 },
+      storm_harbinger: { id: 'dazed', ch: 0.25, sec: 2 }, dread_knight: { id: 'armorBroken', ch: 0.25, sec: 3 },
+      void_oracle: { id: 'curse', ch: 0.3, sec: 4 }, bone_colossus: { id: 'slowed', ch: 0.25, sec: 2 },
+    };
+    let stRolls = 0; const stLog = { applied: 0, last: null };
+    const zoneAtPx = (x, y) => { const tx = Math.floor(x / TILE); const ty = Math.floor(y / TILE); return tx < 0 || ty < 0 || tx >= world.w || ty >= world.h ? 0 : world.zone[ty * world.w + tx]; };
+    function stSource(p) { // the nearest live enemy within about one view diagonal of the player (the bolt's most likely shooter)
+      let best = null; let bd = (arena.W * arena.W + arena.H * arena.H) * 1.5;
+      for (let i = 0; i < arena.enemies.length; i++) { const e = arena.enemies[i]; if (!e.active) continue; const d = (e.x - p.x) * (e.x - p.x) + (e.y - p.y) * (e.y - p.y); if (d < bd) { bd = d; best = e; } }
+      return best;
+    }
+    // creature + zone -> the status that a bolt of it may apply (or null). Shore creatures and the Shore itself never apply anything.
+    function boltStatusFor(creature, zone) { const t = BOLT_ST[creature]; return t && zone > 0 && STATUS_ON ? t : null; }
+    function boltRoll(creature, zone, force) { // one hit by `creature`: roll its chance (force = always), apply through the arena. Returns the status id applied or ''.
+      const t = boltStatusFor(creature, zone); if (!t || zoneAtPx(arena.player.x, arena.player.y) === 0) return '';
+      if (!force && MMRng.create(seed + ':wst:' + (stRolls++)).next() >= t.ch) return '';
+      const ok = arena.applyStatus('player', t.id, { sec: t.sec, src: 'world:' + creature, fromBolt: true, picnic: diffMode === 'picnic', safe: false });
+      if (ok) { stLog.applied++; stLog.last = { id: t.id, creature, t: arena.clock }; } return ok ? t.id : '';
+    }
+    if (STATUS_ON) {
+      const g0 = arena._guarded; const h0 = arena._hitPlayer; let boltHit = false;
+      arena._guarded = function (dmg) { boltHit = true; return g0.call(this, dmg); };
+      arena._hitPlayer = function (dmg) {
+        const flagged = boltHit; boltHit = false; const soaked = this.shield && this.shield.hits > 0; const hp0 = this.player.hp;
+        const r = h0.call(this, dmg);
+        if (flagged && !soaked && this.player.hp < hp0 && this.mode === 'world' && !this.dungeon) {
+          const e = stSource(this.player);
+          if (e && e.art) boltRoll(e.art, e.zone | 0);
+        }
+        return r;
+      };
+    }
+    // Shrines: the instant heal stays; Fury / Ward also show as damaging / armored for 60 s. The status carries a fixed x1.25 / x0.75, so buffDmg and
+    // buffTaken (kept as aliases, read by realm.js) hold only what is left of the shrine's value, and the total stays what the shrine promised.
     function applyBuff(b) {
-      const p = arena.player; const now = arena.clock;
-      if (b.kind === 'heal') { const add = Math.ceil(arena.stats.maxHp * b.value); p.hp = Math.min(arena.stats.maxHp, p.hp + add); arena._floatText(p.x, p.y - 30, `+${add}`, '#5be38a'); }
-      else if (b.kind === 'rage') { rageEnd = now + b.durationMs / 1000; arena.buffDmg = b.value; arena._calcStats(); arena._floatText(p.x, p.y - 30, 'Fury!', '#ff6a4a'); }
-      else if (b.kind === 'ward') { wardEnd = now + b.durationMs / 1000; arena.buffTaken = b.value; arena._floatText(p.x, p.y - 30, 'Ward!', '#6ab8ff'); }
+      const p = arena.player; const now = arena.clock; const sec = b.durationMs / 1000;
+      if (b.kind === 'heal') {
+        const add = Math.ceil(arena.stats.maxHp * b.value); p.hp = Math.min(arena.stats.maxHp, p.hp + add); arena._floatText(p.x, p.y - 30, `+${add}`, '#5be38a');
+        arena.applyStatus('player', 'healing', { sec: 5, src: 'shrine' });
+      } else if (b.kind === 'rage') {
+        rageEnd = now + sec; const on = arena.applyStatus('player', 'damaging', { sec, src: 'shrine' });
+        arena.buffDmg = on ? (b.value / 1.25 > 1 ? b.value / 1.25 : 1) : b.value; arena._calcStats(); arena._floatText(p.x, p.y - 30, 'Fury!', '#ff6a4a');
+      } else if (b.kind === 'ward') {
+        wardEnd = now + sec; const on = arena.applyStatus('player', 'armored', { sec, src: 'shrine' });
+        arena.buffTaken = on ? Math.min(0.999, b.value / 0.75) : b.value; arena._floatText(p.x, p.y - 30, 'Ward!', '#6ab8ff');
+      }
       arena._syncHud();
     }
     function useShrine(i) {
@@ -1097,6 +1150,8 @@
       // Lantern stash payout (slice B)
       sites: () => (SITES ? { shrines: SITES.shrines.map((q, i) => ({ i, id: q.id, x: q.x, y: q.y, kind: q.kind, zone: q.zone, ready: shrineReady(q), left: shrineLeft(q) })), camps: SITES.camps.map((q, i) => ({ i, id: q.id, x: q.x, y: q.y, chest: q.chest, patrol: q.patrol.length, opened: chestOpen.has(q.id), alive: (campSt.get(q.id) || { ents: [] }).ents.filter((e) => e.active && e.campId === q.id).length })), npcs: SITES.npcs.map((q, i) => ({ i, id: q.id, x: q.x, y: q.y, npc: q.npc })) } : null),
       useShrine, openChest, talkNpc: talk, sitePrompt: () => (siteFor ? { kind: siteFor.kind, i: siteFor.i, text: siteBtn.textContent, hidden: siteBtn.classList.contains('hidden') } : null), siteNote: () => ({ text: siteNote.textContent, hidden: siteNote.classList.contains('hidden') }), siteTick,
+      // slice 11: world debuffs (roll(creature, zone, force) = one bolt hit; table = creature -> status; shown by arena.statusOf)
+      worldStatus: { on: STATUS_ON, table: BOLT_ST, forCreature: boltStatusFor, roll: boltRoll, log: stLog },
       settle, stashNote, lastSettle: () => lastSettle, finds: () => (ST ? ST.readFinds(localStorage) : null),
     };
     return { api, hooks };

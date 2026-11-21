@@ -22,6 +22,29 @@
   const SAVE_KEY = 'pixeltown-save-v1';
   const MAX_VALUE = 2000000;
   const MAX_KEYS = 50;
+  const MAX_TOTAL = 6000000; // all values of one bundle together
+  const MAX_DEPTH = 8;
+  const MAX_NODES = 60000;
+  const BAD_KEYS = ['__proto__', 'constructor', 'prototype'];
+
+  // Generic cleaner for game saves that have no owner module here (realm, arms, stalk, jam): a plain JSON object,
+  // bounded depth and node count, prototype-pollution keys dropped. Everything else is kept (the owner game cleans it on load).
+  function cleanPlain(v) {
+    let nodes = 0;
+    function walk(x, d) {
+      if (++nodes > MAX_NODES || d > MAX_DEPTH) throw new Error('too deep or big');
+      if (Array.isArray(x)) return x.map((e) => walk(e, d + 1));
+      if (x && typeof x === 'object') {
+        const o = {};
+        Object.keys(x).forEach((k) => { if (BAD_KEYS.indexOf(k) < 0) o[k] = walk(x[k], d + 1); });
+        return o;
+      }
+      if (typeof x === 'number' && !isFinite(x)) return 0;
+      return x;
+    }
+    if (!isObj(v)) return undefined;
+    try { return walk(v, 0); } catch (e) { return undefined; }
+  }
 
   const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
   const has = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
@@ -40,13 +63,18 @@
     'pixeltown-hub-v1': (o, v) => (o.map && o.map.cleanHub ? o.map.cleanHub(v) : undefined),
     'pixeltown-angler-v1': (o, v) => (o.angler ? o.angler.journal.clean(v) : undefined),
     'pixeltown-bugs-v1': (o, v) => (o.bugs && o.bugs.cleanSave ? o.bugs.cleanSave(v) : undefined),
-    'pixeltown-profile-v1': (o, v) => (o.hubProfile ? o.hubProfile.sanitize(v) : undefined)
+    'pixeltown-profile-v1': (o, v) => (o.hubProfile ? o.hubProfile.sanitize(v) : undefined),
+    'pixeltown-realm-v1': (o, v) => cleanPlain(v),
+    'pixeltown-arms-v1': (o, v) => cleanPlain(v),
+    'pixeltown-stalk-v1': (o, v) => cleanPlain(v),
+    'pixeltown-jam-v1': (o, v) => cleanPlain(v)
   };
   const KNOWN = Object.keys(CLEANERS).concat(['pixeltown-panel-collapsed']);
   const NAMES = {
     'pixeltown-save-v1': 'town save', 'pixeltown-mm-v1': 'Mad Maze heroes and stash', 'pixeltown-hub-v1': 'hub map',
     'pixeltown-angler-v1': 'Angler journal', 'pixeltown-bugs-v1': 'Bug Safari journal', 'pixeltown-profile-v1': 'player profile',
-    'pixeltown-panel-collapsed': 'panel setting'
+    'pixeltown-panel-collapsed': 'panel setting', 'pixeltown-realm-v1': 'Realm progress', 'pixeltown-arms-v1': 'weapon unlocks',
+    'pixeltown-stalk-v1': 'Stalk Market save', 'pixeltown-jam-v1': 'Jam save'
   };
   const label = (k) => NAMES[k] || k;
 
@@ -101,6 +129,9 @@
         if (s.length > MAX_VALUE) return fail('too-big', 'That file is too big to be a save.');
         raw[SAVE_KEY] = s;
       }
+      let total = 0;
+      Object.keys(raw).forEach((k) => { total += raw[k].length; });
+      if (total > MAX_TOTAL) return fail('too-big', 'That backup file is too big, so nothing was changed.');
       const owners = getOwners();
       const entries = {};
       const keys = Object.keys(raw).sort();
