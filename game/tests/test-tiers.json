@@ -690,5 +690,9 @@
   "world-status.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "bolt-art.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
