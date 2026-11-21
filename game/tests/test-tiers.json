@@ -1046,5 +1046,13 @@
   "gear-default-on.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "first-ten-minutes.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "archipelago-perf.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
