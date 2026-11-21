@@ -348,3 +348,10 @@ Codex art and B1-B5 run in parallel; page slices queue.
 | LIVE database | No Firebase SDK; BroadcastChannel only; local homestead; B11 diff assert | Online isles party until the rules are applied |
 | Realm regressions | Generator unchanged and hash-tested; `realm.js` untouched; only B24 edits `realm-world.js` | B24 |
 | Grindy or cruel taming | No fail rolls, no decay, tames never die, daily bonus only | Gatherer automation |
+
+
+## Canonical names (lead reconciliation between this concept and BIOME-ARCH-PLAN.md)
+- Page directory: `games/isles/` (this concept). Engine plan slices A1-A6/B7-B10 in BIOME-ARCH-PLAN.md are the build order for the engine; the concept's B1-B24 list is the content/feature order on top of it.
+- Save keys: `pixeltown-tames-v1` (stable of tamed creatures) and `pixeltown-archipelago-v1` (islands, positions, creature log) from the arch plan are canonical; the concept's `pixeltown-isles-v1` is NOT used (fold any extra fields into these two keys). Medals: `pixeltown-medals-isles-v1`.
+- Terrain ids: new ids are appended from 18 up in `mm-overworld.js` TERRAIN_NAMES (ids 0..17 never move); the concept's 32-127 range is a reserved budget, not a requirement.
+- Home building is a NEW local-only module (`mm-homestead.js`): the Town's building system writes to the live Firebase `blocks` ref and must never be reused.
