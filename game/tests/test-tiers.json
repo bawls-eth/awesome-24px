@@ -594,5 +594,9 @@
   "difficulty-curve.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "town-perf.test.js": {
+    "class": "live",
+    "tier": "full"
   }
 }
