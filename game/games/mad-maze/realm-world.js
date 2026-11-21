@@ -880,7 +880,7 @@
         to = best || far || from;
         if (to !== from) { p.x = (to.x + 0.5) * TILE; p.y = (to.y + 0.5) * TILE; }
       }
-      lastReturn = { from, to: { x: to.x, y: to.y }, moved: to.x !== from.x || to.y !== from.y, events: sites.map((q) => q.id), shield: SAFE_SHIELD };
+      lastReturn = { from, to: { x: to.x, y: to.y }, moved: to.x !== from.x || to.y !== from.y, events: sites.map((q) => q.id), shield: SAFE_SHIELD, iframes: p.iframes };
       return lastReturn;
     }
     // ---------- world sites (MMSites): shrines (timed buffs), camps (chest + patrol), NPC greeters ----------

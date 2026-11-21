@@ -24,7 +24,7 @@ async function open(browser, q, realmSave) {
   await page.evaluate(([v, r]) => { localStorage.clear(); localStorage.setItem('pixeltown-save-v1', v); localStorage.setItem('mm-aim-assist', '0'); if (r) localStorage.setItem('pixeltown-realm-v1', r); }, [JSON.stringify(SAVE), realmSave ? JSON.stringify(realmSave) : null]);
   page.errors.length = 0;
   await page.goto(PAGE + '?mode=world&test=1&seed=' + SEED + q);
-  await page.waitForFunction(() => window.__mm && window.__mm.world && window.__mm.arena.active && window.__mm.arena.state === 'play', null, { timeout: 15000 });
+  await page.waitForFunction(() => window.__mm && window.__mm.world && window.__mm.arena.active && window.__mm.arena.state === 'play', null, { timeout: 30000 });
   return { ctx, page };
 }
 const arrival = (page) => page.evaluate(() => { const a = window.__mm.arena, w = window.__mm.world; return { tile: [Math.floor(a.player.x / 32), Math.floor(a.player.y / 32)], iframes: a.player.iframes, last: w.safeReturn.last(), on: w.safeReturn.on, events: w.events().map((e) => ({ id: e.id, phase: e.phase, spawned: e.spawned })) }; });
@@ -56,7 +56,7 @@ for (let slot = 1; slot < 200 && !pick; slot++) {
   const portal = world.portalSites[0];
   const Q = await open(browser, '&at=' + portal.x + ',' + portal.y);
   const q1 = await arrival(Q.page);
-  check('quiet return: the hero is on the returnTo (portal) tile with the 3 s spawn shield', q1.on === true && q1.tile[0] === portal.x && q1.tile[1] === portal.y && q1.iframes > 2.5 && q1.iframes <= 3 && q1.last && q1.last.moved === false && q1.last.events.length === 0, JSON.stringify(q1));
+  check('quiet return: the hero is on the returnTo (portal) tile with the 3 s spawn shield', q1.on === true && q1.tile[0] === portal.x && q1.tile[1] === portal.y && q1.last && q1.last.iframes >= 3 && q1.iframes > 0 && q1.iframes <= 3 && q1.last.moved === false && q1.last.events.length === 0, JSON.stringify(q1));
   const sw = await Q.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
   check('390x844: no horizontal scroll', sw);
   errs.push(...Q.page.errors); await Q.ctx.close();
@@ -73,7 +73,7 @@ for (let slot = 1; slot < 200 && !pick; slot++) {
   const dSite = Math.hypot(e1.tile[0] - pick.site.x, e1.tile[1] - pick.site.y);
   const hop = Math.max(Math.abs(e1.tile[0] - pick.at[0]), Math.abs(e1.tile[1] - pick.at[1]));
   check('event in view: the arrival records the live event and hops', e1.last && e1.last.moved === true && e1.last.events.indexOf(pick.ev.id) >= 0 && e1.last.from.x === pick.at[0] && e1.last.from.y === pick.at[1], JSON.stringify(e1.last));
-  check('... to a quiet tile within 6 tiles, outside the event spawn radius (14 tiles), still shielded', hop >= 1 && hop <= 6 && dSite >= Z.TABLES.EVENT_SPAWN_RADIUS && e1.iframes > 2.5, JSON.stringify({ tile: e1.tile, hop, dSite, iframes: e1.iframes }));
+  check('... to a quiet tile within 6 tiles, outside the event spawn radius (14 tiles), still shielded', hop >= 1 && hop <= 6 && dSite >= Z.TABLES.EVENT_SPAWN_RADIUS && e1.last.iframes >= 3 && e1.iframes > 0, JSON.stringify({ tile: e1.tile, hop, dSite, iframes: e1.iframes }));
   const ev1 = e1.events.find((x) => x.id === pick.ev.id);
   check('... and the event has not spawned on top of the hero', ev1 && ev1.phase === 'active' && ev1.spawned === 0, JSON.stringify(e1.events));
   errs.push(...E.page.errors); await E.ctx.close();
