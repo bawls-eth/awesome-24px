@@ -670,5 +670,9 @@
   "world-wording.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "world-status.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
