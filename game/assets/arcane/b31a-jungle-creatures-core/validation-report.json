@@ -1,0 +1,21 @@
+{
+  "batch": "b31a",
+  "label": "jungle-creatures-core",
+  "generated_utc": "2026-11-21T19:51:10.912023Z",
+  "files": 40,
+  "duplicate_ids": 0,
+  "blocking": {},
+  "warnings": {},
+  "standing_heights": {
+    "chompbill/down": 172,
+    "chompbill/up": 196,
+    "chompbill/right": 172,
+    "fernraptor/down": 196,
+    "fernraptor/up": 192,
+    "fernraptor/right": 196,
+    "glimmerfrog/down": 144,
+    "glimmerfrog/up": 144,
+    "glimmerfrog/right": 144
+  },
+  "status": "provisional"
+}
