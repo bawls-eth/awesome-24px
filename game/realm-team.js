@@ -391,7 +391,7 @@ class RealmTeam {
       else if (e.k === 'clr') a.eBullets.forEach((b) => { if (b.active) { b.active = false; a._burst(b.x, b.y, '#8fe9ff', 1, 40); } });
       else if (e.k === 'bn') a._showBanner(rtText(String(d[0] || ''), 80), rtNum(d[1], 0, 6, 1.5));
       else if (e.k === 'rew') a._teamReward({ sh: rtNum(d[0], 0, 999, 0), xp: rtNum(d[1], 0, 9999, 0), t: rtText(String(d[2] || ''), 8), boss: d[3] ? 1 : 0, tenths: rtNum(d[4], 0, 999999, 0) });
-      else if (e.k === 'loot') { if (e.o === this.slot) { const id = rtText(String(d[0] || ''), 20); if (RM_ITEM_BY_ID[id]) a.collectItem(id, rtNum(d[1], 0, 2, 0) | 0); } }
+      else if (e.k === 'loot') { if (e.o === this.slot) { const id = rtText(String(d[0] || ''), 20); if (RM_ITEM_BY_ID[id] || (typeof RM_WPN_ID !== 'undefined' && RM_WPN_ID.test(id) && rmInertDef(id))) a.collectItem(id, rtNum(d[1], 0, 2, 0) | 0); } }
       else if (e.k === 'end') a._teamEnd(rtText(String(d[0] || 'end'), 12));
       else if (e.k === 'dpos') { if (rtNum(d[2], 0, 3, 1) === this.slot) { me.x = rtNum(d[0], 0, a.W, me.x); me.y = rtNum(d[1], 0, a.H, me.y); } }
       else if (e.k === 'fx') a.shake = Math.max(a.shake, rtNum(d[0], 0, 16, 4));

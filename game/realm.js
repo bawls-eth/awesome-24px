@@ -263,7 +263,9 @@ class RealmArena {
     this.world = null; this.mode = 'waves'; this.camera = { x: 0, y: 0, vw: 960, vh: RM_SHORT }; this._camF = { x: 0, y: 0 }; // setWorld / setMode: a scrolling world with a camera (null = the screen is the world, today's behaviour)
     this._solidAt = null; this._shotSolidAt = null; this._curDm = 1; this.onEnemyKilled = null; this.onEnemyHit = null; // world tile collision + additive kill / hit callbacks (default null)
     this.onHeroPanel = null; this._heroTab = 'pick'; this.onItem = null; this.onDeathCache = null; this.onMenuOpen = null; this.menuNote = null; // additive loot hooks (Lantern stash payout); null = off (classic arena, town gate)
-    this.rng = rmRng(seed === undefined ? (Date.now() & 0xffffffff) : seed);
+    const sd = seed === undefined ? (Date.now() & 0xffffffff) : seed;
+    this.rng = rmRng(sd);
+    this._wpnRng = rmRng(((Number(sd) >>> 0) ^ 0x5bd1e995) >>> 0); // styled-weapon drop rolls (S12): their own seeded stream, so the main rng sequence is unchanged
     this.active = false;
     this.state = 'idle'; // idle | banner | play | dead
     this.W = 960; this.H = RM_SHORT;
@@ -2498,9 +2500,22 @@ class RealmArena {
     b.active = true; b.x = x; b.y = y; b.t = 0; b.r = rarity;
     b.tier = worldLoot?.tierIndex;
     b.lifetime = worldLoot?.lifetime || Infinity;
-    b.id = itemId || RM_BASE_ITEMS[Math.floor(this.rng() * RM_BASE_ITEMS.length)].id;
+    b.id = this._wpnDrop(itemId || RM_BASE_ITEMS[Math.floor(this.rng() * RM_BASE_ITEMS.length)].id, worldLoot);
     const a = this.rng() * Math.PI * 2; b.vx = Math.cos(a) * 60; b.vy = Math.sin(a) * 60;
     return b;
+  }
+
+  // Styled weapon drops (S12): in a world or dungeon run with an active hero, a rolled classic weapon (Spark / Quickfire Wand) becomes a
+  // `wpn_<style>` item with a chance that grows with the bag tier; MMWeaponItems.dropItem picks it (70% the hero's family, 30% any).
+  // Seeded (_wpnRng), rarity unchanged. Classic waves, duels, no hero, ?weapons=0 or a page without mm-weapon-items.js: the id is unchanged.
+  _wpnDrop(id, worldLoot) {
+    if (!RM_WPN_ITEMS.length || !(worldLoot || this.dungeon) || (this.team && this.team.isPvp) || typeof MMWeaponItems === 'undefined') return id;
+    const def = RM_ITEM_BY_ID[id], cls = this.heroClass();
+    if (!def || def.slot !== 'weapon' || def.wpn || !cls) return id;
+    const tier = worldLoot && Number.isFinite(worldLoot.tierIndex) ? Math.max(0, Math.min(4, worldLoot.tierIndex)) : 1;
+    if (this._wpnRng() >= Math.min(0.85, 0.45 + 0.1 * tier)) return id;
+    let w = null; try { w = MMWeaponItems.dropItem(this._wpnRng, cls); } catch (e) { w = null; }
+    return typeof w === 'string' && RM_ITEM_BY_ID[w] && RM_ITEM_BY_ID[w].wpn ? w : id;
   }
 
   // Picks an item up. A full backpack sells it on the spot for shards.
