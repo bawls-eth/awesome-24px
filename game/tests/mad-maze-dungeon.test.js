@@ -206,7 +206,8 @@ const ev = (page, fn, arg) => page.evaluate(fn, arg);
   xp.on('pageerror', (e) => xerr.push(e.message)); xp.on('dialog', (d) => { dialogs++; d.dismiss(); });
   await xp.goto(PAGE + '?mode=dungeon&test=1&seed=' + encodeURIComponent('<img src=x onerror=alert(1)>'));
   await xp.waitForFunction(() => window.__mm && window.__mm.dungeon); await xp.waitForTimeout(300);
-  const xo = await xp.evaluate(() => { const d = window.__mm.dungeon; return { seed: String(d.seed), imgs: document.querySelectorAll('img').length }; });
+  // .mm-ico = the HUD icons our own code adds from the b19 manifest (S13); any OTHER <img> would be an injection
+  const xo = await xp.evaluate(() => { const d = window.__mm.dungeon; return { seed: String(d.seed), imgs: document.querySelectorAll('img:not(.mm-ico)').length }; });
   await xp.evaluate(() => window.__mm.dungeon.fail && window.__mm.dungeon.fail());
   await xp.waitForTimeout(300);
   const tabOk = await xp.evaluate(() => { const ev = new KeyboardEvent('keydown', { key: 'Tab', cancelable: true }); window.dispatchEvent(ev); return { prevented: ev.defaultPrevented, sum: !!document.querySelector('.mm-sum-card'), html: (document.querySelector('.mm-sum-card') || { innerHTML: '' }).innerHTML.includes('<img') }; });

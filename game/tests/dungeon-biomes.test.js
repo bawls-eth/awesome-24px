@@ -100,7 +100,7 @@ const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
   // ---- invalid / missing biome falls back to warren ----
   for (const q of ['biome=lava', 'biome=CRYPT', 'biome=constructor', 'biome=__proto__', 'biome=' + encodeURIComponent('<img src=x onerror=alert(1)>'), 'biome=']) {
     const { ctx, page: p } = await open(browser, `seed=${SEED}&lv=2&${q}`);
-    const r = await ev(p, () => ({ b: window.__mm.dungeon.biome, ds: document.body.dataset.dungeonBiome, wave: document.getElementById('realm-wave').textContent, imgs: document.querySelectorAll('img').length }));
+    const r = await ev(p, () => ({ b: window.__mm.dungeon.biome, ds: document.body.dataset.dungeonBiome, wave: document.getElementById('realm-wave').textContent, imgs: document.querySelectorAll('img:not(.mm-ico)').length })); // .mm-ico = HUD icons added by our own code (S13); any other <img> would be an injection
     check(`invalid ${q.slice(0, 22)} falls back to the warren`, r.b === 'warren' && r.ds === 'warren' && r.wave.indexOf('Warren') === 0 && r.imgs === 0 && p.errors.length === 0, JSON.stringify([r, p.errors]));
     await ctx.close();
   }
