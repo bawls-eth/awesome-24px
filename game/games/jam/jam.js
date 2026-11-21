@@ -28,11 +28,12 @@
   // ---------- state ----------
   var cv = document.getElementById('game'), ctx = cv.getContext('2d');
   var overlay = document.getElementById('overlay');
-  var mode = 'menu'; // menu | play | pause | results
+  var mode = 'menu'; // menu | play | pause | results | interlude | calib
+  var concert = null; // { ids, tier, idx, parts[] } while a concert is running
   var songId = null, tier = null, chart = null, run = null, lastReport = null, lastResult = null;
   var paused = false, popups = [], flashes = [0, 0, 0, 0], rings = [], glows = [], shake = 0, lastJudge = null, lastTiming = null;
   var held = {}, laneKeys = {}, ptrLane = {};
-  var testNow = 0;
+  var testNow = 0, concertLast = null;
   var stars = [];
   (function () { var g = R.create('jam-stars'); for (var i = 0; i < 30; i++) stars.push({ x: g.int(0, CW), y: g.int(0, HIT_Y - 40), p: g.next() * 6.28 }); })();
 
@@ -148,7 +149,7 @@
     audioMode = !!(actx && !TEST && actx.state === 'running');
     t0 = src() + (audioMode ? 150 : 0);
     mode = 'play'; overlay.hidden = true;
-    $('hud-song').textContent = SG.song(id).name + ' / ' + SG.TIER_NAMES[tier];
+    $('hud-song').textContent = (concert ? 'Concert ' + (concert.idx + 1) + '/' + concert.ids.length + ': ' : '') + SG.song(id).name + ' / ' + SG.TIER_NAMES[tier];
     updateHud();
     return run;
   }
@@ -161,10 +162,11 @@
     lastReport = SG.record(save, songId, tier, res);
     persist();
     frozenAt = songNow(); mode = 'results';
+    if (concert) { concertAfterSong(res); return; }
     showResults();
   }
   function releaseAll() { Object.keys(held).forEach(function (l) { if (held[l]) { run.release(l); held[l] = false; } }); }
-  function quit() { if (run) { releaseAll(); } paused = false; stopAudioForMenu(); showMenu(); }
+  function quit() { if (run) { releaseAll(); } concert = null; paused = false; stopAudioForMenu(); showMenu(); }
   // drop the context so already-scheduled backing notes cannot ring on after quitting
   function stopAudioForMenu() { audioMode = false; events = null; if (actx) { try { actx.close(); } catch (e) { /* ignore */ } actx = null; master = null; noiseBuf = null; } }
 
@@ -382,7 +384,7 @@
     return 'Timing: you averaged ' + how + ' over ' + res.hits + ' hits (offset ' + fmtOff(SG.offsetOf(save)) + ').';
   }
   function showMenu() {
-    mode = 'menu'; run = null; chart = null; paused = false;
+    mode = 'menu'; run = null; chart = null; paused = false; concert = null;
     clear(overlay); overlay.hidden = false;
     overlay.appendChild(el('h2', 'Campfire Jam'));
     if (!save.hint) {
@@ -401,6 +403,14 @@
       overlay.appendChild(cc);
     }
     overlay.appendChild(el('p', 'Stars: ' + SG.totalStars(save) + ' / ' + (SG.SONGS.length * 3), 'dim'));
+    var openN = SG.SONGS.filter(function (x) { return SG.songUnlocked(save, x.id); }).length;
+    var crow = el('div', undefined, 'row'); crow.id = 'concert-row';
+    var cbn = btn('Concert (3 songs)', showConcertSetup, openN < SG.CONCERT_SIZE); cbn.id = 'btn-concert'; crow.appendChild(cbn);
+    var cinfo = save.concert && (save.concert.easy || save.concert.normal || save.concert.hard)
+      ? SG.TIERS.filter(function (t) { return save.concert[t]; }).map(function (t) { return SG.TIER_NAMES[t] + ' ' + save.concert[t].score + ' ' + save.concert[t].rank; }).join('  |  ')
+      : (openN < SG.CONCERT_SIZE ? 'Open 3 songs to play a concert.' : 'Play 3 songs back to back for a combined score.');
+    var cdim = el('span', cinfo, 'dim'); cdim.id = 'concert-info'; crow.appendChild(cdim);
+    overlay.appendChild(crow);
     var list = el('div', undefined, 'songs');
     SG.SONGS.forEach(function (s) {
       var open = SG.songUnlocked(save, s.id);
@@ -429,10 +439,90 @@
     var op = btn('+5 ms', function () { nudge(5); }); op.id = 'off-plus'; off.appendChild(op);
     var oc = btn('Calibrate', showCalibration); oc.id = 'btn-calibrate'; off.appendChild(oc);
     showOff(); overlay.appendChild(off);
-    var rule = el('p', 'Unlock rule: Warm Embers is always open. Lantern Shuffle opens at 2 total stars, Moth Parade at 5, Starlit Stomp at 8, then Kettle Song at 10, Owl Hour at 13 and Comet Tail at 16. A secret song waits for a full combo on any Hard chart. Hard needs 2 stars on that song’s Normal. Stars come from accuracy: 50%, 75%, 90%.', 'dim'); rule.id = 'unlock-rule';
+    var rule = el('p', 'Unlock rule: Warm Embers is always open. Lantern Shuffle opens at 2 total stars, Moth Parade at 5, Starlit Stomp at 8, then Kettle Song at 10, Owl Hour at 13, Comet Tail at 16, Fern Lullaby at 19, Spark Reel at 22, Dewdrop Drift at 25 and Harvest Moonrise at 28. A secret song waits for a full combo on any Hard chart. Hard needs 2 stars on that song’s Normal. Stars come from accuracy: 50%, 75%, 90%.', 'dim'); rule.id = 'unlock-rule';
     overlay.appendChild(rule);
     var row2 = el('div', undefined, 'row'); row2.appendChild(homeLink('menu-back')); overlay.appendChild(row2);
   }
+  // ---------- concert: 3 songs back to back ----------
+  var concertPick = [], concertTier = 'normal';
+  function showConcertSetup() {
+    mode = 'menu'; concert = null;
+    clear(overlay); overlay.hidden = false;
+    overlay.appendChild(el('h2', 'Concert'));
+    overlay.appendChild(el('p', 'Pick 3 open songs and one difficulty. You play them back to back; scores add up to a concert rank.', 'dim'));
+    var info = el('p', undefined, 'dim'); info.id = 'concert-pick-info'; overlay.appendChild(info);
+    var list = el('div', undefined, 'songs'); list.id = 'concert-songs';
+    var go;
+    function refresh() {
+      var chk = SG.concertCheck(save, concertPick, concertTier);
+      info.textContent = 'Setlist (' + concertPick.length + '/' + SG.CONCERT_SIZE + '): ' + (concertPick.map(function (id) { return SG.song(id).name; }).join(' > ') || 'none yet') + (concertPick.length === SG.CONCERT_SIZE && !chk.ok ? '  (' + chk.error + ')' : '');
+      go.disabled = !chk.ok;
+      Array.prototype.forEach.call(list.children, function (b) { var i = concertPick.indexOf(b.dataset.song); b.setAttribute('aria-pressed', i >= 0 ? 'true' : 'false'); b.classList.toggle('sel', i >= 0); b.firstChild.textContent = (i >= 0 ? (i + 1) + '. ' : '') + SG.song(b.dataset.song).name; });
+      Array.prototype.forEach.call(trow.children, function (b) { b.setAttribute('aria-pressed', b.dataset.tier === concertTier ? 'true' : 'false'); b.classList.toggle('sel', b.dataset.tier === concertTier); });
+    }
+    SG.SONGS.forEach(function (sg) {
+      if (!SG.songUnlocked(save, sg.id)) return;
+      var b = el('button'); b.type = 'button'; b.className = 'pick'; b.dataset.song = sg.id; b.appendChild(document.createTextNode(sg.name));
+      b.addEventListener('click', function () { var i = concertPick.indexOf(sg.id); if (i >= 0) concertPick.splice(i, 1); else if (concertPick.length < SG.CONCERT_SIZE) concertPick.push(sg.id); refresh(); });
+      list.appendChild(b);
+    });
+    overlay.appendChild(list);
+    var trow = el('div', undefined, 'row'); trow.id = 'concert-tiers';
+    SG.TIERS.forEach(function (t) { var b = btn(SG.TIER_NAMES[t], function () { concertTier = t; refresh(); }); b.dataset.tier = t; b.className = 'pick'; trow.appendChild(b); });
+    overlay.appendChild(trow);
+    var row = el('div', undefined, 'row');
+    go = btn('Start concert', function () { startConcert(concertPick.slice(), concertTier); }); go.id = 'concert-start'; row.appendChild(go);
+    var back = btn('Songs', showMenu); back.id = 'to-menu'; row.appendChild(back);
+    overlay.appendChild(row);
+    concertPick = concertPick.filter(function (id) { return SG.songUnlocked(save, id); });
+    refresh();
+  }
+  function startConcert(ids, tr) {
+    var chk = SG.concertCheck(save, ids, tr);
+    if (!chk.ok) return false;
+    concert = { ids: ids.slice(), tier: tr, idx: 0, parts: [] };
+    return !!startSong(ids[0], tr);
+  }
+  function concertAfterSong(res) {
+    concert.parts.push({ id: songId, score: res.score, max: chart.notes.length * Jam.POINTS.perfect, maxCombo: res.maxCombo, rank: res.rank, stars: lastReport.stars });
+    concert.idx++;
+    if (concert.idx < concert.ids.length) showInterlude(); else finishConcert();
+  }
+  function showInterlude() {
+    mode = 'interlude';
+    var last = concert.parts[concert.parts.length - 1], next = SG.song(concert.ids[concert.idx]);
+    clear(overlay); overlay.hidden = false;
+    overlay.appendChild(el('h2', 'Song ' + concert.idx + ' of ' + concert.ids.length + ' done'));
+    var lp = el('p', SG.song(last.id).name + ': ' + last.score + ' points, rank ' + last.rank); lp.id = 'inter-last'; overlay.appendChild(lp);
+    var run0 = SG.concertResult(concert.parts);
+    var tp = el('p', 'Concert so far: ' + run0.score + ' points (' + Math.round(run0.accuracy * 100) + '%)'); tp.id = 'inter-total'; overlay.appendChild(tp);
+    var np = el('p', 'Next up: ' + next.name + ' (' + next.bpm + ' BPM)'); np.id = 'inter-next'; overlay.appendChild(np);
+    var row = el('div', undefined, 'row');
+    var go = btn('Next song', function () { startSong(concert.ids[concert.idx], concert.tier); }); go.id = 'inter-next-btn'; row.appendChild(go);
+    var q = btn('Quit concert', function () { concert = null; showMenu(); }); q.id = 'inter-quit'; row.appendChild(q);
+    overlay.appendChild(row);
+  }
+  function finishConcert() {
+    var res = SG.concertResult(concert.parts), tr = concert.tier;
+    var rep = SG.recordConcert(save, tr, res); persist();
+    concertLast = { score: res.score, max: res.max, accuracy: res.accuracy, rank: res.rank, maxCombo: res.maxCombo, tier: tr, newBest: rep.newBest, songs: concert.parts.map(function (p) { return { id: p.id, score: p.score, rank: p.rank }; }) };
+    mode = 'results';
+    clear(overlay); overlay.hidden = false;
+    overlay.appendChild(el('h2', 'Concert / ' + SG.TIER_NAMES[tr]));
+    var rk = el('p', res.rank); rk.id = 'con-rank'; overlay.appendChild(rk);
+    rk.className = 'bigrank';
+    var sc = el('p', 'Combined score ' + res.score + (rep.newBest ? '  (new concert best!)' : '  (best ' + save.concert[tr].score + ')')); sc.id = 'con-score'; overlay.appendChild(sc);
+    var ac = el('p', 'Accuracy ' + Math.round(res.accuracy * 100) + '%   Best combo ' + res.maxCombo); ac.id = 'con-acc'; overlay.appendChild(ac);
+    var ul = el('div'); ul.id = 'con-songs';
+    concert.parts.forEach(function (p, i) { var d = el('div', (i + 1) + '. ' + SG.song(p.id).name + ': ' + p.score + '  ' + p.rank + '  ' + starText(p.stars), 'cline'); d.dataset.song = p.id; ul.appendChild(d); });
+    overlay.appendChild(ul);
+    var row = el('div', undefined, 'row');
+    var again = btn('Another concert', function () { concert = null; showConcertSetup(); }); again.id = 'con-again'; row.appendChild(again);
+    var back = btn('Songs', showMenu); back.id = 'to-menu'; row.appendChild(back);
+    row.appendChild(homeLink('menu-back'));
+    overlay.appendChild(row);
+  }
+
   // ---------- calibration (tap test) ----------
   // 2 count-in clicks + 8 measured clicks. Positive result = you tap late; judging subtracts it.
   var CAL_INT = 700, CAL_LEAD = 1000, CAL_IN = 2, CAL_N = 8;
@@ -564,6 +654,9 @@
       get shake() { return shake; },
       get rings() { return rings.length; },
       get paused() { return paused; },
+      get concert() { return concert ? { ids: concert.ids.slice(), tier: concert.tier, idx: concert.idx, parts: concert.parts.map(function (p) { return Object.assign({}, p); }) } : null; },
+      get concertResult() { return concertLast ? JSON.parse(JSON.stringify(concertLast)) : null; },
+      startConcert: startConcert,
       get lastJudge() { return lastJudge; },
       get offset() { return SG.offsetOf(save); },
       get glows() { return glows.length; },

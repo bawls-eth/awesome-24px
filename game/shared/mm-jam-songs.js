@@ -34,6 +34,14 @@
       patterns: ['wave', 'jacks', 'mirror', 'cross'], needStars: 13, blurb: 'Low hoots and swooping runs.' },
     { id: 'comet-tail', name: 'Comet Tail', bpm: 136, bars: 36, rootHz: 185, scale: [0, 2, 4, 6, 7, 9, 11], prog: [0, 4, 2, 7],
       patterns: ['pulse', 'wave', 'trill', 'jacks', 'rand'], needStars: 16, blurb: 'Bright sparks trailing across the sky.' },
+    { id: 'fern-lullaby', name: 'Fern Lullaby', bpm: 86, bars: 30, rootHz: 155.56, scale: [0, 2, 3, 5, 7, 8, 10], prog: [0, -4, -7, -5],
+      patterns: ['wave', 'stairs', 'pulse', 'rand'], needStars: 19, blurb: 'Soft ferns swaying in slow, even steps.' },
+    { id: 'spark-reel', name: 'Spark Reel', bpm: 148, bars: 34, rootHz: 207.65, scale: [0, 2, 4, 5, 7, 9, 11], prog: [0, 5, -3, 7],
+      patterns: ['jacks', 'trill', 'cross', 'pulse'], needStars: 22, blurb: 'A fast fiddle jig. Hands up!' },
+    { id: 'dewdrop-drift', name: 'Dewdrop Drift', bpm: 98, bars: 32, rootHz: 138.59, scale: [0, 2, 4, 6, 8, 10], prog: [0, 2, 5, -1],
+      patterns: ['mirror', 'wave', 'cross', 'stairs', 'trill'], needStars: 25, blurb: 'Dreamy whole-tone drops that never quite land.' },
+    { id: 'harvest-moonrise', name: 'Harvest Moonrise', bpm: 156, bars: 40, rootHz: 116.54, scale: [0, 1, 4, 5, 7, 8, 11], prog: [0, -1, -3, -5],
+      patterns: ['jacks', 'cross', 'mirror', 'pulse', 'wave', 'trill'], needStars: 28, blurb: 'The last big song before the embers fade.' },
     // secret: opens only after a full combo on any Hard chart (no stars needed)
     { id: 'midnight-campfire', name: 'Midnight Campfire', bpm: 126, bars: 44, rootHz: 123.47, scale: [0, 1, 3, 5, 7, 8, 10], prog: [0, -5, -2, -7],
       patterns: ['cross', 'wave', 'jacks', 'pulse', 'stairs'], needStars: 0, secret: true, blurb: 'Only the embers know this one.' }
@@ -142,6 +150,74 @@
     if (!score && !stars && !combo) return null;
     return { score, stars, rank, combo };
   }
+  // ---- additive save fields: run history, best-run ghost, prefs, concert bests ----
+  const HIST_N = 5, GHOST_MAX = 600, GHOST_MISS = 999, GHOST_LIM = 200, MAX_CONCERT = MAX_SCORE * 3;
+  const PREF_KEYS = ['shapes', 'lefty', 'ghost'];
+  function cleanHist(arr) {
+    if (!Array.isArray(arr)) return null;
+    const out = [];
+    for (const e of arr.slice(-HIST_N)) {
+      if (!e || typeof e !== 'object') continue;
+      out.push({ score: clampInt(e.score, 0, MAX_SCORE), acc: clampInt(e.acc, 0, 100), rank: RANK_LIST.indexOf(e.rank) >= 0 ? e.rank : 'D' });
+    }
+    return out.length ? out : null;
+  }
+  // ghost = per-note press offsets (ms, negative = early) of the best run, in chart order; 999 = note not hit
+  function cleanGhost(arr) {
+    if (!Array.isArray(arr) || !arr.length || arr.length > GHOST_MAX) return null;
+    const out = arr.map((v) => (typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= GHOST_LIM ? Math.round(v) : GHOST_MISS));
+    return out.some((v) => v !== GHOST_MISS) ? out : null;
+  }
+  function cleanConcert(raw) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+    const o = { plays: clampInt(raw.plays, 0, MAX_PLAYS) };
+    for (const t of TIERS) {
+      const e = Object.prototype.hasOwnProperty.call(raw, t) ? raw[t] : null;
+      if (e && typeof e === 'object' && clampInt(e.score, 0, MAX_CONCERT) > 0) o[t] = { score: clampInt(e.score, 0, MAX_CONCERT), rank: RANK_LIST.indexOf(e.rank) >= 0 ? e.rank : 'D' };
+    }
+    return o.plays || TIERS.some((t) => o[t]) ? o : null;
+  }
+  function prefOf(save, key) { return !!(save && save.prefs && save.prefs[key] === true); }
+  function setPref(save, key, on) {
+    if (PREF_KEYS.indexOf(key) < 0) return false;
+    save.prefs = save.prefs || {};
+    if (on) save.prefs[key] = true; else delete save.prefs[key];
+    if (!Object.keys(save.prefs).length) delete save.prefs;
+    return prefOf(save, key);
+  }
+  function histOf(save, id, tier) { const h = save && save.hist && save.hist[id] && save.hist[id][tier]; return Array.isArray(h) ? h.slice() : []; }
+  function ghostOf(save, id, tier) { const g = save && save.ghost && save.ghost[id] && save.ghost[id][tier]; return Array.isArray(g) ? g.slice() : null; }
+
+  // ---- concert: 3 distinct unlocked songs, one tier, played back to back ----
+  const CONCERT_SIZE = 3;
+  function concertCheck(save, ids, tier) {
+    if (TIERS.indexOf(tier) < 0) return { ok: false, error: 'bad tier' };
+    if (!Array.isArray(ids) || ids.length !== CONCERT_SIZE) return { ok: false, error: 'pick ' + CONCERT_SIZE + ' songs' };
+    if (new Set(ids).size !== ids.length) return { ok: false, error: 'songs must differ' };
+    for (const id of ids) {
+      if (!song(id)) return { ok: false, error: 'unknown song' };
+      if (!songUnlocked(save, id)) return { ok: false, error: 'locked song' };
+      if (!tierUnlocked(save, id, tier)) return { ok: false, error: 'tier locked' };
+    }
+    return { ok: true, error: null };
+  }
+  // parts: [{id, score, max, maxCombo}] -> combined score and concert rank from the combined accuracy
+  function concertResult(parts) {
+    let score = 0, max = 0, maxCombo = 0;
+    for (const p of parts || []) { score += clampInt(p.score, 0, MAX_SCORE); max += clampInt(p.max, 0, MAX_SCORE); maxCombo = Math.max(maxCombo, clampInt(p.maxCombo, 0, MAX_COMBO)); }
+    const accuracy = max ? score / max : 0;
+    return { score, max, accuracy, rank: Jam.rankFor(accuracy), maxCombo, songs: (parts || []).length };
+  }
+  function recordConcert(save, tier, res) {
+    if (TIERS.indexOf(tier) < 0 || !res) return { newBest: false };
+    const c = save.concert = save.concert && typeof save.concert === 'object' ? save.concert : { plays: 0 };
+    c.plays = Math.min(MAX_PLAYS, (c.plays || 0) + 1);
+    const score = clampInt(res.score, 0, MAX_CONCERT), cur = c[tier];
+    const newBest = !cur || score > cur.score;
+    if (newBest && score > 0) c[tier] = { score, rank: RANK_LIST.indexOf(res.rank) >= 0 ? res.rank : 'D' };
+    return { newBest: newBest && score > 0 };
+  }
+
   function emptySave() { return { v: 1, best: {}, unlocked: [SONGS[0].id], plays: 0, hint: false }; }
   function songStars(save, id) {
     const b = save && save.best && save.best[id]; let m = 0;
@@ -175,10 +251,22 @@
     }
     out.plays = clampInt(raw.plays, 0, MAX_PLAYS);
     out.hint = raw.hint === true;
+    const hist = raw.hist && typeof raw.hist === 'object' && !Array.isArray(raw.hist) ? raw.hist : {};
+    const ghost = raw.ghost && typeof raw.ghost === 'object' && !Array.isArray(raw.ghost) ? raw.ghost : {};
+    for (const s of SONGS) {
+      const hs = Object.prototype.hasOwnProperty.call(hist, s.id) && hist[s.id] && typeof hist[s.id] === 'object' ? hist[s.id] : null;
+      if (hs) for (const t of TIERS) { const h = Object.prototype.hasOwnProperty.call(hs, t) ? cleanHist(hs[t]) : null; if (h) { out.hist = out.hist || {}; (out.hist[s.id] = out.hist[s.id] || {})[t] = h; } }
+    }
+    for (const s of SONGS) {
+      const gs = Object.prototype.hasOwnProperty.call(ghost, s.id) && ghost[s.id] && typeof ghost[s.id] === 'object' ? ghost[s.id] : null;
+      if (gs) for (const t of TIERS) { const g = Object.prototype.hasOwnProperty.call(gs, t) && out.best[s.id] && out.best[s.id][t] ? cleanGhost(gs[t]) : null; if (g) { out.ghost = out.ghost || {}; (out.ghost[s.id] = out.ghost[s.id] || {})[t] = g; } }
+    }
     // optional additive fields: a bad offsetMs is dropped (reads as 0), a number is clamped to +-200
     if (typeof raw.offsetMs === 'number' && Number.isFinite(raw.offsetMs)) out.offsetMs = Jam.clampOffset(raw.offsetMs);
     // fullCombo only counts when a Hard entry with a long combo backs it up, so a bare flag cannot open the secret
     if (raw.fullCombo === true && SONGS.some((s) => out.best[s.id] && out.best[s.id].hard && out.best[s.id].hard.combo >= FC_MIN_COMBO)) out.fullCombo = true;
+    const conc = cleanConcert(raw.concert); if (conc) out.concert = conc;
+    if (raw.prefs && typeof raw.prefs === 'object' && !Array.isArray(raw.prefs)) for (const k of PREF_KEYS) if (raw.prefs[k] === true) { out.prefs = out.prefs || {}; out.prefs[k] = true; }
     out.unlocked = SONGS.filter((s) => songUnlocked(out, s.id)).map((s) => s.id); // always derived from earned stars, never trusted from disk
     return out;
   }
@@ -198,6 +286,12 @@
     };
     save.best[songId][tier] = cleanEntry(entry) || { score: 0, stars: 0, rank: 'D', combo: 0 };
     save.plays = Math.min(MAX_PLAYS, save.plays + 1);
+    // last 5 runs per song/tier, and the hit offsets of the best run (only when the page vouches for a base-seed chart)
+    const hh = (save.hist = save.hist && typeof save.hist === 'object' ? save.hist : {});
+    hh[songId] = hh[songId] || {};
+    hh[songId][tier] = (cleanHist(hh[songId][tier]) || []).concat({ score, acc: clampInt(Math.round(res.accuracy * 100), 0, 100), rank: RANK_LIST.indexOf(res.rank) >= 0 ? res.rank : 'D' }).slice(-HIST_N);
+    const g = rep.newBest && Array.isArray(res.deltas) ? cleanGhost(res.deltas) : null;
+    if (g) { save.ghost = save.ghost || {}; (save.ghost[songId] = save.ghost[songId] || {})[tier] = g; }
     rep.starsGained = Math.max(0, songStars(save, songId) - before);
     const total = totalStars(save);
     const hadSecret = save.fullCombo === true;
@@ -212,5 +306,5 @@
   }
 
   return { LANES, TIERS, TIER_NAMES, TIER, SONGS, STAR_AT, LEAD_BEATS, song, songIds, beatMs, chartFor, backing, toneHz, noteHz,
-    starsFor, emptySave, cleanSave, record, offsetOf, setOffset, FC_MIN_COMBO, totalStars, songStars, songUnlocked, tierUnlocked };
+    starsFor, emptySave, cleanSave, record, HIST_N, GHOST_MISS, prefOf, setPref, histOf, ghostOf, concertCheck, concertResult, recordConcert, CONCERT_SIZE, offsetOf, setOffset, FC_MIN_COMBO, totalStars, songStars, songUnlocked, tierUnlocked };
 });
