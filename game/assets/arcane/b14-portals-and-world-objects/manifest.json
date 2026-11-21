@@ -1,0 +1,230 @@
+{
+  "batch": "b14",
+  "label": "portals-and-world-objects",
+  "assets": [
+    {
+      "id": "portal_nexus",
+      "path": "sprites/portal_nexus.png",
+      "category": "portal",
+      "frames": 6,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        32,
+        55
+      ]
+    },
+    {
+      "id": "portal_warren",
+      "path": "sprites/portal_warren.png",
+      "category": "portal",
+      "frames": 6,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        32,
+        55
+      ]
+    },
+    {
+      "id": "portal_bramble",
+      "path": "sprites/portal_bramble.png",
+      "category": "portal",
+      "frames": 6,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        32,
+        55
+      ]
+    },
+    {
+      "id": "portal_meadow",
+      "path": "sprites/portal_meadow.png",
+      "category": "portal",
+      "frames": 6,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        32,
+        55
+      ]
+    },
+    {
+      "id": "portal_crypt",
+      "path": "sprites/portal_crypt.png",
+      "category": "portal",
+      "frames": 6,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        32,
+        55
+      ]
+    },
+    {
+      "id": "portal_vault",
+      "path": "sprites/portal_vault.png",
+      "category": "portal",
+      "frames": 6,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        32,
+        55
+      ]
+    },
+    {
+      "id": "portal_boss",
+      "path": "sprites/portal_boss.png",
+      "category": "portal",
+      "frames": 6,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        32,
+        55
+      ]
+    },
+    {
+      "id": "portal_return",
+      "path": "sprites/portal_return.png",
+      "category": "portal",
+      "frames": 6,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        32,
+        55
+      ]
+    },
+    {
+      "id": "spawn_pad",
+      "path": "sprites/spawn_pad.png",
+      "category": "prop",
+      "frames": 4,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        32,
+        55
+      ]
+    },
+    {
+      "id": "shrine_heal",
+      "path": "sprites/shrine_heal.png",
+      "category": "prop",
+      "frames": 4,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        32,
+        55
+      ]
+    },
+    {
+      "id": "shrine_rage",
+      "path": "sprites/shrine_rage.png",
+      "category": "prop",
+      "frames": 4,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        32,
+        55
+      ]
+    },
+    {
+      "id": "shrine_ward",
+      "path": "sprites/shrine_ward.png",
+      "category": "prop",
+      "frames": 4,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        32,
+        55
+      ]
+    },
+    {
+      "id": "event_beacon",
+      "path": "sprites/event_beacon.png",
+      "category": "prop",
+      "frames": 4,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        32,
+        55
+      ]
+    },
+    {
+      "id": "treasure_pile",
+      "path": "sprites/treasure_pile.png",
+      "category": "prop",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 0,
+      "loop": false,
+      "anchor": [
+        32,
+        55
+      ]
+    },
+    {
+      "id": "loot_chest_gold",
+      "path": "sprites/loot_chest_gold.png",
+      "category": "prop",
+      "frames": 4,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 8,
+      "loop": false,
+      "anchor": [
+        32,
+        55
+      ]
+    },
+    {
+      "id": "dungeon_key",
+      "path": "sprites/dungeon_key.png",
+      "category": "prop",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 0,
+      "loop": false,
+      "anchor": [
+        32,
+        55
+      ]
+    }
+  ]
+}
