@@ -724,7 +724,13 @@
   const diffOf = (t) => Math.max.apply(null, t.tags.map((g) => DIFF[g] || 2));
   const pool = (kind) => V2.filter((t) => t.kind === kind);
   function getAny(id) { return get(id) || V2.find((t) => t.id === id) || null; }
-  const BIOME_BIAS = { warren: {}, bramble: { tight: 1.3, maze: 1.2 }, meadow: { open: 1.4, arena: 1.2 }, crypt: { ring: 1.3, split: 1.2 } };
+  // Tag weight multipliers per biome (layout 2 only; layout 1 ignores biomes). Warren stays neutral.
+  const BIOME_BIAS = { warren: {}, bramble: { tight: 1.8, maze: 1.6, open: 0.7 }, meadow: { open: 1.9, arena: 1.4, tight: 0.6, maze: 0.5 }, crypt: { ring: 1.8, split: 1.6, open: 0.7 } };
+  // One template kind with the biome's tag weight (1 = neutral). Used by tests and handy for tooling.
+  function biomePool(biome, kind) {
+    const bias = BIOME_BIAS[biome] || BIOME_BIAS.warren;
+    return pool(kind).map((t) => ({ id: t.id, base: t.base, tags: t.tags, weight: t.tags.reduce((w, g) => w * (bias[g] || 1), 1) }));
+  }
 
   // Layout-2 selection. graph = MMWarren output. Returns { layout, ids:{roomId:tplId}, defs:{roomId:def} }.
   // Rules: seeded (MMRng only); a room never shares a base template with a neighbour or with the room processed
@@ -792,5 +798,5 @@
   function byKind(kind) { return TEMPLATES.filter((t) => t.kind === kind); }
   function get(id) { return TEMPLATES.find((t) => t.id === id) || null; }
 
-  return { W, H, DOORS, TEMPLATES, NEW_TEMPLATES, POOL_V2: V2, LAYOUT_LATEST, DIFF, parse, autotile, byKind, get, getAny, validateTemplate, mirrors, select, selectRooms, selectRoomsV1 };
+  return { W, H, DOORS, TEMPLATES, NEW_TEMPLATES, POOL_V2: V2, LAYOUT_LATEST, DIFF, parse, autotile, byKind, get, getAny, validateTemplate, mirrors, select, selectRooms, selectRoomsV1, BIOME_BIAS, biomePool };
 }));

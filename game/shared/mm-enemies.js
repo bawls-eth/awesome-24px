@@ -36,7 +36,8 @@
 
   // Choose enemies for a room. Never exceeds budget(tier); nothing within 6 tiles of startPoint.
   // Returns { budget, spent, enemies: [{ id, x, y, hp, maxHp, cost, elite, crown, ... }] }.
-  function plan(seed, tier, spawnPoints, startPoint) {
+  function plan(seed, tier, spawnPoints, startPoint, allowedIds) {
+    const pool = Array.isArray(allowedIds) && allowedIds.length ? IDS.filter((id) => allowedIds.indexOf(id) >= 0) : IDS; // additive: a biome restricts the mix; omitted = all (old behaviour)
     const rng = MMRng.create('mm-enemies:' + seed + ':' + tier);
     const total = budget(tier);
     const start = startPoint || null;
@@ -44,7 +45,7 @@
     const out = [];
     let remaining = total;
     for (let i = 0; i < points.length; i++) {
-      const affordable = IDS.filter((id) => ENEMIES[id].cost <= remaining);
+      const affordable = pool.filter((id) => ENEMIES[id].cost <= remaining);
       if (!affordable.length) break;
       const def = ENEMIES[rng.pick(affordable)];
       let elite = false;

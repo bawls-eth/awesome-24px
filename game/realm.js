@@ -829,7 +829,7 @@ class RealmArena {
   }
   // Boss art id for this boss: tier (0-based) comes from the run wave, so the same wave always shows the same boss.
   _bossName(e) {
-    if (e._bk !== 'boss' || e.t < e._lt) { e._bk = 'boss'; e._at = undefined; const A = typeof MMArt !== 'undefined' ? MMArt : null; const w = this.run && this.run.wave; e._bn = A && A.bossArtFor ? A.bossArtFor(Math.max(0, Math.round((Number(w) || 0) / RM_BOSS_EVERY) - 1)) : null; }
+    if (e._bk !== 'boss' || e.t < e._lt) { e._bk = 'boss'; e._at = undefined; const A = typeof MMArt !== 'undefined' ? MMArt : null; const w = this.run && this.run.wave; e._bn = A && A.BOSS_MAP && typeof e.bossArt === 'string' && A.BOSS_MAP.indexOf(e.bossArt) >= 0 ? e.bossArt : A && A.bossArtFor ? A.bossArtFor(Math.max(0, Math.round((Number(w) || 0) / RM_BOSS_EVERY) - 1)) : null; }
     return e._bn;
   }
   // Draws the live boss with art; per-boss state lives on the pooled enemy (no allocation). Timing uses e.t (game time), so pausing freezes it.
@@ -1192,7 +1192,7 @@ class RealmArena {
     e.dg = null; e._at = undefined; e.t = 0; e.flash = 0; e.angle = this.rng() * Math.PI * 2; e.dir = this.rng() < 0.5 ? 1 : -1;
     e.cd = 0.8 + this.rng() * 0.8; // first shot is never instant
     if (this.world) { e.ax = x + (this.rng() - 0.5) * 220; e.ay = y + (this.rng() - 0.5) * 220; } else { e.ax = 80 + this.rng() * (this.W - 160); e.ay = 80 + this.rng() * (this.H - 160); } // drift target for Whirlers (near home in a world)
-    e.spdMul = 1; e.dmgMul = 1; e.xpMul = 1; e.shardMul = 1; e.art = null; e.zid = -1; e.bossName = null; e.bossTier = 0; // world-mode extras (multipliers 1 = unchanged)
+    e.spdMul = 1; e.dmgMul = 1; e.xpMul = 1; e.shardMul = 1; e.art = null; e.bossArt = null; e.zid = -1; e.bossName = null; e.bossTier = 0; // world-mode extras (multipliers 1 = unchanged)
     if (this.world && type === 'boss') { e.ax = x; e.ay = y; }
     return e;
   }
