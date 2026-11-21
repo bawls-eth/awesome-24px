@@ -1099,6 +1099,169 @@
       }
     }
 
+    // ---------- the Nexus (MMNexus hub plaza), reached through a `portal_nexus` next to the world spawn ----------
+    // Design: an OVERLAY SCREEN inside the same page, not a second arena world. Swapping arena.setWorld would rebuild the pools, the zone spawner, the event
+    // clock and the camera (all owned by this controller), so instead the arena is frozen (arena.paused) behind a full-screen plaza drawn once into a canvas
+    // from the MMNexus layout (fountain, torches, banners, 6 portals, 7 NPCs). Everything is a real button; Back (or Escape) unfreezes the arena with the
+    // player exactly where they stood, so Back returns to the same tile. The vault portal opens the Lantern stash page; biome portals enter a dungeon that
+    // returns to this tile; the Realm portal is Back. Visuals come from the registered art with code fallbacks.
+    const NX = window.MMNexus || null;
+    const NX_ON = !!NX && !!window.MMQuests && !/[?&]nexus=0(&|$)/.test(typeof location !== 'undefined' ? location.search : '');
+    const NX_NAME = { realm: 'The Realm', warren: 'Warren dungeon', bramble: 'Bramble dungeon', vault: 'Lantern stash (vault)', meadow: 'Meadow dungeon', crypt: 'Crypt dungeon' };
+    const nxSite = NX_ON ? (() => { const f = nearestFree(world.spawnPoint.x + 3, world.spawnPoint.y - 1, 8) || nearestFree(world.spawnPoint.x - 3, world.spawnPoint.y, 8); return f ? { tx: f.x, ty: f.y, x: (f.x + 0.5) * TILE, y: (f.y + 0.5) * TILE } : null; })() : null;
+    const nxBtn = document.createElement('button'); nxBtn.id = 'rw-nexus-go'; nxBtn.type = 'button'; nxBtn.className = 'hidden'; nxBtn.textContent = 'Visit the Nexus (Enter)'; nxBtn.setAttribute('aria-label', 'Visit the Nexus hub (Enter)'); ov.appendChild(nxBtn);
+    let nxNear = false; let nxOpen = false; let nxEnterTile = null; let nxTalkN = 0; const nxPortrait = {}; let nxDom = null;
+    const todayUtc = () => { let d = null; try { if (opts.test && /[?&]qdate=(\d{4}-\d{2}-\d{2})(&|$)/.test(location.search)) d = window.MMDaily.cleanDate(RegExp.$1); } catch (e) { d = null; } return d || new Date().toISOString().slice(0, 10); };
+    const nxCss = document.createElement('style');
+    nxCss.textContent = '#rw-nexus-go{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(290px + env(safe-area-inset-bottom,0px));z-index:3;min-height:48px;min-width:44px;padding:0 18px;border-radius:24px;border:2px solid #a98bff;background:rgba(30,20,60,.92);color:#fff;font:700 15px system-ui,sans-serif;white-space:nowrap}#rw-nexus-go.hidden{display:none}'
+      + '#rw-nexus{position:fixed;inset:0;z-index:80;background:#120e1f;color:#f3eefc;display:flex;flex-direction:column;overflow-x:hidden;overflow-y:auto;font:14px/1.4 system-ui,sans-serif;padding:env(safe-area-inset-top,0px) 16px env(safe-area-inset-bottom,0px);box-sizing:border-box}#rw-nexus.hidden{display:none}'
+      + '#rw-nexus .nx-head{display:flex;align-items:center;gap:12px;padding:8px 0;flex-wrap:wrap}#rw-nexus h2{margin:0;font-size:18px;flex:1;min-width:120px}'
+      + '#rw-nexus button{min-height:44px;min-width:44px;padding:0 14px;border-radius:10px;border:2px solid #7a63c9;background:#2a2150;color:#fff;font:700 14px system-ui,sans-serif;cursor:pointer}#rw-nexus button:focus-visible{outline:3px solid #ffe27a}'
+      + '#rw-nexus .nx-stage{position:relative;box-sizing:border-box;width:100%;max-width:760px;aspect-ratio:4/3;margin:0 auto;border:2px solid #3a2f66;border-radius:10px;overflow:hidden;background:#1b1530}#rw-nexus canvas{display:block;width:100%;height:100%;image-rendering:pixelated}'
+      + '#rw-nexus .nx-spot{position:absolute;transform:translate(-50%,-50%);padding:0;border-radius:50%;background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.25)}'
+      + '#rw-nexus .nx-lists{max-width:760px;width:100%;margin:10px auto 0;display:flex;flex-direction:column;gap:8px}#rw-nexus .nx-row{display:flex;flex-wrap:wrap;gap:8px}#rw-nexus .nx-row>b{flex:0 0 100%;font-size:12px;color:#c9bff0;font-weight:600}'
+      + '#rw-nexus .nx-talk{max-width:760px;width:100%;margin:10px auto;box-sizing:border-box;padding:10px 12px;border-radius:10px;background:#231b42;border:1px solid #4a3d85;min-height:44px}#rw-nexus .nx-talk b{color:#ffe27a}'
+      + '#rw-nexus .nx-board{max-width:760px;width:100%;margin:0 auto 12px;box-sizing:border-box;padding:10px 12px;border-radius:10px;background:#1d2a2a;border:1px solid #3b6b5f}#rw-nexus .nx-board.hidden{display:none}#rw-nexus .nx-q{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid #2f4a45}#rw-nexus .nx-q:first-of-type{border-top:0}#rw-nexus .nx-q span{flex:1}#rw-nexus .nx-q em{color:#8fe9ff;font-style:normal}';
+    document.head.appendChild(nxCss);
+    function nxLoadPortrait(id, done) { // b21 idle_down, first frame, cached; the plaza redraws when one arrives
+      if (nxPortrait[id] !== undefined || !opts.assetRoot || !artOn) return;
+      nxPortrait[id] = null;
+      const img = new Image();
+      img.onload = () => { if (img.naturalHeight >= 64) { nxPortrait[id] = img; if (done) done(); } };
+      img.src = opts.assetRoot.replace(/\/+$/, '') + '/b21-npcs-and-vendors/enemies/' + id + '/' + id + '_idle_down.png';
+    }
+    function nxDrawPlaza() { // one static draw per open / art arrival (1280x960 = the 40x30 tile plaza at 32 px)
+      if (!nxDom) return;
+      const L = NX.layout(); const c = nxDom.cv; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
+      g.fillStyle = '#0e0a18'; g.fillRect(0, 0, c.width, c.height);
+      for (let ty = 1; ty < L.h - 1; ty++) for (let tx = 1; tx < L.w - 1; tx++) { g.fillStyle = (tx + ty) % 2 ? '#4b4660' : '#554f6c'; g.fillRect(tx * TILE, ty * TILE, TILE, TILE); }
+      g.fillStyle = '#6d6788'; for (let i = 1; i < L.w - 1; i++) { g.fillRect(i * TILE, TILE, TILE, 2); g.fillRect(i * TILE, (L.h - 2) * TILE + 30, TILE, 2); }
+      const pad = wArt.spawn_pad; const sp = L.spawn;
+      if (pad) drawArt(g, pad, 0, sp.x, sp.y + 16); else { g.fillStyle = '#7a63c9'; g.beginPath(); g.arc(sp.x, sp.y, 20, 0, 7); g.fill(); g.fillStyle = '#a98bff'; g.beginPath(); g.arc(sp.x, sp.y, 13, 0, 7); g.fill(); }
+      L.props.forEach((p) => {
+        const a = wArt[p.art]; const x = (p.tx + 0.5) * TILE; const y = (p.ty + 0.5) * TILE + 16;
+        if (a) { drawArt(g, a, 0, x, y); return; }
+        if (p.id === 'fountain') { g.fillStyle = '#7d8aa3'; g.beginPath(); g.arc(x, y - 16, 44, 0, 7); g.fill(); g.fillStyle = '#4fa8e0'; g.beginPath(); g.arc(x, y - 16, 34, 0, 7); g.fill(); g.fillStyle = '#bfe6ff'; g.fillRect(x - 4, y - 44, 8, 26); }
+        else if (/torch/.test(p.id)) { g.fillStyle = '#5a4026'; g.fillRect(x - 3, y - 30, 6, 28); g.fillStyle = '#ffb347'; g.beginPath(); g.arc(x, y - 34, 7, 0, 7); g.fill(); }
+        else if (/banner/.test(p.id)) { g.fillStyle = /red/.test(p.id) ? '#c0394b' : /blue/.test(p.id) ? '#3d6fc0' : '#3f9a55'; g.fillRect(x - 10, y - 44, 20, 38); }
+        else { g.fillStyle = '#8a6a3c'; g.fillRect(x - 10, y - 30, 20, 26); }
+      });
+      L.portals.forEach((q) => {
+        const a = wArt[q.art]; g.save();
+        if (a) drawArt(g, a, 0, q.x, q.y + 23);
+        else { g.globalAlpha = 0.3; g.fillStyle = '#a98bff'; g.beginPath(); g.arc(q.x, q.y, 30, 0, 7); g.fill(); g.globalAlpha = 1; g.strokeStyle = '#a98bff'; g.lineWidth = 4; g.beginPath(); g.arc(q.x, q.y, 24, 0, 7); g.stroke(); }
+        g.restore();
+        g.font = 'bold 22px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(q.label, q.x + 1, q.y - 37); g.fillStyle = '#e8dcff'; g.fillText(q.label, q.x, q.y - 38);
+      });
+      L.npcs.forEach((n) => {
+        const im = nxPortrait[n.npc]; const x = n.x; const y = n.y;
+        if (im) g.drawImage(im, 0, 0, im.naturalHeight, im.naturalHeight, x - 40, y - 60, 80, 80);
+        else { const h = MMRng.hash(n.npc); g.fillStyle = '#000'; g.fillRect(x - 13, y - 14, 26, 36); g.fillStyle = 'hsl(' + (h % 360) + ',45%,48%)'; g.fillRect(x - 11, y - 12, 22, 32); g.fillStyle = '#f0cfa6'; g.beginPath(); g.arc(x, y - 22, 10, 0, 7); g.fill(); }
+        g.font = 'bold 20px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(NPC_NAME[n.npc] || n.id, x + 1, y + 37); g.fillStyle = '#ffe27a'; g.fillText(NPC_NAME[n.npc] || n.id, x, y + 36);
+      });
+    }
+    function nxSay(name, text) { const t = nxDom.talk; t.textContent = ''; const b = document.createElement('b'); b.textContent = name + ': '; t.appendChild(b); t.appendChild(document.createTextNode(text)); nxDom.last = { name, text }; }
+    function nxUrl(biome) { // dungeon trip that returns to the tile the player left from
+      const tx = nxEnterTile ? nxEnterTile.x : Math.floor(arena.player.x / TILE); const ty = nxEnterTile ? nxEnterTile.y : Math.floor(arena.player.y / TILE);
+      const ret = 'index.html?mode=world&seed=' + seed + '&at=' + tx + ',' + ty + (opts.test ? '&test=1' : '');
+      if (!RETURN_RE.test(ret) || !BIOME_NAME[biome]) return null;
+      return { tx, ty, url: 'index.html?mode=dungeon&seed=' + String(MMRng.hash(seed + ':nexus:' + biome) % 100000) + '&lv=2&biome=' + biome + '&return=' + encodeURIComponent(ret) + (opts.test ? '&test=1' : '') };
+    }
+    function nxLeaveTo(url) {
+      if (leaving) return null; leaving = true;
+      savePos(true); writeSave(save); arena.onSave(arena.save); settle('portal');
+      arena.stop(); nxDom.root.classList.add('hidden'); nxOpen = false;
+      api.lastNexusUrl = url; if (opts.navigate !== false) location.href = url; return url;
+    }
+    function nxPortal(q) {
+      if (q.dest === 'realm') { nexusClose(); return 'realm'; }
+      if (q.dest === 'vault') {
+        const c = window.MMPortals ? MMPortals.canEnter('vault', null, 'nexus', 0) : { ok: true, dest: 'lantern-stash' };
+        if (!c.ok) return null;
+        return nxLeaveTo('lantern.html');
+      }
+      const b = /^biome:([a-z]+)$/.exec(q.dest); if (!b) return null;
+      const u = nxUrl(b[1]); if (!u) return null;
+      if (typeof nxQuestEvent === 'function') nxQuestEvent({ type: 'portal' });
+      save.stats.portals++; save.pos = { x: u.tx, y: u.ty }; save.returnTo = { x: u.tx, y: u.ty, seed };
+      return nxLeaveTo(u.url);
+    }
+    const NX_LINES = {
+      guide: ['Welcome to the Nexus. Every road in the Realm ends up here, sooner or later.', 'The ring of doors leads to the dungeons. The plain one takes you home.', 'Nothing here bites. Take your time.'],
+      vendor: ['Wares and bargains are on the Realm menu while you wander. Come back when your pockets are heavy.', 'I keep the good stock behind the counter. It will be on the shelf soon.'],
+      blacksmith: ['Bring me two matching blades and an idea. Combining is on its way.', 'The forge is warming up. Not long now.'],
+      rumours: ['They say the Godlands hum at night.', 'Camps past the hills guard a chest apiece.', 'A shrine will mend you or sharpen you, never both.'],
+    };
+    function nxTalk(n) {
+      const name = NPC_NAME[n.npc] || n.id; nxTalkN++;
+      if (n.role === 'heal') { const p = arena.player; const was = p.hp; p.hp = arena.stats.maxHp; arena._syncHud(); nxSay(name, was < p.hp ? 'There. Whole again, no charge.' : 'You look perfectly well to me.'); return; }
+      if (n.role === 'oracle') { const o = MMQuests.oracle(todayUtc()); nxSay(name, o ? o.text : 'The mists are quiet.'); return; }
+      if (n.role === 'quests') { if (typeof nxBoardOpen === 'function') nxBoardOpen(); nxSay(name, 'Here is the day\'s board. Three jobs, free to take.'); return; }
+      const key = n.role === 'rumours' ? 'rumours' : n.role === 'shop' ? 'vendor' : n.role === 'combine' ? 'blacksmith' : 'guide';
+      const L = NX_LINES[key]; nxSay(name, L[(MMRng.hash(todayUtc() + n.id) + nxTalkN) % L.length]);
+    }
+    function nxBuild() {
+      if (nxDom) return nxDom;
+      const root = document.createElement('div'); root.id = 'rw-nexus'; root.className = 'hidden'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', 'The Nexus');
+      const head = document.createElement('div'); head.className = 'nx-head';
+      const back = document.createElement('button'); back.type = 'button'; back.id = 'rw-nx-back'; back.textContent = 'Back to the Realm'; back.setAttribute('aria-label', 'Back to the Realm');
+      const h = document.createElement('h2'); h.textContent = 'The Nexus'; head.appendChild(back); head.appendChild(h);
+      const stage = document.createElement('div'); stage.className = 'nx-stage';
+      const cv = document.createElement('canvas'); cv.width = NX.W * TILE; cv.height = NX.H * TILE; cv.setAttribute('aria-hidden', 'true'); stage.appendChild(cv);
+      const L = NX.layout(); const lists = document.createElement('div'); lists.className = 'nx-lists';
+      const rowP = document.createElement('div'); rowP.className = 'nx-row'; const rowPl = document.createElement('b'); rowPl.textContent = 'Portals'; rowP.appendChild(rowPl);
+      const rowN = document.createElement('div'); rowN.className = 'nx-row'; const rowNl = document.createElement('b'); rowNl.textContent = 'Talk to'; rowN.appendChild(rowNl);
+      const spot = (x, y, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'nx-spot'; b.tabIndex = -1; b.setAttribute('aria-hidden', 'true'); b.style.left = (x / cv.width * 100) + '%'; b.style.top = (y / cv.height * 100) + '%'; b.addEventListener('click', fn); stage.appendChild(b); };
+      L.portals.forEach((q) => {
+        const b = document.createElement('button'); b.type = 'button'; b.dataset.portal = q.id; b.textContent = q.id === 'realm' ? 'Back to the Realm portal' : q.id === 'vault' ? 'Vault: Lantern stash' : q.label + ' portal'; b.setAttribute('aria-label', q.id === 'vault' ? 'Vault portal: open the Lantern stash' : q.id === 'realm' ? 'Realm portal: go back to the Realm' : 'Enter the ' + q.label + ' dungeon');
+        b.addEventListener('click', () => nxPortal(q)); rowP.appendChild(b); spot(q.x, q.y, () => nxPortal(q));
+      });
+      L.npcs.forEach((n) => {
+        const b = document.createElement('button'); b.type = 'button'; b.dataset.npc = n.id; b.textContent = NPC_NAME[n.npc] || n.id; b.setAttribute('aria-label', 'Talk to ' + (NPC_NAME[n.npc] || n.id));
+        b.addEventListener('click', () => nxTalk(n)); rowN.appendChild(b); spot(n.x, n.y - 10, () => nxTalk(n));
+      });
+      lists.appendChild(rowP); lists.appendChild(rowN);
+      const talk = document.createElement('div'); talk.className = 'nx-talk'; talk.setAttribute('role', 'status'); talk.textContent = 'Pick a portal, or say hello to someone.';
+      const board = document.createElement('div'); board.className = 'nx-board hidden'; board.id = 'rw-nx-board';
+      root.appendChild(head); root.appendChild(stage); root.appendChild(talk); root.appendChild(board); root.appendChild(lists); ov.appendChild(root);
+      back.addEventListener('click', () => nexusClose());
+      nxDom = { root, cv, talk, board, back, last: null };
+      return nxDom;
+    }
+    function nexusOpen() {
+      if (!NX_ON || !nxSite || nxOpen || leaving || !arena.active || arena.state !== 'play' || arena.paused) return false;
+      nxBuild(); nxEnterTile = { x: Math.floor(arena.player.x / TILE), y: Math.floor(arena.player.y / TILE) };
+      nxOpen = true; arena.paused = true; savePos(true);
+      nxBtn.classList.add('hidden'); portalBtn.classList.add('hidden'); siteBtn.classList.add('hidden');
+      nxDom.root.classList.remove('hidden'); nxDom.board.classList.add('hidden');
+      NX.layout().npcs.forEach((n) => nxLoadPortrait(n.npc, nxDrawPlaza)); nxDrawPlaza();
+      nxDom.talk.textContent = 'Pick a portal, or say hello to someone.';
+      nxDom.back.focus({ preventScroll: true });
+      return true;
+    }
+    function nexusClose() {
+      if (!nxOpen) return false;
+      nxOpen = false; nxDom.root.classList.add('hidden'); arena.paused = false; arena.player.iframes = Math.max(arena.player.iframes, 1.5);
+      nxNear = true; return true; // the prompt shows again next tick if the player is still beside the portal
+    }
+    window.addEventListener('keydown', (ev) => {
+      if (nxOpen && ev.key === 'Escape') { ev.preventDefault(); ev.stopImmediatePropagation(); nexusClose(); return; }
+      if (ev.key === 'Enter' && !nxOpen && nxNear && promptFor < 0 && !siteFor && arena.active && !arena.paused && arena.state === 'play') { ev.preventDefault(); nexusOpen(); }
+    }, true);
+    nxBtn.addEventListener('click', () => nexusOpen());
+    function nexusTick() {
+      if (!NX_ON || !nxSite || nxOpen) return;
+      const p = arena.player; const near = arena.state === 'play' && !arena.paused && (p.x - nxSite.x) ** 2 + (p.y - nxSite.y) ** 2 < 48 * 48;
+      nxNear = near;
+      nxBtn.classList.toggle('hidden', !(near && promptFor < 0 && !siteFor));
+    }
+    function drawNexusPortal(g, tt, reduced) {
+      const a = wArt.portal_nexus; const q = nxSite;
+      if (a) { drawArt(g, a, frameOf(a, tt, reduced), q.x, q.y + 23); artDraws.portal++; }
+      else drawPortalCode(g, { x: q.x, y: q.y, col: '#ffd45a' }, tt, reduced);
+      g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText('Nexus', q.x + 1, q.y - 37); g.fillStyle = '#ffd45a'; g.fillText('Nexus', q.x, q.y - 38);
+    }
+
     const hooks = {
       onStart() {
         if (pendingAt) { placeAt(pendingAt.x, pendingAt.y); pendingAt = null; } else placeAt(world.spawnPoint.x, world.spawnPoint.y);
@@ -1125,7 +1288,7 @@
           bossT -= dt; if (bossT <= 0) { bossT = 0.5; bossTick(); }
           sweepT -= dt; if (sweepT <= 0) { sweepT = 1; sweepLost(); }
         }
-        portalTick(); pickTick(dt);
+        portalTick(); pickTick(dt); nexusTick();
         if (SITES) siteTick(dt);
         lastEvClock = eventClock();
         evT -= dt; if (evT <= 0) { evT = 0.25; evTick(); }
@@ -1157,6 +1320,7 @@
           g.globalAlpha = reduced ? 0.5 : 0.35 + 0.25 * Math.sin(tt * 3); g.strokeStyle = '#ff3b3b'; g.lineWidth = 3; g.beginPath(); g.arc(bx, by, 22, 0, Math.PI * 2); g.stroke(); g.globalAlpha = 1;
           g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(BOSS_NAME[i], bx + 1, by - 29); g.fillStyle = '#ff8a8a'; g.fillText(BOSS_NAME[i], bx, by - 30);
         }
+        if (nxSite && NX_ON && nxSite.x > vx0 && nxSite.x < vx1 && nxSite.y > vy0 && nxSite.y < vy1) drawNexusPortal(g, tt, reduced);
         const pad = wArt.spawn_pad; const padX = (world.spawnPoint.x + 0.5) * TILE; const padY = (world.spawnPoint.y + 0.5) * TILE;
         if (pad && padX > vx0 && padX < vx1 && padY > vy0 && padY < vy1) { drawArt(g, pad, frameOf(pad, tt, reduced), padX, padY + 16); artDraws.pad++; }
         if (SITES) drawSites(g, vx0, vy0, vx1, vy1, tt, reduced);
@@ -1225,6 +1389,7 @@
       // slice 11: world debuffs (roll(creature, zone, force) = one bolt hit; table = creature -> status; shown by arena.statusOf)
       worldStatus: { on: STATUS_ON, table: BOLT_ST, forCreature: boltStatusFor, roll: boltRoll, log: stLog },
       pickups: { on: PICK_ON, cap: PICK_CAP, list: () => picks.map((q) => ({ type: q.type, art: q.art, value: q.value, tier: q.tier, x: q.x, y: q.y, lifeMs: q.lifeMs })), spawn: spawnPickups, got: () => Object.assign({}, pickGot), total: () => pickTotal },
+      nexus: { on: NX_ON, site: nxSite, open: nexusOpen, close: nexusClose, isOpen: () => nxOpen, near: () => nxNear, enterTile: () => nxEnterTile, talk: (id) => { const n = NX_ON && NX.layout().npcs.find((x) => x.id === id); if (n) { nxBuild(); nxTalk(n); } return nxDom && nxDom.last; }, portal: (id) => { const q = NX_ON && NX.layout().portals.find((x) => x.id === id); return q ? nxPortal(q) : null; }, lastUrl: () => api.lastNexusUrl || null, today: todayUtc },
       settle, stashNote, lastSettle: () => lastSettle, finds: () => (ST ? ST.readFinds(localStorage) : null),
     };
     return { api, hooks };
