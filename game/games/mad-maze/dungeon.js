@@ -158,24 +158,33 @@
     // set only by mad-maze.js from a regex-checked ?return= (a Realm World portal): the exit goes back to that portal tile
     const backWorld = typeof opts.returnTo === 'string' && /^index\.html\?mode=world&seed=[A-Za-z0-9_-]{1,24}&at=\d{1,4},\d{1,4}(&test=1)?$/.test(opts.returnTo) ? opts.returnTo : null;
     const seed = String(opts.seed === undefined ? '1' : opts.seed);
+    // BL2: ?lair=1 (read here; the BK2 boss-key portal passes it) = a 2-room dungeon: an antechamber guarding the key + the biome boss hall behind a key door
+    let lair = opts.lair === true || opts.lair === '1'; try { if (new URLSearchParams(location.search).get('lair') === '1') lair = true; } catch (e) { /* node / no location */ }
     const biome = MMBiomes.clean(opts.biome); const B = Object.assign({}, MMBiomes.get(biome)); // unknown / missing biome -> warren
     // BI1: each biome boss fires its own b17 ebolt_ art and has one signature attack (MMBiomes bossBolt / sig); ?bosses=classic keeps the plain boss
     let bossBolt = null; let bossSig = null;
     { const bf = MMBiomes.bossFor(biome, seed, opts.bosses === 'classic'); B.boss_art = bf.boss_art; B.boss_name = bf.boss_name; if (opts.bosses !== 'classic') { bossBolt = bf.bossBolt || null; bossSig = bf.sig || null; } } // b23: odd crypt seeds face the Lich King (?bosses=classic keeps the original)
     let rosterClassic = opts.roster === 'classic'; try { if (/[?&]roster=classic(&|$)/.test(location.search)) rosterClassic = true; } catch (e) { /* node / no location */ } // b24: ?roster=classic = no wave-2 skins
-    const layoutV = opts.layout === 2 || biome !== 'warren' ? 2 : 1; // a biome run is new content: it always uses the layout-2 pool
+    const layoutV = opts.layout === 2 || biome !== 'warren' || lair ? 2 : 1; // a biome run is new content: it always uses the layout-2 pool
     const palCache = {};
     function palOf(type) { // warren: the original palette untouched; other biomes recolour start / normal / boss rooms, the coded rooms (key, treasure, secret) keep theirs
       if (palCache[type]) return palCache[type];
       const base = PAL[type] || PAL.combat; const o = biome === 'warren' ? null : type === 'start' ? B.start : type === 'combat' ? B.normal : type === 'boss' ? B.boss : null;
-      const nm = biome === 'warren' ? base.name : type === 'start' ? B.name + ' Gate' : type === 'combat' ? B.room : type === 'boss' ? B.boss_room : base.name;
+      const nm = lair && type === 'start' ? 'Antechamber' : biome === 'warren' ? base.name : type === 'start' ? B.name + ' Gate' : type === 'combat' ? B.room : type === 'boss' ? B.boss_room : base.name;
       palCache[type] = o ? { f: o.f, w: o.w, hi: o.hi, name: nm } : base; return palCache[type];
     } // 1 = original room selection (old seeds/links), 2 = variety pool (new runs only)
-    const dungeon = MMWarren.generate(seed, { layout: layoutV });
+    // The lair graph is hand-built (no generator stream consumed): room 0 = antechamber (type 'start', holds the key), room 1 = boss hall north of it behind a locked door.
+    const dungeon = lair
+      ? { seed, layout: 2, w: 1, h: 2, rooms: [{ id: 0, x: 0, y: 1, w: 17, h: 13, type: 'start', doors: [0], locked: false }, { id: 1, x: 0, y: 0, w: 17, h: 13, type: 'boss', doors: [0], locked: false }], doors: [{ id: 0, a: 0, b: 1, dir: 'N', locked: true, cracked: false }], bossRoomId: 1, lair: true }
+      : MMWarren.generate(seed, { layout: layoutV });
     // Narrow profile (Realm-style tight dungeons): layout-2 runs only; ?narrow=0 (or opts.narrow === false) restores the old room pool.
     let narrowQ = true; try { narrowQ = new URLSearchParams(window.location.search).get('narrow') !== '0'; } catch (e) { /* no location */ }
     const narrowOn = layoutV === 2 && opts.narrow !== false && narrowQ;
-    const picks = MMRooms.select(dungeon, seed, layoutV, biome, narrowOn ? { narrow: true } : undefined);
+    const picks = lair ? (() => { // pick the antechamber as a normal fighting room and the hall as a boss room, through a 3-room stand-in graph (same selector, same biome bias)
+      const fake = { rooms: [{ id: 0, type: 'start', doors: [0] }, { id: 1, type: 'combat', doors: [0, 1] }, { id: 2, type: 'boss', doors: [1] }], doors: [{ id: 0, a: 0, b: 1, dir: 'N' }, { id: 1, a: 1, b: 2, dir: 'N' }] };
+      const sel = MMRooms.select(fake, 'lair:' + seed, 2, biome, narrowOn ? { narrow: true } : undefined);
+      return { defs: { 0: sel.defs[1], 1: sel.defs[2] } };
+    })() : MMRooms.select(dungeon, seed, layoutV, biome, narrowOn ? { narrow: true } : undefined);
     const rngRun = MMRng.create('run:' + seed);
     const lootRng = MMRng.create('loot:' + seed);
     const bossRng = MMRng.create('boss:' + seed);
@@ -210,12 +219,12 @@
       const tplDef = picks.defs[r.id];
       const tpl = MMRooms.parse(tplDef);
       let plan = [];
-      if (r.type === 'combat' || r.type === 'key') {
+      if (r.type === 'combat' || r.type === 'key' || (lair && r.type === 'start')) {
         let allowed = biome === 'warren' ? undefined : B.ids;
         if (tpl.tight) { // cramped room: no ring-bullet puffcaps / splitting sprouts (they add 3+ shooters) and at most 3 enemies at once
           const calm = (allowed || MMEnemies.IDS).filter((q) => q !== 'puffcap' && q !== 'sprout'); if (calm.length) allowed = calm;
         }
-        plan = MMEnemies.plan(seed + ':' + r.id, Math.max(1, depth[r.id] || 1), tpl.spawns.map((s) => ({ x: s.x, y: s.y })), null, allowed).enemies;
+        plan = MMEnemies.plan(seed + ':' + r.id, lair ? 2 : Math.max(1, depth[r.id] || 1), tpl.spawns.map((s) => ({ x: s.x, y: s.y })), null, allowed).enemies;
         if (tpl.tight && plan.length > TIGHT_MAX_SHOOTERS) plan = plan.slice(0, TIGHT_MAX_SHOOTERS);
         if (DIFF) plan = plan.slice(0, Math.max(1, Math.min(plan.length, Math.round(plan.length * scaleOf(r.id).count)))); // early rooms hold fewer enemies (the plan order is seeded)
       }
@@ -223,7 +232,7 @@
       counts[r.id] = r.type === 'boss' ? 1 : plan.length + extra;
       L[r.id] = { tpl, plan, baked: null, spawned: false, keyTaken: false, sc: scaleOf(r.id, r.type === 'boss') };
     });
-    const state = MMDungeonState.create(dungeon, rngRun, { enemies: counts, bossHp: Math.max(1, Math.ceil((opts.bossHp || 260) * (DIFF ? scaleOf(dungeon.rooms.find((q) => q.type === 'boss').id, true).hp : 1))) });
+    const state = MMDungeonState.create(dungeon, rngRun, { enemies: counts, bossHp: Math.max(1, Math.ceil((opts.bossHp || 260) * (DIFF ? scaleOf(dungeon.rooms.find((q) => q.type === 'boss').id, true).hp : 1) * (lair ? 1.3 : 1))) }); // lair boss: 1.3x HP
 
     const freeSpot = (tpl, tx, ty) => {
       let best = null; let bd = 1e9;
@@ -237,7 +246,7 @@
     const unlocked = {}; const granted = [];
     let keyFound = 0; let current = null; let finished = false; let sig = ''; let mapSig = '';
     let lockMsgAt = -9; let hudText = ''; let queue = []; let nextSweep = 0; let nextWall = 0; let sweepN = 0; let sigNext = 0; let sigWind = null; let sigN = 0;
-    const api = { seed, biome, bossBolt, bossSig, sigCount: () => sigN, layoutVersion: layoutV, narrow: narrowOn, graph: dungeon, state, arena, granted, grantItem };
+    const api = { lair, seed, biome, bossBolt, bossSig, sigCount: () => sigN, layoutVersion: layoutV, narrow: narrowOn, graph: dungeon, state, arena, granted, grantItem };
     // Lantern stash payout (MMStash): every kept find of this run is paid into the stash when the summary shows (win or fall)
     const ST = window.MMStash && window.MMProfile ? window.MMStash : null; const shards0 = arena.save.shards;
     if (ST) {
@@ -293,7 +302,7 @@
     function chestSpot() { return spotPx(freeSpot(L[current].tpl, 8, 6)); }
     function portalSpot() { return spotPx(freeSpot(L[current].tpl, 8, 8)); }
     const hasChest = () => current !== null && (byId[current].type === 'treasure' || byId[current].type === 'secret');
-    const hasKey = () => current !== null && byId[current].type === 'key' && !L[current].keyTaken;
+    const hasKey = () => current !== null && (byId[current].type === 'key' || (lair && byId[current].type === 'start')) && !L[current].keyTaken;
     const hasPortal = () => current !== null && byId[current].type === 'boss' && state.boss.dead;
 
     function spawnMob(type, id, x, y, hp, elite, sc) {
@@ -398,7 +407,7 @@
         arena._burst(e.x, e.y, '#ff6a4a', 40, 340); arena._burst(e.x, e.y, '#ffe27a', 30, 260); arena.shake = 14;
         arena.save.shards += 60; arena.save.kills += 1; arena.save.kb.boss += 1; arena._floatText(e.x, e.y - 30, '+60 💎', '#8fe9ff');
         arena._gainXp(Math.round(RM_XP.boss * arena.stats.xp));
-        arena.dropBag(e.x - 20, e.y + 20, 2); arena.dropBag(e.x + 20, e.y + 20, arena.rollRarity());
+        arena.dropBag(e.x - 20, e.y + 20, lair ? 3 : 2); arena.dropBag(e.x + 20, e.y + 20, lair ? Math.min(3, arena.rollRarity() + 1) : arena.rollRarity()); // a lair bag is one tier higher
         arena._showBanner(B.boss_name + ' defeated! The portal opens.', 2.6);
         arena.onSave(arena.save); mapSig = '';
       }
@@ -463,6 +472,7 @@
       let route = routeDoors(startId, dungeon.bossRoomId); if (!route || !route.length) return null;
       let hint = ''; let target = 'boss';
       const gated = route.some((d) => d.locked && !unlocked[d.id]);
+      if (lair && gated && state.keys === 0 && !L[startId].keyTaken) hint = 'Take the key';
       if (gated && state.keys === 0 && dungeon.keyRoomId !== undefined && !L[dungeon.keyRoomId].keyTaken) {
         const kr = routeDoors(startId, dungeon.keyRoomId); if (kr && kr.length) { route = kr; hint = 'Find the key'; target = 'key'; }
       }
@@ -673,7 +683,7 @@
         arena.enemies.forEach((e) => { if (e.active && e.dg === 'mob') e.active = false; });
         while (current !== null && state.room(current).enemiesAlive > 0 && byId[current].type !== 'boss') { if (state.killEnemy() === 0) { ctrl.cleared(); break; } }
       },
-      keyPos: () => (current !== null && byId[current].type === 'key' ? keySpot() : null),
+      keyPos: () => (hasKey() ? keySpot() : null),
       chestPos: () => (hasChest() ? chestSpot() : null),
       portalPos: () => (hasPortal() ? portalSpot() : null),
       crackTile: () => { const o = curDoors().find((q) => q.status === 'cracked'); return o ? o.tile : null; },
