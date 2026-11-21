@@ -2646,4 +2646,5 @@ img.realm-ico { width: 32px; height: 32px; vertical-align: middle; image-renderi
   font-size: 13px; text-decoration: none; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
 }
 #back-to-map-pill.hidden { display: none; }
-#realm-menu-madmaze { display: block; width: 100%; margin-top: 6px; }
+#realm-menu-madmaze { display: block; width: 100%; min-height: 48px; margin: 0 0 6px; padding: 12px; border-radius: 10px; border: 2px solid #8a5a2b; background: #ffd27a; color: #3a2e1f; font-size: 17px; font-weight: 800; }
+#realm-menu-solo { background: #f1e6cf; font-weight: 600; }

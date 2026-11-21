@@ -2873,9 +2873,7 @@ class TownScene extends Phaser.Scene {
     const mm = document.getElementById('realm-menu-madmaze');
     if (mm && !mm.dataset.bound) {
       mm.dataset.bound = '1';
-      mm.addEventListener('click', () => {
-        if (window.confirm('Enter the Realm overworld? Your progress is shared, and the town will close.')) location.href = mm.dataset.href;
-      });
+      mm.addEventListener('click', () => { location.href = mm.dataset.href; });
     }
     this.renderRealmGateMenu();
   }

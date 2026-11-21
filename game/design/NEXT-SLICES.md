@@ -63,14 +63,14 @@ Scheduling: up to 12 grunts in Wave 1; merge order pure modules -> RJ -> RW -> D
 ## QA plan
 - Opus review (mandatory): A1, A4, B3, C3, C4, C6 (saves); C5 and its RW wiring (net/co-op: in-memory relay only, never the live DB; audit any Firebase import); A6, B10, C8 (realm.js core); B2 (old-seed byte-identity).
 - Playtest-style Playwright scripts (non-beta, `class: browser`, added to `test-tiers.json`): A1 (walk 3 screens, minimap pixel check), B1+B2 (enter each biome portal, clear first room, exit to the same tile), C1 (fast-forward clock into an event, win, see gold bag), C3/C4 (dungeon loot appears in Lantern inbox), C5 (two pages, relay), B9 perf. Each: 390x844 + desktop screenshots viewed, zero console errors.
-- Every slice: `node --check`, its tests, smoke tier; full `node game/tests/run-all.js` on the merged head once per hour before stamping `ci-status.json`.
-- A second QA grunt per wave replays the realm-playthrough path by hand-script (spawn -> zone 1 kill -> bag -> portal -> dungeon -> return -> restart) and files findings in QA-SWEEP-NOTES.
+- Every slice: `node --check`, its tests, smoke tier; full run-all on the merged head before stamping `ci-status.json`.
+- One QA grunt per wave scripts the full loop (spawn, kill, bag, portal, dungeon, return, restart) and logs findings in QA-SWEEP-NOTES.md.
 
 ## Risks
-1. RW contention: four features want it; if two land in one hour, rebase, never hand-merge. Consider splitting RW into `realm-world-*.js` modules as its own serial slice before Wave 3.
-2. Save drift: three new additive keys (`discovered`, `inbox`, settings); a single fixture test with old `pixeltown-save-v1`, pre-world `pixeltown-mm-v1` and empty `pixeltown-realm-v1` must gate all of them.
-3. Loot duplication between world, dungeon and Lantern (double claim, two tabs): ledger must use item uids and the existing cross-tab merge.
-4. Co-op on the live DB: free-tier 100 connections and open rules; keep C5 relay-only until the owner approves a live test.
-5. Phone fps with fog + events + more sprites: B9 must land before C1 to give a baseline; no real-device numbers exist yet.
-6. Codex ordering (b11 terrain first, then b14 portals, b15 bags): B1/B5/C1 ship with code fallbacks and swap art by id.
-7. Test runtime grows with ~10 new browser suites; keep heavy ones out of smoke.
+1. RW contention (five slices want it): rebase, never hand-merge; consider splitting RW into modules as its own serial slice.
+2. Save drift (`discovered`, `inbox`, settings): one fixture test with old `pixeltown-save-v1`, pre-world `pixeltown-mm-v1` and empty `pixeltown-realm-v1` gates all of them.
+3. Loot duplication across world, dungeon and Lantern (double claim, two tabs): use item uids and the existing cross-tab merge.
+4. Co-op on the live DB (100-connection free tier, open rules): C5 stays relay-only until the owner approves.
+5. Phone fps: B9 lands before C1 for a baseline; no real-device numbers exist.
+6. Codex order (b11, b14, b15): art slices ship on code fallbacks.
+7. Suite runtime: keep new heavy browser suites out of smoke.
