@@ -63,8 +63,8 @@ const step = `(a, n) => { for (let i = 0; i < n; i++) { a._update(1 / 60); a.ene
     // bullet budget: the same Sniper fires the same bolts at the same frames with and without telegraphs
     const budget = await page.evaluate(`(() => { const a = window.__mm.arena; const setup = ${SETUP}; const st = ${step};
       const run = (off) => { a._tgOff = off; window.__e = setup(a, 'aimed', 3, 0.6); const shots = []; const f0 = a.fireEnemyBullet; let fr = 0;
-        a.fireEnemyBullet = function (x, y, ang, sp, k) { if (a._curE === window.__e) shots.push(fr + ':' + Math.round(ang * 100)); return f0.call(this, x, y, ang, sp, k); };
-        for (fr = 0; fr < 240; fr++) st(a, 1); a.fireEnemyBullet = f0; return { shots, started: a.tgStarted }; };
+        a.fireEnemyBullet = function (x, y, ang, sp, k) { if (a._curE === window.__e) shots.push(fr + ':' + Math.round(Math.cos(ang) * 100) + ',' + Math.round(Math.sin(ang) * 100)); return f0.call(this, x, y, ang, sp, k); };
+        for (fr = 0; fr < 240; fr++) st(a, 1); a.fireEnemyBullet = f0; shots.sort(); return { shots, started: a.tgStarted }; }; // a bolt's direction is compared as a (cos,sin) vector, sorted: an aim at exactly +-PI flips the sign of the raw angle (and the fan order) between two otherwise identical runs
       const s0 = a.tgStarted; const on = run(false); const n1 = a.tgStarted - s0; const off = run(true); const n2 = a.tgStarted - s0 - n1; a._tgOff = false;
       return { on: on.shots, off: off.shots, n1, n2 }; })()`);
     check('bullet budget unchanged: identical shots (count, frame, angle) with telegraphs on and off; wind-ups counted only when on', budget.on.length >= 6 && budget.on.join() === budget.off.join() && budget.n1 >= 2 && budget.n2 === 0, JSON.stringify(budget));
