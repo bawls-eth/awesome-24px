@@ -1,0 +1,54 @@
+/* Cave theme for the Realm UI ONLY (loaded last by games/mad-maze/index.html; Town, Hub and the other pages never load it).
+   Dark rock, warm torch light, rusty-iron borders. Colours only: no layout or size rules, so tap targets stay as they are. */
+body {
+  --cv-rock: #17120e; --cv-rock2: #231b14; --cv-rock3: #2e241a; --cv-iron: #7a5a36; --cv-iron-hi: #b98a4a;
+  --cv-ember: #ffb347; --cv-ember-dim: #c9822c; --cv-bone: #eadcc0; --cv-bone-dim: #b9a888; --cv-moss: #6f8f4e; --cv-blood: #c4452e;
+  background: var(--cv-rock);
+}
+/* HUD pills / round buttons */
+body #realm-bp-btn, body #realm-board-btn, body #realm-menu-btn, body #realm-leave-btn, body #realm-aim-btn, body #mm-map-btn, body #rw-portal, body #rw-site {
+  background: linear-gradient(#2e241a, #17120e); border-color: var(--cv-iron); color: var(--cv-ember);
+  box-shadow: 0 0 0 1px #000 inset, 0 2px 6px rgba(0, 0, 0, 0.55);
+}
+body #realm-bp-btn:active, body #realm-board-btn:active, body #realm-menu-btn:active, body #realm-leave-btn:active, body #rw-portal:active, body #rw-site:active { background: #3a2c1c; border-color: var(--cv-ember); }
+body #rw-portal, body #rw-site { color: var(--cv-bone); border-color: var(--cv-ember-dim); }
+/* bars */
+body #realm-hp { background: #1a0f0c; border: 2px solid var(--cv-iron); box-shadow: 0 0 0 1px #000 inset; }
+body #realm-hp-fill { background: linear-gradient(#e8683f, #b02c1c); }
+body #realm-xp { background: #14100c; border: 2px solid var(--cv-iron); }
+body #realm-xp-fill { background: linear-gradient(#ffd27a, #d8892b); }
+body #realm-info, body #realm-hp-text, body #realm-xp-text { color: var(--cv-bone); text-shadow: 0 1px 2px #000; }
+body #realm-boss, body #realm-partner, body #realm-help, body #rw-zone, body #rw-event-hint, body #rw-site-note {
+  background: rgba(23, 18, 14, 0.82); border: 1px solid var(--cv-iron); color: var(--cv-bone); text-shadow: 0 1px 2px #000;
+}
+body #realm-banner { color: var(--cv-ember); text-shadow: 0 2px 4px #000, 0 0 14px rgba(255, 179, 71, 0.45); }
+/* ability buttons */
+body .realm-ab { background: linear-gradient(#2e241a, #17120e); border-color: var(--cv-iron); color: var(--cv-bone); }
+body .realm-ab:not(.cooling):not([disabled]) { border-color: var(--cv-ember-dim); box-shadow: 0 0 8px rgba(255, 179, 71, 0.25); }
+/* minimap */
+body #rw-minimap, body #mm-map { border-color: var(--cv-iron); background-color: #0e0b08; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6); }
+/* panels: backpack, menu, shop, hero picker/stats, recap */
+body #realm-backpack, body #realm-hero, body .rm-panel, body .rm-card, body .realm-bp-card, body .rm-recap, body .rm-stash, body .hp-body {
+  background: linear-gradient(#251c14, #17120e); border-color: var(--cv-iron); color: var(--cv-bone);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.65), 0 0 0 1px #000 inset;
+}
+body .realm-bp-head, body .hp-h, body .hp-name { color: var(--cv-ember); }
+body .hp-sub, body .rm-note, body .hp-tag { color: var(--cv-bone-dim); }
+body .hp-tab { background: #231b14; border-color: var(--cv-iron); color: var(--cv-bone-dim); }
+body .hp-tab[aria-selected="true"], body .hp-tab.on, body .hp-tab.active { background: #3a2c1c; border-color: var(--cv-ember); color: var(--cv-ember); }
+body .rm-btn, body .hp-open { background: linear-gradient(#3a2c1c, #231b14); border: 2px solid var(--cv-iron-hi); color: var(--cv-bone); }
+body .rm-btn:hover, body .hp-open:hover { border-color: var(--cv-ember); color: var(--cv-ember); }
+body .rm-btn[data-m="resume"], body .rm-btn[data-d="again"] { background: linear-gradient(#d8892b, #8a5518); color: #1a1008; border-color: var(--cv-ember); font-weight: 800; }
+body .rm-tog { background: #231b14; border-color: var(--cv-iron); color: var(--cv-bone); }
+body .rm-tog[aria-pressed="true"], body .rm-tog.on { border-color: var(--cv-moss); }
+body .rm-stash, body .rm-stash-row { background: #14100c; color: var(--cv-bone-dim); }
+body #realm-banner { background: rgba(23, 18, 14, 0.88); border: 2px solid var(--cv-ember-dim); }
+body .rm-stash-row, body .rm-settings, body .hp-swatch { border-color: #3e3022; }
+body #realm-bp-close, body #realm-menu-close, body #realm-hero-close { background: #2e241a; border-color: var(--cv-iron); color: var(--cv-bone); }
+/* dungeon summary / death cards on the same page */
+body .mm-sum-card { background: linear-gradient(#251c14, #17120e); border: 2px solid var(--cv-iron); color: var(--cv-bone); }
+body .mm-sum-card h2, body .mm-sum-card h3 { color: var(--cv-ember); }
+body .mm-btn { background: linear-gradient(#c9822c, #8a5518); color: #1a1008; border-color: var(--cv-ember); }
+body .mm-btn.alt { background: linear-gradient(#3a2c1c, #231b14); color: var(--cv-bone); border-color: var(--cv-iron-hi); }
+/* daily badge */
+body #mm-daily { background: rgba(23, 18, 14, 0.85); border: 2px solid var(--cv-iron); color: var(--cv-ember); }
