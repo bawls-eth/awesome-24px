@@ -766,5 +766,9 @@
   "dungeon-tiles.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "shared-mm-focus.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }
