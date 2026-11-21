@@ -113,6 +113,42 @@
     return out;
   }
 
+
+  // ---- advisor (slice 1): an ESTIMATE of which pattern family this week is, from prices seen so far ----
+  const PRIOR = { decreasing: 0.25, random: 0.30, largeSpike: 0.25, smallSpike: 0.20 };
+  const ADV_SIMS = 3000, ADV_USE = 6, ADV_SIGMA = 0.06;
+  let advBank = null;
+  function advisorBank() {
+    if (advBank) return advBank;
+    advBank = [];
+    for (let i = 0; i < ADV_SIMS; i++) {
+      const w = generateWeek('advisor|' + i);
+      advBank.push({ pattern: w.pattern, ratios: w.sell.slice(0, ADV_USE).map((v) => v / w.buyPrice) });
+    }
+    return advBank;
+  }
+  // known = prices seen so far, index 0 = Sunday buy price. Pure and deterministic (no Math.random).
+  function advise(known) {
+    const prices = Array.isArray(known) ? known.map(Number).filter((v) => isFinite(v) && v > 0) : [];
+    const sells = Math.max(0, prices.length - 1);
+    const probs = {}; PATTERNS.forEach((p) => { probs[p] = PRIOR[p]; });
+    if (sells < 2 || prices[0] <= 0) {
+      return { ready: false, sells, probs, top: null, topProb: 0, text: 'Sprout\'s tip: need two sell prices (Mon AM and PM) before I can estimate the pattern.' };
+    }
+    const obs = prices.slice(1, 1 + ADV_USE).map((v) => v / prices[0]);
+    const bank = advisorBank();
+    const logw = bank.map((b) => { let d = 0; for (let i = 0; i < obs.length; i++) { const e = (b.ratios[i] - obs[i]) / ADV_SIGMA; d += e * e; } return -d / 2; });
+    const mx = Math.max.apply(null, logw);
+    const acc = { decreasing: 0, random: 0, largeSpike: 0, smallSpike: 0 }; let tot = 0;
+    bank.forEach((b, i) => { const w = Math.exp(logw[i] - mx); acc[b.pattern] += w; tot += w; });
+    let top = null;
+    PATTERNS.forEach((p) => { probs[p] = Math.round((0.97 * (acc[p] / tot) + 0.03 * PRIOR[p]) * 1000) / 1000; if (!top || probs[p] > probs[top]) top = p; });
+    const pct = (p) => Math.round(probs[p] * 100) + '%';
+    const text = 'Sprout\'s tip (an estimate, not a promise): about ' + pct(top) + ' ' + PATTERN_NAMES[top] + '. ' +
+      PATTERNS.filter((p) => p !== top).sort((a, b) => probs[b] - probs[a]).map((p) => pct(p) + ' ' + PATTERN_NAMES[p]).join(', ') + '.';
+    return { ready: true, sells, probs, top, topProb: probs[top], text };
+  }
+
   // ---- save ----
   function int(v, lo, hi, def) { v = Math.trunc(Number(v)); return isFinite(v) ? Math.max(lo, Math.min(hi, v)) : def; }
   function defaultSave() {
@@ -201,6 +237,6 @@
   return {
     CURRENCY, PATTERNS, PATTERN_NAMES, PATTERN_HINTS, SLOTS, SELL_SLOTS, MAX_HOLD, START_BALANCE, ALLOWANCE_FLOOR, MEDALS,
     clampWeek, weekNumber, slotOf, clampSlot, slotLabel, generateWeek, priceAt, knownPrices,
-    defaultSave, cleanSave, syncWeek, buy, sell, maxBuy, weekProfit, medalFor, rankFor,
+    defaultSave, cleanSave, syncWeek, buy, sell, maxBuy, weekProfit, medalFor, rankFor, advise,
   };
 }));

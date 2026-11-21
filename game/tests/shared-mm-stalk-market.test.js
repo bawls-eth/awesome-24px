@@ -70,5 +70,7 @@ const h = M.cleanSave({ balance: 1e30, holdings: 5000, week: 5.7, invested: -3, 
 check('hostile fields clamped', h.balance === 99999999 && h.holdings === 200 && h.week === 5 && h.invested === 0 && h.earned === 0 && h.best === 0 && h.history.length === 1 && h.history[0].pattern === 'random' && h.history[0].profit === 99999999 && h.medals.gold === false && h.medals.silver === true && !('junk' in h) && h.hint === false && h.last === null, JSON.stringify(h));
 check('no week means no holdings', M.cleanSave({ week: -1, holdings: 9 }).holdings === 0);
 check('every pattern has a name and hint', M.PATTERNS.every((p) => M.PATTERN_NAMES[p] && M.PATTERN_HINTS[p]));
+function PATTERN_SUM(a) { return Math.abs(Object.values(a.probs).reduce((x, y) => x + y, 0) - 1) < 0.01; }
+check('advise is exported, pure and bounded', typeof M.advise === 'function' && (() => { const a = M.advise(M.knownPrices(M.generateWeek(11), 3)); return a.ready && PATTERN_SUM(a) && /estimate/.test(a.text); })());
 console.log(failed ? `${failed} FAILED` : 'ALL PASSED');
 process.exitCode = failed ? 1 : 0;

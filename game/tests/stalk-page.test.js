@@ -114,6 +114,22 @@ const stored = (p) => p.evaluate((k) => JSON.parse(localStorage.getItem(k)), KEY
   check('without ?from the back link goes to the town', (await nh.page.getAttribute('#back', 'href')) === '../../index.html');
   await nh.ctx.close();
 
+  // slice 1: advisor, animated chart, sound cues
+  const a1 = await open(browser, { viewport: { width: 800, height: 600 } }, '?test=1&week=100');
+  check('advisor says "need two prices" on Sunday', (await a1.page.textContent('#advisor-text')).includes('need two'));
+  await a1.page.evaluate(() => window.__stalk.setTime(100, 2));
+  check('advisor gives an estimate after two prices', /estimate/.test(await a1.page.textContent('#advisor-text')) && (await a1.page.$$('#advisor-bars li')).length === 4);
+  await a1.page.evaluate(() => window.__stalk.setTime(100, 0)); await a1.page.click('#buy1');
+  await a1.page.evaluate(() => window.__stalk.setTime(100, 3)); await a1.page.click('#sell1');
+  check('buy and sell play sound cues through MMSfx names', await a1.page.evaluate(() => window.__stalk.sounds.join() === 'pickup,levelup'));
+  await a1.page.evaluate(() => window.__stalk.step(1));
+  check('chart animates a price change (not reduced)', await a1.page.evaluate(() => window.__stalk.anim.count > 0));
+  await a1.ctx.close();
+  const a2 = await open(browser, { viewport: { width: 800, height: 600 }, reducedMotion: 'reduce' }, '?test=1&week=100');
+  await a2.page.evaluate(() => { window.__stalk.setTime(100, 4); window.__stalk.step(1); });
+  check('reduced motion: chart is static, no animation frames', await a2.page.evaluate(() => window.__stalk.anim.count === 0 && !window.__stalk.anim.running));
+  await a2.ctx.close();
+
   await browser.close();
   console.log(failed ? `${failed} FAILED` : 'ALL PASSED');
   process.exitCode = failed ? 1 : 0;
