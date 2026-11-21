@@ -50,6 +50,18 @@ const rowsOf = (pg) => pg.evaluate(() => {
   check('Boss luck row matches gp (14 kills = +7%, 46 kills left) and is calm', !!luck && /^\+7% \(T12 guaranteed in 46 kills\)$/.test(luck.value) && !/hurry|now|last chance|limited/i.test(luck.value), luck && luck.value);
   check('no underscores or markup in the panel text', rows.every((r) => !/_/.test(r.value) && !/[<>]/.test(r.value)));
 
+  // Armor row (G14): RM_ITEMS has no armor, so the panel builds a friendly name from MMGear ('T5 Moon Robe'), never ids with underscores.
+  const armorRow = async (item) => {
+    await pg.evaluate((it) => { const a = window.__mm.arena; a.save.items = a.save.items.filter((x) => x.n !== 99); if (it) { a.save.items.push(it); a.save.eq.armor = 99; } else delete a.save.eq.armor; }, item);
+    await statsTab(pg);
+    return (await pg.evaluate(() => { let v = ''; document.querySelectorAll('#realm-hero .hp-body .realm-board-row').forEach((r) => { if (r.firstChild.textContent === 'Armor') v = r.lastChild.textContent; }); return v; }));
+  };
+  const a0 = await armorRow(null), a1 = await armorRow({ n: 99, id: 'arm_robe_moon', r: 1, t: 5 }), a2 = await armorRow({ n: 99, id: 'armor_robe_t5', r: 0 });
+  check('armor row reads empty with nothing equipped', a0 === 'empty', a0);
+  check('armor row shows the friendly name "T5 Moon Robe (Uncommon)" with no underscores', /^T5 Moon Robe \(\w+\)$/.test(a1) && !/_/.test(a1), a1);
+  check('a legacy armor id equipped still reads friendly (no underscores, not empty)', a2 !== 'empty' && !/_/.test(a2) && a2.length > 3, a2);
+  await pg.evaluate(() => { const a = window.__mm.arena; a.save.items = a.save.items.filter((x) => x.n !== 99); delete a.save.eq.armor; });
+
   // Graceful degrade: no statsBase and no gp on the arena -> the group falls back to totals, no Boss luck row.
   await pg.evaluate(() => { const a = window.__mm.arena; delete a.statsBase; delete a.save.gp; const orig = a._calcStats; a._calcStats = function () { return orig.apply(this, arguments); }; }); // arity 0 = an arena that does not expose the G8 noGear stats (the real arena now does, and its base correctly includes the hero-scale multiplier, so the panel would show a real gear delta)
   await statsTab(pg);

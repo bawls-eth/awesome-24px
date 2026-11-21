@@ -152,6 +152,7 @@
   }
   function toStash(heroId, idx) {
     var h = heroById(heroId); if (!h || !h.items[idx]) return false;
+    if (S && S.deposit) { var r = S.deposit(profile, heroId, idx); if (!r.ok) { say(r.msg, true); return false; } save(); say(r.msg); render(); return true; }
     if (S && S.soulbound && S.soulbound(h.items[idx])) { say('Soulbound gear stays with its hero, so it cannot go in the stash.', true); return false; }
     var slot = profile.stash.indexOf(null);
     if (slot < 0) { say('The stash is full (16 slots).', true); return false; }

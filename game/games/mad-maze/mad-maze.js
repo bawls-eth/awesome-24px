@@ -333,6 +333,15 @@
     function renderStats() {
       const st = heroState(); const hero = st.hero || { name: 'Wanderer', cls: '', level: arena.save.level, xp: 0 };
       const defs = {}; try { RM_ITEMS.forEach((i) => { defs[i.id] = i; }); } catch (e) { /* no defs */ }
+      // G14: RM_ITEMS has no armor, so the equipped armor gets a friendly def from MMGear (name without tier prefix; itemRows adds 'T5 ').
+      try {
+        const sv = arena.save; const ai = sv && sv.items && sv.eq ? sv.items.find((x) => x && x.n === sv.eq.armor) : null;
+        if (ai && typeof ai.id === 'string' && !defs[ai.id]) {
+          let nm = ''; try { if (window.MMGear) { const d = MMGear.describe(ai); if (d) nm = d.name.replace(/^T\d+ /, ''); } } catch (e2) { nm = ''; }
+          if (!nm) nm = String(ai.id).replace(/^(arm|armor)_/, '').replace(/_t\d+$/, '').replace(/_/g, ' ').replace(/\b[a-z]/g, (c) => c.toUpperCase());
+          defs[ai.id] = { id: ai.id, name: nm, slot: 'armor' };
+        }
+      } catch (e) { /* armor row stays empty */ }
       const wapi = realmWorld ? realmWorld.api : null; let z = -1; try { const zi = wapi && wapi.zone(); z = zi && zi.zone < 4 ? zi.zone : -1; } catch (e) { z = -1; }
       deepest.z = Math.max(deepest.z, z);
       let portals = 0; try { portals = RealmWorld.readSave().stats.portals; } catch (e) { portals = 0; }

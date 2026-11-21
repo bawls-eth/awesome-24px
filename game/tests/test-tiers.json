@@ -675,6 +675,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "gear-soulbound.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "gear-hero-stats.test.js": {
     "class": "browser",
     "tier": "full"
