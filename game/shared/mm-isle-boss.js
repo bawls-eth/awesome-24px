@@ -89,8 +89,8 @@
     return false;
   }
   // Fraction of the arena (radius ARENA_R, boss at centre) that a set of zones leaves safe, by grid sampling.
-  function safeFraction(zones, tau) {
-    const R = K.ARENA_R, n = 28; let safe = 0, tot = 0;
+  function safeFraction(zones, tau, grid) {
+    const R = K.ARENA_R, n = Math.floor(fin(grid, 28, 6, 64)); let safe = 0, tot = 0;
     for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
       const x = -R + (i + 0.5) * 2 * R / n, y = -R + (j + 0.5) * 2 * R / n;
       if (Math.hypot(x, y) > R) continue;

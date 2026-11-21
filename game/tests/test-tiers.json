@@ -1029,6 +1029,6 @@
   },
   "isle-boss-sim.test.js": {
     "class": "node",
-    "tier": "full"
+    "tier": "smoke"
   }
 }

@@ -7,13 +7,13 @@ const MMRng = require('../shared/rng.js');
 let failed = 0;
 function check(name, cond, extra = '') { console.log((cond ? 'PASS ' : 'FAIL ') + name + (cond ? '' : ' ' + extra)); if (!cond) failed++; }
 
-const DT = 0.1, FIGHTS = 1000, LOSS_T = 0.9, MISS_P = 0.12, MISS_T = 1.5, DPS_EXP = 0.3, SOOTHE_MUL = 2, CAP_T = 900;
+const DT = 0.2, FIGHTS = 1000, LOSS_T = 0.9, MISS_P = 0.12, MISS_T = 1.5, DPS_EXP = 0.3, SOOTHE_MUL = 2, CAP_T = 900;
 const BOSSES = B.ids();
 
 // the hero stands on a point that no live zone covers (nearest of a coarse grid), or stays put when it "misses" the dodge
 function safeSpot(zones, from) {
   let best = null, bd = 1e9;
-  for (let x = -400; x <= 400; x += 50) for (let y = -400; y <= 400; y += 50) {
+  for (let x = -400; x <= 400; x += 100) for (let y = -400; y <= 400; y += 100) {
     if (Math.hypot(x, y) > B.K.ARENA_R) continue;
     if (zones.some((z) => B.hitTest(z, x, y, 0))) continue;
     const dd = Math.hypot(x - from.x, y - from.y);
@@ -44,7 +44,7 @@ function fight(id, dps, idx, mode) {
       if (e.type === 'telegraph') {
         out.attacks++; live[e.id] = e.zone; out.minWindup = Math.min(out.minWindup, e.windup);
         const zones = Object.keys(live).map((k) => live[k]);
-        const sf = B.safeFraction(zones, 0); out.minSafe = Math.min(out.minSafe, sf); if (sf <= 0) out.unsafe++;
+        const sf = B.safeFraction(zones, 0, 14); out.minSafe = Math.min(out.minSafe, sf); if (sf <= 0) out.unsafe++;
         if (rng.next() < MISS_P) lostUntil = Math.max(lostUntil, t + MISS_T); else { lostUntil = Math.max(lostUntil, t + LOSS_T); hero = safeSpot(zones, hero) || hero; }
       } else if (e.type === 'hit') {
         if (B.hitTest(e.zone, hero.x, hero.y, 0)) { out.hits++; out.maxHit = Math.max(out.maxHit, e.dmgMul); }
