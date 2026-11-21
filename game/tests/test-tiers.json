@@ -419,6 +419,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-projectile.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "shared-mm-profile-backup.test.js": {
     "class": "node",
     "tier": "smoke"
