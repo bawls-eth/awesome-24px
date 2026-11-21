@@ -95,6 +95,10 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "class-fire.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "class-stats-arena.test.js": {
     "class": "browser",
     "tier": "smoke"
@@ -296,6 +300,10 @@
     "tier": "smoke"
   },
   "shared-mm-angler.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-class-fire.test.js": {
     "class": "node",
     "tier": "smoke"
   },

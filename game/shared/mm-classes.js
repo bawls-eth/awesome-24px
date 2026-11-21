@@ -223,7 +223,7 @@
   // arenaProfile(classId): bounded multipliers for the standalone Mad Maze arena, relative to the ranger (= all 1).
   // Derived from the stat vector: hp = LIFE/120, speed = 1 + 0.5*(SWF/12-1), dmg = (POW/10)^0.8,
   // rate = 1 + 0.6*(KNK/12-1), iframes = 1 + 0.03*GRD; then a small flavour tweak per class; every value clamped to [0.7, 1.4].
-  // shots/spread/pierce are flavour tags only (not applied by the arena yet). Unknown id -> all 1.
+  // shots/spread/pierce/shotDmg/critChance/boltSpeed are the per-class fire tags (see FIRE below; realm.js applies them). Unknown id -> all 1.
   // class        hp    speed dmg   rate  iframes | flavour
   // ranger       1.00  1.00  1.00  1.00  1.00    | baseline
   // frostcaller  0.83  0.83  1.30  0.80  1.00    | caster
@@ -235,17 +235,34 @@
   // druid        1.00  0.83  0.84  0.80  1.09    | caster
   // necromancer  0.88  0.79  1.23  0.85  1.00    | caster
   const FLAVOUR = {
-    rogue: { dmg: 0.9, rate: 1.15, iframes: 1.1, shots: 1, spread: 0, pierce: 0 },
-    berserker: { speed: 1.05, rate: 1.0, shots: 1, spread: 0, pierce: 0 },
-    paladin: { iframes: 1, shots: 1, spread: 0, pierce: 1 },
-    warlock: { shots: 2, spread: 0.2, pierce: 0 },
-    necromancer: { shots: 2, spread: 0.2, pierce: 0 },
-    druid: { shots: 3, spread: 0.35, pierce: 0 },
+    rogue: { dmg: 0.9, rate: 1.15, iframes: 1.1 },
+    berserker: { speed: 1.05, rate: 1.0 },
+    paladin: { iframes: 1 },
+  };
+  // Fire tags (arena bolt shape), applied by realm.js unless ?classstats=0: shots = bolts per volley, spread = total fan (radians),
+  // pierce = extra enemies a bolt passes through, shotDmg = per-bolt damage multiplier (so multi-shot classes do not out-damage the
+  // ranger), critChance = chance a bolt crits for x2, boltSpeed = bolt speed multiplier (range kept). Ranger = today's single bolt.
+  // Theoretical dps = shots x shotDmg x dmg x rate x (1 + 0.25 x pierce) x (1 + critChance); see shared-mm-class-fire.test.js.
+  const FIRE = {
+    ranger: { shots: 1, spread: 0, pierce: 0, shotDmg: 1 },
+    frostcaller: { shots: 1, spread: 0, pierce: 2, shotDmg: 0.7, boltSpeed: 0.8 },
+    herald: { shots: 2, spread: 0.12, pierce: 0, shotDmg: 0.75 },
+    punk: { shots: 2, spread: 0.3, pierce: 0, shotDmg: 0.6 },
+    bruiser: { shots: 3, spread: 0.5, pierce: 0, shotDmg: 0.4 },
+    graveTender: { shots: 1, spread: 0, pierce: 1, shotDmg: 0.8 },
+    trickster: { shots: 2, spread: 0.1, pierce: 0, shotDmg: 0.55 },
+    shadowPaw: { shots: 2, spread: 0.06, pierce: 0, shotDmg: 0.45, critChance: 0.1, boltSpeed: 1.1 },
+    rogue: { shots: 2, spread: 0.08, pierce: 0, shotDmg: 0.5, critChance: 0.1, boltSpeed: 1.1 },
+    warlock: { shots: 2, spread: 0.2, pierce: 0, shotDmg: 0.6 },
+    paladin: { shots: 1, spread: 0, pierce: 2, shotDmg: 1 },
+    berserker: { shots: 3, spread: 0.45, pierce: 0, shotDmg: 0.35 },
+    druid: { shots: 3, spread: 0.35, pierce: 0, shotDmg: 0.45 },
+    necromancer: { shots: 2, spread: 0.2, pierce: 1, shotDmg: 0.5 },
   };
   const clampM = (v) => Math.round(Math.max(0.7, Math.min(1.4, v)) * 1000) / 1000;
   function arenaProfile(classId) {
     const c = Object.prototype.hasOwnProperty.call(CLASSES, classId) ? CLASSES[classId] : null;
-    const out = { id: c ? c.id : null, name: c ? c.name : '', hp: 1, speed: 1, dmg: 1, rate: 1, iframes: 1, shots: 1, spread: 0, pierce: 0 };
+    const out = { id: c ? c.id : null, name: c ? c.name : '', hp: 1, speed: 1, dmg: 1, rate: 1, iframes: 1, shots: 1, spread: 0, pierce: 0, shotDmg: 1, critChance: 0, boltSpeed: 1 };
     if (!c) return out;
     const b = c.base, f = FLAVOUR[c.id] || {};
     out.hp = clampM(b.life / 120);
@@ -253,7 +270,8 @@
     out.dmg = clampM(Math.pow(b.pow / 10, 0.8) * (f.dmg || 1));
     out.rate = clampM((1 + 0.6 * (b.knk / 12 - 1)) * (f.rate || 1));
     out.iframes = clampM((1 + 0.03 * b.grd) * (f.iframes || 1));
-    out.shots = f.shots || 1; out.spread = f.spread || 0; out.pierce = f.pierce || 0;
+    const t = FIRE[c.id] || {};
+    out.shots = t.shots || 1; out.spread = t.spread || 0; out.pierce = t.pierce || 0; out.shotDmg = t.shotDmg || 1; out.critChance = t.critChance || 0; out.boltSpeed = t.boltSpeed || 1;
     return out;
   }
 
