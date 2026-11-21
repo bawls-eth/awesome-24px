@@ -818,5 +818,9 @@
   "backpack-compare.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "telegraph-arena.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

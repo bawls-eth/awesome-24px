@@ -17,7 +17,12 @@
 //   ?boltart=0   bolt art (code-drawn bolts)                           ?fxart=0    one-shot effect art
 //   ?uiicons=0   ability icon art (emoji only)                         ?difficulty=off  wave / world difficulty curve (MMDifficulty)
 //   ?focus=0     focus resource (FO2): abilities cost nothing, cooldowns only (as before); no focus bar
-// Focus only runs with an active Mad Maze hero (setHeroLevelSource); the town's classic arena, co-op and duels are unchanged.
+//   ?telegraph=0 enemy wind-ups (TG3): tier 3+ world enemies and world bosses fire with no ring/line/cone warning (as before)
+// Focus only runs with an active Mad Maze hero (setHeroLevelSource); telegraphs only in the solo world (mode 'world', no dungeon).
+// The town's classic arena, co-op (wire format) and duels are unchanged by both.
+// Accessibility prefs (AC1, MMAccess.prefs on `pixeltown-access-v1`, re-read once a second): a colour-blind `palette` gives enemy bullets
+// that palette's colours (plus a 2 px dark outline while `bulletOutline` is on); `flashes: false` drops the red hit vignette and the
+// white enemy hit flash. Reduce motion (MMMotion) makes telegraphs static (no pulse or growth). Bullet counts and timings never change.
 
 const RM_SHORT = 540; // logical arena short side; the long side follows the screen's shape
 const RM_PLAYER = { speed: 235, r: 11, hp: 100, fireRate: 7.5, bulletSpeed: 580, bulletLife: 0.85, dmg: 1, iframes: 0.5 };
@@ -102,23 +107,26 @@ const RM_WPN_COLOR = { dot: '#ffe27a', arrow: '#f3d9a4', shard: '#9fe3ff', orb: 
 function rmFlagOff(name) { try { return typeof location !== 'undefined' && new RegExp('[?&]' + name + '=0(&|$)').test(location.search || ''); } catch (e) { return false; } }
 // This file's folder (for shared modules and UI art), from the <script> tag that loaded it; '' when unknown (no art, no loader).
 const RM_DIR = (function () { try { const s = typeof document !== 'undefined' && document.currentScript && document.currentScript.src; return s ? String(s).replace(/[?#].*$/, '').replace(/[^/]*$/, '') : ''; } catch (e) { return ''; } })();
-// Shared modules the arena layers need (FO2: mm-focus): a page that does not list one gets it here (ordered, async=false). Every use checks
+// Shared modules the arena layers need (FO2 mm-focus, TG3 mm-access + mm-telegraph; mm-telegraph reads MMAccess, so it loads last): a page that does not list one gets it here (ordered, async=false). Every use checks
 // `typeof`, so the arena runs exactly as before until (or unless) they load. A page that already has the module loads nothing.
 (function rmLoadShared() {
   try {
     if (typeof document === 'undefined' || !RM_DIR || !document.head || typeof window === 'undefined') return;
-    [['MMFocus', 'mm-focus.js']].forEach((m) => {
+    [['MMAccess', 'mm-access.js'], ['MMFocus', 'mm-focus.js'], ['MMTelegraph', 'mm-telegraph.js']].forEach((m) => {
       if (typeof window[m[0]] !== 'undefined' || document.querySelector(`script[src*="${m[1]}"]`)) return;
       const s = document.createElement('script'); s.src = RM_DIR + 'shared/' + m[1]; s.async = false; document.head.appendChild(s);
     });
   } catch (e) { /* the arena never depends on these */ }
 })();
 const RM_UI_ART = RM_DIR ? RM_DIR + 'assets/arcane/b19-ui-icons/ui/' : ''; // b19 UI art (focus bar frame + icon)
-// Focus (FO2): ability id -> MMFocus cost id (Dash 0, Nova 25, Shield 30, Overdrive 40, Signature 40). Cooldowns are kept on top.
 // Damage numbers (S14): crits gold, marked pink (MMStatus colours), armorBroken purple; everything else stays white.
 const RM_DMG_COL = { plain: '#fff', crit: '#ffd24a', marked: '#ff8fa8', armorBroken: '#b77bff' };
 const RM_PIP_MAX = 3, RM_PIP_PX = 8; // at most 3 status pips over an enemy; more collapse into "+n"
+// Telegraphs (TG3): MMTelegraph shape -> code on the pooled enemy (0 = none). Sprites are baked once per colour (no per-frame paths).
+const RM_TG_CODE = { ring: 1, line: 2, cone: 3 };
+const RM_TG_LINE = 220, RM_TG_CONE = 0.42; // aimed line length (px) and cone half-angle (rad; the boss fan is 0.72 wide)
 const RM_ST_ICON_PX = 24; // HUD status icon size in css px (was 20; PLAYTEST-REVIEW-2 #11: readable at a glance)
+// Focus (FO2): ability id -> MMFocus cost id (Dash 0, Nova 25, Shield 30, Overdrive 40, Signature 40). Cooldowns are kept on top.
 const RM_FOCUS_ID = { dash: 'dash', nova: 'nova', shield: 'shield', overdrive: 'overdrive', sig: 'signature' };
 function rmInertDef(id) {
   if (RM_ITEM_BY_ID[id]) return RM_ITEM_BY_ID[id];
@@ -315,6 +323,8 @@ class RealmArena {
     this._heroSrc = null; this._hu = null; // setHeroLevelSource: the active hero {cls, level} (null = classic: account level, no unlock nodes)
     this.weapon = null; this._wq = []; this._wOrbT = [0, 0, 0]; this._wOrbA = 0; this._wCache = null; this._kIn = {}; this._kHero = { x: 0, y: 0 }; this._kWall = 0; this._kW = null; // setHeroWeapon (null = today's fire)
     this.sig = null; this._sigAb = { id: 'sig', key: 'f', icon: '🔥', name: 'Signature', short: '', level: 7, cd: 15 }; // setHeroSignature: the class signature takes the F slot (null = Overdrive, today's behaviour)
+    this._tgOff = rmFlagOff('telegraph'); this._tgSpr = null; this._tgDesc = null; this._tgDescKey = ''; this._tgSndAt = -9; this.tgStarted = 0; this.tgDrawn = 0; this._tgLk = { scale: 1, alpha: 0, len: 0 }; // TG3 telegraphs
+    this.acc = null; this._accRaw = undefined; this._accT = 1; this._ebCB = null; this._ebCBKey = ''; // TG3 accessibility prefs (MMAccess.prefs; null = defaults)
     this.focus = null; this._focusOff = rmFlagOff('focus'); this._fDom = null; this._fHudT = 0; this._fShown = ''; this._fMask = -1; this._fPlaceT = -9; this.focusShorts = 0; // FO2 focus (MMFocus state; null = off)
     this.sg = { powT: 0, powMul: 1, fx: { t: 0, max: 0.5, x: 0, y: 0, r: 0, color: '#fff' }, bloom: { t: 0, x: 0, y: 0, r: 0, tick: 0 }, bones: { t: 0, a: 0, n: 0, heal: 0, frac: 0 } }; // signature runtime state (preallocated)
     this._heroArt = null; this._heroClass = null; this._heroSt = null; this._heroDbg = null; this._heroHurtAt = -9; this._heroAtkAt = -9; // optional hero animations (setHeroArt)
@@ -1886,7 +1896,7 @@ class RealmArena {
     const scale = (1 + 0.15 * Math.max(0, this.run.wave - 1)) * (this.team && this.role === 'host' ? RT_HP_SCALE : 1); // tougher with a partner
     e.active = true; e.type = type; e.x = x; e.y = y;
     e.maxHp = Math.ceil(def.hp * scale); e.hp = e.maxHp;
-    e.slowT = 0; e.slowF = 1; e.boneT = 0; e.status = null; e._stm = null; e._stNext = Infinity; e._stAcc = 0; e.fireMul = 1; e._pipAt = -9; e._pipN = 0; e._pipMore = 0;
+    e.slowT = 0; e.slowF = 1; e.boneT = 0; e.status = null; e._stm = null; e._stNext = Infinity; e._stAcc = 0; e.fireMul = 1; e._pipAt = -9; e._pipN = 0; e._pipMore = 0; e._tg = 0; e._tgW = 0; e._tgP = 0; e._tgA = 0;
     e.dg = null; e._at = undefined; e.t = 0; e.flash = 0; e.angle = this.rng() * Math.PI * 2; e.dir = this.rng() < 0.5 ? 1 : -1;
     e.cd = 0.8 + this.rng() * 0.8; // first shot is never instant
     if (this.world) { e.ax = x + (this.rng() - 0.5) * 220; e.ay = y + (this.rng() - 0.5) * 220; } else { e.ax = 80 + this.rng() * (this.W - 160); e.ay = 80 + this.rng() * (this.H - 160); } // drift target for Whirlers (near home in a world)
@@ -2061,6 +2071,7 @@ class RealmArena {
     if (this.paused) { this._readPad(); this._padPauseEdge(); return; } // backpack open (Start can still close it)
     const p = this.player;
     this._stT += dt; this._stTick(dt); this._focusTick(dt);
+    this._accT += dt; if (this._accT >= 1) { this._accT = 0; this.refreshAccess(); }
     this.shake = Math.max(0, this.shake - dt * 30);
     this.flash = Math.max(0, this.flash - dt * 2.2);
     if (this.displayShards !== this.save.shards) { // the shard counter ticks up (or down) instead of jumping
@@ -2323,6 +2334,7 @@ class RealmArena {
 
   _updateEnemies(dt0) {
     const wd = this.world; const wake = wd ? (wd.wake || Math.max(this.W, this.H) * 0.75) : 0; const wake2 = wake * wake;
+    const tg = this._tgOn();
     for (let i = 0; i < this.enemies.length; i++) {
       const e = this.enemies[i];
       if (!e.active) continue;
@@ -2330,14 +2342,14 @@ class RealmArena {
       if (e.slowT > 0) { e.slowT -= dt0; dt = dt0 * e.slowF; } // a signature slow (Blizzard Ring / Thorn Bloom); never set otherwise
       const p = this._nearest(e.x, e.y);
       e.t += dt; e.flash = Math.max(0, e.flash - dt * 6);
-      if (wd && (p.x - e.x) * (p.x - e.x) + (p.y - e.y) * (p.y - e.y) > wake2) continue; // world: an enemy far from every player sleeps (no moving, no firing)
+      if (wd && (p.x - e.x) * (p.x - e.x) + (p.y - e.y) * (p.y - e.y) > wake2) { e._tg = 0; continue; } // world: an enemy far from every player sleeps (no moving, no firing)
       this._curE = e; this._curDm = e.dmgMul || 1; // bullets fired below carry this enemy's damage multiplier (1 = unchanged)
       let sm = null;
       if (e.status) { if (e._stNext <= this._stT * 1000) this._stRefresh(e); sm = e._stm; if (sm) { this._curDm *= sm.enemyDmg; if (sm.dot > 0) this._stEnemyDot(e, sm, dt0); if (!e.active) continue; } }
       const hold = wd && !this._canFire(e, p); // world: off-screen shooters hold their fire (cooldowns wait at 0.2 s)
       if (hold) { e.cd = Math.max(e.cd, 0.2); if (e.type === 'boss') e.cd2 = Math.max(e.cd2, 0.2); }
-      if (e.type === 'boss') { if (sm && sm.speed < 1) e.t -= dt * (1 - sm.speed); this._updateBoss(e, dt * (e.fireMul || 1) / (sm ? sm.enemyFire : 1)); this._curDm = 1; this._curE = null; continue; } // slowed: the sway runs slower
-      if (sm && sm.stun) continue; // stunned: no moving, no firing
+      if (e.type === 'boss') { if (sm && sm.speed < 1) e.t -= dt * (1 - sm.speed); this._updateBoss(e, dt * (e.fireMul || 1) / (sm ? sm.enemyFire : 1)); if (tg) this._tgBoss(e, hold, p); this._curDm = 1; this._curE = null; continue; } // slowed: the sway runs slower
+      if (sm && sm.stun) { e._tg = 0; continue; } // stunned: no moving, no firing
       if (!hold) e.cd -= dt * (e.fireMul || 1) / (sm ? sm.enemyFire : 1); // fireMul: classic wave scale; dazed makes fire cooldowns x1.5
       const ox = e.x; const oy = e.y; const sp = (e.spdMul || 1) * (sm ? sm.speed : 1);
       const dx = p.x - e.x; const dy = p.y - e.y; const dist = Math.hypot(dx, dy) || 1;
@@ -2366,6 +2378,7 @@ class RealmArena {
           for (let k = 0; k < 14; k++) this.fireEnemyBullet(e.x, e.y, MMPatterns.ringAngle(k, 14, phase), 140, 2);
         }
       }
+      if (tg) this._tgStep(e, hold, p);
       e.x = Math.max(20, Math.min(this._bw() - 20, e.x));
       e.y = Math.max(20, Math.min(this._bh() - 20, e.y));
       if (this._solidAt && this._blocked(e.x, e.y, 8)) { // world tiles block enemies too: slide along one axis, else stay
@@ -2882,6 +2895,124 @@ class RealmArena {
       if (el.style.top !== t) el.style.top = t;
       if (el.style.width !== w) el.style.width = w;
     } catch (e) { /* layout only */ }
+  }
+
+  // ---------- telegraphs (TG3, MMTelegraph) ----------
+  // A wind-up drawn over the LAST `windup` seconds of a volley's existing cooldown: nothing is delayed, added or removed, so bullet counts,
+  // timings and the rng stream are exactly the same with ?telegraph=0. Solo world only (never the classic arena, dungeons, co-op or duels).
+  _tgOn() { return !this._tgOff && typeof MMTelegraph !== 'undefined' && !!this.world && this.mode === 'world' && !this.dungeon && !this.team; }
+  // Ring (Burster) and aimed (Sniper) volleys of tier 3+ world enemies (zone tier 0..3 -> 1..4: the Highlands and the Godlands).
+  _tgStep(e, hold, p) {
+    if (e.type !== 'aimed' && e.type !== 'ring') { e._tg = 0; return; }
+    const tier = (Number(e.tier) || 0) + 1;
+    this._tgSet(e, MMTelegraph.windupFor(tier, false), e.cd, e.type, hold, p);
+  }
+  // World bosses (bossTier > 0): phase 1 aimed fans (cone), phase 2 rings / aimed triples (whichever fires next), phase 3 rings.
+  _tgBoss(e, hold, p) {
+    if (!(e.bossTier > 0) || e.invuln > 0 || !e.active) { e._tg = 0; return; }
+    let cd = e.cd2; let pat = 'fan';
+    if (e.phase === 2) { if (e.cd < e.cd2) { cd = e.cd; pat = 'ring'; } else pat = 'aimed'; } else if (e.phase >= 3) pat = 'ring';
+    this._tgSet(e, MMTelegraph.windupFor(0, true), cd, pat, hold, p);
+  }
+  _tgSet(e, w, cd, pattern, hold, p) {
+    if (!(w > 0) || hold || !(cd > 0) || cd > w) { e._tg = 0; return; }
+    const sc = this._tgCodes || (this._tgCodes = Object.create(null)); // pattern -> shape code, looked up once per pattern (no per-frame strings)
+    const code = sc[pattern] || (sc[pattern] = RM_TG_CODE[MMTelegraph.shapeFor(pattern)] || 1);
+    if (!e._tg) { // a new wind-up: count it and play the `warn` cue (at most every 0.6 s; a silent no-op until the cue exists)
+      this.tgStarted++;
+      if (this.clock - this._tgSndAt > 0.6 || this._tgSndAt > this.clock) { this._tgSndAt = this.clock; this._snd('warn'); }
+    }
+    e._tg = code; e._tgW = w; e._tgP = Math.max(0, Math.min(1, 1 - cd / w)); e._tgA = Math.atan2(p.y - e.y, p.x - e.x);
+  }
+  // The shared look (colour, alpha, pulse) from MMTelegraph.forVolley for the current palette / reduce-motion, made only when those change.
+  _tgLook() {
+    const pal = this.acc ? this.acc.palette : 'normal'; const red = !!this._reduced; const key = pal + (red ? '|r' : '');
+    if (key !== this._tgDescKey || !this._tgDesc) { this._tgDescKey = key; this._tgDesc = MMTelegraph.forVolley('ring', 3, false, { reduced: red, palette: pal }); this._tgSpr = null; }
+    return this._tgDesc;
+  }
+  _tgSprites(color) {
+    if (this._tgSpr && this._tgSpr.color === color) return this._tgSpr;
+    const mk = (w, h, draw) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); return c; };
+    const ring = mk(128, 128, (g) => {
+      g.globalAlpha = 0.16; g.fillStyle = color; g.beginPath(); g.arc(64, 64, 60, 0, Math.PI * 2); g.fill();
+      g.globalAlpha = 1; g.strokeStyle = '#140a14'; g.lineWidth = 6; g.beginPath(); g.arc(64, 64, 59, 0, Math.PI * 2); g.stroke();
+      g.strokeStyle = color; g.lineWidth = 3; g.beginPath(); g.arc(64, 64, 59, 0, Math.PI * 2); g.stroke();
+    });
+    const line = mk(256, 16, (g) => {
+      g.fillStyle = '#140a14'; g.fillRect(0, 4, 238, 8); g.fillStyle = color; g.fillRect(1, 6, 236, 4);
+      g.beginPath(); g.moveTo(236, 0); g.lineTo(256, 8); g.lineTo(236, 16); g.closePath(); g.fillStyle = '#140a14'; g.fill();
+      g.beginPath(); g.moveTo(238, 3); g.lineTo(252, 8); g.lineTo(238, 13); g.closePath(); g.fillStyle = color; g.fill();
+    });
+    const cone = mk(256, 256, (g) => {
+      g.beginPath(); g.moveTo(0, 128); g.arc(0, 128, 250, -RM_TG_CONE, RM_TG_CONE); g.closePath();
+      g.globalAlpha = 0.18; g.fillStyle = color; g.fill(); g.globalAlpha = 1; g.strokeStyle = color; g.lineWidth = 3; g.stroke();
+    });
+    return (this._tgSpr = { color, ring, line, cone });
+  }
+  // Scale and alpha for one telegraph (into a reused object): pulsing = it grows / tightens and brightens with the wind-up;
+  // static (reduce motion) = one fixed size and alpha for the whole wind-up.
+  _tgShape(e, d) {
+    const o = this._tgLk; const t = e._tgP;
+    o.scale = d.pulse ? 1.6 - 0.6 * t : 1;
+    o.alpha = d.pulse ? d.alpha * (0.45 + 0.55 * t) * (0.85 + 0.15 * Math.sin(this.clock * 24)) : d.alpha;
+    o.len = d.pulse ? RM_TG_LINE * (0.35 + 0.65 * t) : RM_TG_LINE;
+    return o;
+  }
+  _drawTelegraphs(g, vx0, vy0, vx1, vy1) {
+    let n = 0;
+    if (!this._tgOn()) { this.tgDrawn = 0; return; }
+    const d = this._tgLook(); const spr = this._tgSprites(d.color);
+    for (let i = 0; i < this.enemies.length; i++) {
+      const e = this.enemies[i];
+      if (!e.active || !e._tg || e.x < vx0 || e.x > vx1 || e.y < vy0 || e.y > vy1) continue;
+      const o = this._tgShape(e, d); g.globalAlpha = Math.max(0, Math.min(1, o.alpha));
+      if (e._tg === 1) { const R = (RM_ENEMIES[e.type].r + 26) * o.scale; g.drawImage(spr.ring, e.x - R, e.y - R, R * 2, R * 2); }
+      else {
+        g.save(); g.translate(e.x, e.y); g.rotate(e._tgA);
+        if (e._tg === 2) g.drawImage(spr.line, 0, -8, o.len, 16);
+        else { const L = RM_TG_LINE * (d.pulse ? 0.6 + 0.4 * e._tgP : 1); g.drawImage(spr.cone, 0, -L / 2, L, L); }
+        g.restore();
+      }
+      n++;
+    }
+    g.globalAlpha = 1; this.tgDrawn = n;
+  }
+  // Test / debug hook: the telegraph an enemy shows now, or null: {shape, windup, progress, color, pulse, scale, alpha}.
+  telegraphOf(e) {
+    if (!e || !e._tg || !this._tgOn()) return null;
+    const d = this._tgLook(); const o = this._tgShape(e, d);
+    return { shape: ['', 'ring', 'line', 'cone'][e._tg], windup: e._tgW, progress: e._tgP, color: d.color, pulse: d.pulse, scale: o.scale, alpha: d.pulse ? null : o.alpha, len: o.len };
+  }
+
+  // ---------- accessibility prefs (TG3, MMAccess.prefs / `pixeltown-access-v1`) ----------
+  // Re-read once a second (the settings sheet writes the key; another tab fires `storage`): only parsed when the raw string changed.
+  refreshAccess() {
+    if (typeof MMAccess === 'undefined' || !MMAccess.prefs) { this.acc = null; this._ebCB = null; return null; }
+    let raw = null; try { raw = localStorage.getItem(MMAccess.prefs.KEY); } catch (e) { raw = null; }
+    if (raw === this._accRaw && this.acc) return this.acc;
+    this._accRaw = raw;
+    let pr = null; try { pr = MMAccess.prefs.load(localStorage); } catch (e) { pr = null; }
+    this.acc = pr || MMAccess.prefs.defaults();
+    this._bakeCBBullets();
+    return this.acc;
+  }
+  _flashesOn() { return !this.acc || this.acc.flashes !== false; }
+  // Colour-blind enemy bullets: with a non-normal palette the three bullet kinds take its colours (aimed = `bullet`, spiral / ring =
+  // `enemy`), with a 2 px dark outline while bulletOutline is on. Same 16 px sprites, same hit size; null = today's hues and art.
+  _bakeCBBullets() {
+    const a = this.acc; const on = a && a.palette && a.palette !== 'normal';
+    const key = on ? `${a.palette}|${a.bulletOutline ? 1 : 0}` : '';
+    if (key === this._ebCBKey) return;
+    this._ebCBKey = key; this._ebCB = null;
+    if (!on || typeof document === 'undefined') return;
+    const pal = MMAccess.palette(a.palette); const R = RM_BOLT_R.enemy;
+    this._ebCB = [pal.bullet, pal.enemy, pal.enemy].map((col, k) => {
+      const c = document.createElement('canvas'); c.width = 16; c.height = 16; const g = c.getContext('2d');
+      g.fillStyle = col; g.beginPath(); g.arc(8, 8, R, 0, Math.PI * 2); g.fill();
+      if (k === 2) { g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.arc(8, 8, 2.4, 0, Math.PI * 2); g.fill(); } // rings get a dark core: told apart by shape, not hue
+      if (a.bulletOutline) { g.strokeStyle = '#000'; g.lineWidth = pal.outlinePx || 2; g.beginPath(); g.arc(8, 8, R + 1, 0, Math.PI * 2); g.stroke(); }
+      return c;
+    });
   }
 
   // ---------- class signature (F slot) ----------
@@ -3421,16 +3552,17 @@ class RealmArena {
       const bob = e.type === 'boss' ? 0 : Math.sin(e.t * 4) * 2;
       const art = e.type === 'boss' ? !!(this._bossArt && this._drawBossArt(g, e)) : !!(this._enemyArt && this._drawEnemyArt(g, e, RM_ENEMIES[e.type]));
       if (!art) g.drawImage(spr, e.x - spr.width / 2, e.y - spr.height / 2 + bob);
-      if (e.flash > 0) { g.globalAlpha = e.flash * 0.7; g.fillStyle = '#fff'; g.beginPath(); g.arc(e.x, e.y + (art ? 0 : bob), RM_ENEMIES[e.type].r, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1; }
+      if (e.flash > 0 && this._flashesOn()) { g.globalAlpha = e.flash * 0.7; g.fillStyle = '#fff'; g.beginPath(); g.arc(e.x, e.y + (art ? 0 : bob), RM_ENEMIES[e.type].r, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1; }
       if (e.type === 'boss' && e.invuln > 0) { g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 3; g.beginPath(); g.arc(e.x, e.y, 40 + Math.sin(e.t * 20) * 2, 0, Math.PI * 2); g.stroke(); }
       if (e.hp < e.maxHp && e.type !== 'boss') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(e.x - 14, e.y - spr.height / 2 - 6, 28, 4); g.fillStyle = RM_ENEMIES[e.type].color; g.fillRect(e.x - 14, e.y - spr.height / 2 - 6, 28 * (e.hp / e.maxHp), 4); }
       if (e.status) this._drawEnemyPips(g, e, e.y - (e.type === 'boss' ? RM_ENEMIES.boss.r + 10 : spr.height / 2 + 13));
     }
+    this._drawTelegraphs(g, vx0, vy0, vx1, vy1);
     if (this._edGhosts) this._drawEnemyGhosts(g);
     if (this._bossGhost) this._drawBossGhost(g);
     for (let i = 0; i < this.bags.length; i++) { const b = this.bags[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { const by = b.y - 13 + Math.sin(b.t * 5) * 2; g.drawImage(this.sprites.worldBag[b.tier] || this.sprites.bag[b.r], b.x - 13, by); if (this._itemArt) { const ic = this._lootIcon(b.id, b.r); if (ic) g.drawImage(ic, b.x - 10, by - 18 + Math.sin(b.t * 5 + 1) * 1.5); } } }
-    let ebn = 0; const ebs = this.sprites.eBullet;
-    for (let i = 0; i < this.eBullets.length && ebn < RM_EB_DRAW; i++) { const b = this.eBullets[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { if (!(b.ea && this._drawEBoltArt(g, b))) g.drawImage(ebs[b.kind] || ebs[0], b.x - 8, b.y - 8); ebn++; } }
+    let ebn = 0; const ebs = this.sprites.eBullet; const cb = this._ebCB; // cb: colour-blind palette sprites (they replace hues and bolt art)
+    for (let i = 0; i < this.eBullets.length && ebn < RM_EB_DRAW; i++) { const b = this.eBullets[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { if (cb) g.drawImage(cb[b.kind] || cb[0], b.x - 8, b.y - 8); else if (!(b.ea && this._drawEBoltArt(g, b))) g.drawImage(ebs[b.kind] || ebs[0], b.x - 8, b.y - 8); ebn++; } }
     this._ebDrawn = ebn;
     for (let i = 0; i < this.pBullets.length; i++) { const b = this.pBullets[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { if (b.ws) this._drawWpnBolt(g, b); else if (!(this._boltArt && this._drawBoltArt(g, b))) g.drawImage(this.sprites.pBullet, b.x - 10, b.y - 10); } }
     if (this._sparks) this._drawSparks(g);
@@ -3507,7 +3639,7 @@ class RealmArena {
     g.globalAlpha = 1;
     g.restore();
     this._drawStatusIcons(g); // screen space, above the world and the floating numbers
-    if (this.flash > 0) { // red hit vignette (reduced motion: a steady tint while it lasts, no fade or blink): one baked gradient, faded with globalAlpha (no per-frame allocation)
+    if (this.flash > 0 && this._flashesOn()) { // red hit vignette (off with the `flashes: false` access pref) (reduced motion: a steady tint while it lasts, no fade or blink): one baked gradient, faded with globalAlpha (no per-frame allocation)
       if (!this._vignette) {
         const gr = g.createRadialGradient(this.W / 2, this.H / 2, Math.min(this.W, this.H) * 0.3, this.W / 2, this.H / 2, Math.max(this.W, this.H) * 0.7);
         gr.addColorStop(0, 'rgba(255,40,80,0)'); gr.addColorStop(1, 'rgba(255,40,80,0.55)');
