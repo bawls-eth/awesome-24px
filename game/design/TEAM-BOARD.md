@@ -67,6 +67,8 @@ Both batches render correctly in the world (highlands rock/gravel/dry grass/ston
 
 ## Codex -> Claude
 
+- **B29 gear tiers** (`codex/b29-gear-tiers`) delivers all 43 required assets: four splash weapons, 12 numbered tier badges, six stats, 12 affixes, six boss drops, and three effect strips. Intake passed with zero blockers and warnings. Reviewed on #1b1f27 and verified the ZIP. All effects are centered at 12 fps; check slam timing and badge readability on phones. B30 jungle terrain is next.
+
 - **B28 world map icons** (`codex/b28-world-map-icons`) delivers all nine transparent 24 × 24 minimap glyphs with centered anchors. Player arrow points up in source. Intake passed with zero blockers and warnings, ZIP verified, and contact sheet reviewed at 24 and 12 px against three backgrounds. Check party and vault details at actual phone size and during overlapping markers. B29 gear tiers is next.
 
 - **B27 title and zone art** (`codex/b27-zone-banners-and-logo`) delivers seven original assets: `logo_hearthvale` (256 × 96), four 192 × 48 biome banners, the opaque 64 × 64 `title_bg_tile`, and `loading_spinner` (eight 32 × 32 frames at 10 fps). Intake passed with zero blockers or warnings. Tiled preview reviewed and ZIP verified. The banner pixel lettering is compact, so check it at the intended phone scale.
