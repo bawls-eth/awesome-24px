@@ -5,10 +5,12 @@
 // hero at 45 px/s from 320 px. The hero aims at the nearest enemy each volley. Bolts are resolved geometrically (hit radius =
 // enemy r + 4): pierce, homing (70 deg cone, 260 px), chain, lob (area at the aim point), boomerang (re-hit on return),
 // bounce (a missed bolt may ricochet back once), orbit (hits enemies within radius + r). Crit and onHit statuses use their
-// expected value (1 + crit, 1 + chance * V). Configs per style: common L0, common with the L19 unlock nodes, epic L0.
+// expected value (1 + crit, 1 + chance * V). Splash styles (G4): the first hit of a bolt also damages the nearest `splash.max` other
+// enemies within `splash.r` (MMSplash.frac falloff x splash.frac), once per bolt. Configs per style: common L0, common with the L19 unlock nodes, epic L0.
 const W = require('../shared/mm-weapons.js');
 const C = require('../shared/mm-classes.js');
 const U = require('../shared/mm-unlocks.js');
+const SP = require('../shared/mm-splash.js');
 let n = 0, bad = 0;
 function check(name, ok, extra) { n++; if (!ok) { bad++; console.log('FAIL ' + name + (extra ? ' ' + extra : '')); } }
 
@@ -64,10 +66,14 @@ function simulate(spec, level) {
           const back = alive().sort((x, y) => origin(x) - origin(y))[0];
           if (back) hits = [{ e: back }];
         }
-        hits.forEach((o) => {
+        hits.forEach((o, hi) => {
           if (done.has(o.e) && p === 0) return;
           done.add(o.e);
           hit(o.e, perBolt * (p ? 0.85 : 1)); // the return pass connects 85% (targets drift off the line)
+          if (spec.splash && spec.splash.r > 0 && hi === 0 && p === 0) { // splash: once per bolt, never the primary
+            const others = alive().filter((e) => e !== o.e).map((e) => ({ e, d: Math.max(0, dist(e, o.e) - e.r) })).filter((q) => q.d <= spec.splash.r).sort((x, y) => x.d - y.d).slice(0, spec.splash.max);
+            others.forEach((q) => hit(q.e, perBolt * spec.splash.frac * SP.frac(q.d, spec.splash)));
+          }
           let from = o.e, f = 1;
           for (let c = 0; c < spec.chain.n; c++) {
             f *= spec.chain.falloff;
@@ -113,9 +119,16 @@ classes.forEach((cls) => {
 });
 if (process.argv.includes('--table')) console.log(table.join('\n'));
 check('ranger plain bolt clears a zone-1 group in a sane time', ranger > 0.5 && ranger < 20, String(ranger));
-check('sim covers every class x style x 3 configs (' + count + ')', count >= (14 + 26) * 3, String(count));
+check('sim covers every class x style x 3 configs (' + count + ')', count >= (14 + 30) * 3, String(count));
 check('every class x style within 0.7-1.4x of the ranger time (common L0, common L19, epic L0)', outliers.length === 0, outliers.join('; '));
 check('no class times out (60 s)', classes.every((c) => simulate(W.resolve(c, 'base', 0), 0) < 60));
 check('sim is deterministic', simulate(W.resolve('rogue', 'dagger_fan', 1), 9) === simulate(W.resolve('rogue', 'dagger_fan', 1), 9));
+// G4 additions: splash styles are modelled and stay inside the group-clear band; single target stays near the base
+const splashIds = ['bow_blast', 'wand_burst', 'staff_comet', 'pistol_flak'];
+check('G4 splash styles are in the sim (a class of each family)', splashIds.every((id) => classes.some((c) => W.stylesFor(c).indexOf(id) >= 0)));
+check('G4 splash styles group-clear 0.7-1.4x the ranger base', splashIds.every((id) => classes.filter((c) => W.stylesFor(c).indexOf(id) >= 0).every((c) => { const r = simulate(W.resolve(c, id, 0), 0) / ranger; return r >= 0.7 && r <= 1.4; })));
+check('G4 splash helps against a group (splash model on beats off)', (() => { const sp = W.resolve('druid', 'staff_comet', 0), off = Object.assign({}, sp, { splash: { r: 0, frac: 0, inner: 0.35, edge: 0.5, max: 0 } }); return simulate(sp, 0) < simulate(off, 0); })());
+// (the plan's >= 0.85x single-target target is G15's tuning job; here only a floor so a splash style is never a dead weapon on one enemy)
+check('G4 single-target damage per second >= 0.6x the base', splashIds.every((id) => classes.filter((c) => W.stylesFor(c).indexOf(id) >= 0).every((c) => { const s = W.resolve(c, id, 0), b = W.resolve(c, 'base', 0); return (s.dmg * s.rate * s.count * s.burst.n * (1 + s.crit)) / (b.dmg * b.rate * b.count * (1 + b.crit)) >= 0.6; })));
 console.log(bad ? bad + ' FAILED of ' + n : 'ALL PASSED (' + n + ')');
 process.exitCode = bad ? 1 : 0;

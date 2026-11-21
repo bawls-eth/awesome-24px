@@ -9,8 +9,10 @@ const label = (h) => (typeof h === 'symbol' ? 'symbol' : typeof h === 'function'
 
 // 40 styles, schema valid
 const ids = W.styleIds();
-check('40 styles', ids.length === 40);
-check('26 alternates + 14 bases', W.altIds().length === 26 && ids.filter((i) => /^base_/.test(i)).length === 14);
+check('44 styles', ids.length === 44);
+const FIRST26 = ['bow_triple','bow_longshot','bow_leaf','wand_seeker','wand_chain','wand_frostshard','staff_helix','staff_orb','staff_bloom','tome_page','tome_orbit','tome_psalm','blade_arc','blade_riff','hammer_throw','hammer_smite','axe_twin','axe_cleave','fist_flurry','fist_shockwave','dagger_fan','dagger_venom','star_bounce','star_seeker','pistol_ricochet','pistol_burst'];
+check('first 26 alt ids unchanged and in order (wire codes), then the 4 splash styles', W.altIds().slice(0, 26).join() === FIRST26.join() && W.altIds().slice(26).join() === 'bow_blast,wand_burst,staff_comet,pistol_flak');
+check('30 alternates + 14 bases', W.altIds().length === 30 && ids.filter((i) => /^base_/.test(i)).length === 14);
 ids.forEach((id) => { const p = W.validate(W.STYLES[id]); check(id + ' schema valid ' + p.join(','), p.length === 0); });
 check('styles are frozen', Object.isFrozen(W.STYLES) && Object.isFrozen(W.STYLES.bow_triple) && Object.isFrozen(W.STYLES.bow_triple.wave));
 check('validate rejects junk', W.validate(null).length > 0 && W.validate({}).length > 0 && W.validate(Object.assign({}, W.STYLES.bow_triple, { pierce: 9 })).length > 0);
@@ -90,7 +92,7 @@ check('describe handles junk', W.describe(null) === '' && W.describe('x') === ''
 check('styleFor legacy sparkwand (no style) = base', W.styleFor('ranger', { id: 'sparkwand', slot: 'weapon' }) === 'base');
 check('styleFor matching family', W.styleFor('ranger', { style: 'bow_triple' }) === 'bow_triple' && W.styleFor('rogue', { style: 'dagger_fan' }) === 'dagger_fan');
 check('styleFor family mismatch = base', W.styleFor('ranger', { style: 'dagger_fan' }) === 'base' && W.styleFor('ranger', { style: 'base_ranger' }) === 'base');
-check('stylesFor ranger lists base + 3 bow styles', W.stylesFor('ranger').join() === 'base,bow_triple,bow_longshot,bow_leaf');
+check('stylesFor ranger lists base + 3 bow styles', W.stylesFor('ranger').join() === 'base,bow_triple,bow_longshot,bow_leaf,bow_blast');
 
 // inputs never mutated
 const frozenIn = Object.freeze({ style: 'bow_triple', extra: Object.freeze({ a: 1 }) });
@@ -113,5 +115,16 @@ check('pierce weight 0.25', near(W.shapeIdx({ dmg: 1, pierce: 2 }), 1.5));
 check('crit weight', near(W.shapeIdx({ dmg: 1, crit: 0.1 }), 1.1));
 check('status weight', near(W.shapeIdx({ dmg: 1, onHit: { status: 'bleed', chance: 0.5 } }), 1.15));
 
+// G4 additions: splash schema, index term, describe
+check('G4 splash data matches the plan', (() => { const a = S.bow_blast.splash, b = S.wand_burst.splash, c = S.staff_comet.splash, d = S.pistol_flak.splash; return a.r === 36 && a.frac === 0.5 && a.max === 4 && b.r === 44 && b.frac === 0.55 && b.max === 5 && c.r === 56 && c.frac === 0.6 && c.max === 6 && d.r === 28 && d.frac === 0.4 && d.max === 3 && a.inner === 0.35 && a.edge === 0.5; })());
+check('G4 old styles norm to splash r 0', W.styleIds().filter((i) => !['bow_blast', 'wand_burst', 'staff_comet', 'pistol_flak'].includes(i)).every((i) => S[i].splash.r === 0 && S[i].splash.max === 0));
+check('G4 splash styles are frozen and valid', ['bow_blast', 'wand_burst', 'staff_comet', 'pistol_flak'].every((i) => Object.isFrozen(S[i].splash) && W.validate(S[i]).length === 0));
+check('G4 describe shows splash 36 px', /splash 36 px/.test(W.describe(S.bow_blast)) && /splash 56 px/.test(W.describe(W.resolve('druid', 'staff_comet', 0))) && !/splash/.test(W.describe(S.bow_triple)));
+check('G4 validate: splash ranges and never with lob', W.validate(Object.assign({}, S.bow_blast, { splash: { r: 81, frac: 0.5, inner: 0.35, edge: 0.5, max: 4 } })).length > 0 && W.validate(Object.assign({}, S.bow_blast, { splash: { r: 40, frac: 0.9, inner: 0.35, edge: 0.5, max: 4 } })).length > 0 && W.validate(Object.assign({}, S.bow_blast, { splash: { r: 40, frac: 0.5, inner: 0.35, edge: 0.5, max: 7 } })).length > 0 && W.validate(Object.assign({}, S.bow_blast, { splash: { r: 40, frac: 0.5, inner: 0.35, edge: 0.5, max: 2.5 } })).length > 0 && W.validate(Object.assign({}, S.staff_bloom, { splash: { r: 30, frac: 0.5, inner: 0.35, edge: 0.5, max: 3 } })).join().indexOf('splash+lob') >= 0 && W.validate(Object.assign({}, S.bow_blast, { splash: null })).length > 0);
+check('G4 splash term in shapeIdx is capped and monotonic', (() => { const base = { dmg: 1 }, w = (r, f, m) => W.shapeIdx({ dmg: 1, splash: { r, frac: f, max: m } }); return near(W.shapeIdx(base), 1) && near(w(0, 0.8, 6), 1) && w(36, 0.5, 4) > 1 && w(36, 0.5, 4) < w(56, 0.6, 6) + 1e-9 && w(80, 0.8, 6) <= 1.45 + 1e-9 && near(w(36, 0.5, 4), 1 + 0.25 * 0.5 * 2.5); })());
+check('G4 resolve keeps splash styles inside [.95,1.10] of base at every rarity', ['ranger', 'frostcaller', 'graveTender', 'warlock', 'druid', 'necromancer', 'trickster'].every((c) => W.stylesFor(c).every((sid) => [0, 1, 2, 3].every((r) => { const q = W.shapeIdx(W.resolve(c, sid, r)) / W.shapeIdx(W.resolve(c, 'base', r)); return q >= 0.95 - 1e-9 && q <= 1.10 + 1e-9; }))));
+check('G4 resolved splash style carries splash through', W.resolve('ranger', 'bow_blast', 3).splash.r === 36 && W.resolve('ranger', 'bow_blast', 3).affixes.join() === 'reach,keen,venom' && W.resolve('ranger', 'base', 0).splash.r === 0);
+check('G4 splash hostile index input is safe', [null, 5, 'x', { splash: null }, { dmg: 1, splash: { r: NaN, frac: 'x', max: {} } }, { dmg: 1, splash: { r: Infinity, frac: Infinity, max: Infinity } }].every((x) => { const v = W.shapeIdx(x); return typeof v === 'number' && Number.isFinite(v); }));
+check('G4 splash styles stay inside the bolt budget and wire limit (128 styles)', ['bow_blast', 'wand_burst', 'staff_comet', 'pistol_flak'].every((i) => W.boltBound(S[i]) <= W.BOLT_BUDGET) && W.altIds().length <= 128);
 console.log(n - bad + '/' + n + ' passed');
 process.exit(bad ? 1 : 0);
