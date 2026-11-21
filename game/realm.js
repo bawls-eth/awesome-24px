@@ -656,7 +656,9 @@ class RealmArena {
   setHeroProfile(profile) {
     const ok = profile && typeof profile === 'object';
     const m = (v) => (Number.isFinite(v) ? Math.max(0.7, Math.min(1.4, v)) : 1);
-    this.heroProfile = ok ? { name: String(profile.name || '').slice(0, 40), hp: m(profile.hp), dmg: m(profile.dmg), rate: m(profile.rate), speed: m(profile.speed), iframes: m(profile.iframes) } : null;
+    this.heroProfile = ok ? { name: String(profile.name || '').slice(0, 40), hp: m(profile.hp), dmg: m(profile.dmg), rate: m(profile.rate), speed: m(profile.speed), iframes: m(profile.iframes),
+      shots: Math.max(1, Math.min(5, Math.floor(Number(profile.shots)) || 1)), spread: Math.max(0, Math.min(1, Number(profile.spread) || 0)), pierce: Math.max(0, Math.min(3, Math.floor(Number(profile.pierce)) || 0)),
+      shotDmg: Math.max(0.2, Math.min(1.5, Number(profile.shotDmg) || 1)), critChance: Math.max(0, Math.min(0.5, Number(profile.critChance) || 0)), boltSpeed: Math.max(0.5, Math.min(1.3, Number(profile.boltSpeed) || 1)) } : null;
     if (this.save) { this._calcStats(); if (this.player && this.player.hp > this.stats.maxHp) this.player.hp = this.stats.maxHp; if (this.active) this._syncHud(); }
   }
   // Additive hook: the class signature ability from MMClasses.arenaSignature(classId). It replaces the F slot (Overdrive) at its level.
@@ -1284,15 +1286,32 @@ class RealmArena {
     b.active = true; b.x = x; b.y = y; b.vx = Math.cos(angle) * speed; b.vy = Math.sin(angle) * speed; b.life = 6; b.kind = kind || 0; b.dm = this._curDm;
   }
 
+  // Class fire tags (heroProfile.shots/spread/pierce/shotDmg/critChance/boltSpeed). Default / duel / no profile = the plain single bolt.
+  _firePlayerVolley(aim) {
+    const hp = this.heroProfile;
+    if (!hp || (this.team && this.team.isPvp) || (hp.shots === 1 && hp.pierce === 0 && hp.shotDmg === 1 && hp.critChance === 0 && hp.boltSpeed === 1)) { this.firePlayerBullet(aim); return; }
+    const base = this.stats.dmg * (this.sg.powT > 0 ? this.sg.powMul : 1) * hp.shotDmg;
+    const n = hp.shots;
+    for (let k = 0; k < n; k++) {
+      const d = hp.critChance > 0 && this.rng() < hp.critChance ? base * 2 : base;
+      const b = this.firePlayerBulletFrom(this.player.x, this.player.y, aim + (n > 1 ? (k / (n - 1) - 0.5) * hp.spread : 0), d, 0);
+      if (!b) continue;
+      b.pr = hp.pierce;
+      if (hp.boltSpeed !== 1) { b.vx *= hp.boltSpeed; b.vy *= hp.boltSpeed; b.life /= hp.boltSpeed; }
+    }
+  }
+
   firePlayerBullet(angle) { this.firePlayerBulletFrom(this.player.x, this.player.y, angle, this.stats.dmg * (this.sg.powT > 0 ? this.sg.powMul : 1), 0); }
 
   // owner 0 = you (host), 1 = your partner. Everything a bolt does is decided on the host; guests only draw them.
   firePlayerBulletFrom(x, y, angle, dmg, owner) {
     const b = this._take(this.pBullets);
-    if (!b) return;
+    if (!b) return null;
     if (this.team && this.role === 'host') this.team.ev('fp', [Math.round(x), Math.round(y), Math.round(angle * 1000) / 1000, Math.round(dmg * 10) / 10], owner);
     b.active = true; b.x = x + Math.cos(angle) * 14; b.y = y + Math.sin(angle) * 14; b.dmg = dmg; b.own = owner;
     b.vx = Math.cos(angle) * RM_PLAYER.bulletSpeed; b.vy = Math.sin(angle) * RM_PLAYER.bulletSpeed; b.life = RM_PLAYER.bulletLife;
+    b.pr = 0; b.hn = 0; b.h0 = b.h1 = b.h2 = -1; // class pierce: bolts left to pass through, and the enemies already hit
+    return b;
   }
 
   _burst(x, y, color, n, speed) {
@@ -1462,7 +1481,7 @@ class RealmArena {
     p.fireCd -= dt;
     if (firing && p.fireCd <= 0 && this.state !== 'dead') {
       p.fireCd = 1 / (this.stats.rate * (this.overdriveT > 0 ? 2 : 1));
-      this.firePlayerBullet(p.aim);
+      this._firePlayerVolley(p.aim);
       this._heroAtkAt = performance.now() / 1000;
       this._snd('shot');
     }
@@ -1626,8 +1645,12 @@ class RealmArena {
       if (this.walls && this.isWallAt(b.x, b.y)) { if (this.dungeon) this.dungeon.onBoltWall(b.x, b.y); b.active = false; continue; }
       if (!this.walls && this._shotSolidAt && this._shotSolidAt(b.x, b.y)) { b.active = false; this._burst(b.x, b.y, '#c9d1d9', 2, 60); continue; } // world: solid tiles absorb bolts
       if (this.team && this.role === 'host' && this.team.isPvp) { if (this.team.duelBoltHit(b)) b.active = false; continue; }
-      const hj = this._boltHitIndex(b.x, b.y);
-      if (hj >= 0) { b.active = false; this._hitEnemy(this.enemies[hj], b.dmg || this.stats.dmg); }
+      let hj = this._boltHitIndex(b.x, b.y);
+      if (hj >= 0 && b.hn > 0 && (hj === b.h0 || hj === b.h1 || hj === b.h2)) hj = -1; // a piercing bolt hits each enemy once
+      if (hj >= 0) {
+        if (b.pr > 0) { b.pr--; if (b.hn === 0) b.h0 = hj; else if (b.hn === 1) b.h1 = hj; else b.h2 = hj; b.hn++; } else b.active = false;
+        this._hitEnemy(this.enemies[hj], b.dmg || this.stats.dmg);
+      }
       if (!b.active) continue;
       for (let j = 0; j < this.drifters.length; j++) {
         const d = this.drifters[j];
