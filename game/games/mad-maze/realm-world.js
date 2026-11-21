@@ -516,7 +516,7 @@
     }
     function giveBag(x, y, bag, info) {
       const got = { zone: info.zone, boss: !!info.boss, tier: bag.tier, items: [], shards: bag.shards, potions: bag.potions };
-      bag.items.forEach((it, k) => { const b = arena.dropBag(x + (k - (bag.items.length - 1) / 2) * 18, y + 10, it.r, it.id, bag); if (b) got.items.push({ id: it.id, r: it.r }); });
+      bag.items.forEach((it, k) => { const b = arena.dropBag(x + (k - (bag.items.length - 1) / 2) * 18, y + 10, it.r, it.id, bag); if (b) { const dd = typeof RM_ITEM_BY_ID !== 'undefined' ? RM_ITEM_BY_ID[b.id] : null; got.items.push({ id: b.id, r: it.r, name: dd ? dd.name : b.id, rolled: it.id }); } }); // the recap lists what actually dropped (a styled wpn_ weapon replaces the rolled wand)
       if (bag.shards > 0) { arena.save.shards += bag.shards; arena.run.shards += bag.shards; arena._floatText(x, y - 34, `+${bag.shards} 💎`, '#8fe9ff'); }
       if (bag.potions > 0) arena._sigHeal(12 * bag.potions);
       lastDrops.push(got); if (lastDrops.length > 12) lastDrops.shift();

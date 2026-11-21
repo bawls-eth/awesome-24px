@@ -2591,13 +2591,14 @@ class RealmArena {
   // Styled weapon drops (S12): in a world or dungeon run with an active hero, a rolled classic weapon (Spark / Quickfire Wand) becomes a
   // `wpn_<style>` item with a chance that grows with the bag tier; MMWeaponItems.dropItem picks it (70% the hero's family, 30% any).
   // Seeded (_wpnRng), rarity unchanged. Classic waves, duels, no hero, ?weapons=0 or a page without mm-weapon-items.js: the id is unchanged.
-  _wpnDrop(id, worldLoot) {
+  _wpnDrop(id, worldLoot, rng) { // `rng` (optional function) replaces the shared _wpnRng stream, e.g. a per-chest seeded stream
     if (!RM_WPN_ITEMS.length || !(worldLoot || this.dungeon) || (this.team && this.team.isPvp) || typeof MMWeaponItems === 'undefined') return id;
     const def = RM_ITEM_BY_ID[id], cls = this.heroClass();
     if (!def || def.slot !== 'weapon' || def.wpn || !cls) return id;
     const tier = worldLoot && Number.isFinite(worldLoot.tierIndex) ? Math.max(0, Math.min(4, worldLoot.tierIndex)) : 1;
-    if (this._wpnRng() >= Math.min(0.85, 0.45 + 0.1 * tier)) return id;
-    let w = null; try { w = MMWeaponItems.dropItem(this._wpnRng, cls); } catch (e) { w = null; }
+    const R = typeof rng === 'function' ? rng : this._wpnRng;
+    if (R() >= Math.min(0.85, 0.45 + 0.1 * tier)) return id;
+    let w = null; try { w = MMWeaponItems.dropItem(R, cls); } catch (e) { w = null; }
     return typeof w === 'string' && RM_ITEM_BY_ID[w] && RM_ITEM_BY_ID[w].wpn ? w : id;
   }
 
