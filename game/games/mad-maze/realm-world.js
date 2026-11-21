@@ -192,6 +192,47 @@
     let frameNo = 0; let chunkBuilds = 0;
     function dropChunks() { chunks.clear(); }
     function rect(g, c, x, y, w, h) { g.fillStyle = c; g.fillRect(x, y, w, h); }
+    // Godlands readability: scenery there is dim, desaturated and non-round so the bright round shapes are only bullets (?props=classic restores the old look).
+    const PROPS_CLASSIC = typeof location !== 'undefined' && /[?&]props=classic(&|$)/.test(location.search);
+    const DIM_SAT = 0.22; const DIM_VAL = 0.5; // HSV caps for dimmed props: max channel <= 128 (50%), saturation <= 0.22
+    const GOD_TERRAIN = { godland_ash: 1, blood_ruins: 1, cracked_stone: 1, lava_rock: 1 };
+    const GOD_POOL = {
+      godland_ash: ['prop_tree_dead', 'prop_rock_b', 'prop_tombstone_cross', 'prop_pillar_ruin_a', 'prop_obelisk', 'prop_boulder_cluster', 'prop_grave_a'],
+      blood_ruins: ['prop_tombstone_cross', 'prop_pillar_ruin_b', 'prop_rock_b', 'prop_obelisk', 'prop_tree_dead', 'prop_grave_b'],
+      cracked_stone: ['prop_rock_b', 'prop_pillar_ruin_a', 'prop_obelisk', 'prop_boulder_cluster', 'prop_grave_a'],
+      lava_rock: ['prop_rock_a', 'prop_rock_b', 'prop_boulder_cluster', 'prop_tree_dead'],
+    };
+    const dimCache = new Map();
+    function dimOf(a) { // cached desaturated + darkened copy of a prop strip (pixel-level, no per-frame work)
+      let d = dimCache.get(a); if (d) return d;
+      d = { img: a.img, fw: a.fw, fh: a.fh, ax: a.ax, ay: a.ay, ok: false };
+      try {
+        const cv = document.createElement('canvas'); cv.width = a.img.naturalWidth; cv.height = a.img.naturalHeight;
+        const c = cv.getContext('2d'); c.drawImage(a.img, 0, 0);
+        const im = c.getImageData(0, 0, cv.width, cv.height); const px = im.data;
+        for (let i = 0; i < px.length; i += 4) {
+          if (!px[i + 3]) continue;
+          const r = px[i] / 255; const gg = px[i + 1] / 255; const b = px[i + 2] / 255;
+          const mx = Math.max(r, gg, b); const mn = Math.min(r, gg, b); const l = (mx + mn) / 2; const grey = 0.3 * r + 0.59 * gg + 0.11 * b;
+          let k = 1; const sat = mx ? (mx - mn) / mx : 0; if (sat > DIM_SAT) k = DIM_SAT / sat; // pull colour toward grey until saturation <= cap
+          let nr = grey + (r - grey) * k; let ng = grey + (gg - grey) * k; let nb = grey + (b - grey) * k;
+          const nm = Math.max(nr, ng, nb); const sc = nm > DIM_VAL ? DIM_VAL / nm : 1;
+          void l; px[i] = Math.floor(nr * sc * 255); px[i + 1] = Math.floor(ng * sc * 255); px[i + 2] = Math.floor(nb * sc * 255);
+        }
+        c.putImageData(im, 0, 0); d.img = cv; d.ok = true;
+      } catch (e) { /* tainted canvas: fall back to the original strip at reduced alpha */ }
+      dimCache.set(a, d); return d;
+    }
+    function godPropPalette() { // every opaque colour a dimmed Godlands prop can show ([r,g,b] strings), for the readability test
+      const out = new Set(['94,90,85', '74,58,52', '26,16,16', '42,32,34']);
+      const ids = {}; Object.keys(GOD_POOL).forEach((k) => GOD_POOL[k].forEach((id) => { ids[id] = 1; })); ids.prop_skeleton_bones = 1; ids.prop_crystal_red = 1;
+      Object.keys(ids).forEach((id) => {
+        const a = wArt[id]; if (!a) return; const d = dimOf(a); if (!d.ok) return;
+        const px = d.img.getContext('2d').getImageData(0, 0, d.img.width, d.img.height).data;
+        for (let i = 0; i < px.length; i += 4) if (px[i + 3]) out.add(px[i] + ',' + px[i + 1] + ',' + px[i + 2]);
+      });
+      return Array.from(out);
+    }
     function drawProp(g, kind, x, y, sd) { // x, y = tile top-left inside the chunk canvas
       const cx = x + 16; const cy = y + 16;
       switch (kind) {
@@ -203,8 +244,8 @@
         case 'rock': g.fillStyle = '#5f5e59'; g.beginPath(); g.ellipse(cx, cy + 4, 10, 7, 0, 0, Math.PI * 2); g.fill(); g.fillStyle = '#a3a29b'; g.beginPath(); g.ellipse(cx - 2, cy + 1, 6, 4, 0, 0, Math.PI * 2); g.fill(); break;
         case 'dead_bush': g.strokeStyle = '#6e5530'; g.lineWidth = 2; g.beginPath(); g.moveTo(cx, cy + 8); g.lineTo(cx - 6, cy - 2); g.moveTo(cx, cy + 8); g.lineTo(cx + 5, cy - 3); g.moveTo(cx, cy + 8); g.lineTo(cx, cy - 5); g.stroke(); break;
         case 'dead_tree': g.strokeStyle = '#2a2022'; g.lineWidth = 3; g.beginPath(); g.moveTo(cx, cy + 12); g.lineTo(cx, cy - 8); g.moveTo(cx, cy - 2); g.lineTo(cx - 8, cy - 9); g.moveTo(cx, cy + 2); g.lineTo(cx + 8, cy - 6); g.stroke(); break;
-        case 'bones': g.strokeStyle = '#eee6cf'; g.lineWidth = 2; g.beginPath(); g.moveTo(cx - 6, cy - 2); g.lineTo(cx + 6, cy + 6); g.moveTo(cx + 6, cy - 2); g.lineTo(cx - 6, cy + 6); g.stroke(); break;
-        case 'ember_vent': g.fillStyle = '#1a1010'; g.beginPath(); g.arc(cx, cy, 8, 0, Math.PI * 2); g.fill(); g.fillStyle = '#ff7a2a'; g.beginPath(); g.arc(cx, cy, 4, 0, Math.PI * 2); g.fill(); break;
+        case 'bones': g.strokeStyle = PROPS_CLASSIC ? '#eee6cf' : '#5e5a55'; g.lineWidth = 2; g.beginPath(); g.moveTo(cx - 6, cy - 2); g.lineTo(cx + 6, cy + 6); g.moveTo(cx + 6, cy - 2); g.lineTo(cx - 6, cy + 6); g.stroke(); break;
+        case 'ember_vent': g.fillStyle = '#1a1010'; g.beginPath(); g.arc(cx, cy, 8, 0, Math.PI * 2); g.fill(); g.fillStyle = PROPS_CLASSIC ? '#ff7a2a' : '#4a3a34'; g.beginPath(); g.arc(cx, cy, 4, 0, Math.PI * 2); g.fill(); break;
         case 'campfire': rect(g, '#5b3d22', cx - 8, cy + 4, 16, 3); rect(g, '#5b3d22', cx - 3, cy + 1, 6, 8); g.fillStyle = '#ff9a2a'; g.beginPath(); g.moveTo(cx, cy - 8); g.lineTo(cx + 5, cy + 3); g.lineTo(cx - 5, cy + 3); g.closePath(); g.fill(); rect(g, '#ffe27a', cx - 1, cy - 2, 3, 4); break;
         case 'tent': g.fillStyle = '#c9a46a'; g.beginPath(); g.moveTo(cx, cy - 12); g.lineTo(cx + 13, cy + 10); g.lineTo(cx - 13, cy + 10); g.closePath(); g.fill(); g.fillStyle = '#6b4a2a'; g.beginPath(); g.moveTo(cx, cy - 2); g.lineTo(cx + 4, cy + 10); g.lineTo(cx - 4, cy + 10); g.closePath(); g.fill(); break;
         case 'gravestone': rect(g, '#3a3640', cx - 6, cy - 6, 12, 15); rect(g, '#8d8896', cx - 5, cy - 8, 10, 15); rect(g, '#5d5966', cx - 1, cy - 5, 2, 7); rect(g, '#5d5966', cx - 3, cy - 3, 6, 2); break;
@@ -248,7 +289,7 @@
       if (list) for (let k = 0; k < list.length; k++) drawProp(g, list[k].kind, (list[k].x - x0) * TILE, (list[k].y - y0) * TILE, false);
       if (artOn) {
         const al = chunkProps(cx, cy);
-        for (let k = 0; k < al.length; k++) { const a = wArt[al[k].id]; if (a) g.drawImage(a.img, 0, 0, a.fw, a.fh, (al[k].x - x0) * TILE + 16 - a.ax, (al[k].y - y0) * TILE + 30 - a.ay, a.fw, a.fh); }
+        for (let k = 0; k < al.length; k++) { let a = wArt[al[k].id]; if (a && al[k].dim) { a = dimOf(a); if (!a.ok) g.globalAlpha = 0.5; } if (a) g.drawImage(a.img, 0, 0, a.fw, a.fh, (al[k].x - x0) * TILE + 16 - a.ax, (al[k].y - y0) * TILE + 30 - a.ay, a.fw, a.fh); g.globalAlpha = 1; }
       }
       let wcv = null;
       if (water) { // a sparse highlight layer, faded / nudged per frame for a cheap shimmer
@@ -376,7 +417,8 @@
           const wx = cx * CH + rng.int(1, 14); const wy = cy * CH + rng.int(2, 15); const roll = rng.next(); const roll2 = rng.next(); // the same draws every try: order-stable
           if (wx >= ww || wy >= wh) continue;
           const i = wy * ww + wx; if (solid[i]) continue;
-          const pool = NAT[TN[terrain[i]]]; if (!pool) continue; // water and the roads themselves stay clear
+          const tn = TN[terrain[i]]; const god = !PROPS_CLASSIC && GOD_TERRAIN[tn] === 1;
+          const pool = god ? GOD_POOL[tn] : NAT[tn]; if (!pool) continue; // water and the roads themselves stay clear
           let bad = false;
           for (let k = 0; k < exPts.length && !bad; k++) { const e = exPts[k]; if (Math.abs(e.x - wx) <= e.r && Math.abs(e.y - wy) <= e.r) bad = true; }
           for (let k = 0; k < L.length && !bad; k++) if (Math.abs(L[k].x - wx) < 3 && Math.abs(L[k].y - wy) < 3) bad = true;
@@ -385,7 +427,7 @@
           for (let oy = -2; oy <= 2 && !near; oy++) for (let ox = -2; ox <= 2 && !near; ox++) { const x2 = wx + ox; const y2 = wy + oy; if (x2 >= 0 && y2 >= 0 && x2 < ww && y2 < wh && isRoad(terrain[y2 * ww + x2])) near = true; }
           for (let k = 0; k < campPts.length && !near; k++) if (Math.abs(campPts[k].x - wx) <= 7 && Math.abs(campPts[k].y - wy) <= 7) near = true;
           const id = near && roll < 0.6 ? STRUCT[Math.floor(roll2 * STRUCT.length)] : pool[Math.floor(roll2 * pool.length)];
-          L.push({ x: wx, y: wy, id });
+          L.push({ x: wx, y: wy, id, dim: !PROPS_CLASSIC && (god || id === 'prop_skeleton_bones' || /^prop_crystal_/.test(id)) });
         }
         L.sort((a, b) => a.y - b.y || a.x - b.x);
       }
@@ -1473,7 +1515,7 @@
       tileCenter: (tx, ty) => ({ x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE }),
       save: () => readSave(), savePos, portals: () => portals.map((q) => ({ i: q.i, x: q.x, y: q.y, tx: q.tx, ty: q.ty, biome: q.biome })),
       syncHud, loadTileArt, loadWorldArt,
-      artState: () => ({ on: artOn, loaded: Object.keys(wArt), draws: Object.assign({}, artDraws), loading: wArtLoading }), artProps: (cx, cy) => chunkProps(cx, cy).map((q) => ({ x: q.x, y: q.y, id: q.id })), chunkGrid: () => ({ cols: ccols, rows: crows }),
+      artState: () => ({ on: artOn, loaded: Object.keys(wArt), draws: Object.assign({}, artDraws), loading: wArtLoading }), artProps: (cx, cy) => chunkProps(cx, cy).map((q) => ({ x: q.x, y: q.y, id: q.id, dim: q.dim })), propsClassic: () => PROPS_CLASSIC, godPropPalette: () => godPropPalette(), chunkGrid: () => ({ cols: ccols, rows: crows }),
       panelHidden: () => panelHid,
       // minimap fog (slice A1)
       discovered: () => ({ on: fogOn, count: FOG ? FOG.count(fogBits) : 0, b64: FOG ? FOG.encode(fogBits) : '', has: (cx, cy) => (FOG ? FOG.has(fogBits, cx, cy) : false) }),

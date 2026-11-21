@@ -754,5 +754,9 @@
   "world-safereturn.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "world-props-godlands.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
