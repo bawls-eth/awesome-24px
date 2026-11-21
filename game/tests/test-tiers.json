@@ -522,5 +522,9 @@
   "world-stash.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "world-sites.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
