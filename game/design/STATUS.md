@@ -16,6 +16,9 @@ PARTIAL = some of it plays, the rest is modules only or missing, TODO = nothing 
 | M9 | Festival Fields | PARTIAL | Bug Safari plays; Jam and Stalk are modules only (their map nodes link to missing pages) |
 | M10 | Co-op / secret world | PARTIAL | town co-op / duel / 2v2 live; `MMParty` is a module only; Comet Trail not started |
 
+## Known data loss (S5 class-id fix)
+`MMProfile.clean` used to whitelist only 11 classes, so heroes of `graveTender`, `trickster` and `shadowPaw` were silently saved back as `ranger`. The whitelist now has all 14 `MMClasses` ids (the Lantern new-hero list and the Realm swatches too). Heroes that were already coerced to ranger before this fix cannot be recovered: the original class id is gone from the stored `pixeltown-mm-v1` blob. `pixeltown-mm-v1` stays backward compatible (no new keys).
+
 ## Wired into the playable game
 - Town (`index.html`): Realm with `MMStats`, `MMHash`, `MMPad`, `MMAim`, `MMSfx`, `MMMotion`, `MMPatterns`; links to Mad Maze and the map.
 - Mad Maze page + Warren run: `MMRng`, `MMWarren`, `MMRooms`, `MMEnemies`, `MMDungeonState`, `MMPatterns2`.

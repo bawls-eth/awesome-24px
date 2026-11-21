@@ -127,4 +127,22 @@ const TOWN = JSON.stringify({ name: 'Ben', species: 'doge', coins: 1 });
   const f = P.fall(p, 'a');
   check('full-stash Fall flags keepsakeLost', f.ok && f.keepsake === null && f.keepsakeLost === true);
 }
+// S5: all 14 class ids survive clean; unknown still -> ranger; legacy 11-class fixture unchanged
+{
+  const C = require('../shared/mm-classes.js');
+  const ids = Object.keys(C.CLASSES);
+  check('14 MMClasses ids', ids.length === 14);
+  const pr = P.clean({ heroes: ids.map((c, i) => ({ id: 'h' + i, cls: c, level: 3 })) });
+  check('every MMClasses id survives clean', pr.heroes.length === 12 && pr.heroes.every((h, i) => h.cls === ids[i]));
+  const one = (c) => P.clean({ heroes: [{ id: 'x', cls: c }] }).heroes[0].cls;
+  check('trickster/shadowPaw/graveTender survive', one('trickster') === 'trickster' && one('shadowPaw') === 'shadowPaw' && one('graveTender') === 'graveTender');
+  check('all 14 ids individually kept', ids.every((c) => one(c) === c));
+  check('unknown/wrong-case class still coerces to ranger', one('Trickster') === 'ranger' && one('nope') === 'ranger' && one(7) === 'ranger');
+  const old11 = ids.filter((c) => ['graveTender', 'trickster', 'shadowPaw'].indexOf(c) < 0);
+  const fx = { v: 1, heroes: old11.map((c, i) => ({ id: 'h' + i, name: 'N' + i, cls: c, level: 2 + i, xp: 5, fame: 1, bonus: 0, mode: 'classic', items: [] })) };
+  const c1 = JSON.stringify(P.clean(fx));
+  check('11-class fixture byte-identical on re-clean', JSON.stringify(P.clean(JSON.parse(c1))) === c1 && P.clean(fx).heroes.every((h, i) => h.cls === old11[i]));
+  const ret = P.clean({ hall: [{ name: 'a', cls: 'shadowPaw' }] });
+  check('hall entry keeps shadowPaw', !ret.hall.length || ret.hall[0].cls === 'shadowPaw');
+}
 done();

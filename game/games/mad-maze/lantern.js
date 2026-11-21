@@ -6,7 +6,7 @@
   var A = window.MMArt, P = window.MMProfile, B = window.MMBackup, C = window.MMClasses, I = window.MMItems;
   var KEY = P.KEY, LEGACY = P.LEGACY_KEY;
   var CARRY_MAX = 24;
-  var CLS_ORDER = ['ranger', 'frostcaller', 'herald', 'punk', 'bruiser', 'rogue', 'warlock', 'paladin', 'berserker', 'druid', 'necromancer'];
+  var CLS_ORDER = C && C.CLASSES ? Object.keys(C.CLASSES) : ['ranger', 'frostcaller', 'herald', 'punk', 'bruiser', 'graveTender', 'trickster', 'shadowPaw', 'rogue', 'warlock', 'paladin', 'berserker', 'druid', 'necromancer'];
   var REASONS = {
     'level-20-required': 'Reach level 20 to retire',
     'picnic-no-fall': 'Picnic heroes never Fall',
