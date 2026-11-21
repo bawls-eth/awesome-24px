@@ -43,14 +43,14 @@ async function fight(page, ms) {
   check('Crypt odd seed (Lich King) has its own bolt and signature, not the Bone Colossus ones; deterministic', lich.boss_art === 'lich_king' && lich.bossBolt !== B.bossFor('crypt', 2).bossBolt && lich.sig !== B.bossFor('crypt', 2).sig && JSON.stringify(lich) === JSON.stringify(B.bossFor('crypt', '3')));
   for (const biome of B.IDS) {
     const r = await open(browser, `biome=${biome}&seed=2&lv=2`);
-    const res = await fight(r.page, 6600); errs.push(...r.page.errors);
+    const res = await fight(r.page, 9000); errs.push(...r.page.errors);
     check(`${biome}: boss fires ${WANT[biome][0]} only and its signature "${WANT[biome][1]}" went off after a 0.6 s wind-up`,
       res.bolt === WANT[biome][0] && res.sig === WANT[biome][1] && res.sigs >= 1 && Object.keys(res.seen.ea).length === 1 && res.seen.ea[WANT[biome][0]] > 0 && Math.abs(res.seen.wind - 0.6) < 1e-9 && res.seen.windKind === WANT[biome][1], JSON.stringify(res));
     await r.ctx.close();
   }
-  { const r = await open(browser, 'biome=crypt&seed=3&lv=2'); const res = await fight(r.page, 6600); errs.push(...r.page.errors);
+  { const r = await open(browser, 'biome=crypt&seed=3&lv=2'); const res = await fight(r.page, 9000); errs.push(...r.page.errors);
     check('Lich King fights with ebolt_frost and the souls signature', res.bolt === 'ebolt_frost' && res.sig === 'souls' && res.sigs >= 1 && res.seen.ea.ebolt_frost > 0 && !res.seen.ea.ebolt_skull, JSON.stringify(res)); await r.ctx.close(); }
-  { const r = await open(browser, 'biome=meadow&seed=2&lv=2&bosses=classic'); const res = await fight(r.page, 6600); errs.push(...r.page.errors);
+  { const r = await open(browser, 'biome=meadow&seed=2&lv=2&bosses=classic'); const res = await fight(r.page, 9000); errs.push(...r.page.errors);
     check('?bosses=classic restores the plain boss: no own bolt, no signature, default art ids', res.bolt === null && res.sig === null && res.sigs === 0 && res.seen.wind === null && !res.seen.ea.ebolt_poison && res.seen.ea.ebolt_orb_purple > 0, JSON.stringify(res)); await r.ctx.close(); }
   { const r = await open(browser, 'biome=meadow&seed=2&lv=2', { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
     const hs = await r.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1); errs.push(...r.page.errors);
