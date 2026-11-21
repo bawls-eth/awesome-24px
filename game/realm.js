@@ -565,6 +565,8 @@ class RealmArena {
     });
     const hp = this.heroProfile; // additive class profile (setHeroProfile), applied after gear and level; never in duels (returned above)
     if (hp) { st.maxHp = Math.max(1, Math.round(st.maxHp * hp.hp)); st.dmg *= hp.dmg; st.rate *= hp.rate; st.speed *= hp.speed; st.iframes *= hp.iframes; }
+    const hs = this._heroWorldScale(); // world mode only: MMDifficulty.heroScale (easy start); 1x in the classic arena, dungeons, ?difficulty=off
+    if (hs) { st.dmg *= hs.dmg; st.rate *= hs.rate; }
     let dm = this.buffDmg > 1 && this.buffDmg <= 1.5 ? this.buffDmg : 1; // additive timed buff (world shrine of Fury), set by realm-world.js
     const sm = this.player && this.player._stm; // status mods (applyStatus): the damage multiplier incl. buffDmg is capped to 0.5..1.6
     if (sm) { dm = Math.max(0.5, Math.min(1.6, dm * sm.dmg)); st.rate *= sm.rate; st.speed *= sm.speed; }
@@ -572,6 +574,12 @@ class RealmArena {
     st.guard = this._calcGuard();
     this.stats = st;
     return st;
+  }
+
+  _heroWorldScale() {
+    if (this.mode !== 'world' || !this.world || this.dungeon || this.team || typeof MMDifficulty === 'undefined' || typeof MMDifficulty.heroScale !== 'function') return null;
+    let off = false; try { off = MMDifficulty.isOff(typeof location !== 'undefined' ? location.search : ''); } catch (e) { off = false; }
+    return off ? null : MMDifficulty.heroScale();
   }
 
   // Guard comes from the equipped items via MMStats (0 for every legacy item today); extraGuard is a test/future hook.
@@ -1356,7 +1364,7 @@ class RealmArena {
   // drawing translates once per frame, mouse aim maps screen -> world, the player / enemies / bags clamp to the world instead of the screen.
   // solidAt(x, y) (px) blocks the player and enemies; shotSolidAt (default solidAt) absorbs bullets. setWorld(null) turns it all off.
   setWorld(opts) {
-    if (!opts || typeof opts !== 'object') { this.world = null; this._solidAt = null; this._shotSolidAt = null; this._camF.x = 0; this._camF.y = 0; this.camera.x = 0; this.camera.y = 0; return null; }
+    if (!opts || typeof opts !== 'object') { this.world = null; this._solidAt = null; this._shotSolidAt = null; this._camF.x = 0; this._camF.y = 0; this.camera.x = 0; this.camera.y = 0; if (this.stats) this._calcStats(); return null; }
     const n = (v, d) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Math.min(1 << 20, Math.floor(Number(v))) : d);
     const fn = (f) => (typeof f === 'function' ? f : null);
     this.world = Object.freeze({ w: n(opts.w, this.W), h: n(opts.h, this.H), tile: n(opts.tile, 32), camera: opts.camera !== false, wake: n(opts.wake, 0),
@@ -1368,12 +1376,12 @@ class RealmArena {
     grow(this.eBullets, pl.eBullets, 900, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, kind: 0 }));
     const p = this.player; const R = RM_PLAYER.r;
     p.x = Math.max(R, Math.min(this.world.w - R, p.x)); p.y = Math.max(R, Math.min(this.world.h - R, p.y));
-    this._camStep(-1);
+    this._camStep(-1); this._calcStats(); // the world hero scale depends on it
     return this.world;
   }
 
   // 'world' turns the wave director off (no waves, no wave banners: a continuous world); anything else = the classic waves.
-  setMode(m) { this.mode = m === 'world' ? 'world' : 'waves'; return this.mode; }
+  setMode(m) { this.mode = m === 'world' ? 'world' : 'waves'; if (this.stats) this._calcStats(); return this.mode; }
 
   _bw() { return this.world ? this.world.w : this.W; }
   _bh() { return this.world ? this.world.h : this.H; }

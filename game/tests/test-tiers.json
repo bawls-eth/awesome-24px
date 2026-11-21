@@ -610,5 +610,9 @@
   "shot-readability.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "world-easy-start.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
