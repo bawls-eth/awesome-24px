@@ -814,5 +814,9 @@
   "lantern-backup-reminder.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "hub-gift.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
