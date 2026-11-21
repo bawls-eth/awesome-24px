@@ -770,5 +770,9 @@
   "shared-mm-focus.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "shared-mm-telegraph.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }
