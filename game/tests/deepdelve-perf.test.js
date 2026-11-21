@@ -30,7 +30,7 @@ const measure = (page, ms) => page.evaluate((span) => new Promise((res) => {
 
 (async () => {
   const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
-  const a = await open(browser, '&seed=5');
+  const a = await open(browser, '&seed=5&perf=0');
   const p = a.page;
 
   // 1. governor logic with simulated frame times (simulated clock, so it is deterministic)
@@ -82,7 +82,7 @@ const measure = (page, ms) => page.evaluate((span) => new Promise((res) => {
   check('reset restores the canvas, view distance and meshes', ap.back.w === ap.full.w && ap.back.view === 5 && ap.back.meshes >= ap.full.meshes, JSON.stringify(ap.back));
 
   // 3. phone keeps view 3 at every level
-  const ph = await open(browser, '&seed=5', PHONE);
+  const ph = await open(browser, '&seed=5&perf=0', PHONE);
   const pv = await ph.page.evaluate(() => {
     const d = window.__dd, perf = d.perf; let now = 1000; const views = [d.view];
     for (let i = 0; i < 600; i++) { now += 70; perf.frame(70, now); views.push(d.view); }

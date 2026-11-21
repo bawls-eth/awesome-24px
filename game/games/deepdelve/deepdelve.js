@@ -374,6 +374,7 @@
   let renderer = null, scene = null, camera = null, atlasTex = null, material = null, outline = null, torchGeo = null, torchMat = null;
   const meshes = new Map(); // key -> { mesh, torches }
   const stale = new Set();
+  let lastAnimated = false, renderRev = 0, lastRenderKey = '', lastRenderAt = 0;
   let lightDirty = true, win = null, manageSkip = false, lastPc = '', backlog = 0;
   const MAX_BUILDS = 3; // chunk meshes rebuilt per frame at most (the rest wait for the next frame)
   const WIN = 5; // light window in chunks (xz), full depth
@@ -424,15 +425,24 @@
   // ---------- adaptive quality governor ----------
   // Lowers render scale, then view distance, when the rolling frame time is high; restores slowly when it is low.
   // At most one change per MIN_GAP ms; restores wait longer (and back off further if they bounce straight back).
-  const GOV = { WINDOW: 30, MIN_SAMPLES: 20, HIGH: 40, LOW: 20, MIN_GAP: 2000, RESTORE_GAP: 6000, MAX_RESTORE_GAP: 60000 };
+  const GOV = { WINDOW: 30, MIN_SAMPLES: 20, HIGH: 34, LOW: 20, MIN_GAP: 2000, RESTORE_GAP: 6000, MAX_RESTORE_GAP: 60000 };
   const LEVELS = (function () {
     const L = [{ scale: 1, view: VIEW }, { scale: 0.75, view: VIEW }];
     for (let v = VIEW - 1; v >= 3; v--) L.push({ scale: 0.75, view: v });
-    L.push({ scale: 0.6, view: Math.min(VIEW, 3) });
+    L.push({ scale: 0.6, view: Math.min(VIEW, 3) }, { scale: 0.5, view: Math.min(VIEW, 3) }, { scale: 0.4, view: Math.min(VIEW, 3) });
     return L;
   }());
-  const gov = { level: 0, samples: [], head: 0, count: 0, lastChange: -1e9, lastRaise: -1e9, restoreGap: GOV.RESTORE_GAP, changes: 0, auto: !TEST || params.get('perf') === '1' };
-  const pixelRatio = () => Math.min(window.devicePixelRatio || 1, 2) * LEVELS[gov.level].scale;
+  const gov = { level: 0, samples: [], head: 0, count: 0, lastChange: -1e9, lastRaise: -1e9, restoreGap: GOV.RESTORE_GAP, changes: 0, auto: params.get('perf') !== '0' };
+  // Desktop render-pixel budget: big or hi-dpi windows are rendered below native size (the fill cost is what software and
+  // integrated GPUs choke on). Phones keep 1:1; a 1280x720 window (544 px canvas) renders at ~0.83, a 4K window at 0.6.
+  const MAX_PIXELS = 480000;
+  function basePixelRatio() {
+    const c = document.getElementById('gl'), area = c ? c.clientWidth * c.clientHeight : 0;
+    let r = Math.min(window.devicePixelRatio || 1, 2);
+    if (!phone && area > 0) r = Math.min(r, Math.max(0.6, Math.sqrt(MAX_PIXELS / area)));
+    return r;
+  }
+  const pixelRatio = () => basePixelRatio() * LEVELS[gov.level].scale;
   function govAvg() {
     if (!gov.count) return 0;
     let t = 0;
@@ -479,6 +489,8 @@
 
   function resize() {
     if (!renderer) return;
+    renderRev++;
+    renderer.setPixelRatio(pixelRatio());
     const c = $('gl'), w = c.clientWidth || 300, h = c.clientHeight || 300;
     renderer.setSize(w, h, false);
     camera.aspect = w / h; camera.updateProjectionMatrix();
@@ -513,6 +525,7 @@
   const UVS = [[0, 0], [1, 0], [1, 1], [0, 1]];
   function buildChunk(cx, cy, cz) {
     const k = MMChunks.key(cx, cy, cz);
+    renderRev++;
     const old = meshes.get(k);
     if (old) disposeEntry(old);
     meshes.delete(k);
@@ -562,6 +575,7 @@
     stale.delete(k);
   }
   function disposeEntry(e) {
+    renderRev++;
     scene.remove(e.group);
     e.group.children.forEach((c) => { if (c.geometry && c.geometry !== torchGeo) c.geometry.dispose(); });
   }
@@ -653,6 +667,15 @@
     const dn = depthNow();
     if (dn !== lastDepth) { lastDepth = dn; $('hud-depth').textContent = 'Depth ' + dn; }
   }
+  // Idle frames (nothing moved, nothing animates, nothing rebuilt) re-present the previous picture instead of rasterising
+  // the whole world again. Anything that moves (mobs, wyrm, camera, sky, chunks, benches) changes the key or forces a draw.
+  function renderIfChanged(t) {
+    const animated = !!(slimes.length || creatures.length || creatureMeshes || wyrm.awake || wyrm.group), was = lastAnimated; lastAnimated = animated;
+    const key = camera.position.x + ',' + camera.position.y + ',' + camera.position.z + ',' + camera.rotation.x + ',' + camera.rotation.y + ',' + renderRev + ',' + scene.background.getHex() + ',' + outline.visible + ',' + outline.position.x + ',' + outline.position.y + ',' + outline.position.z + ',' + benchRev + ',' + scene.fog.far;
+    if (!animated && !was && key === lastRenderKey && t - lastRenderAt < 500) return;
+    lastRenderKey = key; lastRenderAt = t;
+    renderer.render(scene, camera);
+  }
   function frame(t) {
     requestAnimationFrame(frame);
     if (gov.auto && last && backlog < 8) govFrame(t - last, t);
@@ -669,7 +692,7 @@
     }
     checkGoals();
     manage(8);
-    if (renderer) { syncBenches(); syncSlimeMeshes(); if (creatures.length || creatureMeshes) syncCreatureMeshes(); if (wyrm.awake || wyrm.group) syncWyrmMesh(); updateCamera(); renderer.render(scene, camera); }
+    if (renderer) { syncBenches(); syncSlimeMeshes(); if (creatures.length || creatureMeshes) syncCreatureMeshes(); if (wyrm.awake || wyrm.group) syncWyrmMesh(); updateCamera(); renderIfChanged(t); }
   }
 
   // ---------- controls ----------
