@@ -18,6 +18,10 @@
 // idle / move / attack / death by facing (left = mirrored right), sleep when knocked out, eat when fed, the saddle overlay while ridden
 // and the roar strip during the boss wind-up; anything without strips (or ?art=0) draws the MMCreatureDraw code bake. On the jungle the
 // b33 prop PNGs replace the code props by id inside the baked chunks.
+// X1 (NEXT-SLICES-2): spawn ids play as MMBiomePacks.canon() species (via IsleCreatures.kindOf); swim water (reef lagoon / coral /
+// kelp) blocks on foot and is crossed on a swim mount, dismounting in it steps ashore; the pack `rare` entry spawns once per island at
+// a seeded spot (IsleCreatures.rareSpot); b30 tile art is jungle-only (other islands bake with their pack palette); the b34 taming
+// icons (trust / torpor / bond / saddle meters, tranq, ride, follow / stay / attack party command) load by id over the text labels.
 (function () {
   'use strict';
   const O = window.MMOverworld, BP = window.MMBiomePacks, CB = window.MMChunkBake, CR = window.MMCreatures, CD = window.MMCreatureDraw;
@@ -78,6 +82,14 @@
   Object.keys(PACK.hazards || {}).forEach((n) => { const id = O.TERRAIN_ALL[n]; const s = PACK.hazards[n].slow; if (id !== undefined && s > 0 && s <= 1) SLOW[id] = s; });
   const PAL = Object.assign({}, CB.paletteFor(DRAW_BIOME), PACK.palette || {});
   const solidAt = (tx, ty) => O.isSolid(world, tx, ty);
+  // X1 swim water: pack terrain whose hazard says swim / breath (the reef lagoon, coral shallows and kelp beds) is open water. On foot it
+  // blocks like a wall; a swim mount (Tidesteed, Skimray: def.ride.swim) crosses it, and swimming creatures move through it.
+  const SWIM_T = new Uint8Array(NAMES.length);
+  Object.keys(PACK.hazards || {}).forEach((n) => { const id = O.TERRAIN_ALL[n], hz = PACK.hazards[n]; if (id !== undefined && hz && (hz.swim || hz.breath > 0)) SWIM_T[id] = 1; });
+  const swimAt = (tx, ty) => SWIM_T[O.tileAt(world, tx, ty)] === 1;
+  // the hero's tile rule (ride is declared further down; read lazily)
+  const heroSolidAt = (tx, ty) => solidAt(tx, ty) || (swimAt(tx, ty) && !CMP.canSwim(ride));
+  const walkableAt = (tx, ty) => !solidAt(tx, ty) && !swimAt(tx, ty);
   const tileOf = (px) => Math.floor(px / TILE);
   function moveScaleAt(tx, ty) { return SLOW[O.tileAt(world, tx, ty)] || 1; }
   const bandName = (z) => (PACK.bands[z] ? PACK.bands[z].name.replace(/_/g, ' ') : 'open sea');
@@ -103,7 +115,9 @@
   // ---------- chunk art ----------
   let chunkCache = CB.makeCache(LOW ? 12 : 24);
   // b30 jungle tile art (falls back to the code palette per tile) + on the jungle the b33 prop PNGs (fall back to the code props by id)
-  const IA = (ART && window.MMIsleArt) ? window.MMIsleArt.create({ art: true, props: PACK_ID === 'jungle' }) : null;
+  // X1: b30 is jungle terrain only. Its id map and palette stop at the jungle ids, so on the reef / tundra / mars / home it painted every
+  // pack tile as deep water; those islands bake with the pack palette (MMChunkBake + PAL) instead.
+  const IA = (ART && window.MMIsleArt && PACK_ID === 'jungle') ? window.MMIsleArt.create({ art: true, props: true }) : null;
   if (IA) IA.ready.then(() => { if (IA.active() || IA.propsActive()) chunkCache = CB.makeCache(LOW ? 12 : 24); });
   let bakesLeft = 0;
   const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
@@ -111,11 +125,29 @@
     jungle_tree: ['#1d4a2a', '#2f6b3a', 13], tree_palm: ['#3a7a3a', '#8a6a3a', 11], giant_fern: ['#2f8a4a', '#1f5a32', 9], hanging_vine: ['#2a6a3a', '#1a4a2a', 7],
     reeds: ['#6a8a4a', '#4a6a2a', 6], banana_plant: ['#5aa04a', '#e8d05a', 9], log: ['#6a4a2a', '#4a321a', 8], shell: ['#f2e2c8', '#c8a888', 4],
     temple_pillar: ['#8a9a88', '#5a6a58', 8], ruin_pillar: ['#8a9a88', '#5a6a58', 8], shrine: ['#c8b88a', '#7a6a4a', 9], tower: ['#7a7a8a', '#4a4a5a', 10],
-    campfire: ['#e07a3a', '#5a3a2a', 6], tent: ['#c86a4a', '#7a3a2a', 9], boss_altar: ['#7a3a5a', '#d05a8a', 12], portal_rift: ['#8a5ae0', '#e0d0ff', 11], dock: ['#8a5a3b', '#5a3a22', 10]
+    campfire: ['#e07a3a', '#5a3a2a', 6], tent: ['#c86a4a', '#7a3a2a', 9], boss_altar: ['#7a3a5a', '#d05a8a', 12], portal_rift: ['#8a5ae0', '#e0d0ff', 11], dock: ['#8a5a3b', '#5a3a22', 10],
+    // X1: code props for the other islands (4th field: 'r' rock / low mound, 'c' crystal spike; default is a round crown on a stem)
+    tree: ['#4f9a45', '#6a4a2a', 12], bush_berry: ['#3f8a3f', '#c8324a', 7], flower: ['#f2a0c0', '#4f9a45', 4, 'r'], clover: ['#5aa84a', '#3a7a2a', 4, 'r'], garden_plot: ['#7a5232', '#4f3622', 7, 'r'],
+    kelp_tall: ['#3f8a5a', '#2a5a3a', 8], coral: ['#ff8a76', '#c0503f', 6, 'c'], anemone: ['#f07ab0', '#a04a7a', 5, 'r'], pearl_clam: ['#e8e0f0', '#8a8098', 5, 'r'],
+    driftwood: ['#9a7a5a', '#6a4a32', 7, 'r'], wreck_mast: ['#7a5a3a', '#4a321a', 9],
+    pine_snowy: ['#3a6a5a', '#f4f8ff', 11, 'c'], snow_drift: ['#f4f8ff', '#c8d8ec', 8, 'r'], frostberry_bush: ['#5a7a6a', '#7ab8f0', 7], ice_spike: ['#bfe4ff', '#7aa8d0', 7, 'c'],
+    frozen_mammoth_tusk: ['#f0e8d8', '#a89a80', 8, 'r'], hot_spring_steam: ['#e8f4f4', '#9ad4d4', 6, 'r'], crystal_blue: ['#7ad0ff', '#3a7ac0', 7, 'c'],
+    meteor_rock: ['#5a3a30', '#3a2420', 7, 'r'], rover_wreck: ['#b8bcc0', '#6a6e72', 9, 'r'], crystal_red: ['#ff6a4a', '#a0302a', 7, 'c'], oxygen_plant: ['#7ad0a0', '#3a8a6a', 6],
+    solar_panel: ['#3a5a8a', '#c8ccd0', 8, 'r'], probe_lander: ['#d8dce0', '#8a8e92', 8, 'c']
   };
   function drawProp(c, kind, px, py) {
     const a = PROP_ART[kind] || ['#3a5a3a', '#2a3a2a', 6], r = a[2], cx = px + TILE / 2, cy = py + TILE / 2;
     c.fillStyle = 'rgba(0,0,0,0.22)'; c.beginPath(); c.ellipse(cx, cy + r * 0.7, r, r * 0.35, 0, 0, Math.PI * 2); c.fill();
+    if (a[3] === 'r') { // low mound / rock
+      c.fillStyle = a[1]; c.beginPath(); c.ellipse(cx, cy + r * 0.25, r, r * 0.6, 0, 0, Math.PI * 2); c.fill();
+      c.fillStyle = a[0]; c.beginPath(); c.ellipse(cx - r * 0.15, cy, r * 0.8, r * 0.5, 0, 0, Math.PI * 2); c.fill();
+      return;
+    }
+    if (a[3] === 'c') { // spike / crystal / pine
+      c.fillStyle = a[0]; c.beginPath(); c.moveTo(cx, cy - r * 1.6); c.lineTo(cx + r * 0.7, cy + r * 0.6); c.lineTo(cx - r * 0.7, cy + r * 0.6); c.closePath(); c.fill();
+      c.fillStyle = a[1]; c.beginPath(); c.moveTo(cx, cy - r * 1.6); c.lineTo(cx + r * 0.7, cy + r * 0.6); c.lineTo(cx + r * 0.1, cy + r * 0.6); c.closePath(); c.fill();
+      return;
+    }
     c.fillStyle = a[1]; c.fillRect(cx - 2, cy - 2, 4, r);
     c.fillStyle = a[0]; c.beginPath(); c.arc(cx, cy - r * 0.4, r, 0, Math.PI * 2); c.fill();
     c.fillStyle = a[1]; c.fillRect(cx - r * 0.4, cy - r * 0.6, Math.max(2, r * 0.3), Math.max(2, r * 0.3));
@@ -235,16 +267,18 @@
   let creatures = [];
   let uid = 0, simT = 0;
   const rng = RNG.create('isles|' + PACK_ID + '|' + SEED + '|ai');
+  const rare = { spot: IC.rareSpot ? IC.rareSpot(world, PACK, SEED, walkableAt) : null, live: 0, done: false, n: 0 };
   const isBig = (c) => c.size === 'L' || c.size === 'XL';
 
-  function addCreature(sp, x, y, gi, j) {
+  function addCreature(sp, x, y, gi, j, wid) {
     const kind = IC.kindOf(sp, gi);
     const s = specOf(sp, kind);
     const c = { uid: ++uid, sp: sp, kind: kind, base: s.base, x: x, y: y, hx: x, hy: y, vx: 0, vy: 0, hp: s.hp, maxHp: s.hp, rad: s.rad, size: s.size, mood: s.mood,
       angry: 0, think: rng.next() * 0.1, cd: 0, flash: 0, moving: false, t: rng.next() * 4, gi: gi, seen: false, art: null,
       ph: '', pt: 0, ang: 0, ox: x, oy: y, hitDone: false, tgAt: -1, ko: false, calm: false, hostile: s.mood === 'hostile', awake: true,
-      tm: null, tmAcc: 0, leaving: 0, wid: gi >= 0 ? 'g' + gi + '_' + (j | 0) : 'u' + uid, lv: 1,
-      sk: stripKind(kind), dir: 0, act: '', at0: 0, eatT: 0, drawn: '', src: '' };
+      tm: null, tmAcc: 0, leaving: 0, wid: wid || (gi >= 0 ? 'g' + gi + '_' + (j | 0) : 'u' + uid), lv: 1,
+      sk: stripKind(kind), dir: 0, act: '', at0: 0, eatT: 0, drawn: '', src: '', swim: false, rare: false };
+    c.swim = !!(s.def && s.def.behaviours && s.def.behaviours.indexOf('swim') >= 0);
     c.def = s.def;
     if (s.def) c.lv = IC.levelFor(s.def, SEED, c.wid);
     if (TAME && s.def && s.def.tame) c.tm = TM.init(s.def, { seed: 'isles|' + SEED, wildId: c.wid, level: c.lv });
@@ -276,12 +310,28 @@
         if (bigG) bigN++;
       }
     }
+    rareTick(htx, hty);
     // despawn far creatures (their group can come back later, nothing is lost)
     creatures = creatures.filter((c) => {
       if (Math.hypot(c.x - hero.x, c.y - hero.y) <= DESPAWN_R * TILE && !(c.leaving > 0 && c.leaving < 0.05)) return true;
       if (c.gi >= 0) groupState[c.gi].alive = Math.max(0, groupState[c.gi].alive - 1);
+      if (c.rare) rare.live = 0; // wandered off: it can come back later
       return false;
     });
+  }
+  // X1 rare spawn: the pack's `rare` entry (isleback_turtle on the reef zone 2, oakback on Hearth Isle zone 3) at one seeded spot per
+  // island (IsleCreatures.rareSpot). It comes in through the same spawn tick as the groups, at most one alive, never on top of the hero.
+  function rareTick(htx, hty) {
+    const sp = rare.spot;
+    if (!sp || rare.live || rare.done || creatures.length >= CAP) return;
+    const dd = Math.hypot(sp.x - htx, sp.y - hty);
+    if (dd > SPAWN_R || dd < 7) return;
+    const s = specOf(sp.creature, IC.kindOf(sp.creature, -1));
+    if (isBig({ size: s.size }) && bigN >= BIG_CAP) return;
+    const c = addCreature(sp.creature, (sp.x + 0.5) * TILE, (sp.y + 0.5) * TILE, -1, 0, 'rare_' + sp.creature);
+    c.rare = true;
+    rare.live = c.uid; rare.n++;
+    if (isBig(c)) bigN++;
   }
   function startAttack(c, s, dx, dy) {
     c.ph = 'wind'; c.pt = s.atk.windup; c.ang = Math.atan2(dy, dx); c.ox = c.x; c.oy = c.y; c.vx = 0; c.vy = 0; c.hitDone = false; c.tgAt = simT;
@@ -340,8 +390,8 @@
       if (c.ph) attackStep(c, s, dt);
       if (c.ko) { c.vx = 0; c.vy = 0; }
       const nx = c.x + c.vx * dt, ny = c.y + c.vy * dt;
-      if (!solidAt(tileOf(nx), tileOf(c.y))) c.x = nx; else { c.vx = -c.vx; }
-      if (!solidAt(tileOf(c.x), tileOf(ny))) c.y = ny; else { c.vy = -c.vy; }
+      if (!creatureSolid(c, tileOf(nx), tileOf(c.y))) c.x = nx; else { c.vx = -c.vx; }
+      if (!creatureSolid(c, tileOf(c.x), tileOf(ny))) c.y = ny; else { c.vy = -c.vy; }
       c.moving = Math.abs(c.vx) + Math.abs(c.vy) > 4;
       c.awake = !c.ko;
       c.hostile = !c.ko && !c.calm && s.dmg > 0 && (c.mood === 'hostile' || c.angry > 0);
@@ -349,9 +399,11 @@
     }
     if (creatures.length && creatures.some((c) => c.leaving > 0 && c.leaving <= 0.01)) removeWhere((c) => c.leaving > 0 && c.leaving <= 0.01, 0);
   }
+  const creatureSolid = (c, tx, ty) => solidAt(tx, ty) || (!c.swim && swimAt(tx, ty));
   function removeWhere(fn, cool) {
     creatures = creatures.filter((c) => {
       if (!fn(c)) return true;
+      if (c.rare) { rare.live = 0; if (cool > 0) rare.done = true; } // killed or tamed: the island's rare is gone for this visit
       if (c.gi >= 0) { const st = groupState[c.gi]; st.alive = Math.max(0, st.alive - 1); if (st.alive === 0) st.until = clock.now() + cool; }
       return false;
     });
@@ -363,7 +415,7 @@
   const hero = { x: (world.spawnPoint.x + 0.5) * TILE, y: (world.spawnPoint.y + 0.5) * TILE, hp: maxHp, maxHp: maxHp, iframes: 0, face: { x: 1, y: 0 }, scale: 1, dead: false, cd: 0, t: 0, shotT: 0 };
   if (savedIsle && savedIsle.pos && savedIsle.seed === SEED) {
     const tx = Math.floor(savedIsle.pos.x), ty = Math.floor(savedIsle.pos.y);
-    if (tx >= 0 && ty >= 0 && tx < W && ty < H && !solidAt(tx, ty)) { hero.x = (savedIsle.pos.x) * TILE; hero.y = (savedIsle.pos.y) * TILE; }
+    if (tx >= 0 && ty >= 0 && tx < W && ty < H && walkableAt(tx, ty)) { hero.x = (savedIsle.pos.x) * TILE; hero.y = (savedIsle.pos.y) * TILE; }
   }
   if (Q.get('at') === 'dock' && world.dock) { hero.x = (world.dock.x + 0.5) * TILE; hero.y = (world.dock.y + 0.5) * TILE; }
   let god = false, xp = 0, kills = 0, tamedN = 0;
@@ -371,7 +423,24 @@
   const pouch = Object.assign({}, IC.STARTER_POUCH);
   function blocked(x, y) {
     const r = HERO_R - 1;
-    return solidAt(tileOf(x - r), tileOf(y - r)) || solidAt(tileOf(x + r), tileOf(y - r)) || solidAt(tileOf(x - r), tileOf(y + r)) || solidAt(tileOf(x + r), tileOf(y + r));
+    return heroSolidAt(tileOf(x - r), tileOf(y - r)) || heroSolidAt(tileOf(x + r), tileOf(y - r)) || heroSolidAt(tileOf(x - r), tileOf(y + r)) || heroSolidAt(tileOf(x + r), tileOf(y + r));
+  }
+  // the nearest tile the hero can stand on (ring search out to 16 tiles); used when a swim mount is left in the water
+  function nearestWalkable(px, py) {
+    const tx = tileOf(px), ty = tileOf(py);
+    if (walkableAt(tx, ty) && !blocked((tx + 0.5) * TILE, (ty + 0.5) * TILE)) return null;
+    for (let r = 1; r <= 16; r++) {
+      let best = null, bd = 1e9;
+      for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        const x = tx + dx, y = ty + dy;
+        if (!walkableAt(x, y) || blocked((x + 0.5) * TILE, (y + 0.5) * TILE)) continue;
+        const d = Math.hypot((x + 0.5) * TILE - px, (y + 0.5) * TILE - py);
+        if (d < bd) { bd = d; best = { x: x, y: y }; }
+      }
+      if (best) return best;
+    }
+    return { x: world.spawnPoint.x, y: world.spawnPoint.y };
   }
   function moveHero(mx, my, dt) {
     let len = Math.hypot(mx, my);
@@ -619,10 +688,14 @@
     if (!ride) return false;
     const id = ride.id;
     ride = null; rideArt = null; rideKind = null; rideDrawn = ''; saddleDrawn = '';
+    // off a swim mount in open water: step ashore onto the nearest walkable tile
+    const land = nearestWalkable(hero.x, hero.y);
+    if (land) { hero.x = (land.x + 0.5) * TILE; hero.y = (land.y + 0.5) * TILE; lastShore = land; }
     hero.scale = moveScaleAt(tileOf(hero.x), tileOf(hero.y));
     if (tames.party.indexOf(id) >= 0) spawnCompanion(TAMES.find(tames, id), hero.x + 36, hero.y + 12);
     return true;
   }
+  let lastShore = null;
   const toggleRide = () => (ride ? (dismount(), false) : mountUp());
   refreshMount();
 
@@ -1072,9 +1145,62 @@
 
   // ---------- HUD ----------
   const hud = { hero: $('hud-hero'), isle: $('hud-isle'), info: $('hud-info'), ground: $('hud-ground'), fill: $('hp-fill'), hp: $('hp-text'), hint: $('hint') };
-  const btn = { feed: $('btn-feed'), soothe: $('btn-soothe'), ride: $('btn-ride'), gather: $('btn-gather'), sail: $('btn-sail'), build: $('btn-build'), home: $('btn-home'), log: $('btn-log') };
+  const btn = { feed: $('btn-feed'), soothe: $('btn-soothe'), ride: $('btn-ride'), cmd: $('btn-cmd'), gather: $('btn-gather'), sail: $('btn-sail'), build: $('btn-build'), home: $('btn-home'), log: $('btn-log') };
   const lastBtn = {};
   const showBtn = (k, on) => { if (lastBtn[k] !== on) { lastBtn[k] = on; btn[k].hidden = !on; } };
+  // ---- X1: b34 taming icons by id (game/assets/arcane/b34-taming-ui-items/manifest.json, 24x24, provisional). Each icon is one
+  // Image loaded once; until (or unless) it loads, and always with ?art=0, the text label is what shows. No per-frame DOM work:
+  // setIco / setMeter only touch the DOM when a value changes.
+  const ICON_DIR = '../../assets/arcane/b34-taming-ui-items/ui/';
+  const ICON_IDS = ['ui_tame_trust', 'ui_tame_torpor', 'ui_tame_bond', 'ui_tranq_on', 'ui_tranq_off', 'ui_cmd_follow', 'ui_cmd_stay', 'ui_cmd_attack', 'ui_saddle', 'ui_ride'];
+  const iconOk = {};
+  function paintIco(span) {
+    const id = span.dataset.ico, on = !!iconOk[id];
+    let img = span.firstChild;
+    if (on) {
+      if (!img) { img = document.createElement('img'); img.alt = ''; img.width = 24; img.height = 24; span.appendChild(img); }
+      if (img.getAttribute('src') !== iconOk[id]) img.setAttribute('src', iconOk[id]);
+    }
+    span.classList.toggle('on', on);
+    const meter = span.parentNode && span.parentNode.classList && span.parentNode.classList.contains('meter') ? span.parentNode : null;
+    if (meter) meter.classList.toggle('iconed', on);
+  }
+  function setIco(span, id) { if (!span || span.dataset.ico === id) return; span.dataset.ico = id; paintIco(span); }
+  if (ART) ICON_IDS.forEach((id) => {
+    const im = new Image();
+    im.onload = () => { if (!(im.naturalWidth > 0)) return; iconOk[id] = im.src; document.querySelectorAll('.ico').forEach((sp) => { if (sp.dataset.ico === id) paintIco(sp); }); };
+    im.src = ICON_DIR + id + '.png';
+  });
+  const meters = { trust: $('tm-trust'), torpor: $('tm-torpor'), bond: $('tm-bond'), saddle: $('tm-saddle') };
+  const meterVal = {};
+  function setMeter(k, v) {
+    const m = meters[k]; if (!m) return;
+    const on = v !== '';
+    if (meterVal[k] === v) return;
+    meterVal[k] = v;
+    m.hidden = !on;
+    if (on) m.querySelector('.val').textContent = v;
+  }
+  // the party command: follow -> stay -> attack (MMCompanion.setMode on every active companion)
+  const CMD_ORDER = ['follow', 'stay', 'attack'];
+  const CMD_NAME = { follow: 'Follow', stay: 'Stay', attack: 'Attack' };
+  let cmdMode = '';
+  function showCmd(mode) {
+    if (cmdMode === mode) return;
+    cmdMode = mode;
+    setIco(btn.cmd.querySelector('.ico'), 'ui_cmd_' + mode);
+    btn.cmd.querySelector('.txt').textContent = CMD_NAME[mode];
+    btn.cmd.setAttribute('aria-label', 'Party command: ' + mode);
+  }
+  function cycleCommand() {
+    if (!party.length) return '';
+    const cur = CMD_ORDER.indexOf(party[0].cs.mode);
+    const next = CMD_ORDER[(cur + 1) % CMD_ORDER.length];
+    party.forEach((p) => CMP.setMode(p.cs, next));
+    showCmd(next);
+    toast({ follow: 'Party: follow me.', stay: 'Party: stay here.', attack: 'Party: attack!' }[next]);
+    return next;
+  }
   hud.hero.textContent = HERO.name + ' - ' + HERO.cls + ' Lv ' + HERO.level;
   const lastHud = {};
   const setText = (k, v) => { if (lastHud[k] !== v) { lastHud[k] = v; hud[k].textContent = v; } };
@@ -1092,6 +1218,9 @@
     showBtn('feed', !!ft);
     showBtn('soothe', TAME);
     showBtn('ride', MOUNTS && !!mountEnt);
+    showBtn('cmd', COMPANIONS && party.length > 0);
+    if (party.length) showCmd(CMD_ORDER.indexOf(party[0].cs.mode) >= 0 ? party[0].cs.mode : 'follow');
+    tameHud(ft);
     showBtn('gather', !!spotNear());
     showBtn('sail', nearDock());
     showBtn('build', HOME);
@@ -1100,11 +1229,24 @@
     setText('hint', h);
     if (hud.hint.hidden !== !h) hud.hint.hidden = !h;
   }
+  // the tame meters: trust (befriending progress) / torpor (knockout sleepiness) of the creature you are taming, bond of your lead
+  // companion, and the saddle while riding (saddles are crafted later; a saddle mount rides bareback until then)
+  function tameHud(ft) {
+    let c = ft;
+    if (!c && TAME) { let bd = 5 * TILE; for (let i = 0; i < creatures.length; i++) { const x = creatures[i]; if (!x.tm) continue; const d = Math.hypot(hero.x - x.x, hero.y - x.y); if (d < bd) { bd = d; c = x; } } }
+    const tm = c && c.tm;
+    setMeter('trust', tm && (c.calm || c.ko) && tm.need > 0 ? Math.floor(tm.prog) + '/' + tm.need : '');
+    setMeter('torpor', tm && tm.torporMax > 0 && (tm.torpor > 0 || c.ko) ? (c.ko ? 'asleep ' + Math.ceil(TM.sleepLeft(tm)) + 's' : Math.round(100 * clamp(tm.torpor / tm.torporMax, 0, 1)) + '%') : '');
+    setMeter('bond', party.length ? String(party[0].ent.bond | 0) : '');
+    const md = ride && mountEnt ? CR.get(mountEnt.sp) : null;
+    setMeter('saddle', md && md.ride ? (md.ride.saddle ? 'none yet' : 'not needed') : '');
+  }
   function hintText(ft) {
     if (build) return 'Decorating: tap open ground to place, tap an item to pick it up. E works too.';
     if (nearDock() && !ride) return 'The dock. Press T or Sail to open the sea chart.';
     if (spotNear()) return 'Something to gather here. Press G or Gather.';
-    if (ride) return 'Riding ' + (mountEnt ? mountEnt.nm || 'your mount' : 'your mount') + '. Press R or Ride to get off.';
+    if (ride) return 'Riding ' + (mountEnt ? mountEnt.nm || 'your mount' : 'your mount') + (CMP.canSwim(ride) && swimAt(tileOf(hero.x), tileOf(hero.y)) ? ' through the water' : '') + '. Press R or Ride to get off.';
+    if (swimAt(tileOf(hero.x + hero.face.x * TILE * 1.2), tileOf(hero.y + hero.face.y * TILE * 1.2))) return 'Open water. Ride a Tidesteed or Skimray to swim across.';
     if (!TAME) return '';
     if (ft) {
       const def = CR.get(ft.kind), f = IC.foodFor(def, pouch), food = IC.foodName(f.id) + ' x' + (pouch[f.id] | 0);
@@ -1153,6 +1295,7 @@
     if (e.code === 'KeyQ' && !e.repeat) toggleSoothe();
     if (e.code === 'KeyR' && !e.repeat) toggleRide();
     if (e.code === 'KeyG' && !e.repeat) gatherNear();
+    if (e.code === 'KeyC' && !e.repeat) cycleCommand();
     if (e.code === 'KeyT' && !e.repeat && nearDock()) openPanel('sail');
     if (e.code === 'KeyL' && !e.repeat) { if (panelKind === 'log') closePanel(); else openPanel('log'); }
     if (e.code === 'KeyB' && !e.repeat && HOME) setBuild(!build);
@@ -1187,10 +1330,11 @@
   ['pointerup', 'pointercancel', 'pointerleave'].forEach((t) => fireBtn.addEventListener(t, () => { firing = false; }));
   function toggleMap() { mini.hidden = !mini.hidden; $('mini-wrap').hidden = mini.hidden; $('btn-map').setAttribute('aria-pressed', String(!mini.hidden)); }
   $('btn-map').addEventListener('click', toggleMap);
-  function toggleSoothe() { if (!TAME) return false; soothe = !soothe; btn.soothe.setAttribute('aria-pressed', String(soothe)); toast(soothe ? 'Soothe shots: they build torpor.' : 'Normal shots.'); return soothe; }
+  function toggleSoothe() { if (!TAME) return false; soothe = !soothe; btn.soothe.setAttribute('aria-pressed', String(soothe)); setIco(btn.soothe.querySelector('.ico'), soothe ? 'ui_tranq_on' : 'ui_tranq_off'); toast(soothe ? 'Soothe shots: they build torpor.' : 'Normal shots.'); return soothe; }
   btn.feed.addEventListener('click', () => { feed(); });
   btn.soothe.addEventListener('click', () => { toggleSoothe(); });
   btn.ride.addEventListener('click', () => { toggleRide(); btn.ride.setAttribute('aria-pressed', String(!!ride)); });
+  btn.cmd.addEventListener('click', () => { cycleCommand(); });
   btn.gather.addEventListener('click', () => { gatherNear(); });
   btn.sail.addEventListener('click', () => { openPanel('sail'); });
   btn.build.addEventListener('click', () => { setBuild(!build); });
@@ -1289,7 +1433,7 @@
       spawn: (sp, tx, ty) => (SPAWNABLE.indexOf(sp) >= 0 && creatures.length < CAP ? addCreature(sp, (tx + 0.5) * TILE, (ty + 0.5) * TILE, -1).uid : null),
       flags: () => ({ tame: TAME, companions: COMPANIONS, mounts: MOUNTS }),
       anger: (id) => { const c = creatures.find((x) => x.uid === id); if (c) c.angry = 30; return !!c; },
-      soothe: (on) => { if (!TAME) return false; soothe = on !== false; return soothe; },
+      soothe: (on) => { if (!TAME) return false; soothe = on !== false; setIco(btn.soothe.querySelector('.ico'), soothe ? 'ui_tranq_on' : 'ui_tranq_off'); return soothe; },
       feed: () => feed(),
       pouch: () => Object.assign({}, pouch),
       party: () => party.map((p) => ({ id: p.ent.id, sp: p.ent.sp, x: p.cs.x, y: p.cs.y, mode: p.cs.mode, hits: p.cs.hits || 0, dmg: p.dmg, down: p.cs.down })),
@@ -1302,7 +1446,7 @@
       simT: () => simT,
       hint: () => hintText(TAME ? feedTarget() : null),
       nextTo: (id, dx) => { const c = creatures.find((x) => x.uid === id); if (!c) return null; hero.x = c.x + (Number(dx) || 0); hero.y = c.y; return snap(); },
-      clearCreatures: () => { creatures = []; groupState.forEach((s) => { s.alive = 0; s.until = clock.now() + 1e9; }); },
+      clearCreatures: () => { creatures = []; rare.live = 0; groupState.forEach((s) => { s.alive = 0; s.until = clock.now() + 1e9; }); },
       spawnTick: () => { spawnTick(); return creatures.length; },
       fire: (dx, dy) => { hero.cd = 0; return fire(dx, dy); },
       stats: () => ({ xp: xp, kills: kills, tamed: tamedN, loot: Object.assign({}, loot), bolts: bolts.length, chunks: chunkCache.size(), fog: FOG.count(fog), cap: CAP, dpr: DPR }),
@@ -1329,6 +1473,27 @@
       medalLog: () => medalLog.slice(),
       checkMedals: () => checkMedals(),
       bossCheck: () => { bossCheck(); return save.bosses.slice(); },
+      // X1
+      rare: () => ({ spot: rare.spot ? Object.assign({}, rare.spot) : null, live: rare.live, done: rare.done, n: rare.n,
+        alive: creatures.filter((c) => c.rare).length }),
+      swimAt: (tx, ty) => swimAt(tx, ty),
+      terrainName: (tx, ty) => tileName(tx, ty),
+      walkable: (tx, ty) => walkableAt(tx, ty),
+      heroSolid: (tx, ty) => heroSolidAt(tx, ty),
+      isSolid: (tx, ty) => solidAt(tx, ty),
+      kindDef: (k) => { const d = CR.get(k); return d ? { id: d.id, biome: d.biome, tameable: !!d.tame } : null; },
+      command: () => cycleCommand(),
+      icons: () => ({ loaded: Object.keys(iconOk).sort(), shown: Array.prototype.map.call(document.querySelectorAll('.ico.on'), (e) => e.dataset.ico) }),
+      meters: () => { drawHud(); const o = {}; Object.keys(meters).forEach((k) => { o[k] = meters[k].hidden ? null : meters[k].querySelector('.val').textContent; }); return o; },
+      // find a tile of terrain `name` that has a walkable neighbour (a shore tile), for the swim tests
+      findShore: (name) => {
+        const want = O.TERRAIN_ALL[name];
+        for (let y = 3; y < H - 3; y++) for (let x = 3; x < W - 3; x++) {
+          if (world.terrain[y * W + x] !== want) continue;
+          if (walkableAt(x - 1, y) && !solidAt(x - 1, y)) return { x: x, y: y, lx: x - 1, ly: y };
+        }
+        return null;
+      },
     };
   }
 }());

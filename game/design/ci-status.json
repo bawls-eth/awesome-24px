@@ -1,9 +1,9 @@
 {
-  "sha": "88467c0ba9d299a7441a7b9c44712cff2a14e9a8",
-  "generated_utc": "2026-11-21T22:00:16Z",
+  "sha": "90458eae3ac2a4b27933ed9c509b2db351fa60e9",
+  "generated_utc": "2026-11-21T23:03:48Z",
   "full_suite_green": true,
   "beta_green": null,
-  "suites_passed": 254,
-  "suites_total": 254,
-  "notes": "Full run was 252/254 on the tip before the isles art-wiring merge (isles-aw1, merged mid-run); the 2 failures (art-integration: b32 saddle overlays; drop-recap: tier-prefixed names with gear on by default) were fixed in test-only commits, and those two plus every isles/art/gear-signature suite were re-run green on this sha. Gear drops are ON by default. Beta runs only on owner request."
+  "suites_passed": 262,
+  "suites_total": 262,
+  "notes": "Full run on the tip before the gear-gh2 merge was 260/261 (world-safereturn, a load flake, passed 2/2 alone). gear-gh2 (snapshot, hint, seat ids) was merged after the run; gear-default-on, gear-world/dungeon-drops, gear-save-tolerance, world-safereturn, run-all-tiers passed on this sha; dungeon-pickups failed 1 of 4 runs under load and passed 3/3 alone (tracked flake). Beta runs only on owner request."
 }

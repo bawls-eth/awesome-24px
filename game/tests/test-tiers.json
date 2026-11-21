@@ -959,6 +959,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-isle-craft.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "shared-mm-tame.test.js": {
     "class": "node",
     "tier": "smoke"
@@ -1022,5 +1026,25 @@
   "shared-mm-creature-strips.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "shared-mm-isle-boss.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "isle-boss-sim.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-biome-packs-canon.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "isles-biomes.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "gear-default-on.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

@@ -206,5 +206,22 @@
     return apply(storage, p);
   }
 
-  return { FORMAT: FORMAT, VERSION: VERSION, KNOWN: KNOWN.slice(), bundle: bundle, plan: plan, apply: apply, restore: restore, labelOf: label };
+  // Gear-on hardening (slice GH): ONE safety snapshot of every known key, taken just before the first tiered item is written to a town save that
+  // has never seen gear (no realm.gv, no item with `t`). Written once to its own key, which is not in KNOWN, so it is never part of a bundle or a restore.
+  // Quota-safe: a full or blocked storage just skips it. Returns 'written' | 'exists' | 'has-gear' | 'skipped'.
+  const PREGEAR_KEY = 'pixeltown-backup-pregear-v1';
+  function snapshotPregear(storage) {
+    try {
+      if (typeof storage.getItem(PREGEAR_KEY) === 'string') return 'exists';
+      let realm = null;
+      try { const t = JSON.parse(storage.getItem(SAVE_KEY)); realm = isObj(t) && isObj(t.realm) ? t.realm : null; } catch (e) { realm = null; }
+      if (realm && (realm.gv === 1 || (Array.isArray(realm.items) && realm.items.some((x) => isObj(x) && x.t)))) return 'has-gear';
+      const b = bundle(storage); b.at = Date.now(); b.why = 'pregear';
+      storage.setItem(PREGEAR_KEY, JSON.stringify(b));
+      return 'written';
+    } catch (e) { return 'skipped'; }
+  }
+
+  return { FORMAT: FORMAT, VERSION: VERSION, KNOWN: KNOWN.slice(), bundle: bundle, plan: plan, apply: apply, restore: restore, labelOf: label,
+    PREGEAR_KEY: PREGEAR_KEY, snapshotPregear: snapshotPregear };
 }));

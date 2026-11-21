@@ -555,7 +555,7 @@
     }
     function syncHud(force) {
       const p = arena.player; const tx = Math.floor(p.x / TILE); const ty = Math.floor(p.y / TILE);
-      const zi = Z.zoneInfoAt(world, tx, ty); lastZone = zi; zoneCross(zi, tx, ty); fireBudgetFor(zi);
+      const zi = Z.zoneInfoAt(world, tx, ty); lastZone = zi; zoneCross(zi, tx, ty); fireBudgetFor(zi); if (gearHintSt.checked) gearHintNote();
       const txt = `${zi.name} · ${zi.danger}`;
       if (txt !== zoneTxt || force) { zoneTxt = txt; zName.textContent = txt; zName.style.color = zi.color; zoneEl.dataset.zone = String(zi.zone); }
       const dx = world.center.x - tx; const dy = world.center.y - ty; const dist = Math.round(Math.hypot(dx, dy));
@@ -631,7 +631,15 @@
     const GM = window.MMGear; const GD = window.MMGearDrops;
     const gearQs = /[?&]gear=(\d)(&|$)/.exec(qs0); const gearQ = gearQs ? gearQs[1] : null;
     const GEAR_ON = !!(GM && GD) && gearQ !== '0' && (gearQ === '1' || save.gearOn === true || GEAR_DEFAULT_ON);
-    let gearPlayer = 'p0'; // per-player seed id: each co-op seat rolls its own drops locally, nothing is shared
+    // Per-player seed id: each co-op seat rolls its own drops locally, nothing is shared. Seat N of a world team (MMWorldTeam: opts.team, arena.worldTeam
+    // or setTeam) rolls as 'p' + N, so two seats on the same seed and kill get different streams; solo (no seat yet) stays 'p0' = today's seat-0 stream.
+    // setGearPlayer (test hook) overrides it.
+    let gearPlayerSet = null; let gearTeam = opts.team || null;
+    function gearPlayerId() {
+      if (gearPlayerSet !== null) return gearPlayerSet;
+      const tm = gearTeam || arena.worldTeam || null; let st = -1; try { st = tm && tm.ok !== false ? Number(tm.seat) : -1; } catch (e) { st = -1; }
+      return Number.isInteger(st) && st >= 0 && st < 16 ? 'p' + st : 'p0';
+    }
     function gearCtx(info, k, it, bag) {
       const cls = arena.heroClass ? arena.heroClass() : null;
       return { src: info.src || (info.boss ? 'boss' : 'mob'), boss: info.bossId || '', zone: info.zone | 0, eventTier: info.eventTier | 0, cls: cls || '', level: arena.heroLevel ? arena.heroLevel() : 1,
@@ -640,7 +648,7 @@
     function gearRollItem(info, k, it, bag) {
       if (!GEAR_ON || info.quest || !info.tag) return null;
       let g = null;
-      try { g = GD.rollGear(gearCtx(info, k, it, bag), GD.seedFor(seed, info.tag, kills, gearPlayer)); } catch (e) { g = null; }
+      try { g = GD.rollGear(gearCtx(info, k, it, bag), GD.seedFor(seed, info.tag, kills, gearPlayerId())); } catch (e) { g = null; }
       return g;
     }
     function gearPity() {
@@ -962,10 +970,39 @@
         try {
           let best = null, bd = 30;
           arena.bags.forEach((b) => { if (b.active || !b.gear || b.id !== it.id || b.r !== it.r) return; const d = Math.hypot(b.x - arena.player.x, b.y - arena.player.y); if (d < bd) { bd = d; best = b; } });
-          if (best && !it.t) { const c = GM.clean({ n: it.n, id: it.id, r: it.r, t: best.gear.t, a: best.gear.a }); if (c && c.t) { it.t = c.t; if (c.a) it.a = c.a; } best.gear = null; }
+          if (best && !it.t) {
+            const c = GM.clean({ n: it.n, id: it.id, r: it.r, t: best.gear.t, a: best.gear.a });
+            if (c && c.t) {
+              if (!arena.save.gv && window.MMBackup && MMBackup.snapshotPregear) MMBackup.snapshotPregear(localStorage); // GH: once, before the first tiered item is written to a gear-less save
+              it.t = c.t; if (c.a) it.a = c.a;
+            }
+            best.gear = null;
+          }
         } catch (e) { /* the item stays classic */ }
         if (prevOnItem) prevOnItem(it);
       };
+    }
+
+    // ---------- downgrade hint (GH): an old tab (pre-G7 cleaner) can strip every `t` from the town save. Remember the backpack size while the save holds
+    // tiered gear (own key, per device, never in a backup); a later visit whose save says gv:1 but has no tiered item and fewer items gets ONE calm note.
+    // Nothing is restored automatically: the player decides (Lantern backup).
+    const GEAR_HINT_KEY = 'pixeltown-gearhint-v1';
+    const GEAR_HINT_TEXT = 'Your gear may have been reset by an old tab: restore from Lantern backup';
+    const gearHintSt = { n: 0, shown: false, checked: false, now: false };
+    function gearHintRead() { let o = null; try { o = JSON.parse(localStorage.getItem(GEAR_HINT_KEY)); } catch (e) { o = null; } const n = o && Number.isInteger(o.n) && o.n >= 0 && o.n <= 999 ? o.n : 0; return { n, shown: !!(o && o.shown === 1) }; }
+    function gearHintWrite(n, shown) { try { localStorage.setItem(GEAR_HINT_KEY, JSON.stringify({ n, shown: shown ? 1 : 0 })); } catch (e) { /* storage full or blocked */ } gearHintSt.n = n; gearHintSt.shown = shown; }
+    function gearHintNote() { // called from the HUD sync: cheap in-memory test, a write only when the remembered count changes
+      const sv = arena.save; if (!sv || !Array.isArray(sv.items)) return;
+      if (sv.items.some((x) => x && x.t) && (sv.items.length !== gearHintSt.n || gearHintSt.shown)) gearHintWrite(sv.items.length, false);
+    }
+    function gearHintCheck() {
+      if (gearHintSt.checked) return; gearHintSt.checked = true;
+      const st = gearHintRead(); gearHintSt.n = st.n; gearHintSt.shown = st.shown;
+      const sv = arena.save; const items = sv && Array.isArray(sv.items) ? sv.items : [];
+      if (sv && sv.gv === 1 && !items.some((x) => x && x.t) && items.length < st.n && !st.shown) {
+        gearHintWrite(st.n, true); gearHintSt.now = true;
+        say(GEAR_HINT_TEXT); noteT = 9;
+      } else gearHintNote();
     }
 
     // ---------- the hooks the arena calls ----------
@@ -1881,7 +1918,7 @@
         evT = 0; hintT = 0; hintEl.classList.add('hidden');
         if (back && SAFE_ON) safeReturn(); // before the first evTick, so a raid in view never spawns on top of the arrival
         arena._showBanner(`The Realm · island #${seed}`, 1.8);
-        savePos(true); evTick(); syncHud(true);
+        savePos(true); evTick(); syncHud(true); gearHintCheck();
       },
       tick(dt) {
         slamTick(dt);
@@ -1976,7 +2013,7 @@
       diffOn: !!DIFF, diffMode, diffAt, spawner: () => zones, spawned: () => spawned, despawned: () => despawned,
       liveCount: () => { let n = 0; live.forEach((e, id) => { if (e.active && e.zid === id) n++; }); return n; },
       liveEnemies: () => { const o = []; live.forEach((e, id) => { if (e.active && e.zid === id) o.push({ id, x: e.x, y: e.y, type: e.type, zone: e.zone, tier: e.tier, art: e.art, hp: e.maxHp, spd: e.spdMul, dmg: e.dmgMul, diff: e.diff || null }); }); return o; },
-      enemyById: (id) => live.get(id) || null, setDropAll: (on) => { dropAll = !!on; }, lastDrops: () => lastDrops.slice(), kills: () => kills, gearOn: GEAR_ON, gearDefaultOn: GEAR_DEFAULT_ON, gearPity, setGearPlayer: (id) => { gearPlayer = String(id).slice(0, 60); }, gearSave: () => ({ gp: save.gp || null }), testDrop: (info, tag) => { kills++; return rollFor(info, arena.player.x, arena.player.y, tag || 't'); }, // test hook: one kill's worth of drops with the real seed/pity path
+      enemyById: (id) => live.get(id) || null, setDropAll: (on) => { dropAll = !!on; }, lastDrops: () => lastDrops.slice(), kills: () => kills, gearOn: GEAR_ON, gearDefaultOn: GEAR_DEFAULT_ON, gearPity, setGearPlayer: (id) => { gearPlayerSet = id === null ? null : String(id).slice(0, 60); }, gearPlayerId, setTeam: (t) => { gearTeam = t || null; }, gearHint: () => Object.assign({}, gearHintSt), gearSave: () => ({ gp: save.gp || null }), testDrop: (info, tag) => { kills++; return rollFor(info, arena.player.x, arena.player.y, tag || 't'); }, // test hook: one kill's worth of drops with the real seed/pity path
       
       bossesClassic, rosterClassic, bandsClassic, bossArtIds: () => world.bossSites.map((b) => b.boss),
       bossSites: () => world.bossSites.map((b, i) => ({ i, x: b.x, y: b.y, zone: b.zone, boss: b.boss, name: BOSS_NAME[i], live: !!(bossLive[i] && bossLive[i].active), ready: !!zones && zones.bossReady(b, arena.clock) })),

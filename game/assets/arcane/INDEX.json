@@ -487,6 +487,16 @@
       "status": "provisional",
       "ingested_utc": "2026-11-21T21:20:00Z",
       "source": "codex"
+    },
+    {
+      "id": "b34",
+      "label": "taming-ui-items",
+      "path": "assets/arcane/b34-taming-ui-items",
+      "manifest": "assets/arcane/b34-taming-ui-items/manifest.json",
+      "files": 14,
+      "status": "provisional",
+      "ingested_utc": "2026-11-21T22:15:00Z",
+      "source": "codex"
     }
   ]
 }
