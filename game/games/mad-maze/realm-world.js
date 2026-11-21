@@ -529,10 +529,14 @@
     const DIFF = window.MMDifficulty && !MMDifficulty.isOff(typeof location !== 'undefined' ? location.search : '') ? MMDifficulty : null;
     let diffMode = 'classic'; try { if (window.MMProfile) diffMode = MMProfile.clean(localStorage.getItem(MMProfile.KEY)).mode; } catch (e) { diffMode = 'classic'; }
     const REALM_R = world.w * 0.47; // nominal coast radius in tiles (MMOverworld.generate)
+    // early TTK + loot loop (PLAYTEST-REVIEW-2 #3): softer shore creatures (MMDifficulty SHORE_TTK) and a pickup magnet the size of a fight's
+    // reach (MMPickups.MAGNET_RADIUS_WORLD); ?ttk=0 restores today's hp and the 64 px magnet
+    const TTK_ON = !/[?&]ttk=0(&|$)/.test(qs0);
     function diffAt(zone, px, py) { // px/py in pixels -> MMDifficulty.zoneScale for that spot (1x everywhere when off)
       if (!DIFF) return { hp: 1, dmg: 1, spd: 1, count: 1, fire: 1 };
       const d = Math.hypot(px / TILE - world.center.x, py / TILE - world.center.y) / REALM_R;
-      return DIFF.zoneScale(zone, d, world.bands === 'wide' ? { mode: diffMode, bands: 'wide' } : { mode: diffMode });
+      const o = { mode: diffMode }; if (world.bands === 'wide') o.bands = 'wide'; if (TTK_ON) o.ttk = true;
+      return DIFF.zoneScale(zone, d, o);
     }
     function scaleEnemy(e, zone, hpBase) { // multiply an arena enemy already carrying its zone stats
       const s = diffAt(zone, e.x, e.y);
@@ -1075,11 +1079,12 @@
     window.addEventListener('keydown', (ev) => { if ((ev.key === 'e' || ev.key === 'E') && !ev.repeat && siteFor && arena.active && !arena.paused && arena.state === 'play') { ev.preventDefault(); siteAct(); } });
 
     // ---------- live pickups (MMPickups): coins, XP orbs, hearts and life potions rolled per kill, seeded by (world seed, group, kill index) ----------
-    // World sprites on the overlay layer (drawImage from the loaded b15 art, or a tiny cached code sprite). Magnet 64 px, cap 60 (oldest culled),
+    // World sprites on the overlay layer (drawImage from the loaded b15 art, or a tiny cached code sprite). Magnet 120 px (64 px with ?ttk=0), cap 60 (oldest culled),
     // lifetime per tier, no per-frame Graphics. Focus orbs and stat-buff potions need arena resources that do not exist yet: they are never spawned.
     const PK = window.MMPickups || null;
     const PICK_ON = !!PK && !/[?&]pickups=0(&|$)/.test(typeof location !== 'undefined' ? location.search : '');
     const PICK_CAP = 60;
+    const MAGNET_R = TTK_ON && PK && PK.MAGNET_RADIUS_WORLD > 0 ? PK.MAGNET_RADIUS_WORLD : (PK ? PK.MAGNET_RADIUS : 64);
     const picks = []; let pickSave = false; let pickTotal = 0; const pickGot = { coin: 0, xp: 0, heart: 0, potion: 0 };
     const pickSpr = {};
     function pickSprite(type, art) { // cached code sprite (24x24) used until the art loads or when art is off
@@ -1123,7 +1128,7 @@
         const q = picks[i];
         if (PK.expired(q, now)) { picks.splice(i, 1); continue; }
         if (arena.state !== 'play') continue;
-        const m = PK.magnetStep(q, p, d); q.x = m.x; q.y = m.y;
+        const m = PK.magnetStep(q, p, d, MAGNET_R); q.x = m.x; q.y = m.y;
         if (m.collected) { picks.splice(i, 1); collectPick(q); }
       }
       if (pickSave) { pickSave = false; arena.onSave(arena.save); arena._syncHud(); }
@@ -1461,7 +1466,7 @@
       useShrine, openChest, talkNpc: talk, sitePrompt: () => (siteFor ? { kind: siteFor.kind, i: siteFor.i, text: siteBtn.textContent, hidden: siteBtn.classList.contains('hidden') } : null), siteNote: () => ({ text: siteNote.textContent, hidden: siteNote.classList.contains('hidden') }), siteTick,
       // slice 11: world debuffs (roll(creature, zone, force) = one bolt hit; table = creature -> status; shown by arena.statusOf)
       worldStatus: { on: STATUS_ON, table: BOLT_ST, forCreature: boltStatusFor, roll: boltRoll, log: stLog },
-      pickups: { on: PICK_ON, cap: PICK_CAP, list: () => picks.map((q) => ({ type: q.type, art: q.art, value: q.value, tier: q.tier, x: q.x, y: q.y, lifeMs: q.lifeMs })), spawn: spawnPickups, got: () => Object.assign({}, pickGot), total: () => pickTotal },
+      ttk: { on: TTK_ON }, pickups: { on: PICK_ON, cap: PICK_CAP, magnet: MAGNET_R, list: () => picks.map((q) => ({ type: q.type, art: q.art, value: q.value, tier: q.tier, x: q.x, y: q.y, lifeMs: q.lifeMs })), spawn: spawnPickups, got: () => Object.assign({}, pickGot), total: () => pickTotal },
       nexus: { on: NX_ON, site: nxSite, open: nexusOpen, close: nexusClose, isOpen: () => nxOpen, near: () => nxNear, enterTile: () => nxEnterTile, talk: (id) => { const n = NX_ON && NX.layout().npcs.find((x) => x.id === id); if (n) { nxBuild(); nxTalk(n); } return nxDom && nxDom.last; }, portal: (id) => { const q = NX_ON && NX.layout().portals.find((x) => x.id === id); return q ? nxPortal(q) : null; }, lastUrl: () => api.lastNexusUrl || null, today: todayUtc },
       quests: { date: questDate, list: () => MMQuests.quests(questDate()), summary: () => MMQuests.summary(save.quests, questDate()), state: () => JSON.parse(JSON.stringify(save.quests || MMQuests.fresh(questDate()))), event: nxQuestEvent, claim: nxClaim, flush: () => { qDirty = false; return writeSave(save); } },
       settle, stashNote, lastSettle: () => lastSettle, finds: () => (ST ? ST.readFinds(localStorage) : null),

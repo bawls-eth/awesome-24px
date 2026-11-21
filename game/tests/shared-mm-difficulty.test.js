@@ -83,6 +83,8 @@ check('zone out of range clamps to shore / godlands; missing distance = middle o
 check('pure and deterministic: same input twice gives deep-equal output', JSON.stringify(D.zoneScale(1, 0.5)) === JSON.stringify(D.zoneScale(1, 0.5)) && JSON.stringify(D.dungeonScale('meadow', 4, 9, false)) === JSON.stringify(D.dungeonScale('meadow', 4, 9, false)));
 check('isOff only matches ?difficulty=off as a whole param', D.isOff('?mode=world&difficulty=off') && D.isOff('?difficulty=off') && !D.isOff('?difficulty=offx') && !D.isOff('?x=difficulty=off') && !D.isOff(null) && !D.isOff(undefined) && !D.isOff('?difficulty=on'));
 check('IDENTITY is all ones and frozen', K.every((k) => D.IDENTITY[k] === 1) && Object.isFrozen(D.IDENTITY));
+// PLAYTEST-REVIEW-2 #3 (added): opts.ttk halves shore hp (after the clamp) and nothing else; other zones and the default call are unchanged
+check('opts.ttk: shore hp x0.5 (0.3 at the coast), dmg/spd untouched, midlands identical, no ttk = old numbers', D.zoneScale(0, 0.97, { ttk: true }).hp === 0.3 && D.zoneScale(0, 0.97).hp === 0.6 && D.zoneScale(0, 0.8, { ttk: true }).dmg === D.zoneScale(0, 0.8).dmg && JSON.stringify(D.zoneScale(1, 0.5, { ttk: true })) === JSON.stringify(D.zoneScale(1, 0.5)) && D.zoneScale(0, 0.68, { ttk: true }).hp <= D.zoneScale(1, 0.68, { ttk: true }).hp);
 // PLAYTEST-REVIEW-2 #1 (added): opts.bands 'wide' reads the wide zone bands (MMOverworld.ZONE_BANDS_WIDE); the default stays classic
 {
   const O = require('../shared/mm-overworld.js');

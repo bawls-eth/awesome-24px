@@ -43,6 +43,9 @@
     // overworld hero (world mode only; never the classic arena, dungeons or duels): realm attunement so a level-1 hero's 7.5 bolts/s
     // (1 dmg each) kill a 6-12 hp shore creature in about a second (12 dps) instead of ~2 s. Flat, so levelling never lowers it.
     HERO_WORLD: { dmg: 1.6, rate: 1.0 },
+    // early TTK (PLAYTEST-REVIEW-2 #3, opts.ttk, world wiring only; ?ttk=0 = off): shore creatures get this extra hp factor AFTER the clamp, so a
+    // 4.6-6 hp whirler, 3 hp sniper and 4-5 hp burster die in 2-4 bolts of the 1.6-dmg level-1 hero. Only zone 0: the midlands are untouched.
+    SHORE_TTK: { hp: 0.5 },
     CLAMP: { hp: [0.4, 4.0], dmg: [0.5, 2.0], spd: [0.7, 1.4], count: [0.5, 1.6], fire: [0.7, 1.5] },
   };
   const T = TABLES;
@@ -71,7 +74,9 @@
     const b = (opts && opts.bands === 'wide' ? T.BANDS_WIDE : T.BANDS)[z], d = num(distFromCentre, NaN);
     const s = d === d ? clamp((b.max - d) / (b.max - b.min), 0, 1) : 0.5;
     const raw = {}; for (let i = 0; i < KEYS.length; i++) raw[KEYS[i]] = knot(T.ZONE_KNOTS[KEYS[i]], z + s);
-    return finish(raw, opts);
+    const out = finish(raw, opts);
+    if (z === 0 && opts && opts.ttk === true) out.hp = round3(out.hp * T.SHORE_TTK.hp); // below CLAMP.hp on purpose (see SHORE_TTK)
+    return out;
   }
 
   // roomIndex is 1-based progress through the run (1 = first room), roomsTotal the number of rooms on the way (boss room last).

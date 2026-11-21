@@ -746,5 +746,9 @@
   "world-firebudget.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "world-ttk.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

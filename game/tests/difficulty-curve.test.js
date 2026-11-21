@@ -31,6 +31,9 @@ async function zoneStats(page) {
     const out = {};
     for (const z of [0, 1, 2, 3]) {
       const gs = w.world.spawnGroups.filter((g) => g.zone === z); const g = gs[Math.floor(gs.length / 2)];
+      // PLAYTEST-REVIEW-2 #1 (wide bands): the zones sit closer together, so the last zone's groups (not yet 2100 px away) could still fill the
+      // 60-enemy cap. Step out to the empty sea corner first so they despawn, then measure this zone's group on a clean spawner.
+      a.player.x = 48; a.player.y = 48; for (let i = 0; i < 3; i++) await new Promise((r) => requestAnimationFrame(r));
       a.player.x = (g.x + 0.5) * 32; a.player.y = (g.y + 0.5) * 32;
       for (let i = 0; i < 8; i++) await new Promise((r) => requestAnimationFrame(r));
       const es = w.liveEnemies().filter((e) => e.zone === z && Math.hypot(e.x - a.player.x, e.y - a.player.y) < 400);
