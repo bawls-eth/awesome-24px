@@ -194,6 +194,9 @@
     $('buy10').disabled = !sunday || M.maxBuy(save, wk) < 10;
     $('sell1').disabled = sunday || save.holdings < 1;
     $('sellall').disabled = sunday || save.holdings < 1;
+    $('market-reason').textContent = sunday
+      ? 'Selling closed: the market only buys stalks Monday to Saturday. Buying is open today.'
+      : 'Buying closed: stalks can only be bought on Sunday. Selling is open now.';
     $('buy1').textContent = 'Buy 1';
     $('sellall').textContent = save.holdings > 0 && !sunday ? 'Sell all (' + save.holdings + ')' : 'Sell all';
     var known = M.knownPrices(wk, slot);

@@ -36,11 +36,12 @@
     <p id="advisor-text"></p><ul id="advisor-bars"></ul></section>
 
   <section id="actions" aria-label="Trade">
-    <button id="buy1" type="button" class="big buy">Buy 1</button>
-    <button id="buy10" type="button" class="big buy">Buy 10</button>
-    <button id="sell1" type="button" class="big sell">Sell 1</button>
-    <button id="sellall" type="button" class="big sell">Sell all</button>
+    <button id="buy1" type="button" aria-describedby="market-reason" class="big buy">Buy 1</button>
+    <button id="buy10" type="button" aria-describedby="market-reason" class="big buy">Buy 10</button>
+    <button id="sell1" type="button" aria-describedby="market-reason" class="big sell">Sell 1</button>
+    <button id="sellall" type="button" aria-describedby="market-reason" class="big sell">Sell all</button>
   </section>
+  <p id="market-reason" class="dim" role="note"></p>
   <p id="msg" role="status" aria-live="polite"></p>
 
   <div id="hint" hidden role="note"><strong>How to play</strong>

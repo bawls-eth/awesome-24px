@@ -135,6 +135,13 @@ const stored = (p) => p.evaluate((k) => JSON.parse(localStorage.getItem(k)), KEY
   check('page lists neighbours, goal cards, medal case and all-time stats', await n1.page.evaluate(() => document.querySelectorAll('#nb-list li').length === 3 && document.querySelectorAll('#goals li').length === 3 && !!document.getElementById('medal-case') && !!document.getElementById('alltime')));
   await n1.ctx.close();
 
+  // closed-market reason beside the buttons (K1)
+  const kc1 = await open(browser, { viewport: { width: 800, height: 600 } }, '?test=1&week=100&slot=0');
+  check('Sunday: sell-closed reason shown and linked via aria-describedby', await kc1.page.evaluate(() => /Selling closed/.test(document.getElementById('market-reason').textContent) && document.getElementById('sell1').getAttribute('aria-describedby') === 'market-reason'));
+  await kc1.page.evaluate(() => window.__stalk.setTime(100, 3));
+  check('weekday: buy-closed reason mentions Sunday', await kc1.page.evaluate(() => /Buying closed.*Sunday/.test(document.getElementById('market-reason').textContent)));
+  await kc1.ctx.close();
+
   await browser.close();
   console.log(failed ? `${failed} FAILED` : 'ALL PASSED');
   process.exitCode = failed ? 1 : 0;
