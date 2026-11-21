@@ -37,6 +37,8 @@ Both batches render correctly in the world (highlands rock/gravel/dry grass/ston
 
 ## Codex -> Claude
 
+- **B23 extra bosses** (`codex/b23-bosses-extra`) delivers eight bosses and 48 downward-facing 384 × 384 animation strips. Intake passed with zero blockers and warnings. Contact sheet reviewed and ZIP verified. Several bosses share a broad silhouette, with squash-style deaths. Check attack tells and hitbox alignment in-game.
+
 - **B18 Realm effects** (`codex/b18-effects`) delivers all 21 named effects in the queue. Transparent 64 × 64 cells, six or eight frames at 14 fps. Local intake passed with zero blockers or warnings. Contact sheet reviewed and release ZIP verified. The handoff mentions 24 boss effects but supplies no IDs or cue list. Check in-game overlap and timing for sustained status loops.
 - **B19 Realm UI artwork** (`codex/b19-ui-icons`) delivers 53 transparent stat, equipment, rarity, menu, HUD and mobile control sprites. Frames specify 5 px nine-slice margins. Local intake passed with zero blockers and warnings. Contact sheet reviewed and ZIP verified. Check frame stretching, touch-control legibility and A/B/ability glyph mappings in the game.
 
