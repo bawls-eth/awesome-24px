@@ -1,0 +1,100 @@
+// Town desktop performance + desktop HUD target sizes. The Firebase database host is BLOCKED for every request (same trick as
+// realm-playthrough.test.js), so nothing touches the live database; the bot is named ADMIN* and never chats.
+// Run: BASE=http://localhost:8440/game/index.html NODE_PATH=$(npm root -g) node game/tests/town-perf.test.js
+//
+// Pre-fix baseline (recorded on the CI-like box, 1280x720, headless software rendering, Town idle, DB blocked):
+//   long frames (>50 ms): 8.1 per second (every single frame was long, ~3-8 fps while the box was loaded; the beta gate saw ~17.8 fps
+//   average with 166 long frames). The cost was GPU/fill-rate bound (CPU profile: ~95% "(program)", JS < 5%): a full-screen blended
+//   overlay rectangle that never showed anything, a second full-screen season wash, and ~30 live Graphics objects re-tessellated
+//   and flushed every frame. Fixes: one ambient layer drawn only when visible, static Graphics baked to textures, and an adaptive
+//   render resolution on desktop (steps 1 -> 0.75 -> 0.5 while frames stay under 28 fps; the canvas keeps its CSS size).
+const { chromium } = require('playwright');
+const { check, done } = require('./helpers');
+const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
+const BLOCK = /firebaseio\.com|firebasedatabase\.app|identitytoolkit|securetoken/i;
+const BASELINE_LONG_PER_S = 8.1;
+
+(async () => {
+  const browser = await chromium.launch();
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  const errors = [];
+  const dbHits = [];
+  await ctx.route('**/*', (route) => { const u = route.request().url(); if (BLOCK.test(u)) { dbHits.push(u); return route.abort(); } return route.continue(); });
+  const page = await ctx.newPage();
+  page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+  page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|ERR_FAILED|net::/.test(m.text())) errors.push('console: ' + m.text()); });
+  await page.route('**/main.js*', async (route) => { const resp = await route.fetch(); route.fulfill({ response: resp, body: (await resp.text()).replace('const game = new Phaser.Game(config);', 'const game = window.__g = new Phaser.Game(config);') }); });
+  const scene = (fn, arg) => page.evaluate(`(${fn.toString()})(window.__g.scene.getScene('Town'), ${JSON.stringify(arg)})`);
+
+  await page.goto(BASE);
+  await page.fill('#name-input', 'ADMINperf');
+  await page.click('.species-tab'); await page.waitForTimeout(150);
+  await page.click('.avatar-choice');
+  await page.click('#join-btn');
+  await page.waitForSelector('#player-list-panel', { timeout: 30000 });
+  await page.waitForFunction(() => window.__g && window.__g.scene.getScene('Town') && window.__g.scene.getScene('Town').localBody, null, { timeout: 30000 });
+
+  // ---- structure: no per-frame Graphics, one ambient layer ----
+  const st = await scene((s) => {
+    const kids = s.children.list;
+    const fullScreen = kids.filter((c) => c.type === 'Rectangle' && c.scrollFactorX === 0 && c.width >= s.scale.width && c.height >= s.scale.height && c.visible);
+    return { graphics: kids.filter((c) => c.type === 'Graphics').length, fullScreen: fullScreen.length, baked: kids.filter((c) => c.texture && /^baked_/.test(c.texture.key)).length };
+  });
+  check('static scenery Graphics are baked to textures (only the fishing rod stays live)', st.graphics <= 1 && st.baked >= 20, JSON.stringify(st));
+  check('at most ONE full-screen ambient overlay is drawn per frame', st.fullScreen <= 1, JSON.stringify(st));
+
+  // ---- let the adaptive resolution settle, then measure 5 s ----
+  await page.waitForTimeout(13000);
+  const rs = await page.evaluate(() => Number(document.getElementById('game-container').dataset.renderScale || 1));
+  const frames = await page.evaluate(() => new Promise((res) => { const t = []; let last = performance.now(); const t0 = last; const f = (n) => { t.push(n - last); last = n; if (n - t0 < 5000) requestAnimationFrame(f); else res(t); }; requestAnimationFrame(f); }));
+  frames.shift();
+  const secs = frames.reduce((a, b) => a + b, 0) / 1000;
+  const longPerS = frames.filter((x) => x > 50).length / secs;
+  const fps = frames.length / secs;
+  console.log(`INFO ${fps.toFixed(1)} fps avg, ${longPerS.toFixed(2)} long frames/s (baseline ${BASELINE_LONG_PER_S}), render scale ${rs}`);
+  check(`long frames (>50 ms) per second reduced vs the pre-fix baseline (${BASELINE_LONG_PER_S}/s)`, longPerS < BASELINE_LONG_PER_S * 0.9, longPerS.toFixed(2));
+  check('render scale only ever steps down within its allowed range', [1, 0.75, 0.5].includes(rs), String(rs));
+  const cv = await page.evaluate(() => { const r = document.querySelector('#game-container canvas').getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height) }; });
+  check('the canvas still fills the 1280x720 viewport whatever the internal resolution', Math.abs(cv.w - 1280) <= 2 && Math.abs(cv.h - 720) <= 2, JSON.stringify(cv));
+
+  // input still lands on the right world spot after a resolution change: the pointer maps through the scale manager
+  const pt = await scene((s) => { const cam = s.cameras.main; return { zoom: cam.zoom, base: s.baseZoom, gw: s.scale.width }; });
+  check('camera zoom is scaled with the render scale so the visible world is unchanged', Math.abs(pt.zoom - pt.base * rs) < 1e-6, JSON.stringify(pt));
+
+  // ---- desktop HUD targets ----
+  const ids = ['achievements-badge', 'map-btn', 'world-map-link', 'museum-badge', 'dailies-btn', 'journal-btn', 'settings-toggle-btn', 'chat-input'];
+  const rects = await page.evaluate((list) => list.map((id) => { const e = document.getElementById(id); const r = e.getBoundingClientRect(); return { id, w: Math.round(r.width), h: Math.round(r.height), l: r.left, t: r.top, r: r.right, b: r.bottom }; }), ids);
+  rects.forEach((r) => check(`#${r.id} is at least 40 px tall at 1280x720 (${r.w}x${r.h})`, r.h >= 40, JSON.stringify(r)));
+  let overlap = null;
+  for (let i = 0; i < rects.length; i++) for (let j = i + 1; j < rects.length; j++) {
+    const a = rects[i]; const b = rects[j];
+    if (a.l < b.r - 1 && b.l < a.r - 1 && a.t < b.b - 1 && b.t < a.b - 1) overlap = `${a.id} x ${b.id}`;
+  }
+  check('the enlarged HUD buttons do not overlap each other', !overlap, overlap);
+  const panel = await page.evaluate(() => { const p = document.getElementById('player-list-panel').getBoundingClientRect(); const c = document.getElementById('chat-input-row').getBoundingClientRect(); return { pr: p.right, pb: p.bottom, pl: p.left, cr: c.right, ct: c.top }; });
+  check('the HUD panel stays on screen and clear of the chat bar', panel.pr <= 1280 && panel.pb <= 720 && (panel.pl >= panel.cr || panel.pb <= panel.ct), JSON.stringify(panel));
+
+  check('no console errors', errors.length === 0, errors.join(' | '));
+  await browser.close();
+
+  // ---- phone: layout intact ----
+  const b2 = await chromium.launch();
+  const c2 = await b2.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  await c2.route('**/*', (route) => (BLOCK.test(route.request().url()) ? route.abort() : route.continue()));
+  const p2 = await c2.newPage();
+  const e2 = [];
+  p2.on('pageerror', (e) => e2.push(e.message));
+  p2.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|ERR_FAILED|net::/.test(m.text())) e2.push(m.text()); });
+  await p2.goto(BASE);
+  await p2.fill('#name-input', 'ADMINperfm');
+  await p2.click('.species-tab'); await p2.waitForTimeout(150);
+  await p2.click('.avatar-choice');
+  await p2.click('#join-btn');
+  await p2.waitForSelector('#player-list-panel', { timeout: 30000 });
+  await p2.waitForTimeout(1500);
+  const ph = await p2.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: window.innerWidth, chat: document.getElementById('chat-input').getBoundingClientRect().height, scale: document.getElementById('game-container').dataset.renderScale || '1' }));
+  check('phone 390x844: no horizontal scroll, render scale untouched (adaptive scaling is desktop-only)', ph.sw <= ph.iw && ph.scale === '1', JSON.stringify(ph));
+  check('phone: no console errors', e2.length === 0, e2.join(' | '));
+  await b2.close();
+  done();
+})().catch((e) => { console.error(e); process.exit(1); });

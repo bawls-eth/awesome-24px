@@ -356,6 +356,7 @@ const TREE_SHAKE_COOLDOWN_MS = 20000;
 // The original village footprint — unchanged by the world expansion below.
 // Bugs (and anything else that should stay a "village" activity rather
 // than spread out into the much bigger wilderness) are bounded to this.
+const NIGHT_WASH_VISIBLE = false; // see setupDayNight(): the night wash never rendered; keep it that way until design asks for it
 const VILLAGE_BOUNDS = { x: 0, y: 0, width: 2400, height: 1200 };
 // Thickness of the ocean band at the very edge of the (much bigger) world —
 // everything between the village and the ocean is the wilderness ring.
@@ -1334,7 +1335,8 @@ class TownScene extends Phaser.Scene {
     // most of what's visible. Zoomed out further still (was 2/1.5) so more
     // of the surroundings are visible at once — sprites are still a very
     // legible ~38px/29px on screen at these levels.
-    this.cameras.main.setZoom(IS_TOUCH ? 1.2 : 1.6);
+    this.baseZoom = IS_TOUCH ? 1.2 : 1.6;
+    this.cameras.main.setZoom(this.baseZoom);
 
     this.obstacles = this.physics.add.staticGroup();
     this.remotePlayers = new Map();
@@ -1806,12 +1808,42 @@ class TownScene extends Phaser.Scene {
   // ---------- day/night ambience ----------
 
   setupDayNight() {
-    this.dayNightOverlay = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x0a1030, 0)
+    // ONE full-screen ambient layer. History: the night wash was created with fill alpha 0 and
+    // only had its object alpha animated, so it never showed (0 * x = 0) but still cost a full-screen
+    // blended draw every frame, on top of the season wash, which is the same cost again. Now there is
+    // a single layer, drawn only when it can actually be seen, so what players see is unchanged
+    // (the season wash; the night wash stays invisible exactly as before, NIGHT_WASH_VISIBLE = false).
+    this.ambientOverlay = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x0a1030, 0)
       .setOrigin(0, 0)
       .setScrollFactor(0)
-      .setDepth(300000);
-    this.scale.on('resize', (size) => this.dayNightOverlay.setSize(size.width, size.height));
+      .setDepth(300000)
+      .setVisible(false);
+    this.scale.on('resize', (size) => this.ambientOverlay.setSize(size.width, size.height));
+    this.nightAlpha = 0;
+    this.seasonWash = { color: 0xffffff, alpha: 0 };
     this.lastDayNightCheck = 0;
+  }
+
+  // Applies the season wash (and, only if NIGHT_WASH_VISIBLE, the night wash mixed exactly into the
+  // same single layer: A = 1-(1-an)(1-as), C = (night*an + (1-an)*season*as) / A per channel).
+  applyAmbient() {
+    if (!this.ambientOverlay) return;
+    const an = NIGHT_WASH_VISIBLE ? (this.nightAlpha || 0) : 0;
+    const sw = this.seasonWash || { color: 0xffffff, alpha: 0 };
+    const as = sw.alpha || 0;
+    const A = 1 - (1 - an) * (1 - as);
+    const key = `${an.toFixed(3)}|${sw.color}|${as}`;
+    if (key === this.ambientKey) return; // unchanged: no state change
+    this.ambientKey = key;
+    if (A < 0.002) { this.ambientOverlay.setVisible(false); return; }
+    const night = [0x0a, 0x10, 0x30];
+    let rgb = 0;
+    for (let i = 0; i < 3; i++) {
+      const sc = (sw.color >> (16 - 8 * i)) & 255;
+      const c = Math.round((night[i] * an + (1 - an) * sc * as) / A);
+      rgb = (rgb << 8) | Math.max(0, Math.min(255, c));
+    }
+    this.ambientOverlay.setFillStyle(rgb, A).setVisible(true);
   }
 
   // ---------- seasons ----------
@@ -1821,11 +1853,6 @@ class TownScene extends Phaser.Scene {
   // day/night overlay so night still darkens it normally.
 
   setupSeason() {
-    this.seasonOverlay = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0xffffff, 0)
-      .setOrigin(0, 0)
-      .setScrollFactor(0)
-      .setDepth(299999);
-    this.scale.on('resize', (size) => this.seasonOverlay.setSize(size.width, size.height));
     this.seasonDecorSprites = SEASON_DECOR_SPOTS.map(({ x, y }) => this.add.text(x, y, '', { fontSize: '20px' }).setOrigin(0.5).setDepth(y).setVisible(false));
     this.updateSeason();
   }
@@ -1848,7 +1875,8 @@ class TownScene extends Phaser.Scene {
     else if (month >= 2 && month <= 4) { color = 0xcdf2a8; alpha = 0.06; } // spring
     else if (month >= 5 && month <= 7) { color = 0xfff2a0; alpha = 0.05; } // summer
     else { color = 0xe0a050; alpha = 0.09; decorIcon = '🎃'; } // autumn
-    this.seasonOverlay.setFillStyle(color, alpha);
+    this.seasonWash = { color, alpha };
+    this.applyAmbient();
 
     if (this.seasonDecorSprites) {
       this.seasonDecorSprites.forEach((sprite) => {
@@ -1917,7 +1945,8 @@ class TownScene extends Phaser.Scene {
     else if (hour < 7) night = 1 - (hour - 5) / 2;
     else night = 0;
 
-    this.dayNightOverlay.setAlpha(night * 0.45);
+    this.nightAlpha = night * 0.45;
+    this.applyAmbient();
 
     const isNightBugs = hour >= 19 || hour < 6;
     if (isNightBugs !== this.isNightBugs) {
@@ -2497,11 +2526,12 @@ class TownScene extends Phaser.Scene {
 
   drawPolyrollBooth() {
     const { x, y } = POLYROLL_POS;
-    const g = this.add.graphics().setDepth(y - 1);
+    const g = this.bakedGfx(y - 1);
     g.fillStyle(0x6b2e3a, 1).fillRect(x - 28, y - 10, 56, 26);
     g.fillStyle(0xffffff, 1).fillRect(x - 24, y - 6, 48, 18);
     g.fillStyle(0x1c2430, 1);
     [[-14, -1], [0, 2], [14, -2]].forEach(([dx, dy]) => g.fillCircle(x + dx, y + dy, 2));
+    g.bake();
     this.add.text(x, y - 36, '🎲 Polyroll', { fontSize: '13px' }).setOrigin(0.5).setDepth(y + 1);
   }
 
@@ -4773,10 +4803,11 @@ class TownScene extends Phaser.Scene {
   setupFishTournament() {
     this.tournamentBonusBucket = Number(loadSave().tournamentBonusBucket) || -1;
     const { x, y } = FISH_TOURNAMENT_SIGN_POS;
-    const g = this.add.graphics().setDepth(y - 1);
+    const g = this.bakedGfx(y - 1);
     g.fillStyle(0x6b4a30, 1).fillRect(x - 2, y - 4, 4, 30);
     g.fillStyle(0xe8d9b5, 1).fillRect(x - 60, y - 54, 120, 52);
     g.lineStyle(2, 0x8f7044, 1).strokeRect(x - 60, y - 54, 120, 52);
+    g.bake();
     this.tournamentSignText = this.add.text(x, y - 28, '', {
       fontSize: '8px',
       fontFamily: 'monospace',
@@ -5837,7 +5868,7 @@ class TownScene extends Phaser.Scene {
     // Same footprint as always (64px roads, 150px plaza); a soft darker
     // rim and rounded ends instead of hard rectangle edges. Only a dozen
     // shape commands, so it stays one small Graphics object.
-    const g = this.add.graphics().setDepth(-1);
+    const g = this.bakedGfx(-1);
     const { x, y, width, height } = VILLAGE_BOUNDS;
     g.fillStyle(0xa5cf86, 1);
     g.fillRoundedRect(x - 6, 600 - 38, width + 12, 76, 38);
@@ -5850,6 +5881,60 @@ class TownScene extends Phaser.Scene {
     g.fillCircle(800, 600, 150);
     g.fillStyle(0xedd9ad, 1);
     g.fillCircle(800, 600, 142);
+    g.bake();
+  }
+
+  // Static vector art drawn with ordinary Graphics calls but BAKED once into a texture and shown as
+  // a plain Image: a live Graphics object is re-tessellated and flushed (pipeline switch) every
+  // frame, which dominated the desktop frame time. Use like `const g = this.bakedGfx(depth)`, draw
+  // in world coordinates, then call `g.bake()` (returns the Image, same depth/display-list slot).
+  // Only the simple shape calls below are tracked; anything else keeps it a live Graphics.
+  bakedGfx(depth) {
+    const g = depth === undefined ? this.add.graphics() : this.add.graphics().setDepth(depth);
+    const b = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity, live: false };
+    const grow = (x, y) => { b.x0 = Math.min(b.x0, x); b.y0 = Math.min(b.y0, y); b.x1 = Math.max(b.x1, x); b.y1 = Math.max(b.y1, y); };
+    const rect = (x, y, w, h) => { grow(x, y); grow(x + w, y + h); };
+    const track = {
+      fillRect: (x, y, w, h) => rect(x, y, w, h),
+      strokeRect: (x, y, w, h) => rect(x, y, w, h),
+      fillRoundedRect: (x, y, w, h) => rect(x, y, w, h),
+      fillCircle: (x, y, r) => rect(x - r, y - r, r * 2, r * 2),
+      fillEllipse: (x, y, w, h) => rect(x - w / 2, y - h / 2, w, h),
+      fillTriangle: (a, c, d, e, f, h) => { grow(a, c); grow(d, e); grow(f, h); },
+      lineBetween: (a, c, d, e) => { grow(a, c); grow(d, e); },
+    };
+    const passthrough = { fillStyle: 1, lineStyle: 1, setDepth: 1, setAlpha: 1 };
+    const proxy = new Proxy(g, {
+      get: (t, k) => {
+        if (k === 'bake') {
+          return () => {
+            if (b.live || !(b.x1 > b.x0)) return t; // untracked call or empty: stay a live Graphics
+            const pad = 3;
+            const left = Math.floor(b.x0) - pad;
+            const top = Math.floor(b.y0) - pad;
+            const w = Math.ceil(b.x1) - left + pad;
+            const h = Math.ceil(b.y1) - top + pad;
+            t.translateCanvas(-left, -top); // appended at the end; move that command to the front
+            t.commandBuffer.unshift(...t.commandBuffer.splice(-3, 3));
+            this.bakedGfxN = (this.bakedGfxN || 0) + 1;
+            const key = `baked_${this.bakedGfxN}`;
+            t.generateTexture(key, w, h);
+            const img = this.add.image(left, top, key).setOrigin(0, 0).setDepth(t.depth);
+            this.children.moveTo(img, this.children.getIndex(t)); // same display-list slot as the Graphics
+            t.destroy();
+            return img;
+          };
+        }
+        const v = t[k];
+        if (typeof v !== 'function') return v;
+        return (...a) => {
+          if (track[k]) track[k](...a); else if (!passthrough[k]) b.live = true;
+          const r = v.apply(t, a);
+          return r === t ? proxy : r;
+        };
+      },
+    });
+    return proxy;
   }
 
   // Draws static vector art once into a texture and places it as a plain
@@ -5953,13 +6038,14 @@ class TownScene extends Phaser.Scene {
       { x: 760, y: 560 }, { x: 1620, y: 640 }, { x: 1950, y: 720 },
     ];
     spots.forEach(({ x, y }) => {
-      const g = this.add.graphics().setDepth(y - 1);
+      const g = this.bakedGfx(y - 1);
       g.fillStyle(0x6b4226, 1);
       g.fillRect(x - 18, y - 4, 36, 8);
       g.fillRect(x - 18, y - 14, 36, 4);
       g.fillStyle(0x4a2e18, 1);
       g.fillRect(x - 16, y + 4, 4, 8);
       g.fillRect(x + 12, y + 4, 4, 8);
+      g.bake();
     });
   }
 
@@ -5969,16 +6055,18 @@ class TownScene extends Phaser.Scene {
   // gap isn't, so you can still walk in and look around.
   drawGraveyard() {
     const { x, y } = GRAVEYARD_POS;
-    const g = this.add.graphics().setDepth(y - 2);
+    const g = this.bakedGfx(y - 2);
     g.fillStyle(0x3a4a38, 1).fillRect(x - 70, y - 50, 140, 90);
     g.lineStyle(3, 0x5a6a52, 1).strokeRect(x - 70, y - 50, 140, 90);
+    g.bake();
 
     const stones = [{ x: x - 36, y: y - 10 }, { x: x, y: y - 6 }, { x: x + 36, y: y - 14 }];
     stones.forEach((s) => {
-      const sg = this.add.graphics().setDepth(s.y);
+      const sg = this.bakedGfx(s.y);
       sg.fillStyle(0x9a9a9a, 1);
       sg.fillRect(s.x - 10, s.y - 18, 20, 22);
       sg.fillEllipse(s.x, s.y - 18, 20, 14);
+      sg.bake();
       this.addObstacleRect({ x: s.x - 9, y: s.y - 10, width: 18, height: 10 });
     });
 
@@ -6037,7 +6125,7 @@ class TownScene extends Phaser.Scene {
 
   drawHouse() {
     const { x, y, w, h } = HOUSE_POS;
-    const g = this.add.graphics();
+    const g = this.bakedGfx();
     g.fillStyle(0x8a5a3b, 1).fillRect(x, y, w, h);
     g.fillStyle(0xd9663b, 1).fillTriangle(x - 10, y, x + w + 10, y, x + w / 2, y - 45);
     g.fillStyle(0x5a3a22, 1).fillRect(x + w / 2 - 10, y + h - 28, 20, 28);
@@ -6045,6 +6133,7 @@ class TownScene extends Phaser.Scene {
     g.fillRect(x + 16, y + 14, 20, 20);
     g.fillRect(x + w - 36, y + 14, 20, 20);
     g.setDepth(y + h);
+    g.bake();
 
     this.add.text(x + w / 2, y - 55, '🏠 Shop', { fontSize: '16px' }).setOrigin(0.5).setDepth(y + h + 1);
     const deal = this.todaysDeal();
@@ -6060,23 +6149,25 @@ class TownScene extends Phaser.Scene {
 
   drawMuseum() {
     const { x, y, w, h } = MUSEUM_POS;
-    const g = this.add.graphics();
+    const g = this.bakedGfx();
     g.fillStyle(0xd8d0bc, 1).fillRect(x, y, w, h);
     g.fillStyle(0x8f8568, 1).fillTriangle(x - 10, y, x + w + 10, y, x + w / 2, y - 40);
     g.fillStyle(0x6b6250, 1);
     for (let i = 0; i < 4; i++) g.fillRect(x + 10 + i * 22, y + 16, 10, h - 20);
     g.setDepth(y + h);
+    g.bake();
     this.add.text(x + w / 2, y - 50, '🏛️ Museum', { fontSize: '14px' }).setOrigin(0.5).setDepth(y + h + 1);
     this.addObstacleRect({ x, y: y + 16, width: w, height: h - 16 });
   }
 
   drawAbleSisters() {
     const { x, y, w, h } = ABLE_SISTERS_POS;
-    const g = this.add.graphics();
+    const g = this.bakedGfx();
     g.fillStyle(0xd88fb0, 1).fillRect(x, y, w, h);
     g.fillStyle(0xe8b8d0, 1).fillTriangle(x - 8, y, x + w + 8, y, x + w / 2, y - 34);
     g.fillStyle(0xcfe8f5, 1).fillRect(x + w / 2 - 10, y + 14, 20, 18);
     g.setDepth(y + h);
+    g.bake();
     this.add.text(x + w / 2, y - 44, '👗 Able Sisters', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + h + 1);
     this.addObstacleRect({ x, y: y + 14, width: w, height: h - 14 });
   }
@@ -6092,13 +6183,14 @@ class TownScene extends Phaser.Scene {
   // collision, like the notice board), just a landmark to stand near.
   drawGuestbook() {
     const { x, y } = GUESTBOOK_POS;
-    const g = this.add.graphics().setDepth(y - 1);
+    const g = this.bakedGfx(y - 1);
     g.fillStyle(0x6b4a30, 1).fillRect(x - 3, y - 6, 6, 34);
     g.fillStyle(0xe8d9b5, 1);
     g.fillTriangle(x - 26, y - 6, x, y - 22, x, y - 6);
     g.fillTriangle(x + 26, y - 6, x, y - 22, x, y - 6);
     g.lineStyle(1, 0x8f7044, 1);
     g.lineBetween(x, y - 22, x, y - 6);
+    g.bake();
     this.add.text(x, y - 42, '📖 Guestbook', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
   }
 
@@ -6830,9 +6922,10 @@ class TownScene extends Phaser.Scene {
 
   drawTurnipStall() {
     const { x, y } = TURNIP_STALL_POS;
-    const g = this.add.graphics().setDepth(y - 1);
+    const g = this.bakedGfx(y - 1);
     g.fillStyle(0x7a4a26, 1).fillRect(x - 26, y - 4, 52, 18);
     g.fillStyle(0xd9663b, 1).fillTriangle(x - 32, y - 4, x + 32, y - 4, x, y - 30);
+    g.bake();
     this.add.text(x, y - 46, '🥬 Turnips', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
     this.turnipBuyLabel = this.add.text(x, y + 20, '', { fontSize: '11px', color: '#ffe066' }).setOrigin(0.5).setDepth(y + 1);
     this.turnipSellLabel = this.add.text(HOUSE_POS.x + HOUSE_POS.w / 2, HOUSE_POS.y - 38, '', { fontSize: '11px', color: '#6fbf73' }).setOrigin(0.5).setDepth(HOUSE_POS.y + 1);
@@ -6847,10 +6940,10 @@ class TownScene extends Phaser.Scene {
 
   drawFossilSpots() {
     this.fossilMounds = FOSSIL_SPOTS.map(({ x, y }) => {
-      const g = this.add.graphics().setDepth(y - 1);
+      const g = this.bakedGfx(y - 1);
       g.fillStyle(0x7a5a38, 1).fillEllipse(x, y, 34, 18);
       g.fillStyle(0x8f7044, 1).fillEllipse(x, y - 3, 22, 10);
-      return g;
+      return g.bake();
     });
   }
 
@@ -7053,10 +7146,11 @@ class TownScene extends Phaser.Scene {
 
   drawStatue() {
     const { x, y } = STATUE_POS;
-    const g = this.add.graphics();
+    const g = this.bakedGfx();
     g.fillStyle(0x9a9a9a, 1).fillRect(x - 24, y, 48, 14);
     g.fillStyle(0x7d7d7d, 1).fillRect(x - 18, y - 10, 36, 10);
     g.setDepth(y - 1);
+    g.bake();
 
     const ape = this.add.sprite(x, y - 28, 'boredapes', 0).setScale(2.3).setDepth(y);
     this.add.text(x, y - 68, '🐵 Mayor', {
@@ -7077,7 +7171,7 @@ class TownScene extends Phaser.Scene {
   drawWindmill() {
     const { x, y } = WINDMILL_POS;
 
-    const g = this.add.graphics();
+    const g = this.bakedGfx();
     // Tapered stone tower (base wider than top).
     g.fillStyle(0xc9b896, 1);
     g.fillTriangle(x - 20, y, x + 20, y, x + 14, y - 64);
@@ -7089,6 +7183,7 @@ class TownScene extends Phaser.Scene {
     // Door.
     g.fillStyle(0x5a3a22, 1).fillRect(x - 6, y - 16, 12, 16);
     g.setDepth(y - 1);
+    g.bake();
 
     // Blade assembly: four thin arms in a plus shape, grouped in a
     // container so a single rotation tween spins them all together.
@@ -7560,11 +7655,12 @@ class TownScene extends Phaser.Scene {
       const { hx: x, hy: y } = v;
       const w = VILLAGER_HOUSE_W;
       const h = VILLAGER_HOUSE_H;
-      const g = this.add.graphics();
+      const g = this.bakedGfx();
       g.fillStyle(0xe8d9b5, 1).fillRect(x, y, w, h);
       g.fillStyle(v.roof, 1).fillTriangle(x - 8, y, x + w + 8, y, x + w / 2, y - 30);
       g.fillStyle(0x5a3a22, 1).fillRect(x + w / 2 - 8, y + h - 20, 16, 20);
       g.setDepth(y + h);
+      g.bake();
       this.addObstacleRect({ x, y, width: w, height: h });
 
       const spot = this.villagerSpotFor(v, Date.now());
@@ -8041,10 +8137,11 @@ class TownScene extends Phaser.Scene {
 
   drawCampfire() {
     const { x, y } = CAMPFIRE_POS;
-    const logs = this.add.graphics().setDepth(-1);
+    const logs = this.bakedGfx(-1);
     logs.fillStyle(0x6b4226, 1);
     logs.fillRect(x - 16, y - 3, 32, 6);
     logs.fillRect(x - 4, y - 14, 8, 28);
+    logs.bake();
 
     const flame = this.add.circle(x, y - 8, 9, 0xffb238).setDepth(-1);
     const flameInner = this.add.circle(x, y - 8, 5, 0xffe066).setDepth(-1);
@@ -8102,17 +8199,19 @@ class TownScene extends Phaser.Scene {
 
   drawDigHole() {
     const { x, y } = DIG_HOLE_POS;
-    const g = this.add.graphics().setDepth(-1);
+    const g = this.bakedGfx(-1);
     g.fillStyle(0x1a1410, 1).fillEllipse(x, y, 42, 26);
     g.fillStyle(0x100b08, 1).fillEllipse(x, y, 28, 16);
+    g.bake();
     this.add.text(x, y - 26, '⛏️ Hole', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
   }
 
   drawDoor(x, y, label, color) {
-    const g = this.add.graphics().setDepth(y - 1);
-    g.fillStyle(0x3a2a1a, 1).fillRect(x - 16, y - 46, 32, 46);
-    g.fillStyle(color, 0.85).fillRect(x - 12, y - 42, 24, 38);
-    g.fillStyle(0xffffff, 0.9).fillCircle(x + 7, y - 22, 2);
+    const gd = this.bakedGfx(y - 1);
+    gd.fillStyle(0x3a2a1a, 1).fillRect(x - 16, y - 46, 32, 46);
+    gd.fillStyle(color, 0.85).fillRect(x - 12, y - 42, 24, 38);
+    gd.fillStyle(0xffffff, 0.9).fillCircle(x + 7, y - 22, 2);
+    const g = gd.bake();
     this.add.text(x, y - 56, label, { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
     this.tweens.add({
       targets: g,
@@ -8467,10 +8566,11 @@ class TownScene extends Phaser.Scene {
   drawNoticeBoard() {
     const x = 1350;
     const y = 520;
-    const g = this.add.graphics().setDepth(y - 1);
+    const g = this.bakedGfx(y - 1);
     g.fillStyle(0x6b4a30, 1).fillRect(x - 2, y - 4, 4, 30);
     g.fillStyle(0xe8d9b5, 1).fillRect(x - 55, y - 54, 110, 52);
     g.lineStyle(2, 0x8f7044, 1).strokeRect(x - 55, y - 54, 110, 52);
+    g.bake();
     this.noticeBoardText = this.add.text(x, y - 28, '', {
       fontSize: '8px',
       fontFamily: 'monospace',
@@ -8790,9 +8890,24 @@ function startTown(net, data) {
   game.scene.add('Town', TownScene, true, { net, self: data.self, players: data.players, world: data.world });
 
   const gameContainer = document.getElementById('game-container');
+  // Adaptive render resolution (desktop only): the canvas keeps its CSS size but renders fewer
+  // pixels when frames stay slow (software/low-end GPUs are fill-rate bound). Steps down only,
+  // never back up, so it cannot oscillate; the camera zoom is scaled so the view is identical.
+  let renderScale = 1;
+  const applyRenderScale = () => {
+    const size = viewportSize();
+    const gw = Math.max(320, Math.round(size.width * renderScale));
+    const gh = Math.max(180, Math.round(size.height * renderScale));
+    game.scale.resize(gw, gh);
+    game.scale.setZoom(size.width / gw); // display size stays the full viewport
+    const town = game.scene.getScene('Town');
+    if (town && town.cameras && town.cameras.main && town.baseZoom) town.cameras.main.setZoom(town.baseZoom * renderScale);
+    const gc = document.getElementById('game-container');
+    if (gc) gc.dataset.renderScale = String(renderScale);
+  };
   const resizeToViewport = () => {
     const size = viewportSize();
-    game.scale.resize(size.width, size.height);
+    if (renderScale === 1) { game.scale.resize(size.width, size.height); game.scale.setZoom(1); } else applyRenderScale();
     // #game-container is `position: fixed; inset: 0`, sized to the full
     // layout viewport — on a keyboard that overlays rather than resizes the
     // page, that stays taller than the (now keyboard-aware) canvas inside
@@ -8807,6 +8922,27 @@ function startTown(net, data) {
   window.addEventListener('resize', resizeToViewport);
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', resizeToViewport);
+  }
+
+  if (!IS_TOUCH) {
+    const STEPS = [1, 0.75, 0.5];
+    let frames = 0;
+    let winStart = performance.now();
+    let slow = 0;
+    const born = winStart;
+    game.events.on('postrender', () => { frames++; });
+    setInterval(() => {
+      const now = performance.now();
+      const dt = now - winStart;
+      const fps = (frames * 1000) / dt;
+      const seen = frames;
+      frames = 0;
+      winStart = now;
+      if (document.hidden || now - born < 2500 || seen < 3 || dt > 2600) { slow = 0; return; } // warm-up / hidden tab / stalled timer
+      slow = fps < 28 ? slow + 1 : 0;
+      const next = STEPS[STEPS.indexOf(renderScale) + 1];
+      if (slow >= 2 && next) { renderScale = next; slow = 0; applyRenderScale(); }
+    }, 1500);
   }
   // Standalone launches settle their real viewport a beat after load, so
   // double-check shortly after start rather than only on resize events.

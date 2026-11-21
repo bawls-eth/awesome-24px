@@ -562,5 +562,9 @@
   "shared-mm-fx-draw.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "town-perf.test.js": {
+    "class": "live",
+    "tier": "full"
   }
 }

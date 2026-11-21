@@ -2651,3 +2651,18 @@ img.realm-ico { width: 32px; height: 32px; vertical-align: middle; image-renderi
 
 #realm-embed { position: fixed; inset: 0; z-index: 100000; background: #0d0f14; }
 #realm-embed iframe { width: 100%; height: 100%; border: 0; display: block; }
+
+/* ---------- Desktop HUD: comfortable click targets (>= 40 px; chat 44 px) ----------
+   Phone / coarse-pointer layouts keep their own sizes (those rules sit in the media queries above). */
+@media (min-width: 721px) and (min-height: 501px) {
+  #achievements-badge, #map-btn, #world-map-link, #museum-badge, #dailies-btn, #journal-btn, #settings-toggle-btn,
+  #keys-help-btn, #changelog-btn, #feedback-btn {
+    min-height: 40px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #museum-badge, #dailies-btn, #journal-btn { width: 100%; }
+  #chat-input { min-height: 44px; box-sizing: border-box; }
+}
