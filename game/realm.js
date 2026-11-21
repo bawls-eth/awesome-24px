@@ -170,7 +170,7 @@ const RM_SPLASH_ON = RM_GEAR_ON && !rmFlagOff('splash') && typeof MMSplash !== '
 const RM_ARMOR_ICON = { light: '🦺', robe: '👘', heavy: '🛡️' };
 (function rmRegisterArmor() {
   if (!RM_GEAR_ON || !MMGear.ARMOR_IDS) return;
-  MMGear.FAMILY_KEYS.forEach((fam) => (MMGear.ARMOR_IDS[fam] || []).forEach((id) => {
+  MMGear.FAMILY_KEYS.forEach((fam) => (MMGear.ARMOR_IDS[fam] || []).concat((MMGear.SIG_BY_FAMILY || {})[fam] || []).forEach((id) => {
     if (!RM_ARM_ID.test(id) || RM_ITEM_BY_ID[id]) return;
     RM_ITEM_BY_ID[id] = { id, slot: 'armor', name: String(MMGear.ARMOR_NAMES[id] || id).slice(0, 24), icon: RM_ARMOR_ICON[fam] || '🛡️', art: MMGear.ARMOR_ART[id] || null, stat: 'armor', amount: 0, text: 'armor', family: fam, arm: true };
   }));
