@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
 <title>Hearthvale</title>
 <link rel="stylesheet" href="style.css" />
-<link rel="stylesheet" href="realm-ui.css?v=20261121b" />
+<link rel="stylesheet" href="realm-ui.css?v=20261121c" />
 
 <link rel="manifest" href="manifest.json" />
 <meta name="theme-color" content="#bfe6f2" />
@@ -41,6 +41,8 @@
 
     <button id="join-btn" disabled>Join Town</button>
     <p id="join-error" class="error"></p>
+    <p id="join-status" class="join-status" role="status" aria-live="polite"></p>
+    <button id="join-offline-btn" type="button" class="hidden">Play offline</button>
     <p class="join-tip">WASD/arrows to walk · <b>E</b> to interact (fish, chop, mine, catch bugs) · <b>B</b> to build · <b>1-9</b> to emote · <b>P</b> for a photo · Enter to chat</p>
   </div>
 </div>
@@ -484,18 +486,18 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script src="firebase-config.js"></script>
-<script src="net.js?v=20261121b"></script>
-<script src="underground.js?v=20261121b"></script>
-<script src="shared/mm-stats.js?v=20261121b"></script>
-<script src="shared/mm-hash.js?v=20261121b"></script>
-<script src="shared/mm-pad.js?v=20261121b"></script>
-<script src="shared/mm-aim.js?v=20261121b"></script>
-<script src="shared/profile.js?v=20261121b"></script>
-<script src="shared/sfx.js?v=20261121b"></script>
-<script src="shared/motion.js?v=20261121b"></script>
-<script src="shared/mm-patterns.js?v=20261121b"></script>
-<script src="realm-team.js?v=20261121b"></script>
-<script src="realm.js?v=20261121b"></script>
-<script src="main.js?v=20261121b"></script>
+<script src="net.js?v=20261121c"></script>
+<script src="underground.js?v=20261121c"></script>
+<script src="shared/mm-stats.js?v=20261121c"></script>
+<script src="shared/mm-hash.js?v=20261121c"></script>
+<script src="shared/mm-pad.js?v=20261121c"></script>
+<script src="shared/mm-aim.js?v=20261121c"></script>
+<script src="shared/profile.js?v=20261121c"></script>
+<script src="shared/sfx.js?v=20261121c"></script>
+<script src="shared/motion.js?v=20261121c"></script>
+<script src="shared/mm-patterns.js?v=20261121c"></script>
+<script src="realm-team.js?v=20261121c"></script>
+<script src="realm.js?v=20261121c"></script>
+<script src="main.js?v=20261121c"></script>
 </body>
 </html>

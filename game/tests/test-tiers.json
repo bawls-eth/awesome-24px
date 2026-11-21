@@ -1,4 +1,8 @@
 {
+  "town-offline.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "angler-tournament.test.js": {
     "class": "browser",
     "tier": "smoke"
