@@ -336,11 +336,24 @@
       const wapi = realmWorld ? realmWorld.api : null; let z = -1; try { const zi = wapi && wapi.zone(); z = zi && zi.zone < 4 ? zi.zone : -1; } catch (e) { z = -1; }
       deepest.z = Math.max(deepest.z, z);
       let portals = 0; try { portals = RealmWorld.readSave().stats.portals; } catch (e) { portals = 0; }
-      const rows = HS.panelRows(MMClasses, { hero, profile: arena.heroProfile || MMClasses.arenaProfile(null), stats: arena.stats, save: arena.save, defs, weapon: weaponPanel(hero), passives: window.MMUnlocks && hero.cls ? { level: arena.heroLevel ? arena.heroLevel() : arena.save.level, unlocks: MMUnlocks } : undefined, run: { kills: wapi ? wapi.kills() : 0, deepest: deepest.z < 0 ? null : deepest.z, portals, time: arena.clock } });
+      // Gear stats (G14): base = the arena's no-gear stats when it exposes them (G8), else the totals themselves (gear column reads 0).
+      let gearBase = null; try {
+        if (arena.statsBase && typeof arena.statsBase === 'object') gearBase = arena.statsBase;
+        else if (typeof arena._calcStats === 'function' && arena._calcStats.length >= 1) { const keep = arena.stats; try { const b = arena._calcStats({ noGear: true }); if (b && typeof b === 'object' && b !== keep) gearBase = b; } finally { arena.stats = keep; } }
+        if (!gearBase && arena.stats && typeof arena.stats === 'object') gearBase = Object.assign({}, arena.stats);
+      } catch (e) { gearBase = null; }
+      let gearGp = null; try { const g = arena.save && arena.save.gp; if (g && typeof g === 'object') gearGp = g; } catch (e) { gearGp = null; }
+      const rows = HS.panelRows(MMClasses, { hero, profile: arena.heroProfile || MMClasses.arenaProfile(null), stats: arena.stats, save: arena.save, defs, weapon: weaponPanel(hero), passives: window.MMUnlocks && hero.cls ? { level: arena.heroLevel ? arena.heroLevel() : arena.save.level, unlocks: MMUnlocks } : undefined, run: { kills: wapi ? wapi.kills() : 0, deepest: deepest.z < 0 ? null : deepest.z, portals, time: arena.clock }, statsBase: gearBase, gp: gearGp });
+      const gearAria = {}; try { HS.statTable(arena.stats, gearBase).forEach((r) => { gearAria[r.label] = r; }); } catch (e) { /* no gear rows */ }
       body.textContent = ''; let grp = null, dl = null;
       rows.forEach((r) => {
         if (r.group !== grp) { grp = r.group; body.appendChild(mk('h3', 'hp-h', grp)); dl = mk('div', 'hp-rows'); body.appendChild(dl); }
-        const row = mk('div', 'realm-board-row'); const lab = mk('span', '', r.label); row.append(lab, mk('b', '', r.value)); dl.appendChild(row);
+        const row = mk('div', 'realm-board-row'); if (r.group === 'Gear stats') { row.style.flexWrap = 'wrap'; row.style.gap = '2px 12px'; } const lab = mk('span', '', r.label); const val = mk('b', '', r.value); row.append(lab, val); dl.appendChild(row);
+        if (r.group === 'Gear stats') {
+          const g = gearAria[r.label];
+          if (g) { const ar = g.gear > 0 ? '\u25B2' : g.gear < 0 ? '\u25BC' : '='; val.textContent = ar + ' ' + r.value; val.setAttribute('aria-label', g.aria); row.dataset.gear = g.gear > 0 ? 'up' : g.gear < 0 ? 'down' : 'same'; }
+          else if (r.label === 'Boss luck') { val.setAttribute('aria-label', 'Boss luck: ' + r.value); row.dataset.gear = 'luck'; }
+        }
         if (ICONS_ON && STAT_ICON[r.label]) { const im = iconImg(STAT_ICON[r.label], lab); im.classList.add('stat'); lab.insertBefore(im, lab.firstChild); }
       });
       if (st.hero) { const pt = portraitImg(hero.cls, null, null, 64); if (pt) { pt.classList.add('hp-portrait-stats'); body.insertBefore(pt, body.firstChild); } }
