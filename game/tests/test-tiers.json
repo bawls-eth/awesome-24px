@@ -95,6 +95,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "deepdelve-daynight.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "deepdelve-page.test.js": {
     "class": "browser",
     "tier": "smoke"
@@ -284,6 +288,10 @@
     "tier": "smoke"
   },
   "shared-mm-dd-craft.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-dd-time.test.js": {
     "class": "node",
     "tier": "smoke"
   },

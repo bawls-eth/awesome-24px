@@ -71,6 +71,7 @@
   const PLACEABLE = [['dirt', B.DIRT], ['stone', B.STONE], ['coal', B.COAL], ['iron_ore', B.IRON], ['gold_ore', B.GOLD], ['crystal', B.CRYSTAL], ['furnace', B.FURNACE], ['torch', B.TORCH]];
   const BLOCK_OF = {}; PLACEABLE.forEach((p) => { BLOCK_OF[p[0]] = p[1]; });
   const benches = [];
+  const clock = { t: MMDDTime.NOON, step: -1, k: 1 }; // world clock in seconds; saved additively as `t`
   const HARDNESS = {}; HARDNESS[B.GRASS] = 0.3; HARDNESS[B.DIRT] = 0.3; HARDNESS[B.STONE] = 0.7; HARDNESS[B.COAL] = 0.9; HARDNESS[B.IRON] = 1.1;
   HARDNESS[B.GOLD] = 1.3; HARDNESS[B.CRYSTAL] = 1.5; HARDNESS[B.TORCH] = 0.1; HARDNESS[B.FURNACE] = 0.6;
   // Ore gating: minimum pick tier (0 wood, 1 stone, 2 iron, 3 gold).
@@ -354,7 +355,7 @@
     clearTimeout(saveTimer);
     if (!world) return Promise.resolve(false);
     savePending = false;
-    const doc = { inv: Object.assign({}, inv), pos: [player.x, player.y, player.z], sel, hp: player.hp, pick: { tier: pick.tier, dur: pick.dur }, benches: benches.map((b) => b.slice()) };
+    const doc = { inv: Object.assign({}, inv), pos: [player.x, player.y, player.z], sel, hp: player.hp, pick: { tier: pick.tier, dur: pick.dur }, benches: benches.map((b) => b.slice()), t: clock.t };
     return Promise.all([kvSet('world:' + SEED, world.serialise()), kvSet('player:' + SEED, JSON.stringify(doc))]).then((r) => !!r[0]);
   }
   window.addEventListener('pagehide', () => { if (savePending) flush(); });
@@ -452,6 +453,21 @@
   }
   function govState() { const L = LEVELS[gov.level]; return { level: gov.level, levels: LEVELS.length, scale: L.scale, view: L.view, avg: govAvg(), changes: gov.changes, restoreGap: gov.restoreGap, auto: gov.auto }; }
 
+  // Day/night: sky light is scaled in a few discrete steps; a step change re-lights every loaded chunk (3 per frame).
+  function applyTime(force) {
+    const st = MMDDTime.skyStep(clock.t);
+    if (st === clock.step && !force) return false;
+    clock.step = st; clock.k = MMDDTime.skyScale(clock.t);
+    if (win) { for (const k of meshes.keys()) stale.add(k); manageSkip = false; }
+    return true;
+  }
+  let lastTimeText = '';
+  function tickTime(dt) {
+    clock.t = MMDDTime.norm(clock.t + dt);
+    applyTime(false);
+  }
+  function setTime(t) { clock.t = MMDDTime.norm(t); applyTime(true); skyDeep = -1; if (renderer && camera) updateCamera(); return clock.t; }
+
   function resize() {
     if (!renderer) return;
     const c = $('gl'), w = c.clientWidth || 300, h = c.clientHeight || 300;
@@ -473,14 +489,17 @@
         blocks.set(ch.data.subarray(lz * SIZE + ly * 256, lz * SIZE + ly * 256 + SIZE), cx * SIZE + (cz * SIZE + lz) * w + (cy * SIZE + ly) * w * w);
       }
     }
-    win.light = MMLight.propagate({ w, h, d: w, blocks }).light;
+    const lr = MMLight.propagate({ w, h, d: w, blocks });
+    win.light = lr.light; win.sky = lr.sky; win.block = lr.block;
     lightDirty = false;
   }
   function lightAt(wx, wy, wz) {
     if (!win || !win.light) return 7;
     const x = wx - win.ox * SIZE, z = wz - win.oz * SIZE, w = win.w;
     if (x < 0 || z < 0 || x >= w || z >= w || wy < 0 || wy >= win.h) return 7;
-    return win.light[x + z * w + wy * w * w];
+    const i = x + z * w + wy * w * w;
+    // sky light follows the day/night clock; torch (block) light never dims. At full day this equals the plain max.
+    return Math.max(win.sky[i] * clock.k, win.block[i]);
   }
   const UVS = [[0, 0], [1, 0], [1, 1], [0, 1]];
   function buildChunk(cx, cy, cz) {
@@ -594,7 +613,7 @@
   }
   let atkCd = 0;
   let bobOffset = 0;
-  let skyX = NaN, skyZ = NaN, skySurf = 0, skyDeep = -1, rayRev = 0, rayPoseRev = -1, lastDepth = -1;
+  let skyT = -1, skyX = NaN, skyZ = NaN, skySurf = 0, skyDeep = -1, rayRev = 0, rayPoseRev = -1, lastDepth = -1;
   const rayPose = [NaN, 0, 0, 0, 0];
   function updateCamera() {
     if (!camera) return;
@@ -606,10 +625,14 @@
     const fx = Math.floor(player.x), fz = Math.floor(player.z);
     if (fx !== skyX || fz !== skyZ) { skyX = fx; skyZ = fz; skySurf = MMChunks.surfaceY(fx, fz, SEED); }
     const deep = Math.max(0, Math.min(1, (-(player.y + EYE) - skySurf - 1) / 4));
-    if (Math.abs(deep - skyDeep) > 0.002) {
-      skyDeep = deep;
-      const r = 0x8f / 255 * (1 - deep) + 0.02 * deep, g = 0xd0 / 255 * (1 - deep) + 0.03 * deep, b = 1 * (1 - deep) + 0.05 * deep;
+    const skyKey = MMDDTime.norm(clock.t) | 0;
+    if (Math.abs(deep - skyDeep) > 0.002 || skyKey !== skyT) {
+      skyDeep = deep; skyT = skyKey;
+      const sc = MMDDTime.skyColor(clock.t);
+      const r = sc[0] * (1 - deep) + 0.02 * deep, g = sc[1] * (1 - deep) + 0.03 * deep, b = sc[2] * (1 - deep) + 0.05 * deep;
       scene.background.setRGB(r, g, b); scene.fog.color.setRGB(r, g, b);
+      const tt = MMDDTime.clockText(clock.t) + ' ' + MMDDTime.stage(clock.t);
+      if (tt !== lastTimeText) { lastTimeText = tt; $('hud-time').textContent = tt; }
     }
     // the block outline only changes when the view ray or the world does
     const ex = player.x, ey = player.y, ez = player.z, yw = player.yaw, pt = player.pitch;
@@ -627,7 +650,7 @@
     const dt = Math.min(0.05, (t - last) / 1000 || 0); last = t;
     if (!world) return;
     if (!TEST) {
-      physics(dt); updateMining(dt); tickMobs(dt);
+      physics(dt); updateMining(dt); tickMobs(dt); tickTime(dt);
       spawnT -= dt;
       if (spawnT <= 0) { spawnT = 4; if (Math.random() < 0.6) autoSpawn(); }
     }
@@ -1032,6 +1055,7 @@
       setMode, craftRecipe, smeltOre, furnaceNear, checkGoals, lakeCheck, hurt, tickMobs, spawnSlime, autoSpawn, attackSlime, die,
       cellLight, panel: togglePanel, setPick(t, dur) { pick.tier = t; pick.dur = dur === undefined ? PICK_DUR[t] : dur; renderHud(); },
       benches, benchNear, benchAtLook, pickUpBench, placeBench, craftRows: () => MMDDCraft.annotate(inv, { furnace: furnaceNear(), bench: benchNear() }),
+      clock, setTime, tickTime, timeStage: () => MMDDTime.stage(clock.t), skyScale: () => clock.k, bg: () => scene ? scene.background.getHex() : 0, fogHex: () => scene ? scene.fog.color.getHex() : 0, MMDDTime,
       craft: craftTorch, surfaceY: (x, z) => MMChunks.surfaceY(x, z, SEED), ready: true,
     };
   }
@@ -1054,11 +1078,13 @@
         if (Array.isArray(d.pos) && d.pos.every((v) => typeof v === 'number' && isFinite(v))) { player.x = d.pos[0]; player.y = d.pos[1]; player.z = d.pos[2]; player.peak = player.y; }
         if (typeof d.sel === 'string') sel = d.sel;
         MMDDCraft.cleanBenches(d.benches).forEach((b) => benches.push(b));
+        if (typeof d.t === 'number' && isFinite(d.t)) clock.t = MMDDTime.norm(d.t);
         if (typeof d.hp === 'number' && d.hp > 0) player.hp = Math.min(10, d.hp | 0);
         if (d.pick && typeof d.pick === 'object') { pick.tier = clampInt(d.pick.tier, 0, 3); pick.dur = pick.tier ? clampInt(d.pick.dur, 1, PICK_DUR[pick.tier]) : 0; }
       } catch (e) { /* ignore corrupt save */ }
     }
     migrateTown();
+    applyTime(true);
     initRenderer();
     bindControls();
     renderHud();
