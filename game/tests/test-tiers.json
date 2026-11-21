@@ -127,6 +127,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "deepdelve-wyrm.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "deepdelve-polish.test.js": {
     "class": "browser",
     "tier": "full"
@@ -344,6 +348,10 @@
     "tier": "smoke"
   },
   "shared-mm-dd-craft.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-dd-wyrm.test.js": {
     "class": "node",
     "tier": "smoke"
   },

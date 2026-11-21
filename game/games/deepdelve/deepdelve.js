@@ -175,7 +175,7 @@
     $('hud-pick').textContent = 'Pick: ' + TIER_NAME[pick.tier] + (pick.tier > 0 ? ' ' + pick.dur + '/' + PICK_DUR[pick.tier] : '') + ' | ' + (meta.mode === 'creative' ? 'Creative' : 'Survival');
     $('mode-btn').textContent = 'Mode: ' + (meta.mode === 'creative' ? 'Creative' : 'Survival');
     $('t-down').hidden = meta.mode !== 'creative';
-    $('hud-seed').textContent = 'Seed ' + SEED;
+    $('hud-seed').textContent = 'Seed ' + SEED + (wyrm.down ? ' | Wyrm trophy' : '');
     const have = [['coal'], ['iron_ore', 'iron'], ['gold_ore', 'gold'], ['crystal']].filter((ks) => ks.some((k) => (inv[k] | 0) > 0 || (found[k] | 0) > 0)).length;
     $('hud-goal').textContent = 'Goal: find all 4 ores (' + have + '/4), crystal lies deepest';
     if (!$('craft-panel').hidden) renderCraft();
@@ -229,7 +229,7 @@
   function respawn(msg) {
     player.x = spawn.x; player.y = spawn.y; player.z = spawn.z; player.vy = 0; player.hp = 10; player.peak = player.y; player.iframes = 1; lavaT = 0;
     slimes.forEach((m) => { m.dead = true; removeMesh(m); }); slimes.length = 0;
-    clearCreatures();
+    clearCreatures(); wyrmSleep(true);
     if (msg) toast(msg);
     renderHud();
   }
@@ -364,7 +364,7 @@
     clearTimeout(saveTimer);
     if (!world) return Promise.resolve(false);
     savePending = false;
-    const doc = { inv: Object.assign({}, inv), pos: [player.x, player.y, player.z], sel, hp: player.hp, pick: { tier: pick.tier, dur: pick.dur }, benches: benches.map((b) => b.slice()), t: clock.t, slain: Array.from(slain).slice(-300) };
+    const doc = { inv: Object.assign({}, inv), pos: [player.x, player.y, player.z], sel, hp: player.hp, pick: { tier: pick.tier, dur: pick.dur }, benches: benches.map((b) => b.slice()), t: clock.t, slain: Array.from(slain).slice(-300), wyrm: { down: wyrm.down, carved: wyrm.carved } };
     return Promise.all([kvSet('world:' + SEED, world.serialise()), kvSet('player:' + SEED, JSON.stringify(doc))]).then((r) => !!r[0]);
   }
   window.addEventListener('pagehide', () => { if (savePending) flush(); });
@@ -610,7 +610,7 @@
   let mineTarget = null, mineProg = 0, last = 0, spawnT = 6;
   function updateMining(dt) {
     if (atkCd > 0) atkCd -= dt;
-    if (input.mine && (attackSlime(true) || attackCreature(true))) { mineTarget = null; mineProg = 0; return; }
+    if (input.mine && (attackSlime(true) || attackCreature(true) || attackWyrm(true))) { mineTarget = null; mineProg = 0; return; }
     if (input.mine && benches.length) { const bi = benchAtLook(); if (bi >= 0) { pickUpBench(bi); input.mine = false; return; } }
     const hit = input.mine ? raycast(5) : null;
     if (!hit || hit.id === B.BEDROCK || hit.id === B.LAVA) { mineTarget = null; mineProg = 0; return; }
@@ -661,14 +661,15 @@
     if (!TEST) {
       physics(dt); updateMining(dt); tickMobs(dt); tickTime(dt);
       creatureT -= dt;
-      if (creatureT <= 0) { creatureT = 1.5; scanSpawns(); }
+      if (creatureT <= 0) { creatureT = 1.5; scanSpawns(); wyrmScan(); }
       if (creatures.length) tickCreatures(dt);
+      if (wyrm.awake) tickWyrm(dt);
       spawnT -= dt;
       if (spawnT <= 0) { spawnT = 4; if (Math.random() < 0.6) autoSpawn(); }
     }
     checkGoals();
     manage(8);
-    if (renderer) { syncBenches(); syncSlimeMeshes(); if (creatures.length || creatureMeshes) syncCreatureMeshes(); updateCamera(); renderer.render(scene, camera); }
+    if (renderer) { syncBenches(); syncSlimeMeshes(); if (creatures.length || creatureMeshes) syncCreatureMeshes(); if (wyrm.awake || wyrm.group) syncWyrmMesh(); updateCamera(); renderer.render(scene, camera); }
   }
 
   // ---------- controls ----------
@@ -1200,6 +1201,209 @@
     m.mesh = null;
   }
 
+  // ---------- Rock Wyrm boss (seeded) ----------
+  // One segmented boss per world, in a cavern that is a pure function of the world seed (MMDDWyrm.spawnSite), 40+ blocks
+  // below the surface. It sleeps until the player is deep and near, is frozen/unmeshed when far, and once defeated the
+  // `wyrm` flags in the player save keep it down (only a fresh world, i.e. cleared storage, brings it back). Off in ?test=1 unless ?wyrm=1.
+  const WYRM_ON = !TEST || params.get('wyrm') === '1';
+  const wyrm = { site: null, awake: false, down: false, carved: false, hp: 0, max: 30, atk: null, ang: 0, segs: null, tgt: null, from: null, to: null, burrowed: false, hitT: 0, hurtCd: 0, group: null, ring: null, bar: null, fill: null, label: null };
+  let wyrmTex = null, wyrmGeo = null, wyrmMat = null, wyrmRingGeo = null, wyrmRingMat = null;
+  function loadWyrmScript() {
+    return new Promise((resolve) => {
+      if (window.MMDDWyrm) return resolve(true);
+      const s = document.createElement('script');
+      s.src = '../../shared/mm-dd-wyrm.js';
+      s.onload = () => resolve(!!window.MMDDWyrm); s.onerror = () => resolve(false);
+      document.head.appendChild(s);
+    });
+  }
+  function wyrmInit() {
+    if (!WYRM_ON || !window.MMDDWyrm || !world) return;
+    wyrm.max = MMDDWyrm.MAX_HP;
+    wyrm.site = MMDDWyrm.spawnSite(SEED, (x, z) => MMChunks.surfaceY(x, z, SEED));
+    const bar = document.createElement('div');
+    bar.id = 'wyrm-bar'; bar.hidden = true; bar.setAttribute('role', 'progressbar'); bar.setAttribute('aria-label', 'Rock Wyrm health');
+    bar.setAttribute('aria-valuemin', '0'); bar.setAttribute('aria-valuemax', String(wyrm.max));
+    bar.style.cssText = 'position:fixed;top:70px;left:50%;transform:translateX(-50%);width:min(420px,calc(100vw - 32px));z-index:30;pointer-events:none;text-align:center;font:600 13px system-ui,sans-serif;color:#f4e8d0;text-shadow:0 1px 2px #000';
+    const label = document.createElement('div'); label.id = 'wyrm-label'; label.textContent = 'Rock Wyrm';
+    const track = document.createElement('div'); track.style.cssText = 'height:12px;background:#2a1d14;border:2px solid #f4e8d0;border-radius:3px;overflow:hidden';
+    const fill = document.createElement('div'); fill.id = 'wyrm-fill'; fill.style.cssText = 'height:100%;width:100%;background:#d96b2b';
+    track.appendChild(fill); bar.appendChild(label); bar.appendChild(track); document.body.appendChild(bar);
+    wyrm.bar = bar; wyrm.fill = fill; wyrm.label = label;
+  }
+  function wyrmClean(d) {
+    if (!d || typeof d !== 'object' || Array.isArray(d)) return;
+    wyrm.down = d.down === true; wyrm.carved = d.carved === true;
+  }
+  function renderWyrmBar() {
+    if (!wyrm.bar) return;
+    wyrm.bar.hidden = !wyrm.awake;
+    const f = Math.max(0, Math.min(1, wyrm.hp / wyrm.max));
+    wyrm.fill.style.width = Math.round(f * 100) + '%';
+    wyrm.bar.setAttribute('aria-valuenow', String(Math.max(0, wyrm.hp)));
+    wyrm.label.textContent = 'Rock Wyrm - phase ' + MMDDWyrm.phaseOf(wyrm.hp, wyrm.max);
+  }
+  // Hollows the cavern once (idempotent: only non-air cells change) and remembers that in the save.
+  function carveWyrmArena() {
+    if (!wyrm.site || wyrm.carved) return 0;
+    let n = 0; const dirty = new Set();
+    for (const c of MMDDWyrm.arenaCells(wyrm.site)) {
+      if (c[1] < 0 || c[1] >= MMChunks.WORLD.cy * SIZE - 1) continue;
+      const id = world.getBlock(c[0], c[1], c[2]);
+      if (id === B.AIR || id === B.BEDROCK) continue;
+      world.setBlock(c[0], c[1], c[2], B.AIR).forEach((k) => dirty.add(k)); n++;
+    }
+    wyrm.carved = true;
+    afterEdit(dirty); return n;
+  }
+  function wyrmSleep(heal) {
+    wyrm.awake = false; wyrm.burrowed = false;
+    if (heal) wyrm.hp = 0;
+    removeWyrmMesh(); renderWyrmBar();
+  }
+  function wakeWyrm() {
+    const s = wyrm.site, p0 = MMDDWyrm.orbitPos(s, 0, 1);
+    if (wyrm.hp <= 0) wyrm.hp = wyrm.max;
+    wyrm.awake = true; wyrm.atk = MMDDWyrm.newAttack(); wyrm.ang = 0; wyrm.burrowed = false; wyrm.hitT = 0; wyrm.hurtCd = 1;
+    wyrm.segs = Array.from({ length: MMDDWyrm.SEGMENTS }, (_, i) => ({ x: p0.x - i * MMDDWyrm.SPACING, y: p0.y, z: p0.z }));
+    wyrm.tgt = null; toast('The ground shakes: the Rock Wyrm wakes!'); renderWyrmBar();
+  }
+  // Wake / freeze check (run about every 1.5 s, and by tests).
+  function wyrmScan() {
+    if (!wyrm.site || wyrm.down || !world) return false;
+    const s = wyrm.site, dist = Math.hypot(player.x - s.c.x, (player.y + 0.9) - s.c.y, player.z - s.c.z);
+    if (wyrm.awake) { if (MMDDWyrm.shouldFreeze(dist)) wyrmSleep(false); return wyrm.awake; }
+    const depth = Math.floor(-(player.y + 0.9)) - MMChunks.surfaceY(Math.floor(player.x), Math.floor(player.z), SEED);
+    if (!MMDDWyrm.shouldWake(dist, depth, wyrm.down)) return false;
+    carveWyrmArena(); wakeWyrm(); return true;
+  }
+  function moveWyrmHead(tx, ty, tz, speed, dt) {
+    const h = wyrm.segs[0], dx = tx - h.x, dy = ty - h.y, dz = tz - h.z, d = Math.hypot(dx, dy, dz) || 1, st = Math.min(d, speed * dt);
+    h.x += dx / d * st; h.y += dy / d * st; h.z += dz / d * st;
+  }
+  const wyrmPlayerPoint = () => ({ x: player.x, y: player.y + 0.9, z: player.z });
+  function wyrmEvent(prev, ev, phase) {
+    const s = wyrm.site, h = wyrm.segs[0];
+    if (prev === 'lunge' && wyrm.tgt) { // the lunge just landed: the dust ring slams the ground
+      const pp = wyrmPlayerPoint();
+      if (MMDDWyrm.inRing(wyrm.tgt.x, wyrm.tgt.y, wyrm.tgt.z, pp.x, pp.y, pp.z) && wyrm.hurtCd <= 0) wyrmHurtPlayer(2, 'The Rock Wyrm slammed you!');
+    }
+    if (ev === 'burrow') wyrm.burrowed = true;
+    else if (ev === 'circle') wyrm.burrowed = false;
+    else if (ev === 'telegraph') {
+      const c = MMDDWyrm.clampToArena(s, player.x, player.y + 0.9, player.z, 1);
+      wyrm.tgt = c;
+      if (phase >= 2 && wyrm.burrowed) { const y = MMDDWyrm.floorY(s) - 1.6; wyrm.segs.forEach((g, i) => { g.x = c.x; g.z = c.z; g.y = y - i * 0.05; }); }
+    } else if (ev === 'lunge') {
+      wyrm.from = { x: h.x, y: h.y, z: h.z }; wyrm.to = { x: wyrm.tgt.x, y: wyrm.tgt.y + 0.3, z: wyrm.tgt.z };
+      wyrm.burrowed = false;
+    }
+  }
+  function wyrmHurtPlayer(n, msg) {
+    wyrm.hurtCd = 0.9;
+    const before = player.hp;
+    deathCause = 'creature';
+    hurt(n, msg, 'The Rock Wyrm crushed you. Back to the surface.');
+    deathCause = '';
+    if (player.hp < before && player.hp > 0) { // shove the player away from the head
+      const h = wyrm.segs[0], k = MMDDWyrm.knockback(player.x - h.x, player.z - h.z, 1.6);
+      const nx = player.x + k.vx, nz = player.z + k.vz;
+      if (!collides(nx, player.y, player.z)) player.x = nx;
+      if (!collides(player.x, player.y, nz)) player.z = nz;
+    }
+  }
+  function tickWyrm(dt) {
+    if (!wyrm.awake || !wyrm.segs) return;
+    const s = wyrm.site, phase = MMDDWyrm.phaseOf(wyrm.hp, wyrm.max), p = phase - 1;
+    wyrm.hitT = Math.max(0, wyrm.hitT - dt); wyrm.hurtCd = Math.max(0, wyrm.hurtCd - dt);
+    const r = MMDDWyrm.attackStep(wyrm.atk, dt, phase);
+    let before = wyrm.atk.s;
+    wyrm.atk = r.st;
+    for (const ev of r.events) { wyrmEvent(before, ev, phase); before = ev; }
+    const state = wyrm.atk.s, h = wyrm.segs[0];
+    if (state === 'circle' || state === 'recover') {
+      wyrm.ang += MMDDWyrm.ORBIT_SPEED[p] * dt * (state === 'recover' ? 0.4 : 1);
+      const o = MMDDWyrm.orbitPos(s, wyrm.ang, phase);
+      moveWyrmHead(o.x, o.y, o.z, state === 'recover' ? 3 : 8, dt);
+    } else if (state === 'burrow') {
+      moveWyrmHead(player.x, MMDDWyrm.floorY(s) - 1.6, player.z, 5, dt);
+    } else if (state === 'lunge' && wyrm.from && wyrm.to) {
+      const k = Math.min(1, wyrm.atk.t / MMDDWyrm.T.lunge[p]), e = k * k * (3 - 2 * k);
+      h.x = wyrm.from.x + (wyrm.to.x - wyrm.from.x) * e; h.y = wyrm.from.y + (wyrm.to.y - wyrm.from.y) * e; h.z = wyrm.from.z + (wyrm.to.z - wyrm.from.z) * e;
+    }
+    MMDDWyrm.followChain(wyrm.segs);
+    if (!wyrm.burrowed && wyrm.hurtCd <= 0) {
+      const pp = wyrmPlayerPoint();
+      for (let i = 0; i < wyrm.segs.length; i++) {
+        const g = wyrm.segs[i];
+        if (Math.hypot(g.x - pp.x, g.y - pp.y, g.z - pp.z) < (i === 0 ? 1.1 : 0.9)) { wyrmHurtPlayer(MMDDWyrm.contactDamage(state), 'The Rock Wyrm crushed you!'); break; }
+      }
+    }
+  }
+  // Melee: nearest segment within reach (cone check when needCone). Underground wyrms cannot be hit.
+  function attackWyrm(needCone) {
+    if (!wyrm.awake || wyrm.burrowed || !wyrm.segs) return false;
+    if (atkCd > 0 && needCone) return false;
+    const e = eyePos(), ld = lookDir();
+    let best = null, bd = 99;
+    for (const g of wyrm.segs) {
+      const vx = g.x - e[0], vy = g.y - e[1], vz = g.z - e[2], d = Math.hypot(vx, vy, vz);
+      if (d > 3.6 || d >= bd) continue;
+      if (needCone && (vx * ld[0] + vy * ld[1] + vz * ld[2]) / (d || 1) < 0.6) continue;
+      best = g; bd = d;
+    }
+    if (!best) return false;
+    atkCd = 0.4;
+    wyrm.hp -= MMDDWyrm.meleeDamage(pick.tier); wyrm.hitT = 0.2;
+    const h = wyrm.segs[0], k = MMDDWyrm.knockback(h.x - player.x, h.z - player.z, 3);
+    const c = MMDDWyrm.clampToArena(wyrm.site, h.x + k.vx * 0.25, h.y, h.z + k.vz * 0.25, 1);
+    h.x = c.x; h.z = c.z;
+    if (wyrm.hp <= 0) defeatWyrm(); else renderWyrmBar();
+    return true;
+  }
+  function defeatWyrm() {
+    wyrm.hp = 0; wyrm.down = true; wyrmSleep(false);
+    inv.wyrm_scale = (inv.wyrm_scale | 0) + 1;
+    toast('The Rock Wyrm is defeated! It dropped a wyrm scale.');
+    queueSave(); renderHud();
+  }
+  function makeWyrmTex() {
+    const c = document.createElement('canvas'); c.width = 32; c.height = 32;
+    const g = c.getContext('2d');
+    g.fillStyle = '#6b5a4a'; g.fillRect(0, 0, 32, 32);
+    g.fillStyle = '#85715d'; g.fillRect(2, 2, 28, 7); g.fillRect(2, 14, 28, 5);
+    g.fillStyle = '#4a3d31'; g.fillRect(0, 24, 32, 8);
+    g.fillStyle = '#ffb02e'; g.fillRect(7, 22, 5, 3); g.fillRect(20, 22, 5, 3);
+    const t = new THREE.CanvasTexture(c);
+    t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.generateMipmaps = false;
+    return t;
+  }
+  function syncWyrmMesh() {
+    if (!scene || !wyrm.awake || !wyrm.segs) { if (wyrm.group) removeWyrmMesh(); return; }
+    if (!wyrm.group) {
+      if (!wyrmTex) { wyrmTex = makeWyrmTex(); wyrmGeo = new THREE.BoxGeometry(1, 1, 1); wyrmMat = new THREE.MeshBasicMaterial({ map: wyrmTex }); wyrmRingGeo = new THREE.RingGeometry(0.82, 1, 24); wyrmRingMat = new THREE.MeshBasicMaterial({ color: 0xd9b27a, transparent: true, opacity: 0.8, side: THREE.DoubleSide }); }
+      wyrm.group = new THREE.Group();
+      wyrm.segs.forEach((g, i) => { const m = new THREE.Mesh(wyrmGeo, wyrmMat); const sc = i === 0 ? 1.3 : 1.1 - i * 0.07; m.scale.set(sc, sc, sc); wyrm.group.add(m); });
+      wyrm.ring = new THREE.Mesh(wyrmRingGeo, wyrmRingMat); wyrm.ring.rotation.x = -Math.PI / 2; wyrm.ring.visible = false; wyrm.group.add(wyrm.ring);
+      scene.add(wyrm.group);
+    }
+    const kids = wyrm.group.children;
+    wyrm.segs.forEach((g, i) => { kids[i].position.set(g.x, g.y, g.z); });
+    kids[0].rotation.y = Math.atan2(player.x - wyrm.segs[0].x, player.z - wyrm.segs[0].z);
+    wyrmMat.color.setHex(wyrm.hitT > 0 ? 0xff9988 : 0xffffff);
+    const tele = wyrm.atk && wyrm.atk.s === 'telegraph' && wyrm.tgt;
+    wyrm.ring.visible = !!tele;
+    if (tele) {
+      const T = MMDDWyrm.T.telegraph[MMDDWyrm.phaseOf(wyrm.hp, wyrm.max) - 1], k = Math.min(1, wyrm.atk.t / T);
+      const sc = MMDDWyrm.RING_R * (reduced ? 1 : 1.5 - 0.5 * k);
+      wyrm.ring.position.set(wyrm.tgt.x, wyrm.tgt.y - 0.85, wyrm.tgt.z); wyrm.ring.scale.set(sc, sc, 1);
+    }
+  }
+  function removeWyrmMesh() {
+    if (wyrm.group && scene) scene.remove(wyrm.group);
+    wyrm.group = null; wyrm.ring = null;
+  }
+
   // ---------- test hooks ----------
   function hashData(w, cs) {
     let h = 2166136261 >>> 0;
@@ -1229,6 +1433,7 @@
       benches, benchNear, benchAtLook, pickUpBench, placeBench, craftRows: () => MMDDCraft.annotate(inv, { furnace: furnaceNear(), bench: benchNear() }),
       clock, setTime, tickTime, timeStage: () => MMDDTime.stage(clock.t), skyScale: () => clock.k, bg: () => scene ? scene.background.getHex() : 0, fogHex: () => scene ? scene.fog.color.getHex() : 0, MMDDTime,
       creatures, slain, MMDDMobs, scanSpawns, tickCreatures, attackCreature, spawnCreature, clearCreatures, creatureCands: chunkCands, caveDark, deathCause: (c) => { deathCause = c; },
+      wyrm: { state: wyrm, scan: wyrmScan, tick: tickWyrm, attack: attackWyrm, carve: carveWyrmArena, defeat: defeatWyrm, sleep: wyrmSleep, on: WYRM_ON && !!wyrm.site, mesh: syncWyrmMesh, MMDDWyrm: window.MMDDWyrm },
       craft: craftTorch, surfaceY: (x, z) => MMChunks.surfaceY(x, z, SEED), ready: true,
     };
   }
@@ -1253,11 +1458,14 @@
         MMDDCraft.cleanBenches(d.benches).forEach((b) => benches.push(b));
         if (typeof d.t === 'number' && isFinite(d.t)) clock.t = MMDDTime.norm(d.t);
         if (Array.isArray(d.slain)) d.slain.slice(-300).forEach((x) => { if (typeof x === 'string' && x.length < 40 && /^[0-9,#]+$/.test(x)) slain.add(x); });
+        wyrmClean(d.wyrm);
         if (typeof d.hp === 'number' && d.hp > 0) player.hp = Math.min(10, d.hp | 0);
         if (d.pick && typeof d.pick === 'object') { pick.tier = clampInt(d.pick.tier, 0, 3); pick.dur = pick.tier ? clampInt(d.pick.dur, 1, PICK_DUR[pick.tier]) : 0; }
       } catch (e) { /* ignore corrupt save */ }
     }
     migrateTown();
+    if (WYRM_ON) await loadWyrmScript();
+    wyrmInit();
     applyTime(true);
     initRenderer();
     bindControls();
