@@ -57,7 +57,8 @@ const volley = (page) => page.evaluate(() => {
   check('bow_triple fires 3 bolts at -0.09, 0, +0.09 rad', tv.length === 3 && Math.abs(tv[0].ang + 0.09) < 1e-6 && Math.abs(tv[1].ang) < 1e-6 && Math.abs(tv[2].ang - 0.09) < 1e-6 && tv.every((b) => b.ws), JSON.stringify(tv));
   const spec = await R.page.evaluate(() => MMWeapons.resolve('ranger', 'bow_triple', 0).dmg);
   check('each arrow carries the resolved per-bolt damage', tv.every((b) => Math.abs(b.dmg - spec) < 1e-9), JSON.stringify({ spec, d: tv.map((b) => b.dmg) }));
-  const life = await R.page.evaluate(() => { const a = window.__mm.arena; let n = 0; for (let i = 0; i < 60; i++) { a._updateBullets(1 / 60); if (a.pBullets.some((b) => b.active)) n = i + 1; } return n; });
+  // the page's own frame loop ages the bolts between the volley call and this one: count the age they already have (`age`, seconds) plus the manual steps, so the total lifetime is measured exactly
+  const life = await R.page.evaluate(() => { const a = window.__mm.arena; const was = a.paused; a.paused = true; const aged = Math.round(Math.max(0, ...a.pBullets.filter((b) => b.active).map((b) => b.age || 0)) * 60); let n = 0; for (let i = 0; i < 60; i++) { a._updateBullets(1 / 60); if (a.pBullets.some((b) => b.active)) n = i + 1; } a.paused = was; return n + aged; });
   check('bow_triple arrows live about 0.75 s (45 frames)', life >= 43 && life <= 46, String(life));
   const cap = await R.page.evaluate(() => { const a = window.__mm.arena; a.pBullets.forEach((b) => { b.active = false; }); for (let i = 0; i < 30; i++) a._firePlayerVolley(0); return a.pBullets.filter((b) => b.active && b.ws).length; });
   check('40-bolt cap per hero holds', cap === 40, String(cap));
