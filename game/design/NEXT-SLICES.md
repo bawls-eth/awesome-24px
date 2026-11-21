@@ -1,76 +1,79 @@
-# Next slices: unified Realm depth + side games (queue of 24)
+# Next slices: the next hour (26 slices, 3 waves)
 
-Planner, 2026-11-21. Supersedes the 2026-11-20 list (its slices 1-11 and 14 shipped: generator, zones, menu, camera hook, `realm-world.js`, zone drops/bag tiers, minimap, terrain art b10t, portal return, Gate entry).
-Checked this session: `realm.js` 2540 lines (`setWorld`/`setMode` at 972/990); `games/mad-maze/realm-world.js` 532 lines, Warren-only portals (`portalUrls` hard-codes `mode=dungeon`), no fog/`discovered`, no events wiring, no stash or `pixeltown-mm-v1` reference; `dungeon.js` calls only `MMWarren.generate` (no biome parameter); the Mad Maze page loads no `realm-team.js` (no co-op); no daily seed on Mad Maze pages; b21 NPC strips present (`npc_<id>_idle_down`/`_talk_down`, 7 ids); Deepdelve has a furnace, no Rock Wyrm; Stalk has no goals/almanac; 101 test files listed in `test-tiers.json`.
-Unknown (verify before starting): exact Jam song count beyond STATUS's "8"; whether Deepdelve mobs exist (37 loose matches for slime/bat/mob); `MMZones.eventsFor` return shape in practice.
+Planner, 2026-11-21 (late). Replaces the earlier 28-slice queue. Sonnet-class workers; one slice = one branch; `node game/tests/run-all.js` on port 8440 before merge; register every new test in `tests/test-tiers.json` (browser tests non-smoke).
+
+## Already done: do not repeat
+- Class/weapon plan **S1-S8, S15** (`mm-weapons`, `mm-projectile`, `mm-status`, `mm-unlocks`, class-id fix, panel rows, `mm-fx-draw`, projectile engine, TTK sim).
+- Unified Realm: overworld, zones, difficulty curve, fog, minimap, biome portals (4 biomes), world events, sites (shrines/camps/NPCs), stash, terrain art b10t/b11a/b11b, Gate entry, hero picker, daily seed, death cache, shop, combine, loot-bag item icons.
+- Side games: Jam depth (12 songs, Concert, Practice), Stalk depth/goals/advisor/neighbours, Angler depth + boss fish, Deepdelve crafting/day-night/mobs/Rock Wyrm/fps.
+- Art delivered: b12 nature props, b13 structures, b14 portals, b15 bags/coins/potions, b21 NPCs, b22 relics/keys. Next from Codex: b16-b20 (projectiles, enemy bolts, effects, UI icons, portraits) - not delivered, so every slice keeps code fallbacks.
+
+## In flight (do not start; their files are busy until merged)
+| Branch | Covers | Holds |
+|---|---|---|
+| `rj-playtest-fixes` | S9 status wiring, playtest fixes 3-6 (shore, off-screen fire, shot readability, TTK) | RJ |
+| `mm-wire-polish` | S10 Mad Maze wiring | MM |
+| `rw-art-wire` | b12-b15 wiring (props, portals, shrines, beacon, bags, coins) | RW |
+| `town-offline-join` | playtest #2 join timeout | `main.js`, `net.js`, `index.html` |
+Unknown: whether playtest #7-#16 (phone HUD, dungeon fit, prompt stacking, copy) are inside `rj-playtest-fixes`. Each slice below that touches them says "verify first".
 
 ## Serial resources
-`realm.js` (RJ) and `realm-world.js` (RW) are serial: at most ONE slice per wave touches each, and it merges first. `dungeon.js` (DJ), `mad-maze.js` (MM), `games/mad-maze/index.html` + `mad-maze.css` (PG) and `lantern.js` (LJ) are one-per-wave too. Every RW feature below is split: a pure `shared/` module (parallel, Node test) and a wiring slice (serial).
+RJ `realm.js`, RW `games/mad-maze/realm-world.js`, MM `mad-maze.js`, DJ `dungeon.js`, MN `main.js`, PG `games/mad-maze/index.html`+`mad-maze.css`, LJ `lantern.js`: at most one slice each per wave. Wave 1 uses none of them (they are in flight).
 
-## Wave 1 (12 parallel, disjoint files)
+## Wave 1: pure modules, tests, side pages (12 parallel, start now)
 
-| id | title | files | size | conflicts | art | acceptance |
+| id | title | files | S/M/L | art | acceptance (3) | test |
 |---|---|---|---|---|---|---|
-| A1 | Fog of discovered tiles | RW, new test `world-fog.test.js` | M | RW | code | minimap draws unseen 8x8 cells black; walking reveals them; `discovered` base64 saved in `pixeltown-realm-v1` (additive) and a save without it loads fully fogged; restart clears it |
-| A2 | Dungeon biome table | NEW `shared/mm-biomes.js` + node test | S | none | code (b14 portal ids referenced) | `bramble/meadow/crypt/warren` each give palette, enemy roster from delivered creature ids, boss id, key id; same seed same config; unknown biome falls back to warren |
-| A3 | World event scheduler | NEW `shared/mm-world-events.js` + node test | M | none | code | seed + 5-min slot picks the same site/kind for any caller; 20 s warning phase; beacon/horde/raid states advance deterministically on `tick(t)` |
-| A4 | Loot-to-Lantern ledger | NEW `shared/mm-loot-ledger.js` + node test | M | none | code | world/dungeon results become an `inbox` list (additive key in `pixeltown-mm-v1`); cap 24, overflow -> shards; hostile/oversized input sanitised; old mm-v1 fixture loads unchanged |
-| A5 | Shrines, camps, NPC sites | NEW `shared/mm-sites.js` + node test | S | none | b21 art exists | maps `world` structures to shrine (heal/rage/ward buff table, 3-min cooldown), camp (chest + patrol), NPC (one of 7 b21 ids) per zone; deterministic per seed; none in the spawn halo |
-| A6 | Class tags: multi-shot/spread/pierce | RJ (bolt fire), `shared/mm-classes.js` | M | RJ | code | `arenaProfile` tags change bolt count/spread/pierce; ranger byte-identical; `?classstats=0` restores old fire; `realm-core`/`realm-wire` green |
-| A7 | Dungeon boss art + summary item icons | DJ | S | DJ | delivered b07/i01 | dungeon boss uses `setBossArt` sprite (fallback circle); summary lists item icons; `?bossart=0` off |
-| A8 | Daily maze/world seed | `shared/mm-daily.js` (extend), MM | S | MM | code | `?daily=1` gives the same seed for all players on a UTC date; button on menu routes to it; existing `?seed=` unchanged |
-| A9 | Deepdelve Rock Wyrm (boss) | `games/deepdelve/deepdelve.js` | M | deepdelve.js | code voxel | appears below a depth; 3 phases; defeat drops a recipe item; off in `?test=1` unless `?wyrm=1`; perf governor still holds |
-| A10 | Lakeside Angler boss fish encounter polish | `games/angler/angler.js`, `angler.css` | S | angler files | code | boss bite shows a distinct tension pattern; journal marks boss caught; phone 390x844 shows reel bar + button unobstructed |
-| A11 | Stalk Market goals + almanac | `games/stalk/stalk.js`, `shared/mm-stalk-market.js` | S | stalk files | code | 5 goals tracked in `pixeltown-stalk-v1` (additive); almanac lists past 4 weeks; play-money only, no wager UI |
-| A12 | Campfire Jam songs to 12 | `shared/mm-jam-songs.js`, `games/jam/jam.js` | M | jam files | code | 4 new original charts, each Easy/Normal/Hard; offsets respected; song list scrolls on phone |
+| N1 | Nexus layout module | NEW `shared/mm-nexus.js` | M | b13 fountain/banners, b14 `portal_nexus`/`portal_return`, b21 7 NPCs exist | fixed 40x30-tile plaza with fountain, 4 vendor slots, portal ring (realm, vault, 4 biomes); no enemies; `layout()` is pure and identical across calls | `shared-mm-nexus.test.js` |
+| N2 | Quest + oracle module | NEW `shared/mm-quests.js` | M | b21 `npc_quest_giver`; oracle uses `npc_ghost_guide` (no oracle NPC art) | 3 daily quests per UTC date from `MMDaily` (kill N in zone, kill a boss, open a portal); `progress(state, event)` copies, never mutates; reward is shards + one bag tier; hostile save input cleaned | `shared-mm-quests.test.js` |
+| N3 | Vault + boss portal rules | NEW `shared/mm-portals.js` | S | b14 `portal_vault`/`portal_boss`, b22 `key_boss` exist | boss key opens a boss portal 120 s; vault portal only in the Nexus and leads to the Lantern stash; unknown key id is a no-op | `shared-mm-portals.test.js` |
+| N4 | Pickups table | NEW `shared/mm-pickups.js` | S | b15 `coin_f1..4`, heart/focus, 6 potions exist | coins/potions/XP orbs per tier seeded by `(seed, group, kill)`; magnet radius 64 px, lifetime per tier; heal capped at max HP | `shared-mm-pickups.test.js` |
+| P1 | World party protocol | NEW `shared/mm-world-party.js` (uses `mm-party.js` shapes) | M | code | messages pos/hit/bag at 8 Hz within 40 tiles; per-player bag ids never collide; an in-memory relay round-trips 2 peers; no Firebase import (grep check) | `shared-mm-world-party.test.js` |
+| W1 | `wpn_` item table + drop/shop data (S12 data half) | NEW `shared/mm-weapon-items.js` | S | b07 weapon icons exist; style icons via `mm-fx-draw` | 26 items match `/^wpn_[a-z_]{3,24}$/` and resolve in `MMWeapons`; drop split 70/30 base/family; shop price = sell x 8 | `shared-mm-weapon-items.test.js` |
+| Q1 | DB-safe test helper (playtest #1) | `tests/helpers.js`, `tests/realm-playthrough.test.js` + any `offline` test | S | none | `blockDb(ctx)` adds `routeWebSocket` close for DB hosts; a test fails if a DB `websocket` event fires; realm-playthrough shows 0 DB sockets. Verify the bot fix was not already ported | `helpers-db-block.test.js` |
+| J1 | Jam: calibration never blocks the song list | `games/jam/jam.js`, `jam.css` | S | code | first visit shows the song list with a "Check timing (recommended)" chip; offset defaults to 0 and Play works at once; finished calibration still saves the offset. Check branch `jam-calibration-songs` first | `jam-first-visit.test.js` |
+| K1 | Stalk: closed-market text | `games/stalk/stalk.js`, `stalk.css` | S | code | when Buy/Sell is disabled the reason shows beside the buttons ("Market closed: buy on Sunday"); `aria-describedby` links it; no change on open days | extend `stalk-page.test.js` |
+| D1 | Deepdelve first-spawn fix | `games/deepdelve/deepdelve.js` | S | code voxel | spawn chooses a column within 24 blocks of trees or a cave mouth; the stray selection square is hidden until the pointer moves; seed save unchanged | `deepdelve-spawn.test.js` |
+| F1 | World phone perf probe | NEW `tests/world-perf.test.js` | S | none | 390x844, 4x CPU throttle, 60 enemies + 300 bullets: median frame recorded; fails only on 2x regression vs stored baseline; 0 console errors | `world-perf.test.js` |
+| B1 | Backup v2 module | `shared/mm-backup.js` | S | none | export includes `pixeltown-save-v1`, `-mm-v1`, `-realm-v1`, `-arms-v1`, stalk, jam keys; a v1 backup still restores; oversized/hostile blob rejected with a message | extend `shared-mm-profile-backup.test.js` |
 
-## Wave 2 (11 parallel; needs A2-A5 merged)
+## Wave 2: serial wiring (7 parallel; needs the in-flight branches merged)
 
-| id | title | files | size | conflicts | art | acceptance |
-|---|---|---|---|---|---|---|
-| B1 | Biome portals bramble/meadow/crypt | RW (`portalUrls`, labels) | M | RW | b14 portals or code ring | each portal opens `mode=dungeon&biome=<b>`; label/minimap colour per biome; return regex still matches; Warren unchanged |
-| B2 | Dungeon biome parameter | DJ, MM (`biome` query whitelist) | M | DJ, MM | code palettes | `?biome=crypt` uses A2 roster + palette; invalid biome -> warren; old seeds/layout v1 byte-identical |
-| B3 | Lantern inbox claim | LJ, `lantern.html` | S | LJ | b22 icons | inbox panel lists pending items with icons; Claim moves to stash or carry; full stash keeps them pending |
-| B5 | Bag + item art in world drops | `shared/mm-art.js` (bag lookup), new test | S | mm-art.js | b15 bags or current tier colours | `bag_<tier>` drawn when present, fallback colour tested; 2-frame bob; no extra draw calls per bag beyond one sprite |
-| B6 | Class ability balance pass | `shared/mm-classes.js`, new `tests/class-balance.test.js` | S | mm-classes.js (A6 merged first) | code | scripted sim: each class's time-to-kill a zone-1 group within 0.7-1.4x ranger; signature cooldowns 8-20 s; numbers recorded in STATUS |
-| B7 | Mad Maze room eyeball + up-facing deaths | `shared/mm-rooms.js` only if broken, screenshot script | S | mm-rooms.js | b04/b05 (up death strips absent: code mirror fallback) | screenshot of all 68 templates; no unreachable door; up-facing death uses down strip flipped |
-| B8 | Deepdelve phone controls pass | `games/deepdelve/deepdelve.css`, `index.html` | S | deepdelve page | code | 44 px targets, safe areas, no overlap at 390x844 and 844x390 |
-| B9 | Phone perf probe for the world | NEW `tests/world-perf.test.js` (browser, non-beta) | S | none | code | 60 enemies + 300 bullets at 390x844, 4x CPU throttle: median frame under 20 ms recorded; fails only on a 2x regression vs `.timings` baseline |
-| B10 | Realm feel: hit-stop, screen shake, loot pop | RJ | S | RJ | b18 fx optional | 40 ms hit-stop on boss hit; shake respects reduce-motion; 0.3 s pop on purple+ bags; bench unchanged |
-| B11 | Bug Safari fixes | `games/festival/bugs.js` | S | bugs files | code | open Bug Safari items in QA-SWEEP-NOTES.md (not read by this planner: verify they exist first) fixed; 3 assertions per fix |
+| id | title | files | S/M/L | conflict | art | acceptance (3) | test |
+|---|---|---|---|---|---|---|---|
+| S11 | World debuffs + shrines | RW | M | RW | code cores (b17 later) | ice_wraith bolt can slow; a Shore bolt never applies a status; shrine shows the damaging icon 60 s; max 1 status / 0.5 s | `world-status.test.js` |
+| S12 | Passives + `wpn_` drops + shop | RJ (uses W1) | L | RJ, Opus review | b07 icons | L3 rogue lacks `rogue_4`, L4 rate x1.04; L11 Nova fires 20; shop lists family styles at sell x 8; old saves load | `class-unlocks-arena.test.js` |
+| S13 | Ability bar, unlock toast, tooltip | PG + MM | M | PG, MM, Opus review (saves `pixeltown-arms-v1`) | lock/cooldown code-drawn; b20 icons later | at 390x844 targets >= 44 px and clear of the aim stick; toast once per node (`seen`); long-press opens sheet, Esc closes | `class-unlock-ui.test.js` |
+| DG | Phone dungeon fit (playtest #7, #11, #12, #13, #14) | DJ | M | DJ | code | verify first; portrait room scales to screen width, map/banner off the room; exit reads "✖ World"; HUD and summary room counts agree; "cleared!" only with the boss dead | `dungeon-phone.test.js` |
+| LB | Lantern backup UI v2 | LJ, `lantern.html` | S | LJ, Opus review | none | Download/Restore use B1; restore shows a diff summary before writing; cancel writes nothing | extend `lantern-page.test.js` |
+| AX | Accessibility settings | `shared/mm-access.js`, `hub/hub.js`, `hub/hub.css` | M | hub files | code | colour-blind palette, reduced glare and large text toggles saved additively; hub has a settings sheet reachable by keyboard; Realm reads the flags (read-only, no RJ edit) | `access-settings.test.js` |
+| AN | Angler accessibility + phone | `games/angler/angler.js`, `angler.css` | S | angler files | code | tension bar has a pattern, not only colour; reduced motion stops bobber shake; reel button 44 px and unobstructed at 390x844 | extend `angler-polish.test.js` |
 
-(World-event wiring waits for Wave 3: RW is taken by B1.)
+## Wave 3: Realm feel + loop (7 parallel; needs Wave 2 merged)
 
-## Wave 3 (7 parallel; B1, B2 merged)
+| id | title | files | S/M/L | conflict | art | acceptance (3) | test |
+|---|---|---|---|---|---|---|---|
+| NX | Nexus live + vault/boss portals | RW (uses N1, N3, N4) | L | RW, Opus review | b13/b14/b21 exist | Nexus menu "Go to Nexus" places you in the plaza with no enemies; portal ring enters realm/biomes/vault; boss key opens a boss portal for 120 s; coins/potions from N4 drop and magnet | `world-nexus.test.js` |
+| QB | Quest + oracle board | PG + MM (uses N2) | M | PG, MM | b21 quest giver | board lists 3 daily quests; progress reads `pixeltown-realm-v1.stats` (additive `quests` key); claim pays once even after reload | `world-quests.test.js` |
+| S14 | Backpack weapon compare, enemy pips, damage colours | RJ | M | RJ | code | tooltip shows the pattern line and delta vs equipped; at most 3 pips per enemy; armorBroken numbers purple | `class-weapon-ui.test.js` |
+| CO | Co-op on the big map (relay only) | NEW `games/mad-maze/world-team.js`, NEW `tests/fixtures/world-party.html` (uses P1) | L | none (page hookup next hour), Opus review | code | two tabs share one seed and see each other within 40 tiles; each gets its own bag for a shared kill; zero live-DB requests or sockets (Q1 helper) | `world-party.test.js` |
+| S16 | Class/weapon playtest loop | NEW `tests/class-weapon-playtest.test.js` | S | none | none | 4 classes: equip a style, reach L4, see the toast, kill a group, open the panel; 0 console errors; median frame < 20 ms at 390x844 | `class-weapon-playtest.test.js` |
+| DD | Deepdelve goals panel | `games/deepdelve/deepdelve.js`, `.css` | S | deepdelve files | code | 6 goals (first torch, furnace, iron, depth 40, Wyrm, 20 recipes) persist additively in IndexedDB meta; panel 44 px targets; old worlds load | `deepdelve-goals.test.js` |
+| HR | Games report to the hub | `shared/mm-profile.js`, one call line each in jam/angler/stalk | M | mm-profile.js, Opus review | none | qualifying Jam/Angler/Stalk results add a medal on the hub node; old hub profiles load; double report is idempotent | `hub-medals.test.js` |
 
-| id | title | files | size | conflicts | art | acceptance |
-|---|---|---|---|---|---|---|
-| C1 | World events live (beacon, horde, raid) | RW | L | RW | b14 `event_beacon` or code flag | banner 20 s ahead; minimap ping; beacon 45 s hold; contribution bar; gold bag + biome key on win; restart clears |
-| C3 | Dungeon results -> ledger | DJ (exit), `shared/mm-loot-ledger.js` call | S | DJ | code | finishing a portal dungeon adds its loot to `inbox`; standalone dungeon unchanged; death keeps the no-loss rule |
-| C4 | World drops -> ledger on Leave | MM (leave handler) | S | MM | code | Leave/Restart writes carried world items to `inbox` once (idempotent on double click) |
-| C5 | Co-op on the big map (2 tabs, in-memory relay) | NEW `games/mad-maze/world-team.js`, `shared/mm-party.js` | L | mm-party.js | code | same seed both tabs; positions 8 Hz in 40-tile interest radius; per-player bags; zero live-DB writes in tests (relay only); snapshot under 24 KB |
-| C6 | Nexus settings panel (joystick side, aim assist, left-hand) | PG | S | PG | b19 UI or text | settings persist in `pixeltown-realm-v1` (additive); left-hand mode swaps sticks; 44 px targets |
-| C7 | Angler + Jam medals to hub | `shared/mm-profile.js` reportResult callers only | S | mm-profile.js | code | medal appears on hub node after a qualifying run; old profiles load |
-| C8 | Item tooltip + compare in backpack | RJ | M | RJ | b07-b09 icons | tap/hover shows stats delta vs equipped; phone sheet fits 390x844; keyboard accessible |
-
-Serial RW follow-ups (one per slot, after C1 merges):
-- **C2 Shrines/camps/NPCs in the world** (RW, M, b21 art delivered): an NPC idle/talk animation plays near the player and a talk card opens; a shrine buff applies at most once per 3 min (A5 table); a camp chest drops one zone bag; nothing spawns in the spawn halo.
-- **C9 Co-op wiring in RW** (RW, M, Opus review): the C5 module is hooked in; the guest sees host enemies and its own bags; solo play is byte-identical when there is no party.
-- **C10 Boss raid telegraphs** (RW + RJ, M): ground rings 1 s before impact and red lines for aimed volleys; reduce-motion keeps the telegraphs but drops the shake.
-
-Scheduling: up to 12 grunts in Wave 1; merge order pure modules -> RJ -> RW -> DJ/MM/PG -> side games -> docs. Codex art never blocks: every art-using slice tests its fallback path.
+Merge order per wave: pure modules -> RJ -> RW -> DJ/MM/PG -> LJ/hub -> side games -> docs.
 
 ## QA plan
-- Opus review (mandatory): A1, A4, B3, C3, C4, C6 (saves); C5 and its RW wiring (net/co-op: in-memory relay only, never the live DB; audit any Firebase import); A6, B10, C8 (realm.js core); B2 (old-seed byte-identity).
-- Playtest-style Playwright scripts (non-beta, `class: browser`, added to `test-tiers.json`): A1 (walk 3 screens, minimap pixel check), B1+B2 (enter each biome portal, clear first room, exit to the same tile), C1 (fast-forward clock into an event, win, see gold bag), C3/C4 (dungeon loot appears in Lantern inbox), C5 (two pages, relay), B9 perf. Each: 390x844 + desktop screenshots viewed, zero console errors.
-- Every slice: `node --check`, its tests, smoke tier; full run-all on the merged head before stamping `ci-status.json`.
-- One QA grunt per wave scripts the full loop (spawn, kill, bag, portal, dungeon, return, restart) and logs findings in QA-SWEEP-NOTES.md.
+- Opus review: S12, S13, NX, CO, HR, LB, B1 (saves or co-op/core).
+- Saves fixture: one test loads an old `pixeltown-save-v1`, a pre-world `pixeltown-mm-v1`, an empty `pixeltown-realm-v1` and no `pixeltown-arms-v1`; every save-touching slice must pass it.
+- DB safety: after Q1 merges, every browser test uses `blockDb`; reviewer greps new files for `firebase`/`database(`.
+- Phone: S13, DG, AN, DD, NX attach 390x844 screenshots; F1 baseline lands before NX.
+- End of hour: rerun `game/tools/playtest-bot/run.js` (WebSocket-blocked) and append deltas to PLAYTEST-REVIEW.md.
 
 ## Risks
-1. RW contention (five slices want it): rebase, never hand-merge; consider splitting RW into modules as its own serial slice.
-2. Save drift (`discovered`, `inbox`, settings): one fixture test with old `pixeltown-save-v1`, pre-world `pixeltown-mm-v1` and empty `pixeltown-realm-v1` gates all of them.
-3. Loot duplication across world, dungeon and Lantern (double claim, two tabs): use item uids and the existing cross-tab merge.
-4. Co-op on the live DB (100-connection free tier, open rules): C5 stays relay-only until the owner approves.
-5. Phone fps: B9 lands before C1 for a baseline; no real-device numbers exist.
-6. Codex order (b11, b14, b15): art slices ship on code fallbacks.
-7. Suite runtime: keep new heavy browser suites out of smoke.
+1. In-flight branches slip: Wave 2 cannot start on RJ/RW/MM until they merge; Wave 1 is fully independent.
+2. Playtest overlap: `rj-playtest-fixes` may already cover #7-#16; DG verifies before coding.
+3. Co-op: relay-only; any live-DB path in CO is a blocker. Page hookup waits for the next hour (PG busy).
+4. Save drift across `quests`, `arms`, backup v2: additive keys only, shared fixture.
+5. Art gaps: no oracle NPC, b16-b20 not delivered; fallbacks are tested.
+6. RW size (961 lines) and NX being large: keep logic in N1/N3/N4.

@@ -1,4 +1,8 @@
 {
+  "town-offline.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "angler-tournament.test.js": {
     "class": "browser",
     "tier": "smoke"
@@ -100,6 +104,14 @@
     "tier": "smoke"
   },
   "class-weapon-engine.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "dungeon-polish.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "class-weapon-wire.test.js": {
     "class": "browser",
     "tier": "full"
   },
@@ -359,6 +371,26 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-nexus.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-quests.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-portals.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-pickups.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-weapon-items.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "shared-mm-classes.test.js": {
     "class": "node",
     "tier": "smoke"
@@ -563,6 +595,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "world-art.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "shared-mm-hero-stats.test.js": {
     "class": "node",
     "tier": "smoke"
@@ -597,6 +633,42 @@
   },
   "town-perf.test.js": {
     "class": "live",
+    "tier": "full"
+  },
+  "jam-first-visit.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "stalk-closed.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "deepdelve-spawn.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "shared-mm-dd-spawn.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "class-status-arena.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "difficulty-waves.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "shot-readability.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "world-easy-start.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "world-wording.test.js": {
+    "class": "browser",
     "tier": "full"
   }
 }

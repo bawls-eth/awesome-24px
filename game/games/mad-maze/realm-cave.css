@@ -52,3 +52,5 @@ body .mm-btn { background: linear-gradient(#c9822c, #8a5518); color: #1a1008; bo
 body .mm-btn.alt { background: linear-gradient(#3a2c1c, #231b14); color: var(--cv-bone); border-color: var(--cv-iron-hi); }
 /* daily badge */
 body #mm-daily { background: rgba(23, 18, 14, 0.85); border: 2px solid var(--cv-iron); color: var(--cv-ember); }
+body #realm-backpack button[data-open-shop] { background: linear-gradient(#3a2c1c, #231b14); border: 2px solid var(--cv-iron-hi); color: var(--cv-bone); }
+body #realm-backpack button[data-open-shop]:hover { border-color: var(--cv-ember); color: var(--cv-ember); }

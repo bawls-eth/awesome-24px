@@ -37,7 +37,14 @@ const RM_DEATH_PENALTY = 0; // dying never costs banked shards any more: you get
 const RM_SHOP_MULT = 8; // shop price = the item's sell value x this
 const RM_COMBINE_COUNT = 3; // identical items (same gear, same rarity) fuse into one of the next rarity
 const RM_SHOP_UNLOCK = [0, 2, 5]; // best wave needed before the shop stocks Common / Uncommon / Rare
+const RM_SHOP_UNLOCK_LV = [1, 4, 8]; // world mode (no waves): the hero level that also unlocks them (either one unlocks; never fewer items than before)
 const RM_ED_GHOSTS = 24; const RM_ED_REDUCED = 0.25; // enemy death-ghost pool size; reduced-motion fade seconds
+// Shot readability: the player's bolt is a white core with a light outline (solid radius 5 + a soft glow); enemy bullets have a dark
+// rim and their own hue per pattern and are never more than 1.3x the player's bolt. At most RM_EB_DRAW enemy bullets are drawn.
+const RM_BOLT_R = { player: 5, enemy: 6 };
+const RM_EB_HUES = [['#ff4f6d', '#ffd0d8'], ['#b46bff', '#ecdcff'], ['#ffa62b', '#fff0c8']]; // aimed (red), spiral (violet), ring (orange)
+const RM_EB_DRAW = 320;
+const RM_FIRE_RANGE = 0.95; // world mode: an enemy fires only on screen and within this x the view's half-diagonal of the player
 const RM_POOL = { pBullets: 160, eBullets: 420, enemies: 24, particles: 180, texts: 28, bags: 14, drifters: 12, hazards: 5 };
 
 // ---- progression (B2) ----
@@ -379,7 +386,8 @@ class RealmArena {
     this.abilityCd = [0, 0, 0, 0];
     this.shield = { hits: 0, t: 0 };
     this.overdriveT = 0;
-    this.player = { x: 0, y: 0, hp: RM_PLAYER.hp, dashT: 0, iframes: 0, fireCd: 0, aim: 0, facing: 1, moving: false, bob: 0 };
+    this.player = { x: 0, y: 0, hp: RM_PLAYER.hp, dashT: 0, iframes: 0, fireCd: 0, aim: 0, facing: 1, moving: false, bob: 0, status: null, _stm: null, _stNext: Infinity, _stAcc: 0 }; // status..: MMStatus state + cached mods (applyStatus)
+    this._stT = 0; this._stList = null; this._stListT = -1; this._stDrawn = []; this._stCache = null; this._stAnchor = null; this._stAnchorT = -1; // status clock (s), HUD icon row
   }
 
   _take(pool) {
@@ -558,10 +566,21 @@ class RealmArena {
     });
     const hp = this.heroProfile; // additive class profile (setHeroProfile), applied after gear and level; never in duels (returned above)
     if (hp) { st.maxHp = Math.max(1, Math.round(st.maxHp * hp.hp)); st.dmg *= hp.dmg; st.rate *= hp.rate; st.speed *= hp.speed; st.iframes *= hp.iframes; }
-    if (this.buffDmg > 1 && this.buffDmg <= 1.5) st.dmg *= this.buffDmg; // additive timed buff (world shrine of Fury), set by realm-world.js
+    const hs = this._heroWorldScale(); // world mode only: MMDifficulty.heroScale (easy start); 1x in the classic arena, dungeons, ?difficulty=off
+    if (hs) { st.dmg *= hs.dmg; st.rate *= hs.rate; }
+    let dm = this.buffDmg > 1 && this.buffDmg <= 1.5 ? this.buffDmg : 1; // additive timed buff (world shrine of Fury), set by realm-world.js
+    const sm = this.player && this.player._stm; // status mods (applyStatus): the damage multiplier incl. buffDmg is capped to 0.5..1.6
+    if (sm) { dm = Math.max(0.5, Math.min(1.6, dm * sm.dmg)); st.rate *= sm.rate; st.speed *= sm.speed; }
+    st.dmg *= dm;
     st.guard = this._calcGuard();
     this.stats = st;
     return st;
+  }
+
+  _heroWorldScale() {
+    if (this.mode !== 'world' || !this.world || this.dungeon || this.team || typeof MMDifficulty === 'undefined' || typeof MMDifficulty.heroScale !== 'function') return null;
+    let off = false; try { off = MMDifficulty.isOff(typeof location !== 'undefined' ? location.search : ''); } catch (e) { off = false; }
+    return off ? null : MMDifficulty.heroScale();
   }
 
   // Guard comes from the equipped items via MMStats (0 for every legacy item today); extraGuard is a test/future hook.
@@ -574,10 +593,125 @@ class RealmArena {
   // Enemy bolt damage after guard: max(dmg - guard, 25% of dmg). Guard 0 leaves damage unchanged.
   _guarded(dmg) {
     const g = (this.stats && this.stats.guard) || 0;
-    if (g <= 0) return dmg;
+    if (g <= 0 || (this.player._stm && this.player._stm.guard0)) return dmg; // armorBroken: guard 0
     if (typeof MMStats !== 'undefined') return MMStats.damageTaken(dmg, g);
     return Math.max(Math.ceil(dmg * 0.25), dmg - g);
   }
+
+  // ---------- status effects (MMStatus, CLASS-WEAPON-BUILD-PLAN S9). Every piece is a no-op when mm-status.js is not loaded; duels stay plain. ----------
+
+  _stOn() { return typeof MMStatus !== 'undefined' && !(this.team && this.team.isPvp); }
+  _stKind(t) { return t === this.player ? 'player' : t.type === 'boss' || t.dg === 'boss' ? 'boss' : 'enemy'; }
+
+  // applyStatus(target, id, opts): target 'player' (or this.player) or a live enemy from the pool. opts {sec, stacks, pot, src, fromBolt, picnic, safe}
+  // as in MMStatus.apply. Returns true when the status took (or refreshed). The player's stats are recomputed at once.
+  applyStatus(target, id, opts) {
+    if (!this._stOn() || typeof id !== 'string') return false;
+    const t = target === 'player' || target === undefined || target === null ? this.player : target;
+    if (!t || typeof t !== 'object' || (t !== this.player && (!t.active || this.enemies.indexOf(t) < 0))) return false;
+    if (t === this.player && (this.state === 'dead' || this.down)) return false;
+    const o = opts && typeof opts === 'object' ? opts : {};
+    const now = this._stT * 1000; const kind = this._stKind(t);
+    const before = t.status && t.status.fx ? t.status.fx[id] : null; const was = before ? `${before.until}|${before.stacks}|${before.pot}` : '';
+    const next = MMStatus.apply(t.status, id, { sec: o.sec, stacks: o.stacks, pot: o.pot, src: typeof o.src === 'string' ? o.src : '', kind, fromBolt: !!o.fromBolt, picnic: !!o.picnic, safe: !!o.safe }, now);
+    const f = Object.prototype.hasOwnProperty.call(next.fx, id) ? next.fx[id] : null;
+    const ok = !!f && f.until > now && `${f.until}|${f.stacks}|${f.pot}` !== was;
+    t.status = next;
+    this._stRefresh(t);
+    if (t === this.player) {
+      if (ok && id === 'shielded') { this.shield.hits = Math.max(this.shield.hits, f.stacks); this.shield.t = Math.max(this.shield.t, (f.until - now) / 1000); } // the existing shield soaks the hits
+      this._calcStats(); this._stList = null;
+    }
+    return ok;
+  }
+
+  // Drop expired effects and cache the mods + the next expiry, so the frame loop reads plain numbers and never allocates.
+  _stRefresh(t) {
+    const now = this._stT * 1000;
+    const s = MMStatus.tick(t.status, now); let next = Infinity;
+    for (const id in s.fx) if (s.fx[id].until < next) next = s.fx[id].until;
+    t.status = next === Infinity ? null : s; t._stNext = next; t._stAcc = next === Infinity ? 0 : t._stAcc || 0;
+    t._stm = next === Infinity ? null : MMStatus.mods(s, now, this._stKind(t));
+  }
+
+  // The statuses on `target` ('player' or an enemy) for tests and panels: [{id, left (s), stacks}], negatives first.
+  statusOf(target) {
+    const t = target === 'player' || !target ? this.player : target;
+    if (typeof MMStatus === 'undefined' || !t || !t.status) return [];
+    return MMStatus.iconList(t.status, this._stT * 1000, 6).map((i) => ({ id: i.id, left: Math.round(i.left * 100) / 100, stacks: i.stacks }));
+  }
+
+  // Player side, once per frame: expiry, healing regen and bleed (bleed never drops you below 1 hp).
+  _stTick(dt) {
+    const p = this.player;
+    if (!p.status) return;
+    if (typeof MMStatus === 'undefined') { p.status = null; p._stm = null; p._stNext = Infinity; return; }
+    if (p._stNext <= this._stT * 1000) { this._stRefresh(p); this._calcStats(); this._stList = null; }
+    const m = p._stm; if (!m || this.state === 'dead' || this.down || (this.role === 'guest' && this.team)) return;
+    const rate = (m.noHeal ? 0 : m.regen) - m.dot; if (!rate) return;
+    p._stAcc += rate * dt;
+    if (p._stAcc >= 1) { const n = Math.floor(p._stAcc); p._stAcc -= n; this._sigHeal(n); } else if (p._stAcc <= -1) {
+      const n = Math.floor(-p._stAcc); p._stAcc += n; const hp = Math.max(1, p.hp - n);
+      if (hp < p.hp) { p.hp = hp; this._floatText(p.x, p.y - 22, `-${n}`, '#ff5f6b'); this._syncHud(); }
+    }
+  }
+
+  // Enemy bleed: 0.5 x hero damage per second per stack, dealt every 0.5 s.
+  _stEnemyDot(e, m, dt) {
+    e._stAcc += dt;
+    if (e._stAcc < 0.5) return;
+    e._stAcc -= 0.5;
+    this._hitEnemy(e, m.dot * (this.stats.dmg || 1) * 0.5);
+  }
+
+  // Where the HUD icon row goes (logical arena units): just under the XP bar on the left, and under the boss bar if they would overlap.
+  // Also the HUD-safe band of the top-right buttons (bL..right edge, down to bB), kept clear of floating numbers.
+  // DOM rects are read at most twice a second (never every frame) and again after a resize.
+  _stAnchorAt() {
+    if (this._stAnchor && this._stT - this._stAnchorT < 0.5 && this._stAnchorT <= this._stT) return this._stAnchor;
+    this._stAnchorT = this._stT;
+    const k = this._cssK || 1; const a = this._stAnchor || (this._stAnchor = { x: 8, y: 64, px: 20, k: 1, cl: 0, ct: 0, bL: 1e9, bB: -1 });
+    a.k = k;
+    try {
+      const cr = this.canvas.getBoundingClientRect(); a.cl = cr.left; a.ct = cr.top;
+      const vis = (el) => (el && !el.classList.contains('hidden') && el.getClientRects().length ? el.getBoundingClientRect() : null);
+      const xp = vis(document.getElementById('realm-xp')) || vis(document.getElementById('realm-hp'));
+      const left = xp ? xp.left : cr.left + 8; let top = (xp ? xp.bottom : cr.top + 56) + 4;
+      const rowR = left + 6 * (a.px + 3);
+      const boss = vis(document.getElementById('realm-boss'));
+      if (boss && boss.left < rowR && boss.right > left && boss.bottom > top - 2 && boss.top < top + a.px) top = boss.bottom + 4;
+      a.x = Math.max(0, (left - cr.left) / k); a.y = Math.max(0, (top - cr.top) / k);
+      let bl = 1e9; let bb = -1;
+      ['realm-bp-btn', 'realm-board-btn', 'realm-menu-btn', 'realm-leave-btn'].forEach((id) => { const r = vis(document.getElementById(id)); if (r && r.width > 0 && r.left > cr.left + cr.width * 0.4) { bl = Math.min(bl, r.left); bb = Math.max(bb, r.bottom); } });
+      a.bL = bl < 1e9 ? (bl - cr.left) / k - 4 : 1e9; a.bB = bb >= 0 ? (bb - cr.top) / k + 4 : -1;
+    } catch (e) { a.x = 8; a.y = 64; a.bL = 1e9; a.bB = -1; }
+    return a;
+  }
+
+  // HUD: up to 6 player status icons (20 css px), negatives first; each is a cached MMFxDraw.drawIcon canvas (the clock pie in 12 steps).
+  _drawStatusIcons(g) {
+    const out = this._stDrawn; out.length = 0; const pool = this._stPool || (this._stPool = Array.from({ length: 6 }, () => ({ id: '', x: 0, y: 0, size: 0, neg: false }))); // reused: no per-frame objects
+    const p = this.player;
+    if (!p.status || !p._stm || typeof MMFxDraw === 'undefined' || typeof MMStatus === 'undefined' || this.state === 'dead') return;
+    if (!this._stList || this._stT - this._stListT >= 0.1 || this._stListT > this._stT) { this._stList = MMStatus.iconList(p.status, this._stT * 1000, 6); this._stListT = this._stT; }
+    const list = this._stList; if (!list.length) return;
+    const a = this._stAnchorAt(); const L = a.px / a.k; const px = Math.max(8, Math.round(L * (this.scale || 1)));
+    if (!this._stCache) this._stCache = MMFxDraw.makeCache(MMFxDraw.defaultCreate, 96);
+    for (let i = 0; i < list.length && i < 6; i++) {
+      const it = list[i]; const left = it.left - (this._stT - this._stListT);
+      const fr = Math.max(0, Math.min(12, Math.round(it.frac * 12)));
+      const cv = this._stCache.get(`${it.id}|${it.stacks}|${fr}|${px}`, px, px, (c, W) => MMFxDraw.drawIcon(c, it.id, W / 2, W / 2, W - 1, { frac: fr / 12, stacks: it.stacks, positive: !it.neg }));
+      if (!cv) continue;
+      const x = a.x + i * (L + 3 / a.k); const y = a.y;
+      const blink = !this._reduced && left <= 1 && Math.floor(this._stT * 6.67) % 2 === 1; // blink in the last second (not with reduced motion)
+      if (blink) g.globalAlpha = 0.45;
+      g.drawImage(cv, x, y, L, L);
+      if (blink) g.globalAlpha = 1;
+      const o = pool[out.length]; o.id = it.id; o.x = a.cl + x * a.k; o.y = a.ct + y * a.k; o.size = a.px; o.neg = it.neg; out.push(o);
+    }
+  }
+  // Test / debug hook: the icons drawn on the last frame, in css px from the page's top-left.
+  statusIcons() { return this._stDrawn.map((o) => Object.assign({}, o)); }
 
   // ---------- baked sprites ----------
 
@@ -640,16 +774,20 @@ class RealmArena {
       g.fillStyle = '#fff'; g.fillRect(31, 40, 14, 10); g.fillRect(55, 40, 14, 10); g.fillStyle = '#2a0a1a'; g.fillRect(37, 43, 6, 6); g.fillRect(57, 43, 6, 6);
       g.fillStyle = '#1a0f2a'; g.fillRect(28, 36, 20, 4); g.fillRect(52, 36, 20, 4);
     });
-    this.sprites.pBullet = mk(16, 16, (g) => {
-      const gr = g.createRadialGradient(8, 8, 1, 8, 8, 8);
-      gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.45, '#8fe9ff'); gr.addColorStop(1, 'rgba(60,160,255,0)');
-      g.fillStyle = gr; g.fillRect(0, 0, 16, 16);
+    this.sprites.pBullet = mk(20, 20, (g) => { // your bolt: soft cyan glow, a cyan body with a 1.5 px white outline and a white core
+      const gr = g.createRadialGradient(10, 10, 3, 10, 10, 10);
+      gr.addColorStop(0, 'rgba(143,233,255,0.55)'); gr.addColorStop(1, 'rgba(60,160,255,0)');
+      g.fillStyle = gr; g.fillRect(0, 0, 20, 20);
+      const R = RM_BOLT_R.player;
+      g.fillStyle = '#5fd8ff'; g.beginPath(); g.arc(10, 10, R - 0.75, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = '#f4feff'; g.lineWidth = 1.5; g.beginPath(); g.arc(10, 10, R - 0.75, 0, Math.PI * 2); g.stroke();
+      g.fillStyle = '#ffffff'; g.beginPath(); g.arc(10, 10, 2.4, 0, Math.PI * 2); g.fill();
     });
-    const ebCols = [['#ffffff', '#ff6f91'], ['#ffffff', '#c58bff'], ['#ffffff', '#ffc65c']];
-    this.sprites.eBullet = ebCols.map(([a, b]) => mk(16, 16, (g) => {
-      const gr = g.createRadialGradient(8, 8, 1, 8, 8, 8);
-      gr.addColorStop(0, a); gr.addColorStop(0.4, b); gr.addColorStop(1, 'rgba(0,0,0,0)');
-      g.fillStyle = gr; g.fillRect(0, 0, 16, 16);
+    this.sprites.eBullet = RM_EB_HUES.map(([hue, tint]) => mk(16, 16, (g) => { // enemy bullet: dark rim, saturated body, a small light centre
+      const R = RM_BOLT_R.enemy;
+      g.fillStyle = '#1a0812'; g.beginPath(); g.arc(8, 8, R, 0, Math.PI * 2); g.fill();
+      g.fillStyle = hue; g.beginPath(); g.arc(8, 8, R - 1.6, 0, Math.PI * 2); g.fill();
+      g.fillStyle = tint; g.beginPath(); g.arc(8, 8, 1.6, 0, Math.PI * 2); g.fill();
     }));
     // Enemies: chunky pixel creatures with a bold dark outline, ~36px.
     const body = (g, color, shape) => {
@@ -864,6 +1002,7 @@ class RealmArena {
   // Extra effects of a weapon-style hit (host / solo only): knockback (never bosses) and one chain jump.
   _wpnHit(b, e, idx) {
     const w = b.ws;
+    if (b.st > 0) this._wpnStatus(b, e);
     if (w.knock > 0 && e.type !== 'boss' && e.dg !== 'boss') {
       const nx = e.x + b.ux * w.knock, ny = e.y + b.uy * w.knock;
       if (!this._blocked(nx, ny, 8)) { e.x = nx; e.y = ny; }
@@ -890,8 +1029,14 @@ class RealmArena {
     for (let i = 0; i < this.enemies.length; i++) {
       const e = this.enemies[i]; if (!e.active) continue;
       const rr = r + RM_ENEMIES[e.type].r;
-      if ((e.x - x) * (e.x - x) + (e.y - y) * (e.y - y) <= rr * rr) this._hitEnemy(e, b.dmg || this.stats.dmg);
+      if ((e.x - x) * (e.x - x) + (e.y - y) * (e.y - y) <= rr * rr) { if (b.st > 0) this._wpnStatus(b, e); this._hitEnemy(e, b.dmg || this.stats.dmg); }
     }
+  }
+  // A weapon bolt's `st` (RM_WPN_ST index + 1) rolls its onHit chance and applies that status to the enemy it hit.
+  _wpnStatus(b, e) {
+    const oh = b.ws && b.ws.onHit; const id = RM_WPN_ST[b.st - 1];
+    if (!id || !oh || !(oh.chance > 0) || !e.active || this.rng() >= oh.chance) return false;
+    return this.applyStatus(e, id, { sec: oh.sec > 0 ? oh.sec : undefined, src: 'wpn' });
   }
   // Burst follow-ups and orbiters (at most 3; they only hit on the host / solo, a guest just draws its own).
   _updateWeapon(dt) {
@@ -925,14 +1070,14 @@ class RealmArena {
     if (b.lb === 2) { g.strokeStyle = 'rgba(255,90,90,0.8)'; g.lineWidth = 2; g.beginPath(); g.arc(b.tx, b.ty, w.lob.radius, 0, Math.PI * 2); g.stroke(); }
     const rot = (Math.round(Math.atan2(b.vy, b.vx) / (Math.PI / 8)) + 16) & 15;
     const cv = this._wpnSprite(w.shape, w.size, w.shape === 'dot' || w.shape === 'orb' ? 0 : rot);
-    if (cv) g.drawImage(cv, b.x - cv.width / 2, b.y - cv.height / 2); else g.drawImage(this.sprites.pBullet, b.x - 8, b.y - 8);
+    if (cv) g.drawImage(cv, b.x - cv.width / 2, b.y - cv.height / 2); else g.drawImage(this.sprites.pBullet, b.x - 10, b.y - 10);
   }
   _drawWpnOrbs(g) {
     if (!this._wpnOn() || this.weapon.orbit.n <= 0 || this.state === 'dead') return;
     const w = this.weapon, n = w.orbit.n, cv = this._wpnSprite(w.shape, w.size, 0);
     for (let i = 0; i < n; i++) {
       const o = MMProjectile.orbitPos(i, n, this._wOrbA, w, this.player);
-      if (cv) g.drawImage(cv, o.x - cv.width / 2, o.y - cv.height / 2); else g.drawImage(this.sprites.pBullet, o.x - 8, o.y - 8);
+      if (cv) g.drawImage(cv, o.x - cv.width / 2, o.y - cv.height / 2); else g.drawImage(this.sprites.pBullet, o.x - 10, o.y - 10);
     }
   }
 
@@ -1224,7 +1369,7 @@ class RealmArena {
   // drawing translates once per frame, mouse aim maps screen -> world, the player / enemies / bags clamp to the world instead of the screen.
   // solidAt(x, y) (px) blocks the player and enemies; shotSolidAt (default solidAt) absorbs bullets. setWorld(null) turns it all off.
   setWorld(opts) {
-    if (!opts || typeof opts !== 'object') { this.world = null; this._solidAt = null; this._shotSolidAt = null; this._camF.x = 0; this._camF.y = 0; this.camera.x = 0; this.camera.y = 0; return null; }
+    if (!opts || typeof opts !== 'object') { this.world = null; this._solidAt = null; this._shotSolidAt = null; this._camF.x = 0; this._camF.y = 0; this.camera.x = 0; this.camera.y = 0; if (this.stats) this._calcStats(); return null; }
     const n = (v, d) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Math.min(1 << 20, Math.floor(Number(v))) : d);
     const fn = (f) => (typeof f === 'function' ? f : null);
     this.world = Object.freeze({ w: n(opts.w, this.W), h: n(opts.h, this.H), tile: n(opts.tile, 32), camera: opts.camera !== false, wake: n(opts.wake, 0),
@@ -1236,12 +1381,12 @@ class RealmArena {
     grow(this.eBullets, pl.eBullets, 900, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, kind: 0 }));
     const p = this.player; const R = RM_PLAYER.r;
     p.x = Math.max(R, Math.min(this.world.w - R, p.x)); p.y = Math.max(R, Math.min(this.world.h - R, p.y));
-    this._camStep(-1);
+    this._camStep(-1); this._calcStats(); // the world hero scale depends on it
     return this.world;
   }
 
   // 'world' turns the wave director off (no waves, no wave banners: a continuous world); anything else = the classic waves.
-  setMode(m) { this.mode = m === 'world' ? 'world' : 'waves'; return this.mode; }
+  setMode(m) { this.mode = m === 'world' ? 'world' : 'waves'; if (this.stats) this._calcStats(); return this.mode; }
 
   _bw() { return this.world ? this.world.w : this.W; }
   _bh() { return this.world ? this.world.h : this.H; }
@@ -1300,7 +1445,7 @@ class RealmArena {
       this._cvKey = ckey; const cs = this.canvas.style;
       cs.position = 'absolute'; cs.width = `${cw}px`; cs.height = `${ch}px`; cs.left = `${Math.floor((w - cw) / 2)}px`; cs.top = `${Math.floor((h - ch) / 2)}px`;
     }
-    this._applyBacking();
+    this._applyBacking(); this._stAnchorT = -1e9; // the HUD rects moved
     const p = this.player; const bw = this._bw(); const bh = this._bh();
     p.x = Math.max(RM_PLAYER.r, Math.min(bw - RM_PLAYER.r, p.x || bw / 2));
     p.y = Math.max(RM_PLAYER.r, Math.min(bh - RM_PLAYER.r, p.y || bh / 2));
@@ -1359,16 +1504,17 @@ class RealmArena {
     this._wireRefresh(); this._padPrev.fill(false); this._wq.length = 0;
     this.keys = {}; this.mouse.down = false; this.moveVec.x = 0; this.moveVec.y = 0; this.aimVec.on = false; this.aimVec.x = 0; this.aimVec.y = 0; // no stuck input from the last run
     const p = this.player;
+    p.status = null; p._stm = null; p._stNext = Infinity; p._stAcc = 0; this._stList = null; // statuses never carry over into a new run
     this._calcStats();
     this.abilityCd = [0, 0, 0, 0]; this.shield.hits = 0; this.shield.t = 0; this.overdriveT = 0; this.paused = false; this._sigReset();
     p.x = this.W / 2; p.y = this.H / 2; p.hp = this.stats.maxHp; p.dashT = 0; p.iframes = 1; p.fireCd = 0; p.aim = -Math.PI / 2;
-    this.run = { wave: 0, kills: 0, shards: 0 };
+    this.run = { wave: 0, kills: 0, shards: 0 }; this._waveSc = null;
     this.biome = 0; this.clock = 0; this._speedMul = 1; this.down = false; this.reviveT = 0; this._syncBoss();
     this.shake = 0; this.flash = 0;
     this.displayShards = this.save.shards;
     this.state = 'banner';
     this.bannerT = 1.4;
-    this.bannerText = this.team && this.team.isPvp ? (this.team.mode === '2v2' ? '2v2 — first to 2 rounds!' : 'Duel — first to 2 rounds!') : 'Realm — survive the waves!';
+    this.bannerText = this.team && this.team.isPvp ? (this.team.mode === '2v2' ? '2v2 — first to 2 rounds!' : 'Duel — first to 2 rounds!') : this._worldCopy() ? 'The Realm' : 'Realm — survive the waves!';
     if (this.team && this.team.isPvp) { this.state = 'play'; this.run.wave = 1; this.team.duelReset(); }
     this.nextWaveIn = 1.4;
     this._syncHud(true);
@@ -1442,27 +1588,44 @@ class RealmArena {
     const scale = (1 + 0.15 * Math.max(0, this.run.wave - 1)) * (this.team && this.role === 'host' ? RT_HP_SCALE : 1); // tougher with a partner
     e.active = true; e.type = type; e.x = x; e.y = y;
     e.maxHp = Math.ceil(def.hp * scale); e.hp = e.maxHp;
-    e.slowT = 0; e.slowF = 1; e.boneT = 0;
+    e.slowT = 0; e.slowF = 1; e.boneT = 0; e.status = null; e._stm = null; e._stNext = Infinity; e._stAcc = 0; e.fireMul = 1;
     e.dg = null; e._at = undefined; e.t = 0; e.flash = 0; e.angle = this.rng() * Math.PI * 2; e.dir = this.rng() < 0.5 ? 1 : -1;
     e.cd = 0.8 + this.rng() * 0.8; // first shot is never instant
     if (this.world) { e.ax = x + (this.rng() - 0.5) * 220; e.ay = y + (this.rng() - 0.5) * 220; } else { e.ax = 80 + this.rng() * (this.W - 160); e.ay = 80 + this.rng() * (this.H - 160); } // drift target for Whirlers (near home in a world)
-    e.spdMul = 1; e.dmgMul = 1; e.xpMul = 1; e.shardMul = 1; e.art = null; e.bossArt = null; e.zid = -1; e.evid = null; e.campId = null; e.bossName = null; e.bossTier = 0; // world-mode extras (multipliers 1 = unchanged)
+    e.spdMul = 1; e.dmgMul = 1; e.xpMul = 1; e.shardMul = 1; e.art = null; e.bossArt = null; e.zid = -1; e.evid = null; e.campId = null; e.bossName = null; e.bossTier = 0; e.diff = null; // world-mode extras (multipliers 1 = unchanged)
     if (this.world && type === 'boss') { e.ax = x; e.ay = y; }
+    return e;
+  }
+
+  // Classic-arena difficulty curve (MMDifficulty.waveScale), applied to the wave's spawns at spawn time on top of the old wave scaling.
+  // null (= exactly the old numbers) without the module, with ?difficulty=off, and outside the classic waves (world, dungeon, duel).
+  _waveScaleFor(wave) {
+    if (typeof MMDifficulty === 'undefined' || this.world || this.dungeon || this.mode === 'world' || (this.team && this.team.isPvp)) return null;
+    let off = false; try { off = MMDifficulty.isOff(typeof location !== 'undefined' ? location.search : ''); } catch (e) { off = false; }
+    if (off) return null;
+    let mode = 'classic'; try { if (typeof MMProfile !== 'undefined' && MMProfile.clean && MMProfile.KEY) mode = MMProfile.clean(localStorage.getItem(MMProfile.KEY)).mode; } catch (e) { mode = 'classic'; }
+    return MMDifficulty.waveScale(wave, { mode });
+  }
+  _scaleWaveEnemy(e, sc) {
+    if (!e || !sc) return e;
+    e.maxHp = Math.max(1, Math.ceil(e.maxHp * sc.hp)); e.hp = e.maxHp;
+    e.dmgMul = sc.dmg; e.spdMul = sc.spd; e.fireMul = sc.fire; e.diff = sc;
     return e;
   }
 
   _startWave() {
     this.run.wave += 1;
     const wave = this.run.wave;
+    const sc = this._waveSc = this._waveScaleFor(wave);
     const bi = rmBiomeIndex(wave); const biome = RM_BIOMES[bi]; const changed = bi !== this.biome || wave === 1;
     this.biome = bi;
     this.drifters.forEach((d) => { d.active = false; });
     this._layHazards(biome);
     this._spawnDrifters(biome);
     if (wave % RM_BOSS_EVERY === 0) {
-      this._spawnBoss();
+      this._scaleWaveEnemy(this._spawnBoss(), sc);
     } else {
-      const n = Math.min(2 + wave, 10);
+      const n0 = Math.min(2 + wave, 10); const n = sc ? Math.max(1, Math.min(14, Math.round(n0 * sc.count))) : n0;
       const order = biome.mix;
       for (let i = 0; i < n; i++) {
         const type = wave === 1 ? ['aimed', 'aimed', 'ring'][i % 3] : order[(i + Math.floor(this.rng() * order.length)) % order.length];
@@ -1472,7 +1635,7 @@ class RealmArena {
           x = this.W / 2 + Math.cos(a) * (this.W / 2 - 40);
           y = this.H / 2 + Math.sin(a) * (this.H / 2 - 40);
         } while (Math.hypot(x - this.player.x, y - this.player.y) < 220 && ++tries < 12);
-        this.spawnEnemy(type, x, y);
+        this._scaleWaveEnemy(this.spawnEnemy(type, x, y), sc);
       }
     }
     this._syncBoss();
@@ -1590,6 +1753,7 @@ class RealmArena {
     this._readReduced();
     if (this.paused) { this._readPad(); this._padPauseEdge(); return; } // backpack open (Start can still close it)
     const p = this.player;
+    this._stT += dt; this._stTick(dt);
     this.shake = Math.max(0, this.shake - dt * 30);
     this.flash = Math.max(0, this.flash - dt * 2.2);
     if (this.displayShards !== this.save.shards) { // the shard counter ticks up (or down) instead of jumping
@@ -1817,7 +1981,7 @@ class RealmArena {
     const bn = e.bossName || 'Gloomheart';
     this._showBanner(phase === 2 ? `${bn} — it summons help!` : `${bn} — ENRAGED!`, 1.6, true);
     if (this.team) { this.team.ev('clr', []); this.team.ev('fx', [12]); }
-    if (phase === 2) { for (let k = 0; k < 2; k++) { const a = this.world ? this.spawnEnemy('aimed', e.ax + (k ? 140 : -140), e.ay + 60) : this.spawnEnemy('aimed', k ? this.W - 60 : 60, 140); if (a) a.cd = 1.5; } }
+    if (phase === 2) { for (let k = 0; k < 2; k++) { const a = this.world ? this.spawnEnemy('aimed', e.ax + (k ? 140 : -140), e.ay + 60) : this._scaleWaveEnemy(this.spawnEnemy('aimed', k ? this.W - 60 : 60, 140), this._waveSc); if (a) a.cd = 1.5; } }
   }
 
   _bossDefeated(e) {
@@ -1839,6 +2003,16 @@ class RealmArena {
     this._syncBoss();
   }
 
+  // World mode only: may this enemy shoot? It must be on screen (a 24 px margin) and within RM_FIRE_RANGE x the view's half-diagonal of
+  // the player, so nothing snipes from outside the camera. The classic arena and dungeons (the whole room is the view) are unchanged.
+  _canFire(e, p) {
+    if (!this.world || this.mode !== 'world' || this.dungeon) return true;
+    const c = this.camera; const m = 24;
+    if (e.x < c.x - m || e.x > c.x + this.W + m || e.y < c.y - m || e.y > c.y + this.H + m) return false;
+    const fr = Math.hypot(this.W, this.H) * 0.5 * RM_FIRE_RANGE;
+    return (e.x - p.x) * (e.x - p.x) + (e.y - p.y) * (e.y - p.y) <= fr * fr;
+  }
+
   _updateEnemies(dt0) {
     const wd = this.world; const wake = wd ? (wd.wake || Math.max(this.W, this.H) * 0.75) : 0; const wake2 = wake * wake;
     for (let i = 0; i < this.enemies.length; i++) {
@@ -1850,9 +2024,14 @@ class RealmArena {
       e.t += dt; e.flash = Math.max(0, e.flash - dt * 6);
       if (wd && (p.x - e.x) * (p.x - e.x) + (p.y - e.y) * (p.y - e.y) > wake2) continue; // world: an enemy far from every player sleeps (no moving, no firing)
       this._curDm = e.dmgMul || 1; // bullets fired below carry this enemy's damage multiplier (1 = unchanged)
-      if (e.type === 'boss') { this._updateBoss(e, dt); this._curDm = 1; continue; }
-      e.cd -= dt;
-      const ox = e.x; const oy = e.y; const sp = e.spdMul || 1;
+      let sm = null;
+      if (e.status) { if (e._stNext <= this._stT * 1000) this._stRefresh(e); sm = e._stm; if (sm) { this._curDm *= sm.enemyDmg; if (sm.dot > 0) this._stEnemyDot(e, sm, dt0); if (!e.active) continue; } }
+      const hold = wd && !this._canFire(e, p); // world: off-screen shooters hold their fire (cooldowns wait at 0.2 s)
+      if (hold) { e.cd = Math.max(e.cd, 0.2); if (e.type === 'boss') e.cd2 = Math.max(e.cd2, 0.2); }
+      if (e.type === 'boss') { if (sm && sm.speed < 1) e.t -= dt * (1 - sm.speed); this._updateBoss(e, dt * (e.fireMul || 1) / (sm ? sm.enemyFire : 1)); this._curDm = 1; continue; } // slowed: the sway runs slower
+      if (sm && sm.stun) continue; // stunned: no moving, no firing
+      if (!hold) e.cd -= dt * (e.fireMul || 1) / (sm ? sm.enemyFire : 1); // fireMul: classic wave scale; dazed makes fire cooldowns x1.5
+      const ox = e.x; const oy = e.y; const sp = (e.spdMul || 1) * (sm ? sm.speed : 1);
       const dx = p.x - e.x; const dy = p.y - e.y; const dist = Math.hypot(dx, dy) || 1;
       if (e.type === 'spiral') {
         // Drifts toward its anchor and keeps spinning out a steady spiral.
@@ -1918,26 +2097,29 @@ class RealmArena {
         if (d.active && (b.x - d.x) * (b.x - d.x) + (b.y - d.y) * (b.y - d.y) < 15 * 15) { b.active = false; this._hitDrifter(d, b.dmg || this.stats.dmg); break; }
       }
     }
-    // Enemy bullets: move, hit the player.
+    // Enemy bullets: move, hit the player. World mode: a bullet more than one view diagonal from the player can never matter: it is dropped.
     const pr = RM_PLAYER.r + 4;
+    const cull = this.world && this.mode === 'world' && !this.dungeon ? (this.W * this.W + this.H * this.H) : 0;
     for (let i = 0; i < this.eBullets.length; i++) {
       const b = this.eBullets[i];
       if (!b.active) continue;
       b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
       if (b.life <= 0 || b.x < -20 || b.y < -20 || b.x > bw + 20 || b.y > bh + 20) { b.active = false; continue; }
+      if (cull && (b.x - p.x) * (b.x - p.x) + (b.y - p.y) * (b.y - p.y) > cull) { b.active = false; continue; }
       if (this.walls && this.isWallAt(b.x, b.y)) { b.active = false; continue; }
       if (!this.walls && this._shotSolidAt && this._shotSolidAt(b.x, b.y)) { b.active = false; continue; }
       if (this.state !== 'dead' && !this.down && p.iframes <= 0 && (b.x - p.x) * (b.x - p.x) + (b.y - p.y) * (b.y - p.y) < pr * pr) {
         b.active = false;
         this._hitPlayer(this._guarded(b.dm > 0 && b.dm !== 1 ? Math.round(RM_ENEMY_BULLET_DAMAGE * b.dm) : RM_ENEMY_BULLET_DAMAGE));
       } else if (this.team && this.role === 'host' && this.team.partner && this.team.partner.ready) {
-        const q = this.team.partner;
-        if ((b.x - q.x) * (b.x - q.x) + (b.y - q.y) * (b.y - q.y) < pr * pr && this.team.hitPartner(RM_ENEMY_BULLET_DAMAGE)) b.active = false;
+        const q = this.team.partner; // the partner takes the same (wave-scaled) bolt damage as the host; dm 1 = the old 8
+        if ((b.x - q.x) * (b.x - q.x) + (b.y - q.y) * (b.y - q.y) < pr * pr && this.team.hitPartner(b.dm > 0 && b.dm !== 1 ? Math.round(RM_ENEMY_BULLET_DAMAGE * b.dm) : RM_ENEMY_BULLET_DAMAGE)) b.active = false;
       }
     }
   }
 
   _hitEnemy(e, dmg) {
+    if (e._stm && e._stm.taken !== 1) dmg *= e._stm.taken; // status mods (marked / curse / armorBroken), capped at x1.5 by MMStatus
     if (this.dungeon && e.dg === 'boss') { this.dungeon.hitBoss(e, dmg); return; }
     if (e.type === 'boss' && e.invuln > 0) { this._floatText(e.x, e.y - 40, 'shielded', '#c9d1d9'); this._burst(e.x, e.y, '#fff', 1, 60); return; }
     if (this.onEnemyHit) this.onEnemyHit(e, dmg);
@@ -1981,7 +2163,9 @@ class RealmArena {
     if (this.shield.hits > 0) { // Shield soaks the hit
       this.shield.hits -= 1; p.iframes = 0.25; this._burst(p.x, p.y, '#8fe9ff', 6, 140); this._floatText(p.x, p.y - 22, 'blocked', '#8fe9ff'); return;
     }
-    if (this.buffTaken > 0 && this.buffTaken < 1) dmg = Math.max(1, Math.round(dmg * this.buffTaken)); // additive timed buff (world shrine of Warding)
+    let tk = this.buffTaken > 0 && this.buffTaken < 1 ? this.buffTaken : 1; // additive timed buff (world shrine of Warding)
+    if (p._stm) tk = Math.max(0.5, Math.min(1.5, tk * p._stm.taken)); // status mods (armored / armorBroken / curse), capped 0.5..1.5
+    if (tk !== 1) dmg = Math.max(1, Math.round(dmg * tk));
     p.hp = Math.max(0, p.hp - dmg);
     this._heroHurtAt = performance.now() / 1000;
     this._snd('hurt');
@@ -2038,8 +2222,8 @@ class RealmArena {
 
   // Offers: every item at each rarity your best wave has unlocked, priced at sell value x RM_SHOP_MULT. Fixed stock, no luck.
   shopStock() {
-    const best = this.save.bestWave; const out = [];
-    RM_RARITIES.forEach((rar, r) => { if (r < RM_SHOP_UNLOCK.length && best >= RM_SHOP_UNLOCK[r]) RM_ITEMS.forEach((def) => out.push({ id: def.id, r, price: rar.sell * RM_SHOP_MULT })); });
+    const best = this.save.bestWave; const out = []; const wc = this._worldCopy(); const lv = this.save.level;
+    RM_RARITIES.forEach((rar, r) => { if (r < RM_SHOP_UNLOCK.length && (best >= RM_SHOP_UNLOCK[r] || (wc && lv >= RM_SHOP_UNLOCK_LV[r]))) RM_ITEMS.forEach((def) => out.push({ id: def.id, r, price: rar.sell * RM_SHOP_MULT })); });
     return out;
   }
 
@@ -2088,8 +2272,12 @@ class RealmArena {
       const def = RM_ITEM_BY_ID[o.id]; const rar = RM_RARITIES[o.r]; const can = sv.shards >= o.price && !full;
       html += `<li><span class="nm" style="color:${rar.color}">${this._icon(def)} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText({ id: o.id, r: o.r })}</span><button type="button" class="eq" data-buy="${def.id}" data-r="${o.r}"${can ? '' : ' disabled'} aria-label="Buy ${rar.name} ${def.name} for ${o.price} shards">Buy ${o.price}💎</button></li>`;
     });
-    const nextR = RM_SHOP_UNLOCK.findIndex((w) => sv.bestWave < w);
-    html += `</ul>${nextR > 0 ? `<div class="dim">Reach wave ${RM_SHOP_UNLOCK[nextR]} to unlock ${RM_RARITIES[nextR].name} gear.</div>` : ''}`;
+    let foot = '';
+    if (this._worldCopy()) { const nr = RM_SHOP_UNLOCK_LV.findIndex((l, r) => sv.level < l && sv.bestWave < RM_SHOP_UNLOCK[r]); if (nr > 0) foot = `Reach level ${RM_SHOP_UNLOCK_LV[nr]} to unlock ${RM_RARITIES[nr].name} gear.`; } else {
+      const nextR = RM_SHOP_UNLOCK.findIndex((w) => sv.bestWave < w);
+      if (nextR > 0) foot = `Reach wave ${RM_SHOP_UNLOCK[nextR]} to unlock ${RM_RARITIES[nextR].name} gear.`;
+    }
+    html += `</ul>${foot ? `<div class="dim">${foot}</div>` : ''}`;
     root.innerHTML = html; this._fixIcons(root);
   }
 
@@ -2104,7 +2292,8 @@ class RealmArena {
     this.deadT = 2.6;
     this.shake = 14;
     this._burst(this.player.x, this.player.y, '#ff6f91', 30, 300);
-    this._showBanner(`You fell in the Realm…  no 💎 lost — ${cache.text}  ·  wave ${Math.max(1, this.run.wave)}, ${this.run.kills} kills, +${this.run.shards} 💎 this run`, 2.6);
+    this._deathZone = this._worldCopy() ? this._zoneLabel() : '';
+    this._showBanner(`You fell in the Realm…  no 💎 lost — ${cache.text}  ·  ${this._deathZone ? `in ${this._deathZone}` : `wave ${Math.max(1, this.run.wave)}`}, ${this.run.kills} kills, +${this.run.shards} 💎 this run`, 2.6);
     this.onSave(this.save);
     this._syncHud();
   }
@@ -2229,7 +2418,8 @@ class RealmArena {
 
   _updateAbilities(dt) {
     let changed = false;
-    for (let i = 0; i < 4; i++) if (this.abilityCd[i] > 0) { this.abilityCd[i] = Math.max(0, this.abilityCd[i] - dt); changed = true; }
+    const cdr = this.player._stm ? this.player._stm.cdRate : 1; // inspired: cooldowns tick x1.4
+    for (let i = 0; i < 4; i++) if (this.abilityCd[i] > 0) { this.abilityCd[i] = Math.max(0, this.abilityCd[i] - dt * cdr); changed = true; }
     if (this.overdriveT > 0) this.overdriveT = Math.max(0, this.overdriveT - dt);
     if (this.shield.t > 0) { this.shield.t -= dt; if (this.shield.t <= 0) this.shield.hits = 0; }
     this._updateSignature(dt);
@@ -2242,7 +2432,7 @@ class RealmArena {
   _sigDmg(mul) { return this.stats.dmg * (this.sg.powT > 0 ? this.sg.powMul : 1) * mul; }
 
   _sigHeal(n) {
-    const p = this.player; if (this.down || n <= 0 || p.hp >= this.stats.maxHp) return 0;
+    const p = this.player; if (this.down || n <= 0 || p.hp >= this.stats.maxHp || (p._stm && p._stm.noHeal)) return 0; // sick: no healing
     const got = Math.min(Math.round(n), this.stats.maxHp - p.hp); if (got <= 0) return 0;
     p.hp += got; this._floatText(p.x, p.y - 40, `+${got}`, '#7ee787'); this._syncHud(); return got;
   }
@@ -2535,8 +2725,9 @@ class RealmArena {
     const d = this._ensureDeathDom(); if (!d) { this.stop(); this.onExit('death'); return; }
     this._deathShown = true; this.keys = {}; this.mouse.down = false; this.aimVec.on = false; this.moveVec.x = 0; this.moveVec.y = 0;
     const showWave = this.mode !== 'world' || !!this.dungeon;
-    const waveRow = showWave ? `<div class="realm-board-row"><span>🌊 Wave reached</span><b>${Math.max(1, this.run.wave)}</b></div>` : '';
+    const waveRow = showWave ? `<div class="realm-board-row"><span>🌊 Wave reached</span><b>${Math.max(1, this.run.wave)}</b></div>` : '<div class="realm-board-row rm-zone-row"><span>🗺️ Zone</span><b></b></div>';
     d.querySelector('.rm-recap').innerHTML = `${waveRow}<div class="realm-board-row"><span>⚔️ Kills</span><b>${this.run.kills}</b></div><div class="realm-board-row"><span>💎 Shards this run</span><b>+${this.run.shards}</b></div><div class="realm-board-row"><span>🎁 Survivor's cache</span><b>${this._lastCache.replace(/^cache: /, '')}</b></div>`;
+    if (!showWave) { const zb = d.querySelector('.rm-zone-row b'); if (zb) zb.textContent = this._deathZone || this._zoneLabel(); } // textContent: the zone name comes from the page
     const sn = this.menuNote ? String(this.menuNote() || '') : '';
     if (sn) { const row = document.createElement('div'); row.className = 'realm-board-row rm-stash-row'; row.textContent = sn; d.querySelector('.rm-recap').appendChild(row); }
     d.classList.remove('hidden'); d.style.display = 'flex';
@@ -2689,8 +2880,10 @@ class RealmArena {
     if (this._edGhosts) this._drawEnemyGhosts(g);
     if (this._bossGhost) this._drawBossGhost(g);
     for (let i = 0; i < this.bags.length; i++) { const b = this.bags[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { const by = b.y - 13 + Math.sin(b.t * 5) * 2; g.drawImage(this.sprites.worldBag[b.tier] || this.sprites.bag[b.r], b.x - 13, by); if (this._itemArt) { const ic = this._lootIcon(b.id, b.r); if (ic) g.drawImage(ic, b.x - 10, by - 18 + Math.sin(b.t * 5 + 1) * 1.5); } } }
-    for (let i = 0; i < this.eBullets.length; i++) { const b = this.eBullets[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) g.drawImage(this.sprites.eBullet[b.kind], b.x - 8, b.y - 8); }
-    for (let i = 0; i < this.pBullets.length; i++) { const b = this.pBullets[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { if (b.ws) this._drawWpnBolt(g, b); else g.drawImage(this.sprites.pBullet, b.x - 8, b.y - 8); } }
+    let ebn = 0; const ebs = this.sprites.eBullet;
+    for (let i = 0; i < this.eBullets.length && ebn < RM_EB_DRAW; i++) { const b = this.eBullets[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { g.drawImage(ebs[b.kind] || ebs[0], b.x - 8, b.y - 8); ebn++; } }
+    this._ebDrawn = ebn;
+    for (let i = 0; i < this.pBullets.length; i++) { const b = this.pBullets[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { if (b.ws) this._drawWpnBolt(g, b); else g.drawImage(this.sprites.pBullet, b.x - 10, b.y - 10); } }
     if (this.weapon) this._drawWpnOrbs(g);
 
     // Your partner: a tinted villager with a name tag, a small HP bar, and a revive ring while they are down.
@@ -2745,9 +2938,11 @@ class RealmArena {
     }
     g.globalAlpha = 1;
     g.font = 'bold 14px system-ui, sans-serif'; g.textAlign = 'center';
+    const hs = this._stAnchorAt(); const ox = wd ? cam.x : 0; const oy = wd ? cam.y : 0; // floating numbers never sit under the top-right HUD buttons
     for (let i = 0; i < this.texts.length; i++) {
       const t = this.texts[i];
       if (!t.active) continue;
+      const ty0 = t.y; if (hs.bB > 0 && t.y - oy < hs.bB + 10 && t.x - ox > hs.bL - 40) t.y = oy + hs.bB + 10; // drawn just below them (restored after)
       g.globalAlpha = Math.min(1, t.life * 2.5);
       const ic = t.ico && this._itemArt ? this._lootIcon(t.ico, t.ir) : null;
       if (ic) { // icon + name: the icon replaces the emoji
@@ -2756,9 +2951,11 @@ class RealmArena {
         g.fillStyle = '#000'; g.fillText(t.plain, x0 + 23, t.y + 1); g.fillStyle = t.color; g.fillText(t.plain, x0 + 22, t.y);
         g.textAlign = 'center';
       } else { g.fillStyle = '#000'; g.fillText(t.text, t.x + 1, t.y + 1); g.fillStyle = t.color; g.fillText(t.text, t.x, t.y); }
+      t.y = ty0;
     }
     g.globalAlpha = 1;
     g.restore();
+    this._drawStatusIcons(g); // screen space, above the world and the floating numbers
     if (this.flash > 0) { // red hit vignette (reduced motion: a steady tint while it lasts, no fade or blink): one baked gradient, faded with globalAlpha (no per-frame allocation)
       if (!this._vignette) {
         const gr = g.createRadialGradient(this.W / 2, this.H / 2, Math.min(this.W, this.H) * 0.3, this.W / 2, this.H / 2, Math.max(this.W, this.H) * 0.7);
@@ -2771,17 +2968,33 @@ class RealmArena {
 
   // ---------- HUD (plain DOM, only touched when a value changes) ----------
 
+  _worldCopy() { return this.mode === 'world' && !this.dungeon && !(this.team && this.team.isPvp); } // world mode: zone / level wording, never 'wave'
+
+  // The zone the hero is in, for world-mode copy: an optional hook (zoneLabel), else the zone HUD the world draws (#rw-zone / #realm-wave).
+  _zoneLabel() {
+    try {
+      if (typeof this.zoneLabel === 'function') { const z = String(this.zoneLabel() || '').slice(0, 40); if (z) return z; }
+      const zn = document.querySelector('#rw-zone .rw-zname'); const t = zn ? zn.textContent.split(' · ')[0].trim() : '';
+      if (t) return t.slice(0, 40);
+      const w = document.getElementById('realm-wave'); const wt = w ? w.textContent.trim() : '';
+      if (wt && !/wave|get ready/i.test(wt)) return wt.slice(0, 40);
+    } catch (e) { /* no DOM */ }
+    return 'the Realm';
+  }
+
   _syncHud(force) {
     const hp = document.getElementById('realm-hp-fill');
     if (hp) hp.style.width = `${Math.max(0, this.player.hp) / this.stats.maxHp * 100}%`;
     const hpText = document.getElementById('realm-hp-text');
     if (hpText) hpText.textContent = `${Math.ceil(this.player.hp)} / ${this.stats.maxHp}`;
+    const wc = this._worldCopy();
     const wave = document.getElementById('realm-wave');
-    if (wave) wave.textContent = this.team && this.team.isPvp ? this.team.duelLabel() : this.run.wave > 0 ? `Wave ${this.run.wave}` : 'Get ready';
+    if (wave && !wc) wave.textContent = this.team && this.team.isPvp ? this.team.duelLabel() : this.run.wave > 0 ? `Wave ${this.run.wave}` : 'Get ready'; // world mode: the world writes the zone here
+    else if (wave && /wave|get ready/i.test(wave.textContent)) wave.textContent = '';
     const shards = document.getElementById('realm-shards');
     if (shards) shards.textContent = `💎 ${Math.floor(this.displayShards)}`;
     const bio = document.getElementById('realm-biome');
-    if (bio) bio.textContent = this.run.wave > 0 && !(this.team && this.team.isPvp) ? RM_BIOMES[this.biome].name : '';
+    if (bio && !wc) bio.textContent = this.run.wave > 0 && !(this.team && this.team.isPvp) ? RM_BIOMES[this.biome].name : '';
     const pe = document.getElementById('realm-partner');
     if (pe) {
       const t = this.team; const q = t ? t.badge() : null;
@@ -2800,7 +3013,7 @@ class RealmArena {
     if (xpt) xpt.textContent = this.save.level >= RM_MAX_LEVEL ? 'MAX' : `${this.save.xp} / ${rmXpNeeded(this.save.level)} xp`;
     this._syncAbilities();
     const best = document.getElementById('realm-best');
-    if (best) best.textContent = this.save.bestWave > 0 ? `Best wave ${this.save.bestWave}` : '';
+    if (best) best.textContent = this.save.bestWave > 0 && !wc ? `Best wave ${this.save.bestWave}` : '';
     if (force) this._hideBanner();
   }
 

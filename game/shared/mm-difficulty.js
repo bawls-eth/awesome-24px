@@ -39,6 +39,9 @@
     WAVE_END:   { hp: 1.60, dmg: 1.40, spd: 1.20, count: 1.40, fire: 1.30 },  // wave WAVE_SPAN and later
     WAVE_SPAN: 30,
     PICNIC_DMG: 0.8,
+    // overworld hero (world mode only; never the classic arena, dungeons or duels): realm attunement so a level-1 hero's 7.5 bolts/s
+    // (1 dmg each) kill a 6-12 hp shore creature in about a second (12 dps) instead of ~2 s. Flat, so levelling never lowers it.
+    HERO_WORLD: { dmg: 1.6, rate: 1.0 },
     CLAMP: { hp: [0.4, 4.0], dmg: [0.5, 2.0], spd: [0.7, 1.4], count: [0.5, 1.6], fire: [0.7, 1.5] },
   };
   const T = TABLES;
@@ -96,6 +99,9 @@
     return finish(raw, opts);
   }
 
+  // hero multipliers for the overworld (wiring: realm.js _calcStats in world mode only; ?difficulty=off = 1x). Same for picnic.
+  function heroScale() { return { dmg: T.HERO_WORLD.dmg, rate: T.HERO_WORLD.rate }; }
+
   // helpers the guarantees are stated with
   function heroHp(level) { return PLAYER_HP_L1 + PLAYER_HP_PER_LEVEL * (clamp(Math.floor(num(level, 1)), 1, PLAYER_MAX_LEVEL) - 1); }
   function boltDamage(dmgMul) { return Math.max(1, Math.round(BOLT_DAMAGE * clamp(num(dmgMul, 1), 0, 1000))); }
@@ -104,5 +110,5 @@
   function isOff(search) { return /[?&]difficulty=off(&|$)/.test(String(search || '')); }
   const IDENTITY = Object.freeze({ hp: 1, dmg: 1, spd: 1, count: 1, fire: 1 });
 
-  return { VERSION, TABLES, KEYS, BOLT_CAP, BOLT_DAMAGE, IDENTITY, zoneScale, dungeonScale, waveScale, heroHp, boltDamage, capBolts, isOff };
+  return { VERSION, TABLES, KEYS, BOLT_CAP, BOLT_DAMAGE, IDENTITY, zoneScale, dungeonScale, waveScale, heroScale, heroHp, boltDamage, capBolts, isOff };
 }));

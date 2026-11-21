@@ -24,6 +24,7 @@ body { min-height:100vh; display:flex; flex-direction:column; align-items:center
 .big.sell { background:var(--sell); }
 .big[disabled] { background:#566; color:#aab; cursor:not-allowed; }
 .big:focus-visible, #btn-mute:focus-visible, .back:focus-visible, #hint button:focus-visible { outline:3px solid #fff; outline-offset:2px; }
+#market-reason { margin:6px 0 0; font-size:13px; }
 #msg { min-height:1.4em; margin:0; }
 #hint { background:var(--panel); border:2px solid var(--accent); border-radius:10px; padding:10px 14px; }
 #hint[hidden], .card[hidden], #town[hidden] { display:none; }

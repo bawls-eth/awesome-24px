@@ -1,0 +1,364 @@
+{
+  "batch": "b15",
+  "label": "loot-bags-and-drops",
+  "assets": [
+    {
+      "id": "bag_brown",
+      "path": "sprites/bag_brown.png",
+      "category": "loot",
+      "frames": 2,
+      "frame_w": 24,
+      "frame_h": 24,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        12,
+        21
+      ],
+      "tier": "common"
+    },
+    {
+      "id": "bag_pink",
+      "path": "sprites/bag_pink.png",
+      "category": "loot",
+      "frames": 2,
+      "frame_w": 24,
+      "frame_h": 24,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        12,
+        21
+      ],
+      "tier": "uncommon"
+    },
+    {
+      "id": "bag_purple",
+      "path": "sprites/bag_purple.png",
+      "category": "loot",
+      "frames": 2,
+      "frame_w": 24,
+      "frame_h": 24,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        12,
+        21
+      ],
+      "tier": "rare"
+    },
+    {
+      "id": "bag_cyan",
+      "path": "sprites/bag_cyan.png",
+      "category": "loot",
+      "frames": 2,
+      "frame_w": 24,
+      "frame_h": 24,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        12,
+        21
+      ],
+      "tier": "epic"
+    },
+    {
+      "id": "bag_white",
+      "path": "sprites/bag_white.png",
+      "category": "loot",
+      "frames": 2,
+      "frame_w": 24,
+      "frame_h": 24,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        12,
+        21
+      ],
+      "tier": "legendary"
+    },
+    {
+      "id": "bag_gold",
+      "path": "sprites/bag_gold.png",
+      "category": "loot",
+      "frames": 2,
+      "frame_w": 24,
+      "frame_h": 24,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        12,
+        21
+      ],
+      "tier": "soulbound"
+    },
+    {
+      "id": "bag_blue",
+      "path": "sprites/bag_blue.png",
+      "category": "loot",
+      "frames": 2,
+      "frame_w": 24,
+      "frame_h": 24,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        12,
+        21
+      ],
+      "tier": "potion"
+    },
+    {
+      "id": "bag_red",
+      "path": "sprites/bag_red.png",
+      "category": "loot",
+      "frames": 2,
+      "frame_w": 24,
+      "frame_h": 24,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        12,
+        21
+      ],
+      "tier": "mythic"
+    },
+    {
+      "id": "bag_soulbound_sparkle",
+      "path": "sprites/bag_soulbound_sparkle.png",
+      "category": "loot",
+      "frames": 4,
+      "frame_w": 24,
+      "frame_h": 24,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        12,
+        21
+      ]
+    },
+    {
+      "id": "coin_f1",
+      "path": "sprites/coin_f1.png",
+      "category": "loot",
+      "frames": 2,
+      "frame_w": 24,
+      "frame_h": 24,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        12,
+        21
+      ]
+    },
+    {
+      "id": "coin_f2",
+      "path": "sprites/coin_f2.png",
+      "category": "loot",
+      "frames": 2,
+      "frame_w": 24,
+      "frame_h": 24,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        12,
+        21
+      ]
+    },
+    {
+      "id": "coin_f3",
+      "path": "sprites/coin_f3.png",
+      "category": "loot",
+      "frames": 2,
+      "frame_w": 24,
+      "frame_h": 24,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        12,
+        21
+      ]
+    },
+    {
+      "id": "coin_f4",
+      "path": "sprites/coin_f4.png",
+      "category": "loot",
+      "frames": 2,
+      "frame_w": 24,
+      "frame_h": 24,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        12,
+        21
+      ]
+    },
+    {
+      "id": "heart_pickup",
+      "path": "sprites/heart_pickup.png",
+      "category": "loot",
+      "frames": 2,
+      "frame_w": 24,
+      "frame_h": 24,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        12,
+        21
+      ]
+    },
+    {
+      "id": "focus_pickup",
+      "path": "sprites/focus_pickup.png",
+      "category": "loot",
+      "frames": 2,
+      "frame_w": 24,
+      "frame_h": 24,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        12,
+        21
+      ]
+    },
+    {
+      "id": "xp_orb_f1",
+      "path": "sprites/xp_orb_f1.png",
+      "category": "loot",
+      "frames": 2,
+      "frame_w": 24,
+      "frame_h": 24,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        12,
+        21
+      ]
+    },
+    {
+      "id": "xp_orb_f2",
+      "path": "sprites/xp_orb_f2.png",
+      "category": "loot",
+      "frames": 2,
+      "frame_w": 24,
+      "frame_h": 24,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        12,
+        21
+      ]
+    },
+    {
+      "id": "xp_orb_f3",
+      "path": "sprites/xp_orb_f3.png",
+      "category": "loot",
+      "frames": 2,
+      "frame_w": 24,
+      "frame_h": 24,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        12,
+        21
+      ]
+    },
+    {
+      "id": "xp_orb_f4",
+      "path": "sprites/xp_orb_f4.png",
+      "category": "loot",
+      "frames": 2,
+      "frame_w": 24,
+      "frame_h": 24,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        12,
+        21
+      ]
+    },
+    {
+      "id": "potion_life",
+      "path": "sprites/potion_life.png",
+      "category": "loot",
+      "frames": 2,
+      "frame_w": 24,
+      "frame_h": 24,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        12,
+        21
+      ]
+    },
+    {
+      "id": "potion_focus",
+      "path": "sprites/potion_focus.png",
+      "category": "loot",
+      "frames": 2,
+      "frame_w": 24,
+      "frame_h": 24,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        12,
+        21
+      ]
+    },
+    {
+      "id": "potion_power",
+      "path": "sprites/potion_power.png",
+      "category": "loot",
+      "frames": 2,
+      "frame_w": 24,
+      "frame_h": 24,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        12,
+        21
+      ]
+    },
+    {
+      "id": "potion_swift",
+      "path": "sprites/potion_swift.png",
+      "category": "loot",
+      "frames": 2,
+      "frame_w": 24,
+      "frame_h": 24,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        12,
+        21
+      ]
+    },
+    {
+      "id": "potion_guard",
+      "path": "sprites/potion_guard.png",
+      "category": "loot",
+      "frames": 2,
+      "frame_w": 24,
+      "frame_h": 24,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        12,
+        21
+      ]
+    },
+    {
+      "id": "potion_wit",
+      "path": "sprites/potion_wit.png",
+      "category": "loot",
+      "frames": 2,
+      "frame_w": 24,
+      "frame_h": 24,
+      "fps": 8,
+      "loop": true,
+      "anchor": [
+        12,
+        21
+      ]
+    }
+  ]
+}

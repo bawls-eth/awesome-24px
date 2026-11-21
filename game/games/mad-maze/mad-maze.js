@@ -69,8 +69,8 @@
     base.addEventListener('pointermove', (e) => { if (e.pointerId === pid) set(e); });
     ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((ev) => base.addEventListener(ev, (e) => { if (pid === null || e.pointerId === pid) end(); }));
   };
-  if (FROM_HUB) { const lb = document.getElementById('realm-leave-btn'); lb.textContent = '✖ Back to the map'; lb.setAttribute('aria-label', 'Leave Mad Maze and go back to the map'); }
-  if (RETURN) { const lb = document.getElementById('realm-leave-btn'); lb.textContent = '✖ To the world'; lb.setAttribute('aria-label', 'Leave the dungeon and go back to the world'); }
+  if (FROM_HUB) { const lb = document.getElementById('realm-leave-btn'); lb.textContent = window.innerWidth >= 561 ? '✖ Back to the map' : '✖ Map'; lb.setAttribute('aria-label', 'Back to the map: leave Mad Maze'); } // short label on phones so it is never cut off
+  if (RETURN) { const lb = document.getElementById('realm-leave-btn'); lb.textContent = '✖ Exit'; lb.setAttribute('aria-label', 'Exit: leave the dungeon and go back to the world'); lb.title = 'To the world'; }
   document.getElementById('realm-leave-btn').addEventListener('click', () => arena.leave());
   for (let i = 0; i < 4; i++) document.getElementById(`realm-ab-${i}`).addEventListener('pointerdown', (e) => { e.preventDefault(); arena.cast(i); });
   document.getElementById('realm-bp-btn').addEventListener('click', () => arena.setPaused(true));
@@ -129,6 +129,45 @@
   // Class signature: the active hero's class gets a signature ability in the F slot (level 7, replaces Overdrive); ?signature=0 disables it.
   if (window.MMClasses && MMClasses.arenaSignature && params.get('signature') !== '0' && activeHeroClass()) arena.setHeroSignature(MMClasses.arenaSignature(activeHeroClass()));
 
+  // Weapon styles (S10): the equipped weapon item's `wpn_<style>` id (or style/family fields) picks a MMWeapons spec for the active hero's class.
+  // Base style / no styled weapon / ?weapons=0 / missing modules = today's fire (the arena hook decides). Re-applied on equip, hero switch and load.
+  const WEAPONS_ON = params.get('weapons') !== '0' && !!(window.MMWeapons && window.MMProjectile && arena.setHeroWeapon);
+  function equippedWeaponItem() {
+    try {
+      const sv = arena.save; const it = sv && sv.items ? sv.items.find((x) => x.n === (sv.eq || {}).weapon) : null;
+      if (!it || typeof it.id !== 'string') return null;
+      const m = /^wpn_([a-z_]{3,24})$/.exec(it.id);
+      let def = null; try { def = RM_ITEMS.find((d) => d.id === it.id) || null; } catch (e) { def = null; }
+      const style = m ? m[1] : (def && typeof def.style === 'string' ? def.style : '');
+      return { id: it.id, r: Math.max(0, Math.min(3, Math.floor(Number(it.r)) || 0)), style, family: def && def.family ? def.family : '' };
+    } catch (e) { return null; }
+  }
+  function weaponSpecFor(cls) {
+    const it = equippedWeaponItem();
+    return MMWeapons.resolve(cls, MMWeapons.styleFor(cls, it), it ? it.r : 0);
+  }
+  function applyWeapon() {
+    if (!WEAPONS_ON) return null;
+    try {
+      const cls = activeHeroClass();
+      const spec = cls ? weaponSpecFor(cls) : null;
+      arena.setHeroWeapon(spec);
+      return spec;
+    } catch (e) { try { arena.setHeroWeapon(null); } catch (e2) { /* keep today's fire */ } return null; }
+  }
+  if (WEAPONS_ON) {
+    const orig = arena._afterGearChange;
+    if (typeof orig === 'function') arena._afterGearChange = function () { const r = orig.apply(this, arguments); applyWeapon(); return r; }; // equip / sell / buy / combine
+    applyWeapon();
+  }
+  function weaponPanel(hero) {
+    if (!WEAPONS_ON || !hero || !hero.cls) return undefined;
+    try {
+      const spec = weaponSpecFor(hero.cls);
+      return { style: spec.name || spec.id, family: spec.family, pattern: MMWeapons.describe(spec), rarity: spec.rarity, affixes: spec.affixes || [] };
+    } catch (e) { return undefined; }
+  }
+
   // Enemy art: only the mapped arena creatures (idle/move/attack); any failure keeps the procedural sprites.
   if (window.MMArt && MMArt.loadEnemies && params.get('enemyart') !== '0' && !realmWorld) {
     MMArt.loadEnemies('../../assets/arcane/', { extra: dungeon ? MMBiomes.creatures(DBIOME) : [] }).then((set) => { if (set.classes().length) arena.setEnemyArt(set); }).catch(() => {});
@@ -164,6 +203,7 @@
     if (params.get('classstats') !== '0') arena.setHeroProfile(MMClasses.arenaProfile(h.cls));
     if (params.get('signature') !== '0') arena.setHeroSignature(MMClasses.arenaSignature(h.cls));
     const ac = window.MMArt ? MMArt.artClassFor(h.cls) : null;
+    applyWeapon();
     arena.setHeroArt(null);
     if (ac) MMArt.loadClass('../../assets/arcane/', ac).then((set) => { const cur = heroState().hero; if (set.has(ac) && cur && cur.id === h.id) arena.setHeroArt(set, ac); }).catch(() => {});
   }
@@ -255,7 +295,7 @@
       const wapi = realmWorld ? realmWorld.api : null; let z = -1; try { const zi = wapi && wapi.zone(); z = zi && zi.zone < 4 ? zi.zone : -1; } catch (e) { z = -1; }
       deepest.z = Math.max(deepest.z, z);
       let portals = 0; try { portals = RealmWorld.readSave().stats.portals; } catch (e) { portals = 0; }
-      const rows = HS.panelRows(MMClasses, { hero, profile: arena.heroProfile || MMClasses.arenaProfile(null), stats: arena.stats, save: arena.save, defs, run: { kills: wapi ? wapi.kills() : 0, deepest: deepest.z < 0 ? null : deepest.z, portals, time: arena.clock } });
+      const rows = HS.panelRows(MMClasses, { hero, profile: arena.heroProfile || MMClasses.arenaProfile(null), stats: arena.stats, save: arena.save, defs, weapon: weaponPanel(hero), passives: window.MMUnlocks && hero.cls ? { level: arena.save.level, unlocks: MMUnlocks } : undefined, run: { kills: wapi ? wapi.kills() : 0, deepest: deepest.z < 0 ? null : deepest.z, portals, time: arena.clock } });
       body.textContent = ''; let grp = null, dl = null;
       rows.forEach((r) => {
         if (r.group !== grp) { grp = r.group; body.appendChild(mk('h3', 'hp-h', grp)); dl = mk('div', 'hp-rows'); body.appendChild(dl); }
@@ -292,7 +332,7 @@
     window.__heroUi = { select: selectHero, create: createHero, open: (t) => arena.openHeroPanel(t) };
   } else { const bh = document.getElementById('realm-board-hero'); if (bh) bh.hidden = true; }
 
-  if (TEST) window.__mm = { arena, dungeon: dungeon ? dungeon.api : null, world: realmWorld ? realmWorld.api : null };
+  if (TEST) window.__mm = { applyWeapon, arena, dungeon: dungeon ? dungeon.api : null, world: realmWorld ? realmWorld.api : null };
   arena.start();
   // A fresh world visit with several owned heroes opens the picker first (?heropick=0 skips it).
   if (HERO_UI && (!TEST || params.get('heropick') === '1')) { try { if (heroState().prof.heroes.length !== 1) arena.openHeroPanel('pick'); } catch (e) { /* ignore */ } }

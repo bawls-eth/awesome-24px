@@ -118,6 +118,9 @@
     document.body.dataset.dungeonBiome = biome;
     const byId = {}; dungeon.rooms.forEach((r) => { byId[r.id] = r; });
     const ROOMS = dungeon.rooms.length;
+    // One count for the HUD and the summary: the regular rooms (start .. boss, boss included); the hidden secret room is reported on its own row.
+    const MAIN_ROOMS = dungeon.rooms.filter((r) => r.type !== 'secret').length;
+    const visitedMain = () => dungeon.rooms.filter((r) => r.type !== 'secret' && state.room(r.id).visited).length;
 
     // depth from the start over the regular doors, for the encounter tier
     const depth = {}; depth[dungeon.rooms.find((r) => r.type === 'start').id] = 0;
@@ -326,6 +329,32 @@
       }
     }
 
+    // ---------- start-room direction cue ----------
+    // In the start room a pulsing arrow marks the door on the shortest regular route to the boss; while the boss route needs a key the
+    // player has not found, it points at the route to the Keeper's Nook instead, with 'Find the key'. Code-drawn on the overlay layer.
+    const startId = dungeon.rooms.find((r) => r.type === 'start').id;
+    function routeDoors(from, to) { // doors of the shortest route over regular (non-cracked) doors, or null
+      const prev = { [from]: null }; const q = [from];
+      for (let i = 0; i < q.length; i++) {
+        const u = q[i]; if (u === to) break;
+        dungeon.doors.forEach((d) => { if (d.cracked || (d.a !== u && d.b !== u)) return; const v = d.a === u ? d.b : d.a; if (!(v in prev)) { prev[v] = { u, d }; q.push(v); } });
+      }
+      if (!(to in prev)) return null;
+      const out = []; for (let v = to; prev[v]; v = prev[v].u) out.unshift(prev[v].d);
+      return out;
+    }
+    function cue() {
+      if (current !== startId || finished) return null;
+      let route = routeDoors(startId, dungeon.bossRoomId); if (!route || !route.length) return null;
+      let hint = ''; let target = 'boss';
+      const gated = route.some((d) => d.locked && !unlocked[d.id]);
+      if (gated && state.keys === 0 && dungeon.keyRoomId !== undefined && !L[dungeon.keyRoomId].keyTaken) {
+        const kr = routeDoors(startId, dungeon.keyRoomId); if (kr && kr.length) { route = kr; hint = 'Find the key'; target = 'key'; }
+      }
+      const o = curDoors().find((q) => q.d === route[0]); if (!o) return null;
+      return { dir: o.dir, status: o.status, tile: o.tile, hint, target };
+    }
+
     // ---------- mini-map ----------
     const mapEl = document.createElement('canvas'); mapEl.id = 'mm-map'; mapEl.width = 9 * 16 + 8; mapEl.height = 8 * 16 + 8; mapEl.setAttribute('aria-label', 'Dungeon map');
     const mapBtn = document.createElement('button'); mapBtn.id = 'mm-map-btn'; mapBtn.type = 'button'; mapBtn.textContent = '🗺'; mapBtn.setAttribute('aria-label', 'Toggle map (Tab)');
@@ -366,13 +395,13 @@
       api.stash = paid ? { items: paid.items, stash: paid.stash, hero: paid.hero, waiting: paid.waiting, shards: paid.shards, fame: paid.fame } : null;
       const secs = Math.round(arena.clock); const mm = Math.floor(secs / 60); const ss = String(secs % 60).padStart(2, '0');
       const items = granted.length ? granted.map((it) => `<li style="color:${it.color}">${it.icon} ${it.name} <small>${it.rarName}${it.sold ? ' (sold, pack full)' : ''}</small></li>`).join('') : '<li class="none">no items</li>';
-      sumEl.innerHTML = `<div class="mm-sum-card"><h2>${died ? '💀 ' + B.fell : '🌀 ' + B.clear}</h2>
+      sumEl.innerHTML = `<div class="mm-sum-card"><h2>${died ? '💀 ' + B.fell : s.bossDefeated ? '🌀 ' + B.clear : '🚪 Left the ' + B.name}</h2>
         <p class="mm-sum-sub">Seed ${String(seed).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24)} · ${mm}:${ss}</p>
-        <ul class="mm-sum-stats"><li>Rooms visited <b>${s.roomsVisited}/${ROOMS}</b></li><li>Rooms cleared <b>${s.roomsCleared}</b></li><li>Chests opened <b>${s.chestsOpened}</b></li><li>Keys found <b>${s.keysFound}</b></li><li>Secret room <b>${s.secretFound ? 'found' : 'hidden'}</b></li><li>${B.boss_name} <b>${s.bossDefeated ? 'defeated' : 'alive'}</b></li><li>Chest gold <b>${s.gold} 💎</b></li></ul>
+        <ul class="mm-sum-stats"><li>Rooms visited <b>${visitedMain()}/${MAIN_ROOMS}</b></li><li>Rooms cleared <b>${s.roomsCleared}</b></li><li>Chests opened <b>${s.chestsOpened}</b></li><li>Keys found <b>${s.keysFound}</b></li><li>Secret room <b>${s.secretFound ? 'found' : 'hidden'}</b></li><li>${B.boss_name} <b>${s.bossDefeated ? 'defeated' : 'alive'}</b></li><li>Chest gold <b>${s.gold} 💎</b></li></ul>
         <h3>Loot</h3><ul class="mm-sum-loot" id="mm-sum-loot">${items}</ul>${paid && paid.ok ? `<p class="mm-sum-stash" id="mm-sum-stash">🏮 ${ST.text(paid)} (Lantern)</p>` : ''}
         <div class="mm-sum-btns">${backWorld ? '' : `<a class="mm-btn" id="mm-sum-again" href="?mode=dungeon&seed=${Number(seed) + 1 || ''}${layoutV === 2 ? '&lv=2' : ''}${biome !== 'warren' ? '&biome=' + biome : ''}${opts.test ? '&test=1' : ''}${hubExit ? '&from=hub' : ''}">New dungeon</a>`}<a class="mm-btn${backWorld ? '' : ' alt'}" id="mm-sum-home" href="${backWorld || (hubExit ? '../../hub/index.html' : '../../index.html')}">${backWorld ? 'Back to the world' : hubExit ? 'Back to the map' : 'Back to town'}</a></div></div>`;
       sumEl.classList.remove('hidden');
-      api.summary = s;
+      api.summary = s; api.summaryTitle = sumEl.querySelector('h2').textContent;
     }
     function finish() { if (finished) return; arena.stop(); showSummary(false); }
 
@@ -437,7 +466,7 @@
         if (hasChest() && !rs.chestOpen && !state.doorsClosed() && near(chestSpot(), 30)) openChest();
         if (hasPortal() && near(portalSpot(), 30)) { finish(); return; }
         // HUD text (the arena rewrites it from time to time)
-        const txt = `${B.name} · Room ${dungeon.rooms.filter((r) => state.room(r.id).visited).length}/${ROOMS - 1} · 🗝 ${state.keys}${state.room(current).enemiesAlive > 0 && byId[current].type !== 'boss' ? ` · ${state.room(current).enemiesAlive} left` : ''}`;
+        const txt = `${B.name} · Room ${visitedMain()}/${MAIN_ROOMS} · 🗝 ${state.keys}${state.room(current).enemiesAlive > 0 && byId[current].type !== 'boss' ? ` · ${state.room(current).enemiesAlive} left` : ''}`;
         if (txt !== hudText) { hudText = txt; }
         const w = document.getElementById('realm-wave'); if (w && w.textContent !== hudText) w.textContent = hudText;
         const b = document.getElementById('realm-biome'); const bn = window.innerWidth < 600 ? '' : palOf(byId[current].type).name; if (b && b.textContent !== bn) b.textContent = bn;
@@ -470,6 +499,21 @@
             g.fillRect(Math.round(x), Math.round(y), q.sz, q.sz);
           }
           g.globalAlpha = ga;
+        }
+        const cu = cue();
+        if (cu) { // pulsing arrow just inside the door (static with reduced motion), pointing at it
+          const still = !!arena._reduced; const tt = still ? 0 : performance.now() / 1000; const v = DV[cu.dir]; const pulse = still ? 0 : Math.sin(tt * 4);
+          const cx = (cu.tile.x + 0.5) * T; const cy = (cu.tile.y + 0.5) * T; const d = T * 1.05 - pulse * 5; const ax = cx - v[0] * d; const ay = cy - v[1] * d;
+          g.save(); g.globalAlpha = still ? 1 : 0.9 + 0.1 * pulse;
+          g.fillStyle = 'rgba(255,212,90,0.28)'; g.fillRect(cu.tile.x * T, cu.tile.y * T, T, T); // door glow
+          g.translate(ax, ay); g.rotate(Math.atan2(v[1], v[0]));
+          g.fillStyle = '#ffd45a'; g.strokeStyle = '#2a1d44'; g.lineWidth = 3; g.beginPath(); g.moveTo(17, 0); g.lineTo(-9, -15); g.lineTo(-9, 15); g.closePath(); g.stroke(); g.fill();
+          g.restore();
+          if (cu.hint) {
+            g.save(); g.font = 'bold 15px system-ui, sans-serif'; g.textAlign = 'center'; g.lineWidth = 4; g.strokeStyle = '#120a22'; g.fillStyle = '#ffd45a';
+            const tx = Math.max(70, Math.min(arena.W - 70, ax)); const ty = Math.max(24, Math.min(arena.H - 16, ay + (cu.dir === 'N' ? 34 : cu.dir === 'S' ? -26 : 4)));
+            g.strokeText(cu.hint, tx, ty); g.fillText(cu.hint, tx, ty); g.restore();
+          }
         }
         for (let i = 0; i < arena.enemies.length; i++) {
           const e = arena.enemies[i]; if (!e.active || !e.elite) continue;
@@ -515,6 +559,8 @@
       },
       // test hook: put the player on a tile centre; true when the hero circle fits there (not inside a wall)
       teleport: (tx, ty) => { if (current !== null && sig !== doorSig()) refreshWalls(); const p = arena.player; p.x = (tx + 0.5) * T; p.y = (ty + 0.5) * T; return !arena._blocked(p.x, p.y, RM_PLAYER.r); },
+      cue,
+      roomCount: () => ({ visited: visitedMain(), total: MAIN_ROOMS }),
       toggleMap,
       mapVisible: () => !mapEl.classList.contains('hidden'),
     });

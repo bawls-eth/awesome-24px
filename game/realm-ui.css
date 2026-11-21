@@ -139,3 +139,9 @@ body.touch-device #realm-stick-aim { right: calc(20px + var(--sr)); }
 .hp-tag { font-size: 11px; font-weight: 800; color: #7ee787; }
 .hp-h { margin: 10px 0 2px; font-size: 13px; color: #c9a7ff; }
 .hp-rows .realm-board-row { overflow-wrap: anywhere; }
+
+/* ---------- backpack Shop button: same look as .rm-btn (element is made by realm.js, so this is selector-only) ---------- */
+#realm-backpack button[data-open-shop] {
+  display: block; width: 100%; min-height: 48px; border-radius: 12px; border: 2px solid rgba(255, 255, 255, 0.55); background: rgba(255, 255, 255, 0.12); color: #fff;
+  font: 700 clamp(14px, 4vw, 16px) system-ui, sans-serif; padding: 0 14px; touch-action: manipulation; box-sizing: border-box;
+}

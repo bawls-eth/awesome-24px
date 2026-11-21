@@ -88,7 +88,7 @@
   const player = { x: 64.5, y: 0, z: 64.5, vy: 0, onGround: false, yaw: 0, pitch: 0, hp: 10, peak: 0, iframes: 0 };
   const input = { fwd: 0, strafe: 0, jump: false, mine: false, down: false };
   const keys = {};
-  let world = null, spawn = null;
+  let world = null, spawn = null, mouthOn = false, mouthSite = null;
   const reduced = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
   const META_KEY = 'pixeltown-deepdelve-v1', TOWN_KEY = 'pixeltown-save-v1';
   const pick = { tier: 0, dur: 0 };
@@ -365,6 +365,7 @@
     if (!world) return Promise.resolve(false);
     savePending = false;
     const doc = { inv: Object.assign({}, inv), pos: [player.x, player.y, player.z], sel, hp: player.hp, pick: { tier: pick.tier, dur: pick.dur }, benches: benches.map((b) => b.slice()), t: clock.t, slain: Array.from(slain).slice(-300), wyrm: { down: wyrm.down, carved: wyrm.carved } };
+    if (mouthOn) doc.mouth = 1;
     return Promise.all([kvSet('world:' + SEED, world.serialise()), kvSet('player:' + SEED, JSON.stringify(doc))]).then((r) => !!r[0]);
   }
   window.addEventListener('pagehide', () => { if (savePending) flush(); });
@@ -636,6 +637,8 @@
   }
   let atkCd = 0;
   let bobOffset = 0;
+  let aimed = false; // the block outline stays hidden until the player first aims (pointer or touch), so spawn shows no stray square
+  function aim() { if (!aimed) { aimed = true; rayRev++; } }
   let skyT = -1, skyX = NaN, skyZ = NaN, skySurf = 0, skyDeep = -1, rayRev = 0, rayPoseRev = -1, lastDepth = -1;
   const rayPose = [NaN, 0, 0, 0, 0];
   function updateCamera() {
@@ -662,7 +665,7 @@
     if (ex !== rayPose[0] || ey !== rayPose[1] || ez !== rayPose[2] || yw !== rayPose[3] || pt !== rayPose[4] || rayRev !== rayPoseRev) {
       rayPose[0] = ex; rayPose[1] = ey; rayPose[2] = ez; rayPose[3] = yw; rayPose[4] = pt; rayPoseRev = rayRev;
       const hit = raycast(5);
-      if (hit && hit.id !== B.AIR) { outline.visible = true; outline.position.set(hit.cell[0] + 0.5, -(hit.cell[1] + 0.5), hit.cell[2] + 0.5); } else outline.visible = false;
+      if (aimed && hit && hit.id !== B.AIR) { outline.visible = true; outline.position.set(hit.cell[0] + 0.5, -(hit.cell[1] + 0.5), hit.cell[2] + 0.5); } else outline.visible = false;
     }
     const dn = depthNow();
     if (dn !== lastDepth) { lastDepth = dn; $('hud-depth').textContent = 'Depth ' + dn; }
@@ -730,11 +733,13 @@
     const locked = () => document.pointerLockElement === cv;
     cv.addEventListener('mousedown', (e) => {
       if (!locked()) { try { const r = cv.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (err) { /* ignore */ } return; }
+      aim();
       if (e.button === 0) input.mine = true;
       else if (e.button === 2) placeAtLook();
     });
     window.addEventListener('mouseup', (e) => { if (e.button === 0) input.mine = false; });
     document.addEventListener('mousemove', (e) => {
+      if (e.movementX || e.movementY) aim();
       if (!locked()) return;
       player.yaw -= e.movementX * 0.0025; player.pitch = Math.max(-1.55, Math.min(1.55, player.pitch - e.movementY * 0.0025));
     });
@@ -744,6 +749,7 @@
     cv.addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse') return; lookId = e.pointerId; lx = e.clientX; ly = e.clientY; try { cv.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ } });
     cv.addEventListener('pointermove', (e) => {
       if (e.pointerId !== lookId) return;
+      aim();
       player.yaw -= (e.clientX - lx) * 0.006; player.pitch = Math.max(-1.55, Math.min(1.55, player.pitch - (e.clientY - ly) * 0.006)); lx = e.clientX; ly = e.clientY;
     });
     const endLook = (e) => { if (e.pointerId === lookId) lookId = null; };
@@ -767,8 +773,8 @@
       ['pointerup', 'pointercancel', 'pointerleave'].forEach((n) => el.addEventListener(n, off));
     };
     hold('t-jump', () => { input.jump = true; }, () => { input.jump = false; });
-    hold('t-mine', () => { input.mine = true; }, () => { input.mine = false; });
-    hold('t-place', () => { placeAtLook(); }, () => {});
+    hold('t-mine', () => { aim(); input.mine = true; }, () => { input.mine = false; });
+    hold('t-place', () => { aim(); placeAtLook(); }, () => {});
     hold('t-down', () => { input.down = true; }, () => { input.down = false; });
     $('open-craft').addEventListener('click', () => togglePanel('craft'));
     $('open-goals').addEventListener('click', () => togglePanel('goals'));
@@ -1457,7 +1463,7 @@
       clock, setTime, tickTime, timeStage: () => MMDDTime.stage(clock.t), skyScale: () => clock.k, bg: () => scene ? scene.background.getHex() : 0, fogHex: () => scene ? scene.fog.color.getHex() : 0, MMDDTime,
       creatures, slain, MMDDMobs, scanSpawns, tickCreatures, attackCreature, spawnCreature, clearCreatures, creatureCands: chunkCands, caveDark, deathCause: (c) => { deathCause = c; },
       wyrm: { state: wyrm, scan: wyrmScan, tick: tickWyrm, attack: attackWyrm, carve: carveWyrmArena, defeat: defeatWyrm, sleep: wyrmSleep, on: WYRM_ON && !!wyrm.site, mesh: syncWyrmMesh, MMDDWyrm: window.MMDDWyrm },
-      craft: craftTorch, surfaceY: (x, z) => MMChunks.surfaceY(x, z, SEED), ready: true,
+      craft: craftTorch, mouthSite: () => mouthSite, aimed: () => aimed, aim, outlineVisible: () => !!(outline && outline.visible), surfaceY: (x, z) => MMChunks.surfaceY(x, z, SEED), ready: true,
     };
   }
 
@@ -1469,7 +1475,16 @@
     const savedWorld = await kvGet('world:' + SEED);
     const savedPlayer = await kvGet('player:' + SEED);
     world = MMChunks.createWorld(SEED, typeof savedWorld === 'string' ? savedWorld : undefined);
-    const sx = 64, sz = 64, s = MMChunks.surfaceY(sx, sz, SEED);
+    // New worlds open beside a cave mouth (a seeded ramp into the hill) instead of a bare plain. Worlds saved before this
+    // keep the old spawn and are never carved; the additive `mouth` flag in the player save marks the new kind.
+    let sx = 64, sz = 64;
+    mouthOn = typeof savedPlayer !== 'string' || /"mouth":1/.test(savedPlayer);
+    if (mouthOn && window.MMDDSpawn) {
+      mouthSite = MMDDSpawn.site(SEED, (x, z) => MMChunks.surfaceY(x, z, SEED));
+      MMDDSpawn.cells(mouthSite).forEach((c) => world.setBlock(c[0], c[1], c[2], c[3]));
+      sx = mouthSite.spawn.x; sz = mouthSite.spawn.z;
+    } else mouthOn = false;
+    const s = MMChunks.surfaceY(sx, sz, SEED);
     spawn = { x: sx + 0.5, y: -s + 0.5, z: sz + 0.5 };
     player.x = spawn.x; player.y = spawn.y; player.z = spawn.z; player.peak = player.y;
     if (typeof savedPlayer === 'string') {

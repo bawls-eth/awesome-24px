@@ -1,0 +1,174 @@
+{
+  "batch": "b17",
+  "label": "projectiles-enemy",
+  "assets": [
+    {
+      "id": "ebolt_orb_red",
+      "path": "sprites/ebolt_orb_red.png",
+      "category": "projectile",
+      "frames": 4,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 12,
+      "loop": true,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "ebolt_orb_blue",
+      "path": "sprites/ebolt_orb_blue.png",
+      "category": "projectile",
+      "frames": 4,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 12,
+      "loop": true,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "ebolt_orb_green",
+      "path": "sprites/ebolt_orb_green.png",
+      "category": "projectile",
+      "frames": 4,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 12,
+      "loop": true,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "ebolt_orb_purple",
+      "path": "sprites/ebolt_orb_purple.png",
+      "category": "projectile",
+      "frames": 4,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 12,
+      "loop": true,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "ebolt_shard",
+      "path": "sprites/ebolt_shard.png",
+      "category": "projectile",
+      "frames": 4,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 12,
+      "loop": true,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "ebolt_arrow",
+      "path": "sprites/ebolt_arrow.png",
+      "category": "projectile",
+      "frames": 4,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 12,
+      "loop": true,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "ebolt_fire",
+      "path": "sprites/ebolt_fire.png",
+      "category": "projectile",
+      "frames": 4,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 12,
+      "loop": true,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "ebolt_frost",
+      "path": "sprites/ebolt_frost.png",
+      "category": "projectile",
+      "frames": 4,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 12,
+      "loop": true,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "ebolt_poison",
+      "path": "sprites/ebolt_poison.png",
+      "category": "projectile",
+      "frames": 4,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 12,
+      "loop": true,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "ebolt_skull",
+      "path": "sprites/ebolt_skull.png",
+      "category": "projectile",
+      "frames": 4,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 12,
+      "loop": true,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "ebolt_laser_h",
+      "path": "sprites/ebolt_laser_h.png",
+      "category": "projectile",
+      "frames": 4,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 12,
+      "loop": true,
+      "anchor": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "ebolt_ring_pulse",
+      "path": "sprites/ebolt_ring_pulse.png",
+      "category": "projectile",
+      "frames": 4,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 12,
+      "loop": true,
+      "anchor": [
+        16,
+        16
+      ]
+    }
+  ]
+}

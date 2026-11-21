@@ -102,6 +102,9 @@ const tpTo = (page, x, y) => W(page, (a, w, t) => { a.player.x = (t.x + 0.5) * 3
   const used = await W(P.page, (a, w) => w.sites().shrines.some((s) => !s.ready));
   check('phone: tapping the prompt uses the shrine', used);
   check('phone: no console errors', P.errors.length === 0, P.errors.join('|'));
+  // art wiring (additive): the site prompt keeps its place with the world art on, and the chest still opens with the sprite path
+  const artSt = await W(P.page, (a, w) => w.artState());
+  check('world art state is exposed and the site prompt works with it', artSt && typeof artSt.on === 'boolean' && Array.isArray(artSt.loaded), JSON.stringify(artSt && artSt.on));
   await P.ctx.close();
 
   await browser.close();

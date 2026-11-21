@@ -179,6 +179,7 @@ const startChart = (p) => p.evaluate((c) => { window.__jam.start('warm-embers', 
   const fresh = await open(browser, { viewport: { width: 1000, height: 700 } });
   const f = fresh.page;
   check('first run: calibrate card offered, no offsetMs stored yet', await f.evaluate((k) => !!document.getElementById('cal-card') && window.__jam.offset === 0 && !('offsetMs' in JSON.parse(localStorage.getItem(k))), KEY));
+  check('calibration card sits after the song list and Easy of the first song is enabled', await f.evaluate(() => { const c = document.getElementById('cal-card'), l = document.querySelector('.songs'); return !!(l.compareDocumentPosition(c) & Node.DOCUMENT_POSITION_FOLLOWING) && !document.querySelector('button[data-song=warm-embers][data-tier=easy]').disabled; }));
   check('12 cards; the secret song shows as ??? and is locked', await f.evaluate(() => { const c = document.querySelector('.card[data-song=midnight-campfire]'); return document.querySelectorAll('.card').length === 12 && c.classList.contains('locked') && c.textContent.includes('???') && !c.textContent.includes('Midnight') && [...c.querySelectorAll('button')].every((b) => b.disabled); }));
   check('locked new songs say how many stars they need', await f.evaluate(() => document.querySelector('.card[data-song=kettle-song]').textContent.includes('Needs 10 stars')));
   await f.click('#cal-first');

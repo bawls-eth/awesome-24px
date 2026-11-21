@@ -1,0 +1,798 @@
+{
+  "batch": "b13",
+  "label": "overworld-props-structures",
+  "assets": [
+    {
+      "id": "prop_tent_a",
+      "category": "prop",
+      "path": "props/prop_tent_a.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 30
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_tent_b",
+      "category": "prop",
+      "path": "props/prop_tent_b.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 30
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_campfire_f1",
+      "category": "prop",
+      "path": "props/prop_campfire_f1.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 30
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_campfire_f2",
+      "category": "prop",
+      "path": "props/prop_campfire_f2.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 30
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_campfire_f3",
+      "category": "prop",
+      "path": "props/prop_campfire_f3.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 30
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_campfire_f4",
+      "category": "prop",
+      "path": "props/prop_campfire_f4.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 30
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_hut",
+      "category": "prop",
+      "path": "props/prop_hut.png",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 32,
+        "y": 62
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_tower_ruin",
+      "category": "prop",
+      "path": "props/prop_tower_ruin.png",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 32,
+        "y": 62
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_pillar_ruin_a",
+      "category": "prop",
+      "path": "props/prop_pillar_ruin_a.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 64,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 62
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_pillar_ruin_b",
+      "category": "prop",
+      "path": "props/prop_pillar_ruin_b.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 64,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 62
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_arch_ruin",
+      "category": "prop",
+      "path": "props/prop_arch_ruin.png",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 32,
+        "y": 62
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_statue_knight",
+      "category": "prop",
+      "path": "props/prop_statue_knight.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 64,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 62
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_statue_mage",
+      "category": "prop",
+      "path": "props/prop_statue_mage.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 64,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 62
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_statue_demon",
+      "category": "prop",
+      "path": "props/prop_statue_demon.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 64,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 62
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_fountain_f1",
+      "category": "prop",
+      "path": "props/prop_fountain_f1.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 30
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_fountain_f2",
+      "category": "prop",
+      "path": "props/prop_fountain_f2.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 30
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_fountain_f3",
+      "category": "prop",
+      "path": "props/prop_fountain_f3.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 30
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_fountain_f4",
+      "category": "prop",
+      "path": "props/prop_fountain_f4.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 30
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_signpost",
+      "category": "prop",
+      "path": "props/prop_signpost.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 30
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_grave_a",
+      "category": "prop",
+      "path": "props/prop_grave_a.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 30
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_grave_b",
+      "category": "prop",
+      "path": "props/prop_grave_b.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 30
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_tombstone_cross",
+      "category": "prop",
+      "path": "props/prop_tombstone_cross.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 30
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_torch_post_f1",
+      "category": "prop",
+      "path": "props/prop_torch_post_f1.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 64,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 62
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_torch_post_f2",
+      "category": "prop",
+      "path": "props/prop_torch_post_f2.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 64,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 62
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_torch_post_f3",
+      "category": "prop",
+      "path": "props/prop_torch_post_f3.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 64,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 62
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_torch_post_f4",
+      "category": "prop",
+      "path": "props/prop_torch_post_f4.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 64,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 62
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_banner_red",
+      "category": "prop",
+      "path": "props/prop_banner_red.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 64,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 62
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_banner_blue",
+      "category": "prop",
+      "path": "props/prop_banner_blue.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 64,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 62
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_banner_green",
+      "category": "prop",
+      "path": "props/prop_banner_green.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 64,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 62
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_bridge_h",
+      "category": "prop",
+      "path": "props/prop_bridge_h.png",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 32,
+        "y": 62
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_bridge_v",
+      "category": "prop",
+      "path": "props/prop_bridge_v.png",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 32,
+        "y": 62
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_fence_h",
+      "category": "prop",
+      "path": "props/prop_fence_h.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 30
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_fence_v",
+      "category": "prop",
+      "path": "props/prop_fence_v.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 30
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_gate_wood",
+      "category": "prop",
+      "path": "props/prop_gate_wood.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 30
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_well",
+      "category": "prop",
+      "path": "props/prop_well.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 30
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_crate",
+      "category": "prop",
+      "path": "props/prop_crate.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 30
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_barrel",
+      "category": "prop",
+      "path": "props/prop_barrel.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 30
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_chest_closed",
+      "category": "prop",
+      "path": "props/prop_chest_closed.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 30
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_chest_open",
+      "category": "prop",
+      "path": "props/prop_chest_open.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 30
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_altar",
+      "category": "prop",
+      "path": "props/prop_altar.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 30
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_obelisk",
+      "category": "prop",
+      "path": "props/prop_obelisk.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 64,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 62
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_lantern_post",
+      "category": "prop",
+      "path": "props/prop_lantern_post.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 64,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 62
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_market_stall",
+      "category": "prop",
+      "path": "props/prop_market_stall.png",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 32,
+        "y": 62
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    },
+    {
+      "id": "prop_anvil",
+      "category": "prop",
+      "path": "props/prop_anvil.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 30
+      },
+      "tags": [
+        "structure"
+      ],
+      "source": "original procedural pixel art"
+    }
+  ]
+}
