@@ -622,5 +622,21 @@
   "town-perf.test.js": {
     "class": "live",
     "tier": "full"
+  },
+  "jam-first-visit.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "stalk-closed.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "deepdelve-spawn.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "shared-mm-dd-spawn.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }

@@ -490,14 +490,6 @@
       var ok = btn('Got it', function () { save.hint = true; persist(); showMenu(); }); ok.id = 'hint-ok'; h.appendChild(ok);
       overlay.appendChild(h);
     }
-    if (!('offsetMs' in save)) {
-      var cc = el('div', undefined, 'note'); cc.id = 'cal-card'; cc.setAttribute('role', 'note');
-      cc.appendChild(el('strong', 'Check your timing'));
-      cc.appendChild(el('p', 'Screens and speakers run a little late. A 10 second tap test lines the notes up with your ears.'));
-      var cb = btn('Calibrate now', showCalibration); cb.id = 'cal-first'; cc.appendChild(cb);
-      var sk = btn('Skip for now', function () { SG.setOffset(save, 0); persist(); showMenu(); }); sk.id = 'cal-skip'; sk.style.marginLeft = '8px'; cc.appendChild(sk);
-      overlay.appendChild(cc);
-    }
     overlay.appendChild(el('p', 'Stars: ' + SG.totalStars(save) + ' / ' + (SG.SONGS.length * 3), 'dim'));
     var openN = SG.SONGS.filter(function (x) { return SG.songUnlocked(save, x.id); }).length;
     var crow = el('div', undefined, 'row'); crow.id = 'concert-row';
@@ -529,6 +521,14 @@
       list.appendChild(card);
     });
     overlay.appendChild(list);
+    if (!('offsetMs' in save)) {
+      var cc = el('div', undefined, 'note'); cc.id = 'cal-card'; cc.setAttribute('role', 'note');
+      cc.appendChild(el('strong', 'Check timing (recommended, optional)'));
+      cc.appendChild(el('p', 'Screens and speakers run a little late. You can play right away. A 10 second tap test lines the notes up with your ears.'));
+      var cb = btn('Check timing', showCalibration); cb.id = 'cal-first'; cc.appendChild(cb);
+      var sk = btn('Skip for now', function () { SG.setOffset(save, 0); persist(); showMenu(); }); sk.id = 'cal-skip'; sk.style.marginLeft = '8px'; cc.appendChild(sk);
+      overlay.appendChild(cc);
+    }
     var off = el('div', undefined, 'row'); off.id = 'offset-row';
     var ov = el('span', undefined, 'dim'); ov.id = 'offset-val'; off.appendChild(ov);
     function showOff() { ov.textContent = 'Timing offset: ' + fmtOff(SG.offsetOf(save)); }
