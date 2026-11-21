@@ -53,3 +53,15 @@ body.touch .hint { bottom: calc(176px + env(safe-area-inset-bottom)); }
 .decor button { pointer-events: auto; font-size: 12px; padding: 0 8px; }
 .decor button[aria-pressed="true"] { background: #b9e08a; }
 body.touch .decor { bottom: calc(176px + env(safe-area-inset-bottom)); }
+/* X1: b34 taming icons (24x24 PNG by id; the text label stays as the fallback and for screen readers) */
+.ico { display: none; }
+.ico.on { display: inline-block; width: 24px; height: 24px; flex: 0 0 24px; }
+.ico img { display: block; width: 24px; height: 24px; image-rendering: pixelated; image-rendering: crisp-edges; }
+#acts button .ico.on { margin-right: 4px; }
+.hud-tame { display: flex; flex-wrap: wrap; gap: 2px 8px; font-size: 12px; color: var(--ink); }
+.hud-tame:empty, .hud-tame.off { display: none; }
+.meter { display: inline-flex; align-items: center; gap: 3px; min-height: 24px; white-space: nowrap; }
+.meter.iconed .lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* X1: on desktop the key help stays left of the action buttons (it used to run under them) */
+body:not(.touch) .help { max-width: min(520px, calc(100% - 420px)); }
+@media (max-width: 860px) { body:not(.touch) .help { display: none; } }

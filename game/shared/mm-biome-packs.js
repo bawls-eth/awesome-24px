@@ -300,10 +300,24 @@
     return s;
   }
 
-  // the MMCreatures species id a pack creature or boss id stands for: the pack's species table, else the id itself
+  // ---- species canon (slice X1): every legacy / placeholder spawn id -> the MMCreatures species it plays as ----
+  // The spawn tables above keep their ids (saves, seeds and the golden hashes use them); this table is the single place that says
+  // which real def each one is. The jungle first-playable ids moved here from games/isles/isle-creatures.js ALIAS; `shellback_glacier`
+  // and `canopy_queen` are the old tundra / jungle-boss names from the plans. Ids not listed are already MMCreatures ids.
+  const CANON = Object.freeze({
+    parrotlet: 'chompbill', shellback: 'canopy_glider', raptor_jr: 'fernraptor', raptor: 'fernraptor', boarhog: 'tusktop',
+    canopy_queen: 'fernjaw_tyrant', shellback_glacier: 'glacier_shellback',
+  });
+  // canon(id) -> the species id (CANON entry, else the id itself); junk (non-string, bad shape, prototype keys) -> null
+  function canon(cid) {
+    if (typeof cid !== 'string' || cid.length > 32 || !/^[a-z][a-z0-9_]*$/.test(cid)) return null;
+    return own.call(CANON, cid) ? CANON[cid] : cid;
+  }
+  // the MMCreatures species id a pack creature or boss id stands for: the pack's species table, else the canon, else the id itself
   function speciesOf(id, cid) {
     const p = get(id); if (!p || typeof cid !== 'string') return null;
-    return p.species && own.call(p.species, cid) ? p.species[cid] : cid;
+    if (p.species && own.call(p.species, cid)) return p.species[cid];
+    return canon(cid) || cid;
   }
   // every id a pack places: spawn tables, rares and bosses
   function allIds(id) {
@@ -313,5 +327,6 @@
     return s;
   }
 
-  return { VERSION: VERSION, IDS: IDS, ALIASES: ALIASES, get: get, resolveId: resolveId, validate: validate, creatureIds: creatureIds, allIds: allIds, speciesOf: speciesOf, palette: pal };
+  return { VERSION: VERSION, IDS: IDS, ALIASES: ALIASES, get: get, resolveId: resolveId, validate: validate, creatureIds: creatureIds, allIds: allIds, speciesOf: speciesOf, palette: pal,
+    CANON: CANON, canon: canon };
 }));

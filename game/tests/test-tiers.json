@@ -1022,5 +1022,13 @@
   "shared-mm-creature-strips.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "shared-mm-biome-packs-canon.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "isles-biomes.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
