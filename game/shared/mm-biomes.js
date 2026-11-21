@@ -18,7 +18,7 @@
       ids: ['puffcap', 'beetle', 'archer', 'moth', 'sprout'], skin: {},
       // b24: `extra` = rare wave-2 skins for some mobs (see skinFor). Art only: hp/behaviour stay the mob's own. Warren: an elite is sometimes a giant spider queen.
       extra: [{ art: 'giant_spider_queen', elite: true, p: 0.5 }],
-      boss_art: null, boss_name: 'Queen Burrowmole', boss_room: 'Queen\'s Den', mapCol: '#6b5aa8',
+      boss_art: null, bossBolt: 'ebolt_orb_red', sig: 'burrow', boss_name: 'Queen Burrowmole', boss_room: 'Queen\'s Den', mapCol: '#6b5aa8',
     },
     bramble: {
       id: 'bramble', name: 'Bramble', clear: 'Bramble cleared!', fell: 'You fell in the Bramble', room: 'Thorn Hall',
@@ -28,7 +28,7 @@
       tint: 'rgba(40,120,50,0.10)', particles: { kind: 'leaf', color: '#9be36f', n: 16, dir: 1 },
       ids: ['sprout', 'archer', 'beetle', 'puffcap'], skin: { sprout: 'sprout', archer: 'archer', beetle: 'forest_wolf', puffcap: 'goblin_shaman' },
       extra: [{ art: 'thorn_vine', ids: ['sprout', 'puffcap'], p: 0.35 }, { art: 'ogre', ids: ['beetle'], p: 0.35 }],
-      boss_art: 'forest_warden', boss_name: 'The Forest Warden', boss_room: 'Warden\'s Grove', mapCol: '#4fa84a',
+      boss_art: 'forest_warden', bossBolt: 'ebolt_shard', sig: 'thorns', boss_name: 'The Forest Warden', boss_room: 'Warden\'s Grove', mapCol: '#4fa84a',
     },
     meadow: {
       id: 'meadow', name: 'Meadow', clear: 'Meadow cleared!', fell: 'You fell in the Meadow', room: 'Flower Hall',
@@ -38,7 +38,7 @@
       tint: 'rgba(255,230,120,0.07)', particles: { kind: 'petal', color: '#ffd1e8', n: 18, dir: -1 },
       ids: ['puffcap', 'moth', 'archer', 'sprout'], skin: { puffcap: 'puffcap', moth: 'moth', archer: 'mothling', sprout: 'slime_green' },
       extra: [{ art: 'wind_sprite', ids: ['archer'], p: 0.35 }, { art: 'harpy', ids: ['puffcap', 'sprout'], p: 0.35 }],
-      boss_art: 'mire_queen', boss_name: 'The Mire Queen', boss_room: 'Mire Pool', mapCol: '#c9b43a',
+      boss_art: 'mire_queen', bossBolt: 'ebolt_poison', sig: 'bloom', boss_name: 'The Mire Queen', boss_room: 'Mire Pool', mapCol: '#c9b43a',
     },
     crypt: {
       id: 'crypt', name: 'Crypt', clear: 'Crypt cleared!', fell: 'You fell in the Crypt', room: 'Bone Hall',
@@ -48,9 +48,9 @@
       tint: 'rgba(100,140,220,0.09)', particles: { kind: 'mote', color: '#bcd4ff', n: 14, dir: -1 },
       ids: ['puffcap', 'beetle', 'archer', 'moth'], skin: { puffcap: 'skeleton', beetle: 'bone_knight', archer: 'shadow_cultist', moth: 'ice_wraith' },
       extra: [{ art: 'ghoul', ids: ['puffcap'], p: 0.35 }, { art: 'wraith_knight', ids: ['beetle', 'archer'], p: 0.3 }],
-      boss_art: 'bone_colossus', boss_name: 'The Bone Colossus', boss_room: 'Ossuary', mapCol: '#7a8ab0',
+      boss_art: 'bone_colossus', bossBolt: 'ebolt_skull', sig: 'bonerain', boss_name: 'The Bone Colossus', boss_room: 'Ossuary', mapCol: '#7a8ab0',
       // b23: odd seeds (see bossFor) face the Lich King instead of the Bone Colossus; even seeds keep the original boss.
-      alt: { boss_art: 'lich_king', boss_name: 'The Lich King' },
+      alt: { boss_art: 'lich_king', boss_name: 'The Lich King', bossBolt: 'ebolt_frost', sig: 'souls' },
     },
   };
 
@@ -81,11 +81,11 @@
     const s = String(seed); let h = 0; for (let i = 0; i < s.length; i++) h += s.charCodeAt(i);
     return h % 2;
   }
-  // { boss_art, boss_name, alt } for the biome + seed: the biome's `alt` boss on odd seeds, otherwise the primary. `classic` (or no alt) = primary.
+  // { boss_art, boss_name, alt, bossBolt (b17 ebolt_ art id the boss fires), sig (its signature attack kind, see dungeon.js) } for the biome + seed: the biome's `alt` boss on odd seeds, otherwise the primary. `classic` (or no alt) = primary.
   function bossFor(v, seed, classic) {
     const b = get(v);
-    if (!classic && b.alt && seedParity(seed) === 1) return { boss_art: b.alt.boss_art, boss_name: b.alt.boss_name, alt: true };
-    return { boss_art: b.boss_art, boss_name: b.boss_name, alt: false };
+    if (!classic && b.alt && seedParity(seed) === 1) return { boss_art: b.alt.boss_art, boss_name: b.alt.boss_name, alt: true, bossBolt: b.alt.bossBolt, sig: b.alt.sig };
+    return { boss_art: b.boss_art, boss_name: b.boss_name, alt: false, bossBolt: b.bossBolt, sig: b.sig };
   }
 
   return { IDS, BIOMES, clean, get, creatures, skinFor, bossFor, seedParity };

@@ -167,6 +167,18 @@
     "class": "browser",
     "tier": "full"
   },
+  "dungeon-biome-bosses.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "dungeon-lair.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "dungeon-pickups.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "enemy-art.test.js": {
     "class": "browser",
     "tier": "smoke"

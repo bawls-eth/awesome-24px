@@ -159,7 +159,9 @@
     const backWorld = typeof opts.returnTo === 'string' && /^index\.html\?mode=world&seed=[A-Za-z0-9_-]{1,24}&at=\d{1,4},\d{1,4}(&test=1)?$/.test(opts.returnTo) ? opts.returnTo : null;
     const seed = String(opts.seed === undefined ? '1' : opts.seed);
     const biome = MMBiomes.clean(opts.biome); const B = Object.assign({}, MMBiomes.get(biome)); // unknown / missing biome -> warren
-    { const bf = MMBiomes.bossFor(biome, seed, opts.bosses === 'classic'); B.boss_art = bf.boss_art; B.boss_name = bf.boss_name; } // b23: odd crypt seeds face the Lich King (?bosses=classic keeps the original)
+    // BI1: each biome boss fires its own b17 ebolt_ art and has one signature attack (MMBiomes bossBolt / sig); ?bosses=classic keeps the plain boss
+    let bossBolt = null; let bossSig = null;
+    { const bf = MMBiomes.bossFor(biome, seed, opts.bosses === 'classic'); B.boss_art = bf.boss_art; B.boss_name = bf.boss_name; if (opts.bosses !== 'classic') { bossBolt = bf.bossBolt || null; bossSig = bf.sig || null; } } // b23: odd crypt seeds face the Lich King (?bosses=classic keeps the original)
     let rosterClassic = opts.roster === 'classic'; try { if (/[?&]roster=classic(&|$)/.test(location.search)) rosterClassic = true; } catch (e) { /* node / no location */ } // b24: ?roster=classic = no wave-2 skins
     const layoutV = opts.layout === 2 || biome !== 'warren' ? 2 : 1; // a biome run is new content: it always uses the layout-2 pool
     const palCache = {};
@@ -234,8 +236,8 @@
 
     const unlocked = {}; const granted = [];
     let keyFound = 0; let current = null; let finished = false; let sig = ''; let mapSig = '';
-    let lockMsgAt = -9; let hudText = ''; let queue = []; let nextSweep = 0; let nextWall = 0; let sweepN = 0;
-    const api = { seed, biome, layoutVersion: layoutV, narrow: narrowOn, graph: dungeon, state, arena, granted, grantItem };
+    let lockMsgAt = -9; let hudText = ''; let queue = []; let nextSweep = 0; let nextWall = 0; let sweepN = 0; let sigNext = 0; let sigWind = null; let sigN = 0;
+    const api = { seed, biome, bossBolt, bossSig, sigCount: () => sigN, layoutVersion: layoutV, narrow: narrowOn, graph: dungeon, state, arena, granted, grantItem };
     // Lantern stash payout (MMStash): every kept find of this run is paid into the stash when the summary shows (win or fall)
     const ST = window.MMStash && window.MMProfile ? window.MMStash : null; const shards0 = arena.save.shards;
     if (ST) {
@@ -319,7 +321,7 @@
       const e = arena.spawnEnemy('boss', arena.W / 2, 132); if (!e) return;
       if (DIFF && current !== null) { e.dmgMul = L[current].sc.dmg; e.diff = L[current].sc; }
       e.dg = 'boss'; e.maxHp = state.boss.maxHp; e.hp = state.boss.hp; e.phase = state.boss.phase; e.invuln = 1.2; e.cd = 1.2; e.cd2 = 2.4; e.angle = 0;
-      arena.bossT0 = arena.clock; e.bossArt = B.boss_art; arena._syncBoss(); nextSweep = arena.clock + 4; nextWall = arena.clock + 6;
+      arena.bossT0 = arena.clock; e.bossArt = B.boss_art; arena._syncBoss(); nextSweep = arena.clock + 4; nextWall = arena.clock + 6; sigNext = arena.clock + 4.5; sigWind = null;
     }
 
     function clearTransient() {
@@ -388,7 +390,7 @@
         arena.eBullets.forEach((b) => { if (b.active) { b.active = false; arena._burst(b.x, b.y, '#ff6a4a', 1, 60); } });
         arena.shake = 12; arena._burst(e.x, e.y, '#ff6a4a', 30, 280);
         arena._showBanner(r.phase === 2 ? B.boss_name.replace(/^The /, '').split(' ').pop() + ' — the floor shakes!' : B.boss_name.replace(/^The /, '').split(' ').pop() + ' — ENRAGED!', 1.6);
-        nextSweep = arena.clock + 2.5; nextWall = arena.clock + 5;
+        nextSweep = arena.clock + 2.5; nextWall = arena.clock + 5; sigWind = null; sigNext = arena.clock + 3;
       }
       if (r.dead) {
         e.active = false; state.killEnemy();
@@ -402,9 +404,34 @@
       }
       arena._syncBoss();
     }
+    const SIG_WIND = 0.6;
+    const TAU2 = Math.PI * 2;
+    // The signature patterns: no RNG (they aim at the player), built from the existing bullet kinds (0 aimed, 1 spiral / drop, 2 ring).
+    function fireSig(e, t) {
+      const pl = arena.player; const aim = Math.atan2(pl.y - e.y, pl.x - e.x); const ph = e.phase; const q = (d, x, y, a, sp, k) => queue.push({ at: t + d, x, y, a, s: sp, k });
+      if (bossSig === 'burrow') { // Queen Burrowmole: three aimed fans, each a little wider
+        for (let w = 0; w < 3; w++) for (let i = 0; i < 5; i++) q(w * 0.18, e.x, e.y, aim + (i - 2) * (0.2 + 0.06 * w), 215, 0);
+      } else if (bossSig === 'thorns') { // Forest Warden: a wide thorn fan, then the gaps are filled by a second fan half a step over
+        const n = 7 + (ph >= 3 ? 2 : 0); for (let w = 0; w < 2; w++) for (let i = 0; i < n; i++) q(w * 0.35, e.x, e.y, aim + ((i + w * 0.5) / (n - 1) - 0.5) * 1.7, 190, 0);
+      } else if (bossSig === 'bloom') { // Mire Queen: a slow blooming flower of poison, then a second one turned half a petal
+        for (let w = 0; w < 2; w++) for (let i = 0; i < 16; i++) q(w * 0.5, e.x, e.y, (i / 16) * TAU2 + w * (Math.PI / 16), 95 + 45 * (1 + Math.sin(i * 4 * TAU2 / 16)) / 2, 2);
+      } else if (bossSig === 'bonerain') { // Bone Colossus: bones fall from the top edge in columns around the player, then the columns in between
+        for (let w = 0; w < 2; w++) for (let i = -3; i <= 3; i++) q(w * 0.5, Math.max(T * 1.5, Math.min(arena.W - T * 1.5, pl.x + i * 52 + w * 26)), T * 1.4, Math.PI / 2, 150, 1);
+      } else if (bossSig === 'souls') { // Lich King: a sweeping fan of souls across the player, then a ring
+        MMPatterns2.sweep({ x: e.x, y: e.y }, aim, { count: 7, arc: 1.2, speed: 200, every: 0.08, call: sigN }).forEach((b) => q(b.delay, b.x, b.y, Math.atan2(b.vy, b.vx), Math.hypot(b.vx, b.vy), 0));
+        for (let i = 0; i < 10; i++) q(0.9, e.x, e.y, (i / 10) * TAU2, 120, 2);
+      }
+    }
     function bossExtras() {
       const e = bossEntity(); if (!e || e.invuln > 0 || arena.state !== 'play') return;
       const t = arena.clock;
+      if (bossSig) { // BI1: one signature attack per biome boss, announced by a 0.6 s wind-up (MMPatterns2.telegraph) before the shots leave
+        if (!sigWind && t >= sigNext) {
+          sigWind = Object.assign(MMPatterns2.telegraph(bossSig, { x: e.x, y: e.y }), { duration: SIG_WIND, life: SIG_WIND, at: t + SIG_WIND });
+          arena._floatText(e.x, e.y - 44, '!', '#ff4a4a'); arena._burst(e.x, e.y, '#ff4a4a', 10, 150); arena._snd('hit'); api.sigWind = sigWind;
+        }
+        if (sigWind && t >= sigWind.at) { fireSig(e, t); sigWind = null; sigN++; sigNext = t + (e.phase >= 3 ? 4.2 : 5.2); }
+      }
       if (e.phase >= 2 && t >= nextSweep) {
         nextSweep = t + (e.phase === 2 ? 3.4 : 4.2);
         const c = Math.atan2(arena.player.y - e.y, arena.player.x - e.x);
@@ -681,6 +708,12 @@
     Object.defineProperties(api, { room: { get: () => current }, finished: { get: () => finished } });
     ctrl.api = api;
     arena.dungeon = ctrl;
+    // The arena picks an enemy bullet's art in _ebSelect (realm.js has no per-boss override): this instance-level wrapper answers for the dungeon boss's own
+    // bolts (and the bullets this controller queues, fired with no enemy set) and leaves every mob's bullet art to the arena.
+    if (bossBolt && typeof arena._ebSelect === 'function' && !arena._dgEbWrapped) {
+      const baseSel = arena._ebSelect.bind(arena); arena._dgEbWrapped = true;
+      arena._ebSelect = function (kind) { const e = this._curE; if ((!e || e.dg === 'boss') && this._boltArt && this._boltArt.has(bossBolt)) return bossBolt; return baseSel(kind); };
+    }
     arena.fixedWorld = { w: MMRooms.W * T, h: MMRooms.H * T };
     return ctrl;
   }
