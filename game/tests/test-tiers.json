@@ -967,6 +967,14 @@
     "class": "browser",
     "tier": "full"
   },
+  "gear-stats-dropdown.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "realm-cues-access.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "archipelago-page.test.js": {
     "class": "browser",
     "tier": "full"
