@@ -184,6 +184,7 @@ class RealmArena {
     this.dungeon = null; this.fixedWorld = null; // optional run controller + fixed-size world (Mad Maze dungeons); null = classic waves
     this.world = null; this.mode = 'waves'; this.camera = { x: 0, y: 0, vw: 960, vh: RM_SHORT }; this._camF = { x: 0, y: 0 }; // setWorld / setMode: a scrolling world with a camera (null = the screen is the world, today's behaviour)
     this._solidAt = null; this._shotSolidAt = null; this._curDm = 1; this.onEnemyKilled = null; this.onEnemyHit = null; // world tile collision + additive kill / hit callbacks (default null)
+    this.onItem = null; this.onDeathCache = null; this.onMenuOpen = null; this.menuNote = null; // additive loot hooks (Lantern stash payout); null = off (classic arena, town gate)
     this.rng = rmRng(seed === undefined ? (Date.now() & 0xffffffff) : seed);
     this.active = false;
     this.state = 'idle'; // idle | banner | play | dead
@@ -1192,7 +1193,7 @@ class RealmArena {
     e.dg = null; e._at = undefined; e.t = 0; e.flash = 0; e.angle = this.rng() * Math.PI * 2; e.dir = this.rng() < 0.5 ? 1 : -1;
     e.cd = 0.8 + this.rng() * 0.8; // first shot is never instant
     if (this.world) { e.ax = x + (this.rng() - 0.5) * 220; e.ay = y + (this.rng() - 0.5) * 220; } else { e.ax = 80 + this.rng() * (this.W - 160); e.ay = 80 + this.rng() * (this.H - 160); } // drift target for Whirlers (near home in a world)
-    e.spdMul = 1; e.dmgMul = 1; e.xpMul = 1; e.shardMul = 1; e.art = null; e.bossArt = null; e.zid = -1; e.bossName = null; e.bossTier = 0; // world-mode extras (multipliers 1 = unchanged)
+    e.spdMul = 1; e.dmgMul = 1; e.xpMul = 1; e.shardMul = 1; e.art = null; e.bossArt = null; e.zid = -1; e.evid = null; e.bossName = null; e.bossTier = 0; // world-mode extras (multipliers 1 = unchanged)
     if (this.world && type === 'boss') { e.ax = x; e.ay = y; }
     return e;
   }
@@ -1655,7 +1656,7 @@ class RealmArena {
   _hitEnemy(e, dmg) {
     if (this.dungeon && e.dg === 'boss') { this.dungeon.hitBoss(e, dmg); return; }
     if (e.type === 'boss' && e.invuln > 0) { this._floatText(e.x, e.y - 40, 'shielded', '#c9d1d9'); this._burst(e.x, e.y, '#fff', 1, 60); return; }
-    if (this.onEnemyHit) this.onEnemyHit(e);
+    if (this.onEnemyHit) this.onEnemyHit(e, dmg);
     e.hp -= dmg; e.flash = 1;
     this._snd(e.hp > 0 ? 'hit' : 'kill');
     if (e.type === 'boss') {
@@ -1743,8 +1744,9 @@ class RealmArena {
     const rarity = w >= 6 ? 2 : w >= 3 ? 1 : 0;
     const def = RM_ITEMS[(sv.deaths + w) % RM_ITEMS.length]; const rar = RM_RARITIES[rarity];
     let text;
-    if (sv.items.length >= RM_BACKPACK) { sv.shards += rar.sell; text = `pack full, cache sold +${rar.sell} 💎`; } else { sv.items.push({ n: sv.nextUid++, id: def.id, r: rarity }); text = `cache: ${def.icon} ${rar.name} ${def.name}`; }
-    return { id: def.id, rarity, text };
+    let n = 0;
+    if (sv.items.length >= RM_BACKPACK) { sv.shards += rar.sell; text = `pack full, cache sold +${rar.sell} 💎`; } else { n = sv.nextUid++; sv.items.push({ n, id: def.id, r: rarity }); text = `cache: ${def.icon} ${rar.name} ${def.name}`; }
+    return { id: def.id, rarity, text, n }; // n = backpack uid of the cache item (0 = sold)
   }
 
   // ---------- shop ----------
@@ -1811,6 +1813,7 @@ class RealmArena {
     this.save.bestWave = Math.max(this.save.bestWave, this.run.wave - 1);
     const cache = this._deathBonus();
     this._lastCache = cache.text;
+    if (this.onDeathCache) this.onDeathCache(cache);
     this.lastLoss = 0;
     this.state = 'dead';
     this.deadT = 2.6;
@@ -1878,6 +1881,7 @@ class RealmArena {
       sv.items.push({ n: sv.nextUid++, id, r: rarity });
       this._itemText2(this.player.x, this.player.y - 24, id, rarity, def.name, def.icon, rar.color);
       this._burst(this.player.x, this.player.y, rar.color, 10, 150);
+      if (this.onItem) this.onItem(sv.items[sv.items.length - 1]);
     }
     this.onSave(this.save);
     this._syncHud(); if (this.paused) this.renderBackpack();
@@ -2136,6 +2140,7 @@ class RealmArena {
   setMenu(on) {
     if (!this._menuMode || !this.active) return;
     if (on && this.state === 'dead') return;
+    if (on && this.onMenuOpen) this.onMenuOpen();
     this._panel(on ? 'menu' : null);
     if (on && this._menuDom) { const f = this._menuDom.querySelector('button[data-m="resume"].rm-btn'); if (f && f.focus) f.focus({ preventScroll: true }); }
     else if (document.activeElement && document.activeElement.blur && document.activeElement !== document.body) document.activeElement.blur();
@@ -2180,7 +2185,7 @@ class RealmArena {
     const wrap = document.createElement('div');
     wrap.id = 'realm-pause'; wrap.className = 'rm-panel hidden'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-label', 'Menu'); wrap.style.display = 'none';
     wrap.innerHTML = '<div class="realm-bp-card rm-card"><div class="realm-bp-head"><strong>☰ Menu</strong><button id="realm-menu-close" type="button" data-m="resume" aria-label="Close menu">✖</button></div>'
-      + '<div class="rm-main"><button type="button" class="rm-btn" data-m="resume">▶ Resume</button><button type="button" class="rm-btn" data-m="restart">↻ Restart run</button><p class="rm-note dim"></p><button type="button" class="rm-btn" data-m="leave">🚪 Leave to start</button></div>'
+      + '<div class="rm-main"><button type="button" class="rm-btn" data-m="resume">▶ Resume</button><button type="button" class="rm-btn" data-m="restart">↻ Restart run</button><p class="rm-note dim"></p><p class="rm-stash dim hidden" aria-live="polite"></p><button type="button" class="rm-btn" data-m="leave">🚪 Leave to start</button></div>'
       + '<div class="rm-confirm hidden"><p class="rm-restart-copy"></p><button type="button" class="rm-btn" data-m="restart-yes">Yes, restart</button><button type="button" class="rm-btn" data-m="restart-no">Keep playing</button></div>'
       + '<div class="rm-settings"><strong>Settings</strong><button type="button" class="rm-tog" data-set="sound"></button><button type="button" class="rm-tog" data-set="motion"></button><button type="button" class="rm-tog" data-set="aim"></button></div></div>';
     ov.appendChild(wrap);
@@ -2216,6 +2221,8 @@ class RealmArena {
     const can = this.canRestart(); rs.disabled = !can;
     note.textContent = can ? '' : this.team ? 'Restart is off during a shared run: your partner is fighting too.' : this.dungeon ? 'Restart is off in a Warren: leave and enter again for a new one.' : '';
     note.classList.toggle('hidden', can);
+    const sn = d.querySelector('.rm-stash'); const st = this.menuNote ? String(this.menuNote() || '') : '';
+    if (sn.textContent !== st) sn.textContent = st; sn.classList.toggle('hidden', !st);
     const set = (k, label, on) => { const b = d.querySelector(`button[data-set="${k}"]`); const t = `${label}: ${on ? 'on' : 'off'}`; if (b.textContent !== t) b.textContent = t; b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.classList.toggle('on', on); };
     set('sound', '🔊 Sound', !this.isMuted()); set('motion', '🌀 Reduce motion', !!this._reduced); set('aim', '🎯 Aim assist', !!this._aimAssist);
   }
@@ -2238,6 +2245,8 @@ class RealmArena {
     const showWave = this.mode !== 'world' || !!this.dungeon;
     const waveRow = showWave ? `<div class="realm-board-row"><span>🌊 Wave reached</span><b>${Math.max(1, this.run.wave)}</b></div>` : '';
     d.querySelector('.rm-recap').innerHTML = `${waveRow}<div class="realm-board-row"><span>⚔️ Kills</span><b>${this.run.kills}</b></div><div class="realm-board-row"><span>💎 Shards this run</span><b>+${this.run.shards}</b></div><div class="realm-board-row"><span>🎁 Survivor's cache</span><b>${this._lastCache.replace(/^cache: /, '')}</b></div>`;
+    const sn = this.menuNote ? String(this.menuNote() || '') : '';
+    if (sn) { const row = document.createElement('div'); row.className = 'realm-board-row rm-stash-row'; row.textContent = sn; d.querySelector('.rm-recap').appendChild(row); }
     d.classList.remove('hidden'); d.style.display = 'flex';
     const f = d.querySelector('button[data-d="again"]'); if (f && f.focus) f.focus({ preventScroll: true });
   }

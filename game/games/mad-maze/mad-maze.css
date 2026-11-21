@@ -276,6 +276,7 @@ body.touch-device .realm-ab .key { display: none; }
 .mm-sum-stats li { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
 .mm-sum-loot li { padding: 3px 0; }
 .mm-sum-loot li.none { opacity: 0.6; }
+.mm-sum-stash { margin: 10px 0 0; color: #7ee787; font-weight: 700; }
 .mm-sum-btns { display: flex; gap: 10px; margin-top: 16px; }
 .mm-btn { flex: 1; text-align: center; padding: 12px 8px; border-radius: 10px; background: #8a63e0; color: #fff; text-decoration: none; font-weight: 700; min-height: 20px; }
 .mm-btn.alt { background: transparent; border: 2px solid rgba(255, 255, 255, 0.5); }
@@ -291,6 +292,11 @@ body.touch-device .realm-ab .key { display: none; }
 #rw-zone .rw-arrow { display: inline-block; color: #ffd45a; }
 #rw-portal { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(170px + env(safe-area-inset-bottom, 0px)); z-index: 3; min-height: 48px; min-width: 44px; padding: 0 18px; border-radius: 24px; border: 2px solid #c9a7ff; background: #8a63e0; color: #fff; font: 700 15px system-ui, sans-serif; pointer-events: auto; touch-action: manipulation; box-shadow: 0 0 12px rgba(169, 139, 255, 0.7); }
 #rw-portal.hidden { display: none; }
+/* World events: the HUD line under the zone label, and the telegraph hint (bottom centre, above the portal prompt). */
+#rw-zone .rw-event { margin-top: 3px; color: #ffe27a; font-weight: 700; }
+#rw-zone .rw-event[data-state="active"] { color: #ffb36b; }
+#rw-zone .rw-event.hidden, #rw-event-hint.hidden { display: none; }
+#rw-event-hint { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(228px + env(safe-area-inset-bottom, 0px)); z-index: 3; max-width: min(92vw, 420px); box-sizing: border-box; padding: 6px 12px; border-radius: 10px; background: rgba(90, 10, 20, 0.82); border: 2px solid #ff6a6a; color: #fff; font: 700 13px system-ui, sans-serif; text-align: center; pointer-events: none; }
 @media (max-width: 560px) {
   #rw-minimap { top: calc(132px + env(safe-area-inset-top, 0px)); }
   #rw-zone { top: calc(234px + env(safe-area-inset-top, 0px)); }

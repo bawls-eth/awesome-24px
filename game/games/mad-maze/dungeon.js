@@ -149,6 +149,12 @@
     let keyFound = 0; let current = null; let finished = false; let sig = ''; let mapSig = '';
     let lockMsgAt = -9; let hudText = ''; let queue = []; let nextSweep = 0; let nextWall = 0; let sweepN = 0;
     const api = { seed, biome, layoutVersion: layoutV, graph: dungeon, state, arena, granted };
+    // Lantern stash payout (MMStash): every kept find of this run is paid into the stash when the summary shows (win or fall)
+    const ST = window.MMStash && window.MMProfile ? window.MMStash : null; const shards0 = arena.save.shards;
+    if (ST) {
+      arena.onItem = (it) => { try { ST.recordTo(localStorage, it, 'dungeon'); } catch (e) { /* storage blocked */ } };
+      arena.onDeathCache = (c) => { try { if (c && c.n) ST.recordTo(localStorage, { n: c.n, id: c.id, r: c.rarity }, 'cache'); } catch (e) { /* storage blocked */ } };
+    }
 
     // ---------- doors ----------
     function doorsOf(id) {
@@ -336,12 +342,14 @@
     function showSummary(died) {
       if (finished) return; finished = true;
       const s = state.exit(); arena.onSave(arena.save);
+      let paid = null; if (ST) { try { paid = ST.settle(localStorage, { Profile: MMProfile, realmItems: arena.save.items, shards: Math.max(0, arena.save.shards - shards0), src: 'dungeon', force: true }); } catch (e) { paid = null; } }
+      api.stash = paid ? { items: paid.items, stash: paid.stash, hero: paid.hero, waiting: paid.waiting, shards: paid.shards, fame: paid.fame } : null;
       const secs = Math.round(arena.clock); const mm = Math.floor(secs / 60); const ss = String(secs % 60).padStart(2, '0');
       const items = granted.length ? granted.map((it) => `<li style="color:${it.color}">${it.icon} ${it.name} <small>${it.rarName}${it.sold ? ' (sold, pack full)' : ''}</small></li>`).join('') : '<li class="none">no items</li>';
       sumEl.innerHTML = `<div class="mm-sum-card"><h2>${died ? '💀 ' + B.fell : '🌀 ' + B.clear}</h2>
         <p class="mm-sum-sub">Seed ${String(seed).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24)} · ${mm}:${ss}</p>
         <ul class="mm-sum-stats"><li>Rooms visited <b>${s.roomsVisited}/${ROOMS}</b></li><li>Rooms cleared <b>${s.roomsCleared}</b></li><li>Chests opened <b>${s.chestsOpened}</b></li><li>Keys found <b>${s.keysFound}</b></li><li>Secret room <b>${s.secretFound ? 'found' : 'hidden'}</b></li><li>${B.boss_name} <b>${s.bossDefeated ? 'defeated' : 'alive'}</b></li><li>Chest gold <b>${s.gold} 💎</b></li></ul>
-        <h3>Loot</h3><ul class="mm-sum-loot" id="mm-sum-loot">${items}</ul>
+        <h3>Loot</h3><ul class="mm-sum-loot" id="mm-sum-loot">${items}</ul>${paid && paid.ok ? `<p class="mm-sum-stash" id="mm-sum-stash">🏮 ${ST.text(paid)} (Lantern)</p>` : ''}
         <div class="mm-sum-btns">${backWorld ? '' : `<a class="mm-btn" id="mm-sum-again" href="?mode=dungeon&seed=${Number(seed) + 1 || ''}${layoutV === 2 ? '&lv=2' : ''}${biome !== 'warren' ? '&biome=' + biome : ''}${opts.test ? '&test=1' : ''}${hubExit ? '&from=hub' : ''}">New dungeon</a>`}<a class="mm-btn${backWorld ? '' : ' alt'}" id="mm-sum-home" href="${backWorld || (hubExit ? '../../hub/index.html' : '../../index.html')}">${backWorld ? 'Back to the world' : hubExit ? 'Back to the map' : 'Back to town'}</a></div></div>`;
       sumEl.classList.remove('hidden');
       api.summary = s;
