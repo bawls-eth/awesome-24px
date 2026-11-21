@@ -28,6 +28,15 @@
 
   if ((window.matchMedia && matchMedia('(pointer: coarse)').matches) || 'ontouchstart' in window) document.body.classList.add('touch-device');
 
+  // Daily seed: ?daily=1 (world or dungeon) uses the UTC-date seed; an explicit valid ?seed= still wins. ?today=YYYY-MM-DD only with ?test=1.
+  const SEED_RE = /^[A-Za-z0-9_-]{1,24}$/;
+  const DAILY_DATE = (() => {
+    if (params.get('daily') !== '1' || !window.MMDaily) return null;
+    const t = TEST ? MMDaily.cleanDate(params.get('today') || '') : null;
+    return t || MMDaily.dateKey(new Date());
+  })();
+  const EXPLICIT_SEED = SEED_RE.test(params.get('seed') || '') ? params.get('seed') : null;
+  const dailyFor = (kind) => (DAILY_DATE && !EXPLICIT_SEED ? String(MMDaily.dailySeed(DAILY_DATE, kind)) : null);
   const DBIOME = window.MMBiomes ? MMBiomes.clean(params.get('biome')) : 'warren'; // ?biome=warren|bramble|meadow|crypt (dungeon runs only; anything else = warren)
   let dungeon = null; // ?mode=dungeon&seed=N turns the arena into a Warren run; the default stays the solo arena
   let realmWorld = null; // ?mode=world (or ?world=1) turns it into the big scrolling Realm overworld (realm-world.js)
@@ -78,15 +87,27 @@
   stick('realm-stick-aim', (x, y, on) => arena.setAimStick(x, y, on));
 
   if (params.get('mode') === 'dungeon' && window.MMDungeonRun) {
-    const hasSeed = /^[A-Za-z0-9_-]{1,24}$/.test(params.get('seed') || '');
+    const dSeed = dailyFor('dungeon');
+    const hasSeed = !!EXPLICIT_SEED || !!dSeed;
     // layout version: explicit ?lv=2, or a fresh random seed (new run); a link with a seed and no lv keeps the original layouts
-    dungeon = MMDungeonRun.create(arena, { layout: (params.get('lv') === '2' || !hasSeed) ? 2 : 1, seed: hasSeed ? params.get('seed') : String(Date.now() % 100000), home: HOME, homeLabel: HOME_LABEL, test: TEST, returnTo: RETURN, biome: DBIOME });
+    dungeon = MMDungeonRun.create(arena, { layout: (params.get('lv') === '2' || !hasSeed || !!dSeed) ? 2 : 1, seed: hasSeed ? (EXPLICIT_SEED || dSeed) : String(Date.now() % 100000), home: HOME, homeLabel: HOME_LABEL, test: TEST, returnTo: RETURN, biome: DBIOME });
     document.body.classList.add('dungeon-mode');
   }
   if (WORLD) {
-    realmWorld = RealmWorld.create(arena, { seed: params.get('seed'), at: params.get('at'), test: TEST, home: HOME, assetRoot: params.get('tileart') === '0' ? null : '../../assets/arcane/' });
+    realmWorld = RealmWorld.create(arena, { seed: dailyFor('world') || params.get('seed'), at: params.get('at'), test: TEST, home: HOME, assetRoot: params.get('tileart') === '0' ? null : '../../assets/arcane/' });
     document.body.classList.add('world-mode');
   }
+
+  // Daily entry: a 44px 'Daily' link to the daily world (solo + world pages), or a 'Daily <date>' badge when a daily run is active.
+  (function dailyUi() {
+    if (!window.MMDaily || (dungeon && !DAILY_DATE)) return;
+    const keep = (TEST ? '&test=1' : '') + (FROM_HUB ? '&from=hub' : '');
+    const el = document.createElement(DAILY_DATE ? 'div' : 'a');
+    el.id = 'mm-daily-btn';
+    if (DAILY_DATE) el.textContent = 'Daily ' + DAILY_DATE;
+    else { el.textContent = 'Daily'; el.href = '?mode=world&daily=1' + keep; el.setAttribute('aria-label', 'Play the Daily world'); }
+    document.body.appendChild(el);
+  })();
 
   // Hero art: the active hero (pixeltown-mm-active-v1, cleaned) picks its class animations; any other class keeps the sprite.
   function activeHeroClass() {

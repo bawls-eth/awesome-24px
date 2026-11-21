@@ -28,5 +28,17 @@
   function modeOptions(mode) {
     return mode === 'stroll' ? { mode: 'stroll', hedgeTide: false } : { mode: 'daily', hedgeTide: true };
   }
-  return { seedFor, dateKey, recordBest, modeOptions };
+  // dailySeed(dateUtc 'YYYY-MM-DD', kind 'world'|'dungeon') -> small int 1..99999, same for everyone on that UTC date. Pure.
+  function dailySeed(dateUtc, kind) {
+    const R = typeof MMRng !== 'undefined' ? MMRng : (typeof require === 'function' ? require('./rng.js') : null);
+    const k = kind === 'dungeon' ? 'dungeon' : 'world';
+    return (R.hash('mm-daily-seed:' + String(dateUtc == null ? '' : dateUtc).trim() + ':' + k) % 99999) + 1;
+  }
+  // strict YYYY-MM-DD that is a real calendar date, else null
+  function cleanDate(s) {
+    if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+    const d = new Date(s + 'T00:00:00Z');
+    return isFinite(d.getTime()) && d.toISOString().slice(0, 10) === s ? s : null;
+  }
+  return { seedFor, dateKey, recordBest, modeOptions, dailySeed, cleanDate };
 });

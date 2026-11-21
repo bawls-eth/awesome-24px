@@ -503,6 +503,14 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "daily-seed.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "shared-mm-daily-seed.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "world-stash.test.js": {
     "class": "browser",
     "tier": "smoke"
