@@ -167,7 +167,8 @@ const fight = (page, id, credited) => A(page, (a, w, q) => {
   const d1 = [await snap(page, tA), await snap(page, tB)]; const d2 = [await snap(D.page, tA), await snap(D.page, tB)];
   check('determinism: two pages, same seed + same event clock => same events, kinds, sites and times', d1[0] && d1[0] === d2[0] && d1[1] === d2[1], JSON.stringify({ d1, d2 }));
   const rr = await A(D.page, (a, w, q) => JSON.stringify(MMZones.eventReward(MMZones.eventsFor(w.world, q.t).find((e) => e.id === q.id), 3, w.seed + ':' + q.id).bag.items), { t: boss.startsAt + 1, id: boss.id });
-  check('determinism: the reward bag rolls the same from the same seed', rr === JSON.stringify(r1.rew.bag.items.map((it) => ({ id: it.id, r: it.r }))) || JSON.parse(rr).every((it, i) => it.id === r1.rew.bag.items[i].id && it.r === r1.rew.bag.items[i].r), rr + ' vs ' + JSON.stringify(r1.rew.bag.items));
+  // The recap lists what dropped: with tiered gear on by default an item can be replaced by gear (or a styled weapon); `rolled` keeps the bag's own roll.
+  check('determinism: the reward bag rolls the same from the same seed', JSON.parse(rr).length === r1.rew.bag.items.length && JSON.parse(rr).every((it, i) => it.id === (r1.rew.bag.items[i].rolled || r1.rew.bag.items[i].id) && it.r === r1.rew.bag.items[i].r), rr + ' vs ' + JSON.stringify(r1.rew.bag.items));
   const clk = await A(D.page, async (a, w) => { const c0 = w.eventClock(); a.setPaused(true); await new Promise((r) => setTimeout(r, 300)); const c1 = w.eventClock(); a.setPaused(false); return { c0, c1 }; });
   check('the event clock is game time (frozen while paused)', clk.c0 === clk.c1, JSON.stringify(clk));
   await A(D.page, (a, w) => w.savePos(true));

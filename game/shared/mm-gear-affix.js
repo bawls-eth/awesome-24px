@@ -34,6 +34,9 @@
     IDS.push(d[0]);
   });
   Object.freeze(AFFIXES); Object.freeze(IDS);
+  // Boss signature relics (MMGear.SIG_IDS): the id fixes its signature affix, so (id, t, a) alone still describes the item on every device.
+  // The relic sits in the armor slot but its signature may be a weapon affix (blast / venom / leech / pierce): the gear extras are slot-agnostic.
+  const SIG_AFFIX = Object.freeze({ arm_sig_dread: 'ward', arm_sig_wyrm: 'blast', arm_sig_oracle: 'venom', arm_sig_lich: 'leech', arm_sig_hydra: 'pierce', arm_sig_maw: 'blast' });
   const SLOTS = Object.freeze({ weapon: Object.freeze(IDS.filter((i) => AFFIXES[i].slot === 'weapon')), armor: Object.freeze(IDS.filter((i) => AFFIXES[i].slot === 'armor')) });
   const get = (id) => (typeof id === 'string' && has(AFFIXES, id) ? AFFIXES[id] : null);
 
@@ -73,7 +76,8 @@
     if (typeof id !== 'string' || id.length > 64 || (slot !== 'weapon' && slot !== 'armor') || !isInt(t) || t < MIN_T || t > MAX_T || !isInt(a) || a < 1 || a > MAX_A) return Object.freeze([]);
     const draws = 1 + Math.max(0, Math.min(2, typeof r === 'number' && Number.isFinite(r) ? Math.floor(r) - 1 : 0)); // r0/r1: 1, r2: 2, r3: 3
     const rng = MMRng.create('gear-aff:' + id + ':' + t + ':' + a);
-    const sg = t === MAX_T && typeof sig === 'string' && has(AFFIXES, sig) && AFFIXES[sig].slot === slot && rangeOf(sig, t) ? sig : null;
+    const own = has(SIG_AFFIX, id) ? SIG_AFFIX[id] : null; // a signature relic carries its own boss affix (any slot)
+    const sg = t !== MAX_T ? null : own ? (rangeOf(own, t) ? own : null) : typeof sig === 'string' && has(AFFIXES, sig) && AFFIXES[sig].slot === slot && rangeOf(sig, t) ? sig : null;
     const pool = SLOTS[slot].filter((x) => x !== sg && rangeOf(x, t));
     const picks = [];
     for (let i = 0, n = Math.min(countFor(t), pool.length); i < n; i++) picks.push(pool.splice(rng.int(0, pool.length - 1), 1)[0]);
@@ -86,7 +90,7 @@
     });
     // power cap: scale the DPS-weighted values down pro rata (floored, so rounding can never push the product over the cap)
     const c = cap(t), P = value(list);
-    if (slot === 'weapon' && P > c) {
+    if ((slot === 'weapon' || own) && P > c) {
       const s = (c - 1) / (P - 1);
       list.forEach((e) => {
         if (POWER_IDS.indexOf(e.id) < 0) return;
@@ -118,5 +122,5 @@
     return Object.freeze(out);
   }
 
-  return Object.freeze({ AFFIXES, IDS, SLOTS, CAPS, MIN_T, get, rangeOf, roll, value, cap, describe, sum });
+  return Object.freeze({ AFFIXES, IDS, SLOTS, CAPS, MIN_T, SIG_AFFIX, get, rangeOf, roll, value, cap, describe, sum });
 });

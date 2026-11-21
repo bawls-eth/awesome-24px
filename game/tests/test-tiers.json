@@ -663,6 +663,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "gear-signature-drops.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "world-bosses-extra.test.js": {
     "class": "browser",
     "tier": "full"

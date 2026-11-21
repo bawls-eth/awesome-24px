@@ -131,6 +131,62 @@ check('module has no timers, clock or Math.random', (() => { const src = fs.read
 check('cleanGp survives hostile input', [null, 5, 'x', [], { b: -4, d: 'x' }, { b: 1e99, d: NaN }, { b: 3.9, d: 2 }].every((x) => { const g = D.cleanGp(x); return Number.isInteger(g.b) && Number.isInteger(g.d) && g.b >= 0 && g.d >= 0 && g.b <= 9999 && g.d <= 9999; }) && D.cleanGp({ b: 3.9, d: 2 }).b === 3);
 check('pityStep never mutates and ignores hostile results', (() => { const gp = { b: 4, d: 1 }, s = JSON.stringify(gp); const r = D.pityStep(gp, { src: 'boss', zone: 3 }, [null, 5, 'x', { t: 'y' }, { t: NaN }]); return JSON.stringify(gp) === s && r.b === 5; })());
 
+// ---- G15 drop pacing (plan section (g)): seeded 4 h godlands walks through the REAL pipeline (MMZones boss bag -> rollGear per item -> pityStep) ----
+// 3 boss sites (MMZones z3 cooldown, 1200 s), a seeded solo fight of 90-180 s (the plan's T10 Common z3 boss window) and 60 s travel between sites.
+const Z = require('../shared/mm-zones.js');
+const Q = (a, p) => { const x = a.slice().sort((u, v) => u - v); return x[Math.min(x.length - 1, Math.floor(p * x.length))]; };
+const Z3_BOSSES = Object.keys(T.BOSS_ZONE).filter((b) => T.BOSS_ZONE[b] === 3);
+function walk(c, hours) {
+  const R = require('../shared/rng.js').create('walk:' + c), cd = Z.TABLES.BOSS.cooldown[3], end = hours * 3600;
+  const sites = [0, 1, 2].map(() => ({ boss: Z3_BOSSES[R.int(0, Z3_BOSSES.length - 1)], ready: 0 }));
+  let t = 0, gp = { b: 0, d: 0 }, kills = 0, s = 0; const first = { 10: 0, 11: 0, 12: 0 }, firstKill = { 10: 0, 11: 0, 12: 0 }; let relics = 0;
+  while (t < end && kills < 400) {
+    const site = sites[s]; s = (s + 1) % 3;
+    t = Math.max(t + 60, site.ready) + 90 + R.next() * 90; site.ready = t + cd; kills++;
+    const bag = Z.rollDrop({ zone: 3, boss: true }, 'walk:' + c + ':' + kills).bag;
+    const res = bag.items.map((it, k) => D.rollGear({ src: 'boss', boss: site.boss, zone: 3, k: k, r: it.r, bagTier: bag.tierIndex, gp: gp, cls: 'ranger' }, D.seedFor('walk' + c, site.boss, kills, 'me')));
+    gp = D.pityStep(gp, { src: 'boss', zone: 3 }, res);
+    res.forEach((r) => { if (r && r.relic) relics++; [10, 11, 12].forEach((n) => { if (r && r.t >= n && !first[n]) { first[n] = t; firstKill[n] = kills; } }); });
+  }
+  return { first, firstKill, kills, relics };
+}
+const WALKS = []; for (let c = 0; c < 1500; c++) WALKS.push(walk(c, 12));
+const hrs = (n) => WALKS.map((w) => (w.first[n] ? w.first[n] / 3600 : Infinity));
+const ktk = (n) => WALKS.map((w) => w.firstKill[n] || Infinity);
+console.log('G15 pacing: first T10 median ' + Q(ktk(10), 0.5) + ' kills; first T11 median ' + Q(hrs(11), 0.5).toFixed(2) + ' h; first T12 median ' + Q(hrs(12), 0.5).toFixed(2) + ' h / ' + Q(ktk(12), 0.5) + ' kills, p99 ' + Q(ktk(12), 0.99) + ' kills, worst ' + Math.max(...ktk(12)) + '; boss kills per hour ' + (WALKS[0].kills / 12).toFixed(1));
+check('G15 pacing: kills-to-first-T10 from z3 bosses: median 1, p99 <= 3 (T10 is the floor of the z3 boss row)', Q(ktk(10), 0.5) === 1 && Q(ktk(10), 0.99) <= 3);
+check('G15 pacing: first T11 median <= 1 h of a godlands walk', Q(hrs(11), 0.5) <= 1);
+check('G15 pacing: first T12 median inside 1.5-4 h', Q(hrs(12), 0.5) >= 1.5 && Q(hrs(12), 0.5) <= 4, Q(hrs(12), 0.5));
+check('G15 pacing: first T12 p99 <= 60 boss kills and never past the hard pity (61st kill)', Q(ktk(12), 0.99) <= 60 && Math.max(...ktk(12)) <= 61);
+check('G15 pacing: expected kills to T12 sits well inside the pity bound (mean 8-30)', (() => { const k = ktk(12); const m = k.reduce((a, b) => a + b, 0) / k.length; return m >= 8 && m <= 30; })());
+check('G15 pacing: the walk runs at the plan rate (3 sites x 1200 s cooldown: 7-9 boss kills an hour)', WALKS.every((w) => w.kills / 12 >= 7 && w.kills / 12 <= 9));
+check('G15: a z3 boss bag holds at most one T12 chance (k >= 1 uses BOSS_EXTRA without T12, rows sum to 1)', D.table({ src: 'boss', zone: 3, k: 1 }).every((e) => e.t <= 11) && Math.abs(T.BOSS_EXTRA[3].reduce((a, e) => a + e.p, 0) - 1) < 1e-9 && many({ src: 'boss', boss: 'void_maw', always: true, k: 2 }, 4000, 'k2').every((r) => r.t <= 11));
+check('G15: crypt dungeon boss careers reach T10+ within the crypt pity bound (worst <= 16 kills, median <= 2)', (() => {
+  const ks = [];
+  for (let c = 0; c < 2000; c++) {
+    let gp = { b: 0, d: 0 }, k = 0;
+    for (;;) { k++; const a = D.rollGear({ src: 'dboss', biome: 'crypt', k: 0, always: true, r: 2, bagTier: 4, gp: gp }, D.seedFor('crypt' + c, 'boss:0', k, 'solo')); gp = D.pityStep(gp, { src: 'dboss', biome: 'crypt' }, [a]); if ((a && a.t >= 10) || k > 40) break; }
+    ks.push(k);
+  }
+  return Math.max(...ks) <= 16 && Q(ks, 0.5) <= 2;
+})());
+
+// ---- boss signature relics ----
+check('six signature relics, one per z3 boss, each with its b29 sig_ art id and the plan signature affix', G.SIG_IDS.length === 6 && Z3_BOSSES.every((b) => { const id = G.SIG_BY_BOSS[b], i = G.sigInfo(id); return i && i.boss === b && /^sig_/.test(G.ARMOR_ART[id]) && i.affix === T.SIGNATURE[b]; }));
+check('relics roll only from a z3 boss T12 on the first item, at the SIG_ITEM_SHARE of those T12s', (() => {
+  const hi = many({ src: 'boss', boss: 'lich_king', always: true, gp: { b: 60 } }, 4000, 'relic');
+  const share = hi.filter((r) => r.relic).length / hi.length;
+  const k1 = many({ src: 'boss', boss: 'lich_king', always: true, k: 1, gp: { b: 60 } }, 3000, 'relic1');
+  const z2 = many({ src: 'boss', boss: 'hydra', always: true }, 3000, 'relic2'), ev = many({ src: 'event', zone: 3, eventTier: 2, always: true }, 6000, 'relic3');
+  return hi.every((r) => r.t === 12) && Math.abs(share - T.SIG_ITEM_SHARE) < 0.03 && hi.filter((r) => r.relic).every((r) => r.id === 'arm_sig_lich' && r.slot === 'armor' && r.sig === 'leech')
+    && k1.every((r) => !r.relic) && z2.every((r) => !r.relic) && ev.every((r) => !r.relic && !G.isSig(r.id));
+})());
+check('relics are rare: ~1% of z3 boss kills at gp 0, never guaranteed (well under 3%, above 0.3%)', (() => { const r = many({ src: 'boss', boss: 'void_maw', bagTier: 5, gp: { b: 0 } }, 60000, 'rare').filter((x) => x && x.relic).length / 60000; return r > 0.003 && r < 0.03; })());
+check('a relic is a valid soulbound T12 backpack entry (clean keeps id, t 12, quality and affix seed)', (() => {
+  const rel = many({ src: 'boss', boss: 'shadow_hydra', always: true, r: 3, gp: { b: 60 } }, 2000, 'relicv').filter((r) => r.relic);
+  return rel.length > 300 && rel.every((r, i) => { const c = G.clean({ n: i + 1, id: r.id, r: r.r, t: r.t, a: r.a }); return c && c.id === 'arm_sig_hydra' && c.t === 12 && c.r === 3 && c.a === r.a && G.soulbound(c.t); });
+})());
+
 // ---- family shares, bounds, validity ----
 check('weapon family share is 70% +-2% (class bolt or family wpn_)', (() => {
   const own = new Set(['sparkwand'].concat(W.familyItems('bow').map((i) => i.id)));
