@@ -1,0 +1,1698 @@
+{
+  "batch": "b32",
+  "label": "jungle-big-and-boss",
+  "assets": [
+    {
+      "id": "tusktop_idle_down",
+      "path": "creatures/tusktop/tusktop_idle_down.png",
+      "category": "enemy",
+      "creature": "tusktop",
+      "enemy": "tusktop",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 160
+        },
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 152
+        },
+        {
+          "x": 192,
+          "y": 156
+        }
+      ]
+    },
+    {
+      "id": "tusktop_move_down",
+      "path": "creatures/tusktop/tusktop_move_down.png",
+      "category": "enemy",
+      "creature": "tusktop",
+      "enemy": "tusktop",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 160
+        },
+        {
+          "x": 192,
+          "y": 152
+        },
+        {
+          "x": 192,
+          "y": 148
+        },
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 152
+        },
+        {
+          "x": 192,
+          "y": 148
+        }
+      ]
+    },
+    {
+      "id": "tusktop_attack_down",
+      "path": "creatures/tusktop/tusktop_attack_down.png",
+      "category": "enemy",
+      "creature": "tusktop",
+      "enemy": "tusktop",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 160
+        },
+        {
+          "x": 192,
+          "y": 168
+        },
+        {
+          "x": 192,
+          "y": 144
+        },
+        {
+          "x": 192,
+          "y": 152
+        },
+        {
+          "x": 192,
+          "y": 164
+        }
+      ]
+    },
+    {
+      "id": "tusktop_death_down",
+      "path": "creatures/tusktop/tusktop_death_down.png",
+      "category": "enemy",
+      "creature": "tusktop",
+      "enemy": "tusktop",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 224
+        },
+        {
+          "x": 192,
+          "y": 244
+        },
+        {
+          "x": 192,
+          "y": 268
+        },
+        {
+          "x": 192,
+          "y": 288
+        },
+        {
+          "x": 192,
+          "y": 312
+        }
+      ]
+    },
+    {
+      "id": "tusktop_idle_up",
+      "path": "creatures/tusktop/tusktop_idle_up.png",
+      "category": "enemy",
+      "creature": "tusktop",
+      "enemy": "tusktop",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 184
+        },
+        {
+          "x": 192,
+          "y": 180
+        },
+        {
+          "x": 192,
+          "y": 176
+        },
+        {
+          "x": 192,
+          "y": 180
+        }
+      ]
+    },
+    {
+      "id": "tusktop_move_up",
+      "path": "creatures/tusktop/tusktop_move_up.png",
+      "category": "enemy",
+      "creature": "tusktop",
+      "enemy": "tusktop",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 184
+        },
+        {
+          "x": 192,
+          "y": 176
+        },
+        {
+          "x": 192,
+          "y": 172
+        },
+        {
+          "x": 192,
+          "y": 180
+        },
+        {
+          "x": 192,
+          "y": 176
+        },
+        {
+          "x": 192,
+          "y": 172
+        }
+      ]
+    },
+    {
+      "id": "tusktop_attack_up",
+      "path": "creatures/tusktop/tusktop_attack_up.png",
+      "category": "enemy",
+      "creature": "tusktop",
+      "enemy": "tusktop",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 184
+        },
+        {
+          "x": 192,
+          "y": 192
+        },
+        {
+          "x": 192,
+          "y": 168
+        },
+        {
+          "x": 192,
+          "y": 176
+        },
+        {
+          "x": 192,
+          "y": 188
+        }
+      ]
+    },
+    {
+      "id": "tusktop_death_up",
+      "path": "creatures/tusktop/tusktop_death_up.png",
+      "category": "enemy",
+      "creature": "tusktop",
+      "enemy": "tusktop",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 224
+        },
+        {
+          "x": 192,
+          "y": 244
+        },
+        {
+          "x": 192,
+          "y": 268
+        },
+        {
+          "x": 192,
+          "y": 288
+        },
+        {
+          "x": 192,
+          "y": 312
+        }
+      ]
+    },
+    {
+      "id": "tusktop_idle_right",
+      "path": "creatures/tusktop/tusktop_idle_right.png",
+      "category": "enemy",
+      "creature": "tusktop",
+      "enemy": "tusktop",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "seat": [
+        {
+          "x": 172,
+          "y": 212
+        },
+        {
+          "x": 172,
+          "y": 208
+        },
+        {
+          "x": 172,
+          "y": 204
+        },
+        {
+          "x": 172,
+          "y": 208
+        }
+      ]
+    },
+    {
+      "id": "tusktop_move_right",
+      "path": "creatures/tusktop/tusktop_move_right.png",
+      "category": "enemy",
+      "creature": "tusktop",
+      "enemy": "tusktop",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "seat": [
+        {
+          "x": 172,
+          "y": 212
+        },
+        {
+          "x": 172,
+          "y": 204
+        },
+        {
+          "x": 172,
+          "y": 200
+        },
+        {
+          "x": 172,
+          "y": 208
+        },
+        {
+          "x": 172,
+          "y": 204
+        },
+        {
+          "x": 172,
+          "y": 200
+        }
+      ]
+    },
+    {
+      "id": "tusktop_attack_right",
+      "path": "creatures/tusktop/tusktop_attack_right.png",
+      "category": "enemy",
+      "creature": "tusktop",
+      "enemy": "tusktop",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "seat": [
+        {
+          "x": 172,
+          "y": 212
+        },
+        {
+          "x": 172,
+          "y": 220
+        },
+        {
+          "x": 172,
+          "y": 196
+        },
+        {
+          "x": 172,
+          "y": 204
+        },
+        {
+          "x": 172,
+          "y": 216
+        }
+      ]
+    },
+    {
+      "id": "tusktop_death_right",
+      "path": "creatures/tusktop/tusktop_death_right.png",
+      "category": "enemy",
+      "creature": "tusktop",
+      "enemy": "tusktop",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "seat": [
+        {
+          "x": 172,
+          "y": 220
+        },
+        {
+          "x": 172,
+          "y": 240
+        },
+        {
+          "x": 172,
+          "y": 264
+        },
+        {
+          "x": 172,
+          "y": 288
+        },
+        {
+          "x": 172,
+          "y": 312
+        }
+      ]
+    },
+    {
+      "id": "tusktop_sleep_down",
+      "path": "creatures/tusktop/tusktop_sleep_down.png",
+      "category": "enemy",
+      "creature": "tusktop",
+      "enemy": "tusktop",
+      "action": "sleep",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 284
+        },
+        {
+          "x": 192,
+          "y": 284
+        },
+        {
+          "x": 192,
+          "y": 284
+        },
+        {
+          "x": 192,
+          "y": 284
+        }
+      ]
+    },
+    {
+      "id": "tusktop_eat_down",
+      "path": "creatures/tusktop/tusktop_eat_down.png",
+      "category": "enemy",
+      "creature": "tusktop",
+      "enemy": "tusktop",
+      "action": "eat",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 160
+        },
+        {
+          "x": 192,
+          "y": 176
+        },
+        {
+          "x": 192,
+          "y": 188
+        },
+        {
+          "x": 192,
+          "y": 172
+        }
+      ]
+    },
+    {
+      "id": "tusktop_saddle_idle_down",
+      "path": "creatures/tusktop/tusktop_saddle_idle_down.png",
+      "category": "mount",
+      "creature": "tusktop",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 160
+        },
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 152
+        },
+        {
+          "x": 192,
+          "y": 156
+        }
+      ]
+    },
+    {
+      "id": "tusktop_saddle_move_down",
+      "path": "creatures/tusktop/tusktop_saddle_move_down.png",
+      "category": "mount",
+      "creature": "tusktop",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 160
+        },
+        {
+          "x": 192,
+          "y": 152
+        },
+        {
+          "x": 192,
+          "y": 148
+        },
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 152
+        },
+        {
+          "x": 192,
+          "y": 148
+        }
+      ]
+    },
+    {
+      "id": "tusktop_saddle_idle_up",
+      "path": "creatures/tusktop/tusktop_saddle_idle_up.png",
+      "category": "mount",
+      "creature": "tusktop",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 184
+        },
+        {
+          "x": 192,
+          "y": 180
+        },
+        {
+          "x": 192,
+          "y": 176
+        },
+        {
+          "x": 192,
+          "y": 180
+        }
+      ]
+    },
+    {
+      "id": "tusktop_saddle_move_up",
+      "path": "creatures/tusktop/tusktop_saddle_move_up.png",
+      "category": "mount",
+      "creature": "tusktop",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 184
+        },
+        {
+          "x": 192,
+          "y": 176
+        },
+        {
+          "x": 192,
+          "y": 172
+        },
+        {
+          "x": 192,
+          "y": 180
+        },
+        {
+          "x": 192,
+          "y": 176
+        },
+        {
+          "x": 192,
+          "y": 172
+        }
+      ]
+    },
+    {
+      "id": "tusktop_saddle_idle_right",
+      "path": "creatures/tusktop/tusktop_saddle_idle_right.png",
+      "category": "mount",
+      "creature": "tusktop",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "seat": [
+        {
+          "x": 172,
+          "y": 212
+        },
+        {
+          "x": 172,
+          "y": 208
+        },
+        {
+          "x": 172,
+          "y": 204
+        },
+        {
+          "x": 172,
+          "y": 208
+        }
+      ]
+    },
+    {
+      "id": "tusktop_saddle_move_right",
+      "path": "creatures/tusktop/tusktop_saddle_move_right.png",
+      "category": "mount",
+      "creature": "tusktop",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      },
+      "seat": [
+        {
+          "x": 172,
+          "y": 212
+        },
+        {
+          "x": 172,
+          "y": 204
+        },
+        {
+          "x": 172,
+          "y": 200
+        },
+        {
+          "x": 172,
+          "y": 208
+        },
+        {
+          "x": 172,
+          "y": 204
+        },
+        {
+          "x": 172,
+          "y": 200
+        }
+      ]
+    },
+    {
+      "id": "fernjaw_tyrant_idle_down",
+      "path": "creatures/fernjaw_tyrant/fernjaw_tyrant_idle_down.png",
+      "category": "boss",
+      "creature": "fernjaw_tyrant",
+      "boss": "fernjaw_tyrant",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 256,
+          "y": 184
+        },
+        {
+          "x": 256,
+          "y": 180
+        },
+        {
+          "x": 256,
+          "y": 176
+        },
+        {
+          "x": 256,
+          "y": 180
+        }
+      ]
+    },
+    {
+      "id": "fernjaw_tyrant_move_down",
+      "path": "creatures/fernjaw_tyrant/fernjaw_tyrant_move_down.png",
+      "category": "boss",
+      "creature": "fernjaw_tyrant",
+      "boss": "fernjaw_tyrant",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 256,
+          "y": 184
+        },
+        {
+          "x": 256,
+          "y": 176
+        },
+        {
+          "x": 256,
+          "y": 168
+        },
+        {
+          "x": 256,
+          "y": 180
+        },
+        {
+          "x": 256,
+          "y": 176
+        },
+        {
+          "x": 256,
+          "y": 168
+        }
+      ]
+    },
+    {
+      "id": "fernjaw_tyrant_attack_down",
+      "path": "creatures/fernjaw_tyrant/fernjaw_tyrant_attack_down.png",
+      "category": "boss",
+      "creature": "fernjaw_tyrant",
+      "boss": "fernjaw_tyrant",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 256,
+          "y": 184
+        },
+        {
+          "x": 256,
+          "y": 196
+        },
+        {
+          "x": 256,
+          "y": 164
+        },
+        {
+          "x": 256,
+          "y": 176
+        },
+        {
+          "x": 256,
+          "y": 192
+        }
+      ]
+    },
+    {
+      "id": "fernjaw_tyrant_death_down",
+      "path": "creatures/fernjaw_tyrant/fernjaw_tyrant_death_down.png",
+      "category": "boss",
+      "creature": "fernjaw_tyrant",
+      "boss": "fernjaw_tyrant",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 256,
+          "y": 324
+        },
+        {
+          "x": 256,
+          "y": 344
+        },
+        {
+          "x": 256,
+          "y": 368
+        },
+        {
+          "x": 256,
+          "y": 396
+        },
+        {
+          "x": 256,
+          "y": 416
+        }
+      ]
+    },
+    {
+      "id": "fernjaw_tyrant_idle_up",
+      "path": "creatures/fernjaw_tyrant/fernjaw_tyrant_idle_up.png",
+      "category": "boss",
+      "creature": "fernjaw_tyrant",
+      "boss": "fernjaw_tyrant",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 256,
+          "y": 216
+        },
+        {
+          "x": 256,
+          "y": 208
+        },
+        {
+          "x": 256,
+          "y": 204
+        },
+        {
+          "x": 256,
+          "y": 208
+        }
+      ]
+    },
+    {
+      "id": "fernjaw_tyrant_move_up",
+      "path": "creatures/fernjaw_tyrant/fernjaw_tyrant_move_up.png",
+      "category": "boss",
+      "creature": "fernjaw_tyrant",
+      "boss": "fernjaw_tyrant",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 256,
+          "y": 216
+        },
+        {
+          "x": 256,
+          "y": 204
+        },
+        {
+          "x": 256,
+          "y": 200
+        },
+        {
+          "x": 256,
+          "y": 208
+        },
+        {
+          "x": 256,
+          "y": 204
+        },
+        {
+          "x": 256,
+          "y": 200
+        }
+      ]
+    },
+    {
+      "id": "fernjaw_tyrant_attack_up",
+      "path": "creatures/fernjaw_tyrant/fernjaw_tyrant_attack_up.png",
+      "category": "boss",
+      "creature": "fernjaw_tyrant",
+      "boss": "fernjaw_tyrant",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 256,
+          "y": 216
+        },
+        {
+          "x": 256,
+          "y": 224
+        },
+        {
+          "x": 256,
+          "y": 196
+        },
+        {
+          "x": 256,
+          "y": 204
+        },
+        {
+          "x": 256,
+          "y": 220
+        }
+      ]
+    },
+    {
+      "id": "fernjaw_tyrant_death_up",
+      "path": "creatures/fernjaw_tyrant/fernjaw_tyrant_death_up.png",
+      "category": "boss",
+      "creature": "fernjaw_tyrant",
+      "boss": "fernjaw_tyrant",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 256,
+          "y": 284
+        },
+        {
+          "x": 256,
+          "y": 316
+        },
+        {
+          "x": 256,
+          "y": 344
+        },
+        {
+          "x": 256,
+          "y": 376
+        },
+        {
+          "x": 256,
+          "y": 404
+        }
+      ]
+    },
+    {
+      "id": "fernjaw_tyrant_idle_right",
+      "path": "creatures/fernjaw_tyrant/fernjaw_tyrant_idle_right.png",
+      "category": "boss",
+      "creature": "fernjaw_tyrant",
+      "boss": "fernjaw_tyrant",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 232,
+          "y": 248
+        },
+        {
+          "x": 232,
+          "y": 244
+        },
+        {
+          "x": 232,
+          "y": 240
+        },
+        {
+          "x": 232,
+          "y": 244
+        }
+      ]
+    },
+    {
+      "id": "fernjaw_tyrant_move_right",
+      "path": "creatures/fernjaw_tyrant/fernjaw_tyrant_move_right.png",
+      "category": "boss",
+      "creature": "fernjaw_tyrant",
+      "boss": "fernjaw_tyrant",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 232,
+          "y": 248
+        },
+        {
+          "x": 232,
+          "y": 240
+        },
+        {
+          "x": 232,
+          "y": 236
+        },
+        {
+          "x": 232,
+          "y": 244
+        },
+        {
+          "x": 232,
+          "y": 240
+        },
+        {
+          "x": 232,
+          "y": 236
+        }
+      ]
+    },
+    {
+      "id": "fernjaw_tyrant_attack_right",
+      "path": "creatures/fernjaw_tyrant/fernjaw_tyrant_attack_right.png",
+      "category": "boss",
+      "creature": "fernjaw_tyrant",
+      "boss": "fernjaw_tyrant",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 232,
+          "y": 248
+        },
+        {
+          "x": 232,
+          "y": 260
+        },
+        {
+          "x": 232,
+          "y": 232
+        },
+        {
+          "x": 232,
+          "y": 240
+        },
+        {
+          "x": 232,
+          "y": 256
+        }
+      ]
+    },
+    {
+      "id": "fernjaw_tyrant_death_right",
+      "path": "creatures/fernjaw_tyrant/fernjaw_tyrant_death_right.png",
+      "category": "boss",
+      "creature": "fernjaw_tyrant",
+      "boss": "fernjaw_tyrant",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 232,
+          "y": 296
+        },
+        {
+          "x": 232,
+          "y": 324
+        },
+        {
+          "x": 232,
+          "y": 352
+        },
+        {
+          "x": 232,
+          "y": 380
+        },
+        {
+          "x": 232,
+          "y": 408
+        }
+      ]
+    },
+    {
+      "id": "fernjaw_tyrant_sleep_down",
+      "path": "creatures/fernjaw_tyrant/fernjaw_tyrant_sleep_down.png",
+      "category": "boss",
+      "creature": "fernjaw_tyrant",
+      "boss": "fernjaw_tyrant",
+      "action": "sleep",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 256,
+          "y": 392
+        },
+        {
+          "x": 256,
+          "y": 392
+        },
+        {
+          "x": 256,
+          "y": 384
+        },
+        {
+          "x": 256,
+          "y": 392
+        }
+      ]
+    },
+    {
+      "id": "fernjaw_tyrant_eat_down",
+      "path": "creatures/fernjaw_tyrant/fernjaw_tyrant_eat_down.png",
+      "category": "boss",
+      "creature": "fernjaw_tyrant",
+      "boss": "fernjaw_tyrant",
+      "action": "eat",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 256,
+          "y": 184
+        },
+        {
+          "x": 256,
+          "y": 204
+        },
+        {
+          "x": 256,
+          "y": 220
+        },
+        {
+          "x": 256,
+          "y": 200
+        }
+      ]
+    },
+    {
+      "id": "fernjaw_tyrant_roar_down",
+      "path": "creatures/fernjaw_tyrant/fernjaw_tyrant_roar_down.png",
+      "category": "boss",
+      "creature": "fernjaw_tyrant",
+      "boss": "fernjaw_tyrant",
+      "action": "roar",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 256,
+          "y": 184
+        },
+        {
+          "x": 256,
+          "y": 168
+        },
+        {
+          "x": 256,
+          "y": 156
+        },
+        {
+          "x": 256,
+          "y": 164
+        },
+        {
+          "x": 256,
+          "y": 184
+        }
+      ]
+    },
+    {
+      "id": "fernjaw_tyrant_roar_up",
+      "path": "creatures/fernjaw_tyrant/fernjaw_tyrant_roar_up.png",
+      "category": "boss",
+      "creature": "fernjaw_tyrant",
+      "boss": "fernjaw_tyrant",
+      "action": "roar",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 256,
+          "y": 216
+        },
+        {
+          "x": 256,
+          "y": 200
+        },
+        {
+          "x": 256,
+          "y": 184
+        },
+        {
+          "x": 256,
+          "y": 196
+        },
+        {
+          "x": 256,
+          "y": 216
+        }
+      ]
+    },
+    {
+      "id": "fernjaw_tyrant_roar_right",
+      "path": "creatures/fernjaw_tyrant/fernjaw_tyrant_roar_right.png",
+      "category": "boss",
+      "creature": "fernjaw_tyrant",
+      "boss": "fernjaw_tyrant",
+      "action": "roar",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 232,
+          "y": 248
+        },
+        {
+          "x": 232,
+          "y": 236
+        },
+        {
+          "x": 232,
+          "y": 220
+        },
+        {
+          "x": 232,
+          "y": 232
+        },
+        {
+          "x": 232,
+          "y": 248
+        }
+      ]
+    },
+    {
+      "id": "fernjaw_tyrant_saddle_idle_down",
+      "path": "creatures/fernjaw_tyrant/fernjaw_tyrant_saddle_idle_down.png",
+      "category": "mount",
+      "creature": "fernjaw_tyrant",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 256,
+          "y": 184
+        },
+        {
+          "x": 256,
+          "y": 180
+        },
+        {
+          "x": 256,
+          "y": 176
+        },
+        {
+          "x": 256,
+          "y": 180
+        }
+      ]
+    },
+    {
+      "id": "fernjaw_tyrant_saddle_move_down",
+      "path": "creatures/fernjaw_tyrant/fernjaw_tyrant_saddle_move_down.png",
+      "category": "mount",
+      "creature": "fernjaw_tyrant",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 256,
+          "y": 184
+        },
+        {
+          "x": 256,
+          "y": 176
+        },
+        {
+          "x": 256,
+          "y": 168
+        },
+        {
+          "x": 256,
+          "y": 180
+        },
+        {
+          "x": 256,
+          "y": 176
+        },
+        {
+          "x": 256,
+          "y": 168
+        }
+      ]
+    },
+    {
+      "id": "fernjaw_tyrant_saddle_idle_up",
+      "path": "creatures/fernjaw_tyrant/fernjaw_tyrant_saddle_idle_up.png",
+      "category": "mount",
+      "creature": "fernjaw_tyrant",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 256,
+          "y": 216
+        },
+        {
+          "x": 256,
+          "y": 208
+        },
+        {
+          "x": 256,
+          "y": 204
+        },
+        {
+          "x": 256,
+          "y": 208
+        }
+      ]
+    },
+    {
+      "id": "fernjaw_tyrant_saddle_move_up",
+      "path": "creatures/fernjaw_tyrant/fernjaw_tyrant_saddle_move_up.png",
+      "category": "mount",
+      "creature": "fernjaw_tyrant",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 256,
+          "y": 216
+        },
+        {
+          "x": 256,
+          "y": 204
+        },
+        {
+          "x": 256,
+          "y": 200
+        },
+        {
+          "x": 256,
+          "y": 208
+        },
+        {
+          "x": 256,
+          "y": 204
+        },
+        {
+          "x": 256,
+          "y": 200
+        }
+      ]
+    },
+    {
+      "id": "fernjaw_tyrant_saddle_idle_right",
+      "path": "creatures/fernjaw_tyrant/fernjaw_tyrant_saddle_idle_right.png",
+      "category": "mount",
+      "creature": "fernjaw_tyrant",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 232,
+          "y": 248
+        },
+        {
+          "x": 232,
+          "y": 244
+        },
+        {
+          "x": 232,
+          "y": 240
+        },
+        {
+          "x": 232,
+          "y": 244
+        }
+      ]
+    },
+    {
+      "id": "fernjaw_tyrant_saddle_move_right",
+      "path": "creatures/fernjaw_tyrant/fernjaw_tyrant_saddle_move_right.png",
+      "category": "mount",
+      "creature": "fernjaw_tyrant",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 232,
+          "y": 248
+        },
+        {
+          "x": 232,
+          "y": 240
+        },
+        {
+          "x": 232,
+          "y": 236
+        },
+        {
+          "x": 232,
+          "y": 244
+        },
+        {
+          "x": 232,
+          "y": 240
+        },
+        {
+          "x": 232,
+          "y": 236
+        }
+      ]
+    }
+  ]
+}
