@@ -814,5 +814,9 @@
   "realm-settings.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "realm-lowgfx.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
