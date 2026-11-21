@@ -546,5 +546,9 @@
   "shared-mm-unlocks.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "shared-mm-fx-draw.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }
