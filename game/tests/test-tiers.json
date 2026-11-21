@@ -918,5 +918,13 @@
   "shared-mm-isles.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "shared-mm-creature-draw.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-chunk-bake.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }
