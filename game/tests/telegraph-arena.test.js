@@ -36,7 +36,7 @@ async function open(browser, query, opts, acc) {
 const SETUP = `(a, type, tier, cd, boss) => {
   a.enemies.forEach((q) => { q.active = false; }); a.eBullets.forEach((b) => { b.active = false; });
   const p = a.player; const e = a.spawnEnemy(type, p.x + 160, p.y);
-  e.hp = e.maxHp = 1e6; e.tier = tier; e.zone = tier; e.cd = cd; e.spdMul = 0;
+  e.hp = e.maxHp = 1e6; e.tier = tier; e.zone = tier; e.cd = cd; e.spdMul = 0; e.dir = 1; e.angle = 0; // spawnEnemy rolls dir (circling side) and angle from the advancing arena rng: pin them so two runs of one setup are identical
   if (boss) { e.bossTier = 3; e.phase = 1; e.invuln = 0; e.cd = 99; e.cd2 = cd; e.ax = e.x; e.ay = e.y; }
   a._camStep(-1); return e;
 }`;
