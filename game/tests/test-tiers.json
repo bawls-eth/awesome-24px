@@ -650,5 +650,25 @@
   "shared-mm-dd-spawn.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "class-status-arena.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "difficulty-waves.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "shot-readability.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "world-easy-start.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "world-wording.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

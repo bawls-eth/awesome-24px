@@ -25,6 +25,8 @@ check('continuous across a zone border (shore inner edge == midlands outer edge)
 const shore = []; for (let d = 0.97; d >= 0.68; d -= 0.01) shore.push(D.zoneScale(0, d));
 check('shore creatures have 60% hp at the coast', D.zoneScale(0, 0.97).hp === 0.6 && shore.every((s) => s.hp <= 0.7));
 check('shore bolts deal <= 6% of a level-1 hero\'s hp (every shore position)', shore.every((s) => D.boltDamage(s.dmg) <= 0.06 * D.heroHp(1) + 1e-9), JSON.stringify(shore[shore.length - 1]));
+const hs = D.heroScale();
+check('easy start: the world hero scale lets 7.5 bolts/s of 1 dmg kill a 12 hp shore creature in about a second (>= 12 dps, <= 2x)', hs.dmg * 7.5 * hs.rate >= 12 && hs.dmg <= 2 && hs.rate === 1 && D.heroScale() !== D.heroScale(), JSON.stringify(hs));
 check('heroHp mirrors realm.js (100 at level 1, 252 at level 20, clamped)', D.heroHp(1) === 100 && D.heroHp(20) === 252 && D.heroHp(99) === 252 && D.heroHp(-5) === 100);
 const first3 = [1, 2, 3].map((i) => D.dungeonScale('warren', i, 8, false));
 check('the first three dungeon rooms are weak (hp <= 0.7x, dmg <= 0.8x in the warren)', first3.every((s) => s.hp <= 0.7 && s.dmg <= 0.8 && s.count < 1), JSON.stringify(first3));
