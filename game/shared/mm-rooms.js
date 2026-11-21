@@ -259,7 +259,9 @@
         if (c === 'S') spawns.push({ x, y });
       }
     }
-    return { id: t.id, kind: t.kind || 'normal', w: W, h: H, rows: rows.slice(), doors, spawns };
+    const out = { id: t.id, kind: t.kind || 'normal', w: W, h: H, rows: rows.slice(), doors, spawns };
+    if (t.tight) out.tight = true; // additive: only narrow cramped rooms carry it
+    return out;
   }
 
   // 4-bit neighbour mask per wall tile: N=1, E=2, S=4, W=8 (set when that neighbour is a wall;
@@ -666,6 +668,406 @@
     ] }
   ];
 
+  // ------------------------------------------------------------------------------------------------
+  // Narrow rooms (additive, layout 2 only, opt-in through select(..., { narrow: true }); ?narrow=0 turns it off).
+  // Realm-style dungeons: winding corridors 2-4 tiles wide, small chambers, choke points, few big halls. Every template
+  // keeps the standard 17x13 frame and the four door slots, and passes validateTemplate like the rest. `tight: true`
+  // marks a cramped room: the dungeon caps simultaneous shooters there. Flavours (tags[1]) steer the biomes:
+  // winding = burrow mazes (warren), lanes = hedgerows (bramble), glade = open-ish (meadow), chambers = crypt, choke = choke points.
+  // ------------------------------------------------------------------------------------------------
+  const NARROW_TEMPLATES = [
+    { id: 'n-choke-cross', kind: 'normal', tags: ['narrow', 'choke'], tight: true, rows: [
+      '########D########',
+      '#######...#######',
+      '#######S.S#######',
+      '########.########',
+      '######.....######',
+      '#.S.#.......#...#',
+      'D.....S...S.....D',
+      '#...#.......#.S.#',
+      '######.....######',
+      '########.########',
+      '#######S.S#######',
+      '#######...#######',
+      '########D########'
+    ] },
+    { id: 'n-hedge-serpent', kind: 'normal', tags: ['narrow', 'lanes'], tight: true, rows: [
+      '########D########',
+      '#...............#',
+      '#...S.......S...#',
+      '##############..#',
+      '##############..#',
+      '#...............#',
+      'D.....S...S.....D',
+      '#...............#',
+      '#..##############',
+      '#..##############',
+      '#...S.......S...#',
+      '#...............#',
+      '########D########'
+    ] },
+    { id: 'n-vine-serpent', kind: 'normal', tags: ['narrow', 'lanes'], tight: true, rows: [
+      '########D########',
+      '#.........####..#',
+      '#.........####..#',
+      '#.S####...####S.#',
+      '#..####.S.####..#',
+      '#..####...####..#',
+      'D..####...####..D',
+      '#..####...####..#',
+      '#..####.S.####..#',
+      '#.S####...####S.#',
+      '#..####.........#',
+      '#..####.........#',
+      '########D########'
+    ] },
+    { id: 'n-z-bend', kind: 'normal', tags: ['narrow', 'winding'], tight: true, rows: [
+      '########D########',
+      '#.........#######',
+      '#..S...S..#######',
+      '#...#############',
+      '#.S.#############',
+      '#...............#',
+      'D.....S...S.....D',
+      '#...............#',
+      '#############...#',
+      '#############.S.#',
+      '#######.........#',
+      '#######..S......#',
+      '########D########'
+    ] },
+    { id: 'n-hedge-lanes', kind: 'normal', tags: ['narrow', 'lanes'], tight: true, rows: [
+      '########D########',
+      '#...............#',
+      '#....S.....S....#',
+      '##############..#',
+      '#...S...........#',
+      '#...........S...#',
+      'D..###########..D',
+      '#..........S....#',
+      '#...S...........#',
+      '#..##############',
+      '#...........S...#',
+      '#....S..........#',
+      '########D########'
+    ] },
+    { id: 'n-glade', kind: 'normal', tags: ['narrow', 'glade'], rows: [
+      '########D########',
+      '#######...#######',
+      '#######...#######',
+      '####.........####',
+      '###..S.....S..###',
+      '#.S.............#',
+      'D...............D',
+      '#.............S.#',
+      '###..S.....S..###',
+      '####.........####',
+      '#######...#######',
+      '#######...#######',
+      '########D########'
+    ] },
+    { id: 'n-glade-pillars', kind: 'normal', tags: ['narrow', 'glade'], rows: [
+      '########D########',
+      '#######...#######',
+      '#######...#######',
+      '####.........####',
+      '###.S.......S.###',
+      '#.....#...#.....#',
+      'D.S...........S.D',
+      '#.....#...#.....#',
+      '###.S.......S.###',
+      '####.........####',
+      '#######...#######',
+      '#######...#######',
+      '########D########'
+    ] },
+    { id: 'n-baffle-run', kind: 'normal', tags: ['narrow', 'choke'], tight: true, rows: [
+      '########D########',
+      '#######...#######',
+      '#######.S.#######',
+      '#######...#######',
+      '#...#.......#...#',
+      '#.S.#.S.....#...#',
+      'D...#...#...#...D',
+      '#.......#.S...S.#',
+      '#.......#.......#',
+      '#######...#######',
+      '#######.S.#######',
+      '#######...#######',
+      '########D########'
+    ] },
+    { id: 'n-burrow-a', kind: 'normal', tags: ['narrow', 'winding'], tight: true, rows: [
+      '########D########',
+      '#..S#...........#',
+      '#...............#',
+      '#........S..#...#',
+      '#...##..#...#..##',
+      '#...#...#...#...#',
+      'D.......#...#...D',
+      '#.......#S..#...#',
+      '#####...#..###..#',
+      '#........S..#...#',
+      '#...........#...#',
+      '#..S........#...#',
+      '########D########'
+    ] },
+    { id: 'n-burrow-b', kind: 'normal', tags: ['narrow', 'winding'], tight: true, rows: [
+      '########D########',
+      '#...........#...#',
+      '#...........#...#',
+      '#..S#..S....#...#',
+      '#####..###..##..#',
+      '#...#...#.......#',
+      'D.......#.......D',
+      '#.......#S..#...#',
+      '#...#..##..###..#',
+      '#...#.......#...#',
+      '#...........#...#',
+      '#........S..#S..#',
+      '########D########'
+    ] },
+    { id: 'n-burrow-c', kind: 'normal', tags: ['narrow', 'winding'], tight: true, rows: [
+      '########D########',
+      '#..S#......S.S..#',
+      '#...#...........#',
+      '#...#.......#...#',
+      '##..#..######..##',
+      '#.......#.......#',
+      'D.......#.......D',
+      '#...#..S#S......#',
+      '#########..##..##',
+      '#...........#...#',
+      '#...............#',
+      '#...#...........#',
+      '########D########'
+    ] },
+    { id: 'n-burrow-d', kind: 'normal', tags: ['narrow', 'winding'], tight: true, rows: [
+      '########D########',
+      '#...#..S...S....#',
+      '#...#...........#',
+      '#...#...........#',
+      '##..######..#####',
+      '#....S..........#',
+      'D...............D',
+      '#...........#...#',
+      '#..##..##..###..#',
+      '#..S............#',
+      '#...............#',
+      '#...#S...S......#',
+      '########D########'
+    ] },
+    { id: 'n-crypt-a', kind: 'normal', tags: ['narrow', 'chambers'], tight: true, rows: [
+      '########D########',
+      '#...#...........#',
+      '#...#.........#.#',
+      '#...#.......#S..#',
+      '#..##..###..#..##',
+      '#...#...#...#...#',
+      'D.......#.#.#...D',
+      '#.......#...#...#',
+      '##..#####..######',
+      '#...#..S....#...#',
+      '#.....#.......#.#',
+      '#..S.....S...S..#',
+      '########D########'
+    ] },
+    { id: 'n-crypt-b', kind: 'normal', tags: ['narrow', 'chambers'], tight: true, rows: [
+      '########D########',
+      '#........S......#',
+      '#.#...#...#.....#',
+      '#...#.......#...#',
+      '##..##..##..#..##',
+      '#...#.......#...#',
+      'D...#.......#...D',
+      '#...#...#...#...#',
+      '#..###..#..######',
+      '#...#..S........#',
+      '#...#.#...#...#.#',
+      '#S..#......S#S..#',
+      '########D########'
+    ] },
+    { id: 'n-crypt-c', kind: 'normal', tags: ['narrow', 'chambers'], tight: true, rows: [
+      '########D########',
+      '#..S#.......#...#',
+      '#.....#...#.#...#',
+      '#...........#...#',
+      '#..##..######..##',
+      '#.......#.......#',
+      'D.....#.........D',
+      '#...#S......#...#',
+      '#..######..###..#',
+      '#S..#.......#..S#',
+      '#.#.#.....#.#.#.#',
+      '#...#S...S..#...#',
+      '########D########'
+    ] },
+    { id: 'n-crypt-d', kind: 'normal', tags: ['narrow', 'chambers'], tight: true, rows: [
+      '########D########',
+      '#...#..S...S#...#',
+      '#.........#.#.#.#',
+      '#...........#...#',
+      '#..###########..#',
+      '#...#...#..S....#',
+      'D...#.#.#.......D',
+      '#...#...#...#...#',
+      '##..##..######..#',
+      '#..S............#',
+      '#.....#...#...#.#',
+      '#...#..S....#...#',
+      '########D########'
+    ] },
+    { id: 'n-braid-a', kind: 'normal', tags: ['narrow', 'glade'], rows: [
+      '########D########',
+      '#......S.....S..#',
+      '#.#...#...#...#.#',
+      '#........S......#',
+      '#...#...#...#...#',
+      '#...............#',
+      'D.....#...#.....D',
+      '#...............#',
+      '#...#...#...#...#',
+      '#............S..#',
+      '#.#...#...#...#.#',
+      '#....S..........#',
+      '########D########'
+    ] },
+    { id: 'n-braid-b', kind: 'normal', tags: ['narrow', 'glade'], rows: [
+      '########D########',
+      '#S.............S#',
+      '#.#...#...#...#.#',
+      '#......S...S....#',
+      '#...#...#...#...#',
+      '#...............#',
+      'D.....#...#.....D',
+      '#...............#',
+      '#...#...#...#...#',
+      '#..........S.S..#',
+      '#.#...#...#...#.#',
+      '#...............#',
+      '########D########'
+    ] },
+    { id: 'n-burrow-nest', kind: 'key', tags: ['narrow', 'winding'], tight: true, rows: [
+      '########D########',
+      '#...#..S........#',
+      '#...............#',
+      '#..............S#',
+      '#...#############',
+      '#...............#',
+      'D...............D',
+      '#...#......S#...#',
+      '##..######..#..##',
+      '#...........#...#',
+      '#...........#...#',
+      '#..S#S......#...#',
+      '########D########'
+    ] },
+    { id: 'n-crypt-nook', kind: 'key', tags: ['narrow', 'chambers'], tight: true, rows: [
+      '########D########',
+      '#........S..#...#',
+      '#.#...........#.#',
+      '#S..#..........S#',
+      '##############..#',
+      '#...#....S......#',
+      'D...#...........D',
+      '#...#.......#...#',
+      '#..###..#..##..##',
+      '#...#...........#',
+      '#.#...#...#.....#',
+      '#......S....#...#',
+      '########D########'
+    ] },
+    { id: 'n-burrow-vault', kind: 'treasure', tags: ['narrow', 'winding'], tight: true, rows: [
+      '########D########',
+      '#...#.......#...#',
+      '#...#.......#...#',
+      '#...#.......#S..#',
+      '#..#######..##..#',
+      '#........S..#...#',
+      'D...........#...D',
+      '#...#.......#...#',
+      '#..##...##..#...#',
+      '#S..#...........#',
+      '#...............#',
+      '#......S.S......#',
+      '########D########'
+    ] },
+    { id: 'n-crypt-vault', kind: 'treasure', tags: ['narrow', 'chambers'], tight: true, rows: [
+      '########D########',
+      '#...#..S........#',
+      '#...#.#...#.....#',
+      '#...#......S#...#',
+      '##..##..######..#',
+      '#...........#...#',
+      'D...........#...D',
+      '#...#..S.S..#...#',
+      '##..#..###..#####',
+      '#...#.......#...#',
+      '#.#.#.#...#...#.#',
+      '#...#........S..#',
+      '########D########'
+    ] },
+    { id: 'n-burrow-trove', kind: 'treasure', tags: ['narrow', 'winding'], tight: true, rows: [
+      '########D########',
+      '#...#.......#...#',
+      '#...#...........#',
+      '#...#......S....#',
+      '#..######...#...#',
+      '#......S....#...#',
+      'D...........#...D',
+      '#...........#...#',
+      '#####..##...##..#',
+      '#..........S....#',
+      '#...............#',
+      '#..S#..S........#',
+      '########D########'
+    ] },
+    { id: 'n-crypt-trove', kind: 'treasure', tags: ['narrow', 'chambers'], tight: true, rows: [
+      '########D########',
+      '#...#.......#...#',
+      '#...#.#...#.#.#.#',
+      '#..S#..S...S#...#',
+      '#..###..######..#',
+      '#...............#',
+      'D...............D',
+      '#...#S......#...#',
+      '#..##..###..#####',
+      '#...#...........#',
+      '#.....#.........#',
+      '#..S........#...#',
+      '########D########'
+    ] },
+    { id: 'n-burrow-gate', kind: 'start', tags: ['narrow', 'winding'], tight: true, rows: [
+      '########D########',
+      '#...#..........S#',
+      '#...#...........#',
+      '#..S#...........#',
+      '#...#...#..###..#',
+      '#...#.......#...#',
+      'D...............D',
+      '#..........S....#',
+      '#########...##..#',
+      '#...#...........#',
+      '#...............#',
+      '#............S..#',
+      '########D########'
+    ] },
+    { id: 'n-crypt-gate', kind: 'start', tags: ['narrow', 'chambers'], tight: true, rows: [
+      '########D########',
+      '#...#..S........#',
+      '#.#.#.....#.....#',
+      '#...#......S#...#',
+      '#..###..#..###..#',
+      '#...#....S..#...#',
+      'D...............D',
+      '#...............#',
+      '######..######..#',
+      '#...#...........#',
+      '#.#...#.........#',
+      '#......S....#...#',
+      '########D########'
+    ] }
+  ];
+
   // Tags for the frozen layout-1 normals when they are re-used by the layout-2 pool.
   const OLD_TAGS = {
     open: ['open'], pillars4: ['arena'], 'center-block': ['open', 'arena'], 'corner-nooks': ['arena'],
@@ -680,7 +1082,7 @@
   function mirrors(t, allowV) {
     const out = [];
     const seen = new Set([t.rows.join('|')]);
-    const add = (suffix, rows) => { const k = rows.join('|'); if (seen.has(k)) return; seen.add(k); out.push({ id: t.id + '~' + suffix, kind: t.kind, tags: t.tags, rows, base: t.id }); };
+    const add = (suffix, rows) => { const k = rows.join('|'); if (seen.has(k)) return; seen.add(k); const m = { id: t.id + '~' + suffix, kind: t.kind, tags: t.tags, rows, base: t.id }; if (t.tight) m.tight = true; out.push(m); };
     add('h', flipH(t.rows));
     if (allowV) { add('v', flipV(t.rows)); add('hv', flipV(flipH(t.rows))); }
     return out;
@@ -780,6 +1182,99 @@
     return { layout: layout || LAYOUT_LATEST, ids, defs };
   }
 
+  // ---- narrow pool (separate from V2 so layout-2 selections without { narrow } stay exactly as they were) ----
+  const NARROW_POOL = [];
+  NARROW_TEMPLATES.forEach((t) => {
+    const b = { id: t.id, kind: t.kind, tags: t.tags, rows: t.rows, base: t.id };
+    if (t.tight) b.tight = true;
+    NARROW_POOL.push(b);
+    mirrors(b, true).forEach((m) => NARROW_POOL.push(m));
+  });
+  const NARROW_DIFF = { glade: 1, lanes: 2, choke: 3, winding: 3, chambers: 4 };
+  const NARROW_BIAS = {
+    warren: { winding: 2.6, choke: 1.2, lanes: 1, chambers: 0.8, glade: 0.5 },
+    bramble: { lanes: 3, choke: 1.3, winding: 1.2, chambers: 0.6, glade: 0.4 },
+    meadow: { glade: 3, lanes: 1.3, choke: 0.8, winding: 0.8, chambers: 0.3 },
+    crypt: { chambers: 3, choke: 1.1, winding: 1.2, lanes: 0.6, glade: 0.2 }
+  };
+  const isNarrow = (id) => String(id).indexOf('n-') === 0;
+  const flavourOf = (t) => t.tags[1] || 'winding';
+
+  // Room metrics for the narrow profile: long = long side of the largest empty rectangle, short = its short side,
+  // width = mean corridor width (per open tile: min of the straight horizontal and vertical open runs through it).
+  function templateStats(t) {
+    const p = parse(t);
+    const open = (x, y) => x >= 1 && y >= 1 && x < W - 1 && y < H - 1 && p.rows[y][x] !== '#';
+    let best = { a: 0, w: 0, h: 0 }, cnt = 0, sum = 0;
+    for (let y0 = 1; y0 < H - 1; y0++) for (let x0 = 1; x0 < W - 1; x0++) {
+      if (!open(x0, y0)) continue;
+      let maxW = W;
+      for (let y = y0; y < H - 1 && open(x0, y); y++) {
+        let w = 0; while (x0 + w < W - 1 && open(x0 + w, y)) w++;
+        maxW = Math.min(maxW, w);
+        if (maxW * (y - y0 + 1) > best.a) best = { a: maxW * (y - y0 + 1), w: maxW, h: y - y0 + 1 };
+      }
+    }
+    for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+      if (!open(x, y)) continue;
+      let hx = 1, vy = 1;
+      for (let i = x - 1; open(i, y); i--) hx++;
+      for (let i = x + 1; open(i, y); i++) hx++;
+      for (let i = y - 1; open(x, i); i--) vy++;
+      for (let i = y + 1; open(x, i); i++) vy++;
+      sum += Math.min(hx, vy); cnt++;
+    }
+    return { open: cnt, long: Math.max(best.w, best.h), short: Math.min(best.w, best.h), width: cnt ? sum / cnt : 0 };
+  }
+
+  // Layout-2 selection, narrow profile: every combat / key / treasure / start room draws from the narrow pool (the boss keeps
+  // its hall), plus at most ONE big hall per floor (35% of floors, a deeper combat room). Same neighbour / repeat rules as
+  // selectRooms; biome flavour weights; seeded with MMRng only.
+  function selectRoomsNarrow(graph, seed, layout, biome) {
+    seed = String(seed); biome = NARROW_BIAS[biome] ? biome : 'warren';
+    const rooms = graph.rooms;
+    const nbr = {}; rooms.forEach((r) => { nbr[r.id] = []; });
+    graph.doors.forEach((d) => { nbr[d.a].push(d.b); nbr[d.b].push(d.a); });
+    const start = rooms.find((r) => r.type === 'start');
+    const depth = {}; depth[start.id] = 0; const bq = [start.id];
+    for (let i = 0; i < bq.length; i++) graph.doors.forEach((d) => {
+      if (d.cracked) return;
+      const u = bq[i]; const v = d.a === u ? d.b : d.b === u ? d.a : null;
+      if (v !== null && depth[v] === undefined) { depth[v] = depth[u] + 1; bq.push(v); }
+    });
+    let maxD = 1; rooms.forEach((r) => { if (depth[r.id] > maxD) maxD = depth[r.id]; });
+    const dOf = (r) => (depth[r.id] === undefined ? maxD : depth[r.id]);
+    const order = rooms.slice().sort((a, b) => (dOf(a) - dOf(b)) || (a.id - b.id));
+    const bigRng = MMRng.create('tpl3big:' + seed + ':' + biome);
+    const cands = order.filter((r) => r.type === 'combat' && dOf(r) >= 2);
+    const bigId = cands.length && bigRng.next() < 0.35 ? cands[bigRng.int(0, cands.length - 1)].id : -1;
+    const chosen = {}; const baseUse = {}; const variantUse = {}; let prevBase = null;
+    const bias = NARROW_BIAS[biome];
+    order.forEach((r) => {
+      const kinds = r.type === 'treasure' || r.type === 'secret' ? ['treasure'] : r.type === 'boss' ? ['boss'] : r.type === 'start' ? ['start'] : r.type === 'key' ? ['key', 'normal'] : ['normal'];
+      const all = r.type === 'boss' ? pool('boss') : r.id === bigId ? pool('normal') : [].concat.apply([], kinds.map((k) => NARROW_POOL.filter((t) => t.kind === k)));
+      const nb = new Set(nbr[r.id].map((n) => chosen[n] && chosen[n].base).filter(Boolean));
+      const target = 1 + 3.4 * Math.min(1, dOf(r) / maxD);
+      const strict = all.filter((t) => !nb.has(t.base) && t.base !== prevBase && (baseUse[t.base] || 0) < 2 && !variantUse[t.id]);
+      const loose = all.filter((t) => !nb.has(t.base) && !variantUse[t.id]);
+      const list = strict.length ? strict : loose.length ? loose : all;
+      const ws = list.map((t) => {
+        if (!isNarrow(t.id)) return 1;
+        const f = flavourOf(t);
+        let w = Math.exp(-Math.pow((NARROW_DIFF[f] || 2) - target, 2) / (2 * 1.3 * 1.3)) * (bias[f] || 1);
+        if (t.kind === 'key') w *= 2;
+        return w;
+      });
+      const total = ws.reduce((a, b) => a + b, 0);
+      let x = MMRng.create('tpl3:' + seed + ':' + biome + ':' + r.id).next() * total; let pick = list[list.length - 1];
+      for (let i = 0; i < list.length; i++) { x -= ws[i]; if (x < 0) { pick = list[i]; break; } }
+      chosen[r.id] = pick; baseUse[pick.base] = (baseUse[pick.base] || 0) + 1; variantUse[pick.id] = 1; prevBase = pick.base;
+    });
+    const ids = {}; const defs = {};
+    rooms.forEach((r) => { const c = chosen[r.id]; ids[r.id] = c.id; defs[r.id] = { id: c.id, kind: c.kind, rows: c.rows }; if (c.tight) defs[r.id].tight = true; });
+    return { layout: layout || LAYOUT_LATEST, ids, defs, narrow: true, bigRoom: bigId };
+  }
+
   // Layout 1 = the original selection, byte-for-byte (kept so old seeds replay identically).
   function selectRoomsV1(graph, seed) {
     seed = String(seed); const ids = {}; const defs = {};
@@ -792,11 +1287,12 @@
     });
     return { layout: 1, ids, defs };
   }
-  function select(graph, seed, layout, biome) { return layout === 2 ? selectRooms(graph, seed, 2, biome) : selectRoomsV1(graph, seed); }
+  // opts.narrow (layout 2 only) switches to the narrow profile; without it the selection is exactly the old one.
+  function select(graph, seed, layout, biome, opts) { return layout === 2 ? (opts && opts.narrow ? selectRoomsNarrow(graph, seed, 2, biome) : selectRooms(graph, seed, 2, biome)) : selectRoomsV1(graph, seed); }
 
 
   function byKind(kind) { return TEMPLATES.filter((t) => t.kind === kind); }
   function get(id) { return TEMPLATES.find((t) => t.id === id) || null; }
 
-  return { W, H, DOORS, TEMPLATES, NEW_TEMPLATES, POOL_V2: V2, LAYOUT_LATEST, DIFF, parse, autotile, byKind, get, getAny, validateTemplate, mirrors, select, selectRooms, selectRoomsV1, BIOME_BIAS, biomePool };
+  return { W, H, DOORS, TEMPLATES, NEW_TEMPLATES, NARROW_TEMPLATES, POOL_NARROW: NARROW_POOL, NARROW_BIAS, templateStats, isNarrow, selectRoomsNarrow, POOL_V2: V2, LAYOUT_LATEST, DIFF, parse, autotile, byKind, get, getAny, validateTemplate, mirrors, select, selectRooms, selectRoomsV1, BIOME_BIAS, biomePool };
 }));
