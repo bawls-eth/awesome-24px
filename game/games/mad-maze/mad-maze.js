@@ -69,8 +69,8 @@
     base.addEventListener('pointermove', (e) => { if (e.pointerId === pid) set(e); });
     ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((ev) => base.addEventListener(ev, (e) => { if (pid === null || e.pointerId === pid) end(); }));
   };
-  if (FROM_HUB) { const lb = document.getElementById('realm-leave-btn'); lb.textContent = '✖ Back to the map'; lb.setAttribute('aria-label', 'Leave Mad Maze and go back to the map'); }
-  if (RETURN) { const lb = document.getElementById('realm-leave-btn'); lb.textContent = '✖ To the world'; lb.setAttribute('aria-label', 'Leave the dungeon and go back to the world'); }
+  if (FROM_HUB) { const lb = document.getElementById('realm-leave-btn'); lb.textContent = window.innerWidth >= 561 ? '✖ Back to the map' : '✖ Map'; lb.setAttribute('aria-label', 'Back to the map: leave Mad Maze'); } // short label on phones so it is never cut off
+  if (RETURN) { const lb = document.getElementById('realm-leave-btn'); lb.textContent = '✖ Exit'; lb.setAttribute('aria-label', 'Exit: leave the dungeon and go back to the world'); lb.title = 'To the world'; }
   document.getElementById('realm-leave-btn').addEventListener('click', () => arena.leave());
   for (let i = 0; i < 4; i++) document.getElementById(`realm-ab-${i}`).addEventListener('pointerdown', (e) => { e.preventDefault(); arena.cast(i); });
   document.getElementById('realm-bp-btn').addEventListener('click', () => arena.setPaused(true));
