@@ -50,7 +50,8 @@ const grants = (page, slots) => page.evaluate((slots) => { const d = window.__mm
   });
   const it0 = rec.last && rec.last.items[0];
   check('recap item is the converted wpn_ weapon, not the rolled wand', !!it0 && /^wpn_/.test(it0.id) && it0.rolled && it0.rolled !== it0.id, JSON.stringify(rec.last));
-  check('recap shows the styled item name', !!it0 && !!rec.defName && it0.name === rec.defName && it0.name !== 'Spark Wand', JSON.stringify(it0));
+  check('recap shows the styled item name', !!it0 && !!rec.defName && it0.name.replace(/^T\d+ /, '') === rec.defName && // gear is on by default: a tiered drop is named 'T2 Triple Shot'
+     it0.name !== 'Spark Wand', JSON.stringify(it0));
   check('recap id matches the bag on the floor and its pickup toast', !!it0 && rec.bagId === it0.id && rec.toast === rec.defName, JSON.stringify({ bag: rec.bagId, toast: rec.toast }));
   await W.ctx.close();
 
