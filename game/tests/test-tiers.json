@@ -371,6 +371,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-sites.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "shared-mm-overworld.test.js": {
     "class": "node",
     "tier": "smoke"
