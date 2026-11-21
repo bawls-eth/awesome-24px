@@ -387,7 +387,7 @@ class RealmTeam {
       this.lastSeen = e.q;
       const d = e.d;
       if (e.k === 'fe') a.fireEnemyBullet(rtNum(d[0], 0, a.W, 0), rtNum(d[1], 0, a.H, 0), rtNum(d[2], -7, 7, 0), rtNum(d[3], 0, 400, 150), rtNum(d[4], 0, 2, 0) | 0);
-      else if (e.k === 'fp') { if (e.o !== this.slot) a.firePlayerBulletFrom(rtNum(d[0], 0, a.W, 0), rtNum(d[1], 0, a.H, 0), rtNum(d[2], -7, 7, 0), rtNum(d[3], 0, 6, 1), e.o); } // our own bolts are drawn instantly from our input
+      else if (e.k === 'fp') { if (e.o !== this.slot) { const b = a.firePlayerBulletFrom(rtNum(d[0], 0, a.W, 0), rtNum(d[1], 0, a.H, 0), rtNum(d[2], -7, 7, 0), rtNum(d[3], 0, 6, 1), e.o); if (b && d.length > 4 && a._wpnRemote) a._wpnRemote(b, d[4], rtNum(d[2], -7, 7, 0)); } } // our own bolts are drawn instantly from our input; d[4] (optional) = weapon-style wire code
       else if (e.k === 'clr') a.eBullets.forEach((b) => { if (b.active) { b.active = false; a._burst(b.x, b.y, '#8fe9ff', 1, 40); } });
       else if (e.k === 'bn') a._showBanner(rtText(String(d[0] || ''), 80), rtNum(d[1], 0, 6, 1.5));
       else if (e.k === 'rew') a._teamReward({ sh: rtNum(d[0], 0, 999, 0), xp: rtNum(d[1], 0, 9999, 0), t: rtText(String(d[2] || ''), 8), boss: d[3] ? 1 : 0, tenths: rtNum(d[4], 0, 999999, 0) });
@@ -407,7 +407,7 @@ class RealmTeam {
     a.enemies.forEach((e) => { if (e.active && e.tx !== undefined) { e.x += (e.tx - e.x) * k; e.y += (e.ty - e.y) * k; e.t += dt; e.flash = Math.max(0, e.flash - dt * 6); } });
     a.drifters.forEach((d) => { if (d.active && d.tx !== undefined) { d.x += (d.tx - d.x) * k; d.y += (d.ty - d.y) * k; d.t += dt; } });
     a.bags.forEach((b) => { if (b.active) b.t += dt; });
-    for (let i = 0; i < a.pBullets.length; i++) { const b = a.pBullets[i]; if (!b.active) continue; b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt; if (b.life <= 0 || b.x < -10 || b.y < -10 || b.x > a.W + 10 || b.y > a.H + 10) b.active = false; }
+    for (let i = 0; i < a.pBullets.length; i++) { const b = a.pBullets[i]; if (!b.active) continue; if (b.ws && a._stepWpn) { a._stepWpn(b, dt, a.W, a.H); continue; } b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt; if (b.life <= 0 || b.x < -10 || b.y < -10 || b.x > a.W + 10 || b.y > a.H + 10) b.active = false; }
     for (let i = 0; i < a.eBullets.length; i++) { const b = a.eBullets[i]; if (!b.active) continue; b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt; if (b.life <= 0 || b.x < -20 || b.y < -20 || b.x > a.W + 20 || b.y > a.H + 20) b.active = false; }
     this.sendT -= dt;
     if (this.sendT <= 0) {
