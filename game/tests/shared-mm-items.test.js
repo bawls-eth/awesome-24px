@@ -38,4 +38,12 @@ check('potion +2 applied at 20', (() => { const r = I.canDrink(20, 'POW', 10, 50
 check('potion at cap refused, kept', (() => { const r = I.canDrink(20, 'POW', 45, I.capFor('ranger', 'POW')); return !r.ok && r.reason === 'already maxed' && r.value === 45; })());
 check('Life potion +10, greater doubles', I.canDrink(20, 'LIFE', 100, 560).gain === 10 && I.canDrink(20, 'WIT', 1, 50, true).gain === 4);
 check('potion clamps to cap', I.canDrink(20, 'WIT', 44, 45).value === 45);
+// S5: classKey casing alias + weapon family
+check('classKey casing', I.classKey('graveTender') === 'gravetender' && I.classKey('gravetender') === 'gravetender' && I.classKey('SHADOWPAW') === 'shadowpaw' && I.classKey('ranger') === 'ranger');
+check('classKey hostile -> null', I.classKey('constructor') === null && I.classKey('__proto__') === null && I.classKey(null) === null && I.classKey(5) === null && I.classKey('') === null);
+check('canEquip both casings', I.canEquip(I.makeWeapon('graveTender', 2), 'graveTender') && I.canEquip(I.makeWeapon('gravetender', 2), 'graveTender') && I.canEquip(I.makeWeapon('shadowPaw', 1), 'shadowpaw'));
+check('canEquip still class-specific', !I.canEquip(I.makeWeapon('ranger', 1), 'shadowPaw') && !I.canEquip(I.makeAbility('trickster', 1), 'shadowPaw') && I.canEquip(I.makeAbility('shadowPaw', 1), 'shadowpaw'));
+check('canEquip unknown class refused', !I.canEquip(I.makeCharm('c', 1, 'LIFE', 4), 'constructor') && !I.canEquip({ kind: 'weapon' }, 'nope'));
+check('weapons carry family', I.makeWeapon('ranger', 0).family === 'bow' && I.makeWeapon('graveTender', 0).family === 'wand' && I.makeWeapon('shadowPaw', 0).family === 'star' && I.makeWeapon('trickster', 0).family === 'pistol');
+check('every class has a family', I.KLASSES.every((k) => typeof I.CLASS_DEFS[k].family === 'string' && I.classKey(k) === k));
 done();

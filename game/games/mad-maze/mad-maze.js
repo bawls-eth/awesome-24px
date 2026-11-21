@@ -203,7 +203,7 @@
     const body = mk('div', 'hp-body'); body.id = 'realm-hero-body';
     card.append(head, tabs, status, body); wrap.appendChild(card); ov.appendChild(wrap);
     let tab = 'pick'; let creating = false; const arts = new Map(); let artLoading = false;
-    const SW = { ranger: '#6fbf73', frostcaller: '#7ec8f0', herald: '#e8b86a', punk: '#e0679a', bruiser: '#a9784f', rogue: '#8a7ac8', warlock: '#7a3fb0', paladin: '#f0d36a', berserker: '#e8643c', druid: '#5aa05a', necromancer: '#6a8a7a' };
+    const SW = { ranger: '#6fbf73', frostcaller: '#7ec8f0', herald: '#e8b86a', punk: '#e0679a', bruiser: '#a9784f', rogue: '#8a7ac8', warlock: '#7a3fb0', paladin: '#f0d36a', berserker: '#e8643c', druid: '#5aa05a', necromancer: '#6a8a7a', graveTender: '#7f9a5a', trickster: '#5ad0b0', shadowPaw: '#6a5a8a' };
     function paintArts() {
       body.querySelectorAll('canvas.hp-art').forEach((cv) => {
         const ac = cv.getAttribute('data-art'); const set = arts.get(ac); const a = set && set.anim ? set.anim(ac, 'idle', 'down') : null;

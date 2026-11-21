@@ -8,26 +8,36 @@
 
   // Per class: weapon type, T0 and T8 damage ranges (design table 3.4), armor family, ability name.
   const CLASS_DEFS = {
-    ranger:      { weapon: 'slingbow',    t0: [12, 20], t8: [40, 56],  armor: 'light', ability: 'Yarn Snare' },
-    frostcaller: { weapon: 'frostwand',   t0: [14, 22], t8: [42, 58],  armor: 'robe',  ability: 'Blizzard Burst' },
-    herald:      { weapon: 'squeakstaff', t0: [8, 14],  t8: [26, 38],  armor: 'robe',  ability: 'Good Boy Aura' },
-    punk:        { weapon: 'riffblade',   t0: [28, 40], t8: [80, 104], armor: 'heavy', ability: 'Mosh Shield' },
-    bruiser:     { weapon: 'knuckle',     t0: [10, 16], t8: [30, 42],  armor: 'heavy', ability: 'Ground Pound' },
-    gravetender: { weapon: 'bonewand',    t0: [16, 24], t8: [46, 62],  armor: 'robe',  ability: 'Grave Siphon' },
-    trickster:   { weapon: 'raypistol',   t0: [9, 15],  t8: [28, 40],  armor: 'light', ability: 'Blink Decoy' },
-    shadowpaw:   { weapon: 'shuriken',    t0: [10, 16], t8: [30, 42],  armor: 'light', ability: 'Smoke Step' },
-    rogue:       { weapon: 'twindaggers', t0: [10, 16], t8: [32, 44],  armor: 'light', ability: 'Shadow Dash' },
-    warlock:     { weapon: 'orbstaff',    t0: [15, 23], t8: [44, 60],  armor: 'robe',  ability: 'Drain Orb' },
-    paladin:     { weapon: 'warhammer',   t0: [14, 22], t8: [40, 54],  armor: 'heavy', ability: 'Bulwark Oath' },
-    berserker:   { weapon: 'twinaxes',    t0: [18, 28], t8: [56, 76],  armor: 'heavy', ability: 'Rage Slam' },
-    druid:       { weapon: 'thornstaff',  t0: [12, 18], t8: [36, 50],  armor: 'robe',  ability: 'Thorn Bloom' },
-    necromancer: { weapon: 'bonestaff',   t0: [14, 22], t8: [42, 56],  armor: 'robe',  ability: 'Raise Bones' },
+    ranger:      { family: 'bow', weapon: 'slingbow',    t0: [12, 20], t8: [40, 56],  armor: 'light', ability: 'Yarn Snare' },
+    frostcaller: { family: 'wand', weapon: 'frostwand',   t0: [14, 22], t8: [42, 58],  armor: 'robe',  ability: 'Blizzard Burst' },
+    herald:      { family: 'tome', weapon: 'squeakstaff', t0: [8, 14],  t8: [26, 38],  armor: 'robe',  ability: 'Good Boy Aura' },
+    punk:        { family: 'blade', weapon: 'riffblade',   t0: [28, 40], t8: [80, 104], armor: 'heavy', ability: 'Mosh Shield' },
+    bruiser:     { family: 'fist', weapon: 'knuckle',     t0: [10, 16], t8: [30, 42],  armor: 'heavy', ability: 'Ground Pound' },
+    gravetender: { family: 'wand', weapon: 'bonewand',    t0: [16, 24], t8: [46, 62],  armor: 'robe',  ability: 'Grave Siphon' },
+    trickster:   { family: 'pistol', weapon: 'raypistol',   t0: [9, 15],  t8: [28, 40],  armor: 'light', ability: 'Blink Decoy' },
+    shadowpaw:   { family: 'star', weapon: 'shuriken',    t0: [10, 16], t8: [30, 42],  armor: 'light', ability: 'Smoke Step' },
+    rogue:       { family: 'dagger', weapon: 'twindaggers', t0: [10, 16], t8: [32, 44],  armor: 'light', ability: 'Shadow Dash' },
+    warlock:     { family: 'staff', weapon: 'orbstaff',    t0: [15, 23], t8: [44, 60],  armor: 'robe',  ability: 'Drain Orb' },
+    paladin:     { family: 'hammer', weapon: 'warhammer',   t0: [14, 22], t8: [40, 54],  armor: 'heavy', ability: 'Bulwark Oath' },
+    berserker:   { family: 'axe', weapon: 'twinaxes',    t0: [18, 28], t8: [56, 76],  armor: 'heavy', ability: 'Rage Slam' },
+    druid:       { family: 'staff', weapon: 'thornstaff',  t0: [12, 18], t8: [36, 50],  armor: 'robe',  ability: 'Thorn Bloom' },
+    necromancer: { family: 'staff', weapon: 'bonestaff',   t0: [14, 22], t8: [42, 56],  armor: 'robe',  ability: 'Raise Bones' },
   };
+
+  // Casing alias: 'graveTender' / 'gravetender' / 'GRAVETENDER' -> the CLASS_DEFS key ('gravetender'); null if unknown.
+  const KEY_LOWER = {};
+  Object.keys(CLASS_DEFS).forEach((k) => { KEY_LOWER[k.toLowerCase()] = k; });
+  function classKey(k) {
+    if (typeof k !== 'string') return null;
+    const l = k.toLowerCase();
+    return Object.prototype.hasOwnProperty.call(KEY_LOWER, l) ? KEY_LOWER[l] : null;
+  }
 
   const clampTier = (t, max) => Math.max(0, Math.min(max, Math.floor(Number(t)) || 0));
 
   // Linear T0..T8 (average +4 per tier for every weapon in the design table).
   function damageRange(klass, tier) {
+    klass = classKey(klass);
     const d = CLASS_DEFS[klass];
     if (!d) return null;
     const t = clampTier(tier, 8);
@@ -36,10 +46,11 @@
   }
 
   function makeWeapon(klass, tier) {
+    klass = classKey(klass);
     const d = CLASS_DEFS[klass];
     if (!d) return null;
     const t = clampTier(tier, 8);
-    return { id: d.weapon + '_t' + t, kind: 'weapon', slot: 'weapon', weaponType: d.weapon, klass, tier: t,
+    return { id: d.weapon + '_t' + t, kind: 'weapon', slot: 'weapon', weaponType: d.weapon, family: d.family, klass, tier: t,
       dmg: damageRange(klass, t), stats: t >= 6 ? { KNK: 1 } : {} }; // T6+ gets +1 KNK
   }
   function makeArmor(family, tier) {
@@ -47,6 +58,7 @@
     return { id: 'armor_' + family + '_t' + t, kind: 'armor', slot: 'armor', family, tier: t, stats: { GRD: 2 * t } };
   }
   function makeAbility(klass, tier) {
+    klass = classKey(klass);
     const d = CLASS_DEFS[klass];
     if (!d) return null;
     const t = clampTier(tier, 4);
@@ -81,11 +93,12 @@
   }
 
   function canEquip(item, klass) {
-    if (!item || typeof item !== 'object' || !CLASS_DEFS[klass]) return false;
+    klass = classKey(klass);
+    if (!item || typeof item !== 'object' || !klass) return false;
     const d = CLASS_DEFS[klass];
     switch (item.kind) {
       case 'weapon': return item.weaponType === d.weapon;
-      case 'ability': return item.klass === klass;
+      case 'ability': return classKey(item.klass) === klass;
       case 'armor': return item.family === d.armor;
       case 'charm': return true;
       default: return false;
@@ -212,7 +225,7 @@
     return { name, icon, kind, tier, tierLabel: 'T' + tier, color: TIER_COLORS[tier] };
   }
 
-  return { MAX_TIER, KLASSES, CLASS_DEFS, BAG_ORDER, COMMON_DROPS, CLASS_CAPS, POTION_GAIN,
+  return { MAX_TIER, KLASSES, CLASS_DEFS, classKey, BAG_ORDER, COMMON_DROPS, CLASS_CAPS, POTION_GAIN,
     damageRange, makeWeapon, makeArmor, makeAbility, makeCharm, fromLegacy, canEquip,
     bagColor, bestBagColor, dropBag, describe, TIER_COLORS, KIND_ICONS, xpToNext, totalXpToLevel, capFor, canDrink };
 });

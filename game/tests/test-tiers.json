@@ -562,5 +562,9 @@
   "shared-mm-fx-draw.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "hero-all-classes.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
