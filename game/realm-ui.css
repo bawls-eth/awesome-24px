@@ -162,3 +162,15 @@ body.touch-device #realm-stick-aim { right: calc(20px + var(--sr)); }
 @media (prefers-reduced-motion: reduce) { #realm-focus.short .rf-bar { animation: none; box-shadow: 0 0 0 2px #ff6b6b; } }
 .realm-ab.nofocus { filter: saturate(0.35); }
 .realm-ab.nofocus .ico, .realm-ab.nofocus .realm-ab-img { opacity: 0.55; }
+
+/* ---------- backpack weapon compare (S14): shown on hover / keyboard focus, or after a long-press on touch ---------- */
+#realm-bp-list .rm-cmp { display: none; grid-column: 1 / -1; font-size: 12px; line-height: 1.35; padding: 4px 6px; border-radius: 8px; background: rgba(0, 0, 0, 0.35); overflow-wrap: anywhere; }
+#realm-bp-list li:hover .rm-cmp, #realm-bp-list li:focus-within .rm-cmp, #realm-bp-list li.cmp-on .rm-cmp { display: block; }
+#realm-bp-list .rm-cmp .pat { display: block; color: #e6edf3; }
+#realm-bp-list .rm-cmp .dl { display: inline-block; margin-right: 8px; font-weight: 700; }
+#realm-bp-list .rm-cmp .dl.up { color: #7ee787; }
+#realm-bp-list .rm-cmp .dl.dn { color: #ff7b72; }
+#realm-bp-list .rm-cmp .dl.eqd { color: #c9d1d9; font-weight: 600; }
+#realm-bp-list li .nm { -webkit-touch-callout: none; user-select: none; }
+.realm-bp-slot .rm-classwpn { color: #e6edf3; }
+.realm-bp-slot .rm-slot-ico { width: 20px; height: 20px; image-rendering: pixelated; vertical-align: middle; margin-right: 4px; }

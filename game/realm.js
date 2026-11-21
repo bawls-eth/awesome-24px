@@ -115,6 +115,9 @@ const RM_DIR = (function () { try { const s = typeof document !== 'undefined' &&
 })();
 const RM_UI_ART = RM_DIR ? RM_DIR + 'assets/arcane/b19-ui-icons/ui/' : ''; // b19 UI art (focus bar frame + icon)
 // Focus (FO2): ability id -> MMFocus cost id (Dash 0, Nova 25, Shield 30, Overdrive 40, Signature 40). Cooldowns are kept on top.
+// Damage numbers (S14): crits gold, marked pink (MMStatus colours), armorBroken purple; everything else stays white.
+const RM_DMG_COL = { plain: '#fff', crit: '#ffd24a', marked: '#ff8fa8', armorBroken: '#b77bff' };
+const RM_PIP_MAX = 3, RM_PIP_PX = 8; // at most 3 status pips over an enemy; more collapse into "+n"
 const RM_ST_ICON_PX = 24; // HUD status icon size in css px (was 20; PLAYTEST-REVIEW-2 #11: readable at a glance)
 const RM_FOCUS_ID = { dash: 'dash', nova: 'nova', shield: 'shield', overdrive: 'overdrive', sig: 'signature' };
 function rmInertDef(id) {
@@ -767,6 +770,39 @@ class RealmArena {
       const o = pool[out.length]; o.id = it.id; o.x = a.cl + x * a.k; o.y = a.ct + y * a.k; o.size = a.px; o.neg = it.neg; out.push(o);
     }
   }
+  // Enemy status pips (S14): at most RM_PIP_MAX cached MMFxDraw.drawPip discs over the enemy, extra statuses collapse into "+n" (text, not
+  // colour only). The list is re-read at most 4x a second per enemy into fields preallocated on the pooled enemy (no per-frame arrays).
+  _pipsOf(e) {
+    if (!e.status || typeof MMStatus === 'undefined') { e._pipN = 0; e._pipMore = 0; return e; }
+    if (!(this._stT - e._pipAt < 0.25) || e._pipAt > this._stT) { // undefined / NaN (an enemy made outside spawnEnemy) refreshes too
+      e._pipAt = this._stT;
+      const list = MMStatus.iconList(e.status, this._stT * 1000, 6);
+      const ids = e._pipIds || (e._pipIds = ['', '', '']);
+      e._pipN = Math.min(RM_PIP_MAX, list.length); e._pipMore = Math.max(0, list.length - RM_PIP_MAX);
+      for (let i = 0; i < e._pipN; i++) ids[i] = list[i].id;
+    }
+    return e;
+  }
+  _drawEnemyPips(g, e, y) {
+    if (typeof MMFxDraw === 'undefined' || !this._stOn()) return;
+    this._pipsOf(e); const n = e._pipN; if (!n) return;
+    if (!this._pipCache) this._pipCache = MMFxDraw.makeCache(MMFxDraw.defaultCreate, 32);
+    const step = RM_PIP_PX + 2; const more = e._pipMore > 0;
+    const w = n * step - 2 + (more ? 14 : 0); let x = e.x - w / 2;
+    for (let i = 0; i < n; i++) {
+      const id = e._pipIds[i];
+      const cv = this._pipCache.get(id, RM_PIP_PX + 2, RM_PIP_PX + 2, (c, W) => MMFxDraw.drawPip(c, id, W / 2, W / 2, RM_PIP_PX));
+      if (cv) g.drawImage(cv, x - 1, y - 1);
+      x += step;
+    }
+    if (more) {
+      g.font = 'bold 9px system-ui, sans-serif'; g.textAlign = 'left';
+      const t = `+${e._pipMore}`; g.fillStyle = '#000'; g.fillText(t, x + 1, y + RM_PIP_PX + 1); g.fillStyle = '#fff'; g.fillText(t, x, y + RM_PIP_PX);
+    }
+  }
+  // Test / debug hook (S14): the pips an enemy shows now: {ids, more}.
+  enemyPips(e) { if (!e) return null; e._pipAt = -9; this._pipsOf(e); return { ids: (e._pipIds || []).slice(0, e._pipN), more: e._pipMore }; }
+
   // Test / debug hook: the icons drawn on the last frame, in css px from the page's top-left.
   statusIcons() { return this._stDrawn.map((o) => Object.assign({}, o)); }
 
@@ -1168,7 +1204,7 @@ class RealmArena {
       const ph = w.wave.alt && (k & 1) ? 1 : 0;
       const b = this.firePlayerBulletFrom(p.x, p.y, ang, d, 0, rmWpnWire(w, ph, lobD));
       if (!b) continue;
-      this._styleBolt(b, w, ang, ph, lobD); live++;
+      this._styleBolt(b, w, ang, ph, lobD); if (d !== base) b.cr = 1; live++;
     }
   }
   // How far a lobbed shot flies: to the nearest enemy within 0.35 rad of the aim, else its max range.
@@ -1290,7 +1326,7 @@ class RealmArena {
     for (let i = 0; i < this.enemies.length; i++) {
       const e = this.enemies[i]; if (!e.active) continue;
       const rr = r + RM_ENEMIES[e.type].r;
-      if ((e.x - x) * (e.x - x) + (e.y - y) * (e.y - y) <= rr * rr) { if (b.st > 0) this._wpnStatus(b, e); this._hitEnemy(e, b.dmg || this.stats.dmg); }
+      if ((e.x - x) * (e.x - x) + (e.y - y) * (e.y - y) <= rr * rr) { if (b.st > 0) this._wpnStatus(b, e); this._hitEnemy(e, b.dmg || this.stats.dmg, b.cr === 1); }
     }
   }
   // A weapon bolt's `st` (RM_WPN_ST index + 1) rolls its onHit chance and applies that status to the enemy it hit.
@@ -1850,7 +1886,7 @@ class RealmArena {
     const scale = (1 + 0.15 * Math.max(0, this.run.wave - 1)) * (this.team && this.role === 'host' ? RT_HP_SCALE : 1); // tougher with a partner
     e.active = true; e.type = type; e.x = x; e.y = y;
     e.maxHp = Math.ceil(def.hp * scale); e.hp = e.maxHp;
-    e.slowT = 0; e.slowF = 1; e.boneT = 0; e.status = null; e._stm = null; e._stNext = Infinity; e._stAcc = 0; e.fireMul = 1;
+    e.slowT = 0; e.slowF = 1; e.boneT = 0; e.status = null; e._stm = null; e._stNext = Infinity; e._stAcc = 0; e.fireMul = 1; e._pipAt = -9; e._pipN = 0; e._pipMore = 0;
     e.dg = null; e._at = undefined; e.t = 0; e.flash = 0; e.angle = this.rng() * Math.PI * 2; e.dir = this.rng() < 0.5 ? 1 : -1;
     e.cd = 0.8 + this.rng() * 0.8; // first shot is never instant
     if (this.world) { e.ax = x + (this.rng() - 0.5) * 220; e.ay = y + (this.rng() - 0.5) * 220; } else { e.ax = 80 + this.rng() * (this.W - 160); e.ay = 80 + this.rng() * (this.H - 160); } // drift target for Whirlers (near home in a world)
@@ -1982,7 +2018,7 @@ class RealmArena {
       const d = hp.critChance > 0 && this.rng() < hp.critChance ? base * 2 : base;
       const b = this.firePlayerBulletFrom(this.player.x, this.player.y, aim + (n > 1 ? (k / (n - 1) - 0.5) * hp.spread : 0), d, 0);
       if (!b) continue;
-      b.pr = hp.pierce;
+      b.pr = hp.pierce; if (d !== base) b.cr = 1;
       if (hp.boltSpeed !== 1) { b.vx *= hp.boltSpeed; b.vy *= hp.boltSpeed; b.life /= hp.boltSpeed; }
     }
   }
@@ -1995,7 +2031,7 @@ class RealmArena {
     const b = this._take(this.pBullets);
     if (!b) return null;
     if (this.team && this.role === 'host') this.team.ev('fp', wcode >= 0 ? [Math.round(x), Math.round(y), Math.round(angle * 1000) / 1000, Math.round(dmg * 10) / 10, wcode] : [Math.round(x), Math.round(y), Math.round(angle * 1000) / 1000, Math.round(dmg * 10) / 10], owner);
-    b.ws = null; b.ho = 0; b.lb = 0; b.st = 0;
+    b.ws = null; b.ho = 0; b.lb = 0; b.st = 0; b.cr = 0; // cr: this bolt rolled a crit (gold damage number)
     b.active = true; b.x = x + Math.cos(angle) * 14; b.y = y + Math.sin(angle) * 14; b.dmg = dmg; b.own = owner;
     b.vx = Math.cos(angle) * RM_PLAYER.bulletSpeed; b.vy = Math.sin(angle) * RM_PLAYER.bulletSpeed; b.life = RM_PLAYER.bulletLife;
     b.pr = 0; b.hn = 0; b.h0 = b.h1 = b.h2 = -1; // class pierce: bolts left to pass through, and the enemies already hit
@@ -2362,7 +2398,7 @@ class RealmArena {
         const he = this.enemies[hj];
         if (this._sparks) this._spawnSpark(b);
         if (b.ws) this._wpnHit(b, he, hj);
-        this._hitEnemy(he, b.dmg || this.stats.dmg);
+        this._hitEnemy(he, b.dmg || this.stats.dmg, b.cr === 1);
       }
       if (!b.active) continue;
       for (let j = 0; j < this.drifters.length; j++) {
@@ -2395,7 +2431,17 @@ class RealmArena {
     this._ebLive = ebLive;
   }
 
-  _hitEnemy(e, dmg) {
+  // The damage-number colour for a hit on `e` (S14): a crit keeps gold, marked keeps its pink, armorBroken draws purple, else white.
+  _dmgColor(e, crit) {
+    if (crit) return RM_DMG_COL.crit;
+    const fx = e && e.status && e.status.fx; if (!fx) return RM_DMG_COL.plain;
+    const now = this._stT * 1000;
+    if (fx.marked && fx.marked.until > now) return RM_DMG_COL.marked;
+    if (fx.armorBroken && fx.armorBroken.until > now) return RM_DMG_COL.armorBroken;
+    return RM_DMG_COL.plain;
+  }
+
+  _hitEnemy(e, dmg, crit) {
     if (e._stm && e._stm.taken !== 1) dmg *= e._stm.taken; // status mods (marked / curse / armorBroken), capped at x1.5 by MMStatus
     if (this.dungeon && e.dg === 'boss') { this.dungeon.hitBoss(e, dmg); return; }
     if (e.type === 'boss' && e.invuln > 0) { this._floatText(e.x, e.y - 40, 'shielded', '#c9d1d9'); this._burst(e.x, e.y, '#fff', 1, 60); return; }
@@ -2414,7 +2460,8 @@ class RealmArena {
       if (this.onEnemyKilled) this.onEnemyKilled(e);
       return;
     }
-    this._floatText(e.x + (this.rng() - 0.5) * 14, e.y - 14, String(Math.round(dmg * 10) / 10), '#fff');
+    const dc = this._dmgColor(e, crit); this.lastDmgColor = dc; // S14 (test hook: the colour of the last enemy damage number)
+    this._floatText(e.x + (this.rng() - 0.5) * 14, e.y - 14, crit ? `${Math.round(dmg * 10) / 10}!` : String(Math.round(dmg * 10) / 10), dc);
     this._burst(e.x, e.y, RM_ENEMIES[e.type].color, 3, 110);
     if (e.hp > 0) return;
     e.active = false;
@@ -3241,16 +3288,103 @@ class RealmArena {
     let html = `<div id="realm-bp-stats">${this._statLine()}</div><button type="button" class="eq" data-open-shop="1" aria-label="Open the shop (V)" style="min-height:44px;margin:4px 0">🛒 Shop (V)</button><div class="realm-bp-slots">`;
     RM_SLOTS.forEach((slot) => {
       const it = sv.items.find((x) => x.n === sv.eq[slot]);
-      html += `<div class="realm-bp-slot" data-slot="${slot}">${it ? `<span style="color:${RM_RARITIES[it.r].color}">${this._icon(RM_ITEM_BY_ID[it.id])} ${RM_ITEM_BY_ID[it.id].name}</span>` : `<span class="dim">${slot}: empty</span>`}</div>`;
+      const cw = !it && slot === 'weapon' ? this._classWeaponName() : ''; // PT2 #15: the class weapon the hero fires, not "weapon: empty"
+      html += `<div class="realm-bp-slot" data-slot="${slot}">${it ? `<span style="color:${RM_RARITIES[it.r].color}">${this._icon(RM_ITEM_BY_ID[it.id])} ${RM_ITEM_BY_ID[it.id].name}</span>` : cw ? `<span class="rm-classwpn" title="Class weapon">${this._slotIcon('weapon')}${cw}</span>` : `<span class="dim">${slot}: empty</span>`}</div>`;
     });
     html += `</div><div class="realm-bp-count">${sv.items.length} / ${RM_BACKPACK} items</div><ul id="realm-bp-list">`;
     if (!sv.items.length) html += '<li class="dim">Nothing yet — defeat enemies to find loot bags.</li>';
     sv.items.forEach((it) => {
       const def = RM_ITEM_BY_ID[it.id]; const rar = RM_RARITIES[it.r]; const on = eqUids.has(it.n);
-      html += `<li data-uid="${it.n}" class="${on ? 'on' : ''}"><span class="nm" style="color:${rar.color}">${this._icon(def)} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(it)}</span>${def.inert ? '<button type="button" class="eq" disabled aria-label="Not usable yet">Equip</button>' : def.wpn && !on && !this._wpnCanEquip(def) ? `<button type="button" class="eq" disabled data-wpn-lock="1" aria-label="${this._wpnHint(def)} only" title="${this._wpnHint(def)}">🔒 ${def.family.charAt(0).toUpperCase() + def.family.slice(1)}</button>` : `<button type="button" class="eq" data-act="equip" data-uid="${it.n}">${on ? 'Unequip' : 'Equip'}</button>`}${this.combinable(it.n) ? `<button type="button" class="eq" data-combine="${it.n}" aria-label="Combine ${RM_COMBINE_COUNT} ${rar.name} ${def.name} into one ${RM_RARITIES[it.r + 1].name}">Combine ${RM_COMBINE_COUNT}→${RM_RARITIES[it.r + 1].name}</button>` : ''}<button type="button" class="dc" data-act="discard" data-uid="${it.n}" aria-label="Sell ${def.name} for ${rar.sell} shards">Sell ${rar.sell}💎</button></li>`;
+      html += `<li data-uid="${it.n}" class="${on ? 'on' : ''}"><span class="nm" style="color:${rar.color}">${this._icon(def)} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(it)}</span>${def.slot === 'weapon' ? this._cmpHtml(it, on) : ''}${def.inert ? '<button type="button" class="eq" disabled aria-label="Not usable yet">Equip</button>' : def.wpn && !on && !this._wpnCanEquip(def) ? `<button type="button" class="eq" disabled data-wpn-lock="1" aria-label="${this._wpnHint(def)} only" title="${this._wpnHint(def)}">🔒 ${def.family.charAt(0).toUpperCase() + def.family.slice(1)}</button>` : `<button type="button" class="eq" data-act="equip" data-uid="${it.n}">${on ? 'Unequip' : 'Equip'}</button>`}${this.combinable(it.n) ? `<button type="button" class="eq" data-combine="${it.n}" aria-label="Combine ${RM_COMBINE_COUNT} ${rar.name} ${def.name} into one ${RM_RARITIES[it.r + 1].name}">Combine ${RM_COMBINE_COUNT}→${RM_RARITIES[it.r + 1].name}</button>` : ''}<button type="button" class="dc" data-act="discard" data-uid="${it.n}" aria-label="Sell ${def.name} for ${rar.sell} shards">Sell ${rar.sell}💎</button></li>`;
     });
     html += '</ul>';
-    root.innerHTML = html; this._fixIcons(root);
+    root.innerHTML = html; this._fixIcons(root); this._bindCmp(root);
+    root.querySelectorAll('img.rm-slot-ico').forEach((img) => { if (img.complete && !img.naturalWidth) img.remove(); else img.addEventListener('error', () => img.remove(), { once: true }); });
+  }
+
+  // ---------- backpack weapon compare (S14) ----------
+  // A weapon's numbers for the compare line. it = a save item, or null for the hero's class weapon with nothing equipped.
+  // With an active hero and MMWeapons the pattern comes from MMWeapons.resolve (the style the item would really fire), else today's plain bolt.
+  _wpnSummary(it) {
+    const def = it ? RM_ITEM_BY_ID[it.id] : null; const r = it ? it.r : 0;
+    const cls = this.heroClass(); let spec = null; let locked = false;
+    if (typeof MMWeapons !== 'undefined' && cls) {
+      try {
+        if (def && def.wpn && !this._wpnCanEquip(def)) { locked = true; spec = MMWeapons.get(def.style); }
+        else spec = MMWeapons.resolve(cls, def && def.wpn ? def.style : 'base', r);
+      } catch (e) { spec = null; }
+    }
+    const hp = this.heroProfile;
+    const v = def && !def.inert ? def.amount * RM_RARITIES[r].mult : 0;
+    const shots = spec ? Math.max(1, spec.count) * Math.max(1, spec.burst ? spec.burst.n : 1) : (hp ? hp.shots : 1);
+    const shotDmg = (RM_PLAYER.dmg + (def && def.stat === 'dmg' ? v : 0)) * (spec ? spec.dmg : (hp ? hp.shotDmg : 1));
+    const rate = (RM_PLAYER.fireRate + (def && def.stat === 'rate' ? v : 0)) * (spec && !spec.base ? spec.rate : 1);
+    const range = spec ? Math.round(spec.range || (spec.spd || 1) * RM_PLAYER.bulletSpeed * (spec.life || RM_PLAYER.bulletLife)) : Math.round(RM_PLAYER.bulletSpeed * RM_PLAYER.bulletLife);
+    let pattern = '';
+    try { pattern = spec ? MMWeapons.describe(spec) : ''; } catch (e) { pattern = ''; }
+    if (!pattern) pattern = `${shots} bolt${shots === 1 ? '' : 's'}, range ${range} px`;
+    return { pattern, shots, pierce: spec ? spec.pierce || 0 : (hp ? hp.pierce : 0), range, dps: shotDmg * shots * rate, locked };
+  }
+  // Compare a backpack weapon with what is equipped now (or the class weapon): {pattern, deltas: [{text, up}], equipped, locked}.
+  weaponCompare(uid) {
+    const it = this.save.items.find((x) => x.n === uid); const def = it && RM_ITEM_BY_ID[it.id];
+    if (!def || def.slot !== 'weapon') return null;
+    const eqUid = this.save.eq.weapon; const cur = eqUid ? this.save.items.find((x) => x.n === eqUid) : null;
+    const a = this._wpnSummary(it); const b = this._wpnSummary(cur || null);
+    const out = { pattern: a.pattern, deltas: [], equipped: eqUid === uid, locked: a.locked };
+    if (out.equipped || a.locked) return out;
+    const sgn = (d) => (d > 0 ? '+' : '');
+    const add = (d, text, min) => { if (Math.abs(d) >= (min || 1)) out.deltas.push({ text, up: d > 0 }); };
+    const ds = a.shots - b.shots, dp = a.pierce - b.pierce, dr = a.range - b.range;
+    add(ds, `${sgn(ds)}${ds} shot${Math.abs(ds) === 1 ? '' : 's'}`);
+    add(dp, `${sgn(dp)}${dp} pierce`);
+    const pct = b.dps > 0 ? Math.round((a.dps / b.dps - 1) * 100) : 0;
+    add(pct, `${sgn(pct)}${pct}% damage/s`);
+    add(dr, `${sgn(dr)}${dr} px range`, 10);
+    return out;
+  }
+  _cmpHtml(it, on) {
+    let c = null; try { c = this.weaponCompare(it.n); } catch (e) { c = null; }
+    if (!c) return '';
+    const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+    let d = '';
+    if (on || c.equipped) d = '<span class="dl eqd">equipped</span>';
+    else if (c.locked) d = '<span class="dl eqd">another class family</span>';
+    else if (!c.deltas.length) d = '<span class="dl eqd">same as equipped</span>';
+    else d = c.deltas.map((x) => `<span class="dl ${x.up ? 'up' : 'dn'}">${esc(x.text)}</span>`).join('');
+    return `<span class="rm-cmp" data-cmp="${it.n}"><span class="pat">${esc(c.pattern)}</span>${d}</span>`;
+  }
+  // Long-press (touch) toggles a row's compare line; hover / keyboard focus show it on desktop (realm-ui.css). Bound once per element.
+  _bindCmp(root) {
+    if (!root || root.dataset.cmpBound) return;
+    root.dataset.cmpBound = '1';
+    let timer = 0; let li = null;
+    const clear = () => { clearTimeout(timer); timer = 0; li = null; };
+    root.addEventListener('pointerdown', (e) => {
+      const row = e.target.closest && e.target.closest('#realm-bp-list li');
+      if (!row || !row.querySelector('.rm-cmp') || e.target.closest('button')) return;
+      clear(); li = row;
+      timer = setTimeout(() => {
+        const r = li; clear();
+        if (!r || !r.isConnected) return;
+        const was = r.classList.contains('cmp-on');
+        root.querySelectorAll('li.cmp-on').forEach((x) => x.classList.remove('cmp-on'));
+        if (!was) r.classList.add('cmp-on');
+      }, 420);
+    });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach((t) => root.addEventListener(t, clear));
+    root.addEventListener('contextmenu', (e) => { if (e.target.closest && e.target.closest('#realm-bp-list li .nm')) e.preventDefault(); }); // a long-press shows the compare line, not the menu
+  }
+  // The hero's class weapon name (MMWeapons base style, e.g. "Ranger Bolt"), or '' with no hero / module / in a duel.
+  _classWeaponName() {
+    const cls = this.heroClass();
+    if (!cls || typeof MMWeapons === 'undefined' || (this.team && this.team.isPvp)) return '';
+    try { const b = MMWeapons.resolve(cls, 'base', 0); return b && b.name ? String(b.name).replace(/[<>&"]/g, '').slice(0, 32) : ''; } catch (e) { return ''; }
+  }
+  // b19 slot art in front of the class weapon name (decorative; removed if it fails to load).
+  _slotIcon(slot) {
+    if (!RM_UI_ART || !/^[a-z]+$/.test(slot) || !/^[A-Za-z0-9_.:\/%-]+$/.test(RM_UI_ART)) return '';
+    return `<img class="rm-slot-ico mm-ico" src="${RM_UI_ART}ui_slot_${slot}.png" alt="" width="20" height="20">`;
   }
 
   // ---------- drawing ----------
@@ -3290,6 +3424,7 @@ class RealmArena {
       if (e.flash > 0) { g.globalAlpha = e.flash * 0.7; g.fillStyle = '#fff'; g.beginPath(); g.arc(e.x, e.y + (art ? 0 : bob), RM_ENEMIES[e.type].r, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1; }
       if (e.type === 'boss' && e.invuln > 0) { g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 3; g.beginPath(); g.arc(e.x, e.y, 40 + Math.sin(e.t * 20) * 2, 0, Math.PI * 2); g.stroke(); }
       if (e.hp < e.maxHp && e.type !== 'boss') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(e.x - 14, e.y - spr.height / 2 - 6, 28, 4); g.fillStyle = RM_ENEMIES[e.type].color; g.fillRect(e.x - 14, e.y - spr.height / 2 - 6, 28 * (e.hp / e.maxHp), 4); }
+      if (e.status) this._drawEnemyPips(g, e, e.y - (e.type === 'boss' ? RM_ENEMIES.boss.r + 10 : spr.height / 2 + 13));
     }
     if (this._edGhosts) this._drawEnemyGhosts(g);
     if (this._bossGhost) this._drawBossGhost(g);
