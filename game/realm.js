@@ -130,8 +130,9 @@ const RM_ST_ICON_PX = 24; // HUD status icon size in css px (was 20; PLAYTEST-RE
 const RM_FOCUS_ID = { dash: 'dash', nova: 'nova', shield: 'shield', overdrive: 'overdrive', sig: 'signature' };
 function rmInertDef(id) {
   if (RM_ITEM_BY_ID[id]) return RM_ITEM_BY_ID[id];
-  const name = id.slice(4).split('_').filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ').slice(0, 24) || 'Weapon';
-  const def = { id, slot: 'none', name, icon: '🗡️', stat: 'none', amount: 0, text: 'not usable yet', inert: true };
+  const arm = id.slice(0, 4) === 'arm_'; // an `arm_` armor id kept by a page without MMGear or under ?gear=0
+  const name = id.slice(4).split('_').filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ').slice(0, 24) || (arm ? 'Armor' : 'Weapon');
+  const def = { id, slot: 'none', name, icon: arm ? '🛡️' : '🗡️', stat: 'none', amount: 0, text: 'not usable yet', inert: true };
   RM_ITEM_BY_ID[id] = def; // lookup only: never in RM_ITEMS, so never dropped or sold in the shop
   return def;
 }
@@ -149,6 +150,38 @@ const RM_WPN_ITEMS = [];
     RM_ITEMS.push(def); RM_ITEM_BY_ID[def.id] = def; RM_WPN_ITEMS.push(def);
   });
 })();
+// Tiered gear (GEAR-DROPS-BUILD-PLAN G7/G8). Item entries gain the additive fields `t` (tier 1-12) and `a` (uint32 affix seed, T7+ only); the save gains
+// `eq.armor`, `gv` (1 = this save has seen tiered gear) and `gp` ({b, d} pity counters). rmCleanSave KEEPS all of them on every page, with or without
+// MMGear and under ?gear=0, so a tab of this build (or later) never erases them; only their effect is switched: RM_GEAR_ON = MMGear on the page and not
+// ?gear=0 (the kill switch). Off: no armor slot, `arm_` ids are inert items, `t`/`a` are ignored (classic T0 formulas), no affixes / resist / leech / regen.
+// (A build older than G7 does not know these fields and its cleaner strips them: that is why G7 ships one deploy before any drop creates them.)
+// Armor `arm_<family>_<band>` defs are lookup-only (never in RM_ITEMS / RM_BASE_ITEMS: never dropped by the classic pools or stocked by the shop).
+const RM_ARM_ID = /^arm_[a-z]{3,8}_[a-z]{3,10}$/; // MMGear.GEAR_ID_RE
+const RM_GEAR_ON = !rmFlagOff('gear') && typeof MMGear !== 'undefined' && !!MMGear && typeof MMGear.clean === 'function';
+const RM_ARMOR_ICON = { light: '🦺', robe: '👘', heavy: '🛡️' };
+(function rmRegisterArmor() {
+  if (!RM_GEAR_ON || !MMGear.ARMOR_IDS) return;
+  MMGear.FAMILY_KEYS.forEach((fam) => (MMGear.ARMOR_IDS[fam] || []).forEach((id) => {
+    if (!RM_ARM_ID.test(id) || RM_ITEM_BY_ID[id]) return;
+    RM_ITEM_BY_ID[id] = { id, slot: 'armor', name: String(MMGear.ARMOR_NAMES[id] || id).slice(0, 24), icon: RM_ARMOR_ICON[fam] || '🛡️', art: MMGear.ARMOR_ART[id] || null, stat: 'armor', amount: 0, text: 'armor', family: fam, arm: true };
+  }));
+  RM_SLOTS.push('armor'); // the 4th slot exists only with MMGear (and not ?gear=0)
+})();
+const RM_EQ_KEYS = ['weapon', 'charm', 'ring', 'armor']; // every eq key the cleaner keeps (eq.armor survives ?gear=0 / pages without MMGear)
+// Item tier `t` and affix seed `a` as stored: t an integer 1-12 on sparkwand / wpn_ / arm_ ids only (never quickwand: fire-rate stacking); a uint32 >= 1 on T7+.
+// MMGear.clean does it when present (it also clamps arm_ tiers into their band); the fallback keeps the same rules without the band table.
+function rmCleanGear(id, r, raw, aliasT) {
+  if (typeof MMGear !== 'undefined' && MMGear && typeof MMGear.clean === 'function') {
+    const c = MMGear.clean({ n: 1, id, r, t: Number.isInteger(raw.t) ? raw.t : aliasT, a: raw.a });
+    return c && c.id === id ? { t: c.t || 0, a: c.a || 0 } : { t: 0, a: 0 };
+  }
+  const tv = Number.isInteger(raw.t) ? raw.t : aliasT;
+  const t = Number.isInteger(tv) && tv >= 1 && tv <= 12 && (id === 'sparkwand' || RM_WPN_ID.test(id) || RM_ARM_ID.test(id)) ? tv : 0;
+  const a = t >= 7 && Number.isInteger(raw.a) && raw.a >= 1 && raw.a <= 4294967295 ? raw.a : 0;
+  return { t, a };
+}
+// Sell value: the rarity's value, plus 2 x tier for tiered gear (MMGear.sellValue) while gear is on.
+function rmSellValue(it) { return RM_GEAR_ON && it && it.t ? MMGear.sellValue(it.r, it.t) : RM_RARITIES[it.r].sell; }
 // A resolved MMWeapons spec, re-clamped into a plain frozen object the engine trusts. Only the 26 alternate styles count (bases keep today's fire).
 function rmWpnSpec(s) {
   const n = (v, lo, hi, d) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : d);
@@ -219,19 +252,30 @@ function rmCleanSave(s) {
   (Array.isArray(s.items) ? s.items.slice(0, 200) : []).forEach((it) => {
     if (out.items.length >= RM_BACKPACK || !it || typeof it !== 'object') return;
     const uid = rmCleanCount(it.n);
-    const def = typeof it.id === 'string' ? (RM_ITEM_BY_ID[it.id] || (RM_WPN_ID.test(it.id) ? rmInertDef(it.id) : null)) : null;
+    let id = typeof it.id === 'string' ? it.id : null, aliasT;
+    const al = id && typeof MMGear !== 'undefined' && MMGear && typeof MMGear.alias === 'function' ? MMGear.alias(id) : null; // legacy armor_<fam>_t<n> (MMItems / MMQuests.rewardBag)
+    if (al && al.id) { id = al.id; aliasT = al.t; }
+    const def = id ? (RM_ITEM_BY_ID[id] || (RM_WPN_ID.test(id) || RM_ARM_ID.test(id) ? rmInertDef(id) : null)) : null;
     const rar = Math.floor(Number(it.r));
     if (!uid || seen.has(uid) || !def || !(rar >= 0 && rar < RM_RARITIES.length)) return;
     seen.add(uid);
-    out.items.push({ n: uid, id: it.id, r: rar });
+    const o = { n: uid, id, r: rar }; // an item without `t` (every item before G7) stays exactly {n, id, r}
+    const g = rmCleanGear(id, rar, it, aliasT);
+    if (g.t) { o.t = g.t; if (g.a) o.a = g.a; }
+    out.items.push(o);
   });
   out.nextUid = Math.max(rmCleanCount(s.nextUid), 1 + out.items.reduce((m, it) => Math.max(m, it.n), 0));
   out.eq = {};
   const eq = s.eq && typeof s.eq === 'object' ? s.eq : {};
-  RM_SLOTS.forEach((slot) => {
+  RM_EQ_KEYS.forEach((slot) => {
     const it = out.items.find((x) => x.n === rmCleanCount(eq[slot]));
-    if (it && RM_ITEM_BY_ID[it.id].slot === slot) out.eq[slot] = it.n;
+    if (!it) return;
+    const sl = RM_ITEM_BY_ID[it.id].slot;
+    if (sl === slot || (slot === 'armor' && sl === 'none' && RM_ARM_ID.test(it.id))) out.eq[slot] = it.n; // eq.armor is kept (inert) where there is no armor slot
   });
+  // gv / gp only when present (a save without them stays byte-identical); garbage becomes the defaults. gv is also set once any tiered item exists.
+  if (s.gv === 1 || out.items.some((x) => x.t)) out.gv = 1;
+  if (s.gp !== undefined) { const gp = s.gp && typeof s.gp === 'object' && !Array.isArray(s.gp) ? s.gp : {}; out.gp = { b: Math.min(rmCleanCount(gp.b), 9999), d: Math.min(rmCleanCount(gp.d), 9999) }; }
   return out;
 }
 
@@ -272,8 +316,8 @@ function rmMergeSave(mine, stored, opts) {
   a.items.forEach((it) => {
     const other = byUid.get(it.n);
     if (!other) { if (known.has(it.n)) return; items.push({ ...it }); return; } // gone from storage because another tab sold it, or new here
-    if (other.id === it.id && other.r === it.r) { items.push({ ...it }); return; } // same item
-    const fresh = next++; remap[it.n] = fresh; items.push({ n: fresh, id: it.id, r: it.r }); // a uid collision between two different items: this tab's gets a fresh uid, storage's keeps the old one
+    if (other.id === it.id && other.r === it.r && (other.t || 0) === (it.t || 0) && (other.a || 0) === (it.a || 0)) { items.push({ ...it }); return; } // same item: identity is (n, id, r, t, a)
+    const fresh = next++; remap[it.n] = fresh; items.push({ ...it, n: fresh }); // a uid collision between two different items: this tab's gets a fresh uid (keeping t / a), storage's keeps the old one
   });
   const have = new Set(items.map((it) => it.n));
   b.items.forEach((it) => {
@@ -284,6 +328,8 @@ function rmMergeSave(mine, stored, opts) {
   });
   const eq = { ...a.eq }; Object.keys(eq).forEach((slot) => { if (remap[eq[slot]] !== undefined) eq[slot] = remap[eq[slot]]; });
   out.items = items; out.nextUid = next; out.eq = eq; // equipment is per-tab
+  if (a.gv || b.gv) out.gv = 1;
+  if (a.gp || b.gp) { const ga = a.gp || { b: 0, d: 0 }, gb = b.gp || { b: 0, d: 0 }; out.gp = { b: Math.max(ga.b, gb.b), d: Math.max(ga.d, gb.d) }; } // pity only ever helps: the larger count wins
   return rmCleanSave(out);
 }
 
@@ -614,14 +660,27 @@ class RealmArena {
   }
 
   // Stats = base + level + equipped items (recomputed when level / equipment changes, read every frame).
-  _calcStats() {
-    if (this.team && this.team.isPvp) { this.stats = { maxHp: RT_DUEL_HP, dmg: 1, rate: RT_DUEL_RATE, speed: RM_PLAYER.speed, shards: 1, xp: 1, iframes: 0.12 }; return this.stats; } // a duel is fought with identical stats: no gear, no level
+  // opts (G8, optional): { noGear: true } = the same stats with nothing equipped (the "Base" column); { eqOverride: { slot: uid | 0 } } = the stats as if that
+  // slot held that item (the compare UI; level / class gates are skipped for the overridden slots so locked items compare too). With opts the call is
+  // pure: it returns a fresh object and never touches this.stats or the save.
+  _calcStats(opts) {
+    const o = opts && typeof opts === 'object' ? opts : null;
+    const pure = !!(o && (o.noGear || o.eqOverride));
+    if (this.team && this.team.isPvp) { const ds = { maxHp: RT_DUEL_HP, dmg: 1, rate: RT_DUEL_RATE, speed: RM_PLAYER.speed, shards: 1, xp: 1, iframes: 0.12 }; if (!pure) this.stats = ds; return ds; } // a duel is fought with identical stats: no gear, no level, no tiers / armor / affixes
     const st = { maxHp: RM_PLAYER.hp + RM_HP_PER_LEVEL * (this.save.level - 1), dmg: RM_PLAYER.dmg, rate: RM_PLAYER.fireRate, speed: RM_PLAYER.speed, shards: 1, xp: 1, iframes: RM_PLAYER.iframes };
+    const eq = this._eqFor(o); const free = o && o.eqOverride && typeof o.eqOverride === 'object' ? o.eqOverride : null;
+    const gr = { guard: 0, famRes: 0, allRes: 0, resIds: null, status: 0, speed: 0, crit: 0, leech: 0, regen: 0, vital: 0, swift: 0, reach: 0, pierce: 0, blast: 0 }; // tiered gear extras (all 0 without such items)
     RM_SLOTS.forEach((slot) => {
-      const uid = this.save.eq[slot];
+      const uid = eq[slot];
       const it = uid && this.save.items.find((x) => x.n === uid);
       if (!it) return;
-      const def = RM_ITEM_BY_ID[it.id]; const v = def.amount * RM_RARITIES[it.r].mult;
+      const def = RM_ITEM_BY_ID[it.id];
+      if (!def || def.slot !== slot) return;
+      const gated = RM_GEAR_ON && it.t && !(free && Object.prototype.hasOwnProperty.call(free, slot)) ? !this._gearOk(it) : false;
+      if (def.arm) { if (RM_GEAR_ON && !gated) this._armorInto(st, gr, it); return; } // armor: HP / guard / speed / resists (MMGear.armorStats)
+      const tb = RM_GEAR_ON && it.t && !gated && def.stat === 'dmg' ? MMGear.weaponBonus(def.amount, it.t, it.r) : null; // tier bonus: amount/0.5 x WD[t] x Q[r]
+      const v = tb !== null ? tb : def.amount * RM_RARITIES[it.r].mult; // T0 (and a gated / ?gear=0 tiered item): the classic amount x rarity
+      if (tb !== null) this._affixInto(gr, it, 'weapon');
       if (def.stat === 'hp') st.maxHp += Math.round(v);
       else if (def.stat === 'dmg') st.dmg += v;
       else if (def.stat === 'rate') st.rate += v;
@@ -630,6 +689,7 @@ class RealmArena {
       else if (def.stat === 'xp') st.xp += v;
       else if (def.stat === 'iframes') st.iframes += v;
     });
+    if (gr.speed) st.speed += gr.speed; // `fleet` px/s, like armor speed: before the class multipliers
     const hp = this.heroProfile; // additive class profile (setHeroProfile), applied after gear and level; never in duels (returned above)
     if (hp) { st.maxHp = Math.max(1, Math.round(st.maxHp * hp.hp)); st.dmg *= hp.dmg; st.rate *= hp.rate; st.speed *= hp.speed; st.iframes *= hp.iframes; }
     const um = this._unl(); // unlocked passive nodes (MMUnlocks, S12) at the active hero's level; null = classic / ?unlocks=0 / no hero
@@ -640,9 +700,62 @@ class RealmArena {
     const sm = this.player && this.player._stm; // status mods (applyStatus): the damage multiplier incl. buffDmg is capped to 0.5..1.6
     if (sm) { dm = Math.max(0.5, Math.min(1.6, dm * sm.dmg)); st.rate *= sm.rate; st.speed *= sm.speed; }
     st.dmg *= dm;
-    st.guard = this._calcGuard();
-    this.stats = st;
+    // G8 gear extras: affix HP / rate after the class + unlock multipliers; new keys are always present (0 = nothing), so readers never branch on undefined.
+    if (gr.vital > 0) st.maxHp = Math.max(1, Math.round(st.maxHp * (1 + gr.vital)));
+    if (gr.swift > 0) st.rate *= 1 + gr.swift;
+    st.crit = Math.min(0.5, gr.crit); st.status = gr.status; st.leech = gr.leech; st.regen = gr.regen; st.reach = gr.reach; st.pierce = Math.min(3, gr.pierce);
+    st.splashR = gr.blast > 0 ? 24 + gr.blast : 0; st.splashFrac = gr.blast > 0 ? 0.3 : 0; st.splashMax = gr.blast > 0 ? 3 : 0; // `blast` grants {r 24, frac .30, max 3} (+ its px); used by the splash slice (G11)
+    st.resFam = gr.famRes; st.resAll = gr.allRes; st.resIds = gr.resIds; st.resist = Math.min(0.4, gr.famRes + gr.allRes); // armor family resist (statuses in resIds) + the `resist` affix (every status); _resistFor caps at 40%
+    st.guard = this._calcGuard(gr.guard);
+    if (!pure) this.stats = st;
     return st;
+  }
+
+  // The eq map _calcStats reads: the save's, nothing (noGear) or the save's with eqOverride slots replaced (only uids whose item fits that slot).
+  _eqFor(o) {
+    if (o && o.noGear) return {};
+    const eq = this.save.eq;
+    if (!o || !o.eqOverride || typeof o.eqOverride !== 'object') return eq;
+    const out = Object.assign({}, eq);
+    RM_SLOTS.forEach((slot) => {
+      if (!Object.prototype.hasOwnProperty.call(o.eqOverride, slot)) return;
+      const uid = o.eqOverride[slot]; const it = Number.isInteger(uid) && uid > 0 ? this.save.items.find((x) => x.n === uid) : null;
+      if (it && RM_ITEM_BY_ID[it.id] && RM_ITEM_BY_ID[it.id].slot === slot) out[slot] = uid; else delete out[slot];
+    });
+    return out;
+  }
+  // The level the tier equip gate reads (owner decision): the active hero's level when a hero is set, else the account level. Heroes do not level
+  // up yet (most are level 1), so a hero never gates below the account level: max(hero level, account level). Revisit when hero levelling exists.
+  heroGateLevel() {
+    const acct = this.save ? this.save.level : 1;
+    return this._hu && this._hu.level ? Math.max(this._hu.level, acct) : acct;
+  }
+  // Can this tiered item be worn now? Armor: the hero's armor family (MMGear.CLASS_ARMOR) + the tier level gate; a tiered weapon: the level gate
+  // (its style family is checked by _wpnCanEquip). true for T0 items and whenever gear is off (?gear=0 / no MMGear: tiers are ignored).
+  _gearOk(it) { return this._gearWhy(it) === ''; }
+  _gearWhy(it) {
+    if (!RM_GEAR_ON || !it) return '';
+    const def = RM_ITEM_BY_ID[it.id];
+    if (def && def.arm) { let r = null; try { r = MMGear.canEquip(it.id, it.t, this.heroClass(), this.heroGateLevel()); } catch (e) { r = null; } return r && r.ok ? '' : (r && r.reason) || 'class'; }
+    if (it.t && MMGear.gate(it.t) > this.heroGateLevel()) return 'level';
+    return '';
+  }
+  _armorInto(st, gr, it) {
+    let s = null; try { s = MMGear.armorStats(it.id, it.t, it.r); } catch (e) { s = null; }
+    if (!s) return;
+    st.maxHp += s.hp; st.speed += s.speed; gr.guard += s.guard; gr.status += s.statusChance;
+    if (s.res > 0) { gr.resIds = MMGear.FAMILIES[s.family].resists; gr.famRes = s.res; }
+    this._affixInto(gr, it, 'armor');
+  }
+  // T7+ affixes (MMGearAffix.roll: seeded by id + t + a, power cap applied there) summed into the gear extras. Cached per item identity.
+  _affixInto(gr, it, slot) {
+    if (!(it.t >= 7) || !it.a || typeof MMGearAffix === 'undefined') return;
+    const key = `${it.id}:${it.t}:${it.r}:${it.a}`; const c = this._affC || (this._affC = new Map());
+    let sm = c.get(key);
+    if (!sm) { try { sm = MMGearAffix.sum(MMGearAffix.roll(it.id, slot, it.t, it.r, it.a)); } catch (e) { sm = {}; } if (c.size > 64) c.clear(); c.set(key, sm); }
+    const v = (k) => (typeof sm[k] === 'number' && Number.isFinite(sm[k]) ? sm[k] : 0);
+    gr.crit += v('keen'); gr.blast += v('blast'); gr.status += v('venom'); gr.swift += v('swift'); gr.reach += v('reach'); gr.leech += v('leech'); gr.pierce += v('pierce');
+    gr.vital += v('vital'); gr.guard += v('ward'); gr.regen += v('mend'); gr.allRes += v('resist'); gr.speed += v('fleet');
   }
 
   _heroWorldScale() {
@@ -652,10 +765,20 @@ class RealmArena {
   }
 
   // Guard comes from the equipped items via MMStats (0 for every legacy item today); extraGuard is a test/future hook.
-  _calcGuard() {
+  // G8: `gearGuard` = armor GRD (MMGear.armorStats) + the `ward` affix, summed by _calcStats (0 without armor / with ?gear=0). The 25% floor and
+  // armorBroken (guard 0) still apply in _guarded.
+  _calcGuard(gearGuard) {
     let g = Number(this.extraGuard) || 0;
     if (typeof MMStats !== 'undefined') g += MMStats.fromLegacy(this.save).GRD;
+    if (Number.isFinite(gearGuard) && gearGuard > 0) g += gearGuard;
     return g;
+  }
+  // The share of a hostile status the player shrugs off (G8): family resist for its listed statuses + the `resist` affix, capped at 40%. 0 in duels.
+  _resistFor(id) {
+    const st = this.stats;
+    if (!RM_GEAR_ON || !st || (this.team && this.team.isPvp)) return 0;
+    const fam = st.resIds && st.resIds.indexOf(id) >= 0 ? st.resFam || 0 : 0;
+    return Math.max(0, Math.min(0.4, fam + (st.resAll || 0)));
   }
 
   // Enemy bolt damage after guard: max(dmg - guard, 25% of dmg). Guard 0 leaves damage unchanged.
@@ -681,7 +804,12 @@ class RealmArena {
     const o = opts && typeof opts === 'object' ? opts : {};
     const now = this._stT * 1000; const kind = this._stKind(t);
     const before = t.status && t.status.fx ? t.status.fx[id] : null; const was = before ? `${before.until}|${before.stacks}|${before.pot}` : '';
-    const next = MMStatus.apply(t.status, id, { sec: o.sec, stacks: o.stacks, pot: o.pot, src: typeof o.src === 'string' ? o.src : '', kind, fromBolt: !!o.fromBolt, picnic: !!o.picnic, safe: !!o.safe }, now);
+    let sec = o.sec;
+    if (t === this.player) { // G8 player resist (armor family + `resist` affix): a hostile status lasts x (1 - resist); never in duels (_stOn), 0 without such gear
+      const rs = this._resistFor(id), d = MMStatus.DEFS && Object.prototype.hasOwnProperty.call(MMStatus.DEFS, id) ? MMStatus.DEFS[id] : null;
+      if (rs > 0 && d && d.sign < 0) { const base = Number.isFinite(Number(sec)) && sec !== null && sec !== '' ? Number(sec) : d.sec; sec = base * (1 - rs); this.lastResist = { id, rs, sec }; }
+    }
+    const next = MMStatus.apply(t.status, id, { sec, stacks: o.stacks, pot: o.pot, src: typeof o.src === 'string' ? o.src : '', kind, fromBolt: !!o.fromBolt, picnic: !!o.picnic, safe: !!o.safe }, now);
     const f = Object.prototype.hasOwnProperty.call(next.fx, id) ? next.fx[id] : null;
     const ok = !!f && f.until > now && `${f.until}|${f.stacks}|${f.pot}` !== was;
     t.status = next;
@@ -722,6 +850,33 @@ class RealmArena {
       const n = Math.floor(-p._stAcc); p._stAcc += n; const hp = Math.max(1, p.hp - n);
       if (hp < p.hp) { p.hp = hp; this._floatText(p.x, p.y - 22, `-${n}`, '#ff5f6b'); this._syncHud(); }
     }
+  }
+
+  // G8 leech + regen (host / solo only; never in duels, never on a co-op guest, never while down or dead). Both are 0 without T7+ affixes.
+  //  leech: a share of the damage your own bolts deal (_leechAdd), paid out as whole HP from a budget that refills at 3 HP/s (cap 3 HP/s).
+  //  regen (`mend`): HP/s once 3 s of game time have passed since you were last hit. "sick" (noHeal) blocks both, like every heal.
+  _gearTick(dt) {
+    const st = this.stats, p = this.player;
+    if (!st || !(st.leech > 0 || st.regen > 0) || this.state === 'dead' || this.down || (this.team && (this.team.isPvp || this.role === 'guest'))) { this._leechAcc = 0; this._regenAcc = 0; return; }
+    if (st.leech > 0) {
+      this._leechCap = Math.min(3, (this._leechCap || 0) + 3 * dt);
+      const n = Math.floor(Math.min(this._leechAcc || 0, this._leechCap));
+      if (n >= 1) { this._leechAcc -= n; this._leechCap -= n; this.leechHealed = (this.leechHealed || 0) + this._gearHeal(n); }
+    }
+    if (st.regen > 0 && this._stT - (Number.isFinite(this._gHurtT) ? this._gHurtT : -1e9) >= 3 && p.hp < st.maxHp) {
+      this._regenAcc = (this._regenAcc || 0) + st.regen * dt;
+      if (this._regenAcc >= 1) { const n = Math.floor(this._regenAcc); this._regenAcc -= n; this.regenHealed = (this.regenHealed || 0) + this._gearHeal(n); }
+    } else this._regenAcc = 0;
+  }
+  _leechAdd(dmg) {
+    const st = this.stats;
+    if (!st || !(st.leech > 0) || !(dmg > 0) || (this.team && (this.team.isPvp || this.role === 'guest'))) return;
+    this._leechAcc = Math.min(3, (this._leechAcc || 0) + dmg * st.leech); // at most 3 HP banked: no burst heal after a big hit
+  }
+  _gearHeal(n) {
+    const p = this.player; if (this.down || n <= 0 || p.hp >= this.stats.maxHp || (p._stm && p._stm.noHeal)) { this._leechAcc = 0; return 0; }
+    const got = Math.min(Math.round(n), this.stats.maxHp - p.hp); if (got <= 0) return 0;
+    p.hp += got; this._floatText(p.x, p.y - 40, `+${got}`, '#7ee787'); this._syncHud(); return got;
   }
 
   // Enemy bleed: 0.5 x hero damage per second per stack, dealt every 0.5 s.
@@ -1126,6 +1281,7 @@ class RealmArena {
     const wu = this.save && this._heroSrc && !(this.team && this.team.isPvp) ? this.save.eq.weapon : 0; // switching to a hero of another family takes a styled weapon off (it stays in the backpack)
     const wi = wu ? this.save.items.find((x) => x.n === wu) : null;
     if (wi && RM_ITEM_BY_ID[wi.id] && RM_ITEM_BY_ID[wi.id].wpn && !this._wpnCanEquip(RM_ITEM_BY_ID[wi.id])) delete this.save.eq.weapon;
+    if (RM_GEAR_ON && this.save && !(this.team && this.team.isPvp)) RM_SLOTS.forEach((sl) => { const gi = this.save.eq[sl] ? this.save.items.find((x) => x.n === this.save.eq[sl]) : null; if (gi && !this._gearOk(gi)) delete this.save.eq[sl]; }); // G7: armor of another family / a tier above the gate comes off (it stays in the backpack)
     if (this.save) { this._calcStats(); if (this.player && this.player.hp > this.stats.maxHp) this.player.hp = this.stats.maxHp; if (this.active) this._syncHud(); }
     return this._hu ? { cls: this._hu.cls, level: this.heroLevel() } : null;
   }
@@ -1210,7 +1366,8 @@ class RealmArena {
     const lobD = w.lob.radius > 0 ? this._lobDist(aim, w) : 0;
     for (let k = 0; k < n && live < RM_WPN_CAP; k++) {
       const ang = aim + (n > 1 ? (k / (n - 1) - 0.5) * w.spread : 0);
-      const d = w.crit > 0 && this.rng() < w.crit ? base * 2 : base;
+      const wc = Math.min(0.5, w.crit + (this.stats.crit || 0)); // G8: + the `keen` affix crit (0 without it: the rng sequence is unchanged)
+      const d = wc > 0 && this.rng() < wc ? base * 2 : base;
       const ph = w.wave.alt && (k & 1) ? 1 : 0;
       const b = this.firePlayerBulletFrom(p.x, p.y, ang, d, 0, rmWpnWire(w, ph, lobD));
       if (!b) continue;
@@ -1342,7 +1499,9 @@ class RealmArena {
   // A weapon bolt's `st` (RM_WPN_ST index + 1) rolls its onHit chance and applies that status to the enemy it hit.
   _wpnStatus(b, e) {
     const oh = b.ws && b.ws.onHit; const id = RM_WPN_ST[b.st - 1];
-    if (!id || !oh || !(oh.chance > 0) || !e.active || this.rng() >= oh.chance) return false;
+    if (!id || !oh || !(oh.chance > 0) || !e.active) return false;
+    const ch = Math.min(1, oh.chance + (this.stats.status > 0 ? this.stats.status : 0)); // G8: + robe armor status chance + the `venom` affix (0 without them)
+    if (this.rng() >= ch) return false;
     return this.applyStatus(e, id, { sec: oh.sec > 0 ? oh.sec : undefined, src: 'wpn' });
   }
   // Burst follow-ups and orbiters (at most 3; they only hit on the host / solo, a guest just draws its own).
@@ -1401,7 +1560,7 @@ class RealmArena {
   // Icon markup for an item id: <img> from a trusted manifest url (never user data), else the emoji. Fallback on load error is wired by _fixIcons.
   _icon(def) {
     let url = null;
-    try { url = this._itemArt ? this._itemArt.iconUrl(def.wpn && def.art ? def.art : def.id) : null; } catch (e) { url = null; }
+    try { url = this._itemArt ? this._itemArt.iconUrl((def.wpn || def.arm) && def.art ? def.art : def.id) : null; } catch (e) { url = null; }
     if (!url || !/^[A-Za-z0-9_.\/-]+$/.test(url)) return def.icon;
     return `<img class="realm-ico" src="${url}" alt="" width="32" height="32" data-item="${def.id}" style="image-rendering:pixelated">`;
   }
@@ -1413,7 +1572,7 @@ class RealmArena {
     let e = c[id];
     if (e === undefined) {
       let url = null;
-      try { const d = RM_ITEM_BY_ID[id]; url = this._itemArt.iconUrl(d && d.wpn && d.art ? d.art : id); } catch (err) { url = null; }
+      try { const d = RM_ITEM_BY_ID[id]; url = this._itemArt.iconUrl(d && (d.wpn || d.arm) && d.art ? d.art : id); } catch (err) { url = null; }
       if (!url || !/^[A-Za-z0-9_.\/-]+$/.test(url)) return null; // not cached: may become available later
       const img = new Image(); e = c[id] = { img, cv: [null, null, null, null], dead: false };
       img.onerror = () => { e.dead = true; if (this._itemArt && this._itemArt.markBad) this._itemArt.markBad(id); };
@@ -2022,10 +2181,11 @@ class RealmArena {
     if (this._wpnOn()) { this._fireWeapon(aim); return; }
     const hp = this.heroProfile;
     if (!hp || (this.team && this.team.isPvp) || (hp.shots === 1 && hp.pierce === 0 && hp.shotDmg === 1 && hp.critChance === 0 && hp.boltSpeed === 1)) { this.firePlayerBullet(aim); return; }
+    const cc = Math.min(0.5, hp.critChance + (this.stats.crit || 0)); // G8: + the `keen` affix crit
     const base = this.stats.dmg * (this.sg.powT > 0 ? this.sg.powMul : 1) * hp.shotDmg;
     const n = hp.shots;
     for (let k = 0; k < n; k++) {
-      const d = hp.critChance > 0 && this.rng() < hp.critChance ? base * 2 : base;
+      const d = cc > 0 && this.rng() < cc ? base * 2 : base;
       const b = this.firePlayerBulletFrom(this.player.x, this.player.y, aim + (n > 1 ? (k / (n - 1) - 0.5) * hp.spread : 0), d, 0);
       if (!b) continue;
       b.pr = hp.pierce; if (d !== base) b.cr = 1;
@@ -2033,7 +2193,13 @@ class RealmArena {
     }
   }
 
-  firePlayerBullet(angle) { this.firePlayerBulletFrom(this.player.x, this.player.y, angle, this.stats.dmg * (this.sg.powT > 0 ? this.sg.powMul : 1), 0); }
+  firePlayerBullet(angle) {
+    const base = this.stats.dmg * (this.sg.powT > 0 ? this.sg.powMul : 1);
+    const kc = this.stats.crit > 0 && !(this.team && this.team.isPvp) ? this.stats.crit : 0; // G8 `keen` crit on the plain bolt (no roll at 0: unchanged rng)
+    const crit = kc > 0 && this.rng() < kc;
+    const b = this.firePlayerBulletFrom(this.player.x, this.player.y, angle, crit ? base * 2 : base, 0);
+    if (b && crit) b.cr = 1;
+  }
 
   // owner 0 = you (host), 1 = your partner. Everything a bolt does is decided on the host; guests only draw them.
   // wcode (optional): weapon-style wire code, sent as the 5th `fp` element so guests draw the same path (old guests ignore it).
@@ -2070,7 +2236,7 @@ class RealmArena {
     this._readReduced();
     if (this.paused) { this._readPad(); this._padPauseEdge(); return; } // backpack open (Start can still close it)
     const p = this.player;
-    this._stT += dt; this._stTick(dt); this._focusTick(dt);
+    this._stT += dt; this._stTick(dt); this._focusTick(dt); this._gearTick(dt);
     this._accT += dt; if (this._accT >= 1) { this._accT = 0; this.refreshAccess(); }
     this.shake = Math.max(0, this.shake - dt * 30);
     this.flash = Math.max(0, this.flash - dt * 2.2);
@@ -2411,6 +2577,7 @@ class RealmArena {
         const he = this.enemies[hj];
         if (this._sparks) this._spawnSpark(b);
         if (b.ws) this._wpnHit(b, he, hj);
+        if (!b.own && this.stats.leech > 0) this._leechAdd(Math.min(b.dmg || this.stats.dmg, Math.max(0, he.hp))); // G8 leech: your own bolts only (never a partner's)
         this._hitEnemy(he, b.dmg || this.stats.dmg, b.cr === 1);
       }
       if (!b.active) continue;
@@ -2505,7 +2672,7 @@ class RealmArena {
     if (p._stm) tk = Math.max(0.5, Math.min(1.5, tk * p._stm.taken)); // status mods (armored / armorBroken / curse), capped 0.5..1.5
     if (tk !== 1) dmg = Math.max(1, Math.round(dmg * tk));
     p.hp = Math.max(0, p.hp - dmg);
-    this._heroHurtAt = performance.now() / 1000;
+    this._heroHurtAt = performance.now() / 1000; this._gHurtT = this._stT; // _gHurtT: game time of the last hit (G8 regen waits 3 s)
     this._snd('hurt');
     p.iframes = this.stats.iframes;
     this.flash = 1; this.shake = Math.max(this.shake, 8);
@@ -2734,7 +2901,7 @@ class RealmArena {
       if (b.t > 0.4 && d < 110) { const k = (230 * dt) / d; b.x += dx * k; b.y += dy * k; } // bags drift toward you
       if (b.t > 0.25 && d < 20 && !this.down) { b.active = false; this.collectItem(b.id, b.r); continue; }
       const q = this.team && this.role === 'host' && this.team.partner && this.team.partner.ready && !this.team.partner.down ? this.team.partner : null;
-      if (q && b.t > 0.25 && Math.hypot(q.x - b.x, q.y - b.y) < 20) { b.active = false; this.team.ev('loot', [b.id, b.r], 1); }
+      if (q && b.t > 0.25 && !RM_ARM_ID.test(b.id) && Math.hypot(q.x - b.x, q.y - b.y) < 20) { b.active = false; this.team.ev('loot', [b.id, b.r], 1); } // `loot` stays [id, r] (never t / a); armor is never handed to a partner
     }
   }
 
@@ -3344,8 +3511,9 @@ class RealmArena {
     const it = this.save.items.find((x) => x.n === uid);
     if (!it) return false;
     const slot = RM_ITEM_BY_ID[it.id].slot;
-    if (RM_SLOTS.indexOf(slot) < 0) return false; // inert wpn_ item from a newer build: kept, never equipped
+    if (RM_SLOTS.indexOf(slot) < 0) return false; // inert wpn_ / arm_ item from a newer build (or ?gear=0): kept, never equipped
     if (this.save.eq[slot] !== uid && RM_ITEM_BY_ID[it.id].wpn && !this._wpnCanEquip(RM_ITEM_BY_ID[it.id])) return false; // styled weapon: the hero's family only
+    if (this.save.eq[slot] !== uid && !this._gearOk(it)) return false; // G7: armor by class family (MMGear), tiers by heroGateLevel(); unequipping is always allowed
     if (this.save.eq[slot] === uid) delete this.save.eq[slot]; else this.save.eq[slot] = uid;
     this._afterGearChange();
     return true;
@@ -3355,7 +3523,7 @@ class RealmArena {
   combinable(uid) {
     const it = this.save.items.find((x) => x.n === uid);
     if (!it || it.r >= RM_RARITIES.length - 1 || RM_ITEM_BY_ID[it.id].inert) return null;
-    const group = this.save.items.filter((x) => x.id === it.id && x.r === it.r);
+    const group = this.save.items.filter((x) => x.id === it.id && x.r === it.r && (x.t || 0) === (it.t || 0)); // tiered gear: the same tier too (the survivor keeps its own `a`)
     return group.length >= RM_COMBINE_COUNT ? { keep: it, group } : null;
   }
 
@@ -3363,12 +3531,12 @@ class RealmArena {
     const c = this.combinable(uid); if (!c) return false;
     const sv = this.save;
     // The survivor is the equipped copy if there is one (so your damage goes up at once), else the one you clicked; spend unequipped copies first.
-    const eqUids = new Set(RM_SLOTS.map((sl) => sv.eq[sl]).filter(Boolean));
+    const eqUids = new Set(RM_EQ_KEYS.map((sl) => sv.eq[sl]).filter(Boolean));
     c.keep = c.group.find((x) => eqUids.has(x.n)) || c.keep;
     const others = c.group.filter((x) => x !== c.keep).sort((a, b) => (eqUids.has(a.n) ? 1 : 0) - (eqUids.has(b.n) ? 1 : 0)).slice(0, RM_COMBINE_COUNT - 1);
     const gone = new Set(others.map((x) => x.n));
     sv.items = sv.items.filter((x) => !gone.has(x.n));
-    RM_SLOTS.forEach((slot) => { if (gone.has(sv.eq[slot])) delete sv.eq[slot]; });
+    RM_EQ_KEYS.forEach((slot) => { if (gone.has(sv.eq[slot])) delete sv.eq[slot]; });
     c.keep.r += 1;
     this._snd('levelup');
     this._itemText2(this.player.x, this.player.y - 34, c.keep.id, c.keep.r, `${RM_RARITIES[c.keep.r].name}!`, RM_ITEM_BY_ID[c.keep.id].icon, RM_RARITIES[c.keep.r].color);
@@ -3380,9 +3548,9 @@ class RealmArena {
     const i = this.save.items.findIndex((x) => x.n === uid);
     if (i < 0) return false;
     const it = this.save.items[i];
-    this.save.shards += RM_RARITIES[it.r].sell;
+    this.save.shards += rmSellValue(it);
     this.save.items.splice(i, 1);
-    RM_SLOTS.forEach((slot) => { if (this.save.eq[slot] === uid) delete this.save.eq[slot]; });
+    RM_EQ_KEYS.forEach((slot) => { if (this.save.eq[slot] === uid) delete this.save.eq[slot]; });
     this._afterGearChange();
     return true;
   }
@@ -3405,8 +3573,15 @@ class RealmArena {
   }
 
   _itemText(it) {
-    const def = RM_ITEM_BY_ID[it.id]; const v = def.amount * RM_RARITIES[it.r].mult;
+    const def = RM_ITEM_BY_ID[it.id];
     if (def.inert) return def.text;
+    if (def.arm) { // G7 armor: its MMGear numbers
+      let a = null; try { a = MMGear.armorStats(it.id, it.t, it.r); } catch (e) { a = null; }
+      if (!a) return def.text;
+      return [`+${a.hp} HP`, `+${a.guard} guard`].concat(a.speed ? [`${a.speed > 0 ? '+' : ''}${a.speed} speed`] : [], a.res > 0 ? [`${Math.round(a.res * 100)}% resist`] : []).join(' · ');
+    }
+    const tb = RM_GEAR_ON && it.t && def.stat === 'dmg' ? MMGear.weaponBonus(def.amount, it.t, it.r) : null;
+    const v = tb !== null ? tb : def.amount * RM_RARITIES[it.r].mult;
     const num = def.pct ? `+${Math.round(v * 100)}%` : `+${Math.round(v * 10) / 10}`;
     return `${num} ${def.text}`;
   }
@@ -3416,21 +3591,38 @@ class RealmArena {
     if (!root) return;
     const sv = this.save;
     const eqUids = new Set(RM_SLOTS.map((sl) => sv.eq[sl]).filter(Boolean));
-    let html = `<div id="realm-bp-stats">${this._statLine()}</div><button type="button" class="eq" data-open-shop="1" aria-label="Open the shop (V)" style="min-height:44px;margin:4px 0">🛒 Shop (V)</button><div class="realm-bp-slots">`;
+    const grid = RM_SLOTS.length > 3 ? ' style="grid-template-columns:repeat(auto-fit,minmax(78px,1fr))"' : ''; // 4 slots (armor): wraps to 2x2 on a phone
+    let html = `<div id="realm-bp-stats">${this._statLine()}</div><button type="button" class="eq" data-open-shop="1" aria-label="Open the shop (V)" style="min-height:44px;margin:4px 0">🛒 Shop (V)</button><div class="realm-bp-slots"${grid}>`;
     RM_SLOTS.forEach((slot) => {
       const it = sv.items.find((x) => x.n === sv.eq[slot]);
       const cw = !it && slot === 'weapon' ? this._classWeaponName() : ''; // PT2 #15: the class weapon the hero fires, not "weapon: empty"
-      html += `<div class="realm-bp-slot" data-slot="${slot}">${it ? `<span style="color:${RM_RARITIES[it.r].color}">${this._icon(RM_ITEM_BY_ID[it.id])} ${RM_ITEM_BY_ID[it.id].name}</span>` : cw ? `<span class="rm-classwpn" title="Class weapon">${this._slotIcon('weapon')}${cw}</span>` : `<span class="dim">${slot}: empty</span>`}</div>`;
+      html += `<div class="realm-bp-slot" data-slot="${slot}">${it ? `<span style="color:${RM_RARITIES[it.r].color}">${this._icon(RM_ITEM_BY_ID[it.id])} ${this._tierTag(it)}${RM_ITEM_BY_ID[it.id].name}</span>` : cw ? `<span class="rm-classwpn" title="Class weapon">${this._slotIcon('weapon')}${cw}</span>` : `<span class="dim">${slot === 'armor' ? this._slotIcon('armor') : ''}${slot}: empty</span>`}</div>`;
     });
     html += `</div><div class="realm-bp-count">${sv.items.length} / ${RM_BACKPACK} items</div><ul id="realm-bp-list">`;
     if (!sv.items.length) html += '<li class="dim">Nothing yet — defeat enemies to find loot bags.</li>';
     sv.items.forEach((it) => {
-      const def = RM_ITEM_BY_ID[it.id]; const rar = RM_RARITIES[it.r]; const on = eqUids.has(it.n);
-      html += `<li data-uid="${it.n}" class="${on ? 'on' : ''}"><span class="nm" style="color:${rar.color}">${this._icon(def)} ${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(it)}</span>${def.slot === 'weapon' ? this._cmpHtml(it, on) : ''}${def.inert ? '<button type="button" class="eq" disabled aria-label="Not usable yet">Equip</button>' : def.wpn && !on && !this._wpnCanEquip(def) ? `<button type="button" class="eq" disabled data-wpn-lock="1" aria-label="${this._wpnHint(def)} only" title="${this._wpnHint(def)}">🔒 ${def.family.charAt(0).toUpperCase() + def.family.slice(1)}</button>` : `<button type="button" class="eq" data-act="equip" data-uid="${it.n}">${on ? 'Unequip' : 'Equip'}</button>`}${this.combinable(it.n) ? `<button type="button" class="eq" data-combine="${it.n}" aria-label="Combine ${RM_COMBINE_COUNT} ${rar.name} ${def.name} into one ${RM_RARITIES[it.r + 1].name}">Combine ${RM_COMBINE_COUNT}→${RM_RARITIES[it.r + 1].name}</button>` : ''}<button type="button" class="dc" data-act="discard" data-uid="${it.n}" aria-label="Sell ${def.name} for ${rar.sell} shards">Sell ${rar.sell}💎</button></li>`;
+      const def = RM_ITEM_BY_ID[it.id]; const rar = RM_RARITIES[it.r]; const on = eqUids.has(it.n); const sell = rmSellValue(it); const why = on ? '' : this._gearWhy(it);
+      html += `<li data-uid="${it.n}" class="${on ? 'on' : ''}"><span class="nm" style="color:${rar.color}">${this._icon(def)} ${this._tierTag(it)}${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(it)}</span>${def.slot === 'weapon' ? this._cmpHtml(it, on) : ''}${def.inert ? '<button type="button" class="eq" disabled aria-label="Not usable yet">Equip</button>' : def.wpn && !on && !this._wpnCanEquip(def) ? `<button type="button" class="eq" disabled data-wpn-lock="1" aria-label="${this._wpnHint(def)} only" title="${this._wpnHint(def)}">🔒 ${def.family.charAt(0).toUpperCase() + def.family.slice(1)}</button>` : why ? this._gearLockHtml(it, def, why) : `<button type="button" class="eq" data-act="equip" data-uid="${it.n}">${on ? 'Unequip' : 'Equip'}</button>`}${this.combinable(it.n) ? `<button type="button" class="eq" data-combine="${it.n}" aria-label="Combine ${RM_COMBINE_COUNT} ${rar.name} ${def.name} into one ${RM_RARITIES[it.r + 1].name}">Combine ${RM_COMBINE_COUNT}→${RM_RARITIES[it.r + 1].name}</button>` : ''}<button type="button" class="dc" data-act="discard" data-uid="${it.n}" aria-label="Sell ${def.name} for ${sell} shards">Sell ${sell}💎</button></li>`;
     });
     html += '</ul>';
     root.innerHTML = html; this._fixIcons(root); this._bindCmp(root);
+    if (this._cmpOnUid) { const on = root.querySelector(`#realm-bp-list li[data-uid="${this._cmpOnUid}"]`); if (on) on.classList.add('cmp-on'); } // a long-pressed compare line survives a re-render
     root.querySelectorAll('img.rm-slot-ico').forEach((img) => { if (img.complete && !img.naturalWidth) img.remove(); else img.addEventListener('error', () => img.remove(), { once: true }); });
+  }
+
+  // G7: a small "T7" tier label (tier colour + text, never colour alone) in front of a tiered item's name; '' for T0 or with gear off.
+  _tierTag(it) {
+    if (!RM_GEAR_ON || !it || !it.t) return '';
+    const c = MMGear.TIER_COLORS[it.t - 1] || '#c9d1d9';
+    return `<span class="rm-tier" style="color:${c};font-weight:700;font-size:11px;margin-right:3px">T${it.t}</span>${MMGear.soulbound(it.t) ? '🔗 ' : ''}`;
+  }
+  // The disabled equip button of a tiered item the hero cannot wear: another armor family ("🔒 Heavy", the _wpnHint pattern) or a level gate ("🔒 Lv 16").
+  _gearLockHtml(it, def, why) {
+    if (why === 'level') { const lv = MMGear.gate(it.t); return `<button type="button" class="eq" disabled data-gear-lock="level" aria-label="Needs level ${lv}" title="Needs level ${lv}">🔒 Lv ${lv}</button>`; }
+    const fam = def.family || ''; const F = fam ? fam.charAt(0).toUpperCase() + fam.slice(1) : 'Armor';
+    const cls = Object.keys(MMGear.CLASS_ARMOR).filter((k) => MMGear.CLASS_ARMOR[k] === fam).map((k) => k.charAt(0).toUpperCase() + k.slice(1)).join(', ');
+    const hint = cls ? `${F}: ${cls}` : F;
+    return `<button type="button" class="eq" disabled data-gear-lock="class" aria-label="${hint} only" title="${hint}">🔒 ${F}</button>`;
   }
 
   // ---------- backpack weapon compare (S14) ----------
@@ -3446,7 +3638,8 @@ class RealmArena {
       } catch (e) { spec = null; }
     }
     const hp = this.heroProfile;
-    const v = def && !def.inert ? def.amount * RM_RARITIES[r].mult : 0;
+    const tb = RM_GEAR_ON && it && it.t && def && !def.inert && def.stat === 'dmg' ? MMGear.weaponBonus(def.amount, it.t, r) : null; // G8: a tiered weapon compares with its tier bonus
+    const v = def && !def.inert ? (tb !== null ? tb : def.amount * RM_RARITIES[r].mult) : 0;
     const shots = spec ? Math.max(1, spec.count) * Math.max(1, spec.burst ? spec.burst.n : 1) : (hp ? hp.shots : 1);
     const shotDmg = (RM_PLAYER.dmg + (def && def.stat === 'dmg' ? v : 0)) * (spec ? spec.dmg : (hp ? hp.shotDmg : 1));
     const rate = (RM_PLAYER.fireRate + (def && def.stat === 'rate' ? v : 0)) * (spec && !spec.base ? spec.rate : 1);
@@ -3494,13 +3687,15 @@ class RealmArena {
     root.addEventListener('pointerdown', (e) => {
       const row = e.target.closest && e.target.closest('#realm-bp-list li');
       if (!row || !row.querySelector('.rm-cmp') || e.target.closest('button')) return;
-      clear(); li = row;
+      clear(); li = row.dataset.uid; // by uid, not element: a re-render mid-press (item art arriving) replaces the row
       timer = setTimeout(() => {
-        const r = li; clear();
-        if (!r || !r.isConnected) return;
+        const u = li; clear();
+        const r = u ? root.querySelector(`#realm-bp-list li[data-uid="${u}"]`) : null;
+        if (!r) return;
         const was = r.classList.contains('cmp-on');
         root.querySelectorAll('li.cmp-on').forEach((x) => x.classList.remove('cmp-on'));
         if (!was) r.classList.add('cmp-on');
+        this._cmpOnUid = was ? '' : u; // kept across re-renders (renderBackpack re-applies it)
       }, 420);
     });
     ['pointerup', 'pointercancel', 'pointerleave'].forEach((t) => root.addEventListener(t, clear));

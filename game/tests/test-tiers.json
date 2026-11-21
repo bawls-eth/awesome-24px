@@ -938,5 +938,13 @@
   "shared-mm-tame.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "gear-save-tolerance.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "gear-stats-pipeline.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
