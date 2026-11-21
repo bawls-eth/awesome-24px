@@ -7,12 +7,14 @@
     const req = (p) => { try { return require(p); } catch (e) { return null; } };
     module.exports = factory(() => ({
       profile: req('./mm-profile.js'), map: req('./mm-map.js'), angler: req('./mm-angler.js'),
-      bugs: req('./mm-bugs.js'), hubProfile: req('./profile.js')
+      bugs: req('./mm-bugs.js'), hubProfile: req('./profile.js'),
+      access: req('./mm-access.js'), gift: req('./mm-gift.js')
     }));
   } else {
     root.MMBackup = factory(() => ({
       profile: root.MMProfile || null, map: root.MMMap || null, angler: root.MMAngler || null,
-      bugs: root.MMBugs || null, hubProfile: root.MMHubProfile || null
+      bugs: root.MMBugs || null, hubProfile: root.MMHubProfile || null,
+      access: root.MMAccess || null, gift: root.MMGift || null
     }));
   }
 }(typeof self !== 'undefined' ? self : this, function (getOwners) {
@@ -67,14 +69,17 @@
     'pixeltown-realm-v1': (o, v) => cleanPlain(v),
     'pixeltown-arms-v1': (o, v) => cleanPlain(v),
     'pixeltown-stalk-v1': (o, v) => cleanPlain(v),
-    'pixeltown-jam-v1': (o, v) => cleanPlain(v)
+    'pixeltown-jam-v1': (o, v) => cleanPlain(v),
+    'pixeltown-access-v1': (o, v) => (o.access && o.access.prefs ? o.access.prefs.clean(v) : cleanPlain(v)),
+    'pixeltown-gift-v1': (o, v) => (o.gift ? o.gift.clean(v) : cleanPlain(v))
   };
   const KNOWN = Object.keys(CLEANERS).concat(['pixeltown-panel-collapsed']);
   const NAMES = {
     'pixeltown-save-v1': 'town save', 'pixeltown-mm-v1': 'Mad Maze heroes and stash', 'pixeltown-hub-v1': 'hub map',
     'pixeltown-angler-v1': 'Angler journal', 'pixeltown-bugs-v1': 'Bug Safari journal', 'pixeltown-profile-v1': 'player profile',
     'pixeltown-panel-collapsed': 'panel setting', 'pixeltown-realm-v1': 'Realm progress', 'pixeltown-arms-v1': 'weapon unlocks',
-    'pixeltown-stalk-v1': 'Stalk Market save', 'pixeltown-jam-v1': 'Jam save'
+    'pixeltown-stalk-v1': 'Stalk Market save', 'pixeltown-jam-v1': 'Jam save',
+    'pixeltown-access-v1': 'accessibility settings', 'pixeltown-gift-v1': 'daily gift'
   };
   const label = (k) => NAMES[k] || k;
 

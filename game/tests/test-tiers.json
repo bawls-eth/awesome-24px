@@ -387,6 +387,14 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-access.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-gift.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "shared-mm-quests.test.js": {
     "class": "node",
     "tier": "smoke"
