@@ -25,6 +25,7 @@
     'w3-deepdelve': '../games/deepdelve/index.html',
     'w5-safari': '../games/festival/bugs.html',
     'w2-catacombs': '../games/mad-maze/index.html?mode=dungeon&seed=1&from=hub',
+    'w7-isles': '../games/isles/index.html?from=hub',
   });
 
   const $ = (id) => document.getElementById(id);

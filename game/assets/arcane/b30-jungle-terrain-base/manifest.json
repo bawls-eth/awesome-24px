@@ -1,0 +1,486 @@
+{
+  "batch": "b30",
+  "label": "jungle-terrain-base",
+  "assets": [
+    {
+      "id": "tile_jungle_floor_a",
+      "path": "tiles/tile_jungle_floor_a.png",
+      "category": "tile",
+      "terrain": "jungle_floor",
+      "variant": "a",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_jungle_floor_b",
+      "path": "tiles/tile_jungle_floor_b.png",
+      "category": "tile",
+      "terrain": "jungle_floor",
+      "variant": "b",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_jungle_floor_c",
+      "path": "tiles/tile_jungle_floor_c.png",
+      "category": "tile",
+      "terrain": "jungle_floor",
+      "variant": "c",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_jungle_floor_d",
+      "path": "tiles/tile_jungle_floor_d.png",
+      "category": "tile",
+      "terrain": "jungle_floor",
+      "variant": "d",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_jungle_moss_a",
+      "path": "tiles/tile_jungle_moss_a.png",
+      "category": "tile",
+      "terrain": "jungle_moss",
+      "variant": "a",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_jungle_moss_b",
+      "path": "tiles/tile_jungle_moss_b.png",
+      "category": "tile",
+      "terrain": "jungle_moss",
+      "variant": "b",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_jungle_moss_c",
+      "path": "tiles/tile_jungle_moss_c.png",
+      "category": "tile",
+      "terrain": "jungle_moss",
+      "variant": "c",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_jungle_moss_d",
+      "path": "tiles/tile_jungle_moss_d.png",
+      "category": "tile",
+      "terrain": "jungle_moss",
+      "variant": "d",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_fern_thicket_a",
+      "path": "tiles/tile_fern_thicket_a.png",
+      "category": "tile",
+      "terrain": "fern_thicket",
+      "variant": "a",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_fern_thicket_b",
+      "path": "tiles/tile_fern_thicket_b.png",
+      "category": "tile",
+      "terrain": "fern_thicket",
+      "variant": "b",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_fern_thicket_c",
+      "path": "tiles/tile_fern_thicket_c.png",
+      "category": "tile",
+      "terrain": "fern_thicket",
+      "variant": "c",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_fern_thicket_d",
+      "path": "tiles/tile_fern_thicket_d.png",
+      "category": "tile",
+      "terrain": "fern_thicket",
+      "variant": "d",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_mud_a",
+      "path": "tiles/tile_mud_a.png",
+      "category": "tile",
+      "terrain": "mud",
+      "variant": "a",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_mud_b",
+      "path": "tiles/tile_mud_b.png",
+      "category": "tile",
+      "terrain": "mud",
+      "variant": "b",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_mud_c",
+      "path": "tiles/tile_mud_c.png",
+      "category": "tile",
+      "terrain": "mud",
+      "variant": "c",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_mud_d",
+      "path": "tiles/tile_mud_d.png",
+      "category": "tile",
+      "terrain": "mud",
+      "variant": "d",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_mud_deep_a",
+      "path": "tiles/tile_mud_deep_a.png",
+      "category": "tile",
+      "terrain": "mud_deep",
+      "variant": "a",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_mud_deep_b",
+      "path": "tiles/tile_mud_deep_b.png",
+      "category": "tile",
+      "terrain": "mud_deep",
+      "variant": "b",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_mud_deep_c",
+      "path": "tiles/tile_mud_deep_c.png",
+      "category": "tile",
+      "terrain": "mud_deep",
+      "variant": "c",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_mud_deep_d",
+      "path": "tiles/tile_mud_deep_d.png",
+      "category": "tile",
+      "terrain": "mud_deep",
+      "variant": "d",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_river_murk_a",
+      "path": "tiles/tile_river_murk_a.png",
+      "category": "tile",
+      "terrain": "river_murk",
+      "variant": "a",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_river_murk_b",
+      "path": "tiles/tile_river_murk_b.png",
+      "category": "tile",
+      "terrain": "river_murk",
+      "variant": "b",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_river_murk_c",
+      "path": "tiles/tile_river_murk_c.png",
+      "category": "tile",
+      "terrain": "river_murk",
+      "variant": "c",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_river_murk_d",
+      "path": "tiles/tile_river_murk_d.png",
+      "category": "tile",
+      "terrain": "river_murk",
+      "variant": "d",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_black_sand_a",
+      "path": "tiles/tile_black_sand_a.png",
+      "category": "tile",
+      "terrain": "black_sand",
+      "variant": "a",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_black_sand_b",
+      "path": "tiles/tile_black_sand_b.png",
+      "category": "tile",
+      "terrain": "black_sand",
+      "variant": "b",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_black_sand_c",
+      "path": "tiles/tile_black_sand_c.png",
+      "category": "tile",
+      "terrain": "black_sand",
+      "variant": "c",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_black_sand_d",
+      "path": "tiles/tile_black_sand_d.png",
+      "category": "tile",
+      "terrain": "black_sand",
+      "variant": "d",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_temple_stone_a",
+      "path": "tiles/tile_temple_stone_a.png",
+      "category": "tile",
+      "terrain": "temple_stone",
+      "variant": "a",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_temple_stone_b",
+      "path": "tiles/tile_temple_stone_b.png",
+      "category": "tile",
+      "terrain": "temple_stone",
+      "variant": "b",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_temple_stone_c",
+      "path": "tiles/tile_temple_stone_c.png",
+      "category": "tile",
+      "terrain": "temple_stone",
+      "variant": "c",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_temple_stone_d",
+      "path": "tiles/tile_temple_stone_d.png",
+      "category": "tile",
+      "terrain": "temple_stone",
+      "variant": "d",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_temple_moss_a",
+      "path": "tiles/tile_temple_moss_a.png",
+      "category": "tile",
+      "terrain": "temple_moss",
+      "variant": "a",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_temple_moss_b",
+      "path": "tiles/tile_temple_moss_b.png",
+      "category": "tile",
+      "terrain": "temple_moss",
+      "variant": "b",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_temple_moss_c",
+      "path": "tiles/tile_temple_moss_c.png",
+      "category": "tile",
+      "terrain": "temple_moss",
+      "variant": "c",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_temple_moss_d",
+      "path": "tiles/tile_temple_moss_d.png",
+      "category": "tile",
+      "terrain": "temple_moss",
+      "variant": "d",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_orchid_moss_a",
+      "path": "tiles/tile_orchid_moss_a.png",
+      "category": "tile",
+      "terrain": "orchid_moss",
+      "variant": "a",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_orchid_moss_b",
+      "path": "tiles/tile_orchid_moss_b.png",
+      "category": "tile",
+      "terrain": "orchid_moss",
+      "variant": "b",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_orchid_moss_c",
+      "path": "tiles/tile_orchid_moss_c.png",
+      "category": "tile",
+      "terrain": "orchid_moss",
+      "variant": "c",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_orchid_moss_d",
+      "path": "tiles/tile_orchid_moss_d.png",
+      "category": "tile",
+      "terrain": "orchid_moss",
+      "variant": "d",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_vine_root_a",
+      "path": "tiles/tile_vine_root_a.png",
+      "category": "tile",
+      "terrain": "vine_root",
+      "variant": "a",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_vine_root_b",
+      "path": "tiles/tile_vine_root_b.png",
+      "category": "tile",
+      "terrain": "vine_root",
+      "variant": "b",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_vine_root_c",
+      "path": "tiles/tile_vine_root_c.png",
+      "category": "tile",
+      "terrain": "vine_root",
+      "variant": "c",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_vine_root_d",
+      "path": "tiles/tile_vine_root_d.png",
+      "category": "tile",
+      "terrain": "vine_root",
+      "variant": "d",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_jungle_cliff_a",
+      "path": "tiles/tile_jungle_cliff_a.png",
+      "category": "tile",
+      "terrain": "jungle_cliff",
+      "variant": "a",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_jungle_cliff_b",
+      "path": "tiles/tile_jungle_cliff_b.png",
+      "category": "tile",
+      "terrain": "jungle_cliff",
+      "variant": "b",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_jungle_cliff_c",
+      "path": "tiles/tile_jungle_cliff_c.png",
+      "category": "tile",
+      "terrain": "jungle_cliff",
+      "variant": "c",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    },
+    {
+      "id": "tile_jungle_cliff_d",
+      "path": "tiles/tile_jungle_cliff_d.png",
+      "category": "tile",
+      "terrain": "jungle_cliff",
+      "variant": "d",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32
+    }
+  ]
+}

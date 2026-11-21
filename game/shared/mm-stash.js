@@ -102,6 +102,19 @@
     res.items = items; res.shards = f.last.shards; res.profile = p; res.finds = f;
     return res;
   }
+  // Hand deposit (hero pack -> stash). Mutates `profile`; returns { ok, msg, slot }. Soulbound (t >= 11) is refused with a friendly message; t / a ride along untouched.
+  const SOULBOUND_MSG = 'Soulbound gear stays with its hero, so it cannot go in the stash.';
+  function deposit(profile, heroId, idx) {
+    const h = isObj(profile) && Array.isArray(profile.heroes) ? profile.heroes.find((x) => x && x.id === heroId) : null;
+    if (!h || !Array.isArray(h.items) || !isObj(h.items[idx])) return { ok: false, msg: 'Nothing to move.', slot: -1 };
+    if (soulbound(h.items[idx])) return { ok: false, msg: SOULBOUND_MSG, slot: -1 };
+    if (!Array.isArray(profile.stash)) profile.stash = [];
+    while (profile.stash.length < STASH_SLOTS) profile.stash.push(null);
+    const slot = profile.stash.indexOf(null);
+    if (slot < 0) return { ok: false, msg: 'The stash is full (' + STASH_SLOTS + ' slots).', slot: -1 };
+    profile.stash[slot] = h.items.splice(idx, 1)[0];
+    return { ok: true, msg: 'Moved to the stash.', slot: slot };
+  }
   function text(r) { // "Stashed N items, +M shards" (+ fame / waiting notes)
     if (!r) return '';
     const n = r.items || 0;
@@ -142,7 +155,7 @@
 
   return {
     REALM_KEY: REALM_KEY, MM_KEY: MM_KEY, STASH_SLOTS: STASH_SLOTS, CARRY_MAX: CARRY_MAX, MAX_PENDING: MAX_PENDING, MAX_RECENT: MAX_RECENT, SOURCES: SRC,
-    soulbound: soulbound, SOULBOUND_T: SOULBOUND_T, cleanFinds: cleanFinds, record: record, addFame: addFame, payout: payout, text: text,
+    soulbound: soulbound, deposit: deposit, SOULBOUND_MSG: SOULBOUND_MSG, SOULBOUND_T: SOULBOUND_T, cleanFinds: cleanFinds, record: record, addFame: addFame, payout: payout, text: text,
     readFinds: readFinds, writeFinds: writeFinds, recordTo: recordTo, addFameTo: addFameTo, settle: settle,
   };
 }));

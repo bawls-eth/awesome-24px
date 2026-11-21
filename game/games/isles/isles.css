@@ -1,0 +1,38 @@
+:root { --bg:#0f2a3a; --panel:rgba(16,32,24,.82); --ink:#f3ecd2; --dim:#a9c2ad; --accent:#f2b84b; --line:#0c140f; --hp:#e2554b; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font: 14px/1.3 ui-monospace, Menlo, Consolas, monospace; overscroll-behavior: none; }
+body { position: fixed; inset: 0; width: 100%; touch-action: none; -webkit-user-select: none; user-select: none; }
+#view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+#hud { position: absolute; left: 8px; top: calc(8px + env(safe-area-inset-top)); max-width: min(300px, calc(100% - 150px)); background: var(--panel); border: 2px solid var(--line); padding: 6px 8px; z-index: 3; }
+.hud-row { display: flex; align-items: center; gap: 8px; }
+.hud-main { min-width: 0; }
+.hud-hero { font-weight: bold; overflow-wrap: anywhere; }
+.hud-isle, .hud-info { color: var(--dim); font-size: 12px; overflow-wrap: anywhere; }
+.bar { position: relative; height: 14px; margin: 5px 0 3px; background: #2a1b1b; border: 2px solid var(--line); }
+.fill { height: 100%; width: 100%; background: var(--hp); }
+.bar-text { position: absolute; inset: 0; font-size: 10px; line-height: 10px; text-align: center; color: #fff; }
+.btn, button { min-height: 44px; min-width: 44px; padding: 0 12px; background: var(--accent); color: #2a1c00; border: 2px solid var(--line); font: inherit; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; touch-action: manipulation; }
+.btn.small { padding: 0; font-size: 18px; }
+#mini-wrap { position: absolute; right: 8px; top: calc(8px + env(safe-area-inset-top)); border: 2px solid var(--line); background: #000; z-index: 3; line-height: 0; }
+#mini { width: 160px; height: 160px; image-rendering: pixelated; image-rendering: crisp-edges; }
+#toast { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); background: rgba(12,20,15,.9); padding: 8px 14px; border: 2px solid var(--accent); opacity: 0; pointer-events: none; transition: opacity .2s; max-width: 90%; text-align: center; z-index: 4; }
+#toast.on { opacity: 1; }
+#touch { display: none; }
+.help { position: absolute; left: 8px; bottom: 6px; margin: 0; font-size: 12px; color: var(--dim); background: var(--panel); padding: 4px 8px; z-index: 2; max-width: calc(100% - 16px); }
+body.touch #touch { display: block; }
+body.touch .help { display: none; }
+#stick { position: absolute; left: calc(16px + env(safe-area-inset-left)); bottom: calc(20px + env(safe-area-inset-bottom)); width: 132px; height: 132px; border-radius: 50%; background: rgba(255,255,255,.12); border: 2px solid rgba(255,255,255,.35); z-index: 3; touch-action: none; }
+#knob { position: absolute; left: 41px; top: 41px; width: 46px; height: 46px; border-radius: 50%; background: rgba(242,184,75,.85); border: 2px solid var(--line); pointer-events: none; }
+#touch-btns { position: absolute; right: calc(16px + env(safe-area-inset-right)); bottom: calc(24px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: flex-end; gap: 12px; z-index: 3; }
+#btn-fire { width: 76px; height: 76px; border-radius: 50%; padding: 0; }
+#acts { position: absolute; right: 8px; bottom: 8px; display: flex; gap: 8px; z-index: 3; }
+#acts button { min-width: 64px; }
+#btn-soothe[aria-pressed="true"], #btn-ride[aria-pressed="true"] { background: #b9e08a; }
+.hint { position: absolute; left: 50%; bottom: 60px; transform: translateX(-50%); margin: 0; max-width: calc(100% - 16px); width: max-content; font-size: 12px; text-align: center; color: var(--ink); background: var(--panel); border: 2px solid var(--line); padding: 4px 8px; z-index: 2; pointer-events: none; overflow-wrap: anywhere; }
+body.touch #acts { right: calc(16px + 76px + 12px + env(safe-area-inset-right)); bottom: calc(24px + env(safe-area-inset-bottom)); flex-direction: column-reverse; align-items: flex-end; }
+body.touch .hint { bottom: calc(176px + env(safe-area-inset-bottom)); }
+@media (max-width: 600px) {
+  #mini { width: 112px; height: 112px; }
+  #hud { max-width: calc(100% - 136px); }
+}

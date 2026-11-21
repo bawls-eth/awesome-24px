@@ -1,442 +1,462 @@
 {
- "batches": [
-  {
-   "id": "b00",
-   "label": "warrior",
-   "path": "assets/arcane/b00-warrior",
-   "manifest": "assets/arcane/b00-warrior/manifest.json",
-   "files": 21,
-   "status": "provisional",
-   "ingested_utc": "2026-11-19T23:44:34.008106Z"
-  },
-  {
-   "id": "b01",
-   "label": "ranger-mage-cleric",
-   "path": "assets/arcane/b01-ranger-mage-cleric",
-   "manifest": "assets/arcane/b01-ranger-mage-cleric/manifest.json",
-   "files": 63,
-   "status": "provisional",
-   "ingested_utc": "2026-11-19T23:44:35.708950Z"
-  },
-  {
-   "id": "b02",
-   "label": "rogue-warlock-paladin",
-   "path": "assets/arcane/b02-rogue-warlock-paladin",
-   "manifest": "assets/arcane/b02-rogue-warlock-paladin/manifest.json",
-   "files": 63,
-   "status": "provisional",
-   "ingested_utc": "2026-11-20T01:51:48Z",
-   "source": "codex",
-   "note": "b02 v2 (Codex redraw) approved provisional by Claude 2026-11-20"
-  },
-  {
-   "id": "b03",
-   "label": "berserker-druid-necromancer",
-   "path": "assets/arcane/b03-berserker-druid-necromancer",
-   "manifest": "assets/arcane/b03-berserker-druid-necromancer/manifest.json",
-   "files": 63,
-   "status": "provisional",
-   "ingested_utc": "2026-11-20T05:30:00Z",
-   "source": "codex",
-   "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
-  },
-  {
-   "id": "b04",
-   "label": "mad-maze-enemies",
-   "path": "assets/arcane/b04-mad-maze-enemies",
-   "manifest": "assets/arcane/b04-mad-maze-enemies/manifest.json",
-   "files": 72,
-   "status": "provisional",
-   "ingested_utc": "2026-11-20T05:30:00Z",
-   "source": "codex",
-   "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
-  },
-  {
-   "id": "b05",
-   "label": "frontier-enemies",
-   "path": "assets/arcane/b05-frontier-enemies",
-   "manifest": "assets/arcane/b05-frontier-enemies/manifest.json",
-   "files": 72,
-   "status": "provisional",
-   "ingested_utc": "2026-11-20T05:30:00Z",
-   "source": "codex",
-   "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
-  },
-  {
-   "id": "i01",
-   "label": "items-v2",
-   "path": "assets/arcane/i01-items-v2",
-   "manifest": "assets/arcane/i01-items-v2/manifest.json",
-   "files": 58,
-   "status": "provisional",
-   "ingested_utc": "2026-11-20T07:36:39.463363Z"
-  },
-  {
-   "id": "b07",
-   "label": "frontier-bosses",
-   "path": "assets/arcane/b07-frontier-bosses",
-   "manifest": "assets/arcane/b07-frontier-bosses/manifest.json",
-   "files": 48,
-   "status": "provisional",
-   "ingested_utc": "2026-11-20T08:20:00Z",
-   "source": "codex",
-   "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
-  },
-  {
-   "id": "b07x",
-   "label": "frontier-equipment",
-   "path": "assets/arcane/b07-items-frontier-equipment",
-   "manifest": "assets/arcane/b07-items-frontier-equipment/manifest.json",
-   "files": 16,
-   "status": "provisional",
-   "ingested_utc": "2026-11-20T08:20:00Z",
-   "source": "codex",
-   "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
-  },
-  {
-   "id": "b07w",
-   "label": "weapon-expansion",
-   "path": "assets/arcane/b07-weapons-frontier-weapon-expansion",
-   "manifest": "assets/arcane/b07-weapons-frontier-weapon-expansion/manifest.json",
-   "files": 20,
-   "status": "provisional",
-   "ingested_utc": "2026-11-20T08:20:00Z",
-   "source": "codex",
-   "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
-  },
-  {
-   "id": "b08",
-   "label": "frontier-armor",
-   "path": "assets/arcane/b08-armor-frontier-armor",
-   "manifest": "assets/arcane/b08-armor-frontier-armor/manifest.json",
-   "files": 50,
-   "status": "provisional",
-   "ingested_utc": "2026-11-20T08:20:00Z",
-   "source": "codex",
-   "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
-  },
-  {
-   "id": "b08h",
-   "label": "frontier-headgear",
-   "path": "assets/arcane/b08-headgear-frontier-headgear",
-   "manifest": "assets/arcane/b08-headgear-frontier-headgear/manifest.json",
-   "files": 26,
-   "status": "provisional",
-   "ingested_utc": "2026-11-20T08:20:00Z",
-   "source": "codex",
-   "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
-  },
-  {
-   "id": "b09",
-   "label": "frontier-clothing",
-   "path": "assets/arcane/b09-clothing-frontier-clothing",
-   "manifest": "assets/arcane/b09-clothing-frontier-clothing/manifest.json",
-   "files": 34,
-   "status": "provisional",
-   "ingested_utc": "2026-11-20T08:20:00Z",
-   "source": "codex",
-   "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
-  },
-  {
-   "id": "b09a",
-   "label": "frontier-accessories",
-   "path": "assets/arcane/b09-accessories-frontier-accessories",
-   "manifest": "assets/arcane/b09-accessories-frontier-accessories/manifest.json",
-   "files": 25,
-   "status": "provisional",
-   "ingested_utc": "2026-11-20T09:20:00Z",
-   "source": "codex",
-   "note": "approved provisional by Claude 2026-11-20"
-  },
-  {
-   "id": "b09c",
-   "label": "frontier-consumables",
-   "path": "assets/arcane/b09-consumables-frontier-consumables",
-   "manifest": "assets/arcane/b09-consumables-frontier-consumables/manifest.json",
-   "files": 25,
-   "status": "provisional",
-   "ingested_utc": "2026-11-20T09:20:00Z",
-   "source": "codex",
-   "note": "approved provisional by Claude 2026-11-20"
-  },
-  {
-   "id": "b09m",
-   "label": "frontier-materials",
-   "path": "assets/arcane/b09-materials-frontier-materials",
-   "manifest": "assets/arcane/b09-materials-frontier-materials/manifest.json",
-   "files": 16,
-   "status": "provisional",
-   "ingested_utc": "2026-11-20T10:15:00Z",
-   "source": "codex",
-   "note": "approved provisional by Claude 2026-11-20"
-  },
-  {
-   "id": "b06",
-   "label": "dark-spider",
-   "path": "assets/arcane/b06-dark-spider",
-   "manifest": "assets/arcane/b06-dark-spider/manifest.json",
-   "files": 12,
-   "status": "provisional",
-   "ingested_utc": "2026-11-20T11:20:00Z",
-   "source": "codex",
-   "note": "approved provisional by Claude 2026-11-20"
-  },
-  {
-   "id": "b06b",
-   "label": "crystal-beetle",
-   "path": "assets/arcane/b06b-crystal-beetle",
-   "manifest": "assets/arcane/b06b-crystal-beetle/manifest.json",
-   "files": 12,
-   "status": "provisional",
-   "ingested_utc": "2026-11-20T15:50:00Z",
-   "source": "codex",
-   "note": "approved provisional by Claude 2026-11-20; small figures, muzzle points provisional"
-  },
-  {
-   "id": "b06c",
-   "label": "frontier-casters-and-undead",
-   "path": "assets/arcane/b06c-frontier-casters-and-undead",
-   "manifest": "assets/arcane/b06c-frontier-casters-and-undead/manifest.json",
-   "files": 72,
-   "status": "provisional",
-   "ingested_utc": "2026-11-20T16:20:00Z",
-   "source": "codex",
-   "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
-  },
-  {
-   "id": "b06d",
-   "label": "frontier-slimes-swamp-desert",
-   "path": "assets/arcane/b06d-frontier-slimes-swamp-desert",
-   "manifest": "assets/arcane/b06d-frontier-slimes-swamp-desert/manifest.json",
-   "files": 72,
-   "status": "provisional",
-   "ingested_utc": "2026-11-20T17:20:00Z",
-   "source": "codex",
-   "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
-  },
-  {
-   "id": "b06e",
-   "label": "frontier-misc",
-   "path": "assets/arcane/b06e-frontier-misc",
-   "manifest": "assets/arcane/b06e-frontier-misc/manifest.json",
-   "files": 60,
-   "status": "provisional",
-   "ingested_utc": "2026-11-20T19:20:00Z",
-   "source": "codex",
-   "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
-  },
-  {
-   "id": "b10r",
-   "label": "relics-and-runes",
-   "path": "assets/arcane/b10-relics-and-runes",
-   "manifest": "assets/arcane/b10-relics-and-runes/manifest.json",
-   "files": 9,
-   "status": "provisional",
-   "ingested_utc": "2026-11-20T19:20:00Z",
-   "source": "codex",
-   "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
-  },
-  {
-   "id": "b21",
-   "label": "npcs-and-vendors",
-   "path": "assets/arcane/b21-npcs-and-vendors",
-   "manifest": "assets/arcane/b21-npcs-and-vendors/manifest.json",
-   "files": 14,
-   "status": "provisional",
-   "ingested_utc": "2026-11-20T19:20:00Z",
-   "source": "codex",
-   "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
-  },
-  {
-   "id": "b22",
-   "label": "items-relics-keys",
-   "path": "assets/arcane/b22-items-relics-keys",
-   "manifest": "assets/arcane/b22-items-relics-keys/manifest.json",
-   "files": 85,
-   "status": "provisional",
-   "ingested_utc": "2026-11-20T19:20:00Z",
-   "source": "codex",
-   "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
-  },
-  {
-   "id": "b10t",
-   "label": "overworld-terrain-1",
-   "path": "assets/arcane/b10t-overworld-terrain-1",
-   "manifest": "assets/arcane/b10t-overworld-terrain-1/manifest.json",
-   "files": 160,
-   "status": "provisional",
-   "ingested_utc": "2026-11-20T19:49:09.264586Z",
-   "source": "codex"
-  },
-  {
-   "id": "b11a",
-   "label": "highlands",
-   "path": "assets/arcane/b11a-highlands",
-   "manifest": "assets/arcane/b11a-highlands/manifest.json",
-   "files": 100,
-   "status": "provisional",
-   "ingested_utc": "2026-11-21T02:11:56Z",
-   "source": "codex"
-  },
-  {
-   "id": "b11b",
-   "label": "godlands",
-   "path": "assets/arcane/b11b-godlands",
-   "manifest": "assets/arcane/b11b-godlands/manifest.json",
-   "files": 114,
-   "status": "provisional",
-   "ingested_utc": "2026-11-21T02:11:56Z",
-   "source": "codex"
-  },
-  {
-   "id": "b12",
-   "label": "overworld-props-nature",
-   "path": "assets/arcane/b12-overworld-props-nature",
-   "manifest": "assets/arcane/b12-overworld-props-nature/manifest.json",
-   "files": 30,
-   "status": "provisional",
-   "ingested_utc": "2026-11-21T05:11:48Z",
-   "source": "codex"
-  },
-  {
-   "id": "b13",
-   "label": "overworld-props-structures",
-   "path": "assets/arcane/b13-overworld-props-structures",
-   "manifest": "assets/arcane/b13-overworld-props-structures/manifest.json",
-   "files": 44,
-   "status": "provisional",
-   "ingested_utc": "2026-11-21T05:11:48Z",
-   "source": "codex"
-  },
-  {
-   "id": "b14",
-   "label": "portals-and-world-objects",
-   "path": "assets/arcane/b14-portals-and-world-objects",
-   "manifest": "assets/arcane/b14-portals-and-world-objects/manifest.json",
-   "files": 16,
-   "status": "provisional",
-   "ingested_utc": "2026-11-21T05:11:48Z",
-   "source": "codex"
-  },
-  {
-   "id": "b15",
-   "label": "loot-bags-and-drops",
-   "path": "assets/arcane/b15-loot-bags-and-drops",
-   "manifest": "assets/arcane/b15-loot-bags-and-drops/manifest.json",
-   "files": 25,
-   "status": "provisional",
-   "ingested_utc": "2026-11-21T05:11:48Z",
-   "source": "codex"
-  },
-  {
-   "id": "b16",
-   "label": "projectiles-player",
-   "path": "assets/arcane/b16-projectiles-player",
-   "manifest": "assets/arcane/b16-projectiles-player/manifest.json",
-   "files": 17,
-   "status": "provisional",
-   "ingested_utc": "2026-11-21T07:11:51Z",
-   "source": "codex"
-  },
-  {
-   "id": "b17",
-   "label": "projectiles-enemy",
-   "path": "assets/arcane/b17-projectiles-enemy",
-   "manifest": "assets/arcane/b17-projectiles-enemy/manifest.json",
-   "files": 12,
-   "status": "provisional",
-   "ingested_utc": "2026-11-21T07:11:51Z",
-   "source": "codex"
-  },
-  {
-   "id": "b18",
-   "label": "effects",
-   "path": "assets/arcane/b18-effects",
-   "manifest": "assets/arcane/b18-effects/manifest.json",
-   "files": 21,
-   "status": "provisional",
-   "ingested_utc": "2026-11-21T09:12:01Z",
-   "source": "codex"
-  },
-  {
-   "id": "b19",
-   "label": "ui-icons",
-   "path": "assets/arcane/b19-ui-icons",
-   "manifest": "assets/arcane/b19-ui-icons/manifest.json",
-   "files": 53,
-   "status": "provisional",
-   "ingested_utc": "2026-11-21T09:12:01Z",
-   "source": "codex"
-  },
-  {
-   "id": "b20",
-   "label": "class-portraits-and-ability-icons",
-   "path": "assets/arcane/b20-class-portraits-and-ability-icons",
-   "manifest": "assets/arcane/b20-class-portraits-and-ability-icons/manifest.json",
-   "files": 32,
-   "status": "provisional",
-   "ingested_utc": "2026-11-21T11:12:22Z",
-   "source": "codex"
-  },
-  {
-   "id": "b23",
-   "label": "bosses-extra",
-   "path": "assets/arcane/b23-bosses-extra",
-   "manifest": "assets/arcane/b23-bosses-extra/manifest.json",
-   "files": 48,
-   "status": "provisional",
-   "ingested_utc": "2026-11-21T11:12:22Z",
-   "source": "codex"
-  },
-  {
-   "id": "b24",
-   "label": "enemies-wave-2",
-   "path": "assets/arcane/b24-enemies-wave-2",
-   "manifest": "assets/arcane/b24-enemies-wave-2/manifest.json",
-   "files": 144,
-   "status": "provisional",
-   "ingested_utc": "2026-11-21T12:12:06Z",
-   "source": "codex"
-  },
-  {
-   "id": "b25",
-   "label": "dungeon-tilesets",
-   "path": "assets/arcane/b25-dungeon-tilesets",
-   "manifest": "assets/arcane/b25-dungeon-tilesets/manifest.json",
-   "files": 57,
-   "status": "provisional",
-   "ingested_utc": "2026-11-21T14:11:43Z",
-   "source": "codex"
-  },
-  {
-   "id": "b26",
-   "label": "godlands-props-fix",
-   "path": "assets/arcane/b26-godlands-props-fix",
-   "manifest": "assets/arcane/b26-godlands-props-fix/manifest.json",
-   "files": 6,
-   "status": "provisional",
-   "ingested_utc": "2026-11-21T15:11:48Z",
-   "source": "codex"
-  },
-  {
-   "id": "b27",
-   "label": "zone-banners-and-logo",
-   "path": "assets/arcane/b27-zone-banners-and-logo",
-   "manifest": "assets/arcane/b27-zone-banners-and-logo/manifest.json",
-   "files": 7,
-   "status": "provisional",
-   "ingested_utc": "2026-11-21T16:11:51Z",
-   "source": "codex"
-  },
-  {
-   "id": "b28",
-   "label": "world-map-icons",
-   "path": "assets/arcane/b28-world-map-icons",
-   "manifest": "assets/arcane/b28-world-map-icons/manifest.json",
-   "files": 9,
-   "status": "provisional",
-   "ingested_utc": "2026-11-21T17:12:11Z",
-   "source": "codex"
-  }
- ]
+  "batches": [
+    {
+      "id": "b00",
+      "label": "warrior",
+      "path": "assets/arcane/b00-warrior",
+      "manifest": "assets/arcane/b00-warrior/manifest.json",
+      "files": 21,
+      "status": "provisional",
+      "ingested_utc": "2026-11-19T23:44:34.008106Z"
+    },
+    {
+      "id": "b01",
+      "label": "ranger-mage-cleric",
+      "path": "assets/arcane/b01-ranger-mage-cleric",
+      "manifest": "assets/arcane/b01-ranger-mage-cleric/manifest.json",
+      "files": 63,
+      "status": "provisional",
+      "ingested_utc": "2026-11-19T23:44:35.708950Z"
+    },
+    {
+      "id": "b02",
+      "label": "rogue-warlock-paladin",
+      "path": "assets/arcane/b02-rogue-warlock-paladin",
+      "manifest": "assets/arcane/b02-rogue-warlock-paladin/manifest.json",
+      "files": 63,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T01:51:48Z",
+      "source": "codex",
+      "note": "b02 v2 (Codex redraw) approved provisional by Claude 2026-11-20"
+    },
+    {
+      "id": "b03",
+      "label": "berserker-druid-necromancer",
+      "path": "assets/arcane/b03-berserker-druid-necromancer",
+      "manifest": "assets/arcane/b03-berserker-druid-necromancer/manifest.json",
+      "files": 63,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T05:30:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "b04",
+      "label": "mad-maze-enemies",
+      "path": "assets/arcane/b04-mad-maze-enemies",
+      "manifest": "assets/arcane/b04-mad-maze-enemies/manifest.json",
+      "files": 72,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T05:30:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "b05",
+      "label": "frontier-enemies",
+      "path": "assets/arcane/b05-frontier-enemies",
+      "manifest": "assets/arcane/b05-frontier-enemies/manifest.json",
+      "files": 72,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T05:30:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "i01",
+      "label": "items-v2",
+      "path": "assets/arcane/i01-items-v2",
+      "manifest": "assets/arcane/i01-items-v2/manifest.json",
+      "files": 58,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T07:36:39.463363Z"
+    },
+    {
+      "id": "b07",
+      "label": "frontier-bosses",
+      "path": "assets/arcane/b07-frontier-bosses",
+      "manifest": "assets/arcane/b07-frontier-bosses/manifest.json",
+      "files": 48,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T08:20:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "b07x",
+      "label": "frontier-equipment",
+      "path": "assets/arcane/b07-items-frontier-equipment",
+      "manifest": "assets/arcane/b07-items-frontier-equipment/manifest.json",
+      "files": 16,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T08:20:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "b07w",
+      "label": "weapon-expansion",
+      "path": "assets/arcane/b07-weapons-frontier-weapon-expansion",
+      "manifest": "assets/arcane/b07-weapons-frontier-weapon-expansion/manifest.json",
+      "files": 20,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T08:20:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "b08",
+      "label": "frontier-armor",
+      "path": "assets/arcane/b08-armor-frontier-armor",
+      "manifest": "assets/arcane/b08-armor-frontier-armor/manifest.json",
+      "files": 50,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T08:20:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "b08h",
+      "label": "frontier-headgear",
+      "path": "assets/arcane/b08-headgear-frontier-headgear",
+      "manifest": "assets/arcane/b08-headgear-frontier-headgear/manifest.json",
+      "files": 26,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T08:20:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "b09",
+      "label": "frontier-clothing",
+      "path": "assets/arcane/b09-clothing-frontier-clothing",
+      "manifest": "assets/arcane/b09-clothing-frontier-clothing/manifest.json",
+      "files": 34,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T08:20:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "b09a",
+      "label": "frontier-accessories",
+      "path": "assets/arcane/b09-accessories-frontier-accessories",
+      "manifest": "assets/arcane/b09-accessories-frontier-accessories/manifest.json",
+      "files": 25,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T09:20:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20"
+    },
+    {
+      "id": "b09c",
+      "label": "frontier-consumables",
+      "path": "assets/arcane/b09-consumables-frontier-consumables",
+      "manifest": "assets/arcane/b09-consumables-frontier-consumables/manifest.json",
+      "files": 25,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T09:20:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20"
+    },
+    {
+      "id": "b09m",
+      "label": "frontier-materials",
+      "path": "assets/arcane/b09-materials-frontier-materials",
+      "manifest": "assets/arcane/b09-materials-frontier-materials/manifest.json",
+      "files": 16,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T10:15:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20"
+    },
+    {
+      "id": "b06",
+      "label": "dark-spider",
+      "path": "assets/arcane/b06-dark-spider",
+      "manifest": "assets/arcane/b06-dark-spider/manifest.json",
+      "files": 12,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T11:20:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20"
+    },
+    {
+      "id": "b06b",
+      "label": "crystal-beetle",
+      "path": "assets/arcane/b06b-crystal-beetle",
+      "manifest": "assets/arcane/b06b-crystal-beetle/manifest.json",
+      "files": 12,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T15:50:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20; small figures, muzzle points provisional"
+    },
+    {
+      "id": "b06c",
+      "label": "frontier-casters-and-undead",
+      "path": "assets/arcane/b06c-frontier-casters-and-undead",
+      "manifest": "assets/arcane/b06c-frontier-casters-and-undead/manifest.json",
+      "files": 72,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T16:20:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "b06d",
+      "label": "frontier-slimes-swamp-desert",
+      "path": "assets/arcane/b06d-frontier-slimes-swamp-desert",
+      "manifest": "assets/arcane/b06d-frontier-slimes-swamp-desert/manifest.json",
+      "files": 72,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T17:20:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "b06e",
+      "label": "frontier-misc",
+      "path": "assets/arcane/b06e-frontier-misc",
+      "manifest": "assets/arcane/b06e-frontier-misc/manifest.json",
+      "files": 60,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T19:20:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "b10r",
+      "label": "relics-and-runes",
+      "path": "assets/arcane/b10-relics-and-runes",
+      "manifest": "assets/arcane/b10-relics-and-runes/manifest.json",
+      "files": 9,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T19:20:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "b21",
+      "label": "npcs-and-vendors",
+      "path": "assets/arcane/b21-npcs-and-vendors",
+      "manifest": "assets/arcane/b21-npcs-and-vendors/manifest.json",
+      "files": 14,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T19:20:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "b22",
+      "label": "items-relics-keys",
+      "path": "assets/arcane/b22-items-relics-keys",
+      "manifest": "assets/arcane/b22-items-relics-keys/manifest.json",
+      "files": 85,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T19:20:00Z",
+      "source": "codex",
+      "note": "approved provisional by Claude 2026-11-20 after contact-sheet review"
+    },
+    {
+      "id": "b10t",
+      "label": "overworld-terrain-1",
+      "path": "assets/arcane/b10t-overworld-terrain-1",
+      "manifest": "assets/arcane/b10t-overworld-terrain-1/manifest.json",
+      "files": 160,
+      "status": "provisional",
+      "ingested_utc": "2026-11-20T19:49:09.264586Z",
+      "source": "codex"
+    },
+    {
+      "id": "b11a",
+      "label": "highlands",
+      "path": "assets/arcane/b11a-highlands",
+      "manifest": "assets/arcane/b11a-highlands/manifest.json",
+      "files": 100,
+      "status": "provisional",
+      "ingested_utc": "2026-11-21T02:11:56Z",
+      "source": "codex"
+    },
+    {
+      "id": "b11b",
+      "label": "godlands",
+      "path": "assets/arcane/b11b-godlands",
+      "manifest": "assets/arcane/b11b-godlands/manifest.json",
+      "files": 114,
+      "status": "provisional",
+      "ingested_utc": "2026-11-21T02:11:56Z",
+      "source": "codex"
+    },
+    {
+      "id": "b12",
+      "label": "overworld-props-nature",
+      "path": "assets/arcane/b12-overworld-props-nature",
+      "manifest": "assets/arcane/b12-overworld-props-nature/manifest.json",
+      "files": 30,
+      "status": "provisional",
+      "ingested_utc": "2026-11-21T05:11:48Z",
+      "source": "codex"
+    },
+    {
+      "id": "b13",
+      "label": "overworld-props-structures",
+      "path": "assets/arcane/b13-overworld-props-structures",
+      "manifest": "assets/arcane/b13-overworld-props-structures/manifest.json",
+      "files": 44,
+      "status": "provisional",
+      "ingested_utc": "2026-11-21T05:11:48Z",
+      "source": "codex"
+    },
+    {
+      "id": "b14",
+      "label": "portals-and-world-objects",
+      "path": "assets/arcane/b14-portals-and-world-objects",
+      "manifest": "assets/arcane/b14-portals-and-world-objects/manifest.json",
+      "files": 16,
+      "status": "provisional",
+      "ingested_utc": "2026-11-21T05:11:48Z",
+      "source": "codex"
+    },
+    {
+      "id": "b15",
+      "label": "loot-bags-and-drops",
+      "path": "assets/arcane/b15-loot-bags-and-drops",
+      "manifest": "assets/arcane/b15-loot-bags-and-drops/manifest.json",
+      "files": 25,
+      "status": "provisional",
+      "ingested_utc": "2026-11-21T05:11:48Z",
+      "source": "codex"
+    },
+    {
+      "id": "b16",
+      "label": "projectiles-player",
+      "path": "assets/arcane/b16-projectiles-player",
+      "manifest": "assets/arcane/b16-projectiles-player/manifest.json",
+      "files": 17,
+      "status": "provisional",
+      "ingested_utc": "2026-11-21T07:11:51Z",
+      "source": "codex"
+    },
+    {
+      "id": "b17",
+      "label": "projectiles-enemy",
+      "path": "assets/arcane/b17-projectiles-enemy",
+      "manifest": "assets/arcane/b17-projectiles-enemy/manifest.json",
+      "files": 12,
+      "status": "provisional",
+      "ingested_utc": "2026-11-21T07:11:51Z",
+      "source": "codex"
+    },
+    {
+      "id": "b18",
+      "label": "effects",
+      "path": "assets/arcane/b18-effects",
+      "manifest": "assets/arcane/b18-effects/manifest.json",
+      "files": 21,
+      "status": "provisional",
+      "ingested_utc": "2026-11-21T09:12:01Z",
+      "source": "codex"
+    },
+    {
+      "id": "b19",
+      "label": "ui-icons",
+      "path": "assets/arcane/b19-ui-icons",
+      "manifest": "assets/arcane/b19-ui-icons/manifest.json",
+      "files": 53,
+      "status": "provisional",
+      "ingested_utc": "2026-11-21T09:12:01Z",
+      "source": "codex"
+    },
+    {
+      "id": "b20",
+      "label": "class-portraits-and-ability-icons",
+      "path": "assets/arcane/b20-class-portraits-and-ability-icons",
+      "manifest": "assets/arcane/b20-class-portraits-and-ability-icons/manifest.json",
+      "files": 32,
+      "status": "provisional",
+      "ingested_utc": "2026-11-21T11:12:22Z",
+      "source": "codex"
+    },
+    {
+      "id": "b23",
+      "label": "bosses-extra",
+      "path": "assets/arcane/b23-bosses-extra",
+      "manifest": "assets/arcane/b23-bosses-extra/manifest.json",
+      "files": 48,
+      "status": "provisional",
+      "ingested_utc": "2026-11-21T11:12:22Z",
+      "source": "codex"
+    },
+    {
+      "id": "b24",
+      "label": "enemies-wave-2",
+      "path": "assets/arcane/b24-enemies-wave-2",
+      "manifest": "assets/arcane/b24-enemies-wave-2/manifest.json",
+      "files": 144,
+      "status": "provisional",
+      "ingested_utc": "2026-11-21T12:12:06Z",
+      "source": "codex"
+    },
+    {
+      "id": "b25",
+      "label": "dungeon-tilesets",
+      "path": "assets/arcane/b25-dungeon-tilesets",
+      "manifest": "assets/arcane/b25-dungeon-tilesets/manifest.json",
+      "files": 57,
+      "status": "provisional",
+      "ingested_utc": "2026-11-21T14:11:43Z",
+      "source": "codex"
+    },
+    {
+      "id": "b26",
+      "label": "godlands-props-fix",
+      "path": "assets/arcane/b26-godlands-props-fix",
+      "manifest": "assets/arcane/b26-godlands-props-fix/manifest.json",
+      "files": 6,
+      "status": "provisional",
+      "ingested_utc": "2026-11-21T15:11:48Z",
+      "source": "codex"
+    },
+    {
+      "id": "b27",
+      "label": "zone-banners-and-logo",
+      "path": "assets/arcane/b27-zone-banners-and-logo",
+      "manifest": "assets/arcane/b27-zone-banners-and-logo/manifest.json",
+      "files": 7,
+      "status": "provisional",
+      "ingested_utc": "2026-11-21T16:11:51Z",
+      "source": "codex"
+    },
+    {
+      "id": "b28",
+      "label": "world-map-icons",
+      "path": "assets/arcane/b28-world-map-icons",
+      "manifest": "assets/arcane/b28-world-map-icons/manifest.json",
+      "files": 9,
+      "status": "provisional",
+      "ingested_utc": "2026-11-21T17:12:11Z",
+      "source": "codex"
+    },
+    {
+      "id": "b29",
+      "label": "gear-tiers",
+      "path": "assets/arcane/b29-gear-tiers",
+      "manifest": "assets/arcane/b29-gear-tiers/manifest.json",
+      "files": 43,
+      "status": "provisional",
+      "ingested_utc": "2026-11-21T19:20:00Z",
+      "source": "codex"
+    },
+    {
+      "id": "b30",
+      "label": "jungle-terrain-base",
+      "path": "assets/arcane/b30-jungle-terrain-base",
+      "manifest": "assets/arcane/b30-jungle-terrain-base/manifest.json",
+      "files": 48,
+      "status": "provisional",
+      "ingested_utc": "2026-11-21T19:20:00Z",
+      "source": "codex"
+    }
+  ]
 }

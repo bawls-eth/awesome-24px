@@ -100,6 +100,9 @@ const RM_WPN_ST = ['slowed', 'weak', 'dazed', 'armorBroken', 'curse', 'bleed', '
 const RM_BOLT_D = { player: 26, enemy: 24 }; // art bolt draw sizes in px (enemy never above 1.3x the player bolt)
 const RM_SPARK_MAX = 24, RM_SPARK_LIFE = 0.25;
 const RM_FX_MAX = 16; // live one-shot effect sprites (setFxArt)
+// G11 player splash (GEAR-DROPS-BUILD-PLAN d): FX / text for at most 24 events a frame (extras still deal damage), one combined number per event at most
+// 6 a second and only while <= 22 texts are live; code rings come from a fixed pool. Kill switches ?splash=0 and ?gear=0 (no splash at all).
+const RM_SPLASH_FX = 24, RM_SPLASH_TXT_GAP = 1 / 6, RM_SPLASH_TXT_MAX = 22, RM_SPLASH_RINGS = 12, RM_SPLASH_COL = '#ffb36b';
 const RM_SPARK_CLASS = { ranger: 'a', bruiser: 'a', berserker: 'a', punk: 'a', rogue: 'a', paladin: 'a', frostcaller: 'b', herald: 'b', druid: 'b', warlock: 'c', necromancer: 'c', trickster: 'c', gravetender: 'c', shadowpaw: 'c' };
 const RM_EB_ROT = { ebolt_shard: 1, ebolt_arrow: 1, ebolt_fire: 1, ebolt_frost: 1, ebolt_laser_h: 1, ebolt_skull: 0 };
 const RM_WPN_COLOR = { dot: '#ffe27a', arrow: '#f3d9a4', shard: '#9fe3ff', orb: '#c59bff', star: '#ffd24a', blade: '#e6edf3', page: '#fff3c4', axe: '#ff9a6a', hammer: '#ffcf5a', fist: '#ffb38a', ray: '#7ee7ff' };
@@ -119,6 +122,10 @@ const RM_DIR = (function () { try { const s = typeof document !== 'undefined' &&
   } catch (e) { /* the arena never depends on these */ }
 })();
 const RM_UI_ART = RM_DIR ? RM_DIR + 'assets/arcane/b19-ui-icons/ui/' : ''; // b19 UI art (focus bar frame + icon)
+// b29 gear-tier UI icons (provisional batch): 16 px tier badges, stat and affix icons beside text that always stays (code fallback: a failed image
+// is removed). ?art=0 or ?uiicons=0 = text only.
+const RM_GEAR_UI = RM_DIR && !rmFlagOff('art') && !rmFlagOff('uiicons') ? RM_DIR + 'assets/arcane/b29-gear-tiers/ui/' : '';
+const RM_GEAR_UI_RE = /^ui_(tier_badge_([1-9]|1[0-2])|stat_(crit|splash|resist|leech|regen|range)|affix_(keen|blast|venom|swift|reach|leech|pierce|vital|ward|fleet|resist|mend))$/; // MMArt.GEAR_UI_RE
 // Damage numbers (S14): crits gold, marked pink (MMStatus colours), armorBroken purple; everything else stays white.
 const RM_DMG_COL = { plain: '#fff', crit: '#ffd24a', marked: '#ff8fa8', armorBroken: '#b77bff' };
 const RM_PIP_MAX = 3, RM_PIP_PX = 8; // at most 3 status pips over an enemy; more collapse into "+n"
@@ -158,6 +165,7 @@ const RM_WPN_ITEMS = [];
 // Armor `arm_<family>_<band>` defs are lookup-only (never in RM_ITEMS / RM_BASE_ITEMS: never dropped by the classic pools or stocked by the shop).
 const RM_ARM_ID = /^arm_[a-z]{3,8}_[a-z]{3,10}$/; // MMGear.GEAR_ID_RE
 const RM_GEAR_ON = !rmFlagOff('gear') && typeof MMGear !== 'undefined' && !!MMGear && typeof MMGear.clean === 'function';
+const RM_SPLASH_ON = RM_GEAR_ON && !rmFlagOff('splash') && typeof MMSplash !== 'undefined' && !!MMSplash && typeof MMSplash.pick === 'function'; // G11 player splash
 const RM_ARMOR_ICON = { light: '🦺', robe: '👘', heavy: '🛡️' };
 (function rmRegisterArmor() {
   if (!RM_GEAR_ON || !MMGear.ARMOR_IDS) return;
@@ -189,7 +197,8 @@ function rmWpnSpec(s) {
   const id = typeof s.id === 'string' ? s.id : '';
   const sidx = MMWeapons.altIds().indexOf(id);
   if (sidx < 0) return null;
-  const wv = o(s.wave), ch = o(s.chain), ob = o(s.orbit), bu = o(s.burst), lo = o(s.lob), oh = o(s.onHit);
+  const wv = o(s.wave), ch = o(s.chain), ob = o(s.orbit), bu = o(s.burst), lo = o(s.lob), oh = o(s.onHit), sp = o(s.splash);
+  const spR = n(lo.radius, 0, 100, 0) > 0 ? 0 : n(sp.r, 0, 80, 0); // splash never with lob (MMWeapons.validate)
   return Object.freeze({
     id, sidx, rarity: Math.floor(n(s.rarity, 0, 3, 0)), shape: MMWeapons.SHAPES.indexOf(s.shape) >= 0 ? s.shape : 'dot',
     count: Math.floor(n(s.count, 1, 5, 1)), spread: n(s.spread, 0, 1, 0), spd: n(s.spd, 0.3, 2, 1), life: n(s.life, 0.1, 2, 0.85), size: n(s.size, 0.5, 3, 1), rate: n(s.rate, 0.3, 1.5, 1),
@@ -200,6 +209,7 @@ function rmWpnSpec(s) {
     burst: Object.freeze({ n: Math.floor(n(bu.n, 1, 5, 1)), gap: n(bu.gap, 0, 0.5, 0) }),
     lob: Object.freeze({ radius: n(lo.radius, 0, 100, 0), maxRange: n(lo.maxRange, 40, 600, 260) }),
     knock: n(s.knock, 0, 40, 0), onHit: Object.freeze({ status: RM_WPN_ST.indexOf(oh.status) >= 0 ? oh.status : null, chance: n(oh.chance, 0, 1, 0), sec: n(oh.sec, 0, 10, 0) }),
+    splash: Object.freeze({ r: spR, frac: spR > 0 ? n(sp.frac, 0, 0.8, 0) : 0, inner: n(sp.inner, 0, 1, 0.35), edge: n(sp.edge, 0, 1, 0.5), max: spR > 0 ? Math.floor(n(sp.max, 0, 6, 0)) : 0 }), // G11 (the 4 splash styles)
   });
 }
 // Wire code: the optional 5th `fp` element. low 10 bits = ((alt style index * 4 + rarity) * 2 + helix phase); the rest = lob distance in px.
@@ -489,7 +499,7 @@ class RealmArena {
 
   _makePools() {
     const make = (n, f) => Array.from({ length: n }, f);
-    this.pBullets = make(RM_POOL.pBullets, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, ws: null, st: 0, age: 0, cx: 0, cy: 0, ph: 0, bc: 0, ch: 0, ux: 1, uy: 0, sp: 0, bk: false, tx: 0, ty: 0, lb: 0, ho: 0 })); // ws..ho: weapon-style bolt state (setHeroWeapon)
+    this.pBullets = make(RM_POOL.pBullets, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, ws: null, st: 0, age: 0, cx: 0, cy: 0, ph: 0, bc: 0, ch: 0, ux: 1, uy: 0, sp: 0, bk: false, tx: 0, ty: 0, lb: 0, ho: 0, sq: 0 })); // ws..ho: weapon-style bolt state (setHeroWeapon); sq: splashed (G11)
     this.eBullets = make(RM_POOL.eBullets, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, life: 0, kind: 0, ea: null }));
     this.enemies = make(RM_POOL.enemies, () => ({ active: false, type: 'aimed', x: 0, y: 0, hp: 0, maxHp: 0, t: 0, cd: 0, cd2: 0, angle: 0, flash: 0, ax: 0, ay: 0, dir: 1, phase: 0, invuln: 0 }));
     this.drifters = make(RM_POOL.drifters, () => ({ active: false, x: 0, y: 0, vx: 0, vy: 0, t: 0, turn: 0, kind: 'wisp' }));
@@ -517,7 +527,7 @@ class RealmArena {
     this._spawnN = 0; this._hashN = -1; this._hq = { x: 0, y: 0, best: -1 };
     this._hitCb = (id) => { // exact circle test; the lowest pool index wins, like the old linear scan
       const e = this.enemies[id]; if (!e.active || (this._hq.best >= 0 && id > this._hq.best)) return;
-      const r = RM_ENEMIES[e.type].r + 5; const dx = this._hq.x - e.x; const dy = this._hq.y - e.y;
+      const r = this._er(e) + 5; const dx = this._hq.x - e.x; const dy = this._hq.y - e.y;
       if (dx * dx + dy * dy < r * r) this._hq.best = id;
     };
     this._padPrev = [false, false, false, false]; this._aimTargets = [];
@@ -597,7 +607,7 @@ class RealmArena {
   _boltHitIndex(x, y) {
     const h = this._hash;
     if (!h) { // fallback without the module
-      for (let j = 0; j < this.enemies.length; j++) { const e = this.enemies[j]; if (!e.active) continue; const r = RM_ENEMIES[e.type].r + 5; if ((x - e.x) * (x - e.x) + (y - e.y) * (y - e.y) < r * r) return j; }
+      for (let j = 0; j < this.enemies.length; j++) { const e = this.enemies[j]; if (!e.active) continue; const r = this._er(e) + 5; if ((x - e.x) * (x - e.x) + (y - e.y) * (y - e.y) < r * r) return j; }
       return -1;
     }
     if (this._hashN !== this._spawnN) this._buildHash();
@@ -608,7 +618,7 @@ class RealmArena {
 
   _buildHash() {
     const h = this._hash; h.clear();
-    for (let j = 0; j < this.enemies.length; j++) { const e = this.enemies[j]; if (e.active) h.insert(j, e.x, e.y, RM_ENEMIES[e.type].r + 5); }
+    for (let j = 0; j < this.enemies.length; j++) { const e = this.enemies[j]; if (e.active) h.insert(j, e.x, e.y, this._er(e) + 5); }
     this._hashN = this._spawnN;
   }
 
@@ -672,7 +682,7 @@ class RealmArena {
     if (this.team && this.team.isPvp) { const ds = { maxHp: RT_DUEL_HP, dmg: 1, rate: RT_DUEL_RATE, speed: RM_PLAYER.speed, shards: 1, xp: 1, iframes: 0.12 }; if (!pure) this.stats = ds; return ds; } // a duel is fought with identical stats: no gear, no level, no tiers / armor / affixes
     const st = { maxHp: RM_PLAYER.hp + RM_HP_PER_LEVEL * (this.save.level - 1), dmg: RM_PLAYER.dmg, rate: RM_PLAYER.fireRate, speed: RM_PLAYER.speed, shards: 1, xp: 1, iframes: RM_PLAYER.iframes };
     const eq = this._eqFor(o); const free = o && o.eqOverride && typeof o.eqOverride === 'object' ? o.eqOverride : null;
-    const gr = { guard: 0, famRes: 0, allRes: 0, resIds: null, status: 0, speed: 0, crit: 0, leech: 0, regen: 0, vital: 0, swift: 0, reach: 0, pierce: 0, blast: 0 }; // tiered gear extras (all 0 without such items)
+    const gr = { guard: 0, famRes: 0, allRes: 0, resIds: null, status: 0, speed: 0, crit: 0, leech: 0, regen: 0, vital: 0, swift: 0, reach: 0, pierce: 0, blast: 0, venom: 0 }; // tiered gear extras (all 0 without such items)
     RM_SLOTS.forEach((slot) => {
       const uid = eq[slot];
       const it = uid && this.save.items.find((x) => x.n === uid);
@@ -706,7 +716,7 @@ class RealmArena {
     // G8 gear extras: affix HP / rate after the class + unlock multipliers; new keys are always present (0 = nothing), so readers never branch on undefined.
     if (gr.vital > 0) st.maxHp = Math.max(1, Math.round(st.maxHp * (1 + gr.vital)));
     if (gr.swift > 0) st.rate *= 1 + gr.swift;
-    st.crit = Math.min(0.5, gr.crit); st.status = gr.status; st.leech = gr.leech; st.regen = gr.regen; st.reach = gr.reach; st.pierce = Math.min(3, gr.pierce);
+    st.crit = Math.min(0.5, gr.crit); st.status = gr.status; st.leech = gr.leech; st.regen = gr.regen; st.reach = gr.reach; st.pierce = Math.min(3, gr.pierce); st.venom = gr.venom; // venom: also its fallback bleed chance (G11)
     st.splashR = gr.blast > 0 ? 24 + gr.blast : 0; st.splashFrac = gr.blast > 0 ? 0.3 : 0; st.splashMax = gr.blast > 0 ? 3 : 0; // `blast` grants {r 24, frac .30, max 3} (+ its px); used by the splash slice (G11)
     st.resFam = gr.famRes; st.resAll = gr.allRes; st.resIds = gr.resIds; st.resist = Math.min(0.4, gr.famRes + gr.allRes); // armor family resist (statuses in resIds) + the `resist` affix (every status); _resistFor caps at 40%
     st.guard = this._calcGuard(gr.guard);
@@ -757,7 +767,7 @@ class RealmArena {
     let sm = c.get(key);
     if (!sm) { try { sm = MMGearAffix.sum(MMGearAffix.roll(it.id, slot, it.t, it.r, it.a)); } catch (e) { sm = {}; } if (c.size > 64) c.clear(); c.set(key, sm); }
     const v = (k) => (typeof sm[k] === 'number' && Number.isFinite(sm[k]) ? sm[k] : 0);
-    gr.crit += v('keen'); gr.blast += v('blast'); gr.status += v('venom'); gr.swift += v('swift'); gr.reach += v('reach'); gr.leech += v('leech'); gr.pierce += v('pierce');
+    gr.crit += v('keen'); gr.blast += v('blast'); gr.status += v('venom'); gr.venom += v('venom'); gr.swift += v('swift'); gr.reach += v('reach'); gr.leech += v('leech'); gr.pierce += v('pierce');
     gr.vital += v('vital'); gr.guard += v('ward'); gr.regen += v('mend'); gr.allRes += v('resist'); gr.speed += v('fleet');
   }
 
@@ -1374,7 +1384,7 @@ class RealmArena {
       const ph = w.wave.alt && (k & 1) ? 1 : 0;
       const b = this.firePlayerBulletFrom(p.x, p.y, ang, d, 0, rmWpnWire(w, ph, lobD));
       if (!b) continue;
-      this._styleBolt(b, w, ang, ph, lobD); if (d !== base) b.cr = 1; live++;
+      this._styleBolt(b, this._wpnReach(w), ang, ph, lobD); this._gearBolt(b); if (d !== base) b.cr = 1; live++;
     }
   }
   // How far a lobbed shot flies: to the nearest enemy within 0.35 rad of the aim, else its max range.
@@ -1483,7 +1493,7 @@ class RealmArena {
       if (nx) {
         const a = Math.atan2(nx.target.y - b.y, nx.target.x - b.x);
         const c = this.firePlayerBulletFrom(b.x - Math.cos(a) * 14, b.y - Math.sin(a) * 14, a, nx.dmg, b.own, rmWpnWire(w, 0, 0));
-        if (c) { this._styleBolt(c, w, a, 0, 0); c.ch = nx.chainLeft; c.pr = 0; c.hn = 1; c.h0 = idx; }
+        if (c) { this._styleBolt(c, w, a, 0, 0); c.ch = nx.chainLeft; c.pr = 0; c.hn = 1; c.h0 = idx; c.sq = 1; } // chain hops never splash (G11)
       }
     }
   }
@@ -1495,15 +1505,16 @@ class RealmArena {
     const r = w.lob.radius;
     for (let i = 0; i < this.enemies.length; i++) {
       const e = this.enemies[i]; if (!e.active) continue;
-      const rr = r + RM_ENEMIES[e.type].r;
+      const rr = r + this._er(e);
       if ((e.x - x) * (e.x - x) + (e.y - y) * (e.y - y) <= rr * rr) { if (b.st > 0) this._wpnStatus(b, e); this._hitEnemy(e, b.dmg || this.stats.dmg, b.cr === 1); }
     }
   }
   // A weapon bolt's `st` (RM_WPN_ST index + 1) rolls its onHit chance and applies that status to the enemy it hit.
-  _wpnStatus(b, e) {
+  // scale (G11, optional): a splashed enemy rolls at chance x its splash share.
+  _wpnStatus(b, e, scale) {
     const oh = b.ws && b.ws.onHit; const id = RM_WPN_ST[b.st - 1];
     if (!id || !oh || !(oh.chance > 0) || !e.active) return false;
-    const ch = Math.min(1, oh.chance + (this.stats.status > 0 ? this.stats.status : 0)); // G8: + robe armor status chance + the `venom` affix (0 without them)
+    const ch = Math.min(1, oh.chance + (this.stats.status > 0 ? this.stats.status : 0)) * (scale > 0 && scale < 1 ? scale : 1); // G8: + robe armor status chance + the `venom` affix (0 without them)
     if (this.rng() >= ch) return false;
     return this.applyStatus(e, id, { sec: oh.sec > 0 ? oh.sec : undefined, src: 'wpn' });
   }
@@ -1635,7 +1646,7 @@ class RealmArena {
     let q = null;
     for (let i = 0; i < pool.length; i++) if (!pool[i].active) { q = pool[i]; break; }
     if (!q) { q = pool[0]; for (let i = 1; i < pool.length; i++) if (pool[i].t0 < q.t0) q = pool[i]; }
-    q.active = true; q.name = name; q.dir = dir; q.flip = !!e._flip; q.x = e.x; q.y = e.y + def.r * 0.9; q.k = 2.8 * def.r / this._enemyVis; q.t0 = this.clock;
+    q.active = true; q.name = name; q.dir = dir; q.flip = !!e._flip; q.x = e.x; q.y = e.y + this._er(e) * 0.9; q.k = 2.8 * this._er(e) / this._enemyVis; q.t0 = this.clock;
   }
   // Plays every live death ghost once, then frees the slot. Game time (this.clock) drives it, so pause freezes it; reduced motion = last frame, short fade.
   _drawEnemyGhosts(g) {
@@ -1683,7 +1694,7 @@ class RealmArena {
     if (key !== e._key) { e._key = key; e._t0 = e.t; }
     if (act === 'attack' && e._atSeen !== e._at) { e._atSeen = e._at; e._t0 = e.t; }
     const t = this._reduced && act === 'idle' ? 0 : e.t - e._t0;
-    const f = art.draw(g, a, t, e.x, e.y + def.r * 0.9, 2.8 * def.r / this._enemyVis, e._flip);
+    const er = this._er(e); const f = art.draw(g, a, t, e.x, e.y + er * 0.9, 2.8 * er / this._enemyVis, e._flip);
     if (this._enemyDbgOn) this._enemyDbg = { type: e.type, name, action: act, dir: e._dir, flip: e._flip, frame: f, id: a.id };
     return f >= 0;
   }
@@ -1831,18 +1842,49 @@ class RealmArena {
   setMoveStick(x, y) { this.moveVec.x = x; this.moveVec.y = y; }
   setAimStick(x, y, on) { this.aimVec.x = x; this.aimVec.y = y; this.aimVec.on = !!on; }
 
+  // B7: an enemy's hit radius: its own e.rad (a big creature) or its type's.
+  _er(e) { return e.rad > 0 ? e.rad : RM_ENEMIES[e.type].r; }
+  // B7 public helper: damage one live enemy from outside the arena (a companion, a world effect). Clamped to 1e6; returns the damage passed on.
+  damageEnemy(e, dmg, src) {
+    if (!e || !e.active || this.enemies.indexOf(e) < 0) return 0;
+    const d = Math.min(1e6, Number(dmg)); if (!(d > 0)) return 0;
+    this.lastDmgSrc = typeof src === 'string' ? src.slice(0, 16) : null;
+    this._hitEnemy(e, d); return d;
+  }
+  // B7 public helper: show a TG3 telegraph on `e`: shape 'ring' | 'line' | 'cone', `sec` = seconds until the attack lands (the first call
+  // of a wind-up sets its length). Falsy shape or sec <= 0 clears it. Reuses the TG3 sprites, palette and reduced-motion look; solo world only.
+  tgFor(e, shape, sec) {
+    if (!e) return false;
+    const code = RM_TG_CODE[shape] || 0; const s = Number(sec);
+    if (!code || !(s > 0) || !this._tgOn()) { e._tg = 0; return false; }
+    if (e._tg !== code || !(e._tgW >= s)) { // a new wind-up
+      this.tgStarted++;
+      if (this.clock - this._tgSndAt > 0.6 || this._tgSndAt > this.clock) { this._tgSndAt = this.clock; this._snd('warn'); }
+      e._tgW = s;
+    }
+    const p = this._nearest(e.x, e.y);
+    e._tg = code; e._tgP = Math.max(0, Math.min(1, 1 - s / e._tgW)); e._tgA = Math.atan2(p.y - e.y, p.x - e.x);
+    return true;
+  }
+
   // ---------- scrolling world + camera (additive; null world = the screen is the world, exactly as before) ----------
   // setWorld({w, h, tile, camera, solidAt(x,y), shotSolidAt(x,y), drawUnder(g,cam), drawOver(g,cam), tick(dt), onStart(), wake, pools:{enemies,eBullets}}):
   // the world is w x h logical px, larger than the screen; the camera follows the player (smoothed, clamped to the world, integer-snapped,
   // snapped instantly under reduced motion). Every world<->screen conversion goes through this.camera {x, y, vw, vh} (read it, never write it):
   // drawing translates once per frame, mouse aim maps screen -> world, the player / enemies / bags clamp to the world instead of the screen.
   // solidAt(x, y) (px) blocks the player and enemies; shotSolidAt (default solidAt) absorbs bullets. setWorld(null) turns it all off.
+  // B7 optional hooks (BIOME-ARCH-PLAN 2.4; every one null = unchanged; only a world page passes them, never the Town, duels or co-op):
+  //   enemyStep(e, dt, p) -> true: this creature (e.cre) moved itself this frame (the built-in AI and fire are skipped; clamp + slide still apply)
+  //   onLethal(e, dmg) -> true: a lethal hit knocks out instead of killing (e keeps 1 hp: no kill, shards, XP, kb or bag)
+  //   drawEnemy(g, e) -> true: the hook drew this enemy (the built-in sprite, flash, hp bar and pips are skipped)
+  //   drawMid(g, cam): drawn after the enemies / bolts, under the hero (a mount); heroLift() -> px the hero is drawn raised; dashMul() -> dash scale
   setWorld(opts) {
     if (!opts || typeof opts !== 'object') { this.world = null; this._solidAt = null; this._shotSolidAt = null; this._camF.x = 0; this._camF.y = 0; this.camera.x = 0; this.camera.y = 0; if (this.stats) this._calcStats(); return null; }
     const n = (v, d) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Math.min(1 << 20, Math.floor(Number(v))) : d);
     const fn = (f) => (typeof f === 'function' ? f : null);
     this.world = Object.freeze({ w: n(opts.w, this.W), h: n(opts.h, this.H), tile: n(opts.tile, 32), camera: opts.camera !== false, wake: n(opts.wake, 0),
-      drawUnder: fn(opts.drawUnder), drawOver: fn(opts.drawOver), tick: fn(opts.tick), moveScaleAt: fn(opts.moveScaleAt), onStart: fn(opts.onStart) });
+      drawUnder: fn(opts.drawUnder), drawOver: fn(opts.drawOver), tick: fn(opts.tick), moveScaleAt: fn(opts.moveScaleAt), onStart: fn(opts.onStart),
+      enemyStep: fn(opts.enemyStep), onLethal: fn(opts.onLethal), drawEnemy: fn(opts.drawEnemy), drawMid: fn(opts.drawMid), heroLift: fn(opts.heroLift), dashMul: fn(opts.dashMul) }); // B7 arena hooks (null = today's behaviour)
     this._solidAt = fn(opts.solidAt); this._shotSolidAt = fn(opts.shotSolidAt) || this._solidAt;
     const pl = opts.pools && typeof opts.pools === 'object' ? opts.pools : {};
     const grow = (pool, want, max, f) => { const k = Math.min(max, n(want, 0)); while (pool.length < k) pool.push(f()); };
@@ -2063,6 +2105,7 @@ class RealmArena {
     e.cd = 0.8 + this.rng() * 0.8; // first shot is never instant
     if (this.world) { e.ax = x + (this.rng() - 0.5) * 220; e.ay = y + (this.rng() - 0.5) * 220; } else { e.ax = 80 + this.rng() * (this.W - 160); e.ay = 80 + this.rng() * (this.H - 160); } // drift target for Whirlers (near home in a world)
     e.spdMul = 1; e.dmgMul = 1; e.xpMul = 1; e.shardMul = 1; e.art = null; e.bossArt = null; e.zid = -1; e.evid = null; e.campId = null; e.bossName = null; e.bossTier = 0; e.diff = null; // world-mode extras (multipliers 1 = unchanged)
+    e.rad = 0; e.cre = null; e.tame = null; // B7: per-creature hit radius (0 = the type's), creature tag (enemyStep runs only for these), taming state
     if (this.world && type === 'boss') { e.ax = x; e.ay = y; }
     return e;
   }
@@ -2193,7 +2236,26 @@ class RealmArena {
       if (!b) continue;
       b.pr = hp.pierce; if (d !== base) b.cr = 1;
       if (hp.boltSpeed !== 1) { b.vx *= hp.boltSpeed; b.vy *= hp.boltSpeed; b.life /= hp.boltSpeed; }
+      this._gearBolt(b);
     }
+  }
+  // G11: the `reach` (range +%) and `pierce` (+n, cap 3) gear stats on one of your own fresh bolts. Never in duels; 0 / missing keys change nothing.
+  // A weapon-style bolt gets its reach through _wpnReach (its life comes from the spec), so only its pierce is added here.
+  _gearBolt(b) {
+    const st = this.stats;
+    if (!st || (this.team && this.team.isPvp)) return;
+    if (st.reach > 0 && !b.ws) b.life *= 1 + Math.min(0.5, st.reach);
+    if (st.pierce > 0) b.pr = Math.min(3, b.pr + st.pierce);
+  }
+  // The weapon spec a fresh styled bolt flies with: the hero's, or (with `reach`) a cached copy whose life is longer by that share.
+  _wpnReach(w) {
+    const k = this.stats && this.stats.reach > 0 && !(this.team && this.team.isPvp) ? Math.min(0.5, this.stats.reach) : 0;
+    if (!k) return w;
+    const c = this._wReach;
+    if (c && c.src === w && c.k === k) return c.w;
+    const out = Object.freeze(Object.assign({}, w, { life: Math.min(2, w.life * (1 + k)) }));
+    this._wReach = { src: w, k, w: out };
+    return out;
   }
 
   firePlayerBullet(angle) {
@@ -2202,6 +2264,7 @@ class RealmArena {
     const crit = kc > 0 && this.rng() < kc;
     const b = this.firePlayerBulletFrom(this.player.x, this.player.y, angle, crit ? base * 2 : base, 0);
     if (b && crit) b.cr = 1;
+    if (b) this._gearBolt(b);
   }
 
   // owner 0 = you (host), 1 = your partner. Everything a bolt does is decided on the host; guests only draw them.
@@ -2210,7 +2273,7 @@ class RealmArena {
     const b = this._take(this.pBullets);
     if (!b) return null;
     if (this.team && this.role === 'host') this.team.ev('fp', wcode >= 0 ? [Math.round(x), Math.round(y), Math.round(angle * 1000) / 1000, Math.round(dmg * 10) / 10, wcode] : [Math.round(x), Math.round(y), Math.round(angle * 1000) / 1000, Math.round(dmg * 10) / 10], owner);
-    b.ws = null; b.ho = 0; b.lb = 0; b.st = 0; b.cr = 0; // cr: this bolt rolled a crit (gold damage number)
+    b.ws = null; b.ho = 0; b.lb = 0; b.st = 0; b.cr = 0; b.sq = 0; // cr: this bolt rolled a crit (gold damage number); sq: it already splashed (G11, one splash per bolt)
     b.active = true; b.x = x + Math.cos(angle) * 14; b.y = y + Math.sin(angle) * 14; b.dmg = dmg; b.own = owner;
     b.vx = Math.cos(angle) * RM_PLAYER.bulletSpeed; b.vy = Math.sin(angle) * RM_PLAYER.bulletSpeed; b.life = RM_PLAYER.bulletLife;
     b.pr = 0; b.hn = 0; b.h0 = b.h1 = b.h2 = -1; // class pierce: bolts left to pass through, and the enemies already hit
@@ -2519,6 +2582,7 @@ class RealmArena {
       if (hold) { e.cd = Math.max(e.cd, 0.2); if (e.type === 'boss') e.cd2 = Math.max(e.cd2, 0.2); }
       if (e.type === 'boss') { if (sm && sm.speed < 1) e.t -= dt * (1 - sm.speed); this._updateBoss(e, dt * (e.fireMul || 1) / (sm ? sm.enemyFire : 1)); if (tg) this._tgBoss(e, hold, p); this._curDm = 1; this._curE = null; continue; } // slowed: the sway runs slower
       if (sm && sm.stun) { e._tg = 0; continue; } // stunned: no moving, no firing
+      if (e.cre && wd && wd.enemyStep) { const cx = e.x; const cy = e.y; if (wd.enemyStep(e, dt, p)) { this._enemyClamp(e, cx, cy); continue; } } // B7: a creature moves itself
       if (!hold) e.cd -= dt * (e.fireMul || 1) / (sm ? sm.enemyFire : 1); // fireMul: classic wave scale; dazed makes fire cooldowns x1.5
       const ox = e.x; const oy = e.y; const sp = (e.spdMul || 1) * (sm ? sm.speed : 1);
       const dx = p.x - e.x; const dy = p.y - e.y; const dist = Math.hypot(dx, dy) || 1;
@@ -2548,20 +2612,25 @@ class RealmArena {
         }
       }
       if (tg) this._tgStep(e, hold, p);
-      e.x = Math.max(20, Math.min(this._bw() - 20, e.x));
-      e.y = Math.max(20, Math.min(this._bh() - 20, e.y));
-      if (this._solidAt && this._blocked(e.x, e.y, 8)) { // world tiles block enemies too: slide along one axis, else stay
-        if (!this._blocked(e.x, oy, 8)) e.y = oy; else if (!this._blocked(ox, e.y, 8)) e.x = ox; else { e.x = ox; e.y = oy; }
-        if (e.type === 'spiral') { e.ax = e.x; e.ay = e.y; }
-      }
+      this._enemyClamp(e, ox, oy);
     }
     this._curDm = 1; this._curE = null;
+  }
+  // Keep an enemy inside the world; world tiles block enemies too: slide along one axis, else stay at (ox, oy).
+  _enemyClamp(e, ox, oy) {
+    e.x = Math.max(20, Math.min(this._bw() - 20, e.x));
+    e.y = Math.max(20, Math.min(this._bh() - 20, e.y));
+    if (this._solidAt && this._blocked(e.x, e.y, 8)) {
+      if (!this._blocked(e.x, oy, 8)) e.y = oy; else if (!this._blocked(ox, e.y, 8)) e.x = ox; else { e.x = ox; e.y = oy; }
+      if (e.type === 'spiral') { e.ax = e.x; e.ay = e.y; }
+    }
   }
 
   _updateBullets(dt) {
     const p = this.player; const bw = this._bw(); const bh = this._bh();
     // Player bolts: move, hit enemies (spatial hash over the enemies, rebuilt once per frame).
     if (this._hash) { let any = false; for (let i = 0; i < this.pBullets.length; i++) if (this.pBullets[i].active) { any = true; break; } if (any) this._buildHash(); } // no bolts, no hash
+    this._spFrame = 0; // G11: splash events with FX this frame
     for (let i = 0; i < this.pBullets.length; i++) {
       const b = this.pBullets[i];
       if (!b.active) continue;
@@ -2581,7 +2650,9 @@ class RealmArena {
         if (this._sparks) this._spawnSpark(b);
         if (b.ws) this._wpnHit(b, he, hj);
         if (!b.own && this.stats.leech > 0) this._leechAdd(Math.min(b.dmg || this.stats.dmg, Math.max(0, he.hp))); // G8 leech: your own bolts only (never a partner's)
+        if (!b.own && this.stats.venom > 0 && !(b.ws && b.st > 0)) this._venomBleed(he, 1); // G11: `venom` on a style without a status = a bleed chance (no roll at 0)
         this._hitEnemy(he, b.dmg || this.stats.dmg, b.cr === 1);
+        if (!b.sq && RM_SPLASH_ON) { const sp = this._splashSpec(b); if (sp) { b.sq = 1; this._splashAt(b, b.x, b.y, hj, b.dmg || this.stats.dmg, sp); } } // G11: one splash per bolt (pierce: the first hit)
       }
       if (!b.active) continue;
       for (let j = 0; j < this.drifters.length; j++) {
@@ -2589,7 +2660,7 @@ class RealmArena {
         if (d.active && (b.x - d.x) * (b.x - d.x) + (b.y - d.y) * (b.y - d.y) < 15 * 15) { b.active = false; this._hitDrifter(d, b.dmg || this.stats.dmg); break; }
       }
     }
-    this._updateSparks(dt); this._fxUpdate(dt);
+    this._updateSparks(dt); this._fxUpdate(dt); this._splashRingTick(dt);
     // Enemy bullets: move, hit the player. World mode: a bullet more than one view diagonal from the player can never matter: it is dropped.
     const pr = RM_PLAYER.r + 4;
     const cull = this.world && this.mode === 'world' && !this.dungeon ? (this.W * this.W + this.H * this.H) : 0;
@@ -2624,10 +2695,11 @@ class RealmArena {
     return RM_DMG_COL.plain;
   }
 
-  _hitEnemy(e, dmg, crit) {
+  // quiet (G11 splash): no per-hit damage number / spark burst (the splash event shows one combined number); kills behave as usual.
+  _hitEnemy(e, dmg, crit, quiet) {
     if (e._stm && e._stm.taken !== 1) dmg *= e._stm.taken; // status mods (marked / curse / armorBroken), capped at x1.5 by MMStatus
     if (this.dungeon && e.dg === 'boss') { this.dungeon.hitBoss(e, dmg); return; }
-    if (e.type === 'boss' && e.invuln > 0) { this._floatText(e.x, e.y - 40, 'shielded', '#c9d1d9'); this._burst(e.x, e.y, '#fff', 1, 60); return; }
+    if (e.type === 'boss' && e.invuln > 0) { if (quiet) return; this._floatText(e.x, e.y - 40, 'shielded', '#c9d1d9'); this._burst(e.x, e.y, '#fff', 1, 60); return; }
     if (this.onEnemyHit) this.onEnemyHit(e, dmg);
     e.hp -= dmg; e.flash = 1;
     this._snd(e.hp > 0 ? 'hit' : 'kill');
@@ -2638,15 +2710,19 @@ class RealmArena {
         if (want > e.phase) { this._bossPhase(e, want); this._syncBoss(); }
         return;
       }
+      if (this.world && this.world.onLethal && this.world.onLethal(e, dmg)) { e.hp = 1; return; } // B7: knocked out, not killed
       e.active = false; this._bossDefeated(e);
       if (this._bossArt && e._bn && this._bossArt.anim(e._bn, 'death', 'down')) this._bossGhost = { name: e._bn, x: e.x, y: e.y, t0: this.clock };
       if (this.onEnemyKilled) this.onEnemyKilled(e);
       return;
     }
-    const dc = this._dmgColor(e, crit); this.lastDmgColor = dc; // S14 (test hook: the colour of the last enemy damage number)
-    this._floatText(e.x + (this.rng() - 0.5) * 14, e.y - 14, crit ? `${Math.round(dmg * 10) / 10}!` : String(Math.round(dmg * 10) / 10), dc);
-    this._burst(e.x, e.y, RM_ENEMIES[e.type].color, 3, 110);
+    if (!quiet) {
+      const dc = this._dmgColor(e, crit); this.lastDmgColor = dc; // S14 (test hook: the colour of the last enemy damage number)
+      this._floatText(e.x + (this.rng() - 0.5) * 14, e.y - 14, crit ? `${Math.round(dmg * 10) / 10}!` : String(Math.round(dmg * 10) / 10), dc);
+      this._burst(e.x, e.y, RM_ENEMIES[e.type].color, 3, 110);
+    }
     if (e.hp > 0) return;
+    if (this.world && this.world.onLethal && this.world.onLethal(e, dmg)) { e.hp = 1; return; } // B7: knocked out, not killed
     e.active = false;
     const def = RM_ENEMIES[e.type];
     if (this._edGhosts) this._spawnEnemyGhost(e, def);
@@ -2663,6 +2739,92 @@ class RealmArena {
     this.onSave(this.save);
     if (this.dungeon) this.dungeon.onKill(e);
     if (this.onEnemyKilled) this.onEnemyKilled(e);
+  }
+
+  // ---------- G11 player splash (MMSplash kernel, GEAR-DROPS-BUILD-PLAN section d) ----------
+  // The splash spec of one of YOUR bolts (never a partner's, a guest's, a duel's or a lobbed one), or null. A splash style (`bow_blast` ...) uses its
+  // own {r, frac, inner, edge, max} plus the `blast` affix px; any other bolt splashes only with `blast` ({r 24 + px, frac .30, max 3}, from _calcStats).
+  // Reuses one object (no per-hit allocation).
+  _splashSpec(b) {
+    if (!RM_SPLASH_ON || b.own || b.lb || (this.team && (this.team.isPvp || this.role === 'guest'))) return null;
+    const st = this.stats, o = this._spS || (this._spS = { r: 0, frac: 0, inner: 0.35, edge: 0.5, max: 0 });
+    const ws = b.ws && b.ws.splash && b.ws.splash.r > 0 ? b.ws.splash : null;
+    if (ws) {
+      const px = st.splashR > 24 ? st.splashR - 24 : 0; // the `blast` affix widens a splash style by its px
+      o.r = Math.min(MMSplash.MAX_R, ws.r + px); o.frac = ws.frac; o.inner = ws.inner; o.edge = ws.edge; o.max = ws.max;
+    } else if (st.splashFrac > 0 && st.splashR > 0 && st.splashMax > 0) {
+      o.r = Math.min(MMSplash.MAX_R, st.splashR); o.frac = st.splashFrac; o.inner = MMSplash.DEF_INNER; o.edge = MMSplash.DEF_EDGE; o.max = st.splashMax;
+    } else return null;
+    return o.frac > 0 && o.max > 0 ? o : null;
+  }
+  // Splash around (x, y) after a primary hit on enemy `skip` for `hit` damage (crit included; each target's own status mods apply in _hitEnemy).
+  // The nearest `max` (<= 6) active hostile enemies inside r take hit x frac x falloff; partners, the player, drifters and inactive pool slots never do
+  // (only this.enemies is searched). A splashed enemy rolls the bolt's onHit status (or the venom bleed) at chance x its share. Returns the count.
+  _splashAt(b, x, y, skip, hit, sp) {
+    const E = this.enemies, n = E.length;
+    if (!this._spX || this._spX.length < n) { const c = Math.max(64, n); this._spX = new Float32Array(c); this._spY = new Float32Array(c); this._spR = new Float32Array(c); this._spOk = new Uint8Array(c); this._spOut = new Int16Array(MMSplash.MAX_TARGETS); this._spD = new Float32Array(MMSplash.MAX_TARGETS); }
+    const xs = this._spX, ys = this._spY, rs = this._spR, ok = this._spOk, out = this._spOut, dd = this._spD;
+    for (let i = 0; i < n; i++) { const e = E[i]; const live = !!(e.active && e.hp > 0 && !e.tame); ok[i] = live ? 1 : 0; xs[i] = live ? e.x : 0; ys[i] = live ? e.y : 0; rs[i] = live ? this._er(e) : 0; }
+    const k = MMSplash.pick(xs, ys, rs, n, x, y, sp, skip, out, ok);
+    for (let j = 0; j < k; j++) dd[j] = MMSplash.dist[j]; // copied first: nothing below may touch the kernel's scratch
+    let tot = 0, cnt = 0;
+    for (let j = 0; j < k; j++) {
+      const e = E[out[j]]; if (!e || !e.active) continue;
+      const f = MMSplash.frac(dd[j], sp), dmg = hit * sp.frac * f;
+      if (!(dmg > 0)) continue;
+      if (b.ws && b.st > 0) this._wpnStatus(b, e, sp.frac * f); else if (this.stats.venom > 0) this._venomBleed(e, sp.frac * f);
+      this._hitEnemy(e, dmg, false, true);
+      tot += dmg; cnt++;
+    }
+    this.splashN = (this.splashN || 0) + 1; this.lastSplash = { x, y, r: sp.r, n: cnt, dmg: Math.round(tot * 100) / 100 }; // test hooks
+    if (++this._spFrame <= RM_SPLASH_FX) this._splashFx(x, y, sp.r, cnt, tot);
+    return cnt;
+  }
+  // A `venom` bleed (3 s) on an enemy hit by a bolt whose style has no status of its own, at venom x scale (scale = its share on a splashed enemy).
+  _venomBleed(e, scale) {
+    if (!e || !e.active || !(this.stats.venom > 0)) return false;
+    if (this.rng() >= Math.min(1, this.stats.venom * scale)) return false;
+    return this.applyStatus(e, 'bleed', { sec: 3, src: 'wpn' });
+  }
+  // The ring (b29 `fx_splash_ring` art when loaded and two effect slots are free, else a cached code-drawn ring), the b18 small explosion for big
+  // splashes (r >= 40, >= 4 free slots, never with reduced motion) and one combined orange number ("2.4 ×3"), rate-limited.
+  _splashFx(x, y, r, cnt, tot) {
+    const free = this._fxPool ? RM_FX_MAX - this.fxLive() : 0;
+    const art = free >= 2 && this._fx && this._fx.has('fx_splash_ring') && this.fxPlay('fx_splash_ring', x, y, { w: Math.max(24, r * 2) });
+    if (art) this.splashArtN = (this.splashArtN || 0) + 1; else this._splashRing(x, y, r);
+    if (r >= 40 && free >= 4 && !this._reduced && this._fx && this._fx.has('fx_explosion_small')) this.fxPlay('fx_explosion_small', x, y, { w: 64 });
+    if (cnt <= 0 || (this._spTxtT !== undefined && this._stT - this._spTxtT < RM_SPLASH_TXT_GAP)) return;
+    let live = 0; for (let i = 0; i < this.texts.length; i++) if (this.texts[i].active) live++;
+    if (live > RM_SPLASH_TXT_MAX) return;
+    this._spTxtT = this._stT;
+    this._floatText(x, y - 20, `${Math.round(tot / cnt * 10) / 10} ×${cnt}`, RM_SPLASH_COL);
+  }
+  _splashRing(x, y, r) {
+    const P = this._spRings || (this._spRings = Array.from({ length: RM_SPLASH_RINGS }, () => ({ active: false, x: 0, y: 0, r: 0, t: 0, dur: 0.18 })));
+    let q = P[0];
+    for (let i = 0; i < P.length; i++) { if (!P[i].active) { q = P[i]; break; } if (P[i].t > q.t) q = P[i]; }
+    q.active = true; q.x = x; q.y = y; q.r = r; q.t = 0; q.dur = this._reduced ? 0.15 : 0.18;
+    this.splashRingN = (this.splashRingN || 0) + 1;
+  }
+  _splashRingTick(dt) { const P = this._spRings; if (!P) return; for (let i = 0; i < P.length; i++) { const q = P[i]; if (q.active) { q.t += dt; if (q.t >= q.dur) q.active = false; } } }
+  // Code ring: one canvas per 8 px radius bucket (MMFxDraw.makeCache key `splash:<bucket>:<hex>`), blitted 0.6r -> r over 0.18 s; reduced motion: static.
+  _drawSplashRings(g) {
+    const P = this._spRings; if (!P) return;
+    for (let i = 0; i < P.length; i++) {
+      const q = P[i]; if (!q.active) continue;
+      const k = this._reduced ? 1 : 0.6 + 0.4 * Math.min(1, q.t / q.dur), rr = q.r * k;
+      const cv = this._splashCanvas(q.r);
+      g.globalAlpha = Math.max(0, 1 - q.t / q.dur) * 0.9;
+      if (cv) g.drawImage(cv, q.x - rr, q.y - rr, rr * 2, rr * 2);
+      else { g.strokeStyle = RM_SPLASH_COL; g.lineWidth = 2; g.beginPath(); g.arc(q.x, q.y, rr, 0, Math.PI * 2); g.stroke(); }
+      g.globalAlpha = 1;
+    }
+  }
+  _splashCanvas(r) {
+    if (typeof MMFxDraw === 'undefined' || typeof MMFxDraw.makeCache !== 'function') return null;
+    if (!this._spCache) this._spCache = MMFxDraw.makeCache(MMFxDraw.defaultCreate, 16);
+    const bk = Math.max(1, Math.min(10, Math.ceil(r / 8))), S = bk * 16 + 4;
+    return this._spCache.get(`splash:${bk}:${RM_SPLASH_COL.slice(1)}`, S, S, (c) => { c.strokeStyle = RM_SPLASH_COL; c.lineWidth = 2; c.beginPath(); c.arc(S / 2, S / 2, S / 2 - 2, 0, Math.PI * 2); c.stroke(); c.globalAlpha = 0.25; c.fillStyle = RM_SPLASH_COL; c.fill(); c.globalAlpha = 1; });
   }
 
   _hitPlayer(dmg) {
@@ -2928,10 +3090,11 @@ class RealmArena {
       const len = Math.hypot(dx, dy) || 1;
       this._burst(p.x, p.y, '#8fe9ff', 8, 120);
       const sx0 = p.x, sy0 = p.y;
-      if (this._coll()) { for (let k = 0; k < 15; k++) this._movePlayer((dx / len) * 10, (dy / len) * 10); } // stepwise so a dash cannot tunnel through a wall
+      const wdm = this.world && this.world.dashMul ? Number(this.world.dashMul()) : 1; const dk = wdm > 0 ? Math.max(0.25, Math.min(3, wdm)) : 1; // B7: a mount's dash scale (1 = unchanged)
+      if (this._coll()) { const ns = Math.round(15 * dk); for (let k = 0; k < ns; k++) this._movePlayer((dx / len) * 10, (dy / len) * 10); } // stepwise so a dash cannot tunnel through a wall
       else {
-        p.x = Math.max(RM_PLAYER.r, Math.min(this._bw() - RM_PLAYER.r, p.x + (dx / len) * 150));
-        p.y = Math.max(RM_PLAYER.r, Math.min(this._bh() - RM_PLAYER.r, p.y + (dy / len) * 150));
+        p.x = Math.max(RM_PLAYER.r, Math.min(this._bw() - RM_PLAYER.r, p.x + (dx / len) * 150 * dk));
+        p.y = Math.max(RM_PLAYER.r, Math.min(this._bh() - RM_PLAYER.r, p.y + (dy / len) * 150 * dk));
       }
       this._fxDashTrail(sx0, sy0);
       p.iframes = Math.max(p.iframes, 0.4);
@@ -3136,7 +3299,7 @@ class RealmArena {
       const e = this.enemies[i];
       if (!e.active || !e._tg || e.x < vx0 || e.x > vx1 || e.y < vy0 || e.y > vy1) continue;
       const o = this._tgShape(e, d); g.globalAlpha = Math.max(0, Math.min(1, o.alpha));
-      if (e._tg === 1) { const R = (RM_ENEMIES[e.type].r + 26) * o.scale; g.drawImage(spr.ring, e.x - R, e.y - R, R * 2, R * 2); }
+      if (e._tg === 1) { const R = (this._er(e) + 26) * o.scale; g.drawImage(spr.ring, e.x - R, e.y - R, R * 2, R * 2); }
       else {
         g.save(); g.translate(e.x, e.y); g.rotate(e._tgA);
         if (e._tg === 2) g.drawImage(spr.line, 0, -8, o.len, 16);
@@ -3202,7 +3365,7 @@ class RealmArena {
     let dealt = 0;
     for (let i = 0; i < this.enemies.length; i++) {
       const e = this.enemies[i]; if (!e.active) continue;
-      const er = RM_ENEMIES[e.type].r; const dx = e.x - x; const dy = e.y - y; const rr = r + er;
+      const er = this._er(e); const dx = e.x - x; const dy = e.y - y; const rr = r + er;
       if (dx * dx + dy * dy > rr * rr) continue;
       if (slow < 1) { e.slowT = Math.max(e.slowT || 0, slowSec); e.slowF = slow; }
       if (knock > 0 && e.type !== 'boss') {
@@ -3300,7 +3463,7 @@ class RealmArena {
       for (let i = 0; i < this.enemies.length; i++) {
         const e = this.enemies[i]; if (!e.active) continue;
         if (e.boneT > 0) { e.boneT -= dt; continue; }
-        const rr = RM_ENEMIES[e.type].r + 8;
+        const rr = this._er(e) + 8;
         for (let k = 0; k < bn.n; k++) {
           const a = bn.a + k * Math.PI * 2 / bn.n; const bx = p.x + Math.cos(a) * s.radius; const by = p.y + Math.sin(a) * s.radius;
           if ((e.x - bx) * (e.x - bx) + (e.y - by) * (e.y - by) > rr * rr) continue;
@@ -3572,7 +3735,30 @@ class RealmArena {
     if (this.heroProfile && this.heroProfile.name && !(this.team && this.team.isPvp)) bits.unshift(this.heroProfile.name);
     if (st.shards > 1) bits.push(`+${Math.round((st.shards - 1) * 100)}% 💎`);
     if (st.xp > 1) bits.push(`+${Math.round((st.xp - 1) * 100)}% xp`);
+    // G11 gear stats (only when a piece gives them), each with its b29 stat icon
+    const gi = (k) => this._gearIco('ui_stat_' + k);
+    if (st.crit > 0) bits.push(`${gi('crit')}${Math.round(st.crit * 1000) / 10}% crit`);
+    if (st.splashR > 0 && st.splashFrac > 0) bits.push(`${gi('splash')}splash ${Math.round(st.splashR)} px`);
+    if (st.reach > 0) bits.push(`${gi('range')}+${Math.round(st.reach * 1000) / 10}% range`);
+    if (st.resist > 0) bits.push(`${gi('resist')}${Math.round(st.resist * 100)}% resist`);
+    if (st.leech > 0) bits.push(`${gi('leech')}${Math.round(st.leech * 1000) / 10}% leech`);
+    if (st.regen > 0) bits.push(`${gi('regen')}${Math.round(st.regen * 10) / 10} HP/s regen`);
     return bits.join(' · ');
+  }
+  // A decorative b29 UI icon (16 px, aria-hidden: the text beside it carries the meaning); '' when off or the id is unknown. Load errors remove it.
+  _gearIco(id) {
+    if (!RM_GEAR_UI || !RM_GEAR_UI_RE.test(id) || !/^[A-Za-z0-9_.:\/%-]+$/.test(RM_GEAR_UI)) return '';
+    return `<img class="rm-gear-ico mm-ico" src="${RM_GEAR_UI}${id}.png" alt="" aria-hidden="true" width="16" height="16" data-gico="${id}" style="vertical-align:-3px;margin-right:2px;image-rendering:pixelated">`;
+  }
+  // T7+ affix names under a tiered item's stat text, each with its b29 affix icon ('' below T7, without an affix seed or with gear off).
+  _affixHtml(it, def) {
+    if (!RM_GEAR_ON || !it || !(it.t >= 7) || !it.a || typeof MMGearAffix === 'undefined' || !def || (def.slot !== 'weapon' && def.slot !== 'armor')) return '';
+    let list = null; try { list = MMGearAffix.roll(it.id, def.slot, it.t, it.r, it.a); } catch (e) { list = null; }
+    if (!list || !list.length) return '';
+    const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+    let h = '';
+    list.forEach((x) => { let t = ''; try { t = (MMGearAffix.describe([x]) || [])[0] || ''; } catch (e) { t = ''; } if (t && /^[a-z]+$/.test(x.id)) h += `<span class="rm-afx-i" data-affix="${x.id}" style="margin-right:6px;white-space:nowrap">${this._gearIco('ui_affix_' + x.id)}${esc(t)}</span>`; });
+    return h ? `<span class="rm-afx" style="display:block;font-size:11px;opacity:.9">${h}</span>` : '';
   }
 
   _itemText(it) {
@@ -3605,19 +3791,19 @@ class RealmArena {
     if (!sv.items.length) html += '<li class="dim">Nothing yet — defeat enemies to find loot bags.</li>';
     sv.items.forEach((it) => {
       const def = RM_ITEM_BY_ID[it.id]; const rar = RM_RARITIES[it.r]; const on = eqUids.has(it.n); const sell = rmSellValue(it); const why = on ? '' : this._gearWhy(it);
-      html += `<li data-uid="${it.n}" class="${on ? 'on' : ''}"><span class="nm" style="color:${rar.color}">${this._icon(def)} ${this._tierTag(it)}${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(it)}</span>${def.slot === 'weapon' ? this._cmpHtml(it, on) : ''}${def.inert ? '<button type="button" class="eq" disabled aria-label="Not usable yet">Equip</button>' : def.wpn && !on && !this._wpnCanEquip(def) ? `<button type="button" class="eq" disabled data-wpn-lock="1" aria-label="${this._wpnHint(def)} only" title="${this._wpnHint(def)}">🔒 ${def.family.charAt(0).toUpperCase() + def.family.slice(1)}</button>` : why ? this._gearLockHtml(it, def, why) : `<button type="button" class="eq" data-act="equip" data-uid="${it.n}">${on ? 'Unequip' : 'Equip'}</button>`}${this.combinable(it.n) ? `<button type="button" class="eq" data-combine="${it.n}" aria-label="Combine ${RM_COMBINE_COUNT} ${rar.name} ${def.name} into one ${RM_RARITIES[it.r + 1].name}">Combine ${RM_COMBINE_COUNT}→${RM_RARITIES[it.r + 1].name}</button>` : ''}<button type="button" class="dc" data-act="discard" data-uid="${it.n}" aria-label="Sell ${def.name} for ${sell} shards">Sell ${sell}💎</button></li>`;
+      html += `<li data-uid="${it.n}" class="${on ? 'on' : ''}"><span class="nm" style="color:${rar.color}">${this._icon(def)} ${this._tierTag(it)}${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(it)}</span>${this._affixHtml(it, def)}${def.slot === 'weapon' ? this._cmpHtml(it, on) : ''}${def.inert ? '<button type="button" class="eq" disabled aria-label="Not usable yet">Equip</button>' : def.wpn && !on && !this._wpnCanEquip(def) ? `<button type="button" class="eq" disabled data-wpn-lock="1" aria-label="${this._wpnHint(def)} only" title="${this._wpnHint(def)}">🔒 ${def.family.charAt(0).toUpperCase() + def.family.slice(1)}</button>` : why ? this._gearLockHtml(it, def, why) : `<button type="button" class="eq" data-act="equip" data-uid="${it.n}">${on ? 'Unequip' : 'Equip'}</button>`}${this.combinable(it.n) ? `<button type="button" class="eq" data-combine="${it.n}" aria-label="Combine ${RM_COMBINE_COUNT} ${rar.name} ${def.name} into one ${RM_RARITIES[it.r + 1].name}">Combine ${RM_COMBINE_COUNT}→${RM_RARITIES[it.r + 1].name}</button>` : ''}<button type="button" class="dc" data-act="discard" data-uid="${it.n}" aria-label="Sell ${def.name} for ${sell} shards">Sell ${sell}💎</button></li>`;
     });
     html += '</ul>';
     root.innerHTML = html; this._fixIcons(root); this._bindCmp(root);
     if (this._cmpOnUid) { const on = root.querySelector(`#realm-bp-list li[data-uid="${this._cmpOnUid}"]`); if (on) on.classList.add('cmp-on'); } // a long-pressed compare line survives a re-render
-    root.querySelectorAll('img.rm-slot-ico').forEach((img) => { if (img.complete && !img.naturalWidth) img.remove(); else img.addEventListener('error', () => img.remove(), { once: true }); });
+    root.querySelectorAll('img.rm-slot-ico, img.rm-gear-ico').forEach((img) => { if (img.complete && !img.naturalWidth) img.remove(); else img.addEventListener('error', () => img.remove(), { once: true }); });
   }
 
   // G7: a small "T7" tier label (tier colour + text, never colour alone) in front of a tiered item's name; '' for T0 or with gear off.
   _tierTag(it) {
     if (!RM_GEAR_ON || !it || !it.t) return '';
     const c = MMGear.TIER_COLORS[it.t - 1] || '#c9d1d9';
-    return `<span class="rm-tier" style="color:${c};font-weight:700;font-size:11px;margin-right:3px">T${it.t}</span>${MMGear.soulbound(it.t) ? '🔗 ' : ''}`;
+    return `${this._gearIco('ui_tier_badge_' + it.t)}<span class="rm-tier" style="color:${c};font-weight:700;font-size:11px;margin-right:3px">T${it.t}</span>${MMGear.soulbound(it.t) ? '🔗 ' : ''}`;
   }
   // The disabled equip button of a tiered item the hero cannot wear: another armor family ("🔒 Heavy", the _wpnHint pattern) or a level gate ("🔒 Lv 16").
   _gearLockHtml(it, def, why) {
@@ -3650,7 +3836,8 @@ class RealmArena {
     let pattern = '';
     try { pattern = spec ? MMWeapons.describe(spec) : ''; } catch (e) { pattern = ''; }
     if (!pattern) pattern = `${shots} bolt${shots === 1 ? '' : 's'}, range ${range} px`;
-    return { pattern, shots, pierce: spec ? spec.pierce || 0 : (hp ? hp.pierce : 0), range, dps: shotDmg * shots * rate, locked };
+    const splash = RM_SPLASH_ON && spec && spec.splash && spec.splash.r > 0 ? Math.round(spec.splash.r) : 0;
+    return { pattern, shots, pierce: spec ? spec.pierce || 0 : (hp ? hp.pierce : 0), range, dps: shotDmg * shots * rate, locked, splash };
   }
   // Compare a backpack weapon with what is equipped now (or the class weapon): {pattern, deltas: [{text, up}], equipped, locked}.
   weaponCompare(uid) {
@@ -3661,13 +3848,14 @@ class RealmArena {
     const out = { pattern: a.pattern, deltas: [], equipped: eqUid === uid, locked: a.locked };
     if (out.equipped || a.locked) return out;
     const sgn = (d) => (d > 0 ? '+' : '');
-    const add = (d, text, min) => { if (Math.abs(d) >= (min || 1)) out.deltas.push({ text, up: d > 0 }); };
-    const ds = a.shots - b.shots, dp = a.pierce - b.pierce, dr = a.range - b.range;
+    const add = (d, text, min, ico) => { if (Math.abs(d) >= (min || 1)) out.deltas.push(ico ? { text, up: d > 0, ico } : { text, up: d > 0 }); };
+    const ds = a.shots - b.shots, dp = a.pierce - b.pierce, dr = a.range - b.range, dsp = a.splash - b.splash;
     add(ds, `${sgn(ds)}${ds} shot${Math.abs(ds) === 1 ? '' : 's'}`);
-    add(dp, `${sgn(dp)}${dp} pierce`);
+    add(dp, `${sgn(dp)}${dp} pierce`, 1, 'ui_affix_pierce');
     const pct = b.dps > 0 ? Math.round((a.dps / b.dps - 1) * 100) : 0;
     add(pct, `${sgn(pct)}${pct}% damage/s`);
-    add(dr, `${sgn(dr)}${dr} px range`, 10);
+    add(dr, `${sgn(dr)}${dr} px range`, 10, 'ui_stat_range');
+    add(dsp, `${sgn(dsp)}${dsp} px splash`, 1, 'ui_stat_splash'); // G11: only the splash styles have one
     return out;
   }
   _cmpHtml(it, on) {
@@ -3678,7 +3866,7 @@ class RealmArena {
     if (on || c.equipped) d = '<span class="dl eqd">equipped</span>';
     else if (c.locked) d = '<span class="dl eqd">another class family</span>';
     else if (!c.deltas.length) d = '<span class="dl eqd">same as equipped</span>';
-    else d = c.deltas.map((x) => `<span class="dl ${x.up ? 'up' : 'dn'}">${esc(x.text)}</span>`).join('');
+    else d = c.deltas.map((x) => `<span class="dl ${x.up ? 'up' : 'dn'}">${x.ico ? this._gearIco(x.ico) : ''}${esc(x.text)}</span>`).join('');
     return `<span class="rm-cmp" data-cmp="${it.n}"><span class="pat">${esc(c.pattern)}</span>${d}</span>`;
   }
   // Long-press (touch) toggles a row's compare line; hover / keyboard focus show it on desktop (realm-ui.css). Bound once per element.
@@ -3746,11 +3934,12 @@ class RealmArena {
     for (let i = 0; i < this.enemies.length; i++) {
       const e = this.enemies[i];
       if (!e.active || e.x < vx0 || e.x > vx1 || e.y < vy0 || e.y > vy1) continue;
+      if (wd && wd.drawEnemy && wd.drawEnemy(g, e)) continue; // B7: the world drew this one (a creature)
       const spr = this.sprites[e.type];
       const bob = e.type === 'boss' ? 0 : Math.sin(e.t * 4) * 2;
       const art = e.type === 'boss' ? !!(this._bossArt && this._drawBossArt(g, e)) : !!(this._enemyArt && this._drawEnemyArt(g, e, RM_ENEMIES[e.type]));
       if (!art) g.drawImage(spr, e.x - spr.width / 2, e.y - spr.height / 2 + bob);
-      if (e.flash > 0 && this._flashesOn()) { g.globalAlpha = e.flash * 0.7; g.fillStyle = '#fff'; g.beginPath(); g.arc(e.x, e.y + (art ? 0 : bob), RM_ENEMIES[e.type].r, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1; }
+      if (e.flash > 0 && this._flashesOn()) { g.globalAlpha = e.flash * 0.7; g.fillStyle = '#fff'; g.beginPath(); g.arc(e.x, e.y + (art ? 0 : bob), this._er(e), 0, Math.PI * 2); g.fill(); g.globalAlpha = 1; }
       if (e.type === 'boss' && e.invuln > 0) { g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 3; g.beginPath(); g.arc(e.x, e.y, 40 + Math.sin(e.t * 20) * 2, 0, Math.PI * 2); g.stroke(); }
       if (e.hp < e.maxHp && e.type !== 'boss') { g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(e.x - 14, e.y - spr.height / 2 - 6, 28, 4); g.fillStyle = RM_ENEMIES[e.type].color; g.fillRect(e.x - 14, e.y - spr.height / 2 - 6, 28 * (e.hp / e.maxHp), 4); }
       if (e.status) this._drawEnemyPips(g, e, e.y - (e.type === 'boss' ? RM_ENEMIES.boss.r + 10 : spr.height / 2 + 13));
@@ -3780,12 +3969,14 @@ class RealmArena {
         if (q.down && !tm.isPvp) { g.strokeStyle = '#7ee787'; g.lineWidth = 3; g.beginPath(); g.arc(q.x, q.y, RT_REVIVE_RANGE, -Math.PI / 2, -Math.PI / 2 + q.revive * Math.PI * 2); g.stroke(); g.strokeStyle = 'rgba(126,231,135,0.35)'; g.lineWidth = 1; g.beginPath(); g.arc(q.x, q.y, RT_REVIVE_RANGE, 0, Math.PI * 2); g.stroke(); }
       }
     }
+    if (wd && wd.drawMid) wd.drawMid(g, cam); // B7: under the hero (a mount)
     // Player: the villager sprite (flickers while invulnerable), with a soft shadow and aim marker.
     const p = this.player;
+    const lift0 = wd && wd.heroLift ? Number(wd.heroLift()) : 0; const lift = lift0 > 0 ? Math.min(96, lift0) : 0; // B7: hero drawn raised (riding)
     if (this.state !== 'dead' && (p.iframes <= 0 || this._reduced || Math.floor(p.iframes * 20) % 2 === 0)) {
       if (this.down) { g.globalAlpha = 0.45; g.strokeStyle = '#7ee787'; g.lineWidth = 3; g.beginPath(); g.arc(p.x, p.y, RT_REVIVE_RANGE, -Math.PI / 2, -Math.PI / 2 + Math.min(1, this.reviveT / RT_REVIVE_TIME) * Math.PI * 2); g.stroke(); }
       g.fillStyle = 'rgba(0,0,0,0.35)'; g.beginPath(); g.ellipse(p.x, p.y + 14, 13, 5, 0, 0, Math.PI * 2); g.fill();
-      let heroDrawn = false;
+      let heroDrawn = false; if (lift) { g.save(); g.translate(0, -lift); }
       if (this._heroArt) { const ga = g.globalAlpha; if (this._reduced && p.iframes > 0) g.globalAlpha = 0.6; heroDrawn = this._drawHero(g, p); g.globalAlpha = ga; }
       if (!heroDrawn) {
       const spr = this._avatar || this.sprites.playerFallback;
@@ -3796,6 +3987,7 @@ class RealmArena {
       g.drawImage(spr, -size / 2, -size / 2 - 4, size, size);
       g.restore();
       }
+      if (lift) g.restore();
       if (this.shield.hits > 0) { g.strokeStyle = `rgba(143,233,255,${0.5 + 0.1 * this.shield.hits})`; g.lineWidth = 3; g.beginPath(); g.arc(p.x, p.y, 26, 0, Math.PI * 2); g.stroke(); }
       if (this.overdriveT > 0) { g.strokeStyle = 'rgba(255,170,60,0.8)'; g.lineWidth = 2; g.beginPath(); g.arc(p.x, p.y, 21 + Math.sin(performance.now() / 60) * 2, 0, Math.PI * 2); g.stroke(); }
       g.strokeStyle = 'rgba(143,233,255,0.7)'; g.lineWidth = 2; g.beginPath();
@@ -3809,6 +4001,7 @@ class RealmArena {
       this._drawHero(g, p);
     }
     if (this._fxPool) this._fxDraw(g);
+    if (this._spRings) this._drawSplashRings(g);
     if (this.sig) this._drawSignature(g);
     if (this.dungeon) this.dungeon.drawOver(g);
     if (wd && wd.drawOver) wd.drawOver(g, cam);

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Isle art bake fixture</title>
+<!-- shared scripts only: no Phaser, no Firebase, no net.js -->
+<script src="../../shared/mm-chunk-bake.js"></script>
+<script src="../../shared/mm-isle-art.js"></script>
+</head>
+<body>
+<script>
+  // 32x32 tile world of the 12 jungle pack ids (22..33) laid out by position; window.run(opts) bakes chunk (cx,cy) and returns a pixel digest.
+  var W = 32, terrain = new Uint8Array(W * W);
+  for (var y = 0; y < W; y++) for (var x = 0; x < W; x++) terrain[y * W + x] = 22 + ((x + y * 5) % 12);
+  function digest(cv) {
+    var d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data, h = 2166136261 >>> 0;
+    for (var i = 0; i < d.length; i += 7) h = Math.imul(h ^ d[i], 16777619) >>> 0;
+    return { w: cv.width, h: cv.height, h32: h, data: d };
+  }
+  window.run = async function (opts) {
+    var isle = MMIsleArt.create(opts || {});
+    await isle.ready;
+    var cv = isle.chunk(terrain, W, 0, 0), again = isle.chunk(terrain, W, 0, 0);
+    var a = digest(cv), g = cv.getContext('2d');
+    // fresh bake on a new canvas for the determinism check
+    var iso2 = MMIsleArt.create(opts || {}); await iso2.ready;
+    var b = digest(iso2.chunk(terrain, W, 0, 0));
+    return { active: isle.active(), cached: cv === again, size: [a.w, a.h], h32: a.h32, h32b: b.h32, data: Array.from(a.data) };
+  };
+  window.pngTile = function (name) {
+    return new Promise(function (res) {
+      var im = new Image(); im.onload = function () {
+        var c = document.createElement('canvas'); c.width = 32; c.height = 32; c.getContext('2d').drawImage(im, 0, 0);
+        res(Array.from(c.getContext('2d').getImageData(0, 0, 32, 32).data));
+      }; im.onerror = function () { res(null); }; im.src = MMIsleArt.BASE + 'tiles/' + name + '.png';
+    });
+  };
+  window.terrainIds = Array.from(terrain);
+  window.ready = true;
+</script>
+</body>
+</html>

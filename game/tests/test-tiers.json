@@ -655,6 +655,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "gear-boss-splash.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "gear-world-drops.test.js": {
     "class": "browser",
     "tier": "full"
@@ -674,6 +678,10 @@
   "shared-mm-gear-soulbound.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "gear-soulbound.test.js": {
+    "class": "browser",
+    "tier": "full"
   },
   "gear-hero-stats.test.js": {
     "class": "browser",
@@ -907,6 +915,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "arena-world-hooks.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "world-bosskey.test.js": {
     "class": "browser",
     "tier": "full"
@@ -952,6 +964,26 @@
     "tier": "full"
   },
   "gear-stats-pipeline.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "archipelago-page.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "shared-mm-isle-art.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "isle-art-bake.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "isles-taming.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "gear-splash-player.test.js": {
     "class": "browser",
     "tier": "full"
   }
