@@ -811,6 +811,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "world-team.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "class-weapon-playtest.test.js": {
     "class": "browser",
     "tier": "full"
