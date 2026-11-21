@@ -207,6 +207,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "realm-playthrough.test.js": {
+    "class": "live",
+    "tier": "full"
+  },
   "realm-polish.test.js": {
     "class": "browser",
     "tier": "smoke"

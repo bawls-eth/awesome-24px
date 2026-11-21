@@ -185,12 +185,13 @@
       chunkBuilds++;
       const cv = document.createElement('canvas'); cv.width = CPX; cv.height = CPX;
       const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
+      const variants = TN.map((_, id) => tileArt[id]?.filter(Boolean));
       const x0 = cx * CH; const y0 = cy * CH; let water = false;
       for (let ty = 0; ty < CH; ty++) for (let tx = 0; tx < CH; tx++) {
         const wx = x0 + tx; const wy = y0 + ty; const px = tx * TILE; const py = ty * TILE;
         if (wx >= ww || wy >= wh) { rect(g, PAL.deep_water[0], px, py, TILE, TILE); continue; }
         const i = wy * ww + wx; const t = terrain[i]; const pal = PAL[TN[t]] || PAL.grass;
-        const art = tileArt[t]?.filter(Boolean);
+        const art = variants[t];
         if (t === T.deep_water || t === T.shallow_water) water = true;
         const transition = transitionAt(wx, wy, t);
         if (transition) g.drawImage(transition, px, py, TILE, TILE);
@@ -200,13 +201,9 @@
           for (let k = 0; k < 3; k++) { const r = h2(wx * 3 + k, wy, 7); if (r < 0.55) rect(g, r < 0.27 ? pal[1] : pal[2], px + Math.floor(h2(wx, wy * 5 + k, 11) * 26), py + Math.floor(h2(wx * 7 + k, wy, 13) * 26), t === T.flower_meadow ? 3 : 6, t === T.flower_meadow ? 3 : 4); }
         }
         if (solid[i] && t !== T.deep_water) { rect(g, 'rgba(0,0,0,0.28)', px, py, TILE, TILE); rect(g, 'rgba(255,255,255,0.18)', px, py, TILE, 4); rect(g, 'rgba(0,0,0,0.35)', px, py + TILE - 5, TILE, 5); }
-      }
-      // darker edge line where neighbouring terrain differs
-      for (let ty = 0; ty < CH; ty++) for (let tx = 0; tx < CH; tx++) {
-        const wx = x0 + tx; const wy = y0 + ty; if (wx >= ww || wy >= wh) continue;
-        const t = terrain[wy * ww + wx];
-        if (transitionAt(wx, wy, t)) continue;
-        const e = (PAL[TN[t]] || PAL.grass)[3]; const px = tx * TILE; const py = ty * TILE;
+        // Transition sprites already draw the terrain boundary.
+        if (transition) continue;
+        const e = pal[3];
         if (wx + 1 < ww && terrain[wy * ww + wx + 1] !== t) rect(g, e, px + TILE - 2, py, 2, TILE);
         if (wx > 0 && terrain[wy * ww + wx - 1] !== t) rect(g, e, px, py, 2, TILE);
         if (wy + 1 < wh && terrain[(wy + 1) * ww + wx] !== t) rect(g, e, px, py + TILE - 2, TILE, 2);
@@ -250,12 +247,22 @@
     const EMPTY = [];
 
     // ---------- minimap (base image cached once) + zone HUD ----------
-    const mini = document.createElement('canvas'); mini.id = 'rw-minimap'; mini.width = 96; mini.height = 96; mini.setAttribute('aria-label', 'World map (tap to enlarge)'); mini.setAttribute('role', 'img');
+    const mini = document.createElement('canvas'); mini.id = 'rw-minimap'; mini.width = 96; mini.height = 96; mini.setAttribute('aria-label', 'World map (tap to enlarge)'); mini.setAttribute('role', 'button'); mini.tabIndex = 0; mini.setAttribute('aria-pressed', 'false');
     const zoneEl = document.createElement('div'); zoneEl.id = 'rw-zone'; zoneEl.setAttribute('aria-live', 'polite');
     zoneEl.innerHTML = '<div class="rw-zname"></div><div class="rw-zsub"><span class="rw-arrow" aria-hidden="true">➤</span> <span class="rw-coords"></span></div>';
     const ov = document.getElementById('realm-overlay') || document.body;
     ov.appendChild(mini); ov.appendChild(zoneEl);
-    mini.addEventListener('click', () => mini.classList.toggle('big'));
+    function toggleMinimap() {
+      const expanded = mini.classList.toggle('big');
+      mini.setAttribute('aria-pressed', String(expanded));
+    }
+    mini.addEventListener('click', toggleMinimap);
+    mini.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (!event.repeat) toggleMinimap();
+    });
     const zName = zoneEl.querySelector('.rw-zname'); const zArrow = zoneEl.querySelector('.rw-arrow'); const zCoords = zoneEl.querySelector('.rw-coords');
     let miniBase = null;
     function buildMiniBase() {
@@ -273,11 +280,11 @@
       if (!force && key === miniKey) return;
       miniKey = key; miniDraws++;
       if (!miniBase) miniBase = buildMiniBase();
-      const g = mini.getContext('2d'); const k = 96 / ww;
-      g.imageSmoothingEnabled = true; g.drawImage(miniBase, 0, 0, ww, wh, 0, 0, 96, 96);
-      for (let i = 0; i < portals.length; i++) { const q = portals[i]; g.fillStyle = '#000'; g.fillRect(q.tx * k - 2.5, q.ty * k - 2.5, 5, 5); g.fillStyle = q.col; g.fillRect(q.tx * k - 1.5, q.ty * k - 1.5, 3, 3); }
-      for (let i = 0; i < world.bossSites.length; i++) { const b = world.bossSites[i]; g.fillStyle = bossMarkCol(i); g.beginPath(); g.arc(b.x * k, b.y * k, 2, 0, Math.PI * 2); g.fill(); }
-      g.fillStyle = '#000'; g.fillRect(tx * k - 2.5, ty * k - 2.5, 5, 5); g.fillStyle = '#fff'; g.fillRect(tx * k - 1.5, ty * k - 1.5, 3, 3);
+      const g = mini.getContext('2d'); const sx = mini.width / ww; const sy = mini.height / wh;
+      g.imageSmoothingEnabled = true; g.drawImage(miniBase, 0, 0, ww, wh, 0, 0, mini.width, mini.height);
+      for (let i = 0; i < portals.length; i++) { const q = portals[i]; g.fillStyle = '#000'; g.fillRect(q.tx * sx - 2.5, q.ty * sy - 2.5, 5, 5); g.fillStyle = q.col; g.fillRect(q.tx * sx - 1.5, q.ty * sy - 1.5, 3, 3); }
+      for (let i = 0; i < world.bossSites.length; i++) { const b = world.bossSites[i]; g.fillStyle = bossMarkCol(i); g.beginPath(); g.arc(b.x * sx, b.y * sy, 2, 0, Math.PI * 2); g.fill(); }
+      g.fillStyle = '#000'; g.fillRect(tx * sx - 2.5, ty * sy - 2.5, 5, 5); g.fillStyle = '#fff'; g.fillRect(tx * sx - 1.5, ty * sy - 1.5, 3, 3);
     }
     function syncHud(force) {
       const p = arena.player; const tx = Math.floor(p.x / TILE); const ty = Math.floor(p.y / TILE);

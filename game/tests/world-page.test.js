@@ -71,7 +71,7 @@ const walk = (page, path) => A(page, async (a, w, path) => {
   check('no waves in world mode (wave stays 0, no wave banner)', s1.wave === 0 && s1.state === 'play' && !/Wave/.test(s1.banner), JSON.stringify(s1));
   check('zone HUD shows the Shore and a danger label', await A(page, (a, w) => w.hudText().zone === 'Shore · Safe-ish' && document.getElementById('realm-wave').textContent === 'Shore'));
   check('minimap canvas (96x96) and zone label are visible', await vis(page, '#rw-minimap') && await vis(page, '#rw-zone') && await page.evaluate(() => { const c = document.getElementById('rw-minimap'); return c.width === 96 && c.height === 96; }));
-  check('tile canvases are code-drawn (no tile art delivered yet: fallback)', await A(page, (a, w) => w.artTiles() === 0 && w.chunkCount() > 0));
+  check('terrain art (Codex b10t shore/midlands tiles) is used where delivered, with cached chunks', await A(page, (a, w) => w.artTiles() > 0 && w.chunkCount() > 0));
   const sp0 = await A(page, (a, w) => w.liveEnemies());
   const ct = await page.evaluate(() => MMOverworld.CREATURE_TIERS);
   const near0 = sp0.slice().sort((a, b) => Math.hypot(a.x - s0.sp.x * 32, a.y - s0.sp.y * 32) - Math.hypot(b.x - s0.sp.x * 32, b.y - s0.sp.y * 32))[0];
