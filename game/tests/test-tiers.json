@@ -671,6 +671,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "helpers-blockdb.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "shared-mm-backup.test.js": {
     "class": "node",
     "tier": "smoke"

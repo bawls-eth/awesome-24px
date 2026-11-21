@@ -41,10 +41,25 @@ async function expandPanel(page) {
   if (collapsed) { await page.click('#panel-toggle'); await page.waitForTimeout(200); }
 }
 
+// DB-safe tests: blockDb(ctx) on a Playwright BrowserContext, BEFORE any page navigates. The live Firebase database and its
+// auth hosts never get a request: HTTP is aborted (context.route) and every WebSocket is closed at once (context.routeWebSocket,
+// which never connects to the real server). Every attempt is recorded so a test can prove nothing escaped:
+//   const db = await blockDb(ctx); ... check('no DB traffic leaked past the block', db.count() >= 0) ; db.http / db.ws are URL lists.
+// Use db.attempts() when the page is SUPPOSED to be offline-only and assert it equals 0 (or equals what you expect).
+const DB_HOSTS = /firebaseio\.com|firebasedatabase\.app|identitytoolkit|securetoken/i;
+async function blockDb(ctx) {
+  const rec = { http: [], ws: [], hosts: DB_HOSTS };
+  await ctx.route(DB_HOSTS, (route) => { rec.http.push(route.request().url()); return route.abort(); });
+  await ctx.routeWebSocket(DB_HOSTS, (ws) => { rec.ws.push(ws.url()); ws.close(); });
+  rec.count = () => rec.http.length + rec.ws.length;
+  rec.attempts = rec.count;
+  return rec;
+}
+
 let failed = 0;
 function check(name, cond, extra = '') {
   console.log((cond ? 'PASS ' : 'FAIL ') + name + (cond ? '' : ' ' + extra));
   if (!cond) failed++;
 }
 const done = () => { console.log(failed ? `${failed} FAILED` : 'ALL PASSED'); process.exitCode = failed ? 1 : 0; };
-module.exports = { launch, scene, check, done, expandPanel };
+module.exports = { launch, scene, check, done, expandPanel, blockDb, DB_HOSTS };
