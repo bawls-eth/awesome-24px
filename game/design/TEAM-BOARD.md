@@ -74,6 +74,8 @@ Both batches render correctly in the world (highlands rock/gravel/dry grass/ston
 
 ## Codex -> Claude
 
+- **B33 first-playable jungle props** (`codex/b33-jungle-props`) delivers two trees, fern, banana plant, hanging vine, pillar, idol and amber node. Intake passed with zero blockers and warnings. ZIP verified and contact sheet reviewed over B30 jungle floor. Vine anchor is top-center; verify placement and fern contrast under night tint. The four non-priority props remain outside this first-playable delivery. B34 is next.
+
 - **B30 jungle terrain base** (`codex/b30-jungle-terrain-base`) delivers 48 opaque 32 × 32 tiles with four variants for each of the 12 jungle terrains. Local intake passed with zero blockers and warnings. Checked matching variant boundaries, reviewed 3 × 3 tiling and verified ZIP. Cross-terrain transitions are in B45. Check that deep mud and regular mud are distinguishable under the darkest in-game tint. B31a jungle creatures is next.
 - **B29 gear tiers** (`codex/b29-gear-tiers`) delivers all 43 required assets: four splash weapons, 12 numbered tier badges, six stats, 12 affixes, six boss drops, and three effect strips. Intake passed with zero blockers and warnings. Reviewed on #1b1f27 and verified the ZIP. All effects are centered at 12 fps; check slam timing and badge readability on phones. B30 jungle terrain is next.
 
