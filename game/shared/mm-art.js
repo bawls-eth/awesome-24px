@@ -24,6 +24,8 @@
   // Biome-aware skins: biome id -> { enemy type -> art creature id }. Looked up before ENEMY_MAP; types/biomes not listed fall back to ENEMY_MAP.
   // Deterministic (no randomness): the dark spider is the Frost Mire's ranged 'aimed' enemy. Hitboxes and stats are untouched (art only).
   var BIOME_ENEMY_MAP = { frost: { aimed: 'dark_spider' } };
+  // b24 enemies-wave-2 creature ids (world roster in mm-overworld CREATURE_TIERS, dungeon extras in mm-biomes). Loaded by id through the world's loadAll / a biome's `extra`.
+  var ENEMY_WAVE2 = ['ghoul', 'harpy', 'minotaur', 'ogre', 'wraith_knight', 'fire_elemental', 'water_elemental', 'wind_sprite', 'thorn_vine', 'giant_spider_queen', 'golem_lava', 'crab_giant'];
   // Ambient drifter kind -> art creature id.
   var DRIFTER_MAP = { wisp: 'mothling', cinder: 'beetle', puff: 'sprout' };
   // Visible creature width in px at scale 1 (cells are 256 wide, creatures fill about half): callers size the art off this.
@@ -376,5 +378,5 @@
   }
 
 
-  return { loadFx: loadFx, FxSet: FxSet, loadBolts: loadBolts, boltIdFor: boltIdFor, BoltSet: BoltSet, PLAYER_BOLT_CLASSES: PLAYER_BOLT_CLASSES, bossArtFor: bossArtFor, loadBosses: loadBosses, BOSS_MAP: BOSS_MAP, BOSS_EXTRA: BOSS_EXTRA, BOSS_VISIBLE_W: BOSS_VISIBLE_W, BOSS_ACTIONS: BOSS_ACTIONS, loadItems: loadItems, itemIconUrl: itemIconUrl, ITEM_ICON_MAP: ITEM_ICON_MAP, ItemSet: ItemSet, enemyArtFor: enemyArtFor, drifterArtFor: drifterArtFor, loadEnemies: loadEnemies, ENEMY_MAP: ENEMY_MAP, BIOME_ENEMY_MAP: BIOME_ENEMY_MAP, DRIFTER_MAP: DRIFTER_MAP, ENEMY_VISIBLE_W: ENEMY_VISIBLE_W, load: load, loadClass: loadClass, loadAll: loadAll, packIds: packIds, artClassFor: artClassFor, packFor: packFor, frameAt: frameAt, scaleFor: scaleFor, duration: duration, PACKS: PACKS, CLASS_MAP: CLASS_MAP, ArtSet: ArtSet };
+  return { loadFx: loadFx, FxSet: FxSet, loadBolts: loadBolts, boltIdFor: boltIdFor, BoltSet: BoltSet, PLAYER_BOLT_CLASSES: PLAYER_BOLT_CLASSES, bossArtFor: bossArtFor, loadBosses: loadBosses, BOSS_MAP: BOSS_MAP, BOSS_EXTRA: BOSS_EXTRA, BOSS_VISIBLE_W: BOSS_VISIBLE_W, BOSS_ACTIONS: BOSS_ACTIONS, loadItems: loadItems, itemIconUrl: itemIconUrl, ITEM_ICON_MAP: ITEM_ICON_MAP, ItemSet: ItemSet, enemyArtFor: enemyArtFor, drifterArtFor: drifterArtFor, loadEnemies: loadEnemies, ENEMY_MAP: ENEMY_MAP, ENEMY_WAVE2: ENEMY_WAVE2, BIOME_ENEMY_MAP: BIOME_ENEMY_MAP, DRIFTER_MAP: DRIFTER_MAP, ENEMY_VISIBLE_W: ENEMY_VISIBLE_W, load: load, loadClass: loadClass, loadAll: loadAll, packIds: packIds, artClassFor: artClassFor, packFor: packFor, frameAt: frameAt, scaleFor: scaleFor, duration: duration, PACKS: PACKS, CLASS_MAP: CLASS_MAP, ArtSet: ArtSet };
 }));

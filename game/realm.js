@@ -263,6 +263,7 @@ class RealmArena {
     this.dungeon = null; this.fixedWorld = null; // optional run controller + fixed-size world (Mad Maze dungeons); null = classic waves
     this.world = null; this.mode = 'waves'; this.camera = { x: 0, y: 0, vw: 960, vh: RM_SHORT }; this._camF = { x: 0, y: 0 }; // setWorld / setMode: a scrolling world with a camera (null = the screen is the world, today's behaviour)
     this._solidAt = null; this._shotSolidAt = null; this._curDm = 1; this.onEnemyKilled = null; this.onEnemyHit = null; // world tile collision + additive kill / hit callbacks (default null)
+    this.fireBudget = null; this._ebLive = 0; this._ebCapped = 0; // world fire budget {cap, travel} (PLAYTEST-REVIEW-2 #2), set by realm-world.js; null = today's bullets
     this.onHeroPanel = null; this._heroTab = 'pick'; this.onItem = null; this.onDeathCache = null; this.onMenuOpen = null; this.menuNote = null; // additive loot hooks (Lantern stash payout); null = off (classic arena, town gate)
     const sd = seed === undefined ? (Date.now() & 0xffffffff) : seed;
     this.rng = rmRng(sd);
@@ -1927,10 +1928,19 @@ class RealmArena {
   }
 
   fireEnemyBullet(x, y, angle, speed, kind) {
+    const fb = this._fireBudget();
+    if (fb && this._ebLive >= fb.cap) { this._ebCapped++; return; } // world fire budget: the zone's live enemy-bullet cap is full
     const b = this._take(this.eBullets);
     if (!b) return;
     if (this.team && this.role === 'host') this.team.ev('fe', [Math.round(x), Math.round(y), Math.round(angle * 1000) / 1000, speed, kind || 0]);
     b.active = true; b.x = x; b.y = y; b.vx = Math.cos(angle) * speed; b.vy = Math.sin(angle) * speed; b.life = 6; b.kind = kind || 0; b.dm = this._curDm; b.ea = this._boltArt ? this._ebSelect(b.kind) : null;
+    if (fb) { this._ebLive++; const t = fb.travel * Math.max(this.W, this.H) / (speed > 1 ? speed : 1); if (t < b.life) b.life = t; } // a bolt flies at most `travel` x the view's long side
+  }
+
+  // World mode only (solo overworld, never the classic arena, dungeons or co-op): the fire budget realm-world.js sets per zone, else null.
+  _fireBudget() {
+    const fb = this.fireBudget;
+    return fb && this.world && this.mode === 'world' && !this.dungeon && !this.team && fb.cap > 0 ? fb : null;
   }
 
   // Class fire tags (heroProfile.shots/spread/pierce/shotDmg/critChance/boltSpeed). Default / duel / no profile = the plain single bolt.
@@ -2336,9 +2346,11 @@ class RealmArena {
     // Enemy bullets: move, hit the player. World mode: a bullet more than one view diagonal from the player can never matter: it is dropped.
     const pr = RM_PLAYER.r + 4;
     const cull = this.world && this.mode === 'world' && !this.dungeon ? (this.W * this.W + this.H * this.H) : 0;
+    let ebLive = 0;
     for (let i = 0; i < this.eBullets.length; i++) {
       const b = this.eBullets[i];
       if (!b.active) continue;
+      ebLive++; // counted before the move: a bolt that ends this frame frees its budget slot next frame (conservative)
       b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
       if (b.life <= 0 || b.x < -20 || b.y < -20 || b.x > bw + 20 || b.y > bh + 20) { b.active = false; continue; }
       if (cull && (b.x - p.x) * (b.x - p.x) + (b.y - p.y) * (b.y - p.y) > cull) { b.active = false; continue; }
@@ -2352,6 +2364,7 @@ class RealmArena {
         if ((b.x - q.x) * (b.x - q.x) + (b.y - q.y) * (b.y - q.y) < pr * pr && this.team.hitPartner(b.dm > 0 && b.dm !== 1 ? Math.round(RM_ENEMY_BULLET_DAMAGE * b.dm) : RM_ENEMY_BULLET_DAMAGE)) b.active = false;
       }
     }
+    this._ebLive = ebLive;
   }
 
   _hitEnemy(e, dmg) {

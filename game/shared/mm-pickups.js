@@ -7,6 +7,9 @@
   else root.MMPickups = factory(root.MMRng);
 })(typeof self !== 'undefined' ? self : this, function (MMRng) {
   const MAGNET_RADIUS = 64, COLLECT_RADIUS = 16, MAGNET_SPEED = 360; // px, px, px/s
+  // PLAYTEST-REVIEW-2 #3: the overworld passes this radius (about the distance a fighting hero stands from what it kills, so a kill's drop
+  // scatter is pulled in); magnetStep without a radius keeps MAGNET_RADIUS
+  const MAGNET_RADIUS_WORLD = 120;
   const LIFETIME_MS = [0, 20000, 24000, 28000, 34000, 40000]; // index = tier (1..5)
   const COIN_FRAMES = ['coin_f1', 'coin_f2', 'coin_f3', 'coin_f4'];
   const XP_FRAMES = ['xp_orb_f1', 'xp_orb_f2', 'xp_orb_f3', 'xp_orb_f4'];
@@ -75,11 +78,13 @@
   }
 
   // magnetStep(pickup{x,y}, player{x,y}, dtSec) -> { x, y, collected, magnet }: inside 64 px it homes at 360 px/s; inside 16 px it is collected.
-  function magnetStep(pick, player, dtSec) {
+  // radius (optional): the magnet radius in px, clamped to COLLECT_RADIUS..400; missing / bad -> MAGNET_RADIUS
+  function magnetStep(pick, player, dtSec, radius) {
+    const R = isNum(radius) && radius > 0 ? Math.max(COLLECT_RADIUS, Math.min(400, radius)) : MAGNET_RADIUS;
     if (!pick || !player || !isNum(pick.x) || !isNum(pick.y) || !isNum(player.x) || !isNum(player.y)) return { x: isNum(pick && pick.x) ? pick.x : 0, y: isNum(pick && pick.y) ? pick.y : 0, collected: false, magnet: false };
     const dx = player.x - pick.x, dy = player.y - pick.y, d = Math.hypot(dx, dy);
     if (d <= COLLECT_RADIUS) return { x: player.x, y: player.y, collected: true, magnet: true };
-    if (d > MAGNET_RADIUS) return { x: pick.x, y: pick.y, collected: false, magnet: false };
+    if (d > R) return { x: pick.x, y: pick.y, collected: false, magnet: false };
     const dt = isNum(dtSec) ? Math.max(0, Math.min(0.25, dtSec)) : 0;
     const step = Math.min(d, MAGNET_SPEED * dt);
     const nx = pick.x + (dx / d) * step, ny = pick.y + (dy / d) * step;
@@ -99,5 +104,5 @@
     const t = tierOf(raw.tier);
     return { type: raw.type, art: okArt, value: isNum(raw.value) ? Math.max(0, Math.min(1000, raw.value)) : 0, tier: t, lifeMs: LIFETIME_MS[t], x: Math.max(-1e6, Math.min(1e6, raw.x)), y: Math.max(-1e6, Math.min(1e6, raw.y)), bornMs: isNum(raw.bornMs) ? Math.max(0, raw.bornMs) : 0 };
   }
-  return { MAGNET_RADIUS, COLLECT_RADIUS, MAGNET_SPEED, LIFETIME_MS, COIN_FRAMES, XP_FRAMES, POTIONS, POTION_IDS, TYPES, TABLE, tierOf, roll, heal, use, magnetStep, expired, clean };
+  return { MAGNET_RADIUS, MAGNET_RADIUS_WORLD, COLLECT_RADIUS, MAGNET_SPEED, LIFETIME_MS, COIN_FRAMES, XP_FRAMES, POTIONS, POTION_IDS, TYPES, TABLE, tierOf, roll, heal, use, magnetStep, expired, clean };
 });

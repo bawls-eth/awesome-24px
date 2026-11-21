@@ -24,7 +24,8 @@
       count: [0.60, 0.80, 1.00, 1.20, 1.40],
       fire:  [0.80, 0.90, 1.00, 1.10, 1.20],
     },
-    BANDS: [{ min: 0.68, max: 0.97 }, { min: 0.40, max: 0.68 }, { min: 0.20, max: 0.40 }, { min: 0.00, max: 0.20 }], // MMOverworld.ZONE_BANDS (dw units)
+    BANDS: [{ min: 0.68, max: 0.97 }, { min: 0.40, max: 0.68 }, { min: 0.20, max: 0.40 }, { min: 0.00, max: 0.20 }], // MMOverworld.ZONE_BANDS_CLASSIC (dw units)
+    BANDS_WIDE: [{ min: 0.62, max: 0.97 }, { min: 0.34, max: 0.62 }, { min: 0.17, max: 0.34 }, { min: 0.00, max: 0.17 }], // MMOverworld.ZONE_BANDS_WIDE (opts.bands 'wide')
     EASY_ROOMS: 3,                               // the first three dungeon rooms are weak
     ROOM_EASY: { hp: [0.60, 0.65, 0.70], dmg: [0.70, 0.75, 0.80], spd: [0.85, 0.88, 0.90], count: [0.60, 0.70, 0.80], fire: [0.80, 0.85, 0.90] },
     ROOM_END: { hp: 1.40, dmg: 1.25, spd: 1.12, count: 1.30, fire: 1.25 },   // last room before the boss
@@ -42,6 +43,9 @@
     // overworld hero (world mode only; never the classic arena, dungeons or duels): realm attunement so a level-1 hero's 7.5 bolts/s
     // (1 dmg each) kill a 6-12 hp shore creature in about a second (12 dps) instead of ~2 s. Flat, so levelling never lowers it.
     HERO_WORLD: { dmg: 1.6, rate: 1.0 },
+    // early TTK (PLAYTEST-REVIEW-2 #3, opts.ttk, world wiring only; ?ttk=0 = off): shore creatures get this extra hp factor AFTER the clamp, so a
+    // 4.6-6 hp whirler, 3 hp sniper and 4-5 hp burster die in 2-4 bolts of the 1.6-dmg level-1 hero. Only zone 0: the midlands are untouched.
+    SHORE_TTK: { hp: 0.5 },
     CLAMP: { hp: [0.4, 4.0], dmg: [0.5, 2.0], spd: [0.7, 1.4], count: [0.5, 1.6], fire: [0.7, 1.5] },
   };
   const T = TABLES;
@@ -67,10 +71,12 @@
   // missing / hostile -> the middle of the zone. Continuous across zone borders: the same dist in the outer zone and the inner one meet at the knot.
   function zoneScale(zone, distFromCentre, opts) {
     let z = Math.floor(num(zone, 0)); z = z < 0 ? 0 : z > 3 ? 3 : z;
-    const b = T.BANDS[z], d = num(distFromCentre, NaN);
+    const b = (opts && opts.bands === 'wide' ? T.BANDS_WIDE : T.BANDS)[z], d = num(distFromCentre, NaN);
     const s = d === d ? clamp((b.max - d) / (b.max - b.min), 0, 1) : 0.5;
     const raw = {}; for (let i = 0; i < KEYS.length; i++) raw[KEYS[i]] = knot(T.ZONE_KNOTS[KEYS[i]], z + s);
-    return finish(raw, opts);
+    const out = finish(raw, opts);
+    if (z === 0 && opts && opts.ttk === true) out.hp = round3(out.hp * T.SHORE_TTK.hp); // below CLAMP.hp on purpose (see SHORE_TTK)
+    return out;
   }
 
   // roomIndex is 1-based progress through the run (1 = first room), roomsTotal the number of rooms on the way (boss room last).

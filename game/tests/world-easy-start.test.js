@@ -1,5 +1,5 @@
 // Easy start (PLAYTEST-REVIEW #3, #5): a level-1 hero survives 20 s standing still at the shore spawn with the default spawns, and a
-// hero that fights kills a shore creature in about a second of sustained fire (world-only hero scale from MMDifficulty.heroScale).
+// hero that fights kills a shore creature in 2-4 bolts (world-only hero scale from MMDifficulty.heroScale + the shore TTK factor).
 // The classic arena and ?difficulty=off keep the old hero numbers.
 // Run: BASE=http://localhost:8440/game/index.html NODE_PATH=$(npm root -g) node game/tests/world-easy-start.test.js
 const { chromium } = require('playwright');
@@ -67,7 +67,9 @@ const ttk = (page) => page.evaluate(async () => {
   const k = await ttk(S.page);
   console.log('INFO shore ttk:', JSON.stringify(k));
   check('world hero has the easy-start scale (1.6 dmg per bolt, 7.5 bolts/s)', Math.abs(k.dmg - 1.6) < 1e-9 && Math.abs(k.rate - 7.5) < 1e-9, JSON.stringify(k));
-  check('a fighting hero kills a shore creature in about a second of sustained fire (every sample <= 1.25 s)', k.out.length >= 2 && k.out.every((r) => r.dead && r.t <= 1.25), JSON.stringify(k.out));
+  // PLAYTEST-REVIEW-2 #3 (honest update): shore creatures now have half the hp (MMDifficulty SHORE_TTK, ?ttk=0 restores it), so a shore kill
+  // takes 2-4 bolts and well under a second (was "about a second", <= 1.25 s, at 6-12 hp). See world-ttk.test.js for the switch.
+  check('a fighting hero kills a shore creature in 2-4 bolts and under 0.8 s of sustained fire', k.out.length >= 2 && k.out.every((r) => r.dead && r.t <= 0.8 && Math.ceil(r.hp / k.dmg) >= 2 && Math.ceil(r.hp / k.dmg) <= 4), JSON.stringify(k.out));
   errs.push(...S.page.errors); await S.ctx.close();
 
   // ===== ?difficulty=off and the classic arena keep today's hero =====

@@ -5,7 +5,9 @@ const O = require('../shared/mm-overworld.js');
 let failed = 0;
 function check(name, cond, extra = '') { console.log((cond ? 'PASS ' : 'FAIL ') + name + (cond ? '' : ' ' + extra)); if (!cond) failed++; }
 
-const ART_IDS = ['puffcap', 'beetle', 'archer', 'moth', 'sprout', 'mothling', 'sprout_mini', 'goblin_scout', 'skeleton', 'cave_bat', 'forest_wolf', 'stone_golem', 'dark_spider', 'crystal_beetle', 'ember_imp', 'ice_wraith', 'goblin_shaman', 'skeleton_archer', 'bone_knight', 'shadow_cultist', 'slime_green', 'slime_red', 'slime_blue', 'swamp_leech', 'toxic_serpent', 'sand_scorpion'];
+const ART_IDS = ['puffcap', 'beetle', 'archer', 'moth', 'sprout', 'mothling', 'sprout_mini', 'goblin_scout', 'skeleton', 'cave_bat', 'forest_wolf', 'stone_golem', 'dark_spider', 'crystal_beetle', 'ember_imp', 'ice_wraith', 'goblin_shaman', 'skeleton_archer', 'bone_knight', 'shadow_cultist', 'slime_green', 'slime_red', 'slime_blue', 'swamp_leech', 'toxic_serpent', 'sand_scorpion',
+  // b24 enemies-wave-2 (world roster; ?roster=classic keeps the older ids only, see world-roster.test.js)
+  'ghoul', 'harpy', 'minotaur', 'ogre', 'wraith_knight', 'fire_elemental', 'water_elemental', 'wind_sprite', 'thorn_vine', 'giant_spider_queen', 'golem_lava', 'crab_giant'];
 const BOSS_ART = ['bone_colossus', 'inferno_wyrm', 'void_oracle', 'crystal_titan', 'forest_warden', 'dread_knight', 'storm_harbinger', 'mire_queen',
   // b23 bosses-extra: the default boss pools now also draw these (honest update; generate(seed, { bosses: 'classic' }) still yields only the 8 above)
   'lich_king', 'hydra', 'treant_elder', 'sand_titan', 'frost_dragon', 'shadow_hydra', 'clockwork_golem', 'void_maw'];
@@ -102,6 +104,31 @@ check('worst generation time < 400 ms (' + worstMs + ')', worstMs < 400);
   check('boss sites use delivered boss ids, all 8 distinct', world.bossSites.every(function (b) { return BOSS_ART.indexOf(b.boss) >= 0; }) && new Set(world.bossSites.map(function (b) { return b.boss; })).size === 8);
 }
 check('128x128 world verifies', O.verify(O.generate('small', { size: 128 })).ok);
+
+// PLAYTEST-REVIEW-2 #1 zone gradient (added checks): the default WIDE bands keep every verify() guarantee over 50 seeds (shore start,
+// reachable portals / boss sites / structures, 4 portals, 8 bosses, 3 godland bosses) and push the first midlands tile >= 40 tiles from the
+// spawn; generate(seed, { bands: 'classic' }) is the old layout (closer midlands) and also verifies.
+{
+  const minMid = function (wd) { const sp = wd.spawnPoint; let m = Infinity; for (let i = 0; i < wd.zone.length; i++) { const z = wd.zone[i]; if (z >= 1 && z <= 3) { const d = Math.hypot((i % wd.w) - sp.x, ((i / wd.w) | 0) - sp.y); if (d < m) m = d; } } return m; };
+  const badW = [], far = [];
+  let shoreW = 0, shoreC = 0;
+  for (let s = 0; s < 50; s++) {
+    const wd = O.generate('bands-' + s), v = O.verify(wd);
+    if (!v.ok) badW.push(s + ': ' + v.problems.slice(0, 2).join('; '));
+    if (wd.bands !== 'wide') badW.push(s + ' bands ' + wd.bands);
+    if (wd.zone[wd.spawnPoint.y * wd.w + wd.spawnPoint.x] !== 0) badW.push(s + ' spawn not shore');
+    if (wd.portalSites.length < 4 || wd.bossSites.length < 8 || wd.bossSites.filter(function (b) { return b.zone === 3; }).length !== 3 || wd.structures.length < 20 || wd.spawnGroups.length < 40) badW.push(s + ' counts');
+    far.push(minMid(wd));
+    if (s < 6) { const cw = O.generate('bands-' + s, { bands: 'classic' }); for (let i = 0; i < wd.zone.length; i++) { if (wd.zone[i] === 0) shoreW++; if (cw.zone[i] === 0) shoreC++; } }
+  }
+  check('wide bands: 50 seeds verify ok (shore start, reachable portals/bosses/structures, 4 portals, 8 bosses)', badW.length === 0, badW.slice(0, 4).join(' | '));
+  check('wide bands: first midlands tile >= 40 tiles from the spawn on all 50 seeds (min ' + Math.min.apply(null, far).toFixed(1) + ')', far.every(function (d) { return d >= 40; }));
+  check('wide bands: the shore covers clearly more tiles than the classic shore (' + shoreW + ' vs ' + shoreC + ')', shoreW > shoreC * 1.2);
+  const cl = O.generate('bands-7', { bands: 'classic' });
+  check('bands classic: verifies (determinism re-generates with the same bands) and keeps the old, close midlands', cl.bands === 'classic' && O.verify(cl).ok && minMid(cl) < 40);
+  check('ZONE_BANDS is the wide table; ZONE_BANDS_CLASSIC keeps the original thresholds', O.ZONE_BANDS === O.ZONE_BANDS_WIDE && O.ZONE_BANDS_CLASSIC[0].dwMin === 0.68 && O.ZONE_BANDS_CLASSIC[1].dwMin === 0.40 && O.ZONE_BANDS_CLASSIC[2].dwMin === 0.20 && O.SAFE_SHORE === 40);
+  check('128x128 wide world: safe radius scales with the size and still verifies', (function () { const sw = O.generate('small-b', { size: 128 }); return O.verify(sw).ok && minMid(sw) >= 20; })());
+}
 
 // source hygiene
 const src = fs.readFileSync(path.join(__dirname, '..', 'shared', 'mm-overworld.js'), 'utf8');

@@ -27,7 +27,10 @@ check('clean(): valid ids pass, everything else is warren', MMBiomes.IDS.every((
 MMBiomes.IDS.forEach((id) => {
   const B = MMBiomes.BIOMES[id];
   check(`${id}: every enemy id is a real MMEnemies enemy and the mix is not empty`, B.ids.length >= 4 && B.ids.every((e) => MMEnemies.IDS.indexOf(e) >= 0) && new Set(B.ids).size === B.ids.length);
-  const creatures = MMBiomes.creatures(id);
+  // b24: creatures() now also lists the biome's wave-2 `extra` art (checked below); this pin is about the base skins only.
+  const creatures = MMBiomes.creatures(id).filter((c) => !(B.extra || []).some((x) => x.art === c));
+  const extras = (B.extra || []).map((x) => x.art);
+  check(`${id}: wave-2 extras have art, only target mix ids, and creatures() preloads them`, extras.every((c) => enemyActions[c] && ['idle', 'move', 'attack', 'death'].every((a) => enemyActions[c].has(a))) && (B.extra || []).every((x) => x.p > 0 && x.p < 1 && (x.elite || x.ids.every((i) => B.ids.indexOf(i) >= 0))) && extras.every((c) => MMBiomes.creatures(id).indexOf(c) >= 0));
   check(`${id}: every skin maps a mix id to a creature with idle/move/attack art`, id === 'warren' ? creatures.length === 0 : creatures.length === B.ids.length && Object.keys(B.skin).every((k) => B.ids.indexOf(k) >= 0) && creatures.every((c) => enemyActions[c] && ['idle', 'move', 'attack'].every((a) => enemyActions[c].has(a))), JSON.stringify(creatures.filter((c) => !enemyActions[c])));
   check(`${id}: boss art id is in MMArt BOSS_MAP and the manifests`, id === 'warren' ? B.boss_art === null : bossIds.has(B.boss_art) && fs.readFileSync(path.join(__dirname, '..', 'shared', 'mm-art.js'), 'utf8').indexOf("'" + B.boss_art + "'") > 0, String(B.boss_art));
   check(`${id}: names, palettes and colours are well formed`, !!B.name && !!B.boss_name && !!B.room && !!B.boss_room && ['normal', 'start', 'boss'].every((k) => B[k].f.length === 2 && /^#[0-9a-f]{6}$/.test(B[k].w) && /^#[0-9a-f]{6}$/.test(B[k].hi) && B[k].f.every((c) => /^#[0-9a-f]{6}$/.test(c))));
@@ -35,7 +38,7 @@ MMBiomes.IDS.forEach((id) => {
 check('the biome boss ids are distinct (warren keeps the default boss)', new Set(MMBiomes.IDS.map((b) => MMBiomes.BIOMES[b].boss_art)).size === 4);
 check('palettes differ between biomes (normal floor, wall and highlight)', (() => { const s = new Set(MMBiomes.IDS.map((b) => JSON.stringify(MMBiomes.BIOMES[b].normal))); return s.size === 4; })());
 check('the named creature mixes match the brief', (() => {
-  const c = (b) => MMBiomes.creatures(b).sort().join();
+  const c = (b) => { const B = MMBiomes.BIOMES[b]; return MMBiomes.creatures(b).filter((x) => !(B.extra || []).some((e) => e.art === x)).sort().join(); }; // base mixes (b24 extras excluded)
   return c('crypt') === ['skeleton', 'bone_knight', 'shadow_cultist', 'ice_wraith'].sort().join()
     && c('bramble') === ['sprout', 'archer', 'forest_wolf', 'goblin_shaman'].sort().join()
     && c('meadow') === ['puffcap', 'moth', 'mothling', 'slime_green'].sort().join();

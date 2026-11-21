@@ -135,3 +135,18 @@ World boss sites keep their generator LOCATIONS (the `sites` RNG stream is untou
 
 Art: the eight new ids are appended to `MMArt.BOSS_MAP` (`MMArt.BOSS_EXTRA`); `bossArtFor(tier)` still wraps at the original 8. World bosses now set `e.bossArt = site.boss`, so the arena draws each site's own art.
 Dungeon: the Crypt has an `alt` boss (`lich_king`); `MMBiomes.bossFor(biome, seed, classic)` returns it on odd seeds (even keeps Bone Colossus). dungeon.js still reads `B.boss_art` directly; adopting `bossFor` there is a one-line change for its owner.
+
+## Roster (b24 enemies-wave-2)
+
+Twelve creatures join the world and the dungeon biomes. In the world a creature is only a skin on one of the three arena behaviours (`type`: spiral = whirler, aimed = sniper, ring = burster), so hp, speed and damage come from the type base times the zone/tier multipliers and the difficulty curve; nothing per creature changes. Selection is still the single seeded `groups` draw per cell, so spawn positions and group sizes of every existing seed are unchanged; only the creature id can differ. `?roster=classic` (or `generate(seed, { roster: 'classic' })`, table `CREATURE_TIERS_CLASSIC`) restores the old ids. Art loads through the same `loadAll` list as every creature; a creature without art keeps the procedural sprite.
+
+| Zone | Whirler (spiral) | Sniper (aimed) | Burster (ring) |
+|---|---|---|---|
+| Shore (0) | wind_sprite | water_elemental | crab_giant |
+| Midlands (1) | harpy | thorn_vine | ghoul, ogre |
+| Highlands (2) | wraith_knight | fire_elemental | minotaur, golem_lava |
+| Godlands (3) | none | giant_spider_queen (rare elite) | none |
+
+Rare elite: a godland sniper group becomes ONE `giant_spider_queen` with 20% chance (a hash of seed + cell, not the stream); `group.elite` multiplies hp x3, xp x3, shards x2 in `MMZones.TABLES.ELITE` on top of the zone mults. It is listed last in `CREATURE_TIERS.aimed[3]` so its art preloads, but the plain pick skips it (`RARE_ONLY`). World status bolts (realm-world `BOLT_ST`): ghoul/thorn_vine sick, wraith_knight weak, fire_elemental and giant_spider_queen bleed; shore creatures never apply statuses.
+
+Dungeon biomes (`MMBiomes.extra`, `skinFor(biome, mobId, elite, seed, key, classic)`): art-only skin swap on a mob, chosen by a fixed string hash of seed + mob position (no RNG stream, no Math.random), so room plans, hp and behaviour are unchanged. Bramble: thorn_vine (sprout, puffcap), ogre (beetle) at 35%. Meadow: wind_sprite (archer), harpy (puffcap, sprout) at 35%. Crypt: ghoul (puffcap) 35%, wraith_knight (beetle, archer) 30%. Warren: giant_spider_queen on half of the elites. `?roster=classic` disables all of it.

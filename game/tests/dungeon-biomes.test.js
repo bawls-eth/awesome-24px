@@ -56,7 +56,7 @@ const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 
     // ---- enemies wear the biome's creatures; the art for them is loaded ----
     const B = BIOMES.get(biome);
-    const want = Object.keys(B.skin).map((k) => B.skin[k]);
+    const want = Object.keys(B.skin).map((k) => B.skin[k]).concat((B.extra || []).map((x) => x.art)); // b24: the biome's rare wave-2 skins may replace a base skin
     const arts = new Set(); let mobs = 0;
     const combat = await ev(p, () => window.__mm.dungeon.graph.rooms.filter((r) => r.type === 'combat').map((r) => r.id));
     for (const id of combat.slice(0, 4)) {

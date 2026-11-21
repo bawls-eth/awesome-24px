@@ -734,5 +734,25 @@
   "world-nexus.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "world-roster.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "world-gradient.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "world-firebudget.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "world-ttk.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "world-safereturn.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

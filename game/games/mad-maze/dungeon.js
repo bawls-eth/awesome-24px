@@ -98,6 +98,7 @@
     const seed = String(opts.seed === undefined ? '1' : opts.seed);
     const biome = MMBiomes.clean(opts.biome); const B = Object.assign({}, MMBiomes.get(biome)); // unknown / missing biome -> warren
     { const bf = MMBiomes.bossFor(biome, seed, opts.bosses === 'classic'); B.boss_art = bf.boss_art; B.boss_name = bf.boss_name; } // b23: odd crypt seeds face the Lich King (?bosses=classic keeps the original)
+    let rosterClassic = opts.roster === 'classic'; try { if (/[?&]roster=classic(&|$)/.test(location.search)) rosterClassic = true; } catch (e) { /* node / no location */ } // b24: ?roster=classic = no wave-2 skins
     const layoutV = opts.layout === 2 || biome !== 'warren' ? 2 : 1; // a biome run is new content: it always uses the layout-2 pool
     const palCache = {};
     function palOf(type) { // warren: the original palette untouched; other biomes recolour start / normal / boss rooms, the coded rooms (key, treasure, secret) keep theirs
@@ -213,7 +214,7 @@
     function spawnMob(type, id, x, y, hp, elite, sc) {
       const e = arena.spawnEnemy(type, x, y); if (!e) return null;
       if (sc) { hp = Math.max(1, Math.ceil(hp * sc.hp)); e.dmgMul = sc.dmg; e.spdMul = sc.spd; e.diff = sc; }
-      e.dg = 'mob'; e.did = id; e.art = B.skin[id] || (id === 'sprout_mini' ? B.skin.sprout : null) || null; e.elite = !!elite; e.maxHp = hp; e.hp = hp; e.lx = x; e.ly = y;
+      e.dg = 'mob'; e.did = id; e.art = MMBiomes.skinFor(biome, id, !!elite, seed, Math.round(x) + ',' + Math.round(y), rosterClassic) || B.skin[id] || (id === 'sprout_mini' ? B.skin.sprout : null) || null; e.elite = !!elite; e.maxHp = hp; e.hp = hp; e.lx = x; e.ly = y;
       return e;
     }
     function spawnRoom(id, entry) {

@@ -16,6 +16,8 @@
       boss: { f: ['#4a1a1a', '#541f1f'], w: '#4f1e1e', hi: '#ff6a4a' },
       tint: null, particles: null,
       ids: ['puffcap', 'beetle', 'archer', 'moth', 'sprout'], skin: {},
+      // b24: `extra` = rare wave-2 skins for some mobs (see skinFor). Art only: hp/behaviour stay the mob's own. Warren: an elite is sometimes a giant spider queen.
+      extra: [{ art: 'giant_spider_queen', elite: true, p: 0.5 }],
       boss_art: null, boss_name: 'Queen Burrowmole', boss_room: 'Queen\'s Den', mapCol: '#6b5aa8',
     },
     bramble: {
@@ -25,6 +27,7 @@
       boss: { f: ['#2e3a14', '#374518'], w: '#3c4a1a', hi: '#d6e24a' },
       tint: 'rgba(40,120,50,0.10)', particles: { kind: 'leaf', color: '#9be36f', n: 16, dir: 1 },
       ids: ['sprout', 'archer', 'beetle', 'puffcap'], skin: { sprout: 'sprout', archer: 'archer', beetle: 'forest_wolf', puffcap: 'goblin_shaman' },
+      extra: [{ art: 'thorn_vine', ids: ['sprout', 'puffcap'], p: 0.35 }, { art: 'ogre', ids: ['beetle'], p: 0.35 }],
       boss_art: 'forest_warden', boss_name: 'The Forest Warden', boss_room: 'Warden\'s Grove', mapCol: '#4fa84a',
     },
     meadow: {
@@ -34,6 +37,7 @@
       boss: { f: ['#2c4a4a', '#325656'], w: '#2f5a50', hi: '#7be0c4' },
       tint: 'rgba(255,230,120,0.07)', particles: { kind: 'petal', color: '#ffd1e8', n: 18, dir: -1 },
       ids: ['puffcap', 'moth', 'archer', 'sprout'], skin: { puffcap: 'puffcap', moth: 'moth', archer: 'mothling', sprout: 'slime_green' },
+      extra: [{ art: 'wind_sprite', ids: ['archer'], p: 0.35 }, { art: 'harpy', ids: ['puffcap', 'sprout'], p: 0.35 }],
       boss_art: 'mire_queen', boss_name: 'The Mire Queen', boss_room: 'Mire Pool', mapCol: '#c9b43a',
     },
     crypt: {
@@ -43,6 +47,7 @@
       boss: { f: ['#3a2a3a', '#443244'], w: '#4a3350', hi: '#d68cff' },
       tint: 'rgba(100,140,220,0.09)', particles: { kind: 'mote', color: '#bcd4ff', n: 14, dir: -1 },
       ids: ['puffcap', 'beetle', 'archer', 'moth'], skin: { puffcap: 'skeleton', beetle: 'bone_knight', archer: 'shadow_cultist', moth: 'ice_wraith' },
+      extra: [{ art: 'ghoul', ids: ['puffcap'], p: 0.35 }, { art: 'wraith_knight', ids: ['beetle', 'archer'], p: 0.3 }],
       boss_art: 'bone_colossus', boss_name: 'The Bone Colossus', boss_room: 'Ossuary', mapCol: '#7a8ab0',
       // b23: odd seeds (see bossFor) face the Lich King instead of the Bone Colossus; even seeds keep the original boss.
       alt: { boss_art: 'lich_king', boss_name: 'The Lich King' },
@@ -53,7 +58,21 @@
   function clean(v) { return typeof v === 'string' && /^(warren|bramble|meadow|crypt)$/.test(v) ? v : 'warren'; }
   function get(v) { return BIOMES[clean(v)]; }
   // Art creature ids the biome's enemies wear (for the page to preload).
-  function creatures(v) { const b = get(v); return b.ids.map((i) => b.skin[i]).filter(Boolean); }
+  function creatures(v) { const b = get(v); return b.ids.map((i) => b.skin[i]).filter(Boolean).concat((b.extra || []).map((x) => x.art)); }
+  // Seeded wave-2 skin for one mob: the biome's `extra` art id, or null (keep the normal skin). `key` should be unique per mob (e.g. room id + index).
+  // A fixed string hash (no stream consumed, no Math.random): same seed + key -> same answer. `classic` (page ?roster=classic) always returns null.
+  function skinFor(v, mobId, elite, seed, key, classic) {
+    if (classic) return null;
+    const ex = get(v).extra || [];
+    for (let i = 0; i < ex.length; i++) {
+      const x = ex[i];
+      if (x.elite ? !elite : !(x.ids && x.ids.indexOf(mobId) >= 0)) continue;
+      let h = 2166136261; const s = 'roster:' + seed + ':' + key + ':' + x.art;
+      for (let k = 0; k < s.length; k++) { h ^= s.charCodeAt(k); h = Math.imul(h, 16777619); }
+      if (((h >>> 0) % 10000) / 10000 < x.p) return x.art;
+    }
+    return null;
+  }
 
   // Seed parity: a numeric seed uses its own parity, any other string the parity of its char-code sum. Deterministic, no RNG.
   function seedParity(seed) {
@@ -69,5 +88,5 @@
     return { boss_art: b.boss_art, boss_name: b.boss_name, alt: false };
   }
 
-  return { IDS, BIOMES, clean, get, creatures, bossFor, seedParity };
+  return { IDS, BIOMES, clean, get, creatures, skinFor, bossFor, seedParity };
 }));

@@ -93,10 +93,12 @@ const shooter = (page, dx, dy, type) => page.evaluate(([dx, dy, type]) => {
   check('enemy bullets have a dark rim and three distinct hues', spr.eRim.every((c) => lum(c) < 40 && c[3] > 200) && new Set(spr.eBody.map((c) => c.slice(0, 3).join())).size === 3, JSON.stringify([spr.eRim, spr.eBody]));
   check('the player bolt core is brighter than any enemy bullet body', spr.eBody.every((c) => lum(c) < lum(spr.pCore) - 60), JSON.stringify(spr.eBody));
   const cap = await W.page.evaluate(() => {
-    const a = window.__mm.arena, p = a.player; a.paused = true; a.eBullets.forEach((b) => { b.active = false; });
+    // the world fire budget (PLAYTEST-REVIEW-2 #2, world-firebudget.test.js) caps live bolts per zone (40 on the shore); this probe checks the
+    // DRAW cap, so it lifts the budget while it floods the pool and puts it back afterwards
+    const a = window.__mm.arena, p = a.player; a.paused = true; a.eBullets.forEach((b) => { b.active = false; }); const fb = a.fireBudget; a.fireBudget = null;
     for (let i = 0; i < 600; i++) a.fireEnemyBullet(p.x + (i % 40) * 10 - 200, p.y + Math.floor(i / 40) * 10 - 80, 0, 0, i % 3);
     const live = a.eBullets.filter((b) => b.active).length; a._draw(); const drawn = a._ebDrawn;
-    a.eBullets.forEach((b) => { b.active = false; });
+    a.eBullets.forEach((b) => { b.active = false; }); a.fireBudget = fb;
     return { live, drawn };
   });
   check('at most RM_EB_DRAW enemy bullets are drawn per frame', cap.live >= 500 && cap.drawn === spr.cap, JSON.stringify(cap));

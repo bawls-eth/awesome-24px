@@ -22,12 +22,16 @@
     SPREAD_PX: 48,            // enemies of a group scatter within this radius of the group centre
     MAX_GROUP: 8,             // enemy ids encode the in-group slot in 3 bits
     ZONES: [
-      { id: 0, name: 'Shore', color: '#e8d7a1', danger: 'Safe-ish', respawn: 60 },
-      { id: 1, name: 'Midlands', color: '#6fbf5a', danger: 'Dangerous', respawn: 90 },
-      { id: 2, name: 'Highlands', color: '#8d7ab8', danger: 'Deadly', respawn: 120 },
-      { id: 3, name: 'Godlands', color: '#c0392b', danger: 'Lethal', respawn: 180 },
+      // recLv: the recommended hero level the border toast names (realm-world.js zone gradient, PLAYTEST-REVIEW-2 #1)
+      { id: 0, name: 'Shore', color: '#e8d7a1', danger: 'Safe-ish', respawn: 60, recLv: 1 },
+      { id: 1, name: 'Midlands', color: '#6fbf5a', danger: 'Dangerous', respawn: 90, recLv: 5 },
+      { id: 2, name: 'Highlands', color: '#8d7ab8', danger: 'Deadly', respawn: 120, recLv: 10 },
+      { id: 3, name: 'Godlands', color: '#c0392b', danger: 'Lethal', respawn: 180, recLv: 15 },
     ],
     VOID: { id: 255, name: 'The Deep', color: '#0b1a33', danger: 'None' },
+    // ---- world fire budget (PLAYTEST-REVIEW-2 #2, realm-world.js -> realm.js fireBudget; ?firebudget=0 = off) ----
+    EB_CAP: [40, 80, 140, 200],  // live enemy bullets allowed while the player stands in zone 0..3 (a full cap holds new bolts back)
+    EB_TRAVEL: 0.6,           // an enemy bolt flies at most this x the view's long side (its lifetime is cut to match)
     // enemy stat multipliers = ZONE_MUL[zone] * TIER_MUL[tier]; hp/speed/dmg scale like realm.js waves (wave 1 -> ~15)
     ZONE_MUL: {
       hp:    [1.0, 1.8, 3.2, 5.5],
@@ -38,6 +42,7 @@
     },
     TIER_MUL: { hp: [1.0, 1.1, 1.25, 1.5], speed: [1.0, 1.0, 1.03, 1.06], dmg: [1.0, 1.05, 1.15, 1.3], xp: [1, 1.1, 1.25, 1.5], shard: [1, 1, 1.1, 1.25] },
     HP_JITTER: 0.1,           // +-5% per-enemy hp variation (seeded)
+    ELITE: { hp: 3, xp: 3, shard: 2 }, // rare elite group (g.elite, e.g. giant_spider_queen): one creature, hp/xp/shard on top of the zone mults
     BOSS: { hp: 12, dmg: 1.4, xp: 12, shard: 13, cooldown: [0, 600, 900, 1200] }, // extra mults on top of zone mults; respawn s by zone
     // ---- drops ----
     BAG_TIERS: ['brown', 'pink', 'purple', 'cyan', 'white', 'gold'],
@@ -144,6 +149,7 @@
       const g = groups[gi], r = rc[gi], rng = MMRng.create(seed + ':grp:' + gi + ':' + r);
       const n = Math.min(T.MAX_GROUP, Math.max(1, g.count | 0));
       const mul = statMultipliers(g.zone, g.tier, false);
+      if (g.elite) { mul.hpMul *= T.ELITE.hp; mul.xpMul *= T.ELITE.xp; mul.shardMul *= T.ELITE.shard; }
       for (let k = 0; k < n; k++) {
         const a = rng.next() * Math.PI * 2, rad = Math.sqrt(rng.next()) * T.SPREAD_PX, j = 1 + (rng.next() - 0.5) * T.HP_JITTER;
         out.spawn.push({

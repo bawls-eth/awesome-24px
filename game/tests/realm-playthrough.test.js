@@ -79,6 +79,9 @@ const vis = (page, sel) => page.evaluate((s) => { const e = document.querySelect
   await frames(page, 4);
   const back = await A(page, (a, w) => ({ x: Math.floor(a.player.x / 32), y: Math.floor(a.player.y / 32), seed: w.seed }));
   check('back in the same world on the same portal tile', back.x === portal.tx && back.y === portal.ty && back.seed === '4242', JSON.stringify([back, portal]));
+  // PLAYTEST-REVIEW-2 #4 (added check): the return carries the 3 s spawn shield and, with no event in view, no hop off the portal tile
+  const shield = await A(page, (a, w) => ({ iframes: a.player.iframes, last: w.safeReturn && w.safeReturn.last() }));
+  check('the return from the dungeon carries the 3 s spawn shield and stays on the portal tile (no event in view)', shield.last && shield.last.iframes >= 3 && shield.last.moved === false && shield.last.shield === 3 && shield.last.to.x === portal.tx && shield.last.to.y === portal.ty, JSON.stringify(shield));
 
   // ---- Restart from the menu respawns at the island spawn, keeping items and shards ----
   const before = await A(page, (a) => ({ shards: a.save.shards, items: a.save.items.length }));

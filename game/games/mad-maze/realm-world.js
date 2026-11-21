@@ -91,7 +91,14 @@
     save.seed = seed;
     const t0 = performance.now();
     let bossesClassic = false; try { bossesClassic = /[?&]bosses=classic(&|$)/.test(location.search); } catch (e) { bossesClassic = false; } // b23: ?bosses=classic restores the original eight boss ids
-    const world = O.generate(seed, bossesClassic ? { bosses: 'classic' } : undefined);
+    let rosterClassic = false; try { rosterClassic = /[?&]roster=classic(&|$)/.test(location.search); } catch (e) { rosterClassic = false; } // b24: ?roster=classic restores the original creature table (positions are identical either way)
+    // PLAYTEST-REVIEW-2 #1: wide zone bands + border toasts/slow by default; ?zonegrad=0 restores all of today's behaviour (classic bands, no toasts),
+    // ?bands=classic only the old generation (the toasts stay)
+    const qs0 = typeof location !== 'undefined' ? location.search : '';
+    const ZGRAD = !/[?&]zonegrad=0(&|$)/.test(qs0);
+    const bandsClassic = !ZGRAD || /[?&]bands=classic(&|$)/.test(qs0);
+    const gopts = {}; if (bossesClassic) gopts.bosses = 'classic'; if (rosterClassic) gopts.roster = 'classic'; if (bandsClassic) gopts.bands = 'classic';
+    const world = O.generate(seed, bossesClassic || rosterClassic || bandsClassic ? gopts : undefined);
     const genMs = performance.now() - t0;
     save.version = world.version || O.VERSION;
     writeSave(save);
@@ -100,9 +107,11 @@
     const terrain = world.terrain; const solid = world.solid;
 
     // ---------- collision: every solid tile blocks walking; deep water lets bolts fly over it ----------
+    let slowUntil = 0; // zone gradient: a brief slow on the first crossing into a zone above the hero's level (arena clock, s)
     const moveScaleAt = (x, y) => {
       const tx = Math.floor(x / TILE); const ty = Math.floor(y / TILE);
-      return tx >= 0 && ty >= 0 && tx < ww && ty < wh && terrain[ty * ww + tx] === T.shallow_water ? 0.7 : 1;
+      const k = tx >= 0 && ty >= 0 && tx < ww && ty < wh && terrain[ty * ww + tx] === T.shallow_water ? 0.7 : 1;
+      return slowUntil > 0 && arena.clock < slowUntil ? k * ZSLOW : k;
     };
     const solidAt = (x, y) => { const tx = Math.floor(x / TILE); const ty = Math.floor(y / TILE); return tx < 0 || ty < 0 || tx >= ww || ty >= wh || solid[ty * ww + tx] === 1; };
     const shotSolidAt = (x, y) => { const tx = Math.floor(x / TILE); const ty = Math.floor(y / TILE); if (tx < 0 || ty < 0 || tx >= ww || ty >= wh) return true; const i = ty * ww + tx; return solid[i] === 1 && terrain[i] !== T.deep_water; };
@@ -445,9 +454,36 @@
       evState.forEach((st) => { if (st.phase === 'upcoming' || st.phase === 'active') drawBeacon(g, st.plan.site.x * sx, st.plan.site.y * sy, st.phase === 'active' ? 4 : 3, st.phase === 'active' ? '#ff8a2a' : '#ffe27a', 0, true); });
       g.fillStyle = '#000'; g.fillRect(tx * sx - 2.5, ty * sy - 2.5, 5, 5); g.fillStyle = '#fff'; g.fillRect(tx * sx - 1.5, ty * sy - 1.5, 3, 3);
     }
+    // ---------- zone gradient (PLAYTEST-REVIEW-2 #1): a toast at every border crossing, a 1 s slow on the first crossing above the hero's level ----------
+    const ZSLOW = 0.5; const ZSLOW_S = 1; const ZTOAST_GAP = 4; // move x0.5 for 1 s; the same border re-toasts at most every 4 s
+    let prevZ = null; let prevTx = 0; let prevTy = 0; let lastToastT = -1e9; let lastCross = null; let crossN = 0; const crossed = new Set();
+    const ZJUMP = 4; // tiles between two HUD syncs (0.25 s): more than this is a teleport (a placement, a test hook), not a walk: no toast
+    const recLv = (z) => { const Zd = Z.TABLES.ZONES[z]; return Zd && Zd.recLv > 0 ? Zd.recLv : 1; };
+    function zoneCross(zi, tx, ty) {
+      if (!ZGRAD || !(zi.zone >= 0 && zi.zone <= 3)) return; // the void (deep water) never counts as a zone
+      const jump = Math.abs(tx - prevTx) > ZJUMP || Math.abs(ty - prevTy) > ZJUMP; prevTx = tx; prevTy = ty;
+      if (prevZ === null || jump) { if (prevZ === null) crossed.add(zi.zone); prevZ = zi.zone; return; } // where the visit starts, or a teleport: no toast
+      if (zi.zone === prevZ) return;
+      prevZ = zi.zone; crossN++;
+      const first = !crossed.has(zi.zone); crossed.add(zi.zone);
+      const rec = recLv(zi.zone); const lv = Math.max(1, (arena.save && arena.save.level) | 0);
+      const slowed = first && lv < rec && arena.state === 'play';
+      if (slowed) slowUntil = arena.clock + ZSLOW_S;
+      const text = `${zi.name}: ${zi.danger}, recommended Lv ${rec}`;
+      if (first || arena.clock - lastToastT >= ZTOAST_GAP) { lastToastT = arena.clock; arena._showBanner(text, 2.2); }
+      lastCross = { zone: zi.zone, text, first, slowed, rec, lv, t: arena.clock };
+    }
+    // ---------- enemy fire budget (PLAYTEST-REVIEW-2 #2): per-zone live enemy-bullet cap + capped bolt travel; ?firebudget=0 = today's bullets ----------
+    const FB_ON = !/[?&]firebudget=0(&|$)/.test(qs0);
+    const ebCapFor = (z) => { const c = Z.TABLES.EB_CAP; return c && c[z] > 0 ? c[z] : (c ? c[c.length - 1] : 0); };
+    function fireBudgetFor(zi) {
+      if (!FB_ON || !(zi.zone >= 0 && zi.zone <= 3)) return; // the void keeps the last zone's budget
+      const cap = ebCapFor(zi.zone);
+      if (!arena.fireBudget || arena.fireBudget.cap !== cap) arena.fireBudget = { cap, travel: Z.TABLES.EB_TRAVEL || 0.6, zone: zi.zone };
+    }
     function syncHud(force) {
       const p = arena.player; const tx = Math.floor(p.x / TILE); const ty = Math.floor(p.y / TILE);
-      const zi = Z.zoneInfoAt(world, tx, ty); lastZone = zi;
+      const zi = Z.zoneInfoAt(world, tx, ty); lastZone = zi; zoneCross(zi, tx, ty); fireBudgetFor(zi);
       const txt = `${zi.name} · ${zi.danger}`;
       if (txt !== zoneTxt || force) { zoneTxt = txt; zName.textContent = txt; zName.style.color = zi.color; zoneEl.dataset.zone = String(zi.zone); }
       const dx = world.center.x - tx; const dy = world.center.y - ty; const dist = Math.round(Math.hypot(dx, dy));
@@ -493,10 +529,14 @@
     const DIFF = window.MMDifficulty && !MMDifficulty.isOff(typeof location !== 'undefined' ? location.search : '') ? MMDifficulty : null;
     let diffMode = 'classic'; try { if (window.MMProfile) diffMode = MMProfile.clean(localStorage.getItem(MMProfile.KEY)).mode; } catch (e) { diffMode = 'classic'; }
     const REALM_R = world.w * 0.47; // nominal coast radius in tiles (MMOverworld.generate)
+    // early TTK + loot loop (PLAYTEST-REVIEW-2 #3): softer shore creatures (MMDifficulty SHORE_TTK) and a pickup magnet the size of a fight's
+    // reach (MMPickups.MAGNET_RADIUS_WORLD); ?ttk=0 restores today's hp and the 64 px magnet
+    const TTK_ON = !/[?&]ttk=0(&|$)/.test(qs0);
     function diffAt(zone, px, py) { // px/py in pixels -> MMDifficulty.zoneScale for that spot (1x everywhere when off)
       if (!DIFF) return { hp: 1, dmg: 1, spd: 1, count: 1, fire: 1 };
       const d = Math.hypot(px / TILE - world.center.x, py / TILE - world.center.y) / REALM_R;
-      return DIFF.zoneScale(zone, d, { mode: diffMode });
+      const o = { mode: diffMode }; if (world.bands === 'wide') o.bands = 'wide'; if (TTK_ON) o.ttk = true;
+      return DIFF.zoneScale(zone, d, o);
     }
     function scaleEnemy(e, zone, hpBase) { // multiply an arena enemy already carrying its zone stats
       const s = diffAt(zone, e.x, e.y);
@@ -809,6 +849,40 @@
       const f = nearestFree(tx, ty, 8) || world.spawnPoint;
       const p = arena.player; p.x = (f.x + 0.5) * TILE; p.y = (f.y + 0.5) * TILE; p.iframes = Math.max(p.iframes, 2);
     }
+    // ---------- safe return from a portal (PLAYTEST-REVIEW-2 #4): a 3 s spawn shield, and a hop away from a live event in view ----------
+    // Only for an arrival through ?at= (back from a dungeon). The hero still lands on the returnTo tile; only when a live (active, unfinished)
+    // event's site is inside the view (+64 px) does it move to the nearest quiet tile within SAFE_HOP tiles: free and at least the event's
+    // spawn radius from every such site (else the free tile there farthest from them). ?safereturn=0 = today's 2 s and no hop.
+    const SAFE_ON = !/[?&]safereturn=0(&|$)/.test(qs0);
+    const SAFE_SHIELD = 3; const SAFE_HOP = 6; const SAFE_MARGIN = 64;
+    let lastReturn = null;
+    function safeReturn() {
+      const p = arena.player; const now = eventClock();
+      const from = { x: Math.floor(p.x / TILE), y: Math.floor(p.y / TILE) };
+      p.iframes = Math.max(p.iframes, SAFE_SHIELD);
+      const hw = arena.W / 2 + SAFE_MARGIN; const hh = arena.H / 2 + SAFE_MARGIN; const sites = [];
+      const evs = Z.eventsFor(world, now);
+      for (let i = 0; i < evs.length; i++) {
+        const ev = evs[i]; if (!ev.active || evDone.has(ev.id)) continue;
+        const st = evStateFor(ev); if (st.phase === 'won' || st.phase === 'expired') continue;
+        const c = siteXY(st); if (Math.abs(c.x - p.x) <= hw && Math.abs(c.y - p.y) <= hh) sites.push({ id: ev.id, tx: st.plan.site.x, ty: st.plan.site.y });
+      }
+      let to = from;
+      if (sites.length) {
+        const R = ZT.EVENT_SPAWN_RADIUS; let best = null; let bestD = Infinity; let far = null; let farD = -1;
+        const minSite = (x, y) => { let m = Infinity; for (let k = 0; k < sites.length; k++) m = Math.min(m, Math.hypot(x - sites[k].tx, y - sites[k].ty)); return m; };
+        for (let oy = -SAFE_HOP; oy <= SAFE_HOP; oy++) for (let ox = -SAFE_HOP; ox <= SAFE_HOP; ox++) {
+          const x = from.x + ox; const y = from.y + oy; if (!tileFree(x, y)) continue;
+          const ms = minSite(x, y); const d = Math.hypot(ox, oy);
+          if (ms >= R + 0.5 && (d < bestD || (d === bestD && best && (y < best.y || (y === best.y && x < best.x))))) { best = { x, y }; bestD = d; }
+          if (ms > farD) { far = { x, y }; farD = ms; }
+        }
+        to = best || far || from;
+        if (to !== from) { p.x = (to.x + 0.5) * TILE; p.y = (to.y + 0.5) * TILE; }
+      }
+      lastReturn = { from, to: { x: to.x, y: to.y }, moved: to.x !== from.x || to.y !== from.y, events: sites.map((q) => q.id), shield: SAFE_SHIELD, iframes: p.iframes };
+      return lastReturn;
+    }
     // ---------- world sites (MMSites): shrines (timed buffs), camps (chest + patrol), NPC greeters ----------
     const SITES = window.MMSites && !/[?&]sites=0(&|$)/.test(typeof location !== 'undefined' ? location.search : '') ? MMSites.generate(world, seed) : null;
     const NPC_IDS = window.MMSites ? MMSites.NPC_IDS : [];
@@ -903,6 +977,8 @@
       goblin_shaman: { id: 'curse', ch: 0.2, sec: 4 },
       storm_harbinger: { id: 'dazed', ch: 0.25, sec: 2 }, dread_knight: { id: 'armorBroken', ch: 0.25, sec: 3 },
       void_oracle: { id: 'curse', ch: 0.3, sec: 4 }, bone_colossus: { id: 'slowed', ch: 0.25, sec: 2 },
+      ghoul: { id: 'sick', ch: 0.25, sec: 3 }, thorn_vine: { id: 'sick', ch: 0.2, sec: 3 }, wraith_knight: { id: 'weak', ch: 0.2, sec: 2 }, // b24 wave 2 (shore ones stay absent)
+      fire_elemental: { id: 'bleed', ch: 0.25, sec: 3 }, giant_spider_queen: { id: 'bleed', ch: 0.3, sec: 3 },
     };
     let stRolls = 0; const stLog = { applied: 0, last: null };
     const zoneAtPx = (x, y) => { const tx = Math.floor(x / TILE); const ty = Math.floor(y / TILE); return tx < 0 || ty < 0 || tx >= world.w || ty >= world.h ? 0 : world.zone[ty * world.w + tx]; };
@@ -1037,11 +1113,12 @@
     window.addEventListener('keydown', (ev) => { if ((ev.key === 'e' || ev.key === 'E') && !ev.repeat && siteFor && arena.active && !arena.paused && arena.state === 'play') { ev.preventDefault(); siteAct(); } });
 
     // ---------- live pickups (MMPickups): coins, XP orbs, hearts and life potions rolled per kill, seeded by (world seed, group, kill index) ----------
-    // World sprites on the overlay layer (drawImage from the loaded b15 art, or a tiny cached code sprite). Magnet 64 px, cap 60 (oldest culled),
+    // World sprites on the overlay layer (drawImage from the loaded b15 art, or a tiny cached code sprite). Magnet 120 px (64 px with ?ttk=0), cap 60 (oldest culled),
     // lifetime per tier, no per-frame Graphics. Focus orbs and stat-buff potions need arena resources that do not exist yet: they are never spawned.
     const PK = window.MMPickups || null;
     const PICK_ON = !!PK && !/[?&]pickups=0(&|$)/.test(typeof location !== 'undefined' ? location.search : '');
     const PICK_CAP = 60;
+    const MAGNET_R = TTK_ON && PK && PK.MAGNET_RADIUS_WORLD > 0 ? PK.MAGNET_RADIUS_WORLD : (PK ? PK.MAGNET_RADIUS : 64);
     const picks = []; let pickSave = false; let pickTotal = 0; const pickGot = { coin: 0, xp: 0, heart: 0, potion: 0 };
     const pickSpr = {};
     function pickSprite(type, art) { // cached code sprite (24x24) used until the art loads or when art is off
@@ -1085,7 +1162,7 @@
         const q = picks[i];
         if (PK.expired(q, now)) { picks.splice(i, 1); continue; }
         if (arena.state !== 'play') continue;
-        const m = PK.magnetStep(q, p, d); q.x = m.x; q.y = m.y;
+        const m = PK.magnetStep(q, p, d, MAGNET_R); q.x = m.x; q.y = m.y;
         if (m.collected) { picks.splice(i, 1); collectPick(q); }
       }
       if (pickSave) { pickSave = false; arena.onSave(arena.save); arena._syncHud(); }
@@ -1124,7 +1201,7 @@
       + '#rw-nexus{position:fixed;inset:0;z-index:80;background:#120e1f;color:#f3eefc;display:flex;flex-direction:column;overflow-x:hidden;overflow-y:auto;font:14px/1.4 system-ui,sans-serif;padding:env(safe-area-inset-top,0px) 16px env(safe-area-inset-bottom,0px);box-sizing:border-box}#rw-nexus.hidden{display:none}'
       + '#rw-nexus .nx-head{display:flex;align-items:center;gap:12px;padding:8px 0;flex-wrap:wrap}#rw-nexus h2{margin:0;font-size:18px;flex:1;min-width:120px}'
       + '#rw-nexus button{min-height:44px;min-width:44px;padding:0 14px;border-radius:10px;border:2px solid #7a63c9;background:#2a2150;color:#fff;font:700 14px system-ui,sans-serif;cursor:pointer}#rw-nexus button:focus-visible{outline:3px solid #ffe27a}'
-      + '#rw-nexus .nx-stage{position:relative;box-sizing:border-box;width:100%;max-width:760px;aspect-ratio:4/3;margin:0 auto;border:2px solid #3a2f66;border-radius:10px;overflow:hidden;background:#1b1530}#rw-nexus canvas{display:block;width:100%;height:100%;image-rendering:pixelated}'
+      + '#rw-nexus .nx-stage{position:relative;box-sizing:border-box;flex:0 0 auto;width:min(100%,max(320px,calc((100vh - 230px)*4/3)));max-width:760px;aspect-ratio:4/3;margin:0 auto;border:2px solid #3a2f66;border-radius:10px;overflow:hidden;background:#1b1530}#rw-nexus canvas{display:block;width:100%;height:100%;image-rendering:pixelated}'
       + '#rw-nexus .nx-spot{position:absolute;transform:translate(-50%,-50%);padding:0;border-radius:50%;background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.25)}'
       + '#rw-nexus .nx-lists{max-width:760px;width:100%;margin:10px auto 0;display:flex;flex-direction:column;gap:8px}#rw-nexus .nx-row{display:flex;flex-wrap:wrap;gap:8px}#rw-nexus .nx-row>b{flex:0 0 100%;font-size:12px;color:#c9bff0;font-weight:600}'
       + '#rw-nexus .nx-talk{max-width:760px;width:100%;margin:10px auto;box-sizing:border-box;padding:10px 12px;border-radius:10px;background:#231b42;border:1px solid #4a3d85;min-height:44px}#rw-nexus .nx-talk b{color:#ffe27a}'
@@ -1297,7 +1374,9 @@
 
     const hooks = {
       onStart() {
+        const back = !!pendingAt; // an arrival through ?at= (the return from a dungeon portal)
         if (pendingAt) { placeAt(pendingAt.x, pendingAt.y); pendingAt = null; } else placeAt(world.spawnPoint.x, world.spawnPoint.y);
+        prevZ = null; slowUntil = 0; // a (re)start is not a border crossing
         arena.run.wave = 0; arena.biome = 0;
         resetZones();
         kills = 0; spawned = 0; despawned = 0; lastDrops.length = 0; picks.length = 0;
@@ -1310,6 +1389,7 @@
         evBase = Math.max(save.evT, evStarted ? lastEvClock : 0) - arena.clock; evStarted = true;
         evState.forEach((st) => { if (st.phase === 'active' || st.phase === 'upcoming') evRest(st); });
         evT = 0; hintT = 0; hintEl.classList.add('hidden');
+        if (back && SAFE_ON) safeReturn(); // before the first evTick, so a raid in view never spawns on top of the arrival
         arena._showBanner(`The Realm · island #${seed}`, 1.8);
         savePos(true); evTick(); syncHud(true);
       },
@@ -1388,7 +1468,7 @@
     const api = {
       seed, world, genMs, SAVE_KEY, TILE, CPX, MAX_CHUNKS,
       chunkCount: () => chunks.size, chunkBuilds: () => chunkBuilds, artTiles: () => artTiles, miniDraws: () => miniDraws,
-      zone: () => lastZone, hudText: () => ({ zone: zName.textContent, coords: zCoords.textContent, arrow: arrowDeg }),
+      zone: () => lastZone, fireBudget: { on: FB_ON, capFor: ebCapFor, now: () => (arena.fireBudget ? Object.assign({}, arena.fireBudget) : null), live: () => arena._ebLive, capped: () => arena._ebCapped }, zoneGrad: { on: ZGRAD, bands: world.bands || 'classic', recLv, last: () => lastCross, crossings: () => crossN, slowLeft: () => Math.max(0, slowUntil - arena.clock), moveScale: () => moveScaleAt(arena.player.x, arena.player.y) }, hudText: () => ({ zone: zName.textContent, coords: zCoords.textContent, arrow: arrowDeg }),
       tileAt: (x, y) => O.tileAt(world, Math.floor(x / TILE), Math.floor(y / TILE)), solidAt, shotSolidAt, nearestFree,
       tileCenter: (tx, ty) => ({ x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE }),
       save: () => readSave(), savePos, portals: () => portals.map((q) => ({ i: q.i, x: q.x, y: q.y, tx: q.tx, ty: q.ty, biome: q.biome })),
@@ -1403,11 +1483,11 @@
       liveCount: () => { let n = 0; live.forEach((e, id) => { if (e.active && e.zid === id) n++; }); return n; },
       liveEnemies: () => { const o = []; live.forEach((e, id) => { if (e.active && e.zid === id) o.push({ id, x: e.x, y: e.y, type: e.type, zone: e.zone, tier: e.tier, art: e.art, hp: e.maxHp, spd: e.spdMul, dmg: e.dmgMul, diff: e.diff || null }); }); return o; },
       enemyById: (id) => live.get(id) || null, setDropAll: (on) => { dropAll = !!on; }, lastDrops: () => lastDrops.slice(), kills: () => kills,
-      bossesClassic, bossArtIds: () => world.bossSites.map((b) => b.boss),
+      bossesClassic, rosterClassic, bandsClassic, bossArtIds: () => world.bossSites.map((b) => b.boss),
       bossSites: () => world.bossSites.map((b, i) => ({ i, x: b.x, y: b.y, zone: b.zone, boss: b.boss, name: BOSS_NAME[i], live: !!(bossLive[i] && bossLive[i].active), ready: !!zones && zones.bossReady(b, arena.clock) })),
       bossEntity: (i) => bossLive[i] || null, bossTick,
       // slice 7
-      portalPrompt: () => promptFor, portalUrls, portalSeed, enterPortal, lastPortalUrl: null, RETURN_RE,
+      safeReturn: { on: SAFE_ON, shield: SAFE_SHIELD, hop: SAFE_HOP, last: () => lastReturn }, portalPrompt: () => promptFor, portalUrls, portalSeed, enterPortal, lastPortalUrl: null, RETURN_RE,
       // world events (slice A): the clock hook moves the event clock (deterministic: same clock => same events, plans and rewards)
       eventClock, setEventClock: (t) => { evBase = Math.max(0, Number(t) || 0) - arena.clock; evT = 0; evTick(); return eventClock(); },
       jumpEventClock: (dt) => { evBase += Number(dt) || 0; evT = 0; evTick(); return eventClock(); },
@@ -1422,7 +1502,7 @@
       useShrine, openChest, talkNpc: talk, sitePrompt: () => (siteFor ? { kind: siteFor.kind, i: siteFor.i, text: siteBtn.textContent, hidden: siteBtn.classList.contains('hidden') } : null), siteNote: () => ({ text: siteNote.textContent, hidden: siteNote.classList.contains('hidden') }), siteTick,
       // slice 11: world debuffs (roll(creature, zone, force) = one bolt hit; table = creature -> status; shown by arena.statusOf)
       worldStatus: { on: STATUS_ON, table: BOLT_ST, forCreature: boltStatusFor, roll: boltRoll, log: stLog },
-      pickups: { on: PICK_ON, cap: PICK_CAP, list: () => picks.map((q) => ({ type: q.type, art: q.art, value: q.value, tier: q.tier, x: q.x, y: q.y, lifeMs: q.lifeMs })), spawn: spawnPickups, got: () => Object.assign({}, pickGot), total: () => pickTotal },
+      ttk: { on: TTK_ON }, pickups: { on: PICK_ON, cap: PICK_CAP, magnet: MAGNET_R, list: () => picks.map((q) => ({ type: q.type, art: q.art, value: q.value, tier: q.tier, x: q.x, y: q.y, lifeMs: q.lifeMs })), spawn: spawnPickups, got: () => Object.assign({}, pickGot), total: () => pickTotal },
       nexus: { on: NX_ON, site: nxSite, open: nexusOpen, close: nexusClose, isOpen: () => nxOpen, near: () => nxNear, enterTile: () => nxEnterTile, talk: (id) => { const n = NX_ON && NX.layout().npcs.find((x) => x.id === id); if (n) { nxBuild(); nxTalk(n); } return nxDom && nxDom.last; }, portal: (id) => { const q = NX_ON && NX.layout().portals.find((x) => x.id === id); return q ? nxPortal(q) : null; }, lastUrl: () => api.lastNexusUrl || null, today: todayUtc },
       quests: { date: questDate, list: () => MMQuests.quests(questDate()), summary: () => MMQuests.summary(save.quests, questDate()), state: () => JSON.parse(JSON.stringify(save.quests || MMQuests.fresh(questDate()))), event: nxQuestEvent, claim: nxClaim, flush: () => { qDirty = false; return writeSave(save); } },
       settle, stashNote, lastSettle: () => lastSettle, finds: () => (ST ? ST.readFinds(localStorage) : null),
