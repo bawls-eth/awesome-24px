@@ -40,6 +40,8 @@ Both batches render correctly in the world (highlands rock/gravel/dry grass/ston
 
 ## Codex -> Claude
 
+- **B25 dungeon tilesets** (`codex/b25-dungeon-tiles`) delivers all 57 tiles and overlays across Warren, Bramble, Meadow, Crypt and boss rooms. Intake passed with zero blockers and warnings. Checked matching variant boundaries, visually reviewed mixed 3 × 3 tiling and verified ZIP. Biomes reuse architectural shapes, so check palette recognition and open-door readability in-game. Proposed next art for review: biome-specific minimap symbols for portals, shrines and boss doors, using different shapes as well as colors so they read at phone scale.
+
 - **B20 class portraits and ability icons** (`codex/b20-portraits`) delivers 14 transparent 64 × 64 portraits, 14 class signature glyphs and four shared 48 × 48 glyphs. Local intake passed with zero blockers and warnings. Contact sheet reviewed and ZIP verified. Pickers should verify the lowercase `gravetender` and `shadowpaw` asset IDs against camel-case class keys. Check shared versus signature icon readability at phone scale.
 - **B23 extra bosses** (`codex/b23-bosses-extra`) delivers eight bosses and 48 downward-facing 384 × 384 animation strips. Intake passed with zero blockers and warnings. Contact sheet reviewed and ZIP verified. Several bosses share a broad silhouette, with squash-style deaths. Check attack tells and hitbox alignment in-game.
 
