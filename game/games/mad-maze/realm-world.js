@@ -230,6 +230,10 @@
       }
       const list = propsBy[cy * ccols + cx];
       if (list) for (let k = 0; k < list.length; k++) drawProp(g, list[k].kind, (list[k].x - x0) * TILE, (list[k].y - y0) * TILE, false);
+      if (artOn) {
+        const al = chunkProps(cx, cy);
+        for (let k = 0; k < al.length; k++) { const a = wArt[al[k].id]; if (a) g.drawImage(a.img, 0, 0, a.fw, a.fh, (al[k].x - x0) * TILE + 16 - a.ax, (al[k].y - y0) * TILE + 30 - a.ay, a.fw, a.fh); }
+      }
       let wcv = null;
       if (water) { // a sparse highlight layer, faded / nudged per frame for a cheap shimmer
         wcv = document.createElement('canvas'); wcv.width = CPX; wcv.height = CPX;
@@ -256,14 +260,121 @@
     const portals = world.portalSites.map((p, i) => ({ i, x: (p.x + 0.5) * TILE, y: (p.y + 0.5) * TILE, tx: p.x, ty: p.y, biome: p.biome, zone: p.zone, col: BIOME_COL[p.biome] || '#a98bff', label: `${BIOME_NAME[p.biome] || 'Warren'} portal` }));
     const DASH = [10, 8];
     function drawPortal(g, q, tt, reduced) {
+      const pa = wArt['portal_' + q.biome];
+      if (pa) { drawArt(g, pa, frameOf(pa, tt, reduced), q.x, q.y + 23); artDraws.portal++; }
+      else drawPortalCode(g, q, tt, reduced);
+      g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(q.label, q.x + 1, q.y - 37); g.fillStyle = q.col; g.fillText(q.label, q.x, q.y - 38);
+    }
+    function drawPortalCode(g, q, tt, reduced) {
       g.save(); g.translate(q.x, q.y);
       g.globalAlpha = 0.25; g.fillStyle = q.col; g.beginPath(); g.arc(0, 0, 30, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1;
       g.rotate(reduced ? 0 : tt * 1.4); g.strokeStyle = q.col; g.lineWidth = 4; g.setLineDash(DASH); g.beginPath(); g.arc(0, 0, 26, 0, Math.PI * 2); g.stroke();
       g.rotate(reduced ? 0 : -tt * 2.8); g.lineWidth = 2; g.strokeStyle = '#fff'; g.beginPath(); g.arc(0, 0, 16, 0, Math.PI * 2); g.stroke(); g.setLineDash(EMPTY);
       g.restore();
-      g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(q.label, q.x + 1, q.y - 37); g.fillStyle = q.col; g.fillText(q.label, q.x, q.y - 38);
     }
     const EMPTY = [];
+
+    // ---------- world art (b12 nature props, b13 structures, b14 portals / shrines / chest / beacon / spawn pad) ----------
+    // Everything draws from sprite strips with drawImage (no Graphics); the code visuals stay as the fallback (art missing or ?art=0).
+    const artOn = !!opts.assetRoot && !/[?&]art=0(&|$)/.test(typeof location !== 'undefined' ? location.search : '');
+    const wArt = Object.create(null); // id -> { img, frames, fw, fh, fps, ax, ay }
+    const artDraws = { portal: 0, shrine: 0, chest: 0, beacon: 0, pad: 0 };
+    let wArtLoading = false;
+    function drawArt(g, a, f, x, y) { g.drawImage(a.img, f * a.fw, 0, a.fw, a.fh, Math.round(x - a.ax), Math.round(y - a.ay), a.fw, a.fh); }
+    function frameOf(a, tt, reduced) { return reduced || a.frames < 2 ? 0 : Math.floor(tt * a.fps) % a.frames; } // time-sliced, reduce-motion = frame 0
+    function loadWorldArt(root) {
+      if (!artOn || !root || typeof fetch !== 'function') return Promise.resolve(0);
+      wArtLoading = true;
+      const join = (a, b) => a.replace(/\/+$/, '') + '/' + String(b).replace(/^\/+/, '');
+      const okPath = (p) => typeof p === 'string' && /^[A-Za-z0-9_][A-Za-z0-9_.\/-]*\.png$/.test(p) && p.indexOf('..') < 0;
+      const WANT = /^(portal_[a-z]+|spawn_pad|shrine_(heal|rage|ward)|event_beacon|loot_chest_gold|prop_[a-z0-9_]+)$/;
+      let got = 0;
+      return fetch(join(root, 'INDEX.json')).then((r) => (r.ok ? r.json() : null)).then((idx) => {
+        const batches = idx && Array.isArray(idx.batches) ? idx.batches : [];
+        return Promise.all(batches.map((b) => {
+          const id = b && typeof b.path === 'string' ? b.path.replace(/\/+$/, '').split('/').pop() : '';
+          if (!/^b1[234]-[a-z0-9-]{1,48}$/.test(id)) return null;
+          return fetch(join(join(root, id), 'manifest.json')).then((r) => (r.ok ? r.json() : null)).then((m) => {
+            const assets = m && Array.isArray(m.assets) ? m.assets : [];
+            return Promise.all(assets.map((a) => {
+              if (!a || typeof a.id !== 'string' || !WANT.test(a.id) || !okPath(a.path)) return null;
+              const frames = Number.isInteger(a.frames) && a.frames >= 1 && a.frames <= 16 ? a.frames : 0;
+              const fw = Number(a.frame_w); const fh = Number(a.frame_h);
+              if (!frames || !(fw >= 8 && fw <= 128) || !(fh >= 8 && fh <= 128)) return null;
+              const an = Array.isArray(a.anchor) ? { x: a.anchor[0], y: a.anchor[1] } : a.anchor;
+              const ax = an && Number.isFinite(an.x) ? an.x : fw / 2; const ay = an && Number.isFinite(an.y) ? an.y : fh - 2;
+              return new Promise((res) => {
+                const img = new Image();
+                img.onload = () => { if (img.naturalWidth === fw * frames && img.naturalHeight === fh) { wArt[a.id] = { img, frames, fw, fh, fps: Number(a.fps) > 0 ? Math.min(Number(a.fps), 24) : 8, ax, ay }; got++; } res(); };
+                img.onerror = () => res();
+                img.src = join(join(root, id), a.path);
+              });
+            }));
+          }).catch(() => null);
+        }));
+      }).then(() => { wArtLoading = false; if (got) dropChunks(); return got; }).catch(() => { wArtLoading = false; return 0; });
+    }
+
+    // ---------- decorative props (purely visual, baked into the chunk canvas; seeded per chunk, never blocks, world generation untouched) ----------
+    const NAT = {
+      grass: ['prop_tree_small', 'prop_tree_medium', 'prop_bush_a', 'prop_bush_b', 'prop_rock_a', 'prop_flower_red', 'prop_flower_blue', 'prop_flower_yellow', 'prop_stump', 'prop_log', 'prop_bush_berry'],
+      tall_grass: ['prop_tree_medium', 'prop_tree_large', 'prop_bush_a', 'prop_bush_berry', 'prop_log', 'prop_mushroom_ring', 'prop_stump'],
+      flower_meadow: ['prop_flower_red', 'prop_flower_blue', 'prop_flower_yellow', 'prop_flower_red', 'prop_flower_yellow', 'prop_bush_b', 'prop_mushroom_ring', 'prop_tree_small'],
+      sand: ['prop_shell', 'prop_driftwood', 'prop_tree_palm', 'prop_rock_a'],
+      wet_sand: ['prop_shell', 'prop_reeds', 'prop_driftwood', 'prop_rock_b'],
+      dry_grass: ['prop_cactus', 'prop_tree_dead', 'prop_skeleton_bones', 'prop_rock_b'],
+      snow: ['prop_tree_pine', 'prop_ice_spike', 'prop_rock_a'],
+      highland_rock: ['prop_rock_a', 'prop_rock_b', 'prop_rock_big', 'prop_boulder_cluster', 'prop_crystal_blue', 'prop_tree_pine'],
+      gravel: ['prop_rock_a', 'prop_rock_b', 'prop_boulder_cluster', 'prop_tree_dead'],
+      dark_grass: ['prop_tree_dead', 'prop_tree_pine', 'prop_mushroom_ring', 'prop_grave_a', 'prop_grave_b', 'prop_bush_a'],
+      godland_ash: ['prop_skeleton_bones', 'prop_tree_dead', 'prop_crystal_red', 'prop_rock_b'],
+      blood_ruins: ['prop_skeleton_bones', 'prop_crystal_red', 'prop_tombstone_cross', 'prop_rock_b'],
+      cracked_stone: ['prop_rock_b', 'prop_crystal_green', 'prop_skeleton_bones'],
+      lava_rock: ['prop_rock_a', 'prop_crystal_red'],
+    };
+    const STRUCT = ['prop_hut', 'prop_tower_ruin', 'prop_pillar_ruin_a', 'prop_pillar_ruin_b', 'prop_arch_ruin', 'prop_fence_h', 'prop_fence_v', 'prop_signpost', 'prop_crate', 'prop_barrel', 'prop_well', 'prop_tent_a', 'prop_tent_b'];
+    const propCache = new Map(); let exPts = null; let campPts = null;
+    function buildExclusions() { // spawn, portals, sites, bosses, event rings and the generator's own props keep a clear radius
+      exPts = []; campPts = [];
+      const add = (x, y, r) => { if (Number.isFinite(x) && Number.isFinite(y)) exPts.push({ x, y, r }); };
+      add(world.spawnPoint.x, world.spawnPoint.y, 4);
+      world.portalSites.forEach((q) => add(q.x, q.y, 4));
+      world.bossSites.forEach((q) => add(q.x, q.y, 4));
+      world.structures.forEach((q) => add(q.x, q.y, 4));
+      world.props.forEach((q) => add(q.x, q.y, 1));
+      if (SITES) {
+        SITES.shrines.forEach((q) => add(q.x, q.y, 3));
+        SITES.npcs.forEach((q) => add(q.x, q.y, 3));
+        SITES.camps.forEach((q) => { add(q.x, q.y, 3); if (q.chest) add(q.chest.x, q.chest.y, 3); campPts.push(q); });
+      }
+    }
+    const isRoad = (t) => t === T.dirt_road || t === T.stone_road;
+    function chunkProps(cx, cy) {
+      const key = cy * ccols + cx; let L = propCache.get(key); if (L) return L;
+      L = [];
+      if (artOn && cx >= 0 && cy >= 0 && cx < ccols && cy < crows) {
+        if (!exPts) buildExclusions();
+        const rng = MMRng.create(seed + ':art:' + cx + ',' + cy);
+        const target = 2 + rng.int(0, 4); // 2..6 per 256 tiles: at most ~1 per 40 tiles
+        for (let tries = 0; tries < target * 8 && L.length < target; tries++) {
+          const wx = cx * CH + rng.int(1, 14); const wy = cy * CH + rng.int(2, 15); const roll = rng.next(); const roll2 = rng.next(); // the same draws every try: order-stable
+          if (wx >= ww || wy >= wh) continue;
+          const i = wy * ww + wx; if (solid[i]) continue;
+          const pool = NAT[TN[terrain[i]]]; if (!pool) continue; // water and the roads themselves stay clear
+          let bad = false;
+          for (let k = 0; k < exPts.length && !bad; k++) { const e = exPts[k]; if (Math.abs(e.x - wx) <= e.r && Math.abs(e.y - wy) <= e.r) bad = true; }
+          for (let k = 0; k < L.length && !bad; k++) if (Math.abs(L[k].x - wx) < 3 && Math.abs(L[k].y - wy) < 3) bad = true;
+          if (bad) continue;
+          let near = false;
+          for (let oy = -2; oy <= 2 && !near; oy++) for (let ox = -2; ox <= 2 && !near; ox++) { const x2 = wx + ox; const y2 = wy + oy; if (x2 >= 0 && y2 >= 0 && x2 < ww && y2 < wh && isRoad(terrain[y2 * ww + x2])) near = true; }
+          for (let k = 0; k < campPts.length && !near; k++) if (Math.abs(campPts[k].x - wx) <= 7 && Math.abs(campPts[k].y - wy) <= 7) near = true;
+          const id = near && roll < 0.6 ? STRUCT[Math.floor(roll2 * STRUCT.length)] : pool[Math.floor(roll2 * pool.length)];
+          L.push({ x: wx, y: wy, id });
+        }
+        L.sort((a, b) => a.y - b.y || a.x - b.x);
+      }
+      propCache.set(key, L); return L;
+    }
 
     // ---------- minimap (base image cached once) + zone HUD ----------
     const mini = document.createElement('canvas'); mini.id = 'rw-minimap'; mini.width = 96; mini.height = 96; mini.setAttribute('aria-label', 'World map (tap to enlarge)'); mini.setAttribute('role', 'button'); mini.tabIndex = 0; mini.setAttribute('aria-pressed', 'false');
@@ -697,6 +808,7 @@
     const GREET = ['Safe roads, traveller.', 'The island keeps its secrets, but the shrines are generous.', 'Mind the camps past the hills.', 'I hear the beacons are lit tonight.', 'Take your time. Nothing here is in a hurry.', 'Have you tried the portals yet?'];
     const NPC_NAME = { npc_nexus_guide: 'Nexus Guide', npc_vendor: 'Vendor', npc_healer: 'Healer', npc_quest_giver: 'Quest Giver', npc_blacksmith: 'Blacksmith', npc_wanderer: 'Wanderer', npc_ghost_guide: 'Ghost Guide' };
     const SITE_R = 56; const chestOpen = new Set(save.chests || []); const shrineAt = Object.assign({}, save.shrineAt || {}); let greetN = 0;
+    const chestAnimT = new Map(); // camp id -> arena clock when its opening animation began
     const campSt = new Map(); // camp id -> { ents, cleared }
     let rageEnd = 0; let wardEnd = 0; let noteT = 0; let siteFor = null; let siteKeyShown = ''; let siteTickT = 0;
     const siteNote = document.createElement('div'); siteNote.id = 'rw-site-note'; siteNote.className = 'hidden'; siteNote.setAttribute('role', 'status'); ov.appendChild(siteNote);
@@ -749,11 +861,18 @@
         const c = sPx(q); if (c.x < vx0 || c.x > vx1 || c.y < vy0 - 60 || c.y > vy1 + 60) return;
         const lit = shrineReady(q);
         if (lit) { if (!sc['g' + q.kind]) sc['g' + q.kind] = glowSprite(SHRINE_COL[q.kind]); g.globalAlpha = reduced ? 0.45 : 0.35 + 0.2 * Math.sin(tt * 2.4 + q.x); g.drawImage(sc['g' + q.kind], c.x - 64, c.y - 80); g.globalAlpha = 1; }
-        g.drawImage(shrineSprite(q.kind, lit), c.x - 24, c.y - 70);
+        const sa = wArt['shrine_' + q.kind];
+        if (sa) { if (!lit) g.globalAlpha = 0.6; drawArt(g, sa, lit ? frameOf(sa, tt, reduced) : 0, c.x, c.y + 18); g.globalAlpha = 1; artDraws.shrine++; }
+        else g.drawImage(shrineSprite(q.kind, lit), c.x - 24, c.y - 70);
       });
       SITES.camps.forEach((q) => {
         const cx = (q.chest.x + 0.5) * TILE; const cy = (q.chest.y + 0.5) * TILE; if (cx < vx0 || cx > vx1 || cy < vy0 || cy > vy1) return;
-        g.drawImage(chestSprite(chestOpen.has(q.id)), cx - 22, cy - 22);
+        const ca = wArt.loot_chest_gold;
+        if (ca) {
+          const t0c = chestAnimT.get(q.id); let f = chestOpen.has(q.id) ? ca.frames - 1 : 0;
+          if (t0c !== undefined && !reduced) f = Math.max(0, Math.min(ca.frames - 1, Math.floor((tt - t0c) / 0.12)));
+          drawArt(g, ca, f, cx, cy + 18); artDraws.chest++;
+        } else g.drawImage(chestSprite(chestOpen.has(q.id)), cx - 22, cy - 22);
       });
       SITES.npcs.forEach((q) => {
         const c = sPx(q); if (c.x < vx0 || c.x > vx1 || c.y < vy0 - 50 || c.y > vy1 + 50) return;
@@ -778,7 +897,7 @@
     }
     function openChest(i) {
       const q = SITES && SITES.camps[i]; if (!q || chestOpen.has(q.id)) return { ok: false };
-      chestOpen.add(q.id); save.chests = Array.from(chestOpen); writeSave(save); miniKey = '';
+      chestOpen.add(q.id); chestAnimT.set(q.id, arena.clock); save.chests = Array.from(chestOpen); writeSave(save); miniKey = '';
       const info = { zone: q.zone, tier: q.zone };
       const got = giveBag((q.chest.x + 0.5) * TILE, (q.chest.y + 0.5) * TILE, Z.rollDrop(info, seed + ':chest:' + q.id).bag, info);
       say(got.items.length ? 'Chest opened: loot spills out' : 'Chest opened'); siteKeyShown = '';
@@ -834,6 +953,25 @@
       siteTickT = 0;
     }
     siteBtn.addEventListener('click', siteAct);
+    // ---------- prompt layout: with both a portal and a site prompt open they stack (site below, portal above) and never overlap ----------
+    const BOT = 'env(safe-area-inset-bottom, 0px)';
+    [portalBtn, siteBtn].forEach((b) => { b.style.whiteSpace = 'nowrap'; });
+    function layoutPrompts() {
+      const both = !portalBtn.classList.contains('hidden') && !siteBtn.classList.contains('hidden');
+      siteBtn.style.bottom = both ? `calc(170px + ${BOT})` : '';
+      portalBtn.style.bottom = both ? `calc(236px + ${BOT})` : '';
+    }
+    if (typeof MutationObserver === 'function') { const po = new MutationObserver(layoutPrompts); po.observe(portalBtn, { attributes: true, attributeFilter: ['class'] }); po.observe(siteBtn, { attributes: true, attributeFilter: ['class'] }); }
+    // ---------- the minimap and zone text step aside while a panel (backpack / board / menu / shop / hero) is open ----------
+    const PANEL_IDS = { 'realm-backpack': 1, 'realm-board': 1, 'realm-pause': 1, 'realm-shop': 1, 'realm-hero': 1, 'realm-death': 1 };
+    let panelHid = false;
+    function syncPanels() {
+      const open = !!arena.panel && typeof matchMedia === 'function' && matchMedia('(max-width: 700px)').matches; // phone width only: there the panels cover the corner HUD // the arena's own panel state (backpack / board / menu / shop / hero), read-only; the DOM mutations below only say when to look
+      if (open === panelHid) return;
+      panelHid = open; mini.style.display = open ? 'none' : ''; zoneEl.style.display = open ? 'none' : '';
+    }
+    if (typeof window !== 'undefined') window.addEventListener('resize', syncPanels);
+    if (typeof MutationObserver === 'function') new MutationObserver((recs) => { for (let i = 0; i < recs.length; i++) if (PANEL_IDS[recs[i].target.id]) { syncPanels(); return; } }).observe(ov, { attributes: true, subtree: true, attributeFilter: ['class', 'style'] });
     window.addEventListener('keydown', (ev) => { if ((ev.key === 'e' || ev.key === 'E') && !ev.repeat && siteFor && arena.active && !arena.paused && arena.state === 'play') { ev.preventDefault(); siteAct(); } });
 
     const hooks = {
@@ -894,13 +1032,17 @@
           g.globalAlpha = reduced ? 0.5 : 0.35 + 0.25 * Math.sin(tt * 3); g.strokeStyle = '#ff3b3b'; g.lineWidth = 3; g.beginPath(); g.arc(bx, by, 22, 0, Math.PI * 2); g.stroke(); g.globalAlpha = 1;
           g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(BOSS_NAME[i], bx + 1, by - 29); g.fillStyle = '#ff8a8a'; g.fillText(BOSS_NAME[i], bx, by - 30);
         }
+        const pad = wArt.spawn_pad; const padX = (world.spawnPoint.x + 0.5) * TILE; const padY = (world.spawnPoint.y + 0.5) * TILE;
+        if (pad && padX > vx0 && padX < vx1 && padY > vy0 && padY < vy1) { drawArt(g, pad, frameOf(pad, tt, reduced), padX, padY + 16); artDraws.pad++; }
         if (SITES) drawSites(g, vx0, vy0, vx1, vy1, tt, reduced);
         evState.forEach((st) => { // event sites: a beacon (upcoming: gold, active: orange) above the ring of stones
           if (st.phase !== 'upcoming' && st.phase !== 'active') return;
           const c = siteXY(st); if (c.x < vx0 - 80 || c.x > vx1 + 80 || c.y < vy0 - 80 || c.y > vy1 + 80) return;
           const col = st.phase === 'active' ? '#ff8a2a' : '#ffe27a';
           g.globalAlpha = reduced ? 0.3 : 0.2 + 0.12 * Math.sin(tt * 2.5); g.fillStyle = col; g.beginPath(); g.arc(c.x, c.y, 70, 0, Math.PI * 2); g.fill(); g.globalAlpha = 1;
-          drawBeacon(g, c.x, c.y - 30 + (reduced ? 0 : Math.sin(tt * 2) * 4), 12, col, tt, reduced);
+          const ba = wArt.event_beacon;
+          if (ba) { drawArt(g, ba, frameOf(ba, tt, reduced), c.x, c.y + 6); artDraws.beacon++; }
+          else drawBeacon(g, c.x, c.y - 30 + (reduced ? 0 : Math.sin(tt * 2) * 4), 12, col, tt, reduced);
           const label = `${evTitle(st)} · ${st.phase === 'active' ? fmtT(st.ev.endsAt - eventClock()) + ' left' : 'in ' + fmtT(st.ev.startsAt - eventClock())}`;
           g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(label, c.x + 1, c.y - 51); g.fillStyle = col; g.fillText(label, c.x, c.y - 52);
         });
@@ -919,6 +1061,7 @@
     arena.setWorld({ w: WW, h: WH, tile: TILE, camera: true, solidAt, shotSolidAt, moveScaleAt, onStart: hooks.onStart, tick: hooks.tick, drawUnder: hooks.drawUnder, drawOver: hooks.drawOver, pools: { enemies: 72, eBullets: 700 } });
     if (typeof window !== 'undefined') window.addEventListener('pagehide', () => { savePos(true); settle('leave'); });
     if (opts.assetRoot && opts.tileArt !== false) loadTileArt(opts.assetRoot);
+    if (artOn) loadWorldArt(opts.assetRoot);
 
     const api = {
       seed, world, genMs, SAVE_KEY, TILE, CPX, MAX_CHUNKS,
@@ -927,7 +1070,9 @@
       tileAt: (x, y) => O.tileAt(world, Math.floor(x / TILE), Math.floor(y / TILE)), solidAt, shotSolidAt, nearestFree,
       tileCenter: (tx, ty) => ({ x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE }),
       save: () => readSave(), savePos, portals: () => portals.map((q) => ({ i: q.i, x: q.x, y: q.y, tx: q.tx, ty: q.ty, biome: q.biome })),
-      syncHud, loadTileArt,
+      syncHud, loadTileArt, loadWorldArt,
+      artState: () => ({ on: artOn, loaded: Object.keys(wArt), draws: Object.assign({}, artDraws), loading: wArtLoading }), artProps: (cx, cy) => chunkProps(cx, cy).map((q) => ({ x: q.x, y: q.y, id: q.id })), chunkGrid: () => ({ cols: ccols, rows: crows }),
+      panelHidden: () => panelHid,
       // minimap fog (slice A1)
       discovered: () => ({ on: fogOn, count: FOG ? FOG.count(fogBits) : 0, b64: FOG ? FOG.encode(fogBits) : '', has: (cx, cy) => (FOG ? FOG.has(fogBits, cx, cy) : false) }),
       revealAt: (tx, ty) => { const n = revealAt(tx, ty); if (n > 0) drawMini(false); return n; },

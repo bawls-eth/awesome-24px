@@ -563,6 +563,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "world-art.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "shared-mm-hero-stats.test.js": {
     "class": "node",
     "tier": "smoke"
