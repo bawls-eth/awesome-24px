@@ -99,3 +99,5 @@
 - OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
 - 2026-11-21 (20:xx UTC): merged gear G11 (player splash, b29 art wired), G12 (boss ground-slam, telegraphed), G14/G16 (armor row, soulbound stash), G15 splash tuning; biome B7 (arena hooks), B8 (isles page, jungle), B9 (taming/party/mount), b30 jungle tile art wired; Codex b29+b30 registered. Full suite 246/247 then test-only fix. Gear drops still OFF. Next: flip gear defaults after one deploy, G13 stats dropdown, B10 home/travel, wire b31+ creature art.
 - OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
+- 2026-11-21 (21:xx UTC): large push: G13 backpack stats dropdown + audio cues + bullet outline; gear drops ON by default + six boss relics + boss T12 balance; B10 home island/travel/cozy/medals (all 5 packs playable); Codex b29/b30/b31a/b32/b33 wired (jungle tiles, creature strips, props, gear icons); planner NEXT-SLICES-2. Full suite 252/254 then test-only fixes.
+- OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
