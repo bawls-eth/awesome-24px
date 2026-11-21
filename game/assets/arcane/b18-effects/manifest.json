@@ -1,0 +1,300 @@
+{
+  "batch": "b18",
+  "label": "effects",
+  "assets": [
+    {
+      "id": "fx_levelup",
+      "path": "sprites/fx_levelup.png",
+      "category": "effect",
+      "frames": 6,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 14,
+      "loop": false,
+      "anchor": [
+        32,
+        32
+      ]
+    },
+    {
+      "id": "fx_heal_pulse",
+      "path": "sprites/fx_heal_pulse.png",
+      "category": "effect",
+      "frames": 6,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 14,
+      "loop": false,
+      "anchor": [
+        32,
+        32
+      ]
+    },
+    {
+      "id": "fx_shield_up",
+      "path": "sprites/fx_shield_up.png",
+      "category": "effect",
+      "frames": 6,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 14,
+      "loop": false,
+      "anchor": [
+        32,
+        32
+      ]
+    },
+    {
+      "id": "fx_dash_trail",
+      "path": "sprites/fx_dash_trail.png",
+      "category": "effect",
+      "frames": 6,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 14,
+      "loop": false,
+      "anchor": [
+        32,
+        32
+      ]
+    },
+    {
+      "id": "fx_slam_ring",
+      "path": "sprites/fx_slam_ring.png",
+      "category": "effect",
+      "frames": 6,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 14,
+      "loop": false,
+      "anchor": [
+        32,
+        32
+      ]
+    },
+    {
+      "id": "fx_blizzard_ring",
+      "path": "sprites/fx_blizzard_ring.png",
+      "category": "effect",
+      "frames": 8,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 14,
+      "loop": true,
+      "anchor": [
+        32,
+        32
+      ]
+    },
+    {
+      "id": "fx_thorn_bloom",
+      "path": "sprites/fx_thorn_bloom.png",
+      "category": "effect",
+      "frames": 6,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 14,
+      "loop": false,
+      "anchor": [
+        32,
+        32
+      ]
+    },
+    {
+      "id": "fx_bone_shard_orbit",
+      "path": "sprites/fx_bone_shard_orbit.png",
+      "category": "effect",
+      "frames": 6,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 14,
+      "loop": true,
+      "anchor": [
+        32,
+        32
+      ]
+    },
+    {
+      "id": "fx_drain_orb",
+      "path": "sprites/fx_drain_orb.png",
+      "category": "effect",
+      "frames": 6,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 14,
+      "loop": true,
+      "anchor": [
+        32,
+        32
+      ]
+    },
+    {
+      "id": "fx_poof_death",
+      "path": "sprites/fx_poof_death.png",
+      "category": "effect",
+      "frames": 6,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 14,
+      "loop": false,
+      "anchor": [
+        32,
+        32
+      ]
+    },
+    {
+      "id": "fx_loot_spawn",
+      "path": "sprites/fx_loot_spawn.png",
+      "category": "effect",
+      "frames": 6,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 14,
+      "loop": false,
+      "anchor": [
+        32,
+        32
+      ]
+    },
+    {
+      "id": "fx_portal_enter",
+      "path": "sprites/fx_portal_enter.png",
+      "category": "effect",
+      "frames": 8,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 14,
+      "loop": false,
+      "anchor": [
+        32,
+        32
+      ]
+    },
+    {
+      "id": "fx_teleport",
+      "path": "sprites/fx_teleport.png",
+      "category": "effect",
+      "frames": 8,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 14,
+      "loop": false,
+      "anchor": [
+        32,
+        32
+      ]
+    },
+    {
+      "id": "fx_curse",
+      "path": "sprites/fx_curse.png",
+      "category": "effect",
+      "frames": 6,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 14,
+      "loop": true,
+      "anchor": [
+        32,
+        32
+      ]
+    },
+    {
+      "id": "fx_stun_stars",
+      "path": "sprites/fx_stun_stars.png",
+      "category": "effect",
+      "frames": 6,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 14,
+      "loop": true,
+      "anchor": [
+        32,
+        32
+      ]
+    },
+    {
+      "id": "fx_slow_snow",
+      "path": "sprites/fx_slow_snow.png",
+      "category": "effect",
+      "frames": 6,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 14,
+      "loop": true,
+      "anchor": [
+        32,
+        32
+      ]
+    },
+    {
+      "id": "fx_poison_bubbles",
+      "path": "sprites/fx_poison_bubbles.png",
+      "category": "effect",
+      "frames": 6,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 14,
+      "loop": true,
+      "anchor": [
+        32,
+        32
+      ]
+    },
+    {
+      "id": "fx_fire_burst",
+      "path": "sprites/fx_fire_burst.png",
+      "category": "effect",
+      "frames": 6,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 14,
+      "loop": false,
+      "anchor": [
+        32,
+        32
+      ]
+    },
+    {
+      "id": "fx_lightning_strike",
+      "path": "sprites/fx_lightning_strike.png",
+      "category": "effect",
+      "frames": 6,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 14,
+      "loop": false,
+      "anchor": [
+        32,
+        32
+      ]
+    },
+    {
+      "id": "fx_explosion_small",
+      "path": "sprites/fx_explosion_small.png",
+      "category": "effect",
+      "frames": 6,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 14,
+      "loop": false,
+      "anchor": [
+        32,
+        32
+      ]
+    },
+    {
+      "id": "fx_explosion_big",
+      "path": "sprites/fx_explosion_big.png",
+      "category": "effect",
+      "frames": 8,
+      "frame_w": 64,
+      "frame_h": 64,
+      "fps": 14,
+      "loop": false,
+      "anchor": [
+        32,
+        32
+      ]
+    }
+  ]
+}
