@@ -442,9 +442,12 @@
     const ul = $('card-ach');
     while (ul.firstChild) ul.removeChild(ul.firstChild);
     const g = MMHubMedals.gameOfNode(id);
+    const cnt = $('card-ach-n');
     ul.hidden = !g;
+    if (cnt) cnt.hidden = !g;
     if (!g) return;
     const got = achievements()[g];
+    if (cnt) cnt.textContent = got.length + ' of ' + MMHubMedals.GAMES[g].medals.length + ' medals';
     MMHubMedals.GAMES[g].medals.forEach((m) => {
       const li = document.createElement('li');
       const on = got.indexOf(m[0]) >= 0;

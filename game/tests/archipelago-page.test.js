@@ -95,7 +95,10 @@ const frames = (page, n) => page.evaluate((k) => new Promise((res) => { let i = 
   const keys = await pg.evaluate(() => ({ mm: localStorage.getItem('pixeltown-mm-v1'), town: localStorage.getItem('pixeltown-save-v1'), all: Object.keys(localStorage) }));
   check('pixeltown-archipelago-v1 holds the jungle seed, position and fog', saved && saved.isles.jungle.seed === '123' && saved.isles.jungle.pos && saved.isles.jungle.fog.length > 0 && saved.log.seen && Object.keys(saved.log.seen).length > 0, JSON.stringify(saved && saved.isles));
   check('MMProfile key and town save are untouched (read only)', keys.mm === JSON.stringify(PROFILE) && keys.town === '{"realm":{"level":3}}');
-  check('only own keys written (no tames / medals writes in B8)', keys.all.filter((k) => !['pixeltown-mm-v1', 'pixeltown-mm-active-v1', 'pixeltown-save-v1', 'pixeltown-archipelago-v1'].includes(k)).length === 0, keys.all.join(','));
+  // B10: the page is also the single writer of its medal summary key (pixeltown-medals-isles-v1); still no tames write without a tame
+  check('only own keys written (no tames write; the B10 medal summary is the only addition)', keys.all.filter((k) => !['pixeltown-mm-v1', 'pixeltown-mm-active-v1', 'pixeltown-save-v1', 'pixeltown-archipelago-v1', 'pixeltown-medals-isles-v1'].includes(k)).length === 0, keys.all.join(','));
+  const med = await pg.evaluate(() => JSON.parse(localStorage.getItem('pixeltown-medals-isles-v1')));
+  check('B10 medal summary is {v:1, m:[visit_jungle]} after a first jungle visit', med && med.v === 1 && JSON.stringify(med.m) === JSON.stringify(['visit_jungle']), JSON.stringify(med));
   await pg.screenshot({ path: path.join(process.env.SHOTS || require('os').tmpdir(), 'isles-desktop.png') }).catch(() => {});
   check('1a: desktop 1000x700 has no console errors', d.errors.length === 0, d.errors.join(' | '));
   check('5a: blockDb saw 0 database requests (desktop), nothing off-origin', d.db.count() === 0 && d.offsite.length === 0, d.offsite.join(' '));

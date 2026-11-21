@@ -19,6 +19,7 @@
 <script src="../../shared/mm-tames.js"></script>
 <script src="../../shared/mm-tame.js"></script>
 <script src="../../shared/mm-companion.js"></script>
+<script src="../../shared/mm-homestead.js"></script>
 <script src="isle-creatures.js"></script>
 </head>
 <body>
@@ -34,6 +35,10 @@
   <div class="bar" aria-label="Health"><div id="hp-fill" class="fill"></div><span id="hp-text" class="bar-text">20 / 20</span></div>
   <div id="hud-info" class="hud-info">XP 0</div>
   <div id="hud-ground" class="hud-info"></div>
+  <div class="hud-btns">
+    <button id="btn-home" type="button" hidden aria-label="Fast travel to the home dock">Home</button>
+    <button id="btn-log" type="button" aria-label="Open the island log">Log</button>
+  </div>
 </header>
 <div id="mini-wrap">
   <canvas id="mini" width="160" height="160" aria-label="Minimap" role="img"></canvas>
@@ -44,7 +49,18 @@
   <button id="btn-feed" type="button" hidden aria-label="Feed the creature">Feed</button>
   <button id="btn-soothe" type="button" hidden aria-pressed="false" aria-label="Soothe shots">Soothe</button>
   <button id="btn-ride" type="button" hidden aria-pressed="false" aria-label="Ride or dismount">Ride</button>
+  <button id="btn-gather" type="button" hidden aria-label="Gather here">Gather</button>
+  <button id="btn-sail" type="button" hidden aria-label="Open the sea chart">Sail</button>
+  <button id="btn-build" type="button" hidden aria-pressed="false" aria-label="Decorate your island">Decor</button>
 </div>
+<div id="decor" class="decor" role="toolbar" aria-label="Decor" hidden>
+  <button id="decor-undo" type="button">Undo</button>
+  <button id="decor-done" type="button">Done</button>
+</div>
+<section id="panel" class="panel" role="dialog" aria-modal="true" aria-labelledby="panel-title" hidden>
+  <div class="panel-head"><h2 id="panel-title">Sea chart</h2><button id="panel-close" type="button" aria-label="Close">Close</button></div>
+  <div id="panel-body" class="panel-body"></div>
+</section>
 <div id="touch">
   <div id="stick" aria-label="Move joystick"><div id="knob"></div></div>
   <div id="touch-btns">
@@ -52,7 +68,7 @@
     <button id="btn-fire" type="button" aria-label="Fire bolt">Fire</button>
   </div>
 </div>
-<p id="help" class="help">WASD / arrows move. Click or Space to fire. M toggles the map. F feeds, Q soothe shots, R rides.</p>
+<p id="help" class="help">WASD / arrows move. Click or Space to fire. M toggles the map. F feeds, Q soothe shots, R rides. G gathers, T sails at a dock, L opens the log, B decorates at home.</p>
 <script src="isles.js"></script>
 </body>
 </html>
