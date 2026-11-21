@@ -67,15 +67,17 @@
   // ---------- items / blocks ----------
   const ITEM_OF = {}; ITEM_OF[B.GRASS] = 'dirt'; ITEM_OF[B.DIRT] = 'dirt'; ITEM_OF[B.STONE] = 'stone'; ITEM_OF[B.COAL] = 'coal';
   ITEM_OF[B.IRON] = 'iron_ore'; ITEM_OF[B.GOLD] = 'gold_ore'; ITEM_OF[B.CRYSTAL] = 'crystal'; ITEM_OF[B.TORCH] = 'torch'; ITEM_OF[B.FURNACE] = 'furnace';
+  const BENCH_ITEM = 'table'; // the workbench is a placed prop (not a chunk block), kept in `benches` and saved additively
   const PLACEABLE = [['dirt', B.DIRT], ['stone', B.STONE], ['coal', B.COAL], ['iron_ore', B.IRON], ['gold_ore', B.GOLD], ['crystal', B.CRYSTAL], ['furnace', B.FURNACE], ['torch', B.TORCH]];
   const BLOCK_OF = {}; PLACEABLE.forEach((p) => { BLOCK_OF[p[0]] = p[1]; });
+  const benches = [];
   const HARDNESS = {}; HARDNESS[B.GRASS] = 0.3; HARDNESS[B.DIRT] = 0.3; HARDNESS[B.STONE] = 0.7; HARDNESS[B.COAL] = 0.9; HARDNESS[B.IRON] = 1.1;
   HARDNESS[B.GOLD] = 1.3; HARDNESS[B.CRYSTAL] = 1.5; HARDNESS[B.TORCH] = 0.1; HARDNESS[B.FURNACE] = 0.6;
   // Ore gating: minimum pick tier (0 wood, 1 stone, 2 iron, 3 gold).
   const NEED_TIER = {}; NEED_TIER[B.IRON] = 1; NEED_TIER[B.GOLD] = 2; NEED_TIER[B.CRYSTAL] = 2;
   const TIER_NAME = ['Wood', 'Stone', 'Iron', 'Gold'], PICK_DUR = [0, 60, 120, 200];
   const COLORS = ['#000', '#5fa63f', '#7a5230', '#7d8189', '#7d8189', '#7d8189', '#7d8189', '#7d8189', '#e8541a', '#3a6fd8', '#2a2a30', '#ffb02e'];
-  const SWATCH = { dirt: '#7a5230', stone: '#7d8189', coal: '#2b2b30', iron_ore: '#d8a77a', gold_ore: '#f2c744', crystal: '#7fe8ff', furnace: '#d0702a', torch: '#ffb02e' };
+  const SWATCH = { dirt: '#7a5230', stone: '#7d8189', coal: '#2b2b30', iron_ore: '#d8a77a', gold_ore: '#f2c744', crystal: '#7fe8ff', furnace: '#d0702a', torch: '#ffb02e', table: '#a8743a' };
 
   // ---------- state ----------
   const inv = { wood: 4, coal: 1 };
@@ -141,7 +143,7 @@
   const VIEW = phone ? 3 : 5; // base (maximum) view distance in chunks; the quality governor may lower `view` at run time
   let view = VIEW;
 
-  function hotbarItems() { return PLACEABLE.filter((p) => (inv[p[0]] | 0) > 0).map((p) => ({ item: p[0], count: inv[p[0]] | 0 })); }
+  function hotbarItems() { return PLACEABLE.concat([[BENCH_ITEM, 0]]).filter((p) => (inv[p[0]] | 0) > 0).map((p) => ({ item: p[0], count: inv[p[0]] | 0 })); }
   function renderHud() {
     const hb = $('hotbar');
     while (hb.firstChild) hb.removeChild(hb.firstChild);
@@ -323,6 +325,7 @@
   }
   function placeBlock(wx, wy, wz, item) {
     item = item || sel;
+    if (item === BENCH_ITEM) return placeBench(wx, wy, wz);
     const id = BLOCK_OF[item];
     if (!id || (inv[item] | 0) <= 0) return false;
     const here = world.getBlock(wx, wy, wz);
@@ -351,7 +354,7 @@
     clearTimeout(saveTimer);
     if (!world) return Promise.resolve(false);
     savePending = false;
-    const doc = { inv: Object.assign({}, inv), pos: [player.x, player.y, player.z], sel, hp: player.hp, pick: { tier: pick.tier, dur: pick.dur } };
+    const doc = { inv: Object.assign({}, inv), pos: [player.x, player.y, player.z], sel, hp: player.hp, pick: { tier: pick.tier, dur: pick.dur }, benches: benches.map((b) => b.slice()) };
     return Promise.all([kvSet('world:' + SEED, world.serialise()), kvSet('player:' + SEED, JSON.stringify(doc))]).then((r) => !!r[0]);
   }
   window.addEventListener('pagehide', () => { if (savePending) flush(); });
@@ -580,6 +583,7 @@
   function updateMining(dt) {
     if (atkCd > 0) atkCd -= dt;
     if (input.mine && attackSlime(true)) { mineTarget = null; mineProg = 0; return; }
+    if (input.mine && benches.length) { const bi = benchAtLook(); if (bi >= 0) { pickUpBench(bi); input.mine = false; return; } }
     const hit = input.mine ? raycast(5) : null;
     if (!hit || hit.id === B.BEDROCK || hit.id === B.LAVA) { mineTarget = null; mineProg = 0; return; }
     const key = hit.cell.join(',');
@@ -629,7 +633,7 @@
     }
     checkGoals();
     manage(8);
-    if (renderer) { syncSlimeMeshes(); updateCamera(); renderer.render(scene, camera); }
+    if (renderer) { syncBenches(); syncSlimeMeshes(); updateCamera(); renderer.render(scene, camera); }
   }
 
   // ---------- controls ----------
@@ -715,6 +719,7 @@
     $('smelt-iron').addEventListener('click', () => smeltOre('iron_ore'));
     $('smelt-gold').addEventListener('click', () => smeltOre('gold_ore'));
     $('craft-btn').addEventListener('click', craftTorch);
+    $('craft-filter').addEventListener('click', () => { $('craft-panel').classList.toggle('ready-only'); renderCraft(); });
   }
   function placeAtLook() {
     const hit = raycast(5);
@@ -785,6 +790,7 @@
     const r = MMRecipes.get(id);
     if (!r) return false;
     if (r.station === 'furnace' && !furnaceNear()) { toast('Stand near a furnace for that.'); return false; }
+    if (MMDDCraft.needsBench(id) && !benchNear()) { toast('Stand near a workbench for that.'); return false; }
     if (!MMRecipes.craft(inv, id)) { toast('Missing ingredients.'); return false; }
     for (let t = 1; t <= 3; t++) {
       const n = inv['pick' + t] | 0;
@@ -797,6 +803,46 @@
     queueSave(); renderHud();
     return true;
   }
+  function benchNear() { return MMDDCraft.benchNear(benches, Math.floor(player.x), Math.floor(-(player.y + 0.9)), Math.floor(player.z), 4); }
+  let benchGroup = null, benchGeo = null, benchMat = null, benchRev = '';
+  function placeBench(wx, wy, wz) {
+    if ((inv[BENCH_ITEM] | 0) <= 0 || wy < 0 || world.getBlock(wx, wy, wz) !== B.AIR) return false;
+    if (benches.length >= 32 || benches.some((b) => b[0] === wx && b[1] === wy && b[2] === wz)) return false;
+    benches.push([wx, wy, wz]); inv[BENCH_ITEM] -= 1;
+    toast('Workbench placed'); queueSave(); renderHud();
+    return true;
+  }
+  // Picks a bench up again when it is the first thing along the view ray (before any solid block).
+  function benchAtLook() {
+    if (!benches.length) return -1;
+    const e = eyePos(), d = lookDir();
+    for (let t = 0; t <= 5; t += 0.1) {
+      const c = cellOf(e[0] + d[0] * t, e[1] + d[1] * t, e[2] + d[2] * t);
+      if (c[1] >= 0) {
+        const i = benches.findIndex((b) => b[0] === c[0] && b[1] === c[1] && b[2] === c[2]);
+        if (i >= 0) return i;
+        if (solidId(world.getBlock(c[0], c[1], c[2]))) return -1;
+      }
+    }
+    return -1;
+  }
+  function pickUpBench(i) {
+    if (i < 0 || i >= benches.length) return false;
+    benches.splice(i, 1); inv[BENCH_ITEM] = (inv[BENCH_ITEM] | 0) + 1; queueSave(); renderHud();
+    return true;
+  }
+  function syncBenches() {
+    if (!scene) return;
+    if (!benchGroup) {
+      benchGroup = new THREE.Group(); scene.add(benchGroup);
+      benchGeo = new THREE.BoxGeometry(0.9, 0.8, 0.9); benchMat = new THREE.MeshBasicMaterial({ color: 0xa8743a });
+    }
+    const sig = benches.map((b) => b.join(',')).join(';');
+    if (sig === benchRev) return;
+    benchRev = sig;
+    while (benchGroup.children.length) benchGroup.remove(benchGroup.children[0]);
+    benches.forEach((b) => { const m = new THREE.Mesh(benchGeo, benchMat); m.position.set(b[0] + 0.5, -(b[1] + 1) + 0.4, b[2] + 0.5); benchGroup.add(m); });
+  }
   function smeltOre(ore) {
     if (!furnaceNear()) { toast('Stand near a placed furnace to smelt.'); return false; }
     if (!MMRecipes.smelt(inv, ore)) { toast('Need 1 ' + ore.replace(/_/g, ' ') + ' + 1 coal.'); return false; }
@@ -807,19 +853,24 @@
   function renderCraft() {
     const ul = $('recipes');
     while (ul.firstChild) ul.removeChild(ul.firstChild);
-    const near = furnaceNear();
-    MMRecipes.RECIPES.forEach((r) => {
+    const near = furnaceNear(), bn = benchNear();
+    const only = $('craft-panel').classList.contains('ready-only');
+    $('craft-filter').textContent = only ? 'Showing: ready' : 'Showing: all';
+    $('craft-filter').setAttribute('aria-pressed', only ? 'true' : 'false');
+    MMDDCraft.annotate(inv, { furnace: near, bench: bn }).forEach((r) => {
+      if (only && !r.ready) return;
       const li = document.createElement('li');
       const info = document.createElement('span'); info.className = 'ri';
-      const nm = document.createElement('strong'); nm.textContent = r.id.replace(/_/g, ' ');
-      const ct = document.createElement('small'); ct.textContent = costText(r.cost) + ' (' + r.station + ')';
+      const nm = document.createElement('strong'); nm.textContent = r.id.replace(/_/g, ' ') + ' > ' + MMDDCraft.outText(r);
+      const ct = document.createElement('small'); ct.textContent = costText(r.cost) + ' (' + r.station + ')' + (r.reason ? ' - ' + r.reason : '');
       info.appendChild(nm); info.appendChild(ct);
       const b = document.createElement('button'); b.type = 'button'; b.className = 'btn mini'; b.dataset.recipe = r.id; b.textContent = 'Craft';
-      b.disabled = !MMRecipes.canCraft(inv, r.id) || (r.station === 'furnace' && !near);
+      b.disabled = !r.ready;
       b.addEventListener('click', () => craftRecipe(r.id));
       li.appendChild(info); li.appendChild(b); ul.appendChild(li);
     });
     $('furnace-note').textContent = near ? 'Furnace nearby: smelting ready.' : 'Place a furnace (8 stone) next to you to smelt.';
+    $('bench-note').textContent = bn ? 'Workbench nearby.' : 'Craft a table (4 wood), then place it for ladders, doors, chests, beds and rails.';
     $('smelt-iron').disabled = !near || !MMRecipes.canSmelt(inv, 'iron_ore');
     $('smelt-gold').disabled = !near || !MMRecipes.canSmelt(inv, 'gold_ore');
     $('ingots').textContent = 'Iron ore ' + (inv.iron_ore | 0) + ', gold ore ' + (inv.gold_ore | 0) + ', coal ' + (inv.coal | 0) + ' | iron ' + (inv.iron | 0) + ', gold ' + (inv.gold | 0);
@@ -980,6 +1031,7 @@
       pick, slimes, meta: () => meta, reduced, bob: () => bobOffset, sanitiseMeta, META_KEY,
       setMode, craftRecipe, smeltOre, furnaceNear, checkGoals, lakeCheck, hurt, tickMobs, spawnSlime, autoSpawn, attackSlime, die,
       cellLight, panel: togglePanel, setPick(t, dur) { pick.tier = t; pick.dur = dur === undefined ? PICK_DUR[t] : dur; renderHud(); },
+      benches, benchNear, benchAtLook, pickUpBench, placeBench, craftRows: () => MMDDCraft.annotate(inv, { furnace: furnaceNear(), bench: benchNear() }),
       craft: craftTorch, surfaceY: (x, z) => MMChunks.surfaceY(x, z, SEED), ready: true,
     };
   }
@@ -1001,6 +1053,7 @@
         if (d && d.inv && typeof d.inv === 'object') for (const k of Object.keys(d.inv)) if (typeof d.inv[k] === 'number' && isFinite(d.inv[k])) inv[k] = Math.max(0, Math.min(9999, d.inv[k] | 0));
         if (Array.isArray(d.pos) && d.pos.every((v) => typeof v === 'number' && isFinite(v))) { player.x = d.pos[0]; player.y = d.pos[1]; player.z = d.pos[2]; player.peak = player.y; }
         if (typeof d.sel === 'string') sel = d.sel;
+        MMDDCraft.cleanBenches(d.benches).forEach((b) => benches.push(b));
         if (typeof d.hp === 'number' && d.hp > 0) player.hp = Math.min(10, d.hp | 0);
         if (d.pick && typeof d.pick === 'object') { pick.tier = clampInt(d.pick.tier, 0, 3); pick.dur = pick.tier ? clampInt(d.pick.dur, 1, PICK_DUR[pick.tier]) : 0; }
       } catch (e) { /* ignore corrupt save */ }
