@@ -106,7 +106,9 @@
       mode: o.mode === 'creative' ? 'creative' : 'survival',
       migratedFrom: o.migratedFrom === TOWN_KEY ? TOWN_KEY : '',
       cave: null,
-      goals: { bronze: g.bronze === true, silver: g.silver === true, secret: g.secret === true, secretVoid: g.secretVoid === true, deaths: clampInt(g.deaths, 0, 9999), maxDepth: clampInt(g.maxDepth, 0, 99) },
+      goals: { bronze: g.bronze === true, silver: g.silver === true, secret: g.secret === true, secretVoid: g.secretVoid === true, deaths: clampInt(g.deaths, 0, 9999), maxDepth: clampInt(g.maxDepth, 0, 99),
+      // additive goals: depth 20/40, first crawler, the Rock Wyrm, 10 torches placed (counter clamped 0-10)
+      depth20: g.depth20 === true, depth40: g.depth40 === true, crawler: g.crawler === true, wyrm: g.wyrm === true, torches: clampInt(g.torches, 0, 10), torches10: g.torches10 === true || clampInt(g.torches, 0, 10) >= 10 },
     };
     if (o.cave && typeof o.cave === 'object') {
       const c = o.cave, ci = c.inv && typeof c.inv === 'object' ? c.inv : {}, cp = c.pick && typeof c.pick === 'object' ? c.pick : {};
@@ -119,7 +121,9 @@
     return out;
   }
   function loadMeta() { try { return sanitiseMeta(localStorage.getItem(META_KEY)); } catch (e) { return sanitiseMeta(null); } }
-  function saveMeta() { try { localStorage.setItem(META_KEY, JSON.stringify(meta)); return true; } catch (e) { return false; } }
+  // Hub medal summary: this game's own additive key, read by the hub page only.
+  function hubMedals() { try { const g = meta.goals, m = ['bronze', 'silver', 'secret', 'depth20', 'depth40', 'crawler', 'wyrm', 'torches10'].filter((k) => g[k] === true); localStorage.setItem('pixeltown-medals-deepdelve-v1', JSON.stringify({ v: 1, m })); } catch (e) { /* storage blocked */ } }
+  function saveMeta() { hubMedals(); try { localStorage.setItem(META_KEY, JSON.stringify(meta)); return true; } catch (e) { return false; } }
   // Read-only look at the old in-town cave keys; never writes or deletes anything on the town save.
   function readTownCave() {
     let o;
@@ -351,6 +355,7 @@
     const dirty = world.setBlock(wx, wy, wz, id);
     if (!dirty.length) return false;
     inv[item] -= 1;
+    if (id === B.TORCH && meta.goals.torches < 10) { meta.goals.torches++; if (meta.goals.torches >= 10) award('torches10'); else saveMeta(); }
     lakeCheck(wx, wy, wz, id);
     afterEdit(dirty);
     renderHud();
@@ -801,10 +806,18 @@
     { id: 'silver', name: 'Silver: Iron Age', desc: 'Craft an iron pick.' },
     { id: 'secret', name: 'Secret: Lava Lake', desc: 'Cross the lava lake on a bridge of stone only, without ever dying.' },
   ];
+  // Extra goals, listed under the medals in their own list (#goal-more).
+  const EXTRA = [
+    { id: 'depth20', name: 'Depth -20', desc: 'Dig down to depth 20.' },
+    { id: 'depth40', name: 'Depth -40', desc: 'Dig down to depth 40.' },
+    { id: 'crawler', name: 'Crawler Slayer', desc: 'Defeat a cave crawler.' },
+    { id: 'wyrm', name: 'Wyrm Slayer', desc: 'Defeat the Rock Wyrm.' },
+    { id: 'torches10', name: 'Lamplighter', desc: 'Place 10 torches.' },
+  ];
   function award(id) {
     if (meta.goals[id]) return;
     meta.goals[id] = true;
-    const m = MEDALS.filter((x) => x.id === id)[0];
+    const m = MEDALS.concat(EXTRA).filter((x) => x.id === id)[0];
     toast('Medal earned: ' + m.name);
     saveMeta(); renderHud();
   }
@@ -813,6 +826,8 @@
     const d = depthNow();
     if (d > meta.goals.maxDepth) { meta.goals.maxDepth = Math.min(99, d); saveMeta(); }
     if (d >= 8) award('bronze');
+    if (d >= 20) award('depth20');
+    if (d >= 40) award('depth40');
   }
   // Stone-only bridge: a full west-to-east row of placed stone at lava level or the layer above it.
   function lakeCheck(wx, wy, wz, id) {
@@ -838,7 +853,18 @@
       const d = document.createElement('span'); d.textContent = secretHidden ? (meta.goals.secretVoid ? 'Voided: the attempt ended (a death or a non-stone block).' : 'Something glows far below...') : m.desc;
       li.appendChild(t); li.appendChild(d); ul.appendChild(li);
     });
-    $('goal-stats').textContent = 'Deepest: ' + meta.goals.maxDepth + ' | Deaths: ' + meta.goals.deaths + (meta.cave && meta.cave.seed !== null ? ' | Old cave seed: ' + meta.cave.seed : '');
+    const more = $('goal-more');
+    while (more.firstChild) more.removeChild(more.firstChild);
+    EXTRA.forEach((m) => {
+      const li = document.createElement('li'), done = !!meta.goals[m.id];
+      li.className = done ? 'done' : '';
+      const t = document.createElement('strong'); t.textContent = (done ? '[x] ' : '[ ] ') + m.name;
+      const d = document.createElement('span');
+      d.textContent = m.id === 'torches10' && !done ? m.desc + ' (' + meta.goals.torches + '/10)' : m.id.indexOf('depth') === 0 && !done ? m.desc + ' (deepest ' + meta.goals.maxDepth + ')' : m.desc;
+      li.appendChild(t); li.appendChild(d); more.appendChild(li);
+    });
+    const nDone = MEDALS.concat(EXTRA).filter((m) => meta.goals[m.id]).length;
+    $('goal-stats').textContent = 'Goals: ' + nDone + '/' + (MEDALS.length + EXTRA.length) + ' | Torches: ' + meta.goals.torches + '/10 | Deepest: ' + meta.goals.maxDepth + ' | Deaths: ' + meta.goals.deaths + (meta.cave && meta.cave.seed !== null ? ' | Old cave seed: ' + meta.cave.seed : '');
   }
 
   // ---------- crafting + smelting ----------
@@ -1185,6 +1211,7 @@
     best.vx = k.vx; best.vz = k.vz; best.vy = best.kind === 'bat' ? 1.5 : k.vy; best.ground = false;
     if (best.hp <= 0) {
       best.dead = true; slain.add(best.id);
+      if (best.kind === 'crawler') award('crawler');
       if (best.kind === 'crawler') { inv.coal = (inv.coal | 0) + 1; found.coal = 1; toast('The crawler dropped coal.'); } else toast('You swatted the bat.');
       queueSave(); renderHud();
     }
@@ -1393,6 +1420,7 @@
   function defeatWyrm() {
     wyrm.hp = 0; wyrm.down = true; wyrmSleep(false);
     inv.wyrm_scale = (inv.wyrm_scale | 0) + 1;
+    award('wyrm');
     toast('The Rock Wyrm is defeated! It dropped a wyrm scale.');
     queueSave(); renderHud();
   }
@@ -1471,6 +1499,7 @@
   async function boot() {
     $('hud-seed').textContent = 'Seed ' + SEED;
     meta = loadMeta();
+    hubMedals();
     idb = await openDB();
     const savedWorld = await kvGet('world:' + SEED);
     const savedPlayer = await kvGet('player:' + SEED);

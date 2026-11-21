@@ -179,6 +179,14 @@
     "class": "live",
     "tier": "full"
   },
+  "deepdelve-goals.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "hub-medals.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "hub-page.test.js": {
     "class": "browser",
     "tier": "smoke"
