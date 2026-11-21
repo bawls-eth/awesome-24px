@@ -906,5 +906,9 @@
   "world-rewards.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "gear-dungeon-drops.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

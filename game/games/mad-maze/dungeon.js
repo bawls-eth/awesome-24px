@@ -4,6 +4,18 @@
 // Needs: MMRng, MMWarren, MMRooms, MMEnemies, MMDungeonState, MMPatterns2 and realm.js (RM_* globals).
 (function () {
   'use strict';
+  // Tiered gear drops (GEAR-DROPS-BUILD-PLAN slice G10). OFF by default: the lead flips GEAR_DEFAULT_ON after the save-tolerance slice (G7) ships.
+  // ?gear=1 turns it on (tests), ?gear=0 is the kill switch and always wins.
+  const GEAR_DEFAULT_ON = false;
+  const gearWanted = () => { let v = null; try { v = new URLSearchParams(window.location.search).get('gear'); } catch (e) { /* no location */ } return v === '1' ? true : v === '0' ? false : GEAR_DEFAULT_ON; };
+  // The gear modules are not in the page's script list yet (the index.html tags belong to the save-tolerance slice): load them here, in order, only when gear is on.
+  try {
+    const cs = document.currentScript;
+    if (cs && cs.src && gearWanted() && document.readyState === 'loading') {
+      const base = cs.src.replace(/games\/mad-maze\/dungeon\.js.*$/, 'shared/');
+      ['mm-gear.js', 'mm-gear-drops.js'].forEach((f) => { if (!document.querySelector('script[src$="shared/' + f + '"]')) document.write('<script src="' + base + f + '"><\/script>'); });
+    }
+  } catch (e) { /* gear stays off */ }
   const T = 40; // RM_TILE
   const OPP = { N: 'S', S: 'N', E: 'W', W: 'E' };
   const DV = { N: [0, -1], E: [1, 0], S: [0, 1], W: [-1, 0] };
@@ -246,7 +258,7 @@
     const unlocked = {}; const granted = [];
     let keyFound = 0; let current = null; let finished = false; let sig = ''; let mapSig = '';
     let lockMsgAt = -9; let hudText = ''; let queue = []; let nextSweep = 0; let nextWall = 0; let sweepN = 0; let sigNext = 0; let sigWind = null; let sigN = 0;
-    const api = { pickups: () => drops.map((q) => ({ type: q.type, x: q.x, y: q.y, value: q.value, tier: q.tier })), pickStats: () => ({ live: drops.length, total: pickTotal, got: Object.assign({}, pickGot), magnet: MAGNET_R, on: pickOn }), lair, seed, biome, bossBolt, bossSig, sigCount: () => sigN, layoutVersion: layoutV, narrow: narrowOn, graph: dungeon, state, arena, granted, grantItem };
+    const api = { pickups: () => drops.map((q) => ({ type: q.type, x: q.x, y: q.y, value: q.value, tier: q.tier })), pickStats: () => ({ live: drops.length, total: pickTotal, got: Object.assign({}, pickGot), magnet: MAGNET_R, on: pickOn }), lair, seed, biome, bossBolt, bossSig, sigCount: () => sigN, layoutVersion: layoutV, narrow: narrowOn, graph: dungeon, state, arena, granted, grantItem, get gearOn() { return gearOn; }, get gear() { return gearGot; }, gp: () => gpNow() };
     // Lantern stash payout (MMStash): every kept find of this run is paid into the stash when the summary shows (win or fall)
     const ST = window.MMStash && window.MMProfile ? window.MMStash : null; const shards0 = arena.save.shards;
     if (ST) {
@@ -446,11 +458,57 @@
       granted.push({ id, rarity: rar, name: def.name, icon: def.icon, rarName: RM_RARITIES[rar].name, color: RM_RARITIES[rar].color, sold: full });
       return granted[granted.length - 1];
     }
+    // ---------- tiered gear (G10) ----------
+    // Room clears, chests and the boss roll MMGearDrops.rollGear. Every roll has its OWN seeded stream ('dgear...' / 'dgearq...'): lootRng, bossRng, runRng and the
+    // arena rng are never touched, so an old seed's non-gear loot is identical with gear off. Gear is granted straight into the pack (no extra bag, no arena.rng draw).
+    const gearOn = gearWanted() && typeof MMGearDrops !== 'undefined' && typeof MMGear !== 'undefined' && !(arena.team && arena.team.isPvp);
+    const gearGot = []; let gearChestN = 0;
+    // Pity state: arena.save.gp is the source of truth once the realm save keeps it; a local mirror covers a realm that still strips unknown keys (it is re-read whenever the save has one).
+    let gpMirror = gearOn ? MMGearDrops.cleanGp(arena.save.gp) : { b: 0, d: 0 };
+    const gpNow = () => { if (gearOn && arena.save.gp !== undefined) gpMirror = MMGearDrops.cleanGp(arena.save.gp); return gpMirror; };
+    function gearRoll(tag, o) { // -> a rollGear result whose id the arena knows, or null
+      if (!gearOn) return null;
+      const cls = (arena.heroClass && arena.heroClass()) || '';
+      const u = MMRng.create('dgearq:' + seed + ':' + tag).next();
+      const r = typeof o.r === 'number' ? o.r : (u < 0.04 ? 2 : u < 0.22 ? 1 : 0);
+      const ctx = { src: o.src, biome, cls, r, bagTier: o.bagTier || 0, k: o.k || 0, always: !!o.always, gp: gpNow() };
+      for (let i = 0; i < (o.always ? 8 : 1); i++) { // an always-drop retries (new stream) when the pick is an id this build cannot hold yet; pity still applies (k stays 0)
+        const g = MMGearDrops.rollGear(ctx, MMGearDrops.seedFor(seed, i ? tag + ':try' + i : tag, ctx.k, 'solo'));
+        if (!g) { if (!o.always) return null; continue; }
+        if (RM_ITEM_BY_ID[g.id]) return g;
+      }
+      return null;
+    }
+    function gearGrant(g, x, y) {
+      const sv = arena.save; const n0 = sv.items.length; const full = n0 >= RM_BACKPACK;
+      // collectItem's burst and text draw the arena rng: swap in a throwaway seeded stream so no later arena draw (bags, enemy AI) shifts when gear drops
+      const keep = arena.rng; const fx = MMRng.create('dgearfx:' + seed + ':' + gearGot.length); arena.rng = () => fx.next();
+      try {
+        arena.collectItem(g.id, g.r);
+        if (!full && sv.items.length > n0 && sv.items[sv.items.length - 1].id === g.id) { const it = sv.items[sv.items.length - 1]; it.t = g.t; if (g.a) it.a = g.a; }
+        arena.onSave(sv);
+      } finally { arena.rng = keep; }
+      const d = MMGear.describe({ id: g.id, r: g.r, t: g.t, a: g.a }); const rar = RM_RARITIES[g.r] || RM_RARITIES[0];
+      const rec = { id: g.id, r: g.r, t: g.t, a: g.a || 0, slot: g.slot, name: d ? d.name : g.id, color: d ? d.tierColor : rar.color, rarName: rar.name, sold: full };
+      gearGot.push(rec);
+      if (typeof x === 'number') { arena.rng = () => fx.next(); try { arena._floatText(x, y, rec.name, rec.color); } finally { arena.rng = keep; } }
+      return rec;
+    }
+    function dropClearGear(id, x, y) { const g = gearRoll('clear:' + id, { src: 'dungeon', bagTier: 0 }); if (g) gearGrant(g, x, y - 34); return g; }
+    function dropChestGear(l) { if (l.slot !== 'weapon' && l.slot !== 'armor') return null; const g = gearRoll('chest:' + (gearChestN++), { src: 'dungeon', bagTier: Math.max(0, Math.min(2, (l.tier || 1) - 1)) }); if (g) gearGrant(g, arena.player.x, arena.player.y - 60); return g; }
+    function dropBossGear(e, r1) { // the boss always yields one tiered item (the first bag's fixed quality); a second item rolls the usual chance with its own seeded quality (the bag's rollRarity uses the arena rng, which is not seed-stable)
+      const a = gearRoll('boss:0', { src: 'dboss', k: 0, always: true, r: r1, bagTier: Math.min(5, r1 + 2) });
+      const b = gearRoll('boss:1', { src: 'dboss', k: 1, bagTier: 2 });
+      if (a) gearGrant(a, e.x - 20, e.y - 56);
+      if (b) gearGrant(b, e.x + 20, e.y - 56);
+      const gp = MMGearDrops.pityStep(gpNow(), { src: 'dboss', biome }, [a]); // only the k 0 roll counts toward the crypt counter
+      gpMirror = { b: gp.b, d: gp.d }; arena.save.gp = { b: gp.b, d: gp.d }; arena.onSave(arena.save);
+    }
     function openChest() {
       const l = state.openChest(); if (!l) return null;
       arena._snd('levelup');
       if (l.kind === 'gold') { arena.save.shards += l.amount; arena._floatText(arena.player.x, arena.player.y - 44, `+${l.amount} 💎`, '#8fe9ff'); arena.onSave(arena.save); grantItem('trinket', 1); }
-      else grantItem(l.slot, l.tier);
+      else { grantItem(l.slot, l.tier); if (gearOn) dropChestGear(l); }
       arena._burst(arena.player.x, arena.player.y, '#ffd45a', 22, 240);
       { const c = chestSpot(); for (let k = 0; k < 2; k++) spawnPickups(c.x, c.y + 18, 'chest:' + current, k, pickTier(current) + 1); } // a chest pays two kills' worth, a tier up
       mapSig = '';
@@ -477,7 +535,9 @@
         arena._burst(e.x, e.y, '#ff6a4a', 40, 340); arena._burst(e.x, e.y, '#ffe27a', 30, 260); arena.shake = 14;
         arena.save.shards += 60; arena.save.kills += 1; arena.save.kb.boss += 1; arena._floatText(e.x, e.y - 30, '+60 💎', '#8fe9ff');
         arena._gainXp(Math.round(RM_XP.boss * arena.stats.xp));
-        arena.dropBag(e.x - 20, e.y + 20, lair ? 3 : 2); arena.dropBag(e.x + 20, e.y + 20, lair ? Math.min(3, arena.rollRarity() + 1) : arena.rollRarity()); // a lair bag is one tier higher
+        const bagR1 = lair ? 3 : 2; const bagR2 = lair ? Math.min(3, arena.rollRarity() + 1) : arena.rollRarity(); // a lair bag is one tier higher
+        arena.dropBag(e.x - 20, e.y + 20, bagR1); arena.dropBag(e.x + 20, e.y + 20, bagR2);
+        if (gearOn) dropBossGear(e, bagR1);
         arena._showBanner(B.boss_name + ' defeated! The portal opens.', 2.6);
         arena.onSave(arena.save); mapSig = '';
       }
@@ -595,6 +655,10 @@
         <ul class="mm-sum-stats"><li>Rooms visited <b>${visitedMain()}/${MAIN_ROOMS}</b></li><li>Rooms cleared <b>${s.roomsCleared}</b></li><li>Chests opened <b>${s.chestsOpened}</b></li><li>Keys found <b>${s.keysFound}</b></li><li>Secret room <b>${s.secretFound ? 'found' : 'hidden'}</b></li><li>${B.boss_name} <b>${s.bossDefeated ? 'defeated' : 'alive'}</b></li><li>Chest gold <b>${s.gold} 💎</b></li></ul>
         <h3>Loot</h3><ul class="mm-sum-loot" id="mm-sum-loot">${items}</ul>${paid && paid.ok ? `<p class="mm-sum-stash" id="mm-sum-stash">🏮 ${ST.text(paid)} (Lantern)</p>` : ''}
         <div class="mm-sum-btns">${backWorld ? '' : `<a class="mm-btn" id="mm-sum-again" href="?mode=dungeon&seed=${Number(seed) + 1 || ''}${layoutV === 2 ? '&lv=2' : ''}${biome !== 'warren' ? '&biome=' + biome : ''}${opts.test ? '&test=1' : ''}${hubExit ? '&from=hub' : ''}">New dungeon</a>`}<a class="mm-btn${backWorld ? '' : ' alt'}" id="mm-sum-home" href="${backWorld || (hubExit ? '../../hub/index.html' : '../../index.html')}">${backWorld ? 'Back to the world' : hubExit ? 'Back to the map' : 'Back to town'}</a></div></div>`;
+      if (gearGot.length) { // tiered finds: "T7 Name" via textContent
+        const ul = sumEl.querySelector('#mm-sum-loot'); const none = ul.querySelector('.none'); if (none) none.remove();
+        gearGot.forEach((g) => { const li = document.createElement('li'); li.className = 'mm-sum-gear'; li.style.color = g.color; li.textContent = g.name + ' '; const sm = document.createElement('small'); sm.textContent = g.rarName + (g.sold ? ' (sold, pack full)' : ''); li.appendChild(sm); ul.appendChild(li); });
+      }
       sumEl.classList.remove('hidden');
       api.summary = s; api.summaryTitle = sumEl.querySelector('h2').textContent;
     }
@@ -630,7 +694,7 @@
       cleared(kx, ky) {
         arena.player.hp = Math.min(arena.stats.maxHp, arena.player.hp + Math.round(arena.stats.maxHp * 0.15)); if (arena.fxHeal) arena.fxHeal();
         arena._showBanner('Room cleared!', 1.4); arena.eBullets.forEach((b) => { if (b.active) { b.active = false; arena._burst(b.x, b.y, '#8fe9ff', 1, 40); } });
-        if (current !== null && byId[current].type !== 'boss') { const q = typeof kx === 'number' ? { x: kx, y: ky } : { x: arena.player.x, y: arena.player.y }; dropClearPickups(current, q.x, q.y); }
+        if (current !== null && byId[current].type !== 'boss') { const q = typeof kx === 'number' ? { x: kx, y: ky } : { x: arena.player.x, y: arena.player.y }; dropClearPickups(current, q.x, q.y); if (gearOn) dropClearGear(current, q.x, q.y); }
         arena._syncHud(); mapSig = '';
       },
       tick(dt) {
