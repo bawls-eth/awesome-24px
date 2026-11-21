@@ -50,11 +50,12 @@
   var mode = 'menu'; // menu | play | pause | results | interlude | calib
   var practice = null; // { speed, loop:{a,b}|null, loopBars, loops } while practising (no scoring, nothing saved)
   var practiceCfg = { tier: 'normal', speed: 1, loop: false, a: 1, b: 4 }, practiceLast = null;
+  var ghost = null; // best-run press offsets (ms per note, chart order) drawn as faint markers while playing
   var concert = null; // { ids, tier, idx, parts[] } while a concert is running
   var songId = null, tier = null, chart = null, run = null, lastReport = null, lastResult = null;
   var paused = false, popups = [], flashes = [0, 0, 0, 0], rings = [], glows = [], shake = 0, lastJudge = null, lastTiming = null;
   var held = {}, laneKeys = {}, ptrLane = {};
-  var testNow = 0, concertLast = null;
+  var testNow = 0, concertLast = null, resultsData = null;
   var stars = [];
   (function () { var g = R.create('jam-stars'); for (var i = 0; i < 30; i++) stars.push({ x: g.int(0, CW), y: g.int(0, HIT_Y - 40), p: g.next() * 6.28 }); })();
 
@@ -163,6 +164,11 @@
     songId = id; tier = SG.TIERS.indexOf(tr) >= 0 ? tr : 'normal';
     chart = opts.chart || SG.chartFor(id, tier, opts.seed !== undefined ? opts.seed : qs.get('seed') || undefined);
     practice = opts.practice ? makePractice(id, opts.practice) : null;
+    ghost = null;
+    if (!practice && (opts.ghost === true || (opts.ghost !== false && SG.prefOf(save, 'ghost')))) {
+      var gd = SG.ghostOf(save, id, tier);
+      if (gd && chart.song === id && chart.seed === 'base' && gd.length === chart.notes.length) ghost = gd; // only for the exact same base chart
+    }
     if (practice) concert = null;
     document.body.dataset.practice = practice ? '1' : '0';
     run = makeRun();
@@ -188,6 +194,7 @@
     releaseAll();
     run.update();
     var res = run.result();
+    res.deltas = chart.song === songId && chart.seed === 'base' ? run.deltas() : null;
     lastResult = res;
     lastReport = SG.record(save, songId, tier, res);
     persist();
@@ -443,6 +450,17 @@
         g.strokeStyle = '#fff'; g.lineWidth = 2; g.beginPath(); g.arc(x, yy, 3, 0, 6.283); g.stroke(); g.lineWidth = 1;
         g.globalAlpha = 1;
       });
+      if (ghost) {
+        g.lineWidth = 2; g.strokeStyle = '#ffffff';
+        ghost.forEach(function (d, i) {
+          if (d === SG.GHOST_MISS) return;
+          var gn = chart.notes[i]; if (!gn) return;
+          var gy = noteY(gn.t + d, now); if (gy < -12 || gy > CH + 12) return;
+          var gx = colOf(LANES.indexOf(gn.lane)) * LANE_W + LANE_W / 2;
+          g.globalAlpha = 0.38; g.beginPath(); g.arc(gx, gy, 9, 0, 6.283); g.moveTo(gx - 16, gy); g.lineTo(gx + 16, gy); g.stroke();
+        });
+        g.globalAlpha = 1; g.lineWidth = 1;
+      }
       rings.forEach(function (r) { g.strokeStyle = LANE_COL[r.lane]; g.globalAlpha = 1 - r.t / 0.3; g.beginPath(); g.arc(colOf(r.lane) * LANE_W + LANE_W / 2, HIT_Y, 14 + r.t * 90, 0, 6.283); g.stroke(); g.globalAlpha = 1; });
       g.font = 'bold 14px monospace';
       popups.forEach(function (p) { var y = HIT_Y - 40 - (reduced ? 0 : p.t * 40); g.globalAlpha = reduced ? 1 : 1 - p.t / 0.6; g.fillStyle = '#000'; g.fillText(p.text, p.x + 1, y + 1); g.fillStyle = p.col; g.fillText(p.text, p.x, y);
@@ -520,7 +538,7 @@
     var oc = btn('Calibrate', showCalibration); oc.id = 'btn-calibrate'; off.appendChild(oc);
     showOff(); overlay.appendChild(off);
     var prow = el('div', undefined, 'row'); prow.id = 'pref-row';
-    [['shapes', 'Colour-blind lanes', 'Safe colours, thick outlines and a shape on each touch pad.'], ['lefty', 'Left-handed order', 'Mirrors the lane order. The key under each column stays the same.']].forEach(function (d) {
+    [['shapes', 'Colour-blind lanes', 'Safe colours, thick outlines and a shape on each touch pad.'], ['lefty', 'Left-handed order', 'Mirrors the lane order. The key under each column stays the same.'], ['ghost', 'Best-run ghost', 'Faint markers show where your best run pressed each note.']].forEach(function (d) {
       var b = el('button'); b.type = 'button'; b.className = 'pick'; b.id = 'pref-' + d[0]; b.title = d[2];
       function lab() { var on = SG.prefOf(save, d[0]); b.textContent = d[1] + ': ' + (on ? 'On' : 'Off'); b.setAttribute('aria-pressed', on ? 'true' : 'false'); b.classList.toggle('sel', on); }
       b.addEventListener('click', function () { SG.setPref(save, d[0], !SG.prefOf(save, d[0])); persist(); applyPrefs(); lab(); });
@@ -758,6 +776,29 @@
     var cl = el('div'); cl.id = 'res-counts';
     ['perfect', 'great', 'good', 'miss'].forEach(function (j) { var d = el('div', JUDGE_LABEL[j] + ' ' + res.counts[j]); d.dataset.judge = j; cl.appendChild(d); });
     overlay.appendChild(cl);
+    var total = res.counts.perfect + res.counts.great + res.counts.good + res.counts.miss;
+    var bd = el('div'); bd.id = 'res-breakdown';
+    ['perfect', 'great', 'good', 'miss'].forEach(function (j) {
+      var pc = total ? Math.round(res.counts[j] / total * 100) : 0;
+      var r = el('div', undefined, 'brow'); r.dataset.judge = j; r.dataset.pct = String(pc);
+      r.appendChild(el('span', JUDGE_LABEL[j], 'bl'));
+      var bar = el('span', undefined, 'bar'), fill = el('i'); fill.style.width = pc + '%'; fill.className = 'f-' + j; bar.appendChild(fill); r.appendChild(bar);
+      r.appendChild(el('span', res.counts[j] + ' (' + pc + '%)', 'bn'));
+      bd.appendChild(r);
+    });
+    overlay.appendChild(bd);
+    var dl = run ? run.deltas() : [], hg = Jam.histogram(dl);
+    resultsData = { histogram: hg, history: SG.histOf(save, songId, tier), ghost: !!SG.ghostOf(save, songId, tier) };
+    var hc = document.createElement('canvas'); hc.id = 'res-histo'; hc.width = 300; hc.height = 90; hc.setAttribute('role', 'img');
+    hc.setAttribute('aria-label', 'Timing histogram: ' + hg.early + ' early, ' + hg.onTime + ' on time, ' + hg.late + ' late');
+    overlay.appendChild(hc); drawHistogram(hc, hg);
+    var ht = el('p', 'Early ' + hg.early + '  |  On time ' + hg.onTime + '  |  Late ' + hg.late, 'dim'); ht.id = 'res-histo-text'; overlay.appendChild(ht);
+    var hist = resultsData.history;
+    var sc2 = document.createElement('canvas'); sc2.id = 'res-spark'; sc2.width = 300; sc2.height = 70; sc2.setAttribute('role', 'img');
+    sc2.setAttribute('aria-label', 'Accuracy of your last ' + hist.length + ' runs on this chart');
+    sc2.dataset.points = hist.map(function (h) { return h.acc; }).join(',');
+    overlay.appendChild(sc2); drawSparkline(sc2, hist);
+    var st2 = el('p', 'Last ' + hist.length + ' run' + (hist.length === 1 ? '' : 's') + ' (accuracy): ' + hist.map(function (h) { return h.acc + '%'; }).join(', '), 'dim'); st2.id = 'res-spark-text'; overlay.appendChild(st2);
     var tm = el('p', timingText(res)); tm.id = 'res-timing'; overlay.appendChild(tm);
     var sug = SG.offsetOf(save) + (res.avgDelta || 0);
     if (res.hits >= 8 && Math.abs(res.avgDelta) >= 5 && Math.abs(sug) <= Jam.OFFSET_MAX) {
@@ -767,9 +808,33 @@
     if (un.length) { var u = el('p', 'Unlocked: ' + un.join(', ')); u.id = 'res-unlocked'; overlay.appendChild(u); }
     var row = el('div', undefined, 'row');
     var again = btn('Play again', function () { startSong(songId, tier); }); again.id = 'again'; row.appendChild(again);
+    var rb = btn('Replay best', function () { startSong(songId, tier, { ghost: true }); }, !(resultsData && resultsData.ghost)); rb.id = 'replay-best'; row.appendChild(rb);
     var back = btn('Songs', showMenu); back.id = 'to-menu'; row.appendChild(back);
     row.appendChild(homeLink('menu-back'));
     overlay.appendChild(row);
+  }
+  // 13 bars from 130 ms early to 130 ms late; the centre bar is on time. Static, so reduced motion needs no change.
+  function drawHistogram(cv2, hg) {
+    var g = cv2.getContext('2d'), W = cv2.width, H = cv2.height, n = hg.bins.length, mx = Math.max(1, Math.max.apply(null, hg.bins)), bw = (W - 20) / n;
+    g.fillStyle = '#1a1626'; g.fillRect(0, 0, W, H);
+    for (var i = 0; i < n; i++) {
+      var h = Math.round(hg.bins[i] / mx * (H - 34)), c = i < (n - 1) / 2 ? '#9bf6ff' : i > (n - 1) / 2 ? '#ffadad' : '#fff3b0';
+      g.fillStyle = c; g.fillRect(10 + i * bw + 1, H - 18 - h, bw - 2, h);
+    }
+    g.fillStyle = '#a79bc0'; g.font = '11px monospace'; g.textAlign = 'left'; g.fillText('early', 10, H - 4); g.textAlign = 'center'; g.fillText('on time', W / 2, H - 4); g.textAlign = 'right'; g.fillText('late', W - 10, H - 4);
+    g.strokeStyle = '#a79bc0'; g.beginPath(); g.moveTo(W / 2, 4); g.lineTo(W / 2, H - 18); g.stroke();
+  }
+  // accuracy (0..100) of the last runs on this chart; the newest run is the white dot
+  function drawSparkline(cv2, hist) {
+    var g = cv2.getContext('2d'), W = cv2.width, H = cv2.height, n = hist.length;
+    g.fillStyle = '#1a1626'; g.fillRect(0, 0, W, H);
+    g.strokeStyle = 'rgba(255,255,255,0.15)'; g.beginPath(); g.moveTo(10, 10); g.lineTo(W - 10, 10); g.moveTo(10, H - 10); g.lineTo(W - 10, H - 10); g.stroke();
+    if (!n) return;
+    var px = function (i) { return n === 1 ? W / 2 : 20 + i * (W - 40) / (n - 1); }, py = function (a) { return H - 10 - a / 100 * (H - 20); };
+    g.strokeStyle = '#ffb347'; g.lineWidth = 2; g.beginPath();
+    hist.forEach(function (h, i) { if (i) g.lineTo(px(i), py(h.acc)); else g.moveTo(px(i), py(h.acc)); });
+    g.stroke(); g.lineWidth = 1;
+    hist.forEach(function (h, i) { g.fillStyle = i === n - 1 ? '#ffffff' : '#ffb347'; g.beginPath(); g.arc(px(i), py(h.acc), i === n - 1 ? 5 : 3.5, 0, 6.283); g.fill(); });
   }
 
   // ---------- loop ----------
@@ -795,6 +860,8 @@
       get shake() { return shake; },
       get rings() { return rings.length; },
       get paused() { return paused; },
+      get ghost() { return ghost ? { active: true, count: ghost.filter(function (d) { return d !== SG.GHOST_MISS; }).length, markers: ghost.map(function (d, i) { return d === SG.GHOST_MISS || !chart.notes[i] ? null : { lane: chart.notes[i].lane, t: chart.notes[i].t + d }; }).filter(Boolean) } : { active: false, count: 0, markers: [] }; },
+      get results() { return resultsData ? JSON.parse(JSON.stringify(resultsData)) : null; },
       get practice() { return practice ? { speed: practice.speed, loop: practice.loop ? { a: practice.loop.a, b: practice.loop.b, aBar: practice.loopBars[0], bBar: practice.loopBars[1] } : null, loops: practice.loops } : null; },
       get practiceResult() { return practiceLast ? JSON.parse(JSON.stringify(practiceLast)) : null; },
       get prefs() { return { shapes: prefShapes, lefty: prefLefty }; },

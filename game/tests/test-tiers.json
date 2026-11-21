@@ -143,6 +143,10 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "jam-results.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "lantern-page.test.js": {
     "class": "browser",
     "tier": "smoke"

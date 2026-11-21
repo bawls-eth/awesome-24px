@@ -280,6 +280,37 @@ check('rank thresholds S 95, A 85, B 70, C 50', Jam.rankFor(0.95) === 'S' && Jam
   check('turning every pref off removes the key (old saves stay identical)', !('prefs' in sv));
 }
 
+// ---- depth slice 3: histogram, history, ghost ----
+{
+  let now = 0;
+  const c = { notes: [{ t: 1000, lane: 'D' }, { t: 2000, lane: 'F' }, { t: 3000, lane: 'J' }, { t: 4000, lane: 'K' }] };
+  const run = Jam.createRun(c, { clock: () => now });
+  now = 960; run.press('D'); now = 2000; run.press('F'); now = 3125; run.press('J'); now = 4200; run.update();
+  check('run.deltas lists early/late per note and null for a missed note', JSON.stringify(run.deltas()) === JSON.stringify([-40, 0, 125, null]));
+  const h = Jam.histogram(run.deltas());
+  check('histogram: 13 bins, early/on-time/late split, misses ignored', h.bins.length === 13 && h.early === 1 && h.onTime === 1 && h.late === 1 && h.total === 3 && h.bins.reduce((a, b) => a + b, 0) === 3);
+  check('histogram bins: -40 -> bin 4, 0 -> centre bin 6, +125 -> last bin 12', h.bins[4] === 1 && h.bins[6] === 1 && h.bins[12] === 1);
+  check('histogram tolerates junk', Jam.histogram([NaN, 'x', undefined, null, 9999, -9999]).bins[12] === 1 && Jam.histogram(null).total === 0);
+
+  const sv = SG.emptySave();
+  const res = (score, deltas) => ({ score, maxCombo: 10, accuracy: score / 1000, rank: 'B', deltas });
+  for (let i = 1; i <= 7; i++) SG.record(sv, 'warm-embers', 'easy', res(i * 100, [i, -i, null]));
+  check('history keeps the last 5 runs in order', SG.histOf(sv, 'warm-embers', 'easy').map((e) => e.score).join() === '300,400,500,600,700' && SG.histOf(sv, 'warm-embers', 'easy')[4].acc === 70);
+  check('ghost holds the best run (the last, highest) with 999 for no-hit', JSON.stringify(SG.ghostOf(sv, 'warm-embers', 'easy')) === JSON.stringify([7, -7, 999]));
+  SG.record(sv, 'warm-embers', 'easy', res(50, [1, 1, 1]));
+  check('a worse run adds history but keeps the ghost', SG.histOf(sv, 'warm-embers', 'easy').length === 5 && SG.ghostOf(sv, 'warm-embers', 'easy')[0] === 7);
+  check('history/ghost survive cleanSave', JSON.stringify(SG.cleanSave(JSON.parse(JSON.stringify(sv))).hist) === JSON.stringify(sv.hist) && JSON.stringify(SG.cleanSave(JSON.parse(JSON.stringify(sv))).ghost) === JSON.stringify(sv.ghost));
+  SG.record(sv, 'lantern-shuffle', 'normal', res(10, null));
+  check('no deltas means no ghost, but history still records', !SG.ghostOf(sv, 'lantern-shuffle', 'normal') && SG.histOf(sv, 'lantern-shuffle', 'normal').length === 1);
+  const dirty = SG.cleanSave({ best: { 'warm-embers': { easy: { score: 10, stars: 1, rank: 'C', combo: 1 } } }, hist: { 'warm-embers': { easy: [{ score: -5, acc: 500, rank: 'Z' }, 'x', { score: 1e12, acc: 'q', rank: 'S' }, null, {}, 1, 2, 3] }, nope: { easy: [{ score: 1, acc: 1, rank: 'A' }] } },
+    ghost: { 'warm-embers': { easy: [5, 'x', 1e9, null, -300, 12.7] }, 'lantern-shuffle': { easy: [1, 2] }, nope: { easy: [1] } } });
+  const dh = dirty.hist['warm-embers'].easy;
+  check('dirty history is clamped (acc 0..100, valid rank, <= 5 entries) and unknown songs dropped', dh.length <= 5 && dh.every((e) => e.acc >= 0 && e.acc <= 100 && e.score >= 0 && e.score <= 999999 && 'SABCD'.includes(e.rank)) && !dirty.hist.nope);
+  check('dirty ghost: junk becomes 999, floats round, tiers without a best are dropped', JSON.stringify(dirty.ghost['warm-embers'].easy) === JSON.stringify([5, 999, 999, 999, 999, 13]) && !dirty.ghost['lantern-shuffle'] && !dirty.ghost.nope);
+  check('an all-miss or oversized ghost is rejected', !('ghost' in SG.cleanSave({ best: { 'warm-embers': { easy: { score: 10, stars: 1, rank: 'C', combo: 1 } } }, ghost: { 'warm-embers': { easy: [999, 999] } } })) && !('ghost' in SG.cleanSave({ best: { 'warm-embers': { easy: { score: 10, stars: 1, rank: 'C', combo: 1 } } }, ghost: { 'warm-embers': { easy: new Array(601).fill(3) } } })));
+  check('hist/ghost non-objects are ignored', !('hist' in SG.cleanSave({ hist: 7, ghost: [1] })) && !('ghost' in SG.cleanSave({ hist: 'x', ghost: 'y' })));
+}
+
 // song names are original (no real song or artist names)
 check('song names are not borrowed', SG.SONGS.every((s) => !/slider|k\.k\.|animal|nintendo/i.test(s.name + s.blurb)));
 // source hygiene

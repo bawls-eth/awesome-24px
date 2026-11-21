@@ -66,3 +66,10 @@ body[data-practice="1"] #hud-score, body[data-practice="1"] #hud-acc { display:n
 .stepper { display:inline-flex; gap:6px; align-items:center; }
 #pref-row button { flex:1 1 150px; }
 #pads .pad { font-size:20px; }
+#res-breakdown { display:grid; gap:4px; margin:6px 0; }
+.brow { display:grid; grid-template-columns:64px 1fr 76px; gap:8px; align-items:center; font-size:13px; }
+.brow .bar { display:block; height:12px; background:var(--panel); border-radius:6px; overflow:hidden; }
+.brow .bar i { display:block; height:100%; }
+.f-perfect { background:#fff3b0; } .f-great { background:#9bf6ff; } .f-good { background:#caffbf; } .f-miss { background:#ff6b6b; }
+.brow .bn { text-align:right; }
+#res-histo, #res-spark { display:block; width:100%; max-width:320px; height:auto; border-radius:6px; margin:6px 0 2px; }
