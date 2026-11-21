@@ -378,5 +378,46 @@
   }
 
 
-  return { loadFx: loadFx, FxSet: FxSet, loadBolts: loadBolts, boltIdFor: boltIdFor, BoltSet: BoltSet, PLAYER_BOLT_CLASSES: PLAYER_BOLT_CLASSES, bossArtFor: bossArtFor, loadBosses: loadBosses, BOSS_MAP: BOSS_MAP, BOSS_EXTRA: BOSS_EXTRA, BOSS_VISIBLE_W: BOSS_VISIBLE_W, BOSS_ACTIONS: BOSS_ACTIONS, loadItems: loadItems, itemIconUrl: itemIconUrl, ITEM_ICON_MAP: ITEM_ICON_MAP, ItemSet: ItemSet, enemyArtFor: enemyArtFor, drifterArtFor: drifterArtFor, loadEnemies: loadEnemies, ENEMY_MAP: ENEMY_MAP, ENEMY_WAVE2: ENEMY_WAVE2, BIOME_ENEMY_MAP: BIOME_ENEMY_MAP, DRIFTER_MAP: DRIFTER_MAP, ENEMY_VISIBLE_W: ENEMY_VISIBLE_W, load: load, loadClass: loadClass, loadAll: loadAll, packIds: packIds, artClassFor: artClassFor, packFor: packFor, frameAt: frameAt, scaleFor: scaleFor, duration: duration, PACKS: PACKS, CLASS_MAP: CLASS_MAP, ArtSet: ArtSet };
+  // ---------- dungeon tiles (batch b25 dungeon-tilesets): dtile_<biome>_<kind>[_a-d] 32x32 images (torch = 4-frame strip) ----------
+  var DT_ID_RE = /^dtile_[a-z0-9_]+$/;
+  function DTileSet() { this.byId = Object.create(null); this.meta = Object.create(null); }
+  DTileSet.prototype.has = function (name) { return typeof name === 'string' && !!this.byId[name]; };
+  DTileSet.prototype.ids = function () { return Object.keys(this.byId); };
+  // name = id without the dtile_ prefix, e.g. 'warren_floor_a', 'key_door'. Image or null.
+  DTileSet.prototype.img = function (name) { return typeof name === 'string' && this.byId[name] ? this.byId[name] : null; };
+  DTileSet.prototype.frames = function (name) { return this.meta[name] ? this.meta[name].frames : 1; };
+  // Variants of a tile: prefix_a .. prefix_d if present, else the single prefix tile, else [].
+  DTileSet.prototype.variants = function (prefix) {
+    var out = [];
+    ['a', 'b', 'c', 'd'].forEach(function (v) { var im = this.img(prefix + '_' + v); if (im) out.push(im); }, this);
+    if (!out.length) { var one = this.img(prefix); if (one) out.push(one); }
+    return out;
+  };
+  // loadDungeonTiles(assetRoot) -> Promise<DTileSet>: every dtile_ image of the INDEX.json batches whose folder name contains "dungeon-tiles" or "tilesets". Never rejects.
+  function loadDungeonTiles(assetRoot) {
+    var base = assetRoot || ASSET_ROOT, set = new DTileSet();
+    return fetchJson(join(base, 'INDEX.json')).then(function (idx) {
+      var ids = [];
+      if (idx && Array.isArray(idx.batches)) idx.batches.forEach(function (b) {
+        var id = b && typeof b.path === 'string' ? b.path.replace(/\/+$/, '').split('/').pop() : '';
+        if (/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(id) && /dungeon-tiles|tilesets/.test(id) && ids.indexOf(id) < 0) ids.push(id);
+      });
+      return Promise.all(ids.map(function (id) {
+        return fetchJson(join(join(base, id), 'manifest.json')).then(function (m) {
+          return Promise.all((m && Array.isArray(m.assets) ? m.assets : []).map(function (a) {
+            if (!a || typeof a.id !== 'string' || !DT_ID_RE.test(a.id) || typeof a.path !== 'string' || !/^[A-Za-z0-9_.\/-]+$/.test(a.path) || a.path.indexOf('..') >= 0) return null;
+            var frames = Math.max(1, Math.floor(num(a.frames, 1))), fw = num(a.frame_w, 32), fh = num(a.frame_h, 32);
+            if (fw <= 0 || fh <= 0 || frames > 8) return null;
+            return loadImage(join(join(base, id), a.path)).then(function (img) {
+              if (!img || !img.naturalWidth || img.naturalWidth < fw * frames || img.naturalHeight < fh) return;
+              var name = a.id.slice(6);
+              set.byId[name] = img; set.meta[name] = { frames: frames, fw: fw, fh: fh, fps: num(a.fps, 8) };
+            });
+          }));
+        });
+      }));
+    }).then(function () { return set; }).catch(function () { return set; });
+  }
+
+  return { loadDungeonTiles: loadDungeonTiles, DTileSet: DTileSet, loadFx: loadFx, FxSet: FxSet, loadBolts: loadBolts, boltIdFor: boltIdFor, BoltSet: BoltSet, PLAYER_BOLT_CLASSES: PLAYER_BOLT_CLASSES, bossArtFor: bossArtFor, loadBosses: loadBosses, BOSS_MAP: BOSS_MAP, BOSS_EXTRA: BOSS_EXTRA, BOSS_VISIBLE_W: BOSS_VISIBLE_W, BOSS_ACTIONS: BOSS_ACTIONS, loadItems: loadItems, itemIconUrl: itemIconUrl, ITEM_ICON_MAP: ITEM_ICON_MAP, ItemSet: ItemSet, enemyArtFor: enemyArtFor, drifterArtFor: drifterArtFor, loadEnemies: loadEnemies, ENEMY_MAP: ENEMY_MAP, ENEMY_WAVE2: ENEMY_WAVE2, BIOME_ENEMY_MAP: BIOME_ENEMY_MAP, DRIFTER_MAP: DRIFTER_MAP, ENEMY_VISIBLE_W: ENEMY_VISIBLE_W, load: load, loadClass: loadClass, loadAll: loadAll, packIds: packIds, artClassFor: artClassFor, packFor: packFor, frameAt: frameAt, scaleFor: scaleFor, duration: duration, PACKS: PACKS, CLASS_MAP: CLASS_MAP, ArtSet: ArtSet };
 }));

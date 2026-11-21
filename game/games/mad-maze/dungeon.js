@@ -24,6 +24,7 @@
 
   const mk = (w, h, fn) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.imageSmoothingEnabled = false; fn(g, w, h); return c; };
   const rect = (g, col, x, y, w, h) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+  const hexA = (hex, a) => { const n = parseInt(String(hex).slice(1), 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`; };
 
   function bakeShared() {
     const wallBase = (g) => { rect(g, '#2a1d44', 0, 0, T, T); rect(g, '#3a2a5e', 0, 0, T, 3); for (let y = 8; y < T; y += 8) rect(g, '#1b1430', 0, y, T, 1); };
@@ -90,6 +91,67 @@
     });
   }
 
+  // ---- b25 dungeon tile art: floors / walls baked into the same cached room canvas (visual only, collision untouched) ----
+  const DOOR_TILES = [[8, 0], [16, 6], [8, 12], [0, 6]]; // N E S W door tiles (MMRooms.DOORS), kept local so excl never depends on a door existing
+  function tileSetReady(ts, biome) { return !!ts && ts.variants(biome + '_floor').length > 0 && ts.variants(biome + '_wall').length > 0; }
+  // Returns { canvas, n (art tiles drawn), torches: [{x,y}] }. rng streams are separate from the code-drawn bake ('dtile:' prefix) so old looks never shift.
+  function bakeRoomTiles(ts, biome, rid, tpl, pal, seed, isBoss, tint, excl) {
+    const grid = tpl.rows.map((r) => r.replace(/D/g, '#').replace(/S/g, '.'));
+    const masks = MMRooms.autotile(grid);
+    const rng = MMRng.create('dtile:' + seed + ':' + rid);
+    const floors = isBoss && ts.variants('boss_floor').length ? ts.variants('boss_floor') : ts.variants(biome + '_floor');
+    const walls = ts.variants(biome + '_wall');
+    const wallAt = (x, y) => y < 0 || x < 0 || y >= tpl.h || x >= tpl.w || grid[y][x] === '#';
+    const isDoor = (x, y) => tpl.rows[y][x] === 'D';
+    let n = 0; const torches = []; const cand = [];
+    const canvas = mk(T * tpl.w, T * tpl.h, (g) => {
+      g.imageSmoothingEnabled = false;
+      const put = (im, x, y) => { g.drawImage(im, 0, 0, 32, 32, x * T, y * T, T, T); n++; };
+      for (let y = 0; y < tpl.h; y++) for (let x = 0; x < tpl.w; x++) {
+        if (grid[y][x] !== '#') {
+          put(floors[rng.int(0, floors.length - 1)], x, y);
+          if (tint) rect(g, tint, x * T, y * T, T, T);
+          if (wallAt(x, y - 1)) rect(g, 'rgba(0,0,0,0.28)', x * T, y * T, T, 7); // soft shadow under a wall
+          continue;
+        }
+        put(walls[rng.int(0, walls.length - 1)], x, y);
+        const m = masks[y][x];
+        if (m & 4) rect(g, 'rgba(0,0,0,0.32)', x * T, y * T, T, T); // wall top (no face): a little darker so faces read as the near side
+        else if (!isDoor(x, y)) cand.push({ x, y });
+        if (!(m & 1)) rect(g, pal.hi, x * T, y * T, T, 1);
+      }
+      const near = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+      const shuffled = (a) => a.map((c) => ({ c, k: rng.next() })).sort((p, q) => p.k - q.k).map((q) => q.c);
+      // torches: wall faces near doors or corners, spaced apart, seeded
+      const doorsT = DOOR_TILES.map((d) => ({ x: d[0], y: d[1] }));
+      const tc = cand.filter((c) => doorsT.some((d) => near(c, d) <= 3) || (wallAt(c.x - 1, c.y) && !wallAt(c.x - 1, c.y + 1)) || (wallAt(c.x + 1, c.y) && !wallAt(c.x + 1, c.y + 1)));
+      shuffled(tc).forEach((c) => { if (torches.length < 4 && torches.every((t) => near(t, c) >= 4)) torches.push(c); });
+      // pillars: only on wall faces (already solid), never under a torch
+      const pil = ts.variants(biome + '_pillar')[0];
+      if (pil) {
+        const po = shuffled(cand.filter((c) => !torches.some((t) => t.x === c.x && t.y === c.y) && !doorsT.some((d) => near(c, d) <= 1)));
+        const picked = []; const cap = isBoss ? 4 : 3;
+        po.forEach((c) => { if (picked.length < cap && picked.every((t) => near(t, c) >= 3)) { picked.push(c); put(pil, c.x, c.y); } });
+      }
+      // rubble: flat debris on free floor tiles that touch a wall, never on spawn / door / key / chest / portal tiles
+      const rub = ts.variants(biome + '_rubble')[0];
+      if (rub) {
+        const ro = []; for (let y = 1; y < tpl.h - 1; y++) for (let x = 1; x < tpl.w - 1; x++) {
+          if (grid[y][x] === '#' || excl.has(x + ',' + y)) continue;
+          if (wallAt(x - 1, y) || wallAt(x + 1, y) || wallAt(x, y - 1) || wallAt(x, y + 1)) ro.push({ x, y });
+        }
+        const picked = [];
+        shuffled(ro).forEach((c) => { if (picked.length < 3 && picked.every((t) => near(t, c) >= 4)) { picked.push(c); put(rub, c.x, c.y); } });
+      }
+      torches.forEach((t) => { // static warm glow on the floor below each torch (the flame itself is drawn per frame from a strip)
+        const gr = g.createRadialGradient((t.x + 0.5) * T, (t.y + 1.3) * T, 2, (t.x + 0.5) * T, (t.y + 1.3) * T, T * 2);
+        gr.addColorStop(0, 'rgba(255,170,70,0.18)'); gr.addColorStop(1, 'rgba(255,170,70,0)');
+        g.fillStyle = gr; g.fillRect((t.x - 2) * T, t.y * T, T * 5, T * 4);
+      });
+    });
+    return { canvas, n, torches };
+  }
+
   function create(arena, opts) {
     opts = opts || {};
     const hubExit = opts.home === '../../hub/index.html'; // set only by mad-maze.js from an exact ?from=hub
@@ -116,6 +178,8 @@
     const lootRng = MMRng.create('loot:' + seed);
     const bossRng = MMRng.create('boss:' + seed);
     const S = bakeShared();
+    let tiles = null; // MMArt DTileSet (b25) once loaded; null = the code-drawn rooms
+    let lastDoorArt = [];
     const ambient = []; if (B.particles) { const ar = MMRng.create('amb:' + biome + ':' + seed); for (let i = 0; i < B.particles.n; i++) ambient.push({ x: ar.int(0, MMRooms.W * T), y: ar.int(0, MMRooms.H * T), v: 0.6 + ar.next(), ph: ar.next() * 6.28, sz: ar.int(2, 4) }); }
     document.body.dataset.dungeonBiome = biome;
     const byId = {}; dungeon.rooms.forEach((r) => { byId[r.id] = r; });
@@ -202,6 +266,25 @@
     function doorSig() { return current + ':' + curDoors().map((o) => o.dir + o.status).join(',') + ':' + state.secretHits; }
     function refreshWalls() { if (current === null) return; arena.setWalls(wallRows()); sig = doorSig(); }
 
+    // ---------- room bake (tile art when loaded, else the code-drawn room) ----------
+    function exclTiles(tpl) { // tiles that must stay free of decoration: spawns, doors (+ inner neighbour), key / chest / portal spots, the entry points
+      const ex = new Set(); const add = (x, y, r) => { for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) ex.add((x + dx) + ',' + (y + dy)); };
+      tpl.spawns.forEach((q) => add(q.x, q.y, 0));
+      DOOR_TILES.forEach((d) => add(d[0], d[1], 1));
+      [[8, 6], [8, 8]].forEach((q) => { const f = freeSpot(tpl, q[0], q[1]); if (f) add(f.x, f.y, 1); });
+      add(8, 6, 1); add(8, 5, 1);
+      return ex;
+    }
+    function bakeIfNeeded(id) {
+      const lay = L[id]; if (lay.baked) return; const r = byId[id]; const pal = palOf(r.type);
+      if (tileSetReady(tiles, biome)) {
+        const tint = r.type === 'key' || r.type === 'treasure' || r.type === 'secret' ? hexA(pal.hi, 0.12) : null;
+        const res = bakeRoomTiles(tiles, biome, id, lay.tpl, pal, seed, r.type === 'boss', tint, exclTiles(lay.tpl));
+        lay.baked = res.canvas; lay.tileN = res.n; lay.torches = res.torches;
+      } else { lay.baked = bakeRoom(id, lay.tpl, pal, seed); lay.tileN = 0; lay.torches = []; }
+    }
+    function setTileArt(set) { tiles = set && set.variants ? set : null; dungeon.rooms.forEach((r) => { L[r.id].baked = null; L[r.id].tileN = 0; L[r.id].torches = []; }); if (current !== null) bakeIfNeeded(current); }
+
     // ---------- rooms ----------
     const spotPx = (s) => ({ x: (s.x + 0.5) * T, y: (s.y + 0.5) * T });
     function keySpot() { return spotPx(freeSpot(L[current].tpl, 8, 6)); }
@@ -246,7 +329,7 @@
     function loadRoom(id, travel) {
       current = id;
       const lay = L[id]; const r = byId[id];
-      if (!lay.baked) lay.baked = bakeRoom(id, lay.tpl, palOf(r.type), seed);
+      bakeIfNeeded(id);
       clearTransient();
       arena.biome = r.type === 'boss' ? 1 : r.type === 'treasure' ? 2 : 0;
       const p = arena.player; let entry = { x: 8, y: 6 };
@@ -482,18 +565,39 @@
       // ---- drawing ----
       drawUnder(g) {
         if (current === null) return;
+        bakeIfNeeded(current);
+        const useT = L[current].tileN > 0 && !!tiles;
+        const sm = g.imageSmoothingEnabled; if (useT) g.imageSmoothingEnabled = false;
         g.drawImage(L[current].baked, 0, 0);
         const pal = palOf(byId[current].type); const tt = performance.now() / 1000;
+        const dimg = (name) => (useT ? tiles.img(name) : null);
+        const first = (name) => (useT ? tiles.variants(name)[0] || null : null);
+        const art = [];
         curDoors().forEach((o) => {
-          const x = o.tile.x * T; const y = o.tile.y * T;
-          if (o.status === 'open') { rect(g, pal.f[0], x, y, T, T); rect(g, 'rgba(255,255,255,0.12)', x, y, T, T); }
-          else if (o.status === 'sealed') { g.drawImage(S.doorSealed, x, y); g.globalAlpha = 0.25 + 0.15 * Math.sin(tt * 5); rect(g, '#ff2244', x, y, T, T); g.globalAlpha = 1; }
-          else if (o.status === 'locked') g.drawImage(S.doorLocked, x, y);
-          else g.drawImage(S.crack[Math.min(2, state.secretHits)], x, y);
+          const x = o.tile.x * T; const y = o.tile.y * T; let used = null;
+          if (o.status === 'open') {
+            const fl = first(biome + '_floor'); const op = dimg(biome + '_door_open');
+            if (fl && op) { g.drawImage(fl, 0, 0, 32, 32, x, y, T, T); g.drawImage(op, 0, 0, 32, 32, x, y, T, T); used = 'door_open'; }
+            else { rect(g, pal.f[0], x, y, T, T); rect(g, 'rgba(255,255,255,0.12)', x, y, T, T); }
+          } else if (o.status === 'sealed') {
+            const cl = dimg(biome + '_door_closed');
+            if (cl) { g.drawImage(cl, 0, 0, 32, 32, x, y, T, T); used = 'door_closed'; } else g.drawImage(S.doorSealed, x, y);
+            g.globalAlpha = 0.25 + 0.15 * Math.sin(tt * 5); rect(g, '#ff2244', x, y, T, T); g.globalAlpha = 1;
+          } else if (o.status === 'locked') {
+            const kd = dimg('key_door');
+            if (kd) { g.drawImage(kd, 0, 0, 32, 32, x, y, T, T); used = 'key_door'; } else g.drawImage(S.doorLocked, x, y);
+          } else g.drawImage(S.crack[Math.min(2, state.secretHits)], x, y);
+          art.push({ dir: o.dir, status: o.status, art: used });
         });
+        lastDoorArt = art;
+        if (useT && L[current].torches.length) { // torch flames: one drawImage each from the cached 4-frame strip, ~4 fps (frame 0 under reduced motion)
+          const ts = dimg(biome + '_torch'); const fr = arena._reduced ? 0 : Math.floor(tt * 4) & 3;
+          if (ts) L[current].torches.forEach((q) => g.drawImage(ts, fr * 32, 0, 32, 32, q.x * T, q.y * T, T, T));
+        }
         if (hasKey()) { const k = keySpot(); g.drawImage(S.key, k.x - 11, k.y - 11 + Math.sin(tt * 3) * 3); }
-        if (hasChest()) { const c = chestSpot(); g.drawImage(S.chest[state.room(current).chestOpen ? 1 : 0], c.x - 16, c.y - 14); }
+        if (hasChest()) { const c = chestSpot(); const open = state.room(current).chestOpen; const ci = dimg(open ? 'chest_open' : 'chest_closed'); if (ci) g.drawImage(ci, 0, 0, 32, 32, c.x - 18, c.y - 20, 36, 36); else g.drawImage(S.chest[open ? 1 : 0], c.x - 16, c.y - 14); }
         if (hasPortal()) { const q = portalSpot(); g.save(); g.translate(q.x, q.y); g.rotate(tt * 1.2); g.drawImage(S.portal, -36, -36); g.rotate(-tt * 2.4); g.globalAlpha = 0.6; g.drawImage(S.portal, -26, -26, 52, 52); g.restore(); g.globalAlpha = 1; }
+        if (useT) g.imageSmoothingEnabled = sm;
       },
       drawOver(g) {
         if (B.tint) { g.fillStyle = B.tint; g.fillRect(0, 0, arena.W, arena.H); }
@@ -530,6 +634,11 @@
 
     // ---------- test hook helpers ----------
     Object.assign(api, {
+      setTileArt,
+      tileArt: () => dungeon.rooms.reduce((n, r) => n + (L[r.id].baked ? L[r.id].tileN || 0 : 0), 0), // art tiles baked into the cached rooms so far (0 = code-drawn)
+      doorArt: () => lastDoorArt.slice(),
+      torchCount: () => (current !== null && L[current].torches ? L[current].torches.length : 0),
+      roomHash: (id) => { bakeIfNeeded(id); const c = L[id].baked; const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let h = 2166136261; for (let i = 0; i < d.length; i += 4) { h = Math.imul(h ^ d[i] ^ (d[i + 1] << 8) ^ (d[i + 2] << 16), 16777619); } return h >>> 0; },
       doors: () => curDoors().map((o) => ({ dir: o.dir, other: o.other, status: o.status, tile: o.tile })),
       enter: (id) => tryEnter(id),
       mobs: () => arena.enemies.filter((e) => e.active && e.dg === 'mob').length,

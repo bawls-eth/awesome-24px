@@ -762,5 +762,9 @@
   "world-phone-hud.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "dungeon-tiles.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
