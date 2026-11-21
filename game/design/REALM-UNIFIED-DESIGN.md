@@ -100,3 +100,22 @@ Pure and seeded. `createSpawner(world, opts)` activates spawn groups within 1500
 
 Pure and seeded (MMRng streams from `seed:sites:<kind>:<zone>`), tile coordinates, no DOM or clock; the caller passes `nowMs`. `MMSites.generate(world, seed)` returns `{version, seed, shrines[], camps[], npcs[]}` for an `MMOverworld.generate` world. Sites sit on walkable non-water tiles with walkable neighbours, at least 14 tiles apart (relaxed to 55% worst case), 10 from portal/boss sites, 5 from generator structures and 20 from spawn. Counts scale by zone and area (more in midlands/highlands). Shrines: `{id,x,y,zone,kind: heal|rage|ward,buff,cooldownMs}`. Camps: `{id,x,y,zone,chest:{x,y,tier},patrol:[{type,art,x,y,leash}]}` (patrol art ids come from `MMOverworld.CREATURE_TIERS`; the wiring slice spawns them and rolls the chest with `MMZones.rollDrop`). NPC sites: `{id,x,y,zone,npc}` where `npc` is one of the 7 b21 ids (`npc_nexus_guide, npc_vendor, npc_healer, npc_quest_giver, npc_blacksmith, npc_wanderer, npc_ghost_guide`).
 Shrine logic: `useShrine(state, shrine, nowMs)` -> `{ok, buff, left, state}` (state is `{shrineId: lastUsedMs}`, copied not mutated; 3 minute cooldown, `COOLDOWN_MS`); `cooldownLeft(lastMs, nowMs)`, `shrineReady`, `buffFor(kind, zone)` (heal = hp fraction; rage = damage mult; ward = damage-taken mult, 60 s) and `clampBuff(buff)` for anything read back from saves or the network. `verify(sites, world)` returns a problems array (empty = ok); `all(sites)`, `hash(sites)`, `walkable(world,x,y)` are helpers. Wiring slice: generate once per world seed, keep cooldown state per player, render by id, never write to Firebase.
+
+
+## 12. Difficulty curve (`game/shared/mm-difficulty.js`, global `MMDifficulty`)
+
+Pure, no randomness. `zoneScale(zone, dw, {mode})`, `dungeonScale(biome, roomIndex, roomsTotal, isBoss, {mode})`, `waveScale(wave, {mode})` return `{hp, dmg, spd, count, fire}` multipliers (1 = today), clamped to hp 0.4-4, dmg 0.5-2, spd 0.7-1.4, count 0.5-1.6, fire 0.7-1.5, monotonic; `mode:'picnic'` (Careful) takes damage x0.8. They are applied at SPAWN time on top of the existing tables (`MMZones.statMultipliers` zone x tier), so world generation, seeds and old goldens are untouched. `?difficulty=off` restores today's numbers (world and dungeon).
+Wired in `realm-world.js` (`scaleEnemy`: zone spawner, event swarms, camp patrols; `dw` = tile distance from `world.center` / (0.47 x world width)) and `dungeon.js` (per-room scale from door depth; early rooms also get fewer enemies; boss hp x scale). `waveScale` is ready for the classic arena but not wired (needs a `realm.js` hook).
+
+| Position | hp | dmg | spd | count | notes |
+|---|---|---|---|---|---|
+| Shore coast -> inner edge | 0.60 -> 0.70 | 0.70 -> 0.80 | 0.85 -> 0.92 | 0.6 -> 0.8 | a bolt is 6 dmg = 6% of a level-1 hero (100 hp) |
+| Midlands | 0.70 -> 0.85 | 0.80 -> 0.95 | 0.92 -> 1.00 | 0.8 -> 1.0 | |
+| Highlands | 0.85 -> 1.00 | 0.95 -> 1.10 | 1.00 -> 1.06 | 1.0 -> 1.2 | |
+| Godlands edge -> centre | 1.00 -> 1.15 | 1.10 -> 1.20 | 1.06 -> 1.12 | 1.2 -> 1.4 | with the zone x tier x boss tables a bolt is about 38 dmg, under 35% of a level-20 hero (252 hp = 88) |
+| Dungeon room 1 / 2 / 3 | 0.60 / 0.65 / 0.70 | 0.70 / 0.75 / 0.80 | 0.85-0.90 | 0.6-0.8 | warren; first three rooms weak |
+| Dungeon last room (boss extra) | 1.40 (x1.2) | 1.25 (x1.1) | 1.12 | 1.3 | linear from room 3 |
+| Biome factor warren / bramble / meadow / crypt | 1.0 / 1.1 / 1.25 / 1.4 | 1.0 / 1.05 / 1.12 / 1.2 | 1.0 / 1.02 / 1.05 / 1.08 | | applied to every room |
+| Arena wave 1 -> 30+ | 0.70 -> 1.60 | 0.80 -> 1.40 | 0.90 -> 1.20 | 0.7 -> 1.4 | `capBolts` keeps a volley at or under the 40-bolt cap |
+
+Tests: `shared-mm-difficulty.test.js` (node), `difficulty-curve.test.js` (browser).
