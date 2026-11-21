@@ -46,6 +46,9 @@ const goNear = (page) => E(page, (a, w) => { const s = w.nexus.site; a.player.x 
   check('the plaza lists the 7 NPCs and the 6 portals from MMNexus', npcs.length === 7 && portals.length === 6 && portals.includes('vault') && portals.includes('realm'), JSON.stringify({ npcs, portals }));
   const px = await page.evaluate(() => { const c = document.querySelector('#rw-nexus canvas'); const d = c.getContext('2d').getImageData(c.width / 2, c.height / 2 + 120, 1, 1).data; return c.width === 1280 && c.height === 960 && (d[0] + d[1] + d[2]) > 0; });
   check('the plaza canvas is drawn (1280x960, not blank)', px);
+  // PLAYTEST-REVIEW-2 #5 first step (added check): on desktop the plaza keeps its 4:3 shape (it used to squash into a wide strip) and fits the window
+  const stage = await page.evaluate(() => { const r = document.querySelector('#rw-nexus .nx-stage').getBoundingClientRect(); return { w: r.width, h: r.height, top: r.top, ih: innerHeight }; });
+  check('desktop: the Nexus plaza preview keeps its 4:3 aspect and fits inside the window', Math.abs(stage.w / stage.h - 4 / 3) < 0.02 && stage.h >= 300 && stage.top + stage.h <= stage.ih, JSON.stringify(stage));
   // NPC talk lines
   const lines = await E(page, (a, w) => ['guide', 'wanderer', 'oracle', 'vendor'].map((id) => w.nexus.talk(id)));
   check('NPCs talk (guide, wanderer, oracle, vendor each say something, textContent only)', lines.every((l) => l && l.text && l.text.length > 10), JSON.stringify(lines));
