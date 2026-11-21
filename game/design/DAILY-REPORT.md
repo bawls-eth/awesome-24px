@@ -79,3 +79,5 @@
 - 2026-11-21T01:58Z activity (counts only): playerCount=0, online players=0, chat messages stored=13, open realm invites=2, tournament nodes=2
 - 2026-11-21 late: merged fog of discovered tiles, class fire tags, daily seed, angler boss fish, Rock Wyrm, world sites wiring, Codex b11a/b11b terrain. Full suite 134/134 on afeb689.
 - OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
+- 2026-11-21 night: merged hero picker + class-id fix, weapon/projectile/status/unlock modules (S1-S8), Lantern unlock viewer, difficulty curve, narrow dungeon rooms, Deepdelve/Town fps work, cave-coloured Realm UI, playtest bot + PLAYTEST-REVIEW.md. Full suite 150/150 on 3bdb47d. Incident: playtest bot's first run joined the live town ~1 min as "BotDesk" (presence only, no chat); fixed with routeWebSocket.
+- OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
