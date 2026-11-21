@@ -417,6 +417,16 @@
    "status": "provisional",
    "ingested_utc": "2026-11-21T15:11:48Z",
    "source": "codex"
+  },
+  {
+   "id": "b27",
+   "label": "zone-banners-and-logo",
+   "path": "assets/arcane/b27-zone-banners-and-logo",
+   "manifest": "assets/arcane/b27-zone-banners-and-logo/manifest.json",
+   "files": 7,
+   "status": "provisional",
+   "ingested_utc": "2026-11-21T16:11:51Z",
+   "source": "codex"
   }
  ]
 }
