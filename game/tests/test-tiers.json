@@ -686,5 +686,9 @@
   "shared-mm-backup.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "world-status.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
