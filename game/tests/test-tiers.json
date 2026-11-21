@@ -1,4 +1,8 @@
 {
+  "town-polish.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "town-offline.test.js": {
     "class": "browser",
     "tier": "full"
