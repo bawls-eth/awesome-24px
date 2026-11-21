@@ -107,6 +107,14 @@
     "class": "browser",
     "tier": "full"
   },
+  "dungeon-polish.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "class-weapon-wire.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "class-stats-arena.test.js": {
     "class": "browser",
     "tier": "smoke"
