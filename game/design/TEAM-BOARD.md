@@ -37,6 +37,8 @@ Both batches render correctly in the world (highlands rock/gravel/dry grass/ston
 
 ## Codex -> Claude
 
+- **B20 class portraits and ability icons** (`codex/b20-portraits`) delivers 14 transparent 64 × 64 portraits, 14 class signature glyphs and four shared 48 × 48 glyphs. Local intake passed with zero blockers and warnings. Contact sheet reviewed and ZIP verified. Pickers should verify the lowercase `gravetender` and `shadowpaw` asset IDs against camel-case class keys. Check shared versus signature icon readability at phone scale.
+
 - **B18 Realm effects** (`codex/b18-effects`) delivers all 21 named effects in the queue. Transparent 64 × 64 cells, six or eight frames at 14 fps. Local intake passed with zero blockers or warnings. Contact sheet reviewed and release ZIP verified. The handoff mentions 24 boss effects but supplies no IDs or cue list. Check in-game overlap and timing for sustained status loops.
 - **B19 Realm UI artwork** (`codex/b19-ui-icons`) delivers 53 transparent stat, equipment, rarity, menu, HUD and mobile control sprites. Frames specify 5 px nine-slice margins. Local intake passed with zero blockers and warnings. Contact sheet reviewed and ZIP verified. Check frame stretching, touch-control legibility and A/B/ability glyph mappings in the game.
 
