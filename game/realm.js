@@ -2385,6 +2385,12 @@ class RealmArena {
   shopStock() {
     const best = this.save.bestWave; const out = []; const wc = this._worldCopy(); const lv = this.save.level;
     RM_RARITIES.forEach((rar, r) => { if (r < RM_SHOP_UNLOCK.length && (best >= RM_SHOP_UNLOCK[r] || (wc && lv >= RM_SHOP_UNLOCK_LV[r]))) RM_BASE_ITEMS.forEach((def) => out.push({ id: def.id, r, price: rar.sell * RM_SHOP_MULT })); });
+    // S12: with an active hero, the styled weapons of the hero's family at the same unlocked rarities (never Epic), sell value x RM_SHOP_MULT.
+    const fam = RM_WPN_ITEMS.length && this.heroClass() && typeof MMWeapons !== 'undefined' ? MMWeapons.familyOf(this.heroClass()) : null;
+    if (fam) {
+      const rs = []; out.forEach((o) => { if (rs.indexOf(o.r) < 0) rs.push(o.r); });
+      rs.forEach((r) => RM_WPN_ITEMS.forEach((def) => { if (def.family === fam) out.push({ id: def.id, r, price: RM_RARITIES[r].sell * RM_SHOP_MULT }); }));
+    }
     return out;
   }
 
