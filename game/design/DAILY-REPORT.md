@@ -83,3 +83,5 @@
 - OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
 - 2026-11-21 (06:xx UTC): merged Codex b12-b15 art wiring (portals/shrines/chests/props), weapon-style wiring in the Realm page, dungeon polish (room count, exit label, door cue), status effects wiring, classic-arena difficulty ramp, shot readability, easy shore start, world wording, Town offline join, Jam/Stalk/Deepdelve fixes, 5 pure modules (nexus, quests, portals, pickups, wpn items). Full suite 168/168 on 17252ab.
 - OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
+- 2026-11-21 (08:xx UTC): master at bf49e61 (PR #26). New on dev: Codex b16/b17 projectile art wired (class bolts, enemy bullets, hit sparks), world status effects (shrine buffs, creature debuffs, safe shore), backup v2 (realm/arms/stalk/jam keys), DB-blocking test helper, world-party protocol module, world phone perf probe. Full suite 174/174 on 0352708.
+- OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
