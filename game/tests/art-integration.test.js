@@ -78,7 +78,58 @@ async function open(browser, url, { heroes, active, opts } = {}) {
   check('left (flip) is the pixel mirror of right', r.mirror > 0.999, String(r.mirror));
   check('feet land on the anchor row (no rescale)', r.low >= 226 && r.low <= 232, String(r.low));
   check('anim(left) resolves to the right strip; class map ignores unsupported/odd ids', r.left === true && r.mapped === 'warrior|mage|cleric|||', r.mapped);
+
+  // ---------- b29 gear tiers (provisional): every id resolves by id through MMArt ----------
+  const g29 = await u.page.evaluate(async () => {
+    const out = {};
+    const head = async (url) => !!url && (await fetch(url, { method: 'HEAD' })).ok;
+    const fx = await MMArt.loadFx('/game/assets/arcane/');
+    out.fx = MMArt.GEAR_FX_IDS.map((id) => { const a = fx.anim(id); return a ? [id, a.frames, a.fw, a.fh, a.loop] : [id, null]; });
+    out.fxOld = fx.has('fx_explosion_small'); // b18 still there
+    const items = await MMArt.loadItems('/game/assets/arcane/');
+    out.wpn = ['wpn_bow_blast', 'wpn_wand_burst', 'wpn_staff_comet', 'wpn_pistol_flak'].map((id) => items.iconUrl(id));
+    out.wpnOk = (await Promise.all(out.wpn.map(head))).every(Boolean);
+    out.sig = MMArt.GEAR_SIG_ITEMS.map((id) => items.iconUrl(id));
+    out.sigOk = out.sig.length === 6 && (await Promise.all(out.sig.map(head))).every(Boolean);
+    out.oldItem = !!items.iconUrl('sparkwand');
+    const ui = []; for (let t = 1; t <= 12; t++) ui.push(MMArt.gearUiId('tier', t));
+    ['crit', 'splash', 'resist', 'leech', 'regen', 'range'].forEach((k) => ui.push(MMArt.gearUiId('stat', k)));
+    ['keen', 'blast', 'venom', 'swift', 'reach', 'leech', 'pierce', 'vital', 'ward', 'fleet', 'resist', 'mend'].forEach((k) => ui.push(MMArt.gearUiId('affix', k)));
+    out.uiN = ui.filter(Boolean).length;
+    out.uiOk = (await Promise.all(ui.map((id) => head(MMArt.gearUiUrl(id, '/game/assets/arcane/'))))).every(Boolean);
+    const m = await (await fetch('/game/assets/arcane/b29-gear-tiers/manifest.json')).json();
+    out.manifestCovered = m.assets.every((a) => (a.category === 'ui' ? !!MMArt.gearUiUrl(a.id) : a.category === 'effect' ? !!fx.anim(a.id) : !!items.iconUrl(a.id)));
+    out.bad = [MMArt.gearUiUrl('ui_tier_badge_13'), MMArt.gearUiUrl('../x'), MMArt.gearUiUrl(null), MMArt.gearUiId('tier', 0)].every((x) => x === null);
+    return out;
+  });
+  check('b29 effects load by id: fx_splash_ring 6x64 one-shot, fx_boss_slam_warn 4x128 loop, fx_boss_slam_hit 6x128 (b18 effects kept)', JSON.stringify(g29.fx) === JSON.stringify([['fx_splash_ring', 6, 64, 64, false], ['fx_boss_slam_warn', 4, 128, 128, true], ['fx_boss_slam_hit', 6, 128, 128, false]]) && g29.fxOld, JSON.stringify(g29.fx));
+  check('b29 item art: the 4 splash weapon items (wpn_bow_blast ...) and the 6 boss signature ids resolve to loadable PNGs; old item art kept', g29.wpn.every(Boolean) && g29.wpnOk && g29.sigOk && g29.oldItem, JSON.stringify([g29.wpn, g29.sig]));
+  check('b29 UI icons: 12 tier badges + 6 stat + 12 affix icons resolve and load; bad ids give null; every manifest asset is reachable by id', g29.uiN === 30 && g29.uiOk && g29.bad && g29.manifestCovered, JSON.stringify(g29));
   await u.ctx.close();
+
+  // ---------- b29 in the backpack: tier badge, affix icons, ?uiicons=0 / ?art=0 keep only the text ----------
+  const bpHero = [hero('hero-warlock-1', 'warlock', 'Hex')];
+  const bpSave = { realm: { shards: 0, bestWave: 0, kills: 0, deaths: 0, kb: { spiral: 0, aimed: 0, ring: 0, drifter: 0, boss: 0 }, bossBestT: 0, level: 20, xp: 0, items: [{ n: 1, id: 'sparkwand', r: 3, t: 9, a: 12345 }, { n: 2, id: 'wpn_staff_comet', r: 0 }], nextUid: 10, eq: {} } };
+  const bp = async (q) => {
+    const B = await open(browser, MAZE + q, { heroes: bpHero, active: JSON.stringify({ v: 1, heroId: 'hero-warlock-1' }) });
+    await B.page.evaluate((s) => { localStorage.setItem('pixeltown-save-v1', JSON.stringify(s)); }, bpSave);
+    await B.page.reload(); await B.page.waitForFunction(() => window.__mm && window.__mm.arena && window.__mm.arena.active, null, { timeout: 15000 });
+    await B.page.waitForTimeout(600);
+    await B.page.evaluate(() => window.__mm.arena.setPaused(true));
+    await B.page.waitForTimeout(500);
+    const o = await B.page.evaluate(() => {
+      const li = document.querySelector('#realm-bp-list li[data-uid="1"]');
+      const imgs = Array.from(document.querySelectorAll('#realm-backpack-body img.rm-gear-ico')).map((i) => ({ id: i.dataset.gico, ok: i.complete && i.naturalWidth === 16 }));
+      const st = window.__mm.arena._fx; const staff = document.querySelector('#realm-bp-list li[data-uid="2"] img.realm-ico');
+      return { tierText: li ? (li.querySelector('.rm-tier') || {}).textContent : '', afx: li ? li.querySelectorAll('.rm-afx-i').length : 0, imgs, ring: !!(st && st.has('fx_splash_ring')), staff: staff ? staff.getAttribute('src') : '' };
+    });
+    await B.ctx.close(); return { o, bad: B.bad, errors: B.errors };
+  };
+  const on29 = await bp(''), off29 = await bp('&uiicons=0'), art0 = await bp('&art=0');
+  check('backpack: a T9 item shows the ui_tier_badge_9 icon next to its "T9" text and 2 affix names with their ui_affix_* icons (all loaded)', on29.o.tierText === 'T9' && on29.o.afx === 2 && on29.o.imgs.some((i) => i.id === 'ui_tier_badge_9' && i.ok) && on29.o.imgs.filter((i) => /^ui_affix_/.test(i.id)).length === 2 && on29.o.imgs.every((i) => i.ok), JSON.stringify(on29.o));
+  check('arena: the b29 splash ring is in the effect set and the Comet Staff row shows its b29 art', on29.o.ring && /b29-gear-tiers\/items\/wpn_icon_staff_comet\.png$/.test(on29.o.staff), JSON.stringify(on29.o));
+  check('?uiicons=0 and ?art=0: no b29 UI icon, the "T9" text and affix names stay; ?art=0 also skips the b29 ring / item art', off29.o.imgs.length === 0 && art0.o.imgs.length === 0 && off29.o.tierText === 'T9' && art0.o.afx === 2 && !art0.o.ring && !/b29/.test(art0.o.staff), JSON.stringify([off29.o, art0.o]));
+  check('b29 backpack pages: no 404s, no console errors', [on29, off29, art0].every((x) => x.bad.length === 0 && x.errors.length === 0), JSON.stringify([on29.bad, on29.errors, off29.errors, art0.errors]));
 
   // ---------- Lantern ----------
   const heroes = [hero('hero-bruiser-1', 'bruiser', 'Brute'), hero('hero-punk-1', 'punk', 'Spike'), hero('hero-herald-1', 'herald', 'Pup')];

@@ -982,5 +982,9 @@
   "isles-taming.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "gear-splash-player.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

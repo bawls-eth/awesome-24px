@@ -240,9 +240,33 @@
   var ITEM_ICON_MAP = {
     sparkwand: 'wand_spark', quickwand: 'wand_ember',
     heartcharm: 'accessory_red_garnet_heart_pendant', swiftcharm: 'accessory_gold_feather_brooch',
-    luckring: 'accessory_copper_emerald_ring', scholarring: 'accessory_sapphire_wave_ring', wardring: 'accessory_gold_ruby_signet'
+    luckring: 'accessory_copper_emerald_ring', scholarring: 'accessory_sapphire_wave_ring', wardring: 'accessory_gold_ruby_signet',
+    // b29 gear tiers: the 4 splash weapon styles (MMWeaponItems ART_WANTED); their items carry art:null, so the realm asks by item id.
+    wpn_bow_blast: 'wpn_icon_bow_blast', wpn_wand_burst: 'wpn_icon_wand_burst', wpn_staff_comet: 'wpn_icon_staff_comet', wpn_pistol_flak: 'wpn_icon_pistol_flak'
   };
   var ITEM_BATCH_RE = /(items|weapons|armor|headgear|clothing|accessories|consumables)/;
+  // ---------- b29 gear tiers (provisional): extra batches read by id, with a code fallback everywhere ----------
+  // Its folder name matches none of the loader patterns, so it is listed here: item art (category "items": 4 splash weapons + 6 boss signature
+  // items), effect strips (fx_splash_ring, fx_boss_slam_warn / _hit) and 16 px UI icons (tier badges, stat and affix icons). ?art=0 skips all of it.
+  var GEAR_BATCH = 'b29-gear-tiers';
+  var GEAR_FX_IDS = ['fx_splash_ring', 'fx_boss_slam_warn', 'fx_boss_slam_hit'];
+  var GEAR_SIG_ITEMS = ['sig_dread_plate', 'sig_wyrm_core', 'sig_oracle_eye', 'sig_lich_phylactery', 'sig_hydra_fang', 'sig_maw_shard'];
+  var GEAR_UI_RE = /^ui_(tier_badge_([1-9]|1[0-2])|stat_(crit|splash|resist|leech|regen|range)|affix_(keen|blast|venom|swift|reach|leech|pierce|vital|ward|fleet|resist|mend))$/;
+  function gearArtOff() {
+    try { var s = root && root.location && root.location.search; return typeof s === 'string' && /[?&]art=0(&|$)/.test(s); } catch (e) { return false; }
+  }
+  function isGearBatch(id) { return id === GEAR_BATCH && !gearArtOff(); }
+  // gearUiUrl(id, assetRoot?) -> url of a b29 UI icon ('ui_tier_badge_7', 'ui_stat_crit', 'ui_affix_keen', ...) or null (unknown id / ?art=0). Never throws.
+  function gearUiId(kind, key) {
+    var id = kind === 'tier' ? 'ui_tier_badge_' + Math.floor(Number(key)) : 'ui_' + kind + '_' + key;
+    return GEAR_UI_RE.test(id) ? id : null;
+  }
+  function gearUiUrl(id, assetRoot) {
+    try {
+      if (typeof id !== 'string' || !GEAR_UI_RE.test(id) || gearArtOff()) return null;
+      return join(join(assetRoot || ASSET_ROOT, GEAR_BATCH), 'ui/' + id + '.png');
+    } catch (e) { return null; }
+  }
   var lastItemSet = null;
 
   function ItemSet() { this.byId = Object.create(null); this.images = Object.create(null); this.bad = Object.create(null); }
@@ -284,12 +308,12 @@
       var ids = [];
       if (idx && Array.isArray(idx.batches)) idx.batches.forEach(function (b) {
         var id = b && typeof b.path === 'string' ? b.path.replace(/\/+$/, '').split('/').pop() : '';
-        if (/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(id) && ITEM_BATCH_RE.test(id) && ids.indexOf(id) < 0) ids.push(id);
+        if (/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(id) && (ITEM_BATCH_RE.test(id) || isGearBatch(id)) && ids.indexOf(id) < 0) ids.push(id);
       });
       return Promise.all(ids.map(function (id) {
         return fetchJson(join(join(base, id), 'manifest.json')).then(function (m) {
           (m && Array.isArray(m.assets) ? m.assets : []).forEach(function (a) {
-            if (!a || a.category !== 'item' || typeof a.id !== 'string' || typeof a.path !== 'string') return;
+            if (!a || !(a.category === 'item' || (id === GEAR_BATCH && a.category === 'items')) || typeof a.id !== 'string' || typeof a.path !== 'string') return;
             if (!/^[A-Za-z0-9_.\/-]+$/.test(a.path) || a.path.indexOf('..') >= 0) return;
             set.byId[a.id] = { url: join(join(base, id), a.path), tags: Array.isArray(a.tags) ? a.tags.filter(function (t) { return typeof t === 'string'; }) : [] };
           });
@@ -359,7 +383,7 @@
       var ids = [];
       if (idx && Array.isArray(idx.batches)) idx.batches.forEach(function (b) {
         var id = b && typeof b.path === 'string' ? b.path.replace(/\/+$/, '').split('/').pop() : '';
-        if (/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(id) && /effects/.test(id) && ids.indexOf(id) < 0) ids.push(id);
+        if (/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(id) && (/effects/.test(id) || isGearBatch(id)) && ids.indexOf(id) < 0) ids.push(id);
       });
       return Promise.all(ids.map(function (id) {
         return fetchJson(join(join(base, id), 'manifest.json')).then(function (m) {
@@ -419,5 +443,5 @@
     }).then(function () { return set; }).catch(function () { return set; });
   }
 
-  return { loadDungeonTiles: loadDungeonTiles, DTileSet: DTileSet, loadFx: loadFx, FxSet: FxSet, loadBolts: loadBolts, boltIdFor: boltIdFor, BoltSet: BoltSet, PLAYER_BOLT_CLASSES: PLAYER_BOLT_CLASSES, bossArtFor: bossArtFor, loadBosses: loadBosses, BOSS_MAP: BOSS_MAP, BOSS_EXTRA: BOSS_EXTRA, BOSS_VISIBLE_W: BOSS_VISIBLE_W, BOSS_ACTIONS: BOSS_ACTIONS, loadItems: loadItems, itemIconUrl: itemIconUrl, ITEM_ICON_MAP: ITEM_ICON_MAP, ItemSet: ItemSet, enemyArtFor: enemyArtFor, drifterArtFor: drifterArtFor, loadEnemies: loadEnemies, ENEMY_MAP: ENEMY_MAP, ENEMY_WAVE2: ENEMY_WAVE2, BIOME_ENEMY_MAP: BIOME_ENEMY_MAP, DRIFTER_MAP: DRIFTER_MAP, ENEMY_VISIBLE_W: ENEMY_VISIBLE_W, load: load, loadClass: loadClass, loadAll: loadAll, packIds: packIds, artClassFor: artClassFor, packFor: packFor, frameAt: frameAt, scaleFor: scaleFor, duration: duration, PACKS: PACKS, CLASS_MAP: CLASS_MAP, ArtSet: ArtSet };
+  return { GEAR_BATCH: GEAR_BATCH, GEAR_FX_IDS: GEAR_FX_IDS, GEAR_SIG_ITEMS: GEAR_SIG_ITEMS, GEAR_UI_RE: GEAR_UI_RE, gearUiId: gearUiId, gearUiUrl: gearUiUrl, loadDungeonTiles: loadDungeonTiles, DTileSet: DTileSet, loadFx: loadFx, FxSet: FxSet, loadBolts: loadBolts, boltIdFor: boltIdFor, BoltSet: BoltSet, PLAYER_BOLT_CLASSES: PLAYER_BOLT_CLASSES, bossArtFor: bossArtFor, loadBosses: loadBosses, BOSS_MAP: BOSS_MAP, BOSS_EXTRA: BOSS_EXTRA, BOSS_VISIBLE_W: BOSS_VISIBLE_W, BOSS_ACTIONS: BOSS_ACTIONS, loadItems: loadItems, itemIconUrl: itemIconUrl, ITEM_ICON_MAP: ITEM_ICON_MAP, ItemSet: ItemSet, enemyArtFor: enemyArtFor, drifterArtFor: drifterArtFor, loadEnemies: loadEnemies, ENEMY_MAP: ENEMY_MAP, ENEMY_WAVE2: ENEMY_WAVE2, BIOME_ENEMY_MAP: BIOME_ENEMY_MAP, DRIFTER_MAP: DRIFTER_MAP, ENEMY_VISIBLE_W: ENEMY_VISIBLE_W, load: load, loadClass: loadClass, loadAll: loadAll, packIds: packIds, artClassFor: artClassFor, packFor: packFor, frameAt: frameAt, scaleFor: scaleFor, duration: duration, PACKS: PACKS, CLASS_MAP: CLASS_MAP, ArtSet: ArtSet };
 }));
