@@ -983,7 +983,8 @@ class RealmArena {
     if (!id || (el.dataset.abBad || '').split(',').indexOf(id) >= 0) { if (img) img.remove(); if (ico) ico.style.opacity = ''; delete el.dataset.abImg; return; }
     if (img && img.dataset.id === id) return;
     if (img) img.remove();
-    img = document.createElement('img'); img.className = 'realm-ab-img'; img.alt = ''; img.draggable = false; img.dataset.id = id; img.setAttribute('aria-hidden', 'true');
+    img = document.createElement('img'); img.className = 'realm-ab-img mm-ico'; // mm-ico: our own UI icon (tests tell it from an injected <img>)
+    img.alt = ''; img.draggable = false; img.dataset.id = id; img.setAttribute('aria-hidden', 'true');
     img.style.cssText = 'position:absolute;left:50%;top:50%;width:70%;height:70%;transform:translate(-50%,-50%);object-fit:contain;image-rendering:pixelated;pointer-events:none';
     img.addEventListener('load', () => { el.dataset.abImg = id; if (ico) ico.style.opacity = '0'; });
     img.addEventListener('error', () => { el.dataset.abBad = (el.dataset.abBad ? el.dataset.abBad + ',' : '') + id; img.remove(); if (ico) ico.style.opacity = ''; delete el.dataset.abImg; });

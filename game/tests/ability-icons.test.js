@@ -50,7 +50,7 @@ const abState = (page) => page.evaluate(() => [0, 1, 2, 3].map((i) => {
   await Ab.page.waitForTimeout(1200);
   const fb = await abState(Ab.page);
   check('image aborted: no img left, emoji visible, letters intact', fb.every((s) => s.img === null && s.icoOpacity === '' && s.emoji.length > 0) && fb.map((s) => s.key).join('') === 'QERF', JSON.stringify(fb));
-  const fc = await Ab.page.evaluate(() => Array.from(document.querySelectorAll('#realm-hero .hp-hero:not(.locked)')).map((c) => { const sw = c.querySelector('.hp-swatch'); return { img: !!c.querySelector('img.hp-portrait'), sw: !!sw && !sw.hidden }; }));
+  const fc = await Ab.page.evaluate(() => Array.from(document.querySelectorAll('#realm-hero .hp-hero:not(.locked)')).map((c) => { const sw = c.querySelector('.hp-swatch'); const cv = c.querySelector('canvas.hp-art'); return { img: !!c.querySelector('img.hp-portrait'), sw: (!!sw && !sw.hidden) || (!!cv && !cv.hidden) }; })); // the swatch, or today's animated hero canvas that replaces it
   check('portrait aborted: the colour swatch stays', fc.length >= 2 && fc.every((c) => !c.img && c.sw), JSON.stringify(fc));
   await Ab.ctx.close();
 
