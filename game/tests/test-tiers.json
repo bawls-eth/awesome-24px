@@ -295,6 +295,14 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-angler-boss.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "angler-boss.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "shared-mm-angler.test.js": {
     "class": "node",
     "tier": "smoke"

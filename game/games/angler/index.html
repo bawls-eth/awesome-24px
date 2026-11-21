@@ -25,6 +25,10 @@
 <main id="stage">
   <canvas id="scene" width="320" height="480" aria-label="Fishing scene"></canvas>
   <p id="msg" role="status" aria-live="polite">Pick a spot, then cast.</p>
+  <div id="boss-ui" hidden>
+    <div id="boss-bar" role="progressbar" aria-label="Line strain" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-phase="calm"><span id="boss-fill"></span><span id="boss-label"></span></div>
+    <button class="btn primary" id="reel-btn" type="button">Hold to reel</button>
+  </div>
   <section id="result" class="panel" hidden>
     <h2 id="res-title"></h2>
     <p id="res-detail"></p>
@@ -81,6 +85,7 @@
 <script src="../../shared/store.js"></script>
 <script src="../../shared/mm-angler.js"></script>
 <script src="../../shared/mm-angler-depth.js"></script>
+<script src="../../shared/mm-angler-boss.js"></script>
 <script src="angler.js"></script>
 </body>
 </html>

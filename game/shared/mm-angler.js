@@ -190,6 +190,7 @@
     const boss = BOSSES[fish.id] || null;
     const rng = seedRng(opts.seed);
     const baseZone = Math.min(1, rodDef.zone * (opts.calm ? 1.3 : 1));
+    const fillMult = boss && opts.fillMult > 0 ? Math.min(1, opts.fillMult) : 1;
     const snapLimit = boss ? boss.snapLimit : (fish.snapLimit || RATES.snapLimit);
     const s = {
       fish: fish.id, boss: !!boss, tension: 0.5, meter: 0.25, pos: 0.5, side: 0,
@@ -240,7 +241,7 @@
       if (boss && boss.sidePull) s.side = boss.sidePull.amp * Math.sin((s.time / boss.sidePull.period) * Math.PI * 2);
       if (s.tension >= 1) s.atMax += dt; else s.atMax = 0;
       if (s.atMax > s.snapLimit + 1e-9) { s.status = 'snapped'; return s; }
-      s.meter += (inZone() ? RATES.fill : -RATES.drain) * dt;
+      s.meter += (inZone() ? RATES.fill * fillMult : -RATES.drain) * dt;
       s.meter = Math.max(0, Math.min(1, s.meter));
       if (s.meter >= 1) s.status = 'caught';
       return s;
@@ -318,7 +319,7 @@
   function cleanFull(raw) {
     let o = raw;
     if (typeof raw === 'string') { try { o = JSON.parse(raw); } catch (e) { o = null; } }
-    const out = { caught: {}, bosses: {}, trophies: {}, gear: { rod: 'stick', lure: 'none' }, bait: 0, bells: 0, stock: {}, baits: { quick: 0, rare: 0, big: 0 }, baitType: 'plain', sets: {}, badges: {}, tour: cleanTour(null) };
+    const out = { caught: {}, bosses: {}, trophies: {}, gear: { rod: 'stick', lure: 'none' }, bait: 0, bells: 0, stock: {}, baits: { quick: 0, rare: 0, big: 0 }, baitType: 'plain', sets: {}, badges: {}, tour: cleanTour(null), lair: {}, hall: {} };
     if (!o || typeof o !== 'object' || Array.isArray(o)) return out;
     const c = o.caught && typeof o.caught === 'object' ? o.caught : {};
     Object.keys(c).forEach((id) => {
@@ -350,6 +351,15 @@
     const bd = o.badges && typeof o.badges === 'object' && !Array.isArray(o.badges) ? o.badges : {};
     Object.keys(bd).forEach((k) => { if (/^[a-z0-9_]{1,24}$/.test(k) && bd[k] === true && Object.keys(out.badges).length < 40) out.badges[k] = true; });
     out.tour = cleanTour(o.tour);
+    // boss encounter keys: normal catches per lair spot, and Hall of Records {size, date}
+    const la = o.lair && typeof o.lair === 'object' && !Array.isArray(o.lair) ? o.lair : {};
+    Object.keys(BOSS_SPOTS).forEach((sp) => { const n = clampInt(la[sp], 0, 99); if (n > 0) out.lair[sp] = n; });
+    const ha = o.hall && typeof o.hall === 'object' && !Array.isArray(o.hall) ? o.hall : {};
+    Object.keys(BOSSES).forEach((id) => {
+      const e = ha[id];
+      if (!e || typeof e !== 'object' || typeof e.date !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(e.date)) return;
+      out.hall[id] = { size: clampInt(e.size, 0, 9999), date: e.date };
+    });
     return out;
   }
   // Public clean: depth keys that still hold their defaults are left out, so a plain save stays byte-compatible
@@ -357,7 +367,7 @@
   const DEPTH_DEFAULTS = JSON.stringify(cleanFull(null));
   function clean(raw) {
     const o = cleanFull(raw), d = JSON.parse(DEPTH_DEFAULTS);
-    ['bells', 'stock', 'baits', 'baitType', 'sets', 'badges', 'tour'].forEach((k) => { if (JSON.stringify(o[k]) === JSON.stringify(d[k])) delete o[k]; });
+    ['bells', 'stock', 'baits', 'baitType', 'sets', 'badges', 'tour', 'lair', 'hall'].forEach((k) => { if (JSON.stringify(o[k]) === JSON.stringify(d[k])) delete o[k]; });
     return o;
   }
   function addTrophy(journal, bossId) {
