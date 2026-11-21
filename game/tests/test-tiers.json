@@ -371,6 +371,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-pickups.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "shared-mm-classes.test.js": {
     "class": "node",
     "tier": "smoke"
