@@ -39,7 +39,7 @@
     if (typeof o === 'string') { try { o = JSON.parse(o); } catch (e) { o = null; } }
     if (!o || typeof o !== 'object' || Array.isArray(o)) o = {};
     const out = {};
-    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo|evT|evDone|finds|discovered)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
+    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo|evT|evDone|finds|discovered|shrineAt|chests)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
     out.v = 1;
     out.seed = cleanSeed(o.seed);
     out.version = Number.isInteger(o.version) && o.version > 0 && o.version < 1000 ? o.version : 0;
@@ -52,6 +52,11 @@
     out.evT = Number.isFinite(Number(o.evT)) && Number(o.evT) > 0 ? Math.min(Math.floor(Number(o.evT)), 1e9) : 0;
     out.evDone = (Array.isArray(o.evDone) ? o.evDone : []).filter((id) => typeof id === 'string' && /^ev:\d{1,9}:[1-3]$/.test(id)).slice(-12);
     // minimap fog (additive): base64 bitset of discovered 8x8-tile cells; absent or corrupt -> fully fogged (key left out)
+    // world sites (additive): shrine id -> event-clock ms of last use, and the camp ids whose chest was opened
+    const sa = {}; if (o.shrineAt && typeof o.shrineAt === 'object' && !Array.isArray(o.shrineAt)) Object.keys(o.shrineAt).slice(0, 64).forEach((k) => { const v = o.shrineAt[k]; if (/^shrine_\d_\d{1,3}$/.test(k) && Number.isFinite(v) && v > 0 && v < 1e12) sa[k] = Math.floor(v); });
+    if (Object.keys(sa).length) out.shrineAt = sa;
+    const ch = (Array.isArray(o.chests) ? o.chests : []).filter((id, i, a) => typeof id === 'string' && /^camp_\d_\d{1,3}$/.test(id) && a.indexOf(id) === i).slice(0, 64);
+    if (ch.length) out.chests = ch;
     const disc = window.MMFog ? MMFog.clean(o.discovered) : '';
     if (disc) out.discovered = disc;
     const r = o.returnTo && typeof o.returnTo === 'object' ? o.returnTo : null;
@@ -76,7 +81,7 @@
     const save = readSave();
     let seed = cleanSeed(opts.seed) || save.seed;
     if (!seed) seed = String(Math.floor(Math.random() * 900000) + 100000); // first visit: a fresh island, remembered below
-    if (save.seed !== seed) { save.pos = null; save.returnTo = null; delete save.discovered; } // a new island starts fully fogged (one seed's discovery is kept at a time)
+    if (save.seed !== seed) { save.pos = null; save.returnTo = null; delete save.discovered; delete save.shrineAt; delete save.chests; } // a new island starts fully fogged (one seed's discovery is kept at a time)
     save.seed = seed;
     const t0 = performance.now();
     const world = O.generate(seed);
@@ -302,7 +307,7 @@
     let miniKey = ''; let hudT = 0; let zoneTxt = ''; let arrowDeg = -1; let miniDraws = 0; let lastZone = null;
     function drawMini(force) {
       const p = arena.player; const tx = Math.floor(p.x / TILE); const ty = Math.floor(p.y / TILE);
-      const key = (tx >> 1) + ',' + (ty >> 1) + ',' + bossesKey() + ',' + evMiniKey;
+      const key = (tx >> 1) + ',' + (ty >> 1) + ',' + bossesKey() + ',' + evMiniKey + ',' + siteMiniKey();
       if (!force && key === miniKey) return;
       miniKey = key; miniDraws++;
       if (!miniBase) miniBase = buildMiniBase();
@@ -314,6 +319,11 @@
       }
       for (let i = 0; i < portals.length; i++) { const q = portals[i]; if (fogged(q.tx, q.ty)) continue; g.fillStyle = '#000'; g.fillRect(q.tx * sx - 2.5, q.ty * sy - 2.5, 5, 5); g.fillStyle = q.col; g.fillRect(q.tx * sx - 1.5, q.ty * sy - 1.5, 3, 3); }
       for (let i = 0; i < world.bossSites.length; i++) { const b = world.bossSites[i]; if (fogged(b.x, b.y)) continue; g.fillStyle = bossMarkCol(i); g.beginPath(); g.arc(b.x * sx, b.y * sy, 2, 0, Math.PI * 2); g.fill(); }
+      if (SITES) {
+        SITES.shrines.forEach((q) => { if (fogged(q.x, q.y)) return; g.fillStyle = '#000'; g.fillRect(q.x * sx - 2.5, q.y * sy - 2.5, 5, 5); g.fillStyle = shrineReady(q) ? SHRINE_COL[q.kind] : '#6b6b6b'; g.fillRect(q.x * sx - 1.5, q.y * sy - 1.5, 3, 3); });
+        SITES.camps.forEach((q) => { if (fogged(q.x, q.y)) return; g.fillStyle = chestOpen.has(q.id) ? '#6b6b6b' : '#d98a2b'; g.fillRect(q.x * sx - 1, q.y * sy - 1, 3, 3); });
+        SITES.npcs.forEach((q) => { if (fogged(q.x, q.y)) return; g.fillStyle = '#7fe0ff'; g.fillRect(q.x * sx - 1, q.y * sy - 1, 2, 2); });
+      }
       evState.forEach((st) => { if (st.phase === 'upcoming' || st.phase === 'active') drawBeacon(g, st.plan.site.x * sx, st.plan.site.y * sy, st.phase === 'active' ? 4 : 3, st.phase === 'active' ? '#ff8a2a' : '#ffe27a', 0, true); });
       g.fillStyle = '#000'; g.fillRect(tx * sx - 2.5, ty * sy - 2.5, 5, 5); g.fillStyle = '#fff'; g.fillRect(tx * sx - 1.5, ty * sy - 1.5, 3, 3);
     }
@@ -389,6 +399,7 @@
     }
     function onEnemyHit(e, dmg) { if (evOnHit(e, dmg)) return; if (zones && e.zid >= 0) zones.markCombat(e.zid); }
     function onEnemyKilled(e) {
+      if (e.campId) { e.campId = null; kills++; save.stats.kills++; return; }
       if (e.evid) { evOnKilled(e); return; }
       if (!zones) return;
       if (e.zid >= 0) {
@@ -664,6 +675,153 @@
       const f = nearestFree(tx, ty, 8) || world.spawnPoint;
       const p = arena.player; p.x = (f.x + 0.5) * TILE; p.y = (f.y + 0.5) * TILE; p.iframes = Math.max(p.iframes, 2);
     }
+    // ---------- world sites (MMSites): shrines (timed buffs), camps (chest + patrol), NPC greeters ----------
+    const SITES = window.MMSites && !/[?&]sites=0(&|$)/.test(typeof location !== 'undefined' ? location.search : '') ? MMSites.generate(world, seed) : null;
+    const NPC_IDS = window.MMSites ? MMSites.NPC_IDS : [];
+    const SHRINE_COL = { heal: '#5be38a', rage: '#ff6a4a', ward: '#6ab8ff' };
+    const SHRINE_TXT = { heal: 'Shrine of Mending', rage: 'Shrine of Fury', ward: 'Shrine of Warding' };
+    const GREET = ['Safe roads, traveller.', 'The island keeps its secrets, but the shrines are generous.', 'Mind the camps past the hills.', 'I hear the beacons are lit tonight.', 'Take your time. Nothing here is in a hurry.', 'Have you tried the portals yet?'];
+    const NPC_NAME = { npc_nexus_guide: 'Nexus Guide', npc_vendor: 'Vendor', npc_healer: 'Healer', npc_quest_giver: 'Quest Giver', npc_blacksmith: 'Blacksmith', npc_wanderer: 'Wanderer', npc_ghost_guide: 'Ghost Guide' };
+    const SITE_R = 56; const chestOpen = new Set(save.chests || []); const shrineAt = Object.assign({}, save.shrineAt || {}); let greetN = 0;
+    const campSt = new Map(); // camp id -> { ents, cleared }
+    let rageEnd = 0; let wardEnd = 0; let noteT = 0; let siteFor = null; let siteKeyShown = ''; let siteTickT = 0;
+    const siteNote = document.createElement('div'); siteNote.id = 'rw-site-note'; siteNote.className = 'hidden'; siteNote.setAttribute('role', 'status'); ov.appendChild(siteNote);
+    const siteBtn = document.createElement('button'); siteBtn.id = 'rw-site'; siteBtn.type = 'button'; siteBtn.className = 'hidden'; ov.appendChild(siteBtn);
+    const sNow = () => Math.floor(eventClock() * 1000);
+    const shrineLeft = (q) => MMSites.cooldownLeft(shrineAt[q.id], sNow());
+    const shrineReady = (q) => shrineLeft(q) === 0;
+    const siteMiniKey = () => { if (!SITES) return ''; let k = chestOpen.size + ':'; SITES.shrines.forEach((q) => { k += shrineReady(q) ? 1 : 0; }); return k; };
+    const sPx = (q) => ({ x: (q.x + 0.5) * TILE, y: (q.y + 0.5) * TILE });
+    function say(text) { siteNote.textContent = text; siteNote.classList.remove('hidden'); noteT = 3.2; }
+    const sc = {}; // cached site sprites (code drawn once)
+    function mk(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+    function glowSprite(col) { const c = mk(128, 128); const g = c.getContext('2d'); const gr = g.createRadialGradient(64, 64, 4, 64, 64, 62); gr.addColorStop(0, col); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return c; }
+    function shrineSprite(kind, lit) {
+      const key = 's' + kind + (lit ? 1 : 0); if (sc[key]) return sc[key];
+      const c = mk(48, 88); const g = c.getContext('2d'); const col = lit ? SHRINE_COL[kind] : '#6b7078';
+      g.fillStyle = '#000'; g.fillRect(8, 72, 32, 12); g.fillStyle = '#8b8a84'; g.fillRect(10, 72, 28, 10); g.fillStyle = '#5f5e59'; g.fillRect(10, 78, 28, 4);
+      g.fillStyle = '#000'; g.fillRect(14, 22, 20, 52); g.fillStyle = '#a9a8a0'; g.fillRect(16, 22, 16, 50); g.fillStyle = '#7f7e78'; g.fillRect(26, 22, 6, 50);
+      g.fillStyle = col; g.fillRect(20, 40, 8, 12); g.fillRect(22, 36, 4, 20);
+      g.fillStyle = '#000'; g.beginPath(); g.arc(24, 14, 11, 0, Math.PI * 2); g.fill(); g.fillStyle = col; g.beginPath(); g.arc(24, 14, 8, 0, Math.PI * 2); g.fill();
+      g.fillStyle = 'rgba(255,255,255,0.7)'; g.fillRect(20, 10, 4, 4);
+      return (sc[key] = c);
+    }
+    function chestSprite(open) {
+      const key = 'c' + (open ? 1 : 0); if (sc[key]) return sc[key];
+      const c = mk(44, 36); const g = c.getContext('2d');
+      g.fillStyle = '#000'; g.fillRect(2, 12, 40, 22); g.fillStyle = '#8a5a2b'; g.fillRect(4, 14, 36, 18); g.fillStyle = '#6b4220'; g.fillRect(4, 26, 36, 6);
+      g.fillStyle = '#d9b341'; g.fillRect(4, 20, 36, 3); g.fillRect(19, 18, 6, 9);
+      if (open) { g.fillStyle = '#000'; g.fillRect(2, 2, 40, 12); g.fillStyle = '#5a3a1c'; g.fillRect(4, 4, 36, 8); g.fillStyle = '#ffe27a'; g.fillRect(8, 14, 28, 4); }
+      else { g.fillStyle = '#000'; g.fillRect(2, 4, 40, 10); g.fillStyle = '#a06a33'; g.fillRect(4, 6, 36, 8); g.fillStyle = '#d9b341'; g.fillRect(4, 8, 36, 3); }
+      return (sc[key] = c);
+    }
+    const npcSpr = {};
+    function npcSprite(id) { // b21 art (idle, facing down, first frame) cached once; a code figure until it loads or when art is off
+      if (npcSpr[id]) return npcSpr[id];
+      const c = mk(56, 72); const g = c.getContext('2d'); const h = MMRng.hash(id);
+      g.fillStyle = '#000'; g.fillRect(14, 28, 28, 42); g.fillStyle = 'hsl(' + (h % 360) + ',45%,48%)'; g.fillRect(16, 30, 24, 38);
+      g.fillStyle = '#000'; g.beginPath(); g.arc(28, 20, 13, 0, Math.PI * 2); g.fill(); g.fillStyle = '#f0cfa6'; g.beginPath(); g.arc(28, 20, 11, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#222'; g.fillRect(23, 18, 3, 4); g.fillRect(31, 18, 3, 4);
+      npcSpr[id] = c;
+      if (opts.assetRoot && NPC_IDS.indexOf(id) >= 0) {
+        const img = new Image();
+        img.onload = () => { if (img.naturalHeight >= 64) { const a = mk(72, 72); const ag = a.getContext('2d'); ag.imageSmoothingEnabled = false; ag.drawImage(img, 0, 0, img.naturalHeight, img.naturalHeight, 0, 0, 72, 72); npcSpr[id] = a; } };
+        img.src = opts.assetRoot.replace(/\/+$/, '') + '/b21-npcs-and-vendors/enemies/' + id + '/' + id + '_idle_down.png';
+      }
+      return c;
+    }
+    function drawSites(g, vx0, vy0, vx1, vy1, tt, reduced) {
+      SITES.shrines.forEach((q) => {
+        const c = sPx(q); if (c.x < vx0 || c.x > vx1 || c.y < vy0 - 60 || c.y > vy1 + 60) return;
+        const lit = shrineReady(q);
+        if (lit) { if (!sc['g' + q.kind]) sc['g' + q.kind] = glowSprite(SHRINE_COL[q.kind]); g.globalAlpha = reduced ? 0.45 : 0.35 + 0.2 * Math.sin(tt * 2.4 + q.x); g.drawImage(sc['g' + q.kind], c.x - 64, c.y - 80); g.globalAlpha = 1; }
+        g.drawImage(shrineSprite(q.kind, lit), c.x - 24, c.y - 70);
+      });
+      SITES.camps.forEach((q) => {
+        const cx = (q.chest.x + 0.5) * TILE; const cy = (q.chest.y + 0.5) * TILE; if (cx < vx0 || cx > vx1 || cy < vy0 || cy > vy1) return;
+        g.drawImage(chestSprite(chestOpen.has(q.id)), cx - 22, cy - 22);
+      });
+      SITES.npcs.forEach((q) => {
+        const c = sPx(q); if (c.x < vx0 || c.x > vx1 || c.y < vy0 - 50 || c.y > vy1 + 50) return;
+        const s = npcSprite(q.npc); g.drawImage(s, c.x - s.width / 2, c.y + 14 - s.height);
+      });
+    }
+    function applyBuff(b) {
+      const p = arena.player; const now = arena.clock;
+      if (b.kind === 'heal') { const add = Math.ceil(arena.stats.maxHp * b.value); p.hp = Math.min(arena.stats.maxHp, p.hp + add); arena._floatText(p.x, p.y - 30, `+${add}`, '#5be38a'); }
+      else if (b.kind === 'rage') { rageEnd = now + b.durationMs / 1000; arena.buffDmg = b.value; arena._calcStats(); arena._floatText(p.x, p.y - 30, 'Fury!', '#ff6a4a'); }
+      else if (b.kind === 'ward') { wardEnd = now + b.durationMs / 1000; arena.buffTaken = b.value; arena._floatText(p.x, p.y - 30, 'Ward!', '#6ab8ff'); }
+      arena._syncHud();
+    }
+    function useShrine(i) {
+      const q = SITES && SITES.shrines[i]; if (!q) return { ok: false, left: 0 };
+      const r = MMSites.useShrine(shrineAt, q, sNow());
+      if (!r.ok) { say(`${SHRINE_TXT[q.kind]} is resting (${fmtT(r.left / 1000)})`); return { ok: false, left: r.left }; }
+      Object.assign(shrineAt, r.state); save.shrineAt = Object.assign({}, shrineAt); writeSave(save); miniKey = '';
+      applyBuff(r.buff);
+      say(`${SHRINE_TXT[q.kind]}: ${{ heal: 'restored', rage: 'more damage for 60s', ward: 'less damage taken for 60s' }[q.kind]}`); siteKeyShown = '';
+      return { ok: true, buff: r.buff, left: 0 };
+    }
+    function openChest(i) {
+      const q = SITES && SITES.camps[i]; if (!q || chestOpen.has(q.id)) return { ok: false };
+      chestOpen.add(q.id); save.chests = Array.from(chestOpen); writeSave(save); miniKey = '';
+      const info = { zone: q.zone, tier: q.zone };
+      const got = giveBag((q.chest.x + 0.5) * TILE, (q.chest.y + 0.5) * TILE, Z.rollDrop(info, seed + ':chest:' + q.id).bag, info);
+      say(got.items.length ? 'Chest opened: loot spills out' : 'Chest opened'); siteKeyShown = '';
+      return { ok: true, items: got.items.length, shards: got.shards };
+    }
+    function talk(i) {
+      const q = SITES && SITES.npcs[i]; if (!q) return null;
+      const t = `${NPC_NAME[q.npc] || 'Traveller'}: ${MMRng.create(seed + ':greet:' + q.id + ':' + (greetN++)).pick(GREET)}`; say(t); return t;
+    }
+    function campTick() {
+      const p = arena.player;
+      SITES.camps.forEach((q) => {
+        const c = sPx(q); const d = Math.hypot(p.x - c.x, p.y - c.y); let st = campSt.get(q.id);
+        if (!st) { st = { ents: [], cleared: false }; campSt.set(q.id, st); }
+        if (st.ents.length) {
+          let alive = 0; st.ents.forEach((e) => { if (e.active && e.campId === q.id) alive++; });
+          if (!alive) { st.ents = []; st.cleared = true; }
+          else if (d > 26 * TILE) { st.ents.forEach((e) => { if (e.active && e.campId === q.id) { e.active = false; e.campId = null; } }); st.ents = []; }
+        } else if (!st.cleared && d < 15 * TILE) {
+          q.patrol.forEach((m) => {
+            const e = arena.spawnEnemy(m.type, (m.x + 0.5) * TILE, (m.y + 0.5) * TILE); if (!e) return;
+            e.art = m.art; e.zone = q.zone; e.tier = q.zone; e.campId = q.id; e.zid = -1; st.ents.push(e);
+          });
+        }
+      });
+    }
+    function siteTick(dt) {
+      if (noteT > 0) { noteT -= dt; if (noteT <= 0) siteNote.classList.add('hidden'); }
+      const now = arena.clock;
+      if (rageEnd && now >= rageEnd) { rageEnd = 0; arena.buffDmg = 1; arena._calcStats(); }
+      if (wardEnd && now >= wardEnd) { wardEnd = 0; arena.buffTaken = 1; }
+      siteTickT -= dt; if (siteTickT > 0) return; siteTickT = 0.25;
+      campTick();
+      const p = arena.player; let best = null; let bd = SITE_R * SITE_R;
+      if (arena.state === 'play' && !arena.paused) {
+        const test = (kind, i, q, c) => { const d = (p.x - c.x) ** 2 + (p.y - c.y) ** 2; if (d < bd) { bd = d; best = { kind, i, q }; } };
+        SITES.shrines.forEach((q, i) => test('shrine', i, q, sPx(q)));
+        SITES.camps.forEach((q, i) => { if (!chestOpen.has(q.id)) test('chest', i, q, { x: (q.chest.x + 0.5) * TILE, y: (q.chest.y + 0.5) * TILE }); });
+        SITES.npcs.forEach((q, i) => test('npc', i, q, sPx(q)));
+      }
+      siteFor = best;
+      let key = ''; let txt = '';
+      if (best) {
+        if (best.kind === 'shrine') { const l = shrineLeft(best.q); txt = l ? `${SHRINE_TXT[best.q.kind]} (${fmtT(l / 1000)})` : `Pray at ${SHRINE_TXT[best.q.kind]} (E)`; }
+        else if (best.kind === 'chest') txt = 'Open chest (E)'; else txt = `Talk to ${NPC_NAME[best.q.npc] || 'traveller'} (E)`;
+        key = best.kind + best.i + txt;
+      }
+      if (key !== siteKeyShown) { siteKeyShown = key; siteBtn.classList.toggle('hidden', !best); if (best) { siteBtn.textContent = txt; siteBtn.setAttribute('aria-label', txt); } }
+    }
+    function siteAct() {
+      if (!siteFor) return;
+      const s = siteFor; if (s.kind === 'shrine') useShrine(s.i); else if (s.kind === 'chest') openChest(s.i); else talk(s.i);
+      siteTickT = 0;
+    }
+    siteBtn.addEventListener('click', siteAct);
+    window.addEventListener('keydown', (ev) => { if ((ev.key === 'e' || ev.key === 'E') && !ev.repeat && siteFor && arena.active && !arena.paused && arena.state === 'play') { ev.preventDefault(); siteAct(); } });
+
     const hooks = {
       onStart() {
         if (pendingAt) { placeAt(pendingAt.x, pendingAt.y); pendingAt = null; } else placeAt(world.spawnPoint.x, world.spawnPoint.y);
@@ -672,6 +830,7 @@
         kills = 0; spawned = 0; despawned = 0; lastDrops.length = 0;
         bossReadyNow.fill(0); bossT = 0; sweepT = 0;
         promptFor = -2; leaving = false;
+        rageEnd = 0; wardEnd = 0; arena.buffDmg = 1; arena.buffTaken = 1; campSt.clear(); siteKeyShown = '';
         if (save.returnTo) { save.returnTo = null; writeSave(save); } // back from a dungeon: the trip is over
         // events: the clock continues from the save (or from where this visit was, on a restart); creatures of a running event rest
         if (evStarted) settle('restart'); // a restart ends the leg too
@@ -690,6 +849,7 @@
           sweepT -= dt; if (sweepT <= 0) { sweepT = 1; sweepLost(); }
         }
         portalTick();
+        if (SITES) siteTick(dt);
         lastEvClock = eventClock();
         evT -= dt; if (evT <= 0) { evT = 0.25; evTick(); }
         evHint(dt);
@@ -720,6 +880,7 @@
           g.globalAlpha = reduced ? 0.5 : 0.35 + 0.25 * Math.sin(tt * 3); g.strokeStyle = '#ff3b3b'; g.lineWidth = 3; g.beginPath(); g.arc(bx, by, 22, 0, Math.PI * 2); g.stroke(); g.globalAlpha = 1;
           g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(BOSS_NAME[i], bx + 1, by - 29); g.fillStyle = '#ff8a8a'; g.fillText(BOSS_NAME[i], bx, by - 30);
         }
+        if (SITES) drawSites(g, vx0, vy0, vx1, vy1, tt, reduced);
         evState.forEach((st) => { // event sites: a beacon (upcoming: gold, active: orange) above the ring of stones
           if (st.phase !== 'upcoming' && st.phase !== 'active') return;
           const c = siteXY(st); if (c.x < vx0 - 80 || c.x > vx1 + 80 || c.y < vy0 - 80 || c.y > vy1 + 80) return;
@@ -775,6 +936,8 @@
       setEventCredit: (on) => { evCredit = !!on; }, lastEventReward: () => lastEvReward,
       onEventFame: ST ? (n) => { try { ST.addFameTo(localStorage, n); } catch (e) { /* storage blocked */ } } : null,
       // Lantern stash payout (slice B)
+      sites: () => (SITES ? { shrines: SITES.shrines.map((q, i) => ({ i, id: q.id, x: q.x, y: q.y, kind: q.kind, zone: q.zone, ready: shrineReady(q), left: shrineLeft(q) })), camps: SITES.camps.map((q, i) => ({ i, id: q.id, x: q.x, y: q.y, chest: q.chest, patrol: q.patrol.length, opened: chestOpen.has(q.id), alive: (campSt.get(q.id) || { ents: [] }).ents.filter((e) => e.active && e.campId === q.id).length })), npcs: SITES.npcs.map((q, i) => ({ i, id: q.id, x: q.x, y: q.y, npc: q.npc })) } : null),
+      useShrine, openChest, talkNpc: talk, sitePrompt: () => (siteFor ? { kind: siteFor.kind, i: siteFor.i, text: siteBtn.textContent, hidden: siteBtn.classList.contains('hidden') } : null), siteNote: () => ({ text: siteNote.textContent, hidden: siteNote.classList.contains('hidden') }), siteTick,
       settle, stashNote, lastSettle: () => lastSettle, finds: () => (ST ? ST.readFinds(localStorage) : null),
     };
     return { api, hooks };

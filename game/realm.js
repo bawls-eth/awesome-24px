@@ -506,6 +506,7 @@ class RealmArena {
     });
     const hp = this.heroProfile; // additive class profile (setHeroProfile), applied after gear and level; never in duels (returned above)
     if (hp) { st.maxHp = Math.max(1, Math.round(st.maxHp * hp.hp)); st.dmg *= hp.dmg; st.rate *= hp.rate; st.speed *= hp.speed; st.iframes *= hp.iframes; }
+    if (this.buffDmg > 1 && this.buffDmg <= 1.5) st.dmg *= this.buffDmg; // additive timed buff (world shrine of Fury), set by realm-world.js
     st.guard = this._calcGuard();
     this.stats = st;
     return st;
@@ -1195,7 +1196,7 @@ class RealmArena {
     e.dg = null; e._at = undefined; e.t = 0; e.flash = 0; e.angle = this.rng() * Math.PI * 2; e.dir = this.rng() < 0.5 ? 1 : -1;
     e.cd = 0.8 + this.rng() * 0.8; // first shot is never instant
     if (this.world) { e.ax = x + (this.rng() - 0.5) * 220; e.ay = y + (this.rng() - 0.5) * 220; } else { e.ax = 80 + this.rng() * (this.W - 160); e.ay = 80 + this.rng() * (this.H - 160); } // drift target for Whirlers (near home in a world)
-    e.spdMul = 1; e.dmgMul = 1; e.xpMul = 1; e.shardMul = 1; e.art = null; e.bossArt = null; e.zid = -1; e.evid = null; e.bossName = null; e.bossTier = 0; // world-mode extras (multipliers 1 = unchanged)
+    e.spdMul = 1; e.dmgMul = 1; e.xpMul = 1; e.shardMul = 1; e.art = null; e.bossArt = null; e.zid = -1; e.evid = null; e.campId = null; e.bossName = null; e.bossTier = 0; // world-mode extras (multipliers 1 = unchanged)
     if (this.world && type === 'boss') { e.ax = x; e.ay = y; }
     return e;
   }
@@ -1720,6 +1721,7 @@ class RealmArena {
     if (this.shield.hits > 0) { // Shield soaks the hit
       this.shield.hits -= 1; p.iframes = 0.25; this._burst(p.x, p.y, '#8fe9ff', 6, 140); this._floatText(p.x, p.y - 22, 'blocked', '#8fe9ff'); return;
     }
+    if (this.buffTaken > 0 && this.buffTaken < 1) dmg = Math.max(1, Math.round(dmg * this.buffTaken)); // additive timed buff (world shrine of Warding)
     p.hp = Math.max(0, p.hp - dmg);
     this._heroHurtAt = performance.now() / 1000;
     this._snd('hurt');
