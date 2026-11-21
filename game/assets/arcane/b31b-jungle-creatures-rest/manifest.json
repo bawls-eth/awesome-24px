@@ -1,0 +1,652 @@
+{
+  "batch": "b31b",
+  "label": "jungle-creatures-rest",
+  "assets": [
+    {
+      "id": "vinecoil_idle_down",
+      "path": "enemies/vinecoil/vinecoil_idle_down.png",
+      "category": "enemy",
+      "enemy": "vinecoil",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "vinecoil_move_down",
+      "path": "enemies/vinecoil/vinecoil_move_down.png",
+      "category": "enemy",
+      "enemy": "vinecoil",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "vinecoil_attack_down",
+      "path": "enemies/vinecoil/vinecoil_attack_down.png",
+      "category": "enemy",
+      "enemy": "vinecoil",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "vinecoil_death_down",
+      "path": "enemies/vinecoil/vinecoil_death_down.png",
+      "category": "enemy",
+      "enemy": "vinecoil",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "vinecoil_idle_up",
+      "path": "enemies/vinecoil/vinecoil_idle_up.png",
+      "category": "enemy",
+      "enemy": "vinecoil",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "vinecoil_move_up",
+      "path": "enemies/vinecoil/vinecoil_move_up.png",
+      "category": "enemy",
+      "enemy": "vinecoil",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "vinecoil_attack_up",
+      "path": "enemies/vinecoil/vinecoil_attack_up.png",
+      "category": "enemy",
+      "enemy": "vinecoil",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "vinecoil_death_up",
+      "path": "enemies/vinecoil/vinecoil_death_up.png",
+      "category": "enemy",
+      "enemy": "vinecoil",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "vinecoil_idle_right",
+      "path": "enemies/vinecoil/vinecoil_idle_right.png",
+      "category": "enemy",
+      "enemy": "vinecoil",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "vinecoil_move_right",
+      "path": "enemies/vinecoil/vinecoil_move_right.png",
+      "category": "enemy",
+      "enemy": "vinecoil",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "vinecoil_attack_right",
+      "path": "enemies/vinecoil/vinecoil_attack_right.png",
+      "category": "enemy",
+      "enemy": "vinecoil",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "vinecoil_death_right",
+      "path": "enemies/vinecoil/vinecoil_death_right.png",
+      "category": "enemy",
+      "enemy": "vinecoil",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "canopy_glider_idle_down",
+      "path": "enemies/canopy_glider/canopy_glider_idle_down.png",
+      "category": "enemy",
+      "enemy": "canopy_glider",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "canopy_glider_move_down",
+      "path": "enemies/canopy_glider/canopy_glider_move_down.png",
+      "category": "enemy",
+      "enemy": "canopy_glider",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "canopy_glider_attack_down",
+      "path": "enemies/canopy_glider/canopy_glider_attack_down.png",
+      "category": "enemy",
+      "enemy": "canopy_glider",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "canopy_glider_death_down",
+      "path": "enemies/canopy_glider/canopy_glider_death_down.png",
+      "category": "enemy",
+      "enemy": "canopy_glider",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "canopy_glider_idle_up",
+      "path": "enemies/canopy_glider/canopy_glider_idle_up.png",
+      "category": "enemy",
+      "enemy": "canopy_glider",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "canopy_glider_move_up",
+      "path": "enemies/canopy_glider/canopy_glider_move_up.png",
+      "category": "enemy",
+      "enemy": "canopy_glider",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "canopy_glider_attack_up",
+      "path": "enemies/canopy_glider/canopy_glider_attack_up.png",
+      "category": "enemy",
+      "enemy": "canopy_glider",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "canopy_glider_death_up",
+      "path": "enemies/canopy_glider/canopy_glider_death_up.png",
+      "category": "enemy",
+      "enemy": "canopy_glider",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "canopy_glider_idle_right",
+      "path": "enemies/canopy_glider/canopy_glider_idle_right.png",
+      "category": "enemy",
+      "enemy": "canopy_glider",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "canopy_glider_move_right",
+      "path": "enemies/canopy_glider/canopy_glider_move_right.png",
+      "category": "enemy",
+      "enemy": "canopy_glider",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "canopy_glider_attack_right",
+      "path": "enemies/canopy_glider/canopy_glider_attack_right.png",
+      "category": "enemy",
+      "enemy": "canopy_glider",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "canopy_glider_death_right",
+      "path": "enemies/canopy_glider/canopy_glider_death_right.png",
+      "category": "enemy",
+      "enemy": "canopy_glider",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "moth_lantern_idle_down",
+      "path": "enemies/moth_lantern/moth_lantern_idle_down.png",
+      "category": "enemy",
+      "enemy": "moth_lantern",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "moth_lantern_move_down",
+      "path": "enemies/moth_lantern/moth_lantern_move_down.png",
+      "category": "enemy",
+      "enemy": "moth_lantern",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "moth_lantern_attack_down",
+      "path": "enemies/moth_lantern/moth_lantern_attack_down.png",
+      "category": "enemy",
+      "enemy": "moth_lantern",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "moth_lantern_death_down",
+      "path": "enemies/moth_lantern/moth_lantern_death_down.png",
+      "category": "enemy",
+      "enemy": "moth_lantern",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "moth_lantern_idle_up",
+      "path": "enemies/moth_lantern/moth_lantern_idle_up.png",
+      "category": "enemy",
+      "enemy": "moth_lantern",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "moth_lantern_move_up",
+      "path": "enemies/moth_lantern/moth_lantern_move_up.png",
+      "category": "enemy",
+      "enemy": "moth_lantern",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "moth_lantern_attack_up",
+      "path": "enemies/moth_lantern/moth_lantern_attack_up.png",
+      "category": "enemy",
+      "enemy": "moth_lantern",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "moth_lantern_death_up",
+      "path": "enemies/moth_lantern/moth_lantern_death_up.png",
+      "category": "enemy",
+      "enemy": "moth_lantern",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "moth_lantern_idle_right",
+      "path": "enemies/moth_lantern/moth_lantern_idle_right.png",
+      "category": "enemy",
+      "enemy": "moth_lantern",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "moth_lantern_move_right",
+      "path": "enemies/moth_lantern/moth_lantern_move_right.png",
+      "category": "enemy",
+      "enemy": "moth_lantern",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "moth_lantern_attack_right",
+      "path": "enemies/moth_lantern/moth_lantern_attack_right.png",
+      "category": "enemy",
+      "enemy": "moth_lantern",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "moth_lantern_death_right",
+      "path": "enemies/moth_lantern/moth_lantern_death_right.png",
+      "category": "enemy",
+      "enemy": "moth_lantern",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "moth_lantern_sleep_down",
+      "path": "enemies/moth_lantern/moth_lantern_sleep_down.png",
+      "category": "enemy",
+      "enemy": "moth_lantern",
+      "action": "sleep",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "moth_lantern_eat_down",
+      "path": "enemies/moth_lantern/moth_lantern_eat_down.png",
+      "category": "enemy",
+      "enemy": "moth_lantern",
+      "action": "eat",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    }
+  ]
+}

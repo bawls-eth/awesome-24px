@@ -1,0 +1,21 @@
+{
+  "batch": "b31b",
+  "label": "jungle-creatures-rest",
+  "generated_utc": "2026-11-21T22:44:20.807134Z",
+  "files": 38,
+  "duplicate_ids": 0,
+  "blocking": {},
+  "warnings": {},
+  "standing_heights": {
+    "vinecoil/down": 168,
+    "vinecoil/up": 172,
+    "vinecoil/right": 160,
+    "canopy_glider/down": 176,
+    "canopy_glider/up": 176,
+    "canopy_glider/right": 176,
+    "moth_lantern/down": 136,
+    "moth_lantern/up": 136,
+    "moth_lantern/right": 136
+  },
+  "status": "provisional"
+}
