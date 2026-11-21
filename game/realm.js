@@ -38,6 +38,12 @@ const RM_SHOP_MULT = 8; // shop price = the item's sell value x this
 const RM_COMBINE_COUNT = 3; // identical items (same gear, same rarity) fuse into one of the next rarity
 const RM_SHOP_UNLOCK = [0, 2, 5]; // best wave needed before the shop stocks Common / Uncommon / Rare
 const RM_ED_GHOSTS = 24; const RM_ED_REDUCED = 0.25; // enemy death-ghost pool size; reduced-motion fade seconds
+// Shot readability: the player's bolt is a white core with a light outline (solid radius 5 + a soft glow); enemy bullets have a dark
+// rim and their own hue per pattern and are never more than 1.3x the player's bolt. At most RM_EB_DRAW enemy bullets are drawn.
+const RM_BOLT_R = { player: 5, enemy: 6 };
+const RM_EB_HUES = [['#ff4f6d', '#ffd0d8'], ['#b46bff', '#ecdcff'], ['#ffa62b', '#fff0c8']]; // aimed (red), spiral (violet), ring (orange)
+const RM_EB_DRAW = 320;
+const RM_FIRE_RANGE = 0.95; // world mode: an enemy fires only on screen and within this x the view's half-diagonal of the player
 const RM_POOL = { pBullets: 160, eBullets: 420, enemies: 24, particles: 180, texts: 28, bags: 14, drifters: 12, hazards: 5 };
 
 // ---- progression (B2) ----
@@ -755,16 +761,20 @@ class RealmArena {
       g.fillStyle = '#fff'; g.fillRect(31, 40, 14, 10); g.fillRect(55, 40, 14, 10); g.fillStyle = '#2a0a1a'; g.fillRect(37, 43, 6, 6); g.fillRect(57, 43, 6, 6);
       g.fillStyle = '#1a0f2a'; g.fillRect(28, 36, 20, 4); g.fillRect(52, 36, 20, 4);
     });
-    this.sprites.pBullet = mk(16, 16, (g) => {
-      const gr = g.createRadialGradient(8, 8, 1, 8, 8, 8);
-      gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.45, '#8fe9ff'); gr.addColorStop(1, 'rgba(60,160,255,0)');
-      g.fillStyle = gr; g.fillRect(0, 0, 16, 16);
+    this.sprites.pBullet = mk(20, 20, (g) => { // your bolt: soft cyan glow, a cyan body with a 1.5 px white outline and a white core
+      const gr = g.createRadialGradient(10, 10, 3, 10, 10, 10);
+      gr.addColorStop(0, 'rgba(143,233,255,0.55)'); gr.addColorStop(1, 'rgba(60,160,255,0)');
+      g.fillStyle = gr; g.fillRect(0, 0, 20, 20);
+      const R = RM_BOLT_R.player;
+      g.fillStyle = '#5fd8ff'; g.beginPath(); g.arc(10, 10, R - 0.75, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = '#f4feff'; g.lineWidth = 1.5; g.beginPath(); g.arc(10, 10, R - 0.75, 0, Math.PI * 2); g.stroke();
+      g.fillStyle = '#ffffff'; g.beginPath(); g.arc(10, 10, 2.4, 0, Math.PI * 2); g.fill();
     });
-    const ebCols = [['#ffffff', '#ff6f91'], ['#ffffff', '#c58bff'], ['#ffffff', '#ffc65c']];
-    this.sprites.eBullet = ebCols.map(([a, b]) => mk(16, 16, (g) => {
-      const gr = g.createRadialGradient(8, 8, 1, 8, 8, 8);
-      gr.addColorStop(0, a); gr.addColorStop(0.4, b); gr.addColorStop(1, 'rgba(0,0,0,0)');
-      g.fillStyle = gr; g.fillRect(0, 0, 16, 16);
+    this.sprites.eBullet = RM_EB_HUES.map(([hue, tint]) => mk(16, 16, (g) => { // enemy bullet: dark rim, saturated body, a small light centre
+      const R = RM_BOLT_R.enemy;
+      g.fillStyle = '#1a0812'; g.beginPath(); g.arc(8, 8, R, 0, Math.PI * 2); g.fill();
+      g.fillStyle = hue; g.beginPath(); g.arc(8, 8, R - 1.6, 0, Math.PI * 2); g.fill();
+      g.fillStyle = tint; g.beginPath(); g.arc(8, 8, 1.6, 0, Math.PI * 2); g.fill();
     }));
     // Enemies: chunky pixel creatures with a bold dark outline, ~36px.
     const body = (g, color, shape) => {
@@ -1047,14 +1057,14 @@ class RealmArena {
     if (b.lb === 2) { g.strokeStyle = 'rgba(255,90,90,0.8)'; g.lineWidth = 2; g.beginPath(); g.arc(b.tx, b.ty, w.lob.radius, 0, Math.PI * 2); g.stroke(); }
     const rot = (Math.round(Math.atan2(b.vy, b.vx) / (Math.PI / 8)) + 16) & 15;
     const cv = this._wpnSprite(w.shape, w.size, w.shape === 'dot' || w.shape === 'orb' ? 0 : rot);
-    if (cv) g.drawImage(cv, b.x - cv.width / 2, b.y - cv.height / 2); else g.drawImage(this.sprites.pBullet, b.x - 8, b.y - 8);
+    if (cv) g.drawImage(cv, b.x - cv.width / 2, b.y - cv.height / 2); else g.drawImage(this.sprites.pBullet, b.x - 10, b.y - 10);
   }
   _drawWpnOrbs(g) {
     if (!this._wpnOn() || this.weapon.orbit.n <= 0 || this.state === 'dead') return;
     const w = this.weapon, n = w.orbit.n, cv = this._wpnSprite(w.shape, w.size, 0);
     for (let i = 0; i < n; i++) {
       const o = MMProjectile.orbitPos(i, n, this._wOrbA, w, this.player);
-      if (cv) g.drawImage(cv, o.x - cv.width / 2, o.y - cv.height / 2); else g.drawImage(this.sprites.pBullet, o.x - 8, o.y - 8);
+      if (cv) g.drawImage(cv, o.x - cv.width / 2, o.y - cv.height / 2); else g.drawImage(this.sprites.pBullet, o.x - 10, o.y - 10);
     }
   }
 
@@ -1980,6 +1990,16 @@ class RealmArena {
     this._syncBoss();
   }
 
+  // World mode only: may this enemy shoot? It must be on screen (a 24 px margin) and within RM_FIRE_RANGE x the view's half-diagonal of
+  // the player, so nothing snipes from outside the camera. The classic arena and dungeons (the whole room is the view) are unchanged.
+  _canFire(e, p) {
+    if (!this.world || this.mode !== 'world' || this.dungeon) return true;
+    const c = this.camera; const m = 24;
+    if (e.x < c.x - m || e.x > c.x + this.W + m || e.y < c.y - m || e.y > c.y + this.H + m) return false;
+    const fr = Math.hypot(this.W, this.H) * 0.5 * RM_FIRE_RANGE;
+    return (e.x - p.x) * (e.x - p.x) + (e.y - p.y) * (e.y - p.y) <= fr * fr;
+  }
+
   _updateEnemies(dt0) {
     const wd = this.world; const wake = wd ? (wd.wake || Math.max(this.W, this.H) * 0.75) : 0; const wake2 = wake * wake;
     for (let i = 0; i < this.enemies.length; i++) {
@@ -1993,9 +2013,11 @@ class RealmArena {
       this._curDm = e.dmgMul || 1; // bullets fired below carry this enemy's damage multiplier (1 = unchanged)
       let sm = null;
       if (e.status) { if (e._stNext <= this._stT * 1000) this._stRefresh(e); sm = e._stm; if (sm) { this._curDm *= sm.enemyDmg; if (sm.dot > 0) this._stEnemyDot(e, sm, dt0); if (!e.active) continue; } }
+      const hold = wd && !this._canFire(e, p); // world: off-screen shooters hold their fire (cooldowns wait at 0.2 s)
+      if (hold) { e.cd = Math.max(e.cd, 0.2); if (e.type === 'boss') e.cd2 = Math.max(e.cd2, 0.2); }
       if (e.type === 'boss') { if (sm && sm.speed < 1) e.t -= dt * (1 - sm.speed); this._updateBoss(e, dt * (e.fireMul || 1) / (sm ? sm.enemyFire : 1)); this._curDm = 1; continue; } // slowed: the sway runs slower
       if (sm && sm.stun) continue; // stunned: no moving, no firing
-      e.cd -= dt * (e.fireMul || 1) / (sm ? sm.enemyFire : 1); // fireMul: classic wave scale; dazed makes fire cooldowns x1.5
+      if (!hold) e.cd -= dt * (e.fireMul || 1) / (sm ? sm.enemyFire : 1); // fireMul: classic wave scale; dazed makes fire cooldowns x1.5
       const ox = e.x; const oy = e.y; const sp = (e.spdMul || 1) * (sm ? sm.speed : 1);
       const dx = p.x - e.x; const dy = p.y - e.y; const dist = Math.hypot(dx, dy) || 1;
       if (e.type === 'spiral') {
@@ -2062,13 +2084,15 @@ class RealmArena {
         if (d.active && (b.x - d.x) * (b.x - d.x) + (b.y - d.y) * (b.y - d.y) < 15 * 15) { b.active = false; this._hitDrifter(d, b.dmg || this.stats.dmg); break; }
       }
     }
-    // Enemy bullets: move, hit the player.
+    // Enemy bullets: move, hit the player. World mode: a bullet more than one view diagonal from the player can never matter: it is dropped.
     const pr = RM_PLAYER.r + 4;
+    const cull = this.world && this.mode === 'world' && !this.dungeon ? (this.W * this.W + this.H * this.H) : 0;
     for (let i = 0; i < this.eBullets.length; i++) {
       const b = this.eBullets[i];
       if (!b.active) continue;
       b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
       if (b.life <= 0 || b.x < -20 || b.y < -20 || b.x > bw + 20 || b.y > bh + 20) { b.active = false; continue; }
+      if (cull && (b.x - p.x) * (b.x - p.x) + (b.y - p.y) * (b.y - p.y) > cull) { b.active = false; continue; }
       if (this.walls && this.isWallAt(b.x, b.y)) { b.active = false; continue; }
       if (!this.walls && this._shotSolidAt && this._shotSolidAt(b.x, b.y)) { b.active = false; continue; }
       if (this.state !== 'dead' && !this.down && p.iframes <= 0 && (b.x - p.x) * (b.x - p.x) + (b.y - p.y) * (b.y - p.y) < pr * pr) {
@@ -2837,8 +2861,10 @@ class RealmArena {
     if (this._edGhosts) this._drawEnemyGhosts(g);
     if (this._bossGhost) this._drawBossGhost(g);
     for (let i = 0; i < this.bags.length; i++) { const b = this.bags[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { const by = b.y - 13 + Math.sin(b.t * 5) * 2; g.drawImage(this.sprites.worldBag[b.tier] || this.sprites.bag[b.r], b.x - 13, by); if (this._itemArt) { const ic = this._lootIcon(b.id, b.r); if (ic) g.drawImage(ic, b.x - 10, by - 18 + Math.sin(b.t * 5 + 1) * 1.5); } } }
-    for (let i = 0; i < this.eBullets.length; i++) { const b = this.eBullets[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) g.drawImage(this.sprites.eBullet[b.kind], b.x - 8, b.y - 8); }
-    for (let i = 0; i < this.pBullets.length; i++) { const b = this.pBullets[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { if (b.ws) this._drawWpnBolt(g, b); else g.drawImage(this.sprites.pBullet, b.x - 8, b.y - 8); } }
+    let ebn = 0; const ebs = this.sprites.eBullet;
+    for (let i = 0; i < this.eBullets.length && ebn < RM_EB_DRAW; i++) { const b = this.eBullets[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { g.drawImage(ebs[b.kind] || ebs[0], b.x - 8, b.y - 8); ebn++; } }
+    this._ebDrawn = ebn;
+    for (let i = 0; i < this.pBullets.length; i++) { const b = this.pBullets[i]; if (b.active && b.x > vx0 && b.x < vx1 && b.y > vy0 && b.y < vy1) { if (b.ws) this._drawWpnBolt(g, b); else g.drawImage(this.sprites.pBullet, b.x - 10, b.y - 10); } }
     if (this.weapon) this._drawWpnOrbs(g);
 
     // Your partner: a tinted villager with a name tag, a small HP bar, and a revive ring while they are down.

@@ -606,5 +606,9 @@
   "difficulty-waves.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "shot-readability.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
