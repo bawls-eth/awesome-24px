@@ -34,12 +34,17 @@
     if (/^\d{1,15}$/.test(s)) return String(Math.min(Number(s), 2147483647)); // numeric seeds are clamped to int32
     return SEED_RE.test(s) ? s : null;
   }
+  function questDate() { // UTC day of the daily quests; ?qdate=YYYY-MM-DD only under ?test=1 (tests pin a day)
+    let d = null;
+    try { const m = /[?&]qdate=(\d{4}-\d{2}-\d{2})(&|$)/.exec(location.search); if (m && /[?&]test=1(&|$)/.test(location.search) && window.MMDaily) d = window.MMDaily.cleanDate(m[1]); } catch (e) { d = null; }
+    return d || new Date().toISOString().slice(0, 10);
+  }
   function cleanSave(raw) {
     let o = raw;
     if (typeof o === 'string') { try { o = JSON.parse(o); } catch (e) { o = null; } }
     if (!o || typeof o !== 'object' || Array.isArray(o)) o = {};
     const out = {};
-    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo|evT|evDone|finds|discovered|shrineAt|chests)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
+    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo|evT|evDone|finds|discovered|shrineAt|chests|quests)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
     out.v = 1;
     out.seed = cleanSeed(o.seed);
     out.version = Number.isInteger(o.version) && o.version > 0 && o.version < 1000 ? o.version : 0;
@@ -59,6 +64,7 @@
     if (ch.length) out.chests = ch;
     const disc = window.MMFog ? MMFog.clean(o.discovered) : '';
     if (disc) out.discovered = disc;
+    if (o.quests !== undefined && window.MMQuests) out.quests = window.MMQuests.clean(o.quests, questDate()); // daily quests (additive): bad shape or another day -> fresh
     const r = o.returnTo && typeof o.returnTo === 'object' ? o.returnTo : null;
     if (o.finds !== undefined) out.finds = window.MMStash ? MMStash.cleanFinds(o.finds) : o.finds; // owned by MMStash (Lantern payout)
     out.returnTo = r && Number.isInteger(r.x) && Number.isInteger(r.y) && r.x >= 0 && r.y >= 0 && r.x < 4096 && r.y < 4096 && cleanSeed(r.seed) ? { x: r.x, y: r.y, seed: cleanSeed(r.seed) } : null;
@@ -84,7 +90,8 @@
     if (save.seed !== seed) { save.pos = null; save.returnTo = null; delete save.discovered; delete save.shrineAt; delete save.chests; } // a new island starts fully fogged (one seed's discovery is kept at a time)
     save.seed = seed;
     const t0 = performance.now();
-    const world = O.generate(seed);
+    let bossesClassic = false; try { bossesClassic = /[?&]bosses=classic(&|$)/.test(location.search); } catch (e) { bossesClassic = false; } // b23: ?bosses=classic restores the original eight boss ids
+    const world = O.generate(seed, bossesClassic ? { bosses: 'classic' } : undefined);
     const genMs = performance.now() - t0;
     save.version = world.version || O.VERSION;
     writeSave(save);
@@ -287,13 +294,13 @@
       wArtLoading = true;
       const join = (a, b) => a.replace(/\/+$/, '') + '/' + String(b).replace(/^\/+/, '');
       const okPath = (p) => typeof p === 'string' && /^[A-Za-z0-9_][A-Za-z0-9_.\/-]*\.png$/.test(p) && p.indexOf('..') < 0;
-      const WANT = /^(portal_[a-z]+|spawn_pad|shrine_(heal|rage|ward)|event_beacon|loot_chest_gold|prop_[a-z0-9_]+)$/;
+      const WANT = /^(portal_[a-z]+|spawn_pad|shrine_(heal|rage|ward)|event_beacon|loot_chest_gold|prop_[a-z0-9_]+|coin_f[1-4]|xp_orb_f[1-4]|heart_pickup|potion_life)$/;
       let got = 0;
       return fetch(join(root, 'INDEX.json')).then((r) => (r.ok ? r.json() : null)).then((idx) => {
         const batches = idx && Array.isArray(idx.batches) ? idx.batches : [];
         return Promise.all(batches.map((b) => {
           const id = b && typeof b.path === 'string' ? b.path.replace(/\/+$/, '').split('/').pop() : '';
-          if (!/^b1[234]-[a-z0-9-]{1,48}$/.test(id)) return null;
+          if (!/^b1[2345]-[a-z0-9-]{1,48}$/.test(id)) return null;
           return fetch(join(join(root, id), 'manifest.json')).then((r) => (r.ok ? r.json() : null)).then((m) => {
             const assets = m && Array.isArray(m.assets) ? m.assets : [];
             return Promise.all(assets.map((a) => {
@@ -510,7 +517,7 @@
     }
     function giveBag(x, y, bag, info) {
       const got = { zone: info.zone, boss: !!info.boss, tier: bag.tier, items: [], shards: bag.shards, potions: bag.potions };
-      bag.items.forEach((it, k) => { const b = arena.dropBag(x + (k - (bag.items.length - 1) / 2) * 18, y + 10, it.r, it.id, bag); if (b) got.items.push({ id: it.id, r: it.r }); });
+      bag.items.forEach((it, k) => { const b = arena.dropBag(x + (k - (bag.items.length - 1) / 2) * 18, y + 10, it.r, it.id, bag); if (b) { const dd = typeof RM_ITEM_BY_ID !== 'undefined' ? RM_ITEM_BY_ID[b.id] : null; got.items.push({ id: b.id, r: it.r, name: dd ? dd.name : b.id, rolled: it.id }); } }); // the recap lists what actually dropped (a styled wpn_ weapon replaces the rolled wand)
       if (bag.shards > 0) { arena.save.shards += bag.shards; arena.run.shards += bag.shards; arena._floatText(x, y - 34, `+${bag.shards} 💎`, '#8fe9ff'); }
       if (bag.potions > 0) arena._sigHeal(12 * bag.potions);
       lastDrops.push(got); if (lastDrops.length > 12) lastDrops.shift();
@@ -530,15 +537,17 @@
       if (e.zid >= 0) {
         const info = zones.markDead(e.zid, arena.clock); live.delete(e.zid); e.zid = -1;
         if (!info) return;
-        kills++; save.stats.kills++;
+        kills++; save.stats.kills++; nxQuestEvent({ type: 'kill', zone: info.zone, n: 1 });
         rollFor({ zone: info.zone, tier: info.tier }, e.x, e.y, 'g' + info.group);
+        spawnPickups(e.x, e.y, 'g' + info.group, kills, info.tier);
         return;
       }
       for (let i = 0; i < bossLive.length; i++) {
         if (bossLive[i] !== e) continue;
         const site = world.bossSites[i]; bossLive[i] = null; bossReadyNow[i] = 0; miniKey = '';
-        zones.bossDefeated(site, arena.clock); kills++; save.stats.bossKills++;
+        zones.bossDefeated(site, arena.clock); kills++; save.stats.bossKills++; nxQuestEvent({ type: 'kill', zone: site.zone, boss: true, n: 1 });
         rollFor({ zone: site.zone, tier: site.zone, boss: true }, e.x, e.y + 30, 'boss' + i);
+        spawnPickups(e.x, e.y + 20, 'boss' + i, kills, 5);
         writeSave(save);
       }
     }
@@ -549,7 +558,7 @@
       if (!e) return null;
       e.maxHp = Math.max(1, Math.ceil(RM_BOSS_HP * rec.hpMul / Z.TABLES.BOSS.hp)); e.hp = e.maxHp;
       e.phase = 1; e.invuln = 1.2; e.cd = 1.2; e.cd2 = 2.4; e.angle = 0;
-      e.dmgMul = rec.dmgMul; e.bossName = BOSS_NAME[i]; e.bossTier = site.zone + 1; e.art = site.boss;
+      e.dmgMul = rec.dmgMul; e.bossName = BOSS_NAME[i]; e.bossTier = site.zone + 1; e.art = site.boss; e.bossArt = site.boss;
       arena.bossT0 = arena.clock; bossLive[i] = e; arena._syncBoss();
       arena._showBanner(`${BOSS_NAME[i]} awakens!`, 1.8);
       miniKey = '';
@@ -612,7 +621,7 @@
         if (!e) return false;
         e.maxHp = Math.max(1, Math.ceil(RM_BOSS_HP * rec.hpMul / ZT.BOSS.hp)); e.hp = e.maxHp;
         e.phase = 1; e.invuln = 1.2; e.cd = 1.2; e.cd2 = 2.4; e.angle = 0;
-        e.dmgMul = rec.dmgMul; e.bossName = pretty(p.boss); e.bossTier = p.region + 1; e.art = p.boss; e.evid = st.id;
+        e.dmgMul = rec.dmgMul; e.bossName = pretty(p.boss); e.bossTier = p.region + 1; e.art = p.boss; e.bossArt = p.boss; e.evid = st.id;
         st.ents.push(e); st.total = e.maxHp; arena.bossT0 = arena.clock; arena._syncBoss();
         hintT = 3.5; spawnHint = hintEl.textContent = `⚠ ${e.bossName}: a red ring flashes 1 s before each burst. Move when you see it.`;
       } else {
@@ -750,7 +759,7 @@
       const q = portals[i]; const u = portalUrls(i);
       if (!u.ret) return null;
       leaving = true;
-      save.pos = { x: q.tx, y: q.ty }; save.returnTo = { x: q.tx, y: q.ty, seed }; save.stats.portals++;
+      save.pos = { x: q.tx, y: q.ty }; save.returnTo = { x: q.tx, y: q.ty, seed }; save.stats.portals++; nxQuestEvent({ type: 'portal' });
       writeSave(save); arena.onSave(arena.save); settle('portal');
       api.lastPortalUrl = u.url;
       arena.stop(); portalBtn.classList.add('hidden');
@@ -928,7 +937,7 @@
     function applyBuff(b) {
       const p = arena.player; const now = arena.clock; const sec = b.durationMs / 1000;
       if (b.kind === 'heal') {
-        const add = Math.ceil(arena.stats.maxHp * b.value); p.hp = Math.min(arena.stats.maxHp, p.hp + add); arena._floatText(p.x, p.y - 30, `+${add}`, '#5be38a');
+        const add = Math.ceil(arena.stats.maxHp * b.value); p.hp = Math.min(arena.stats.maxHp, p.hp + add); arena._floatText(p.x, p.y - 30, `+${add}`, '#5be38a'); if (arena.fxHeal) arena.fxHeal();
         arena.applyStatus('player', 'healing', { sec: 5, src: 'shrine' });
       } else if (b.kind === 'rage') {
         rageEnd = now + sec; const on = arena.applyStatus('player', 'damaging', { sec, src: 'shrine' });
@@ -1027,12 +1036,271 @@
     if (typeof MutationObserver === 'function') new MutationObserver((recs) => { for (let i = 0; i < recs.length; i++) if (PANEL_IDS[recs[i].target.id]) { syncPanels(); return; } }).observe(ov, { attributes: true, subtree: true, attributeFilter: ['class', 'style'] });
     window.addEventListener('keydown', (ev) => { if ((ev.key === 'e' || ev.key === 'E') && !ev.repeat && siteFor && arena.active && !arena.paused && arena.state === 'play') { ev.preventDefault(); siteAct(); } });
 
+    // ---------- live pickups (MMPickups): coins, XP orbs, hearts and life potions rolled per kill, seeded by (world seed, group, kill index) ----------
+    // World sprites on the overlay layer (drawImage from the loaded b15 art, or a tiny cached code sprite). Magnet 64 px, cap 60 (oldest culled),
+    // lifetime per tier, no per-frame Graphics. Focus orbs and stat-buff potions need arena resources that do not exist yet: they are never spawned.
+    const PK = window.MMPickups || null;
+    const PICK_ON = !!PK && !/[?&]pickups=0(&|$)/.test(typeof location !== 'undefined' ? location.search : '');
+    const PICK_CAP = 60;
+    const picks = []; let pickSave = false; let pickTotal = 0; const pickGot = { coin: 0, xp: 0, heart: 0, potion: 0 };
+    const pickSpr = {};
+    function pickSprite(type, art) { // cached code sprite (24x24) used until the art loads or when art is off
+      const k = type === 'potion' ? 'potion' : type; if (pickSpr[k]) return pickSpr[k];
+      const c = mk(24, 24); const g = c.getContext('2d');
+      if (type === 'coin') { g.fillStyle = '#7a5a12'; g.beginPath(); g.arc(12, 12, 8, 0, 7); g.fill(); g.fillStyle = '#ffd45a'; g.beginPath(); g.arc(12, 12, 6.5, 0, 7); g.fill(); g.fillStyle = '#fff0a8'; g.fillRect(9, 8, 2, 6); }
+      else if (type === 'xp') { g.fillStyle = '#4a2a8a'; g.beginPath(); g.arc(12, 12, 8, 0, 7); g.fill(); g.fillStyle = '#b48cff'; g.beginPath(); g.arc(12, 12, 6, 0, 7); g.fill(); g.fillStyle = '#efe0ff'; g.fillRect(9, 8, 3, 3); }
+      else if (type === 'heart') { g.fillStyle = '#7a1022'; g.beginPath(); g.arc(8, 9, 5.5, 0, 7); g.arc(16, 9, 5.5, 0, 7); g.fill(); g.beginPath(); g.moveTo(3, 11); g.lineTo(21, 11); g.lineTo(12, 21); g.fill(); g.fillStyle = '#ff5f6b'; g.beginPath(); g.arc(8, 9, 4, 0, 7); g.arc(16, 9, 4, 0, 7); g.fill(); g.beginPath(); g.moveTo(5, 11); g.lineTo(19, 11); g.lineTo(12, 19); g.fill(); }
+      else { g.fillStyle = '#143a24'; g.fillRect(9, 4, 6, 5); g.fillRect(6, 9, 12, 12); g.fillStyle = '#5be38a'; g.fillRect(8, 11, 8, 8); g.fillStyle = '#d8ffe6'; g.fillRect(9, 12, 2, 4); }
+      pickSpr[k] = c; return c;
+    }
+    const pickOk = (d) => d.type === 'coin' || (d.type === 'xp' && typeof arena._gainXp === 'function') || d.type === 'heart' || (d.type === 'potion' && d.art === 'potion_life');
+    function spawnPickups(x, y, group, killIdx, tier) {
+      if (!PICK_ON) return 0;
+      const list = PK.roll(seed, group, killIdx, tier).filter(pickOk);
+      const r = MMRng.create('pickpos:' + seed + ':' + group + ':' + killIdx);
+      let n = 0;
+      for (let i = 0; i < list.length; i++) {
+        const d = list[i]; const a = r.next() * Math.PI * 2; const rad = 10 + r.next() * 22;
+        let px = x + Math.cos(a) * rad; let py = y + Math.sin(a) * rad;
+        if (solidAt(px, py)) { px = x; py = y; }
+        if (picks.length >= PICK_CAP) picks.shift();
+        picks.push({ type: d.type, art: d.art, frames: d.frames || null, value: d.value, tier: d.tier, x: px, y: py, bornMs: arena.clock * 1000, lifeMs: d.lifeMs, ph: r.next() * 6.28 });
+        n++; pickTotal++;
+      }
+      return n;
+    }
+    function collectPick(q) {
+      const p = arena.player; pickGot[q.type] = (pickGot[q.type] || 0) + 1;
+      if (q.type === 'coin') { arena.save.shards += q.value; arena.run.shards += q.value; arena._floatText(p.x, p.y - 26, `+${q.value} 💎`, '#8fe9ff'); pickSave = true; }
+      else if (q.type === 'xp') { arena._gainXp(Math.max(1, Math.round(q.value * (arena.stats ? arena.stats.xp : 1)))); pickSave = true; }
+      else {
+        const o = PK.use(q, { hp: p.hp, maxHp: arena.stats.maxHp, focus: 0, maxFocus: 0 });
+        if (o.hp > p.hp) { arena._floatText(p.x, p.y - 26, `+${Math.round(o.hp - p.hp)}`, '#5be38a'); p.hp = o.hp; arena._syncHud(); }
+      }
+    }
+    function pickTick(dt) {
+      if (!picks.length) return;
+      const p = arena.player; const now = arena.clock * 1000; const d = Math.min(dt, 0.1);
+      for (let i = picks.length - 1; i >= 0; i--) {
+        const q = picks[i];
+        if (PK.expired(q, now)) { picks.splice(i, 1); continue; }
+        if (arena.state !== 'play') continue;
+        const m = PK.magnetStep(q, p, d); q.x = m.x; q.y = m.y;
+        if (m.collected) { picks.splice(i, 1); collectPick(q); }
+      }
+      if (pickSave) { pickSave = false; arena.onSave(arena.save); arena._syncHud(); }
+    }
+    function drawPicks(g, cam) {
+      if (!picks.length) return;
+      const tt = arena.clock; const reduced = arena._reduced; const now = tt * 1000;
+      const x0 = cam.x - 24; const y0 = cam.y - 24; const x1 = cam.x + arena.W + 24; const y1 = cam.y + arena.H + 24;
+      for (let i = 0; i < picks.length; i++) {
+        const q = picks[i]; if (q.x < x0 || q.x > x1 || q.y < y0 || q.y > y1) continue;
+        const left = q.lifeMs - (now - q.bornMs);
+        if (left < 4000 && !reduced && Math.floor(tt * 8) % 2) continue; // blinks out in the last 4 s
+        const bob = reduced ? 0 : Math.round(Math.sin(tt * 4 + q.ph) * 2);
+        let art = null;
+        if (q.frames) art = wArt[q.frames[reduced ? 0 : Math.floor(tt * 10 + q.ph) % q.frames.length]]; else art = wArt[q.art];
+        if (art) drawArt(g, art, 0, q.x, q.y + 8 + bob);
+        else g.drawImage(pickSprite(q.type, q.art), Math.round(q.x - 12), Math.round(q.y - 12 + bob));
+      }
+    }
+
+    // ---------- the Nexus (MMNexus hub plaza), reached through a `portal_nexus` next to the world spawn ----------
+    // Design: an OVERLAY SCREEN inside the same page, not a second arena world. Swapping arena.setWorld would rebuild the pools, the zone spawner, the event
+    // clock and the camera (all owned by this controller), so instead the arena is frozen (arena.paused) behind a full-screen plaza drawn once into a canvas
+    // from the MMNexus layout (fountain, torches, banners, 6 portals, 7 NPCs). Everything is a real button; Back (or Escape) unfreezes the arena with the
+    // player exactly where they stood, so Back returns to the same tile. The vault portal opens the Lantern stash page; biome portals enter a dungeon that
+    // returns to this tile; the Realm portal is Back. Visuals come from the registered art with code fallbacks.
+    const NX = window.MMNexus || null;
+    const NX_ON = !!NX && !!window.MMQuests && !/[?&]nexus=0(&|$)/.test(typeof location !== 'undefined' ? location.search : '');
+    const NX_NAME = { realm: 'The Realm', warren: 'Warren dungeon', bramble: 'Bramble dungeon', vault: 'Lantern stash (vault)', meadow: 'Meadow dungeon', crypt: 'Crypt dungeon' };
+    const nxSite = NX_ON ? (() => { const f = nearestFree(world.spawnPoint.x + 3, world.spawnPoint.y - 1, 8) || nearestFree(world.spawnPoint.x - 3, world.spawnPoint.y, 8); return f ? { tx: f.x, ty: f.y, x: (f.x + 0.5) * TILE, y: (f.y + 0.5) * TILE } : null; })() : null;
+    const nxBtn = document.createElement('button'); nxBtn.id = 'rw-nexus-go'; nxBtn.type = 'button'; nxBtn.className = 'hidden'; nxBtn.textContent = 'Visit the Nexus (Enter)'; nxBtn.setAttribute('aria-label', 'Visit the Nexus hub (Enter)'); ov.appendChild(nxBtn);
+    let nxNear = false; let nxOpen = false; let nxEnterTile = null; let nxTalkN = 0; const nxPortrait = {}; let nxDom = null;
+    const todayUtc = questDate;
+    const nxCss = document.createElement('style');
+    nxCss.textContent = '#rw-nexus-go{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(290px + env(safe-area-inset-bottom,0px));z-index:3;min-height:48px;min-width:44px;padding:0 18px;border-radius:24px;border:2px solid #a98bff;background:rgba(30,20,60,.92);color:#fff;font:700 15px system-ui,sans-serif;white-space:nowrap}#rw-nexus-go.hidden{display:none}'
+      + '#rw-nexus{position:fixed;inset:0;z-index:80;background:#120e1f;color:#f3eefc;display:flex;flex-direction:column;overflow-x:hidden;overflow-y:auto;font:14px/1.4 system-ui,sans-serif;padding:env(safe-area-inset-top,0px) 16px env(safe-area-inset-bottom,0px);box-sizing:border-box}#rw-nexus.hidden{display:none}'
+      + '#rw-nexus .nx-head{display:flex;align-items:center;gap:12px;padding:8px 0;flex-wrap:wrap}#rw-nexus h2{margin:0;font-size:18px;flex:1;min-width:120px}'
+      + '#rw-nexus button{min-height:44px;min-width:44px;padding:0 14px;border-radius:10px;border:2px solid #7a63c9;background:#2a2150;color:#fff;font:700 14px system-ui,sans-serif;cursor:pointer}#rw-nexus button:focus-visible{outline:3px solid #ffe27a}'
+      + '#rw-nexus .nx-stage{position:relative;box-sizing:border-box;width:100%;max-width:760px;aspect-ratio:4/3;margin:0 auto;border:2px solid #3a2f66;border-radius:10px;overflow:hidden;background:#1b1530}#rw-nexus canvas{display:block;width:100%;height:100%;image-rendering:pixelated}'
+      + '#rw-nexus .nx-spot{position:absolute;transform:translate(-50%,-50%);padding:0;border-radius:50%;background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.25)}'
+      + '#rw-nexus .nx-lists{max-width:760px;width:100%;margin:10px auto 0;display:flex;flex-direction:column;gap:8px}#rw-nexus .nx-row{display:flex;flex-wrap:wrap;gap:8px}#rw-nexus .nx-row>b{flex:0 0 100%;font-size:12px;color:#c9bff0;font-weight:600}'
+      + '#rw-nexus .nx-talk{max-width:760px;width:100%;margin:10px auto;box-sizing:border-box;padding:10px 12px;border-radius:10px;background:#231b42;border:1px solid #4a3d85;min-height:44px}#rw-nexus .nx-talk b{color:#ffe27a}'
+      + '#rw-nexus .nx-board{max-width:760px;width:100%;margin:0 auto 12px;box-sizing:border-box;padding:10px 12px;border-radius:10px;background:#1d2a2a;border:1px solid #3b6b5f}#rw-nexus .nx-board.hidden{display:none}#rw-nexus .nx-q{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid #2f4a45}#rw-nexus .nx-q:first-of-type{border-top:0}#rw-nexus .nx-q span{flex:1}#rw-nexus .nx-q em{color:#8fe9ff;font-style:normal}';
+    document.head.appendChild(nxCss);
+    function nxLoadPortrait(id, done) { // b21 idle_down, first frame, cached; the plaza redraws when one arrives
+      if (nxPortrait[id] !== undefined || !opts.assetRoot || !artOn) return;
+      nxPortrait[id] = null;
+      const img = new Image();
+      img.onload = () => { if (img.naturalHeight >= 64) { nxPortrait[id] = img; if (done) done(); } };
+      img.src = opts.assetRoot.replace(/\/+$/, '') + '/b21-npcs-and-vendors/enemies/' + id + '/' + id + '_idle_down.png';
+    }
+    function nxDrawPlaza() { // one static draw per open / art arrival (1280x960 = the 40x30 tile plaza at 32 px)
+      if (!nxDom) return;
+      const L = NX.layout(); const c = nxDom.cv; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
+      g.fillStyle = '#0e0a18'; g.fillRect(0, 0, c.width, c.height);
+      for (let ty = 1; ty < L.h - 1; ty++) for (let tx = 1; tx < L.w - 1; tx++) { g.fillStyle = (tx + ty) % 2 ? '#4b4660' : '#554f6c'; g.fillRect(tx * TILE, ty * TILE, TILE, TILE); }
+      g.fillStyle = '#6d6788'; for (let i = 1; i < L.w - 1; i++) { g.fillRect(i * TILE, TILE, TILE, 2); g.fillRect(i * TILE, (L.h - 2) * TILE + 30, TILE, 2); }
+      const pad = wArt.spawn_pad; const sp = L.spawn;
+      if (pad) drawArt(g, pad, 0, sp.x, sp.y + 16); else { g.fillStyle = '#7a63c9'; g.beginPath(); g.arc(sp.x, sp.y, 20, 0, 7); g.fill(); g.fillStyle = '#a98bff'; g.beginPath(); g.arc(sp.x, sp.y, 13, 0, 7); g.fill(); }
+      L.props.forEach((p) => {
+        const a = wArt[p.art]; const x = (p.tx + 0.5) * TILE; const y = (p.ty + 0.5) * TILE + 16;
+        if (a) { drawArt(g, a, 0, x, y); return; }
+        if (p.id === 'fountain') { g.fillStyle = '#7d8aa3'; g.beginPath(); g.arc(x, y - 16, 44, 0, 7); g.fill(); g.fillStyle = '#4fa8e0'; g.beginPath(); g.arc(x, y - 16, 34, 0, 7); g.fill(); g.fillStyle = '#bfe6ff'; g.fillRect(x - 4, y - 44, 8, 26); }
+        else if (/torch/.test(p.id)) { g.fillStyle = '#5a4026'; g.fillRect(x - 3, y - 30, 6, 28); g.fillStyle = '#ffb347'; g.beginPath(); g.arc(x, y - 34, 7, 0, 7); g.fill(); }
+        else if (/banner/.test(p.id)) { g.fillStyle = /red/.test(p.id) ? '#c0394b' : /blue/.test(p.id) ? '#3d6fc0' : '#3f9a55'; g.fillRect(x - 10, y - 44, 20, 38); }
+        else { g.fillStyle = '#8a6a3c'; g.fillRect(x - 10, y - 30, 20, 26); }
+      });
+      L.portals.forEach((q) => {
+        const a = wArt[q.art]; g.save();
+        if (a) drawArt(g, a, 0, q.x, q.y + 23);
+        else { g.globalAlpha = 0.3; g.fillStyle = '#a98bff'; g.beginPath(); g.arc(q.x, q.y, 30, 0, 7); g.fill(); g.globalAlpha = 1; g.strokeStyle = '#a98bff'; g.lineWidth = 4; g.beginPath(); g.arc(q.x, q.y, 24, 0, 7); g.stroke(); }
+        g.restore();
+        g.font = 'bold 22px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(q.label, q.x + 1, q.y - 37); g.fillStyle = '#e8dcff'; g.fillText(q.label, q.x, q.y - 38);
+      });
+      L.npcs.forEach((n) => {
+        const im = nxPortrait[n.npc]; const x = n.x; const y = n.y;
+        if (im) g.drawImage(im, 0, 0, im.naturalHeight, im.naturalHeight, x - 40, y - 60, 80, 80);
+        else { const h = MMRng.hash(n.npc); g.fillStyle = '#000'; g.fillRect(x - 13, y - 14, 26, 36); g.fillStyle = 'hsl(' + (h % 360) + ',45%,48%)'; g.fillRect(x - 11, y - 12, 22, 32); g.fillStyle = '#f0cfa6'; g.beginPath(); g.arc(x, y - 22, 10, 0, 7); g.fill(); }
+        g.font = 'bold 20px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(NPC_NAME[n.npc] || n.id, x + 1, y + 37); g.fillStyle = '#ffe27a'; g.fillText(NPC_NAME[n.npc] || n.id, x, y + 36);
+      });
+    }
+    function nxSay(name, text) { const t = nxDom.talk; t.textContent = ''; const b = document.createElement('b'); b.textContent = name + ': '; t.appendChild(b); t.appendChild(document.createTextNode(text)); nxDom.last = { name, text }; }
+    function nxUrl(biome) { // dungeon trip that returns to the tile the player left from
+      const tx = nxEnterTile ? nxEnterTile.x : Math.floor(arena.player.x / TILE); const ty = nxEnterTile ? nxEnterTile.y : Math.floor(arena.player.y / TILE);
+      const ret = 'index.html?mode=world&seed=' + seed + '&at=' + tx + ',' + ty + (opts.test ? '&test=1' : '');
+      if (!RETURN_RE.test(ret) || !BIOME_NAME[biome]) return null;
+      return { tx, ty, url: 'index.html?mode=dungeon&seed=' + String(MMRng.hash(seed + ':nexus:' + biome) % 100000) + '&lv=2&biome=' + biome + '&return=' + encodeURIComponent(ret) + (opts.test ? '&test=1' : '') };
+    }
+    function nxLeaveTo(url) {
+      if (leaving) return null; leaving = true;
+      savePos(true); writeSave(save); arena.onSave(arena.save); settle('portal');
+      arena.stop(); nxDom.root.classList.add('hidden'); nxOpen = false;
+      api.lastNexusUrl = url; if (opts.navigate !== false) location.href = url; return url;
+    }
+    function nxPortal(q) {
+      if (q.dest === 'realm') { nexusClose(); return 'realm'; }
+      if (q.dest === 'vault') {
+        const c = window.MMPortals ? MMPortals.canEnter('vault', null, 'nexus', 0) : { ok: true, dest: 'lantern-stash' };
+        if (!c.ok) return null;
+        return nxLeaveTo('lantern.html');
+      }
+      const b = /^biome:([a-z]+)$/.exec(q.dest); if (!b) return null;
+      const u = nxUrl(b[1]); if (!u) return null;
+      if (typeof nxQuestEvent === 'function') nxQuestEvent({ type: 'portal' });
+      save.stats.portals++; save.pos = { x: u.tx, y: u.ty }; save.returnTo = { x: u.tx, y: u.ty, seed };
+      return nxLeaveTo(u.url);
+    }
+    const NX_LINES = {
+      guide: ['Welcome to the Nexus. Every road in the Realm ends up here, sooner or later.', 'The ring of doors leads to the dungeons. The plain one takes you home.', 'Nothing here bites. Take your time.'],
+      vendor: ['Wares and bargains are on the Realm menu while you wander. Come back when your pockets are heavy.', 'I keep the good stock behind the counter. It will be on the shelf soon.'],
+      blacksmith: ['Bring me two matching blades and an idea. Combining is on its way.', 'The forge is warming up. Not long now.'],
+      rumours: ['They say the Godlands hum at night.', 'Camps past the hills guard a chest apiece.', 'A shrine will mend you or sharpen you, never both.'],
+    };
+    function nxTalk(n) {
+      const name = NPC_NAME[n.npc] || n.id; nxTalkN++;
+      if (n.role === 'heal') { const p = arena.player; const was = p.hp; p.hp = arena.stats.maxHp; arena._syncHud(); nxSay(name, was < p.hp ? 'There. Whole again, no charge.' : 'You look perfectly well to me.'); return; }
+      if (n.role === 'oracle') { const o = MMQuests.oracle(todayUtc()); nxSay(name, o ? o.text : 'The mists are quiet.'); return; }
+      if (n.role === 'quests') { if (typeof nxBoardOpen === 'function') nxBoardOpen(); nxSay(name, 'Here is the day\'s board. Three jobs, free to take.'); return; }
+      const key = n.role === 'rumours' ? 'rumours' : n.role === 'shop' ? 'vendor' : n.role === 'combine' ? 'blacksmith' : 'guide';
+      const L = NX_LINES[key]; nxSay(name, L[(MMRng.hash(todayUtc() + n.id) + nxTalkN) % L.length]);
+    }
+    function nxBuild() {
+      if (nxDom) return nxDom;
+      const root = document.createElement('div'); root.id = 'rw-nexus'; root.className = 'hidden'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', 'The Nexus');
+      const head = document.createElement('div'); head.className = 'nx-head';
+      const back = document.createElement('button'); back.type = 'button'; back.id = 'rw-nx-back'; back.textContent = 'Back to the Realm'; back.setAttribute('aria-label', 'Back to the Realm');
+      const h = document.createElement('h2'); h.textContent = 'The Nexus'; head.appendChild(back); head.appendChild(h);
+      const stage = document.createElement('div'); stage.className = 'nx-stage';
+      const cv = document.createElement('canvas'); cv.width = NX.W * TILE; cv.height = NX.H * TILE; cv.setAttribute('aria-hidden', 'true'); stage.appendChild(cv);
+      const L = NX.layout(); const lists = document.createElement('div'); lists.className = 'nx-lists';
+      const rowP = document.createElement('div'); rowP.className = 'nx-row'; const rowPl = document.createElement('b'); rowPl.textContent = 'Portals'; rowP.appendChild(rowPl);
+      const rowN = document.createElement('div'); rowN.className = 'nx-row'; const rowNl = document.createElement('b'); rowNl.textContent = 'Talk to'; rowN.appendChild(rowNl);
+      const spot = (x, y, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'nx-spot'; b.tabIndex = -1; b.setAttribute('aria-hidden', 'true'); b.style.left = (x / cv.width * 100) + '%'; b.style.top = (y / cv.height * 100) + '%'; b.addEventListener('click', fn); stage.appendChild(b); };
+      L.portals.forEach((q) => {
+        const b = document.createElement('button'); b.type = 'button'; b.dataset.portal = q.id; b.textContent = q.id === 'realm' ? 'Back to the Realm portal' : q.id === 'vault' ? 'Vault: Lantern stash' : q.label + ' portal'; b.setAttribute('aria-label', q.id === 'vault' ? 'Vault portal: open the Lantern stash' : q.id === 'realm' ? 'Realm portal: go back to the Realm' : 'Enter the ' + q.label + ' dungeon');
+        b.addEventListener('click', () => nxPortal(q)); rowP.appendChild(b); spot(q.x, q.y, () => nxPortal(q));
+      });
+      L.npcs.forEach((n) => {
+        const b = document.createElement('button'); b.type = 'button'; b.dataset.npc = n.id; b.textContent = NPC_NAME[n.npc] || n.id; b.setAttribute('aria-label', 'Talk to ' + (NPC_NAME[n.npc] || n.id));
+        b.addEventListener('click', () => nxTalk(n)); rowN.appendChild(b); spot(n.x, n.y - 10, () => nxTalk(n));
+      });
+      lists.appendChild(rowP); lists.appendChild(rowN);
+      const talk = document.createElement('div'); talk.className = 'nx-talk'; talk.setAttribute('role', 'status'); talk.textContent = 'Pick a portal, or say hello to someone.';
+      const board = document.createElement('div'); board.className = 'nx-board hidden'; board.id = 'rw-nx-board';
+      root.appendChild(head); root.appendChild(stage); root.appendChild(talk); root.appendChild(board); root.appendChild(lists); ov.appendChild(root);
+      back.addEventListener('click', () => nexusClose());
+      nxDom = { root, cv, talk, board, back, last: null };
+      return nxDom;
+    }
+    function nexusOpen() {
+      if (!NX_ON || !nxSite || nxOpen || leaving || !arena.active || arena.state !== 'play' || arena.paused) return false;
+      nxBuild(); nxEnterTile = { x: Math.floor(arena.player.x / TILE), y: Math.floor(arena.player.y / TILE) };
+      nxOpen = true; arena.paused = true; savePos(true);
+      nxBtn.classList.add('hidden'); portalBtn.classList.add('hidden'); siteBtn.classList.add('hidden');
+      nxDom.root.classList.remove('hidden'); nxDom.board.classList.add('hidden');
+      NX.layout().npcs.forEach((n) => nxLoadPortrait(n.npc, nxDrawPlaza)); nxDrawPlaza();
+      nxDom.talk.textContent = 'Pick a portal, or say hello to someone.';
+      nxDom.back.focus({ preventScroll: true });
+      return true;
+    }
+    function nexusClose() {
+      if (!nxOpen) return false;
+      nxOpen = false; nxDom.root.classList.add('hidden'); arena.paused = false; arena.player.iframes = Math.max(arena.player.iframes, 1.5);
+      nxNear = true; return true; // the prompt shows again next tick if the player is still beside the portal
+    }
+    window.addEventListener('keydown', (ev) => {
+      if (nxOpen && ev.key === 'Escape') { ev.preventDefault(); ev.stopImmediatePropagation(); nexusClose(); return; }
+      if (ev.key === 'Enter' && !nxOpen && nxNear && promptFor < 0 && !siteFor && arena.active && !arena.paused && arena.state === 'play') { ev.preventDefault(); nexusOpen(); }
+    }, true);
+    nxBtn.addEventListener('click', () => nexusOpen());
+    function nexusTick() {
+      if (!NX_ON || !nxSite || nxOpen) return;
+      const p = arena.player; const near = arena.state === 'play' && !arena.paused && (p.x - nxSite.x) ** 2 + (p.y - nxSite.y) ** 2 < 48 * 48;
+      nxNear = near;
+      nxBtn.classList.toggle('hidden', !(near && promptFor < 0 && !siteFor));
+    }
+    function drawNexusPortal(g, tt, reduced) {
+      const a = wArt.portal_nexus; const q = nxSite;
+      if (a) { drawArt(g, a, frameOf(a, tt, reduced), q.x, q.y + 23); artDraws.portal++; }
+      else drawPortalCode(g, { x: q.x, y: q.y, col: '#ffd45a' }, tt, reduced);
+      g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText('Nexus', q.x + 1, q.y - 37); g.fillStyle = '#ffd45a'; g.fillText('Nexus', q.x, q.y - 38);
+    }
+
+    // ---------- daily quests (MMQuests): 3 per UTC day, progress from kills / boss kills / portals, claimed at the Quest Giver in the Nexus ----------
+    let qDirty = false;
+    function nxQuestEvent(ev) {
+      if (!window.MMQuests) return;
+      save.quests = MMQuests.progress(save.quests, ev, questDate()); qDirty = true;
+      if (nxOpen && nxDom && !nxDom.board.classList.contains('hidden')) nxBoardRender();
+    }
+    function nxBoardRender() {
+      const b = nxDom.board; b.textContent = '';
+      const h = document.createElement('b'); h.textContent = 'Daily quests · ' + questDate(); b.appendChild(h);
+      MMQuests.summary(save.quests, questDate()).forEach((q) => {
+        const row = document.createElement('div'); row.className = 'nx-q'; row.dataset.quest = q.id;
+        const t = document.createElement('span'); t.textContent = q.text + ' (' + q.p + '/' + q.need + ') '; const r = document.createElement('em'); r.textContent = '+' + q.reward.shards + ' 💎'; t.appendChild(r); row.appendChild(t);
+        if (q.claimed) { const d = document.createElement('span'); d.textContent = 'Claimed'; d.style.flex = '0 0 auto'; row.appendChild(d); }
+        else { const c = document.createElement('button'); c.type = 'button'; c.dataset.claim = q.id; c.textContent = 'Claim'; c.disabled = !q.done; c.setAttribute('aria-label', q.done ? 'Claim ' + q.text : q.text + ', not finished yet'); c.addEventListener('click', () => nxClaim(q.id)); row.appendChild(c); }
+        b.appendChild(row);
+      });
+    }
+    function nxBoardOpen() { nxBuild(); nxBoardRender(); nxDom.board.classList.remove('hidden'); }
+    function nxClaim(id) {
+      const out = MMQuests.claim(save.quests, id, questDate()); save.quests = out.state;
+      if (out.reward) { arena.save.shards += out.reward.shards; arena.run.shards += out.reward.shards; arena.onSave(arena.save); arena._syncHud(); nxSay('Quest Giver', 'Well earned. +' + out.reward.shards + ' shards.'); }
+      writeSave(save); qDirty = false; if (nxDom) nxBoardRender();
+      return out.reward;
+    }
+
     const hooks = {
       onStart() {
         if (pendingAt) { placeAt(pendingAt.x, pendingAt.y); pendingAt = null; } else placeAt(world.spawnPoint.x, world.spawnPoint.y);
         arena.run.wave = 0; arena.biome = 0;
         resetZones();
-        kills = 0; spawned = 0; despawned = 0; lastDrops.length = 0;
+        kills = 0; spawned = 0; despawned = 0; lastDrops.length = 0; picks.length = 0;
         bossReadyNow.fill(0); bossT = 0; sweepT = 0;
         promptFor = -2; leaving = false;
         rageEnd = 0; wardEnd = 0; arena.buffDmg = 1; arena.buffTaken = 1; campSt.clear(); siteKeyShown = '';
@@ -1053,14 +1321,14 @@
           bossT -= dt; if (bossT <= 0) { bossT = 0.5; bossTick(); }
           sweepT -= dt; if (sweepT <= 0) { sweepT = 1; sweepLost(); }
         }
-        portalTick();
+        portalTick(); pickTick(dt); nexusTick();
         if (SITES) siteTick(dt);
         lastEvClock = eventClock();
         evT -= dt; if (evT <= 0) { evT = 0.25; evTick(); }
         evHint(dt);
         hudT -= dt; saveT -= dt;
         if (hudT <= 0) { hudT = 0.25; syncHud(false); }
-        if (saveT <= 0) { saveT = 2; savePos(false); }
+        if (saveT <= 0) { saveT = 2; savePos(false); if (qDirty) { qDirty = false; writeSave(save); } }
       },
       drawUnder(g, cam) {
         frameNo++;
@@ -1085,6 +1353,7 @@
           g.globalAlpha = reduced ? 0.5 : 0.35 + 0.25 * Math.sin(tt * 3); g.strokeStyle = '#ff3b3b'; g.lineWidth = 3; g.beginPath(); g.arc(bx, by, 22, 0, Math.PI * 2); g.stroke(); g.globalAlpha = 1;
           g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(BOSS_NAME[i], bx + 1, by - 29); g.fillStyle = '#ff8a8a'; g.fillText(BOSS_NAME[i], bx, by - 30);
         }
+        if (nxSite && NX_ON && nxSite.x > vx0 && nxSite.x < vx1 && nxSite.y > vy0 && nxSite.y < vy1) drawNexusPortal(g, tt, reduced);
         const pad = wArt.spawn_pad; const padX = (world.spawnPoint.x + 0.5) * TILE; const padY = (world.spawnPoint.y + 0.5) * TILE;
         if (pad && padX > vx0 && padX < vx1 && padY > vy0 && padY < vy1) { drawArt(g, pad, frameOf(pad, tt, reduced), padX, padY + 16); artDraws.pad++; }
         if (SITES) drawSites(g, vx0, vy0, vx1, vy1, tt, reduced);
@@ -1100,7 +1369,7 @@
           g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(label, c.x + 1, c.y - 51); g.fillStyle = col; g.fillText(label, c.x, c.y - 52);
         });
       },
-      drawOver(g) { // a raid boss telegraphs its next burst: a red ring that closes in during the last second
+      drawOver(g, cam) { drawPicks(g, cam); // a raid boss telegraphs its next burst: a red ring that closes in during the last second
         evState.forEach((st) => {
           if (st.phase !== 'active' || st.plan.kind !== 'boss') return;
           const e = st.ents[0]; if (!e || !e.active || e.evid !== st.id || e.invuln > 0 || !(e.cd2 < 1)) return;
@@ -1134,6 +1403,7 @@
       liveCount: () => { let n = 0; live.forEach((e, id) => { if (e.active && e.zid === id) n++; }); return n; },
       liveEnemies: () => { const o = []; live.forEach((e, id) => { if (e.active && e.zid === id) o.push({ id, x: e.x, y: e.y, type: e.type, zone: e.zone, tier: e.tier, art: e.art, hp: e.maxHp, spd: e.spdMul, dmg: e.dmgMul, diff: e.diff || null }); }); return o; },
       enemyById: (id) => live.get(id) || null, setDropAll: (on) => { dropAll = !!on; }, lastDrops: () => lastDrops.slice(), kills: () => kills,
+      bossesClassic, bossArtIds: () => world.bossSites.map((b) => b.boss),
       bossSites: () => world.bossSites.map((b, i) => ({ i, x: b.x, y: b.y, zone: b.zone, boss: b.boss, name: BOSS_NAME[i], live: !!(bossLive[i] && bossLive[i].active), ready: !!zones && zones.bossReady(b, arena.clock) })),
       bossEntity: (i) => bossLive[i] || null, bossTick,
       // slice 7
@@ -1152,6 +1422,9 @@
       useShrine, openChest, talkNpc: talk, sitePrompt: () => (siteFor ? { kind: siteFor.kind, i: siteFor.i, text: siteBtn.textContent, hidden: siteBtn.classList.contains('hidden') } : null), siteNote: () => ({ text: siteNote.textContent, hidden: siteNote.classList.contains('hidden') }), siteTick,
       // slice 11: world debuffs (roll(creature, zone, force) = one bolt hit; table = creature -> status; shown by arena.statusOf)
       worldStatus: { on: STATUS_ON, table: BOLT_ST, forCreature: boltStatusFor, roll: boltRoll, log: stLog },
+      pickups: { on: PICK_ON, cap: PICK_CAP, list: () => picks.map((q) => ({ type: q.type, art: q.art, value: q.value, tier: q.tier, x: q.x, y: q.y, lifeMs: q.lifeMs })), spawn: spawnPickups, got: () => Object.assign({}, pickGot), total: () => pickTotal },
+      nexus: { on: NX_ON, site: nxSite, open: nexusOpen, close: nexusClose, isOpen: () => nxOpen, near: () => nxNear, enterTile: () => nxEnterTile, talk: (id) => { const n = NX_ON && NX.layout().npcs.find((x) => x.id === id); if (n) { nxBuild(); nxTalk(n); } return nxDom && nxDom.last; }, portal: (id) => { const q = NX_ON && NX.layout().portals.find((x) => x.id === id); return q ? nxPortal(q) : null; }, lastUrl: () => api.lastNexusUrl || null, today: todayUtc },
+      quests: { date: questDate, list: () => MMQuests.quests(questDate()), summary: () => MMQuests.summary(save.quests, questDate()), state: () => JSON.parse(JSON.stringify(save.quests || MMQuests.fresh(questDate()))), event: nxQuestEvent, claim: nxClaim, flush: () => { qDirty = false; return writeSave(save); } },
       settle, stashNote, lastSettle: () => lastSettle, finds: () => (ST ? ST.readFinds(localStorage) : null),
     };
     return { api, hooks };

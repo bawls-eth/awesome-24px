@@ -31,6 +31,11 @@
   // Arena boss art (batch b07-frontier-bosses, 384px cells, 'down' only). BOSS_MAP is indexed by boss tier (0 = the first boss, Gloomheart ->
   // void_oracle, whose pink/purple fits); later tiers walk the rest of the list and wrap. Deterministic: no randomness, same tier -> same boss.
   var BOSS_MAP = ['void_oracle', 'bone_colossus', 'inferno_wyrm', 'crystal_titan', 'forest_warden', 'dread_knight', 'storm_harbinger', 'mire_queen'];
+  // b23 bosses-extra (384px, 'down' only, same six actions). Appended AFTER the 8 tier bosses: bossArtFor() still wraps at BOSS_TIER_COUNT so old tiers/seeds are unchanged;
+  // these are picked by id (world boss sites in mm-overworld.js, the Crypt alternate boss in mm-biomes.js).
+  var BOSS_EXTRA = ['lich_king', 'hydra', 'treant_elder', 'sand_titan', 'frost_dragon', 'shadow_hydra', 'clockwork_golem', 'void_maw'];
+  var BOSS_TIER_COUNT = BOSS_MAP.length;
+  BOSS_MAP = BOSS_MAP.concat(BOSS_EXTRA);
   var BOSS_ACTIONS = ['idle', 'move', 'attack_a', 'attack_b', 'hit', 'death'];
   var BOSS_VISIBLE_W = 220; // typical visible body width in px inside a 384 cell
 
@@ -50,7 +55,7 @@
   function bossArtFor(tier) {
     var t = Math.floor(Number(tier));
     if (!isFinite(t) || t < 0) t = 0;
-    return BOSS_MAP[t % BOSS_MAP.length];
+    return BOSS_MAP[t % BOSS_TIER_COUNT];
   }
   function packFor(artClass) {
     for (var i = 0; i < PACKS.length; i++) if (PACKS[i].classes.indexOf(artClass) >= 0) return PACKS[i];
@@ -338,5 +343,38 @@
     }).then(function () { return set; }).catch(function () { return set; });
   }
 
-  return { loadBolts: loadBolts, boltIdFor: boltIdFor, BoltSet: BoltSet, PLAYER_BOLT_CLASSES: PLAYER_BOLT_CLASSES, bossArtFor: bossArtFor, loadBosses: loadBosses, BOSS_MAP: BOSS_MAP, BOSS_VISIBLE_W: BOSS_VISIBLE_W, BOSS_ACTIONS: BOSS_ACTIONS, loadItems: loadItems, itemIconUrl: itemIconUrl, ITEM_ICON_MAP: ITEM_ICON_MAP, ItemSet: ItemSet, enemyArtFor: enemyArtFor, drifterArtFor: drifterArtFor, loadEnemies: loadEnemies, ENEMY_MAP: ENEMY_MAP, BIOME_ENEMY_MAP: BIOME_ENEMY_MAP, DRIFTER_MAP: DRIFTER_MAP, ENEMY_VISIBLE_W: ENEMY_VISIBLE_W, load: load, loadClass: loadClass, loadAll: loadAll, packIds: packIds, artClassFor: artClassFor, packFor: packFor, frameAt: frameAt, scaleFor: scaleFor, duration: duration, PACKS: PACKS, CLASS_MAP: CLASS_MAP, ArtSet: ArtSet };
+  // ---------- one-shot effect art (batch b18 effects): fx_* strips, 64x64 cells ----------
+  var FX_ID_RE = /^fx_[a-z_]+$/;
+  function FxSet() { this.byId = Object.create(null); }
+  FxSet.prototype.has = function (id) { return typeof id === 'string' && !!this.byId[id]; };
+  FxSet.prototype.ids = function () { return Object.keys(this.byId); };
+  // { id, img, frames, fw, fh, fps, loop } or null.
+  FxSet.prototype.anim = function (id) { return typeof id === 'string' && this.byId[id] ? this.byId[id] : null; };
+  // loadFx(assetRoot) -> Promise<FxSet>: every fx_ strip of the INDEX.json batches whose folder name contains "effects". Never rejects.
+  function loadFx(assetRoot) {
+    var base = assetRoot || ASSET_ROOT, set = new FxSet();
+    return fetchJson(join(base, 'INDEX.json')).then(function (idx) {
+      var ids = [];
+      if (idx && Array.isArray(idx.batches)) idx.batches.forEach(function (b) {
+        var id = b && typeof b.path === 'string' ? b.path.replace(/\/+$/, '').split('/').pop() : '';
+        if (/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(id) && /effects/.test(id) && ids.indexOf(id) < 0) ids.push(id);
+      });
+      return Promise.all(ids.map(function (id) {
+        return fetchJson(join(join(base, id), 'manifest.json')).then(function (m) {
+          return Promise.all((m && Array.isArray(m.assets) ? m.assets : []).map(function (a) {
+            if (!a || typeof a.id !== 'string' || !FX_ID_RE.test(a.id) || typeof a.path !== 'string' || !/^[A-Za-z0-9_.\/-]+$/.test(a.path) || a.path.indexOf('..') >= 0) return null;
+            var frames = Math.max(1, Math.floor(num(a.frames, 1))), fw = num(a.frame_w, 64), fh = num(a.frame_h, 64);
+            if (fw <= 0 || fh <= 0 || frames > 16) return null;
+            return loadImage(join(join(base, id), a.path)).then(function (img) {
+              if (!img || !img.naturalWidth || img.naturalWidth < fw * frames || img.naturalHeight < fh) return;
+              set.byId[a.id] = { id: a.id, img: img, frames: frames, fw: fw, fh: fh, fps: Math.max(1, num(a.fps, 14)), loop: !!a.loop };
+            });
+          }));
+        });
+      }));
+    }).then(function () { return set; }).catch(function () { return set; });
+  }
+
+
+  return { loadFx: loadFx, FxSet: FxSet, loadBolts: loadBolts, boltIdFor: boltIdFor, BoltSet: BoltSet, PLAYER_BOLT_CLASSES: PLAYER_BOLT_CLASSES, bossArtFor: bossArtFor, loadBosses: loadBosses, BOSS_MAP: BOSS_MAP, BOSS_EXTRA: BOSS_EXTRA, BOSS_VISIBLE_W: BOSS_VISIBLE_W, BOSS_ACTIONS: BOSS_ACTIONS, loadItems: loadItems, itemIconUrl: itemIconUrl, ITEM_ICON_MAP: ITEM_ICON_MAP, ItemSet: ItemSet, enemyArtFor: enemyArtFor, drifterArtFor: drifterArtFor, loadEnemies: loadEnemies, ENEMY_MAP: ENEMY_MAP, BIOME_ENEMY_MAP: BIOME_ENEMY_MAP, DRIFTER_MAP: DRIFTER_MAP, ENEMY_VISIBLE_W: ENEMY_VISIBLE_W, load: load, loadClass: loadClass, loadAll: loadAll, packIds: packIds, artClassFor: artClassFor, packFor: packFor, frameAt: frameAt, scaleFor: scaleFor, duration: duration, PACKS: PACKS, CLASS_MAP: CLASS_MAP, ArtSet: ArtSet };
 }));

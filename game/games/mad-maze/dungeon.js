@@ -96,7 +96,8 @@
     // set only by mad-maze.js from a regex-checked ?return= (a Realm World portal): the exit goes back to that portal tile
     const backWorld = typeof opts.returnTo === 'string' && /^index\.html\?mode=world&seed=[A-Za-z0-9_-]{1,24}&at=\d{1,4},\d{1,4}(&test=1)?$/.test(opts.returnTo) ? opts.returnTo : null;
     const seed = String(opts.seed === undefined ? '1' : opts.seed);
-    const biome = MMBiomes.clean(opts.biome); const B = MMBiomes.get(biome); // unknown / missing biome -> warren
+    const biome = MMBiomes.clean(opts.biome); const B = Object.assign({}, MMBiomes.get(biome)); // unknown / missing biome -> warren
+    { const bf = MMBiomes.bossFor(biome, seed, opts.bosses === 'classic'); B.boss_art = bf.boss_art; B.boss_name = bf.boss_name; } // b23: odd crypt seeds face the Lich King (?bosses=classic keeps the original)
     const layoutV = opts.layout === 2 || biome !== 'warren' ? 2 : 1; // a biome run is new content: it always uses the layout-2 pool
     const palCache = {};
     function palOf(type) { // warren: the original palette untouched; other biomes recolour start / normal / boss rooms, the coded rooms (key, treasure, secret) keep theirs
@@ -169,7 +170,7 @@
     const unlocked = {}; const granted = [];
     let keyFound = 0; let current = null; let finished = false; let sig = ''; let mapSig = '';
     let lockMsgAt = -9; let hudText = ''; let queue = []; let nextSweep = 0; let nextWall = 0; let sweepN = 0;
-    const api = { seed, biome, layoutVersion: layoutV, narrow: narrowOn, graph: dungeon, state, arena, granted };
+    const api = { seed, biome, layoutVersion: layoutV, narrow: narrowOn, graph: dungeon, state, arena, granted, grantItem };
     // Lantern stash payout (MMStash): every kept find of this run is paid into the stash when the summary shows (win or fall)
     const ST = window.MMStash && window.MMProfile ? window.MMStash : null; const shards0 = arena.save.shards;
     if (ST) {
@@ -271,7 +272,10 @@
 
     // ---------- loot ----------
     function grantItem(slot, tier) {
-      const ids = SLOT_ITEMS[slot] || SLOT_ITEMS.trinket; const id = lootRng.pick(ids); const rar = Math.max(0, Math.min(2, tier - 1));
+      const ids = SLOT_ITEMS[slot] || SLOT_ITEMS.trinket; let id = lootRng.pick(ids); const rar = Math.max(0, Math.min(2, tier - 1));
+      // A weapon chest can hold a styled wpn_ weapon (same rules as world drops: hero family 70%, none in classic or without a hero). Its own seeded stream
+      // per chest keeps lootRng, and so every old seed's other contents, unchanged.
+      if (slot === 'weapon' && arena._wpnDrop && typeof MMRng !== 'undefined') { const wr = MMRng.create('chestwpn:' + seed + ':' + granted.length); id = arena._wpnDrop(id, null, () => wr.next()); }
       const full = arena.save.items.length >= RM_BACKPACK;
       arena.collectItem(id, rar);
       const def = RM_ITEM_BY_ID[id];
@@ -433,7 +437,7 @@
         if (left === 0) ctrl.cleared();
       },
       cleared() {
-        arena.player.hp = Math.min(arena.stats.maxHp, arena.player.hp + Math.round(arena.stats.maxHp * 0.15));
+        arena.player.hp = Math.min(arena.stats.maxHp, arena.player.hp + Math.round(arena.stats.maxHp * 0.15)); if (arena.fxHeal) arena.fxHeal();
         arena._showBanner('Room cleared!', 1.4); arena.eBullets.forEach((b) => { if (b.active) { b.active = false; arena._burst(b.x, b.y, '#8fe9ff', 1, 40); } });
         arena._syncHud(); mapSig = '';
       },

@@ -435,6 +435,25 @@
     $('hud-pct').textContent = String(MMMap.completion(E, MAP));
   }
 
+  // Per-game medal strip from the game's own summary key (read-only; see medals.js).
+  function achievements() { try { return MMHubMedals.read(localStorage, window.MMJamSongs); } catch (e) { return MMHubMedals.read({ getItem() { return null; } }); } }
+  function renderAch(id) {
+    const ul = $('card-ach');
+    while (ul.firstChild) ul.removeChild(ul.firstChild);
+    const g = MMHubMedals.gameOfNode(id);
+    ul.hidden = !g;
+    if (!g) return;
+    const got = achievements()[g];
+    MMHubMedals.GAMES[g].medals.forEach((m) => {
+      const li = document.createElement('li');
+      const on = got.indexOf(m[0]) >= 0;
+      li.className = on ? 'on' : '';
+      li.dataset.medal = m[0];
+      li.textContent = (on ? '[x] ' : '[ ] ') + m[1];
+      ul.appendChild(li);
+    });
+  }
+
   function openNode(id) {
     const n = byId[id];
     if (!n) return;
@@ -455,6 +474,7 @@
       });
     }
     med.hidden = !n.medals;
+    renderAch(id);
     $('card-status').textContent = n.medals ? (got + ' of 3 medals') : (st && st.exits.length ? 'Visited' : 'Not visited yet');
     const href = LINKS[id];
     const play = $('card-play');
@@ -590,6 +610,7 @@
     get walking() { return !!walker.wps; },
     get reduced() { return reducedMotion(); },
     isReachable: (id) => reach.has(id),
+    achievements,
     nodeClient(id) {
       const n = byId[id], g = geoFor(n.world), r = canvas.getBoundingClientRect(), k = r.width / canvas.width;
       return { x: r.left + ((n.x - g.minX) * T + 8) * k, y: r.top + ((n.y - g.minY) * T + 8) * k };

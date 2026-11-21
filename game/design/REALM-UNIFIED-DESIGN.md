@@ -119,3 +119,19 @@ Wired in `realm-world.js` (`scaleEnemy`: zone spawner, event swarms, camp patrol
 | Arena wave 1 -> 30+ | 0.70 -> 1.60 | 0.80 -> 1.40 | 0.90 -> 1.20 | 0.7 -> 1.4 | `capBolts` keeps a volley at or under the 40-bolt cap |
 
 Tests: `shared-mm-difficulty.test.js` (node), `difficulty-curve.test.js` (browser).
+
+## Boss mapping (b23 bosses-extra)
+
+World boss sites keep their generator LOCATIONS (the `sites` RNG stream is untouched). Only the boss id changes: per zone the pool below is ordered by a seeded hash
+(`MMRng.hash(seed + ':boss:' + zone + ':' + id)`) and handed to that zone's sites in order, so ids are distinct within a zone and deterministic per seed.
+`?bosses=classic` (or `MMOverworld.generate(seed, { bosses: 'classic' })`) restores the original eight ids. Difficulty still scales by zone via the existing boss tier.
+
+| Zone | Sites | Pool (classic ids first, b23 ids after) |
+|---|---|---|
+| Shore (0) | none | (treant_elder and sand_titan live in the midlands pool) |
+| Midlands (1) | 2 | forest_warden, mire_queen, treant_elder, sand_titan |
+| Highlands (2) | 3 | bone_colossus, storm_harbinger, crystal_titan, hydra, frost_dragon, clockwork_golem |
+| Godlands (3) | 3 | dread_knight, inferno_wyrm, void_oracle, lich_king, shadow_hydra, void_maw |
+
+Art: the eight new ids are appended to `MMArt.BOSS_MAP` (`MMArt.BOSS_EXTRA`); `bossArtFor(tier)` still wraps at the original 8. World bosses now set `e.bossArt = site.boss`, so the arena draws each site's own art.
+Dungeon: the Crypt has an `alt` boss (`lich_king`); `MMBiomes.bossFor(biome, seed, classic)` returns it on odd seeds (even keeps Bone Colossus). dungeon.js still reads `B.boss_art` directly; adopting `bossFor` there is a one-line change for its owner.

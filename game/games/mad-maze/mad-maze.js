@@ -90,7 +90,7 @@
     const dSeed = dailyFor('dungeon');
     const hasSeed = !!EXPLICIT_SEED || !!dSeed;
     // layout version: explicit ?lv=2, or a fresh random seed (new run); a link with a seed and no lv keeps the original layouts
-    dungeon = MMDungeonRun.create(arena, { layout: (params.get('lv') === '2' || !hasSeed || !!dSeed) ? 2 : 1, seed: hasSeed ? (EXPLICIT_SEED || dSeed) : String(Date.now() % 100000), home: HOME, homeLabel: HOME_LABEL, test: TEST, returnTo: RETURN, biome: DBIOME });
+    dungeon = MMDungeonRun.create(arena, { bosses: params.get('bosses') === 'classic' ? 'classic' : '', layout: (params.get('lv') === '2' || !hasSeed || !!dSeed) ? 2 : 1, seed: hasSeed ? (EXPLICIT_SEED || dSeed) : String(Date.now() % 100000), home: HOME, homeLabel: HOME_LABEL, test: TEST, returnTo: RETURN, biome: DBIOME });
     document.body.classList.add('dungeon-mode');
   }
   if (WORLD) {
@@ -129,10 +129,26 @@
     MMArt.loadBolts('../../assets/arcane/').then((set) => { if (set.ids().length) arena.setBoltArt(set, activeHeroClass()); }).catch(() => {});
   }
 
+  // Effect art (b18 one-shot effects); ?fxart=0 turns it off. Missing art falls back silently.
+  if (window.MMArt && MMArt.loadFx && arena.setFxArt && params.get('fxart') !== '0') {
+    MMArt.loadFx('../../assets/arcane/').then((set) => { if (set.ids().length) arena.setFxArt(set); }).catch(() => {});
+  }
+
+  // Ability bar icons (b20 ability art in the .realm-ab buttons); ?uiicons=0 keeps the emoji. The F slot follows the class signature.
+  if (arena.setAbilityIcons) arena.setAbilityIcons('../../assets/arcane/b20-class-portraits-and-ability-icons/abilities/');
+
   // Class stats: the active hero's class nudges HP/speed/damage/fire rate/safe time (MMClasses.arenaProfile); ?classstats=0 disables it.
   if (window.MMClasses && MMClasses.arenaProfile && params.get('classstats') !== '0' && activeHeroClass()) arena.setHeroProfile(MMClasses.arenaProfile(activeHeroClass()));
   // Class signature: the active hero's class gets a signature ability in the F slot (level 7, replaces Overdrive); ?signature=0 disables it.
   if (window.MMClasses && MMClasses.arenaSignature && params.get('signature') !== '0' && activeHeroClass()) arena.setHeroSignature(MMClasses.arenaSignature(activeHeroClass()));
+
+  // Unlock nodes (S12): class passives, Nova II and Dash II (and the styled weapon items) follow the ACTIVE hero's class and level; ?unlocks=0 turns the nodes off.
+  if (arena.setHeroLevelSource) arena.setHeroLevelSource(() => {
+    if (!window.MMProfile) return null;
+    const active = MMProfile.cleanActive(localStorage.getItem(MMProfile.ACTIVE_KEY)); const prof = MMProfile.clean(localStorage.getItem(MMProfile.KEY));
+    const h = (prof.heroes || []).find((x) => x.id === active.heroId) || (prof.heroes || [])[0];
+    return h ? { cls: h.cls, level: h.level } : null;
+  });
 
   // Weapon styles (S10): the equipped weapon item's `wpn_<style>` id (or style/family fields) picks a MMWeapons spec for the active hero's class.
   // Base style / no styled weapon / ?weapons=0 / missing modules = today's fire (the arena hook decides). Re-applied on equip, hero switch and load.
@@ -208,6 +224,7 @@
     if (params.get('classstats') !== '0') arena.setHeroProfile(MMClasses.arenaProfile(h.cls));
     if (params.get('signature') !== '0') arena.setHeroSignature(MMClasses.arenaSignature(h.cls));
     const ac = window.MMArt ? MMArt.artClassFor(h.cls) : null;
+    if (arena.refreshHeroLevel) arena.refreshHeroLevel();
     applyWeapon();
     if (arena.setBoltClass) arena.setBoltClass(h.cls);
     arena.setHeroArt(null);
@@ -235,6 +252,7 @@
     applyHero(h);
     return h;
   }
+  const STAT_ICON = { HP: 'stat_life', Damage: 'stat_power', 'Attack rate': 'stat_knack', Speed: 'stat_swift', 'Safe time': 'stat_guard', XP: 'stat_xp', 'Realm level': 'stat_xp', 'Base stats': 'stat_focus' };
   if (HERO_UI) {
     const ov = document.getElementById('realm-overlay');
     const mk = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt !== undefined) e.textContent = txt; return e; };
@@ -250,6 +268,17 @@
     card.append(head, tabs, status, body); wrap.appendChild(card); ov.appendChild(wrap);
     let tab = 'pick'; let creating = false; const arts = new Map(); let artLoading = false;
     const SW = { ranger: '#6fbf73', frostcaller: '#7ec8f0', herald: '#e8b86a', punk: '#e0679a', bruiser: '#a9784f', rogue: '#8a7ac8', warlock: '#7a3fb0', paladin: '#f0d36a', berserker: '#e8643c', druid: '#5aa05a', necromancer: '#6a8a7a', graveTender: '#7f9a5a', trickster: '#5ad0b0', shadowPaw: '#6a5a8a' };
+    // b20 class portrait: replaces the colour swatch (and the animated canvas) once the image loads; a missing image keeps today's swatch / canvas.
+    const PORTRAIT_ROOT = '../../assets/arcane/b20-class-portraits-and-ability-icons/portraits/portrait_';
+    function portraitImg(cls, sw, cv, size) {
+      const c = String(cls || '').toLowerCase(); if (params.get('uiicons') === '0' || !/^[a-z]+$/.test(c)) return null;
+      const im = document.createElement('img'); im.className = 'hp-portrait'; im.alt = ''; im.setAttribute('aria-hidden', 'true'); im.draggable = false; im.hidden = true; im.dataset.cls = c;
+      if (size) { im.style.width = im.style.height = size + 'px'; }
+      im.addEventListener('load', () => { im.hidden = false; if (sw) sw.hidden = true; if (cv) { cv.hidden = true; cv.removeAttribute('data-art'); } });
+      im.addEventListener('error', () => { im.remove(); });
+      im.src = PORTRAIT_ROOT + c + '.png';
+      return im;
+    }
     function paintArts() {
       body.querySelectorAll('canvas.hp-art').forEach((cv) => {
         const ac = cv.getAttribute('data-art'); const set = arts.get(ac); const a = set && set.anim ? set.anim(ac, 'idle', 'down') : null;
@@ -270,7 +299,7 @@
       Object.keys(MMClasses.CLASSES).forEach((id) => {
         const lk = !ok[id]; const b = mk('button', 'hp-hero hp-new' + (lk ? ' locked' : '')); b.type = 'button'; b.dataset.newcls = id; if (lk) { b.disabled = true; b.setAttribute('aria-disabled', 'true'); }
         const sw = mk('span', 'hp-swatch', HS.className(MMClasses, id).charAt(0)); sw.style.background = SW[id] || '#8a63e0'; sw.setAttribute('aria-hidden', 'true');
-        b.append(sw, mk('span', 'hp-name', HS.className(MMClasses, id)), mk('span', 'hp-sub', MMClasses.CLASSES[id].ability.name));
+        const pt0 = portraitImg(id, sw, null); if (pt0) b.append(sw, pt0, mk('span', 'hp-name', HS.className(MMClasses, id)), mk('span', 'hp-sub', MMClasses.CLASSES[id].ability.name)); else b.append(sw, mk('span', 'hp-name', HS.className(MMClasses, id)), mk('span', 'hp-sub', MMClasses.CLASSES[id].ability.name));
         if (lk) b.appendChild(mk('span', 'hp-hint', '🔒 ' + HS.lockHint(MMClasses, id)));
         grid.appendChild(b);
       });
@@ -289,6 +318,7 @@
         const sw = mk('span', 'hp-swatch', (h.name || '?').charAt(0).toUpperCase()); sw.style.background = SW[h.cls] || '#8a63e0'; sw.setAttribute('aria-hidden', 'true');
         const cv = mk('canvas', 'hp-art'); cv.width = cv.height = 64; cv.hidden = true; cv.setAttribute('aria-hidden', 'true'); const ac = window.MMArt ? MMArt.artClassFor(h.cls) : null; if (ac) cv.setAttribute('data-art', ac);
         b.append(sw, cv, mk('span', 'hp-name', h.name), mk('span', 'hp-sub', h.clsName + (h.locked ? '' : ' · Lv ' + h.level)));
+        const pt = portraitImg(h.cls, sw, cv); if (pt) b.insertBefore(pt, cv.nextSibling);
         if (h.locked) b.appendChild(mk('span', 'hp-hint', '🔒 ' + h.hint)); else if (h.active) b.appendChild(mk('span', 'hp-tag', 'Active'));
         grid.appendChild(b);
       });
@@ -301,12 +331,14 @@
       const wapi = realmWorld ? realmWorld.api : null; let z = -1; try { const zi = wapi && wapi.zone(); z = zi && zi.zone < 4 ? zi.zone : -1; } catch (e) { z = -1; }
       deepest.z = Math.max(deepest.z, z);
       let portals = 0; try { portals = RealmWorld.readSave().stats.portals; } catch (e) { portals = 0; }
-      const rows = HS.panelRows(MMClasses, { hero, profile: arena.heroProfile || MMClasses.arenaProfile(null), stats: arena.stats, save: arena.save, defs, weapon: weaponPanel(hero), passives: window.MMUnlocks && hero.cls ? { level: arena.save.level, unlocks: MMUnlocks } : undefined, run: { kills: wapi ? wapi.kills() : 0, deepest: deepest.z < 0 ? null : deepest.z, portals, time: arena.clock } });
+      const rows = HS.panelRows(MMClasses, { hero, profile: arena.heroProfile || MMClasses.arenaProfile(null), stats: arena.stats, save: arena.save, defs, weapon: weaponPanel(hero), passives: window.MMUnlocks && hero.cls ? { level: arena.heroLevel ? arena.heroLevel() : arena.save.level, unlocks: MMUnlocks } : undefined, run: { kills: wapi ? wapi.kills() : 0, deepest: deepest.z < 0 ? null : deepest.z, portals, time: arena.clock } });
       body.textContent = ''; let grp = null, dl = null;
       rows.forEach((r) => {
         if (r.group !== grp) { grp = r.group; body.appendChild(mk('h3', 'hp-h', grp)); dl = mk('div', 'hp-rows'); body.appendChild(dl); }
-        const row = mk('div', 'realm-board-row'); row.append(mk('span', '', r.label), mk('b', '', r.value)); dl.appendChild(row);
+        const row = mk('div', 'realm-board-row'); const lab = mk('span', '', r.label); row.append(lab, mk('b', '', r.value)); dl.appendChild(row);
+        if (ICONS_ON && STAT_ICON[r.label]) { const im = iconImg(STAT_ICON[r.label], lab); im.classList.add('stat'); lab.insertBefore(im, lab.firstChild); }
       });
+      if (st.hero) { const pt = portraitImg(hero.cls, null, null, 64); if (pt) { pt.classList.add('hp-portrait-stats'); body.insertBefore(pt, body.firstChild); } }
       if (!st.hero) body.insertBefore(mk('p', 'dim', 'No hero is active, so base stats apply. Pick one on the Pick hero tab.'), body.firstChild);
     }
     function render() {
@@ -337,6 +369,130 @@
     setInterval(() => { try { const zi = realmWorld.api.zone(); if (zi && zi.zone < 4) deepest.z = Math.max(deepest.z, zi.zone); } catch (e) { /* ignore */ } }, 1500);
     window.__heroUi = { select: selectHero, create: createHero, open: (t) => arena.openHeroPanel(t) };
   } else { const bh = document.getElementById('realm-board-hero'); if (bh) bh.hidden = true; }
+
+  // ---------- S13: unlock toast, ability sheet, UI icons (pixeltown-arms-v1 keeps the `seen` list) ----------
+  const ARMS_KEY = 'pixeltown-arms-v1';
+  const ICON_ROOT = '../../assets/arcane/b19-ui-icons/ui/ui_';
+  const mkEl = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt !== undefined) e.textContent = txt; return e; };
+  const overlayEl = document.getElementById('realm-overlay');
+  const U = window.MMUnlocks;
+  const armsRead = () => { try { return U.cleanArms(JSON.parse(localStorage.getItem(ARMS_KEY) || 'null')); } catch (e) { return U.cleanArms(null); } };
+  const armsWrite = (a) => { try { localStorage.setItem(ARMS_KEY, JSON.stringify(a)); } catch (e) { /* storage blocked: toasts just repeat next visit */ } };
+
+  // UI icons: an <img> from the b19 art placed before the emoji, which stays in the DOM (visually hidden) as text and as the fallback if the image fails.
+  var ICONS_ON = params.get('uiicons') !== '0' && (!U || armsRead().hud.icons !== false);
+  function iconImg(id, host) {
+    const img = document.createElement('img'); img.className = 'mm-ico'; img.alt = ''; img.setAttribute('aria-hidden', 'true'); img.draggable = false; img.decoding = 'async';
+    img.addEventListener('load', () => { host.classList.add('has-ico'); });
+    img.addEventListener('error', () => { host.classList.remove('has-ico'); img.remove(); host.dataset.icoFail = '1'; });
+    img.src = ICON_ROOT + id + '.png';
+    return img;
+  }
+  function decorate(host, id) {
+    if (!ICONS_ON || !host || host.dataset.icoFail || host.querySelector(':scope > .mm-ico')) return;
+    let n = host.firstChild;
+    while (n && !(n.nodeType === 3 && n.nodeValue.trim())) n = n.nextSibling;
+    if (n && !host.querySelector(':scope > .emo')) {
+      const m = /^\s*[^\sA-Za-z0-9(]+/u.exec(n.nodeValue);
+      if (m) { const rest = n.nodeValue.slice(m[0].length).replace(/^\s+/, ''); const emo = mkEl('span', 'emo', m[0].trim()); n.nodeValue = (rest ? ' ' : '') + rest; host.insertBefore(emo, n); }
+    }
+    host.classList.add('ico-host');
+    host.insertBefore(iconImg(id, host), host.firstChild);
+  }
+  const ICON_TARGETS = [['#realm-bp-btn', 'icon_backpack'], ['#realm-board-btn', 'icon_board'], ['#realm-leave-btn', 'icon_back'], ['#realm-menu-btn', 'icon_settings'],
+    ['#realm-bp-close, #realm-board-close, #realm-hero-close, #realm-menu-close, #realm-shop-close', 'icon_close'], ['#realm-board-hero', 'icon_board'],
+    ['.rm-btn[data-m="resume"]', 'icon_play'], ['.rm-btn[data-m="heroes"]', 'icon_party'], ['.rm-btn[data-m="herostats"]', 'icon_board'], ['.rm-btn[data-m="restart"]', 'icon_restart'],
+    ['.rm-btn[data-m="leave"]', 'icon_nexus'], ['.rm-btn[data-d="again"]', 'icon_restart'], ['.rm-btn[data-d="leave"]', 'icon_nexus']];
+  const RARITY_CLS = { common: 'common', uncommon: 'uncommon', rare: 'rare', epic: 'epic' };
+  function decorateAll() {
+    ICON_TARGETS.forEach((t) => { overlayEl.querySelectorAll(t[0]).forEach((el) => decorate(el, t[1])); });
+    overlayEl.querySelectorAll('#realm-backpack-body li:not([data-rar])').forEach((li) => {
+      const r = li.querySelector('.rar'); const k = r ? RARITY_CLS[r.textContent.trim().toLowerCase()] : null; // class names only, never user text
+      if (k) { li.dataset.rar = k; li.classList.add('rar-' + k); } else li.dataset.rar = '';
+    });
+  }
+  if (ICONS_ON) {
+    let raf = 0; const sched = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; try { decorateAll(); } catch (e) { /* cosmetic only */ } }); };
+    new MutationObserver(sched).observe(overlayEl, { childList: true, subtree: true });
+    sched();
+  }
+
+  // Unlock toast: shows 'Unlocked: <node> - <effect>' once per node. On the first look at a class, every node at or below the current level is
+  // marked seen (no flood); after that, nodes the level reaches that are not in `seen` queue as toasts.
+  let toastEl = null, toastTimer = 0; const toastQ = []; const baselined = {};
+  function ensureToast() {
+    if (toastEl) return toastEl;
+    toastEl = mkEl('div', 'mm-toast hidden'); toastEl.id = 'mm-unlock-toast'; toastEl.setAttribute('role', 'status'); toastEl.setAttribute('aria-live', 'polite');
+    const txt = mkEl('span', 'mm-toast-text'); const x = mkEl('button', 'mm-toast-x', '✖'); x.type = 'button'; x.id = 'mm-unlock-toast-x'; x.setAttribute('aria-label', 'Dismiss unlock message');
+    x.addEventListener('click', () => nextToast());
+    toastEl.append(txt, x); overlayEl.appendChild(toastEl); return toastEl;
+  }
+  function nextToast() {
+    clearTimeout(toastTimer); toastTimer = 0; const el = ensureToast();
+    const n = toastQ.shift();
+    if (!n) { el.classList.add('hidden'); return; }
+    el.querySelector('.mm-toast-text').textContent = 'Unlocked: ' + n.name + ' - ' + n.text;
+    el.dataset.node = n.id; el.classList.remove('hidden');
+    toastTimer = setTimeout(nextToast, 5000);
+  }
+  function unlockTick() {
+    try {
+      if (!U || !arena.save || document.hidden) return;
+      const cls = activeHeroClass(); if (!cls) return;
+      const lv = Math.floor(Number(arena.save.level)) || 1;
+      let arms = armsRead();
+      if (!baselined[cls]) { baselined[cls] = true; arms = U.markSeen(arms, cls, lv); armsWrite(arms); return; }
+      const fresh = U.unseen(arms, cls, lv); if (!fresh.length) return;
+      fresh.forEach((n) => { if (arms.seen.length < U.MAX_SEEN) arms.seen.push(n.id); });
+      armsWrite(U.cleanArms(arms));
+      fresh.forEach((n) => toastQ.push(n));
+      if (!toastTimer) nextToast();
+    } catch (e) { /* never break the game for a toast */ }
+  }
+  if (U) { unlockTick(); setInterval(unlockTick, 250); }
+
+  // Ability sheet: long-press (500 ms) or right-click on an ability button. Esc, the close button or a tap outside closes it.
+  let sheetEl = null;
+  function closeSheet() { if (sheetEl) sheetEl.classList.add('hidden'); }
+  function openSheet(i) {
+    try {
+      const ab = arena._ab(i); if (!ab) return;
+      const lv = Math.floor(Number(arena.save.level)) || 1; const cls = activeHeroClass();
+      if (!sheetEl) {
+        sheetEl = mkEl('div', 'mm-sheet hidden'); sheetEl.id = 'mm-ab-sheet'; sheetEl.setAttribute('role', 'dialog'); sheetEl.setAttribute('aria-label', 'Ability details');
+        overlayEl.appendChild(sheetEl);
+      }
+      sheetEl.textContent = '';
+      const head = mkEl('div', 'mm-sheet-head'); head.appendChild(mkEl('strong', '', (ab.icon || '') + ' ' + ab.name + ' (' + String(ab.key).toUpperCase() + ')'));
+      const x = mkEl('button', 'mm-sheet-x', '✖'); x.type = 'button'; x.id = 'mm-ab-sheet-x'; x.setAttribute('aria-label', 'Close ability details'); x.addEventListener('click', closeSheet); head.appendChild(x);
+      sheetEl.appendChild(head);
+      const cd = ab.id === 'dash' && U ? U.dashCooldown(lv) : ab.cd;
+      const row = (k, v) => { const r = mkEl('div', 'mm-sheet-row'); r.append(mkEl('span', '', k), mkEl('b', '', v)); sheetEl.appendChild(r); };
+      row('Cooldown', (Math.round(Number(cd) * 10) / 10) + ' s');
+      row('Unlocks at', 'Level ' + ab.level + (lv >= ab.level ? ' (unlocked)' : ' (you are level ' + lv + ')'));
+      if (U && cls) {
+        const reached = U.forLevel(cls, lv).filter((n) => !/^(nova2|dash2)_/.test(n.id)); const nx = U.next(cls, lv);
+        sheetEl.appendChild(mkEl('h4', '', 'Class passives'));
+        if (!reached.length) sheetEl.appendChild(mkEl('p', 'dim', 'None yet.'));
+        reached.forEach((n) => sheetEl.appendChild(mkEl('p', 'mm-sheet-node', '[x] ' + n.name + ' (Lv ' + n.lv + '): ' + n.text)));
+        if (nx) sheetEl.appendChild(mkEl('p', 'mm-sheet-node next', 'Next, Lv ' + nx.lv + ': ' + nx.name + ' - ' + nx.text));
+      }
+      sheetEl.classList.remove('hidden');
+    } catch (e) { closeSheet(); }
+  }
+  (function abilitySheet() {
+    let timer = 0, sx = 0, sy = 0;
+    const stop = () => { clearTimeout(timer); timer = 0; };
+    for (let i = 0; i < 4; i++) {
+      const b = document.getElementById('realm-ab-' + i); if (!b) continue;
+      b.addEventListener('pointerdown', (e) => { if (e.button > 0) return; stop(); sx = e.clientX; sy = e.clientY; timer = setTimeout(() => { timer = 0; openSheet(i); }, 500); });
+      b.addEventListener('pointermove', (e) => { if (timer && Math.hypot(e.clientX - sx, e.clientY - sy) > 12) stop(); });
+      ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => b.addEventListener(ev, stop));
+      b.addEventListener('contextmenu', (e) => { e.preventDefault(); stop(); openSheet(i); });
+    }
+    document.addEventListener('pointerdown', (e) => { if (sheetEl && !sheetEl.classList.contains('hidden') && !sheetEl.contains(e.target) && !(e.target.closest && e.target.closest('.realm-ab'))) closeSheet(); }, true);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && sheetEl && !sheetEl.classList.contains('hidden')) { closeSheet(); e.stopPropagation(); e.preventDefault(); } }, true);
+  })();
 
   if (TEST) window.__mm = { applyWeapon, arena, dungeon: dungeon ? dungeon.api : null, world: realmWorld ? realmWorld.api : null };
   arena.start();

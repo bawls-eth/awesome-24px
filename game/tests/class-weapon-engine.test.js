@@ -57,7 +57,8 @@ const volley = (page) => page.evaluate(() => {
   check('bow_triple fires 3 bolts at -0.09, 0, +0.09 rad', tv.length === 3 && Math.abs(tv[0].ang + 0.09) < 1e-6 && Math.abs(tv[1].ang) < 1e-6 && Math.abs(tv[2].ang - 0.09) < 1e-6 && tv.every((b) => b.ws), JSON.stringify(tv));
   const spec = await R.page.evaluate(() => MMWeapons.resolve('ranger', 'bow_triple', 0).dmg);
   check('each arrow carries the resolved per-bolt damage', tv.every((b) => Math.abs(b.dmg - spec) < 1e-9), JSON.stringify({ spec, d: tv.map((b) => b.dmg) }));
-  const life = await R.page.evaluate(() => { const a = window.__mm.arena; let n = 0; for (let i = 0; i < 60; i++) { a._updateBullets(1 / 60); if (a.pBullets.some((b) => b.active)) n = i + 1; } return n; });
+  // the page's own frame loop ages the bolts between the volley call and this one: count the age they already have (`age`, seconds) plus the manual steps, so the total lifetime is measured exactly
+  const life = await R.page.evaluate(() => { const a = window.__mm.arena; const was = a.paused; a.paused = true; const aged = Math.round(Math.max(0, ...a.pBullets.filter((b) => b.active).map((b) => b.age || 0)) * 60); let n = 0; for (let i = 0; i < 60; i++) { a._updateBullets(1 / 60); if (a.pBullets.some((b) => b.active)) n = i + 1; } a.paused = was; return n + aged; });
   check('bow_triple arrows live about 0.75 s (45 frames)', life >= 43 && life <= 46, String(life));
   const cap = await R.page.evaluate(() => { const a = window.__mm.arena; a.pBullets.forEach((b) => { b.active = false; }); for (let i = 0; i < 30; i++) a._firePlayerVolley(0); return a.pBullets.filter((b) => b.active && b.ws).length; });
   check('40-bolt cap per hero holds', cap === 40, String(cap));
@@ -176,23 +177,24 @@ const volley = (page) => page.evaluate(() => {
   check('code-drawn shapes are cached (no new canvases while drawing the same bolts)', draw.n1 >= 1 && draw.n2 === draw.n1, JSON.stringify(draw));
   await S.ctx.close();
 
-  // (4) a save holding wpn_bow_leaf keeps it (inert, unequippable) and writes it back.
-  const realm = { shards: 5, level: 2, xp: 0, items: [{ n: 1, id: 'wpn_bow_leaf', r: 1 }, { n: 2, id: 'sparkwand', r: 0 }, { n: 3, id: 'wpn_X', r: 0 }, { n: 4, id: 'bogus', r: 0 }], nextUid: 5, eq: { weapon: 1 } };
+  // (4) a save holding wpn_bow_leaf keeps it and writes it back. Since S12 the 26 known styles are real weapon items, so the stale-tab
+  // tolerance is checked with a wpn_ id this build does not know (wpn_zz_future): kept, inert, never equipped.
+  const realm = { shards: 5, level: 2, xp: 0, items: [{ n: 1, id: 'wpn_bow_leaf', r: 1 }, { n: 2, id: 'sparkwand', r: 0 }, { n: 3, id: 'wpn_X', r: 0 }, { n: 4, id: 'bogus', r: 0 }, { n: 5, id: 'wpn_zz_future', r: 0 }], nextUid: 6, eq: { weapon: 5 } };
   const Sv = await open(browser, 'ranger', '', { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }, realm); errs.push(...Sv.errors);
   const sv = await Sv.page.evaluate(([k]) => {
     const a = window.__mm.arena;
     const ids = a.save.items.map((it) => it.id);
     const eq = a.save.eq.weapon || 0;
-    const eqOk = a.equip(1) === false && !a.save.eq.weapon;
+    const eqOk = a.equip(5) === false && !a.save.eq.weapon;
     a.setPaused(true); const html = (document.getElementById('realm-backpack-body') || {}).innerHTML || '';
     a.setPaused(false);
     a.onSave(a.save);
     const stored = JSON.parse(localStorage.getItem(k)).realm.items.map((it) => it.id);
-    return { ids, eq, eqOk, listed: /Bow Leaf/.test(html), stored, scroll: document.documentElement.scrollWidth <= window.innerWidth };
+    return { ids, eq, eqOk, listed: /Leaf Volley/.test(html) && /Zz Future/.test(html), stored, scroll: document.documentElement.scrollWidth <= window.innerWidth };
   }, [SAVE]);
-  check('a save holding wpn_bow_leaf keeps it (bad ids still dropped)', sv.ids.join() === 'wpn_bow_leaf,sparkwand', JSON.stringify(sv));
+  check('a save holding wpn_bow_leaf keeps it (bad ids still dropped)', sv.ids.join() === 'wpn_bow_leaf,sparkwand,wpn_zz_future', JSON.stringify(sv));
   check('the inert wpn_ item is never equipped', sv.eq === 0 && sv.eqOk, JSON.stringify(sv));
-  check('the inert item shows in the backpack and survives a save write', sv.listed && sv.stored.indexOf('wpn_bow_leaf') >= 0, JSON.stringify(sv));
+  check('the inert item shows in the backpack and survives a save write', sv.listed && sv.stored.indexOf('wpn_bow_leaf') >= 0 && sv.stored.indexOf('wpn_zz_future') >= 0, JSON.stringify(sv));
   check('390x844 phone: no horizontal scroll', sv.scroll);
   await Sv.ctx.close();
 

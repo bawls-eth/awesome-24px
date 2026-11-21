@@ -1,0 +1,822 @@
+{
+  "batch": "b23",
+  "label": "bosses-extra",
+  "assets": [
+    {
+      "id": "lich_king_idle_down",
+      "path": "bosses/lich_king/lich_king_idle_down.png",
+      "category": "boss",
+      "boss": "lich_king",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "lich_king_move_down",
+      "path": "bosses/lich_king/lich_king_move_down.png",
+      "category": "boss",
+      "boss": "lich_king",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "lich_king_attack_a_down",
+      "path": "bosses/lich_king/lich_king_attack_a_down.png",
+      "category": "boss",
+      "boss": "lich_king",
+      "action": "attack_a",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "lich_king_attack_b_down",
+      "path": "bosses/lich_king/lich_king_attack_b_down.png",
+      "category": "boss",
+      "boss": "lich_king",
+      "action": "attack_b",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "lich_king_hit_down",
+      "path": "bosses/lich_king/lich_king_hit_down.png",
+      "category": "boss",
+      "boss": "lich_king",
+      "action": "hit",
+      "dir": "down",
+      "frames": 2,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "lich_king_death_down",
+      "path": "bosses/lich_king/lich_king_death_down.png",
+      "category": "boss",
+      "boss": "lich_king",
+      "action": "death",
+      "dir": "down",
+      "frames": 8,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "hydra_idle_down",
+      "path": "bosses/hydra/hydra_idle_down.png",
+      "category": "boss",
+      "boss": "hydra",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "hydra_move_down",
+      "path": "bosses/hydra/hydra_move_down.png",
+      "category": "boss",
+      "boss": "hydra",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "hydra_attack_a_down",
+      "path": "bosses/hydra/hydra_attack_a_down.png",
+      "category": "boss",
+      "boss": "hydra",
+      "action": "attack_a",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "hydra_attack_b_down",
+      "path": "bosses/hydra/hydra_attack_b_down.png",
+      "category": "boss",
+      "boss": "hydra",
+      "action": "attack_b",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "hydra_hit_down",
+      "path": "bosses/hydra/hydra_hit_down.png",
+      "category": "boss",
+      "boss": "hydra",
+      "action": "hit",
+      "dir": "down",
+      "frames": 2,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "hydra_death_down",
+      "path": "bosses/hydra/hydra_death_down.png",
+      "category": "boss",
+      "boss": "hydra",
+      "action": "death",
+      "dir": "down",
+      "frames": 8,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "treant_elder_idle_down",
+      "path": "bosses/treant_elder/treant_elder_idle_down.png",
+      "category": "boss",
+      "boss": "treant_elder",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "treant_elder_move_down",
+      "path": "bosses/treant_elder/treant_elder_move_down.png",
+      "category": "boss",
+      "boss": "treant_elder",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "treant_elder_attack_a_down",
+      "path": "bosses/treant_elder/treant_elder_attack_a_down.png",
+      "category": "boss",
+      "boss": "treant_elder",
+      "action": "attack_a",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "treant_elder_attack_b_down",
+      "path": "bosses/treant_elder/treant_elder_attack_b_down.png",
+      "category": "boss",
+      "boss": "treant_elder",
+      "action": "attack_b",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "treant_elder_hit_down",
+      "path": "bosses/treant_elder/treant_elder_hit_down.png",
+      "category": "boss",
+      "boss": "treant_elder",
+      "action": "hit",
+      "dir": "down",
+      "frames": 2,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "treant_elder_death_down",
+      "path": "bosses/treant_elder/treant_elder_death_down.png",
+      "category": "boss",
+      "boss": "treant_elder",
+      "action": "death",
+      "dir": "down",
+      "frames": 8,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "sand_titan_idle_down",
+      "path": "bosses/sand_titan/sand_titan_idle_down.png",
+      "category": "boss",
+      "boss": "sand_titan",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "sand_titan_move_down",
+      "path": "bosses/sand_titan/sand_titan_move_down.png",
+      "category": "boss",
+      "boss": "sand_titan",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "sand_titan_attack_a_down",
+      "path": "bosses/sand_titan/sand_titan_attack_a_down.png",
+      "category": "boss",
+      "boss": "sand_titan",
+      "action": "attack_a",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "sand_titan_attack_b_down",
+      "path": "bosses/sand_titan/sand_titan_attack_b_down.png",
+      "category": "boss",
+      "boss": "sand_titan",
+      "action": "attack_b",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "sand_titan_hit_down",
+      "path": "bosses/sand_titan/sand_titan_hit_down.png",
+      "category": "boss",
+      "boss": "sand_titan",
+      "action": "hit",
+      "dir": "down",
+      "frames": 2,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "sand_titan_death_down",
+      "path": "bosses/sand_titan/sand_titan_death_down.png",
+      "category": "boss",
+      "boss": "sand_titan",
+      "action": "death",
+      "dir": "down",
+      "frames": 8,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "frost_dragon_idle_down",
+      "path": "bosses/frost_dragon/frost_dragon_idle_down.png",
+      "category": "boss",
+      "boss": "frost_dragon",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "frost_dragon_move_down",
+      "path": "bosses/frost_dragon/frost_dragon_move_down.png",
+      "category": "boss",
+      "boss": "frost_dragon",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "frost_dragon_attack_a_down",
+      "path": "bosses/frost_dragon/frost_dragon_attack_a_down.png",
+      "category": "boss",
+      "boss": "frost_dragon",
+      "action": "attack_a",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "frost_dragon_attack_b_down",
+      "path": "bosses/frost_dragon/frost_dragon_attack_b_down.png",
+      "category": "boss",
+      "boss": "frost_dragon",
+      "action": "attack_b",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "frost_dragon_hit_down",
+      "path": "bosses/frost_dragon/frost_dragon_hit_down.png",
+      "category": "boss",
+      "boss": "frost_dragon",
+      "action": "hit",
+      "dir": "down",
+      "frames": 2,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "frost_dragon_death_down",
+      "path": "bosses/frost_dragon/frost_dragon_death_down.png",
+      "category": "boss",
+      "boss": "frost_dragon",
+      "action": "death",
+      "dir": "down",
+      "frames": 8,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "shadow_hydra_idle_down",
+      "path": "bosses/shadow_hydra/shadow_hydra_idle_down.png",
+      "category": "boss",
+      "boss": "shadow_hydra",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "shadow_hydra_move_down",
+      "path": "bosses/shadow_hydra/shadow_hydra_move_down.png",
+      "category": "boss",
+      "boss": "shadow_hydra",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "shadow_hydra_attack_a_down",
+      "path": "bosses/shadow_hydra/shadow_hydra_attack_a_down.png",
+      "category": "boss",
+      "boss": "shadow_hydra",
+      "action": "attack_a",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "shadow_hydra_attack_b_down",
+      "path": "bosses/shadow_hydra/shadow_hydra_attack_b_down.png",
+      "category": "boss",
+      "boss": "shadow_hydra",
+      "action": "attack_b",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "shadow_hydra_hit_down",
+      "path": "bosses/shadow_hydra/shadow_hydra_hit_down.png",
+      "category": "boss",
+      "boss": "shadow_hydra",
+      "action": "hit",
+      "dir": "down",
+      "frames": 2,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "shadow_hydra_death_down",
+      "path": "bosses/shadow_hydra/shadow_hydra_death_down.png",
+      "category": "boss",
+      "boss": "shadow_hydra",
+      "action": "death",
+      "dir": "down",
+      "frames": 8,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "clockwork_golem_idle_down",
+      "path": "bosses/clockwork_golem/clockwork_golem_idle_down.png",
+      "category": "boss",
+      "boss": "clockwork_golem",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "clockwork_golem_move_down",
+      "path": "bosses/clockwork_golem/clockwork_golem_move_down.png",
+      "category": "boss",
+      "boss": "clockwork_golem",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "clockwork_golem_attack_a_down",
+      "path": "bosses/clockwork_golem/clockwork_golem_attack_a_down.png",
+      "category": "boss",
+      "boss": "clockwork_golem",
+      "action": "attack_a",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "clockwork_golem_attack_b_down",
+      "path": "bosses/clockwork_golem/clockwork_golem_attack_b_down.png",
+      "category": "boss",
+      "boss": "clockwork_golem",
+      "action": "attack_b",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "clockwork_golem_hit_down",
+      "path": "bosses/clockwork_golem/clockwork_golem_hit_down.png",
+      "category": "boss",
+      "boss": "clockwork_golem",
+      "action": "hit",
+      "dir": "down",
+      "frames": 2,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "clockwork_golem_death_down",
+      "path": "bosses/clockwork_golem/clockwork_golem_death_down.png",
+      "category": "boss",
+      "boss": "clockwork_golem",
+      "action": "death",
+      "dir": "down",
+      "frames": 8,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "void_maw_idle_down",
+      "path": "bosses/void_maw/void_maw_idle_down.png",
+      "category": "boss",
+      "boss": "void_maw",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "void_maw_move_down",
+      "path": "bosses/void_maw/void_maw_move_down.png",
+      "category": "boss",
+      "boss": "void_maw",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "void_maw_attack_a_down",
+      "path": "bosses/void_maw/void_maw_attack_a_down.png",
+      "category": "boss",
+      "boss": "void_maw",
+      "action": "attack_a",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "void_maw_attack_b_down",
+      "path": "bosses/void_maw/void_maw_attack_b_down.png",
+      "category": "boss",
+      "boss": "void_maw",
+      "action": "attack_b",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "void_maw_hit_down",
+      "path": "bosses/void_maw/void_maw_hit_down.png",
+      "category": "boss",
+      "boss": "void_maw",
+      "action": "hit",
+      "dir": "down",
+      "frames": 2,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    },
+    {
+      "id": "void_maw_death_down",
+      "path": "bosses/void_maw/void_maw_death_down.png",
+      "category": "boss",
+      "boss": "void_maw",
+      "action": "death",
+      "dir": "down",
+      "frames": 8,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 350
+      }
+    }
+  ]
+}

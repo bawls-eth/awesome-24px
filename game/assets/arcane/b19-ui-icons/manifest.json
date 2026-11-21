@@ -1,0 +1,696 @@
+{
+  "batch": "b19",
+  "label": "ui-icons",
+  "assets": [
+    {
+      "id": "ui_stat_life",
+      "path": "ui/ui_stat_life.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "ui_stat_focus",
+      "path": "ui/ui_stat_focus.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "ui_stat_power",
+      "path": "ui/ui_stat_power.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "ui_stat_guard",
+      "path": "ui/ui_stat_guard.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "ui_stat_swift",
+      "path": "ui/ui_stat_swift.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "ui_stat_knack",
+      "path": "ui/ui_stat_knack.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "ui_stat_wit",
+      "path": "ui/ui_stat_wit.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "ui_stat_xp",
+      "path": "ui/ui_stat_xp.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "ui_slot_weapon",
+      "path": "ui/ui_slot_weapon.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "ui_slot_charm",
+      "path": "ui/ui_slot_charm.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "ui_slot_ring",
+      "path": "ui/ui_slot_ring.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "ui_slot_armor",
+      "path": "ui/ui_slot_armor.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "ui_slot_ability",
+      "path": "ui/ui_slot_ability.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "ui_slot_empty",
+      "path": "ui/ui_slot_empty.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "ui_frame_common",
+      "path": "ui/ui_frame_common.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": [
+        16,
+        16
+      ],
+      "nine_slice": {
+        "top": 5,
+        "right": 5,
+        "bottom": 5,
+        "left": 5
+      }
+    },
+    {
+      "id": "ui_frame_uncommon",
+      "path": "ui/ui_frame_uncommon.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": [
+        16,
+        16
+      ],
+      "nine_slice": {
+        "top": 5,
+        "right": 5,
+        "bottom": 5,
+        "left": 5
+      }
+    },
+    {
+      "id": "ui_frame_rare",
+      "path": "ui/ui_frame_rare.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": [
+        16,
+        16
+      ],
+      "nine_slice": {
+        "top": 5,
+        "right": 5,
+        "bottom": 5,
+        "left": 5
+      }
+    },
+    {
+      "id": "ui_frame_epic",
+      "path": "ui/ui_frame_epic.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": [
+        16,
+        16
+      ],
+      "nine_slice": {
+        "top": 5,
+        "right": 5,
+        "bottom": 5,
+        "left": 5
+      }
+    },
+    {
+      "id": "ui_frame_legendary",
+      "path": "ui/ui_frame_legendary.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": [
+        16,
+        16
+      ],
+      "nine_slice": {
+        "top": 5,
+        "right": 5,
+        "bottom": 5,
+        "left": 5
+      }
+    },
+    {
+      "id": "ui_icon_restart",
+      "path": "ui/ui_icon_restart.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ]
+    },
+    {
+      "id": "ui_icon_nexus",
+      "path": "ui/ui_icon_nexus.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ]
+    },
+    {
+      "id": "ui_icon_settings",
+      "path": "ui/ui_icon_settings.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ]
+    },
+    {
+      "id": "ui_icon_backpack",
+      "path": "ui/ui_icon_backpack.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ]
+    },
+    {
+      "id": "ui_icon_board",
+      "path": "ui/ui_icon_board.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ]
+    },
+    {
+      "id": "ui_icon_shop",
+      "path": "ui/ui_icon_shop.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ]
+    },
+    {
+      "id": "ui_icon_map",
+      "path": "ui/ui_icon_map.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ]
+    },
+    {
+      "id": "ui_icon_sound_on",
+      "path": "ui/ui_icon_sound_on.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ]
+    },
+    {
+      "id": "ui_icon_sound_off",
+      "path": "ui/ui_icon_sound_off.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ]
+    },
+    {
+      "id": "ui_icon_pause",
+      "path": "ui/ui_icon_pause.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ]
+    },
+    {
+      "id": "ui_icon_play",
+      "path": "ui/ui_icon_play.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ]
+    },
+    {
+      "id": "ui_icon_close",
+      "path": "ui/ui_icon_close.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ]
+    },
+    {
+      "id": "ui_icon_back",
+      "path": "ui/ui_icon_back.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ]
+    },
+    {
+      "id": "ui_icon_heart",
+      "path": "ui/ui_icon_heart.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ]
+    },
+    {
+      "id": "ui_icon_shield",
+      "path": "ui/ui_icon_shield.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ]
+    },
+    {
+      "id": "ui_icon_sword",
+      "path": "ui/ui_icon_sword.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ]
+    },
+    {
+      "id": "ui_icon_skull",
+      "path": "ui/ui_icon_skull.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ]
+    },
+    {
+      "id": "ui_icon_star",
+      "path": "ui/ui_icon_star.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ]
+    },
+    {
+      "id": "ui_icon_key",
+      "path": "ui/ui_icon_key.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ]
+    },
+    {
+      "id": "ui_icon_lock",
+      "path": "ui/ui_icon_lock.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ]
+    },
+    {
+      "id": "ui_icon_chest",
+      "path": "ui/ui_icon_chest.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ]
+    },
+    {
+      "id": "ui_icon_party",
+      "path": "ui/ui_icon_party.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ]
+    },
+    {
+      "id": "ui_icon_duel",
+      "path": "ui/ui_icon_duel.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ]
+    },
+    {
+      "id": "ui_icon_portal",
+      "path": "ui/ui_icon_portal.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ]
+    },
+    {
+      "id": "ui_bar_hp_frame",
+      "path": "ui/ui_bar_hp_frame.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 16,
+      "anchor": [
+        24,
+        8
+      ],
+      "nine_slice": {
+        "top": 5,
+        "right": 5,
+        "bottom": 5,
+        "left": 5
+      }
+    },
+    {
+      "id": "ui_bar_focus_frame",
+      "path": "ui/ui_bar_focus_frame.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 16,
+      "anchor": [
+        24,
+        8
+      ],
+      "nine_slice": {
+        "top": 5,
+        "right": 5,
+        "bottom": 5,
+        "left": 5
+      }
+    },
+    {
+      "id": "ui_bar_xp_frame",
+      "path": "ui/ui_bar_xp_frame.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 16,
+      "anchor": [
+        24,
+        8
+      ],
+      "nine_slice": {
+        "top": 5,
+        "right": 5,
+        "bottom": 5,
+        "left": 5
+      }
+    },
+    {
+      "id": "ui_minimap_frame",
+      "path": "ui/ui_minimap_frame.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 96,
+      "frame_h": 96,
+      "anchor": [
+        48,
+        48
+      ],
+      "nine_slice": {
+        "top": 5,
+        "right": 5,
+        "bottom": 5,
+        "left": 5
+      }
+    },
+    {
+      "id": "ui_joystick_base",
+      "path": "ui/ui_joystick_base.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 128,
+      "frame_h": 128,
+      "anchor": [
+        64,
+        64
+      ]
+    },
+    {
+      "id": "ui_joystick_knob",
+      "path": "ui/ui_joystick_knob.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 64,
+      "anchor": [
+        32,
+        32
+      ]
+    },
+    {
+      "id": "ui_button_a",
+      "path": "ui/ui_button_a.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 64,
+      "anchor": [
+        32,
+        32
+      ]
+    },
+    {
+      "id": "ui_button_b",
+      "path": "ui/ui_button_b.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 64,
+      "anchor": [
+        32,
+        32
+      ]
+    },
+    {
+      "id": "ui_button_ability",
+      "path": "ui/ui_button_ability.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 64,
+      "anchor": [
+        32,
+        32
+      ]
+    },
+    {
+      "id": "ui_cursor_aim",
+      "path": "ui/ui_cursor_aim.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    }
+  ]
+}

@@ -31,6 +31,14 @@
     { boss: 'bone_colossus', zone: 2 }, { boss: 'storm_harbinger', zone: 2 }, { boss: 'crystal_titan', zone: 2 },
     { boss: 'dread_knight', zone: 3 }, { boss: 'inferno_wyrm', zone: 3 }, { boss: 'void_oracle', zone: 3 },
   ];
+  // b23 bosses-extra: per-zone boss pools. A site keeps its LOCATION (found with the 'sites' stream, untouched); only its boss id is drawn from the
+  // zone pool by a seeded hash sort (no stream consumed). `classic` (generate opts.bosses === 'classic', page ?bosses=classic) keeps the BOSSES ids above.
+  // Zone 0 (shore) holds no boss site; its two thematic bosses (treant_elder, sand_titan) live in the midlands pool.
+  const BOSS_POOLS = {
+    1: ['forest_warden', 'mire_queen', 'treant_elder', 'sand_titan'],
+    2: ['bone_colossus', 'storm_harbinger', 'crystal_titan', 'hydra', 'frost_dragon', 'clockwork_golem'],
+    3: ['dread_knight', 'inferno_wyrm', 'void_oracle', 'lich_king', 'shadow_hydra', 'void_maw'],
+  };
   const PORTAL_ZONES = { warren: 1, bramble: 1, meadow: 2, crypt: 2 };
   // existing enemy TYPES (realm.js RM_ENEMIES: spiral/aimed/ring) -> art creature ids by zone tier 0..3
   const CREATURE_TIERS = {
@@ -38,7 +46,17 @@
     aimed: [['goblin_scout', 'sprout'], ['archer', 'forest_wolf'], ['skeleton_archer', 'dark_spider', 'sand_scorpion'], ['dark_spider', 'skeleton_archer', 'bone_knight']],
     ring: [['puffcap', 'slime_green'], ['beetle', 'slime_blue', 'swamp_leech'], ['stone_golem', 'crystal_beetle', 'slime_red'], ['bone_knight', 'toxic_serpent', 'stone_golem']],
   };
-  const BOSS_IDS = BOSSES.map(function (b) { return b.boss; });
+  const BOSS_IDS = BOSSES.map(function (b) { return b.boss; }).concat([].concat(BOSS_POOLS[1], BOSS_POOLS[2], BOSS_POOLS[3]).filter(function (id) { return !BOSSES.some(function (b) { return b.boss === id; }); }));
+  // site boss ids for a seed: per zone, the zone pool ordered by a seeded hash, assigned to that zone's sites in BOSSES order (distinct per zone).
+  function bossIdsFor(seedStr, classic) {
+    const out = BOSSES.map(function (b) { return b.boss; });
+    if (classic) return out;
+    [1, 2, 3].forEach(function (z) {
+      const order = BOSS_POOLS[z].map(function (id) { return { id: id, k: MMRng.hash(seedStr + ':boss:' + z + ':' + id) >>> 0 }; }).sort(function (a, b) { return a.k - b.k || (a.id < b.id ? -1 : 1); });
+      let n = 0; BOSSES.forEach(function (b, i) { if (b.zone === z) out[i] = order[n++].id; });
+    });
+    return out;
+  }
   const GROUP_COUNT = [[1, 3], [2, 4], [3, 5], [4, 6]];
   const GROUP_CELL = [11, 10, 9, 8];
   const GROUP_PROB = [0.5, 0.62, 0.7, 0.8];
@@ -279,11 +297,12 @@
     const props = [];
     const structures = [], bossSites = [], portalSites = [];
 
-    BOSSES.forEach(function (b) {
+    const bossIds = bossIdsFor(seedStr, opts.bosses === 'classic');
+    BOSSES.forEach(function (b, bi) {
       const p = findSite(b.zone, 13, 4);
       if (!p) return;
       clearing(p.x, p.y, 4, b.zone === 3 ? T.cracked_stone : b.zone === 2 ? T.stone_road : T.dirt_road);
-      bossSites.push({ x: p.x, y: p.y, boss: b.boss, zone: b.zone });
+      bossSites.push({ x: p.x, y: p.y, boss: bossIds[bi], zone: b.zone });
       props.push({ x: p.x, y: p.y, kind: 'boss_altar' });
     });
     BIOMES.forEach(function (biome) {
@@ -560,7 +579,7 @@
 
   return {
     VERSION: VERSION, TERRAIN: TERRAIN, TERRAIN_NAMES: TERRAIN_NAMES, ZONES: ZONES, ZONE_BANDS: ZONE_BANDS, BIOMES: BIOMES,
-    BOSSES: BOSSES, CREATURE_TIERS: CREATURE_TIERS, generate: generate, tileAt: tileAt, isSolid: isSolid, zoneAt: zoneAt,
+    BOSSES: BOSSES, BOSS_POOLS: BOSS_POOLS, bossIdsFor: bossIdsFor, CREATURE_TIERS: CREATURE_TIERS, generate: generate, tileAt: tileAt, isSolid: isSolid, zoneAt: zoneAt,
     difficultyAt: difficultyAt, nearestSpawnGroups: nearestSpawnGroups, chunk: chunk, verify: verify, hash: fnv,
   };
 }));

@@ -1,0 +1,418 @@
+{
+  "batch": "b20",
+  "label": "class-portraits-and-ability-icons",
+  "assets": [
+    {
+      "id": "portrait_ranger",
+      "path": "portraits/portrait_ranger.png",
+      "category": "portrait",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 64,
+      "anchor": [
+        32,
+        32
+      ],
+      "class": "ranger"
+    },
+    {
+      "id": "ability_ranger_sig",
+      "path": "abilities/ability_ranger_sig.png",
+      "category": "ability",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ],
+      "class": "ranger"
+    },
+    {
+      "id": "portrait_frostcaller",
+      "path": "portraits/portrait_frostcaller.png",
+      "category": "portrait",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 64,
+      "anchor": [
+        32,
+        32
+      ],
+      "class": "frostcaller"
+    },
+    {
+      "id": "ability_frostcaller_sig",
+      "path": "abilities/ability_frostcaller_sig.png",
+      "category": "ability",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ],
+      "class": "frostcaller"
+    },
+    {
+      "id": "portrait_herald",
+      "path": "portraits/portrait_herald.png",
+      "category": "portrait",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 64,
+      "anchor": [
+        32,
+        32
+      ],
+      "class": "herald"
+    },
+    {
+      "id": "ability_herald_sig",
+      "path": "abilities/ability_herald_sig.png",
+      "category": "ability",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ],
+      "class": "herald"
+    },
+    {
+      "id": "portrait_punk",
+      "path": "portraits/portrait_punk.png",
+      "category": "portrait",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 64,
+      "anchor": [
+        32,
+        32
+      ],
+      "class": "punk"
+    },
+    {
+      "id": "ability_punk_sig",
+      "path": "abilities/ability_punk_sig.png",
+      "category": "ability",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ],
+      "class": "punk"
+    },
+    {
+      "id": "portrait_bruiser",
+      "path": "portraits/portrait_bruiser.png",
+      "category": "portrait",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 64,
+      "anchor": [
+        32,
+        32
+      ],
+      "class": "bruiser"
+    },
+    {
+      "id": "ability_bruiser_sig",
+      "path": "abilities/ability_bruiser_sig.png",
+      "category": "ability",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ],
+      "class": "bruiser"
+    },
+    {
+      "id": "portrait_rogue",
+      "path": "portraits/portrait_rogue.png",
+      "category": "portrait",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 64,
+      "anchor": [
+        32,
+        32
+      ],
+      "class": "rogue"
+    },
+    {
+      "id": "ability_rogue_sig",
+      "path": "abilities/ability_rogue_sig.png",
+      "category": "ability",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ],
+      "class": "rogue"
+    },
+    {
+      "id": "portrait_warlock",
+      "path": "portraits/portrait_warlock.png",
+      "category": "portrait",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 64,
+      "anchor": [
+        32,
+        32
+      ],
+      "class": "warlock"
+    },
+    {
+      "id": "ability_warlock_sig",
+      "path": "abilities/ability_warlock_sig.png",
+      "category": "ability",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ],
+      "class": "warlock"
+    },
+    {
+      "id": "portrait_paladin",
+      "path": "portraits/portrait_paladin.png",
+      "category": "portrait",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 64,
+      "anchor": [
+        32,
+        32
+      ],
+      "class": "paladin"
+    },
+    {
+      "id": "ability_paladin_sig",
+      "path": "abilities/ability_paladin_sig.png",
+      "category": "ability",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ],
+      "class": "paladin"
+    },
+    {
+      "id": "portrait_berserker",
+      "path": "portraits/portrait_berserker.png",
+      "category": "portrait",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 64,
+      "anchor": [
+        32,
+        32
+      ],
+      "class": "berserker"
+    },
+    {
+      "id": "ability_berserker_sig",
+      "path": "abilities/ability_berserker_sig.png",
+      "category": "ability",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ],
+      "class": "berserker"
+    },
+    {
+      "id": "portrait_druid",
+      "path": "portraits/portrait_druid.png",
+      "category": "portrait",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 64,
+      "anchor": [
+        32,
+        32
+      ],
+      "class": "druid"
+    },
+    {
+      "id": "ability_druid_sig",
+      "path": "abilities/ability_druid_sig.png",
+      "category": "ability",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ],
+      "class": "druid"
+    },
+    {
+      "id": "portrait_necromancer",
+      "path": "portraits/portrait_necromancer.png",
+      "category": "portrait",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 64,
+      "anchor": [
+        32,
+        32
+      ],
+      "class": "necromancer"
+    },
+    {
+      "id": "ability_necromancer_sig",
+      "path": "abilities/ability_necromancer_sig.png",
+      "category": "ability",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ],
+      "class": "necromancer"
+    },
+    {
+      "id": "portrait_trickster",
+      "path": "portraits/portrait_trickster.png",
+      "category": "portrait",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 64,
+      "anchor": [
+        32,
+        32
+      ],
+      "class": "trickster"
+    },
+    {
+      "id": "ability_trickster_sig",
+      "path": "abilities/ability_trickster_sig.png",
+      "category": "ability",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ],
+      "class": "trickster"
+    },
+    {
+      "id": "portrait_gravetender",
+      "path": "portraits/portrait_gravetender.png",
+      "category": "portrait",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 64,
+      "anchor": [
+        32,
+        32
+      ],
+      "class": "gravetender"
+    },
+    {
+      "id": "ability_gravetender_sig",
+      "path": "abilities/ability_gravetender_sig.png",
+      "category": "ability",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ],
+      "class": "gravetender"
+    },
+    {
+      "id": "portrait_shadowpaw",
+      "path": "portraits/portrait_shadowpaw.png",
+      "category": "portrait",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 64,
+      "anchor": [
+        32,
+        32
+      ],
+      "class": "shadowpaw"
+    },
+    {
+      "id": "ability_shadowpaw_sig",
+      "path": "abilities/ability_shadowpaw_sig.png",
+      "category": "ability",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ],
+      "class": "shadowpaw"
+    },
+    {
+      "id": "ability_dash",
+      "path": "abilities/ability_dash.png",
+      "category": "ability",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ]
+    },
+    {
+      "id": "ability_nova",
+      "path": "abilities/ability_nova.png",
+      "category": "ability",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ]
+    },
+    {
+      "id": "ability_shield",
+      "path": "abilities/ability_shield.png",
+      "category": "ability",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ]
+    },
+    {
+      "id": "ability_overdrive",
+      "path": "abilities/ability_overdrive.png",
+      "category": "ability",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": [
+        24,
+        24
+      ]
+    }
+  ]
+}

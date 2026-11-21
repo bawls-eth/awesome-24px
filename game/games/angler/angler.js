@@ -73,7 +73,10 @@
     const raw = params.get('bait');
     if (raw !== null && /^\d{1,6}$/.test(raw)) { journal.bait = Math.max(0, Math.min(99, Number(raw))); Store.set(KEY, A.journal.clean(journal)); }
   })();
-  function saveJournal() { journal = A.journal.cleanFull(journal); Store.set(KEY, journal); }
+  // Hub medal summary: its own additive key, read by the hub page only.
+  function hubMedals() { try { const n = A.journal.speciesCount(journal), t = A.journal.trophyCount(journal), m = []; if (n >= 1) m.push('catch1'); if (n >= 10) m.push('species10'); if (t >= 1) m.push('boss1'); localStorage.setItem('pixeltown-medals-angler-v1', JSON.stringify({ v: 1, m })); } catch (e) { /* storage blocked */ } }
+  function saveJournal() { journal = A.journal.cleanFull(journal); Store.set(KEY, journal); hubMedals(); }
+  hubMedals();
 
   // ---- state ----
   const g = {

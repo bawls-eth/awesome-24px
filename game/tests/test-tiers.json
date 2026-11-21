@@ -111,6 +111,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "class-unlock-ui.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "class-weapon-wire.test.js": {
     "class": "browser",
     "tier": "full"
@@ -177,6 +181,14 @@
   },
   "home.test.js": {
     "class": "live",
+    "tier": "full"
+  },
+  "deepdelve-goals.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "hub-medals.test.js": {
+    "class": "browser",
     "tier": "full"
   },
   "hub-page.test.js": {
@@ -595,6 +607,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "world-bosses-extra.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "world-art.test.js": {
     "class": "browser",
     "tier": "full"
@@ -655,6 +671,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "class-unlocks-arena.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "difficulty-waves.test.js": {
     "class": "browser",
     "tier": "full"
@@ -692,6 +712,26 @@
     "tier": "full"
   },
   "bolt-art.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "fx-art.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "ability-icons.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "drop-recap.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "world-pickups.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "world-nexus.test.js": {
     "class": "browser",
     "tier": "full"
   }

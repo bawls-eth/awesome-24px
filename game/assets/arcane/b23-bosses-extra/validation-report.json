@@ -1,0 +1,20 @@
+{
+  "batch": "b23",
+  "label": "bosses-extra",
+  "generated_utc": "2026-11-21T10:49:47.590932Z",
+  "files": 48,
+  "duplicate_ids": 0,
+  "blocking": {},
+  "warnings": {},
+  "standing_heights": {
+    "lich_king/down": 324,
+    "hydra/down": 300,
+    "treant_elder/down": 320,
+    "sand_titan/down": 288,
+    "frost_dragon/down": 300,
+    "shadow_hydra/down": 300,
+    "clockwork_golem/down": 288,
+    "void_maw/down": 284
+  },
+  "status": "provisional"
+}
