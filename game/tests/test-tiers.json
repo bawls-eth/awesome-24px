@@ -754,5 +754,9 @@
   "world-safereturn.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "dungeon-tiles.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

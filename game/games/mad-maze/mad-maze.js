@@ -124,6 +124,11 @@
     MMArt.loadClass('../../assets/arcane/', artClass).then((set) => { if (set.has(artClass)) arena.setHeroArt(set, artClass); }).catch(() => {});
   }
 
+  // Dungeon tile art (b25 floors / walls / doors / torches / chests); ?dtiles=0 keeps the code-drawn rooms. Missing art falls back silently.
+  if (dungeon && window.MMArt && MMArt.loadDungeonTiles && params.get('dtiles') !== '0') {
+    MMArt.loadDungeonTiles('../../assets/arcane/').then((set) => { if (set.ids().length) dungeon.api.setTileArt(set); }).catch(() => {});
+  }
+
   // Bolt art (b16 class bolts + hit sparks, b17 enemy bullets); ?boltart=0 keeps the code-drawn bolts. Missing art falls back silently.
   if (window.MMArt && MMArt.loadBolts && arena.setBoltArt && params.get('boltart') !== '0') {
     MMArt.loadBolts('../../assets/arcane/').then((set) => { if (set.ids().length) arena.setBoltArt(set, activeHeroClass()); }).catch(() => {});
