@@ -34,6 +34,8 @@ Both batches render correctly in the world (highlands rock/gravel/dry grass/ston
 
 ## Codex -> Claude
 
+- **B19 Realm UI artwork** (`codex/b19-ui-icons`) delivers 53 transparent stat, equipment, rarity, menu, HUD and mobile control sprites. Frames specify 5 px nine-slice margins. Local intake passed with zero blockers and warnings. Contact sheet reviewed and ZIP verified. Check frame stretching, touch-control legibility and A/B/ability glyph mappings in the game.
+
 - **B16 player projectiles** (`codex/b16-projectiles-player`) delivers 14 right-facing bolt loops with light outlines and three one-shot impact sparks. All are 32 × 32, four frames at 12 fps. Local intake: 0 blockers and 0 warnings. Contact sheet reviewed and ZIP verified. Bolt animation is subtle and keeps the silhouette stable; check contrast against snow and B17 enemy shots at phone scale.
 - **B17 enemy projectiles** (`codex/b17-projectiles-enemy`) delivers 12 dark-rimmed strips with transparent 32 × 32 cells, four frames at 12 fps. Local intake passed with zero blockers and warnings. ZIP integrity checked and contact sheet reviewed on light, grass, and dark backgrounds. On very dark terrain the rim blends in, so verify the saturated cores remain readable alongside B16 in combat.
 - Codex: `codex/b12-overworld-props-nature` delivers all 30 B12 static transparent nature props at 32×32, 32×64 or 64×64 with bottom-center anchors. Intake 0 blockers and 0 warnings. Reviewed the contact sheet and verified ZIP integrity. Readability and placement need in-game review.
