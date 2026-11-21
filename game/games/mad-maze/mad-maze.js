@@ -499,6 +499,146 @@
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && sheetEl && !sheetEl.classList.contains('hidden')) { closeSheet(); e.stopPropagation(); e.preventDefault(); } }, true);
   })();
 
+  // ---------- AX2 + PF3: settings sheet (palette, HUD size, reduce motion, flashes, low graphics, bullet outline, ambient music) ----------
+  // Prefs live in `pixeltown-access-v1` via MMAccess.prefs (corrupt -> defaults). Everything applies live: body classes + CSS vars on the
+  // Realm root + the arena hooks that exist (setReduceMotion, the flash vignette, the pooled spark / death-ghost arrays, the render-scale guard).
+  const AXM = window.MMAccess && MMAccess.prefs ? MMAccess : null;
+  const AX_ON = !!AXM && params.get('settings') !== '0';
+  let axPrefs = AX_ON ? AXM.prefs.load(localStorage) : null;
+  const PERF_ON = !!window.MMPerf;
+  const perfSt = { prev: null, samples: [], result: null, auto: false, pools: { sparks: null, ghosts: null }, pf: null };
+  function perfPools() { // keep the original pool arrays so caps are fully reversible
+    if (arena._sparks && !perfSt.pools.sparks) perfSt.pools.sparks = arena._sparks.slice();
+    if (arena._edGhosts && !perfSt.pools.ghosts) perfSt.pools.ghosts = arena._edGhosts.slice();
+  }
+  function capPool(arr, orig, n) { if (!arr || !orig) return; const want = Math.max(0, Math.min(orig.length, n)); if (arr.length === want) return; arr.length = 0; for (let i = 0; i < want; i++) arr.push(orig[i]); }
+  function applyPerf(res) {
+    perfSt.result = res; perfPools();
+    const c = res.caps; const low = res.tier === 'low';
+    capPool(arena._sparks, perfSt.pools.sparks, c.sparks); capPool(arena._edGhosts, perfSt.pools.ghosts, c.deathGhosts);
+    if (perfSt.pf === null && low && arena._pf) perfSt.pf = { on: arena._pf.on };
+    if (low && arena._pf) { if (arena._pf.q !== 0.75) arena._perfSet(0.75); arena._pf.on = false; } // lower resolution; the guard must not undo it while low
+    else if (!low && perfSt.pf && arena._pf) { arena._pf.on = perfSt.pf.on; perfSt.pf = null; arena._perfSet(1); }
+    document.body.classList.toggle('mm-low-gfx', low);
+    document.body.classList.toggle('mm-perf-mid', res.tier === 'mid');
+    window.__mmPerf = Object.assign(window.__mmPerf || {}, { tier: res.tier, caps: Object.assign({}, c), terrainAnim: c.terrainAnim, forced: !!res.forced, auto: perfSt.auto, lowGfx: low, sparkCap: arena._sparks ? arena._sparks.length : 0, ghostCap: arena._edGhosts ? arena._edGhosts.length : 0, quality: arena._pf ? arena._pf.q : 1 });
+  }
+  function perfEval(force) {
+    if (!PERF_ON || !axPrefs) return;
+    const total = perfSt.samples.reduce((a, b) => a + b, 0);
+    let res;
+    if (axPrefs.lowGfx === true) res = MMPerf.profile([], axPrefs, perfSt.prev);
+    else if (total >= 3000) { // auto: only after 3 s of frames were measured
+      res = MMPerf.profile(perfSt.samples, { lowGfx: false }, perfSt.prev);
+      perfSt.auto = res.tier !== 'high';
+    } else res = perfSt.prev && !perfSt.prev.forced ? perfSt.prev : MMPerf.profile([], { lowGfx: false }, null);
+    perfSt.prev = res;
+    if (!perfSt.result || perfSt.result.tier !== res.tier || perfSt.result.forced !== res.forced || force) applyPerf(res);
+    else { perfPools(); capPool(arena._sparks, perfSt.pools.sparks, res.caps.sparks); capPool(arena._edGhosts, perfSt.pools.ghosts, res.caps.deathGhosts); }
+  }
+  function perfFeed(ms) {
+    if (!(ms > 0) || ms > 250) return;
+    perfSt.samples.push(ms); let t = 0, k = perfSt.samples.length; while (k > 0 && t < 3000) t += perfSt.samples[--k]; if (k > 0) perfSt.samples.splice(0, k); // keep ~the last 3 s
+  }
+  if (PERF_ON && AX_ON) {
+    let lastT = 0;
+    const loop = (t) => { if (lastT && !document.hidden) perfFeed(t - lastT); lastT = t; requestAnimationFrame(loop); };
+    requestAnimationFrame(loop);
+    setInterval(() => { if (!document.hidden) perfEval(false); }, 1000);
+  }
+  function setFlashes(on) { // screen flashes off: the red hit vignette stays at 0 (restored when turned back on)
+    const d = Object.getOwnPropertyDescriptor(arena, 'flash');
+    if (!on) { if (d && d.get) return; Object.defineProperty(arena, 'flash', { configurable: true, enumerable: true, get() { return 0; }, set() { /* flashes off */ } }); }
+    else if (d && d.get) { delete arena.flash; arena.flash = 0; }
+  }
+  function axApply(p) {
+    const ov = document.getElementById('realm-overlay'); const b = document.body; if (!ov) return;
+    ov.style.setProperty('--mm-hud-scale', String(p.hudScale)); document.documentElement.style.setProperty('--mm-hud-scale', String(p.hudScale));
+    const pal = AXM.palette(p.palette);
+    ['bullet', 'enemy', 'ally'].forEach((k) => ov.style.setProperty('--mm-' + k, pal[k]));
+    AXM.names().forEach((n) => b.classList.toggle('mm-pal-' + n, n === pal.name));
+    b.classList.toggle('mm-no-flash', !p.flashes); b.classList.toggle('mm-outline', !!p.bulletOutline); b.classList.toggle('mm-hud-big', p.hudScale > 1);
+    arena.accessPrefs = Object.assign({}, p, { outlinePx: AXM.OUTLINE_PX, palette: pal.name }); // read-only snapshot for the arena / other modules
+    setFlashes(p.flashes);
+    perfEval(true);
+    window.__mmAccess = Object.assign(window.__mmAccess || {}, { prefs: Object.assign({}, p), palette: pal });
+  }
+  function axSet(key, val) {
+    const next = Object.assign({}, axPrefs, { [key]: val });
+    const saved = AXM.prefs.save(localStorage, next); // null when storage refuses: still applies for this visit
+    axPrefs = saved || AXM.prefs.clean(next);
+    if (key === 'lowGfx' && !val) { perfSt.samples.length = 0; perfSt.auto = false; perfSt.prev = null; }
+    axApply(axPrefs); axRender();
+    return axPrefs;
+  }
+  let axEl = null, axBody = null, axLast = null, axGear = false;
+  function axOpen(fromGear) {
+    if (!AX_ON) return false;
+    axBuild(); axGear = !!fromGear && arena.panel !== 'menu';
+    if (fromGear && arena.setMenu && arena.panel !== 'menu') { try { arena.setMenu(true); } catch (e) { /* the sheet alone still works */ } }
+    axLast = document.activeElement; axRender(); axEl.classList.remove('hidden'); axEl.style.display = 'flex';
+    const f = axEl.querySelector('button'); if (f) f.focus({ preventScroll: true });
+    return true;
+  }
+  function axClose() { if (!axEl || axEl.classList.contains('hidden')) return false; axEl.classList.add('hidden'); axEl.style.display = 'none'; if (axGear) { axGear = false; try { if (arena.panel === 'menu') arena.setMenu(false); } catch (e) { /* ignore */ } } try { if (axLast && axLast.isConnected) axLast.focus({ preventScroll: true }); } catch (e) { /* ignore */ } return true; }
+  const AX_PAL = { normal: 'Normal', deuteranopia: 'Deuteranopia', protanopia: 'Protanopia', tritanopia: 'Tritanopia' };
+  function axBuild() {
+    if (axEl) return;
+    axEl = mkEl('div', 'rm-panel hidden'); axEl.id = 'mm-settings'; axEl.setAttribute('role', 'dialog'); axEl.setAttribute('aria-modal', 'true'); axEl.setAttribute('aria-label', 'Settings'); axEl.style.display = 'none';
+    const card = mkEl('div', 'realm-bp-card rm-card'); const head = mkEl('div', 'realm-bp-head'); head.appendChild(mkEl('strong', '', '⚙ Settings'));
+    const x = mkEl('button', '', '✖'); x.type = 'button'; x.id = 'mm-settings-x'; x.setAttribute('aria-label', 'Close settings'); x.addEventListener('click', axClose); head.appendChild(x);
+    axBody = mkEl('div', 'mm-set-body'); card.append(head, axBody); axEl.appendChild(card); overlayEl.appendChild(axEl);
+    axEl.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-ax]'); if (!b) return; const k = b.dataset.ax, v = b.dataset.v;
+      if (k === 'palette') axSet('palette', v);
+      else if (k === 'hudScale') axSet('hudScale', Number(v));
+      else if (k === 'motion') { arena.setReduceMotion(!arena._reduced); axRender(); }
+      else if (k === 'music') { if (window.RealmAudio) { RealmAudio.setOn(!RealmAudio.isOn()); axRender(); } }
+      else if (k === 'done') axClose();
+      else axSet(k, !axPrefs[k]);
+    });
+    axEl.addEventListener('keydown', (e) => { // keep Tab inside the sheet
+      if (e.key !== 'Tab') return; const bs = Array.from(axEl.querySelectorAll('button')).filter((q) => !q.disabled); if (!bs.length) return;
+      const i = bs.indexOf(document.activeElement); const nx = e.shiftKey ? (i <= 0 ? bs.length - 1 : i - 1) : (i === bs.length - 1 ? 0 : i + 1); e.preventDefault(); bs[nx].focus();
+    });
+  }
+  function axRender() {
+    if (!axEl || !axPrefs) return; const p = axPrefs; axBody.textContent = '';
+    const sec = (t) => { axBody.appendChild(mkEl('h4', 'mm-set-h', t)); const g = mkEl('div', 'mm-set-row'); axBody.appendChild(g); return g; };
+    const choice = (g, key, val, label, on) => { const b = mkEl('button', 'rm-tog' + (on ? ' on' : ''), label); b.type = 'button'; b.dataset.ax = key; b.dataset.v = String(val); b.setAttribute('aria-pressed', on ? 'true' : 'false'); g.appendChild(b); };
+    const tog = (key, label, on, extra) => { const b = mkEl('button', 'rm-tog' + (on ? ' on' : ''), label + ': ' + (on ? 'on' : 'off') + (extra || '')); b.type = 'button'; b.dataset.ax = key; b.setAttribute('aria-pressed', on ? 'true' : 'false'); axBody.appendChild(b); };
+    const g1 = sec('Colour palette'); AXM.names().forEach((n) => choice(g1, 'palette', n, AX_PAL[n] || n, p.palette === n));
+    const g2 = sec('HUD size'); AXM.prefs.HUD_SCALES.forEach((s) => choice(g2, 'hudScale', s, Math.round(s * 100) + '%', p.hudScale === s));
+    axBody.appendChild(mkEl('h4', 'mm-set-h', 'Comfort'));
+    tog('motion', 'Reduce motion', !!arena._reduced); tog('flashes', 'Screen flashes', p.flashes); tog('bulletOutline', 'Bullet outline', p.bulletOutline);
+    tog('lowGfx', 'Low graphics', p.lowGfx, !p.lowGfx && perfSt.auto ? ' (auto: slow frames)' : '');
+    if (window.RealmAudio) tog('music', 'Ambient music', RealmAudio.isOn());
+    const d = mkEl('button', 'rm-btn', 'Done'); d.type = 'button'; d.dataset.ax = 'done'; axBody.appendChild(d);
+  }
+  if (AX_ON) {
+    axApply(axPrefs);
+    // gear icon (always reachable) + a Settings button in the Esc menu (the menu DOM is built lazily by the arena)
+    const gear = mkEl('button', '', '⚙'); gear.id = 'mm-gear-btn'; gear.type = 'button'; gear.setAttribute('aria-label', 'Open settings'); gear.title = 'Settings';
+    gear.addEventListener('click', () => axOpen(true)); overlayEl.appendChild(gear);
+    if (params.get('uiicons') !== '0') {
+      const gi = document.createElement('img'); gi.className = 'mm-ico'; gi.alt = ''; gi.setAttribute('aria-hidden', 'true'); gi.draggable = false;
+      gi.addEventListener('load', () => { gear.classList.add('has-ico'); }); gi.addEventListener('error', () => gi.remove()); gi.src = ICON_ROOT + 'icon_settings.png'; gear.insertBefore(gi, gear.firstChild);
+    }
+    const hook = () => {
+      const m = document.getElementById('realm-pause'); if (!m || m.querySelector('#mm-settings-open')) return;
+      const host = m.querySelector('.rm-settings'); if (!host) return;
+      const b = mkEl('button', 'rm-tog', '⚙ More settings'); b.type = 'button'; b.id = 'mm-settings-open'; b.addEventListener('click', () => axOpen(false)); host.appendChild(b);
+    };
+    new MutationObserver(hook).observe(overlayEl, { childList: true }); hook();
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && axEl && !axEl.classList.contains('hidden')) { axClose(); e.stopPropagation(); e.preventDefault(); } }, true);
+    window.__mmAccess = Object.assign(window.__mmAccess || {}, { open: () => axOpen(false), close: axClose, set: axSet, isOpen: () => !!axEl && !axEl.classList.contains('hidden') });
+    window.__mmPerf = Object.assign(window.__mmPerf || {}, { feed: (arr) => { (Array.isArray(arr) ? arr : [arr]).forEach(perfFeed); perfEval(false); return window.__mmPerf; }, evaluate: () => perfEval(true), samples: () => perfSt.samples.slice() });
+  }
+
+  // Realm audio (SA2) and the first-run tutorial (TU2): optional files; the page runs without them.
+  if (window.RealmAudio) { try { RealmAudio.attach({ arena, zone: () => { try { if (realmWorld) { const zi = realmWorld.api.zone(); return zi ? zi.zone : 0; } } catch (e) { /* fall through */ } return dungeon ? 3 : 0; } }); } catch (e) { /* audio never breaks the page */ } }
+  if (window.RealmTutorial && WORLD && realmWorld) { try { RealmTutorial.attach({ arena, world: realmWorld.api, params, test: TEST, overlay: overlayEl, profile: () => { try { return heroState().prof; } catch (e) { return null; } } }); } catch (e) { /* the tutorial never breaks the page */ } }
+
   if (TEST) window.__mm = { applyWeapon, arena, dungeon: dungeon ? dungeon.api : null, world: realmWorld ? realmWorld.api : null };
   arena.start();
   // A fresh world visit with several owned heroes opens the picker first (?heropick=0 skips it).
