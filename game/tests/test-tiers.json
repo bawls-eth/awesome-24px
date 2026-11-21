@@ -774,5 +774,9 @@
   "shared-mm-telegraph.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "shared-mm-perf.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }
