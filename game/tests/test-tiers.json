@@ -103,6 +103,18 @@
     "class": "live",
     "tier": "full"
   },
+  "deepdelve-crafting.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "deepdelve-daynight.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "deepdelve-mobs.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "deepdelve-page.test.js": {
     "class": "browser",
     "tier": "smoke"
@@ -312,6 +324,18 @@
     "tier": "smoke"
   },
   "shared-mm-daily-ghost-board-access.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-dd-craft.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-dd-mobs.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-dd-time.test.js": {
     "class": "node",
     "tier": "smoke"
   },
