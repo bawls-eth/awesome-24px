@@ -33,6 +33,11 @@
     if (!id) return null;
     const o = { id: id, r: int(it.r, 0, 9) };
     if (it.n !== undefined) o.n = int(it.n, 0, 9999999);
+    // Tier gear (additive): t integer 1-12, a uint32 seed only when t >= 7; anything else is dropped (old items stay identical).
+    if (typeof it.t === 'number' && Number.isInteger(it.t) && it.t >= 1 && it.t <= 12) {
+      o.t = it.t;
+      if (it.t >= 7 && typeof it.a === 'number' && Number.isInteger(it.a) && it.a >= 1 && it.a <= 4294967295) o.a = it.a;
+    }
     if (it.keepsake === true) o.keepsake = true;
     if (typeof it.from === 'string') o.from = it.from.slice(0, 40);
     if (typeof it.cls === 'string') o.cls = it.cls.slice(0, 20);
@@ -113,7 +118,7 @@
     const items = [];
     (Array.isArray(realmSave.items) ? realmSave.items.slice(0, 200) : []).forEach((it) => {
       if (items.length >= MAX_ITEMS || !isObj(it)) return;
-      const c = cleanItem({ id: it.id, r: it.r, n: it.n });
+      const c = cleanItem({ id: it.id, r: it.r, n: it.n, t: it.t, a: it.a });
       if (c) items.push(c);
     });
     const hero = cleanHero({

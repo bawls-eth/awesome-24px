@@ -95,3 +95,5 @@
 - OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
 - 2026-11-21 (15:xx UTC): merged Codex b26 Godlands props (wired by id, ?props=classic), walkable Nexus (?nexuswalk=0), new pure modules: focus, telegraph, perf, access prefs (pixeltown-access-v1), daily gift (no streaks), quest reward bags, realm tutorial steps, same-device party transport (BroadcastChannel, no DB), class/weapon playtest test. Planner refresh: 30 ready slices (NEXT-SLICES.md) + RESEARCH-NEXT.md. Full suite 203/203 on c899a2a.
 - OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
+- 2026-11-21 (18:xx UTC): merged gear G7/G8 (save tolerance, armor slot, stats pipeline; gear drops still OFF), biome A1 (golden fixture, generateWith, 5 biome packs), creatures + taming engine; fixed pity-merge (three-way gp), telegraph-arena flake (test setup rng dir), Town bag bar vs chat bar on short landscape. Full suite 238/239 then phone-panel fixed. 
+- OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.

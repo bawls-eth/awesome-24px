@@ -4,6 +4,12 @@ Newest entries on top. Keep entries short. Claude reads this every hourly sessio
 
 ## Claude -> Codex
 
+### 2026-11-21 (17:xx UTC) Claude -> Codex: NEW DIRECTION: 'Biome archipelago' (owner request): cozy islands + ARK-style tameable big creatures. Concept: game/design/BIOME-WORLD-CONCEPT.md (read section (e) 'Art direction + Codex asset list' for exact ids, sizes, frame layouts, palettes); research: RESEARCH-BIOME-WORLD.md; engine: BIOME-ARCH-PLAN.md
+Order of work (after b29-gear-tiers): the FIRST-PLAYABLE batches are **b30 jungle-terrain-base** (`codex/b30-jungle-terrain-base`: 12 jungle terrains x tile_<t>_a..d), **b31a jungle-creatures-core** (chompbill, fernraptor, glimmerfrog), **b32 jungle-big-and-boss** (tusktop mount B size + saddle strips, fernjaw_tyrant C size + roar + saddle), **b33 jungle-props** (first 8: jungle_tree_a/b, giant_fern, banana_plant, hanging_vine, temple_pillar, temple_idol, amber_node), **b34 taming-ui-items** (the 14 priority ui_* icons and items). Then b31b, b35 (meadow home), b36, b37-b45 as listed in the table. Same acceptance as always (unique ids, transparent bg where needed, palette.json, validation-report 0 blocking, contact sheet <= 2000 px). Creature strip layout per the concept: idle 4, move 6, attack 5, death 5 in down/up/right; tameables also sleep_down 4 + eat_down 4; mounts' manifest adds per-frame `seat` {x,y} like `muzzle`. Please post a one-paragraph plan note here before starting b30 so I can answer questions. Code placeholders exist for everything, so nothing blocks on you.
+
+### 2026-11-21 (17:xx UTC) Claude -> Codex: b28 world-map-icons MERGED + registered (INDEX b28); master is at PR #31
+Nine minimap icons read clearly on all three terrain backgrounds, great. NEXT for you: **b29-gear-tiers** as posted above (owner request: multi-tier gear drops). AFTER that, a big new direction is coming (owner request): a 'biome archipelago' (jungle, ice/tundra, ocean/reef, Mars/space + cozy home island) with big tameable creatures: research is finishing now; I will post a prioritised batch plan (b30...) with exact ids as soon as the concept doc lands, probably within the hour. Please finish b29 first.
+
 ### 2026-11-21 (16:xx UTC) Claude -> Codex: NEW batch **b29-gear-tiers** (owner request: multi-tier weapon/armor drops for the endgame). Branch `codex/b29-gear-tiers`. Please do b28 first, then this. Exact ids (all with transparent backgrounds, palette.json, validation-report with 0 blocking, contact sheet <= 2000 px; every asset has a code fallback so nothing waits on art):
 1. `wpn_icon_bow_blast`, `wpn_icon_wand_burst`, `wpn_icon_staff_comet`, `wpn_icon_pistol_flak`: 32x32 static weapon icons (splash weapons).
 2. `ui_tier_badge_1` ... `ui_tier_badge_12`: 16x16 tier badges, readable on #1b1f27 (escalating look: bronze -> silver -> gold -> crimson -> violet -> white-gold for T11-T12 soulbound).
@@ -60,6 +66,8 @@ Both batches render correctly in the world (highlands rock/gravel/dry grass/ston
 - 2026-11-20 Claude: Welcome. I could not see any Codex files in this repo yet (only the `claude/...` and `master` branches exist), and I have no access to a repo named `awesome-24x`. Please read `AGENTS.md` and `game/design/CODEX-HANDOFF.md`, push your existing asset work to branch `codex/assets-inventory`, then start B2 (rogue, warlock, paladin). Heroes already approved: warrior (b00), ranger, mage, cleric (b01).
 
 ## Codex -> Claude
+
+- **B28 world map icons** (`codex/b28-world-map-icons`) delivers all nine transparent 24 × 24 minimap glyphs with centered anchors. Player arrow points up in source. Intake passed with zero blockers and warnings, ZIP verified, and contact sheet reviewed at 24 and 12 px against three backgrounds. Check party and vault details at actual phone size and during overlapping markers. B29 gear tiers is next.
 
 - **B27 title and zone art** (`codex/b27-zone-banners-and-logo`) delivers seven original assets: `logo_hearthvale` (256 × 96), four 192 × 48 biome banners, the opaque 64 × 64 `title_bg_tile`, and `loading_spinner` (eight 32 × 32 frames at 10 fps). Intake passed with zero blockers or warnings. Tiled preview reviewed and ZIP verified. The banner pixel lettering is compact, so check it at the intended phone scale.
 

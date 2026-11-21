@@ -145,4 +145,12 @@ const TOWN = JSON.stringify({ name: 'Ben', species: 'doge', coins: 1 });
   const ret = P.clean({ hall: [{ name: 'a', cls: 'shadowPaw' }] });
   check('hall entry keeps shadowPaw', !ret.hall.length || ret.hall[0].cls === 'shadowPaw');
 }
+// tier gear (additive t/a): old profiles identical, valid t/a kept, garbage dropped
+{
+  const old = { v: 1, heroes: [{ id: 'a', name: 'Aya', cls: 'ranger', level: 3, xp: 4, fame: 5, bonus: 0, mode: 'classic', items: [{ id: 'sparkwand', r: 2, n: 5 }] }], stash: [{ id: 'sparkwand', r: 3 }].concat(new Array(15).fill(null)), fame: 9, mode: 'classic', hall: [], migratedFrom: null };
+  const o1 = JSON.stringify(P.clean(old));
+  check('old item fixture: no t/a keys added, stable', !/"t":|"a":/.test(o1) && JSON.stringify(P.clean(JSON.parse(o1))) === o1 && JSON.parse(o1).heroes[0].items[0].r === 2);
+  const g = P.clean({ heroes: [{ id: 'a', items: [{ id: 'sparkwand', r: 0, t: 9, a: 77 }, { id: 'sparkwand', r: 0, t: 2, a: 77 }, { id: 'sparkwand', r: 0, t: 13 }, { id: 'sparkwand', r: 0, t: '4' }] }] }).heroes[0].items;
+  check('tier t/a kept when valid, dropped when not', g[0].t === 9 && g[0].a === 77 && g[1].t === 2 && g[1].a === undefined && g[2].t === undefined && g[3].t === undefined);
+}
 done();

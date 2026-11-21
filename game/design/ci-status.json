@@ -1,9 +1,9 @@
 {
-  "sha": "c899a2a5a8612fe0dee88fa8edfacd2b346a01e6",
-  "generated_utc": "2026-11-21T15:53:54Z",
+  "sha": "17ff28f29f73e268237e443e39c45e2453b970af",
+  "generated_utc": "2026-11-21T18:48:28Z",
   "full_suite_green": true,
   "beta_green": null,
-  "suites_passed": 203,
-  "suites_total": 203,
-  "notes": "beta runs only on owner request"
+  "suites_passed": 239,
+  "suites_total": 239,
+  "notes": "Full run on parent (tg-flake merge) was 238/239; the one failure (phone-panel 640x360, Town bag bar vs chat bar) was fixed by a CSS-only commit (this sha) and re-verified alone (2 runs) with 5 related town/phone suites. Beta runs only on owner request."
 }

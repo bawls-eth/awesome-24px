@@ -27,9 +27,18 @@
 
   const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
   const int = (v, lo, hi) => { v = Math.floor(Number(v)); if (!Number.isFinite(v)) v = lo; return Math.max(lo, Math.min(hi, v)); };
+  // Tier gear: `t` (integer 1-12) and `a` (uint32 affix seed, only when t >= 7) are additive; anything else is dropped.
+  const SOULBOUND_T = 11;
+  const strictInt = (v, lo, hi) => typeof v === 'number' && Number.isInteger(v) && v >= lo && v <= hi;
+  function gearFields(f, o) {
+    if (strictInt(f.t, 1, 12)) { o.t = f.t; if (f.t >= 7 && strictInt(f.a, 1, 4294967295)) o.a = f.a; }
+    return o;
+  }
+  const soulbound = (it) => isObj(it) && strictInt(it.t, SOULBOUND_T, 12);
   function cleanFind(f, withN) {
     if (!isObj(f) || typeof f.id !== 'string' || !ID_RE.test(f.id)) return null;
     const o = { id: f.id, r: int(f.r, 0, 9), src: SRC.indexOf(f.src) >= 0 ? f.src : 'world' };
+    gearFields(f, o);
     if (withN) { const n = int(f.n, 0, 9999999); if (!n) return null; o.n = n; }
     return o;
   }
@@ -50,10 +59,11 @@
   // A find was picked up: item {n, id, r} (n = its realm backpack uid). Returns new finds.
   function record(finds, item, src) {
     const f = cleanFinds(finds);
-    const c = cleanFind({ n: item && item.n, id: item && item.id, r: item && item.r, src: src }, true);
+    const c = cleanFind({ n: item && item.n, id: item && item.id, r: item && item.r, t: item && item.t, a: item && item.a, src: src }, true);
     if (!c) return f;
     if (!f.pending.some((p) => p.n === c.n)) { f.pending.push(c); if (f.pending.length > MAX_PENDING) f.pending.shift(); }
-    f.recent.unshift({ id: c.id, r: c.r, src: c.src }); if (f.recent.length > MAX_RECENT) f.recent.length = MAX_RECENT;
+    const rc = { id: c.id, r: c.r, src: c.src }; if (c.t) rc.t = c.t;
+    f.recent.unshift(rc); if (f.recent.length > MAX_RECENT) f.recent.length = MAX_RECENT;
     return f;
   }
   function addFame(finds, n) { const f = cleanFinds(finds); f.fame = Math.min(MAX_FAME, f.fame + int(n, 0, MAX_FAME)); return f; }
@@ -69,11 +79,13 @@
     const kept = Array.isArray(realmItems) ? new Set(realmItems.filter(isObj).map((it) => int(it.n, 0, 9999999))) : null;
     const hero = typeof opts.heroId === 'string' && Array.isArray(p.heroes) ? p.heroes.find((h) => h && h.id === opts.heroId) || null : null;
     if (hero && !Array.isArray(hero.items)) hero.items = [];
-    const res = { stash: 0, hero: 0, waiting: 0, dropped: 0, fame: 0, paid: [] };
+    const res = { stash: 0, hero: 0, waiting: 0, dropped: 0, soulbound: 0, fame: 0, paid: [] };
     const waiting = [];
     f.pending.forEach((it) => {
       if (kept && !kept.has(it.n)) { res.dropped++; return; } // thrown away or sold before the settle: nothing to pay
+      if (soulbound(it)) { res.soulbound++; return; } // soulbound (T11+): stays on the hero's realm backpack, never copied to the stash or pack
       const item = { id: it.id, r: it.r };
+      if (it.t) { item.t = it.t; if (it.a) item.a = it.a; }
       const slot = p.stash.indexOf(null);
       if (slot >= 0) { p.stash[slot] = item; res.stash++; res.paid.push(it); return; }
       if (hero && hero.items.length < CARRY_MAX) { hero.items.push(item); res.hero++; res.paid.push(it); return; }
@@ -95,6 +107,7 @@
     const n = r.items || 0;
     let t = `Stashed ${n} item${n === 1 ? '' : 's'}, +${r.shards || 0} shards`;
     if (r.fame) t += `, +${r.fame} fame`;
+    if (r.soulbound) t += ` (${r.soulbound} soulbound item${r.soulbound === 1 ? '' : 's'} stay with your hero)`;
     if (r.waiting) t += ` (${r.waiting} waiting: the stash and pack are full)`;
     return t;
   }
@@ -129,7 +142,7 @@
 
   return {
     REALM_KEY: REALM_KEY, MM_KEY: MM_KEY, STASH_SLOTS: STASH_SLOTS, CARRY_MAX: CARRY_MAX, MAX_PENDING: MAX_PENDING, MAX_RECENT: MAX_RECENT, SOURCES: SRC,
-    cleanFinds: cleanFinds, record: record, addFame: addFame, payout: payout, text: text,
+    soulbound: soulbound, SOULBOUND_T: SOULBOUND_T, cleanFinds: cleanFinds, record: record, addFame: addFame, payout: payout, text: text,
     readFinds: readFinds, writeFinds: writeFinds, recordTo: recordTo, addFameTo: addFameTo, settle: settle,
   };
 }));

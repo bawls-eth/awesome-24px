@@ -2269,6 +2269,8 @@ body.touch-device .key-hint { display: none; }
    town panel and park the walkie button in the free strip at the bottom. */
 @media (max-height: 500px) and (pointer: coarse) {
   body.touch-device #chat-panel { right: 200px; }
+  /* Short landscape: the bag bar wraps to two rows; keep it compact so it stays above the chat bar. */
+  #inventory-panel { padding: 3px 8px; font-size: 11px; gap: 0 6px; line-height: 1.2; }
   /* Bottom-centre, in the free strip between the joystick and the action buttons. */
   #walkie-panel {
     top: auto;

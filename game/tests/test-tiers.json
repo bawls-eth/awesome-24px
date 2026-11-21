@@ -511,6 +511,14 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-overworld-golden.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-biome-packs.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "shared-mm-pad-aim.test.js": {
     "class": "node",
     "tier": "smoke"
@@ -647,6 +655,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "gear-world-drops.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "world-bosses-extra.test.js": {
     "class": "browser",
     "tier": "full"
@@ -658,6 +670,14 @@
   "shared-mm-hero-stats.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "shared-mm-gear-soulbound.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "gear-hero-stats.test.js": {
+    "class": "browser",
+    "tier": "full"
   },
   "hero-pick.test.js": {
     "class": "browser",
@@ -892,6 +912,46 @@
     "tier": "full"
   },
   "world-rewards.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "gear-dungeon-drops.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "shared-mm-companion.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-tames.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-isles.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-creature-draw.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-chunk-bake.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-creatures.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-tame.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "gear-save-tolerance.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "gear-stats-pipeline.test.js": {
     "class": "browser",
     "tier": "full"
   }

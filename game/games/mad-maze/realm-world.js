@@ -6,6 +6,9 @@
 (function () {
   'use strict';
   const SAVE_KEY = 'pixeltown-realm-v1';
+  // Tiered gear drops (G9): OFF by default until the save-tolerance slice (G7) has been live for one deploy. The lead flips this constant later.
+  // ?gear=1 or the save flag `gearOn` turns them on (tests); ?gear=0 is always off.
+  const GEAR_DEFAULT_ON = false;
   const TILE = 32; const CH = 16; const CPX = TILE * CH; const MAX_CHUNKS = 24;
   const SEED_RE = /^[A-Za-z0-9_-]{1,24}$/;
   const AT_RE = /^(\d{1,4}),(\d{1,4})$/;
@@ -44,7 +47,7 @@
     if (typeof o === 'string') { try { o = JSON.parse(o); } catch (e) { o = null; } }
     if (!o || typeof o !== 'object' || Array.isArray(o)) o = {};
     const out = {};
-    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo|evT|evDone|finds|discovered|shrineAt|chests|quests|bossKeys|bossPortal|questBags)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
+    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo|evT|evDone|finds|discovered|shrineAt|chests|quests|bossKeys|bossPortal|questBags|gp|gearOn)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
     out.v = 1;
     out.seed = cleanSeed(o.seed);
     out.version = Number.isInteger(o.version) && o.version > 0 && o.version < 1000 ? o.version : 0;
@@ -70,6 +73,9 @@
     // quest reward bags waiting to drop (additive, RB3): [{ q: quest id, d: 'YYYY-MM-DD' }]; the items are re-derived from MMQuests.rewardBag, never stored
     if (Array.isArray(o.questBags)) { const qb = []; o.questBags.forEach((b) => { if (b && typeof b === 'object' && typeof b.q === 'string' && /^[a-z_]{1,24}$/.test(b.q) && typeof b.d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(b.d) && !qb.some((x) => x.q === b.q && x.d === b.d) && qb.length < 3) qb.push({ q: b.q, d: b.d }); }); if (qb.length) out.questBags = qb; }
     if (o.bossPortal !== undefined && window.MMPortals) { const bp = window.MMPortals.clean(o.bossPortal); if (bp.boss) out.bossPortal = bp; }
+    // gear pity (additive, G9): {b: z3 boss kills since the last T12, d: crypt boss kills since the last T10+}, each an int 0..9999; garbage -> defaults (key left out)
+    if (o.gp && typeof o.gp === 'object' && !Array.isArray(o.gp)) { const g = (v) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(9999, Math.floor(v))) : 0); const gp = { b: g(o.gp.b), d: g(o.gp.d) }; if (gp.b || gp.d) out.gp = gp; }
+    if (o.gearOn === true) out.gearOn = true;
     const r = o.returnTo && typeof o.returnTo === 'object' ? o.returnTo : null;
     if (o.finds !== undefined) out.finds = window.MMStash ? MMStash.cleanFinds(o.finds) : o.finds; // owned by MMStash (Lantern payout)
     out.returnTo = r && Number.isInteger(r.x) && Number.isInteger(r.y) && r.x >= 0 && r.y >= 0 && r.x < 4096 && r.y < 4096 && cleanSeed(r.seed) ? { x: r.x, y: r.y, seed: cleanSeed(r.seed) } : null;
@@ -621,9 +627,51 @@
       live.set(rec.id, e); spawned++;
       return e;
     }
+    // ---------- tiered gear drops (G9): MMGearDrops.rollGear per bag item, per-player seeded; off unless ?gear=1 / save.gearOn / GEAR_DEFAULT_ON ----------
+    const GM = window.MMGear; const GD = window.MMGearDrops;
+    const gearQs = /[?&]gear=(\d)(&|$)/.exec(qs0); const gearQ = gearQs ? gearQs[1] : null;
+    const GEAR_ON = !!(GM && GD) && gearQ !== '0' && (gearQ === '1' || save.gearOn === true || GEAR_DEFAULT_ON);
+    let gearPlayer = 'p0'; // per-player seed id: each co-op seat rolls its own drops locally, nothing is shared
+    function gearCtx(info, k, it, bag) {
+      const cls = arena.heroClass ? arena.heroClass() : null;
+      return { src: info.src || (info.boss ? 'boss' : 'mob'), boss: info.bossId || '', zone: info.zone | 0, eventTier: info.eventTier | 0, cls: cls || '', level: arena.heroLevel ? arena.heroLevel() : 1,
+        gp: save.gp || { b: 0, d: 0 }, k: k, r: it.r | 0, bagTier: bag.tierIndex | 0, always: dropAll };
+    }
+    function gearRollItem(info, k, it, bag) {
+      if (!GEAR_ON || info.quest || !info.tag) return null;
+      let g = null;
+      try { g = GD.rollGear(gearCtx(info, k, it, bag), GD.seedFor(seed, info.tag, kills, gearPlayer)); } catch (e) { g = null; }
+      return g;
+    }
+    function gearPity() {
+      const gp = GD ? GD.cleanGp(save.gp) : { b: 0, d: 0 }; const v = GD ? GD.pityView(gp) : null;
+      return { on: GEAR_ON, b: gp.b, d: gp.d, text: v ? v.text : '', cryptText: v ? v.cryptText : '', bonusPct: v ? v.bonusPct : 0, bossKillsLeft: v ? v.bossKillsLeft : 60 };
+    }
     function giveBag(x, y, bag, info) {
       const got = { zone: info.zone, boss: !!info.boss, tier: bag.tier, items: [], shards: bag.shards, potions: bag.potions };
-      bag.items.forEach((it, k) => { const b = arena.dropBag(x + (k - (bag.items.length - 1) / 2) * 18, y + 10, it.r, it.id, bag); if (b) { const dd = typeof RM_ITEM_BY_ID !== 'undefined' ? RM_ITEM_BY_ID[b.id] : null; got.items.push({ id: b.id, r: it.r, name: dd ? dd.name : b.id, rolled: it.id }); } }); // the recap lists what actually dropped (a styled wpn_ weapon replaces the rolled wand)
+      const rolls = []; let toasted = false;
+      bag.items.forEach((it, k) => {
+        let g = gearRollItem(info, k, it, bag); rolls.push(g);
+        let id = it.id; let gear = null;
+        if (g) {
+          id = g.id;
+          if (typeof RM_ITEM_BY_ID !== 'undefined' && !RM_ITEM_BY_ID[id]) id = 'sparkwand'; // an arena without the armor slot yet: the tier stays, as a wand
+          gear = { t: g.t }; if (g.a) gear.a = g.a;
+        }
+        const b = arena.dropBag(x + (k - (bag.items.length - 1) / 2) * 18, y + 10, it.r, id, bag, gear);
+        if (!b) return;
+        if (gear) { b.gear = gear; }
+        const dd = typeof RM_ITEM_BY_ID !== 'undefined' ? RM_ITEM_BY_ID[b.id] : null;
+        const ent = { id: b.id, r: it.r, name: dd ? dd.name : b.id, rolled: it.id };
+        if (gear) {
+          const d = GM.describe({ id: b.id, r: it.r, t: gear.t, a: gear.a });
+          ent.t = gear.t; if (gear.a) ent.a = gear.a; ent.name = d ? d.name : ent.name; ent.tierLabel = d ? d.tierLabel : 'T' + gear.t; ent.tierColor = d ? d.tierColor : '#fff';
+          ent.soulbound = !!(d && d.soulbound); ent.gate = d ? d.gate : 0; ent.locked = (arena.heroLevel ? arena.heroLevel() : 1) < ent.gate; if (g && g.sig) ent.sig = g.sig;
+          if (!toasted) { toasted = true; arena._floatText(x, y - 48, ent.name + (ent.soulbound ? ' (soulbound)' : ''), ent.tierColor); }
+        }
+        got.items.push(ent);
+      }); // the recap lists what actually dropped (a styled wpn_ weapon replaces the rolled wand; tiered gear shows 'T7 Name')
+      if (GEAR_ON && info.tag) { const ng = GD.pityStep(save.gp, gearCtx(info, 0, { r: 0 }, bag), rolls); if (ng.b !== (save.gp ? save.gp.b : 0) || ng.d !== (save.gp ? save.gp.d : 0)) { save.gp = { b: ng.b, d: ng.d }; writeSave(save); } }
       if (bag.shards > 0) { arena.save.shards += bag.shards; arena.run.shards += bag.shards; arena._floatText(x, y - 34, `+${bag.shards} 💎`, '#8fe9ff'); }
       if (bag.potions > 0) arena._sigHeal(12 * bag.potions);
       lastDrops.push(got); if (lastDrops.length > 12) lastDrops.shift();
@@ -633,7 +681,7 @@
     function rollFor(info, x, y, tag) {
       const rs = seed + ':' + tag + ':' + kills;
       if (!dropAll && MMRng.create('dropchance:' + rs).next() >= Z.dropChance(info)) return null;
-      return giveBag(x, y, Z.rollDrop(info, rs).bag, info);
+      return giveBag(x, y, Z.rollDrop(info, rs).bag, Object.assign({ tag: tag }, info));
     }
     function onEnemyHit(e, dmg) { if (evOnHit(e, dmg)) return; if (zones && e.zid >= 0) zones.markCombat(e.zid); }
     function onEnemyKilled(e) {
@@ -644,7 +692,7 @@
         const info = zones.markDead(e.zid, arena.clock); live.delete(e.zid); e.zid = -1;
         if (!info) return;
         kills++; save.stats.kills++; nxQuestEvent({ type: 'kill', zone: info.zone, n: 1 });
-        rollFor({ zone: info.zone, tier: info.tier }, e.x, e.y, 'g' + info.group);
+        rollFor({ zone: info.zone, tier: info.tier, src: e.type === 'giant_spider_queen' ? 'elite' : 'mob', bossId: e.type === 'giant_spider_queen' ? e.type : '' }, e.x, e.y, 'g' + info.group);
         spawnPickups(e.x, e.y, 'g' + info.group, kills, info.tier);
         return;
       }
@@ -652,7 +700,7 @@
         if (bossLive[i] !== e) continue;
         const site = world.bossSites[i]; bossLive[i] = null; bossReadyNow[i] = 0; miniKey = '';
         zones.bossDefeated(site, arena.clock); kills++; save.stats.bossKills++; nxQuestEvent({ type: 'kill', zone: site.zone, boss: true, n: 1 });
-        rollFor({ zone: site.zone, tier: site.zone, boss: true }, e.x, e.y + 30, 'boss' + i);
+        rollFor({ zone: site.zone, tier: site.zone, boss: true, src: 'boss', bossId: site.boss }, e.x, e.y + 30, 'boss' + i);
         spawnPickups(e.x, e.y + 20, 'boss' + i, kills, 5);
         dropKey(e.x + 24, e.y + 26, 'boss' + i); // BK2: every world boss drops a boss key
         writeSave(save);
@@ -756,7 +804,7 @@
       const res = { id: st.id, kind: st.plan.kind, region: st.plan.region, tier, tierName: ZT.EVENT_TIERS[tier], dealt: st.dealt, total: st.total, share: st.total ? st.dealt / st.total : 0, shards: 0, fame: 0, bag: null };
       save.stats.events++;
       if (rew) {
-        res.bag = giveBag(p.x, p.y - 26, rew.bag, { zone: st.plan.region, boss: true, event: true });
+        res.bag = giveBag(p.x, p.y - 26, rew.bag, { zone: st.plan.region, boss: true, event: true, src: 'event', eventTier: Math.max(0, tier - 1), tag: 'ev:' + st.id });
         arena.save.shards += rew.shards; arena.run.shards += rew.shards; res.shards = rew.shards; res.fame = rew.fame;
         save.stats.eventWins++;
         dropKey(p.x + 24, p.y - 30, st.id); // BK2: a won world event drops a boss key
@@ -1106,7 +1154,7 @@
     function openChest(i) {
       const q = SITES && SITES.camps[i]; if (!q || chestOpen.has(q.id)) return { ok: false };
       chestOpen.add(q.id); chestAnimT.set(q.id, arena.clock); save.chests = Array.from(chestOpen); writeSave(save); miniKey = '';
-      const info = { zone: q.zone, tier: q.zone };
+      const info = { zone: q.zone, tier: q.zone, src: 'chest', tag: 'chest:' + q.id };
       const got = giveBag((q.chest.x + 0.5) * TILE, (q.chest.y + 0.5) * TILE, Z.rollDrop(info, seed + ':chest:' + q.id).bag, info);
       say(got.items.length ? 'Chest opened: loot spills out' : 'Chest opened'); siteKeyShown = '';
       return { ok: true, items: got.items.length, shards: got.shards };
@@ -1878,7 +1926,8 @@
       diffOn: !!DIFF, diffMode, diffAt, spawner: () => zones, spawned: () => spawned, despawned: () => despawned,
       liveCount: () => { let n = 0; live.forEach((e, id) => { if (e.active && e.zid === id) n++; }); return n; },
       liveEnemies: () => { const o = []; live.forEach((e, id) => { if (e.active && e.zid === id) o.push({ id, x: e.x, y: e.y, type: e.type, zone: e.zone, tier: e.tier, art: e.art, hp: e.maxHp, spd: e.spdMul, dmg: e.dmgMul, diff: e.diff || null }); }); return o; },
-      enemyById: (id) => live.get(id) || null, setDropAll: (on) => { dropAll = !!on; }, lastDrops: () => lastDrops.slice(), kills: () => kills,
+      enemyById: (id) => live.get(id) || null, setDropAll: (on) => { dropAll = !!on; }, lastDrops: () => lastDrops.slice(), kills: () => kills, gearOn: GEAR_ON, gearDefaultOn: GEAR_DEFAULT_ON, gearPity, setGearPlayer: (id) => { gearPlayer = String(id).slice(0, 60); }, gearSave: () => ({ gp: save.gp || null }), testDrop: (info, tag) => { kills++; return rollFor(info, arena.player.x, arena.player.y, tag || 't'); }, // test hook: one kill's worth of drops with the real seed/pity path
+      
       bossesClassic, rosterClassic, bandsClassic, bossArtIds: () => world.bossSites.map((b) => b.boss),
       bossSites: () => world.bossSites.map((b, i) => ({ i, x: b.x, y: b.y, zone: b.zone, boss: b.boss, name: BOSS_NAME[i], live: !!(bossLive[i] && bossLive[i].active), ready: !!zones && zones.bossReady(b, arena.clock) })),
       bossEntity: (i) => bossLive[i] || null, bossTick,

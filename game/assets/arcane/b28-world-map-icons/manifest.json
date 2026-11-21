@@ -1,0 +1,114 @@
+{
+  "batch": "b28",
+  "label": "world-map-icons",
+  "assets": [
+    {
+      "id": "mm_portal",
+      "path": "ui/mm_portal.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "mm_boss",
+      "path": "ui/mm_boss.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "mm_shrine",
+      "path": "ui/mm_shrine.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "mm_camp",
+      "path": "ui/mm_camp.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "mm_npc",
+      "path": "ui/mm_npc.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "mm_event",
+      "path": "ui/mm_event.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "mm_player",
+      "path": "ui/mm_player.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "mm_party",
+      "path": "ui/mm_party.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "mm_vault",
+      "path": "ui/mm_vault.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 24,
+      "frame_h": 24,
+      "anchor": [
+        12,
+        12
+      ]
+    }
+  ]
+}
