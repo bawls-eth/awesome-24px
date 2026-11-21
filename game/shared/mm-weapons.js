@@ -53,12 +53,16 @@
     const w = s.wave || {}, ch = s.chain || {}, ob = s.orbit || {}, bu = s.burst || {}, lo = s.lob || {}, oh = s.onHit || {};
     const count = num(s.count, 1), burstN = num(bu.n, 1);
     let v = count * burstN * num(s.dmg, 1) * num(s.rate, 1);
+    // S15 calibration (class-weapon-sim.test.js, zone-1 group clear time vs the ranger must stay 0.7-1.4x): against a clustered
+    // group, boomerang re-hits (weight 1.25 -> 2.0), helix waves (new x1.15) and chains (0.3 -> 0.4 per link) are worth more than the
+    // single-target weights credited, so those styles get less per-bolt damage. Pierce stays 0.25 (pinned by shared-mm-weapons.test.js).
     v *= 1 + 0.25 * num(s.pierce, 0);
     v *= 1 + num(s.crit, 0);
     v *= 1 + 0.12 * num(s.bounce, 0);
     if (num(s.homing, 0) > 0) v *= 1.15;
-    if (s.boomerang) v *= 1.25;
-    v *= 1 + 0.3 * num(ch.n, 0) * num(ch.falloff, 0.7);
+    if (s.boomerang) v *= 2.0;
+    if (num(w.amp, 0) > 0 && w.alt) v *= 1.15;
+    v *= 1 + 0.4 * num(ch.n, 0) * num(ch.falloff, 0.7);
     if (count * burstN === 1 && num(w.amp, 0) > 0) v *= 0.95;
     v *= 1 + Math.min(0.4, num(lo.radius, 0) / 100);
     if (oh.status && has(STATUS_VALUE, oh.status)) v *= 1 + num(oh.chance, 0) * STATUS_VALUE[oh.status];

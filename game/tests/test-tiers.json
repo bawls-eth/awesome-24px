@@ -319,6 +319,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "class-weapon-sim.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "shared-mm-class-fire.test.js": {
     "class": "node",
     "tier": "smoke"

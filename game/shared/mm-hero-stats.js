@@ -107,6 +107,52 @@
     return out;
   }
 
+  // Weapon group rows (only when src.weapon is given): src.weapon = {style, family, pattern, rarity, affixes[]}.
+  function weaponRows(w) {
+    if (!w || typeof w !== 'object') return [];
+    const out = [];
+    const style = clean(w.style, 30), fam = clean(w.family, 20), pat = clean(w.pattern, 120);
+    if (style) out.push({ label: 'Style', value: style + (fam ? ' (' + fam + ')' : '') });
+    if (pat) out.push({ label: 'Fire pattern', value: pat });
+    if (has(w, 'rarity')) out.push({ label: 'Rarity', value: rarityName(w.rarity) });
+    const aff = Array.isArray(w.affixes) ? w.affixes.map((a) => clean(a, 20)).filter(Boolean).slice(0, 3) : [];
+    if (aff.length) out.push({ label: 'Affixes', value: aff.join(', ') });
+    return out;
+  }
+  // Passive rows (only when src.passives is given): {level, unlocks (MMUnlocks, optional; falls back to the global/require)}.
+  // One row per class node reached (ticked) or still locked ("Lv N"), then a "Next" row for the first locked node.
+  function passiveRows(Classes, cls, pz) {
+    if (!pz || typeof pz !== 'object') return [];
+    let U = pz.unlocks;
+    if (!U) { try { U = typeof MMUnlocks !== 'undefined' ? MMUnlocks : (typeof require === 'function' ? require('./mm-unlocks.js') : null); } catch (e) { U = null; } }
+    if (!U || typeof U.forLevel !== 'function') return [];
+    const level = Math.max(0, Math.min(20, Math.floor(num(pz.level, 0))));
+    const id = typeof cls === 'string' ? cls : '';
+    let all = [], nx = null;
+    try { all = U.nodes(id) || []; nx = U.next(id, level); } catch (e) { return []; }
+    const out = [];
+    all.forEach((n) => {
+      if (!n || typeof n !== 'object' || /^(nova2|dash2)_/.test(String(n.id))) return; // shared actives are shown on the ability bar
+      const nm = clean(n.name, 24) || 'Passive';
+      out.push({ label: nm, value: num(n.lv, 99) <= level ? '[x] ' + clean(n.text, 80) : 'Lv ' + Math.floor(num(n.lv, 0)) });
+    });
+    if (nx) out.push({ label: 'Next', value: 'Lv ' + Math.floor(num(nx.lv, 0)) + ' ' + (clean(nx.name, 24) || 'Passive') });
+    return out;
+  }
+  // Status rows (only when src.status is a non-empty array): [{id, name, sec, stacks}] -> "Slowed x2, 1.5s".
+  function statusRows(list) {
+    if (!Array.isArray(list)) return [];
+    const out = [];
+    list.slice(0, 12).forEach((s) => {
+      if (!s || typeof s !== 'object') return;
+      const nm = clean(s.name, 24) || clean(s.id, 24);
+      if (!nm) return;
+      const st = Math.floor(num(s.stacks, 1));
+      out.push({ label: nm, value: (st > 1 ? 'x' + Math.min(st, 9) + ', ' : '') + round(Math.max(0, num(s.sec, 0)), 1) + 's left' });
+    });
+    return out;
+  }
+
   // Full stats panel model. src: {hero, profile (arenaProfile), stats (arena.stats), save (arena.save), run:{kills,deepest,portals,time}, defs}.
   function panelRows(Classes, src) {
     src = src && typeof src === 'object' ? src : {};
@@ -131,6 +177,9 @@
     add('Class stats', 'Fire', fireText(p));
     if (cd && cd.base) add('Class stats', 'Base stats', 'POW ' + num(cd.base.pow, 0) + ' / GRD ' + num(cd.base.grd, 0) + ' / SWF ' + num(cd.base.swf, 0) + ' / KNK ' + num(cd.base.knk, 0));
     abilityRows(Classes, hero.cls).forEach((a) => add('Abilities', a.key === 'F' ? 'Signature' : 'Class ability', a.text));
+    weaponRows(src.weapon).forEach((r) => add('Weapon', r.label, r.value));
+    passiveRows(Classes, hero.cls, src.passives).forEach((r) => add('Passives', r.label, r.value));
+    statusRows(src.status).forEach((r) => add('Status', r.label, r.value));
     add('Gear', 'Shards', Math.max(0, Math.floor(num(sv.shards, 0))));
     itemRows(sv.items, sv.eq, src.defs).forEach((r) => add('Gear', r.slot.charAt(0).toUpperCase() + r.slot.slice(1), r.text));
     add('Run', 'Kills', Math.max(0, Math.floor(num(run.kills, 0))));
@@ -140,5 +189,5 @@
     return rows;
   }
 
-  return { RARITIES, ZONE_NAMES, clean, fmtTime, fmtMult, rarityName, zoneName, fireText, abilityRows, lockHint, pickerList, itemRows, panelRows, className };
+  return { RARITIES, ZONE_NAMES, clean, fmtTime, fmtMult, rarityName, zoneName, fireText, abilityRows, lockHint, pickerList, itemRows, weaponRows, passiveRows, statusRows, panelRows, className };
 }));
