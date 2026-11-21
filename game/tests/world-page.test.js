@@ -228,7 +228,8 @@ const walk = (page, path) => A(page, async (a, w, path) => {
   check('portal prompt is hidden away from portals', !(await vis(page, '#rw-portal')));
   await A(page, (a, w, q) => { a.player.x = q.x + 10; a.player.y = q.y; }, portal);
   await frames(page, 3);
-  check('standing on a portal shows the "Enter Warren dungeon" prompt button', await vis(page, '#rw-portal') && (await page.textContent('#rw-portal')) === 'Enter Warren dungeon' && await A(page, (a, w) => w.portalPrompt() === 0));
+  const BN = { warren: 'Warren', bramble: 'Bramble', meadow: 'Meadow', crypt: 'Crypt' }[portal.biome];
+  check('standing on a portal shows the "Enter <Biome> dungeon" prompt button', !!BN && await vis(page, '#rw-portal') && (await page.textContent('#rw-portal')) === 'Enter ' + BN + ' dungeon' && await A(page, (a, w) => w.portalPrompt() === 0));
   const pb = await page.evaluate(() => { const r = document.getElementById('rw-portal').getBoundingClientRect(); return { w: r.width, h: r.height }; });
   check('the portal button is a >= 44 px touch target', pb.w >= 44 && pb.h >= 44, JSON.stringify(pb));
   await page.click('#rw-portal');
@@ -236,7 +237,7 @@ const walk = (page, path) => A(page, async (a, w, path) => {
   await page.waitForFunction(() => window.__mm && window.__mm.dungeon && window.__mm.arena.active, null, { timeout: 15000 });
   const dg = await page.evaluate(() => ({ url: location.href, seed: window.__mm.dungeon.seed, leave: document.getElementById('realm-leave-btn').textContent, save: JSON.parse(localStorage.getItem('pixeltown-realm-v1')) }));
   const ret = new URL(dg.url).searchParams.get('return');
-  check('entering the portal starts a Warren dungeon run with a seed derived from (world seed, portal)', /mode=dungeon/.test(dg.url) && /^\d{1,5}$/.test(dg.seed) && ret === `index.html?mode=world&seed=12345&at=${portal.tx},${portal.ty}&test=1`, JSON.stringify(dg));
+  check('entering the portal starts a dungeon run of the portal biome with a seed derived from (world seed, portal)', /mode=dungeon/.test(dg.url) && new URL(dg.url).searchParams.get('biome') === portal.biome && /^\d{1,5}$/.test(dg.seed) && ret === `index.html?mode=world&seed=12345&at=${portal.tx},${portal.ty}&test=1`, JSON.stringify(dg));
   check('the world position and seed were saved before leaving', dg.save.seed === '12345' && dg.save.pos.x === portal.tx && dg.save.pos.y === portal.ty && dg.save.returnTo && dg.save.returnTo.x === portal.tx && dg.save.stats.portals === 1, JSON.stringify(dg.save));
   check('the dungeon Leave button goes back to the world', /world/.test(dg.leave), dg.leave);
   await page.evaluate(() => window.__mm.dungeon.finish());

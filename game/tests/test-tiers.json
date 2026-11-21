@@ -103,6 +103,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "dungeon-biomes.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "enemy-art.test.js": {
     "class": "browser",
     "tier": "smoke"
@@ -260,6 +264,10 @@
     "tier": "smoke"
   },
   "shared-mm-arena-signature.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-biomes.test.js": {
     "class": "node",
     "tier": "smoke"
   },

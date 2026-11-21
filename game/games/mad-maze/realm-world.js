@@ -403,14 +403,14 @@
 
     // ---------- portals into Warren dungeons and back (slice 7) ----------
     const RETURN_RE = /^index\.html\?mode=world&seed=[A-Za-z0-9_-]{1,24}&at=\d{1,4},\d{1,4}(&test=1)?$/;
-    const portalBtn = document.createElement('button'); portalBtn.id = 'rw-portal'; portalBtn.type = 'button'; portalBtn.className = 'hidden'; portalBtn.textContent = 'Enter Warren dungeon';
+    const portalBtn = document.createElement('button'); portalBtn.id = 'rw-portal'; portalBtn.type = 'button'; portalBtn.className = 'hidden'; portalBtn.textContent = 'Enter Warren dungeon'; // retitled per portal biome in portalTick
     ov.appendChild(portalBtn);
     let promptFor = -1; let leaving = false;
     function portalSeed(i) { return String(MMRng.hash(seed + ':portal:' + i) % 100000); }
     function portalUrls(i) {
       const q = portals[i];
       const ret = 'index.html?mode=world&seed=' + seed + '&at=' + q.tx + ',' + q.ty + (opts.test ? '&test=1' : '');
-      const url = 'index.html?mode=dungeon&seed=' + portalSeed(i) + '&lv=2&return=' + encodeURIComponent(ret) + (opts.test ? '&test=1' : '');
+      const url = 'index.html?mode=dungeon&seed=' + portalSeed(i) + '&lv=2&biome=' + (BIOME_NAME[q.biome] ? q.biome : 'warren') + '&return=' + encodeURIComponent(ret) + (opts.test ? '&test=1' : '');
       return { ret: RETURN_RE.test(ret) ? ret : null, url };
     }
     function enterPortal(i) {
@@ -432,7 +432,7 @@
       if (arena.state === 'play' && !arena.paused) for (let i = 0; i < portals.length; i++) { const dx = p.x - portals[i].x; const dy = p.y - portals[i].y; if (dx * dx + dy * dy < 40 * 40) { near = i; break; } }
       if (near !== promptFor) {
         promptFor = near; portalBtn.classList.toggle('hidden', near < 0);
-        if (near >= 0) portalBtn.setAttribute('aria-label', `Enter Warren dungeon (${portals[near].label}, Enter)`);
+        if (near >= 0) { const bn = BIOME_NAME[portals[near].biome] || 'Warren'; portalBtn.textContent = `Enter ${bn} dungeon`; portalBtn.setAttribute('aria-label', `Enter ${bn} dungeon (${portals[near].label}, Enter)`); }
       }
     }
 
