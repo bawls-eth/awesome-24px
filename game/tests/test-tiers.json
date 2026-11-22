@@ -759,6 +759,14 @@
     "class": "node",
     "tier": "smoke"
   },
+  "dd-bands-golden.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "deepdelve-depth2.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "class-status-arena.test.js": {
     "class": "browser",
     "tier": "full"
