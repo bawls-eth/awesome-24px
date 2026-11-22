@@ -1,0 +1,798 @@
+{
+  "batch": "b32s",
+  "label": "stegolith",
+  "assets": [
+    {
+      "id": "stegolith_idle_down",
+      "path": "creatures/stegolith/stegolith_idle_down.png",
+      "category": "enemy",
+      "creature": "stegolith",
+      "enemy": "stegolith",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 252,
+          "y": 224
+        },
+        {
+          "x": 252,
+          "y": 220
+        },
+        {
+          "x": 252,
+          "y": 216
+        },
+        {
+          "x": 252,
+          "y": 220
+        }
+      ]
+    },
+    {
+      "id": "stegolith_move_down",
+      "path": "creatures/stegolith/stegolith_move_down.png",
+      "category": "enemy",
+      "creature": "stegolith",
+      "enemy": "stegolith",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 252,
+          "y": 224
+        },
+        {
+          "x": 252,
+          "y": 216
+        },
+        {
+          "x": 252,
+          "y": 220
+        },
+        {
+          "x": 252,
+          "y": 224
+        },
+        {
+          "x": 252,
+          "y": 216
+        },
+        {
+          "x": 252,
+          "y": 220
+        }
+      ]
+    },
+    {
+      "id": "stegolith_attack_down",
+      "path": "creatures/stegolith/stegolith_attack_down.png",
+      "category": "enemy",
+      "creature": "stegolith",
+      "enemy": "stegolith",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 252,
+          "y": 224
+        },
+        {
+          "x": 252,
+          "y": 232
+        },
+        {
+          "x": 252,
+          "y": 208
+        },
+        {
+          "x": 252,
+          "y": 216
+        },
+        {
+          "x": 252,
+          "y": 228
+        }
+      ]
+    },
+    {
+      "id": "stegolith_death_down",
+      "path": "creatures/stegolith/stegolith_death_down.png",
+      "category": "enemy",
+      "creature": "stegolith",
+      "enemy": "stegolith",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 252,
+          "y": 272
+        },
+        {
+          "x": 252,
+          "y": 292
+        },
+        {
+          "x": 252,
+          "y": 320
+        },
+        {
+          "x": 252,
+          "y": 352
+        },
+        {
+          "x": 252,
+          "y": 384
+        }
+      ]
+    },
+    {
+      "id": "stegolith_idle_up",
+      "path": "creatures/stegolith/stegolith_idle_up.png",
+      "category": "enemy",
+      "creature": "stegolith",
+      "enemy": "stegolith",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 252,
+          "y": 224
+        },
+        {
+          "x": 252,
+          "y": 220
+        },
+        {
+          "x": 252,
+          "y": 216
+        },
+        {
+          "x": 252,
+          "y": 220
+        }
+      ]
+    },
+    {
+      "id": "stegolith_move_up",
+      "path": "creatures/stegolith/stegolith_move_up.png",
+      "category": "enemy",
+      "creature": "stegolith",
+      "enemy": "stegolith",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 252,
+          "y": 224
+        },
+        {
+          "x": 252,
+          "y": 216
+        },
+        {
+          "x": 252,
+          "y": 220
+        },
+        {
+          "x": 252,
+          "y": 224
+        },
+        {
+          "x": 252,
+          "y": 216
+        },
+        {
+          "x": 252,
+          "y": 220
+        }
+      ]
+    },
+    {
+      "id": "stegolith_attack_up",
+      "path": "creatures/stegolith/stegolith_attack_up.png",
+      "category": "enemy",
+      "creature": "stegolith",
+      "enemy": "stegolith",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 252,
+          "y": 224
+        },
+        {
+          "x": 252,
+          "y": 232
+        },
+        {
+          "x": 252,
+          "y": 208
+        },
+        {
+          "x": 252,
+          "y": 216
+        },
+        {
+          "x": 252,
+          "y": 228
+        }
+      ]
+    },
+    {
+      "id": "stegolith_death_up",
+      "path": "creatures/stegolith/stegolith_death_up.png",
+      "category": "enemy",
+      "creature": "stegolith",
+      "enemy": "stegolith",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 252,
+          "y": 272
+        },
+        {
+          "x": 252,
+          "y": 292
+        },
+        {
+          "x": 252,
+          "y": 320
+        },
+        {
+          "x": 252,
+          "y": 352
+        },
+        {
+          "x": 252,
+          "y": 384
+        }
+      ]
+    },
+    {
+      "id": "stegolith_idle_right",
+      "path": "creatures/stegolith/stegolith_idle_right.png",
+      "category": "enemy",
+      "creature": "stegolith",
+      "enemy": "stegolith",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 256,
+          "y": 224
+        },
+        {
+          "x": 256,
+          "y": 220
+        },
+        {
+          "x": 256,
+          "y": 216
+        },
+        {
+          "x": 256,
+          "y": 220
+        }
+      ]
+    },
+    {
+      "id": "stegolith_move_right",
+      "path": "creatures/stegolith/stegolith_move_right.png",
+      "category": "enemy",
+      "creature": "stegolith",
+      "enemy": "stegolith",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 256,
+          "y": 224
+        },
+        {
+          "x": 256,
+          "y": 216
+        },
+        {
+          "x": 256,
+          "y": 220
+        },
+        {
+          "x": 256,
+          "y": 224
+        },
+        {
+          "x": 256,
+          "y": 216
+        },
+        {
+          "x": 256,
+          "y": 220
+        }
+      ]
+    },
+    {
+      "id": "stegolith_attack_right",
+      "path": "creatures/stegolith/stegolith_attack_right.png",
+      "category": "enemy",
+      "creature": "stegolith",
+      "enemy": "stegolith",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 256,
+          "y": 224
+        },
+        {
+          "x": 256,
+          "y": 232
+        },
+        {
+          "x": 256,
+          "y": 208
+        },
+        {
+          "x": 256,
+          "y": 216
+        },
+        {
+          "x": 256,
+          "y": 228
+        }
+      ]
+    },
+    {
+      "id": "stegolith_death_right",
+      "path": "creatures/stegolith/stegolith_death_right.png",
+      "category": "enemy",
+      "creature": "stegolith",
+      "enemy": "stegolith",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 256,
+          "y": 260
+        },
+        {
+          "x": 256,
+          "y": 280
+        },
+        {
+          "x": 256,
+          "y": 312
+        },
+        {
+          "x": 256,
+          "y": 344
+        },
+        {
+          "x": 256,
+          "y": 380
+        }
+      ]
+    },
+    {
+      "id": "stegolith_sleep_down",
+      "path": "creatures/stegolith/stegolith_sleep_down.png",
+      "category": "enemy",
+      "creature": "stegolith",
+      "enemy": "stegolith",
+      "action": "sleep",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 252,
+          "y": 364
+        },
+        {
+          "x": 252,
+          "y": 364
+        },
+        {
+          "x": 252,
+          "y": 368
+        },
+        {
+          "x": 252,
+          "y": 364
+        }
+      ]
+    },
+    {
+      "id": "stegolith_eat_down",
+      "path": "creatures/stegolith/stegolith_eat_down.png",
+      "category": "enemy",
+      "creature": "stegolith",
+      "enemy": "stegolith",
+      "action": "eat",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 252,
+          "y": 224
+        },
+        {
+          "x": 252,
+          "y": 236
+        },
+        {
+          "x": 252,
+          "y": 248
+        },
+        {
+          "x": 252,
+          "y": 232
+        }
+      ]
+    },
+    {
+      "id": "stegolith_saddle_idle_down",
+      "path": "creatures/stegolith/stegolith_saddle_idle_down.png",
+      "category": "mount",
+      "creature": "stegolith",
+      "enemy": "stegolith",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 252,
+          "y": 224
+        },
+        {
+          "x": 252,
+          "y": 220
+        },
+        {
+          "x": 252,
+          "y": 216
+        },
+        {
+          "x": 252,
+          "y": 220
+        }
+      ]
+    },
+    {
+      "id": "stegolith_saddle_move_down",
+      "path": "creatures/stegolith/stegolith_saddle_move_down.png",
+      "category": "mount",
+      "creature": "stegolith",
+      "enemy": "stegolith",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 252,
+          "y": 224
+        },
+        {
+          "x": 252,
+          "y": 216
+        },
+        {
+          "x": 252,
+          "y": 220
+        },
+        {
+          "x": 252,
+          "y": 224
+        },
+        {
+          "x": 252,
+          "y": 216
+        },
+        {
+          "x": 252,
+          "y": 220
+        }
+      ]
+    },
+    {
+      "id": "stegolith_saddle_idle_up",
+      "path": "creatures/stegolith/stegolith_saddle_idle_up.png",
+      "category": "mount",
+      "creature": "stegolith",
+      "enemy": "stegolith",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 252,
+          "y": 224
+        },
+        {
+          "x": 252,
+          "y": 220
+        },
+        {
+          "x": 252,
+          "y": 216
+        },
+        {
+          "x": 252,
+          "y": 220
+        }
+      ]
+    },
+    {
+      "id": "stegolith_saddle_move_up",
+      "path": "creatures/stegolith/stegolith_saddle_move_up.png",
+      "category": "mount",
+      "creature": "stegolith",
+      "enemy": "stegolith",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 252,
+          "y": 224
+        },
+        {
+          "x": 252,
+          "y": 216
+        },
+        {
+          "x": 252,
+          "y": 220
+        },
+        {
+          "x": 252,
+          "y": 224
+        },
+        {
+          "x": 252,
+          "y": 216
+        },
+        {
+          "x": 252,
+          "y": 220
+        }
+      ]
+    },
+    {
+      "id": "stegolith_saddle_idle_right",
+      "path": "creatures/stegolith/stegolith_saddle_idle_right.png",
+      "category": "mount",
+      "creature": "stegolith",
+      "enemy": "stegolith",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 256,
+          "y": 224
+        },
+        {
+          "x": 256,
+          "y": 220
+        },
+        {
+          "x": 256,
+          "y": 216
+        },
+        {
+          "x": 256,
+          "y": 220
+        }
+      ]
+    },
+    {
+      "id": "stegolith_saddle_move_right",
+      "path": "creatures/stegolith/stegolith_saddle_move_right.png",
+      "category": "mount",
+      "creature": "stegolith",
+      "enemy": "stegolith",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 512,
+      "frame_h": 512,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 256,
+        "y": 463
+      },
+      "seat": [
+        {
+          "x": 256,
+          "y": 224
+        },
+        {
+          "x": 256,
+          "y": 216
+        },
+        {
+          "x": 256,
+          "y": 220
+        },
+        {
+          "x": 256,
+          "y": 224
+        },
+        {
+          "x": 256,
+          "y": 216
+        },
+        {
+          "x": 256,
+          "y": 220
+        }
+      ]
+    }
+  ]
+}
