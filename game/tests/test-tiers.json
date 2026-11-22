@@ -751,6 +751,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "deepdelve-depth2.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "class-status-arena.test.js": {
     "class": "browser",
     "tier": "full"

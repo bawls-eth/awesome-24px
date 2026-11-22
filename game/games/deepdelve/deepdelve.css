@@ -41,16 +41,21 @@ body { display:flex; flex-direction:column; max-width:100vw; overflow:hidden; to
 .btn.mini { min-height:44px; min-width:64px; font-size:calc(14px * var(--ui-scale,1)); }
 .note { color:var(--mut); font-size:calc(13px * var(--ui-scale,1)); margin:6px 0; }
 .smelt { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
-#recipes, #goal-list, #goal-more { list-style:none; margin:8px 0 0; padding:0; display:grid; gap:6px; }
-#recipes li { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:4px 6px; background:var(--panel); border-radius:8px; }
-#recipes .ri { display:flex; flex-direction:column; min-width:0; }
-#recipes small { color:var(--mut); overflow-wrap:anywhere; }
-#goal-list li, #goal-more li { display:flex; flex-direction:column; padding:8px; background:var(--panel); border-radius:8px; }
-#goal-list li.done strong, #goal-more li.done strong { color:var(--acc); }
-#goal-list span, #goal-more span { color:var(--mut); font-size:calc(13px * var(--ui-scale,1)); }
+#recipes, #recipes-x, #goal-list, #goal-more, #goal-build { list-style:none; margin:8px 0 0; padding:0; display:grid; gap:6px; }
+#recipes li, #recipes-x li { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:4px 6px; background:var(--panel); border-radius:8px; }
+#recipes .ri, #recipes-x .ri { display:flex; flex-direction:column; min-width:0; }
+#recipes small, #recipes-x small { color:var(--mut); overflow-wrap:anywhere; }
+#goal-list li, #goal-more li, #goal-build li { display:flex; flex-direction:column; padding:8px; background:var(--panel); border-radius:8px; }
+#goal-list li.done strong, #goal-more li.done strong, #goal-build li.done strong { color:var(--acc); }
+#goal-list span, #goal-more span, #goal-build span { color:var(--mut); font-size:calc(13px * var(--ui-scale,1)); }
 @media (prefers-reduced-motion: reduce) { #hpfill { transition:none; } }
 .sub { margin:12px 0 0; font-size:calc(15px * var(--ui-scale,1)); color:var(--mut); }
 
 /* AX2-side: text size from pixeltown-access-v1 (--ui-scale) and reduce motion (data-reduce-motion) */
 body { font-size: calc(16px * var(--ui-scale,1)); }
 html[data-reduce-motion="1"] *, html[data-reduce-motion="1"] *::before, html[data-reduce-motion="1"] *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+
+/* MG2: calm creative world label */
+#creative-note { color:#9ff0d8; font-weight:600; }
+#creative-note[hidden] { display:none; }
+html[data-dd-world="creative"] .bar h1 { color:#9ff0d8; }

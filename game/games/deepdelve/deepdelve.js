@@ -16,6 +16,12 @@
     return Math.max(0, Math.min(999999999, n));
   }
   const SEED = parseSeed(params.get('seed'));
+  // MG2 calm creative world (?mode=creative, or the "Creative world" button): no mobs, no hazards, unlimited blocks, its own
+  // save under localStorage 'pixeltown-deepdelve-creative-v1'. It never opens the survival IndexedDB and never writes the
+  // survival meta, medal or hub keys.
+  const CREATIVE = params.get('mode') === 'creative';
+  const CREATIVE_KEY = 'pixeltown-deepdelve-creative-v1';
+  const GROTTO = window.MMDDGrotto || null, BUILD = window.MMDDBuild || null;
 
   const $ = (id) => document.getElementById(id);
   const say = (t) => { $('msg').textContent = t || ''; };
@@ -25,7 +31,15 @@
   // ---------- storage: IndexedDB with an in-memory fallback ----------
   const memStore = new Map();
   let idb = null;
+  function creativeDoc() {
+    try {
+      const o = JSON.parse(localStorage.getItem(CREATIVE_KEY) || 'null');
+      if (o && typeof o === 'object' && !Array.isArray(o) && o.v === 1 && o.kv && typeof o.kv === 'object' && !Array.isArray(o.kv)) return o;
+    } catch (e) { /* corrupt or blocked: start fresh */ }
+    return { v: 1, kv: {} };
+  }
   function openDB() {
+    if (CREATIVE) return Promise.resolve(null); // the creative world never opens the survival database
     return new Promise((resolve) => {
       let done = false;
       const fin = (v) => { if (!done) { done = true; resolve(v); } };
@@ -42,6 +56,7 @@
   }
   function kvGet(k) {
     return new Promise((resolve) => {
+      if (CREATIVE) { const v = creativeDoc().kv[k]; return resolve(typeof v === 'string' ? v : memStore.has(k) ? memStore.get(k) : null); }
       if (!idb) return resolve(memStore.has(k) ? memStore.get(k) : null);
       try {
         const r = idb.transaction('kv', 'readonly').objectStore('kv').get(k);
@@ -53,6 +68,7 @@
   function kvSet(k, v) {
     memStore.set(k, v);
     return new Promise((resolve) => {
+      if (CREATIVE) { try { const d = creativeDoc(); d.kv[k] = v; localStorage.setItem(CREATIVE_KEY, JSON.stringify(d)); return resolve(true); } catch (e) { return resolve(false); } }
       if (!idb) return resolve(false);
       try {
         const tx = idb.transaction('kv', 'readwrite');
@@ -67,20 +83,26 @@
   // ---------- items / blocks ----------
   const ITEM_OF = {}; ITEM_OF[B.GRASS] = 'dirt'; ITEM_OF[B.DIRT] = 'dirt'; ITEM_OF[B.STONE] = 'stone'; ITEM_OF[B.COAL] = 'coal';
   ITEM_OF[B.IRON] = 'iron_ore'; ITEM_OF[B.GOLD] = 'gold_ore'; ITEM_OF[B.CRYSTAL] = 'crystal'; ITEM_OF[B.TORCH] = 'torch'; ITEM_OF[B.FURNACE] = 'furnace';
+  // MG2 crystal grotto blocks (ids continue MMChunks.B; see shared/mm-dd-grotto.js)
+  const GLOW = 13, LAMP = 14, BRICK = 15;
+  ITEM_OF[GLOW] = 'glowstone'; ITEM_OF[LAMP] = 'glow_lamp'; ITEM_OF[BRICK] = 'stone_brick';
   const BENCH_ITEM = 'table'; // the workbench is a placed prop (not a chunk block), kept in `benches` and saved additively
-  const PLACEABLE = [['dirt', B.DIRT], ['stone', B.STONE], ['coal', B.COAL], ['iron_ore', B.IRON], ['gold_ore', B.GOLD], ['crystal', B.CRYSTAL], ['furnace', B.FURNACE], ['torch', B.TORCH]];
+  const PLACEABLE = [['dirt', B.DIRT], ['stone', B.STONE], ['coal', B.COAL], ['iron_ore', B.IRON], ['gold_ore', B.GOLD], ['crystal', B.CRYSTAL], ['furnace', B.FURNACE], ['torch', B.TORCH], ['glowstone', GLOW], ['glow_lamp', LAMP], ['stone_brick', BRICK]];
   const BLOCK_OF = {}; PLACEABLE.forEach((p) => { BLOCK_OF[p[0]] = p[1]; });
   const benches = [];
+  const lampChunks = new Set(); // chunk keys that may hold a glow lamp (placed blocks only), so relight scans just those
+  const creativeBuilt = {};
   const creatures = [], slain = new Set(); // seeded cave creatures (crawler, bat); slain ids are saved additively
   let deathCause = '';
   const clock = { t: MMDDTime.NOON, step: -1, k: 1 }; // world clock in seconds; saved additively as `t`
   const HARDNESS = {}; HARDNESS[B.GRASS] = 0.3; HARDNESS[B.DIRT] = 0.3; HARDNESS[B.STONE] = 0.7; HARDNESS[B.COAL] = 0.9; HARDNESS[B.IRON] = 1.1;
   HARDNESS[B.GOLD] = 1.3; HARDNESS[B.CRYSTAL] = 1.5; HARDNESS[B.TORCH] = 0.1; HARDNESS[B.FURNACE] = 0.6;
+  HARDNESS[GLOW] = 1.0; HARDNESS[LAMP] = 0.3; HARDNESS[BRICK] = 0.9;
   // Ore gating: minimum pick tier (0 wood, 1 stone, 2 iron, 3 gold).
-  const NEED_TIER = {}; NEED_TIER[B.IRON] = 1; NEED_TIER[B.GOLD] = 2; NEED_TIER[B.CRYSTAL] = 2;
+  const NEED_TIER = {}; NEED_TIER[B.IRON] = 1; NEED_TIER[B.GOLD] = 2; NEED_TIER[B.CRYSTAL] = 2; NEED_TIER[GLOW] = 1;
   const TIER_NAME = ['Wood', 'Stone', 'Iron', 'Gold'], PICK_DUR = [0, 60, 120, 200];
   const COLORS = ['#000', '#5fa63f', '#7a5230', '#7d8189', '#7d8189', '#7d8189', '#7d8189', '#7d8189', '#e8541a', '#3a6fd8', '#2a2a30', '#ffb02e'];
-  const SWATCH = { dirt: '#7a5230', stone: '#7d8189', coal: '#2b2b30', iron_ore: '#d8a77a', gold_ore: '#f2c744', crystal: '#7fe8ff', furnace: '#d0702a', torch: '#ffb02e', table: '#a8743a' };
+  const SWATCH = { dirt: '#7a5230', stone: '#7d8189', coal: '#2b2b30', iron_ore: '#d8a77a', gold_ore: '#f2c744', crystal: '#7fe8ff', furnace: '#d0702a', torch: '#ffb02e', table: '#a8743a', glowstone: '#5fe0c8', glow_lamp: '#fff0b0', stone_brick: '#9a9ea8' };
 
   // ---------- state ----------
   const inv = { wood: 4, coal: 1 };
@@ -91,6 +113,15 @@
   let world = null, spawn = null, mouthOn = false, mouthSite = null;
   const reduced = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) || !!(window.MMSideAccess && window.MMSideAccess.reduced());
   const META_KEY = 'pixeltown-deepdelve-v1', TOWN_KEY = 'pixeltown-save-v1';
+  // Shared access prefs (pixeltown-access-v1, read-only): text size + reduce motion come via MMSideAccess; lowGfx starts the
+  // quality governor at the low view and keeps it there; a colour-blind palette recolours the block outline and the creatures.
+  const ACCESS = (function () {
+    let p = null;
+    try { p = window.MMAccess && MMAccess.prefs ? MMAccess.prefs.load(localStorage) : null; } catch (e) { p = null; }
+    p = p || { palette: 'normal', hudScale: 1, flashes: true, lowGfx: false };
+    const pal = window.MMAccess ? MMAccess.palette(p.palette) : { name: 'normal', ally: '#5ad1ff', enemy: '#ffb347' };
+    return { palette: pal.name, ally: pal.ally, enemy: pal.enemy, scale: p.hudScale, lowGfx: p.lowGfx === true, reduced };
+  }());
   const pick = { tier: 0, dur: 0 };
   const slimes = [];
 
@@ -108,7 +139,9 @@
       cave: null,
       goals: { bronze: g.bronze === true, silver: g.silver === true, secret: g.secret === true, secretVoid: g.secretVoid === true, deaths: clampInt(g.deaths, 0, 9999), maxDepth: clampInt(g.maxDepth, 0, 99),
       // additive goals: depth 20/40, first crawler, the Rock Wyrm, 10 torches placed (counter clamped 0-10)
-      depth20: g.depth20 === true, depth40: g.depth40 === true, crawler: g.crawler === true, wyrm: g.wyrm === true, torches: clampInt(g.torches, 0, 10), torches10: g.torches10 === true || clampInt(g.torches, 0, 10) >= 10 },
+      depth20: g.depth20 === true, depth40: g.depth40 === true, crawler: g.crawler === true, wyrm: g.wyrm === true, torches: clampInt(g.torches, 0, 10), torches10: g.torches10 === true || clampInt(g.torches, 0, 10) >= 10,
+      // MG2 (additive): blueprint builds and their hub medals
+      buildHut: g.buildHut === true, buildBridge: g.buildBridge === true, buildLighthouse: g.buildLighthouse === true, build1: g.build1 === true, build3: g.build3 === true },
     };
     if (o.cave && typeof o.cave === 'object') {
       const c = o.cave, ci = c.inv && typeof c.inv === 'object' ? c.inv : {}, cp = c.pick && typeof c.pick === 'object' ? c.pick : {};
@@ -122,8 +155,8 @@
   }
   function loadMeta() { try { return sanitiseMeta(localStorage.getItem(META_KEY)); } catch (e) { return sanitiseMeta(null); } }
   // Hub medal summary: this game's own additive key, read by the hub page only.
-  function hubMedals() { try { const g = meta.goals, m = ['bronze', 'silver', 'secret', 'depth20', 'depth40', 'crawler', 'wyrm', 'torches10'].filter((k) => g[k] === true); localStorage.setItem('pixeltown-medals-deepdelve-v1', JSON.stringify({ v: 1, m })); } catch (e) { /* storage blocked */ } try { const g = meta.goals; window.MMHubProfile.sync(localStorage, 'deepdelve', [g.maxDepth >= 1 && 'dig'].concat(['bronze', 'silver', 'secret', 'depth20', 'depth40', 'wyrm'].filter((k) => g[k] === true))); } catch (e) { /* hub map progress is optional */ } }
-  function saveMeta() { hubMedals(); try { localStorage.setItem(META_KEY, JSON.stringify(meta)); return true; } catch (e) { return false; } }
+  function hubMedals() { if (CREATIVE) return; try { const g = meta.goals, m = ['bronze', 'silver', 'secret', 'depth20', 'depth40', 'crawler', 'wyrm', 'torches10', 'build1', 'build3'].filter((k) => g[k] === true); localStorage.setItem('pixeltown-medals-deepdelve-v1', JSON.stringify({ v: 1, m })); } catch (e) { /* storage blocked */ } try { const g = meta.goals; window.MMHubProfile.sync(localStorage, 'deepdelve', [g.maxDepth >= 1 && 'dig'].concat(['bronze', 'silver', 'secret', 'depth20', 'depth40', 'wyrm'].filter((k) => g[k] === true))); } catch (e) { /* hub map progress is optional */ } }
+  function saveMeta() { if (CREATIVE) return true; hubMedals(); try { localStorage.setItem(META_KEY, JSON.stringify(meta)); return true; } catch (e) { return false; } }
   // Read-only look at the old in-town cave keys; never writes or deletes anything on the town save.
   function readTownCave() {
     let o;
@@ -133,7 +166,7 @@
     return sanitiseMeta({ cave: { seed: o.caveSeed, inv: o.caveInv, pick: o.cavePick } }).cave;
   }
   function migrateTown() {
-    if (meta.migratedFrom) return false;
+    if (CREATIVE || meta.migratedFrom) return false;
     const t = readTownCave();
     if (!t) return false;
     meta.cave = t; meta.migratedFrom = TOWN_KEY;
@@ -163,9 +196,9 @@
       const b = document.createElement('button');
       b.type = 'button'; b.className = 'btn slot' + (it.item === sel ? ' sel' : ''); b.dataset.item = it.item;
       const sw = document.createElement('span'); sw.className = 'sw'; sw.style.background = SWATCH[it.item];
-      const t = document.createElement('span'); t.textContent = (n + 1) + ':' + it.count;
+      const t = document.createElement('span'); t.textContent = (n + 1) + ':' + (CREATIVE ? '\u221e' : it.count);
       b.appendChild(sw); b.appendChild(t);
-      b.setAttribute('aria-label', it.item + ' ' + it.count);
+      b.setAttribute('aria-label', it.item.replace(/_/g, ' ') + ' ' + (CREATIVE ? 'unlimited' : it.count));
       b.addEventListener('click', () => { sel = it.item; renderHud(); });
       hb.appendChild(b);
     });
@@ -176,12 +209,12 @@
     $('hud-hp').textContent = 'HP ' + player.hp + '/10';
     $('hpfill').style.width = Math.max(0, Math.min(100, player.hp * 10)) + '%';
     $('hpbar').setAttribute('aria-valuenow', String(player.hp));
-    $('hud-pick').textContent = 'Pick: ' + TIER_NAME[pick.tier] + (pick.tier > 0 ? ' ' + pick.dur + '/' + PICK_DUR[pick.tier] : '') + ' | ' + (meta.mode === 'creative' ? 'Creative' : 'Survival');
-    $('mode-btn').textContent = 'Mode: ' + (meta.mode === 'creative' ? 'Creative' : 'Survival');
+    $('hud-pick').textContent = CREATIVE ? 'Creative world | ' + (meta.mode === 'creative' ? 'Flying' : 'Walking') : 'Pick: ' + TIER_NAME[pick.tier] + (pick.tier > 0 ? ' ' + pick.dur + '/' + PICK_DUR[pick.tier] : '') + ' | ' + (meta.mode === 'creative' ? 'Creative' : 'Survival');
+    $('mode-btn').textContent = CREATIVE ? 'Fly: ' + (meta.mode === 'creative' ? 'On' : 'Off') : 'Mode: ' + (meta.mode === 'creative' ? 'Creative' : 'Survival');
     $('t-down').hidden = meta.mode !== 'creative';
     $('hud-seed').textContent = 'Seed ' + SEED + (wyrm.down ? ' | Wyrm trophy' : '');
     const have = [['coal'], ['iron_ore', 'iron'], ['gold_ore', 'gold'], ['crystal']].filter((ks) => ks.some((k) => (inv[k] | 0) > 0 || (found[k] | 0) > 0)).length;
-    $('hud-goal').textContent = 'Goal: find all 4 ores (' + have + '/4), crystal lies deepest';
+    $('hud-goal').textContent = CREATIVE ? 'Build anything: every block is unlimited' : 'Goal: find all 4 ores (' + have + '/4), crystal lies deepest';
     if (!$('craft-panel').hidden) renderCraft();
     if (!$('goals-panel').hidden) renderGoals();
   }
@@ -210,7 +243,7 @@
   }
   const flying = () => MMRecipes.mode(meta.mode).flight;
   function hurt(n, msg, deathMsg) {
-    if (player.iframes > 0) return;
+    if (CREATIVE || player.iframes > 0) return; // the calm creative world has no hazards
     player.iframes = 0.6;
     player.hp -= n;
     if (player.hp <= 0) { die(deathMsg || 'You were defeated. Back to the surface.'); return; }
@@ -219,6 +252,7 @@
   }
   // Any death voids the secret Lava Lake bridge for good (it is a no-death challenge).
   function die(msg) {
+    if (CREATIVE) { deathCause = ''; respawn(msg); return; }
     if (deathCause === 'creature' && meta.mode === 'survival') {
       const k = MMDDMobs.deathKeep(inv), names = Object.keys(k.lost);
       names.forEach((n) => { inv[n] = k.inv[n]; });
@@ -268,7 +302,7 @@
       if (p.vy < 0) {
         const fall = p.peak - p.y;
         p.onGround = true;
-        if (fall > 4.5 && MMRecipes.mode(meta.mode).fallDamage) {
+        if (fall > 4.5 && MMRecipes.mode(meta.mode).fallDamage && !CREATIVE) {
           p.hp -= Math.floor(fall - 3);
           if (p.hp <= 0) { die('You fell too far. Back to the surface.'); return; }
           toast('Ouch! Fall damage');
@@ -289,6 +323,7 @@
   }
   // Lava hurts 2 hearts every 0.4 s while any part of your body is in it.
   function hazards(dt) {
+    if (CREATIVE) { lavaT = 0; return; }
     if (inLava()) {
       lavaT += dt;
       if (lavaT >= 0.4) { lavaT = 0; player.iframes = 0; hurt(2, 'Lava! Get out!', 'You fell into the lava. Back to the surface.'); }
@@ -322,12 +357,13 @@
   function mineBlock(wx, wy, wz) {
     const id = world.getBlock(wx, wy, wz);
     if (id === B.AIR || id === B.BEDROCK || id === B.LAVA || id === B.WATER) return false;
-    if ((NEED_TIER[id] | 0) > pick.tier) { toast('Too hard! Needs a ' + TIER_NAME[NEED_TIER[id]].toLowerCase() + ' pick or better.'); return false; }
+    if (!CREATIVE && (NEED_TIER[id] | 0) > pick.tier) { toast('Too hard! Needs a ' + TIER_NAME[NEED_TIER[id]].toLowerCase() + ' pick or better.'); return false; }
     const dirty = world.setBlock(wx, wy, wz, B.AIR);
     if (!dirty.length) return false;
     const item = ITEM_OF[id];
-    if (item) { inv[item] = (inv[item] | 0) + 1; found[item] = 1; }
-    wearPick(NEED_TIER[id] ? 2 : 1);
+    if (item && !CREATIVE) { inv[item] = (inv[item] | 0) + 1; found[item] = 1; }
+    if (!CREATIVE) findBlueprint(id, wy);
+    if (!CREATIVE) wearPick(NEED_TIER[id] ? 2 : 1);
     afterEdit(dirty);
     renderHud();
     return true;
@@ -354,7 +390,10 @@
     }
     const dirty = world.setBlock(wx, wy, wz, id);
     if (!dirty.length) return false;
-    inv[item] -= 1;
+    if (!CREATIVE) inv[item] -= 1; // unlimited blocks in the creative world
+    if (id === LAMP) lampChunks.add(MMChunks.key(Math.floor(wx / SIZE), Math.floor(wy / SIZE), Math.floor(wz / SIZE)));
+    if (CREATIVE) { buildCheck(wx, wy, wz); afterEdit(dirty); renderHud(); return true; }
+    buildCheck(wx, wy, wz);
     if (id === B.TORCH && meta.goals.torches < 10) { meta.goals.torches++; if (meta.goals.torches >= 10) award('torches10'); else saveMeta(); }
     lakeCheck(wx, wy, wz, id);
     afterEdit(dirty);
@@ -387,14 +426,17 @@
   function makeAtlas() {
     const c = document.createElement('canvas'); c.width = 64; c.height = 64;
     const g = c.getContext('2d');
-    const base = ['#000', '#5fa63f', '#7a5230', '#7d8189', '#7d8189', '#7d8189', '#7d8189', '#7d8189', '#e8541a', '#3a6fd8', '#2a2a30', '#ffb02e', '#5a5e66'];
-    const fleck = [null, '#4a8a2e', '#5c3a20', '#6a6e76', '#202024', '#d8a77a', '#f2c744', '#7fe8ff', '#ffd23a', '#6fa0f0', '#18181c', '#fff3a0', '#ff9a2e'];
-    for (let id = 0; id < 13; id++) {
+    const base = ['#000', '#5fa63f', '#7a5230', '#7d8189', '#7d8189', '#7d8189', '#7d8189', '#7d8189', '#e8541a', '#3a6fd8', '#2a2a30', '#ffb02e', '#5a5e66', '#2f8f86', '#6b5a3a', '#9a9ea8'];
+    const fleck = [null, '#4a8a2e', '#5c3a20', '#6a6e76', '#202024', '#d8a77a', '#f2c744', '#7fe8ff', '#ffd23a', '#6fa0f0', '#18181c', '#fff3a0', '#ff9a2e', '#bffff0', '#fff0b0', '#6e727b'];
+    for (let id = 0; id < 16; id++) {
       const rng = MMRng.create('tile' + id);
       const ox = (id % 4) * 16, oy = Math.floor(id / 4) * 16;
       g.fillStyle = base[id]; g.fillRect(ox, oy, 16, 16);
       if (id === 0) { g.clearRect(ox, oy, 16, 16); continue; }
       for (let i = 0; i < 40; i++) { g.fillStyle = rng.next() < 0.5 ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.1)'; g.fillRect(ox + rng.int(0, 15), oy + rng.int(0, 15), 1 + rng.int(0, 1), 1); }
+      if (id === 13) { g.fillStyle = '#5fe0c8'; for (let i = 0; i < 7; i++) { const x = rng.int(1, 12), y = rng.int(1, 12); g.fillRect(ox + x, oy + y, 3, 3); } g.fillStyle = fleck[13]; for (let i = 0; i < 8; i++) g.fillRect(ox + rng.int(1, 14), oy + rng.int(1, 14), 1, 1); continue; }
+      if (id === 14) { g.fillStyle = '#fff0b0'; g.fillRect(ox + 2, oy + 2, 12, 12); g.fillStyle = '#ffe07a'; g.fillRect(ox + 4, oy + 4, 8, 8); g.fillStyle = '#6b5a3a'; g.fillRect(ox + 7, oy, 2, 16); g.fillRect(ox, oy + 7, 16, 2); continue; }
+      if (id === 15) { g.fillStyle = fleck[15]; for (let r = 0; r < 4; r++) { g.fillRect(ox, oy + r * 4 + 3, 16, 1); for (let c = 0; c < 2; c++) g.fillRect(ox + ((c * 8 + (r % 2) * 4) % 16), oy + r * 4, 1, 3); } continue; }
       if (id === 12) { g.fillStyle = '#2a2c30'; g.fillRect(ox + 3, oy + 4, 10, 8); g.fillStyle = '#ff9a2e'; g.fillRect(ox + 5, oy + 6, 6, 4); g.fillStyle = '#ffd23a'; g.fillRect(ox + 7, oy + 7, 2, 2); continue; }
       if (fleck[id] && id >= 4 && id <= 7) {
         g.fillStyle = fleck[id];
@@ -438,6 +480,7 @@
     L.push({ scale: 0.6, view: Math.min(VIEW, 3) }, { scale: 0.5, view: Math.min(VIEW, 3) }, { scale: 0.4, view: Math.min(VIEW, 3) });
     return L;
   }());
+  let govFloor = 0; // access lowGfx keeps the governor at (or below) the low view
   const gov = { level: 0, samples: [], head: 0, count: 0, lastChange: -1e9, lastRaise: -1e9, restoreGap: GOV.RESTORE_GAP, changes: 0, auto: params.get('perf') !== '0' };
   // Desktop render-pixel budget: big or hi-dpi windows are rendered below native size (the fill cost is what software and
   // integrated GPUs choke on). Phones keep 1:1; a 1280x720 window (544 px canvas) renders at ~0.83, a 4K window at 0.6.
@@ -470,7 +513,7 @@
     if (avg > GOV.HIGH && gov.level < LEVELS.length - 1) {
       if (now - gov.lastRaise < 15000) gov.restoreGap = Math.min(GOV.MAX_RESTORE_GAP, gov.restoreGap * 2); // bounced back: wait longer next time
       gov.level++;
-    } else if (avg < GOV.LOW && gov.level > 0 && now - gov.lastChange >= gov.restoreGap) {
+    } else if (avg < GOV.LOW && gov.level > govFloor && now - gov.lastChange >= gov.restoreGap) {
       gov.level--; gov.lastRaise = now;
     } else return false;
     gov.lastChange = now; gov.changes++; govReset(); applyLevel();
@@ -515,6 +558,11 @@
       for (let ly = 0; ly < SIZE; ly++) for (let lz = 0; lz < SIZE; lz++) {
         blocks.set(ch.data.subarray(lz * SIZE + ly * 256, lz * SIZE + ly * 256 + SIZE), cx * SIZE + (cz * SIZE + lz) * w + (cy * SIZE + ly) * w * w);
       }
+      // glow lamps shine like a torch (a steady, calm light): only chunks that ever had one placed are scanned
+      if (lampChunks.size && lampChunks.has(MMChunks.key(win.ox + cx, cy, win.oz + cz))) {
+        const d = ch.data;
+        for (let i = 0; i < d.length; i++) if (d[i] === LAMP) blocks[cx * SIZE + (i & 15) + (cz * SIZE + ((i >> 4) & 15)) * w + (cy * SIZE + (i >> 8)) * w * w] = B.TORCH;
+      }
     }
     const lr = MMLight.propagate({ w, h, d: w, blocks });
     win.light = lr.light; win.sky = lr.sky; win.block = lr.block;
@@ -558,6 +606,7 @@
         let br = 0.08 + 0.92 * Math.pow(lightAt(wx, wy, wz) / 15, 1.3);
         br *= ny === -1 ? 1 : ny === 1 ? 0.55 : nx !== 0 ? 0.8 : 0.9;
         if (id === B.LAVA) br = Math.max(br, 0.95); else if (id === B.CRYSTAL) br = Math.max(br, 0.35 + br * 0.65);
+        else if (id === GLOW) br = Math.max(br, 0.55 + br * 0.45); else if (id === LAMP) br = 1;
         for (let v = 0; v < 4; v++) { col[b + v * 3] = br; col[b + v * 3 + 1] = br; col[b + v * 3 + 2] = br; }
         const i = f * 6, q = f * 4;
         idx[i] = q; idx[i + 1] = q + 2; idx[i + 2] = q + 1; idx[i + 3] = q; idx[i + 4] = q + 3; idx[i + 5] = q + 2;
@@ -636,9 +685,9 @@
     if (!hit || hit.id === B.BEDROCK || hit.id === B.LAVA) { mineTarget = null; mineProg = 0; return; }
     const key = hit.cell.join(',');
     if (mineTarget !== key) { mineTarget = key; mineProg = 0; }
-    if ((NEED_TIER[hit.id] | 0) > pick.tier) { if (mineProg === 0) toast('Too hard! Needs a ' + TIER_NAME[NEED_TIER[hit.id]].toLowerCase() + ' pick or better.'); mineProg = 0.001; return; }
+    if (!CREATIVE && (NEED_TIER[hit.id] | 0) > pick.tier) { if (mineProg === 0) toast('Too hard! Needs a ' + TIER_NAME[NEED_TIER[hit.id]].toLowerCase() + ' pick or better.'); mineProg = 0.001; return; }
     mineProg += dt * (1 + pick.tier * 0.4);
-    if (mineProg >= (HARDNESS[hit.id] || 0.8)) { mineBlock(hit.cell[0], hit.cell[1], hit.cell[2]); mineTarget = null; mineProg = 0; }
+    if (mineProg >= (HARDNESS[hit.id] || 0.8) * (CREATIVE ? 0.35 : 1)) { mineBlock(hit.cell[0], hit.cell[1], hit.cell[2]); mineTarget = null; mineProg = 0; }
   }
   let atkCd = 0;
   let bobOffset = 0;
@@ -690,13 +739,16 @@
     const dt = Math.min(0.05, (t - last) / 1000 || 0); last = t;
     if (!world) return;
     if (!TEST) {
-      physics(dt); updateMining(dt); tickMobs(dt); tickTime(dt);
-      creatureT -= dt;
-      if (creatureT <= 0) { creatureT = 1.5; scanSpawns(); wyrmScan(); }
-      if (creatures.length) tickCreatures(dt);
-      if (wyrm.awake) tickWyrm(dt);
-      spawnT -= dt;
-      if (spawnT <= 0) { spawnT = 4; if (Math.random() < 0.6) autoSpawn(); }
+      physics(dt); updateMining(dt);
+      if (!CREATIVE) {
+        tickMobs(dt); tickTime(dt);
+        creatureT -= dt;
+        if (creatureT <= 0) { creatureT = 1.5; scanSpawns(); wyrmScan(); }
+        if (creatures.length) tickCreatures(dt);
+        if (wyrm.awake) tickWyrm(dt);
+        spawnT -= dt;
+        if (spawnT <= 0) { spawnT = 4; if (Math.random() < 0.6) autoSpawn(); }
+      } else tickTime(dt);
     }
     checkGoals();
     manage(8);
@@ -784,6 +836,7 @@
     $('open-craft').addEventListener('click', () => togglePanel('craft'));
     $('open-goals').addEventListener('click', () => togglePanel('goals'));
     $('mode-btn').addEventListener('click', () => setMode(meta.mode === 'creative' ? 'survival' : 'creative'));
+    $('world-btn').addEventListener('click', switchWorld);
     $('close-craft').addEventListener('click', () => togglePanel('craft', false));
     $('close-goals').addEventListener('click', () => togglePanel('goals', false));
     $('smelt-iron').addEventListener('click', () => smeltOre('iron_ore'));
@@ -815,7 +868,7 @@
     { id: 'torches10', name: 'Lamplighter', desc: 'Place 10 torches.' },
   ];
   function award(id) {
-    if (meta.goals[id]) return;
+    if (CREATIVE || meta.goals[id]) return;
     meta.goals[id] = true;
     const m = MEDALS.concat(EXTRA).filter((x) => x.id === id)[0];
     toast('Medal earned: ' + m.name);
@@ -823,6 +876,7 @@
   }
   const depthNow = () => Math.max(0, Math.floor(-player.y));
   function checkGoals() {
+    if (CREATIVE) return;
     const d = depthNow();
     if (d > meta.goals.maxDepth) { meta.goals.maxDepth = Math.min(99, d); saveMeta(); }
     if (d >= 8) award('bronze');
@@ -831,6 +885,7 @@
   }
   // Stone-only bridge: a full west-to-east row of placed stone at lava level or the layer above it.
   function lakeCheck(wx, wy, wz, id) {
+    if (CREATIVE) return;
     const L = MMChunks.LAKE;
     if (wx < L.x0 || wx > L.x1 || wz < L.z0 || wz > L.z1 || wy < L.airY0 || wy > L.lavaY) return;
     if (id !== B.STONE && id !== B.TORCH) { meta.goals.secretVoid = true; saveMeta(); return; }
@@ -863,6 +918,7 @@
       d.textContent = m.id === 'torches10' && !done ? m.desc + ' (' + meta.goals.torches + '/10)' : m.id.indexOf('depth') === 0 && !done ? m.desc + ' (deepest ' + meta.goals.maxDepth + ')' : m.desc;
       li.appendChild(t); li.appendChild(d); more.appendChild(li);
     });
+    renderBuilds();
     const nDone = MEDALS.concat(EXTRA).filter((m) => meta.goals[m.id]).length;
     $('goal-stats').textContent = 'Goals: ' + nDone + '/' + (MEDALS.length + EXTRA.length) + ' | Torches: ' + meta.goals.torches + '/10 | Deepest: ' + meta.goals.maxDepth + ' | Deaths: ' + meta.goals.deaths + (meta.cave && meta.cave.seed !== null ? ' | Old cave seed: ' + meta.cave.seed : '');
   }
@@ -878,11 +934,17 @@
   }
   const costText = (c) => Object.keys(c).map((k) => k.replace(/_/g, ' ') + ' ' + c[k]).join(', ');
   function craftRecipe(id) {
-    const r = MMRecipes.get(id);
+    const x = MMDDCraft.extra ? MMDDCraft.extra(id) : null;
+    const r = x || MMRecipes.get(id);
     if (!r) return false;
-    if (r.station === 'furnace' && !furnaceNear()) { toast('Stand near a furnace for that.'); return false; }
-    if (MMDDCraft.needsBench(id) && !benchNear()) { toast('Stand near a workbench for that.'); return false; }
-    if (!MMRecipes.craft(inv, id)) { toast('Missing ingredients.'); return false; }
+    if (x) {
+      if (x.blueprint && (inv[x.blueprint] | 0) <= 0) { toast('Find the ' + x.blueprint.replace(/^bp_/, '') + ' blueprint first.'); return false; }
+      if (!MMDDCraft.craftExtra(inv, id)) { toast('Missing ingredients.'); return false; }
+    } else {
+      if (r.station === 'furnace' && !furnaceNear()) { toast('Stand near a furnace for that.'); return false; }
+      if (MMDDCraft.needsBench(id) && !benchNear()) { toast('Stand near a workbench for that.'); return false; }
+      if (!MMRecipes.craft(inv, id)) { toast('Missing ingredients.'); return false; }
+    }
     for (let t = 1; t <= 3; t++) {
       const n = inv['pick' + t] | 0;
       if (!n) continue;
@@ -960,6 +1022,20 @@
       b.addEventListener('click', () => craftRecipe(r.id));
       li.appendChild(info); li.appendChild(b); ul.appendChild(li);
     });
+    const ux = $('recipes-x');
+    while (ux.firstChild) ux.removeChild(ux.firstChild);
+    MMDDCraft.annotateExtra(inv, {}).forEach((r) => {
+      if (only && !r.ready) return;
+      const li = document.createElement('li');
+      const info = document.createElement('span'); info.className = 'ri';
+      const nm = document.createElement('strong'); nm.textContent = (r.locked ? '[locked] ' : '') + r.id.replace(/_/g, ' ') + ' > ' + MMDDCraft.outText(r);
+      const ct = document.createElement('small'); ct.textContent = costText(r.cost) + ' (' + (r.kind === 'grotto' ? 'grotto' : 'blueprint') + ')' + (r.reason ? ' - ' + r.reason : '');
+      info.appendChild(nm); info.appendChild(ct);
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'btn mini'; b.dataset.recipe = r.id; b.textContent = 'Craft';
+      b.disabled = !r.ready;
+      b.addEventListener('click', () => craftRecipe(r.id));
+      li.appendChild(info); li.appendChild(b); ux.appendChild(li);
+    });
     $('furnace-note').textContent = near ? 'Furnace nearby: smelting ready.' : 'Place a furnace (8 stone) next to you to smelt.';
     $('bench-note').textContent = bn ? 'Workbench nearby.' : 'Craft a table (4 wood), then place it for ladders, doors, chests, beds and rails.';
     $('smelt-iron').disabled = !near || !MMRecipes.canSmelt(inv, 'iron_ore');
@@ -976,7 +1052,55 @@
     meta.mode = name === 'creative' ? 'creative' : 'survival';
     if (meta.mode === 'survival') { player.vy = 0; player.peak = player.y; }
     saveMeta(); renderHud();
-    toast(meta.mode === 'creative' ? 'Creative: Space up, Shift down, no fall damage.' : 'Survival: fall damage on.');
+    toast(CREATIVE ? (meta.mode === 'creative' ? 'Flying: Space up, Shift down.' : 'Walking. Nothing can hurt you here.') : meta.mode === 'creative' ? 'Creative: Space up, Shift down, no fall damage.' : 'Survival: fall damage on.');
+  }
+  // The "Creative world" / "Survival world" toggle: saves, then reloads the page on the other world (seed and flags kept).
+  function worldUrl() {
+    const q = new URLSearchParams(location.search);
+    if (CREATIVE) q.delete('mode'); else q.set('mode', 'creative');
+    const s = q.toString();
+    return location.pathname + (s ? '?' + s : '');
+  }
+  function switchWorld() { return flush().then(() => { location.href = worldUrl(); }); }
+
+  // ---------- MG2 blueprints ----------
+  function findBlueprint(id, wy) {
+    if (!BUILD) return null;
+    const bp = BUILD.findOnMine(id, wy, (k) => (inv[k] | 0) > 0);
+    if (!bp) return null;
+    inv[bp.item] = 1;
+    toast('You found a blueprint: ' + bp.name + '! New crafts unlocked.');
+    return bp;
+  }
+  function buildCheck(wx, wy, wz) {
+    if (!BUILD || !world) return [];
+    const has = CREATIVE ? () => true : (k) => (inv[k] | 0) > 0;
+    const done = BUILD.check((x, y, z) => (y < 0 ? B.AIR : world.getBlock(x, y, z)), wx, wy, wz, has);
+    done.forEach((id) => {
+      const bp = BUILD.byId[id];
+      if (CREATIVE) { if (!creativeBuilt[id]) { creativeBuilt[id] = 1; toast(bp.name + ' built! (Creative world: no medals)'); } return; }
+      if (meta.goals[bp.goal]) return;
+      meta.goals[bp.goal] = true;
+      const md = BUILD.medals(meta.goals);
+      meta.goals.build1 = md.build1; meta.goals.build3 = md.build3;
+      toast('Blueprint built: ' + bp.name + '!' + (md.build3 ? ' All three: Master Builder medal.' : md.n === 1 ? ' Builder medal earned.' : ''));
+      saveMeta(); renderHud();
+    });
+    return done;
+  }
+  function renderBuilds() {
+    const ul = $('goal-build');
+    if (!ul || !BUILD) return;
+    while (ul.firstChild) ul.removeChild(ul.firstChild);
+    BUILD.BLUEPRINTS.forEach((bp) => {
+      const li = document.createElement('li'), done = CREATIVE ? !!creativeBuilt[bp.id] : !!meta.goals[bp.goal], have = CREATIVE || (inv[bp.item] | 0) > 0;
+      li.className = done ? 'done' : '';
+      const t = document.createElement('strong'); t.textContent = (done ? '[x] ' : '[ ] ') + 'Blueprint: ' + bp.name + (have ? '' : ' (not found yet)');
+      const d = document.createElement('span'); d.textContent = have ? bp.desc : 'Where to find it: ' + bp.find;
+      li.appendChild(t); li.appendChild(d); ul.appendChild(li);
+    });
+    const md = BUILD.medals(meta.goals);
+    $('build-stats').textContent = CREATIVE ? 'Creative world: builds are just for fun here, no medals.' : 'Builds: ' + md.n + '/3 | Builder medal (1 build): ' + (md.build1 ? 'yes' : 'no') + ' | Master Builder (all 3): ' + (md.build3 ? 'yes' : 'no');
   }
 
   // ---------- Glow Slime ----------
@@ -990,7 +1114,7 @@
   };
   // Never spawns where the light level is 8 or more (torchlight or sky).
   function spawnSlime(x, y, z) {
-    if (slimes.length >= 3) return null;
+    if (CREATIVE || slimes.length >= 3) return null;
     if (x < 1 || z < 1 || x >= SIZE * MMChunks.WORLD.cx - 1 || z >= SIZE * MMChunks.WORLD.cz - 1) return null;
     if (collides(x, y, z, SLIME_HALF, SLIME_H)) return null;
     if (cellLight(x, y, z) >= 8) return null;
@@ -1084,7 +1208,7 @@
     if (!scene) return;
     if (!slimeTex) { slimeTex = makeSlimeTex(); slimeGeo = new THREE.BoxGeometry(0.7, SLIME_H, 0.7); }
     for (const m of slimes) {
-      if (!m.mesh) { m.mesh = new THREE.Mesh(slimeGeo, new THREE.MeshBasicMaterial({ map: slimeTex, transparent: true, opacity: 0.92 })); scene.add(m.mesh); }
+      if (!m.mesh) { m.mesh = new THREE.Mesh(slimeGeo, new THREE.MeshBasicMaterial({ map: slimeTex, transparent: true, opacity: 0.92 })); if (ACCESS.palette !== 'normal') m.mesh.material.color.set(ACCESS.enemy); scene.add(m.mesh); }
       const sq = reduced ? 0 : m.squash * 0.25 + (m.ground ? 0 : 0.1);
       m.mesh.scale.set(1 + sq, 1 - sq, 1 + sq);
       m.mesh.position.set(m.x, m.y + SLIME_H / 2 * (1 - sq), m.z);
@@ -1118,14 +1242,14 @@
   }
   function spawnCreature(kind, x, y, z, id, phase) {
     const K = MMDDMobs.KINDS[kind];
-    if (!K || creatures.length >= MMDDMobs.MAX_ACTIVE) return null;
+    if (CREATIVE || !K || creatures.length >= MMDDMobs.MAX_ACTIVE) return null;
     const m = { id: id || ('t' + creatures.length + ':' + kind), kind, x, y, z, vx: 0, vy: 0, vz: 0, hp: K.hp, ground: false, mesh: null, dead: false, phase: phase || 0, age: 0, hitT: 0, hurtCd: 0 };
     creatures.push(m);
     return m;
   }
   // Brings candidates near the player to life: only in dark air, underground, never inside blocks.
   function scanSpawns() {
-    if (!world) return 0;
+    if (!world || CREATIVE) return 0;
     const pc = playerChunk();
     const px = Math.floor(player.x), py = Math.floor(-(player.y + 0.9)), pz = Math.floor(player.z);
     if (player.y > -MMChunks.surfaceY(px, pz, SEED) - 2) return 0; // only below the surface
@@ -1236,6 +1360,7 @@
       const K = MMDDMobs.KINDS[m.kind];
       if (!m.mesh) {
         const g = new THREE.Group(), mat = new THREE.MeshBasicMaterial({ map: creatureTex });
+        if (ACCESS.palette !== 'normal') mat.color.set(ACCESS.enemy);
         if (m.kind === 'crawler') { const b = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.45, 0.9), mat); b.position.y = 0.23; g.add(b); }
         else {
           const b = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.25, 0.3), mat); g.add(b);
@@ -1261,7 +1386,7 @@
   // One segmented boss per world, in a cavern that is a pure function of the world seed (MMDDWyrm.spawnSite), 40+ blocks
   // below the surface. It sleeps until the player is deep and near, is frozen/unmeshed when far, and once defeated the
   // `wyrm` flags in the player save keep it down (only a fresh world, i.e. cleared storage, brings it back). Off in ?test=1 unless ?wyrm=1.
-  const WYRM_ON = !TEST || params.get('wyrm') === '1';
+  const WYRM_ON = !CREATIVE && (!TEST || params.get('wyrm') === '1');
   const wyrm = { site: null, awake: false, down: false, carved: false, hp: 0, max: 30, atk: null, ang: 0, segs: null, tgt: null, from: null, to: null, burrowed: false, hitT: 0, hurtCd: 0, group: null, ring: null, bar: null, fill: null, label: null };
   let wyrmTex = null, wyrmGeo = null, wyrmMat = null, wyrmRingGeo = null, wyrmRingMat = null;
   function loadWyrmScript() {
@@ -1491,6 +1616,11 @@
       clock, setTime, tickTime, timeStage: () => MMDDTime.stage(clock.t), skyScale: () => clock.k, bg: () => scene ? scene.background.getHex() : 0, fogHex: () => scene ? scene.fog.color.getHex() : 0, MMDDTime,
       creatures, slain, MMDDMobs, scanSpawns, tickCreatures, attackCreature, spawnCreature, clearCreatures, creatureCands: chunkCands, caveDark, deathCause: (c) => { deathCause = c; },
       wyrm: { state: wyrm, scan: wyrmScan, tick: tickWyrm, attack: attackWyrm, carve: carveWyrmArena, defeat: defeatWyrm, sleep: wyrmSleep, on: WYRM_ON && !!wyrm.site, mesh: syncWyrmMesh, MMDDWyrm: window.MMDDWyrm },
+      creative: CREATIVE, CREATIVE_KEY, access: ACCESS, govFloor: () => govFloor, kv: { get: kvGet, set: kvSet }, MMDDGrotto: GROTTO, MMDDBuild: BUILD, buildCheck, findBlueprint, renderBuilds, lampChunks, creativeBuilt, lightAt: (x, y, z) => {
+        if (!win || x < win.ox * SIZE || z < win.oz * SIZE || x >= (win.ox + WIN) * SIZE || z >= (win.oz + WIN) * SIZE) { fillWindow(Math.floor(x / SIZE), Math.floor(z / SIZE)); lightDirty = true; }
+        if (lightDirty || !win.light) relight();
+        return lightAt(x, y, z);
+      }, worldUrl, switchWorld, outlineHex: () => (outline ? outline.material.color.getHex() : 0),
       craft: craftTorch, mouthSite: () => mouthSite, aimed: () => aimed, aim, outlineVisible: () => !!(outline && outline.visible), surfaceY: (x, z) => MMChunks.surfaceY(x, z, SEED), ready: true,
     };
   }
@@ -1498,12 +1628,23 @@
   // ---------- boot ----------
   async function boot() {
     $('hud-seed').textContent = 'Seed ' + SEED;
-    meta = loadMeta();
+    meta = CREATIVE ? sanitiseMeta({ mode: 'creative' }) : loadMeta();
+    if (CREATIVE) {
+      document.documentElement.setAttribute('data-dd-world', 'creative');
+      document.title = 'Deepdelve - Creative world';
+      const h1 = document.querySelector('.bar h1'); if (h1) h1.textContent = 'Deepdelve: Creative';
+      const cn = $('creative-note'); cn.hidden = false; cn.textContent = 'Calm creative world: no mobs, no hazards, unlimited blocks. Separate save.';
+      $('world-btn').textContent = 'Survival world'; $('world-btn').setAttribute('aria-label', 'Back to the survival world');
+      $('mode-btn').setAttribute('aria-label', 'Toggle flying (M)');
+    }
     hubMedals();
     idb = await openDB();
     const savedWorld = await kvGet('world:' + SEED);
     const savedPlayer = await kvGet('player:' + SEED);
-    world = MMChunks.createWorld(SEED, typeof savedWorld === 'string' ? savedWorld : undefined);
+    world = MMChunks.createWorld(SEED, typeof savedWorld === 'string' ? savedWorld : undefined, GROTTO ? GROTTO.worldOpts(SEED) : undefined);
+    if (typeof savedWorld === 'string' && /,14[,\]]/.test(savedWorld)) {
+      try { JSON.parse(savedWorld).d.forEach((e) => { for (let j = 1; j < e[3].length; j += 2) if (e[3][j] === LAMP) { lampChunks.add(MMChunks.key(e[0], e[1], e[2])); break; } }); } catch (e) { /* the world loader already ignored it */ }
+    }
     // New worlds open beside a cave mouth (a seeded ramp into the hill) instead of a bare plain. Worlds saved before this
     // keep the old spawn and are never carved; the additive `mouth` flag in the player save marks the new kind.
     let sx = 64, sz = 64;
@@ -1531,10 +1672,13 @@
       } catch (e) { /* ignore corrupt save */ }
     }
     migrateTown();
+    if (CREATIVE) { PLACEABLE.forEach((p) => { inv[p[0]] = 999; }); if (BUILD) BUILD.BLUEPRINTS.forEach((bp) => { inv[bp.item] = 1; }); }
     if (WYRM_ON) await loadWyrmScript();
     wyrmInit();
     applyTime(true);
     initRenderer();
+    if (ACCESS.lowGfx) { const i = LEVELS.findIndex((L) => L.view <= 3 && L.scale <= 0.75); govFloor = i < 0 ? 0 : i; gov.level = Math.max(gov.level, govFloor); applyLevel(); }
+    if (outline && ACCESS.palette !== 'normal') outline.material.color.set(ACCESS.ally);
     bindControls();
     renderHud();
     if (TEST) exposeTest();
