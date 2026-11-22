@@ -21,6 +21,18 @@ check('compute: defaults', JSON.stringify(SA.compute(null)) === '{"scale":1,"red
 check('compute: 1.5 + flashes off', JSON.stringify(SA.compute({ hudScale: 1.5, flashes: false })) === '{"scale":1.5,"reduceMotion":true}');
 check('compute: junk values fall back', JSON.stringify(SA.compute({ hudScale: 9, flashes: 'no' })) === '{"scale":1,"reduceMotion":false}' && JSON.stringify(SA.compute('x')) === '{"scale":1,"reduceMotion":false}');
 
+// chrome-8bit: what the shared Settings panel (MMSettings) writes is what the side pages apply.
+{
+  const S = require('../shared/mm-settings.js');
+  const mem = {}; const st = { getItem: (k) => (k in mem ? mem[k] : null), setItem: (k, v) => { mem[k] = String(v); } };
+  S.set(st, 'text-size', 1.25);
+  check('settings -> side: text size 1.25 gives scale 1.25', SA.compute(JSON.parse(mem[KEY])).scale === 1.25);
+  S.set(st, 'flashes', false);
+  check('settings -> side: flashes off gives reduceMotion', SA.compute(JSON.parse(mem[KEY])).reduceMotion === true);
+  S.set(st, 'flashes', true); S.set(st, 'text-size', 1);
+  check('settings -> side: back to defaults', JSON.stringify(SA.compute(JSON.parse(mem[KEY]))) === '{"scale":1,"reduceMotion":false}');
+}
+
 async function open(browser, url, cond, raw, viewport) {
   const ctx = await browser.newContext({ viewport: viewport || { width: 1000, height: 760 } });
   const page = await ctx.newPage();
