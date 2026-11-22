@@ -20,6 +20,7 @@
   <span id="weather" title="Weather"><span id="weather-icon" aria-hidden="true"></span> <span id="weather-name"></span></span>
   <span id="bait-box">Bait <output id="bait-val">0</output> <small id="bait-type"></small></span>
   <span id="bells-box">Bells <output id="bells-val">0</output></span>
+  <span id="bug-sum" hidden></span>
   <button class="btn" id="tourney-btn" type="button">Tournament</button>
   <button class="btn" id="market-btn" type="button">Market</button>
   <button class="btn" id="aquarium-btn" type="button">Aquarium</button>
@@ -48,6 +49,13 @@
     <h3>Lures <small>(shift what bites)</small></h3>
     <div id="lures" class="gearrow"></div>
     <p class="rule">Bait comes from catches and the Market. Each cast uses one equipped bait for a quicker, richer bite.</p>
+    <h3>Bug bait <small>(from Bug Safari, never used up)</small></h3>
+    <div id="bugbaits" class="gearrow"></div>
+    <p class="rule" id="bug-rule"></p>
+    <div id="cove-gear" hidden>
+      <h3>Cove bait <small>(Isles Cove only, never used up)</small></h3>
+      <div id="covebaits" class="gearrow"></div>
+    </div>
   </div>
 </section>
 <section id="tourney" class="overlay" hidden>
@@ -89,6 +97,7 @@
 <script src="../../shared/mm-angler.js"></script>
 <script src="../../shared/mm-angler-depth.js"></script>
 <script src="../../shared/mm-angler-boss.js"></script>
+<script src="../../shared/mm-angler-isles.js"></script>
 <script src="../../shared/mm-nav.js" data-mount="manual"></script>
 <script>
 (function () {
