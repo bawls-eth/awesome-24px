@@ -33,3 +33,4 @@ ul.medals li.on { color:#111; background:var(--accent); font-weight:bold; }
 #jump { width:100%; min-height:72px; font-size:20px; touch-action:none; }
 #hud { grid-template-columns:repeat(3,1fr); }
 #view { cursor:pointer; }
+#result.overlay { position:static; box-shadow:none; }

@@ -38,6 +38,11 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
   const idle = await p.evaluate(() => { __dash.step(2000); return { st: __dash.run.state, dead: __dash.player.dead, dist: __dash.run.dist }; });
   check('without jumping you bump the first rock (run over, reason shown)', idle.st === 'over' && idle.dead === 'rock' && /rock/i.test(await p.textContent('#r-why')), JSON.stringify(idle));
   check('result card: distance, Play again focused, medal run1 saved for the hub', await p.isVisible('#result') && (await p.textContent('#r-dist')) === String(idle.dist) && await p.evaluate(() => document.activeElement.id === 'again') && (await lj(p, MKEY)).m.includes('run1'));
+  check('after a crash the big button reads Run again and the result sits below the scene', (await p.textContent('#jump')) === 'Run again' && await p.evaluate(() => document.getElementById('result').getBoundingClientRect().top >= document.getElementById('view').getBoundingClientRect().bottom));
+  await p.waitForTimeout(750);
+  const jb0 = await p.locator('#jump').boundingBox();
+  await p.touchscreen.tap(jb0.x + jb0.width / 2, jb0.y + jb0.height / 2);
+  check('one tap on Run again restarts the same course', await p.evaluate(() => __dash.run.state === 'play' && __dash.run.seed === 'night1' && __dash.run.f === 0 && document.getElementById('result').hidden));
   // jump physics: a press makes the hero leave the ground; holding goes higher than a tap
   const jh = await p.evaluate(() => {
     const peak = (hold) => { __dash.start('flat'); __dash.down(); let top = 999; for (let i = 0; i < 50; i++) { if (i === hold) __dash.up(); __dash.step(1); top = Math.min(top, __dash.player.y); } __dash.up(); return 200 - top; };

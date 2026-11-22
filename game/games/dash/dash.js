@@ -124,17 +124,28 @@
       ghostC = { obs: built.obs, lo: 0 };
     } else { G = null; ghostIn = null; ghostC = null; }
     $('intro').hidden = true; $('result').hidden = true;
+    $('jump').textContent = 'Jump (hold = higher)';
     msg(G ? 'Race your ghost: best ' + save.ghost.dist + ' m on this course.' : 'Tap to jump. Jump late for a Perfect!');
     hud();
   }
   const msg = (t) => { $('msg').textContent = t; };
+  let endAt = 0, rearm = false;
   function down() {
+    // after a crash the same button runs the course again (a short pause stops a mashed jump from skipping the result)
+    physDown = true;
+    if (run.state === 'over' && rearm && performance.now() - endAt > 700) { start(run.seed); return; }
     if (run.state !== 'play') return;
     if (run.open < 0) { run.open = run.f; press(P); }
   }
-  function up() {
+  let physDown = false;
+  function closeInput() {
     if (run.open >= 0) { run.ins.push([run.open, Math.max(run.f, run.open + 1)]); run.open = -1; }
     release(P);
+  }
+  function up() {
+    physDown = false;
+    closeInput();
+    if (run.state === 'over') rearm = true;
   }
   function burst(x, y, color, n, up) {
     n = lowGfx ? Math.min(4, n) : n;
@@ -186,8 +197,10 @@
   }
   function end() {
     if (run.state !== 'play') return;
-    if (run.open >= 0) up();
+    closeInput();
     run.state = 'over';
+    endAt = performance.now(); rearm = !physDown;
+    $('jump').textContent = 'Run again';
     save.runs++;
     const newBest = run.dist > save.best;
     if (newBest) save.best = run.dist;

@@ -9,9 +9,9 @@
   const W = 5, H = 6, CELL = 72, CW = W * CELL, CH = H * CELL, ROUND = 90;
   const MEDALS = [
     ['round1', 'First round', 'Finish a round'],
-    ['chain3', '3x chain', 'Set up a 3x chain'],
-    ['tile7', 'Make a 7', 'Merge up to a level 7 tile'],
-    ['score5k', '5,000 points', 'Score 5,000 in one round'],
+    ['chain5', '5x chain', 'Set up a 5x chain'],
+    ['tile9', 'Make a 9', 'Merge up to a level 9 tile'],
+    ['score25k', '25,000 points', 'Score 25,000 in one round'],
   ];
   const COLORS = ['#000', '#7fd18b', '#5cc8ff', '#c99bff', '#ff8fb1', '#ffb347', '#ffe066', '#ff6b6b', '#66f0d0', '#ffffff', '#f0a8ff', '#a8ffb0'];
   const $ = (id) => document.getElementById(id);
@@ -90,7 +90,7 @@
 
   // ---------- feedback ----------
   function burst(c, r, color, n) {
-    n = lowGfx ? Math.min(6, n) : n;
+    n = lowGfx ? Math.min(6, n, Math.max(0, 24 - parts.length)) : n;
     const cx = c * CELL + CELL / 2, cy = r * CELL + CELL / 2;
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2 + (i % 3) * 0.4, sp = 60 + (i * 37) % 140;
@@ -130,9 +130,9 @@
     run.score += gained; run.pops++;
     if (chain > run.bestChain) run.bestChain = chain;
     if (chain >= 2) { msg('Chain x' + chain + '!'); bump(3 + chain * 2); play(chain >= 3 ? 'claim' : 'pickup'); } else play('pickup');
-    if (chain >= 3) award('chain3');
-    if (run.maxTile >= 7) award('tile7');
-    if (run.score >= 5000) award('score5k');
+    if (chain >= 5) award('chain5');
+    if (run.maxTile >= 9) award('tile9');
+    if (run.score >= 25000) award('score25k');
     if (!hasMove()) {
       let tries = 0;
       do {

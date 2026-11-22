@@ -85,9 +85,9 @@
     ],
     pop: [
       ['round1', 'A first round', 'Play one 90-second round of Pixel Pop.'],
-      ['chain3', 'A 3x chain', 'In Pixel Pop, merge so the new tile lands by its twin: chain it three times.'],
-      ['tile7', 'A level 7 tile', 'Keep merging in Pixel Pop until a tile reaches level 7.'],
-      ['score5k', '5,000 points', 'Score 5,000 points in one Pixel Pop round. Chains help a lot.'],
+      ['chain5', 'A 5x chain', 'In Pixel Pop, merge so the new tile lands by its twin: chain it 5 times.'],
+      ['tile9', 'A level 9 tile', 'Keep merging in Pixel Pop until a tile reaches level 9.'],
+      ['score25k', '25,000 points', 'Score 25,000 points in one Pixel Pop round. Chains help a lot.'],
     ],
     dash: [
       ['run1', 'A first run', 'Go for a run in Lantern Dash.'],

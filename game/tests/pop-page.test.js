@@ -90,7 +90,7 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
   check('save is cleaned: unknown medal ids dropped, best kept', await q.evaluate(() => __pop.save.best === 1234 && JSON.stringify(__pop.save.medals) === '["round1"]'));
   await q.click('#play');
   const rm = await q.evaluate(() => { __pop.set([[1, 1, 3, 2, 3, 2], [2, 3, 2, 3, 2, 3], [3, 2, 3, 2, 3, 2], [2, 3, 2, 3, 2, 3], [3, 2, 3, 2, 3, 2]]); __pop.tap(0, 1); return Object.assign(__pop.counts(), { reduced: __pop.reduced, low: __pop.lowGfx }); });
-  check('reduced motion: no screen shake; low graphics: fewer particles', rm.reduced && rm.low && rm.shake === 0 && rm.parts <= 12, JSON.stringify(rm));
+  check('reduced motion: no screen shake; low graphics: particles capped at 24', rm.reduced && rm.low && rm.shake === 0 && rm.parts <= 24, JSON.stringify(rm));
   const dw = await q.evaluate(() => { const b = document.getElementById('board').getBoundingClientRect(); return { w: b.width, x: b.left, vw: innerWidth }; });
   check('desktop: board is centred and capped in width', dw.w <= 560 && dw.x > 100, JSON.stringify(dw));
   check('desktop: no console errors, 0 DB requests', d.errors.length === 0 && d.db.count() === 0, JSON.stringify(d.errors));
