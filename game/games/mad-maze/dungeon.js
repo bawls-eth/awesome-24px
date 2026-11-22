@@ -381,6 +381,7 @@
       const p = arena.player; let entry = { x: 8, y: 6 };
       if (travel) { const dt = MMRooms.DOORS[OPP[travel]]; entry = { x: dt.x + DV[travel][0], y: dt.y + DV[travel][1] }; p.x = (entry.x + 0.5) * T; p.y = (entry.y + 0.5) * T; p.iframes = Math.max(p.iframes, 1); }
       else { p.x = arena.W / 2; p.y = arena.H / 2; }
+      if (arena._dv && typeof arena._camStep === 'function') arena._camStep(-1); // phone dungeon view: a new room opens on the hero (no sweep across it)
       refreshWalls();
       const rs = state.room(id);
       if (!lay.spawned && rs.enemiesAlive > 0) {
@@ -819,9 +820,17 @@
           g.translate(ax, ay); g.rotate(Math.atan2(v[1], v[0]));
           g.fillStyle = '#ffd45a'; g.strokeStyle = '#2a1d44'; g.lineWidth = 3; g.beginPath(); g.moveTo(17, 0); g.lineTo(-9, -15); g.lineTo(-9, 15); g.closePath(); g.stroke(); g.fill();
           g.restore();
+          // phone dungeon view (realm.js arena._dv): the room pans sideways, so a door outside the slice gets a gold arrow on the slice edge
+          const dvw = arena._dv ? arena._dv.vw : 0; const cx0 = arena.camera ? arena.camera.x : 0;
+          if (dvw && (cx < cx0 || cx > cx0 + dvw)) {
+            const right = cx > cx0 + dvw; const ex = right ? cx0 + dvw - 22 : cx0 + 22; const ey = Math.max(30, Math.min(arena.H - 30, cy));
+            g.save(); g.translate(ex, ey); if (!right) g.scale(-1, 1);
+            g.fillStyle = '#ffd45a'; g.strokeStyle = '#2a1d44'; g.lineWidth = 3; g.beginPath(); g.moveTo(14, 0); g.lineTo(-8, -13); g.lineTo(-8, 13); g.closePath(); g.stroke(); g.fill();
+            g.restore();
+          }
           if (cu.hint) {
             g.save(); g.font = 'bold 15px system-ui, sans-serif'; g.textAlign = 'center'; g.lineWidth = 4; g.strokeStyle = '#120a22'; g.fillStyle = '#ffd45a';
-            const tx = Math.max(70, Math.min(arena.W - 70, ax)); const ty = Math.max(24, Math.min(arena.H - 16, ay + (cu.dir === 'N' ? 34 : cu.dir === 'S' ? -26 : 4)));
+            const tx = dvw ? Math.max(cx0 + 70, Math.min(cx0 + dvw - 70, ax)) : Math.max(70, Math.min(arena.W - 70, ax)); const ty = Math.max(24, Math.min(arena.H - 16, ay + (cu.dir === 'N' ? 34 : cu.dir === 'S' ? -26 : 4)));
             g.strokeText(cu.hint, tx, ty); g.fillText(cu.hint, tx, ty); g.restore();
           }
         }

@@ -26,6 +26,7 @@
 // white enemy hit flash. Reduce motion (MMMotion) makes telegraphs static (no pulse or growth). Bullet counts and timings never change.
 
 const RM_SHORT = 540; // logical arena short side; the long side follows the screen's shape
+const RM_DV_MIN = 0.5, RM_DV_FILL = 0.6, RM_DV_ZOOM_MAX = 2; // dungeon view (PLAYTEST-REVIEW-3 #4): below RM_DV_MIN of the screen height, show the room at RM_DV_FILL of it (at most RM_DV_ZOOM_MAX x the fitted size)
 const RM_PLAYER = { speed: 235, r: 11, hp: 100, fireRate: 7.5, bulletSpeed: 580, bulletLife: 0.85, dmg: 1, iframes: 0.5 };
 const RM_ENEMIES = {
   spiral: { name: 'Whirler', hp: 16, r: 17, shards: 3, color: '#b36bff', speed: 22 },
@@ -460,7 +461,7 @@ class RealmArena {
     this.onExit = onExit || (() => {});
     this.save = rmCleanSave(save);
     this._baseShards = this.save.shards; this._baseDust = this.save.dust || 0; this._baseGp = rmGpOf(this.save.gp); this._known = rmKnownOf(this.save.items); this.saveOk = true; this.saveFails = 0; this.walls = null; this.extraGuard = 0;
-    this.dungeon = null; this.fixedWorld = null; // optional run controller + fixed-size world (Mad Maze dungeons); null = classic waves
+    this.dungeon = null; this.fixedWorld = null; this._dv = null; this._dvOff = rmFlagOff('dview'); // optional run controller + fixed-size world (Mad Maze dungeons); null = classic waves
     this.world = null; this.mode = 'waves'; this.camera = { x: 0, y: 0, vw: 960, vh: RM_SHORT }; this._camF = { x: 0, y: 0 }; // setWorld / setMode: a scrolling world with a camera (null = the screen is the world, today's behaviour)
     this._solidAt = null; this._shotSolidAt = null; this._curDm = 1; this.onEnemyKilled = null; this.onEnemyHit = null; // world tile collision + additive kill / hit callbacks (default null)
     this.fireBudget = null; this._ebLive = 0; this._ebCapped = 0; // world fire budget {cap, travel} (PLAYTEST-REVIEW-2 #2), set by realm-world.js; null = today's bullets
@@ -2086,7 +2087,7 @@ class RealmArena {
 
     const toArena = (e) => {
       const r = this.canvas.getBoundingClientRect();
-      this.mouse.x = ((e.clientX - r.left) / r.width) * this.W;
+      this.mouse.x = ((e.clientX - r.left) / r.width) * (this._dv ? this._dv.vw : this.W); // screen units (the dungeon view shows a slice)
       this.mouse.y = ((e.clientY - r.top) / r.height) * this.H;
       this.mouse.seen = true;
     };
@@ -2222,6 +2223,16 @@ class RealmArena {
   _camStep(dt) {
     const c = this.camera; const wd = this.world; const p = this.player; const f = this._camF;
     c.vw = this.W; c.vh = this.H;
+    const dv = this._dv;
+    if (dv && !wd) { // dungeon view: pan sideways only, smoothed like the world camera, clamped to the room
+      c.vw = dv.vw; c.y = 0; f.y = 0;
+      const tx = p.x - dv.vw / 2;
+      if (dt < 0 || this._reduced) f.x = tx; else f.x += (tx - f.x) * (1 - Math.exp(-Math.min(dt, 0.1) * 12));
+      const mx = Math.min(80, dv.vw * 0.2);
+      if (p.x - f.x < mx) f.x = p.x - mx; else if (p.x - f.x > dv.vw - mx) f.x = p.x - dv.vw + mx;
+      f.x = Math.max(0, Math.min(this.W - dv.vw, f.x)); c.x = Math.round(f.x);
+      return;
+    }
     if (!wd || !wd.camera) { f.x = 0; f.y = 0; c.x = 0; c.y = 0; return; }
     const tx = p.x - this.W / 2; const ty = p.y - this.H / 2;
     if (dt < 0 || this._reduced) { f.x = tx; f.y = ty; } else { const k = 1 - Math.exp(-Math.min(dt, 0.1) * 12); f.x += (tx - f.x) * k; f.y += (ty - f.y) * k; }
@@ -2264,12 +2275,21 @@ class RealmArena {
       const aspect = w / h;
       if (aspect >= 1) { this.H = RM_SHORT; this.W = Math.round(Math.min(1400, Math.max(RM_SHORT, RM_SHORT * aspect))); } else { this.W = RM_SHORT; this.H = Math.round(Math.min(1400, Math.max(RM_SHORT, RM_SHORT / aspect))); }
     }
-    const k = Math.min(w / this.W, h / this.H); this._cssK = k;
-    const cw = Math.floor(this.W * k); const ch = Math.floor(this.H * k);
+    let k = Math.min(w / this.W, h / this.H);
+    let cw = Math.floor(this.W * k); let ch = Math.floor(this.H * k);
+    // PLAYTEST-REVIEW-3 #4 (dungeon view): a fixed dungeon room on a tall portrait screen was a letterboxed strip (~35% of the height). There the
+    // whole room height is shown at RM_DV_FILL of the screen height and the view pans sideways with the hero (this.camera.x; rooms, bounds and
+    // seeds unchanged, this.W / this.H stay the room). ?dview=0 restores the full-room strip.
+    this._dv = null;
+    if (this.fixedWorld && !this.world && !this._dvOff && ch < h * RM_DV_MIN) {
+      const k2 = Math.min(h * RM_DV_FILL / this.H, k * RM_DV_ZOOM_MAX); const vw = Math.min(this.W, Math.floor(w / k2));
+      if (vw < this.W) { k = k2; cw = Math.floor(vw * k); ch = Math.floor(this.H * k); this._dv = { vw, k }; }
+    }
+    this._cssK = k;
     const ckey = `${cw}|${ch}|${w}|${h}`;
     if (ckey !== this._cvKey) { // letterboxed only when the world aspect cannot match the screen
       this._cvKey = ckey; const cs = this.canvas.style;
-      cs.position = 'absolute'; cs.width = `${cw}px`; cs.height = `${ch}px`; cs.left = `${Math.floor((w - cw) / 2)}px`; cs.top = `${Math.floor((h - ch) / 2)}px`;
+      cs.position = 'absolute'; cs.width = `${cw}px`; cs.height = `${ch}px`; cs.left = `${Math.floor((w - cw) / 2)}px`; cs.top = `${Math.floor((h - ch) / 2)}px`; this.canvas.classList.toggle('rm-dv', !!this._dv); // page CSS may seat the dungeon view (mad-maze.css: above the phone sticks)
     }
     this._applyBacking(); this._stAnchorT = -1e9; // the HUD rects moved
     const p = this.player; const bw = this._bw(); const bh = this._bh();
@@ -2283,9 +2303,10 @@ class RealmArena {
   _applyBacking() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const s = Math.min(dpr, 1.5, this._cssK * dpr) * this._pf.q;
-    const cw = Math.max(1, Math.round(this.W * s)); const ch = Math.max(1, Math.round(this.H * s));
+    const vw = this._dv ? this._dv.vw : this.W; // dungeon view: the backing store holds only the visible slice of the room
+    const cw = Math.max(1, Math.round(vw * s)); const ch = Math.max(1, Math.round(this.H * s));
     if (this.canvas.width !== cw || this.canvas.height !== ch) { this.canvas.width = cw; this.canvas.height = ch; }
-    this.scale = this.canvas.width / this.W; this._vignette = null;
+    this.scale = this.canvas.width / vw; this._vignette = null;
   }
 
   // After a rotation the world changes shape: pull anything that is now outside back in.
@@ -2403,7 +2424,7 @@ class RealmArena {
     this._lastT = now;
     this._perfFeed(raw);
     this._update(dt);
-    if (this.world) this._camStep(dt);
+    if (this.world || this._dv) this._camStep(dt);
     this._draw();
     if (this.active) this._raf = requestAnimationFrame(this._loop); // a death exit inside _update must not leave a second loop
   };
@@ -2900,6 +2921,7 @@ class RealmArena {
   // World mode only: may this enemy shoot? It must be on screen (a 24 px margin) and within RM_FIRE_RANGE x the view's half-diagonal of
   // the player, so nothing snipes from outside the camera. The classic arena and dungeons (the whole room is the view) are unchanged.
   _canFire(e, p) {
+    if (this._dv && !this.world) { const cx = this.camera.x; return e.type === 'boss' || (e.x >= cx - 40 && e.x <= cx + this._dv.vw + 40); } // dungeon view (phone portrait): shooters far outside the slice hold their fire
     if (!this.world || this.mode !== 'world' || this.dungeon) return true;
     const c = this.camera; const m = 24;
     if (e.x < c.x - m || e.x > c.x + this.W + m || e.y < c.y - m || e.y > c.y + this.H + m) return false;
@@ -2921,7 +2943,7 @@ class RealmArena {
       this._curE = e; this._curDm = e.dmgMul || 1; // bullets fired below carry this enemy's damage multiplier (1 = unchanged)
       let sm = null;
       if (e.status) { if (e._stNext <= this._stT * 1000) this._stRefresh(e); sm = e._stm; if (sm) { this._curDm *= sm.enemyDmg; if (sm.dot > 0) this._stEnemyDot(e, sm, dt0); if (!e.active) continue; } }
-      const hold = wd && !this._canFire(e, p); // world: off-screen shooters hold their fire (cooldowns wait at 0.2 s)
+      const hold = (wd || this._dv) && !this._canFire(e, p); // world: off-screen shooters hold their fire (cooldowns wait at 0.2 s)
       if (hold) { e.cd = Math.max(e.cd, 0.2); if (e.type === 'boss') e.cd2 = Math.max(e.cd2, 0.2); }
       if (e.type === 'boss') { if (sm && sm.speed < 1) e.t -= dt * (1 - sm.speed); this._updateBoss(e, dt * (e.fireMul || 1) / (sm ? sm.enemyFire : 1)); if (tg) this._tgBoss(e, hold, p); this._curDm = 1; this._curE = null; continue; } // slowed: the sway runs slower
       if (sm && sm.stun) { e._tg = 0; continue; } // stunned: no moving, no firing
@@ -3910,6 +3932,12 @@ class RealmArena {
   // One panel at a time (backpack or kill board); either one pauses the fight.
   _panel(name) {
     if (name && this.state === 'dead') return; // no panels while the death message runs (it would freeze the exit)
+    const prev = this.panel || null;
+    this._panelSet(name);
+    if (this.onPanel && prev !== (name || null)) { try { this.onPanel(name || null, prev); } catch (e) { /* a page hook never breaks the panels */ } } // optional page hook (realm-world: Nexus return)
+  }
+
+  _panelSet(name) {
     this.panel = name;
     this.paused = !!name && !this.team; // a shared run never freezes (it would time the partner out)
     const bp = document.getElementById('realm-backpack'); if (bp) bp.classList.toggle('hidden', name !== 'bp');
@@ -4652,6 +4680,7 @@ class RealmArena {
       g.translate(-cam.x, -cam.y);
       if (wd.drawUnder) wd.drawUnder(g, cam); else { g.fillStyle = '#10202a'; g.fillRect(cam.x - 10, cam.y - 10, this.W + 20, this.H + 20); }
     } else {
+      if (this._dv) g.translate(-cam.x, 0); // dungeon view: the room slice around the hero
       this._floorPatterns = this._floorPatterns || [];
       if (!this._floorPatterns[this.biome]) this._floorPatterns[this.biome] = g.createPattern(this.sprites.floors[this.biome], 'repeat');
       g.fillStyle = this._floorPatterns[this.biome]; g.fillRect(-10, -10, this.W + 20, this.H + 20);
@@ -4743,7 +4772,7 @@ class RealmArena {
     }
     g.globalAlpha = 1;
     g.font = this._txtFont; g.textAlign = 'center'; // AR: follows the HUD size pref (a cached string; 14 px by default)
-    const hs = this._stAnchorAt(); const ox = wd ? cam.x : 0; const oy = wd ? cam.y : 0; // floating numbers never sit under the top-right HUD buttons
+    const hs = this._stAnchorAt(); const ox = wd || this._dv ? cam.x : 0; const oy = wd ? cam.y : 0; // floating numbers never sit under the top-right HUD buttons
     for (let i = 0; i < this.texts.length; i++) {
       const t = this.texts[i];
       if (!t.active) continue;
@@ -4763,7 +4792,7 @@ class RealmArena {
     this._drawStatusIcons(g); // screen space, above the world and the floating numbers
     if (this.flash > 0 && this._flashesOn()) { // red hit vignette (off with the `flashes: false` access pref) (reduced motion: a steady tint while it lasts, no fade or blink): one baked gradient, faded with globalAlpha (no per-frame allocation)
       if (!this._vignette) {
-        const gr = g.createRadialGradient(this.W / 2, this.H / 2, Math.min(this.W, this.H) * 0.3, this.W / 2, this.H / 2, Math.max(this.W, this.H) * 0.7);
+        const VW = this._dv ? this._dv.vw : this.W; const gr = g.createRadialGradient(VW / 2, this.H / 2, Math.min(VW, this.H) * 0.3, VW / 2, this.H / 2, Math.max(VW, this.H) * 0.7); // screen space (the dungeon view slice)
         gr.addColorStop(0, 'rgba(255,40,80,0)'); gr.addColorStop(1, 'rgba(255,40,80,0.55)');
         this._vignette = gr;
       }

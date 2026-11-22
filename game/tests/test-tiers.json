@@ -1131,6 +1131,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "realm-polish3.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "realm-access2.test.js": {
     "class": "browser",
     "tier": "full"

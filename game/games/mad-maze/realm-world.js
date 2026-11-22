@@ -1485,6 +1485,8 @@
     const todayUtc = questDate;
     const nxCss = document.createElement('style');
     nxCss.textContent = '#rw-nexus-go{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(290px + env(safe-area-inset-bottom,0px));z-index:3;min-height:48px;min-width:44px;padding:0 18px;border-radius:24px;border:2px solid #a98bff;background:rgba(30,20,60,.92);color:#fff;font:700 15px system-ui,sans-serif;white-space:nowrap}#rw-nexus-go.hidden{display:none}'
+      // PLAYTEST-REVIEW-3 #3: the pill shares z-index 3 with the backpack and comes later in the DOM: never over an open Realm panel or dialog
+      + 'body:has(#realm-backpack:not(.hidden),#realm-board:not(.hidden),#realm-shop:not(.hidden),#realm-hero:not(.hidden),#realm-pause:not(.hidden),#realm-death:not(.hidden),#mm-settings:not(.hidden),#mm-summary:not(.hidden)) #rw-nexus-go{display:none}'
       + '#rw-nexus{position:fixed;inset:0;z-index:80;background:#120e1f;color:#f3eefc;display:flex;flex-direction:column;overflow-x:hidden;overflow-y:auto;font:14px/1.4 system-ui,sans-serif;padding:env(safe-area-inset-top,0px) 16px env(safe-area-inset-bottom,0px);box-sizing:border-box}#rw-nexus.hidden{display:none}'
       + '#rw-nexus .nx-head{display:flex;align-items:center;gap:12px;padding:8px 0;flex-wrap:wrap}#rw-nexus h2{margin:0;font-size:18px;flex:1;min-width:120px}'
       + '#rw-nexus button{min-height:44px;min-width:44px;padding:0 14px;border-radius:10px;border:2px solid #7a63c9;background:#2a2150;color:#fff;font:700 14px system-ui,sans-serif;cursor:pointer}#rw-nexus button:focus-visible{outline:3px solid #ffe27a}'
@@ -1622,8 +1624,20 @@
       el.appendChild(back);
     }
     function nxStallOpen() { nxBuild(); if (!nxStallOn()) return false; nxStallAsk = 0; nxDom.board.classList.add('hidden'); nxStallRender(); nxDom.stall.classList.remove('hidden'); return true; }
-    function nxStallShop() { nxStallHide(); nexusClose(); if (typeof arena.setShop === 'function') arena.setShop(true); return true; }
-    function nxStallForge() { if (!nxStallOn()) return false; nxStallHide(); nexusClose(); return arena.openForge(); }
+    // PLAYTEST-REVIEW-3 #7: Shop and Forge open over the Nexus (the plaza closes underneath) and closing them returns to the Nexus stall.
+    // nxReturn remembers that origin only for a panel opened from the stall; any other panel, a death or a leave forgets it.
+    let nxReturn = null;
+    function nxStallShop() { nxStallHide(); nexusClose(); if (typeof arena.setShop === 'function') { arena.setShop(true); nxReturn = arena.panel === 'shop' ? 'shop' : null; } return true; }
+    function nxStallForge() { if (!nxStallOn()) return false; nxStallHide(); nexusClose(); const ok = arena.openForge(); nxReturn = ok && arena.panel === 'bp' ? 'bp' : null; return ok; }
+    const nxPanelHook = arena.onPanel;
+    arena.onPanel = (name, prev) => {
+      if (typeof nxPanelHook === 'function') nxPanelHook(name, prev);
+      if (!nxReturn) return;
+      if (name) { if (name !== 'shop' && name !== 'bp') nxReturn = null; return; } // shop <-> backpack keeps the origin; a menu / board / hero panel drops it
+      nxReturn = null;
+      if (leaving || !arena.active || arena.state !== 'play') return;
+      if (nexusOpen()) nxStallOpen();
+    };
     function nxStallHide() { nxStallAsk = 0; if (!nxDom || !nxDom.stall) return; nxDom.stall.classList.add('hidden'); nxDom.stall.textContent = ''; } // emptied: no hidden buttons linger
     function nxBuild() {
       if (nxDom) return nxDom;
