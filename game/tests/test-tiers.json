@@ -75,6 +75,10 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "bugs-depth.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "cave-craft.test.js": {
     "class": "live",
     "tier": "full"

@@ -3,42 +3,42 @@
 html, body { margin:0; background:var(--bg); color:var(--ink); font-family: ui-monospace, Menlo, Consolas, monospace; overflow-x:hidden; }
 body { min-height:100vh; display:flex; flex-direction:column; align-items:center; touch-action:manipulation; }
 #top { width:100%; max-width:960px; display:flex; align-items:center; justify-content:space-between; padding:8px 16px; }
-#top h1 { font-size:18px; margin:0; }
+#top h1 { font-size:calc(18px * var(--ui-scale,1)); margin:0; }
 .back, .menu-back { color:var(--accent); text-decoration:none; min-height:48px; min-width:48px; display:inline-flex; align-items:center; }
 #stage { width:100%; max-width:960px; padding:0 16px 16px; display:flex; flex-direction:column; gap:8px; }
-#hud { display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center; font-size:16px; }
+#hud { display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center; font-size:calc(16px * var(--ui-scale,1)); }
 #hud span { background:var(--panel); padding:4px 10px; border-radius:6px; }
 #hud-arena { color:var(--dim); }
 #combo { position:relative; flex:1 1 140px; height:26px; background:var(--panel); border-radius:6px; overflow:hidden; }
 #combo-bar { position:absolute; left:0; top:0; bottom:0; width:0; background:#e07a1f; }
-#combo span { position:absolute; inset:0; padding:3px 8px; background:none; font-size:14px; }
+#combo span { position:absolute; inset:0; padding:3px 8px; background:none; font-size:calc(14px * var(--ui-scale,1)); }
 #canvas-wrap { position:relative; width:100%; }
 #game { width:100%; height:auto; display:block; image-rendering:pixelated; border:3px solid #0d160f; border-radius:6px; background:#4a7c3a; touch-action:none; }
 #overlay { position:absolute; inset:0; background:rgba(13,22,15,.93); border-radius:6px; padding:12px; overflow:auto; }
 #overlay[hidden] { display:none; }
-#overlay h2 { margin:0 0 8px; font-size:20px; }
+#overlay h2 { margin:0 0 8px; font-size:calc(20px * var(--ui-scale,1)); }
 #overlay p { margin:4px 0; }
 #overlay button, #touch button { font:inherit; color:#1d2b20; background:var(--accent); border:0; border-radius:8px; min-height:48px; min-width:48px; padding:8px 14px; cursor:pointer; }
 #overlay button[disabled] { background:#566; color:#aab; cursor:not-allowed; }
 .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:8px; margin:10px 0; }
 .card { display:flex; flex-direction:column; gap:2px; text-align:left; }
-.card small { font-size:12px; }
+.card small { font-size:calc(12px * var(--ui-scale,1)); }
 .row { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
-.stars { font-size:28px; letter-spacing:4px; color:var(--accent); }
+.stars { font-size:calc(28px * var(--ui-scale,1)); letter-spacing:4px; color:var(--accent); }
 .dim { color:var(--dim); }
 #journal-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:6px; }
 #journal-list div { background:var(--panel); padding:6px 8px; border-radius:6px; }
 #touch { display:none; align-items:center; justify-content:space-between; gap:12px; padding:8px 0; user-select:none; -webkit-user-select:none; }
 #joy { position:relative; width:128px; height:128px; border-radius:50%; background:rgba(255,255,255,.12); border:2px solid rgba(255,255,255,.3); touch-action:none; flex:none; }
 #knob { position:absolute; left:41px; top:41px; width:40px; height:40px; border-radius:50%; background:var(--accent); opacity:.85; }
-#btn-swing { width:112px; height:112px; border-radius:50%; font-size:18px; touch-action:none; flex:none; }
+#btn-swing { width:112px; height:112px; border-radius:50%; font-size:calc(18px * var(--ui-scale,1)); touch-action:none; flex:none; }
 #btn-sneak { width:84px; height:64px; touch-action:none; background:#8ecae6; flex:none; }
 #btn-sneak.on { background:#219ebc; color:#fff; }
-#help { font-size:12px; color:var(--dim); margin:0; }
+#help { font-size:calc(12px * var(--ui-scale,1)); color:var(--dim); margin:0; }
 @media (pointer: coarse), (max-width: 700px) { #touch { display:flex; } #help { display:none; } }
 
-#btn-mute { align-self:center; font:inherit; font-size:12px; color:var(--ink); background:var(--panel); border:1px solid #0d160f; border-radius:8px; min-height:48px; min-width:48px; padding:4px 8px; cursor:pointer; }
-#hint { margin-top:8px; background:rgba(13,22,15,.94); border:2px solid var(--accent); border-radius:8px; padding:8px 10px; font-size:13px; }
+#btn-mute { align-self:center; font:inherit; font-size:calc(12px * var(--ui-scale,1)); color:var(--ink); background:var(--panel); border:1px solid #0d160f; border-radius:8px; min-height:48px; min-width:48px; padding:4px 8px; cursor:pointer; }
+#hint { margin-top:8px; background:rgba(13,22,15,.94); border:2px solid var(--accent); border-radius:8px; padding:8px 10px; font-size:calc(13px * var(--ui-scale,1)); }
 #hint[hidden] { display:none; }
 #hint p { margin:4px 0 8px; }
 #hint button { font:inherit; color:#1d2b20; background:var(--accent); border:0; border-radius:8px; min-height:48px; min-width:48px; padding:8px 14px; cursor:pointer; }
@@ -47,7 +47,7 @@ body { min-height:100vh; display:flex; flex-direction:column; align-items:center
 #sum-counts div { background:var(--panel); padding:4px 8px; border-radius:6px; }
 /* Beta gate: at 360 px the joystick + sneak + swing row was 4 px too wide (horizontal scroll). */
 @media (max-width: 400px) { #joy { width:112px; height:112px; } #knob { left:36px; top:36px; } #btn-swing { width:96px; height:96px; } #touch { gap:8px; } }
-@media (max-width: 480px) { #top { gap:4px; padding:8px 8px; } #top h1 { font-size:15px; } }
+@media (max-width: 480px) { #top { gap:4px; padding:8px 8px; } #top h1 { font-size:calc(15px * var(--ui-scale,1)); } }
 /* Phones: the canvas is short, so the overlay (arena picker, journal, summary) becomes a full-screen scrollable sheet. */
 @media (max-width: 700px) {
   #overlay { position:fixed; inset:0; z-index:30; border-radius:0; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; padding:12px 12px calc(24px + env(safe-area-inset-bottom)); background:#0d160f; }
@@ -57,3 +57,17 @@ body { min-height:100vh; display:flex; flex-direction:column; align-items:center
 
 /* shared Menu button sits top-left: keep the full-screen overlay content clear of it */
 @media (max-width: 480px) { body.mm-nav-on #overlay { padding-top: 64px; } }
+
+/* MG1: journal goals ("Things to find") and Night Glade list. Plain text, no timers. */
+#overlay h3 { margin:12px 0 6px; font-size:calc(16px * var(--ui-scale,1)); }
+#glade-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:6px; }
+#glade-list div { background:var(--panel); padding:6px 8px; border-radius:6px; }
+#glade-list canvas.jicon { width:32px; height:32px; display:block; image-rendering:pixelated; }
+#goals-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:8px; }
+.goal-arena { background:var(--panel); padding:6px 10px; border-radius:6px; font-size:calc(13px * var(--ui-scale,1)); }
+.goal-arena ul { list-style:none; margin:4px 0 0; padding:0; }
+.goal-arena li { margin:3px 0; color:var(--dim); }
+.goal-arena li.on { color:var(--accent); }
+body { font-size:calc(16px * var(--ui-scale,1)); } /* shared text size pref; everything else inherits or scales */
+/* Shared access pref "screen flashes off" (MMSideAccess) or the OS setting: no animations or transitions. */
+html[data-reduce-motion="1"] *, html[data-reduce-motion="1"] *::before, html[data-reduce-motion="1"] *::after { animation:none !important; transition:none !important; }
