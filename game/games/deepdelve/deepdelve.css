@@ -59,3 +59,23 @@ html[data-reduce-motion="1"] *, html[data-reduce-motion="1"] *::before, html[dat
 #creative-note { color:#9ff0d8; font-weight:600; }
 #creative-note[hidden] { display:none; }
 html[data-dd-world="creative"] .bar h1 { color:#9ff0d8; }
+
+/* Dive runs: hidden touch buttons stay hidden (.btn display beat [hidden]), combo meter, ore pops, dive summary */
+.tb[hidden], .btn[hidden] { display:none; }
+#hud-dive { color:#bfe6ff; }
+#combo { position:absolute; left:50%; top:calc(44% + 48px); transform:translateX(-50%); padding:2px 12px; border-radius:12px; background:rgba(7,13,18,.7); color:var(--acc); font-weight:800; font-size:calc(18px * var(--ui-scale,1)); pointer-events:none; }
+#combo:empty { display:none; }
+#combo.hot { color:#ff9a2e; }
+#pops { position:absolute; left:50%; top:40%; width:0; height:0; pointer-events:none; }
+.pop { position:absolute; left:0; top:0; transform:translate(-50%,0); white-space:nowrap; font-weight:800; font-size:calc(16px * var(--ui-scale,1)); color:#fff; text-shadow:0 1px 2px #000, 0 0 4px #000; animation:ddpop .9s ease-out forwards; }
+.pop.ore { color:var(--acc); font-size:calc(18px * var(--ui-scale,1)); }
+.pop.pb { color:#7dffb0; font-size:calc(20px * var(--ui-scale,1)); }
+@keyframes ddpop { from { opacity:1; transform:translate(-50%,0) scale(1.15); } to { opacity:0; transform:translate(-50%,-56px) scale(1); } }
+#run-panel { bottom:auto; background:#0b1620; }
+#run-score { font-size:calc(24px * var(--ui-scale,1)); font-weight:800; color:var(--acc); margin:8px 0; }
+#run-stats { list-style:none; margin:0; padding:0; display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+#run-stats li { padding:8px; background:var(--panel); border-radius:8px; font-size:calc(15px * var(--ui-scale,1)); }
+#run-stats li.pb { outline:2px solid #7dffb0; }
+#run-stats small { display:block; color:var(--mut); font-size:calc(13px * var(--ui-scale,1)); }
+.btn.big { width:100%; min-height:56px; margin-top:6px; font-size:calc(18px * var(--ui-scale,1)); border-color:var(--acc); }
+@media (prefers-reduced-motion: reduce) { .pop { animation:none; } }
