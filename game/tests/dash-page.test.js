@@ -82,6 +82,45 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
   await p.touchscreen.tap(jb.x + jb.width / 2, jb.y + jb.height / 2);
   await p.evaluate(() => __dash.step(3));
   check('a touch on the Jump button jumps', await p.evaluate(() => __dash.player.jumps === 1 && __dash.player.y < 200));
+  // ---- second pass: gentler start, coyote + buffer, forgiving landings, near misses, ghost clarity ----
+  const sp = await p.evaluate(() => [0, 600, 1200, 1800, 1e6].map((f) => __dash.speedAt(f)));
+  check('gentle start: 140 px/s at the start, only 160 after 10 s (was 172), 180 at 20 s', sp[0] === 140 && sp[1] === 160 && sp[2] === 180, JSON.stringify(sp));
+  check('after the warm-up the old ramp resumes (+3.2/s) and still tops out at 330', Math.abs(sp[3] - 212) < 1e-9 && sp[4] === 330, JSON.stringify(sp));
+  const cb = await p.evaluate(() => {
+    const T = __dash.tuning;
+    // buffer: a press a few frames before touching down still jumps on landing
+    __dash.start('flat'); __dash.down(); let land = 0; __dash.step(3); __dash.up();
+    while (!__dash.player.ground && land < 200) { __dash.step(1); land++; }
+    __dash.start('flat'); __dash.down(); __dash.step(3); __dash.up(); __dash.step(land - 6); __dash.down(); __dash.step(T.BUFFER); __dash.up();
+    const buffered = __dash.player.jumps;
+    // coyote: just walked off an edge (airborne, falling for COYOTE frames) and a press still jumps
+    __dash.start('flat'); const P = __dash.player; P.ground = false; P.air = T.COYOTE; P.y = 200; P.vy = 0; __dash.down(); __dash.step(1); __dash.up();
+    const coyote = { jumps: P.jumps, vy: P.vy };
+    return { T, land, buffered, coyote };
+  });
+  check('fairness tuning: coyote 6 frames, input buffer 8 frames (was 5 / 6)', cb.T.COYOTE === 6 && cb.T.BUFFER === 8 && cb.T.PV === 2, JSON.stringify(cb.T));
+  check('input buffer: a press 6 frames before touching down still jumps on landing (the old 6-frame buffer dropped it)', cb.buffered === 2, JSON.stringify(cb));
+  check('coyote time: a press just after running off an edge still jumps', cb.coyote.jumps === 1 && cb.coyote.vy < 0, JSON.stringify(cb));
+  const early = await p.evaluate(() => { const out = {}; for (const s of ['a', 'd', 'e']) { __dash.start(s); __dash.step(600, { lead: 60 }); out[s] = { st: __dash.run.state, dist: __dash.run.dist, perch: __dash.player.perch || 0 }; } __dash.start('a'); __dash.step(2000); out.idle = { st: __dash.run.state, dead: __dash.player.dead, why: __dash.run.why }; return out; });
+  check('forgiving landing: a too-early jump that comes down on a rock top lands on it (was a crash at 54 m)', ['a', 'd', 'e'].every((s) => early[s].perch >= 1 && early[s].dist > 100), JSON.stringify(early));
+  check('forgiving landing: early jumpers now get past the first 10 s', ['a', 'd', 'e'].every((s) => early[s].st === 'play'), JSON.stringify(early));
+  check('rocks still end a run when you never jump (and the reason says so)', early.idle.st === 'over' && early.idle.dead === 'rock' && early.idle.why === 'nojump' && /tap to jump/i.test(await p.textContent('#r-why')), JSON.stringify(early.idle));
+  check('quick restart is spelled out on the result card (R or Run again)', /press r/i.test(await p.textContent('#r-why')));
+  const nm = await p.evaluate(() => {
+    for (const lead of [18, 20, 22, 24, 26, 28, 30, 32, 34, 36]) {
+      __dash.start('night1'); let seen = false;
+      for (let i = 0; i < 1500 && __dash.run.state === 'play'; i++) { __dash.step(1, { lead }); if (__dash.counts().floatTexts.includes('close!')) seen = true; }
+      if (__dash.run.near > 0) return { lead, near: __dash.run.near, seen, dist: __dash.run.dist, tun: __dash.tuning.NEAR };
+    }
+    return null;
+  });
+  check('near miss: clearing a rock by under 8 px counts a near miss', nm && nm.near >= 1 && nm.tun === 8, JSON.stringify(nm));
+  check('near miss: a "close!" sparkle pops over the hero', nm && nm.seen, JSON.stringify(nm));
+  // ghost: saved with the physics version; the race shows a tag and the ghost's finish flag
+  await p.evaluate(() => { __dash.start('night1'); __dash.step(20000, { lead: 26 }); });
+  const gv = await p.evaluate(() => { const gs = __dash.save.ghost; __dash.start('night1'); __dash.step(30, { lead: 26 }); __dash.draw(); return { pv: gs.pv, racing: !!__dash.ghost, tag: __dash.counts().ghostTag }; });
+  check('ghost clarity: ghosts are saved with physics version 2 and raced on Play again', gv.pv === 2 && gv.racing, JSON.stringify(gv));
+  check('ghost clarity: the ghost wears a "ghost" tag at the start of the race', gv.tag === true, JSON.stringify(gv));
   check('phone: no console errors, 0 DB requests', s.errors.length === 0 && s.db.count() === 0, JSON.stringify(s.errors));
   await s.ctx.close();
 
@@ -100,8 +139,27 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
   await q.evaluate(() => __dash.step(3000));
   const rm = await q.evaluate(() => Object.assign(__dash.counts(), { reduced: __dash.reduced, low: __dash.lowGfx, st: __dash.run.state }));
   check('reduced motion: no shake on a crash; low graphics: few particles', rm.st === 'over' && rm.reduced && rm.low && rm.shake === 0 && rm.parts <= 12, JSON.stringify(rm));
+  await q.evaluate(() => document.activeElement.blur());
+  await q.keyboard.press('r');
+  check('quick restart: R right at the crash is ignored (no skipped result card)', await q.evaluate(() => __dash.run.state === 'over'));
+  await q.waitForTimeout(750);
+  const f0 = await q.evaluate(() => __dash.run.seed);
+  await q.keyboard.press('r');
+  check('quick restart: R after a crash runs the same course again from 0 m', await q.evaluate((sd) => __dash.run.state === 'play' && __dash.run.seed === sd && __dash.run.f === 0 && document.getElementById('result').hidden, f0));
+  await q.keyboard.press('r');
+  check('quick restart: R during a run does nothing', await q.evaluate((sd) => __dash.run.state === 'play' && __dash.run.seed === sd && __dash.player.jumps === 0, f0));
   check('desktop: no console errors, 0 DB requests', d.errors.length === 0 && d.db.count() === 0, JSON.stringify(d.errors));
   await d.ctx.close();
+  // an old (pre-second-pass) ghost has no pv: it is not raced (its inputs were for the old physics), but the save loads clean
+  const o = await open(browser, { viewport: { width: 1280, height: 800 } }, '?test=1&seed=oldg',
+    { [KEY]: JSON.stringify({ v: 1, hint: true, best: 77, runs: 2, ghost: { seed: 'oldg', in: [[10, 14]], dist: 60 } }) });
+  await o.page.click('#play');
+  const og = await o.page.evaluate(() => ({ racing: !!__dash.ghost, kept: __dash.save.ghost && __dash.save.ghost.dist, best: __dash.save.best }));
+  check('old ghost without pv loads (kept in the save) but is not raced out of sync', !og.racing && og.kept === 60 && og.best === 77, JSON.stringify(og));
+  await o.page.evaluate(() => __dash.step(3000));
+  check('the next run on that course replaces the old ghost with a pv 2 ghost', await o.page.evaluate(() => __dash.run.state === 'over' && __dash.save.ghost.pv === 2 && __dash.save.ghost.seed === 'oldg'));
+  check('old-ghost page: no console errors, 0 DB requests', o.errors.length === 0 && o.db.count() === 0, JSON.stringify(o.errors));
+  await o.ctx.close();
   await browser.close();
   done();
 })().catch((e) => { console.error(e); process.exit(1); });

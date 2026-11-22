@@ -17,12 +17,17 @@
   const $ = (id) => document.getElementById(id);
   const params = new URLSearchParams(location.search);
   const TEST = params.get('test') === '1';
+  // idle hint: after 6 s without a pop the best move glows (static outline with reduced motion); ?hints=0 turns it off
+  const HINTS = params.get('hints') !== '0', HINT_AFTER = 6;
+  // combo audio ladder: each chain step plays a brighter sound (chain 1, 2, 3, 4+)
+  const LADDER = ['pickup', 'claim', 'bag_rare', 'levelup'];
   let reduced = false, lowGfx = false;
   try { reduced = (window.MMMotion ? MMMotion.reduced(window, localStorage) : false) || !!(window.MMSideAccess && MMSideAccess.reduced()); } catch (e) { reduced = false; }
   try { lowGfx = !!(window.MMAccess && MMAccess.prefs.load(localStorage).lowGfx); } catch (e) { lowGfx = false; }
   let sfx = null;
   try { sfx = window.MMSfx ? MMSfx.create({ storage: localStorage }) : null; } catch (e) { sfx = null; }
-  const play = (n) => { try { if (sfx) sfx.play(n); } catch (e) { /* ignore */ } };
+  let lastSound = '';
+  const play = (n) => { lastSound = n; try { if (sfx) sfx.play(n); } catch (e) { /* ignore */ } };
 
   // ---------- save ----------
   const int = (x, hi) => (typeof x === 'number' && isFinite(x) && x >= 0 ? Math.min(hi, Math.floor(x)) : 0);
@@ -48,6 +53,7 @@
   const run = { state: 'ready', seed: '', score: 0, time: ROUND, maxTile: 0, bestChain: 0, pops: 0, newMedals: [] };
   let cur = { c: 2, r: 3 }, showCur = false;
   let parts = [], floats = [], shake = 0;
+  let idle = 0, hint = null, preview = null, pulse = 0;
 
   function spawnV() {
     const pool = [1, 1, 2, 2, 3, 4];
@@ -86,6 +92,40 @@
       grid[c] = add.concat(col);
     }
   }
+  // what popping (c, r) would do, without touching the board or the RNG: group size, the new tile and the chain it
+  // sets off (refilled tiles are unknown, so they count as blanks: the real chain can only be longer)
+  function predict(c, r) {
+    if (!grid[c] || !grid[c][r]) return null;
+    const sim = grid.map((col) => col.map((t) => t.v));
+    const fl = (x0, y0) => {
+      const v = sim[x0][y0], seen = {}, out = [], st = [[x0, y0]];
+      if (!v) return out;
+      while (st.length) { const [x, y] = st.pop(), k = x + ',' + y; if (seen[k] || x < 0 || y < 0 || x >= W || y >= H || sim[x][y] !== v) continue; seen[k] = 1; out.push([x, y]); st.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]); }
+      return out;
+    };
+    const first = fl(c, r);
+    if (first.length < 2) return null;
+    let g2 = first, at = [c, r], chain = 0, v = sim[c][r];
+    while (g2.length >= 2 && chain < 12) {
+      chain++;
+      v = sim[at[0]][at[1]] + (g2.length >= 5 ? 2 : 1);
+      g2.forEach(([x, y]) => { sim[x][y] = null; });
+      sim[at[0]][at[1]] = -1;
+      for (let x = 0; x < W; x++) { const col = sim[x].filter((q) => q !== null); while (col.length < H) col.unshift(0); sim[x] = col; }
+      for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) if (sim[x][y] === -1) { at = [x, y]; sim[x][y] = v; }
+      g2 = fl(at[0], at[1]);
+    }
+    return { cells: first, size: first.length, chain, tile: v };
+  }
+  function bestMove() {
+    let best = null;
+    for (let c = 0; c < W; c++) for (let r = 0; r < H; r++) {
+      const p = predict(c, r); if (!p) continue;
+      const sc = p.chain * 100 + p.size * 10 + p.tile;
+      if (!best || sc > best.sc) best = Object.assign({ c, r, sc }, p);
+    }
+    return best;
+  }
   function find(id) { for (let c = 0; c < W; c++) for (let r = 0; r < H; r++) if (grid[c][r].id === id) return [c, r]; return null; }
 
   // ---------- feedback ----------
@@ -107,6 +147,7 @@
     if (run.state !== 'play') return false;
     if (c < 0 || r < 0 || c >= W || r >= H) return false;
     const grp = flood(c, r);
+    idle = 0; hint = null;
     if (grp.length < 2) { grid[c][r].wob = 0.35; msg('Needs a touching twin: 2 or more of the same tile.'); play('ui_tap'); return false; }
     let id = grid[c][r].id, chain = 0, gained = 0, g2 = grp, at = [c, r];
     while (g2.length >= 2) {
@@ -129,7 +170,8 @@
     }
     run.score += gained; run.pops++;
     if (chain > run.bestChain) run.bestChain = chain;
-    if (chain >= 2) { msg('Chain x' + chain + '!'); bump(3 + chain * 2); play(chain >= 3 ? 'claim' : 'pickup'); } else play('pickup');
+    if (chain >= 2) { msg('Chain x' + chain + '!'); bump(3 + chain * 2); }
+    play(LADDER[Math.min(chain, LADDER.length) - 1]);
     if (chain >= 5) award('chain5');
     if (run.maxTile >= 9) award('tile9');
     if (run.score >= 25000) award('score25k');
@@ -143,6 +185,7 @@
       if (!hasMove()) grid[0][H - 1].v = grid[1][H - 1].v;
       msg('No twins left: shuffled!');
     }
+    preview = null;
     hud();
     return { chain, gained };
   }
@@ -153,7 +196,7 @@
     run.seed = (typeof seed === 'string' && /^[A-Za-z0-9_-]{1,24}$/.test(seed)) ? seed : newSeed();
     rng = MMRng.create('pixel-pop:' + run.seed);
     Object.assign(run, { state: 'play', score: 0, time: ROUND, maxTile: 3, bestChain: 0, pops: 0, newMedals: [] });
-    parts = []; floats = []; fill();
+    parts = []; floats = []; idle = 0; hint = null; preview = null; fill();
     $('intro').hidden = true; $('result').hidden = true;
     msg(save.rounds === 0 ? 'Tap two touching twins to pop them.' : 'Seed ' + run.seed + '. Go!');
     hud();
@@ -214,9 +257,30 @@
     if (t.v >= 6) { g.fillStyle = '#fff'; g.fillRect(-4, -sz / 2 - 3, 8, 6); }
     g.restore();
   }
+  // outline every tile of a group and badge the tapped one with the chain it sets off
+  function outline(p, col, a) {
+    g.save(); g.globalAlpha = a; g.strokeStyle = col; g.lineWidth = 4;
+    p.cells.forEach(([x, y]) => { rr(x * CELL + 3, y * CELL + 3, CELL - 6, CELL - 6, 12); g.stroke(); });
+    if (p.chain > 1) {
+      const bx = p.c * CELL + CELL / 2, by = (p.r + 1) * CELL - 13; // bottom of the tile: keeps its level number readable
+      g.globalAlpha = 1; g.fillStyle = '#1b1830'; rr(bx - 20, by - 10, 40, 20, 8); g.fill();
+      g.fillStyle = col; g.font = 'bold 14px ui-monospace, Menlo, monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText('x' + p.chain, bx, by + 1);
+    }
+    g.restore();
+  }
+  function setPreview(c, r) {
+    const p = (c >= 0 && r >= 0 && c < W && r < H && run.state === 'play') ? predict(c, r) : null;
+    preview = p ? Object.assign({ c, r }, p) : null;
+  }
   let last = 0;
   function update(dt, manual) {
-    if (run.state === 'play' && (!TEST || manual)) { run.time -= dt; if (run.time <= 0) { run.time = 0; end(); } }
+    if (run.state === 'play' && (!TEST || manual)) {
+      run.time -= dt; if (run.time <= 0) { run.time = 0; end(); }
+      idle += dt;
+      if (HINTS && !hint && idle >= HINT_AFTER && run.state === 'play') { hint = bestMove(); if (hint) msg(hint.chain > 1 ? 'Psst: this group sets off a x' + hint.chain + ' chain.' : 'Psst: try the glowing group.'); }
+    }
+    pulse += dt;
     for (let c = 0; c < W; c++) for (let r = 0; r < H; r++) {
       const t = grid[c] && grid[c][r]; if (!t) continue;
       if (reduced) { t.y = r; t.s = 1; t.wob = 0; continue; }
@@ -237,6 +301,10 @@
     g.fillStyle = '#1b1733';
     for (let c = 0; c < W; c++) for (let r = 0; r < H; r++) if ((c + r) % 2) g.fillRect(c * CELL, r * CELL, CELL, CELL);
     for (let c = 0; c < W; c++) for (let r = 0; r < H; r++) { const t = grid[c] && grid[c][r]; if (t) drawTile(t, c); }
+    if (run.state === 'play') {
+      if (hint) outline(hint, '#ffd166', reduced ? 1 : 0.55 + 0.45 * Math.abs(Math.sin(pulse * 3)));
+      if (preview && (!hint || preview.c !== hint.c || preview.r !== hint.r)) outline(preview, '#ffffff', 0.9);
+    }
     if (showCur && run.state === 'play') { g.strokeStyle = '#fff'; g.lineWidth = 3; rr(cur.c * CELL + 2, cur.r * CELL + 2, CELL - 4, CELL - 4, 12); g.stroke(); }
     parts.forEach((p) => { g.globalAlpha = Math.min(1, p.t * 2); g.fillStyle = p.c; g.fillRect(p.x - 3, p.y - 3, 6, 6); });
     g.globalAlpha = 1;
@@ -259,11 +327,14 @@
     return { c: Math.floor(((ev.clientX - b.left) / b.width) * W), r: Math.floor(((ev.clientY - b.top) / b.height) * H) };
   }
   canvas.addEventListener('pointerdown', (ev) => { ev.preventDefault(); showCur = false; const p = cellAt(ev); tap(p.c, p.r); });
+  // chain preview: a mouse hovering a group outlines it and shows the chain it would set off (touch taps pop at once)
+  canvas.addEventListener('pointermove', (ev) => { if (ev.pointerType !== 'mouse') return; const p = cellAt(ev); setPreview(p.c, p.r); });
+  canvas.addEventListener('pointerleave', () => { preview = null; });
   document.addEventListener('keydown', (ev) => {
     if (run.state !== 'play') return;
     const ae = document.activeElement; if (ae && ae !== canvas && /^(BUTTON|A|INPUT)$/.test(ae.tagName)) return;
     const k = ev.key, mv = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1], a: [-1, 0], d: [1, 0], w: [0, -1], s: [0, 1] }[k];
-    if (mv) { cur.c = Math.max(0, Math.min(W - 1, cur.c + mv[0])); cur.r = Math.max(0, Math.min(H - 1, cur.r + mv[1])); showCur = true; ev.preventDefault(); }
+    if (mv) { cur.c = Math.max(0, Math.min(W - 1, cur.c + mv[0])); cur.r = Math.max(0, Math.min(H - 1, cur.r + mv[1])); showCur = true; setPreview(cur.c, cur.r); ev.preventDefault(); }
     else if (k === 'Enter' || k === ' ') { showCur = true; tap(cur.c, cur.r); ev.preventDefault(); }
   });
   $('play').addEventListener('click', () => { save.hint = true; persist(); start(params.get('seed') || undefined); });
@@ -289,5 +360,7 @@
     set(vals) { for (let c = 0; c < W; c++) for (let r = 0; r < H; r++) grid[c][r].v = vals[c][r]; },
     tap, start, end, step(dt) { update(dt, true); }, flood: (c, r) => flood(c, r).length, hasMove,
     counts: () => ({ parts: parts.length, floats: floats.length, shake }),
+    get hint() { return hint; }, get preview() { return preview; }, get lastSound() { return lastSound; }, get hintsOn() { return HINTS; },
+    predict, bestMove, setPreview,
   };
 }());
