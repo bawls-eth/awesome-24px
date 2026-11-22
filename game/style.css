@@ -2828,3 +2828,74 @@ body.touch-device #postcards-hint { bottom: calc(188px + env(safe-area-inset-bot
   /* The quick-chat phrases wrap instead of running out of the 320 px chat panel (the last one was clipped). */
   #quick-chat-row { flex-wrap: wrap; overflow-x: visible; }
 }
+
+/* ===================== 8-bit Town (town-8bit) =====================
+   One pixel-styled menu panel: hero line, three tabs (Town / Stats / More), a tidy 2-column button grid and a plain
+   stat block. Hard pixel edges (no radius), solid dark outlines and stepped drop shadows. Every control >= 44 px
+   tall, every line >= 12 px. The tokens live on :root so the shared mm-8bit theme can retune them. */
+:root {
+  --tb-ink: #2b1d14;          /* outline / text on light */
+  --tb-paper: #fff6dc;        /* panel fill */
+  --tb-paper-2: #f2e2b6;      /* inset / idle tab */
+  --tb-accent: #2a74a3;       /* active tab */
+  --tb-accent-ink: #fff6dc;
+  --tb-gold: #7a4f00;
+  --tb-shadow: 3px 3px 0 var(--tb-ink);
+}
+#player-list-panel {
+  border-radius: 0; border: 3px solid var(--tb-ink); background: var(--tb-paper);
+  box-shadow: var(--tb-shadow); padding: 8px;
+}
+#hero-line {
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 6px;
+  margin: 6px 0; padding: 4px 6px; background: var(--tb-paper-2); border: 2px solid var(--tb-ink);
+  font-size: 13px; line-height: 1.3; color: var(--tb-ink);
+}
+#hero-name { font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+#hero-stats { font-size: 12px; color: var(--tb-gold); font-weight: 700; }
+#town-tabs { display: flex; gap: 3px; margin: 0 0 6px; }
+#player-list-panel #town-tabs .town-tab {
+  flex: 1 1 0; min-width: 0; min-height: 44px; width: auto; margin: 0; padding: 2px 1px; display: flex; align-items: center;
+  justify-content: center; text-align: center; font: inherit; font-size: 12px; font-weight: 800; line-height: 1.1;
+  color: var(--tb-ink); background: var(--tb-paper-2); border: 2px solid var(--tb-ink); border-radius: 0;
+  box-shadow: inset -2px -2px 0 rgba(0, 0, 0, 0.18); cursor: pointer; box-sizing: border-box;
+}
+#player-list-panel #town-tabs .town-tab.active { background: var(--tb-accent); color: var(--tb-accent-ink); box-shadow: inset 2px 2px 0 rgba(0, 0, 0, 0.25); }
+#player-list-panel #town-tabs .town-tab:focus-visible { outline: 3px solid var(--ac-orange); outline-offset: 1px; }
+.town-pane.hidden { display: none !important; }
+#town-quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 6px; }
+#town-quick-grid > * {
+  margin: 0 !important; min-height: 44px; padding: 2px 3px !important; display: flex !important; align-items: center;
+  justify-content: center; box-sizing: border-box; width: 100%; font: inherit; font-size: 12px !important; font-weight: 700;
+  color: var(--tb-ink) !important; background: var(--tb-paper-2) !important; border: 2px solid var(--tb-ink) !important;
+  border-radius: 0 !important; box-shadow: inset -2px -2px 0 rgba(0, 0, 0, 0.15); text-decoration: none; text-align: center;
+  line-height: 1.15; cursor: pointer;
+}
+#town-quick-grid > *:active { box-shadow: inset 2px 2px 0 rgba(0, 0, 0, 0.25); }
+#town-quick-grid > #achievements-badge { color: var(--tb-gold) !important; }
+#stat-block { display: grid; grid-template-columns: 1fr auto; margin: 6px 0 0; border: 2px solid var(--tb-ink); font-size: 12px; color: var(--tb-ink); background: var(--tb-paper); }
+#stat-block dt, #stat-block dd { margin: 0; padding: 4px 6px; border-bottom: 1px dashed rgba(43, 29, 20, 0.35); line-height: 1.3; }
+#stat-block dd { font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; }
+#stat-block dt:last-of-type, #stat-block dd:last-of-type { border-bottom: 0; }
+#town-pane-stats #status-row { border-top: 0; margin-top: 0; gap: 3px; }
+#town-pane-stats #streak-badge, #town-pane-stats #town-rating { border: 2px solid var(--tb-ink); background: var(--tb-paper-2); color: var(--tb-ink); }
+#settings-section > button, #settings-section > a { border-radius: 0; }
+/* Inventory: the same hard-edged pixel panel. */
+#inventory-panel { border-radius: 0; border: 3px solid var(--tb-ink); background: var(--tb-paper); box-shadow: var(--tb-shadow); }
+/* Toasts, banners, hint pills, chat and the touch buttons share the same hard-edged look. */
+#achievement-toast, #whats-new-banner, #gate-pointer, #build-mode-banner, #realm-gate-hint, #dig-hole-hint,
+#isles-sign-hint, #postcards-hint, #fish-hint-btn, #gift-hint-btn, #walkie-talk-btn, #memo-inbox-btn, #chat-panel,
+#chat-input, #chat-send-btn, #quick-chat-row button, #emote-toggle-btn, #tilt-toggle-btn, .ab-btn, #where-to-btn, #panel-toggle {
+  border-radius: 0 !important;
+}
+#achievement-toast, #whats-new-banner, #gate-pointer, #build-mode-banner { border: 3px solid var(--tb-ink) !important; box-shadow: var(--tb-shadow) !important; }
+#chat-panel { border: 3px solid var(--tb-ink); box-shadow: var(--tb-shadow); }
+#quick-chat-row button, #chat-send-btn, #where-to-btn { border: 2px solid var(--tb-ink) !important; box-shadow: inset -2px -2px 0 rgba(0, 0, 0, 0.18); }
+#walkie-talk-btn, .ab-btn, #emote-toggle-btn, #tilt-toggle-btn { border: 3px solid var(--tb-ink) !important; }
+.join-card, .achievements-card { border-radius: 0 !important; border: 3px solid var(--tb-ink) !important; box-shadow: 4px 4px 0 var(--tb-ink) !important; }
+.join-card h1 { letter-spacing: 0.04em; text-shadow: 2px 2px 0 rgba(43, 29, 20, 0.25); }
+#join-btn, #join-offline-btn, #join-continue, .join-card input, .species-tab, .avatar-choice { border-radius: 0 !important; }
+#join-btn, #join-offline-btn { border: 3px solid var(--tb-ink) !important; box-shadow: 3px 3px 0 var(--tb-ink) !important; }
+#join-btn:active, #join-offline-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--tb-ink) !important; }
+/* Crisp pixels: the world is pixel art, so the canvas scales without smoothing (CSS only, no per-frame cost). */
+#game-container canvas { image-rendering: pixelated; }

@@ -4590,15 +4590,32 @@ class TownScene extends Phaser.Scene {
     const btn = document.getElementById('settings-toggle-btn');
     const section = document.getElementById('settings-section');
     if (!btn || !section) return;
+    // 8-bit menu: one panel, three tabs (Town / Stats / More). "More" is this settings toggle (same id, same remembered
+    // settingsOpen key): opening it shows the settings pane, tapping it again goes back to the Town tab.
     let open = loadSave().settingsOpen === true;
+    let pane = open ? 'more' : 'town';
+    const panes = { town: document.getElementById('town-pane-town'), stats: document.getElementById('town-pane-stats'), more: section };
+    const tabs = Array.from(document.querySelectorAll('#town-tabs .town-tab'));
     const render = () => {
-      section.classList.toggle('hidden', !open);
-      btn.textContent = open ? '⚙️ Settings ▴' : '⚙️ Settings ▾';
+      open = pane === 'more';
+      Object.keys(panes).forEach((k) => { if (panes[k]) panes[k].classList.toggle('hidden', k !== pane); });
+      tabs.forEach((t) => {
+        const on = t.dataset.pane === pane;
+        t.classList.toggle('active', on);
+        t.setAttribute('aria-selected', String(on));
+      });
+      btn.textContent = '☰ More';
+      if (pane === 'stats') this.renderHeroLine();
     };
+    this.setTownTab = (next) => { pane = panes[next] ? next : 'town'; render(); };
     render();
+    tabs.forEach((t) => {
+      if (t === btn) return;
+      t.addEventListener('click', () => { pane = t.dataset.pane; if (open) writeSave({ settingsOpen: false }); render(); });
+    });
     btn.addEventListener('click', () => {
-      open = !open;
-      writeSave({ settingsOpen: open });
+      pane = pane === 'more' ? 'town' : 'more';
+      writeSave({ settingsOpen: pane === 'more' });
       render();
     });
     // Device-only "Suggest or report a bug" box (shared/mm-feedback.js: localStorage only, no network).
@@ -9000,7 +9017,43 @@ class TownScene extends Phaser.Scene {
     this.noticeBoardText.setText(['TOP SCORES', ...lines].join('\n'));
   }
 
+  // Hero line (name · stars · trophies) and the plain stat block in the Stats tab. Text only (textContent), cheap: it
+  // runs when the player list re-renders (score changes), never per frame.
+  renderHeroLine() {
+    const nameEl = document.getElementById('hero-name');
+    const statsEl = document.getElementById('hero-stats');
+    const block = document.getElementById('stat-block');
+    if (!nameEl || !statsEl) return;
+    const name = censorBlockedTerms((this.selfData && this.selfData.name) || 'You');
+    const stars = this.localScore || 0;
+    const ach = this.achievementsUnlocked ? this.achievementsUnlocked.size : 0;
+    const cap = typeof ACHIEVEMENTS !== 'undefined' ? ACHIEVEMENTS.length : 0;
+    if (nameEl.textContent !== name) nameEl.textContent = name;
+    const line = `⭐ ${stars} · 🏆 ${ach}/${cap}`;
+    if (statsEl.textContent !== line) statsEl.textContent = line;
+    if (!block) return;
+    const txt = (id) => ((document.getElementById(id) || {}).textContent || '0');
+    const rows = [
+      ['⭐ Stars', String(stars)],
+      ['🏆 Trophies', `${ach}/${cap}`],
+      ['🏛️ Museum', `${txt('museum-count')}/${txt('museum-cap')}`],
+      ['🐟 Fish', txt('fish-count')],
+      ['🦋 Bugs', txt('bug-count')],
+      ['🔥 Streak', txt('streak-count')],
+    ];
+    const key = rows.map((r) => r.join('=')).join('|');
+    if (block.dataset.key === key) return;
+    block.dataset.key = key;
+    block.textContent = '';
+    rows.forEach(([k, v]) => {
+      const dt = document.createElement('dt'); dt.textContent = k;
+      const dd = document.createElement('dd'); dd.textContent = v;
+      block.appendChild(dt); block.appendChild(dd);
+    });
+  }
+
   renderPlayerList() {
+    this.renderHeroLine();
     const listEl = document.getElementById('player-list');
     listEl.innerHTML = '';
     const sorted = Array.from(this.allPlayers.values()).sort((a, b) => (b.score || 0) - (a.score || 0));

@@ -83,6 +83,7 @@ const { launch, scene, check, done, expandPanel } = require('./helpers');
   await page.waitForTimeout(500);
   check('phone: A button pulls a weed', await scene(page, (s) => s.weedsPulledToday.has(2)));
   await expandPanel(page);
+  await page.click('#town-tab-stats'); await page.waitForTimeout(150); // town-8bit: status lines live in the Stats tab of the menu panel
   const tidyBox = await page.evaluate(() => { const r = document.getElementById('town-tidy').getBoundingClientRect(); return { l: r.left, r: r.right, w: r.width }; });
   check('phone: tidiness readout on screen', tidyBox.w > 0 && tidyBox.l >= 0 && tidyBox.r <= 390, JSON.stringify(tidyBox));
   if (process.env.SHOTS) await page.screenshot({ path: process.env.SHOTS + '/weeds-phone.png' });
