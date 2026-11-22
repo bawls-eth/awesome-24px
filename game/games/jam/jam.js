@@ -879,6 +879,9 @@
     overlay.appendChild(el('p', practice ? 'Practice at ' + Math.round(practice.speed * 100) + '% speed. Nothing is scored.' : relax ? 'Relax mode. Nothing is scored; the song waits for you.' : 'The song waits for you.', 'dim'));
     var row = el('div', undefined, 'row');
     var r = btn('Resume', resume); r.id = 'resume'; row.appendChild(r);
+    // restart from the top without a trip through the menu (same chart, same mode; a concert restarts its current song)
+    var sid = songId, tr = tier, o = practice ? { practice: { speed: practice.speed, loop: practice.loopBars } } : relax ? { relax: true } : undefined;
+    var rs = btn('Restart', function () { releaseAll(); paused = false; navPaused = false; mode = 'menu'; stopAudioForMenu(); startSong(sid, tr, o); }); rs.id = 'restart'; row.appendChild(rs);
     var q = btn('Quit to songs', quit); q.id = 'quit'; row.appendChild(q);
     overlay.appendChild(row);
   }

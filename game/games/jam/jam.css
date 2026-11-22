@@ -94,3 +94,5 @@ body[data-relax="1"] #progress-bar { background:#8ecae6; }
 #overlay p.pb { color:#fff3b0; font-weight:bold; }
 #overlay p.goal { background:var(--panel); border-left:4px solid var(--accent); padding:6px 10px; border-radius:6px; }
 #hud-song:empty { display:none; }
+/* phones: taller touch pads use the free space under the lanes (easier to hit without looking) */
+@media (pointer: coarse) and (min-height: 700px) { #pads .pad { min-height:96px; } }

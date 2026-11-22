@@ -54,6 +54,15 @@ const box = (p, sel) => p.evaluate((s) => { const e = document.querySelector(s);
   await p.evaluate((t) => window.__jam.at(t), n11 + 200); // let note 11 slip past
   const b1 = await p.evaluate(() => ({ banner: window.__jam.banner, combo: window.__jam.run.combo, miss: window.__jam.run.counts.miss }));
   check('losing a 10+ combo shows a neutral "Combo ended at 10" notice', b1.banner === 'Combo ended at 10' && b1.combo === 0 && b1.miss >= 1, JSON.stringify(b1));
+  const pads = await p.evaluate(() => [...document.querySelectorAll('#pads .pad')].map((b) => { const r = b.getBoundingClientRect(); return { h: r.height, w: r.width, bottom: r.bottom }; }));
+  check('phone: touch pads are tall (>= 88 px) and fully on screen', pads.length === 4 && pads.every((b) => b.h >= 88 && b.w >= 44 && b.bottom <= 844), JSON.stringify(pads));
+  // ---- pause card: one-tap Restart ----
+  await p.evaluate(() => window.__jam.pause());
+  const rsb = await box(p, '#restart');
+  check('pause card offers Restart as a >= 44 px button', rsb && rsb.h >= 44 && rsb.w >= 44, JSON.stringify(rsb));
+  await p.tap('#restart');
+  const rs = await p.evaluate(() => ({ mode: window.__jam.mode, now: window.__jam.now, run: window.__jam.run, ms: window.__jam.milestones, paused: window.__jam.paused, song: window.__jam.chart.song, overlay: document.getElementById('overlay').hidden }));
+  check('Restart starts the same chart from the top with a fresh run', rs.mode === 'play' && rs.now === 0 && !rs.paused && rs.overlay && rs.song === 'warm-embers' && rs.run.score === 0 && rs.run.combo === 0 && rs.ms.length === 0, JSON.stringify(rs));
   await p.evaluate(() => window.__jam.menu());
 
   // ---- results: Play again near the top, next goal, personal best, R restarts ----
