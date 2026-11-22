@@ -29,7 +29,7 @@
   var save = M.cleanSave(S.get(KEY, null));
   var wk = null, spoiledNote = 0, msgText = '';
   // Hub medal summary: its own additive key, read by the hub page only.
-  function persist() { S.set(KEY, save); try { var m = ['bronze', 'silver', 'gold'].filter(function (k) { return save.medals && save.medals[k] === true; }); window.localStorage.setItem('pixeltown-medals-stalk-v1', JSON.stringify({ v: 1, m: m })); } catch (e) { /* storage blocked */ } }
+  function persist() { S.set(KEY, save); try { var m = ['bronze', 'silver', 'gold'].filter(function (k) { return save.medals && save.medals[k] === true; }); window.localStorage.setItem('pixeltown-medals-stalk-v1', JSON.stringify({ v: 1, m: m })); } catch (e) { /* storage blocked */ } try { window.MMHubProfile.sync(localStorage, 'stalk', [(save.invested > 0 || save.played >= 1) && 'trade'].concat(m)); } catch (e) { /* hub map progress is optional */ } }
 
   function sync() {
     var w = curWeek();

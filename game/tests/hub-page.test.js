@@ -48,7 +48,9 @@ async function tap(page, id) {
   await idle(pg);
   check('tapping a reachable node walks the villager there', (await pg.evaluate(() => window.__hub.at)) === 'w0-first');
   check('arrival opens the node card with the title', !(await pg.locator('#card').isHidden()) && (await pg.textContent('#card-title')) === 'First Steps');
-  check('no real page for First Steps: shows Coming soon, no Play link', (await pg.locator('#card-soon').isVisible()) && (await pg.locator('#card-play').isHidden()));
+  // First Steps is a cross-game goal (no page of its own): the card lists the goal instead of a "Coming soon" dead end.
+  const fsGoal = await pg.evaluate(() => [...document.querySelectorAll('#card-goals li')].map((l) => l.textContent));
+  check('First Steps card lists its goal (no Coming soon, no Play link)', (await pg.locator('#card-soon').isHidden()) && (await pg.locator('#card-play').isHidden()) && fsGoal.length === 1 && /any game/.test(fsGoal[0]), JSON.stringify(fsGoal));
   await pg.keyboard.press('Escape');
   check('Escape closes the card', await pg.locator('#card').isHidden());
 

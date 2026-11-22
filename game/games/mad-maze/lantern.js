@@ -61,7 +61,10 @@
   function save() {
     profile = P.clean(profile);
     try { localStorage.setItem(KEY, JSON.stringify(profile)); } catch (e) { say('Could not save here (storage is blocked).', true); }
+    hubReport();
   }
+  // Hub map progress (MMHubProfile, its own key): milestones this save and the Realm finds already show.
+  function hubReport() { try { var hs = profile.heroes.concat(profile.hall), top = hs.reduce(function (n, h) { return Math.max(n, h.level || 0); }, 0); window.MMHubProfile.sync(localStorage, 'lantern', [hs.length > 0 && 'hero1', !!(S && S.readFinds(localStorage).recent.some(function (f) { return f.src === 'dungeon'; })) && 'warren', top >= 5 && 'level5', top >= 10 && 'level10', profile.hall.some(function (h) { return h.how === 'retire'; }) && 'retire']); } catch (e) { /* hub map progress is optional */ } }
   function loadActive() {
     var raw = null;
     try { raw = localStorage.getItem(ACTIVE_KEY); } catch (e) { raw = null; }
@@ -634,6 +637,7 @@
   // another tab (a Realm World or Warren run) paid finds into the stash: reload, so a later save here never writes an older copy
   window.addEventListener('storage', function (e) { if (e.key === KEY || e.key === null) { profile = load(); render(); } });
   selected = loadActive().heroId;
+  hubReport();
   render();
   renderNote();
   if (settled && settled.ok && (settled.items || settled.fame)) say(S.text(settled).replace(/, \+\d+ shards/, '') + ' from your travels.');

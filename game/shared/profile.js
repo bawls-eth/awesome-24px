@@ -133,5 +133,93 @@
   // Storage convenience for games: load, report, save.
   function report(storage, result, now) { const p = reportResult(load(storage, now), result); save(storage, p); return p; }
 
-  return { KEY, TOWN_KEY, MAX_RESULTS, defaults, sanitize, seedFromTown, load, save, reportResult, report };
+  // ---------- game milestones (hub map progress) ----------
+  // Each game passes the milestone ids its OWN save already shows (one line, on load and after each save); sync()
+  // reports every id once (remembered in profile.games[game].done), so a reload never adds Tokens twice. Only the
+  // profile key is written, and only when something new was reached. hit = [node, exit, medal|null].
+  const TOKENS = 10;
+  const COMETS = ['w6-night', 'w6-remix', 'w6-hardcore', 'w6-trout', 'w6-expert'];
+  const ms = (id, label, ...hits) => ({ id, label, hits: hits.map((h) => ({ node: h[0], exit: h[1] || 'normal', medal: h[2] || null })) });
+  const MILESTONES = {
+    jam: [ms('play', 'Finish a song', ['w5-jam']), ms('star1', 'Earn a first star', ['w5-jam', 'normal', 'b']),
+      ms('stars12', 'Earn 12 stars', ['w5-jam', 'normal', 's']), ms('fullcombo', 'Full combo a song', ['w5-jam', 'normal', 'g']),
+      ms('hard3', '3 stars on a Hard song', ['w6-expert', 'normal', 'b'])],
+    bugs: [ms('catch1', 'Catch a first bug', ['w5-safari', 'normal', 'b']), ms('stars6', 'Earn 6 stars', ['w5-safari', 'normal', 's']),
+      ms('rare', 'Catch a Gold Beetle or a Moonwing', ['w5-safari', 'secret']), ms('stars24', 'Earn 24 stars', ['w5-safari', 'normal', 'g'])],
+    stalk: [ms('trade', 'Buy your first stalks', ['w5-stalk']), ms('bronze', 'Bronze week (500 profit)', ['w5-stalk', 'normal', 'b']),
+      ms('silver', 'Silver week (2000 profit)', ['w5-stalk', 'normal', 's']), ms('gold', 'Gold week (10000 profit)', ['w5-stalk', 'normal', 'g'])],
+    angler: [ms('catch1', 'Catch a first fish', ['w4-angler', 'normal', 'b']), ms('species10', 'Log 10 species', ['w4-angler', 'normal', 's']),
+      ms('west', 'Log a West Pond fish', ['w4-west', 'normal', 'b']), ms('east', 'Log an East Pond fish', ['w4-east', 'normal', 'b']),
+      ms('river', 'Log a River fish', ['w4-river', 'secret', 'b']), ms('pier', 'Log a Sea Pier fish', ['w4-pier', 'normal', 'b']),
+      ms('whiskers', 'Land Old Whiskers', ['w4-whiskers', 'normal', 'b']), ms('trout', 'Catch the Golden River Trout', ['w6-trout', 'normal', 'b'])],
+    deepdelve: [ms('dig', 'Dig below the surface', ['w3-deepdelve', 'normal', 'b']), ms('bronze', 'Reach depth 8', ['w3-depth8', 'normal', 'b']),
+      ms('silver', 'Craft an iron pick', ['w3-iron', 'normal', 'b']), ms('secret', 'Find the Lava Lake', ['w3-lava', 'secret', 'b']),
+      ms('depth20', 'Reach depth 20', ['w3-deepdelve', 'normal', 's']), ms('depth40', 'Reach depth 40', ['w3-deepdelve', 'normal', 'g']),
+      ms('wyrm', 'Beat the Rock Wyrm', ['w3-crystal', 'normal', 'b'])],
+    lantern: [ms('hero1', 'Make a first hero', ['w2-lantern', 'normal', 'b']), ms('warren', 'Bring a Warren find home', ['w2-burrow', 'normal', 'b']),
+      ms('level5', 'A hero reaches level 5', ['w2-catacombs', 'normal', 'b']), ms('level10', 'A hero reaches level 10', ['w2-keep', 'normal', 'b'], ['w2-lantern', 'normal', 's']),
+      ms('retire', 'Retire a hero at level 20', ['w2-lantern', 'normal', 'g'])],
+  };
+  const GAMES = Object.keys(MILESTONES);
+  // Cross-game goals, derived from the games' done lists (never from anything else).
+  const FESTIVAL = [['bugs', 'catch1'], ['jam', 'star1'], ['stalk', 'bronze']];
+  const DERIVED = [
+    { node: 'w0-first', label: 'Reach a first milestone in any game', test: (n) => n >= 1 },
+    { node: 'w0-sparkle', label: 'Reach a milestone in 3 different games', test: (n) => n >= 3 },
+    { node: 'w0-practice', label: 'Reach a milestone in all 6 games', test: (n) => n >= GAMES.length },
+    { node: 'w5-finale', label: 'Bug Safari first bug, Jam first star and a Stalk bronze week', test: (n, done) => FESTIVAL.every((f) => done(f[0]).includes(f[1])) },
+  ];
+  const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+  function doneOf(p, game) {
+    const g = isObj(p.games) && own(p.games, game) && isObj(p.games[game]) ? p.games[game] : {};
+    const ok = MILESTONES[game].map((m) => m.id);
+    return uniq(strList(g.done, 64).filter((id) => ok.includes(id)));
+  }
+  function applyHit(p, h, tokens) {
+    p = reportResult(p, { node: h.node, exit: h.exit, medals: h.medal ? [h.medal] : [], tokens });
+    if (COMETS.includes(h.node) && !p.comets.includes(h.node)) p.comets = p.comets.concat([h.node]);
+    return p;
+  }
+  // Pure: {profile, added: [milestone ids]}.
+  function syncGame(profile, game, ids) {
+    let p = sanitize(profile);
+    if (!own(MILESTONES, game)) return { profile: p, added: [] };
+    const want = uniq((Array.isArray(ids) ? ids : []).filter((s) => typeof s === 'string'));
+    const done = doneOf(p, game);
+    const added = [];
+    MILESTONES[game].forEach((m) => {
+      if (!want.includes(m.id) || done.includes(m.id)) return;
+      m.hits.forEach((h, i) => { p = applyHit(p, h, i === 0 ? TOKENS : 0); });
+      done.push(m.id); added.push(m.id);
+    });
+    if (!added.length) return { profile: p, added };
+    p.games = Object.assign({}, p.games, { [game]: Object.assign({}, isObj(p.games[game]) ? p.games[game] : {}, { done }) });
+    const doneFor = (g) => doneOf(p, g);
+    const played = GAMES.filter((g) => doneFor(g).length > 0).length;
+    DERIVED.forEach((d) => {
+      const st = p.nodes[d.node];
+      if (d.test(played, doneFor) && !(st && st.exits.includes('normal'))) p = applyHit(p, { node: d.node, exit: 'normal', medal: 'b' }, TOKENS);
+    });
+    return { profile: p, added };
+  }
+  // Storage: report what is new for `game`; writes only the profile key, and only when something was added.
+  function sync(storage, game, ids, now) {
+    const raw = parse(read(storage, KEY));
+    const base = isObj(raw) ? sanitize(raw) : seedFromTown(read(storage, TOWN_KEY), now === undefined ? Date.now() : now);
+    const r = syncGame(base, game, ids);
+    if (r.added.length) save(storage, r.profile);
+    return r;
+  }
+  // Read-only: the goals that clear a map node ({game|null, id|null, label, done}).
+  function goalsFor(profile, nodeId) {
+    const p = sanitize(profile), out = [];
+    GAMES.forEach((g) => {
+      const done = doneOf(p, g);
+      MILESTONES[g].forEach((m) => { if (m.hits.some((h) => h.node === nodeId)) out.push({ game: g, id: m.id, label: m.label, done: done.includes(m.id) }); });
+    });
+    DERIVED.forEach((d) => { if (d.node === nodeId) out.push({ game: null, id: null, label: d.label, done: !!(p.nodes[nodeId] && p.nodes[nodeId].exits.includes('normal')) }); });
+    return out;
+  }
+
+  return { KEY, TOWN_KEY, MAX_RESULTS, MILESTONES, DERIVED, defaults, sanitize, seedFromTown, load, save, reportResult, report, syncGame, sync, goalsFor };
 }));

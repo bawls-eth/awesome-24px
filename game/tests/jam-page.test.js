@@ -90,7 +90,8 @@ const startChart = (p) => p.evaluate((c) => { window.__jam.start('warm-embers', 
   const stored = await p.evaluate((k) => JSON.parse(localStorage.getItem(k)), KEY);
   check('best score written to pixeltown-jam-v1', stored.best['warm-embers'].easy.score === 310 && stored.best['warm-embers'].easy.rank === 'C' && stored.best['warm-embers'].easy.stars === 1 && stored.plays === 1);
   check('stored save has only known keys', ['best', 'hint', 'plays', 'unlocked', 'v'].every((k) => k in stored) && Object.keys(stored).every((k) => ['best', 'hint', 'plays', 'unlocked', 'v', 'hist', 'ghost', 'offsetMs', 'fullCombo', 'prefs', 'concert'].includes(k)), Object.keys(stored).join());
-  check('no other localStorage keys written', await p.evaluate(() => Object.keys(localStorage).every((k) => k === 'pixeltown-jam-v1' || k === 'pixeltown-nav-v1')), await p.evaluate(() => Object.keys(localStorage).join()));
+  // pixeltown-profile-v1: the hub map progress key (MMHubProfile.sync reports the first song)
+  check('no other localStorage keys written', await p.evaluate(() => Object.keys(localStorage).every((k) => k === 'pixeltown-jam-v1' || k === 'pixeltown-nav-v1' || k === 'pixeltown-profile-v1')), await p.evaluate(() => Object.keys(localStorage).join()));
   await p.reload(); await p.waitForFunction(() => window.__jam);
   check('best survives reload and shows on the card', await p.evaluate(() => window.__jam.save.best['warm-embers'].easy.score === 310 && document.querySelector('.card[data-song=warm-embers]').textContent.includes('Easy 310 C')));
   // a worse run does not lower the best; a perfect run unlocks the next song

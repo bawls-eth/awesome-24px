@@ -122,7 +122,7 @@
   }
   function loadMeta() { try { return sanitiseMeta(localStorage.getItem(META_KEY)); } catch (e) { return sanitiseMeta(null); } }
   // Hub medal summary: this game's own additive key, read by the hub page only.
-  function hubMedals() { try { const g = meta.goals, m = ['bronze', 'silver', 'secret', 'depth20', 'depth40', 'crawler', 'wyrm', 'torches10'].filter((k) => g[k] === true); localStorage.setItem('pixeltown-medals-deepdelve-v1', JSON.stringify({ v: 1, m })); } catch (e) { /* storage blocked */ } }
+  function hubMedals() { try { const g = meta.goals, m = ['bronze', 'silver', 'secret', 'depth20', 'depth40', 'crawler', 'wyrm', 'torches10'].filter((k) => g[k] === true); localStorage.setItem('pixeltown-medals-deepdelve-v1', JSON.stringify({ v: 1, m })); } catch (e) { /* storage blocked */ } try { const g = meta.goals; window.MMHubProfile.sync(localStorage, 'deepdelve', [g.maxDepth >= 1 && 'dig'].concat(['bronze', 'silver', 'secret', 'depth20', 'depth40', 'wyrm'].filter((k) => g[k] === true))); } catch (e) { /* hub map progress is optional */ } }
   function saveMeta() { hubMedals(); try { localStorage.setItem(META_KEY, JSON.stringify(meta)); return true; } catch (e) { return false; } }
   // Read-only look at the old in-town cave keys; never writes or deletes anything on the town save.
   function readTownCave() {
