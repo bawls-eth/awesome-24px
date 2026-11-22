@@ -259,7 +259,7 @@
     let dMode = 'classic'; try { if (window.MMProfile) dMode = MMProfile.clean(localStorage.getItem(MMProfile.KEY)).mode; } catch (e) { dMode = 'classic'; }
     const maxDepth = Math.max(1, ...Object.keys(depth).map((k) => depth[k]));
     const scaleOf0 = (id, boss) => (DIFF ? DIFF.dungeonScale(biome, Math.max(1, depth[id] || 1), maxDepth, !!boss, { mode: dMode }) : { hp: 1, dmg: 1, spd: 1, count: 1, fire: 1 });
-    const scaleOf = (id, boss) => (MUT ? EG.applyMutators(scaleOf0(id, boss), MUT) : scaleOf0(id, boss));
+    const scaleOf = (id, boss) => (MUT && DIFF ? EG.applyMutators(scaleOf0(id, boss), MUT) : scaleOf0(id, boss));
     const SC = !!(DIFF || MUT); // a scale is applied at spawn time
 
     // ---- per-room layout: template, plan, counts ----
