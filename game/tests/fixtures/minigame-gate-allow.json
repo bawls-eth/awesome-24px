@@ -1,7 +1,1 @@
-[
-  "angler:focus:#back-hub",
-  "angler:focus:#back-town",
-  "stalk:focus:#back",
-  "bugs:focus:a.back \"← Hub\"",
-  "bugs:focus:a.back \"Town\""
-]
+[]
