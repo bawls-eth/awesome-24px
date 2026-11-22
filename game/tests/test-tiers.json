@@ -747,6 +747,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "dd-bands-golden.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "class-status-arena.test.js": {
     "class": "browser",
     "tier": "full"
