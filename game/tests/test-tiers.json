@@ -1314,5 +1314,9 @@
   "realm-chase-ui.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "dungeon-mutators.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

@@ -961,6 +961,14 @@
     const RETURN_RE = /^index\.html\?mode=world&seed=[A-Za-z0-9_-]{1,24}&at=\d{1,4},\d{1,4}(&test=1)?$/;
     const portalBtn = document.createElement('button'); portalBtn.id = 'rw-portal'; portalBtn.type = 'button'; portalBtn.className = 'hidden'; portalBtn.textContent = 'Enter Warren dungeon'; // retitled per portal biome in portalTick
     ov.appendChild(portalBtn);
+    // DV1: a z2+ portal names its dungeon's seeded mutator on a small label above the prompt (MMEndgame.mutatorsFor on the portal's own seed; ?mut=0 none)
+    const portalMut = document.createElement('div'); portalMut.id = 'rw-portal-mut'; portalMut.className = 'hidden'; portalMut.setAttribute('role', 'note'); ov.appendChild(portalMut);
+    const MUT_OFF = /[?&]mut=0(&|$)/.test(qs0);
+    function portalMutOf(i) {
+      const q = portals[i]; if (!q || MUT_OFF || !window.MMEndgame) return null;
+      let m = null; try { m = MMEndgame.mutatorsFor(BIOME_NAME[q.biome] ? q.biome : 'warren', undefined, portalSeed(i), {}); } catch (e) { m = null; }
+      return m && m.list.length ? m : null;
+    }
     let promptFor = -1; let leaving = false;
     // PLAYTEST-REVIEW-2 #14: no keyboard hints ("(Enter)", "(E)") on a coarse pointer / touch device
     const isCoarse = () => (typeof document !== 'undefined' && document.body.classList.contains('touch-device')) || (typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches);
@@ -991,6 +999,8 @@
       if (near !== promptFor) {
         promptFor = near; portalBtn.classList.toggle('hidden', near < 0);
         if (near >= 0) { const bn = BIOME_NAME[portals[near].biome] || 'Warren'; portalBtn.textContent = `Enter ${bn} dungeon`; portalBtn.setAttribute('aria-label', `Enter ${bn} dungeon (${portals[near].label}${isCoarse() ? '' : ', Enter'})`); }
+        const pm = near >= 0 ? portalMutOf(near) : null; portalMut.classList.toggle('hidden', !pm); portalMut.textContent = pm ? '✦ Mutator: ' + pm.label : ''; portalMut.title = pm ? pm.text : '';
+        if (pm) portalBtn.setAttribute('aria-label', portalBtn.getAttribute('aria-label') + ', mutator ' + pm.label);
       }
     }
 
@@ -1530,6 +1540,7 @@
         else { g.globalAlpha = 0.3; g.fillStyle = '#a98bff'; g.beginPath(); g.arc(q.x, q.y, 30, 0, 7); g.fill(); g.globalAlpha = 1; g.strokeStyle = '#a98bff'; g.lineWidth = 4; g.beginPath(); g.arc(q.x, q.y, 24, 0, 7); g.stroke(); }
         g.restore();
         g.font = 'bold 22px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(nxPortalName(q), q.x + 1, q.y - 37); g.fillStyle = '#e8dcff'; g.fillText(nxPortalName(q), q.x, q.y - 38);
+        const nm = nxMutOf(q); if (nm) { g.font = 'bold 16px system-ui, sans-serif'; g.fillStyle = '#000'; g.fillText('✦ ' + nm.label, q.x + 1, q.y - 59); g.fillStyle = '#c9b6ff'; g.fillText('✦ ' + nm.label, q.x, q.y - 60); }
       });
       L.npcs.forEach((n) => {
         const im = nxPortrait[n.npc]; const x = n.x; const y = n.y;
@@ -1537,6 +1548,11 @@
         else { const h = MMRng.hash(n.npc); g.fillStyle = '#000'; g.fillRect(x - 13, y - 14, 26, 36); g.fillStyle = 'hsl(' + (h % 360) + ',45%,48%)'; g.fillRect(x - 11, y - 12, 22, 32); g.fillStyle = '#f0cfa6'; g.beginPath(); g.arc(x, y - 22, 10, 0, 7); g.fill(); }
         g.font = 'bold 20px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(NPC_NAME[n.npc] || n.id, x + 1, y + 37); g.fillStyle = '#ffe27a'; g.fillText(NPC_NAME[n.npc] || n.id, x, y + 36);
       });
+    }
+    function nxMutOf(q) { // DV1: the seeded mutator of a Nexus dungeon portal (same seed as nxUrl), or null
+      if (!q || !BIOME_NAME[q.id] || !window.MMEndgame || MUT_OFF) return null;
+      let m = null; try { m = MMEndgame.mutatorsFor(q.id, undefined, String(MMRng.hash(seed + ':nexus:' + q.id) % 100000), {}); } catch (e) { m = null; }
+      return m && m.list.length ? m : null;
     }
     function nxSay(name, text) { const t = nxDom.talk; t.textContent = ''; const b = document.createElement('b'); b.textContent = name + ': '; t.appendChild(b); t.appendChild(document.createTextNode(text)); nxDom.last = { name, text }; }
     function nxUrl(biome) { // dungeon trip that returns to the tile the player left from
@@ -1659,6 +1675,7 @@
       const spot = (x, y, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'nx-spot'; b.tabIndex = -1; b.setAttribute('aria-hidden', 'true'); b.style.left = (x / cv.width * 100) + '%'; b.style.top = (y / cv.height * 100) + '%'; b.addEventListener('click', fn); stage.appendChild(b); };
       if (!NX_WALK) L.portals.forEach((q) => {
         const b = document.createElement('button'); b.type = 'button'; b.dataset.portal = q.id; b.textContent = q.id === 'realm' ? 'Back to the Realm portal' : q.id === 'vault' ? 'Lantern vault: your stash' : q.label + ' portal'; b.setAttribute('aria-label', q.id === 'vault' ? 'Lantern vault portal: open the Lantern stash' : q.id === 'realm' ? 'Realm portal: go back to the Realm' : 'Enter the ' + q.label + ' dungeon');
+        { const m = nxMutOf(q); if (m) { b.title = 'Mutator: ' + m.text; b.dataset.mut = m.ids.join(','); b.setAttribute('aria-label', b.getAttribute('aria-label') + ', mutator ' + m.label); } } // DV1: the dungeon's seeded mutator (same seed as nxUrl)
         b.addEventListener('click', () => nxPortal(q)); rowP.appendChild(b); spot(q.x, q.y, () => nxPortal(q));
       });
       if (!NX_WALK) L.npcs.forEach((n) => {

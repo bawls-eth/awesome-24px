@@ -443,3 +443,17 @@ body.mm-hud-big #rw-nexus .nx-talk, body.mm-hud-big #rw-nexus .nx-stall { font-s
 @media (max-width: 679px) {
   body.mm-nav-on.mm-nav-realm #realm-hero { padding-top: calc(var(--mm-nav-top, 8px) + var(--mm-nav-y, 0px) + var(--mm-nav-size, 48px) + 8px) !important; }
 }
+
+/* DV1: the dungeon mutator chip (under the map button, beside it) and the deep-run choice after a boss */
+#mm-mut { position: fixed; left: calc(62px + env(safe-area-inset-left, 0px)); top: calc(86px + env(safe-area-inset-top, 0px)); z-index: 33; max-width: calc(100vw - 190px); box-sizing: border-box; padding: 4px 10px; border-radius: 12px; background: rgba(20, 12, 40, 0.78); border: 1px solid rgba(201, 182, 255, 0.55); color: #e8dcff; font: 600 12px system-ui, sans-serif; pointer-events: none; overflow-wrap: anywhere; }
+@media (max-width: 600px) { #mm-mut { top: calc(120px + env(safe-area-inset-top, 0px)); } }
+#mm-deep { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(24px + env(safe-area-inset-bottom, 0px)); z-index: 40; width: min(420px, calc(100vw - 32px)); box-sizing: border-box; padding: 10px 12px; border-radius: 12px; background: rgba(16, 10, 34, 0.94); border: 2px solid rgba(255, 212, 90, 0.6); color: #f3eefc; font: 14px/1.4 system-ui, sans-serif; }
+body.touch-device #mm-deep { bottom: calc(200px + env(safe-area-inset-bottom, 0px)); }
+#mm-deep p { margin: 0 0 8px; overflow-wrap: anywhere; }
+#mm-deep .mm-deep-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+#mm-deep button { flex: 1 1 140px; min-height: 44px; min-width: 44px; padding: 0 12px; border-radius: 10px; border: 2px solid #a98bff; background: #2a2150; color: #fff; font: 700 14px system-ui, sans-serif; cursor: pointer; }
+#mm-deep #mm-deep-leave { border-color: #ffd45a; background: #3a2c10; }
+#mm-deep button:focus-visible { outline: 3px solid #ffe27a; }
+body:has(#mm-summary:not(.hidden)) #mm-deep, body:has(#mm-summary:not(.hidden)) #mm-mut { display: none; }
+#rw-portal-mut { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(226px + env(safe-area-inset-bottom, 0px)); z-index: 3; max-width: calc(100vw - 32px); box-sizing: border-box; padding: 3px 10px; border-radius: 12px; background: rgba(20, 12, 40, 0.82); border: 1px solid rgba(201, 182, 255, 0.6); color: #e8dcff; font: 600 12px system-ui, sans-serif; pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#rw-portal-mut.hidden { display: none; }
