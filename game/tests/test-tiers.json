@@ -1071,6 +1071,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "isle-reef-art.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "shared-mm-creature-strips.test.js": {
     "class": "node",
     "tier": "smoke"

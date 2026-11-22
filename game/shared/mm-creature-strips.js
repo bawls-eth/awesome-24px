@@ -1,7 +1,9 @@
 // MMCreatureStrips: real PNG animation strips for the Hearthvale Isles creatures (Codex b31a jungle-creatures-core, b32 jungle-big-and-boss,
 // b31b jungle-creatures-rest: vinecoil + canopy_glider, provisional; its moth_lantern has no MMCreatures def yet, so it is not wired;
 // b31af glimmerfrog sleep + eat; b32s the XL stegolith with saddle overlays + seat; b36 the seven Hearth Isle meadow tameables at their
-// size-class cells after the AW3 redo; b38a the reef puffer, all provisional).
+// size-class cells after the AW3 redo; b38a the reef puffer; b38b-f the rest of the Coral Reef: shellcrab, glowjelly (core 12 only),
+// fin raider (S), the tidesteed / skimray swim mounts (L, body + saddle overlays + per-frame seat) and the isleback turtle (XL, seat, no
+// saddle: it is ridden bare), all provisional).
 // The strip table below mirrors the batch manifests (the node test checks it against manifest.json). Each strip is one row of square
 // cells (4x pixel art: 192 / 256 / 384 / 512 px cells hold 48 / 64 / 96 / 128 px native art for the S / M / L / XL size classes), facing
 // down / up / right; left is the mirrored right. A strip's cell is its manifest frame_h (= the PNG height); the loader trusts the PNG.
@@ -21,6 +23,11 @@
   const B32S = '../../assets/arcane/b32s-stegolith/creatures/';
   const B36 = '../../assets/arcane/b36-meadow-creatures/enemies/';
   const B38A = '../../assets/arcane/b38a-reef-puffer/creatures/';
+  const B38B = '../../assets/arcane/b38b-shellcrab/creatures/';
+  const B38C = '../../assets/arcane/b38c-reef-mounts/creatures/';
+  const B38D = '../../assets/arcane/b38d-glowjelly/creatures/';
+  const B38E = '../../assets/arcane/b38e-fin-raider/creatures/';
+  const B38F = '../../assets/arcane/b38f-isleback-turtle/creatures/';
   const DIRS = ['down', 'up', 'right'];       // dir codes 0 1 2; code 3 = left (the right strip, mirrored)
   const DOWN = 0, UP = 1, RIGHT = 2, LEFT = 3;
   const SCALE = 4;                            // cells are 4x upscaled pixel art: draw at 1/4 (native) so every pixel stays crisp
@@ -58,7 +65,23 @@
       move: [[159, 171, 165, 153, 165, 171], [159, 171, 165, 153, 165, 171], [159, 171, 165, 153, 165, 171]] } }),
     oakback: MEADOW('oakback', { cell: 512, ax: 256, ay: 463 }),
     // b38a Coral Reef: the reef puffer (S, 192 px cells, feet 96,171, the 14 strips, death at 9 fps)
-    reef_puffer: { dir: B38A + 'reef_puffer/', cell: 192, ax: 96, ay: 171, acts: CORE.concat(['sleep', 'eat']), biome: 'reef', fps: { death: 9 } }
+    reef_puffer: { dir: B38A + 'reef_puffer/', cell: 192, ax: 96, ay: 171, acts: CORE.concat(['sleep', 'eat']), biome: 'reef', fps: { death: 9 } },
+    // b38b-f the rest of the reef: S shellcrab / glowjelly / fin raider (192, feet 96,171; the glowjelly has no sleep / eat), L tidesteed /
+    // skimray swim mounts (384, feet 192,347, saddle overlays, per-frame seat), XL isleback turtle (512, feet 256,463, seat, no saddle)
+    shellcrab: { dir: B38B + 'shellcrab/', cell: 192, ax: 96, ay: 171, acts: CORE.concat(['sleep', 'eat']), biome: 'reef' },
+    glowjelly: { dir: B38D + 'glowjelly/', cell: 192, ax: 96, ay: 171, acts: CORE.slice(), biome: 'reef' },
+    fin_raider: { dir: B38E + 'fin_raider/', cell: 192, ax: 96, ay: 171, acts: CORE.concat(['sleep', 'eat']), biome: 'reef' },
+    tidesteed: { dir: B38C + 'tidesteed/', cell: 384, ax: 192, ay: 347, acts: CORE.concat(['sleep', 'eat', 'saddle_idle', 'saddle_move']), biome: 'reef',
+      seat: { x: [192, 192, 180], idle: [[152, 148, 152, 156], [152, 148, 152, 156], [160, 156, 160, 164]],
+        move: [[152, 144, 148, 156, 160, 156], [152, 144, 148, 156, 160, 156], [160, 152, 156, 164, 168, 164]] } },
+    skimray: { dir: B38C + 'skimray/', cell: 384, ax: 192, ay: 347, acts: CORE.concat(['sleep', 'eat', 'saddle_idle', 'saddle_move']), biome: 'reef',
+      seat: { x: [192, 192, 184], idle: [[156, 152, 156, 160], [156, 152, 156, 160], [148, 144, 148, 152]],
+        move: [[156, 148, 152, 160, 164, 160], [156, 148, 152, 160, 164, 160], [148, 140, 144, 152, 156, 152]] } },
+    // sdy: the turtle's manifest seat (y 152-164) puts the rider inside the coral crown; drawn 6 native px lower, on the shell in front of
+    // the crown (the crown reads as a backrest). Only the drawn seat moves; the table still mirrors the manifest.
+    isleback_turtle: { dir: B38F + 'isleback_turtle/', cell: 512, ax: 256, ay: 463, acts: CORE.concat(['sleep', 'eat']), biome: 'reef', sdy: 6,
+      seat: { x: [256, 256, 232], idle: [[152, 148, 152, 156], [152, 148, 152, 156], [160, 156, 160, 164]],
+        move: [[152, 144, 148, 156, 156, 152], [152, 144, 148, 156, 156, 152], [160, 152, 156, 164, 164, 160]] } }
   };
   const KINDS = Object.keys(SPECS);
   const has = (o, k) => !!o && Object.prototype.hasOwnProperty.call(o, k);
@@ -141,7 +164,7 @@
     const ys = sp.seat[moving ? 'move' : 'idle'][d];
     const f = ((frame | 0) % ys.length + ys.length) % ys.length;
     out.x = (sp.seat.x[d] - sp.ax) / SCALE * (dir === LEFT ? -1 : 1);
-    out.y = (sp.ay - ys[f]) / SCALE;
+    out.y = (sp.ay - ys[f]) / SCALE - (sp.sdy || 0);
     return true;
   }
   // flip: a left-facing strip is the right strip mirrored; down-only actions (sleep, eat) never mirror
