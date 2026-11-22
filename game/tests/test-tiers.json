@@ -1174,5 +1174,9 @@
   "arena-p2-hotpath.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "gear-save-fixes-2.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

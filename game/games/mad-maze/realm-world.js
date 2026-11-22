@@ -672,6 +672,12 @@
     function giveBag(x, y, bag, info) {
       const got = { zone: info.zone, boss: !!info.boss, tier: bag.tier, items: [], shards: bag.shards, potions: bag.potions };
       const rolls = []; let toasted = false;
+      // review F12: the pity counter lives in storage and another world tab may have spent (or raised) it since this page loaded: re-read it right
+      // before a boss roll / pityStep, so two tabs at b = 60 give ONE forced T12, not two. Unreadable storage keeps the in-memory value.
+      if (GEAR_ON && info.tag && info.boss) {
+        let raw = null; try { raw = localStorage.getItem(SAVE_KEY); } catch (e) { raw = null; }
+        if (raw) { const st = cleanSave(raw); if (st.gp) save.gp = { b: st.gp.b, d: st.gp.d }; else delete save.gp; }
+      }
       bag.items.forEach((it, k) => {
         let g = gearRollItem(info, k, it, bag); rolls.push(g);
         let id = it.id; let gear = null;
@@ -1013,6 +1019,7 @@
         try {
           let best = null, bd = 30;
           arena.bags.forEach((b) => { if (b.active || !b.gear || b.id !== it.id || b.r !== it.r) return; const d = Math.hypot(b.x - arena.player.x, b.y - arena.player.y); if (d < bd) { bd = d; best = b; } });
+          if (it.t && !arena.save.gv && window.MMBackup && MMBackup.snapshotPregear) MMBackup.snapshotPregear(localStorage); // the pickup already carried the bag's tier (realm.js passes b.gear, review F11): same once-only snapshot
           if (best && !it.t) {
             const c = GM.clean({ n: it.n, id: it.id, r: it.r, t: best.gear.t, a: best.gear.a, sig: best.gear.sig });
             if (c && c.t) {
