@@ -383,6 +383,14 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-angler-golden.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "angler-depth2.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "shared-mm-splash.test.js": {
     "class": "node",
     "tier": "smoke"

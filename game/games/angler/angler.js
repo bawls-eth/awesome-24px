@@ -1,7 +1,13 @@
 // Lakeside Angler page. Canvas + DOM, no network. Logic lives in shared/mm-angler.js.
 (function () {
   'use strict';
-  const A = window.MMAngler, D = window.MMAnglerDepth, B = window.MMAnglerBoss, Store = window.MMStore, Rng = window.MMRng;
+  const A = window.MMAngler, D = window.MMAnglerDepth, B = window.MMAnglerBoss, I = window.MMAnglerIsles, Store = window.MMStore, Rng = window.MMRng;
+  // MG3: other games' saves are READ ONLY here (getItem only; Bug Safari and the isles are never written or consumed).
+  const peek = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+  const bugsRaw = () => peek(I.BUGS_KEY);
+  const coveOpen = () => I.cove.open(peek(I.ISLES_KEY));
+  const COVE = 'cove';
+  const spotName = (id) => (id === COVE ? 'Isles Cove' : A.SPOT_NAMES[id]);
   const KEY = 'pixeltown-angler-v1';
   const W = 320, H = 480, WATER = 170;
   const params = new URLSearchParams(location.search);
@@ -66,6 +72,7 @@
   function fixGear() {
     if (!A.journal.gearUnlocked(journal, 'rod', journal.gear.rod)) journal.gear.rod = 'stick';
     if (!A.journal.gearUnlocked(journal, 'lure', journal.gear.lure)) journal.gear.lure = 'none';
+    if (journal.bugBait && I.bug.unlocked(bugsRaw()).indexOf(journal.bugBait) < 0) journal.bugBait = '';
   }
   fixGear();
   // ?bait=N: digits only, clamped 0-99. Anything else is ignored. Never a purchase.
@@ -90,9 +97,11 @@
     const c = nowCtx();
     if (id === 'ice') return !A.iceOpen(c.month);
     if (id === 'mangrove') return A.journal.speciesCount(journal) < MANGROVE_NEEDS;
+    if (id === COVE) return !coveOpen();
     return false;
   }
   function lockReason(id) {
+    if (id === COVE) return 'Visit the Coral Reef isle';
     if (id === 'ice') return 'Open Dec-Feb';
     if (id === 'mangrove') return 'Catch ' + MANGROVE_NEEDS + ' species';
     return '';
@@ -100,13 +109,13 @@
   function setMsg(t) { $('msg').textContent = t; }
 
   function pickSpot(id) {
-    if (A.SPOTS.indexOf(id) < 0 || spotLocked(id)) return false;
+    if ((A.SPOTS.indexOf(id) < 0 && id !== COVE) || spotLocked(id)) return false;
     if (g.state !== 'idle') return false;
     if (g.tour && id !== D.tournament.forDay(today()).spot) return false;
-    g.spot = id; renderSpots(); setMsg(idleMsg()); $('spot-title').textContent = A.SPOT_NAMES[id];
+    g.spot = id; renderSpots(); setMsg(idleMsg()); $('spot-title').textContent = spotName(id);
     return true;
   }
-  const idleMsg = () => 'Press, click or tap to cast at ' + A.SPOT_NAMES[g.spot] + '.';
+  const idleMsg = () => 'Press, click or tap to cast at ' + spotName(g.spot) + '.';
 
   // ---- flow ----
   function cast() {
@@ -119,6 +128,8 @@
       journal = tk.journal; saveJournal();
       g.cf = D.tournament.castFor(today(), tk.n);
       g.bite = A.bite(rng); g.bite.wait = g.cf.wait; // same bite for everyone; no bait in the tournament
+    } else if (g.spot === COVE) {
+      g.bite = A.bite(rng); // cove bait (kelp / shell / pearl) is never used up; Market bait stays in the bag here
     } else {
       g.bite = A.bite(rng);
       const u = D.economy.useBait(journal);
@@ -142,7 +153,7 @@
   function dismiss() {
     if (g.state !== 'result') return;
     $('result').hidden = true; g.fan = null; g.boss = false; g.surge = null; g.strain = 0; g.splash = null; bossUi(); g.state = 'idle'; g.reel = null; g.bite = null; g.fish = null; g.cf = null;
-    setMsg(g.tour ? 'Tournament: cast ' + (journal.tour.run ? journal.tour.run.used + 1 : '?') + '/' + D.CASTS + ' at ' + A.SPOT_NAMES[g.spot] + '.' : idleMsg()); renderSpots();
+    setMsg(g.tour ? 'Tournament: cast ' + (journal.tour.run ? journal.tour.run.used + 1 : '?') + '/' + D.CASTS + ' at ' + spotName(g.spot) + '.' : idleMsg()); renderSpots();
     if (g.tourResult) openTourney();
   }
   const OVERLAYS = ['journal', 'gear', 'tourney', 'market', 'aquarium'];
@@ -161,9 +172,10 @@
     const lair = A.journal.bossFor(journal, g.spot);
     let f;
     if (g.cf) f = A.BY_ID[g.cf.fish];
-    else if (g.forced) f = A.BY_ID[g.forced];
+    else if (g.forced) f = A.BY_ID[g.forced] || A.COVE_BY_ID[g.forced];
+    else if (g.spot === COVE) f = I.cove.roll(rng, journal.coveBait);
     else if (lair && lair.ready && (!g.bossGate || B.gateOpen(journal, lair.boss)) && rng() < g.bossChance) f = A.BY_ID[lair.boss];
-    else f = A.rollFish(rng, g.spot, c, { lure: journal.gear.lure, bait: g.baitUsed === 'plain', baitType: g.baitUsed });
+    else f = I.bug.rollFish(rng, g.spot, c, { lure: journal.gear.lure, bait: g.baitUsed === 'plain', baitType: g.baitUsed }, journal.bugBait);
     g.forced = null;
     if (!f) { finish('none', 'Nothing here', 'This spot is closed.'); return; }
     g.fish = f; g.size = g.cf ? g.cf.size : A.rollSize(rng, f, { big: g.baitUsed === 'big' }); g.boss = !!f.boss;
@@ -183,6 +195,7 @@
     renderSpots();
   }
   function land() {
+    if (g.fish.cove) { landCove(); return; }
     const f = g.fish, isNew = !journal.caught[f.id];
     const firstTrophy = f.boss && !journal.trophies[f.id];
     journal = A.journal.record(journal, f.id, g.size);
@@ -200,6 +213,14 @@
       RARITY[f.rarity] + ' (' + f.rarity + '/5) - ' + sizeWord(f, g.size) + ', ' + g.size + ' cm' + (f.boss ? ' - trophy in the Hall of Records' : '') + g.dropMsg + (g.tourPts ? ' - +' + g.tourPts + ' points' : ''));
   }
 
+  // Cove fish go to their own journal key: no stock, no bells, no bait drops (no currency here), just the collection.
+  function landCove() {
+    const f = g.fish, isNew = !journal.cove[f.id];
+    journal = I.cove.record(journal, f.id, g.size);
+    saveJournal(); renderStatus();
+    g.fan = { t: 0, big: f.rarity >= 4 };
+    finish('caught', (isNew ? 'New! ' : '') + f.name, RARITY[f.rarity] + ' (' + f.rarity + '/5) - ' + sizeWord(f, g.size) + ', ' + g.size + ' cm - cove fish ' + I.cove.count(journal) + '/' + A.COVE_FISH.length);
+  }
   function sizeWord(f, cm) {
     const s = f.size || [10, 30], q = (cm - s[0]) / Math.max(1, s[1] - s[0]);
     return q < 0.25 ? 'a tiny one' : q < 0.6 ? 'a nice one' : q < 0.9 ? 'a big one' : 'a whopper';
@@ -280,15 +301,16 @@
   // ---- DOM: spots / journal ----
   function renderSpots() {
     const box = $('spots'); box.textContent = '';
-    A.SPOTS.forEach((id) => {
+    if (g.spot === COVE && !coveOpen()) g.spot = 'west';
+    A.SPOTS.concat(coveOpen() ? [COVE] : []).forEach((id) => {
       const b = document.createElement('button');
       b.type = 'button'; b.className = 'btn' + (id === g.spot ? ' sel' : '');
       b.dataset.spot = id;
       const locked = spotLocked(id);
-      b.textContent = A.SPOT_NAMES[id] + (locked ? ' (' + lockReason(id) + ')' : '');
+      b.textContent = spotName(id) + (locked ? ' (' + lockReason(id) + ')' : '');
       if (locked) { b.classList.add('locked'); b.setAttribute('aria-disabled', 'true'); }
       if (g.state !== 'idle') b.disabled = true;
-      b.addEventListener('click', () => { if (locked) setMsg(A.SPOT_NAMES[id] + ': ' + lockReason(id) + '.'); else pickSpot(id); });
+      b.addEventListener('click', () => { if (locked) setMsg(spotName(id) + ': ' + lockReason(id) + '.'); else pickSpot(id); });
       box.appendChild(b);
     });
     if (ready) renderStatus();
@@ -308,6 +330,9 @@
     $('bells-val').textContent = String(journal.bells);
     $('bait-type').textContent = BAIT_NAMES[journal.baitType] + ' x' + D.economy.baitCount(journal, journal.baitType);
     $('gear-sum').textContent = GEAR_NAMES[journal.gear.rod] + ' / ' + GEAR_NAMES[journal.gear.lure];
+    const bs = $('bug-sum'), bt = journal.bugBait ? 'Bug bait: ' + I.BUG_BAITS[journal.bugBait].name : '';
+    if (bs.textContent !== bt) bs.textContent = bt;
+    bs.hidden = !bt;
     $('gear-btn').disabled = g.state !== 'idle';
   }
   function needText(r) {
@@ -333,6 +358,46 @@
         box.appendChild(b);
       });
     });
+    renderBugBaits();
+  }
+  // MG3 bait rows. Bug bait: one per Bug Safari species you have caught there (read-only), never used up, at most +10% bias.
+  function gearBtn(label, hint, sel, fn, data) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn' + (sel ? ' sel' : '');
+    Object.keys(data).forEach((k) => { b.dataset[k] = data[k]; });
+    b.setAttribute('aria-pressed', sel ? 'true' : 'false');
+    const t = document.createElement('span'); t.textContent = label;
+    const sm = document.createElement('small'); sm.textContent = hint;
+    b.appendChild(t); b.appendChild(sm); b.addEventListener('click', fn); return b;
+  }
+  function renderBugBaits() {
+    const box = $('bugbaits'); box.textContent = '';
+    const have = I.bug.unlocked(bugsRaw());
+    box.appendChild(gearBtn('No bug bait', 'plain hook', !journal.bugBait, () => setBugBait(''), { bug: '' }));
+    have.forEach((id) => box.appendChild(gearBtn(I.BUG_BAITS[id].name, I.BUG_BAITS[id].hint, journal.bugBait === id, () => setBugBait(id), { bug: id })));
+    $('bug-rule').textContent = have.length
+      ? have.length + ' bug bait(s) from your Bug Safari journal. They are never used up, and Bug Safari keeps every bug. Each nudges its fish by at most 10%.'
+      : 'Catch bugs in Bug Safari and each species becomes a bug bait here. Bug Safari keeps every bug.';
+    const open = coveOpen();
+    $('cove-gear').hidden = !open;
+    const cb = $('covebaits'); cb.textContent = '';
+    if (!open) return;
+    cb.appendChild(gearBtn('No cove bait', 'open-water fish', !journal.coveBait, () => setCoveBait(''), { coveBait: '' }));
+    A.COVE_BAITS.forEach((id) => {
+      const wants = A.COVE_FISH.filter((f) => f.bait === id).length;
+      cb.appendChild(gearBtn(I.COVE_BAIT_NAMES[id], wants + ' cove fish want it', journal.coveBait === id, () => setCoveBait(id), { coveBait: id }));
+    });
+  }
+  function setBugBait(id) {
+    if (g.state !== 'idle') return false;
+    const r = I.bug.set(journal, id, bugsRaw());
+    if (r.ok) { journal = r.journal; saveJournal(); renderBugBaits(); renderStatus(); }
+    return r.ok;
+  }
+  function setCoveBait(id) {
+    if (g.state !== 'idle') return false;
+    const r = I.cove.setBait(journal, id);
+    if (r.ok) { journal = r.journal; saveJournal(); renderBugBaits(); }
+    return r.ok;
   }
   function setGear(kind, id) {
     if (g.state !== 'idle' || (kind !== 'rod' && kind !== 'lure') || !A.journal.gearUnlocked(journal, kind, id)) return false;
@@ -416,9 +481,9 @@
     if (!r.ok) return false;
     journal = r.journal; saveJournal();
     g.tour = true; g.tourResult = null;
-    g.spot = D.tournament.forDay(day).spot; $('spot-title').textContent = A.SPOT_NAMES[g.spot];
+    g.spot = D.tournament.forDay(day).spot; $('spot-title').textContent = spotName(g.spot);
     closeOverlay('tourney'); renderSpots(); renderStatus();
-    setMsg('Tournament: cast ' + (journal.tour.run.used + 1) + '/' + D.CASTS + ' at ' + A.SPOT_NAMES[g.spot] + '.');
+    setMsg('Tournament: cast ' + (journal.tour.run.used + 1) + '/' + D.CASTS + ' at ' + spotName(g.spot) + '.');
     return true;
   }
   function renderTourney() {
@@ -498,6 +563,65 @@
       r.dataset.id = b.id; hall.appendChild(r);
     });
     box.appendChild(hall);
+    // MG3: Isles cove collection (only once the cove is open) and the decor tank
+    if (coveOpen() || I.cove.count(journal) > 0) {
+      const cs = mk('section', 'aqextra'); cs.id = 'aq-cove';
+      cs.appendChild(mk('h3', '', 'Isles Cove ' + I.cove.count(journal) + '/' + A.COVE_FISH.length));
+      const grid = mk('div', 'aqgrid');
+      A.COVE_FISH.forEach((f) => {
+        const e = journal.cove[f.id];
+        const c = mk('span', 'chip' + (e ? ' r' + f.rarity : ' unk'), e ? f.icon + ' ' + f.name + ' ' + e.best + ' cm' : '???' + (f.bait ? ' (' + I.COVE_BAIT_NAMES[f.bait] + ' bait)' : ''));
+        c.dataset.cove = f.id; grid.appendChild(c);
+      });
+      cs.appendChild(grid);
+      cs.appendChild(mk('p', 'rule', 'Cove fish are for the collection only: they are not sold and use no Market bait.'));
+      box.appendChild(cs);
+    }
+    renderDecor(box);
+  }
+  function renderDecor(box) {
+    const ds = mk('section', 'aqextra'); ds.id = 'aq-decor';
+    ds.appendChild(mk('h3', '', 'Tank decor'));
+    const cv2 = document.createElement('canvas'); cv2.id = 'aq-tank'; cv2.width = 160; cv2.height = 80;
+    cv2.setAttribute('role', 'img');
+    const list = I.decor.list(journal, bugsRaw()), shown = list.filter((d) => d.shown);
+    cv2.setAttribute('aria-label', 'Your tank' + (shown.length ? ' with ' + shown.map((d) => d.name).join(', ') : ', no decor on show'));
+    ds.appendChild(cv2);
+    drawTank(cv2.getContext('2d'), shown.map((d) => d.id));
+    const row = mk('div', 'gearrow');
+    list.forEach((d) => {
+      const b = gearBtn(d.name, d.unlocked ? (d.shown ? 'on show - tap to put away' : 'tap to show') : d.need, d.shown, () => toggleDecor(d.id), { decor: d.id });
+      if (!d.unlocked) { b.classList.add('locked'); b.setAttribute('aria-disabled', 'true'); }
+      row.appendChild(b);
+    });
+    ds.appendChild(row);
+    ds.appendChild(mk('p', 'rule', 'Decor unlocks from your journal and stays yours. Nothing to buy, nothing to lose.'));
+    box.appendChild(ds);
+  }
+  function toggleDecor(id) {
+    const r = I.decor.toggle(journal, id, bugsRaw());
+    if (r.ok) { journal = r.journal; saveJournal(); renderAquarium(); }
+    return r.ok;
+  }
+  // Static code art, drawn once per render (no animation loop).
+  function drawTank(c, ids) {
+    c.imageSmoothingEnabled = false;
+    c.fillStyle = '#1e6f99'; c.fillRect(0, 0, 160, 80);
+    c.fillStyle = 'rgba(255,255,255,.12)'; c.fillRect(0, 0, 160, 6);
+    c.fillStyle = '#d8c48a'; c.fillRect(0, 70, 160, 10);
+    c.fillStyle = '#c4ae72'; for (let x = 4; x < 160; x += 11) c.fillRect(x, 72 + (x % 3), 3, 2);
+    const has = (id) => ids.indexOf(id) >= 0;
+    if (has('kelp_forest')) { c.fillStyle = '#2f8f4e'; [8, 14, 20].forEach((x, i) => { for (let y = 70; y > 30 + i * 6; y -= 4) c.fillRect(x + ((y >> 2) % 2), y - 4, 3, 4); }); }
+    if (has('coral_arch')) { c.fillStyle = '#ff7f6e'; c.fillRect(34, 50, 5, 20); c.fillRect(54, 50, 5, 20); c.fillRect(34, 46, 25, 5); c.fillStyle = '#ffb3a6'; c.fillRect(36, 47, 4, 2); }
+    if (has('river_stones')) { c.fillStyle = '#7d8a91'; c.fillRect(66, 64, 10, 6); c.fillStyle = '#9aa7ad'; c.fillRect(77, 66, 7, 4); c.fillRect(70, 61, 5, 3); }
+    if (has('tiny_castle')) { c.fillStyle = '#b9a58c'; c.fillRect(90, 44, 22, 26); c.fillRect(88, 40, 5, 6); c.fillRect(98, 40, 5, 6); c.fillRect(108, 40, 5, 6); c.fillStyle = '#3b2f2a'; c.fillRect(98, 58, 6, 12); }
+    if (has('sunken_chest')) { c.fillStyle = '#8a5a34'; c.fillRect(118, 60, 16, 10); c.fillStyle = '#e2b84a'; c.fillRect(118, 63, 16, 2); c.fillRect(125, 62, 2, 5); }
+    if (has('pearl_clam')) { c.fillStyle = '#b48fc9'; c.fillRect(138, 64, 14, 6); c.fillRect(140, 58, 10, 5); c.fillStyle = '#f4f1ea'; c.fillRect(144, 61, 3, 3); }
+    if (has('lily_pad')) { c.fillStyle = '#4caf50'; c.fillRect(60, 3, 18, 4); c.fillStyle = '#ffc0d0'; c.fillRect(66, 1, 4, 3); }
+    if (has('bug_lantern')) { c.fillStyle = '#5a3a1a'; c.fillRect(150, 0, 2, 14); c.fillStyle = '#ffe08a'; c.fillRect(146, 14, 10, 8); c.fillStyle = '#fff6c8'; c.fillRect(149, 16, 3, 3); }
+    // a few caught fish, fixed positions
+    const caught = A.FISH.filter((f) => journal.caught[f.id] && !f.boss).concat(A.COVE_FISH.filter((f) => journal.cove[f.id])).slice(0, 5);
+    caught.forEach((f, i) => drawFish(c, 30 + i * 26, 18 + (i % 2) * 16, 6, f, false));
   }
   function claimSet(sp) { const r = D.aquarium.claimSet(journal, sp); journal = r.journal; saveJournal(); renderAquarium(); renderStatus(); return r.ok; }
   function openAquarium() { return openOverlay('aquarium', renderAquarium); }
@@ -534,8 +658,9 @@
     if (night) { c.fillStyle = '#fff'; for (let i = 0; i < 14; i++) c.fillRect((i * 53) % W, (i * 29) % 80, 2, 2); }
     else { c.fillStyle = '#fff'; c.fillRect(40, 62, 40, 10); c.fillRect(50, 56, 24, 8); c.fillRect(150, 74, 44, 10); }
     // water
-    const spotHue = { west: '#2f86c7', east: '#2a78a8', river: '#3a9bb5', pier: '#1f5f9e', ice: '#9fd6ea', mangrove: '#2c7f6a' }[g.spot];
+    const spotHue = { west: '#2f86c7', east: '#2a78a8', river: '#3a9bb5', pier: '#1f5f9e', ice: '#9fd6ea', mangrove: '#2c7f6a', cove: '#1d9aa6' }[g.spot];
     c.fillStyle = spotHue; c.fillRect(0, WATER, W, H - WATER);
+    if (g.spot === COVE) { c.fillStyle = '#ff8f7a'; [24, 120, 236, 300].forEach((x, i) => { c.fillRect(x, H - 30 - i * 3, 6, 30 + i * 3); c.fillRect(x - 5, H - 22 - i * 3, 5, 4); c.fillRect(x + 6, H - 16 - i * 3, 5, 4); }); }
     c.fillStyle = 'rgba(0,0,0,.12)';
     for (let y = WATER + 16; y < H; y += 24) c.fillRect(0, y, W, 8);
     if (!reduced()) {
@@ -577,7 +702,7 @@
     if (g.fan && g.state === 'result') drawFanfare(c);
     if (g.state === 'result' && g.result && g.result.outcome === 'caught') drawFish(c, W / 2, 290, 46, g.fish, false);
     if (g.state === 'idle' || g.state === 'result') {
-      c.fillStyle = 'rgba(0,0,0,.35)'; c.font = '12px sans-serif'; c.textAlign = 'left'; c.fillText(A.SPOT_NAMES[g.spot], 8, 18);
+      c.fillStyle = 'rgba(0,0,0,.35)'; c.font = '12px sans-serif'; c.textAlign = 'left'; c.fillText(spotName(g.spot), 8, 18);
     }
   }
   // boss splash: expanding ripple rings; with reduce-motion one static ring and a label
@@ -654,7 +779,7 @@
 
   // ---- init ----
   ready = true; initFilters(); renderSpots(); renderJournalCount(); renderStatus();
-  $('spot-title').textContent = A.SPOT_NAMES[g.spot]; setMsg(idleMsg());
+  $('spot-title').textContent = spotName(g.spot); setMsg(idleMsg());
   draw();
   if (TEST) {
     window.__angler = {
@@ -673,6 +798,7 @@
       tourney: { start: startTournament, open: openTourney, info: () => D.tournament.forDay(today()), get active() { return g.tour; }, get run() { return journal.tour.run; }, get result() { return g.tourResult; }, get state() { return journal.tour; } },
       market: { open: openMarket, sell: marketSell, buy: marketBuy, equip: marketEquip, get bells() { return journal.bells; }, get stock() { return journal.stock; }, get baits() { return journal.baits; }, get baitType() { return journal.baitType; } },
       aquarium: { open: openAquarium, claim: claimSet },
+      isles: { setBugBait, setCoveBait, toggleDecor, openGear, coveOpen, bugBaits: () => I.bug.unlocked(bugsRaw()), decor: () => I.decor.list(journal, bugsRaw()), get bugBait() { return journal.bugBait; }, get coveBait() { return journal.coveBait; }, get cove() { return journal.cove; } },
       setBossChance(p) { g.bossChance = p; if (p >= 1) g.bossGate = false; }, setBossGate(v) { g.bossGate = !!v; },
       boss2: { get gate() { return g.bossGate; }, get surge() { return g.surge; }, get strain() { return g.strain; }, get splash() { return g.splash; }, get lair() { return journal.lair; }, get hall() { return journal.hall; }, phase() { return g.surge ? B.phaseAt(g.surge, g.t) : 'calm'; }, get time() { return g.t; }, openJournal, todayStr }, bossFor(sp) { return A.journal.bossFor(journal, sp || g.spot); },
       poolInfo() {
