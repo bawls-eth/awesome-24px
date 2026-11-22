@@ -1110,5 +1110,9 @@
   "nav-sheet.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "nav-hub-isles.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }

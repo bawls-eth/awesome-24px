@@ -26,7 +26,15 @@
     'w5-safari': '../games/festival/bugs.html',
     'w2-catacombs': '../games/mad-maze/index.html?mode=dungeon&seed=1&from=hub',
     'w7-isles': '../games/isles/index.html?from=hub',
+    'w5-jam': '../games/jam/index.html',
+    'w5-stalk': '../games/stalk/index.html',
   });
+  // NAV slice D: every game node with a real page is always open to play (from a fresh save too). Map paths,
+  // medals and the unlock rules are unchanged: they are a bonus goal (walking the map), never a gate on a game.
+  const GAME_ICON = { 'w1-hearthvale': '\u{1F3E1}', 'w2-lantern': '\u{1F3EE}', 'w3-deepdelve': '\u26CF\uFE0F', 'w4-angler': '\u{1F3A3}',
+    'w5-safari': '\u{1F98B}', 'w5-jam': '\u{1F3B8}', 'w5-stalk': '\u{1F96C}', 'w7-isles': '\u{1F3DD}\uFE0F' };
+  const playable = (n) => !!n && (n.type === 'game' || n.type === 'gate') && !!LINKS[n.id];
+  const GAME_NODES = MAP.nodes.filter((n) => n.type === 'game' && LINKS[n.id]);
 
   const $ = (id) => document.getElementById(id);
   const canvas = $('map');
@@ -315,7 +323,7 @@
   }
   function drawNode(g, n) {
     const cx = (n.x - g.minX) * T + 8, cy = (n.y - g.minY) * T + 8;
-    const locked = !reach.has(n.id);
+    const locked = !reach.has(n.id) && !playable(n);
     const st = E.nodes[n.id];
     const cleared = !!(st && st.exits.length);
     px(ctx, cx - 7, cy + 5, 14, 3, 'rgba(0,0,0,.25)');
@@ -351,6 +359,42 @@
       if (n.comet) { px(ctx, cx - 1, cy - 3, 2, 6, '#fff'); px(ctx, cx - 3, cy - 1, 6, 2, '#fff'); }
     }
     if (n.medals && !locked) medalDots(n, cx, cy);
+  }
+  // Labels under every game / gate node (canvas text at the map's pixel scale), kept inside the canvas.
+  let labelsDrawn = [];
+  function drawLabels(g) {
+    labelsDrawn = [];
+    ctx.save();
+    ctx.font = 'bold 8px ui-monospace, Menlo, Consolas, monospace';
+    ctx.textBaseline = 'top';
+    MAP.nodes.forEach((n) => {
+      if (n.world !== view.world || !(n.type === 'game' || n.type === 'gate')) return;
+      const text = n.name;
+      const w = Math.ceil(ctx.measureText(text).width) + 4, h = 10;
+      const cx = (n.x - g.minX) * T + 8, cy = (n.y - g.minY) * T + 8;
+      let x = Math.round(cx - w / 2), y = cy + (n.medals ? 15 : 9);
+      x = Math.max(1, Math.min(canvas.width - w - 1, x));
+      y = Math.max(1, Math.min(canvas.height - h - 1, y));
+      px(ctx, x, y, w, h, 'rgba(12,20,15,.85)');
+      ctx.fillStyle = '#fff7d6';
+      ctx.fillText(text, x + 2, y + 1);
+      labelsDrawn.push({ id: n.id, text, x, y, w, h });
+    });
+    // signposts at the map edge name the world they lead to
+    g.stubs.forEach((st) => {
+      const t = byId[st.target];
+      const text = (st.dir > 0 ? '' : '< ') + wName[t.world] + (st.dir > 0 ? ' >' : '');
+      const w = Math.ceil(ctx.measureText(text).width) + 4, h = 10;
+      const cx = (st.x - g.minX) * T + 8, cy = (st.y - g.minY) * T;
+      let x = Math.round(cx - w / 2), y = cy - h - 1;
+      x = Math.max(1, Math.min(canvas.width - w - 1, x));
+      y = Math.max(1, Math.min(canvas.height - h - 1, y));
+      px(ctx, x, y, w, h, 'rgba(58,42,20,.9)');
+      ctx.fillStyle = '#fff7d6';
+      ctx.fillText(text, x + 2, y + 1);
+      labelsDrawn.push({ id: 'stub:' + st.target, text, x, y, w, h });
+    });
+    ctx.restore();
   }
 
   function drawVillager(g) {
@@ -399,6 +443,7 @@
     MAP.nodes.forEach((n) => { if (n.world === view.world) drawNode(g, n); });
     dots(g);
     drawVillager(g);
+    drawLabels(g);
   }
 
   // ---------- layout ----------
@@ -480,6 +525,13 @@
     med.hidden = !n.medals;
     renderAch(id);
     $('card-status').textContent = n.medals ? (got + ' of 3 medals') : (st && st.exits.length ? 'Visited' : 'Not visited yet');
+    const bonus = $('card-bonus');
+    if (bonus) {
+      bonus.hidden = !playable(n);
+      bonus.textContent = !playable(n) ? '' : n.medals
+        ? (reach.has(id) ? 'Open to play any time. Medals are a bonus.' : 'Open to play any time. Walking here on the map is a bonus: earn medals to open the path.')
+        : 'Open any time.';
+    }
     const href = LINKS[id];
     const play = $('card-play');
     if (href) { play.setAttribute('href', href); play.hidden = false; $('card-soon').hidden = true; }
@@ -505,7 +557,7 @@
     const id = cardFor, href = $('card-play').getAttribute('href');
     if (!id || !href) { e.preventDefault(); return; }
     const n = byId[id];
-    if (n.type === 'game' || n.type === 'gate') { // visiting is an exit of kind "visit" (opens the next paths)
+    if ((n.type === 'game' || n.type === 'gate') && reach.has(id)) { // visiting (after walking there) is an exit of kind "visit" (opens the next paths)
       hub.state = MMMap.unlock(MAP, hub.state, { node: id, exit: 'visit' }).state;
     }
     saveHub();
@@ -542,7 +594,10 @@
     if (walker.wps || !$('card').hidden) return;
     const id = hit(e);
     if (!id) return;
-    if (!reach.has(id)) { toast('Locked - finish earlier stops first.'); return; }
+    if (!reach.has(id)) {
+      if (playable(byId[id])) { openNode(id); return; } // a game is always open; walking there stays a bonus
+      toast('Locked - finish earlier stops first.'); return;
+    }
     travel(id, true);
   });
   canvas.addEventListener('mousemove', (e) => { view.hover = hit(e); });
@@ -599,6 +654,31 @@
     requestAnimationFrame(frame);
   }
 
+  // ---------- NAV slice D: games strip, shared Menu, phone hint chip ----------
+  (function gamesStrip() {
+    const nav = $('hub-games');
+    if (!nav) return;
+    GAME_NODES.forEach((n) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.dataset.node = n.id;
+      b.setAttribute('aria-label', n.name + ' (' + wName[n.world] + ')');
+      const ic = document.createElement('span'); ic.className = 'g-ico'; ic.setAttribute('aria-hidden', 'true'); ic.textContent = GAME_ICON[n.id] || '';
+      b.appendChild(ic);
+      b.appendChild(document.createTextNode(n.name));
+      b.addEventListener('click', () => { if (!walker.wps) openNode(n.id); });
+      nav.appendChild(b);
+    });
+  }());
+  if (window.MMNav) {
+    try { MMNav.mount({ page: 'map', avoid: '#hud .hud-main' }); } catch (e) { /* the map works without it */ }
+  }
+  (function hintChip() {
+    const chip = $('hint-chip'), x = $('hint-chip-x'), K = 'pixeltown-hub-hint-v1';
+    if (!chip || !x) return;
+    if (readKey(K) !== '1') chip.hidden = false;
+    x.addEventListener('click', () => { chip.hidden = true; try { localStorage.setItem(K, '1'); } catch (e) { /* storage blocked */ } });
+  }());
+
   window.addEventListener('resize', resize);
   recompute();
   placeAt(hub.at);
@@ -614,6 +694,10 @@
     get walking() { return !!walker.wps; },
     get reduced() { return reducedMotion(); },
     isReachable: (id) => reach.has(id),
+    isPlayable: (id) => playable(byId[id]),
+    labels: () => labelsDrawn.map((l) => Object.assign({}, l)),
+    gameNodes: () => GAME_NODES.map((n) => n.id),
+    links: () => Object.assign({}, LINKS),
     achievements,
     nodeClient(id) {
       const n = byId[id], g = geoFor(n.world), r = canvas.getBoundingClientRect(), k = r.width / canvas.width;

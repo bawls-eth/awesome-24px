@@ -95,3 +95,12 @@ body:not(.touch) .help { max-width: min(520px, calc(100% - 420px)); }
 body.touch .boss-bar { top: auto; bottom: calc(214px + env(safe-area-inset-bottom)); width: min(320px, calc(100% - 32px)); min-width: 0; }
 /* X6: on desktop the calm hint line sits above the key help box (they used to overlap during a fight) */
 @media (min-width: 861px) { body:not(.touch) .hint { bottom: 104px; } }
+/* NAV slice D: the shared Menu button owns the top-left corner; the HUD moves right of it (desktop) or under it (phones) */
+body.mm-nav-on #hud { left: calc(8px + var(--mm-nav-reserve)); max-width: min(300px, calc(100% - 150px - var(--mm-nav-reserve))); }
+@media (max-width: 600px) { body.mm-nav-on #hud { max-width: calc(100% - 136px - var(--mm-nav-reserve)); } }
+@media (max-width: 479px) { body.mm-nav-on #hud { left: 8px; top: calc(64px + env(safe-area-inset-top)); max-width: calc(100% - 136px); } }
+#back { padding: 0 10px; font-size: 13px; white-space: nowrap; }
+.panel .dest-row { display: flex; gap: 6px; align-items: stretch; margin: 6px 0; }
+.panel .dest-row .dest { flex: 1 1 auto; margin: 0; min-width: 0; text-align: left; }
+.panel .craft-it { flex: 0 0 auto; min-width: 88px; }
+.recipe.want { outline: 2px solid var(--accent); outline-offset: 2px; }
