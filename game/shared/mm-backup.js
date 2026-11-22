@@ -211,8 +211,26 @@
 
   // Gear-on hardening (slice GH): ONE safety snapshot of every known key, taken just before the first tiered item is written to a town save that
   // has never seen gear (no realm.gv, no item with `t`). Written once to its own key, which is not in KNOWN, so it is never part of a bundle or a restore.
-  // Quota-safe: a full or blocked storage just skips it. Returns 'written' | 'exists' | 'has-gear' | 'skipped'.
+  // Quota-safe (SV3 / F14): a snapshot over PREGEAR_MAX (1 MB) is skipped ('too-big'), and so is one that would push everything this origin
+  // stores past MAX_TOTAL ('over-total'), so it can never fill storage. A full or blocked storage just skips it.
+  // Returns 'written' | 'exists' | 'has-gear' | 'too-big' | 'over-total' | 'skipped'.
   const PREGEAR_KEY = 'pixeltown-backup-pregear-v1';
+  const PREGEAR_MAX = 1000000;
+  // Characters stored under every key (key + value). Storage without length/key() (a plain fake) counts the known keys only.
+  function usedChars(storage) {
+    let n = 0;
+    try {
+      if (typeof storage.length === 'number' && typeof storage.key === 'function') {
+        for (let i = 0; i < storage.length && i < 10000; i++) {
+          const k = storage.key(i); if (typeof k !== 'string') continue;
+          const v = storage.getItem(k); n += k.length + (typeof v === 'string' ? v.length : 0);
+        }
+        return n;
+      }
+      listKeys(storage).forEach((k) => { const v = storage.getItem(k); n += k.length + (typeof v === 'string' ? v.length : 0); });
+    } catch (e) { /* unreadable: count what we have */ }
+    return n;
+  }
   function snapshotPregear(storage) {
     try {
       if (typeof storage.getItem(PREGEAR_KEY) === 'string') return 'exists';
@@ -220,11 +238,54 @@
       try { const t = JSON.parse(storage.getItem(SAVE_KEY)); realm = isObj(t) && isObj(t.realm) ? t.realm : null; } catch (e) { realm = null; }
       if (realm && (realm.gv === 1 || (Array.isArray(realm.items) && realm.items.some((x) => isObj(x) && x.t)))) return 'has-gear';
       const b = bundle(storage); b.at = Date.now(); b.why = 'pregear';
-      storage.setItem(PREGEAR_KEY, JSON.stringify(b));
+      const s = JSON.stringify(b);
+      if (s.length > PREGEAR_MAX) return 'too-big';
+      if (usedChars(storage) + PREGEAR_KEY.length + s.length > MAX_TOTAL) return 'over-total';
+      storage.setItem(PREGEAR_KEY, s);
       return 'written';
     } catch (e) { return 'skipped'; }
   }
 
+  // Read the pre-gear snapshot and plan its restore (never writes). Same checks as a restore file, plus a summary for the confirm step:
+  // {ok, keys, entries, labels, at, changed:[keys whose value would change], same:[keys already equal], added:[keys not on the device now],
+  //  kept:[known keys on the device now that the snapshot does not hold; they stay as they are], items:{now, then} (town Realm pack sizes)}.
+  // Never applied automatically: the caller confirms, then calls apply(storage, plan).
+  function planRestorePregear(storage) {
+    let raw = null;
+    try { raw = storage.getItem(PREGEAR_KEY); } catch (e) { raw = null; }
+    if (typeof raw !== 'string') return fail('no-snapshot', 'There is no pre-gear snapshot on this device.');
+    if (raw.length > MAX_TOTAL) return fail('too-big', 'The pre-gear snapshot is too big to restore.');
+    let obj;
+    try { obj = JSON.parse(raw); } catch (e) { return fail('bad-snapshot', 'The pre-gear snapshot is damaged, so nothing was changed.'); }
+    if (!isObj(obj) || obj.format !== FORMAT) return fail('bad-snapshot', 'The pre-gear snapshot is damaged, so nothing was changed.');
+    const p = plan({ format: FORMAT, v: obj.v, keys: obj.keys });
+    if (!p.ok) return p;
+    const at = typeof obj.at === 'number' && isFinite(obj.at) && obj.at > 0 && obj.at < 8.64e15 ? obj.at : null;
+    const changed = [], same = [], added = [];
+    p.keys.forEach((k) => {
+      let now = null;
+      try { now = storage.getItem(k); } catch (e) { now = null; }
+      if (typeof now !== 'string') added.push(k); else if (now === p.entries[k]) same.push(k); else changed.push(k);
+    });
+    const kept = listKeys(storage).filter((k) => p.keys.indexOf(k) < 0);
+    const count = (s) => {
+      try { const t = JSON.parse(s); return isObj(t) && isObj(t.realm) && Array.isArray(t.realm.items) ? t.realm.items.length : 0; } catch (e) { return 0; }
+    };
+    let cur = null;
+    try { cur = storage.getItem(SAVE_KEY); } catch (e) { cur = null; }
+    const items = { now: count(cur), then: typeof p.entries[SAVE_KEY] === 'string' ? count(p.entries[SAVE_KEY]) : 0 };
+    return { ok: true, keys: p.keys, entries: p.entries, labels: p.labels, at: at, changed: changed, same: same, added: added, kept: kept, items: items };
+  }
+
+  // Delete the pre-gear snapshot (the caller confirms first). Returns true when no snapshot is left.
+  function dropPregear(storage) {
+    try { storage.removeItem(PREGEAR_KEY); return typeof storage.getItem(PREGEAR_KEY) !== 'string'; } catch (e) { return false; }
+  }
+  function hasPregear(storage) {
+    try { return typeof storage.getItem(PREGEAR_KEY) === 'string'; } catch (e) { return false; }
+  }
+
   return { FORMAT: FORMAT, VERSION: VERSION, KNOWN: KNOWN.slice(), bundle: bundle, plan: plan, apply: apply, restore: restore, labelOf: label,
-    PREGEAR_KEY: PREGEAR_KEY, snapshotPregear: snapshotPregear };
+    PREGEAR_KEY: PREGEAR_KEY, PREGEAR_MAX: PREGEAR_MAX, MAX_TOTAL: MAX_TOTAL, snapshotPregear: snapshotPregear,
+    planRestorePregear: planRestorePregear, dropPregear: dropPregear, hasPregear: hasPregear };
 }));

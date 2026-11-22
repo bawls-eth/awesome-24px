@@ -1146,5 +1146,9 @@
   "shared-mm-home-build.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "lantern-backup-restore.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
