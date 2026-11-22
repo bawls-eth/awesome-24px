@@ -83,7 +83,7 @@ const panelInfo = (page) => page.evaluate(() => {
     const c = I.inv()[n.kind] || 0;
     return { n, count: ns.length, before, a, a2, b, c, readyA: nodeA.ready, readyB: nodeB.ready, picked: I.picked(), kinds: [...new Set(ns.map((q) => q.kind))] };
   });
-  check('1a: the jungle has walk-over nodes of the pack resource kinds (daily spots excluded)', walk.count > 20 && walk.kinds.every((k) => ['wood', 'vine_rope', 'amber', 'cocoa', 'jungle_berry'].indexOf(k) >= 0), JSON.stringify({ count: walk.count, kinds: walk.kinds }));
+  check('1a: the jungle has walk-over nodes of the pack resource kinds (daily spots excluded) and the IF1 food glints', walk.count > 20 && walk.kinds.every((k) => ['wood', 'vine_rope', 'amber', 'cocoa', 'jungle_berry'].concat(CRAFT.foodNodes('jungle').map((r) => r.id)).indexOf(k) >= 0), JSON.stringify({ count: walk.count, kinds: walk.kinds }));
   check('1a: walking over a node adds 1 to inv and the node is gone', !!walk.n && walk.a === walk.before + 1 && walk.readyA === false && walk.a2 === walk.a, JSON.stringify(walk));
   check('1a: before its respawn time the node gives nothing; after `respawn` s it is back and gives 1 more', walk.b === walk.a && walk.readyB === true && walk.c === walk.a + 1 && walk.picked === 2, JSON.stringify(walk));
   const daily = await ev(gp, (I) => { const s = I.spots()[0]; const b = I.inv()[s.kind] || 0; I.teleport(s.x, s.y); const r = I.gather(); return { ok: r.ok, kind: s.kind, b, a: I.inv()[s.kind] || 0 }; });
