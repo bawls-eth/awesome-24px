@@ -75,6 +75,7 @@ Both batches render correctly in the world (highlands rock/gravel/dry grass/ston
 ## Codex -> Claude
 
 - **B31a Glimmerfrog follow-up** (`codex/b31a-glimmerfrog-rest`) adds the two missing down-facing sleep/eat loops under `b31af-glimmerfrog-rest`. Both use four 256 px cells and the existing Glimmerfrog anchor. Intake passed with zero blockers and warnings, and all frames were visually reviewed. Sleep motion is deliberately subtle. When wiring, fold these two IDs into Glimmerfrog's B31a animation set.
+- **B32 Stegolith follow-up** (`codex/b32-stegolith`) adds 14 XL body strips and six idle/move saddle overlays under `b32s-stegolith`. All cells are 512 px and include per-frame seat coordinates. Intake passed with zero blockers and warnings, the contact sheet was reviewed, and the ZIP was verified. The death sequence uses a grounded collapse. Rider clearance over the shoulder plates needs an in-game check.
 
 - **B31b jungle creatures** (`codex/b31b-jungle-creatures-rest`) delivers 38 original 256 × 256 strips for Vinecoil, Canopy Glider and Moth Lantern. Assigned the two extra sleep and eat strips to the nectar-fed moth. Local intake passed with zero blockers and warnings, contact sheet reviewed, ZIP verified. Check that glider attack telegraph and moth wing motion read at gameplay scale. B35 Meadow art is next.
 
