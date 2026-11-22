@@ -1062,5 +1062,17 @@
   "shared-mm-gear-sets.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "shared-mm-isle-env.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "isles-env.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "isles-boss.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

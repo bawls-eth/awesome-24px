@@ -124,6 +124,18 @@
     return true;
   }
 
-  return { PROP_BASE: PROP_BASE, PROPS: PROPS, PROP_ALIAS: PROP_ALIAS, loadProps: loadProps, propFor: propFor, drawPropArt: drawPropArt,
+  // X6: the b33 boss arena ring (128x128, centre anchor). It is not delivered yet, so the page draws its code ring; loadArena() only
+  // requests the PNG once ARENA.delivered is true (no 404s in the console), or when a caller forces it.
+  const ARENA = Object.freeze({ id: 'boss_arena_ring', w: 128, h: 128, ax: 64, ay: 64, delivered: false });
+  // loadArena(opts) -> Promise<{img, w, h, ax, ay} | null>; never rejects. opts: {propBase, loadImage, force}
+  function loadArena(opts) {
+    const o = opts && typeof opts === 'object' ? opts : {};
+    if (!ARENA.delivered && o.force !== true) return Promise.resolve(null);
+    const base = typeof o.propBase === 'string' ? o.propBase : PROP_BASE;
+    const li = typeof o.loadImage === 'function' ? o.loadImage : defaultLoadImage;
+    return Promise.resolve().then(() => li(base + ARENA.id + '.png')).then((im) => (im ? { img: im, w: ARENA.w, h: ARENA.h, ax: ARENA.ax, ay: ARENA.ay } : null), () => null);
+  }
+
+  return { ARENA: ARENA, loadArena: loadArena, PROP_BASE: PROP_BASE, PROPS: PROPS, PROP_ALIAS: PROP_ALIAS, loadProps: loadProps, propFor: propFor, drawPropArt: drawPropArt,
     BASE: BASE, VARIANTS: VARIANTS, NAMES: NAMES, TERRAINS: TERRAINS, PALETTE: PALETTE, tileId: tileId, idMap: idMap, load: load, create: create };
 });

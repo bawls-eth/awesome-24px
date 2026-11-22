@@ -29,6 +29,17 @@
 // free saddle for the mount you already had (save.sg marks it done), and ?saddles=0 restores free riding. Crafting a raft adds `reef` to
 // `unlock`, a rocket core adds `mars`; the sea chart lists locked islands with their cost (home, jungle and tundra are open by default,
 // an island you already visited stays open). b31b: the vinecoil and canopy glider PNG strips come in through MMCreatureStrips.
+// X6 (NEXT-SLICES-2): each pack's bosses[0] (MMIsleBoss: phase scripts, weary at 10% HP) waits at its boss site inside a boss arena ring
+// (the b33 boss_arena_ring PNG once delivered, else a code ring). Walking into the ring starts the fight; every attack is drawn as its
+// exact MMIsleBoss shape for its whole wind-up (static with reduced motion) and the hero is hurt only inside a live shape. At weary a
+// `feast` from `inv` (F) starts a boss-tame: soothe shots put it to sleep, more feasts tame it; a tamed boss joins the stable as an alpha
+// (cos 'alpha') and rides with its crafted saddle (saddle_tyrant for the Fernjaw Tyrant; the X4 rules apply). ?tame=0: the boss just
+// dies and nothing is written to the stable. A kill or tame notes the boss (save.bosses + save.beat), so the boss medal counts it.
+// ?bosses=0 leaves the boss sites empty (only the lair-seen medal, as before).
+// X5: MMIsleEnv rules behind its flags (?env=0 turns them all off): calm warmth on the tundra (drains in 90 s, a warm cloak doubles it,
+// hot springs and campfires refill it; at 0 you walk at x0.8, never any damage) and air on mars (90 s, 120 s with an o2_tank; domes and
+// landing pads refill it; at 0 it costs 1 HP every 3 s after a 10 s warning, and it never takes your last HP), plus mars gravity (x1.15).
+// No meter ever touches items or tames. The swim rule keeps the X1 behaviour (open water needs a swim mount) with or without the flag.
 (function () {
   'use strict';
   const CRAFT = window.MMIsleCraft || null;
@@ -95,6 +106,10 @@
   // blocks like a wall; a swim mount (Tidesteed, Skimray: def.ride.swim) crosses it, and swimming creatures move through it.
   const SWIM_T = new Uint8Array(NAMES.length);
   Object.keys(PACK.hazards || {}).forEach((n) => { const id = O.TERRAIN_ALL[n], hz = PACK.hazards[n]; if (id !== undefined && hz && (hz.swim || hz.breath > 0)) SWIM_T[id] = 1; });
+  // X5: MMIsleEnv decides which terrain is deep water (the same tiles as X1: the pack's swim / breath hazards); its flag off keeps X1
+  const ENV = window.MMIsleEnv || null;
+  const ENVR = ENV ? ENV.rules(PACK_ID, (k) => Q.get(k)) : { swim: false, warmth: false, oxygen: false, gravity: false };
+  if (ENV && ENVR.swim) NAMES.forEach((n, id) => { SWIM_T[id] = ENV.swimAt(n, null, has(PACK.hazards, n) ? PACK.hazards[n] : null).needSwim ? 1 : 0; });
   const swimAt = (tx, ty) => SWIM_T[O.tileAt(world, tx, ty)] === 1;
   // the hero's tile rule (ride is declared further down; read lazily)
   const heroSolidAt = (tx, ty) => solidAt(tx, ty) || (swimAt(tx, ty) && !CMP.canSwim(ride));
@@ -427,7 +442,7 @@
     if (tx >= 0 && ty >= 0 && tx < W && ty < H && walkableAt(tx, ty)) { hero.x = (savedIsle.pos.x) * TILE; hero.y = (savedIsle.pos.y) * TILE; }
   }
   if (Q.get('at') === 'dock' && world.dock) { hero.x = (world.dock.x + 0.5) * TILE; hero.y = (world.dock.y + 0.5) * TILE; }
-  let god = false, xp = 0, kills = 0, tamedN = 0;
+  let god = false, xp = 0, kills = 0, tamedN = 0, heroLost = 0;
   const loot = {};
   const pouch = Object.assign({}, IC.STARTER_POUCH);
   function blocked(x, y) {
@@ -455,6 +470,7 @@
     let len = Math.hypot(mx, my);
     if (len > 1) { mx /= len; my /= len; len = 1; }
     hero.scale = CMP.moveScale(ride, moveScaleAt(tileOf(hero.x), tileOf(hero.y)));
+    if (ENV_ON && envS.move !== 1) hero.scale *= envS.move; // X5: mars gravity x1.15, the tundra cold x0.8
     if (len < 0.05) return;
     hero.face.x = mx / len; hero.face.y = my / len;
     const v = SPEED * hero.scale * dt;
@@ -466,7 +482,9 @@
     if (god || hero.dead || hero.iframes > 0) return;
     if (ride) n = CMP.riderDamage(ride, n);
     if (!(n > 0)) return;
+    const hpBefore = hero.hp;
     hero.hp = Math.max(0, hero.hp - n); hero.iframes = 0.6;
+    heroLost += hpBefore - hero.hp;
     if (hero.hp <= 0) {
       hero.dead = true;
       if (ride) dismount();
@@ -486,9 +504,11 @@
   const SOOTHE_DMG = 0.25; // a soothe shot does a quarter of the damage and its full value as torpor
   let soothe = false;
   let bolts = [];
+  const aimPt = { x: 0, y: 0 }; // the boss's aim point (reused)
   function nearestTarget(range) {
     let best = null, bd = range;
     creatures.forEach((c) => { const d = Math.hypot(c.x - hero.x, c.y - hero.y); if (d < bd && !c.calm) { bd = d; best = c; } });
+    if (bossAlive() && !bz.ko) { const d = Math.hypot(bz.x - hero.x, bz.y - 36 - hero.y); if (d < bd + 2 * TILE) { aimPt.x = bz.x; aimPt.y = bz.y - 30; best = aimPt; } }
     return best;
   }
   function fire(dx, dy) {
@@ -559,6 +579,7 @@
       const b = bolts[i];
       b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
       let gone = b.life <= 0 || solidAt(tileOf(b.x), tileOf(b.y)) && O.tileAt(world, tileOf(b.x), tileOf(b.y)) !== 0;
+      if (!gone && bz.st && bossAlive() && Math.hypot(bz.x - b.x, bz.y - 36 - b.y) < BOSS_RAD) { bossHit(BOLT_DMG, b.soothe); gone = true; }
       if (!gone) for (let k = 0; k < creatures.length; k++) {
         const c = creatures[k];
         if (Math.hypot(c.x - b.x, c.y - 8 - b.y) < c.rad + 5) { hitCreature(c, BOLT_DMG, b.soothe ? 'soothe' : undefined); gone = true; break; }
@@ -607,6 +628,7 @@
   }
   function feed() {
     if (!TAME || hero.dead) return { ok: false, why: 'off' };
+    if (bossFeedable()) return bossFeed();
     const c = feedTarget();
     if (!c) return { ok: false, why: 'none' };
     const def = CR.get(c.kind), nm = def.name;
@@ -664,25 +686,32 @@
   }
   function finishTame(c) {
     const def = CR.get(c.kind);
+    const ent = adoptTame(def, c.tm.bond, c.x, c.y, false);
+    removeWhere((x) => x === c, 90000);
+    toast(ent ? def.name + ' joined you!' : def.name + ' is happy. Your bond grows.');
+    refreshMount();
+    checkMedals();
+  }
+  // a finished tame joins the stable (MMTames; the third of a species gives affinity instead), the party when there is room, and becomes
+  // the mount when it is rideable and you have none. X6: a boss joins as an alpha (cos 'alpha', its wild level). One stable write.
+  function adoptTame(def, bond, x, y, alpha) {
     const owned = tames.roster.filter((t) => t.sp === def.id);
     const rule = TM.duplicateRule(owned.length);
     let ent = null;
-    if (rule.allow) ent = TAMES.add(tames, { sp: def.id, nm: def.name, isle: ISLE, d: today(), bond: c.tm.bond });
+    if (rule.allow) ent = TAMES.add(tames, { sp: def.id, nm: def.name, isle: ISLE, d: today(), bond: bond });
     else if (owned[0]) TAMES.addAffinity(tames, owned[0].id, 30);
+    if (ent && alpha) { TAMES.setCosmetic(tames, ent.id, 'alpha'); ent.lv = Math.max(1, Math.min(TAMES.MAX_LV, (def.lv && def.lv[0]) | 0)); }
     if (ent) {
       if (tames.party.length < Math.min(TAMES.MAX_PARTY, LOW ? 1 : CMP.MAX_ACTIVE)) {
         TAMES.setParty(tames, tames.party.concat([ent.id]));
-        spawnCompanion(ent, c.x, c.y);
+        spawnCompanion(ent, x, y);
       }
       if (def.rideable && !tames.mount) TAMES.setMount(tames, ent.id);
     }
     TAMES.write(S, tames);
     ISL.noteLog(save, 'tamed', def.id, 1); dirty = true;
     tamedN++;
-    removeWhere((x) => x === c, 90000);
-    toast(ent ? def.name + ' joined you!' : def.name + ' is happy. Your bond grows.');
-    refreshMount();
-    checkMedals();
+    return ent;
   }
 
   // mount: the tames.mount entry (else the first rideable tame) through MMCompanion.ride
@@ -726,6 +755,196 @@
   const hasSaddle = (id) => !!id && has(save.inv, id) && save.inv[id] > 0;
   const toggleRide = () => (ride ? (dismount(), false) : mountUp());
   refreshMount();
+
+  // ---------- X6: the island boss (MMIsleBoss) at the pack's boss site ----------
+  const BOSS = window.MMIsleBoss || null;
+  const BOSSES = !!BOSS && Q.get('bosses') !== '0';
+  const BOSS_ID = BOSSES && PACK.bosses && PACK.bosses[0] && BOSS.script(PACK.bosses[0].boss) && CR.get(PACK.bosses[0].boss) ? PACK.bosses[0].boss : null;
+  const bossSite = BOSS_ID ? ((world.bossSites || []).find((b) => b.boss === BOSS_ID) || (world.bossSites || [])[0] || null) : null;
+  const ARENA_R = BOSS ? BOSS.K.ARENA_R : 420;
+  const BOSS_SPAWN_R = ARENA_R + 12 * TILE, BOSS_LEAVE_R = ARENA_R + 24 * TILE, BOSS_DRIFT = 4 * TILE, BOSS_RAD = 48, BOSS_FEED_R = 5 * TILE;
+  const BOSS_DEF = BOSS_ID ? CR.get(BOSS_ID) : null, BOSS_DT = 0.025;
+  const BOSS_TAMEABLE = !!(BOSS_DEF && BOSS_DEF.tame && BOSS_DEF.tame.method === 'knockout' && BOSS_DEF.diet.indexOf('feast') >= 0);
+  // bz: the boss on screen. It is shaped like a creature where the strip helpers read it (sk, dir, act, at0, ph, ang, vx, vy, ko, eatT, t)
+  const bz = { st: null, n: 0, acc: 0, done: '', sx: 0, sy: 0, x: 0, y: 0, engaged: false, dmg: 0, torpor: 0, tele: [], live: [], flash: 0, t: 0,
+    sp: BOSS_ID || '', kind: BOSS_ID || '', sk: stripKind(BOSS_ID), dir: 0, act: '', at0: 0, ph: '', ang: 0, vx: 0, vy: 0, ko: false, eatT: 0, moving: false,
+    art: null, drawn: '', src: '', phaseName: '', inp: { hero: { x: 0, y: 0 }, dmg: 0, torporHit: 0, feast: false, offer: null, playerDist: 100 } };
+  if (bossSite) { bz.sx = (bossSite.x + 0.5) * TILE; bz.sy = (bossSite.y + 0.5) * TILE; bz.x = bz.sx; bz.y = bz.sy; }
+  if (BOSS_DEF) bz.art = baker.bake({ id: BOSS_ID, archetype: IC.ARCH[BOSS_ID] || 'giant', size: BOSS_DEF.size, biome: DRAW_BIOME }, { dpr: DPR });
+  // test / balance logs (fixed size): telegraphs as they turn into hits, hero hits, phase changes, event counts
+  const BOSS_LOG = { tele: [], hurt: [], phase: [], ev: {}, hurtTotal: 0 };
+  const logPush = (a, v, n) => { if (a.length >= (n || 64)) a.shift(); a.push(v); };
+  const bossAlive = () => !!bz.st && (bz.st.st === 'fight' || bz.st.st === 'weary' || bz.st.st === 'taming');
+  const bossName = () => (BOSS_DEF ? BOSS_DEF.name : '');
+  // the b33 boss arena ring (MMIsleArt.ARENA; only requested once delivered), else the code ring
+  let arenaImg = null, arenaSrc = '', arenaDrawn = 0;
+  if (ART && bossSite && window.MMIsleArt && window.MMIsleArt.loadArena) window.MMIsleArt.loadArena().then((a) => { if (a) arenaImg = a; });
+  function bossTick() {
+    if (!bossSite || !BOSS_ID || bz.done) return;
+    const d = Math.hypot(bz.sx - hero.x, bz.sy - hero.y);
+    if (!bz.st && d <= BOSS_SPAWN_R) spawnBoss();
+    else if (bz.st && d > BOSS_LEAVE_R && bz.st.st === 'fight') { bz.st = null; bz.engaged = false; bz.tele.length = 0; bz.live.length = 0; } // back to its lair (full health next time)
+  }
+  function spawnBoss() {
+    bz.st = BOSS.init(BOSS_ID, { seed: 'isles|' + SEED + '|boss|' + (bz.n++), x: bz.sx, y: bz.sy });
+    bz.x = bz.sx; bz.y = bz.sy; bz.engaged = false; bz.tele.length = 0; bz.live.length = 0; bz.phaseName = BOSS.script(BOSS_ID).phases[0].name;
+    return !!bz.st;
+  }
+  function disengage() {
+    bz.engaged = false; bz.tele.length = 0; bz.live.length = 0; bz.ph = '';
+    if (bz.st && bz.st.st === 'fight') bz.st = Object.assign({}, bz.st, { hazards: [], cd: Math.max(bz.st.cd, 2.5) });
+  }
+  const findIdx = (a, id) => { for (let i = 0; i < a.length; i++) if (a[i].id === id) return i; return -1; };
+  function bossEvents(events) {
+    for (let i = 0; i < events.length; i++) {
+      const e = events[i];
+      BOSS_LOG.ev[e.type] = (BOSS_LOG.ev[e.type] || 0) + 1;
+      if (e.type === 'telegraph') bz.tele.push({ id: e.id, atk: e.atk, zone: e.zone, windup: e.windup, t0: simT, drawn: 0, first: -1, last: -1 });
+      else if (e.type === 'hit') {
+        // the shape goes live only once its telegraph has been on screen for the whole wind-up (the 40 Hz engine can be a step ahead)
+        const k = findIdx(bz.tele, e.id), tg = k >= 0 ? bz.tele[k] : null;
+        const at = tg ? Math.max(simT, tg.t0 + tg.windup) : simT;
+        if (tg) tg.hitAt = at;
+        bz.live.push({ id: e.id, atk: e.atk, zone: e.zone, dmg: e.dmg, dur: e.dur, t0: at, done: false, tele: !!tg, tg: tg });
+      } else if (e.type === 'end') { /* the page ends a live shape on its own clock (t0 + dur) */ }
+      else if (e.type === 'cancel') { let k = findIdx(bz.tele, e.id); if (k >= 0) bz.tele.splice(k, 1); k = findIdx(bz.live, e.id); if (k >= 0) bz.live.splice(k, 1); }
+      else if (e.type === 'phase') { bz.phaseName = e.name; logPush(BOSS_LOG.phase, { phase: e.phase, name: e.name, frac: Math.round(1e4 * bz.st.hp / bz.st.hpMax) / 1e4, t: simT }, 8); toast(bossName() + ': ' + e.name + '!'); }
+      else if (e.type === 'weary') {
+        bz.tele.length = 0; bz.live.length = 0;
+        toast(TAME && e.canTame ? 'The ' + bossName() + ' is weary. Feed it a feast (F) to tame it, or finish it.' : 'The ' + bossName() + ' is weary. Finish it!');
+      } else if (e.type === 'tame_start') toast('The ' + bossName() + ' takes the feast. Soothe shots (Q) put it to sleep, then feed it more feasts.');
+      else if (e.type === 'no_tame') toast('The ' + bossName() + ' cannot be tamed.');
+      else if (e.type === 'tame') {
+        if (e.ev === 'ko') toast('The ' + bossName() + ' is asleep. Feed it feasts (F). Do not hit it.');
+        else if (e.ev === 'fed') { save.inv = invTake('feast', 1); bz.eatT = 0.8; }
+        else if (e.ev === 'toofast') toast('The ' + bossName() + ' is still chewing.');
+        else if (e.ev === 'cannot_feed') toast('Put it to sleep with soothe shots (Q) first.');
+        else if (e.ev === 'wake') toast('The ' + bossName() + ' woke up. It is still weary: soothe it again.');
+      } else if (e.type === 'tamed') bossTamed();
+      else if (e.type === 'dead') bossDefeated();
+      else if (e.type === 'escaped') { bz.done = 'escaped'; bz.st = null; bz.tele.length = 0; bz.live.length = 0; toast('The ' + bossName() + ' slipped away. It will be back next visit.'); }
+    }
+  }
+  // take n of an item out of `inv` (a feast eaten by a boss); returns the new inv
+  function invTake(id, n) {
+    const out = {};
+    Object.keys(save.inv).forEach((k) => { out[k] = save.inv[k]; });
+    if (has(out, id)) { out[id] -= n; if (out[id] <= 0) delete out[id]; }
+    dirty = true; if (panelKind === 'craft') craftDirty = true;
+    return out;
+  }
+  function bossStep(dt) {
+    if (!bz.st) return;
+    const st = bz.st.st;
+    bz.t += dt; bz.flash -= dt; if (bz.eatT > 0) bz.eatT -= dt;
+    const fromSite = Math.hypot(hero.x - bz.sx, hero.y - bz.sy);
+    if (!bz.engaged && !hero.dead && (fromSite <= ARENA_R || bz.dmg > 0 || bz.torpor > 0)) { bz.engaged = true; if (st === 'fight') toast('The ' + bossName() + ' roars! Watch the ground: step out of each shape before it fills.'); }
+    if (bz.engaged && st === 'fight' && (hero.dead || fromSite > ARENA_R * 1.35)) disengage(); // you left the ring: it calls off its attacks
+    if (!bz.engaged) { bz.dmg = 0; bz.torpor = 0; bz.ph = ''; bz.moving = false; return; }
+    // between attacks it lumbers toward you, never far from its lair
+    bz.moving = false; bz.vx = 0; bz.vy = 0;
+    if (st === 'fight' && !bz.st.hazards.length && !hero.dead) {
+      const dx = hero.x - bz.st.x, dy = hero.y - bz.st.y, d = Math.hypot(dx, dy) || 1;
+      if (d > 140) {
+        const sp = 46 * dt, nx = bz.st.x + dx / d * sp, ny = bz.st.y + dy / d * sp;
+        if (Math.hypot(nx - bz.sx, ny - bz.sy) <= BOSS_DRIFT) { bz.st.x = nx; bz.st.y = ny; bz.vx = dx / d * 46; bz.vy = dy / d * 46; bz.moving = true; }
+      }
+    }
+    // the engine runs on a fixed 40 Hz step (0.025 s is exact in its 1 ms clock, so a 0.9 s wind-up is 0.9 s on screen)
+    bz.acc = Math.min(0.5, bz.acc + dt);
+    while (bz.acc >= BOSS_DT - 1e-9 && bz.st) {
+      bz.acc -= BOSS_DT;
+      const inp = bz.inp;
+      inp.hero.x = hero.x; inp.hero.y = hero.y; inp.dmg = bz.dmg; inp.torporHit = bz.torpor; inp.feast = false; inp.offer = null;
+      inp.playerDist = Math.hypot(hero.x - bz.st.x, hero.y - bz.st.y);
+      bz.dmg = 0; bz.torpor = 0;
+      const r = BOSS.step(bz.st, inp, BOSS_DT);
+      if (r.state) bz.st = r.state;
+      if (r.events.length) bossEvents(r.events);
+    }
+    if (!bz.st) return;
+    bossZonesTick();
+    bossHurtCheck();
+    bz.x = bz.st.x; bz.y = bz.st.y;
+    bz.ko = bz.st.st === 'taming' && !!bz.st.tame && (bz.st.tame.st === 'ko' || (bz.st.tame.st === 'taming' && bz.st.tame.how === 'ko'));
+    bz.ph = bz.tele.length ? 'wind' : '';
+    if (bz.tele.length) bz.ang = bz.tele[bz.tele.length - 1].zone.angle;
+  }
+  // telegraphs hand over to their live shape at hitAt; live shapes end after dur (sim clock)
+  function bossZonesTick() {
+    for (let i = bz.tele.length - 1; i >= 0; i--) {
+      const tg = bz.tele[i];
+      if (!(tg.hitAt >= 0) || simT < tg.hitAt - 1e-9) continue;
+      logPush(BOSS_LOG.tele, { id: tg.id, atk: tg.atk, shape: tg.zone.shape, windup: tg.windup, t0: tg.t0, th: tg.hitAt, drawn: tg.drawn, first: tg.first, last: tg.last });
+      bz.tele.splice(i, 1);
+    }
+    for (let i = bz.live.length - 1; i >= 0; i--) if (simT - bz.live[i].t0 > bz.live[i].dur + 1e-6) bz.live.splice(i, 1);
+  }
+  // the hero is hurt only inside a live (already telegraphed) shape, once per hazard
+  function bossHurtCheck() {
+    for (let i = 0; i < bz.live.length; i++) {
+      const L = bz.live[i];
+      if (L.done || hero.dead) continue;
+      if (simT - L.t0 < -1e-9) continue;
+      const tau = Math.max(0, simT - L.t0);
+      if (tau > L.dur + 1e-6) continue;
+      if (!BOSS.hitTest(L.zone, hero.x, hero.y, tau)) continue;
+      L.done = true;
+      const before = hero.hp;
+      hurtHero(Math.max(1, Math.round(L.dmg)));
+      const lost = before - hero.hp;
+      BOSS_LOG.hurtTotal += lost;
+      logPush(BOSS_LOG.hurt, { t: simT, id: L.id, atk: L.atk, x: hero.x, y: hero.y, tau: tau, zone: L.zone, tele: L.tele, lost: lost }, 48);
+    }
+  }
+  // a bolt hits the boss: damage (a soothe shot does a quarter), or torpor once taming has begun
+  function bossHit(dmg, sooth) {
+    if (!bossAlive()) return false;
+    bz.flash = 0.12;
+    if (!bz.engaged) bz.engaged = true;
+    if (bz.st.st === 'taming') { if (sooth) bz.torpor += dmg; else bz.dmg += dmg; }
+    else bz.dmg += sooth ? dmg * SOOTHE_DMG : dmg;
+    return true;
+  }
+  const bossFeedable = () => TAME && bossAlive() && !hero.dead && Math.hypot(hero.x - bz.x, hero.y - bz.y) <= BOSS_FEED_R &&
+    ((bz.st.st === 'weary' && BOSS_TAMEABLE) || bz.st.st === 'taming');
+  // F next to a weary boss: a feast from `inv` starts the boss-tame; once it sleeps, each feast feeds it (MMTame through MMIsleBoss)
+  function bossFeed() {
+    if (!bossFeedable()) return { ok: false, why: 'none' };
+    if (invCount('feast') <= 0) { toast('The ' + bossName() + ' only eats a feast. Craft one (K): raw meat and jungle berries.'); return { ok: false, why: 'nofood' }; }
+    const weary = bz.st.st === 'weary';
+    const inp = bz.inp;
+    inp.hero.x = hero.x; inp.hero.y = hero.y; inp.dmg = 0; inp.torporHit = 0; inp.feast = weary; inp.offer = weary ? null : 'feast';
+    inp.playerDist = Math.hypot(hero.x - bz.x, hero.y - bz.y);
+    const r = BOSS.step(bz.st, inp, 0);
+    inp.feast = false; inp.offer = null;
+    if (r.state) bz.st = r.state;
+    const started = r.events.some((e) => e.type === 'tame_start');
+    if (started) save.inv = invTake('feast', 1);
+    bossEvents(r.events);
+    const t = bz.st && bz.st.tame;
+    return { ok: started || r.events.some((e) => e.type === 'tame' && e.ev === 'fed'), started: started, st: bz.st ? bz.st.st : bz.done, prog: t ? t.prog : 0, need: t ? t.need : 0 };
+  }
+  function bossDefeated() {
+    const def = BOSS_DEF;
+    xp += 60; kills++;
+    bz.x = bz.st.x; bz.y = bz.st.y;
+    addDeath(bz);
+    rollLoot(bz);
+    ISL.noteBeat(save, BOSS_ID); dirty = true;
+    bz.done = 'dead'; bz.st = null; bz.tele.length = 0; bz.live.length = 0; bz.engaged = false;
+    toast('You defeated the ' + def.name + '!');
+    checkMedals();
+  }
+  function bossTamed() {
+    const def = BOSS_DEF, bond = bz.st.tame ? bz.st.tame.bond : 1;
+    const ent = adoptTame(def, bond, bz.st.x, bz.st.y, true);
+    ISL.noteBeat(save, BOSS_ID); dirty = true;
+    bz.done = 'tamed'; bz.st = null; bz.tele.length = 0; bz.live.length = 0; bz.engaged = false;
+    toast(ent ? 'The ' + def.name + ' is yours: an alpha! ' + (def.ride && def.ride.saddle ? 'Craft a ' + itemName(def.ride.saddle).toLowerCase() + ' to ride it.' : '') : 'The ' + def.name + ' is happy. Your bond grows.');
+    refreshMount();
+    checkMedals();
+  }
 
   // ---------- fog + minimap ----------
   let fog = (savedIsle && savedIsle.seed === SEED && FOG.decode(savedIsle.fog)) || FOG.make();
@@ -804,8 +1023,10 @@
       if (cv) g.drawImage(cv, cx * CPX - camX, cy * CPX - camY, CPX, CPX);
     }
     drawGround();
+    drawArena();
     // telegraphs first (on the ground, under every body)
     for (let i = 0; i < creatures.length; i++) { const c = creatures[i]; if (c.ph === 'wind') drawTelegraph(c, c.x - camX, c.y - camY); }
+    if (bz.tele.length || bz.live.length) drawBossZones();
     // creatures, y-sorted into a reused buffer (insertion sort: at most 24, nearly sorted frame to frame, no per-frame arrays)
     const list = drawBuf;
     list.length = creatures.length;
@@ -841,6 +1062,7 @@
       if (c.hp < c.maxHp) { const bw = Math.max(20, c.rad * 1.6); g.fillStyle = '#2a1b1b'; g.fillRect(sx - bw / 2, top - 6, bw, 4); g.fillStyle = MOOD_COL[c.mood] || '#e0604a'; g.fillRect(sx - bw / 2, top - 6, bw * Math.max(0, c.hp / c.maxHp), 4); }
       if (c.tm) drawTameState(c, sx, sy, top);
     }
+    drawBoss();
     // companions
     for (let i = 0; i < party.length; i++) {
       const p = party[i], cs = p.cs, sx = cs.x - camX, sy = cs.y - camY;
@@ -922,6 +1144,86 @@
     }
     g.restore();
     if (a.big) { g.fillStyle = col; g.fillRect(sx - 2, sy - c.rad * 2.6 - 18, 4, 9); g.fillRect(sx - 2, sy - c.rad * 2.6 - 7, 4, 3); } // "!"
+  }
+  // ---- X6 boss drawing: the arena ring, the exact MMIsleBoss shapes (telegraph -> live), the boss itself ----
+  const ARENA_DASH = [14, 10], NO_DASH = [];
+  const BOSS_TG = { frac: 0, alpha: 0, n: 0 }; // the last telegraph fill drawn (test handle; reused)
+  function drawArena() {
+    if (!bossSite) return;
+    const sx = bz.sx - camX, sy = bz.sy - camY, R = ARENA_R;
+    if (sx + R < 0 || sy + R < 0 || sx - R > VW || sy - R > VH) return;
+    arenaDrawn++;
+    if (arenaImg) { g.drawImage(arenaImg.img, Math.round(sx - R), Math.round(sy - R), R * 2, R * 2); arenaSrc = 'png'; return; }
+    arenaSrc = 'code';
+    const hot = bossAlive() && bz.engaged;
+    g.save();
+    g.globalAlpha = hot ? 0.75 : 0.45;
+    g.strokeStyle = '#2a1408'; g.lineWidth = 7; g.beginPath(); g.arc(sx, sy, R, 0, Math.PI * 2); g.stroke();
+    g.strokeStyle = hot ? '#ff9a4a' : '#e8c890'; g.lineWidth = 3; g.setLineDash(ARENA_DASH); g.beginPath(); g.arc(sx, sy, R, 0, Math.PI * 2); g.stroke();
+    g.setLineDash(NO_DASH);
+    g.fillStyle = hot ? '#ff9a4a' : '#e8c890';
+    for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; g.fillRect(Math.round(sx + Math.cos(a) * (R - 12)) - 3, Math.round(sy + Math.sin(a) * (R - 12)) - 3, 6, 6); } // rune stones
+    g.restore();
+  }
+  // the path of a boss shape around its origin (already translated there); k scales the reach (telegraph fill), tau spins a spiral
+  function zonePath(z, k, tau) {
+    g.beginPath();
+    if (z.shape === 'line') { g.rotate(z.angle); g.rect(0, -z.width / 2, z.len * k, z.width); g.rotate(-z.angle); }
+    else if (z.shape === 'cone') { g.moveTo(0, 0); g.arc(0, 0, Math.max(1, z.radius * k), z.angle - z.arc / 2, z.angle + z.arc / 2); g.closePath(); }
+    else if (z.shape === 'ring') { const o = z.inner + (z.outer - z.inner) * k; g.arc(0, 0, Math.max(z.inner + 1, o), 0, Math.PI * 2); g.arc(0, 0, z.inner, Math.PI * 2, 0, true); }
+    else if (z.shape === 'spiral') {
+      const step = Math.PI * 2 / z.arms, base = z.angle + z.spin * tau;
+      for (let i = 0; i < z.arms; i++) { const a = base + i * step; g.moveTo(0, 0); g.arc(0, 0, Math.max(1, z.radius * k), a - z.armHalf, a + z.armHalf); g.closePath(); }
+    }
+  }
+  function drawBossZones() {
+    for (let i = 0; i < bz.tele.length; i++) {
+      const tg = bz.tele[i], z = tg.zone, sx = z.x - camX, sy = z.y - camY;
+      const p = clamp((simT - tg.t0) / tg.windup, 0, 1);
+      const frac = REDUCED ? 1 : p, alpha = REDUCED ? 0.3 : 0.14 + 0.3 * p; // reduced motion: one static shape, no growth, no pulse
+      g.save(); g.translate(sx, sy);
+      g.globalAlpha = alpha; g.fillStyle = TG_BIG; zonePath(z, frac, 0); g.fill();
+      g.globalAlpha = 0.95; g.strokeStyle = TG_BIG; g.lineWidth = 3; zonePath(z, 1, 0); g.stroke();
+      g.restore();
+      tg.drawn++; if (tg.first < 0) tg.first = simT; tg.last = simT;
+      BOSS_TG.frac = frac; BOSS_TG.alpha = alpha; BOSS_TG.n++;
+    }
+    for (let i = 0; i < bz.live.length; i++) {
+      const L = bz.live[i], z = L.zone, tau = simT - L.t0;
+      if (tau < 0 || tau > L.dur) continue;
+      g.save(); g.translate(z.x - camX, z.y - camY);
+      g.globalAlpha = 0.55; g.fillStyle = '#ff3a2a'; zonePath(z, 1, tau); g.fill();
+      g.globalAlpha = 1; g.strokeStyle = '#fff0c0'; g.lineWidth = 2; zonePath(z, 1, tau); g.stroke();
+      g.restore();
+    }
+  }
+  function drawBoss() {
+    if (!bz.st) return;
+    const sx = bz.x - camX, sy = bz.y - camY;
+    if (sx < -200 || sy < -240 || sx > VW + 200 || sy > VH + 200) return;
+    let top = sy - 110;
+    const st = stripOf(bz, bz.moving);
+    if (st) {
+      const a = bz.art;
+      if (a && a.shadow && !LOW) { const w = a.w / a.dpr; g.drawImage(a.shadow, sx - w / 2, sy - (a.shadow.height / a.dpr) / 2, w, a.shadow.height / a.dpr); }
+      let fr;
+      if (bz.act === 'roar' && bz.tele.length) { const tg = bz.tele[bz.tele.length - 1]; fr = MS.frameIndex('roar', clamp((simT - tg.t0) / tg.windup, 0, 0.999) * MS.duration('roar')); }
+      else if (bz.act === 'idle' || bz.act === 'move' || bz.act === 'sleep' || bz.act === 'eat') fr = MS.frameIndex(bz.act, bz.t);
+      else fr = MS.frameIndex(bz.act, simT - bz.at0);
+      STRIPS.draw(g, st, fr, sx, sy, 1, MS.flipFor(bz.act, bz.dir));
+      bz.drawn = st.id; bz.src = 'png';
+      top = sy - (st.ay - st.top) - 2;
+    } else if (bz.art) {
+      const a = bz.art, act = bz.moving ? 'move' : 'idle', fr = a.frames[act][CD.frameAt(act, bz.t)], w = a.w / a.dpr, h = a.h / a.dpr;
+      if (a.shadow && !LOW) g.drawImage(a.shadow, sx - w / 2, sy - (a.shadow.height / a.dpr) / 2, w, a.shadow.height / a.dpr);
+      if (bz.vx < -4) { g.save(); g.translate(sx, 0); g.scale(-1, 1); g.drawImage(fr, -w / 2, sy - a.ay / a.dpr, w, h); g.restore(); }
+      else g.drawImage(fr, sx - w / 2, sy - a.ay / a.dpr, w, h);
+      bz.drawn = a.id; bz.src = 'code';
+      top = sy - a.ay / a.dpr - 2;
+    }
+    if (bz.flash > 0) { g.fillStyle = 'rgba(255,255,255,0.28)'; g.beginPath(); g.arc(sx, sy - 40, BOSS_RAD, 0, Math.PI * 2); g.fill(); }
+    if (bz.ko) { g.fillStyle = '#e8e0ff'; g.font = 'bold 16px monospace'; const k = REDUCED ? 0 : Math.floor(simT * 2) % 3; g.fillText('z', sx + 30, top - 2 - k * 3); g.fillText('Z', sx + 40, top - 14 - k * 3); }
+    if (bz.tele.length) { g.fillStyle = TG_BIG; g.fillRect(sx - 3, top - 26, 6, 14); g.fillRect(sx - 3, top - 9, 6, 5); } // "!"
   }
   // death strips of the pooled dying creatures (held on the last frame briefly, then the slot frees)
   function drawDeaths() {
@@ -1155,6 +1457,75 @@
     if (panelKind === 'craft') renderCraft(id);
     return { ok: true, id: id, unlocked: opened, have: invCount(id) };
   }
+  // ---------- X5: environment meters (MMIsleEnv, behind its flags; ?env=0 turns them all off) ----------
+  const ENV_ON = !!ENV && (ENVR.warmth || ENVR.oxygen || ENVR.gravity);
+  const GRAV = ENV && ENVR.gravity ? ENV.gravity(PACK_ID) : { move: 1, dash: 1 };
+  // shelter tiles, baked once: on the tundra hot springs, campfires and the camp at the landing; on mars the domes (habitat floor,
+  // landing pad), oxygen plants and the landing. The dock counts on both (the boat is warm and has air).
+  const SHELTER = (ENVR.warmth || ENVR.oxygen) ? new Uint8Array(W * H) : null;
+  if (SHELTER) {
+    const mark = (x, y, r) => { for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { const tx = x + dx, ty = y + dy; if (tx >= 0 && ty >= 0 && tx < W && ty < H && dx * dx + dy * dy <= r * r) SHELTER[ty * W + tx] = 1; } };
+    const tileSet = ENVR.warmth ? { hot_spring: 2 } : { habitat_floor: 0, landing_pad: 0 };
+    const propSet = ENVR.warmth ? { campfire: 3, hot_spring_steam: 2 } : { oxygen_plant: 1 };
+    for (let i = 0; i < W * H; i++) { const n = NAMES[world.terrain[i]]; if (has(tileSet, n)) mark(i % W, Math.floor(i / W), tileSet[n]); }
+    world.props.forEach((p) => { if (has(propSet, p.kind)) mark(p.x, p.y, propSet[p.kind]); });
+    mark(world.spawnPoint.x, world.spawnPoint.y, 3);
+    if (world.dock) mark(world.dock.x, world.dock.y, 2);
+  }
+  const envS = { warmT: 0, o2T: 0, o2Hurt: 0, acc: 0, warm: null, o2: null, warnW: false, warnO: false, emptyW: false, emptyO: false, move: GRAV.move, lost: 0 };
+  const sheltered = () => !!SHELTER && SHELTER[tileOf(hero.y) * W + tileOf(hero.x)] === 1;
+  function envStep(dt) {
+    envS.acc += dt;
+    if (envS.acc < 0.1) return; // 10 Hz is plenty for a calm meter
+    const d = envS.acc;
+    envS.acc = 0;
+    if (hero.dead) return;
+    const sh = sheltered();
+    let slow = 1;
+    if (ENVR.warmth) {
+      const cloak = invCount('warm_cloak') > 0;
+      const m0 = ENV.warmth(envS.warmT, sh, cloak);
+      envS.warmT = ENV.advance(envS.warmT, m0.rate, d, m0.max);
+      const m = ENV.warmth(envS.warmT, sh, cloak);
+      envS.warm = m;
+      if (m.warn && !envS.warnW && !sh) toast('Getting cold. Warm up by a hot spring or a campfire.');
+      if (m.empty && !envS.emptyW) toast('Too cold: you walk slower until you warm up. The cold never hurts you.');
+      envS.warnW = m.warn; envS.emptyW = m.empty; slow = m.slow;
+    }
+    if (ENVR.oxygen) {
+      const tank = invCount('o2_tank') > 0;
+      const m0 = ENV.oxygen(envS.o2T, sh, tank);
+      envS.o2T = ENV.advance(envS.o2T, m0.rate, d, m0.max);
+      const m = ENV.oxygen(envS.o2T, sh, tank);
+      envS.o2 = m;
+      if (m.warn && !envS.warnO) toast('Air is running low. Head back to a dome or the landing pad.');
+      if (m.empty && !envS.emptyO) toast('Out of air: 1 HP every 3 s until you reach a dome. It never takes your last HP.');
+      envS.warnO = m.warn; envS.emptyO = m.empty;
+      if (m.hurt > envS.o2Hurt && !god) { const before = hero.hp; hero.hp = Math.max(Math.min(1, hero.hp), hero.hp - (m.hurt - envS.o2Hurt)); envS.lost += before - hero.hp; }
+      envS.o2Hurt = m.hurt;
+    }
+    envS.move = GRAV.move * slow;
+  }
+  const envEls = { box: $('hud-env'), warm: $('env-warm'), o2: $('env-o2') };
+  const envLast = { warm: null, o2: null };
+  function envMeter(k, m, text) {
+    const el = envEls[k], v = m ? text + (m.empty ? '!' : '') : '';
+    if (envLast[k] === v) return;
+    envLast[k] = v;
+    el.hidden = !m;
+    if (!m) return;
+    el.querySelector('.val').textContent = text;
+    el.classList.toggle('warn', m.warn);
+    el.classList.toggle('empty', m.empty);
+  }
+  function envHud() {
+    if (!ENV_ON) return;
+    const w = ENVR.warmth ? envS.warm || ENV.warmth(envS.warmT, false, false) : null;
+    const o = ENVR.oxygen ? envS.o2 || ENV.oxygen(envS.o2T, false, false) : null;
+    if (envEls.box.hidden === !!(w || o)) envEls.box.hidden = !(w || o);
+    envMeter('warm', w, w ? (w.empty ? 'cold (slow)' : w.pct + '%') : '');
+    envMeter('o2', o, o ? (o.empty ? 'empty' : Math.ceil(o.left) + ' s') : '');
+  }
   // dock + sea chart
   const DOCK_R = 2.5 * TILE;
   const nearDock = () => !!world.dock && !hero.dead && Math.hypot((world.dock.x + 0.5) * TILE - hero.x, (world.dock.y + 0.5) * TILE - hero.y) <= DOCK_R;
@@ -1344,7 +1715,9 @@
   }
 
   // ---------- HUD ----------
-  const hud = { hero: $('hud-hero'), isle: $('hud-isle'), info: $('hud-info'), ground: $('hud-ground'), fill: $('hp-fill'), hp: $('hp-text'), hint: $('hint') };
+  const hud = { hero: $('hud-hero'), isle: $('hud-isle'), info: $('hud-info'), ground: $('hud-ground'), fill: $('hp-fill'), hp: $('hp-text'), hint: $('hint'),
+    bbName: $('bb-name'), bbPhase: $('bb-phase') };
+  const bossBar = $('boss-bar'), bbFill = $('bb-fill');
   const btn = { feed: $('btn-feed'), soothe: $('btn-soothe'), ride: $('btn-ride'), cmd: $('btn-cmd'), gather: $('btn-gather'), sail: $('btn-sail'), build: $('btn-build'), home: $('btn-home'), log: $('btn-log') };
   const lastBtn = {};
   const showBtn = (k, on) => { if (lastBtn[k] !== on) { lastBtn[k] = on; btn[k].hidden = !on; } };
@@ -1412,10 +1785,12 @@
     const lootN = Object.keys(loot).reduce((n, k) => n + loot[k], 0);
     setText('info', 'XP ' + xp + '  Kills ' + kills + '  Loot ' + lootN + (tames.roster.length ? '  Tames ' + tames.roster.length : '') + (party.length ? '  Party ' + party.length : ''));
     const tn = NAMES[O.tileAt(world, tx, ty)] || '';
-    setText('ground', tn.replace(/_/g, ' ') + (hero.scale < 1 ? ' (slow x' + hero.scale + ')' : '') + (ride ? ' (riding x' + Math.round(hero.scale * 100) / 100 + ')' : ''));
+    setText('ground', tn.replace(/_/g, ' ') + (hero.scale < 1 ? ' (slow x' + Math.round(hero.scale * 100) / 100 + ')' : '') + (ride ? ' (riding x' + Math.round(hero.scale * 100) / 100 + ')' : ''));
     // the calm hint line + the Feed / Soothe / Ride buttons
     const ft = TAME ? feedTarget() : null;
-    showBtn('feed', !!ft);
+    showBtn('feed', !!ft || bossFeedable());
+    bossHud();
+    envHud();
     showBtn('soothe', TAME);
     showBtn('ride', MOUNTS && !!mountEnt);
     showBtn('cmd', COMPANIONS && party.length > 0);
@@ -1441,12 +1816,39 @@
     const md = ride && mountEnt ? CR.get(mountEnt.sp) : null;
     setMeter('saddle', md && md.ride ? (md.ride.saddle ? (hasSaddle(md.ride.saddle) ? 'fitted' : 'bareback') : 'not needed') : '');
   }
+  // X6: the boss bar (name, phase, health) while you fight; DOM only when a value changes
+  let bbW = '', bbCls = '';
+  function bossHud() {
+    const on = bossAlive() && bz.engaged;
+    if (bossBar.hidden === on) bossBar.hidden = !on;
+    if (!on) return;
+    const s = bz.st.st;
+    setText('bbName', (bz.st.st === 'fight' ? '' : s === 'weary' ? 'Weary ' : 'Taming ') + bossName());
+    setText('bbPhase', s === 'fight' ? 'Phase ' + (bz.st.phase + 1) + ': ' + bz.phaseName : s === 'weary' ? (TAME && BOSS_TAMEABLE ? 'feast to tame' : 'finish it') : (bz.ko ? 'asleep' : 'soothe it'));
+    const w = Math.max(0, Math.round(100 * bz.st.hp / bz.st.hpMax)) + '%';
+    if (w !== bbW) { bbW = w; bbFill.style.width = w; }
+    if (s !== bbCls) { bossBar.classList.toggle('weary', s === 'weary'); bossBar.classList.toggle('taming', s === 'taming'); bbCls = s; }
+  }
+  function bossHint() {
+    if (!bossAlive() || !bz.engaged) return '';
+    const s = bz.st.st, nm = bossName();
+    if (s === 'weary') return TAME && BOSS_TAMEABLE ? 'The ' + nm + ' is weary. Press F to feed it a feast and tame it (' + invCount('feast') + ' in your pack), or finish it.' : 'The ' + nm + ' is weary. Finish it!';
+    if (s === 'taming') {
+      const t = bz.st.tame;
+      if (bz.ko && t) return 'The ' + nm + ' is asleep (' + Math.ceil(TM.sleepLeft(t)) + ' s). Feed it feasts (F): ' + Math.floor(t.prog) + '/' + t.need + '. Do not hit it.';
+      return 'Taming the ' + nm + ': soothe shots (Q) put it to sleep. Torpor ' + (t && t.torporMax ? Math.round(100 * t.torpor / t.torporMax) : 0) + '%.';
+    }
+    if (bz.tele.length) return 'Step out of the glowing shape before it fills!';
+    return '';
+  }
   function hintText(ft) {
     if (build) return 'Decorating: tap open ground to place, tap an item to pick it up. E works too.';
+    const bh = bossHint();
+    if (bh) return bh;
     if (nearDock() && !ride) return 'The dock. Press T or Sail to open the sea chart.';
     if (spotNear()) return 'Something to gather here. Press G or Gather.';
     if (ride) return 'Riding ' + (mountEnt ? mountEnt.nm || 'your mount' : 'your mount') + (CMP.canSwim(ride) && swimAt(tileOf(hero.x), tileOf(hero.y)) ? ' through the water' : '') + '. Press R or Ride to get off.';
-    if (swimAt(tileOf(hero.x + hero.face.x * TILE * 1.2), tileOf(hero.y + hero.face.y * TILE * 1.2))) return 'Open water. Ride a Tidesteed or Skimray to swim across.';
+    { const fx = tileOf(hero.x + hero.face.x * TILE * 1.2), fy = tileOf(hero.y + hero.face.y * TILE * 1.2); if (swimAt(fx, fy) && !solidAt(fx, fy)) return 'Open water. Ride a Tidesteed or Skimray to swim across.'; }
     if (!TAME) return '';
     if (ft) {
       const def = CR.get(ft.kind), f = IC.foodFor(def, pouch), food = IC.foodName(f.id) + ' x' + (pouch[f.id] | 0);
@@ -1566,8 +1968,10 @@
     revealFog();
     nodeTick();
     spawnT -= dt;
-    if (spawnT <= 0) { spawnT = 0.5; spawnTick(); bossCheck(); }
+    if (spawnT <= 0) { spawnT = 0.5; spawnTick(); bossCheck(); bossTick(); }
     stepCreatures(dt);
+    if (bz.st) bossStep(dt);
+    if (ENV_ON) envStep(dt);
     stepBolts(dt);
     if (party.length) stepParty(dt);
     saveT -= dt;
@@ -1613,7 +2017,7 @@
     const snap = () => ({ x: hero.x, y: hero.y, tx: tileOf(hero.x), ty: tileOf(hero.y), hp: hero.hp, maxHp: hero.maxHp, scale: hero.scale, dead: hero.dead,
       terrain: NAMES[O.tileAt(world, tileOf(hero.x), tileOf(hero.y))] });
     window.__isles = {
-      world: world, pack: PACK_ID, isle: ISLE, seed: SEED, art: ART, low: LOW, hero: snap, heroInfo: () => Object.assign({}, HERO), packSpecies: PACK_SPECIES.slice(),
+      world: world, pack: PACK_ID, isle: ISLE, seed: SEED, tile: TILE, art: ART, low: LOW, hero: snap, heroInfo: () => Object.assign({}, HERO), packSpecies: PACK_SPECIES.slice(),
       clock: clock,
       verify: () => O.verify(world),
       pause: (p) => { paused = p !== false; return paused; },
@@ -1711,6 +2115,42 @@
       picked: () => picked,
       drops: () => DROP_LOG.slice(),
       saddles: () => ({ on: SADDLES, gift: saddleGift, sg: save.sg === 1 }),
+      // X6
+      boss: () => ({ id: BOSS_ID, on: BOSSES, site: bossSite ? { x: bossSite.x, y: bossSite.y, px: bz.sx, py: bz.sy } : null, arenaR: ARENA_R,
+        st: bz.st ? bz.st.st : null, done: bz.done, hp: bz.st ? bz.st.hp : 0, hpMax: bz.st ? bz.st.hpMax : 0, phase: bz.st ? bz.st.phase : -1, phaseName: bz.phaseName,
+        engaged: bz.engaged, x: bz.x, y: bz.y, tameable: BOSS_TAMEABLE, feedable: bossFeedable(), bar: !bossBar.hidden,
+        tele: bz.tele.map((t) => ({ id: t.id, atk: t.atk, shape: t.zone.shape, windup: t.windup, t0: t.t0, drawn: t.drawn, zone: Object.assign({}, t.zone) })),
+        live: bz.live.map((L) => ({ id: L.id, atk: L.atk, t0: L.t0, dur: L.dur, done: L.done, zone: Object.assign({}, L.zone) })),
+        tame: bz.st && bz.st.tame ? { st: bz.st.tame.st, how: bz.st.tame.how, torpor: bz.st.tame.torpor, torporMax: bz.st.tame.torporMax, prog: bz.st.tame.prog, need: bz.st.tame.need, asleep: bz.ko } : null,
+        arenaSrc: arenaSrc, arenaDrawn: arenaDrawn, reduced: REDUCED, tg: Object.assign({}, BOSS_TG), src: bz.src, drawn: bz.drawn, sk: bz.sk }),
+      bossLog: () => JSON.parse(JSON.stringify(BOSS_LOG)),
+      bossSpawn: () => { if (!BOSS_ID) return false; if (!bz.st) { bz.done = ''; spawnBoss(); } return !!bz.st; },
+      bossHit: (n, sooth) => bossHit(Number(n) || 0, sooth === true),
+      bossFeed: () => bossFeed(),
+      // stand in for the b33 ring PNG (a code-drawn 128x128 image) to check the art path; false goes back to the code ring
+      arenaArt: (on) => {
+        if (!on) { arenaImg = null; return false; }
+        const cv = mk(128, 128), c = cv.getContext('2d'); c.strokeStyle = '#c8a060'; c.lineWidth = 6; c.beginPath(); c.arc(64, 64, 58, 0, Math.PI * 2); c.stroke();
+        arenaImg = { img: cv, w: 128, h: 128, ax: 64, ay: 64 }; return true;
+      },
+      place: (x, y) => { hero.x = Number(x) || 0; hero.y = Number(y) || 0; revealFog(); return snap(); },
+      heal: () => { hero.hp = hero.maxHp; hero.dead = false; hero.iframes = 0; return hero.hp; },
+      heroLost: () => heroLost,
+      // X5
+      env: () => { drawHud(); return { rules: Object.assign({}, ENVR), on: ENV_ON, warmT: envS.warmT, o2T: envS.o2T, warm: envS.warm ? Object.assign({}, envS.warm) : null,
+        o2: envS.o2 ? Object.assign({}, envS.o2) : null, move: envS.move, grav: Object.assign({}, GRAV), lost: envS.lost, sheltered: sheltered(),
+        hud: { box: !envEls.box.hidden, warm: envEls.warm.hidden ? null : envEls.warm.querySelector('.val').textContent, o2: envEls.o2.hidden ? null : envEls.o2.querySelector('.val').textContent,
+          warmWarn: envEls.warm.classList.contains('warn'), o2Warn: envEls.o2.classList.contains('warn') } }; },
+      envSet: (w, o) => { envS.warmT = Math.max(0, Number(w) || 0); envS.o2T = Math.max(0, Number(o) || 0); envS.o2Hurt = ENV && ENVR.oxygen ? ENV.oxygen(envS.o2T, false, invCount('o2_tank') > 0).hurt : 0; return true; },
+      // a walkable tile (with walkable neighbours) that is sheltered (want true) or exposed (want false)
+      findEnvTile: (want) => {
+        for (let y = 4; y < H - 4; y++) for (let x = 4; x < W - 4; x++) {
+          let ok = true;
+          for (let dy = -1; dy <= 1 && ok; dy++) for (let dx = -1; dx <= 1 && ok; dx++) if (!walkableAt(x + dx, y + dy) || heroSolidAt(x + dx, y + dy) || (!!SHELTER && SHELTER[(y + dy) * W + x + dx] === 1) !== !!want) ok = false;
+          if (ok) return { x: x, y: y };
+        }
+        return null;
+      },
       findShore: (name) => {
         const want = O.TERRAIN_ALL[name];
         for (let y = 3; y < H - 3; y++) for (let x = 3; x < W - 3; x++) {

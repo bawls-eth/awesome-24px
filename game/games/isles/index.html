@@ -20,6 +20,8 @@
 <script src="../../shared/mm-isles.js"></script>
 <script src="../../shared/mm-tames.js"></script>
 <script src="../../shared/mm-tame.js"></script>
+<script src="../../shared/mm-isle-boss.js"></script>
+<script src="../../shared/mm-isle-env.js"></script>
 <script src="../../shared/mm-companion.js"></script>
 <script src="../../shared/mm-homestead.js"></script>
 <script src="isle-creatures.js"></script>
@@ -43,6 +45,10 @@
     <span id="tm-bond" class="meter" hidden><span class="ico" data-ico="ui_tame_bond"></span><span class="lbl">Bond</span> <span class="val"></span></span>
     <span id="tm-saddle" class="meter" hidden><span class="ico" data-ico="ui_saddle"></span><span class="lbl">Saddle</span> <span class="val"></span></span>
   </div>
+  <div id="hud-env" class="hud-env" hidden>
+    <span id="env-warm" class="meter env" hidden><span class="lbl">Warmth</span> <span class="val"></span></span>
+    <span id="env-o2" class="meter env" hidden><span class="lbl">Air</span> <span class="val"></span></span>
+  </div>
   <div class="hud-btns">
     <button id="btn-home" type="button" hidden aria-label="Fast travel to the home dock">Home</button>
     <button id="btn-log" type="button" aria-label="Open the island log">Log</button>
@@ -51,6 +57,10 @@
 </header>
 <div id="mini-wrap">
   <canvas id="mini" width="160" height="160" aria-label="Minimap" role="img"></canvas>
+</div>
+<div id="boss-bar" class="boss-bar" role="status" aria-live="off" hidden>
+  <div class="bb-head"><span id="bb-name" class="bb-name"></span><span id="bb-phase" class="bb-phase"></span></div>
+  <div class="bar" aria-label="Boss health"><div id="bb-fill" class="fill bb-fill"></div></div>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
 <p id="hint" class="hint" role="status" aria-live="polite" hidden></p>
