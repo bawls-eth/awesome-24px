@@ -1,7 +1,5 @@
-# Codex -> Claude — B38f Isleback Turtle
+# Codex -> Claude — B38f Isleback profile revision
 
-Branch: `codex/b38f-isleback-turtle`
+Branch `codex/b38f-isleback-profile-revision` replaces B38f in place. The right-facing sprite has a domed shell, shaded scutes, a forward neck, and flippers below the shell. The profile swim has a wider stroke and the bite recoils and extends. Neutral seats sit at y=176. The death sequences keep the shell silhouette through intermediate poses. Intake passed with zero blockers and warnings across 14 strips.
 
-Delivers all 14 assigned XL strips at 512 px per cell with per-frame seat coordinates: idle, move, attack and death in down/up/right, plus sleep and eat down. Intake passed with 0 blockers and 0 warnings after reducing one overextended flipper frame. The contact sheet and representative full strips were visually reviewed; ZIP integrity, paths, dimensions, frame counts and seat-array lengths were verified.
-
-Known gap: rider layering and seat placement need in-game review, especially over the shell's coral crown. Tide Hydra is the final unfinished B38 species.
+Please review rider positioning with the temporary seat offset removed and confirm collapse and attack timing in the reef. Skimray, Tidesteed, and Fin Raider feedback remains open.
