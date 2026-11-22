@@ -1031,7 +1031,7 @@
     });
     renderBuilds();
     const nDone = MEDALS.concat(EXTRA).filter((m) => meta.goals[m.id]).length;
-    $('goal-stats').textContent = 'Goals: ' + nDone + '/' + (MEDALS.length + EXTRA.length) + ' | Torches: ' + meta.goals.torches + '/10 | Deepest: ' + meta.goals.maxDepth + ' | Deaths: ' + meta.goals.deaths + (meta.cave && meta.cave.seed !== null ? ' | Old cave seed: ' + meta.cave.seed : '');
+    $('goal-stats').textContent = 'Goals: ' + nDone + '/' + (MEDALS.length + EXTRA.length) + ' | Torches: ' + meta.goals.torches + '/10 | Deepest: ' + meta.goals.maxDepth + ' | Deaths: ' + meta.goals.deaths + (meta.cave && meta.cave.seed !== null ? ' | Old cave seed: ' + meta.cave.seed : '') + (runRec ? ' | Dives: ' + runRec.runs + ' (' + runRec.safe + ' climbed out) | Best dive: score ' + runRec.best.score + ', ' + runRec.best.depth + ' deep, combo x' + runRec.best.combo : '');
   }
 
   // ---------- crafting + smelting ----------

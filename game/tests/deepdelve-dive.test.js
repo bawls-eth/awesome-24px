@@ -109,8 +109,9 @@ async function open(browser, opts, q, init) {
 
   // reload: personal bests persist and show in the HUD; existing meta key untouched in shape
   await P.page.reload(); await P.page.waitForFunction(() => window.__dd && window.__dd.ready);
-  const d4 = await P.page.evaluate(() => ({ dive: document.getElementById('hud-dive').textContent, meta: JSON.parse(localStorage.getItem('pixeltown-deepdelve-v1') || '{}') }));
+  const d4 = await P.page.evaluate(() => ({ goals: (window.__dd.panel('goals', true), document.getElementById('goal-stats').textContent), dive: document.getElementById('hud-dive').textContent, meta: JSON.parse(localStorage.getItem('pixeltown-deepdelve-v1') || '{}') }));
   check('persist: best depth survives a reload', /Best 9/.test(d4.dive), d4.dive);
+  check('goals panel: lists dive records next to the old stats', /Goals: \d+\/8/.test(d4.goals) && /Dives: 2 \(1 climbed out\) \| Best dive: score \d+, 9 deep, combo x3/.test(d4.goals), d4.goals);
   check('persist: the old meta key keeps its goals block', d4.meta.v === 1 && d4.meta.goals && typeof d4.meta.goals.deaths === 'number' && d4.meta.goals.deaths >= 1);
   check('phone: console clean', P.errors.length === 0, P.errors.join(' | '));
   check('phone: zero DB requests', P.db.count() === 0);
