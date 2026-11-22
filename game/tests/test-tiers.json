@@ -1134,5 +1134,9 @@
   "nav-realm.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "nav-town.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }

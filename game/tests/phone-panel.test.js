@@ -12,9 +12,11 @@ const SEL = { joystick: '#joystick', actions: '#action-buttons', chat: '#chat-pa
     const tag = `${w}x${h}`;
     const { browser, page, errors } = await launch({ width: w, height: h }, null, true);
     // 1. Collapsed by default: only the chip shows; it carries the key stats.
-    const c = await page.evaluate(() => { const p = document.getElementById('player-list-panel'); const t = document.getElementById('panel-toggle'); const kids = [...p.children].filter((k) => k.id !== 'panel-toggle' && getComputedStyle(k).display !== 'none').length; const r = p.getBoundingClientRect(); return { collapsed: p.classList.contains('collapsed'), visibleKids: kids, chip: t.textContent, expanded: t.getAttribute('aria-expanded'), w: r.width, h: r.height, stored: localStorage.getItem('pixeltown-panel-collapsed') }; });
+    const c = await page.evaluate(() => { const p = document.getElementById('player-list-panel'); const t = document.getElementById('panel-toggle'); const kids = [...p.children].filter((k) => k.id !== 'panel-toggle' && k.id !== 'where-to-btn' && getComputedStyle(k).display !== 'none').length; const r = p.getBoundingClientRect(); const wt = document.getElementById('where-to-btn').getBoundingClientRect(); const tr = t.getBoundingClientRect(); return { whereTo: { w: wt.width, h: wt.height }, chipH: tr.height, collapsed: p.classList.contains('collapsed'), visibleKids: kids, chip: t.textContent, expanded: t.getAttribute('aria-expanded'), w: r.width, h: r.height, stored: localStorage.getItem('pixeltown-panel-collapsed') }; });
+    // NAV-AUDIT 4.4: the "Where to?" button stays visible under the collapsed chip (outside the collapsible part).
+    check(`${tag}: "Where to?" is visible under the collapsed chip and at least 44 px tall`, c.whereTo.h >= 44 && c.whereTo.w >= 44, JSON.stringify(c.whereTo));
     check(`${tag}: panel starts collapsed to a chip with players + trophies`, c.collapsed && c.visibleKids === 0 && /👥 \d+ · 🏆 \d+\/\d+/.test(c.chip) && c.expanded === 'false', JSON.stringify(c));
-    check(`${tag}: collapsed chip is small (< 40% of the screen width, < 64px tall)`, c.w < w * 0.4 && c.h < 64, `${c.w}x${c.h}`);
+    check(`${tag}: collapsed chip is small (< 40% of the screen width, chip < 64px tall, chip + Where to? < 120px)`, c.w < w * 0.4 && c.chipH < 64 && c.h < 120, `${c.w}x${c.h} chip ${c.chipH}`);
     check(`${tag}: collapsed state is not persisted until the player chooses`, c.stored === null);
 
     // The rest of the phone HUD must not overlap itself either (collapsed state).

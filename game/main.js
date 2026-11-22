@@ -914,6 +914,8 @@ const FISH_TOURNAMENT_BONUS = 10;
 const GUESTBOOK_RADIUS = 60;
 
 const PANEL_COLLAPSE_KEY = 'pixeltown-panel-collapsed'; // own key; never part of the save
+const GATE_POINTER_KEY = 'pixeltown-gate-pointer-v1'; // own key; never part of the save
+const GATE_POINTER_MIN_DIST = 300; // the Realm Gate pointer shows only while the gate is further than this
 // Phone layout: narrow screens (portrait) OR a short touch screen (landscape phone).
 const PANEL_PHONE_QUERY = '(max-width: 600px), (max-height: 500px) and (pointer: coarse)';
 // ---------- daily checklist ----------
@@ -1463,6 +1465,8 @@ class TownScene extends Phaser.Scene {
     this.setupJournal();
     this.setupDailies(); // after weeds/mail/bug-off/home/birthdays exist
     this.setupPanelCollapse();
+    this.setupWhereTo();
+    this.setupGatePointer();
     if (IS_TOUCH) {
       this.setupTouchControls();
       this.setupTiltShake();
@@ -1497,6 +1501,7 @@ class TownScene extends Phaser.Scene {
     if (this.homeOpen && !this.isNearHome(HOME_RADIUS + 90)) this.closeHome();
     this.updateDigHoleHint();
     this.updateRealmGateHint();
+    this.updateGatePointer(time);
     this.updateFishHint();
     this.updateGiftHint();
     this.updateFloraFaunaHint();
@@ -2910,6 +2915,79 @@ class TownScene extends Phaser.Scene {
     hint.classList.toggle('hidden', this.inUnderground || this.inRealm || this.buildMode || !this.isNearRealmGate());
   }
 
+  // ---------- NAV slice E: "Where to?" sheet + Realm Gate pointer (UI only; no network, no save keys) ----------
+  // The Town keeps one HUD: no corner Menu button. The sheet (shared/mm-nav.js) opens from the "Where to?" button in the
+  // In-town panel, and its destinations are plain links, so leaving works exactly like the "World map" link.
+  setupWhereTo() {
+    const btn = document.getElementById('where-to-btn');
+    if (!btn) return;
+    let on = false;
+    try { on = typeof MMNav !== 'undefined' && MMNav.mount({ page: 'town', hideMenu: true }) === true; } catch (e) { on = false; }
+    if (!on) { btn.classList.add('hidden'); return; }
+    btn.addEventListener('click', () => {
+      if (MMNav.isOpen()) { MMNav.close(); return; }
+      for (let i = 0; i < 4 && this.closeTopOverlay(); i++); // never stack the sheet on a town overlay
+      MMNav.open();
+    });
+    MMNav.onOpen(() => btn.setAttribute('aria-expanded', 'true'));
+    MMNav.onClose(() => btn.setAttribute('aria-expanded', 'false'));
+    MMNav.onSettings(() => {
+      const panel = document.getElementById('player-list-panel');
+      const toggle = document.getElementById('panel-toggle');
+      if (panel && toggle && panel.classList.contains('collapsed')) toggle.click();
+      const sec = document.getElementById('settings-section');
+      if (sec && sec.classList.contains('hidden')) document.getElementById('settings-toggle-btn').click();
+    });
+  }
+
+  // A chip that points at the Realm Gate for players who have not found it yet. Its state lives in its own
+  // additive key (never pixeltown-save-v1): dismissed (the ✕) or reached (the gate menu was opened once).
+  loadGatePointer() {
+    try {
+      const v = JSON.parse(localStorage.getItem(GATE_POINTER_KEY) || 'null');
+      if (v && typeof v === 'object' && !Array.isArray(v)) return { v: 1, dismissed: v.dismissed === true, reached: v.reached === true };
+    } catch (e) { /* storage blocked or corrupt: start fresh */ }
+    return { v: 1, dismissed: false, reached: false };
+  }
+
+  saveGatePointer(patch) {
+    this.gatePointer = Object.assign(this.gatePointer || this.loadGatePointer(), patch);
+    try { localStorage.setItem(GATE_POINTER_KEY, JSON.stringify(this.gatePointer)); } catch (e) { /* storage blocked: this session only */ }
+  }
+
+  markGateReached() {
+    if (this.gatePointer && !this.gatePointer.reached) this.saveGatePointer({ reached: true });
+  }
+
+  setupGatePointer() {
+    this.gatePointer = this.loadGatePointer();
+    this._gatePointerAt = 0;
+    const close = document.getElementById('gate-pointer-close');
+    if (close) close.addEventListener('click', () => {
+      this.saveGatePointer({ dismissed: true });
+      document.getElementById('gate-pointer').classList.add('hidden');
+    });
+  }
+
+  updateGatePointer(time) {
+    const el = document.getElementById('gate-pointer');
+    if (!el || !this.localBody || !this.gatePointer) return;
+    if (time - this._gatePointerAt < 200) return; // a few times a second is plenty
+    this._gatePointerAt = time;
+    const st = this.gatePointer;
+    const dx = REALM_GATE_POS.x - this.localBody.x;
+    const dy = (REALM_GATE_POS.y + 30) - this.localBody.y;
+    const far = Math.hypot(dx, dy) > GATE_POINTER_MIN_DIST;
+    const show = !st.dismissed && !st.reached && far && !this.inRealm && !this.inUnderground && !this.realmEmbed && !this.buildMode;
+    if (el.classList.contains('hidden') === show) el.classList.toggle('hidden', !show);
+    if (!show) return;
+    // Screen and world share their axes, so the world direction is the arrow direction (8 ways).
+    const ARROWS = ['→', '↘', '↓', '↙', '←', '↖', '↑', '↗'];
+    const i = ((Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) % 8) + 8) % 8;
+    const arrow = document.getElementById('gate-pointer-arrow');
+    if (arrow && arrow.textContent !== ARROWS[i]) arrow.textContent = ARROWS[i];
+  }
+
   // ---------- Realm gate menu, invites and team link ----------
 
   // The big Realm runs in a same-origin full-screen frame over the town, so the player never leaves the game page.
@@ -2944,7 +3022,10 @@ class TownScene extends Phaser.Scene {
   openRealmGateMenu() {
     if (this.realmMenuOpen || this.inRealm || this.inUnderground) return;
     this.realmMenuOpen = true;
+    this.markGateReached();
+    if (typeof MMNav !== 'undefined' && MMNav.isOpen()) MMNav.close(); // never two dialogs at once
     document.getElementById('realm-menu').classList.remove('hidden');
+    this._friendsAuto = false; // "Play with friends" opens by itself once somebody else is in town
     const mm = document.getElementById('realm-menu-madmaze');
     if (mm && !mm.dataset.bound) {
       mm.dataset.bound = '1';
@@ -2971,6 +3052,8 @@ class TownScene extends Phaser.Scene {
     else if (inv) { status.textContent = inv.delivered ? `${inv.name} got your invite. Waiting for them to tap Accept…` : inv.notDelivered ? `${inv.name} has not received it yet. Ask them to refresh the page (and not be inside the Realm or cave), then invite again.` : `Invite sent to ${inv.name}…`; }
     else status.textContent = this.net && this.net.db ? 'Pick a player: they get a popup in town and tap Join. You enter together.' : 'Team play needs the online town.';
     const online = [...this.remotePlayers.values()].filter((rp) => rp.id && rp.name);
+    const friends = document.getElementById('realm-menu-friends');
+    if (friends && !this._friendsAuto) { friends.open = online.length > 0 || !!inv; if (friends.open) this._friendsAuto = true; }
     if (!online.length) { const li = document.createElement('li'); li.className = 'dim'; li.textContent = 'Nobody else is in town right now.'; list.appendChild(li); }
     online.forEach((rp) => {
       const li = document.createElement('li');
@@ -4222,6 +4305,11 @@ class TownScene extends Phaser.Scene {
       writeSave({ settingsOpen: open });
       render();
     });
+    // Device-only "Suggest or report a bug" box (shared/mm-feedback.js: localStorage only, no network).
+    if (window.MMFeedback && !section.dataset.fb) {
+      section.dataset.fb = '1';
+      try { window.MMFeedback.mount(section, { page: 'town' }); } catch (e) { /* the box never breaks settings */ }
+    }
   }
 
   // ---------- town map ----------
@@ -8897,6 +8985,8 @@ function showOfflineOption(message) {
   if (joinDone) return;
   joinStatus.textContent = message;
   joinOfflineBtn.classList.remove('hidden');
+  // The join card scrolls on short screens: bring the new button into view instead of leaving it below the fold.
+  try { joinOfflineBtn.scrollIntoView({ block: 'nearest' }); } catch (e) { /* old browsers: it is still reachable by scrolling */ }
 }
 
 function enterTown(net, data) {
@@ -9079,6 +9169,23 @@ function startTown(net, data) {
 renderSpeciesTabs();
 renderAvatarGrid();
 updateJoinButtonState();
+
+// Join screen "Continue: <last place>" (shared/mm-nav.js, key pixeltown-nav-v1, read-only here): only when a previous
+// place other than the Town is stored. A plain link, so it leaves the page without joining (no network).
+(function setupJoinContinue() {
+  const a = document.getElementById('join-continue');
+  if (!a || typeof MMNav === 'undefined') return;
+  try {
+    const st = MMNav.state();
+    const c = MMNav.continueTarget(st, 'town') || (st.prev ? MMNav.continueTarget({ v: 1, last: st.prev }, 'town') : null);
+    const href = c && MMNav.urlFor(c.url, 'game/index.html');
+    if (!href) return;
+    a.href = href;
+    a.textContent = '↩️ ' + c.label;
+    a.dataset.place = c.id;
+    a.classList.remove('hidden');
+  } catch (e) { /* storage blocked: no Continue link */ }
+}());
 
 // A lightweight, read-only peek at how many villagers are in town right
 // now, shown on the join screen before this player has actually joined.

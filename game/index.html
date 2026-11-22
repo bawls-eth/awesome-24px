@@ -4,8 +4,10 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
 <title>Hearthvale</title>
-<link rel="stylesheet" href="style.css?v=20261121d" />
+<link rel="stylesheet" href="style.css?v=20261122e" />
 <link rel="stylesheet" href="realm-ui.css?v=20261121d" />
+<link rel="stylesheet" href="shared/mm-nav.css?v=20261122e" />
+<link rel="stylesheet" href="shared/mm-feedback.css" />
 
 <link rel="manifest" href="manifest.json" />
 <meta name="theme-color" content="#bfe6f2" />
@@ -39,6 +41,7 @@
     <div id="species-tabs"></div>
     <div id="avatar-grid"></div>
 
+    <a id="join-continue" class="hidden" href="#">↩️ Continue</a>
     <button id="join-btn" disabled>Join Town</button>
     <p id="join-error" class="error"></p>
     <p id="join-status" class="join-status" role="status" aria-live="polite"></p>
@@ -57,6 +60,7 @@
   <div id="achievement-toast" class="hidden" aria-live="polite"></div>
   <div id="player-list-panel">
     <button id="panel-toggle" type="button" aria-expanded="true" aria-controls="player-list-panel">👥 In town</button>
+    <button id="where-to-btn" type="button" aria-haspopup="dialog" aria-controls="mm-nav-sheet" aria-expanded="false" title="Go to another world or game">🧭 Where to?</button>
     <h2>In town</h2>
     <ul id="player-list"></ul>
     <button id="achievements-badge" type="button">🏆 <b id="achievement-count">0</b>/<span id="achievement-cap"></span></button>
@@ -175,6 +179,10 @@
   <button id="build-material-btn" type="button" class="hidden">🪵 Wall</button>
   <button id="build-undo-btn" type="button" class="hidden" title="Undo your last placed block (Z)">↩️ Undo</button>
 
+  <div id="gate-pointer" class="hidden" role="status">
+    <span id="gate-pointer-text">🌀 Realm Gate <span id="gate-pointer-arrow" aria-hidden="true">↑</span></span>
+    <button id="gate-pointer-close" type="button" aria-label="Hide the Realm Gate pointer">✕</button>
+  </div>
   <div id="realm-gate-hint" class="hidden">🌀 <span class="key-hint">Press E</span><span class="tap-hint">Tap A</span> to enter the Realm</div>
   <div id="dig-hole-hint" class="hidden">⛏️ <span class="key-hint">Press E</span><span class="tap-hint">Tap A</span> to jump down the hole</div>
   <button id="fish-hint-btn" class="hidden" type="button">🎣 Fish</button>
@@ -394,11 +402,14 @@
   <div class="realm-menu-card">
     <div class="realm-bp-head"><strong>🌀 The Realm</strong><button id="realm-menu-close-btn" type="button" aria-label="Close">✕</button></div>
     <button id="realm-menu-madmaze" type="button" data-href="./games/mad-maze/index.html?mode=world">🌀 Enter the Realm</button>
-    <button id="realm-menu-solo" type="button">⚔️ Classic arena</button>
-    <p class="realm-menu-sub">🤝 Fight together (2-player co-op) — invite someone in town:</p>
-    <ul id="realm-menu-players"></ul>
-    <p id="realm-menu-status" aria-live="polite"></p>
-    <p class="realm-menu-sub dim">⚔️ Duel: best-of-3 1v1. 2v2: invite three players (you + the first against the other two). Identical stats in both.</p>
+    <button id="realm-menu-solo" type="button">⚔️ Quick arena (one room)</button>
+    <details id="realm-menu-friends">
+      <summary>🤝 Play with friends</summary>
+      <p class="realm-menu-sub">🤝 Fight together (2-player co-op) — invite someone in town:</p>
+      <ul id="realm-menu-players"></ul>
+      <p id="realm-menu-status" aria-live="polite"></p>
+      <p class="realm-menu-sub dim">⚔️ Duel: best-of-3 1v1. 2v2: invite three players (you + the first against the other two). Identical stats in both.</p>
+    </details>
   </div>
 </div>
 <div id="realm-invite" class="hidden" role="alertdialog" aria-label="Realm invitation">
@@ -497,8 +508,10 @@
 <script src="shared/sfx.js?v=20261121d"></script>
 <script src="shared/motion.js?v=20261121d"></script>
 <script src="shared/mm-patterns.js?v=20261121d"></script>
+<script src="shared/mm-nav.js?v=20261122e" data-page="town" data-mount="manual"></script>
+<script src="shared/mm-feedback.js?v=20261122e"></script>
 <script src="realm-team.js?v=20261121d"></script>
 <script src="realm.js?v=20261121d"></script>
-<script src="main.js?v=20261121d"></script>
+<script src="main.js?v=20261122e"></script>
 </body>
 </html>
