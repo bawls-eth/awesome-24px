@@ -279,6 +279,7 @@
   $('play').textContent = save.hint ? 'Play' : 'Got it, play';
   rng = MMRng.create('pixel-pop:preview'); fill(); run.maxTile = 0;
   medalList($('i-medals'));
+  try { $('play').focus({ preventScroll: true }); } catch (e) { /* ignore */ }
   hud();
   requestAnimationFrame(frame);
 

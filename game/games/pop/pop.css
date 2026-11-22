@@ -30,3 +30,4 @@ ul.medals li { background:var(--bg); border-radius:8px; padding:6px 8px; font-si
 ul.medals li.on { color:#111; background:var(--accent); font-weight:bold; }
 #msg { min-height:1.4em; margin:0; text-align:center; }
 .new { color:var(--accent); font-weight:bold; }
+.back[hidden] { display:none !important; }

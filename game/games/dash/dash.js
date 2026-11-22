@@ -344,6 +344,7 @@
   $('how').hidden = save.hint;
   $('play').textContent = save.hint ? 'Run' : 'Got it, run';
   medalList($('i-medals'));
+  try { $('play').focus({ preventScroll: true }); } catch (e) { /* ignore */ }
   C = { obs: course('preview').obs, flies: [], lo: 0, next: 0 };
   hud();
   requestAnimationFrame(frame);

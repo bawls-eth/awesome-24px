@@ -27,7 +27,7 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
   const s = await open(browser, { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }, '?test=1&seed=demo1');
   const p = s.page;
   check('title and how-to card on a fresh save', (await p.title()) === 'Pixel Pop - Pixeltown' && await p.isVisible('#intro') && await p.isVisible('#how') && (await p.textContent('#play')) === 'Got it, play');
-  check('MMNav mounted (Where to? button) and legacy links hidden', await p.evaluate(() => !!document.getElementById('mm-nav-btn') && document.body.classList.contains('mm-nav-on')));
+  check('MMNav mounted (Where to? button) and the old links removed from view', await p.evaluate(() => !!document.getElementById('mm-nav-btn') && document.body.classList.contains('mm-nav-on') && document.getElementById('back').hidden && document.getElementById('town').hidden && document.getElementById('back').getBoundingClientRect().width === 0));
   await p.tap('#play');
   check('Play starts the round: card hidden, state play, 90 s, seed from the URL', await p.evaluate(() => __pop.run.state === 'play' && __pop.run.time === 90 && __pop.run.seed === 'demo1' && document.getElementById('intro').hidden));
   check('hint is remembered in the own save key', (await lj(p, KEY)).hint === true);

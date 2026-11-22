@@ -60,7 +60,9 @@
 <script>
 (function () {
   if (!window.MMNav) return;
-  MMNav.mount({ page: 'pop', legacy: '#back,#town', avoid: '#top h1', backHref: '../../index.html', backLabel: 'Town' });
+  MMNav.mount({ page: 'pop', avoid: '#top h1', backHref: '../../index.html', backLabel: 'Town' });
+  // the Menu button replaces the old links outright (no 1 px hidden links left behind); without MMNav they stay
+  if (document.body.classList.contains('mm-nav-on')) ['back', 'town'].forEach(function (id) { var e = document.getElementById(id); if (e) e.hidden = true; });
   var cover = [], shut = ['result'];
   function open(ids) { return ids.some(function (id) { var e = document.getElementById(id); return e && !e.hidden; }); }
   function sync() { MMNav.setCovered(open(cover)); if (open(cover) || open(shut)) MMNav.close(); }

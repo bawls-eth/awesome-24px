@@ -27,7 +27,7 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
   const s = await open(browser, { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }, '?test=1&seed=night1');
   const p = s.page;
   check('title and how-to card on a fresh save', (await p.title()) === 'Lantern Dash - Pixeltown' && await p.isVisible('#intro') && await p.isVisible('#how') && (await p.textContent('#play')) === 'Got it, run');
-  check('MMNav mounted', await p.evaluate(() => !!document.getElementById('mm-nav-btn') && document.body.classList.contains('mm-nav-on')));
+  check('MMNav mounted and the old links removed from view', await p.evaluate(() => !!document.getElementById('mm-nav-btn') && document.body.classList.contains('mm-nav-on') && document.getElementById('back').hidden && document.getElementById('town').getBoundingClientRect().width === 0));
   // seeded course: same seed -> same obstacles, other seed -> different
   const cs = await p.evaluate(() => { const a = __dash.course('night1').obs.slice(0, 30), b = __dash.course('night1').obs.slice(0, 30), c = __dash.course('other').obs.slice(0, 30); return { same: JSON.stringify(a) === JSON.stringify(b), diff: JSON.stringify(a) !== JSON.stringify(c), easy: a.slice(0, 3).every((o) => o.t === 'rock'), kinds: [...new Set(a.map((o) => o.t))].sort().join(',') }; });
   check('course is seeded: same seed same course, new seed new course', cs.same && cs.diff, JSON.stringify(cs));
