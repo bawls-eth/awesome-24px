@@ -176,9 +176,10 @@
     setMsg(g.tour ? 'Tournament cast ' + journal.tour.run.used + '/' + D.CASTS + '. Waiting for a bite...' : g.baited ? 'Bait on the hook! Waiting for a bite...' : 'Waiting for a bite... (do not press yet)');
     renderSpots();
   }
-  function finish(outcome, title, detail) {
+  function finish(outcome, title, detail, funLine) {
     g.state = 'result'; g.result = { outcome, fish: g.fish && g.fish.id, size: g.size };
     $('res-title').textContent = title; $('res-detail').textContent = detail;
+    $('res-fun').textContent = funLine || ''; $('res-fun').hidden = !funLine;
     $('res-ok').textContent = outcome === 'caught' ? 'Cast again' : 'Try again';
     $('result').hidden = false; g.resultAt = g.t;
     $('res-title').className = outcome === 'caught' && g.fish ? 'r' + g.fish.rarity : '';
@@ -249,7 +250,7 @@
     g.fan = { t: 0, big: f.rarity >= 4 };
     const fl = funLand(f);
     finish('caught', (f.boss ? (firstTrophy ? 'TROPHY! ' : 'Boss beaten! ') : isNew ? 'New! ' : '') + f.name,
-      RARITY[f.rarity] + ' (' + f.rarity + '/5) - ' + sizeWord(f, g.size) + ', ' + g.size + ' cm' + (f.boss ? ' - trophy in the Hall of Records' : '') + g.dropMsg + (g.tourPts ? ' - +' + g.tourPts + ' points' : '') + '. ' + fl);
+      RARITY[f.rarity] + ' (' + f.rarity + '/5) - ' + sizeWord(f, g.size) + ', ' + g.size + ' cm' + (f.boss ? ' - trophy in the Hall of Records' : '') + g.dropMsg + (g.tourPts ? ' - +' + g.tourPts + ' points' : ''), fl);
   }
 
   // Cove fish go to their own journal key: no stock, no bells, no bait drops (no currency here), just the collection.
@@ -259,7 +260,7 @@
     saveJournal(); renderStatus();
     g.fan = { t: 0, big: f.rarity >= 4 };
     const fl = funLand(f);
-    finish('caught', (isNew ? 'New! ' : '') + f.name, RARITY[f.rarity] + ' (' + f.rarity + '/5) - ' + sizeWord(f, g.size) + ', ' + g.size + ' cm - cove fish ' + I.cove.count(journal) + '/' + A.COVE_FISH.length + '. ' + fl);
+    finish('caught', (isNew ? 'New! ' : '') + f.name, RARITY[f.rarity] + ' (' + f.rarity + '/5) - ' + sizeWord(f, g.size) + ', ' + g.size + ' cm - cove fish ' + I.cove.count(journal) + '/' + A.COVE_FISH.length, fl);
   }
   function nearLine() { const m = g.reel ? Math.round(g.reel.meter * 100) : 0; return m >= 70 ? ' So close: the catch meter was at ' + m + '%!' : m > 0 ? ' Catch meter reached ' + m + '%.' : ''; }
   function reactWord(ms) { return ms < 250 ? 'Lightning reflexes' : ms < 450 ? 'Sharp strike' : ms < 700 ? 'Good strike' : 'Just in time'; }
@@ -702,7 +703,7 @@
       c.fillStyle = '#111'; c.fillRect(x + bw * 0.5, y - bh * 0.12, Math.max(1, s * 0.05), Math.max(1, s * 0.05));
     }
   }
-  const BX = 200, BY = 255;
+  const BX = 200, BY = 255, FY = 228; // FY: landed fish + fanfare centre, kept above the result panel
   function draw() {
     const c = ctx, t = g.t;
     const night = nowCtx().hour >= 19 || nowCtx().hour < 6;
@@ -754,7 +755,7 @@
     if (g.state === 'reeling' && g.reel) drawReel(c);
     if (g.splash && g.state === 'reeling') drawSplash(c);
     if (g.fan && g.state === 'result') drawFanfare(c);
-    if (g.state === 'result' && g.result && g.result.outcome === 'caught') drawFish(c, W / 2, 290, 46, g.fish, false);
+    if (g.state === 'result' && g.result && g.result.outcome === 'caught') drawFish(c, W / 2, FY, 46, g.fish, false);
     if (g.state === 'idle' || g.state === 'result') {
       c.fillStyle = night ? 'rgba(255,255,255,.7)' : 'rgba(0,0,0,.45)'; c.font = '12px sans-serif'; c.textAlign = 'left'; c.fillText(spotName(g.spot), 8, 18);
     }
@@ -779,13 +780,13 @@
   function drawFanfare(c) {
     const f = g.fan, rare = ['', '#cfd8dc', '#8fe08f', '#6db8ff', '#c88bff', '#ffc24a'][g.fish.rarity];
     c.fillStyle = rare; c.textAlign = 'center';
-    if (reduced()) { c.font = 'bold 22px sans-serif'; c.fillText('\u2605 CAUGHT \u2605', W / 2, 226); return; } // no motion
+    if (reduced()) { c.font = 'bold 22px sans-serif'; c.fillText('\u2605 CAUGHT \u2605', W / 2, FY - 44); return; } // no motion
     if (f.t > 1.4) return;
     const n = Math.min(f.big ? 28 : 14, gfx.cap);
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2, rr = f.t * (70 + (i % 4) * 25);
       c.globalAlpha = Math.max(0, 1 - f.t / 1.4);
-      c.fillRect(W / 2 + Math.cos(a) * rr - 2, 290 + Math.sin(a) * rr * 0.8 - 2, 4, 4);
+      c.fillRect(W / 2 + Math.cos(a) * rr - 2, FY + Math.sin(a) * rr * 0.8 - 2, 4, 4);
     }
     c.globalAlpha = 1;
   }

@@ -47,19 +47,25 @@ async function open(browser, opts) {
   check('hook reports reaction time in ms and plays a cue', await p.evaluate(() => __angler.state === 'reeling' && __angler.fun.react >= 30 && __angler.fun.react <= 80 && /ms\)/.test(document.getElementById('msg').textContent) && __angler.fun.sounds.slice(-1)[0] === 'pickup'));
   check('hook shakes the scene (motion allowed)', await p.evaluate(() => __angler.fun.shakes === 1 && document.getElementById('scene').classList.contains('shake')));
   check('first catch lands', (await play(p)) === 'result:caught');
-  check('catch detail shows streak 1 and strike time', /Streak 1/.test(await p.textContent('#res-detail')) && /strike \d+ ms/.test(await p.textContent('#res-detail')));
+  check('catch shows streak 1 and strike time in its own highlighted line', /Streak 1/.test(await p.textContent('#res-fun')) && /strike \d+ ms/.test(await p.textContent('#res-fun')) && await p.isVisible('#res-fun'));
   check('catch plays a fanfare cue', await p.evaluate(() => ['levelup', 'bag_rare'].includes(__angler.fun.sounds.slice(-1)[0])));
   await p.evaluate(() => __angler.dismiss());
   await toReel(p, 'bluegill', 0.4); await play(p);
-  check('second catch: streak 2 and new best', /Streak 2 - new best!/.test(await p.textContent('#res-detail')));
+  check('second catch: streak 2 and new best', /Streak 2 - new best!/.test(await p.textContent('#res-fun')));
   const st = await p.evaluate(() => __angler.fun.state);
   check('fun key saved additively with best streak and fastest strike', st.v === 1 && st.streak === 2 && st.bestStreak === 2 && st.bestReact > 0 && st.bestReact <= 80);
+  check('phone: result panel sits below the landed fish (fish stays visible)', await p.evaluate(() => {
+    const c = document.getElementById('scene').getBoundingClientRect(), r = document.getElementById('result').getBoundingClientRect();
+    const fishBottom = c.top + c.height * (228 + 26) / 480;
+    return r.top >= fishBottom && r.bottom <= c.bottom && r.left >= 0 && r.right <= window.innerWidth;
+  }));
   await p.evaluate(() => __angler.dismiss());
 
   // near-miss: early press tells you how early, and the streak ends gently
   await p.evaluate(() => { const a = __angler; a.tap(); a.advance(0.3); a.tap(); });
   const sp = await p.textContent('#res-detail');
   check('spook says how early and that the streak of 2 ended', /Too early by \d\.\d s/.test(sp) && /streak of 2 ends here \(best 2\)/.test(sp), sp);
+  check('streak line is hidden on a miss', !(await p.isVisible('#res-fun')));
   check('streak reset to 0, best kept', await p.evaluate(() => __angler.fun.state.streak === 0 && __angler.fun.state.bestStreak === 2));
   check('Try again button is a big tap target', await p.evaluate(() => { const r = document.getElementById('res-ok').getBoundingClientRect(); return r.height >= 44 && r.width >= 44 && document.getElementById('res-ok').textContent === 'Try again'; }));
   await p.tap('#res-ok');

@@ -77,3 +77,6 @@ html[data-reduce-motion="1"] *, html[data-reduce-motion="1"] *::before, html[dat
 @keyframes ang-shake { 0%,100% { transform:translate(0,0); } 20% { transform:translate(-3px,1px); } 40% { transform:translate(3px,-1px); } 60% { transform:translate(-2px,-1px); } 80% { transform:translate(2px,1px); } }
 @media (prefers-reduced-motion: reduce) { #scene.shake, #scene.shake-big { animation:none; } }
 #bait-type { font-size:calc(12px * var(--ui-scale,1)); }
+/* result panel sits below the landed fish (drawn at 47% of the scene) so the catch stays visible */
+#result { top:auto; bottom:56px; transform:translateX(-50%); }
+#result #res-fun { color:var(--acc); font-weight:700; margin:-4px 0 12px; }
