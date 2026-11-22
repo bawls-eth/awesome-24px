@@ -40,17 +40,14 @@
 // hot springs and campfires refill it; at 0 you walk at x0.8, never any damage) and air on mars (90 s, 120 s with an o2_tank; domes and
 // landing pads refill it; at 0 it costs 1 HP every 3 s after a 10 s warning, and it never takes your last HP), plus mars gravity (x1.15).
 // No meter ever touches items or tames. The swim rule keeps the X1 behaviour (open water needs a swim mount) with or without the flag.
-<<<<<<< HEAD
 // X7: the hero's HP rides along on every trip (additive save.hp; absent = full); sailing to an island you already have a spot on resumes
 // there with its fog (the Home dock always lands at the dock); locked sea chart rows show the unlock cost with have / need; Decor > Make
 // opens the Home decor panel (MMHomeBuild: decor crafted from the pack into the decor stock, additive save.home.made) with the tame pen
 // roster by name, and each resting tame wears a cached name tag.
-=======
 // AW2 (art wiring, provisional Codex batches): Hearth Isle chunks bake the b35 meadow-home tiles (variants + grass edge masks, MMIsleArt
 // pack 'meadow'; code palette per missing tile) with its garden plot / dock / boat props and the stable over the homestead pen; the b36
 // meadow tameables, the b32s stegolith (saddle overlay + seat) and the b31af glimmerfrog sleep / eat come through MMCreatureStrips (each
 // island preloads its own biome's strips plus your stable's); the craft panel shows the b34b item icons by id over the text label.
->>>>>>> isles-aw2
 (function () {
   'use strict';
   const CRAFT = window.MMIsleCraft || null;
