@@ -239,6 +239,14 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "jam-relax.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "stalk-notes.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "lantern-page.test.js": {
     "class": "browser",
     "tier": "smoke"

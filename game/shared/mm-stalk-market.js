@@ -300,6 +300,65 @@
     return { ok: true, qty, price, gross, fee: NEIGHBOUR_FEE, gain, save: s };
   }
 
+  // ---- display only (MG4): plain-language "market notes" and the "Week of <date>" label ----
+  // These READ prices from generateWeek/knownPrices and never change prices, seeds or saves. They describe the past only:
+  // no advice, no promises and no urgency words.
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  // The Sunday that starts `week` (inverse of weekNumber), as a calendar date.
+  function weekStart(week) {
+    const w = clampWeek(week) || 0;
+    const d = new Date(Math.max(0, w * 7 - 4) * 86400000);
+    return { y: d.getUTCFullYear(), m: d.getUTCMonth(), d: d.getUTCDate() };
+  }
+  function weekLabel(week) { const s = weekStart(week); return 'Week of ' + s.d + ' ' + MONTHS[s.m] + ' ' + s.y; }
+  const SHAPE_WORDS = {
+    decreasing: 'Prices slid a little lower almost every half-day.',
+    random: 'Prices wandered up and down in waves.',
+    largeSpike: 'Prices dipped for a while, jumped far above the Sunday price for a short time, then fell back.',
+    smallSpike: 'Prices dipped, climbed to about double the Sunday price for a short time, then fell back.',
+  };
+  const STEP = 0.02; // moves under 2% read as "held steady"
+  function moveOf(a, b) { return b > a * (1 + STEP) ? 1 : b < a * (1 - STEP) ? -1 : 0; }
+  function countWord(n) { return ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'][n] || String(n); }
+  // Notes on this week so far: prices known at `slot`. Returns plain sentences.
+  function marketNotes(wk, slot) {
+    slot = clampSlot(slot);
+    const known = knownPrices(wk, slot), buy = wk.buyPrice, out = [];
+    if (slot === 0) {
+      out.push('Today is Sunday: the only price so far is the buy price of ' + buy + ' bells.');
+      out.push('Sell prices show up on Monday morning and change twice a day.');
+      return out;
+    }
+    const sells = known.slice(1), last = sells[sells.length - 1];
+    if (sells.length === 1) out.push('The first sell price this week is ' + last + ' bells, ' + vsBuy(last, buy) + '.');
+    else {
+      const prev = sells[sells.length - 2], mv = moveOf(prev, last);
+      out.push(mv > 0 ? 'Prices rose from ' + prev + ' to ' + last + ' bells since the half-day before.' : mv < 0 ? 'Prices dipped from ' + prev + ' to ' + last + ' bells since the half-day before.' : 'Prices held about steady at ' + last + ' bells since the half-day before.');
+      let run = 0, dir = 0;
+      for (let i = sells.length - 1; i > 0; i--) { const m = moveOf(sells[i - 1], sells[i]); if (!m || (dir && m !== dir)) break; dir = m; run++; }
+      if (run >= 2) out.push('Prices ' + (dir < 0 ? 'dipped' : 'rose') + ' ' + countWord(run) + ' half-days in a row' + (run >= 4 && run % 2 === 0 ? ' (' + countWord(run / 2) + ' days)' : '') + '.');
+      out.push('The latest price is ' + vsBuy(last, buy) + '.');
+      let hi = 1; for (let i = 2; i <= slot; i++) if (known[i] > known[hi]) hi = i;
+      if (hi !== slot) out.push('The highest sell price so far was ' + known[hi] + ' bells on ' + slotLabel(hi) + '.');
+      else out.push('This is the highest sell price so far this week.');
+    }
+    out.push('These notes only describe prices that already happened. Nobody can tell what comes next.');
+    return out;
+  }
+  function vsBuy(v, buy) {
+    const pct = Math.round(Math.abs(v - buy) / buy * 100);
+    return pct < 2 ? 'about the same as the Sunday price of ' + buy : v > buy ? pct + '% above the Sunday price of ' + buy : pct + '% below the Sunday price of ' + buy;
+  }
+  // One plain paragraph about the whole of last week (the week before `week`), or null in week 0.
+  function lastWeekNote(week) {
+    const w = clampWeek(week);
+    if (!w) return null;
+    const lw = generateWeek(w - 1), sells = lw.sell;
+    let lo = 0, hi = 0; for (let i = 1; i < sells.length; i++) { if (sells[i] < sells[lo]) lo = i; if (sells[i] > sells[hi]) hi = i; }
+    return weekLabel(w - 1) + ': ' + SHAPE_WORDS[lw.pattern] + ' It opened at ' + lw.buyPrice + ' bells on Sunday. The lowest sell price was ' + sells[lo] + ' on ' + slotLabel(lo + 1) +
+      ', the highest was ' + sells[hi] + ' on ' + slotLabel(hi + 1) + ', and it closed at ' + sells[sells.length - 1] + ' on Saturday PM.';
+  }
+
   function maxBuy(save, wk) {
     return Math.max(0, Math.min(MAX_HOLD - save.holdings, Math.floor(save.balance / wk.buyPrice)));
   }
@@ -308,5 +367,6 @@
     CURRENCY, PATTERNS, PATTERN_NAMES, PATTERN_HINTS, SLOTS, SELL_SLOTS, MAX_HOLD, START_BALANCE, ALLOWANCE_FLOOR, MEDALS,
     clampWeek, weekNumber, slotOf, clampSlot, slotLabel, generateWeek, priceAt, knownPrices,
     defaultSave, cleanSave, syncWeek, buy, sell, maxBuy, weekProfit, medalFor, rankFor, advise, GOALS, MAX_PRICE, goalsDone, latchGoals, goalStatus, lifetime, NEIGHBOURS, NEIGHBOUR_FEE, neighbourWeek, neighbourPrice, neighbourOffers, sellToNeighbour,
+    weekStart, weekLabel, marketNotes, lastWeekNote,
   };
 }));

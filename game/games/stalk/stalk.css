@@ -56,3 +56,9 @@ ul.cards li.done .tag { color:var(--buy); }
 /* AX2-side: text size from pixeltown-access-v1 (--ui-scale) and reduce motion (data-reduce-motion) */
 body { font-size: calc(16px * var(--ui-scale,1)); }
 html[data-reduce-motion="1"] *, html[data-reduce-motion="1"] *::before, html[data-reduce-motion="1"] *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+
+/* MG4 market notes: plain-language description of past prices (display only) */
+#market-notes h3 { font-size:calc(14px * var(--ui-scale,1)); margin:8px 0 2px; color:var(--dim); }
+#notes-list { margin:4px 0; padding-left:18px; font-size:calc(14px * var(--ui-scale,1)); }
+#notes-list li { margin:2px 0; overflow-wrap:anywhere; }
+#notes-last { overflow-wrap:anywhere; }

@@ -152,7 +152,7 @@
   }
   // ---- additive save fields: run history, best-run ghost, prefs, concert bests ----
   const HIST_N = 5, GHOST_MAX = 600, GHOST_MISS = 999, GHOST_LIM = 200, MAX_CONCERT = MAX_SCORE * 3;
-  const PREF_KEYS = ['shapes', 'lefty', 'ghost'];
+  const PREF_KEYS = ['shapes', 'lefty', 'ghost', 'relax', 'laneShapes', 'laneShapesOff', 'tapHolds'];
   function cleanHist(arr) {
     if (!Array.isArray(arr)) return null;
     const out = [];
@@ -184,6 +184,32 @@
     if (on) save.prefs[key] = true; else delete save.prefs[key];
     if (!Object.keys(save.prefs).length) delete save.prefs;
     return prefOf(save, key);
+  }
+  // ---- Relax mode (MG4): its own medal-free tracking under save.relax. Never touches best, stars, plays or unlocks. ----
+  const MAX_NOTES = 5000;
+  function cleanRelax(raw) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+    const o = { plays: clampInt(raw.plays, 0, MAX_PLAYS), songs: {} };
+    const src = raw.songs && typeof raw.songs === 'object' && !Array.isArray(raw.songs) ? raw.songs : {};
+    for (const s of SONGS) {
+      const e = Object.prototype.hasOwnProperty.call(src, s.id) ? src[s.id] : null;
+      if (!e || typeof e !== 'object' || Array.isArray(e)) continue;
+      const plays = clampInt(e.plays, 0, MAX_PLAYS);
+      if (plays > 0) o.songs[s.id] = { plays, notes: clampInt(e.notes, 0, MAX_NOTES), pstars: clampInt(e.pstars, 0, 3) };
+    }
+    return o.plays || Object.keys(o.songs).length ? o : null;
+  }
+  function relaxOf(save, id) { const r = save && save.relax && save.relax.songs && save.relax.songs[id]; return r ? { plays: r.plays, notes: r.notes, pstars: r.pstars } : { plays: 0, notes: 0, pstars: 0 }; }
+  // res: an MMJam run result(). Practice stars are shown but never count toward unlocks or totals.
+  function recordRelax(save, songId, res) {
+    const rep = { practiceStars: starsFor(res && res.accuracy), plays: 0, notes: clampInt(res && res.hits, 0, MAX_NOTES) };
+    if (!song(songId)) return rep;
+    const r = save.relax = cleanRelax(save.relax) || { plays: 0, songs: {} };
+    r.plays = Math.min(MAX_PLAYS, r.plays + 1);
+    const cur = r.songs[songId] || { plays: 0, notes: 0, pstars: 0 };
+    r.songs[songId] = { plays: Math.min(MAX_PLAYS, cur.plays + 1), notes: Math.max(cur.notes, rep.notes), pstars: Math.max(cur.pstars, rep.practiceStars) };
+    rep.plays = r.songs[songId].plays;
+    return rep;
   }
   function histOf(save, id, tier) { const h = save && save.hist && save.hist[id] && save.hist[id][tier]; return Array.isArray(h) ? h.slice() : []; }
   function ghostOf(save, id, tier) { const g = save && save.ghost && save.ghost[id] && save.ghost[id][tier]; return Array.isArray(g) ? g.slice() : null; }
@@ -266,6 +292,7 @@
     // fullCombo only counts when a Hard entry with a long combo backs it up, so a bare flag cannot open the secret
     if (raw.fullCombo === true && SONGS.some((s) => out.best[s.id] && out.best[s.id].hard && out.best[s.id].hard.combo >= FC_MIN_COMBO)) out.fullCombo = true;
     const conc = cleanConcert(raw.concert); if (conc) out.concert = conc;
+    const rlx = cleanRelax(raw.relax); if (rlx) out.relax = rlx;
     if (raw.prefs && typeof raw.prefs === 'object' && !Array.isArray(raw.prefs)) for (const k of PREF_KEYS) if (raw.prefs[k] === true) { out.prefs = out.prefs || {}; out.prefs[k] = true; }
     out.unlocked = SONGS.filter((s) => songUnlocked(out, s.id)).map((s) => s.id); // always derived from earned stars, never trusted from disk
     return out;
@@ -306,5 +333,5 @@
   }
 
   return { LANES, TIERS, TIER_NAMES, TIER, SONGS, STAR_AT, LEAD_BEATS, song, songIds, beatMs, chartFor, backing, toneHz, noteHz,
-    starsFor, emptySave, cleanSave, record, HIST_N, GHOST_MISS, prefOf, setPref, histOf, ghostOf, concertCheck, concertResult, recordConcert, CONCERT_SIZE, offsetOf, setOffset, FC_MIN_COMBO, totalStars, songStars, songUnlocked, tierUnlocked };
+    starsFor, emptySave, cleanSave, record, HIST_N, GHOST_MISS, prefOf, setPref, PREF_KEYS, relaxOf, recordRelax, histOf, ghostOf, concertCheck, concertResult, recordConcert, CONCERT_SIZE, offsetOf, setOffset, FC_MIN_COMBO, totalStars, songStars, songUnlocked, tierUnlocked };
 });

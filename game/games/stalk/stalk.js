@@ -141,6 +141,17 @@
     return a;
   }
 
+  // Market notes (MG4): plain words about prices that already happened. Display only: reads the week, changes nothing.
+  var notesKey = '';
+  function renderNotes() {
+    var slot = curSlot(), k = wk.seed + '|' + slot;
+    if (k === notesKey) return;
+    notesKey = k;
+    var ul = $('notes-list'); ul.textContent = '';
+    M.marketNotes(wk, slot).forEach(function (t) { var li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
+    var lw = M.lastWeekNote(curWeek());
+    $('notes-last').textContent = lw || 'This is the very first market week, so there is no last week to describe.';
+  }
   function renderNeighbours() {
     var slot = curSlot(), ul = $('nb-list'); ul.textContent = '';
     $('nb-fee').textContent = String(M.NEIGHBOUR_FEE);
@@ -186,7 +197,7 @@
     $('st-owned').textContent = fmt(save.holdings) + ' / ' + M.MAX_HOLD;
     var prof = M.weekProfit(save);
     $('st-profit').textContent = (prof > 0 ? '+' : '') + fmt(prof);
-    $('when').textContent = M.slotLabel(slot) + ' (week ' + curWeek() + ')';
+    $('when').textContent = M.slotLabel(slot) + ', ' + M.weekLabel(curWeek());
     $('price').textContent = fmt(price);
     $('price-note').textContent = sunday
       ? 'Buy price today. Stalks cannot be sold on Sunday.'
@@ -203,7 +214,7 @@
     var known = M.knownPrices(wk, slot);
     $('chart-alt').textContent = 'Known prices: ' + known.join(', ') + '. Price history changes twice a day, Monday to Saturday.';
     if (!anim.running) drawChart();
-    renderAdvisor(); renderGoals(); renderNeighbours();
+    renderAdvisor(); renderNotes(); renderGoals(); renderNeighbours();
     // last week reveal
     $('last-card').hidden = !save.last;
     if (save.last) {
@@ -298,6 +309,7 @@
         while (s < 0) { s += M.SLOTS; w = Math.max(0, w - 1); }
         this.setTime(w, s);
       },
+      get notes() { return M.marketNotes(wk, curSlot()); },
       get anim() { return anim; }, get advice() { return M.advise(M.knownPrices(wk, curSlot())); },
       get sounds() { return sounds; },
       buy: function (n) { return doBuy(n); },
