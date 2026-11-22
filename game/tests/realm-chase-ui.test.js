@@ -11,7 +11,7 @@ const SAVE = 'pixeltown-save-v1', MM = 'pixeltown-mm-v1', ACTIVE = 'pixeltown-mm
 const hero = (id, cls, level) => ({ id, name: cls, cls, level, xp: 0, fame: 0, bonus: 0, mode: 'classic', items: [] });
 const prof = (heroes) => ({ v: 1, heroes, stash: new Array(16).fill(null), fame: 0, mode: 'classic', hall: [], migratedFrom: null });
 const realm = (level, items, eq, gp) => ({ shards: 0, bestWave: 0, kills: 0, deaths: 0, kb: { spiral: 0, aimed: 0, ring: 0, drifter: 0, boss: 0 }, bossBestT: 0, level, xp: 0, items, nextUid: 100, eq, gv: 1, gp });
-// two relics held (Dread Plate, Hydra Fang), a T9 wand equipped; boss pity at 12
+// two relics held (Dread Plate, Hydra Fang), a T9 wand equipped; boss pity at 12 (the World save keeps gp.b), crypt pity 3 (this save keeps gp.d)
 const ITEMS = [{ n: 1, id: 'sparkwand', r: 1, t: 9 }, { n: 2, id: 'arm_sig_dread', r: 0, t: 12 }, { n: 4, id: 'arm_sig_hydra', r: 0, t: 12 }, { n: 5, id: 'heartcharm', r: 0 }];
 
 async function open(browser, query, viewport, items, gp) {
@@ -25,8 +25,8 @@ async function open(browser, query, viewport, items, gp) {
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push('console: ' + m.text()); });
   await page.goto(ORIGIN + '/game/games/mad-maze/lantern.css');
-  await page.evaluate(([k1, p, k2, a, k3, s]) => { localStorage.setItem(k1, JSON.stringify(p)); localStorage.setItem(k2, a); localStorage.setItem(k3, JSON.stringify({ realm: s })); },
-    [MM, prof([hero('h-1', 'ranger', 20)]), ACTIVE, JSON.stringify({ v: 1, heroId: 'h-1' }), SAVE, realm(20, items || ITEMS, { weapon: 1 }, gp || { b: 12, d: 3 })]);
+  await page.evaluate(([k1, p, k2, a, k3, s, w]) => { localStorage.setItem(k1, JSON.stringify(p)); localStorage.setItem(k2, a); localStorage.setItem(k3, JSON.stringify({ realm: s })); localStorage.setItem('pixeltown-realm-v1', JSON.stringify(w)); },
+    [MM, prof([hero('h-1', 'ranger', 20)]), ACTIVE, JSON.stringify({ v: 1, heroId: 'h-1' }), SAVE, realm(20, items || ITEMS, { weapon: 1 }, { b: 0, d: (gp || { d: 3 }).d }), { gp: { b: (gp || { b: 12 }).b, d: 0 } }]);
   errors.length = 0;
   await page.goto(MAZE + (query || ''));
   await page.waitForFunction(() => window.__mm && window.__mm.arena && window.__mm.arena.active, null, { timeout: 15000 });
@@ -60,8 +60,8 @@ const view = (page) => page.evaluate(() => {
     check('the relic book text is calm: no countdown, timer or urgency words', !/(\d+\s*(s|sec|min|hours?|days?)\b|left|hurry|expires|last chance|streak|missed)/i.test(v1.rows.map((r) => r.text).join(' ') + ' ' + v1.hint + ' ' + v1.label), JSON.stringify(v1));
     await page.click('#realm-bp-stats-toggle');
     const v2 = await view(page);
-    const c = await page.evaluate(() => MMEndgame.chase(window.__mm.arena.save));
-    check('the Stats drop-down starts with the pity line from MMEndgame.chase ("12 of 60 toward a sure T12")', !!v2.chase && v2.chase.indexOf(c.text) >= 0 && c.text === '12 of 60 toward a sure T12' && v2.chase.indexOf(c.luckText) >= 0, JSON.stringify({ chase: v2.chase, c: c.text }));
+    const c = await page.evaluate(() => MMEndgame.chase({ gp: { b: 12, d: 3 }, items: window.__mm.arena.save.items }));
+    check('the Stats drop-down starts with the pity line from MMEndgame.chase ("12 of 60 toward a sure T12": boss pity from the World save, crypt pity from this save)', !!v2.chase && v2.chase.indexOf(c.text) >= 0 && c.text === '12 of 60 toward a sure T12' && v2.chase.indexOf(c.luckText) >= 0 && JSON.stringify(await page.evaluate(() => window.__mm.arena.chaseGp())) === '{"b":12,"d":3}', JSON.stringify({ chase: v2.chase, c: c.text }));
     check('the pity line is the first thing in the Stats box', await page.evaluate(() => document.getElementById('realm-bp-stats-box').firstElementChild.id === 'realm-bp-chase'));
     errs.push(...A.errors); await A.ctx.close(); // toast below: a T10 pick-up beats the T9 best (relics are T12, so a save without them)
   }
@@ -77,6 +77,14 @@ const view = (page) => page.evaluate(() => {
     check('the chase UI adds no save keys (read-only)', Object.keys(sv).every((k) => !/chase|relic|besttier/i.test(k)) && sv.items.length === 3, JSON.stringify(Object.keys(sv)));
     check('no DB traffic (blockDb)', T.db.attempts() === 0, JSON.stringify({ http: T.db.http, ws: T.db.ws }));
     errs.push(...T.errors); await T.ctx.close(); }
+
+  // ---- hostile World save: the pity line falls back to 0, no error ----
+  { const H = await open(browser); const page = H.page;
+    await page.evaluate(() => { localStorage.setItem('pixeltown-realm-v1', '{"gp":{"b":"__proto__"}}x'); });
+    await page.click('#realm-bp-stats-toggle');
+    const v = await view(page);
+    check('a broken World save reads as 0 of 60 (no throw)', !!v.chase && v.chase.indexOf('0 of 60 toward a sure T12') >= 0, JSON.stringify(v.chase));
+    errs.push(...H.errors); await H.ctx.close(); }
 
   // ---- phone 390x844 ----
   { const P = await open(browser, '', { width: 390, height: 844 }); const page = P.page;

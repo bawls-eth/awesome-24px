@@ -4556,7 +4556,14 @@ class RealmArena {
   // section at the end of the backpack (the six godland relics, found or "not yet", MMEndgame.relicBook) and a gentle "New best tier" toast when a
   // picked-up item beats the best tier held this visit. Read-only on the save (no new keys). DOM built with textContent only. No countdowns.
   chaseOn() { return !rmFlagOff('chase') && typeof MMEndgame !== 'undefined' && !!MMEndgame && typeof MMEndgame.chase === 'function' && !(this.team && this.team.isPvp); }
-  chaseInfo() { if (!this.chaseOn() || !this.save) return null; try { return MMEndgame.chase(this.save); } catch (e) { return null; } }
+  // The godland boss pity (gp.b) lives in the Realm World save (pixeltown-realm-v1, realm-world.js giveBag); the crypt counter (gp.d) in this save
+  // (dungeon.js). Read-only: hostile or missing storage counts as 0.
+  chaseGp() {
+    const own = rmGpOf(this.save && this.save.gp); let wb = 0;
+    try { const o = JSON.parse(localStorage.getItem('pixeltown-realm-v1') || 'null'); const b = o && typeof o === 'object' && o.gp && typeof o.gp === 'object' ? o.gp.b : 0; wb = typeof b === 'number' && Number.isFinite(b) ? Math.max(0, Math.min(9999, Math.floor(b))) : 0; } catch (e) { wb = 0; }
+    return { b: wb, d: own.d };
+  }
+  chaseInfo() { if (!this.chaseOn() || !this.save) return null; try { return MMEndgame.chase({ gp: this.chaseGp(), items: this.save.items }); } catch (e) { return null; } }
   relicInfo() { if (!this.chaseOn() || !this.save) return null; try { return MMEndgame.relicBook({ items: this.save.items }); } catch (e) { return null; } }
   _chaseDom(box) {
     if (!box || !RM_GEAR_ON) return;
