@@ -96,8 +96,17 @@
       <button id="backup" type="button" class="btn" aria-label="Back up my progress to a file">Back up my progress</button>
       <label class="btn file" for="restore">Restore<input id="restore" type="file" accept=".json,application/json" aria-label="Restore from a backup file"></label>
     </div>
+    <div id="pregear-row" class="pregear" hidden>
+      <p id="pregear-note" class="muted"></p>
+      <div class="row">
+        <button id="pregear-restore" type="button" class="btn">Restore the pre-gear snapshot</button>
+        <button id="pregear-drop" type="button" class="btn" hidden>Delete the old snapshot</button>
+        <button id="pregear-keep" type="button" class="btn keep" hidden>Keep it</button>
+      </div>
+    </div>
     <div id="restore-confirm" class="confirm" role="alertdialog" aria-modal="true" aria-labelledby="restore-title" hidden>
       <h3 id="restore-title">Replace these saves?</h3>
+      <p id="restore-summary" class="muted" hidden></p>
       <p class="muted">Restoring will overwrite what is on this device for:</p>
       <ul id="restore-list" class="list"></ul>
       <div class="row">

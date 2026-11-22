@@ -93,3 +93,6 @@ legend{color:var(--gold);font-size:.9rem;padding:0 6px}
 .anode.reached{border-color:var(--ok)}
 .atitle{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;justify-content:space-between}
 .tag.reached{background:#1f5a3a}
+.pregear{margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+.pregear[hidden],.pregear .btn[hidden],#restore-summary[hidden]{display:none}
+#restore-summary,#pregear-note{overflow-wrap:anywhere}
