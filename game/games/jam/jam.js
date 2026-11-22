@@ -35,6 +35,34 @@
 
   // ---------- save (only pixeltown-jam-v1) ----------
   var save = SG.cleanSave(S.get(KEY, null));
+  // ---------- JM5 Assist (one thumb) + section-practice bests: own key, never touches pixeltown-jam-v1 bests/stars ----------
+  var AKEY = 'pixeltown-jam-assist-v1', ASSIST_GAP = 180, AMAX = 10000000;
+  var RANKS_OK = ['S', 'A', 'B', 'C', 'D'];
+  function cleanAssist(raw) {
+    var o = { on: false, best: {}, section: {} };
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return o;
+    o.on = raw.on === true;
+    var b = raw.best && typeof raw.best === 'object' && !Array.isArray(raw.best) ? raw.best : {};
+    SG.SONGS.forEach(function (sg) {
+      var e = Object.prototype.hasOwnProperty.call(b, sg.id) && b[sg.id] && typeof b[sg.id] === 'object' ? b[sg.id] : null; if (!e) return;
+      SG.TIERS.forEach(function (t) {
+        var x = Object.prototype.hasOwnProperty.call(e, t) ? e[t] : null;
+        if (x && typeof x === 'object' && Number.isFinite(x.score) && x.score > 0) { (o.best[sg.id] = o.best[sg.id] || {})[t] = { score: Math.min(AMAX, Math.floor(x.score)), rank: RANKS_OK.indexOf(x.rank) >= 0 ? x.rank : 'D' }; }
+      });
+    });
+    var sc = raw.section && typeof raw.section === 'object' && !Array.isArray(raw.section) ? raw.section : {};
+    Object.keys(sc).slice(0, 200).forEach(function (k) { if (/^[a-z0-9-]{1,40}:(easy|normal|hard):(50|75|100):\d{1,3}-\d{1,3}$/.test(k) && Number.isFinite(sc[k]) && sc[k] > 0) o.section[k] = Math.min(5000, Math.floor(sc[k])); });
+    return o;
+  }
+  var assist = cleanAssist(S.get(AKEY, null)), assistRun = false, assistLast = null;
+  function persistAssist() { S.set(AKEY, { on: assist.on, best: assist.best, section: assist.section }); }
+  // Outer lanes fold onto the nearest inner lane (D->F, K->J); notes then thinned to >= 180 ms apart per lane.
+  function assistChart(c) {
+    var map = { D: 'F', F: 'F', J: 'J', K: 'J' }, last = {};
+    var notes = c.notes.map(function (n) { return Object.assign({}, n, { lane: map[n.lane] || n.lane }); }).sort(function (a, b) { return a.t - b.t; })
+      .filter(function (n) { var end = last[n.lane]; if (end !== undefined && n.t < end + ASSIST_GAP) return false; last[n.lane] = n.t + (n.hold || 0); return true; });
+    return Object.assign({}, c, { notes: notes, assist: true });
+  }
   function persist() { S.set(KEY, save); try { var st = SG.totalStars(save); window.MMHubProfile.sync(localStorage, 'jam', [save.plays >= 1 && 'play', st >= 1 && 'star1', st >= 12 && 'stars12', save.fullCombo === true && 'fullcombo', SG.SONGS.some(function (s) { var b = save.best[s.id]; return !!(b && b.hard && b.hard.stars >= 3); }) && 'hard3']); } catch (e) { /* hub map progress is optional */ } }
   persist();
   function applyPrefs() {
@@ -196,10 +224,13 @@
     chart = opts.chart || SG.chartFor(id, tier, opts.seed !== undefined ? opts.seed : qs.get('seed') || undefined);
     practice = opts.practice ? makePractice(id, opts.practice) : null;
     relax = !practice && opts.relax === true;
+    assistRun = !relax && !concert && (opts.assist !== undefined ? opts.assist === true : assist.on);
+    if (assistRun) chart = assistChart(chart);
+    document.body.dataset.assist = assistRun ? '1' : '0';
     if (relax) concert = null;
     document.body.dataset.relax = relax ? '1' : '0';
     ghost = null;
-    if (!practice && !relax && (opts.ghost === true || (opts.ghost !== false && SG.prefOf(save, 'ghost')))) {
+    if (!practice && !relax && !assistRun && (opts.ghost === true || (opts.ghost !== false && SG.prefOf(save, 'ghost')))) {
       var gd = SG.ghostOf(save, id, tier);
       if (gd && chart.song === id && chart.seed === 'base' && gd.length === chart.notes.length) ghost = gd; // only for the exact same base chart
     }
@@ -218,7 +249,7 @@
     evIdx = firstEvent(startAt);
     mode = 'play'; overlay.hidden = true;
     $('hud-speed').textContent = practice ? 'Speed ' + Math.round(practice.speed * 100) + '%' : '';
-    $('hud-song').textContent = (practice ? 'Practice: ' : '') + (relax ? 'Relax: ' : '') + (concert ? 'Concert ' + (concert.idx + 1) + '/' + concert.ids.length + ': ' : '') + SG.song(id).name + ' / ' + SG.TIER_NAMES[tier];
+    $('hud-song').textContent = (practice ? 'Practice: ' : '') + (assistRun ? 'Assist: ' : '') + (relax ? 'Relax: ' : '') + (concert ? 'Concert ' + (concert.idx + 1) + '/' + concert.ids.length + ': ' : '') + SG.song(id).name + ' / ' + SG.TIER_NAMES[tier];
     updateHud();
     return run;
   }
@@ -226,6 +257,7 @@
     if (mode !== 'play') return;
     if (practice) { finishPractice(); return; }
     if (relax) { finishRelax(); return; }
+    if (assistRun && !practice) { finishAssist(); return; }
     releaseAll();
     run.update();
     var res = run.result();
@@ -265,8 +297,17 @@
     return Jam.createRun(c, { clock: songNow, offset: SG.offsetOf(save) * sp }); // offset shifts judging only, never the clock
   }
   function firstEvent(t) { if (!events) return 0; var i = 0; while (i < events.length && events[i].t < t) i++; return i; }
+  // Section practice best (hits in one pass of the A-B loop), kept in the Assist key: never a song best.
+  function sectionKey() { return practice && practice.loopBars && !assistRun ? songId + ':' + tier + ':' + Math.round(practice.speed * 100) + ':' + practice.loopBars[0] + '-' + practice.loopBars[1] : null; }
+  function recordSection(hits) {
+    var k = sectionKey(); if (!k) return { key: null, best: null, isNew: false };
+    var prev = assist.section[k] || 0;
+    if (hits > prev) { assist.section[k] = hits; persistAssist(); }
+    return { key: k, best: Math.max(prev, hits), isNew: hits > prev };
+  }
   function loopBack() {
     releaseAll();
+    try { run.update(); recordSection(run.result().hits); } catch (e) { /* ignore */ }
     var at = loopStart();
     run = makeRun(); practice.loops++;
     popups = []; rings = []; glows = []; held = {}; laneKeys = {}; ptrLane = {}; lastJudge = null;
@@ -274,10 +315,31 @@
     evIdx = firstEvent(at);
     updateHud();
   }
+  function finishAssist() {
+    releaseAll(); run.update();
+    var res = run.result();
+    var prev = assist.best[songId] && assist.best[songId][tier], nb = res.score > 0 && (!prev || res.score > prev.score);
+    if (nb) { (assist.best[songId] = assist.best[songId] || {})[tier] = { score: res.score, rank: res.rank }; persistAssist(); }
+    assistLast = { score: res.score, rank: res.rank, hits: res.hits, notes: chart.notes.length, newBest: nb, best: assist.best[songId] && assist.best[songId][tier] ? assist.best[songId][tier].score : 0 };
+    frozenAt = songNow(); mode = 'results';
+    var sid = songId, tr = tier;
+    clear(overlay); overlay.hidden = false;
+    overlay.appendChild(el('h2', 'Assist: ' + SG.song(sid).name + ' / ' + SG.TIER_NAMES[tr]));
+    var n = el('p', 'Assist (one thumb, 2 lanes). Assist runs never count toward stars, S-rank or unlocks; their bests are kept apart.'); n.id = 'assist-note'; overlay.appendChild(n);
+    var sc = el('p', 'Score ' + res.score + '  Rank ' + res.rank + '  (' + res.hits + ' / ' + chart.notes.length + ' notes)'); sc.id = 'assist-score'; overlay.appendChild(sc);
+    var bb = el('p', 'Assist best ' + assistLast.best + (assistLast.newBest ? ' (new)' : ''), 'dim'); bb.id = 'assist-best'; overlay.appendChild(bb);
+    var row = el('div', undefined, 'row');
+    var again = btn('Play again (Assist)', function () { startSong(sid, tr, { assist: true }); }); again.id = 'again'; row.appendChild(again);
+    var back = btn('Songs', showMenu); back.id = 'to-menu'; row.appendChild(back);
+    row.appendChild(homeLink('menu-back'));
+    overlay.appendChild(row);
+    try { again.focus(); } catch (e) { /* ignore */ }
+  }
   function finishPractice() {
     releaseAll(); run.update();
     var res = run.result();
-    practiceLast = { hits: res.hits, counts: res.counts, speed: practice.speed, loops: practice.loops, saved: false };
+    var sr = recordSection(res.hits);
+    practiceLast = { hits: res.hits, counts: res.counts, speed: practice.speed, loops: practice.loops, saved: false, sectionKey: sr.key, sectionBest: sr.best, sectionNew: sr.isNew };
     frozenAt = songNow(); mode = 'results';
     showPracticeDone(res);
   }
@@ -329,6 +391,7 @@
   // ---------- input ----------
   function press(lane) {
     if (mode !== 'play' || !run) return null;
+    if (assistRun) lane = lane === 'D' ? 'F' : lane === 'K' ? 'J' : lane; // either half of the board hits its inner lane
     var idx = LANES.indexOf(lane); if (idx < 0) return null;
     flashes[idx] = 1;
     var prevCombo = run.state.combo;
@@ -347,6 +410,7 @@
   }
   function release(lane) {
     if (mode !== 'play' || !run) return null;
+    if (assistRun) lane = lane === 'D' ? 'F' : lane === 'K' ? 'J' : lane;
     if (prefTapHolds && run.state.holds[lane]) { held[lane] = false; return 'tap-hold'; } // tap only: the long note finishes by itself
     var prevCombo = run.state.combo;
     var r = run.release(lane); held[lane] = false;
@@ -578,7 +642,7 @@
     return 'Timing: you averaged ' + how + ' over ' + res.hits + ' hits (offset ' + fmtOff(SG.offsetOf(save)) + ').';
   }
   function showMenu() {
-    mode = 'menu'; run = null; chart = null; paused = false; concert = null; practice = null; relax = false; document.body.dataset.practice = '0'; document.body.dataset.relax = '0';
+    mode = 'menu'; run = null; chart = null; paused = false; concert = null; practice = null; relax = false; assistRun = false; document.body.dataset.assist = '0'; document.body.dataset.practice = '0'; document.body.dataset.relax = '0';
     clear(overlay); overlay.hidden = false;
     overlay.appendChild(el('h2', 'Campfire Jam'));
     if (!save.hint) {
@@ -596,8 +660,15 @@
     rb.textContent = 'Relax mode: ' + (prefRelax ? 'On' : 'Off'); rb.setAttribute('aria-pressed', prefRelax ? 'true' : 'false'); rb.classList.toggle('sel', prefRelax);
     rb.addEventListener('click', function () { SG.setPref(save, 'relax', !prefRelax); persist(); applyPrefs(); showMenu(); });
     rrow.appendChild(rb);
+    var arow = el('div', undefined, 'row'); arow.id = 'assist-row';
+    var ab = el('button'); ab.type = 'button'; ab.className = 'pick'; ab.id = 'pref-assist';
+    ab.textContent = 'Assist (one thumb): ' + (assist.on ? 'On' : 'Off'); ab.setAttribute('aria-pressed', assist.on ? 'true' : 'false'); ab.classList.toggle('sel', assist.on);
+    ab.addEventListener('click', function () { assist.on = !assist.on; persistAssist(); showMenu(); var f = $('pref-assist'); if (f) f.focus(); });
+    arow.appendChild(ab);
+    var ainfo = el('span', assist.on ? 'Assist is on: 2 lanes, any pad on a side hits it. Scores go to separate Assist bests, never stars or S-rank.' : 'Assist: fold the 4 lanes into 2 for one-thumb play (separate bests).', 'dim'); ainfo.id = 'assist-info'; arow.appendChild(ainfo);
     var rinfo = el('span', prefRelax ? 'Relax is on: songs keep their notes, nothing can fail and there is no score. Stars only come from normal play.' : 'Relax mode: play any open song with no fail and no score.', 'dim'); rinfo.id = 'relax-info'; rrow.appendChild(rinfo);
     overlay.appendChild(rrow);
+    overlay.appendChild(arow);
     var openN = SG.SONGS.filter(function (x) { return SG.songUnlocked(save, x.id); }).length;
     var crow = el('div', undefined, 'row'); crow.id = 'concert-row';
     var cbn = btn('Concert (3 songs)', showConcertSetup, openN < SG.CONCERT_SIZE); cbn.id = 'btn-concert'; crow.appendChild(cbn);
@@ -709,7 +780,8 @@
   function showPracticeDone(res) {
     clear(overlay); overlay.hidden = false;
     overlay.appendChild(el('h2', 'Practice done: ' + SG.song(songId).name));
-    var n = el('p', 'Speed ' + Math.round(practice.speed * 100) + '%. No score, no stars, nothing saved.'); n.id = 'practice-note'; overlay.appendChild(n);
+    var n = el('p', 'Speed ' + Math.round(practice.speed * 100) + '%. No score, no stars, nothing saved to song bests.'); n.id = 'practice-note'; overlay.appendChild(n);
+    if (practiceLast && practiceLast.sectionKey) { var sb = el('p', 'Section best (Practice, bars ' + practice.loopBars[0] + '-' + practice.loopBars[1] + ' at ' + Math.round(practice.speed * 100) + '%): ' + practiceLast.sectionBest + ' hits' + (practiceLast.sectionNew ? ' (new)' : '') + '. Kept apart from song bests.', 'dim'); sb.id = 'practice-section-best'; overlay.appendChild(sb); }
     var c = el('p', 'You hit ' + res.hits + ' notes: ' + res.counts.perfect + ' perfect, ' + res.counts.great + ' great, ' + res.counts.good + ' good, ' + res.counts.miss + ' missed.', 'dim'); c.id = 'practice-counts'; overlay.appendChild(c);
     var cfg = { speed: practice.speed, loop: practice.loopBars }, sid = songId, tr = tier;
     var row = el('div', undefined, 'row');
@@ -1018,6 +1090,8 @@
       get results() { return resultsData ? JSON.parse(JSON.stringify(resultsData)) : null; },
       get practice() { return practice ? { speed: practice.speed, loop: practice.loop ? { a: practice.loop.a, b: practice.loop.b, aBar: practice.loopBars[0], bBar: practice.loopBars[1] } : null, loops: practice.loops } : null; },
       get relax() { return relax; },
+      sectionBest: function () { return sectionKey() ? assist.section[sectionKey()] || 0 : null; },
+      get assist() { return { on: assist.on, active: assistRun, best: JSON.parse(JSON.stringify(assist.best)), section: Object.assign({}, assist.section), last: assistLast ? Object.assign({}, assistLast) : null }; },
       get relaxResult() { return relaxLast ? JSON.parse(JSON.stringify(relaxLast)) : null; },
       get popups() { return popups.map(function (q) { return q.text; }); },
       get laneShapes() { return prefLaneShapes; },

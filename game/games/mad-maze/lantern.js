@@ -624,7 +624,7 @@
   }
   // ---------- hero art (real class animations; the canvas stays hidden when a class has none) ----------
   var artSet = null, artRaf = 0;
-  var REDUCE = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  var REDUCE = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) || !!(window.MMSideAccess && window.MMSideAccess.reduced && window.MMSideAccess.reduced());
   function paintArt() {
     var cvs = document.querySelectorAll('canvas.heroart'), t = performance.now() / 1000, any = false;
     var pv = $('new-class-art'); if (pv) pv.setAttribute('data-art', (A && A.artClassFor($('new-class').value)) || '');
@@ -655,7 +655,7 @@
   var drawBurst = 0;
   function startScene() {
     var cv = $('scene'), g = cv.getContext && cv.getContext('2d'); if (!g) return;
-    var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var reduce = REDUCE;
     var t = 0, flies = [];
     for (var i = 0; i < 14; i++) flies.push({ x: (i * 53) % 360, y: 20 + (i * 31) % 80, p: i });
     function frame() {

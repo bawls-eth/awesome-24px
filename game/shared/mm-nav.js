@@ -243,6 +243,15 @@
     if (typeof sel !== 'string' || !sel) return;
     try { document.querySelectorAll(sel).forEach((n) => n.classList.add(cls)); } catch (e) { /* bad selector */ }
   }
+  // The 1 px legacy links leave the tab order and the a11y tree while the Menu is mounted
+  // (unmounted pages never call this, so the links keep working there).
+  function hideLegacy() {
+    document.querySelectorAll('.mm-nav-legacy:not([data-mm-nav-hid])').forEach((n) => {
+      n.setAttribute('data-mm-nav-hid', n.hasAttribute('tabindex') ? n.getAttribute('tabindex') : '');
+      n.setAttribute('tabindex', '-1');
+      n.setAttribute('aria-hidden', 'true');
+    });
+  }
   function row(id, icon, label, href, cls) {
     const a = el('a', { id, class: 'mm-nav-row ' + (cls || ''), href });
     a.appendChild(el('span', { class: 'mm-nav-ico', 'aria-hidden': 'true' }, icon));
@@ -386,6 +395,10 @@
     tag(opts.legacy || opts.backLegacy, 'mm-nav-legacy');
     tag(opts.avoid, 'mm-nav-avoid');
     ui = build();
+    hideLegacy();
+    if (typeof MutationObserver === 'function') {
+      try { new MutationObserver(hideLegacy).observe(document.body, { childList: true, subtree: true }); } catch (e) { /* ignore */ }
+    }
     document.body.classList.add('mm-nav-on');
     window.addEventListener('keydown', onKey, true);
     return true;
