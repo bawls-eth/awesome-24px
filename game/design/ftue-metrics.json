@@ -43,12 +43,12 @@
       "minHp": 92,
       "portalWalk": 16.1,
       "portalPathTiles": 103,
-      "firstFrameMs": 390,
+      "firstFrameMs": 408,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-      "wallMs": 8476
+      "wallMs": 8836
     },
     "world-shore-b": {
       "seed": "4242",
@@ -85,12 +85,12 @@
       "minHp": 73,
       "portalWalk": 14.8,
       "portalPathTiles": 105,
-      "firstFrameMs": 369,
+      "firstFrameMs": 387,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-      "wallMs": 7949
+      "wallMs": 8229
     },
     "world-shore-c": {
       "seed": "12345",
@@ -127,12 +127,12 @@
       "minHp": 79,
       "portalWalk": 16.1,
       "portalPathTiles": 103,
-      "firstFrameMs": 379,
+      "firstFrameMs": 406,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-      "wallMs": 8282
+      "wallMs": 8626
     },
     "world-shore-d": {
       "seed": "4242",
@@ -169,12 +169,12 @@
       "minHp": 100,
       "portalWalk": 14.8,
       "portalPathTiles": 105,
-      "firstFrameMs": 353,
+      "firstFrameMs": 351,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-      "wallMs": 7880
+      "wallMs": 8660
     },
     "world-shore-e": {
       "seed": "31337",
@@ -211,12 +211,12 @@
       "minHp": 100,
       "portalWalk": 12,
       "portalPathTiles": 81,
-      "firstFrameMs": 404,
+      "firstFrameMs": 447,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-      "wallMs": 8338
+      "wallMs": 8723
     },
     "world-shore-f": {
       "seed": "777",
@@ -253,12 +253,12 @@
       "minHp": 100,
       "portalWalk": 11.6,
       "portalPathTiles": 78,
-      "firstFrameMs": 387,
+      "firstFrameMs": 401,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-      "wallMs": 8374
+      "wallMs": 8543
     }
   },
   "isles": {
@@ -277,12 +277,12 @@
       "nearEmpty": 0,
       "deaths": 0,
       "kills": 0,
-      "firstFrameMs": 773,
+      "firstFrameMs": 1008,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-      "wallMs": 1191
+      "wallMs": 1453
     },
     "isles-jungle-b": {
       "seed": "777",
@@ -299,12 +299,12 @@
       "nearEmpty": 0,
       "deaths": 0,
       "kills": 0,
-      "firstFrameMs": 729,
+      "firstFrameMs": 857,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-      "wallMs": 1182
+      "wallMs": 1306
     },
     "isles-jungle-c": {
       "seed": "4242",
@@ -321,12 +321,12 @@
       "nearEmpty": 0,
       "deaths": 0,
       "kills": 0,
-      "firstFrameMs": 788,
+      "firstFrameMs": 913,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-      "wallMs": 1201
+      "wallMs": 1319
     },
     "isles-jungle-d": {
       "seed": "31337",
@@ -343,12 +343,12 @@
       "nearEmpty": 0,
       "deaths": 0,
       "kills": 0,
-      "firstFrameMs": 740,
+      "firstFrameMs": 915,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-      "wallMs": 1157
+      "wallMs": 1333
     }
   },
   "dbAttempts": 0,
@@ -454,13 +454,13 @@
         "hintEmpty": 0,
         "hintNoAction": 0,
         "hintActionPct": 100,
-        "firstFrameMs": 491,
+        "firstFrameMs": 153,
         "smallButtons": 0,
         "underCanvas": 0,
         "stickOverlaps": 0,
         "tinyText": 5,
         "consoleErrors": 0,
-        "wallMs": 5610
+        "wallMs": 2242
       },
       "isles2-home-b": {
         "isle": "home",
@@ -491,13 +491,13 @@
         "hintEmpty": 0,
         "hintNoAction": 0,
         "hintActionPct": 100,
-        "firstFrameMs": 442,
+        "firstFrameMs": 149,
         "smallButtons": 0,
         "underCanvas": 0,
         "stickOverlaps": 0,
         "tinyText": 5,
         "consoleErrors": 0,
-        "wallMs": 6250
+        "wallMs": 2076
       },
       "isles2-jungle-a": {
         "isle": "jungle",
@@ -536,13 +536,13 @@
         "hintEmpty": 0,
         "hintNoAction": 0,
         "hintActionPct": 100,
-        "firstFrameMs": 346,
+        "firstFrameMs": 172,
         "smallButtons": 0,
         "underCanvas": 0,
         "stickOverlaps": 0,
         "tinyText": 5,
         "consoleErrors": 0,
-        "wallMs": 4889
+        "wallMs": 2729
       },
       "isles2-jungle-b": {
         "isle": "jungle",
@@ -579,13 +579,13 @@
         "hintEmpty": 0,
         "hintNoAction": 0,
         "hintActionPct": 100,
-        "firstFrameMs": 550,
+        "firstFrameMs": 150,
         "smallButtons": 0,
         "underCanvas": 0,
         "stickOverlaps": 0,
         "tinyText": 5,
         "consoleErrors": 0,
-        "wallMs": 6410
+        "wallMs": 3038
       },
       "isles2-tundra-a": {
         "isle": "tundra",
@@ -621,13 +621,13 @@
         "hintEmpty": 0,
         "hintNoAction": 0,
         "hintActionPct": 100,
-        "firstFrameMs": 409,
+        "firstFrameMs": 192,
         "smallButtons": 0,
         "underCanvas": 0,
         "stickOverlaps": 0,
         "tinyText": 5,
         "consoleErrors": 0,
-        "wallMs": 3269
+        "wallMs": 2160
       },
       "isles2-tundra-b": {
         "isle": "tundra",
@@ -663,13 +663,13 @@
         "hintEmpty": 0,
         "hintNoAction": 0,
         "hintActionPct": 100,
-        "firstFrameMs": 669,
+        "firstFrameMs": 173,
         "smallButtons": 0,
         "underCanvas": 0,
         "stickOverlaps": 0,
         "tinyText": 5,
         "consoleErrors": 0,
-        "wallMs": 4307
+        "wallMs": 1983
       },
       "isles2-reef-a": {
         "isle": "reef",
@@ -700,13 +700,13 @@
         "hintEmpty": 0,
         "hintNoAction": 0,
         "hintActionPct": 100,
-        "firstFrameMs": 671,
+        "firstFrameMs": 155,
         "smallButtons": 0,
         "underCanvas": 0,
         "stickOverlaps": 0,
         "tinyText": 5,
         "consoleErrors": 0,
-        "wallMs": 4178
+        "wallMs": 2170
       },
       "isles2-reef-b": {
         "isle": "reef",
@@ -737,13 +737,13 @@
         "hintEmpty": 0,
         "hintNoAction": 0,
         "hintActionPct": 100,
-        "firstFrameMs": 330,
+        "firstFrameMs": 136,
         "smallButtons": 0,
         "underCanvas": 0,
         "stickOverlaps": 0,
         "tinyText": 5,
         "consoleErrors": 0,
-        "wallMs": 4173
+        "wallMs": 1946
       },
       "isles2-mars-a": {
         "isle": "mars",
@@ -774,19 +774,19 @@
         "hintEmpty": 0,
         "hintNoAction": 0,
         "hintActionPct": 100,
-        "firstFrameMs": 508,
+        "firstFrameMs": 145,
         "smallButtons": 0,
         "underCanvas": 0,
         "stickOverlaps": 0,
         "tinyText": 5,
         "consoleErrors": 0,
-        "wallMs": 4595
+        "wallMs": 2327
       },
       "isles2-mars-b": {
         "isle": "mars",
         "pack": "mars",
         "seed": "4242",
-        "simSeconds": 615,
+        "simSeconds": 616,
         "tameSpecies": 4,
         "feedableSpecies": 0,
         "firstAction": 0.8,
@@ -801,34 +801,34 @@
         "deaths": 2,
         "minHp": 0,
         "counts": {
-          "gather": 87,
-          "hit": 746,
-          "drop": 76,
+          "gather": 96,
+          "hit": 625,
+          "drop": 87,
           "medal": 1
         },
         "tamed": [],
-        "kills": 76,
-        "hintSamples": 596,
+        "kills": 87,
+        "hintSamples": 597,
         "hintEmpty": 0,
         "hintNoAction": 0,
         "hintActionPct": 100,
-        "firstFrameMs": 251,
+        "firstFrameMs": 152,
         "smallButtons": 0,
         "underCanvas": 0,
         "stickOverlaps": 0,
         "tinyText": 5,
         "consoleErrors": 0,
-        "wallMs": 5020
+        "wallMs": 2320
       }
     },
     "reach": {
       "reef": true,
-      "mars": false,
-      "marsVia": null,
+      "mars": true,
+      "marsVia": "panel",
       "rocketCorePanel": {
         "ironListed": true,
         "ironCraftable": false,
-        "driftListed": false
+        "driftListed": true
       },
       "gathered": {
         "jungle": {
@@ -853,10 +853,10 @@
         "sail reef -> tundra: ok",
         "gather on the tundra: done",
         "craft a rocket core (Craft panel): done",
-        "craft rocket_core_drift through __isles.craft: done"
+        "sail tundra -> mars: ok"
       ],
       "panelButtonsClosed": 0,
-      "wallMs": 9484
+      "wallMs": 4355
     },
     "dbAttempts": 0,
     "sockets": 0

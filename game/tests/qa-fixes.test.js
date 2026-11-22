@@ -102,7 +102,7 @@ async function summaryLinks(browser, qs) {
       return { id: b.dataset.arena, w: r.width, h: r.height, top: r.top, bottom: r.bottom, left: r.left, right: r.right };
     });
   });
-  check('all 8 arena buttons exist', arenas.length === 8, String(arenas.length));
+  check('all 9 arena buttons exist (the 8 arenas + the Night Glade added by Bug Safari depth)', arenas.length === 9, String(arenas.length));
   check('every arena button is >= 44 px tall and wide', arenas.every((a) => a.h >= 44 && a.w >= 44), JSON.stringify(arenas.map((a) => [a.w, a.h])));
   check('every arena button is inside the viewport (reachable without clipping)', arenas.every((a) => a.top >= 0 && a.bottom <= 844 && a.left >= 0 && a.right <= 390), JSON.stringify(arenas.map((a) => [a.top, a.bottom])));
   const ovSc = await s.page.evaluate(() => { const o = document.getElementById('overlay'); const cs = getComputedStyle(o); return { oy: cs.overflowY, pos: cs.position, sh: o.scrollHeight, ch: o.clientHeight, doc: document.documentElement.scrollWidth }; });
