@@ -1314,5 +1314,17 @@
   "hub-collections.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "realm-chase-ui.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "dungeon-mutators.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "world-boss-rush.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

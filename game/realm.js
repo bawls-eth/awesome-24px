@@ -3427,7 +3427,7 @@ class RealmArena {
       sv.shards += val; this.lastFullSale = { id, r: rarity, t: gt, shards: val }; // test hook
       this._floatText(this.player.x, this.player.y - 24, `sold ${def.name} +${val} 💎`, rar.color);
     } else {
-      const ent = rmTagged({ n: sv.nextUid++, id, r: rarity });
+      const ent = rmTagged({ n: sv.nextUid++, id, r: rarity }); const prevBest = this._bestTierHeld();
       if (gear && typeof gear === 'object' && !Array.isArray(gear)) {
         const g = rmCleanGear(id, rarity, gear);
         if (g.t) { ent.t = g.t; if (g.a) ent.a = g.a; const sg = rmCleanSig(id, g.t, g.a, gear.sig); if (sg) ent.sig = sg; }
@@ -3436,6 +3436,7 @@ class RealmArena {
       this._itemText2(this.player.x, this.player.y - 24, id, rarity, def.name, def.icon, rar.color);
       this._burst(this.player.x, this.player.y, rar.color, 10, 150);
       if (this.onItem) this.onItem(sv.items[sv.items.length - 1]);
+      this._chaseNewItem(ent, prevBest);
     }
     this.onSave(this.save);
     this._syncHud(); if (this.paused) this.renderBackpack();
@@ -4464,7 +4465,8 @@ class RealmArena {
     });
     html += '</ul>';
     if (this._forgeUid && !sv.items.some((x) => x.n === this._forgeUid)) { this._forgeUid = 0; this._forgeAsk = null; }
-    root.innerHTML = html; this._fixIcons(root); this._bindCmp(root); this._bindStatsDrop(root); this._forgeDom(root); this._bindForge(root);
+    root.innerHTML = html; this._fixIcons(root); this._bindCmp(root); this._bindStatsDrop(root); this._forgeDom(root); this._bindForge(root); this._relicDom(root);
+    const sbx = document.getElementById('realm-bp-stats-box'); if (sbx && !sbx.hidden) this._chaseDom(sbx);
     if (this._cmpOnUid) { const on = root.querySelector(`#realm-bp-list li[data-uid="${this._cmpOnUid}"]`); if (on) on.classList.add('cmp-on'); } // a long-pressed compare line survives a re-render
     root.querySelectorAll('img.rm-slot-ico, img.rm-gear-ico').forEach((img) => { if (img.complete && !img.naturalWidth) img.remove(); else img.addEventListener('error', () => img.remove(), { once: true }); });
   }
@@ -4507,7 +4509,7 @@ class RealmArena {
     try { sessionStorage.setItem('pixeltown-bp-stats-open', on ? '1' : '0'); } catch (e) { /* blocked storage: remembered for this page only */ }
     const btn = document.getElementById('realm-bp-stats-toggle'); const box = document.getElementById('realm-bp-stats-box');
     if (btn) { btn.setAttribute('aria-expanded', on ? 'true' : 'false'); const ar = btn.querySelector('.ar'); if (ar) ar.textContent = on ? '▾' : '▸'; }
-    if (box) { box.hidden = !on; box.innerHTML = on ? this._statsBoxHtml() : ''; if (on) { this._fixIcons(box); box.querySelectorAll('img.rm-gear-ico').forEach((img) => { if (img.complete && !img.naturalWidth) img.remove(); else img.addEventListener('error', () => img.remove(), { once: true }); }); } }
+    if (box) { box.hidden = !on; box.innerHTML = on ? this._statsBoxHtml() : ''; if (on) { this._chaseDom(box); this._fixIcons(box); box.querySelectorAll('img.rm-gear-ico').forEach((img) => { if (img.complete && !img.naturalWidth) img.remove(); else img.addEventListener('error', () => img.remove(), { once: true }); }); } }
     return this._bpStatsOpen;
   }
   _statIco(id) {
@@ -4548,6 +4550,79 @@ class RealmArena {
     if (!this.save || (this.team && this.team.isPvp)) return [];
     let st = null; try { st = this._calcStats({ eqOverride: eqOverride && typeof eqOverride === 'object' ? eqOverride : {} }); } catch (e) { st = null; }
     return st && Array.isArray(st.sets) ? st.sets : [];
+  }
+  // ---------- RE3: the T12 chase + relic book (MMEndgame), ?chase=0 hides all three ----------
+  // A calm pity line at the top of the Stats box ("12 of 60 toward a sure T12", MMEndgame.chase on this save; gear on only), a "Relic book"
+  // section at the end of the backpack (the six godland relics, found or "not yet", MMEndgame.relicBook) and a gentle "New best tier" toast when a
+  // picked-up item beats the best tier held this visit. Read-only on the save (no new keys). DOM built with textContent only. No countdowns.
+  chaseOn() { return !rmFlagOff('chase') && typeof MMEndgame !== 'undefined' && !!MMEndgame && typeof MMEndgame.chase === 'function' && !(this.team && this.team.isPvp); }
+  // The godland boss pity (gp.b) lives in the Realm World save (pixeltown-realm-v1, realm-world.js giveBag); the crypt counter (gp.d) in this save
+  // (dungeon.js). Read-only: hostile or missing storage counts as 0.
+  chaseGp() {
+    const own = rmGpOf(this.save && this.save.gp); let wb = 0;
+    try { const o = JSON.parse(localStorage.getItem('pixeltown-realm-v1') || 'null'); const b = o && typeof o === 'object' && o.gp && typeof o.gp === 'object' ? o.gp.b : 0; wb = typeof b === 'number' && Number.isFinite(b) ? Math.max(0, Math.min(9999, Math.floor(b))) : 0; } catch (e) { wb = 0; }
+    return { b: wb, d: own.d };
+  }
+  chaseInfo() { if (!this.chaseOn() || !this.save) return null; try { return MMEndgame.chase({ gp: this.chaseGp(), items: this.save.items }); } catch (e) { return null; } }
+  relicInfo() { if (!this.chaseOn() || !this.save) return null; try { return MMEndgame.relicBook({ items: this.save.items }); } catch (e) { return null; } }
+  _chaseDom(box) {
+    if (!box || !RM_GEAR_ON) return;
+    const c = this.chaseInfo(); if (!c) return;
+    const d = document.createElement('div'); d.id = 'realm-bp-chase'; d.className = 'rm-chase-line';
+    d.style.cssText = 'margin:2px 0 6px;padding:4px 6px;border-radius:8px;background:rgba(255,215,90,.08);color:#f2e3b3;font-size:12px;line-height:1.35;overflow-wrap:anywhere';
+    const a = document.createElement('div'); a.className = 'pity'; a.textContent = '🌟 ' + c.text;
+    const b = document.createElement('div'); b.className = 'luck'; b.style.color = '#8b949e'; b.textContent = c.luckText + (c.bestTier ? ' · best tier T' + c.bestTier : '');
+    d.append(a, b); box.insertBefore(d, box.firstChild);
+  }
+  _relicDom(root) {
+    if (!root) return;
+    const rb = this.relicInfo(); if (!rb) return;
+    const open = !!this._relicOpen;
+    const wrap = document.createElement('div'); wrap.className = 'rm-relic-book'; wrap.style.cssText = 'margin:8px 0 4px;max-width:100%';
+    const btn = document.createElement('button'); btn.type = 'button'; btn.id = 'realm-bp-relic-toggle'; btn.className = 'eq';
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false'); btn.setAttribute('aria-controls', 'realm-bp-relic-box');
+    btn.style.cssText = 'min-height:44px;min-width:44px;width:100%;text-align:left;box-sizing:border-box;padding:6px 10px;border-radius:10px;border:2px solid rgba(255,255,255,.45);background:rgba(255,255,255,.1);color:#fff;font:700 13px system-ui,sans-serif;cursor:pointer';
+    btn.textContent = (open ? '▾' : '▸') + ' 📖 Relic book · ' + rb.text;
+    const box = document.createElement('div'); box.id = 'realm-bp-relic-box'; box.setAttribute('role', 'region'); box.setAttribute('aria-label', 'Relic book'); box.hidden = !open;
+    box.style.cssText = 'margin-top:4px;font-size:12px;line-height:1.35;box-sizing:border-box;max-width:100%';
+    const ul = document.createElement('ul'); ul.className = 'rm-relic-list'; ul.style.cssText = 'list-style:none;margin:0;padding:0';
+    rb.entries.forEach((e) => {
+      const li = document.createElement('li'); li.dataset.relic = e.id; li.dataset.found = e.found ? '1' : '0';
+      li.style.cssText = 'padding:3px 4px;border-bottom:1px solid rgba(255,255,255,.08);overflow-wrap:anywhere;color:' + (e.found ? '#ffd25a' : '#8b949e');
+      li.textContent = (e.found ? '✓ ' : '· ') + e.text; ul.appendChild(li);
+    });
+    const hint = document.createElement('div'); hint.className = 'hint'; hint.style.cssText = 'color:#8b949e;margin-top:4px'; hint.textContent = rb.hint;
+    box.append(ul, hint); wrap.append(btn, box); root.appendChild(wrap);
+    btn.addEventListener('click', () => {
+      this._relicOpen = !this._relicOpen; box.hidden = !this._relicOpen; btn.setAttribute('aria-expanded', this._relicOpen ? 'true' : 'false');
+      btn.textContent = (this._relicOpen ? '▾' : '▸') + ' 📖 Relic book · ' + rb.text;
+    });
+  }
+  // the best item tier held this visit (lazy: from the backpack the first time it is asked)
+  _bestTierHeld() {
+    if (typeof this._chaseBestT !== 'number') { let b = 0; (this.save && Array.isArray(this.save.items) ? this.save.items : []).forEach((it) => { if (it && it.t > b) b = it.t; }); this._chaseBestT = b; }
+    return this._chaseBestT;
+  }
+  _chaseNewItem(ent, prevBest) {
+    if (!ent || !ent.t || !RM_GEAR_ON || !this.chaseOn()) return;
+    if (ent.t > prevBest) { this._chaseBestT = ent.t; this.chaseToast('New best tier: T' + ent.t + ' ' + ((RM_ITEM_BY_ID[ent.id] || {}).name || '')); }
+  }
+  chaseToast(text) {
+    const host = this.container || document.body; if (!host || typeof document === 'undefined') return;
+    let el = document.getElementById('realm-chase-toast');
+    if (!el) {
+      el = document.createElement('div'); el.id = 'realm-chase-toast'; el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite');
+      el.style.cssText = 'position:absolute;left:50%;top:12%;transform:translateX(-50%);z-index:30;display:flex;align-items:center;gap:6px;max-width:calc(100% - 32px);box-sizing:border-box;padding:4px 4px 4px 12px;border-radius:12px;background:rgba(20,24,32,.88);border:2px solid rgba(255,210,90,.6);color:#ffe9a8;font:600 13px system-ui,sans-serif';
+      const t = document.createElement('span'); t.className = 'txt'; t.style.overflowWrap = 'anywhere';
+      const x = document.createElement('button'); x.type = 'button'; x.className = 'x'; x.textContent = '✖'; x.setAttribute('aria-label', 'Dismiss');
+      x.style.cssText = 'min-width:44px;min-height:44px;border:0;background:transparent;color:#ffe9a8;font-size:14px;cursor:pointer';
+      x.addEventListener('click', () => { el.hidden = true; });
+      el.append(t, x);
+      if (host !== document.body && getComputedStyle(host).position === 'static') host.style.position = 'relative';
+      host.appendChild(el);
+    }
+    el.querySelector('.txt').textContent = '✨ ' + text; el.hidden = false; this.lastChaseToast = text; // test hook
+    clearTimeout(this._chaseToastT); this._chaseToastT = setTimeout(() => { el.hidden = true; }, 4500);
   }
   _bindStatsDrop(root) {
     if (!root || root.dataset.statsBound) return;

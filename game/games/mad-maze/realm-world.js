@@ -690,6 +690,7 @@
         }
         const b = arena.dropBag(x + (k - (bag.items.length - 1) / 2) * 18, y + 10, it.r, id, bag, gear);
         if (!b) return;
+        if (rushCollect) rushCollect.push(b); // RE2: a Trial of Six bag goes straight into the pack (safe return: nothing is left on the floor)
         b.fb = fbFresh() && !info.quest; if (b.fb) { fbDropped = true; b.lifetime = Infinity; } // FT2: a fresh profile's first bag(s) come to the hero (fbTick)
         b.gear = gear || null; // pooled bags are reused: never leave an earlier drop's tier on a classic bag
         const dd = typeof RM_ITEM_BY_ID !== 'undefined' ? RM_ITEM_BY_ID[b.id] : null;
@@ -744,6 +745,7 @@
     }
     function onEnemyHit(e, dmg) { if (evOnHit(e, dmg)) return; if (zones && e.zid >= 0) zones.markCombat(e.zid); }
     function onEnemyKilled(e) {
+      if (e.rushStep) { rushKilled(e); return; }
       if (e.campId) { e.campId = null; kills++; save.stats.kills++; return; }
       if (e.evid) { evOnKilled(e); return; }
       if (!zones) return;
@@ -780,6 +782,7 @@
     }
     const bossReadyNow = new Uint8Array(world.bossSites.length); // refreshed by bossTick (2 Hz) so drawing never builds lookup strings
     function bossTick() {
+      if (rush.on) return; // RE2: no altar boss wakes during the Trial of Six
       const p = arena.player; const alive = bossAlive();
       for (let i = 0; i < bossLive.length; i++) {
         const b = world.bossSites[i]; const bx = (b.x + 0.5) * TILE; const by = (b.y + 0.5) * TILE; const d = Math.hypot(p.x - bx, p.y - by);
@@ -961,6 +964,14 @@
     const RETURN_RE = /^index\.html\?mode=world&seed=[A-Za-z0-9_-]{1,24}&at=\d{1,4},\d{1,4}(&test=1)?$/;
     const portalBtn = document.createElement('button'); portalBtn.id = 'rw-portal'; portalBtn.type = 'button'; portalBtn.className = 'hidden'; portalBtn.textContent = 'Enter Warren dungeon'; // retitled per portal biome in portalTick
     ov.appendChild(portalBtn);
+    // DV1: a z2+ portal names its dungeon's seeded mutator on a small label above the prompt (MMEndgame.mutatorsFor on the portal's own seed; ?mut=0 none)
+    const portalMut = document.createElement('div'); portalMut.id = 'rw-portal-mut'; portalMut.className = 'hidden'; portalMut.setAttribute('role', 'note'); ov.appendChild(portalMut);
+    const MUT_OFF = /[?&]mut=0(&|$)/.test(qs0);
+    function portalMutOf(i) {
+      const q = portals[i]; if (!q || MUT_OFF || !window.MMEndgame) return null;
+      let m = null; try { m = MMEndgame.mutatorsFor(BIOME_NAME[q.biome] ? q.biome : 'warren', undefined, portalSeed(i), {}); } catch (e) { m = null; }
+      return m && m.list.length ? m : null;
+    }
     let promptFor = -1; let leaving = false;
     // PLAYTEST-REVIEW-2 #14: no keyboard hints ("(Enter)", "(E)") on a coarse pointer / touch device
     const isCoarse = () => (typeof document !== 'undefined' && document.body.classList.contains('touch-device')) || (typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches);
@@ -991,6 +1002,8 @@
       if (near !== promptFor) {
         promptFor = near; portalBtn.classList.toggle('hidden', near < 0);
         if (near >= 0) { const bn = BIOME_NAME[portals[near].biome] || 'Warren'; portalBtn.textContent = `Enter ${bn} dungeon`; portalBtn.setAttribute('aria-label', `Enter ${bn} dungeon (${portals[near].label}${isCoarse() ? '' : ', Enter'})`); }
+        const pm = near >= 0 ? portalMutOf(near) : null; portalMut.classList.toggle('hidden', !pm); portalMut.textContent = pm ? '✦ Mutator: ' + pm.label : ''; portalMut.title = pm ? pm.text : '';
+        if (pm) portalBtn.setAttribute('aria-label', portalBtn.getAttribute('aria-label') + ', mutator ' + pm.label);
       }
     }
 
@@ -1530,13 +1543,23 @@
         else { g.globalAlpha = 0.3; g.fillStyle = '#a98bff'; g.beginPath(); g.arc(q.x, q.y, 30, 0, 7); g.fill(); g.globalAlpha = 1; g.strokeStyle = '#a98bff'; g.lineWidth = 4; g.beginPath(); g.arc(q.x, q.y, 24, 0, 7); g.stroke(); }
         g.restore();
         g.font = 'bold 22px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(nxPortalName(q), q.x + 1, q.y - 37); g.fillStyle = '#e8dcff'; g.fillText(nxPortalName(q), q.x, q.y - 38);
+        const nm = nxMutOf(q); if (nm) { g.font = 'bold 16px system-ui, sans-serif'; g.fillStyle = '#000'; g.fillText('✦ ' + nm.label, q.x + 1, q.y - 59); g.fillStyle = '#c9b6ff'; g.fillText('✦ ' + nm.label, q.x, q.y - 60); }
       });
+      if (RUSH_ON && L.trial) { // RE2: the Trial gate, code-drawn (no art id): a gold ring and its name
+        const q = L.trial; g.save(); g.globalAlpha = 0.3; g.fillStyle = '#ffd45a'; g.beginPath(); g.arc(q.x, q.y, 30, 0, 7); g.fill(); g.globalAlpha = 1; g.strokeStyle = '#ffd45a'; g.lineWidth = 4; g.beginPath(); g.arc(q.x, q.y, 24, 0, 7); g.stroke(); g.restore();
+        g.font = 'bold 20px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(q.label, q.x + 1, q.y - 37); g.fillStyle = '#ffe27a'; g.fillText(q.label, q.x, q.y - 38);
+      }
       L.npcs.forEach((n) => {
         const im = nxPortrait[n.npc]; const x = n.x; const y = n.y;
         if (im) g.drawImage(im, 0, 0, im.naturalHeight, im.naturalHeight, x - 40, y - 60, 80, 80);
         else { const h = MMRng.hash(n.npc); g.fillStyle = '#000'; g.fillRect(x - 13, y - 14, 26, 36); g.fillStyle = 'hsl(' + (h % 360) + ',45%,48%)'; g.fillRect(x - 11, y - 12, 22, 32); g.fillStyle = '#f0cfa6'; g.beginPath(); g.arc(x, y - 22, 10, 0, 7); g.fill(); }
         g.font = 'bold 20px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(NPC_NAME[n.npc] || n.id, x + 1, y + 37); g.fillStyle = '#ffe27a'; g.fillText(NPC_NAME[n.npc] || n.id, x, y + 36);
       });
+    }
+    function nxMutOf(q) { // DV1: the seeded mutator of a Nexus dungeon portal (same seed as nxUrl), or null
+      if (!q || !BIOME_NAME[q.id] || !window.MMEndgame || MUT_OFF) return null;
+      let m = null; try { m = MMEndgame.mutatorsFor(q.id, undefined, String(MMRng.hash(seed + ':nexus:' + q.id) % 100000), {}); } catch (e) { m = null; }
+      return m && m.list.length ? m : null;
     }
     function nxSay(name, text) { const t = nxDom.talk; t.textContent = ''; const b = document.createElement('b'); b.textContent = name + ': '; t.appendChild(b); t.appendChild(document.createTextNode(text)); nxDom.last = { name, text }; }
     function nxUrl(biome) { // dungeon trip that returns to the tile the player left from
@@ -1563,6 +1586,95 @@
       if (typeof nxQuestEvent === 'function') nxQuestEvent({ type: 'portal' });
       save.stats.portals++; save.pos = { x: u.tx, y: u.ty }; save.returnTo = { x: u.tx, y: u.ty, seed };
       return nxLeaveTo(u.url);
+    }
+    // ---------- RE2: the boss rush "Trial of Six" (MMEndgame.rushLadder) ----------
+    // A gate in the Nexus (heroes Lv 20+, entered only by choice) runs the six godland bosses one after another, here in the Realm beside the Nexus,
+    // with the arena's own boss fight and telegraphs. Each boss is the world boss at its zone 3 multipliers with the ladder's small capped ramp.
+    // Between fights a calm choice: the next fight, "Rest here" (nothing is restored beyond normal resting) or "Leave with your loot". No timer,
+    // no lives, no entry fee, no lockout. Each kill is one normal boss bag (giveBag: one MMGearDrops.pityStep, the storage re-read before the roll)
+    // and its bag goes straight into the pack, so leaving or falling keeps every drop. No extra loot: no pickups or keys from rush bosses.
+    // ?rush=0 hides the gate. Session-only state: nothing new is saved.
+    const RUSH_ON = NX_ON && !!window.MMEndgame && typeof MMEndgame.rushLadder === 'function' && !/[?&]rush=0(&|$)/.test(qs0);
+    const rush = { on: false, ladder: null, i: 0, e: null, kills: 0, phase: '', n: 0, log: [] };
+    let rushCollect = null; let rushEl = null; let rushGoEl = null;
+    const rushLevel = () => (arena.heroLevel ? arena.heroLevel() : 1);
+    function rushLadderNow() { return MMEndgame.rushLadder(seed + ':' + rush.n, rushLevel()); }
+    function rushStart() {
+      if (!RUSH_ON || rush.on || leaving || !arena.active) return null;
+      const L = rushLadderNow();
+      if (!L.ok) { if (nxDom && nxOpen) nxSay('Trial of Six', L.text); return null; }
+      if (nxOpen) nexusClose();
+      rush.on = true; rush.ladder = L; rush.i = 0; rush.kills = 0; rush.e = null; rush.log = []; rush.phase = 'fight'; rush.n++;
+      rushSpawn();
+      return 'rush';
+    }
+    function rushSpawn() {
+      if (!rush.on || rush.phase !== 'fight' || rush.e) return null;
+      const st = rush.ladder.steps[rush.i]; const p = arena.player;
+      const f = nearestFree(Math.floor(p.x / TILE), Math.floor(p.y / TILE) - 5, 6) || { x: Math.floor(p.x / TILE), y: Math.floor(p.y / TILE) - 3 };
+      const e = arena.spawnEnemy('boss', (f.x + 0.5) * TILE, (f.y + 0.5) * TILE);
+      if (!e) return null; // pool full: rushTick tries again
+      e.maxHp = Math.max(1, Math.ceil(RM_BOSS_HP * st.hpMul / Z.TABLES.BOSS.hp)); e.hp = e.maxHp;
+      e.phase = 1; e.invuln = 1.2; e.cd = 1.2; e.cd2 = 2.4; e.angle = 0;
+      e.dmgMul = st.dmgMul; e.bossName = st.name; e.bossTier = 4; e.art = st.boss; e.bossArt = st.boss; e.rushStep = st.step;
+      arena.bossT0 = arena.clock; rush.e = e; arena._syncBoss(); rushHide();
+      arena._showBanner('Trial of Six · ' + st.text, 1.8);
+      return e;
+    }
+    function rushKilled(e) {
+      const st = rush.ladder.steps[rush.i]; e.rushStep = 0; rush.e = null;
+      rush.kills++; kills++; save.stats.bossKills++;
+      rushCollect = arena.bags.filter((b) => b.active && b.t === 0 && Math.hypot(b.x - e.x, b.y - e.y) < 120); // the arena's own two boss bags (_bossDefeated), dropped just now
+      let got = null; try { got = rollFor({ zone: 3, tier: 3, boss: true, src: 'boss', bossId: st.boss }, e.x, e.y + 30, 'rush' + rush.n + ':' + rush.i); } finally {
+        const bags = rushCollect || []; rushCollect = null;
+        bags.forEach((b) => { if (b.active) { const g = b.gear; b.active = false; arena.collectItem(b.id, b.r, g || undefined); b.gear = null; } });
+      }
+      writeSave(save);
+      rush.log.push({ step: st.step, boss: st.boss, items: got ? got.items.length : 0 });
+      rush.i++; rush.phase = rush.i >= rush.ladder.steps.length ? 'done' : 'rest';
+      rushPanel();
+    }
+    function rushBuild() {
+      if (rushEl) return;
+      rushEl = document.createElement('div'); rushEl.id = 'rw-rush'; rushEl.className = 'hidden'; rushEl.setAttribute('role', 'group'); rushEl.setAttribute('aria-label', 'Trial of Six');
+      rushGoEl = document.createElement('button'); rushGoEl.type = 'button'; rushGoEl.id = 'rw-rush-go'; rushGoEl.className = 'hidden';
+      rushGoEl.addEventListener('click', () => rushPanel());
+      ov.appendChild(rushEl); ov.appendChild(rushGoEl);
+    }
+    function rushPanel() {
+      if (!rush.on) return; rushBuild();
+      const steps = rush.ladder.steps; const done = steps[rush.i - 1]; const next = steps[rush.i];
+      rushEl.textContent = '';
+      const p = document.createElement('p');
+      p.textContent = rush.phase === 'done' ? 'The Trial of Six is done: ' + done.name + ' was the last. Every drop is already in your pack.'
+        : 'Step ' + done.step + ' of ' + steps.length + ' done: ' + done.name + '. Next is ' + next.name + '. Take your time; every drop is already in your pack.';
+      const row = document.createElement('div'); row.className = 'rw-rush-btns';
+      const btn = (id, text, fn) => { const b = document.createElement('button'); b.type = 'button'; b.id = id; b.textContent = text; b.addEventListener('click', fn); row.appendChild(b); return b; };
+      if (rush.phase === 'rest') { btn('rw-rush-next', 'Next fight: ' + next.name, () => rushNext()); btn('rw-rush-rest', done.restText, () => rushRest()); }
+      btn('rw-rush-leave', done.leaveText, () => rushEnd('leave'));
+      rushEl.append(p, row); rushEl.classList.remove('hidden'); rushGoEl.classList.add('hidden');
+    }
+    function rushHide() { if (rushEl) rushEl.classList.add('hidden'); if (rushGoEl) rushGoEl.classList.add('hidden'); }
+    function rushRest() { // the panel folds into a small pill; the hero walks, heals and shops as usual
+      if (!rush.on || rush.phase !== 'rest') return false;
+      rushHide(); rushGoEl.textContent = 'Trial of Six: ready for ' + rush.ladder.steps[rush.i].name; rushGoEl.classList.remove('hidden');
+      return true;
+    }
+    function rushNext() { if (!rush.on || rush.phase !== 'rest') return null; rush.phase = 'fight'; return rushSpawn(); }
+    function rushEnd(why) {
+      if (!rush.on) return false;
+      if (rush.e) { rush.e.rushStep = 0; rush.e.active = false; rush.e = null; arena._syncBoss(); }
+      rush.on = false; rush.phase = why === 'fell' ? 'fell' : 'left'; rushHide();
+      if (why === 'leave' && nxSite && arena.state === 'play') { const p = arena.player; p.x = nxSite.x; p.y = nxSite.y + TILE; p.iframes = Math.max(p.iframes, 1.5); arena._showBanner('You left the Trial of Six with your loot', 1.8); }
+      writeSave(save); arena.onSave(arena.save);
+      return true;
+    }
+    const rushDcPrev = arena.onDeathCache; // a fall ends the trial at once (the arena stops ticking the world while it is down)
+    arena.onDeathCache = (c) => { if (rush.on) rushEnd('fell'); if (typeof rushDcPrev === 'function') rushDcPrev(c); };
+    function rushTick() {
+      if (!rush.on) return;
+      if (arena.state === 'dead' || !arena.active) { rushEnd('fell'); return; } // a fall ends the trial: the hero is back by the Nexus, every drop already kept
+      if (rush.phase === 'fight') { if (rush.e && !rush.e.active) { rush.e.rushStep = 0; rush.e = null; } if (!rush.e) rushSpawn(); }
     }
     const NX_LINES = {
       guide: ['Welcome to the Nexus. Every road in the Realm ends up here, sooner or later.', 'The ring of doors leads to the dungeons. The plain one takes you home.', 'Nothing here bites. Take your time.'],
@@ -1659,8 +1771,10 @@
       const spot = (x, y, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'nx-spot'; b.tabIndex = -1; b.setAttribute('aria-hidden', 'true'); b.style.left = (x / cv.width * 100) + '%'; b.style.top = (y / cv.height * 100) + '%'; b.addEventListener('click', fn); stage.appendChild(b); };
       if (!NX_WALK) L.portals.forEach((q) => {
         const b = document.createElement('button'); b.type = 'button'; b.dataset.portal = q.id; b.textContent = q.id === 'realm' ? 'Back to the Realm portal' : q.id === 'vault' ? 'Lantern vault: your stash' : q.label + ' portal'; b.setAttribute('aria-label', q.id === 'vault' ? 'Lantern vault portal: open the Lantern stash' : q.id === 'realm' ? 'Realm portal: go back to the Realm' : 'Enter the ' + q.label + ' dungeon');
+        { const m = nxMutOf(q); if (m) { b.title = 'Mutator: ' + m.text; b.dataset.mut = m.ids.join(','); b.setAttribute('aria-label', b.getAttribute('aria-label') + ', mutator ' + m.label); } } // DV1: the dungeon's seeded mutator (same seed as nxUrl)
         b.addEventListener('click', () => nxPortal(q)); rowP.appendChild(b); spot(q.x, q.y, () => nxPortal(q));
       });
+      if (!NX_WALK && RUSH_ON && L.trial) { const q = L.trial; const b = document.createElement('button'); b.type = 'button'; b.dataset.trial = '1'; b.id = 'rw-nx-trial'; b.textContent = 'Trial of Six'; b.setAttribute('aria-label', 'Trial of Six: six godland bosses, leave after any fight (level ' + MMEndgame.RUSH.minLevel + '+)'); b.addEventListener('click', () => rushStart()); rowP.appendChild(b); spot(q.x, q.y, () => rushStart()); }
       if (!NX_WALK) L.npcs.forEach((n) => {
         const b = document.createElement('button'); b.type = 'button'; b.dataset.npc = n.id; b.textContent = NPC_NAME[n.npc] || n.id; b.setAttribute('aria-label', 'Talk to ' + (NPC_NAME[n.npc] || n.id));
         b.addEventListener('click', () => nxTalk(n)); rowN.appendChild(b); spot(n.x, n.y - 10, () => nxTalk(n));
@@ -1687,6 +1801,7 @@
     }
     function nxLabel(it) {
       if (!it) return '';
+      if (it.kind === 'trial') return rushLevel() >= MMEndgame.RUSH.minLevel ? 'Enter the Trial of Six' : 'Trial of Six: opens at level ' + MMEndgame.RUSH.minLevel;
       if (it.kind === 'npc') { const nm = NPC_NAME[it.ref.npc] || it.ref.id; return it.ref.role === 'quests' ? 'Quest board: ' + nm : 'Talk to ' + nm; }
       const q = it.ref; return q.id === 'realm' ? 'Back to the Realm' : q.id === 'vault' ? 'Lantern vault: open your stash' : 'Enter the ' + q.label + ' dungeon';
     }
@@ -1694,11 +1809,13 @@
       const L = NX.layout(); const h = nxHero; let best = null; let bd = Infinity;
       L.portals.forEach((q) => { const d = Math.hypot(q.x - h.x, q.y - h.y); if (d < 52 && d < bd) { bd = d; best = { kind: 'portal', ref: q }; } });
       L.npcs.forEach((n) => { const d = Math.hypot(n.x - h.x, n.y - h.y); if (d < 60 && d < bd) { bd = d; best = { kind: 'npc', ref: n }; } });
+      if (RUSH_ON && L.trial) { const d = Math.hypot(L.trial.x - h.x, L.trial.y - h.y); if (d < 52 && d < bd) { bd = d; best = { kind: 'trial', ref: L.trial }; } }
       return best;
     }
     function nxAct() {
       const it = nxNearI; if (!nxOpen || !it) return null;
       if (it.kind === 'npc') { nxTalk(it.ref); return 'talk'; }
+      if (it.kind === 'trial') return rushStart();
       return nxPortal(it.ref);
     }
     function nxSyncPrompt() {
@@ -2063,7 +2180,7 @@
           bossT -= dt; if (bossT <= 0) { bossT = 0.5; bossTick(); }
           sweepT -= dt; if (sweepT <= 0) { sweepT = 1; sweepLost(); }
         }
-        portalTick(); pickTick(dt); nexusTick(); keyTick(dt); fbTick(dt); exploreTick(dt);
+        portalTick(); pickTick(dt); nexusTick(); keyTick(dt); fbTick(dt); exploreTick(dt); rushTick();
         if (save.questBags) deliverQuestBags();
         if (SITES) siteTick(dt);
         lastEvClock = eventClock();
@@ -2153,6 +2270,7 @@
       bossSites: () => world.bossSites.map((b, i) => ({ i, x: b.x, y: b.y, zone: b.zone, boss: b.boss, name: BOSS_NAME[i], live: !!(bossLive[i] && bossLive[i].active), ready: !!zones && zones.bossReady(b, arena.clock) })),
       bossEntity: (i) => bossLive[i] || null, bossTick,
       // slice 7
+      rush: { on: RUSH_ON, start: rushStart, next: rushNext, rest: rushRest, leave: () => rushEnd('leave'), entity: () => rush.e, ladder: () => rush.ladder, state: () => ({ on: rush.on, phase: rush.phase, i: rush.i, kills: rush.kills, n: rush.n, log: rush.log.slice() }) },
       safeReturn: { on: SAFE_ON, shield: SAFE_SHIELD, hop: SAFE_HOP, last: () => lastReturn }, portalPrompt: () => promptFor, portalUrls, portalSeed, enterPortal, lastPortalUrl: null, RETURN_RE,
       // world events (slice A): the clock hook moves the event clock (deterministic: same clock => same events, plans and rewards)
       eventClock, setEventClock: (t) => { evBase = Math.max(0, Number(t) || 0) - arena.clock; evT = 0; evTick(); return eventClock(); },
