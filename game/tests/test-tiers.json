@@ -1310,5 +1310,9 @@
   "hub-collections.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "realm-chase-ui.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
