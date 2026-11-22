@@ -97,3 +97,4 @@ legend{color:var(--gold);font-size:.9rem;padding:0 6px}
 .pregear{margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
 .pregear[hidden],.pregear .btn[hidden],#restore-summary[hidden]{display:none}
 #restore-summary,#pregear-note{overflow-wrap:anywhere}
+.nextgoal{margin:6px 0 2px;font-size:13px;color:#ffe3a8}

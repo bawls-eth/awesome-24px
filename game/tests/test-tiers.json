@@ -79,6 +79,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "bugs-fun.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "cave-craft.test.js": {
     "class": "live",
     "tier": "full"
@@ -270,6 +274,10 @@
   "lantern-polish.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "lantern-fun.test.js": {
+    "class": "browser",
+    "tier": "full"
   },
   "loot-bag-icons.test.js": {
     "class": "browser",
