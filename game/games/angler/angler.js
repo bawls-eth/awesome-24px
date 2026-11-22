@@ -103,6 +103,30 @@
     result: null, t: 0, hooked: 0, tour: false, tourResult: null, cf: null, baitUsed: null, calm: false, fx: [], bobY: 0, baited: false, bossChance: 0.25, boss: false, bossGate: true, surge: null, strain: 0, splash: null, bossLog: [],
   };
   const held = { ptr: false, key: false, pad: false, test: false, btn: false };
+
+  // ---- FUN1: streaks, reaction time, personal bests, sound cues, screen shake ----
+  // Own additive key pixeltown-angler-fun-v1 {v, bestStreak, bestReact (ms, 0 = none), streak}; the journal format is untouched.
+  const FUN_KEY = 'pixeltown-angler-fun-v1';
+  function cleanFun(raw) {
+    const o = raw && typeof raw === 'object' ? raw : {};
+    const n = (v, hi) => { v = Math.floor(Number(v)); return isFinite(v) ? Math.max(0, Math.min(hi, v)) : 0; };
+    return { v: 1, bestStreak: n(o.bestStreak, 99999), bestReact: n(o.bestReact, 1000), streak: n(o.streak, 99999) };
+  }
+  let fun = cleanFun(Store.get(FUN_KEY, null));
+  const saveFun = () => { fun = cleanFun(fun); Store.set(FUN_KEY, fun); };
+  let sfx = null; const sounds = [];
+  function ensureSfx() { if (sfx || !window.MMSfx) return; try { sfx = window.MMSfx.create({ storage: window.localStorage }); } catch (e) { sfx = null; } }
+  function cue(name) { sounds.push(name); if (sounds.length > 30) sounds.shift(); if (sfx) { try { sfx.play(name); } catch (e) { /* ignore */ } } }
+  ['pointerdown', 'keydown'].forEach((n) => window.addEventListener(n, ensureSfx, { passive: true }));
+  let shakes = 0;
+  function shake(big) { // CSS shake on the canvas; off with reduced motion and the low graphics tier
+    if (reduced() || gfx.low) return;
+    shakes++; cv.classList.remove('shake', 'shake-big'); void cv.offsetWidth; cv.classList.add(big ? 'shake-big' : 'shake');
+  }
+  function breakStreak() {
+    const s = fun.streak; fun.streak = 0; saveFun();
+    return s >= 2 ? ' Your streak of ' + s + ' ends here (best ' + fun.bestStreak + ').' : '';
+  }
   const anyHeld = () => held.ptr || held.key || held.pad || held.test || held.btn;
 
   function spotLocked(id) {
@@ -147,8 +171,8 @@
       const u = D.economy.useBait(journal);
       if (u.type) { journal = u.journal; g.baitUsed = u.type; g.bite.wait *= A.BAITS[u.type].waitMult; saveJournal(); }
     }
-    g.state = 'waiting'; g.t = 0;
-    g.baited = !!g.baitUsed;
+    g.state = 'waiting'; g.t = 0; g.react = 0;
+    g.baited = !!g.baitUsed; cue('ui_tap');
     setMsg(g.tour ? 'Tournament cast ' + journal.tour.run.used + '/' + D.CASTS + '. Waiting for a bite...' : g.baited ? 'Bait on the hook! Waiting for a bite...' : 'Waiting for a bite... (do not press yet)');
     renderSpots();
   }
@@ -175,12 +199,13 @@
     if (g.state === 'idle') cast();
     else if (g.state === 'waiting' || g.state === 'biting') {
       const r = g.bite.press();
-      if (r === 'spooked') { finish('spooked', 'Spooked!', 'You pulled too early. The fish swam away.'); }
+      if (r === 'spooked') { const early = Math.max(0.1, g.bite.wait - g.bite.t); cue('hurt'); finish('spooked', 'Spooked!', 'Too early by ' + early.toFixed(1) + ' s. Wait for the splash and the "!".' + breakStreak()); }
       else if (r === 'hooked') hook();
     }
   }
   function hook() {
     const c = nowCtx();
+    g.react = Math.max(0, Math.round((g.bite.t - g.bite.wait) * 1000));
     const lair = A.journal.bossFor(journal, g.spot);
     let f;
     if (g.cf) f = A.BY_ID[g.cf.fish];
@@ -202,7 +227,8 @@
         journal = B.resetLair(journal, B.spotOf(f.id)); saveJournal();
       }
       setMsg('BOSS! ' + (B.INTRO[f.id] || f.name + ' takes the line.') + (g.surge ? ' Ease off during surges.' : ' The line snaps after 1.5 s at max tension.'));
-    } else setMsg('Hooked! Hold to reel. Keep the zone on the fish.');
+      cue('boss_awaken'); shake(true);
+    } else { setMsg('Hooked! ' + reactWord(g.react) + ' (' + g.react + ' ms). Hold to reel. Keep the zone on the fish.'); cue('pickup'); shake(false); }
     bossUi();
     renderSpots();
   }
@@ -221,8 +247,9 @@
     if (g.tour && g.cf) { g.tourPts = D.tournament.scoreCatch(f.id, g.size, today()); journal = D.tournament.addScore(journal, g.tourPts); }
     saveJournal(); renderJournalCount(); renderStatus();
     g.fan = { t: 0, big: f.rarity >= 4 };
+    const fl = funLand(f);
     finish('caught', (f.boss ? (firstTrophy ? 'TROPHY! ' : 'Boss beaten! ') : isNew ? 'New! ' : '') + f.name,
-      RARITY[f.rarity] + ' (' + f.rarity + '/5) - ' + sizeWord(f, g.size) + ', ' + g.size + ' cm' + (f.boss ? ' - trophy in the Hall of Records' : '') + g.dropMsg + (g.tourPts ? ' - +' + g.tourPts + ' points' : ''));
+      RARITY[f.rarity] + ' (' + f.rarity + '/5) - ' + sizeWord(f, g.size) + ', ' + g.size + ' cm' + (f.boss ? ' - trophy in the Hall of Records' : '') + g.dropMsg + (g.tourPts ? ' - +' + g.tourPts + ' points' : '') + '. ' + fl);
   }
 
   // Cove fish go to their own journal key: no stock, no bells, no bait drops (no currency here), just the collection.
@@ -231,7 +258,22 @@
     journal = I.cove.record(journal, f.id, g.size);
     saveJournal(); renderStatus();
     g.fan = { t: 0, big: f.rarity >= 4 };
-    finish('caught', (isNew ? 'New! ' : '') + f.name, RARITY[f.rarity] + ' (' + f.rarity + '/5) - ' + sizeWord(f, g.size) + ', ' + g.size + ' cm - cove fish ' + I.cove.count(journal) + '/' + A.COVE_FISH.length);
+    const fl = funLand(f);
+    finish('caught', (isNew ? 'New! ' : '') + f.name, RARITY[f.rarity] + ' (' + f.rarity + '/5) - ' + sizeWord(f, g.size) + ', ' + g.size + ' cm - cove fish ' + I.cove.count(journal) + '/' + A.COVE_FISH.length + '. ' + fl);
+  }
+  function nearLine() { const m = g.reel ? Math.round(g.reel.meter * 100) : 0; return m >= 70 ? ' So close: the catch meter was at ' + m + '%!' : m > 0 ? ' Catch meter reached ' + m + '%.' : ''; }
+  function reactWord(ms) { return ms < 250 ? 'Lightning reflexes' : ms < 450 ? 'Sharp strike' : ms < 700 ? 'Good strike' : 'Just in time'; }
+  // streak + reaction personal bests on every landed fish (journal and cove alike)
+  function funLand(f) {
+    fun.streak += 1;
+    const newStreak = fun.streak > fun.bestStreak && fun.streak >= 2;
+    if (fun.streak > fun.bestStreak) fun.bestStreak = fun.streak;
+    const newReact = g.react > 0 && (fun.bestReact === 0 || g.react < fun.bestReact);
+    if (newReact) fun.bestReact = g.react;
+    saveFun();
+    cue(f.rarity >= 3 || f.boss ? 'bag_rare' : 'levelup'); shake(f.rarity >= 4 || !!f.boss);
+    g.funLine = 'Streak ' + fun.streak + (newStreak ? ' - new best!' : ' (best ' + fun.bestStreak + ')') + (g.react ? ' - strike ' + g.react + ' ms' + (newReact ? ' - fastest yet!' : '') : '');
+    return g.funLine;
   }
   function sizeWord(f, cm) {
     const s = f.size || [10, 30], q = (cm - s[0]) / Math.max(1, s[1] - s[0]);
@@ -243,18 +285,18 @@
     if (g.splash) g.splash.t += dt;
     if (g.state === 'waiting' || g.state === 'biting') {
       const s = g.bite.tick(dt);
-      if (s === 'biting' && g.state === 'waiting') { g.state = 'biting'; setMsg('A bite! Press now!'); }
-      else if (s === 'missed') finish('missed', 'Too slow', 'The fish got away.');
+      if (s === 'biting' && g.state === 'waiting') { g.state = 'biting'; setMsg('A bite! Press now!'); cue('warn'); }
+      else if (s === 'missed') { cue('hurt'); finish('missed', 'Too slow', 'The bite lasts ' + g.bite.window.toFixed(1) + ' s. Press the moment you see the "!".' + breakStreak()); }
     } else if (g.state === 'reeling') {
       const r = g.reel.tick(dt, anyHeld());
       if (g.boss && r.phase !== g.lastPhase) { g.lastPhase = r.phase; g.phaseAt = g.t; }
       if (r.status === 'reeling' && g.surge) {
         const sp = B.phaseAt(g.surge, g.t), ts = B.tensionStep(g.strain, dt, anyHeld(), sp === 'surge');
         g.strain = ts.strain;
-        if (ts.snapped) { finish('snapped', 'Line snapped!', 'The boss surged and you kept reeling. Ease off during a surge, then reel again.'); bossUi(); return; }
+        if (ts.snapped) { cue('hurt'); finish('snapped', 'Line snapped!', 'The boss surged and you kept reeling. Ease off during a surge, then reel again.' + nearLine() + breakStreak()); bossUi(); return; }
       }
       bossUi();
-      if (r.status === 'snapped') finish('snapped', 'Line snapped!', g.boss ? 'The boss won this round. At max tension the line lasts only 1.5 s.' : 'Tension stayed at max too long. Release more often.');
+      if (r.status === 'snapped') { cue('hurt'); finish('snapped', 'Line snapped!', (g.boss ? 'The boss won this round. At max tension the line lasts only 1.5 s.' : 'Tension stayed at max too long. Release more often.') + nearLine() + breakStreak()); }
       else if (r.status === 'caught') land();
     }
     if (g.state === 'biting' || g.state === 'hooked') g.bobY = 6;
@@ -714,7 +756,7 @@
     if (g.fan && g.state === 'result') drawFanfare(c);
     if (g.state === 'result' && g.result && g.result.outcome === 'caught') drawFish(c, W / 2, 290, 46, g.fish, false);
     if (g.state === 'idle' || g.state === 'result') {
-      c.fillStyle = 'rgba(0,0,0,.35)'; c.font = '12px sans-serif'; c.textAlign = 'left'; c.fillText(spotName(g.spot), 8, 18);
+      c.fillStyle = night ? 'rgba(255,255,255,.7)' : 'rgba(0,0,0,.45)'; c.font = '12px sans-serif'; c.textAlign = 'left'; c.fillText(spotName(g.spot), 8, 18);
     }
   }
   // boss splash: expanding ripple rings; with reduce-motion one static ring and a label
@@ -806,6 +848,7 @@
       dismiss, redraw: draw, rng, setWeather, setGear, renderStatus,
       get gear() { return journal.gear; }, get bait() { return journal.bait; }, get weather() { return nowCtx().weather; },
       get boss() { return g.boss; }, get phase() { return g.reel ? g.reel.phase : -1; }, get fish() { return g.fish && g.fish.id; },
+      fun: { get state() { return cleanFun(fun); }, get sounds() { return sounds; }, get shakes() { return shakes; }, get react() { return g.react; } },
       get fanfare() { return { reduced: reduced(), active: !!g.fan, t: g.fan ? g.fan.t : 0 }; },
       get day() { return today(); }, setDay(n) { dayOverride = D.clampDay(n, null); if (ready) { renderStatus(); } return today(); },
       tourney: { start: startTournament, open: openTourney, info: () => D.tournament.forDay(today()), get active() { return g.tour; }, get run() { return journal.tour.run; }, get result() { return g.tourResult; }, get state() { return journal.tour; } },
