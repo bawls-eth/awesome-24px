@@ -557,6 +557,16 @@
       "status": "provisional",
       "ingested_utc": "2026-11-22T02:06:00Z",
       "source": "codex"
+    },
+    {
+      "id": "b38a",
+      "label": "reef-puffer",
+      "path": "assets/arcane/b38a-reef-puffer",
+      "manifest": "assets/arcane/b38a-reef-puffer/manifest.json",
+      "files": 14,
+      "status": "provisional",
+      "ingested_utc": "2026-11-22T07:10:00Z",
+      "source": "codex"
     }
   ]
 }
