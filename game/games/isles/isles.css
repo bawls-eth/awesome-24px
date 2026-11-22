@@ -122,3 +122,8 @@ body.mm-nav-on #hud { left: calc(8px + var(--mm-nav-reserve)); max-width: min(30
 body.touch.abil-on .hint, body.touch.abil-on .decor { bottom: calc(232px + env(safe-area-inset-bottom)); }
 body.touch.abil-on .boss-bar { bottom: calc(270px + env(safe-area-inset-bottom)); }
 #abil-breath .val { margin-left: 4px; }
+/* XB: the trophy pedestal panel (rows like the craft rows; 44 px buttons from the base rule) */
+.trophy-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid rgba(243,236,210,.14); }
+.trophy-row.on .rc-name { color: #b9e08a; }
+.trophy-row.gold .rc-name { color: #f2c84b; }
+.trophy-row .rc-note { font-size: 12px; }
