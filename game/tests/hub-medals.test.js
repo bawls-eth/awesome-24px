@@ -57,7 +57,7 @@ async function strip(page, nodeId) {
 
   // 2. the node card shows the strip with the right chips lit (try Deepdelve and Stalk)
   const dd = await strip(H.page, 'w3-deepdelve');
-  check('Deepdelve card strip lights depth20, wyrm and torches10 of its 8 medals', dd.shown && !dd.hidden && dd.all.length === 8 && JSON.stringify(dd.on) === JSON.stringify(['depth20', 'wyrm', 'torches10']), JSON.stringify(dd));
+  check('Deepdelve card strip lights depth20, wyrm and torches10 of its 10 medals (8 + the two Deepdelve build medals)', dd.shown && !dd.hidden && dd.all.length === 10 && JSON.stringify(dd.on) === JSON.stringify(['depth20', 'wyrm', 'torches10']), JSON.stringify(dd));
   const txt = await H.page.evaluate(() => document.getElementById('card-ach').textContent);
   check('chips are plain text names', /Rock Wyrm/.test(txt) && !/</.test(txt), txt);
   const hooks = await H.page.evaluate(() => Object.keys(window.__hub));
