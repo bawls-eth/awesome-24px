@@ -11,6 +11,23 @@
   const SAFE_DEPTH = 6; // a dive counts once you are this many blocks below where it started
   const SAFE_BONUS = 1.5; // surfacing alive multiplies the dive score (falling forfeits it)
   const ORE = { coal: 1, iron_ore: 2, gold_ore: 3, crystal: 5, glowstone: 2 };
+  // Seeded dive modifiers: every dive gets one, picked from the world seed and the dive number (no Math.random), so runs
+  // differ but the same seed + dive number always gives the same twist.
+  const MODS = [
+    { id: 'plain', name: 'Plain dive', desc: 'No twist: just dig deep.' },
+    { id: 'veins', name: 'Rich veins', desc: 'Ores score double.' },
+    { id: 'rhythm', name: 'Rhythm', desc: 'Combo window 2.4 s.' },
+    { id: 'plunge', name: 'Plunge', desc: 'Depth scores x1.5.' },
+    { id: 'steady', name: 'Steady hands', desc: 'Combos score triple.' },
+  ];
+  function modFor(seed, n) {
+    let h = (Math.floor(Math.abs(+seed || 0)) ^ 0x9e3779b9) >>> 0;
+    h = Math.imul(h ^ (Math.floor(Math.abs(+n || 0)) + 0x632be5ab), 2654435761) >>> 0;
+    h ^= h >>> 15; h = Math.imul(h, 2246822519) >>> 0; h ^= h >>> 13;
+    return MODS[(h >>> 0) % MODS.length];
+  }
+  const modOf = (run) => (run && run.mod) || 'plain';
+  const gapOf = (run) => (modOf(run) === 'rhythm' ? 2.4 : COMBO_GAP);
   const ci = (v, hi) => (typeof v === 'number' && isFinite(v) ? Math.max(0, Math.min(hi, Math.floor(v))) : 0);
 
   function clean(raw) {
@@ -23,7 +40,7 @@
   function load(storage) { try { return clean(storage.getItem(KEY)); } catch (e) { return clean(null); } }
   function save(storage, rec) { try { storage.setItem(KEY, JSON.stringify(clean(rec))); return true; } catch (e) { return false; } }
 
-  function start(startDepth) { return { start: ci(startDepth, 999), depth: 0, blocks: 0, ores: 0, orePts: 0, combo: 0, bestCombo: 0, lastBreak: -99, armed: false }; }
+  function start(startDepth, mod) { return { mod: MODS.some((m) => m.id === mod) ? mod : 'plain', start: ci(startDepth, 999), depth: 0, blocks: 0, ores: 0, orePts: 0, combo: 0, bestCombo: 0, lastBreak: -99, armed: false }; }
   // Depth below where the dive started (blocks). Returns true when it became a new dive maximum.
   function depth(run, absDepth) {
     const d = Math.max(0, ci(absDepth, 999) - run.start);
@@ -34,7 +51,7 @@
   // A block broke at time `now` (seconds). Returns { combo, ore } for feedback.
   function mined(run, item, now) {
     run.blocks++;
-    run.combo = now - run.lastBreak <= COMBO_GAP ? run.combo + 1 : 1;
+    run.combo = now - run.lastBreak <= gapOf(run) ? run.combo + 1 : 1;
     run.lastBreak = now;
     if (run.combo > run.bestCombo) run.bestCombo = run.combo;
     const ore = ORE[item] | 0;
@@ -42,9 +59,9 @@
     return { combo: run.combo, ore };
   }
   // The combo has lapsed when no block broke for COMBO_GAP seconds.
-  function comboLive(run, now) { return run.combo > 1 && now - run.lastBreak <= COMBO_GAP; }
+  function comboLive(run, now) { return run.combo > 1 && now - run.lastBreak <= gapOf(run); }
   function score(run, safe) {
-    const base = run.depth * 10 + run.blocks + run.orePts * 8 + run.bestCombo * 3;
+    const m = modOf(run), base = Math.floor(run.depth * (m === 'plunge' ? 15 : 10)) + run.blocks + run.orePts * (m === 'veins' ? 16 : 8) + run.bestCombo * (m === 'steady' ? 9 : 3);
     return Math.floor(safe ? base * SAFE_BONUS : base);
   }
   // Finish a dive: returns a summary with the personal-best flags; `rec` is updated in place (the caller saves it).
@@ -56,7 +73,7 @@
     rec.runs = Math.min(999999, rec.runs + 1); if (safe) rec.safe = Math.min(999999, rec.safe + 1);
     // "so close" feedback: how far short of the old best this dive ended (only when it did not beat it)
     const short = !pb.depth && prev.depth > 0 ? prev.depth - run.depth : 0;
-    return { score: s, safe: !!safe, depth: run.depth, blocks: run.blocks, ores: run.ores, combo: run.bestCombo, pb, prev, short, any: pb.score || pb.depth || pb.ores || pb.combo };
+    return { score: s, safe: !!safe, mod: modOf(run), depth: run.depth, blocks: run.blocks, ores: run.ores, combo: run.bestCombo, pb, prev, short, any: pb.score || pb.depth || pb.ores || pb.combo };
   }
-  return { KEY, COMBO_GAP, SAFE_DEPTH, SAFE_BONUS, ORE, clean, load, save, start, depth, mined, comboLive, score, finish };
+  return { KEY, MODS, modFor, COMBO_GAP, SAFE_DEPTH, SAFE_BONUS, ORE, clean, load, save, start, depth, mined, comboLive, score, finish };
 }));

@@ -43,6 +43,14 @@ async function open(browser, opts, q, init) {
   const sum2 = R.finish(rec, run2, false);
   check('module: a near miss reports how many blocks short', sum2.pb.depth === false && sum2.short === 2 && rec.best.depth === R.SAFE_DEPTH);
 
+  const mods = []; for (let n = 0; n < 40; n++) mods.push(R.modFor(7, n).id);
+  check('modifiers: seeded and deterministic (same seed + dive number, same twist)', R.modFor(7, 3).id === R.modFor(7, 3).id && R.modFor(123, 9).id === R.modFor(123, 9).id);
+  check('modifiers: dives vary (at least 4 different twists over 40 dives)', new Set(mods).size >= 4, mods.join(','));
+  const mk = (mod) => { const r = R.start(0, mod); R.depth(r, 10); R.mined(r, 'gold_ore', 1); R.mined(r, 'stone', 1.5); return r; };
+  check('modifiers: Rich veins doubles ore points and Plunge boosts depth', R.score(mk('veins')) - R.score(mk('plain')) === R.ORE.gold_ore * 8 && R.score(mk('plunge')) - R.score(mk('plain')) === 50 && R.start(0, 'bogus').mod === 'plain');
+  const rh = R.start(0, 'rhythm'); R.mined(rh, 'stone', 1); const pl = R.start(0, 'plain'); R.mined(pl, 'stone', 1);
+  check('modifiers: Rhythm widens the combo window', R.mined(rh, 'stone', 3).combo === 2 && R.mined(pl, 'stone', 3).combo === 1);
+
   const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 
   // phone: layout, hidden Down button, 44px targets
@@ -55,7 +63,7 @@ async function open(browser, opts, q, init) {
   });
   check('phone: Down button is hidden in survival (hidden attribute wins over .btn display)', lay.mode === 'survival' && lay.downVisible === false, JSON.stringify(lay));
   check('phone: every visible button/link is at least 44x44', lay.small.length === 0, JSON.stringify(lay.small));
-  check('phone: dive HUD shows the dive depth and best', /^Dive 0 deep \| Best \d+/.test(lay.dive), lay.dive);
+  check('phone: dive HUD shows the dive twist, depth and best', /^[A-Z][a-z]+( [a-z]+)?: 0 deep \| Best (-|\d+)$/.test(lay.dive), lay.dive);
   check('phone: MMNav still mounted', lay.hasNav === true);
 
   // a dive: mine with a combo, go deep, die -> summary with personal bests; Dive again closes it in one tap
@@ -70,7 +78,7 @@ async function open(browser, opts, q, init) {
     d.die('Test fall.');
     const panel = document.getElementById('run-panel');
     const again = document.getElementById('run-again').getBoundingClientRect();
-    return { a: a.combo, b: b.combo, c: c.combo, comboTxt, pops, armed, open: !panel.hidden, title: document.getElementById('run-title').textContent, score: document.getElementById('run-score').textContent, stats: [...document.querySelectorAll('#run-stats li')].map((l) => l.textContent), pbs: document.querySelectorAll('#run-stats li.pb').length, again: [again.width, again.height], saved: JSON.parse(localStorage.getItem('pixeltown-deepdelve-runs-v1')), runAfter: r.state.blocks };
+    return { a: a.combo, b: b.combo, c: c.combo, comboTxt, pops, armed, open: !panel.hidden, title: document.getElementById('run-title').textContent, score: document.getElementById('run-score').textContent, stats: [...document.querySelectorAll('#run-stats li')].map((l) => l.textContent), pbs: document.querySelectorAll('#run-stats li.pb').length, again: [again.width, again.height], saved: JSON.parse(localStorage.getItem('pixeltown-deepdelve-runs-v1')), runAfter: r.state.blocks, next: document.getElementById('run-next').textContent };
   });
   check('combo: three quick breaks count x1, x2, x3 and the meter shows it', d1.a === 1 && d1.b === 2 && d1.c === 3 && d1.comboTxt === 'Combo x3', JSON.stringify(d1));
   check('juice: ore and break pops appear', d1.pops >= 1);
@@ -78,6 +86,7 @@ async function open(browser, opts, q, init) {
   check('summary: death opens the Dive over panel with score and stats', d1.open && d1.title === 'Dive over' && /^Score \d+/.test(d1.score) && d1.stats.length === 4 && /Depth: 9/.test(d1.stats[0]));
   check('summary: first dive marks personal bests and saves them in its own key', d1.pbs >= 2 && d1.saved && d1.saved.best.depth === 9 && d1.saved.runs === 1 && d1.saved.best.combo === 3);
   check('summary: Dive again is a big one-tap target and a fresh dive started', d1.again[0] >= 44 && d1.again[1] >= 44 && d1.runAfter === 0);
+  check('summary: names this dive and previews the next twist', /^This dive: .+\. Next dive: .+ \(.+\)$/.test(d1.next), d1.next);
   if (process.env.SHOTS) await P.page.screenshot({ path: process.env.SHOTS + '/dive-phone-summary.png' });
   await P.page.tap('#run-again');
   const d2 = await P.page.evaluate(() => ({ open: !document.getElementById('run-panel').hidden, mine: window.__dd.input.mine }));

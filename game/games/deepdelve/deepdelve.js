@@ -149,18 +149,19 @@
   function renderDive() {
     const el = $('hud-dive'); if (!el) return;
     if (!run || !runRec) { el.textContent = ''; return; }
-    el.textContent = 'Dive ' + run.depth + ' deep | Best ' + runRec.best.depth + (run.armed ? ' | Climb out for x' + RUNS.SAFE_BONUS : '');
+    el.textContent = modName(run.mod) + ': ' + run.depth + ' deep | Best ' + (runRec.best.depth || '-') + (run.armed ? ' | Climb out for x' + RUNS.SAFE_BONUS : '');
   }
+  const modName = (id) => { const m = RUNS && RUNS.MODS.filter((x) => x.id === id)[0]; return m ? m.name : 'Dive'; };
   function startRun() {
     if (!RUNS) return;
     if (!runRec) runRec = RUNS.load(localStorage);
-    run = RUNS.start(runDepth0); pbDepthShown = false; comboShown = false; $('combo').textContent = '';
+    run = RUNS.start(runDepth0, RUNS.modFor(SEED, runRec.runs).id); pbDepthShown = false; comboShown = false; $('combo').textContent = '';
     renderDive();
   }
   function onMined(item, now) {
     if (!run) return null;
     const r = RUNS.mined(run, item, now === undefined ? nowS() : now);
-    if (r.ore) { pop('+' + (r.ore * 8) + ' ' + item.replace(/_ore$/, '').replace(/_/g, ' '), 'ore'); sfx('pickup'); shake(0.06, 0.16); }
+    if (r.ore) { pop('+' + (r.ore * (run.mod === 'veins' ? 16 : 8)) + ' ' + item.replace(/_ore$/, '').replace(/_/g, ' '), 'ore'); sfx('pickup'); shake(0.06, 0.16); }
     else { sfx('hit'); shake(0.025, 0.08); }
     if (r.combo >= 2) {
       const c = $('combo'); c.textContent = 'Combo x' + r.combo; c.className = r.combo >= 5 ? 'hot' : ''; comboShown = true;
@@ -201,6 +202,8 @@
       const sm = document.createElement('small'); sm.textContent = r[2] ? (sum.pb[r[2]] ? 'New personal best!' : 'Best ' + (r[2] === 'combo' ? 'x' : '') + r[3]) : 'Dives: ' + runRec.runs;
       li.appendChild(sm); ul.appendChild(li);
     });
+    const nx = RUNS.MODS.filter((m) => m.id === run.mod)[0];
+    $('run-next').textContent = 'This dive: ' + modName(sum.mod) + '. Next dive: ' + nx.name + ' (' + nx.desc + ')';
     $('run-tip').textContent = sum.short > 0 && sum.short <= 5 ? 'Only ' + sum.short + ' blocks short of your deepest dive!' : sum.safe ? 'Surfacing alive pays x' + RUNS.SAFE_BONUS + '. Go deeper next time?' : 'Tip: climb back out alive for a x' + RUNS.SAFE_BONUS + ' score bonus. Chain breaks within ' + RUNS.COMBO_GAP + ' s for combos.';
     togglePanel('craft', false); togglePanel('goals', false);
     $('run-panel').hidden = false;
