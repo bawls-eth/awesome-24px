@@ -77,6 +77,7 @@ legend{color:var(--gold);font-size:.9rem;padding:0 6px}
 .find{display:flex;align-items:center;flex-wrap:wrap;gap:4px}
 .find .item{cursor:default;display:inline-flex;align-items:center}
 .tag.src{background:#24456a}
+.tag.realm-lv{background:#5a3a1a;color:#ffe3a8}
 
 /* abilities and unlocks viewer (read-only) */
 .btn.abil{min-height:48px}
