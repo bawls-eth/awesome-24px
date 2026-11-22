@@ -1250,5 +1250,13 @@
   "town-postcards.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "smoke-journey.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "minigame-lowgfx.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

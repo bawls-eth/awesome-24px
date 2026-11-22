@@ -1,0 +1,78 @@
+{
+  "v": 1,
+  "allow404": [],
+  "offOrigin": [
+    "https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js",
+    "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"
+  ],
+  "small": {
+    "390x844": {
+      "bugs": [
+        "a#menu-back"
+      ]
+    },
+    "1280x720": {
+      "lantern": [
+        "a#back-hub",
+        "a#back-town"
+      ],
+      "jam": [
+        "a#back-hub",
+        "a#back-town"
+      ],
+      "bugs": [
+        "#top a.back\"Town\"",
+        "#top a.back\"← Hub\"",
+        "a#menu-back"
+      ],
+      "stalk": [
+        "a#back"
+      ]
+    }
+  },
+  "tinyText": {
+    "390x844": {
+      "realm": [
+        "#mm-coach span.mm-coach-prog\"# / #\"",
+        "button#mm-gear-btn"
+      ],
+      "angler": [
+        "small#bait-type"
+      ]
+    },
+    "1280x720": {
+      "realm": [
+        "#mm-coach span.mm-coach-prog\"# / #\"",
+        "#realm-ab-0 span.key\"Q\"",
+        "#realm-ab-1 span.key\"E\"",
+        "#realm-ab-2 span.key\"R\"",
+        "#realm-ab-3 span.key\"F\"",
+        "#realm-help span.key-hint\"WASD move · mouse \"",
+        "button#mm-gear-btn"
+      ],
+      "angler": [
+        "small#bait-type"
+      ]
+    }
+  },
+  "overStick": {
+    "390x844": {
+      "bugs": [
+        "#overlay button.card\"DunesLockedNeeds #\" over div#joy",
+        "#overlay button.card\"MarshLockedNeeds #\" over div#joy"
+      ]
+    },
+    "1280x720": {}
+  },
+  "dismiss": {
+    "realm": [
+      "#realm-hero-close"
+    ]
+  },
+  "knownIssues": [
+    "Realm: a fresh visitor gets the hero picker, which covers the shared Menu button until it is closed (the bot closes it with #realm-hero-close).",
+    "Desktop: the legacy Hub/Town header links on Lantern, Jam, Bug Safari and Stalk are under 44 px (they stay beside the Menu button).",
+    "Bug Safari phone: the arena menu \"Back to the hub\" link is under 44 px, and two locked arena cards sit over the walk joystick (the menu overlay covers it).",
+    "Realm: the coach progress, the ability key letters, the desktop key hint and the gear button label are under 12 px; Angler: the bait type label is under 12 px."
+  ]
+}
