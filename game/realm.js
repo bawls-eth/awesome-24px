@@ -384,7 +384,15 @@ function rmMergeSave(mine, stored, opts) {
   a.items.forEach((it) => {
     const other = byUid.get(it.n);
     if (!other) { if (known.has(it.n)) return; items.push({ ...it }); return; } // gone from storage because another tab sold it, or new here
-    if (other.id === it.id && other.r === it.r && (other.t || 0) === (it.t || 0) && (other.a || 0) === (it.a || 0)) { items.push({ ...it }); return; } // same item: identity is (n, id, r, t, a)
+    if (other.id === it.id && other.r === it.r && (other.t || 0) === (it.t || 0) && (other.a || 0) === (it.a || 0)) { // same item: identity is (n, id, r, t, a) ...
+      // ... unless this tab never saw that uid in storage (FZ issue A): then both tabs picked their own copy under the same uid before either synced,
+      // so they are two items and this tab's gets a fresh uid below. Only when the caller tracks `known` (RealmArena always does).
+      if (!(opts.known && !known.has(it.n))) {
+        // FZ issue B: never drop `sig` / `f` that storage holds for the same item (this copy may come from an old tab's stripped write); this tab's wins when both have one
+        const o = { ...it }; if (!o.sig && other.sig) o.sig = other.sig; if (!o.f && other.f) o.f = { ...other.f };
+        items.push(o); return;
+      }
+    }
     const fresh = next++; remap[it.n] = fresh; items.push({ ...it, n: fresh }); // a uid collision between two different items: this tab's gets a fresh uid (keeping t / a), storage's keeps the old one
   });
   const have = new Set(items.map((it) => it.n));
@@ -527,7 +535,9 @@ class RealmArena {
       const st = this._syncBase(stored);
       ok = ok && st.shards === this.save.shards && st.items.length === this.save.items.length && st.items.every((it, i) => it.n === this.save.items[i].n && it.r === this.save.items[i].r && (it.t || 0) === (this.save.items[i].t || 0));
     } else { // nothing readable in storage (no storage, or a page that saves elsewhere): keep every item as new here, never drop one
-      this._known = new Set(); this._baseShards = this.save.shards; this._baseDust = this.save.dust || 0; this._baseGp = rmGpOf(this.save.gp);
+      this._known = new Set();
+      // FZ issue C: a FAILED write leaves the bases where they were (the unsaved shards / dust / pity are still this tab's delta for the next merge)
+      if (ok) { this._baseShards = this.save.shards; this._baseDust = this.save.dust || 0; this._baseGp = rmGpOf(this.save.gp); }
     }
     this.saveOk = ok;
     if (!ok) {

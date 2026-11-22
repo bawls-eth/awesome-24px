@@ -108,50 +108,27 @@ function rmMergeSaveOld(mine, stored, opts) {
   return rmCleanSaveOld(out);
 }
 globalThis.__O = { rmCleanSaveOld, rmMergeSaveOld };`;
-vm.runInContext(WRAP + realmSrc.slice(0, cut) + '\n;globalThis.__R = { rmCleanSave, rmMergeSave, RM_BACKPACK, RM_SIG_IDS, RM_AFFIX_IDS };\n' + OLD_SRC + '\n})();', sandbox, { filename: 'realm.js+old-cleaner' });
+vm.runInContext(WRAP + realmSrc.slice(0, cut) + '\n;globalThis.__R = { rmCleanSave, rmMergeSave, RM_BACKPACK, RM_SIG_IDS, RM_AFFIX_IDS, rmReadStoredRealm, rmGpOf };\n' + OLD_SRC + '\n})();', sandbox, { filename: 'realm.js+old-cleaner' });
 const { rmCleanSave, rmMergeSave, RM_BACKPACK, RM_SIG_IDS, RM_AFFIX_IDS } = sandbox.__R;
 const { rmCleanSaveOld, rmMergeSaveOld } = sandbox.__O;
 
 // Known issues found by this fuzz, allow-listed BY SEED: a seed listed under an issue may show that issue (and only that one); any other issue in any
 // seed fails. All of them are printed on every run (count, seeds, shortest repro) so they are never silent. Regenerate a list with FUZZ_LIST=1.
+// A, B and C below are FIXED in realm.js (save-fuzzfix): B and C have empty seed lists, so every seed asserts them for real; the codes stay so a
+// regression is reported under its name. A keeps ONE seed, a different sub-case the twin fix cannot see (see `rest` below).
 const KNOWN = {
   'A-twin-uid': {
-    what: "two tabs that pick the same plain item (same id / r / t / a, no affix seed) before either sees the other's write give it the same uid; rmMergeSave reads the two items as one (identity = n, id, r, t, a) and one copy is lost",
-    seeds: [
-      15718090, 67887965, 71031583, 76129654, 82416890, 86325796, 89469414, 91847744, 94991362, 99665556, 105952792, 137730383, 150304855, 152259308,
-      167553521, 175029922, 189134970, 201709442, 235441486, 240539557, 264075459, 269597407, 277415219, 298996668, 304094739, 381413558, 387276917, 388466082,
-      389655247, 392798865, 411236696, 423387291, 429674527, 462641283, 465361024, 500282233, 503425851, 509713087, 534438154, 560352386, 562306839, 566215745,
-      600371666, 604280572, 627816474, 667070466, 667835754, 695704439, 715331435, 726716742, 759259621, 773788546, 774553834, 812618661, 843630964, 871499649,
-      873454102, 891891933, 905231693, 909140599, 912708094, 931145925, 938963737, 949583756, 952303497, 968786875, 985270253, 995466395, 1009995320, 1032765934,
-      1035909552, 1038629293, 1043727364, 1044151241, 1061399907, 1064543525, 1068452431, 1070406884, 1073974379, 1097510281, 1112804494, 1123000636, 1129287872, 1135151231,
-      1146536538, 1161065463, 1183412200, 1190888601, 1197175837, 1229718716, 1260731019, 1262685472, 1270161873, 1280358015, 1284266921, 1289364992, 1292508610, 1322331748,
-      1331338725, 1334482343, 1341958744, 1364305481, 1373736335, 1380023571, 1390985001, 1391408878, 1409846709, 1414944780, 1430238993, 1457683801, 1480454415, 1488696104,
-      1524806478, 1531093714, 1567969376, 1595414184, 1609943109, 1630759270, 1635857341, 1639766247, 1644099030, 1719804807, 1748438780, 1757104346, 1761013252, 1770020229,
-      1777496630, 1799843367, 1864587714, 1870109662, 1877927474, 1884214710, 1926612320, 1928566773, 1929332061, 1936384585, 1955246293, 1968586053, 2028997617, 2058055467,
-      2073349680, 2087878605, 2101218365, 2123565102, 2126708720, 2145146551, 2147101004, 2156531858, 2158486311, 2164773547, 2222465370, 2235381253, 2235805130, 2243622942,
-      2246766560, 2248721013, 2271491627, 2275824410, 2327228997, 2342523210, 2348810446, 2354673805, 2355862970, 2357817423, 2366059112, 2385686108, 2402169486, 2406078392,
-      2423750935, 2431568747, 2435901530, 2466489956, 2472777192, 2498691424, 2514750925, 2515940090, 2520272873, 2526136232, 2573631913, 2583828055, 2584593343, 2605409504,
-      2617560099, 2623847335, 2628180118, 2687402517, 2698022536, 2706264225, 2718414820, 2723512891, 2773728313, 2776106643, 2780015549, 2786302785, 2802362286, 2863197727,
-      2867106633, 2872628581, 2879681105, 2891066412, 2907549790, 2915791479, 2924798456, 2967196066, 3007215346, 3009935087, 3037803772, 3066861622, 3072724981, 3091162812,
-      3152763541, 3163383560, 3188873915, 3192782821, 3206546458, 3211220652, 3220651506, 3244187408, 3249285479, 3261859951, 3265003569, 3286585018, 3289728636, 3358381889,
-      3378774173, 3392113933, 3402733952, 3403499240, 3410551764, 3437231284, 3444707685, 3465099969, 3474530823, 3476485276, 3480394182, 3526700698, 3543184076, 3638940726,
-      3671907482, 3679725294, 3690345313, 3706828691, 3725266522, 3727220975, 3739371570, 3743704353, 3765285802, 3775481944, 3791965322, 3825697366, 3880245571, 3881010859,
-      3881434736, 3888487260, 3910833997, 3931650158, 3937513517, 3941846300, 3943035465, 3945755206, 3956375225, 3967760532, 3970480273, 4032081002, 4036413785, 4085863919,
-      4099968967, 4114497892, 4141177412, 4169046097, 4190203669, 4202778141, 4237699350, 4239653803, 4255371893, 4256137181, 4263189705, 4268711653, 4273809724, 4274575012,
-    ],
+    what: "FIXED: two tabs that pick the same plain item (same id / r / t / a) under the same uid before either syncs used to merge as one item; rmMergeSave now gives this tab's copy a fresh uid when it never saw that uid in storage",
+    rest: "still open in 1334482343 only: uid REUSE. Tab A picks uid 13, writes, sells it (storage drops 13, nextUid stays 14); tab B still holds A's item under 13 (known, not yet synced); tab C, last synced before 13 existed, picks its own identical item as 13 and writes. B then reads C's 13 as the item it knew, keeps its stale copy, and C's item is lost. Renumbering unknown picks below storage's nextUid fixes the fuzz but changes uids in flows realm-core / realm-progress / realm-shop-death rely on, so it is not shipped; a real fix needs uids that are unique across tabs",
+    seeds: [1334482343],
   },
   'B-stale-strip': {
-    what: "a new tab that adopted an OLD (pre-GW) tab's stripped write keeps its own copy of a same-uid item in rmMergeSave, so it writes the item back without f / sig even after another new tab restored them",
-    seeds: [
-      16907255, 271551860, 474026590, 484222732, 885604697, 950349044, 963688804, 1042962076, 1529904549, 1905796159, 2549672134, 2595978650, 2602265886, 2634043477,
-      2738041816, 3356427436, 3447851303, 3726031810, 4234555732,
-    ],
+    what: "FIXED: a new tab that adopted an OLD (pre-GW) tab's stripped write used to keep its own copy of a same-uid item, writing it back without f / sig; rmMergeSave now never drops f / sig that storage holds for the same item",
+    seeds: [],
   },
   'C-empty-fail': {
-    what: "RealmArena._persist: a write that fails while storage holds no realm yet sets the shard / dust bases to the UNSAVED totals, so that tab's delta is lost once another tab creates the save",
-    seeds: [
-      153448473, 887559150, 1444344041, 2534377921, 3536131552,
-    ],
+    what: "FIXED: RealmArena._persist used to set the shard / dust bases to the UNSAVED totals after a write that failed while storage held no realm yet; a failed write now leaves the bases as they were",
+    seeds: [],
   },
 };
 const KNOWN_BY_SEED = Object.create(null);
@@ -193,21 +170,23 @@ function runOne(seed, trace) {
   for (let i = 0; i < nTabs; i++) tabs.push({ i, old: hasOld && i === nTabs - 1, save: rmCleanSave({}), lids: new Map(), baseShards: 0, baseDust: 0, baseGp: { b: 0, d: 0 }, known: new Set(), pending: false, dirty: false });
   const T = (s) => { if (trace) console.log('  ' + s); };
 
-  // map result items back to lids (mine wins on a same-uid same-item tie, exactly like rmMergeSave keeps `a`'s copy; a remapped uid is mine's)
-  function lidsFor(res, mine, mineLids, stored, storedLids) {
+  // map result items back to lids (mine wins on a same-uid same-item tie, exactly like rmMergeSave keeps `a`'s copy; a remapped uid is mine's).
+  // `known` (new tabs only): a same-uid same-item pair whose uid this tab never saw in storage is two items (issue A fix): the uid stays storage's.
+  function lidsFor(res, mine, mineLids, stored, storedLids, known) {
+    const twinUid = (n) => known && !known.has(n) && mi.has(n) && si.has(n) && same(mi.get(n), si.get(n));
     const out = new Map(), used = new Set();
     const mi = new Map(mine.items.map((x) => [x.n, x])), si = new Map(stored.items.map((x) => [x.n, x]));
     const pend = [];
     res.items.forEach((it) => {
       const m = mi.get(it.n), s = si.get(it.n);
       let lid = null;
-      if (m && same(m, it) && mineLids.has(m.n) && !used.has(mineLids.get(m.n))) lid = mineLids.get(m.n);
+      if (m && same(m, it) && !twinUid(it.n) && mineLids.has(m.n) && !used.has(mineLids.get(m.n))) lid = mineLids.get(m.n);
       else if (s && same(s, it) && storedLids.has(s.n) && !used.has(storedLids.get(s.n))) lid = storedLids.get(s.n);
       if (lid === null) { pend.push(it); return; }
       used.add(lid); out.set(it.n, lid);
     });
-    pend.forEach((it) => { // a fresh uid from a collision: one of mine whose uid storage holds as a different item
-      const m = mine.items.find((x) => same(x, it) && mineLids.has(x.n) && !used.has(mineLids.get(x.n)) && si.has(x.n) && !same(si.get(x.n), x));
+    pend.forEach((it) => { // a fresh uid from a collision: one of mine whose uid storage holds as a different item (or, new tabs, a twin: issue A fix)
+      const m = mine.items.find((x) => same(x, it) && mineLids.has(x.n) && !used.has(mineLids.get(x.n)) && ((si.has(x.n) && (!same(si.get(x.n), x) || twinUid(x.n)))));
       if (m) { const lid = mineLids.get(m.n); used.add(lid); out.set(it.n, lid); } else out.set(it.n, -1);
     });
     return out;
@@ -222,13 +201,17 @@ function runOne(seed, trace) {
     const opts = { base: tab.baseShards, baseDust: tab.baseDust, known: tab.known, baseGp: tab.baseGp };
     const res = tab.old ? rmMergeSaveOld(mineRaw, storedRaw, opts) : rmMergeSave(mineRaw, storedRaw, opts);
     const mine = tab.old ? rmCleanSaveOld(mineRaw) : rmCleanSave(mineRaw), stored = tab.old ? rmCleanSaveOld(storedRaw) : rmCleanSave(storedRaw);
-    const lids = lidsFor(res, mine, tab.lids, stored, store.lids);
+    const lids = lidsFor(res, mine, tab.lids, stored, store.lids, tab.old ? null : tab.known);
     const mv = verOf(mine, tab.lids), sv = verOf(stored, store.lids), rv = verOf(res, lids);
     const inputs = new Set([...mv.keys(), ...sv.keys()].filter((l) => live.has(l) && !allowedGone.has(l)));
     const missing = [...inputs].filter((l) => !rv.has(l));
     if (tab.old) { // an old tab's losses are not the new cleaner's (a twin it merged leaves the survivor ambiguous as well)
       missing.forEach((l) => { allowedGone.add(l); const it = mv.get(l) || sv.get(l); if (tab.lids.has(it.n)) allowedGone.add(tab.lids.get(it.n)); if (store.lids.has(it.n)) allowedGone.add(store.lids.get(it.n)); });
       if (missing.length) T('old tab dropped lids ' + missing.join(','));
+      // The old merge also reads twins (two items under one uid with the same id / r / t / a, picked in two tabs) as one and writes ITS copy under
+      // that uid; a new tab that already knew the uid then cannot tell the two apart, so the survivor is ambiguous even when storage's twin was
+      // already consumed (and so not "missing" here). Same rule as above: an old tab's write, not the new cleaner's loss.
+      mine.items.forEach((x) => { const s = stored.items.find((y) => y.n === x.n); if (s && same(s, x) && tab.lids.has(x.n) && store.lids.has(x.n) && tab.lids.get(x.n) !== store.lids.get(x.n)) { allowedGone.add(tab.lids.get(x.n)); allowedGone.add(store.lids.get(x.n)); T('old tab merged twin uid ' + x.n); } });
       return { res, lids };
     }
     // I1 / I5
@@ -277,14 +260,14 @@ function runOne(seed, trace) {
   }
   function persist(tab, failWrite) {
     resync(tab, 'tab' + tab.i + (tab.old ? '(old)' : '') + ' persist');
-    if (failWrite && !store.realm && (tab.save.shards > 0 || tab.save.dust > 0)) emptyFail = true; // issue C: realm.js then takes the unsaved values as its bases
+    if (failWrite && !store.realm && (tab.save.shards > 0 || tab.save.dust > 0)) emptyFail = true; // issue C (fixed): realm.js used to take the unsaved values as its bases
     if (!failWrite) {
       tab.dirty = false;
       store.realm = JSON.parse(JSON.stringify(tab.save)); store.lids = new Map(tab.lids);
       if (tab.old) oldWrote = true;
       tabs.forEach((o) => { if (o !== tab) o.pending = true; }); // a storage event for every other tab
     }
-    if (store.realm) syncBase(tab); else { tab.known = new Set(); tab.baseShards = tab.save.shards; tab.baseDust = tab.save.dust || 0; tab.baseGp = gpOf(tab.save.gp); }
+    if (store.realm) syncBase(tab); else { tab.known = new Set(); if (!failWrite) { tab.baseShards = tab.save.shards; tab.baseDust = tab.save.dust || 0; tab.baseGp = gpOf(tab.save.gp); } } // a failed write keeps the bases (realm.js _persist, issue C fix)
     T('tab' + tab.i + (failWrite ? ' FAILED write' : ' wrote') + ' items=' + tab.save.items.map((x) => x.n + ':' + tab.lids.get(x.n)).join(' ') + ' shards=' + tab.save.shards + ' dust=' + tab.save.dust);
   }
   function newLid(dupe) { const l = nextLid++; live.add(l); meta.set(l, { dupe }); return l; }
@@ -374,20 +357,39 @@ function runOne(seed, trace) {
   return { issues, ops: opCount };
 }
 
-// ---------- the three known issues, as minimal hand-written repros on the real rmMergeSave (printed, never hidden) ----------
-// They do not fail the test (the game code is not changed in this slice); each line says whether the issue still reproduces.
-function knownRepro(name, present) { console.log('known issue ' + name + ': ' + (present ? 'still reproduces' : 'NO LONGER reproduces (fixed? drop it from KNOWN)')); }
-{ // A: tab 1 wrote {n:1 sparkwand r0}; tab 2 (not synced yet, nothing known) picked its own sparkwand r0 as n:1 too
-  const m = rmMergeSave({ items: [{ n: 1, id: 'sparkwand', r: 0 }], nextUid: 2 }, { items: [{ n: 1, id: 'sparkwand', r: 0 }], nextUid: 2 }, { base: 0, known: new Set() });
-  knownRepro('A-twin-uid (two picked Spark Wands merge into ' + m.items.length + ')', m.items.length === 1);
+// ---------- the three fixed issues, as minimal hand-written regression checks on the real realm.js code ----------
+{ // A: tab 1 wrote {n:1 sparkwand r0}; tab 2 (not synced yet, nothing known) picked its own sparkwand r0 as n:1 too: both kept, distinct uids
+  const m = rmMergeSave({ items: [{ n: 1, id: 'sparkwand', r: 0 }], nextUid: 2, eq: { weapon: 1 } }, { items: [{ n: 1, id: 'sparkwand', r: 0 }], nextUid: 2 }, { base: 0, known: new Set() });
+  check('A fixed: two picked Spark Wands under one uid stay two items (this tab\'s renumbered, its equip follows)', m.items.length === 2 && new Set(m.items.map((x) => x.n)).size === 2 && m.eq.weapon === m.items[0].n && m.eq.weapon !== 1, JSON.stringify(m.items) + ' eq ' + m.eq.weapon);
+  // the same item seen at the last sync (known) is still ONE item, and a re-merge of the split result never multiplies it
+  const k = rmMergeSave({ items: [{ n: 1, id: 'sparkwand', r: 0 }], nextUid: 2 }, { items: [{ n: 1, id: 'sparkwand', r: 0 }], nextUid: 2 }, { base: 0, known: new Set([1]) });
+  const k2 = rmMergeSave(m, m, { base: 0, known: new Set(m.items.map((x) => x.n)) });
+  check('A fixed: a known same-uid item stays one item; re-merging the split result never multiplies it', k.items.length === 1 && k2.items.length === 2, JSON.stringify([k.items, k2.items]));
+  // without `known` (a caller that does not track it) the old identity rule is unchanged
+  const nk = rmMergeSave({ items: [{ n: 1, id: 'sparkwand', r: 0 }], nextUid: 2 }, { items: [{ n: 1, id: 'sparkwand', r: 0 }], nextUid: 2 }, { base: 0 });
+  check('A fixed: callers without opts.known keep the old identity rule', nk.items.length === 1 && nk.items[0].n === 1, JSON.stringify(nk.items));
 }
-{ // B: this tab adopted an old tab's write of the T12 (no sig); storage now holds the intact copy again
-  const m = rmMergeSave({ items: [{ n: 1, id: 'sparkwand', r: 2, t: 12, a: 5 }] }, { items: [{ n: 1, id: 'sparkwand', r: 2, t: 12, a: 5, sig: 'ward' }] }, { base: 0, known: new Set([1]) });
-  knownRepro('B-stale-strip (merged sig: ' + (m.items[0].sig || 'none') + ')', !m.items[0].sig);
+{ // B: this tab adopted an old tab's write of the T12 (no sig, no f); storage now holds the intact copy again
+  const m = rmMergeSave({ items: [{ n: 1, id: 'sparkwand', r: 2, t: 12, a: 5 }] }, { items: [{ n: 1, id: 'sparkwand', r: 2, t: 12, a: 5, sig: 'ward', f: { id: 'keen', v: 3 } }] }, { base: 0, known: new Set([1]) });
+  check('B fixed: the merge keeps storage\'s sig and f for the same item', m.items.length === 1 && m.items[0].sig === 'ward' && m.items[0].f && m.items[0].f.id === 'keen' && m.items[0].f.v === 3, JSON.stringify(m.items));
+  const mi = rmMergeSave({ items: [{ n: 1, id: 'sparkwand', r: 2, t: 12, a: 5, sig: 'blast', f: { id: 'swift', v: 2 } }] }, { items: [{ n: 1, id: 'sparkwand', r: 2, t: 12, a: 5, sig: 'ward', f: { id: 'keen', v: 3 } }] }, { base: 0, known: new Set([1]) });
+  check('B fixed: when both copies carry sig / f, this tab\'s win (as before)', mi.items[0].sig === 'blast' && mi.items[0].f.id === 'swift', JSON.stringify(mi.items));
 }
-{ // C: the failed write on empty storage left base = 5 (the unsaved total); another tab then created the save with 0 shards
-  const m = rmMergeSave({ shards: 5 }, { shards: 0 }, { base: 5, known: new Set() });
-  knownRepro('C-empty-fail (5 unsaved shards merge to ' + m.shards + ')', m.shards === 0);
+{ // C: RealmArena.prototype._persist (the real method source) on a fake arena with no readable storage: a failed write keeps the bases
+  const head = '\n  _persist(sv) {';
+  const mStart = realmSrc.indexOf(head), mEnd = realmSrc.indexOf('\n  }\n', mStart);
+  check('C: _persist found in realm.js', mStart > 0 && mEnd > mStart);
+  const body = realmSrc.slice(mStart + head.length, mEnd);
+  const persistFn = vm.runInContext("(function (rmReadStoredRealm, rmGpOf) { return function (sv) {" + body + "\n}; })", sandbox, { filename: 'realm.js#_persist' })(sandbox.__R.rmReadStoredRealm, sandbox.__R.rmGpOf);
+  const fake = (ret) => ({ save: rmCleanSave({ shards: 5, dust: 7, gp: { b: 2, d: 1 } }), _baseShards: 0, _baseDust: 0, _baseGp: { b: 0, d: 0 }, _known: new Set([9]), active: false,
+    resyncSave() { return false; }, _onSave() { return ret; }, _syncBase() { throw new Error('no storage here'); } });
+  const f = fake(false); const okF = persistFn.call(f, f.save);
+  check('C fixed: a failed write with no stored realm keeps the shard / dust / pity bases (the unsaved delta survives)', okF === false && f._baseShards === 0 && f._baseDust === 0 && f._baseGp.b === 0 && f._baseGp.d === 0 && f._known.size === 0 && f.saveFails === 1, JSON.stringify([okF, f._baseShards, f._baseDust, f._baseGp]));
+  const g = fake(true); const okG = persistFn.call(g, g.save);
+  check('C: a write that succeeded (page saves elsewhere) still takes the saved totals as its bases', okG === true && g._baseShards === 5 && g._baseDust === 7 && g._baseGp.b === 2, JSON.stringify([okG, g._baseShards, g._baseDust, g._baseGp]));
+  // and the merge then applies the kept delta once another tab creates the save
+  const m = rmMergeSave(f.save, { shards: 0 }, { base: f._baseShards, known: f._known });
+  check('C fixed: the 5 unsaved shards survive the merge with the save another tab created', m.shards === 5, String(m.shards));
 }
 
 // ---------- run ----------
@@ -417,7 +419,7 @@ for (let s = 1; s <= RUNS; s++) {
 }
 // Print every known issue (never silent): how many seeds hit it, the allow-listed seeds, and the shortest repro seed.
 Object.keys(KNOWN).forEach((c) => {
-  console.log('KNOWN ISSUE ' + c + ': ' + KNOWN[c].what);
+  console.log('KNOWN ISSUE ' + c + ': ' + KNOWN[c].what + (KNOWN[c].rest ? ' | ' + KNOWN[c].rest : ''));
   console.log('  hit in ' + (seen[c] || 0) + ' of ' + RUNS + ' runs; allow-listed seeds (' + KNOWN[c].seeds.length + '): ' + KNOWN[c].seeds.join(','));
   if (minRepro[c]) console.log('  shortest repro: FUZZ_SEED=' + minRepro[c].seed + ' node game/tests/save-merge-fuzz.test.js (' + minRepro[c].ops + ' ops): ' + minRepro[c].first.slice(0, 220));
 });
