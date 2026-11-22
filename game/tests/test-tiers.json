@@ -967,6 +967,14 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-mount-ability.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "isle-reachability.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "shared-mm-tame.test.js": {
     "class": "node",
     "tier": "smoke"
