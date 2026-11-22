@@ -83,6 +83,14 @@ body:not(.touch) .help { max-width: min(520px, calc(100% - 420px)); }
 .meter.env .val { color: #b9e08a; }
 .meter.env.warn .val { color: #f2d06b; }
 .meter.env.empty .val { color: #f0b0a0; }
+/* TD1: a shape icon per meter (not colour alone): warmth a flame (triangle), air a bubble (ring); low air fills the bubble, empty hollows it out with a bar */
+.meter.env .shp { display: inline-block; width: 10px; height: 10px; margin-right: 4px; vertical-align: -1px; }
+.shp-warm { background: #f2a04b; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.shp-o2 { border: 2px solid #9ad0ff; border-radius: 50%; box-sizing: border-box; }
+.meter.env.warn .shp-o2 { background: #f2d06b; border-color: #f2d06b; }
+.meter.env.empty .shp-o2 { background: linear-gradient(#f0b0a0, #f0b0a0) center / 100% 2px no-repeat; border-color: #f0b0a0; }
+.meter.env.warn .shp-warm { background: #f2d06b; }
+.meter.env.empty .shp-warm { background: #9ad0ff; }
 /* X6: boss bar (top centre on desktop, above the hint on phones) */
 .boss-bar { position: absolute; left: 50%; top: calc(8px + env(safe-area-inset-top)); transform: translateX(-50%); width: min(340px, calc(100% - 520px)); min-width: 220px; background: var(--panel); border: 2px solid var(--line); padding: 4px 8px; z-index: 3; pointer-events: none; }
 .bb-head { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; }

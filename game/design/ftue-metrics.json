@@ -460,13 +460,13 @@
         "hintEmpty": 0,
         "hintNoAction": 0,
         "hintActionPct": 100,
-        "firstFrameMs": 118,
+        "firstFrameMs": 126,
         "smallButtons": 0,
         "underCanvas": 0,
         "stickOverlaps": 0,
         "tinyText": 0,
         "consoleErrors": 0,
-        "wallMs": 2088
+        "wallMs": 2318
       },
       "isles2-home-b": {
         "isle": "home",
@@ -503,13 +503,13 @@
         "hintEmpty": 0,
         "hintNoAction": 0,
         "hintActionPct": 100,
-        "firstFrameMs": 110,
+        "firstFrameMs": 108,
         "smallButtons": 0,
         "underCanvas": 0,
         "stickOverlaps": 0,
         "tinyText": 0,
         "consoleErrors": 0,
-        "wallMs": 1982
+        "wallMs": 2028
       },
       "isles2-jungle-a": {
         "isle": "jungle",
@@ -548,13 +548,13 @@
         "hintEmpty": 0,
         "hintNoAction": 0,
         "hintActionPct": 100,
-        "firstFrameMs": 119,
+        "firstFrameMs": 130,
         "smallButtons": 0,
         "underCanvas": 0,
         "stickOverlaps": 0,
         "tinyText": 0,
         "consoleErrors": 0,
-        "wallMs": 2477
+        "wallMs": 2725
       },
       "isles2-jungle-b": {
         "isle": "jungle",
@@ -592,13 +592,13 @@
         "hintEmpty": 0,
         "hintNoAction": 0,
         "hintActionPct": 100,
-        "firstFrameMs": 144,
+        "firstFrameMs": 139,
         "smallButtons": 0,
         "underCanvas": 0,
         "stickOverlaps": 0,
         "tinyText": 0,
         "consoleErrors": 0,
-        "wallMs": 2494
+        "wallMs": 2719
       },
       "isles2-tundra-a": {
         "isle": "tundra",
@@ -614,34 +614,34 @@
         "firstTame": 52.7,
         "firstMedal": 52.7,
         "firstTameOrDrop": 52.7,
-        "maxRewardGap": 41.5,
-        "gapAt": 63.6,
+        "maxRewardGap": 41.6,
+        "gapAt": 267,
         "deaths": 0,
-        "minHp": 14,
+        "minHp": 4,
         "counts": {
-          "gather": 61,
-          "spot": 5,
-          "feed": 46,
+          "gather": 50,
+          "spot": 8,
+          "feed": 51,
           "tame": 1,
           "medal": 2,
-          "hit": 841,
-          "drop": 54
+          "hit": 544,
+          "drop": 43
         },
         "tamed": [
           "pengling"
         ],
-        "kills": 54,
+        "kills": 43,
         "hintSamples": 581,
         "hintEmpty": 0,
         "hintNoAction": 0,
         "hintActionPct": 100,
-        "firstFrameMs": 120,
+        "firstFrameMs": 122,
         "smallButtons": 0,
         "underCanvas": 0,
         "stickOverlaps": 0,
         "tinyText": 0,
         "consoleErrors": 0,
-        "wallMs": 1848
+        "wallMs": 1971
       },
       "isles2-tundra-b": {
         "isle": "tundra",
@@ -657,34 +657,34 @@
         "firstTame": 53.4,
         "firstMedal": 53.4,
         "firstTameOrDrop": 53.4,
-        "maxRewardGap": 41.6,
-        "gapAt": 94.7,
+        "maxRewardGap": 42.3,
+        "gapAt": 444.4,
         "deaths": 0,
         "minHp": 2,
         "counts": {
-          "gather": 24,
+          "gather": 27,
           "spot": 7,
-          "feed": 44,
+          "feed": 36,
           "tame": 1,
           "medal": 2,
-          "hit": 520,
-          "drop": 18
+          "hit": 487,
+          "drop": 15
         },
         "tamed": [
           "pengling"
         ],
-        "kills": 18,
+        "kills": 15,
         "hintSamples": 581,
         "hintEmpty": 0,
         "hintNoAction": 0,
         "hintActionPct": 100,
-        "firstFrameMs": 112,
+        "firstFrameMs": 132,
         "smallButtons": 0,
         "underCanvas": 0,
         "stickOverlaps": 0,
         "tinyText": 0,
         "consoleErrors": 0,
-        "wallMs": 1774
+        "wallMs": 1897
       },
       "isles2-reef-a": {
         "isle": "reef",
@@ -722,13 +722,13 @@
         "hintEmpty": 0,
         "hintNoAction": 0,
         "hintActionPct": 100,
-        "firstFrameMs": 139,
+        "firstFrameMs": 172,
         "smallButtons": 0,
         "underCanvas": 0,
         "stickOverlaps": 0,
         "tinyText": 0,
         "consoleErrors": 0,
-        "wallMs": 2375
+        "wallMs": 2450
       },
       "isles2-reef-b": {
         "isle": "reef",
@@ -766,13 +766,13 @@
         "hintEmpty": 0,
         "hintNoAction": 0,
         "hintActionPct": 100,
-        "firstFrameMs": 137,
+        "firstFrameMs": 131,
         "smallButtons": 0,
         "underCanvas": 0,
         "stickOverlaps": 0,
         "tinyText": 0,
         "consoleErrors": 0,
-        "wallMs": 2275
+        "wallMs": 2294
       },
       "isles2-mars-a": {
         "isle": "mars",
@@ -788,34 +788,34 @@
         "firstTame": 54.5,
         "firstMedal": 54.5,
         "firstTameOrDrop": 54.5,
-        "maxRewardGap": 41.1,
-        "gapAt": 464.7,
+        "maxRewardGap": 40.9,
+        "gapAt": 2.6,
         "deaths": 0,
         "minHp": 6,
         "counts": {
-          "spot": 5,
-          "gather": 80,
-          "feed": 25,
+          "spot": 6,
+          "gather": 83,
+          "feed": 28,
           "tame": 1,
           "medal": 2,
-          "hit": 587,
-          "drop": 73
+          "hit": 615,
+          "drop": 78
         },
         "tamed": [
           "regolith_roly"
         ],
-        "kills": 73,
+        "kills": 78,
         "hintSamples": 581,
         "hintEmpty": 0,
         "hintNoAction": 0,
         "hintActionPct": 100,
-        "firstFrameMs": 125,
+        "firstFrameMs": 112,
         "smallButtons": 0,
         "underCanvas": 0,
         "stickOverlaps": 0,
         "tinyText": 0,
         "consoleErrors": 0,
-        "wallMs": 1962
+        "wallMs": 2037
       },
       "isles2-mars-b": {
         "isle": "mars",
@@ -831,34 +831,34 @@
         "firstTame": 54.6,
         "firstMedal": 54.6,
         "firstTameOrDrop": 54.6,
-        "maxRewardGap": 41,
-        "gapAt": 520,
+        "maxRewardGap": 40.8,
+        "gapAt": 54.6,
         "deaths": 0,
         "minHp": 2,
         "counts": {
-          "gather": 55,
-          "spot": 5,
-          "feed": 29,
+          "gather": 77,
+          "spot": 6,
+          "feed": 28,
           "tame": 1,
           "medal": 2,
-          "hit": 835,
-          "drop": 65
+          "hit": 767,
+          "drop": 72
         },
         "tamed": [
           "regolith_roly"
         ],
-        "kills": 65,
+        "kills": 72,
         "hintSamples": 581,
         "hintEmpty": 0,
         "hintNoAction": 0,
         "hintActionPct": 100,
-        "firstFrameMs": 115,
+        "firstFrameMs": 119,
         "smallButtons": 0,
         "underCanvas": 0,
         "stickOverlaps": 0,
         "tinyText": 0,
         "consoleErrors": 0,
-        "wallMs": 2126
+        "wallMs": 2018
       }
     },
     "reach": {
@@ -896,7 +896,7 @@
         "sail tundra -> mars: ok"
       ],
       "panelButtonsClosed": 0,
-      "wallMs": 4060
+      "wallMs": 6549
     },
     "dbAttempts": 0,
     "sockets": 0

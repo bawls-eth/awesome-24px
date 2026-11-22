@@ -65,6 +65,12 @@
 // seeded food glints for every diet item (MMIsleCraft.FOOD_NODES, a labelled vine rope patch by the jungle dock), journal sightings,
 // forage sparkles after 40 s without a reward (<= 6 per island a day, save.spark), and a locked island opened by URL lands at the home
 // dock (?test=1 keeps the old direct load for tests). Events gain the kinds spot, rest and sparkle. ?rest=0 turns rest / regen off.
+// TD1 (NEXT-SLICES-4): tundra + mars depth. Rares from a page-side table (RARE_EXTRA: an aurora frostfox on the tundra at night, a chrome
+// rustbeetle on mars; seeded IsleCreatures.rareSpot, one alive, a code palette swap, a tame adds aurora_shard / chrome_flake), thin ice
+// (a crack telegraph after 1 s on one tile, slush x0.6 for 20 s, never damage), a hot spring soak ("Warm and rested"), an aurora night
+// on a page clock (?aurora=1 / 0), once-a-day glints (save.glint), the air warning at 20 s with an arrow home, and a short rocket lift-off
+// when sailing to mars (a tap, a key or reduced motion skips it; nothing is used up). Events gain ice_warn, ice_crack, soak, glint,
+// rare_tame and launch.
 (function () {
   'use strict';
   const CRAFT = window.MMIsleCraft || null;
@@ -159,7 +165,19 @@
   const heroSolidAt = (tx, ty) => (inWorld(tx, ty) && PASS_T[O.tileAt(world, tx, ty)] === 1 ? false : solidAt(tx, ty) || (swimAt(tx, ty) && !CMP.canSwim(ride)));
   const walkableAt = (tx, ty) => !solidAt(tx, ty) && !swimAt(tx, ty);
   const tileOf = (px) => Math.floor(px / TILE);
-  function moveScaleAt(tx, ty) { const t = O.tileAt(world, tx, ty); return NOSLOW_T[t] || PASS_T[t] ? 1 : SLOW[t] || 1; }
+  function moveScaleAt(tx, ty) { const t = O.tileAt(world, tx, ty); return NOSLOW_T[t] || PASS_T[t] ? 1 : crackedAt(tx, ty) ? THIN_SLOW : SLOW[t] || 1; }
+  // TD1 thin ice (tundra): standing on one ice_thin tile shows a crack telegraph after ICE_WARN s and cracks it at ICE_CRACK s into slush
+  // for ICE_SLUSH s (x THIN_SLOW footing only: never damage, never water, never a trap). The cracked tiles live in two fixed arrays (no
+  // per-frame allocation, no change to world.terrain or the baked chunks); ?thinice=0 turns it off.
+  const ICE_THIN_T = O.TERRAIN_ALL.ice_thin, ICE_WARN = 1.0, ICE_CRACK = 1.5, ICE_SLUSH = 20, THIN_SLOW = 0.6, CRACK_MAX = 32;
+  const THIN_ICE = PACK_ID === 'tundra' && ICE_THIN_T !== undefined && Q.get('thinice') !== '0';
+  const ice = { tile: -1, t: 0, n: 0, made: 0, warnN: 0, told: false, idx: new Int32Array(CRACK_MAX).fill(-1), until: new Float64Array(CRACK_MAX) };
+  function crackedAt(tx, ty) {
+    if (!ice.n) return false;
+    const k = ty * W + tx;
+    for (let i = 0; i < CRACK_MAX; i++) if (ice.idx[i] === k) return true;
+    return false;
+  }
   const bandName = (z) => (PACK.bands[z] ? PACK.bands[z].name.replace(/_/g, ' ') : 'open sea');
 
   // props / sites per chunk, baked into the chunk canvas (never drawn per frame)
@@ -344,17 +362,48 @@
   let creatures = [];
   let uid = 0, simT = 0;
   const rng = RNG.create('isles|' + PACK_ID + '|' + SEED + '|ai');
-  const rare = { spot: IC.rareSpot ? IC.rareSpot(world, PACK, SEED, walkableAt) : null, live: 0, done: false, n: 0 };
+  // TD1: the tundra and mars rares come from this page-side table (the packs carry no `rare` there, so pack-golden stays identical): the
+  // same seeded IsleCreatures.rareSpot, at most one alive. Each is a code palette swap of its species (aurora frostfox, only out on an
+  // aurora night; chrome rustbeetle), tameable like the plain one, and a tame (never a kill) adds its MMIsleCraft rare item.
+  const RARE_EXTRA = { tundra: { frostfox: { zone: 3 } }, mars: { rustbeetle: { zone: 3 } } };
+  const RARE_VARIANT = { frostfox: { v: 'aurora', name: 'Aurora Frostfox', item: 'aurora_shard', night: true, tint: '#7fffd4', glow: '#e0b8ff' },
+    rustbeetle: { v: 'chrome', name: 'Chrome Rustbeetle', item: 'chrome_flake', night: false, tint: '#dfe8f2', glow: '#ffffff' } };
+  const RARE_PACK = !PACK.rare && has(RARE_EXTRA, PACK_ID) && Q.get('rares') !== '0' ? { id: PACK.id, rare: RARE_EXTRA[PACK_ID] } : PACK;
+  const rare = { spot: IC.rareSpot ? IC.rareSpot(world, RARE_PACK, SEED, walkableAt) : null, live: 0, done: false, n: 0 };
+  const RARE_VAR = rare.spot && RARE_PACK !== PACK && has(RARE_VARIANT, rare.spot.creature) ? RARE_VARIANT[rare.spot.creature] : null;
+  // the variant's look: the species' code bake recoloured once (source-atop tint + a few glints), cached per bake
+  const varArt = {};
+  function variantArt(a, V) {
+    if (!a || !V) return a;
+    const key = a.id + '|' + V.v;
+    if (varArt[key]) return varArt[key];
+    const frames = {};
+    Object.keys(a.frames).forEach((act) => {
+      frames[act] = a.frames[act].map((cv, fi) => {
+        const c2 = mk(cv.width, cv.height), x = c2.getContext('2d');
+        x.drawImage(cv, 0, 0);
+        x.globalCompositeOperation = 'source-atop';
+        x.globalAlpha = 0.55; x.fillStyle = V.tint; x.fillRect(0, 0, cv.width, cv.height);
+        x.globalAlpha = 0.9; x.fillStyle = V.glow;
+        const u = Math.max(2, Math.round(cv.width / 24));
+        for (let k = 0; k < 5; k++) x.fillRect(Math.round(cv.width * (0.3 + 0.1 * ((k * 3 + fi) % 5))), Math.round(cv.height * (0.35 + 0.09 * ((k * 2 + fi) % 5))), u, u);
+        return c2;
+      });
+    });
+    varArt[key] = Object.assign({}, a, { frames: frames, id: a.id + '_' + V.v });
+    return varArt[key];
+  }
   const isBig = (c) => c.size === 'L' || c.size === 'XL';
 
-  function addCreature(sp, x, y, gi, j, wid) {
+  function addCreature(sp, x, y, gi, j, wid, own) { // own: a creature-owned MMRng stream (TD1 rares) instead of the shared AI stream
+    const R = own || rng;
     const kind = IC.kindOf(sp, gi);
     const s = specOf(sp, kind);
     const c = { uid: ++uid, sp: sp, kind: kind, base: s.base, x: x, y: y, hx: x, hy: y, vx: 0, vy: 0, hp: s.hp, maxHp: s.hp, rad: s.rad, size: s.size, mood: s.mood,
-      angry: 0, think: rng.next() * 0.1, cd: 0, flash: 0, moving: false, t: rng.next() * 4, gi: gi, seen: false, art: null,
+      angry: 0, think: R.next() * 0.1, cd: 0, flash: 0, moving: false, t: R.next() * 4, gi: gi, seen: false, art: null,
       ph: '', pt: 0, ang: 0, ox: x, oy: y, hitDone: false, tgAt: -1, ko: false, calm: false, hostile: s.mood === 'hostile', awake: true,
       tm: null, tmAcc: 0, leaving: 0, wid: wid || (gi >= 0 ? 'g' + gi + '_' + (j | 0) : 'u' + uid), lv: 1,
-      sk: stripKind(kind), dir: 0, act: '', at0: 0, eatT: 0, drawn: '', src: '', swim: false, rare: false };
+      sk: stripKind(kind), dir: 0, act: '', at0: 0, eatT: 0, drawn: '', src: '', swim: false, rare: false, rng: own || null };
     c.swim = !!(s.def && s.def.behaviours && s.def.behaviours.indexOf('swim') >= 0);
     c.def = s.def;
     if (s.def) c.lv = IC.levelFor(s.def, SEED, c.wid);
@@ -401,12 +450,15 @@
   function rareTick(htx, hty) {
     const sp = rare.spot;
     if (!sp || rare.live || rare.done || creatures.length >= CAP) return;
+    if (RARE_VAR && RARE_VAR.night && !tdNight()) return; // TD1: the aurora frostfox only comes out on an aurora night
     const dd = Math.hypot(sp.x - htx, sp.y - hty);
     if (dd > SPAWN_R || dd < 7) return;
     const s = specOf(sp.creature, IC.kindOf(sp.creature, -1));
     if (isBig({ size: s.size }) && bigN >= BIG_CAP) return;
-    const c = addCreature(sp.creature, (sp.x + 0.5) * TILE, (sp.y + 0.5) * TILE, -1, 0, 'rare_' + sp.creature);
+    // TD1: a page-table rare wanders on its own seeded stream, so its coming and going never reshuffles the island's other creatures
+    const c = addCreature(sp.creature, (sp.x + 0.5) * TILE, (sp.y + 0.5) * TILE, -1, 0, 'rare_' + sp.creature, RARE_VAR ? RNG.create('isles|' + PACK_ID + '|' + SEED + '|rare|' + rare.n) : null);
     c.rare = true;
+    if (RARE_VAR) { c.variant = RARE_VAR.v; c.sk = null; c.art = variantArt(c.art, RARE_VAR); } // TD1: the code-drawn palette swap
     rare.live = c.uid; rare.n++;
     if (isBig(c)) bigN++;
   }
@@ -438,9 +490,10 @@
     if (c.mood === 'shy' && c.angry > 0 && d < 8 * TILE) { c.vx = -dx / d * s.speed * 1.2; c.vy = -dy / d * s.speed * 1.2; return; }
     // IF1: a feed / calm tameable smells food it likes in your pouch or bag and wanders over (never while you shoot or after a scare)
     if (curious(c, d)) { const k = d > 3 * TILE ? 0.55 : 0.3; c.vx = dx / d * s.speed * k; c.vy = dy / d * s.speed * k; return; }
-    if (rng.next() < 0.12) {
-      if (rng.next() < 0.45) { c.vx = 0; c.vy = 0; }
-      else { const a = rng.next() * Math.PI * 2; c.vx = Math.cos(a) * s.speed * 0.5; c.vy = Math.sin(a) * s.speed * 0.5; }
+    const R = c.rng || rng;
+    if (R.next() < 0.12) {
+      if (R.next() < 0.45) { c.vx = 0; c.vy = 0; }
+      else { const a = R.next() * Math.PI * 2; c.vx = Math.cos(a) * s.speed * 0.5; c.vy = Math.sin(a) * s.speed * 0.5; }
     }
   }
   function curious(c, d) {
@@ -495,6 +548,10 @@
   function noteSeen(c) {
     const k = c.kind || c.sp, first = !(save.log && save.log.seen && save.log.seen[k] > 0);
     ISL.noteLog(save, 'seen', k, 1); dirty = true;
+    // TD1: a rare variant is its own journal line (frostfox_aurora / rustbeetle_chrome), on top of its species
+    const vk = c.variant ? k + '_' + c.variant : '', vFirst = !!vk && !(save.log && save.log.seen && save.log.seen[vk] > 0);
+    if (vk) ISL.noteLog(save, 'seen', vk, 1);
+    if (vFirst && RARE_VAR) { toast('New in your journal: ' + RARE_VAR.name + ' (rare)!'); logEvent('spot'); reward(); return; }
     if (!first) return;
     const d = CR.get(k);
     toast('New in your journal: ' + (d ? d.name : String(k).replace(/_/g, ' ')) + '.');
@@ -802,7 +859,14 @@
     const def = CR.get(c.kind);
     const ent = adoptTame(def, c.tm.bond, c.x, c.y, false);
     removeWhere((x) => x === c, 90000);
-    toast(ent ? def.name + ' joined you!' : def.name + ' is happy. Your bond grows.');
+    // TD1: taming the island's rare variant (never killing it) gives its rare item; the tame keeps the look as its cosmetic
+    const V = c.variant && RARE_VAR && RARE_VAR.v === c.variant ? RARE_VAR : null;
+    if (V) {
+      const got = invAdd(V.item, 1);
+      if (ent && TAMES.setCosmetic(tames, ent.id, V.v)) { TAMES.rename(tames, ent.id, V.name); TAMES.write(S, tames); }
+      toast((ent ? V.name + ' joined you!' : V.name + ' is happy. Your bond grows.') + (got ? ' +1 ' + HS.resName(V.item) + '.' : ''));
+      logEvent('rare_tame');
+    } else toast(ent ? def.name + ' joined you!' : def.name + ' is happy. Your bond grows.');
     logEvent('tame');
     refreshMount();
     checkMedals();
@@ -1282,6 +1346,7 @@
       if (cv) g.drawImage(cv, cx * CPX - camX, cy * CPX - camY, CPX, CPX);
     }
     drawGround();
+    drawTdGround(); // TD1: thin-ice cracks / slush, glints
     drawArena();
     drawBossGround();
     // telegraphs first (on the ground, under every body)
@@ -1378,6 +1443,7 @@
       } else { g.fillStyle = CLASS_COL[HERO.cls] || '#4f9a45'; g.beginPath(); g.arc(hx, hy - 8 + lift, HERO_R, 0, Math.PI * 2); g.fill(); }
     }
     if (abil && ride && !hero.dead && (abil.ph === 'active' || abil.ph === 'wind')) drawAbility(hx, hy);
+    drawTdSky(hx, hy); // TD1: night tint + aurora band, the air arrow, soak steam
   }
   // XW1: the ability's look: a windup line ahead (charge), a ring for stomp / roar / the warm aura, a soft glow while the rest are on
   function drawAbility(hx, hy) {
@@ -1685,7 +1751,7 @@
   const ITEM_NAME = { raft: 'Raft', rocket_core: 'Rocket core', feast: 'Feast', sleepy_herb: 'Sleepy herb', warm_cloak: 'Warm cloak', o2_tank: 'O2 tank',
     // XW1: the XD1 recipe outputs
     heat_pack: 'Heat pack', glow_lamp: 'Glow lamp', bone_charm: 'Bone charm', honey_cake: 'Honey cake', sea_salt_snack: 'Sea salt snack', stone_bench: 'Stone bench',
-    berry_jam: 'Berry jam', signal_beacon: 'Signal beacon', trophy_tyrant: 'Tyrant trophy', trophy_hydra: 'Hydra trophy', trophy_dragon: 'Dragon trophy', trophy_titan: 'Titan trophy' };
+    berry_jam: 'Berry jam', signal_beacon: 'Signal beacon', aurora_lamp: 'Aurora lamp', chrome_beacon: 'Chrome beacon', aurora_shard: 'Aurora shard', chrome_flake: 'Chrome flake', trophy_tyrant: 'Tyrant trophy', trophy_hydra: 'Hydra trophy', trophy_dragon: 'Dragon trophy', trophy_titan: 'Titan trophy' };
   // XW1: a recipe row's label: an alternative recipe names its build so the two rocket core rows read apart
   const RECIPE_LABEL = { rocket_core_drift: 'Rocket core (drift build)', o2_tank_kelp: 'O2 tank (kelp build)' };
   const SADDLE_OF = {};
@@ -2058,9 +2124,11 @@
       envS.o2T = ENV.advance(envS.o2T, m0.rate, d, m0.max);
       const m = ENV.oxygen(envS.o2T, sh, tank);
       envS.o2 = m;
-      if (m.warn && !envS.warnO) toast('Air is running low. Head back to a dome or the landing pad.');
+      // TD1: the page warns AIR_WARN s before empty (earlier than the module's 10 s), and the arrow points home while it is low
+      const low = m.warn || (!m.empty && m.left <= AIR_WARN);
+      if (low && !envS.warnO) toast('Air is running low (' + Math.ceil(m.left) + ' s left). Follow the arrow to a dome or the landing pad.');
       if (m.empty && !envS.emptyO) toast('Out of air: 1 HP every 3 s until you reach a dome. It never takes your last HP.');
-      envS.warnO = m.warn; envS.emptyO = m.empty;
+      envS.warnO = low; envS.emptyO = m.empty;
       if (m.hurt > envS.o2Hurt && !god) { const before = hero.hp; hero.hp = Math.max(Math.min(1, hero.hp), hero.hp - (m.hurt - envS.o2Hurt)); envS.lost += before - hero.hp; }
       envS.o2Hurt = m.hurt;
     }
@@ -2068,14 +2136,14 @@
   }
   const envEls = { box: $('hud-env'), warm: $('env-warm'), o2: $('env-o2') };
   const envLast = { warm: null, o2: null };
-  function envMeter(k, m, text) {
-    const el = envEls[k], v = m ? text + (m.empty ? '!' : '') : '';
+  function envMeter(k, m, text, warn) {
+    const el = envEls[k], v = m ? text + (m.empty ? '!' : '') + (warn ? '~' : '') : '';
     if (envLast[k] === v) return;
     envLast[k] = v;
     el.hidden = !m;
     if (!m) return;
     el.querySelector('.val').textContent = text;
-    el.classList.toggle('warn', m.warn);
+    el.classList.toggle('warn', !!warn);
     el.classList.toggle('empty', m.empty);
   }
   function envHud() {
@@ -2083,8 +2151,225 @@
     const w = ENVR.warmth ? envS.warm || ENV.warmth(envS.warmT, false, false) : null;
     const o = ENVR.oxygen ? envS.o2 || ENV.oxygen(envS.o2T, false, false) : null;
     if (envEls.box.hidden === !!(w || o)) envEls.box.hidden = !(w || o);
-    envMeter('warm', w, w ? (w.empty ? 'cold (slow)' : w.pct + '%') : '');
-    envMeter('o2', o, o ? (o.empty ? 'empty' : Math.ceil(o.left) + ' s') : '');
+    envMeter('warm', w, w ? (w.empty ? 'cold (slow)' : w.pct + '%') : '', !!w && w.warn);
+    envMeter('o2', o, o ? (o.empty ? 'empty' : Math.ceil(o.left) + ' s') : '', !!o && (o.warn || (!o.empty && o.left <= AIR_WARN)));
+  }
+  // ---------- TD1 (NEXT-SLICES-4): tundra + mars depth ----------
+  // Aurora night (tundra): a page clock (seconds on the island, never the real time of day) passes dusk at DUSK s of every DAY_LEN s
+  // cycle; ?aurora=1 forces the night, ?aurora=0 keeps it day. At night a calm aurora band (one cached canvas, a slow drift; static with
+  // reduced motion) shows over a soft night tint, aurora crystals glint, and the aurora frostfox can come out. Purely cosmetic otherwise.
+  const DAY_LEN = 300, DUSK = 150, AIR_WARN = 20, SOAK_SEC = 2, LAUNCH_SEC = 2.5;
+  const AUR_ON = PACK_ID === 'tundra' && Q.get('aurora') !== '0', AUR_FORCE = AUR_ON && Q.get('aurora') === '1';
+  function tdNight() { return AUR_ON && (AUR_FORCE || simT % DAY_LEN >= DUSK); }
+  const nightK = () => (!tdNight() ? 0 : AUR_FORCE ? 1 : clamp((simT % DAY_LEN - DUSK) / 8, 0, 1));
+  let auroraCv = null, auroraDrawn = 0;
+  function auroraBand() { // baked once: three soft ribbons (green, teal, violet) on a 256 px tileable strip
+    if (auroraCv) return auroraCv;
+    const w = 256, h = 72, cv = mk(w, h), c = cv.getContext('2d');
+    const rib = [['#7fffd4', 0.35, 26, 10, 1], ['#5ad8ff', 0.28, 38, 8, 2], ['#c8a0ff', 0.22, 18, 6, 3]];
+    rib.forEach((r) => {
+      for (let x = 0; x < w; x += 2) {
+        const y = r[2] + Math.sin((x / w) * Math.PI * 2 * r[4]) * r[3], hh = 10 + Math.sin((x / w) * Math.PI * 2 * (r[4] + 1)) * 4;
+        c.fillStyle = r[0]; c.globalAlpha = r[1]; c.fillRect(x, y, 2, hh);
+        c.globalAlpha = r[1] * 0.5; c.fillRect(x, y + hh, 2, hh * 1.6);
+      }
+    });
+    auroraCv = cv;
+    return cv;
+  }
+  // Hot spring soak (tundra): SOAK_SEC s standing in a hot_spring gives "Warm and rested": full warmth and full HP (the IF1 rest; never in a
+  // boss fight). Spring salt still gathers there. Once per soak: step out and back in for another.
+  const HOT_T = O.TERRAIN_ALL.hot_spring;
+  const soak = { t: 0, done: false, n: 0 };
+  function soakStep(dt) {
+    const on = PACK_ID === 'tundra' && HOT_T !== undefined && !hero.dead && O.tileAt(world, tileOf(hero.x), tileOf(hero.y)) === HOT_T;
+    if (!on) { soak.t = 0; soak.done = false; return; }
+    soak.t += dt;
+    if (soak.done || soak.t < SOAK_SEC) return;
+    soak.done = true; soak.n++;
+    envS.warmT = 0;
+    if (ENV && ENVR.warmth) { envS.warm = ENV.warmth(0, true, invCount('warm_cloak') > 0); envS.warnW = false; envS.emptyW = false; }
+    if (!(bz.engaged && bossAlive())) hero.hp = hero.maxHp;
+    dirty = true;
+    toast('Warm and rested. The hot spring soaks the cold away.');
+    logEvent('soak'); reward();
+  }
+  function iceStep(dt) {
+    if (!THIN_ICE) return;
+    const tx = tileOf(hero.x), ty = tileOf(hero.y), k = ty * W + tx;
+    if (hero.dead || O.tileAt(world, tx, ty) !== ICE_THIN_T || crackedAt(tx, ty)) { ice.tile = -1; ice.t = 0; return; }
+    // only standing still and idle on one tile cracks it: walking across (even slowly), shooting, or feeding a creature never does
+    const busy = heroMoving || hero.shotT > 0 || (TAME && !!feedTarget());
+    if (k !== ice.tile || busy) { ice.tile = k; ice.t = 0; }
+    if (busy) return;
+    const was = ice.t;
+    ice.t += dt;
+    if (was < ICE_WARN && ice.t >= ICE_WARN) { ice.warnN++; logEvent('ice_warn'); if (!ice.told) toast('The thin ice creaks. Step off, or it cracks into slush (it only slows you).'); }
+    if (ice.t < ICE_CRACK) return;
+    let slot = 0; // a free slot, else the one that thaws first
+    for (let i = 0; i < CRACK_MAX; i++) { if (ice.idx[i] < 0) { slot = i; break; } if (ice.until[i] < ice.until[slot]) slot = i; }
+    if (ice.idx[slot] < 0) ice.n++;
+    ice.idx[slot] = k; ice.until[slot] = simT + ICE_SLUSH; ice.made++;
+    ice.tile = -1; ice.t = 0;
+    logEvent('ice_crack');
+    if (!ice.told) { ice.told = true; toast('The ice cracked into slush: slower for a little while, never dangerous.'); }
+  }
+  function iceThaw() { // 5 Hz: slush turns back into thin ice after ICE_SLUSH s
+    if (!ice.n) return;
+    for (let i = 0; i < CRACK_MAX; i++) if (ice.idx[i] >= 0 && ice.until[i] <= simT) { ice.idx[i] = -1; ice.n--; }
+  }
+  // Once-a-day glints (save.glint, isles only): aurora crystals (the aurora_crystal tiles and crystal_blue props) glint at night on the
+  // tundra and give an aurora shard; on mars the rover / probe wrecks give a chrome flake (salvage). Picked within GLINT_R of the glint.
+  const GLINT_R = 1.6 * TILE;
+  const GLINTS = [];
+  (function findGlints() {
+    if (PACK_ID === 'tundra') {
+      const ac = O.TERRAIN_ALL.aurora_crystal;
+      for (let i = 0; i < W * H && GLINTS.length < 8; i++) if (world.terrain[i] === ac) GLINTS.push({ x: i % W, y: Math.floor(i / W), item: 'aurora_shard', night: true });
+      world.props.forEach((p) => { if (p.kind === 'crystal_blue' && GLINTS.length < 16) GLINTS.push({ x: p.x, y: p.y, item: 'aurora_shard', night: true }); });
+    } else if (PACK_ID === 'mars') {
+      world.props.forEach((p) => { if ((p.kind === 'rover_wreck' || p.kind === 'probe_lander') && GLINTS.length < 16) GLINTS.push({ x: p.x, y: p.y, item: 'chrome_flake', night: false }); });
+    }
+    GLINTS.forEach((q, i) => { q.i = i; });
+  }());
+  if (GLINTS.length && (!save.glint || save.glint.day !== DAY)) save.glint = { day: DAY, n: {} };
+  const glintTaken = (q) => !!save.glint && Array.isArray(save.glint.n[ISLE]) && save.glint.n[ISLE].indexOf(q.i) >= 0;
+  const glintLive = (q) => !glintTaken(q) && (!q.night || tdNight());
+  function glintCheck() {
+    if (!GLINTS.length || hero.dead) return;
+    for (let i = 0; i < GLINTS.length; i++) {
+      const q = GLINTS[i];
+      if (!glintLive(q) || Math.hypot((q.x + 0.5) * TILE - hero.x, (q.y + 0.5) * TILE - hero.y) > GLINT_R) continue;
+      const got = invAdd(q.item, 1);
+      if (!got) { toast('Your pack has no room for a ' + HS.resName(q.item) + '.'); continue; }
+      if (!Array.isArray(save.glint.n[ISLE])) save.glint.n[ISLE] = [];
+      save.glint.n[ISLE].push(q.i); dirty = true;
+      toast('+1 ' + HS.resName(q.item) + ' (' + invCount(q.item) + ' in your pack). ' + (q.night ? 'Each aurora crystal gives one shard a day, at night.' : 'Each wreck has a little chrome to salvage once a day.'));
+      logEvent('glint'); reward();
+    }
+  }
+  // the air arrow (mars): while the air is low and you are outside, it points to the nearest dome / landing pad (aimed at 5 Hz, drawn
+  // every frame from two numbers)
+  const airArrow = { on: false, ang: 0, tiles: 0 };
+  function airAim() {
+    airArrow.on = false;
+    if (!ENVR.oxygen || !envS.o2 || !(envS.warnO || envS.emptyO) || hero.dead || sheltered() || !SHELTER_PTS.length) return;
+    const tx = hero.x / TILE, ty = hero.y / TILE;
+    let b = null, bd = Infinity;
+    for (let i = 0; i < SHELTER_PTS.length; i++) { const p = SHELTER_PTS[i], d = (p.x - tx) * (p.x - tx) + (p.y - ty) * (p.y - ty); if (d < bd) { bd = d; b = p; } }
+    airArrow.on = true; airArrow.ang = Math.atan2(b.y - ty, b.x - tx); airArrow.tiles = Math.round(Math.sqrt(bd));
+  }
+  let tdAcc = 0;
+  function tdStep(dt) {
+    iceStep(dt);
+    soakStep(dt);
+    tdAcc += dt;
+    if (tdAcc < 0.2) return;
+    tdAcc = 0;
+    iceThaw(); glintCheck(); airAim();
+  }
+  // ground layer: the crack telegraph, the slush patches, the glints (only what is on screen; constant colours, no allocation)
+  const SLUSH_COL = PAL.slush ? PAL.slush[0] : '#a4b4c4';
+  function crackLines(sx, sy, k) { // a star of cracks from the tile centre, k = 0..1 of its full length
+    const cx = sx + TILE / 2, cy = sy + TILE / 2, r = 4 + 18 * k; // reaches past the tile edge so it shows around the hero's feet
+    g.beginPath();
+    g.moveTo(cx, cy); g.lineTo(cx - r, cy - r * 0.5); g.moveTo(cx, cy); g.lineTo(cx + r, cy - r * 0.3);
+    g.moveTo(cx, cy); g.lineTo(cx + r * 0.3, cy + r); g.moveTo(cx, cy); g.lineTo(cx - r * 0.6, cy + r * 0.7);
+    g.stroke();
+  }
+  let crackDrawn = 0;
+  function drawTdGround() {
+    if (THIN_ICE) {
+      if (ice.n) {
+        g.strokeStyle = '#4a6a8a'; g.lineWidth = 1.5;
+        for (let i = 0; i < CRACK_MAX; i++) {
+          if (ice.idx[i] < 0) continue;
+          const tx = ice.idx[i] % W, ty = (ice.idx[i] - tx) / W, sx = tx * TILE - camX, sy = ty * TILE - camY;
+          if (sx < -TILE || sy < -TILE || sx > VW || sy > VH) continue;
+          g.fillStyle = SLUSH_COL; g.globalAlpha = 0.85; g.fillRect(sx, sy, TILE, TILE); g.globalAlpha = 1;
+          crackLines(sx, sy, 1);
+        }
+      }
+      if (ice.tile >= 0 && ice.t >= ICE_WARN) { // the telegraph: cracks spreading over the tile (a static full overlay with reduced motion)
+        const tx = ice.tile % W, ty = (ice.tile - tx) / W, sx = tx * TILE - camX, sy = ty * TILE - camY;
+        const k = REDUCED ? 1 : clamp((ice.t - ICE_WARN) / (ICE_CRACK - ICE_WARN), 0.15, 1);
+        g.globalAlpha = 0.9; g.strokeStyle = '#ffffff'; g.lineWidth = 2; crackLines(sx, sy, k);
+        g.strokeStyle = '#2a4a6a'; g.lineWidth = 1; crackLines(sx, sy, k); g.globalAlpha = 1;
+        g.strokeStyle = '#ffffff'; g.lineWidth = 2; g.globalAlpha = REDUCED ? 1 : 0.6 + 0.4 * Math.sin(simT * 14); g.strokeRect(sx + 1, sy + 1, TILE - 2, TILE - 2); g.globalAlpha = 1;
+        crackDrawn++;
+      }
+    }
+    if (GLINTS.length) {
+      const tw = REDUCED ? 0 : Math.sin(simT * 4);
+      for (let i = 0; i < GLINTS.length; i++) {
+        const q = GLINTS[i];
+        if (!glintLive(q)) continue;
+        const sx = q.x * TILE - camX + TILE / 2, sy = q.y * TILE - camY + TILE / 2;
+        if (sx < -TILE || sy < -TILE || sx > VW + TILE || sy > VH + TILE) continue;
+        g.fillStyle = q.night ? '#c8fff0' : '#f4f8ff';
+        g.fillRect(sx - 1, sy - 9 - tw * 2, 3, 3); g.fillRect(sx + 7, sy - 3 + tw, 2, 2); g.fillRect(sx - 8, sy + 1 - tw, 2, 2);
+        g.fillStyle = q.night ? '#7fffd4' : '#b8c8d8'; g.fillRect(sx - 4, sy - 5, 9, 1); g.fillRect(sx, sy - 9, 1, 9);
+      }
+    }
+  }
+  // sky layer (screen space, over the world, under the DOM HUD): the night tint + the aurora band; the air arrow; the soak steam
+  function drawTdSky(hx, hy) {
+    const nk = nightK();
+    if (nk > 0) {
+      g.globalAlpha = 0.3 * nk; g.fillStyle = '#0a1030'; g.fillRect(0, 0, VW, VH);
+      const band = auroraBand(), bw = band.width, bh = band.height * (VW > 700 ? 1.4 : 1), off = REDUCED ? 0 : (simT * 6) % bw;
+      g.globalAlpha = 0.9 * nk;
+      for (let x = -off; x < VW; x += bw) g.drawImage(band, Math.round(x), 0, bw, bh);
+      g.globalAlpha = 1;
+      auroraDrawn++;
+    }
+    if (airArrow.on && !hero.dead) {
+      const r = 40, ca = Math.cos(airArrow.ang), sa = Math.sin(airArrow.ang), ax = hx + ca * r, ay = hy - 12 + sa * r;
+      g.fillStyle = envS.emptyO ? '#f0b0a0' : '#f2d06b'; g.strokeStyle = '#1a1a1a'; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(ax + ca * 14, ay + sa * 14); g.lineTo(ax - ca * 8 - sa * 10, ay - sa * 8 + ca * 10); g.lineTo(ax - ca * 3, ay - sa * 3); g.lineTo(ax - ca * 8 + sa * 10, ay - sa * 8 - ca * 10); g.closePath();
+      g.stroke(); g.fill();
+    }
+    if (soak.t > 0 && !hero.dead) { // steam puffs while soaking (still with reduced motion)
+      const k = REDUCED ? 0.3 : (simT * 1.5) % 1;
+      g.fillStyle = '#f4ffff'; g.strokeStyle = '#7fc4c4'; g.lineWidth = 1; g.globalAlpha = 0.9 - 0.45 * k;
+      g.beginPath(); g.arc(hx - 9, hy - 30 - k * 14, 4 + k * 3, 0, Math.PI * 2); g.fill(); g.stroke();
+      g.beginPath(); g.arc(hx + 10, hy - 24 - k * 12, 3 + k * 3, 0, Math.PI * 2); g.fill(); g.stroke();
+      g.beginPath(); g.arc(hx + 2, hy - 40 - k * 10, 3 + k * 2, 0, Math.PI * 2); g.fill(); g.stroke();
+      g.globalAlpha = 1;
+    }
+  }
+  // Rocket launch (sailing to mars): a 2.5 s code-art lift-off, then the mars landing pad. A tap, a key or reduced motion skips it; the
+  // rocket core is never used up (it stays in the pack and mars stays open). ?launch=0 skips the scene too.
+  const launch = { on: false, t: 0, url: '', n: 0, skipped: 0 };
+  const STARS = [];
+  { const r = RNG.create('isles|stars'); for (let i = 0; i < 28; i++) STARS.push([r.next(), r.next() * 0.7, r.next() < 0.3 ? 2 : 1]); }
+  function launchGo(skip) {
+    if (!launch.on) return false;
+    launch.on = false; if (skip) launch.skipped++;
+    location.href = launch.url;
+    return true;
+  }
+  function drawLaunch() {
+    const t = launch.t, p = clamp((t - 0.6) / (LAUNCH_SEC - 0.6), 0, 1), ease = p * p;
+    g.globalAlpha = 0.6 + 0.3 * p; g.fillStyle = '#080a1c'; g.fillRect(0, 0, VW, VH); g.globalAlpha = 1;
+    g.fillStyle = '#f4f8ff';
+    for (let i = 0; i < STARS.length; i++) g.fillRect(Math.round(STARS[i][0] * VW), Math.round(STARS[i][1] * VH), STARS[i][2], STARS[i][2]);
+    const cx = Math.round(VW / 2), pad = Math.round(VH * 0.78);
+    g.fillStyle = '#8a8e92'; g.fillRect(cx - 46, pad, 92, 10); g.fillStyle = '#c8ccd0'; g.fillRect(cx - 40, pad - 4, 80, 5);
+    g.fillStyle = '#5a5e62'; g.fillRect(cx - 34, pad - 70, 6, 70);
+    const shake = t < 0.6 ? Math.round(Math.sin(t * 60)) : 0, by = Math.round(pad - 6 - ease * (VH * 0.9)) + shake;
+    // smoke at the pad, the flame, then the rocket (white body, red nose and fins, a blue window)
+    g.fillStyle = '#d8d8d8'; g.globalAlpha = 0.7 * (1 - p * 0.6);
+    for (let i = -2; i <= 2; i++) { g.beginPath(); g.arc(cx + i * 16, pad - 2, 9 + t * 6 + Math.abs(i) * 2, 0, Math.PI * 2); g.fill(); }
+    g.globalAlpha = 1;
+    const fl = 12 + ((t * 40) % 3) * 3 + p * 18;
+    g.fillStyle = '#ff8a2a'; g.beginPath(); g.moveTo(cx - 8, by); g.lineTo(cx + 8, by); g.lineTo(cx, by + fl + 8); g.closePath(); g.fill();
+    g.fillStyle = '#ffe07a'; g.beginPath(); g.moveTo(cx - 4, by); g.lineTo(cx + 4, by); g.lineTo(cx, by + fl * 0.6); g.closePath(); g.fill();
+    g.fillStyle = '#c8402a'; g.beginPath(); g.moveTo(cx - 10, by - 6); g.lineTo(cx - 18, by + 2); g.lineTo(cx - 10, by - 16); g.closePath(); g.fill();
+    g.beginPath(); g.moveTo(cx + 10, by - 6); g.lineTo(cx + 18, by + 2); g.lineTo(cx + 10, by - 16); g.closePath(); g.fill();
+    g.fillStyle = '#f4f4f0'; g.fillRect(cx - 10, by - 52, 20, 52);
+    g.fillStyle = '#c8402a'; g.beginPath(); g.moveTo(cx - 10, by - 52); g.lineTo(cx + 10, by - 52); g.lineTo(cx, by - 70); g.closePath(); g.fill();
+    g.fillStyle = '#3a7ac0'; g.fillRect(cx - 4, by - 42, 8, 8); g.fillStyle = '#9ad0ff'; g.fillRect(cx - 3, by - 41, 3, 3);
   }
   // dock + sea chart
   const DOCK_R = 2.5 * TILE;
@@ -2098,12 +2383,22 @@
     q.set('isle', ISLE_PARAM[id] || id); q.delete('seed'); q.delete('from');
     // X7: the Home dock always lands at the dock; any other island you have a saved spot on picks up where you left it (position + fog)
     if (id !== 'home' && ISL.lastPos(save, id) && save.isles[id].seed) q.delete('at'); else q.set('at', 'dock');
+    if (id === 'mars') q.set('at', 'dock'); // TD1: a rocket always lands on the mars landing pad
     travelling = id;
     if (ride) dismount();
     persist();
-    toast('Sailing to ' + isleName(id) + '...');
     logEvent('sail');
-    location.href = location.pathname + '?' + q.toString();
+    const url = location.pathname + '?' + q.toString();
+    // TD1: to mars, a short lift-off first (never with reduced motion or ?launch=0; a tap or a key skips it). Nothing is used up.
+    if (id === 'mars' && !REDUCED && Q.get('launch') !== '0') {
+      if (panelKind) closePanel();
+      launch.on = true; launch.t = 0; launch.url = url; launch.n++;
+      logEvent('launch');
+      toast('Lift-off! Tap to skip.');
+      return true;
+    }
+    toast((id === 'mars' ? 'Flying' : 'Sailing') + ' to ' + isleName(id) + '...');
+    location.href = url;
     return true;
   }
   // medals: computed from the saves, the summary key is additive and each new medal is announced once
@@ -2478,7 +2773,7 @@
     hud.fill.style.width = Math.round(100 * hero.hp / hero.maxHp) + '%';
     const lootN = Object.keys(loot).reduce((n, k) => n + loot[k], 0);
     setText('info', 'XP ' + xp + '  Kills ' + kills + '  Loot ' + lootN + (tames.roster.length ? '  Tames ' + tames.roster.length : '') + (party.length ? '  Party ' + party.length : ''));
-    const tn = NAMES[O.tileAt(world, tx, ty)] || '';
+    const tn = crackedAt(tx, ty) ? 'slush (cracked ice)' : NAMES[O.tileAt(world, tx, ty)] || '';
     setText('ground', tn.replace(/_/g, ' ') + (hero.scale < 1 ? ' (slow x' + Math.round(hero.scale * 100) / 100 + ')' : '') + (ride ? ' (riding x' + Math.round(hero.scale * 100) / 100 + ')' : ''));
     // the calm hint line + the Feed / Soothe / Ride buttons
     const ft = TAME ? feedTarget() : null;
@@ -2570,7 +2865,7 @@
   const dir8 = (dx, dy) => ((Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) % 8) + 8) % 8;
   // IF1: out of air (or running low) away from shelter: the nearest dome / landing pad, by direction with an arrow
   function airHint() {
-    if (!ENVR.oxygen || !envS.o2 || !(envS.o2.warn || envS.o2.empty) || sheltered() || hero.dead || !SHELTER_PTS.length) return '';
+    if (!ENVR.oxygen || !envS.o2 || !(envS.warnO || envS.o2.empty) || sheltered() || hero.dead || !SHELTER_PTS.length) return '';
     const tx = hero.x / TILE, ty = hero.y / TILE;
     let b = null, bd = Infinity;
     for (let i = 0; i < SHELTER_PTS.length; i++) { const p = SHELTER_PTS[i], d = (p.x - tx) * (p.x - tx) + (p.y - ty) * (p.y - ty); if (d < bd) { bd = d; b = p; } }
@@ -2657,7 +2952,9 @@
   const keys = {};
   const KEYMAP = { ArrowUp: 'u', KeyW: 'u', ArrowDown: 'd', KeyS: 'd', ArrowLeft: 'l', KeyA: 'l', ArrowRight: 'r', KeyD: 'r' };
   let firing = false, aim = null;
+  document.addEventListener('pointerdown', () => { if (launch.on) launchGo(true); }, true); // TD1: a tap skips the lift-off
   document.addEventListener('keydown', (e) => {
+    if (launch.on) { launchGo(true); e.preventDefault(); return; }
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (KEYMAP[e.code]) { keys[KEYMAP[e.code]] = true; e.preventDefault(); }
     if (e.code === 'Space') { firing = true; aim = null; e.preventDefault(); }
@@ -2745,6 +3042,7 @@
     stepCreatures(dt);
     if (bz.st) bossStep(dt);
     if (ENV_ON) envStep(dt);
+    tdStep(dt); // TD1: thin ice, hot spring soak, glints, the air arrow
     restAcc += dt; if (restAcc >= 0.2) { restStep(restAcc); restAcc = 0; } // IF1: 5 Hz is plenty for a calm heal
     stepBolts(dt);
     if (party.length) stepParty(dt);
@@ -2755,6 +3053,12 @@
   function frame(now) {
     const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
     last = now;
+    if (launch.on) { // TD1: the rocket lift-off plays over a frozen island, then the page goes to the mars landing pad
+      launch.t += dt; render(); drawLaunch();
+      if (launch.t >= LAUNCH_SEC) launchGo(false);
+      requestAnimationFrame(frame);
+      return;
+    }
     if (!paused) {
       const v = inputVec();
       if (firing) { if (aim) fire(aim.x - (hero.x - camX), aim.y - (hero.y - camY)); else fire(0, 0); }
@@ -2828,7 +3132,7 @@
       creatures: () => creatures.map((c) => ({ uid: c.uid, sp: c.sp, kind: c.kind, base: c.base, x: c.x, y: c.y, hp: c.hp, maxHp: c.maxHp, mood: c.mood, size: c.size, art: !!c.art,
         ph: c.ph, tg: c.ph === 'wind' ? { shape: specOf(c.sp, c.kind).atk.shape, left: c.pt, windup: specOf(c.sp, c.kind).atk.windup, big: specOf(c.sp, c.kind).atk.big } : null,
         ko: c.ko, calm: c.calm, hostile: c.hostile, lv: c.lv, st: c.tm ? c.tm.st : null, torpor: c.tm ? c.tm.torpor : 0, torporMax: c.tm ? c.tm.torporMax : 0,
-        prog: c.tm ? c.tm.prog : 0, need: c.tm ? c.tm.need : 0, src: c.src, drawn: c.drawn, act: c.act, dir: c.dir })),
+        prog: c.tm ? c.tm.prog : 0, need: c.tm ? c.tm.need : 0, src: c.src, drawn: c.drawn, act: c.act, dir: c.dir, rare: !!c.rare, variant: c.variant || '' })),
       // PNG creature strips (b31a / b32) and b33 props: readiness, what was drawn, death strips shown, props baked from PNG vs code
       stripsReady: () => (STRIPS ? STRIPS.ready.then(() => ({ on: true, kinds: STRIPS.kinds.filter((k) => STRIPS.has(k)), count: STRIPS.count() })) : { on: false, kinds: [], count: 0 }),
       // a baked strip's drawn size in native px (AW3 size-class checks), or null when that creature has no PNG set
@@ -2945,6 +3249,16 @@
         tame: bz.st && bz.st.tame ? { st: bz.st.tame.st, how: bz.st.tame.how, torpor: bz.st.tame.torpor, torporMax: bz.st.tame.torporMax, prog: bz.st.tame.prog, need: bz.st.tame.need, asleep: bz.ko } : null,
         arenaSrc: arenaSrc, arenaDrawn: arenaDrawn, reduced: REDUCED, tg: Object.assign({}, BOSS_TG), src: bz.src, drawn: bz.drawn, sk: bz.sk }),
       bossLog: () => JSON.parse(JSON.stringify(BOSS_LOG)),
+      // TD1
+      td: () => ({ night: tdNight(), nightK: nightK(), aurora: AUR_ON, auroraDrawn: auroraDrawn, dayLen: DAY_LEN, dusk: DUSK,
+        ice: { on: THIN_ICE, tile: ice.tile, t: ice.t, warnN: ice.warnN, made: ice.made, live: ice.n, drawn: crackDrawn, slow: THIN_SLOW },
+        soak: { t: soak.t, n: soak.n }, glints: GLINTS.map((q) => ({ i: q.i, x: q.x, y: q.y, item: q.item, night: q.night, live: glintLive(q), taken: glintTaken(q) })),
+        air: { arrow: airArrow.on, ang: airArrow.ang, tiles: airArrow.tiles, warnAt: AIR_WARN, low: !!envS.warnO, empty: !!envS.emptyO },
+        launch: { on: launch.on, t: launch.t, n: launch.n, skipped: launch.skipped, url: launch.url, sec: LAUNCH_SEC },
+        rare: RARE_VAR ? { v: RARE_VAR.v, name: RARE_VAR.name, item: RARE_VAR.item, night: RARE_VAR.night } : null, reduced: REDUCED }),
+      cracked: (tx, ty) => crackedAt(tx, ty),
+      moveScale: (tx, ty) => moveScaleAt(tx, ty),
+      findTerrain: (name, walk) => { const want = O.TERRAIN_ALL[name]; for (let y = 4; y < H - 4; y++) for (let x = 4; x < W - 4; x++) if (world.terrain[y * W + x] === want && (!walk || (walkableAt(x, y) && !heroSolidAt(x, y)))) return { x: x, y: y }; return null; },
       // XB
       bossSig: () => (bz.st ? { id: BOSS_ID, heads: bz.st.heads ? bz.st.heads.slice() : null, springs: bz.st.springs ? bz.st.springs.map((p) => Object.assign({}, p)) : null,
         ice: bz.st.ice.map((p) => ({ id: p.id, ttl: p.ttl, zone: Object.assign({}, p.zone) })), sub: bz.st.sub, dig: bz.st.dig, rematch: bz.st.rematch, rm: bz.rm, onIce: bz.onIce,
