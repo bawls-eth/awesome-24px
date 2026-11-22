@@ -200,7 +200,49 @@
     return Promise.resolve().then(() => li(base + ARENA.id + '.png')).then((im) => (im ? { img: im, w: ARENA.w, h: ARENA.h, ax: ARENA.ax, ay: ARENA.ay } : null), () => null);
   }
 
-  return { SETS: SETS, MEADOW_BASE: MEADOW_BASE, MEADOW_TILES: MEADOW_TILES, MEADOW_BLEND: MEADOW_BLEND, MEADOW_PALETTE: MEADOW_PALETTE, MEADOW_PROPS: MEADOW_PROPS,
+  // 8B: code-drawn terrain detail, painted ONCE onto a baked chunk (never per frame) so big fields do not look flat: 8 seeded tile variants
+  // (plain, speckle pair, grass tuft, pebble, dash, cross, checker dither, shade corner) in the tile's own palette shades, wave dashes on
+  // water, and stepped (stair) edges where two terrains meet (the neighbour's base colour in 4 px steps). Pure in its inputs: the same
+  // terrain + seed paint the same pixels. pal: name -> [base, shade, light, edge]. Returns the number of tiles touched.
+  const DETAIL_VARIANTS = 8;
+  function dhash(x, y, s) { let h = (Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(s | 0, 2246822519)) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+  function detailVariant(wx, wy, seed) { return Math.floor(dhash(wx, wy, seed) * DETAIL_VARIANTS); }
+  const WATERY = /water|sea|lagoon|murk|reef_deep|ocean/;
+  function detail(ctx, terrain, w, h, cx, cy, opts) {
+    try {
+      const o = opts && typeof opts === 'object' ? opts : {};
+      const names = o.names || NAMES, pal = o.palette || PALETTE, T = o.tile | 0 || 32, CH = o.ch | 0 || 16, seed = o.seed | 0;
+      if (!ctx || typeof ctx.fillRect !== 'function' || !terrain) return 0;
+      const at = (x, y) => (x >= 0 && y >= 0 && x < w && y < h ? terrain[y * w + x] | 0 : -1);
+      const u = Math.max(1, Math.round(T / 16)); // one art pixel (2 px on a 32 px tile)
+      let n = 0;
+      for (let ty = 0; ty < CH; ty++) for (let tx = 0; tx < CH; tx++) {
+        const wx = cx * CH + tx, wy = cy * CH + ty, t = at(wx, wy);
+        if (t < 0) continue;
+        const nm = names[t], p = pal[nm];
+        if (!p) continue;
+        const px = tx * T, py = ty * T, v = detailVariant(wx, wy, seed), r2 = dhash(wy, wx, seed + 7);
+        const ox = px + u * (2 + Math.floor(r2 * 10)), oy = py + u * (2 + Math.floor(dhash(wx + 3, wy, seed) * 10));
+        if (WATERY.test(nm)) {
+          if (v < 3) { ctx.fillStyle = p[2]; ctx.fillRect(ox, oy, u * 3, u); ctx.fillRect(ox + u * 3, oy - u, u * 2, u); }
+        } else if (v === 1) { ctx.fillStyle = p[1]; ctx.fillRect(ox, oy, u, u); ctx.fillRect(ox + u * 3, oy + u * 2, u, u); }
+        else if (v === 2) { ctx.fillStyle = p[2]; ctx.fillRect(ox, oy, u, u * 2); ctx.fillRect(ox - u, oy - u, u, u); ctx.fillRect(ox + u, oy - u, u, u); }
+        else if (v === 3) { ctx.fillStyle = p[3]; ctx.fillRect(ox, oy + u, u * 2, u); ctx.fillStyle = p[2]; ctx.fillRect(ox, oy, u * 2, u); }
+        else if (v === 4) { ctx.fillStyle = p[2]; ctx.fillRect(ox, oy, u * 3, u); }
+        else if (v === 5) { ctx.fillStyle = p[1]; ctx.fillRect(ox + u, oy, u, u * 3); ctx.fillRect(ox, oy + u, u * 3, u); }
+        else if (v === 6) { ctx.fillStyle = p[1]; for (let k = 0; k < 4; k++) ctx.fillRect(ox + (k & 1) * u, oy + (k >> 1) * u * 2 + (k & 1) * u, u, u); }
+        else if (v === 7) { ctx.fillStyle = p[1]; ctx.fillRect(px, py, u * 2, u * 2); }
+        // stepped edges: where the east / south neighbour is another terrain, its base colour bites in 4-px steps (an 8-bit stair line)
+        const e = at(wx + 1, wy), s2 = at(wx, wy + 1);
+        if (e >= 0 && e !== t && pal[names[e]]) { ctx.fillStyle = pal[names[e]][0]; for (let k = (wy & 1) * 2 * u; k < T; k += 4 * u) ctx.fillRect(px + T - u, py + k, u, 2 * u); }
+        if (s2 >= 0 && s2 !== t && pal[names[s2]]) { ctx.fillStyle = pal[names[s2]][0]; for (let k = (wx & 1) * 2 * u; k < T; k += 4 * u) ctx.fillRect(px + k, py + T - u, 2 * u, u); }
+        n++;
+      }
+      return n;
+    } catch (e) { return 0; }
+  }
+
+  return { DETAIL_VARIANTS: DETAIL_VARIANTS, detailVariant: detailVariant, detail: detail, SETS: SETS, MEADOW_BASE: MEADOW_BASE, MEADOW_TILES: MEADOW_TILES, MEADOW_BLEND: MEADOW_BLEND, MEADOW_PALETTE: MEADOW_PALETTE, MEADOW_PROPS: MEADOW_PROPS,
     MEADOW_ALIAS: MEADOW_ALIAS, edgeId: edgeId, ICON_BASE: ICON_BASE, ITEM_ICONS: ITEM_ICONS, iconUrl: iconUrl, ARENA: ARENA, loadArena: loadArena, PROP_BASE: PROP_BASE, PROPS: PROPS, PROP_ALIAS: PROP_ALIAS, loadProps: loadProps, propFor: propFor, drawPropArt: drawPropArt,
     BASE: BASE, VARIANTS: VARIANTS, NAMES: NAMES, TERRAINS: TERRAINS, PALETTE: PALETTE, tileId: tileId, idMap: idMap, load: load, create: create };
 });

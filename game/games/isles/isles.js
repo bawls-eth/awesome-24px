@@ -274,9 +274,12 @@
   function bakeArt(cx, cy) {
     let cv = null;
     if (IA && IA.active()) { const src = IA.chunk(world.terrain, W, cx, cy); if (src) { cv = mk(CPX, CPX); cv.getContext('2d').drawImage(src, 0, 0, CPX, CPX); } }
-    if (!cv) cv = CB.bakeChunkCanvas(mk, world.terrain, W, cx, cy, PAL, null, { names: NAMES, h: H });
+    let code = false;
+    if (!cv) { cv = CB.bakeChunkCanvas(mk, world.terrain, W, cx, cy, PAL, null, { names: NAMES, h: H }); code = !!cv; }
     if (!cv) return bakeFlat(cx, cy);
     const c = cv.getContext('2d');
+    // 8B: the code-drawn terrain gets seeded detail pixels (8 tile variants) and stepped edges, once per chunk bake
+    if (code && window.MMIsleArt && window.MMIsleArt.detail) window.MMIsleArt.detail(c, world.terrain, W, H, cx, cy, { names: NAMES, palette: PAL, tile: TILE, ch: CH, seed: parseInt(SEED, 10) % 100003 });
     // props of this chunk and its 8 neighbours, back to front: a 64 px tree near a chunk edge is painted on both sides of the seam
     const pa = IA && IA.propsActive() ? IA.props() : null, list = [];
     for (let ny = cy - 1; ny <= cy + 1; ny++) for (let nx = cx - 1; nx <= cx + 1; nx++) { const l = chunkProps.get(nx + ',' + ny); if (l) for (let i = 0; i < l.length; i++) list.push(l[i]); }
@@ -336,7 +339,7 @@
   // b31a / b32 PNG strips: loaded once (the jungle loads all five species, other isles only the species in your stable), baked to native
   // size; a creature without a complete set (or ?art=0) keeps the code-drawn MMCreatureDraw bake above.
   const STRIP_KINDS = MS ? MS.kindsFor(PACK_ID, tames.roster.map((t) => t.sp)) : [];
-  const STRIPS = ART && MS && STRIP_KINDS.length ? MS.create({ kinds: STRIP_KINDS, create: mk }) : null;
+  const STRIPS = ART && MS && STRIP_KINDS.length ? MS.create({ kinds: STRIP_KINDS, create: mk, rim: true }) : null;
   const stripKind = (k) => (MS && k && has(MS.SPECS, k) ? k : null);
   const stState = { dying: false, ko: false, eating: false, ph: '', moving: false }; // reused every frame
   const seat = { x: 0, y: 0 };
@@ -1360,7 +1363,10 @@
       c.fillStyle = '#1e1a22'; c.fillRect(13, 8 + bob, 2, 3); c.fillRect(18, 8 + bob, 2, 3);
       c.fillStyle = col; c.fillRect(9, 2 + bob, 14, 4);
       c.fillStyle = '#0c140f'; c.fillRect(9, 26 + bob, 14, 1);
-      frames.push(cv);
+      // 8B: a crisp light rim around the hero, baked once here (never per frame), so the hero reads on any ground
+      let rc = cv;
+      for (let k = 0; k < Math.max(1, Math.round(DPR)) && MS && MS.rimCanvas; k++) rc = MS.rimCanvas(rc, 0, null, mk) || rc; // 1 logical px thick
+      frames.push(rc);
     }
     const sh = mk(Math.round(24 * DPR), Math.round(8 * DPR)), sc = sh.getContext('2d');
     sc.fillStyle = 'rgba(0,0,0,0.28)'; sc.beginPath(); sc.ellipse(sh.width / 2, sh.height / 2, sh.width / 2, sh.height / 2, 0, 0, Math.PI * 2); sc.fill();
@@ -1434,7 +1440,7 @@
       const pm = Math.abs(cs.x - p.lx) + Math.abs(cs.y - p.ly) > 0.4; p.lx = cs.x; p.ly = cs.y;
       const pst = STRIPS && p.sk && STRIPS.has(p.sk) ? STRIPS.get(p.sk, pm ? 'move' : 'idle', (p.dir = cs.face < 0 ? MS.LEFT : MS.RIGHT)) : null;
       if (pst) {
-        STRIPS.draw(g, pst, MS.frameIndex(pm ? 'move' : 'idle', hero.t), sx, sy, 1, p.dir === MS.LEFT);
+        STRIPS.draw(g, pst, MS.frameIndex(pm ? 'move' : 'idle', hero.t), sx, sy, 1, p.dir === MS.LEFT, true); // 8B: party creatures wear the light rim
         drawHeart(sx, sy - (pst.ay - pst.top) - 8, '#ff7aa8');
         continue;
       }
@@ -1461,7 +1467,7 @@
         // the mount's own strip, then the separate saddle overlay (same view, same frame), then the hero on the manifest seat
         const ra = heroMoving ? 'move' : 'idle', fr = MS.frameIndex(ra, hero.t), flip = rideDir === MS.LEFT;
         if (rideArt && rideArt.shadow && GFX.shadows) { const a = rideArt, w0 = a.w / a.dpr, w = Math.min(w0, rst.w * 0.8, rst.span), h = a.shadow.height / a.dpr * w / w0; g.drawImage(a.shadow, hx - w / 2, hy - h / 2, w, h); }
-        STRIPS.draw(g, rst, fr, hx, hy, 1, flip);
+        STRIPS.draw(g, rst, fr, hx, hy, 1, flip, true);
         if (sad && sad !== rst) STRIPS.draw(g, sad, fr, hx, hy, 1, flip);
         rideDrawn = rst.id; saddleDrawn = sad && sad !== rst ? sad.id : '';
         if (MS.seatOffset(rideKind, heroMoving, rideDir, fr, seat)) { lift = -seat.y + 5; rdx = Math.round(seat.x); }

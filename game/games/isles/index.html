@@ -4,12 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Hearthvale Isles - Pixeltown</title>
+<link rel="stylesheet" href="../../shared/mm-8bit.css">
 <link rel="stylesheet" href="isles.css">
 <link rel="stylesheet" href="../../shared/mm-nav.css">
 <link rel="stylesheet" href="../../shared/mm-feedback.css">
 <!-- Local-only page: no database, no network module, no game engine. Pure shared modules + one light canvas loop. -->
 <!-- PI2: the shared access prefs (pixeltown-access-v1: --ui-scale, reduced motion) and the graphics tier (lowGfx -> MMPerf low), read only -->
 <script src="../../shared/mm-access.js"></script>
+<script src="../../shared/mm-8bit.js"></script>
 <script src="../../shared/mm-side-access.js"></script>
 <script src="../../shared/mm-perf.js"></script>
 <script src="../../shared/rng.js"></script>
@@ -40,7 +42,7 @@
 </head>
 <body>
 <canvas id="view" aria-label="Island view" role="img"></canvas>
-<header id="hud" class="px-bar">
+<header id="hud">
   <a class="btn small" id="back" href="../../hub/index.html" aria-label="Back to the World map">&larr; World map</a>
   <div class="hud-row">
     <div class="hud-main">
@@ -108,7 +110,7 @@
   <div id="stick" aria-label="Move joystick"><div id="knob"></div></div>
   <div id="touch-btns">
     <button id="btn-map" type="button" aria-pressed="true">Map</button>
-    <button id="btn-fire" type="button" aria-label="Fire bolt">Attack</button>
+    <button id="btn-fire" class="px-btn" type="button" aria-label="Fire bolt">Attack</button>
   </div>
 </div>
 <div id="howto" class="howto px-panel" role="note" hidden>
