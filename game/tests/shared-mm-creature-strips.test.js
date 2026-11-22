@@ -14,15 +14,18 @@ const man = (d) => JSON.parse(fs.readFileSync(path.join(ART, d, 'manifest.json')
   // 1 the inline table mirrors the manifests: every manifest strip is listed with the same frames / fps / loop / cell / anchor / seat
   // b31b: vinecoil + canopy_glider are wired (moth_lantern has no MMCreatures def yet, so its strips are not in the table)
   const b31b = man('b31b-jungle-creatures-rest').assets.filter((a) => a.enemy === 'vinecoil' || a.enemy === 'canopy_glider');
-  const assets = man('b31a-jungle-creatures-core').assets.concat(b31b, man('b32-jungle-big-and-boss').assets);
+  // AW2: b31af (glimmerfrog sleep + eat), b32s (stegolith body + saddle overlays), b36 (the seven meadow tameables) are wired in full
+  const assets = man('b31a-jungle-creatures-core').assets.concat(b31b, man('b32-jungle-big-and-boss').assets, man('b31af-glimmerfrog-rest').assets,
+    man('b32s-stegolith').assets, man('b36-meadow-creatures').assets);
   const files = M.files();
   const byId = {}; files.forEach((f) => { byId[f.id] = f; });
-  check('107 strips: 40 from b31a + 24 from b31b + 43 from b32, one per manifest asset', files.length === 107 && b31b.length === 24 && assets.length === 107 && assets.every((a) => byId[a.id]));
+  check('227 strips: 40 b31a + 24 b31b + 43 b32 + 2 b31af + 20 b32s + 98 b36, one per manifest asset', files.length === 227 && b31b.length === 24 && assets.length === 227
+    && assets.every((a) => byId[a.id]) && new Set(files.map((f) => f.id)).size === 227, files.length + ' / ' + assets.length);
   const bad = [];
   assets.forEach((a) => {
     const k = a.enemy || a.creature, sp = M.SPECS[k], act = M.ACT[a.action];
     if (!sp || !act) { bad.push(a.id + ' unknown'); return; }
-    if (act[0] !== a.frames || act[1] !== a.fps || !!act[2] !== !!a.loop) bad.push(a.id + ' timing');
+    if (act[0] !== a.frames || M.fpsOf(a.action, k) !== a.fps || !!act[2] !== !!a.loop) bad.push(a.id + ' timing');
     if (sp.cell !== a.frame_w || sp.cell !== a.frame_h || sp.ax !== a.anchor.x || sp.ay !== a.anchor.y) bad.push(a.id + ' cell/anchor');
     if (a.seat && /^(saddle_)?(idle|move)$/.test(a.action)) {
       const d = M.DIRS.indexOf(a.dir), mv = /move/.test(a.action) ? 'move' : 'idle';
@@ -52,8 +55,15 @@ const man = (d) => JSON.parse(fs.readFileSync(path.join(ART, d, 'manifest.json')
   check('actionFor: the boss wind-up is its roar, other wind-ups are attack', M.actionFor('fernjaw_tyrant', st({ ph: 'wind' })) === 'roar' && M.actionFor('tusktop', st({ ph: 'wind' })) === 'attack');
   check('actionFor: ko -> sleep, fed -> eat (eat wins over sleep)', M.actionFor('chompbill', st({ ko: true })) === 'sleep' && M.actionFor('chompbill', st({ eating: true })) === 'eat'
     && M.actionFor('chompbill', st({ ko: true, eating: true })) === 'eat');
-  check('actionFor: glimmerfrog has no sleep / eat strips -> idle', M.actionFor('glimmerfrog', st({ ko: true })) === 'idle' && M.actionFor('glimmerfrog', st({ eating: true })) === 'idle');
-  check('actionFor: unknown species / bad state -> idle', M.actionFor('stegolith', st({ moving: true })) === 'idle' && M.actionFor('fernraptor', null) === 'idle');
+  check('actionFor: glimmerfrog sleeps / eats from the b31af strips', M.actionFor('glimmerfrog', st({ ko: true })) === 'sleep' && M.actionFor('glimmerfrog', st({ eating: true })) === 'eat'
+    && /b31af-glimmerfrog-rest\/enemies\/glimmerfrog\/glimmerfrog_sleep_down\.png$/.test(byId.glimmerfrog_sleep_down.url) && /b31a-/.test(byId.glimmerfrog_idle_down.url));
+  check('actionFor: unknown species / bad state -> idle', M.actionFor('moth_lantern', st({ moving: true })) === 'idle' && M.actionFor('fernraptor', null) === 'idle');
+  check('b36: the seven MMCreatures meadow ids, each with the 14 strips; b36 death runs at 9 fps (others 10)', M.kindsFor('meadow').join() === 'clover_hopper,puffwool,bumble_mote,pebble_tortle,thistle_boar,meadow_strider,oakback'
+    && M.kindsFor('meadow').every((k) => files.filter((f) => f.kind === k).length === 14) && M.fpsOf('death', 'puffwool') === 9 && M.fpsOf('death', 'tusktop') === 10
+    && M.frameIndex('death', 0.42) === 4 && M.frameIndex('death', 0.42, 'puffwool') === 3 && Math.abs(M.duration('death', 'oakback') - 5 / 9) < 1e-9);
+  check('kindsFor: an island preloads its biome plus the stable roster (jungle 8, reef none, meadow + a tusktop 8)', M.kindsFor('jungle').length === 8 && M.kindsFor('jungle').indexOf('stegolith') >= 0
+    && M.kindsFor('reef').length === 0 && M.kindsFor('meadow', ['tusktop', 'nope']).length === 8);
+  check('saddleFor: the stegolith has overlays; the meadow strider (no saddle) has none', M.saddleFor('stegolith', true) === 'saddle_move' && M.saddleFor('meadow_strider', false) === null);
   check('saddleFor: tusktop / tyrant have overlays, others none', M.saddleFor('tusktop', true) === 'saddle_move' && M.saddleFor('fernjaw_tyrant', false) === 'saddle_idle' && M.saddleFor('fernraptor', true) === null);
   check('stripId: precomputed, left reuses right, down-only actions stay down', M.stripId('tusktop', 'move', M.LEFT) === 'tusktop_move_right' && M.stripId('fernraptor', 'sleep', M.UP) === 'fernraptor_sleep_down'
     && M.stripId('tusktop', 'move', M.LEFT) === M.stripId('tusktop', 'move', M.LEFT) && M.stripId('nope', 'idle', 0) === null);
@@ -63,6 +73,9 @@ const man = (d) => JSON.parse(fs.readFileSync(path.join(ART, d, 'manifest.json')
   check('seatOffset: right / left mirror x, frame wraps', M.seatOffset('tusktop', true, M.RIGHT, 7, seat) && seat.x === -5 && seat.y === (350 - 204) / 4
     && M.seatOffset('tusktop', true, M.LEFT, 1, seat) && seat.x === 5);
   check('seatOffset: no seat data -> false', M.seatOffset('fernraptor', false, 0, 0, seat) === false);
+  check('seatOffset: stegolith (b32s) and meadow strider (b36) seats from their manifests', M.seatOffset('stegolith', false, M.DOWN, 2, seat) && seat.x === -1 && seat.y === (463 - 216) / 4
+    && M.seatOffset('meadow_strider', true, M.LEFT, 3, seat) && seat.x === 0.5 && seat.y === (231 - 102) / 4);
+  check('oakback (XL drawn in a 256 cell) shows at k 2; its seat-less spec stays false', M.SPECS.oakback.k === 2 && M.SPECS.puffwool.k === 1 && M.seatOffset('oakback', false, 0, 0, seat) === false);
 
   // 5 loader: stub images + stub canvas; native 1/4 bake; per-creature fallback when a needed strip is missing
   const canvases = [];
@@ -72,11 +85,14 @@ const man = (d) => JSON.parse(fs.readFileSync(path.join(ART, d, 'manifest.json')
   const set = M.create({ create: mk, loadImage: (u) => { asked.push(u); return Promise.resolve(/glimmerfrog_move_up/.test(u) ? null : img(u)); } });
   check('before ready: nothing is drawn from PNG', !set.has('fernraptor') && set.get('fernraptor', 'idle', 0) === null);
   await set.ready;
-  check('loads each of the 107 PNGs exactly once', asked.length === 107 && new Set(asked).size === 107);
+  check('loads each of the 227 PNGs exactly once', asked.length === 227 && new Set(asked).size === 227);
   check('complete creatures are on, glimmerfrog (a missing move_up) falls back to the code bake', set.has('fernraptor') && set.has('tusktop') && set.has('fernjaw_tyrant') && set.has('chompbill') && !set.has('glimmerfrog'));
   const fr = set.get('fernraptor', 'move', M.LEFT), tk = set.get('tusktop', 'saddle_move', M.DOWN), ty = set.get('fernjaw_tyrant', 'roar', M.UP);
   check('baked strips are native size (256 -> 64, 384 -> 96, 512 -> 128) with the anchor scaled', fr.w === 64 && fr.frames === 6 && fr.ax === 32 && fr.ay === 231 / 4 && tk.w === 96 && tk.id === 'tusktop_saddle_move_down' && ty.w === 128 && ty.id === 'fernjaw_tyrant_roar_up');
-  check('each loaded strip (106: one failed) is baked once onto a frames x native canvas with smoothing off', canvases.length === 106 && fr.src.width === 64 * 6 && fr.src.height === 64 && fr.src.smooth === false);
+  check('each loaded strip (226: one failed) is baked once onto a frames x native canvas with smoothing off', canvases.length === 226 && fr.src.width === 64 * 6 && fr.src.height === 64 && fr.src.smooth === false);
+  const oak = set.get('oakback', 'idle', M.DOWN), steg = set.get('stegolith', 'saddle_idle', M.RIGHT);
+  check('k 2 strips keep a native source cell but draw twice the size (oakback 64 -> 128, anchor x2); stegolith 512 -> 128', oak.sw === 64 && oak.w === 128 && oak.ay === 231 / 2 && oak.k === 2
+    && steg.w === 128 && steg.id === 'stegolith_saddle_idle_right' && set.has('stegolith') && set.has('puffwool'));
   check('get() falls back to idle of the same view for an action a creature lacks', set.get('chompbill', 'roar', M.RIGHT).id === 'chompbill_idle_right');
   const calls = []; const ctx = { drawImage: (...a) => calls.push(a), save: () => calls.push('save'), translate: () => {}, scale: () => {}, restore: () => calls.push('restore') };
   set.draw(ctx, fr, 7, 100, 200, 1, false);
@@ -106,6 +122,19 @@ const man = (d) => JSON.parse(fs.readFileSync(path.join(ART, d, 'manifest.json')
   A.drawPropArt(pctx, props.jungle_tree_a, 'jungle_tree', 64, 32, 32); A.drawPropArt(pctx, props.hanging_vine, 'hanging_vine', 0, 0, 32);
   check('ground props stand on the tile bottom centre, the vine hangs from the tile top', pc[0][1] === 64 + 16 - 32 && pc[0][2] === 32 + 30 - 62 && pc[1][1] === 0 && pc[1][2] === -2);
   check('loadProps with every PNG failing gives null, never rejects', (await A.loadProps({ loadImage: () => Promise.resolve(null) })) === null);
+
+  // 7 b35 meadow props and b34b icons: the tables match the manifests and every file exists
+  const mm = man('b35-meadow-home').assets.filter((a) => a.category === 'prop');
+  check('MMIsleArt.MEADOW_PROPS matches the b35 prop manifest (size, anchor, frames)', mm.length === 10 && mm.length === Object.keys(A.MEADOW_PROPS).length
+    && mm.every((a) => { const p = A.MEADOW_PROPS[a.id]; return p && p[0] * (a.frames || 1) === a.frame_w * (a.frames || 1) && p[0] === a.frame_w && p[1] === a.frame_h && p[2] === a.anchor[0] && p[3] === a.anchor[1] && p[4] === a.frames; }));
+  const mpu = []; const mprops = await A.loadProps({ pack: 'meadow', loadImage: (u) => { mpu.push(u); return Promise.resolve({ u }); } });
+  check('loadProps(meadow) asks the 10 b35 props; garden_plot mixes the 4 stages, the pen shows the stable', mpu.length === 10 && mpu.every((u) => /b35-meadow-home\/props\/[a-z_0-9]+\.png$/.test(u))
+    && new Set(Array.from({ length: 40 }, (v, x) => A.propFor(mprops, 'garden_plot', x, 1).img.u)).size === 4 && A.propFor(mprops, 'pen', 0, 0) === mprops.stable && A.propFor(mprops, 'fence', 0, 0) === null);
+  const bc = []; A.drawPropArt({ drawImage: (...a) => bc.push(a) }, mprops.boat, 'boat', 0, 0, 32);
+  check('the 2-frame boat strip bakes its first 64x32 frame', bc[0].length === 9 && bc[0][1] === 0 && bc[0][3] === 64 && bc[0][7] === 64);
+  const im = man('b34b-crafting-icons').assets.filter((a) => a.category === 'item').map((a) => a.id.replace(/^icon_/, ''));
+  check('b34b: ITEM_ICONS are the 15 manifest items, each file exists from the isles page; unknown ids have no icon', im.length === 15 && im.slice().sort().join() === A.ITEM_ICONS.slice().sort().join()
+    && A.ITEM_ICONS.every((id) => fs.existsSync(path.join(__dirname, '..', 'games', 'isles', A.iconUrl(id)))) && A.iconUrl('feast') === null && A.iconUrl({}) === null);
 
   if (failed) { console.log(failed + ' FAILED'); process.exit(1); }
   console.log('ALL PASSED');

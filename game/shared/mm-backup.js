@@ -9,14 +9,14 @@
       profile: req('./mm-profile.js'), map: req('./mm-map.js'), angler: req('./mm-angler.js'),
       bugs: req('./mm-bugs.js'), hubProfile: req('./profile.js'),
       access: req('./mm-access.js'), gift: req('./mm-gift.js'),
-      tames: req('./mm-tames.js'), isles: req('./mm-isles.js')
+      tames: req('./mm-tames.js'), isles: req('./mm-isles.js'), feedback: req('./mm-feedback.js')
     }));
   } else {
     root.MMBackup = factory(() => ({
       profile: root.MMProfile || null, map: root.MMMap || null, angler: root.MMAngler || null,
       bugs: root.MMBugs || null, hubProfile: root.MMHubProfile || null,
       access: root.MMAccess || null, gift: root.MMGift || null,
-      tames: root.MMTames || null, isles: root.MMIsles || null
+      tames: root.MMTames || null, isles: root.MMIsles || null, feedback: root.MMFeedback || null
     }));
   }
 }(typeof self !== 'undefined' ? self : this, function (getOwners) {
@@ -77,7 +77,11 @@
     // Biome Archipelago: owner cleaners turn anything corrupt into defaults; a non-object value is still refused.
     'pixeltown-tames-v1': (o, v) => (isObj(v) ? (o.tames ? o.tames.clean(v) : cleanPlain(v)) : undefined),
     'pixeltown-archipelago-v1': (o, v) => (isObj(v) ? (o.isles ? o.isles.clean(v) : cleanPlain(v)) : undefined),
-    'pixeltown-medals-isles-v1': (o, v) => (isObj(v) ? (o.isles ? o.isles.cleanMedals(v) : cleanPlain(v)) : undefined)
+    'pixeltown-medals-isles-v1': (o, v) => (isObj(v) ? (o.isles ? o.isles.cleanMedals(v) : cleanPlain(v)) : undefined),
+    // Feedback box notes (device-only, never sent anywhere): the owner cleaner keeps only the known entry fields.
+    'pixeltown-feedback-v1': (o, v) => (isObj(v) ? (o.feedback ? o.feedback.clean(v) : cleanPlain(v)) : undefined),
+    // Town Realm Gate pointer chip (UI only): keep just the two known booleans, the shape main.js loadGatePointer() reads.
+    'pixeltown-gate-pointer-v1': (o, v) => (isObj(v) ? { v: 1, dismissed: v.dismissed === true, reached: v.reached === true } : undefined)
   };
   const KNOWN = Object.keys(CLEANERS).concat(['pixeltown-panel-collapsed']);
   const NAMES = {
@@ -86,7 +90,8 @@
     'pixeltown-panel-collapsed': 'panel setting', 'pixeltown-realm-v1': 'Realm progress', 'pixeltown-arms-v1': 'weapon unlocks',
     'pixeltown-stalk-v1': 'Stalk Market save', 'pixeltown-jam-v1': 'Jam save',
     'pixeltown-access-v1': 'accessibility settings', 'pixeltown-gift-v1': 'daily gift',
-    'pixeltown-tames-v1': 'tamed creatures', 'pixeltown-archipelago-v1': 'Archipelago progress', 'pixeltown-medals-isles-v1': 'Archipelago medals'
+    'pixeltown-tames-v1': 'tamed creatures', 'pixeltown-archipelago-v1': 'Archipelago progress', 'pixeltown-medals-isles-v1': 'Archipelago medals',
+    'pixeltown-feedback-v1': 'feedback notes', 'pixeltown-gate-pointer-v1': 'Realm Gate pointer setting'
   };
   const label = (k) => NAMES[k] || k;
 
@@ -208,8 +213,26 @@
 
   // Gear-on hardening (slice GH): ONE safety snapshot of every known key, taken just before the first tiered item is written to a town save that
   // has never seen gear (no realm.gv, no item with `t`). Written once to its own key, which is not in KNOWN, so it is never part of a bundle or a restore.
-  // Quota-safe: a full or blocked storage just skips it. Returns 'written' | 'exists' | 'has-gear' | 'skipped'.
+  // Quota-safe (SV3 / F14): a snapshot over PREGEAR_MAX (1 MB) is skipped ('too-big'), and so is one that would push everything this origin
+  // stores past MAX_TOTAL ('over-total'), so it can never fill storage. A full or blocked storage just skips it.
+  // Returns 'written' | 'exists' | 'has-gear' | 'too-big' | 'over-total' | 'skipped'.
   const PREGEAR_KEY = 'pixeltown-backup-pregear-v1';
+  const PREGEAR_MAX = 1000000;
+  // Characters stored under every key (key + value). Storage without length/key() (a plain fake) counts the known keys only.
+  function usedChars(storage) {
+    let n = 0;
+    try {
+      if (typeof storage.length === 'number' && typeof storage.key === 'function') {
+        for (let i = 0; i < storage.length && i < 10000; i++) {
+          const k = storage.key(i); if (typeof k !== 'string') continue;
+          const v = storage.getItem(k); n += k.length + (typeof v === 'string' ? v.length : 0);
+        }
+        return n;
+      }
+      listKeys(storage).forEach((k) => { const v = storage.getItem(k); n += k.length + (typeof v === 'string' ? v.length : 0); });
+    } catch (e) { /* unreadable: count what we have */ }
+    return n;
+  }
   function snapshotPregear(storage) {
     try {
       if (typeof storage.getItem(PREGEAR_KEY) === 'string') return 'exists';
@@ -217,11 +240,54 @@
       try { const t = JSON.parse(storage.getItem(SAVE_KEY)); realm = isObj(t) && isObj(t.realm) ? t.realm : null; } catch (e) { realm = null; }
       if (realm && (realm.gv === 1 || (Array.isArray(realm.items) && realm.items.some((x) => isObj(x) && x.t)))) return 'has-gear';
       const b = bundle(storage); b.at = Date.now(); b.why = 'pregear';
-      storage.setItem(PREGEAR_KEY, JSON.stringify(b));
+      const s = JSON.stringify(b);
+      if (s.length > PREGEAR_MAX) return 'too-big';
+      if (usedChars(storage) + PREGEAR_KEY.length + s.length > MAX_TOTAL) return 'over-total';
+      storage.setItem(PREGEAR_KEY, s);
       return 'written';
     } catch (e) { return 'skipped'; }
   }
 
+  // Read the pre-gear snapshot and plan its restore (never writes). Same checks as a restore file, plus a summary for the confirm step:
+  // {ok, keys, entries, labels, at, changed:[keys whose value would change], same:[keys already equal], added:[keys not on the device now],
+  //  kept:[known keys on the device now that the snapshot does not hold; they stay as they are], items:{now, then} (town Realm pack sizes)}.
+  // Never applied automatically: the caller confirms, then calls apply(storage, plan).
+  function planRestorePregear(storage) {
+    let raw = null;
+    try { raw = storage.getItem(PREGEAR_KEY); } catch (e) { raw = null; }
+    if (typeof raw !== 'string') return fail('no-snapshot', 'There is no pre-gear snapshot on this device.');
+    if (raw.length > MAX_TOTAL) return fail('too-big', 'The pre-gear snapshot is too big to restore.');
+    let obj;
+    try { obj = JSON.parse(raw); } catch (e) { return fail('bad-snapshot', 'The pre-gear snapshot is damaged, so nothing was changed.'); }
+    if (!isObj(obj) || obj.format !== FORMAT) return fail('bad-snapshot', 'The pre-gear snapshot is damaged, so nothing was changed.');
+    const p = plan({ format: FORMAT, v: obj.v, keys: obj.keys });
+    if (!p.ok) return p;
+    const at = typeof obj.at === 'number' && isFinite(obj.at) && obj.at > 0 && obj.at < 8.64e15 ? obj.at : null;
+    const changed = [], same = [], added = [];
+    p.keys.forEach((k) => {
+      let now = null;
+      try { now = storage.getItem(k); } catch (e) { now = null; }
+      if (typeof now !== 'string') added.push(k); else if (now === p.entries[k]) same.push(k); else changed.push(k);
+    });
+    const kept = listKeys(storage).filter((k) => p.keys.indexOf(k) < 0);
+    const count = (s) => {
+      try { const t = JSON.parse(s); return isObj(t) && isObj(t.realm) && Array.isArray(t.realm.items) ? t.realm.items.length : 0; } catch (e) { return 0; }
+    };
+    let cur = null;
+    try { cur = storage.getItem(SAVE_KEY); } catch (e) { cur = null; }
+    const items = { now: count(cur), then: typeof p.entries[SAVE_KEY] === 'string' ? count(p.entries[SAVE_KEY]) : 0 };
+    return { ok: true, keys: p.keys, entries: p.entries, labels: p.labels, at: at, changed: changed, same: same, added: added, kept: kept, items: items };
+  }
+
+  // Delete the pre-gear snapshot (the caller confirms first). Returns true when no snapshot is left.
+  function dropPregear(storage) {
+    try { storage.removeItem(PREGEAR_KEY); return typeof storage.getItem(PREGEAR_KEY) !== 'string'; } catch (e) { return false; }
+  }
+  function hasPregear(storage) {
+    try { return typeof storage.getItem(PREGEAR_KEY) === 'string'; } catch (e) { return false; }
+  }
+
   return { FORMAT: FORMAT, VERSION: VERSION, KNOWN: KNOWN.slice(), bundle: bundle, plan: plan, apply: apply, restore: restore, labelOf: label,
-    PREGEAR_KEY: PREGEAR_KEY, snapshotPregear: snapshotPregear };
+    PREGEAR_KEY: PREGEAR_KEY, PREGEAR_MAX: PREGEAR_MAX, MAX_TOTAL: MAX_TOTAL, snapshotPregear: snapshotPregear,
+    planRestorePregear: planRestorePregear, dropPregear: dropPregear, hasPregear: hasPregear };
 }));

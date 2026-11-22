@@ -143,6 +143,25 @@
     big: { id: 'big', waitMult: 0.9 },
   };
 
+  // ---- MG3 data (additive; logic lives in shared/mm-angler-isles.js) ----
+  // Isles cove fish: their own spot and their own journal key (journal.cove), so FISH, the 6 spots and every existing
+  // bite table stay byte-identical. bait: '' = bites on any cove bait; otherwise only with that isles-themed bait
+  // (ids match the isles resources kelp / shell / pearl, see shared/mm-isle-craft.js).
+  const COVE_FISH = [
+    ['kelp_darter', 'Kelp Darter', 1, 'darter', '', [6, 14]],
+    ['coral_goby', 'Coral Goby', 1, 'calm', '', [4, 10]],
+    ['kelp_ribbon', 'Ribbon Kelpfish', 2, 'zigzag', 'kelp', [20, 45]],
+    ['shell_wrasse', 'Shellcracker Wrasse', 2, 'sinker', 'shell', [18, 40]],
+    ['reef_parrot', 'Reef Parrotfish', 3, 'calm', 'kelp', [30, 70]],
+    ['pearl_ray', 'Pearl Ray', 4, 'sinker', 'pearl', [60, 140]],
+  ].map((r) => ({ id: r[0], icon: '🐠', name: r[1], rarity: r[2], spots: ['cove'], behaviour: r[3], bait: r[4], size: r[5], cove: true }));
+  const COVE_BY_ID = Object.create(null);
+  COVE_FISH.forEach((f) => { COVE_BY_ID[f.id] = f; });
+  const COVE_BAITS = ['kelp', 'shell', 'pearl'];
+  // Bug Safari species that can become bait (read-only from pixeltown-bugs-v1.journal) and the aquarium decor ids.
+  const BUG_BAIT_IDS = ['ladybug', 'butterfly', 'beetle', 'cricket', 'antlion', 'goldbeetle', 'moonwing', 'firefly', 'glowmoth'];
+  const DECOR_IDS = ['lily_pad', 'river_stones', 'sunken_chest', 'bug_lantern', 'coral_arch', 'kelp_forest', 'pearl_clam', 'tiny_castle'];
+
   // seeded rng for fish paths (mulberry32)
   function seedRng(seed) {
     let a = (seed === undefined ? 1 : Math.floor(Number(seed))) >>> 0 || 1;
@@ -319,7 +338,7 @@
   function cleanFull(raw) {
     let o = raw;
     if (typeof raw === 'string') { try { o = JSON.parse(raw); } catch (e) { o = null; } }
-    const out = { caught: {}, bosses: {}, trophies: {}, gear: { rod: 'stick', lure: 'none' }, bait: 0, bells: 0, stock: {}, baits: { quick: 0, rare: 0, big: 0 }, baitType: 'plain', sets: {}, badges: {}, tour: cleanTour(null), lair: {}, hall: {} };
+    const out = { caught: {}, bosses: {}, trophies: {}, gear: { rod: 'stick', lure: 'none' }, bait: 0, bells: 0, stock: {}, baits: { quick: 0, rare: 0, big: 0 }, baitType: 'plain', sets: {}, badges: {}, tour: cleanTour(null), lair: {}, hall: {}, cove: {}, bugBait: '', coveBait: '', decor: [] };
     if (!o || typeof o !== 'object' || Array.isArray(o)) return out;
     const c = o.caught && typeof o.caught === 'object' ? o.caught : {};
     Object.keys(c).forEach((id) => {
@@ -360,6 +379,16 @@
       if (!e || typeof e !== 'object' || typeof e.date !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(e.date)) return;
       out.hall[id] = { size: clampInt(e.size, 0, 9999), date: e.date };
     });
+    // MG3 keys: cove catches {id: {n, best}}, chosen bug bait / cove bait, aquarium decor on show (ids, in order)
+    const cv = o.cove && typeof o.cove === 'object' && !Array.isArray(o.cove) ? o.cove : {};
+    Object.keys(cv).forEach((id) => {
+      if (!COVE_BY_ID[id] || !cv[id] || typeof cv[id] !== 'object') return;
+      const n = clampInt(cv[id].n, 0, 99999);
+      if (n >= 1) out.cove[id] = { n, best: clampInt(cv[id].best, 0, 9999) };
+    });
+    if (typeof o.bugBait === 'string' && BUG_BAIT_IDS.indexOf(o.bugBait) >= 0) out.bugBait = o.bugBait;
+    if (typeof o.coveBait === 'string' && COVE_BAITS.indexOf(o.coveBait) >= 0) out.coveBait = o.coveBait;
+    (Array.isArray(o.decor) ? o.decor.slice(0, 32) : []).forEach((id) => { if (typeof id === 'string' && DECOR_IDS.indexOf(id) >= 0 && out.decor.indexOf(id) < 0) out.decor.push(id); });
     return out;
   }
   // Public clean: depth keys that still hold their defaults are left out, so a plain save stays byte-compatible
@@ -367,7 +396,7 @@
   const DEPTH_DEFAULTS = JSON.stringify(cleanFull(null));
   function clean(raw) {
     const o = cleanFull(raw), d = JSON.parse(DEPTH_DEFAULTS);
-    ['bells', 'stock', 'baits', 'baitType', 'sets', 'badges', 'tour', 'lair', 'hall'].forEach((k) => { if (JSON.stringify(o[k]) === JSON.stringify(d[k])) delete o[k]; });
+    ['bells', 'stock', 'baits', 'baitType', 'sets', 'badges', 'tour', 'lair', 'hall', 'cove', 'bugBait', 'coveBait', 'decor'].forEach((k) => { if (JSON.stringify(o[k]) === JSON.stringify(d[k])) delete o[k]; });
     return o;
   }
   function addTrophy(journal, bossId) {
@@ -393,6 +422,6 @@
     seasonOf, timeOf, iceOpen, pool, weightOf, rollFish, rollSize, seedRng,
     reel: { create },
     bite, journal: { clean, cleanFull, record, serialize, speciesCount, addTrophy, gearUnlocked, bossFor, trophyCount }, clean, serialize,
-    GEAR_RULES, BOSS_SPOTS,
+    GEAR_RULES, BOSS_SPOTS, COVE_FISH, COVE_BY_ID, COVE_BAITS, BUG_BAIT_IDS, DECOR_IDS,
   };
 }));

@@ -43,20 +43,12 @@
       "minHp": 92,
       "portalWalk": 16.1,
       "portalPathTiles": 103,
-<<<<<<< HEAD
-      "firstFrameMs": 370,
-=======
-      "firstFrameMs": 465,
->>>>>>> ftue-ft2
+      "firstFrameMs": 408,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-<<<<<<< HEAD
-      "wallMs": 8672
-=======
-      "wallMs": 10526
->>>>>>> ftue-ft2
+      "wallMs": 8836
     },
     "world-shore-b": {
       "seed": "4242",
@@ -93,20 +85,12 @@
       "minHp": 73,
       "portalWalk": 14.8,
       "portalPathTiles": 105,
-<<<<<<< HEAD
-      "firstFrameMs": 335,
-=======
-      "firstFrameMs": 430,
->>>>>>> ftue-ft2
+      "firstFrameMs": 387,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-<<<<<<< HEAD
-      "wallMs": 7639
-=======
-      "wallMs": 10427
->>>>>>> ftue-ft2
+      "wallMs": 8229
     },
     "world-shore-c": {
       "seed": "12345",
@@ -143,20 +127,12 @@
       "minHp": 79,
       "portalWalk": 16.1,
       "portalPathTiles": 103,
-<<<<<<< HEAD
-      "firstFrameMs": 330,
-=======
-      "firstFrameMs": 446,
->>>>>>> ftue-ft2
+      "firstFrameMs": 406,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-<<<<<<< HEAD
-      "wallMs": 8127
-=======
-      "wallMs": 10636
->>>>>>> ftue-ft2
+      "wallMs": 8626
     },
     "world-shore-d": {
       "seed": "4242",
@@ -193,20 +169,12 @@
       "minHp": 100,
       "portalWalk": 14.8,
       "portalPathTiles": 105,
-<<<<<<< HEAD
-      "firstFrameMs": 329,
-=======
-      "firstFrameMs": 345,
->>>>>>> ftue-ft2
+      "firstFrameMs": 351,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-<<<<<<< HEAD
-      "wallMs": 7912
-=======
-      "wallMs": 9911
->>>>>>> ftue-ft2
+      "wallMs": 8660
     },
     "world-shore-e": {
       "seed": "31337",
@@ -243,20 +211,12 @@
       "minHp": 100,
       "portalWalk": 12,
       "portalPathTiles": 81,
-<<<<<<< HEAD
-      "firstFrameMs": 398,
-=======
-      "firstFrameMs": 402,
->>>>>>> ftue-ft2
+      "firstFrameMs": 447,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-<<<<<<< HEAD
-      "wallMs": 7930
-=======
-      "wallMs": 8715
->>>>>>> ftue-ft2
+      "wallMs": 8723
     },
     "world-shore-f": {
       "seed": "777",
@@ -293,20 +253,12 @@
       "minHp": 100,
       "portalWalk": 11.6,
       "portalPathTiles": 78,
-<<<<<<< HEAD
-      "firstFrameMs": 574,
-=======
-      "firstFrameMs": 394,
->>>>>>> ftue-ft2
+      "firstFrameMs": 401,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-<<<<<<< HEAD
-      "wallMs": 10304
-=======
-      "wallMs": 8476
->>>>>>> ftue-ft2
+      "wallMs": 8543
     }
   },
   "isles": {
@@ -325,20 +277,12 @@
       "nearEmpty": 0,
       "deaths": 0,
       "kills": 0,
-<<<<<<< HEAD
-      "firstFrameMs": 968,
-=======
-      "firstFrameMs": 693,
->>>>>>> ftue-ft2
+      "firstFrameMs": 1008,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-<<<<<<< HEAD
-      "wallMs": 1396
-=======
-      "wallMs": 1145
->>>>>>> ftue-ft2
+      "wallMs": 1453
     },
     "isles-jungle-b": {
       "seed": "777",
@@ -355,20 +299,12 @@
       "nearEmpty": 0,
       "deaths": 0,
       "kills": 0,
-<<<<<<< HEAD
-      "firstFrameMs": 682,
-=======
-      "firstFrameMs": 683,
->>>>>>> ftue-ft2
+      "firstFrameMs": 857,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-<<<<<<< HEAD
-      "wallMs": 1116
-=======
-      "wallMs": 1115
->>>>>>> ftue-ft2
+      "wallMs": 1306
     },
     "isles-jungle-c": {
       "seed": "4242",
@@ -385,20 +321,12 @@
       "nearEmpty": 0,
       "deaths": 0,
       "kills": 0,
-<<<<<<< HEAD
-      "firstFrameMs": 666,
-=======
-      "firstFrameMs": 734,
->>>>>>> ftue-ft2
+      "firstFrameMs": 913,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-<<<<<<< HEAD
-      "wallMs": 1067
-=======
-      "wallMs": 1143
->>>>>>> ftue-ft2
+      "wallMs": 1319
     },
     "isles-jungle-d": {
       "seed": "31337",
@@ -415,21 +343,522 @@
       "nearEmpty": 0,
       "deaths": 0,
       "kills": 0,
-<<<<<<< HEAD
-      "firstFrameMs": 697,
-=======
-      "firstFrameMs": 703,
->>>>>>> ftue-ft2
+      "firstFrameMs": 915,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-<<<<<<< HEAD
-      "wallMs": 1109
-=======
-      "wallMs": 1124
->>>>>>> ftue-ft2
+      "wallMs": 1333
     }
   },
-  "dbAttempts": 0
+  "dbAttempts": 0,
+  "town": {
+    "generated": "tests/town-first-ten.test.js",
+    "profiles": {
+      "town-phone": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "touch": true,
+        "joinShownMs": 435,
+        "offlineOfferMs": 537,
+        "inTownMs": 2194,
+        "joinTaps": 2,
+        "tapsToFirstMove": 3,
+        "firstMoveMs": 2676,
+        "firstInteraction": 1.7,
+        "firstInteractionKind": "sellAtShop",
+        "gateReach": 6.3,
+        "gatePathCells": 47,
+        "gatePointer": true,
+        "whereToTaps": 1,
+        "places": 10,
+        "hudPieces": 7,
+        "hudOverlaps": 0,
+        "smallButtons": 0,
+        "tinyText": 0,
+        "underCanvas": 0,
+        "dbRequests": 0,
+        "sockets": 0,
+        "consoleErrors": 0,
+        "wallMs": 5556
+      },
+      "town-desktop": {
+        "viewport": {
+          "width": 1280,
+          "height": 720
+        },
+        "touch": false,
+        "joinShownMs": 1180,
+        "offlineOfferMs": 1279,
+        "inTownMs": 3421,
+        "joinTaps": 2,
+        "tapsToFirstMove": 3,
+        "firstMoveMs": 3097,
+        "firstInteraction": 1.7,
+        "firstInteractionKind": "sellAtShop",
+        "gateReach": 6.3,
+        "gatePathCells": 47,
+        "gatePointer": true,
+        "whereToTaps": 1,
+        "places": 10,
+        "hudPieces": 5,
+        "hudOverlaps": 0,
+        "smallButtons": 0,
+        "tinyText": 0,
+        "underCanvas": 0,
+        "dbRequests": 0,
+        "sockets": 0,
+        "consoleErrors": 0,
+        "wallMs": 7981
+      }
+    }
+  },
+  "isles2": {
+    "generated": "tests/isles-first-ten.test.js",
+    "viewport": {
+      "width": 390,
+      "height": 844,
+      "hasTouch": true,
+      "isMobile": true
+    },
+    "dtSim": 0.03333333333333333,
+    "profiles": {
+      "isles2-home-a": {
+        "isle": "home",
+        "pack": "meadow",
+        "seed": "123",
+        "simSeconds": 600,
+        "tameSpecies": 7,
+        "feedableSpecies": 0,
+        "firstAction": 3.7,
+        "firstGather": 7,
+        "firstHit": 3.7,
+        "firstDrop": 4.6,
+        "firstTame": null,
+        "firstMedal": null,
+        "firstTameOrDrop": 4.6,
+        "maxRewardGap": 42.6,
+        "gapAt": 249.5,
+        "deaths": 0,
+        "minHp": 22,
+        "counts": {
+          "hit": 689,
+          "drop": 64,
+          "gather": 60
+        },
+        "tamed": [],
+        "kills": 64,
+        "hintSamples": 581,
+        "hintEmpty": 0,
+        "hintNoAction": 0,
+        "hintActionPct": 100,
+        "firstFrameMs": 153,
+        "smallButtons": 0,
+        "underCanvas": 0,
+        "stickOverlaps": 0,
+        "tinyText": 5,
+        "consoleErrors": 0,
+        "wallMs": 2242
+      },
+      "isles2-home-b": {
+        "isle": "home",
+        "pack": "meadow",
+        "seed": "4242",
+        "simSeconds": 600,
+        "tameSpecies": 7,
+        "feedableSpecies": 0,
+        "firstAction": 1.1,
+        "firstGather": 1.1,
+        "firstHit": 5.7,
+        "firstDrop": 7.1,
+        "firstTame": null,
+        "firstMedal": null,
+        "firstTameOrDrop": 7.1,
+        "maxRewardGap": 68.3,
+        "gapAt": 194.9,
+        "deaths": 0,
+        "minHp": 22,
+        "counts": {
+          "gather": 48,
+          "hit": 395,
+          "drop": 41
+        },
+        "tamed": [],
+        "kills": 41,
+        "hintSamples": 581,
+        "hintEmpty": 0,
+        "hintNoAction": 0,
+        "hintActionPct": 100,
+        "firstFrameMs": 149,
+        "smallButtons": 0,
+        "underCanvas": 0,
+        "stickOverlaps": 0,
+        "tinyText": 5,
+        "consoleErrors": 0,
+        "wallMs": 2076
+      },
+      "isles2-jungle-a": {
+        "isle": "jungle",
+        "pack": "jungle",
+        "seed": "123",
+        "simSeconds": 602,
+        "tameSpecies": 1,
+        "feedableSpecies": 1,
+        "firstAction": 1,
+        "firstGather": 1,
+        "firstHit": 118.5,
+        "firstDrop": 188.6,
+        "firstTame": 43.1,
+        "firstMedal": 43.1,
+        "firstTameOrDrop": 43.1,
+        "maxRewardGap": 44.4,
+        "gapAt": 43.1,
+        "deaths": 3,
+        "minHp": 0,
+        "counts": {
+          "gather": 106,
+          "feed": 46,
+          "tame": 5,
+          "medal": 3,
+          "hit": 517,
+          "drop": 31
+        },
+        "tamed": [
+          "chompbill",
+          "chompbill",
+          "fernraptor",
+          "fernraptor"
+        ],
+        "kills": 31,
+        "hintSamples": 583,
+        "hintEmpty": 0,
+        "hintNoAction": 0,
+        "hintActionPct": 100,
+        "firstFrameMs": 172,
+        "smallButtons": 0,
+        "underCanvas": 0,
+        "stickOverlaps": 0,
+        "tinyText": 5,
+        "consoleErrors": 0,
+        "wallMs": 2729
+      },
+      "isles2-jungle-b": {
+        "isle": "jungle",
+        "pack": "jungle",
+        "seed": "4242",
+        "simSeconds": 602,
+        "tameSpecies": 1,
+        "feedableSpecies": 1,
+        "firstAction": 2.9,
+        "firstGather": 2.9,
+        "firstHit": 75.5,
+        "firstDrop": 135.9,
+        "firstTame": 48.6,
+        "firstMedal": 48.6,
+        "firstTameOrDrop": 48.6,
+        "maxRewardGap": 66.4,
+        "gapAt": 48.6,
+        "deaths": 1,
+        "minHp": 0,
+        "counts": {
+          "gather": 63,
+          "feed": 54,
+          "tame": 2,
+          "medal": 3,
+          "hit": 673,
+          "drop": 50
+        },
+        "tamed": [
+          "canopy_glider",
+          "fernraptor"
+        ],
+        "kills": 50,
+        "hintSamples": 583,
+        "hintEmpty": 0,
+        "hintNoAction": 0,
+        "hintActionPct": 100,
+        "firstFrameMs": 150,
+        "smallButtons": 0,
+        "underCanvas": 0,
+        "stickOverlaps": 0,
+        "tinyText": 5,
+        "consoleErrors": 0,
+        "wallMs": 3038
+      },
+      "isles2-tundra-a": {
+        "isle": "tundra",
+        "pack": "tundra",
+        "seed": "123",
+        "simSeconds": 607,
+        "tameSpecies": 6,
+        "feedableSpecies": 3,
+        "firstAction": 1,
+        "firstGather": 1,
+        "firstHit": 14.1,
+        "firstDrop": 15.6,
+        "firstTame": 98.1,
+        "firstMedal": 98.1,
+        "firstTameOrDrop": 15.6,
+        "maxRewardGap": 73.9,
+        "gapAt": 475.6,
+        "deaths": 3,
+        "minHp": 0,
+        "counts": {
+          "gather": 58,
+          "hit": 971,
+          "drop": 64,
+          "feed": 21,
+          "tame": 1,
+          "medal": 4
+        },
+        "tamed": [
+          "rimewolf"
+        ],
+        "kills": 64,
+        "hintSamples": 588,
+        "hintEmpty": 0,
+        "hintNoAction": 0,
+        "hintActionPct": 100,
+        "firstFrameMs": 192,
+        "smallButtons": 0,
+        "underCanvas": 0,
+        "stickOverlaps": 0,
+        "tinyText": 5,
+        "consoleErrors": 0,
+        "wallMs": 2160
+      },
+      "isles2-tundra-b": {
+        "isle": "tundra",
+        "pack": "tundra",
+        "seed": "4242",
+        "simSeconds": 617,
+        "tameSpecies": 6,
+        "feedableSpecies": 3,
+        "firstAction": 1,
+        "firstGather": 1,
+        "firstHit": 12.4,
+        "firstDrop": 14.1,
+        "firstTame": 314.7,
+        "firstMedal": 314.7,
+        "firstTameOrDrop": 14.1,
+        "maxRewardGap": 139.5,
+        "gapAt": 33.1,
+        "deaths": 4,
+        "minHp": 0,
+        "counts": {
+          "gather": 20,
+          "hit": 674,
+          "drop": 25,
+          "feed": 8,
+          "tame": 1,
+          "medal": 3
+        },
+        "tamed": [
+          "rimewolf"
+        ],
+        "kills": 25,
+        "hintSamples": 598,
+        "hintEmpty": 0,
+        "hintNoAction": 0,
+        "hintActionPct": 100,
+        "firstFrameMs": 173,
+        "smallButtons": 0,
+        "underCanvas": 0,
+        "stickOverlaps": 0,
+        "tinyText": 5,
+        "consoleErrors": 0,
+        "wallMs": 1983
+      },
+      "isles2-reef-a": {
+        "isle": "reef",
+        "pack": "reef",
+        "seed": "123",
+        "simSeconds": 600,
+        "tameSpecies": 6,
+        "feedableSpecies": 0,
+        "firstAction": 0.8,
+        "firstGather": 0.8,
+        "firstHit": 11.4,
+        "firstDrop": 12.9,
+        "firstTame": null,
+        "firstMedal": null,
+        "firstTameOrDrop": 12.9,
+        "maxRewardGap": 33.9,
+        "gapAt": 188.5,
+        "deaths": 0,
+        "minHp": 14,
+        "counts": {
+          "gather": 111,
+          "hit": 965,
+          "drop": 121
+        },
+        "tamed": [],
+        "kills": 121,
+        "hintSamples": 581,
+        "hintEmpty": 0,
+        "hintNoAction": 0,
+        "hintActionPct": 100,
+        "firstFrameMs": 155,
+        "smallButtons": 0,
+        "underCanvas": 0,
+        "stickOverlaps": 0,
+        "tinyText": 5,
+        "consoleErrors": 0,
+        "wallMs": 2170
+      },
+      "isles2-reef-b": {
+        "isle": "reef",
+        "pack": "reef",
+        "seed": "4242",
+        "simSeconds": 609,
+        "tameSpecies": 6,
+        "feedableSpecies": 0,
+        "firstAction": 3.3,
+        "firstGather": 3.3,
+        "firstHit": 6.5,
+        "firstDrop": 23.8,
+        "firstTame": null,
+        "firstMedal": null,
+        "firstTameOrDrop": 23.8,
+        "maxRewardGap": 161.8,
+        "gapAt": 255.2,
+        "deaths": 1,
+        "minHp": 0,
+        "counts": {
+          "gather": 36,
+          "hit": 287,
+          "drop": 27
+        },
+        "tamed": [],
+        "kills": 27,
+        "hintSamples": 590,
+        "hintEmpty": 0,
+        "hintNoAction": 0,
+        "hintActionPct": 100,
+        "firstFrameMs": 136,
+        "smallButtons": 0,
+        "underCanvas": 0,
+        "stickOverlaps": 0,
+        "tinyText": 5,
+        "consoleErrors": 0,
+        "wallMs": 1946
+      },
+      "isles2-mars-a": {
+        "isle": "mars",
+        "pack": "mars",
+        "seed": "123",
+        "simSeconds": 600,
+        "tameSpecies": 4,
+        "feedableSpecies": 0,
+        "firstAction": 3.4,
+        "firstGather": 3.4,
+        "firstHit": 3.9,
+        "firstDrop": 4.9,
+        "firstTame": null,
+        "firstMedal": null,
+        "firstTameOrDrop": 4.9,
+        "maxRewardGap": 46.6,
+        "gapAt": 83.7,
+        "deaths": 0,
+        "minHp": 1,
+        "counts": {
+          "gather": 183,
+          "hit": 331,
+          "drop": 40
+        },
+        "tamed": [],
+        "kills": 40,
+        "hintSamples": 581,
+        "hintEmpty": 0,
+        "hintNoAction": 0,
+        "hintActionPct": 100,
+        "firstFrameMs": 145,
+        "smallButtons": 0,
+        "underCanvas": 0,
+        "stickOverlaps": 0,
+        "tinyText": 5,
+        "consoleErrors": 0,
+        "wallMs": 2327
+      },
+      "isles2-mars-b": {
+        "isle": "mars",
+        "pack": "mars",
+        "seed": "4242",
+        "simSeconds": 616,
+        "tameSpecies": 4,
+        "feedableSpecies": 0,
+        "firstAction": 0.8,
+        "firstGather": 0.8,
+        "firstHit": 8.3,
+        "firstDrop": 9.3,
+        "firstTame": null,
+        "firstMedal": 490.8,
+        "firstTameOrDrop": 9.3,
+        "maxRewardGap": 54.3,
+        "gapAt": 321.5,
+        "deaths": 2,
+        "minHp": 0,
+        "counts": {
+          "gather": 96,
+          "hit": 625,
+          "drop": 87,
+          "medal": 1
+        },
+        "tamed": [],
+        "kills": 87,
+        "hintSamples": 597,
+        "hintEmpty": 0,
+        "hintNoAction": 0,
+        "hintActionPct": 100,
+        "firstFrameMs": 152,
+        "smallButtons": 0,
+        "underCanvas": 0,
+        "stickOverlaps": 0,
+        "tinyText": 5,
+        "consoleErrors": 0,
+        "wallMs": 2320
+      }
+    },
+    "reach": {
+      "reef": true,
+      "mars": true,
+      "marsVia": "panel",
+      "rocketCorePanel": {
+        "ironListed": true,
+        "ironCraftable": false,
+        "driftListed": true
+      },
+      "gathered": {
+        "jungle": {
+          "wood": 4,
+          "vine_rope": 2,
+          "amber": 2
+        },
+        "reef": {
+          "driftwood": 3,
+          "pearl": 1
+        },
+        "tundra": {
+          "frost_crystal": 2
+        }
+      },
+      "steps": [
+        "sail home -> jungle: ok",
+        "gather on the jungle: done",
+        "craft a raft (Craft panel): done",
+        "sail jungle -> reef: ok",
+        "gather on the reef: done",
+        "sail reef -> tundra: ok",
+        "gather on the tundra: done",
+        "craft a rocket core (Craft panel): done",
+        "sail tundra -> mars: ok"
+      ],
+      "panelButtonsClosed": 0,
+      "wallMs": 4355
+    },
+    "dbAttempts": 0,
+    "sockets": 0
+  }
 }

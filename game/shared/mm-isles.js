@@ -2,7 +2,9 @@
 // medals summary (`pixeltown-medals-isles-v1` = {"v":1,"m":[ids]}, the page is its single writer). Pure data + validation, no DOM.
 // A save is { v, at, returnTo, unlock[], isles{id:{seed,pos,fog,chests}}, home{grid[<=400],stable{slots}}, log{seen,ko,tamed,bugs,fish},
 // rides, wild{<=4} }. B10 adds (all additive): home.inv{kind:n} + home.seeded (MMHomestead decor), visited[isle], bosses[id],
-// gather{day, got{isle:[idx]}, log{res:n}} (daily-free gather spots). X2 adds inv{item:n} (crafting stacks, <=64 x 999). X4 adds sg:1 (the one-time saddle grandfather gift was given; absent = not yet). X6 adds beat[boss id] (bosses defeated or tamed; absent = none yet). clean() always returns a valid save (corrupt -> defaults) and keeps the whole key under 20 KB.
+// gather{day, got{isle:[idx]}, log{res:n}} (daily-free gather spots). X2 adds inv{item:n} (crafting stacks, <=64 x 999). X4 adds sg:1 (the one-time saddle grandfather gift was given; absent = not yet). X6 adds beat[boss id] (bosses defeated or tamed; absent = none yet). X7 adds hp (1..999, the hero HP carried across a trip; absent = full)
+// and home.made{kind:1..999} (MMHomeBuild decor crafted). XB adds trophies{trophy_*: 1 on the home pedestal | 2 with the one-time
+// rematch gold trim} (absent = none). clean() always returns a valid save (corrupt -> defaults) and keeps the whole key under 20 KB.
 // This module never touches `pixeltown-save-v1`.
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -25,6 +27,7 @@
   const MAX_BOSSES = 16, MAX_GOT = 16;
   const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
   const BAD = ['__proto__', 'constructor', 'prototype'];
+  const TROPHY_IDS = ['trophy_tyrant', 'trophy_hydra', 'trophy_dragon', 'trophy_titan']; // XB: the MMIsleCraft boss keepsakes
 
   const ISLES = {
     home: { id: 'home', pack: 'home', size: 96, fixedSeed: true },
@@ -150,6 +153,7 @@
         out.home.stable.slots = int(isObj(raw.home.stable) ? raw.home.stable.slots : 12, 12, 24, 12);
         if (isObj(raw.home.inv)) { const inv = cleanCounts(raw.home.inv); Object.keys(raw.home.inv).forEach((k) => { if (KEY_RE.test(k) && BAD.indexOf(k) < 0 && raw.home.inv[k] === 0 && Object.keys(inv).length < MAX_LOG) inv[k] = 0; }); out.home.inv = inv; }
         if (raw.home.seeded === 1 || raw.home.seeded === true) out.home.seeded = 1;
+        if (isObj(raw.home.made)) { const md = {}; Object.keys(raw.home.made).slice(0, 32).forEach((k) => { const n = raw.home.made[k]; if (Object.keys(md).length < 16 && /^[a-z_]{1,16}$/.test(k) && BAD.indexOf(k) < 0 && Number.isInteger(n) && n >= 1) md[k] = Math.min(999, n); }); if (Object.keys(md).length) out.home.made = md; }
       }
       if (isObj(raw.log)) LOG_KINDS.forEach((k) => { out.log[k] = cleanCounts(raw.log[k]); });
       out.rides = int(raw.rides, 0, 99999, 0);
@@ -159,7 +163,9 @@
       out.gather = cleanGather(raw.gather);
       out.inv = cleanInvX(raw.inv);
       if (raw.sg === 1 || raw.sg === true) out.sg = 1;
+      if (typeof raw.hp === 'number' && Number.isFinite(raw.hp) && raw.hp >= 1) out.hp = Math.min(999, Math.ceil(raw.hp));
       if (Array.isArray(raw.beat)) { const b = []; raw.beat.slice(0, 64).forEach((id) => { if (b.length < MAX_BOSSES && typeof id === 'string' && KEY_RE.test(id) && BAD.indexOf(id) < 0 && b.indexOf(id) < 0) b.push(id); }); if (b.length) out.beat = b; }
+      if (isObj(raw.trophies)) { const tr = {}; TROPHY_IDS.forEach((id) => { if (has(raw.trophies, id) && (raw.trophies[id] === 1 || raw.trophies[id] === 2)) tr[id] = raw.trophies[id]; }); if (Object.keys(tr).length) out.trophies = tr; }
       // size guard: shed the least valuable data first until the key fits
       const size = () => JSON.stringify(out).length;
       if (size() > MAX_BYTES) out.inv = {};
@@ -292,6 +298,16 @@
     if (save.beat.indexOf(id) >= 0 || save.beat.length >= MAX_BOSSES) return false;
     save.beat.push(id); return true;
   }
+  // XB: a trophy set on the home pedestal (tier 1), or given its one-time rematch gold trim (tier 2). Never lowers a tier.
+  // Returns true only when the tier went up.
+  function setTrophy(save, id, tier) {
+    if (!isObj(save) || TROPHY_IDS.indexOf(id) < 0 || (tier !== 1 && tier !== 2)) return false;
+    if (!isObj(save.trophies)) save.trophies = {};
+    const cur = has(save.trophies, id) ? save.trophies[id] | 0 : 0;
+    if (cur >= tier) return false;
+    save.trophies[id] = tier; return true;
+  }
+  const trophyTier = (save, id) => (isObj(save) && isObj(save.trophies) && TROPHY_IDS.indexOf(id) >= 0 && has(save.trophies, id) ? save.trophies[id] | 0 : 0);
   // map a page ?isle= value (isle id or pack id / alias) to the isle id: meadow -> home, tundra -> ice
   const PACK_TO_ISLE = { meadow: 'home', home: 'home', tundra: 'ice', ice: 'ice', jungle: 'jungle', reef: 'reef', mars: 'mars' };
   const isleFor = (v) => (typeof v === 'string' && has(PACK_TO_ISLE, v) ? PACK_TO_ISLE[v] : '');
@@ -307,6 +323,7 @@
     KEY: KEY, MEDALS_KEY: MEDALS_KEY, ISLES: ISLES, ROUTES: ROUTES, MAX_GRID: MAX_GRID, MAX_WILD: MAX_WILD, MAX_BYTES: MAX_BYTES,
     LOG_KINDS: LOG_KINDS, MEDAL_IDS: MEDAL_IDS, MEDAL_NAMES: MEDAL_NAMES, WILD_KEEP_MS: WILD_KEEP_MS, SAVED_ISLES: SAVED_ISLES,
     noteVisit: noteVisit, noteBoss: noteBoss, noteBeat: noteBeat, isleFor: isleFor, cleanGather: cleanGather,
+    TROPHY_IDS: TROPHY_IDS, setTrophy: setTrophy, trophyTier: trophyTier,
     defaults: defaults, clean: clean, isUnlocked: isUnlocked, meetsUnlock: meetsUnlock, unlockIsle: unlockIsle, routeBetween: routeBetween,
     destinations: destinations, noteLog: noteLog, logCount: logCount, setPos: setPos, lastPos: lastPos, cleanMedals: cleanMedals,
     medalsFor: medalsFor, writeMedals: writeMedals, load: load, write: write

@@ -1,0 +1,24 @@
+{
+  "about": "QT Town first-ten-minutes gate (NEXT-SLICES-3). OFFLINE only (blockDb + SDK stub + Play offline). Fresh profiles (localStorage cleared). Simulated time: the Phaser loop sleeps and the test steps game.headlessStep with a fixed 1/60 s. targets = the QT acceptance numbers. knownIssues = the measured value on the base branch for a target the game misses today (assert: not worse than this baseline; print the gap). legacySmall / legacyTiny / legacyUnderCanvas = frozen allow-lists of controls under 44 px / text under 12 px / controls whose centre shows the canvas, seen on the base branch: they may only shrink, a new offender fails.",
+  "wallBudgetMs": 90000,
+  "targets": { "offlineOfferMs": 6000, "tapsToFirstMove": 5, "firstMoveMs": 10000, "firstInteraction": 60, "gateReach": 90, "whereToTaps": 1, "places": 10 },
+  "profiles": [
+    { "id": "town-phone", "viewport": { "width": 390, "height": 844 }, "touch": true, "seed": 20261122, "clock": 0 },
+    { "id": "town-desktop", "viewport": { "width": 1280, "height": 720 }, "touch": false, "seed": 4242, "clock": 0 }
+  ],
+  "knownIssues": {},
+  "legacySmall": {
+    "_notes": "TN2 fixed every entry measured on 67cc086 (6 phone + 8 desktop controls at 40 px: the panel toggle, the quick-chat row, the trophy / Map / World map / Museum buttons are now >= 44 px). The lists are empty: any control under 44 px fails the gate.",
+    "town-phone": [],
+    "town-desktop": []
+  },
+  "legacyTiny": {
+    "_notes": "TN2 raised the In-town panel lines (streak, town rating, tidy, birthday, bestie, Map / World map) and the phone action-button labels (Emotes, Tilt, the A/B/P/C captions) from 10-11 px to 12 px. The lists are empty: any visible text under 12 px fails the gate.",
+    "town-phone": [],
+    "town-desktop": []
+  },
+  "legacyUnderCanvas": {
+    "_notes": "TN2: on desktop the In-town panel may use the full right edge (max-height 100vh - 32px) and the quick-chat row wraps, so Today, Journal, Settings and the last quick-chat button are reachable without scrolling at 1280x720. Empty: any clipped control fails the gate.",
+    "town-desktop": []
+  }
+}

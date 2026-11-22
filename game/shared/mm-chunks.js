@@ -124,14 +124,30 @@
   }
 
   // World = generated data + bounded diffs. diffs: chunk key -> { idx: block }.
-  function createWorld(seed, savedDiffs) {
+  // opts (optional, additive): { filter(wx,wy,wz,id)->id, yMin, yMax, maxId } layers extra bands over the generator for rows
+  // yMin..yMax only (Deepdelve's grotto band); maxId lets saved diffs hold those extra ids. Without opts nothing changes.
+  function createWorld(seed, savedDiffs, opts) {
     const chunks = new Map();
     let diffs = new Map(), diffCount = 0;
+    const filt = opts && typeof opts.filter === 'function' ? opts.filter : null;
+    const fy0 = filt ? opts.yMin | 0 : 0, fy1 = filt ? (typeof opts.yMax === 'number' ? opts.yMax : WORLD.cy * SIZE - 1) : -1;
+    const maxId = opts && Number.isInteger(opts.maxId) ? Math.max(12, Math.min(255, opts.maxId)) : 12;
+    const genAt = (wx, wy, wz) => { const b = blockAt(wx, wy, wz, seed); return filt && wy >= fy0 && wy <= fy1 ? filt(wx, wy, wz, b) : b; };
+    function genChunk(cx, cy, cz) {
+      const c = generate(seed, cx, cy, cz);
+      if (!filt || !inWorld(cx, cy, cz)) return c;
+      const y0 = Math.max(fy0, cy * SIZE), y1 = Math.min(fy1, cy * SIZE + SIZE - 1);
+      for (let wy = y0; wy <= y1; wy++) for (let z = 0; z < SIZE; z++) for (let x = 0; x < SIZE; x++) {
+        const i = x + z * SIZE + (wy - cy * SIZE) * 256;
+        c.data[i] = filt(cx * SIZE + x, wy, cz * SIZE + z, c.data[i]);
+      }
+      return c;
+    }
     function getChunk(cx, cy, cz) {
       const k = key(cx, cy, cz);
       let c = chunks.get(k);
       if (!c) {
-        c = generate(seed, cx, cy, cz);
+        c = genChunk(cx, cy, cz);
         const d = diffs.get(k);
         if (d) for (const i in d) c.data[i] = d[i];
         chunks.set(k, c);
@@ -151,7 +167,7 @@
       const lx = wx - cx * SIZE, ly = wy - cy * SIZE, lz = wz - cz * SIZE, i = lx + lz * SIZE + ly * 256;
       if (c.data[i] === id) return [];
       const k = key(cx, cy, cz);
-      const gen = blockAt(wx, wy, wz, seed);
+      const gen = genAt(wx, wy, wz);
       let d = diffs.get(k);
       const had = !!d && (i in d);
       if (id === gen) {
@@ -199,7 +215,7 @@
         const d = {};
         for (let j = 0; j + 1 < e[3].length && diffCount < MAX_DIFFS; j += 2) {
           const i = e[3][j], b = e[3][j + 1];
-          if (i >= 0 && i < VOL && b >= 0 && b <= 12) { d[i] = b; diffCount++; }
+          if (i >= 0 && i < VOL && b >= 0 && b <= maxId) { d[i] = b; diffCount++; }
         }
         if (Object.keys(d).length) diffs.set(key(e[0], e[1], e[2]), d);
       }

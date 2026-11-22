@@ -61,7 +61,10 @@
   function save() {
     profile = P.clean(profile);
     try { localStorage.setItem(KEY, JSON.stringify(profile)); } catch (e) { say('Could not save here (storage is blocked).', true); }
+    hubReport();
   }
+  // Hub map progress (MMHubProfile, its own key): milestones this save and the Realm finds already show.
+  function hubReport() { try { var hs = profile.heroes.concat(profile.hall), top = hs.reduce(function (n, h) { return Math.max(n, h.level || 0); }, 0); window.MMHubProfile.sync(localStorage, 'lantern', [hs.length > 0 && 'hero1', !!(S && S.readFinds(localStorage).recent.some(function (f) { return f.src === 'dungeon'; })) && 'warren', top >= 5 && 'level5', top >= 10 && 'level10', profile.hall.some(function (h) { return h.how === 'retire'; }) && 'retire']); } catch (e) { /* hub map progress is optional */ } }
   function loadActive() {
     var raw = null;
     try { raw = localStorage.getItem(ACTIVE_KEY); } catch (e) { raw = null; }
@@ -190,9 +193,12 @@
   function doImport() {
     var real = legacyRealm();
     if (!real) { say('No old Realm hero was found.', true); return; }
-    profile = P.importLegacy(real, profile); save();
+    profile = P.importLegacy(real, profile);
+    var sb = profile.skippedSoulbound || 0; // read before save(): clean() drops this non-saved count
+    save();
     var h = heroById('legacy-ranger');
-    if (h) { selected = h.id; say('Your Legacy Ranger is here. The old save was left untouched.'); }
+    var sbText = sb ? ' ' + sb + ' soulbound item' + (sb === 1 ? '' : 's') + ' (T11+) stayed in the Realm, because soulbound gear never leaves it.' : '';
+    if (h) { selected = h.id; say('Your Legacy Ranger is here. The old save was left untouched.' + sbText); }
     else say('Your roster is full (12 heroes), so the Legacy Ranger was not added. Retire or free a slot and try again.', true);
     render();
   }
@@ -235,6 +241,7 @@
       setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
       try { localStorage.setItem(NOTE_KEY, JSON.stringify({ v: 1, at: todayUtc() })); } catch (e2) { /* blocked: the note just stays as it was */ }
       renderNote();
+      downloaded = true; dropArmed = false; renderPregear();
       say('Backup file saved. Keep it somewhere safe.');
     } catch (e) { say('Could not make the backup file.', true); }
   }
@@ -246,6 +253,7 @@
     pending = null;
     var p = $('restore-confirm'); p.hidden = true;
     $('restore-list').textContent = '';
+    $('restore-summary').textContent = ''; $('restore-summary').hidden = true;
     if (wasOpen && lastFocus && lastFocus.focus) { try { lastFocus.focus(); } catch (e) { /* ignore */ } }
   }
   // Keep Tab / focus inside the restore panel until it is closed; Escape cancels.
@@ -262,14 +270,15 @@
     var p = $('restore-confirm');
     if (!p.hidden && !p.contains(e.target)) $('restore-no').focus();
   });
-  function showConfirm(plan) {
+  function showConfirm(plan, summary, marks) {
     pending = plan;
     var list = $('restore-list'); list.textContent = '';
     plan.keys.forEach(function (k) {
       var li = el('li', '', B.labelOf(k));
-      li.appendChild(el('span', 'muted', ' (' + k + ')'));
+      li.appendChild(el('span', 'muted', ' (' + k + ')' + (marks && marks[k] ? ': ' + marks[k] : '')));
       list.appendChild(li);
     });
+    if (summary) { $('restore-summary').textContent = summary; $('restore-summary').hidden = false; }
     $('restore-confirm').hidden = false;
     say('Check the list below, then Confirm or Cancel. Nothing has changed yet.');
     lastFocus = document.activeElement && document.activeElement !== document.body ? document.activeElement : $('restore');
@@ -281,6 +290,7 @@
     if (!plan) return;
     var r;
     try { r = B.apply(localStorage, plan); } catch (e) { r = { ok: false, message: 'Restore failed, nothing was changed.' }; }
+    renderPregear();
     if (r && r.ok) {
       profile = load(); selected = null; render();
       say('Restored ' + r.restored.length + ' saved item' + (r.restored.length === 1 ? '' : 's') + '.');
@@ -302,6 +312,51 @@
       else say((plan && plan.message) || 'That file does not look like a Mad Maze backup.', true);
     };
     try { fr.readAsText(file); } catch (e) { say('Could not read that file.', true); }
+  }
+
+  // SV3: the one-time pre-gear snapshot (MMBackup.snapshotPregear). Offered here only when it exists, restored only after the same
+  // plan + Confirm step as a file (never automatically), and deletable (tap twice) once a normal backup file has been downloaded.
+  var downloaded = false, dropArmed = false;
+  function pregearAt() {
+    try { var o = JSON.parse(localStorage.getItem(B.PREGEAR_KEY)); var t = o && typeof o.at === 'number' ? new Date(o.at) : null; return t && isFinite(t.getTime()) ? t.toISOString().slice(0, 10) : null; } catch (e) { return null; }
+  }
+  function renderPregear() {
+    var row = $('pregear-row'); if (!row) return;
+    var has = !!(B.hasPregear && B.hasPregear(localStorage));
+    row.hidden = !has;
+    if (!has) { dropArmed = false; return; }
+    var at = pregearAt(), note = loadNote();
+    $('pregear-note').textContent = 'A safety copy of your saves was kept from just before gear arrived' + (at ? ' (' + at + ')' : '') + '. You can restore it, and nothing changes until you confirm.';
+    var canDrop = downloaded || !!(note && at && note >= at);
+    var d = $('pregear-drop');
+    d.hidden = !canDrop;
+    d.textContent = dropArmed ? 'Tap again to delete the snapshot' : 'Delete the old snapshot';
+    d.setAttribute('aria-label', dropArmed ? 'Confirm: delete the old pre-gear snapshot' : 'Delete the old pre-gear snapshot');
+    $('pregear-keep').hidden = !(canDrop && dropArmed);
+  }
+  function restorePregear() {
+    hideConfirm(); dropArmed = false; renderPregear();
+    var plan;
+    try { plan = B.planRestorePregear(localStorage); } catch (e) { plan = { ok: false }; }
+    if (!plan || !plan.ok) { say((plan && plan.message) || 'The pre-gear snapshot could not be read, so nothing was changed.', true); return; }
+    var marks = {};
+    plan.changed.forEach(function (k) { marks[k] = 'changes'; });
+    plan.same.forEach(function (k) { marks[k] = 'already the same'; });
+    plan.added.forEach(function (k) { marks[k] = 'not on this device now'; });
+    var n = plan.items, pl = function (x, w) { return x + ' ' + w + (x === 1 ? '' : 's'); };
+    var summary = 'Pre-gear snapshot' + (plan.at ? ' from ' + new Date(plan.at).toISOString().slice(0, 10) : '') + ': ' +
+      pl(plan.changed.length, 'save') + ' would change, ' + plan.same.length + ' already the same, ' + plan.added.length + ' would be added. ' +
+      'Realm pack: ' + pl(n.now, 'item') + ' now, ' + pl(n.then, 'item') + ' in the snapshot.' +
+      (plan.kept.length ? ' ' + pl(plan.kept.length, 'other save') + ' not in the snapshot stay as they are.' : '');
+    showConfirm(plan, summary, marks);
+  }
+  function dropPregear() {
+    if (!dropArmed) { dropArmed = true; renderPregear(); say('Delete the pre-gear snapshot? Tap again to delete it, or Keep it. Your backup file is not touched.'); $('pregear-drop').focus(); return; }
+    dropArmed = false;
+    var ok = false;
+    try { ok = B.dropPregear(localStorage); } catch (e) { ok = false; }
+    renderPregear();
+    if (ok) say('The old pre-gear snapshot was deleted.'); else say('Could not delete the snapshot.', true);
   }
 
   // ---------- read-only Abilities and unlocks panel ----------
@@ -621,6 +676,9 @@
   $('rest').addEventListener('click', rest);
   $('backup').addEventListener('click', downloadBackup);
   $('restore-yes').addEventListener('click', confirmRestore);
+  $('pregear-restore').addEventListener('click', restorePregear);
+  $('pregear-drop').addEventListener('click', dropPregear);
+  $('pregear-keep').addEventListener('click', function () { dropArmed = false; renderPregear(); say('Kept the pre-gear snapshot.'); $('pregear-restore').focus(); });
   $('restore-no').addEventListener('click', function () { hideConfirm(); say('Restore cancelled. Nothing was changed.'); });
   $('restore').addEventListener('change', function (e) { restoreFile(e.target.files && e.target.files[0]); e.target.value = ''; });
   $('start').addEventListener('click', function (e) {
@@ -634,8 +692,10 @@
   // another tab (a Realm World or Warren run) paid finds into the stash: reload, so a later save here never writes an older copy
   window.addEventListener('storage', function (e) { if (e.key === KEY || e.key === null) { profile = load(); render(); } });
   selected = loadActive().heroId;
+  hubReport();
   render();
   renderNote();
+  renderPregear();
   if (settled && settled.ok && (settled.items || settled.fame)) say(S.text(settled).replace(/, \+\d+ shards/, '') + ' from your travels.');
   startScene();
   loadArt();

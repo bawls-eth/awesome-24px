@@ -167,7 +167,12 @@
 
   function create(arena, opts) {
     opts = opts || {};
-    const hubExit = opts.home === '../../hub/index.html'; // set only by mad-maze.js from an exact ?from=hub
+    const hubExit = opts.fromHub === undefined ? opts.home === '../../hub/index.html' : opts.fromHub === true; // set only by mad-maze.js from an exact ?from=hub
+    // The summary's Back link (NAV-AUDIT #8/#12): mad-maze.js passes the page's exit (the previous place, else the World map) and its
+    // "Back to <place>" label. Only a plain relative href is accepted (no scheme, no //); anything else keeps the old town / map link.
+    const homeOk = typeof opts.home === 'string' && opts.home.length <= 200 && !/^\/\//.test(opts.home) && /^[A-Za-z0-9_.\/?=&%#-]+$/.test(opts.home);
+    const homeHref = homeOk ? opts.home : (hubExit ? '../../hub/index.html' : '../../index.html');
+    const homeText = typeof opts.homeLabel === 'string' && /^Back to [A-Za-z ]{1,30}$/.test(opts.homeLabel) ? opts.homeLabel : (hubExit ? 'Back to the map' : 'Back to town');
     // set only by mad-maze.js from a regex-checked ?return= (a Realm World portal): the exit goes back to that portal tile
     const backWorld = typeof opts.returnTo === 'string' && /^index\.html\?mode=world&seed=[A-Za-z0-9_-]{1,24}&at=\d{1,4},\d{1,4}(&test=1)?$/.test(opts.returnTo) ? opts.returnTo : null;
     const seed = String(opts.seed === undefined ? '1' : opts.seed);
@@ -675,7 +680,7 @@
         <p class="mm-sum-sub">Seed ${String(seed).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24)} · ${mm}:${ss}</p>
         <ul class="mm-sum-stats"><li>Rooms visited <b>${visitedMain()}/${MAIN_ROOMS}</b></li><li>Rooms cleared <b>${s.roomsCleared}</b></li><li>Chests opened <b>${s.chestsOpened}</b></li><li>Keys found <b>${s.keysFound}</b></li><li>Secret room <b>${s.secretFound ? 'found' : 'hidden'}</b></li><li>${B.boss_name} <b>${s.bossDefeated ? 'defeated' : 'alive'}</b></li><li>Chest gold <b>${s.gold} 💎</b></li></ul>
         <h3>Loot</h3><ul class="mm-sum-loot" id="mm-sum-loot">${items}</ul>${paid && paid.ok ? `<p class="mm-sum-stash" id="mm-sum-stash">🏮 ${ST.text(paid)} (Lantern)</p>` : ''}
-        <div class="mm-sum-btns">${backWorld ? '' : `<a class="mm-btn" id="mm-sum-again" href="?mode=dungeon&seed=${Number(seed) + 1 || ''}${layoutV === 2 ? '&lv=2' : ''}${biome !== 'warren' ? '&biome=' + biome : ''}${opts.test ? '&test=1' : ''}${hubExit ? '&from=hub' : ''}">New dungeon</a>`}<a class="mm-btn${backWorld ? '' : ' alt'}" id="mm-sum-home" href="${backWorld || (hubExit ? '../../hub/index.html' : '../../index.html')}">${backWorld ? 'Back to the world' : hubExit ? 'Back to the map' : 'Back to town'}</a></div></div>`;
+        <div class="mm-sum-btns">${backWorld ? '' : `<a class="mm-btn" id="mm-sum-again" href="?mode=dungeon&seed=${Number(seed) + 1 || ''}${layoutV === 2 ? '&lv=2' : ''}${biome !== 'warren' ? '&biome=' + biome : ''}${opts.test ? '&test=1' : ''}${hubExit ? '&from=hub' : ''}">New dungeon</a>`}<a class="mm-btn${backWorld ? '' : ' alt'}" id="mm-sum-home" href="${backWorld || homeHref}">${backWorld ? 'Back to the world' : homeText}</a></div></div>`;
       if (gearGot.length) { // tiered finds: "T7 Name" via textContent
         const ul = sumEl.querySelector('#mm-sum-loot'); const none = ul.querySelector('.none'); if (none) none.remove();
         gearGot.forEach((g) => { const li = document.createElement('li'); li.className = 'mm-sum-gear'; li.style.color = g.color; li.textContent = g.name + ' '; const sm = document.createElement('small'); sm.textContent = g.rarName + (g.sold ? ' (sold, pack full)' : ''); li.appendChild(sm); ul.appendChild(li); });

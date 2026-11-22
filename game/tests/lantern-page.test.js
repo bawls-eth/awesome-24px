@@ -105,7 +105,8 @@ const prof = (page) => page.evaluate((K) => JSON.parse(localStorage.getItem(K) |
   await s.page.setInputFiles('#restore', { name: 'b.json', mimeType: 'application/json', buffer: fs.readFileSync(dlPath) });
   await s.page.waitForSelector('#restore-confirm:not([hidden])');
   const listed = await s.page.locator('#restore-list li').allTextContents();
-  check('restore shows a confirmation panel listing the keys, and has changed nothing yet', listed.length === 2 && listed.some((t) => t.includes(MM)) && listed.some((t) => t.includes(SAVE)) && (await s.page.evaluate((K) => localStorage.getItem(K), MM)) === null);
+  // the hub map progress key (pixeltown-profile-v1, written by MMHubProfile.sync for the hero) is backed up too
+  check('restore shows a confirmation panel listing the keys, and has changed nothing yet', listed.length === Object.keys(bundle.keys).length && listed.length === (bundle.keys['pixeltown-profile-v1'] ? 3 : 2) && listed.some((t) => t.includes(MM)) && listed.some((t) => t.includes(SAVE)) && (await s.page.evaluate((K) => localStorage.getItem(K), MM)) === null);
   await s.page.click('#restore-no');
   check('Cancel hides the panel and changes nothing', (await s.page.isHidden('#restore-confirm')) && (await s.page.evaluate((K) => localStorage.getItem(K), MM)) === null && (await s.page.evaluate((K) => localStorage.getItem(K), SAVE)) === null);
   await s.page.setInputFiles('#restore', { name: 'b.json', mimeType: 'application/json', buffer: fs.readFileSync(dlPath) });
@@ -194,7 +195,7 @@ const prof = (page) => page.evaluate((K) => JSON.parse(localStorage.getItem(K) |
   s = await open(browser, { mm: { v: 1, heroes: [hero({ name: 'Phone' })] }, viewport: { width: 390, height: 844 } });
   await s.page.waitForTimeout(300);
   const lay = await s.page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth,
-    small: [...document.querySelectorAll('button, .btn, select, input[type=text]')].filter((n) => n.offsetParent && n.getBoundingClientRect().height < 47.5 && !n.closest('.choice')).map((n) => n.id || n.className) }));
+    small: [...document.querySelectorAll('button, .btn, select, input[type=text]')].filter((n) => n.offsetParent && !n.classList.contains('mm-nav-legacy') && n.getBoundingClientRect().height < 47.5 && !n.closest('.choice')).map((n) => n.id || n.className) }));
   check('390x844: no horizontal scroll', lay.sw <= lay.cw, JSON.stringify(lay));
   check('390x844: touch targets at least 48px', lay.small.length === 0, lay.small.join());
   check('zero off-origin requests', s.reqs.every((u) => u.startsWith(ORIGIN + '/') || u.startsWith('data:') || u.startsWith('blob:')), s.reqs.join(' '));

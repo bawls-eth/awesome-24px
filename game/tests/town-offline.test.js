@@ -70,6 +70,9 @@ async function run(browser, viewport, touch) {
     // Town Gate -> Enter the Realm -> in-page frame.
     await page.evaluate(() => { const s = window.__g.scene.getScene('Town'); s.realmMenuOpen = false; s.inRealm = false; s.inUnderground = false; s.openRealmGateMenu(); });
     check(`[${label}] Town Gate menu opens`, await page.evaluate(() => !document.getElementById('realm-menu').classList.contains('hidden')));
+    // Nobody else is online, so the co-op/duel text sits in a collapsed "Play with friends" section (NAV-AUDIT 4.4).
+    check(`[${label}] offline: "Play with friends" is collapsed`, await page.evaluate(() => { const d = document.getElementById('realm-menu-friends'); return !!d && !d.open && /Play with friends/.test(d.querySelector('summary').textContent); }));
+    await page.click('#realm-menu-friends > summary');
     check(`[${label}] co-op/team list is disabled offline (needs the online town)`, await page.evaluate(() => /needs the online town/i.test(document.getElementById('realm-menu').innerText)));
     await page.click('#realm-menu-madmaze');
     await page.waitForSelector('#realm-embed iframe', { timeout: 5000 });

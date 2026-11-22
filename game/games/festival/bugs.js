@@ -8,25 +8,33 @@
   var qs = new URLSearchParams(location.search);
   var TEST = qs.get('test') === '1';
   var mq = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
-  var reduced = !!(mq && mq.matches);
-  if (mq && mq.addEventListener) mq.addEventListener('change', function (e) { reduced = e.matches; });
+  // Reduced motion: the OS setting, or the shared "screen flashes off" pref (MMSideAccess sets data-reduce-motion on <html>).
+  var sideReduced = function () { try { return !!(window.MMSideAccess && window.MMSideAccess.reduced()); } catch (e) { return false; } };
+  var reduced = !!(mq && mq.matches) || sideReduced();
+  if (mq && mq.addEventListener) mq.addEventListener('change', function (e) { reduced = e.matches || sideReduced(); });
 
-  var NAMES = { meadow: 'Meadow', orchard: 'Orchard', pond: 'Pond Edge', forest: 'Forest', dunes: 'Dunes', cliffs: 'Cliffs', marsh: 'Marsh', lantern: 'Lantern Glade' };
+  var NAMES = { meadow: 'Meadow', orchard: 'Orchard', pond: 'Pond Edge', forest: 'Forest', dunes: 'Dunes', cliffs: 'Cliffs', marsh: 'Marsh', lantern: 'Lantern Glade', glade: 'Night Glade' };
   var THEME = {
     meadow: ['#5b9b3f', '#4f8d36', '#ffd166', 'flower'], orchard: ['#6aa84f', '#5a9a42', '#e63946', 'fruit'],
     pond: ['#5f9e5a', '#4f8f50', '#4aa3df', 'water'], forest: ['#3f7a3a', '#357032', '#2c5a2a', 'tree'],
     dunes: ['#e0c27a', '#d4b36a', '#b5883a', 'rock'], cliffs: ['#8a8f8a', '#7c817c', '#5d625d', 'rock'],
-    marsh: ['#58805a', '#4b724e', '#79b8c9', 'water'], lantern: ['#2d4a4f', '#264043', '#ffd166', 'lantern']
+    marsh: ['#58805a', '#4b724e', '#79b8c9', 'water'], lantern: ['#2d4a4f', '#264043', '#ffd166', 'lantern'],
+    glade: ['#1f3d3a', '#1a3533', '#9be564', 'glade']
   };
+  var ALL = B.ALL_ARENAS; // 8 arenas, then the Night Glade variant (unlock order)
+  var GOALS_KEY = 'pixeltown-bugs-goals-v1', MEDALS_KEY = 'pixeltown-medals-bugs-v1';
   var SPECIES = ['ladybug', 'butterfly', 'beetle', 'cricket', 'antlion', 'goldbeetle', 'moonwing'];
-  var SP_NAME = { ladybug: 'Ladybug', butterfly: 'Butterfly', beetle: 'Beetle', cricket: 'Cricket', antlion: 'Antlion', goldbeetle: 'Gold Beetle', moonwing: 'Moonwing' };
+  var SP_NAME = { ladybug: 'Ladybug', butterfly: 'Butterfly', beetle: 'Beetle', cricket: 'Cricket', antlion: 'Antlion', goldbeetle: 'Gold Beetle', moonwing: 'Moonwing', firefly: 'Firefly', glowmoth: 'Glowmoth' };
 
   // ---------- save ----------
   function sanitize(raw) { return B.cleanSave(raw); }
   var save = sanitize(S.get(KEY, null));
-  function persist() { S.set(KEY, { v: 1, stars: save.stars, best: save.best, journal: save.journal }); }
+  var goals = B.cleanGoals(S.get(GOALS_KEY, null));
+  // Own additive keys only: the run save, the goals list, and the hub medal summary {v:1,m:[...]} (read by hub/medals.js).
+  function persist() { S.set(KEY, { v: 1, stars: save.stars, best: save.best, journal: save.journal }); S.set(GOALS_KEY, goals); S.set(MEDALS_KEY, { v: 1, m: B.medalsFor(save, goals) }); try { var st = totalStars(), j = save.journal; window.MMHubProfile.sync(localStorage, 'bugs', [Object.keys(j).some(function (k) { return j[k] > 0; }) && 'catch1', st >= 6 && 'stars6', (j.goldbeetle > 0 || j.moonwing > 0) && 'rare', st >= 24 && 'stars24']); } catch (e) { /* hub map progress is optional */ } }
   persist();
-  function totalStars() { return B.ARENAS.reduce(function (n, a) { return n + save.stars[a.id]; }, 0); }
+  function arenaStars() { return ALL.reduce(function (n, a) { return n + save.stars[a.id]; }, 0); }
+  function totalStars() { return arenaStars() + B.goalStars(goals); } // score stars + one per finished journal goal
   function needStars(i) { return i * 2; }
   function unlocked(i) { return totalStars() >= needStars(i); }
 
@@ -72,7 +80,7 @@
     var a = B.arena(id); if (!a) return null;
     arenaId = id;
     var seed = opts.seed !== undefined ? opts.seed : (String(Date.now()) + Math.random());
-    game = B.createRun({ seed: seed, arena: id, night: !!a.night, width: W, height: H, empty: !!opts.empty, count: opts.count });
+    game = B.createRun({ seed: seed, arena: id, night: !!a.night, glade: !!a.glade, width: W, height: H, empty: !!opts.empty, count: opts.count });
     rng = R.create('page:' + seed);
     meta = {}; gmeta = {}; popups = []; particles = []; shake = 0; swingAnim = 0;
     mode = 'play'; overlay.hidden = true;
@@ -114,16 +122,20 @@
     if (score > prevBest) save.best[arenaId] = Math.min(99999, score);
     var counts = {};
     st.caughtTypes.forEach(function (t) { counts[t] = (counts[t] || 0) + 1; if (save.journal[t] !== undefined) save.journal[t] = Math.min(999999, save.journal[t] + 1); });
+    var doneBefore = goals.done[arenaId] || [], newGoals = [];
+    B.goalsMet(arenaId, st).forEach(function (gid) { if (doneBefore.indexOf(gid) < 0) newGoals.push(gid); });
+    if (newGoals.length) goals = B.cleanGoals({ v: 1, done: Object.assign({}, goals.done, (function () { var o = {}; o[arenaId] = doneBefore.concat(newGoals); return o; })()) });
     persist();
     var newly = [];
-    B.ARENAS.forEach(function (a, i) { if (!(oldTotal >= needStars(i)) && unlocked(i)) newly.push(NAMES[a.id]); });
+    ALL.forEach(function (a, i) { if (!(oldTotal >= needStars(i)) && unlocked(i)) newly.push(NAMES[a.id]); });
     var gained = Math.max(0, stars - prevStars);
     var nextHint = '';
-    for (var ni = 0; ni < B.ARENAS.length; ni++) {
-      if (!unlocked(ni)) { nextHint = NAMES[B.ARENAS[ni].id] + ' unlocks at ' + needStars(ni) + ' stars (you have ' + totalStars() + ').'; break; }
+    for (var ni = 0; ni < ALL.length; ni++) {
+      if (!unlocked(ni)) { nextHint = NAMES[ALL[ni].id] + ' unlocks at ' + needStars(ni) + ' stars (you have ' + totalStars() + ').'; break; }
     }
     if (!nextHint) nextHint = 'Every arena is unlocked. Go for 3 stars everywhere!';
-    lastSummary = { arena: arenaId, score: score, stars: stars, gained: gained, bestCombo: st.bestCombo, hint: nextHint, caught: st.caught, counts: counts, best: save.best[arenaId], newlyUnlocked: newly, newBest: score > prevBest };
+    lastSummary = { arena: arenaId, score: score, stars: stars, gained: gained, bestCombo: st.bestCombo, hint: nextHint, caught: st.caught, counts: counts, best: save.best[arenaId], newlyUnlocked: newly, newBest: score > prevBest,
+      goals: newGoals.map(function (gid) { return B.goalsFor(arenaId).filter(function (g) { return g.id === gid; })[0].text; }) };
     mode = 'summary';
     hideHint();
     if (gained > 0) beep('levelup');
@@ -200,6 +212,7 @@
         else if (kind === 'fruit') { g.beginPath(); g.arc(ox, oy, 2.5, 0, 6.3); g.fill(); g.fillStyle = '#3a6b2a'; g.fillRect(ox, oy - 4, 1, 2); }
         else if (kind === 'water') { g.fillRect(ox - 3, oy, 8, 4); g.fillStyle = 'rgba(255,255,255,.3)'; g.fillRect(ox - 2, oy + 1, 3, 1); }
         else if (kind === 'tree') { g.fillRect(ox - 4, oy - 4, 9, 7); g.fillStyle = '#5a3b1e'; g.fillRect(ox, oy + 3, 2, 4); }
+        else if (kind === 'glade') { g.fillStyle = '#d9c7a3'; g.fillRect(ox, oy, 1, 3); g.fillStyle = '#7bd389'; g.fillRect(ox - 2, oy - 2, 5, 2); g.fillStyle = 'rgba(155,229,100,.25)'; g.fillRect(ox - 3, oy - 3, 7, 5); }
         else if (kind === 'rock') { g.fillRect(ox - 3, oy - 1, 7, 4); g.fillStyle = 'rgba(0,0,0,.2)'; g.fillRect(ox - 3, oy + 2, 7, 1); }
         else { g.fillRect(ox, oy, 2, 2); g.fillStyle = 'rgba(255,209,102,.3)'; g.fillRect(ox - 2, oy - 2, 6, 6); }
       }
@@ -214,6 +227,7 @@
     g.save(); g.globalAlpha = alpha;
     if (b.state === 'hidden') {
       if (b.hideKind === 'flower') { if (!reduced) { g.fillStyle = '#ffffff'; g.fillRect(x + Math.round(Math.sin(time * 9 + m.ph)), y - 3, 1, 1); } }
+      else if (b.hideKind === 'dim') { g.fillStyle = 'rgba(200,255,150,.35)'; g.fillRect(x - 0.5, y - 0.5, 1, 1); }
       else if (!b.mound) { circle(g, x, y + 2, 3, '#a8895a'); g.fillStyle = '#6e5836'; g.fillRect(x - 3, y + 2, 6, 1); }
       g.restore(); return;
     }
@@ -228,9 +242,13 @@
       case 'cricket': g.fillStyle = '#8b5a2b'; g.fillRect(x - 5, y - 1, 10, 3); g.fillStyle = '#c08a4a'; g.fillRect(x + 2, y - 3, 3, 3); g.fillStyle = '#5a3b1e'; g.fillRect(x - 6, y + 1, 3, 2); g.fillRect(x - 4, y + 2 + (flap > 0 ? 1 : 0), 1, 2); break;
       case 'antlion': g.fillStyle = '#c9a66b'; g.beginPath(); g.moveTo(x - 5, y + 3); g.lineTo(x, y - 4); g.lineTo(x + 5, y + 3); g.closePath(); g.fill(); g.fillStyle = '#5a3b1e'; g.fillRect(x - 1, y - 1, 2, 4); g.fillRect(x - 3, y - 3, 1, 3); g.fillRect(x + 2, y - 3, 1, 3); break;
       case 'goldbeetle': circle(g, x, y, 5 + (reduced ? 0 : Math.sin(time * 8) * 0.6), 'rgba(255,215,0,.35)'); circle(g, x, y, 3.5, '#ffc300'); g.fillStyle = '#fff3b0'; g.fillRect(x - 2, y - 2, 2, 2); g.fillStyle = '#7a5c00'; g.fillRect(x - 0.5, y - 3, 1, 6); break;
+      case 'firefly': circle(g, x, y + 1, 5, 'rgba(190,255,120,' + glowAlpha(time, x).toFixed(2) + ')'); g.fillStyle = '#3a2f1e'; g.fillRect(x - 1, y - 3, 2, 3); g.fillStyle = '#d8f7a0'; g.fillRect(x - 1.5, y, 3, 2); g.fillStyle = 'rgba(255,255,255,.6)'; g.fillRect(x - 3, y - 3 - (flap > 0 ? 1 : 0), 2, 2); g.fillRect(x + 1, y - 3 - (flap > 0 ? 1 : 0), 2, 2); break;
+      case 'glowmoth': circle(g, x, y, 6, 'rgba(120,200,255,' + (glowAlpha(time, y) * 0.7).toFixed(2) + ')'); g.fillStyle = '#c3b7ff'; g.fillRect(x - 5, y - 2 - flap, 4, 4); g.fillRect(x + 1, y - 2 - flap, 4, 4); g.fillStyle = '#7f6fd6'; g.fillRect(x - 4, y + 2, 3, 1); g.fillRect(x + 1, y + 2, 3, 1); g.fillStyle = '#efeaff'; g.fillRect(x - 0.5, y - 3, 1, 6); break;
       case 'moonwing': circle(g, x, y, 8, 'rgba(160,230,255,.25)'); g.fillStyle = '#b8f2ff'; g.fillRect(x - 6, y - 4 - flap, 5, 6); g.fillRect(x + 1, y - 4 - flap, 5, 6); g.fillStyle = '#e0aaff'; g.fillRect(x - 5, y + 1, 4, 3); g.fillRect(x + 1, y + 1, 4, 3); g.fillStyle = '#fff'; g.fillRect(x - 0.5, y - 3, 1, 7); break;
     }
   }
+  // Glade glow: a soft pulse, or one steady value with reduced motion.
+  function glowAlpha(time, ph) { return reduced ? 0.45 : 0.3 + 0.25 * (0.5 + 0.5 * Math.sin(time * 3 + (ph || 0) * 0.1)); }
   function drawPatch(g, f, time) {
     var x = f.x * TILE, y = f.y * TILE, cols = ['#ff8fc7', '#ffd166', '#fff', '#c77dff'];
     for (var i = 0; i < 5; i++) {
@@ -299,22 +317,22 @@
     mode = 'menu'; game = null; arenaId = null;
     clear(overlay); overlay.hidden = false;
     overlay.appendChild(el('h2', 'Bug Safari'));
-    overlay.appendChild(el('p', 'Pick an arena. 90 seconds, no rush between runs. Stars: ' + totalStars() + ' / 24', 'dim'));
+    var tot = el('p', 'Pick an arena. 90 seconds, no rush between runs. Stars: ' + totalStars() + ' / ' + (ALL.length * 3 + B.GOAL_COUNT), 'dim'); tot.id = 'menu-stars'; overlay.appendChild(tot);
     var grid = el('div', undefined, 'grid');
-    B.ARENAS.forEach(function (a, i) {
+    ALL.forEach(function (a, i) {
       var open = unlocked(i);
       var b = btn('', function () { startArena(a.id); }, !open);
       b.className = 'card'; b.dataset.arena = a.id;
-      b.appendChild(el('strong', NAMES[a.id] + (a.night ? ' (night)' : '')));
+      b.appendChild(el('strong', NAMES[a.id] + (a.glade ? ' (night variant)' : (a.night ? ' (night)' : ''))));
       b.appendChild(el('span', open ? stars(save.stars[a.id]) : 'Locked'));
       b.appendChild(el('small', open ? 'Best ' + save.best[a.id] + '  |  ' + a.stars.join('/') : 'Needs ' + needStars(i) + ' stars'));
       grid.appendChild(b);
     });
     overlay.appendChild(grid);
-    var rule = el('p', 'Unlock rule: Meadow is always open. Every other arena opens when your total stars across all arenas reach 2 x (its number - 1): Orchard 2, Pond Edge 4, Forest 6, Dunes 8, Cliffs 10, Marsh 12, Lantern Glade 14. Earn 1 to 3 stars per arena by score.', 'dim'); rule.id = 'unlock-rule'; overlay.appendChild(rule);
+    var rule = el('p', 'Unlock rule: Meadow is always open. Every other arena opens when your total stars across all arenas reach 2 x (its number - 1): Orchard 2, Pond Edge 4, Forest 6, Dunes 8, Cliffs 10, Marsh 12, Lantern Glade 14, Night Glade 16. Earn 1 to 3 stars per arena by score, and 1 star for each journal goal you finish. Nothing is ever locked by time.', 'dim'); rule.id = 'unlock-rule'; overlay.appendChild(rule);
     var row = el('div', undefined, 'row');
     var j = btn('Bug journal', showJournal); j.id = 'open-journal'; row.appendChild(j);
-    var back = document.createElement('a'); back.className = 'menu-back'; back.id = 'menu-back'; back.href = '../../hub/index.html'; back.textContent = '\u2190 Back to the hub'; // beta gate: the full-screen phone sheet covers the header links
+    var back = document.createElement('a'); back.className = 'menu-back' + (document.body.classList.contains('mm-nav-on') ? ' mm-nav-legacy' : ''); back.id = 'menu-back'; back.href = '../../hub/index.html'; back.textContent = '\u2190 Back to the hub'; // beta gate: the full-screen phone sheet covers the header links (with mm-nav on, the shared Menu button replaces it; it stays in the DOM)
     row.appendChild(back);
     overlay.appendChild(row);
   }
@@ -334,6 +352,33 @@
       list.appendChild(d);
     });
     overlay.appendChild(list);
+    // Night Glade bugs (their own list so the 7 base species above stay as they were)
+    overlay.appendChild(el('h3', 'Night Glade bugs'));
+    var gl = el('div'); gl.id = 'glade-list';
+    B.GLADE_SPECIES.forEach(function (sp) {
+      var n = save.journal[sp] || 0, d = el('div'); d.dataset.gladeSpecies = sp;
+      var c3 = document.createElement('canvas'); c3.width = 32; c3.height = 32; c3.className = 'jicon'; c3.setAttribute('aria-hidden', 'true'); c3.dataset.silhouette = n > 0 ? '0' : '1';
+      var g3 = c3.getContext('2d'); g3.scale(2, 2); drawSpecies(g3, sp, 8, 8, 0, 0);
+      if (n <= 0) { g3.setTransform(1, 0, 0, 1, 0, 0); g3.globalCompositeOperation = 'source-in'; g3.fillStyle = '#000'; g3.fillRect(0, 0, 32, 32); }
+      d.appendChild(c3); d.appendChild(el('strong', n > 0 ? SP_NAME[sp] : '???')); d.appendChild(el('div', 'Caught: ' + n, 'dim'));
+      gl.appendChild(d);
+    });
+    overlay.appendChild(gl);
+    // Things to find: calm journal goals. No timers, nothing expires; each one done is a star.
+    overlay.appendChild(el('h3', 'Things to find'));
+    overlay.appendChild(el('p', 'Finished goals stay finished. Each one adds a star. Done ' + B.goalStars(goals) + ' of ' + B.GOAL_COUNT + '.', 'dim'));
+    var gw = el('div'); gw.id = 'goals-list';
+    ALL.forEach(function (a) {
+      var sec = el('div', undefined, 'goal-arena'); sec.dataset.arena = a.id;
+      sec.appendChild(el('strong', NAMES[a.id]));
+      var ul = el('ul');
+      B.goalsFor(a.id).forEach(function (g) {
+        var on = goals.done[a.id].indexOf(g.id) >= 0, li = el('li', (on ? '[x] ' : '[ ] ') + g.text, on ? 'on' : '');
+        li.dataset.goal = g.id; li.dataset.done = on ? '1' : '0'; ul.appendChild(li);
+      });
+      sec.appendChild(ul); gw.appendChild(sec);
+    });
+    overlay.appendChild(gw);
     var row = el('div', undefined, 'row'); row.appendChild(btn('Back', showMenu)); overlay.appendChild(row);
   }
   function showSummary() {
@@ -348,6 +393,7 @@
     SPECIES.forEach(function (sp) { if (s.counts[sp]) { var li = el('div', SP_NAME[sp] + ' x' + s.counts[sp]); li.dataset.species = sp; cl.appendChild(li); } });
     if (!cl.firstChild) cl.appendChild(el('div', 'No bugs this time', 'dim'));
     overlay.appendChild(cl);
+    if (s.goals && s.goals.length) { var sg = el('p', 'Journal goal done (+' + s.goals.length + ' star' + (s.goals.length > 1 ? 's' : '') + '): ' + s.goals.join(', ')); sg.id = 'sum-goals'; overlay.appendChild(sg); }
     if (s.newlyUnlocked.length) overlay.appendChild(el('p', 'Unlocked: ' + s.newlyUnlocked.join(', ')));
     var hp = el('p', 'Next: ' + s.hint, 'dim'); hp.id = 'sum-hint'; overlay.appendChild(hp);
     var row = el('div', undefined, 'row');
@@ -429,7 +475,10 @@
       spawnSwarm: function (type, x, y, n) { return game ? game.spawnSwarm(type, x, y, n) : null; },
       hideInFlower: function (type, x, y) { return game ? game.hideInFlower(type, x, y) : null; },
       showJournal: showJournal,
-      unlockedCount: function () { var n = 0; B.ARENAS.forEach(function (a, i) { if (unlocked(i)) n++; }); return n; }
+      get goals() { return JSON.parse(JSON.stringify(goals)); },
+      get totalStars() { return totalStars(); },
+      glowAlpha: function (t) { return glowAlpha(t, 0); },
+      unlockedCount: function () { var n = 0; ALL.forEach(function (a, i) { if (unlocked(i)) n++; }); return n; }
     };
   }
 })();

@@ -75,6 +75,10 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "bugs-depth.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "cave-craft.test.js": {
     "class": "live",
     "tier": "full"
@@ -211,6 +215,10 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "hub-progress.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "integration.test.js": {
     "class": "live",
     "tier": "smoke"
@@ -232,6 +240,14 @@
     "tier": "smoke"
   },
   "jam-results.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "jam-relax.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "stalk-notes.test.js": {
     "class": "browser",
     "tier": "smoke"
   },
@@ -365,6 +381,14 @@
   },
   "shared-mm-angler.test.js": {
     "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-angler-golden.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "angler-depth2.test.js": {
+    "class": "browser",
     "tier": "smoke"
   },
   "shared-mm-splash.test.js": {
@@ -743,6 +767,14 @@
     "class": "node",
     "tier": "smoke"
   },
+  "dd-bands-golden.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "deepdelve-depth2.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "class-status-arena.test.js": {
     "class": "browser",
     "tier": "full"
@@ -967,6 +999,14 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-mount-ability.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "isle-reachability.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "shared-mm-tame.test.js": {
     "class": "node",
     "tier": "smoke"
@@ -1027,6 +1067,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "isle-meadow-art.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "shared-mm-creature-strips.test.js": {
     "class": "node",
     "tier": "smoke"
@@ -1071,11 +1115,27 @@
     "class": "browser",
     "tier": "full"
   },
+  "nexus-vendor.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "realm-access2.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "gear-save-fixes.test.js": {
     "class": "browser",
     "tier": "full"
   },
   "first-ten-minutes.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "isles-first-ten.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "town-first-ten.test.js": {
     "class": "browser",
     "tier": "full"
   },
@@ -1099,7 +1159,95 @@
     "class": "browser",
     "tier": "full"
   },
+  "isles-boss-depth.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "ftue-ft2.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "shared-mm-nav.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "nav-sheet.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "shared-mm-feedback.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-feedback-triage.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "feedback-box.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "nav-consistency.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "nav-hub-isles.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "nav-realm.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "archipelago-home-travel.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "shared-mm-home-build.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "lantern-backup-restore.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "shared-no-conflict-markers.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "nav-town.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "arena-p2-hotpath.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "town-isles-sign.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "isles-mount-ability.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "gear-save-fixes-2.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "shared-mm-calm-goals.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "hub-calm-goals.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "save-merge-fuzz.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "town-postcards.test.js": {
     "class": "browser",
     "tier": "full"
   }

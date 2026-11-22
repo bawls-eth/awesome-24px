@@ -1,0 +1,148 @@
+{
+  "about": "QI isles first-ten-minutes gate 2 (NEXT-SLICES-3): every island from a fresh profile at 390x844 touch. Simulated time (fixed 1/30 s steps through __isles.step, the page clock advanced by the same dt). targets = the QI acceptance numbers. knownIssues = the measured value on the base branch for a target the game misses today (assert: not worse than this baseline, null = never happened; print the gap).",
+  "viewport": {
+    "width": 390,
+    "height": 844,
+    "hasTouch": true,
+    "isMobile": true
+  },
+  "wallBudgetMs": 90000,
+  "targets": {
+    "simSeconds": 600,
+    "firstAction": 20,
+    "firstGather": 60,
+    "firstTameOrDrop": 180,
+    "maxRewardGap": 45,
+    "maxDeaths": 1,
+    "hintActionPct": 100,
+    "firstFrameMs": 3000
+  },
+  "profiles": [
+    {
+      "id": "isles2-home-a",
+      "isle": "home",
+      "seed": "123",
+      "clock": 0
+    },
+    {
+      "id": "isles2-home-b",
+      "isle": "home",
+      "seed": "4242",
+      "clock": 7919
+    },
+    {
+      "id": "isles2-jungle-a",
+      "isle": "jungle",
+      "seed": "123",
+      "clock": 0
+    },
+    {
+      "id": "isles2-jungle-b",
+      "isle": "jungle",
+      "seed": "4242",
+      "clock": 7919
+    },
+    {
+      "id": "isles2-tundra-a",
+      "isle": "tundra",
+      "seed": "123",
+      "clock": 0,
+      "meter": "warmth"
+    },
+    {
+      "id": "isles2-tundra-b",
+      "isle": "tundra",
+      "seed": "4242",
+      "clock": 7919,
+      "meter": "warmth"
+    },
+    {
+      "id": "isles2-reef-a",
+      "isle": "reef",
+      "seed": "123",
+      "clock": 0
+    },
+    {
+      "id": "isles2-reef-b",
+      "isle": "reef",
+      "seed": "4242",
+      "clock": 7919
+    },
+    {
+      "id": "isles2-mars-a",
+      "isle": "mars",
+      "seed": "123",
+      "clock": 0,
+      "meter": "air"
+    },
+    {
+      "id": "isles2-mars-b",
+      "isle": "mars",
+      "seed": "4242",
+      "clock": 7919,
+      "meter": "air"
+    }
+  ],
+  "reach": {
+    "jungle": {
+      "wood": 4,
+      "vine_rope": 2,
+      "amber": 2
+    },
+    "reef": {
+      "driftwood": 3,
+      "pearl": 1
+    },
+    "tundra": {
+      "frost_crystal": 2
+    }
+  },
+  "knownIssues": {
+    "_notes": "Measured on claude/animal-crossing-game-7z3roh @ 67cc086 (3 identical runs: the sim is deterministic). layout.tinyText 5 on every island: the Craft panel's recipe notes (.rc-note) are 11 px. maxRewardGap: long walks between glints after the nearby ones are picked (glints regrow after 180-600 s) with nothing tameable from the starter pouch on home / reef / mars (their diets - clover, kelp, fish, oxide dust, iron - never enter the pouch; only jungle_berry / raw_meat / bug do). deaths: no HP regeneration on the isles (only a respawn heals), so hostiles (jungle raptors, tundra rimewolf / sabrefang, mars at 1 HP after an air run) take a careful bot down over 10 minutes. tundra-b: the first tame (rimewolf knockout) comes at 315 s. reach.marsReachable: the Craft panel lists only CRAFT.IDS (no rocket_core_drift; the iron rocket core needs mars iron), and __isles.craft('rocket_core_drift') makes a rocket core but does not add mars to `unlock` (UNLOCK_BY_ITEM is keyed by recipe id): waits on XW1.",
+    "isles2-home-a": {
+      "layout.tinyText": 5
+    },
+    "isles2-home-b": {
+      "layout.tinyText": 5,
+      "maxRewardGap": 68.3
+    },
+    "isles2-jungle-a": {
+      "layout.tinyText": 5,
+      "deaths": 3
+    },
+    "isles2-jungle-b": {
+      "layout.tinyText": 5,
+      "maxRewardGap": 66.4
+    },
+    "isles2-tundra-a": {
+      "layout.tinyText": 5,
+      "maxRewardGap": 73.9,
+      "deaths": 3
+    },
+    "isles2-tundra-b": {
+      "layout.tinyText": 5,
+      "firstTame": 314.7,
+      "maxRewardGap": 139.5,
+      "deaths": 4
+    },
+    "isles2-reef-a": {
+      "layout.tinyText": 5
+    },
+    "isles2-reef-b": {
+      "layout.tinyText": 5,
+      "maxRewardGap": 161.8
+    },
+    "isles2-mars-a": {
+      "layout.tinyText": 5,
+      "maxRewardGap": 46.6
+    },
+    "isles2-mars-b": {
+      "layout.tinyText": 5,
+      "maxRewardGap": 54.3,
+      "deaths": 2
+    },
+    "reach": {
+      "marsReachable": 0
+    }
+  }
+}

@@ -12,9 +12,11 @@ const SEL = { joystick: '#joystick', actions: '#action-buttons', chat: '#chat-pa
     const tag = `${w}x${h}`;
     const { browser, page, errors } = await launch({ width: w, height: h }, null, true);
     // 1. Collapsed by default: only the chip shows; it carries the key stats.
-    const c = await page.evaluate(() => { const p = document.getElementById('player-list-panel'); const t = document.getElementById('panel-toggle'); const kids = [...p.children].filter((k) => k.id !== 'panel-toggle' && getComputedStyle(k).display !== 'none').length; const r = p.getBoundingClientRect(); return { collapsed: p.classList.contains('collapsed'), visibleKids: kids, chip: t.textContent, expanded: t.getAttribute('aria-expanded'), w: r.width, h: r.height, stored: localStorage.getItem('pixeltown-panel-collapsed') }; });
+    const c = await page.evaluate(() => { const p = document.getElementById('player-list-panel'); const t = document.getElementById('panel-toggle'); const kids = [...p.children].filter((k) => k.id !== 'panel-toggle' && k.id !== 'where-to-btn' && getComputedStyle(k).display !== 'none').length; const r = p.getBoundingClientRect(); const wt = document.getElementById('where-to-btn').getBoundingClientRect(); const tr = t.getBoundingClientRect(); return { whereTo: { w: wt.width, h: wt.height }, chipH: tr.height, collapsed: p.classList.contains('collapsed'), visibleKids: kids, chip: t.textContent, expanded: t.getAttribute('aria-expanded'), w: r.width, h: r.height, stored: localStorage.getItem('pixeltown-panel-collapsed') }; });
+    // NAV-AUDIT 4.4: the "Where to?" button stays visible under the collapsed chip (outside the collapsible part).
+    check(`${tag}: "Where to?" is visible under the collapsed chip and at least 44 px tall`, c.whereTo.h >= 44 && c.whereTo.w >= 44, JSON.stringify(c.whereTo));
     check(`${tag}: panel starts collapsed to a chip with players + trophies`, c.collapsed && c.visibleKids === 0 && /👥 \d+ · 🏆 \d+\/\d+/.test(c.chip) && c.expanded === 'false', JSON.stringify(c));
-    check(`${tag}: collapsed chip is small (< 40% of the screen width, < 64px tall)`, c.w < w * 0.4 && c.h < 64, `${c.w}x${c.h}`);
+    check(`${tag}: collapsed chip is small (< 40% of the screen width, chip < 64px tall, chip + Where to? < 120px)`, c.w < w * 0.4 && c.chipH < 64 && c.h < 120, `${c.w}x${c.h} chip ${c.chipH}`);
     check(`${tag}: collapsed state is not persisted until the player chooses`, c.stored === null);
 
     // The rest of the phone HUD must not overlap itself either (collapsed state).
@@ -107,7 +109,9 @@ const SEL = { joystick: '#joystick', actions: '#action-buttons', chat: '#chat-pa
   // 6. Desktop unchanged: no chip, full panel, same size as before, never collapsed.
   const { browser, page, errors } = await launch({ width: 1000, height: 700 });
   const d = await page.evaluate(() => { const p = document.getElementById('player-list-panel'); const t = getComputedStyle(document.getElementById('panel-toggle')); const r = p.getBoundingClientRect(); return { chipDisplay: t.display, collapsed: p.classList.contains('collapsed'), w: r.width, maxH: getComputedStyle(p).maxHeight, inline: p.style.maxHeight, buttons: ['achievements-badge', 'map-btn', 'museum-badge', 'dailies-btn', 'journal-btn', 'settings-toggle-btn'].every((id) => document.getElementById(id).getBoundingClientRect().width > 0) }; });
-  check('desktop: no chip, panel never collapsed, 180px wide, 40vh cap, all buttons visible', d.chipDisplay === 'none' && !d.collapsed && Math.round(d.w) === 180 && d.maxH === '280px' && d.inline === '' && d.buttons, JSON.stringify(d));
+  // TN2: the desktop cap was 40vh (280px here); it is now the full right edge (100vh - 32px = 668px) so Today / Journal /
+  // Settings are reachable without scrolling (the QT underCanvas known issue). Still a CSS cap, never an inline one.
+  check('desktop: no chip, panel never collapsed, 180px wide, 100vh - 32px cap, all buttons visible', d.chipDisplay === 'none' && !d.collapsed && Math.round(d.w) === 180 && d.maxH === '668px' && d.inline === '' && d.buttons, JSON.stringify(d));
   await page.click('#achievements-badge'); await page.waitForTimeout(200);
   check('desktop: buttons still work (Achievements opens)', await scene(page, (s) => !!s.achievementsOpen));
   check('no console errors (desktop)', errors.length === 0, errors.join('|'));

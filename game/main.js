@@ -349,6 +349,29 @@ if (IS_TOUCH) document.body.classList.add('touch-device');
   } catch (e) { /* prefs are optional */ }
 })();
 
+// TN2: the Town low-end tier through the shared MMPerf profile (shared/mm-perf.js). Only the Low graphics setting
+// (pixeltown-access-v1.lowGfx) picks it; without it the tier is 'high' and nothing below changes (the desktop adaptive
+// render resolution in startTown stays the automatic fallback). Low caps the rain drops and the arrival puff to
+// MMPerf's spark cap (Low graphics also turns on the Town's reduce motion, so the puff is then one still piece), drops the ocean crest/foam ambient layers, the season decor and the bug glow tweens, eases the
+// villagers every third frame and starts the canvas at 0.75 render scale. Read once; never writes storage.
+const TOWN_PERF = (function townPerfTier() {
+  const fallback = { tier: 'high', caps: { dpr: 2, sparks: 64, deathGhosts: 24, terrainAnim: true }, forced: false };
+  let res = fallback;
+  try {
+    const p = (typeof MMAccess !== 'undefined' && MMAccess.prefs) ? MMAccess.prefs.load(window.localStorage) : null;
+    if (typeof MMPerf !== 'undefined' && MMPerf.profile) res = MMPerf.profile([], { lowGfx: !!(p && p.lowGfx === true) }, null);
+  } catch (e) { res = fallback; }
+  const low = res.tier === 'low';
+  const out = {
+    tier: res.tier, low, forced: !!res.forced, caps: Object.assign({}, res.caps),
+    rainDrops: low ? Math.min(70, res.caps.sparks) : 70, puffs: low ? Math.min(3, res.caps.sparks) : 6,
+    npcEvery: low ? 3 : 1, ambientLayers: !low, renderScale: low ? 0.75 : 1,
+  };
+  if (low) document.body.classList.add('town-low-gfx');
+  window.__townPerf = out;
+  return out;
+})();
+
 const TILT_DEADZONE_DEG = 8;
 const TILT_RANGE_DEG = 36;
 // Radial dead zone for gamepad sticks and the on-screen joystick (0..1 of
@@ -691,6 +714,58 @@ const DIG_HOLE_RADIUS = 36;
 // The Realm Gate: a swirling portal in the quiet north-west of the village leading to the bullet-hell Realm.
 const REALM_GATE_POS = { x: 750, y: 260 };
 const REALM_GATE_RADIUS = 70;
+// TN1: a signpost at the north-east end of the pond dock (drawDock, x 410-480, y 585-623) that sails to the Hearthvale
+// Isles page. Leaving is a plain same-tab location change, exactly like the "World map" link: no net.* call, no save key.
+const ISLES_SIGN_POS = { x: 505, y: 560 };
+const ISLES_SIGN_RADIUS = 46;
+const ISLES_SIGN_URL = 'games/isles/index.html?from=town';
+const DOCK_ARRIVAL_POS = { x: 452, y: 596 }; // on the dock planks; clear of the sign and Salty Mo's talk radius
+// TN2: a read-only "Postcards" board beside the plaza notice board. It reads the games' own medal summaries
+// (pixeltown-medals-<game>-v1 through MMHubMedals' whitelist) and the hub profile's milestone lists (pixeltown-profile-v1,
+// parsed + sanitized here, never MMHubProfile.load, which would seed and write the key) and shows calm "Recently: ..."
+// lines. No timers, no streaks, nothing that expires; nothing is written; anything unknown or corrupt shows no line.
+const POSTCARD_POS = { x: 1262, y: 540 };
+const POSTCARD_RADIUS = 46;
+const POSTCARD_MAX = 8;
+const POSTCARD_WHERE = { isles: 'on the isles', angler: 'in Angler', bugs: 'in Bug Safari', deepdelve: 'in Deepdelve', stalk: 'at the Stalk Market' };
+const POSTCARD_PROFILE = {
+  jam: { where: 'at Campfire Jam', names: { play: 'First song', star1: 'First star', stars12: '12 stars', fullcombo: 'Full combo', hard3: '3 stars on a Hard song' } },
+  lantern: { where: 'in the Lantern', names: { hero1: 'First hero', warren: 'A Warren find brought home', level5: 'A level 5 hero', level10: 'A level 10 hero', retire: 'A hero retired at level 20' } },
+};
+// Storage in, strings out: newest medals first per game (each summary key is append-only, so its tail is the latest).
+function postcardLines(storage) {
+  const lines = [];
+  const own = (o, k) => !!o && Object.prototype.hasOwnProperty.call(o, k);
+  if (typeof MMHubMedals !== 'undefined' && MMHubMedals.read) {
+    let got = {};
+    try { got = MMHubMedals.read(storage) || {}; } catch (e) { got = {}; }
+    Object.keys(POSTCARD_WHERE).forEach((g) => {
+      const meta = own(MMHubMedals.GAMES, g) ? MMHubMedals.GAMES[g] : null;
+      const ids = own(got, g) && Array.isArray(got[g]) ? got[g] : [];
+      if (!meta) return;
+      ids.slice(-2).reverse().forEach((id) => {
+        const m = meta.medals.filter((x) => x[0] === id)[0];
+        if (m) lines.push(`Recently: ${m[1]} ${POSTCARD_WHERE[g]}`);
+      });
+    });
+  }
+  if (typeof MMHubProfile !== 'undefined' && MMHubProfile.sanitize) {
+    let raw = null;
+    try { raw = JSON.parse(storage.getItem(MMHubProfile.KEY)); } catch (e) { raw = null; }
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+      let prof = null;
+      try { prof = MMHubProfile.sanitize(raw); } catch (e) { prof = null; }
+      Object.keys(POSTCARD_PROFILE).forEach((g) => {
+        const gm = prof && own(prof.games, g) && prof.games[g] && typeof prof.games[g] === 'object' ? prof.games[g] : null;
+        const done = gm && Array.isArray(gm.done) ? gm.done.slice(0, 64) : [];
+        const names = POSTCARD_PROFILE[g].names;
+        const ok = done.filter((id, i) => typeof id === 'string' && own(names, id) && done.indexOf(id) === i);
+        ok.slice(-2).reverse().forEach((id) => lines.push(`Recently: ${names[id]} ${POSTCARD_PROFILE[g].where}`));
+      });
+    }
+  }
+  return lines.slice(0, POSTCARD_MAX);
+}
 const DOOR_RADIUS = 34;
 const TURNIP_STALL_POS = { x: 1760, y: 760 };
 const TURNIP_STALL_RADIUS = 50;
@@ -914,6 +989,8 @@ const FISH_TOURNAMENT_BONUS = 10;
 const GUESTBOOK_RADIUS = 60;
 
 const PANEL_COLLAPSE_KEY = 'pixeltown-panel-collapsed'; // own key; never part of the save
+const GATE_POINTER_KEY = 'pixeltown-gate-pointer-v1'; // own key; never part of the save
+const GATE_POINTER_MIN_DIST = 300; // the Realm Gate pointer shows only while the gate is further than this
 // Phone layout: narrow screens (portrait) OR a short touch screen (landscape phone).
 const PANEL_PHONE_QUERY = '(max-width: 600px), (max-height: 500px) and (pointer: coarse)';
 // ---------- daily checklist ----------
@@ -1348,7 +1425,9 @@ class TownScene extends Phaser.Scene {
     // of the surroundings are visible at once — sprites are still a very
     // legible ~38px/29px on screen at these levels.
     this.baseZoom = IS_TOUCH ? 1.2 : 1.6;
-    this.cameras.main.setZoom(this.baseZoom);
+    // the render scale may already be applied (TN2 low tier starts at 0.75): keep the visible world unchanged
+    const gc0 = document.getElementById('game-container');
+    this.cameras.main.setZoom(this.baseZoom * ((gc0 && Number(gc0.dataset.renderZoom)) || 1));
 
     this.obstacles = this.physics.add.staticGroup();
     this.remotePlayers = new Map();
@@ -1360,6 +1439,8 @@ class TownScene extends Phaser.Scene {
     this.drawPond();
     this.drawPondCats();
     this.drawDock();
+    this.drawIslesSign();
+    this.drawPostcardBoard();
     this.drawBenches();
     this.drawEastPond();
     this.drawBridge();
@@ -1397,6 +1478,7 @@ class TownScene extends Phaser.Scene {
     this.drawFloraFauna();
 
     this.createLocalPlayer(this.selfData);
+    this.applyArrivalSpot();
     this.physics.add.collider(this.localBody, this.obstacles);
 
     this.allPlayers.forEach((p) => {
@@ -1463,6 +1545,8 @@ class TownScene extends Phaser.Scene {
     this.setupJournal();
     this.setupDailies(); // after weeds/mail/bug-off/home/birthdays exist
     this.setupPanelCollapse();
+    this.setupWhereTo();
+    this.setupGatePointer();
     if (IS_TOUCH) {
       this.setupTouchControls();
       this.setupTiltShake();
@@ -1495,8 +1579,12 @@ class TownScene extends Phaser.Scene {
     if (this.workbenchOpen && !this.isNearWorkbench(WORKBENCH_RADIUS + 90)) this.closeWorkbench();
     if (this.mailboxOpen && !this.isNearMailbox(MAILBOX_RADIUS + 90)) this.closeMailbox();
     if (this.homeOpen && !this.isNearHome(HOME_RADIUS + 90)) this.closeHome();
+    if (this.postcardsOpen && !this.isNearPostcards(POSTCARD_RADIUS + 90)) this.closePostcards();
     this.updateDigHoleHint();
     this.updateRealmGateHint();
+    this.updateIslesSignHint();
+    this.updatePostcardHint();
+    this.updateGatePointer(time);
     this.updateFishHint();
     this.updateGiftHint();
     this.updateFloraFaunaHint();
@@ -1896,7 +1984,7 @@ class TownScene extends Phaser.Scene {
 
     if (this.seasonDecorSprites) {
       this.seasonDecorSprites.forEach((sprite) => {
-        if (decorIcon) sprite.setText(decorIcon).setVisible(true);
+        if (decorIcon && TOWN_PERF.ambientLayers) sprite.setText(decorIcon).setVisible(true);
         else sprite.setVisible(false);
       });
     }
@@ -1910,7 +1998,8 @@ class TownScene extends Phaser.Scene {
 
   setupWeather() {
     this.rainDrops = [];
-    for (let i = 0; i < WEATHER_RAIN_COUNT; i++) {
+    const drops = Math.min(WEATHER_RAIN_COUNT, TOWN_PERF.rainDrops); // TN2: the low tier keeps MMPerf's spark cap
+    for (let i = 0; i < drops; i++) {
       const d = this.add.rectangle(0, 0, 2, 16, 0xcfe9ff, 0.45)
         .setScrollFactor(0)
         .setDepth(300001)
@@ -1977,7 +2066,7 @@ class TownScene extends Phaser.Scene {
     this.bugs.forEach((bug) => {
       bug.sprite.setText(this.isNightBugs ? '✨' : '🦋');
       if (bug.glowTween) { bug.glowTween.stop(); bug.glowTween = null; bug.sprite.setAlpha(1); }
-      if (this.isNightBugs) {
+      if (this.isNightBugs && TOWN_PERF.ambientLayers) {
         bug.glowTween = this.tweens.add({ targets: bug.sprite, alpha: { from: 0.4, to: 1 }, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
       }
     });
@@ -2172,6 +2261,7 @@ class TownScene extends Phaser.Scene {
       ['guestbookOpen', 'guestbook-close-btn'], ['triviaOpen', 'trivia-close-btn'],
       ['keysHelpOpen', 'keys-help-close-btn'], ['changelogOpen', 'changelog-close-btn'],
       ['museumOpen', 'museum-close-btn'], ['workbenchOpen', 'workbench-close-btn'], ['mailboxOpen', 'mailbox-close-btn'], ['homeOpen', 'home-close-btn'], ['dailiesOpen', 'dailies-close-btn'], ['journalOpen', 'journal-close-btn'], ['realmMenuOpen', 'realm-menu-close-btn'],
+      ['postcardsOpen', 'postcards-close-btn'],
     ];
     const open = overlays.find(([flag]) => this[flag]);
     if (open) {
@@ -2289,7 +2379,7 @@ class TownScene extends Phaser.Scene {
   // so chat/overlay state is respected no matter which input triggered it
   // (keyboard, on-screen button, or shake).
   canAct() {
-    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen && !this.mapOpen && !this.museumOpen && !this.workbenchOpen && !this.mailboxOpen && !this.homeOpen && !this.dailiesOpen && !this.journalOpen && !this.realmMenuOpen;
+    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen && !this.mapOpen && !this.museumOpen && !this.workbenchOpen && !this.mailboxOpen && !this.homeOpen && !this.dailiesOpen && !this.journalOpen && !this.realmMenuOpen && !this.postcardsOpen;
   }
 
   // Shake is just a fun alternate trigger for the same interact() logic used
@@ -2422,6 +2512,14 @@ class TownScene extends Phaser.Scene {
     }
     if (this.isNearGuestbook()) {
       this.openGuestbook();
+      return;
+    }
+    if (this.isNearIslesSign()) {
+      this.useIslesSign();
+      return;
+    }
+    if (this.isNearPostcards()) {
+      this.openPostcards();
       return;
     }
     // Weeds are one-shot and tiny, so they win over wandering villagers / fish
@@ -2822,7 +2920,161 @@ class TownScene extends Phaser.Scene {
   // and an ordinary fresh load (where it's already false, so this is a
   // no-op).
   setupPortalReopen() {
-    window.addEventListener('pageshow', () => { this.doorBusy = false; });
+    window.addEventListener('pageshow', () => { this.doorBusy = false; this.islesBusy = false; });
+  }
+
+  // ---------- TN1: dock signpost to the Hearthvale Isles (UI only) ----------
+  drawIslesSign() {
+    const { x, y } = ISLES_SIGN_POS;
+    const g = this.bakedGfx(y - 1);
+    g.fillStyle(0x000000, 0.2).fillEllipse(x, y + 14, 22, 6);
+    g.fillStyle(0x6b4a30, 1).fillRect(x - 2, y - 14, 4, 28);
+    g.fillStyle(0x8a5a3b, 1).fillRect(x - 26, y - 26, 48, 14);
+    g.fillTriangle(x + 22, y - 26, x + 30, y - 19, x + 22, y - 12);
+    g.lineStyle(1, 0x5a3a22, 1).strokeRect(x - 26, y - 26, 48, 14);
+    g.bake();
+    this.add.text(x + 2, y - 19, '⛵ Isles', { fontSize: '12px', color: '#fff8e1', stroke: '#3b2412', strokeThickness: 2 }).setOrigin(0.5).setDepth(y + 1);
+    this.add.text(x, y - 40, 'Hearthvale Isles →', { fontSize: '12px', color: '#ffffff', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setDepth(y + 1);
+    this.islesSignBtn = document.getElementById('isles-sign-hint');
+    if (this.islesSignBtn) this.islesSignBtn.addEventListener('click', () => { if (this.isNearIslesSign()) this.useIslesSign(); });
+  }
+
+  isNearIslesSign() {
+    return !!this.localBody && Math.hypot(this.localBody.x - ISLES_SIGN_POS.x, this.localBody.y - (ISLES_SIGN_POS.y + 14)) < ISLES_SIGN_RADIUS;
+  }
+
+  updateIslesSignHint() {
+    const btn = this.islesSignBtn;
+    if (!btn) return;
+    const show = !this.inUnderground && !this.inRealm && !this.buildMode && this.isNearIslesSign();
+    if (btn.classList.contains('hidden') === show) btn.classList.toggle('hidden', !show);
+  }
+
+  // Same path as the "World map" link: a same-tab location change to a page of this site. Nothing is written.
+  useIslesSign() {
+    if (this.islesBusy || this.inUnderground || this.inRealm) return;
+    this.islesBusy = true;
+    window.location.href = ISLES_SIGN_URL;
+  }
+
+  // Arrival spot (UI only, after the normal spawn): `?from=isles`, or a previous place of 'isles' in pixeltown-nav-v1
+  // when the page was actually reached from the isles page, puts the player on the dock; `?from=realm` puts them at the
+  // Realm Gate exit spot. Anything else keeps the default spawn. Read-only: never writes storage or the database.
+  arrivalSpot() {
+    let from = null;
+    try { from = new URLSearchParams(location.search).get('from'); } catch (e) { from = null; }
+    if (from === 'isles') return DOCK_ARRIVAL_POS;
+    if (from === 'realm') return { x: REALM_GATE_POS.x, y: REALM_GATE_POS.y + 116 };
+    try {
+      const last = typeof MMNav !== 'undefined' ? MMNav.last() : null;
+      if (!from && last && last.id === 'isles' && /\/games\/isles\//.test(document.referrer || '')) return DOCK_ARRIVAL_POS;
+    } catch (e) { /* nav state unreadable: default spawn */ }
+    return null;
+  }
+
+  applyArrivalSpot() {
+    const at = this.arrivalSpot();
+    if (!at) return;
+    this.localBody.setPosition(at.x, at.y);
+    this.localVisual.setPosition(at.x, at.y);
+    this.localShadow.setPosition(at.x, at.y + 9);
+    this.localNameText.setPosition(at.x, at.y - 22);
+    this.playArrivalPuff(at);
+  }
+
+  // TN2: a small dust puff where the player arrives (dock / gate). One cached 16x16 texture, a few images and one
+  // tween each, destroyed when it ends: nothing runs per frame afterwards. Reduce motion: one still puff that fades.
+  playArrivalPuff(at) {
+    if (!this.textures.exists('arrival_puff')) {
+      const g = this.make.graphics({ x: 0, y: 0, add: false });
+      g.fillStyle(0xfff8e6, 0.85).fillCircle(8, 8, 8);
+      g.fillStyle(0xe8dcc0, 1).fillCircle(9, 10, 4);
+      g.generateTexture('arrival_puff', 16, 16);
+      g.destroy();
+    }
+    const reduce = document.body.classList.contains('a11y-reduce-motion');
+    const n = reduce ? 1 : TOWN_PERF.puffs;
+    const y0 = at.y + 8;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2;
+      const img = this.add.image(at.x, y0, 'arrival_puff').setDepth(at.y + 2).setAlpha(0.9).setScale(0.6);
+      this.tweens.add({
+        targets: img, alpha: 0, scale: reduce ? 0.6 : 1.3,
+        x: reduce ? at.x : at.x + Math.cos(a) * 20, y: reduce ? y0 : y0 + Math.sin(a) * 8,
+        duration: reduce ? 500 : 650, ease: 'Quad.easeOut',
+        onComplete: () => img.destroy(),
+      });
+    }
+    window.__townArrival = { x: at.x, y: at.y, puffs: n, reduce, texture: 'arrival_puff' };
+  }
+
+  // ---------- TN2: Postcards board (read-only, local keys only) ----------
+  drawPostcardBoard() {
+    const { x, y } = POSTCARD_POS;
+    const g = this.bakedGfx(y - 1);
+    g.fillStyle(0x000000, 0.18).fillEllipse(x, y + 14, 30, 6);
+    g.fillStyle(0x6b4a30, 1).fillRect(x - 13, y - 6, 3, 20);
+    g.fillStyle(0x6b4a30, 1).fillRect(x + 10, y - 6, 3, 20);
+    g.fillStyle(0x9a6a44, 1).fillRect(x - 20, y - 30, 40, 26);
+    g.lineStyle(1, 0x5a3a22, 1).strokeRect(x - 20, y - 30, 40, 26);
+    g.fillStyle(0xfff3d6, 1).fillRect(x - 16, y - 27, 15, 10);
+    g.fillStyle(0xdcefff, 1).fillRect(x + 1, y - 22, 15, 10);
+    g.fillStyle(0xd65a4a, 1).fillRect(x - 10, y - 26, 3, 3);
+    g.fillStyle(0x3b6fb6, 1).fillRect(x + 10, y - 21, 3, 3);
+    g.bake();
+    this.add.text(x, y - 44, '📮 Postcards', { fontSize: '12px', color: '#ffffff', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setDepth(y + 1);
+    this.postcardsBtn = document.getElementById('postcards-hint');
+    if (this.postcardsBtn) this.postcardsBtn.addEventListener('click', () => { if (this.canAct() && this.isNearPostcards()) this.openPostcards(); });
+    const close = document.getElementById('postcards-close-btn');
+    if (close) close.addEventListener('click', () => this.closePostcards());
+    const ov = document.getElementById('postcards-overlay');
+    if (ov) ov.addEventListener('click', (e) => { if (e.target === ov) this.closePostcards(); });
+  }
+
+  isNearPostcards(radius = POSTCARD_RADIUS) {
+    return !!this.localBody && Math.hypot(this.localBody.x - POSTCARD_POS.x, this.localBody.y - (POSTCARD_POS.y + 14)) < radius;
+  }
+
+  updatePostcardHint() {
+    const btn = this.postcardsBtn;
+    if (!btn) return;
+    const show = !this.inUnderground && !this.inRealm && !this.buildMode && !this.postcardsOpen && this.isNearPostcards();
+    if (btn.classList.contains('hidden') === show) btn.classList.toggle('hidden', !show);
+  }
+
+  openPostcards() {
+    const ov = document.getElementById('postcards-overlay');
+    if (!ov) return;
+    this.postcardsOpen = true;
+    this.renderPostcards();
+    ov.classList.remove('hidden');
+  }
+
+  closePostcards() {
+    this.postcardsOpen = false;
+    const ov = document.getElementById('postcards-overlay');
+    if (ov) ov.classList.add('hidden');
+  }
+
+  renderPostcards() {
+    const list = document.getElementById('postcards-list');
+    if (!list) return;
+    while (list.firstChild) list.removeChild(list.firstChild);
+    let lines = [];
+    try { lines = postcardLines(window.localStorage); } catch (e) { lines = []; }
+    if (!lines.length) {
+      const li = document.createElement('li');
+      li.className = 'postcards-empty';
+      li.textContent = 'No postcards yet. Notes from the isles and the other games land here as you play them.';
+      list.appendChild(li);
+      return;
+    }
+    lines.forEach((text) => {
+      const li = document.createElement('li');
+      li.className = 'postcard-line';
+      li.textContent = text;
+      list.appendChild(li);
+    });
   }
 
   updateDigHoleHint() {
@@ -2910,6 +3162,79 @@ class TownScene extends Phaser.Scene {
     hint.classList.toggle('hidden', this.inUnderground || this.inRealm || this.buildMode || !this.isNearRealmGate());
   }
 
+  // ---------- NAV slice E: "Where to?" sheet + Realm Gate pointer (UI only; no network, no save keys) ----------
+  // The Town keeps one HUD: no corner Menu button. The sheet (shared/mm-nav.js) opens from the "Where to?" button in the
+  // In-town panel, and its destinations are plain links, so leaving works exactly like the "World map" link.
+  setupWhereTo() {
+    const btn = document.getElementById('where-to-btn');
+    if (!btn) return;
+    let on = false;
+    try { on = typeof MMNav !== 'undefined' && MMNav.mount({ page: 'town', hideMenu: true }) === true; } catch (e) { on = false; }
+    if (!on) { btn.classList.add('hidden'); return; }
+    btn.addEventListener('click', () => {
+      if (MMNav.isOpen()) { MMNav.close(); return; }
+      for (let i = 0; i < 4 && this.closeTopOverlay(); i++); // never stack the sheet on a town overlay
+      MMNav.open();
+    });
+    MMNav.onOpen(() => btn.setAttribute('aria-expanded', 'true'));
+    MMNav.onClose(() => btn.setAttribute('aria-expanded', 'false'));
+    MMNav.onSettings(() => {
+      const panel = document.getElementById('player-list-panel');
+      const toggle = document.getElementById('panel-toggle');
+      if (panel && toggle && panel.classList.contains('collapsed')) toggle.click();
+      const sec = document.getElementById('settings-section');
+      if (sec && sec.classList.contains('hidden')) document.getElementById('settings-toggle-btn').click();
+    });
+  }
+
+  // A chip that points at the Realm Gate for players who have not found it yet. Its state lives in its own
+  // additive key (never pixeltown-save-v1): dismissed (the ✕) or reached (the gate menu was opened once).
+  loadGatePointer() {
+    try {
+      const v = JSON.parse(localStorage.getItem(GATE_POINTER_KEY) || 'null');
+      if (v && typeof v === 'object' && !Array.isArray(v)) return { v: 1, dismissed: v.dismissed === true, reached: v.reached === true };
+    } catch (e) { /* storage blocked or corrupt: start fresh */ }
+    return { v: 1, dismissed: false, reached: false };
+  }
+
+  saveGatePointer(patch) {
+    this.gatePointer = Object.assign(this.gatePointer || this.loadGatePointer(), patch);
+    try { localStorage.setItem(GATE_POINTER_KEY, JSON.stringify(this.gatePointer)); } catch (e) { /* storage blocked: this session only */ }
+  }
+
+  markGateReached() {
+    if (this.gatePointer && !this.gatePointer.reached) this.saveGatePointer({ reached: true });
+  }
+
+  setupGatePointer() {
+    this.gatePointer = this.loadGatePointer();
+    this._gatePointerAt = 0;
+    const close = document.getElementById('gate-pointer-close');
+    if (close) close.addEventListener('click', () => {
+      this.saveGatePointer({ dismissed: true });
+      document.getElementById('gate-pointer').classList.add('hidden');
+    });
+  }
+
+  updateGatePointer(time) {
+    const el = document.getElementById('gate-pointer');
+    if (!el || !this.localBody || !this.gatePointer) return;
+    if (time - this._gatePointerAt < 200) return; // a few times a second is plenty
+    this._gatePointerAt = time;
+    const st = this.gatePointer;
+    const dx = REALM_GATE_POS.x - this.localBody.x;
+    const dy = (REALM_GATE_POS.y + 30) - this.localBody.y;
+    const far = Math.hypot(dx, dy) > GATE_POINTER_MIN_DIST;
+    const show = !st.dismissed && !st.reached && far && !this.inRealm && !this.inUnderground && !this.realmEmbed && !this.buildMode;
+    if (el.classList.contains('hidden') === show) el.classList.toggle('hidden', !show);
+    if (!show) return;
+    // Screen and world share their axes, so the world direction is the arrow direction (8 ways).
+    const ARROWS = ['→', '↘', '↓', '↙', '←', '↖', '↑', '↗'];
+    const i = ((Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) % 8) + 8) % 8;
+    const arrow = document.getElementById('gate-pointer-arrow');
+    if (arrow && arrow.textContent !== ARROWS[i]) arrow.textContent = ARROWS[i];
+  }
+
   // ---------- Realm gate menu, invites and team link ----------
 
   // The big Realm runs in a same-origin full-screen frame over the town, so the player never leaves the game page.
@@ -2944,7 +3269,10 @@ class TownScene extends Phaser.Scene {
   openRealmGateMenu() {
     if (this.realmMenuOpen || this.inRealm || this.inUnderground) return;
     this.realmMenuOpen = true;
+    this.markGateReached();
+    if (typeof MMNav !== 'undefined' && MMNav.isOpen()) MMNav.close(); // never two dialogs at once
     document.getElementById('realm-menu').classList.remove('hidden');
+    this._friendsAuto = false; // "Play with friends" opens by itself once somebody else is in town
     const mm = document.getElementById('realm-menu-madmaze');
     if (mm && !mm.dataset.bound) {
       mm.dataset.bound = '1';
@@ -2971,6 +3299,8 @@ class TownScene extends Phaser.Scene {
     else if (inv) { status.textContent = inv.delivered ? `${inv.name} got your invite. Waiting for them to tap Accept…` : inv.notDelivered ? `${inv.name} has not received it yet. Ask them to refresh the page (and not be inside the Realm or cave), then invite again.` : `Invite sent to ${inv.name}…`; }
     else status.textContent = this.net && this.net.db ? 'Pick a player: they get a popup in town and tap Join. You enter together.' : 'Team play needs the online town.';
     const online = [...this.remotePlayers.values()].filter((rp) => rp.id && rp.name);
+    const friends = document.getElementById('realm-menu-friends');
+    if (friends && !this._friendsAuto) { friends.open = online.length > 0 || !!inv; if (friends.open) this._friendsAuto = true; }
     if (!online.length) { const li = document.createElement('li'); li.className = 'dim'; li.textContent = 'Nobody else is in town right now.'; list.appendChild(li); }
     online.forEach((rp) => {
       const li = document.createElement('li');
@@ -4222,6 +4552,11 @@ class TownScene extends Phaser.Scene {
       writeSave({ settingsOpen: open });
       render();
     });
+    // Device-only "Suggest or report a bug" box (shared/mm-feedback.js: localStorage only, no network).
+    if (window.MMFeedback && !section.dataset.fb) {
+      section.dataset.fb = '1';
+      try { window.MMFeedback.mount(section, { page: 'town' }); } catch (e) { /* the box never breaks settings */ }
+    }
   }
 
   // ---------- town map ----------
@@ -5395,6 +5730,7 @@ class TownScene extends Phaser.Scene {
     const depth = this.world.originY - 990;
     const land = this.landBounds();
     const pad = 260;
+    if (!TOWN_PERF.ambientLayers) return; // TN2 low tier: no crest / foam ambient layers (the ocean texture itself stays)
     const crests = [[], [], []];
     for (let i = 0; i < 120; i++) {
       const x = Math.round(this.world.originX + worldHash(i, 0, 51) * this.world.width);
@@ -6982,6 +7318,7 @@ class TownScene extends Phaser.Scene {
     const keepClear = [
       ...FLOWER_SPOTS, CAMPFIRE_POS, STATUE_POS, MAILBOX_POS, BUGOFF_SIGN_POS, HOME_POS, GUESTBOOK_POS, WORKBENCH_POS,
       POLYROLL_POS, TURNIP_STALL_POS, ABLE_SISTERS_POS, MERCHANT_POS, DIG_HOLE_POS, FISH_TOURNAMENT_SIGN_POS, REALM_GATE_POS,
+      ISLES_SIGN_POS, POSTCARD_POS,
     ];
     const spots = [];
     for (let i = 0; i < WEED_COUNT; i++) {
@@ -7871,7 +8208,7 @@ class TownScene extends Phaser.Scene {
       // (chat bar, joystick, action buttons, hint pills).
       const pr = panel.getBoundingClientRect();
       let limit = window.innerHeight;
-      ['chat-panel', 'joystick', 'action-buttons', 'fish-hint-btn', 'gift-hint-btn', 'dig-hole-hint'].forEach((id) => {
+      ['chat-panel', 'joystick', 'action-buttons', 'fish-hint-btn', 'gift-hint-btn', 'dig-hole-hint', 'isles-sign-hint', 'postcards-hint'].forEach((id) => {
         const el = document.getElementById(id);
         if (!el || el.classList.contains('hidden') || getComputedStyle(el).display === 'none') return;
         const r = el.getBoundingClientRect();
@@ -7902,7 +8239,7 @@ class TownScene extends Phaser.Scene {
     if (cap) obs.observe(cap, { childList: true, characterData: true, subtree: true });
     // Hint pills (fish / gift / dig hole) appear and disappear: refit so an expanded panel never sits on one.
     const hintObs = new MutationObserver(fit);
-    ['fish-hint-btn', 'gift-hint-btn', 'dig-hole-hint'].forEach((id) => { const el = document.getElementById(id); if (el) hintObs.observe(el, { attributes: true, attributeFilter: ['class'] }); });
+    ['fish-hint-btn', 'gift-hint-btn', 'dig-hole-hint', 'isles-sign-hint', 'postcards-hint'].forEach((id) => { const el = document.getElementById(id); if (el) hintObs.observe(el, { attributes: true, attributeFilter: ['class'] }); });
     // Expanded content grows/shrinks (e.g. settings section): refit.
     if (window.ResizeObserver && document.getElementById('chat-panel')) new ResizeObserver(fit).observe(document.getElementById('chat-panel'));
     apply();
@@ -8139,7 +8476,9 @@ class TownScene extends Phaser.Scene {
   }
 
   updateGiftHint() {
-    this.updateVillagers();
+    // TN2 low tier: the villagers ease every third frame (their tags move with them, so nothing drifts apart)
+    this.npcTick = ((this.npcTick || 0) + 1) % TOWN_PERF.npcEvery;
+    if (this.npcTick === 0) this.updateVillagers();
     const btn = document.getElementById('gift-hint-btn');
     if (!btn) return;
     const v = (!this.inUnderground && !this.inRealm && !this.buildMode) ? this.findNearestVillager() : null;
@@ -8897,6 +9236,8 @@ function showOfflineOption(message) {
   if (joinDone) return;
   joinStatus.textContent = message;
   joinOfflineBtn.classList.remove('hidden');
+  // The join card scrolls on short screens: bring the new button into view instead of leaving it below the fold.
+  try { joinOfflineBtn.scrollIntoView({ block: 'nearest' }); } catch (e) { /* old browsers: it is still reachable by scrolling */ }
 }
 
 function enterTown(net, data) {
@@ -8998,7 +9339,7 @@ function startTown(net, data) {
   // Adaptive render resolution (desktop only): the canvas keeps its CSS size but renders fewer
   // pixels when frames stay slow (software/low-end GPUs are fill-rate bound). Steps down only,
   // never back up, so it cannot oscillate; the camera zoom is scaled so the view is identical.
-  let renderScale = 1;
+  let renderScale = TOWN_PERF.renderScale; // 1, or 0.75 on the TN2 low tier
   const applyRenderScale = () => {
     const size = viewportSize();
     const gw = Math.max(320, Math.round(size.width * renderScale));
@@ -9006,9 +9347,10 @@ function startTown(net, data) {
     game.scale.resize(gw, gh);
     game.scale.setZoom(size.width / gw); // display size stays the full viewport
     const town = game.scene.getScene('Town');
-    if (town && town.cameras && town.cameras.main && town.baseZoom) town.cameras.main.setZoom(town.baseZoom * renderScale);
+    const k = gw / size.width; // == renderScale, except where the 320 px floor kicks in (a phone on the TN2 low tier)
+    if (town && town.cameras && town.cameras.main && town.baseZoom) town.cameras.main.setZoom(town.baseZoom * k);
     const gc = document.getElementById('game-container');
-    if (gc) gc.dataset.renderScale = String(renderScale);
+    if (gc) { gc.dataset.renderScale = String(renderScale); gc.dataset.renderZoom = String(k); }
   };
   const resizeToViewport = () => {
     const size = viewportSize();
@@ -9079,6 +9421,23 @@ function startTown(net, data) {
 renderSpeciesTabs();
 renderAvatarGrid();
 updateJoinButtonState();
+
+// Join screen "Continue: <last place>" (shared/mm-nav.js, key pixeltown-nav-v1, read-only here): only when a previous
+// place other than the Town is stored. A plain link, so it leaves the page without joining (no network).
+(function setupJoinContinue() {
+  const a = document.getElementById('join-continue');
+  if (!a || typeof MMNav === 'undefined') return;
+  try {
+    const st = MMNav.state();
+    const c = MMNav.continueTarget(st, 'town') || (st.prev ? MMNav.continueTarget({ v: 1, last: st.prev }, 'town') : null);
+    const href = c && MMNav.urlFor(c.url, 'game/index.html');
+    if (!href) return;
+    a.href = href;
+    a.textContent = '↩️ ' + c.label;
+    a.dataset.place = c.id;
+    a.classList.remove('hidden');
+  } catch (e) { /* storage blocked: no Continue link */ }
+}());
 
 // A lightweight, read-only peek at how many villagers are in town right
 // now, shown on the join screen before this player has actually joined.

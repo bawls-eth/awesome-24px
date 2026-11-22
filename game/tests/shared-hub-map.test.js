@@ -41,6 +41,37 @@ const memStore = (init) => { const d = Object.assign({}, init); return { d, getI
   check('invalid result is ignored', JSON.stringify(Prof.reportResult(p, { exit: 'normal' })) === before);
 }
 
+// ---- game milestones: sync / syncGame / goalsFor
+{
+  const nodeIds = new Set(M.MAP.nodes.map((n) => n.id));
+  const hits = [];
+  Object.keys(Prof.MILESTONES).forEach((g) => Prof.MILESTONES[g].forEach((m) => m.hits.forEach((h) => hits.push(h))));
+  check('every milestone hit names a real map node, a known exit and medal', hits.every((h) => nodeIds.has(h.node) && ['normal', 'secret'].includes(h.exit) && [null, 'b', 's', 'g'].includes(h.medal)));
+  check('secret milestones only target secret nodes', hits.filter((h) => h.exit === 'secret').every((h) => M.MAP.nodes.find((n) => n.id === h.node).secret === true));
+  check('six games report, 4-8 milestones each', Object.keys(Prof.MILESTONES).length === 6 && Object.keys(Prof.MILESTONES).every((g) => Prof.MILESTONES[g].length >= 4 && Prof.MILESTONES[g].length <= 8));
+  const town = JSON.stringify({ name: 'Ben' });
+  const st = memStore({ 'pixeltown-save-v1': town });
+  let r = Prof.sync(st, 'jam', [], 5);
+  check('sync with nothing reached writes nothing', r.added.length === 0 && !(Prof.KEY in st.d));
+  r = Prof.sync(st, 'jam', ['play', 'star1', false, 7, 'nope', 'star1'], 5);
+  check('sync reports known ids once, ignores junk', JSON.stringify(r.added) === '["play","star1"]' && r.profile.nodes['w5-jam'].medals.b && r.profile.name === 'Ben', JSON.stringify(r.added));
+  check('first milestone in any game clears First Steps (derived)', r.profile.nodes['w0-first'].exits.includes('normal'));
+  const t1 = r.profile.tokens;
+  r = Prof.sync(st, 'jam', ['play', 'star1'], 6);
+  check('re-sync of the same ids adds no Tokens and writes nothing new', r.added.length === 0 && Prof.load(st).tokens === t1 && t1 === 30, String(t1));
+  check('town save untouched by sync', st.d['pixeltown-save-v1'] === town);
+  const unl = M.openPathIds(M.MAP, Prof.sync(st, 'angler', ['west', 'trout'], 7).profile);
+  check('angler West Pond opens West -> East; the Trout is a comet', unl.includes('w4-west>w4-east') && Prof.load(st).comets.includes('w6-trout'));
+  check('unknown game is ignored', Prof.sync(st, '__proto__', ['play']).added.length === 0 && Prof.syncGame(Prof.defaults(), 'zz', ['play']).added.length === 0);
+  const hostile = Prof.syncGame({ games: { jam: { done: ['fullcombo', '<b>', 3] } } }, 'jam', ['fullcombo']);
+  check('a stored done id is not re-reported (hostile entries dropped)', hostile.added.length === 0);
+  const g = Prof.goalsFor(Prof.load(st), 'w4-west');
+  check('goalsFor lists the clearing goal with its done flag', g.length === 1 && g[0].game === 'angler' && g[0].done === true && Prof.goalsFor(Prof.defaults(), 'w4-east')[0].done === false);
+  check('goalsFor on an unknown node is empty', Prof.goalsFor(null, 'nope').length === 0);
+  const fin = ['bugs:catch1', 'jam:star1', 'stalk:bronze'].reduce((p, x) => Prof.syncGame(p, x.split(':')[0], [x.split(':')[1]]).profile, Prof.defaults());
+  check('Festival Finale clears when all three festival games reached their first medal', fin.nodes['w5-finale'].exits.includes('normal') && fin.nodes['w0-sparkle'].exits.includes('normal'));
+}
+
 // ---- map validation
 check('shipped map validates', M.validate(M.MAP).ok, JSON.stringify(M.validate(M.MAP).errors));
 check('shipped map has worlds W0..W7', ['w0', 'w1', 'w2', 'w3', 'w4', 'w5', 'w6', 'w7'].every((w) => M.MAP.nodes.some((n) => n.world === w)));

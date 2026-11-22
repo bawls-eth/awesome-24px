@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#1a1030">
 <title>The Lantern - Mad Maze</title>
 <link rel="stylesheet" href="lantern.css">
+<link rel="stylesheet" href="../../shared/mm-nav.css">
 </head>
 <body>
 <main id="app">
@@ -95,8 +96,17 @@
       <button id="backup" type="button" class="btn" aria-label="Back up my progress to a file">Back up my progress</button>
       <label class="btn file" for="restore">Restore<input id="restore" type="file" accept=".json,application/json" aria-label="Restore from a backup file"></label>
     </div>
+    <div id="pregear-row" class="pregear" hidden>
+      <p id="pregear-note" class="muted"></p>
+      <div class="row">
+        <button id="pregear-restore" type="button" class="btn">Restore the pre-gear snapshot</button>
+        <button id="pregear-drop" type="button" class="btn" hidden>Delete the old snapshot</button>
+        <button id="pregear-keep" type="button" class="btn keep" hidden>Keep it</button>
+      </div>
+    </div>
     <div id="restore-confirm" class="confirm" role="alertdialog" aria-modal="true" aria-labelledby="restore-title" hidden>
       <h3 id="restore-title">Replace these saves?</h3>
+      <p id="restore-summary" class="muted" hidden></p>
       <p class="muted">Restoring will overwrite what is on this device for:</p>
       <ul id="restore-list" class="list"></ul>
       <div class="row">
@@ -128,6 +138,18 @@
 <script src="../../shared/mm-access.js"></script>
 <script src="../../shared/mm-gift.js"></script>
 <script src="../../shared/mm-backup.js"></script>
+<script src="../../shared/mm-nav.js" data-mount="manual"></script>
+<script>
+(function () {
+  if (!window.MMNav) return;
+  MMNav.mount({ page: 'lantern', legacy: '#back-hub,#back-town', avoid: '.top h1', backHref: '../../hub/index.html', backLabel: 'World map' });
+  var cover = ['abil-panel'], shut = ['restore-confirm'];
+  function open(ids) { return ids.some(function (id) { var e = document.getElementById(id); return e && !e.hidden; }); }
+  function sync() { MMNav.setCovered(open(cover)); if (open(cover) || open(shut)) MMNav.close(); }
+  var mo = window.MutationObserver ? new MutationObserver(sync) : null;
+  cover.concat(shut).forEach(function (id) { var e = document.getElementById(id); if (e && mo) mo.observe(e, { attributes: true, attributeFilter: ['hidden'] }); });
+}());
+</script>
 <script src="lantern.js"></script>
 </body>
 </html>

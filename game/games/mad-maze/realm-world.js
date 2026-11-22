@@ -644,7 +644,7 @@
     const GM = window.MMGear; const GD = window.MMGearDrops;
     const gearQs = /[?&]gear=(\d)(&|$)/.exec(qs0); const gearQ = typeof rmFlag === 'function' ? rmFlag('gear') : gearQs ? gearQs[1] : null; // rmFlag: the one ?gear= parser (realm.js, review F15)
     const GEAR_ON = !!(GM && GD) && gearQ !== '0' && (gearQ === '1' || save.gearOn === true || GEAR_DEFAULT_ON);
-    const SIG_ON = typeof RM_FORGE_ON !== 'undefined' && RM_FORGE_ON === true; // T12 boss signatures (`sig`) on new drops only with the GW gate open (?forge=1; realm.js RM_FORGE_DEFAULT_ON)
+    const SIG_ON = typeof RM_FORGE_ON !== 'undefined' && RM_FORGE_ON === true; // T12 boss signatures (`sig`) on new drops only with the GW gate open (realm.js RM_FORGE_ON: default on since P2, ?forge=0 off)
     // Per-player seed id: each co-op seat rolls its own drops locally, nothing is shared. Seat N of a world team (MMWorldTeam: opts.team, arena.worldTeam
     // or setTeam) rolls as 'p' + N, so two seats on the same seed and kill get different streams; solo (no seat yet) stays 'p0' = today's seat-0 stream.
     // setGearPlayer (test hook) overrides it.
@@ -672,6 +672,12 @@
     function giveBag(x, y, bag, info) {
       const got = { zone: info.zone, boss: !!info.boss, tier: bag.tier, items: [], shards: bag.shards, potions: bag.potions };
       const rolls = []; let toasted = false;
+      // review F12: the pity counter lives in storage and another world tab may have spent (or raised) it since this page loaded: re-read it right
+      // before a boss roll / pityStep, so two tabs at b = 60 give ONE forced T12, not two. Unreadable storage keeps the in-memory value.
+      if (GEAR_ON && info.tag && info.boss) {
+        let raw = null; try { raw = localStorage.getItem(SAVE_KEY); } catch (e) { raw = null; }
+        if (raw) { const st = cleanSave(raw); if (st.gp) save.gp = { b: st.gp.b, d: st.gp.d }; else delete save.gp; }
+      }
       bag.items.forEach((it, k) => {
         let g = gearRollItem(info, k, it, bag); rolls.push(g);
         let id = it.id; let gear = null;
@@ -1013,6 +1019,7 @@
         try {
           let best = null, bd = 30;
           arena.bags.forEach((b) => { if (b.active || !b.gear || b.id !== it.id || b.r !== it.r) return; const d = Math.hypot(b.x - arena.player.x, b.y - arena.player.y); if (d < bd) { bd = d; best = b; } });
+          if (it.t && !arena.save.gv && window.MMBackup && MMBackup.snapshotPregear) MMBackup.snapshotPregear(localStorage); // the pickup already carried the bag's tier (realm.js passes b.gear, review F11): same once-only snapshot
           if (best && !it.t) {
             const c = GM.clean({ n: it.n, id: it.id, r: it.r, t: best.gear.t, a: best.gear.a, sig: best.gear.sig });
             if (c && c.t) {
@@ -1245,7 +1252,7 @@
         arena.applyStatus('player', 'healing', { sec: 5, src: 'shrine' });
       } else if (b.kind === 'rage') {
         rageEnd = now + sec; const on = arena.applyStatus('player', 'damaging', { sec, src: 'shrine' });
-        arena.buffDmg = on ? (b.value / 1.25 > 1 ? b.value / 1.25 : 1) : b.value; arena._calcStats(); arena._floatText(p.x, p.y - 30, 'Fury!', '#ff6a4a');
+        arena.buffDmg = on ? (b.value / 1.25 > 1 ? b.value / 1.25 : 1) : b.value; if (arena.markStatsDirty) arena.markStatsDirty(); arena._calcStats(); arena._floatText(p.x, p.y - 30, 'Fury!', '#ff6a4a');
       } else if (b.kind === 'ward') {
         wardEnd = now + sec; const on = arena.applyStatus('player', 'armored', { sec, src: 'shrine' });
         arena.buffTaken = on ? Math.min(0.999, b.value / 0.75) : b.value; arena._floatText(p.x, p.y - 30, 'Ward!', '#6ab8ff');
@@ -1293,7 +1300,7 @@
     function siteTick(dt) {
       if (noteT > 0) { noteT -= dt; if (noteT <= 0) siteNote.classList.add('hidden'); }
       const now = arena.clock;
-      if (rageEnd && now >= rageEnd) { rageEnd = 0; arena.buffDmg = 1; arena._calcStats(); }
+      if (rageEnd && now >= rageEnd) { rageEnd = 0; arena.buffDmg = 1; if (arena.markStatsDirty) arena.markStatsDirty(); arena._calcStats(); }
       if (wardEnd && now >= wardEnd) { wardEnd = 0; arena.buffTaken = 1; }
       siteTickT -= dt; if (siteTickT > 0) return; siteTickT = 0.25;
       campTick();
@@ -1469,7 +1476,9 @@
     const NX_WALK = NX_ON && !/[?&]nexuswalk=0(&|$)/.test(typeof location !== 'undefined' ? location.search : '');
     const NX_VW = 640; const NX_VH = 480; const NX_R = 10; // walk view (world px, 4:3) and the hero's collision radius
     const nxHero = { x: 0, y: 0, moving: false, aim: 0, mx: 0, my: 1, iframes: 0 }; let nxRaf = 0; let nxLast = 0; let nxNearI = null; const nxCam = { x: 0, y: 0 };
-    const NX_NAME = { realm: 'The Realm', warren: 'Warren dungeon', bramble: 'Bramble dungeon', vault: 'Lantern stash (vault)', meadow: 'Meadow dungeon', crypt: 'Crypt dungeon' };
+    const NX_NAME = { realm: 'The Realm', warren: 'Warren dungeon', bramble: 'Bramble dungeon', vault: 'Lantern vault', meadow: 'Meadow dungeon', crypt: 'Crypt dungeon' };
+    // Shown name of a Nexus portal (display only; MMNexus keeps its ids and labels): the vault says where it leads (NAV-AUDIT 4.1 renames).
+    const nxPortalName = (q) => (q && q.id === 'vault' ? 'Lantern vault' : q ? q.label : '');
     const nxSite = NX_ON ? (() => { const f = nearestFree(world.spawnPoint.x + 3, world.spawnPoint.y - 1, 8) || nearestFree(world.spawnPoint.x - 3, world.spawnPoint.y, 8); return f ? { tx: f.x, ty: f.y, x: (f.x + 0.5) * TILE, y: (f.y + 0.5) * TILE } : null; })() : null;
     const nxBtn = document.createElement('button'); nxBtn.id = 'rw-nexus-go'; nxBtn.type = 'button'; nxBtn.className = 'hidden'; nxBtn.textContent = 'Visit the Nexus (Enter)'; nxBtn.setAttribute('aria-label', 'Visit the Nexus hub'); ov.appendChild(nxBtn);
     let nxNear = false; let nxOpen = false; let nxEnterTile = null; let nxTalkN = 0; const nxPortrait = {}; let nxDom = null;
@@ -1487,6 +1496,7 @@
       + 'body.nx-walking #realm-stick-move{z-index:90}body.touch-device.nx-walking #rw-nexus{padding-bottom:calc(170px + env(safe-area-inset-bottom,0px))}'
       + '#rw-nexus .nx-board{max-width:760px;width:100%;margin:0 auto 12px;box-sizing:border-box;padding:10px 12px;border-radius:10px;background:#1d2a2a;border:1px solid #3b6b5f}#rw-nexus .nx-board.hidden{display:none}#rw-nexus .nx-q{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid #2f4a45}#rw-nexus .nx-q:first-of-type{border-top:0}#rw-nexus .nx-q span{flex:1}#rw-nexus .nx-q em{color:#8fe9ff;font-style:normal}'
       // PLAYTEST-REVIEW-2 #8: an unfinished quest's Claim is outline-only (dashed, muted, no fill) and the row carries a progress bar
+      + '#rw-nexus .nx-stall{background:#2a2418;border-color:#6b5a36}#rw-nexus .nx-st-head{display:flex;align-items:center;gap:8px;justify-content:space-between}#rw-nexus .nx-st-note,#rw-nexus .nx-st-wallet{margin:6px 0;font-size:13px}#rw-nexus .nx-st-sub{display:block;margin:10px 0 6px;font-size:12px;color:#e8d9b0}#rw-nexus .nx-stall button{height:auto;padding:6px 10px;white-space:normal;max-width:100%;text-align:left}#rw-nexus .nx-stall button:disabled{background:transparent;border-style:dashed;border-color:#6b6390;color:#a59cc4;cursor:not-allowed}#rw-nexus .nx-st-q{flex:0 0 100%}#rw-nx-forge{margin:4px 0}'
       + '#rw-nexus .nx-q button:disabled{background:transparent;border-style:dashed;border-color:#6b6390;color:#a59cc4;cursor:not-allowed}#rw-nexus .nx-bar{display:block;height:6px;margin-top:5px;border-radius:3px;background:#2f4a45;overflow:hidden}#rw-nexus .nx-bar>i{display:block;height:100%;background:#5be38a}';
     document.head.appendChild(nxCss);
     function nxLoadPortrait(id, done) { // b21 idle_down, first frame, cached; the plaza redraws when one arrives
@@ -1517,7 +1527,7 @@
         if (a) drawArt(g, a, 0, q.x, q.y + 23);
         else { g.globalAlpha = 0.3; g.fillStyle = '#a98bff'; g.beginPath(); g.arc(q.x, q.y, 30, 0, 7); g.fill(); g.globalAlpha = 1; g.strokeStyle = '#a98bff'; g.lineWidth = 4; g.beginPath(); g.arc(q.x, q.y, 24, 0, 7); g.stroke(); }
         g.restore();
-        g.font = 'bold 22px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(q.label, q.x + 1, q.y - 37); g.fillStyle = '#e8dcff'; g.fillText(q.label, q.x, q.y - 38);
+        g.font = 'bold 22px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(nxPortalName(q), q.x + 1, q.y - 37); g.fillStyle = '#e8dcff'; g.fillText(nxPortalName(q), q.x, q.y - 38);
       });
       L.npcs.forEach((n) => {
         const im = nxPortrait[n.npc]; const x = n.x; const y = n.y;
@@ -1563,9 +1573,53 @@
       if (n.role === 'heal') { const p = arena.player; const was = p.hp; p.hp = arena.stats.maxHp; arena._syncHud(); nxSay(name, was < p.hp ? 'There. Whole again, no charge.' : 'You look perfectly well to me.'); return; }
       if (n.role === 'oracle') { const o = MMQuests.oracle(todayUtc()); nxSay(name, o ? o.text : 'The mists are quiet.'); return; }
       if (n.role === 'quests') { if (typeof nxBoardOpen === 'function') nxBoardOpen(); nxSay(name, 'Here is the day\'s board. Three jobs, free to take.'); return; }
+      if (n.stall && nxStallOn()) { nxStallOpen(); nxSay(name, n.stall === 'forge' ? 'The anvil is yours to use. Salvage and reforge live in your backpack Forge.' : 'Same goods, same prices, every day. Take your time.'); return; }
       const key = n.role === 'rumours' ? 'rumours' : n.role === 'shop' ? 'vendor' : n.role === 'combine' ? 'blacksmith' : 'guide';
       const L = NX_LINES[key]; nxSay(name, L[(MMRng.hash(todayUtc() + n.id) + nxTalkN) % L.length]);
     }
+    // ---------- VN: the vendor / forge stall (arena.vendorStock / vendorBuy / vendorSellBack / openForge; realm.js owns the save) ----------
+    // Calm by design: a fixed T1-T3 list at fixed dust prices, no timer, no rotation, no random pack, no real money. Follows the forge gate (?forge=0 hides it).
+    let nxStallAsk = 0; // uid waiting for the sell-back confirm
+    const nxStallOn = () => typeof arena.vendorOn === 'function' && arena.vendorOn();
+    function nxStallBtn(text, label, fn) { const b = document.createElement('button'); b.type = 'button'; b.textContent = text; b.setAttribute('aria-label', label || text); b.addEventListener('click', fn); return b; }
+    function nxStallRender() {
+      const el = nxDom.stall; el.textContent = '';
+      if (!nxStallOn()) { el.classList.add('hidden'); return; }
+      const sv = arena.save; const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+      const head = mk('div', 'nx-st-head'); head.appendChild(mk('b', '', 'Vendor stall'));
+      head.appendChild(nxStallBtn('Close stall', 'Close the vendor stall', () => nxStallHide()));
+      el.appendChild(head);
+      el.appendChild(mk('p', 'nx-st-note', 'Fixed prices in dust. The shelf is the same every day.'));
+      el.appendChild(mk('p', 'nx-st-wallet', 'You have ' + (sv.dust || 0) + ' dust · ' + sv.items.length + ' items carried'));
+      const fg = nxStallBtn('⚒ Open the Forge', 'Open the Forge in your backpack', () => nxStallForge()); fg.id = 'rw-nx-forge'; el.appendChild(fg);
+      el.appendChild(mk('b', 'nx-st-sub', 'Buy'));
+      const buy = mk('div', 'nx-row'); buy.id = 'rw-nx-buy';
+      (arena.vendorStock() || []).forEach((o) => {
+        const why = !o.room ? ' (backpack full)' : !o.afford ? ' (not enough dust)' : '';
+        const b = nxStallBtn(o.name + ' T' + o.t + ' · ' + o.price + ' dust', 'Buy ' + o.name + ' tier ' + o.t + ' for ' + o.price + ' dust' + why, () => { arena.vendorBuy(o.id, o.t); nxStallRender(); });
+        b.dataset.vbuy = o.id + ':' + o.t; b.dataset.price = String(o.price); if (why) b.disabled = true; buy.appendChild(b);
+      });
+      el.appendChild(buy);
+      el.appendChild(mk('b', 'nx-st-sub', 'Sell back (T1-T3)'));
+      const back = mk('div', 'nx-row'); back.id = 'rw-nx-sell'; let any = false;
+      sv.items.forEach((it) => {
+        const info = arena.vendorBuyBackInfo(it.n); if (!info) return; any = true;
+        const def = typeof RM_ITEM_BY_ID !== 'undefined' && RM_ITEM_BY_ID[it.id] ? RM_ITEM_BY_ID[it.id].name : it.id;
+        if (nxStallAsk === it.n) {
+          const q = mk('span', 'nx-st-q', 'Sell ' + def + ' T' + it.t + ' back for ' + info.dust + ' dust?'); back.appendChild(q);
+          const y = nxStallBtn('Confirm +' + info.dust + ' dust', 'Confirm: sell ' + def + ' back for ' + info.dust + ' dust', () => { nxStallAsk = 0; arena.vendorSellBack(it.n); nxStallRender(); }); y.dataset.vyes = String(it.n); back.appendChild(y);
+          back.appendChild(nxStallBtn('Cancel', 'Keep ' + def, () => { nxStallAsk = 0; nxStallRender(); }));
+        } else {
+          const b = nxStallBtn(def + ' T' + it.t + ' · +' + info.dust + ' dust', 'Sell ' + def + ' tier ' + it.t + ' back for ' + info.dust + ' dust (asks first)', () => { nxStallAsk = it.n; nxStallRender(); });
+          b.dataset.vsell = String(it.n); back.appendChild(b);
+        }
+      });
+      if (!any) back.appendChild(mk('span', 'nx-st-note', 'Nothing to sell back. Tier 1 to 3 gear can be sold here.'));
+      el.appendChild(back);
+    }
+    function nxStallOpen() { nxBuild(); if (!nxStallOn()) return false; nxStallAsk = 0; nxDom.board.classList.add('hidden'); nxStallRender(); nxDom.stall.classList.remove('hidden'); return true; }
+    function nxStallForge() { if (!nxStallOn()) return false; nxStallHide(); nexusClose(); return arena.openForge(); }
+    function nxStallHide() { nxStallAsk = 0; if (!nxDom || !nxDom.stall) return; nxDom.stall.classList.add('hidden'); nxDom.stall.textContent = ''; } // emptied: no hidden buttons linger
     function nxBuild() {
       if (nxDom) return nxDom;
       const root = document.createElement('div'); root.id = 'rw-nexus'; root.className = 'hidden'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', 'The Nexus');
@@ -1585,7 +1639,7 @@
       const rowN = document.createElement('div'); rowN.className = 'nx-row'; const rowNl = document.createElement('b'); rowNl.textContent = 'Talk to'; rowN.appendChild(rowNl);
       const spot = (x, y, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'nx-spot'; b.tabIndex = -1; b.setAttribute('aria-hidden', 'true'); b.style.left = (x / cv.width * 100) + '%'; b.style.top = (y / cv.height * 100) + '%'; b.addEventListener('click', fn); stage.appendChild(b); };
       if (!NX_WALK) L.portals.forEach((q) => {
-        const b = document.createElement('button'); b.type = 'button'; b.dataset.portal = q.id; b.textContent = q.id === 'realm' ? 'Back to the Realm portal' : q.id === 'vault' ? 'Vault: Lantern stash' : q.label + ' portal'; b.setAttribute('aria-label', q.id === 'vault' ? 'Vault portal: open the Lantern stash' : q.id === 'realm' ? 'Realm portal: go back to the Realm' : 'Enter the ' + q.label + ' dungeon');
+        const b = document.createElement('button'); b.type = 'button'; b.dataset.portal = q.id; b.textContent = q.id === 'realm' ? 'Back to the Realm portal' : q.id === 'vault' ? 'Lantern vault: your stash' : q.label + ' portal'; b.setAttribute('aria-label', q.id === 'vault' ? 'Lantern vault portal: open the Lantern stash' : q.id === 'realm' ? 'Realm portal: go back to the Realm' : 'Enter the ' + q.label + ' dungeon');
         b.addEventListener('click', () => nxPortal(q)); rowP.appendChild(b); spot(q.x, q.y, () => nxPortal(q));
       });
       if (!NX_WALK) L.npcs.forEach((n) => {
@@ -1595,9 +1649,10 @@
       lists.appendChild(rowP); lists.appendChild(rowN);
       const talk = document.createElement('div'); talk.className = 'nx-talk'; talk.setAttribute('role', 'status'); talk.textContent = nxHint();
       const board = document.createElement('div'); board.className = 'nx-board hidden'; board.id = 'rw-nx-board';
-      root.appendChild(head); root.appendChild(stage); if (act) root.appendChild(act); root.appendChild(talk); root.appendChild(board); if (!NX_WALK) root.appendChild(lists); ov.appendChild(root);
+      const stall = document.createElement('div'); stall.className = 'nx-board nx-stall hidden'; stall.id = 'rw-nx-stall'; stall.setAttribute('role', 'region'); stall.setAttribute('aria-label', 'Vendor stall');
+      root.appendChild(head); root.appendChild(stage); if (act) root.appendChild(act); root.appendChild(talk); root.appendChild(board); if (nxStallOn()) root.appendChild(stall); if (!NX_WALK) root.appendChild(lists); ov.appendChild(root);
       back.addEventListener('click', () => nexusClose());
-      nxDom = { root, cv, plaza, act, stage, talk, board, back, last: null };
+      nxDom = { root, cv, plaza, act, stage, talk, board, stall, back, last: null };
       return nxDom;
     }
     function nxTouch() { return document.body.classList.contains('touch-device'); }
@@ -1614,7 +1669,7 @@
     function nxLabel(it) {
       if (!it) return '';
       if (it.kind === 'npc') { const nm = NPC_NAME[it.ref.npc] || it.ref.id; return it.ref.role === 'quests' ? 'Quest board: ' + nm : 'Talk to ' + nm; }
-      const q = it.ref; return q.id === 'realm' ? 'Back to the Realm' : q.id === 'vault' ? 'Vault: open the Lantern stash' : 'Enter the ' + q.label + ' dungeon';
+      const q = it.ref; return q.id === 'realm' ? 'Back to the Realm' : q.id === 'vault' ? 'Lantern vault: open your stash' : 'Enter the ' + q.label + ' dungeon';
     }
     function nxNearest() {
       const L = NX.layout(); const h = nxHero; let best = null; let bd = Infinity;
@@ -1692,7 +1747,7 @@
       nxBuild(); nxEnterTile = { x: Math.floor(arena.player.x / TILE), y: Math.floor(arena.player.y / TILE) };
       nxOpen = true; arena.paused = true; savePos(true);
       nxBtn.classList.add('hidden'); portalBtn.classList.add('hidden'); siteBtn.classList.add('hidden'); if (typeof lairBtn !== 'undefined') { lairBtn.classList.add('hidden'); lairTxt = ''; }
-      nxDom.root.classList.remove('hidden'); nxDom.board.classList.add('hidden');
+      nxDom.root.classList.remove('hidden'); nxDom.board.classList.add('hidden'); nxStallHide();
       NX.layout().npcs.forEach((n) => nxLoadPortrait(n.npc, nxDrawPlaza)); nxDrawPlaza();
       nxDom.talk.textContent = nxHint();
       if (NX_WALK) nxWalkStart(); else nxDom.back.focus({ preventScroll: true });
@@ -1870,7 +1925,7 @@
         b.appendChild(row);
       });
     }
-    function nxBoardOpen() { nxBuild(); nxBoardRender(); nxDom.board.classList.remove('hidden'); }
+    function nxBoardOpen() { nxBuild(); nxBoardRender(); nxDom.board.classList.remove('hidden'); nxStallHide(); }
     function nxClaim(id) {
       const out = MMQuests.claim(save.quests, id, questDate()); save.quests = out.state;
       if (out.reward) {
@@ -2096,7 +2151,7 @@
       worldStatus: { on: STATUS_ON, table: BOLT_ST, forCreature: boltStatusFor, roll: boltRoll, log: stLog },
       ttk: { on: TTK_ON }, firstBag: { on: FIRSTBAG_ON, kill: FIRSTBAG_KILL, fresh: fbFresh, kills: () => fbKills, dropped: () => fbDropped, forced: () => fbForced, spent: () => save.fb === 1 }, explore: { on: EXPLORE_ON, every: EXPLORE_EVERY, pct: EXPLORE_PCT, xp: () => exploreXp, pending: () => exploreCells },
       pickups: { on: PICK_ON, cap: PICK_CAP, magnet: MAGNET_R, list: () => picks.map((q) => ({ type: q.type, art: q.art, value: q.value, tier: q.tier, x: q.x, y: q.y, lifeMs: q.lifeMs })), spawn: spawnPickups, got: () => Object.assign({}, pickGot), total: () => pickTotal },
-      nexus: { on: NX_ON, site: nxSite, open: nexusOpen, close: nexusClose, isOpen: () => nxOpen, near: () => nxNear, enterTile: () => nxEnterTile, talk: (id) => { const n = NX_ON && NX.layout().npcs.find((x) => x.id === id); if (n) { nxBuild(); nxTalk(n); } return nxDom && nxDom.last; }, portal: (id) => { const q = NX_ON && NX.layout().portals.find((x) => x.id === id); return q ? nxPortal(q) : null; }, lastUrl: () => api.lastNexusUrl || null, today: todayUtc,
+      nexus: { on: NX_ON, site: nxSite, portalName: (id) => (NX_ON ? nxPortalName(NX.layout().portals.find((q) => q.id === id)) : ''), promptFor: (id) => { const q = NX_ON ? NX.layout().portals.find((p) => p.id === id) : null; return q ? nxLabel({ kind: 'portal', ref: q }) : ''; }, open: nexusOpen, close: nexusClose, isOpen: () => nxOpen, near: () => nxNear, enterTile: () => nxEnterTile, talk: (id) => { const n = NX_ON && NX.layout().npcs.find((x) => x.id === id); if (n) { nxBuild(); nxTalk(n); } return nxDom && nxDom.last; }, stall: { on: () => NX_ON && nxStallOn(), open: () => NX_ON && nxStallOpen(), isOpen: () => !!(nxDom && nxDom.stall && nxDom.stall.isConnected && !nxDom.stall.classList.contains('hidden')), forge: () => NX_ON && nxStallForge() }, portal: (id) => { const q = NX_ON && NX.layout().portals.find((x) => x.id === id); return q ? nxPortal(q) : null; }, lastUrl: () => api.lastNexusUrl || null, today: todayUtc,
         // walkable plaza (PLAYTEST-REVIEW-2 #5); step(mx, my, dt) injects input for tests, place() only accepts free plaza points
         walk: { on: NX_WALK, view: { w: NX_VW, h: NX_VH }, hero: () => ({ x: nxHero.x, y: nxHero.y, tx: Math.floor(nxHero.x / TILE), ty: Math.floor(nxHero.y / TILE), moving: nxHero.moving }), cam: () => ({ x: nxCam.x, y: nxCam.y }),
           near: () => (nxNearI ? { kind: nxNearI.kind, id: nxNearI.ref.id } : null), act: () => nxAct(), step: (mx, my, dt) => { if (nxOpen && NX_WALK) nxWalkStep(Number(dt) || 1 / 60, Number(mx) || 0, Number(my) || 0); return { x: nxHero.x, y: nxHero.y }; },

@@ -15,7 +15,8 @@
   const wName = Object.create(null);
   MAP.worlds.forEach((w) => { wName[w.id] = w.name; });
 
-  // Real pages (relative to /game/hub/). Anything else is "Coming soon".
+  // Real pages (relative to /game/hub/). Nodes without one are cross-game goals (W0 levels, the Festival Finale: the card
+  // lists the goal) or HIDDEN below; "Coming soon" is only a fallback for a node with neither.
   const FROM_HUB = '../index.html?from=hub';
   const LINKS = Object.assign(Object.create(null), {
     'w0-hearthvale': FROM_HUB,
@@ -26,7 +27,34 @@
     'w5-safari': '../games/festival/bugs.html',
     'w2-catacombs': '../games/mad-maze/index.html?mode=dungeon&seed=1&from=hub',
     'w7-isles': '../games/isles/index.html?from=hub',
+    'w5-jam': '../games/jam/index.html',
+    'w5-stalk': '../games/stalk/index.html',
+    // Level nodes open the game (and sub-mode) whose own save clears them (goals: MMHubProfile.MILESTONES).
+    'w2-burrow': '../games/mad-maze/index.html?mode=dungeon&from=hub',
+    'w2-keep': '../games/mad-maze/index.html?mode=world&from=hub',
+    'w3-depth8': '../games/deepdelve/index.html', 'w3-iron': '../games/deepdelve/index.html',
+    'w3-lava': '../games/deepdelve/index.html', 'w3-crystal': '../games/deepdelve/index.html',
+    'w4-west': '../games/angler/index.html', 'w4-east': '../games/angler/index.html', 'w4-river': '../games/angler/index.html',
+    'w4-pier': '../games/angler/index.html', 'w4-whiskers': '../games/angler/index.html',
+    'w6-trout': '../games/angler/index.html', 'w6-expert': '../games/jam/index.html',
+    // Hearthvale places live in the Town (the Town reports their exits itself).
+    'w1-sparkle': FROM_HUB, 'w1-weed': FROM_HUB, 'w1-turnip': FROM_HUB, 'w1-museum': FROM_HUB,
+    'w1-bonus': FROM_HUB, 'w1-castle': FROM_HUB, 'w6-night': FROM_HUB,
   });
+  const TOWN_NODES = new Set(['w1-sparkle', 'w1-weed', 'w1-turnip', 'w1-museum', 'w1-bonus', 'w1-castle', 'w6-night']);
+  // Not buildable yet (no game or sub-mode can report them): hidden from the map, its taps and the completion total.
+  // Daily Maze / Sunken Lantern need the Realm to report a daily run; Mazewright Remix and Deepdelve Hardcore have no mode.
+  const HIDDEN = new Set(['w2-daily', 'w2-sunken', 'w6-remix', 'w6-hardcore']);
+  const shown = (id) => !HIDDEN.has(id);
+  const VISIBLE_MAP = Object.assign({}, MAP, { nodes: MAP.nodes.filter((n) => shown(n.id)) });
+  const PATH_BY_ID = Object.create(null);
+  MAP.paths.forEach((p) => { PATH_BY_ID[p.id] = p; });
+  // NAV slice D: every game node with a real page is always open to play (from a fresh save too). Map paths,
+  // medals and the unlock rules are unchanged: they are a bonus goal (walking the map), never a gate on a game.
+  const GAME_ICON = { 'w1-hearthvale': '\u{1F3E1}', 'w2-lantern': '\u{1F3EE}', 'w3-deepdelve': '\u26CF\uFE0F', 'w4-angler': '\u{1F3A3}',
+    'w5-safari': '\u{1F98B}', 'w5-jam': '\u{1F3B8}', 'w5-stalk': '\u{1F96C}', 'w7-isles': '\u{1F3DD}\uFE0F' };
+  const playable = (n) => !!n && (n.type === 'game' || n.type === 'gate') && !!LINKS[n.id];
+  const GAME_NODES = MAP.nodes.filter((n) => n.type === 'game' && LINKS[n.id]);
 
   const $ = (id) => document.getElementById(id);
   const canvas = $('map');
@@ -82,10 +110,10 @@
   let E, openIds, openSet, reach;
   function recompute() {
     E = effective();
-    openIds = MMMap.openPathIds(MAP, E);
+    openIds = MMMap.openPathIds(MAP, E).filter((pid) => { const p = PATH_BY_ID[pid]; return shown(p.from) && shown(p.to); });
     openSet = new Set(openIds);
     reach = new Set();
-    MAP.nodes.forEach((n) => { if (MMMap.bfs(MAP, hub.at, n.id, openIds)) reach.add(n.id); });
+    MAP.nodes.forEach((n) => { if (shown(n.id) && MMMap.bfs(MAP, hub.at, n.id, openIds)) reach.add(n.id); });
   }
 
   // ---------- geometry per world ----------
@@ -109,6 +137,7 @@
     if (wantRows > g.rows) { const ex = wantRows - g.rows, top = Math.floor(ex / 2); g.minY -= top; g.maxY += ex - top; g.rows = wantRows; }
     MAP.paths.forEach((p) => {
       const a = byId[p.from], b = byId[p.to];
+      if (!shown(a.id) || !shown(b.id)) return;
       if (a.world === w && b.world === w) {
         const pts = poly(a, b);
         const tiles = [];
@@ -315,7 +344,7 @@
   }
   function drawNode(g, n) {
     const cx = (n.x - g.minX) * T + 8, cy = (n.y - g.minY) * T + 8;
-    const locked = !reach.has(n.id);
+    const locked = !reach.has(n.id) && !playable(n);
     const st = E.nodes[n.id];
     const cleared = !!(st && st.exits.length);
     px(ctx, cx - 7, cy + 5, 14, 3, 'rgba(0,0,0,.25)');
@@ -351,6 +380,42 @@
       if (n.comet) { px(ctx, cx - 1, cy - 3, 2, 6, '#fff'); px(ctx, cx - 3, cy - 1, 6, 2, '#fff'); }
     }
     if (n.medals && !locked) medalDots(n, cx, cy);
+  }
+  // Labels under every game / gate node (canvas text at the map's pixel scale), kept inside the canvas.
+  let labelsDrawn = [];
+  function drawLabels(g) {
+    labelsDrawn = [];
+    ctx.save();
+    ctx.font = 'bold 8px ui-monospace, Menlo, Consolas, monospace';
+    ctx.textBaseline = 'top';
+    MAP.nodes.forEach((n) => {
+      if (n.world !== view.world || !(n.type === 'game' || n.type === 'gate')) return;
+      const text = n.name;
+      const w = Math.ceil(ctx.measureText(text).width) + 4, h = 10;
+      const cx = (n.x - g.minX) * T + 8, cy = (n.y - g.minY) * T + 8;
+      let x = Math.round(cx - w / 2), y = cy + (n.medals ? 15 : 9);
+      x = Math.max(1, Math.min(canvas.width - w - 1, x));
+      y = Math.max(1, Math.min(canvas.height - h - 1, y));
+      px(ctx, x, y, w, h, 'rgba(12,20,15,.85)');
+      ctx.fillStyle = '#fff7d6';
+      ctx.fillText(text, x + 2, y + 1);
+      labelsDrawn.push({ id: n.id, text, x, y, w, h });
+    });
+    // signposts at the map edge name the world they lead to
+    g.stubs.forEach((st) => {
+      const t = byId[st.target];
+      const text = (st.dir > 0 ? '' : '< ') + wName[t.world] + (st.dir > 0 ? ' >' : '');
+      const w = Math.ceil(ctx.measureText(text).width) + 4, h = 10;
+      const cx = (st.x - g.minX) * T + 8, cy = (st.y - g.minY) * T;
+      let x = Math.round(cx - w / 2), y = cy - h - 1;
+      x = Math.max(1, Math.min(canvas.width - w - 1, x));
+      y = Math.max(1, Math.min(canvas.height - h - 1, y));
+      px(ctx, x, y, w, h, 'rgba(58,42,20,.9)');
+      ctx.fillStyle = '#fff7d6';
+      ctx.fillText(text, x + 2, y + 1);
+      labelsDrawn.push({ id: 'stub:' + st.target, text, x, y, w, h });
+    });
+    ctx.restore();
   }
 
   function drawVillager(g) {
@@ -396,9 +461,10 @@
     ctx.drawImage(cv, 0, 0);
     drawPaths(g);
     g.stubs.forEach((s) => drawStub(g, s));
-    MAP.nodes.forEach((n) => { if (n.world === view.world) drawNode(g, n); });
+    MAP.nodes.forEach((n) => { if (n.world === view.world && shown(n.id)) drawNode(g, n); });
     dots(g);
     drawVillager(g);
+    drawLabels(g);
   }
 
   // ---------- layout ----------
@@ -433,7 +499,7 @@
     $('hud-world').textContent = wName[n.world] + ' - ' + n.name;
     $('hud-tokens').textContent = String(profile.tokens);
     $('hud-medals').textContent = String(MMMap.medalCount(E));
-    $('hud-pct').textContent = String(MMMap.completion(E, MAP));
+    $('hud-pct').textContent = String(MMMap.completion(E, VISIBLE_MAP));
   }
 
   // Per-game medal strip from the game's own summary key (read-only; see medals.js).
@@ -458,6 +524,23 @@
     });
   }
 
+  // How a node is cleared: the game milestones (MMHubProfile.goalsFor, read-only) or a Town note. Returns the count shown.
+  function renderGoals(id) {
+    const ul = $('card-goals'), head = $('card-goals-n');
+    while (ul.firstChild) ul.removeChild(ul.firstChild);
+    let goals = [];
+    if (!MMHubMedals.gameOfNode(id)) { try { goals = MMHubProfile.goalsFor(profile, id); } catch (e) { goals = []; } } // games with a medal strip show that instead
+    if (!goals.length && TOWN_NODES.has(id)) goals = [{ label: 'Played in the Town: the Town marks this place on the map', done: !!(E.nodes[id] && E.nodes[id].exits.length), town: true }];
+    goals.forEach((g) => {
+      const li = document.createElement('li');
+      li.className = g.done ? 'on' : '';
+      if (g.id) li.dataset.goal = g.game + ':' + g.id;
+      li.textContent = (g.done ? '[x] ' : '[ ] ') + g.label;
+      ul.appendChild(li);
+    });
+    ul.hidden = !goals.length; head.hidden = !goals.length;
+    return goals.length;
+  }
   function openNode(id) {
     const n = byId[id];
     if (!n) return;
@@ -479,11 +562,19 @@
     }
     med.hidden = !n.medals;
     renderAch(id);
+    const goals = renderGoals(id);
     $('card-status').textContent = n.medals ? (got + ' of 3 medals') : (st && st.exits.length ? 'Visited' : 'Not visited yet');
+    const bonus = $('card-bonus');
+    if (bonus) {
+      bonus.hidden = !playable(n);
+      bonus.textContent = !playable(n) ? '' : n.medals
+        ? (reach.has(id) ? 'Open to play any time. Medals are a bonus.' : 'Open to play any time. Walking here on the map is a bonus: earn medals to open the path.')
+        : 'Open any time.';
+    }
     const href = LINKS[id];
     const play = $('card-play');
     if (href) { play.setAttribute('href', href); play.hidden = false; $('card-soon').hidden = true; }
-    else { play.removeAttribute('href'); play.hidden = true; $('card-soon').hidden = false; }
+    else { play.removeAttribute('href'); play.hidden = true; $('card-soon').hidden = goals > 0; }
     $('card').hidden = false;
     if (href) play.focus(); else $('card-close').focus();
   }
@@ -505,7 +596,7 @@
     const id = cardFor, href = $('card-play').getAttribute('href');
     if (!id || !href) { e.preventDefault(); return; }
     const n = byId[id];
-    if (n.type === 'game' || n.type === 'gate') { // visiting is an exit of kind "visit" (opens the next paths)
+    if ((n.type === 'game' || n.type === 'gate') && reach.has(id)) { // visiting (after walking there) is an exit of kind "visit" (opens the next paths)
       hub.state = MMMap.unlock(MAP, hub.state, { node: id, exit: 'visit' }).state;
     }
     saveHub();
@@ -528,7 +619,7 @@
     const rad = Math.max(1.1, 24 / (T * p.k));
     let best = null, bd = rad;
     MAP.nodes.forEach((n) => {
-      if (n.world !== view.world) return;
+      if (n.world !== view.world || !shown(n.id)) return;
       const d = Math.hypot(n.x - p.tx, n.y - p.ty);
       if (d < bd) { bd = d; best = n.id; }
     });
@@ -542,7 +633,10 @@
     if (walker.wps || !$('card').hidden) return;
     const id = hit(e);
     if (!id) return;
-    if (!reach.has(id)) { toast('Locked - finish earlier stops first.'); return; }
+    if (!reach.has(id)) {
+      if (playable(byId[id])) { openNode(id); return; } // a game is always open; walking there stays a bonus
+      toast('Locked - finish earlier stops first.'); return;
+    }
     travel(id, true);
   });
   canvas.addEventListener('mousemove', (e) => { view.hover = hit(e); });
@@ -599,6 +693,50 @@
     requestAnimationFrame(frame);
   }
 
+  // ---------- NAV slice D: games strip, shared Menu, phone hint chip ----------
+  (function gamesStrip() {
+    const nav = $('hub-games');
+    if (!nav) return;
+    GAME_NODES.forEach((n) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.dataset.node = n.id;
+      b.setAttribute('aria-label', n.name + ' (' + wName[n.world] + ')');
+      const ic = document.createElement('span'); ic.className = 'g-ico'; ic.setAttribute('aria-hidden', 'true'); ic.textContent = GAME_ICON[n.id] || '';
+      b.appendChild(ic);
+      b.appendChild(document.createTextNode(n.name));
+      b.addEventListener('click', () => { if (!walker.wps) openNode(n.id); });
+      nav.appendChild(b);
+    });
+  }());
+  // Continue hint: the last game played (read before mount records this page). On a hub reload the last place is the
+  // map itself, so the one before it is used. Hidden when there is nothing to continue or MMNav is absent.
+  (function continueCard() {
+    const a = $('hub-continue');
+    if (!a || !window.MMNav || typeof MMNav.continueTarget !== 'function') return;
+    let t = null;
+    try {
+      const st = MMNav.state();
+      t = MMNav.continueTarget(st, 'map') || (st.prev ? MMNav.continueTarget({ v: 1, last: st.prev }, 'map') : null);
+    } catch (e) { t = null; }
+    const href = t && MMNav.urlFor(t.url, 'game/hub/index.html');
+    if (!t || !href || t.id === 'town') return; // the Town has its own button in the bar
+    a.setAttribute('href', href);
+    a.dataset.place = t.id;
+    a.setAttribute('aria-label', t.label);
+    a.querySelector('.c-ico').textContent = t.icon || '';
+    a.querySelector('.c-txt').textContent = t.label;
+    a.hidden = false;
+  }());
+  if (window.MMNav) {
+    try { MMNav.mount({ page: 'map', avoid: '#hud .hud-main' }); } catch (e) { /* the map works without it */ }
+  }
+  (function hintChip() {
+    const chip = $('hint-chip'), x = $('hint-chip-x'), K = 'pixeltown-hub-hint-v1';
+    if (!chip || !x) return;
+    if (readKey(K) !== '1') chip.hidden = false;
+    x.addEventListener('click', () => { chip.hidden = true; try { localStorage.setItem(K, '1'); } catch (e) { /* storage blocked */ } });
+  }());
+
   window.addEventListener('resize', resize);
   recompute();
   placeAt(hub.at);
@@ -614,6 +752,13 @@
     get walking() { return !!walker.wps; },
     get reduced() { return reducedMotion(); },
     isReachable: (id) => reach.has(id),
+    isShown: (id) => shown(id),
+    progress: () => ({ medals: MMMap.medalCount(E), pct: MMMap.completion(E, VISIBLE_MAP), tokens: profile.tokens, open: openIds.slice(), comets: E.comets.slice(),
+      nodes: JSON.parse(JSON.stringify(E.nodes)) }),
+    isPlayable: (id) => playable(byId[id]),
+    labels: () => labelsDrawn.map((l) => Object.assign({}, l)),
+    gameNodes: () => GAME_NODES.map((n) => n.id),
+    links: () => Object.assign({}, LINKS),
     achievements,
     nodeClient(id) {
       const n = byId[id], g = geoFor(n.world), r = canvas.getBoundingClientRect(), k = r.width / canvas.width;

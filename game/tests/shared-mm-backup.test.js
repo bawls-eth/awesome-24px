@@ -57,6 +57,24 @@ check('backup round-trips the access prefs', (() => { const st = fake(); const r
 check('backup cleans the gift save', (() => { const st = fake(); const r = B.restore(st, key('pixeltown-gift-v1', '{"days":1e99,"evil":1}')); const v = JSON.parse(st._m['pixeltown-gift-v1']); return r.ok && v.days === 99999 && v.evil === undefined; })());
 check('a bundle without the new keys still restores', B.restore(fake(), key('pixeltown-jam-v1', '{}')).ok);
 
+// nav-e's Town Realm Gate pointer key is backed up (additive): known, exported raw, restored with only its two booleans.
+check('KNOWN includes pixeltown-gate-pointer-v1', B.KNOWN.indexOf('pixeltown-gate-pointer-v1') >= 0);
+check('gate pointer key is exported raw and round-trips', (() => {
+  const raw = '{"v":1,"dismissed":true,"reached":false}';
+  const b = B.bundle(fake({ 'pixeltown-gate-pointer-v1': raw, 'pixeltown-save-v1': '{"name":"Bo"}' }));
+  const d = fake();
+  const r = B.restore(d, JSON.parse(JSON.stringify(b)));
+  const got = JSON.parse(d._m['pixeltown-gate-pointer-v1']);
+  return b.keys['pixeltown-gate-pointer-v1'] === raw && r.ok && r.restored.indexOf('pixeltown-gate-pointer-v1') >= 0 && got.dismissed === true && got.reached === false && d._m['pixeltown-save-v1'] === '{"name":"Bo"}';
+})());
+check('gate pointer restore keeps only the known booleans; a non-object is refused', (() => {
+  const d = fake();
+  const r = B.restore(d, key('pixeltown-gate-pointer-v1', '{"dismissed":"yes","reached":true,"evil":{"x":1}}'));
+  const got = JSON.parse(d._m['pixeltown-gate-pointer-v1'] || 'null');
+  const bad = B.plan(key('pixeltown-gate-pointer-v1', '[1,2]'));
+  return r.ok && got && got.dismissed === false && got.reached === true && !('evil' in got) && !bad.ok;
+})());
+
 // A5: Biome Archipelago keys (tames, archipelago progress, isles medals)
 const ISLE_KEYS = ['pixeltown-tames-v1', 'pixeltown-archipelago-v1', 'pixeltown-medals-isles-v1'];
 ISLE_KEYS.forEach((k) => check('KNOWN includes ' + k, B.KNOWN.indexOf(k) >= 0));
@@ -93,6 +111,66 @@ check('hostile new-key values never throw', [null, 5, '"x"', '{"__proto__":{"a":
 check('an old v2 bundle without the new keys restores identically', (() => { const st = fake(); const r = B.restore(st, { format: 'pixeltown-backup', v: 2, keys: { 'pixeltown-save-v1': '{"name":"Old"}', 'pixeltown-jam-v1': '{"offset":0}' } }); return r.ok && r.restored.length === 2 && st._m['pixeltown-jam-v1'] === '{"offset":0}' && !ISLE_KEYS.some((k) => k in st._m); })());
 check('old bundle plus new keys together round trip', (() => { const st = fake(); const bk = JSON.parse(JSON.stringify(bun)); ISLE_KEYS.forEach((k) => { bk.keys[k] = isleBun.keys[k]; }); const r = B.restore(st, bk); return r.ok && r.restored.length === 8; })());
 check('the new keys have readable labels', ISLE_KEYS.every((k) => B.labelOf(k) !== k));
+
+// SV3 (F14): pre-gear snapshot hygiene. A Storage-like fake with length/key() so the whole-origin total is measured.
+function fakeLS(init, quota) {
+  const m = Object.assign({}, init || {});
+  return { getItem: (k) => (Object.prototype.hasOwnProperty.call(m, k) ? m[k] : null), setItem: (k, v) => { if (quota) throw new Error('QuotaExceededError'); m[k] = String(v); },
+    removeItem: (k) => { delete m[k]; }, key: (i) => Object.keys(m)[i] || null, get length() { return Object.keys(m).length; }, _m: m };
+}
+const OLD_SAVE = JSON.stringify({ name: 'Old', realm: { level: 4, xp: 3, shards: 9, items: [{ n: 1, id: 'sparkwand', r: 1 }, { n: 2, id: 'luckring', r: 0 }] } });
+check('snapshot: a small gear-less save is written once', (() => { const st = fakeLS({ 'pixeltown-save-v1': OLD_SAVE }); return B.snapshotPregear(st) === 'written' && B.snapshotPregear(st) === 'exists' && B.hasPregear(st); })());
+check('snapshot: a 1.2 MB bundle is not snapshotted ("too-big"), nothing written', (() => {
+  const st = fakeLS({ 'pixeltown-save-v1': JSON.stringify({ name: 'Big', pad: 'x'.repeat(1200000) }) });
+  return B.snapshotPregear(st) === 'too-big' && st.getItem(B.PREGEAR_KEY) === null;
+})());
+check('snapshot: just under the 1 MB cap is still written', (() => {
+  const st = fakeLS({ 'pixeltown-save-v1': JSON.stringify({ name: 'Mid', pad: 'x'.repeat(900000) }) });
+  return B.snapshotPregear(st) === 'written';
+})());
+check('snapshot: a small bundle that would push the origin past MAX_TOTAL is skipped ("over-total")', (() => {
+  const st = fakeLS({ 'pixeltown-save-v1': OLD_SAVE, 'other-site-data': 'y'.repeat(B.MAX_TOTAL - 100) });
+  return B.snapshotPregear(st) === 'over-total' && st.getItem(B.PREGEAR_KEY) === null;
+})());
+check('snapshot: full storage is still "skipped" (no throw)', B.snapshotPregear(fakeLS({ 'pixeltown-save-v1': OLD_SAVE }, true)) === 'skipped');
+check('snapshot: a plain fake without length/key still works (legacy callers)', B.snapshotPregear(fake({ 'pixeltown-save-v1': OLD_SAVE })) === 'written');
+
+check('planRestorePregear: no snapshot -> no-snapshot, nothing written', (() => { const st = fakeLS({ 'pixeltown-save-v1': OLD_SAVE }); const p = B.planRestorePregear(st); return !p.ok && p.error === 'no-snapshot' && Object.keys(st._m).length === 1; })());
+check('planRestorePregear: plan summary + apply round-trips the old save byte-identically', (() => {
+  const st = fakeLS({ 'pixeltown-save-v1': OLD_SAVE, 'pixeltown-jam-v1': '{"offset":2}' });
+  B.snapshotPregear(st);
+  const geared = JSON.stringify({ name: 'Old', realm: { gv: 1, level: 9, items: [{ n: 1, id: 'sparkwand', r: 1, t: 5 }, { n: 2, id: 'luckring', r: 0 }, { n: 3, id: 'quickwand', r: 2, t: 8, a: 77 }] } });
+  st.setItem('pixeltown-save-v1', geared); st.setItem('pixeltown-realm-v1', '{"level":2}');
+  const before = JSON.stringify(st._m);
+  const p = B.planRestorePregear(st);
+  const planWroteNothing = JSON.stringify(st._m) === before;
+  const sumOk = p.ok && p.changed.join() === 'pixeltown-save-v1' && p.same.join() === 'pixeltown-jam-v1' && p.added.length === 0 &&
+    p.kept.join() === 'pixeltown-realm-v1' && p.items.now === 3 && p.items.then === 2 && typeof p.at === 'number';
+  const r = B.apply(st, p);
+  return planWroteNothing && sumOk && r.ok && st._m['pixeltown-save-v1'] === OLD_SAVE && st._m['pixeltown-realm-v1'] === '{"level":2}' && B.hasPregear(st);
+})());
+check('planRestorePregear: hostile snapshots are refused without throwing or writing', ['not json', '[]', '"x"', '{"format":"nope","keys":{}}', '{"format":"pixeltown-backup","v":2,"keys":{"__proto__":"{}"}}',
+  '{"format":"pixeltown-backup","v":2,"keys":{"pixeltown-evil":"{}"}}', '{"format":"pixeltown-backup","v":2,"keys":{"pixeltown-save-v1":"[1]"}}', '{"format":"pixeltown-backup","v":"x","keys":{"pixeltown-save-v1":"{}"}}'].every((raw) => {
+  const st = fakeLS({ 'pixeltown-save-v1': OLD_SAVE, [B.PREGEAR_KEY]: raw });
+  try { const p = B.planRestorePregear(st); return !p.ok && st._m['pixeltown-save-v1'] === OLD_SAVE && Object.keys(st._m).length === 2; } catch (e) { return false; }
+}));
+check('planRestorePregear: hostile `at` is dropped, unreadable storage never throws', (() => {
+  const st = fakeLS({ [B.PREGEAR_KEY]: JSON.stringify({ format: 'pixeltown-backup', v: 2, at: 1e300, keys: { 'pixeltown-save-v1': OLD_SAVE } }) });
+  const p = B.planRestorePregear(st);
+  const bad = { getItem: () => { throw new Error('blocked'); }, setItem: () => { throw new Error('blocked'); }, removeItem: () => { throw new Error('blocked'); } };
+  let ok = true; try { ok = !B.planRestorePregear(bad).ok && B.dropPregear(bad) === false && B.hasPregear(bad) === false && B.snapshotPregear(bad) === 'skipped'; } catch (e) { ok = false; }
+  return p.ok && p.at === null && ok;
+})());
+check('dropPregear removes only the snapshot', (() => { const st = fakeLS({ 'pixeltown-save-v1': OLD_SAVE }); B.snapshotPregear(st); const ok = B.dropPregear(st); return ok && !B.hasPregear(st) && st._m['pixeltown-save-v1'] === OLD_SAVE && Object.keys(st._m).length === 1 && B.dropPregear(st) === true; })());
+check('the snapshot key is never part of a bundle or accepted in a restore file', (() => { const st = fakeLS({ 'pixeltown-save-v1': OLD_SAVE }); B.snapshotPregear(st); return !(B.PREGEAR_KEY in B.bundle(st).keys) && B.plan({ format: 'pixeltown-backup', v: 2, keys: { [B.PREGEAR_KEY]: '{}' } }).error === 'unknown-key'; })());
+
+// SV3 (F17): importLegacy keeps soulbound (T11+) items in the Realm, says how many, and never saves that count.
+const P = require('../shared/mm-profile.js');
+const leg = P.importLegacy({ level: 5, xp: 0, items: [{ n: 1, id: 'sparkwand', r: 1, t: 11, a: 3 }, { n: 2, id: 'luckring', r: 0, t: 12 }, { n: 3, id: 'sparkwand', r: 0, t: 10, a: 9 }, { n: 4, id: 'heartcharm', r: 2 }] });
+check('importLegacy skips T11/T12 and keeps T10 and plain items', leg.heroes[0].items.length === 2 && leg.heroes[0].items.every((it) => !(it.t >= 11)) && leg.skippedSoulbound === 2);
+check('skippedSoulbound is not written into the saved profile', !/skippedSoulbound/.test(JSON.stringify(leg)) && P.clean(JSON.parse(JSON.stringify(leg))).heroes[0].items.length === 2);
+check('importLegacy with no soulbound items reports 0', P.importLegacy({ level: 1, items: [{ n: 1, id: 'sparkwand', r: 0 }] }).skippedSoulbound === 0);
+
 
 console.log(pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);

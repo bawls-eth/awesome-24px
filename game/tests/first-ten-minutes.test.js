@@ -333,7 +333,8 @@ const ISLES_BOT = `(lim) => {
 
   check('0 database requests or sockets in every profile', dbAll === 0, String(dbAll));
   metrics.dbAttempts = dbAll;
-  try { fs.writeFileSync(METRICS, JSON.stringify(metrics, null, 2) + '\n'); console.log('INFO wrote ' + path.relative(path.join(__dirname, '..', '..'), METRICS)); } catch (e) { check('ftue-metrics.json written', false, e.message); }
+  // merge: the QI / QT gates (isles-first-ten, town-first-ten) keep their own sections (isles2, town) in the same file
+  try { let prev = {}; try { prev = JSON.parse(fs.readFileSync(METRICS, 'utf8')); } catch (e) { prev = {}; } fs.writeFileSync(METRICS, JSON.stringify(Object.assign(prev, metrics), null, 2) + '\n'); console.log('INFO wrote ' + path.relative(path.join(__dirname, '..', '..'), METRICS)); } catch (e) { check('ftue-metrics.json written', false, e.message); }
   await browser.close();
   done();
 })();

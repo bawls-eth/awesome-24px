@@ -1,0 +1,1010 @@
+{
+  "batch": "b35",
+  "label": "meadow-home",
+  "assets": [
+    {
+      "id": "tile_tilled_soil_a",
+      "path": "tiles/tile_tilled_soil_a.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_soil",
+      "variant": "a"
+    },
+    {
+      "id": "tile_tilled_soil_b",
+      "path": "tiles/tile_tilled_soil_b.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_soil",
+      "variant": "b"
+    },
+    {
+      "id": "tile_tilled_soil_c",
+      "path": "tiles/tile_tilled_soil_c.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_soil",
+      "variant": "c"
+    },
+    {
+      "id": "tile_tilled_soil_d",
+      "path": "tiles/tile_tilled_soil_d.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_soil",
+      "variant": "d"
+    },
+    {
+      "id": "tile_tilled_soil_edge_00",
+      "path": "tiles/tile_tilled_soil_edge_00.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_soil",
+      "edge_mask": 0,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_tilled_soil_edge_01",
+      "path": "tiles/tile_tilled_soil_edge_01.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_soil",
+      "edge_mask": 1,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_tilled_soil_edge_02",
+      "path": "tiles/tile_tilled_soil_edge_02.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_soil",
+      "edge_mask": 2,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_tilled_soil_edge_03",
+      "path": "tiles/tile_tilled_soil_edge_03.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_soil",
+      "edge_mask": 3,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_tilled_soil_edge_04",
+      "path": "tiles/tile_tilled_soil_edge_04.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_soil",
+      "edge_mask": 4,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_tilled_soil_edge_05",
+      "path": "tiles/tile_tilled_soil_edge_05.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_soil",
+      "edge_mask": 5,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_tilled_soil_edge_06",
+      "path": "tiles/tile_tilled_soil_edge_06.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_soil",
+      "edge_mask": 6,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_tilled_soil_edge_07",
+      "path": "tiles/tile_tilled_soil_edge_07.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_soil",
+      "edge_mask": 7,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_tilled_soil_edge_08",
+      "path": "tiles/tile_tilled_soil_edge_08.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_soil",
+      "edge_mask": 8,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_tilled_soil_edge_09",
+      "path": "tiles/tile_tilled_soil_edge_09.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_soil",
+      "edge_mask": 9,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_tilled_soil_edge_10",
+      "path": "tiles/tile_tilled_soil_edge_10.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_soil",
+      "edge_mask": 10,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_tilled_soil_edge_11",
+      "path": "tiles/tile_tilled_soil_edge_11.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_soil",
+      "edge_mask": 11,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_tilled_soil_edge_12",
+      "path": "tiles/tile_tilled_soil_edge_12.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_soil",
+      "edge_mask": 12,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_tilled_soil_edge_13",
+      "path": "tiles/tile_tilled_soil_edge_13.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_soil",
+      "edge_mask": 13,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_tilled_soil_edge_14",
+      "path": "tiles/tile_tilled_soil_edge_14.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_soil",
+      "edge_mask": 14,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_tilled_soil_edge_15",
+      "path": "tiles/tile_tilled_soil_edge_15.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_soil",
+      "edge_mask": 15,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_tilled_wet_a",
+      "path": "tiles/tile_tilled_wet_a.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_wet",
+      "variant": "a"
+    },
+    {
+      "id": "tile_tilled_wet_b",
+      "path": "tiles/tile_tilled_wet_b.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_wet",
+      "variant": "b"
+    },
+    {
+      "id": "tile_tilled_wet_c",
+      "path": "tiles/tile_tilled_wet_c.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_wet",
+      "variant": "c"
+    },
+    {
+      "id": "tile_tilled_wet_d",
+      "path": "tiles/tile_tilled_wet_d.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_wet",
+      "variant": "d"
+    },
+    {
+      "id": "tile_tilled_wet_edge_00",
+      "path": "tiles/tile_tilled_wet_edge_00.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_wet",
+      "edge_mask": 0,
+      "blend": "tilled_soil"
+    },
+    {
+      "id": "tile_tilled_wet_edge_01",
+      "path": "tiles/tile_tilled_wet_edge_01.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_wet",
+      "edge_mask": 1,
+      "blend": "tilled_soil"
+    },
+    {
+      "id": "tile_tilled_wet_edge_02",
+      "path": "tiles/tile_tilled_wet_edge_02.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_wet",
+      "edge_mask": 2,
+      "blend": "tilled_soil"
+    },
+    {
+      "id": "tile_tilled_wet_edge_03",
+      "path": "tiles/tile_tilled_wet_edge_03.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_wet",
+      "edge_mask": 3,
+      "blend": "tilled_soil"
+    },
+    {
+      "id": "tile_tilled_wet_edge_04",
+      "path": "tiles/tile_tilled_wet_edge_04.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_wet",
+      "edge_mask": 4,
+      "blend": "tilled_soil"
+    },
+    {
+      "id": "tile_tilled_wet_edge_05",
+      "path": "tiles/tile_tilled_wet_edge_05.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_wet",
+      "edge_mask": 5,
+      "blend": "tilled_soil"
+    },
+    {
+      "id": "tile_tilled_wet_edge_06",
+      "path": "tiles/tile_tilled_wet_edge_06.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_wet",
+      "edge_mask": 6,
+      "blend": "tilled_soil"
+    },
+    {
+      "id": "tile_tilled_wet_edge_07",
+      "path": "tiles/tile_tilled_wet_edge_07.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_wet",
+      "edge_mask": 7,
+      "blend": "tilled_soil"
+    },
+    {
+      "id": "tile_tilled_wet_edge_08",
+      "path": "tiles/tile_tilled_wet_edge_08.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_wet",
+      "edge_mask": 8,
+      "blend": "tilled_soil"
+    },
+    {
+      "id": "tile_tilled_wet_edge_09",
+      "path": "tiles/tile_tilled_wet_edge_09.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_wet",
+      "edge_mask": 9,
+      "blend": "tilled_soil"
+    },
+    {
+      "id": "tile_tilled_wet_edge_10",
+      "path": "tiles/tile_tilled_wet_edge_10.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_wet",
+      "edge_mask": 10,
+      "blend": "tilled_soil"
+    },
+    {
+      "id": "tile_tilled_wet_edge_11",
+      "path": "tiles/tile_tilled_wet_edge_11.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_wet",
+      "edge_mask": 11,
+      "blend": "tilled_soil"
+    },
+    {
+      "id": "tile_tilled_wet_edge_12",
+      "path": "tiles/tile_tilled_wet_edge_12.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_wet",
+      "edge_mask": 12,
+      "blend": "tilled_soil"
+    },
+    {
+      "id": "tile_tilled_wet_edge_13",
+      "path": "tiles/tile_tilled_wet_edge_13.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_wet",
+      "edge_mask": 13,
+      "blend": "tilled_soil"
+    },
+    {
+      "id": "tile_tilled_wet_edge_14",
+      "path": "tiles/tile_tilled_wet_edge_14.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_wet",
+      "edge_mask": 14,
+      "blend": "tilled_soil"
+    },
+    {
+      "id": "tile_tilled_wet_edge_15",
+      "path": "tiles/tile_tilled_wet_edge_15.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "tilled_wet",
+      "edge_mask": 15,
+      "blend": "tilled_soil"
+    },
+    {
+      "id": "tile_clover_patch_a",
+      "path": "tiles/tile_clover_patch_a.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "clover_patch",
+      "variant": "a"
+    },
+    {
+      "id": "tile_clover_patch_b",
+      "path": "tiles/tile_clover_patch_b.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "clover_patch",
+      "variant": "b"
+    },
+    {
+      "id": "tile_clover_patch_c",
+      "path": "tiles/tile_clover_patch_c.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "clover_patch",
+      "variant": "c"
+    },
+    {
+      "id": "tile_clover_patch_d",
+      "path": "tiles/tile_clover_patch_d.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "clover_patch",
+      "variant": "d"
+    },
+    {
+      "id": "tile_clover_patch_edge_00",
+      "path": "tiles/tile_clover_patch_edge_00.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "clover_patch",
+      "edge_mask": 0,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_clover_patch_edge_01",
+      "path": "tiles/tile_clover_patch_edge_01.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "clover_patch",
+      "edge_mask": 1,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_clover_patch_edge_02",
+      "path": "tiles/tile_clover_patch_edge_02.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "clover_patch",
+      "edge_mask": 2,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_clover_patch_edge_03",
+      "path": "tiles/tile_clover_patch_edge_03.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "clover_patch",
+      "edge_mask": 3,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_clover_patch_edge_04",
+      "path": "tiles/tile_clover_patch_edge_04.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "clover_patch",
+      "edge_mask": 4,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_clover_patch_edge_05",
+      "path": "tiles/tile_clover_patch_edge_05.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "clover_patch",
+      "edge_mask": 5,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_clover_patch_edge_06",
+      "path": "tiles/tile_clover_patch_edge_06.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "clover_patch",
+      "edge_mask": 6,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_clover_patch_edge_07",
+      "path": "tiles/tile_clover_patch_edge_07.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "clover_patch",
+      "edge_mask": 7,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_clover_patch_edge_08",
+      "path": "tiles/tile_clover_patch_edge_08.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "clover_patch",
+      "edge_mask": 8,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_clover_patch_edge_09",
+      "path": "tiles/tile_clover_patch_edge_09.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "clover_patch",
+      "edge_mask": 9,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_clover_patch_edge_10",
+      "path": "tiles/tile_clover_patch_edge_10.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "clover_patch",
+      "edge_mask": 10,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_clover_patch_edge_11",
+      "path": "tiles/tile_clover_patch_edge_11.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "clover_patch",
+      "edge_mask": 11,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_clover_patch_edge_12",
+      "path": "tiles/tile_clover_patch_edge_12.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "clover_patch",
+      "edge_mask": 12,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_clover_patch_edge_13",
+      "path": "tiles/tile_clover_patch_edge_13.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "clover_patch",
+      "edge_mask": 13,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_clover_patch_edge_14",
+      "path": "tiles/tile_clover_patch_edge_14.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "clover_patch",
+      "edge_mask": 14,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_clover_patch_edge_15",
+      "path": "tiles/tile_clover_patch_edge_15.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "clover_patch",
+      "edge_mask": 15,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_garden_path_a",
+      "path": "tiles/tile_garden_path_a.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "garden_path",
+      "variant": "a"
+    },
+    {
+      "id": "tile_garden_path_b",
+      "path": "tiles/tile_garden_path_b.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "garden_path",
+      "variant": "b"
+    },
+    {
+      "id": "tile_garden_path_c",
+      "path": "tiles/tile_garden_path_c.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "garden_path",
+      "variant": "c"
+    },
+    {
+      "id": "tile_garden_path_d",
+      "path": "tiles/tile_garden_path_d.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "garden_path",
+      "variant": "d"
+    },
+    {
+      "id": "tile_garden_path_edge_00",
+      "path": "tiles/tile_garden_path_edge_00.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "garden_path",
+      "edge_mask": 0,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_garden_path_edge_01",
+      "path": "tiles/tile_garden_path_edge_01.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "garden_path",
+      "edge_mask": 1,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_garden_path_edge_02",
+      "path": "tiles/tile_garden_path_edge_02.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "garden_path",
+      "edge_mask": 2,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_garden_path_edge_03",
+      "path": "tiles/tile_garden_path_edge_03.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "garden_path",
+      "edge_mask": 3,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_garden_path_edge_04",
+      "path": "tiles/tile_garden_path_edge_04.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "garden_path",
+      "edge_mask": 4,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_garden_path_edge_05",
+      "path": "tiles/tile_garden_path_edge_05.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "garden_path",
+      "edge_mask": 5,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_garden_path_edge_06",
+      "path": "tiles/tile_garden_path_edge_06.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "garden_path",
+      "edge_mask": 6,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_garden_path_edge_07",
+      "path": "tiles/tile_garden_path_edge_07.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "garden_path",
+      "edge_mask": 7,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_garden_path_edge_08",
+      "path": "tiles/tile_garden_path_edge_08.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "garden_path",
+      "edge_mask": 8,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_garden_path_edge_09",
+      "path": "tiles/tile_garden_path_edge_09.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "garden_path",
+      "edge_mask": 9,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_garden_path_edge_10",
+      "path": "tiles/tile_garden_path_edge_10.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "garden_path",
+      "edge_mask": 10,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_garden_path_edge_11",
+      "path": "tiles/tile_garden_path_edge_11.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "garden_path",
+      "edge_mask": 11,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_garden_path_edge_12",
+      "path": "tiles/tile_garden_path_edge_12.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "garden_path",
+      "edge_mask": 12,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_garden_path_edge_13",
+      "path": "tiles/tile_garden_path_edge_13.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "garden_path",
+      "edge_mask": 13,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_garden_path_edge_14",
+      "path": "tiles/tile_garden_path_edge_14.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "garden_path",
+      "edge_mask": 14,
+      "blend": "grass"
+    },
+    {
+      "id": "tile_garden_path_edge_15",
+      "path": "tiles/tile_garden_path_edge_15.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "terrain": "garden_path",
+      "edge_mask": 15,
+      "blend": "grass"
+    },
+    {
+      "id": "stable",
+      "path": "props/stable.png",
+      "category": "prop",
+      "frames": 1,
+      "frame_w": 96,
+      "frame_h": 64,
+      "anchor": [
+        48,
+        52
+      ],
+      "fps": 0,
+      "loop": false
+    },
+    {
+      "id": "nest",
+      "path": "props/nest.png",
+      "category": "prop",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": [
+        16,
+        26
+      ],
+      "fps": 0,
+      "loop": false
+    },
+    {
+      "id": "garden_plot_s1",
+      "path": "props/garden_plot_s1.png",
+      "category": "prop",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": [
+        16,
+        26
+      ],
+      "fps": 0,
+      "loop": false
+    },
+    {
+      "id": "garden_plot_s2",
+      "path": "props/garden_plot_s2.png",
+      "category": "prop",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": [
+        16,
+        26
+      ],
+      "fps": 0,
+      "loop": false
+    },
+    {
+      "id": "garden_plot_s3",
+      "path": "props/garden_plot_s3.png",
+      "category": "prop",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": [
+        16,
+        26
+      ],
+      "fps": 0,
+      "loop": false
+    },
+    {
+      "id": "garden_plot_s4",
+      "path": "props/garden_plot_s4.png",
+      "category": "prop",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": [
+        16,
+        26
+      ],
+      "fps": 0,
+      "loop": false
+    },
+    {
+      "id": "dock",
+      "path": "props/dock.png",
+      "category": "prop",
+      "frames": 1,
+      "frame_w": 64,
+      "frame_h": 32,
+      "anchor": [
+        32,
+        26
+      ],
+      "fps": 0,
+      "loop": false
+    },
+    {
+      "id": "launch_pad",
+      "path": "props/launch_pad.png",
+      "category": "prop",
+      "frames": 1,
+      "frame_w": 96,
+      "frame_h": 96,
+      "anchor": [
+        48,
+        79
+      ],
+      "fps": 0,
+      "loop": false
+    },
+    {
+      "id": "workbench_isle",
+      "path": "props/workbench_isle.png",
+      "category": "prop",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": [
+        16,
+        26
+      ],
+      "fps": 0,
+      "loop": false
+    },
+    {
+      "id": "boat",
+      "path": "props/boat.png",
+      "category": "prop",
+      "frames": 2,
+      "frame_w": 64,
+      "frame_h": 32,
+      "anchor": [
+        32,
+        26
+      ],
+      "fps": 4,
+      "loop": true
+    }
+  ]
+}

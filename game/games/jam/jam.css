@@ -77,3 +77,13 @@ body[data-practice="1"] #hud-score, body[data-practice="1"] #hud-acc { display:n
 /* AX2-side: text size from pixeltown-access-v1 (--ui-scale) and reduce motion (data-reduce-motion) */
 body { font-size: calc(16px * var(--ui-scale,1)); }
 html[data-reduce-motion="1"] *, html[data-reduce-motion="1"] *::before, html[data-reduce-motion="1"] *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+
+/* shared Menu button sits top-left: keep the full-screen overlay content clear of it */
+@media (max-width: 480px) { body.mm-nav-on #overlay { padding-top: 64px; } }
+
+/* MG4 Relax mode: no score pressure (score, accuracy and combo hidden) and lane-shape assist */
+body[data-relax="1"] #hud-score, body[data-relax="1"] #hud-acc, body[data-relax="1"] #hud-combo { display:none; }
+body[data-relax="1"] #progress-bar { background:#8ecae6; }
+#relax-row span { flex:1 1 180px; }
+.stars.practice { color:#8ecae6; }
+.card small.relax-line { color:#8ecae6; }

@@ -67,8 +67,9 @@ const view = (page) => page.evaluate(() => {
     errs.push(...A.errors); await A.ctx.close(); }
 
   // ---- Dread pair: T12 signature wand (sig blast) + dread plate; sig survives the reload (rmCleanSave) ----
-  // The sig-only Dread pair ships behind the GW one-deploy gate (review F3: RM_FORGE_DEFAULT_ON = false), so this block opens it with ?forge=1.
-  { const A = await open(browser, '&forge=1', { weapon: 9, armor: 11 }); const page = A.page;
+  // The sig-only Dread pair follows the GW gate (review F3); P2 flipped RM_FORGE_DEFAULT_ON to true, so it is on by default and with ?forge=1.
+  for (const fq of ['', '&forge=1']) { const A = await open(browser, fq, { weapon: 9, armor: 11 }); const page = A.page;
+    check(`Dread block (${fq || 'default'}): the GW gate is open`, await page.evaluate(() => RM_FORGE_DEFAULT_ON === true && RM_FORGE_ON === true));
     const v = await view(page);
     const kept = await page.evaluate(() => JSON.stringify(window.__mm.arena.save.items.find((x) => x.n === 9)));
     check('the T12 wand keeps its `sig` through the save cleaner', /"sig":"blast"/.test(kept), kept);
@@ -80,12 +81,12 @@ const view = (page) => page.evaluate(() => {
     check('the backpack row lists the signature affix (roll gets `sig`)', afx.indexOf('blast') >= 0 && afx.length === 3, JSON.stringify(afx));
     errs.push(...A.errors); await A.ctx.close(); }
 
-  // ---- GW gate closed (the default, and ?forge=0): the Dread pair is off, Banded still works, `sig` is kept on the item ----
-  for (const q of ['', '&forge=0', '&forge=1&forge=0']) {
+  // ---- GW gate closed (?forge=0, the kill switch, even with ?forge=1): the Dread pair is off, Banded still works, `sig` is kept on the item ----
+  for (const q of ['&forge=0', '&forge=1&forge=0']) {
     const A = await open(browser, q, { weapon: 9, armor: 11 }); const page = A.page;
     const v = await view(page);
     const kept = await page.evaluate(() => JSON.stringify(window.__mm.arena.save.items.find((x) => x.n === 9)));
-    check(`gate closed (${q || 'default'}): only Banded is active (no Dread pair), the T12 wand keeps its sig`, v.ids.join() === 'banded' && /"sig":"blast"/.test(kept), JSON.stringify({ sets: v.sets, kept }));
+    check(`gate closed (${q}): only Banded is active (no Dread pair), the T12 wand keeps its sig`, v.ids.join() === 'banded' && /"sig":"blast"/.test(kept), JSON.stringify({ sets: v.sets, kept }));
     errs.push(...A.errors); await A.ctx.close();
   }
 

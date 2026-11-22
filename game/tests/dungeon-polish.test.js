@@ -39,7 +39,7 @@ const overlap = (a, b) => a && b && a.x < b.r && b.x < a.r && a.y < b.b && b.y <
   const ab = await rect(ph.page, '#realm-abilities');
   check('phone: the room is clear of the ability buttons', !overlap(ab, cv), JSON.stringify({ cv, ab }));
   const lbl = await ph.page.evaluate(() => { const b = document.getElementById('realm-leave-btn'); const r = b.getBoundingClientRect(); return { t: b.textContent, sw: b.scrollWidth, cw: b.clientWidth, a: b.getAttribute('aria-label'), h: r.height, w: r.width }; });
-  check('phone: the exit label is not truncated and keeps a 44px target', lbl.sw <= lbl.cw && lbl.h >= 44 && lbl.w >= 44 && /Exit/.test(lbl.t), JSON.stringify(lbl));
+  check('phone: the exit label is not truncated and keeps a 44px target', lbl.sw <= lbl.cw && lbl.h >= 44 && lbl.w >= 44 && /Leave/.test(lbl.t) && !/Exit/.test(lbl.t), JSON.stringify(lbl)); // NAV-AUDIT #8: one label ("Leave"), the destination is in the aria-label
   check('phone: the exit button keeps the full text in its aria-label', /world/.test(lbl.a || ''), lbl.a);
   const sw = await ph.page.evaluate(() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]);
   check('phone: no horizontal scroll', sw[0] <= sw[1], JSON.stringify(sw));
@@ -48,7 +48,7 @@ const overlap = (a, b) => a && b && a.x < b.r && b.x < a.r && a.y < b.b && b.y <
   // ---------- desktop exit label (world return) ----------
   const dk = await open(browser, URL(5, '&lv=2&return=' + encodeURIComponent(RET)));
   const dl = await dk.page.evaluate(() => { const b = document.getElementById('realm-leave-btn'); return { sw: b.scrollWidth, cw: b.clientWidth, t: b.textContent }; });
-  check('desktop: the exit label is not truncated', dl.sw <= dl.cw && /Exit/.test(dl.t), JSON.stringify(dl));
+  check('desktop: the exit label is not truncated', dl.sw <= dl.cw && /Leave/.test(dl.t), JSON.stringify(dl));
   errs.push(...dk.page.errors); await dk.ctx.close();
 
   // ---------- room count + summary wording ----------

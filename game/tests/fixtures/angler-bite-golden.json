@@ -1,0 +1,32 @@
+{
+ "rollFish": {
+  "west": 3499258324,
+  "east": 132473057,
+  "river": 482699427,
+  "pier": 2672256525,
+  "ice": 2692629860,
+  "mangrove": 1447245589
+ },
+ "pools": {
+  "west": 1354968097,
+  "east": 596762861,
+  "river": 3734881879,
+  "pier": 2518565417,
+  "ice": 3751250629,
+  "mangrove": 824265913
+ },
+ "sample": {
+  "west": "shrimp,sunfish,bluegill,sunfish,minnow,perch,minnow,minnow,koi,sunfish,koi,minnow,shrimp,sunfish,shrimp,shrimp,goldfish,sunfish,bluegill,shrimp",
+  "east": "shrimp,perch,turtle,bluegill,minnow,perch,minnow,minnow,puffer,bluegill,puffer,minnow,shrimp,bluegill,shrimp,shrimp,puffer,perch,turtle,shrimp",
+  "river": "chub,grayling,crayfish,river_trout,minnow,grayling,minnow,minnow,chub,river_trout,chub,minnow,chub,river_trout,chub,minnow,crayfish,grayling,crayfish,chub",
+  "pier": "puffer,flounder,mackerel,sea_bass,shrimp,flounder,shrimp,shrimp,sardine,sea_bass,sardine,shrimp,sardine,sea_bass,puffer,shrimp,sardine,sea_bass,sardine,puffer",
+  "ice": "ice_smelt,arctic_char,ice_perch,ice_perch,goldfish,arctic_char,goldfish,ice_smelt,ice_perch,ice_perch,ice_smelt,ice_smelt,ice_smelt,arctic_char,ice_smelt,ice_smelt,ice_perch,arctic_char,ice_perch,ice_smelt",
+  "mangrove": "turtle,mangrove_snapper,mudskipper,archerfish,shrimp,mangrove_snapper,shrimp,shrimp,seahorse,archerfish,turtle,shrimp,turtle,archerfish,turtle,shrimp,mudskipper,archerfish,mudskipper,turtle"
+ },
+ "rollSize": 3010591752,
+ "bite": 1548625679,
+ "reel": 1415572883,
+ "baitDrop": 2261932857,
+ "tour": 1227385713,
+ "save": "{\"caught\":{\"koi\":{\"n\":3,\"best\":50},\"minnow\":{\"n\":1,\"best\":6}},\"bosses\":{},\"trophies\":{},\"gear\":{\"rod\":\"stick\",\"lure\":\"worm\"},\"bait\":4,\"bells\":120,\"baits\":{\"quick\":2,\"rare\":0,\"big\":1},\"baitType\":\"quick\"}|{\"caught\":{\"koi\":{\"n\":1,\"best\":40}},\"bosses\":{},\"trophies\":{},\"gear\":{\"rod\":\"stick\",\"lure\":\"none\"},\"bait\":0}|{\"caught\":{},\"bosses\":{},\"trophies\":{},\"gear\":{\"rod\":\"stick\",\"lure\":\"none\"},\"bait\":0}"
+}

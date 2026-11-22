@@ -55,6 +55,7 @@ const RM_ED_GHOSTS = 24; const RM_ED_REDUCED = 0.25; // enemy death-ghost pool s
 // Shot readability: the player's bolt is a white core with a light outline (solid radius 5 + a soft glow); enemy bullets have a dark
 // rim and their own hue per pattern and are never more than 1.3x the player's bolt. At most RM_EB_DRAW enemy bullets are drawn.
 const RM_BOLT_R = { player: 5, enemy: 6 };
+const RM_AF_RANGE = 380; // AR auto-fire reach (logical px): about the player's bolt range, so it never fires at what it cannot hit
 const RM_EB_HUES = [['#ff4f6d', '#ffd0d8'], ['#b46bff', '#ecdcff'], ['#ffa62b', '#fff0c8']]; // aimed (red), spiral (violet), ring (orange)
 const RM_EB_DRAW = 320;
 const RM_FIRE_RANGE = 0.95; // world mode: an enemy fires only on screen and within this x the view's half-diagonal of the player
@@ -103,6 +104,9 @@ const RM_SPARK_MAX = 24, RM_SPARK_LIFE = 0.25;
 const RM_FX_MAX = 16; // live one-shot effect sprites (setFxArt)
 // G11 player splash (GEAR-DROPS-BUILD-PLAN d): FX / text for at most 24 events a frame (extras still deal damage), one combined number per event at most
 // 6 a second and only while <= 22 texts are live; code rings come from a fixed pool. Kill switches ?splash=0 and ?gear=0 (no splash at all).
+const rmSame = (x, y) => x === y || (x !== x && y !== y); // P2: what a `${x}` string compare said for numbers, without building strings
+const RM_VENOM_ST = Object.freeze({ sec: 3, src: 'wpn' });
+const RM_LOW_DMG_GAP = 1 / 12, RM_LOW_TXT_MUL = 2; // P2: low graphics tier damage-text throttle (plain numbers at most 12/s; splash numbers half as often)
 const RM_SPLASH_FX = 24, RM_SPLASH_TXT_GAP = 1 / 6, RM_SPLASH_TXT_MAX = 22, RM_SPLASH_RINGS = 12, RM_SPLASH_COL = '#ffb36b';
 const RM_SPARK_CLASS = { ranger: 'a', bruiser: 'a', berserker: 'a', punk: 'a', rogue: 'a', paladin: 'a', frostcaller: 'b', herald: 'b', druid: 'b', warlock: 'c', necromancer: 'c', trickster: 'c', gravetender: 'c', shadowpaw: 'c' };
 const RM_EB_ROT = { ebolt_shard: 1, ebolt_arrow: 1, ebolt_fire: 1, ebolt_frost: 1, ebolt_laser_h: 1, ebolt_skull: 0 };
@@ -175,10 +179,11 @@ const RM_WPN_ITEMS = [];
 // Armor `arm_<family>_<band>` defs are lookup-only (never in RM_ITEMS / RM_BASE_ITEMS: never dropped by the classic pools or stocked by the shop).
 const RM_ARM_ID = /^arm_[a-z]{3,8}_[a-z]{3,10}$/; // MMGear.GEAR_ID_RE
 const RM_GEAR_ON = !rmFlagOff('gear') && typeof MMGear !== 'undefined' && !!MMGear && typeof MMGear.clean === 'function';
-// GW one-deploy gate (review F3, the G7 pattern): builds older than GW strip `dust`, `f` and `sig`, so this build only KEEPS them (rmCleanSave /
-// rmMergeSave) while nothing creates them by default: the Forge (salvage -> dust, reforge -> f), T12 boss signatures (`sig`) on new drops and the
-// sig-only "Dread pair" set stay off until the next deploy flips RM_FORGE_DEFAULT_ON. ?forge=1 turns them on, ?forge=0 off (always wins); ?gear=0 wins over both.
-const RM_FORGE_DEFAULT_ON = false;
+// GW one-deploy gate (review F3, the G7 pattern): builds older than GW strip `dust`, `f` and `sig`, so the gear-fixsave deploy only KEPT them (rmCleanSave /
+// rmMergeSave) while nothing created them. That deploy is on master now (every live tab keeps them), so P2 flips the default ON: the Forge
+// (salvage -> dust, reforge -> f), T12 boss signatures (`sig`) on new drops (realm-world.js / dungeon.js SIG_ON) and the sig-only "Dread pair" set all
+// follow RM_FORGE_ON. ?forge=0 is the kill switch (always wins), ?forge=1 still forces it on; ?gear=0 wins over both.
+const RM_FORGE_DEFAULT_ON = true;
 const RM_FORGE_ON = !rmFlagOff('gear') && (rmFlag('forge') === '1' || (RM_FORGE_DEFAULT_ON && rmFlag('forge') !== '0'));
 const RM_SPLASH_ON = RM_GEAR_ON && !rmFlagOff('splash') && typeof MMSplash !== 'undefined' && !!MMSplash && typeof MMSplash.pick === 'function'; // G11 player splash
 const RM_ARMOR_ICON = { light: '🦺', robe: '👘', heavy: '🛡️' };
@@ -331,6 +336,7 @@ function rmCleanSave(s) {
 // The arena keeps `realm` in memory and used to write it back whole, so two tabs clobbered each other.
 // Now every save re-reads pixeltown-save-v1, merges (never loses progress) and writes the merge.
 const RM_SAVE_KEY = 'pixeltown-save-v1';
+const RM_SAVE_SOON_MS = 250; // review F16: coalesced persist delay for kill-path saves (saveSoon)
 const RM_TILE = 40; // wall-grid tile size in logical px
 // GH downgrade hint record (pixeltown-gearhint-v1, owned by realm-world.js: { n, shown, d?, f? }). A deliberate removal in THIS tab (salvage, sell,
 // combine) rewrites the remembered counts so the hint never reads a normal salvage as an old-tab reset (review F10). Only an existing record is updated.
@@ -378,7 +384,15 @@ function rmMergeSave(mine, stored, opts) {
   a.items.forEach((it) => {
     const other = byUid.get(it.n);
     if (!other) { if (known.has(it.n)) return; items.push({ ...it }); return; } // gone from storage because another tab sold it, or new here
-    if (other.id === it.id && other.r === it.r && (other.t || 0) === (it.t || 0) && (other.a || 0) === (it.a || 0)) { items.push({ ...it }); return; } // same item: identity is (n, id, r, t, a)
+    if (other.id === it.id && other.r === it.r && (other.t || 0) === (it.t || 0) && (other.a || 0) === (it.a || 0)) { // same item: identity is (n, id, r, t, a) ...
+      // ... unless this tab never saw that uid in storage (FZ issue A): then both tabs picked their own copy under the same uid before either synced,
+      // so they are two items and this tab's gets a fresh uid below. Only when the caller tracks `known` (RealmArena always does).
+      if (!(opts.known && !known.has(it.n))) {
+        // FZ issue B: never drop `sig` / `f` that storage holds for the same item (this copy may come from an old tab's stripped write); this tab's wins when both have one
+        const o = { ...it }; if (!o.sig && other.sig) o.sig = other.sig; if (!o.f && other.f) o.f = { ...other.f };
+        items.push(o); return;
+      }
+    }
     const fresh = next++; remap[it.n] = fresh; items.push({ ...it, n: fresh }); // a uid collision between two different items: this tab's gets a fresh uid (keeping t / a), storage's keeps the old one
   });
   const have = new Set(items.map((it) => it.n));
@@ -398,7 +412,7 @@ function rmMergeSave(mine, stored, opts) {
   }
   out.items = items; out.nextUid = next; out.eq = eq; // equipment is per-tab
   if (a.gv || b.gv) out.gv = 1;
-  if (a.dust !== undefined || b.dust !== undefined) { const ad = a.dust || 0, bd = b.dust || 0; const bs = Number.isFinite(opts.baseDust) ? opts.baseDust : ad; out.dust = Math.max(0, bd + (ad - bs)); } // three-way like shards
+  if (a.dust !== undefined || b.dust !== undefined) { const ad = a.dust || 0; const bs = Number.isFinite(opts.baseDust) ? opts.baseDust : ad; const bd = b.dust !== undefined ? b.dust : (a.dust !== undefined ? bs : 0); out.dust = Math.max(0, bd + (ad - bs)); } // three-way like shards. SV1: a stored save WITHOUT the key was rewritten by a pre-535faf6 tab (a modern cleaner keeps `dust: 0`), so it says nothing about dust: read it as unchanged (the base), never as 0
   if (a.gp || b.gp) { const ga = a.gp || { b: 0, d: 0 }, gb = b.gp || { b: 0, d: 0 }; const bs = opts.baseGp; // storage's gp at this tab's last sync: three-way like shards, so an in-tab reset / increment survives while another tab's change is added
     out.gp = bs ? { b: Math.max(0, gb.b + (ga.b - bs.b)), d: Math.max(0, gb.d + (ga.d - bs.d)) } : { b: Math.max(ga.b, gb.b), d: Math.max(ga.d, gb.d) }; }
   return rmCleanSave(out);
@@ -408,7 +422,7 @@ class RealmArena {
   constructor({ container, save, onSave, onExit, seed }) {
     this.container = container;
     this._onSave = onSave || (() => {});
-    this.onSave = (sv) => this._persist(sv); // every save goes through the cross-tab merge first
+    this.onSave = (sv) => { this._saveDirty = false; if (this._saveTimer) { clearTimeout(this._saveTimer); this._saveTimer = 0; } this.saveWrites = (this.saveWrites || 0) + 1; return this._persist(sv); }; // every save goes through the cross-tab merge first (and covers a pending saveSoon, review F16)
     this.onExit = onExit || (() => {});
     this.save = rmCleanSave(save);
     this._baseShards = this.save.shards; this._baseDust = this.save.dust || 0; this._baseGp = rmGpOf(this.save.gp); this._known = new Set(this.save.items.map((it) => it.n)); this.saveOk = true; this.saveFails = 0; this.walls = null; this.extraGuard = 0;
@@ -462,13 +476,35 @@ class RealmArena {
     this._bindInput();
     this._resize();
     if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('storage', (e) => { if (!e.key || e.key === RM_SAVE_KEY) this.resyncSave(); });
+    // Review F16: hot paths (a kill, a partner's kill reward) mark the save dirty (saveSoon) and ONE coalesced persist runs RM_SAVE_SOON_MS later; every
+    // explicit onSave (pickup, death, wave, shop, exit ...) persists at once and clears the pending one. Flushed on stop (exit / death screen leave),
+    // menu open, `visibilitychange: hidden` and `pagehide`, so closing or hiding the tab never loses a kill's shards.
+    this._saveDirty = false; this._saveTimer = 0; this.saveWrites = 0; this.saveSoonCalls = 0; // test hooks: persists run / saveSoon requests
+    this._onHide = () => { this.flushSave(); };
+    this._onVis = () => { if (typeof document !== 'undefined' && document.visibilityState === 'hidden') this.flushSave(); };
+    if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('pagehide', this._onHide);
+    if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('visibilitychange', this._onVis);
+  }
+
+  // Review F16: request a persist soon (coalesced: at most one per RM_SAVE_SOON_MS however many kills land in a frame). Returns nothing; flushSave() forces it.
+  saveSoon() {
+    this.saveSoonCalls++;
+    this._saveDirty = true;
+    if (this._saveTimer) return;
+    this._saveTimer = setTimeout(() => { this._saveTimer = 0; this.flushSave(); }, RM_SAVE_SOON_MS);
+  }
+  // Persist now if a saveSoon is pending. Returns the persist result, or true when nothing was pending.
+  flushSave() {
+    if (this._saveTimer) { clearTimeout(this._saveTimer); this._saveTimer = 0; }
+    if (!this._saveDirty) return true;
+    return this.onSave(this.save);
   }
 
   // Replace the in-memory save with `m` in place (callers hold references to this.save) and refresh what depends on it.
   _adopt(m) {
     const sv = this.save; const before = JSON.stringify([sv.level, sv.items, sv.eq]);
     Object.keys(sv).forEach((k) => { delete sv[k]; }); Object.assign(sv, m);
-    if (JSON.stringify([sv.level, sv.items, sv.eq]) !== before) { this._calcStats(); if (this.active) this._syncHud(); }
+    if (JSON.stringify([sv.level, sv.items, sv.eq]) !== before) { this.markStatsDirty(); this._calcStats(); if (this.active) this._syncHud(); }
   }
 
   // Merge with whatever is in storage now (another tab may have written) without writing.
@@ -499,7 +535,9 @@ class RealmArena {
       const st = this._syncBase(stored);
       ok = ok && st.shards === this.save.shards && st.items.length === this.save.items.length && st.items.every((it, i) => it.n === this.save.items[i].n && it.r === this.save.items[i].r && (it.t || 0) === (this.save.items[i].t || 0));
     } else { // nothing readable in storage (no storage, or a page that saves elsewhere): keep every item as new here, never drop one
-      this._known = new Set(); this._baseShards = this.save.shards; this._baseDust = this.save.dust || 0; this._baseGp = rmGpOf(this.save.gp);
+      this._known = new Set();
+      // FZ issue C: a FAILED write leaves the bases where they were (the unsaved shards / dust / pity are still this tab's delta for the next merge)
+      if (ok) { this._baseShards = this.save.shards; this._baseDust = this.save.dust || 0; this._baseGp = rmGpOf(this.save.gp); }
     }
     this.saveOk = ok;
     if (!ok) {
@@ -573,7 +611,7 @@ class RealmArena {
     else if (r.boss) { sv.kb.boss += 1; sv.kills += 1; if (r.tenths && (!sv.bossBestT || r.tenths < sv.bossBestT)) sv.bossBestT = r.tenths; } else if (Object.prototype.hasOwnProperty.call(sv.kb, r.t) && typeof sv.kb[r.t] === 'number') { sv.kb[r.t] += 1; sv.kills += 1; }
     this._floatText(this.player.x, this.player.y - 36, `+${gain} 💎`, '#8fe9ff');
     this._gainXp(Math.max(1, Math.round(r.xp * this.stats.xp)));
-    this.onSave(sv);
+    this.saveSoon(); // review F16: one coalesced persist for a burst of partner kills
   }
 
   // ---------- pools ----------
@@ -616,6 +654,10 @@ class RealmArena {
     this._padPause = false; this._padWas = false;
     this._padRes = { move: { x: 0, y: 0 }, aim: { x: 0, y: 0, on: false }, fire: false, ability: [false, false, false, false], pause: false }; // reused every frame (no per-frame allocation)
     this._aimAssist = true; this._reduced = false;
+    // AR (NEXT-SLICES-3 Wave 4): Realm one-thumb access, opt-in per page (enableAccess2(); the town classic arena never calls it, duels never use it).
+    this._ax2 = false; this._autoFire = false; this._aimToggle = false; this._shapes = false; this._aimPressMax = 0; this.autoFireN = 0;
+    this._afT = null; this._afX = 0; this._afY = 0; this._afVx = 0; this._afVy = 0; // auto-fire target + its smoothed velocity (lead)
+    this._txtFont = 'bold 14px system-ui, sans-serif'; this._txtScale = 1;
     this._wireRefresh();
     this._mountAimToggle();
   }
@@ -757,7 +799,54 @@ class RealmArena {
   // opts (G8, optional): { noGear: true } = the same stats with nothing equipped (the "Base" column); { eqOverride: { slot: uid | 0 } } = the stats as if that
   // slot held that item (the compare UI; level / class gates are skipped for the overridden slots so locked items compare too). With opts the call is
   // pure: it returns a fresh object and never touches this.stats or the save.
+  // P2 (phone perf): the non-pure call is cached behind a dirty flag (markStatsDirty) plus an input signature (_stSig: level, the equipped items
+  // and their t/r/a/sig/f, the hero / class / passives, buffs, status mods, world / mode / team), so a call with nothing changed does no work.
+  // A hit returns exactly what a recompute would (gear-stats-cache.test.js checks cached == _calcStatsNow over random sequences); a caller that
+  // edited this.stats in place gets a fresh copy, like before. Pure calls and duels always recompute.
   _calcStats(opts) {
+    const o = opts && typeof opts === 'object' ? opts : null;
+    if (o && (o.noGear || o.eqOverride)) return this._calcStatsNow(o); // pure: this.stats and the cache are untouched
+    if (!this.save || (this.team && this.team.isPvp)) { this._stDirty = true; return this._calcStatsNow(null); } // a duel sets its own fixed stats: recompute after it
+    const A = this._stSigA || (this._stSigA = []), B = this._stSigB || (this._stSigB = []);
+    const n = this._stSig(B); let same = !this._stDirty && !!this._stC && n === A.length;
+    for (let i = 0; same && i < n; i++) { const x = A[i], y = B[i]; if (x !== y && !(x !== x && y !== y)) same = false; }
+    if (same) {
+      const c = this._stC, cur = this.stats; let ok = cur === c.obj;
+      if (ok) { const ks = c.keys; for (let i = 0; i < ks.length; i++) { const k = ks[i], x = cur[k], y = c.vals[k]; if (x !== y && !(x !== x && y !== y)) { ok = false; break; } } }
+      if (!ok) { const st = Object.assign({}, c.vals); Object.defineProperty(st, 'sets', { value: c.sets, enumerable: false }); c.obj = st; this.stats = st; }
+      this.statsHits = (this.statsHits || 0) + 1; // test hook
+      return this.stats;
+    }
+    const st = this._calcStatsNow(null);
+    this._stSigA = B; this._stSigB = A; B.length = n; this._stDirty = false;
+    this._stC = { obj: st, vals: Object.assign({}, st), keys: Object.keys(st), sets: st.sets };
+    this.statsRuns = (this.statsRuns || 0) + 1; // test hook
+    return st;
+  }
+  // Equipment, level, buffs or passives changed: the next _calcStats() recomputes (the signature also catches it; this is the explicit flag).
+  markStatsDirty() { this._stDirty = true; }
+  // Writes every input of the non-pure _calcStats into `b` (no strings built); returns the count.
+  _stSig(b) {
+    let i = 0; const s = this.save, p = this.player, hp = this.heroProfile, sm = p ? p._stm : null, u = this._hu, eq = s.eq || {}, items = s.items;
+    b[i++] = s; b[i++] = s.level; b[i++] = eq; b[i++] = items; b[i++] = items ? items.length : -1;
+    for (let k = 0; k < RM_SLOTS.length; k++) {
+      const uid = eq[RM_SLOTS[k]]; const it = uid && items ? items.find((x) => x.n === uid) : null;
+      b[i++] = uid; b[i++] = it || null; b[i++] = it ? RM_ITEM_BY_ID[it.id] : null;
+      if (it) { b[i++] = it.id; b[i++] = it.t; b[i++] = it.r; b[i++] = it.a; b[i++] = it.sig; const f = it.f; b[i++] = f; b[i++] = f && typeof f === 'object' ? f.id : null; b[i++] = f && typeof f === 'object' ? f.v : null; }
+    }
+    b[i++] = hp; if (hp) { b[i++] = hp.hp; b[i++] = hp.dmg; b[i++] = hp.rate; b[i++] = hp.speed; b[i++] = hp.iframes; }
+    b[i++] = u; if (u) { b[i++] = u.cls; b[i++] = u.level; }
+    b[i++] = this._unl();
+    b[i++] = this.mode; b[i++] = this.world; b[i++] = this.dungeon; b[i++] = this.team;
+    const hs = this._heroWorldScale(); b[i++] = hs ? hs.dmg : null; b[i++] = hs ? hs.rate : null;
+    b[i++] = this.buffDmg; b[i++] = p; b[i++] = sm; if (sm) { b[i++] = sm.dmg; b[i++] = sm.rate; b[i++] = sm.speed; }
+    b[i++] = this.extraGuard;
+    b[i++] = typeof MMGear !== 'undefined'; b[i++] = typeof MMGearAffix !== 'undefined'; b[i++] = typeof MMGearSets !== 'undefined'; b[i++] = typeof MMGearForge !== 'undefined';
+    b[i++] = typeof MMUnlocks !== 'undefined'; b[i++] = typeof MMStats !== 'undefined'; b[i++] = typeof MMDifficulty !== 'undefined';
+    return i;
+  }
+  // The full computation (what _calcStats did before P2). With opts it is pure; without, it sets this.stats.
+  _calcStatsNow(opts) {
     const o = opts && typeof opts === 'object' ? opts : null;
     const pure = !!(o && (o.noGear || o.eqOverride));
     if (this.team && this.team.isPvp) { const ds = { maxHp: RT_DUEL_HP, dmg: 1, rate: RT_DUEL_RATE, speed: RM_PLAYER.speed, shards: 1, xp: 1, iframes: 0.12 }; if (!pure) this.stats = ds; return ds; } // a duel is fought with identical stats: no gear, no level, no tiers / armor / affixes
@@ -956,15 +1045,17 @@ class RealmArena {
     if (t === this.player && (this.state === 'dead' || this.down)) return false;
     const o = opts && typeof opts === 'object' ? opts : {};
     const now = this._stT * 1000; const kind = this._stKind(t);
-    const before = t.status && t.status.fx ? t.status.fx[id] : null; const was = before ? `${before.until}|${before.stacks}|${before.pot}` : '';
+    const before = t.status && t.status.fx ? t.status.fx[id] : null; const wu = before ? before.until : NaN, ws = before ? before.stacks : NaN, wp = before ? before.pot : NaN; // P2: compared as numbers (no string per hit)
     let sec = o.sec;
     if (t === this.player) { // G8 player resist (armor family + `resist` affix): a hostile status lasts x (1 - resist); never in duels (_stOn), 0 without such gear
       const rs = this._resistFor(id), d = MMStatus.DEFS && Object.prototype.hasOwnProperty.call(MMStatus.DEFS, id) ? MMStatus.DEFS[id] : null;
       if (rs > 0 && d && d.sign < 0) { const base = Number.isFinite(Number(sec)) && sec !== null && sec !== '' ? Number(sec) : d.sec; sec = base * (1 - rs); this.lastResist = { id, rs, sec }; }
     }
-    const next = MMStatus.apply(t.status, id, { sec, stacks: o.stacks, pot: o.pot, src: typeof o.src === 'string' ? o.src : '', kind, fromBolt: !!o.fromBolt, picnic: !!o.picnic, safe: !!o.safe }, now);
+    const ao = this._apO || (this._apO = { sec: 0, stacks: 0, pot: 0, src: '', kind: '', fromBolt: false, picnic: false, safe: false }); // P2: reused (MMStatus.apply only reads it)
+    ao.sec = sec; ao.stacks = o.stacks; ao.pot = o.pot; ao.src = typeof o.src === 'string' ? o.src : ''; ao.kind = kind; ao.fromBolt = !!o.fromBolt; ao.picnic = !!o.picnic; ao.safe = !!o.safe;
+    const next = MMStatus.apply(t.status, id, ao, now);
     const f = Object.prototype.hasOwnProperty.call(next.fx, id) ? next.fx[id] : null;
-    const ok = !!f && f.until > now && `${f.until}|${f.stacks}|${f.pot}` !== was;
+    const ok = !!f && f.until > now && !(before && rmSame(f.until, wu) && rmSame(f.stacks, ws) && rmSame(f.pot, wp));
     t.status = next;
     this._stRefresh(t);
     if (t === this.player) {
@@ -1374,7 +1465,7 @@ class RealmArena {
     el.insertBefore(img, el.firstChild);
   }
   fxDraws() { return this._fxDraws; }
-  fxLive() { return this._fxPool ? this._fxPool.filter((q) => q.active).length : 0; }
+  fxLive() { const P = this._fxPool; if (!P) return 0; let n = 0; for (let i = 0; i < P.length; i++) if (P[i].active) n++; return n; } // P2: counted, no array
   // Plays effect `id` once at (x, y). opt: { w, h (draw size), rot (radians), follow (track the hero), oy (offset), dur (seconds) }.
   fxPlay(id, x, y, opt) {
     const A = this._fx, pool = this._fxPool; if (!A || !pool) return false;
@@ -1419,7 +1510,7 @@ class RealmArena {
     this.heroProfile = ok ? { name: String(profile.name || '').slice(0, 40), hp: m(profile.hp), dmg: m(profile.dmg), rate: m(profile.rate), speed: m(profile.speed), iframes: m(profile.iframes),
       shots: Math.max(1, Math.min(5, Math.floor(Number(profile.shots)) || 1)), spread: Math.max(0, Math.min(1, Number(profile.spread) || 0)), pierce: Math.max(0, Math.min(3, Math.floor(Number(profile.pierce)) || 0)),
       shotDmg: Math.max(0.2, Math.min(1.5, Number(profile.shotDmg) || 1)), critChance: Math.max(0, Math.min(0.5, Number(profile.critChance) || 0)), boltSpeed: Math.max(0.5, Math.min(1.3, Number(profile.boltSpeed) || 1)) } : null;
-    if (this.save) { this._calcStats(); if (this.player && this.player.hp > this.stats.maxHp) this.player.hp = this.stats.maxHp; if (this.active) this._syncHud(); }
+    if (this.save) { this.markStatsDirty(); this._calcStats(); if (this.player && this.player.hp > this.stats.maxHp) this.player.hp = this.stats.maxHp; if (this.active) this._syncHud(); }
   }
   // Additive hook (S12): fn() -> the active hero {cls, level} (MMProfile). With a hero, the unlock-tree nodes (MMUnlocks: class passives,
   // Nova II, Dash II) and the styled weapon items follow THAT hero's class and level; without one (null fn / null result) the arena is the
@@ -1435,7 +1526,7 @@ class RealmArena {
     const wi = wu ? this.save.items.find((x) => x.n === wu) : null;
     if (wi && RM_ITEM_BY_ID[wi.id] && RM_ITEM_BY_ID[wi.id].wpn && !this._wpnCanEquip(RM_ITEM_BY_ID[wi.id])) delete this.save.eq.weapon;
     if (RM_GEAR_ON && this.save && !(this.team && this.team.isPvp)) RM_SLOTS.forEach((sl) => { const gi = this.save.eq[sl] ? this.save.items.find((x) => x.n === this.save.eq[sl]) : null; if (gi && !this._gearOk(gi)) delete this.save.eq[sl]; }); // G7: armor of another family / a tier above the gate comes off (it stays in the backpack)
-    if (this.save) { this._calcStats(); if (this.player && this.player.hp > this.stats.maxHp) this.player.hp = this.stats.maxHp; if (this.active) this._syncHud(); }
+    if (this.save) { this.markStatsDirty(); this._calcStats(); if (this.player && this.player.hp > this.stats.maxHp) this.player.hp = this.stats.maxHp; if (this.active) this._syncHud(); }
     return this._hu ? { cls: this._hu.cls, level: this.heroLevel() } : null;
   }
   heroClass() { return this._hu ? this._hu.cls : null; }
@@ -1656,7 +1747,8 @@ class RealmArena {
     if (!id || !oh || !(oh.chance > 0) || !e.active) return false;
     const ch = Math.min(1, oh.chance + (this.stats.status > 0 ? this.stats.status : 0)) * (scale > 0 && scale < 1 ? scale : 1); // G8: + robe armor status chance + the `venom` affix (0 without them)
     if (this.rng() >= ch) return false;
-    return this.applyStatus(e, id, { sec: oh.sec > 0 ? oh.sec : undefined, src: 'wpn' });
+    const so = this._wsO || (this._wsO = { sec: undefined, src: 'wpn' }); so.sec = oh.sec > 0 ? oh.sec : undefined; // P2: one reused opts object
+    return this.applyStatus(e, id, so);
   }
   // Burst follow-ups and orbiters (at most 3; they only hit on the host / solo, a guest just draws its own).
   _updateWeapon(dt) {
@@ -1965,8 +2057,9 @@ class RealmArena {
       this.mouse.seen = true;
     };
     this.onPointerMove = (e) => { if (e.pointerType === 'mouse') toArena(e); };
-    this.onPointerDown = (e) => { if (e.pointerType === 'mouse') { toArena(e); this.mouse.down = true; } };
-    this.onPointerUp = (e) => { if (e.pointerType === 'mouse') this.mouse.down = false; };
+    // AR aim toggle: a click latches firing on, the next click lets go (instead of holding the button down)
+    this.onPointerDown = (e) => { if (e.pointerType === 'mouse') { toArena(e); this.mouse.down = this._aimToggle && this._ax2On() ? !this.mouse.down : true; } };
+    this.onPointerUp = (e) => { if (e.pointerType === 'mouse' && !(this._aimToggle && this._ax2On())) this.mouse.down = false; };
     this.canvas.addEventListener('pointermove', this.onPointerMove);
     this.canvas.addEventListener('pointerdown', this.onPointerDown);
     window.addEventListener('pointerup', this.onPointerUp);
@@ -1980,7 +2073,55 @@ class RealmArena {
 
   // Touch sticks are DOM elements (set up by main.js); they only feed these two vectors.
   setMoveStick(x, y) { this.moveVec.x = x; this.moveVec.y = y; }
-  setAimStick(x, y, on) { this.aimVec.x = x; this.aimVec.y = y; this.aimVec.on = !!on; }
+  // AR "hold to aim" -> toggle: with the aim toggle on, letting go of a dragged aim stick keeps aiming and firing that way (latched); a short tap
+  // (never dragged past 0.25) lets go. Without it (and on every page that never enabled access2) the stick is hold-to-fire as before.
+  setAimStick(x, y, on) {
+    if (this._aimToggle && this._ax2On()) {
+      if (on) { const m = Math.sqrt(x * x + y * y); if (m > this._aimPressMax) this._aimPressMax = m; // (Math.hypot boxes its arguments)
+        this.aimVec.x = x; this.aimVec.y = y; this.aimVec.on = true; return; }
+      const drag = this._aimPressMax > 0.25; this._aimPressMax = 0;
+      if (!drag) { this.aimVec.on = false; this.aimVec.x = 0; this.aimVec.y = 0; } // a tap: stop (the last dragged direction stays latched otherwise)
+      return;
+    }
+    this.aimVec.x = x; this.aimVec.y = y; this.aimVec.on = !!on;
+  }
+
+  // ---------- AR: one-thumb mode (auto-fire), aim toggle, bullet shapes, HUD text scale ----------
+  // Prefs are per device in their own small keys (like mm-aim-assist): never in the save, never in pixeltown-access-v1 (its schema is shared).
+  enableAccess2() { this._ax2 = true; this._readAccess2(); return this.access2(); }
+  _ax2On() { return this._ax2 && !(this.team && this.team.isPvp); }
+  _readAccess2() {
+    const rd = (k) => { try { return localStorage.getItem(k) === '1'; } catch (e) { return false; } };
+    this._autoFire = rd('mm-auto-fire'); this._aimToggle = rd('mm-aim-toggle'); this._shapes = rd('mm-bullet-shapes');
+    this._bakeCBBullets(); this._syncTxtFont();
+  }
+  _setAx2(key, field, on) {
+    this[field] = !!on; try { localStorage.setItem(key, on ? '1' : '0'); } catch (e) { /* this visit only */ }
+    if (field === '_aimToggle' && !on) { this.aimVec.on = false; this.mouse.down = false; this._aimPressMax = 0; } // never leave a latch behind
+    this._bakeCBBullets(); return this.access2();
+  }
+  setAutoFire(on) { return this._setAx2('mm-auto-fire', '_autoFire', on); }
+  setAimToggle(on) { return this._setAx2('mm-aim-toggle', '_aimToggle', on); }
+  setBulletShapes(on) { return this._setAx2('mm-bullet-shapes', '_shapes', on); }
+  // One-thumb mode = auto-fire + the aim toggle: the move stick alone plays the Realm.
+  setOneThumb(on) { this.setAimToggle(on); return this.setAutoFire(on); }
+  access2() { return { on: this._ax2On(), autoFire: this._autoFire, aimToggle: this._aimToggle, shapes: this._shapes, oneThumb: this._autoFire && this._aimToggle, textScale: this._txtScale, autoFireN: this.autoFireN }; }
+  // The floating combat text follows the shared HUD size (pixeltown-access-v1 hudScale); the font string is built once per change, never per frame.
+  _syncTxtFont() {
+    const hs = this._ax2On() && this.acc && Number.isFinite(this.acc.hudScale) ? this.acc.hudScale : 1;
+    if (hs === this._txtScale && this._txtFont) return;
+    this._txtScale = hs; this._txtFont = 'bold ' + Math.round(14 * hs) + 'px system-ui, sans-serif';
+  }
+  // Auto-fire target: the nearest live enemy within RM_AF_RANGE (no arrays, no objects: one pass over the pool). null = hold fire.
+  _autoFireTarget() {
+    const p = this.player; let best = null; let bd = RM_AF_RANGE * RM_AF_RANGE;
+    for (let i = 0; i < this.enemies.length; i++) {
+      const e = this.enemies[i]; if (!e.active) continue;
+      const dx = e.x - p.x; const dy = e.y - p.y; const d = dx * dx + dy * dy;
+      if (d < bd) { bd = d; best = e; }
+    }
+    return best;
+  }
 
   // B7: an enemy's hit radius: its own e.rad (a big creature) or its type's.
   _er(e) { return e.rad > 0 ? e.rad : RM_ENEMIES[e.type].r; }
@@ -2152,6 +2293,7 @@ class RealmArena {
   // Everything a fresh run needs (shared by start() and restart()); never touches the loop or the save.
   _beginRun() {
     [this.pBullets, this.eBullets, this.enemies, this._edGhosts || [], this.particles, this.texts, this.bags, this.drifters, this.hazards, this._sparks || [], this._fxPool || []].forEach((pool) => pool.forEach((o) => { o.active = false; }));
+    this.bags.forEach((b) => { b.gear = null; }); // review F9
     this._wireRefresh(); this._padPrev.fill(false); this._wq.length = 0;
     this.keys = {}; this.mouse.down = false; this.moveVec.x = 0; this.moveVec.y = 0; this.aimVec.on = false; this.aimVec.x = 0; this.aimVec.y = 0; // no stuck input from the last run
     const p = this.player;
@@ -2181,6 +2323,7 @@ class RealmArena {
   }
 
   stop() {
+    this.flushSave(); // review F16: a pending kill save is written before the run ends (exit, leave, team end)
     this.active = false; this._focusHud(true);
     if (this.team) { this.team.close(); this.team = null; this.role = 'solo'; }
     const pe = document.getElementById('realm-partner'); if (pe) pe.classList.add('hidden');
@@ -2195,6 +2338,8 @@ class RealmArena {
 
   destroy() {
     this.stop();
+    if (typeof window !== 'undefined' && window.removeEventListener) window.removeEventListener('pagehide', this._onHide);
+    if (typeof document !== 'undefined' && document.removeEventListener) document.removeEventListener('visibilitychange', this._onVis);
     window.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('keyup', this.onKeyUp);
     window.removeEventListener('blur', this.onBlur);
@@ -2430,6 +2575,18 @@ class RealmArena {
     }
   }
 
+  // P2: damage-number strings cached by value (no string built per hit). k 0 = plain "12.3", -1 = crit "12.3!", n > 0 = splash "12.3 ×n".
+  _numTxt(v, k) {
+    const C = this._numC || (this._numC = new Map()); const key = Math.round(v * 10) * 8 + (k < 0 ? 7 : k); // k is -1..6
+    let t = C.get(key);
+    if (t === undefined) { t = k < 0 ? `${v}!` : k > 0 ? `${v} ×${k}` : String(v); if (C.size >= 512) C.clear(); C.set(key, t); }
+    return t;
+  }
+  // P2: the low graphics tier (MMPerf 'low', forced by the Low graphics setting or picked automatically; mad-maze.js publishes it in window.__mmPerf).
+  // Read once per frame (_update), so a hit never touches the DOM.
+  _lowGfx() { return this._lowF === true; }
+  _readLowGfx() { const P = typeof window !== 'undefined' ? window.__mmPerf : null; this._lowF = !!(P && P.lowGfx === true); }
+
   _floatText(x, y, text, color) {
     const t = this._take(this.texts);
     if (!t) return null;
@@ -2440,7 +2597,7 @@ class RealmArena {
   // ---------- simulation ----------
 
   _update(dt) {
-    this._readReduced();
+    this._readReduced(); this._readLowGfx();
     if (this.paused) { this._readPad(); this._padPauseEdge(); return; } // backpack open (Start can still close it)
     const p = this.player;
     this._stT += dt; this._stTick(dt); this._focusTick(dt); this._gearTick(dt);
@@ -2586,6 +2743,16 @@ class RealmArena {
       firing = this.mouse.down || !!this.keys[' '];
     } else if (this.keys[' ']) firing = true;
     if (pad && pad.fire) firing = true;
+    if (!firing && this._autoFire && this._ax2On() && !this.down && !(pad && pad.aim.on)) { // AR one-thumb: aim at the nearest enemy in range and fire
+      const t = this._autoFireTarget();
+      if (t) { // lead the target by its measured velocity over the bolt's flight time (strafing enemies are hit too); plain numbers only
+        if (t !== this._afT || !(dt > 0)) { this._afT = t; this._afVx = 0; this._afVy = 0; }
+        else { this._afVx = this._afVx * 0.6 + ((t.x - this._afX) / dt) * 0.4; this._afVy = this._afVy * 0.6 + ((t.y - this._afY) / dt) * 0.4; }
+        this._afX = t.x; this._afY = t.y;
+        const dx = t.x - p.x; const dy = t.y - p.y; const ft = Math.sqrt(dx * dx + dy * dy) / RM_PLAYER.bulletSpeed;
+        p.aim = Math.atan2(dy + this._afVy * ft, dx + this._afVx * ft); firing = true; this.autoFireN++;
+      } else this._afT = null;
+    }
     if (pad) { for (let i = 0; i < 4; i++) { const on = !!pad.ability[i]; if (on && !this._padPrev[i]) this.cast(i); this._padPrev[i] = on; } }
     if (this.down) firing = false;
     this._firing = firing;
@@ -2844,7 +3011,7 @@ class RealmArena {
     if (e.type === 'boss' && e.invuln > 0) { if (quiet) return; this._floatText(e.x, e.y - 40, 'shielded', '#c9d1d9'); this._burst(e.x, e.y, '#fff', 1, 60); return; }
     if (this.onEnemyHit) this.onEnemyHit(e, dmg);
     e.hp -= dmg; e.flash = 1;
-    this._snd(e.hp > 0 ? 'hit' : 'kill');
+    if (!quiet || e.hp <= 0) this._snd(e.hp > 0 ? 'hit' : 'kill'); // P2: a splashed (quiet) target that survives plays no extra 'hit' (the primary hit just played one; no voice per target)
     if (e.type === 'boss') {
       this._syncBoss();
       if (e.hp > 0) {
@@ -2860,7 +3027,12 @@ class RealmArena {
     }
     if (!quiet) {
       const dc = this._dmgColor(e, crit); this.lastDmgColor = dc; // S14 (test hook: the colour of the last enemy damage number)
-      this._floatText(e.x + (this.rng() - 0.5) * 14, e.y - 14, crit ? `${Math.round(dmg * 10) / 10}!` : String(Math.round(dmg * 10) / 10), dc);
+      // P2: on the low graphics tier a plain (non-crit) number shows at most every RM_LOW_DMG_GAP s; crits always show. The rng draw is kept either way.
+      const jx = (this.rng() - 0.5) * 14;
+      if (crit || !this._lowGfx() || !(this._stT - (this._dmgTxtT === undefined ? -1e9 : this._dmgTxtT) < RM_LOW_DMG_GAP)) {
+        if (!crit) this._dmgTxtT = this._stT;
+        this._floatText(e.x + jx, e.y - 14, this._numTxt(Math.round(dmg * 10) / 10, crit ? -1 : 0), dc);
+      } else this.dmgTxtSkipped = (this.dmgTxtSkipped || 0) + 1; // test hook
       this._burst(e.x, e.y, RM_ENEMIES[e.type].color, 3, 110);
     }
     if (e.hp > 0) return;
@@ -2878,7 +3050,7 @@ class RealmArena {
     this._gainXp(Math.round(RM_XP[e.type] * (1 + 0.1 * Math.max(0, this.run.wave - 1)) * (e.xpMul || 1) * this.stats.xp));
     if (this.mode !== 'world' && this.rng() < RM_BAG_CHANCE) this.dropBag(e.x, e.y, this.rollRarity()); // a world rolls its own zone drops (onEnemyKilled)
     this.shake = Math.max(this.shake, 3);
-    this.onSave(this.save);
+    this.saveSoon(); // review F16: a splash that kills 8 in one frame persists once (a bag pickup, wave or death that follows persists at once anyway)
     if (this.dungeon) this.dungeon.onKill(e);
     if (this.onEnemyKilled) this.onEnemyKilled(e);
   }
@@ -2904,21 +3076,24 @@ class RealmArena {
   // (only this.enemies is searched). A splashed enemy rolls the bolt's onHit status (or the venom bleed) at chance x its share. Returns the count.
   _splashAt(b, x, y, skip, hit, sp) {
     const E = this.enemies, n = E.length;
-    if (!this._spX || this._spX.length < n) { const c = Math.max(64, n); this._spX = new Float32Array(c); this._spY = new Float32Array(c); this._spR = new Float32Array(c); this._spOk = new Uint8Array(c); this._spOut = new Int16Array(MMSplash.MAX_TARGETS); this._spD = new Float32Array(MMSplash.MAX_TARGETS); }
+    if (!this._spX || this._spX.length < n) { const c = Math.max(64, n); this._spX = new Float32Array(c); this._spY = new Float32Array(c); this._spR = new Float32Array(c); this._spOk = new Uint8Array(c); this._spOut = new Int16Array(MMSplash.MAX_TARGETS); this._spD = new Float32Array(MMSplash.MAX_TARGETS); this._spF = new Float64Array(MMSplash.MAX_TARGETS); }
     const xs = this._spX, ys = this._spY, rs = this._spR, ok = this._spOk, out = this._spOut, dd = this._spD;
     for (let i = 0; i < n; i++) { const e = E[i]; const live = !!(e.active && e.hp > 0 && !e.tame); ok[i] = live ? 1 : 0; xs[i] = live ? e.x : 0; ys[i] = live ? e.y : 0; rs[i] = live ? this._er(e) : 0; }
     const k = MMSplash.pick(xs, ys, rs, n, x, y, sp, skip, out, ok);
     for (let j = 0; j < k; j++) dd[j] = MMSplash.dist[j]; // copied first: nothing below may touch the kernel's scratch
+    const ff = this._spF || (this._spF = new Float64Array(MMSplash.MAX_TARGETS)); // P2: each target's falloff (float64: the same numbers as frac() returned)
+    if (typeof MMSplash.fracInto === 'function') MMSplash.fracInto(dd, k, sp, ff); else for (let j = 0; j < k; j++) ff[j] = MMSplash.frac(dd[j], sp);
     let tot = 0, cnt = 0;
     for (let j = 0; j < k; j++) {
       const e = E[out[j]]; if (!e || !e.active) continue;
-      const f = MMSplash.frac(dd[j], sp), dmg = hit * sp.frac * f;
+      const f = ff[j], dmg = hit * sp.frac * f;
       if (!(dmg > 0)) continue;
       if (b.ws && b.st > 0) this._wpnStatus(b, e, sp.frac * f); else if (this.stats.venom > 0) this._venomBleed(e, sp.frac * f);
       this._hitEnemy(e, dmg, false, true);
       tot += dmg; cnt++;
     }
-    this.splashN = (this.splashN || 0) + 1; this.lastSplash = { x, y, r: sp.r, n: cnt, dmg: Math.round(tot * 100) / 100 }; // test hooks
+    this.splashN = (this.splashN || 0) + 1; // test hooks; P2: lastSplash is one reused object (no per-hit allocation)
+    const L = this.lastSplash || (this.lastSplash = { x: 0, y: 0, r: 0, n: 0, dmg: 0 }); L.x = x; L.y = y; L.r = sp.r; L.n = cnt; L.dmg = Math.round(tot * 100) / 100;
     if (++this._spFrame <= RM_SPLASH_FX) this._splashFx(x, y, sp.r, cnt, tot);
     return cnt;
   }
@@ -2926,20 +3101,23 @@ class RealmArena {
   _venomBleed(e, scale) {
     if (!e || !e.active || !(this.stats.venom > 0)) return false;
     if (this.rng() >= Math.min(1, this.stats.venom * scale)) return false;
-    return this.applyStatus(e, 'bleed', { sec: 3, src: 'wpn' });
+    return this.applyStatus(e, 'bleed', RM_VENOM_ST); // P2: a constant opts object (applyStatus only reads it)
   }
   // The ring (b29 `fx_splash_ring` art when loaded and two effect slots are free, else a cached code-drawn ring), the b18 small explosion for big
   // splashes (r >= 40, >= 4 free slots, never with reduced motion) and one combined orange number ("2.4 ×3"), rate-limited.
   _splashFx(x, y, r, cnt, tot) {
     const free = this._fxPool ? RM_FX_MAX - this.fxLive() : 0;
-    const art = free >= 2 && this._fx && this._fx.has('fx_splash_ring') && this.fxPlay('fx_splash_ring', x, y, { w: Math.max(24, r * 2) });
+    const fo = this._spFxO || (this._spFxO = { w: 0 }); // P2: one reused fxPlay option object (fxPlay copies what it reads)
+    fo.w = Math.max(24, r * 2);
+    const art = free >= 2 && this._fx && this._fx.has('fx_splash_ring') && this.fxPlay('fx_splash_ring', x, y, fo);
     if (art) this.splashArtN = (this.splashArtN || 0) + 1; else this._splashRing(x, y, r);
-    if (r >= 40 && free >= 4 && !this._reduced && this._fx && this._fx.has('fx_explosion_small')) this.fxPlay('fx_explosion_small', x, y, { w: 64 });
-    if (cnt <= 0 || (this._spTxtT !== undefined && this._stT - this._spTxtT < RM_SPLASH_TXT_GAP)) return;
+    if (r >= 40 && free >= 4 && !this._reduced && this._fx && this._fx.has('fx_explosion_small')) { fo.w = 64; this.fxPlay('fx_explosion_small', x, y, fo); }
+    const gap = this._lowGfx() ? RM_SPLASH_TXT_GAP * RM_LOW_TXT_MUL : RM_SPLASH_TXT_GAP; // P2: the low graphics tier shows fewer splash numbers
+    if (cnt <= 0 || (this._spTxtT !== undefined && this._stT - this._spTxtT < gap)) return;
     let live = 0; for (let i = 0; i < this.texts.length; i++) if (this.texts[i].active) live++;
     if (live > RM_SPLASH_TXT_MAX) return;
     this._spTxtT = this._stT;
-    this._floatText(x, y - 20, `${Math.round(tot / cnt * 10) / 10} ×${cnt}`, RM_SPLASH_COL);
+    this._floatText(x, y - 20, this._numTxt(Math.round(tot / cnt * 10) / 10, cnt), RM_SPLASH_COL);
   }
   _splashRing(x, y, r) {
     const P = this._spRings || (this._spRings = Array.from({ length: RM_SPLASH_RINGS }, () => ({ active: false, x: 0, y: 0, r: 0, t: 0, dur: 0.18 })));
@@ -3127,14 +3305,14 @@ class RealmArena {
     while (sv.level < RM_MAX_LEVEL && sv.xp >= rmXpNeeded(sv.level)) { sv.xp -= rmXpNeeded(sv.level); sv.level += 1; up = true; }
     if (sv.level >= RM_MAX_LEVEL) sv.xp = 0;
     if (up) this._levelUp();
-    this.onSave(this.save);
+    if (up) this.onSave(this.save); else this.saveSoon(); // review F16: plain xp rides the coalesced kill save; a level-up persists at once
     this._syncHud();
   }
 
   _levelUp() {
     this._snd('levelup');
     const before = this.stats.maxHp;
-    this._calcStats();
+    this.markStatsDirty(); this._calcStats();
     const p = this.player;
     p.hp = Math.min(this.stats.maxHp, p.hp + Math.round(this.stats.maxHp * 0.3) + (this.stats.maxHp - before)); // a level heals a bit and the new max HP is free
     this.shake = Math.max(this.shake, 4);
@@ -3152,10 +3330,11 @@ class RealmArena {
     return r < rare ? 2 : r < rare + unc ? 1 : 0;
   }
 
-  dropBag(x, y, rarity, itemId, worldLoot) {
+  // gear (optional): { t, a?, sig? } of a tiered drop; null otherwise (pooled bags are reused, so a classic bag never keeps an earlier drop's tier, review F9).
+  dropBag(x, y, rarity, itemId, worldLoot, gear) {
     const b = this._take(this.bags);
     if (!b) return null;
-    b.active = true; b.x = x; b.y = y; b.t = 0; b.r = rarity;
+    b.active = true; b.x = x; b.y = y; b.t = 0; b.r = rarity; b.gear = gear && typeof gear === 'object' && !Array.isArray(gear) ? gear : null;
     b.tier = worldLoot?.tierIndex;
     b.lifetime = worldLoot?.lifetime || Infinity;
     b.id = this._wpnDrop(itemId || RM_BASE_ITEMS[Math.floor(this.rng() * RM_BASE_ITEMS.length)].id, worldLoot);
@@ -3186,8 +3365,11 @@ class RealmArena {
     this._snd('pickup');
     const sv = this.save; const def = RM_ITEM_BY_ID[id]; const rar = RM_RARITIES[rarity];
     if (sv.items.length >= RM_BACKPACK) {
-      sv.shards += rar.sell;
-      this._floatText(this.player.x, this.player.y - 24, `sold ${def.name} +${rar.sell} 💎`, rar.color);
+      // review F11: a full pack sells a tiered drop at its tiered value (rmSellValue, the same price the backpack's Sell button pays), never the classic one
+      const gt = gear && typeof gear === 'object' && !Array.isArray(gear) ? rmCleanGear(id, rarity, gear).t : 0;
+      const val = rmSellValue(gt ? { r: rarity, t: gt } : { r: rarity });
+      sv.shards += val; this.lastFullSale = { id, r: rarity, t: gt, shards: val }; // test hook
+      this._floatText(this.player.x, this.player.y - 24, `sold ${def.name} +${val} 💎`, rar.color);
     } else {
       const ent = { n: sv.nextUid++, id, r: rarity };
       if (gear && typeof gear === 'object' && !Array.isArray(gear)) {
@@ -3209,14 +3391,16 @@ class RealmArena {
       const b = this.bags[i];
       if (!b.active) continue;
       b.t += dt;
-      if (b.t >= b.lifetime) { b.active = false; continue; }
+      if (b.t >= b.lifetime) { b.active = false; b.gear = null; continue; } // review F9: an inactive bag never keeps its tier
       b.x += b.vx * dt; b.y += b.vy * dt; b.vx *= 0.93; b.vy *= 0.93;
       b.x = Math.max(14, Math.min(this._bw() - 14, b.x)); b.y = Math.max(14, Math.min(this._bh() - 14, b.y));
       const dx = p.x - b.x; const dy = p.y - b.y; const d = Math.hypot(dx, dy) || 1;
       if (b.t > 0.4 && d < 110) { const k = (230 * dt) / d; b.x += dx * k; b.y += dy * k; } // bags drift toward you
-      if (b.t > 0.25 && d < 20 && !this.down) { b.active = false; this.collectItem(b.id, b.r); continue; }
+      if (b.t > 0.25 && d < 20 && !this.down) { const g = b.gear; b.active = false; this.collectItem(b.id, b.r, g || undefined); b.gear = null; continue; } // the tier goes INTO the pickup (a full pack sells it at its tiered value, review F11)
       const q = this.team && this.role === 'host' && this.team.partner && this.team.partner.ready && !this.team.partner.down ? this.team.partner : null;
-      if (q && b.t > 0.25 && !RM_ARM_ID.test(b.id) && Math.hypot(q.x - b.x, q.y - b.y) < 20) { b.active = false; this.team.ev('loot', [b.id, b.r], 1); } // `loot` stays [id, r] (never t / a); armor is never handed to a partner
+      // `loot` stays [id, r] (the wire format never carries t / a / sig). Review F9, the choice: a TIERED bag (b.gear) is never handed to a partner at all, so a
+      // T12 can never arrive there as a T0 copy and soulbound gear never crosses; each seat rolls its own tiered drops locally (seeded per seat). Armor too.
+      if (q && b.t > 0.25 && !b.gear && !RM_ARM_ID.test(b.id) && Math.hypot(q.x - b.x, q.y - b.y) < 20) { b.active = false; this.team.ev('loot', [b.id, b.r], 1); }
     }
   }
 
@@ -3472,11 +3656,11 @@ class RealmArena {
   refreshAccess() {
     if (typeof MMAccess === 'undefined' || !MMAccess.prefs) { this.acc = null; this._ebCB = null; return null; }
     let raw = null; try { raw = localStorage.getItem(MMAccess.prefs.KEY); } catch (e) { raw = null; }
-    if (raw === this._accRaw && this.acc) return this.acc;
+    if (raw === this._accRaw && this.acc) { if (this._ax2) { this._bakeCBBullets(); this._syncTxtFont(); } return this.acc; } // AR: a duel starting / ending flips the gate
     this._accRaw = raw;
     let pr = null; try { pr = MMAccess.prefs.load(localStorage); } catch (e) { pr = null; }
     this.acc = pr || MMAccess.prefs.defaults();
-    this._bakeCBBullets();
+    this._bakeCBBullets(); this._syncTxtFont();
     return this.acc;
   }
   _flashesOn() { return !this.acc || this.acc.flashes !== false; }
@@ -3484,14 +3668,37 @@ class RealmArena {
   // `enemy`), with a 2 px dark outline while bulletOutline is on. Same 16 px sprites, same hit size; null = today's hues and art.
   // The normal palette with bulletOutline OFF bakes today's three hues with no dark rim (and no bolt art, which carries its own rim), so
   // the outline pref works on every palette. Baked once per pref change (3 canvases); the draw loop only picks a cached canvas.
+  // AR: on a page that enabled access2 (never in a duel), a colour-blind palette or the Bullet shapes toggle gives each kind its own SHAPE too:
+  // aimed = round dot, spiral = diamond, ring = hollow ring, each in the MMAccess palette colours with the outline following the shape.
   _bakeCBBullets() {
     const a = this.acc; const on = a && a.palette && a.palette !== 'normal';
-    const bare = !!(a && !on && a.bulletOutline === false);
-    const key = on ? `${a.palette}|${a.bulletOutline ? 1 : 0}` : bare ? 'normal|0' : '';
+    const shp = this._ax2On() && (on || this._shapes) && typeof MMAccess !== 'undefined' && typeof MMAccess.palette === 'function';
+    const bare = !!(a && !on && !shp && a.bulletOutline === false);
+    const key = shp ? `shape|${a ? a.palette : 'normal'}|${!a || a.bulletOutline ? 1 : 0}` : on ? `${a.palette}|${a.bulletOutline ? 1 : 0}` : bare ? 'normal|0' : '';
     if (key === this._ebCBKey) return;
     this._ebCBKey = key; this._ebCB = null;
     if (typeof document === 'undefined') return;
     const R = RM_BOLT_R.enemy;
+    if (shp) {
+      const pal = MMAccess.palette(a ? a.palette : 'normal'); const outline = !a || a.bulletOutline !== false;
+      const path = (g, k, r) => {
+        g.beginPath();
+        if (k === 1) { g.moveTo(8, 8 - r); g.lineTo(8 + r, 8); g.lineTo(8, 8 + r); g.lineTo(8 - r, 8); g.closePath(); }
+        else g.arc(8, 8, r, 0, Math.PI * 2);
+      };
+      this._ebCB = [pal.bullet, pal.enemy, pal.enemy].map((col, k) => {
+        const c = document.createElement('canvas'); c.width = 16; c.height = 16; const g = c.getContext('2d');
+        const r = k === 1 ? R + 1 : R; // the diamond's corners reach a little further so its area matches the dot
+        g.fillStyle = col; path(g, k, r); g.fill();
+        if (k === 2) { g.globalCompositeOperation = 'destination-out'; g.beginPath(); g.arc(8, 8, 2.6, 0, Math.PI * 2); g.fill(); g.globalCompositeOperation = 'source-over'; } // hollow ring
+        if (outline) {
+          g.strokeStyle = '#000'; g.lineWidth = pal.outlinePx || 2; path(g, k, r + 1); g.stroke();
+          if (k === 2) { g.lineWidth = 1; g.beginPath(); g.arc(8, 8, 2.6, 0, Math.PI * 2); g.stroke(); }
+        }
+        return c;
+      });
+      return;
+    }
     if (bare) {
       this._ebCB = RM_EB_HUES.map(([hue, tint]) => {
         const c = document.createElement('canvas'); c.width = 16; c.height = 16; const g = c.getContext('2d');
@@ -3698,7 +3905,7 @@ class RealmArena {
   _mountMenuBtn() {
     if (this._menuBtn || typeof document === 'undefined') return;
     const hud = document.getElementById('realm-hud'); if (!hud) return;
-    const b = document.createElement('button'); b.id = 'realm-menu-btn'; b.type = 'button'; b.textContent = '☰'; b.setAttribute('aria-label', 'Open menu (Esc)');
+    const b = document.createElement('button'); b.id = 'realm-menu-btn'; b.type = 'button'; b.textContent = '☰'; b.setAttribute('aria-label', 'Open menu: heroes, restart, leave (Esc)'); b.title = 'Menu (Esc)';
     const lb = document.getElementById('realm-leave-btn'); hud.insertBefore(b, lb || null);
     b.addEventListener('click', () => this.setMenu(true));
     this._menuBtn = b;
@@ -3707,6 +3914,7 @@ class RealmArena {
   setMenu(on) {
     if (!this._menuMode || !this.active) return;
     if (on && this.state === 'dead') return;
+    if (on) this.flushSave(); // review F16: the menu (and its stash settle) sees what storage holds
     if (on && this.onMenuOpen) this.onMenuOpen();
     this._panel(on ? 'menu' : null);
     if (on && this._menuDom) { const f = this._menuDom.querySelector('button[data-m="resume"].rm-btn'); if (f && f.focus) f.focus({ preventScroll: true }); }
@@ -3752,7 +3960,7 @@ class RealmArena {
     const wrap = document.createElement('div');
     wrap.id = 'realm-pause'; wrap.className = 'rm-panel hidden'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-label', 'Menu'); wrap.style.display = 'none';
     wrap.innerHTML = '<div class="realm-bp-card rm-card"><div class="realm-bp-head"><strong>☰ Menu</strong><button id="realm-menu-close" type="button" data-m="resume" aria-label="Close menu">✖</button></div>'
-      + '<div class="rm-main"><button type="button" class="rm-btn" data-m="resume">▶ Resume</button><button type="button" class="rm-btn" data-m="heroes">🦸 Pick hero</button><button type="button" class="rm-btn" data-m="herostats">📊 Hero stats</button><button type="button" class="rm-btn" data-m="restart">↻ Restart run</button><p class="rm-note dim"></p><p class="rm-stash dim hidden" aria-live="polite"></p><button type="button" class="rm-btn" data-m="leave">🚪 Leave to start</button></div>'
+      + '<div class="rm-main"><button type="button" class="rm-btn" data-m="resume">▶ Resume</button><button type="button" class="rm-btn" data-m="heroes">🦸 Pick hero</button><button type="button" class="rm-btn" data-m="herostats">📊 Hero stats</button><button type="button" class="rm-btn" data-m="restart">↻ Restart run</button><p class="rm-note dim"></p><p class="rm-stash dim hidden" aria-live="polite"></p><button type="button" class="rm-btn" data-m="leave">🚪 Leave</button></div>'
       + '<div class="rm-confirm hidden"><p class="rm-restart-copy"></p><button type="button" class="rm-btn" data-m="restart-yes">Yes, restart</button><button type="button" class="rm-btn" data-m="restart-no">Keep playing</button></div>'
       + '<div class="rm-settings"><strong>Settings</strong><button type="button" class="rm-tog" data-set="sound"></button><button type="button" class="rm-tog" data-set="motion"></button><button type="button" class="rm-tog" data-set="aim"></button></div></div>';
     ov.appendChild(wrap);
@@ -3896,7 +4104,7 @@ class RealmArena {
   }
 
   // ---------- Forge (GW): salvage for dust, deterministic reforge (MMGearForge). Free in-game dust + shards only; no randomness anywhere. ----------
-  // Off with ?gear=0, without mm-gear-forge.js or while the GW gate is closed (RM_FORGE_ON, default off for one deploy; ?forge=1): no Forge section,
+  // Off with ?gear=0, without mm-gear-forge.js or while the GW gate is closed (RM_FORGE_ON: on by default since P2; ?forge=0 closes it): no Forge section,
   // nothing creates `dust` / `f`, and the ones already saved are kept (a forged `f` still counts in the stats).
   forgeOn() { return RM_GEAR_ON && RM_FORGE_ON && typeof MMGearForge !== 'undefined' && !!MMGearForge && typeof MMGearForge.salvage === 'function' && !(this.team && this.team.isPvp); }
   _forgeView(it) { const v = { n: it.n, id: it.id, r: it.r }; if (it.t) v.t = it.t; if (it.a) v.a = it.a; if (it.sig) v.sig = it.sig; if (it.f) v.f = it.f; return v; } // sig: review F5
@@ -3950,6 +4158,8 @@ class RealmArena {
     ne.f = { id: nf.f.id, v: nf.f.v };
     sv.items[i] = ne;
     RM_EQ_KEYS.forEach((slot) => { if (sv.eq[slot] === uid) sv.eq[slot] = n; });
+    // review F13: a pending Lantern find of the old uid moves to the new one (same id / r / t / a), so the next settle still pays it
+    try { if (typeof MMStash !== 'undefined' && MMStash.renumberFindIn && typeof localStorage !== 'undefined') MMStash.renumberFindIn(localStorage, uid, n, ne); } catch (e) { /* storage blocked: the find stays as it was */ }
     sv.dust = (sv.dust || 0) - o.cost.dust; sv.shards -= o.cost.shards;
     this._forgeUid = n; this._forgeAsk = null;
     this._snd('levelup');
@@ -4037,8 +4247,69 @@ class RealmArena {
     });
   }
 
+  // ---------- Nexus vendor stall (VN, NEXT-SLICES-3 Wave 4): MMGearForge.vendorStock / buyBack, free in-game dust only ----------
+  // A fixed T1-T3 list at fixed dust prices (never soulbound, nothing rolled, no timer, no rotation, no random pack, no real money). Buy-back pays
+  // MMGearForge.BUYBACK_RATIO of the item's sell value in dust for T1-T3 items only. Follows the forge gate (forgeOn: ?forge=0 / ?gear=0 / duels: off).
+  // No new save key: a bought item is a plain { n, id, r: 0, t } entry (t 1-3 needs no affix seed) and dust is the GW `dust` field.
+  vendorOn() { return this.forgeOn() && typeof MMGearForge.vendorStock === 'function' && typeof MMGearForge.buyBack === 'function'; }
+  // vendorStock() -> [{ id, t, r: 0, price, name, afford, room }] or null when the stall is off.
+  vendorStock() {
+    if (!this.vendorOn()) return null;
+    const d = new Date(); const th = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 4 - (d.getUTCDay() || 7))); // ISO week (the list does not depend on it)
+    const wk = th.getUTCFullYear() + '-W' + String(Math.ceil(((th - Date.UTC(th.getUTCFullYear(), 0, 1)) / 864e5 + 1) / 7)).padStart(2, '0');
+    let s = null; try { s = MMGearForge.vendorStock(wk); } catch (e) { s = null; }
+    if (!Array.isArray(s)) return null;
+    const sv = this.save; const dust = sv.dust || 0; const room = sv.items.length < RM_BACKPACK;
+    return s.filter((o) => o && Object.prototype.hasOwnProperty.call(RM_ITEM_BY_ID, o.id) && Number.isInteger(o.t) && o.t >= 1 && o.t <= 3 && o.r === 0 && Number.isInteger(o.price) && o.price > 0)
+      .map((o) => ({ id: o.id, t: o.t, r: 0, price: o.price, name: RM_ITEM_BY_ID[o.id].name, afford: dust >= o.price, room }));
+  }
+  // vendorBuy(id, t) -> the new item's uid, or 0. Charges exactly the listed dust once; refused without the dust or a free backpack slot.
+  vendorBuy(id, t) {
+    const o = (this.vendorStock() || []).find((x) => x.id === id && x.t === t);
+    if (!o || !o.afford || !o.room) return 0;
+    const sv = this.save; const n = Math.max(sv.nextUid || 1, 1 + sv.items.reduce((m, x) => Math.max(m, x.n), 0)); sv.nextUid = n + 1;
+    sv.dust = (sv.dust || 0) - o.price;
+    sv.items.push({ n, id: o.id, r: 0, t: o.t });
+    this._snd('pickup');
+    this._afterGearChange();
+    return n;
+  }
+  // vendorBuyBackInfo(uid) -> { dust } or null (T1-T3 tiered items only; soulbound / T4+ / classic items are refused).
+  vendorBuyBackInfo(uid) {
+    if (!this.vendorOn()) return null;
+    const it = this.save.items.find((x) => x.n === uid);
+    if (!it || !it.t || it.t > 3) return null;
+    let r = null; try { r = MMGearForge.buyBack(this._forgeView(it)); } catch (e) { r = null; }
+    return r && Number.isInteger(r.dust) && r.dust > 0 ? { dust: r.dust } : null;
+  }
+  // vendorSellBack(uid) -> the dust paid, or 0. The item leaves the backpack (and its slot).
+  vendorSellBack(uid) {
+    const info = this.vendorBuyBackInfo(uid);
+    if (!info) return 0;
+    const sv = this.save; const i = sv.items.findIndex((x) => x.n === uid);
+    if (i < 0) return 0;
+    sv.items.splice(i, 1);
+    RM_EQ_KEYS.forEach((slot) => { if (sv.eq[slot] === uid) delete sv.eq[slot]; });
+    sv.dust = (sv.dust || 0) + info.dust;
+    if (this._forgeUid === uid) { this._forgeUid = 0; this._forgeAsk = null; }
+    rmGearHintOwn(sv);
+    this._afterGearChange();
+    return info.dust;
+  }
+  // openForge(): the backpack with the Forge section of a tiered item open (the equipped weapon first). false when the forge is off.
+  openForge() {
+    if (!this.forgeOn() || !this.active || this.state === 'dead') return false;
+    const sv = this.save; const w = sv.items.find((x) => x.n === sv.eq.weapon && x.t);
+    const it = w || sv.items.find((x) => x.t);
+    this._forgeUid = it ? it.n : 0; this._forgeAsk = null;
+    this._panel('bp');
+    const f = typeof document !== 'undefined' ? document.querySelector('#realm-bp-forge button.fg') || document.getElementById('realm-bp-close') : null;
+    if (f && f.focus) { try { f.focus({ preventScroll: true }); } catch (e) { /* focus is cosmetic */ } }
+    return true;
+  }
+
   _afterGearChange() {
-    this._calcStats();
+    this.markStatsDirty(); this._calcStats();
     const p = this.player;
     p.hp = Math.min(this.stats.maxHp, p.hp); // swapping gear never heals (no free HP by toggling a charm); losing max HP just lowers the cap
     this.displayShards = this.save.shards;
@@ -4418,7 +4689,7 @@ class RealmArena {
       g.globalAlpha = Math.max(0, pt.life / pt.max); g.fillStyle = pt.color; g.fillRect(pt.x - pt.size / 2, pt.y - pt.size / 2, pt.size, pt.size);
     }
     g.globalAlpha = 1;
-    g.font = 'bold 14px system-ui, sans-serif'; g.textAlign = 'center';
+    g.font = this._txtFont; g.textAlign = 'center'; // AR: follows the HUD size pref (a cached string; 14 px by default)
     const hs = this._stAnchorAt(); const ox = wd ? cam.x : 0; const oy = wd ? cam.y : 0; // floating numbers never sit under the top-right HUD buttons
     for (let i = 0; i < this.texts.length; i++) {
       const t = this.texts[i];

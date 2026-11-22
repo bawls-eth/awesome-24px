@@ -829,6 +829,28 @@ body.touch-device #dig-hole-hint, body.touch-device #realm-gate-hint { bottom: c
 
 #realm-gate-hint.hidden { display: none; }
 
+/* TN1: the dock signpost prompt is a real button (tap or click it, or press E / A near the sign). */
+#isles-sign-hint {
+  position: fixed;
+  bottom: 172px;
+  left: 50%;
+  transform: translateX(-50%);
+  min-height: 44px;
+  background: var(--ac-sky-deep);
+  border: 2px solid var(--ac-leaf);
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--ac-text-on-accent);
+  z-index: 15;
+  white-space: nowrap;
+  cursor: pointer;
+}
+#isles-sign-hint.hidden { display: none; }
+/* Phone: the free row between the chat bar and the joystick (the fish / gift row never shows at the dock sign). */
+body.touch-device #isles-sign-hint { bottom: calc(160px + env(safe-area-inset-bottom, 0px)); font-size: 13px; padding: 7px 14px; }
+
 #fish-hint-btn {
   position: fixed;
   bottom: 220px;
@@ -2225,7 +2247,9 @@ body.touch-device .key-hint { display: none; }
     background: transparent;
     border: none;
   }
-  #player-list-panel.collapsed > :not(#panel-toggle) { display: none !important; }
+  #player-list-panel.collapsed > :not(#panel-toggle):not(#where-to-btn) { display: none !important; }
+  /* "Where to?" stays visible under the collapsed chip (NAV-AUDIT 4.4): outside the collapsible part. */
+  #player-list-panel.collapsed #where-to-btn { margin: 6px 0 0; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25); }
   #player-list-panel.collapsed #panel-toggle { margin: 0; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25); background: var(--ac-panel-solid); }
   /* Expanded: scrolls inside itself; its height is capped in JS (<= 60vh and
      clear of the chat bar), this is the fallback. */
@@ -2699,3 +2723,108 @@ body.a11y-hud-scaled #inventory-panel, body.a11y-hud-scaled #player-list-panel, 
 }
 body.a11y-reduce-motion #join-decor { display: none; }
 body.a11y-reduce-motion *, body.a11y-reduce-motion *::before, body.a11y-reduce-motion *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; }
+
+/* ---------- NAV slice E (design/NAV-AUDIT.md 4.4): Where to?, Realm Gate pointer, join Continue, gate menu ---------- */
+#where-to-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; min-height: 44px; box-sizing: border-box; margin: 0 0 8px; padding: 6px 10px;
+  border: 2px solid var(--ac-leaf); border-radius: 999px; background: var(--ac-leaf-tint, #e6f4dc);
+  color: var(--ac-leaf-text, #2f5a1e); font: inherit; font-size: 14px; font-weight: 800; cursor: pointer;
+  white-space: nowrap; touch-action: manipulation;
+}
+#where-to-btn:hover, #where-to-btn:focus-visible { border-color: var(--ac-border); }
+#where-to-btn.hidden { display: none !important; }
+
+#gate-pointer {
+  position: fixed; z-index: 16; left: 50%; transform: translateX(-50%);
+  top: calc(16px + 40px + 12px + env(safe-area-inset-top, 0px));
+  display: flex; align-items: center; gap: 4px; min-height: 44px; box-sizing: border-box;
+  padding: 0 0 0 14px; border-radius: 999px; border: 2px solid #7b3fe4;
+  background: var(--ac-panel-solid, #fffaf0); color: var(--ac-text, #3a2e1f);
+  font-size: 14px; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  pointer-events: auto;
+}
+#gate-pointer.hidden { display: none; }
+#gate-pointer-arrow { display: inline-block; min-width: 1.2em; text-align: center; font-size: 18px; color: #7b3fe4; }
+#gate-pointer-close {
+  width: 44px; height: 44px; margin: -2px -2px -2px 0; padding: 0; border: none; border-radius: 50%;
+  background: transparent; color: inherit; font: inherit; font-size: 15px; cursor: pointer;
+}
+@media (max-width: 600px), (max-height: 500px) and (pointer: coarse) {
+  /* Phones: centred below the inventory strip and the In-town chip + Where to? button. */
+  #gate-pointer { top: calc(112px + env(safe-area-inset-top, 0px)); font-size: 13px; }
+  /* The expanded In-town panel wins the space: the chip waits until it collapses again. */
+  #player-list-panel:not(.collapsed) ~ #gate-pointer { display: none; }
+}
+@media (max-height: 500px) and (pointer: coarse) {
+  /* Landscape phones: the top row is the inventory strip + quick chat, so sit on the right, under Where to?. */
+  #gate-pointer { top: calc(116px + env(safe-area-inset-top, 0px)); left: auto; right: calc(8px + env(safe-area-inset-right, 0px)); transform: none; }
+}
+
+#join-continue {
+  display: flex; align-items: center; justify-content: center; min-height: 44px; box-sizing: border-box;
+  margin: 12px 0 0; padding: 8px 12px; border: 2px solid var(--ac-border); border-radius: 999px;
+  background: var(--ac-inset); color: var(--ac-text); font-weight: 700; font-size: 14px; text-decoration: none;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#join-continue.hidden { display: none; }
+
+.species-tab { min-height: 40px; box-sizing: border-box; }
+
+#realm-menu .realm-bp-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+#realm-menu-close-btn {
+  width: 44px; height: 44px; min-width: 44px; padding: 0; border-radius: 50%; border: 2px solid #8a5a2b;
+  background: #f1e6cf; color: #3a2a1a; font-size: 18px; line-height: 1;
+}
+#realm-menu-solo { min-height: 44px; }
+#realm-menu-friends { margin: 4px 0 0; }
+#realm-menu-friends > summary {
+  display: flex; align-items: center; min-height: 44px; box-sizing: border-box; padding: 6px 4px;
+  font-size: 14px; font-weight: 700; cursor: pointer; list-style-position: inside;
+}
+#realm-menu-friends > summary::before { content: '▸'; margin-right: 6px; }
+#realm-menu-friends[open] > summary::before { content: '▾'; }
+#realm-menu-friends > summary::-webkit-details-marker { display: none; }
+#realm-menu-friends > summary { list-style: none; }
+
+/* ---------- TN2: Postcards board, 44 px targets and 12 px text in the Town HUD (QT known issues) ---------- */
+#postcards-hint {
+  position: fixed; bottom: 172px; left: 50%; transform: translateX(-50%);
+  min-height: 44px; box-sizing: border-box; padding: 8px 18px;
+  background: var(--ac-panel-solid); border: 2px solid var(--ac-border); border-radius: 999px;
+  color: var(--ac-text); font-size: 14px; font-weight: bold; white-space: nowrap; cursor: pointer; z-index: 15;
+}
+#postcards-hint.hidden { display: none; }
+/* Phone: the row just under the chat bar (232 px) and above the fish / gift row (148-184 px); the dig-hole hint that
+   shares it never shows at the board (the hole is ~110 px away). */
+body.touch-device #postcards-hint { bottom: calc(188px + env(safe-area-inset-bottom, 0px)); font-size: 13px; padding: 7px 14px; }
+#postcards-overlay { position: fixed; inset: 0; z-index: 25; display: flex; align-items: center; justify-content: center; background: var(--ac-scrim); }
+#postcards-overlay.hidden { display: none; }
+#postcards-overlay .join-card { position: relative; max-height: 90vh; overflow-y: auto; }
+#postcards-overlay #postcards-close-btn {
+  position: absolute; top: 6px !important; right: 6px !important; width: 44px !important; height: 44px !important;
+  border-radius: 50%; border: 2px solid var(--ac-border); background: var(--ac-inset); color: var(--ac-text); font-size: 16px; cursor: pointer;
+}
+#postcards-overlay h1 { padding-right: 48px; }
+#postcards-list { max-height: 55vh; }
+#postcards-list li { padding: 8px 10px; font-size: 14px; line-height: 1.35; }
+#postcards-list li.postcards-empty { font-size: 13px; font-style: italic; opacity: 0.85; }
+
+/* QT: every Town HUD control >= 44 px tall (was 40 px) and every HUD line >= 12 px (was 10-11 px). */
+#quick-chat-row button { min-height: 44px; }
+@media (max-width: 600px), (max-height: 500px) and (pointer: coarse) {
+  #player-list-panel #panel-toggle { min-height: 44px; }
+}
+#streak-badge, #town-rating, #town-tidy, #birthday-line, #bestie-label { font-size: 12px; }
+#keys-help-btn, #changelog-btn, #feedback-btn, #map-btn, #world-map-link { font-size: 12px; }
+#tilt-toggle-btn, #emote-toggle-btn { font-size: 12px !important; line-height: 1.1; }
+.ab-emoji { font-size: 12px; }
+@media (min-width: 721px) and (min-height: 501px) {
+  #achievements-badge, #map-btn, #world-map-link, #museum-badge, #dailies-btn, #journal-btn, #settings-toggle-btn,
+  #keys-help-btn, #changelog-btn, #feedback-btn { min-height: 44px; }
+  /* Desktop: the panel may use the full height of the right edge (nothing else lives there), so Today, Journal and
+     Settings are reachable without scrolling at 1280x720; it still scrolls inside itself on shorter windows. */
+  #player-list-panel { max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); box-sizing: border-box; }
+  /* The quick-chat phrases wrap instead of running out of the 320 px chat panel (the last one was clipped). */
+  #quick-chat-row { flex-wrap: wrap; overflow-x: visible; }
+}

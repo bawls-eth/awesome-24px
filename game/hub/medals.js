@@ -11,12 +11,14 @@
     angler: { node: 'w4-angler', name: 'Angler', medals: [['catch1', 'First catch'], ['species10', '10 species'], ['boss1', 'Boss trophy']] },
     jam: { node: 'w5-jam', name: 'Campfire Jam', medals: [['star1', 'First star'], ['stars12', '12 stars'], ['fullcombo', 'Full combo']] },
     stalk: { node: 'w5-stalk', name: 'Stalk Market', medals: [['bronze', 'Bronze'], ['silver', 'Silver'], ['gold', 'Gold']] },
-    deepdelve: { node: 'w3-deepdelve', name: 'Deepdelve', medals: [['bronze', 'Depth 8'], ['silver', 'Iron pick'], ['secret', 'Lava Lake'], ['depth20', 'Depth 20'], ['depth40', 'Depth 40'], ['crawler', 'Crawler slain'], ['wyrm', 'Rock Wyrm'], ['torches10', '10 torches']] },
+    deepdelve: { node: 'w3-deepdelve', name: 'Deepdelve', medals: [['bronze', 'Depth 8'], ['silver', 'Iron pick'], ['secret', 'Lava Lake'], ['depth20', 'Depth 20'], ['depth40', 'Depth 40'], ['crawler', 'Crawler slain'], ['wyrm', 'Rock Wyrm'], ['torches10', '10 torches'], ['build1', 'First build'], ['build3', 'Three builds']] },
     // Hearthvale Isles (games/isles, MMIsles.MEDAL_IDS): first tames, a tame per size class, each island visited, each boss lair seen
     isles: { node: 'w7-isles', name: 'Hearthvale Isles', medals: [['tame1', 'First tame'], ['log6', '6 creatures seen'], ['ride1', 'First ride'], ['stable5', '5 tames'],
       ['tame_s', 'Small friend'], ['tame_m', 'Medium friend'], ['tame_l', 'Large friend'], ['tame_xl', 'Giant friend'], ['visit_home', 'Hearth Isle'],
       ['visit_jungle', 'Verdant Jungle'], ['visit_reef', 'Coral Reef'], ['visit_ice', 'Frostfang Tundra'], ['visit_mars', 'Red Waste'],
       ['boss_fernjaw_tyrant', 'Fernjaw Tyrant seen'], ['boss_tide_hydra', 'Tide Hydra seen'], ['boss_frost_dragon', 'Frost Dragon seen'], ['boss_red_titan', 'Red Titan seen']] },
+    // Bug Safari (games/festival/bugs.html, MMBugs.MEDAL_IDS): written to its own key pixeltown-medals-bugs-v1
+    bugs: { node: 'w5-safari', name: 'Bug Safari', medals: [['first_catch', 'First catch'], ['species7', 'All 7 bugs'], ['stars10', '10 stars'], ['moonwing', 'Moonwing']] },
   };
   const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
   const keyOf = (game) => 'pixeltown-medals-' + game + '-v1';

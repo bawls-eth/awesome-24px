@@ -1,0 +1,33 @@
+{
+  "batch": "b36",
+  "label": "meadow-creatures",
+  "generated_utc": "2026-11-21T23:48:19.775664Z",
+  "files": 98,
+  "duplicate_ids": 0,
+  "blocking": {},
+  "warnings": {},
+  "standing_heights": {
+    "clover_hopper/down": 192,
+    "clover_hopper/up": 192,
+    "clover_hopper/right": 192,
+    "puffwool/down": 156,
+    "puffwool/up": 156,
+    "puffwool/right": 156,
+    "bumble_mote/down": 164,
+    "bumble_mote/up": 164,
+    "bumble_mote/right": 164,
+    "pebble_tortle/down": 116,
+    "pebble_tortle/up": 116,
+    "pebble_tortle/right": 116,
+    "thistle_boar/down": 152,
+    "thistle_boar/up": 152,
+    "thistle_boar/right": 152,
+    "meadow_strider/down": 220,
+    "meadow_strider/up": 220,
+    "meadow_strider/right": 220,
+    "oakback/down": 184,
+    "oakback/up": 184,
+    "oakback/right": 184
+  },
+  "status": "provisional"
+}

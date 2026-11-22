@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="deepdelve.css">
 <script src="../../shared/mm-access.js"></script>
 <script src="../../shared/mm-side-access.js"></script>
+<link rel="stylesheet" href="../../shared/mm-nav.css">
 </head>
 <body>
 <header class="bar">
@@ -19,6 +20,7 @@
   <button class="btn" id="open-craft" type="button" aria-controls="craft-panel">Craft (C)</button>
   <button class="btn" id="open-goals" type="button" aria-controls="goals-panel">Goals (G)</button>
   <button class="btn" id="mode-btn" type="button" aria-label="Toggle creative mode (M)">Mode: Survival</button>
+  <button class="btn" id="world-btn" type="button" aria-label="Open the calm creative world (separate save)">Creative world</button>
 </nav>
 <main id="stage">
   <canvas id="gl" aria-label="Deepdelve world"></canvas>
@@ -28,6 +30,7 @@
     <div id="hpbar" role="progressbar" aria-label="Health" aria-valuemin="0" aria-valuemax="10" aria-valuenow="10"><div id="hpfill"></div></div>
     <div id="hud-pick"></div>
     <div id="hud-goal"></div>
+    <div id="creative-note" hidden></div>
   </div>
   <p id="msg" role="status" aria-live="polite">Loading the mine...</p>
   <section id="craft-panel" class="panel" role="dialog" aria-label="Crafting" hidden>
@@ -36,12 +39,17 @@
     <div class="smelt"><button class="btn mini" id="craft-filter" type="button" aria-pressed="false">Showing: all</button><span id="bench-note" class="note"></span></div>
     <div class="smelt"><button class="btn mini" id="smelt-iron" type="button">Smelt iron</button><button class="btn mini" id="smelt-gold" type="button">Smelt gold</button><span id="furnace-note" class="note"></span></div>
     <ul id="recipes"></ul>
+    <h3 class="sub">Grotto and blueprint crafts</h3>
+    <ul id="recipes-x"></ul>
   </section>
   <section id="goals-panel" class="panel" role="dialog" aria-label="Goals and medals" hidden>
     <div class="ph"><h2>Goals</h2><button class="btn mini" id="close-goals" type="button">Close</button></div>
     <ul id="goal-list"></ul>
     <h3 class="sub">More goals</h3>
     <ul id="goal-more"></ul>
+    <h3 class="sub">Blueprints</h3>
+    <ul id="goal-build"></ul>
+    <p id="build-stats" class="note"></p>
     <p id="goal-stats" class="note"></p>
   </section>
   <div id="touch" hidden>
@@ -63,7 +71,22 @@
 <script src="../../shared/mm-dd-time.js"></script>
 <script src="../../shared/mm-dd-mobs.js"></script>
 <script src="../../shared/mm-dd-spawn.js"></script>
+<script src="../../shared/mm-dd-grotto.js"></script>
+<script src="../../shared/mm-dd-build.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="../../shared/mm-nav.js" data-mount="manual"></script>
+<script>
+(function () {
+  if (!window.MMNav) return;
+  MMNav.mount({ page: 'deepdelve', legacy: '#back-hub,#back-town', avoid: '.bar h1', backHref: '../../hub/index.html', backLabel: 'World map' });
+  var cover = [], shut = ['craft-panel','goals-panel'];
+  function open(ids) { return ids.some(function (id) { var e = document.getElementById(id); return e && !e.hidden; }); }
+  function sync() { MMNav.setCovered(open(cover)); if (open(cover) || open(shut)) MMNav.close(); }
+  var mo = window.MutationObserver ? new MutationObserver(sync) : null;
+  cover.concat(shut).forEach(function (id) { var e = document.getElementById(id); if (e && mo) mo.observe(e, { attributes: true, attributeFilter: ['hidden'] }); });
+}());
+</script>
+<script src="../../shared/profile.js"></script>
 <script src="deepdelve.js"></script>
 </body>
 </html>

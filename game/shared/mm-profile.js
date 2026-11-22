@@ -112,15 +112,20 @@
   }
 
   // Copy (never move) the old arena save into a 'Legacy Ranger' hero. Idempotent via migratedFrom.
+  // Soulbound gear (T11+) never leaves the Realm, the same rule MMStash.payout enforces, so it is skipped here.
+  // The count is on the returned profile as a non-enumerable `skippedSoulbound` (never saved: JSON.stringify ignores it).
   function importLegacy(realmSave, profile) {
     const p = clean(profile);
     if (p.migratedFrom || !isObj(realmSave)) return p;
     const items = [];
+    let skipped = 0;
     (Array.isArray(realmSave.items) ? realmSave.items.slice(0, 200) : []).forEach((it) => {
       if (items.length >= MAX_ITEMS || !isObj(it)) return;
       const c = cleanItem({ id: it.id, r: it.r, n: it.n, t: it.t, a: it.a });
+      if (c && c.t >= 11) { skipped++; return; }
       if (c) items.push(c);
     });
+    Object.defineProperty(p, 'skippedSoulbound', { value: skipped, enumerable: false, configurable: true, writable: true });
     const hero = cleanHero({
       id: 'legacy-ranger', name: 'Legacy Ranger', cls: 'ranger',
       level: realmSave.level, xp: realmSave.xp, fame: 0, mode: 'classic', items: items

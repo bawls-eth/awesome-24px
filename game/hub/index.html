@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Pixeltown Hub</title>
 <link rel="stylesheet" href="hub.css">
+<link rel="stylesheet" href="../shared/mm-nav.css">
 <script src="../shared/mm-access.js"></script>
 <script src="../shared/mm-side-access.js"></script>
 </head>
@@ -20,11 +21,25 @@
     <span class="stat" title="Completion"><b id="hud-pct">0</b>%</span>
   </div>
 </header>
+<nav id="hub-games" class="hub-games" aria-label="Games: tap one to play"></nav>
+<a id="hub-continue" class="hub-continue" href="#" hidden><span class="c-ico" aria-hidden="true"></span><span class="c-txt"></span></a>
+<section id="calm-card" class="calm-card" hidden aria-labelledby="calm-title">
+  <div class="calm-head">
+    <h2 id="calm-title">Things you could do</h2>
+    <button id="calm-close" type="button" aria-label="Hide these ideas (the Menu brings them back)">&times;</button>
+  </div>
+  <ul id="calm-list" class="calm-list" aria-label="Ideas"></ul>
+</section>
 <main id="stage">
   <canvas id="map" aria-label="World map" role="img"></canvas>
   <div id="toast" role="status" aria-live="polite"></div>
+  <div id="hint-chip" class="hint-chip" role="note" hidden>
+    <span class="hint-chip-text">Tap a place to walk there, or a game above to play.</span>
+    <button id="hint-chip-x" type="button" aria-label="Dismiss the hint">&times;</button>
+  </div>
 </main>
 <footer id="bar">
+  <a id="hub-town" class="btn town-btn" href="../index.html?from=hub" aria-label="Back to the Town">&larr; Town</a>
   <span id="hint" class="hint">Tap a node, or use arrows / WASD / D-pad. Enter or A opens a node.</span>
   <button id="gift-btn" type="button" aria-expanded="false" aria-controls="gift-card">Daily gift</button>
   <button id="open-btn" type="button">Open</button>
@@ -37,8 +52,11 @@
   <p id="card-world" class="card-sub"></p>
   <div id="card-medals" class="medals" aria-label="Medals"></div>
   <p id="card-status" class="card-sub"></p>
+  <p id="card-bonus" class="card-bonus" hidden></p>
   <p id="card-ach-n" class="ach-n" hidden></p>
   <ul id="card-ach" class="ach" aria-label="Game medals" hidden></ul>
+  <p id="card-goals-n" class="ach-n" hidden>Clears this place on the map:</p>
+  <ul id="card-goals" class="ach goals" aria-label="Map goals" hidden></ul>
   <div class="card-actions">
     <a id="card-play" class="btn" href="#">Play</a>
     <span id="card-soon" class="btn disabled" hidden>Coming soon</span>
@@ -55,6 +73,7 @@
   <div class="card-actions"><button id="gift-claim" type="button">Claim</button></div>
 </section>
 <div id="iris" aria-hidden="true"></div>
+<script src="../shared/mm-nav.js" data-mount="manual"></script>
 <script src="../shared/mm-map.js"></script>
 <script src="../shared/profile.js"></script>
 <script src="../shared/mm-jam.js"></script>
@@ -66,5 +85,7 @@
 <script src="medals.js"></script>
 <script src="hub.js"></script>
 <script src="gift.js"></script>
+<script src="../shared/mm-calm-goals.js"></script>
+<script src="calm.js"></script>
 </body>
 </html>

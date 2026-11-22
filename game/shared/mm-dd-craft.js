@@ -42,5 +42,42 @@
     }
     return out;
   }
-  return { BENCH_ONLY, needsBench, outText, annotate, benchNear, cleanBenches };
+  // ---------- MG2 (additive): crystal grotto recipes + blueprint crafts. Kept apart from MMRecipes so the 24-row list is unchanged. ----------
+  // grotto: always listed, they need glowstone (depth 25-40). blueprint: listed locked until the blueprint item is held.
+  const X = (id, kind, station, cost, out, extra) => Object.assign({ id, kind, station, cost, out }, extra || {});
+  const EXTRA = [
+    X('glow_lamp', 'grotto', 'hand', { glowstone: 2, stone: 1 }, { glow_lamp: 1 }),
+    X('glow_torch', 'grotto', 'hand', { glowstone: 1, wood: 1 }, { torch: 6 }),
+    X('glow_furnace', 'grotto', 'hand', { glowstone: 1, stone: 5 }, { furnace: 1 }),
+    X('glow_pick', 'grotto', 'table', { glowstone: 2, stone: 4 }, { pick1: 1 }, { tier: 1 }),
+    X('stone_brick', 'blueprint', 'hand', { stone: 2 }, { stone_brick: 2 }, { blueprint: 'bp_hut' }),
+    X('brick_span', 'blueprint', 'hand', { stone: 3, coal: 1 }, { stone_brick: 5 }, { blueprint: 'bp_bridge' }),
+    X('beacon_lamp', 'blueprint', 'hand', { glowstone: 1, gold: 1 }, { glow_lamp: 3 }, { blueprint: 'bp_lighthouse' }),
+  ];
+  const extraById = {}; EXTRA.forEach((r) => { extraById[r.id] = r; });
+  const extra = (id) => extraById[id] || null;
+  const has = (inv, k, n) => ((inv && inv[k]) | 0) >= n;
+  const unlocked = (inv, r) => !r.blueprint || has(inv, r.blueprint, 1);
+  function canCraftExtra(inv, id) { const r = extra(id); return !!r && unlocked(inv, r) && Object.keys(r.cost).every((k) => has(inv, k, r.cost[k])); }
+  // Consumes exactly r.cost and adds r.out; inv untouched on failure.
+  function craftExtra(inv, id) {
+    if (!canCraftExtra(inv, id)) return false;
+    const r = extra(id);
+    for (const k of Object.keys(r.cost)) inv[k] = (inv[k] | 0) - r.cost[k];
+    for (const k of Object.keys(r.out)) inv[k] = (inv[k] | 0) + r.out[k];
+    return true;
+  }
+  // Same row shape as annotate() plus { kind, locked, blueprint }.
+  function annotateExtra(inv, ctx) {
+    void ctx;
+    return EXTRA.map((r) => {
+      const keys = Object.keys(r.cost), locked = !unlocked(inv, r), can = canCraftExtra(inv, r.id);
+      const held = keys.some((k) => ((inv && inv[k]) | 0) > 0);
+      let reason = '';
+      if (locked) reason = 'Find the ' + r.blueprint.replace(/^bp_/, '') + ' blueprint';
+      else if (!can) reason = 'Missing ' + keys.filter((k) => ((inv && inv[k]) | 0) < r.cost[k]).map((k) => k.replace(/_/g, ' ')).join(', ');
+      return { id: r.id, kind: r.kind, cost: r.cost, out: r.out, station: r.station, blueprint: r.blueprint || '', locked, held, can, ready: can && !reason, reason };
+    });
+  }
+  return { BENCH_ONLY, needsBench, outText, annotate, benchNear, cleanBenches, EXTRA, extra, canCraftExtra, craftExtra, annotateExtra };
 });

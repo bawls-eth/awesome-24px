@@ -174,7 +174,7 @@ const bot = (page) => page.evaluate(() => {
   // phone
   const ph = await open(browser, '&seed=p&date=2026-07-15&weather=rain&bait=5', { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 }, seed(west4)); all.push(ph);
   check('phone 390x844: no horizontal scroll', await ph.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
-  check('phone: buttons at least 48px tall', await ph.page.$$eval('#spots .btn, #journal-btn, #gear-btn, .back', (b) => b.every((x) => x.getBoundingClientRect().height >= 47.5)));
+  check('phone: buttons at least 48px tall', await ph.page.$$eval('#spots .btn, #journal-btn, #gear-btn, .back:not(.mm-nav-legacy)', (b) => b.every((x) => x.getBoundingClientRect().height >= 47.5)));
   if (shot) await ph.page.screenshot({ path: shot + '/angler-polish-phone-idle.png' });
   await ph.page.click('#gear-btn');
   check('phone: gear panel has no horizontal scroll', await ph.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));

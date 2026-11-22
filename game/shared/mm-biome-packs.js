@@ -226,6 +226,21 @@
   };
   // names used elsewhere in the plans: 'home' (MMIsles) and 'ice' resolve to the canonical packs (same id, same seed space)
   const ALIASES = { home: 'meadow', ice: 'tundra' };
+
+  // ---- XD1: forage finds (pure data; MMOverworld never reads it, so every pack world and golden hash is unchanged) ----
+  // A daily gather pick (MMHomestead spot, G) on a pack's island can also turn up one bonus find: the page rolls u in [0, 1) with
+  // MMRng and keeps the find when u < chance, chosen by weight (MMIsleCraft.bonusFind). These are the second source of items that
+  // otherwise come from one place only (feather, honey, wool, driftwood, salt, apple, bone, stone, cocoa, glow_gel, ice_core, ...).
+  const FINDS = {
+    meadow: { chance: 0.35, items: [['feather', 3], ['honey', 2], ['wool', 2], ['driftwood', 2], ['salt', 1]] },
+    jungle: { chance: 0.3, items: [['apple', 3], ['bone', 2], ['stone', 2]] },
+    reef: { chance: 0.3, items: [['cocoa', 2], ['glow_gel', 2]] },
+    tundra: { chance: 0.3, items: [['ice_core', 1], ['wool', 2]] },
+    mars: { chance: 0.3, items: [['spring_salt', 2], ['data_chip', 1]] },
+  };
+  (function () { Object.keys(FINDS).forEach(function (k) { FINDS[k].items.forEach(Object.freeze); Object.freeze(FINDS[k].items); Object.freeze(FINDS[k]); }); Object.freeze(FINDS); })();
+  // finds(id) -> the frozen { chance, items: [[item, weight]] } of a pack (aliases ok), or null
+  function finds(id) { const k = resolveId(id); return k && own.call(FINDS, k) ? FINDS[k] : null; }
   const IDS = Object.keys(PACKS);
   const own = Object.prototype.hasOwnProperty;
 
@@ -276,6 +291,8 @@
     (p.solid || []).forEach(function (n) { if (n === t.pad || n === t.ford || n === t.dock) out.push('pad/ford/dock may not be solid: ' + n); });
     Object.keys(p.props || {}).forEach(function (n) { if (!known(n)) out.push('prop on unknown terrain ' + n); const r = p.props[n]; if (!Array.isArray(r) || typeof r[0] !== 'string' || !(r[1] > 0 && r[1] < 1)) out.push('bad prop rule ' + n); });
     (p.resources || []).forEach(function (r) { if (!r || !/^[a-z][a-z0-9_]*$/.test(r.id) || !Array.isArray(r.terrain) || !r.terrain.every(known) || !(r.chance > 0 && r.chance < 1) || !(r.respawn > 0)) out.push('bad resource ' + (r && r.id)); });
+    const fd = own.call(FINDS, p.id) ? FINDS[p.id] : null;
+    if (fd && (!(fd.chance > 0 && fd.chance < 1) || !fd.items.length || fd.items.some(function (r) { return !/^[a-z][a-z0-9_]*$/.test(r[0]) || !(r[1] > 0); }))) out.push('bad finds table');
     const g = p.groups || {};
     ['cell', 'count', 'prob'].forEach(function (k) { if (!Array.isArray(g[k]) || g[k].length !== nb) out.push('groups.' + k + ' needs one entry per band'); });
     for (let z = 0; z < nb; z++) {
@@ -328,5 +345,5 @@
   }
 
   return { VERSION: VERSION, IDS: IDS, ALIASES: ALIASES, get: get, resolveId: resolveId, validate: validate, creatureIds: creatureIds, allIds: allIds, speciesOf: speciesOf, palette: pal,
-    CANON: CANON, canon: canon };
+    CANON: CANON, canon: canon, FINDS: FINDS, finds: finds };
 }));
