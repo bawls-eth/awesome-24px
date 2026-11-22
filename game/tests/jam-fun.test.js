@@ -112,6 +112,16 @@ const box = (p, sel) => p.evaluate((s) => { const e = document.querySelector(s);
   check('desktop: 0 DB requests', d.db.count() === 0);
   await d.ctx.close();
 
+  // ---- low graphics (shared access prefs): no sparks, motion otherwise allowed ----
+  d = await open(browser, PHONE, JSON.stringify({ v: 1, hint: true, offsetMs: 0, plays: 0 })); p = d.page;
+  await p.evaluate(() => { localStorage.setItem('pixeltown-access-v1', JSON.stringify({ v: 1, lowGfx: true })); window.__jam.start('warm-embers', 'easy'); });
+  const n12 = await p.evaluate(() => window.__jam.chart.notes[11].t);
+  await drive(p, [], n12 + 5);
+  const m3 = await p.evaluate(() => ({ reduced: window.__jam.reduced, ms: window.__jam.milestones, sparks: window.__jam.sparks, combo: window.__jam.run.combo }));
+  check('low graphics: no sparks while the combo and milestone still work', m3.reduced === false && m3.sparks === 0 && m3.combo === 12 && m3.ms.join(',') === '10', JSON.stringify(m3));
+  check('low graphics: console clean, 0 DB requests', d.errors.length === 0 && d.db.count() === 0, d.errors.join(' | '));
+  await d.ctx.close();
+
   await browser.close();
   done();
 })();
