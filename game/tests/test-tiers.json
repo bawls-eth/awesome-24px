@@ -655,6 +655,14 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "angler-fun.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "stalk-practice.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "town-links.test.js": {
     "class": "live",
     "tier": "smoke"

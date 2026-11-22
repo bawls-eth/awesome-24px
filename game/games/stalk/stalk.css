@@ -62,3 +62,28 @@ html[data-reduce-motion="1"] *, html[data-reduce-motion="1"] *::before, html[dat
 #notes-list { margin:4px 0; padding-left:18px; font-size:calc(14px * var(--ui-scale,1)); }
 #notes-list li { margin:2px 0; overflow-wrap:anywhere; }
 #notes-last { overflow-wrap:anywhere; }
+
+/* Practice week (quick play) + trade layout polish */
+#practice h2 small { font-size:calc(12px * var(--ui-scale,1)); font-weight:normal; }
+#pr-start, #pr-again { width:100%; margin:6px 0; }
+#pr-top { display:flex; flex-wrap:wrap; align-items:baseline; gap:8px; margin:6px 0 2px; }
+#pr-when { color:var(--dim); font-size:calc(14px * var(--ui-scale,1)); }
+#pr-price { font-size:calc(28px * var(--ui-scale,1)); color:var(--accent); display:inline-block; }
+#pr-pl { font-weight:bold; font-size:calc(15px * var(--ui-scale,1)); }
+#pr-pl.up, #price-note .up { color:var(--buy); } #pr-pl.down { color:var(--sell); }
+#pr-stat, #pr-odds { margin:2px 0; font-size:calc(13px * var(--ui-scale,1)); }
+#pr-chart { width:100%; height:auto; display:block; background:#18241b; border:3px solid #0d160f; border-radius:8px; margin:4px 0; }
+#pr-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+#pr-actions .next { grid-column:1 / -1; background:var(--accent); }
+#pr-msg { min-height:1.4em; margin:6px 0 0; }
+#pr-end h3 { margin:6px 0; color:var(--accent); font-size:calc(17px * var(--ui-scale,1)); }
+#pr-end-list { margin:4px 0; padding-left:18px; font-size:calc(14px * var(--ui-scale,1)); }
+#pr-end-list li { margin:3px 0; overflow-wrap:anywhere; }
+.pop { animation:pr-pop .35s ease-out; }
+@keyframes pr-pop { 0% { transform:scale(1); } 40% { transform:scale(1.25); } 100% { transform:scale(1); } }
+@media (prefers-reduced-motion: reduce) { .pop { animation:none; } }
+#practice [hidden] { display:none !important; }
+.stat strong.pop { display:inline-block; }
+#go-practice { font:inherit; font-size:calc(14px * var(--ui-scale,1)); font-weight:bold; color:#1d2b20; background:var(--accent); border:0; border-radius:10px; min-height:48px; padding:8px 12px; cursor:pointer; width:100%; }
+#go-practice[hidden] { display:none; }
+#go-practice:focus-visible { outline:3px solid #fff; outline-offset:2px; }

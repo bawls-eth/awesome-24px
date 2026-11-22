@@ -60,6 +60,8 @@
   // ---------- DOM ----------
   function $(id) { return document.getElementById(id); }
   function fmt(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+  function pop(el) { if (reduced || !el) return; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
+  function signed(n) { return (n > 0 ? '+' : '') + fmt(n); }
   function say(t) { msgText = t; $('msg').textContent = t; }
 
   function drawIcon() {
@@ -74,17 +76,19 @@
     c.fillStyle = '#8a6a4a'; c.fillRect(23, 42, 2, 5); // root
   }
 
-  function drawChart(prog) {
+  function drawChart(prog) { drawChartOn($('chart'), wk, curSlot(), prog, null); }
+  // Shared by the real week and the practice week. marks: slots where the player sold (drawn as rings).
+  function drawChartOn(cv, wk, slot, prog, marks) {
     if (prog === undefined) prog = 1;
-    var cv = $('chart'), c = cv.getContext('2d'), W = cv.width, H = cv.height;
-    var slot = curSlot(), known = M.knownPrices(wk, slot);
+    var c = cv.getContext('2d'), W = cv.width, H = cv.height;
+    var known = M.knownPrices(wk, slot);
     var L = 34, R = 10, T = 12, B = 26, pw = W - L - R, ph = H - T - B;
     c.clearRect(0, 0, W, H);
     var top = Math.max(wk.buyPrice * 1.5, Math.max.apply(null, known) * 1.1);
     top = Math.ceil(top / 50) * 50;
     function X(i) { return L + pw * i / (M.SLOTS - 1); }
     function Y(v) { return T + ph * (1 - v / top); }
-    c.font = '11px monospace'; c.textBaseline = 'middle';
+    c.font = '12px monospace'; c.textBaseline = 'middle';
     c.strokeStyle = '#2f4a35'; c.fillStyle = '#9db3a0'; c.lineWidth = 1;
     for (var g = 0; g <= top; g += 50) {
       c.beginPath(); c.moveTo(L, Y(g) + 0.5); c.lineTo(W - R, Y(g) + 0.5); c.stroke();
@@ -112,6 +116,7 @@
       c.fillStyle = i === slot ? '#ffd166' : '#7fd18b';
       c.beginPath(); c.arc(PX(i), PY(i), i === slot ? 5 : 3, 0, Math.PI * 2); c.fill();
     });
+    if (marks) { c.strokeStyle = '#f4a261'; c.lineWidth = 2; marks.forEach(function (i) { if (i <= slot) { c.beginPath(); c.arc(X(i), Y(known[i]), 8, 0, Math.PI * 2); c.stroke(); } }); }
     c.lineWidth = 1;
   }
 
@@ -201,7 +206,7 @@
     $('price').textContent = fmt(price);
     $('price-note').textContent = sunday
       ? 'Buy price today. Stalks cannot be sold on Sunday.'
-      : 'Sell price now. You paid ' + (save.holdings ? 'up to ' : '') + 'about ' + wk.buyPrice + ' on Sunday.';
+      : 'Sell price now. You paid ' + (save.holdings ? 'up to ' : '') + 'about ' + wk.buyPrice + ' on Sunday.' + (save.holdings ? ' Sell all now: ' + signed(save.earned + save.holdings * price - save.invested) + ' bells for the week.' : '');
     $('buy1').disabled = !sunday || M.maxBuy(save, wk) < 1;
     $('buy10').disabled = !sunday || M.maxBuy(save, wk) < 10;
     $('sell1').disabled = sunday || save.holdings < 1;
@@ -210,6 +215,7 @@
       ? 'Selling closed: the market only buys stalks Monday to Saturday. Buying is open today.'
       : 'Buying closed: stalks can only be bought on Sunday. Selling is open now.';
     $('buy1').textContent = 'Buy 1';
+    $('go-practice').hidden = sunday || save.holdings > 0; // dead-end fix: a weekday with nothing to sell offers the quick practice week
     $('sellall').textContent = save.holdings > 0 && !sunday ? 'Sell all (' + save.holdings + ')' : 'Sell all';
     var known = M.knownPrices(wk, slot);
     $('chart-alt').textContent = 'Known prices: ' + known.join(', ') + '. Price history changes twice a day, Monday to Saturday.';
@@ -253,7 +259,8 @@
     if (!r.ok) { say(REASONS[r.reason] || 'Cannot do that.'); render(); return r; }
     var before = M.goalsDone(save, wk);
     save = M.latchGoals(r.save, wk); persist(); beep('levelup'); // sell cue
-    say('Sold ' + r.qty + ' for ' + fmt(r.gain) + ' bells.' + (save.goals !== before ? ' A weekly goal is done!' : '')); render(); return r;
+    var vs = r.gain - r.qty * wk.buyPrice;
+    say('Sold ' + r.qty + ' for ' + fmt(r.gain) + ' bells (' + signed(vs) + ' against the Sunday price).' + (save.goals !== before ? ' A weekly goal is done!' : '')); render(); pop($('st-profit')); return r;
   }
   function doSellNb(id, n) {
     sync();
@@ -277,6 +284,103 @@
     if (k === 'b') { doBuy(e.shiftKey ? 10 : 1); e.preventDefault(); }
     else if (k === 's') { doSell(e.shiftKey ? save.holdings : 1); e.preventDefault(); }
   });
+
+
+  // ---------- practice week (quick play) ----------
+  // A seeded pretend week ('practice|N', N counts up per round: no Math.random). Own bells, own key
+  // (pixeltown-stalk-practice-v1: {v, n, best, rounds}); never touches the real save, medals or hub profile.
+  var PKEY = 'pixeltown-stalk-practice-v1', PSTART = 1000;
+  function cleanPr(raw) {
+    var o = raw && typeof raw === 'object' ? raw : {};
+    function n(v, lo, hi) { v = Math.trunc(Number(v)); return isFinite(v) ? Math.max(lo, Math.min(hi, v)) : 0; }
+    var best = Math.trunc(Number(o.best));
+    return { v: 1, n: n(o.n, 0, 999999), best: isFinite(best) ? Math.max(-PSTART, Math.min(99999999, best)) : 0, rounds: n(o.rounds, 0, 999999), hasBest: o.hasBest === true };
+  }
+  var prSave = cleanPr(S.get(PKEY, null));
+  var pr = null;
+  function prPersist() { S.set(PKEY, prSave); }
+  function prStart() {
+    prSave.n += 1; prPersist();
+    pr = { n: prSave.n, wk: M.generateWeek('practice|' + prSave.n), slot: 0, bells: PSTART, hold: 0, invested: 0, earned: 0, marks: [], done: false };
+    $('pr-start').hidden = true; $('pr-end').hidden = true; $('pr-play').hidden = false; $('pr-actions').hidden = false; $('pr-odds').hidden = false;
+    $('pr-msg').textContent = 'Sunday: buy stalks, then step through the week.';
+    prRender(); try { $('pr-buy').focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+  }
+  function prPrice() { return M.priceAt(pr.wk, pr.slot); }
+  function prNow() { return pr.earned + pr.hold * (pr.slot === 0 ? 0 : prPrice()) - pr.invested; }
+  var prPop = pop;
+  function prBuy() {
+    if (!pr || pr.done || pr.slot !== 0) return false;
+    var q = Math.max(0, Math.min(M.MAX_HOLD - pr.hold, Math.floor(pr.bells / pr.wk.buyPrice)));
+    if (q < 1) { $('pr-msg').textContent = 'Not enough practice bells for another stalk.'; return false; }
+    pr.hold += q; pr.bells -= q * pr.wk.buyPrice; pr.invested += q * pr.wk.buyPrice;
+    beep('pickup'); $('pr-msg').textContent = 'Bought ' + q + ' at ' + pr.wk.buyPrice + ' each. Now step to Monday.'; prRender(); return true;
+  }
+  function prSell() {
+    if (!pr || pr.done || pr.slot === 0 || pr.hold < 1) return false;
+    var price = prPrice(), q = pr.hold, gain = q * price, diff = (price - pr.wk.buyPrice) * q;
+    pr.bells += gain; pr.earned += gain; pr.hold = 0; pr.marks.push(pr.slot);
+    beep(diff > 0 ? 'levelup' : 'ui_tap');
+    $('pr-msg').textContent = 'Sold ' + q + ' at ' + price + ': ' + signed(diff) + ' bells against the Sunday price.';
+    prPop($('pr-price')); prRender(); return true;
+  }
+  function prNext() {
+    if (!pr || pr.done) return false;
+    if (pr.slot >= M.SLOTS - 1) { prEnd(); return true; }
+    var before = pr.slot === 0 ? pr.wk.buyPrice : prPrice();
+    pr.slot += 1;
+    var p = prPrice(), d = p - before;
+    $('pr-msg').textContent = M.slotLabel(pr.slot) + ': ' + p + ' (' + (d >= 0 ? 'up ' : 'down ') + Math.abs(d) + ').' + (pr.slot === M.SLOTS - 1 && pr.hold ? ' Last chance to sell!' : '');
+    if (d > 0 && pr.hold) prPop($('pr-price'));
+    prRender(); return true;
+  }
+  function prEnd() {
+    pr.done = true;
+    var spoiled = pr.hold, profit = pr.earned - pr.invested;
+    var sells = pr.wk.sell, peak = Math.max.apply(null, sells), peakSlot = sells.indexOf(peak) + 1;
+    var hadBest = prSave.hasBest, isBest = !hadBest || profit > prSave.best;
+    if (isBest) { prSave.best = profit; prSave.hasBest = true; }
+    prSave.rounds += 1; prPersist();
+    beep(profit > 0 ? 'claim' : 'ui_tap');
+    $('pr-actions').hidden = true; $('pr-odds').hidden = true; $('pr-end').hidden = false;
+    $('pr-when').textContent = 'Week over'; $('pr-pl').textContent = ''; $('pr-stat').textContent = 'Final practice bells ' + fmt(pr.bells) + '. Rings on the chart mark where you sold.';
+    $('pr-end-title').textContent = (profit > 0 ? 'Profit ' : profit < 0 ? 'Loss ' : 'Even ') + signed(profit) + ' bells' + (isBest && hadBest ? ' - new practice best!' : '');
+    var ul = $('pr-end-list'); ul.textContent = '';
+    [
+      'This was a "' + M.PATTERN_NAMES[pr.wk.pattern] + '" week. ' + M.PATTERN_HINTS[pr.wk.pattern],
+      'Sunday price ' + pr.wk.buyPrice + '; the peak was ' + peak + ' on ' + M.slotLabel(peakSlot) + '.',
+      pr.invested ? (pr.marks.length ? 'You sold on ' + pr.marks.map(function (i) { return M.slotLabel(i); }).join(', ') + '.' : 'You never sold.') : 'You did not buy any stalks this time.',
+      spoiled ? spoiled + ' stalks spoiled at the end of the week.' : 'Nothing spoiled.',
+      'Practice best: ' + signed(prSave.best) + ' bells over ' + prSave.rounds + ' practice week(s).'
+    ].forEach(function (t) { var li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
+    drawChartOn($('pr-chart'), pr.wk, M.SLOTS - 1, 1, pr.marks);
+    prBestLine();
+    try { $('pr-again').focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+  }
+  function prBestLine() { $('pr-best').textContent = prSave.hasBest ? 'Practice best: ' + signed(prSave.best) + ' bells (' + prSave.rounds + ' played).' : 'No practice weeks played yet.'; }
+  function prRender() {
+    var sun = pr.slot === 0, price = sun ? pr.wk.buyPrice : prPrice();
+    $('pr-when').textContent = M.slotLabel(pr.slot) + (sun ? ' buy price' : ' sell price');
+    $('pr-price').textContent = String(price);
+    var now = prNow();
+    $('pr-pl').textContent = pr.hold && !sun ? 'Sell all now: ' + signed(now) : pr.invested ? 'Week so far: ' + signed(pr.earned - pr.invested) : '';
+    $('pr-pl').className = now > 0 ? 'up' : now < 0 ? 'down' : '';
+    $('pr-stat').textContent = 'Practice bells ' + fmt(pr.bells) + ' - stalks ' + pr.hold + ' - paid ' + pr.wk.buyPrice + ' each';
+    var a = M.advise(M.knownPrices(pr.wk, pr.slot));
+    $('pr-odds').textContent = a.ready ? 'Honest odds from the prices so far: ' + M.PATTERNS.map(function (p) { return M.PATTERN_NAMES[p] + ' ' + Math.round(a.probs[p] * 100) + '%'; }).join(', ') + '.' : 'Odds appear after Monday\'s two prices.';
+    $('pr-buy').disabled = !sun || Math.floor(pr.bells / pr.wk.buyPrice) < 1 || pr.hold >= M.MAX_HOLD;
+    $('pr-sell').disabled = sun || pr.hold < 1;
+    $('pr-sell').textContent = pr.hold && !sun ? 'Sell all (' + pr.hold + ')' : 'Sell all';
+    $('pr-next').textContent = pr.slot >= M.SLOTS - 1 ? 'End week' : 'Next half-day';
+    drawChartOn($('pr-chart'), pr.wk, pr.slot, 1, pr.marks);
+  }
+  $('pr-start').addEventListener('click', prStart);
+  $('go-practice').addEventListener('click', function () { if (!pr || pr.done) prStart(); try { $('practice').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }); } catch (e) { /* ignore */ } });
+  $('pr-again').addEventListener('click', prStart);
+  $('pr-buy').addEventListener('click', prBuy);
+  $('pr-sell').addEventListener('click', prSell);
+  $('pr-next').addEventListener('click', prNext);
+  prBestLine();
 
   // Real-time week/slot changes while the page stays open (no nagging, just keeps the numbers right).
   function tick() { var before = curSlot(); var rolled = sync(); if (rolled || before !== lastSlot) { lastSlot = before; animateChartSoon = true; if (rolled && spoiledNote) { say(spoiledNote + ' stalks spoiled over the weekend. A fresh week has started.'); spoiledNote = 0; } render(); if (animateChartSoon) { animateChartSoon = false; animateChart(); } } }
@@ -314,7 +418,8 @@
       get sounds() { return sounds; },
       buy: function (n) { return doBuy(n); },
       sellNeighbour: function (id, n) { return doSellNb(id, n); },
-      sell: function (n) { return doSell(n); }
+      sell: function (n) { return doSell(n); },
+      practice: { start: prStart, buy: prBuy, sell: prSell, next: prNext, get state() { return pr; }, get saved() { return prSave; } }
     };
   }
 }());
