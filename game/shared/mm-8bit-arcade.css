@@ -1,0 +1,42 @@
+/* MM8 arcade skin: 8-bit restyle for the shared arcade page layout (Pixel Pop, Dash, Stack, Echo).
+   Load after the game css and mm-8bit.css. Palette = mm-8bit.css variables; square corners, stepped ink rings, hard shadows. */
+body.px8, html { --bg: var(--px-bg); --panel: var(--px-1); --ink: var(--px-7); --dim: var(--px-6); }
+html, body { background-color: var(--px-bg); font-family: var(--px-font); }
+body { background-image: repeating-linear-gradient(0deg, transparent 0 7px, rgba(0,0,0,.18) 7px 8px), repeating-linear-gradient(90deg, transparent 0 7px, rgba(0,0,0,.18) 7px 8px); background-color: var(--px-bg); }
+#top { border-bottom: 4px solid var(--px-ink); box-shadow: 0 4px 0 0 var(--px-2); background: var(--px-1); max-width: 100%; margin-bottom: 8px; }
+#top h1 { font-size: 20px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; color: var(--accent);
+  text-shadow: 2px 2px 0 var(--px-ink), 4px 4px 0 var(--px-2); }
+#top, #stage { max-width: 560px; }
+#top { width: 100%; }
+@media (min-width: 600px) { #top { max-width: 100%; padding-left: calc(50% - 264px); padding-right: calc(50% - 264px); } }
+.back { color: var(--accent); font-weight: 900; text-transform: uppercase; letter-spacing: .06em; text-shadow: 2px 2px 0 var(--px-ink); }
+#btn-mute { font-family: var(--px-font); font-weight: 900; text-transform: uppercase; letter-spacing: .06em; font-size: 13px;
+  background: var(--px-1); color: var(--px-7); border: 0; border-radius: 0; margin: 4px;
+  box-shadow: var(--px-ring2), inset 0 -3px 0 0 rgba(0,0,0,.35), inset 0 2px 0 0 rgba(255,255,255,.15), 0 4px 0 0 var(--px-ink); }
+#btn-mute:active { transform: translateY(3px); box-shadow: var(--px-ring2); }
+#btn-mute[aria-pressed="true"] { background: var(--px-5); color: var(--px-6); }
+#hud { gap: 10px; padding: 0 4px; }
+.stat { background: var(--px-ink); border-radius: 0; padding: 6px 8px; box-shadow: var(--px-ring2), 0 0 0 4px var(--px-5); margin: 4px 2px; }
+.stat .lbl { font-size: 12px; color: var(--accent); text-transform: uppercase; letter-spacing: .1em; font-weight: 900; }
+.stat strong { font-size: 20px; color: var(--px-7); text-shadow: 2px 2px 0 var(--px-2); font-variant-numeric: tabular-nums; letter-spacing: .04em; }
+#timebar { height: 12px; background: var(--px-ink); border-radius: 0; box-shadow: 0 0 0 2px var(--px-ink), 0 0 0 4px var(--px-6); margin: 4px 6px; }
+#timefill { background-color: var(--px-11); background-image: repeating-linear-gradient(90deg, transparent 0 10px, var(--px-ink) 10px 12px); }
+#board, #view { border: 0; border-radius: 0; image-rendering: pixelated; box-shadow: 0 0 0 4px var(--px-ink), 0 0 0 8px var(--px-6), 0 0 0 12px var(--px-ink), 8px 14px 0 4px rgba(0,0,0,.45);
+  margin: 12px 0 14px; width: calc(100% - 24px); align-self: center; }
+#board:focus-visible, #view:focus-visible { outline: 3px solid var(--px-10); outline-offset: 14px; }
+.card { background: var(--px-1); border-radius: 0; box-shadow: var(--px-ring4), inset 0 2px 0 0 rgba(255,241,232,.15), inset 0 -3px 0 0 rgba(0,0,0,.35); margin: 4px; }
+.card h2 { font-size: 18px; font-weight: 900; text-transform: uppercase; letter-spacing: .1em; color: var(--accent); text-shadow: 2px 2px 0 var(--px-ink); }
+.overlay { border: 0; box-shadow: var(--px-ring4), 0 0 0 8px var(--accent), 0 0 0 12px var(--px-ink), 10px 16px 0 6px rgba(0,0,0,.55); }
+.big { font-family: var(--px-font); font-weight: 900; text-transform: uppercase; letter-spacing: .08em; color: var(--px-ink); background: var(--px-11);
+  border-radius: 0; margin: 4px 4px 10px; box-shadow: var(--px-ring2), inset 0 -5px 0 0 rgba(0,0,0,.28), inset 0 3px 0 0 rgba(255,255,255,.4), 0 6px 0 0 var(--px-ink); }
+.big.alt { background: var(--px-12); }
+.big:hover { filter: brightness(1.1); }
+.big:active { transform: translateY(5px); box-shadow: var(--px-ring2), inset 0 4px 0 0 rgba(0,0,0,.28), 0 1px 0 0 var(--px-ink); }
+.big:focus-visible, #btn-mute:focus-visible, .back:focus-visible { outline: 3px solid var(--px-10); outline-offset: 5px; }
+ul.medals li { border-radius: 0; background: var(--px-ink); color: var(--px-6); box-shadow: var(--px-ring2); margin: 2px; text-transform: uppercase; font-size: 12px; letter-spacing: .05em; }
+ul.medals li.on { background: var(--px-10); color: var(--px-ink); }
+#msg { font-weight: 900; text-transform: uppercase; letter-spacing: .06em; color: var(--px-7); text-shadow: 2px 2px 0 var(--px-ink); }
+.dim { color: var(--px-6); }
+.new { color: var(--px-10); text-shadow: 2px 2px 0 var(--px-2); }
+@media (prefers-reduced-motion: reduce) { .big:active, #btn-mute:active { transform: none; } }
+html.reduce-motion .big:active, html.reduce-motion #btn-mute:active { transform: none; }
