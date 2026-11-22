@@ -1,9 +1,9 @@
 {
-  "sha": "c77e8e123a868c8a5c882ef41ad6b1714939f5e9",
-  "generated_utc": "2026-11-22T05:32:06Z",
+  "sha": "3bb72bf4fa8d31193a35f0b09084b2362464aca2",
+  "generated_utc": "2026-11-22T08:15:20Z",
   "full_suite_green": true,
   "beta_green": null,
   "suites_passed": 313,
   "suites_total": 313,
-  "notes": "Full run on the parent tip (693e2bf) was 311/313. qa-fixes failed because Bug Safari now has 9 arena buttons (8 + Night Glade): test updated in this sha and passes. world-party failed 3 co-op checks under load and passed 2/2 alone (tracked load flake; no code change). Everything else green incl. forge-on-by-default, save-merge fuzz fixes, Town nav/postcards, isles bosses/trophies, minigame depth. Beta runs only on owner request."
+  "notes": "Full run on this exact sha: 313/313 green, quiet machine. Includes the P0 fix (keys typed in the feedback box no longer reach Town/Isles/Realm hotkeys), the Nexus vendor Shop button fix, Codex redo art wiring (b34b/b35/b36/b38a). Beta runs only on owner request."
 }
