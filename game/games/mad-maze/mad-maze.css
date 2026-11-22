@@ -392,3 +392,22 @@ body.mm-low-gfx *, body.mm-low-gfx *::before, body.mm-low-gfx *::after { animati
 }
 @media (max-width: 560px) { #mm-coach { top: calc(env(safe-area-inset-top, 0px) + 134px); } }
 #mm-settings-x { border-radius: 10px; border: 2px solid #7a5a36; background: #231b14; color: #eadcc0; }
+
+/* ---------- FT2 (first ten minutes): readable phone HUD + a visible Daily link ----------
+   No HUD text under 12 px (realm-ui.css sizes these at 10-11.7 px). `body` raises the specificity over realm-ui.css, which loads after this file.
+   The XP bar grows to 18 px so 12 px text fits inside it (it still ends above the phone zone line). */
+body #realm-xp { height: 18px; }
+body #realm-xp-text { font-size: 12px; line-height: 1; }
+body #realm-leave-btn { font-size: 12px; }
+@media (max-width: 380px) { body #realm-leave-btn { padding: 0 6px; } } /* the 12 px label must not squeeze the HP bar under 100 px on a 360 px phone */
+body #rw-zone .rw-zname, body #rw-zone .rw-arrow, body #rw-zone .rw-event { font-size: max(12px, 1em); }
+@media (max-width: 560px) {
+  body #rw-zone { top: calc(108px + env(safe-area-inset-top, 0px)); font-size: 12px; line-height: 15px; }
+  body #rw-zone .rw-zname, body #rw-zone .rw-arrow, body #rw-zone .rw-event { font-size: 12px; }
+}
+/* The Daily link sat under the full-screen Realm overlay (z 31), never seen nor tappable: above it now, bottom left beside the settings gear on a
+   desktop, and on a touch screen in the free band above the move stick (the gear sits in the centre there). Hidden while a panel or dialog is open. */
+a#mm-daily-btn { z-index: 32; left: calc(62px + env(safe-area-inset-left, 0px)); bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+body.touch-device a#mm-daily-btn { left: calc(10px + env(safe-area-inset-left, 0px)); bottom: calc(172px + env(safe-area-inset-bottom, 0px)); }
+@media (pointer: coarse) { a#mm-daily-btn { left: calc(10px + env(safe-area-inset-left, 0px)); bottom: calc(172px + env(safe-area-inset-bottom, 0px)); } }
+body:has(#realm-overlay [role="dialog"]:not(.hidden), #realm-backpack:not(.hidden), #realm-board:not(.hidden), #realm-shop:not(.hidden), #realm-hero:not(.hidden), #mm-summary:not(.hidden)) a#mm-daily-btn { visibility: hidden; }

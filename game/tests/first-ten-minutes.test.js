@@ -9,7 +9,8 @@
 //  2 isles (games/isles/index.html): a fresh profile tames its first creature <= 180 s sim; the hint text names the next action.
 //  3 layout (both pages): every visible button >= 44 px and off both sticks, no visible text under 12 px, first frame <= 3 s, 0 console errors.
 // Counts go to design/ftue-metrics.json. A miss fails, except a target listed in the fixture's knownIssues: that one must not be worse
-// than the recorded base-branch baseline, and the gap to the target is printed (FT2 closes it). Offline: blockDb, no chat, no DB writes.
+// than the recorded base-branch baseline, and the gap to the target is printed (FT2 closed them all: the fixture lists none today).
+// Offline: blockDb, no chat, no DB writes.
 // Run: BASE=http://localhost:8440/game/index.html NODE_PATH=$(npm root -g) node game/tests/first-ten-minutes.test.js
 const fs = require('fs');
 const path = require('path');
@@ -267,7 +268,8 @@ const ISLES_BOT = `(lim) => {
     console.log(`INFO ${prof.id}: ${JSON.stringify(rep)}`);
     console.log(`INFO ${prof.id} portal walk: ${JSON.stringify(portal)} | wall ${wall} ms | first frame ${r1(ff)} ms (nav ${navMs} ms)`);
     console.log(`INFO ${prof.id} layout: ${JSON.stringify(lay)}`);
-    if (lay.covered.length) console.log(`INFO ${prof.id}: controls covered by the canvas (not counted, not tappable): ${lay.covered.join(', ')}`);
+    if (lay.covered.length) console.log(`INFO ${prof.id}: controls covered by the canvas (not tappable): ${lay.covered.join(', ')}`);
+    check(`${prof.id}: no visible control is buried under the game canvas (FT2: the Daily link)`, lay.covered.length === 0, lay.covered.join(', '));
     const f = rep.first;
     gate(prof.id, 'firstKill', f.kill === undefined ? null : f.kill, TG.world.firstKill);
     gate(prof.id, 'firstBag', f.bag === undefined ? null : f.bag, TG.world.firstBag);

@@ -1456,7 +1456,12 @@
     }
     let best = null, bd = 5 * TILE;
     for (let i = 0; i < creatures.length; i++) { const c = creatures[i]; if (!c.tm) continue; const d = Math.hypot(hero.x - c.x, hero.y - c.y); if (d < bd) { bd = d; best = c; } }
-    if (!best) return '';
+    if (!best) { // FT2: nothing tameable in reach - say where the nearest one is (or to explore), never a blank hint
+      let far = null, fd = Infinity; for (let i = 0; i < creatures.length; i++) { const c = creatures[i]; if (!c.tm) continue; const d = Math.hypot(hero.x - c.x, hero.y - c.y); if (d < fd) { fd = d; far = c; } }
+      if (!far) return 'Explore the island: walk on to find a creature to tame.';
+      const ang = Math.atan2(far.y - hero.y, far.x - hero.x), dir = ['east', 'south-east', 'south', 'south-west', 'west', 'north-west', 'north', 'north-east'][((Math.round(ang / (Math.PI / 4)) % 8) + 8) % 8];
+      return 'A ' + CR.get(far.kind).name + ' is to the ' + dir + ': walk over to tame it.';
+    }
     const def = CR.get(best.kind);
     if (def.tame.method === 'knockout') return best.tm.torpor > 0 ? def.name + ' is getting drowsy. Keep up the soothe shots.' : def.name + ' can be tamed: knock it out with Soothe shots (Q), then feed it.';
     return def.name + ' is shy. Walk up slowly and do not attack.';

@@ -47,7 +47,7 @@
     if (typeof o === 'string') { try { o = JSON.parse(o); } catch (e) { o = null; } }
     if (!o || typeof o !== 'object' || Array.isArray(o)) o = {};
     const out = {};
-    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo|evT|evDone|finds|discovered|shrineAt|chests|quests|bossKeys|bossPortal|questBags|gp|gearOn)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
+    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo|evT|evDone|finds|discovered|shrineAt|chests|quests|bossKeys|bossPortal|questBags|gp|gearOn|fb)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
     out.v = 1;
     out.seed = cleanSeed(o.seed);
     out.version = Number.isInteger(o.version) && o.version > 0 && o.version < 1000 ? o.version : 0;
@@ -76,6 +76,7 @@
     // gear pity (additive, G9): {b: z3 boss kills since the last T12, d: crypt boss kills since the last T10+}, each an int 0..9999; garbage -> defaults (key left out)
     if (o.gp && typeof o.gp === 'object' && !Array.isArray(o.gp)) { const g = (v) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(9999, Math.floor(v))) : 0); const gp = { b: g(o.gp.b), d: g(o.gp.d) }; if (gp.b || gp.d) out.gp = gp; }
     if (o.gearOn === true) out.gearOn = true;
+    if (o.fb === 1) out.fb = 1; // FT2 (additive): this save has picked up its first world bag, so the first-bag guarantee is spent
     const r = o.returnTo && typeof o.returnTo === 'object' ? o.returnTo : null;
     if (o.finds !== undefined) out.finds = window.MMStash ? MMStash.cleanFinds(o.finds) : o.finds; // owned by MMStash (Lantern payout)
     out.returnTo = r && Number.isInteger(r.x) && Number.isInteger(r.y) && r.x >= 0 && r.y >= 0 && r.x < 4096 && r.y < 4096 && cleanSeed(r.seed) ? { x: r.x, y: r.y, seed: cleanSeed(r.seed) } : null;
@@ -490,8 +491,20 @@
     function revealAt(tx, ty) { // -> number of newly revealed cells; the minimap redraws (and the save updates) only when it is > 0
       if (!FOG) return 0;
       const n = FOG.reveal(fogBits, Math.floor(tx), Math.floor(ty), FOG_R);
-      if (n > 0) { save.discovered = FOG.encode(fogBits); miniKey = ''; writeSave(save); }
+      if (n > 0) { save.discovered = FOG.encode(fogBits); miniKey = ''; writeSave(save); if (exploreLive) exploreCells += n; }
       return n;
+    }
+    // FT2 exploration trickle: a map cell revealed for the first time on this island (fog bits are saved in `discovered`, so a cell never pays twice) is
+    // worth ~0.5% of the current level's XP bar, paid as one "+N xp" at most every EXPLORE_EVERY s, so a long walk to the next zone still moves the bar.
+    // Cells revealed around the arrival point at the start of a visit pay nothing. ?explorexp=0 turns it off (and fog off has no cells to pay).
+    const EXPLORE_ON = fogOn && !/[?&]explorexp=0(&|$)/.test(qs0); const EXPLORE_EVERY = 6; const EXPLORE_PCT = 0.005;
+    let exploreLive = false; let exploreCells = 0; let exploreT = 0; let exploreXp = 0;
+    function exploreTick(dt) {
+      if ((exploreT -= dt) > 0 || !exploreCells) return;
+      exploreT = EXPLORE_EVERY; const n = exploreCells; exploreCells = 0;
+      if (!EXPLORE_ON || arena.state !== 'play' || typeof arena._gainXp !== 'function' || typeof rmXpNeeded !== 'function') return;
+      const xp = Math.max(1, Math.round(n * EXPLORE_PCT * rmXpNeeded(arena.save.level || 1)));
+      exploreXp += xp; arena._gainXp(xp);
     }
     function buildMiniBase() {
       const c = document.createElement('canvas'); c.width = ww; c.height = wh;
@@ -670,6 +683,7 @@
         }
         const b = arena.dropBag(x + (k - (bag.items.length - 1) / 2) * 18, y + 10, it.r, id, bag, gear);
         if (!b) return;
+        b.fb = fbFresh() && !info.quest; if (b.fb) { fbDropped = true; b.lifetime = Infinity; } // FT2: a fresh profile's first bag(s) come to the hero (fbTick)
         b.gear = gear || null; // pooled bags are reused: never leave an earlier drop's tier on a classic bag
         const dd = typeof RM_ITEM_BY_ID !== 'undefined' ? RM_ITEM_BY_ID[b.id] : null;
         const ent = { id: b.id, r: it.r, name: dd ? dd.name : b.id, rolled: it.id };
@@ -690,8 +704,36 @@
     }
     function rollFor(info, x, y, tag) {
       const rs = seed + ':' + tag + ':' + kills;
-      if (!dropAll && MMRng.create('dropchance:' + rs).next() >= Z.dropChance(info)) return null;
-      return giveBag(x, y, Z.rollDrop(info, rs).bag, Object.assign({ tag: tag }, info));
+      const force = fbForce(info);
+      if (!dropAll && !force && MMRng.create('dropchance:' + rs).next() >= Z.dropChance(info)) return null;
+      let bag = Z.rollDrop(info, rs).bag;
+      for (let k = 0; force && !bag.items.length && k < 16; k++) bag = Z.rollDrop(info, rs + ':fb' + k).bag; // the guaranteed first bag holds an item (still seeded)
+      return giveBag(x, y, bag, Object.assign({ tag: tag }, info));
+    }
+    // ---------- FT2 first-bag guarantee ----------
+    // A fresh profile (this realm save never picked a world bag up, and the backpack is empty) gets its first bag by its FIRSTBAG_KILL-th shore kill at
+    // the latest: the normal seeded roll still comes first, and the guaranteed one reuses the same seeded roll (forced past the drop chance). Until it is
+    // picked up, that first bag never despawns and drifts to the hero (a new player sees loot land in the backpack in the first minute even while kiting).
+    // Saved as `fb: 1` once the backpack has an item; ?firstbag=0 turns it all off (pure rolls, today's lifetime).
+    const FIRSTBAG_ON = !/[?&]firstbag=0(&|$)/.test(qs0); const FIRSTBAG_KILL = 4; const FIRSTBAG_SPEED = 260;
+    let fbKills = 0; let fbDropped = false; let fbForced = 0;
+    const fbFresh = () => FIRSTBAG_ON && save.fb !== 1 && !!arena.save && Array.isArray(arena.save.items) && arena.save.items.length === 0;
+    function fbForce(info) {
+      if (!fbFresh() || fbDropped || !info || info.boss || info.quest || (info.zone | 0) !== 0) return false;
+      fbKills++;
+      if (fbKills < FIRSTBAG_KILL) return false;
+      fbForced++; return true;
+    }
+    function fbTick(dt) {
+      if (!FIRSTBAG_ON || save.fb === 1) return;
+      if (arena.save && Array.isArray(arena.save.items) && arena.save.items.length > 0) { save.fb = 1; writeSave(save); return; } // spent: the first item is in
+      const p = arena.player;
+      for (let i = 0; i < arena.bags.length; i++) {
+        const b = arena.bags[i]; if (!b.active || !b.fb) continue;
+        b.lifetime = Infinity; if (b.t < 0.6) continue;
+        const dx = p.x - b.x; const dy = p.y - b.y; const d = Math.hypot(dx, dy) || 1; if (d > 900 || d < 16) continue;
+        const k = Math.min(d - 12, FIRSTBAG_SPEED * dt) / d; b.x += dx * k; b.y += dy * k;
+      }
     }
     function onEnemyHit(e, dmg) { if (evOnHit(e, dmg)) return; if (zones && e.zid >= 0) zones.markCombat(e.zid); }
     function onEnemyKilled(e) {
@@ -1901,6 +1943,7 @@
     }
     const hooks = {
       onStart() {
+        exploreLive = false; exploreCells = 0; exploreT = 0;
         const back = !!pendingAt; // an arrival through ?at= (the return from a dungeon portal)
         if (pendingAt) { placeAt(pendingAt.x, pendingAt.y); pendingAt = null; } else placeAt(world.spawnPoint.x, world.spawnPoint.y);
         prevZ = null; slowUntil = 0; // a (re)start is not a border crossing
@@ -1919,6 +1962,7 @@
         if (back && SAFE_ON) safeReturn(); // before the first evTick, so a raid in view never spawns on top of the arrival
         arena._showBanner(`The Realm · island #${seed}`, 1.8);
         savePos(true); evTick(); syncHud(true); gearHintCheck();
+        exploreLive = true; // from here on a newly revealed cell pays exploration XP
       },
       tick(dt) {
         slamTick(dt);
@@ -1929,7 +1973,7 @@
           bossT -= dt; if (bossT <= 0) { bossT = 0.5; bossTick(); }
           sweepT -= dt; if (sweepT <= 0) { sweepT = 1; sweepLost(); }
         }
-        portalTick(); pickTick(dt); nexusTick(); keyTick(dt);
+        portalTick(); pickTick(dt); nexusTick(); keyTick(dt); fbTick(dt); exploreTick(dt);
         if (save.questBags) deliverQuestBags();
         if (SITES) siteTick(dt);
         lastEvClock = eventClock();
@@ -2034,7 +2078,8 @@
       useShrine, openChest, talkNpc: talk, sitePrompt: () => (siteFor ? { kind: siteFor.kind, i: siteFor.i, text: siteBtn.textContent, hidden: siteBtn.classList.contains('hidden') } : null), siteNote: () => ({ text: siteNote.textContent, hidden: siteNote.classList.contains('hidden') }), siteTick,
       // slice 11: world debuffs (roll(creature, zone, force) = one bolt hit; table = creature -> status; shown by arena.statusOf)
       worldStatus: { on: STATUS_ON, table: BOLT_ST, forCreature: boltStatusFor, roll: boltRoll, log: stLog },
-      ttk: { on: TTK_ON }, pickups: { on: PICK_ON, cap: PICK_CAP, magnet: MAGNET_R, list: () => picks.map((q) => ({ type: q.type, art: q.art, value: q.value, tier: q.tier, x: q.x, y: q.y, lifeMs: q.lifeMs })), spawn: spawnPickups, got: () => Object.assign({}, pickGot), total: () => pickTotal },
+      ttk: { on: TTK_ON }, firstBag: { on: FIRSTBAG_ON, kill: FIRSTBAG_KILL, fresh: fbFresh, kills: () => fbKills, dropped: () => fbDropped, forced: () => fbForced, spent: () => save.fb === 1 }, explore: { on: EXPLORE_ON, every: EXPLORE_EVERY, pct: EXPLORE_PCT, xp: () => exploreXp, pending: () => exploreCells },
+      pickups: { on: PICK_ON, cap: PICK_CAP, magnet: MAGNET_R, list: () => picks.map((q) => ({ type: q.type, art: q.art, value: q.value, tier: q.tier, x: q.x, y: q.y, lifeMs: q.lifeMs })), spawn: spawnPickups, got: () => Object.assign({}, pickGot), total: () => pickTotal },
       nexus: { on: NX_ON, site: nxSite, open: nexusOpen, close: nexusClose, isOpen: () => nxOpen, near: () => nxNear, enterTile: () => nxEnterTile, talk: (id) => { const n = NX_ON && NX.layout().npcs.find((x) => x.id === id); if (n) { nxBuild(); nxTalk(n); } return nxDom && nxDom.last; }, portal: (id) => { const q = NX_ON && NX.layout().portals.find((x) => x.id === id); return q ? nxPortal(q) : null; }, lastUrl: () => api.lastNexusUrl || null, today: todayUtc,
         // walkable plaza (PLAYTEST-REVIEW-2 #5); step(mx, my, dt) injects input for tests, place() only accepts free plaza points
         walk: { on: NX_WALK, view: { w: NX_VW, h: NX_VH }, hero: () => ({ x: nxHero.x, y: nxHero.y, tx: Math.floor(nxHero.x / TILE), ty: Math.floor(nxHero.y / TILE), moving: nxHero.moving }), cam: () => ({ x: nxCam.x, y: nxCam.y }),

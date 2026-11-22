@@ -1,5 +1,5 @@
 {
-  "about": "FT1 first-ten-minutes phone fun-gate (NEXT-SLICES-2 Wave 2). Profiles are fresh (localStorage cleared, no hero, no realm save). Simulated time: the test stops the page's own loop and steps the real update with a fixed dt. targets = the FT1 acceptance numbers. knownIssues = the measured value on the base branch for a target the game misses today (assert: not worse than this baseline, and print the gap to the target). Remove an entry once the game meets its target (FT2).",
+  "about": "FT1 first-ten-minutes phone fun-gate (NEXT-SLICES-2 Wave 2). Profiles are fresh (localStorage cleared, no hero, no realm save). Simulated time: the test stops the page's own loop and steps the real update with a fixed dt. targets = the FT1 acceptance numbers. knownIssues = the measured value on the base branch for a target the game misses today (assert: not worse than this baseline, and print the gap to the target). FT2 met every target and removed all entries.",
   "viewport": { "width": 390, "height": 844, "hasTouch": true, "isMobile": true },
   "wallBudgetMs": 90000,
   "dt": 0.016666666666666666,
@@ -9,17 +9,7 @@
     "layout": { "minButtonPx": 44, "minFontPx": 12, "firstFrameMs": 3000, "consoleErrors": 0 }
   },
   "knownIssues": {
-    "_notes": "Measured on claude/animal-crossing-game-7z3roh @ 668bf8c (QA FT1). firstBag: world drops are pure rolls, no first-bag guarantee yet (FT2). maxRewardGap: at level 11 the bot enters the Highlands (recLv 10) and meets the Frost Dragon + 60-90 hp ring casters, 49 s without a kill. hintActionPct: the isles hint is blank whenever no tameable creature is within 5 tiles (it never says where to go next). layout.tinyText: world HUD #realm-xp-text 10px, #rw-zname / #rw-arrow / #rw-event 11px, the Leave button (#realm-leave-btn and its ✖ glyph) 11.7px; isles #hp-text 10px.",
-    "world-shore-a": { "layout.tinyText": 6 },
-    "world-shore-b": { "layout.tinyText": 6 },
-    "world-shore-c": { "layout.tinyText": 6 },
-    "world-shore-d": { "firstBag": 67.8, "layout.tinyText": 6 },
-    "world-shore-e": { "maxRewardGap": 49, "layout.tinyText": 6 },
-    "world-shore-f": { "layout.tinyText": 6 },
-    "isles-jungle-a": { "hintActionPct": 67, "layout.tinyText": 1 },
-    "isles-jungle-b": { "hintActionPct": 91, "layout.tinyText": 1 },
-    "isles-jungle-c": { "hintActionPct": 83, "layout.tinyText": 1 },
-    "isles-jungle-d": { "hintActionPct": 84, "layout.tinyText": 1 }
+    "_notes": "FT2 closed every FT1 known issue (measured on claude/animal-crossing-game-7z3roh @ 668bf8c): firstBag (world-shore-d 67.8 s: the first bag dropped 298 px away while the bot kited and despawned; now a first-bag guarantee, realm-world.js fbForce/fbTick, ?firstbag=0), maxRewardGap (world-shore-e 49 s at level 11 in the Highlands; now an exploration XP trickle for newly revealed map cells, realm-world.js exploreTick, ?explorexp=0), hintActionPct (isles hint blank with no tameable creature within 5 tiles; now it names the nearest one's direction or says to explore), layout.tinyText (world HUD 10-11.7 px and isles #hp-text 10 px; now >= 12 px). No allowances remain: every target is asserted as is. Add an entry here only with a measured baseline and a note."
   },
   "world": [
     { "id": "world-shore-a", "seed": "12345", "clock": 0 },
