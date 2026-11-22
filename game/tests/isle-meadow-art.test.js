@@ -107,12 +107,13 @@ const SPOTS = (I) => ({ path: I.findTile('garden_path', 1), dock: I.dock(), home
     I.openPanel('craft');
     const row = (id) => document.querySelector('.recipe[data-recipe="' + id + '"]');
     const ico = (id) => { const im = row(id) && row(id).querySelector('img.rc-ico'); return im ? { src: im.getAttribute('src'), w: im.naturalWidth } : null; };
-    const out = { loaded: I.craftIcons(), raft: ico('raft'), steg: ico('saddle_stegolith'), feast: ico('feast'), feastText: row('feast').querySelector('.rc-name').textContent,
+    const out = { loaded: I.craftIcons(), raft: ico('raft'), drift: ico('rocket_core_drift'), steg: ico('saddle_stegolith'), feast: ico('feast'), feastText: row('feast').querySelector('.rc-name').textContent,
       raftText: row('raft').querySelector('.rc-name').textContent, n: document.querySelectorAll('img.rc-ico').length };
     I.closePanel();
     return out;
   });
-  check('4a every recipe with b34b art shows its icon by id (14 of the 16 recipes)', icons.loaded.length === 14 && icons.n === 14 && /b34b-crafting-icons\/items\/icon_raft\.png$/.test(icons.raft.src)
+  // XW1: icons are by output item; the drift rocket core row shows the rocket core icon too and the kelp O2 tank row the O2 tank icon (14 icons on 16 of the ALL_IDS rows)
+  check('4a every recipe with b34b art shows its icon by id (14 icons, on 16 rows: both rocket core and both O2 tank builds)', icons.loaded.length === 14 && icons.n === 16 && /icon_rocket_core\.png$/.test(icons.drift.src) && /b34b-crafting-icons\/items\/icon_raft\.png$/.test(icons.raft.src)
     && icons.raft.w === 32 && /icon_saddle_stegolith\.png$/.test(icons.steg.src), JSON.stringify(icons));
   check('4b the text label stays; a recipe with no icon (feast) is text only', icons.raftText === 'Raft' && icons.feast === null && icons.feastText === 'Feast', JSON.stringify(icons));
   check('1g desktop: no console errors, no offsite requests, 0 DB requests, every b3x PNG 200, no jungle strips fetched',

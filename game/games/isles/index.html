@@ -6,6 +6,7 @@
 <title>Hearthvale Isles - Pixeltown</title>
 <link rel="stylesheet" href="isles.css">
 <link rel="stylesheet" href="../../shared/mm-nav.css">
+<link rel="stylesheet" href="../../shared/mm-feedback.css">
 <!-- Local-only page: no database, no network module, no game engine. Pure shared modules + one light canvas loop. -->
 <script src="../../shared/rng.js"></script>
 <script src="../../shared/mm-biome-packs.js"></script>
@@ -23,11 +24,13 @@
 <script src="../../shared/mm-tame.js"></script>
 <script src="../../shared/mm-isle-boss.js"></script>
 <script src="../../shared/mm-isle-env.js"></script>
+<script src="../../shared/mm-mount-ability.js"></script>
 <script src="../../shared/mm-companion.js"></script>
 <script src="../../shared/mm-homestead.js"></script>
 <script src="../../shared/mm-home-build.js"></script>
 <script src="isle-creatures.js"></script>
 <script src="../../shared/mm-nav.js" data-mount="manual"></script>
+<script src="../../shared/mm-feedback.js"></script>
 </head>
 <body>
 <canvas id="view" aria-label="Island view" role="img"></canvas>
@@ -52,6 +55,9 @@
     <span id="env-warm" class="meter env" hidden><span class="lbl">Warmth</span> <span class="val"></span></span>
     <span id="env-o2" class="meter env" hidden><span class="lbl">Air</span> <span class="val"></span></span>
   </div>
+  <div id="hud-abil" class="hud-env" hidden>
+    <span id="abil-breath" class="meter env"><span class="lbl">Breath</span> <span class="val"></span></span>
+  </div>
   <div class="hud-btns">
     <button id="btn-home" type="button" hidden aria-label="Fast travel to the home dock">Home dock</button>
     <button id="btn-log" type="button" aria-label="Open the island log">Log</button>
@@ -71,6 +77,7 @@
   <button id="btn-feed" type="button" hidden aria-label="Feed the creature">Feed</button>
   <button id="btn-soothe" type="button" hidden aria-pressed="false" aria-label="Soothe shots"><span class="ico" data-ico="ui_tranq_off"></span><span class="txt">Soothe</span></button>
   <button id="btn-ride" type="button" hidden aria-pressed="false" aria-label="Ride or dismount"><span class="ico" data-ico="ui_ride"></span><span class="txt">Ride</span></button>
+  <button id="btn-ability" type="button" hidden aria-label="Mount ability"><span class="ring" aria-hidden="true"></span><span class="txt">Ability</span></button>
   <button id="btn-cmd" type="button" hidden aria-label="Party command: follow"><span class="ico" data-ico="ui_cmd_follow"></span><span class="txt">Follow</span></button>
   <button id="btn-gather" type="button" hidden aria-label="Gather here">Gather</button>
   <button id="btn-sail" type="button" hidden aria-label="Open the sea chart">Sail</button>
@@ -92,7 +99,7 @@
     <button id="btn-fire" type="button" aria-label="Fire bolt">Fire</button>
   </div>
 </div>
-<p id="help" class="help">WASD / arrows move. Click or Space to fire. M toggles the map. F feeds, Q soothe shots, R rides, C commands the party (follow / stay / attack). G gathers, walk over glints to pick them up, K crafts, T sails at a dock, L opens the log, B decorates at home (Make crafts decor).</p>
+<p id="help" class="help">WASD / arrows move. Click or Space to fire. M toggles the map. F feeds, Q soothe shots, R rides (F uses the mount's ability while riding), C commands the party (follow / stay / attack). G gathers, walk over glints to pick them up, K crafts, T sails at a dock, L opens the log, B decorates at home (Make crafts decor).</p>
 <script src="isles.js"></script>
 </body>
 </html>

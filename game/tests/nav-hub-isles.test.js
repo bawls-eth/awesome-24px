@@ -5,7 +5,7 @@
 // Isles: the Menu replaces the unlabeled top-left "<-" (kept in the DOM as mm-nav-legacy, shown again with ?nav=0, labelled);
 //   "Home dock" (not "Home"); a locked sea-chart row has a "Craft it" button that opens the craft panel at that recipe;
 //   ?isle=reef from a fresh save reaches the craft panel in <= 3 taps; the Menu and the HUD / minimap never overlap at 390x844
-//   and 1280x720; one dialog at a time; the optional feedback widget mounts in the island log when present.
+//   and 1280x720; one dialog at a time; the feedback widget (static tag since XW1) mounts in the island log.
 // Both pages: 0 DB attempts (blockDb), no console errors, pixeltown-save-v1 byte-identical.
 // Run: python3 -m http.server 8991 &  BASE=http://localhost:8991/game/index.html NODE_PATH=$(npm root -g) node game/tests/nav-hub-isles.test.js
 const { chromium } = require('playwright');
@@ -167,9 +167,10 @@ async function isles(browser, label, ctxOpts) {
   check(L('sea chart says "Home dock: ..." for the home island'), homeRow && /^Home dock: /.test(homeRow.t), JSON.stringify(chart.dests));
   const mars = chart.craftIt.find((c) => c.isle === 'mars');
   check(L('the locked Mars row has a "Craft it" button (>= 44 px) for the rocket core'), mars && mars.t === 'Craft it' && mars.need === 'rocket_core' && mars.w >= 44 && mars.h >= 44 && chart.dests.find((d) => d.isle === 'mars').dis, JSON.stringify(chart));
+  // XW1: "Craft it" opens the rocket core build a fresh save can reach (rocket_core_drift); the iron build needs mars iron
   await tap(pg, '#panel-body button.craft-it[data-isle="mars"]');               // tap 2
   const after = await pg.evaluate(() => ({ title: document.getElementById('panel-title').textContent, open: !document.getElementById('panel').hidden, want: (document.querySelector('#panel-body .recipe.want') || {}).dataset }));
-  check(L('?isle=reef&at=dock, fresh save: Sail, Craft it -> the craft panel at that recipe (2 taps, <= 3)'), after.open && after.title === 'Craft' && after.want && after.want.recipe === 'rocket_core', JSON.stringify(after));
+  check(L('?isle=reef&at=dock, fresh save: Sail, Craft it -> the craft panel at the reachable rocket core recipe (2 taps, <= 3)'), after.open && after.title === 'Craft' && after.want && after.want.recipe === 'rocket_core_drift' && after.want.item === 'rocket_core', JSON.stringify(after));
   const dlg = await pg.evaluate(() => [...document.querySelectorAll('[role=dialog][aria-modal=true]')].filter((n) => !n.hidden && n.getBoundingClientRect().height > 0).length);
   check(L('one dialog at a time'), dlg === 1, String(dlg));
 
@@ -201,7 +202,7 @@ async function isles(browser, label, ctxOpts) {
   await isles(browser, '1280x720', DESK);
   await isles(browser, '390x844', PHONE);
 
-  // Isles with the test hook on: the feedback widget mounts in the island log when it is present (?feedback=1 opts in)
+  // Isles with the test hook on: the feedback widget mounts in the island log (XW1: a static script tag; ?feedback=1 is no longer needed)
   {
     let req = 0;
     const o = await open(browser, DESK, ISLES + '?isle=reef&test=1&feedback=1', { route: (ctx) => ctx.route(/mm-feedback\.js/, (r) => { req++; return r.fulfill({ status: 200, contentType: 'text/javascript', body: 'window.__fbMounts=[];window.MMFeedback={mount:function(el,o){window.__fbMounts.push({id:el.id,page:o&&o.page});}};' }); }) });
@@ -213,14 +214,17 @@ async function isles(browser, label, ctxOpts) {
     await o.page.click('#panel-close'); await o.page.click('#btn-log');
     check('[isles feedback] reopening the log mounts again into the new log, the script loads once', req === 1 && (await o.page.evaluate(() => window.__fbMounts.length)) === 2);
   }
-  // ?test=1 pages (the other isles tests) never request the not-yet-merged widget file unless ?feedback=1
+  // XW1: mm-feedback.js is merged, so the isles page loads it with a static tag; the old "?test=1 skips unless ?feedback=1" stopgap is
+  // gone. A ?test=1 page with the REAL module: one request, the real box mounts in the island log, console clean.
   {
     let req = 0;
-    const o = await open(browser, PHONE, ISLES + '?isle=reef&test=1', { route: (ctx) => ctx.route(/mm-feedback\.js/, (r) => { req++; return r.abort(); }) });
+    const o = await open(browser, PHONE, ISLES + '?isle=reef&test=1', { route: (ctx) => ctx.route(/mm-feedback\.js/, (r) => { req++; return r.continue(); }) });
     await o.page.waitForFunction(() => window.__isles && window.__isles.world);
     await o.page.tap('#btn-log');
     await o.page.waitForTimeout(200);
-    check('[isles ?test=1] the island log opens with a feedback host and no widget request', req === 0 && (await o.page.$('#log-feedback')) !== null && (await o.page.textContent('#panel-title')) === 'Island log', String(req));
+    const fb = await o.page.evaluate(() => { const h = document.getElementById('log-feedback'); return { mod: !!window.MMFeedback, host: !!h, kids: h ? h.children.length : 0, mounted: h ? h.dataset.fb === '1' : false }; });
+    check('[isles ?test=1] the real feedback widget loads once (static tag) and mounts in the island log', req === 1 && fb.mod && fb.host && fb.mounted && fb.kids > 0 && (await o.page.textContent('#panel-title')) === 'Island log', JSON.stringify({ req, fb }));
+    check('[isles ?test=1] no console errors with the real widget', o.errors.length === 0, o.errors.join(' | '));
   }
   // ?nav=0 keeps the old link visible, now labelled
   {

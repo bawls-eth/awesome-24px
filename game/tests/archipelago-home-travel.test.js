@@ -102,9 +102,10 @@ const KO_AND_TAME = (I, a) => {
       hscroll: document.documentElement.scrollWidth > innerWidth, panelRight: document.getElementById('panel').getBoundingClientRect().right }));
     check(L('1: the sea chart from home opens the jungle and the tundra'), JSON.stringify(chart.open) === JSON.stringify(['ice', 'jungle']), JSON.stringify(chart.open));
     const reefC = chart.cost.find((c) => c.isle === 'reef'), marsC = chart.cost.find((c) => c.isle === 'mars');
-    check(L('1: locked isles show their unlock cost (reef: 1 raft = wood 0/4, vine rope 0/2; mars: 1 rocket core = iron 0/4, frost crystal 0/2, amber 0/2)'),
+    // XW1: the mars cost is the build a fresh save can reach (rocket_core_drift), not the iron build that needs mars iron
+    check(L('1: locked isles show their unlock cost (reef: 1 raft = wood 0/4, vine rope 0/2; mars: 1 rocket core = driftwood 0/3, frost crystal 0/2, amber 0/2, pearl 0/1)'),
       chart.locked.length === 2 && chart.locked.every((b) => b.dis && /Unlock cost/.test(b.aria)) && reefC && reefC.vis && reefC.need === 'raft' && reefC.t === 'Unlock cost: 1 raft = wood 0/4, vine rope 0/2' &&
-      marsC && marsC.vis && marsC.t === 'Unlock cost: 1 rocket core = iron 0/4, frost crystal 0/2, amber 0/2', JSON.stringify(chart));
+      marsC && marsC.vis && marsC.t === 'Unlock cost: 1 rocket core = driftwood 0/3, frost crystal 0/2, amber 0/2, pearl 0/1', JSON.stringify(chart));
     check(L('1: the sea chart fits the screen (no sideways scroll)'), !chart.hscroll && chart.panelRight <= opts.viewport.width, JSON.stringify(chart));
     await shot(pg, 'x7-sea-chart-' + label);
     await sailVia(o, phone, '#panel-body button.dest[data-isle="jungle"]');

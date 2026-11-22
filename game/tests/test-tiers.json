@@ -1178,5 +1178,9 @@
   "town-isles-sign.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "isles-mount-ability.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
