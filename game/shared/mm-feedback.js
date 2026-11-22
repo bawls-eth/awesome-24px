@@ -199,6 +199,9 @@
 
     const root = el('section', 'mmfb');
     root.setAttribute('data-mmfb', page);
+    // The host pages (Town, Realm, Isles) bind game hotkeys on window/document (emotes, walkie, chat focus, WASD): while the player types a note
+    // those keys must stay inside the box. Stopping the events at the root keeps every bubbling page handler from seeing them.
+    ['keydown', 'keyup', 'keypress'].forEach((t) => root.addEventListener(t, (e) => { e.stopPropagation(); }));
     const head = el('button', 'mmfb-head');
     head.type = 'button';
     head.id = 'mmfb-head-' + n;
