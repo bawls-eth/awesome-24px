@@ -1,0 +1,24 @@
+{
+  "about": "QT Town first-ten-minutes gate (NEXT-SLICES-3). OFFLINE only (blockDb + SDK stub + Play offline). Fresh profiles (localStorage cleared). Simulated time: the Phaser loop sleeps and the test steps game.headlessStep with a fixed 1/60 s. targets = the QT acceptance numbers. knownIssues = the measured value on the base branch for a target the game misses today (assert: not worse than this baseline; print the gap). legacySmall / legacyTiny / legacyUnderCanvas = frozen allow-lists of controls under 44 px / text under 12 px / controls whose centre shows the canvas, seen on the base branch: they may only shrink, a new offender fails.",
+  "wallBudgetMs": 90000,
+  "targets": { "offlineOfferMs": 6000, "tapsToFirstMove": 5, "firstMoveMs": 10000, "firstInteraction": 60, "gateReach": 90, "whereToTaps": 1, "places": 10 },
+  "profiles": [
+    { "id": "town-phone", "viewport": { "width": 390, "height": 844 }, "touch": true, "seed": 20261122, "clock": 0 },
+    { "id": "town-desktop", "viewport": { "width": 1280, "height": 720 }, "touch": false, "seed": 4242, "clock": 0 }
+  ],
+  "knownIssues": {},
+  "legacySmall": {
+    "_notes": "Measured on claude/animal-crossing-game-7z3roh @ 67cc086: every one is 40 px tall (the 44 px rule wants 4 more). The quick-chat row buttons send chat, so the test never taps them. On desktop the last quick-chat button is clipped (see legacyUnderCanvas), so it is not measured here.",
+    "town-phone": ["panel-toggle", "quick-chat-row>button:👋 Hi!", "quick-chat-row>button:😂 lol", "quick-chat-row>button:🎣 Fishing!", "quick-chat-row>button:⭐ Nice!", "quick-chat-row>button:👋 Bye!"],
+    "town-desktop": ["achievements-badge", "map-btn", "world-map-link", "museum-badge", "quick-chat-row>button:👋 Hi!", "quick-chat-row>button:😂 lol", "quick-chat-row>button:🎣 Fishing!", "quick-chat-row>button:⭐ Nice!"]
+  },
+  "legacyTiny": {
+    "_notes": "Measured on 67cc086: 10-11 px text in the In-town panel (streak, town rating, tidy line, birthday line, bestie label, Map / World map) and the phone action-button labels (Emotes, Tilt, the A/B/P/C emoji captions).",
+    "town-phone": ["bestie-label", "emote-toggle-btn", "tilt-toggle-btn", "ab-emoji"],
+    "town-desktop": ["map-btn", "world-map-link", "streak-badge", "streak-count", "town-rating", "town-rating-label", "town-rating-count", "town-tidy", "birthday-line", "bestie-label"]
+  },
+  "legacyUnderCanvas": {
+    "_notes": "Measured on 67cc086 at 1280x720: the In-town panel is overflow:auto and ends at y=304, so Dailies, Journal, Settings and the last quick-chat button sit below its visible area; their centre shows the game canvas until the panel is scrolled.",
+    "town-desktop": ["dailies-btn", "journal-btn", "settings-toggle-btn", "quick-chat-row>button:👋 Bye!"]
+  }
+}

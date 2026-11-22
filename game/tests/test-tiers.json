@@ -1095,6 +1095,14 @@
     "class": "browser",
     "tier": "full"
   },
+  "isles-first-ten.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "town-first-ten.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "archipelago-perf.test.js": {
     "class": "browser",
     "tier": "full"
