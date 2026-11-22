@@ -12,6 +12,16 @@
   var sideReduced = function () { try { return !!(window.MMSideAccess && window.MMSideAccess.reduced()); } catch (e) { return false; } };
   var reduced = !!(mq && mq.matches) || sideReduced();
   if (mq && mq.addEventListener) mq.addEventListener('change', function (e) { reduced = e.matches || sideReduced(); });
+  // AC1 graphics tier: the shared "Low graphics" pref (pixeltown-access-v1 lowGfx, read with MMAccess) forces MMPerf's low tier:
+  // fewer catch sparks (MMPerf low cap), no halo around gold beetles and moonwings, still flower patches, no popup shadow text.
+  // Without the pref (or without MMPerf) the tier is 'high' and every frame draws exactly as before.
+  var gfx = (function () {
+    var prefs = null, tier = 'high';
+    try { prefs = window.MMAccess ? window.MMAccess.prefs.load(window.localStorage) : null; } catch (e) { prefs = null; }
+    try { if (window.MMPerf) tier = window.MMPerf.profile([], prefs).tier; } catch (e) { tier = 'high'; }
+    var low = tier === 'low';
+    return { tier: tier, low: low, cap: low && window.MMPerf ? window.MMPerf.CAPS.low.sparks : 24, burst: low ? 2 : 4 };
+  })();
 
   var NAMES = { meadow: 'Meadow', orchard: 'Orchard', pond: 'Pond Edge', forest: 'Forest', dunes: 'Dunes', cliffs: 'Cliffs', marsh: 'Marsh', lantern: 'Lantern Glade', glade: 'Night Glade' };
   var THEME = {
@@ -40,6 +50,7 @@
 
   // ---------- state ----------
   var cv = document.getElementById('game'), ctx = cv.getContext('2d');
+  if (window.MMPerf && window.MMPerf.applyCanvas) { try { gfx.dpr = window.MMPerf.applyCanvas(cv, gfx.tier).dpr; } catch (e) { /* the canvas keeps its 1:1 backing */ } }
   var overlay = document.getElementById('overlay');
   var mode = 'menu'; // menu | play | summary
   var game = null, arenaId = null, rng = null, meta = null, popups = [], particles = [], shake = 0, swingAnim = 0, face = { x: 1, y: 0 };
@@ -106,8 +117,9 @@
           metaFor(b).caughtAt = st.time;
           var pts = B.TYPES[b.type].points;
           popups.push({ x: b.x, y: b.y, t: 0, text: '+' + pts + (st.combo > 1 ? ' x' + mult(st.combo).toFixed(1) : '') });
-          if (!reduced) for (var i = 0; i < 4; i++) particles.push({ x: b.x, y: b.y, vx: (rng.next() - .5) * 3, vy: (rng.next() - .5) * 3, t: 0 });
+          if (!reduced) for (var i = 0; i < gfx.burst; i++) particles.push({ x: b.x, y: b.y, vx: (rng.next() - .5) * 3, vy: (rng.next() - .5) * 3, t: 0 });
         });
+        if (gfx.low && particles.length > gfx.cap) particles.length = gfx.cap; // low tier: never over MMPerf's cap, not even for one frame
         if (!reduced) shake = 0.12;
       }
     }
@@ -193,7 +205,7 @@
     popups = popups.filter(function (p) { return p.t < 0.9; });
     particles.forEach(function (p) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; });
     particles = particles.filter(function (p) { return p.t < 0.4; });
-    if (particles.length > 24) particles.length = 24;
+    if (particles.length > gfx.cap) particles.length = gfx.cap;
   }
 
   // ---------- drawing ----------
@@ -221,12 +233,12 @@
   }
   function circle(g, x, y, r, col) { g.fillStyle = col; g.beginPath(); g.arc(x, y, r, 0, 6.3); g.fill(); }
   function drawBug(g, b, time) {
-    var m = metaFor(b), x = b.x * TILE, y = b.y * TILE, flap = Math.sin(time * 18 + m.ph);
+    var m = metaFor(b), x = b.x * TILE, y = b.y * TILE, flap = reduced ? 0 : Math.sin(time * 18 + m.ph); // reduced motion: wings hold still
     var alpha = 1;
     if (b.state === 'caught') { var k = time - m.caughtAt; if (m.caughtAt < 0 || k > 0.3) return; alpha = 1 - k / 0.3; }
     g.save(); g.globalAlpha = alpha;
     if (b.state === 'hidden') {
-      if (b.hideKind === 'flower') { if (!reduced) { g.fillStyle = '#ffffff'; g.fillRect(x + Math.round(Math.sin(time * 9 + m.ph)), y - 3, 1, 1); } }
+      if (b.hideKind === 'flower') { if (!reduced && !gfx.low) { g.fillStyle = '#ffffff'; g.fillRect(x + Math.round(Math.sin(time * 9 + m.ph)), y - 3, 1, 1); } }
       else if (b.hideKind === 'dim') { g.fillStyle = 'rgba(200,255,150,.35)'; g.fillRect(x - 0.5, y - 0.5, 1, 1); }
       else if (!b.mound) { circle(g, x, y + 2, 3, '#a8895a'); g.fillStyle = '#6e5836'; g.fillRect(x - 3, y + 2, 6, 1); }
       g.restore(); return;
@@ -241,10 +253,10 @@
       case 'beetle': g.fillStyle = '#1b4332'; g.fillRect(x - 4, y - 2, 1, 2); g.fillRect(x + 3, y - 2, 1, 2); g.fillRect(x - 4, y + 2, 1, 2); g.fillRect(x + 3, y + 2, 1, 2); g.fillStyle = '#2d6a4f'; g.fillRect(x - 3, y - 4, 6, 8); g.fillStyle = '#95d5b2'; g.fillRect(x - 3, y - 4, 2, 8); g.fillStyle = '#111'; g.fillRect(x - 2, y - 6, 1, 2); g.fillRect(x + 1, y - 6, 1, 2); break;
       case 'cricket': g.fillStyle = '#8b5a2b'; g.fillRect(x - 5, y - 1, 10, 3); g.fillStyle = '#c08a4a'; g.fillRect(x + 2, y - 3, 3, 3); g.fillStyle = '#5a3b1e'; g.fillRect(x - 6, y + 1, 3, 2); g.fillRect(x - 4, y + 2 + (flap > 0 ? 1 : 0), 1, 2); break;
       case 'antlion': g.fillStyle = '#c9a66b'; g.beginPath(); g.moveTo(x - 5, y + 3); g.lineTo(x, y - 4); g.lineTo(x + 5, y + 3); g.closePath(); g.fill(); g.fillStyle = '#5a3b1e'; g.fillRect(x - 1, y - 1, 2, 4); g.fillRect(x - 3, y - 3, 1, 3); g.fillRect(x + 2, y - 3, 1, 3); break;
-      case 'goldbeetle': circle(g, x, y, 5 + (reduced ? 0 : Math.sin(time * 8) * 0.6), 'rgba(255,215,0,.35)'); circle(g, x, y, 3.5, '#ffc300'); g.fillStyle = '#fff3b0'; g.fillRect(x - 2, y - 2, 2, 2); g.fillStyle = '#7a5c00'; g.fillRect(x - 0.5, y - 3, 1, 6); break;
+      case 'goldbeetle': if (!gfx.low) circle(g, x, y, 5 + (reduced ? 0 : Math.sin(time * 8) * 0.6), 'rgba(255,215,0,.35)'); circle(g, x, y, 3.5, '#ffc300'); g.fillStyle = '#fff3b0'; g.fillRect(x - 2, y - 2, 2, 2); g.fillStyle = '#7a5c00'; g.fillRect(x - 0.5, y - 3, 1, 6); break;
       case 'firefly': circle(g, x, y + 1, 5, 'rgba(190,255,120,' + glowAlpha(time, x).toFixed(2) + ')'); g.fillStyle = '#3a2f1e'; g.fillRect(x - 1, y - 3, 2, 3); g.fillStyle = '#d8f7a0'; g.fillRect(x - 1.5, y, 3, 2); g.fillStyle = 'rgba(255,255,255,.6)'; g.fillRect(x - 3, y - 3 - (flap > 0 ? 1 : 0), 2, 2); g.fillRect(x + 1, y - 3 - (flap > 0 ? 1 : 0), 2, 2); break;
       case 'glowmoth': circle(g, x, y, 6, 'rgba(120,200,255,' + (glowAlpha(time, y) * 0.7).toFixed(2) + ')'); g.fillStyle = '#c3b7ff'; g.fillRect(x - 5, y - 2 - flap, 4, 4); g.fillRect(x + 1, y - 2 - flap, 4, 4); g.fillStyle = '#7f6fd6'; g.fillRect(x - 4, y + 2, 3, 1); g.fillRect(x + 1, y + 2, 3, 1); g.fillStyle = '#efeaff'; g.fillRect(x - 0.5, y - 3, 1, 6); break;
-      case 'moonwing': circle(g, x, y, 8, 'rgba(160,230,255,.25)'); g.fillStyle = '#b8f2ff'; g.fillRect(x - 6, y - 4 - flap, 5, 6); g.fillRect(x + 1, y - 4 - flap, 5, 6); g.fillStyle = '#e0aaff'; g.fillRect(x - 5, y + 1, 4, 3); g.fillRect(x + 1, y + 1, 4, 3); g.fillStyle = '#fff'; g.fillRect(x - 0.5, y - 3, 1, 7); break;
+      case 'moonwing': if (!gfx.low) circle(g, x, y, 8, 'rgba(160,230,255,.25)'); g.fillStyle = '#b8f2ff'; g.fillRect(x - 6, y - 4 - flap, 5, 6); g.fillRect(x + 1, y - 4 - flap, 5, 6); g.fillStyle = '#e0aaff'; g.fillRect(x - 5, y + 1, 4, 3); g.fillRect(x + 1, y + 1, 4, 3); g.fillStyle = '#fff'; g.fillRect(x - 0.5, y - 3, 1, 7); break;
     }
   }
   // Glade glow: a soft pulse, or one steady value with reduced motion.
@@ -252,10 +264,10 @@
   function drawPatch(g, f, time) {
     var x = f.x * TILE, y = f.y * TILE, cols = ['#ff8fc7', '#ffd166', '#fff', '#c77dff'];
     for (var i = 0; i < 5; i++) {
-      var ox = Math.round(Math.cos(i * 1.26) * 5), oy = Math.round(Math.sin(i * 1.26) * 4), sw = reduced ? 0 : Math.sin(time * 3 + i) * 0.6;
+      var ox = Math.round(Math.cos(i * 1.26) * 5), oy = Math.round(Math.sin(i * 1.26) * 4), sw = reduced || gfx.low ? 0 : Math.sin(time * 3 + i) * 0.6;
       g.fillStyle = '#2f6b2a'; g.fillRect(x + ox, y + oy + 1, 1, 4);
       g.fillStyle = cols[i % 4]; g.fillRect(x + ox - 1 + sw, y + oy - 1, 3, 3);
-      g.fillStyle = '#7a5c00'; g.fillRect(x + ox, y + oy, 1, 1);
+      if (!gfx.low) { g.fillStyle = '#7a5c00'; g.fillRect(x + ox, y + oy, 1, 1); }
     }
   }
   function drawMound(g, b) {
@@ -295,7 +307,7 @@
       }
       particles.forEach(function (p) { g.fillStyle = '#ffd166'; g.fillRect(p.x * TILE, p.y * TILE, 2, 2); });
       g.font = 'bold 9px monospace'; g.textAlign = 'center';
-      popups.forEach(function (p) { g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(p.text, p.x * TILE + 1, p.y * TILE - 5); g.fillStyle = '#fff'; g.fillText(p.text, p.x * TILE, p.y * TILE - 6); });
+      popups.forEach(function (p) { if (!gfx.low) { g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(p.text, p.x * TILE + 1, p.y * TILE - 5); } g.fillStyle = '#fff'; g.fillText(p.text, p.x * TILE, p.y * TILE - 6); });
     }
     g.restore();
     if (B.arena(id).night) { g.fillStyle = 'rgba(8,10,40,.4)'; g.fillRect(0, 0, cv.width, cv.height); }
@@ -464,6 +476,9 @@
       get summary() { return lastSummary; },
       get shake() { return shake; },
       get particles() { return particles.length; },
+      get gfx() { return { tier: gfx.tier, low: gfx.low, cap: gfx.cap, burst: gfx.burst, dpr: gfx.dpr || 1 }; },
+      render: render,
+      renderAt: function (t) { if (game) game.state.time = t; render(); }, // draw one frame at run time t (no step: nothing wanders)
       start: startArena,
       step: step,
       swing: doSwing,

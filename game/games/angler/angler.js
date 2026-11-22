@@ -21,6 +21,18 @@
   const todayStr = () => (dateOverride && B.validDate(dateOverride.str) ? dateOverride.str : B.dateStr(new Date()));
   const mq = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
   const reduced = () => !!(mq && mq.matches) || !!(window.MMSideAccess && window.MMSideAccess.reduced());
+  // AC1 graphics tier: the shared "Low graphics" pref (pixeltown-access-v1 lowGfx, read with MMAccess) forces MMPerf's low tier:
+  // no water shimmer, fewer rain/snow drops, one splash ring and fanfare sparks capped at MMPerf's low cap.
+  // Without the pref (or without MMPerf) the tier is 'high' and every frame draws exactly as before.
+  const gfx = (() => {
+    let prefs = null, tier = 'high';
+    try { prefs = window.MMAccess ? window.MMAccess.prefs.load(window.localStorage) : null; } catch (e) { prefs = null; }
+    try { if (window.MMPerf) tier = window.MMPerf.profile([], prefs).tier; } catch (e) { tier = 'high'; }
+    const low = tier === 'low';
+    let dpr = 1;
+    try { if (window.MMPerf && window.MMPerf.applyCanvas) dpr = window.MMPerf.applyCanvas(cv, tier).dpr; } catch (e) { dpr = 1; }
+    return { tier, low, dpr, cap: low && window.MMPerf ? window.MMPerf.CAPS.low.sparks : Infinity, drops: low ? 16 : 40, rings: low ? 1 : 3 };
+  })();
 
   // ---- rng / clock / date (seeded and fake in test mode) ----
   let rng = Math.random;
@@ -663,7 +675,7 @@
     if (g.spot === COVE) { c.fillStyle = '#ff8f7a'; [24, 120, 236, 300].forEach((x, i) => { c.fillRect(x, H - 30 - i * 3, 6, 30 + i * 3); c.fillRect(x - 5, H - 22 - i * 3, 5, 4); c.fillRect(x + 6, H - 16 - i * 3, 5, 4); }); }
     c.fillStyle = 'rgba(0,0,0,.12)';
     for (let y = WATER + 16; y < H; y += 24) c.fillRect(0, y, W, 8);
-    if (!reduced()) {
+    if (!reduced() && !gfx.low) { // water shimmer: off with reduced motion and on the low tier
       c.fillStyle = 'rgba(255,255,255,.22)';
       for (let i = 0; i < 18; i++) {
         const yy = WATER + 10 + ((i * 37) % (H - WATER - 20)), xx = ((i * 71 + t * 14 * (1 + (i % 3) * 0.3)) % (W + 30)) - 15;
@@ -676,7 +688,7 @@
     if (wx === 'rain' || wx === 'snow') {
       c.fillStyle = wx === 'rain' ? 'rgba(200,225,255,.7)' : 'rgba(255,255,255,.85)';
       const drift = reduced() ? 0 : t * (wx === 'rain' ? 160 : 30);
-      for (let i = 0; i < 40; i++) {
+      for (let i = 0; i < gfx.drops; i++) {
         const xx = (i * 47) % W, yy = ((i * 83 + drift) % (WATER + 60));
         if (wx === 'rain') c.fillRect(xx, yy, 1, 7); else c.fillRect(xx, yy, 2, 2);
       }
@@ -715,7 +727,7 @@
       return;
     }
     if (t > 2) return;
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < gfx.rings; i++) {
       const k = t - i * 0.25; if (k < 0) continue;
       c.globalAlpha = Math.max(0, 1 - k / 1.4);
       c.beginPath(); c.ellipse(cx, cy, 8 + k * 50, 3 + k * 18, 0, 0, Math.PI * 2); c.stroke();
@@ -727,7 +739,7 @@
     c.fillStyle = rare; c.textAlign = 'center';
     if (reduced()) { c.font = 'bold 22px sans-serif'; c.fillText('\u2605 CAUGHT \u2605', W / 2, 226); return; } // no motion
     if (f.t > 1.4) return;
-    const n = f.big ? 28 : 14;
+    const n = Math.min(f.big ? 28 : 14, gfx.cap);
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2, rr = f.t * (70 + (i % 4) * 25);
       c.globalAlpha = Math.max(0, 1 - f.t / 1.4);
@@ -786,6 +798,7 @@
       get state() { return g.state; }, get result() { return g.result; }, get reel() { return g.reel; },
       get bite() { return g.bite; }, get journal() { return A.journal.clean(journal); }, get full() { return journal; }, get spot() { return g.spot; },
       get reduced() { return reduced(); }, get bobY() { return g.bobY; },
+      get gfx() { return { tier: gfx.tier, low: gfx.low, dpr: gfx.dpr, cap: gfx.cap === Infinity ? null : gfx.cap, drops: gfx.drops, rings: gfx.rings }; },
       setHold(v) { setInput('test', !!v); },
       tap() { setInput('test', true); setInput('test', false); },
       advance(sec) { let n = Math.round(sec * 60); while (n-- > 0) step(1 / 60); draw(); },
