@@ -32,12 +32,16 @@ const overlap = (a, b) => a && b && a.x < b.r && b.x < a.r && a.y < b.b && b.y <
   await ph.page.waitForTimeout(400);
   const cv = await rect(ph.page, '#realm-canvas');
   check('phone 390x844: the room canvas spans at least 60% of the viewport width', cv && cv.w >= 0.6 * 390 && cv.x >= 0 && cv.r <= 390.5, JSON.stringify(cv));
-  check('phone 390x844: the room keeps its aspect (not stretched)', cv && Math.abs(cv.w / cv.h - 680 / 520) < 0.03, JSON.stringify(cv));
+  // PLAYTEST-REVIEW-3 #4: on a tall phone the canvas shows the full room height and a sideways-panning slice (arena._dv.vw wide)
+  const vwSlice = await ph.page.evaluate(() => (window.__mm.arena._dv ? window.__mm.arena._dv.vw : 680));
+  check('phone 390x844: the room keeps its aspect (not stretched; the dungeon view shows a slice of the full height)', cv && Math.abs(cv.w / cv.h - vwSlice / 520) < 0.03, JSON.stringify({ cv, vwSlice }));
   const mp = await rect(ph.page, '#mm-map'); const mb = await rect(ph.page, '#mm-map-btn'); const bn = await rect(ph.page, '#realm-banner');
   const bnShown = await ph.page.evaluate(() => { const b = document.getElementById('realm-banner'); return !!b && !b.classList.contains('hidden'); });
   check('phone: the map, its button and the banner do not cover the room', !overlap(mp, cv) && !overlap(mb, cv) && (!bnShown || !overlap(bn, cv)), JSON.stringify({ cv, mp, mb, bn, bnShown }));
   const ab = await rect(ph.page, '#realm-abilities');
-  check('phone: the room is clear of the ability buttons', !overlap(ab, cv), JSON.stringify({ cv, ab }));
+  // PLAYTEST-REVIEW-3 #4: the taller dungeon view puts the ability buttons over the lower floor (as in the world): they must stay on top and tappable
+  const abTop = await ph.page.evaluate(() => Array.from(document.querySelectorAll('#realm-abilities button')).every((b) => { const r = b.getBoundingClientRect(); const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!t && (t === b || b.contains(t)); }));
+  check('phone: the ability buttons sit above the room and stay tappable', abTop && cv.h >= 0.55 * 844, JSON.stringify({ cv, ab, abTop }));
   const lbl = await ph.page.evaluate(() => { const b = document.getElementById('realm-leave-btn'); const r = b.getBoundingClientRect(); return { t: b.textContent, sw: b.scrollWidth, cw: b.clientWidth, a: b.getAttribute('aria-label'), h: r.height, w: r.width }; });
   check('phone: the exit label is not truncated and keeps a 44px target', lbl.sw <= lbl.cw && lbl.h >= 44 && lbl.w >= 44 && /Leave/.test(lbl.t) && !/Exit/.test(lbl.t), JSON.stringify(lbl)); // NAV-AUDIT #8: one label ("Leave"), the destination is in the aria-label
   check('phone: the exit button keeps the full text in its aria-label', /world/.test(lbl.a || ''), lbl.a);

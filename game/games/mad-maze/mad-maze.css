@@ -322,9 +322,8 @@ div#mm-daily-btn { pointer-events: none; min-height: 28px; font-size: 12px; left
    ability buttons (not behind the map / banner), and keep the banner and the mini-map above it ---------- */
 @media (max-width: 600px) and (min-height: 760px) and (orientation: portrait) {
   body.dungeon-mode #realm-canvas { top: 215px !important; }
-  /* PLAYTEST-REVIEW-3 #4: the dungeon view (realm.js rm-dv: the full room height at 60% of the screen, panning sideways) sits right above
-     the move / aim sticks; its top wall row may pass under the mini-map */
-  body.dungeon-mode #realm-canvas.rm-dv { top: auto !important; bottom: calc(168px + env(safe-area-inset-bottom, 0px)); }
+  /* PLAYTEST-REVIEW-3 #4: the dungeon view (realm.js rm-dv: the full room height at 60% of the screen, panning sideways) keeps the same top,
+     clear of the map and the banner; the ability buttons sit over its lower floor (as in the world) and only its bottom wall row reaches the sticks */
   body.dungeon-mode #realm-banner { top: 182px; left: calc(50% - 48px); max-width: calc(100% - 140px); }
   body.dungeon-mode #mm-map { width: 96px; height: auto; top: calc(124px + env(safe-area-inset-top, 0px)); }
 }

@@ -114,7 +114,7 @@ const coveredIn = (page, sel) => page.evaluate((q) => {
     await calm(page); await frames(page, 4);
     const g = await page.evaluate(() => { const c = document.getElementById('realm-canvas'); const r = c.getBoundingClientRect(); const a = window.__mm.arena; const h = (id) => { const e = document.getElementById(id); return e ? e.getBoundingClientRect() : null; }; const st = h('realm-stick-move'); return { top: r.top, bottom: r.bottom, left: r.left, right: r.right, h: r.height, vh: innerHeight, vw: innerWidth, W: a.W, H: a.H, cam: Object.assign({}, a.camera), dv: a._dv, stickTop: st ? st.top : null, ratio: r.height / innerHeight }; });
     check('phone 390x844 dungeon: the room uses >= 55% of the screen height (was ~35%)', g.ratio >= 0.55, JSON.stringify(g));
-    check('phone dungeon: the canvas stays on screen, full width, above the move stick', g.top >= 0 && g.bottom <= g.vh && g.left >= -1 && g.right <= g.vw + 1 && g.right - g.left >= g.vw - 2 && (g.stickTop === null || g.bottom <= g.stickTop + 1), JSON.stringify(g));
+    check('phone dungeon: the canvas stays on screen, full width, clear of the map row, and only its bottom wall row (one 40 px tile) reaches the move stick', g.top >= 0 && g.bottom <= g.vh && g.left >= -1 && g.right <= g.vw + 1 && g.right - g.left >= g.vw - 2 && g.top >= 214 && (g.stickTop === null || g.bottom <= g.stickTop + 40 * g.h / g.H), JSON.stringify(g));
     check('phone dungeon: the room itself is unchanged (17 x 13 tiles = 680 x 520, the full height shown)', g.W === 680 && g.H === 520 && g.dv && g.dv.vw < 680 && g.cam.vw === g.dv.vw, JSON.stringify(g));
     const pan = await E(page, (a) => { a.player.x = a.W - 40; a.player.y = a.H / 2; return null; });
     await frames(page, 40);
