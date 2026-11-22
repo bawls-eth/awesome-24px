@@ -740,6 +740,7 @@
   }());
 
   window.addEventListener('resize', resize);
+  try { if (window.ResizeObserver) new ResizeObserver(() => resize()).observe(document.getElementById('stage')); } catch (e) { /* older browsers: window resize only */ } // cards above the map load after the first layout
   recompute();
   placeAt(hub.at);
   saveHub(); // writes the sanitised state back (drops unknown keys, repairs a corrupt value)

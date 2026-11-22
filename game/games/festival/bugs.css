@@ -83,3 +83,5 @@ html[data-reduce-motion="1"] *, html[data-reduce-motion="1"] *::before, html[dat
 #overlay .keyhint { font-size:calc(12px * var(--ui-scale,1)); }
 @media (pointer: coarse) { #overlay .keyhint { display:none; } }
 #hud-best.ahead { color:#1d2b20; background:var(--accent); font-weight:bold; }
+/* The full-screen menu covers the touch controls, so take them out of the layout while it is open (they cannot be hit anyway). */
+body:has(#overlay:not([hidden])) #touch { visibility: hidden; }

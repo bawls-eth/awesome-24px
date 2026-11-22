@@ -120,13 +120,13 @@ const SEED = {
   s = await open(browser, { ctxOpts: PHONE, seed: { 'pixeltown-nav-v1': { v: 1, last: { id: 'angler', sub: '', url: 'game/games/angler/index.html', t: 1 }, prev: null } } });
   const lay = await s.page.evaluate(() => {
     const r = (sel) => { const n = document.querySelector(sel); if (!n || n.hidden || !n.offsetParent) return null; const b = n.getBoundingClientRect(); return { l: b.left, t: b.top, r: b.right, b: b.bottom, w: b.width, h: b.height }; };
-    const targets = Array.from(document.querySelectorAll('#coll-card a, #coll-card button')).map((n) => { const b = n.getBoundingClientRect(); return { w: b.width, h: b.height }; });
+    const targets = Array.from(document.querySelectorAll('#coll-card a, #coll-card button')).filter((n) => n.offsetParent).map((n) => { const b = n.getBoundingClientRect(); return { w: b.width, h: b.height }; });
     const fonts = Array.from(document.querySelectorAll('#coll-card *')).filter((n) => n.childNodes.length && Array.from(n.childNodes).some((c) => c.nodeType === 3 && c.textContent.trim())).map((n) => parseFloat(getComputedStyle(n).fontSize));
     return { sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, card: r('#coll-card'), others: ['#hud', '#hub-games', '#hub-continue', '#calm-card', '#bar', '#mm-nav-btn', '#hint-chip', '#stage'].map((s) => [s, r(s)]), targets, fonts };
   });
   const ov = (a, b) => a && b && a.l < b.r - 0.5 && b.l < a.r - 0.5 && a.t < b.b - 0.5 && b.t < a.b - 0.5;
   check('phone: card on screen, no horizontal scroll', lay.card && lay.card.l >= 0 && lay.card.r <= 390 && lay.card.t >= 0 && lay.card.b <= 844 && lay.sw <= lay.cw, JSON.stringify(lay.card));
-  check('phone: 4 card targets (book + 3 first steps), each >= 44 px', lay.targets.length === 4 && lay.targets.every((t) => t.w >= 44 && t.h >= 44), JSON.stringify(lay.targets));
+  check('phone: the book is the one card target (the step chips fold away so the map keeps 55% of the screen), >= 44 px', lay.targets.length === 1 && lay.targets.every((t) => t.w >= 44 && t.h >= 44), JSON.stringify(lay.targets));
   check('phone: card text >= 12 px', lay.fonts.length > 0 && lay.fonts.every((f) => f >= 12), JSON.stringify(lay.fonts));
   const hits = lay.others.filter(([, b]) => ov(lay.card, b)).map(([n]) => n);
   check('phone: card overlaps nothing (HUD, games strip, Continue, ideas card, bar, Menu, hint chip, map)', hits.length === 0, hits.join(','));
