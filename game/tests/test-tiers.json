@@ -1282,5 +1282,17 @@
   "nav-town-p2.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "shared-mm-isle-rest.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-isle-pouch.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "isles-ftue-fixes.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

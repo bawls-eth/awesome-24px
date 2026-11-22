@@ -19,6 +19,9 @@ const SAVE = JSON.stringify({ name: 'ADMINnavd', species: 'coolcats', frame: 1, 
 const PHONE = { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true };
 const DESK = { viewport: { width: 1280, height: 720 } };
 const all = [];
+// IF1: a locked island opened by URL lands at the home dock now, so the reef pages here start from a save that crafted a raft (reef in
+// `unlock`, nothing else: an empty pack, no tames, no visits)
+const REEF_OPEN = { 'pixeltown-archipelago-v1': JSON.stringify({ v: 1, at: 'home', unlock: ['jungle', 'reef'], isles: {}, visited: [] }) };
 
 async function open(browser, ctxOpts, url, opt) {
   opt = opt || {};
@@ -137,7 +140,7 @@ async function isles(browser, label, ctxOpts) {
   const tap = tapper(mobile);
   const L = (s) => '[isles ' + label + '] ' + s;
   let fbReq = 0;
-  const o = await open(browser, ctxOpts, ISLES + '?isle=reef&at=dock', { route: (ctx) => ctx.route(/mm-feedback\.js/, (r) => { fbReq++; return r.fulfill({ status: 200, contentType: 'text/javascript', body: 'window.__fbMounts=[];window.MMFeedback={mount:function(el,o){window.__fbMounts.push({id:el.id,page:o&&o.page});var p=document.createElement("p");p.className="fb-stub";p.textContent="Feedback";el.appendChild(p);}};' }); }) });
+  const o = await open(browser, ctxOpts, ISLES + '?isle=reef&at=dock', { seed: REEF_OPEN, route: (ctx) => ctx.route(/mm-feedback\.js/, (r) => { fbReq++; return r.fulfill({ status: 200, contentType: 'text/javascript', body: 'window.__fbMounts=[];window.MMFeedback={mount:function(el,o){window.__fbMounts.push({id:el.id,page:o&&o.page});var p=document.createElement("p");p.className="fb-stub";p.textContent="Feedback";el.appendChild(p);}};' }); }) });
   const pg = o.page;
   await pg.waitForSelector('#mm-nav-btn');
   await pg.waitForTimeout(400);
@@ -235,7 +238,7 @@ async function isles(browser, label, ctxOpts) {
   }
   // Continue: after the reef, the hub Menu offers "Continue: Isles - Coral Reef"
   {
-    const o = await open(browser, DESK, ISLES + '?isle=reef');
+    const o = await open(browser, DESK, ISLES + '?isle=reef', { seed: REEF_OPEN });
     await o.page.waitForSelector('#mm-nav-btn');
     await o.page.goto(HUB);
     await o.page.waitForSelector('#mm-nav-btn');

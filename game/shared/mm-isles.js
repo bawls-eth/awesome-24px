@@ -166,6 +166,11 @@
       if (typeof raw.hp === 'number' && Number.isFinite(raw.hp) && raw.hp >= 1) out.hp = Math.min(999, Math.ceil(raw.hp));
       if (Array.isArray(raw.beat)) { const b = []; raw.beat.slice(0, 64).forEach((id) => { if (b.length < MAX_BOSSES && typeof id === 'string' && KEY_RE.test(id) && BAD.indexOf(id) < 0 && b.indexOf(id) < 0) b.push(id); }); if (b.length) out.beat = b; }
       if (isObj(raw.trophies)) { const tr = {}; TROPHY_IDS.forEach((id) => { if (has(raw.trophies, id) && (raw.trophies[id] === 1 || raw.trophies[id] === 2)) tr[id] = raw.trophies[id]; }); if (Object.keys(tr).length) out.trophies = tr; }
+      // IF1 (additive): forage sparkles shown today per island ({ day: 'YYYY-MM-DD', n: { isle: 0..6 } }); anything else is dropped
+      if (isObj(raw.spark) && typeof raw.spark.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw.spark.day)) {
+        const sn = {}; if (isObj(raw.spark.n)) SAVED_ISLES.forEach((id) => { const n = raw.spark.n[id]; if (has(raw.spark.n, id) && Number.isInteger(n) && n >= 1) sn[id] = Math.min(6, n); });
+        out.spark = { day: raw.spark.day, n: sn };
+      }
       // size guard: shed the least valuable data first until the key fits
       const size = () => JSON.stringify(out).length;
       if (size() > MAX_BYTES) out.inv = {};
