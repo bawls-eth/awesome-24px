@@ -19,3 +19,7 @@ Reviewed with the owner's concern "the GPT art looks pretty bad": contact sheets
 - Same palette family per biome (see reference/ and scales.json); effects separate; true back/side views.
 - Deliver a side-by-side sheet next to one b04 sprite so the quality match can be checked at a glance.
 - Priority redo order: b12 props, terrain variants (b10t/b30/b35), b31a/b31b small jungle creatures, then the older nits.
+
+## Owner-supplied target (2026-11-22): GPT concept sheet `game/design/concepts/gpt-mounts-concept-1.png`
+Skimray, Isleback Turtle and Rimewolf concepts from GPT. THIS is the richness we want for mounts, bosses and creatures: bold readable silhouettes, big shapes with 4-5 tone ramps, a clear colour accent per creature (teal veins on the ray, coral and a cargo deck on the turtle shell, bright frost ruff on the wolf), a visible saddle/cargo rig that says what the mount does at a glance, a consistent dark outline and top-left light, and a small in-game-size version under the big one. It is far above the current b31b/b12 flat sprites and above rimewolf b40c.
+Production rules (from GPT's own note, adopted): the concept is a 3/4 pose for choosing direction only; the shipped sprites need clean TRUE down (front), up (back) and right (side) views with a SEPARATE saddle overlay per mount (`saddle_*`), at the native cell sizes in scales.json (mounts L96/XL128), checked at 1x and 3x. Start with Isleback Turtle (reads by function), then Skimray, then Rimewolf. Keep it original: use the concept for shape language and shading, do not copy another game's art.
