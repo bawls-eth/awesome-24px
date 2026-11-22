@@ -143,6 +143,8 @@
 (function () {
   if (!window.MMNav) return;
   MMNav.mount({ page: 'lantern', legacy: '#back-hub,#back-town', avoid: '.top h1', backHref: '../../hub/index.html', backLabel: 'World map' });
+  // the old links are clipped to 1 px while the Menu button is on: keep them in the DOM (and for screen readers) but out of the Tab order
+  if (document.body.classList.contains('mm-nav-on')) ['back-hub', 'back-town'].forEach(function (id) { var e = document.getElementById(id); if (e) e.setAttribute('tabindex', '-1'); });
   var cover = ['abil-panel'], shut = ['restore-confirm'];
   function open(ids) { return ids.some(function (id) { var e = document.getElementById(id); return e && !e.hidden; }); }
   function sync() { MMNav.setCovered(open(cover)); if (open(cover) || open(shut)) MMNav.close(); }

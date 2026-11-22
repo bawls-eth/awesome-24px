@@ -1362,5 +1362,9 @@
   "art-audit-tool.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "minigame-quality-gate.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }
