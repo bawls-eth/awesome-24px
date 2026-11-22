@@ -140,7 +140,7 @@ const toReel = (page, fish) => page.evaluate((f) => {
   // 12: phone
   const ph = await open(browser, '&seed=p&date=2026-07-15', { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
   check('phone: no horizontal scroll', await ph.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
-  check('phone: buttons at least 48px tall', await ph.page.$$eval('#spots .btn, #journal-btn, .back', (b) => b.every((x) => x.getBoundingClientRect().height >= 47.5)));
+  check('phone: buttons at least 48px tall', await ph.page.$$eval('#spots .btn, #journal-btn, .back:not(.mm-nav-legacy)', (b) => b.every((x) => x.getBoundingClientRect().height >= 47.5)));
   check('phone: hold anywhere reels (touch on canvas)', await (async () => {
     await ph.page.evaluate(() => __angler.tap());
     await ph.page.evaluate(() => { const a = __angler; a.advance(a.bite.wait + 0.2); });

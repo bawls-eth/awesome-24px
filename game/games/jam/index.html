@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="jam.css">
 <script src="../../shared/mm-access.js"></script>
 <script src="../../shared/mm-side-access.js"></script>
+<link rel="stylesheet" href="../../shared/mm-nav.css">
 </head>
 <body>
 <header id="top">
@@ -43,6 +44,18 @@
 <script src="../../shared/mm-jam.js"></script>
 <script src="../../shared/mm-jam-songs.js"></script>
 <script src="../../shared/sfx.js"></script>
+<script src="../../shared/mm-nav.js" data-mount="manual"></script>
+<script>
+(function () {
+  if (!window.MMNav) return;
+  MMNav.mount({ page: 'jam', legacy: '#back-hub,#back-town', avoid: '#top h1', backHref: '../../hub/index.html', backLabel: 'World map' });
+  var cover = [], shut = ['overlay'];
+  function open(ids) { return ids.some(function (id) { var e = document.getElementById(id); return e && !e.hidden; }); }
+  function sync() { MMNav.setCovered(open(cover)); if (open(cover) || open(shut)) MMNav.close(); }
+  var mo = window.MutationObserver ? new MutationObserver(sync) : null;
+  cover.concat(shut).forEach(function (id) { var e = document.getElementById(id); if (e && mo) mo.observe(e, { attributes: true, attributeFilter: ['hidden'] }); });
+}());
+</script>
 <script src="jam.js"></script>
 </body>
 </html>

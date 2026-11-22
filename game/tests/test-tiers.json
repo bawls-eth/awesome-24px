@@ -1122,5 +1122,9 @@
   "feedback-box.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "nav-consistency.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }

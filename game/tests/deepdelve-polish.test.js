@@ -262,7 +262,7 @@ const reload = async (page) => { await page.reload(); await page.waitForFunction
   await PH.page.evaluate(() => { window.__dd.panel('craft', true); });
   const ph = await PH.page.evaluate(() => {
     const vw = window.innerWidth, out = [];
-    ['open-craft', 'open-goals', 'mode-btn', 'craft-btn', 'back-hub', 'back-town', 't-jump', 't-mine', 't-place'].forEach((id) => { const r = document.getElementById(id).getBoundingClientRect(); if (r.right > vw + 1 || r.left < -1 || r.width < 40 || r.height < 40) out.push(id + ':' + Math.round(r.left) + '-' + Math.round(r.right) + 'x' + Math.round(r.height)); });
+    ['open-craft', 'open-goals', 'mode-btn', 'craft-btn', 'back-hub', 'back-town', 't-jump', 't-mine', 't-place'].forEach((id) => { if (document.getElementById(id).classList.contains('mm-nav-legacy')) return; const r = document.getElementById(id).getBoundingClientRect(); if (r.right > vw + 1 || r.left < -1 || r.width < 40 || r.height < 40) out.push(id + ':' + Math.round(r.left) + '-' + Math.round(r.right) + 'x' + Math.round(r.height)); });
     const pr = document.getElementById('craft-panel').getBoundingClientRect();
     return { sw: document.documentElement.scrollWidth, iw: vw, bad: out, panelOk: pr.left >= 0 && pr.right <= vw };
   });

@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="deepdelve.css">
 <script src="../../shared/mm-access.js"></script>
 <script src="../../shared/mm-side-access.js"></script>
+<link rel="stylesheet" href="../../shared/mm-nav.css">
 </head>
 <body>
 <header class="bar">
@@ -64,6 +65,18 @@
 <script src="../../shared/mm-dd-mobs.js"></script>
 <script src="../../shared/mm-dd-spawn.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="../../shared/mm-nav.js" data-mount="manual"></script>
+<script>
+(function () {
+  if (!window.MMNav) return;
+  MMNav.mount({ page: 'deepdelve', legacy: '#back-hub,#back-town', avoid: '.bar h1', backHref: '../../hub/index.html', backLabel: 'World map' });
+  var cover = [], shut = ['craft-panel','goals-panel'];
+  function open(ids) { return ids.some(function (id) { var e = document.getElementById(id); return e && !e.hidden; }); }
+  function sync() { MMNav.setCovered(open(cover)); if (open(cover) || open(shut)) MMNav.close(); }
+  var mo = window.MutationObserver ? new MutationObserver(sync) : null;
+  cover.concat(shut).forEach(function (id) { var e = document.getElementById(id); if (e && mo) mo.observe(e, { attributes: true, attributeFilter: ['hidden'] }); });
+}());
+</script>
 <script src="deepdelve.js"></script>
 </body>
 </html>
