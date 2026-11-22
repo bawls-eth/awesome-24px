@@ -1,0 +1,15 @@
+{
+  "batch": "b38b",
+  "label": "shellcrab",
+  "generated_utc": "2026-11-22T07:53:25.448744Z",
+  "files": 14,
+  "duplicate_ids": 0,
+  "blocking": {},
+  "warnings": {},
+  "standing_heights": {
+    "shellcrab/down": 132,
+    "shellcrab/up": 132,
+    "shellcrab/right": 132
+  },
+  "status": "provisional"
+}
