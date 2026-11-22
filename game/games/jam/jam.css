@@ -87,3 +87,10 @@ body[data-relax="1"] #progress-bar { background:#8ecae6; }
 #relax-row span { flex:1 1 180px; }
 .stars.practice { color:#8ecae6; }
 .card small.relax-line { color:#8ecae6; }
+
+/* fun pass: one obvious Play button, one-tap Play again, personal-best and next-goal lines */
+#overlay button.big { display:block; width:100%; min-height:56px; font-size:calc(18px * var(--ui-scale,1)); font-weight:bold; margin:8px 0; }
+#res-actions button.big { display:inline-block; width:auto; flex:1 1 140px; margin:0; }
+#overlay p.pb { color:#fff3b0; font-weight:bold; }
+#overlay p.goal { background:var(--panel); border-left:4px solid var(--accent); padding:6px 10px; border-radius:6px; }
+#hud-song:empty { display:none; }

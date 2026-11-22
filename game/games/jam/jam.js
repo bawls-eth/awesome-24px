@@ -66,6 +66,27 @@
   var paused = false, popups = [], flashes = [0, 0, 0, 0], rings = [], glows = [], shake = 0, lastJudge = null, lastTiming = null;
   var held = {}, laneKeys = {}, ptrLane = {};
   var testNow = 0, concertLast = null, resultsData = null;
+  // ---------- juice: combo milestones, combo-break notice, hit sparks (fewer/none with reduced motion or low graphics) ----------
+  var MILESTONES = [10, 25, 50, 75, 100];
+  var sparks = [], banner = null, comboPop = 0, milestonesHit = [], fxRng = R.create('jam-fx'), lastPrevBest = null;
+  function lowGfx() { try { return !!(window.MMAccess && window.MMAccess.prefs.load(window.localStorage).lowGfx); } catch (e) { return false; } }
+  function isMilestone(c) { return MILESTONES.indexOf(c) >= 0 || (c > 100 && c % 50 === 0); }
+  function sfxPlay(name) { if (TEST || !sfx) return; try { sfx.play(name); } catch (e) { /* ignore */ } }
+  function showBanner(text, col) { banner = { text: text, col: col, t: 0 }; }
+  function afterHit(j, idx, prevCombo) {
+    if (relax || !run) return;
+    var c = run.state.combo;
+    if (j && j !== 'miss') {
+      comboPop = 1;
+      if (isMilestone(c)) { milestonesHit.push(c); showBanner(c + ' combo!', '#ffd166'); sfxPlay(c >= 50 ? 'levelup' : 'pickup'); }
+      if (!reduced && !lowGfx() && (j === 'perfect' || j === 'great')) {
+        var n = j === 'perfect' ? 6 : 3, x = colOf(idx) * LANE_W + LANE_W / 2;
+        for (var i = 0; i < n; i++) sparks.push({ x: x + fxRng.int(-12, 12), y: HIT_Y, vx: (fxRng.next() - 0.5) * 120, vy: -60 - fxRng.next() * 140, t: 0, col: j === 'perfect' ? '#fff3b0' : LANE_COL[idx] });
+        if (sparks.length > 48) sparks.splice(0, sparks.length - 48);
+      }
+    }
+    if (prevCombo >= 10 && c === 0) showBanner('Combo ended at ' + prevCombo, '#ffadad');
+  }
   var stars = [];
   (function () { var g = R.create('jam-stars'); for (var i = 0; i < 30; i++) stars.push({ x: g.int(0, CW), y: g.int(0, HIT_Y - 40), p: g.next() * 6.28 }); })();
 
@@ -186,7 +207,7 @@
     document.body.dataset.practice = practice ? '1' : '0';
     run = makeRun();
     popups = []; rings = []; glows = []; lastTiming = null; flashes = [0, 0, 0, 0]; shake = 0; held = {}; laneKeys = {}; ptrLane = {};
-    lastJudge = null;
+    lastJudge = null; sparks = []; banner = null; comboPop = 0; milestonesHit = [];
     $('hud-timing').textContent = '';
     paused = false; pausedTotal = 0; testNow = 0; frozenAt = 0; evIdx = 0;
     events = SG.backing(id, tier);
@@ -209,6 +230,8 @@
     run.update();
     var res = run.result();
     res.deltas = chart.song === songId && chart.seed === 'base' ? run.deltas() : null;
+    var pb = save.best[songId] && save.best[songId][tier];
+    lastPrevBest = pb ? pb.score : null;
     lastResult = res;
     lastReport = SG.record(save, songId, tier, res);
     persist();
@@ -308,7 +331,9 @@
     if (mode !== 'play' || !run) return null;
     var idx = LANES.indexOf(lane); if (idx < 0) return null;
     flashes[idx] = 1;
+    var prevCombo = run.state.combo;
     var j = run.press(lane);
+    afterHit(j, idx, prevCombo);
     if (j) {
       held[lane] = run.state.holds[lane] ? true : false;
       var dl = run.state.lastDelta;
@@ -323,7 +348,9 @@
   function release(lane) {
     if (mode !== 'play' || !run) return null;
     if (prefTapHolds && run.state.holds[lane]) { held[lane] = false; return 'tap-hold'; } // tap only: the long note finishes by itself
+    var prevCombo = run.state.combo;
     var r = run.release(lane); held[lane] = false;
+    if (r === 'broken') afterHit(null, LANES.indexOf(lane), prevCombo);
     if (r === 'broken' && !relax) popup('miss', LANES.indexOf(lane));
     updateHud();
     return r;
@@ -348,6 +375,7 @@
       return;
     }
     if (e.code === 'Escape' || e.code === 'KeyP') { if (mode === 'play') pause(); else if (mode === 'pause') resume(); return; }
+    if (e.code === 'KeyR' && mode === 'results' && !e.repeat) { var ag = $('again'); if (ag && !overlay.hidden) { e.preventDefault(); ag.click(); } return; }
     var lane = KEYMAP[e.code];
     if (!lane) return;
     lane = L(lane);
@@ -403,7 +431,9 @@
   // ---------- step / update ----------
   function tick() {
     if (mode !== 'play' || !run) return;
+    var prevCombo = run.state.combo;
     run.update();
+    if (prevCombo && !run.state.combo) afterHit(null, 0, prevCombo);
     var fresh = false;
     for (var ni = 0; ni < run.notes.length; ni++) { var n = run.notes[ni]; if (n.judge === 'miss' && !n.shown) { n.shown = true; fresh = true; if (!relax) popup('miss', LANES.indexOf(n.lane)); } }
     if (fresh && !relax) { if (!reduced) shake = 0.08; lastJudge = 'miss'; }
@@ -425,6 +455,9 @@
     rings.forEach(function (r) { r.t += dt; }); rings = rings.filter(function (r) { return r.t < 0.3; });
     var gl = reduced ? 0.2 : 0.35; glows.forEach(function (q) { q.t += dt; }); glows = glows.filter(function (q) { return q.t < gl; });
     shake = Math.max(0, shake - dt);
+    sparks.forEach(function (p) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 260 * dt; }); sparks = sparks.filter(function (p) { return p.t < 0.5; });
+    if (banner) { banner.t += dt; if (banner.t > 1.1) banner = null; }
+    comboPop = Math.max(0, comboPop - dt * 6);
   }
   function updateHud() {
     if (practice && run) { $('hud-score').textContent = ''; $('hud-acc').textContent = ''; $('hud-combo').textContent = 'Combo ' + run.state.combo; $('progress-bar').style.width = Math.max(0, Math.min(100, songNow() / chart.lengthMs * 100)).toFixed(1) + '%'; return; }
@@ -517,6 +550,20 @@
       popups.forEach(function (p) { var y = HIT_Y - 40 - (reduced ? 0 : p.t * 40); g.globalAlpha = reduced ? 1 : 1 - p.t / 0.6; g.fillStyle = '#000'; g.fillText(p.text, p.x + 1, y + 1); g.fillStyle = p.col; g.fillText(p.text, p.x, y);
         if (p.tag) { g.font = 'bold 10px monospace'; g.fillStyle = p.tag === 'early' ? '#9bf6ff' : '#ffadad'; g.fillText(p.tag, p.x, y + 12); g.font = 'bold 14px monospace'; }
         g.globalAlpha = 1; });
+      sparks.forEach(function (p) { g.globalAlpha = Math.max(0, 1 - p.t / 0.5); g.fillStyle = p.col; g.fillRect(p.x - 2, p.y - 2, 4, 4); });
+      g.globalAlpha = 1;
+      // big centred combo: the number players actually watch; pops a little on each hit (steady when reduced)
+      if (!relax && !practice && combo >= 5) {
+        var cs = 34 + (reduced ? 0 : Math.round(comboPop * 8));
+        g.font = 'bold ' + cs + 'px monospace'; g.globalAlpha = 0.32 + Math.min(0.4, combo / 100);
+        g.fillStyle = combo >= 50 ? '#ffd166' : '#ffffff'; g.fillText(String(combo), CW / 2, 120);
+        g.font = 'bold 12px monospace'; g.fillText('COMBO', CW / 2, 138); g.globalAlpha = 1;
+      }
+      if (banner) {
+        var ba = banner.t < 0.8 ? 1 : Math.max(0, 1 - (banner.t - 0.8) / 0.3), bs = reduced ? 22 : 22 + Math.round(Math.max(0, 0.15 - banner.t) * 60);
+        g.globalAlpha = ba; g.fillStyle = 'rgba(13,10,22,0.75)'; g.fillRect(20, 170, CW - 40, 40);
+        g.font = 'bold ' + bs + 'px monospace'; g.fillStyle = banner.col; g.fillText(banner.text, CW / 2, 198); g.globalAlpha = 1;
+      }
     }
     g.restore();
   }
@@ -541,6 +588,8 @@
       var ok = btn('Got it', function () { save.hint = true; persist(); showMenu(); }); ok.id = 'hint-ok'; h.appendChild(ok);
       overlay.appendChild(h);
     }
+    var rec = recommended(), qp = btn('Play: ' + SG.song(rec.id).name + ' (' + (prefRelax ? 'Relax ' : '') + SG.TIER_NAMES[rec.tier] + ')', function () { startSong(rec.id, rec.tier, prefRelax ? { relax: true } : undefined); });
+    qp.id = 'quick-play'; qp.className = 'big'; qp.dataset.song = rec.id; qp.dataset.tier = rec.tier; overlay.appendChild(qp);
     overlay.appendChild(el('p', 'Stars: ' + SG.totalStars(save) + ' / ' + (SG.SONGS.length * 3), 'dim'));
     var rrow = el('div', undefined, 'row'); rrow.id = 'relax-row';
     var rb = el('button'); rb.type = 'button'; rb.className = 'pick'; rb.id = 'pref-relax';
@@ -842,6 +891,15 @@
     var best = save.best[songId][tier];
     var sc = el('p', 'Score ' + res.score + (rep.newBest ? '  (new best!)' : '  (best ' + best.score + ')')); sc.id = 'res-score'; overlay.appendChild(sc);
     var acc = el('p', 'Accuracy ' + Math.round(res.accuracy * 100) + '%   Max combo ' + res.maxCombo + (res.counts.miss === 0 ? '   Full combo!' : '')); acc.id = 'res-acc'; overlay.appendChild(acc);
+    if (rep.newBest && lastPrevBest !== null) { var pbl = el('p', 'New personal best: +' + (res.score - lastPrevBest) + ' over ' + lastPrevBest, 'pb'); pbl.id = 'res-pb'; overlay.appendChild(pbl); }
+    if (rep.newBest) sfxPlay('claim');
+    var gl = el('p', nextGoal(res, rep), 'goal'); gl.id = 'res-goal'; overlay.appendChild(gl);
+    // one-tap Play again right under the headline numbers (R also restarts); the details follow below
+    var row = el('div', undefined, 'row'); row.id = 'res-actions';
+    var again = btn('Play again', function () { startSong(songId, tier); }); again.id = 'again'; again.className = 'big'; row.appendChild(again);
+    var rb = btn('Replay best', function () { startSong(songId, tier, { ghost: true }); }, !SG.ghostOf(save, songId, tier)); rb.id = 'replay-best'; row.appendChild(rb);
+    var back = btn('Songs', showMenu); back.id = 'to-menu'; row.appendChild(back);
+    overlay.appendChild(row);
     var cl = el('div'); cl.id = 'res-counts';
     ['perfect', 'great', 'good', 'miss'].forEach(function (j) { var d = el('div', JUDGE_LABEL[j] + ' ' + res.counts[j]); d.dataset.judge = j; cl.appendChild(d); });
     overlay.appendChild(cl);
@@ -874,13 +932,33 @@
       var ab = btn('Set offset to ' + fmtOff(sug), function () { SG.setOffset(save, sug); persist(); ab.disabled = true; ab.textContent = 'Offset is ' + fmtOff(SG.offsetOf(save)); }); ab.id = 'apply-suggest'; overlay.appendChild(ab);
     }
     var un = rep.newlyUnlocked.map(function (id) { return SG.song(id).name; });
-    if (un.length) { var u = el('p', 'Unlocked: ' + un.join(', ')); u.id = 'res-unlocked'; overlay.appendChild(u); }
-    var row = el('div', undefined, 'row');
-    var again = btn('Play again', function () { startSong(songId, tier); }); again.id = 'again'; row.appendChild(again);
-    var rb = btn('Replay best', function () { startSong(songId, tier, { ghost: true }); }, !(resultsData && resultsData.ghost)); rb.id = 'replay-best'; row.appendChild(rb);
-    var back = btn('Songs', showMenu); back.id = 'to-menu'; row.appendChild(back);
-    row.appendChild(homeLink('menu-back'));
-    overlay.appendChild(row);
+    if (un.length) { var u = el('p', 'Unlocked: ' + un.join(', ')); u.id = 'res-unlocked'; overlay.insertBefore(u, gl.nextSibling); }
+    var row2 = el('div', undefined, 'row'); row2.appendChild(homeLink('menu-back')); overlay.appendChild(row2);
+    try { again.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+  }
+  // the one concrete thing to aim for next; "So close" when it is within 3 points of accuracy (near-miss feedback)
+  function nextGoal(res, rep) {
+    var a = res.accuracy, pct = function (x) { return Math.max(1, Math.ceil((x - a) * 100)); };
+    var g;
+    if (rep.stars < 3) { var need = SG.STAR_AT[rep.stars]; g = { gap: need - a, text: 'Next star at ' + Math.round(need * 100) + '% accuracy: ' + pct(need) + '% to go.' }; }
+    else if (res.rank !== 'S') g = { gap: 0.95 - a, text: 'Rank S at 95% accuracy: ' + pct(0.95) + '% to go.' };
+    else if (!res.fullCombo) g = { gap: 0, text: 'Next goal: a full combo (' + res.counts.miss + ' missed this time).' };
+    else {
+      var nt = SG.TIERS[SG.TIERS.indexOf(tier) + 1];
+      g = { gap: 1, text: nt && SG.tierUnlocked(save, songId, nt) ? 'Mastered! Try ' + SG.TIER_NAMES[nt] + ' next.' : 'Mastered! Chase a higher score or another song.' };
+    }
+    return (g.gap > 0 && g.gap <= 0.03 ? 'So close! ' : '') + g.text;
+  }
+  // quick play: the first open chart (song order, easiest tier first) without 3 stars yet; a brand-new player gets Warm Embers Easy
+  function recommended() {
+    for (var i = 0; i < SG.SONGS.length; i++) {
+      var s = SG.SONGS[i]; if (!SG.songUnlocked(save, s.id)) continue;
+      for (var k = 0; k < SG.TIERS.length; k++) {
+        var t = SG.TIERS[k], b = save.best[s.id] && save.best[s.id][t];
+        if (SG.tierUnlocked(save, s.id, t) && !(b && b.stars >= 3)) return { id: s.id, tier: t };
+      }
+    }
+    return { id: SG.SONGS[0].id, tier: 'hard' };
   }
   // 13 bars from 130 ms early to 130 ms late; the centre bar is on time. Static, so reduced motion needs no change.
   function drawHistogram(cv2, hg) {
@@ -928,6 +1006,10 @@
       get reduced() { return reduced; },
       get shake() { return shake; },
       get rings() { return rings.length; },
+      get sparks() { return sparks.length; },
+      get banner() { return banner ? banner.text : null; },
+      get milestones() { return milestonesHit.slice(); },
+      get recommended() { return recommended(); },
       get paused() { return paused; },
       get ghost() { return ghost ? { active: true, count: ghost.filter(function (d) { return d !== SG.GHOST_MISS; }).length, markers: ghost.map(function (d, i) { return d === SG.GHOST_MISS || !chart.notes[i] ? null : { lane: chart.notes[i].lane, t: chart.notes[i].t + d }; }).filter(Boolean) } : { active: false, count: 0, markers: [] }; },
       get results() { return resultsData ? JSON.parse(JSON.stringify(resultsData)) : null; },
