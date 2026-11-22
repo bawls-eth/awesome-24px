@@ -75,7 +75,7 @@
       let note = '';
       try {
         const sv = arena.save; const cap = typeof RM_BACKPACK === 'number' ? RM_BACKPACK : 24;
-        if (sv && Array.isArray(sv.items) && sv.items.length < cap) { sv.items.push({ n: sv.nextUid++, id: 'heartcharm', r: 0 }); note = 'Tutorial done! Gift: a Hearty Charm (+12 max HP) is in your backpack, and you are fully healed.'; }
+        if (sv && Array.isArray(sv.items) && sv.items.length < cap) { sv.items.push(typeof rmTagged === 'function' ? rmTagged({ n: sv.nextUid++, id: 'heartcharm', r: 0 }) : { n: sv.nextUid++, id: 'heartcharm', r: 0 }); note = 'Tutorial done! Gift: a Hearty Charm (+12 max HP) is in your backpack, and you are fully healed.'; }
         else if (sv) { sv.shards = (Number(sv.shards) || 0) + 30; note = 'Tutorial done! Gift: +30 shards, and you are fully healed.'; }
         arena.onSave(sv);
         if (arena.player && arena.stats) arena.player.hp = arena.stats.maxHp;

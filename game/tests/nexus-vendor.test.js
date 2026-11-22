@@ -67,7 +67,7 @@ const stall = (page) => page.evaluate(() => {
     let stv = await stored(page);
     const got = sv.items.find((x) => x.n === pre.next);
     check('buy deducts exactly the listed dust once (saved)', sv.dust === 100 - p2 && stv.dust === 100 - p2 && sv.items.length === pre.n + 1, JSON.stringify({ dust: sv.dust, st: stv.dust, p2 }));
-    check('the bought item is a plain { n, id, r: 0, t } entry (no affix seed, untiered-safe) and is saved', got && got.id === 'sparkwand' && got.r === 0 && got.t === 2 && Object.keys(got).sort().join() === 'id,n,r,t' && stv.items.some((x) => x.n === got.n && x.t === 2), JSON.stringify(got));
+    check('the bought item is a plain { n, id, r: 0, t } entry (no affix seed, untiered-safe; plus the UR identity tag u) and is saved', got && got.id === 'sparkwand' && got.r === 0 && got.t === 2 && Object.keys(got).filter((k) => k !== 'u').sort().join() === 'id,n,r,t' && Number.isInteger(got.u) && got.u > 0 && !('a' in got) && stv.items.some((x) => x.n === got.n && x.t === 2), JSON.stringify(got));
     check('no randomness is used by the vendor', sv.rnd === 0, String(sv.rnd));
     s = await stall(page);
     check('the stall re-renders with the new wallet', new RegExp('You have ' + (100 - p2) + ' dust').test(s.text), s.text.slice(0, 120));

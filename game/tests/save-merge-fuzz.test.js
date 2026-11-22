@@ -5,8 +5,9 @@
 // evaluated in a vm sandbox with MMGear / MMGearAffix as globals, the way the Realm page loads them. No DOM, no location (so no ?gear=0 etc.).
 //
 // Each run: 2-3 "tabs" share one fake pixeltown-save-v1. A NEW tab follows RealmArena exactly (resyncSave / _persist / _syncBase: three-way
-// shards, dust and gp, `known` uids). Ops: pick, sell, salvage, combine, reforge (a fresh uid, like realm.js), gp change, a write, a FAILED write
-// (storage unchanged), and storage events that reach the other tabs late (a race window). In some runs one tab is an OLD tab: the cleaner and
+// shards, dust and gp, `known` uids + UR tags via rmKnownOf). Ops: pick, sell, salvage, combine, reforge (a fresh uid and tag, like realm.js; a dust
+// TRANSACTION: resync, price, write at once, undone when that write fails), gp change, a write, a FAILED write (storage unchanged), and storage
+// events that reach the other tabs late (a race window). New tabs tag every new item (`u`, realm.js rmItemTag) from a separate PRNG stream. In some runs one tab is an OLD tab: the cleaner and
 // merge from before GW (realm.js at the parent of 2451f5b, pasted below from git history), which strips `sig`, `f` and `dust`.
 //
 // Every physical item gets a ledger id (lid) that follows it through uid remaps, so the invariants are about real items, not uids:
@@ -16,7 +17,8 @@
 //   I3 the 24-slot cut keeps equipped items, then higher tier, then higher rarity: never a soulbound / T12 dropped before a lower item
 //   I4 a NEW-tab merge keeps `f` / `sig` of every item it keeps, and keeps the `dust` key when either side had it
 //   I5 shards / dust / gp are never negative; merged pack <= 24
-//   I6 after all tabs converge (no old tab writes), storage holds every live item and the exact shard total (and the dust total when no old tab ran)
+//   I6 after all tabs converge (no old tab writes), storage holds every live item and the exact shard total (and the dust total when no old tab ran;
+//      I6-dust: exact even when two tabs spent from the same balance, which a floor at 0 in the merge would otherwise hide)
 // A real bug found by this fuzz is NOT hidden: it is listed in KNOWN below keyed by seed (with the issue), printed every run, and reported.
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.join(__dirname, '..');
@@ -108,7 +110,7 @@ function rmMergeSaveOld(mine, stored, opts) {
   return rmCleanSaveOld(out);
 }
 globalThis.__O = { rmCleanSaveOld, rmMergeSaveOld };`;
-vm.runInContext(WRAP + realmSrc.slice(0, cut) + '\n;globalThis.__R = { rmCleanSave, rmMergeSave, RM_BACKPACK, RM_SIG_IDS, RM_AFFIX_IDS, rmReadStoredRealm, rmGpOf };\n' + OLD_SRC + '\n})();', sandbox, { filename: 'realm.js+old-cleaner' });
+vm.runInContext(WRAP + realmSrc.slice(0, cut) + '\n;globalThis.__R = { rmKnownOf, rmCleanSave, rmMergeSave, RM_BACKPACK, RM_SIG_IDS, RM_AFFIX_IDS, rmReadStoredRealm, rmGpOf };\n' + OLD_SRC + '\n})();', sandbox, { filename: 'realm.js+old-cleaner' });
 const { rmCleanSave, rmMergeSave, RM_BACKPACK, RM_SIG_IDS, RM_AFFIX_IDS } = sandbox.__R;
 const { rmCleanSaveOld, rmMergeSaveOld } = sandbox.__O;
 
@@ -119,8 +121,8 @@ const { rmCleanSaveOld, rmMergeSaveOld } = sandbox.__O;
 const KNOWN = {
   'A-twin-uid': {
     what: "FIXED: two tabs that pick the same plain item (same id / r / t / a) under the same uid before either syncs used to merge as one item; rmMergeSave now gives this tab's copy a fresh uid when it never saw that uid in storage",
-    rest: "still open in 1334482343 only: uid REUSE. Tab A picks uid 13, writes, sells it (storage drops 13, nextUid stays 14); tab B still holds A's item under 13 (known, not yet synced); tab C, last synced before 13 existed, picks its own identical item as 13 and writes. B then reads C's 13 as the item it knew, keeps its stale copy, and C's item is lost. Renumbering unknown picks below storage's nextUid fixes the fuzz but changes uids in flows realm-core / realm-progress / realm-shop-death rely on, so it is not shipped; a real fix needs uids that are unique across tabs",
-    seeds: [1334482343],
+    rest: "uid REUSE (was seed 1334482343, FIXED by UR): tab A picks uid 13, writes, sells it; tab B still holds A's item under 13 (known); tab C, last synced before 13 existed, picks its own identical item as 13 and writes, so B read C's 13 as the item it knew and C's item was lost. Every new item now carries a random tag `u` (realm.js rmItemTag), so (n, u) tells the two apart while uids keep their sequence",
+    seeds: [],
   },
   'B-stale-strip': {
     what: "FIXED: a new tab that adopted an OLD (pre-GW) tab's stripped write used to keep its own copy of a same-uid item, writing it back without f / sig; rmMergeSave now never drops f / sig that storage holds for the same item",
@@ -151,12 +153,16 @@ function prng(seed) { // mulberry32, the same shape as realm.js rmRng
 }
 const IDS = ['sparkwand', 'sparkwand', 'quickwand', 'heartcharm', 'luckring', 'wpn_bow_triple', 'arm_light_scout'];
 const TIERABLE = (id) => id === 'sparkwand' || id.slice(0, 4) === 'wpn_' || id.slice(0, 4) === 'arm_';
-const same = (x, y) => x.id === y.id && x.r === y.r && (x.t || 0) === (y.t || 0) && (x.a || 0) === (y.a || 0); // rmMergeSave identity (minus n)
+// rmMergeSave identity (minus n): (id, r, t, a), and since UR the `u` tag when BOTH copies carry one (different tags = different items)
+const same = (x, y) => x.id === y.id && x.r === y.r && (x.t || 0) === (y.t || 0) && (x.a || 0) === (y.a || 0) && (!x.u || !y.u || x.u === y.u);
+const tagEq = (x, y) => !!(x.u && y.u && x.u === y.u); // UR: equal tags are always the same item (never a twin)
 const gpOf = (g) => ({ b: g && g.b > 0 ? g.b : 0, d: g && g.d > 0 ? g.d : 0 });
 
 function runOne(seed, trace) {
   const R = prng(seed);
   const ri = (n) => Math.floor(R() * n);
+  const RU = prng(seed ^ 0x5bd1e995); // UR tags (realm.js rmItemTag uses crypto.getRandomValues) come from their own stream, so every op sequence stays as it was before UR
+  const tag = () => 1 + Math.floor(RU() * 2147483646);
   const issues = [];
   const bad = (code, info) => { issues.push(code + (info ? ' ' + info : '')); };
   let nextLid = 1;
@@ -173,7 +179,7 @@ function runOne(seed, trace) {
   // map result items back to lids (mine wins on a same-uid same-item tie, exactly like rmMergeSave keeps `a`'s copy; a remapped uid is mine's).
   // `known` (new tabs only): a same-uid same-item pair whose uid this tab never saw in storage is two items (issue A fix): the uid stays storage's.
   function lidsFor(res, mine, mineLids, stored, storedLids, known) {
-    const twinUid = (n) => known && !known.has(n) && mi.has(n) && si.has(n) && same(mi.get(n), si.get(n));
+    const twinUid = (n) => known && !known.has(n) && mi.has(n) && si.has(n) && same(mi.get(n), si.get(n)) && !tagEq(mi.get(n), si.get(n));
     const out = new Map(), used = new Set();
     const mi = new Map(mine.items.map((x) => [x.n, x])), si = new Map(stored.items.map((x) => [x.n, x]));
     const pend = [];
@@ -251,7 +257,7 @@ function runOne(seed, trace) {
   }
   function syncBase(tab) {
     const st = tab.old ? rmCleanSaveOld(store.realm) : rmCleanSave(store.realm);
-    tab.known = new Set(st.items.map((x) => x.n)); tab.baseShards = st.shards; tab.baseDust = st.dust || 0; tab.baseGp = gpOf(st.gp);
+    tab.known = tab.old ? new Set(st.items.map((x) => x.n)) : sandbox.__R.rmKnownOf(st.items); tab.baseShards = st.shards; tab.baseDust = st.dust || 0; tab.baseGp = gpOf(st.gp);
   }
   function resync(tab, label) {
     if (!store.realm) return;
@@ -294,7 +300,7 @@ function runOne(seed, trace) {
     if (p < 0.3) { // pick
       if (sv.items.length >= RM_BACKPACK) { sv.shards += 3; shardLedger += 3; T('tab' + tab.i + ' pack full, sold pick +3'); continue; }
       const id = IDS[ri(IDS.length)], r = ri(3);
-      const raw = { n: sv.nextUid, id, r };
+      const raw = { n: sv.nextUid, id, r }; if (!tab.old) raw.u = tag(); // UR: a new build tags every new item (an old build has no tags)
       if (TIERABLE(id) && R() < 0.6) { raw.t = 1 + ri(12); if (raw.t >= 7) raw.a = 1 + ri(R() < 0.5 ? 3 : 4294967294); if (raw.t === 12 && id !== 'arm_light_scout' && R() < 0.6) raw.sig = RM_SIG_IDS[ri(RM_SIG_IDS.length)]; }
       const it = (tab.old ? rmCleanSaveOld : rmCleanSave)({ items: [raw] }).items[0];
       if (!it) continue;
@@ -319,20 +325,30 @@ function runOne(seed, trace) {
       grp.forEach((g) => { dupe = removeAt(tab, sv.items.indexOf(g)).dupe || dupe; });
       const ki = sv.items.indexOf(cand); const k = removeAt(tab, ki); dupe = dupe || k.dupe;
       const n = Math.max(sv.nextUid || 1, 1 + sv.items.reduce((m, x) => Math.max(m, x.n), 0)); sv.nextUid = n + 1;
-      const ne = Object.assign({}, cand, { n, r: cand.r + 1 }); sv.items.splice(ki, 0, ne);
+      const ne = Object.assign({}, cand, { n, r: cand.r + 1 }); if (!tab.old) ne.u = tag(); sv.items.splice(ki, 0, ne);
       tab.lids.set(n, newLid(dupe));
       T('tab' + tab.i + ' combine -> ' + JSON.stringify(ne));
-    } else if (p < 0.64) { // reforge (new tabs only: the old build has no Forge)
+    } else if (p < 0.64) { // reforge (new tabs only: the old build has no Forge). A dust TRANSACTION like realm.js (FZ I6-dust): resync, price, write at once, undo on a failed write
       if (tab.old) continue;
+      if (store.realm && tab.save.items.some((x) => x.t >= 7)) resync(tab, 'tab' + tab.i + ' reforge-resync');
+      const sv = tab.save;
       const idx = sv.items.findIndex((x) => x.t >= 7); if (idx < 0) continue;
       const it = sv.items[idx], cost = 20 * (it.t - 6) + 10 * it.r, sh = it.t - 6;
       if ((sv.dust || 0) < cost || sv.shards < sh) continue;
       const fid = RM_AFFIX_IDS.filter((x) => x !== it.sig)[ri(RM_AFFIX_IDS.length - 1)];
-      const n = sv.nextUid++; const ne = { n, id: it.id, r: it.r, t: it.t }; if (it.a) ne.a = it.a; if (it.sig) ne.sig = it.sig; ne.f = { id: fid, v: 1 + ri(20) };
+      const undo = { save: JSON.parse(JSON.stringify(sv)), lids: new Map(tab.lids), live: [...live], consumed: [...consumed], shardLedger, dustLedger };
+      const n = sv.nextUid++; const ne = { n, id: it.id, r: it.r, u: tag(), t: it.t }; if (it.a) ne.a = it.a; if (it.sig) ne.sig = it.sig; ne.f = { id: fid, v: 1 + ri(20) };
       const old = removeAt(tab, idx); sv.items.splice(idx, 0, ne);
       tab.lids.set(n, newLid(old.dupe));
       sv.dust -= cost; sv.shards -= sh; dustLedger -= cost; shardLedger -= sh;
       T('tab' + tab.i + ' reforge lid ' + old.l + ' -> ' + JSON.stringify(ne));
+      const fails = R() < 0.08;
+      persist(tab, fails);
+      if (fails && store.realm) { // realm.js _dustTxnCommit: storage holds a realm and the write failed, so the spend is undone (nothing charged)
+        tab.save = rmCleanSave(undo.save); tab.lids = undo.lids; shardLedger = undo.shardLedger; dustLedger = undo.dustLedger;
+        live.clear(); undo.live.forEach((l) => live.add(l)); consumed.clear(); undo.consumed.forEach((l) => consumed.add(l));
+        T('tab' + tab.i + ' reforge write FAILED: undone');
+      }
     } else if (p < 0.69) { // pity counters
       const g = gpOf(sv.gp); if (R() < 0.3) g.b = 0; else g.b += 1; if (R() < 0.5) g.d += 1; sv.gp = g;
     } else if (p < 0.72) { // equip
@@ -353,7 +369,9 @@ function runOne(seed, trace) {
   // shard / dust delta is lost once another tab creates the save.
   const cc = emptyFail ? 'C-empty-fail' : 'I6-';
   if (fin.shards !== shardLedger) bad(cc + (emptyFail ? '' : 'shards'), 'shards ' + fin.shards + ' != ' + shardLedger);
-  if (!oldWrote && dustLedger > 0 && fin.dust !== dustLedger) bad(cc + (emptyFail ? '' : 'dust'), 'dust ' + fin.dust + ' != ' + dustLedger);
+  // I6-dust: every dust spend is a transaction (resync, price, write at once, undo on a failed write), so two tabs never spend the same dust and the
+  // total is exact (a spend the merge had to floor at 0 would show here as fin.dust > the ledger, or the ledger going below 0)
+  if (!oldWrote && (dustLedger !== 0 || fin.dust) && (fin.dust || 0) !== dustLedger) bad(cc + (emptyFail ? '' : 'dust'), 'dust ' + fin.dust + ' != ' + dustLedger);
   return { issues, ops: opCount };
 }
 
@@ -390,6 +408,36 @@ function runOne(seed, trace) {
   // and the merge then applies the kept delta once another tab creates the save
   const m = rmMergeSave(f.save, { shards: 0 }, { base: f._baseShards, known: f._known });
   check('C fixed: the 5 unsaved shards survive the merge with the save another tab created', m.shards === 5, String(m.shards));
+}
+
+{ // UR (uid reuse, was seed 1334482343): tab B knew uid 13 = A's Hearty Charm (tag 111); A sold it; C (never saw 13) picked its own charm as 13 (tag 222)
+  const sB = { items: [{ n: 13, id: 'heartcharm', r: 1, u: 111 }], nextUid: 14 }, sC = { items: [{ n: 13, id: 'heartcharm', r: 1, u: 222 }], nextUid: 14 };
+  const rmKnownOf = sandbox.__R.rmKnownOf;
+  const m = rmMergeSave(sB, sC, { base: 0, known: rmKnownOf(sB.items) });
+  const m0 = rmMergeSave(sB, sC, { base: 0, known: new Set([13]) });
+  check('UR fixed: a known uid now naming a different tagged item drops the stale (sold) copy and takes storage\'s', m.items.length === 1 && m.items[0].n === 13 && m.items[0].u === 222 && JSON.stringify(m0.items) === JSON.stringify(m.items), JSON.stringify([m.items, m0.items]));
+  // was seed 421515304 at 20000 runs: tab 1 knew uid 1 = its Scout armor (tag 5) and sold it (a stale double sale); storage's uid 1 is now ANOTHER tab's
+  // charm (tag 9). The uid alone said "sold here" and dropped the charm; the tag says it is a different item, so it is taken.
+  const r = rmMergeSave({ items: [], nextUid: 2 }, { items: [{ n: 1, id: 'heartcharm', r: 1, u: 9 }], nextUid: 2 }, { base: 0, known: rmKnownOf([{ n: 1, id: 'arm_light_scout', r: 0, t: 2, u: 5 }]) });
+  const r2 = rmMergeSave({ items: [], nextUid: 2 }, { items: [{ n: 1, id: 'heartcharm', r: 1, u: 9 }], nextUid: 2 }, { base: 0, known: rmKnownOf([{ n: 1, id: 'heartcharm', r: 1, u: 9 }]) });
+  check('UR: a stored item under a known uid but with a tag this tab never saw is taken; the very item it saw (sold here) stays gone', r.items.length === 1 && r.items[0].u === 9 && r2.items.length === 0, JSON.stringify([r.items, r2.items]));
+  const t = rmMergeSave(sC, { items: [{ n: 13, id: 'heartcharm', r: 1, u: 111 }], nextUid: 14 }, { base: 0, known: new Set() });
+  check('UR: an UNKNOWN uid with two different tags is two items (this tab\'s renumbered, both tags kept)', t.items.length === 2 && new Set(t.items.map((x) => x.n)).size === 2 && t.items.map((x) => x.u).sort().join() === '111,222', JSON.stringify(t.items));
+  const e = rmMergeSave(sC, sC, { base: 0, known: new Set() });
+  check('UR: equal tags are the same item even under an uid this tab never saw (no twin split)', e.items.length === 1 && e.items[0].n === 13 && e.items[0].u === 222, JSON.stringify(e.items));
+  const h = rmMergeSave({ items: [{ n: 13, id: 'heartcharm', r: 1 }], nextUid: 14 }, sC, { base: 0, known: new Set([13]) });
+  check('UR: an untagged copy (from before UR or an old build) keeps the old identity rule and takes storage\'s tag', h.items.length === 1 && h.items[0].u === 222, JSON.stringify(h.items));
+  const c = rmCleanSave({ items: [{ n: 1, id: 'sparkwand', r: 0, u: 7 }, { n: 2, id: 'sparkwand', r: 0, u: -1 }, { n: 3, id: 'sparkwand', r: 0, u: 2 ** 31 }, { n: 4, id: 'sparkwand', r: 0, u: 'x' }, { n: 5, id: 'sparkwand', r: 0 }] });
+  check('UR: the cleaner keeps a valid tag only; an untagged item stays exactly {n, id, r}', c.items[0].u === 7 && c.items.slice(1).every((x) => !('u' in x)) && JSON.stringify(c.items[4]) === '{"n":5,"id":"sparkwand","r":0}', JSON.stringify(c.items));
+  const o = rmCleanSaveOld({ items: [{ n: 1, id: 'sparkwand', r: 0, u: 7 }] });
+  check('UR: an old build loads a tagged item (uid unchanged, the tag just dropped)', o.items.length === 1 && o.items[0].n === 1 && o.nextUid === 2, JSON.stringify(o));
+}
+{ // I6-dust: the merge alone cannot undo a double spend (it floors at 0), which is why realm.js spends dust as a transaction (resync, price, write, undo)
+  const m = rmMergeSave({ items: [], dust: 10 }, { items: [], dust: 10 }, { base: 0, baseDust: 60, known: new Set() });
+  check('I6-dust: two stale spends of the same 50 dust floor at 0 in the merge (the transaction in RealmArena is what prevents it)', m.dust === 0, String(m.dust));
+  const src = realmSrc.slice(realmSrc.indexOf('\n  reforge(uid, affixId) {'), realmSrc.indexOf('\n  _forgeDom(root) {'));
+  const vb = realmSrc.slice(realmSrc.indexOf('\n  vendorBuy(id, t) {'), realmSrc.indexOf('\n  vendorBuyBackInfo(uid) {'));
+  check('I6-dust: reforge and vendorBuy resync before pricing and commit through _dustTxnCommit', /resyncSave\(\)[\s\S]*reforgeOptions\(uid\)[\s\S]*_dustTxnCommit\(undo\)/.test(src) && /resyncSave\(\)[\s\S]*vendorStock\(\)[\s\S]*_dustTxnCommit\(undo\)/.test(vb));
 }
 
 // ---------- run ----------

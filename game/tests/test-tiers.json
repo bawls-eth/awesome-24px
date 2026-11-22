@@ -1251,6 +1251,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "gear-dust-txn.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "town-postcards.test.js": {
     "class": "browser",
     "tier": "full"
