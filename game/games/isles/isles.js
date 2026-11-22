@@ -40,10 +40,17 @@
 // hot springs and campfires refill it; at 0 you walk at x0.8, never any damage) and air on mars (90 s, 120 s with an o2_tank; domes and
 // landing pads refill it; at 0 it costs 1 HP every 3 s after a 10 s warning, and it never takes your last HP), plus mars gravity (x1.15).
 // No meter ever touches items or tames. The swim rule keeps the X1 behaviour (open water needs a swim mount) with or without the flag.
+<<<<<<< HEAD
 // X7: the hero's HP rides along on every trip (additive save.hp; absent = full); sailing to an island you already have a spot on resumes
 // there with its fog (the Home dock always lands at the dock); locked sea chart rows show the unlock cost with have / need; Decor > Make
 // opens the Home decor panel (MMHomeBuild: decor crafted from the pack into the decor stock, additive save.home.made) with the tame pen
 // roster by name, and each resting tame wears a cached name tag.
+=======
+// AW2 (art wiring, provisional Codex batches): Hearth Isle chunks bake the b35 meadow-home tiles (variants + grass edge masks, MMIsleArt
+// pack 'meadow'; code palette per missing tile) with its garden plot / dock / boat props and the stable over the homestead pen; the b36
+// meadow tameables, the b32s stegolith (saddle overlay + seat) and the b31af glimmerfrog sleep / eat come through MMCreatureStrips (each
+// island preloads its own biome's strips plus your stable's); the craft panel shows the b34b item icons by id over the text label.
+>>>>>>> isles-aw2
 (function () {
   'use strict';
   const CRAFT = window.MMIsleCraft || null;
@@ -146,7 +153,16 @@
   // b30 jungle tile art (falls back to the code palette per tile) + on the jungle the b33 prop PNGs (fall back to the code props by id)
   // X1: b30 is jungle terrain only. Its id map and palette stop at the jungle ids, so on the reef / tundra / mars / home it painted every
   // pack tile as deep water; those islands bake with the pack palette (MMChunkBake + PAL) instead.
-  const IA = (ART && window.MMIsleArt && PACK_ID === 'jungle') ? window.MMIsleArt.create({ art: true, props: true }) : null;
+  // AW2: Hearth Isle (meadow) bakes the b35 tiles through the same layer, with the page's own names + pack palette for every other tile
+  const IA = !(ART && window.MMIsleArt) ? null : PACK_ID === 'jungle' ? window.MMIsleArt.create({ art: true, props: true })
+    : PACK_ID === 'meadow' ? window.MMIsleArt.create({ art: true, props: true, pack: 'meadow', names: NAMES, palette: Object.assign({}, window.MMIsleArt.SETS.meadow.palette, PAL) }) : null;
+  // the b35 boat rides at the dock (meadow art only): the first open-water tile next to it
+  if (IA && IA.pack === 'meadow' && world.dock) {
+    const dw = O.TERRAIN_ALL.deep_water, sw = O.TERRAIN_ALL.shallow_water;
+    const spot = [[1, 0], [-1, 0], [0, 1], [0, -1], [2, 0], [-2, 0], [0, 2], [0, -2]].map((d) => ({ x: world.dock.x + d[0], y: world.dock.y + d[1] }))
+      .find((q) => { const t = O.tileAt(world, q.x, q.y); return t === dw || t === sw; });
+    if (spot) pushProp(spot, 'boat');
+  }
   if (IA) IA.ready.then(() => { if (IA.active() || IA.propsActive()) chunkCache = CB.makeCache(LOW ? 12 : 24); });
   let bakesLeft = 0;
   const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
@@ -204,7 +220,7 @@
       if (px < -3 * TILE || py < -3 * TILE || px > CPX + 2 * TILE || py > CPX + 2 * TILE) continue;
       const art = pa ? window.MMIsleArt.propFor(pa, p.kind, p.x, p.y) : null;
       if (art) { propsBaked.png++; window.MMIsleArt.drawPropArt(c, art, p.kind, px, py, TILE); }
-      else if (p.x >= cx * CH && p.x < (cx + 1) * CH && p.y >= cy * CH && p.y < (cy + 1) * CH) { propsBaked.code++; drawProp(c, p.kind, px, py); }
+      else if (p.kind !== 'boat' && p.x >= cx * CH && p.x < (cx + 1) * CH && p.y >= cy * CH && p.y < (cy + 1) * CH) { propsBaked.code++; drawProp(c, p.kind, px, py); }
     }
     return cv;
   }
@@ -253,7 +269,7 @@
   const baker = CD.makeBaker(mk, 64);
   // b31a / b32 PNG strips: loaded once (the jungle loads all five species, other isles only the species in your stable), baked to native
   // size; a creature without a complete set (or ?art=0) keeps the code-drawn MMCreatureDraw bake above.
-  const STRIP_KINDS = MS ? (PACK_ID === 'jungle' ? MS.KINDS.slice() : MS.KINDS.filter((k) => tames.roster.some((t) => t.sp === k))) : [];
+  const STRIP_KINDS = MS ? MS.kindsFor(PACK_ID, tames.roster.map((t) => t.sp)) : [];
   const STRIPS = ART && MS && STRIP_KINDS.length ? MS.create({ kinds: STRIP_KINDS, create: mk }) : null;
   const stripKind = (k) => (MS && k && has(MS.SPECS, k) ? k : null);
   const stState = { dying: false, ko: false, eating: false, ph: '', moving: false }; // reused every frame
@@ -271,10 +287,10 @@
   // frame for a creature's current action: loops run on its own clock, a wind-up (roar / attack) is stretched over the wind-up time
   function stripFrame(c) {
     const a = c.act;
-    if (a === 'idle' || a === 'move' || a === 'sleep' || a === 'eat') return MS.frameIndex(a, c.t);
+    if (a === 'idle' || a === 'move' || a === 'sleep' || a === 'eat') return MS.frameIndex(a, c.t, c.sk);
     const el = simT - c.at0;
-    if (c.ph === 'wind') { const w = specOf(c.sp, c.kind).atk.windup || 0.5; return MS.frameIndex(a, el * MS.duration(a) / w); }
-    return MS.frameIndex(a, el);
+    if (c.ph === 'wind') { const w = specOf(c.sp, c.kind).atk.windup || 0.5; return MS.frameIndex(a, el * MS.duration(a, c.sk) / w, c.sk); }
+    return MS.frameIndex(a, el, c.sk);
   }
   // dying creatures play their death strip from a fixed pool (6 slots, reused)
   const deadPool = []; for (let i = 0; i < 6; i++) deadPool.push({ on: false, sk: '', x: 0, y: 0, dir: 0, t0: 0, id: '' });
@@ -1050,7 +1066,7 @@
       let top = sy - c.rad * 2.4;
       if (st) {
         const a = c.art;
-        if (a && a.shadow && !LOW) { const w = a.w / a.dpr; g.drawImage(a.shadow, sx - w / 2, sy - (a.shadow.height / a.dpr) / 2, w, a.shadow.height / a.dpr); }
+        if (a && a.shadow && !LOW) { const w0 = a.w / a.dpr, w = Math.min(w0, st.w * 0.8), h = a.shadow.height / a.dpr * w / w0; g.drawImage(a.shadow, sx - w / 2, sy - h / 2, w, h); } // AW2: shadow no wider than the strip
         STRIPS.draw(g, st, stripFrame(c), sx, sy, 1, MS.flipFor(c.act, c.dir));
         c.drawn = st.id; c.src = 'png';
         top = Math.min(top, sy - (st.ay - st.top) - 2);
@@ -1099,11 +1115,12 @@
     if (ride && !hero.dead) {
       lift = CMP.overlay(ride, heroMoving).dy;
       const rst = STRIPS && rideKind && STRIPS.has(rideKind) ? STRIPS.get(rideKind, heroMoving ? 'move' : 'idle', (rideDir = MS.dirCode(hero.face.x * 100, hero.face.y * 100, rideDir))) : null;
-      const sad = rst ? STRIPS.get(rideKind, MS.saddleFor(rideKind, heroMoving) || 'idle', rideDir) : null;
+      const sadAct = rst ? MS.saddleFor(rideKind, heroMoving) : null; // AW2: a mount without saddle strips (the strider) draws no overlay
+      const sad = sadAct ? STRIPS.get(rideKind, sadAct, rideDir) : null;
       if (rst) {
         // the mount's own strip, then the separate saddle overlay (same view, same frame), then the hero on the manifest seat
         const ra = heroMoving ? 'move' : 'idle', fr = MS.frameIndex(ra, hero.t), flip = rideDir === MS.LEFT;
-        if (rideArt && rideArt.shadow && !LOW) { const a = rideArt, w = a.w / a.dpr; g.drawImage(a.shadow, hx - w / 2, hy - (a.shadow.height / a.dpr) / 2, w, a.shadow.height / a.dpr); }
+        if (rideArt && rideArt.shadow && !LOW) { const a = rideArt, w0 = a.w / a.dpr, w = Math.min(w0, rst.w * 0.8), h = a.shadow.height / a.dpr * w / w0; g.drawImage(a.shadow, hx - w / 2, hy - h / 2, w, h); }
         STRIPS.draw(g, rst, fr, hx, hy, 1, flip);
         if (sad && sad !== rst) STRIPS.draw(g, sad, fr, hx, hy, 1, flip);
         rideDrawn = rst.id; saddleDrawn = sad && sad !== rst ? sad.id : '';
@@ -1239,10 +1256,10 @@
       const d = deadPool[i];
       if (!d.on) continue;
       const el = simT - d.t0;
-      if (el > MS.duration('death') + 0.35) { d.on = false; continue; }
+      if (el > MS.duration('death', d.sk) + 0.35) { d.on = false; continue; }
       const st = STRIPS.get(d.sk, 'death', d.dir);
       if (!st) { d.on = false; continue; }
-      STRIPS.draw(g, st, MS.frameIndex('death', el), d.x - camX, d.y - camY, 1, MS.flipFor('death', d.dir));
+      STRIPS.draw(g, st, MS.frameIndex('death', el, d.sk), d.x - camX, d.y - camY, 1, MS.flipFor('death', d.dir));
       if (d.id !== st.id) { d.id = st.id; deathsShown++; }
     }
   }
@@ -1300,8 +1317,13 @@
     lastAct = null; dirty = true; persist(); refreshDecor(); refreshGuests(); toast('Undone.');
     return true;
   }
-  // decor art: one small canvas per kind, baked once
+  // decor art: one small canvas per kind, baked once (AW2: kinds with a b35 prop by id - the pen's stable - draw that PNG instead)
   const decorArt = {};
+  let homeProps = null;
+  if (HOME && IA && IA.pack === 'meadow') IA.ready.then(() => {
+    const pp = IA.propsActive() ? IA.props() : null;
+    if (pp) { homeProps = {}; HS.ORDER.forEach((k) => { const a = window.MMIsleArt.propFor(pp, k, 0, 0); if (a) homeProps[k] = a; }); }
+  });
   function bakeDecor(kind) {
     if (decorArt[kind]) return decorArt[kind];
     const k = HS.KINDS[kind], s = Math.round(TILE * DPR), cv = mk(s, s), c = cv.getContext('2d');
@@ -1458,6 +1480,15 @@
   // an island is open by default, through `unlock`, or because you have already been there (nobody loses a trip they had)
   const isleOpen = (id) => OPEN_ISLES.indexOf(id) >= 0 || ISL.isUnlocked(save, id) || (Array.isArray(save.visited) && save.visited.indexOf(id) >= 0);
   let craftDirty = false;
+  // AW2: b34b crafting icons by recipe id (MMIsleArt.iconUrl), each loaded once; until one loads (and always with ?art=0) the text label shows
+  const craftIcon = {};
+  if (ART && CRAFT && window.MMIsleArt && window.MMIsleArt.iconUrl) CRAFT.IDS.forEach((id) => {
+    const u = window.MMIsleArt.iconUrl(id);
+    if (!u) return;
+    const im = new Image();
+    im.onload = () => { if (!(im.naturalWidth > 0)) return; craftIcon[id] = im.src; if (panelKind === 'craft') craftDirty = true; };
+    im.src = u;
+  });
   function doCraft(id) {
     if (!CRAFT) return { ok: false, why: 'off' };
     const c = CRAFT.canCraft(save.inv, id);
@@ -1592,8 +1623,10 @@
       const g0 = save.home.grid;
       for (let i = 0; i < g0.length; i++) {
         const sx = (homeO.x + g0[i][0]) * TILE - camX, sy = (homeO.y + g0[i][1]) * TILE - camY;
-        if (sx < -TILE || sy < -TILE || sx > VW || sy > VH) continue;
-        g.drawImage(bakeDecor(g0[i][2]), sx, sy, TILE, TILE);
+        if (sx < -3 * TILE || sy < -TILE || sx > VW + 2 * TILE || sy > VH + 2 * TILE) continue;
+        const pa = homeProps ? homeProps[g0[i][2]] : null; // AW2: the pen shows the b35 stable (looked up once, no per-frame work)
+        if (pa) window.MMIsleArt.drawPropArt(g, pa, g0[i][2], sx, sy, TILE);
+        else g.drawImage(bakeDecor(g0[i][2]), sx, sy, TILE, TILE);
       }
       if (build) { g.strokeStyle = 'rgba(255,244,214,0.55)'; g.lineWidth = 2; g.strokeRect(homeO.x * TILE - camX, homeO.y * TILE - camY, HS.GRID_W * TILE, HS.GRID_W * TILE); }
       for (let i = 0; i < guests.length; i++) {
@@ -1747,7 +1780,9 @@
         const r = CRAFT.get(id), can = CRAFT.canCraft(save.inv, id), own = invCount(id);
         const row = el('div', can.ok ? 'recipe ready' : 'recipe'); row.dataset.recipe = id;
         const info = el('div', 'rc-info');
-        info.appendChild(el('div', 'rc-name', itemName(id) + (own ? ' (have ' + own + ')' : '')));
+        const nm = el('div', 'rc-name', itemName(id) + (own ? ' (have ' + own + ')' : ''));
+        if (craftIcon[id]) { const im = document.createElement('img'); im.className = 'rc-ico'; im.alt = ''; im.width = 32; im.height = 32; im.src = craftIcon[id]; nm.insertBefore(im, nm.firstChild); }
+        info.appendChild(nm);
         const isle = has(UNLOCK_BY_ITEM, id) ? UNLOCK_BY_ITEM[id] : '';
         info.appendChild(el('div', 'rc-note', isle ? (isleOpen(isle) ? isleName(isle) + ' is open' : 'opens ' + isleName(isle)) : r.note));
         const need = el('ul', 'rc-need');
@@ -2203,6 +2238,8 @@
       stripsReady: () => (STRIPS ? STRIPS.ready.then(() => ({ on: true, kinds: STRIPS.kinds.filter((k) => STRIPS.has(k)), count: STRIPS.count() })) : { on: false, kinds: [], count: 0 }),
       propsReady: () => (IA ? IA.ready.then(() => ({ props: IA.propsActive() ? Object.keys(IA.props()).sort() : [], tiles: IA.active() })) : { props: [], tiles: false }),
       propsBaked: () => Object.assign({}, propsBaked),
+      craftIcons: () => Object.keys(craftIcon).sort(),
+      isleArt: () => (IA ? IA.ready.then(() => ({ pack: IA.pack, tiles: IA.active(), props: IA.propsActive() ? Object.keys(IA.props()).sort() : [] })) : { pack: '', tiles: false, props: [] }),
       deathsShown: () => deathsShown,
       render: () => { render(); return true; },
       face: (x, y) => { const l = Math.hypot(x, y) || 1; hero.face.x = x / l; hero.face.y = y / l; return true; },

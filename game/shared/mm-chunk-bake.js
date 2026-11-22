@@ -97,7 +97,12 @@
   // bakeChunk(ctx, terrain, w, cx, cy, palette, tileArt, opts)
   //  terrain: Uint8Array/Array of terrain ids, w tiles wide (height = terrain.length / w unless opts.h)
   //  palette: {terrainName:[base,shade1,shade2,edge]}   tileArt: optional {id:[image,...]} (used instead of the pattern when drawImage exists)
-  //  opts: {names:[id->name] (default the 18 realm names), h, tile (default 32)}
+  //  opts: {names:[id->name] (default the 18 realm names), h, tile (default 32),
+  //         edges: optional {id: {imgs:[16 masks], blend:{id:1}}}: a tile with art whose 4-neighbour set is not all the same terrain, and
+  //         whose differing neighbours are all in its blend set, draws edges[id].imgs[mask] (mask bits N 1, E 2, S 4, W 8 = neighbour is the
+  //         same terrain; off-map counts as the same) instead of a variant. Missing mask image -> the variant. A 16-mask set has grass in
+  //         every corner, so where two connected sides meet over a same-terrain diagonal (a wide path) that quarter is repainted from the
+  //         variant. A code-drawn tile skips its 2 px edge line toward a neighbour whose edge masks blend into it (no box round a path).}
   // Returns the number of tiles painted (0 when ctx is unusable). Never throws.
   function bakeChunk(ctx, terrain, w, cx, cy, palette, tileArt, opts) {
     try {
@@ -113,6 +118,10 @@
       const entry = (t) => { const nm = names[t]; return (typeof nm === 'string' && has(pal, nm) && nm !== '__fallback') ? pal[nm] : pal.__fallback; };
       const deep = has(pal, 'deep_water') ? pal.deep_water : pal.__fallback;
       const art = isObj(tileArt) && typeof ctx.drawImage === 'function' ? tileArt : null;
+      const edges = art && isObj(o.edges) ? o.edges : null;
+      // terrain at (x, y), `d` off the map; soft(v, t): neighbour v has loaded art + edge masks that blend into t
+      const at = (x, y, d) => (x >= 0 && y >= 0 && x < ww && y < wh ? terrain[y * ww + x] | 0 : d);
+      const soft = (v, t) => !!edges && has(edges, v) && isObj(edges[v].blend) && has(edges[v].blend, t) && Array.isArray(art[v]) && art[v].length > 0;
       const x0 = cx * CH, y0 = cy * CH;
       let painted = 0;
       for (let ty = 0; ty < CH; ty++) {
@@ -123,15 +132,35 @@
           const p = entry(t);
           const imgs = art && Array.isArray(art[t]) ? art[t].filter(Boolean) : null;
           if (imgs && imgs.length) {
-            ctx.drawImage(imgs[Math.floor(hash(wx, wy, 91) * imgs.length)], px, py, T, T);
+            const ed = edges && has(edges, t) ? edges[t] : null;
+            const vimg = imgs[Math.floor(hash(wx, wy, 91) * imgs.length)];
+            let eimg = null, mask = 15;
+            if (ed && Array.isArray(ed.imgs) && isObj(ed.blend)) {
+              const n = at(wx, wy - 1, t), e = at(wx + 1, wy, t), s = at(wx, wy + 1, t), wv = at(wx - 1, wy, t);
+              mask = (n === t ? 1 : 0) | (e === t ? 2 : 0) | (s === t ? 4 : 0) | (wv === t ? 8 : 0);
+              if (mask !== 15 && (n === t || has(ed.blend, n)) && (e === t || has(ed.blend, e)) && (s === t || has(ed.blend, s)) && (wv === t || has(ed.blend, wv))) eimg = ed.imgs[mask] || null;
+            }
+            ctx.drawImage(eimg || vimg, px, py, T, T);
+            if (eimg) {
+              // inner corners: two connected sides over a same-terrain diagonal -> that quarter from the variant (no grass notch)
+              const hq = T / 2, iw = vimg.naturalWidth || vimg.width || T, ih = vimg.naturalHeight || vimg.height || T;
+              for (let q = 0; q < 4; q++) {
+                const dx = q === 0 || q === 1 ? 1 : -1, dy = q === 1 || q === 2 ? 1 : -1;
+                const sideA = dy < 0 ? 1 : 4, sideB = dx > 0 ? 2 : 8;
+                if ((mask & sideA) && (mask & sideB) && at(wx + dx, wy + dy, t) === t) {
+                  const ox = dx > 0 ? hq : 0, oy = dy > 0 ? hq : 0;
+                  ctx.drawImage(vimg, ox * iw / T, oy * ih / T, iw / 2, ih / 2, px + ox, py + oy, hq, hq);
+                }
+              }
+            }
           } else {
             ctx.fillStyle = p[0]; ctx.fillRect(px, py, T, T);
             speckle(ctx, p, wx, wy, px, py);
             ctx.fillStyle = p[3];
-            if (wx + 1 < ww && terrain[wy * ww + wx + 1] !== t) ctx.fillRect(px + T - 2, py, 2, T);
-            if (wx > 0 && terrain[wy * ww + wx - 1] !== t) ctx.fillRect(px, py, 2, T);
-            if (wy + 1 < wh && terrain[(wy + 1) * ww + wx] !== t) ctx.fillRect(px, py + T - 2, T, 2);
-            if (wy > 0 && terrain[(wy - 1) * ww + wx] !== t) ctx.fillRect(px, py, T, 2);
+            if (wx + 1 < ww && terrain[wy * ww + wx + 1] !== t && !soft(terrain[wy * ww + wx + 1], t)) ctx.fillRect(px + T - 2, py, 2, T);
+            if (wx > 0 && terrain[wy * ww + wx - 1] !== t && !soft(terrain[wy * ww + wx - 1], t)) ctx.fillRect(px, py, 2, T);
+            if (wy + 1 < wh && terrain[(wy + 1) * ww + wx] !== t && !soft(terrain[(wy + 1) * ww + wx], t)) ctx.fillRect(px, py + T - 2, T, 2);
+            if (wy > 0 && terrain[(wy - 1) * ww + wx] !== t && !soft(terrain[(wy - 1) * ww + wx], t)) ctx.fillRect(px, py, T, 2);
           }
           painted++;
         }

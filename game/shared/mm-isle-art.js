@@ -2,6 +2,10 @@
 // Sits on top of MMChunkBake: it loads the tile images once, maps pack terrain ids (appended ids 22..33) to the b30 tile ids
 // (tile_<terrain>_<a..d>) and bakes chunks with MMChunkBake.bakeChunk, which picks the variant by an integer hash of the world tile coords.
 // Anything missing (image failed, art:false, no Image/drawImage) falls back to the code-drawn palette, so the island never goes blank.
+// b35 meadow-home (Hearth Isle, provisional): 4 home terrains x variants a..d plus 16 edge masks each (tile_<terrain>_edge_NN, mask bits
+// N 1 / E 2 / S 4 / W 8 = neighbour is the same terrain), blended into grass (tilled_wet into tilled_soil); and its props (garden plots,
+// dock, stable, nest, workbench, launch pad, boat). opts.pack picks the set ('jungle' default = b30 + b33, 'meadow' = b35); a tile with
+// no loaded art bakes with the code palette. b34b crafting icons: ITEM_ICONS / iconUrl(id) for the craft panel (text label fallback).
 // No Firebase, no network except the PNG loads. Browser: window.MMIsleArt (needs mm-chunk-bake.js first). Node: require().
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory(require('./mm-chunk-bake.js'));
@@ -24,10 +28,54 @@
   const PALETTE = Object.assign({}, Bake.BIOME_PALETTES.jungle, PACK_PALETTE);
 
   const tileId = (terrain, v) => 'tile_' + terrain + '_' + v;
-  // names (optional id->name list, default NAMES) -> { terrainId: terrainName } for the 12 b30 terrains
-  function idMap(names) {
+  const edgeId = (terrain, m) => 'tile_' + terrain + '_edge_' + (m < 10 ? '0' : '') + m;
+
+  // ---- b35 meadow-home tile set (Hearth Isle only). pack terrain name -> b35 terrain name (equal today; the table keeps it explicit
+  // like the jungle mapping) and the terrains each one's edge masks blend into.
+  const MEADOW_BASE = '../../assets/arcane/b35-meadow-home/';
+  const GRASSY = ['grass', 'tall_grass', 'flower_meadow'];
+  const MEADOW_TILES = { tilled_soil: 'tilled_soil', tilled_wet: 'tilled_wet', clover_patch: 'clover_patch', garden_path: 'garden_path' };
+  const MEADOW_BLEND = { tilled_soil: GRASSY, tilled_wet: ['tilled_soil'], clover_patch: GRASSY, garden_path: GRASSY };
+  // code fallback for the four (base, shade, shade, edge) on top of the home palette; the page passes its own pack palette over this
+  const MEADOW_PALETTE = Object.assign({}, Bake.BIOME_PALETTES.home, {
+    tilled_soil: ['#6b4a2f', '#5f4129', '#775336', '#4a3320'], tilled_wet: ['#4f3622', '#45301e', '#5a3e28', '#33231a'],
+    clover_patch: ['#4f9a3f', '#468c38', '#5aa84a', '#356b2b'], garden_path: ['#cbb890', '#bfac84', '#d6c49d', '#9a8a66'], dock_planks: ['#8a5a3b', '#7c5034', '#966444', '#5a3a22']
+  });
+  // b35 edge masks paint their grass in 3 exact colours (base, light, dark) that are darker than Hearth Isle's code grass, which shows as
+  // dark halos round every patch. With a canvas factory the loader swaps exactly those 3 colours (they never occur in a b35 variant) for
+  // palette.grass [base, shade2, edge] once per edge image; without one (node, a failed getImageData) the PNG is used as delivered.
+  const MEADOW_GRASS = [[0x36, 0x6f, 0x3d, 0], [0x4f, 0x8b, 0x46, 2], [0x26, 0x52, 0x31, 3]];
+  const SETS = {
+    jungle: { base: BASE, tiles: null, terrains: TERRAINS, palette: PALETTE, edges: null, grass: null },
+    meadow: { base: MEADOW_BASE, tiles: MEADOW_TILES, terrains: Object.keys(MEADOW_TILES), palette: MEADOW_PALETTE, edges: MEADOW_BLEND, grass: MEADOW_GRASS }
+  };
+  const rgbOf = (hex) => { const h = String(hex).replace('#', ''); const f = h.length === 3 ? h.split('').map((c) => c + c).join('') : h; return [0, 2, 4].map((i) => parseInt(f.slice(i, i + 2), 16)); };
+  // regrass(im, from, pal, create) -> a canvas with the `from` colours swapped for palette.grass entries, or the image itself
+  function regrass(im, from, pal, create) {
+    try {
+      const to = pal && Array.isArray(pal.grass) ? pal.grass : null;
+      if (!from || !to || typeof create !== 'function') return im;
+      const w = im.naturalWidth || im.width, h = im.naturalHeight || im.height;
+      const cv = create(w, h), g = cv && cv.getContext && cv.getContext('2d');
+      if (!g || typeof g.getImageData !== 'function') return im;
+      g.drawImage(im, 0, 0);
+      const d = g.getImageData(0, 0, w, h), px = d.data, map = from.map((f) => [f[0], f[1], f[2]].concat(rgbOf(to[f[3]])));
+      let n = 0;
+      for (let i = 0; i < px.length; i += 4) {
+        if (px[i + 3] === 0) continue;
+        for (let k = 0; k < map.length; k++) { const m = map[k]; if (px[i] === m[0] && px[i + 1] === m[1] && px[i + 2] === m[2]) { px[i] = m[3]; px[i + 1] = m[4]; px[i + 2] = m[5]; n++; break; } }
+      }
+      g.putImageData(d, 0, 0);
+      cv.regrassed = n;
+      return cv;
+    } catch (e) { return im; }
+  }
+  const setOf = (pack) => (typeof pack === 'string' && Object.prototype.hasOwnProperty.call(SETS, pack) ? SETS[pack] : SETS.jungle);
+  const artName = (set, t) => (set.tiles ? set.tiles[t] : t);
+  // names (optional id->name list, default NAMES) -> { terrainId: terrainName } for the set's terrains (default the 12 b30 jungle ones)
+  function idMap(names, pack) {
     const list = Array.isArray(names) ? names : NAMES, out = {};
-    TERRAINS.forEach((t) => { const i = list.indexOf(t); if (i >= 0) out[i] = t; });
+    setOf(pack).terrains.forEach((t) => { const i = list.indexOf(t); if (i >= 0) out[i] = t; });
     return out;
   }
   function defaultLoadImage(url) {
@@ -38,52 +86,69 @@
       im.src = url;
     });
   }
-  // load(opts) -> Promise<{ [terrainId]: [image, ...] } | null>. opts: {base, names, loadImage(url)->Promise<image|null>}
+  // load(opts) -> Promise<{ [terrainId]: [image, ...] } | null>. opts: {base, names, pack, loadImage(url)->Promise<image|null>,
+  //   palette + create (canvas factory): the meadow edge-mask grass is recoloured to palette.grass}
   // Never rejects; a terrain with no loaded variant is simply absent (the bake falls back for it). Resolves null when nothing loaded.
+  // A set with edge masks (meadow) also loads tile_<t>_edge_00..15 and puts them on the result's non-enumerable `edges`:
+  // {terrainId: {imgs: [16], blend: {terrainId: 1}}} (the MMChunkBake opts.edges shape); a terrain whose variants all failed gets none.
   function load(opts) {
     const o = opts && typeof opts === 'object' ? opts : {};
-    const base = typeof o.base === 'string' ? o.base : BASE;
+    const set = setOf(o.pack);
+    const base = typeof o.base === 'string' ? o.base : set.base;
     const li = typeof o.loadImage === 'function' ? o.loadImage : defaultLoadImage;
-    const map = idMap(o.names), art = {}, jobs = [];
+    const names = Array.isArray(o.names) ? o.names : NAMES;
+    const map = idMap(names, o.pack), art = {}, edge = {}, jobs = [];
+    const get = (url, put) => jobs.push(Promise.resolve().then(() => li(url)).then((im) => { if (im) put(im); }, () => {}));
     Object.keys(map).forEach((id) => {
       art[id] = [];
-      VARIANTS.forEach((v, k) => {
-        jobs.push(Promise.resolve().then(() => li(base + 'tiles/' + tileId(map[id], v) + '.png')).then((im) => { if (im) art[id][k] = im; }, () => {}));
-      });
+      const nm = artName(set, map[id]);
+      VARIANTS.forEach((v, k) => get(base + 'tiles/' + tileId(nm, v) + '.png', (im) => { art[id][k] = im; }));
+      if (set.edges && set.edges[map[id]]) {
+        const blend = {};
+        set.edges[map[id]].forEach((b) => { const i = names.indexOf(b); if (i >= 0) blend[i] = 1; });
+        edge[id] = { imgs: new Array(16).fill(null), blend: blend };
+        const fix = set.grass && set.edges[map[id]].indexOf('grass') >= 0 ? set.grass : null;
+        for (let m = 0; m < 16; m++) get(base + 'tiles/' + edgeId(nm, m) + '.png', (im) => { edge[id].imgs[m] = fix ? regrass(im, fix, o.palette || set.palette, o.create) : im; });
+      }
     });
     return Promise.all(jobs).then(() => {
       let any = false;
-      Object.keys(art).forEach((id) => { art[id] = art[id].filter(Boolean); if (art[id].length) any = true; else delete art[id]; });
-      return any ? art : null;
+      Object.keys(art).forEach((id) => { art[id] = art[id].filter(Boolean); if (art[id].length) any = true; else { delete art[id]; delete edge[id]; } });
+      if (!any) return null;
+      if (set.edges) Object.defineProperty(art, 'edges', { value: edge, enumerable: false });
+      return art;
     });
   }
 
   // create(opts) -> isle art baker.
-  //  opts: {art: false to force the code-drawn fallback, base, names, palette, loadImage, create (canvas factory), cap (cache size)}
+  //  opts: {art: false to force the code-drawn fallback, pack ('jungle' | 'meadow'), base, names, palette, loadImage, create (canvas
+  //         factory), cap (cache size), props (also load the set's prop PNGs), propBase}
   //  .ready: Promise resolving to this once images are loaded (or failed). .active(): true when real art is in use.
   //  .chunk(terrain, w, cx, cy): cached baked canvas (null when no canvas is available). Bakes with the art that is loaded NOW.
   //  .bake(ctx, terrain, w, cx, cy): paints straight onto a ctx (returns tiles painted).
   function create(opts) {
     const o = opts && typeof opts === 'object' ? opts : {};
     const names = Array.isArray(o.names) ? o.names : NAMES;
-    const palette = o.palette || PALETTE;
+    const set = setOf(o.pack), pack = set === SETS.meadow ? 'meadow' : 'jungle';
+    const palette = o.palette || set.palette;
     const cache = Bake.makeCache(o.cap);
     let art = null, props = null;
+    const bo = { names: names, edges: null };
     const self = {
-      palette: palette, names: names,
+      palette: palette, names: names, pack: pack,
       active: () => !!art,
       props: () => props,
       propsActive: () => !!props,
-      bake: (ctx, terrain, w, cx, cy) => Bake.bakeChunk(ctx, terrain, w, cx, cy, palette, art, { names: names }),
-      chunk: (terrain, w, cx, cy) => cache.get(cx + ',' + cy, () => Bake.bakeChunkCanvas(o.create, terrain, w, cx, cy, palette, art, { names: names })),
+      bake: (ctx, terrain, w, cx, cy) => Bake.bakeChunk(ctx, terrain, w, cx, cy, palette, art, bo),
+      chunk: (terrain, w, cx, cy) => cache.get(cx + ',' + cy, () => Bake.bakeChunkCanvas(o.create, terrain, w, cx, cy, palette, art, bo)),
       clear: () => cache.clear(),
       cacheSize: () => cache.size()
     };
     // props load beside the tiles only when asked (opts.props), so callers that bake terrain only keep their exact request set
     self.ready = o.art === false ? Promise.resolve(self)
-      : Promise.all([load({ base: o.base, names: names, loadImage: o.loadImage }),
-        o.props ? loadProps({ propBase: o.propBase, loadImage: o.loadImage }) : null])
-        .then((r) => { art = r[0]; props = r[1] || null; cache.clear(); return self; }, () => self);
+      : Promise.all([load({ base: o.base, names: names, pack: pack, loadImage: o.loadImage, palette: palette, create: o.create || Bake.defaultCreate }),
+        o.props ? loadProps({ propBase: o.propBase, pack: pack, loadImage: o.loadImage }) : null])
+        .then((r) => { art = r[0]; bo.edges = art && art.edges ? art.edges : null; props = r[1] || null; cache.clear(); return self; }, () => self);
     return self;
   }
 
@@ -96,21 +161,37 @@
   // pack prop id -> b33 ids (a list picks one by the world tile hash, so a forest mixes both trees)
   const PROP_ALIAS = { jungle_tree: ['jungle_tree_a', 'jungle_tree_b'] };
   const HANGING = { hanging_vine: true };
-  // loadProps(opts) -> Promise<{id: {img, w, h, ax, ay}} | null>; never rejects, a failed PNG is simply absent (the code prop stays)
+  // b35 meadow-home props [w, h, ax, ay, frames] (frames > 1: a horizontal strip; the bake draws frame 0). Pack / page ids -> b35 ids:
+  // the pack `garden_plot` prop mixes the four growth stages by tile hash, the homestead `pen` shows the stable.
+  const MEADOW_PROP_BASE = MEADOW_BASE + 'props/';
+  const MEADOW_PROPS = {
+    stable: [96, 64, 48, 52, 1], nest: [32, 32, 16, 26, 1], garden_plot_s1: [32, 32, 16, 26, 1], garden_plot_s2: [32, 32, 16, 26, 1], garden_plot_s3: [32, 32, 16, 26, 1],
+    garden_plot_s4: [32, 32, 16, 26, 1], dock: [64, 32, 32, 26, 1], launch_pad: [96, 96, 48, 79, 1], workbench_isle: [32, 32, 16, 26, 1], boat: [64, 32, 32, 26, 2]
+  };
+  const MEADOW_ALIAS = { garden_plot: ['garden_plot_s1', 'garden_plot_s2', 'garden_plot_s3', 'garden_plot_s4'], pen: ['stable'], workbench: ['workbench_isle'] };
+  const PROP_SETS = { jungle: { base: PROP_BASE, props: PROPS, alias: PROP_ALIAS }, meadow: { base: MEADOW_PROP_BASE, props: MEADOW_PROPS, alias: MEADOW_ALIAS } };
+  // loadProps(opts) -> Promise<{id: {img, w, h, ax, ay, frames}} | null>; never rejects, a failed PNG is simply absent (the code prop stays).
+  // opts: {pack ('jungle' b33 default | 'meadow' b35), propBase, loadImage}. The result carries its alias table (non-enumerable).
   function loadProps(opts) {
     const o = opts && typeof opts === 'object' ? opts : {};
-    const base = typeof o.propBase === 'string' ? o.propBase : PROP_BASE;
+    const ps = o.pack === 'meadow' ? PROP_SETS.meadow : PROP_SETS.jungle;
+    const base = typeof o.propBase === 'string' ? o.propBase : ps.base;
     const li = typeof o.loadImage === 'function' ? o.loadImage : defaultLoadImage;
     const out = {};
-    return Promise.all(Object.keys(PROPS).map((id) => Promise.resolve().then(() => li(base + id + '.png')).then((im) => {
-      if (im) { const p = PROPS[id]; out[id] = { img: im, w: p[0], h: p[1], ax: p[2], ay: p[3] }; }
-    }, () => {}))).then(() => (Object.keys(out).length ? out : null));
+    return Promise.all(Object.keys(ps.props).map((id) => Promise.resolve().then(() => li(base + id + '.png')).then((im) => {
+      if (im) { const p = ps.props[id]; out[id] = { img: im, w: p[0], h: p[1], ax: p[2], ay: p[3], frames: p[4] > 1 ? p[4] : 1 }; }
+    }, () => {}))).then(() => {
+      if (!Object.keys(out).length) return null;
+      Object.defineProperty(out, 'alias', { value: ps.alias, enumerable: false });
+      return out;
+    });
   }
-  // propFor(props, kind, wx, wy) -> the loaded b33 prop for a pack prop id at world tile (wx, wy), or null (draw the code prop)
+  // propFor(props, kind, wx, wy) -> the loaded prop for a pack prop id at world tile (wx, wy), or null (draw the code prop)
   function propFor(props, kind, wx, wy) {
     if (!props || typeof kind !== 'string') return null;
-    if (Object.prototype.hasOwnProperty.call(PROP_ALIAS, kind)) {
-      const list = PROP_ALIAS[kind].filter((id) => !!props[id]);
+    const alias = props.alias || PROP_ALIAS;
+    if (Object.prototype.hasOwnProperty.call(alias, kind)) {
+      const list = alias[kind].filter((id) => !!props[id]);
       return list.length ? props[list[Math.floor(Bake.hash(wx | 0, wy | 0, 57) * list.length)]] : null;
     }
     return Object.prototype.hasOwnProperty.call(props, kind) ? props[kind] : null;
@@ -120,9 +201,16 @@
     if (!ctx || !p || typeof ctx.drawImage !== 'function') return false;
     const T = tile > 0 ? tile : Bake.TILE;
     const x = Math.round(px + T / 2 - p.ax), y = Math.round(HANGING[kind] ? py - p.ay + 2 : py + T - 2 - p.ay);
-    ctx.drawImage(p.img, x, y, p.w, p.h);
+    if (p.frames > 1) ctx.drawImage(p.img, 0, 0, p.w, p.h, x, y, p.w, p.h); // a strip (the boat): its first frame
+    else ctx.drawImage(p.img, x, y, p.w, p.h);
     return true;
   }
+
+  // ---- b34b crafting icons (32x32 items, provisional): recipe / item id -> icon PNG. Ids without an icon keep the text label.
+  const ICON_BASE = '../../assets/arcane/b34b-crafting-icons/items/';
+  const ITEM_ICONS = ['saddle_tusktop', 'saddle_stegolith', 'saddle_tyrant', 'saddle_shagtusk', 'saddle_sabrefang', 'saddle_tidesteed', 'saddle_skimray',
+    'saddle_strider', 'saddle_grazer', 'saddle_titan', 'raft', 'rocket_core', 'warm_cloak', 'o2_tank', 'gear_dust'];
+  const iconUrl = (id) => (typeof id === 'string' && ITEM_ICONS.indexOf(id) >= 0 ? ICON_BASE + 'icon_' + id + '.png' : null);
 
   // X6: the b33 boss arena ring (128x128, centre anchor). It is not delivered yet, so the page draws its code ring; loadArena() only
   // requests the PNG once ARENA.delivered is true (no 404s in the console), or when a caller forces it.
@@ -136,6 +224,7 @@
     return Promise.resolve().then(() => li(base + ARENA.id + '.png')).then((im) => (im ? { img: im, w: ARENA.w, h: ARENA.h, ax: ARENA.ax, ay: ARENA.ay } : null), () => null);
   }
 
-  return { ARENA: ARENA, loadArena: loadArena, PROP_BASE: PROP_BASE, PROPS: PROPS, PROP_ALIAS: PROP_ALIAS, loadProps: loadProps, propFor: propFor, drawPropArt: drawPropArt,
+  return { SETS: SETS, MEADOW_BASE: MEADOW_BASE, MEADOW_TILES: MEADOW_TILES, MEADOW_BLEND: MEADOW_BLEND, MEADOW_PALETTE: MEADOW_PALETTE, MEADOW_PROPS: MEADOW_PROPS,
+    MEADOW_ALIAS: MEADOW_ALIAS, MEADOW_GRASS: MEADOW_GRASS, regrass: regrass, edgeId: edgeId, ICON_BASE: ICON_BASE, ITEM_ICONS: ITEM_ICONS, iconUrl: iconUrl, ARENA: ARENA, loadArena: loadArena, PROP_BASE: PROP_BASE, PROPS: PROPS, PROP_ALIAS: PROP_ALIAS, loadProps: loadProps, propFor: propFor, drawPropArt: drawPropArt,
     BASE: BASE, VARIANTS: VARIANTS, NAMES: NAMES, TERRAINS: TERRAINS, PALETTE: PALETTE, tileId: tileId, idMap: idMap, load: load, create: create };
 });
