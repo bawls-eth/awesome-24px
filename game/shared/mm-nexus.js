@@ -30,6 +30,7 @@
     { id: 'wanderer', npc: 'npc_wanderer', role: 'rumours', x: 6, y: 9 },
     { id: 'oracle', npc: 'npc_ghost_guide', role: 'oracle', x: 34, y: 9 },
   ];
+  const TRIAL = { x: 35, y: 24 }; // RE2: the Trial of Six gate tile (walkable, clear of the ring, NPCs and props)
   const TORCH = ['prop_torch_post_f1', 'prop_torch_post_f2', 'prop_torch_post_f3', 'prop_torch_post_f4'];
 
   function deepFreeze(o) { if (o && typeof o === 'object' && !Object.isFrozen(o)) { Object.freeze(o); Object.keys(o).forEach((k) => deepFreeze(o[k])); } return o; }
@@ -53,7 +54,10 @@
     const blocked = [];
     props.forEach((p) => { if (p.solid) for (let dy = 0; dy < p.h; dy++) for (let dx = 0; dx < p.w; dx++) blocked.push((p.ty - (p.h >> 1) + dy) * W + (p.tx - (p.w >> 1) + dx)); });
     const spawn = { tx: 20, ty: 19, x: 20 * TILE + TILE / 2, y: 19 * TILE + TILE / 2, art: 'spawn_pad' };
-    return deepFreeze({ version: 1, w: W, h: H, tile: TILE, noEnemies: true, enemies: [], spawn: spawn, fountain: props[0], props: props, npcs: npcs, vendorSlots: npcs.filter((n) => n.vendor), portals: portals, blocked: blocked });
+    // RE2 (additive): the "Trial of Six" boss-rush gate in the south-east corner, kept OUT of `portals` (the six-door ring stays as it is).
+    // No art id (the page draws it in code), heroes Lv 20+ (MMEndgame.RUSH.minLevel; the page checks it).
+    const trial = { id: 'trial', art: null, dest: 'rush', label: 'Trial of Six', minLevel: 20, tx: TRIAL.x, ty: TRIAL.y, x: TRIAL.x * TILE + TILE / 2, y: TRIAL.y * TILE + TILE / 2, r: 40 };
+    return deepFreeze({ version: 1, w: W, h: H, tile: TILE, noEnemies: true, enemies: [], spawn: spawn, fountain: props[0], props: props, npcs: npcs, vendorSlots: npcs.filter((n) => n.vendor), portals: portals, blocked: blocked, trial: trial });
   }
 
   let cache = null;
@@ -79,6 +83,7 @@
     return best;
   }
   function portalAt(x, y) { return hit(layout().portals, x, y); }
+  function trialAt(x, y) { return hit([layout().trial], x, y); } // RE2: the Trial of Six gate, or null
   function npcAt(x, y) { return hit(layout().npcs, x, y); }
   // VN: the NPCs that run the vendor / forge stall ('shop': the fixed T1-T3 dust list + buy-back; 'forge': the same stall, opening the Forge).
   // The stall itself (prices, stock) lives in MMGearForge; the plaza only says who keeps it.
@@ -93,5 +98,5 @@
     L.props.forEach((p) => { s.add(p.art); (p.frames || []).forEach((f) => s.add(f)); });
     return Array.from(s);
   }
-  return { W, H, TILE, layout, walkable, clampPoint, portalAt, npcAt, portalById, artIds, stallNpcs };
+  return { W, H, TILE, layout, walkable, clampPoint, portalAt, npcAt, portalById, artIds, stallNpcs, trialAt };
 });
