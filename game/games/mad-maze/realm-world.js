@@ -1587,7 +1587,7 @@
       if (!nxStallOn()) { el.classList.add('hidden'); return; }
       const sv = arena.save; const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
       const head = mk('div', 'nx-st-head'); head.appendChild(mk('b', '', 'Vendor stall'));
-      head.appendChild(nxStallBtn('Close stall', 'Close the vendor stall', () => { nxStallAsk = 0; el.classList.add('hidden'); }));
+      head.appendChild(nxStallBtn('Close stall', 'Close the vendor stall', () => nxStallHide()));
       el.appendChild(head);
       el.appendChild(mk('p', 'nx-st-note', 'Fixed prices in dust. The shelf is the same every day.'));
       el.appendChild(mk('p', 'nx-st-wallet', 'You have ' + (sv.dust || 0) + ' dust · ' + sv.items.length + ' items carried'));
@@ -1618,7 +1618,8 @@
       el.appendChild(back);
     }
     function nxStallOpen() { nxBuild(); if (!nxStallOn()) return false; nxStallAsk = 0; nxDom.board.classList.add('hidden'); nxStallRender(); nxDom.stall.classList.remove('hidden'); return true; }
-    function nxStallForge() { if (!nxStallOn()) return false; nxStallAsk = 0; nxDom.stall.classList.add('hidden'); nexusClose(); return arena.openForge(); }
+    function nxStallForge() { if (!nxStallOn()) return false; nxStallHide(); nexusClose(); return arena.openForge(); }
+    function nxStallHide() { nxStallAsk = 0; if (!nxDom || !nxDom.stall) return; nxDom.stall.classList.add('hidden'); nxDom.stall.textContent = ''; } // emptied: no hidden buttons linger
     function nxBuild() {
       if (nxDom) return nxDom;
       const root = document.createElement('div'); root.id = 'rw-nexus'; root.className = 'hidden'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', 'The Nexus');
@@ -1746,7 +1747,7 @@
       nxBuild(); nxEnterTile = { x: Math.floor(arena.player.x / TILE), y: Math.floor(arena.player.y / TILE) };
       nxOpen = true; arena.paused = true; savePos(true);
       nxBtn.classList.add('hidden'); portalBtn.classList.add('hidden'); siteBtn.classList.add('hidden'); if (typeof lairBtn !== 'undefined') { lairBtn.classList.add('hidden'); lairTxt = ''; }
-      nxDom.root.classList.remove('hidden'); nxDom.board.classList.add('hidden'); nxDom.stall.classList.add('hidden'); nxStallAsk = 0;
+      nxDom.root.classList.remove('hidden'); nxDom.board.classList.add('hidden'); nxStallHide();
       NX.layout().npcs.forEach((n) => nxLoadPortrait(n.npc, nxDrawPlaza)); nxDrawPlaza();
       nxDom.talk.textContent = nxHint();
       if (NX_WALK) nxWalkStart(); else nxDom.back.focus({ preventScroll: true });
@@ -1924,7 +1925,7 @@
         b.appendChild(row);
       });
     }
-    function nxBoardOpen() { nxBuild(); nxBoardRender(); nxDom.board.classList.remove('hidden'); if (nxDom.stall) nxDom.stall.classList.add('hidden'); }
+    function nxBoardOpen() { nxBuild(); nxBoardRender(); nxDom.board.classList.remove('hidden'); nxStallHide(); }
     function nxClaim(id) {
       const out = MMQuests.claim(save.quests, id, questDate()); save.quests = out.state;
       if (out.reward) {
