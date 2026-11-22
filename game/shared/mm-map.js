@@ -62,6 +62,8 @@
     // Pocket arcade games beside the festival path (open paths: a bonus to walk to, never a gate)
     N('w5-pop', 'game', 18, 13, 'Pixel Pop', { game: 'games/pop/index.html?from=hub' }),
     N('w5-dash', 'game', 26, 6, 'Lantern Dash', { game: 'games/dash/index.html?from=hub' }),
+    N('w5-stack', 'game', 10, 14, 'Stack Tower', { game: 'games/stack/index.html?from=hub' }),
+    N('w5-echo', 'game', 33, 5, 'Echo Garden', { game: 'games/echo/index.html?from=hub' }),
     // W6 Comet Trail (secret): five challenge nodes, each worth a comet
     N('w6-night', 'level', 6, 16, 'Hearthvale Night', { comet: true }),
     N('w6-remix', 'level', 12, 12, 'Mazewright Remix', { comet: true }),
@@ -102,6 +104,7 @@
     P('w4-whiskers', 'w5-safari', { medals: 16 }),
     P('w5-safari', 'w5-jam'), P('w5-jam', 'w5-stalk'), P('w5-stalk', 'w5-finale', ex('w5-stalk')),
     P('w5-jam', 'w5-pop'), P('w5-stalk', 'w5-dash'),
+    P('w5-jam', 'w5-stack'), P('w5-dash', 'w5-echo'),
     // W6: reached only through a secret exit (a comet), then one node after another
     P('w2-keep', 'w6-night', ex('w2-burrow', 'secret')),
     P('w6-night', 'w6-remix', ex('w6-night')), P('w6-remix', 'w6-hardcore', ex('w6-remix')),

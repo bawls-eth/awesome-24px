@@ -53,7 +53,7 @@ async function strip(page, nodeId) {
   // 1. seeded summaries show the right medals via the read-only hook
   const H = await open(browser, HUB, at(seed, 'w3-deepdelve'));
   const a = await H.page.evaluate(() => window.__hub.achievements());
-  check('achievements() reads each game key and keeps only its medals', JSON.stringify(a) === JSON.stringify({ angler: ['catch1', 'boss1'], jam: ['star1', 'stars12', 'fullcombo'], stalk: ['bronze'], pop: [], dash: [], deepdelve: ['depth20', 'wyrm', 'torches10'], isles: [], bugs: [] }), JSON.stringify(a));
+  check('achievements() reads each game key and keeps only its medals', JSON.stringify(a) === JSON.stringify({ angler: ['catch1', 'boss1'], jam: ['star1', 'stars12', 'fullcombo'], stalk: ['bronze'], pop: [], dash: [], stack: [], echo: [], deepdelve: ['depth20', 'wyrm', 'torches10'], isles: [], bugs: [] }), JSON.stringify(a));
 
   // 2. the node card shows the strip with the right chips lit (try Deepdelve and Stalk)
   const dd = await strip(H.page, 'w3-deepdelve');
@@ -71,7 +71,7 @@ async function strip(page, nodeId) {
   bad[key('deepdelve')] = JSON.stringify({ v: 1, m: 'depth20', x: ['wyrm'] });
   const B = await open(browser, HUB, at(bad, 'w4-angler'));
   const ab = await B.page.evaluate(() => window.__hub.achievements());
-  check('hostile ids, duplicates and non-arrays are dropped; corrupt JSON shows nothing', JSON.stringify(ab) === JSON.stringify({ angler: ['catch1'], jam: [], stalk: [], pop: [], dash: [], deepdelve: [], isles: [], bugs: [] }), JSON.stringify(ab));
+  check('hostile ids, duplicates and non-arrays are dropped; corrupt JSON shows nothing', JSON.stringify(ab) === JSON.stringify({ angler: ['catch1'], jam: [], stalk: [], pop: [], dash: [], stack: [], echo: [], deepdelve: [], isles: [], bugs: [] }), JSON.stringify(ab));
   const bs = await strip(B.page, 'w4-angler');
   check('corrupt-seeded Angler strip lights only catch1', JSON.stringify(bs.on) === JSON.stringify(['catch1']) && bs.all.length === 3, JSON.stringify(bs));
   const hostile = await B.page.evaluate(() => ({ imgs: document.querySelectorAll('img').length, alerted: !!window.__alerted }));

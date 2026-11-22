@@ -43,8 +43,11 @@
       medals: Array.isArray(o.medals) ? o.medals.filter((m, i, a) => ok.indexOf(m) >= 0 && a.indexOf(m) === i) : [], ghost: cleanGhost(o.ghost) };
   }
   let save = load();
+  const hubSync = () => { try { if (window.MMHubProfile && MMHubProfile.sync) MMHubProfile.sync(localStorage, 'dash', save.medals.slice()); } catch (e) { /* hub map progress is optional */ } };
+  if (save.medals.length) hubSync(); // medals won before the arcade map group existed reach the Hub map too
   function persist() {
     try { localStorage.setItem(KEY, JSON.stringify(save)); localStorage.setItem(MKEY, JSON.stringify({ v: 1, m: save.medals.slice() })); } catch (e) { /* ignore */ }
+    hubSync();
   }
   function award(id) { if (save.medals.indexOf(id) >= 0) return false; save.medals.push(id); run.newMedals.push(id); persist(); play('claim'); return true; }
 

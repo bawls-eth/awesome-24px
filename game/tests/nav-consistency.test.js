@@ -75,7 +75,7 @@ async function run(browser, view) {
     });
     check(L('one tap opens the sheet; exactly one modal dialog is visible'), sh.dialogs === 1, JSON.stringify(sh));
     const ids = sh.dests.map((d) => d.id).join();
-    check(L('all 12 places are listed'), sh.dests.length === 12 && ids === 'town,map,realm,lantern,isles,jam,bugs,angler,deepdelve,stalk,pop,dash', ids);
+    check(L('all 14 places are listed'), sh.dests.length === 14 && ids === 'town,map,realm,lantern,isles,jam,bugs,angler,deepdelve,stalk,pop,dash,stack,echo', ids);
     sh.dests.forEach((d) => links.set(d.href.split('?')[0], 1));
     check(L('Back falls back to a sensible page (World map or Town)'), /^Back to (World map|Town)$/.test(sh.back) && /\/game\/(hub\/)?index\.html$/.test(sh.backHref), `${sh.back} ${sh.backHref}`);
     await page.keyboard.press('Escape');

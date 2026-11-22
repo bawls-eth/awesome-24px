@@ -8,7 +8,7 @@
 //  1 join screen -> first movement: <= 5 taps and <= 10 s wall ("Play offline" offered within 6 s).
 //  2 first interaction (shop / door / NPC, via the real A button) <= 60 s sim.
 //  3 the Realm Gate pointer chip is visible on the first spawn; the gate is reached <= 90 s sim (and A opens the gate menu).
-//  4 "Where to?" opens the sheet in 1 tap and lists the 12 places.
+//  4 "Where to?" opens the sheet in 1 tap and lists the 14 places.
 //  5 layout: no overlap between HUD pieces, every visible control >= 44 px (offenders listed in the fixture's frozen legacySmall list,
 //    which may only shrink), no text under 12 px (same rule, legacyTiny), nothing buried under the canvas.
 //  6 0 database requests, 0 sockets, 0 console errors.
@@ -22,7 +22,7 @@ const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 const FX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'town-ftue-profiles.json'), 'utf8'));
 const METRICS = path.join(__dirname, '..', 'design', 'ftue-metrics.json');
 const TG = FX.targets; const KNOWN = FX.knownIssues || {};
-const IDS = 'town,map,realm,lantern,isles,jam,bugs,angler,deepdelve,stalk,pop,dash';
+const IDS = 'town,map,realm,lantern,isles,jam,bugs,angler,deepdelve,stalk,pop,dash,stack,echo';
 const r1 = (v) => (v === null || v === undefined ? null : Math.round(v * 10) / 10);
 
 // a target check: pass at the target; a known issue (fixture baseline) passes only when not worse than its baseline, and prints the gap
@@ -227,7 +227,7 @@ const WALKER = `(spawn) => {
     check(`${P}: no control overlaps the stick`, lay.over.length === 0, lay.over.join(', '));
     if (prof.touch) check(`${P}: coarse pointer emulated, the stick is visible`, lay.coarse && lay.sticks === 1, JSON.stringify({ coarse: lay.coarse, sticks: lay.sticks }));
 
-    // "Where to?": one tap opens the sheet, 12 places
+    // "Where to?": one tap opens the sheet, 14 places
     const taps0 = taps;
     await tap('#where-to-btn');
     await page.waitForFunction(() => { const sh = document.getElementById('mm-nav-sheet'); return sh && !sh.hidden && sh.getBoundingClientRect().height > 0; }, null, { timeout: 3000 }).catch(() => {});
