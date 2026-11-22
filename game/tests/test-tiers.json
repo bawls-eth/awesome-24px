@@ -1098,5 +1098,9 @@
   "isles-boss.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "ftue-ft2.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

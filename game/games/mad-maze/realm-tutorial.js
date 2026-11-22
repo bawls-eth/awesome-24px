@@ -46,15 +46,30 @@
     let toast = null, toastT = 0;
     function say(text) {
       if (!toast) { toast = el('div'); toast.id = 'mm-coach-toast'; toast.setAttribute('role', 'status'); ov.appendChild(toast); }
-      toast.textContent = text; toast.classList.remove('hidden'); clearTimeout(toastT); toastT = setTimeout(() => toast.classList.add("hidden"), 10000);
+      toast.textContent = text; toast.classList.remove('hidden'); keepClear(toast); clearTimeout(toastT); toastT = setTimeout(() => toast.classList.add("hidden"), 10000);
     }
     const stat = { x0: null, y0: null, uid0: Math.floor(Number((arena.save || {}).nextUid)) || 0, tick: 0, rewarded: false };
+    // FT2: a coach mark never covers a stick or the ability grid. The CSS puts it under the HUD; on a short screen (or a long text) that could still
+    // reach the controls, so a mark or toast that overlaps one moves up to end 8 px above it (never above the top edge).
+    const hit = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+    function keepClear(e) {
+      if (!e || e.classList.contains('hidden')) return;
+      e.style.top = ''; let r = e.getBoundingClientRect(); if (!(r.height > 0)) return;
+      const ctl = Array.prototype.slice.call(document.querySelectorAll('.realm-stick, #realm-abilities')).map((c) => c.getBoundingClientRect()).filter((c) => c.width > 0 && c.height > 0);
+      for (let k = 0; k < 3; k++) {
+        const o = ctl.filter((c) => hit(r, c)); if (!o.length) return;
+        const ovr = ov.getBoundingClientRect(); const top = Math.max(4, Math.min.apply(null, o.map((c) => c.top)) - 8 - r.height - ovr.top);
+        e.style.top = Math.round(top) + 'px'; r = e.getBoundingClientRect();
+      }
+    }
     function render() {
       const cur = MT.realmCurrent(rec.s);
-      if (cur === 'done') { root.classList.add('hidden'); return; }
+      if (cur === 'done') { root.classList.add('hidden'); keepClear(toast); return; }
       const pr = MT.realmProgress(rec.s);
       txt.textContent = MT.realmText(cur, coarse); prog.textContent = (pr.done + 1) + ' / ' + pr.total; root.dataset.step = cur; root.classList.remove('hidden');
+      keepClear(root);
     }
+    window.addEventListener('resize', () => { keepClear(root); keepClear(toast); });
     function pay() { // once, through the existing arena save path (a Hearty Charm into the backpack, or shards when it is full) + a full heal
       if (stat.rewarded) return null; stat.rewarded = true;
       let note = '';
