@@ -25,6 +25,7 @@
 <script src="../../shared/mm-isle-env.js"></script>
 <script src="../../shared/mm-companion.js"></script>
 <script src="../../shared/mm-homestead.js"></script>
+<script src="../../shared/mm-home-build.js"></script>
 <script src="isle-creatures.js"></script>
 <script src="../../shared/mm-nav.js" data-mount="manual"></script>
 </head>
@@ -76,6 +77,7 @@
   <button id="btn-build" type="button" hidden aria-pressed="false" aria-label="Decorate your island">Decor</button>
 </div>
 <div id="decor" class="decor" role="toolbar" aria-label="Decor" hidden>
+  <button id="decor-make" type="button" aria-label="Make decor and see the tame pen">Make</button>
   <button id="decor-undo" type="button">Undo</button>
   <button id="decor-done" type="button">Done</button>
 </div>
@@ -90,7 +92,7 @@
     <button id="btn-fire" type="button" aria-label="Fire bolt">Fire</button>
   </div>
 </div>
-<p id="help" class="help">WASD / arrows move. Click or Space to fire. M toggles the map. F feeds, Q soothe shots, R rides, C commands the party (follow / stay / attack). G gathers, walk over glints to pick them up, K crafts, T sails at a dock, L opens the log, B decorates at home.</p>
+<p id="help" class="help">WASD / arrows move. Click or Space to fire. M toggles the map. F feeds, Q soothe shots, R rides, C commands the party (follow / stay / attack). G gathers, walk over glints to pick them up, K crafts, T sails at a dock, L opens the log, B decorates at home (Make crafts decor).</p>
 <script src="isles.js"></script>
 </body>
 </html>

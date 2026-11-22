@@ -1138,5 +1138,13 @@
   "nav-realm.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "archipelago-home-travel.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "shared-mm-home-build.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }
