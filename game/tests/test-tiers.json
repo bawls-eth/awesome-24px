@@ -435,6 +435,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-gear-forge.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "shared-mm-gear-affix.test.js": {
     "class": "node",
     "tier": "smoke"
@@ -1043,7 +1047,59 @@
     "class": "browser",
     "tier": "full"
   },
+  "isles-craft.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "gear-default-on.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "gear-balance-sim.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-gear-sets.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "gear-sets-wired.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "gear-forge-ui.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "gear-save-fixes.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "first-ten-minutes.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "archipelago-perf.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "world-party.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "shared-mm-isle-env.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "isles-env.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "isles-boss.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "ftue-ft2.test.js": {
     "class": "browser",
     "tier": "full"
   }

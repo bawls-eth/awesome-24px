@@ -2,7 +2,7 @@
 // medals summary (`pixeltown-medals-isles-v1` = {"v":1,"m":[ids]}, the page is its single writer). Pure data + validation, no DOM.
 // A save is { v, at, returnTo, unlock[], isles{id:{seed,pos,fog,chests}}, home{grid[<=400],stable{slots}}, log{seen,ko,tamed,bugs,fish},
 // rides, wild{<=4} }. B10 adds (all additive): home.inv{kind:n} + home.seeded (MMHomestead decor), visited[isle], bosses[id],
-// gather{day, got{isle:[idx]}, log{res:n}} (daily-free gather spots). X2 adds inv{item:n} (crafting stacks, <=64 x 999). clean() always returns a valid save (corrupt -> defaults) and keeps the whole key under 20 KB.
+// gather{day, got{isle:[idx]}, log{res:n}} (daily-free gather spots). X2 adds inv{item:n} (crafting stacks, <=64 x 999). X4 adds sg:1 (the one-time saddle grandfather gift was given; absent = not yet). X6 adds beat[boss id] (bosses defeated or tamed; absent = none yet). clean() always returns a valid save (corrupt -> defaults) and keeps the whole key under 20 KB.
 // This module never touches `pixeltown-save-v1`.
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -158,6 +158,8 @@
       (Array.isArray(raw.bosses) ? raw.bosses.slice(0, 64) : []).forEach((id) => { if (out.bosses.length < MAX_BOSSES && typeof id === 'string' && KEY_RE.test(id) && BAD.indexOf(id) < 0 && out.bosses.indexOf(id) < 0) out.bosses.push(id); });
       out.gather = cleanGather(raw.gather);
       out.inv = cleanInvX(raw.inv);
+      if (raw.sg === 1 || raw.sg === true) out.sg = 1;
+      if (Array.isArray(raw.beat)) { const b = []; raw.beat.slice(0, 64).forEach((id) => { if (b.length < MAX_BOSSES && typeof id === 'string' && KEY_RE.test(id) && BAD.indexOf(id) < 0 && b.indexOf(id) < 0) b.push(id); }); if (b.length) out.beat = b; }
       // size guard: shed the least valuable data first until the key fits
       const size = () => JSON.stringify(out).length;
       if (size() > MAX_BYTES) out.inv = {};
@@ -282,6 +284,14 @@
     if (save.bosses.indexOf(id) >= 0 || save.bosses.length >= MAX_BOSSES) return false;
     save.bosses.push(id); return true;
   }
+  // X6: a boss defeated or tamed (also counts as seen, so the existing boss medal is earned). True only the first time.
+  function noteBeat(save, id) {
+    if (!isObj(save) || typeof id !== 'string' || !KEY_RE.test(id) || BAD.indexOf(id) >= 0) return false;
+    noteBoss(save, id);
+    if (!Array.isArray(save.beat)) save.beat = [];
+    if (save.beat.indexOf(id) >= 0 || save.beat.length >= MAX_BOSSES) return false;
+    save.beat.push(id); return true;
+  }
   // map a page ?isle= value (isle id or pack id / alias) to the isle id: meadow -> home, tundra -> ice
   const PACK_TO_ISLE = { meadow: 'home', home: 'home', tundra: 'ice', ice: 'ice', jungle: 'jungle', reef: 'reef', mars: 'mars' };
   const isleFor = (v) => (typeof v === 'string' && has(PACK_TO_ISLE, v) ? PACK_TO_ISLE[v] : '');
@@ -296,7 +306,7 @@
   return {
     KEY: KEY, MEDALS_KEY: MEDALS_KEY, ISLES: ISLES, ROUTES: ROUTES, MAX_GRID: MAX_GRID, MAX_WILD: MAX_WILD, MAX_BYTES: MAX_BYTES,
     LOG_KINDS: LOG_KINDS, MEDAL_IDS: MEDAL_IDS, MEDAL_NAMES: MEDAL_NAMES, WILD_KEEP_MS: WILD_KEEP_MS, SAVED_ISLES: SAVED_ISLES,
-    noteVisit: noteVisit, noteBoss: noteBoss, isleFor: isleFor, cleanGather: cleanGather,
+    noteVisit: noteVisit, noteBoss: noteBoss, noteBeat: noteBeat, isleFor: isleFor, cleanGather: cleanGather,
     defaults: defaults, clean: clean, isUnlocked: isUnlocked, meetsUnlock: meetsUnlock, unlockIsle: unlockIsle, routeBetween: routeBetween,
     destinations: destinations, noteLog: noteLog, logCount: logCount, setPos: setPos, lastPos: lastPos, cleanMedals: cleanMedals,
     medalsFor: medalsFor, writeMedals: writeMedals, load: load, write: write

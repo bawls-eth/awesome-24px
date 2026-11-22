@@ -108,7 +108,16 @@ const RM_SPARK_CLASS = { ranger: 'a', bruiser: 'a', berserker: 'a', punk: 'a', r
 const RM_EB_ROT = { ebolt_shard: 1, ebolt_arrow: 1, ebolt_fire: 1, ebolt_frost: 1, ebolt_laser_h: 1, ebolt_skull: 0 };
 const RM_WPN_COLOR = { dot: '#ffe27a', arrow: '#f3d9a4', shard: '#9fe3ff', orb: '#c59bff', star: '#ffd24a', blade: '#e6edf3', page: '#fff3c4', axe: '#ff9a6a', hammer: '#ffcf5a', fist: '#ffb38a', ray: '#7ee7ff' };
 // URL kill switches (S12): ?unlocks=0 turns off the unlock-tree passives / Nova II / Dash II, ?weapons=0 the styled weapon items.
-function rmFlagOff(name) { try { return typeof location !== 'undefined' && new RegExp('[?&]' + name + '=0(&|$)').test(location.search || ''); } catch (e) { return false; } }
+// rmFlag(name) -> '0' when ANY ?name= value is 0 (a kill switch always wins, duplicates and %-encoding included), '1' when any is 1, else null.
+// The one parser for these switches: realm.js, dungeon.js and realm-world.js all read ?gear= / ?forge= through it (review F15).
+function rmFlag(name) {
+  try {
+    if (typeof location === 'undefined' || typeof URLSearchParams === 'undefined') return null;
+    const vs = new URLSearchParams(location.search || '').getAll(name).map((v) => String(v).trim());
+    return vs.indexOf('0') >= 0 ? '0' : vs.indexOf('1') >= 0 ? '1' : null;
+  } catch (e) { return null; }
+}
+function rmFlagOff(name) { return rmFlag(name) === '0'; }
 // This file's folder (for shared modules and UI art), from the <script> tag that loaded it; '' when unknown (no art, no loader).
 const RM_DIR = (function () { try { const s = typeof document !== 'undefined' && document.currentScript && document.currentScript.src; return s ? String(s).replace(/[?#].*$/, '').replace(/[^/]*$/, '') : ''; } catch (e) { return ''; } })();
 // Shared modules the arena layers need (FO2 mm-focus, TG3 mm-access + mm-telegraph; mm-telegraph reads MMAccess, so it loads last): a page that does not list one gets it here (ordered, async=false). Every use checks
@@ -166,6 +175,11 @@ const RM_WPN_ITEMS = [];
 // Armor `arm_<family>_<band>` defs are lookup-only (never in RM_ITEMS / RM_BASE_ITEMS: never dropped by the classic pools or stocked by the shop).
 const RM_ARM_ID = /^arm_[a-z]{3,8}_[a-z]{3,10}$/; // MMGear.GEAR_ID_RE
 const RM_GEAR_ON = !rmFlagOff('gear') && typeof MMGear !== 'undefined' && !!MMGear && typeof MMGear.clean === 'function';
+// GW one-deploy gate (review F3, the G7 pattern): builds older than GW strip `dust`, `f` and `sig`, so this build only KEEPS them (rmCleanSave /
+// rmMergeSave) while nothing creates them by default: the Forge (salvage -> dust, reforge -> f), T12 boss signatures (`sig`) on new drops and the
+// sig-only "Dread pair" set stay off until the next deploy flips RM_FORGE_DEFAULT_ON. ?forge=1 turns them on, ?forge=0 off (always wins); ?gear=0 wins over both.
+const RM_FORGE_DEFAULT_ON = false;
+const RM_FORGE_ON = !rmFlagOff('gear') && (rmFlag('forge') === '1' || (RM_FORGE_DEFAULT_ON && rmFlag('forge') !== '0'));
 const RM_SPLASH_ON = RM_GEAR_ON && !rmFlagOff('splash') && typeof MMSplash !== 'undefined' && !!MMSplash && typeof MMSplash.pick === 'function'; // G11 player splash
 const RM_ARMOR_ICON = { light: '🦺', robe: '👘', heavy: '🛡️' };
 (function rmRegisterArmor() {
@@ -188,6 +202,23 @@ function rmCleanGear(id, r, raw, aliasT) {
   const t = Number.isInteger(tv) && tv >= 1 && tv <= 12 && (id === 'sparkwand' || RM_WPN_ID.test(id) || RM_ARM_ID.test(id)) ? tv : 0;
   const a = t >= 7 && Number.isInteger(raw.a) && raw.a >= 1 && raw.a <= 4294967295 ? raw.a : 0;
   return { t, a };
+}
+// GW (additive): `sig` (a T12 weapon's boss signature affix id, GB) and `f` ({ id, v }: the one forged affix, MMGearForge, t >= 7 only) on an item, and
+// `dust` (forge currency) on the save. Kept by every page (with or without the gear modules, and under ?gear=0) so no tab ever erases them; only
+// their effect is switched. The fallbacks mirror MMGear.SIG_AFFIX_IDS / MMGearAffix.IDS for pages without those modules (the Town page).
+const RM_SIG_IDS = ['ward', 'blast', 'venom', 'leech', 'pierce'];
+const RM_AFFIX_IDS = ['keen', 'blast', 'venom', 'swift', 'reach', 'leech', 'pierce', 'vital', 'ward', 'fleet', 'resist', 'mend'];
+function rmCleanSig(id, t, a, sig) {
+  if (t !== 12 || !a || typeof sig !== 'string') return '';
+  if (typeof MMGear !== 'undefined' && MMGear && typeof MMGear.clean === 'function') { const c = MMGear.clean({ n: 1, id, r: 0, t, a, sig }); return c && c.sig ? c.sig : ''; }
+  return (id === 'sparkwand' || RM_WPN_ID.test(id)) && RM_SIG_IDS.indexOf(sig) >= 0 ? sig : '';
+}
+function rmCleanForged(t, f) {
+  if (!(t >= 7) || !f || typeof f !== 'object' || Array.isArray(f) || typeof f.id !== 'string') return null;
+  const ok = typeof MMGearAffix !== 'undefined' && MMGearAffix && MMGearAffix.AFFIXES ? Object.prototype.hasOwnProperty.call(MMGearAffix.AFFIXES, f.id) : RM_AFFIX_IDS.indexOf(f.id) >= 0;
+  const v = Number(f.v);
+  if (!ok || !(typeof f.v === 'number' && Number.isFinite(v) && v > 0 && v <= 100)) return null;
+  return { id: f.id, v: Math.round(v * 1000) / 1000 };
 }
 // Sell value: the rarity's value, plus 2 x tier for tiered gear (MMGear.sellValue) while gear is on.
 function rmSellValue(it) { return RM_GEAR_ON && it && it.t ? MMGear.sellValue(it.r, it.t) : RM_RARITIES[it.r].sell; }
@@ -273,7 +304,11 @@ function rmCleanSave(s) {
     seen.add(uid);
     const o = { n: uid, id, r: rar }; // an item without `t` (every item before G7) stays exactly {n, id, r}
     const g = rmCleanGear(id, rar, it, aliasT);
-    if (g.t) { o.t = g.t; if (g.a) o.a = g.a; }
+    if (g.t) {
+      o.t = g.t; if (g.a) o.a = g.a;
+      const sg = rmCleanSig(id, g.t, g.a, it.sig); if (sg) o.sig = sg; // GB / GW: additive, only when valid
+      const fg = rmCleanForged(g.t, it.f); if (fg) o.f = fg;
+    }
     out.items.push(o);
   });
   out.nextUid = Math.max(rmCleanCount(s.nextUid), 1 + out.items.reduce((m, it) => Math.max(m, it.n), 0));
@@ -287,6 +322,7 @@ function rmCleanSave(s) {
   });
   // gv / gp only when present (a save without them stays byte-identical); garbage becomes the defaults. gv is also set once any tiered item exists.
   if (s.gv === 1 || out.items.some((x) => x.t)) out.gv = 1;
+  if (s.dust !== undefined) out.dust = rmCleanCount(s.dust); // GW forge dust: only when present (old saves stay byte-identical); corrupt -> 0
   if (s.gp !== undefined) { const gp = s.gp && typeof s.gp === 'object' && !Array.isArray(s.gp) ? s.gp : {}; out.gp = { b: Math.min(rmCleanCount(gp.b), 9999), d: Math.min(rmCleanCount(gp.d), 9999) }; }
   return out;
 }
@@ -296,6 +332,20 @@ function rmCleanSave(s) {
 // Now every save re-reads pixeltown-save-v1, merges (never loses progress) and writes the merge.
 const RM_SAVE_KEY = 'pixeltown-save-v1';
 const RM_TILE = 40; // wall-grid tile size in logical px
+// GH downgrade hint record (pixeltown-gearhint-v1, owned by realm-world.js: { n, shown, d?, f? }). A deliberate removal in THIS tab (salvage, sell,
+// combine) rewrites the remembered counts so the hint never reads a normal salvage as an old-tab reset (review F10). Only an existing record is updated.
+const RM_GEAR_HINT_KEY = 'pixeltown-gearhint-v1';
+function rmGearHintOf(sv) { const items = sv && Array.isArray(sv.items) ? sv.items : []; return { n: items.length, d: sv && sv.dust !== undefined ? 1 : 0, f: items.filter((x) => x && x.f).length }; }
+function rmGearHintOwn(sv) {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    const raw = localStorage.getItem(RM_GEAR_HINT_KEY); if (!raw) return;
+    const o = JSON.parse(raw); if (!o || typeof o !== 'object' || Array.isArray(o)) return;
+    const h = rmGearHintOf(sv); const n0 = Number.isInteger(o.n) ? o.n : 0, f0 = Number.isInteger(o.f) ? o.f : 0;
+    const next = { n: Math.min(n0, h.n), shown: o.shown === 1 ? 1 : 0, d: o.d === 1 && h.d ? 1 : 0, f: Math.min(f0, h.f) }; // only ever lowered here (a pickup never needs it)
+    if (next.n !== n0 || next.f !== f0 || next.d !== (o.d === 1 ? 1 : 0)) localStorage.setItem(RM_GEAR_HINT_KEY, JSON.stringify(next));
+  } catch (e) { /* storage full or blocked: the hint is only advice */ }
+}
 
 function rmReadStoredRealm() {
   try {
@@ -339,8 +389,16 @@ function rmMergeSave(mine, stored, opts) {
     items.push({ ...it }); have.add(it.n);
   });
   const eq = { ...a.eq }; Object.keys(eq).forEach((slot) => { if (remap[eq[slot]] !== undefined) eq[slot] = remap[eq[slot]]; });
+  if (items.length > RM_BACKPACK) { // review F8: the cleaner keeps the first 24, so cut the LEAST valuable first (unequipped, then lowest tier, then lowest rarity), never a T12 before a T0
+    const eqd = new Set(Object.keys(eq).map((k) => eq[k]));
+    const rank = items.map((it, i) => ({ i, e: eqd.has(it.n) ? 1 : 0, t: it.t || 0, r: it.r }));
+    rank.sort((x, y) => (y.e - x.e) || (y.t - x.t) || (y.r - x.r) || (x.i - y.i));
+    const keepI = new Set(rank.slice(0, RM_BACKPACK).map((x) => x.i));
+    for (let i = items.length - 1; i >= 0; i--) if (!keepI.has(i)) items.splice(i, 1); // the kept items stay in their order
+  }
   out.items = items; out.nextUid = next; out.eq = eq; // equipment is per-tab
   if (a.gv || b.gv) out.gv = 1;
+  if (a.dust !== undefined || b.dust !== undefined) { const ad = a.dust || 0, bd = b.dust || 0; const bs = Number.isFinite(opts.baseDust) ? opts.baseDust : ad; out.dust = Math.max(0, bd + (ad - bs)); } // three-way like shards
   if (a.gp || b.gp) { const ga = a.gp || { b: 0, d: 0 }, gb = b.gp || { b: 0, d: 0 }; const bs = opts.baseGp; // storage's gp at this tab's last sync: three-way like shards, so an in-tab reset / increment survives while another tab's change is added
     out.gp = bs ? { b: Math.max(0, gb.b + (ga.b - bs.b)), d: Math.max(0, gb.d + (ga.d - bs.d)) } : { b: Math.max(ga.b, gb.b), d: Math.max(ga.d, gb.d) }; }
   return rmCleanSave(out);
@@ -353,7 +411,7 @@ class RealmArena {
     this.onSave = (sv) => this._persist(sv); // every save goes through the cross-tab merge first
     this.onExit = onExit || (() => {});
     this.save = rmCleanSave(save);
-    this._baseShards = this.save.shards; this._baseGp = rmGpOf(this.save.gp); this._known = new Set(this.save.items.map((it) => it.n)); this.walls = null; this.extraGuard = 0;
+    this._baseShards = this.save.shards; this._baseDust = this.save.dust || 0; this._baseGp = rmGpOf(this.save.gp); this._known = new Set(this.save.items.map((it) => it.n)); this.saveOk = true; this.saveFails = 0; this.walls = null; this.extraGuard = 0;
     this.dungeon = null; this.fixedWorld = null; // optional run controller + fixed-size world (Mad Maze dungeons); null = classic waves
     this.world = null; this.mode = 'waves'; this.camera = { x: 0, y: 0, vw: 960, vh: RM_SHORT }; this._camF = { x: 0, y: 0 }; // setWorld / setMode: a scrolling world with a camera (null = the screen is the world, today's behaviour)
     this._solidAt = null; this._shotSolidAt = null; this._curDm = 1; this.onEnemyKilled = null; this.onEnemyHit = null; // world tile collision + additive kill / hit callbacks (default null)
@@ -417,17 +475,39 @@ class RealmArena {
   resyncSave() {
     const stored = rmReadStoredRealm();
     if (!stored) return false;
-    this._adopt(rmMergeSave(this.save, stored, { base: this._baseShards, known: this._known, baseGp: this._baseGp }));
-    { this._baseGp = rmGpOf(rmCleanSave(stored).gp); } // storage's gp at this sync
-    this._baseShards = this.save.shards; this._known = new Set(rmCleanSave(stored).items.map((it) => it.n)); // what storage held at this sync
+    this._adopt(rmMergeSave(this.save, stored, { base: this._baseShards, baseDust: this._baseDust, known: this._known, baseGp: this._baseGp }));
+    this._syncBase(stored); // the bases are what storage held at this sync (review F7: not the merged value, or an unsaved in-memory delta is lost)
     return true;
   }
 
+  // The three-way merge bookkeeping (_known uids, shard / dust / pity bases) = exactly what `stored` (the raw realm in storage) holds.
+  _syncBase(stored) {
+    const st = rmCleanSave(stored);
+    this._known = new Set(st.items.map((it) => it.n)); this._baseShards = st.shards; this._baseDust = st.dust || 0; this._baseGp = rmGpOf(st.gp);
+    return st;
+  }
+
+  // Merge, write, then set the bookkeeping from what storage REALLY holds after the write (review F1): a write that failed (quota full, blocked storage)
+  // leaves storage as it was, so a fresh pickup stays "new here" and is written next time instead of being read as "sold in another tab".
+  // Returns true when storage now holds this save (also on this.saveOk); false = not saved (this.saveFails counts them, a calm note shows in play).
   _persist(sv) {
     this.resyncSave();
-    this._baseShards = this.save.shards; this._baseGp = rmGpOf(this.save.gp);
-    this._known = new Set(this.save.items.map((it) => it.n)); // about to be written, so storage will hold exactly these
-    this._onSave(this.save);
+    let ret; try { ret = this._onSave(this.save); } catch (e) { ret = false; }
+    const stored = rmReadStoredRealm();
+    let ok = ret !== false;
+    if (stored) {
+      const st = this._syncBase(stored);
+      ok = ok && st.shards === this.save.shards && st.items.length === this.save.items.length && st.items.every((it, i) => it.n === this.save.items[i].n && it.r === this.save.items[i].r && (it.t || 0) === (this.save.items[i].t || 0));
+    } else { // nothing readable in storage (no storage, or a page that saves elsewhere): keep every item as new here, never drop one
+      this._known = new Set(); this._baseShards = this.save.shards; this._baseDust = this.save.dust || 0; this._baseGp = rmGpOf(this.save.gp);
+    }
+    this.saveOk = ok;
+    if (!ok) {
+      this.saveFails = (this.saveFails || 0) + 1;
+      const now = Date.now();
+      if (this.active && this.player && !(now - (this._saveWarnAt || 0) < 20000)) { this._saveWarnAt = now; try { this._floatText(this.player.x, this.player.y - 60, 'Storage full: progress not saved yet', '#ff9a8a'); } catch (e) { /* cosmetic */ } }
+    }
+    return ok;
   }
 
   // ---------- team play ----------
@@ -684,6 +764,7 @@ class RealmArena {
     const st = { maxHp: RM_PLAYER.hp + RM_HP_PER_LEVEL * (this.save.level - 1), dmg: RM_PLAYER.dmg, rate: RM_PLAYER.fireRate, speed: RM_PLAYER.speed, shards: 1, xp: 1, iframes: RM_PLAYER.iframes };
     const eq = this._eqFor(o); const free = o && o.eqOverride && typeof o.eqOverride === 'object' ? o.eqOverride : null;
     const gr = { guard: 0, famRes: 0, allRes: 0, resIds: null, status: 0, speed: 0, crit: 0, leech: 0, regen: 0, vital: 0, swift: 0, reach: 0, pierce: 0, blast: 0, venom: 0 }; // tiered gear extras (all 0 without such items)
+    const eqItems = { weapon: null, armor: null }; // GB / GW: the equipped, tiered, un-gated weapon + armor the set bonuses read
     RM_SLOTS.forEach((slot) => {
       const uid = eq[slot];
       const it = uid && this.save.items.find((x) => x.n === uid);
@@ -691,10 +772,10 @@ class RealmArena {
       const def = RM_ITEM_BY_ID[it.id];
       if (!def || def.slot !== slot) return;
       const gated = RM_GEAR_ON && it.t && !(free && Object.prototype.hasOwnProperty.call(free, slot)) ? !this._gearOk(it) : false;
-      if (def.arm) { if (RM_GEAR_ON && !gated) this._armorInto(st, gr, it); return; } // armor: HP / guard / speed / resists (MMGear.armorStats)
+      if (def.arm) { if (RM_GEAR_ON && !gated) { this._armorInto(st, gr, it); if (it.t) eqItems.armor = it; } return; } // armor: HP / guard / speed / resists (MMGear.armorStats)
       const tb = RM_GEAR_ON && it.t && !gated && def.stat === 'dmg' ? MMGear.weaponBonus(def.amount, it.t, it.r) : null; // tier bonus: amount/0.5 x WD[t] x Q[r]
       const v = tb !== null ? tb : def.amount * RM_RARITIES[it.r].mult; // T0 (and a gated / ?gear=0 tiered item): the classic amount x rarity
-      if (tb !== null) this._affixInto(gr, it, 'weapon');
+      if (tb !== null) { this._affixInto(gr, it, 'weapon'); eqItems.weapon = it; }
       if (def.stat === 'hp') st.maxHp += Math.round(v);
       else if (def.stat === 'dmg') st.dmg += v;
       else if (def.stat === 'rate') st.rate += v;
@@ -703,6 +784,13 @@ class RealmArena {
       else if (def.stat === 'xp') st.xp += v;
       else if (def.stat === 'iframes') st.iframes += v;
     });
+    const sets = this._setsOf(eqItems); // GB set bonuses (Banded, Dread pair): [] without MMGearSets, under ?gear=0 and in duels (returned above)
+    if (sets.length) {
+      let sx = null; try { sx = MMGearSets.extras(sets); } catch (e) { sx = null; }
+      const n = (k) => (sx && typeof sx[k] === 'number' && Number.isFinite(sx[k]) ? sx[k] : 0);
+      gr.vital += n('vital'); gr.guard += n('ward'); gr.crit += n('keen'); gr.blast += n('blast'); gr.status += n('venom'); gr.venom += n('venom');
+      gr.swift += n('swift'); gr.reach += n('reach'); gr.leech += n('leech'); gr.pierce += n('pierce');
+    }
     if (gr.speed) st.speed += gr.speed; // `fleet` px/s, like armor speed: before the class multipliers
     const hp = this.heroProfile; // additive class profile (setHeroProfile), applied after gear and level; never in duels (returned above)
     if (hp) { st.maxHp = Math.max(1, Math.round(st.maxHp * hp.hp)); st.dmg *= hp.dmg; st.rate *= hp.rate; st.speed *= hp.speed; st.iframes *= hp.iframes; }
@@ -721,8 +809,53 @@ class RealmArena {
     st.splashR = gr.blast > 0 ? 24 + gr.blast : 0; st.splashFrac = gr.blast > 0 ? 0.3 : 0; st.splashMax = gr.blast > 0 ? 3 : 0; // `blast` grants {r 24, frac .30, max 3} (+ its px); used by the splash slice (G11)
     st.resFam = gr.famRes; st.resAll = gr.allRes; st.resIds = gr.resIds; st.resist = Math.min(0.4, gr.famRes + gr.allRes); // armor family resist (statuses in resIds) + the `resist` affix (every status); _resistFor caps at 40%
     st.guard = this._calcGuard(gr.guard);
+    Object.defineProperty(st, 'sets', { value: sets, enumerable: false }); // the active set list (non-enumerable: the stats shape stays as it was)
     if (!pure) this.stats = st;
     return st;
+  }
+  // The active gear sets for { weapon, armor } (MMGearSets.active), [] when gear is off, the module is missing or either piece is absent.
+  _setsOf(eqItems) {
+    if (!RM_GEAR_ON || !eqItems || !eqItems.weapon || !eqItems.armor || typeof MMGearSets === 'undefined' || !MMGearSets || typeof MMGearSets.active !== 'function') return [];
+    if (!RM_FORGE_ON && eqItems.weapon.sig) { const w = Object.assign({}, eqItems.weapon); delete w.sig; eqItems = { weapon: w, armor: eqItems.armor }; } // F3 gate: the sig-only Dread pair is off with the GW gate (Banded stays)
+    const key = ['weapon', 'armor'].map((k) => { const x = eqItems[k]; return `${x.id}:${x.t}:${x.r}:${x.a || 0}:${x.sig || ''}`; }).join('|');
+    const c = this._setC || (this._setC = new Map());
+    let v = c.get(key);
+    if (!v) { try { v = MMGearSets.active({ weapon: eqItems.weapon, armor: eqItems.armor }); } catch (e) { v = []; } if (!Array.isArray(v)) v = []; if (c.size > 32) c.clear(); c.set(key, v); }
+    return v;
+  }
+  // GW: the canonical value of an item's forged affix `f` (MMGearForge.reforgeOptions; the stored v is never trusted), or null when it is not legal
+  // there (unknown id, below T7, an affix the item already rolled, or its signature). Without the forge module: the stored value clamped to the tier range.
+  _forgedOf(it) {
+    if (!it || !it.f || !(it.t >= 7) || typeof it.f.id !== 'string') return null;
+    const key = `${it.id}:${it.t}:${it.r}:${it.a || 0}:${it.sig || ''}:${it.f.id}`;
+    const c = this._forC || (this._forC = new Map());
+    if (c.has(key)) return c.get(key);
+    let out = null;
+    try {
+      if (it.sig && it.f.id === it.sig) out = null;
+      else if (typeof MMGearForge !== 'undefined' && MMGearForge && typeof MMGearForge.reforgeOptions === 'function') {
+        const fv = { n: 1, id: it.id, r: it.r, t: it.t, a: it.a }; if (it.sig) fv.sig = it.sig; // review F5: the signature changes which affixes the item rolled
+        const opts = MMGearForge.reforgeOptions(fv);
+        const o = opts ? opts.find((x) => x.id === it.f.id) : null;
+        out = o ? { id: o.id, v: o.v } : null;
+      } else if (typeof MMGearAffix !== 'undefined' && MMGearAffix) {
+        const rg = MMGearAffix.rangeOf(it.f.id, it.t); const v = Number(it.f.v);
+        const rolled = it.a ? MMGearAffix.roll(it.id, it.id.indexOf('arm_') === 0 ? 'armor' : 'weapon', it.t, it.r, it.a, it.sig).map((e) => e.id) : [];
+        out = rg && Number.isFinite(v) && v > 0 && rolled.indexOf(it.f.id) < 0 ? { id: it.f.id, v: Math.min(rg[1], v) } : null;
+      }
+      if (out && it.id.indexOf('arm_') !== 0 && typeof MMGearAffix !== 'undefined' && MMGearAffix && typeof MMGearAffix.value === 'function' && typeof MMGearAffix.cap === 'function') {
+        // review F6: the forged affix sits inside the weapon power cap (MMGearAffix.cap) like every rolled one: trim it on its unit grid until the product fits
+        const rolled = it.a ? MMGearAffix.roll(it.id, 'weapon', it.t, it.r, it.a, it.sig) : [];
+        const cp = MMGearAffix.cap(it.t) + 1e-9; const d = MMGearAffix.get(out.id);
+        const step = d && d.unit === 'int' ? 1 : d && d.unit === 'pct' ? 0.001 : 0.1;
+        let v = out.v; let guard = 0;
+        while (v > 0 && MMGearAffix.value(rolled.concat([{ id: out.id, v }])) > cp && guard++ < 2000) v = Math.round((v - step) * 1000) / 1000;
+        out = v > 0 ? { id: out.id, v } : null;
+      }
+    } catch (e) { out = null; }
+    if (c.size > 64) c.clear();
+    c.set(key, out);
+    return out;
   }
 
   // The eq map _calcStats reads: the save's, nothing (noGear) or the save's with eqOverride slots replaced (only uids whose item fits that slot).
@@ -762,11 +895,17 @@ class RealmArena {
     this._affixInto(gr, it, 'armor');
   }
   // T7+ affixes (MMGearAffix.roll: seeded by id + t + a, power cap applied there) summed into the gear extras. Cached per item identity.
+  // GW: `sig` (T12 weapon boss signature) is passed through, and the one forged affix `f` is added on top (never replacing a rolled one).
   _affixInto(gr, it, slot) {
-    if (!(it.t >= 7) || !it.a || typeof MMGearAffix === 'undefined') return;
-    const key = `${it.id}:${it.t}:${it.r}:${it.a}`; const c = this._affC || (this._affC = new Map());
+    if (!(it.t >= 7) || typeof MMGearAffix === 'undefined') return;
+    const fg = this._forgedOf(it);
+    if (!it.a && !fg) return;
+    const key = `${it.id}:${it.t}:${it.r}:${it.a || 0}:${it.sig || ''}:${fg ? fg.id + '=' + fg.v : ''}`; const c = this._affC || (this._affC = new Map());
     let sm = c.get(key);
-    if (!sm) { try { sm = MMGearAffix.sum(MMGearAffix.roll(it.id, slot, it.t, it.r, it.a)); } catch (e) { sm = {}; } if (c.size > 64) c.clear(); c.set(key, sm); }
+    if (!sm) {
+      try { const list = it.a ? MMGearAffix.roll(it.id, slot, it.t, it.r, it.a, it.sig).slice() : []; if (fg) list.push(fg); sm = MMGearAffix.sum(list); } catch (e) { sm = {}; }
+      if (c.size > 64) c.clear(); c.set(key, sm);
+    }
     const v = (k) => (typeof sm[k] === 'number' && Number.isFinite(sm[k]) ? sm[k] : 0);
     gr.crit += v('keen'); gr.blast += v('blast'); gr.status += v('venom'); gr.venom += v('venom'); gr.swift += v('swift'); gr.reach += v('reach'); gr.leech += v('leech'); gr.pierce += v('pierce');
     gr.vital += v('vital'); gr.guard += v('ward'); gr.regen += v('mend'); gr.allRes += v('resist'); gr.speed += v('fleet');
@@ -3041,14 +3180,21 @@ class RealmArena {
   }
 
   // Picks an item up. A full backpack sells it on the spot for shards.
-  collectItem(id, rarity) {
+  // gear (optional, additive): { t, a?, sig? } of a tiered drop. The entry is built WITH them before onItem (the stash record) and the save write, so no
+  // T0 copy of a tiered drop ever reaches storage or the stash (review F2). Cleaned like a stored item (rmCleanGear / rmCleanSig).
+  collectItem(id, rarity, gear) {
     this._snd('pickup');
     const sv = this.save; const def = RM_ITEM_BY_ID[id]; const rar = RM_RARITIES[rarity];
     if (sv.items.length >= RM_BACKPACK) {
       sv.shards += rar.sell;
       this._floatText(this.player.x, this.player.y - 24, `sold ${def.name} +${rar.sell} 💎`, rar.color);
     } else {
-      sv.items.push({ n: sv.nextUid++, id, r: rarity });
+      const ent = { n: sv.nextUid++, id, r: rarity };
+      if (gear && typeof gear === 'object' && !Array.isArray(gear)) {
+        const g = rmCleanGear(id, rarity, gear);
+        if (g.t) { ent.t = g.t; if (g.a) ent.a = g.a; const sg = rmCleanSig(id, g.t, g.a, gear.sig); if (sg) ent.sig = sg; }
+      }
+      sv.items.push(ent);
       this._itemText2(this.player.x, this.player.y - 24, id, rarity, def.name, def.icon, rar.color);
       this._burst(this.player.x, this.player.y, rar.color, 10, 150);
       if (this.onItem) this.onItem(sv.items[sv.items.length - 1]);
@@ -3721,7 +3867,16 @@ class RealmArena {
     const gone = new Set(others.map((x) => x.n));
     sv.items = sv.items.filter((x) => !gone.has(x.n));
     RM_EQ_KEYS.forEach((slot) => { if (gone.has(sv.eq[slot])) delete sv.eq[slot]; });
-    c.keep.r += 1;
+    // review F4: the survivor is replaced by a FRESH uid entry one rarity up (like reforge), never changed in place: a tab still holding the old r would
+    // otherwise see a uid collision in the cross-tab merge and keep both copies. Its t / a / sig / f and its slot are kept.
+    const ki = sv.items.indexOf(c.keep); const old = c.keep.n;
+    const n = Math.max(sv.nextUid || 1, 1 + sv.items.reduce((m, x) => Math.max(m, x.n), 0)); sv.nextUid = n + 1;
+    c.keep = Object.assign({}, c.keep, { n, r: c.keep.r + 1 });
+    if (c.keep.f) c.keep.f = { id: c.keep.f.id, v: c.keep.f.v };
+    if (ki >= 0) sv.items[ki] = c.keep; else sv.items.push(c.keep);
+    RM_EQ_KEYS.forEach((slot) => { if (sv.eq[slot] === old) sv.eq[slot] = n; });
+    if (this._forgeUid === old) this._forgeUid = n;
+    rmGearHintOwn(sv);
     this._snd('levelup');
     this._itemText2(this.player.x, this.player.y - 34, c.keep.id, c.keep.r, `${RM_RARITIES[c.keep.r].name}!`, RM_ITEM_BY_ID[c.keep.id].icon, RM_RARITIES[c.keep.r].color);
     this._afterGearChange();
@@ -3735,8 +3890,151 @@ class RealmArena {
     this.save.shards += rmSellValue(it);
     this.save.items.splice(i, 1);
     RM_EQ_KEYS.forEach((slot) => { if (this.save.eq[slot] === uid) delete this.save.eq[slot]; });
+    rmGearHintOwn(this.save);
     this._afterGearChange();
     return true;
+  }
+
+  // ---------- Forge (GW): salvage for dust, deterministic reforge (MMGearForge). Free in-game dust + shards only; no randomness anywhere. ----------
+  // Off with ?gear=0, without mm-gear-forge.js or while the GW gate is closed (RM_FORGE_ON, default off for one deploy; ?forge=1): no Forge section,
+  // nothing creates `dust` / `f`, and the ones already saved are kept (a forged `f` still counts in the stats).
+  forgeOn() { return RM_GEAR_ON && RM_FORGE_ON && typeof MMGearForge !== 'undefined' && !!MMGearForge && typeof MMGearForge.salvage === 'function' && !(this.team && this.team.isPvp); }
+  _forgeView(it) { const v = { n: it.n, id: it.id, r: it.r }; if (it.t) v.t = it.t; if (it.a) v.a = it.a; if (it.sig) v.sig = it.sig; if (it.f) v.f = it.f; return v; } // sig: review F5
+  // salvageInfo(uid) -> { dust, t, r, soulbound } or null (any tiered item; soulbound ones too).
+  salvageInfo(uid) {
+    if (!this.forgeOn()) return null;
+    const it = this.save.items.find((x) => x.n === uid);
+    if (!it || !it.t) return null;
+    let r = null; try { r = MMGearForge.salvage(this._forgeView(it)); } catch (e) { r = null; }
+    return r && Number.isInteger(r.dust) && r.dust > 0 ? r : null;
+  }
+  // salvage(uid) -> the dust gained, or 0. The item leaves the backpack (and its slot).
+  salvage(uid) {
+    const info = this.salvageInfo(uid);
+    if (!info) return 0;
+    const sv = this.save; const i = sv.items.findIndex((x) => x.n === uid);
+    if (i < 0) return 0;
+    sv.items.splice(i, 1);
+    RM_EQ_KEYS.forEach((slot) => { if (sv.eq[slot] === uid) delete sv.eq[slot]; });
+    sv.dust = (sv.dust || 0) + info.dust;
+    this._forgeUid = 0; this._forgeAsk = null;
+    rmGearHintOwn(sv);
+    this._afterGearChange();
+    return info.dust;
+  }
+  // reforgeOptions(uid) -> [{ id, v, text, cost: { dust, shards }, current, afford }] (T7+ only; a signature affix is never offered) or null.
+  reforgeOptions(uid) {
+    if (!this.forgeOn() || typeof MMGearForge.reforgeOptions !== 'function') return null;
+    const it = this.save.items.find((x) => x.n === uid);
+    if (!it || !(it.t >= 7)) return null;
+    let o = null; try { o = MMGearForge.reforgeOptions(this._forgeView(it)); } catch (e) { o = null; }
+    if (!o) return null;
+    const sv = this.save;
+    return o.filter((x) => !(it.sig && x.id === it.sig)).map((x) => ({ id: x.id, v: x.v, text: x.text, cost: { dust: x.cost.dust, shards: x.cost.shards }, current: !!x.current, afford: (sv.dust || 0) >= x.cost.dust && sv.shards >= x.cost.shards }));
+  }
+  // reforge(uid, affixId) -> the new uid, or 0. Charges exactly the shown dust + shards once; the entry is replaced (a fresh uid, so the cross-tab merge
+  // carries the new `f` like a new item) keeping t, a, sig and its slot.
+  reforge(uid, affixId) {
+    const opts = this.reforgeOptions(uid);
+    const o = opts ? opts.find((x) => x.id === affixId) : null;
+    if (!o || o.current || !o.afford) return 0;
+    const sv = this.save; const i = sv.items.findIndex((x) => x.n === uid);
+    if (i < 0) return 0;
+    const it = sv.items[i];
+    let nf = null; try { nf = MMGearForge.reforge(this._forgeView(it), affixId); } catch (e) { nf = null; }
+    if (!nf || !nf.f || nf.f.id !== o.id) return 0;
+    const n = sv.nextUid++;
+    const ne = { n, id: it.id, r: it.r, t: it.t };
+    if (it.a) ne.a = it.a;
+    if (it.sig) ne.sig = it.sig;
+    ne.f = { id: nf.f.id, v: nf.f.v };
+    sv.items[i] = ne;
+    RM_EQ_KEYS.forEach((slot) => { if (sv.eq[slot] === uid) sv.eq[slot] = n; });
+    sv.dust = (sv.dust || 0) - o.cost.dust; sv.shards -= o.cost.shards;
+    this._forgeUid = n; this._forgeAsk = null;
+    this._snd('levelup');
+    this._afterGearChange();
+    return n;
+  }
+  // The Forge section of the open item (DOM + textContent only; 44 px targets). Built after the backpack list is rendered.
+  _forgeDom(root) {
+    if (!this.forgeOn() || !root) return;
+    const sv = this.save;
+    const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+    const btn = (text, data, label) => {
+      const b = mk('button', 'fg', text); b.type = 'button';
+      Object.keys(data).forEach((k) => { b.dataset[k] = String(data[k]); });
+      if (label) b.setAttribute('aria-label', label);
+      b.style.cssText = 'height:auto;min-height:44px;min-width:44px;max-width:100%;white-space:normal;text-align:left;padding:6px 10px;box-sizing:border-box;overflow-wrap:anywhere';
+      return b;
+    };
+    const cost = (c) => `${c.dust} dust + ${c.shards} 💎`;
+    const row = () => { const r = mk('div'); r.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px'; return r; };
+    sv.items.forEach((it) => {
+      if (!it.t) return;
+      const li = root.querySelector(`#realm-bp-list li[data-uid="${it.n}"]`);
+      if (!li) return;
+      const open = this._forgeUid === it.n;
+      const tg = btn(open ? '⚒ Close forge' : '⚒ Forge', { forgeOpen: it.n }, open ? 'Close the forge' : 'Open the forge for this item');
+      tg.setAttribute('aria-expanded', open ? 'true' : 'false'); tg.style.gridColumn = '1 / -1'; tg.style.justifySelf = 'start';
+      const cmpEl = li.querySelector('.rm-cmp'); if (cmpEl) li.insertBefore(tg, cmpEl); else li.appendChild(tg); // above the hover / long-press compare line, so showing it never moves the toggle
+      if (!open) return;
+      const box = mk('div', 'rm-forge'); box.id = 'realm-bp-forge'; box.setAttribute('role', 'region'); box.setAttribute('aria-label', 'Forge');
+      box.style.cssText = 'grid-column:1 / -1;display:flex;flex-direction:column;gap:6px;padding:8px;border-radius:8px;background:rgba(0,0,0,.35);font-size:12px;line-height:1.35;min-width:0;max-width:100%;box-sizing:border-box;overflow-wrap:anywhere';
+      box.appendChild(mk('div', 'rm-forge-wallet', `You have ${sv.dust || 0} dust · ${sv.shards} 💎`));
+      const ask = this._forgeAsk;
+      const sal = this.salvageInfo(it.n);
+      if (ask && ask.kind === 'salvage' && sal) {
+        box.appendChild(mk('div', 'rm-forge-q', `Salvage this item for ${sal.dust} dust? It leaves your backpack.${sal.soulbound ? ' Soulbound items can be salvaged.' : ''}`));
+        const r = row();
+        r.appendChild(btn(`Confirm salvage +${sal.dust} dust`, { forgeYes: 'salvage', uid: it.n }));
+        r.appendChild(btn('Cancel', { forgeNo: 1 }));
+        box.appendChild(r);
+      } else if (ask && ask.kind === 'reforge') {
+        const o = (this.reforgeOptions(it.n) || []).find((x) => x.id === ask.id);
+        if (o) {
+          const prev = this._forgedOf(it);
+          let pt = ''; try { pt = prev ? (MMGearAffix.describe([prev])[0] || '') : ''; } catch (e) { pt = ''; }
+          box.appendChild(mk('div', 'rm-forge-q', `Forge ${o.text} onto this item for ${cost(o.cost)}?${pt ? ` It replaces the forged ${pt}.` : ''}`));
+          const r = row();
+          const yes = btn(`Confirm: pay ${cost(o.cost)}`, { forgeYes: 'reforge', uid: it.n, affix: o.id }); if (!o.afford || o.current) yes.disabled = true;
+          r.appendChild(yes); r.appendChild(btn('Cancel', { forgeNo: 1 }));
+          box.appendChild(r);
+        }
+      } else {
+        if (sal) box.appendChild(btn(`Salvage for ${sal.dust} dust`, { forgeSalvage: it.n }, `Salvage for ${sal.dust} dust (asks first)`));
+        const opts = this.reforgeOptions(it.n);
+        if (opts && opts.length) {
+          box.appendChild(mk('div', 'rm-forge-h', 'Reforge: add one forged affix (exact value and cost):'));
+          opts.forEach((o) => {
+            const b = btn(`${o.text} · ${cost(o.cost)}${o.current ? ' · forged now' : !o.afford ? ' · not enough' : ''}`, { forgePick: o.id, uid: it.n });
+            b.dataset.dust = String(o.cost.dust); b.dataset.shards = String(o.cost.shards); b.dataset.v = String(o.v);
+            if (o.current || !o.afford) b.disabled = true;
+            box.appendChild(b);
+          });
+        } else if (it.t < 7) box.appendChild(mk('div', 'dim', 'Reforge opens at T7.'));
+      }
+      if (cmpEl) li.insertBefore(box, cmpEl); else li.appendChild(box);
+    });
+  }
+  _bindForge(root) {
+    if (!root || root.dataset.forgeBound) return;
+    root.dataset.forgeBound = '1';
+    root.addEventListener('click', (e) => {
+      const b = e.target.closest && e.target.closest('button.fg');
+      if (!b || b.disabled || !this.forgeOn()) return;
+      const d = b.dataset;
+      if (d.forgeOpen) { const u = Number(d.forgeOpen); this._forgeUid = this._forgeUid === u ? 0 : u; this._forgeAsk = null; }
+      else if (d.forgeSalvage) this._forgeAsk = { kind: 'salvage' };
+      else if (d.forgePick) this._forgeAsk = { kind: 'reforge', id: d.forgePick };
+      else if (d.forgeNo) this._forgeAsk = null;
+      else if (d.forgeYes === 'salvage') { this.salvage(Number(d.uid)); return; }
+      else if (d.forgeYes === 'reforge') { this.reforge(Number(d.uid), d.affix); return; }
+      else return;
+      this.renderBackpack();
+      const nb = root.querySelector('#realm-bp-forge button.fg') || root.querySelector(`button.fg[data-forge-open="${this._forgeUid}"]`); // keep keyboard focus in the forge
+      if (nb && nb.focus) { try { nb.focus(); } catch (er) { /* focus is cosmetic */ } }
+    });
   }
 
   _afterGearChange() {
@@ -3770,12 +4068,13 @@ class RealmArena {
   }
   // T7+ affix names under a tiered item's stat text, each with its b29 affix icon ('' below T7, without an affix seed or with gear off).
   _affixHtml(it, def) {
-    if (!RM_GEAR_ON || !it || !(it.t >= 7) || !it.a || typeof MMGearAffix === 'undefined' || !def || (def.slot !== 'weapon' && def.slot !== 'armor')) return '';
-    let list = null; try { list = MMGearAffix.roll(it.id, def.slot, it.t, it.r, it.a); } catch (e) { list = null; }
+    if (!RM_GEAR_ON || !it || !(it.t >= 7) || typeof MMGearAffix === 'undefined' || !def || (def.slot !== 'weapon' && def.slot !== 'armor')) return '';
+    const fg = this._forgedOf(it);
+    let list = null; try { list = (it.a ? MMGearAffix.roll(it.id, def.slot, it.t, it.r, it.a, it.sig) : []).slice(); if (fg) list.push(fg); } catch (e) { list = null; }
     if (!list || !list.length) return '';
     const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
     let h = '';
-    list.forEach((x) => { let t = ''; try { t = (MMGearAffix.describe([x]) || [])[0] || ''; } catch (e) { t = ''; } if (t && /^[a-z]+$/.test(x.id)) h += `<span class="rm-afx-i" data-affix="${x.id}" style="margin-right:6px;white-space:nowrap">${this._gearIco('ui_affix_' + x.id)}${esc(t)}</span>`; });
+    list.forEach((x) => { let t = ''; try { t = (MMGearAffix.describe([x]) || [])[0] || ''; } catch (e) { t = ''; } if (t && /^[a-z]+$/.test(x.id)) h += `<span class="rm-afx-i" data-affix="${x.id}"${x === fg ? ' data-forged="1"' : ''} style="margin-right:6px;white-space:nowrap">${this._gearIco('ui_affix_' + x.id)}${x === fg ? '⚒ ' : ''}${esc(t)}${x === fg ? ' (forged)' : ''}</span>`; });
     return h ? `<span class="rm-afx" style="display:block;font-size:11px;opacity:.9">${h}</span>` : '';
   }
 
@@ -3805,14 +4104,15 @@ class RealmArena {
       const cw = !it && slot === 'weapon' ? this._classWeaponName() : ''; // PT2 #15: the class weapon the hero fires, not "weapon: empty"
       html += `<div class="realm-bp-slot" data-slot="${slot}">${it ? `<span style="color:${RM_RARITIES[it.r].color}">${this._icon(RM_ITEM_BY_ID[it.id])} ${this._tierTag(it)}${RM_ITEM_BY_ID[it.id].name}</span>` : cw ? `<span class="rm-classwpn" title="Class weapon">${this._slotIcon('weapon')}${cw}</span>` : `<span class="dim">${slot === 'armor' ? this._slotIcon('armor') : ''}${slot}: empty</span>`}</div>`;
     });
-    html += `</div><div class="realm-bp-count">${sv.items.length} / ${RM_BACKPACK} items</div><ul id="realm-bp-list">`;
+    html += `</div><div class="realm-bp-count">${sv.items.length} / ${RM_BACKPACK} items${this.forgeOn() ? ` · <span id="realm-bp-dust">✨ ${sv.dust || 0} dust</span>` : ''}</div><ul id="realm-bp-list">`;
     if (!sv.items.length) html += '<li class="dim">Nothing yet — defeat enemies to find loot bags.</li>';
     sv.items.forEach((it) => {
       const def = RM_ITEM_BY_ID[it.id]; const rar = RM_RARITIES[it.r]; const on = eqUids.has(it.n); const sell = rmSellValue(it); const why = on ? '' : this._gearWhy(it);
       html += `<li data-uid="${it.n}" class="${on ? 'on' : ''}"><span class="nm" style="color:${rar.color}">${this._icon(def)} ${this._tierTag(it)}${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(it)}</span>${this._affixHtml(it, def)}${def.slot === 'weapon' ? this._cmpHtml(it, on) : ''}${def.inert ? '<button type="button" class="eq" disabled aria-label="Not usable yet">Equip</button>' : def.wpn && !on && !this._wpnCanEquip(def) ? `<button type="button" class="eq" disabled data-wpn-lock="1" aria-label="${this._wpnHint(def)} only" title="${this._wpnHint(def)}">🔒 ${def.family.charAt(0).toUpperCase() + def.family.slice(1)}</button>` : why ? this._gearLockHtml(it, def, why) : `<button type="button" class="eq" data-act="equip" data-uid="${it.n}">${on ? 'Unequip' : 'Equip'}</button>`}${this.combinable(it.n) ? `<button type="button" class="eq" data-combine="${it.n}" aria-label="Combine ${RM_COMBINE_COUNT} ${rar.name} ${def.name} into one ${RM_RARITIES[it.r + 1].name}">Combine ${RM_COMBINE_COUNT}→${RM_RARITIES[it.r + 1].name}</button>` : ''}<button type="button" class="dc" data-act="discard" data-uid="${it.n}" aria-label="Sell ${def.name} for ${sell} shards">Sell ${sell}💎</button></li>`;
     });
     html += '</ul>';
-    root.innerHTML = html; this._fixIcons(root); this._bindCmp(root); this._bindStatsDrop(root);
+    if (this._forgeUid && !sv.items.some((x) => x.n === this._forgeUid)) { this._forgeUid = 0; this._forgeAsk = null; }
+    root.innerHTML = html; this._fixIcons(root); this._bindCmp(root); this._bindStatsDrop(root); this._forgeDom(root); this._bindForge(root);
     if (this._cmpOnUid) { const on = root.querySelector(`#realm-bp-list li[data-uid="${this._cmpOnUid}"]`); if (on) on.classList.add('cmp-on'); } // a long-pressed compare line survives a re-render
     root.querySelectorAll('img.rm-slot-ico, img.rm-gear-ico').forEach((img) => { if (img.complete && !img.naturalWidth) img.remove(); else img.addEventListener('error', () => img.remove(), { once: true }); });
   }
@@ -3880,13 +4180,22 @@ class RealmArena {
       const lab = `${r.label} ${r.dir === 'same' ? 'no change from gear' : `${r.dir} ${r.delta.replace(/^[+-]/, '')} from gear`}`;
       h += `<tr data-stat="${r.key}"${r.gear ? ' data-gear="1"' : ''}><th scope="row" style="text-align:left;font-weight:600;${td}">${this._statIco(r.ico)}${esc(r.label)}</th><td class="tt" style="text-align:right;${td}">${esc(r.total)}</td><td class="bs" style="text-align:right;color:#8b949e;${td}">${esc(r.base)}</td><td class="gd ${r.dir}" style="text-align:right;color:${col};${td}" aria-label="${esc(lab)}"><span aria-hidden="true">${ar}</span> ${esc(r.delta)}</td></tr>`;
     });
-    h += '</tbody></table><div class="rm-stats-eq" style="margin-top:6px;font-size:12px"><div style="color:#8b949e;margin-bottom:2px">Equipped</div><ul style="list-style:none;margin:0;padding:0">';
+    h += '</tbody></table>';
+    const sets = this.activeSets();
+    if (sets.length) h += `<div class="rm-stats-sets" style="margin-top:6px;font-size:12px"><div style="color:#8b949e;margin-bottom:2px">Sets</div>${sets.map((x) => `<div data-set="${esc(x.id)}" style="padding:2px 0;color:#7ee787;overflow-wrap:anywhere">${esc(x.text)}</div>`).join('')}</div>`;
+    h += '<div class="rm-stats-eq" style="margin-top:6px;font-size:12px"><div style="color:#8b949e;margin-bottom:2px">Equipped</div><ul style="list-style:none;margin:0;padding:0">';
     const sv = this.save;
     RM_SLOTS.forEach((slot) => {
       const it = sv.items.find((x) => x.n === sv.eq[slot]); const def = it && RM_ITEM_BY_ID[it.id];
       h += def ? `<li data-eq-slot="${slot}" style="padding:2px 0;overflow-wrap:anywhere"><span style="color:${RM_RARITIES[it.r].color}">${this._icon(def)} ${this._tierTag(it)}${esc(def.name)}</span> <span class="dim">${esc(this._itemText(it))}</span></li>` : `<li data-eq-slot="${slot}" class="dim" style="padding:2px 0">${esc(slot)}: empty</li>`;
     });
     return h + '</ul></div>';
+  }
+  // GB / GW: the active gear sets of what is worn now ([{ id, name, text, bonus }]; [] with gear off, in duels or without MMGearSets).
+  activeSets(eqOverride) {
+    if (!this.save || (this.team && this.team.isPvp)) return [];
+    let st = null; try { st = this._calcStats({ eqOverride: eqOverride && typeof eqOverride === 'object' ? eqOverride : {} }); } catch (e) { st = null; }
+    return st && Array.isArray(st.sets) ? st.sets : [];
   }
   _bindStatsDrop(root) {
     if (!root || root.dataset.statsBound) return;
@@ -3951,6 +4260,9 @@ class RealmArena {
     add(pct, `${sgn(pct)}${pct}% damage/s`);
     add(dr, `${sgn(dr)}${dr} px range`, 10, 'ui_stat_range');
     add(dsp, `${sgn(dsp)}${dsp} px splash`, 1, 'ui_stat_splash'); // G11: only the splash styles have one
+    const sNow = this.activeSets(), sNew = this.activeSets({ weapon: uid }); // GB / GW: a set this swap makes or breaks
+    sNew.forEach((x) => { if (!sNow.some((y) => y.id === x.id)) out.deltas.push({ text: `+ ${x.text}`, up: true, set: x.id }); });
+    sNow.forEach((x) => { if (!sNew.some((y) => y.id === x.id)) out.deltas.push({ text: `loses ${x.name}`, up: false, set: x.id }); });
     return out;
   }
   _cmpHtml(it, on) {
@@ -4162,6 +4474,11 @@ class RealmArena {
     else if (wave && /wave|get ready/i.test(wave.textContent)) wave.textContent = '';
     const shards = document.getElementById('realm-shards');
     if (shards) shards.textContent = `💎 ${Math.floor(this.displayShards)}`;
+    let de = shards ? document.getElementById('realm-dust') : null;
+    if (shards && (de || (this.save.dust || 0) > 0) && this.forgeOn()) { // GW: forge dust, calm (no animation), only once there is some
+      if (!de) { de = document.createElement('span'); de.id = 'realm-dust'; de.style.marginLeft = '6px'; shards.insertAdjacentElement('afterend', de); }
+      const dt = `✨ ${this.save.dust || 0}`; if (de.textContent !== dt) de.textContent = dt;
+    }
     const bio = document.getElementById('realm-biome');
     if (bio && !wc) bio.textContent = this.run.wave > 0 && !(this.team && this.team.isPvp) ? RM_BIOMES[this.biome].name : '';
     const pe = document.getElementById('realm-partner');

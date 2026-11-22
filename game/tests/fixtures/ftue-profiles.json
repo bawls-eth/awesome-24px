@@ -1,0 +1,28 @@
+{
+  "about": "FT1 first-ten-minutes phone fun-gate (NEXT-SLICES-2 Wave 2). Profiles are fresh (localStorage cleared, no hero, no realm save). Simulated time: the test stops the page's own loop and steps the real update with a fixed dt. targets = the FT1 acceptance numbers. knownIssues = the measured value on the base branch for a target the game misses today (assert: not worse than this baseline, and print the gap to the target). FT2 met every target and removed all entries.",
+  "viewport": { "width": 390, "height": 844, "hasTouch": true, "isMobile": true },
+  "wallBudgetMs": 90000,
+  "dt": 0.016666666666666666,
+  "targets": {
+    "world": { "firstKill": 20, "firstBag": 60, "firstLevel": 180, "firstAbility": 240, "portalWalk": 600, "maxRewardGap": 45, "maxDeaths": 1, "simSeconds": 600 },
+    "isles": { "firstTame": 180, "hintActionPct": 100, "simSeconds": 300 },
+    "layout": { "minButtonPx": 44, "minFontPx": 12, "firstFrameMs": 3000, "consoleErrors": 0 }
+  },
+  "knownIssues": {
+    "_notes": "FT2 closed every FT1 known issue (measured on claude/animal-crossing-game-7z3roh @ 668bf8c): firstBag (world-shore-d 67.8 s: the first bag dropped 298 px away while the bot kited and despawned; now a first-bag guarantee, realm-world.js fbForce/fbTick, ?firstbag=0), maxRewardGap (world-shore-e 49 s at level 11 in the Highlands; now an exploration XP trickle for newly revealed map cells, realm-world.js exploreTick, ?explorexp=0), hintActionPct (isles hint blank with no tameable creature within 5 tiles; now it names the nearest one's direction or says to explore), layout.tinyText (world HUD 10-11.7 px and isles #hp-text 10 px; now >= 12 px). No allowances remain: every target is asserted as is. Add an entry here only with a measured baseline and a note."
+  },
+  "world": [
+    { "id": "world-shore-a", "seed": "12345", "clock": 0 },
+    { "id": "world-shore-b", "seed": "4242", "clock": 0 },
+    { "id": "world-shore-c", "seed": "12345", "clock": 7919 },
+    { "id": "world-shore-d", "seed": "4242", "clock": 104729 },
+    { "id": "world-shore-e", "seed": "31337", "clock": 2026 },
+    { "id": "world-shore-f", "seed": "777", "clock": 65537 }
+  ],
+  "isles": [
+    { "id": "isles-jungle-a", "seed": "123", "clock": 0 },
+    { "id": "isles-jungle-b", "seed": "777", "clock": 0 },
+    { "id": "isles-jungle-c", "seed": "4242", "clock": 7919 },
+    { "id": "isles-jungle-d", "seed": "31337", "clock": 65537 }
+  ]
+}

@@ -1,7 +1,7 @@
 // MMGear: tiered gear core (GEAR-DROPS-BUILD-PLAN sections (a) and (b), slice G1).
 // Tier `t` (1-12) is a new axis beside rarity `r` (0-3, a quality multiplier) and style (wpn_<style>). Items without `t` are T0 and keep today's formulas.
 // Pure: no DOM, no clock, no Math.random. Frozen output. Hostile input returns null / [] / safe defaults, inputs are never mutated.
-// Item entry (additive): { n, id, r, t?, a? }. `a` is a uint32 affix seed, kept only when t >= 7. Soulbound is derived (t >= 11), never stored.
+// Item entry (additive): { n, id, r, t?, a?, sig? }. `a` is a uint32 affix seed, kept only when t >= 7; `sig` (GB) is a T12 weapon's boss signature affix id. Soulbound is derived (t >= 11), never stored.
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory(require('./mm-items.js'), require('./mm-weapon-items.js'));
   else root.MMGear = factory(root.MMItems || null, root.MMWeaponItems || null);
@@ -16,8 +16,8 @@
     [1, 1, 0.70, 6, 1, 0, 0, 'bag_brown', 0, 2], [2, 2, 0.85, 10, 1, 0, 0, 'bag_brown', 0, 4],
     [3, 4, 1.00, 14, 2, 5, 1, 'bag_pink', 0, 6], [4, 6, 1.15, 18, 2, 5, 1, 'bag_pink', 0, 8],
     [5, 8, 1.30, 24, 3, 10, 2, 'bag_purple', 0, 10], [6, 10, 1.45, 30, 3, 10, 2, 'bag_purple', 0, 12],
-    [7, 12, 1.60, 36, 4, 15, 3, 'bag_cyan', 1, 14], [8, 14, 1.75, 44, 4, 15, 3, 'bag_cyan', 1, 16],
-    [9, 16, 1.90, 52, 5, 20, 4, 'bag_blue', 2, 18], [10, 18, 2.10, 60, 5, 20, 4, 'bag_blue', 2, 20],
+    [7, 12, 1.60, 36, 4, 15, 3, 'bag_cyan', 1, 14], [8, 14, 1.75, 50, 4, 15, 3, 'bag_cyan', 1, 16],
+    [9, 16, 1.90, 56, 5, 20, 4, 'bag_blue', 2, 18], [10, 18, 2.10, 60, 5, 20, 4, 'bag_blue', 2, 20],
     [11, 20, 2.30, 70, 6, 25, 5, 'bag_gold', 2, 22], [12, 20, 2.55, 80, 7, 30, 5, 'bag_red', 2, 24],
   ];
   const TIERS = Object.freeze(ROWS.map((r) => Object.freeze({
@@ -68,6 +68,7 @@
     ['arm_sig_maw', 'void_maw', 'light', 'sig_maw_shard', 'Maw Shard', 'blast'],
   ];
   const SIG_T = 12;
+  const SIG_AFFIX_IDS = Object.freeze(['ward', 'blast', 'venom', 'leech', 'pierce']); // the boss signature affix ids (MMGearDrops.SIGNATURE values)
   const SIG_IDS = [], SIG_BY_BOSS = {}, SIG_BY_FAMILY = {}; FAMILY_KEYS.forEach((f) => { SIG_BY_FAMILY[f] = []; });
   SIG_LIST.forEach((a) => {
     SIG_IDS.push(a[0]); SIG_BY_BOSS[a[1]] = a[0]; SIG_BY_FAMILY[a[2]].push(a[0]); ARMOR_ART[a[0]] = a[3]; ARMOR_NAMES[a[0]] = a[4];
@@ -145,6 +146,9 @@
     const out = { n: n, id: id, r: r };
     if (t) out.t = t;
     if (t >= AFFIX_MIN_T && isInt(raw.a) && raw.a >= 1 && raw.a <= MAX_A) out.a = raw.a;
+    // GB (additive): a T12 weapon from a z3 boss may keep its boss signature affix id (MMGearDrops rollGear `sig`), so MMGearAffix.roll and the
+    // "Dread pair" set (MMGearSets) can see it after a reload. Kept only on a T12 weapon with an `a` seed and a known signature id; anything else is dropped.
+    if (t === MAX_T && out.a && isWeaponId(id) && typeof raw.sig === 'string' && SIG_AFFIX_IDS.indexOf(raw.sig) >= 0) out.sig = raw.sig;
     return Object.freeze(out);
   }
 

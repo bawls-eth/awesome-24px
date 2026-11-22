@@ -1,0 +1,435 @@
+{
+  "generated": "tests/first-ten-minutes.test.js",
+  "viewport": {
+    "width": 390,
+    "height": 844,
+    "hasTouch": true,
+    "isMobile": true
+  },
+  "dtSim": 0.016666666666666666,
+  "world": {
+    "world-shore-a": {
+      "seed": "12345",
+      "simSeconds": 620,
+      "firstKill": 3.5,
+      "firstBagDrop": 3.5,
+      "firstBag": 4.5,
+      "firstXp": 0.3,
+      "firstLevel": 14.3,
+      "firstAbility": 8.1,
+      "firstPickup": 3.5,
+      "firstQuest": 4,
+      "maxRewardGap": 18.1,
+      "deaths": 0,
+      "level": 13,
+      "kills": 169,
+      "items": 16,
+      "counts": {
+        "xp": 271,
+        "bagDrop": 28,
+        "kill": 169,
+        "pickup": 349,
+        "quest": 11,
+        "bag": 16,
+        "ability": 181,
+        "level": 12
+      },
+      "casts": [
+        108,
+        46,
+        3,
+        24
+      ],
+      "minHp": 92,
+      "portalWalk": 16.1,
+      "portalPathTiles": 103,
+<<<<<<< HEAD
+      "firstFrameMs": 370,
+=======
+      "firstFrameMs": 465,
+>>>>>>> ftue-ft2
+      "smallButtons": 0,
+      "stickOverlaps": 0,
+      "tinyText": 0,
+      "consoleErrors": 0,
+<<<<<<< HEAD
+      "wallMs": 8672
+=======
+      "wallMs": 10526
+>>>>>>> ftue-ft2
+    },
+    "world-shore-b": {
+      "seed": "4242",
+      "simSeconds": 620,
+      "firstKill": 3,
+      "firstBagDrop": 16.2,
+      "firstBag": 17.9,
+      "firstXp": 0.6,
+      "firstLevel": 18.6,
+      "firstAbility": 14.9,
+      "firstPickup": 3,
+      "firstQuest": 3,
+      "maxRewardGap": 15.1,
+      "deaths": 0,
+      "level": 16,
+      "kills": 237,
+      "items": 24,
+      "counts": {
+        "xp": 388,
+        "kill": 237,
+        "pickup": 462,
+        "quest": 12,
+        "ability": 126,
+        "bagDrop": 39,
+        "bag": 34,
+        "level": 15
+      },
+      "casts": [
+        68,
+        30,
+        4,
+        24
+      ],
+      "minHp": 73,
+      "portalWalk": 14.8,
+      "portalPathTiles": 105,
+<<<<<<< HEAD
+      "firstFrameMs": 335,
+=======
+      "firstFrameMs": 430,
+>>>>>>> ftue-ft2
+      "smallButtons": 0,
+      "stickOverlaps": 0,
+      "tinyText": 0,
+      "consoleErrors": 0,
+<<<<<<< HEAD
+      "wallMs": 7639
+=======
+      "wallMs": 10427
+>>>>>>> ftue-ft2
+    },
+    "world-shore-c": {
+      "seed": "12345",
+      "simSeconds": 620,
+      "firstKill": 3.3,
+      "firstBagDrop": 3.3,
+      "firstBag": 5.5,
+      "firstXp": 0.3,
+      "firstLevel": 10.5,
+      "firstAbility": 11.2,
+      "firstPickup": 3.3,
+      "firstQuest": 4,
+      "maxRewardGap": 22.1,
+      "deaths": 0,
+      "level": 14,
+      "kills": 191,
+      "items": 23,
+      "counts": {
+        "xp": 339,
+        "bagDrop": 28,
+        "kill": 191,
+        "pickup": 389,
+        "quest": 13,
+        "bag": 23,
+        "level": 13,
+        "ability": 150
+      },
+      "casts": [
+        94,
+        33,
+        2,
+        21
+      ],
+      "minHp": 79,
+      "portalWalk": 16.1,
+      "portalPathTiles": 103,
+<<<<<<< HEAD
+      "firstFrameMs": 330,
+=======
+      "firstFrameMs": 446,
+>>>>>>> ftue-ft2
+      "smallButtons": 0,
+      "stickOverlaps": 0,
+      "tinyText": 0,
+      "consoleErrors": 0,
+<<<<<<< HEAD
+      "wallMs": 8127
+=======
+      "wallMs": 10636
+>>>>>>> ftue-ft2
+    },
+    "world-shore-d": {
+      "seed": "4242",
+      "simSeconds": 620,
+      "firstKill": 2.7,
+      "firstBagDrop": 8,
+      "firstBag": 9.3,
+      "firstXp": 0.6,
+      "firstLevel": 10,
+      "firstAbility": 5.8,
+      "firstPickup": 2.7,
+      "firstQuest": 3,
+      "maxRewardGap": 19.7,
+      "deaths": 0,
+      "level": 15,
+      "kills": 208,
+      "items": 19,
+      "counts": {
+        "xp": 356,
+        "kill": 208,
+        "pickup": 406,
+        "quest": 11,
+        "ability": 152,
+        "bagDrop": 30,
+        "bag": 19,
+        "level": 14
+      },
+      "casts": [
+        89,
+        41,
+        0,
+        22
+      ],
+      "minHp": 100,
+      "portalWalk": 14.8,
+      "portalPathTiles": 105,
+<<<<<<< HEAD
+      "firstFrameMs": 329,
+=======
+      "firstFrameMs": 345,
+>>>>>>> ftue-ft2
+      "smallButtons": 0,
+      "stickOverlaps": 0,
+      "tinyText": 0,
+      "consoleErrors": 0,
+<<<<<<< HEAD
+      "wallMs": 7912
+=======
+      "wallMs": 9911
+>>>>>>> ftue-ft2
+    },
+    "world-shore-e": {
+      "seed": "31337",
+      "simSeconds": 620,
+      "firstKill": 2.7,
+      "firstBagDrop": 23.2,
+      "firstBag": 26,
+      "firstXp": 0.3,
+      "firstLevel": 29.7,
+      "firstAbility": 10.9,
+      "firstPickup": 2.7,
+      "firstQuest": 3,
+      "maxRewardGap": 36.2,
+      "deaths": 0,
+      "level": 16,
+      "kills": 288,
+      "items": 24,
+      "counts": {
+        "xp": 461,
+        "kill": 288,
+        "pickup": 598,
+        "quest": 13,
+        "ability": 139,
+        "bagDrop": 45,
+        "bag": 32,
+        "level": 15
+      },
+      "casts": [
+        81,
+        35,
+        0,
+        23
+      ],
+      "minHp": 100,
+      "portalWalk": 12,
+      "portalPathTiles": 81,
+<<<<<<< HEAD
+      "firstFrameMs": 398,
+=======
+      "firstFrameMs": 402,
+>>>>>>> ftue-ft2
+      "smallButtons": 0,
+      "stickOverlaps": 0,
+      "tinyText": 0,
+      "consoleErrors": 0,
+<<<<<<< HEAD
+      "wallMs": 7930
+=======
+      "wallMs": 8715
+>>>>>>> ftue-ft2
+    },
+    "world-shore-f": {
+      "seed": "777",
+      "simSeconds": 620,
+      "firstKill": 3.5,
+      "firstBagDrop": 6.7,
+      "firstBag": 8,
+      "firstXp": 0.8,
+      "firstLevel": 6.8,
+      "firstAbility": 12,
+      "firstPickup": 3.5,
+      "firstQuest": 4,
+      "maxRewardGap": 15.3,
+      "deaths": 0,
+      "level": 15,
+      "kills": 206,
+      "items": 23,
+      "counts": {
+        "xp": 381,
+        "kill": 206,
+        "pickup": 413,
+        "quest": 13,
+        "bagDrop": 28,
+        "level": 14,
+        "bag": 23,
+        "ability": 151
+      },
+      "casts": [
+        81,
+        44,
+        0,
+        26
+      ],
+      "minHp": 100,
+      "portalWalk": 11.6,
+      "portalPathTiles": 78,
+<<<<<<< HEAD
+      "firstFrameMs": 574,
+=======
+      "firstFrameMs": 394,
+>>>>>>> ftue-ft2
+      "smallButtons": 0,
+      "stickOverlaps": 0,
+      "tinyText": 0,
+      "consoleErrors": 0,
+<<<<<<< HEAD
+      "wallMs": 10304
+=======
+      "wallMs": 8476
+>>>>>>> ftue-ft2
+    }
+  },
+  "isles": {
+    "isles-jungle-a": {
+      "seed": "123",
+      "firstTame": 68.2,
+      "simSeconds": 68,
+      "tamedSpecies": [
+        "canopy_glider"
+      ],
+      "hintSamples": 67,
+      "hintEmpty": 0,
+      "hintNoAction": 0,
+      "hintActionPct": 100,
+      "nearSamples": 44,
+      "nearEmpty": 0,
+      "deaths": 0,
+      "kills": 0,
+<<<<<<< HEAD
+      "firstFrameMs": 968,
+=======
+      "firstFrameMs": 693,
+>>>>>>> ftue-ft2
+      "smallButtons": 0,
+      "stickOverlaps": 0,
+      "tinyText": 0,
+      "consoleErrors": 0,
+<<<<<<< HEAD
+      "wallMs": 1396
+=======
+      "wallMs": 1145
+>>>>>>> ftue-ft2
+    },
+    "isles-jungle-b": {
+      "seed": "777",
+      "firstTame": 57.7,
+      "simSeconds": 58,
+      "tamedSpecies": [
+        "fernraptor"
+      ],
+      "hintSamples": 56,
+      "hintEmpty": 0,
+      "hintNoAction": 0,
+      "hintActionPct": 100,
+      "nearSamples": 48,
+      "nearEmpty": 0,
+      "deaths": 0,
+      "kills": 0,
+<<<<<<< HEAD
+      "firstFrameMs": 682,
+=======
+      "firstFrameMs": 683,
+>>>>>>> ftue-ft2
+      "smallButtons": 0,
+      "stickOverlaps": 0,
+      "tinyText": 0,
+      "consoleErrors": 0,
+<<<<<<< HEAD
+      "wallMs": 1116
+=======
+      "wallMs": 1115
+>>>>>>> ftue-ft2
+    },
+    "isles-jungle-c": {
+      "seed": "4242",
+      "firstTame": 46.5,
+      "simSeconds": 46,
+      "tamedSpecies": [
+        "canopy_glider"
+      ],
+      "hintSamples": 46,
+      "hintEmpty": 0,
+      "hintNoAction": 0,
+      "hintActionPct": 100,
+      "nearSamples": 38,
+      "nearEmpty": 0,
+      "deaths": 0,
+      "kills": 0,
+<<<<<<< HEAD
+      "firstFrameMs": 666,
+=======
+      "firstFrameMs": 734,
+>>>>>>> ftue-ft2
+      "smallButtons": 0,
+      "stickOverlaps": 0,
+      "tinyText": 0,
+      "consoleErrors": 0,
+<<<<<<< HEAD
+      "wallMs": 1067
+=======
+      "wallMs": 1143
+>>>>>>> ftue-ft2
+    },
+    "isles-jungle-d": {
+      "seed": "31337",
+      "firstTame": 38.8,
+      "simSeconds": 39,
+      "tamedSpecies": [
+        "chompbill"
+      ],
+      "hintSamples": 38,
+      "hintEmpty": 0,
+      "hintNoAction": 0,
+      "hintActionPct": 100,
+      "nearSamples": 32,
+      "nearEmpty": 0,
+      "deaths": 0,
+      "kills": 0,
+<<<<<<< HEAD
+      "firstFrameMs": 697,
+=======
+      "firstFrameMs": 703,
+>>>>>>> ftue-ft2
+      "smallButtons": 0,
+      "stickOverlaps": 0,
+      "tinyText": 0,
+      "consoleErrors": 0,
+<<<<<<< HEAD
+      "wallMs": 1109
+=======
+      "wallMs": 1124
+>>>>>>> ftue-ft2
+    }
+  },
+  "dbAttempts": 0
+}

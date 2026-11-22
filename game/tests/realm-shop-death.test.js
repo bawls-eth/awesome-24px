@@ -68,16 +68,17 @@ const enter = (s) => {
     o.twoNot = r.combine(5) === false; // only 2 charms
     r.setPaused(true); o.btns = document.querySelectorAll('#realm-backpack-body button[data-combine]').length;
     o.ok = r.combine(1); // the equipped #2 survives as Uncommon; #1 and #3 are spent first
-    o.left = r.save.items.map((x) => x.n + ':' + x.r).join(','); o.eq = r.save.eq.weapon; o.dmg1 = r.stats.dmg;
+    o.left = r.save.items.map((x) => x.n + ':' + x.r).join(','); o.eq = r.save.eq.weapon; o.dmg1 = r.stats.dmg; o.surv = (r.save.items.find((x) => x.id === 'sparkwand' && x.r === 1) || {}).n; // review F4: the survivor gets a fresh uid (no in-place r change)
     forget(); r.save.items = [mk(701, 'luckring', 2), mk(702, 'luckring', 2), mk(703, 'luckring', 2)]; r.save.eq = {}; // fresh uids: the save-merge remaps a uid that collides with a different stored item
-    o.epicRet = r.combine(702); o.epicItems = JSON.stringify(r.save.items); o.epic = o.epicRet && r.save.items.length === 1 && r.save.items[0].r === 3 && r.save.items[0].n === 702; o.saved = JSON.parse(localStorage.getItem('pixeltown-save-v1')).realm.items.length === 1 && JSON.parse(localStorage.getItem('pixeltown-save-v1')).realm.items[0].r === 3;
-    o.epicText = r._itemText(r.save.items[0]); o.noMore = r.combinable(702) === null;
+    o.epicRet = r.combine(702); o.epicItems = JSON.stringify(r.save.items); o.epic = o.epicRet && r.save.items.length === 1 && r.save.items[0].r === 3 && [701, 702, 703].indexOf(r.save.items[0].n) < 0; o.saved = JSON.parse(localStorage.getItem('pixeltown-save-v1')).realm.items.length === 1 && JSON.parse(localStorage.getItem('pixeltown-save-v1')).realm.items[0].r === 3;
+    o.epicText = r._itemText(r.save.items[0]); o.noMore = r.combinable(r.save.items[0].n) === null;
     r.save.items = [mk(801, 'luckring', 3), mk(802, 'luckring', 3), mk(803, 'luckring', 3)]; o.capped = r.combine(801) === false;
     r.save.items = []; r.save.eq = {}; r.setPaused(false);
     return o;
   });
   check('combine: needs 3 identical items; the backpack shows the Combine button only then', cb.twoNot && cb.btns >= 1, JSON.stringify(cb));
-  check('combine: 3 Common wands -> 1 Uncommon (the equipped copy is upgraded, others spent), damage goes up at once', cb.ok && cb.left === '2:1,4:0,5:0,6:0' && cb.eq === 2 && cb.dmg1 > cb.dmg0, JSON.stringify(cb));
+  // review F4: the survivor is the equipped copy (#2), replaced in its place by a FRESH uid one rarity up (an in-place r change duplicated it in the cross-tab merge)
+  check('combine: 3 Common wands -> 1 Uncommon (the equipped copy is upgraded under a fresh uid, others spent), damage goes up at once', cb.ok && cb.left === `${cb.surv}:1,4:0,5:0,6:0` && [1, 2, 3].indexOf(cb.surv) < 0 && cb.eq === cb.surv && cb.dmg1 > cb.dmg0, JSON.stringify(cb));
   check('combine: 3 Rares -> 1 Epic (+43% shard bonus), Epic is the cap and persists in the save', cb.epic && /43%/.test(cb.epicText) && cb.noMore && cb.capped && cb.saved, JSON.stringify(cb));
 
   check('no console errors', errors.length === 0, errors.join('|'));

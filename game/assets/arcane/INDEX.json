@@ -497,6 +497,16 @@
       "status": "provisional",
       "ingested_utc": "2026-11-21T22:15:00Z",
       "source": "codex"
+    },
+    {
+      "id": "b31b",
+      "label": "jungle-creatures-rest",
+      "path": "assets/arcane/b31b-jungle-creatures-rest",
+      "manifest": "assets/arcane/b31b-jungle-creatures-rest/manifest.json",
+      "files": 38,
+      "status": "provisional",
+      "ingested_utc": "2026-11-21T23:15:00Z",
+      "source": "codex"
     }
   ]
 }

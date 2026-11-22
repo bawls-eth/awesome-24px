@@ -4,6 +4,8 @@
 //   no frame over 1500 ms, median under MEDIAN_LIMIT_MS, at most LONG_LIMIT_FRAC of frames long, 0 console errors, 0 DB traffic.
 // Recorded on a headless software-rendering box, 4x throttle, 60 enemies + 300 bullets: see BASELINE_MEDIAN_MS below (print line
 // "world-perf: ..." shows the numbers every run so the baseline can be revised from real data).
+// P1 adds a second case below (gear + splash on: staff_comet into 30 enemies vs the same scene with ?gear=0; median <= 1.10x, text pool <= 28,
+// the first offending phase update/draw is logged on a miss). The case above is unchanged.
 // Run: BASE=http://localhost:8583/game/index.html NODE_PATH=$(npm root -g) node game/tests/world-perf.test.js
 const { chromium } = require('playwright');
 const { check, done, blockDb } = require('./helpers');
@@ -82,6 +84,70 @@ const LONG_LIMIT_FRAC = 0.5;
   check('no horizontal scroll at 390 px', noScroll);
   check('0 console errors', errors.length === 0, errors.join(' | '));
   check('0 database requests or sockets', db.count() === 0, JSON.stringify(db));
+  await ctx.close();
+
+  // ===== P1 (NEXT-SLICES-2 Wave 2): the gear + splash-on case. The same phone page and 4x throttle; a warlock hero fires a Comet Staff
+  // (staff_comet: splash r 56, frac 0.6, max 6) without pause into 30 sturdy enemies packed around the aim line. Run once with gear on
+  // (splash on, the default) and once with ?gear=0 (no splash), same scene, same seed. Gate: gear-on median frame <= 1.10x the gear-off
+  // median, and the floating-text pool never grows past 28 (its RM_POOL size) nor has more than 28 live texts. Each frame's work is also
+  // timed by phase (arena _update / _draw): a miss logs the first offending phase for P2. The case above is unchanged.
+  const GEAR_RATIO = 1.10, TEXT_POOL = 28;
+  const HERO = { 'pixeltown-mm-v1': JSON.stringify({ v: 1, heroes: [{ id: 'h1', name: 'Wren', cls: 'warlock', level: 10, xp: 0, fame: 0, bonus: 0, mode: 'classic', items: [] }], stash: new Array(16).fill(null), fame: 0, mode: 'classic', hall: [], migratedFrom: null }), 'pixeltown-mm-active-v1': JSON.stringify({ v: 1, heroId: 'h1' }) };
+  async function splashRun(gearOff) {
+    const c2 = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    const db2 = await blockDb(c2);
+    await c2.route('**/game/index.html*', (r) => r.fulfill({ contentType: 'text/html', body: '<!doctype html><title>town</title>town' }));
+    const pg = await c2.newPage(); const errs = [];
+    pg.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
+    pg.on('console', (m) => { if (m.type() === 'error') errs.push('console: ' + m.text()); });
+    await pg.goto(ORIGIN + '/game/games/mad-maze/lantern.css');
+    await pg.evaluate((a) => { localStorage.clear(); localStorage.setItem('pixeltown-save-v1', a.v); localStorage.setItem('mm-aim-assist', '0'); Object.keys(a.h).forEach((k) => localStorage.setItem(k, a.h[k])); }, { v: JSON.stringify(SAVE), h: HERO });
+    errs.length = 0;
+    await pg.goto(WORLD + (gearOff ? '&gear=0' : ''));
+    await pg.waitForFunction(() => window.__mm && window.__mm.world && window.__mm.arena.active && window.__mm.arena.state === 'play', null, { timeout: 20000 });
+    await pg.waitForLoadState('networkidle');
+    const cdp2 = await c2.newCDPSession(pg);
+    await cdp2.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+    const setup = await pg.evaluate(() => {
+      const a = window.__mm.arena, p = a.player;
+      a.player.iframes = 1e9; a._hitPlayer = () => {};
+      const on = a.setHeroWeapon(MMWeapons.resolve('warlock', 'staff_comet', 0));
+      a.eBullets.forEach((b) => { b.active = false; }); a.enemies.forEach((e) => { e.active = false; });
+      while (a.enemies.length < 30) a.enemies.push(Object.assign({}, a.enemies[0], { active: false }));
+      let n = 0; // 30 enemies in a fan 150-260 px to the right of the hero, close enough that every comet splashes several
+      for (let i = 0; n < 30 && i < 200; i++) { const e = a.spawnEnemy(['spiral', 'aimed', 'ring'][i % 3], p.x + 150 + (i % 5) * 26, p.y - 70 + Math.floor(i / 5) * 26); if (e) { e.hp = e.maxHp = 1e9; e.spdMul = 0; e.cd = 1e9; e.cd2 = 1e9; n++; } }
+      // per-frame phase timing (update / draw) and the text pool, recorded by wrapping the arena's own methods
+      const T = window.__P1 = { up: [], dr: [], maxLive: 0, maxPool: a.texts.length, splash0: a.splashN || 0 };
+      const u = a._update.bind(a), d = a._draw.bind(a);
+      a._update = (dt) => { const t = performance.now(); u(dt); T.up.push(performance.now() - t); let l = 0; for (let i = 0; i < a.texts.length; i++) if (a.texts[i].active) l++; if (l > T.maxLive) T.maxLive = l; if (a.texts.length > T.maxPool) T.maxPool = a.texts.length; };
+      a._draw = () => { const t = performance.now(); d(); T.dr.push(performance.now() - t); };
+      a.setAimStick(1, 0, true); // fire without pause, straight into the pack
+      return { on: !!on, enemies: n, splashR: a.weapon && a.weapon.splash ? a.weapon.splash.r : 0 };
+    });
+    const d = await pg.evaluate(() => new Promise((res) => { const o = []; let last = performance.now(); const t0 = last; const f = (now) => { o.push(now - last); last = now; if (now - t0 < 6000) requestAnimationFrame(f); else res(o); }; requestAnimationFrame(f); }));
+    const P = await pg.evaluate(() => { const a = window.__mm.arena, T = window.__P1; return { up: T.up.slice(5), dr: T.dr.slice(5), maxLive: T.maxLive, maxPool: T.maxPool, splashes: (a.splashN || 0) - T.splash0, alive: a.enemies.filter((e) => e.active).length, shots: a.pBullets.filter((b) => b.active).length }; });
+    await cdp2.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+    const fr = d.slice(2).sort((x, y) => x - y), su = P.up.slice().sort((x, y) => x - y), sd = P.dr.slice().sort((x, y) => x - y);
+    const q = (s, k) => s[Math.min(s.length - 1, Math.floor(s.length * k))];
+    const r = { gearOff, setup, frames: fr.length, median: q(fr, 0.5), p95: q(fr, 0.95), upMed: q(su, 0.5), upP95: q(su, 0.95), drMed: q(sd, 0.5), drP95: q(sd, 0.95), maxLive: P.maxLive, maxPool: P.maxPool, splashes: P.splashes, alive: P.alive, errs, db: db2.count() };
+    await c2.close();
+    return r;
+  }
+  const off = await splashRun(true);
+  const gon = await splashRun(false);
+  const fx = (v) => v.toFixed(1);
+  for (const r of [off, gon]) console.log(`world-perf ${r.gearOff ? 'gear-off' : 'gear-on '}: frames=${r.frames} median=${fx(r.median)}ms p95=${fx(r.p95)}ms | update med ${fx(r.upMed)} p95 ${fx(r.upP95)} ms, draw med ${fx(r.drMed)} p95 ${fx(r.drP95)} ms | splashes=${r.splashes} texts live max=${r.maxLive} pool=${r.maxPool} | ${JSON.stringify(r.setup)}`);
+  const ratio = gon.median / off.median, workRatio = (gon.upMed + gon.drMed) / Math.max(0.1, off.upMed + off.drMed);
+  const first = gon.upMed > off.upMed * GEAR_RATIO ? 'update' : gon.drMed > off.drMed * GEAR_RATIO ? 'draw' : (gon.upMed - off.upMed >= gon.drMed - off.drMed ? 'update' : 'draw');
+  console.log(`world-perf gear-on/gear-off: frame median ratio ${ratio.toFixed(3)} (gate <= ${GEAR_RATIO}), work (update+draw median) ratio ${workRatio.toFixed(3)}, ${ratio > GEAR_RATIO ? 'first offending phase' : 'largest phase delta'}: ${first}`);
+  check('gear case: the warlock fires staff_comet (splash r 56) into 30 enemies, gear on', gon.setup.on && gon.setup.enemies === 30 && gon.setup.splashR === 56 && gon.alive >= 30, JSON.stringify(gon.setup));
+  check('gear case: splash events really happen with gear on, none with ?gear=0', gon.splashes > 20 && off.splashes === 0, JSON.stringify({ on: gon.splashes, off: off.splashes }));
+  check('gear case: enough frames sampled in both runs', gon.frames >= 8 && off.frames >= 8, JSON.stringify({ on: gon.frames, off: off.frames }));
+  check(`gear case: gear-on median frame <= ${GEAR_RATIO}x the gear-off median`, ratio <= GEAR_RATIO, `${fx(gon.median)} vs ${fx(off.median)} ms; first offending phase: ${first}`);
+  if (ratio > GEAR_RATIO) console.log(`P1 first offending phase (gear-on): ${first} (update ${fx(off.upMed)} -> ${fx(gon.upMed)} ms, draw ${fx(off.drMed)} -> ${fx(gon.drMed)} ms)`);
+  check(`gear case: the floating-text pool stays <= ${TEXT_POOL} (pool size and live texts)`, gon.maxPool <= TEXT_POOL && gon.maxLive <= TEXT_POOL, JSON.stringify({ pool: gon.maxPool, live: gon.maxLive }));
+  check('gear case: 0 console errors', off.errs.length + gon.errs.length === 0, off.errs.concat(gon.errs).slice(0, 3).join(' | '));
+  check('gear case: 0 database requests or sockets', off.db + gon.db === 0, String(off.db + gon.db));
   await browser.close();
   done();
 })();

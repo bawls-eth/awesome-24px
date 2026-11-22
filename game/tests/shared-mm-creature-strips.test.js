@@ -12,10 +12,12 @@ const man = (d) => JSON.parse(fs.readFileSync(path.join(ART, d, 'manifest.json')
 
 (async () => {
   // 1 the inline table mirrors the manifests: every manifest strip is listed with the same frames / fps / loop / cell / anchor / seat
-  const assets = man('b31a-jungle-creatures-core').assets.concat(man('b32-jungle-big-and-boss').assets);
+  // b31b: vinecoil + canopy_glider are wired (moth_lantern has no MMCreatures def yet, so its strips are not in the table)
+  const b31b = man('b31b-jungle-creatures-rest').assets.filter((a) => a.enemy === 'vinecoil' || a.enemy === 'canopy_glider');
+  const assets = man('b31a-jungle-creatures-core').assets.concat(b31b, man('b32-jungle-big-and-boss').assets);
   const files = M.files();
   const byId = {}; files.forEach((f) => { byId[f.id] = f; });
-  check('83 strips: 40 from b31a + 43 from b32, one per manifest asset', files.length === 83 && assets.length === 83 && assets.every((a) => byId[a.id]));
+  check('107 strips: 40 from b31a + 24 from b31b + 43 from b32, one per manifest asset', files.length === 107 && b31b.length === 24 && assets.length === 107 && assets.every((a) => byId[a.id]));
   const bad = [];
   assets.forEach((a) => {
     const k = a.enemy || a.creature, sp = M.SPECS[k], act = M.ACT[a.action];
@@ -70,11 +72,11 @@ const man = (d) => JSON.parse(fs.readFileSync(path.join(ART, d, 'manifest.json')
   const set = M.create({ create: mk, loadImage: (u) => { asked.push(u); return Promise.resolve(/glimmerfrog_move_up/.test(u) ? null : img(u)); } });
   check('before ready: nothing is drawn from PNG', !set.has('fernraptor') && set.get('fernraptor', 'idle', 0) === null);
   await set.ready;
-  check('loads each of the 83 PNGs exactly once', asked.length === 83 && new Set(asked).size === 83);
+  check('loads each of the 107 PNGs exactly once', asked.length === 107 && new Set(asked).size === 107);
   check('complete creatures are on, glimmerfrog (a missing move_up) falls back to the code bake', set.has('fernraptor') && set.has('tusktop') && set.has('fernjaw_tyrant') && set.has('chompbill') && !set.has('glimmerfrog'));
   const fr = set.get('fernraptor', 'move', M.LEFT), tk = set.get('tusktop', 'saddle_move', M.DOWN), ty = set.get('fernjaw_tyrant', 'roar', M.UP);
   check('baked strips are native size (256 -> 64, 384 -> 96, 512 -> 128) with the anchor scaled', fr.w === 64 && fr.frames === 6 && fr.ax === 32 && fr.ay === 231 / 4 && tk.w === 96 && tk.id === 'tusktop_saddle_move_down' && ty.w === 128 && ty.id === 'fernjaw_tyrant_roar_up');
-  check('each loaded strip (82: one failed) is baked once onto a frames x native canvas with smoothing off', canvases.length === 82 && fr.src.width === 64 * 6 && fr.src.height === 64 && fr.src.smooth === false);
+  check('each loaded strip (106: one failed) is baked once onto a frames x native canvas with smoothing off', canvases.length === 106 && fr.src.width === 64 * 6 && fr.src.height === 64 && fr.src.smooth === false);
   check('get() falls back to idle of the same view for an action a creature lacks', set.get('chompbill', 'roar', M.RIGHT).id === 'chompbill_idle_right');
   const calls = []; const ctx = { drawImage: (...a) => calls.push(a), save: () => calls.push('save'), translate: () => {}, scale: () => {}, restore: () => calls.push('restore') };
   set.draw(ctx, fr, 7, 100, 200, 1, false);
