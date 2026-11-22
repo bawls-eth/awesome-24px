@@ -71,3 +71,14 @@ body { min-height:100vh; display:flex; flex-direction:column; align-items:center
 body { font-size:calc(16px * var(--ui-scale,1)); } /* shared text size pref; everything else inherits or scales */
 /* Shared access pref "screen flashes off" (MMSideAccess) or the OS setting: no animations or transitions. */
 html[data-reduce-motion="1"] *, html[data-reduce-motion="1"] *::before, html[data-reduce-motion="1"] *::after { animation:none !important; transition:none !important; }
+/* FUN1: juice. Timer warms up in the last 10 s, the score pops on a catch, the summary leads with Play again. */
+#hud-best { color:var(--dim); }
+#hud-time.hurry { color:#1d2b20; background:#ffb703; animation:bugs-hurry .5s ease-in-out infinite alternate; }
+@keyframes bugs-hurry { from { transform:scale(1); } to { transform:scale(1.12); } }
+#hud-score { display:inline-block; transition:transform .12s ease-out; }
+#hud-score.bump { transform:scale(1.25); color:var(--accent); }
+#overlay .chase { font-size:calc(16px * var(--ui-scale,1)); color:var(--ink); }
+#overlay .chase.win { color:var(--accent); font-weight:bold; }
+#overlay button.again { font-size:calc(18px * var(--ui-scale,1)); min-width:160px; min-height:56px; font-weight:bold; }
+#overlay .keyhint { font-size:calc(12px * var(--ui-scale,1)); }
+@media (pointer: coarse) { #overlay .keyhint { display:none; } }

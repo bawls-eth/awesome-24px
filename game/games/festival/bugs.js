@@ -43,6 +43,19 @@
   // Own additive keys only: the run save, the goals list, and the hub medal summary {v:1,m:[...]} (read by hub/medals.js).
   function persist() { S.set(KEY, { v: 1, stars: save.stars, best: save.best, journal: save.journal }); S.set(GOALS_KEY, goals); S.set(MEDALS_KEY, { v: 1, m: B.medalsFor(save, goals) }); try { var st = totalStars(), j = save.journal; window.MMHubProfile.sync(localStorage, 'bugs', [Object.keys(j).some(function (k) { return j[k] > 0; }) && 'catch1', st >= 6 && 'stars6', (j.goldbeetle > 0 || j.moonwing > 0) && 'rare', st >= 24 && 'stars24']); } catch (e) { /* hub map progress is optional */ } }
   persist();
+  // FUN1 personal bests (own additive key): best combo per arena, runs played, so the summary can show the chase.
+  var PB_KEY = 'pixeltown-bugs-pb-v1';
+  function cleanPb(raw) {
+    var o = { v: 1, combo: {}, runs: 0 };
+    if (raw && typeof raw === 'object') {
+      var r = Math.floor(Number(raw.runs)); o.runs = isFinite(r) && r > 0 ? Math.min(999999, r) : 0;
+      if (raw.combo && typeof raw.combo === 'object') ALL.forEach(function (a) { var n = Math.floor(Number(raw.combo[a.id])); if (isFinite(n) && n > 0) o.combo[a.id] = Math.min(999, n); });
+    }
+    return o;
+  }
+  var pb = cleanPb(S.get(PB_KEY, null));
+  var NEAR_RADIUS = 2.4, CATCH_R = 1.2; // a swing that misses a visible bug within this many tiles is a near miss
+  var MILESTONES = [3, 5, 8];
   function arenaStars() { return ALL.reduce(function (n, a) { return n + save.stars[a.id]; }, 0); }
   function totalStars() { return arenaStars() + B.goalStars(goals); } // score stars + one per finished journal goal
   function needStars(i) { return i * 2; }
@@ -57,7 +70,7 @@
   var bgCache = {}, gmeta = {};
   var keys = {}, joy = { x: 0, y: 0 }, sneakBtn = false;
   var testClock = TEST;
-  var lastSummary = null, testSneak = false;
+  var lastSummary = null, testSneak = false, nearMisses = 0, banner = null, scoreBump = 0;
   var HINT_KEY = 'pixeltown-bugs-hint-v1';
   var hintOpen = false;
   var sfx = null;
@@ -93,7 +106,8 @@
     var seed = opts.seed !== undefined ? opts.seed : (String(Date.now()) + Math.random());
     game = B.createRun({ seed: seed, arena: id, night: !!a.night, glade: !!a.glade, width: W, height: H, empty: !!opts.empty, count: opts.count });
     rng = R.create('page:' + seed);
-    meta = {}; gmeta = {}; popups = []; particles = []; shake = 0; swingAnim = 0;
+    meta = {}; gmeta = {}; popups = []; particles = []; shake = 0; swingAnim = 0; nearMisses = 0; banner = null; scoreBump = 0;
+    $('hud-best').textContent = 'Best ' + save.best[id];
     mode = 'play'; overlay.hidden = true;
     $('hud-arena').textContent = NAMES[id];
     if (!hintSeen()) showHint(); else hideHint();
@@ -121,6 +135,18 @@
         });
         if (gfx.low && particles.length > gfx.cap) particles.length = gfx.cap; // low tier: never over MMPerf's cap, not even for one frame
         if (!reduced) shake = 0.12;
+        scoreBump = 0.25;
+        var c = game.state.combo;
+        if (MILESTONES.indexOf(c) >= 0) { banner = { text: 'Combo x' + mult(c).toFixed(2).replace(/0$/, '') + '!', t: 0 }; beep('claim'); if (!reduced) shake = 0.2; }
+      } else {
+        // near miss: an honest "So close!" only when a catchable bug was just out of net reach
+        var p0 = game.state.player, near = null, nd = 1e9;
+        game.state.bugs.forEach(function (b) {
+          if (b.state === 'hidden' || b.state === 'caught') return;
+          var d = Math.hypot(b.x - p0.x, b.y - p0.y);
+          if (d > CATCH_R && d <= NEAR_RADIUS && d < nd) { nd = d; near = b; }
+        });
+        if (near) { nearMisses++; popups.push({ x: near.x, y: near.y, t: 0, text: 'So close!', miss: true }); }
       }
     }
     void before;
@@ -141,17 +167,22 @@
     var newly = [];
     ALL.forEach(function (a, i) { if (!(oldTotal >= needStars(i)) && unlocked(i)) newly.push(NAMES[a.id]); });
     var gained = Math.max(0, stars - prevStars);
+    var prevCombo = pb.combo[arenaId] || 0;
+    if (st.bestCombo > prevCombo) pb.combo[arenaId] = Math.min(999, st.bestCombo);
+    pb.runs = Math.min(999999, pb.runs + 1);
+    S.set(PB_KEY, pb);
     var nextHint = '';
     for (var ni = 0; ni < ALL.length; ni++) {
       if (!unlocked(ni)) { nextHint = NAMES[ALL[ni].id] + ' unlocks at ' + needStars(ni) + ' stars (you have ' + totalStars() + ').'; break; }
     }
     if (!nextHint) nextHint = 'Every arena is unlocked. Go for 3 stars everywhere!';
-    lastSummary = { arena: arenaId, score: score, stars: stars, gained: gained, bestCombo: st.bestCombo, hint: nextHint, caught: st.caught, counts: counts, best: save.best[arenaId], newlyUnlocked: newly, newBest: score > prevBest,
+    lastSummary = { arena: arenaId, score: score, stars: stars, gained: gained, bestCombo: st.bestCombo, hint: nextHint, caught: st.caught, counts: counts, best: save.best[arenaId], newlyUnlocked: newly, newBest: score > prevBest, prevBest: prevBest, nearMisses: nearMisses, comboBest: pb.combo[arenaId] || 0, newComboBest: st.bestCombo > prevCombo && prevCombo > 0,
       goals: newGoals.map(function (gid) { return B.goalsFor(arenaId).filter(function (g) { return g.id === gid; })[0].text; }) };
     mode = 'summary';
     hideHint();
     if (gained > 0) beep('levelup');
     showSummary();
+    var ag = $('again'); if (ag && ag.focus) { try { ag.focus({ preventScroll: true }); } catch (e) { ag.focus(); } }
   }
 
   // advance game time; used by loop and test hook
@@ -202,6 +233,8 @@
   function fx(dt) {
     swingAnim = Math.max(0, swingAnim - dt); shake = Math.max(0, shake - dt);
     popups.forEach(function (p) { p.t += dt; p.y -= dt * (reduced ? 0 : 1.2); });
+    scoreBump = Math.max(0, scoreBump - dt);
+    if (banner) { banner.t += dt; if (banner.t > 1.1) banner = null; }
     popups = popups.filter(function (p) { return p.t < 0.9; });
     particles.forEach(function (p) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; });
     particles = particles.filter(function (p) { return p.t < 0.4; });
@@ -306,18 +339,28 @@
         g.fillStyle = 'rgba(255,255,255,' + (0.85 - t * 0.5) + ')'; g.beginPath(); g.arc(px + Math.cos(aEnd) * r, py + Math.sin(aEnd) * r, 3.5, 0, 6.3); g.fill();
       }
       particles.forEach(function (p) { g.fillStyle = '#ffd166'; g.fillRect(p.x * TILE, p.y * TILE, 2, 2); });
-      g.font = 'bold 9px monospace'; g.textAlign = 'center';
-      popups.forEach(function (p) { if (!gfx.low) { g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(p.text, p.x * TILE + 1, p.y * TILE - 5); } g.fillStyle = '#fff'; g.fillText(p.text, p.x * TILE, p.y * TILE - 6); });
+      g.font = 'bold 10px monospace'; g.textAlign = 'center';
+      popups.forEach(function (p) { if (!gfx.low) { g.fillStyle = 'rgba(0,0,0,.6)'; g.fillText(p.text, p.x * TILE + 1, p.y * TILE - 5); } g.fillStyle = p.miss ? '#ffb3a7' : '#fff'; g.fillText(p.text, p.x * TILE, p.y * TILE - 6); });
+      if (banner) {
+        var bs = reduced ? 1 : 1 + 0.35 * Math.max(0, 1 - banner.t / 0.18), ba = banner.t > 0.8 ? Math.max(0, 1 - (banner.t - 0.8) / 0.3) : 1;
+        g.save(); g.globalAlpha = ba; g.translate(cv.width / 2, 40); g.scale(bs, bs);
+        g.font = 'bold 18px monospace'; g.textAlign = 'center';
+        if (!gfx.low) { g.fillStyle = 'rgba(0,0,0,.65)'; g.fillText(banner.text, 1, 1); }
+        g.fillStyle = '#ffd166'; g.fillText(banner.text, 0, 0); g.restore();
+      }
     }
     g.restore();
     if (B.arena(id).night) { g.fillStyle = 'rgba(8,10,40,.4)'; g.fillRect(0, 0, cv.width, cv.height); }
     hud();
   }
   function hud() {
-    if (!game) { $('hud-time').textContent = String(B.RUN_SECONDS); $('hud-score').textContent = '0'; $('combo-bar').style.width = '0'; $('combo-text').textContent = ''; return; }
+    if (!game) { $('hud-time').textContent = B.RUN_SECONDS + 's'; $('hud-time').classList.remove('hurry'); $('hud-score').textContent = '0'; $('combo-bar').style.width = '0'; $('combo-text').textContent = ''; return; }
     var st = game.state;
-    $('hud-time').textContent = Math.max(0, Math.ceil(B.RUN_SECONDS - st.time)) + 's';
+    var left = Math.max(0, Math.ceil(B.RUN_SECONDS - st.time));
+    $('hud-time').textContent = left + 's';
+    $('hud-time').classList.toggle('hurry', mode === 'play' && left <= 10);
     $('hud-score').textContent = String(Math.round(st.score));
+    $('hud-score').classList.toggle('bump', scoreBump > 0 && !reduced);
     var frac = st.combo > 0 ? Math.max(0, 1 - (st.time - st.lastCatchAt) / B.COMBO_WINDOW) : 0;
     $('combo-bar').style.width = (frac * 100).toFixed(0) + '%';
     $('combo-text').textContent = st.combo > 1 ? 'Combo x' + mult(st.combo).toFixed(2).replace(/0$/, '') : (st.combo === 1 ? 'Combo 1' : 'No combo');
@@ -398,6 +441,14 @@
     overlay.appendChild(el('h2', 'Time! ' + NAMES[s.arena]));
     var st = el('p', stars(s.stars), 'stars'); st.id = 'sum-stars'; overlay.appendChild(st);
     var sc = el('p', 'Score ' + s.score + (s.newBest ? '  (new best!)' : '  (best ' + s.best + ')')); sc.id = 'sum-score'; overlay.appendChild(sc);
+    // FUN1: the personal-best chase in one honest line, and Play again right under the result (one tap, or Enter / R)
+    var chase = s.newBest ? (s.prevBest > 0 ? 'New best by ' + (s.score - s.prevBest) + ' points!' : 'First score on the board!') : (s.best - s.score === 0 ? 'Tied your best!' : (s.best - s.score) + ' points to beat your best.');
+    var ch = el('p', chase, s.newBest ? 'chase win' : 'chase'); ch.id = 'sum-chase'; overlay.appendChild(ch);
+    var top = el('div', undefined, 'row'); top.id = 'sum-actions';
+    var again = btn('Play again', function () { startArena(s.arena); }, false); again.id = 'again'; again.className = 'again'; top.appendChild(again);
+    var back = btn('Arenas', showMenu); back.id = 'to-menu'; top.appendChild(back);
+    overlay.appendChild(top);
+    overlay.appendChild(el('p', 'Enter or R plays again.', 'dim keyhint'));
     overlay.appendChild(el('p', 'Bugs caught: ' + s.caught));
     var gp = el('p', 'Stars gained: ' + s.gained); gp.id = 'sum-gained'; overlay.appendChild(gp);
     var cp = el('p', 'Best combo: ' + s.bestCombo + (s.bestCombo > 1 ? ' (x' + mult(s.bestCombo).toFixed(2).replace(/0$/, '') + ')' : '')); cp.id = 'sum-combo'; overlay.appendChild(cp);
@@ -407,11 +458,9 @@
     overlay.appendChild(cl);
     if (s.goals && s.goals.length) { var sg = el('p', 'Journal goal done (+' + s.goals.length + ' star' + (s.goals.length > 1 ? 's' : '') + '): ' + s.goals.join(', ')); sg.id = 'sum-goals'; overlay.appendChild(sg); }
     if (s.newlyUnlocked.length) overlay.appendChild(el('p', 'Unlocked: ' + s.newlyUnlocked.join(', ')));
+    var nm = el('p', s.nearMisses ? 'Near misses: ' + s.nearMisses + ' (stand a little closer before you swing)' : 'Near misses: 0', 'dim'); nm.id = 'sum-near'; overlay.appendChild(nm);
+    var cb = el('p', 'Arena best combo: ' + s.comboBest + (s.newComboBest ? ' (new!)' : ''), 'dim'); cb.id = 'sum-combo-best'; overlay.appendChild(cb);
     var hp = el('p', 'Next: ' + s.hint, 'dim'); hp.id = 'sum-hint'; overlay.appendChild(hp);
-    var row = el('div', undefined, 'row');
-    var again = btn('Play again', function () { startArena(s.arena); }); again.id = 'again'; row.appendChild(again);
-    var back = btn('Arenas', showMenu); back.id = 'to-menu'; row.appendChild(back);
-    overlay.appendChild(row);
   }
 
   // ---------- tutorial hint (first run only, remembered) ----------
@@ -431,6 +480,9 @@
     if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].indexOf(e.code) >= 0 && mode === 'play') e.preventDefault();
     keys[e.code] = true;
     if (e.code === 'Space' && mode === 'play') doSwing();
+    if (mode === 'summary' && lastSummary && (e.code === 'KeyR' || ((e.code === 'Enter' || e.code === 'NumpadEnter') && !(document.activeElement && document.activeElement.id === 'to-menu')))) {
+      e.preventDefault(); startArena(lastSummary.arena);
+    }
   });
   window.addEventListener('keyup', function (e) { keys[e.code] = false; });
   window.addEventListener('blur', function () { keys = {}; joy.x = joy.y = 0; sneakBtn = false; });
@@ -475,6 +527,10 @@
       get save() { return JSON.parse(JSON.stringify(save)); },
       get summary() { return lastSummary; },
       get shake() { return shake; },
+      get banner() { return banner ? banner.text : null; },
+      get nearMisses() { return nearMisses; },
+      get popups() { return popups.map(function (p) { return p.text; }); },
+      get pb() { return JSON.parse(JSON.stringify(pb)); },
       get particles() { return particles.length; },
       get gfx() { return { tier: gfx.tier, low: gfx.low, cap: gfx.cap, burst: gfx.burst, dpr: gfx.dpr || 1 }; },
       render: render,
