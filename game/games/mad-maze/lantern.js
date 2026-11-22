@@ -93,6 +93,19 @@
     var o; try { o = JSON.parse(raw); } catch (e) { return null; }
     return isObj(o) && isObj(o.realm) ? o.realm : null;
   }
+  // The world Realm keeps its own save (RealmWorld.SAVE_KEY); its presence means the realm progress above is today's Realm, not an old arena.
+  var WORLD_KEY = 'pixeltown-realm-v1';
+  function worldPlayed() { try { return localStorage.getItem(WORLD_KEY) !== null; } catch (e) { return false; } }
+  function showOffer() { return !offerHidden && (P.legacyOffer ? P.legacyOffer(legacyRealm(), profile, worldPlayed()) : !profile.migratedFrom && !!legacyRealm()); }
+  // Read-only: the Realm HUD level ("Lv N", account-wide) for the hero the Realm plays as (active id, else the first hero, as the picker does).
+  function realmTag() {
+    if (!P.realmLevel || !P.realmHeroId) return null;
+    var lv = P.realmLevel(legacyRealm());
+    if (lv === null) return null;
+    var raw = null; try { raw = localStorage.getItem(ACTIVE_KEY); } catch (e) { raw = null; }
+    var id = P.realmHeroId(profile, raw);
+    return id ? { id: id, level: lv } : null;
+  }
   function clsName(id) { var c = C.CLASSES[id]; return c ? c.name : id; }
   function itemInfo(it) {
     if (it.keepsake) return { name: 'Keepsake' + (it.from ? ' of ' + String(it.from).replace(/[\u0000-\u001f]/g, '') : ''), icon: I.KIND_ICONS.keepsake, tier: null, color: '#ffd36b' };
@@ -478,7 +491,8 @@
     if (selected && !heroById(selected)) selected = null;
     if (!selected && profile.heroes.length) selected = profile.heroes[0].id;
     $('fame').textContent = 'Account fame: ' + profile.fame;
-    $('import-offer').hidden = !(!profile.migratedFrom && legacyRealm() && !offerHidden);
+    $('import-offer').hidden = !showOffer();
+    var realmLv = realmTag();
 
     var ul = $('heroes'); ul.textContent = '';
     profile.heroes.forEach(function (h) {
@@ -488,6 +502,7 @@
       li.appendChild(el('div', 'hname', h.name));
       var meta = el('div', 'meta', clsName(h.cls) + ' - Level ' + h.level + ' - fame ' + h.fame);
       meta.appendChild(el('span', 'tag mode', h.mode === 'picnic' ? 'Picnic' : h.mode === 'hardcore' ? 'Hardcore' : 'Classic'));
+      if (realmLv && realmLv.id === h.id) { var rl = el('span', 'tag realm-lv', 'Realm Lv ' + realmLv.level); rl.setAttribute('data-realm-level', String(realmLv.level)); rl.title = 'The level the Realm shows for this hero (shared Realm level). Level here is the Lantern level.'; meta.appendChild(rl); }
       li.appendChild(meta);
       heroDetails(li, h);
       var row = el('div', 'row');

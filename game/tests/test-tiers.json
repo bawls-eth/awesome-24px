@@ -247,11 +247,19 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "jam-menu-first-tap.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "stalk-notes.test.js": {
     "class": "browser",
     "tier": "smoke"
   },
   "lantern-page.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "lantern-fresh-player.test.js": {
     "class": "browser",
     "tier": "smoke"
   },

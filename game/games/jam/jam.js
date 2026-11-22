@@ -286,13 +286,18 @@
   // drop the context so already-scheduled backing notes cannot ring on after quitting
   function stopAudioForMenu() { audioMode = false; events = null; if (actx) { try { actx.close(); } catch (e) { /* ignore */ } actx = null; master = null; noiseBuf = null; } }
 
-  function pause() {
+  // quiet = paused by the Menu sheet (review 3 #6): the Paused card waits until the sheet closes, because the page closes the sheet
+  // whenever #overlay shows, which used to eat the first Menu tap. On close the song stays paused with a clear Resume.
+  var navPaused = false;
+  function pause(quiet) {
     if (mode !== 'play' || paused) return;
     frozenAt = songNow(); paused = true; mode = 'pause';
     if (!TEST) { if (audioMode) { try { actx.suspend(); } catch (e) { /* ignore */ } } else pauseSrc = performance.now(); }
+    if (quiet === true) { navPaused = true; return; }
     showPause();
   }
   function resume() {
+    navPaused = false;
     if (mode !== 'pause') return;
     if (!TEST) { if (audioMode) { try { actx.resume(); } catch (e) { /* ignore */ } } else pausedTotal += performance.now() - pauseSrc; }
     paused = false; mode = 'play'; overlay.hidden = true;
@@ -353,7 +358,11 @@
   window.addEventListener('keyup', function (e) { if (KEYMAP[e.code]) releaseSource('k:' + e.code); });
   window.addEventListener('blur', function () { Object.keys(laneKeys).forEach(releaseSource); if (mode === 'play' && !TEST) pause(); });
   document.addEventListener('visibilitychange', function () { if (document.hidden && mode === 'play') pause(); });
-  if (window.MMNav && MMNav.onOpen) MMNav.onOpen(function () { if (mode === 'play' && !TEST) pause(); }); // the Menu sheet pauses the song
+  if (window.MMNav && MMNav.onOpen) MMNav.onOpen(function () { if (mode === 'play' && !TEST) pause(true); }); // the Menu sheet pauses the song (sheet stays open)
+  if (window.MMNav && MMNav.onClose) MMNav.onClose(function () { // closing the sheet (Esc, backdrop, Menu) leaves the song paused with Resume focused
+    if (!navPaused) return; navPaused = false;
+    if (mode === 'pause') { showPause(); var r = $('resume'); if (r) r.focus(); }
+  });
   window.addEventListener('pointerdown', ensureAudio, { passive: true });
 
   function bindPointer(node, laneOf) {
