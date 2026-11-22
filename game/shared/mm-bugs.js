@@ -24,8 +24,16 @@
     cricket: { points: 25, speed: 1.8, burrower: false },
     antlion: { points: 30, speed: 0.4, burrower: true },
     goldbeetle: { points: 150, speed: 1.2, burrower: false, rare: true },
-    moonwing: { points: 300, speed: 1.6, burrower: false, rare: true, night: true }
+    moonwing: { points: 300, speed: 1.6, burrower: false, rare: true, night: true },
+    // MG1 night glade band (additive): only spawn in the glade. A firefly dims and drifts off if you walk up fast; sneak up slowly.
+    firefly: { points: 20, speed: 0.7, burrower: false, glade: true, wary: true },
+    glowmoth: { points: 35, speed: 1.1, burrower: false, glade: true }
   };
+  const BASE_SPECIES = ['ladybug', 'butterfly', 'beetle', 'cricket', 'antlion', 'goldbeetle', 'moonwing'];
+  const GLADE_SPECIES = ['firefly', 'glowmoth'];
+  const WARY_RADIUS = 3.5;   // a firefly notices a fast walker this close
+  const DIM_SECONDS = 1.5;   // and stays dim (not catchable) this long
+  const GLADE_FIREFLIES = 4, GLADE_MOTHS = 2;
   const COMMON = ['ladybug', 'butterfly', 'beetle', 'cricket', 'antlion'];
 
   // 8 arenas; stars at score thresholds [1 star, 2 stars, 3 stars]
@@ -39,6 +47,65 @@
     { id: 'marsh', stars: [130, 250, 390] },
     { id: 'lantern', stars: [150, 280, 430], night: true }
   ];
+  // MG1 additive band: arena variants. The Night Glade is a variant of Lantern Glade with its own bugs; it opens by stars
+  // like every arena (never by time). ALL_ARENAS = ARENAS then VARIANTS (unlock order).
+  const VARIANTS = [
+    { id: 'glade', stars: [140, 260, 400], night: true, glade: true, variant: 'lantern' }
+  ];
+  const ALL_ARENAS = ARENAS.concat(VARIANTS);
+
+  // MG1 journal goals: 3 calm "things to find" per arena, checked at the end of a normal run. Done goals stay done forever.
+  // k: catch (n of sp), sneak (n of sp while sneaking), combo (reach n), total (n bugs), flower (n flushed from flowers)
+  const GOALS = {
+    meadow: [{ id: 'm1', k: 'catch', sp: 'ladybug', n: 3, text: 'Catch 3 ladybugs' }, { id: 'm2', k: 'sneak', sp: 'cricket', n: 3, text: 'Catch 3 crickets sneaking' }, { id: 'm3', k: 'flower', n: 1, text: 'Net a bug that hid in a flower' }],
+    orchard: [{ id: 'o1', k: 'catch', sp: 'butterfly', n: 3, text: 'Catch 3 butterflies' }, { id: 'o2', k: 'combo', n: 3, text: 'Reach a 3 catch combo' }, { id: 'o3', k: 'total', n: 8, text: 'Catch 8 bugs in one visit' }],
+    pond: [{ id: 'p1', k: 'catch', sp: 'beetle', n: 3, text: 'Catch 3 beetles' }, { id: 'p2', k: 'sneak', sp: 'butterfly', n: 2, text: 'Catch 2 butterflies sneaking' }, { id: 'p3', k: 'combo', n: 3, text: 'Reach a 3 catch combo' }],
+    forest: [{ id: 'f1', k: 'catch', sp: 'antlion', n: 2, text: 'Lure out 2 antlions' }, { id: 'f2', k: 'total', n: 10, text: 'Catch 10 bugs in one visit' }, { id: 'f3', k: 'sneak', sp: 'beetle', n: 3, text: 'Catch 3 beetles sneaking' }],
+    dunes: [{ id: 'd1', k: 'catch', sp: 'antlion', n: 3, text: 'Lure out 3 antlions' }, { id: 'd2', k: 'catch', sp: 'cricket', n: 4, text: 'Catch 4 crickets' }, { id: 'd3', k: 'combo', n: 4, text: 'Reach a 4 catch combo' }],
+    cliffs: [{ id: 'c1', k: 'catch', sp: 'butterfly', n: 4, text: 'Catch 4 butterflies' }, { id: 'c2', k: 'sneak', sp: 'ladybug', n: 4, text: 'Catch 4 ladybugs sneaking' }, { id: 'c3', k: 'total', n: 12, text: 'Catch 12 bugs in one visit' }],
+    marsh: [{ id: 'h1', k: 'catch', sp: 'beetle', n: 4, text: 'Catch 4 beetles' }, { id: 'h2', k: 'flower', n: 2, text: 'Net 2 bugs that hid in flowers' }, { id: 'h3', k: 'combo', n: 4, text: 'Reach a 4 catch combo' }],
+    lantern: [{ id: 'l1', k: 'catch', sp: 'moonwing', n: 1, text: 'Find the Moonwing' }, { id: 'l2', k: 'sneak', sp: 'cricket', n: 4, text: 'Catch 4 crickets sneaking' }, { id: 'l3', k: 'total', n: 12, text: 'Catch 12 bugs in one visit' }],
+    glade: [{ id: 'g1', k: 'catch', sp: 'firefly', n: 3, text: 'Catch 3 fireflies (walk up slowly)' }, { id: 'g2', k: 'catch', sp: 'glowmoth', n: 2, text: 'Catch 2 glowmoths' }, { id: 'g3', k: 'total', n: 10, text: 'Catch 10 bugs in one visit' }]
+  };
+  function goalsFor(id) { return Object.prototype.hasOwnProperty.call(GOALS, id) ? GOALS[id] : []; }
+  // Which goals of `arenaId` a finished (or running) run state meets. Pure.
+  function goalsMet(arenaId, st) {
+    const log = (st && Array.isArray(st.catchLog)) ? st.catchLog : [];
+    return goalsFor(arenaId).filter((g) => {
+      if (g.k === 'catch') return log.filter((c) => c.type === g.sp).length >= g.n;
+      if (g.k === 'sneak') return log.filter((c) => c.type === g.sp && c.sneak).length >= g.n;
+      if (g.k === 'combo') return (st.bestCombo || 0) >= g.n;
+      if (g.k === 'total') return log.length >= g.n;
+      if (g.k === 'flower') return log.filter((c) => c.flushed).length >= g.n;
+      return false;
+    }).map((g) => g.id);
+  }
+  // Goals save `pixeltown-bugs-goals-v1` = {v:1, done:{arena:[goalId...]}}. Any input -> valid; only known ids survive.
+  function cleanGoals(raw) {
+    if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch (e) { raw = null; } }
+    const done = raw && typeof raw === 'object' && !Array.isArray(raw) && raw.done && typeof raw.done === 'object' && !Array.isArray(raw.done) ? raw.done : {};
+    const out = { v: 1, done: {} };
+    Object.keys(GOALS).forEach((a) => {
+      const list = Object.prototype.hasOwnProperty.call(done, a) && Array.isArray(done[a]) ? done[a] : [];
+      const ok = GOALS[a].map((g) => g.id);
+      out.done[a] = ok.filter((id) => list.indexOf(id) >= 0);
+    });
+    return out;
+  }
+  function goalStars(goals) { const g = cleanGoals(goals); return Object.keys(g.done).reduce((n, a) => n + g.done[a].length, 0); }
+  const GOAL_COUNT = Object.keys(GOALS).reduce((n, a) => n + GOALS[a].length, 0);
+  // Hub medals for `pixeltown-medals-bugs-v1` = {v:1, m:[...]}: from the cleaned save + goals.
+  const MEDAL_IDS = ['first_catch', 'species7', 'stars10', 'moonwing'];
+  function medalsFor(save, goals) {
+    const s = cleanSave(save), j = s.journal;
+    const stars = ALL_ARENAS.reduce((n, a) => n + s.stars[a.id], 0) + goalStars(goals);
+    const m = [];
+    if (Object.keys(j).some((k) => j[k] > 0)) m.push('first_catch');
+    if (BASE_SPECIES.every((k) => j[k] > 0)) m.push('species7');
+    if (stars >= 10) m.push('stars10');
+    if (j.moonwing > 0) m.push('moonwing');
+    return m;
+  }
 
   function rng(seed) {
     let h = 2166136261 >>> 0;
@@ -53,17 +120,17 @@
     };
   }
 
-  function arena(id) { return ARENAS.find((a) => a.id === id) || null; }
+  function arena(id) { return ALL_ARENAS.find((a) => a.id === id) || null; }
   function starsFor(id, score) {
     const a = arena(id); if (!a) return 0;
     let s = 0; for (const t of a.stars) if (score >= t) s++;
     return s;
   }
-  // Moonwing only at night
-  function canSpawn(type, night) { const t = Object.prototype.hasOwnProperty.call(TYPES, type) ? TYPES[type] : null; return !!t && (!t.night || !!night); }
+  // Moonwing only at night; glade bugs only in the Night Glade
+  function canSpawn(type, night, glade) { const t = Object.prototype.hasOwnProperty.call(TYPES, type) ? TYPES[type] : null; return !!t && (!t.night || !!night) && (!t.glade || !!glade); }
 
   // Save shape for `pixeltown-bugs-v1`: {v, stars{arena:0..3}, best{arena:0..99999}, journal{type:0..999999}}.
-  // Any input -> a valid save; only known arena / species names survive.
+  // Any input -> a valid save; only known arena / species names survive. stars/best also hold the MG1 variants (glade); journal holds the glade bugs.
   function clampInt(v, lo, hi) { v = Math.floor(Number(v)); return Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : lo; }
   function cleanSave(raw) {
     if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch (e) { raw = null; } }
@@ -71,7 +138,7 @@
     const own = (o, k) => isO(o) && Object.prototype.hasOwnProperty.call(o, k) ? o[k] : 0;
     if (!isO(raw)) raw = {};
     const out = { v: 1, stars: {}, best: {}, journal: {} };
-    ARENAS.forEach((a) => { out.stars[a.id] = clampInt(own(raw.stars, a.id), 0, 3); out.best[a.id] = clampInt(own(raw.best, a.id), 0, 99999); });
+    ALL_ARENAS.forEach((a) => { out.stars[a.id] = clampInt(own(raw.stars, a.id), 0, 3); out.best[a.id] = clampInt(own(raw.best, a.id), 0, 99999); });
     Object.keys(TYPES).forEach((t) => { out.journal[t] = clampInt(own(raw.journal, t), 0, 999999); });
     return out;
   }
@@ -79,15 +146,15 @@
   function createRun(opts) {
     opts = opts || {};
     const r = rng(opts.seed === undefined ? 'bugs' : opts.seed);
-    const night = !!opts.night;
+    const night = !!opts.night, glade = !!opts.glade;
     const W = opts.width || 20, H = opts.height || 14;
     const run = {
       time: 0, score: 0, caught: 0, combo: 0, bestCombo: 0, stillT: 0, flowers: [], nextGroup: 1, lastCatchAt: -1e9, cooldown: 0, rareSpawned: false, done: false,
-      player: { x: W / 2, y: H / 2, sneaking: false }, bugs: [], nextId: 1, caughtTypes: []
+      player: { x: W / 2, y: H / 2, sneaking: false }, bugs: [], nextId: 1, caughtTypes: [], catchLog: []
     };
     // o.mound: a burrower that stays underground until you stand still near it; o.flower: hides in a flower patch.
     function spawn(type, x, y, o) {
-      if (!canSpawn(type, night)) return null;
+      if (!canSpawn(type, night, glade)) return null;
       o = o || {};
       const b = { id: run.nextId++, type, x: x === undefined ? r() * W : x, y: y === undefined ? r() * H : y,
         state: 'idle', hideT: 0, hideKind: null, group: 0, fleeT: 0, mound: false };
@@ -113,6 +180,11 @@
         const sx = 2 + r() * (W - 4), sy = 2 + r() * (H - 4);
         spawnSwarm('ladybug', sx, sy, 3); left -= 3;
       }
+      if (glade) {
+        for (let i = 0; i < GLADE_FIREFLIES; i++) spawn('firefly', 1 + r() * (W - 2), 1 + r() * (H - 2));
+        for (let i = 0; i < GLADE_MOTHS; i++) spawn('glowmoth', 1 + r() * (W - 2), 1 + r() * (H - 2));
+        left = Math.max(0, left - GLADE_FIREFLIES - GLADE_MOTHS);
+      }
       for (let i = 0; i < left; i++) { const t = COMMON[Math.floor(r() * COMMON.length)]; spawn(t, undefined, undefined, { mound: true }); }
     }
 
@@ -137,6 +209,7 @@
         run.score += TYPES[b.type].points * mult;
         run.bestCombo = Math.max(run.bestCombo, run.combo);
         run.caught++; run.caughtTypes.push(b.type);
+        run.catchLog.push({ type: b.type, sneak: !!run.player.sneaking, flushed: !!b.flushed });
       }
       run.score = Math.round(run.score * 100) / 100;
       return { swung: true, caught: hit.map((b) => b.id) };
@@ -165,6 +238,16 @@
       for (const b of run.bugs) {
         if (b.state === 'caught') continue;
         const t = TYPES[b.type];
+        if (t.wary) {
+          // Firefly: a fast walker nearby makes it dim (uncatchable) and drift; sneaking or standing still never does.
+          if (b.state === 'hidden' && b.hideKind === 'dim') {
+            b.hideT -= dt; runAway(b, t.speed * 0.4, dt, false);
+            if (b.hideT <= 0) { b.state = 'idle'; b.hideKind = null; }
+          } else if (moved && !sneaking && dist(b, run.player) <= WARY_RADIUS) {
+            b.state = 'hidden'; b.hideKind = 'dim'; b.hideT = DIM_SECONDS; b.dimmed = (b.dimmed || 0) + 1;
+          } else if (b.state === 'flee') b.state = 'idle';
+          continue;
+        }
         if (b.state === 'hidden') {
           const d = dist(b, run.player);
           if (b.hideKind === 'flower') {
@@ -190,5 +273,5 @@
     return { state: run, spawn, spawnSwarm, hideInFlower, setPlayer, swing, update, stars: () => starsFor(opts.arena, run.score) };
   }
 
-  return { RUN_SECONDS, SWING_COOLDOWN, SCARE_TILES, FLUSH_RADIUS, BURROW_RADIUS, STILL_SECONDS, FLEE_SECONDS, COMBO_WINDOW, COMBO_MULT, RARE_AT, TYPES, ARENAS, arena, starsFor, canSpawn, createRun, cleanSave };
+  return { BASE_SPECIES, GLADE_SPECIES, WARY_RADIUS, DIM_SECONDS, GOALS, GOAL_COUNT, goalsFor, goalsMet, cleanGoals, goalStars, MEDAL_IDS, medalsFor, RUN_SECONDS, SWING_COOLDOWN, SCARE_TILES, FLUSH_RADIUS, BURROW_RADIUS, STILL_SECONDS, FLEE_SECONDS, COMBO_WINDOW, COMBO_MULT, RARE_AT, TYPES, ARENAS, VARIANTS, ALL_ARENAS, arena, starsFor, canSpawn, createRun, cleanSave };
 });

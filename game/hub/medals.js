@@ -17,6 +17,8 @@
       ['tame_s', 'Small friend'], ['tame_m', 'Medium friend'], ['tame_l', 'Large friend'], ['tame_xl', 'Giant friend'], ['visit_home', 'Hearth Isle'],
       ['visit_jungle', 'Verdant Jungle'], ['visit_reef', 'Coral Reef'], ['visit_ice', 'Frostfang Tundra'], ['visit_mars', 'Red Waste'],
       ['boss_fernjaw_tyrant', 'Fernjaw Tyrant seen'], ['boss_tide_hydra', 'Tide Hydra seen'], ['boss_frost_dragon', 'Frost Dragon seen'], ['boss_red_titan', 'Red Titan seen']] },
+    // Bug Safari (games/festival/bugs.html, MMBugs.MEDAL_IDS): written to its own key pixeltown-medals-bugs-v1
+    bugs: { node: 'w5-safari', name: 'Bug Safari', medals: [['first_catch', 'First catch'], ['species7', 'All 7 bugs'], ['stars10', '10 stars'], ['moonwing', 'Moonwing']] },
   };
   const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
   const keyOf = (game) => 'pixeltown-medals-' + game + '-v1';
