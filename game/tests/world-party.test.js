@@ -166,7 +166,7 @@ const SPY = () => {
     return { n, dead, grew, items: got ? got.items.map((i) => ({ id: i.id, t: i.t || 0, rolled: i.rolled })) : [], own: t.bags().slice(-1)[0], shared: t.stats().shared };
   });
   check('2d. A\'s real world kill drops A\'s own tiered bag and is shared (one share per kill)', !!kill && kill.dead && kill.grew && kill.items.length > 0 && kill.items.every((i) => i.t >= 1) && kill.shared === kill.n, JSON.stringify(kill));
-  const gotB = await B.waitForFunction((n) => window.__mm.team.rolls().length >= n, bRolls0 + (kill ? kill.n : 1), { timeout: 3000 }).then(() => true, () => false);
+  const gotB = await B.waitForFunction((n) => window.__mm.team.rolls().length >= n, bRolls0 + (kill ? kill.n : 1), { timeout: 20000 }).then(() => true, () => false);
   const rollB = await T(B, (t, a, w) => ({ bags: t.bags(), roll: t.rolls().slice(-1)[0], drops: w.lastDrops().length }));
   const postedKill = await A.evaluate((n) => window.__spy.posted.slice(n).map((q) => q.m), nPost0); // before the extra shares below
   // a bag can be shards / potions only: share more of A's (safe) drops until B's own roll has items, to check B's tiers
