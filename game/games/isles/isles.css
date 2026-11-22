@@ -104,3 +104,8 @@ body.mm-nav-on #hud { left: calc(8px + var(--mm-nav-reserve)); max-width: min(30
 .panel .dest-row .dest { flex: 1 1 auto; margin: 0; min-width: 0; text-align: left; }
 .panel .craft-it { flex: 0 0 auto; min-width: 88px; }
 .recipe.want { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* X7: home decor panel (same row layout as the craft panel), the tame pen roster and the sea chart unlock cost */
+.decor-recipe { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid rgba(243,236,210,.14); }
+.decor-recipe.ready .rc-name { color: #b9e08a; }
+.pen-list { columns: auto; }
+.panel .dest-cost { margin: -2px 0 8px; font-size: 12px; color: var(--dim); }
