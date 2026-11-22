@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MMFeedback fixture</title>
+<style>
+  html, body { margin: 0; background: #0d0f14; color: #eee; font: 15px system-ui, sans-serif; }
+  main { padding: 16px; max-width: 520px; margin: 0 auto; }
+  .settings { border: 1px solid #333; border-radius: 8px; padding: 8px 12px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Settings</h1>
+  <div id="settings-body" class="settings"><p>Other settings would sit here.</p></div>
+</main>
+<script src="../../shared/mm-feedback.js"></script>
+<script>
+  // Mount snippet as pages use it (the stylesheet is added by mount() when the page has not linked it).
+  window.__fb = MMFeedback.mount(document.getElementById('settings-body'), { page: 'fixture' });
+</script>
+</body>
+</html>

@@ -9,14 +9,14 @@
       profile: req('./mm-profile.js'), map: req('./mm-map.js'), angler: req('./mm-angler.js'),
       bugs: req('./mm-bugs.js'), hubProfile: req('./profile.js'),
       access: req('./mm-access.js'), gift: req('./mm-gift.js'),
-      tames: req('./mm-tames.js'), isles: req('./mm-isles.js')
+      tames: req('./mm-tames.js'), isles: req('./mm-isles.js'), feedback: req('./mm-feedback.js')
     }));
   } else {
     root.MMBackup = factory(() => ({
       profile: root.MMProfile || null, map: root.MMMap || null, angler: root.MMAngler || null,
       bugs: root.MMBugs || null, hubProfile: root.MMHubProfile || null,
       access: root.MMAccess || null, gift: root.MMGift || null,
-      tames: root.MMTames || null, isles: root.MMIsles || null
+      tames: root.MMTames || null, isles: root.MMIsles || null, feedback: root.MMFeedback || null
     }));
   }
 }(typeof self !== 'undefined' ? self : this, function (getOwners) {
@@ -77,7 +77,9 @@
     // Biome Archipelago: owner cleaners turn anything corrupt into defaults; a non-object value is still refused.
     'pixeltown-tames-v1': (o, v) => (isObj(v) ? (o.tames ? o.tames.clean(v) : cleanPlain(v)) : undefined),
     'pixeltown-archipelago-v1': (o, v) => (isObj(v) ? (o.isles ? o.isles.clean(v) : cleanPlain(v)) : undefined),
-    'pixeltown-medals-isles-v1': (o, v) => (isObj(v) ? (o.isles ? o.isles.cleanMedals(v) : cleanPlain(v)) : undefined)
+    'pixeltown-medals-isles-v1': (o, v) => (isObj(v) ? (o.isles ? o.isles.cleanMedals(v) : cleanPlain(v)) : undefined),
+    // Feedback box notes (device-only, never sent anywhere): the owner cleaner keeps only the known entry fields.
+    'pixeltown-feedback-v1': (o, v) => (isObj(v) ? (o.feedback ? o.feedback.clean(v) : cleanPlain(v)) : undefined)
   };
   const KNOWN = Object.keys(CLEANERS).concat(['pixeltown-panel-collapsed']);
   const NAMES = {
@@ -86,7 +88,8 @@
     'pixeltown-panel-collapsed': 'panel setting', 'pixeltown-realm-v1': 'Realm progress', 'pixeltown-arms-v1': 'weapon unlocks',
     'pixeltown-stalk-v1': 'Stalk Market save', 'pixeltown-jam-v1': 'Jam save',
     'pixeltown-access-v1': 'accessibility settings', 'pixeltown-gift-v1': 'daily gift',
-    'pixeltown-tames-v1': 'tamed creatures', 'pixeltown-archipelago-v1': 'Archipelago progress', 'pixeltown-medals-isles-v1': 'Archipelago medals'
+    'pixeltown-tames-v1': 'tamed creatures', 'pixeltown-archipelago-v1': 'Archipelago progress', 'pixeltown-medals-isles-v1': 'Archipelago medals',
+    'pixeltown-feedback-v1': 'feedback notes'
   };
   const label = (k) => NAMES[k] || k;
 

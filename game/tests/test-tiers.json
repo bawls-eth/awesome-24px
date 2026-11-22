@@ -1110,5 +1110,17 @@
   "nav-sheet.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "shared-mm-feedback.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-feedback-triage.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "feedback-box.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }
