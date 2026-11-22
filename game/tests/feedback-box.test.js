@@ -133,6 +133,48 @@ const box = (page, fn) => page.evaluate(fn);
   check('Download .json gives a valid export file', /^pixeltown-feedback-\d{4}-\d{2}-\d{2}\.json$/.test(dl.suggestedFilename()) && pd.ok && pd.entries.length === 2 &&
     JSON.stringify(Object.keys(JSON.parse(dlText))) === '["v","app","entries"]', dl.suggestedFilename());
 
+  // ---------- two tabs (review F1): Delete / Copy / Download act on what storage holds now, never on a stale in-memory list ----------
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1000, height: 700 }, acceptDownloads: true });
+    const db = await blockDb(ctx);
+    await ctx.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: ORIGIN });
+    const errs = []; const off = [];
+    const tab = async () => {
+      const t = await ctx.newPage();
+      t.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
+      t.on('console', (msg) => { if (msg.type() === 'error' || msg.type() === 'warning') errs.push('console: ' + msg.text()); });
+      t.on('request', (r) => { const u = r.url(); if (!u.startsWith('data:') && !u.startsWith('blob:') && !u.startsWith(ORIGIN + '/')) off.push(u); });
+      await t.goto(PAGE); await t.waitForSelector('.mmfb-head'); return t;
+    };
+    const A = await tab();
+    await A.evaluate((k) => localStorage.removeItem(k), KEY);
+    await A.reload(); await A.waitForSelector('.mmfb-head');
+    const B = await tab();
+    const write = async (t, text) => { await t.click('.mmfb-text'); await t.keyboard.type(text); await t.click('.mmfb-save'); };
+    await A.click('.mmfb-head'); await B.click('.mmfb-head');
+    await write(A, 'tab A first note');
+    await write(B, 'tab B note saved while A is open'); // B's list was empty in memory; Save re-reads, so storage holds both
+    const stored = async () => F.clean(await A.evaluate((k) => localStorage.getItem(k), KEY)).entries.map((e) => e.text);
+    check('two tabs: both notes are stored', JSON.stringify(await stored()) === JSON.stringify(['tab A first note', 'tab B note saved while A is open']), JSON.stringify(await stored()));
+    check('two tabs: tab A still shows only its own note (stale list before the fix)', (await A.$$eval('.mmfb-item', (n) => n.length)) === 1);
+    await A.click('.mmfb-item .mmfb-del');
+    const afterDelA = await stored();
+    check('two tabs: Delete in tab A removes only its note and keeps the note tab B saved meanwhile', JSON.stringify(afterDelA) === JSON.stringify(['tab B note saved while A is open']), JSON.stringify(afterDelA));
+    check('two tabs: tab A list now shows tab B note', (await A.$$eval('.mmfb-itext', (n) => n.map((x) => x.textContent))).join('|') === 'tab B note saved while A is open');
+    await write(B, 'tab B second note');
+    const [dl2] = await Promise.all([A.waitForEvent('download'), A.click('.mmfb-download')]);
+    const pd2 = F.parseExport(fs.readFileSync(await dl2.path(), 'utf8'));
+    check('two tabs: Download in tab A includes the note tab B just saved', pd2.ok && pd2.entries.map((e) => e.text).join('|') === 'tab B note saved while A is open|tab B second note', JSON.stringify(pd2.entries && pd2.entries.map((e) => e.text)));
+    await B.click('.mmfb-item:last-child .mmfb-del'); // B lists newest first: last item = oldest = 'tab B note saved while A is open'
+    check('two tabs: tab B deleted its older note', JSON.stringify(await stored()) === JSON.stringify(['tab B second note']), JSON.stringify(await stored()));
+    await A.click('.mmfb-copy');
+    await A.waitForFunction(() => /Copied|Select/.test(document.querySelector('.mmfb-status').textContent));
+    const pc2 = F.parseExport(await A.evaluate(() => navigator.clipboard.readText()));
+    check('two tabs: Copy in tab A leaves out the note tab B deleted', pc2.ok && pc2.entries.map((e) => e.text).join('|') === 'tab B second note', JSON.stringify(pc2.entries && pc2.entries.map((e) => e.text)));
+    check('two tabs: console clean, zero offsite requests, zero DB attempts', errs.length === 0 && off.length === 0 && db.attempts() === 0, errs.concat(off).join(' | '));
+    await ctx.close();
+  }
+
   // corrupt key -> defaults, no crash
   const c = await open(browser, { viewport: { width: 1000, height: 700 } }, { [KEY]: '{"entries":[{"id":"__proto__","text":"x"},"junk"' });
   await c.page.click('.mmfb-head');

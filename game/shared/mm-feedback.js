@@ -295,8 +295,9 @@
         del.type = 'button';
         del.setAttribute('aria-label', 'Delete note: ' + e.text.slice(0, 40));
         del.addEventListener('click', () => {
-          state = remove(state, e.id);
-          if (storage) save(storage, state);
+          const next = remove(storage ? load(storage) : state, e.id); // review F1: re-read first, so a note another tab saved meanwhile is kept
+          if (storage && !save(storage, next)) { say('Could not delete on this device (storage is full or blocked).'); return; }
+          state = next;
           render();
           say('Note deleted.');
         });
@@ -331,8 +332,10 @@
       fallback.hidden = false;
       try { fallback.focus(); fallback.select(); } catch (e) { /* ignore */ }
     }
+    // review F1: Copy / Download export what storage holds now (another tab may have added or deleted a note).
+    const fresh = () => { if (storage) { state = load(storage); render(); } return state; };
     copyBtn.addEventListener('click', () => {
-      const text = exportText(state);
+      const text = exportText(fresh());
       const legacy = () => {
         showFallback(text);
         let ok = false;
@@ -349,7 +352,7 @@
       legacy();
     });
     dlBtn.addEventListener('click', () => {
-      const text = exportText(state);
+      const text = exportText(fresh());
       try {
         const blob = new win.Blob([text], { type: 'application/json' });
         const url = win.URL.createObjectURL(blob);
