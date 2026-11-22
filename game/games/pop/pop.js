@@ -262,7 +262,7 @@
     g.save(); g.globalAlpha = a; g.strokeStyle = col; g.lineWidth = 4;
     p.cells.forEach(([x, y]) => { rr(x * CELL + 3, y * CELL + 3, CELL - 6, CELL - 6, 12); g.stroke(); });
     if (p.chain > 1) {
-      const bx = p.c * CELL + CELL / 2, by = p.r * CELL + 12;
+      const bx = p.c * CELL + CELL / 2, by = (p.r + 1) * CELL - 13; // bottom of the tile: keeps its level number readable
       g.globalAlpha = 1; g.fillStyle = '#1b1830'; rr(bx - 20, by - 10, 40, 20, 8); g.fill();
       g.fillStyle = col; g.font = 'bold 14px ui-monospace, Menlo, monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
       g.fillText('x' + p.chain, bx, by + 1);
