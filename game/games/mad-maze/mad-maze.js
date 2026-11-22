@@ -714,7 +714,7 @@
   if (AX_ON) {
     axApply(axPrefs);
     // gear icon (always reachable) + a Settings button in the Esc menu (the menu DOM is built lazily by the arena)
-    const gear = mkEl('button', '', ''); gear.appendChild(mkEl('span', 'mm-gear-glyph', '⚙')); gear.id = 'mm-gear-btn'; // the glyph hides once the icon loads (no 0 px text) gear.type = 'button'; gear.setAttribute('aria-label', 'Open settings'); gear.title = 'Settings';
+    const gear = mkEl('button', '', ''); gear.appendChild(mkEl('span', 'mm-gear-glyph', '⚙')); gear.id = 'mm-gear-btn'; gear.type = 'button'; gear.setAttribute('aria-label', 'Open settings'); gear.title = 'Settings'; // the glyph hides once the icon loads (no 0 px text)
     gear.addEventListener('click', () => axOpen(true)); overlayEl.appendChild(gear);
     if (params.get('uiicons') !== '0') {
       const gi = document.createElement('img'); gi.className = 'mm-ico'; gi.alt = ''; gi.setAttribute('aria-hidden', 'true'); gi.draggable = false;

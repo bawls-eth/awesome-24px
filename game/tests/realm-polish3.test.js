@@ -176,10 +176,10 @@ const coveredIn = (page, sel) => page.evaluate((q) => {
         if (fs(e) < 12) tiny.push((e.id || e.className || e.tagName) + ' ' + fs(e) + 'px "' + e.textContent.trim().slice(0, 16) + '"');
       });
       const gear = document.getElementById('mm-gear-btn');
-      return { tiny, seen, gearFont: gear ? fs(gear) : null, keyFont: (() => { const k = document.querySelector('.realm-ab .key'); return k ? fs(k) : null; })() };
+      return { tiny, seen, gearFont: gear ? fs(gear) : null, gearA: gear ? gear.getAttribute('aria-label') : null, keyFont: (() => { const k = document.querySelector('.realm-ab .key'); return k ? fs(k) : null; })() };
     });
     check(`[${label}] no visible Realm HUD text under 12 px (key letters, key hint, gear label, coach progress)`, t.tiny.length === 0, JSON.stringify(t.tiny.slice(0, 6)));
-    check(`[${label}] the gear button keeps a >= 12 px font (the glyph hides behind its icon, never 0 px text)`, t.gearFont >= 12 && t.keyFont >= 12, JSON.stringify(t));
+    check(`[${label}] the gear button keeps a >= 12 px font (the glyph hides behind its icon, never 0 px text)`, t.gearFont >= 12 && t.keyFont >= 12 && t.gearA === 'Open settings', JSON.stringify(t));
     await fin(A);
   }
 
