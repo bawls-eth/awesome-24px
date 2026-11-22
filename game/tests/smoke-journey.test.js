@@ -24,7 +24,7 @@ const NAME = 'ADMINsmoke';
 const IDS = ['town', 'map', 'realm', 'lantern', 'isles', 'jam', 'bugs', 'angler', 'deepdelve', 'stalk'];
 const AUDITS = ['small', 'tinyText', 'overStick'];
 // The allow-lists may only shrink: these are the sizes frozen with the first fixture. Lower them when entries are removed.
-const FROZEN_MAX = { allow404: 0, offOrigin: 2, small: 9, tinyText: 11, overStick: 2 };
+const FROZEN_MAX = { allow404: 0, offOrigin: 2, small: 9, tinyText: 2, overStick: 2 };
 const T0 = Date.now();
 
 async function open(browser, viewport, touch) {
@@ -163,7 +163,9 @@ async function journey(browser, label, viewport, touch, out) {
     // First-visit dialogs that cover the Menu button (fixture "dismiss"): the bot closes them the way a player would.
     for (const ds of (FIX.dismiss && FIX.dismiss[id]) || []) {
       const shown = await page.evaluate((q) => { const e = document.querySelector(q); return !!e && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden'; }, ds);
-      if (shown) { known.push(`${id}: a first-visit dialog covers the Menu button until the player closes it (${ds})`); await tap(ds); await page.waitForTimeout(400); }
+      // A dialog that leaves the Menu button visible and on top is not an issue (the Realm hero picker since PLAYTEST-REVIEW-3); the bot still closes it to audit the page.
+      const menuFree = shown && await page.evaluate(() => { const b = document.getElementById('mm-nav-btn'); if (!b || getComputedStyle(b).display === 'none') return false; const r = b.getBoundingClientRect(); if (!r.width || !r.height) return false; const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!t && (t === b || b.contains(t)); });
+      if (shown) { if (!menuFree) known.push(`${id}: a first-visit dialog covers the Menu button until the player closes it (${ds})`); await tap(ds); await page.waitForTimeout(400); }
     }
     await pageChecks(id, false);
     // Back to the Town through this page's own sheet: "Back to Town" when it is offered, else the Town entry.

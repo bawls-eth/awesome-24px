@@ -77,7 +77,7 @@ body { font-family: system-ui, sans-serif; }
   bottom: calc(10px + env(safe-area-inset-bottom, 0px));
   transform: translateX(-50%);
   color: rgba(255, 255, 255, 0.55);
-  font: 600 11px system-ui, sans-serif;
+  font: 600 12px system-ui, sans-serif;
   pointer-events: none;
   white-space: nowrap;
 }
@@ -156,7 +156,7 @@ body.touch-device #realm-stick-aim { right: calc(20px + env(safe-area-inset-righ
   touch-action: manipulation;
   color: #fff;
 }
-.realm-ab .key { position: absolute; left: 4px; top: 1px; font: 700 10px system-ui, sans-serif; opacity: 0.8; }
+.realm-ab .key { position: absolute; left: 4px; top: 1px; font: 700 12px system-ui, sans-serif; opacity: 0.85; }
 .realm-ab .cd { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font: 800 18px system-ui, sans-serif; text-shadow: 0 1px 3px #000; pointer-events: none; }
 .realm-ab .nm { position: absolute; left: 0; right: 0; bottom: 1px; text-align: center; font: 700 8px system-ui, sans-serif; letter-spacing: 0.2px; opacity: 0.9; pointer-events: none; text-shadow: 0 1px 2px #000; }
 .realm-ab.cooling { opacity: 0.55; }
@@ -322,6 +322,9 @@ div#mm-daily-btn { pointer-events: none; min-height: 28px; font-size: 12px; left
    ability buttons (not behind the map / banner), and keep the banner and the mini-map above it ---------- */
 @media (max-width: 600px) and (min-height: 760px) and (orientation: portrait) {
   body.dungeon-mode #realm-canvas { top: 215px !important; }
+  /* PLAYTEST-REVIEW-3 #4: the dungeon view (realm.js rm-dv: the full room height at 60% of the screen, panning sideways) sits right above
+     the move / aim sticks; its top wall row may pass under the mini-map */
+  body.dungeon-mode #realm-canvas.rm-dv { top: auto !important; bottom: calc(168px + env(safe-area-inset-bottom, 0px)); }
   body.dungeon-mode #realm-banner { top: 182px; left: calc(50% - 48px); max-width: calc(100% - 140px); }
   body.dungeon-mode #mm-map { width: 96px; height: auto; top: calc(124px + env(safe-area-inset-top, 0px)); }
 }
@@ -365,7 +368,7 @@ body.mm-outline #realm-hp { box-shadow: 0 0 0 1px #000; }
 }
 body.touch-device #mm-gear-btn { left: calc(50% - 22px); }
 #mm-gear-btn .mm-ico { width: 24px; height: 24px; image-rendering: pixelated; vertical-align: middle; }
-#mm-gear-btn.has-ico { font-size: 0; }
+#mm-gear-btn.has-ico .mm-gear-glyph { display: none; } /* the icon replaces the glyph (hidden, never 0 px text) */
 body #mm-gear-btn { background: linear-gradient(#2e241a, #17120e); border-color: #7a5a36; color: #ffb347; }
 #mm-settings { z-index: 6; }
 #mm-settings .rm-card { max-height: 100%; overflow-y: auto; box-sizing: border-box; }
@@ -384,7 +387,7 @@ body.mm-low-gfx *, body.mm-low-gfx *::before, body.mm-low-gfx *::after { animati
 }
 #mm-coach.hidden, #mm-coach-toast.hidden { display: none; }
 #mm-coach .mm-coach-text { flex: 1 1 auto; min-width: 0; }
-#mm-coach .mm-coach-prog { flex: none; font-size: 11px; opacity: 0.75; }
+#mm-coach .mm-coach-prog { flex: none; font-size: 12px; opacity: 0.8; }
 #mm-coach .mm-coach-skip { flex: none; min-width: 56px; min-height: 44px; border-radius: 12px; border: 2px solid #b98a4a; background: #2e241a; color: #eadcc0; font: 700 13px system-ui, sans-serif; pointer-events: auto; touch-action: manipulation; }
 #mm-coach-toast {
   position: absolute; z-index: 3; left: 50%; transform: translateX(-50%); top: 34%; width: min(320px, calc(100% - 32px)); box-sizing: border-box; padding: 10px 14px; border-radius: 14px;
@@ -432,7 +435,12 @@ body.mm-hud-big #rw-zone .rw-zname, body.mm-hud-big #rw-zone .rw-arrow, body.mm-
 body.mm-hud-big #realm-banner { font-size: calc(clamp(15px, 4.6vw, 20px) * var(--mm-hud-scale, 1)); }
 body.mm-hud-big #realm-help, body.mm-hud-big #rw-event-hint { font-size: calc(12px * var(--mm-hud-scale, 1)); }
 body.mm-hud-big #rw-site-note { font-size: calc(13px * var(--mm-hud-scale, 1)); }
-body.mm-hud-big .realm-ab .key { font-size: calc(11px * var(--mm-hud-scale, 1)); }
+body.mm-hud-big .realm-ab .key { font-size: calc(12px * var(--mm-hud-scale, 1)); }
 body.mm-hud-big .realm-ab .cd { font-size: calc(18px * var(--mm-hud-scale, 1)); }
 body.mm-hud-big .realm-ab.locked .cd { font-size: calc(12px * var(--mm-hud-scale, 1)); }
 body.mm-hud-big #rw-nexus .nx-talk, body.mm-hud-big #rw-nexus .nx-stall { font-size: calc(14px * var(--mm-hud-scale, 1)); }
+/* PLAYTEST-REVIEW-3: the hero picker (a fresh visitor's first screen) no longer hides the shared Menu button: where the centred card would
+   reach the button's corner (narrow screens), the card starts below the button row. */
+@media (max-width: 679px) {
+  body.mm-nav-on.mm-nav-realm #realm-hero { padding-top: calc(var(--mm-nav-top, 8px) + var(--mm-nav-y, 0px) + var(--mm-nav-size, 48px) + 8px) !important; }
+}

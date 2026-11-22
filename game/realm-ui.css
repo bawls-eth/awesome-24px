@@ -52,7 +52,7 @@
 /* ---------- abilities + sticks ---------- */
 .realm-ab { width: 56px; height: 56px; }
 .realm-ab .nm { font-size: 10px; letter-spacing: 0; white-space: nowrap; overflow: hidden; }
-.realm-ab .key { font-size: 11px; }
+.realm-ab .key { font-size: 12px; line-height: 1; }
 body.touch-device #realm-abilities { right: calc(20px + var(--sr)); bottom: calc(24px + 124px + 14px + var(--sb)); grid-template-columns: repeat(2, 56px); }
 body.touch-device .realm-ab { width: 56px; height: 56px; }
 body.touch-device .realm-stick { bottom: calc(24px + var(--sb)); }

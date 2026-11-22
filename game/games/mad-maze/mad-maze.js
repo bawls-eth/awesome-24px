@@ -714,7 +714,7 @@
   if (AX_ON) {
     axApply(axPrefs);
     // gear icon (always reachable) + a Settings button in the Esc menu (the menu DOM is built lazily by the arena)
-    const gear = mkEl('button', '', '⚙'); gear.id = 'mm-gear-btn'; gear.type = 'button'; gear.setAttribute('aria-label', 'Open settings'); gear.title = 'Settings';
+    const gear = mkEl('button', '', ''); gear.appendChild(mkEl('span', 'mm-gear-glyph', '⚙')); gear.id = 'mm-gear-btn'; // the glyph hides once the icon loads (no 0 px text) gear.type = 'button'; gear.setAttribute('aria-label', 'Open settings'); gear.title = 'Settings';
     gear.addEventListener('click', () => axOpen(true)); overlayEl.appendChild(gear);
     if (params.get('uiicons') !== '0') {
       const gi = document.createElement('img'); gi.className = 'mm-ico'; gi.alt = ''; gi.setAttribute('aria-hidden', 'true'); gi.draggable = false;
@@ -755,7 +755,8 @@
     const shown = (n) => !!n && !n.classList.contains('hidden') && n.getClientRects().length > 0 && getComputedStyle(n).display !== 'none';
     const tick = () => {
       let any = false, other = false;
-      overlayEl.querySelectorAll('[role="dialog"]').forEach((n) => { if (shown(n)) { any = true; if (n.id !== 'mm-settings' && n.id !== 'realm-pause') other = true; } });
+      // PLAYTEST-REVIEW-3: the hero picker (a fresh visitor's first screen) keeps the Menu button: its card steps below the button (mad-maze.css)
+      overlayEl.querySelectorAll('[role="dialog"]').forEach((n) => { if (shown(n)) { if (n.id !== 'realm-hero') any = true; if (n.id !== 'mm-settings' && n.id !== 'realm-pause') other = true; } });
       ['mm-summary', 'rw-nexus'].forEach((id) => { const n = document.getElementById(id); if (shown(n)) { any = true; other = true; } });
       document.body.classList.toggle('mm-realm-dialog', other);
       if (navOn) { if (any && NAV.isOpen()) NAV.close(); NAV.setCovered(any); }
