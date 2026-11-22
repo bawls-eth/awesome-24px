@@ -1,0 +1,151 @@
+#!/usr/bin/env node
+// Art health audit (art-audit-3). Node only, no network, no dependencies: a tiny PNG decoder on zlib.
+// Walks game/assets/arcane/INDEX.json -> each batch manifest -> each asset and reports:
+//   missing      the PNG is not on disk                                                    (blocker)
+//   dims         PNG size does not fit frames x frame_w by frame_h                          (blocker)
+//   bg           a sprite (not a tile / opaque batch) has opaque corner pixels               (needs-redo)
+//   frames       fewer non-empty cells than the manifest frame count                        (needs-redo)
+//   anchor       the art's lowest opaque row sits far off anchor.y (feet float / sink)      (needs-redo > cell/8, nit > cell/16)
+//   drift        idle / move baseline jumps between frames (bobbing feet)                   (nit)
+//   palette      too many colours for pixel art / many soft-alpha pixels (blurred upscale)  (nit / needs-redo)
+//   dup          byte-identical PNG registered under two ids                                (nit)
+//   unref        neither the id nor its batch folder + creature name appear in game code    (nit: registered, never used)
+// Usage: node game/tools/art-audit/run.js [--json out.json] [--md]   (exit code 0 always; it is a report, not a gate)
+'use strict';
+const fs = require('fs'), path = require('path'), zlib = require('zlib'), crypto = require('crypto');
+const GAME = path.resolve(__dirname, '..', '..');
+const INDEX = path.join(GAME, 'assets', 'arcane', 'INDEX.json');
+
+// ---- minimal PNG decode (8-bit gray / RGB / palette / gray-alpha / RGBA, non-interlaced) ----
+function decodePng(buf) {
+  if (buf.readUInt32BE(0) !== 0x89504e47) throw new Error('not a png');
+  let p = 8, w = 0, h = 0, depth = 0, ct = 0, inter = 0, plte = null, trns = null; const idat = [];
+  while (p < buf.length) {
+    const len = buf.readUInt32BE(p), type = buf.toString('ascii', p + 4, p + 8), d = buf.slice(p + 8, p + 8 + len);
+    if (type === 'IHDR') { w = d.readUInt32BE(0); h = d.readUInt32BE(4); depth = d[8]; ct = d[9]; inter = d[12]; }
+    else if (type === 'PLTE') plte = d; else if (type === 'tRNS') trns = d; else if (type === 'IDAT') idat.push(d); else if (type === 'IEND') break;
+    p += 12 + len;
+  }
+  if (depth !== 8 || inter) return { w, h, rgba: null, why: 'depth ' + depth + (inter ? ' interlaced' : '') };
+  const ch = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 }[ct], raw = zlib.inflateSync(Buffer.concat(idat)), stride = w * ch;
+  const out = Buffer.alloc(w * h * 4), prev = Buffer.alloc(stride), cur = Buffer.alloc(stride);
+  for (let y = 0, o = 0; y < h; y++) {
+    const f = raw[o++]; raw.copy(cur, 0, o, o + stride); o += stride;
+    for (let i = 0; i < stride; i++) {
+      const a = i >= ch ? cur[i - ch] : 0, b = prev[i], c = i >= ch ? prev[i - ch] : 0;
+      let v = cur[i];
+      if (f === 1) v += a; else if (f === 2) v += b; else if (f === 3) v += (a + b) >> 1;
+      else if (f === 4) { const pp = a + b - c, pa = Math.abs(pp - a), pb = Math.abs(pp - b), pc = Math.abs(pp - c); v += pa <= pb && pa <= pc ? a : pb <= pc ? b : c; }
+      cur[i] = v & 255;
+    }
+    for (let x = 0; x < w; x++) {
+      const q = (y * w + x) * 4, s = x * ch;
+      if (ct === 6) { out[q] = cur[s]; out[q + 1] = cur[s + 1]; out[q + 2] = cur[s + 2]; out[q + 3] = cur[s + 3]; }
+      else if (ct === 2) { out[q] = cur[s]; out[q + 1] = cur[s + 1]; out[q + 2] = cur[s + 2]; out[q + 3] = 255; }
+      else if (ct === 0) { out[q] = out[q + 1] = out[q + 2] = cur[s]; out[q + 3] = 255; }
+      else if (ct === 4) { out[q] = out[q + 1] = out[q + 2] = cur[s]; out[q + 3] = cur[s + 1]; }
+      else if (ct === 3) { const k = cur[s]; out[q] = plte[k * 3]; out[q + 1] = plte[k * 3 + 1]; out[q + 2] = plte[k * 3 + 2]; out[q + 3] = trns && k < trns.length ? trns[k] : 255; }
+    }
+    cur.copy(prev);
+  }
+  return { w, h, rgba: out };
+}
+
+// ---- the code corpus (every .js / .html under game/ except assets, tests, tools) for the "never referenced" check ----
+function corpus() {
+  const parts = [];
+  (function walk(d) {
+    fs.readdirSync(d, { withFileTypes: true }).forEach((e) => {
+      const f = path.join(d, e.name);
+      if (e.isDirectory()) { if (!/^(assets|tests|tools|node_modules|design)$/.test(e.name)) walk(f); }
+      else if (/\.(js|html|json)$/.test(e.name)) parts.push(fs.readFileSync(f, 'utf8'));
+    });
+  })(GAME);
+  return parts.join('\n');
+}
+
+function auditAsset(b, man, a, file, CODE, seen) {
+  const probs = []; const add = (sev, kind, msg) => probs.push({ sev, kind, msg });
+  if (!fs.existsSync(file)) { add('blocker', 'missing', 'file not found: ' + path.relative(GAME, file)); return probs; }
+  const bytes = fs.readFileSync(file);
+  const sha = crypto.createHash('sha1').update(bytes).digest('hex');
+  if (seen[sha] && seen[sha] !== a.id) add('nit', 'dup', 'byte-identical to ' + seen[sha]); else seen[sha] = a.id;
+  let img; try { img = decodePng(bytes); } catch (e) { add('blocker', 'missing', 'unreadable png: ' + e.message); return probs; }
+  const fw = a.frame_w || man.frame_size || man.tile_size || img.h, fh = a.frame_h || man.frame_size || man.tile_size || img.h, n = a.frames || 1;
+  const cols = Math.floor(img.w / fw), rows = Math.floor(img.h / fh);
+  if (img.w % fw || img.h % fh || cols * rows < n) add('blocker', 'dims', img.w + 'x' + img.h + ' does not hold ' + n + ' x ' + fw + 'x' + fh);
+  if (!img.rgba) { add('nit', 'palette', 'not 8-bit RGBA (' + img.why + '), pixels not checked'); return probs; }
+  const px = img.rgba, A = (x, y) => px[(y * img.w + x) * 4 + 3];
+  const tile = man.opaque || /tile|terrain|backdrop|bg|banner|portrait|logo/i.test((a.category || '') + ' ' + a.id + ' ' + (a.kind || ''));
+  if (!tile) {
+    const corners = [[0, 0], [img.w - 1, 0], [0, img.h - 1], [img.w - 1, img.h - 1]].filter(([x, y]) => A(x, y) > 0).length;
+    if (corners >= 3) add('needs-redo', 'bg', corners + '/4 corners opaque: background not transparent');
+    else if (corners) add('nit', 'bg', corners + '/4 corners opaque: the art touches the cell edge (no 1 px padding)');
+  }
+  // per-cell: empty?, lowest opaque row
+  const bottoms = []; let empty = 0;
+  for (let i = 0; i < Math.min(n, cols * rows); i++) {
+    const cx = (i % cols) * fw, cy = Math.floor(i / cols) * fh; let low = -1;
+    for (let y = fh - 1; y >= 0 && low < 0; y--) for (let x = 0; x < fw; x++) if (A(cx + x, cy + y) > 0) { low = y; break; }
+    if (low < 0) empty++; else bottoms.push(low);
+  }
+  if (empty && !/death|fade|blink|despawn/.test(a.action || a.id)) add('needs-redo', 'frames', empty + ' of ' + n + ' frames are empty');
+  if (a.anchor && bottoms.length && !tile && !/fly|float|hover|bat|glider|jelly|moth|projectile|bolt|fx|effect|icon|saddle|\bui\b|overlay/i.test((a.category || '') + ' ' + a.id)) {
+    const base = bottoms[0], off = base - a.anchor.y;
+    if (Math.abs(off) > fh / 8) add('needs-redo', 'anchor', 'lowest opaque row ' + base + ' vs anchor.y ' + a.anchor.y + ' (' + (off > 0 ? 'below' : 'above') + ' by ' + Math.abs(off) + ' px)');
+    else if (Math.abs(off) > fh / 16) add('nit', 'anchor', 'lowest opaque row ' + base + ' vs anchor.y ' + a.anchor.y);
+    if (/idle|move|walk|run/.test(a.action || '')) {
+      const spread = Math.max.apply(null, bottoms) - Math.min.apply(null, bottoms);
+      if (spread > fh / 16) add('nit', 'drift', 'baseline moves ' + spread + ' px across frames');
+    }
+  }
+  // palette: distinct opaque colours and soft-alpha share
+  const cols2 = new Set(); let soft = 0, opaque = 0;
+  for (let q = 0; q < px.length; q += 4) {
+    const al = px[q + 3]; if (!al) continue; opaque++;
+    if (al < 250) soft++; if (cols2.size < 4096) cols2.add((px[q] << 16) | (px[q + 1] << 8) | px[q + 2]);
+  }
+  const softPct = opaque ? soft / opaque : 0;
+  if (!tile && softPct > 0.08) add('needs-redo', 'palette', Math.round(softPct * 100) + '% soft-alpha pixels (blurred / anti-aliased edges)');
+  else if (!tile && softPct > 0.02) add('nit', 'palette', Math.round(softPct * 100) + '% soft-alpha pixels');
+  if (cols2.size > 96) add('nit', 'palette', cols2.size + ' distinct colours (pixel-art budget is ~32-48)');
+  // never referenced: id literal, or (batch folder + creature / enemy / class / kind) in code
+  const dir = path.basename(b.path), who = a.creature || a.enemy || a.class || a.terrain || a.kind || a.item || '';
+  // mm-art loads every INDEX.json batch at runtime and looks strips up by name, so a batch folder need not appear in code: an asset
+  // counts as used when its id, its creature / enemy / class name, or an id prefix (the id minus 1-2 trailing _parts) is in the code
+  const segs = a.id.split('_'), pre = [segs.slice(0, -1).join('_'), segs.slice(0, -2).join('_')].filter((x) => x.length >= 6);
+  const ref = CODE.indexOf(a.id) >= 0 || CODE.indexOf(path.basename(a.path || '', '.png')) >= 0 || (who && who.length >= 3 && CODE.indexOf(who) >= 0)
+    || pre.some((x) => CODE.indexOf(x) >= 0) || CODE.indexOf("'" + segs[0] + "_'") >= 0 || (CODE.indexOf(dir) >= 0 && !who);
+  if (!ref) add('nit', 'unref', 'registered but not referenced by game code');
+  return probs;
+}
+
+function run() {
+  const idx = JSON.parse(fs.readFileSync(INDEX, 'utf8')), CODE = corpus(), seen = {}, rows = [], batches = [];
+  idx.batches.forEach((b) => {
+    const mp = path.join(GAME, b.manifest); let man;
+    if (!fs.existsSync(mp)) { rows.push({ batch: b.id, id: '(manifest)', sev: 'blocker', kind: 'missing', msg: 'manifest not found' }); return; }
+    try { man = JSON.parse(fs.readFileSync(mp, 'utf8')); } catch (e) { rows.push({ batch: b.id, id: '(manifest)', sev: 'blocker', kind: 'missing', msg: 'manifest bad json' }); return; }
+    const assets = man.assets || [];
+    const dirRef = CODE.indexOf(path.basename(b.path)) >= 0;
+    batches.push({ id: b.id, label: b.label, status: b.status, assets: assets.length, referenced: dirRef });
+    if (b.files && Math.abs(b.files - assets.length) > 0 && b.files < assets.length) rows.push({ batch: b.id, id: '(index)', sev: 'nit', kind: 'count', msg: 'INDEX files ' + b.files + ' < manifest assets ' + assets.length });
+    assets.forEach((a) => {
+      const file = path.join(GAME, b.path, a.path || (a.id + '.png'));
+      auditAsset(b, man, a, file, CODE, seen).forEach((p) => rows.push(Object.assign({ batch: b.id, id: a.id }, p)));
+    });
+  });
+  return { rows, batches };
+}
+
+if (require.main === module) {
+  const { rows, batches } = run();
+  const by = (s) => rows.filter((r) => r.sev === s);
+  const kinds = {}; rows.forEach((r) => { const k = r.sev + ':' + r.kind; kinds[k] = (kinds[k] || 0) + 1; });
+  console.log('art-audit: ' + batches.length + ' batches, ' + batches.reduce((s, b) => s + b.assets, 0) + ' assets; blocker ' + by('blocker').length + ', needs-redo ' + by('needs-redo').length + ', nit ' + by('nit').length);
+  console.log(JSON.stringify(kinds));
+  console.log('batches loaded only through INDEX.json (MMArt.loadAll; no folder literal in code, informational): ' + batches.filter((b) => !b.referenced).map((b) => b.id + ' ' + b.label).join(', '));
+  ['blocker', 'needs-redo'].forEach((s) => by(s).forEach((r) => console.log(s.padEnd(10) + ' ' + r.batch.padEnd(6) + ' ' + r.id + ' [' + r.kind + '] ' + r.msg)));
+  const j = process.argv.indexOf('--json'); if (j > 0) fs.writeFileSync(process.argv[j + 1], JSON.stringify({ rows, batches }, null, 1));
+}
+module.exports = { decodePng, run };
