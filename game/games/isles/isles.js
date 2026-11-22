@@ -48,6 +48,8 @@
 // pack 'meadow'; code palette per missing tile) with its garden plot / dock / boat props and the stable over the homestead pen; the b36
 // meadow tameables, the b32s stegolith (saddle overlay + seat) and the b31af glimmerfrog sleep / eat come through MMCreatureStrips (each
 // island preloads its own biome's strips plus your stable's); the craft panel shows the b34b item icons by id over the text label.
+// AW3 (Codex redo): the b36 strips are at their size class (S 48 / M 64 / L 96 / XL 128 native; no 2x oakback), the b35 edge masks are
+// drawn as delivered, the Coral Reef preloads the b38a reef puffer, and a strip's ground shadow is sized to its measured body width.
 // XW1: the craft panel lists every MMIsleCraft recipe (ALL_IDS, groups Travel / Saddles / Supplies / Trophies); an alternative recipe
 // unlocks by its output item (rocket_core_drift opens mars from a fresh save) and the sea chart's "Craft it" points at a reachable build;
 // a daily gather spot can add a seeded bonus find (MMIsleCraft.bonusFind). Riding shows one 44 px ability button (key F while riding)
@@ -1228,7 +1230,7 @@
       let top = sy - c.rad * 2.4;
       if (st) {
         const a = c.art;
-        if (a && a.shadow && !LOW) { const w0 = a.w / a.dpr, w = Math.min(w0, st.w * 0.8), h = a.shadow.height / a.dpr * w / w0; g.drawImage(a.shadow, sx - w / 2, sy - h / 2, w, h); } // AW2: shadow no wider than the strip
+        if (a && a.shadow && !LOW) { const w0 = a.w / a.dpr, w = Math.min(w0, st.w * 0.8, st.span), h = a.shadow.height / a.dpr * w / w0; g.drawImage(a.shadow, sx - w / 2, sy - h / 2, w, h); } // AW2 / AW3: shadow no wider than the body
         STRIPS.draw(g, st, stripFrame(c), sx, sy, 1, MS.flipFor(c.act, c.dir));
         c.drawn = st.id; c.src = 'png';
         top = Math.min(top, sy - (st.ay - st.top) - 2);
@@ -1282,7 +1284,7 @@
       if (rst) {
         // the mount's own strip, then the separate saddle overlay (same view, same frame), then the hero on the manifest seat
         const ra = heroMoving ? 'move' : 'idle', fr = MS.frameIndex(ra, hero.t), flip = rideDir === MS.LEFT;
-        if (rideArt && rideArt.shadow && !LOW) { const a = rideArt, w0 = a.w / a.dpr, w = Math.min(w0, rst.w * 0.8), h = a.shadow.height / a.dpr * w / w0; g.drawImage(a.shadow, hx - w / 2, hy - h / 2, w, h); }
+        if (rideArt && rideArt.shadow && !LOW) { const a = rideArt, w0 = a.w / a.dpr, w = Math.min(w0, rst.w * 0.8, rst.span), h = a.shadow.height / a.dpr * w / w0; g.drawImage(a.shadow, hx - w / 2, hy - h / 2, w, h); }
         STRIPS.draw(g, rst, fr, hx, hy, 1, flip);
         if (sad && sad !== rst) STRIPS.draw(g, sad, fr, hx, hy, 1, flip);
         rideDrawn = rst.id; saddleDrawn = sad && sad !== rst ? sad.id : '';
@@ -2624,6 +2626,8 @@
         prog: c.tm ? c.tm.prog : 0, need: c.tm ? c.tm.need : 0, src: c.src, drawn: c.drawn, act: c.act, dir: c.dir })),
       // PNG creature strips (b31a / b32) and b33 props: readiness, what was drawn, death strips shown, props baked from PNG vs code
       stripsReady: () => (STRIPS ? STRIPS.ready.then(() => ({ on: true, kinds: STRIPS.kinds.filter((k) => STRIPS.has(k)), count: STRIPS.count() })) : { on: false, kinds: [], count: 0 }),
+      // a baked strip's drawn size in native px (AW3 size-class checks), or null when that creature has no PNG set
+      stripSize: (kind, act, dir) => { const s = STRIPS && STRIPS.has(kind) ? STRIPS.get(kind, act || 'idle', dir | 0) : null; return s ? { id: s.id, w: s.w, h: s.h, ax: s.ax, ay: s.ay, top: s.top, span: s.span } : null; },
       propsReady: () => (IA ? IA.ready.then(() => ({ props: IA.propsActive() ? Object.keys(IA.props()).sort() : [], tiles: IA.active() })) : { props: [], tiles: false }),
       propsBaked: () => Object.assign({}, propsBaked),
       craftIcons: () => Object.keys(craftIcon).sort(),

@@ -1574,6 +1574,7 @@
       if (n.role === 'oracle') { const o = MMQuests.oracle(todayUtc()); nxSay(name, o ? o.text : 'The mists are quiet.'); return; }
       if (n.role === 'quests') { if (typeof nxBoardOpen === 'function') nxBoardOpen(); nxSay(name, 'Here is the day\'s board. Three jobs, free to take.'); return; }
       if (n.stall && nxStallOn()) { nxStallOpen(); nxSay(name, n.stall === 'forge' ? 'The anvil is yours to use. Salvage and reforge live in your backpack Forge.' : 'Same goods, same prices, every day. Take your time.'); return; }
+      if (n.role === 'shop' && typeof arena.setShop === 'function') { nxSay(name, 'Take a look. Everything is priced in 💎 shards, same every day.'); nxStallShop(); return; } // forge/stall off: the vendor still opens the classic shop
       const key = n.role === 'rumours' ? 'rumours' : n.role === 'shop' ? 'vendor' : n.role === 'combine' ? 'blacksmith' : 'guide';
       const L = NX_LINES[key]; nxSay(name, L[(MMRng.hash(todayUtc() + n.id) + nxTalkN) % L.length]);
     }
@@ -1592,6 +1593,9 @@
       el.appendChild(mk('p', 'nx-st-note', 'Fixed prices in dust. The shelf is the same every day.'));
       el.appendChild(mk('p', 'nx-st-wallet', 'You have ' + (sv.dust || 0) + ' dust · ' + sv.items.length + ' items carried'));
       const fg = nxStallBtn('⚒ Open the Forge', 'Open the Forge in your backpack', () => nxStallForge()); fg.id = 'rw-nx-forge'; el.appendChild(fg);
+      // The classic shop (priced in 💎 shards, every unlocked rarity) stays one tap away: the dust stall only sells fixed T1-T3 goods, and dust starts at 0.
+      const sh = nxStallBtn('🛒 Shop (💎 shards)', 'Open the shop: buy gear with shards', () => nxStallShop()); sh.id = 'rw-nx-shop'; el.appendChild(sh);
+      if (!(sv.dust > 0)) el.appendChild(mk('p', 'nx-st-note', 'No dust yet. Sell T1-T3 gear back here or salvage in the Forge to earn some; the Shop above takes shards.'));
       el.appendChild(mk('b', 'nx-st-sub', 'Buy'));
       const buy = mk('div', 'nx-row'); buy.id = 'rw-nx-buy';
       (arena.vendorStock() || []).forEach((o) => {
@@ -1618,6 +1622,7 @@
       el.appendChild(back);
     }
     function nxStallOpen() { nxBuild(); if (!nxStallOn()) return false; nxStallAsk = 0; nxDom.board.classList.add('hidden'); nxStallRender(); nxDom.stall.classList.remove('hidden'); return true; }
+    function nxStallShop() { nxStallHide(); nexusClose(); if (typeof arena.setShop === 'function') arena.setShop(true); return true; }
     function nxStallForge() { if (!nxStallOn()) return false; nxStallHide(); nexusClose(); return arena.openForge(); }
     function nxStallHide() { nxStallAsk = 0; if (!nxDom || !nxDom.stall) return; nxDom.stall.classList.add('hidden'); nxDom.stall.textContent = ''; } // emptied: no hidden buttons linger
     function nxBuild() {

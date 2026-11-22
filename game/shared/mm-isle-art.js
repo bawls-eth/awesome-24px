@@ -41,35 +41,13 @@
     tilled_soil: ['#6b4a2f', '#5f4129', '#775336', '#4a3320'], tilled_wet: ['#4f3622', '#45301e', '#5a3e28', '#33231a'],
     clover_patch: ['#4f9a3f', '#468c38', '#5aa84a', '#356b2b'], garden_path: ['#cbb890', '#bfac84', '#d6c49d', '#9a8a66'], dock_planks: ['#8a5a3b', '#7c5034', '#966444', '#5a3a22']
   });
-  // b35 edge masks paint their grass in 3 exact colours (base, light, dark) that are darker than Hearth Isle's code grass, which shows as
-  // dark halos round every patch. With a canvas factory the loader swaps exactly those 3 colours (they never occur in a b35 variant) for
-  // palette.grass [base, shade2, edge] once per edge image; without one (node, a failed getImageData) the PNG is used as delivered.
-  const MEADOW_GRASS = [[0x36, 0x6f, 0x3d, 0], [0x4f, 0x8b, 0x46, 2], [0x26, 0x52, 0x31, 3]];
+  // b35 edge masks (AW3: Codex's grass-edge redo) paint their grass in Hearth Isle's own ramp (#6cbf55 base, #78c960 light, #60ad4d
+  // dark) and are drawn as delivered; the old 3-colour swap for the darker first delivery is gone (tests/shared-mm-isle-art pixel-checks
+  // every mask against the island grass so a dark halo cannot come back unnoticed).
   const SETS = {
-    jungle: { base: BASE, tiles: null, terrains: TERRAINS, palette: PALETTE, edges: null, grass: null },
-    meadow: { base: MEADOW_BASE, tiles: MEADOW_TILES, terrains: Object.keys(MEADOW_TILES), palette: MEADOW_PALETTE, edges: MEADOW_BLEND, grass: MEADOW_GRASS }
+    jungle: { base: BASE, tiles: null, terrains: TERRAINS, palette: PALETTE, edges: null },
+    meadow: { base: MEADOW_BASE, tiles: MEADOW_TILES, terrains: Object.keys(MEADOW_TILES), palette: MEADOW_PALETTE, edges: MEADOW_BLEND }
   };
-  const rgbOf = (hex) => { const h = String(hex).replace('#', ''); const f = h.length === 3 ? h.split('').map((c) => c + c).join('') : h; return [0, 2, 4].map((i) => parseInt(f.slice(i, i + 2), 16)); };
-  // regrass(im, from, pal, create) -> a canvas with the `from` colours swapped for palette.grass entries, or the image itself
-  function regrass(im, from, pal, create) {
-    try {
-      const to = pal && Array.isArray(pal.grass) ? pal.grass : null;
-      if (!from || !to || typeof create !== 'function') return im;
-      const w = im.naturalWidth || im.width, h = im.naturalHeight || im.height;
-      const cv = create(w, h), g = cv && cv.getContext && cv.getContext('2d');
-      if (!g || typeof g.getImageData !== 'function') return im;
-      g.drawImage(im, 0, 0);
-      const d = g.getImageData(0, 0, w, h), px = d.data, map = from.map((f) => [f[0], f[1], f[2]].concat(rgbOf(to[f[3]])));
-      let n = 0;
-      for (let i = 0; i < px.length; i += 4) {
-        if (px[i + 3] === 0) continue;
-        for (let k = 0; k < map.length; k++) { const m = map[k]; if (px[i] === m[0] && px[i + 1] === m[1] && px[i + 2] === m[2]) { px[i] = m[3]; px[i + 1] = m[4]; px[i + 2] = m[5]; n++; break; } }
-      }
-      g.putImageData(d, 0, 0);
-      cv.regrassed = n;
-      return cv;
-    } catch (e) { return im; }
-  }
   const setOf = (pack) => (typeof pack === 'string' && Object.prototype.hasOwnProperty.call(SETS, pack) ? SETS[pack] : SETS.jungle);
   const artName = (set, t) => (set.tiles ? set.tiles[t] : t);
   // names (optional id->name list, default NAMES) -> { terrainId: terrainName } for the set's terrains (default the 12 b30 jungle ones)
@@ -86,8 +64,7 @@
       im.src = url;
     });
   }
-  // load(opts) -> Promise<{ [terrainId]: [image, ...] } | null>. opts: {base, names, pack, loadImage(url)->Promise<image|null>,
-  //   palette + create (canvas factory): the meadow edge-mask grass is recoloured to palette.grass}
+  // load(opts) -> Promise<{ [terrainId]: [image, ...] } | null>. opts: {base, names, pack, loadImage(url)->Promise<image|null>}
   // Never rejects; a terrain with no loaded variant is simply absent (the bake falls back for it). Resolves null when nothing loaded.
   // A set with edge masks (meadow) also loads tile_<t>_edge_00..15 and puts them on the result's non-enumerable `edges`:
   // {terrainId: {imgs: [16], blend: {terrainId: 1}}} (the MMChunkBake opts.edges shape); a terrain whose variants all failed gets none.
@@ -107,8 +84,7 @@
         const blend = {};
         set.edges[map[id]].forEach((b) => { const i = names.indexOf(b); if (i >= 0) blend[i] = 1; });
         edge[id] = { imgs: new Array(16).fill(null), blend: blend };
-        const fix = set.grass && set.edges[map[id]].indexOf('grass') >= 0 ? set.grass : null;
-        for (let m = 0; m < 16; m++) get(base + 'tiles/' + edgeId(nm, m) + '.png', (im) => { edge[id].imgs[m] = fix ? regrass(im, fix, o.palette || set.palette, o.create) : im; });
+        for (let m = 0; m < 16; m++) get(base + 'tiles/' + edgeId(nm, m) + '.png', (im) => { edge[id].imgs[m] = im; });
       }
     });
     return Promise.all(jobs).then(() => {
@@ -146,7 +122,7 @@
     };
     // props load beside the tiles only when asked (opts.props), so callers that bake terrain only keep their exact request set
     self.ready = o.art === false ? Promise.resolve(self)
-      : Promise.all([load({ base: o.base, names: names, pack: pack, loadImage: o.loadImage, palette: palette, create: o.create || Bake.defaultCreate }),
+      : Promise.all([load({ base: o.base, names: names, pack: pack, loadImage: o.loadImage }),
         o.props ? loadProps({ propBase: o.propBase, pack: pack, loadImage: o.loadImage }) : null])
         .then((r) => { art = r[0]; bo.edges = art && art.edges ? art.edges : null; props = r[1] || null; cache.clear(); return self; }, () => self);
     return self;
@@ -225,6 +201,6 @@
   }
 
   return { SETS: SETS, MEADOW_BASE: MEADOW_BASE, MEADOW_TILES: MEADOW_TILES, MEADOW_BLEND: MEADOW_BLEND, MEADOW_PALETTE: MEADOW_PALETTE, MEADOW_PROPS: MEADOW_PROPS,
-    MEADOW_ALIAS: MEADOW_ALIAS, MEADOW_GRASS: MEADOW_GRASS, regrass: regrass, edgeId: edgeId, ICON_BASE: ICON_BASE, ITEM_ICONS: ITEM_ICONS, iconUrl: iconUrl, ARENA: ARENA, loadArena: loadArena, PROP_BASE: PROP_BASE, PROPS: PROPS, PROP_ALIAS: PROP_ALIAS, loadProps: loadProps, propFor: propFor, drawPropArt: drawPropArt,
+    MEADOW_ALIAS: MEADOW_ALIAS, edgeId: edgeId, ICON_BASE: ICON_BASE, ITEM_ICONS: ITEM_ICONS, iconUrl: iconUrl, ARENA: ARENA, loadArena: loadArena, PROP_BASE: PROP_BASE, PROPS: PROPS, PROP_ALIAS: PROP_ALIAS, loadProps: loadProps, propFor: propFor, drawPropArt: drawPropArt,
     BASE: BASE, VARIANTS: VARIANTS, NAMES: NAMES, TERRAINS: TERRAINS, PALETTE: PALETTE, tileId: tileId, idMap: idMap, load: load, create: create };
 });

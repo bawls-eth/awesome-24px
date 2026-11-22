@@ -64,6 +64,14 @@ const box = (page, fn) => page.evaluate(fn);
   await pg.click('.mmfb-chip[data-kind="bug"]');
   check('chip aria-pressed follows the choice', await box(pg, () => document.querySelector('.mmfb-chip[data-kind="bug"]').getAttribute('aria-pressed') === 'true' &&
     document.querySelector('.mmfb-chip[data-kind="suggestion"]').getAttribute('aria-pressed') === 'false'));
+  // Host pages bind game hotkeys on window/document (Town: digits = emotes, T = walkie, Enter = chat; Isles: WASD/Space/L): typing in the box must never reach them.
+  await box(pg, () => { window.__leak = 0; ['keydown', 'keyup', 'keypress'].forEach((t) => { window.addEventListener(t, () => { window.__leak++; }); document.addEventListener(t, () => { window.__leak++; }); }); });
+  await pg.focus('.mmfb-text');
+  await pg.keyboard.type('w1t l');
+  await pg.keyboard.press('Enter');
+  await pg.keyboard.press('Escape');
+  check('real key presses typed in the box never reach window/document hotkey handlers (Town emotes/walkie/chat, Isles WASD/L)', (await box(pg, () => window.__leak)) === 0 && (await pg.inputValue('.mmfb-text')).indexOf('w1t l') >= 0, String(await box(pg, () => window.__leak)));
+  await pg.fill('.mmfb-text', '');
   const MARK = '<img src=x onerror="window.__pwned=1"><b>bold</b> & the map button overlaps chat';
   await pg.fill('.mmfb-text', MARK);
   check('live counter', (await pg.textContent('.mmfb-count')) === MARK.length + ' / 500');

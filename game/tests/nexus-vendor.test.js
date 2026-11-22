@@ -94,6 +94,16 @@ const stall = (page) => page.evaluate(() => {
     await page.click('#rw-nx-forge');
     const fg = await E(page, (a, w) => ({ nx: w.nexus.isOpen(), panel: a.panel, bp: !document.getElementById('realm-backpack').classList.contains('hidden'), forge: !!document.getElementById('realm-bp-forge'), uid: a._forgeUid, eq: a.save.eq.weapon }));
     check('the stall button opens the backpack Forge (Nexus closed, the equipped weapon\'s Forge section open)', !fg.nx && fg.panel === 'bp' && fg.bp && fg.forge && fg.uid === fg.eq, JSON.stringify(fg));
+    // the classic shard shop is one tap from the stall (players report: 'cannot buy from the shop in the Realm': dust starts at 0, so the dust stall alone sells nothing)
+    const snapSave = await E(page, (a) => JSON.stringify(a.save));
+    await E(page, (a, w) => { a.setPaused(false); a.save.shards = 5000; a.save.dust = 0; a.save.bestWave = 5; a.save.level = 20; a.save.items = []; a.onSave(a.save); w.nexus.open(); w.nexus.stall.open(); });
+    check('the stall shows a Shop (shards) button and a calm no-dust note', await page.isVisible('#rw-nx-shop') && /No dust yet/.test(await page.textContent('#rw-nx-stall')));
+    await page.click('#rw-nx-shop');
+    const shp = await E(page, (a, w) => ({ nx: w.nexus.isOpen(), panel: a.panel, btn: document.querySelectorAll('#realm-shop-body button[data-buy]').length }));
+    check('the Shop button closes the Nexus and opens the classic shop with buy buttons', !shp.nx && shp.panel === 'shop' && shp.btn > 0, JSON.stringify(shp));
+    const bought = await E(page, (a) => { const b = document.querySelector('#realm-shop-body button[data-buy]'); const sh0 = a.save.shards, n0 = a.save.items.length; b.click(); return { dsh: sh0 - a.save.shards, dn: a.save.items.length - n0 }; });
+    check('buying in the shop spends shards and adds the item', bought.dsh > 0 && bought.dn === 1, JSON.stringify(bought));
+    await E(page, (a, w, snap) => { a.setShop(false); const o = JSON.parse(snap); Object.keys(a.save).forEach((k) => { delete a.save[k]; }); Object.assign(a.save, o); a.onSave(a.save); }, snapSave);
     // the Blacksmith keeps the same stall
     await E(page, (a) => a.setPaused(false));
     const bs = await E(page, (a, w) => { const s = w.nexus.site; a.player.x = s.x - 20; a.player.y = s.y; w.nexus.open(); const l = w.nexus.talk('blacksmith'); return { l, open: w.nexus.stall.isOpen() }; });

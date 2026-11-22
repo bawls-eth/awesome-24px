@@ -10,13 +10,13 @@
       "action": "idle",
       "dir": "down",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 6,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -32,13 +32,13 @@
       "action": "move",
       "dir": "down",
       "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 10,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -54,13 +54,13 @@
       "action": "attack",
       "dir": "down",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 12,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -76,13 +76,13 @@
       "action": "death",
       "dir": "down",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 9,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -98,13 +98,13 @@
       "action": "idle",
       "dir": "up",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 6,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -120,13 +120,13 @@
       "action": "move",
       "dir": "up",
       "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 10,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -142,13 +142,13 @@
       "action": "attack",
       "dir": "up",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 12,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -164,13 +164,13 @@
       "action": "death",
       "dir": "up",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 9,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -186,13 +186,13 @@
       "action": "idle",
       "dir": "right",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 6,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -208,13 +208,13 @@
       "action": "move",
       "dir": "right",
       "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 10,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -230,13 +230,13 @@
       "action": "attack",
       "dir": "right",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 12,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -252,13 +252,13 @@
       "action": "death",
       "dir": "right",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 9,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -274,13 +274,13 @@
       "action": "sleep",
       "dir": "down",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 6,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -296,13 +296,13 @@
       "action": "eat",
       "dir": "down",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 8,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -318,13 +318,13 @@
       "action": "idle",
       "dir": "down",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 6,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 169
       },
       "tags": [
         "hearth-isle",
@@ -340,13 +340,13 @@
       "action": "move",
       "dir": "down",
       "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 10,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 169
       },
       "tags": [
         "hearth-isle",
@@ -362,13 +362,13 @@
       "action": "attack",
       "dir": "down",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 12,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 169
       },
       "tags": [
         "hearth-isle",
@@ -384,13 +384,13 @@
       "action": "death",
       "dir": "down",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 9,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 169
       },
       "tags": [
         "hearth-isle",
@@ -406,13 +406,13 @@
       "action": "idle",
       "dir": "up",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 6,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 169
       },
       "tags": [
         "hearth-isle",
@@ -428,13 +428,13 @@
       "action": "move",
       "dir": "up",
       "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 10,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 169
       },
       "tags": [
         "hearth-isle",
@@ -450,13 +450,13 @@
       "action": "attack",
       "dir": "up",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 12,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 169
       },
       "tags": [
         "hearth-isle",
@@ -472,13 +472,13 @@
       "action": "death",
       "dir": "up",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 9,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 169
       },
       "tags": [
         "hearth-isle",
@@ -494,13 +494,13 @@
       "action": "idle",
       "dir": "right",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 6,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 169
       },
       "tags": [
         "hearth-isle",
@@ -516,13 +516,13 @@
       "action": "move",
       "dir": "right",
       "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 10,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 169
       },
       "tags": [
         "hearth-isle",
@@ -538,13 +538,13 @@
       "action": "attack",
       "dir": "right",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 12,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 169
       },
       "tags": [
         "hearth-isle",
@@ -560,13 +560,13 @@
       "action": "death",
       "dir": "right",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 9,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 169
       },
       "tags": [
         "hearth-isle",
@@ -582,13 +582,13 @@
       "action": "sleep",
       "dir": "down",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 6,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 169
       },
       "tags": [
         "hearth-isle",
@@ -604,13 +604,13 @@
       "action": "eat",
       "dir": "down",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 8,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 169
       },
       "tags": [
         "hearth-isle",
@@ -626,13 +626,13 @@
       "action": "idle",
       "dir": "down",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 6,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -648,13 +648,13 @@
       "action": "move",
       "dir": "down",
       "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 10,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -670,13 +670,13 @@
       "action": "attack",
       "dir": "down",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 12,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -692,13 +692,13 @@
       "action": "death",
       "dir": "down",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 9,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -714,13 +714,13 @@
       "action": "idle",
       "dir": "up",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 6,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -736,13 +736,13 @@
       "action": "move",
       "dir": "up",
       "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 10,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -758,13 +758,13 @@
       "action": "attack",
       "dir": "up",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 12,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -780,13 +780,13 @@
       "action": "death",
       "dir": "up",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 9,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -802,13 +802,13 @@
       "action": "idle",
       "dir": "right",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 6,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -824,13 +824,13 @@
       "action": "move",
       "dir": "right",
       "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 10,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -846,13 +846,13 @@
       "action": "attack",
       "dir": "right",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 12,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -868,13 +868,13 @@
       "action": "death",
       "dir": "right",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 9,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -890,13 +890,13 @@
       "action": "sleep",
       "dir": "down",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 6,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -912,13 +912,13 @@
       "action": "eat",
       "dir": "down",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 8,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -934,13 +934,13 @@
       "action": "idle",
       "dir": "down",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 6,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -956,13 +956,13 @@
       "action": "move",
       "dir": "down",
       "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 10,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -978,13 +978,13 @@
       "action": "attack",
       "dir": "down",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 12,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -1000,13 +1000,13 @@
       "action": "death",
       "dir": "down",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 9,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -1022,13 +1022,13 @@
       "action": "idle",
       "dir": "up",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 6,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -1044,13 +1044,13 @@
       "action": "move",
       "dir": "up",
       "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 10,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -1066,13 +1066,13 @@
       "action": "attack",
       "dir": "up",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 12,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -1088,13 +1088,13 @@
       "action": "death",
       "dir": "up",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 9,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -1110,13 +1110,13 @@
       "action": "idle",
       "dir": "right",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 6,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -1132,13 +1132,13 @@
       "action": "move",
       "dir": "right",
       "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 10,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -1154,13 +1154,13 @@
       "action": "attack",
       "dir": "right",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 12,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -1176,13 +1176,13 @@
       "action": "death",
       "dir": "right",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
-      "fps": 9,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -1198,13 +1198,13 @@
       "action": "sleep",
       "dir": "down",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 6,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -1220,13 +1220,13 @@
       "action": "eat",
       "dir": "down",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 192,
+      "frame_h": 192,
       "fps": 8,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 96,
+        "y": 173
       },
       "tags": [
         "hearth-isle",
@@ -1550,13 +1550,13 @@
       "action": "idle",
       "dir": "down",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 384,
+      "frame_h": 384,
       "fps": 6,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 192,
+        "y": 347
       },
       "tags": [
         "hearth-isle",
@@ -1566,20 +1566,20 @@
       "source": "original code-drawn pixel art",
       "seat": [
         {
-          "x": 128,
-          "y": 110
+          "x": 192,
+          "y": 165
         },
         {
-          "x": 128,
-          "y": 114
+          "x": 192,
+          "y": 171
         },
         {
-          "x": 128,
-          "y": 110
+          "x": 192,
+          "y": 165
         },
         {
-          "x": 128,
-          "y": 106
+          "x": 192,
+          "y": 159
         }
       ]
     },
@@ -1591,13 +1591,13 @@
       "action": "move",
       "dir": "down",
       "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 384,
+      "frame_h": 384,
       "fps": 10,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 192,
+        "y": 347
       },
       "tags": [
         "hearth-isle",
@@ -1607,28 +1607,28 @@
       "source": "original code-drawn pixel art",
       "seat": [
         {
-          "x": 128,
-          "y": 106
+          "x": 192,
+          "y": 159
         },
         {
-          "x": 128,
-          "y": 114
+          "x": 192,
+          "y": 171
         },
         {
-          "x": 128,
-          "y": 110
+          "x": 192,
+          "y": 165
         },
         {
-          "x": 128,
-          "y": 102
+          "x": 192,
+          "y": 153
         },
         {
-          "x": 128,
-          "y": 110
+          "x": 192,
+          "y": 165
         },
         {
-          "x": 128,
-          "y": 114
+          "x": 192,
+          "y": 171
         }
       ]
     },
@@ -1640,13 +1640,13 @@
       "action": "attack",
       "dir": "down",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 384,
+      "frame_h": 384,
       "fps": 12,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 192,
+        "y": 347
       },
       "tags": [
         "hearth-isle",
@@ -1656,24 +1656,24 @@
       "source": "original code-drawn pixel art",
       "seat": [
         {
-          "x": 128,
-          "y": 110
+          "x": 192,
+          "y": 165
         },
         {
-          "x": 128,
-          "y": 114
+          "x": 192,
+          "y": 171
         },
         {
-          "x": 128,
-          "y": 110
+          "x": 192,
+          "y": 165
         },
         {
-          "x": 128,
-          "y": 106
+          "x": 192,
+          "y": 159
         },
         {
-          "x": 128,
-          "y": 110
+          "x": 192,
+          "y": 165
         }
       ]
     },
@@ -1685,13 +1685,13 @@
       "action": "death",
       "dir": "down",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 384,
+      "frame_h": 384,
       "fps": 9,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 192,
+        "y": 347
       },
       "tags": [
         "hearth-isle",
@@ -1701,24 +1701,24 @@
       "source": "original code-drawn pixel art",
       "seat": [
         {
-          "x": 128,
-          "y": 110
+          "x": 192,
+          "y": 165
         },
         {
-          "x": 128,
-          "y": 114
+          "x": 192,
+          "y": 171
         },
         {
-          "x": 128,
-          "y": 110
+          "x": 192,
+          "y": 165
         },
         {
-          "x": 128,
-          "y": 106
+          "x": 192,
+          "y": 159
         },
         {
-          "x": 128,
-          "y": 110
+          "x": 192,
+          "y": 165
         }
       ]
     },
@@ -1730,13 +1730,13 @@
       "action": "idle",
       "dir": "up",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 384,
+      "frame_h": 384,
       "fps": 6,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 192,
+        "y": 347
       },
       "tags": [
         "hearth-isle",
@@ -1746,20 +1746,20 @@
       "source": "original code-drawn pixel art",
       "seat": [
         {
-          "x": 128,
-          "y": 110
+          "x": 192,
+          "y": 165
         },
         {
-          "x": 128,
-          "y": 114
+          "x": 192,
+          "y": 171
         },
         {
-          "x": 128,
-          "y": 110
+          "x": 192,
+          "y": 165
         },
         {
-          "x": 128,
-          "y": 106
+          "x": 192,
+          "y": 159
         }
       ]
     },
@@ -1771,13 +1771,13 @@
       "action": "move",
       "dir": "up",
       "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 384,
+      "frame_h": 384,
       "fps": 10,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 192,
+        "y": 347
       },
       "tags": [
         "hearth-isle",
@@ -1787,28 +1787,28 @@
       "source": "original code-drawn pixel art",
       "seat": [
         {
-          "x": 128,
-          "y": 106
+          "x": 192,
+          "y": 159
         },
         {
-          "x": 128,
-          "y": 114
+          "x": 192,
+          "y": 171
         },
         {
-          "x": 128,
-          "y": 110
+          "x": 192,
+          "y": 165
         },
         {
-          "x": 128,
-          "y": 102
+          "x": 192,
+          "y": 153
         },
         {
-          "x": 128,
-          "y": 110
+          "x": 192,
+          "y": 165
         },
         {
-          "x": 128,
-          "y": 114
+          "x": 192,
+          "y": 171
         }
       ]
     },
@@ -1820,13 +1820,13 @@
       "action": "attack",
       "dir": "up",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 384,
+      "frame_h": 384,
       "fps": 12,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 192,
+        "y": 347
       },
       "tags": [
         "hearth-isle",
@@ -1836,24 +1836,24 @@
       "source": "original code-drawn pixel art",
       "seat": [
         {
-          "x": 128,
-          "y": 110
+          "x": 192,
+          "y": 165
         },
         {
-          "x": 128,
-          "y": 114
+          "x": 192,
+          "y": 171
         },
         {
-          "x": 128,
-          "y": 110
+          "x": 192,
+          "y": 165
         },
         {
-          "x": 128,
-          "y": 106
+          "x": 192,
+          "y": 159
         },
         {
-          "x": 128,
-          "y": 110
+          "x": 192,
+          "y": 165
         }
       ]
     },
@@ -1865,13 +1865,13 @@
       "action": "death",
       "dir": "up",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 384,
+      "frame_h": 384,
       "fps": 9,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 192,
+        "y": 347
       },
       "tags": [
         "hearth-isle",
@@ -1881,24 +1881,24 @@
       "source": "original code-drawn pixel art",
       "seat": [
         {
-          "x": 128,
-          "y": 110
+          "x": 192,
+          "y": 165
         },
         {
-          "x": 128,
-          "y": 114
+          "x": 192,
+          "y": 171
         },
         {
-          "x": 128,
-          "y": 110
+          "x": 192,
+          "y": 165
         },
         {
-          "x": 128,
-          "y": 106
+          "x": 192,
+          "y": 159
         },
         {
-          "x": 128,
-          "y": 110
+          "x": 192,
+          "y": 165
         }
       ]
     },
@@ -1910,13 +1910,13 @@
       "action": "idle",
       "dir": "right",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 384,
+      "frame_h": 384,
       "fps": 6,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 192,
+        "y": 347
       },
       "tags": [
         "hearth-isle",
@@ -1926,20 +1926,20 @@
       "source": "original code-drawn pixel art",
       "seat": [
         {
-          "x": 126,
-          "y": 110
+          "x": 189,
+          "y": 165
         },
         {
-          "x": 126,
-          "y": 114
+          "x": 189,
+          "y": 171
         },
         {
-          "x": 126,
-          "y": 110
+          "x": 189,
+          "y": 165
         },
         {
-          "x": 126,
-          "y": 106
+          "x": 189,
+          "y": 159
         }
       ]
     },
@@ -1951,13 +1951,13 @@
       "action": "move",
       "dir": "right",
       "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 384,
+      "frame_h": 384,
       "fps": 10,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 192,
+        "y": 347
       },
       "tags": [
         "hearth-isle",
@@ -1967,28 +1967,28 @@
       "source": "original code-drawn pixel art",
       "seat": [
         {
-          "x": 126,
-          "y": 106
+          "x": 189,
+          "y": 159
         },
         {
-          "x": 126,
-          "y": 114
+          "x": 189,
+          "y": 171
         },
         {
-          "x": 126,
-          "y": 110
+          "x": 189,
+          "y": 165
         },
         {
-          "x": 126,
-          "y": 102
+          "x": 189,
+          "y": 153
         },
         {
-          "x": 126,
-          "y": 110
+          "x": 189,
+          "y": 165
         },
         {
-          "x": 126,
-          "y": 114
+          "x": 189,
+          "y": 171
         }
       ]
     },
@@ -2000,13 +2000,13 @@
       "action": "attack",
       "dir": "right",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 384,
+      "frame_h": 384,
       "fps": 12,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 192,
+        "y": 347
       },
       "tags": [
         "hearth-isle",
@@ -2016,24 +2016,24 @@
       "source": "original code-drawn pixel art",
       "seat": [
         {
-          "x": 126,
-          "y": 110
+          "x": 189,
+          "y": 165
         },
         {
-          "x": 126,
-          "y": 114
+          "x": 189,
+          "y": 171
         },
         {
-          "x": 126,
-          "y": 110
+          "x": 189,
+          "y": 165
         },
         {
-          "x": 126,
-          "y": 106
+          "x": 189,
+          "y": 159
         },
         {
-          "x": 126,
-          "y": 110
+          "x": 189,
+          "y": 165
         }
       ]
     },
@@ -2045,13 +2045,13 @@
       "action": "death",
       "dir": "right",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 384,
+      "frame_h": 384,
       "fps": 9,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 192,
+        "y": 347
       },
       "tags": [
         "hearth-isle",
@@ -2061,24 +2061,24 @@
       "source": "original code-drawn pixel art",
       "seat": [
         {
-          "x": 126,
-          "y": 110
+          "x": 189,
+          "y": 165
         },
         {
-          "x": 126,
-          "y": 114
+          "x": 189,
+          "y": 171
         },
         {
-          "x": 126,
-          "y": 110
+          "x": 189,
+          "y": 165
         },
         {
-          "x": 126,
-          "y": 106
+          "x": 189,
+          "y": 159
         },
         {
-          "x": 126,
-          "y": 110
+          "x": 189,
+          "y": 165
         }
       ]
     },
@@ -2090,13 +2090,13 @@
       "action": "sleep",
       "dir": "down",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 384,
+      "frame_h": 384,
       "fps": 6,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 192,
+        "y": 347
       },
       "tags": [
         "hearth-isle",
@@ -2106,20 +2106,20 @@
       "source": "original code-drawn pixel art",
       "seat": [
         {
-          "x": 128,
-          "y": 114
+          "x": 192,
+          "y": 171
         },
         {
-          "x": 128,
-          "y": 118
+          "x": 192,
+          "y": 177
         },
         {
-          "x": 128,
-          "y": 114
+          "x": 192,
+          "y": 171
         },
         {
-          "x": 128,
-          "y": 110
+          "x": 192,
+          "y": 165
         }
       ]
     },
@@ -2131,13 +2131,13 @@
       "action": "eat",
       "dir": "down",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 384,
+      "frame_h": 384,
       "fps": 8,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 192,
+        "y": 347
       },
       "tags": [
         "hearth-isle",
@@ -2147,20 +2147,20 @@
       "source": "original code-drawn pixel art",
       "seat": [
         {
-          "x": 128,
-          "y": 110
+          "x": 192,
+          "y": 165
         },
         {
-          "x": 128,
-          "y": 114
+          "x": 192,
+          "y": 171
         },
         {
-          "x": 128,
-          "y": 110
+          "x": 192,
+          "y": 165
         },
         {
-          "x": 128,
-          "y": 106
+          "x": 192,
+          "y": 159
         }
       ]
     },
@@ -2172,13 +2172,13 @@
       "action": "idle",
       "dir": "down",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 512,
+      "frame_h": 512,
       "fps": 6,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 256,
+        "y": 463
       },
       "tags": [
         "hearth-isle",
@@ -2196,13 +2196,13 @@
       "action": "move",
       "dir": "down",
       "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 512,
+      "frame_h": 512,
       "fps": 10,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 256,
+        "y": 463
       },
       "tags": [
         "hearth-isle",
@@ -2220,13 +2220,13 @@
       "action": "attack",
       "dir": "down",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 512,
+      "frame_h": 512,
       "fps": 12,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 256,
+        "y": 463
       },
       "tags": [
         "hearth-isle",
@@ -2244,13 +2244,13 @@
       "action": "death",
       "dir": "down",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 512,
+      "frame_h": 512,
       "fps": 9,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 256,
+        "y": 463
       },
       "tags": [
         "hearth-isle",
@@ -2268,13 +2268,13 @@
       "action": "idle",
       "dir": "up",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 512,
+      "frame_h": 512,
       "fps": 6,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 256,
+        "y": 463
       },
       "tags": [
         "hearth-isle",
@@ -2292,13 +2292,13 @@
       "action": "move",
       "dir": "up",
       "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 512,
+      "frame_h": 512,
       "fps": 10,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 256,
+        "y": 463
       },
       "tags": [
         "hearth-isle",
@@ -2316,13 +2316,13 @@
       "action": "attack",
       "dir": "up",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 512,
+      "frame_h": 512,
       "fps": 12,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 256,
+        "y": 463
       },
       "tags": [
         "hearth-isle",
@@ -2340,13 +2340,13 @@
       "action": "death",
       "dir": "up",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 512,
+      "frame_h": 512,
       "fps": 9,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 256,
+        "y": 463
       },
       "tags": [
         "hearth-isle",
@@ -2364,13 +2364,13 @@
       "action": "idle",
       "dir": "right",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 512,
+      "frame_h": 512,
       "fps": 6,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 256,
+        "y": 463
       },
       "tags": [
         "hearth-isle",
@@ -2388,13 +2388,13 @@
       "action": "move",
       "dir": "right",
       "frames": 6,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 512,
+      "frame_h": 512,
       "fps": 10,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 256,
+        "y": 463
       },
       "tags": [
         "hearth-isle",
@@ -2412,13 +2412,13 @@
       "action": "attack",
       "dir": "right",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 512,
+      "frame_h": 512,
       "fps": 12,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 256,
+        "y": 463
       },
       "tags": [
         "hearth-isle",
@@ -2436,13 +2436,13 @@
       "action": "death",
       "dir": "right",
       "frames": 5,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 512,
+      "frame_h": 512,
       "fps": 9,
       "loop": false,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 256,
+        "y": 463
       },
       "tags": [
         "hearth-isle",
@@ -2460,13 +2460,13 @@
       "action": "sleep",
       "dir": "down",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 512,
+      "frame_h": 512,
       "fps": 6,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 256,
+        "y": 463
       },
       "tags": [
         "hearth-isle",
@@ -2484,13 +2484,13 @@
       "action": "eat",
       "dir": "down",
       "frames": 4,
-      "frame_w": 256,
-      "frame_h": 256,
+      "frame_w": 512,
+      "frame_h": 512,
       "fps": 8,
       "loop": true,
       "anchor": {
-        "x": 128,
-        "y": 231
+        "x": 256,
+        "y": 463
       },
       "tags": [
         "hearth-isle",
