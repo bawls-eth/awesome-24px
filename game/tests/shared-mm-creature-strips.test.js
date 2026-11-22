@@ -16,11 +16,11 @@ const man = (d) => JSON.parse(fs.readFileSync(path.join(ART, d, 'manifest.json')
   const b31b = man('b31b-jungle-creatures-rest').assets.filter((a) => a.enemy === 'vinecoil' || a.enemy === 'canopy_glider');
   // AW2: b31af (glimmerfrog sleep + eat), b32s (stegolith body + saddle overlays), b36 (the seven meadow tameables) are wired in full
   const assets = man('b31a-jungle-creatures-core').assets.concat(b31b, man('b32-jungle-big-and-boss').assets, man('b31af-glimmerfrog-rest').assets,
-    man('b32s-stegolith').assets, man('b36-meadow-creatures').assets);
+    man('b32s-stegolith').assets, man('b36-meadow-creatures').assets, man('b38a-reef-puffer').assets);
   const files = M.files();
   const byId = {}; files.forEach((f) => { byId[f.id] = f; });
-  check('227 strips: 40 b31a + 24 b31b + 43 b32 + 2 b31af + 20 b32s + 98 b36, one per manifest asset', files.length === 227 && b31b.length === 24 && assets.length === 227
-    && assets.every((a) => byId[a.id]) && new Set(files.map((f) => f.id)).size === 227, files.length + ' / ' + assets.length);
+  check('241 strips: 40 b31a + 24 b31b + 43 b32 + 2 b31af + 20 b32s + 98 b36 + 14 b38a, one per manifest asset', files.length === 241 && b31b.length === 24 && assets.length === 241
+    && assets.every((a) => byId[a.id]) && new Set(files.map((f) => f.id)).size === 241, files.length + ' / ' + assets.length);
   const bad = [];
   assets.forEach((a) => {
     const k = a.enemy || a.creature, sp = M.SPECS[k], act = M.ACT[a.action];
@@ -31,7 +31,9 @@ const man = (d) => JSON.parse(fs.readFileSync(path.join(ART, d, 'manifest.json')
       const d = M.DIRS.indexOf(a.dir), mv = /move/.test(a.action) ? 'move' : 'idle';
       if (JSON.stringify(sp.seat[mv][d]) !== JSON.stringify(a.seat.map((s) => s.y)) || sp.seat.x[d] !== a.seat[0].x) bad.push(a.id + ' seat');
     }
-    if (!fs.existsSync(path.join(__dirname, '..', 'games', 'isles', byId[a.id].url))) bad.push(a.id + ' file');
+    const fp = path.join(__dirname, '..', 'games', 'isles', byId[a.id].url);
+    if (!fs.existsSync(fp)) bad.push(a.id + ' file');
+    else { const b = fs.readFileSync(fp); if (b.readUInt32BE(16) !== a.frame_w * a.frames || b.readUInt32BE(20) !== a.frame_h) bad.push(a.id + ' png size'); } // PNG IHDR w / h
   });
   check('table frames / fps / loop / cell / anchor / seat match the manifests and every url resolves from the isles page', bad.length === 0, bad.join(', '));
 
@@ -58,11 +60,19 @@ const man = (d) => JSON.parse(fs.readFileSync(path.join(ART, d, 'manifest.json')
   check('actionFor: glimmerfrog sleeps / eats from the b31af strips', M.actionFor('glimmerfrog', st({ ko: true })) === 'sleep' && M.actionFor('glimmerfrog', st({ eating: true })) === 'eat'
     && /b31af-glimmerfrog-rest\/enemies\/glimmerfrog\/glimmerfrog_sleep_down\.png$/.test(byId.glimmerfrog_sleep_down.url) && /b31a-/.test(byId.glimmerfrog_idle_down.url));
   check('actionFor: unknown species / bad state -> idle', M.actionFor('moth_lantern', st({ moving: true })) === 'idle' && M.actionFor('fernraptor', null) === 'idle');
-  check('b36: the seven MMCreatures meadow ids, each with the 14 strips; b36 death runs at 9 fps (others 10)', M.kindsFor('meadow').join() === 'clover_hopper,puffwool,bumble_mote,pebble_tortle,thistle_boar,meadow_strider,oakback'
-    && M.kindsFor('meadow').every((k) => files.filter((f) => f.kind === k).length === 14) && M.fpsOf('death', 'puffwool') === 9 && M.fpsOf('death', 'tusktop') === 10
-    && M.frameIndex('death', 0.42) === 4 && M.frameIndex('death', 0.42, 'puffwool') === 3 && Math.abs(M.duration('death', 'oakback') - 5 / 9) < 1e-9);
-  check('kindsFor: an island preloads its biome plus the stable roster (jungle 8, reef none, meadow + a tusktop 8)', M.kindsFor('jungle').length === 8 && M.kindsFor('jungle').indexOf('stegolith') >= 0
-    && M.kindsFor('reef').length === 0 && M.kindsFor('meadow', ['tusktop', 'nope']).length === 8);
+  check('b36: the seven MMCreatures meadow ids, each with the 14 strips; small-four death at 10 fps, boar / strider / oakback at 9', M.kindsFor('meadow').join() === 'clover_hopper,puffwool,bumble_mote,pebble_tortle,thistle_boar,meadow_strider,oakback'
+    && M.kindsFor('meadow').every((k) => files.filter((f) => f.kind === k).length === 14) && M.fpsOf('death', 'puffwool') === 10 && M.fpsOf('death', 'thistle_boar') === 9 && M.fpsOf('death', 'tusktop') === 10
+    && M.frameIndex('death', 0.42) === 4 && M.frameIndex('death', 0.42, 'oakback') === 3 && Math.abs(M.duration('death', 'oakback') - 5 / 9) < 1e-9);
+  const SZ = { S: 48, M: 64, L: 96, XL: 128 }, CR = require('../shared/mm-creatures.js');
+  // (b36 meadow + b38a reef; the b31a / b31b jungle S species were delivered in 256 px cells before the size classes and still are)
+  const szBad = M.KINDS.filter((k) => M.SPECS[k].biome !== 'jungle').filter((k) => { const d = CR.get(k); return !d || SZ[d.size] !== M.SPECS[k].cell / M.SCALE; });
+  check('every meadow / reef strip species is an MMCreatures id whose native cell matches its size class (S 48, M 64, L 96, XL 128)', szBad.length === 0, szBad.join());
+  const BP = require('../shared/mm-biome-packs.js');
+  check('b38a: reef_puffer is the canon reef species, in the reef spawn table, preloaded by the reef isle (14 strips, death 9 fps)', M.kindsFor('reef').join() === 'reef_puffer'
+    && BP.canon('reef_puffer') === 'reef_puffer' && CR.get('reef_puffer').biome === 'reef' && BP.creatureIds('reef').indexOf('reef_puffer') >= 0
+    && files.filter((f) => f.kind === 'reef_puffer').length === 14 && M.fpsOf('death', 'reef_puffer') === 9);
+  check('kindsFor: an island preloads its biome plus the stable roster (jungle 8, reef 1, meadow + a tusktop 8)', M.kindsFor('jungle').length === 8 && M.kindsFor('jungle').indexOf('stegolith') >= 0
+    && M.kindsFor('reef').length === 1 && M.kindsFor('meadow', ['tusktop', 'nope']).length === 8);
   check('saddleFor: the stegolith has overlays; the meadow strider (no saddle) has none', M.saddleFor('stegolith', true) === 'saddle_move' && M.saddleFor('meadow_strider', false) === null);
   check('saddleFor: tusktop / tyrant have overlays, others none', M.saddleFor('tusktop', true) === 'saddle_move' && M.saddleFor('fernjaw_tyrant', false) === 'saddle_idle' && M.saddleFor('fernraptor', true) === null);
   check('stripId: precomputed, left reuses right, down-only actions stay down', M.stripId('tusktop', 'move', M.LEFT) === 'tusktop_move_right' && M.stripId('fernraptor', 'sleep', M.UP) === 'fernraptor_sleep_down'
@@ -74,8 +84,8 @@ const man = (d) => JSON.parse(fs.readFileSync(path.join(ART, d, 'manifest.json')
     && M.seatOffset('tusktop', true, M.LEFT, 1, seat) && seat.x === 5);
   check('seatOffset: no seat data -> false', M.seatOffset('fernraptor', false, 0, 0, seat) === false);
   check('seatOffset: stegolith (b32s) and meadow strider (b36) seats from their manifests', M.seatOffset('stegolith', false, M.DOWN, 2, seat) && seat.x === -1 && seat.y === (463 - 216) / 4
-    && M.seatOffset('meadow_strider', true, M.LEFT, 3, seat) && seat.x === 0.5 && seat.y === (231 - 102) / 4);
-  check('oakback (XL drawn in a 256 cell) shows at k 2; its seat-less spec stays false', M.SPECS.oakback.k === 2 && M.SPECS.puffwool.k === 1 && M.seatOffset('oakback', false, 0, 0, seat) === false);
+    && M.seatOffset('meadow_strider', true, M.LEFT, 3, seat) && seat.x === 0.75 && seat.y === (347 - 153) / 4);
+  check('oakback is a native 512 cell (no 2x display override left); its seat-less spec stays false', M.SPECS.oakback.cell === 512 && !('k' in M.SPECS.oakback) && M.seatOffset('oakback', false, 0, 0, seat) === false);
 
   // 5 loader: stub images + stub canvas; native 1/4 bake; per-creature fallback when a needed strip is missing
   const canvases = [];
@@ -85,14 +95,21 @@ const man = (d) => JSON.parse(fs.readFileSync(path.join(ART, d, 'manifest.json')
   const set = M.create({ create: mk, loadImage: (u) => { asked.push(u); return Promise.resolve(/glimmerfrog_move_up/.test(u) ? null : img(u)); } });
   check('before ready: nothing is drawn from PNG', !set.has('fernraptor') && set.get('fernraptor', 'idle', 0) === null);
   await set.ready;
-  check('loads each of the 227 PNGs exactly once', asked.length === 227 && new Set(asked).size === 227);
+  check('loads each of the 241 PNGs exactly once', asked.length === 241 && new Set(asked).size === 241);
   check('complete creatures are on, glimmerfrog (a missing move_up) falls back to the code bake', set.has('fernraptor') && set.has('tusktop') && set.has('fernjaw_tyrant') && set.has('chompbill') && !set.has('glimmerfrog'));
   const fr = set.get('fernraptor', 'move', M.LEFT), tk = set.get('tusktop', 'saddle_move', M.DOWN), ty = set.get('fernjaw_tyrant', 'roar', M.UP);
   check('baked strips are native size (256 -> 64, 384 -> 96, 512 -> 128) with the anchor scaled', fr.w === 64 && fr.frames === 6 && fr.ax === 32 && fr.ay === 231 / 4 && tk.w === 96 && tk.id === 'tusktop_saddle_move_down' && ty.w === 128 && ty.id === 'fernjaw_tyrant_roar_up');
-  check('each loaded strip (226: one failed) is baked once onto a frames x native canvas with smoothing off', canvases.length === 226 && fr.src.width === 64 * 6 && fr.src.height === 64 && fr.src.smooth === false);
+  check('each loaded strip (240: one failed) is baked once onto a frames x native canvas with smoothing off', canvases.length === 240 && fr.src.width === 64 * 6 && fr.src.height === 64 && fr.src.smooth === false);
   const oak = set.get('oakback', 'idle', M.DOWN), steg = set.get('stegolith', 'saddle_idle', M.RIGHT);
-  check('k 2 strips keep a native source cell but draw twice the size (oakback 64 -> 128, anchor x2); stegolith 512 -> 128', oak.sw === 64 && oak.w === 128 && oak.ay === 231 / 2 && oak.k === 2
-    && steg.w === 128 && steg.id === 'stegolith_saddle_idle_right' && set.has('stegolith') && set.has('puffwool'));
+  const pw = set.get('puffwool', 'idle', M.DOWN), sd = set.get('meadow_strider', 'move', M.RIGHT), rp = set.get('reef_puffer', 'eat', M.LEFT);
+  check('b36 / b38a redo cells bake to their size class: oakback 512 -> 128 (feet 463/4), strider 384 -> 96, puffwool / reef puffer 192 -> 48; stegolith 512 -> 128',
+    oak.sw === 128 && oak.w === 128 && oak.ay === 463 / 4 && oak.ax === 64 && sd.w === 96 && sd.ay === 347 / 4 && pw.w === 48 && pw.ay === 169 / 4 && pw.ax === 24
+    && rp.w === 48 && rp.id === 'reef_puffer_eat_down' && rp.ay === 171 / 4 && steg.w === 128 && steg.id === 'stegolith_saddle_idle_right' && set.has('stegolith') && set.has('puffwool') && set.has('reef_puffer'));
+  const odd = M.create({ create: mk, kinds: ['puffwool'], loadImage: (u) => Promise.resolve(/idle_down/.test(u) ? { naturalWidth: 256 * 4, naturalHeight: 256 } : /sleep_down/.test(u) ? { naturalWidth: 300, naturalHeight: 30 } : img(u)) });
+  await odd.ready;
+  const o1 = odd.get('puffwool', 'idle', M.DOWN);
+  check('the loader trusts the PNG cell (frame_h): a 256 px puffwool strip bakes to 64 with the anchor scaled; a tiny one is rejected', o1.w === 64 && Math.abs(o1.ay - 169 / 3) < 1e-9 && o1.ax === 32
+    && odd.has('puffwool') && odd.count() === 13 && odd.get('puffwool', 'sleep', M.DOWN).id === 'puffwool_idle_down');
   check('get() falls back to idle of the same view for an action a creature lacks', set.get('chompbill', 'roar', M.RIGHT).id === 'chompbill_idle_right');
   const calls = []; const ctx = { drawImage: (...a) => calls.push(a), save: () => calls.push('save'), translate: () => {}, scale: () => {}, restore: () => calls.push('restore') };
   set.draw(ctx, fr, 7, 100, 200, 1, false);
@@ -100,6 +117,14 @@ const man = (d) => JSON.parse(fs.readFileSync(path.join(ART, d, 'manifest.json')
   check('draw blits one cell at the anchor (frame wraps 7 -> 1)', d[1] === 64 && d[2] === 0 && d[3] === 64 && d[5] === 100 - 32 && d[6] === 200 - 231 / 4 && d[7] === 64);
   calls.length = 0; set.draw(ctx, fr, 0, 100, 200, 1, true);
   check('a flipped draw is wrapped in save / restore', calls[0] === 'save' && calls[calls.length - 1] === 'restore');
+  // the bake measures the opaque top row and the widest opaque run (the shadow is sized to the body): a 20 px wide body from row 10
+  const pxc = (w, h) => ({ width: w, height: h, getContext: () => ({ drawImage: () => {}, getImageData: (x0, y0, gw, gh) => { const dd = new Uint8ClampedArray(gw * gh * 4);
+    for (let y = 10; y < gh; y++) for (let fi = 0; fi < gw / 48; fi++) for (let x = 14 + fi; x < 34 + fi - (fi ? 2 : 0); x++) dd[(y * gw + fi * 48 + x) * 4 + 3] = 255; return { data: dd }; } }) });
+  const meas = M.create({ create: pxc, kinds: ['reef_puffer'], loadImage: (u) => Promise.resolve(img(u)) });
+  await meas.ready;
+  const ms = meas.get('reef_puffer', 'idle', M.DOWN);
+  check('bake measures top (10) and span (widest frame, 20 of a 48 cell) once per strip', ms.top === 10 && ms.span === 20 && ms.w === 48, JSON.stringify({ top: ms.top, span: ms.span }));
+  check('without getImageData the span is the whole cell', fr.span === fr.w);
   const off = M.create({ art: false, loadImage: () => { throw new Error('must not load'); } });
   await off.ready;
   check('art:false loads nothing and has no creature', off.count() === 0 && !off.has('fernraptor'));

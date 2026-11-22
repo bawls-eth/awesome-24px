@@ -2,6 +2,30 @@
 const K = require('../shared/mm-chunk-bake.js');
 const A = require('../shared/mm-isle-art.js');
 const O = require('../shared/mm-overworld.js');
+const fs = require('fs');
+const path = require('path');
+const zlib = require('zlib');
+const VARIANTS = ['a', 'b', 'c', 'd'];
+// minimal RGBA8 PNG decoder (non-interlaced, the only kind the b35 batch ships) -> {w, h, d: Uint8Array}
+function readPng(file) {
+  const b = fs.readFileSync(file), w = b.readUInt32BE(16), h = b.readUInt32BE(20);
+  if (b[24] !== 8 || b[25] !== 6 || b[28] !== 0) throw new Error('not RGBA8: ' + file);
+  const chunks = []; let o = 8;
+  while (o < b.length) { const len = b.readUInt32BE(o), type = b.toString('ascii', o + 4, o + 8); if (type === 'IDAT') chunks.push(b.slice(o + 8, o + 8 + len)); o += 12 + len; }
+  const raw = zlib.inflateSync(Buffer.concat(chunks)), st = w * 4, out = new Uint8Array(st * h);
+  let p = 0;
+  for (let y = 0; y < h; y++) {
+    const ft = raw[p++];
+    for (let i = 0; i < st; i++) {
+      const a = i >= 4 ? out[y * st + i - 4] : 0, up = y ? out[(y - 1) * st + i] : 0, c = i >= 4 && y ? out[(y - 1) * st + i - 4] : 0;
+      let v = raw[p++];
+      if (ft === 1) v += a; else if (ft === 2) v += up; else if (ft === 3) v += (a + up) >> 1;
+      else if (ft === 4) { const pp = a + up - c, pa = Math.abs(pp - a), pb = Math.abs(pp - up), pc = Math.abs(pp - c); v += (pa <= pb && pa <= pc) ? a : (pb <= pc ? up : c); }
+      out[y * st + i] = v & 255;
+    }
+  }
+  return { w, h, d: out };
+}
 let n = 0, bad = 0;
 function check(name, ok) { n++; if (!ok) { bad++; console.log('FAIL ' + name); } }
 function stub() {
@@ -89,14 +113,39 @@ function stub() {
   check('meadow fallback palette covers the 4 terrains + dock planks', ['tilled_soil', 'tilled_wet', 'clover_patch', 'garden_path', 'dock_planks', 'grass'].every((x) => K.resolvePalette(A.MEADOW_PALETTE)[x]));
   const half = await A.load({ pack: 'meadow', names: NM, loadImage: (u) => Promise.resolve(/garden_path_[a-d]\.png|tilled_wet_edge_07/.test(u) ? null : { u }) });
   check('a terrain whose variants all fail falls back (no edges either); one missing mask is just absent', half[21] === undefined && half.edges[21] === undefined && half.edges[19].imgs[7] === null && half.edges[19].imgs[6]);
-  // regrass: the 3 b35 grass colours become palette.grass [base, shade2, edge]; other pixels stay; no canvas -> the image as delivered
-  const px = new Uint8ClampedArray([0x36, 0x6f, 0x3d, 255, 0x4f, 0x8b, 0x46, 255, 0x26, 0x52, 0x31, 255, 0xa7, 0x8a, 0x68, 255, 0x36, 0x6f, 0x3d, 0]);
-  const rc = { getContext: () => ({ drawImage: () => {}, getImageData: () => ({ data: px }), putImageData: () => {} }) };
-  const out = A.regrass({ width: 5, height: 1 }, A.MEADOW_GRASS, { grass: ['#6cbf55', '#62b24c', '#78cb62', '#468a38'] }, () => rc);
-  check('regrass swaps exactly the b35 grass colours (transparent and path pixels untouched)', out === rc && out.regrassed === 3 && px[0] === 0x6c && px[1] === 0xbf && px[4] === 0x78 && px[8] === 0x46
-    && px[12] === 0xa7 && px[16] === 0x36);
-  const raw = { width: 1 };
-  check('regrass without a canvas (node) or a throwing one returns the PNG unchanged', A.regrass(raw, A.MEADOW_GRASS, A.MEADOW_PALETTE, null) === raw && A.regrass(raw, A.MEADOW_GRASS, A.MEADOW_PALETTE, () => { throw new Error('x'); }) === raw);
+  // AW3 b35 grass-edge redo: the masks are drawn as delivered (the old 3-colour swap is gone). Pixel proof on the real PNGs that no dark
+  // halo is left: every pixel of a grass-blended mask that is not its terrain's variant colour is Hearth Isle grass (one of the 3 ramp
+  // colours, none darker than the code grass shade), every unconnected side's outer row is all grass, and the first delivery's dark
+  // grass (#366f3d / #4f8b46 / #265231) is gone from every mask.
+  check('the regrass workaround is gone (no export)', A.regrass === undefined && A.MEADOW_GRASS === undefined);
+  const TD = path.join(__dirname, '..', 'assets', 'arcane', 'b35-meadow-home', 'tiles');
+  const hexOf = (d, i) => '#' + [d[i], d[i + 1], d[i + 2]].map((v) => v.toString(16).padStart(2, '0')).join('');
+  const lum = (h) => { const r = parseInt(h.slice(1, 3), 16), g = parseInt(h.slice(3, 5), 16), b = parseInt(h.slice(5, 7), 16); return 0.299 * r + 0.587 * g + 0.114 * b; };
+  const HOME = K.BIOME_PALETTES.home.grass, RAMP = ['#6cbf55', '#78c960', '#60ad4d'], OLD = ['#366f3d', '#4f8b46', '#265231'];
+  const floor = Math.min(lum(HOME[0]), lum(HOME[1])) - 6; // the code grass base / shade the masks sit next to
+  const halo = [], sides = [], old = [];
+  let grassPx = 0;
+  ['tilled_soil', 'clover_patch', 'garden_path'].forEach((t) => {
+    const vset = new Set();
+    VARIANTS.forEach((v) => { const im = readPng(path.join(TD, A.tileId(t, v) + '.png')); for (let i = 0; i < im.d.length; i += 4) vset.add(hexOf(im.d, i)); });
+    for (let m = 0; m < 16; m++) {
+      const im = readPng(path.join(TD, A.edgeId(t, m) + '.png')), w = im.w;
+      for (let i = 0; i < im.d.length; i += 4) {
+        const h = hexOf(im.d, i);
+        if (OLD.indexOf(h) >= 0) old.push(t + m);
+        if (vset.has(h)) continue;
+        grassPx++;
+        if (RAMP.indexOf(h) < 0 || lum(h) < floor || im.d[i + 3] !== 255) halo.push(t + '_' + m + ':' + h);
+      }
+      [[1, (k) => k], [2, (k) => k * w + w - 1], [4, (k) => (w - 1) * w + k], [8, (k) => k * w]].forEach((sd) => {
+        if (m & sd[0]) return;
+        for (let k = 0; k < w; k++) if (RAMP.indexOf(hexOf(im.d, sd[1](k) * 4)) < 0) { sides.push(t + '_' + m + '/' + sd[0]); break; }
+      });
+    }
+  });
+  check('b35 grass masks: every non-variant pixel is the Hearth Isle grass ramp, none darker than the code grass (no dark halo)', grassPx > 5000 && halo.length === 0 && HOME[0] === RAMP[0]);
+  check('b35 grass masks: each unconnected side is grass to the outer row, and the old dark grass is gone', sides.length === 0 && old.length === 0);
+  if (halo.length || sides.length || old.length) console.log('  ' + halo.concat(sides, old).slice(0, 8).join(' '));
   const ja = []; await A.load({ loadImage: (u) => { ja.push(u); return Promise.resolve({ u }); } });
   check('jungle set unchanged: the default load still asks only the 48 b30 tiles', ja.length === 48 && ja.every((u) => /b30-jungle-terrain-base/.test(u)));
   console.log(bad ? bad + ' of ' + n + ' FAILED' : 'shared-mm-isle-art: ' + n + ' checks passed');
