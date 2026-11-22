@@ -52,7 +52,7 @@ check('cleanDismissed keeps known keys only, de-duplicated, capped', JSON.string
 // 4. every hub medal has a friendly line; links are MMNav registry pages (the URL allow-list) for the right game
 const hubKeys = []; Object.keys(H.GAMES).forEach((g) => H.GAMES[g].medals.forEach((m) => hubKeys.push(g + ':' + m[0])));
 check('covers exactly the medals the Hub shows', JSON.stringify(hubKeys.slice().sort()) === JSON.stringify(allKeys.slice().sort()), hubKeys.filter((k) => !allKeys.includes(k)).concat(allKeys.filter((k) => !hubKeys.includes(k))).join(','));
-const NODE_PLACE = { 'w4-angler': 'angler', 'w5-jam': 'jam', 'w5-stalk': 'stalk', 'w3-deepdelve': 'deepdelve', 'w7-isles': 'isles', 'w5-safari': 'bugs' };
+const NODE_PLACE = { 'w4-angler': 'angler', 'w5-jam': 'jam', 'w5-stalk': 'stalk', 'w3-deepdelve': 'deepdelve', 'w7-isles': 'isles', 'w5-safari': 'bugs', 'w5-pop': 'pop', 'w5-dash': 'dash' };
 let linksOk = true;
 Object.keys(C.GAMES).forEach((g) => {
   const p = N.place(C.GAMES[g].place);

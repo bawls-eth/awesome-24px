@@ -1350,5 +1350,13 @@
   "world-boss-rush.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "pop-page.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "dash-page.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }

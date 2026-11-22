@@ -12,7 +12,7 @@ const PTR_KEY = 'pixeltown-gate-pointer-v1';
 const FB_KEY = 'pixeltown-feedback-v1';
 const SAVE_KEY = 'pixeltown-save-v1';
 const ISLES = JSON.stringify({ v: 1, last: { id: 'isles', sub: 'Coral Reef', url: 'game/games/isles/index.html?isle=reef', t: 1 }, prev: null });
-const IDS = 'town,map,realm,lantern,isles,jam,bugs,angler,deepdelve,stalk';
+const IDS = 'town,map,realm,lantern,isles,jam,bugs,angler,deepdelve,stalk,pop,dash';
 
 async function open(browser, viewport, touch, seedNav) {
   const ctx = await browser.newContext(touch ? { viewport, hasTouch: true, isMobile: true } : { viewport });
@@ -105,7 +105,7 @@ const overlap = (a, b) => a && b && a.vis && b.vis && a.x < b.x + b.w && b.x < a
       return { open: vis(sheet), dialogs: [...document.querySelectorAll('[role=dialog][aria-modal=true]')].filter(vis).length, dests, expanded: document.getElementById('where-to-btn').getAttribute('aria-expanded'), focusIn: sheet.contains(document.activeElement), worldMap: document.getElementById('world-map-link').href, sheetMap: document.getElementById('mm-nav-map').href };
     });
     check(L('one tap on "Where to?" opens the sheet; exactly one modal dialog is visible'), sh.open && sh.dialogs === 1 && sh.expanded === 'true' && sh.focusIn, JSON.stringify({ open: sh.open, dialogs: sh.dialogs, expanded: sh.expanded }));
-    check(L('all 10 places are listed in catalogue order'), sh.dests.map((d) => d.id).join(',') === IDS, sh.dests.map((d) => d.id).join(','));
+    check(L('all 12 places are listed in catalogue order'), sh.dests.map((d) => d.id).join(',') === IDS, sh.dests.map((d) => d.id).join(','));
     check(L('the Town entry is marked as the current page'), sh.dests[0].cur === 'page');
     check(L('destinations are plain same-tab links (they leave like the "World map" link does)'), sh.dests.every((d) => !d.target && d.abs.startsWith(new URL(BASE).origin + '/game/')) && sh.sheetMap === sh.worldMap, JSON.stringify([sh.sheetMap, sh.worldMap]));
     for (const d of sh.dests.filter((x) => x.id !== 'town')) {

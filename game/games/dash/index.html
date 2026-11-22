@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lantern Dash - Pixeltown</title>
+<link rel="stylesheet" href="dash.css">
+<script src="../../shared/mm-access.js"></script>
+<script src="../../shared/mm-side-access.js"></script>
+<link rel="stylesheet" href="../../shared/mm-nav.css">
+</head>
+<body>
+<header id="top">
+  <a class="back" id="back" href="../../index.html">&larr; Town</a>
+  <h1>Lantern Dash</h1>
+  <button id="btn-mute" type="button" aria-pressed="false">Sound on</button>
+  <a class="back" id="town" href="../../index.html">Town</a>
+</header>
+<main id="stage">
+  <section id="hud" aria-label="Run">
+    <div class="stat"><span class="lbl">Distance</span><strong id="h-dist">0 m</strong></div>
+    <div class="stat"><span class="lbl">Perfect combo</span><strong id="h-combo">x0</strong></div>
+    <div class="stat"><span class="lbl">Best</span><strong id="h-best">0 m</strong></div>
+  </section>
+  <canvas id="view" width="360" height="240" role="img" aria-label="Lantern Dash: a lantern carrier runs through the night over rocks and gaps"></canvas>
+  <button class="big" id="jump" type="button">Jump (hold = higher)</button>
+  <p id="msg" role="status" aria-live="polite"></p>
+  <p id="goal" class="dim"></p>
+
+  <section class="card overlay" id="intro" aria-label="How to play">
+    <h2>Lantern Dash</h2>
+    <div id="how">
+      <p><strong>Tap</strong> to jump over rocks. <strong>Hold</strong> to jump higher and further over gaps.</p>
+      <p>Jump <strong>late</strong>, just before a rock, for a <strong>Perfect</strong>. Perfects in a row build a combo.</p>
+      <p class="dim">Fireflies are worth 10. Play again runs the same course against the ghost of your best run.</p>
+    </div>
+    <ul class="medals" id="i-medals" aria-label="Medals"></ul>
+    <div class="row"><button class="big" id="play" type="button">Run</button></div>
+  </section>
+
+  <section class="card overlay" id="result" hidden aria-label="Run over" aria-live="polite">
+    <h2><span id="r-dist">0</span> m</h2>
+    <p id="r-best" class="dim"></p>
+    <p id="r-why"></p>
+    <p id="r-line" class="dim"></p>
+    <p id="r-new" class="new"></p>
+    <ul class="medals" id="r-medals" aria-label="Medals"></ul>
+    <div class="row">
+      <button class="big" id="again" type="button">Play again</button>
+      <button class="big alt" id="fresh" type="button">New course</button>
+    </div>
+  </section>
+  <p class="dim">Keys: Space, W or Up to jump (hold for higher). Free to play, nothing to buy.</p>
+</main>
+<script src="../../shared/store.js"></script>
+<script src="../../shared/motion.js"></script>
+<script src="../../shared/rng.js"></script>
+<script src="../../shared/sfx.js"></script>
+<script src="../../shared/mm-nav.js" data-mount="manual"></script>
+<script>
+(function () {
+  if (!window.MMNav) return;
+  MMNav.mount({ page: 'dash', avoid: '#top h1', backHref: '../../index.html', backLabel: 'Town' });
+  // the Menu button replaces the old links outright (no 1 px hidden links left behind); without MMNav they stay
+  if (document.body.classList.contains('mm-nav-on')) ['back', 'town'].forEach(function (id) { var e = document.getElementById(id); if (e) e.hidden = true; });
+  var cover = [], shut = ['result'];
+  function open(ids) { return ids.some(function (id) { var e = document.getElementById(id); return e && !e.hidden; }); }
+  function sync() { MMNav.setCovered(open(cover)); if (open(cover) || open(shut)) MMNav.close(); }
+  var mo = window.MutationObserver ? new MutationObserver(sync) : null;
+  cover.concat(shut).forEach(function (id) { var e = document.getElementById(id); if (e && mo) mo.observe(e, { attributes: true, attributeFilter: ['hidden'] }); });
+}());
+</script>
+<script src="dash.js"></script>
+</body>
+</html>
