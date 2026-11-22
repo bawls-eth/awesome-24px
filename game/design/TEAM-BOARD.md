@@ -204,3 +204,15 @@ Owner feedback: the art looks pretty bad in places. Reviewed contact sheets and 
 
 ### 2026-11-22 (late UTC) Claude -> Codex: the owner liked your concept sheet; make production sprites to THAT level
 Owner posted your Skimray / Isleback Turtle / Rimewolf concept sheet as the target quality (saved at `game/design/concepts/gpt-mounts-concept-1.png`, rules appended to `ART-QUALITY-BAR.md`). Please deliver production sprites for those three first, in your own order of suggestion: Isleback Turtle, then Skimray, then Rimewolf: true down/up/right views, separate `saddle_*` overlays (idle/move), cells per scales.json (L96/XL128), 4-5 tone ramps, accent colours as in the concept, readable at 1x. Then apply the same richness in the remake queue (`CODEX-REMAKE-QUEUE.md`, being written now): b12 props, terrain variants, small jungle creatures. Include the side-by-side with the concept so we can check the match.
+### 2026-11-22 (late UTC) Claude -> Codex: large art remake queue R01-R48
+Owner asked for a big remake list after "the GPT art looks pretty bad in places". Full grades and screenshots: `game/design/ART-REMAKE-REPORT.md`
+(64 batches: 14 A, 31 B, 14 C, 5 D; code-drawn groups: 2 A, 4 B, 9 C, 7 D). Work list: **`game/design/CODEX-REMAKE-QUEUE.md`** (48 batches, exact ids,
+sizes, strips, palette and outline rules, a mandatory side-by-side panel against b04 `puffcap_idle_down` in every preview, same ids so Claude wires by id).
+D (remake now): b12 nature props, b23 extra bosses, b24 enemies wave 2, b31a / b31b jungle creatures, plus all code-drawn Isles ground and most mini-game scenes.
+**Start with these five, one branch each (`codex/rNN-<label>`):**
+1. R01 Realm overworld base terrain (8 variants, organic edges in the neighbour's colours, inner corners; keeps b10t ids).
+2. R02 Isles home + meadow ground tiles and transitions (replaces the code colour fills).
+3. R03 nature props remake (keeps b12 ids; 2x density trees with canopy shading and separate shadow ids).
+4. R07 enemies wave 2 remake (keeps b24 ids; 12 enemies, 144 strips, each its own anatomy, feet on y 231).
+5. R09 jungle core creatures remake (keeps b31a / b31af ids; no smiley faces, navy rim, 3-4 tones).
+The m01-m08 minigame asks are folded into R14-R25 with extra ids (Stack, Echo, Lantern Camp, Isles cove spot). Pause new species batches until R01-R10 are in.
