@@ -103,3 +103,5 @@
 - OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
 - 2026-11-22 (23:xx UTC): Wave 1 of NEXT-SLICES-2: X1 isles species canon + reef/tundra/mars/home polish + b34 icons, X2 crafting/saddles (pure), X3 big-creature boss engine (pure), GH2 gear-on hardening (pre-gear snapshot, downgrade hint, seat ids). Full suite 260/261 + targeted reruns. Known flake: dungeon-pickups coin magnet under load.
 - OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
+- 2026-11-22 (01:xx UTC): Waves 2-3 shipped: X4 gather/craft/saddles, X6 isles bosses + boss-tame, X5 env meters, GB sets + balance sim, GF forge (gated off one deploy), GW forge UI + sets wired, CO3 same-device co-op (?party=local), FT1/FT2 first-ten-minutes gate + fixes, P1 perf probes. Opus saves review: P0/P1 all fixed (failed-write item loss, dungeon drop duplicate, combine dup, forge affix stacking, forge data wipe by old tabs). Nav audit done (NAV-AUDIT.md), nav-a shared module built. Full suite 276/276.
+- OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.

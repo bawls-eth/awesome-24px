@@ -1,9 +1,9 @@
 {
-  "sha": "90458eae3ac2a4b27933ed9c509b2db351fa60e9",
-  "generated_utc": "2026-11-21T23:03:48Z",
+  "sha": "9d472fd20b5083cadcc6ab20960b3c8be3c3d483",
+  "generated_utc": "2026-11-22T01:23:00Z",
   "full_suite_green": true,
   "beta_green": null,
-  "suites_passed": 262,
-  "suites_total": 262,
-  "notes": "Full run on the tip before the gear-gh2 merge was 260/261 (world-safereturn, a load flake, passed 2/2 alone). gear-gh2 (snapshot, hint, seat ids) was merged after the run; gear-default-on, gear-world/dungeon-drops, gear-save-tolerance, world-safereturn, run-all-tiers passed on this sha; dungeon-pickups failed 1 of 4 runs under load and passed 3/3 alone (tracked flake). Beta runs only on owner request."
+  "suites_passed": 276,
+  "suites_total": 276,
+  "notes": "Full run on this exact sha: 276/276 green. Includes gear sets/forge (forge gated off by default for one deploy), save fixes from the Opus review, isles bosses/env/craft, co-op ?party=local, FT2 first-run fixes. Beta runs only on owner request."
 }
