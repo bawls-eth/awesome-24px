@@ -2786,3 +2786,45 @@ body.a11y-reduce-motion *, body.a11y-reduce-motion *::before, body.a11y-reduce-m
 #realm-menu-friends[open] > summary::before { content: '▾'; }
 #realm-menu-friends > summary::-webkit-details-marker { display: none; }
 #realm-menu-friends > summary { list-style: none; }
+
+/* ---------- TN2: Postcards board, 44 px targets and 12 px text in the Town HUD (QT known issues) ---------- */
+#postcards-hint {
+  position: fixed; bottom: 172px; left: 50%; transform: translateX(-50%);
+  min-height: 44px; box-sizing: border-box; padding: 8px 18px;
+  background: var(--ac-panel-solid); border: 2px solid var(--ac-border); border-radius: 999px;
+  color: var(--ac-text); font-size: 14px; font-weight: bold; white-space: nowrap; cursor: pointer; z-index: 15;
+}
+#postcards-hint.hidden { display: none; }
+/* Phone: the row just under the chat bar (232 px) and above the fish / gift row (148-184 px); the dig-hole hint that
+   shares it never shows at the board (the hole is ~110 px away). */
+body.touch-device #postcards-hint { bottom: calc(188px + env(safe-area-inset-bottom, 0px)); font-size: 13px; padding: 7px 14px; }
+#postcards-overlay { position: fixed; inset: 0; z-index: 25; display: flex; align-items: center; justify-content: center; background: var(--ac-scrim); }
+#postcards-overlay.hidden { display: none; }
+#postcards-overlay .join-card { position: relative; max-height: 90vh; overflow-y: auto; }
+#postcards-overlay #postcards-close-btn {
+  position: absolute; top: 6px !important; right: 6px !important; width: 44px !important; height: 44px !important;
+  border-radius: 50%; border: 2px solid var(--ac-border); background: var(--ac-inset); color: var(--ac-text); font-size: 16px; cursor: pointer;
+}
+#postcards-overlay h1 { padding-right: 48px; }
+#postcards-list { max-height: 55vh; }
+#postcards-list li { padding: 8px 10px; font-size: 14px; line-height: 1.35; }
+#postcards-list li.postcards-empty { font-size: 13px; font-style: italic; opacity: 0.85; }
+
+/* QT: every Town HUD control >= 44 px tall (was 40 px) and every HUD line >= 12 px (was 10-11 px). */
+#quick-chat-row button { min-height: 44px; }
+@media (max-width: 600px), (max-height: 500px) and (pointer: coarse) {
+  #player-list-panel #panel-toggle { min-height: 44px; }
+}
+#streak-badge, #town-rating, #town-tidy, #birthday-line, #bestie-label { font-size: 12px; }
+#keys-help-btn, #changelog-btn, #feedback-btn, #map-btn, #world-map-link { font-size: 12px; }
+#tilt-toggle-btn, #emote-toggle-btn { font-size: 12px !important; line-height: 1.1; }
+.ab-emoji { font-size: 12px; }
+@media (min-width: 721px) and (min-height: 501px) {
+  #achievements-badge, #map-btn, #world-map-link, #museum-badge, #dailies-btn, #journal-btn, #settings-toggle-btn,
+  #keys-help-btn, #changelog-btn, #feedback-btn { min-height: 44px; }
+  /* Desktop: the panel may use the full height of the right edge (nothing else lives there), so Today, Journal and
+     Settings are reachable without scrolling at 1280x720; it still scrolls inside itself on shorter windows. */
+  #player-list-panel { max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); box-sizing: border-box; }
+  /* The quick-chat phrases wrap instead of running out of the 320 px chat panel (the last one was clipped). */
+  #quick-chat-row { flex-wrap: wrap; overflow-x: visible; }
+}

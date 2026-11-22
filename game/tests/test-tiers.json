@@ -1222,5 +1222,9 @@
   "gear-save-fixes-2.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "town-postcards.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
