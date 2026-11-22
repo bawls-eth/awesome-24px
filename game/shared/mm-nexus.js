@@ -20,8 +20,8 @@
   ];
   // 4 vendor slots on the south arc, 3 more NPCs (guide, wanderer, oracle = ghost guide, no oracle art exists).
   const VENDOR_DEFS = [
-    { id: 'vendor', npc: 'npc_vendor', role: 'shop', x: 12, y: 24 },
-    { id: 'blacksmith', npc: 'npc_blacksmith', role: 'combine', x: 17, y: 25 },
+    { id: 'vendor', npc: 'npc_vendor', role: 'shop', x: 12, y: 24, stall: 'shop' },
+    { id: 'blacksmith', npc: 'npc_blacksmith', role: 'combine', x: 17, y: 25, stall: 'forge' },
     { id: 'healer', npc: 'npc_healer', role: 'heal', x: 23, y: 25 },
     { id: 'quest', npc: 'npc_quest_giver', role: 'quests', x: 28, y: 24 },
   ];
@@ -40,7 +40,7 @@
       const tx = Math.round(CX + Math.cos(a) * 11), ty = Math.round(CY + Math.sin(a) * 7);
       return { id: p.id, art: p.art, dest: p.dest, label: p.label, tx: tx, ty: ty, x: tx * TILE + TILE / 2, y: ty * TILE + TILE / 2, r: 40 };
     });
-    const npcs = VENDOR_DEFS.concat(OTHER_NPCS).map((n) => ({ id: n.id, npc: n.npc, role: n.role, tx: n.x, ty: n.y, x: n.x * TILE + TILE / 2, y: n.y * TILE + TILE / 2, r: 48, vendor: VENDOR_DEFS.indexOf(n) >= 0 }));
+    const npcs = VENDOR_DEFS.concat(OTHER_NPCS).map((n) => ({ id: n.id, npc: n.npc, role: n.role, tx: n.x, ty: n.y, x: n.x * TILE + TILE / 2, y: n.y * TILE + TILE / 2, r: 48, vendor: VENDOR_DEFS.indexOf(n) >= 0, stall: n.stall || null }));
     const props = [
       { id: 'fountain', art: 'prop_fountain_f1', frames: ['prop_fountain_f1', 'prop_fountain_f2', 'prop_fountain_f3', 'prop_fountain_f4'], tx: CX, ty: CY, solid: true, w: 3, h: 3 },
       { id: 'banner_red', art: 'prop_banner_red', tx: 14, ty: 4, solid: false, w: 1, h: 1 },
@@ -80,6 +80,9 @@
   }
   function portalAt(x, y) { return hit(layout().portals, x, y); }
   function npcAt(x, y) { return hit(layout().npcs, x, y); }
+  // VN: the NPCs that run the vendor / forge stall ('shop': the fixed T1-T3 dust list + buy-back; 'forge': the same stall, opening the Forge).
+  // The stall itself (prices, stock) lives in MMGearForge; the plaza only says who keeps it.
+  function stallNpcs() { return layout().npcs.filter((n) => !!n.stall); }
   function portalById(id) { return typeof id === 'string' ? layout().portals.find((p) => p.id === id) || null : null; }
 
   // artIds(): every art id the plaza draws (for manifest validation).
@@ -90,5 +93,5 @@
     L.props.forEach((p) => { s.add(p.art); (p.frames || []).forEach((f) => s.add(f)); });
     return Array.from(s);
   }
-  return { W, H, TILE, layout, walkable, clampPoint, portalAt, npcAt, portalById, artIds };
+  return { W, H, TILE, layout, walkable, clampPoint, portalAt, npcAt, portalById, artIds, stallNpcs };
 });

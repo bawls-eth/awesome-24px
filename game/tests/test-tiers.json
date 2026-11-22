@@ -1115,6 +1115,14 @@
     "class": "browser",
     "tier": "full"
   },
+  "nexus-vendor.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "realm-access2.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "gear-save-fixes.test.js": {
     "class": "browser",
     "tier": "full"

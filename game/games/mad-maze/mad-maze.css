@@ -424,3 +424,15 @@ body.mm-nav-on.mm-nav-realm #realm-xp { margin-left: var(--mm-nav-reserve); }
 body.mm-realm-dialog #mm-gear-btn { display: none; }
 #mm-settings .mm-set-feedback:empty { display: none; }
 #mm-settings .mm-set-feedback { margin-top: 10px; }
+/* AR (NEXT-SLICES-3 Wave 4): the shared HUD / text size (pixeltown-access-v1 hudScale -> --mm-hud-scale) also reaches the Realm HUD text that the
+   zoom rule above leaves out: the zone line, the banner, the help line, prompts and notes, the ability key / cooldown labels and the Nexus talk
+   line. Only font sizes grow; the 44 px buttons and their positions stay put. At 100 % nothing changes (the rules only apply with mm-hud-big). */
+body.mm-hud-big #rw-zone { font-size: calc(12px * var(--mm-hud-scale, 1)); line-height: 1.25; }
+body.mm-hud-big #rw-zone .rw-zname, body.mm-hud-big #rw-zone .rw-arrow, body.mm-hud-big #rw-zone .rw-event { font-size: 1em; }
+body.mm-hud-big #realm-banner { font-size: calc(clamp(15px, 4.6vw, 20px) * var(--mm-hud-scale, 1)); }
+body.mm-hud-big #realm-help, body.mm-hud-big #rw-event-hint { font-size: calc(12px * var(--mm-hud-scale, 1)); }
+body.mm-hud-big #rw-site-note { font-size: calc(13px * var(--mm-hud-scale, 1)); }
+body.mm-hud-big .realm-ab .key { font-size: calc(11px * var(--mm-hud-scale, 1)); }
+body.mm-hud-big .realm-ab .cd { font-size: calc(18px * var(--mm-hud-scale, 1)); }
+body.mm-hud-big .realm-ab.locked .cd { font-size: calc(12px * var(--mm-hud-scale, 1)); }
+body.mm-hud-big #rw-nexus .nx-talk, body.mm-hud-big #rw-nexus .nx-stall { font-size: calc(14px * var(--mm-hud-scale, 1)); }
