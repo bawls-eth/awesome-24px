@@ -75,14 +75,16 @@ async function open(browser, opts, q, init) {
     const pops = document.querySelectorAll('#pops .pop').length;
     r.tick(d.run.depth0() + 9);
     const armed = r.state.armed;
+    const tip = document.getElementById('msg').textContent;
     d.die('Test fall.');
     const panel = document.getElementById('run-panel');
     const again = document.getElementById('run-again').getBoundingClientRect();
-    return { a: a.combo, b: b.combo, c: c.combo, comboTxt, pops, armed, open: !panel.hidden, title: document.getElementById('run-title').textContent, score: document.getElementById('run-score').textContent, stats: [...document.querySelectorAll('#run-stats li')].map((l) => l.textContent), pbs: document.querySelectorAll('#run-stats li.pb').length, again: [again.width, again.height], saved: JSON.parse(localStorage.getItem('pixeltown-deepdelve-runs-v1')), runAfter: r.state.blocks, next: document.getElementById('run-next').textContent };
+    return { a: a.combo, b: b.combo, c: c.combo, comboTxt, pops, armed, open: !panel.hidden, title: document.getElementById('run-title').textContent, score: document.getElementById('run-score').textContent, stats: [...document.querySelectorAll('#run-stats li')].map((l) => l.textContent), pbs: document.querySelectorAll('#run-stats li.pb').length, again: [again.width, again.height], tip, saved: JSON.parse(localStorage.getItem('pixeltown-deepdelve-runs-v1')), runAfter: r.state.blocks, next: document.getElementById('run-next').textContent };
   });
   check('combo: three quick breaks count x1, x2, x3 and the meter shows it', d1.a === 1 && d1.b === 2 && d1.c === 3 && d1.comboTxt === 'Combo x3', JSON.stringify(d1));
   check('juice: ore and break pops appear', d1.pops >= 1);
   check('dive: going 9 deep arms the safe-return bonus', d1.armed === true);
+  check('dive: arming shows how to climb out (pillar tip)', /Climb back out for a x1\.5 bonus: look down, jump and Place/.test(d1.tip), d1.tip);
   check('summary: death opens the Dive over panel with score and stats', d1.open && d1.title === 'Dive over' && /^Score \d+/.test(d1.score) && d1.stats.length === 4 && /Depth: 9/.test(d1.stats[0]));
   check('summary: first dive marks personal bests and saves them in its own key', d1.pbs >= 2 && d1.saved && d1.saved.best.depth === 9 && d1.saved.runs === 1 && d1.saved.best.combo === 3);
   check('summary: Dive again is a big one-tap target and a fresh dive started', d1.again[0] >= 44 && d1.again[1] >= 44 && d1.runAfter === 0);
@@ -129,6 +131,17 @@ async function open(browser, opts, q, init) {
   check('desktop: Escape closes the summary', d6 === false);
   const d7 = await D.page.evaluate(() => { const d = window.__dd; d.panel('goals', true); const g = !document.getElementById('goals-panel').hidden; document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); return { g, after: !document.getElementById('goals-panel').hidden }; });
   check('desktop: Escape closes the goals panel too', d7.g === true && d7.after === false, JSON.stringify(d7));
+  const pil = await D.page.evaluate(() => {
+    const d = window.__dd, s = d.spawn; d.setPos(s.x, s.y, s.z); d.step(1 / 60, 40); d.inv.stone = 5; d.select('stone');
+    const y0 = d.player.y; d.player.pitch = -1.55; const out = [];
+    for (let k = 0; k < 3; k++) {
+      d.input.jump = true; let placed = false;
+      for (let i = 0; i < 60 && !placed; i++) { d.step(1 / 60, 1); d.input.jump = false; const h = d.raycast(5); if (h && h.prev && d.player.vy < 2) placed = d.placeAt(h.prev[0], h.prev[1], h.prev[2], 'stone'); }
+      d.step(1 / 60, 60); out.push([placed, Math.round((d.player.y - y0) * 100) / 100]);
+    }
+    return { out, stone: d.inv.stone };
+  });
+  check('climb tip is honest: jump + Place under you pillars up 3 blocks', pil.out.every((o) => o[0]) && pil.out[2][1] >= 2.9 && pil.stone === 2, JSON.stringify(pil));
   const mp = await D.page.evaluate(() => {
     const d = window.__dd, s = d.spawn; d.setPos(s.x, s.y, s.z); d.step(1 / 60, 30); d.player.pitch = -1.55; d.player.yaw = 0;
     const target = d.raycast(5), before = target && d.getBlock(...target.cell);

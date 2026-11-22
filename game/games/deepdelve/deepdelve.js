@@ -127,7 +127,7 @@
 
   // ---------- dive runs + juice (dd-run.js; personal bests in 'pixeltown-deepdelve-runs-v1') ----------
   const RUNS = CREATIVE ? null : window.MMDDRun || null;
-  let runRec = null, run = null, runDepth0 = 0, shakeT = 0, shakeAmp = 0, comboShown = false, pbDepthShown = false;
+  let climbTipShown = false, runRec = null, run = null, runDepth0 = 0, shakeT = 0, shakeAmp = 0, comboShown = false, pbDepthShown = false;
   const calm = () => reduced || ACCESS.lowGfx; // no camera shake on reduce motion or low graphics
   let sfxBox = null;
   function sfx(name) {
@@ -177,6 +177,7 @@
       if (!pbDepthShown && runRec.best.depth > 0 && run.depth > runRec.best.depth) { pbDepthShown = true; pop('New depth record!', 'pb'); sfx('levelup'); }
       renderDive();
     } else if (wasArmed !== run.armed) renderDive();
+    if (!wasArmed && run.armed && !climbTipShown) { climbTipShown = true; toast('Deep enough! Climb back out for a x' + RUNS.SAFE_BONUS + ' bonus: look down, jump and Place a block under you.'); }
     if (run.armed && absDepth <= runDepth0) endRun(true, 'You climbed back out alive: x' + RUNS.SAFE_BONUS + ' score bonus.');
   }
   // End the dive and show the summary. `safe` = surfaced alive (bonus); otherwise the dive ended in a fall.
@@ -789,7 +790,7 @@
     if (!hit || hit.id === B.BEDROCK || hit.id === B.LAVA) { mineTarget = null; mineProg = 0; return; }
     const key = hit.cell.join(',');
     if (mineTarget !== key) { mineTarget = key; mineProg = 0; }
-    if (!CREATIVE && (NEED_TIER[hit.id] | 0) > pick.tier) { if (mineProg === 0) toast('Too hard! Needs a ' + TIER_NAME[NEED_TIER[hit.id]].toLowerCase() + ' pick or better.'); mineProg = 0.001; return; }
+    if (!CREATIVE && (NEED_TIER[hit.id] | 0) > pick.tier) { if (mineProg === 0) toast('Too hard! Needs a ' + TIER_NAME[NEED_TIER[hit.id]].toLowerCase() + ' pick or better. Open Craft (C) to make one.'); mineProg = 0.001; return; }
     mineProg += dt * (1 + pick.tier * 0.4);
     if (mineProg >= (HARDNESS[hit.id] || 0.8) * (CREATIVE ? 0.35 : 1)) { mineBlock(hit.cell[0], hit.cell[1], hit.cell[2]); mineTarget = null; mineProg = 0; }
   }
