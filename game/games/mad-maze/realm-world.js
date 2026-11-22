@@ -644,7 +644,7 @@
     const GM = window.MMGear; const GD = window.MMGearDrops;
     const gearQs = /[?&]gear=(\d)(&|$)/.exec(qs0); const gearQ = typeof rmFlag === 'function' ? rmFlag('gear') : gearQs ? gearQs[1] : null; // rmFlag: the one ?gear= parser (realm.js, review F15)
     const GEAR_ON = !!(GM && GD) && gearQ !== '0' && (gearQ === '1' || save.gearOn === true || GEAR_DEFAULT_ON);
-    const SIG_ON = typeof RM_FORGE_ON !== 'undefined' && RM_FORGE_ON === true; // T12 boss signatures (`sig`) on new drops only with the GW gate open (?forge=1; realm.js RM_FORGE_DEFAULT_ON)
+    const SIG_ON = typeof RM_FORGE_ON !== 'undefined' && RM_FORGE_ON === true; // T12 boss signatures (`sig`) on new drops only with the GW gate open (realm.js RM_FORGE_ON: default on since P2, ?forge=0 off)
     // Per-player seed id: each co-op seat rolls its own drops locally, nothing is shared. Seat N of a world team (MMWorldTeam: opts.team, arena.worldTeam
     // or setTeam) rolls as 'p' + N, so two seats on the same seed and kill get different streams; solo (no seat yet) stays 'p0' = today's seat-0 stream.
     // setGearPlayer (test hook) overrides it.
@@ -1245,7 +1245,7 @@
         arena.applyStatus('player', 'healing', { sec: 5, src: 'shrine' });
       } else if (b.kind === 'rage') {
         rageEnd = now + sec; const on = arena.applyStatus('player', 'damaging', { sec, src: 'shrine' });
-        arena.buffDmg = on ? (b.value / 1.25 > 1 ? b.value / 1.25 : 1) : b.value; arena._calcStats(); arena._floatText(p.x, p.y - 30, 'Fury!', '#ff6a4a');
+        arena.buffDmg = on ? (b.value / 1.25 > 1 ? b.value / 1.25 : 1) : b.value; if (arena.markStatsDirty) arena.markStatsDirty(); arena._calcStats(); arena._floatText(p.x, p.y - 30, 'Fury!', '#ff6a4a');
       } else if (b.kind === 'ward') {
         wardEnd = now + sec; const on = arena.applyStatus('player', 'armored', { sec, src: 'shrine' });
         arena.buffTaken = on ? Math.min(0.999, b.value / 0.75) : b.value; arena._floatText(p.x, p.y - 30, 'Ward!', '#6ab8ff');
@@ -1293,7 +1293,7 @@
     function siteTick(dt) {
       if (noteT > 0) { noteT -= dt; if (noteT <= 0) siteNote.classList.add('hidden'); }
       const now = arena.clock;
-      if (rageEnd && now >= rageEnd) { rageEnd = 0; arena.buffDmg = 1; arena._calcStats(); }
+      if (rageEnd && now >= rageEnd) { rageEnd = 0; arena.buffDmg = 1; if (arena.markStatsDirty) arena.markStatsDirty(); arena._calcStats(); }
       if (wardEnd && now >= wardEnd) { wardEnd = 0; arena.buffTaken = 1; }
       siteTickT -= dt; if (siteTickT > 0) return; siteTickT = 0.25;
       campTick();

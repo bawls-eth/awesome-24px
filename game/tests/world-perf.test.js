@@ -129,7 +129,8 @@ const LONG_LIMIT_FRAC = 0.5;
     await cdp2.send('Emulation.setCPUThrottlingRate', { rate: 1 });
     const fr = d.slice(2).sort((x, y) => x - y), su = P.up.slice().sort((x, y) => x - y), sd = P.dr.slice().sort((x, y) => x - y);
     const q = (s, k) => s[Math.min(s.length - 1, Math.floor(s.length * k))];
-    const r = { gearOff, setup, frames: fr.length, median: q(fr, 0.5), p95: q(fr, 0.95), upMed: q(su, 0.5), upP95: q(su, 0.95), drMed: q(sd, 0.5), drP95: q(sd, 0.95), maxLive: P.maxLive, maxPool: P.maxPool, splashes: P.splashes, alive: P.alive, errs, db: db2.count() };
+    const mean = (s) => s.reduce((x, y) => x + y, 0) / Math.max(1, s.length);
+    const r = { gearOff, setup, frames: fr.length, median: q(fr, 0.5), p95: q(fr, 0.95), upMed: q(su, 0.5), upP95: q(su, 0.95), drMed: q(sd, 0.5), drP95: q(sd, 0.95), workMean: mean(P.up) + mean(P.dr), maxLive: P.maxLive, maxPool: P.maxPool, splashes: P.splashes, alive: P.alive, errs, db: db2.count() };
     await c2.close();
     return r;
   }
@@ -139,6 +140,7 @@ const LONG_LIMIT_FRAC = 0.5;
   for (const r of [off, gon]) console.log(`world-perf ${r.gearOff ? 'gear-off' : 'gear-on '}: frames=${r.frames} median=${fx(r.median)}ms p95=${fx(r.p95)}ms | update med ${fx(r.upMed)} p95 ${fx(r.upP95)} ms, draw med ${fx(r.drMed)} p95 ${fx(r.drP95)} ms | splashes=${r.splashes} texts live max=${r.maxLive} pool=${r.maxPool} | ${JSON.stringify(r.setup)}`);
   const ratio = gon.median / off.median, workRatio = (gon.upMed + gon.drMed) / Math.max(0.1, off.upMed + off.drMed);
   const first = gon.upMed > off.upMed * GEAR_RATIO ? 'update' : gon.drMed > off.drMed * GEAR_RATIO ? 'draw' : (gon.upMed - off.upMed >= gon.drMed - off.drMed ? 'update' : 'draw');
+  console.log(`world-perf gear-on/gear-off: work mean (update+draw per frame) ${gon.workMean.toFixed(2)} vs ${off.workMean.toFixed(2)} ms, ratio ${(gon.workMean / Math.max(0.01, off.workMean)).toFixed(3)} (P2: the mean is not quantised to the 0.1 ms timer like the medians)`);
   console.log(`world-perf gear-on/gear-off: frame median ratio ${ratio.toFixed(3)} (gate <= ${GEAR_RATIO}), work (update+draw median) ratio ${workRatio.toFixed(3)}, ${ratio > GEAR_RATIO ? 'first offending phase' : 'largest phase delta'}: ${first}`);
   check('gear case: the warlock fires staff_comet (splash r 56) into 30 enemies, gear on', gon.setup.on && gon.setup.enemies === 30 && gon.setup.splashR === 56 && gon.alive >= 30, JSON.stringify(gon.setup));
   check('gear case: splash events really happen with gear on, none with ?gear=0', gon.splashes > 20 && off.splashes === 0, JSON.stringify({ on: gon.splashes, off: off.splashes }));

@@ -103,6 +103,9 @@ const RM_SPARK_MAX = 24, RM_SPARK_LIFE = 0.25;
 const RM_FX_MAX = 16; // live one-shot effect sprites (setFxArt)
 // G11 player splash (GEAR-DROPS-BUILD-PLAN d): FX / text for at most 24 events a frame (extras still deal damage), one combined number per event at most
 // 6 a second and only while <= 22 texts are live; code rings come from a fixed pool. Kill switches ?splash=0 and ?gear=0 (no splash at all).
+const rmSame = (x, y) => x === y || (x !== x && y !== y); // P2: what a `${x}` string compare said for numbers, without building strings
+const RM_VENOM_ST = Object.freeze({ sec: 3, src: 'wpn' });
+const RM_LOW_DMG_GAP = 1 / 12, RM_LOW_TXT_MUL = 2; // P2: low graphics tier damage-text throttle (plain numbers at most 12/s; splash numbers half as often)
 const RM_SPLASH_FX = 24, RM_SPLASH_TXT_GAP = 1 / 6, RM_SPLASH_TXT_MAX = 22, RM_SPLASH_RINGS = 12, RM_SPLASH_COL = '#ffb36b';
 const RM_SPARK_CLASS = { ranger: 'a', bruiser: 'a', berserker: 'a', punk: 'a', rogue: 'a', paladin: 'a', frostcaller: 'b', herald: 'b', druid: 'b', warlock: 'c', necromancer: 'c', trickster: 'c', gravetender: 'c', shadowpaw: 'c' };
 const RM_EB_ROT = { ebolt_shard: 1, ebolt_arrow: 1, ebolt_fire: 1, ebolt_frost: 1, ebolt_laser_h: 1, ebolt_skull: 0 };
@@ -175,10 +178,11 @@ const RM_WPN_ITEMS = [];
 // Armor `arm_<family>_<band>` defs are lookup-only (never in RM_ITEMS / RM_BASE_ITEMS: never dropped by the classic pools or stocked by the shop).
 const RM_ARM_ID = /^arm_[a-z]{3,8}_[a-z]{3,10}$/; // MMGear.GEAR_ID_RE
 const RM_GEAR_ON = !rmFlagOff('gear') && typeof MMGear !== 'undefined' && !!MMGear && typeof MMGear.clean === 'function';
-// GW one-deploy gate (review F3, the G7 pattern): builds older than GW strip `dust`, `f` and `sig`, so this build only KEEPS them (rmCleanSave /
-// rmMergeSave) while nothing creates them by default: the Forge (salvage -> dust, reforge -> f), T12 boss signatures (`sig`) on new drops and the
-// sig-only "Dread pair" set stay off until the next deploy flips RM_FORGE_DEFAULT_ON. ?forge=1 turns them on, ?forge=0 off (always wins); ?gear=0 wins over both.
-const RM_FORGE_DEFAULT_ON = false;
+// GW one-deploy gate (review F3, the G7 pattern): builds older than GW strip `dust`, `f` and `sig`, so the gear-fixsave deploy only KEPT them (rmCleanSave /
+// rmMergeSave) while nothing created them. That deploy is on master now (every live tab keeps them), so P2 flips the default ON: the Forge
+// (salvage -> dust, reforge -> f), T12 boss signatures (`sig`) on new drops (realm-world.js / dungeon.js SIG_ON) and the sig-only "Dread pair" set all
+// follow RM_FORGE_ON. ?forge=0 is the kill switch (always wins), ?forge=1 still forces it on; ?gear=0 wins over both.
+const RM_FORGE_DEFAULT_ON = true;
 const RM_FORGE_ON = !rmFlagOff('gear') && (rmFlag('forge') === '1' || (RM_FORGE_DEFAULT_ON && rmFlag('forge') !== '0'));
 const RM_SPLASH_ON = RM_GEAR_ON && !rmFlagOff('splash') && typeof MMSplash !== 'undefined' && !!MMSplash && typeof MMSplash.pick === 'function'; // G11 player splash
 const RM_ARMOR_ICON = { light: '🦺', robe: '👘', heavy: '🛡️' };
@@ -468,7 +472,7 @@ class RealmArena {
   _adopt(m) {
     const sv = this.save; const before = JSON.stringify([sv.level, sv.items, sv.eq]);
     Object.keys(sv).forEach((k) => { delete sv[k]; }); Object.assign(sv, m);
-    if (JSON.stringify([sv.level, sv.items, sv.eq]) !== before) { this._calcStats(); if (this.active) this._syncHud(); }
+    if (JSON.stringify([sv.level, sv.items, sv.eq]) !== before) { this.markStatsDirty(); this._calcStats(); if (this.active) this._syncHud(); }
   }
 
   // Merge with whatever is in storage now (another tab may have written) without writing.
@@ -757,7 +761,54 @@ class RealmArena {
   // opts (G8, optional): { noGear: true } = the same stats with nothing equipped (the "Base" column); { eqOverride: { slot: uid | 0 } } = the stats as if that
   // slot held that item (the compare UI; level / class gates are skipped for the overridden slots so locked items compare too). With opts the call is
   // pure: it returns a fresh object and never touches this.stats or the save.
+  // P2 (phone perf): the non-pure call is cached behind a dirty flag (markStatsDirty) plus an input signature (_stSig: level, the equipped items
+  // and their t/r/a/sig/f, the hero / class / passives, buffs, status mods, world / mode / team), so a call with nothing changed does no work.
+  // A hit returns exactly what a recompute would (gear-stats-cache.test.js checks cached == _calcStatsNow over random sequences); a caller that
+  // edited this.stats in place gets a fresh copy, like before. Pure calls and duels always recompute.
   _calcStats(opts) {
+    const o = opts && typeof opts === 'object' ? opts : null;
+    if (o && (o.noGear || o.eqOverride)) return this._calcStatsNow(o); // pure: this.stats and the cache are untouched
+    if (!this.save || (this.team && this.team.isPvp)) { this._stDirty = true; return this._calcStatsNow(null); } // a duel sets its own fixed stats: recompute after it
+    const A = this._stSigA || (this._stSigA = []), B = this._stSigB || (this._stSigB = []);
+    const n = this._stSig(B); let same = !this._stDirty && !!this._stC && n === A.length;
+    for (let i = 0; same && i < n; i++) { const x = A[i], y = B[i]; if (x !== y && !(x !== x && y !== y)) same = false; }
+    if (same) {
+      const c = this._stC, cur = this.stats; let ok = cur === c.obj;
+      if (ok) { const ks = c.keys; for (let i = 0; i < ks.length; i++) { const k = ks[i], x = cur[k], y = c.vals[k]; if (x !== y && !(x !== x && y !== y)) { ok = false; break; } } }
+      if (!ok) { const st = Object.assign({}, c.vals); Object.defineProperty(st, 'sets', { value: c.sets, enumerable: false }); c.obj = st; this.stats = st; }
+      this.statsHits = (this.statsHits || 0) + 1; // test hook
+      return this.stats;
+    }
+    const st = this._calcStatsNow(null);
+    this._stSigA = B; this._stSigB = A; B.length = n; this._stDirty = false;
+    this._stC = { obj: st, vals: Object.assign({}, st), keys: Object.keys(st), sets: st.sets };
+    this.statsRuns = (this.statsRuns || 0) + 1; // test hook
+    return st;
+  }
+  // Equipment, level, buffs or passives changed: the next _calcStats() recomputes (the signature also catches it; this is the explicit flag).
+  markStatsDirty() { this._stDirty = true; }
+  // Writes every input of the non-pure _calcStats into `b` (no strings built); returns the count.
+  _stSig(b) {
+    let i = 0; const s = this.save, p = this.player, hp = this.heroProfile, sm = p ? p._stm : null, u = this._hu, eq = s.eq || {}, items = s.items;
+    b[i++] = s; b[i++] = s.level; b[i++] = eq; b[i++] = items; b[i++] = items ? items.length : -1;
+    for (let k = 0; k < RM_SLOTS.length; k++) {
+      const uid = eq[RM_SLOTS[k]]; const it = uid && items ? items.find((x) => x.n === uid) : null;
+      b[i++] = uid; b[i++] = it || null; b[i++] = it ? RM_ITEM_BY_ID[it.id] : null;
+      if (it) { b[i++] = it.id; b[i++] = it.t; b[i++] = it.r; b[i++] = it.a; b[i++] = it.sig; const f = it.f; b[i++] = f; b[i++] = f && typeof f === 'object' ? f.id : null; b[i++] = f && typeof f === 'object' ? f.v : null; }
+    }
+    b[i++] = hp; if (hp) { b[i++] = hp.hp; b[i++] = hp.dmg; b[i++] = hp.rate; b[i++] = hp.speed; b[i++] = hp.iframes; }
+    b[i++] = u; if (u) { b[i++] = u.cls; b[i++] = u.level; }
+    b[i++] = this._unl();
+    b[i++] = this.mode; b[i++] = this.world; b[i++] = this.dungeon; b[i++] = this.team;
+    const hs = this._heroWorldScale(); b[i++] = hs ? hs.dmg : null; b[i++] = hs ? hs.rate : null;
+    b[i++] = this.buffDmg; b[i++] = p; b[i++] = sm; if (sm) { b[i++] = sm.dmg; b[i++] = sm.rate; b[i++] = sm.speed; }
+    b[i++] = this.extraGuard;
+    b[i++] = typeof MMGear !== 'undefined'; b[i++] = typeof MMGearAffix !== 'undefined'; b[i++] = typeof MMGearSets !== 'undefined'; b[i++] = typeof MMGearForge !== 'undefined';
+    b[i++] = typeof MMUnlocks !== 'undefined'; b[i++] = typeof MMStats !== 'undefined'; b[i++] = typeof MMDifficulty !== 'undefined';
+    return i;
+  }
+  // The full computation (what _calcStats did before P2). With opts it is pure; without, it sets this.stats.
+  _calcStatsNow(opts) {
     const o = opts && typeof opts === 'object' ? opts : null;
     const pure = !!(o && (o.noGear || o.eqOverride));
     if (this.team && this.team.isPvp) { const ds = { maxHp: RT_DUEL_HP, dmg: 1, rate: RT_DUEL_RATE, speed: RM_PLAYER.speed, shards: 1, xp: 1, iframes: 0.12 }; if (!pure) this.stats = ds; return ds; } // a duel is fought with identical stats: no gear, no level, no tiers / armor / affixes
@@ -956,15 +1007,17 @@ class RealmArena {
     if (t === this.player && (this.state === 'dead' || this.down)) return false;
     const o = opts && typeof opts === 'object' ? opts : {};
     const now = this._stT * 1000; const kind = this._stKind(t);
-    const before = t.status && t.status.fx ? t.status.fx[id] : null; const was = before ? `${before.until}|${before.stacks}|${before.pot}` : '';
+    const before = t.status && t.status.fx ? t.status.fx[id] : null; const wu = before ? before.until : NaN, ws = before ? before.stacks : NaN, wp = before ? before.pot : NaN; // P2: compared as numbers (no string per hit)
     let sec = o.sec;
     if (t === this.player) { // G8 player resist (armor family + `resist` affix): a hostile status lasts x (1 - resist); never in duels (_stOn), 0 without such gear
       const rs = this._resistFor(id), d = MMStatus.DEFS && Object.prototype.hasOwnProperty.call(MMStatus.DEFS, id) ? MMStatus.DEFS[id] : null;
       if (rs > 0 && d && d.sign < 0) { const base = Number.isFinite(Number(sec)) && sec !== null && sec !== '' ? Number(sec) : d.sec; sec = base * (1 - rs); this.lastResist = { id, rs, sec }; }
     }
-    const next = MMStatus.apply(t.status, id, { sec, stacks: o.stacks, pot: o.pot, src: typeof o.src === 'string' ? o.src : '', kind, fromBolt: !!o.fromBolt, picnic: !!o.picnic, safe: !!o.safe }, now);
+    const ao = this._apO || (this._apO = { sec: 0, stacks: 0, pot: 0, src: '', kind: '', fromBolt: false, picnic: false, safe: false }); // P2: reused (MMStatus.apply only reads it)
+    ao.sec = sec; ao.stacks = o.stacks; ao.pot = o.pot; ao.src = typeof o.src === 'string' ? o.src : ''; ao.kind = kind; ao.fromBolt = !!o.fromBolt; ao.picnic = !!o.picnic; ao.safe = !!o.safe;
+    const next = MMStatus.apply(t.status, id, ao, now);
     const f = Object.prototype.hasOwnProperty.call(next.fx, id) ? next.fx[id] : null;
-    const ok = !!f && f.until > now && `${f.until}|${f.stacks}|${f.pot}` !== was;
+    const ok = !!f && f.until > now && !(before && rmSame(f.until, wu) && rmSame(f.stacks, ws) && rmSame(f.pot, wp));
     t.status = next;
     this._stRefresh(t);
     if (t === this.player) {
@@ -1374,7 +1427,7 @@ class RealmArena {
     el.insertBefore(img, el.firstChild);
   }
   fxDraws() { return this._fxDraws; }
-  fxLive() { return this._fxPool ? this._fxPool.filter((q) => q.active).length : 0; }
+  fxLive() { const P = this._fxPool; if (!P) return 0; let n = 0; for (let i = 0; i < P.length; i++) if (P[i].active) n++; return n; } // P2: counted, no array
   // Plays effect `id` once at (x, y). opt: { w, h (draw size), rot (radians), follow (track the hero), oy (offset), dur (seconds) }.
   fxPlay(id, x, y, opt) {
     const A = this._fx, pool = this._fxPool; if (!A || !pool) return false;
@@ -1419,7 +1472,7 @@ class RealmArena {
     this.heroProfile = ok ? { name: String(profile.name || '').slice(0, 40), hp: m(profile.hp), dmg: m(profile.dmg), rate: m(profile.rate), speed: m(profile.speed), iframes: m(profile.iframes),
       shots: Math.max(1, Math.min(5, Math.floor(Number(profile.shots)) || 1)), spread: Math.max(0, Math.min(1, Number(profile.spread) || 0)), pierce: Math.max(0, Math.min(3, Math.floor(Number(profile.pierce)) || 0)),
       shotDmg: Math.max(0.2, Math.min(1.5, Number(profile.shotDmg) || 1)), critChance: Math.max(0, Math.min(0.5, Number(profile.critChance) || 0)), boltSpeed: Math.max(0.5, Math.min(1.3, Number(profile.boltSpeed) || 1)) } : null;
-    if (this.save) { this._calcStats(); if (this.player && this.player.hp > this.stats.maxHp) this.player.hp = this.stats.maxHp; if (this.active) this._syncHud(); }
+    if (this.save) { this.markStatsDirty(); this._calcStats(); if (this.player && this.player.hp > this.stats.maxHp) this.player.hp = this.stats.maxHp; if (this.active) this._syncHud(); }
   }
   // Additive hook (S12): fn() -> the active hero {cls, level} (MMProfile). With a hero, the unlock-tree nodes (MMUnlocks: class passives,
   // Nova II, Dash II) and the styled weapon items follow THAT hero's class and level; without one (null fn / null result) the arena is the
@@ -1435,7 +1488,7 @@ class RealmArena {
     const wi = wu ? this.save.items.find((x) => x.n === wu) : null;
     if (wi && RM_ITEM_BY_ID[wi.id] && RM_ITEM_BY_ID[wi.id].wpn && !this._wpnCanEquip(RM_ITEM_BY_ID[wi.id])) delete this.save.eq.weapon;
     if (RM_GEAR_ON && this.save && !(this.team && this.team.isPvp)) RM_SLOTS.forEach((sl) => { const gi = this.save.eq[sl] ? this.save.items.find((x) => x.n === this.save.eq[sl]) : null; if (gi && !this._gearOk(gi)) delete this.save.eq[sl]; }); // G7: armor of another family / a tier above the gate comes off (it stays in the backpack)
-    if (this.save) { this._calcStats(); if (this.player && this.player.hp > this.stats.maxHp) this.player.hp = this.stats.maxHp; if (this.active) this._syncHud(); }
+    if (this.save) { this.markStatsDirty(); this._calcStats(); if (this.player && this.player.hp > this.stats.maxHp) this.player.hp = this.stats.maxHp; if (this.active) this._syncHud(); }
     return this._hu ? { cls: this._hu.cls, level: this.heroLevel() } : null;
   }
   heroClass() { return this._hu ? this._hu.cls : null; }
@@ -1656,7 +1709,8 @@ class RealmArena {
     if (!id || !oh || !(oh.chance > 0) || !e.active) return false;
     const ch = Math.min(1, oh.chance + (this.stats.status > 0 ? this.stats.status : 0)) * (scale > 0 && scale < 1 ? scale : 1); // G8: + robe armor status chance + the `venom` affix (0 without them)
     if (this.rng() >= ch) return false;
-    return this.applyStatus(e, id, { sec: oh.sec > 0 ? oh.sec : undefined, src: 'wpn' });
+    const so = this._wsO || (this._wsO = { sec: undefined, src: 'wpn' }); so.sec = oh.sec > 0 ? oh.sec : undefined; // P2: one reused opts object
+    return this.applyStatus(e, id, so);
   }
   // Burst follow-ups and orbiters (at most 3; they only hit on the host / solo, a guest just draws its own).
   _updateWeapon(dt) {
@@ -2430,6 +2484,18 @@ class RealmArena {
     }
   }
 
+  // P2: damage-number strings cached by value (no string built per hit). k 0 = plain "12.3", -1 = crit "12.3!", n > 0 = splash "12.3 ×n".
+  _numTxt(v, k) {
+    const C = this._numC || (this._numC = new Map()); const key = Math.round(v * 10) * 8 + (k < 0 ? 7 : k); // k is -1..6
+    let t = C.get(key);
+    if (t === undefined) { t = k < 0 ? `${v}!` : k > 0 ? `${v} ×${k}` : String(v); if (C.size >= 512) C.clear(); C.set(key, t); }
+    return t;
+  }
+  // P2: the low graphics tier (MMPerf 'low', forced by the Low graphics setting or picked automatically; mad-maze.js publishes it in window.__mmPerf).
+  // Read once per frame (_update), so a hit never touches the DOM.
+  _lowGfx() { return this._lowF === true; }
+  _readLowGfx() { const P = typeof window !== 'undefined' ? window.__mmPerf : null; this._lowF = !!(P && P.lowGfx === true); }
+
   _floatText(x, y, text, color) {
     const t = this._take(this.texts);
     if (!t) return null;
@@ -2440,7 +2506,7 @@ class RealmArena {
   // ---------- simulation ----------
 
   _update(dt) {
-    this._readReduced();
+    this._readReduced(); this._readLowGfx();
     if (this.paused) { this._readPad(); this._padPauseEdge(); return; } // backpack open (Start can still close it)
     const p = this.player;
     this._stT += dt; this._stTick(dt); this._focusTick(dt); this._gearTick(dt);
@@ -2844,7 +2910,7 @@ class RealmArena {
     if (e.type === 'boss' && e.invuln > 0) { if (quiet) return; this._floatText(e.x, e.y - 40, 'shielded', '#c9d1d9'); this._burst(e.x, e.y, '#fff', 1, 60); return; }
     if (this.onEnemyHit) this.onEnemyHit(e, dmg);
     e.hp -= dmg; e.flash = 1;
-    this._snd(e.hp > 0 ? 'hit' : 'kill');
+    if (!quiet || e.hp <= 0) this._snd(e.hp > 0 ? 'hit' : 'kill'); // P2: a splashed (quiet) target that survives plays no extra 'hit' (the primary hit just played one; no voice per target)
     if (e.type === 'boss') {
       this._syncBoss();
       if (e.hp > 0) {
@@ -2860,7 +2926,12 @@ class RealmArena {
     }
     if (!quiet) {
       const dc = this._dmgColor(e, crit); this.lastDmgColor = dc; // S14 (test hook: the colour of the last enemy damage number)
-      this._floatText(e.x + (this.rng() - 0.5) * 14, e.y - 14, crit ? `${Math.round(dmg * 10) / 10}!` : String(Math.round(dmg * 10) / 10), dc);
+      // P2: on the low graphics tier a plain (non-crit) number shows at most every RM_LOW_DMG_GAP s; crits always show. The rng draw is kept either way.
+      const jx = (this.rng() - 0.5) * 14;
+      if (crit || !this._lowGfx() || !(this._stT - (this._dmgTxtT === undefined ? -1e9 : this._dmgTxtT) < RM_LOW_DMG_GAP)) {
+        if (!crit) this._dmgTxtT = this._stT;
+        this._floatText(e.x + jx, e.y - 14, this._numTxt(Math.round(dmg * 10) / 10, crit ? -1 : 0), dc);
+      } else this.dmgTxtSkipped = (this.dmgTxtSkipped || 0) + 1; // test hook
       this._burst(e.x, e.y, RM_ENEMIES[e.type].color, 3, 110);
     }
     if (e.hp > 0) return;
@@ -2904,21 +2975,24 @@ class RealmArena {
   // (only this.enemies is searched). A splashed enemy rolls the bolt's onHit status (or the venom bleed) at chance x its share. Returns the count.
   _splashAt(b, x, y, skip, hit, sp) {
     const E = this.enemies, n = E.length;
-    if (!this._spX || this._spX.length < n) { const c = Math.max(64, n); this._spX = new Float32Array(c); this._spY = new Float32Array(c); this._spR = new Float32Array(c); this._spOk = new Uint8Array(c); this._spOut = new Int16Array(MMSplash.MAX_TARGETS); this._spD = new Float32Array(MMSplash.MAX_TARGETS); }
+    if (!this._spX || this._spX.length < n) { const c = Math.max(64, n); this._spX = new Float32Array(c); this._spY = new Float32Array(c); this._spR = new Float32Array(c); this._spOk = new Uint8Array(c); this._spOut = new Int16Array(MMSplash.MAX_TARGETS); this._spD = new Float32Array(MMSplash.MAX_TARGETS); this._spF = new Float64Array(MMSplash.MAX_TARGETS); }
     const xs = this._spX, ys = this._spY, rs = this._spR, ok = this._spOk, out = this._spOut, dd = this._spD;
     for (let i = 0; i < n; i++) { const e = E[i]; const live = !!(e.active && e.hp > 0 && !e.tame); ok[i] = live ? 1 : 0; xs[i] = live ? e.x : 0; ys[i] = live ? e.y : 0; rs[i] = live ? this._er(e) : 0; }
     const k = MMSplash.pick(xs, ys, rs, n, x, y, sp, skip, out, ok);
     for (let j = 0; j < k; j++) dd[j] = MMSplash.dist[j]; // copied first: nothing below may touch the kernel's scratch
+    const ff = this._spF || (this._spF = new Float64Array(MMSplash.MAX_TARGETS)); // P2: each target's falloff (float64: the same numbers as frac() returned)
+    if (typeof MMSplash.fracInto === 'function') MMSplash.fracInto(dd, k, sp, ff); else for (let j = 0; j < k; j++) ff[j] = MMSplash.frac(dd[j], sp);
     let tot = 0, cnt = 0;
     for (let j = 0; j < k; j++) {
       const e = E[out[j]]; if (!e || !e.active) continue;
-      const f = MMSplash.frac(dd[j], sp), dmg = hit * sp.frac * f;
+      const f = ff[j], dmg = hit * sp.frac * f;
       if (!(dmg > 0)) continue;
       if (b.ws && b.st > 0) this._wpnStatus(b, e, sp.frac * f); else if (this.stats.venom > 0) this._venomBleed(e, sp.frac * f);
       this._hitEnemy(e, dmg, false, true);
       tot += dmg; cnt++;
     }
-    this.splashN = (this.splashN || 0) + 1; this.lastSplash = { x, y, r: sp.r, n: cnt, dmg: Math.round(tot * 100) / 100 }; // test hooks
+    this.splashN = (this.splashN || 0) + 1; // test hooks; P2: lastSplash is one reused object (no per-hit allocation)
+    const L = this.lastSplash || (this.lastSplash = { x: 0, y: 0, r: 0, n: 0, dmg: 0 }); L.x = x; L.y = y; L.r = sp.r; L.n = cnt; L.dmg = Math.round(tot * 100) / 100;
     if (++this._spFrame <= RM_SPLASH_FX) this._splashFx(x, y, sp.r, cnt, tot);
     return cnt;
   }
@@ -2926,20 +3000,23 @@ class RealmArena {
   _venomBleed(e, scale) {
     if (!e || !e.active || !(this.stats.venom > 0)) return false;
     if (this.rng() >= Math.min(1, this.stats.venom * scale)) return false;
-    return this.applyStatus(e, 'bleed', { sec: 3, src: 'wpn' });
+    return this.applyStatus(e, 'bleed', RM_VENOM_ST); // P2: a constant opts object (applyStatus only reads it)
   }
   // The ring (b29 `fx_splash_ring` art when loaded and two effect slots are free, else a cached code-drawn ring), the b18 small explosion for big
   // splashes (r >= 40, >= 4 free slots, never with reduced motion) and one combined orange number ("2.4 ×3"), rate-limited.
   _splashFx(x, y, r, cnt, tot) {
     const free = this._fxPool ? RM_FX_MAX - this.fxLive() : 0;
-    const art = free >= 2 && this._fx && this._fx.has('fx_splash_ring') && this.fxPlay('fx_splash_ring', x, y, { w: Math.max(24, r * 2) });
+    const fo = this._spFxO || (this._spFxO = { w: 0 }); // P2: one reused fxPlay option object (fxPlay copies what it reads)
+    fo.w = Math.max(24, r * 2);
+    const art = free >= 2 && this._fx && this._fx.has('fx_splash_ring') && this.fxPlay('fx_splash_ring', x, y, fo);
     if (art) this.splashArtN = (this.splashArtN || 0) + 1; else this._splashRing(x, y, r);
-    if (r >= 40 && free >= 4 && !this._reduced && this._fx && this._fx.has('fx_explosion_small')) this.fxPlay('fx_explosion_small', x, y, { w: 64 });
-    if (cnt <= 0 || (this._spTxtT !== undefined && this._stT - this._spTxtT < RM_SPLASH_TXT_GAP)) return;
+    if (r >= 40 && free >= 4 && !this._reduced && this._fx && this._fx.has('fx_explosion_small')) { fo.w = 64; this.fxPlay('fx_explosion_small', x, y, fo); }
+    const gap = this._lowGfx() ? RM_SPLASH_TXT_GAP * RM_LOW_TXT_MUL : RM_SPLASH_TXT_GAP; // P2: the low graphics tier shows fewer splash numbers
+    if (cnt <= 0 || (this._spTxtT !== undefined && this._stT - this._spTxtT < gap)) return;
     let live = 0; for (let i = 0; i < this.texts.length; i++) if (this.texts[i].active) live++;
     if (live > RM_SPLASH_TXT_MAX) return;
     this._spTxtT = this._stT;
-    this._floatText(x, y - 20, `${Math.round(tot / cnt * 10) / 10} ×${cnt}`, RM_SPLASH_COL);
+    this._floatText(x, y - 20, this._numTxt(Math.round(tot / cnt * 10) / 10, cnt), RM_SPLASH_COL);
   }
   _splashRing(x, y, r) {
     const P = this._spRings || (this._spRings = Array.from({ length: RM_SPLASH_RINGS }, () => ({ active: false, x: 0, y: 0, r: 0, t: 0, dur: 0.18 })));
@@ -3134,7 +3211,7 @@ class RealmArena {
   _levelUp() {
     this._snd('levelup');
     const before = this.stats.maxHp;
-    this._calcStats();
+    this.markStatsDirty(); this._calcStats();
     const p = this.player;
     p.hp = Math.min(this.stats.maxHp, p.hp + Math.round(this.stats.maxHp * 0.3) + (this.stats.maxHp - before)); // a level heals a bit and the new max HP is free
     this.shake = Math.max(this.shake, 4);
@@ -3896,7 +3973,7 @@ class RealmArena {
   }
 
   // ---------- Forge (GW): salvage for dust, deterministic reforge (MMGearForge). Free in-game dust + shards only; no randomness anywhere. ----------
-  // Off with ?gear=0, without mm-gear-forge.js or while the GW gate is closed (RM_FORGE_ON, default off for one deploy; ?forge=1): no Forge section,
+  // Off with ?gear=0, without mm-gear-forge.js or while the GW gate is closed (RM_FORGE_ON: on by default since P2; ?forge=0 closes it): no Forge section,
   // nothing creates `dust` / `f`, and the ones already saved are kept (a forged `f` still counts in the stats).
   forgeOn() { return RM_GEAR_ON && RM_FORGE_ON && typeof MMGearForge !== 'undefined' && !!MMGearForge && typeof MMGearForge.salvage === 'function' && !(this.team && this.team.isPvp); }
   _forgeView(it) { const v = { n: it.n, id: it.id, r: it.r }; if (it.t) v.t = it.t; if (it.a) v.a = it.a; if (it.sig) v.sig = it.sig; if (it.f) v.f = it.f; return v; } // sig: review F5
@@ -4038,7 +4115,7 @@ class RealmArena {
   }
 
   _afterGearChange() {
-    this._calcStats();
+    this.markStatsDirty(); this._calcStats();
     const p = this.player;
     p.hp = Math.min(this.stats.maxHp, p.hp); // swapping gear never heals (no free HP by toggling a charm); losing max HP just lowers the cap
     this.displayShards = this.save.shards;
