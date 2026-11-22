@@ -79,6 +79,45 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
   for (const k of ['ArrowLeft', 'ArrowLeft', 'ArrowUp', 'ArrowUp', 'ArrowUp']) await p.keyboard.press(k);
   await p.keyboard.press('Enter');
   check('keyboard: arrows move the cursor, Enter pops', await p.evaluate((sc) => __pop.run.score > sc, kb0));
+  // ---- second pass: chain preview, combo audio ladder, idle hint ----
+  const CHAINB = [[1, 3, 1, 3, 1, 3], [3, 1, 3, 1, 4, 4], [1, 3, 1, 3, 2, 3], [3, 1, 3, 1, 2, 1], [1, 3, 1, 3, 1, 3]];
+  const pv = await p.evaluate((B) => {
+    __pop.set(B); const before = JSON.stringify(__pop.values());
+    const pr = __pop.predict(2, 4), lone = __pop.predict(0, 0);
+    const same = JSON.stringify(__pop.values()) === before;
+    const r = __pop.tap(2, 4);
+    return { pr, lone, same, chain: r.chain, sound: __pop.lastSound };
+  }, CHAINB);
+  check('chain preview: a twin pair that lands next to its twin predicts a x2 chain (group of 2, new tile 3)', pv.pr && pv.pr.size === 2 && pv.pr.chain === 2 && pv.pr.cells.length === 2, JSON.stringify(pv.pr));
+  check('chain preview: never touches the board (or the seeded refills); a lone tile predicts nothing', pv.same && pv.lone === null);
+  check('chain preview is a safe lower bound: the real pop chained at least as far', pv.chain >= pv.pr.chain, JSON.stringify(pv));
+  check('combo audio ladder: a x2 chain plays the brighter "claim" step', pv.chain === 2 ? pv.sound === 'claim' : pv.sound === ['pickup', 'claim', 'bag_rare', 'levelup'][Math.min(pv.chain, 4) - 1], JSON.stringify(pv));
+  const lad = await p.evaluate(() => {
+    __pop.set([[1, 1, 3, 2, 3, 2], [2, 3, 2, 3, 2, 3], [3, 2, 3, 2, 3, 2], [2, 3, 2, 3, 2, 3], [3, 2, 3, 2, 3, 2]]);
+    const r = __pop.tap(0, 1), one = __pop.lastSound;
+    __pop.set([[1, 2, 1, 2, 1, 2], [2, 1, 2, 1, 2, 1], [1, 2, 1, 2, 1, 2], [2, 1, 2, 1, 2, 1], [1, 2, 1, 2, 1, 1]]);
+    __pop.tap(0, 0);
+    return { chain: r.chain, one, miss: __pop.lastSound };
+  });
+  check('combo audio ladder: a plain pop plays the base "pickup" step', lad.chain !== 1 || lad.one === 'pickup', JSON.stringify(lad));
+  check('combo audio ladder: a lone tile only plays the soft tap (no ladder step)', lad.miss === 'ui_tap', JSON.stringify(lad));
+  await p.evaluate(() => { document.getElementById('board').focus(); });
+  await p.keyboard.press('ArrowRight');
+  check('chain preview follows the keyboard cursor', await p.evaluate(() => { const pr = __pop.preview; return pr === null || (Array.isArray(pr.cells) && pr.size >= 2); }));
+  const hn = await p.evaluate(() => {
+    __pop.tap(-1, -1); // no-op
+    __pop.set([[1, 2, 1, 2, 1, 2], [2, 1, 2, 1, 2, 1], [1, 2, 1, 2, 1, 2], [2, 1, 2, 1, 2, 1], [1, 2, 1, 2, 3, 3]]);
+    __pop.tap(0, 0); // a miss counts as activity: idle timer restarts
+    __pop.step(5);
+    const early = __pop.hint;
+    __pop.step(1.2);
+    const h = __pop.hint, m = document.getElementById('msg').textContent, best = __pop.bestMove();
+    const r = __pop.tap(h.c, h.r);
+    return { early, h: h && { c: h.c, r: h.r, size: h.size }, best: { c: best.c, r: best.r }, m, popped: !!r, after: __pop.hint, on: __pop.hintsOn };
+  });
+  check('idle hint: nothing for the first 6 s of thinking', hn.on && hn.early === null, JSON.stringify(hn));
+  check('idle hint: after 6 s the best move glows and the status line nudges (no penalty, no timer change)', hn.h && hn.h.size >= 2 && hn.h.c === hn.best.c && hn.h.r === hn.best.r && /psst/i.test(hn.m), JSON.stringify(hn));
+  check('idle hint: popping clears the glow', hn.popped && hn.after === null, JSON.stringify(hn));
   check('phone: no console errors, 0 DB requests', s.errors.length === 0 && s.db.count() === 0, JSON.stringify(s.errors) + s.db.count());
   await s.ctx.close();
 
@@ -93,8 +132,19 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
   check('reduced motion: no screen shake; low graphics: particles capped at 24', rm.reduced && rm.low && rm.shake === 0 && rm.parts <= 24, JSON.stringify(rm));
   const dw = await q.evaluate(() => { const b = document.getElementById('board').getBoundingClientRect(); return { w: b.width, x: b.left, vw: innerWidth }; });
   check('desktop: board is centred and capped in width', dw.w <= 560 && dw.x > 100, JSON.stringify(dw));
+  const hm = await q.evaluate(() => { __pop.step(4); const a = __pop.hint; __pop.step(3); return { a, b: __pop.hint }; });
+  check('reduced motion: the idle hint still appears (a steady outline, no pulse)', hm.a === null && hm.b && hm.b.size >= 2, JSON.stringify(hm));
+  const bb2 = await q.locator('#board').boundingBox();
+  await q.evaluate(() => __pop.set([[1, 1, 3, 2, 3, 2], [2, 3, 2, 3, 2, 3], [3, 2, 3, 2, 3, 2], [2, 3, 2, 3, 2, 3], [3, 2, 3, 2, 3, 2]]));
+  await q.mouse.move(bb2.x + bb2.width * 0.1, bb2.y + bb2.height * (0.5 / 6));
+  check('chain preview: a mouse hovering a pair outlines it without popping', await q.evaluate(() => __pop.preview && __pop.preview.size === 2 && __pop.values()[0][0] === 1));
   check('desktop: no console errors, 0 DB requests', d.errors.length === 0 && d.db.count() === 0, JSON.stringify(d.errors));
   await d.ctx.close();
+  const o = await open(browser, { viewport: { width: 1280, height: 800 } }, '?test=1&hints=0', { [KEY]: JSON.stringify({ v: 1, hint: true }) });
+  await o.page.click('#play');
+  check('?hints=0 turns the idle hint off', await o.page.evaluate(() => { __pop.step(10); return __pop.hintsOn === false && __pop.hint === null; }));
+  check('hints=0 page: no console errors, 0 DB requests', o.errors.length === 0 && o.db.count() === 0, JSON.stringify(o.errors));
+  await o.ctx.close();
   await browser.close();
   done();
 })().catch((e) => { console.error(e); process.exit(1); });
