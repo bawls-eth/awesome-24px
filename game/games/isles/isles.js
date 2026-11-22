@@ -48,6 +48,11 @@
 // pack 'meadow'; code palette per missing tile) with its garden plot / dock / boat props and the stable over the homestead pen; the b36
 // meadow tameables, the b32s stegolith (saddle overlay + seat) and the b31af glimmerfrog sleep / eat come through MMCreatureStrips (each
 // island preloads its own biome's strips plus your stable's); the craft panel shows the b34b item icons by id over the text label.
+// XW1: the craft panel lists every MMIsleCraft recipe (ALL_IDS, groups Travel / Saddles / Supplies / Trophies); an alternative recipe
+// unlocks by its output item (rocket_core_drift opens mars from a fresh save) and the sea chart's "Craft it" points at a reachable build;
+// a daily gather spot can add a seeded bonus find (MMIsleCraft.bonusFind). Riding shows one 44 px ability button (key F while riding)
+// for the mount's MMMountAbility (12 abilities; never damage, never touches tames / party / boss / items); ?ability=0 turns them off.
+// The feedback widget is a static script tag; ?test=1 exposes __isles.events() (a {t, kind} ring buffer, no text).
 (function () {
   'use strict';
   const CRAFT = window.MMIsleCraft || null;
@@ -67,6 +72,12 @@
   const TAME = Q.get('tame') !== '0', COMPANIONS = Q.get('companions') !== '0', MOUNTS = Q.get('mounts') !== '0';
   const SADDLES = Q.get('saddles') !== '0' && !!CRAFT; // X4: ?saddles=0 rides every mount bareback (today's free riding)
   const TILE = CB.TILE, CPX = CB.CPX, CH = CB.CH;
+  // XW1: mount abilities (MMMountAbility); ?ability=0 (its KILL_FLAG) rides exactly as before
+  const MA = window.MMMountAbility || null;
+  const ABIL = !!MA && Q.get('mounts') !== '0' && MA.enabled(location.search);
+  // XW1: the test-only reward log (?test=1): a ring buffer of {t, kind}, no text
+  const EVENTS = [], EVENT_MAX = 64;
+  function logEvent(kind) { if (!TEST) return; if (EVENTS.length >= EVENT_MAX) EVENTS.shift(); EVENTS.push({ t: Math.round(simT * 1000) / 1000, kind: kind }); }
 
   // ---------- storage (own keys only; every access guarded) ----------
   const store = (() => { try { return window.localStorage; } catch (e) { return null; } })();
@@ -120,11 +131,15 @@
   const ENVR = ENV ? ENV.rules(PACK_ID, (k) => Q.get(k)) : { swim: false, warmth: false, oxygen: false, gravity: false };
   if (ENV && ENVR.swim) NAMES.forEach((n, id) => { SWIM_T[id] = ENV.swimAt(n, null, has(PACK.hazards, n) ? PACK.hazards[n] : null).needSwim ? 1 : 0; });
   const swimAt = (tx, ty) => SWIM_T[O.tileAt(world, tx, ty)] === 1;
+  // XW1: terrain an active mount ability crosses (dive: deep water / abyss; hover: dust shallows / lava vents) or crosses at full speed
+  // (skim: kelp beds / coral shallows). Set when an ability starts, cleared when it ends (never per frame).
+  const PASS_T = new Uint8Array(NAMES.length), NOSLOW_T = new Uint8Array(NAMES.length);
+  const inWorld = (tx, ty) => tx >= 0 && ty >= 0 && tx < W && ty < H;
   // the hero's tile rule (ride is declared further down; read lazily)
-  const heroSolidAt = (tx, ty) => solidAt(tx, ty) || (swimAt(tx, ty) && !CMP.canSwim(ride));
+  const heroSolidAt = (tx, ty) => (inWorld(tx, ty) && PASS_T[O.tileAt(world, tx, ty)] === 1 ? false : solidAt(tx, ty) || (swimAt(tx, ty) && !CMP.canSwim(ride)));
   const walkableAt = (tx, ty) => !solidAt(tx, ty) && !swimAt(tx, ty);
   const tileOf = (px) => Math.floor(px / TILE);
-  function moveScaleAt(tx, ty) { return SLOW[O.tileAt(world, tx, ty)] || 1; }
+  function moveScaleAt(tx, ty) { const t = O.tileAt(world, tx, ty); return NOSLOW_T[t] || PASS_T[t] ? 1 : SLOW[t] || 1; }
   const bandName = (z) => (PACK.bands[z] ? PACK.bands[z].name.replace(/_/g, ' ') : 'open sea');
 
   // props / sites per chunk, baked into the chunk canvas (never drawn per frame)
@@ -427,6 +442,7 @@
       const s = specOf(c.sp, c.kind);
       c.t += dt; c.cd -= dt; c.flash -= dt; c.angry -= dt; c.tmAcc += dt; if (c.eatT > 0) c.eatT -= dt;
       if (c.leaving > 0) c.leaving = Math.max(0.01, c.leaving - dt);
+      if (c.stun > 0) { c.stun -= dt; c.vx = 0; c.vy = 0; c.moving = false; continue; } // XW1: dazed by a stomp / roar (never hurt)
       c.think -= dt;
       if (c.think <= 0) { c.think += 0.1; think(c); } // 10 Hz, staggered by the random start phase
       if (c.ph) attackStep(c, s, dt);
@@ -491,6 +507,7 @@
     if (len > 1) { mx /= len; my /= len; len = 1; }
     hero.scale = CMP.moveScale(ride, moveScaleAt(tileOf(hero.x), tileOf(hero.y)));
     if (ENV_ON && envS.move !== 1) hero.scale *= envS.move; // X5: mars gravity x1.15, the tundra cold x0.8
+    if (abilSpeed !== 1) hero.scale *= abilSpeed; // XW1: sprint
     if (len < 0.05) return;
     hero.face.x = mx / len; hero.face.y = my / len;
     const v = SPEED * hero.scale * dt;
@@ -663,6 +680,7 @@
     if (ev.indexOf('refused') >= 0) toast(nm + ' turns its nose up.');
     if (c.tm.st === 'tamed') { finishTame(c); return { ok: true, tamed: true, events: ev }; }
     syncTame(c, ev);
+    if (ev.indexOf('fed') >= 0) logEvent('tame_progress');
     return { ok: ev.indexOf('fed') >= 0, events: ev, prog: c.tm.prog, need: c.tm.need };
   }
 
@@ -709,6 +727,7 @@
     const ent = adoptTame(def, c.tm.bond, c.x, c.y, false);
     removeWhere((x) => x === c, 90000);
     toast(ent ? def.name + ' joined you!' : def.name + ' is happy. Your bond grows.');
+    logEvent('tame');
     refreshMount();
     checkMedals();
   }
@@ -755,12 +774,15 @@
     rideKind = stripKind(def.id);
     if (tames.mount !== mountEnt.id) { TAMES.setMount(tames, mountEnt.id); TAMES.write(S, tames); }
     hero.scale = CMP.moveScale(ride, moveScaleAt(tileOf(hero.x), tileOf(hero.y)));
+    abilityMount(def);
     toast('Riding ' + (mountEnt.nm || def.name) + '. R to get off.');
+    logEvent('ride');
     return true;
   }
   function dismount() {
     if (!ride) return false;
     const id = ride.id;
+    abilityClear();
     ride = null; rideArt = null; rideKind = null; rideDrawn = ''; saddleDrawn = '';
     // off a swim mount in open water: step ashore onto the nearest walkable tile
     const land = nearestWalkable(hero.x, hero.y);
@@ -775,6 +797,115 @@
   const hasSaddle = (id) => !!id && has(save.inv, id) && save.inv[id] > 0;
   const toggleRide = () => (ride ? (dismount(), false) : mountUp());
   refreshMount();
+
+  // ---------- XW1: the mount's one active ability (MMMountAbility: 12 abilities, one per rideable species' ride.ability) ----------
+  // The pure module owns the timing (ready -> wind -> active -> cool, no cost, never skips a cooldown) and the numbers; the page carries
+  // them out: speed, terrain it may cross, a one-shot move / stun / push, the warm aura and the shell platform. Abilities never deal
+  // damage and never touch tames, the party, the boss or items. Button: #btn-ability (44 px, next to Ride), key F while riding.
+  let abil = null, abilDef = null, abilPress = false, abilSpeed = 1, abilWarm = false, abilPlatform = false, abilMove = null, abilUses = 0;
+  const ABIL_LOG = []; // last few firings {t, a, moved, stun, knock} (test handle; fixed size)
+  function abilityMount(def) {
+    abilityClear();
+    if (!ABIL || !def || !def.ride || !def.ride.ability) return;
+    abilDef = MA.def(def.ride.ability);
+    abil = abilDef ? MA.init(abilDef.id) : null;
+    if (!abil) abilDef = null;
+  }
+  function setMask(arr, list) { arr.fill(0); for (let i = 0; i < list.length; i++) { const id = O.TERRAIN_ALL[list[i]]; if (id !== undefined) arr[id] = 1; } }
+  function abilityClear() {
+    if (abil && abil.ph === 'active') abilityEnd(true);
+    abil = null; abilDef = null; abilPress = false; abilMove = null;
+    PASS_T.fill(0); NOSLOW_T.fill(0); abilSpeed = 1; abilWarm = false; abilPlatform = false;
+  }
+  // the nearest spot the hero fits (after a dive runs out of breath over the abyss, or a move that ended inside a wall)
+  function nearestFree(px, py) {
+    if (!blocked(px, py)) return null;
+    const tx = tileOf(px), ty = tileOf(py);
+    for (let r = 1; r <= 16; r++) {
+      let best = null, bd = 1e9;
+      for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        const cx = (tx + dx + 0.5) * TILE, cy = (ty + dy + 0.5) * TILE;
+        if (!inWorld(tx + dx, ty + dy) || blocked(cx, cy)) continue;
+        const d = Math.hypot(cx - px, cy - py);
+        if (d < bd) { bd = d; best = { x: cx, y: cy }; }
+      }
+      if (best) return best;
+    }
+    return { x: (world.spawnPoint.x + 0.5) * TILE, y: (world.spawnPoint.y + 0.5) * TILE };
+  }
+  const abilityTarget = (c) => ({ id: c.uid, x: c.x / TILE - 0.5, y: c.y / TILE - 0.5, size: c.size, tame: !!(c.calm || c.ko || (c.tm && c.tm.st === 'tamed')), party: false, boss: false });
+  function abilityStart() {
+    const m = MA.mods(abil);
+    setMask(PASS_T, m.pass); setMask(NOSLOW_T, m.noSlow);
+    abilSpeed = m.speedMul; abilWarm = m.warmR > 0; abilPlatform = m.platform;
+    // the one-shot part, in tile units (the hero's tile index, creatures likewise); the boss is never in the list
+    const near = [];
+    for (let i = 0; i < creatures.length && near.length < 64; i++) { const c = creatures[i]; if (Math.hypot(c.x - hero.x, c.y - hero.y) < 10 * TILE) near.push(abilityTarget(c)); }
+    const out = MA.apply(abil, { x: hero.x / TILE - 0.5, y: hero.y / TILE - 0.5, face: hero.face, creatures: near,
+      solidAt: (tx, ty) => heroSolidAt(tx, ty), terrainAt: (tx, ty) => NAMES[O.tileAt(world, tx, ty)] || '' });
+    let moved = 0;
+    if (out.move) {
+      const k = abilDef.kind;
+      if (k === 'dash' || k === 'leap_to') abilMove = { vx: out.move.dx * TILE / abilDef.dur, vy: out.move.dy * TILE / abilDef.dur, left: abilDef.dur }; // slides, stops at walls
+      else if (k === 'hop') { // over one rim tile onto the far side
+        const nx = (tileOf(hero.x) + out.move.dx + 0.5) * TILE, ny = (tileOf(hero.y) + out.move.dy + 0.5) * TILE;
+        if (!blocked(nx, ny)) { hero.x = nx; hero.y = ny; moved = Math.hypot(out.move.dx, out.move.dy); }
+      } else if (k === 'burrow') { // a short tunnel: the farthest free spot along the line (it may pass under a wall)
+        const l = Math.hypot(out.move.dx, out.move.dy), st = Math.max(1, Math.ceil(l * 4));
+        for (let i = st; i >= 1; i--) {
+          const nx = hero.x + out.move.dx * TILE * i / st, ny = hero.y + out.move.dy * TILE * i / st;
+          if (inWorld(tileOf(nx), tileOf(ny)) && !blocked(nx, ny)) { hero.x = nx; hero.y = ny; moved = l * i / st; break; }
+        }
+      }
+    }
+    if (out.untargetable > 0) hero.iframes = Math.max(hero.iframes, out.untargetable);
+    let stunN = 0, knockN = 0;
+    out.stun.forEach((st) => { const c = creatures.find((x) => x.uid === st.id); if (!c) return; c.stun = Math.max(c.stun || 0, st.s); c.vx = 0; c.vy = 0; if (c.ph === 'wind') c.ph = ''; stunN++; });
+    out.knock.forEach((kn) => {
+      const c = creatures.find((x) => x.uid === kn.id); if (!c) return;
+      const nx = c.x + kn.dx * TILE, ny = c.y + kn.dy * TILE;
+      if (!creatureSolid(c, tileOf(nx), tileOf(ny))) { c.x = nx; c.y = ny; knockN++; }
+    });
+    abilUses++;
+    if (ABIL_LOG.length >= 8) ABIL_LOG.shift();
+    ABIL_LOG.push({ t: simT, a: abilDef.id, moved: Math.round(moved * 100) / 100, stun: stunN, knock: knockN });
+    logEvent('ability');
+    const extra = stunN ? ' ' + stunN + (stunN === 1 ? ' creature is' : ' creatures are') + ' dazed for a moment.' : knockN ? ' ' + knockN + ' nudged aside.' : '';
+    toast(abilDef.name + '!' + extra);
+  }
+  function abilityEnd(quiet) {
+    PASS_T.fill(0); NOSLOW_T.fill(0); abilSpeed = 1; abilWarm = false; abilPlatform = false; abilMove = null;
+    // a dive that ran out over the abyss (or a hover that ends over a vent) surfaces on the nearest spot the rider fits
+    const spot = nearestFree(hero.x, hero.y);
+    if (spot) { hero.x = spot.x; hero.y = spot.y; if (!quiet) toast(abilDef && abilDef.kind === 'swim' ? 'Out of breath: back up to the surface.' : 'Back on solid ground.'); }
+  }
+  function abilityStep(dt) {
+    if (!abil) return;
+    const idle = abil.ph === 'ready' && !abilPress && (abilDef.kind !== 'swim' || abil.breath >= abilDef.breath);
+    if (!idle) {
+      const under = abilDef.kind === 'swim' && PASS_T[O.tileAt(world, tileOf(hero.x), tileOf(hero.y))] === 1;
+      abil = MA.step(abil, { press: abilPress, under: under }, dt);
+      abilPress = false;
+      for (let i = 0; i < abil.ev.length; i++) { const e = abil.ev[i]; if (e === 'start') abilityStart(); else if (e === 'end') abilityEnd(false); }
+    }
+    if (abilMove) {
+      const st = Math.min(dt, abilMove.left), nx = hero.x + abilMove.vx * st, ny = hero.y + abilMove.vy * st;
+      let ok = false;
+      if (!blocked(nx, hero.y)) { hero.x = nx; ok = true; }
+      if (!blocked(hero.x, ny)) { hero.y = ny; ok = true; }
+      abilMove.left -= st;
+      if (!ok || abilMove.left <= 1e-6) abilMove = null;
+    }
+    // float dock: the party rides on the shell while it is active
+    if (abilPlatform) for (let i = 0; i < party.length; i++) { const p = party[i]; p.cs.x = hero.x + (i - (party.length - 1) / 2) * 14; p.cs.y = hero.y - 6; }
+  }
+  function useAbility() {
+    if (!ride || !abil) { if (ride && !ABIL) toast('Mount abilities are off (?ability=0).'); return false; }
+    if (abil.ph !== 'ready') { toast(abilDef.name + ' is resting. Ready in ' + Math.max(1, Math.ceil(abil.cd)) + ' s.'); return false; }
+    abilPress = true;
+    return true;
+  }
 
   // ---------- X6: the island boss (MMIsleBoss) at the pack's boss site ----------
   const BOSS = window.MMIsleBoss || null;
@@ -1136,6 +1267,22 @@
         g.drawImage(heroArt.frames[Math.floor(hero.t * 6) % 2], hx - 16 + rdx, hy - 28 + lift, 32, 32);
       } else { g.fillStyle = CLASS_COL[HERO.cls] || '#4f9a45'; g.beginPath(); g.arc(hx, hy - 8 + lift, HERO_R, 0, Math.PI * 2); g.fill(); }
     }
+    if (abil && ride && !hero.dead && (abil.ph === 'active' || abil.ph === 'wind')) drawAbility(hx, hy);
+  }
+  // XW1: the ability's look: a windup line ahead (charge), a ring for stomp / roar / the warm aura, a soft glow while the rest are on
+  function drawAbility(hx, hy) {
+    const d = abilDef;
+    g.save();
+    if (abil.ph === 'wind') {
+      g.strokeStyle = TG_COL; g.lineWidth = 3; g.globalAlpha = 0.8;
+      g.beginPath(); g.moveTo(hx, hy); g.lineTo(hx + hero.face.x * (d.dist || 3) * TILE, hy + hero.face.y * (d.dist || 3) * TILE); g.stroke();
+    } else {
+      const r = (d.r || d.warmR || 0) * TILE, k = d.dur > 0 ? clamp(abil.t / d.dur, 0, 1) : 0;
+      g.strokeStyle = d.kind === 'aura' ? '#f2b84b' : d.kind === 'swim' ? '#8ad0ff' : '#fff4a8';
+      g.globalAlpha = r ? 0.35 + 0.4 * k : 0.55; g.lineWidth = r ? 3 : 2;
+      g.beginPath(); g.arc(hx, hy - 6, r || 22, 0, Math.PI * 2); g.stroke();
+    }
+    g.restore();
   }
   const drawBuf = [];
   const TG_COL = '#ffb347', TG_BIG = '#ff6a3a';
@@ -1374,14 +1521,28 @@
     const p = spotNear();
     if (!p || hero.dead) return { ok: false, why: 'none' };
     const r = HS.gather(save.gather, ISLE, p, DAY);
-    if (r.ok) { invAdd(r.kind, 1); toast('You found ' + HS.resName(r.kind) + '. (' + r.total + ' in your log)'); dirty = true; persist(); }
+    if (r.ok) {
+      invAdd(r.kind, 1);
+      // XD1/XW1: a seeded bonus forage find from the pack's FINDS table (one MMRng draw per island, day and spot)
+      const f = CRAFT && CRAFT.bonusFind ? CRAFT.bonusFind(PACK_ID, RNG.create(ISLE + '|' + DAY + '|' + p.idx).next()) : '';
+      const fGot = f ? invAdd(f, 1) : 0;
+      r.find = fGot ? f : '';
+      toast('You found ' + HS.resName(r.kind) + '. (' + r.total + ' in your log)' + (fGot ? ' And a little ' + HS.resName(f) + '.' : ''));
+      logEvent('gather');
+      dirty = true; persist();
+    }
     else if (r.why === 'today') toast('Already gathered here today. It grows back tomorrow.');
     return r;
   }
 
   // ---------- X4: inventory, walk-over resource nodes, crafting, island unlocks ----------
   if (!save.inv || typeof save.inv !== 'object') save.inv = {};
-  const ITEM_NAME = { raft: 'Raft', rocket_core: 'Rocket core', feast: 'Feast', sleepy_herb: 'Sleepy herb', warm_cloak: 'Warm cloak', o2_tank: 'O2 tank' };
+  const ITEM_NAME = { raft: 'Raft', rocket_core: 'Rocket core', feast: 'Feast', sleepy_herb: 'Sleepy herb', warm_cloak: 'Warm cloak', o2_tank: 'O2 tank',
+    // XW1: the XD1 recipe outputs
+    heat_pack: 'Heat pack', glow_lamp: 'Glow lamp', bone_charm: 'Bone charm', honey_cake: 'Honey cake', sea_salt_snack: 'Sea salt snack', stone_bench: 'Stone bench',
+    berry_jam: 'Berry jam', signal_beacon: 'Signal beacon', trophy_tyrant: 'Tyrant trophy', trophy_hydra: 'Hydra trophy', trophy_dragon: 'Dragon trophy', trophy_titan: 'Titan trophy' };
+  // XW1: a recipe row's label: an alternative recipe names its build so the two rocket core rows read apart
+  const RECIPE_LABEL = { rocket_core_drift: 'Rocket core (drift build)', o2_tank_kelp: 'O2 tank (kelp build)' };
   const SADDLE_OF = {};
   CR.list().forEach((d) => { if (d.ride && d.ride.saddle) SADDLE_OF[d.ride.saddle] = d.name; });
   const itemName = (id) => (has(ITEM_NAME, id) ? ITEM_NAME[id] : has(SADDLE_OF, id) ? SADDLE_OF[id] + ' saddle' : HS.resName(id));
@@ -1479,7 +1640,10 @@
   let craftDirty = false;
   // AW2: b34b crafting icons by recipe id (MMIsleArt.iconUrl), each loaded once; until one loads (and always with ?art=0) the text label shows
   const craftIcon = {};
-  if (ART && CRAFT && window.MMIsleArt && window.MMIsleArt.iconUrl) CRAFT.IDS.forEach((id) => {
+  const RECIPE_IDS = CRAFT ? (CRAFT.ALL_IDS || CRAFT.IDS) : [];
+  const outOf = (id) => (CRAFT && CRAFT.outputOf ? CRAFT.outputOf(id) || id : id);
+  // icons are by output item (an alternative recipe shows its item's icon); each item is requested once
+  if (ART && CRAFT && window.MMIsleArt && window.MMIsleArt.iconUrl) RECIPE_IDS.map(outOf).filter((id, i, a) => a.indexOf(id) === i).forEach((id) => {
     const u = window.MMIsleArt.iconUrl(id);
     if (!u) return;
     const im = new Image();
@@ -1498,12 +1662,15 @@
     Object.keys(next).forEach((k) => { copy[k] = next[k]; });
     save.inv = copy;
     let opened = '';
-    const isle = has(UNLOCK_BY_ITEM, id) ? UNLOCK_BY_ITEM[id] : '';
+    // XW1: an alternative recipe (rocket_core_drift, o2_tank_kelp) makes the same item, so the unlock is keyed by the output item
+    const outItem = CRAFT.outputOf ? CRAFT.outputOf(id) : id;
+    const isle = has(UNLOCK_BY_ITEM, outItem) ? UNLOCK_BY_ITEM[outItem] : '';
     if (isle) { if (!Array.isArray(save.unlock)) save.unlock = ['jungle']; if (save.unlock.indexOf(isle) < 0) { save.unlock.push(isle); opened = isle; } }
     dirty = true; persist();
-    toast('Crafted ' + itemName(id).toLowerCase() + '.' + (opened ? ' ' + isleName(opened) + ' is on the sea chart now.' : ''));
+    toast('Crafted ' + itemName(outItem).toLowerCase() + '.' + (opened ? ' ' + isleName(opened) + ' is on the sea chart now.' : ''));
+    logEvent('craft');
     if (panelKind === 'craft') renderCraft(id);
-    return { ok: true, id: id, unlocked: opened, have: invCount(id) };
+    return { ok: true, id: id, item: outItem, unlocked: opened, have: invCount(outItem) };
   }
   // ---------- X5: environment meters (MMIsleEnv, behind its flags; ?env=0 turns them all off) ----------
   const ENV_ON = !!ENV && (ENVR.warmth || ENVR.oxygen || ENVR.gravity);
@@ -1533,7 +1700,7 @@
     if (ENVR.warmth) {
       const cloak = invCount('warm_cloak') > 0;
       const m0 = ENV.warmth(envS.warmT, sh, cloak);
-      envS.warmT = ENV.advance(envS.warmT, m0.rate, d, m0.max);
+      if (!(abilWarm && m0.rate > 0)) envS.warmT = ENV.advance(envS.warmT, m0.rate, d, m0.max); // XW1 warm aura: no drain while it lasts
       const m = ENV.warmth(envS.warmT, sh, cloak);
       envS.warm = m;
       if (m.warn && !envS.warnW && !sh) toast('Getting cold. Warm up by a hot spring or a campfire.');
@@ -1590,6 +1757,7 @@
     if (ride) dismount();
     persist();
     toast('Sailing to ' + isleName(id) + '...');
+    logEvent('sail');
     location.href = location.pathname + '?' + q.toString();
     return true;
   }
@@ -1602,7 +1770,7 @@
     if (!fresh.length) return [];
     const m = ISL.writeMedals(S, fresh);
     if (m) medals = m; else medals = medals.concat(fresh);
-    fresh.forEach((id) => medalLog.push(id));
+    fresh.forEach((id) => { medalLog.push(id); logEvent('medal'); });
     toast('Medal: ' + fresh.map((id) => ISL.MEDAL_NAMES[id] || id).join(', '));
     return fresh;
   }
@@ -1680,11 +1848,12 @@
         row.appendChild(b);
         const c = el('button', 'craft-it', 'Craft it'); c.type = 'button'; c.dataset.need = need || ''; c.dataset.isle = id;
         c.setAttribute('aria-label', 'Craft a ' + itemName(need).toLowerCase() + ' for ' + isleName(id));
-        c.addEventListener('click', () => openCraftFor(need));
+        c.dataset.recipe = craftItTarget(need);
+        c.addEventListener('click', () => openCraftFor(craftItTarget(need)));
         row.appendChild(c);
         panelBody.appendChild(row);
         // X7: the unlock cost in plain words, with what you have of each input
-        const rc = CRAFT && need ? CRAFT.get(need) : null;
+        const rc = CRAFT && need ? CRAFT.get(craftItTarget(need)) || CRAFT.get(need) : null;
         if (rc) {
           const cost = el('p', 'dest-cost', 'Unlock cost: 1 ' + itemName(need).toLowerCase() + ' = ' + Object.keys(rc.in).map((k) => HS.resName(k) + ' ' + invCount(k) + '/' + rc.in[k]).join(', '));
           cost.dataset.isle = id; cost.dataset.need = need;
@@ -1700,6 +1869,7 @@
       renderDecor('');
     } else {
       panelTitle.textContent = 'Island log';
+      logEvent('log');
       const gl = save.gather.log, keys = Object.keys(gl).sort();
       panelBody.appendChild(el('h3', '', 'Collection'));
       const ul = el('ul', 'log-list'); ul.id = 'log-collection';
@@ -1726,6 +1896,13 @@
     try { first.focus(); } catch (e) { /* ignore */ }
   }
   $('panel-close').addEventListener('click', closePanel);
+  // XW1: "Craft it" on a locked row points at a recipe a fresh save can reach (rocket_core_drift for mars, not the iron build that
+  // needs mars iron); the reachability walk is pure and runs once
+  const REACH = CRAFT && CRAFT.reachability && CRAFT.recipesFor ? CRAFT.reachability() : null;
+  function craftItTarget(need) {
+    if (!REACH || !need) return need;
+    return CRAFT.recipesFor(need).find((r) => REACH.recipes[r] !== null && !/^rocket_core$/.test(r)) || need;
+  }
   // open the craft panel and bring one recipe into view (the sea chart's "Craft it")
   function openCraftFor(id) {
     openPanel('craft');
@@ -1737,25 +1914,17 @@
     const b = row.querySelector('button.rc-btn');
     if (b && !b.disabled) { try { b.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
   }
-  // NAV slice D: the shared feedback widget (game/shared/mm-feedback.js, another slice) mounts in the island log when present.
-  // Loaded on demand the first time the log opens (a missing file is a harmless 404; ?test=1 pages skip the request unless
-  // ?feedback=1, so page tests stay console-clean until that file lands).
-  let fbTried = false;
+  // NAV slice D: the shared feedback widget (game/shared/mm-feedback.js) mounts in the island log. XW1: it is a static script tag in
+  // index.html now (the file is merged), so the old on-demand load and its ?test=1 gate are gone; without the module the log just has
+  // an empty host.
   function mountFeedback(host) {
-    const go = () => { if (window.MMFeedback && host.isConnected && !host.dataset.fb) { host.dataset.fb = '1'; try { window.MMFeedback.mount(host, { page: 'isles' }); } catch (e) { /* widget is optional */ } } };
-    if (window.MMFeedback) { go(); return; }
-    if (fbTried || (TEST && Q.get('feedback') !== '1')) return;
-    fbTried = true;
-    const sc = document.createElement('script');
-    sc.src = '../../shared/mm-feedback.js';
-    sc.async = true;
-    sc.onload = () => { if (panelKind === 'log') go(); };
-    sc.onerror = () => { /* not installed: nothing to show */ };
-    document.head.appendChild(sc);
+    if (window.MMFeedback && host.isConnected && !host.dataset.fb) { host.dataset.fb = '1'; try { window.MMFeedback.mount(host, { page: 'isles' }); } catch (e) { /* widget is optional */ } }
   }
   // the craft panel: your pack, then every recipe grouped (travel, saddles, supplies) with have / need per input and a Craft button.
   // Rebuilt only when it opens or the pack changes (never per frame); plain text nodes only.
-  const CRAFT_GROUPS = [['Travel', (id) => has(UNLOCK_BY_ITEM, id)], ['Saddles', (id) => /^saddle_/.test(id)], ['Supplies', (id) => !has(UNLOCK_BY_ITEM, id) && !/^saddle_/.test(id)]];
+  const isTrophy = (id) => { const r = CRAFT && CRAFT.get(id); return !!r && r.trophy === true; };
+  const CRAFT_GROUPS = [['Travel', (id) => has(UNLOCK_BY_ITEM, outOf(id))], ['Saddles', (id) => /^saddle_/.test(id)],
+    ['Supplies', (id) => !has(UNLOCK_BY_ITEM, outOf(id)) && !/^saddle_/.test(id) && !isTrophy(id)], ['Trophies', isTrophy]];
   function renderCraft(focusId) {
     const top = panel.scrollTop;
     while (panelBody.firstChild) panelBody.removeChild(panelBody.firstChild);
@@ -1770,17 +1939,17 @@
     panelBody.appendChild(ul);
     let focusBtn = null;
     CRAFT_GROUPS.forEach((gr) => {
-      const ids = CRAFT.IDS.filter(gr[1]);
+      const ids = RECIPE_IDS.filter(gr[1]);
       if (!ids.length) return;
       panelBody.appendChild(el('h3', '', gr[0]));
       ids.forEach((id) => {
-        const r = CRAFT.get(id), can = CRAFT.canCraft(save.inv, id), own = invCount(id);
-        const row = el('div', can.ok ? 'recipe ready' : 'recipe'); row.dataset.recipe = id;
+        const r = CRAFT.get(id), can = CRAFT.canCraft(save.inv, id), item = outOf(id), own = invCount(item);
+        const row = el('div', can.ok ? 'recipe ready' : 'recipe'); row.dataset.recipe = id; row.dataset.item = item;
         const info = el('div', 'rc-info');
-        const nm = el('div', 'rc-name', itemName(id) + (own ? ' (have ' + own + ')' : ''));
-        if (craftIcon[id]) { const im = document.createElement('img'); im.className = 'rc-ico'; im.alt = ''; im.width = 32; im.height = 32; im.src = craftIcon[id]; nm.insertBefore(im, nm.firstChild); }
+        const nm = el('div', 'rc-name', (has(RECIPE_LABEL, id) ? RECIPE_LABEL[id] : itemName(item)) + (own ? ' (have ' + own + ')' : ''));
+        if (craftIcon[item]) { const im = document.createElement('img'); im.className = 'rc-ico'; im.alt = ''; im.width = 32; im.height = 32; im.src = craftIcon[item]; nm.insertBefore(im, nm.firstChild); }
         info.appendChild(nm);
-        const isle = has(UNLOCK_BY_ITEM, id) ? UNLOCK_BY_ITEM[id] : '';
+        const isle = has(UNLOCK_BY_ITEM, item) ? UNLOCK_BY_ITEM[item] : '';
         info.appendChild(el('div', 'rc-note', isle ? (isleOpen(isle) ? isleName(isle) + ' is open' : 'opens ' + isleName(isle)) : r.note));
         const need = el('ul', 'rc-need');
         Object.keys(r.in).forEach((k) => {
@@ -1791,7 +1960,7 @@
         info.appendChild(need);
         row.appendChild(info);
         const b = el('button', 'rc-btn', 'Craft'); b.type = 'button'; b.dataset.recipe = id;
-        b.setAttribute('aria-label', 'Craft ' + itemName(id));
+        b.setAttribute('aria-label', 'Craft ' + (has(RECIPE_LABEL, id) ? RECIPE_LABEL[id] : itemName(item)));
         if (!can.ok) { b.disabled = true; b.setAttribute('aria-disabled', 'true'); }
         b.addEventListener('click', () => doCraft(id));
         row.appendChild(b);
@@ -1889,7 +2058,7 @@
   const hud = { hero: $('hud-hero'), isle: $('hud-isle'), info: $('hud-info'), ground: $('hud-ground'), fill: $('hp-fill'), hp: $('hp-text'), hint: $('hint'),
     bbName: $('bb-name'), bbPhase: $('bb-phase') };
   const bossBar = $('boss-bar'), bbFill = $('bb-fill');
-  const btn = { feed: $('btn-feed'), soothe: $('btn-soothe'), ride: $('btn-ride'), cmd: $('btn-cmd'), gather: $('btn-gather'), sail: $('btn-sail'), build: $('btn-build'), home: $('btn-home'), log: $('btn-log') };
+  const btn = { feed: $('btn-feed'), soothe: $('btn-soothe'), ride: $('btn-ride'), ability: $('btn-ability'), cmd: $('btn-cmd'), gather: $('btn-gather'), sail: $('btn-sail'), build: $('btn-build'), home: $('btn-home'), log: $('btn-log') };
   const lastBtn = {};
   const showBtn = (k, on) => { if (lastBtn[k] !== on) { lastBtn[k] = on; btn[k].hidden = !on; } };
   // ---- X1: b34 taming icons by id (game/assets/arcane/b34-taming-ui-items/manifest.json, 24x24, provisional). Each icon is one
@@ -1964,6 +2133,7 @@
     envHud();
     showBtn('soothe', TAME);
     showBtn('ride', MOUNTS && !!mountEnt);
+    abilityHud();
     showBtn('cmd', COMPANIONS && party.length > 0);
     if (party.length) showCmd(CMD_ORDER.indexOf(party[0].cs.mode) >= 0 ? party[0].cs.mode : 'follow');
     tameHud(ft);
@@ -1974,6 +2144,30 @@
     const h = hintText(ft);
     setText('hint', h);
     if (hud.hint.hidden !== !h) hud.hint.hidden = !h;
+  }
+  // XW1: the ability button (shown only while riding a mount with an ability) and the dive breath meter; DOM touched only on change
+  const abilLast = { on: false, txt: '', p: -1, cls: '', label: '', breath: null };
+  const abilEls = { txt: btn.ability.querySelector('.txt'), box: $('hud-abil'), breath: $('abil-breath').querySelector('.val') };
+  function abilityHud() {
+    const on = !!(ride && abil);
+    showBtn('ability', on);
+    if (abilLast.on !== on) { abilLast.on = on; document.body.classList.toggle('abil-on', on); } // phones lift the hint above the taller button column
+    let breath = '';
+    if (on) {
+      const ph = abil.ph, cool = ph === 'cool' || ph === 'wind';
+      const txt = abilDef.name;
+      let p = MA.ready(abil);
+      p = REDUCED ? Math.floor(p * 4) / 4 : Math.round(p * 20) / 20; // reduced motion: a static ring in quarter steps
+      if (ph === 'active') p = 1;
+      const cls = ph === 'active' ? 'on' : cool ? 'cool' : '';
+      const label = 'Mount ability: ' + abilDef.name + (ph === 'ready' ? ', ready' : ph === 'active' ? ', on now' : ph === 'wind' ? ', getting ready' : ', resting ' + Math.max(1, Math.ceil(abil.cd)) + ' s');
+      if (abilLast.txt !== txt) { abilLast.txt = txt; abilEls.txt.textContent = txt; }
+      if (abilLast.p !== p) { abilLast.p = p; btn.ability.style.setProperty('--p', String(p)); }
+      if (abilLast.cls !== cls) { abilLast.cls = cls; btn.ability.classList.toggle('on', cls === 'on'); btn.ability.classList.toggle('cool', cls === 'cool'); }
+      if (abilLast.label !== label) { abilLast.label = label; btn.ability.setAttribute('aria-label', label); btn.ability.title = abilDef.desc; }
+      if (abilDef.kind === 'swim' && (ph === 'active' || abil.breath < abilDef.breath)) breath = Math.ceil(abil.breath) + ' / ' + abilDef.breath + ' s';
+    }
+    if (abilLast.breath !== breath) { abilLast.breath = breath; abilEls.box.hidden = !breath; if (breath) abilEls.breath.textContent = breath; }
   }
   // the tame meters: trust (befriending progress) / torpor (knockout sleepiness) of the creature you are taming, bond of your lead
   // companion, and the saddle while riding (fitted = the crafted saddle is in your pack; bareback only with ?saddles=0)
@@ -2018,7 +2212,8 @@
     if (bh) return bh;
     if (nearDock() && !ride) return document.body.classList.contains('touch') ? 'The dock. Tap Sail to open the sea chart.' : 'The dock. Press T or Sail to open the sea chart.';
     if (spotNear()) return 'Something to gather here. Press G or Gather.';
-    if (ride) return 'Riding ' + (mountEnt ? mountEnt.nm || 'your mount' : 'your mount') + (CMP.canSwim(ride) && swimAt(tileOf(hero.x), tileOf(hero.y)) ? ' through the water' : '') + '. Press R or Ride to get off.';
+    if (ride) return 'Riding ' + (mountEnt ? mountEnt.nm || 'your mount' : 'your mount') + (CMP.canSwim(ride) && swimAt(tileOf(hero.x), tileOf(hero.y)) ? ' through the water' : '') + '. Press R or Ride to get off.' +
+      (abil ? (document.body.classList.contains('touch') ? ' Tap ' : ' F or ') + abilDef.name + ': ' + abilDef.desc.charAt(0).toLowerCase() + abilDef.desc.slice(1) : '');
     { const fx = tileOf(hero.x + hero.face.x * TILE * 1.2), fy = tileOf(hero.y + hero.face.y * TILE * 1.2); if (swimAt(fx, fy) && !solidAt(fx, fy)) return 'Open water. Ride a Tidesteed or Skimray to swim across.'; }
     if (!TAME) return '';
     if (ft) {
@@ -2070,7 +2265,7 @@
     if (KEYMAP[e.code]) { keys[KEYMAP[e.code]] = true; e.preventDefault(); }
     if (e.code === 'Space') { firing = true; aim = null; e.preventDefault(); }
     if (e.code === 'KeyM') toggleMap();
-    if (e.code === 'KeyF' && !e.repeat) feed();
+    if (e.code === 'KeyF' && !e.repeat) { if (ride && abil && !(TAME && feedTarget()) && !bossFeedable()) useAbility(); else feed(); } // XW1: F = the mount ability while riding (feeding still wins next to a creature)
     if (e.code === 'KeyQ' && !e.repeat) toggleSoothe();
     if (e.code === 'KeyR' && !e.repeat) toggleRide();
     if (e.code === 'KeyG' && !e.repeat) gatherNear();
@@ -2114,6 +2309,7 @@
   btn.feed.addEventListener('click', () => { feed(); });
   btn.soothe.addEventListener('click', () => { toggleSoothe(); });
   btn.ride.addEventListener('click', () => { toggleRide(); btn.ride.setAttribute('aria-pressed', String(!!ride)); });
+  btn.ability.addEventListener('click', () => { useAbility(); });
   btn.cmd.addEventListener('click', () => { cycleCommand(); });
   btn.gather.addEventListener('click', () => { gatherNear(); });
   btn.sail.addEventListener('click', () => { openPanel('sail'); });
@@ -2141,6 +2337,7 @@
     hero.t += dt; hero.iframes -= dt; hero.cd -= dt; hero.shotT -= dt;
     heroMoving = Math.hypot(mx, my) > 0.05;
     if (ride) CMP.rideStep(ride, dt);
+    if (ride && abil && !hero.dead) abilityStep(dt);
     if (!hero.dead) moveHero(mx, my, dt);
     revealFog();
     nodeTick();
@@ -2250,6 +2447,13 @@
       ride: () => toggleRide(),
       riding: () => (ride ? { id: ride.id, speed: ride.m.speed, lift: ride.m.lift, overlay: CMP.overlay(ride, false).dy, drawn: rideDrawn, saddle: saddleDrawn } : null),
       mountId: () => (mountEnt ? mountEnt.id : null),
+      // XW1
+      ability: () => (abil ? { id: abilDef.id, name: abilDef.name, kind: abilDef.kind, ph: abil.ph, cd: abil.cd, t: abil.t, breath: abil.breath, uses: abilUses, ready: MA.ready(abil),
+        speed: abilSpeed, warm: abilWarm, platform: abilPlatform, pass: NAMES.filter((n, i) => PASS_T[i] === 1), noSlow: NAMES.filter((n, i) => NOSLOW_T[i] === 1), on: ABIL } : { id: null, on: ABIL }),
+      useAbility: () => useAbility(),
+      abilityLog: () => ABIL_LOG.slice(),
+      events: () => EVENTS.map((e) => ({ t: e.t, kind: e.kind })),
+      stun: (id) => { const c = creatures.find((x) => x.uid === id); return c ? c.stun || 0 : null; },
       tames: () => JSON.parse(S.getItem(TAMES.KEY) || 'null'),
       tamesLive: () => JSON.parse(JSON.stringify(tames)),
       hurtLog: () => HURT_LOG.slice(),

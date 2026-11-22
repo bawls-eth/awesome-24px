@@ -110,3 +110,15 @@ body.mm-nav-on #hud { left: calc(8px + var(--mm-nav-reserve)); max-width: min(30
 .decor-recipe.ready .rc-name { color: #b9e08a; }
 .pen-list { columns: auto; }
 .panel .dest-cost { margin: -2px 0 8px; font-size: 12px; color: var(--dim); }
+/* XW1: the mount ability button (44 px, next to Ride) with a cooldown ring drawn by CSS from --p (0..1, set a few times a second) */
+#btn-ability { position: relative; gap: 6px; }
+#btn-ability .ring { width: 22px; height: 22px; flex: 0 0 22px; border-radius: 50%; border: 2px solid var(--line);
+  background: conic-gradient(#2f6b3a calc(var(--p, 1) * 360deg), rgba(12,20,15,.35) 0); }
+#btn-ability.cool { background: #c8b07a; }
+#btn-ability.cool .txt { color: #3a2c10; }
+#btn-ability.on { background: #b9e08a; }
+@media (prefers-reduced-motion: reduce) { #btn-ability, #btn-ability .ring { transition: none; animation: none; } }
+/* XW1: on phones the ability button makes the right-hand button column one row taller: the hint, the decor bar and the boss bar move up */
+body.touch.abil-on .hint, body.touch.abil-on .decor { bottom: calc(232px + env(safe-area-inset-bottom)); }
+body.touch.abil-on .boss-bar { bottom: calc(270px + env(safe-area-inset-bottom)); }
+#abil-breath .val { margin-left: 4px; }

@@ -11,6 +11,7 @@ const path = require('path');
 const { chromium } = require('playwright');
 const { check, done, blockDb } = require('./helpers');
 const CREATURES = require('../shared/mm-creatures.js');
+const CRAFT = require('../shared/mm-isle-craft.js');
 const ORIGIN = (process.env.BASE || 'http://localhost:8440/game/index.html').replace(/\/game\/index\.html.*$/, '');
 const PAGE = ORIGIN + '/game/games/isles/index.html';
 const TOWN = '{"realm":{"level":3},"name":"Bo"}';
@@ -118,7 +119,15 @@ const panelInfo = (page) => page.evaluate(() => {
   const cp = await panelInfo(gp);
   const inv = await ev(gp, (I) => I.inv());
   const raft = cp.rows.find((r) => r.id === 'raft');
-  check('1c: Craft opens a panel titled Craft that lists all 16 recipes', cp.open && cp.title === 'Craft' && cp.rows.length === 16, JSON.stringify(cp.rows.map((r) => r.id)));
+  // XW1: the panel lists every MMIsleCraft recipe (ALL_IDS: the 16 X2 recipes plus the XD1 alternatives, supplies and trophies)
+  check('1c: Craft opens a panel titled Craft that lists all ' + CRAFT.ALL_IDS.length + ' recipes (MMIsleCraft.ALL_IDS)', cp.open && cp.title === 'Craft' && cp.rows.length === CRAFT.ALL_IDS.length &&
+    CRAFT.ALL_IDS.every((id) => cp.rows.some((r) => r.id === id)), JSON.stringify(cp.rows.map((r) => r.id)));
+  const groups = await gp.evaluate(() => { const o = {}; let cur = ''; [...document.querySelectorAll('#panel-body > h3, #panel-body > .recipe')].forEach((n) => { if (n.tagName === 'H3') { cur = n.textContent; o[cur] = []; } else if (o[cur]) o[cur].push(n.dataset.recipe); }); return o; });
+  check('1c: XW1 groups: Travel holds both rocket core builds and the raft, Trophies holds the 4 trophies, Supplies the rest',
+    JSON.stringify(groups.Travel) === JSON.stringify(['raft', 'rocket_core', 'rocket_core_drift']) && JSON.stringify(groups.Trophies) === JSON.stringify(['trophy_tyrant', 'trophy_hydra', 'trophy_dragon', 'trophy_titan']) &&
+    groups.Supplies.indexOf('o2_tank_kelp') >= 0 && groups.Supplies.indexOf('heat_pack') >= 0 && groups.Saddles.length === 10, JSON.stringify(groups));
+  const drift = cp.rows.find((r) => r.id === 'rocket_core_drift');
+  check('1c: the drift build row names its build and its inputs (driftwood, frost crystal, amber, pearl)', drift && /^Rocket core \(drift build\)/.test(drift.name) && drift.need.map((n) => n.item).join() === 'driftwood,frost_crystal,amber,pearl', JSON.stringify(drift));
   check('1c: each recipe shows have / need per input from inv (raft: wood 4/4 ok, vine rope n/2 short)', cp.rows.every((r) => r.need.length >= 2 && r.need.every((n) => n.have === (inv[n.item] || 0) && new RegExp(n.have + '/' + n.need + '$').test(n.t))) &&
     raft && raft.need.find((n) => n.item === 'wood').t === 'wood ' + inv.wood + '/4' && raft.btn.dis === (inv.vine_rope < 2), JSON.stringify(raft));
   check('1c: every Craft button and Close are >= 44 px', cp.rows.every((r) => r.btn.w >= 44 && r.btn.h >= 44) && cp.close >= 44, JSON.stringify(cp.rows.map((r) => r.btn)));
@@ -215,6 +224,39 @@ const panelInfo = (page) => page.evaluate(() => {
   const towns = await Promise.all(all.map((o) => o.page.evaluate(() => localStorage.getItem('pixeltown-save-v1')).catch(() => TOWN)));
   check('3d: pixeltown-save-v1 is never written by the isles page', towns.every((t) => t === TOWN), JSON.stringify(towns));
   check('3d: 0 DB requests and no console errors overall', all.every((o) => o.db.count() === 0 && o.errors.length === 0), all.map((o) => o.errors.join(' | ')).filter(Boolean).join(' / '));
+
+  // ---- 5. XW1: alternative recipes unlock by their output item, the sea chart's Craft it, bonus finds ----
+  const V = await open(browser, DESK, '&isle=jungle&seed=123');
+  const vp = V.page;
+  const alt = await ev(vp, (I) => {
+    I.pause(true); I.god(true); I.clearCreatures();
+    I.give('driftwood', 3); I.give('frost_crystal', 2); I.give('amber', 2); I.give('pearl', 1);
+    const c = I.craft('rocket_core_drift');
+    I.give('kelp', 3); I.give('shell', 2); I.give('ice', 2);
+    const o = I.craft('o2_tank_kelp');
+    return { c, o, inv: I.inv(), unlock: I.unlock(), mars: I.isleOpen('mars') };
+  });
+  check('5a: rocket_core_drift makes a rocket core (not a "rocket_core_drift" item) and opens mars', alt.c.ok && alt.c.item === 'rocket_core' && alt.c.unlocked === 'mars' && alt.inv.rocket_core === 1 && !alt.inv.rocket_core_drift && alt.mars && alt.unlock.indexOf('mars') >= 0, JSON.stringify(alt));
+  check('5a: o2_tank_kelp makes an O2 tank and opens nothing', alt.o.ok && alt.o.item === 'o2_tank' && alt.o.unlocked === '' && alt.inv.o2_tank === 1, JSON.stringify(alt.o));
+  const toastAlt = await vp.evaluate(() => document.getElementById('toast').textContent);
+  check('5a: the toast names the item (O2 tank)', /o2 tank/i.test(toastAlt), toastAlt);
+  const W2 = await open(browser, DESK, '&isle=reef&seed=123&at=dock');
+  await ev(W2.page, (I) => { I.pause(true); I.god(true); I.clearCreatures(); const d = I.dock(); I.teleport(d.x, d.y); });
+  await W2.page.click('#btn-sail');
+  const ci = await W2.page.evaluate(() => { const b = document.querySelector('#panel-body button.craft-it[data-isle="mars"]'); const c = document.querySelector('#panel-body .dest-cost[data-isle="mars"]'); return b ? { need: b.dataset.need, recipe: b.dataset.recipe, cost: c && c.textContent } : null; });
+  check('5b: the locked Mars row\'s Craft it targets the reachable drift build (not the iron build), its cost lists the drift inputs', ci && ci.need === 'rocket_core' && ci.recipe === 'rocket_core_drift' && /driftwood/.test(ci.cost) && !/iron/.test(ci.cost), JSON.stringify(ci));
+  await W2.page.click('#panel-body button.craft-it[data-isle="mars"]');
+  const want = await W2.page.evaluate(() => { const r = document.querySelector('#panel-body .recipe.want'); return r && r.dataset.recipe; });
+  check('5b: tapping it opens the craft panel at rocket_core_drift', want === 'rocket_core_drift', String(want));
+  // bonus finds: each daily spot rolls one seeded MMRng draw (island | day | spot) through MMIsleCraft.bonusFind
+  const bf = async () => { const B = await open(browser, DESK, '&isle=home&seed=7&today=2026-12-03'); return ev(B.page, (I) => { I.pause(true); I.god(true); I.clearCreatures(); const out = [];
+    I.spots().forEach((s) => { const inv0 = I.inv(); I.teleport(s.x, s.y); const r = I.gather(); const inv1 = I.inv(); out.push({ idx: s.idx, ok: r.ok, kind: r.kind, find: r.find || '', inv0, inv1 }); }); return out; }); };
+  const b1 = await bf(), b2 = await bf();
+  const FIND = ['feather', 'honey', 'wool', 'driftwood', 'salt'];
+  check('5c: a daily gather sometimes brings a bonus find from the pack FINDS table, added to the pack', b1.length > 0 && b1.every((r) => r.ok) && b1.some((r) => r.find) &&
+    b1.every((r) => !r.find || (FIND.indexOf(r.find) >= 0 && (r.inv1[r.find] || 0) === (r.inv0[r.find] || 0) + 1 + (r.find === r.kind ? 1 : 0))), JSON.stringify(b1.map((r) => [r.idx, r.kind, r.find])));
+  check('5c: the bonus finds are seeded (same island, day and spots -> the same finds)', JSON.stringify(b1.map((r) => r.find)) === JSON.stringify(b2.map((r) => r.find)), JSON.stringify(b2.map((r) => r.find)));
+  check('5: 0 DB requests and no console errors', [V, W2].every((o) => o.db.count() === 0 && o.errors.length === 0), [V, W2].map((o) => o.errors.join(' | ')).join(' / '));
 
   // ---- 4. b31b strips: vinecoil + canopy_glider by id, code fallback with ?art=0 ----
   const A = await open(browser, DESK, '&seed=7');

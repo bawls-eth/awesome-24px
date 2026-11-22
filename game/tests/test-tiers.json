@@ -1170,5 +1170,9 @@
   "nav-town.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "isles-mount-ability.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

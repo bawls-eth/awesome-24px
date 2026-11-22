@@ -2,9 +2,8 @@
 // every input is picked up by walking over the page's own resource nodes (window.__isles test hooks), then crafted with the page's
 // craft action, travelling with the page's sea-chart travel. Chain: home (wood) -> jungle (vine rope, amber) -> raft (reef opens) ->
 // tundra (frost crystal) -> reef (driftwood, pearl) -> rocket_core_drift -> a rocket core in the pack.
-// The last hop (crafting a rocket core opens mars on the sea chart) is page wiring (games/isles/isles.js UNLOCK_BY_ITEM keyed by the
-// recipe's output item, slice XW1). Until that lands the test proves the chain up to the rocket core and prints an INFO line;
-// once the page opens mars it also sails there and checks the arrival. The pure walk is MMIsleCraft.reachability (node tests).
+// The last hop: crafting the rocket core opens mars on the sea chart (games/isles/isles.js keys UNLOCK_BY_ITEM by the recipe's output
+// item, slice XW1), and the page sails there from the fresh profile. The pure walk is MMIsleCraft.reachability (node tests).
 // Offline: blockDb on the context, 0 DB requests; pixeltown-save-v1 is never written.
 // Run: python3 -m http.server 9061 (repo root), then BASE=http://localhost:9061/game/index.html NODE_PATH=$(npm root -g) node game/tests/isle-reachability.test.js
 const { chromium } = require('playwright');
@@ -83,13 +82,11 @@ async function sail(page, id) {
   const saved = await page.evaluate((k) => JSON.parse(localStorage.getItem(k) || 'null'), ARCH);
   check('5: the rocket core and the reef unlock are in the saved archipelago key', saved && saved.inv.rocket_core === 1 && saved.unlock.indexOf('reef') >= 0, JSON.stringify(saved && { inv: saved.inv, unlock: saved.unlock }));
 
-  if (rc.mars) {
-    const m = await sail(page, 'mars');
-    check('6: mars opens from the crafted rocket core and the page sails there', m.isle === 'mars' && m.pack === 'mars', JSON.stringify(m));
-  } else {
-    console.log('INFO 6: the page does not yet open mars for a rocket core made by rocket_core_drift (UNLOCK_BY_ITEM is keyed by recipe id): XW1 wiring pending');
-    check('6: until the page wiring lands, mars stays honestly locked (no shortcut was used)', !(await ev(page, (I) => I.travel('mars'))) && !(await ev(page, (I) => I.isleOpen('mars'))));
-  }
+  check('5: crafting the drift rocket core opens mars on the page (UNLOCK_BY_ITEM keyed by the output item, XW1)', rc.c.unlocked === 'mars' && rc.mars, JSON.stringify(rc.c));
+  const m = await sail(page, 'mars');
+  check('6: the page sails to mars from the crafted rocket core (fresh profile, no shortcut)', m.isle === 'mars' && m.pack === 'mars', JSON.stringify(m));
+  const marsSave = await page.evaluate((k) => JSON.parse(localStorage.getItem(k) || 'null'), ARCH);
+  check('6: mars is in the saved unlock list and visited', marsSave && marsSave.unlock.indexOf('mars') >= 0 && (marsSave.visited || []).indexOf('mars') >= 0, JSON.stringify(marsSave && { unlock: marsSave.unlock, visited: marsSave.visited }));
 
   const town = await page.evaluate(() => localStorage.getItem('pixeltown-save-v1'));
   check('7: pixeltown-save-v1 is untouched', town === TOWN);
