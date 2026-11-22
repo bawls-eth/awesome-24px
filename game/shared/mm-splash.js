@@ -6,6 +6,7 @@
 //    (nearest first, at most min(spec.max, 6, out.length)); the primary target `skip` is excluded; `ok` is an optional mask
 //    (falsy entries are never picked: partners, drifters, critters, camp NPCs are simply not hostile). Returns the count.
 //    The distances (minus enemy radius) of the picked targets are left in MMSplash.dist[0..count).
+//  - fracInto(d, k, spec, out): frac() of d[0..k) into out[0..k) (P2: no boxed return per target); returns the count.
 //  - claim(bolt): true only the first time for a bolt (one splash per bolt), then sets bolt.sp = 1.
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -34,6 +35,13 @@
     const inner = clamp(num(s.inner, DEF_INNER), 0, 1) * r, edge = clamp(num(s.edge, DEF_EDGE), 0, 1);
     if (d <= inner || r <= inner) return 1;
     return 1 - (1 - edge) * (d - inner) / (r - inner);
+  }
+  // P2: frac() for the first k distances of `d` written into `out` (typed arrays), so the arena's splash loop never boxes a returned double. Returns k.
+  function fracInto(d, k, s, out) {
+    if (!d || !out) return 0;
+    const n = Math.min(Math.floor(num(k, 0)), d.length | 0, out.length | 0);
+    for (let j = 0; j < n; j++) out[j] = frac(d[j], s);
+    return n < 0 ? 0 : n;
   }
   // Damage one splashed enemy takes: hit already includes crit and status mods.
   function dmg(hit, d, s) {
@@ -116,5 +124,5 @@
     g.globalAlpha = reduced ? 0.8 : 0.6 + 0.4 * q; g.drawImage(sp.ring, x - r, y - r, r * 2, r * 2);
     g.globalAlpha = a0; return true;
   }
-  return { MAX_TARGETS, MAX_R, MAX_FRAC, DEF_INNER, DEF_EDGE, dist, clean, frac, dmg, pick, claim, SLAM, slamR, slamDmg, slamNew, slamStep, drawSlam };
+  return { MAX_TARGETS, MAX_R, MAX_FRAC, DEF_INNER, DEF_EDGE, dist, clean, frac, fracInto, dmg, pick, claim, SLAM, slamR, slamDmg, slamNew, slamStep, drawSlam };
 });

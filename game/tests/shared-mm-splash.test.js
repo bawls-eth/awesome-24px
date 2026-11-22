@@ -59,5 +59,8 @@ check('pick allocates nothing (heap delta < 64 KB over 1e5 calls)', (() => {
   const delta = process.memoryUsage().heapUsed - before;
   return t > 0 && delta < 64 * 1024;
 })());
+// P2: fracInto(d, k, spec, out) == frac() per entry (bit-identical), clamps k to both lengths, hostile input -> 0
+check('fracInto matches frac for every entry', (() => { const d = new Float32Array([0, 10, 14, 20, 27, 39.5, 40, 55]); const o = new Float64Array(8); const k = S.fracInto(d, 8, sp, o); for (let j = 0; j < 8; j++) if (o[j] !== S.frac(d[j], sp)) return false; return k === 8; })());
+check('fracInto clamps k to the array lengths and survives hostile input', S.fracInto(new Float32Array(3), 9, sp, new Float64Array(2)) === 2 && S.fracInto(null, 3, sp, new Float64Array(3)) === 0 && S.fracInto(new Float32Array(3), NaN, sp, new Float64Array(3)) === 0 && S.fracInto(new Float32Array(3), -4, sp, new Float64Array(3)) === 0);
 console.log(n - bad + '/' + n + ' passed');
 process.exit(bad ? 1 : 0);

@@ -1170,5 +1170,9 @@
   "nav-town.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "arena-p2-hotpath.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

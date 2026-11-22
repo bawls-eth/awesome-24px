@@ -7,8 +7,9 @@
 const { chromium } = require('playwright');
 const { check, done, blockDb } = require('./helpers');
 const ORIGIN = (process.env.BASE || 'http://localhost:8440/game/index.html').replace(/\/game\/index\.html.*$/, '');
-// The Forge ships behind the GW one-deploy gate (review F3: realm.js RM_FORGE_DEFAULT_ON = false), so these checks open it with ?forge=1;
-// the gate-closed default (and ?forge=0) is checked at the end: no forge, nothing creates dust / f, the saved ones are kept.
+// The Forge sat behind the GW one-deploy gate (review F3) until P2 flipped realm.js RM_FORGE_DEFAULT_ON to true. These checks still pass ?forge=1
+// (it forces the gate open); at the end the default (no flag) is checked ON, and ?forge=0 (the kill switch, even with ?forge=1) closed: no forge,
+// nothing creates dust / f, the saved ones are kept and an old forged f still counts.
 const MAZE0 = ORIGIN + '/game/games/mad-maze/index.html?test=1&offline=1';
 const MAZE = MAZE0 + '&forge=1';
 const SAVE = 'pixeltown-save-v1', MM = 'pixeltown-mm-v1', ACTIVE = 'pixeltown-mm-active-v1';
@@ -147,17 +148,28 @@ const click = (page, sel) => page.click(sel);
     check('?gear=0 ignores f (no splash) but keeps f and dust in the save', r.splash === 0 && r.f && r.f.id === 'blast' && r.dust === 9, JSON.stringify(r));
     await ctx.close(); }
 
-  // ---- GW gate closed (the default, and ?forge=0 even with ?forge=1): no forge UI, salvage / reforge refused, dust + f kept and f still counts ----
-  for (const q of ['', '&forge=0', '&forge=1&forge=0']) {
+  // ---- P2: the default (no ?forge) is now ON: the forge toggle and dust line show, salvage works, the saved f still counts ----
+  { const { ctx } = await ctxOf(browser); const p0 = await ctx.newPage();
+    await seed(p0, realm({ dust: 9, items: [{ n: 1, id: 'sparkwand', r: 1, t: 8, a: 12345, f: { id: 'blast', v: 5 } }, { n: 3, id: 'sparkwand', r: 0, t: 3 }], nextUid: 10 })); await p0.close();
+    const page = await go(ctx, errs, '', MAZE0);
+    const u = await ui(page);
+    const r = await page.evaluate(() => { const a = window.__mm.arena; const info = a.salvageInfo(3); const sal = a.salvage(3); a.onSave(a.save); const s = JSON.parse(localStorage.getItem('pixeltown-save-v1')).realm;
+      return { on: a.forgeOn(), gate: RM_FORGE_ON, def: RM_FORGE_DEFAULT_ON, info: !!info, sal, opts: Array.isArray(a.reforgeOptions(1)), splash: a.stats.splashR, f: s.items[0].f, dust: s.dust, n: s.items.length }; });
+    check('default (no ?forge): RM_FORGE_DEFAULT_ON is true, the gate is open and the forge toggle + dust line show', r.def === true && r.gate === true && r.on && u.toggles.length > 0 && /dust/.test(u.dust), JSON.stringify({ u, r }));
+    check('default (no ?forge): salvage pays dust and reforge lists options; the saved f is kept and counts', r.info && r.sal > 0 && r.dust === 9 + r.sal && r.n === 1 && r.opts && r.f && r.f.id === 'blast' && r.f.v === 5 && r.splash > 0, JSON.stringify(r));
+    await ctx.close(); }
+
+  // ---- GW gate closed (?forge=0, the kill switch, even with ?forge=1): no forge UI, salvage / reforge refused, dust + f kept and f still counts ----
+  for (const q of ['&forge=0', '&forge=1&forge=0']) {
     const { ctx } = await ctxOf(browser); const p0 = await ctx.newPage();
     await seed(p0, realm({ dust: 9, items: [{ n: 1, id: 'sparkwand', r: 1, t: 8, a: 12345, f: { id: 'blast', v: 5 } }, { n: 3, id: 'sparkwand', r: 0, t: 3 }], nextUid: 10 })); await p0.close();
     const page = await go(ctx, errs, q, MAZE0);
     const u = await ui(page);
     const r = await page.evaluate(() => { const a = window.__mm.arena; const sal = a.salvage(3); const rf = a.reforge(1, 'keen'); a.onSave(a.save); const s = JSON.parse(localStorage.getItem('pixeltown-save-v1')).realm;
       return { on: a.forgeOn(), gate: RM_FORGE_ON, def: RM_FORGE_DEFAULT_ON, sal, rf, opts: a.reforgeOptions(1), info: a.salvageInfo(3), splash: a.stats.splashR, f: s.items[0].f, dust: s.dust, n: s.items.length, hud: !!document.getElementById('realm-dust') }; });
-    check(`gate closed (${q || 'default'}): RM_FORGE_DEFAULT_ON is false, no forge toggle, no dust line, no HUD dust`, r.def === false && !r.gate && !r.on && u.toggles.length === 0 && u.dust === '' && !r.hud, JSON.stringify({ u, r }));
-    check(`gate closed (${q || 'default'}): salvage and reforge create nothing (no dust, no f), the items stay`, r.sal === 0 && r.rf === 0 && r.opts === null && r.info === null && r.dust === 9 && r.n === 2 && r.f && r.f.id === 'blast' && r.f.v === 5, JSON.stringify(r));
-    check(`gate closed (${q || 'default'}): an already forged f still counts (splash from forged blast)`, r.splash > 0, JSON.stringify(r));
+    check(`gate closed (${q}): RM_FORGE_DEFAULT_ON is true but ?forge=0 wins: no forge toggle, no dust line, no HUD dust`, r.def === true && !r.gate && !r.on && u.toggles.length === 0 && u.dust === '' && !r.hud, JSON.stringify({ u, r }));
+    check(`gate closed (${q}): salvage and reforge create nothing (no dust, no f), the items stay`, r.sal === 0 && r.rf === 0 && r.opts === null && r.info === null && r.dust === 9 && r.n === 2 && r.f && r.f.id === 'blast' && r.f.v === 5, JSON.stringify(r));
+    check(`gate closed (${q}): an already forged f still counts (splash from forged blast)`, r.splash > 0, JSON.stringify(r));
     await ctx.close();
   }
 

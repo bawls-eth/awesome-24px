@@ -2,7 +2,7 @@
 //  F1 a failed save write no longer deletes the item just picked up (bookkeeping = what storage really holds; failures are observable)
 //  F7 a resync without a write keeps an unsaved in-memory shard delta
 //  F2 a dungeon gear drop is ONE item with its tier from the start (no T0 copy in the pack, the stash find carries t)
-//  F3 the GW one-deploy gate (forge + sig drops default off) and the downgrade hint watching `dust` / `f`
+//  F3 the GW gate (forge + sig drops: default ON since P2, ?forge=0 off) and the downgrade hint watching `dust` / `f`
 //  F4 combine gives the survivor a fresh uid; the Town arena starts from the CURRENT stored realm (no duplicate from a stale copy)
 //  F5 the forge never offers an affix the item already has (the signature is passed through)
 //  F6 a forged affix stays inside the weapon power cap; F8 a merge cut to 24 never drops T12s before lower items; F10 no hint after a salvage
@@ -136,28 +136,22 @@ const stored = (page) => page.evaluate((k) => { try { return JSON.parse(localSto
     check('arena page: no DB traffic (blockDb)', A.db.attempts() === 0);
     await A.ctx.close(); }
 
-  // ================= F3: the GW gate is closed by default: no forge, no new `sig` on drops =================
-  { const A = await openMM(browser, WURL(''), realm({ items: [{ n: 1, id: 'sparkwand', r: 0, t: 3 }] }), {}, () => window.__mm && window.__mm.world && window.__mm.arena.active);
+  // ================= F3: the GW gate. P2 flipped RM_FORGE_DEFAULT_ON to true (the keep-dust/f/sig deploy is on master): the default and ?forge=1
+  // open it (forge on, T12 boss drops carry their signature); ?forge=0 is the kill switch (forge off, no new `sig` on any drop) =================
+  for (const [q, open] of [['', true], ['&forge=1', true], ['&forge=0', false], ['&forge=1&forge=0', false]]) {
+    const A = await openMM(browser, WURL(q), realm({ items: [{ n: 1, id: 'sparkwand', r: 0, t: 3 }] }), {}, () => window.__mm && window.__mm.world && window.__mm.arena.active);
     await calm(A.page);
     const g = await A.page.evaluate(() => {
-      const a = window.__mm.arena; const w = window.__mm.world; const out = { gate: RM_FORGE_ON, forge: a.forgeOn(), sigs: 0, t12: 0 };
-      // a forced T12 z3 boss bag: rollGear may give it a signature, the bag must not carry it while the gate is closed
+      const a = window.__mm.arena; const w = window.__mm.world; const out = { def: RM_FORGE_DEFAULT_ON, gate: RM_FORGE_ON, forge: a.forgeOn(), sigs: 0, t12: 0 };
+      // a forced T12 z3 boss bag: rollGear may give it a signature; the bag must not carry it while the gate is closed
       w.setDropAll(true);
       for (let i = 0; i < 40; i++) { a.bags.forEach((b) => { b.active = false; }); const got = w.testDrop({ zone: 3, tier: 3, boss: true, src: 'boss', bossId: 'void_maw' }, 'f3' + i); (got ? got.items : []).forEach((it) => { if (it.t === 12) out.t12++; if (it.sig) out.sigs++; }); a.bags.forEach((b) => { if (b.gear && b.gear.sig) out.sigs++; }); }
       w.setDropAll(false); return out;
     });
-    check('F3: default (no ?forge): the gate is closed, the forge is off, and no world drop carries a `sig`', g.gate === false && g.forge === false && g.sigs === 0, JSON.stringify(g));
-    errs.push(...A.errors); await A.ctx.close(); }
-  { const A = await openMM(browser, WURL('&forge=1'), realm({ items: [{ n: 1, id: 'sparkwand', r: 0, t: 3 }] }), {}, () => window.__mm && window.__mm.world && window.__mm.arena.active);
-    await calm(A.page);
-    const g = await A.page.evaluate(() => {
-      const a = window.__mm.arena; const w = window.__mm.world; const out = { gate: RM_FORGE_ON, forge: a.forgeOn(), sigs: 0, t12: 0 };
-      w.setDropAll(true);
-      for (let i = 0; i < 40; i++) { a.bags.forEach((b) => { b.active = false; }); const got = w.testDrop({ zone: 3, tier: 3, boss: true, src: 'boss', bossId: 'void_maw' }, 'f3' + i); (got ? got.items : []).forEach((it) => { if (it.t === 12) out.t12++; if (it.sig) out.sigs++; }); }
-      w.setDropAll(false); return out;
-    });
-    check('F3: ?forge=1 opens the gate: the forge is on and T12 boss drops carry their signature again', g.gate === true && g.forge === true && g.t12 > 0 && g.sigs > 0, JSON.stringify(g));
-    errs.push(...A.errors); await A.ctx.close(); }
+    if (open) check(`F3 (${q || 'default, no ?forge'}): the gate is open (default on), the forge is on and T12 boss drops carry their signature`, g.def === true && g.gate === true && g.forge === true && g.t12 > 0 && g.sigs > 0, JSON.stringify(g));
+    else check(`F3 (${q}): ?forge=0 closes the gate: the forge is off and no world drop carries a \`sig\``, g.def === true && g.gate === false && g.forge === false && g.t12 > 0 && g.sigs === 0, JSON.stringify(g));
+    errs.push(...A.errors); await A.ctx.close();
+  }
 
   // ================= F3 + F10: the downgrade hint watches dust / f, and a normal salvage never trips it =================
   const hintNow = async (rm, hint) => {
