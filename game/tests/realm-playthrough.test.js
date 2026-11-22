@@ -32,7 +32,7 @@ const vis = (page, sel) => page.evaluate((s) => { const e = document.querySelect
   await page.waitForTimeout(1200);
   await page.waitForFunction(() => window.__g && window.__g.scene.getScene('Town') && window.__g.scene.getScene('Town').localBody, null, { timeout: 30000 }); // slower on a remote origin
   const gate = await scene((s) => { s.localBody.setPosition(REALM_GATE_POS.x, REALM_GATE_POS.y + 30); s.interact(); return { open: s.realmMenuOpen, shown: !document.getElementById('realm-menu').classList.contains('hidden'), world: document.getElementById('realm-menu-madmaze').textContent, classic: document.getElementById('realm-menu-solo').textContent, href: document.getElementById('realm-menu-madmaze').dataset.href }; });
-  check('Town Gate menu opens offline with "Enter the Realm" as the main action and "Classic arena" kept', gate.open && gate.shown && /Enter the Realm/.test(gate.world) && /Classic arena/.test(gate.classic), JSON.stringify(gate));
+  check('Town Gate menu opens offline with "Enter the Realm" as the main action and the one-room arena kept (label "Quick arena (one room)", NAV-AUDIT 4.1)', gate.open && gate.shown && /Enter the Realm/.test(gate.world) && /Quick arena \(one room\)/.test(gate.classic), JSON.stringify(gate));
   check('Enter the Realm points at the overworld page', /games\/mad-maze\/index\.html\?mode=world$/.test(gate.href), gate.href);
 
   // ---- Classic arena still works and can be left ----

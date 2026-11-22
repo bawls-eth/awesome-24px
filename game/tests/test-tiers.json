@@ -1166,5 +1166,9 @@
   "shared-no-conflict-markers.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "nav-town.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }
