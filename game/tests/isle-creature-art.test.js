@@ -4,6 +4,8 @@
 // 3 a ridden Tusktop draws its own idle / move strip plus the separate saddle overlay; 4 the Fernjaw Tyrant's wind-up telegraph plays
 //   its roar strip, then the attack strip; 5 a fed Chompbill plays eat; 6 b33 props are baked into the chunks; 7 phone 390x844 renders
 //   the strips with no horizontal scroll; plus no per-frame allocation in the strip draw path, no console errors and 0 DB requests.
+// AW2: the jungle now preloads 8 species (+ the b32s stegolith; glimmerfrog gains its b31af sleep / eat): 129 strips; 3d a ridden
+// Stegolith (saddle_stegolith in the pack) draws its b32s body + saddle overlay; 5b a fed glimmerfrog plays its b31af eat strip.
 // Run: BASE=http://localhost:8841/game/index.html NODE_PATH=$(npm root -g) node game/tests/isle-creature-art.test.js
 const fs = require('fs');
 const path = require('path');
@@ -23,7 +25,7 @@ async function open(browser, opts, query, seed) {
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
   page.on('request', (r) => { const u = r.url(); if (!u.startsWith(ORIGIN + '/') && !u.startsWith('data:')) offsite.push(u); });
-  page.on('response', (r) => { const u = r.url(); if (/assets\/arcane\/b3[123][a-z]?-/.test(u)) pngs.push({ u: u.replace(/^.*\/arcane\//, ''), s: r.status() }); });
+  page.on('response', (r) => { const u = r.url(); if (/assets\/arcane\/b3[1-6][a-z]{0,2}-/.test(u)) pngs.push({ u: u.replace(/^.*\/arcane\//, ''), s: r.status() }); });
   await page.addInitScript((s) => {
     if (sessionStorage.seeded) return;
     sessionStorage.seeded = '1';
@@ -70,7 +72,8 @@ const PIXELS = (I, a) => {
   // ---- 1 desktop: PNG strips on ----
   const d = await open(browser, { viewport: { width: 1000, height: 700 } });
   const ready = await ev(d.page, (I) => I.stripsReady());
-  check('1a strips: all seven b31a / b31b / b32 species load (107 strips baked once)', ready.on && ready.kinds.length === 7 && ready.count === 107, JSON.stringify(ready));
+  check('1a strips: the eight jungle species load (b31a / b31af / b31b / b32 / b32s: 129 strips baked once), no meadow strips', ready.on && ready.kinds.length === 8 && ready.count === 129
+    && ready.kinds.indexOf('stegolith') >= 0 && ready.kinds.indexOf('puffwool') < 0, JSON.stringify(ready));
   await ev(d.page, SETUP);
   const px = await ev(d.page, PIXELS, { sp: 'fernraptor', pal: B31A_PAL });
   check('1b a Fern Raptor draws from its PNG strip (src png, fernraptor_* strip)', px.src === 'png' && /^fernraptor_(idle|move)_(down|up|right)$/.test(px.drawn), JSON.stringify(px));
@@ -122,8 +125,17 @@ const PIXELS = (I, a) => {
   const props = await ev(d.page, (I) => Promise.resolve(I.propsReady()).then((p) => ({ p, baked: I.propsBaked() })));
   check('6 all 8 b33 jungle props load and are baked into chunks (PNG props by id, the rest stay code props)',
     props.p.props.length === 8 && props.baked.png > 0, JSON.stringify(props));
-  check('1g desktop: no console errors, no offsite requests, 0 DB requests, every b31a / b32 / b33 PNG answered 200',
-    d.errors.length === 0 && d.offsite.length === 0 && d.db.count() === 0 && d.pngs.length >= 91 && d.pngs.every((p) => p.s === 200), d.errors.concat(d.offsite).join(' | ') + ' pngs ' + d.pngs.length);
+  // 5b a fed glimmerfrog plays its b31af eat strip (b31a had no eat for it)
+  const frog = await ev(d.page, (I) => {
+    I.clearCreatures(); const h = I.hero(); const uid = I.spawn('glimmerfrog', h.tx + 2, h.ty);
+    const c = () => I.creatures().find((x) => x.uid === uid);
+    for (let i = 0; i < 60 && c() && !c().calm; i++) { I.nextTo(uid, -40); I.step(0, 0, 0.2); }
+    const r = I.feed(); I.render(); return { r, now: c() ? c().drawn : null, src: c() ? c().src : null };
+  });
+  check('5b a fed Glimmerfrog plays its b31af eat strip', frog.r && frog.r.ok && frog.now === 'glimmerfrog_eat_down' && frog.src === 'png', JSON.stringify(frog));
+  check('1g desktop: no console errors, no offsite requests, 0 DB requests, every b31a / b31af / b32 / b32s / b33 PNG answered 200, no b35 / b36 on the jungle',
+    d.errors.length === 0 && d.offsite.length === 0 && d.db.count() === 0 && d.pngs.length >= 113 && d.pngs.every((p) => p.s === 200) && !d.pngs.some((p) => /^b3[56]-/.test(p.u))
+    && d.pngs.some((p) => /^b32s-stegolith\/creatures\/stegolith\/stegolith_saddle_move_right\.png$/.test(p.u)), d.errors.concat(d.offsite).join(' | ') + ' pngs ' + d.pngs.length);
 
   // ---- 2 ?art=0 falls back ----
   const z = await open(browser, { viewport: { width: 1000, height: 700 } }, '&art=0');
@@ -145,7 +157,7 @@ const PIXELS = (I, a) => {
   const miss = await ev(mp, (I) => Promise.resolve(I.stripsReady()).then((r) => { I.pause(true); I.god(true); I.clearCreatures(); const t = I.findTile('jungle_floor', 10); I.teleport(t.x, t.y);
     const a = I.spawn('glimmerfrog', t.x + 2, t.y), b = I.spawn('fernraptor', t.x - 2, t.y); I.step(0, 0, 0.05); I.render();
     const cs = I.creatures(); return { kinds: r.kinds, frog: cs.find((c) => c.uid === a).src, raptor: cs.find((c) => c.uid === b).src }; }));
-  check('2d a missing strip drops only that creature to the code bake', miss.kinds.indexOf('glimmerfrog') < 0 && miss.kinds.length === 6 && miss.frog === 'code' && miss.raptor === 'png' && merr.length === 0 && mdb.count() === 0, JSON.stringify(miss) + merr.join(' | '));
+  check('2d a missing strip drops only that creature to the code bake', miss.kinds.indexOf('glimmerfrog') < 0 && miss.kinds.length === 7 && miss.frog === 'code' && miss.raptor === 'png' && merr.length === 0 && mdb.count() === 0, JSON.stringify(miss) + merr.join(' | '));
   await mctx.close();
 
   // ---- 3 ridden tusktop uses the saddle overlay ----
@@ -160,6 +172,18 @@ const PIXELS = (I, a) => {
   check('3a a ridden Tusktop draws its own strip plus the saddle overlay while idle (down)', ride.on && ride.idle.drawn === 'tusktop_idle_down' && ride.idle.saddle === 'tusktop_saddle_idle_down', JSON.stringify(ride));
   check('3b moving right it switches to the move strip and the saddle_move overlay', mv && mv.drawn === 'tusktop_move_right' && mv.saddle === 'tusktop_saddle_move_right', JSON.stringify(mv));
   check('3c riding keeps the ride stats (x1.3, lift 18) and no errors / DB traffic', mv.speed === 1.3 && mv.lift === 18 && r.errors.length === 0 && r.db.count() === 0, r.errors.join(' | '));
+
+  // ---- 3d ridden stegolith (b32s): body strip + saddle overlay, the hero on the manifest seat ----
+  const STEG_SAVE = TUSK_SAVE.replace('tusktop', 'stegolith').replace('Tuskie', 'Steggy');
+  const ARCH = JSON.stringify({ v: 1, at: 'jungle', unlock: ['jungle'], isles: {}, home: { grid: [], stable: { slots: 12 } }, inv: { saddle_stegolith: 1 }, sg: 1 });
+  const sg = await open(browser, { viewport: { width: 800, height: 600 } }, '', { 'pixeltown-tames-v1': STEG_SAVE, 'pixeltown-archipelago-v1': ARCH });
+  const sride = await ev(sg.page, (I) => {
+    I.pause(true); I.god(true); I.clearCreatures(); const t = I.findTile('jungle_floor', 10); I.teleport(t.x, t.y);
+    const on = I.ride(); I.face(0, 1); I.render(); const idle = I.riding();
+    I.step(1, 0, 0.2); I.render(); return { on, idle, move: I.riding(), inv: I.inv() };
+  });
+  check('3d a ridden Stegolith draws its b32s strip + saddle overlay (idle down, then move right)', sride.on && sride.idle.drawn === 'stegolith_idle_down' && sride.idle.saddle === 'stegolith_saddle_idle_down'
+    && sride.move.drawn === 'stegolith_move_right' && sride.move.saddle === 'stegolith_saddle_move_right' && sride.move.speed === 1.15 && sg.errors.length === 0 && sg.db.count() === 0, JSON.stringify(sride) + sg.errors.join(' | '));
 
   // ---- 7 phone ----
   const p = await open(browser, { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
