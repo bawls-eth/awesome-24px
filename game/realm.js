@@ -2057,6 +2057,15 @@ class RealmArena {
 
   // ---------- input ----------
 
+  // The one-line control hint, built from the shared MMInput mapping so it never drifts from the keys (old aliases listed after).
+  _syncHelp() {
+    if (typeof document === 'undefined' || typeof MMInput === 'undefined') return;
+    const el = document.querySelector('#realm-help .key-hint'); if (!el) return;
+    const base = MMInput.hint({ only: ['move', 'primary', 'secondary', 'menu'], names: { primary: 'fire', secondary: 'ability 2', menu: 'menu' } });
+    el.textContent = base + ' · mouse aims · Q E R F abilities · B bag · K board';
+    el.dataset.mmInput = '1';
+  }
+
   _bindInput() {
     this.onKeyDown = (e) => {
       if (!this.active) return;
@@ -2067,6 +2076,22 @@ class RealmArena {
         if (this.paused || this.panel) this.setPaused(false); else this.leave();
         return;
       }
+      // Universal controls (shared/mm-input.js, design/CONTROLS.md): P = Menu/Pause, R = Restart where safe, Shift = E, Enter = Space (fire).
+      // Every old key keeps its meaning; these only add aliases.
+      const act = typeof MMInput !== 'undefined' && !MMInput.isTyping(e.target) ? MMInput.actionOf(e) : null;
+      if (act === 'restart' && !e.repeat && (this._deathShown || this.panel === 'menu')) { // R is Shield in play: restart only from the fall screen or the open menu
+        e.preventDefault();
+        if (this._deathShown) { const b = this._deathDom && this._deathDom.querySelector('button[data-d="again"]'); if (b) b.click(); } else if (this.canRestart()) this._menuConfirm(true);
+        return;
+      }
+      if (k === 'p' && act === 'menu') {
+        e.preventDefault(); if (e.repeat || this._deathShown) return;
+        if (this._menuMode) { this._escMenu(); return; }
+        if (this.paused || this.panel) this.setPaused(false); else this._panel('bp'); // like pad Start: P pauses, never leaves
+        return;
+      }
+      if (k === 'shift' && act === 'secondary') { if (!e.repeat) this.cast(1); return; } // Shift = E (second ability)
+      if (k === 'enter' && act === 'primary') { const onBtn = !!(e.target && e.target.closest && e.target.closest('button, a, summary')); if (!onBtn) this.keys[' '] = true; return; } // Enter fires like Space
       if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault();
       if (!e.repeat) {
         const ai = RM_ABILITIES.findIndex((a) => a.key === k);
@@ -2077,7 +2102,8 @@ class RealmArena {
       }
       this.keys[k] = true;
     };
-    this.onKeyUp = (e) => { this.keys[e.key.toLowerCase()] = false; };
+    this.onKeyUp = (e) => { const k = e.key.toLowerCase(); this.keys[k] = false; if (k === 'enter') this.keys[' '] = false; };
+    this._syncHelp();
     this.onBlur = () => { this.keys = {}; this.mouse.down = false; };
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('keyup', this.onKeyUp);
