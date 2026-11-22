@@ -57,6 +57,24 @@ check('backup round-trips the access prefs', (() => { const st = fake(); const r
 check('backup cleans the gift save', (() => { const st = fake(); const r = B.restore(st, key('pixeltown-gift-v1', '{"days":1e99,"evil":1}')); const v = JSON.parse(st._m['pixeltown-gift-v1']); return r.ok && v.days === 99999 && v.evil === undefined; })());
 check('a bundle without the new keys still restores', B.restore(fake(), key('pixeltown-jam-v1', '{}')).ok);
 
+// nav-e's Town Realm Gate pointer key is backed up (additive): known, exported raw, restored with only its two booleans.
+check('KNOWN includes pixeltown-gate-pointer-v1', B.KNOWN.indexOf('pixeltown-gate-pointer-v1') >= 0);
+check('gate pointer key is exported raw and round-trips', (() => {
+  const raw = '{"v":1,"dismissed":true,"reached":false}';
+  const b = B.bundle(fake({ 'pixeltown-gate-pointer-v1': raw, 'pixeltown-save-v1': '{"name":"Bo"}' }));
+  const d = fake();
+  const r = B.restore(d, JSON.parse(JSON.stringify(b)));
+  const got = JSON.parse(d._m['pixeltown-gate-pointer-v1']);
+  return b.keys['pixeltown-gate-pointer-v1'] === raw && r.ok && r.restored.indexOf('pixeltown-gate-pointer-v1') >= 0 && got.dismissed === true && got.reached === false && d._m['pixeltown-save-v1'] === '{"name":"Bo"}';
+})());
+check('gate pointer restore keeps only the known booleans; a non-object is refused', (() => {
+  const d = fake();
+  const r = B.restore(d, key('pixeltown-gate-pointer-v1', '{"dismissed":"yes","reached":true,"evil":{"x":1}}'));
+  const got = JSON.parse(d._m['pixeltown-gate-pointer-v1'] || 'null');
+  const bad = B.plan(key('pixeltown-gate-pointer-v1', '[1,2]'));
+  return r.ok && got && got.dismissed === false && got.reached === true && !('evil' in got) && !bad.ok;
+})());
+
 // A5: Biome Archipelago keys (tames, archipelago progress, isles medals)
 const ISLE_KEYS = ['pixeltown-tames-v1', 'pixeltown-archipelago-v1', 'pixeltown-medals-isles-v1'];
 ISLE_KEYS.forEach((k) => check('KNOWN includes ' + k, B.KNOWN.indexOf(k) >= 0));

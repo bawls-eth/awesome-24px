@@ -691,6 +691,12 @@ const DIG_HOLE_RADIUS = 36;
 // The Realm Gate: a swirling portal in the quiet north-west of the village leading to the bullet-hell Realm.
 const REALM_GATE_POS = { x: 750, y: 260 };
 const REALM_GATE_RADIUS = 70;
+// TN1: a signpost at the north-east end of the pond dock (drawDock, x 410-480, y 585-623) that sails to the Hearthvale
+// Isles page. Leaving is a plain same-tab location change, exactly like the "World map" link: no net.* call, no save key.
+const ISLES_SIGN_POS = { x: 505, y: 560 };
+const ISLES_SIGN_RADIUS = 46;
+const ISLES_SIGN_URL = 'games/isles/index.html?from=town';
+const DOCK_ARRIVAL_POS = { x: 452, y: 596 }; // on the dock planks; clear of the sign and Salty Mo's talk radius
 const DOOR_RADIUS = 34;
 const TURNIP_STALL_POS = { x: 1760, y: 760 };
 const TURNIP_STALL_RADIUS = 50;
@@ -1362,6 +1368,7 @@ class TownScene extends Phaser.Scene {
     this.drawPond();
     this.drawPondCats();
     this.drawDock();
+    this.drawIslesSign();
     this.drawBenches();
     this.drawEastPond();
     this.drawBridge();
@@ -1399,6 +1406,7 @@ class TownScene extends Phaser.Scene {
     this.drawFloraFauna();
 
     this.createLocalPlayer(this.selfData);
+    this.applyArrivalSpot();
     this.physics.add.collider(this.localBody, this.obstacles);
 
     this.allPlayers.forEach((p) => {
@@ -1501,6 +1509,7 @@ class TownScene extends Phaser.Scene {
     if (this.homeOpen && !this.isNearHome(HOME_RADIUS + 90)) this.closeHome();
     this.updateDigHoleHint();
     this.updateRealmGateHint();
+    this.updateIslesSignHint();
     this.updateGatePointer(time);
     this.updateFishHint();
     this.updateGiftHint();
@@ -2429,6 +2438,10 @@ class TownScene extends Phaser.Scene {
       this.openGuestbook();
       return;
     }
+    if (this.isNearIslesSign()) {
+      this.useIslesSign();
+      return;
+    }
     // Weeds are one-shot and tiny, so they win over wandering villagers / fish
     // shadows / wildlife that could otherwise shadow a weed beside them.
     const weed = this.findNearestWeed();
@@ -2827,7 +2840,65 @@ class TownScene extends Phaser.Scene {
   // and an ordinary fresh load (where it's already false, so this is a
   // no-op).
   setupPortalReopen() {
-    window.addEventListener('pageshow', () => { this.doorBusy = false; });
+    window.addEventListener('pageshow', () => { this.doorBusy = false; this.islesBusy = false; });
+  }
+
+  // ---------- TN1: dock signpost to the Hearthvale Isles (UI only) ----------
+  drawIslesSign() {
+    const { x, y } = ISLES_SIGN_POS;
+    const g = this.bakedGfx(y - 1);
+    g.fillStyle(0x000000, 0.2).fillEllipse(x, y + 14, 22, 6);
+    g.fillStyle(0x6b4a30, 1).fillRect(x - 2, y - 14, 4, 28);
+    g.fillStyle(0x8a5a3b, 1).fillRect(x - 26, y - 26, 48, 14);
+    g.fillTriangle(x + 22, y - 26, x + 30, y - 19, x + 22, y - 12);
+    g.lineStyle(1, 0x5a3a22, 1).strokeRect(x - 26, y - 26, 48, 14);
+    g.bake();
+    this.add.text(x + 2, y - 19, '⛵ Isles', { fontSize: '12px', color: '#fff8e1', stroke: '#3b2412', strokeThickness: 2 }).setOrigin(0.5).setDepth(y + 1);
+    this.add.text(x, y - 40, 'Hearthvale Isles →', { fontSize: '12px', color: '#ffffff', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setDepth(y + 1);
+    this.islesSignBtn = document.getElementById('isles-sign-hint');
+    if (this.islesSignBtn) this.islesSignBtn.addEventListener('click', () => { if (this.isNearIslesSign()) this.useIslesSign(); });
+  }
+
+  isNearIslesSign() {
+    return !!this.localBody && Math.hypot(this.localBody.x - ISLES_SIGN_POS.x, this.localBody.y - (ISLES_SIGN_POS.y + 14)) < ISLES_SIGN_RADIUS;
+  }
+
+  updateIslesSignHint() {
+    const btn = this.islesSignBtn;
+    if (!btn) return;
+    const show = !this.inUnderground && !this.inRealm && !this.buildMode && this.isNearIslesSign();
+    if (btn.classList.contains('hidden') === show) btn.classList.toggle('hidden', !show);
+  }
+
+  // Same path as the "World map" link: a same-tab location change to a page of this site. Nothing is written.
+  useIslesSign() {
+    if (this.islesBusy || this.inUnderground || this.inRealm) return;
+    this.islesBusy = true;
+    window.location.href = ISLES_SIGN_URL;
+  }
+
+  // Arrival spot (UI only, after the normal spawn): `?from=isles`, or a previous place of 'isles' in pixeltown-nav-v1
+  // when the page was actually reached from the isles page, puts the player on the dock; `?from=realm` puts them at the
+  // Realm Gate exit spot. Anything else keeps the default spawn. Read-only: never writes storage or the database.
+  arrivalSpot() {
+    let from = null;
+    try { from = new URLSearchParams(location.search).get('from'); } catch (e) { from = null; }
+    if (from === 'isles') return DOCK_ARRIVAL_POS;
+    if (from === 'realm') return { x: REALM_GATE_POS.x, y: REALM_GATE_POS.y + 116 };
+    try {
+      const last = typeof MMNav !== 'undefined' ? MMNav.last() : null;
+      if (!from && last && last.id === 'isles' && /\/games\/isles\//.test(document.referrer || '')) return DOCK_ARRIVAL_POS;
+    } catch (e) { /* nav state unreadable: default spawn */ }
+    return null;
+  }
+
+  applyArrivalSpot() {
+    const at = this.arrivalSpot();
+    if (!at) return;
+    this.localBody.setPosition(at.x, at.y);
+    this.localVisual.setPosition(at.x, at.y);
+    this.localShadow.setPosition(at.x, at.y + 9);
+    this.localNameText.setPosition(at.x, at.y - 22);
   }
 
   updateDigHoleHint() {
@@ -7070,6 +7141,7 @@ class TownScene extends Phaser.Scene {
     const keepClear = [
       ...FLOWER_SPOTS, CAMPFIRE_POS, STATUE_POS, MAILBOX_POS, BUGOFF_SIGN_POS, HOME_POS, GUESTBOOK_POS, WORKBENCH_POS,
       POLYROLL_POS, TURNIP_STALL_POS, ABLE_SISTERS_POS, MERCHANT_POS, DIG_HOLE_POS, FISH_TOURNAMENT_SIGN_POS, REALM_GATE_POS,
+      ISLES_SIGN_POS,
     ];
     const spots = [];
     for (let i = 0; i < WEED_COUNT; i++) {
@@ -7959,7 +8031,7 @@ class TownScene extends Phaser.Scene {
       // (chat bar, joystick, action buttons, hint pills).
       const pr = panel.getBoundingClientRect();
       let limit = window.innerHeight;
-      ['chat-panel', 'joystick', 'action-buttons', 'fish-hint-btn', 'gift-hint-btn', 'dig-hole-hint'].forEach((id) => {
+      ['chat-panel', 'joystick', 'action-buttons', 'fish-hint-btn', 'gift-hint-btn', 'dig-hole-hint', 'isles-sign-hint'].forEach((id) => {
         const el = document.getElementById(id);
         if (!el || el.classList.contains('hidden') || getComputedStyle(el).display === 'none') return;
         const r = el.getBoundingClientRect();
@@ -7990,7 +8062,7 @@ class TownScene extends Phaser.Scene {
     if (cap) obs.observe(cap, { childList: true, characterData: true, subtree: true });
     // Hint pills (fish / gift / dig hole) appear and disappear: refit so an expanded panel never sits on one.
     const hintObs = new MutationObserver(fit);
-    ['fish-hint-btn', 'gift-hint-btn', 'dig-hole-hint'].forEach((id) => { const el = document.getElementById(id); if (el) hintObs.observe(el, { attributes: true, attributeFilter: ['class'] }); });
+    ['fish-hint-btn', 'gift-hint-btn', 'dig-hole-hint', 'isles-sign-hint'].forEach((id) => { const el = document.getElementById(id); if (el) hintObs.observe(el, { attributes: true, attributeFilter: ['class'] }); });
     // Expanded content grows/shrinks (e.g. settings section): refit.
     if (window.ResizeObserver && document.getElementById('chat-panel')) new ResizeObserver(fit).observe(document.getElementById('chat-panel'));
     apply();

@@ -829,6 +829,28 @@ body.touch-device #dig-hole-hint, body.touch-device #realm-gate-hint { bottom: c
 
 #realm-gate-hint.hidden { display: none; }
 
+/* TN1: the dock signpost prompt is a real button (tap or click it, or press E / A near the sign). */
+#isles-sign-hint {
+  position: fixed;
+  bottom: 172px;
+  left: 50%;
+  transform: translateX(-50%);
+  min-height: 44px;
+  background: var(--ac-sky-deep);
+  border: 2px solid var(--ac-leaf);
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--ac-text-on-accent);
+  z-index: 15;
+  white-space: nowrap;
+  cursor: pointer;
+}
+#isles-sign-hint.hidden { display: none; }
+/* Phone: the free row between the chat bar and the joystick (the fish / gift row never shows at the dock sign). */
+body.touch-device #isles-sign-hint { bottom: calc(160px + env(safe-area-inset-bottom, 0px)); font-size: 13px; padding: 7px 14px; }
+
 #fish-hint-btn {
   position: fixed;
   bottom: 220px;
