@@ -44,8 +44,11 @@ const box = (p, sel) => p.evaluate((s) => { const e = document.querySelector(s);
   check('tapping quick play starts that chart', await p.evaluate(() => window.__jam.mode === 'play' && window.__jam.chart.song === 'warm-embers' && document.getElementById('hud-song').textContent.includes('Easy')));
 
   // ---- combo milestones, sparks and the combo-ended notice ----
+  const top0 = (await box(p, '#game')).y;
   const n10 = await p.evaluate(() => window.__jam.chart.notes[9].t);
   await drive(p, [], n10 + 5);
+  const top1 = (await box(p, '#game')).y;
+  check('lanes do not jump when the timing pill appears (layout reserved)', top0 === top1 && (await p.evaluate(() => document.getElementById('hud-timing').textContent.length > 0)), top0 + ' vs ' + top1);
   const m1 = await p.evaluate(() => ({ ms: window.__jam.milestones, banner: window.__jam.banner, sparks: window.__jam.sparks, combo: window.__jam.run.combo }));
   check('10 on-time hits fire the 10-combo milestone with a banner', m1.combo === 10 && m1.ms.includes(10) && m1.banner === '10 combo!', JSON.stringify(m1));
   check('perfect hits throw sparks (motion allowed)', m1.sparks > 0, JSON.stringify(m1));
@@ -63,6 +66,9 @@ const box = (p, sel) => p.evaluate((s) => { const e = document.querySelector(s);
   await p.tap('#restart');
   const rs = await p.evaluate(() => ({ mode: window.__jam.mode, now: window.__jam.now, run: window.__jam.run, ms: window.__jam.milestones, paused: window.__jam.paused, song: window.__jam.chart.song, overlay: document.getElementById('overlay').hidden }));
   check('Restart starts the same chart from the top with a fresh run', rs.mode === 'play' && rs.now === 0 && !rs.paused && rs.overlay && rs.song === 'warm-embers' && rs.run.score === 0 && rs.run.combo === 0 && rs.ms.length === 0, JSON.stringify(rs));
+  await p.evaluate(() => { const J = window.__jam, n = J.chart.notes[0]; J.at(n.t + 33); J.press(n.lane); });
+  const top2 = (await box(p, '#game')).y, tt = await p.evaluate(() => document.getElementById('hud-timing').textContent);
+  check('a long timing text ("Perfect late 33 ms") still leaves the lanes in place', top2 === top0 && tt === 'Perfect late 33 ms', top0 + ' vs ' + top2 + ' ' + tt);
   await p.evaluate(() => window.__jam.menu());
 
   // ---- results: Play again near the top, next goal, personal best, R restarts ----
