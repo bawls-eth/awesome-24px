@@ -335,6 +335,7 @@ function rmCleanSave(s) {
 // The arena keeps `realm` in memory and used to write it back whole, so two tabs clobbered each other.
 // Now every save re-reads pixeltown-save-v1, merges (never loses progress) and writes the merge.
 const RM_SAVE_KEY = 'pixeltown-save-v1';
+const RM_SAVE_SOON_MS = 250; // review F16: coalesced persist delay for kill-path saves (saveSoon)
 const RM_TILE = 40; // wall-grid tile size in logical px
 // GH downgrade hint record (pixeltown-gearhint-v1, owned by realm-world.js: { n, shown, d?, f? }). A deliberate removal in THIS tab (salvage, sell,
 // combine) rewrites the remembered counts so the hint never reads a normal salvage as an old-tab reset (review F10). Only an existing record is updated.
@@ -402,7 +403,7 @@ function rmMergeSave(mine, stored, opts) {
   }
   out.items = items; out.nextUid = next; out.eq = eq; // equipment is per-tab
   if (a.gv || b.gv) out.gv = 1;
-  if (a.dust !== undefined || b.dust !== undefined) { const ad = a.dust || 0, bd = b.dust || 0; const bs = Number.isFinite(opts.baseDust) ? opts.baseDust : ad; out.dust = Math.max(0, bd + (ad - bs)); } // three-way like shards
+  if (a.dust !== undefined || b.dust !== undefined) { const ad = a.dust || 0; const bs = Number.isFinite(opts.baseDust) ? opts.baseDust : ad; const bd = b.dust !== undefined ? b.dust : (a.dust !== undefined ? bs : 0); out.dust = Math.max(0, bd + (ad - bs)); } // three-way like shards. SV1: a stored save WITHOUT the key was rewritten by a pre-535faf6 tab (a modern cleaner keeps `dust: 0`), so it says nothing about dust: read it as unchanged (the base), never as 0
   if (a.gp || b.gp) { const ga = a.gp || { b: 0, d: 0 }, gb = b.gp || { b: 0, d: 0 }; const bs = opts.baseGp; // storage's gp at this tab's last sync: three-way like shards, so an in-tab reset / increment survives while another tab's change is added
     out.gp = bs ? { b: Math.max(0, gb.b + (ga.b - bs.b)), d: Math.max(0, gb.d + (ga.d - bs.d)) } : { b: Math.max(ga.b, gb.b), d: Math.max(ga.d, gb.d) }; }
   return rmCleanSave(out);
@@ -412,7 +413,7 @@ class RealmArena {
   constructor({ container, save, onSave, onExit, seed }) {
     this.container = container;
     this._onSave = onSave || (() => {});
-    this.onSave = (sv) => this._persist(sv); // every save goes through the cross-tab merge first
+    this.onSave = (sv) => { this._saveDirty = false; if (this._saveTimer) { clearTimeout(this._saveTimer); this._saveTimer = 0; } this.saveWrites = (this.saveWrites || 0) + 1; return this._persist(sv); }; // every save goes through the cross-tab merge first (and covers a pending saveSoon, review F16)
     this.onExit = onExit || (() => {});
     this.save = rmCleanSave(save);
     this._baseShards = this.save.shards; this._baseDust = this.save.dust || 0; this._baseGp = rmGpOf(this.save.gp); this._known = new Set(this.save.items.map((it) => it.n)); this.saveOk = true; this.saveFails = 0; this.walls = null; this.extraGuard = 0;
@@ -466,6 +467,28 @@ class RealmArena {
     this._bindInput();
     this._resize();
     if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('storage', (e) => { if (!e.key || e.key === RM_SAVE_KEY) this.resyncSave(); });
+    // Review F16: hot paths (a kill, a partner's kill reward) mark the save dirty (saveSoon) and ONE coalesced persist runs RM_SAVE_SOON_MS later; every
+    // explicit onSave (pickup, death, wave, shop, exit ...) persists at once and clears the pending one. Flushed on stop (exit / death screen leave),
+    // menu open, `visibilitychange: hidden` and `pagehide`, so closing or hiding the tab never loses a kill's shards.
+    this._saveDirty = false; this._saveTimer = 0; this.saveWrites = 0; this.saveSoonCalls = 0; // test hooks: persists run / saveSoon requests
+    this._onHide = () => { this.flushSave(); };
+    this._onVis = () => { if (typeof document !== 'undefined' && document.visibilityState === 'hidden') this.flushSave(); };
+    if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('pagehide', this._onHide);
+    if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('visibilitychange', this._onVis);
+  }
+
+  // Review F16: request a persist soon (coalesced: at most one per RM_SAVE_SOON_MS however many kills land in a frame). Returns nothing; flushSave() forces it.
+  saveSoon() {
+    this.saveSoonCalls++;
+    this._saveDirty = true;
+    if (this._saveTimer) return;
+    this._saveTimer = setTimeout(() => { this._saveTimer = 0; this.flushSave(); }, RM_SAVE_SOON_MS);
+  }
+  // Persist now if a saveSoon is pending. Returns the persist result, or true when nothing was pending.
+  flushSave() {
+    if (this._saveTimer) { clearTimeout(this._saveTimer); this._saveTimer = 0; }
+    if (!this._saveDirty) return true;
+    return this.onSave(this.save);
   }
 
   // Replace the in-memory save with `m` in place (callers hold references to this.save) and refresh what depends on it.
@@ -577,7 +600,7 @@ class RealmArena {
     else if (r.boss) { sv.kb.boss += 1; sv.kills += 1; if (r.tenths && (!sv.bossBestT || r.tenths < sv.bossBestT)) sv.bossBestT = r.tenths; } else if (Object.prototype.hasOwnProperty.call(sv.kb, r.t) && typeof sv.kb[r.t] === 'number') { sv.kb[r.t] += 1; sv.kills += 1; }
     this._floatText(this.player.x, this.player.y - 36, `+${gain} 💎`, '#8fe9ff');
     this._gainXp(Math.max(1, Math.round(r.xp * this.stats.xp)));
-    this.onSave(sv);
+    this.saveSoon(); // review F16: one coalesced persist for a burst of partner kills
   }
 
   // ---------- pools ----------
@@ -2206,6 +2229,7 @@ class RealmArena {
   // Everything a fresh run needs (shared by start() and restart()); never touches the loop or the save.
   _beginRun() {
     [this.pBullets, this.eBullets, this.enemies, this._edGhosts || [], this.particles, this.texts, this.bags, this.drifters, this.hazards, this._sparks || [], this._fxPool || []].forEach((pool) => pool.forEach((o) => { o.active = false; }));
+    this.bags.forEach((b) => { b.gear = null; }); // review F9
     this._wireRefresh(); this._padPrev.fill(false); this._wq.length = 0;
     this.keys = {}; this.mouse.down = false; this.moveVec.x = 0; this.moveVec.y = 0; this.aimVec.on = false; this.aimVec.x = 0; this.aimVec.y = 0; // no stuck input from the last run
     const p = this.player;
@@ -2235,6 +2259,7 @@ class RealmArena {
   }
 
   stop() {
+    this.flushSave(); // review F16: a pending kill save is written before the run ends (exit, leave, team end)
     this.active = false; this._focusHud(true);
     if (this.team) { this.team.close(); this.team = null; this.role = 'solo'; }
     const pe = document.getElementById('realm-partner'); if (pe) pe.classList.add('hidden');
@@ -2249,6 +2274,8 @@ class RealmArena {
 
   destroy() {
     this.stop();
+    if (typeof window !== 'undefined' && window.removeEventListener) window.removeEventListener('pagehide', this._onHide);
+    if (typeof document !== 'undefined' && document.removeEventListener) document.removeEventListener('visibilitychange', this._onVis);
     window.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('keyup', this.onKeyUp);
     window.removeEventListener('blur', this.onBlur);
@@ -2949,7 +2976,7 @@ class RealmArena {
     this._gainXp(Math.round(RM_XP[e.type] * (1 + 0.1 * Math.max(0, this.run.wave - 1)) * (e.xpMul || 1) * this.stats.xp));
     if (this.mode !== 'world' && this.rng() < RM_BAG_CHANCE) this.dropBag(e.x, e.y, this.rollRarity()); // a world rolls its own zone drops (onEnemyKilled)
     this.shake = Math.max(this.shake, 3);
-    this.onSave(this.save);
+    this.saveSoon(); // review F16: a splash that kills 8 in one frame persists once (a bag pickup, wave or death that follows persists at once anyway)
     if (this.dungeon) this.dungeon.onKill(e);
     if (this.onEnemyKilled) this.onEnemyKilled(e);
   }
@@ -3204,7 +3231,7 @@ class RealmArena {
     while (sv.level < RM_MAX_LEVEL && sv.xp >= rmXpNeeded(sv.level)) { sv.xp -= rmXpNeeded(sv.level); sv.level += 1; up = true; }
     if (sv.level >= RM_MAX_LEVEL) sv.xp = 0;
     if (up) this._levelUp();
-    this.onSave(this.save);
+    if (up) this.onSave(this.save); else this.saveSoon(); // review F16: plain xp rides the coalesced kill save; a level-up persists at once
     this._syncHud();
   }
 
@@ -3229,10 +3256,11 @@ class RealmArena {
     return r < rare ? 2 : r < rare + unc ? 1 : 0;
   }
 
-  dropBag(x, y, rarity, itemId, worldLoot) {
+  // gear (optional): { t, a?, sig? } of a tiered drop; null otherwise (pooled bags are reused, so a classic bag never keeps an earlier drop's tier, review F9).
+  dropBag(x, y, rarity, itemId, worldLoot, gear) {
     const b = this._take(this.bags);
     if (!b) return null;
-    b.active = true; b.x = x; b.y = y; b.t = 0; b.r = rarity;
+    b.active = true; b.x = x; b.y = y; b.t = 0; b.r = rarity; b.gear = gear && typeof gear === 'object' && !Array.isArray(gear) ? gear : null;
     b.tier = worldLoot?.tierIndex;
     b.lifetime = worldLoot?.lifetime || Infinity;
     b.id = this._wpnDrop(itemId || RM_BASE_ITEMS[Math.floor(this.rng() * RM_BASE_ITEMS.length)].id, worldLoot);
@@ -3263,8 +3291,11 @@ class RealmArena {
     this._snd('pickup');
     const sv = this.save; const def = RM_ITEM_BY_ID[id]; const rar = RM_RARITIES[rarity];
     if (sv.items.length >= RM_BACKPACK) {
-      sv.shards += rar.sell;
-      this._floatText(this.player.x, this.player.y - 24, `sold ${def.name} +${rar.sell} 💎`, rar.color);
+      // review F11: a full pack sells a tiered drop at its tiered value (rmSellValue, the same price the backpack's Sell button pays), never the classic one
+      const gt = gear && typeof gear === 'object' && !Array.isArray(gear) ? rmCleanGear(id, rarity, gear).t : 0;
+      const val = rmSellValue(gt ? { r: rarity, t: gt } : { r: rarity });
+      sv.shards += val; this.lastFullSale = { id, r: rarity, t: gt, shards: val }; // test hook
+      this._floatText(this.player.x, this.player.y - 24, `sold ${def.name} +${val} 💎`, rar.color);
     } else {
       const ent = { n: sv.nextUid++, id, r: rarity };
       if (gear && typeof gear === 'object' && !Array.isArray(gear)) {
@@ -3286,14 +3317,16 @@ class RealmArena {
       const b = this.bags[i];
       if (!b.active) continue;
       b.t += dt;
-      if (b.t >= b.lifetime) { b.active = false; continue; }
+      if (b.t >= b.lifetime) { b.active = false; b.gear = null; continue; } // review F9: an inactive bag never keeps its tier
       b.x += b.vx * dt; b.y += b.vy * dt; b.vx *= 0.93; b.vy *= 0.93;
       b.x = Math.max(14, Math.min(this._bw() - 14, b.x)); b.y = Math.max(14, Math.min(this._bh() - 14, b.y));
       const dx = p.x - b.x; const dy = p.y - b.y; const d = Math.hypot(dx, dy) || 1;
       if (b.t > 0.4 && d < 110) { const k = (230 * dt) / d; b.x += dx * k; b.y += dy * k; } // bags drift toward you
-      if (b.t > 0.25 && d < 20 && !this.down) { b.active = false; this.collectItem(b.id, b.r); continue; }
+      if (b.t > 0.25 && d < 20 && !this.down) { const g = b.gear; b.active = false; this.collectItem(b.id, b.r, g || undefined); b.gear = null; continue; } // the tier goes INTO the pickup (a full pack sells it at its tiered value, review F11)
       const q = this.team && this.role === 'host' && this.team.partner && this.team.partner.ready && !this.team.partner.down ? this.team.partner : null;
-      if (q && b.t > 0.25 && !RM_ARM_ID.test(b.id) && Math.hypot(q.x - b.x, q.y - b.y) < 20) { b.active = false; this.team.ev('loot', [b.id, b.r], 1); } // `loot` stays [id, r] (never t / a); armor is never handed to a partner
+      // `loot` stays [id, r] (the wire format never carries t / a / sig). Review F9, the choice: a TIERED bag (b.gear) is never handed to a partner at all, so a
+      // T12 can never arrive there as a T0 copy and soulbound gear never crosses; each seat rolls its own tiered drops locally (seeded per seat). Armor too.
+      if (q && b.t > 0.25 && !b.gear && !RM_ARM_ID.test(b.id) && Math.hypot(q.x - b.x, q.y - b.y) < 20) { b.active = false; this.team.ev('loot', [b.id, b.r], 1); }
     }
   }
 
@@ -3784,6 +3817,7 @@ class RealmArena {
   setMenu(on) {
     if (!this._menuMode || !this.active) return;
     if (on && this.state === 'dead') return;
+    if (on) this.flushSave(); // review F16: the menu (and its stash settle) sees what storage holds
     if (on && this.onMenuOpen) this.onMenuOpen();
     this._panel(on ? 'menu' : null);
     if (on && this._menuDom) { const f = this._menuDom.querySelector('button[data-m="resume"].rm-btn'); if (f && f.focus) f.focus({ preventScroll: true }); }
@@ -4027,6 +4061,8 @@ class RealmArena {
     ne.f = { id: nf.f.id, v: nf.f.v };
     sv.items[i] = ne;
     RM_EQ_KEYS.forEach((slot) => { if (sv.eq[slot] === uid) sv.eq[slot] = n; });
+    // review F13: a pending Lantern find of the old uid moves to the new one (same id / r / t / a), so the next settle still pays it
+    try { if (typeof MMStash !== 'undefined' && MMStash.renumberFindIn && typeof localStorage !== 'undefined') MMStash.renumberFindIn(localStorage, uid, n, ne); } catch (e) { /* storage blocked: the find stays as it was */ }
     sv.dust = (sv.dust || 0) - o.cost.dust; sv.shards -= o.cost.shards;
     this._forgeUid = n; this._forgeAsk = null;
     this._snd('levelup');

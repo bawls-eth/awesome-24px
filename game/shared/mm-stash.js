@@ -66,6 +66,22 @@
     f.recent.unshift(rc); if (f.recent.length > MAX_RECENT) f.recent.length = MAX_RECENT;
     return f;
   }
+  // renumberFind(finds, oldN, newN, item?) -> new finds. A realm item that was replaced under a fresh uid (a reforge) keeps its pending find: the find of
+  // oldN moves to newN, and its id / r / t / a are taken from `item` (the replacement entry) when given, so the stash copy matches the item it pays for
+  // (review F13). The stash format holds {id, r, t, a} only: a forged `f` / `sig` stays on the realm item, as for every find. No pending find of oldN, a
+  // bad uid, or newN already pending: unchanged.
+  function renumberFind(finds, oldN, newN, item) {
+    const f = cleanFinds(finds);
+    const o = int(oldN, 0, 9999999), n = int(newN, 0, 9999999);
+    if (!o || !n || o === n || f.pending.some((p) => p.n === n)) return f;
+    const i = f.pending.findIndex((p) => p.n === o);
+    if (i < 0) return f;
+    const p = f.pending[i];
+    const src = isObj(item) ? { n: n, id: item.id, r: item.r, t: item.t, a: item.a, src: p.src } : { n: n, id: p.id, r: p.r, t: p.t, a: p.a, src: p.src };
+    const c = cleanFind(src, true);
+    if (c) f.pending[i] = c; else f.pending[i] = Object.assign({}, p, { n: n });
+    return f;
+  }
   function addFame(finds, n) { const f = cleanFinds(finds); f.fame = Math.min(MAX_FAME, f.fame + int(n, 0, MAX_FAME)); return f; }
 
   // Pure payout. profile: an MMProfile-shaped object (cleaned by the caller); realmItems: the realm backpack (array of {n}) or null
@@ -132,6 +148,12 @@
     try { const r = readJson(storage, REALM_KEY) || {}; r.finds = cleanFinds(finds); storage.setItem(REALM_KEY, JSON.stringify(r)); return true; } catch (e) { return false; }
   }
   function recordTo(storage, item, src) { const f = record(readFinds(storage), item, src); writeFinds(storage, f); return f; }
+  // Storage form of renumberFind: writes only when a pending find moved. Returns true when it did.
+  function renumberFindIn(storage, oldN, newN, item) {
+    const f0 = readFinds(storage); const f = renumberFind(f0, oldN, newN, item);
+    if (JSON.stringify(f) === JSON.stringify(f0)) return false;
+    return writeFinds(storage, f);
+  }
   function addFameTo(storage, n) { const f = addFame(readFinds(storage), n); writeFinds(storage, f); return f; }
   // Settle now. opts: {Profile (MMProfile), realmItems (array, or undefined = read pixeltown-save-v1), shards, src}.
   // The Lantern save is written first; the pending list is cleared only after that write worked (a failed write pays nothing).
@@ -156,6 +178,6 @@
   return {
     REALM_KEY: REALM_KEY, MM_KEY: MM_KEY, STASH_SLOTS: STASH_SLOTS, CARRY_MAX: CARRY_MAX, MAX_PENDING: MAX_PENDING, MAX_RECENT: MAX_RECENT, SOURCES: SRC,
     soulbound: soulbound, deposit: deposit, SOULBOUND_MSG: SOULBOUND_MSG, SOULBOUND_T: SOULBOUND_T, cleanFinds: cleanFinds, record: record, addFame: addFame, payout: payout, text: text,
-    readFinds: readFinds, writeFinds: writeFinds, recordTo: recordTo, addFameTo: addFameTo, settle: settle,
+    readFinds: readFinds, writeFinds: writeFinds, recordTo: recordTo, renumberFind: renumberFind, renumberFindIn: renumberFindIn, addFameTo: addFameTo, settle: settle,
   };
 }));
