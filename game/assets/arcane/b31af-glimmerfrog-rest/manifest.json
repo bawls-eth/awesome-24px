@@ -1,0 +1,40 @@
+{
+  "batch": "b31af",
+  "label": "glimmerfrog-rest",
+  "assets": [
+    {
+      "id": "glimmerfrog_sleep_down",
+      "path": "enemies/glimmerfrog/glimmerfrog_sleep_down.png",
+      "category": "enemy",
+      "enemy": "glimmerfrog",
+      "action": "sleep",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    },
+    {
+      "id": "glimmerfrog_eat_down",
+      "path": "enemies/glimmerfrog/glimmerfrog_eat_down.png",
+      "category": "enemy",
+      "enemy": "glimmerfrog",
+      "action": "eat",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 256,
+      "frame_h": 256,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 128,
+        "y": 231
+      }
+    }
+  ]
+}
