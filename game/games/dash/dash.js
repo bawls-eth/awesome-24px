@@ -232,6 +232,7 @@
     endAt = performance.now(); rearm = !physDown;
     $('jump').textContent = 'Run again';
     save.runs++;
+    const prevBest = save.best, prevScore = save.bestScore, prevCombo = save.bestCombo;
     const newBest = run.dist > save.best;
     if (newBest) save.best = run.dist;
     if (run.score > save.bestScore) save.bestScore = run.score;
@@ -242,23 +243,51 @@
     play('hurt');
     if (!reduced) shake = 8;
     burst(PX, P.y - 10, '#ffb347', 16, false);
-    $('r-dist').textContent = String(run.dist);
-    $('r-best').textContent = newBest ? 'New personal best!' : 'Best: ' + save.best + ' m';
-    $('r-best').className = newBest ? 'new' : 'dim';
-    $('r-line').textContent = 'Score ' + run.score + ' / ' + run.flies + ' fireflies / best combo x' + run.bestCombo + ' / course ' + run.seed;
     run.why = P.dead === 'fell' ? 'gap' : P.ground ? 'nojump' : P.vy > 0 ? 'early' : 'late';
-    $('r-why').textContent = {
+    const whyText = {
       gap: 'Into a gap: hold the button for a longer jump.',
       nojump: 'Bumped a rock: tap to jump just before it (late is Perfect).',
       early: 'Came down on the rock: that jump was a touch early. Wait until it is close.',
       late: 'Clipped the rock on the way up: jump a little earlier, but late is Perfect.',
     }[run.why] + ' Press R or tap Run again to retry this course.';
-    $('r-new').textContent = run.newMedals.length ? 'New medal: ' + run.newMedals.map((m) => MEDALS.find((x) => x[0] === m)[1]).join(', ') : '';
-    medalList($('r-medals'));
+    showResult(newBest, prevBest, prevScore, prevCombo, whyText);
     $('result').hidden = false;
     msg('');
-    $('again').focus({ preventScroll: true });
+    if (resCard) resCard.focus(); else $('again').focus({ preventScroll: true });
     hud();
+  }
+  // MK1: the shared result card (MMMiniKit); ids r-dist / r-best / r-why / r-line / r-new / r-medals / again / fresh kept.
+  // Play again already runs the same course (with the ghost), so there is no separate Replay seed button here.
+  const rMedals = $('r-medals');
+  let resCard = null;
+  function showResult(newBest, prevBest, prevScore, prevCombo, whyText) {
+    medalList(rMedals);
+    const lines = [
+      { id: 'r-best', text: newBest ? 'New personal best!' : 'Best: ' + save.best + ' m', cls: newBest ? 'new' : 'dim' },
+      { id: 'r-why', text: whyText, cls: '' },
+      { id: 'r-line', text: 'Score ' + run.score + ' / ' + run.flies + ' fireflies / best combo x' + run.bestCombo + ' / course ' + run.seed, cls: 'dim' },
+      { id: 'r-new', text: run.newMedals.length ? 'New medal: ' + run.newMedals.map((m) => MEDALS.find((x) => x[0] === m)[1]).join(', ') : '', cls: 'new' },
+    ];
+    if (!window.MMMiniKit) {
+      $('r-dist').textContent = String(run.dist); lines.forEach((l) => { $(l.id).textContent = l.text; $(l.id).className = l.cls; });
+      return;
+    }
+    const K = window.MMMiniKit;
+    const m = MEDALS.find((x) => save.medals.indexOf(x[0]) < 0);
+    resCard = K.panel($('result'), K.result({
+      headline: [{ text: String(run.dist), id: 'r-dist' }, ' m'],
+      stats: [
+        { label: 'Distance', value: run.dist + ' m', best: newBest && prevBest > 0 },
+        { label: 'Score', value: K.fmt(run.score), best: run.score > prevScore && prevScore > 0 },
+        { label: 'Best combo', value: 'x' + run.bestCombo, best: run.bestCombo > prevCombo && prevCombo > 0 },
+      ],
+      lines,
+      goalText: m ? 'Goal: ' + m[2] : 'All medals won. Beat your ghost!',
+      seed: run.seed, replay: false,
+      more: [{ id: 'fresh', label: 'New course' }],
+      menuHref: '../../index.html',
+      ids: { again: 'again', code: 'r-code', copy: 'r-copy', goal: 'r-goal' },
+    }), { again: () => start(run.seed), more: [() => start()], extra: [rMedals], keyReady: () => performance.now() - endAt > 700 });
   }
   function medalList(ul) {
     while (ul.firstChild) ul.removeChild(ul.firstChild);
@@ -382,9 +411,14 @@
     ev.preventDefault(); if (!ev.repeat) down();
   });
   document.addEventListener('keyup', (ev) => { if (KEYS[ev.key]) up(); });
-  $('play').addEventListener('click', () => { save.hint = true; persist(); start(params.get('seed') || (save.ghost ? save.ghost.seed : undefined)); });
-  $('again').addEventListener('click', () => start(run.seed));
-  $('fresh').addEventListener('click', () => start());
+  // ?seed= takes a share code (A-Z0-9, any case) or the old seed form; anything invalid is ignored (a fresh seed)
+  function urlSeed() {
+    const raw = params.get('seed');
+    const code = window.MMMiniKit ? window.MMMiniKit.parseSeedCode(raw || '') : null;
+    return code || raw;
+  }
+  $('play').addEventListener('click', () => { save.hint = true; persist(); start(urlSeed() || (save.ghost ? save.ghost.seed : undefined)); });
+  if (!window.MMMiniKit) { $('again').addEventListener('click', () => start(run.seed)); $('fresh').addEventListener('click', () => start()); }
   const mute = $('btn-mute');
   function syncMute() { const m = !!(sfx && sfx.isMuted()); mute.textContent = m ? 'Sound off' : 'Sound on'; mute.setAttribute('aria-pressed', m ? 'true' : 'false'); }
   mute.addEventListener('click', () => { if (sfx) sfx.setMuted(!sfx.isMuted()); syncMute(); });

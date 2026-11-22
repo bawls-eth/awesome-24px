@@ -79,6 +79,7 @@
       seed: seed,
       code: code,
       replay: !!seed && o.replay !== false,
+      more: (Array.isArray(o.more) ? o.more : []).slice(0, 2).map(function (m) { return { id: m.id ? String(m.id) : '', label: String(m.label || '') }; }),
       menuHref: o.menuHref ? String(o.menuHref) : '',
       menuLabel: String(o.menuLabel || 'Menu'),
       ids: Object.assign({ again: 'mk-again', replay: 'mk-replay', copy: 'mk-copy', code: 'mk-code', goal: 'mk-goal', menu: 'mk-menu' }, o.ids || {}),
@@ -96,7 +97,8 @@
   function reducedMotion(win) {
     try { return !!(win && win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { return false; }
   }
-  // el: the card container (section). vm: result() output (or raw input). on: { again, replay, menu, extra: [nodes] }
+  // el: the card container (section). vm: result() output (or raw input).
+  // on: { again, replay(seed), more: [fn per vm.more button], extra: [nodes kept in the card], keyReady() -> false holds R / Enter }
   function panel(el, vm, on) {
     if (!el) return null;
     if (!vm || !vm.ids) vm = result(vm);
@@ -112,6 +114,11 @@
     acts.appendChild(again);
     var replay = null;
     if (vm.replay) { replay = mk(doc, 'button', 'mk-btn', 'Replay seed', vm.ids.replay); replay.type = 'button'; acts.appendChild(replay); }
+    var more = vm.more.map(function (m, i) {
+      var b = mk(doc, 'button', 'mk-btn', m.label, m.id); b.type = 'button';
+      b.addEventListener('click', function () { if (on.more && on.more[i]) on.more[i](); });
+      acts.appendChild(b); return b;
+    });
     var menu = null;
     if (vm.menuHref) { menu = mk(doc, 'a', 'mk-btn mk-link', vm.menuLabel, vm.ids.menu); menu.href = vm.menuHref; acts.appendChild(menu); }
     var h = mk(doc, 'h2', 'mk-head');
@@ -156,15 +163,15 @@
     if (!el.__mkKeys) {
       el.__mkKeys = true;
       doc.addEventListener('keydown', function (ev) {
-        if (el.hidden || !el.__mkOn) return;
+        if (el.hidden || !el.__mkOn || !el.__mkOn.ready()) return;
         var k = ev.key, ae = doc.activeElement;
         if (k === 'Escape') { ev.preventDefault(); return; } // nothing destructive closes the card
         if (k === 'r' || k === 'R') { if (ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName)) return; ev.preventDefault(); el.__mkOn.again(); }
         else if (k === 'Enter') { if (ae && el.contains(ae) && /^(BUTTON|A)$/.test(ae.tagName)) return; ev.preventDefault(); el.__mkOn.again(); }
       });
     }
-    el.__mkOn = { again: function () { if (!el.hidden) again.click(); } };
-    return { again: again, replay: replay, copy: copy, menu: menu, vm: vm, focus: function () { try { again.focus({ preventScroll: true }); } catch (e) { again.focus(); } } };
+    el.__mkOn = { again: function () { if (!el.hidden) again.click(); }, ready: function () { return !on.keyReady || !!on.keyReady(); } };
+    return { again: again, replay: replay, more: more, copy: copy, menu: menu, vm: vm, focus: function () { try { again.focus({ preventScroll: true }); } catch (e) { again.focus(); } } };
   }
 
   var api = { NEAR: NEAR, fmt: fmt, fmtTime: fmtTime, pbDelta: pbDelta, nearMiss: nearMiss, nextGoal: nextGoal, goalLine: goalLine, seedCode: seedCode, parseSeedCode: parseSeedCode, result: result, panel: panel };

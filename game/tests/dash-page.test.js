@@ -72,6 +72,14 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
   const replay = await p.evaluate((want) => { __dash.start('night1'); const ins = __dash.save.ghost.in; let k = 0; for (let f = 0; f < 40000 && __dash.run.state === 'play'; f++) { if (k < ins.length && ins[k][0] === f) __dash.down(); if (k < ins.length && ins[k][1] === f) { __dash.up(); k++; } __dash.step(1); } return __dash.run.dist === want; }, g1.dist);
   check('the simulation is deterministic: replaying the ghost inputs reaches the same distance', replay);
   await p.evaluate(() => __dash.step(40000));
+  const kit = await p.evaluate(() => {
+    const r = document.getElementById('result'), c = document.getElementById('r-copy').getBoundingClientRect();
+    const small = Array.from(r.querySelectorAll('*')).filter((e) => Array.from(e.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim()) && parseFloat(getComputedStyle(e).fontSize) < 12).map((e) => e.className || e.tagName);
+    const foc = r.querySelector('button, a');
+    return { card: r.classList.contains('mk-card'), code: document.getElementById('r-code').textContent, goal: document.getElementById('r-goal').textContent, menu: !!r.querySelector('a.mk-link[href]'), copy: [c.width, c.height], small, first: foc && foc.id, medals: !!r.querySelector('#r-medals'), replay: !!document.getElementById('mk-replay') };
+  });
+  check('kit: shared result card with share code NIGHT1, a goal line, a Menu link, medals kept', kit.card && kit.code === 'NIGHT1' && kit.goal.length > 0 && kit.menu && kit.medals && !kit.replay, JSON.stringify(kit));
+  check('kit: Copy is >= 44 px, Play again is the first focusable, no text under 12 px', kit.copy[0] >= 44 && kit.copy[1] >= 44 && kit.first === 'again' && kit.small.length === 0, JSON.stringify(kit));
   // targets
   const t = await p.evaluate(() => ['jump', 'again', 'fresh', 'btn-mute'].map((id) => { const r = document.getElementById(id).getBoundingClientRect(); return [id, Math.round(r.width), Math.round(r.height)]; }).concat([['scroll', document.documentElement.scrollWidth <= innerWidth ? 99 : 0, 99]]));
   check('phone: Jump, Play again, New course, Sound are >= 44 px; no horizontal scroll', t.every((x) => x[1] >= 44 && x[2] >= 44), JSON.stringify(t));
@@ -142,6 +150,7 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
   await q.evaluate(() => document.activeElement.blur());
   await q.keyboard.press('r');
   check('quick restart: R right at the crash is ignored (no skipped result card)', await q.evaluate(() => __dash.run.state === 'over'));
+  check('kit: desktop card shows the share code for ?seed=keys', (await q.textContent('#r-code')) === 'KEYS');
   await q.waitForTimeout(750);
   const f0 = await q.evaluate(() => __dash.run.seed);
   await q.keyboard.press('r');
@@ -160,6 +169,11 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
   check('the next run on that course replaces the old ghost with a pv 2 ghost', await o.page.evaluate(() => __dash.run.state === 'over' && __dash.save.ghost.pv === 2 && __dash.save.ghost.seed === 'oldg'));
   check('old-ghost page: no console errors, 0 DB requests', o.errors.length === 0 && o.db.count() === 0, JSON.stringify(o.errors));
   await o.ctx.close();
+  // share code in the URL runs the same course as the seed it came from; a bad code is ignored safely
+  const courseFor = async (qs) => { const x = await open(browser, { viewport: { width: 1280, height: 800 } }, '?test=1&' + qs, { [KEY]: JSON.stringify({ v: 1, hint: true }) }); await x.page.click('#play'); const r = await x.page.evaluate(() => ({ seed: __dash.run.seed, c: JSON.stringify(__dash.course.obs) })); const ok = x.errors.length === 0 && x.db.count() === 0; await x.ctx.close(); return Object.assign(r, { ok }); };
+  const sc = await courseFor('seed=NIGHT1'), sl = await courseFor('seed=night1'), sb = await courseFor('seed=%3Cb%3E!!');
+  check('kit: ?seed=NIGHT1 (share code) runs the night1 course', sc.seed === 'night1' && sc.c === sl.c && sc.ok, sc.seed);
+  check('kit: an invalid share code is ignored (fresh seed, no errors)', /^[a-z0-9]+$/.test(sb.seed) && sb.ok, sb.seed);
   await browser.close();
   done();
 })().catch((e) => { console.error(e); process.exit(1); });

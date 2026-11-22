@@ -90,6 +90,17 @@ root.hidden = false;
 K.panel(root, K.result({ headline: 'again' }), {});
 check('panel: re-render does not stack key listeners', doc.listeners.keydown.length === 1);
 pv.focus && pv.focus();
+// extra buttons + key guard
+let fresh = 0, armed = false;
+const r3 = el('section', doc);
+const p3 = K.panel(r3, K.result({ headline: 'x', seed: 'abc', replay: false, more: [{ id: 'fresh', label: 'New course' }] }), { again: () => again++, more: [() => fresh++], keyReady: () => armed });
+p3.more[0].click();
+check('panel: extra button calls back; replay can be turned off', fresh === 1 && p3.replay === null && p3.more[0].id === 'fresh');
+const before3 = again; root.hidden = true; key('r');
+check('panel: keyReady false holds R', again === before3);
+armed = true; key('r');
+check('panel: keyReady true lets R play again', again === before3 + 1);
+root.hidden = false;
 // copy with no clipboard: honest failure text, no throw
 const p2 = K.panel(el('section', doc), K.result({ headline: 'x', seed: 'abc' }), {});
 p2.copy.click();
