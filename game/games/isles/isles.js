@@ -3253,6 +3253,7 @@
       tamesLive: () => JSON.parse(JSON.stringify(tames)),
       hurtLog: () => HURT_LOG.slice(),
       simT: () => simT,
+      setTime: (t) => { simT = Number(t) || 0; hero.t = simT; return simT; }, // PI2: one sim time on two pages (seeded frame comparisons)
       hint: () => hintText(TAME ? feedTarget() : null),
       nextTo: (id, dx) => { const c = creatures.find((x) => x.uid === id); if (!c) return null; hero.x = c.x + (Number(dx) || 0); hero.y = c.y; return snap(); },
       clearCreatures: () => { creatures = []; rare.live = 0; groupState.forEach((s) => { s.alive = 0; s.until = clock.now() + 1e9; }); },
