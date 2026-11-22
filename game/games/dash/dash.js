@@ -7,7 +7,9 @@
   'use strict';
   const KEY = 'pixeltown-dash-v1', MKEY = 'pixeltown-medals-dash-v1';
   const VW = 360, VH = 240, GROUND = 200, PX = 70, STEP = 1 / 60;
-  const JUMP_V = 440, GRAV = 1500, GRAV_HOLD = 820, COYOTE = 5, BUFFER = 6, PERFECT_S = 0.2;
+  // PV 2 (second pass): gentler first 20 s, a little more coyote time and a longer input buffer. Ghosts recorded with the
+  // old physics (no pv) no longer replay in sync, so they are not raced; they are replaced by the next run on that course.
+  const JUMP_V = 440, GRAV = 1500, GRAV_HOLD = 820, COYOTE = 6, BUFFER = 8, PERFECT_S = 0.2, PV = 2, NEAR = 8;
   const MEDALS = [
     ['run1', 'First run', 'Finish a run'],
     ['m500', '500 m', 'Run 500 m'],
@@ -30,7 +32,7 @@
   function cleanGhost(gh) {
     if (!gh || typeof gh !== 'object' || typeof gh.seed !== 'string' || !SEED_RE.test(gh.seed) || !Array.isArray(gh.in)) return null;
     const ins = gh.in.slice(0, 4000).filter((p) => Array.isArray(p) && p.length === 2 && p.every((n) => typeof n === 'number' && isFinite(n) && n >= 0 && n < 1e6)).map((p) => [Math.floor(p[0]), Math.floor(p[1])]);
-    return { seed: gh.seed, in: ins, dist: int(gh.dist, 1e7) };
+    return { seed: gh.seed, in: ins, dist: int(gh.dist, 1e7), pv: int(gh.pv, 99) };
   }
   function load() {
     let o = null;
@@ -47,7 +49,8 @@
   function award(id) { if (save.medals.indexOf(id) >= 0) return false; save.medals.push(id); run.newMedals.push(id); persist(); play('claim'); return true; }
 
   // ---------- course (seeded) ----------
-  const speedAt = (f) => Math.min(330, 140 + f * STEP * 3.2);
+  // gentle warm-up: +2 px/s per second for the first 20 s (140 -> 180), then the old +3.2 ramp up to the 330 cap
+  const speedAt = (f) => { const t = f * STEP; return Math.min(330, t < 20 ? 140 + t * 2 : 180 + (t - 20) * 3.2); };
   function course(seed) {
     const rng = MMRng.create('lantern-dash:' + seed), obs = [], flies = [];
     let x = 520, n = 0;
@@ -78,9 +81,17 @@
   function hitRock(c, wx, y) {
     for (let i = c.lo; i < c.obs.length; i++) {
       const o = c.obs[i]; if (o.x > wx + 10) break;
-      if (o.t !== 'gap' && wx + 7 > o.x + 2 && wx - 7 < o.x + o.w - 2 && y > GROUND - o.h + 3) return true;
+      if (o.t !== 'gap' && wx + 7 > o.x + 2 && wx - 7 < o.x + o.w - 2 && y > GROUND - o.h + 3) return o;
     }
-    return false;
+    return null;
+  }
+  // standing on a rock top (after a forgiving landing): the rock under the feet, if any
+  function rockUnder(c, wx, y) {
+    for (let i = c.lo; i < c.obs.length; i++) {
+      const o = c.obs[i]; if (o.x > wx + 10) break;
+      if (o.t !== 'gap' && wx + 7 > o.x + 2 && wx - 7 < o.x + o.w - 2 && Math.abs(y - (GROUND - o.h)) < 0.5) return o;
+    }
+    return null;
   }
   // one fixed step; returns 'jump' | 'land' | null
   function stepBody(b, c, wx, sp) {
@@ -98,8 +109,13 @@
       else if (gap && b.y >= GROUND) b.ground = false;
     }
     if (b.ground && gap) { b.ground = false; }
+    // ran off the end of a rock top: fall back down (coyote time still applies)
+    if (b.ground && b.y < GROUND - 0.5 && !rockUnder(c, wx, b.y)) { b.ground = false; b.air = 1; }
     if (b.y > GROUND + 40) b.dead = 'fell';
-    if (hitRock(c, wx, b.y)) b.dead = 'rock';
+    const o = hitRock(c, wx, b.y);
+    // forgiving landing: coming down (or stepping) with the feet in the top 12 px of a rock (one fast frame of fall) lands on it instead of a crash
+    if (o && b.vy >= 0 && b.y - (GROUND - o.h) <= 12) { b.y = GROUND - o.h; b.vy = 0; if (!b.ground) ev = 'land'; b.ground = true; b.air = 0; b.perch = (b.perch || 0) + 1; }
+    else if (o) b.dead = 'rock';
     return ev;
   }
   function press(b) { b.held = true; b.buf = BUFFER; }
@@ -108,18 +124,19 @@
   // ---------- run state ----------
   const canvas = $('view'), g = canvas.getContext('2d');
   canvas.width = VW; canvas.height = VH;
-  const run = { state: 'ready', seed: '', f: 0, wx: 0, dist: 0, flies: 0, combo: 0, bestCombo: 0, perfects: 0, bonus: 0, score: 0, newMedals: [], ins: [], open: -1 };
+  const run = { state: 'ready', seed: '', f: 0, wx: 0, dist: 0, flies: 0, combo: 0, bestCombo: 0, perfects: 0, bonus: 0, score: 0, newMedals: [], ins: [], open: -1, near: 0 };
   let C = null, P = body(), G = null, ghostIn = null, gi = 0, ghostC = null;
-  let parts = [], floats = [], shake = 0, flash = 0, acc = 0;
+  let parts = [], floats = [], shake = 0, flash = 0, acc = 0, ghostTag = false;
 
   function newSeed() { return (Date.now().toString(36) + (save.runs % 1296).toString(36)).slice(-8); }
   function start(seed) {
     run.seed = (typeof seed === 'string' && SEED_RE.test(seed)) ? seed : newSeed();
     const built = course(run.seed);
     C = { obs: built.obs, flies: built.flies, lo: 0, next: 0 };
-    Object.assign(run, { state: 'play', f: 0, wx: 0, dist: 0, flies: 0, combo: 0, bestCombo: 0, perfects: 0, bonus: 0, score: 0, newMedals: [], ins: [], open: -1 });
+    Object.assign(run, { state: 'play', f: 0, wx: 0, dist: 0, flies: 0, combo: 0, bestCombo: 0, perfects: 0, bonus: 0, score: 0, newMedals: [], ins: [], open: -1, near: 0 });
+    built.obs.forEach((o) => { o.clr = 1e9; });
     P = body(); parts = []; floats = []; shake = 0; acc = 0;
-    if (save.ghost && save.ghost.seed === run.seed) {
+    if (save.ghost && save.ghost.seed === run.seed && save.ghost.pv === PV) {
       G = body(); ghostIn = save.ghost.in; gi = 0;
       ghostC = { obs: built.obs, lo: 0 };
     } else { G = null; ghostIn = null; ghostC = null; }
@@ -164,11 +181,21 @@
       stepBody(G, ghostC, run.wx, sp);
     }
     const ev = stepBody(P, C, run.wx, sp);
+    // near miss: the closest the hero's feet came to the top of the rock being passed
+    for (let i = C.next; i < C.obs.length; i++) {
+      const o = C.obs[i]; if (o.x > run.wx + 8) break;
+      if (o.t !== 'gap' && run.wx + 7 > o.x && run.wx - 7 < o.x + o.w) o.clr = Math.min(o.clr, (GROUND - o.h) - P.y);
+    }
     if (ev === 'jump') { play('ui_tap'); burst(PX, GROUND, '#c9b48a', 6, true); }
     if (ev === 'land') burst(PX, GROUND, '#c9b48a', 4, true);
     // cleared obstacles: perfect = took off within PERFECT_S of the obstacle's front edge
     while (C.next < C.obs.length && C.obs[C.next].x + C.obs[C.next].w < run.wx - 8) {
       const o = C.obs[C.next]; C.next++;
+      if (o.t !== 'gap' && o.clr > 0 && o.clr < NEAR && !P.dead) {
+        run.near++;
+        if (!lowGfx && !reduced) burst(PX, P.y - 4, '#bff4ff', 6, true); else burst(PX, P.y - 4, '#bff4ff', 2, true);
+        floats.push({ x: PX + 4, y: P.y - 44, text: 'close!', color: '#bff4ff', t: 0.6 });
+      }
       const lead = (o.x - (P.toX + 8)) / sp;
       if (P.toX > -1e8 && lead >= -0.02 && lead <= PERFECT_S) {
         run.combo++; run.perfects++; run.bonus += 5 * run.combo;
@@ -206,7 +233,7 @@
     if (newBest) save.best = run.dist;
     if (run.score > save.bestScore) save.bestScore = run.score;
     if (run.bestCombo > save.bestCombo) save.bestCombo = run.bestCombo;
-    if (!save.ghost || save.ghost.seed !== run.seed || run.dist > save.ghost.dist) save.ghost = { seed: run.seed, in: run.ins.slice(0, 4000), dist: run.dist };
+    if (!save.ghost || save.ghost.seed !== run.seed || save.ghost.pv !== PV || run.dist > save.ghost.dist) save.ghost = { seed: run.seed, in: run.ins.slice(0, 4000), dist: run.dist, pv: PV };
     award('run1');
     persist();
     play('hurt');
@@ -216,7 +243,13 @@
     $('r-best').textContent = newBest ? 'New personal best!' : 'Best: ' + save.best + ' m';
     $('r-best').className = newBest ? 'new' : 'dim';
     $('r-line').textContent = 'Score ' + run.score + ' / ' + run.flies + ' fireflies / best combo x' + run.bestCombo + ' / course ' + run.seed;
-    $('r-why').textContent = P.dead === 'fell' ? 'Into a gap: hold the button for a longer jump.' : 'Bumped a rock: jump a little earlier, but late is Perfect.';
+    run.why = P.dead === 'fell' ? 'gap' : P.ground ? 'nojump' : P.vy > 0 ? 'early' : 'late';
+    $('r-why').textContent = {
+      gap: 'Into a gap: hold the button for a longer jump.',
+      nojump: 'Bumped a rock: tap to jump just before it (late is Perfect).',
+      early: 'Came down on the rock: that jump was a touch early. Wait until it is close.',
+      late: 'Clipped the rock on the way up: jump a little earlier, but late is Perfect.',
+    }[run.why] + ' Press R or tap Run again to retry this course.';
     $('r-new').textContent = run.newMedals.length ? 'New medal: ' + run.newMedals.map((m) => MEDALS.find((x) => x[0] === m)[1]).join(', ') : '';
     medalList($('r-medals'));
     $('result').hidden = false;
@@ -291,7 +324,17 @@
     // best-distance flag (any course) and the ghost (same course)
     const bx = save.best * 10 - wx + PX;
     if (save.best > 0 && bx > -10 && bx < VW + 10) { g.fillStyle = '#ffb347'; g.fillRect(bx, GROUND - 46, 2, 46); g.fillRect(bx + 2, GROUND - 46, 14, 9); g.fillStyle = '#fff'; g.font = '10px ui-monospace, monospace'; g.fillText('best', bx + 4, GROUND - 50); }
-    if (G && !G.dead) hero(PX, G.y, run.f, true, !G.ground);
+    // the ghost's finish line on this course (cyan) and a small tag over the ghost once it moves apart from you
+    if (G && save.ghost) {
+      const gx = save.ghost.dist * 10 - wx + PX;
+      if (gx > -10 && gx < VW + 10) { g.fillStyle = '#9fd8ff'; g.fillRect(gx, GROUND - 46, 2, 46); g.fillRect(gx + 2, GROUND - 46, 14, 9); g.fillStyle = '#fff'; g.font = '10px ui-monospace, monospace'; g.fillText('ghost', gx + 4, GROUND - 50); }
+    }
+    ghostTag = false;
+    if (G && !G.dead) {
+      hero(PX, G.y, run.f, true, !G.ground);
+      g.save(); g.globalAlpha = 0.8; g.strokeStyle = '#9fd8ff'; g.lineWidth = 1; g.strokeRect(PX - 7.5, G.y - 32.5, 15, 33); g.restore();
+      if (Math.abs(G.y - P.y) > 6 || run.f < 120) { ghostTag = true; g.fillStyle = '#9fd8ff'; g.font = '10px ui-monospace, monospace'; g.textAlign = 'center'; g.fillText('ghost', PX, G.y - 36); g.textAlign = 'left'; }
+    }
     if (!lowGfx) {
       const lg = g.createRadialGradient(PX + 10, P.y - 15, 4, PX + 10, P.y - 15, 70);
       lg.addColorStop(0, 'rgba(255,207,90,0.35)'); lg.addColorStop(1, 'rgba(255,207,90,0)'); g.fillStyle = lg; g.fillRect(PX - 70, P.y - 90, 160, 160);
@@ -329,6 +372,8 @@
   ['pointerup', 'pointercancel', 'pointerleave'].forEach((t) => { canvas.addEventListener(t, up); jb.addEventListener(t, up); });
   jb.addEventListener('click', (ev) => { if (ev.detail === 0) { down(); setTimeout(up, 120); } }); // keyboard activation of the button
   document.addEventListener('keydown', (ev) => {
+    // quick restart: R after a crash runs the same course again (same short pause as the big button)
+    if ((ev.key === 'r' || ev.key === 'R') && run.state === 'over' && !ev.repeat && performance.now() - endAt > 700) { ev.preventDefault(); start(run.seed); return; }
     if (!KEYS[ev.key] || run.state !== 'play') return;
     const ae = document.activeElement; if (ae && ae !== jb && /^(BUTTON|A|INPUT)$/.test(ae.tagName)) return;
     ev.preventDefault(); if (!ev.repeat) down();
@@ -365,6 +410,7 @@
       }
       return run.state;
     },
-    counts: () => ({ parts: parts.length, floats: floats.length, shake }),
+    counts: () => ({ parts: parts.length, floats: floats.length, shake, ghostTag, floatTexts: floats.map((x) => x.text) }),
+    tuning: { COYOTE, BUFFER, PV, NEAR }, speedAt, draw() { draw(); },
   };
 }());
