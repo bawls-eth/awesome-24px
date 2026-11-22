@@ -567,6 +567,56 @@
       "status": "provisional",
       "ingested_utc": "2026-11-22T07:10:00Z",
       "source": "codex"
+    },
+    {
+      "id": "b38b",
+      "label": "shellcrab",
+      "path": "assets/arcane/b38b-shellcrab",
+      "manifest": "assets/arcane/b38b-shellcrab/manifest.json",
+      "files": 14,
+      "status": "provisional",
+      "ingested_utc": "2026-11-22T12:06:00Z",
+      "source": "codex"
+    },
+    {
+      "id": "b38c",
+      "label": "reef-mounts",
+      "path": "assets/arcane/b38c-reef-mounts",
+      "manifest": "assets/arcane/b38c-reef-mounts/manifest.json",
+      "files": 40,
+      "status": "provisional",
+      "ingested_utc": "2026-11-22T12:06:00Z",
+      "source": "codex"
+    },
+    {
+      "id": "b38d",
+      "label": "glowjelly",
+      "path": "assets/arcane/b38d-glowjelly",
+      "manifest": "assets/arcane/b38d-glowjelly/manifest.json",
+      "files": 12,
+      "status": "provisional",
+      "ingested_utc": "2026-11-22T12:06:00Z",
+      "source": "codex"
+    },
+    {
+      "id": "b38e",
+      "label": "fin-raider",
+      "path": "assets/arcane/b38e-fin-raider",
+      "manifest": "assets/arcane/b38e-fin-raider/manifest.json",
+      "files": 14,
+      "status": "provisional",
+      "ingested_utc": "2026-11-22T12:06:00Z",
+      "source": "codex"
+    },
+    {
+      "id": "b38f",
+      "label": "isleback-turtle",
+      "path": "assets/arcane/b38f-isleback-turtle",
+      "manifest": "assets/arcane/b38f-isleback-turtle/manifest.json",
+      "files": 14,
+      "status": "provisional",
+      "ingested_utc": "2026-11-22T12:06:00Z",
+      "source": "codex"
     }
   ]
 }
