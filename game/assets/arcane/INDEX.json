@@ -637,6 +637,26 @@
       "status": "provisional",
       "ingested_utc": "2026-11-22T17:50:00Z",
       "source": "codex"
+    },
+    {
+      "id": "b40b",
+      "label": "frostfox",
+      "path": "assets/arcane/b40b-frostfox",
+      "manifest": "assets/arcane/b40b-frostfox/manifest.json",
+      "files": 14,
+      "status": "provisional",
+      "ingested_utc": "2026-11-22T20:15:00Z",
+      "source": "codex"
+    },
+    {
+      "id": "b40c",
+      "label": "rimewolf",
+      "path": "assets/arcane/b40c-rimewolf",
+      "manifest": "assets/arcane/b40c-rimewolf/manifest.json",
+      "files": 14,
+      "status": "provisional",
+      "ingested_utc": "2026-11-22T20:15:00Z",
+      "source": "codex"
     }
   ]
 }

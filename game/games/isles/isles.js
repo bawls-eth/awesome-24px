@@ -53,7 +53,8 @@
 // AW4: the reef preloads all seven b38a-f species (108 strips); the tidesteed / skimray swim mounts draw body + saddle overlay with the
 // hero on the seat, the isleback turtle rides bare; __isles.riding() also reports seatY / seatX (where the hero was last drawn).
 // AW5: the reef also preloads the b38g Tide Hydra (its 6-frame roar runs over the wind-up; boss frames use the per-creature timing) and
-// the tundra preloads the b40a pengling.
+// the tundra preloads the b40a pengling. art-audit-3: and the b40b frostfox + b40c rimewolf (42 tundra strips; the aurora frostfox stays
+// the code-drawn palette swap).
 // XW1: the craft panel lists every MMIsleCraft recipe (ALL_IDS, groups Travel / Saddles / Supplies / Trophies); an alternative recipe
 // unlocks by its output item (rocket_core_drift opens mars from a fresh save) and the sea chart's "Craft it" points at a reachable build;
 // a daily gather spot can add a seeded bonus find (MMIsleCraft.bonusFind). Riding shows one 44 px ability button (key F while riding)
