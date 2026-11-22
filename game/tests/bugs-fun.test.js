@@ -50,22 +50,26 @@ async function open(browser, opts) {
     B.setPlayer(10, 7, true);
     const seen = [];
     for (let i = 0; i < 3; i++) { B.spawn('ladybug', 10.3, 7); B.swing(); seen.push(B.banner); B.step(0.4); }
-    return { seen, combo: B.run.combo };
+    const combo = B.run.combo;
+    B.step(2.5); // the combo window (2 s) runs out
+    return { seen, combo, ended: B.banner, after: B.run.combo };
   });
   check('no banner before the third chained catch', cm.seen[0] === null && cm.seen[1] === null, JSON.stringify(cm));
   check('third chained catch announces a combo banner', typeof cm.seen[2] === 'string' && /^Combo x1\.44!$/.test(cm.seen[2]), JSON.stringify(cm));
   check('combo is 3 after three chained catches', cm.combo === 3, JSON.stringify(cm));
+  check('a 3+ chain that runs out says so plainly', cm.after === 0 && cm.ended === 'Chain of 3 ended', JSON.stringify(cm));
 
   // last 10 seconds: timer gets the hurry class, not before
   const hu = await p.evaluate(() => {
     const B = window.__bugs; B.setPlayer(4, 4, true); B.spawn('beetle', 5.8, 4); B.swing(); // one near miss in this run
     B.step(70); B.render();
-    const before = document.getElementById('hud-time').classList.contains('hurry');
+    const before = document.getElementById('hud-time').classList.contains('hurry'), warnedBefore = B.warned;
     B.step(11); B.render();
     const t = document.getElementById('hud-time');
-    return { before, after: t.classList.contains('hurry'), text: t.textContent, mode: B.mode };
+    return { before, warnedBefore, warned: B.warned, after: t.classList.contains('hurry'), text: t.textContent, mode: B.mode };
   });
   check('timer is calm with more than 10 s left', hu.before === false, JSON.stringify(hu));
+  check('one soft cue at 10 s left, not before', hu.warnedBefore === false && hu.warned === true, JSON.stringify(hu));
   check('timer warms up in the last 10 s', hu.after === true && /^\d+s$/.test(hu.text) && parseInt(hu.text, 10) <= 10, JSON.stringify(hu));
 
   // summary: Play again sits right under the result, is focused, big enough, and the chase line is honest
@@ -119,6 +123,12 @@ async function open(browser, opts) {
   await d.focus('#to-menu'); await d.keyboard.press('Enter');
   check('Enter on Arenas still opens the arena list', await d.evaluate(() => window.__bugs.mode === 'menu' && !!document.querySelector('#overlay .grid')));
   await dk.ctx.close();
+
+  // reduced motion: the banner still tells you, but nothing shakes
+  const rm = await open(browser, { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' });
+  const rr = await rm.page.evaluate(() => { const B = window.__bugs; B.start('meadow', { seed: 'fun-rm', empty: true }); B.setPlayer(10, 7, true); let sh = 0; for (let i = 0; i < 3; i++) { B.spawn('ladybug', 10.3, 7); B.swing(); sh = Math.max(sh, B.shake); B.step(0.4); } return { reduced: B.reduced, sh, banner: B.banner }; });
+  check('reduced motion: milestone banner shows without any shake', rr.reduced === true && rr.sh === 0 && /^Combo x/.test(rr.banner || ''), JSON.stringify(rr));
+  await rm.ctx.close();
 
   check('console clean', errors.length === 0, JSON.stringify(errors));
   check('zero DB requests', dbs.every((x) => x.attempts() === 0), JSON.stringify(dbs.map((x) => x.attempts())));

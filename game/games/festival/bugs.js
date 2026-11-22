@@ -70,7 +70,7 @@
   var bgCache = {}, gmeta = {};
   var keys = {}, joy = { x: 0, y: 0 }, sneakBtn = false;
   var testClock = TEST;
-  var lastSummary = null, testSneak = false, nearMisses = 0, banner = null, scoreBump = 0;
+  var lastSummary = null, testSneak = false, nearMisses = 0, banner = null, scoreBump = 0, chainWas = 0, warned = false;
   var HINT_KEY = 'pixeltown-bugs-hint-v1';
   var hintOpen = false;
   var sfx = null;
@@ -106,7 +106,7 @@
     var seed = opts.seed !== undefined ? opts.seed : (String(Date.now()) + Math.random());
     game = B.createRun({ seed: seed, arena: id, night: !!a.night, glade: !!a.glade, width: W, height: H, empty: !!opts.empty, count: opts.count });
     rng = R.create('page:' + seed);
-    meta = {}; gmeta = {}; popups = []; particles = []; shake = 0; swingAnim = 0; nearMisses = 0; banner = null; scoreBump = 0;
+    meta = {}; gmeta = {}; popups = []; particles = []; shake = 0; swingAnim = 0; nearMisses = 0; banner = null; scoreBump = 0; chainWas = 0; warned = false;
     $('hud-best').textContent = 'Best ' + save.best[id];
     mode = 'play'; overlay.hidden = true;
     $('hud-arena').textContent = NAMES[id];
@@ -194,6 +194,9 @@
       movePlayer(d);
       game.update(d);
       if (!game.state.done && B.RUN_SECONDS - game.state.time < 1e-6) game.update(1e-5); // float drift guard
+      // FUN1: say plainly when a 3+ chain runs out, and one soft cue when 10 seconds are left
+      if (game.state.combo > 0) chainWas = game.state.combo; else if (chainWas) { if (chainWas >= 3 && !game.state.done) banner = { text: 'Chain of ' + chainWas + ' ended', t: 0, soft: true }; chainWas = 0; }
+      if (!warned && B.RUN_SECONDS - game.state.time <= 10 && !game.state.done) { warned = true; beep('warn'); }
       wander(d);
       fx(d);
       if (game.state.done) endRun();
@@ -344,9 +347,9 @@
       if (banner) {
         var bs = reduced ? 1 : 1 + 0.35 * Math.max(0, 1 - banner.t / 0.18), ba = banner.t > 0.8 ? Math.max(0, 1 - (banner.t - 0.8) / 0.3) : 1;
         g.save(); g.globalAlpha = ba; g.translate(cv.width / 2, 40); g.scale(bs, bs);
-        g.font = 'bold 18px monospace'; g.textAlign = 'center';
+        g.font = banner.soft ? 'bold 13px monospace' : 'bold 18px monospace'; g.textAlign = 'center';
         if (!gfx.low) { g.fillStyle = 'rgba(0,0,0,.65)'; g.fillText(banner.text, 1, 1); }
-        g.fillStyle = '#ffd166'; g.fillText(banner.text, 0, 0); g.restore();
+        g.fillStyle = banner.soft ? '#cfe8d0' : '#ffd166'; g.fillText(banner.text, 0, 0); g.restore();
       }
     }
     g.restore();
@@ -529,6 +532,7 @@
       get shake() { return shake; },
       get banner() { return banner ? banner.text : null; },
       get nearMisses() { return nearMisses; },
+      get warned() { return warned; },
       get popups() { return popups.map(function (p) { return p.text; }); },
       get pb() { return JSON.parse(JSON.stringify(pb)); },
       get particles() { return particles.length; },
