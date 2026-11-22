@@ -1154,5 +1154,9 @@
   "lantern-backup-restore.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "shared-no-conflict-markers.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }
