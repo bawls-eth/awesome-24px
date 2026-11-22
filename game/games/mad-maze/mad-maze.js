@@ -562,6 +562,8 @@
   // Realm root + the arena hooks that exist (setReduceMotion, the flash vignette, the pooled spark / death-ghost arrays, the render-scale guard).
   const AXM = window.MMAccess && MMAccess.prefs ? MMAccess : null;
   const AX_ON = !!AXM && params.get('settings') !== '0';
+  // AR (NEXT-SLICES-3 Wave 4): one-thumb mode, aim toggle, bullet shapes, HUD text scale in the Realm. ?access2=0 turns them off (the page as before).
+  const AX2 = typeof arena.enableAccess2 === 'function' && params.get('access2') !== '0' ? !!arena.enableAccess2() : false;
   let axPrefs = AX_ON ? AXM.prefs.load(localStorage) : null;
   const PERF_ON = !!window.MMPerf;
   const perfSt = { prev: null, samples: [], result: null, auto: false, pools: { sparks: null, ghosts: null }, pf: null };
@@ -612,12 +614,14 @@
   function axApply(p) {
     const ov = document.getElementById('realm-overlay'); const b = document.body; if (!ov) return;
     ov.style.setProperty('--mm-hud-scale', String(p.hudScale)); document.documentElement.style.setProperty('--mm-hud-scale', String(p.hudScale));
+    document.documentElement.style.setProperty('--ui-scale', String(p.hudScale)); // AR: the shared text-scale variable (MMSideAccess sets the same on the side pages)
     const pal = AXM.palette(p.palette);
     ['bullet', 'enemy', 'ally'].forEach((k) => ov.style.setProperty('--mm-' + k, pal[k]));
     AXM.names().forEach((n) => b.classList.toggle('mm-pal-' + n, n === pal.name));
     b.classList.toggle('mm-no-flash', !p.flashes); b.classList.toggle('mm-outline', !!p.bulletOutline); b.classList.toggle('mm-hud-big', p.hudScale > 1);
     arena.accessPrefs = Object.assign({}, p, { outlinePx: AXM.OUTLINE_PX, palette: pal.name }); // read-only snapshot for the arena / other modules
     setFlashes(p.flashes);
+    if (typeof arena.refreshAccess === 'function') { try { arena.refreshAccess(); } catch (e) { /* the arena re-reads within a second anyway */ } } // AR: text scale + bullet shapes now
     perfEval(true);
     window.__mmAccess = Object.assign(window.__mmAccess || {}, { prefs: Object.assign({}, p), palette: pal });
   }
@@ -654,6 +658,10 @@
       else if (k === 'hudScale') axSet('hudScale', Number(v));
       else if (k === 'motion') { arena.setReduceMotion(!arena._reduced); axRender(); }
       else if (k === 'music') { if (window.RealmAudio) { RealmAudio.setOn(!RealmAudio.isOn()); axRender(); } }
+      else if (k === 'oneThumb' && AX2) { const c = arena.access2(); arena.setOneThumb(!c.oneThumb); axRender(); }
+      else if (k === 'autoFire' && AX2) { arena.setAutoFire(!arena.access2().autoFire); axRender(); }
+      else if (k === 'aimToggle' && AX2) { arena.setAimToggle(!arena.access2().aimToggle); axRender(); }
+      else if (k === 'shapes' && AX2) { arena.setBulletShapes(!arena.access2().shapes); axRender(); }
       else if (k === 'done') axClose();
       else axSet(k, !axPrefs[k]);
     });
@@ -673,6 +681,14 @@
     tog('motion', 'Reduce motion', !!arena._reduced); tog('flashes', 'Screen flashes', p.flashes); tog('bulletOutline', 'Bullet outline', p.bulletOutline);
     tog('lowGfx', 'Low graphics', p.lowGfx, !p.lowGfx && perfSt.auto ? ' (auto: slow frames)' : '');
     if (window.RealmAudio) tog('music', 'Ambient music', RealmAudio.isOn());
+    if (AX2) { // AR: one-thumb play, hold-or-toggle aiming, bullet shapes (per device, never in the save)
+      const c = arena.access2();
+      axBody.appendChild(mkEl('h4', 'mm-set-h', 'Controls'));
+      tog('oneThumb', 'One-thumb mode', c.oneThumb, ' (auto-fire + aim toggle)');
+      tog('autoFire', 'Auto-fire at the nearest enemy', c.autoFire);
+      tog('aimToggle', 'Aim: tap to toggle (instead of hold)', c.aimToggle);
+      tog('shapes', 'Bullet shapes', c.shapes || p.palette !== 'normal', p.palette !== 'normal' ? ' (always with this palette)' : '');
+    }
     const d = mkEl('button', 'rm-btn', 'Done'); d.type = 'button'; d.dataset.ax = 'done'; axBody.appendChild(d);
   }
   // Feedback box (shared/mm-feedback.js, local-only notes): loaded on the first settings open. The tag is added from here, guarded:

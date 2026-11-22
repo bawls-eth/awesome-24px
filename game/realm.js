@@ -55,6 +55,7 @@ const RM_ED_GHOSTS = 24; const RM_ED_REDUCED = 0.25; // enemy death-ghost pool s
 // Shot readability: the player's bolt is a white core with a light outline (solid radius 5 + a soft glow); enemy bullets have a dark
 // rim and their own hue per pattern and are never more than 1.3x the player's bolt. At most RM_EB_DRAW enemy bullets are drawn.
 const RM_BOLT_R = { player: 5, enemy: 6 };
+const RM_AF_RANGE = 380; // AR auto-fire reach (logical px): about the player's bolt range, so it never fires at what it cannot hit
 const RM_EB_HUES = [['#ff4f6d', '#ffd0d8'], ['#b46bff', '#ecdcff'], ['#ffa62b', '#fff0c8']]; // aimed (red), spiral (violet), ring (orange)
 const RM_EB_DRAW = 320;
 const RM_FIRE_RANGE = 0.95; // world mode: an enemy fires only on screen and within this x the view's half-diagonal of the player
@@ -643,6 +644,10 @@ class RealmArena {
     this._padPause = false; this._padWas = false;
     this._padRes = { move: { x: 0, y: 0 }, aim: { x: 0, y: 0, on: false }, fire: false, ability: [false, false, false, false], pause: false }; // reused every frame (no per-frame allocation)
     this._aimAssist = true; this._reduced = false;
+    // AR (NEXT-SLICES-3 Wave 4): Realm one-thumb access, opt-in per page (enableAccess2(); the town classic arena never calls it, duels never use it).
+    this._ax2 = false; this._autoFire = false; this._aimToggle = false; this._shapes = false; this._aimPressMax = 0; this.autoFireN = 0;
+    this._afT = null; this._afX = 0; this._afY = 0; this._afVx = 0; this._afVy = 0; // auto-fire target + its smoothed velocity (lead)
+    this._txtFont = 'bold 14px system-ui, sans-serif'; this._txtScale = 1;
     this._wireRefresh();
     this._mountAimToggle();
   }
@@ -2042,8 +2047,9 @@ class RealmArena {
       this.mouse.seen = true;
     };
     this.onPointerMove = (e) => { if (e.pointerType === 'mouse') toArena(e); };
-    this.onPointerDown = (e) => { if (e.pointerType === 'mouse') { toArena(e); this.mouse.down = true; } };
-    this.onPointerUp = (e) => { if (e.pointerType === 'mouse') this.mouse.down = false; };
+    // AR aim toggle: a click latches firing on, the next click lets go (instead of holding the button down)
+    this.onPointerDown = (e) => { if (e.pointerType === 'mouse') { toArena(e); this.mouse.down = this._aimToggle && this._ax2On() ? !this.mouse.down : true; } };
+    this.onPointerUp = (e) => { if (e.pointerType === 'mouse' && !(this._aimToggle && this._ax2On())) this.mouse.down = false; };
     this.canvas.addEventListener('pointermove', this.onPointerMove);
     this.canvas.addEventListener('pointerdown', this.onPointerDown);
     window.addEventListener('pointerup', this.onPointerUp);
@@ -2057,7 +2063,55 @@ class RealmArena {
 
   // Touch sticks are DOM elements (set up by main.js); they only feed these two vectors.
   setMoveStick(x, y) { this.moveVec.x = x; this.moveVec.y = y; }
-  setAimStick(x, y, on) { this.aimVec.x = x; this.aimVec.y = y; this.aimVec.on = !!on; }
+  // AR "hold to aim" -> toggle: with the aim toggle on, letting go of a dragged aim stick keeps aiming and firing that way (latched); a short tap
+  // (never dragged past 0.25) lets go. Without it (and on every page that never enabled access2) the stick is hold-to-fire as before.
+  setAimStick(x, y, on) {
+    if (this._aimToggle && this._ax2On()) {
+      if (on) { const m = Math.sqrt(x * x + y * y); if (m > this._aimPressMax) this._aimPressMax = m; // (Math.hypot boxes its arguments)
+        this.aimVec.x = x; this.aimVec.y = y; this.aimVec.on = true; return; }
+      const drag = this._aimPressMax > 0.25; this._aimPressMax = 0;
+      if (!drag) { this.aimVec.on = false; this.aimVec.x = 0; this.aimVec.y = 0; } // a tap: stop (the last dragged direction stays latched otherwise)
+      return;
+    }
+    this.aimVec.x = x; this.aimVec.y = y; this.aimVec.on = !!on;
+  }
+
+  // ---------- AR: one-thumb mode (auto-fire), aim toggle, bullet shapes, HUD text scale ----------
+  // Prefs are per device in their own small keys (like mm-aim-assist): never in the save, never in pixeltown-access-v1 (its schema is shared).
+  enableAccess2() { this._ax2 = true; this._readAccess2(); return this.access2(); }
+  _ax2On() { return this._ax2 && !(this.team && this.team.isPvp); }
+  _readAccess2() {
+    const rd = (k) => { try { return localStorage.getItem(k) === '1'; } catch (e) { return false; } };
+    this._autoFire = rd('mm-auto-fire'); this._aimToggle = rd('mm-aim-toggle'); this._shapes = rd('mm-bullet-shapes');
+    this._bakeCBBullets(); this._syncTxtFont();
+  }
+  _setAx2(key, field, on) {
+    this[field] = !!on; try { localStorage.setItem(key, on ? '1' : '0'); } catch (e) { /* this visit only */ }
+    if (field === '_aimToggle' && !on) { this.aimVec.on = false; this.mouse.down = false; this._aimPressMax = 0; } // never leave a latch behind
+    this._bakeCBBullets(); return this.access2();
+  }
+  setAutoFire(on) { return this._setAx2('mm-auto-fire', '_autoFire', on); }
+  setAimToggle(on) { return this._setAx2('mm-aim-toggle', '_aimToggle', on); }
+  setBulletShapes(on) { return this._setAx2('mm-bullet-shapes', '_shapes', on); }
+  // One-thumb mode = auto-fire + the aim toggle: the move stick alone plays the Realm.
+  setOneThumb(on) { this.setAimToggle(on); return this.setAutoFire(on); }
+  access2() { return { on: this._ax2On(), autoFire: this._autoFire, aimToggle: this._aimToggle, shapes: this._shapes, oneThumb: this._autoFire && this._aimToggle, textScale: this._txtScale, autoFireN: this.autoFireN }; }
+  // The floating combat text follows the shared HUD size (pixeltown-access-v1 hudScale); the font string is built once per change, never per frame.
+  _syncTxtFont() {
+    const hs = this._ax2On() && this.acc && Number.isFinite(this.acc.hudScale) ? this.acc.hudScale : 1;
+    if (hs === this._txtScale && this._txtFont) return;
+    this._txtScale = hs; this._txtFont = 'bold ' + Math.round(14 * hs) + 'px system-ui, sans-serif';
+  }
+  // Auto-fire target: the nearest live enemy within RM_AF_RANGE (no arrays, no objects: one pass over the pool). null = hold fire.
+  _autoFireTarget() {
+    const p = this.player; let best = null; let bd = RM_AF_RANGE * RM_AF_RANGE;
+    for (let i = 0; i < this.enemies.length; i++) {
+      const e = this.enemies[i]; if (!e.active) continue;
+      const dx = e.x - p.x; const dy = e.y - p.y; const d = dx * dx + dy * dy;
+      if (d < bd) { bd = d; best = e; }
+    }
+    return best;
+  }
 
   // B7: an enemy's hit radius: its own e.rad (a big creature) or its type's.
   _er(e) { return e.rad > 0 ? e.rad : RM_ENEMIES[e.type].r; }
@@ -2679,6 +2733,16 @@ class RealmArena {
       firing = this.mouse.down || !!this.keys[' '];
     } else if (this.keys[' ']) firing = true;
     if (pad && pad.fire) firing = true;
+    if (!firing && this._autoFire && this._ax2On() && !this.down && !(pad && pad.aim.on)) { // AR one-thumb: aim at the nearest enemy in range and fire
+      const t = this._autoFireTarget();
+      if (t) { // lead the target by its measured velocity over the bolt's flight time (strafing enemies are hit too); plain numbers only
+        if (t !== this._afT || !(dt > 0)) { this._afT = t; this._afVx = 0; this._afVy = 0; }
+        else { this._afVx = this._afVx * 0.6 + ((t.x - this._afX) / dt) * 0.4; this._afVy = this._afVy * 0.6 + ((t.y - this._afY) / dt) * 0.4; }
+        this._afX = t.x; this._afY = t.y;
+        const dx = t.x - p.x; const dy = t.y - p.y; const ft = Math.sqrt(dx * dx + dy * dy) / RM_PLAYER.bulletSpeed;
+        p.aim = Math.atan2(dy + this._afVy * ft, dx + this._afVx * ft); firing = true; this.autoFireN++;
+      } else this._afT = null;
+    }
     if (pad) { for (let i = 0; i < 4; i++) { const on = !!pad.ability[i]; if (on && !this._padPrev[i]) this.cast(i); this._padPrev[i] = on; } }
     if (this.down) firing = false;
     this._firing = firing;
@@ -3582,11 +3646,11 @@ class RealmArena {
   refreshAccess() {
     if (typeof MMAccess === 'undefined' || !MMAccess.prefs) { this.acc = null; this._ebCB = null; return null; }
     let raw = null; try { raw = localStorage.getItem(MMAccess.prefs.KEY); } catch (e) { raw = null; }
-    if (raw === this._accRaw && this.acc) return this.acc;
+    if (raw === this._accRaw && this.acc) { if (this._ax2) { this._bakeCBBullets(); this._syncTxtFont(); } return this.acc; } // AR: a duel starting / ending flips the gate
     this._accRaw = raw;
     let pr = null; try { pr = MMAccess.prefs.load(localStorage); } catch (e) { pr = null; }
     this.acc = pr || MMAccess.prefs.defaults();
-    this._bakeCBBullets();
+    this._bakeCBBullets(); this._syncTxtFont();
     return this.acc;
   }
   _flashesOn() { return !this.acc || this.acc.flashes !== false; }
@@ -3594,14 +3658,37 @@ class RealmArena {
   // `enemy`), with a 2 px dark outline while bulletOutline is on. Same 16 px sprites, same hit size; null = today's hues and art.
   // The normal palette with bulletOutline OFF bakes today's three hues with no dark rim (and no bolt art, which carries its own rim), so
   // the outline pref works on every palette. Baked once per pref change (3 canvases); the draw loop only picks a cached canvas.
+  // AR: on a page that enabled access2 (never in a duel), a colour-blind palette or the Bullet shapes toggle gives each kind its own SHAPE too:
+  // aimed = round dot, spiral = diamond, ring = hollow ring, each in the MMAccess palette colours with the outline following the shape.
   _bakeCBBullets() {
     const a = this.acc; const on = a && a.palette && a.palette !== 'normal';
-    const bare = !!(a && !on && a.bulletOutline === false);
-    const key = on ? `${a.palette}|${a.bulletOutline ? 1 : 0}` : bare ? 'normal|0' : '';
+    const shp = this._ax2On() && (on || this._shapes) && typeof MMAccess !== 'undefined' && typeof MMAccess.palette === 'function';
+    const bare = !!(a && !on && !shp && a.bulletOutline === false);
+    const key = shp ? `shape|${a ? a.palette : 'normal'}|${!a || a.bulletOutline ? 1 : 0}` : on ? `${a.palette}|${a.bulletOutline ? 1 : 0}` : bare ? 'normal|0' : '';
     if (key === this._ebCBKey) return;
     this._ebCBKey = key; this._ebCB = null;
     if (typeof document === 'undefined') return;
     const R = RM_BOLT_R.enemy;
+    if (shp) {
+      const pal = MMAccess.palette(a ? a.palette : 'normal'); const outline = !a || a.bulletOutline !== false;
+      const path = (g, k, r) => {
+        g.beginPath();
+        if (k === 1) { g.moveTo(8, 8 - r); g.lineTo(8 + r, 8); g.lineTo(8, 8 + r); g.lineTo(8 - r, 8); g.closePath(); }
+        else g.arc(8, 8, r, 0, Math.PI * 2);
+      };
+      this._ebCB = [pal.bullet, pal.enemy, pal.enemy].map((col, k) => {
+        const c = document.createElement('canvas'); c.width = 16; c.height = 16; const g = c.getContext('2d');
+        const r = k === 1 ? R + 1 : R; // the diamond's corners reach a little further so its area matches the dot
+        g.fillStyle = col; path(g, k, r); g.fill();
+        if (k === 2) { g.globalCompositeOperation = 'destination-out'; g.beginPath(); g.arc(8, 8, 2.6, 0, Math.PI * 2); g.fill(); g.globalCompositeOperation = 'source-over'; } // hollow ring
+        if (outline) {
+          g.strokeStyle = '#000'; g.lineWidth = pal.outlinePx || 2; path(g, k, r + 1); g.stroke();
+          if (k === 2) { g.lineWidth = 1; g.beginPath(); g.arc(8, 8, 2.6, 0, Math.PI * 2); g.stroke(); }
+        }
+        return c;
+      });
+      return;
+    }
     if (bare) {
       this._ebCB = RM_EB_HUES.map(([hue, tint]) => {
         const c = document.createElement('canvas'); c.width = 16; c.height = 16; const g = c.getContext('2d');
@@ -4150,6 +4237,67 @@ class RealmArena {
     });
   }
 
+  // ---------- Nexus vendor stall (VN, NEXT-SLICES-3 Wave 4): MMGearForge.vendorStock / buyBack, free in-game dust only ----------
+  // A fixed T1-T3 list at fixed dust prices (never soulbound, nothing rolled, no timer, no rotation, no random pack, no real money). Buy-back pays
+  // MMGearForge.BUYBACK_RATIO of the item's sell value in dust for T1-T3 items only. Follows the forge gate (forgeOn: ?forge=0 / ?gear=0 / duels: off).
+  // No new save key: a bought item is a plain { n, id, r: 0, t } entry (t 1-3 needs no affix seed) and dust is the GW `dust` field.
+  vendorOn() { return this.forgeOn() && typeof MMGearForge.vendorStock === 'function' && typeof MMGearForge.buyBack === 'function'; }
+  // vendorStock() -> [{ id, t, r: 0, price, name, afford, room }] or null when the stall is off.
+  vendorStock() {
+    if (!this.vendorOn()) return null;
+    const d = new Date(); const th = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 4 - (d.getUTCDay() || 7))); // ISO week (the list does not depend on it)
+    const wk = th.getUTCFullYear() + '-W' + String(Math.ceil(((th - Date.UTC(th.getUTCFullYear(), 0, 1)) / 864e5 + 1) / 7)).padStart(2, '0');
+    let s = null; try { s = MMGearForge.vendorStock(wk); } catch (e) { s = null; }
+    if (!Array.isArray(s)) return null;
+    const sv = this.save; const dust = sv.dust || 0; const room = sv.items.length < RM_BACKPACK;
+    return s.filter((o) => o && Object.prototype.hasOwnProperty.call(RM_ITEM_BY_ID, o.id) && Number.isInteger(o.t) && o.t >= 1 && o.t <= 3 && o.r === 0 && Number.isInteger(o.price) && o.price > 0)
+      .map((o) => ({ id: o.id, t: o.t, r: 0, price: o.price, name: RM_ITEM_BY_ID[o.id].name, afford: dust >= o.price, room }));
+  }
+  // vendorBuy(id, t) -> the new item's uid, or 0. Charges exactly the listed dust once; refused without the dust or a free backpack slot.
+  vendorBuy(id, t) {
+    const o = (this.vendorStock() || []).find((x) => x.id === id && x.t === t);
+    if (!o || !o.afford || !o.room) return 0;
+    const sv = this.save; const n = Math.max(sv.nextUid || 1, 1 + sv.items.reduce((m, x) => Math.max(m, x.n), 0)); sv.nextUid = n + 1;
+    sv.dust = (sv.dust || 0) - o.price;
+    sv.items.push({ n, id: o.id, r: 0, t: o.t });
+    this._snd('pickup');
+    this._afterGearChange();
+    return n;
+  }
+  // vendorBuyBackInfo(uid) -> { dust } or null (T1-T3 tiered items only; soulbound / T4+ / classic items are refused).
+  vendorBuyBackInfo(uid) {
+    if (!this.vendorOn()) return null;
+    const it = this.save.items.find((x) => x.n === uid);
+    if (!it || !it.t || it.t > 3) return null;
+    let r = null; try { r = MMGearForge.buyBack(this._forgeView(it)); } catch (e) { r = null; }
+    return r && Number.isInteger(r.dust) && r.dust > 0 ? { dust: r.dust } : null;
+  }
+  // vendorSellBack(uid) -> the dust paid, or 0. The item leaves the backpack (and its slot).
+  vendorSellBack(uid) {
+    const info = this.vendorBuyBackInfo(uid);
+    if (!info) return 0;
+    const sv = this.save; const i = sv.items.findIndex((x) => x.n === uid);
+    if (i < 0) return 0;
+    sv.items.splice(i, 1);
+    RM_EQ_KEYS.forEach((slot) => { if (sv.eq[slot] === uid) delete sv.eq[slot]; });
+    sv.dust = (sv.dust || 0) + info.dust;
+    if (this._forgeUid === uid) { this._forgeUid = 0; this._forgeAsk = null; }
+    rmGearHintOwn(sv);
+    this._afterGearChange();
+    return info.dust;
+  }
+  // openForge(): the backpack with the Forge section of a tiered item open (the equipped weapon first). false when the forge is off.
+  openForge() {
+    if (!this.forgeOn() || !this.active || this.state === 'dead') return false;
+    const sv = this.save; const w = sv.items.find((x) => x.n === sv.eq.weapon && x.t);
+    const it = w || sv.items.find((x) => x.t);
+    this._forgeUid = it ? it.n : 0; this._forgeAsk = null;
+    this._panel('bp');
+    const f = typeof document !== 'undefined' ? document.querySelector('#realm-bp-forge button.fg') || document.getElementById('realm-bp-close') : null;
+    if (f && f.focus) { try { f.focus({ preventScroll: true }); } catch (e) { /* focus is cosmetic */ } }
+    return true;
+  }
+
   _afterGearChange() {
     this.markStatsDirty(); this._calcStats();
     const p = this.player;
@@ -4531,7 +4679,7 @@ class RealmArena {
       g.globalAlpha = Math.max(0, pt.life / pt.max); g.fillStyle = pt.color; g.fillRect(pt.x - pt.size / 2, pt.y - pt.size / 2, pt.size, pt.size);
     }
     g.globalAlpha = 1;
-    g.font = 'bold 14px system-ui, sans-serif'; g.textAlign = 'center';
+    g.font = this._txtFont; g.textAlign = 'center'; // AR: follows the HUD size pref (a cached string; 14 px by default)
     const hs = this._stAnchorAt(); const ox = wd ? cam.x : 0; const oy = wd ? cam.y : 0; // floating numbers never sit under the top-right HUD buttons
     for (let i = 0; i < this.texts.length; i++) {
       const t = this.texts[i];

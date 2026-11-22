@@ -1496,6 +1496,7 @@
       + 'body.nx-walking #realm-stick-move{z-index:90}body.touch-device.nx-walking #rw-nexus{padding-bottom:calc(170px + env(safe-area-inset-bottom,0px))}'
       + '#rw-nexus .nx-board{max-width:760px;width:100%;margin:0 auto 12px;box-sizing:border-box;padding:10px 12px;border-radius:10px;background:#1d2a2a;border:1px solid #3b6b5f}#rw-nexus .nx-board.hidden{display:none}#rw-nexus .nx-q{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid #2f4a45}#rw-nexus .nx-q:first-of-type{border-top:0}#rw-nexus .nx-q span{flex:1}#rw-nexus .nx-q em{color:#8fe9ff;font-style:normal}'
       // PLAYTEST-REVIEW-2 #8: an unfinished quest's Claim is outline-only (dashed, muted, no fill) and the row carries a progress bar
+      + '#rw-nexus .nx-stall{background:#2a2418;border-color:#6b5a36}#rw-nexus .nx-st-head{display:flex;align-items:center;gap:8px;justify-content:space-between}#rw-nexus .nx-st-note,#rw-nexus .nx-st-wallet{margin:6px 0;font-size:13px}#rw-nexus .nx-st-sub{display:block;margin:10px 0 6px;font-size:12px;color:#e8d9b0}#rw-nexus .nx-stall button{height:auto;padding:6px 10px;white-space:normal;max-width:100%;text-align:left}#rw-nexus .nx-stall button:disabled{background:transparent;border-style:dashed;border-color:#6b6390;color:#a59cc4;cursor:not-allowed}#rw-nexus .nx-st-q{flex:0 0 100%}#rw-nx-forge{margin:4px 0}'
       + '#rw-nexus .nx-q button:disabled{background:transparent;border-style:dashed;border-color:#6b6390;color:#a59cc4;cursor:not-allowed}#rw-nexus .nx-bar{display:block;height:6px;margin-top:5px;border-radius:3px;background:#2f4a45;overflow:hidden}#rw-nexus .nx-bar>i{display:block;height:100%;background:#5be38a}';
     document.head.appendChild(nxCss);
     function nxLoadPortrait(id, done) { // b21 idle_down, first frame, cached; the plaza redraws when one arrives
@@ -1572,9 +1573,52 @@
       if (n.role === 'heal') { const p = arena.player; const was = p.hp; p.hp = arena.stats.maxHp; arena._syncHud(); nxSay(name, was < p.hp ? 'There. Whole again, no charge.' : 'You look perfectly well to me.'); return; }
       if (n.role === 'oracle') { const o = MMQuests.oracle(todayUtc()); nxSay(name, o ? o.text : 'The mists are quiet.'); return; }
       if (n.role === 'quests') { if (typeof nxBoardOpen === 'function') nxBoardOpen(); nxSay(name, 'Here is the day\'s board. Three jobs, free to take.'); return; }
+      if (n.stall && nxStallOn()) { nxStallOpen(); nxSay(name, n.stall === 'forge' ? 'The anvil is yours to use. Salvage and reforge live in your backpack Forge.' : 'Same goods, same prices, every day. Take your time.'); return; }
       const key = n.role === 'rumours' ? 'rumours' : n.role === 'shop' ? 'vendor' : n.role === 'combine' ? 'blacksmith' : 'guide';
       const L = NX_LINES[key]; nxSay(name, L[(MMRng.hash(todayUtc() + n.id) + nxTalkN) % L.length]);
     }
+    // ---------- VN: the vendor / forge stall (arena.vendorStock / vendorBuy / vendorSellBack / openForge; realm.js owns the save) ----------
+    // Calm by design: a fixed T1-T3 list at fixed dust prices, no timer, no rotation, no random pack, no real money. Follows the forge gate (?forge=0 hides it).
+    let nxStallAsk = 0; // uid waiting for the sell-back confirm
+    const nxStallOn = () => typeof arena.vendorOn === 'function' && arena.vendorOn();
+    function nxStallBtn(text, label, fn) { const b = document.createElement('button'); b.type = 'button'; b.textContent = text; b.setAttribute('aria-label', label || text); b.addEventListener('click', fn); return b; }
+    function nxStallRender() {
+      const el = nxDom.stall; el.textContent = '';
+      if (!nxStallOn()) { el.classList.add('hidden'); return; }
+      const sv = arena.save; const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+      const head = mk('div', 'nx-st-head'); head.appendChild(mk('b', '', 'Vendor stall'));
+      head.appendChild(nxStallBtn('Close stall', 'Close the vendor stall', () => { nxStallAsk = 0; el.classList.add('hidden'); }));
+      el.appendChild(head);
+      el.appendChild(mk('p', 'nx-st-note', 'Fixed prices in dust. The shelf is the same every day.'));
+      el.appendChild(mk('p', 'nx-st-wallet', 'You have ' + (sv.dust || 0) + ' dust · ' + sv.items.length + ' items carried'));
+      const fg = nxStallBtn('⚒ Open the Forge', 'Open the Forge in your backpack', () => nxStallForge()); fg.id = 'rw-nx-forge'; el.appendChild(fg);
+      el.appendChild(mk('b', 'nx-st-sub', 'Buy'));
+      const buy = mk('div', 'nx-row'); buy.id = 'rw-nx-buy';
+      (arena.vendorStock() || []).forEach((o) => {
+        const why = !o.room ? ' (backpack full)' : !o.afford ? ' (not enough dust)' : '';
+        const b = nxStallBtn(o.name + ' T' + o.t + ' · ' + o.price + ' dust', 'Buy ' + o.name + ' tier ' + o.t + ' for ' + o.price + ' dust' + why, () => { arena.vendorBuy(o.id, o.t); nxStallRender(); });
+        b.dataset.vbuy = o.id + ':' + o.t; b.dataset.price = String(o.price); if (why) b.disabled = true; buy.appendChild(b);
+      });
+      el.appendChild(buy);
+      el.appendChild(mk('b', 'nx-st-sub', 'Sell back (T1-T3)'));
+      const back = mk('div', 'nx-row'); back.id = 'rw-nx-sell'; let any = false;
+      sv.items.forEach((it) => {
+        const info = arena.vendorBuyBackInfo(it.n); if (!info) return; any = true;
+        const def = typeof RM_ITEM_BY_ID !== 'undefined' && RM_ITEM_BY_ID[it.id] ? RM_ITEM_BY_ID[it.id].name : it.id;
+        if (nxStallAsk === it.n) {
+          const q = mk('span', 'nx-st-q', 'Sell ' + def + ' T' + it.t + ' back for ' + info.dust + ' dust?'); back.appendChild(q);
+          const y = nxStallBtn('Confirm +' + info.dust + ' dust', 'Confirm: sell ' + def + ' back for ' + info.dust + ' dust', () => { nxStallAsk = 0; arena.vendorSellBack(it.n); nxStallRender(); }); y.dataset.vyes = String(it.n); back.appendChild(y);
+          back.appendChild(nxStallBtn('Cancel', 'Keep ' + def, () => { nxStallAsk = 0; nxStallRender(); }));
+        } else {
+          const b = nxStallBtn(def + ' T' + it.t + ' · +' + info.dust + ' dust', 'Sell ' + def + ' tier ' + it.t + ' back for ' + info.dust + ' dust (asks first)', () => { nxStallAsk = it.n; nxStallRender(); });
+          b.dataset.vsell = String(it.n); back.appendChild(b);
+        }
+      });
+      if (!any) back.appendChild(mk('span', 'nx-st-note', 'Nothing to sell back. Tier 1 to 3 gear can be sold here.'));
+      el.appendChild(back);
+    }
+    function nxStallOpen() { nxBuild(); if (!nxStallOn()) return false; nxStallAsk = 0; nxDom.board.classList.add('hidden'); nxStallRender(); nxDom.stall.classList.remove('hidden'); return true; }
+    function nxStallForge() { if (!nxStallOn()) return false; nxStallAsk = 0; nxDom.stall.classList.add('hidden'); nexusClose(); return arena.openForge(); }
     function nxBuild() {
       if (nxDom) return nxDom;
       const root = document.createElement('div'); root.id = 'rw-nexus'; root.className = 'hidden'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', 'The Nexus');
@@ -1604,9 +1648,10 @@
       lists.appendChild(rowP); lists.appendChild(rowN);
       const talk = document.createElement('div'); talk.className = 'nx-talk'; talk.setAttribute('role', 'status'); talk.textContent = nxHint();
       const board = document.createElement('div'); board.className = 'nx-board hidden'; board.id = 'rw-nx-board';
-      root.appendChild(head); root.appendChild(stage); if (act) root.appendChild(act); root.appendChild(talk); root.appendChild(board); if (!NX_WALK) root.appendChild(lists); ov.appendChild(root);
+      const stall = document.createElement('div'); stall.className = 'nx-board nx-stall hidden'; stall.id = 'rw-nx-stall'; stall.setAttribute('role', 'region'); stall.setAttribute('aria-label', 'Vendor stall');
+      root.appendChild(head); root.appendChild(stage); if (act) root.appendChild(act); root.appendChild(talk); root.appendChild(board); if (nxStallOn()) root.appendChild(stall); if (!NX_WALK) root.appendChild(lists); ov.appendChild(root);
       back.addEventListener('click', () => nexusClose());
-      nxDom = { root, cv, plaza, act, stage, talk, board, back, last: null };
+      nxDom = { root, cv, plaza, act, stage, talk, board, stall, back, last: null };
       return nxDom;
     }
     function nxTouch() { return document.body.classList.contains('touch-device'); }
@@ -1701,7 +1746,7 @@
       nxBuild(); nxEnterTile = { x: Math.floor(arena.player.x / TILE), y: Math.floor(arena.player.y / TILE) };
       nxOpen = true; arena.paused = true; savePos(true);
       nxBtn.classList.add('hidden'); portalBtn.classList.add('hidden'); siteBtn.classList.add('hidden'); if (typeof lairBtn !== 'undefined') { lairBtn.classList.add('hidden'); lairTxt = ''; }
-      nxDom.root.classList.remove('hidden'); nxDom.board.classList.add('hidden');
+      nxDom.root.classList.remove('hidden'); nxDom.board.classList.add('hidden'); nxDom.stall.classList.add('hidden'); nxStallAsk = 0;
       NX.layout().npcs.forEach((n) => nxLoadPortrait(n.npc, nxDrawPlaza)); nxDrawPlaza();
       nxDom.talk.textContent = nxHint();
       if (NX_WALK) nxWalkStart(); else nxDom.back.focus({ preventScroll: true });
@@ -1879,7 +1924,7 @@
         b.appendChild(row);
       });
     }
-    function nxBoardOpen() { nxBuild(); nxBoardRender(); nxDom.board.classList.remove('hidden'); }
+    function nxBoardOpen() { nxBuild(); nxBoardRender(); nxDom.board.classList.remove('hidden'); if (nxDom.stall) nxDom.stall.classList.add('hidden'); }
     function nxClaim(id) {
       const out = MMQuests.claim(save.quests, id, questDate()); save.quests = out.state;
       if (out.reward) {
@@ -2105,7 +2150,7 @@
       worldStatus: { on: STATUS_ON, table: BOLT_ST, forCreature: boltStatusFor, roll: boltRoll, log: stLog },
       ttk: { on: TTK_ON }, firstBag: { on: FIRSTBAG_ON, kill: FIRSTBAG_KILL, fresh: fbFresh, kills: () => fbKills, dropped: () => fbDropped, forced: () => fbForced, spent: () => save.fb === 1 }, explore: { on: EXPLORE_ON, every: EXPLORE_EVERY, pct: EXPLORE_PCT, xp: () => exploreXp, pending: () => exploreCells },
       pickups: { on: PICK_ON, cap: PICK_CAP, magnet: MAGNET_R, list: () => picks.map((q) => ({ type: q.type, art: q.art, value: q.value, tier: q.tier, x: q.x, y: q.y, lifeMs: q.lifeMs })), spawn: spawnPickups, got: () => Object.assign({}, pickGot), total: () => pickTotal },
-      nexus: { on: NX_ON, site: nxSite, portalName: (id) => (NX_ON ? nxPortalName(NX.layout().portals.find((q) => q.id === id)) : ''), promptFor: (id) => { const q = NX_ON ? NX.layout().portals.find((p) => p.id === id) : null; return q ? nxLabel({ kind: 'portal', ref: q }) : ''; }, open: nexusOpen, close: nexusClose, isOpen: () => nxOpen, near: () => nxNear, enterTile: () => nxEnterTile, talk: (id) => { const n = NX_ON && NX.layout().npcs.find((x) => x.id === id); if (n) { nxBuild(); nxTalk(n); } return nxDom && nxDom.last; }, portal: (id) => { const q = NX_ON && NX.layout().portals.find((x) => x.id === id); return q ? nxPortal(q) : null; }, lastUrl: () => api.lastNexusUrl || null, today: todayUtc,
+      nexus: { on: NX_ON, site: nxSite, portalName: (id) => (NX_ON ? nxPortalName(NX.layout().portals.find((q) => q.id === id)) : ''), promptFor: (id) => { const q = NX_ON ? NX.layout().portals.find((p) => p.id === id) : null; return q ? nxLabel({ kind: 'portal', ref: q }) : ''; }, open: nexusOpen, close: nexusClose, isOpen: () => nxOpen, near: () => nxNear, enterTile: () => nxEnterTile, talk: (id) => { const n = NX_ON && NX.layout().npcs.find((x) => x.id === id); if (n) { nxBuild(); nxTalk(n); } return nxDom && nxDom.last; }, stall: { on: () => NX_ON && nxStallOn(), open: () => NX_ON && nxStallOpen(), isOpen: () => !!(nxDom && nxDom.stall && nxDom.stall.isConnected && !nxDom.stall.classList.contains('hidden')), forge: () => NX_ON && nxStallForge() }, portal: (id) => { const q = NX_ON && NX.layout().portals.find((x) => x.id === id); return q ? nxPortal(q) : null; }, lastUrl: () => api.lastNexusUrl || null, today: todayUtc,
         // walkable plaza (PLAYTEST-REVIEW-2 #5); step(mx, my, dt) injects input for tests, place() only accepts free plaza points
         walk: { on: NX_WALK, view: { w: NX_VW, h: NX_VH }, hero: () => ({ x: nxHero.x, y: nxHero.y, tx: Math.floor(nxHero.x / TILE), ty: Math.floor(nxHero.y / TILE), moving: nxHero.moving }), cam: () => ({ x: nxCam.x, y: nxCam.y }),
           near: () => (nxNearI ? { kind: nxNearI.kind, id: nxNearI.ref.id } : null), act: () => nxAct(), step: (mx, my, dt) => { if (nxOpen && NX_WALK) nxWalkStep(Number(dt) || 1 / 60, Number(mx) || 0, Number(my) || 0); return { x: nxHero.x, y: nxHero.y }; },
