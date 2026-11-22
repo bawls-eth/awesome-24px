@@ -7,7 +7,7 @@
 // AW2: the jungle now preloads 8 species (+ the b32s stegolith; glimmerfrog gains its b31af sleep / eat): 129 strips; 3d a ridden
 // Stegolith (saddle_stegolith in the pack) draws its b32s body + saddle overlay; 5b a fed glimmerfrog plays its b31af eat strip.
 // AW3: 8 the Coral Reef (?isle=reef) preloads the b38a reef puffer (14 strips, 48 px S class) and draws it from PNG, desktop + phone.
-// AW4: the reef now preloads all seven b38a-f species (108 strips) and the shellcrab draws from PNG too (details: isle-reef-art.test.js).
+// AW4: the reef now preloads all seven b38a-f species (108 strips; AW5: + the b38g hydra, 123) and the shellcrab draws from PNG too (details: isle-reef-art.test.js).
 // Run: BASE=http://localhost:8841/game/index.html NODE_PATH=$(npm root -g) node game/tests/isle-creature-art.test.js
 const fs = require('fs');
 const path = require('path');
@@ -207,8 +207,8 @@ const PIXELS = (I, a) => {
       return { crab: c.src, crabDrawn: c.drawn, size: I.stripSize('reef_puffer', 'idle', 0), eat: I.stripSize('reef_puffer', 'eat', 3) };
     });
     const rp = rf.pngs.filter((p) => /^b38a-reef-puffer\//.test(p.u));
-    check('8 ' + lab + ': the reef isle preloads the seven b38a-f species (108 strips; the 14 b38a PNGs all 200), the puffer draws from its strip at 48 px (b38a palette), the shellcrab from its b38b strip',
-      rready.on && rready.kinds[0] === 'reef_puffer' && rready.kinds.length === 7 && rready.count === 108 && rp.length === 14 && rp.every((p) => p.s === 200)
+    check('8 ' + lab + ': the reef isle preloads the seven b38a-f species + the b38g hydra (108 + 15 strips; the 14 b38a PNGs all 200), the puffer draws from its strip at 48 px (b38a palette), the shellcrab from its b38b strip',
+      rready.on && rready.kinds[0] === 'reef_puffer' && rready.kinds.length === 8 && rready.count === 123 && rp.length === 14 && rp.every((p) => p.s === 200)
       && rpx.src === 'png' && /^reef_puffer_(idle|move)_(down|up|right)$/.test(rpx.drawn) && rpx.changed > 150 && rpx.ratio > 0.6
       && rmore.crab === 'png' && /^shellcrab_/.test(rmore.crabDrawn) && rmore.size.w === 48 && rmore.size.ay === 171 / 4 && rmore.eat.id === 'reef_puffer_eat_down'
       && rf.errors.length === 0 && rf.offsite.length === 0 && rf.db.count() === 0, JSON.stringify([rready, rpx, rmore, rp.length]) + rf.errors.join(' | '));

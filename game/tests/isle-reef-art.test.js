@@ -1,10 +1,11 @@
 // Browser test (AW4): the Codex b38a-f Coral Reef creature strips on the Hearthvale Isles page (?isle=reef).
-// 1 the reef isle preloads its seven biome species (reef_puffer, shellcrab, glowjelly, fin_raider, tidesteed, skimray, isleback_turtle:
-//   108 PNGs, every one answered 200, nothing from another biome) and each species draws from its PNG strip (screen pixels are its batch
+// 1 the reef isle preloads its eight biome species (reef_puffer, shellcrab, glowjelly, fin_raider, tidesteed, skimray, isleback_turtle, and
+//   since AW5 the b38g tide_hydra boss: 108 + 15 = 123 PNGs, every one answered 200, nothing from another biome) and each species draws from its PNG strip (screen pixels are its batch
 //   palette, not the code bake), at its size class (S 48, L 96, XL 128 native px, feet anchors from the manifests);
 // 2 the glowjelly (no sleep / eat strips) falls back to idle; a killed glowjelly plays its death strip;
 // 3 a ridden Tidesteed / Skimray draws its body strip plus the separate saddle overlay (idle down, move right) with the hero on the
-//   manifest seat (lift and x from MMCreatureStrips.seatOffset); the Isleback Turtle (saddle: null) rides bare, the hero on its shell;
+//   manifest seat (lift and x from MMCreatureStrips.seatOffset; the b38c / b38f revisions); the Isleback Turtle (saddle: null) rides bare,
+//   the hero on its shell at the revised manifest seat (no drawn-seat nudge);
 // 4 phone 390x844 dpr 2: the same strips draw, no horizontal scroll; 5 ?art=0 loads no b38 PNG and every reef species (and the ride)
 //   is the MMCreatureDraw code bake; plus no console errors, no offsite requests and 0 DB requests (blockDb) everywhere.
 // Run: python3 -m http.server 9221 (repo root), then BASE=http://localhost:9221/game/index.html NODE_PATH=$(npm root -g) node game/tests/isle-reef-art.test.js
@@ -86,8 +87,9 @@ const pngOk = (sp, r) => r.src === 'png' && new RegExp('^' + sp + '_(idle|move)_
   const d = await open(browser, DESK);
   const ready = await ev(d.page, (I) => I.stripsReady());
   const b38 = d.pngs.filter((p) => /^b38[a-f]-/.test(p.u)), crit = d.pngs.filter((p) => /\/(creatures|enemies)\//.test(p.u));
-  check('1a the reef isle preloads its seven biome species: 108 b38a-f PNGs (14+14+12+14+20+20+14), all 200, no other creature batch (b31 / b32 / b36)',
-    ready.on && ready.kinds.join() === REEF.map((r) => r[0]).join() && ready.count === 108 && b38.length === 108 && b38.every((p) => p.s === 200) && crit.length === 108 && d.pngs.every((p) => p.s === 200)
+  check('1a the reef isle preloads its eight biome species: 108 b38a-f PNGs (14+14+12+14+20+20+14) + 15 b38g hydra, all 200, no other creature batch (b31 / b32 / b36)',
+    ready.on && ready.kinds.join() === REEF.map((r) => r[0]).concat(['tide_hydra']).join() && ready.count === 123 && b38.length === 108 && b38.every((p) => p.s === 200) && crit.length === 123
+    && d.pngs.filter((p) => /^b38g-tide-hydra\/creatures\/tide_hydra\//.test(p.u)).length === 15 && d.pngs.every((p) => p.s === 200)
     && b38.some((p) => p.u === 'b38c-reef-mounts/creatures/tidesteed/tidesteed_saddle_move_right.png'), JSON.stringify(ready) + ' ' + d.pngs.length);
   const px = await species(d);
   const bad = px.filter((r) => !pngOk(r.sp, r));
@@ -112,7 +114,7 @@ const pngOk = (sp, r) => r.src === 'png' && new RegExp('^' + sp + '_(idle|move)_
     I.step(1, 0, 0.2); I.render(); const move = I.riding();
     return { on, idle, move };
   };
-  for (const [sp, saddle, sx, sys, sdy] of [['tidesteed', true, 180, [144, 168], 0], ['skimray', true, 184, [140, 156], 0], ['isleback_turtle', false, 232, [144, 164], 6]]) {
+  for (const [sp, saddle, sx, sys, sdy] of [['tidesteed', true, 180, [120, 136], 0], ['skimray', true, 184, [180, 196], 0], ['isleback_turtle', false, 236, [176, 176], 0]]) {
     const ay = sp === 'isleback_turtle' ? 463 : 347, ax = sp === 'isleback_turtle' ? 256 : 192;
     const r = await open(browser, DESK, '', { 'pixeltown-tames-v1': stable(sp) });
     const out = await ev(r.page, RIDE);

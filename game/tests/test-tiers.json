@@ -1171,6 +1171,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "isles-tundra-mars.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "isles-boss.test.js": {
     "class": "browser",
     "tier": "full"
