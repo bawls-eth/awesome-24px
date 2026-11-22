@@ -59,12 +59,13 @@ async function open(browser, opts, q, init) {
     const vis = (e) => !!(e && e.offsetParent && getComputedStyle(e).display !== 'none');
     const small = [...document.querySelectorAll('button, a')].filter(vis).map((e) => { const r = e.getBoundingClientRect(); return { id: e.id || e.textContent.trim().slice(0, 14), w: r.width, h: r.height }; }).filter((x) => x.w > 2 && x.h > 2) /* MMNav keeps the legacy Hub/Town links as 1px screen-reader-only */.filter((x) => x.w < 44 || x.h < 44);
     const nav = document.querySelector('.mm-nav-btn, #mm-nav-btn, [data-mm-nav]');
-    return { downVisible: vis(document.getElementById('t-down')), mode: window.__dd.meta().mode, small, dive: document.getElementById('hud-dive').textContent, hasNav: !!window.MMNav };
+    return { intro: window.__dd.introText(), downVisible: vis(document.getElementById('t-down')), mode: window.__dd.meta().mode, small, dive: document.getElementById('hud-dive').textContent, hasNav: !!window.MMNav };
   });
   check('phone: Down button is hidden in survival (hidden attribute wins over .btn display)', lay.mode === 'survival' && lay.downVisible === false, JSON.stringify(lay));
   check('phone: every visible button/link is at least 44x44', lay.small.length === 0, JSON.stringify(lay.small));
   check('phone: dive HUD shows the dive twist, depth and best', /^[A-Z][a-z]+( [a-z]+)?: 0 deep \| Best (-|\d+)$/.test(lay.dive), lay.dive);
   check('phone: MMNav still mounted', lay.hasNav === true);
+  check('phone: first hint uses touch words, not mouse/keys, and names the dive goal', /hold Mine to dig/.test(lay.intro) && !/WASD|left|right/.test(lay.intro) && /climb back out/.test(lay.intro), lay.intro);
 
   // a dive: mine with a combo, go deep, die -> summary with personal bests; Dive again closes it in one tap
   const d1 = await P.page.evaluate(() => {
@@ -129,6 +130,8 @@ async function open(browser, opts, q, init) {
   await D.page.keyboard.press('Escape');
   const d6 = await D.page.evaluate(() => !document.getElementById('run-panel').hidden);
   check('desktop: Escape closes the summary', d6 === false);
+  const intro = await D.page.evaluate(() => window.__dd.introText());
+  check('desktop: first hint names mouse + WASD controls', /WASD/.test(intro) && /Hold left to mine/.test(intro), intro);
   const d7 = await D.page.evaluate(() => { const d = window.__dd; d.panel('goals', true); const g = !document.getElementById('goals-panel').hidden; document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); return { g, after: !document.getElementById('goals-panel').hidden }; });
   check('desktop: Escape closes the goals panel too', d7.g === true && d7.after === false, JSON.stringify(d7));
   const pil = await D.page.evaluate(() => {

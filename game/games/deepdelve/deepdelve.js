@@ -1733,12 +1733,17 @@
         if (lightDirty || !win.light) relight();
         return lightAt(x, y, z);
       }, worldUrl, switchWorld, outlineHex: () => (outline ? outline.material.color.getHex() : 0),
-      prog: showProg, mining: (dt) => updateMining(dt), progShown: () => progShown,
+      introText, prog: showProg, mining: (dt) => updateMining(dt), progShown: () => progShown,
       run: { get state() { return run; }, get rec() { return runRec; }, start: startRun, end: endRun, mined: onMined, tick: tickRun, close: closeSummary, depth0: () => runDepth0, shake: () => ({ t: shakeT, amp: shakeAmp }), MMDDRun: RUNS },
       craft: craftTorch, mouthSite: () => mouthSite, aimed: () => aimed, aim, outlineVisible: () => !!(outline && outline.visible), surfaceY: (x, z) => MMChunks.surfaceY(x, z, SEED), ready: true,
     };
   }
 
+  // First hint: touch players get touch words (they have no mouse buttons or keys); both learn the dive goal.
+  function introText() {
+    const how = $('touch').hidden ? 'Click the view to look around. Hold left to mine, right to place. WASD + Space.' : 'Drag the view to look, use the stick to move, hold Mine to dig.';
+    return CREATIVE ? how : how + ' Dive deep, then climb back out for a bonus.';
+  }
   // ---------- boot ----------
   async function boot() {
     $('hud-seed').textContent = 'Seed ' + SEED;
@@ -1798,8 +1803,8 @@
     bindControls();
     renderHud();
     if (TEST) exposeTest();
-    say(TEST ? '' : 'Click the view to look around. Hold left to mine, right to place. WASD + Space.');
-    if (!TEST) setTimeout(() => say(''), 5000);
+    say(TEST ? '' : introText());
+    if (!TEST) setTimeout(() => say(''), 6000);
     requestAnimationFrame(frame);
   }
   boot();
