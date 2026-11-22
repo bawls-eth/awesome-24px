@@ -1234,5 +1234,9 @@
   "save-merge-fuzz.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "town-postcards.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

@@ -361,12 +361,12 @@
           "height": 844
         },
         "touch": true,
-        "joinShownMs": 1016,
-        "offlineOfferMs": 1175,
-        "inTownMs": 3706,
+        "joinShownMs": 435,
+        "offlineOfferMs": 537,
+        "inTownMs": 2194,
         "joinTaps": 2,
         "tapsToFirstMove": 3,
-        "firstMoveMs": 3661,
+        "firstMoveMs": 2676,
         "firstInteraction": 1.7,
         "firstInteractionKind": "sellAtShop",
         "gateReach": 6.3,
@@ -376,13 +376,13 @@
         "places": 10,
         "hudPieces": 7,
         "hudOverlaps": 0,
-        "smallButtons": 6,
-        "tinyText": 7,
+        "smallButtons": 0,
+        "tinyText": 0,
         "underCanvas": 0,
         "dbRequests": 0,
         "sockets": 0,
         "consoleErrors": 0,
-        "wallMs": 7887
+        "wallMs": 5556
       },
       "town-desktop": {
         "viewport": {
@@ -390,12 +390,12 @@
           "height": 720
         },
         "touch": false,
-        "joinShownMs": 511,
-        "offlineOfferMs": 625,
-        "inTownMs": 2744,
+        "joinShownMs": 1180,
+        "offlineOfferMs": 1279,
+        "inTownMs": 3421,
         "joinTaps": 2,
         "tapsToFirstMove": 3,
-        "firstMoveMs": 3135,
+        "firstMoveMs": 3097,
         "firstInteraction": 1.7,
         "firstInteractionKind": "sellAtShop",
         "gateReach": 6.3,
@@ -405,13 +405,13 @@
         "places": 10,
         "hudPieces": 5,
         "hudOverlaps": 0,
-        "smallButtons": 8,
-        "tinyText": 12,
-        "underCanvas": 4,
+        "smallButtons": 0,
+        "tinyText": 0,
+        "underCanvas": 0,
         "dbRequests": 0,
         "sockets": 0,
         "consoleErrors": 0,
-        "wallMs": 7071
+        "wallMs": 7981
       }
     }
   },

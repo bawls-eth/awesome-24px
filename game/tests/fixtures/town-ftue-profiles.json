@@ -8,17 +8,17 @@
   ],
   "knownIssues": {},
   "legacySmall": {
-    "_notes": "Measured on claude/animal-crossing-game-7z3roh @ 67cc086: every one is 40 px tall (the 44 px rule wants 4 more). The quick-chat row buttons send chat, so the test never taps them. On desktop the last quick-chat button is clipped (see legacyUnderCanvas), so it is not measured here.",
-    "town-phone": ["panel-toggle", "quick-chat-row>button:👋 Hi!", "quick-chat-row>button:😂 lol", "quick-chat-row>button:🎣 Fishing!", "quick-chat-row>button:⭐ Nice!", "quick-chat-row>button:👋 Bye!"],
-    "town-desktop": ["achievements-badge", "map-btn", "world-map-link", "museum-badge", "quick-chat-row>button:👋 Hi!", "quick-chat-row>button:😂 lol", "quick-chat-row>button:🎣 Fishing!", "quick-chat-row>button:⭐ Nice!"]
+    "_notes": "TN2 fixed every entry measured on 67cc086 (6 phone + 8 desktop controls at 40 px: the panel toggle, the quick-chat row, the trophy / Map / World map / Museum buttons are now >= 44 px). The lists are empty: any control under 44 px fails the gate.",
+    "town-phone": [],
+    "town-desktop": []
   },
   "legacyTiny": {
-    "_notes": "Measured on 67cc086: 10-11 px text in the In-town panel (streak, town rating, tidy line, birthday line, bestie label, Map / World map) and the phone action-button labels (Emotes, Tilt, the A/B/P/C emoji captions).",
-    "town-phone": ["bestie-label", "emote-toggle-btn", "tilt-toggle-btn", "ab-emoji"],
-    "town-desktop": ["map-btn", "world-map-link", "streak-badge", "streak-count", "town-rating", "town-rating-label", "town-rating-count", "town-tidy", "birthday-line", "bestie-label"]
+    "_notes": "TN2 raised the In-town panel lines (streak, town rating, tidy, birthday, bestie, Map / World map) and the phone action-button labels (Emotes, Tilt, the A/B/P/C captions) from 10-11 px to 12 px. The lists are empty: any visible text under 12 px fails the gate.",
+    "town-phone": [],
+    "town-desktop": []
   },
   "legacyUnderCanvas": {
-    "_notes": "Measured on 67cc086 at 1280x720: the In-town panel is overflow:auto and ends at y=304, so Dailies, Journal, Settings and the last quick-chat button sit below its visible area; their centre shows the game canvas until the panel is scrolled.",
-    "town-desktop": ["dailies-btn", "journal-btn", "settings-toggle-btn", "quick-chat-row>button:👋 Bye!"]
+    "_notes": "TN2: on desktop the In-town panel may use the full right edge (max-height 100vh - 32px) and the quick-chat row wraps, so Today, Journal, Settings and the last quick-chat button are reachable without scrolling at 1280x720. Empty: any clipped control fails the gate.",
+    "town-desktop": []
   }
 }
