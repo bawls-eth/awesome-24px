@@ -117,3 +117,4 @@ body { background-color:var(--bg); background-image:linear-gradient(rgba(255,255
 #boss-bar[data-phase="surge"] { box-shadow:0 0 0 3px var(--px-ink), inset 0 0 0 3px var(--bad); }
 #boss-fill { background:repeating-linear-gradient(90deg, rgba(255,107,107,.7) 0 6px, rgba(200,60,60,.7) 6px 8px); }
 #bait-val, #bells-val { text-shadow:2px 2px 0 var(--px-ink); }
+body.px8 { background-color:var(--bg); color:var(--ink); }

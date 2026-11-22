@@ -127,3 +127,4 @@ body { font-family: "Courier New", ui-monospace, Menlo, Consolas, monospace; -we
 #res-histo, #res-spark { border-radius:0; image-rendering:pixelated; box-shadow:0 0 0 3px var(--px-ink), 0 0 0 6px #3a2e58; margin:10px 6px; }
 .pad { color:var(--px-ink); }
 #pads { gap:12px; padding:3px; }
+body.px8 { background-color:var(--bg); color:var(--ink); }
