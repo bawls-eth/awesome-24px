@@ -1358,5 +1358,9 @@
   "dash-page.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "art-audit-tool.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }
