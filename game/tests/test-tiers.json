@@ -1250,5 +1250,9 @@
   "town-postcards.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "nav-town-p2.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }

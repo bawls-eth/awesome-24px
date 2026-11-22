@@ -80,6 +80,12 @@ async function run(label, ctxOpts, tapper) {
   // the game behind does not see keys while open
   const leaked = await page.evaluate(() => { let n = 0; const f = () => n++; window.addEventListener('keydown', f); window.dispatchEvent(new KeyboardEvent('keydown', { key: 'w' })); window.removeEventListener('keydown', f); return n; });
   check(L('keys do not reach the page while the sheet is open'), leaked === 0);
+  // review N1: real key events. keydown is held back, keyup still reaches the page so a game never keeps a key "down".
+  await page.evaluate(() => { window.__kd = 0; window.__ku = 0; window.addEventListener('keydown', (e) => { if (e.key === 'd') window.__kd++; }); window.addEventListener('keyup', (e) => { if (e.key === 'd') window.__ku++; }); });
+  await page.keyboard.down('d');
+  await page.keyboard.up('d');
+  const ku = await page.evaluate(() => ({ kd: window.__kd, ku: window.__ku, open: !document.getElementById('mm-nav-sheet').hidden }));
+  check(L('a real keyup passes through the open sheet (no stuck key), the keydown does not'), ku.kd === 0 && ku.ku === 1 && ku.open, JSON.stringify(ku));
   await page.keyboard.press('Escape');
   await page.waitForTimeout(100);
   const closed = await page.evaluate(() => ({ hidden: document.getElementById('mm-nav-sheet').hidden, focus: document.activeElement && document.activeElement.id, exp: document.getElementById('mm-nav-btn').getAttribute('aria-expanded') }));

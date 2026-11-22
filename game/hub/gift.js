@@ -15,6 +15,9 @@
   }
   const rd = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 
+  // A delta write (review H1): read storage NOW, add n, write, read back. A Town / Realm tab that holds an older realm
+  // in memory never writes it back as-is: RealmArena._persist re-reads storage and applies only its own delta
+  // (rmMergeSave: stored.shards + (mine - base)), so the gift is kept (tests/nav-town-p2.test.js, H1).
   function payShards(n) {
     const raw = rd(SAVE);
     let o; try { o = JSON.parse(raw); } catch (e) { return false; }
@@ -23,7 +26,9 @@
     const cur = Number.isFinite(Number(realm.shards)) && Number(realm.shards) > 0 ? Math.floor(Number(realm.shards)) : 0;
     realm.shards = Math.min(MAX_SHARDS, cur + n);
     o.realm = realm;
-    try { localStorage.setItem(SAVE, JSON.stringify(o)); return true; } catch (e) { return false; }
+    try { localStorage.setItem(SAVE, JSON.stringify(o)); } catch (e) { return false; }
+    let back; try { back = JSON.parse(rd(SAVE)); } catch (e) { back = null; }
+    return !!(back && back.realm && Number(back.realm.shards) === realm.shards); // not stored = not paid (the claim is rolled back)
   }
   // Returns {ok, what} describing what was paid.
   function pay(gift) {

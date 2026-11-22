@@ -326,7 +326,8 @@
     }
     e.stopImmediatePropagation();  // the game behind the sheet does not see keys while it is open
   }
-  function onKeyUp(e) { if (ui && ui.isOpen) e.stopImmediatePropagation(); }
+  // keyup is NOT swallowed (review N1): a key held when the sheet opened must still reach the page on release, or the game
+  // behind keeps it "down" after the sheet closes (the Town player walked on by itself). Only keydown acts, so keyup is harmless.
 
   function open() {
     if (!ui) return false;
@@ -383,7 +384,6 @@
     ui = build();
     document.body.classList.add('mm-nav-on');
     window.addEventListener('keydown', onKey, true);
-    window.addEventListener('keyup', onKeyUp, true);
     return true;
   }
   // Record a sub-place for the current page (e.g. the isle), additive storage only.
