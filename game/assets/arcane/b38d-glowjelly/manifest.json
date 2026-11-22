@@ -1,0 +1,222 @@
+{
+  "batch": "b38d",
+  "label": "glowjelly",
+  "assets": [
+    {
+      "id": "glowjelly_idle_down",
+      "path": "creatures/glowjelly/glowjelly_idle_down.png",
+      "category": "enemy",
+      "enemy": "glowjelly",
+      "creature": "glowjelly",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 96,
+        "y": 171
+      }
+    },
+    {
+      "id": "glowjelly_move_down",
+      "path": "creatures/glowjelly/glowjelly_move_down.png",
+      "category": "enemy",
+      "enemy": "glowjelly",
+      "creature": "glowjelly",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 96,
+        "y": 171
+      }
+    },
+    {
+      "id": "glowjelly_attack_down",
+      "path": "creatures/glowjelly/glowjelly_attack_down.png",
+      "category": "enemy",
+      "enemy": "glowjelly",
+      "creature": "glowjelly",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 96,
+        "y": 171
+      }
+    },
+    {
+      "id": "glowjelly_death_down",
+      "path": "creatures/glowjelly/glowjelly_death_down.png",
+      "category": "enemy",
+      "enemy": "glowjelly",
+      "creature": "glowjelly",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 96,
+        "y": 171
+      }
+    },
+    {
+      "id": "glowjelly_idle_up",
+      "path": "creatures/glowjelly/glowjelly_idle_up.png",
+      "category": "enemy",
+      "enemy": "glowjelly",
+      "creature": "glowjelly",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 96,
+        "y": 171
+      }
+    },
+    {
+      "id": "glowjelly_move_up",
+      "path": "creatures/glowjelly/glowjelly_move_up.png",
+      "category": "enemy",
+      "enemy": "glowjelly",
+      "creature": "glowjelly",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 96,
+        "y": 171
+      }
+    },
+    {
+      "id": "glowjelly_attack_up",
+      "path": "creatures/glowjelly/glowjelly_attack_up.png",
+      "category": "enemy",
+      "enemy": "glowjelly",
+      "creature": "glowjelly",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 96,
+        "y": 171
+      }
+    },
+    {
+      "id": "glowjelly_death_up",
+      "path": "creatures/glowjelly/glowjelly_death_up.png",
+      "category": "enemy",
+      "enemy": "glowjelly",
+      "creature": "glowjelly",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 96,
+        "y": 171
+      }
+    },
+    {
+      "id": "glowjelly_idle_right",
+      "path": "creatures/glowjelly/glowjelly_idle_right.png",
+      "category": "enemy",
+      "enemy": "glowjelly",
+      "creature": "glowjelly",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 96,
+        "y": 171
+      }
+    },
+    {
+      "id": "glowjelly_move_right",
+      "path": "creatures/glowjelly/glowjelly_move_right.png",
+      "category": "enemy",
+      "enemy": "glowjelly",
+      "creature": "glowjelly",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 96,
+        "y": 171
+      }
+    },
+    {
+      "id": "glowjelly_attack_right",
+      "path": "creatures/glowjelly/glowjelly_attack_right.png",
+      "category": "enemy",
+      "enemy": "glowjelly",
+      "creature": "glowjelly",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 96,
+        "y": 171
+      }
+    },
+    {
+      "id": "glowjelly_death_right",
+      "path": "creatures/glowjelly/glowjelly_death_right.png",
+      "category": "enemy",
+      "enemy": "glowjelly",
+      "creature": "glowjelly",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 96,
+        "y": 171
+      }
+    }
+  ]
+}
