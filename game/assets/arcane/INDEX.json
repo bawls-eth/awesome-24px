@@ -507,6 +507,56 @@
       "status": "provisional",
       "ingested_utc": "2026-11-21T23:15:00Z",
       "source": "codex"
+    },
+    {
+      "id": "b34b",
+      "label": "crafting-icons",
+      "path": "assets/arcane/b34b-crafting-icons",
+      "manifest": "assets/arcane/b34b-crafting-icons/manifest.json",
+      "files": 19,
+      "status": "provisional",
+      "ingested_utc": "2026-11-22T02:05:00Z",
+      "source": "codex"
+    },
+    {
+      "id": "b35",
+      "label": "meadow-home",
+      "path": "assets/arcane/b35-meadow-home",
+      "manifest": "assets/arcane/b35-meadow-home/manifest.json",
+      "files": 90,
+      "status": "provisional",
+      "ingested_utc": "2026-11-22T02:05:00Z",
+      "source": "codex"
+    },
+    {
+      "id": "b36",
+      "label": "meadow-creatures",
+      "path": "assets/arcane/b36-meadow-creatures",
+      "manifest": "assets/arcane/b36-meadow-creatures/manifest.json",
+      "files": 98,
+      "status": "provisional",
+      "ingested_utc": "2026-11-22T02:05:00Z",
+      "source": "codex"
+    },
+    {
+      "id": "b31af",
+      "label": "glimmerfrog-rest",
+      "path": "assets/arcane/b31af-glimmerfrog-rest",
+      "manifest": "assets/arcane/b31af-glimmerfrog-rest/manifest.json",
+      "files": 2,
+      "status": "provisional",
+      "ingested_utc": "2026-11-22T02:06:00Z",
+      "source": "codex"
+    },
+    {
+      "id": "b32s",
+      "label": "stegolith",
+      "path": "assets/arcane/b32s-stegolith",
+      "manifest": "assets/arcane/b32s-stegolith/manifest.json",
+      "files": 20,
+      "status": "provisional",
+      "ingested_utc": "2026-11-22T02:06:00Z",
+      "source": "codex"
     }
   ]
 }
