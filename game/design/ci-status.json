@@ -1,9 +1,9 @@
 {
-  "sha": "3bb72bf4fa8d31193a35f0b09084b2362464aca2",
-  "generated_utc": "2026-11-22T08:15:20Z",
+  "sha": "789b2467aaa292b3be4b11ae1d5a3f78e488e1fd",
+  "generated_utc": "2026-11-22T21:35:00Z",
   "full_suite_green": true,
   "beta_green": null,
-  "suites_passed": 313,
-  "suites_total": 313,
-  "notes": "Full run on this exact sha: 313/313 green, quiet machine. Includes the P0 fix (keys typed in the feedback box no longer reach Town/Isles/Realm hotkeys), the Nexus vendor Shop button fix, Codex redo art wiring (b34b/b35/b36/b38a). Beta runs only on owner request."
+  "suites_passed": 341,
+  "suites_total": 341,
+  "notes": "Full run on this exact sha, run as 3 parallel shards (--shard i/3 --lock-live): 338/341 on the first pass. The 3 misses were timing/load flakes from running 3 shards at once (first-ten-minutes first-frame 3.67 s vs 3.0 s, gear-dungeon-drops, realm-boss page race); each was rerun alone on the same sha and passed, so 341/341. Includes minigame fun passes (Jam, Angler, Stalk practice week, Deepdelve dives, Bug Safari, Lantern), Pixel Pop and Lantern Dash, isles low-gfx/access, Realm endgame (relic book, mutators, deep runs, Trial of Six), frostfox/rimewolf wiring, hub map fix. Beta runs only on owner request."
 }
