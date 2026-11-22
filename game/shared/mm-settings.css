@@ -1,0 +1,95 @@
+/* MMSettings panel, toasts and tooltips in the shared 8-bit look. Tokens fall back to built-in values when the page has not
+   loaded the shared theme (mm-8bit.css). Text >= 12 px, targets >= 44 px. The panel starts below the Menu button (top-left). */
+.mmset, .mm8-toasts, [data-mm-tip] {
+  --mmset-bg: var(--mm8-bg, #1a1c2c);
+  --mmset-bg2: var(--mm8-bg2, #333c57);
+  --mmset-fg: var(--mm8-fg, #f4f4f4);
+  --mmset-dim: var(--mm8-dim, #94b0c2);
+  --mmset-line: var(--mm8-line, #f4f4f4);
+  --mmset-shadow: var(--mm8-shadow, #000000);
+  --mmset-on: var(--mm8-good, #38b764);
+  --mmset-accent: var(--mm8-accent, #ffcd75);
+  --mmset-font: var(--mm8-font, ui-monospace, "Courier New", Menlo, Consolas, monospace);
+}
+.mmset-back[hidden], .mmset[hidden] { display: none !important; }
+.mmset-back { position: fixed; inset: 0; z-index: 9990; background: rgba(0, 0, 0, 0.6); }
+.mmset {
+  position: fixed; z-index: 9991;
+  top: calc(64px + env(safe-area-inset-top, 0px)); bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  left: 50%; transform: translateX(-50%);
+  width: min(520px, calc(100vw - 16px)); max-height: calc(100dvh - 72px);
+  display: flex; flex-direction: column; box-sizing: border-box;
+  background: var(--mmset-bg); color: var(--mmset-fg);
+  border: 4px solid var(--mmset-line); border-radius: 0;
+  box-shadow: 4px 4px 0 var(--mmset-shadow), inset 0 0 0 2px var(--mmset-bg2);
+  font-family: var(--mmset-font); font-size: calc(14px * var(--ui-scale, 1)); line-height: 1.35;
+  image-rendering: pixelated;
+}
+@media (min-height: 700px) and (min-width: 700px) { .mmset { bottom: auto; } }
+.mmset *, .mmset *::before, .mmset *::after { box-sizing: border-box; }
+.mmset-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-bottom: 4px solid var(--mmset-bg2); }
+.mmset-title { margin: 0; font-size: calc(18px * var(--ui-scale, 1)); letter-spacing: 1px; text-transform: uppercase; color: var(--mmset-accent); }
+.mmset-scroll { overflow-y: auto; overscroll-behavior: contain; padding: 4px 10px 12px; }
+.mmset-group { margin: 8px 0 0; }
+.mmset-gh {
+  margin: 8px 0 6px; font-size: calc(14px * var(--ui-scale, 1)); text-transform: uppercase; letter-spacing: 2px;
+  color: var(--mmset-dim); border-bottom: 2px dashed var(--mmset-bg2); padding-bottom: 2px;
+}
+.mm8-btn, .mmset-row, .mmset .mmfb-btn, .mmset .mmfb-chip {
+  font-family: var(--mmset-font);
+}
+.mm8-btn {
+  min-height: 44px; min-width: 44px; padding: 0 12px;
+  background: var(--mmset-bg2); color: var(--mmset-fg);
+  border: 2px solid var(--mmset-line); border-radius: 0; box-shadow: 2px 2px 0 var(--mmset-shadow);
+  font-size: calc(14px * var(--ui-scale, 1)); cursor: pointer;
+}
+.mm8-btn:active { transform: translate(2px, 2px); box-shadow: none; }
+.mmset-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; min-height: 52px; margin: 0 0 6px; padding: 6px 10px;
+  background: var(--mmset-bg2); color: var(--mmset-fg); text-align: left;
+  border: 2px solid var(--mmset-bg2); border-radius: 0; font-size: calc(14px * var(--ui-scale, 1));
+}
+.mmset-toggle { cursor: pointer; }
+.mmset-txt { display: flex; flex-direction: column; min-width: 0; }
+.mmset-label { font-weight: 700; }
+.mmset-hint { color: var(--mmset-dim); font-size: calc(12px * var(--ui-scale, 1)); }
+.mmset-state {
+  flex: 0 0 auto; min-width: 56px; min-height: 32px; display: inline-flex; align-items: center; justify-content: center;
+  border: 2px solid var(--mmset-line); background: var(--mmset-bg); color: var(--mmset-dim); font-weight: 700; font-size: 13px;
+}
+.mmset-toggle[aria-checked="true"] .mmset-state { background: var(--mmset-on); color: #0b0f14; }
+.mmset-opts { display: flex; gap: 6px; flex-wrap: wrap; }
+.mmset-opt[aria-pressed="true"] { background: var(--mmset-accent); color: #0b0f14; font-weight: 700; }
+.mmset button:focus-visible, .mmset textarea:focus-visible { outline: 3px solid var(--mmset-accent); outline-offset: 2px; }
+.mmset-keys { margin: 0 0 8px; padding: 0; }
+.mmset-key { display: flex; justify-content: space-between; gap: 8px; padding: 6px 10px; background: var(--mmset-bg2); margin-bottom: 4px; font-size: calc(13px * var(--ui-scale, 1)); }
+.mmset-key dt { font-weight: 700; color: var(--mmset-accent); }
+.mmset-key dd { margin: 0; text-align: right; }
+html[data-high-contrast="1"] .mmset { --mmset-bg: #000; --mmset-bg2: #1f1f1f; --mmset-dim: #e6e6e6; --mmset-fg: #fff; --mmset-line: #fff; }
+html[data-reduce-motion="1"] .mmset *, html[data-reduce-motion="1"] .mm8-toast { transition: none !important; animation: none !important; }
+
+/* Toasts / banners: bottom centre, above the phone's game controls zone (they sit lower-left / lower-right). */
+.mm8-toasts {
+  position: fixed; z-index: 9995; left: 50%; transform: translateX(-50%);
+  top: calc(64px + env(safe-area-inset-top, 0px));
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  width: min(420px, calc(100vw - 120px)); pointer-events: none;
+}
+.mm8-toast {
+  max-width: 100%; padding: 8px 12px; box-sizing: border-box;
+  background: var(--mmset-bg); color: var(--mmset-fg); border: 2px solid var(--mmset-line); box-shadow: 2px 2px 0 var(--mmset-shadow);
+  font-family: var(--mmset-font); font-size: 13px; text-align: center; overflow-wrap: anywhere;
+  animation: mm8-toast-in 120ms steps(3) both;
+}
+@keyframes mm8-toast-in { from { transform: translateY(-6px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Tooltips: any element with data-mm-tip="text" shows it on hover/focus (CSS only, content from an attribute = never markup). */
+[data-mm-tip] { position: relative; }
+[data-mm-tip]:hover::after, [data-mm-tip]:focus-visible::after {
+  content: attr(data-mm-tip); position: absolute; z-index: 9996; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%);
+  width: max-content; max-width: 220px; padding: 4px 8px; white-space: normal;
+  background: var(--mmset-bg); color: var(--mmset-fg); border: 2px solid var(--mmset-line); box-shadow: 2px 2px 0 var(--mmset-shadow);
+  font-family: var(--mmset-font); font-size: 12px; line-height: 1.3; pointer-events: none;
+}

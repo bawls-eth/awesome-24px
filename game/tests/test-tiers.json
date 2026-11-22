@@ -1390,5 +1390,9 @@
   "shared-mm-minikit.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "shared-mm-settings.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }

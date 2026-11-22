@@ -58,6 +58,14 @@ const box = (page, fn) => page.evaluate(fn);
   const fs12 = await box(pg, () => Array.from(document.querySelectorAll('.mmfb *')).filter((e) => e.offsetParent && e.textContent.trim())
     .map((e) => parseFloat(getComputedStyle(e).fontSize)).reduce((a, b) => Math.min(a, b), 99));
   check('all visible text is 12 px or larger', fs12 >= 12, String(fs12));
+  // 8-bit look (chrome-8bit): square corners, pixel border, hard shadow, monospace pixel font, pressed chip filled.
+  const bit = await box(pg, () => { const r = getComputedStyle(document.querySelector('.mmfb')); const c = getComputedStyle(document.querySelector('.mmfb-chip[aria-pressed="false"]'));
+    const on = getComputedStyle(document.querySelector('.mmfb-chip[aria-pressed="true"]'));
+    return { rad: r.borderTopLeftRadius, bw: parseFloat(r.borderTopWidth), sh: r.boxShadow, font: r.fontFamily, crad: c.borderTopLeftRadius, onBg: on.backgroundColor, offBg: c.backgroundColor }; });
+  check('8-bit: box has square corners and a 3 px pixel border', bit.rad === '0px' && bit.bw >= 3, JSON.stringify(bit));
+  check('8-bit: box has a hard (unblurred) drop shadow', /px \d+px 0px/.test(bit.sh) && !/none/.test(bit.sh), bit.sh);
+  check('8-bit: monospace pixel font, square chips', /mono|Courier|Menlo|Consolas|pixel/i.test(bit.font) && bit.crad === '0px', JSON.stringify(bit));
+  check('8-bit: pressed chip is filled with the accent', bit.onBg !== bit.offBg, JSON.stringify(bit));
   check('Copy/Download disabled with nothing saved', await box(pg, () => document.querySelector('.mmfb-copy').disabled && document.querySelector('.mmfb-download').disabled));
 
   // save
@@ -204,6 +212,13 @@ const box = (page, fn) => page.evaluate(fn);
   check('phone: no horizontal scroll', ph.sw <= ph.cw, ph.sw + ' > ' + ph.cw);
   check('phone: every button/textarea target is at least 44 px', ph.small.length === 0, JSON.stringify(ph.small));
   check('phone: header is 48 px', ph.head >= 48, String(ph.head));
+  const pbit = await box(pp, () => { const r = document.querySelector('.mmfb').getBoundingClientRect(); const cs = getComputedStyle(document.querySelector('.mmfb'));
+    const fs = Array.from(document.querySelectorAll('.mmfb *')).filter((e) => e.offsetParent && e.textContent.trim()).map((e) => parseFloat(getComputedStyle(e).fontSize));
+    return { l: r.left, r: r.right, w: innerWidth, rad: cs.borderTopLeftRadius, min: Math.min.apply(null, fs) }; });
+  check('phone 8-bit: square pixel box fits the 390 px screen', pbit.rad === '0px' && pbit.l >= 0 && pbit.r <= pbit.w, JSON.stringify(pbit));
+  check('phone 8-bit: all text >= 12 px', pbit.min >= 12, JSON.stringify(pbit));
+  check('phone 8-bit: key typed in the box still never reaches the page', await box(pp, () => { let hit = 0; const f = () => { hit++; }; window.addEventListener('keydown', f);
+    document.querySelector('.mmfb-text').dispatchEvent(new KeyboardEvent('keydown', { key: 'w', bubbles: true })); window.removeEventListener('keydown', f); return hit === 0; }));
   check('phone: entry saved with ua phone', ph.ua === 'phone' && ph.n === 2, JSON.stringify(ph));
   check('phone: console clean', p.errors.length === 0, p.errors.join(' | '));
   check('phone: zero offsite requests, zero DB attempts, only static GETs', p.offsite.length === 0 && p.db.attempts() === 0 && p.nonStatic.length === 0, p.offsite.concat(p.nonStatic).join(', '));
