@@ -26,6 +26,8 @@
     bugs: Object.freeze({ place: 'bugs', icon: '🦋', name: 'Bug Safari', url: 'game/games/festival/bugs.html' }),
     deepdelve: Object.freeze({ place: 'deepdelve', icon: '⛏️', name: 'Deepdelve', url: 'game/games/deepdelve/index.html' }),
     stalk: Object.freeze({ place: 'stalk', icon: '🥬', name: 'Stalk Market', url: 'game/games/stalk/index.html' }),
+    pop: Object.freeze({ place: 'pop', icon: '🧩', name: 'Pixel Pop', url: 'game/games/pop/index.html' }),
+    dash: Object.freeze({ place: 'dash', icon: '🕯️', name: 'Lantern Dash', url: 'game/games/dash/index.html' }),
   });
   // Every medal the Hub shows, in each game's own order (first steps first), with a plain, friendly line on what to try.
   const MEDALS = Object.freeze({
@@ -80,6 +82,18 @@
       ['bronze', 'A little profit', 'Buy turnips at the Stalk Market and sell them for a bit more.'],
       ['silver', 'A nice profit', 'Watch the turnip prices and sell when they look good.'],
       ['gold', 'A big profit', 'Buy low and sell high at the Stalk Market for a big profit.'],
+    ],
+    pop: [
+      ['round1', 'A first round', 'Play one 90-second round of Pixel Pop.'],
+      ['chain3', 'A 3x chain', 'In Pixel Pop, merge so the new tile lands by its twin: chain it three times.'],
+      ['tile7', 'A level 7 tile', 'Keep merging in Pixel Pop until a tile reaches level 7.'],
+      ['score5k', '5,000 points', 'Score 5,000 points in one Pixel Pop round. Chains help a lot.'],
+    ],
+    dash: [
+      ['run1', 'A first run', 'Go for a run in Lantern Dash.'],
+      ['m500', '500 metres', 'Run 500 m in Lantern Dash. Hold the button to jump further over gaps.'],
+      ['perfect10', 'Ten perfects', 'In Lantern Dash, jump late, just before a rock, ten times in a row.'],
+      ['m1500', '1,500 metres', 'Run 1,500 m in Lantern Dash. Race your ghost on the same course.'],
     ],
   });
   const ORDER = Object.freeze(Object.keys(GAMES)); // isles, angler, jam first: the three first steps

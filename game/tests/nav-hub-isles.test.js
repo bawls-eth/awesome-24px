@@ -74,7 +74,7 @@ async function hub(browser, label, ctxOpts) {
   // every game node: a strip entry, a label on its map, and <= 2 taps (strip, Play) from this FRESH save
   const games = await pg.evaluate(() => window.__hub.gameNodes());
   const links = await pg.evaluate(() => window.__hub.links());
-  check(L('8 game nodes (Hearthvale, Lantern, Deepdelve, Angler, Bug Safari, Jam, Stalk, Isles) all have links'), games.length === 8 && ['w2-lantern', 'w3-deepdelve', 'w4-angler', 'w5-safari', 'w5-jam', 'w5-stalk', 'w7-isles', 'w1-hearthvale'].every((id) => games.includes(id) && links[id]), games.join(','));
+  check(L('10 game nodes (Hearthvale, Lantern, Deepdelve, Angler, Bug Safari, Jam, Stalk, Pixel Pop, Lantern Dash, Isles) all have links'), games.length === 10 && ['w2-lantern', 'w3-deepdelve', 'w4-angler', 'w5-safari', 'w5-jam', 'w5-stalk', 'w5-pop', 'w5-dash', 'w7-isles', 'w1-hearthvale'].every((id) => games.includes(id) && links[id]), games.join(','));
   const fresh = await pg.evaluate(() => localStorage.getItem('pixeltown-hub-v1'));
   for (const id of games) {
     const before = await pg.evaluate(() => window.__hub.at);

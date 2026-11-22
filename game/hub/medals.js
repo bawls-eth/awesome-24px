@@ -11,6 +11,9 @@
     angler: { node: 'w4-angler', name: 'Angler', medals: [['catch1', 'First catch'], ['species10', '10 species'], ['boss1', 'Boss trophy']] },
     jam: { node: 'w5-jam', name: 'Campfire Jam', medals: [['star1', 'First star'], ['stars12', '12 stars'], ['fullcombo', 'Full combo']] },
     stalk: { node: 'w5-stalk', name: 'Stalk Market', medals: [['bronze', 'Bronze'], ['silver', 'Silver'], ['gold', 'Gold']] },
+    // Pixel Pop (games/pop) and Lantern Dash (games/dash): each writes its own pixeltown-medals-<game>-v1
+    pop: { node: 'w5-pop', name: 'Pixel Pop', medals: [['round1', 'First round'], ['chain3', '3x chain'], ['tile7', 'Make a 7'], ['score5k', '5,000 points']] },
+    dash: { node: 'w5-dash', name: 'Lantern Dash', medals: [['run1', 'First run'], ['m500', '500 m'], ['perfect10', '10x perfect'], ['m1500', '1,500 m']] },
     deepdelve: { node: 'w3-deepdelve', name: 'Deepdelve', medals: [['bronze', 'Depth 8'], ['silver', 'Iron pick'], ['secret', 'Lava Lake'], ['depth20', 'Depth 20'], ['depth40', 'Depth 40'], ['crawler', 'Crawler slain'], ['wyrm', 'Rock Wyrm'], ['torches10', '10 torches'], ['build1', 'First build'], ['build3', 'Three builds']] },
     // Hearthvale Isles (games/isles, MMIsles.MEDAL_IDS): first tames, a tame per size class, each island visited, each boss lair seen
     isles: { node: 'w7-isles', name: 'Hearthvale Isles', medals: [['tame1', 'First tame'], ['log6', '6 creatures seen'], ['ride1', 'First ride'], ['stable5', '5 tames'],
