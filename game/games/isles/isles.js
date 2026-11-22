@@ -508,6 +508,7 @@
     hero.scale = CMP.moveScale(ride, moveScaleAt(tileOf(hero.x), tileOf(hero.y)));
     if (ENV_ON && envS.move !== 1) hero.scale *= envS.move; // X5: mars gravity x1.15, the tundra cold x0.8
     if (abilSpeed !== 1) hero.scale *= abilSpeed; // XW1: sprint
+    if (bz.onIce) hero.scale *= ICE_SLOW; // XB: thin ice from the frost dragon's breath (never inside a hot spring)
     if (len < 0.05) return;
     hero.face.x = mx / len; hero.face.y = my / len;
     const v = SPEED * hero.scale * dt;
@@ -616,7 +617,7 @@
       const b = bolts[i];
       b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
       let gone = b.life <= 0 || solidAt(tileOf(b.x), tileOf(b.y)) && O.tileAt(world, tileOf(b.x), tileOf(b.y)) !== 0;
-      if (!gone && bz.st && bossAlive() && Math.hypot(bz.x - b.x, bz.y - 36 - b.y) < BOSS_RAD) { bossHit(BOLT_DMG, b.soothe); gone = true; }
+      if (!gone && bz.st && bossAlive() && Math.hypot(bz.x - b.x, bz.y - 36 - b.y) < BOSS_RAD) { bossHit(BOLT_DMG, b.soothe, headAt(b.x)); gone = true; }
       if (!gone) for (let k = 0; k < creatures.length; k++) {
         const c = creatures[k];
         if (Math.hypot(c.x - b.x, c.y - 8 - b.y) < c.rad + 5) { hitCreature(c, BOLT_DMG, b.soothe ? 'soothe' : undefined); gone = true; break; }
@@ -910,16 +911,20 @@
   // ---------- X6: the island boss (MMIsleBoss) at the pack's boss site ----------
   const BOSS = window.MMIsleBoss || null;
   const BOSSES = !!BOSS && Q.get('bosses') !== '0';
-  const BOSS_ID = BOSSES && PACK.bosses && PACK.bosses[0] && BOSS.script(PACK.bosses[0].boss) && CR.get(PACK.bosses[0].boss) ? PACK.bosses[0].boss : null;
-  const bossSite = BOSS_ID ? ((world.bossSites || []).find((b) => b.boss === BOSS_ID) || (world.bossSites || [])[0] || null) : null;
+  // XB: these are `let` so the home pedestal can bring any beaten boss over for a rematch (startRematch); on the other islands they are
+  // set once here, exactly as before
+  let BOSS_ID = BOSSES && PACK.bosses && PACK.bosses[0] && BOSS.script(PACK.bosses[0].boss) && CR.get(PACK.bosses[0].boss) ? PACK.bosses[0].boss : null;
+  let bossSite = BOSS_ID ? ((world.bossSites || []).find((b) => b.boss === BOSS_ID) || (world.bossSites || [])[0] || null) : null;
   const ARENA_R = BOSS ? BOSS.K.ARENA_R : 420;
   const BOSS_SPAWN_R = ARENA_R + 12 * TILE, BOSS_LEAVE_R = ARENA_R + 24 * TILE, BOSS_DRIFT = 4 * TILE, BOSS_RAD = 48, BOSS_FEED_R = 5 * TILE;
-  const BOSS_DEF = BOSS_ID ? CR.get(BOSS_ID) : null, BOSS_DT = 0.025;
-  const BOSS_TAMEABLE = !!(BOSS_DEF && BOSS_DEF.tame && BOSS_DEF.tame.method === 'knockout' && BOSS_DEF.diet.indexOf('feast') >= 0);
+  let BOSS_DEF = BOSS_ID ? CR.get(BOSS_ID) : null;
+  const BOSS_DT = 0.025;
+  let BOSS_TAMEABLE = !!(BOSS_DEF && BOSS_DEF.tame && BOSS_DEF.tame.method === 'knockout' && BOSS_DEF.diet.indexOf('feast') >= 0);
   // bz: the boss on screen. It is shaped like a creature where the strip helpers read it (sk, dir, act, at0, ph, ang, vx, vy, ko, eatT, t)
   const bz = { st: null, n: 0, acc: 0, done: '', sx: 0, sy: 0, x: 0, y: 0, engaged: false, dmg: 0, torpor: 0, tele: [], live: [], flash: 0, t: 0,
     sp: BOSS_ID || '', kind: BOSS_ID || '', sk: stripKind(BOSS_ID), dir: 0, act: '', at0: 0, ph: '', ang: 0, vx: 0, vy: 0, ko: false, eatT: 0, moving: false,
-    art: null, drawn: '', src: '', phaseName: '', inp: { hero: { x: 0, y: 0 }, dmg: 0, torporHit: 0, feast: false, offer: null, playerDist: 100 } };
+    art: null, drawn: '', src: '', phaseName: '', inp: { hero: { x: 0, y: 0 }, dmg: 0, torporHit: 0, feast: false, offer: null, playerDist: 100, head: -1 },
+    rm: false, hd: -1, told: {}, onIce: false }; // XB: rm = a home rematch, hd = the hydra head the last bolt struck, told = one-time tips this fight
   if (bossSite) { bz.sx = (bossSite.x + 0.5) * TILE; bz.sy = (bossSite.y + 0.5) * TILE; bz.x = bz.sx; bz.y = bz.sy; }
   if (BOSS_DEF) bz.art = baker.bake({ id: BOSS_ID, archetype: IC.ARCH[BOSS_ID] || 'giant', size: BOSS_DEF.size, biome: DRAW_BIOME }, { dpr: DPR });
   // test / balance logs (fixed size): telegraphs as they turn into hits, hero hits, phase changes, event counts
@@ -933,12 +938,14 @@
   function bossTick() {
     if (!bossSite || !BOSS_ID || bz.done) return;
     const d = Math.hypot(bz.sx - hero.x, bz.sy - hero.y);
+    if (bz.rm) { if (!bz.st || d > ARENA_R * 1.35) endRematch('left'); return; } // XB: a rematch never respawns by itself
     if (!bz.st && d <= BOSS_SPAWN_R) spawnBoss();
     else if (bz.st && d > BOSS_LEAVE_R && bz.st.st === 'fight') { bz.st = null; bz.engaged = false; bz.tele.length = 0; bz.live.length = 0; } // back to its lair (full health next time)
   }
   function spawnBoss() {
-    bz.st = BOSS.init(BOSS_ID, { seed: 'isles|' + SEED + '|boss|' + (bz.n++), x: bz.sx, y: bz.sy });
+    bz.st = BOSS.init(BOSS_ID, { seed: 'isles|' + SEED + '|boss|' + (bz.rm ? 'rematch|' + BOSS_ID + '|' : '') + (bz.n++), x: bz.sx, y: bz.sy, rematch: bz.rm });
     bz.x = bz.sx; bz.y = bz.sy; bz.engaged = false; bz.tele.length = 0; bz.live.length = 0; bz.phaseName = BOSS.script(BOSS_ID).phases[0].name;
+    bz.told = {}; bz.hd = -1; bz.onIce = false;
     return !!bz.st;
   }
   function disengage() {
@@ -950,7 +957,11 @@
     for (let i = 0; i < events.length; i++) {
       const e = events[i];
       BOSS_LOG.ev[e.type] = (BOSS_LOG.ev[e.type] || 0) + 1;
-      if (e.type === 'telegraph') bz.tele.push({ id: e.id, atk: e.atk, zone: e.zone, windup: e.windup, t0: simT, drawn: 0, first: -1, last: -1 });
+      if (e.type === 'telegraph') {
+        bz.tele.push({ id: e.id, atk: e.atk, zone: e.zone, windup: e.windup, t0: simT, drawn: 0, first: -1, last: -1 });
+        if (e.sig === 'vents') tipOnce('vents', 'Lava vents glow: step off the circles.');
+        else if (e.sig === 'roar') tipOnce('roar', 'A roar! A charge follows along the line where you stand.');
+      }
       else if (e.type === 'hit') {
         // the shape goes live only once its telegraph has been on screen for the whole wind-up (the 40 Hz engine can be a step ahead)
         const k = findIdx(bz.tele, e.id), tg = k >= 0 ? bz.tele[k] : null;
@@ -974,8 +985,14 @@
       } else if (e.type === 'tamed') bossTamed();
       else if (e.type === 'dead') bossDefeated();
       else if (e.type === 'escaped') { bz.done = 'escaped'; bz.st = null; bz.tele.length = 0; bz.live.length = 0; toast('The ' + bossName() + ' slipped away. It will be back next visit.'); }
+      // XB signature mechanics: a short tip the first time each one shows up in a fight
+      else if (e.type === 'head_cut') { if (e.left > 0) toast('A head falls! ' + e.left + ' left. Cut them in any order.'); }
+      else if (e.type === 'submerge') tipOnce('sub', 'The ' + bossName() + ' dives! Step off the bubbles before it rises.');
+      else if (e.type === 'ice') tipOnce('ice', 'Thin ice underfoot. The hot springs are always safe.');
+      else if (e.type === 'dig') tipOnce('dig', 'The ' + bossName() + ' burrows! Step off the marked line.');
     }
   }
+  function tipOnce(k, msg) { if (bz.told[k]) return; bz.told[k] = 1; toast(msg); }
   // take n of an item out of `inv` (a feast eaten by a boss); returns the new inv
   function invTake(id, n) {
     const out = {};
@@ -990,7 +1007,8 @@
     bz.t += dt; bz.flash -= dt; if (bz.eatT > 0) bz.eatT -= dt;
     const fromSite = Math.hypot(hero.x - bz.sx, hero.y - bz.sy);
     if (!bz.engaged && !hero.dead && (fromSite <= ARENA_R || bz.dmg > 0 || bz.torpor > 0)) { bz.engaged = true; if (st === 'fight') toast('The ' + bossName() + ' roars! Watch the ground: step out of each shape before it fills.'); }
-    if (bz.engaged && st === 'fight' && (hero.dead || fromSite > ARENA_R * 1.35)) disengage(); // you left the ring: it calls off its attacks
+    if (bz.engaged && st === 'fight' && (hero.dead || fromSite > ARENA_R * 1.35)) { if (bz.rm) { endRematch('left'); return; } disengage(); } // you left the ring: it calls off its attacks (a rematch just ends)
+    if (bz.rm && (st === 'weary') && (hero.dead || fromSite > ARENA_R * 1.35)) { endRematch('left'); return; }
     if (!bz.engaged) { bz.dmg = 0; bz.torpor = 0; bz.ph = ''; bz.moving = false; return; }
     // between attacks it lumbers toward you, never far from its lair
     bz.moving = false; bz.vx = 0; bz.vy = 0;
@@ -1008,6 +1026,7 @@
       const inp = bz.inp;
       inp.hero.x = hero.x; inp.hero.y = hero.y; inp.dmg = bz.dmg; inp.torporHit = bz.torpor; inp.feast = false; inp.offer = null;
       inp.playerDist = Math.hypot(hero.x - bz.st.x, hero.y - bz.st.y);
+      inp.head = bz.hd; // XB: the hydra head your bolts struck (the engine picks the next head left when it is gone)
       bz.dmg = 0; bz.torpor = 0;
       const r = BOSS.step(bz.st, inp, BOSS_DT);
       if (r.state) bz.st = r.state;
@@ -1020,7 +1039,19 @@
     bz.ko = bz.st.st === 'taming' && !!bz.st.tame && (bz.st.tame.st === 'ko' || (bz.st.tame.st === 'taming' && bz.st.tame.how === 'ko'));
     bz.ph = bz.tele.length ? 'wind' : '';
     if (bz.tele.length) bz.ang = bz.tele[bz.tele.length - 1].zone.angle;
+    bz.onIce = onThinIce(hero.x, hero.y);
   }
+  // XB: thin ice (frost dragon) slows your footing a little; a hot spring is never ice. Footing only, never damage.
+  const ICE_SLOW = 0.85;
+  function inSpring(x, y) { const sp = bz.st && bz.st.springs; if (!sp) return false; for (let i = 0; i < sp.length; i++) if (Math.hypot(x - sp[i].x, y - sp[i].y) <= sp[i].r) return true; return false; }
+  function onThinIce(x, y) {
+    const ice = bz.st && bz.st.ice;
+    if (!ice || !ice.length || inSpring(x, y)) return false;
+    for (let i = 0; i < ice.length; i++) if (BOSS.hitTest(ice[i].zone, x, y, 0)) return true;
+    return false;
+  }
+  // XB: which of the hydra's 3 heads a bolt at x struck (left / middle / right of the body); -1 for any other boss
+  function headAt(x) { if (!bz.st || !bz.st.heads) return -1; const dx = x - bz.x; return dx < -16 ? 0 : dx > 16 ? 2 : 1; }
   // telegraphs hand over to their live shape at hitAt; live shapes end after dur (sim clock)
   function bossZonesTick() {
     for (let i = bz.tele.length - 1; i >= 0; i--) {
@@ -1049,9 +1080,10 @@
     }
   }
   // a bolt hits the boss: damage (a soothe shot does a quarter), or torpor once taming has begun
-  function bossHit(dmg, sooth) {
+  function bossHit(dmg, sooth, head) {
     if (!bossAlive()) return false;
     bz.flash = 0.12;
+    if (Number.isInteger(head) && head >= 0) bz.hd = head;
     if (!bz.engaged) bz.engaged = true;
     if (bz.st.st === 'taming') { if (sooth) bz.torpor += dmg; else bz.dmg += dmg; }
     else bz.dmg += sooth ? dmg * SOOTHE_DMG : dmg;
@@ -1082,6 +1114,7 @@
     bz.x = bz.st.x; bz.y = bz.st.y;
     addDeath(bz);
     rollLoot(bz);
+    if (bz.rm) { rematchWon(); return; }
     ISL.noteBeat(save, BOSS_ID); dirty = true;
     bz.done = 'dead'; bz.st = null; bz.tele.length = 0; bz.live.length = 0; bz.engaged = false;
     toast('You defeated the ' + def.name + '!');
@@ -1175,6 +1208,7 @@
     }
     drawGround();
     drawArena();
+    drawBossGround();
     // telegraphs first (on the ground, under every body)
     for (let i = 0; i < creatures.length; i++) { const c = creatures[i]; if (c.ph === 'wind') drawTelegraph(c, c.x - camX, c.y - camY); }
     if (bz.tele.length || bz.live.length) drawBossZones();
@@ -1343,6 +1377,30 @@
       const step = Math.PI * 2 / z.arms, base = z.angle + z.spin * tau;
       for (let i = 0; i < z.arms; i++) { const a = base + i * step; g.moveTo(0, 0); g.arc(0, 0, Math.max(1, z.radius * k), a - z.armHalf, a + z.armHalf); g.closePath(); }
     }
+    else if (z.shape === 'burst') { // XB bubbles / lava vents: each disc grows with the telegraph (static with reduced motion)
+      const p = z.pts || [], r = Math.max(1, z.r * k);
+      for (let i = 0; i < p.length; i++) { g.moveTo(p[i].dx + r, p[i].dy); g.arc(p[i].dx, p[i].dy, r, 0, Math.PI * 2); }
+    }
+  }
+  // XB: the frost dragon's hot springs (always safe) and its thin-ice patches, under every telegraph
+  function drawBossGround() {
+    const s = bz.st;
+    if (!s || !bz.engaged) return;
+    if (s.springs) for (let i = 0; i < s.springs.length; i++) {
+      const p = s.springs[i], sx = p.x - camX, sy = p.y - camY;
+      g.globalAlpha = 0.85; g.fillStyle = '#3aa8a0'; g.beginPath(); g.arc(sx, sy, p.r, 0, Math.PI * 2); g.fill();
+      g.globalAlpha = 1; g.strokeStyle = '#f2e0a0'; g.lineWidth = 3; g.stroke();
+      const k = REDUCED ? 0 : (simT * 12) % 10; // steam puffs rise (static with reduced motion)
+      g.fillStyle = 'rgba(255,255,255,0.65)'; g.fillRect(sx - 12, sy - 16 - k, 5, 6); g.fillRect(sx + 7, sy - 10 - ((k + 5) % 10), 5, 6);
+    }
+    if (s.ice && s.ice.length) for (let i = 0; i < s.ice.length; i++) {
+      const z = s.ice[i].zone;
+      g.save(); g.translate(z.x - camX, z.y - camY);
+      g.globalAlpha = 0.32; g.fillStyle = '#d8f2ff'; zonePath(z, 1, 0); g.fill();
+      g.globalAlpha = 0.7; g.strokeStyle = '#ffffff'; g.lineWidth = 2; zonePath(z, 1, 0); g.stroke();
+      g.restore();
+    }
+    g.globalAlpha = 1;
   }
   function drawBossZones() {
     for (let i = 0; i < bz.tele.length; i++) {
@@ -1370,6 +1428,8 @@
     const sx = bz.x - camX, sy = bz.y - camY;
     if (sx < -200 || sy < -240 || sx > VW + 200 || sy > VH + 200) return;
     let top = sy - 110;
+    const under = !!(bz.st.sub || bz.st.dig); // XB: diving (hydra) or burrowing (titan): a faint body and a ripple / dust ring
+    if (under) g.globalAlpha = 0.3;
     const st = stripOf(bz, bz.moving);
     if (st) {
       const a = bz.art;
@@ -1388,6 +1448,15 @@
       else g.drawImage(fr, sx - w / 2, sy - a.ay / a.dpr, w, h);
       bz.drawn = a.id; bz.src = 'code';
       top = sy - a.ay / a.dpr - 2;
+    }
+    if (under) {
+      g.globalAlpha = 1; g.strokeStyle = bz.st.sub ? '#bfe8ff' : '#a07a4a'; g.lineWidth = 3;
+      g.beginPath(); g.ellipse(sx, sy, 44 + (REDUCED ? 0 : Math.sin(simT * 6) * 4), 13, 0, 0, Math.PI * 2); g.stroke();
+    }
+    if (bz.st.heads) for (let i = 0; i < bz.st.heads.length; i++) { // XB: the hydra's 3 heads (left / middle / right), a cut one greyed out
+      const hx = Math.round(sx + (i - 1) * 30) - 6, hy = Math.round(top - 40);
+      g.fillStyle = '#1a2a3a'; g.fillRect(hx - 1, hy - 1, 14, 14);
+      g.fillStyle = bz.st.heads[i] > 0 ? '#4aa8e0' : '#6a6a6a'; g.fillRect(hx + 1, hy + 1, 10, 10);
     }
     if (bz.flash > 0) { g.fillStyle = 'rgba(255,255,255,0.28)'; g.beginPath(); g.arc(sx, sy - 40, BOSS_RAD, 0, Math.PI * 2); g.fill(); }
     if (bz.ko) { g.fillStyle = '#e8e0ff'; g.font = 'bold 16px monospace'; const k = REDUCED ? 0 : Math.floor(simT * 2) % 3; g.fillText('z', sx + 30, top - 2 - k * 3); g.fillText('Z', sx + 40, top - 14 - k * 3); }
@@ -1560,6 +1629,118 @@
     if (panelKind === 'craft') craftDirty = true;
     return got;
   }
+  // ---------- XB: trophies on the home pedestal, and rematches at home ----------
+  // A boss's unique drop crafts its trophy_* (MMIsleCraft); a crafted trophy stands on the pedestal on Hearth Isle (save.trophies, tier 1;
+  // the item stays in your pack too). The pedestal offers a rematch with any boss you have beaten or hold the trophy of, at any time, with
+  // no cooldown: the same fight (MMIsleBoss opts.rematch), normal loot only, never a tame. The first rematch win per placed trophy gives it
+  // a gold trim (tier 2), once. Leaving the ring just ends the rematch.
+  const NATIVE_BIOME = { fernjaw_tyrant: 'jungle', tide_hydra: 'reef', frost_dragon: 'ice', red_titan: 'mars' };
+  const TROPHY_COL = { trophy_tyrant: '#6aa04a', trophy_hydra: '#3a8ac0', trophy_dragon: '#bfe4f4', trophy_titan: '#c0482a' };
+  const TROPHY_IDS = ISL.TROPHY_IDS || [];
+  const trophyOf = (id) => (BOSS && BOSS.trophyFor ? BOSS.trophyFor(id) : '');
+  const RM_BOSSES = BOSS && BOSS.ids ? BOSS.ids().filter((id) => !!CR.get(id) && !!trophyOf(id)) : [];
+  const PED_R = 3 * TILE;
+  let pedDrawn = 0, rmWins = 0;
+  const rmArt = {};
+  // trophies already in the pack (crafted on another island, or before XB) stand on the pedestal too (written by the first save tick)
+  TROPHY_IDS.forEach((t) => { if (invCount(t) > 0) ISL.setTrophy(save, t, 1); });
+  // the pedestal: the first open 3x3 patch of dry land 4+ tiles from the spawn pad, outside the garden square and away from the dock
+  function findPedestal() {
+    const sp = world.spawnPoint;
+    const inGarden = (x, y) => !!homeO && x >= homeO.x - 1 && y >= homeO.y - 1 && x <= homeO.x + HS.GRID_W && y <= homeO.y + HS.GRID_W;
+    for (let r = 4; r <= 30; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+      const x = sp.x + dx, y = sp.y + dy;
+      if (x < 3 || y < 3 || x >= W - 3 || y >= H - 3 || inGarden(x, y)) continue;
+      if (world.dock && Math.abs(x - world.dock.x) + Math.abs(y - world.dock.y) < 4) continue;
+      let ok = true;
+      for (let j = -1; j <= 1 && ok; j++) for (let i = -1; i <= 1 && ok; i++) if (!walkableAt(x + i, y + j) || heroSolidAt(x + i, y + j) || WET[tileName(x + i, y + j)]) ok = false;
+      if (ok) return { x: x, y: y };
+    }
+    return null;
+  }
+  const pedestal = HOME ? findPedestal() : null;
+  const nearPedestal = () => !!pedestal && !hero.dead && Math.hypot((pedestal.x + 0.5) * TILE - hero.x, (pedestal.y + 0.5) * TILE - hero.y) <= PED_R;
+  const canRematch = (id) => !!(HOME && pedestal && BOSSES && RM_BOSSES.indexOf(id) >= 0 &&
+    ((Array.isArray(save.beat) && save.beat.indexOf(id) >= 0) || ISL.trophyTier(save, trophyOf(id)) > 0));
+  function startRematch(id) {
+    if (!canRematch(id)) return { ok: false, why: 'locked' };
+    if (bossAlive()) return { ok: false, why: 'busy' };
+    if (hero.dead) return { ok: false, why: 'dead' };
+    const def = CR.get(id);
+    BOSS_ID = id; BOSS_DEF = def; BOSS_TAMEABLE = false;
+    bossSite = { x: pedestal.x, y: pedestal.y, boss: id };
+    bz.sx = (pedestal.x + 0.5) * TILE; bz.sy = (pedestal.y + 0.5) * TILE;
+    bz.sp = id; bz.kind = id; bz.sk = stripKind(id);
+    if (!has(rmArt, id)) rmArt[id] = baker.bake({ id: id, archetype: IC.ARCH[id] || 'giant', size: def.size, biome: NATIVE_BIOME[id] || DRAW_BIOME }, { dpr: DPR });
+    bz.art = rmArt[id];
+    bz.rm = true; bz.done = '';
+    if (panelKind) closePanel();
+    spawnBoss();
+    bz.engaged = true;
+    toast('The ' + def.name + ' is here for a friendly rematch. ' + (BOSS.hint ? BOSS.hint(id) + ' ' : '') + 'Leave the ring any time to stop.');
+    logEvent('rematch');
+    return { ok: true, id: id };
+  }
+  function endRematch(why) {
+    const nm = bossName();
+    bz.st = null; bz.tele.length = 0; bz.live.length = 0; bz.engaged = false; bz.rm = false; bz.done = why || 'left'; bz.onIce = false; bz.ph = ''; bz.moving = false;
+    BOSS_ID = null; BOSS_DEF = null; BOSS_TAMEABLE = false; bossSite = null;
+    if (why === 'left') toast('The ' + nm + ' heads home. Rematch any time from the pedestal.');
+    if (panelKind === 'trophy') renderTrophies();
+  }
+  function rematchWon() {
+    const id = BOSS_ID, t = trophyOf(id), nm = BOSS_DEF ? BOSS_DEF.name : '';
+    const trim = !!t && ISL.trophyTier(save, t) === 1 && ISL.setTrophy(save, t, 2);
+    rmWins++; dirty = true;
+    endRematch('won');
+    toast('Good match with the ' + nm + '!' + (trim ? ' Your ' + itemName(t).toLowerCase() + ' gets a gold trim.' : ''));
+    logEvent('rematch_won');
+    checkMedals();
+  }
+  // the pedestal panel: one row per boss (its trophy, how to craft it, the rematch button). Rebuilt only when it opens or changes.
+  function renderTrophies() {
+    while (panelBody.firstChild) panelBody.removeChild(panelBody.firstChild);
+    panelBody.appendChild(el('p', 'calm', 'Keepsakes from the big creatures you have met. Rematch any of them here whenever you like, just for fun: normal loot, no taming. Leave the ring to stop.'));
+    const list = el('div', 'trophy-list'); list.id = 'trophy-list';
+    RM_BOSSES.forEach((id) => {
+      const def = CR.get(id), t = trophyOf(id), tier = ISL.trophyTier(save, t), rc = CRAFT ? CRAFT.get(t) : null;
+      const row = el('div', 'trophy-row' + (tier ? ' on' : '') + (tier === 2 ? ' gold' : ''));
+      row.dataset.boss = id; row.dataset.trophy = t; row.dataset.tier = String(tier);
+      const info = el('div', 'rc-info');
+      info.appendChild(el('div', 'rc-name', itemName(t) + (tier === 2 ? ' (gold trim)' : tier ? ' (on the pedestal)' : '')));
+      info.appendChild(el('div', 'rc-note', tier ? def.name + '. ' + (BOSS.hint ? BOSS.hint(id) : '') :
+        rc ? 'Craft it (K): ' + Object.keys(rc.in).map((k) => HS.resName(k) + ' ' + invCount(k) + '/' + rc.in[k]).join(', ') : 'Not made yet.'));
+      row.appendChild(info);
+      const can = canRematch(id);
+      const b = el('button', 'rc-btn rematch', 'Rematch'); b.type = 'button'; b.dataset.boss = id;
+      b.setAttribute('aria-label', can ? 'Rematch the ' + def.name : 'Rematch the ' + def.name + ': meet it on its island first');
+      if (!can) { b.disabled = true; b.setAttribute('aria-disabled', 'true'); }
+      b.addEventListener('click', () => startRematch(id));
+      row.appendChild(b);
+      list.appendChild(row);
+    });
+    panelBody.appendChild(list);
+    panelBody.appendChild(el('p', 'dim', BOSSES ? 'A first rematch win gives a trophy on the pedestal a gold trim, once. Every rematch gives the normal loot.' : 'Bosses are off (?bosses=0), so rematches are too.'));
+  }
+  // the pedestal itself (code-drawn stone, one slot per trophy; a gold rim once trimmed). Constant colours, no per-frame allocations.
+  function drawPedestal() {
+    if (!pedestal) return;
+    const cx = Math.round((pedestal.x + 0.5) * TILE - camX), by = Math.round((pedestal.y + 0.5) * TILE - camY);
+    if (cx < -2 * TILE || by < -2 * TILE || cx > VW + 2 * TILE || by > VH + 2 * TILE) return;
+    pedDrawn++;
+    g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(cx - 30, by + 8, 60, 6);
+    g.fillStyle = '#8a8478'; g.fillRect(cx - 28, by - 6, 56, 14);
+    g.fillStyle = '#b8b0a0'; g.fillRect(cx - 31, by - 10, 62, 6);
+    g.fillStyle = '#5a5448'; g.fillRect(cx - 28, by + 6, 56, 2);
+    for (let i = 0; i < TROPHY_IDS.length; i++) {
+      const t = TROPHY_IDS[i], tier = ISL.trophyTier(save, t), x = cx - 25 + i * 13;
+      if (!tier) { g.fillStyle = '#6a6458'; g.fillRect(x + 2, by - 13, 6, 3); continue; }
+      if (tier === 2) { g.fillStyle = '#f2c84b'; g.fillRect(x - 1, by - 27, 12, 18); }
+      g.fillStyle = TROPHY_COL[t] || '#ccc'; g.fillRect(x + 1, by - 25, 8, 14);
+      g.fillStyle = '#fff4d0'; g.fillRect(x + 3, by - 23, 2, 3);
+    }
+  }
   // walk-over nodes: every pack resource node except today's gather spots (those stay a G pick, once a day). In memory only: a node
   // you picked grows back after its pack `respawn` seconds (and a reload grows everything back; nothing is ever lost).
   const RESPAWN = {};
@@ -1666,11 +1847,12 @@
     const outItem = CRAFT.outputOf ? CRAFT.outputOf(id) : id;
     const isle = has(UNLOCK_BY_ITEM, outItem) ? UNLOCK_BY_ITEM[outItem] : '';
     if (isle) { if (!Array.isArray(save.unlock)) save.unlock = ['jungle']; if (save.unlock.indexOf(isle) < 0) { save.unlock.push(isle); opened = isle; } }
+    const placed = TROPHY_IDS.indexOf(outItem) >= 0 && ISL.setTrophy(save, outItem, 1); // XB: a crafted trophy stands on the home pedestal
     dirty = true; persist();
-    toast('Crafted ' + itemName(outItem).toLowerCase() + '.' + (opened ? ' ' + isleName(opened) + ' is on the sea chart now.' : ''));
+    toast('Crafted ' + itemName(outItem).toLowerCase() + '.' + (opened ? ' ' + isleName(opened) + ' is on the sea chart now.' : '') + (placed ? ' It stands on the trophy pedestal at home.' : ''));
     logEvent('craft');
     if (panelKind === 'craft') renderCraft(id);
-    return { ok: true, id: id, item: outItem, unlocked: opened, have: invCount(outItem) };
+    return { ok: true, id: id, item: outItem, unlocked: opened, have: invCount(outItem), trophy: placed };
   }
   // ---------- X5: environment meters (MMIsleEnv, behind its flags; ?env=0 turns them all off) ----------
   const ENV_ON = !!ENV && (ENVR.warmth || ENVR.oxygen || ENVR.gravity);
@@ -1794,6 +1976,7 @@
         else g.drawImage(bakeDecor(g0[i][2]), sx, sy, TILE, TILE);
       }
       if (build) { g.strokeStyle = 'rgba(255,244,214,0.55)'; g.lineWidth = 2; g.strokeRect(homeO.x * TILE - camX, homeO.y * TILE - camY, HS.GRID_W * TILE, HS.GRID_W * TILE); }
+      drawPedestal();
       for (let i = 0; i < guests.length; i++) {
         const q = guests[i], sx = q.x - camX, sy = q.y - camY + Math.sin(simT * 2 + q.t) * 1.5;
         if (sx < -80 || sy < -80 || sx > VW + 80 || sy > VH + 80) continue;
@@ -1867,6 +2050,9 @@
     } else if (kind === 'decor') {
       panelTitle.textContent = 'Home decor';
       renderDecor('');
+    } else if (kind === 'trophy') {
+      panelTitle.textContent = 'Trophy pedestal';
+      renderTrophies();
     } else {
       panelTitle.textContent = 'Island log';
       logEvent('log');
@@ -2058,7 +2244,7 @@
   const hud = { hero: $('hud-hero'), isle: $('hud-isle'), info: $('hud-info'), ground: $('hud-ground'), fill: $('hp-fill'), hp: $('hp-text'), hint: $('hint'),
     bbName: $('bb-name'), bbPhase: $('bb-phase') };
   const bossBar = $('boss-bar'), bbFill = $('bb-fill');
-  const btn = { feed: $('btn-feed'), soothe: $('btn-soothe'), ride: $('btn-ride'), ability: $('btn-ability'), cmd: $('btn-cmd'), gather: $('btn-gather'), sail: $('btn-sail'), build: $('btn-build'), home: $('btn-home'), log: $('btn-log') };
+  const btn = { feed: $('btn-feed'), soothe: $('btn-soothe'), ride: $('btn-ride'), ability: $('btn-ability'), cmd: $('btn-cmd'), gather: $('btn-gather'), sail: $('btn-sail'), build: $('btn-build'), home: $('btn-home'), log: $('btn-log'), trophy: $('btn-trophy') };
   const lastBtn = {};
   const showBtn = (k, on) => { if (lastBtn[k] !== on) { lastBtn[k] = on; btn[k].hidden = !on; } };
   // ---- X1: b34 taming icons by id (game/assets/arcane/b34-taming-ui-items/manifest.json, 24x24, provisional). Each icon is one
@@ -2141,6 +2327,7 @@
     showBtn('sail', nearDock());
     showBtn('build', HOME);
     showBtn('home', !HOME);
+    showBtn('trophy', nearPedestal() && !bossAlive());
     const h = hintText(ft);
     setText('hint', h);
     if (hud.hint.hidden !== !h) hud.hint.hidden = !h;
@@ -2189,7 +2376,8 @@
     if (!on) return;
     const s = bz.st.st;
     setText('bbName', (bz.st.st === 'fight' ? '' : s === 'weary' ? 'Weary ' : 'Taming ') + bossName());
-    setText('bbPhase', s === 'fight' ? 'Phase ' + (bz.st.phase + 1) + ': ' + bz.phaseName : s === 'weary' ? (TAME && BOSS_TAMEABLE ? 'feast to tame' : 'finish it') : (bz.ko ? 'asleep' : 'soothe it'));
+    const heads = bz.st.heads ? ' - heads ' + bz.st.heads.filter((h) => h > 0).length + '/' + bz.st.heads.length : ''; // XB
+    setText('bbPhase', (s === 'fight' ? 'Phase ' + (bz.st.phase + 1) + ': ' + bz.phaseName + heads : s === 'weary' ? (TAME && BOSS_TAMEABLE ? 'feast to tame' : 'finish it') : (bz.ko ? 'asleep' : 'soothe it')) + (bz.rm ? ' (rematch)' : ''));
     const w = Math.max(0, Math.round(100 * bz.st.hp / bz.st.hpMax)) + '%';
     if (w !== bbW) { bbW = w; bbFill.style.width = w; }
     if (s !== bbCls) { bossBar.classList.toggle('weary', s === 'weary'); bossBar.classList.toggle('taming', s === 'taming'); bbCls = s; }
@@ -2204,12 +2392,16 @@
       return 'Taming the ' + nm + ': soothe shots (Q) put it to sleep. Torpor ' + (t && t.torporMax ? Math.round(100 * t.torpor / t.torporMax) : 0) + '%.';
     }
     if (bz.tele.length) return 'Step out of the glowing shape before it fills!';
+    if (bz.onIce) return 'Thin ice: a little slippery. The hot springs are always safe.';
+    if (bz.st.sub) return 'The ' + nm + ' is under the water. Watch for bubbles.';
+    if (bz.st.dig) return 'The ' + nm + ' is underground.';
     return '';
   }
   function hintText(ft) {
     if (build) return 'Decorating: tap open ground to place, tap an item to pick it up. E works too.';
     const bh = bossHint();
     if (bh) return bh;
+    if (nearPedestal() && !bossAlive()) return document.body.classList.contains('touch') ? 'The trophy pedestal. Tap Trophies to look, or for a rematch.' : 'The trophy pedestal. Press P or Trophies to look, or for a rematch.';
     if (nearDock() && !ride) return document.body.classList.contains('touch') ? 'The dock. Tap Sail to open the sea chart.' : 'The dock. Press T or Sail to open the sea chart.';
     if (spotNear()) return 'Something to gather here. Press G or Gather.';
     if (ride) return 'Riding ' + (mountEnt ? mountEnt.nm || 'your mount' : 'your mount') + (CMP.canSwim(ride) && swimAt(tileOf(hero.x), tileOf(hero.y)) ? ' through the water' : '') + '. Press R or Ride to get off.' +
@@ -2274,6 +2466,7 @@
     if (e.code === 'KeyL' && !e.repeat) { if (panelKind === 'log') closePanel(); else openPanel('log'); }
     if (e.code === 'KeyK' && !e.repeat) { if (panelKind === 'craft') closePanel(); else openPanel('craft'); }
     if (e.code === 'KeyB' && !e.repeat && HOME) setBuild(!build);
+    if (e.code === 'KeyP' && !e.repeat && (nearPedestal() || panelKind === 'trophy')) { if (panelKind === 'trophy') closePanel(); else openPanel('trophy'); }
     if (e.code === 'KeyE' && !e.repeat && build) buildAt(tileOf(hero.x + hero.face.x * TILE), tileOf(hero.y + hero.face.y * TILE));
     if (e.code === 'Escape' && !panel.hidden) closePanel();
   });
@@ -2315,6 +2508,7 @@
   btn.sail.addEventListener('click', () => { openPanel('sail'); });
   btn.build.addEventListener('click', () => { setBuild(!build); });
   btn.home.addEventListener('click', () => { travelTo('home'); });
+  btn.trophy.addEventListener('click', () => { if (panelKind === 'trophy') closePanel(); else openPanel('trophy'); });
   btn.log.addEventListener('click', () => { if (panelKind === 'log') closePanel(); else openPanel('log'); });
   $('btn-craft').addEventListener('click', () => { if (panelKind === 'craft') closePanel(); else openPanel('craft'); });
   const coarse = (() => { try { return window.matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } })();
@@ -2475,7 +2669,7 @@
       undo: () => undoBuild(),
       dock: () => (world.dock ? { x: world.dock.x, y: world.dock.y } : null),
       nearDock: () => nearDock(),
-      openPanel: (k) => { openPanel(k === 'sail' ? 'sail' : k === 'craft' ? 'craft' : k === 'decor' && HOME ? 'decor' : 'log'); return panelKind; },
+      openPanel: (k) => { openPanel(k === 'sail' ? 'sail' : k === 'craft' ? 'craft' : k === 'decor' && HOME ? 'decor' : k === 'trophy' && HOME ? 'trophy' : 'log'); return panelKind; },
       // X7
       decorCraft: (k) => doDecorCraft(k),
       penNames: () => guests.map((q) => ({ id: q.id, sp: q.sp, nm: q.nm })),
@@ -2519,12 +2713,22 @@
       // X6
       boss: () => ({ id: BOSS_ID, on: BOSSES, site: bossSite ? { x: bossSite.x, y: bossSite.y, px: bz.sx, py: bz.sy } : null, arenaR: ARENA_R,
         st: bz.st ? bz.st.st : null, done: bz.done, hp: bz.st ? bz.st.hp : 0, hpMax: bz.st ? bz.st.hpMax : 0, phase: bz.st ? bz.st.phase : -1, phaseName: bz.phaseName,
-        engaged: bz.engaged, x: bz.x, y: bz.y, tameable: BOSS_TAMEABLE, feedable: bossFeedable(), bar: !bossBar.hidden,
+        engaged: bz.engaged, x: bz.x, y: bz.y, tameable: BOSS_TAMEABLE, feedable: bossFeedable(), bar: !bossBar.hidden, rm: bz.rm,
         tele: bz.tele.map((t) => ({ id: t.id, atk: t.atk, shape: t.zone.shape, windup: t.windup, t0: t.t0, drawn: t.drawn, zone: Object.assign({}, t.zone) })),
         live: bz.live.map((L) => ({ id: L.id, atk: L.atk, t0: L.t0, dur: L.dur, done: L.done, zone: Object.assign({}, L.zone) })),
         tame: bz.st && bz.st.tame ? { st: bz.st.tame.st, how: bz.st.tame.how, torpor: bz.st.tame.torpor, torporMax: bz.st.tame.torporMax, prog: bz.st.tame.prog, need: bz.st.tame.need, asleep: bz.ko } : null,
         arenaSrc: arenaSrc, arenaDrawn: arenaDrawn, reduced: REDUCED, tg: Object.assign({}, BOSS_TG), src: bz.src, drawn: bz.drawn, sk: bz.sk }),
       bossLog: () => JSON.parse(JSON.stringify(BOSS_LOG)),
+      // XB
+      bossSig: () => (bz.st ? { id: BOSS_ID, heads: bz.st.heads ? bz.st.heads.slice() : null, springs: bz.st.springs ? bz.st.springs.map((p) => Object.assign({}, p)) : null,
+        ice: bz.st.ice.map((p) => ({ id: p.id, ttl: p.ttl, zone: Object.assign({}, p.zone) })), sub: bz.st.sub, dig: bz.st.dig, rematch: bz.st.rematch, rm: bz.rm, onIce: bz.onIce,
+        scale: hero.scale, hint: BOSS.hint(BOSS_ID), sigs: BOSS.signatures(BOSS_ID), told: Object.keys(bz.told) } : { id: BOSS_ID, rm: bz.rm, done: bz.done }),
+      bossHitHead: (n, head) => bossHit(Number(n) || 0, false, Number(head)),
+      trophies: () => Object.assign({}, save.trophies || {}),
+      pedestal: () => (pedestal ? { x: pedestal.x, y: pedestal.y, px: (pedestal.x + 0.5) * TILE, py: (pedestal.y + 0.5) * TILE, near: nearPedestal(), drawn: pedDrawn, btn: !btn.trophy.hidden } : null),
+      rematchList: () => RM_BOSSES.map((id) => ({ id: id, can: canRematch(id), trophy: trophyOf(id), tier: ISL.trophyTier(save, trophyOf(id)) })),
+      rematch: (id) => startRematch(String(id)),
+      rematchWins: () => rmWins,
       bossSpawn: () => { if (!BOSS_ID) return false; if (!bz.st) { bz.done = ''; spawnBoss(); } return !!bz.st; },
       bossHit: (n, sooth) => bossHit(Number(n) || 0, sooth === true),
       bossFeed: () => bossFeed(),
