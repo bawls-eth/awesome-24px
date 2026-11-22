@@ -629,8 +629,9 @@
     }
     // ---------- tiered gear drops (G9): MMGearDrops.rollGear per bag item, per-player seeded; on by default (GEAR_DEFAULT_ON), ?gear=0 turns it off ----------
     const GM = window.MMGear; const GD = window.MMGearDrops;
-    const gearQs = /[?&]gear=(\d)(&|$)/.exec(qs0); const gearQ = gearQs ? gearQs[1] : null;
+    const gearQs = /[?&]gear=(\d)(&|$)/.exec(qs0); const gearQ = typeof rmFlag === 'function' ? rmFlag('gear') : gearQs ? gearQs[1] : null; // rmFlag: the one ?gear= parser (realm.js, review F15)
     const GEAR_ON = !!(GM && GD) && gearQ !== '0' && (gearQ === '1' || save.gearOn === true || GEAR_DEFAULT_ON);
+    const SIG_ON = typeof RM_FORGE_ON !== 'undefined' && RM_FORGE_ON === true; // T12 boss signatures (`sig`) on new drops only with the GW gate open (?forge=1; realm.js RM_FORGE_DEFAULT_ON)
     // Per-player seed id: each co-op seat rolls its own drops locally, nothing is shared. Seat N of a world team (MMWorldTeam: opts.team, arena.worldTeam
     // or setTeam) rolls as 'p' + N, so two seats on the same seed and kill get different streams; solo (no seat yet) stays 'p0' = today's seat-0 stream.
     // setGearPlayer (test hook) overrides it.
@@ -666,7 +667,7 @@
           const usable = (x) => typeof RM_ITEM_BY_ID === 'undefined' || !!(RM_ITEM_BY_ID[x] && !RM_ITEM_BY_ID[x].inert); // an inert def is a saved id this build cannot use
           if (!usable(id) && GM.isSig && GM.isSig(id)) id = GM.armorId(GM.sigInfo(id).family, 12); // a boss relic on an arena that does not register relics yet: its family's T12 piece
           if (!usable(id)) id = 'sparkwand'; // an arena without the armor slot yet: the tier stays, as a wand
-          gear = { t: g.t }; if (g.a) gear.a = g.a; if (g.sig && id === g.id) gear.sig = g.sig; // GW: the T12 boss signature rides on the bag (MMGear.clean drops it where it does not fit)
+          gear = { t: g.t }; if (g.a) gear.a = g.a; if (g.sig && id === g.id && SIG_ON) gear.sig = g.sig; // GW: the T12 boss signature rides on the bag (MMGear.clean drops it where it does not fit); SIG_ON: the GW gate (review F3)
         }
         const b = arena.dropBag(x + (k - (bag.items.length - 1) / 2) * 18, y + 10, it.r, id, bag, gear);
         if (!b) return;
@@ -676,7 +677,7 @@
         if (gear) {
           const d = GM.describe({ id: b.id, r: it.r, t: gear.t, a: gear.a });
           ent.t = gear.t; if (gear.a) ent.a = gear.a; ent.name = d ? d.name : ent.name; ent.tierLabel = d ? d.tierLabel : 'T' + gear.t; ent.tierColor = d ? d.tierColor : '#fff';
-          ent.soulbound = !!(d && d.soulbound); ent.gate = d ? d.gate : 0; ent.locked = (arena.heroLevel ? arena.heroLevel() : 1) < ent.gate; if (g && g.sig) ent.sig = g.sig; if (GM.isSig && GM.isSig(b.id)) ent.relic = true;
+          ent.soulbound = !!(d && d.soulbound); ent.gate = d ? d.gate : 0; ent.locked = (arena.heroLevel ? arena.heroLevel() : 1) < ent.gate; if (gear.sig) ent.sig = gear.sig; if (GM.isSig && GM.isSig(b.id)) ent.relic = true;
           if (!toasted) { toasted = true; arena._floatText(x, y - 48, ent.name + (ent.soulbound ? ' (soulbound)' : ''), ent.tierColor); }
         }
         got.items.push(ent);
@@ -988,19 +989,34 @@
     // Nothing is restored automatically: the player decides (Lantern backup).
     const GEAR_HINT_KEY = 'pixeltown-gearhint-v1';
     const GEAR_HINT_TEXT = 'Your gear may have been reset by an old tab: restore from Lantern backup';
-    const gearHintSt = { n: 0, shown: false, checked: false, now: false };
-    function gearHintRead() { let o = null; try { o = JSON.parse(localStorage.getItem(GEAR_HINT_KEY)); } catch (e) { o = null; } const n = o && Number.isInteger(o.n) && o.n >= 0 && o.n <= 999 ? o.n : 0; return { n, shown: !!(o && o.shown === 1) }; }
-    function gearHintWrite(n, shown) { try { localStorage.setItem(GEAR_HINT_KEY, JSON.stringify({ n, shown: shown ? 1 : 0 })); } catch (e) { /* storage full or blocked */ } gearHintSt.n = n; gearHintSt.shown = shown; }
-    function gearHintNote() { // called from the HUD sync: cheap in-memory test, a write only when the remembered count changes
+    // Review F3: it also remembers whether the save holds the GW `dust` key (d) and how many items carry a forged `f` (f); a pre-GW tab strips both.
+    // A salvage / sell / combine in a realm.js tab lowers the remembered counts itself (rmGearHintOwn, review F10), so those never trigger the note.
+    const gearHintSt = { n: 0, shown: false, checked: false, now: false, d: 0, f: 0 };
+    const gearHintOf = (sv) => (typeof rmGearHintOf === 'function' ? rmGearHintOf(sv) : { n: sv.items.length, d: sv.dust !== undefined ? 1 : 0, f: sv.items.filter((x) => x && x.f).length });
+    function gearHintRead() {
+      let o = null; try { o = JSON.parse(localStorage.getItem(GEAR_HINT_KEY)); } catch (e) { o = null; }
+      const cnt = (v) => (Number.isInteger(v) && v >= 0 && v <= 999 ? v : 0);
+      return { n: cnt(o && o.n), shown: !!(o && o.shown === 1), d: o && o.d === 1 ? 1 : 0, f: cnt(o && o.f) };
+    }
+    function gearHintWrite(n, shown, d, f) {
+      d = d ? 1 : 0; f = f | 0;
+      try { localStorage.setItem(GEAR_HINT_KEY, JSON.stringify({ n, shown: shown ? 1 : 0, d, f })); } catch (e) { /* storage full or blocked */ }
+      gearHintSt.n = n; gearHintSt.shown = shown; gearHintSt.d = d; gearHintSt.f = f;
+    }
+    function gearHintNote() { // called from the HUD sync: cheap in-memory test, a write only when a remembered value changes
       const sv = arena.save; if (!sv || !Array.isArray(sv.items)) return;
-      if (sv.items.some((x) => x && x.t) && (sv.items.length !== gearHintSt.n || gearHintSt.shown)) gearHintWrite(sv.items.length, false);
+      const h = gearHintOf(sv);
+      if ((sv.items.some((x) => x && x.t) || h.d || h.f) && (h.n !== gearHintSt.n || h.d !== gearHintSt.d || h.f !== gearHintSt.f || gearHintSt.shown)) gearHintWrite(h.n, false, h.d, h.f);
     }
     function gearHintCheck() {
       if (gearHintSt.checked) return; gearHintSt.checked = true;
-      const st = gearHintRead(); gearHintSt.n = st.n; gearHintSt.shown = st.shown;
+      const st = gearHintRead(); gearHintSt.n = st.n; gearHintSt.shown = st.shown; gearHintSt.d = st.d; gearHintSt.f = st.f;
       const sv = arena.save; const items = sv && Array.isArray(sv.items) ? sv.items : [];
-      if (sv && sv.gv === 1 && !items.some((x) => x && x.t) && items.length < st.n && !st.shown) {
-        gearHintWrite(st.n, true); gearHintSt.now = true;
+      const h = sv ? gearHintOf(sv) : { n: 0, d: 0, f: 0 };
+      const tGone = sv && sv.gv === 1 && !items.some((x) => x && x.t) && items.length < st.n;
+      const fGone = (st.d === 1 && !h.d) || (st.f > 0 && h.f < st.f); // dust key or forged affixes gone (review F3)
+      if (sv && (tGone || fGone) && !st.shown) {
+        gearHintWrite(st.n, true, st.d, st.f); gearHintSt.now = true;
         say(GEAR_HINT_TEXT); noteT = 9;
       } else gearHintNote();
     }

@@ -7,7 +7,7 @@
   // Tiered gear drops (GEAR-DROPS-BUILD-PLAN slice G10). ON by default since the save-tolerance slice (G7) shipped (PR #32).
   // ?gear=1 forces it on, ?gear=0 is the kill switch and always wins.
   const GEAR_DEFAULT_ON = true;
-  const gearWanted = () => { let v = null; try { v = new URLSearchParams(window.location.search).get('gear'); } catch (e) { /* no location */ } return v === '1' ? true : v === '0' ? false : GEAR_DEFAULT_ON; };
+  const gearWanted = () => { let v = null; try { v = typeof rmFlag === 'function' ? rmFlag('gear') : new URLSearchParams(window.location.search).get('gear'); } catch (e) { /* no location */ } return v === '1' ? true : v === '0' ? false : GEAR_DEFAULT_ON; }; // rmFlag (realm.js): the one ?gear= parser, review F15
   // The gear modules are not in the page's script list yet (the index.html tags belong to the save-tolerance slice): load them here, in order, only when gear is on.
   // mm-backup.js rides along for the one-time pre-gear snapshot (MMBackup.snapshotPregear) before the first tiered item reaches a gear-less save.
   try {
@@ -502,9 +502,10 @@
       const keep = arena.rng; const fx = MMRng.create('dgearfx:' + seed + ':' + gearGot.length); arena.rng = () => fx.next();
       try {
         if (!full && !sv.gv && window.MMBackup && MMBackup.snapshotPregear) MMBackup.snapshotPregear(localStorage); // GH: once, before the first tiered item is written
-        arena.collectItem(g.id, g.r);
-        if (!full && sv.items.length > n0 && sv.items[sv.items.length - 1].id === g.id) { const it = sv.items[sv.items.length - 1]; it.t = g.t; if (g.a) it.a = g.a; if (g.sig) { const cs = MMGear.clean({ n: it.n, id: it.id, r: it.r, t: g.t, a: g.a, sig: g.sig }); if (cs && cs.sig) it.sig = cs.sig; } } // GW: a T12 boss signature is kept
-        arena.onSave(sv);
+        // review F2: the tier, affix seed and (with the GW gate open) the T12 boss signature go INTO collectItem, so the entry the stash records (onItem)
+        // and the one written to storage already carry them: no T0 copy, and a soulbound T11+ is never paid to the Lantern stash.
+        const gear = { t: g.t }; if (g.a) gear.a = g.a; if (g.sig && typeof RM_FORGE_ON !== 'undefined' && RM_FORGE_ON === true) gear.sig = g.sig;
+        arena.collectItem(g.id, g.r, gear);
       } finally { arena.rng = keep; }
       const d = MMGear.describe({ id: g.id, r: g.r, t: g.t, a: g.a }); const rar = RM_RARITIES[g.r] || RM_RARITIES[0];
       const rec = { id: g.id, r: g.r, t: g.t, a: g.a || 0, slot: g.slot, name: d ? d.name : g.id, color: d ? d.tierColor : rar.color, rarName: rar.name, sold: full };

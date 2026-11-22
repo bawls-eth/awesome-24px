@@ -67,7 +67,8 @@ const view = (page) => page.evaluate(() => {
     errs.push(...A.errors); await A.ctx.close(); }
 
   // ---- Dread pair: T12 signature wand (sig blast) + dread plate; sig survives the reload (rmCleanSave) ----
-  { const A = await open(browser, '', { weapon: 9, armor: 11 }); const page = A.page;
+  // The sig-only Dread pair ships behind the GW one-deploy gate (review F3: RM_FORGE_DEFAULT_ON = false), so this block opens it with ?forge=1.
+  { const A = await open(browser, '&forge=1', { weapon: 9, armor: 11 }); const page = A.page;
     const v = await view(page);
     const kept = await page.evaluate(() => JSON.stringify(window.__mm.arena.save.items.find((x) => x.n === 9)));
     check('the T12 wand keeps its `sig` through the save cleaner', /"sig":"blast"/.test(kept), kept);
@@ -79,6 +80,15 @@ const view = (page) => page.evaluate(() => {
     check('the backpack row lists the signature affix (roll gets `sig`)', afx.indexOf('blast') >= 0 && afx.length === 3, JSON.stringify(afx));
     errs.push(...A.errors); await A.ctx.close(); }
 
+  // ---- GW gate closed (the default, and ?forge=0): the Dread pair is off, Banded still works, `sig` is kept on the item ----
+  for (const q of ['', '&forge=0', '&forge=1&forge=0']) {
+    const A = await open(browser, q, { weapon: 9, armor: 11 }); const page = A.page;
+    const v = await view(page);
+    const kept = await page.evaluate(() => JSON.stringify(window.__mm.arena.save.items.find((x) => x.n === 9)));
+    check(`gate closed (${q || 'default'}): only Banded is active (no Dread pair), the T12 wand keeps its sig`, v.ids.join() === 'banded' && /"sig":"blast"/.test(kept), JSON.stringify({ sets: v.sets, kept }));
+    errs.push(...A.errors); await A.ctx.close();
+  }
+
   // ---- ?gear=0: no sets anywhere, the items (and sig) are kept ----
   { const A = await open(browser, '&gear=0', { weapon: 9, armor: 11 }); const page = A.page;
     const v = await view(page);
@@ -88,7 +98,7 @@ const view = (page) => page.evaluate(() => {
     errs.push(...A.errors); await A.ctx.close(); }
 
   // ---- world bag pickup copies the drop's sig onto the saved item ----
-  { const A = await open(browser, '', { weapon: 1, armor: 3 }, ORIGIN + '/game/games/mad-maze/index.html?mode=world&test=1&seed=12345'); const page = A.page;
+  { const A = await open(browser, '', { weapon: 1, armor: 3 }, ORIGIN + '/game/games/mad-maze/index.html?mode=world&test=1&seed=12345&forge=1'); const page = A.page;
     await page.waitForFunction(() => window.__mm && window.__mm.world, null, { timeout: 15000 });
     const got = await page.evaluate(() => {
       const a = window.__mm.arena; const p = a.player;

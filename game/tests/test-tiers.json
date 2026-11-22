@@ -1071,6 +1071,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "gear-save-fixes.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "first-ten-minutes.test.js": {
     "class": "browser",
     "tier": "full"

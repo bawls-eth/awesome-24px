@@ -3093,9 +3093,10 @@ class TownScene extends Phaser.Scene {
     document.getElementById('realm-overlay').classList.remove('hidden');
     this.scene.pause();
     if (!this.realm) {
+      const nowRealm = loadSave().realm; // review F4: the CURRENT stored realm (Mad Maze in the embed may have changed it since this scene loaded), not the load-time copy
       this.realm = new RealmArena({
         container: document.getElementById('realm-canvas-wrap'),
-        save: this.realmSave,
+        save: nowRealm && typeof nowRealm === 'object' && !Array.isArray(nowRealm) ? nowRealm : this.realmSave,
         onSave: (s) => writeSave({ realm: s }),
         onExit: (why) => this.exitRealm(why),
       });
