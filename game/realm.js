@@ -108,7 +108,16 @@ const RM_SPARK_CLASS = { ranger: 'a', bruiser: 'a', berserker: 'a', punk: 'a', r
 const RM_EB_ROT = { ebolt_shard: 1, ebolt_arrow: 1, ebolt_fire: 1, ebolt_frost: 1, ebolt_laser_h: 1, ebolt_skull: 0 };
 const RM_WPN_COLOR = { dot: '#ffe27a', arrow: '#f3d9a4', shard: '#9fe3ff', orb: '#c59bff', star: '#ffd24a', blade: '#e6edf3', page: '#fff3c4', axe: '#ff9a6a', hammer: '#ffcf5a', fist: '#ffb38a', ray: '#7ee7ff' };
 // URL kill switches (S12): ?unlocks=0 turns off the unlock-tree passives / Nova II / Dash II, ?weapons=0 the styled weapon items.
-function rmFlagOff(name) { try { return typeof location !== 'undefined' && new RegExp('[?&]' + name + '=0(&|$)').test(location.search || ''); } catch (e) { return false; } }
+// rmFlag(name) -> '0' when ANY ?name= value is 0 (a kill switch always wins, duplicates and %-encoding included), '1' when any is 1, else null.
+// The one parser for these switches: realm.js, dungeon.js and realm-world.js all read ?gear= / ?forge= through it (review F15).
+function rmFlag(name) {
+  try {
+    if (typeof location === 'undefined' || typeof URLSearchParams === 'undefined') return null;
+    const vs = new URLSearchParams(location.search || '').getAll(name).map((v) => String(v).trim());
+    return vs.indexOf('0') >= 0 ? '0' : vs.indexOf('1') >= 0 ? '1' : null;
+  } catch (e) { return null; }
+}
+function rmFlagOff(name) { return rmFlag(name) === '0'; }
 // This file's folder (for shared modules and UI art), from the <script> tag that loaded it; '' when unknown (no art, no loader).
 const RM_DIR = (function () { try { const s = typeof document !== 'undefined' && document.currentScript && document.currentScript.src; return s ? String(s).replace(/[?#].*$/, '').replace(/[^/]*$/, '') : ''; } catch (e) { return ''; } })();
 // Shared modules the arena layers need (FO2 mm-focus, TG3 mm-access + mm-telegraph; mm-telegraph reads MMAccess, so it loads last): a page that does not list one gets it here (ordered, async=false). Every use checks
@@ -166,6 +175,11 @@ const RM_WPN_ITEMS = [];
 // Armor `arm_<family>_<band>` defs are lookup-only (never in RM_ITEMS / RM_BASE_ITEMS: never dropped by the classic pools or stocked by the shop).
 const RM_ARM_ID = /^arm_[a-z]{3,8}_[a-z]{3,10}$/; // MMGear.GEAR_ID_RE
 const RM_GEAR_ON = !rmFlagOff('gear') && typeof MMGear !== 'undefined' && !!MMGear && typeof MMGear.clean === 'function';
+// GW one-deploy gate (review F3, the G7 pattern): builds older than GW strip `dust`, `f` and `sig`, so this build only KEEPS them (rmCleanSave /
+// rmMergeSave) while nothing creates them by default: the Forge (salvage -> dust, reforge -> f), T12 boss signatures (`sig`) on new drops and the
+// sig-only "Dread pair" set stay off until the next deploy flips RM_FORGE_DEFAULT_ON. ?forge=1 turns them on, ?forge=0 off (always wins); ?gear=0 wins over both.
+const RM_FORGE_DEFAULT_ON = false;
+const RM_FORGE_ON = !rmFlagOff('gear') && (rmFlag('forge') === '1' || (RM_FORGE_DEFAULT_ON && rmFlag('forge') !== '0'));
 const RM_SPLASH_ON = RM_GEAR_ON && !rmFlagOff('splash') && typeof MMSplash !== 'undefined' && !!MMSplash && typeof MMSplash.pick === 'function'; // G11 player splash
 const RM_ARMOR_ICON = { light: '🦺', robe: '👘', heavy: '🛡️' };
 (function rmRegisterArmor() {
@@ -318,6 +332,20 @@ function rmCleanSave(s) {
 // Now every save re-reads pixeltown-save-v1, merges (never loses progress) and writes the merge.
 const RM_SAVE_KEY = 'pixeltown-save-v1';
 const RM_TILE = 40; // wall-grid tile size in logical px
+// GH downgrade hint record (pixeltown-gearhint-v1, owned by realm-world.js: { n, shown, d?, f? }). A deliberate removal in THIS tab (salvage, sell,
+// combine) rewrites the remembered counts so the hint never reads a normal salvage as an old-tab reset (review F10). Only an existing record is updated.
+const RM_GEAR_HINT_KEY = 'pixeltown-gearhint-v1';
+function rmGearHintOf(sv) { const items = sv && Array.isArray(sv.items) ? sv.items : []; return { n: items.length, d: sv && sv.dust !== undefined ? 1 : 0, f: items.filter((x) => x && x.f).length }; }
+function rmGearHintOwn(sv) {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    const raw = localStorage.getItem(RM_GEAR_HINT_KEY); if (!raw) return;
+    const o = JSON.parse(raw); if (!o || typeof o !== 'object' || Array.isArray(o)) return;
+    const h = rmGearHintOf(sv); const n0 = Number.isInteger(o.n) ? o.n : 0, f0 = Number.isInteger(o.f) ? o.f : 0;
+    const next = { n: Math.min(n0, h.n), shown: o.shown === 1 ? 1 : 0, d: o.d === 1 && h.d ? 1 : 0, f: Math.min(f0, h.f) }; // only ever lowered here (a pickup never needs it)
+    if (next.n !== n0 || next.f !== f0 || next.d !== (o.d === 1 ? 1 : 0)) localStorage.setItem(RM_GEAR_HINT_KEY, JSON.stringify(next));
+  } catch (e) { /* storage full or blocked: the hint is only advice */ }
+}
 
 function rmReadStoredRealm() {
   try {
@@ -361,6 +389,13 @@ function rmMergeSave(mine, stored, opts) {
     items.push({ ...it }); have.add(it.n);
   });
   const eq = { ...a.eq }; Object.keys(eq).forEach((slot) => { if (remap[eq[slot]] !== undefined) eq[slot] = remap[eq[slot]]; });
+  if (items.length > RM_BACKPACK) { // review F8: the cleaner keeps the first 24, so cut the LEAST valuable first (unequipped, then lowest tier, then lowest rarity), never a T12 before a T0
+    const eqd = new Set(Object.keys(eq).map((k) => eq[k]));
+    const rank = items.map((it, i) => ({ i, e: eqd.has(it.n) ? 1 : 0, t: it.t || 0, r: it.r }));
+    rank.sort((x, y) => (y.e - x.e) || (y.t - x.t) || (y.r - x.r) || (x.i - y.i));
+    const keepI = new Set(rank.slice(0, RM_BACKPACK).map((x) => x.i));
+    for (let i = items.length - 1; i >= 0; i--) if (!keepI.has(i)) items.splice(i, 1); // the kept items stay in their order
+  }
   out.items = items; out.nextUid = next; out.eq = eq; // equipment is per-tab
   if (a.gv || b.gv) out.gv = 1;
   if (a.dust !== undefined || b.dust !== undefined) { const ad = a.dust || 0, bd = b.dust || 0; const bs = Number.isFinite(opts.baseDust) ? opts.baseDust : ad; out.dust = Math.max(0, bd + (ad - bs)); } // three-way like shards
@@ -376,7 +411,7 @@ class RealmArena {
     this.onSave = (sv) => this._persist(sv); // every save goes through the cross-tab merge first
     this.onExit = onExit || (() => {});
     this.save = rmCleanSave(save);
-    this._baseShards = this.save.shards; this._baseDust = this.save.dust || 0; this._baseGp = rmGpOf(this.save.gp); this._known = new Set(this.save.items.map((it) => it.n)); this.walls = null; this.extraGuard = 0;
+    this._baseShards = this.save.shards; this._baseDust = this.save.dust || 0; this._baseGp = rmGpOf(this.save.gp); this._known = new Set(this.save.items.map((it) => it.n)); this.saveOk = true; this.saveFails = 0; this.walls = null; this.extraGuard = 0;
     this.dungeon = null; this.fixedWorld = null; // optional run controller + fixed-size world (Mad Maze dungeons); null = classic waves
     this.world = null; this.mode = 'waves'; this.camera = { x: 0, y: 0, vw: 960, vh: RM_SHORT }; this._camF = { x: 0, y: 0 }; // setWorld / setMode: a scrolling world with a camera (null = the screen is the world, today's behaviour)
     this._solidAt = null; this._shotSolidAt = null; this._curDm = 1; this.onEnemyKilled = null; this.onEnemyHit = null; // world tile collision + additive kill / hit callbacks (default null)
@@ -441,16 +476,38 @@ class RealmArena {
     const stored = rmReadStoredRealm();
     if (!stored) return false;
     this._adopt(rmMergeSave(this.save, stored, { base: this._baseShards, baseDust: this._baseDust, known: this._known, baseGp: this._baseGp }));
-    { this._baseGp = rmGpOf(rmCleanSave(stored).gp); } // storage's gp at this sync
-    this._baseShards = this.save.shards; this._baseDust = this.save.dust || 0; this._known = new Set(rmCleanSave(stored).items.map((it) => it.n)); // what storage held at this sync
+    this._syncBase(stored); // the bases are what storage held at this sync (review F7: not the merged value, or an unsaved in-memory delta is lost)
     return true;
   }
 
+  // The three-way merge bookkeeping (_known uids, shard / dust / pity bases) = exactly what `stored` (the raw realm in storage) holds.
+  _syncBase(stored) {
+    const st = rmCleanSave(stored);
+    this._known = new Set(st.items.map((it) => it.n)); this._baseShards = st.shards; this._baseDust = st.dust || 0; this._baseGp = rmGpOf(st.gp);
+    return st;
+  }
+
+  // Merge, write, then set the bookkeeping from what storage REALLY holds after the write (review F1): a write that failed (quota full, blocked storage)
+  // leaves storage as it was, so a fresh pickup stays "new here" and is written next time instead of being read as "sold in another tab".
+  // Returns true when storage now holds this save (also on this.saveOk); false = not saved (this.saveFails counts them, a calm note shows in play).
   _persist(sv) {
     this.resyncSave();
-    this._baseShards = this.save.shards; this._baseDust = this.save.dust || 0; this._baseGp = rmGpOf(this.save.gp);
-    this._known = new Set(this.save.items.map((it) => it.n)); // about to be written, so storage will hold exactly these
-    this._onSave(this.save);
+    let ret; try { ret = this._onSave(this.save); } catch (e) { ret = false; }
+    const stored = rmReadStoredRealm();
+    let ok = ret !== false;
+    if (stored) {
+      const st = this._syncBase(stored);
+      ok = ok && st.shards === this.save.shards && st.items.length === this.save.items.length && st.items.every((it, i) => it.n === this.save.items[i].n && it.r === this.save.items[i].r && (it.t || 0) === (this.save.items[i].t || 0));
+    } else { // nothing readable in storage (no storage, or a page that saves elsewhere): keep every item as new here, never drop one
+      this._known = new Set(); this._baseShards = this.save.shards; this._baseDust = this.save.dust || 0; this._baseGp = rmGpOf(this.save.gp);
+    }
+    this.saveOk = ok;
+    if (!ok) {
+      this.saveFails = (this.saveFails || 0) + 1;
+      const now = Date.now();
+      if (this.active && this.player && !(now - (this._saveWarnAt || 0) < 20000)) { this._saveWarnAt = now; try { this._floatText(this.player.x, this.player.y - 60, 'Storage full: progress not saved yet', '#ff9a8a'); } catch (e) { /* cosmetic */ } }
+    }
+    return ok;
   }
 
   // ---------- team play ----------
@@ -759,6 +816,7 @@ class RealmArena {
   // The active gear sets for { weapon, armor } (MMGearSets.active), [] when gear is off, the module is missing or either piece is absent.
   _setsOf(eqItems) {
     if (!RM_GEAR_ON || !eqItems || !eqItems.weapon || !eqItems.armor || typeof MMGearSets === 'undefined' || !MMGearSets || typeof MMGearSets.active !== 'function') return [];
+    if (!RM_FORGE_ON && eqItems.weapon.sig) { const w = Object.assign({}, eqItems.weapon); delete w.sig; eqItems = { weapon: w, armor: eqItems.armor }; } // F3 gate: the sig-only Dread pair is off with the GW gate (Banded stays)
     const key = ['weapon', 'armor'].map((k) => { const x = eqItems[k]; return `${x.id}:${x.t}:${x.r}:${x.a || 0}:${x.sig || ''}`; }).join('|');
     const c = this._setC || (this._setC = new Map());
     let v = c.get(key);
@@ -776,13 +834,23 @@ class RealmArena {
     try {
       if (it.sig && it.f.id === it.sig) out = null;
       else if (typeof MMGearForge !== 'undefined' && MMGearForge && typeof MMGearForge.reforgeOptions === 'function') {
-        const opts = MMGearForge.reforgeOptions({ n: 1, id: it.id, r: it.r, t: it.t, a: it.a });
+        const fv = { n: 1, id: it.id, r: it.r, t: it.t, a: it.a }; if (it.sig) fv.sig = it.sig; // review F5: the signature changes which affixes the item rolled
+        const opts = MMGearForge.reforgeOptions(fv);
         const o = opts ? opts.find((x) => x.id === it.f.id) : null;
         out = o ? { id: o.id, v: o.v } : null;
       } else if (typeof MMGearAffix !== 'undefined' && MMGearAffix) {
         const rg = MMGearAffix.rangeOf(it.f.id, it.t); const v = Number(it.f.v);
         const rolled = it.a ? MMGearAffix.roll(it.id, it.id.indexOf('arm_') === 0 ? 'armor' : 'weapon', it.t, it.r, it.a, it.sig).map((e) => e.id) : [];
         out = rg && Number.isFinite(v) && v > 0 && rolled.indexOf(it.f.id) < 0 ? { id: it.f.id, v: Math.min(rg[1], v) } : null;
+      }
+      if (out && it.id.indexOf('arm_') !== 0 && typeof MMGearAffix !== 'undefined' && MMGearAffix && typeof MMGearAffix.value === 'function' && typeof MMGearAffix.cap === 'function') {
+        // review F6: the forged affix sits inside the weapon power cap (MMGearAffix.cap) like every rolled one: trim it on its unit grid until the product fits
+        const rolled = it.a ? MMGearAffix.roll(it.id, 'weapon', it.t, it.r, it.a, it.sig) : [];
+        const cp = MMGearAffix.cap(it.t) + 1e-9; const d = MMGearAffix.get(out.id);
+        const step = d && d.unit === 'int' ? 1 : d && d.unit === 'pct' ? 0.001 : 0.1;
+        let v = out.v; let guard = 0;
+        while (v > 0 && MMGearAffix.value(rolled.concat([{ id: out.id, v }])) > cp && guard++ < 2000) v = Math.round((v - step) * 1000) / 1000;
+        out = v > 0 ? { id: out.id, v } : null;
       }
     } catch (e) { out = null; }
     if (c.size > 64) c.clear();
@@ -3112,14 +3180,21 @@ class RealmArena {
   }
 
   // Picks an item up. A full backpack sells it on the spot for shards.
-  collectItem(id, rarity) {
+  // gear (optional, additive): { t, a?, sig? } of a tiered drop. The entry is built WITH them before onItem (the stash record) and the save write, so no
+  // T0 copy of a tiered drop ever reaches storage or the stash (review F2). Cleaned like a stored item (rmCleanGear / rmCleanSig).
+  collectItem(id, rarity, gear) {
     this._snd('pickup');
     const sv = this.save; const def = RM_ITEM_BY_ID[id]; const rar = RM_RARITIES[rarity];
     if (sv.items.length >= RM_BACKPACK) {
       sv.shards += rar.sell;
       this._floatText(this.player.x, this.player.y - 24, `sold ${def.name} +${rar.sell} 💎`, rar.color);
     } else {
-      sv.items.push({ n: sv.nextUid++, id, r: rarity });
+      const ent = { n: sv.nextUid++, id, r: rarity };
+      if (gear && typeof gear === 'object' && !Array.isArray(gear)) {
+        const g = rmCleanGear(id, rarity, gear);
+        if (g.t) { ent.t = g.t; if (g.a) ent.a = g.a; const sg = rmCleanSig(id, g.t, g.a, gear.sig); if (sg) ent.sig = sg; }
+      }
+      sv.items.push(ent);
       this._itemText2(this.player.x, this.player.y - 24, id, rarity, def.name, def.icon, rar.color);
       this._burst(this.player.x, this.player.y, rar.color, 10, 150);
       if (this.onItem) this.onItem(sv.items[sv.items.length - 1]);
@@ -3792,7 +3867,16 @@ class RealmArena {
     const gone = new Set(others.map((x) => x.n));
     sv.items = sv.items.filter((x) => !gone.has(x.n));
     RM_EQ_KEYS.forEach((slot) => { if (gone.has(sv.eq[slot])) delete sv.eq[slot]; });
-    c.keep.r += 1;
+    // review F4: the survivor is replaced by a FRESH uid entry one rarity up (like reforge), never changed in place: a tab still holding the old r would
+    // otherwise see a uid collision in the cross-tab merge and keep both copies. Its t / a / sig / f and its slot are kept.
+    const ki = sv.items.indexOf(c.keep); const old = c.keep.n;
+    const n = Math.max(sv.nextUid || 1, 1 + sv.items.reduce((m, x) => Math.max(m, x.n), 0)); sv.nextUid = n + 1;
+    c.keep = Object.assign({}, c.keep, { n, r: c.keep.r + 1 });
+    if (c.keep.f) c.keep.f = { id: c.keep.f.id, v: c.keep.f.v };
+    if (ki >= 0) sv.items[ki] = c.keep; else sv.items.push(c.keep);
+    RM_EQ_KEYS.forEach((slot) => { if (sv.eq[slot] === old) sv.eq[slot] = n; });
+    if (this._forgeUid === old) this._forgeUid = n;
+    rmGearHintOwn(sv);
     this._snd('levelup');
     this._itemText2(this.player.x, this.player.y - 34, c.keep.id, c.keep.r, `${RM_RARITIES[c.keep.r].name}!`, RM_ITEM_BY_ID[c.keep.id].icon, RM_RARITIES[c.keep.r].color);
     this._afterGearChange();
@@ -3806,14 +3890,16 @@ class RealmArena {
     this.save.shards += rmSellValue(it);
     this.save.items.splice(i, 1);
     RM_EQ_KEYS.forEach((slot) => { if (this.save.eq[slot] === uid) delete this.save.eq[slot]; });
+    rmGearHintOwn(this.save);
     this._afterGearChange();
     return true;
   }
 
   // ---------- Forge (GW): salvage for dust, deterministic reforge (MMGearForge). Free in-game dust + shards only; no randomness anywhere. ----------
-  // Off with ?gear=0 or without mm-gear-forge.js: no Forge section, and `dust` / `f` are kept but do nothing.
-  forgeOn() { return RM_GEAR_ON && typeof MMGearForge !== 'undefined' && !!MMGearForge && typeof MMGearForge.salvage === 'function' && !(this.team && this.team.isPvp); }
-  _forgeView(it) { const v = { n: it.n, id: it.id, r: it.r }; if (it.t) v.t = it.t; if (it.a) v.a = it.a; if (it.f) v.f = it.f; return v; }
+  // Off with ?gear=0, without mm-gear-forge.js or while the GW gate is closed (RM_FORGE_ON, default off for one deploy; ?forge=1): no Forge section,
+  // nothing creates `dust` / `f`, and the ones already saved are kept (a forged `f` still counts in the stats).
+  forgeOn() { return RM_GEAR_ON && RM_FORGE_ON && typeof MMGearForge !== 'undefined' && !!MMGearForge && typeof MMGearForge.salvage === 'function' && !(this.team && this.team.isPvp); }
+  _forgeView(it) { const v = { n: it.n, id: it.id, r: it.r }; if (it.t) v.t = it.t; if (it.a) v.a = it.a; if (it.sig) v.sig = it.sig; if (it.f) v.f = it.f; return v; } // sig: review F5
   // salvageInfo(uid) -> { dust, t, r, soulbound } or null (any tiered item; soulbound ones too).
   salvageInfo(uid) {
     if (!this.forgeOn()) return null;
@@ -3832,6 +3918,7 @@ class RealmArena {
     RM_EQ_KEYS.forEach((slot) => { if (sv.eq[slot] === uid) delete sv.eq[slot]; });
     sv.dust = (sv.dust || 0) + info.dust;
     this._forgeUid = 0; this._forgeAsk = null;
+    rmGearHintOwn(sv);
     this._afterGearChange();
     return info.dust;
   }

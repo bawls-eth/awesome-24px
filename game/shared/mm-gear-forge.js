@@ -1,7 +1,7 @@
 // MMGearForge: salvage, deterministic reforge and the fixed vendor list (NEXT-SLICES-2 Wave 2, slice GF).
 // Pure and fully deterministic: no rng, no clock. Frozen output, inputs are never mutated, hostile input returns null.
 // Currencies are free in-game dust and shards only; there is no real money and no paid pack anywhere.
-// Item shape (additive): { n, id, r, t?, a?, f? } where `f` = { id, v } is the one forged affix (only on t >= 7).
+// Item shape (additive): { n, id, r, t?, a?, sig?, f? } where `f` = { id, v } is the one forged affix (only on t >= 7).
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory(require('./mm-gear.js'), require('./mm-gear-affix.js'));
   else root.MMGearForge = factory(root.MMGear, root.MMGearAffix);
@@ -19,7 +19,7 @@
     if (!item || typeof item !== 'object' || Array.isArray(item)) return null;
     if (has(item, '__proto__') || has(item, 'constructor') || has(item, 'prototype')) return null;
     if (typeof item.id !== 'string') return null;
-    const c = MMGear.clean({ n: has(item, 'n') ? item.n : 1, id: item.id, r: has(item, 'r') ? item.r : 0, t: has(item, 't') ? item.t : undefined, a: has(item, 'a') ? item.a : undefined });
+    const c = MMGear.clean({ n: has(item, 'n') ? item.n : 1, id: item.id, r: has(item, 'r') ? item.r : 0, t: has(item, 't') ? item.t : undefined, a: has(item, 'a') ? item.a : undefined, sig: has(item, 'sig') ? item.sig : undefined }); // sig: a T12 weapon's boss signature (review F5)
     if (!c) return null;
     if (has(item, 't') && item.t !== undefined && item.t !== (c.t || 0)) return null;
     if (has(item, 'r') && item.r !== c.r) return null;
@@ -52,13 +52,13 @@
   };
 
   // reforgeOptions(item) -> frozen [{ id, v, text, cost: { dust, shards }, current }] for every legal affix of the item's slot, or null.
-  // Legal: the slot's affixes that exist at this tier, minus those already rolled on the item. Value and cost are exact and fixed, so the
-  // outcome is known before paying. Only t >= 7.
+  // Legal: the slot's affixes that exist at this tier, minus those already rolled on the item (with its signature: `sig` changes the seeded picks and
+  // is itself an affix the item has, so it is never offered either). Value and cost are exact and fixed, so the outcome is known before paying. Only t >= 7.
   function reforgeOptions(item) {
     const c = view(item);
     if (!c || !c.t || c.t < MIN_T || c.t > MAX_T) return null;
     const slot = slotOf(c.id);
-    const rolled = c.a ? MMGearAffix.roll(c.id, slot, c.t, c.r, c.a, null).map((e) => e.id) : [];
+    const rolled = c.a ? MMGearAffix.roll(c.id, slot, c.t, c.r, c.a, c.sig || null).map((e) => e.id) : [];
     const cur = forgedOf(item);
     const out = [];
     MMGearAffix.SLOTS[slot].forEach((aid) => {
@@ -79,6 +79,7 @@
     const c = view(item);
     const out = { n: c.n, id: c.id, r: c.r, t: c.t };
     if (c.a) out.a = c.a;
+    if (c.sig) out.sig = c.sig;
     out.f = Object.freeze({ id: o.id, v: o.v });
     return Object.freeze(out);
   }
