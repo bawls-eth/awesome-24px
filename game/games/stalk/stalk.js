@@ -60,6 +60,7 @@
   // ---------- DOM ----------
   function $(id) { return document.getElementById(id); }
   function fmt(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+  function pop(el) { if (reduced || !el) return; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
   function signed(n) { return (n > 0 ? '+' : '') + fmt(n); }
   function say(t) { msgText = t; $('msg').textContent = t; }
 
@@ -257,7 +258,8 @@
     if (!r.ok) { say(REASONS[r.reason] || 'Cannot do that.'); render(); return r; }
     var before = M.goalsDone(save, wk);
     save = M.latchGoals(r.save, wk); persist(); beep('levelup'); // sell cue
-    say('Sold ' + r.qty + ' for ' + fmt(r.gain) + ' bells.' + (save.goals !== before ? ' A weekly goal is done!' : '')); render(); return r;
+    var vs = r.gain - r.qty * wk.buyPrice;
+    say('Sold ' + r.qty + ' for ' + fmt(r.gain) + ' bells (' + signed(vs) + ' against the Sunday price).' + (save.goals !== before ? ' A weekly goal is done!' : '')); render(); pop($('st-profit')); return r;
   }
   function doSellNb(id, n) {
     sync();
@@ -305,7 +307,7 @@
   }
   function prPrice() { return M.priceAt(pr.wk, pr.slot); }
   function prNow() { return pr.earned + pr.hold * (pr.slot === 0 ? 0 : prPrice()) - pr.invested; }
-  function prPop(el) { if (reduced || !el) return; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
+  var prPop = pop;
   function prBuy() {
     if (!pr || pr.done || pr.slot !== 0) return false;
     var q = Math.max(0, Math.min(M.MAX_HOLD - pr.hold, Math.floor(pr.bells / pr.wk.buyPrice)));

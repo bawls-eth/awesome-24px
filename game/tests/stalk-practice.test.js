@@ -65,6 +65,19 @@ const PAGE = ORIGIN + '/game/games/stalk/index.html';
   await p.evaluate(() => localStorage.setItem('pixeltown-stalk-practice-v1', '{"n":-5,"best":"<b>","rounds":1e99}'));
   await p.reload(); await p.waitForFunction(() => window.__stalk);
   check('hostile practice save is sanitised', await p.evaluate(() => { const s = window.__stalk.practice.saved; return s.n === 0 && s.best === 0 && s.rounds === 999999; }));
+  // real week: profit feedback on a sale and live "Sell all now" line
+  await p.evaluate(() => { window.__stalk.setTime(100, 0); window.__stalk.buy(10); window.__stalk.setTime(100, 3); });
+  const live = await p.evaluate(() => { const s = window.__stalk.save, pr = window.__stalk.wk.sell[2]; return { note: document.getElementById('price-note').textContent, want: s.earned + s.holdings * pr - s.invested }; });
+  check('real week: price note shows the live sell-all-now result', live.note.replace(/,/g, '').includes('Sell all now: ' + (live.want > 0 ? '+' : '') + live.want + ' bells'), live.note);
+  await p.tap('#sell1');
+  const fb = await p.evaluate(() => ({ msg: document.getElementById('msg').textContent, d: window.__stalk.wk.sell[2] - window.__stalk.wk.buyPrice, pop: document.getElementById('st-profit').classList.contains('pop') }));
+  check('real sale message compares with the Sunday price', fb.msg.replace(/,/g, '').includes('(' + (fb.d > 0 ? '+' : '') + fb.d + ' against the Sunday price)'), fb.msg);
+  check('week profit pops after a sale (motion allowed)', fb.pop);
+  check('Menu button present and clear of the trade and sound buttons', await p.evaluate(() => {
+    const m = document.getElementById('mm-nav-btn'); if (!m) return false;
+    const a = m.getBoundingClientRect();
+    return ['btn-mute', 'buy1', 'buy10', 'sell1', 'sellall', 'pr-start'].every((id) => { const e = document.getElementById(id); if (!e || e.offsetParent === null) return true; const b = e.getBoundingClientRect(); return a.bottom <= b.top || a.top >= b.bottom || a.right <= b.left || a.left >= b.right; });
+  }));
   check('phone: no horizontal scroll', await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
   check('no console errors', errors.length === 0, errors.join('|'));
   check('zero Firebase/DB requests', db.attempts() === 0);

@@ -83,3 +83,4 @@ html[data-reduce-motion="1"] *, html[data-reduce-motion="1"] *::before, html[dat
 @keyframes pr-pop { 0% { transform:scale(1); } 40% { transform:scale(1.25); } 100% { transform:scale(1); } }
 @media (prefers-reduced-motion: reduce) { .pop { animation:none; } }
 #practice [hidden] { display:none !important; }
+.stat strong.pop { display:inline-block; }
