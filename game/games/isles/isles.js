@@ -2516,10 +2516,35 @@
   let panelKind = '';
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
   function closePanel() { panel.hidden = true; panelKind = ''; paused = false; }
+  // 8B: the Pack (one button): a tabbed panel - Party (home dock + party), Craft, Log, Help. Other panels (sea chart, decor, trophies) stay
+  // tab-less. The tab row and the party block are static DOM; only their hidden / aria-selected flags change.
+  const PACK_TABS = { party: $('tab-party'), craft: $('btn-craft'), log: $('btn-log'), help: $('tab-help') };
+  const packTabs = $('pack-tabs'), packParty = $('pack-party');
+  function packHud(kind) {
+    const inPack = Object.prototype.hasOwnProperty.call(PACK_TABS, kind);
+    packTabs.hidden = !inPack;
+    packParty.hidden = kind !== 'party';
+    Object.keys(PACK_TABS).forEach((k) => { PACK_TABS[k].setAttribute('aria-selected', String(k === kind)); PACK_TABS[k].classList.toggle('on', k === kind); });
+  }
+  const HOWTO = Array.prototype.map.call(document.querySelectorAll('#howto-list li'), (li) => li.textContent);
   function openPanel(kind) {
     while (panelBody.firstChild) panelBody.removeChild(panelBody.firstChild);
     panelKind = kind;
-    if (kind === 'sail') {
+    packHud(kind);
+    if (kind === 'party') {
+      panelTitle.textContent = 'Pack';
+      const pl = $('party-list');
+      while (pl.firstChild) pl.removeChild(pl.firstChild);
+      if (!party.length) pl.appendChild(el('li', 'dim', 'No party yet. Soothe a creature, then feed it.'));
+      party.forEach((p) => { const li = el('li', '', (p.ent.nm || p.def.name) + ' (' + p.cs.mode + ')'); li.dataset.tame = p.ent.id; pl.appendChild(li); });
+      panelBody.appendChild(el('p', 'dim', 'Stable ' + tames.roster.length + '. XP ' + xp + '. ' + (HOME ? 'You are home.' : 'Home dock takes you home.')));
+    } else if (kind === 'help') {
+      panelTitle.textContent = 'Help';
+      const ol = el('ol', 'howto-list'); ol.id = 'help-list';
+      HOWTO.forEach((t) => ol.appendChild(el('li', '', t)));
+      panelBody.appendChild(ol);
+      panelBody.appendChild(el('p', 'dim', $('help').textContent));
+    } else if (kind === 'sail') {
       panelTitle.textContent = 'Sea chart';
       panelBody.appendChild(el('p', 'calm', 'The boat is ready whenever you are. Where to?'));
       DESTS.filter((id) => id !== ISLE).forEach((id) => {
@@ -2589,9 +2614,10 @@
       mountFeedback(fb);
     }
     panel.hidden = false;
+    $('howto').hidden = true; // 8B: the first-visit how-to never sits under a panel
     paused = true;
     if (window.MMNav) { try { window.MMNav.close(); } catch (e) { /* ignore */ } } // never two dialogs at once
-    const first = panelBody.querySelector('button') || $('panel-close');
+    const first = (kind === 'party' && !$('btn-home').hidden ? $('btn-home') : null) || panelBody.querySelector('button') || $('panel-close');
     try { first.focus(); } catch (e) { /* ignore */ }
   }
   $('panel-close').addEventListener('click', closePanel);
@@ -3067,8 +3093,24 @@
   btn.build.addEventListener('click', () => { setBuild(!build); });
   btn.home.addEventListener('click', () => { travelTo('home'); });
   btn.trophy.addEventListener('click', () => { if (panelKind === 'trophy') closePanel(); else openPanel('trophy'); });
-  btn.log.addEventListener('click', () => { if (panelKind === 'log') closePanel(); else openPanel('log'); });
-  $('btn-craft').addEventListener('click', () => { if (panelKind === 'craft') closePanel(); else openPanel('craft'); });
+  btn.log.addEventListener('click', () => { if (panelKind !== 'log') openPanel('log'); });
+  $('btn-craft').addEventListener('click', () => { if (panelKind !== 'craft') openPanel('craft'); });
+  $('tab-party').addEventListener('click', () => { if (panelKind !== 'party') openPanel('party'); });
+  $('tab-help').addEventListener('click', () => { if (panelKind !== 'help') openPanel('help'); });
+  $('btn-pack').addEventListener('click', () => { if (PACK_TABS[panelKind]) closePanel(); else openPanel('party'); });
+  // 8B: the short how-to shows once, on the first visit (own additive key), and never blocks a tap (pointer-events: none); Help keeps it
+  (function howto() {
+    const K = 'pixeltown-isles-howto-v1', box = $('howto');
+    let seen = false;
+    try { seen = !!(store && store.getItem(K)); } catch (e) { seen = true; }
+    if (seen) return;
+    box.hidden = false;
+    try { if (store) store.setItem(K, '1'); } catch (e) { /* ignore */ }
+    const hide = () => { box.hidden = true; };
+    setTimeout(hide, 9000);
+    window.addEventListener('keydown', function once() { setTimeout(hide, 2500); window.removeEventListener('keydown', once); });
+    window.addEventListener('pointerdown', function once() { setTimeout(hide, 2500); window.removeEventListener('pointerdown', once); });
+  })();
   const coarse = (() => { try { return window.matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } })();
   if (coarse || Q.get('touch') === '1' || ('ontouchstart' in window && window.innerWidth <= 700)) document.body.classList.add('touch');
   // PI2: one-thumb layout. On touch the mount ability button moves next to the move stick (the same thumb reaches both); off, it goes

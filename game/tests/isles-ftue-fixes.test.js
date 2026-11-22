@@ -100,7 +100,7 @@ const BEFRIEND = `(I, sp) => { I.pause(true); I.clearCreatures(); const h = I.he
   check('4: the hint names where vine rope grows (with a direction)', /Vine rope .*ferns by the dock.*(north|south|east|west)/.test(vj.hint), vj.hint);
   const vp = await ev(J2.page, (I) => { const v = I.foodGlints().find((g) => g.kind === 'vine_rope'); I.teleport(v.x, v.y); I.step(0, 0, 0.05); return I.inv().vine_rope | 0; });
   check('4: walking over a vine rope glint picks one up', vp === 1, String(vp));
-  await J2.page.tap('#btn-craft'); await J2.page.waitForFunction(() => !document.getElementById('panel').hidden);
+  await J2.page.tap('#btn-pack'); await J2.page.tap('#btn-craft'); await J2.page.waitForFunction(() => !document.getElementById('panel').hidden);
   const cp = await J2.page.evaluate(() => { const row = document.querySelector('#panel-body .recipe[data-recipe="raft"]'); const w = row && row.querySelector('.rc-where'); const notes = Array.from(document.querySelectorAll('#panel-body .rc-note')).filter((e) => e.getBoundingClientRect().width > 0);
     return { where: w ? w.textContent : '', fs: notes.map((e) => parseFloat(getComputedStyle(e).fontSize)), n: notes.length }; });
   check('4: the Craft panel raft row says where the vine rope grows', /vine rope grows on the Verdant Jungle ferns by the dock/.test(cp.where), cp.where);

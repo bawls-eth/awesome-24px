@@ -275,7 +275,7 @@ const fresh = async (page) => page.waitForFunction(() => !!(window.__isles && wi
     check(`${P}: a fresh profile on ${prof.isle} (pack ${st0.pack}): no tames, no hero profile, an empty pack`, st0.tames === 0 && st0.hero === false && st0.inv === 0, JSON.stringify(st0));
     if (prof.meter) check(`${P}: the ${prof.meter} meter shows on the first frame`, st0.env.box && (prof.meter === 'warmth' ? st0.env.warm !== null : st0.env.o2 !== null), JSON.stringify(st0.env));
     // the craft panel through the real Craft button (layout pass with it open), then closed again
-    await Q.page.tap('#btn-craft');
+    await Q.page.tap('#btn-pack'); await Q.page.tap('#btn-craft'); // 8B: Craft is a Pack tab
     await Q.page.waitForFunction(() => !document.getElementById('panel').hidden, null, { timeout: 3000 }).catch(() => {});
     const layC = await Q.page.evaluate(`(${LAYOUT})('#stick')`);
     await Q.page.tap('#panel-close');
@@ -348,7 +348,7 @@ const fresh = async (page) => page.waitForFunction(() => !!(window.__isles && wi
     };
     // the real Craft panel: open it with the Craft button, tap the recipe's Craft button
     const craftPanel = async (recipe) => {
-      await page.tap('#btn-craft');
+      await page.tap('#btn-pack'); await page.tap('#btn-craft'); // 8B: Craft is a Pack tab
       await page.waitForFunction(() => !document.getElementById('panel').hidden, null, { timeout: 3000 }).catch(() => {});
       const r = await page.evaluate((id) => { const b = document.querySelector('#panel-body .rc-btn[data-recipe="' + id + '"]'); return b ? { listed: true, enabled: !b.disabled } : { listed: false, enabled: false }; }, recipe);
       if (r.listed && r.enabled) { await page.locator('#panel-body .rc-btn[data-recipe="' + recipe + '"]').scrollIntoViewIfNeeded(); await page.tap('#panel-body .rc-btn[data-recipe="' + recipe + '"]'); await page.waitForTimeout(100); }
