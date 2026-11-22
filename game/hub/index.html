@@ -23,6 +23,13 @@
 </header>
 <nav id="hub-games" class="hub-games" aria-label="Games: tap one to play"></nav>
 <a id="hub-continue" class="hub-continue" href="#" hidden><span class="c-ico" aria-hidden="true"></span><span class="c-txt"></span></a>
+<section id="calm-card" class="calm-card" hidden aria-labelledby="calm-title">
+  <div class="calm-head">
+    <h2 id="calm-title">Things you could do</h2>
+    <button id="calm-close" type="button" aria-label="Hide these ideas (the Menu brings them back)">&times;</button>
+  </div>
+  <ul id="calm-list" class="calm-list" aria-label="Ideas"></ul>
+</section>
 <main id="stage">
   <canvas id="map" aria-label="World map" role="img"></canvas>
   <div id="toast" role="status" aria-live="polite"></div>
@@ -78,5 +85,7 @@
 <script src="medals.js"></script>
 <script src="hub.js"></script>
 <script src="gift.js"></script>
+<script src="../shared/mm-calm-goals.js"></script>
+<script src="calm.js"></script>
 </body>
 </html>

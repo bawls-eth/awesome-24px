@@ -1222,5 +1222,17 @@
   "gear-save-fixes-2.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "shared-mm-calm-goals.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "hub-calm-goals.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "save-merge-fuzz.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }
