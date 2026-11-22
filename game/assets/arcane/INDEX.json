@@ -617,6 +617,26 @@
       "status": "provisional",
       "ingested_utc": "2026-11-22T12:06:00Z",
       "source": "codex"
+    },
+    {
+      "id": "b38g",
+      "label": "tide-hydra",
+      "path": "assets/arcane/b38g-tide-hydra",
+      "manifest": "assets/arcane/b38g-tide-hydra/manifest.json",
+      "files": 15,
+      "status": "provisional",
+      "ingested_utc": "2026-11-22T17:50:00Z",
+      "source": "codex"
+    },
+    {
+      "id": "b40a",
+      "label": "pengling",
+      "path": "assets/arcane/b40a-pengling",
+      "manifest": "assets/arcane/b40a-pengling/manifest.json",
+      "files": 14,
+      "status": "provisional",
+      "ingested_utc": "2026-11-22T17:50:00Z",
+      "source": "codex"
     }
   ]
 }
