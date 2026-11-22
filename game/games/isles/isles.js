@@ -52,6 +52,8 @@
 // drawn as delivered, the Coral Reef preloads the b38a reef puffer, and a strip's ground shadow is sized to its measured body width.
 // AW4: the reef preloads all seven b38a-f species (108 strips); the tidesteed / skimray swim mounts draw body + saddle overlay with the
 // hero on the seat, the isleback turtle rides bare; __isles.riding() also reports seatY / seatX (where the hero was last drawn).
+// AW5: the reef also preloads the b38g Tide Hydra (its 6-frame roar runs over the wind-up; boss frames use the per-creature timing) and
+// the tundra preloads the b40a pengling.
 // XW1: the craft panel lists every MMIsleCraft recipe (ALL_IDS, groups Travel / Saddles / Supplies / Trophies); an alternative recipe
 // unlocks by its output item (rocket_core_drift opens mars from a fresh save) and the sea chart's "Craft it" points at a reachable build;
 // a daily gather spot can add a seeded bonus find (MMIsleCraft.bonusFind). Riding shows one 44 px ability button (key F while riding)
@@ -1509,9 +1511,9 @@
       const a = bz.art;
       if (a && a.shadow && !LOW) { const w = a.w / a.dpr; g.drawImage(a.shadow, sx - w / 2, sy - (a.shadow.height / a.dpr) / 2, w, a.shadow.height / a.dpr); }
       let fr;
-      if (bz.act === 'roar' && bz.tele.length) { const tg = bz.tele[bz.tele.length - 1]; fr = MS.frameIndex('roar', clamp((simT - tg.t0) / tg.windup, 0, 0.999) * MS.duration('roar')); }
-      else if (bz.act === 'idle' || bz.act === 'move' || bz.act === 'sleep' || bz.act === 'eat') fr = MS.frameIndex(bz.act, bz.t);
-      else fr = MS.frameIndex(bz.act, simT - bz.at0);
+      if (bz.act === 'roar' && bz.tele.length) { const tg = bz.tele[bz.tele.length - 1]; fr = MS.frameIndex('roar', clamp((simT - tg.t0) / tg.windup, 0, 0.999) * MS.duration('roar', bz.sk), bz.sk); }
+      else if (bz.act === 'idle' || bz.act === 'move' || bz.act === 'sleep' || bz.act === 'eat') fr = MS.frameIndex(bz.act, bz.t, bz.sk);
+      else fr = MS.frameIndex(bz.act, simT - bz.at0, bz.sk);
       STRIPS.draw(g, st, fr, sx, sy, 1, MS.flipFor(bz.act, bz.dir));
       bz.drawn = st.id; bz.src = 'png';
       top = sy - (st.ay - st.top) - 2;
