@@ -79,6 +79,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "bugs-fun.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "cave-craft.test.js": {
     "class": "live",
     "tier": "full"
@@ -160,6 +164,10 @@
     "tier": "full"
   },
   "deepdelve-wyrm.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "deepdelve-dive.test.js": {
     "class": "browser",
     "tier": "full"
   },
@@ -247,6 +255,14 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "jam-menu-first-tap.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "jam-fun.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "stalk-notes.test.js": {
     "class": "browser",
     "tier": "smoke"
@@ -255,9 +271,17 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "lantern-fresh-player.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "lantern-polish.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "lantern-fun.test.js": {
+    "class": "browser",
+    "tier": "full"
   },
   "loot-bag-icons.test.js": {
     "class": "browser",
@@ -459,6 +483,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-endgame.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "shared-mm-gear-forge.test.js": {
     "class": "node",
     "tier": "smoke"
@@ -636,6 +664,14 @@
     "tier": "smoke"
   },
   "stalk-page.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "angler-fun.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "stalk-practice.test.js": {
     "class": "browser",
     "tier": "smoke"
   },
@@ -1071,6 +1107,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "isle-reef-art.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "shared-mm-creature-strips.test.js": {
     "class": "node",
     "tier": "smoke"
@@ -1119,6 +1159,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "realm-polish3.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "realm-access2.test.js": {
     "class": "browser",
     "tier": "full"
@@ -1152,6 +1196,10 @@
     "tier": "smoke"
   },
   "isles-env.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "isles-tundra-mars.test.js": {
     "class": "browser",
     "tier": "full"
   },
@@ -1247,8 +1295,72 @@
     "class": "node",
     "tier": "smoke"
   },
+  "gear-dust-txn.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "town-postcards.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "smoke-journey.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "minigame-lowgfx.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "nav-town-p2.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "shared-mm-isle-rest.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-isle-pouch.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "isles-ftue-fixes.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "isles-access.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "shared-mm-collections.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "hub-collections.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "realm-chase-ui.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "dungeon-mutators.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "world-boss-rush.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "pop-page.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "dash-page.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "art-audit-tool.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }

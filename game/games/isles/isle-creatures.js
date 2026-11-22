@@ -70,11 +70,21 @@
     const r = MMRng.create('isles|lv|' + seed + '|' + wid).next();
     return def.lv[0] + Math.floor(r * (def.lv[1] - def.lv[0] + 1));
   }
-  // foodFor(def, pouch) -> {id, have}: the most-liked diet item the pouch holds, else the favourite (have:false)
-  function foodFor(def, pouch) {
+  // foodFor(def, pouch, inv, reserve) -> {id, have, from, kept}: the most-liked diet item the pouch holds; IF1: else a diet item from the
+  // pack (`inv`) above its `reserve` (what a locked travel recipe still needs); else the favourite (have:false; `kept` names a pack food
+  // held back for a recipe). Without inv it is the old pouch-only pick (from 'pouch' or '').
+  function foodFor(def, pouch, inv, reserve) {
     if (!def || !def.diet || !def.diet.length) return null;
-    for (let i = 0; i < def.diet.length; i++) if ((pouch[def.diet[i]] | 0) > 0) return { id: def.diet[i], have: true };
-    return { id: def.diet[0], have: false };
+    const p = pouch || {};
+    for (let i = 0; i < def.diet.length; i++) if ((p[def.diet[i]] | 0) > 0) return { id: def.diet[i], have: true, from: 'pouch', kept: '' };
+    let kept = '';
+    if (inv && typeof inv === 'object') for (let i = 0; i < def.diet.length; i++) {
+      const k = def.diet[i], n = has(inv, k) ? inv[k] | 0 : 0;
+      if (n <= 0) continue;
+      if (n > (reserve && has(reserve, k) ? reserve[k] | 0 : 0)) return { id: k, have: true, from: 'inv', kept: '' };
+      if (!kept) kept = k;
+    }
+    return { id: kept || def.diet[0], have: false, from: '', kept: kept };
   }
   const foodName = (id) => String(id || '').replace(/_/g, ' ');
 

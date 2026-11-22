@@ -77,6 +77,12 @@ check('write round trips and only writes its own key (town save never touched)',
 check('write failure returns false', I.write({ setItem() { throw new Error('q'); } }, D) === false);
 check('deterministic: same input gives identical output', (() => { const o = { at: 'ice', unlock: ['ice'], wild: { 'jungle:g1:1': w(), 'jungle:g2:1': w() }, log: { seen: { b: 1, a: 2 } } }; return same(I.clean(o), I.clean(JSON.parse(JSON.stringify(o)))); })());
 check('module has no Math.random and never names the town save key', (() => { const src = require('fs').readFileSync(require.resolve('../shared/mm-isles.js'), 'utf8').replace(/\/\/.*$/gm, ''); return !/Math\.random/.test(src) && !/pixeltown-save-v1/.test(src); })());
+// TD1: the additive once-a-day glint key keeps valid isle lists only (ints 0..63, unique, <= 16), drops junk, and is absent by default
+check('TD1 glint: cleaned to { day, n: { isle: [ints] } }', (() => {
+  const c = I.clean({ glint: { day: '2026-11-22', n: { ice: [0, 3, 3, -1, 64, 'x', 2.5, 5], mars: [], nope: [1], __proto__: [1] } } });
+  const big = I.clean({ glint: { day: '2026-11-22', n: { ice: Array.from({ length: 40 }, (v, i) => i) } } });
+  return JSON.stringify(c.glint) === '{"day":"2026-11-22","n":{"ice":[0,3,5]}}' && big.glint.n.ice.length === 16 && !('glint' in I.clean({})) && !('glint' in I.clean({ glint: { day: 'x', n: {} } }));
+})());
 
 console.log((bad ? 'FAILED ' + bad : 'ok') + ' (' + n + ' checks)');
 process.exit(bad ? 1 : 0);

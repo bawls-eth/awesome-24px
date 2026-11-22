@@ -26,6 +26,7 @@
 // white enemy hit flash. Reduce motion (MMMotion) makes telegraphs static (no pulse or growth). Bullet counts and timings never change.
 
 const RM_SHORT = 540; // logical arena short side; the long side follows the screen's shape
+const RM_DV_MIN = 0.5, RM_DV_FILL = 0.6, RM_DV_ZOOM_MAX = 2; // dungeon view (PLAYTEST-REVIEW-3 #4): below RM_DV_MIN of the screen height, show the room at RM_DV_FILL of it (at most RM_DV_ZOOM_MAX x the fitted size)
 const RM_PLAYER = { speed: 235, r: 11, hp: 100, fireRate: 7.5, bulletSpeed: 580, bulletLife: 0.85, dmg: 1, iframes: 0.5 };
 const RM_ENEMIES = {
   spiral: { name: 'Whirler', hp: 16, r: 17, shards: 3, color: '#b36bff', speed: 22 },
@@ -285,6 +286,34 @@ function rmCleanCount(v) {
   v = Math.floor(Number(v));
   return Number.isFinite(v) && v > 0 ? Math.min(v, 9999999) : 0;
 }
+// UR (item tag): every item CREATED from now on carries `u`, a random 31-bit tag, next to its integer uid `n`. Uids still come from the shared
+// `nextUid` counter (so every uid sequence stays as it was, and every build, old ones included, loads the item: they cap uids at 9,999,999, which
+// rules out salting the uid itself), but two tabs that picked under the same uid before either synced now hold two different `u`s, so the merge
+// can always tell the items apart: identity is (n, u) when both copies have a tag, and (n, id, r, t, a) as before when either lacks one (an item
+// from before UR, or one an old build rewrote: old cleaners drop unknown keys, which is harmless). Additive key: absent or corrupt = no tag.
+const RM_TAG_MAX = 2147483647;
+// The tag is an identity nonce, never a gameplay roll: it comes from crypto.getRandomValues (Math.random stays untouched, so the forge and vendor stay
+// free of randomness as their tests assert); Math.random only where crypto is missing.
+function rmItemTag() {
+  try { if (typeof crypto !== 'undefined' && crypto && typeof crypto.getRandomValues === 'function') { const b = new Uint32Array(1); crypto.getRandomValues(b); return 1 + (b[0] % (RM_TAG_MAX - 1)); } } catch (e) { /* fall back below */ }
+  return 1 + Math.floor(Math.random() * (RM_TAG_MAX - 1));
+}
+function rmCleanTag(u) { return Number.isInteger(u) && u > 0 && u <= RM_TAG_MAX ? u : 0; }
+// The `known` set a tab keeps for the merge: every uid storage held at its last sync, plus for each TAGGED item `n:`, `n:u` and `n#id/r/t/a` (which
+// item that uid named). Plain number lookups (known.has(n)) work as before; rmKnownSame asks whether `it` is the very item this tab saw under its uid:
+// by tag, or (a copy an old build rewrote without its tag) by id / r / t / a. Knowledge of an untagged item keeps the old uid-only rule.
+const rmItemFp = (it) => it.id + '/' + it.r + '/' + (it.t || 0) + '/' + (it.a || 0);
+function rmKnownOf(items) {
+  const k = new Set();
+  (items || []).forEach((it) => { k.add(it.n); if (it.u) { k.add(it.n + ':'); k.add(it.n + ':' + it.u); k.add(it.n + '#' + rmItemFp(it)); } });
+  return k;
+}
+function rmKnownSame(known, it) {
+  if (!known.has(it.n)) return false;
+  if (!known.has(it.n + ':')) return true;
+  return it.u ? known.has(it.n + ':' + it.u) : known.has(it.n + '#' + rmItemFp(it));
+}
+function rmTagged(it) { if (it && typeof it === 'object') it.u = rmItemTag(); return it; } // stamp a NEW item entry (returns it)
 
 // Everything read back from localStorage goes through here (additive fields: old saves load as level 1).
 function rmCleanSave(s) {
@@ -308,6 +337,7 @@ function rmCleanSave(s) {
     if (!uid || seen.has(uid) || !def || !(rar >= 0 && rar < RM_RARITIES.length)) return;
     seen.add(uid);
     const o = { n: uid, id, r: rar }; // an item without `t` (every item before G7) stays exactly {n, id, r}
+    const tg = rmCleanTag(it.u); if (tg) o.u = tg; // UR: only when present and valid (an untagged item stays byte-identical)
     const g = rmCleanGear(id, rar, it, aliasT);
     if (g.t) {
       o.t = g.t; if (g.a) o.a = g.a;
@@ -383,13 +413,18 @@ function rmMergeSave(mine, stored, opts) {
   const byUid = new Map(b.items.map((it) => [it.n, it]));
   a.items.forEach((it) => {
     const other = byUid.get(it.n);
-    if (!other) { if (known.has(it.n)) return; items.push({ ...it }); return; } // gone from storage because another tab sold it, or new here
-    if (other.id === it.id && other.r === it.r && (other.t || 0) === (it.t || 0) && (other.a || 0) === (it.a || 0)) { // same item: identity is (n, id, r, t, a) ...
+    if (!other) { if (rmKnownSame(known, it)) return; items.push({ ...it }); return; } // gone from storage because another tab sold it, or new here
+    const tagged = !!(it.u && other.u); // UR: both copies carry a tag, so (n, u) is the identity
+    // UR (FZ uid reuse): this tab knew THIS item under uid n, and storage now holds a DIFFERENT tagged item under n: the one this tab knew left storage
+    // (sold / used in another tab) and a tab that had not seen it yet picked its own item under the same uid. Drop this stale copy; storage's is taken below.
+    if (tagged && it.u !== other.u && rmKnownSame(known, it)) return;
+    if ((!tagged || it.u === other.u) && other.id === it.id && other.r === it.r && (other.t || 0) === (it.t || 0) && (other.a || 0) === (it.a || 0)) { // same item: identity is (n, id, r, t, a) ...
       // ... unless this tab never saw that uid in storage (FZ issue A): then both tabs picked their own copy under the same uid before either synced,
-      // so they are two items and this tab's gets a fresh uid below. Only when the caller tracks `known` (RealmArena always does).
-      if (!(opts.known && !known.has(it.n))) {
-        // FZ issue B: never drop `sig` / `f` that storage holds for the same item (this copy may come from an old tab's stripped write); this tab's wins when both have one
-        const o = { ...it }; if (!o.sig && other.sig) o.sig = other.sig; if (!o.f && other.f) o.f = { ...other.f };
+      // so they are two items and this tab's gets a fresh uid below. Only when the caller tracks `known` (RealmArena always does). Equal tags are
+      // always the same item (UR), so a twin is renumbered only when a copy has no tag.
+      if (tagged || !(opts.known && !known.has(it.n))) {
+        // FZ issue B: never drop `sig` / `f` (or the UR tag) that storage holds for the same item (this copy may come from an old tab's stripped write); this tab's wins when both have one
+        const o = { ...it }; if (!o.sig && other.sig) o.sig = other.sig; if (!o.f && other.f) o.f = { ...other.f }; if (!o.u && other.u) o.u = other.u;
         items.push(o); return;
       }
     }
@@ -399,7 +434,7 @@ function rmMergeSave(mine, stored, opts) {
   b.items.forEach((it) => {
     if (have.has(it.n)) return;
     const mineHas = a.items.some((x) => x.n === it.n);
-    if (!mineHas && known.has(it.n)) return; // sold here
+    if (!mineHas && rmKnownSame(known, it)) return; // sold here (UR: only the very item this tab saw; a new tagged item that reused the uid is taken)
     items.push({ ...it }); have.add(it.n);
   });
   const eq = { ...a.eq }; Object.keys(eq).forEach((slot) => { if (remap[eq[slot]] !== undefined) eq[slot] = remap[eq[slot]]; });
@@ -425,8 +460,8 @@ class RealmArena {
     this.onSave = (sv) => { this._saveDirty = false; if (this._saveTimer) { clearTimeout(this._saveTimer); this._saveTimer = 0; } this.saveWrites = (this.saveWrites || 0) + 1; return this._persist(sv); }; // every save goes through the cross-tab merge first (and covers a pending saveSoon, review F16)
     this.onExit = onExit || (() => {});
     this.save = rmCleanSave(save);
-    this._baseShards = this.save.shards; this._baseDust = this.save.dust || 0; this._baseGp = rmGpOf(this.save.gp); this._known = new Set(this.save.items.map((it) => it.n)); this.saveOk = true; this.saveFails = 0; this.walls = null; this.extraGuard = 0;
-    this.dungeon = null; this.fixedWorld = null; // optional run controller + fixed-size world (Mad Maze dungeons); null = classic waves
+    this._baseShards = this.save.shards; this._baseDust = this.save.dust || 0; this._baseGp = rmGpOf(this.save.gp); this._known = rmKnownOf(this.save.items); this.saveOk = true; this.saveFails = 0; this.walls = null; this.extraGuard = 0;
+    this.dungeon = null; this.fixedWorld = null; this._dv = null; this._dvOff = rmFlagOff('dview'); // optional run controller + fixed-size world (Mad Maze dungeons); null = classic waves
     this.world = null; this.mode = 'waves'; this.camera = { x: 0, y: 0, vw: 960, vh: RM_SHORT }; this._camF = { x: 0, y: 0 }; // setWorld / setMode: a scrolling world with a camera (null = the screen is the world, today's behaviour)
     this._solidAt = null; this._shotSolidAt = null; this._curDm = 1; this.onEnemyKilled = null; this.onEnemyHit = null; // world tile collision + additive kill / hit callbacks (default null)
     this.fireBudget = null; this._ebLive = 0; this._ebCapped = 0; // world fire budget {cap, travel} (PLAYTEST-REVIEW-2 #2), set by realm-world.js; null = today's bullets
@@ -519,7 +554,7 @@ class RealmArena {
   // The three-way merge bookkeeping (_known uids, shard / dust / pity bases) = exactly what `stored` (the raw realm in storage) holds.
   _syncBase(stored) {
     const st = rmCleanSave(stored);
-    this._known = new Set(st.items.map((it) => it.n)); this._baseShards = st.shards; this._baseDust = st.dust || 0; this._baseGp = rmGpOf(st.gp);
+    this._known = rmKnownOf(st.items); this._baseShards = st.shards; this._baseDust = st.dust || 0; this._baseGp = rmGpOf(st.gp);
     return st;
   }
 
@@ -533,7 +568,7 @@ class RealmArena {
     let ok = ret !== false;
     if (stored) {
       const st = this._syncBase(stored);
-      ok = ok && st.shards === this.save.shards && st.items.length === this.save.items.length && st.items.every((it, i) => it.n === this.save.items[i].n && it.r === this.save.items[i].r && (it.t || 0) === (this.save.items[i].t || 0));
+      ok = ok && st.shards === this.save.shards && (st.dust || 0) === (this.save.dust || 0) && st.items.length === this.save.items.length && st.items.every((it, i) => it.n === this.save.items[i].n && it.r === this.save.items[i].r && (it.t || 0) === (this.save.items[i].t || 0));
     } else { // nothing readable in storage (no storage, or a page that saves elsewhere): keep every item as new here, never drop one
       this._known = new Set();
       // FZ issue C: a FAILED write leaves the bases where they were (the unsaved shards / dust / pity are still this tab's delta for the next merge)
@@ -2052,7 +2087,7 @@ class RealmArena {
 
     const toArena = (e) => {
       const r = this.canvas.getBoundingClientRect();
-      this.mouse.x = ((e.clientX - r.left) / r.width) * this.W;
+      this.mouse.x = ((e.clientX - r.left) / r.width) * (this._dv ? this._dv.vw : this.W); // screen units (the dungeon view shows a slice)
       this.mouse.y = ((e.clientY - r.top) / r.height) * this.H;
       this.mouse.seen = true;
     };
@@ -2188,6 +2223,16 @@ class RealmArena {
   _camStep(dt) {
     const c = this.camera; const wd = this.world; const p = this.player; const f = this._camF;
     c.vw = this.W; c.vh = this.H;
+    const dv = this._dv;
+    if (dv && !wd) { // dungeon view: pan sideways only, smoothed like the world camera, clamped to the room
+      c.vw = dv.vw; c.y = 0; f.y = 0;
+      const tx = p.x - dv.vw / 2;
+      if (dt < 0 || this._reduced) f.x = tx; else f.x += (tx - f.x) * (1 - Math.exp(-Math.min(dt, 0.1) * 12));
+      const mx = Math.min(80, dv.vw * 0.2);
+      if (p.x - f.x < mx) f.x = p.x - mx; else if (p.x - f.x > dv.vw - mx) f.x = p.x - dv.vw + mx;
+      f.x = Math.max(0, Math.min(this.W - dv.vw, f.x)); c.x = Math.round(f.x);
+      return;
+    }
     if (!wd || !wd.camera) { f.x = 0; f.y = 0; c.x = 0; c.y = 0; return; }
     const tx = p.x - this.W / 2; const ty = p.y - this.H / 2;
     if (dt < 0 || this._reduced) { f.x = tx; f.y = ty; } else { const k = 1 - Math.exp(-Math.min(dt, 0.1) * 12); f.x += (tx - f.x) * k; f.y += (ty - f.y) * k; }
@@ -2230,12 +2275,21 @@ class RealmArena {
       const aspect = w / h;
       if (aspect >= 1) { this.H = RM_SHORT; this.W = Math.round(Math.min(1400, Math.max(RM_SHORT, RM_SHORT * aspect))); } else { this.W = RM_SHORT; this.H = Math.round(Math.min(1400, Math.max(RM_SHORT, RM_SHORT / aspect))); }
     }
-    const k = Math.min(w / this.W, h / this.H); this._cssK = k;
-    const cw = Math.floor(this.W * k); const ch = Math.floor(this.H * k);
+    let k = Math.min(w / this.W, h / this.H);
+    let cw = Math.floor(this.W * k); let ch = Math.floor(this.H * k);
+    // PLAYTEST-REVIEW-3 #4 (dungeon view): a fixed dungeon room on a tall portrait screen was a letterboxed strip (~35% of the height). There the
+    // whole room height is shown at RM_DV_FILL of the screen height and the view pans sideways with the hero (this.camera.x; rooms, bounds and
+    // seeds unchanged, this.W / this.H stay the room). ?dview=0 restores the full-room strip.
+    this._dv = null;
+    if (this.fixedWorld && !this.world && !this._dvOff && ch < h * RM_DV_MIN) {
+      const k2 = Math.min(h * RM_DV_FILL / this.H, k * RM_DV_ZOOM_MAX); const vw = Math.min(this.W, Math.floor(w / k2));
+      if (vw < this.W) { k = k2; cw = Math.floor(vw * k); ch = Math.floor(this.H * k); this._dv = { vw, k }; }
+    }
+    this._cssK = k;
     const ckey = `${cw}|${ch}|${w}|${h}`;
     if (ckey !== this._cvKey) { // letterboxed only when the world aspect cannot match the screen
       this._cvKey = ckey; const cs = this.canvas.style;
-      cs.position = 'absolute'; cs.width = `${cw}px`; cs.height = `${ch}px`; cs.left = `${Math.floor((w - cw) / 2)}px`; cs.top = `${Math.floor((h - ch) / 2)}px`;
+      cs.position = 'absolute'; cs.width = `${cw}px`; cs.height = `${ch}px`; cs.left = `${Math.floor((w - cw) / 2)}px`; cs.top = `${Math.floor((h - ch) / 2)}px`; this.canvas.classList.toggle('rm-dv', !!this._dv); // page CSS may seat the dungeon view (mad-maze.css: above the phone sticks)
     }
     this._applyBacking(); this._stAnchorT = -1e9; // the HUD rects moved
     const p = this.player; const bw = this._bw(); const bh = this._bh();
@@ -2249,9 +2303,10 @@ class RealmArena {
   _applyBacking() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const s = Math.min(dpr, 1.5, this._cssK * dpr) * this._pf.q;
-    const cw = Math.max(1, Math.round(this.W * s)); const ch = Math.max(1, Math.round(this.H * s));
+    const vw = this._dv ? this._dv.vw : this.W; // dungeon view: the backing store holds only the visible slice of the room
+    const cw = Math.max(1, Math.round(vw * s)); const ch = Math.max(1, Math.round(this.H * s));
     if (this.canvas.width !== cw || this.canvas.height !== ch) { this.canvas.width = cw; this.canvas.height = ch; }
-    this.scale = this.canvas.width / this.W; this._vignette = null;
+    this.scale = this.canvas.width / vw; this._vignette = null;
   }
 
   // After a rotation the world changes shape: pull anything that is now outside back in.
@@ -2369,7 +2424,7 @@ class RealmArena {
     this._lastT = now;
     this._perfFeed(raw);
     this._update(dt);
-    if (this.world) this._camStep(dt);
+    if (this.world || this._dv) this._camStep(dt);
     this._draw();
     if (this.active) this._raf = requestAnimationFrame(this._loop); // a death exit inside _update must not leave a second loop
   };
@@ -2866,6 +2921,7 @@ class RealmArena {
   // World mode only: may this enemy shoot? It must be on screen (a 24 px margin) and within RM_FIRE_RANGE x the view's half-diagonal of
   // the player, so nothing snipes from outside the camera. The classic arena and dungeons (the whole room is the view) are unchanged.
   _canFire(e, p) {
+    if (this._dv && !this.world) { const cx = this.camera.x; return e.type === 'boss' || (e.x >= cx - 40 && e.x <= cx + this._dv.vw + 40); } // dungeon view (phone portrait): shooters far outside the slice hold their fire
     if (!this.world || this.mode !== 'world' || this.dungeon) return true;
     const c = this.camera; const m = 24;
     if (e.x < c.x - m || e.x > c.x + this.W + m || e.y < c.y - m || e.y > c.y + this.H + m) return false;
@@ -2887,7 +2943,7 @@ class RealmArena {
       this._curE = e; this._curDm = e.dmgMul || 1; // bullets fired below carry this enemy's damage multiplier (1 = unchanged)
       let sm = null;
       if (e.status) { if (e._stNext <= this._stT * 1000) this._stRefresh(e); sm = e._stm; if (sm) { this._curDm *= sm.enemyDmg; if (sm.dot > 0) this._stEnemyDot(e, sm, dt0); if (!e.active) continue; } }
-      const hold = wd && !this._canFire(e, p); // world: off-screen shooters hold their fire (cooldowns wait at 0.2 s)
+      const hold = (wd || this._dv) && !this._canFire(e, p); // world: off-screen shooters hold their fire (cooldowns wait at 0.2 s)
       if (hold) { e.cd = Math.max(e.cd, 0.2); if (e.type === 'boss') e.cd2 = Math.max(e.cd2, 0.2); }
       if (e.type === 'boss') { if (sm && sm.speed < 1) e.t -= dt * (1 - sm.speed); this._updateBoss(e, dt * (e.fireMul || 1) / (sm ? sm.enemyFire : 1)); if (tg) this._tgBoss(e, hold, p); this._curDm = 1; this._curE = null; continue; } // slowed: the sway runs slower
       if (sm && sm.stun) { e._tg = 0; continue; } // stunned: no moving, no firing
@@ -3204,7 +3260,7 @@ class RealmArena {
     const def = RM_BASE_ITEMS[(sv.deaths + w) % RM_BASE_ITEMS.length]; const rar = RM_RARITIES[rarity];
     let text;
     let n = 0;
-    if (sv.items.length >= RM_BACKPACK) { sv.shards += rar.sell; text = `pack full, cache sold +${rar.sell} 💎`; } else { n = sv.nextUid++; sv.items.push({ n, id: def.id, r: rarity }); text = `cache: ${def.icon} ${rar.name} ${def.name}`; }
+    if (sv.items.length >= RM_BACKPACK) { sv.shards += rar.sell; text = `pack full, cache sold +${rar.sell} 💎`; } else { n = sv.nextUid++; sv.items.push(rmTagged({ n, id: def.id, r: rarity })); text = `cache: ${def.icon} ${rar.name} ${def.name}`; }
     return { id: def.id, rarity, text, n }; // n = backpack uid of the cache item (0 = sold)
   }
 
@@ -3229,7 +3285,7 @@ class RealmArena {
     if (!this.shopStock().some((o) => o.id === id && o.r === r)) return false;
     const price = RM_RARITIES[r].sell * RM_SHOP_MULT;
     if (sv.shards < price || sv.items.length >= RM_BACKPACK) return false;
-    sv.shards -= price; sv.items.push({ n: sv.nextUid++, id, r });
+    sv.shards -= price; sv.items.push(rmTagged({ n: sv.nextUid++, id, r }));
     this.displayShards = sv.shards;
     this._snd('pickup');
     this._itemText2(this.player.x, this.player.y - 24, id, r, RM_ITEM_BY_ID[id].name, RM_ITEM_BY_ID[id].icon, RM_RARITIES[r].color);
@@ -3371,7 +3427,7 @@ class RealmArena {
       sv.shards += val; this.lastFullSale = { id, r: rarity, t: gt, shards: val }; // test hook
       this._floatText(this.player.x, this.player.y - 24, `sold ${def.name} +${val} 💎`, rar.color);
     } else {
-      const ent = { n: sv.nextUid++, id, r: rarity };
+      const ent = rmTagged({ n: sv.nextUid++, id, r: rarity }); const prevBest = this._bestTierHeld();
       if (gear && typeof gear === 'object' && !Array.isArray(gear)) {
         const g = rmCleanGear(id, rarity, gear);
         if (g.t) { ent.t = g.t; if (g.a) ent.a = g.a; const sg = rmCleanSig(id, g.t, g.a, gear.sig); if (sg) ent.sig = sg; }
@@ -3380,6 +3436,7 @@ class RealmArena {
       this._itemText2(this.player.x, this.player.y - 24, id, rarity, def.name, def.icon, rar.color);
       this._burst(this.player.x, this.player.y, rar.color, 10, 150);
       if (this.onItem) this.onItem(sv.items[sv.items.length - 1]);
+      this._chaseNewItem(ent, prevBest);
     }
     this.onSave(this.save);
     this._syncHud(); if (this.paused) this.renderBackpack();
@@ -3876,6 +3933,12 @@ class RealmArena {
   // One panel at a time (backpack or kill board); either one pauses the fight.
   _panel(name) {
     if (name && this.state === 'dead') return; // no panels while the death message runs (it would freeze the exit)
+    const prev = this.panel || null;
+    this._panelSet(name);
+    if (this.onPanel && prev !== (name || null)) { try { this.onPanel(name || null, prev); } catch (e) { /* a page hook never breaks the panels */ } } // optional page hook (realm-world: Nexus return)
+  }
+
+  _panelSet(name) {
     this.panel = name;
     this.paused = !!name && !this.team; // a shared run never freezes (it would time the partner out)
     const bp = document.getElementById('realm-backpack'); if (bp) bp.classList.toggle('hidden', name !== 'bp');
@@ -4079,7 +4142,7 @@ class RealmArena {
     // otherwise see a uid collision in the cross-tab merge and keep both copies. Its t / a / sig / f and its slot are kept.
     const ki = sv.items.indexOf(c.keep); const old = c.keep.n;
     const n = Math.max(sv.nextUid || 1, 1 + sv.items.reduce((m, x) => Math.max(m, x.n), 0)); sv.nextUid = n + 1;
-    c.keep = Object.assign({}, c.keep, { n, r: c.keep.r + 1 });
+    c.keep = Object.assign({}, c.keep, { n, r: c.keep.r + 1, u: rmItemTag() }); // a new entry: a new UR tag
     if (c.keep.f) c.keep.f = { id: c.keep.f.id, v: c.keep.f.v };
     if (ki >= 0) sv.items[ki] = c.keep; else sv.items.push(c.keep);
     RM_EQ_KEYS.forEach((slot) => { if (sv.eq[slot] === old) sv.eq[slot] = n; });
@@ -4143,6 +4206,7 @@ class RealmArena {
   // reforge(uid, affixId) -> the new uid, or 0. Charges exactly the shown dust + shards once; the entry is replaced (a fresh uid, so the cross-tab merge
   // carries the new `f` like a new item) keeping t, a, sig and its slot.
   reforge(uid, affixId) {
+    if (this.forgeOn()) this.resyncSave(); // FZ I6-dust: price it against what every tab has written (another tab may have spent this dust already)
     const opts = this.reforgeOptions(uid);
     const o = opts ? opts.find((x) => x.id === affixId) : null;
     if (!o || o.current || !o.afford) return 0;
@@ -4152,19 +4216,34 @@ class RealmArena {
     let nf = null; try { nf = MMGearForge.reforge(this._forgeView(it), affixId); } catch (e) { nf = null; }
     if (!nf || !nf.f || nf.f.id !== o.id) return 0;
     const n = sv.nextUid++;
-    const ne = { n, id: it.id, r: it.r, t: it.t };
+    const ne = { n, id: it.id, r: it.r, u: rmItemTag(), t: it.t }; // a new entry: a new UR tag
     if (it.a) ne.a = it.a;
     if (it.sig) ne.sig = it.sig;
     ne.f = { id: nf.f.id, v: nf.f.v };
+    const undo = this._dustTxnStart();
     sv.items[i] = ne;
     RM_EQ_KEYS.forEach((slot) => { if (sv.eq[slot] === uid) sv.eq[slot] = n; });
+    sv.dust = (sv.dust || 0) - o.cost.dust; sv.shards -= o.cost.shards;
+    if (!this._dustTxnCommit(undo)) return 0;
     // review F13: a pending Lantern find of the old uid moves to the new one (same id / r / t / a), so the next settle still pays it
     try { if (typeof MMStash !== 'undefined' && MMStash.renumberFindIn && typeof localStorage !== 'undefined') MMStash.renumberFindIn(localStorage, uid, n, ne); } catch (e) { /* storage blocked: the find stays as it was */ }
-    sv.dust = (sv.dust || 0) - o.cost.dust; sv.shards -= o.cost.shards;
     this._forgeUid = n; this._forgeAsk = null;
     this._snd('levelup');
-    this._afterGearChange();
+    this._afterGearChange(true);
     return n;
+  }
+  // FZ I6-dust: a dust spend is a transaction. The caller resyncs first (so the balance it checks is what storage holds plus this tab's own unsaved
+  // delta), then the spend is written AT ONCE. If that write fails while storage holds a realm, the spend is undone: otherwise another tab could
+  // spend the same dust from storage's balance, and the three-way merge (which never goes below 0) would hand out the difference for free.
+  // With no readable storage at all (a page that saves elsewhere) no other tab can see this dust, so the spend stands as before.
+  _dustTxnStart() { return JSON.parse(JSON.stringify(this.save)); }
+  _dustTxnCommit(undo) {
+    const ok = this.onSave(this.save);
+    if (ok !== false || !rmReadStoredRealm()) return true;
+    this._adopt(rmCleanSave(undo)); this.displayShards = this.save.shards;
+    try { if (this.player) this._floatText(this.player.x, this.player.y - 60, 'Not saved (storage full): nothing was charged', '#ff9a8a'); } catch (e) { /* cosmetic */ }
+    this._syncHud(); this.renderBackpack();
+    return false;
   }
   // The Forge section of the open item (DOM + textContent only; 44 px targets). Built after the backpack list is rendered.
   _forgeDom(root) {
@@ -4265,13 +4344,16 @@ class RealmArena {
   }
   // vendorBuy(id, t) -> the new item's uid, or 0. Charges exactly the listed dust once; refused without the dust or a free backpack slot.
   vendorBuy(id, t) {
+    if (this.vendorOn()) this.resyncSave(); // FZ I6-dust: the balance every tab has written (see _dustTxnCommit)
     const o = (this.vendorStock() || []).find((x) => x.id === id && x.t === t);
     if (!o || !o.afford || !o.room) return 0;
+    const undo = this._dustTxnStart();
     const sv = this.save; const n = Math.max(sv.nextUid || 1, 1 + sv.items.reduce((m, x) => Math.max(m, x.n), 0)); sv.nextUid = n + 1;
     sv.dust = (sv.dust || 0) - o.price;
-    sv.items.push({ n, id: o.id, r: 0, t: o.t });
+    sv.items.push({ n, id: o.id, r: 0, u: rmItemTag(), t: o.t });
+    if (!this._dustTxnCommit(undo)) return 0;
     this._snd('pickup');
-    this._afterGearChange();
+    this._afterGearChange(true);
     return n;
   }
   // vendorBuyBackInfo(uid) -> { dust } or null (T1-T3 tiered items only; soulbound / T4+ / classic items are refused).
@@ -4308,12 +4390,12 @@ class RealmArena {
     return true;
   }
 
-  _afterGearChange() {
+  _afterGearChange(saved) { // saved: the caller has just written this change (a dust transaction), so no second write
     this.markStatsDirty(); this._calcStats();
     const p = this.player;
     p.hp = Math.min(this.stats.maxHp, p.hp); // swapping gear never heals (no free HP by toggling a charm); losing max HP just lowers the cap
     this.displayShards = this.save.shards;
-    this.onSave(this.save);
+    if (!saved) this.onSave(this.save);
     this._syncHud(); this.renderBackpack();
   }
 
@@ -4383,7 +4465,8 @@ class RealmArena {
     });
     html += '</ul>';
     if (this._forgeUid && !sv.items.some((x) => x.n === this._forgeUid)) { this._forgeUid = 0; this._forgeAsk = null; }
-    root.innerHTML = html; this._fixIcons(root); this._bindCmp(root); this._bindStatsDrop(root); this._forgeDom(root); this._bindForge(root);
+    root.innerHTML = html; this._fixIcons(root); this._bindCmp(root); this._bindStatsDrop(root); this._forgeDom(root); this._bindForge(root); this._relicDom(root);
+    const sbx = document.getElementById('realm-bp-stats-box'); if (sbx && !sbx.hidden) this._chaseDom(sbx);
     if (this._cmpOnUid) { const on = root.querySelector(`#realm-bp-list li[data-uid="${this._cmpOnUid}"]`); if (on) on.classList.add('cmp-on'); } // a long-pressed compare line survives a re-render
     root.querySelectorAll('img.rm-slot-ico, img.rm-gear-ico').forEach((img) => { if (img.complete && !img.naturalWidth) img.remove(); else img.addEventListener('error', () => img.remove(), { once: true }); });
   }
@@ -4426,7 +4509,7 @@ class RealmArena {
     try { sessionStorage.setItem('pixeltown-bp-stats-open', on ? '1' : '0'); } catch (e) { /* blocked storage: remembered for this page only */ }
     const btn = document.getElementById('realm-bp-stats-toggle'); const box = document.getElementById('realm-bp-stats-box');
     if (btn) { btn.setAttribute('aria-expanded', on ? 'true' : 'false'); const ar = btn.querySelector('.ar'); if (ar) ar.textContent = on ? '▾' : '▸'; }
-    if (box) { box.hidden = !on; box.innerHTML = on ? this._statsBoxHtml() : ''; if (on) { this._fixIcons(box); box.querySelectorAll('img.rm-gear-ico').forEach((img) => { if (img.complete && !img.naturalWidth) img.remove(); else img.addEventListener('error', () => img.remove(), { once: true }); }); } }
+    if (box) { box.hidden = !on; box.innerHTML = on ? this._statsBoxHtml() : ''; if (on) { this._chaseDom(box); this._fixIcons(box); box.querySelectorAll('img.rm-gear-ico').forEach((img) => { if (img.complete && !img.naturalWidth) img.remove(); else img.addEventListener('error', () => img.remove(), { once: true }); }); } }
     return this._bpStatsOpen;
   }
   _statIco(id) {
@@ -4467,6 +4550,79 @@ class RealmArena {
     if (!this.save || (this.team && this.team.isPvp)) return [];
     let st = null; try { st = this._calcStats({ eqOverride: eqOverride && typeof eqOverride === 'object' ? eqOverride : {} }); } catch (e) { st = null; }
     return st && Array.isArray(st.sets) ? st.sets : [];
+  }
+  // ---------- RE3: the T12 chase + relic book (MMEndgame), ?chase=0 hides all three ----------
+  // A calm pity line at the top of the Stats box ("12 of 60 toward a sure T12", MMEndgame.chase on this save; gear on only), a "Relic book"
+  // section at the end of the backpack (the six godland relics, found or "not yet", MMEndgame.relicBook) and a gentle "New best tier" toast when a
+  // picked-up item beats the best tier held this visit. Read-only on the save (no new keys). DOM built with textContent only. No countdowns.
+  chaseOn() { return !rmFlagOff('chase') && typeof MMEndgame !== 'undefined' && !!MMEndgame && typeof MMEndgame.chase === 'function' && !(this.team && this.team.isPvp); }
+  // The godland boss pity (gp.b) lives in the Realm World save (pixeltown-realm-v1, realm-world.js giveBag); the crypt counter (gp.d) in this save
+  // (dungeon.js). Read-only: hostile or missing storage counts as 0.
+  chaseGp() {
+    const own = rmGpOf(this.save && this.save.gp); let wb = 0;
+    try { const o = JSON.parse(localStorage.getItem('pixeltown-realm-v1') || 'null'); const b = o && typeof o === 'object' && o.gp && typeof o.gp === 'object' ? o.gp.b : 0; wb = typeof b === 'number' && Number.isFinite(b) ? Math.max(0, Math.min(9999, Math.floor(b))) : 0; } catch (e) { wb = 0; }
+    return { b: wb, d: own.d };
+  }
+  chaseInfo() { if (!this.chaseOn() || !this.save) return null; try { return MMEndgame.chase({ gp: this.chaseGp(), items: this.save.items }); } catch (e) { return null; } }
+  relicInfo() { if (!this.chaseOn() || !this.save) return null; try { return MMEndgame.relicBook({ items: this.save.items }); } catch (e) { return null; } }
+  _chaseDom(box) {
+    if (!box || !RM_GEAR_ON) return;
+    const c = this.chaseInfo(); if (!c) return;
+    const d = document.createElement('div'); d.id = 'realm-bp-chase'; d.className = 'rm-chase-line';
+    d.style.cssText = 'margin:2px 0 6px;padding:4px 6px;border-radius:8px;background:rgba(255,215,90,.08);color:#f2e3b3;font-size:12px;line-height:1.35;overflow-wrap:anywhere';
+    const a = document.createElement('div'); a.className = 'pity'; a.textContent = '🌟 ' + c.text;
+    const b = document.createElement('div'); b.className = 'luck'; b.style.color = '#8b949e'; b.textContent = c.luckText + (c.bestTier ? ' · best tier T' + c.bestTier : '');
+    d.append(a, b); box.insertBefore(d, box.firstChild);
+  }
+  _relicDom(root) {
+    if (!root) return;
+    const rb = this.relicInfo(); if (!rb) return;
+    const open = !!this._relicOpen;
+    const wrap = document.createElement('div'); wrap.className = 'rm-relic-book'; wrap.style.cssText = 'margin:8px 0 4px;max-width:100%';
+    const btn = document.createElement('button'); btn.type = 'button'; btn.id = 'realm-bp-relic-toggle'; btn.className = 'eq';
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false'); btn.setAttribute('aria-controls', 'realm-bp-relic-box');
+    btn.style.cssText = 'min-height:44px;min-width:44px;width:100%;text-align:left;box-sizing:border-box;padding:6px 10px;border-radius:10px;border:2px solid rgba(255,255,255,.45);background:rgba(255,255,255,.1);color:#fff;font:700 13px system-ui,sans-serif;cursor:pointer';
+    btn.textContent = (open ? '▾' : '▸') + ' 📖 Relic book · ' + rb.text;
+    const box = document.createElement('div'); box.id = 'realm-bp-relic-box'; box.setAttribute('role', 'region'); box.setAttribute('aria-label', 'Relic book'); box.hidden = !open;
+    box.style.cssText = 'margin-top:4px;font-size:12px;line-height:1.35;box-sizing:border-box;max-width:100%';
+    const ul = document.createElement('ul'); ul.className = 'rm-relic-list'; ul.style.cssText = 'list-style:none;margin:0;padding:0';
+    rb.entries.forEach((e) => {
+      const li = document.createElement('li'); li.dataset.relic = e.id; li.dataset.found = e.found ? '1' : '0';
+      li.style.cssText = 'padding:3px 4px;border-bottom:1px solid rgba(255,255,255,.08);overflow-wrap:anywhere;color:' + (e.found ? '#ffd25a' : '#8b949e');
+      li.textContent = (e.found ? '✓ ' : '· ') + e.text; ul.appendChild(li);
+    });
+    const hint = document.createElement('div'); hint.className = 'hint'; hint.style.cssText = 'color:#8b949e;margin-top:4px'; hint.textContent = rb.hint;
+    box.append(ul, hint); wrap.append(btn, box); root.appendChild(wrap);
+    btn.addEventListener('click', () => {
+      this._relicOpen = !this._relicOpen; box.hidden = !this._relicOpen; btn.setAttribute('aria-expanded', this._relicOpen ? 'true' : 'false');
+      btn.textContent = (this._relicOpen ? '▾' : '▸') + ' 📖 Relic book · ' + rb.text;
+    });
+  }
+  // the best item tier held this visit (lazy: from the backpack the first time it is asked)
+  _bestTierHeld() {
+    if (typeof this._chaseBestT !== 'number') { let b = 0; (this.save && Array.isArray(this.save.items) ? this.save.items : []).forEach((it) => { if (it && it.t > b) b = it.t; }); this._chaseBestT = b; }
+    return this._chaseBestT;
+  }
+  _chaseNewItem(ent, prevBest) {
+    if (!ent || !ent.t || !RM_GEAR_ON || !this.chaseOn()) return;
+    if (ent.t > prevBest) { this._chaseBestT = ent.t; this.chaseToast('New best tier: T' + ent.t + ' ' + ((RM_ITEM_BY_ID[ent.id] || {}).name || '')); }
+  }
+  chaseToast(text) {
+    const host = this.container || document.body; if (!host || typeof document === 'undefined') return;
+    let el = document.getElementById('realm-chase-toast');
+    if (!el) {
+      el = document.createElement('div'); el.id = 'realm-chase-toast'; el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite');
+      el.style.cssText = 'position:absolute;left:50%;top:12%;transform:translateX(-50%);z-index:30;display:flex;align-items:center;gap:6px;max-width:calc(100% - 32px);box-sizing:border-box;padding:4px 4px 4px 12px;border-radius:12px;background:rgba(20,24,32,.88);border:2px solid rgba(255,210,90,.6);color:#ffe9a8;font:600 13px system-ui,sans-serif';
+      const t = document.createElement('span'); t.className = 'txt'; t.style.overflowWrap = 'anywhere';
+      const x = document.createElement('button'); x.type = 'button'; x.className = 'x'; x.textContent = '✖'; x.setAttribute('aria-label', 'Dismiss');
+      x.style.cssText = 'min-width:44px;min-height:44px;border:0;background:transparent;color:#ffe9a8;font-size:14px;cursor:pointer';
+      x.addEventListener('click', () => { el.hidden = true; });
+      el.append(t, x);
+      if (host !== document.body && getComputedStyle(host).position === 'static') host.style.position = 'relative';
+      host.appendChild(el);
+    }
+    el.querySelector('.txt').textContent = '✨ ' + text; el.hidden = false; this.lastChaseToast = text; // test hook
+    clearTimeout(this._chaseToastT); this._chaseToastT = setTimeout(() => { el.hidden = true; }, 4500);
   }
   _bindStatsDrop(root) {
     if (!root || root.dataset.statsBound) return;
@@ -4599,6 +4755,7 @@ class RealmArena {
       g.translate(-cam.x, -cam.y);
       if (wd.drawUnder) wd.drawUnder(g, cam); else { g.fillStyle = '#10202a'; g.fillRect(cam.x - 10, cam.y - 10, this.W + 20, this.H + 20); }
     } else {
+      if (this._dv) g.translate(-cam.x, 0); // dungeon view: the room slice around the hero
       this._floorPatterns = this._floorPatterns || [];
       if (!this._floorPatterns[this.biome]) this._floorPatterns[this.biome] = g.createPattern(this.sprites.floors[this.biome], 'repeat');
       g.fillStyle = this._floorPatterns[this.biome]; g.fillRect(-10, -10, this.W + 20, this.H + 20);
@@ -4690,7 +4847,7 @@ class RealmArena {
     }
     g.globalAlpha = 1;
     g.font = this._txtFont; g.textAlign = 'center'; // AR: follows the HUD size pref (a cached string; 14 px by default)
-    const hs = this._stAnchorAt(); const ox = wd ? cam.x : 0; const oy = wd ? cam.y : 0; // floating numbers never sit under the top-right HUD buttons
+    const hs = this._stAnchorAt(); const ox = wd || this._dv ? cam.x : 0; const oy = wd ? cam.y : 0; // floating numbers never sit under the top-right HUD buttons
     for (let i = 0; i < this.texts.length; i++) {
       const t = this.texts[i];
       if (!t.active) continue;
@@ -4710,7 +4867,7 @@ class RealmArena {
     this._drawStatusIcons(g); // screen space, above the world and the floating numbers
     if (this.flash > 0 && this._flashesOn()) { // red hit vignette (off with the `flashes: false` access pref) (reduced motion: a steady tint while it lasts, no fade or blink): one baked gradient, faded with globalAlpha (no per-frame allocation)
       if (!this._vignette) {
-        const gr = g.createRadialGradient(this.W / 2, this.H / 2, Math.min(this.W, this.H) * 0.3, this.W / 2, this.H / 2, Math.max(this.W, this.H) * 0.7);
+        const VW = this._dv ? this._dv.vw : this.W; const gr = g.createRadialGradient(VW / 2, this.H / 2, Math.min(VW, this.H) * 0.3, VW / 2, this.H / 2, Math.max(VW, this.H) * 0.7); // screen space (the dungeon view slice)
         gr.addColorStop(0, 'rgba(255,40,80,0)'); gr.addColorStop(1, 'rgba(255,40,80,0.55)');
         this._vignette = gr;
       }

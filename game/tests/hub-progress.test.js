@@ -138,12 +138,12 @@ const exit = (p, id, e) => !!(p.nodes[id] && p.nodes[id].exits.includes(e || 'no
   check('a game reporting over a corrupt profile writes a clean one (seeded from the Town name)', rep && rep.name === 'Mossy' && rep.games.stalk.done.includes('bronze') && rep.nodes['w5-stalk'].medals.b, JSON.stringify(rep));
   check('Town save byte-identical (corrupt-key run)', (await C.page.evaluate(() => localStorage.getItem('pixeltown-save-v1'))) === TOWN);
 
-  // 6. fresh-save reachability: all 8 game nodes open, Play in 2 taps (strip -> card Play), phone 390x844, no overlap
+  // 6. fresh-save reachability: all 10 game nodes open, Play in 2 taps (strip -> card Play), phone 390x844, no overlap
   const F = await context(browser, PHONE);
   await seed(F.page, { 'pixeltown-save-v1': TOWN, 'pixeltown-nav-v1': JSON.stringify({ v: 1, last: { id: 'angler', url: 'game/games/angler/index.html', t: 1 } }) });
   await hub(F.page);
   const gn = await F.page.evaluate(() => window.__hub.gameNodes().filter((id) => window.__hub.isPlayable(id)));
-  check('fresh save: all 8 game nodes are playable', gn.length === 8, JSON.stringify(gn));
+  check('fresh save: all 10 game nodes are playable', gn.length === 10, JSON.stringify(gn));
   let twoTaps = true;
   for (const id of gn) {
     await F.page.tap('#hub-games button[data-node="' + id + '"]');

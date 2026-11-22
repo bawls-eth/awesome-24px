@@ -7,13 +7,13 @@ let passed = 0, failed = 0;
 function check(name, cond, extra) { if (cond) passed++; else { failed++; console.log('FAIL: ' + name + (extra ? ' ' + extra : '')); } }
 
 // ---- registry ----
-const IDS = ['town', 'map', 'realm', 'lantern', 'isles', 'jam', 'bugs', 'angler', 'deepdelve', 'stalk'];
-check('registry lists the 10 places in order', JSON.stringify(N.PLACES.map((p) => p.id)) === JSON.stringify(IDS));
+const IDS = ['town', 'map', 'realm', 'lantern', 'isles', 'jam', 'bugs', 'angler', 'deepdelve', 'stalk', 'pop', 'dash'];
+check('registry lists the 12 places in order', JSON.stringify(N.PLACES.map((p) => p.id)) === JSON.stringify(IDS));
 check('every place has id, name, icon, path, one-line desc', N.PLACES.every((p) => p.id && p.name && p.icon && p.path && p.desc && p.desc.length <= 60 && !/\n/.test(p.desc)));
 check('names are the catalogue names', N.place('map').name === 'World map' && N.place('realm').name === 'The Realm' && N.place('lantern').name === 'Lantern Camp' && N.place('town').name === 'Town');
 check('every registry file exists on disk', N.PLACES.every((p) => fs.existsSync(path.join(repo, p.path.split('?')[0]))), N.PLACES.filter((p) => !fs.existsSync(path.join(repo, p.path.split('?')[0]))).map((p) => p.path).join(','));
 check('registry is frozen', Object.isFrozen(N.PLACES) && N.PLACES.every(Object.isFrozen));
-check('names are unique, ids are unique', new Set(N.PLACES.map((p) => p.name)).size === 10 && new Set(N.PLACES.map((p) => p.id)).size === 10);
+check('names are unique, ids are unique', new Set(N.PLACES.map((p) => p.name)).size === 12 && new Set(N.PLACES.map((p) => p.id)).size === 12);
 check('place() ignores prototype keys', N.place('__proto__') === null && N.place('constructor') === null && N.place('toString') === null);
 
 // ---- detect ----

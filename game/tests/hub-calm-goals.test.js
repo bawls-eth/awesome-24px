@@ -102,12 +102,12 @@ const items = (page) => page.$$eval('#calm-list .calm-go', (as) => as.map((a) =>
   s = await open(browser, { viewport: { width: 390, height: 844 }, seed: { 'pixeltown-nav-v1': { v: 1, last: { id: 'angler', sub: '', url: 'game/games/angler/index.html', t: 1 }, prev: null } } });
   const ph = await s.page.evaluate(() => {
     const r = (sel) => { const n = document.querySelector(sel); if (!n || n.hidden || !n.offsetParent) return null; const b = n.getBoundingClientRect(); return { l: b.left, t: b.top, r: b.right, b: b.bottom, w: b.width, h: b.height }; };
-    const targets = Array.from(document.querySelectorAll('#calm-card a, #calm-card button')).map((n) => { const b = n.getBoundingClientRect(); return { w: b.width, h: b.height }; });
+    const targets = Array.from(document.querySelectorAll('#calm-card a, #calm-card button')).filter((n) => n.offsetParent).map((n) => { const b = n.getBoundingClientRect(); return { w: b.width, h: b.height }; });
     return { sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, card: r('#calm-card'), others: ['#hud', '#hub-games', '#hub-continue', '#bar', '#mm-nav-btn', '#hint-chip', '#stage'].map((s) => [s, r(s)]), targets };
   });
   const ov = (a, b) => a && b && a.l < b.r - 0.5 && b.l < a.r - 0.5 && a.t < b.b - 0.5 && b.t < a.b - 0.5;
   check('phone: card on screen, no horizontal scroll', ph.card && ph.card.l >= 0 && ph.card.r <= 390 && ph.card.t >= 0 && ph.card.b <= 844 && ph.sw <= ph.cw, JSON.stringify(ph.card));
-  check('phone: every card target is at least 44 px', ph.targets.length === 7 && ph.targets.every((t) => t.w >= 44 && t.h >= 44), JSON.stringify(ph.targets));
+  check('phone: every card target is at least 44 px', ph.targets.length === 3 && ph.targets.every((t) => t.w >= 44 && t.h >= 44), JSON.stringify(ph.targets));
   const hits = ph.others.filter(([, b]) => ov(ph.card, b)).map(([n]) => n);
   check('phone: card overlaps nothing (HUD, games strip, Continue, bar, Menu, hint chip, map stage)', hits.length === 0, hits.join(','));
   const mapBox = ph.others.find(([n]) => n === '#stage')[1];

@@ -215,9 +215,36 @@
     return { v: 1, heroId: id };
   }
 
+  // Legacy import display (review 3 #8). The old arena and today's Realm share `pixeltown-save-v1`.realm, so a realm object alone is
+  // not a legacy hero: the offer needs real progress (level > 1, xp, kills, a wave or items; a Daily-gift `{shards}` is not progress),
+  // and once the player is on the world Realm (its own save key) with a hero, that progress is the current Realm's, not an old arena's.
+  function legacyHasProgress(realm) {
+    if (!isObj(realm)) return false;
+    const n = (v) => { v = Math.floor(Number(v)); return Number.isFinite(v) && v > 0 ? v : 0; };
+    return n(realm.level) > 1 || n(realm.xp) > 0 || n(realm.kills) > 0 || n(realm.bestWave) > 0 || (Array.isArray(realm.items) && realm.items.some(isObj));
+  }
+  function legacyOffer(realm, profile, worldPlayed) {
+    const p = clean(profile);
+    if (p.migratedFrom || !legacyHasProgress(realm)) return false;
+    return !(worldPlayed && p.heroes.length > 0);
+  }
+  // The level the Realm HUD shows ("Lv N"): account-wide `pixeltown-save-v1`.realm.level, clamped like the Realm does. null = no Realm save.
+  function realmLevel(realm) {
+    if (!isObj(realm)) return null;
+    const v = Math.floor(Number(realm.level));
+    return Number.isFinite(v) && v >= 1 ? Math.min(v, MAX_LEVEL) : 1;
+  }
+  // The hero the Realm plays as: the active id when it is still owned, else the first hero (the same fallback as the Realm's hero picker).
+  function realmHeroId(profile, active) {
+    const p = clean(profile), a = cleanActive(active);
+    const h = p.heroes.find((x) => x.id === a.heroId) || p.heroes[0];
+    return h ? h.id : null;
+  }
+
   return {
     KEY: KEY, LEGACY_KEY: LEGACY_KEY, ACTIVE_KEY: ACTIVE_KEY, cleanActive: cleanActive, STASH_SLOTS: STASH_SLOTS, MAX_LEVEL: MAX_LEVEL,
     empty: empty, clean: clean, importLegacy: importLegacy, setMode: setMode,
-    fall: fall, rekindle: rekindle, retire: retire
+    fall: fall, rekindle: rekindle, retire: retire,
+    legacyHasProgress: legacyHasProgress, legacyOffer: legacyOffer, realmLevel: realmLevel, realmHeroId: realmHeroId
   };
 }));

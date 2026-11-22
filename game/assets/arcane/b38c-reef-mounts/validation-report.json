@@ -1,0 +1,18 @@
+{
+  "batch": "b38c",
+  "label": "reef-mounts",
+  "generated_utc": "2026-11-22T14:48:38.878572Z",
+  "files": 40,
+  "duplicate_ids": 0,
+  "blocking": {},
+  "warnings": {},
+  "standing_heights": {
+    "tidesteed/down": 88,
+    "tidesteed/up": 88,
+    "tidesteed/right": 88,
+    "skimray/down": 84,
+    "skimray/up": 84,
+    "skimray/right": 84
+  },
+  "status": "provisional"
+}

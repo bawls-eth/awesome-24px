@@ -4,7 +4,7 @@
 // rides, wild{<=4} }. B10 adds (all additive): home.inv{kind:n} + home.seeded (MMHomestead decor), visited[isle], bosses[id],
 // gather{day, got{isle:[idx]}, log{res:n}} (daily-free gather spots). X2 adds inv{item:n} (crafting stacks, <=64 x 999). X4 adds sg:1 (the one-time saddle grandfather gift was given; absent = not yet). X6 adds beat[boss id] (bosses defeated or tamed; absent = none yet). X7 adds hp (1..999, the hero HP carried across a trip; absent = full)
 // and home.made{kind:1..999} (MMHomeBuild decor crafted). XB adds trophies{trophy_*: 1 on the home pedestal | 2 with the one-time
-// rematch gold trim} (absent = none). clean() always returns a valid save (corrupt -> defaults) and keeps the whole key under 20 KB.
+// rematch gold trim} (absent = none); IF1 spark{day,n}; TD1 glint{day, n{isle:[idx]}} (once-a-day glints picked). clean() always returns a valid save (corrupt -> defaults) and keeps the whole key under 20 KB.
 // This module never touches `pixeltown-save-v1`.
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -166,6 +166,22 @@
       if (typeof raw.hp === 'number' && Number.isFinite(raw.hp) && raw.hp >= 1) out.hp = Math.min(999, Math.ceil(raw.hp));
       if (Array.isArray(raw.beat)) { const b = []; raw.beat.slice(0, 64).forEach((id) => { if (b.length < MAX_BOSSES && typeof id === 'string' && KEY_RE.test(id) && BAD.indexOf(id) < 0 && b.indexOf(id) < 0) b.push(id); }); if (b.length) out.beat = b; }
       if (isObj(raw.trophies)) { const tr = {}; TROPHY_IDS.forEach((id) => { if (has(raw.trophies, id) && (raw.trophies[id] === 1 || raw.trophies[id] === 2)) tr[id] = raw.trophies[id]; }); if (Object.keys(tr).length) out.trophies = tr; }
+      // IF1 (additive): forage sparkles shown today per island ({ day: 'YYYY-MM-DD', n: { isle: 0..6 } }); anything else is dropped
+      if (isObj(raw.spark) && typeof raw.spark.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw.spark.day)) {
+        const sn = {}; if (isObj(raw.spark.n)) SAVED_ISLES.forEach((id) => { const n = raw.spark.n[id]; if (has(raw.spark.n, id) && Number.isInteger(n) && n >= 1) sn[id] = Math.min(6, n); });
+        out.spark = { day: raw.spark.day, n: sn };
+      }
+      // TD1 (additive): the once-a-day glints picked today per island ({ day, n: { isle: [glint index 0..63, <= 16] } }: aurora crystals
+      // on the tundra, wreck salvage on mars); anything else is dropped
+      if (isObj(raw.glint) && typeof raw.glint.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw.glint.day)) {
+        const gn = {};
+        if (isObj(raw.glint.n)) SAVED_ISLES.forEach((id) => {
+          const a = raw.glint.n[id]; if (!has(raw.glint.n, id) || !Array.isArray(a)) return;
+          const l = []; a.slice(0, 64).forEach((v) => { if (l.length < 16 && Number.isInteger(v) && v >= 0 && v < 64 && l.indexOf(v) < 0) l.push(v); });
+          if (l.length) gn[id] = l;
+        });
+        out.glint = { day: raw.glint.day, n: gn };
+      }
       // size guard: shed the least valuable data first until the key fits
       const size = () => JSON.stringify(out).length;
       if (size() > MAX_BYTES) out.inv = {};

@@ -103,6 +103,28 @@ check('a new export adds one row with status new', T.parseInbox(fs.readFileSync(
 const rep = T.report(T.parseInbox(fs.readFileSync(inbox, 'utf8')), '2026-11-22');
 check('report has counts', /Received: 4 today \(inbox total 5\)/.test(rep) && /Implemented: 1/.test(rep) && /Rejected: 1/.test(rep) && /Still open: 3/.test(rep), rep);
 check('report lists rejects with reason', /#### Rejected feedback\n- bbbb0002 \(other, town\): "Love the fishing" - \(risk 85\): needs DB writes/.test(rep), rep);
+// review R1: rejected player text is neutralised before it goes into the report Markdown
+{
+  const evil = '[click](https://evil.example/x) ![img](http://a/b.png) <!-- hide --> <script>alert(1)</script>\n# Heading | cell | `code` **bold** _em_ ~~s~~ www.evil.com me@x.io \\ ' + 'z'.repeat(200);
+  const rows = [
+    { id: 'eeee0001', date: '2026-11-22 10:00', kind: 'bug', page: 'town', text: evil, status: 'rejected (risk 90): spam' },
+    { id: 'eeee0002', date: '2026-11-22 10:01', kind: 'other', page: 'hub', text: 'line one\nline two‮\u0000 end', status: 'rejected: unclear' },
+    { id: 'eeee0003', date: '2026-11-22 10:02', kind: 'other', page: 'hub', text: '🐟'.repeat(90), status: 'rejected: emoji only' },
+  ];
+  const r = T.report(rows, '2026-11-22');
+  const body = r.split('#### Rejected feedback\n')[1] || '';
+  const items = body.trim().split('\n');
+  check('R1: one report line per rejected note (newlines in player text never start a new line / heading)', items.length === 3 && items.every((l) => /^- eeee000\d \(/.test(l)) && !/\n#\s*Heading/.test(r), JSON.stringify(items));
+  check('R1: no raw HTML in the report (no <, >, HTML comment or script tag)', !/[<>]/.test(body) && !/<!--|<script/i.test(body), body);
+  const t1 = /: "(.*)" - /.exec(items[0])[1];
+  check('R1: Markdown link / image / code / emphasis / table characters are backslash-escaped', !/(^|[^\\])[[\]()`*_|~!#]/.test(t1.replace(/&#?\w+;/g, "")), t1);
+  check('R1: bare autolinks are broken (no scheme://, www., or a@b left as plain text)', !/:\/\/|www\.|@/.test(t1), t1);
+  check('R1: text is cut at 80 characters with "..."', /\.\.\.$/.test(t1) && !/zzzzz/.test(t1), t1);
+  check('R1: control and bidi characters are removed, whitespace collapsed', /"line one line two end"/.test(items[1]), items[1]);
+  const fish = /: "(.*)" - /.exec(items[2])[1];
+  check('R1: truncation counts code points, so emoji are never split', Array.from(fish.replace(/\.\.\.$/, '')).length === 80 && !/�/.test(fish) && fish.replace(/\.\.\.$/, '').split('').every((c, i, a) => !(c >= '\uD800' && c <= '\uDBFF') || (a[i + 1] >= '\uDC00' && a[i + 1] <= '\uDFFF')), fish.length + '');
+  check('R1: plain text is unchanged', T.mdSafe('Love the fishing', 80) === 'Love the fishing' && T.mdSafe('a & b', 80) === 'a &amp; b');
+}
 const repLog = [];
 T.run(['--inbox', inbox, '--report', '2026-11-22'], { log: (m) => repLog.push(m) });
 check('--report prints the section and writes nothing', repLog[0] === rep);

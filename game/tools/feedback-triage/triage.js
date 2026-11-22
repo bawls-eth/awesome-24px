@@ -183,6 +183,22 @@ function readExports(dir) {
   return { entries: entries, files: names, bad: bad };
 }
 
+// Player text going into the daily-report Markdown (review R1): one line, at most `max` characters (code points), with no
+// control / bidi characters, HTML neutralised (& < > as entities) and every Markdown-active character backslash-escaped,
+// so a note cannot add links, images, headings, HTML comments, emphasis or table cells to the report. Bare autolinks
+// (scheme://, www., a@b) are broken with entities so a renderer shows them as plain text.
+const MD_ENT = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', ':': '&#58;', '@': '&#64;' };
+function mdSafe(s, max) {
+  const lim = Number.isFinite(max) && max > 0 ? Math.floor(max) : 80;
+  const flat = String(s === undefined || s === null ? '' : s)
+    .replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u2069\ufeff]/g, ' ')
+    .replace(/\s+/g, ' ').trim();
+  const cps = Array.from(flat);
+  const cut = cps.length > lim ? cps.slice(0, lim).join('').replace(/\s+$/, '') + '...' : flat;
+  // one pass, so an inserted entity or backslash is never escaped again
+  return cut.replace(/(www)\.|[&<>":@\\`*_{}[\]()#+!|~$]/gi, (m, w) => (w ? w + '&#46;' : MD_ENT[m] || '\\' + m));
+}
+
 // Daily-report "Feedback" section from the inbox rows. day: 'YYYY-MM-DD' (rows dated that day count as received).
 function report(rows, day) {
   const st = (r) => String(r.status || '').toLowerCase();
@@ -201,8 +217,7 @@ function report(rows, day) {
   ];
   if (!rej.length) lines.push('- none');
   rej.forEach((r) => {
-    const short = String(r.text).replace(/\s+/g, ' ').slice(0, 80);
-    lines.push('- ' + r.id + ' (' + r.kind + ', ' + r.page + '): "' + short + (r.text.length > 80 ? '...' : '') + '" - ' + String(r.status).replace(/^rejected\s*/i, '').replace(/^:\s*/, ''));
+    lines.push('- ' + mdSafe(r.id, 24) + ' (' + mdSafe(r.kind, 16) + ', ' + mdSafe(r.page, 24) + '): "' + mdSafe(r.text, 80) + '" - ' + String(r.status).replace(/^rejected\s*/i, '').replace(/^:\s*/, ''));
   });
   return lines.join('\n') + '\n';
 }
@@ -256,4 +271,4 @@ function run(argv, io) {
 
 if (require.main === module) process.exitCode = run(process.argv.slice(2));
 
-module.exports = { RUBRIC, AUTO_REJECT, BASE, THRESHOLD, scoreRisk, suggestFlags, parseInbox, renderInbox, merge, entriesFromText, readExports, report, run, esc, unesc };
+module.exports = { RUBRIC, AUTO_REJECT, BASE, THRESHOLD, scoreRisk, suggestFlags, parseInbox, renderInbox, merge, entriesFromText, readExports, report, run, esc, unesc, mdSafe };

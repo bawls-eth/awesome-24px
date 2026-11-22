@@ -5,7 +5,8 @@
 //   10 s and not after; no Town build code (net.placeBlock) anywhere on the page; 3 the tame pen shows resting tames by name;
 // 4 the X5 environment meters are live on the tundra (warmth) and mars (air); 5 the first real tame writes `tame1` and the Hub card shows it;
 // 6 blockDb sees 0 requests, nothing offsite, pixeltown-save-v1 never changes, the console stays clean.
-// Screenshots (home island + sea chart, desktop + phone) go to $SHOTS when set.
+// Screenshots (home island + sea chart, desktop + phone) go to $SHOTS when set. IF1: the trip runs with ?rest=0 (kept through every sail):
+// docks became rest spots that heal to full, and this test is about HP riding along unchanged (tests/isles-ftue-fixes.test.js covers rest).
 // Run: BASE=http://localhost:9031/game/index.html NODE_PATH=$(npm root -g) node game/tests/archipelago-home-travel.test.js
 const fs = require('fs');
 const path = require('path');
@@ -88,7 +89,7 @@ const KO_AND_TAME = (I, a) => {
 
   for (const [label, opts, phone] of [['1280x720', DESK, false], ['390x844', PHONE, true]]) {
     const L = (s) => s + ' (' + label + ')';
-    const o = await open(browser, opts, '&isle=meadow&today=2026-12-01', SEED);
+    const o = await open(browser, opts, '&isle=meadow&today=2026-12-01&rest=0', SEED); // IF1: ?rest=0 (docks are rest spots that heal; this trip checks the HP carry)
     const pg = o.page;
     await frames(pg, 10);
     // ---- 1. home -> jungle (dock + sea chart) ----

@@ -175,13 +175,28 @@
     const homeText = typeof opts.homeLabel === 'string' && /^Back to [A-Za-z ]{1,30}$/.test(opts.homeLabel) ? opts.homeLabel : (hubExit ? 'Back to the map' : 'Back to town');
     // set only by mad-maze.js from a regex-checked ?return= (a Realm World portal): the exit goes back to that portal tile
     const backWorld = typeof opts.returnTo === 'string' && /^index\.html\?mode=world&seed=[A-Za-z0-9_-]{1,24}&at=\d{1,4},\d{1,4}(&test=1)?$/.test(opts.returnTo) ? opts.returnTo : null;
-    const seed = String(opts.seed === undefined ? '1' : opts.seed);
+    const baseSeed = String(opts.seed === undefined ? '1' : opts.seed);
+    // DV1 deep run: floor 2..3 of the same biome (opts.floor from ?floor=, set only by the stairs). Each floor below the first has its own derived seed.
+    const EG = typeof window !== 'undefined' && window.MMEndgame ? window.MMEndgame : null;
+    const qsHas = (re) => { try { return re.test(location.search); } catch (e) { return false; } };
+    const floorQ = Math.floor(Number(opts.floor)); const floor0 = floorQ >= 2 && floorQ <= 3 ? floorQ : 1;
+    const seed = floor0 > 1 ? baseSeed + 'f' + floor0 : baseSeed;
     // BL2: ?lair=1 (read here; the BK2 boss-key portal passes it) = a 2-room dungeon: an antechamber guarding the key + the biome boss hall behind a key door
     let lair = opts.lair === true || opts.lair === '1'; try { if (new URLSearchParams(location.search).get('lair') === '1') lair = true; } catch (e) { /* node / no location */ }
     const biome = MMBiomes.clean(opts.biome); const B = Object.assign({}, MMBiomes.get(biome)); // unknown / missing biome -> warren
     // BI1: each biome boss fires its own b17 ebolt_ art and has one signature attack (MMBiomes bossBolt / sig); ?bosses=classic keeps the plain boss
     let bossBolt = null; let bossSig = null;
     { const bf = MMBiomes.bossFor(biome, seed, opts.bosses === 'classic'); B.boss_art = bf.boss_art; B.boss_name = bf.boss_name; if (opts.bosses !== 'classic') { bossBolt = bf.bossBolt || null; bossSig = bf.sig || null; } } // b23: odd crypt seeds face the Lich King (?bosses=classic keeps the original)
+    // DV1 dungeon mutators (MMEndgame.mutatorsFor): z2+ biomes only (meadow, crypt; warren / bramble z1 never), seeded per dungeon seed, one by default.
+    // ?mut=0 turns them off (the run is then exactly today's), ?mut=2 asks for two. The lair (BK2) keeps its fixed fight. Applied on the MMDifficulty
+    // scale through MMEndgame.applyMutators (re-clamped), so no mutator raises damage, adds a timer or shortens a wind-up.
+    let mutOff = opts.mut === 0 || opts.mut === '0'; let mutN = opts.mut === 2 || opts.mut === '2' ? 2 : 1;
+    try { const mv = new URLSearchParams(location.search).getAll('mut'); if (mv.indexOf('0') >= 0) mutOff = true; else if (mv.indexOf('2') >= 0) mutN = 2; } catch (e) { /* node / no location */ }
+    const mutRes = EG && !lair ? EG.mutatorsFor(biome, undefined, seed, { off: mutOff, count: mutN }) : null;
+    const MUT = mutRes && mutRes.list.length ? mutRes : null;
+    const DEEP_ON = !!EG && !lair && opts.deep !== false && !qsHas(/[?&]deep=0(&|$)/);
+    const floor = DEEP_ON ? floor0 : 1;
+    const deepInfo = DEEP_ON ? EG.deepRun(floor, biome) : null;
     let rosterClassic = opts.roster === 'classic'; try { if (/[?&]roster=classic(&|$)/.test(location.search)) rosterClassic = true; } catch (e) { /* node / no location */ } // b24: ?roster=classic = no wave-2 skins
     const layoutV = opts.layout === 2 || biome !== 'warren' || lair ? 2 : 1; // a biome run is new content: it always uses the layout-2 pool
     const palCache = {};
@@ -198,11 +213,25 @@
     // Narrow profile (Realm-style tight dungeons): layout-2 runs only; ?narrow=0 (or opts.narrow === false) restores the old room pool.
     let narrowQ = true; try { narrowQ = new URLSearchParams(window.location.search).get('narrow') !== '0'; } catch (e) { /* no location */ }
     const narrowOn = layoutV === 2 && opts.narrow !== false && narrowQ;
-    const picks = lair ? (() => { // pick the antechamber as a normal fighting room and the hall as a boss room, through a 3-room stand-in graph (same selector, same biome bias)
+    let picks = lair ? (() => { // pick the antechamber as a normal fighting room and the hall as a boss room, through a 3-room stand-in graph (same selector, same biome bias)
       const fake = { rooms: [{ id: 0, type: 'start', doors: [0] }, { id: 1, type: 'combat', doors: [0, 1] }, { id: 2, type: 'boss', doors: [1] }], doors: [{ id: 0, a: 0, b: 1, dir: 'N' }, { id: 1, a: 1, b: 2, dir: 'N' }] };
       const sel = MMRooms.select(fake, 'lair:' + seed, 2, biome, narrowOn ? { narrow: true } : undefined);
       return { defs: { 0: sel.defs[1], 1: sel.defs[2] } };
     })() : MMRooms.select(dungeon, seed, layoutV, biome, narrowOn ? { narrow: true } : undefined);
+    if (MUT && !lair) { // Narrow: every fighting room comes from the narrow pool (no wide hall); Mirror: the fighting rooms' layouts come in reverse order
+      const fight = dungeon.rooms.filter((r) => r.type === 'combat').map((r) => r.id);
+      const defs = Object.assign({}, picks.defs);
+      if (MUT.fx.width < 1 && layoutV === 2) {
+        const nar = narrowOn ? picks : MMRooms.select(dungeon, seed, layoutV, biome, { narrow: true });
+        fight.forEach((id) => {
+          let d = nar.defs[id];
+          for (let k = 1; k <= 8 && d && !MMRooms.isNarrow(d.id); k++) d = MMRooms.select(dungeon, seed + ':narrow' + k, layoutV, biome, { narrow: true }).defs[id];
+          if (d && MMRooms.isNarrow(d.id)) defs[id] = d;
+        });
+      }
+      if (MUT.fx.mirror) { const ds = fight.map((id) => defs[id]).reverse(); fight.forEach((id, i) => { defs[id] = ds[i]; }); }
+      picks = { defs };
+    }
     const rngRun = MMRng.create('run:' + seed);
     const lootRng = MMRng.create('loot:' + seed);
     const bossRng = MMRng.create('boss:' + seed);
@@ -229,7 +258,9 @@
     const DIFF = window.MMDifficulty && !MMDifficulty.isOff(typeof location !== 'undefined' ? location.search : '') ? MMDifficulty : null;
     let dMode = 'classic'; try { if (window.MMProfile) dMode = MMProfile.clean(localStorage.getItem(MMProfile.KEY)).mode; } catch (e) { dMode = 'classic'; }
     const maxDepth = Math.max(1, ...Object.keys(depth).map((k) => depth[k]));
-    const scaleOf = (id, boss) => (DIFF ? DIFF.dungeonScale(biome, Math.max(1, depth[id] || 1), maxDepth, !!boss, { mode: dMode }) : { hp: 1, dmg: 1, spd: 1, count: 1, fire: 1 });
+    const scaleOf0 = (id, boss) => (DIFF ? DIFF.dungeonScale(biome, Math.max(1, depth[id] || 1), maxDepth, !!boss, { mode: dMode }) : { hp: 1, dmg: 1, spd: 1, count: 1, fire: 1 });
+    const scaleOf = (id, boss) => (MUT && DIFF ? EG.applyMutators(scaleOf0(id, boss), MUT) : scaleOf0(id, boss));
+    const SC = !!(DIFF || MUT); // a scale is applied at spawn time
 
     // ---- per-room layout: template, plan, counts ----
     const L = {}; const counts = {};
@@ -244,13 +275,20 @@
         }
         plan = MMEnemies.plan(seed + ':' + r.id, lair ? 2 : Math.max(1, depth[r.id] || 1), tpl.spawns.map((s) => ({ x: s.x, y: s.y })), null, allowed).enemies;
         if (tpl.tight && plan.length > TIGHT_MAX_SHOOTERS) plan = plan.slice(0, TIGHT_MAX_SHOOTERS);
-        if (DIFF) plan = plan.slice(0, Math.max(1, Math.min(plan.length, Math.round(plan.length * scaleOf(r.id).count)))); // early rooms hold fewer enemies (the plan order is seeded)
+        if (SC && plan.length) {
+          const want = Math.round(plan.length * scaleOf(r.id).count);
+          if (MUT && want > plan.length) { // Swarm: more (weaker) foes on the room's free spawn tiles, copies of the seeded plan, never past the tight-room cap
+            const used = new Set(plan.map((e) => e.x + ',' + e.y)); const free = tpl.spawns.filter((q) => !used.has(q.x + ',' + q.y)); const add = [];
+            for (let i = 0; plan.length + add.length < want && i < free.length; i++) add.push(Object.assign({}, plan[i % plan.length], { x: free[i].x, y: free[i].y, elite: false }));
+            plan = plan.concat(add); if (tpl.tight && plan.length > TIGHT_MAX_SHOOTERS) plan = plan.slice(0, TIGHT_MAX_SHOOTERS);
+          } else plan = plan.slice(0, Math.max(1, Math.min(plan.length, want))); // early rooms hold fewer enemies (the plan order is seeded)
+        }
       }
       const extra = plan.reduce((n, e) => n + (e.id === 'sprout' ? 2 : 0), 0); // each Sprout leaves two minis behind
       counts[r.id] = r.type === 'boss' ? 1 : plan.length + extra;
       L[r.id] = { tpl, plan, baked: null, spawned: false, keyTaken: false, sc: scaleOf(r.id, r.type === 'boss') };
     });
-    const state = MMDungeonState.create(dungeon, rngRun, { enemies: counts, bossHp: Math.max(1, Math.ceil((opts.bossHp || 260) * (DIFF ? scaleOf(dungeon.rooms.find((q) => q.type === 'boss').id, true).hp : 1) * (lair ? 1.3 : 1))) }); // lair boss: 1.3x HP
+    const state = MMDungeonState.create(dungeon, rngRun, { enemies: counts, bossHp: Math.max(1, Math.ceil((opts.bossHp || 260) * (SC ? scaleOf(dungeon.rooms.find((q) => q.type === 'boss').id, true).hp : 1) * (lair ? 1.3 : 1))) }); // lair boss: 1.3x HP
 
     const freeSpot = (tpl, tx, ty) => {
       let best = null; let bd = 1e9;
@@ -280,7 +318,7 @@
       const dmg = MMSplash.slamDmg(e.dmgMul || 1, Math.max(0, d), MMSplash.slamR(2));
       if (dmg > 0) { slamHits++; arena._hitPlayer(arena._guarded(dmg)); }
     }
-    const api = { pickups: () => drops.map((q) => ({ type: q.type, x: q.x, y: q.y, value: q.value, tier: q.tier })), pickStats: () => ({ live: drops.length, total: pickTotal, got: Object.assign({}, pickGot), magnet: MAGNET_R, on: pickOn }), lair, seed, biome, bossBolt, bossSig, sigCount: () => sigN, layoutVersion: layoutV, narrow: narrowOn, graph: dungeon, state, arena, granted, grantItem, get gearOn() { return gearOn; }, get gear() { return gearGot; }, gp: () => gpNow() };
+    const api = { mut: MUT ? { ids: MUT.ids.slice(), label: MUT.label, text: MUT.text, fx: Object.assign({}, MUT.fx) } : null, floor, baseSeed, deep: deepInfo, pickups: () => drops.map((q) => ({ type: q.type, x: q.x, y: q.y, value: q.value, tier: q.tier })), pickStats: () => ({ live: drops.length, total: pickTotal, got: Object.assign({}, pickGot), magnet: MAGNET_R, on: pickOn }), lair, seed, biome, bossBolt, bossSig, sigCount: () => sigN, layoutVersion: layoutV, narrow: narrowOn, graph: dungeon, state, arena, granted, grantItem, get gearOn() { return gearOn; }, get gear() { return gearGot; }, gp: () => gpNow() };
     // Lantern stash payout (MMStash): every kept find of this run is paid into the stash when the summary shows (win or fall)
     const ST = window.MMStash && window.MMProfile ? window.MMStash : null; const shards0 = arena.save.shards;
     if (ST) {
@@ -357,12 +395,12 @@
         }
         used.add(pos.x + ',' + pos.y);
         const px = spotPx(pos);
-        spawnMob(ENEMY_MAP[p.id], p.id, px.x, px.y, Math.max(3, Math.ceil(p.hp / HP_DIV)), p.elite, DIFF ? lay.sc : null);
+        spawnMob(ENEMY_MAP[p.id], p.id, px.x, px.y, Math.max(3, Math.ceil(p.hp / HP_DIV)), p.elite, SC ? lay.sc : null);
       });
     }
     function spawnBoss() {
       const e = arena.spawnEnemy('boss', arena.W / 2, 132); if (!e) return;
-      if (DIFF && current !== null) { e.dmgMul = L[current].sc.dmg; e.diff = L[current].sc; }
+      if (SC && current !== null) { e.dmgMul = L[current].sc.dmg; e.diff = L[current].sc; }
       e.dg = 'boss'; e.maxHp = state.boss.maxHp; e.hp = state.boss.hp; e.phase = state.boss.phase; e.invuln = 1.2; e.cd = 1.2; e.cd2 = 2.4; e.angle = 0;
       arena.bossT0 = arena.clock; e.bossArt = B.boss_art; arena._syncBoss(); nextSweep = arena.clock + 4; nextWall = arena.clock + 6; sigNext = arena.clock + 4.5; sigWind = null; slam = null;
     }
@@ -381,6 +419,7 @@
       const p = arena.player; let entry = { x: 8, y: 6 };
       if (travel) { const dt = MMRooms.DOORS[OPP[travel]]; entry = { x: dt.x + DV[travel][0], y: dt.y + DV[travel][1] }; p.x = (entry.x + 0.5) * T; p.y = (entry.y + 0.5) * T; p.iframes = Math.max(p.iframes, 1); }
       else { p.x = arena.W / 2; p.y = arena.H / 2; }
+      if (arena._dv && typeof arena._camStep === 'function') arena._camStep(-1); // phone dungeon view: a new room opens on the hero (no sweep across it)
       refreshWalls();
       const rs = state.room(id);
       if (!lay.spawned && rs.enemiesAlive > 0) {
@@ -497,9 +536,21 @@
       for (let i = 0; i < (o.always ? 8 : 1); i++) { // an always-drop retries (new stream) when the pick is an id this build cannot hold yet; pity still applies (k stays 0)
         const g = MMGearDrops.rollGear(ctx, MMGearDrops.seedFor(seed, i ? tag + ':try' + i : tag, ctx.k, 'solo'));
         if (!g) { if (!o.always) return null; continue; }
-        if (RM_ITEM_BY_ID[g.id] && !RM_ITEM_BY_ID[g.id].inert) return g; // an inert def is a saved id this build cannot use: retry
+        if (RM_ITEM_BY_ID[g.id] && !RM_ITEM_BY_ID[g.id].inert) return deepLift(g, tag); // an inert def is a saved id this build cannot use: retry
       }
       return null;
+    }
+    // DV1 deep run: floor N lifts a dungeon roll N-1 tiers (MMEndgame.deepRun, capped at T11: T12 stays a godland-boss find). An armor piece becomes its
+    // family's piece for the new tier; an item reaching T7 gets a seeded affix seed. Floor 1 returns the roll unchanged.
+    function deepLift(g, tag) {
+      const sh = deepInfo ? deepInfo.tierShift : 0; if (!sh || !g) return g;
+      const t = Math.min(EG.DEEP.tierCap, g.t + sh); if (t <= g.t) return g;
+      let id = g.id;
+      if (g.slot === 'armor') { const fam = MMGear.FAMILY_KEYS.find((f) => (MMGear.ARMOR_IDS[f] || []).indexOf(g.id) >= 0); const nid = fam ? MMGear.armorId(fam, t) : null; if (!nid) return g; id = nid; }
+      if (!RM_ITEM_BY_ID[id] || RM_ITEM_BY_ID[id].inert) return g;
+      const o = Object.assign({}, g, { id, t, deep: sh });
+      if (t >= MMGear.AFFIX_MIN_T && !o.a) o.a = 1 + Math.floor(MMRng.create('dgeardeep:' + seed + ':' + tag).next() * 4294967294);
+      return o;
     }
     function gearGrant(g, x, y) {
       const sv = arena.save; const n0 = sv.items.length; const full = n0 >= RM_BACKPACK;
@@ -563,7 +614,7 @@
         arena.dropBag(e.x - 20, e.y + 20, bagR1); arena.dropBag(e.x + 20, e.y + 20, bagR2);
         if (gearOn) dropBossGear(e, bagR1);
         arena._showBanner(B.boss_name + ' defeated! The portal opens.', 2.6);
-        arena.onSave(arena.save); mapSig = '';
+        arena.onSave(arena.save); mapSig = ''; deepShow();
       }
       arena._syncBoss();
     }
@@ -680,15 +731,73 @@
         <p class="mm-sum-sub">Seed ${String(seed).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24)} · ${mm}:${ss}</p>
         <ul class="mm-sum-stats"><li>Rooms visited <b>${visitedMain()}/${MAIN_ROOMS}</b></li><li>Rooms cleared <b>${s.roomsCleared}</b></li><li>Chests opened <b>${s.chestsOpened}</b></li><li>Keys found <b>${s.keysFound}</b></li><li>Secret room <b>${s.secretFound ? 'found' : 'hidden'}</b></li><li>${B.boss_name} <b>${s.bossDefeated ? 'defeated' : 'alive'}</b></li><li>Chest gold <b>${s.gold} 💎</b></li></ul>
         <h3>Loot</h3><ul class="mm-sum-loot" id="mm-sum-loot">${items}</ul>${paid && paid.ok ? `<p class="mm-sum-stash" id="mm-sum-stash">🏮 ${ST.text(paid)} (Lantern)</p>` : ''}
-        <div class="mm-sum-btns">${backWorld ? '' : `<a class="mm-btn" id="mm-sum-again" href="?mode=dungeon&seed=${Number(seed) + 1 || ''}${layoutV === 2 ? '&lv=2' : ''}${biome !== 'warren' ? '&biome=' + biome : ''}${opts.test ? '&test=1' : ''}${hubExit ? '&from=hub' : ''}">New dungeon</a>`}<a class="mm-btn${backWorld ? '' : ' alt'}" id="mm-sum-home" href="${backWorld || homeHref}">${backWorld ? 'Back to the world' : homeText}</a></div></div>`;
+        <div class="mm-sum-btns">${backWorld ? '' : `<a class="mm-btn" id="mm-sum-again" href="?mode=dungeon&seed=${Number(baseSeed) + 1 || ''}${layoutV === 2 ? '&lv=2' : ''}${biome !== 'warren' ? '&biome=' + biome : ''}${opts.test ? '&test=1' : ''}${hubExit ? '&from=hub' : ''}">New dungeon</a>`}<a class="mm-btn${backWorld ? '' : ' alt'}" id="mm-sum-home" href="${backWorld || homeHref}">${backWorld ? 'Back to the world' : homeText}</a></div></div>`;
       if (gearGot.length) { // tiered finds: "T7 Name" via textContent
         const ul = sumEl.querySelector('#mm-sum-loot'); const none = ul.querySelector('.none'); if (none) none.remove();
         gearGot.forEach((g) => { const li = document.createElement('li'); li.className = 'mm-sum-gear'; li.style.color = g.color; li.textContent = g.name + ' '; const sm = document.createElement('small'); sm.textContent = g.rarName + (g.sold ? ' (sold, pack full)' : ''); li.appendChild(sm); ul.appendChild(li); });
       }
+      if (MUT || floor > 1) { // DV1: the mutator and the floor on their own rows (textContent)
+        const st = sumEl.querySelector('.mm-sum-stats');
+        const add = (cls, k, v) => { const li = document.createElement('li'); li.className = cls; li.append(document.createTextNode(k + ' ')); const b = document.createElement('b'); b.textContent = v; li.appendChild(b); st.appendChild(li); };
+        if (st && MUT) add('mm-sum-mut', 'Mutator', MUT.label);
+        if (st && floor > 1) add('mm-sum-floor', 'Floor', floor + ' of ' + (deepInfo ? deepInfo.maxFloor : 3));
+      }
+      deepHide();
       sumEl.classList.remove('hidden');
       api.summary = s; api.summaryTitle = sumEl.querySelector('h2').textContent;
     }
-    function finish() { if (finished) return; arena.stop(); showSummary(false); }
+    function finish() { if (finished) return; deepHide(); arena.stop(); showSummary(false); }
+
+    // ---------- DV1: mutator chip + deep-run stairs / off-ramp ----------
+    // The chip names the run's mutator(s) under the map button (textContent only). After the boss, a calm choice: the stairs down to the next floor
+    // of the same biome (gear one tier up, at most floor 3 and T11) or "Leave with your loot" (the summary, as the portal does). No timer, nothing lost:
+    // every find is already in the pack, and the Lantern stash is settled before the stairs load the next floor.
+    let mutEl = null; let deepEl = null; let stairsArmed = false;
+    function mutChip() {
+      if (!MUT || mutEl) return;
+      mutEl = document.createElement('div'); mutEl.id = 'mm-mut'; mutEl.setAttribute('role', 'note'); mutEl.dataset.mut = MUT.ids.join(',');
+      mutEl.textContent = '✦ ' + MUT.label + (floor > 1 ? ' · Floor ' + floor : ''); mutEl.title = MUT.text; mutEl.setAttribute('aria-label', 'Dungeon mutator: ' + MUT.text);
+      document.body.appendChild(mutEl);
+    }
+    const canStairs = () => !!deepInfo && deepInfo.nextStairs && state.boss.dead && !finished;
+    function stairsSpot() { const pq = portalSpot(); const s1 = spotPx(freeSpot(L[current].tpl, 4, 8)); return Math.hypot(s1.x - pq.x, s1.y - pq.y) >= 80 ? s1 : spotPx(freeSpot(L[current].tpl, 12, 8)); }
+    function deepShow() {
+      if (!deepInfo || finished || deepEl) return;
+      deepEl = document.createElement('div'); deepEl.id = 'mm-deep'; deepEl.setAttribute('role', 'group'); deepEl.setAttribute('aria-label', 'Deep run');
+      const p = document.createElement('p'); p.className = 'mm-deep-txt';
+      p.textContent = deepInfo.nextStairs ? 'Floor ' + floor + ' of ' + deepInfo.maxFloor + ' cleared. Stairs lead down to floor ' + (floor + 1) + ', where gear is one tier higher (up to T11). Or leave with your loot.'
+        : 'Floor ' + floor + ' of ' + deepInfo.maxFloor + ' cleared. This is the deepest floor. Leave with your loot.';
+      const row = document.createElement('div'); row.className = 'mm-deep-btns';
+      if (deepInfo.nextStairs) { const d = document.createElement('button'); d.type = 'button'; d.id = 'mm-deep-down'; d.textContent = '⬇ Stairs to floor ' + (floor + 1); d.addEventListener('click', () => takeStairs()); row.appendChild(d); }
+      const l = document.createElement('button'); l.type = 'button'; l.id = 'mm-deep-leave'; l.textContent = 'Leave with your loot'; l.addEventListener('click', () => finish()); row.appendChild(l);
+      deepEl.append(p, row); document.body.appendChild(deepEl);
+    }
+    function deepHide() { if (deepEl) { deepEl.remove(); deepEl = null; } }
+    function takeStairs() {
+      if (!canStairs()) return null;
+      finished = true; deepHide(); arena.onSave(arena.save);
+      if (ST) { try { ST.settle(localStorage, { Profile: MMProfile, realmItems: arena.save.items, shards: Math.max(0, arena.save.shards - shards0), src: 'dungeon', force: true }); } catch (e) { /* storage blocked */ } }
+      let q = null; try { q = new URLSearchParams(location.search); } catch (e) { q = null; }
+      if (!q) return null;
+      q.set('mode', 'dungeon'); q.set('seed', baseSeed); q.set('biome', biome); q.set('lv', '2'); q.set('floor', String(floor + 1));
+      const url = 'index.html?' + q.toString(); api.lastStairsUrl = url;
+      arena.stop(); if (opts.navigate !== false) location.href = url;
+      return url;
+    }
+    // Dim: one cached vignette canvas (drawn once), blitted around the hero each frame
+    let dimCv = null;
+    function dimDraw(g) {
+      if (!MUT || !(MUT.fx.view < 1)) return;
+      const W = arena.W, H = arena.H;
+      if (!dimCv) dimCv = mk(W * 2, H * 2, (c) => { const r0 = 300 * MUT.fx.view; const gr = c.createRadialGradient(W, H, r0 * 0.55, W, H, r0 + 90); gr.addColorStop(0, 'rgba(4,2,12,0)'); gr.addColorStop(1, 'rgba(4,2,12,0.62)'); c.fillStyle = gr; c.fillRect(0, 0, W * 2, H * 2); });
+      g.drawImage(dimCv, Math.round(arena.player.x - W), Math.round(arena.player.y - H)); api.dimDraws = (api.dimDraws || 0) + 1;
+    }
+    let stairsCv = null;
+    function stairsImg() {
+      if (stairsCv) return stairsCv;
+      stairsCv = mk(40, 40, (g) => { rect(g, '#120a22', 2, 2, 36, 36); for (let i = 0; i < 5; i++) { rect(g, '#6b5aa8', 4 + i * 3, 6 + i * 6, 32 - i * 6, 4); rect(g, '#a98bff', 4 + i * 3, 6 + i * 6, 32 - i * 6, 1); } rect(g, '#ffd45a', 2, 2, 36, 2); });
+      return stairsCv;
+    }
 
     // ---------- the controller the arena calls ----------
     const ctrl = {
@@ -697,7 +806,8 @@
         arena.state = 'play'; arena.run.wave = 0; arena.biome = 0;
         const res = state.enter(dungeon.rooms.find((r) => r.type === 'start').id);
         loadRoom(res.ok ? state.current : 0, null);
-        arena._showBanner(`${B.name} #${seed}`, 1.8);
+        arena._showBanner(floor > 1 ? `${B.name} #${baseSeed} · Floor ${floor}` : MUT ? `${B.name} #${seed} · ${MUT.label}` : `${B.name} #${seed}`, 1.8);
+        mutChip();
         drawMap();
       },
       onBoltWall(x, y) {
@@ -714,7 +824,7 @@
         if (e.dg !== 'mob' || current === null) return;
         const before = state.room(current).enemiesAlive; if (before <= 0) return;
         const left = state.killEnemy();
-        if (e.did === 'sprout') MMEnemies.onDeath({ id: 'sprout', x: 0, y: 0 }).forEach((m, i) => spawnMob('aimed', m.id, e.x + (i ? 16 : -16), e.y, Math.max(2, Math.ceil(m.hp / HP_DIV)), false, DIFF && current !== null ? L[current].sc : null));
+        if (e.did === 'sprout') MMEnemies.onDeath({ id: 'sprout', x: 0, y: 0 }).forEach((m, i) => spawnMob('aimed', m.id, e.x + (i ? 16 : -16), e.y, Math.max(2, Math.ceil(m.hp / HP_DIV)), false, SC && current !== null ? L[current].sc : null));
         if (left === 0) ctrl.cleared(e.x, e.y);
       },
       cleared(kx, ky) {
@@ -752,6 +862,7 @@
         if (hasKey() && !state.doorsClosed() && near(keySpot(), 26)) { L[current].keyTaken = true; keyFound = state.pickKey(); arena._snd('pickup'); arena._floatText(p.x, p.y - 30, '🗝 Key!', '#ffd45a'); mapSig = ''; }
         if (hasChest() && !rs.chestOpen && !state.doorsClosed() && near(chestSpot(), 30)) openChest();
         if (hasPortal() && near(portalSpot(), 30)) { finish(); return; }
+        if (hasPortal() && canStairs()) { const sq = stairsSpot(); if (!near(sq, 70)) stairsArmed = true; else if (stairsArmed && near(sq, 26)) { takeStairs(); return; } }
         // HUD text (the arena rewrites it from time to time)
         const txt = `${B.name} · Room ${visitedMain()}/${MAIN_ROOMS} · 🗝 ${state.keys}${state.room(current).enemiesAlive > 0 && byId[current].type !== 'boss' ? ` · ${state.room(current).enemiesAlive} left` : ''}`;
         if (txt !== hudText) { hudText = txt; }
@@ -796,12 +907,14 @@
         drawPicks(g);
         if (hasKey()) { const k = keySpot(); g.drawImage(S.key, k.x - 11, k.y - 11 + Math.sin(tt * 3) * 3); }
         if (hasChest()) { const c = chestSpot(); const open = state.room(current).chestOpen; const ci = dimg(open ? 'chest_open' : 'chest_closed'); if (ci) g.drawImage(ci, 0, 0, 32, 32, c.x - 18, c.y - 20, 36, 36); else g.drawImage(S.chest[open ? 1 : 0], c.x - 16, c.y - 14); }
+        if (hasPortal() && canStairs()) { const sq = stairsSpot(); g.drawImage(stairsImg(), sq.x - 20, sq.y - 20); }
         if (hasPortal()) { const q = portalSpot(); g.save(); g.translate(q.x, q.y); g.rotate(tt * 1.2); g.drawImage(S.portal, -36, -36); g.rotate(-tt * 2.4); g.globalAlpha = 0.6; g.drawImage(S.portal, -26, -26, 52, 52); g.restore(); g.globalAlpha = 1; }
         if (useT) g.imageSmoothingEnabled = sm;
       },
       drawOver(g) {
         if (slam && slam.w > 0) { const be = bossEntity(); if (be) { const look = typeof MMTelegraph !== 'undefined' ? MMTelegraph.forVolley('ring', 3, true, { reduced: !!arena._reduced, palette: arena.acc ? arena.acc.palette : 'normal' }) : null; MMSplash.drawSlam(g, be.x, be.y, MMSplash.slamR(2), 1 - slam.w / MMSplash.SLAM.WIND, !!arena._reduced, look ? look.color : null); } }
         if (B.tint) { g.fillStyle = B.tint; g.fillRect(0, 0, arena.W, arena.H); }
+        if (MUT) dimDraw(g);
         if (B.particles && current !== null) { // seeded drift: positions come from a table made with MMRng, only the clock moves them
           const P = B.particles; const tt = arena._reduced ? 0 : performance.now() / 1000; g.fillStyle = P.color; const ga = g.globalAlpha; g.globalAlpha = 0.5;
           for (let i = 0; i < ambient.length; i++) {
@@ -819,9 +932,17 @@
           g.translate(ax, ay); g.rotate(Math.atan2(v[1], v[0]));
           g.fillStyle = '#ffd45a'; g.strokeStyle = '#2a1d44'; g.lineWidth = 3; g.beginPath(); g.moveTo(17, 0); g.lineTo(-9, -15); g.lineTo(-9, 15); g.closePath(); g.stroke(); g.fill();
           g.restore();
+          // phone dungeon view (realm.js arena._dv): the room pans sideways, so a door outside the slice gets a gold arrow on the slice edge
+          const dvw = arena._dv ? arena._dv.vw : 0; const cx0 = arena.camera ? arena.camera.x : 0;
+          if (dvw && (cx < cx0 || cx > cx0 + dvw)) {
+            const right = cx > cx0 + dvw; const ex = right ? cx0 + dvw - 22 : cx0 + 22; const ey = Math.max(30, Math.min(arena.H - 30, cy));
+            g.save(); g.translate(ex, ey); if (!right) g.scale(-1, 1);
+            g.fillStyle = '#ffd45a'; g.strokeStyle = '#2a1d44'; g.lineWidth = 3; g.beginPath(); g.moveTo(14, 0); g.lineTo(-8, -13); g.lineTo(-8, 13); g.closePath(); g.stroke(); g.fill();
+            g.restore();
+          }
           if (cu.hint) {
             g.save(); g.font = 'bold 15px system-ui, sans-serif'; g.textAlign = 'center'; g.lineWidth = 4; g.strokeStyle = '#120a22'; g.fillStyle = '#ffd45a';
-            const tx = Math.max(70, Math.min(arena.W - 70, ax)); const ty = Math.max(24, Math.min(arena.H - 16, ay + (cu.dir === 'N' ? 34 : cu.dir === 'S' ? -26 : 4)));
+            const tx = dvw ? Math.max(cx0 + 70, Math.min(cx0 + dvw - 70, ax)) : Math.max(70, Math.min(arena.W - 70, ax)); const ty = Math.max(24, Math.min(arena.H - 16, ay + (cu.dir === 'N' ? 34 : cu.dir === 'S' ? -26 : 4)));
             g.strokeText(cu.hint, tx, ty); g.fillText(cu.hint, tx, ty); g.restore();
           }
         }
@@ -854,7 +975,7 @@
       boltWall: (x, y) => ctrl.onBoltWall(x, y),
       boss: () => bossEntity(),
       slam: { on: SLAM_ON, wind: () => (slam && slam.w > 0 ? { left: slam.w, total: MMSplash.SLAM.WIND } : null), hits: () => slamHits, winds: () => slamWinds, r: () => MMSplash.slamR(2) },
-      finish,
+      finish, takeStairs, canStairs, stairsPos: () => (hasPortal() && canStairs() ? stairsSpot() : null),
       scaleFor: (id) => L[id].sc, depthOf: (id) => depth[id], maxDepth, diffOn: !!DIFF, mobsInfo: () => arena.enemies.filter((e) => e.active && e.dg).map((e) => ({ dg: e.dg, hp: e.maxHp, dmg: e.dmgMul, spd: e.spdMul })),
       layout: (id) => ({ tpl: L[id].tpl.id, plan: L[id].plan.length, count: counts[id], tight: !!L[id].tpl.tight }),
       // narrow-profile stats: per room (long side of the largest empty rectangle, mean corridor width) + the floor averages

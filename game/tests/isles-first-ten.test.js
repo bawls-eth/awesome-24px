@@ -7,7 +7,8 @@
 // pouch can feed (knock out with soothe shots, then feed), hunts the rest for drops, defends itself and explores when nothing is near.
 //  1 first interactive action (a gather, a hit on a creature, an accepted feed) <= 20 s sim; first gather <= TG; first tame, else first
 //    drop, <= 180 s on islands with tameables; the hint names an action in every sampled sim second; no 45 s window without a reward
-//    event (gather, drop, tame, medal); <= 1 death.
+//    event (gather, drop, tame, medal; IF1: a first-sighting journal entry, __isles.events() kind 'spot'); <= 1 death. IF1: the bot also
+//    walks over a forage sparkle (__isles.sparkle()) within 10 tiles, as a player would.
 //  2 layout (start, after the run, craft panel open): every visible button >= 44 px, not under the canvas, off the stick; text >= 12 px;
 //    first frame < 3 s; 0 console errors; tundra / mars show their meter on the first frame.
 //  3 reachability from a fresh profile through crafting: home -> jungle (sea chart) -> gather -> the real Craft panel (raft) -> reef ->
@@ -95,7 +96,8 @@ const BOT = `(rseed) => {
   const VERB = /\\b(press|tap|feed|walk|knock|soothe|stay|ride|keep|explore|find|look|open|follow|shoot|fire|gather|sail|place|head|go|move|step|craft|warm|return)\\b/i;
   const S = window.__qi = { t: 0, first: {}, counts: {}, events: [], lastReward: 0, maxGap: 0, gapAt: 0, samples: 0, empty: 0, noVerb: [], deaths: 0, wasDead: false,
     tamed0: I.stats().tamed, picked0: I.picked(), glog0: 0, medals0: I.medals().length, drops0: JSON.stringify(I.drops()), path: null, pi: 0, goal: null, goalT: 0, bad: {}, tried: {},
-    target: null, fireT: 0, feedT: 0, gatherT: 0, sT: 0, lastPos: null, chkT: 1, unstick: 0, ux: 0, uy: 0, rs: rseed >>> 0 || 7, hp: {}, log: [], minHp: I.hero().hp };
+    target: null, fireT: 0, feedT: 0, gatherT: 0, sT: 0, lastPos: null, chkT: 1, unstick: 0, ux: 0, uy: 0, rs: rseed >>> 0 || 7, hp: {}, log: [], minHp: I.hero().hp, evT: -1, hunt: {} };
+  { const es = I.events ? I.events() : []; if (es.length) S.evT = es[es.length - 1].t; }
   const glogN = () => { const g = I.gatherLog(); return Object.keys(g).reduce((a, k) => a + (Number(g[k]) || 0), 0); };
   S.glog0 = glogN();
   const ev = (k) => { const t = S.t; if (S.first[k] === undefined) S.first[k] = t; S.counts[k] = (S.counts[k] || 0) + 1; if (S.events.length < 400) S.events.push({ t: Math.round(t * 10) / 10, kind: k });
@@ -134,6 +136,8 @@ const BOT = `(rseed) => {
     const gl = glogN(); while (S.glog0 < gl) { S.glog0++; ev('gather'); }
     const md = I.medals().length; while (S.medals0 < md) { S.medals0++; ev('medal'); }
     const dr = JSON.stringify(I.drops()); if (dr !== S.drops0) { S.drops0 = dr; ev('drop'); }
+    // IF1: a first sighting ("New in your journal: ...", event kind 'spot') is a reward beat too
+    if (I.events) { const es = I.events(); for (let i = 0; i < es.length; i++) if (es[i].t > S.evT) { S.evT = es[i].t; if (es[i].kind === 'spot') ev('spot'); } }
     // hint, once a sim second
     if ((S.sT -= DT) <= 0) { S.sT = 1; const ht = I.hint() || ''; S.samples++; if (!ht) S.empty++; else if (!VERB.test(ht)) { S.nv = (S.nv || 0) + 1; if (S.noVerb.length < 5) S.noVerb.push(ht); } }
     if (h.dead) return { mx: 0, my: 0 };
@@ -145,6 +149,20 @@ const BOT = `(rseed) => {
     // air on mars: the hint / toast says "head back to a dome or the landing pad" when it runs low; the bot walks back to the landing
     // (the spawn point is always sheltered) and waits there until the meter is full again
     if ((S.envT = (S.envT || 0) - DT) <= 0) { S.envT = 1; const e = I.env(); const m = e.o2; if (m) { if ((m.warn || m.empty) && !e.sheltered && !S.home) { S.home = true; S.homes = (S.homes || 0) + 1; S.homePath = null; } if (S.home && e.sheltered && m.t <= 3) S.home = false; } }
+    // IF1: low on HP away from a fight you can win: walk to the nearest rest spot (dock, campfire, hot spring, dome, home) and rest
+    // there until full (MMIsleRest heals to full in <= 3 s); and step out of a boss ring the bot did not mean to enter
+    if ((S.bossT = (S.bossT || 0) - DT) <= 0) { S.bossT = 0.5; const b = I.boss(); S.boss = b && b.engaged && b.st ? { x: b.x, y: b.y, r: b.arenaR || 200 } : null; }
+    if (!S.home && !S.rest && I.restPoints && S.t >= (S.restCd || 0) && (h.hp < 0.25 * h.maxHp || (h.hp < 0.45 * h.maxHp && !(S.target && cs.some((q) => q.uid === S.target && (q.ko || q.st === 'taming')))))) {
+      if (!S.restPts) S.restPts = I.restPoints();
+      let best = null, bd = 1e18; S.restPts.forEach((p) => { const d = (p.x - h.tx) * (p.x - h.tx) + (p.y - h.ty) * (p.y - h.ty); if (d < bd) { bd = d; best = p; } });
+      if (best) { S.rest = { x: best.x, y: best.y, path: bfs(new Set([best.y * W + best.x]), 80000) || [], pi: 0 }; S.rests = (S.rests || 0) + 1; }
+    }
+    if (S.rest && !S.home) {
+      busy = true;
+      if (h.hp >= h.maxHp) S.rest = null;
+      else if (!I.rest().spot) { let wp = S.rest.path[S.rest.pi]; while (wp && Math.hypot(wp.x - h.x, wp.y - h.y) < 8) { S.rest.pi++; wp = S.rest.path[S.rest.pi]; } if (wp) { const l = Math.hypot(wp.x - h.x, wp.y - h.y) || 1; mx = (wp.x - h.x) / l; my = (wp.y - h.y) / l; } else { S.rest = null; S.restCd = S.t + 10; } }
+    }
+    if (S.boss && !S.home) { const dx = h.x - S.boss.x, dy = h.y - S.boss.y, l = Math.hypot(dx, dy) || 1; busy = true; S.path = null; mx = dx / l; my = dy / l; }
     if (S.home) {
       busy = true; const sp = I.world.spawnPoint;
       if (!S.homePath || S.homePi >= S.homePath.length) { S.homePath = bfs(new Set([sp.y * W + sp.x]), 80000) || []; S.homePi = 0; }
@@ -158,22 +176,34 @@ const BOT = `(rseed) => {
     const tc = cs.filter((c) => tameable(c) && foodOk(c) && !(S.tried[c.uid] > 40) && (!low || c.ko || c.st === 'calm' || c.st === 'taming' || (CR.get(c.kind).tame.method !== 'knockout')));
     let c = tc.find((q) => q.uid === S.target) || null;
     if (!c) { let best = 1e9; tc.forEach((q) => { const d = Math.hypot(q.x - h.x, q.y - h.y); if (d > 22 * TL) return; const k = d / 150 + (((CR.get(q.kind) || {}).tame || {}).time || 60) + (q.ko || q.st === 'calm' || q.st === 'taming' ? -1000 : 0); if (k < best) { best = k; c = q; } }); }
-    if (c && !S.home) {
+    // IF1: a forage sparkle (it shows after 40 s without a reward) within 10 tiles: walk over to it (a BFS path), unless out of air
+    const spk = I.sparkle ? I.sparkle() : null;
+    const spkD = spk ? Math.hypot((spk.x + 0.5) * TL - h.x, (spk.y + 0.5) * TL - h.y) : 1e9;
+    if (spk && spk.ready && !S.boss && ((!S.home && !S.rest && spkD < 10 * TL) || spkD < 5 * TL)) {
+      busy = true;
+      if (!S.spkPath || S.spkKey !== spk.x + ',' + spk.y) { S.spkKey = spk.x + ',' + spk.y; S.spkPath = bfs(new Set([spk.y * W + spk.x]), 60000) || []; S.spkPi = 0; }
+      let wp = S.spkPath[S.spkPi]; while (wp && Math.hypot(wp.x - h.x, wp.y - h.y) < 8) { S.spkPi++; wp = S.spkPath[S.spkPi]; }
+      if (wp) { const l = Math.hypot(wp.x - h.x, wp.y - h.y) || 1; mx = (wp.x - h.x) / l; my = (wp.y - h.y) / l; }
+      else { const gx = (spk.x + 0.5) * TL, gy = (spk.y + 0.5) * TL, l = Math.hypot(gx - h.x, gy - h.y); if (l > 3) { mx = (gx - h.x) / l; my = (gy - h.y) / l; } }
+    } else if (c && !S.home && !S.rest && !S.boss) {
       const cd = Math.hypot(c.x - h.x, c.y - h.y); const def = CR.get(c.kind); const ko = def.tame.method === 'knockout';
       if (S.target !== c.uid) { S.target = c.uid; if (S.log.length < 30) S.log.push(Math.round(S.t) + 's tame ' + c.kind + ' ' + c.st + ' d' + Math.round(cd)); }
-      if (near && cd > 6 * TL) goNear();
+      // IF1: between two feeds (the creature is still chewing), pick up a glint a few steps away and come back, as a player would
+      const chewing = (c.ko || c.st === 'taming') && S.fedAt !== undefined && S.fedUid === c.uid && S.t - S.fedAt < (def.tame.feedEvery || 6) - 3 &&
+        near && Math.hypot((near.x + 0.5) * TL - c.x, (near.y + 0.5) * TL - c.y) < 4 * TL;
+      if (near && (cd > 6 * TL || chewing)) goNear();
       else {
         busy = true; if (c.st === 'wild' && !c.ko) S.tried[c.uid] = (S.tried[c.uid] || 0) + DT;
         const ux = (c.x - h.x) / (cd || 1), uy = (c.y - h.y) / (cd || 1);
         if (ko && !c.ko) { I.soothe(true); if (cd > 4 * TL) { mx = ux; my = uy; } else if (cd < 2.5 * TL) { mx = -ux; my = -uy; } if ((S.fireT -= DT) <= 0 && cd < 7 * TL) { S.fireT = 0.25; S.aimed = c.uid; I.fire(c.x - h.x, c.y - 8 - h.y); } }
-        else { if (cd > 26) { const k = cd < 6 * TL ? 0.45 : 1; mx = ux * k; my = uy * k; } if ((S.feedT -= DT) <= 0) { S.feedT = 1; const r = I.feed(); if (r && r.ok) ev('feed'); } }
+        else { if (cd > 26) { const k = cd < 6 * TL ? 0.45 : 1; mx = ux * k; my = uy * k; } if ((S.feedT -= DT) <= 0) { S.feedT = 1; const r = I.feed(); if (r && r.ok) { ev('feed'); S.fedAt = S.t; S.fedUid = c.uid; } } }
       }
     } else S.target = null;
     if (!busy && near && !S.home) goNear();
     // 2 hunt what cannot be tamed from the pouch (drops) while HP is above half: passive / neutral ones first, normal bolts, 3-5 tiles away
     if (!busy && h.hp >= 0.5 * h.maxHp) {
-      let foe = null, fd = 8 * TL; cs.forEach((q) => { if (q.st === 'tamed' || q.ko || (tameable(q) && foodOk(q))) return; const d = Math.hypot(q.x - h.x, q.y - h.y) + ((q.hostile || q.mood === 'hostile') ? 3 * TL : 0); if (d < fd) { fd = d; foe = q; } });
-      if (foe) { busy = true; I.soothe(false); fd = Math.hypot(foe.x - h.x, foe.y - h.y); const ux = (foe.x - h.x) / (fd || 1), uy = (foe.y - h.y) / (fd || 1); if (fd > 5 * TL) { mx = ux; my = uy; } else if (fd < 3 * TL) { mx = -ux; my = -uy; } else { mx = -uy * 0.6; my = ux * 0.6; }
+      let foe = null, fd = 8 * TL; cs.forEach((q) => { if (q.st === 'tamed' || q.ko || (tameable(q) && foodOk(q)) || (S.hunt[q.uid] || 0) > 15) return; const d = Math.hypot(q.x - h.x, q.y - h.y) + ((q.hostile || q.mood === 'hostile') ? 3 * TL : 0); if (d < fd) { fd = d; foe = q; } });
+      if (foe) { busy = true; I.soothe(false); S.hunt[foe.uid] = (S.hunt[foe.uid] || 0) + DT; /* IF1: a hunt that takes > 15 s is given up */ fd = Math.hypot(foe.x - h.x, foe.y - h.y); const ux = (foe.x - h.x) / (fd || 1), uy = (foe.y - h.y) / (fd || 1); if (fd > 5 * TL) { mx = ux; my = uy; } else if (fd < 3 * TL) { mx = -ux; my = -uy; } else { mx = -uy * 0.6; my = ux * 0.6; }
         if ((S.fireT -= DT) <= 0) { S.fireT = 0.25; S.aimed = foe.uid; I.fire(foe.x - h.x, foe.y - 8 - h.y); } }
     }
     // 3 walk to the next glint / gather spot, else explore; at the end of the path step onto the goal tile's centre (up to 2 s), then
@@ -193,7 +223,20 @@ const BOT = `(rseed) => {
     // self-defence: an awake hostile close by (not the one being tamed) gets shots (never through the creature being fed); back off from it
     let foe = null, fd = 4.5 * TL; cs.forEach((q) => { if (q.uid === (c && c.uid) || q.st === 'tamed' || q.ko || !(q.hostile || q.mood === 'hostile')) return; const d = Math.hypot(q.x - h.x, q.y - h.y); if (d < fd) { fd = d; foe = q; } });
     const inLine = (q) => { if (!c || !(c.ko || c.calm || c.st === 'taming')) return false; const ax = q.x - h.x, ay = q.y - h.y, bx = c.x - h.x, by = c.y - h.y, la = Math.hypot(ax, ay) || 1, lb = Math.hypot(bx, by) || 1; return lb < la + 20 && (ax * bx + ay * by) / (la * lb) > 0.9; };
-    if (foe) { if (!inLine(foe) && (S.fireT -= DT) <= 0) { S.fireT = 0.25; S.aimed = foe.uid; I.fire(foe.x - h.x, foe.y - 8 - h.y); } if (low || fd < 2.5 * TL) { mx = mx * 0.3 - (foe.x - h.x) / fd; my = my * 0.3 - (foe.y - h.y) / fd; } }
+    // IF1: a fight that goes nowhere (a hostile on you for 20 s with no reward meanwhile): walk away from it, 20-35 tiles, without
+    // shooting, as a player would (a badly hurt hero is then left alone: the page's mercy rule)
+    if (foe && !S.flee) S.fightT = (S.fightT || 0) + DT; else if (!foe) S.fightT = 0;
+    if (!S.flee && !S.home && S.fightT > 20 && S.t - S.lastReward > 20) {
+      S.fightT = 0; const ax = h.x - foe.x, ay = h.y - foe.y, la = Math.hypot(ax, ay) || 1;
+      for (let k = 0; k < 10 && !S.flee; k++) { const r = 20 + (k % 4) * 5, sp = (k - 5) * 0.25, ca = Math.cos(sp), sa = Math.sin(sp); const ux = (ax * ca - ay * sa) / la, uy = (ax * sa + ay * ca) / la;
+        const gx = Math.round(h.tx + ux * r), gy = Math.round(h.ty + uy * r); if (!pass(gx, gy)) continue; const p = bfs(new Set([gy * W + gx]), 60000); if (p) S.flee = { path: p, pi: 0, until: S.t + 14 }; }
+      if (S.flee) { S.flees = (S.flees || 0) + 1; S.path = null; }
+    }
+    if (S.flee) {
+      let wp = S.flee.path[S.flee.pi]; while (wp && Math.hypot(wp.x - h.x, wp.y - h.y) < 8) { S.flee.pi++; wp = S.flee.path[S.flee.pi]; }
+      if (!wp || S.t > S.flee.until) S.flee = null; else { const l = Math.hypot(wp.x - h.x, wp.y - h.y) || 1; mx = (wp.x - h.x) / l; my = (wp.y - h.y) / l; }
+    }
+    if (foe) { if (!inLine(foe) && !S.rest && !S.flee && (S.fireT -= DT) <= 0) { S.fireT = 0.25; S.aimed = foe.uid; I.fire(foe.x - h.x, foe.y - 8 - h.y); } if (!S.flee && !S.rest && (low || fd < 2.5 * TL)) { mx = mx * 0.3 - (foe.x - h.x) / fd; my = my * 0.3 - (foe.y - h.y) / fd; } }
     if (S.unstick > 0) { S.unstick -= DT; mx = S.ux; my = S.uy; }
     return { mx, my };
   };
@@ -201,7 +244,7 @@ const BOT = `(rseed) => {
       if ((S.chkT -= DT) <= 0) { S.chkT = 1; const hh = I.hero(); if (S.lastPos && Math.hypot(hh.x - S.lastPos.x, hh.y - S.lastPos.y) < 12 && (m.mx || m.my) && S.unstick <= 0) { S.rs = (S.rs * 1103515245 + 12345) % 2147483648; const a = (S.rs / 2147483648) * 6.283; S.ux = Math.cos(a); S.uy = Math.sin(a); S.unstick = 0.7; S.path = null; } S.lastPos = { x: hh.x, y: hh.y }; } }
     I.render(); return S.t; };
   S.report = () => { const t = S.t, gap = Math.max(S.maxGap, t - S.lastReward); return { t, first: S.first, counts: S.counts, deaths: S.deaths, maxGap: gap, gapAt: gap === S.maxGap ? S.gapAt : S.lastReward, samples: S.samples, empty: S.empty, noVerbN: S.nv || 0, noVerb: S.noVerb,
-    minHp: S.minHp, homes: S.homes || 0, at: [I.hero().tx, I.hero().ty], goal: S.goal, path: S.path ? S.path.length : 0, bad: Object.keys(S.bad).length, stats: I.stats(), inv: I.inv(), medals: I.medals(), tames: I.tamesLive().roster.map((r) => r.sp), log: S.log.slice(0, 12), events: S.events.slice(0, 40) }; };
+    minHp: S.minHp, homes: S.homes || 0, rests: S.rests || 0, flees: S.flees || 0, at: [I.hero().tx, I.hero().ty], goal: S.goal, path: S.path ? S.path.length : 0, bad: Object.keys(S.bad).length, stats: I.stats(), inv: I.inv(), medals: I.medals(), tames: I.tamesLive().roster.map((r) => r.sp), log: S.log.slice(0, 12), events: S.events.slice(0, 40) }; };
   const cs0 = I.creatures();
   return { w: W, h: H, species: I.packSpecies, tameSpecies: I.packSpecies.filter((s) => { const d = I.kindDef(s); return d && d.tameable; }),
     feedable: I.packSpecies.filter((s) => { const d = CR.get(s); const pz = I.pouch(); return d && d.tame && d.diet && d.diet.some((f) => (pz[f] | 0) > 0); }), creatures: cs0.length, nodes: I.nodes().length };

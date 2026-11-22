@@ -58,8 +58,9 @@ const BASELINE_LONG_PER_S = 8.1;
   check('the canvas still fills the 1280x720 viewport whatever the internal resolution', Math.abs(cv.w - 1280) <= 2 && Math.abs(cv.h - 720) <= 2, JSON.stringify(cv));
 
   // input still lands on the right world spot after a resolution change: the pointer maps through the scale manager
-  const pt = await scene((s) => { const cam = s.cameras.main; return { zoom: cam.zoom, base: s.baseZoom, gw: s.scale.width }; });
-  check('camera zoom is scaled with the render scale so the visible world is unchanged', Math.abs(pt.zoom - pt.base * rs) < 1e-6, JSON.stringify(pt));
+  // Read the zoom and the render scale in ONE evaluate: the adaptive scaler can step down at any moment on a slow machine (during the 5 s frame sample above), so a scale read earlier no longer matches the zoom read now.
+  const pt = await scene((s) => { const cam = s.cameras.main; const gc = document.getElementById('game-container'); return { zoom: cam.zoom, base: s.baseZoom, gw: s.scale.width, rs: Number(gc.dataset.renderScale || 1), k: Number(gc.dataset.renderZoom || gc.dataset.renderScale || 1) }; });
+  check('camera zoom is scaled with the render scale so the visible world is unchanged', Math.abs(pt.zoom - pt.base * pt.k) < 1e-6 && [1, 0.75, 0.5].includes(pt.rs), JSON.stringify(pt));
 
   // ---- desktop HUD targets ----
   const ids = ['achievements-badge', 'map-btn', 'world-map-link', 'museum-badge', 'dailies-btn', 'journal-btn', 'settings-toggle-btn', 'chat-input'];

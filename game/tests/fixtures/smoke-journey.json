@@ -1,0 +1,64 @@
+{
+  "v": 1,
+  "allow404": [],
+  "offOrigin": [
+    "https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js",
+    "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"
+  ],
+  "small": {
+    "390x844": {
+      "bugs": [
+        "a#menu-back"
+      ]
+    },
+    "1280x720": {
+      "lantern": [
+        "a#back-hub",
+        "a#back-town"
+      ],
+      "jam": [
+        "a#back-hub",
+        "a#back-town"
+      ],
+      "bugs": [
+        "#top a.back\"Town\"",
+        "#top a.back\"← Hub\"",
+        "a#menu-back"
+      ],
+      "stalk": [
+        "a#back"
+      ]
+    }
+  },
+  "tinyText": {
+    "390x844": {
+      "angler": [
+        "small#bait-type"
+      ]
+    },
+    "1280x720": {
+      "angler": [
+        "small#bait-type"
+      ]
+    }
+  },
+  "overStick": {
+    "390x844": {
+      "bugs": [
+        "#overlay button.card\"DunesLockedNeeds #\" over div#joy",
+        "#overlay button.card\"MarshLockedNeeds #\" over div#joy"
+      ]
+    },
+    "1280x720": {}
+  },
+  "dismiss": {
+    "realm": [
+      "#realm-hero-close"
+    ]
+  },
+  "knownIssues": [
+    "Desktop: the legacy Hub/Town header links on Lantern, Jam, Bug Safari and Stalk are under 44 px (they stay beside the Menu button).",
+    "Bug Safari phone: the arena menu \"Back to the hub\" link is under 44 px, and two locked arena cards sit over the walk joystick (the menu overlay covers it).",
+    "Angler: the bait type label is under 12 px."
+  ]
+}

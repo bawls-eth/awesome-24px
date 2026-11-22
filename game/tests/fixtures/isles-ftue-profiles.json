@@ -98,51 +98,6 @@
     }
   },
   "knownIssues": {
-    "_notes": "Measured on claude/animal-crossing-game-7z3roh @ 67cc086 (3 identical runs: the sim is deterministic). layout.tinyText 5 on every island: the Craft panel's recipe notes (.rc-note) are 11 px. maxRewardGap: long walks between glints after the nearby ones are picked (glints regrow after 180-600 s) with nothing tameable from the starter pouch on home / reef / mars (their diets - clover, kelp, fish, oxide dust, iron - never enter the pouch; only jungle_berry / raw_meat / bug do). deaths: no HP regeneration on the isles (only a respawn heals), so hostiles (jungle raptors, tundra rimewolf / sabrefang, mars at 1 HP after an air run) take a careful bot down over 10 minutes. tundra-b: the first tame (rimewolf knockout) comes at 315 s. reach.marsReachable: the Craft panel lists only CRAFT.IDS (no rocket_core_drift; the iron rocket core needs mars iron), and __isles.craft('rocket_core_drift') makes a rocket core but does not add mars to `unlock` (UNLOCK_BY_ITEM is keyed by recipe id): waits on XW1.",
-    "isles2-home-a": {
-      "layout.tinyText": 5
-    },
-    "isles2-home-b": {
-      "layout.tinyText": 5,
-      "maxRewardGap": 68.3
-    },
-    "isles2-jungle-a": {
-      "layout.tinyText": 5,
-      "deaths": 3
-    },
-    "isles2-jungle-b": {
-      "layout.tinyText": 5,
-      "maxRewardGap": 66.4
-    },
-    "isles2-tundra-a": {
-      "layout.tinyText": 5,
-      "maxRewardGap": 73.9,
-      "deaths": 3
-    },
-    "isles2-tundra-b": {
-      "layout.tinyText": 5,
-      "firstTame": 314.7,
-      "maxRewardGap": 139.5,
-      "deaths": 4
-    },
-    "isles2-reef-a": {
-      "layout.tinyText": 5
-    },
-    "isles2-reef-b": {
-      "layout.tinyText": 5,
-      "maxRewardGap": 161.8
-    },
-    "isles2-mars-a": {
-      "layout.tinyText": 5,
-      "maxRewardGap": 46.6
-    },
-    "isles2-mars-b": {
-      "layout.tinyText": 5,
-      "maxRewardGap": 54.3,
-      "deaths": 2
-    },
-    "reach": {
-      "marsReachable": 0
-    }
+    "_notes": "IF1 (NEXT-SLICES-4): every isles2 profile meets every target, so knownIssues is empty (the gate asserts the real targets). Fixed by IF1: layout.tinyText (.rc-note is 12 px), deaths (MMIsleRest rest spots + slow regen out of danger, rest spots are safe rooms, a creature hit never takes you from above a quarter of your HP to 0, wild creatures break off a badly hurt hero), maxRewardGap (a pouch per island + feeding from the pack, food glints for every diet item, first-sighting journal entries, forage sparkles after 40 s without a reward), tundra firstTame (the pengling eats fish from the tundra pouch and pads over when it smells it). reach.marsReachable was fixed by XW1 (rocket_core_drift on the Craft panel). Before IF1 (base 67cc086): tinyText 5 on every island; deaths jungle-a 3, tundra-a 3, tundra-b 4, mars-b 2; maxRewardGap up to 161.8 s (reef-b); tundra-b firstTame 314.7 s."
   }
 }

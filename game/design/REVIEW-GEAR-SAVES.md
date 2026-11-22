@@ -171,6 +171,16 @@ most once per frame (or every 250 ms), with a flush on exit, death, menu and `vi
 **F17 (minor): `importLegacy` copies soulbound items.** `mm-profile.js:121` copies T11+ items into the Legacy Ranger pack, the one path
 that skips the soulbound rule `MMStash` enforces. Fix: skip `t >= 11` there (or keep them, but note it in the Lantern text).
 
+**Follow-up from the save-merge fuzz (save-uid), both fixed.** *UR, uid reuse:* two tabs could pick different items under the same
+uid before either synced, and a third tab that had already seen (and sold) the first one read the second as "sold here". Salting the uid
+is not possible because every build caps uids at 9,999,999 in `rmCleanCount`, so the fix is additive instead. Every new item carries a
+random tag `u` (`rmItemTag`), the merge's `known` set records which tagged item each uid named (`rmKnownOf` / `rmKnownSame`), and
+(n, u) is the identity when both copies are tagged. Uid sequences are unchanged. Untagged items keep the old rule, and old builds load
+tagged items and drop the tag. *I6-dust:* two stale tabs could spend the same dust, and the three-way merge floored the result at 0, which
+gave the difference away for free. `reforge` and `vendorBuy` now resync before pricing and write at once (`_dustTxnCommit`). A write that
+fails while storage holds the realm undoes the spend. Tests: `save-merge-fuzz` (20000 runs clean, no allow-listed seeds) and
+`gear-dust-txn`.
+
 ## Checked and found fine
 
 - Salvage, reforge, vendor and buy-back arbitrage. Salvage gives `1 + t(1 + r)` (T12 r3 = 49). A T12 r3 reforge costs 150 dust + 6

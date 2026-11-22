@@ -17,15 +17,25 @@ const man = (d) => JSON.parse(fs.readFileSync(path.join(ART, d, 'manifest.json')
   // AW2: b31af (glimmerfrog sleep + eat), b32s (stegolith body + saddle overlays), b36 (the seven meadow tameables) are wired in full
   const assets = man('b31a-jungle-creatures-core').assets.concat(b31b, man('b32-jungle-big-and-boss').assets, man('b31af-glimmerfrog-rest').assets,
     man('b32s-stegolith').assets, man('b36-meadow-creatures').assets, man('b38a-reef-puffer').assets);
+  // AW4: b38b-f the rest of the reef, wired in full (shellcrab 14, the two swim mounts 20 + 20 with saddles, glowjelly 12, fin raider 14, turtle 14)
+  const b38 = ['b38b-shellcrab', 'b38c-reef-mounts', 'b38d-glowjelly', 'b38e-fin-raider', 'b38f-isleback-turtle'].map((d) => man(d).assets);
+  b38.forEach((a) => { assets.push.apply(assets, a); });
+  // AW5: b38g the Tide Hydra boss (12 core + 3 six-frame roars) and b40a the pengling (14), both provisional, wired in full
+  const b38g = man('b38g-tide-hydra').assets, b40a = man('b40a-pengling').assets;
+  assets.push.apply(assets, b38g); assets.push.apply(assets, b40a);
+  // art-audit-3: b40b the frostfox (14) and b40c the rimewolf (14), provisional, wired in full
+  const b40b = man('b40b-frostfox').assets, b40c = man('b40c-rimewolf').assets;
+  assets.push.apply(assets, b40b); assets.push.apply(assets, b40c);
   const files = M.files();
   const byId = {}; files.forEach((f) => { byId[f.id] = f; });
-  check('241 strips: 40 b31a + 24 b31b + 43 b32 + 2 b31af + 20 b32s + 98 b36 + 14 b38a, one per manifest asset', files.length === 241 && b31b.length === 24 && assets.length === 241
-    && assets.every((a) => byId[a.id]) && new Set(files.map((f) => f.id)).size === 241, files.length + ' / ' + assets.length);
+  check('392 strips: 40 b31a + 24 b31b + 43 b32 + 2 b31af + 20 b32s + 98 b36 + 14 b38a + 94 b38b-f (14 + 40 + 12 + 14 + 14) + 15 b38g + 14 b40a + 14 b40b + 14 b40c, one per manifest asset',
+    files.length === 392 && b31b.length === 24 && assets.length === 392 && b38.map((a) => a.length).join() === '14,40,12,14,14' && b38g.length === 15 && b40a.length === 14 && b40b.length === 14 && b40c.length === 14
+    && assets.every((a) => byId[a.id]) && new Set(files.map((f) => f.id)).size === 392, files.length + ' / ' + assets.length);
   const bad = [];
   assets.forEach((a) => {
     const k = a.enemy || a.creature, sp = M.SPECS[k], act = M.ACT[a.action];
     if (!sp || !act) { bad.push(a.id + ' unknown'); return; }
-    if (act[0] !== a.frames || M.fpsOf(a.action, k) !== a.fps || !!act[2] !== !!a.loop) bad.push(a.id + ' timing');
+    if (M.framesOf(a.action, k) !== a.frames || M.fpsOf(a.action, k) !== a.fps || !!act[2] !== !!a.loop) bad.push(a.id + ' timing');
     if (sp.cell !== a.frame_w || sp.cell !== a.frame_h || sp.ax !== a.anchor.x || sp.ay !== a.anchor.y) bad.push(a.id + ' cell/anchor');
     if (a.seat && /^(saddle_)?(idle|move)$/.test(a.action)) {
       const d = M.DIRS.indexOf(a.dir), mv = /move/.test(a.action) ? 'move' : 'idle';
@@ -68,11 +78,32 @@ const man = (d) => JSON.parse(fs.readFileSync(path.join(ART, d, 'manifest.json')
   const szBad = M.KINDS.filter((k) => M.SPECS[k].biome !== 'jungle').filter((k) => { const d = CR.get(k); return !d || SZ[d.size] !== M.SPECS[k].cell / M.SCALE; });
   check('every meadow / reef strip species is an MMCreatures id whose native cell matches its size class (S 48, M 64, L 96, XL 128)', szBad.length === 0, szBad.join());
   const BP = require('../shared/mm-biome-packs.js');
-  check('b38a: reef_puffer is the canon reef species, in the reef spawn table, preloaded by the reef isle (14 strips, death 9 fps)', M.kindsFor('reef').join() === 'reef_puffer'
+  const REEF = ['reef_puffer', 'shellcrab', 'glowjelly', 'fin_raider', 'tidesteed', 'skimray', 'isleback_turtle', 'tide_hydra'];
+  check('b38a: reef_puffer is the canon reef species, in the reef spawn table, preloaded by the reef isle (14 strips, death 9 fps)', M.kindsFor('reef')[0] === 'reef_puffer'
     && BP.canon('reef_puffer') === 'reef_puffer' && CR.get('reef_puffer').biome === 'reef' && BP.creatureIds('reef').indexOf('reef_puffer') >= 0
     && files.filter((f) => f.kind === 'reef_puffer').length === 14 && M.fpsOf('death', 'reef_puffer') === 9);
-  check('kindsFor: an island preloads its biome plus the stable roster (jungle 8, reef 1, meadow + a tusktop 8)', M.kindsFor('jungle').length === 8 && M.kindsFor('jungle').indexOf('stegolith') >= 0
-    && M.kindsFor('reef').length === 1 && M.kindsFor('meadow', ['tusktop', 'nope']).length === 8);
+  check('b38b-g: the eight reef strip species are canon MMCreatures reef ids in the reef pack (spawn table, rare or boss), 12 / 14 / 15 / 20 strips each, no fps overrides but the hydra roar',
+    M.kindsFor('reef').join() === REEF.join() && REEF.every((k) => BP.canon(k) === k && CR.get(k) && CR.get(k).biome === 'reef' && BP.allIds('reef').indexOf(k) >= 0)
+    && REEF.map((k) => files.filter((f) => f.kind === k).length).join() === '14,14,12,14,20,20,14,15' && ['shellcrab', 'glowjelly', 'fin_raider', 'tidesteed', 'skimray', 'isleback_turtle'].every((k) => !M.SPECS[k].fps));
+  check('b38g: the Tide Hydra is the reef boss with a 6-frame roar at 10 fps in all three views (wind-up telegraph); other actions keep the shared timing',
+    CR.get('tide_hydra').tier === 'boss' && M.actionFor('tide_hydra', st({ ph: 'wind' })) === 'roar' && M.framesOf('roar', 'tide_hydra') === 6 && M.framesOf('roar', 'fernjaw_tyrant') === 5
+    && M.fpsOf('roar', 'tide_hydra') === 10 && Math.abs(M.duration('roar', 'tide_hydra') - 0.6) < 1e-9 && M.frameIndex('roar', 0.55, 'tide_hydra') === 5 && M.frameIndex('roar', 9, 'tide_hydra') === 5
+    && M.frameIndex('roar', 0.55) === 4 && M.stripId('tide_hydra', 'roar', M.LEFT) === 'tide_hydra_roar_right' && M.stripId('tide_hydra', 'sleep', 0) === null && M.saddleFor('tide_hydra', true) === null
+    && M.seatOffset('tide_hydra', false, 0, 0, { x: 0, y: 0 }) === false && M.SPECS.tide_hydra.cell === 512);
+  check('b40a: the pengling is the first tundra strip species (S 192 px, feet 96,171, the 14 strips, death at 10 fps), the canon tundra tame',
+    M.kindsFor('tundra')[0] === 'pengling' && BP.canon('pengling') === 'pengling' && BP.creatureIds('tundra').indexOf('pengling') >= 0 && CR.get('pengling').biome === 'tundra'
+    && files.filter((f) => f.kind === 'pengling').length === 14 && M.fpsOf('death', 'pengling') === 10 && M.actionFor('pengling', st({ eating: true })) === 'eat' && /b40a-pengling\/creatures\/pengling\/pengling_eat_down\.png$/.test(byId.pengling_eat_down.url));
+  check('b40b/b40c: frostfox + rimewolf are tundra strip species by id (S 192 px, feet 96,171, 14 strips each, death 10 fps, sleep / eat down)',
+    M.kindsFor('tundra').join() === 'pengling,frostfox,rimewolf' && ['frostfox', 'rimewolf'].every((k) => CR.get(k).biome === 'tundra' && CR.get(k).size === 'S'
+      && BP.creatureIds('tundra').indexOf(k) >= 0 && M.SPECS[k].cell === 192 && files.filter((f) => f.kind === k).length === 14 && M.fpsOf('death', k) === 10
+      && M.stripId(k, 'move', M.LEFT) === k + '_move_right' && M.stripId(k, 'sleep', M.UP) === k + '_sleep_down')
+    && /b40b-frostfox\/creatures\/frostfox\/frostfox_attack_right\.png$/.test(byId.frostfox_attack_right.url) && /b40c-rimewolf\/creatures\/rimewolf\/rimewolf_eat_down\.png$/.test(byId.rimewolf_eat_down.url));
+  check('b38c/f: the swim mounts are MMCreatures rideables (swim) with seats; tidesteed / skimray have saddle overlays, the turtle (saddle: null) rides bare',
+    ['tidesteed', 'skimray', 'isleback_turtle'].every((k) => CR.get(k).ride && CR.get(k).ride.swim && M.seatOffset(k, false, M.DOWN, 0, { x: 0, y: 0 }))
+    && M.saddleFor('tidesteed', true) === 'saddle_move' && M.saddleFor('skimray', false) === 'saddle_idle' && M.saddleFor('isleback_turtle', true) === null && CR.get('isleback_turtle').ride.saddle === null
+    && M.saddleFor('shellcrab', false) === null);
+  check('kindsFor: an island preloads its biome plus the stable roster (jungle 8, reef 8, tundra 3, mars 0, meadow + a tusktop 8)', M.kindsFor('jungle').length === 8 && M.kindsFor('jungle').indexOf('stegolith') >= 0
+    && M.kindsFor('reef').length === 8 && M.kindsFor('tundra').length === 3 && M.kindsFor('mars').length === 0 && M.kindsFor('meadow', ['tusktop', 'nope']).length === 8);
   check('saddleFor: the stegolith has overlays; the meadow strider (no saddle) has none', M.saddleFor('stegolith', true) === 'saddle_move' && M.saddleFor('meadow_strider', false) === null);
   check('saddleFor: tusktop / tyrant have overlays, others none', M.saddleFor('tusktop', true) === 'saddle_move' && M.saddleFor('fernjaw_tyrant', false) === 'saddle_idle' && M.saddleFor('fernraptor', true) === null);
   check('stripId: precomputed, left reuses right, down-only actions stay down', M.stripId('tusktop', 'move', M.LEFT) === 'tusktop_move_right' && M.stripId('fernraptor', 'sleep', M.UP) === 'fernraptor_sleep_down'
@@ -82,6 +113,9 @@ const man = (d) => JSON.parse(fs.readFileSync(path.join(ART, d, 'manifest.json')
   check('seatOffset: tusktop idle down frame 0 = 47.5 px above the feet, centred', M.seatOffset('tusktop', false, M.DOWN, 0, seat) && seat.x === 0 && seat.y === (350 - 160) / 4);
   check('seatOffset: right / left mirror x, frame wraps', M.seatOffset('tusktop', true, M.RIGHT, 7, seat) && seat.x === -5 && seat.y === (350 - 204) / 4
     && M.seatOffset('tusktop', true, M.LEFT, 1, seat) && seat.x === 5);
+  check('seatOffset (b38 revisions): tidesteed right move frame 1 (manifest 180,120), skimray left idle mirrors x (184,188), turtle down idle (256,176) = 71.75 px up with no drawn-seat nudge left', M.seatOffset('tidesteed', true, M.RIGHT, 1, seat) && seat.x === -3 && seat.y === (347 - 120) / 4
+    && M.seatOffset('skimray', false, M.LEFT, 0, seat) && seat.x === 2 && seat.y === (347 - 188) / 4 && M.seatOffset('isleback_turtle', false, M.DOWN, 0, seat) && seat.x === 0 && seat.y === (463 - 176) / 4 && !M.SPECS.isleback_turtle.sdy
+    && M.seatOffset('isleback_turtle', true, M.LEFT, 3, seat) && seat.x === 5 && seat.y === (463 - 176) / 4);
   check('seatOffset: no seat data -> false', M.seatOffset('fernraptor', false, 0, 0, seat) === false);
   check('seatOffset: stegolith (b32s) and meadow strider (b36) seats from their manifests', M.seatOffset('stegolith', false, M.DOWN, 2, seat) && seat.x === -1 && seat.y === (463 - 216) / 4
     && M.seatOffset('meadow_strider', true, M.LEFT, 3, seat) && seat.x === 0.75 && seat.y === (347 - 153) / 4);
@@ -90,16 +124,18 @@ const man = (d) => JSON.parse(fs.readFileSync(path.join(ART, d, 'manifest.json')
   // 5 loader: stub images + stub canvas; native 1/4 bake; per-creature fallback when a needed strip is missing
   const canvases = [];
   const mk = (w, h) => { const calls = []; const cv = { width: w, height: h, calls, getContext: () => ({ drawImage: (...a) => calls.push(a), set imageSmoothingEnabled(v) { cv.smooth = v; } }) }; canvases.push(cv); return cv; };
-  const img = (u) => { const f = files.find((x) => u.endsWith(x.id + '.png')); const cell = M.SPECS[f.kind].cell; return { naturalWidth: cell * M.ACT[f.act][0], naturalHeight: cell, u }; };
+  const img = (u) => { const f = files.find((x) => u.endsWith(x.id + '.png')); const cell = M.SPECS[f.kind].cell; return { naturalWidth: cell * M.framesOf(f.act, f.kind), naturalHeight: cell, u }; };
   const asked = [];
   const set = M.create({ create: mk, loadImage: (u) => { asked.push(u); return Promise.resolve(/glimmerfrog_move_up/.test(u) ? null : img(u)); } });
   check('before ready: nothing is drawn from PNG', !set.has('fernraptor') && set.get('fernraptor', 'idle', 0) === null);
   await set.ready;
-  check('loads each of the 241 PNGs exactly once', asked.length === 241 && new Set(asked).size === 241);
+  check('loads each of the 392 PNGs exactly once', asked.length === 392 && new Set(asked).size === 392);
   check('complete creatures are on, glimmerfrog (a missing move_up) falls back to the code bake', set.has('fernraptor') && set.has('tusktop') && set.has('fernjaw_tyrant') && set.has('chompbill') && !set.has('glimmerfrog'));
   const fr = set.get('fernraptor', 'move', M.LEFT), tk = set.get('tusktop', 'saddle_move', M.DOWN), ty = set.get('fernjaw_tyrant', 'roar', M.UP);
   check('baked strips are native size (256 -> 64, 384 -> 96, 512 -> 128) with the anchor scaled', fr.w === 64 && fr.frames === 6 && fr.ax === 32 && fr.ay === 231 / 4 && tk.w === 96 && tk.id === 'tusktop_saddle_move_down' && ty.w === 128 && ty.id === 'fernjaw_tyrant_roar_up');
-  check('each loaded strip (240: one failed) is baked once onto a frames x native canvas with smoothing off', canvases.length === 240 && fr.src.width === 64 * 6 && fr.src.height === 64 && fr.src.smooth === false);
+  const hr = set.get('tide_hydra', 'roar', M.LEFT);
+  check('the hydra roar bakes all 6 frames (512 -> 128) and the pengling is on', hr.frames === 6 && hr.w === 128 && hr.src.width === 128 * 6 && set.has('tide_hydra') && set.has('pengling') && set.has('frostfox') && set.has('rimewolf'));
+  check('each loaded strip (391: one failed) is baked once onto a frames x native canvas with smoothing off', canvases.length === 391 && fr.src.width === 64 * 6 && fr.src.height === 64 && fr.src.smooth === false);
   const oak = set.get('oakback', 'idle', M.DOWN), steg = set.get('stegolith', 'saddle_idle', M.RIGHT);
   const pw = set.get('puffwool', 'idle', M.DOWN), sd = set.get('meadow_strider', 'move', M.RIGHT), rp = set.get('reef_puffer', 'eat', M.LEFT);
   check('b36 / b38a redo cells bake to their size class: oakback 512 -> 128 (feet 463/4), strider 384 -> 96, puffwool / reef puffer 192 -> 48; stegolith 512 -> 128',

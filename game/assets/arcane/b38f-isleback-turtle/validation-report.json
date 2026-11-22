@@ -1,0 +1,15 @@
+{
+  "batch": "b38f",
+  "label": "isleback-turtle",
+  "generated_utc": "2026-11-22T13:53:53.659682Z",
+  "files": 14,
+  "duplicate_ids": 0,
+  "blocking": {},
+  "warnings": {},
+  "standing_heights": {
+    "isleback_turtle/down": 424,
+    "isleback_turtle/up": 424,
+    "isleback_turtle/right": 376
+  },
+  "status": "provisional"
+}

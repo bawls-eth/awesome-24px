@@ -90,7 +90,7 @@ async function pageChecks(browser, label, ctxOpts, url, kind) {
   });
   await page.waitForTimeout(300);
   const c1 = await page.evaluate(() => window.__mm.arena.clock);
-  check(L('one tap opens the "Where to?" sheet with 10 places, exactly one modal dialog'), sh.open && sh.dests === 10 && sh.modals === 1, JSON.stringify(sh));
+  check(L('one tap opens the "Where to?" sheet with 12 places, exactly one modal dialog'), sh.open && sh.dests === 12 && sh.modals === 1, JSON.stringify(sh));
   check(L('the sheet marks the Realm as the current place and offers Settings'), sh.cur && sh.cur.place === 'realm' && sh.set, JSON.stringify(sh));
   check(L('opening the sheet pauses the run (clock frozen, no panel opened)'), sh.paused && !sh.panel && c1 === sh.c0, JSON.stringify({ sh, c1 }));
   if (kind === 'dungeon-return') check(L('Back row goes to the world'), sh.back === 'Back to the world' && decodeURIComponent(sh.backHref) === RET, JSON.stringify(sh));

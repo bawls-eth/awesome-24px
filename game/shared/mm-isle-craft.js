@@ -4,6 +4,9 @@
 // XD1 (NEXT-SLICES-3): alternative recipes that make the same item (`item`), the mars fix (rocket_core_drift, o2_tank_kelp), recipes for
 // every drop no recipe used, a pure island reachability walk (reachability()) and the validate() rule that an island's unlock item
 // never needs an input found only on that island.
+// TD1 (NEXT-SLICES-4): additive rare items (aurora_shard from the tundra's aurora frostfox tame and the aurora night glints, chrome_flake
+// from the mars chrome rustbeetle tame and the wreck salvage glints; EXTRA_SOURCES) and two decor recipes that use them (aurora_lamp,
+// chrome_beacon). The o2 tank notes say what it gives (+30 s air). Nothing else changes: every old recipe, source and wave stays.
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory(require('./mm-creatures.js'), require('./mm-biome-packs.js'));
   else root.MMIsleCraft = factory(root.MMCreatures, root.MMBiomePacks);
@@ -36,10 +39,10 @@
     // the iron build stays (a spare core once you are on mars); rocket_core_drift below is the way there from a fresh save
     rocket_core: R({ iron: 4, frost_crystal: 2, amber: 2 }, 'unlocks mars (iron build)'),
     warm_cloak: R({ hide: 3, fiber: 3 }, 'tundra cold protection'),
-    o2_tank: R({ iron: 3, kelp: 2, oxide_dust: 1 }, 'mars air'),
+    o2_tank: R({ iron: 3, kelp: 2, oxide_dust: 1 }, '+30 s air on mars'),
     // ---- XD1: the mars fix (each makes the same inventory item as the recipe it stands in for) ----
     rocket_core_drift: R({ driftwood: 3, frost_crystal: 2, amber: 2, pearl: 1 }, 'unlocks mars (reef, tundra and jungle finds)', { item: 'rocket_core' }),
-    o2_tank_kelp: R({ kelp: 3, shell: 2, ice: 2 }, 'mars air (a kelp-sealed tank)', { item: 'o2_tank' }),
+    o2_tank_kelp: R({ kelp: 3, shell: 2, ice: 2 }, '+30 s air on mars (a kelp-sealed tank)', { item: 'o2_tank' }),
     // ---- XD1: cozy and useful uses for drops no recipe used before ----
     heat_pack: R({ spring_salt: 1, fiber: 2 }, 'extra warmth on the tundra', { use: 'warmth' }),
     glow_lamp: R({ glow_gel: 1, shell: 2 }, 'a soft light for home', { use: 'light' }),
@@ -54,6 +57,9 @@
     trophy_dragon: R({ frost_heart: 1, frost_crystal: 3 }, 'home decor: the Frost Dragon', { use: 'decor', trophy: true }),
     // MMCreatures gives the Red Titan (mars_boss) no unique drop, so its trophy is a big haul of what it does drop
     trophy_titan: R({ meteor_glass: 4, iron: 5 }, 'home decor: the Red Titan', { use: 'decor', trophy: true }),
+    // ---- TD1: decor from the tundra / mars rares (each input also has a calm second source: a night glint or wreck salvage) ----
+    aurora_lamp: R({ aurora_shard: 2, frost_crystal: 1 }, 'home decor: a lamp that glows like the aurora', { use: 'decor' }),
+    chrome_beacon: R({ chrome_flake: 2, iron: 1 }, 'home decor: a shiny chrome beacon', { use: 'decor' }),
   };
   (function freezeAll(o) { Object.freeze(o); Object.keys(o).forEach((k) => { if (o[k] && typeof o[k] === 'object') freezeAll(o[k]); }); })(RECIPES);
   // ALL_IDS: every recipe. IDS: the 16 X2 recipes the isles craft panel lists today (games/isles/isles.js renders CRAFT.IDS); the page
@@ -61,13 +67,38 @@
   const ALL_IDS = Object.freeze(Object.keys(RECIPES));
   const IDS = Object.freeze(ALL_IDS.slice(0, ALL_IDS.indexOf('o2_tank') + 1));
 
-  // ---- where each item comes from: pack resources, pack forage finds and creature drop tables ----
+  // ---- IF1 (NEXT-SLICES-4): food glints. Page-side walk-over nodes the isles page places on a seeded walkable tile of the listed terrain
+  // (`near` = within `r` tiles of the island's dock or spawn point; `zone` = that pack band only). They are the source of every creature
+  // diet item no pack resource or drop table gives (fish, flower, hay, nectar, sea_melon, greenhouse_potato, golden_apple, bug) and a
+  // labelled vine rope patch by the jungle dock (the raft input). Pure data: MMOverworld never reads it, so every world hash is unchanged.
+  // pack id -> [{ id, n, terrain[], near?, r?, zone?, respawn (s), label? }]
+  const N = (id, n, terrain, extra) => Object.assign({ id: id, n: n, terrain: terrain, respawn: 240 }, extra || {});
+  const FOOD_NODES = {
+    meadow: [N('flower', 4, ['flower_meadow', 'grass']), N('hay', 4, ['tall_grass']), N('nectar', 3, ['flower_meadow', 'clover_patch']),
+      N('bug', 4, ['tall_grass', 'grass'], { near: 'spawn', r: 30 }), N('fish', 3, ['wet_sand', 'sand', 'dock_planks'], { near: 'dock', r: 8 }),
+      N('golden_apple', 1, ['grass'], { zone: [2, 3], respawn: 900 })],
+    jungle: [N('vine_rope', 3, ['fern_thicket', 'jungle_moss', 'jungle_floor', 'sand'], { near: 'dock', r: 15, respawn: 150, label: 'vine rope' }),
+      N('nectar', 3, ['orchid_moss', 'jungle_moss']), N('bug', 4, ['jungle_floor'])],
+    reef: [N('fish', 5, ['shell_beach', 'reef_sand'], { near: 'spawn', r: 40 }), N('sea_melon', 3, ['sandbar', 'seagrass'], { zone: [2] })],
+    tundra: [N('fish', 5, ['ice_sheet', 'packed_snow', 'tundra_moss'], { near: 'spawn', r: 40 }), N('fish', 3, ['ice_sheet', 'packed_snow', 'slush'], { near: 'dock', r: 8 }),
+      N('frostberry', 14, ['tundra_moss', 'snow', 'powder_snow'], { zone: [1, 2, 3], respawn: 150 })],
+    mars: [N('greenhouse_potato', 4, ['habitat_floor'])],
+  };
+  (function freezeAll(o) { Object.freeze(o); Object.keys(o).forEach((k) => { if (o[k] && typeof o[k] === 'object') freezeAll(o[k]); }); })(FOOD_NODES);
+  // TD1: item sources that live on the isles page, not in a pack or drop table: 'rare:<pack>' (the drop when you tame that island's rare
+  // variant, never on a kill) and 'glint:<pack>' (the page's once-a-day glints: aurora crystals at night on the tundra, wreck salvage on mars)
+  const EXTRA_SOURCES = Object.freeze({ aurora_shard: Object.freeze(['rare:tundra', 'glint:tundra']), chrome_flake: Object.freeze(['rare:mars', 'glint:mars']) });
+  const foodNodes = (packId) => { const k = P && P.resolveId ? P.resolveId(packId) : packId; return typeof k === 'string' && own.call(FOOD_NODES, k) ? FOOD_NODES[k] : []; };
+
+  // ---- where each item comes from: pack resources, pack forage finds, food glints and creature drop tables ----
   function sources() {
     const m = {};
     const add = (item, src) => { if (!own.call(m, item)) m[item] = []; if (m[item].indexOf(src) < 0) m[item].push(src); };
     ((P && P.IDS) || []).forEach((pid) => { const p = P.get(pid); ((p && p.resources) || []).forEach((r) => add(r.id, 'pack:' + pid)); });
+    Object.keys(FOOD_NODES).forEach((pid) => FOOD_NODES[pid].forEach((r) => add(r.id, 'node:' + pid)));
     ((P && P.IDS) || []).forEach((pid) => { const f = P.finds ? P.finds(pid) : null; ((f && f.items) || []).forEach((r) => add(r[0], 'find:' + pid)); });
     Object.keys((C && C.DROP_TABLES) || {}).forEach((k) => C.DROP_TABLES[k].forEach((row) => add(row[0], 'drop:' + k)));
+    Object.keys(EXTRA_SOURCES).forEach((it) => EXTRA_SOURCES[it].forEach((src) => add(it, src)));
     return m;
   }
   const SRC = sources();
@@ -138,7 +169,7 @@
   function islesOfSource(src) {
     if (typeof src !== 'string') return [];
     const i = src.indexOf(':'), kind = src.slice(0, i), id = src.slice(i + 1);
-    if (kind === 'pack' || kind === 'find') return own.call(PACK_ISLE, id) ? [PACK_ISLE[id]] : [];
+    if (kind === 'pack' || kind === 'find' || kind === 'node' || kind === 'rare' || kind === 'glint') return own.call(PACK_ISLE, id) ? [PACK_ISLE[id]] : [];
     if (kind === 'drop') return own.call(TABLE_ISLES, id) ? TABLE_ISLES[id].slice() : [];
     return [];
   }
@@ -207,7 +238,18 @@
     });
     const reach = reachability(tbl);
     reach.locked.forEach((x) => errors.push('island ' + x + ' never opens from a fresh save'));
+    dietGaps(tbl).forEach((f) => errors.push('diet item ' + f + ' has no source (no pack, find, food glint, drop table or recipe)'));
     return { ok: errors.length === 0, errors: errors };
+  }
+
+  // IF1: every MMCreatures diet item with no source at all (no pack resource, forage find, food glint, drop table, or a recipe that makes it)
+  function dietGaps(recipes) {
+    const tbl = recipes || RECIPES, out = [];
+    ((C && C.list && C.list()) || []).forEach((d) => (d.diet || []).forEach((f) => {
+      if (out.indexOf(f) >= 0 || sourcesOf(f).length || recipesFor(f, tbl).length) return;
+      out.push(f);
+    }));
+    return out.sort();
   }
 
   // XD1: a daily gather pick's bonus find on a pack's island. u is one MMRng draw in [0, 1) made by the caller (this module has no RNG):
@@ -222,5 +264,5 @@
   }
 
   return Object.freeze({ RECIPES, IDS, ALL_IDS, MAX_STACKS, MAX_COUNT, GATES, ISLES, get, outputOf, recipesFor, sourcesOf, islesOf, islesOfSource, cleanInv,
-    canCraft, craft, validate, reachability, bonusFind });
+    canCraft, craft, validate, reachability, bonusFind, FOOD_NODES, foodNodes, dietGaps, EXTRA_SOURCES });
 }));

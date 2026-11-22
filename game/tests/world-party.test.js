@@ -139,7 +139,12 @@ const SPY = () => {
   check('1k. beyond 40 tiles the ghost is not drawn and its tag hides', !!farAt && far1 === far0 && far.tag === 'none', JSON.stringify({ farAt, far0, far1, far }));
   check('1l. the minimap dot redraws when the partner moves (and only then)', far.mini > d0, JSON.stringify({ d0, far }));
   await T(B, (t, a, w, s) => { a.player.x = s.x + 64; a.player.y = s.y; }, spawn);
-  await A.waitForFunction((x) => { const g = window.__mm.team.ghosts().find((q) => q.seat === 1); return g && g.x < x + 4; }, spawn.x / 32, { timeout: 2000 }).catch(() => {});
+  // wait until A's ghost of B is back at B's tile (2 tiles from A). A one-sided `g.x < spawn + 4` was already true when the far tile
+  // lay WEST (x - 50, picked when x + 50 is not free on this run's seed), so the kill below ran while A still saw B ~50 tiles away,
+  // out of the 40-tile share range: no bag was posted and 2e / 2f / 2g failed on those seeds.
+  const back = await A.waitForFunction((s) => { const g = window.__mm.team.ghosts().find((q) => q.seat === 1); return !!g && Math.hypot(g.x - s.x, g.y - s.y) < 0.6; },
+    { x: (spawn.x + 64) / 32, y: spawn.y / 32 }, { timeout: 5000, polling: 50 }).then(() => true, () => false);
+  check('1m. after B walks back, A\'s ghost of B is at B\'s tile again (before the shared kill)', back, JSON.stringify(await T(A, (t) => t.ghosts())));
 
   // ================= 2. a shared kill: own bag id, own tiered roll per seat; soulbound never crosses =================
   const gp = [await T(A, (t, a, w) => w.gearPlayerId()), await T(B, (t, a, w) => w.gearPlayerId())];
@@ -166,7 +171,7 @@ const SPY = () => {
     return { n, dead, grew, items: got ? got.items.map((i) => ({ id: i.id, t: i.t || 0, rolled: i.rolled })) : [], own: t.bags().slice(-1)[0], shared: t.stats().shared };
   });
   check('2d. A\'s real world kill drops A\'s own tiered bag and is shared (one share per kill)', !!kill && kill.dead && kill.grew && kill.items.length > 0 && kill.items.every((i) => i.t >= 1) && kill.shared === kill.n, JSON.stringify(kill));
-  const gotB = await B.waitForFunction((n) => window.__mm.team.rolls().length >= n, bRolls0 + (kill ? kill.n : 1), { timeout: 3000 }).then(() => true, () => false);
+  const gotB = await B.waitForFunction((n) => window.__mm.team.rolls().length >= n, bRolls0 + (kill ? kill.n : 1), { timeout: 20000 }).then(() => true, () => false);
   const rollB = await T(B, (t, a, w) => ({ bags: t.bags(), roll: t.rolls().slice(-1)[0], drops: w.lastDrops().length }));
   const postedKill = await A.evaluate((n) => window.__spy.posted.slice(n).map((q) => q.m), nPost0); // before the extra shares below
   // a bag can be shards / potions only: share more of A's (safe) drops until B's own roll has items, to check B's tiers

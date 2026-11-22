@@ -88,5 +88,15 @@
     return { boss_art: b.boss_art, boss_name: b.boss_name, alt: false, bossBolt: b.bossBolt, sig: b.sig };
   }
 
-  return { IDS, BIOMES, clean, get, creatures, skinFor, bossFor, seedParity };
+  // DV1 (additive): the seeded dungeon mutators for a biome + dungeon seed (MMEndgame.mutatorsFor, z2+ biomes only). No MMEndgame = none.
+  // opts: { off, count } as MMEndgame takes them. Returns { list, ids, fx, label, text }.
+  const NO_MUT = Object.freeze({ list: Object.freeze([]), ids: Object.freeze([]), fx: null, label: '', text: '' });
+  function mutatorsFor(v, seed, opts) {
+    let EG = null;
+    try { EG = typeof MMEndgame !== 'undefined' ? MMEndgame : (typeof module === 'object' && module.exports && typeof require === 'function' ? require('./mm-endgame.js') : null); } catch (e) { EG = null; }
+    if (!EG || typeof EG.mutatorsFor !== 'function') return NO_MUT;
+    return EG.mutatorsFor(clean(v), undefined, seed, opts);
+  }
+
+  return { IDS, BIOMES, clean, get, creatures, skinFor, bossFor, seedParity, mutatorsFor };
 }));

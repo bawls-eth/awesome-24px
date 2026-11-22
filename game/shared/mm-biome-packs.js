@@ -232,11 +232,12 @@
   // MMRng and keeps the find when u < chance, chosen by weight (MMIsleCraft.bonusFind). These are the second source of items that
   // otherwise come from one place only (feather, honey, wool, driftwood, salt, apple, bone, stone, cocoa, glow_gel, ice_core, ...).
   const FINDS = {
-    meadow: { chance: 0.35, items: [['feather', 3], ['honey', 2], ['wool', 2], ['driftwood', 2], ['salt', 1]] },
-    jungle: { chance: 0.3, items: [['apple', 3], ['bone', 2], ['stone', 2]] },
-    reef: { chance: 0.3, items: [['cocoa', 2], ['glow_gel', 2]] },
-    tundra: { chance: 0.3, items: [['ice_core', 1], ['wool', 2]] },
-    mars: { chance: 0.3, items: [['spring_salt', 2], ['data_chip', 1]] },
+    // IF1: additive food rows (fish at the home dock, a rare golden apple, flowers, nectar, bugs, sea melon, greenhouse potatoes)
+    meadow: { chance: 0.35, items: [['feather', 3], ['honey', 2], ['wool', 2], ['driftwood', 2], ['salt', 1], ['fish', 2], ['golden_apple', 1], ['flower', 1]] },
+    jungle: { chance: 0.3, items: [['apple', 3], ['bone', 2], ['stone', 2], ['nectar', 1], ['bug', 1]] },
+    reef: { chance: 0.3, items: [['cocoa', 2], ['glow_gel', 2], ['fish', 2], ['sea_melon', 1]] },
+    tundra: { chance: 0.3, items: [['ice_core', 1], ['wool', 2], ['fish', 2]] },
+    mars: { chance: 0.3, items: [['spring_salt', 2], ['data_chip', 1], ['greenhouse_potato', 2]] },
   };
   (function () { Object.keys(FINDS).forEach(function (k) { FINDS[k].items.forEach(Object.freeze); Object.freeze(FINDS[k].items); Object.freeze(FINDS[k]); }); Object.freeze(FINDS); })();
   // finds(id) -> the frozen { chance, items: [[item, weight]] } of a pack (aliases ok), or null

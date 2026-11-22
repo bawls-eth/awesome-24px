@@ -54,7 +54,7 @@ const OLD16 = ['saddle_tusktop', 'saddle_stegolith', 'saddle_tyrant', 'saddle_sh
   'saddle_grazer', 'saddle_titan', 'feast', 'sleepy_herb', 'raft', 'rocket_core', 'warm_cloak', 'o2_tank'];
 check('XD1: the 16 existing recipe ids are all kept, and still make themselves', OLD16.every((id) => X.get(id) && X.outputOf(id) === id));
 check('XD1: IDS stays the 16-recipe panel list (the page lists IDS until XW1); ALL_IDS has every recipe', JSON.stringify(X.IDS) === JSON.stringify(OLD16) && Object.isFrozen(X.ALL_IDS) &&
-  JSON.stringify(X.ALL_IDS) === JSON.stringify(Object.keys(X.RECIPES)) && X.ALL_IDS.length === 30);
+  JSON.stringify(X.ALL_IDS) === JSON.stringify(Object.keys(X.RECIPES)) && X.ALL_IDS.length === 32); // TD1: + aurora_lamp, chrome_beacon
 check('XD1 1: rocket_core_drift makes a rocket_core from home/jungle/reef/tundra inputs only', (() => {
   const r = X.get('rocket_core_drift');
   return X.outputOf('rocket_core_drift') === 'rocket_core' && JSON.stringify(r.in) === JSON.stringify({ driftwood: 3, frost_crystal: 2, amber: 2, pearl: 1 }) &&
@@ -126,5 +126,18 @@ check('XD1 finds: every find item is a known item and each weight is reachable',
   return f.items.every((r) => seen[r[0]] && X.sourcesOf(r[0]).indexOf('find:' + id) >= 0);
 }));
 check('XD1: the module source has no Math.random, Date, DOM or network', (() => { const s = require('fs').readFileSync(require('path').join(__dirname, '..', 'shared', 'mm-isle-craft.js'), 'utf8'); return !/Math\.random|Date\.|new Date|document\.|window\.|fetch\(|XMLHttpRequest|localStorage/.test(s); })());
+
+// ---------------- TD1 (NEXT-SLICES-4): rare items and their decor ----------------
+check('TD1: aurora_shard / chrome_flake each have 2 sources (the rare tame + a page glint) on their own island, and are known to cleanInv',
+  JSON.stringify(X.sourcesOf('aurora_shard')) === '["rare:tundra","glint:tundra"]' && JSON.stringify(X.sourcesOf('chrome_flake')) === '["rare:mars","glint:mars"]'
+  && JSON.stringify(X.islesOf('aurora_shard')) === '["ice"]' && JSON.stringify(X.islesOf('chrome_flake')) === '["mars"]' && X.islesOfSource('rare:mars')[0] === 'mars'
+  && JSON.stringify(X.cleanInv({ aurora_shard: 2, chrome_flake: 1, aurora_lamp: 1, chrome_beacon: 1 })) === '{"aurora_shard":2,"chrome_flake":1,"aurora_lamp":1,"chrome_beacon":1}');
+check('TD1: aurora_lamp (aurora_shard 2, frost_crystal 1) and chrome_beacon (chrome_flake 2, iron 1) are decor; craftable from tundra (wave 0) and mars (wave 2)',
+  JSON.stringify(X.get('aurora_lamp').in) === '{"aurora_shard":2,"frost_crystal":1}' && JSON.stringify(X.get('chrome_beacon').in) === '{"chrome_flake":2,"iron":1}'
+  && X.get('aurora_lamp').use === 'decor' && X.get('chrome_beacon').use === 'decor' && reach.recipes.aurora_lamp === 0 && reach.recipes.chrome_beacon === 2
+  && X.craft({ aurora_shard: 2, frost_crystal: 1 }, 'aurora_lamp').aurora_lamp === 1 && !X.canCraft({ chrome_flake: 1, iron: 1 }, 'chrome_beacon').ok);
+check('TD1: the rares gate nothing: the unlock waves and every old recipe wave are unchanged, the table still validates, the o2 tank notes say +30 s air',
+  X.validate().ok && JSON.stringify(reach.wave) === '{"home":0,"jungle":0,"ice":0,"reef":1,"mars":2}' && OLD16.every((id) => reach.recipes[id] !== null)
+  && /\+30 s air/.test(X.get('o2_tank').note) && /\+30 s air/.test(X.get('o2_tank_kelp').note) && Object.isFrozen(X.EXTRA_SOURCES));
 
 console.log(failed ? `${failed} FAILED` : 'ALL PASSED'); process.exitCode = failed ? 1 : 0;

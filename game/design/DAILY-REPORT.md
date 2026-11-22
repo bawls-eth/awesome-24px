@@ -111,3 +111,7 @@
 - 2026-11-22 (08:xx UTC): Opus review of Town/nav/feedback: P0 found + fixed (feedback box leaked keys to Town hotkeys: emotes/walkie/chat), P1 isles same; Nexus vendor Shop button fix (players could not buy: dust stall only); Codex redo batches (b34b raft, b35 grass edges, b36 small/oakback/strider, b38a reef puffer) wired. Full suite 313/313. Open P2s from REVIEW-TOWN-NAV.md: nav sheet swallows keyup, sheet under Realm invite/embed, feedback Delete/Copy stale across tabs, postcards focus, hub gift vs Town shard last-writer, triage Markdown of raw text.
 - Feedback: received 0, implemented 0, rejected 0.
 - OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
+
+- 2026-11-22 (21:xx UTC): Mini-game fun pass: Jam (combo/PB/one-tap restart), Angler (streaks, reaction time, clearer fails), Stalk (trade buttons up, practice week), Deepdelve (dive rounds, modifiers, PBs), Bug Safari (near-miss, combos, PB), Lantern (clear rank + next goal); two NEW games: Pixel Pop and Lantern Dash. Realm endgame: relic book + chase line, dungeon mutators + deep runs, Trial of Six boss rush. Isles low-gfx/accessibility tier. Frostfox/rimewolf wired; art audit 0 blockers, 2 needs-redo (ART-AUDIT-3.md); Codex minigame art batches posted (CODEX-MINIGAME-ART-ASKS.md). Hub map fix (phone). Full suite 341/341 on 789b246.
+- Feedback: received 0, implemented 0, rejected 0.
+- OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.

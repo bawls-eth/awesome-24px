@@ -119,7 +119,7 @@
     const dSeed = dailyFor('dungeon');
     const hasSeed = !!EXPLICIT_SEED || !!dSeed;
     // layout version: explicit ?lv=2, or a fresh random seed (new run); a link with a seed and no lv keeps the original layouts
-    dungeon = MMDungeonRun.create(arena, { bosses: params.get('bosses') === 'classic' ? 'classic' : '', layout: (params.get('lv') === '2' || !hasSeed || !!dSeed) ? 2 : 1, seed: hasSeed ? (EXPLICIT_SEED || dSeed) : String(Date.now() % 100000), home: HOME, homeLabel: HOME_LABEL, fromHub: FROM_HUB, test: TEST, returnTo: RETURN, biome: DBIOME });
+    dungeon = MMDungeonRun.create(arena, { bosses: params.get('bosses') === 'classic' ? 'classic' : '', layout: (params.get('lv') === '2' || !hasSeed || !!dSeed) ? 2 : 1, seed: hasSeed ? (EXPLICIT_SEED || dSeed) : String(Date.now() % 100000), home: HOME, homeLabel: HOME_LABEL, fromHub: FROM_HUB, test: TEST, returnTo: RETURN, biome: DBIOME, floor: /^[23]$/.test(params.get('floor') || '') ? Number(params.get('floor')) : 1 }); // DV1: ?floor=2|3 only from the deep-run stairs
     document.body.classList.add('dungeon-mode');
   }
   if (WORLD) {
@@ -714,7 +714,7 @@
   if (AX_ON) {
     axApply(axPrefs);
     // gear icon (always reachable) + a Settings button in the Esc menu (the menu DOM is built lazily by the arena)
-    const gear = mkEl('button', '', '⚙'); gear.id = 'mm-gear-btn'; gear.type = 'button'; gear.setAttribute('aria-label', 'Open settings'); gear.title = 'Settings';
+    const gear = mkEl('button', '', ''); gear.appendChild(mkEl('span', 'mm-gear-glyph', '⚙')); gear.id = 'mm-gear-btn'; gear.type = 'button'; gear.setAttribute('aria-label', 'Open settings'); gear.title = 'Settings'; // the glyph hides once the icon loads (no 0 px text)
     gear.addEventListener('click', () => axOpen(true)); overlayEl.appendChild(gear);
     if (params.get('uiicons') !== '0') {
       const gi = document.createElement('img'); gi.className = 'mm-ico'; gi.alt = ''; gi.setAttribute('aria-hidden', 'true'); gi.draggable = false;
@@ -755,7 +755,8 @@
     const shown = (n) => !!n && !n.classList.contains('hidden') && n.getClientRects().length > 0 && getComputedStyle(n).display !== 'none';
     const tick = () => {
       let any = false, other = false;
-      overlayEl.querySelectorAll('[role="dialog"]').forEach((n) => { if (shown(n)) { any = true; if (n.id !== 'mm-settings' && n.id !== 'realm-pause') other = true; } });
+      // PLAYTEST-REVIEW-3: the hero picker (a fresh visitor's first screen) keeps the Menu button: its card steps below the button (mad-maze.css)
+      overlayEl.querySelectorAll('[role="dialog"]').forEach((n) => { if (shown(n)) { if (n.id !== 'realm-hero') any = true; if (n.id !== 'mm-settings' && n.id !== 'realm-pause') other = true; } });
       ['mm-summary', 'rw-nexus'].forEach((id) => { const n = document.getElementById(id); if (shown(n)) { any = true; other = true; } });
       document.body.classList.toggle('mm-realm-dialog', other);
       if (navOn) { if (any && NAV.isOpen()) NAV.close(); NAV.setCovered(any); }

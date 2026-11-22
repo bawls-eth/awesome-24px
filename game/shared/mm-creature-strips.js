@@ -1,7 +1,12 @@
 // MMCreatureStrips: real PNG animation strips for the Hearthvale Isles creatures (Codex b31a jungle-creatures-core, b32 jungle-big-and-boss,
 // b31b jungle-creatures-rest: vinecoil + canopy_glider, provisional; its moth_lantern has no MMCreatures def yet, so it is not wired;
 // b31af glimmerfrog sleep + eat; b32s the XL stegolith with saddle overlays + seat; b36 the seven Hearth Isle meadow tameables at their
-// size-class cells after the AW3 redo; b38a the reef puffer, all provisional).
+// size-class cells after the AW3 redo; b38a the reef puffer; b38b-f the rest of the Coral Reef: shellcrab, glowjelly (core 12 only),
+// fin raider (S), the tidesteed / skimray swim mounts (L, body + saddle overlays + per-frame seat) and the isleback turtle (XL, seat, no
+// saddle: it is ridden bare), all provisional); b38c / b38e / b38f revised in place (taller tidesteed, skimray side pose on its anchor,
+// fin raider fins, the turtle profile with neutral seats at y 176: the old 6 px drawn-seat workaround is gone); b38g the Tide Hydra reef
+// boss (XL, the 12 core strips + a 6-frame roar at 10 fps in all three views); b40a the pengling (S, the first tundra species), provisional;
+// b40b the frostfox and b40c the rimewolf (both S, 192 px cells, feet 96,171, the 14 strips), provisional (art-audit-3).
 // The strip table below mirrors the batch manifests (the node test checks it against manifest.json). Each strip is one row of square
 // cells (4x pixel art: 192 / 256 / 384 / 512 px cells hold 48 / 64 / 96 / 128 px native art for the S / M / L / XL size classes), facing
 // down / up / right; left is the mirrored right. A strip's cell is its manifest frame_h (= the PNG height); the loader trusts the PNG.
@@ -21,6 +26,15 @@
   const B32S = '../../assets/arcane/b32s-stegolith/creatures/';
   const B36 = '../../assets/arcane/b36-meadow-creatures/enemies/';
   const B38A = '../../assets/arcane/b38a-reef-puffer/creatures/';
+  const B38B = '../../assets/arcane/b38b-shellcrab/creatures/';
+  const B38C = '../../assets/arcane/b38c-reef-mounts/creatures/';
+  const B38D = '../../assets/arcane/b38d-glowjelly/creatures/';
+  const B38E = '../../assets/arcane/b38e-fin-raider/creatures/';
+  const B38F = '../../assets/arcane/b38f-isleback-turtle/creatures/';
+  const B38G = '../../assets/arcane/b38g-tide-hydra/creatures/';
+  const B40A = '../../assets/arcane/b40a-pengling/creatures/';
+  const B40B = '../../assets/arcane/b40b-frostfox/creatures/';
+  const B40C = '../../assets/arcane/b40c-rimewolf/creatures/';
   const DIRS = ['down', 'up', 'right'];       // dir codes 0 1 2; code 3 = left (the right strip, mirrored)
   const DOWN = 0, UP = 1, RIGHT = 2, LEFT = 3;
   const SCALE = 4;                            // cells are 4x upscaled pixel art: draw at 1/4 (native) so every pixel stays crisp
@@ -29,7 +43,7 @@
     roar: [5, 12, 0, 0], saddle_idle: [4, 6, 1, 0], saddle_move: [6, 10, 1, 0] };
   const CORE = ['idle', 'move', 'attack', 'death'];
   // creature -> {dir, cell (manifest frame_w = frame_h), ax / ay (feet anchor in cell px), actions, biome (the island that preloads it),
-  //   adir (per-action folder), fps (per-action fps override)}
+  //   adir (per-action folder), fps (per-action fps override), nf (per-action frame-count override: the hydra's 6-frame roar)}
   const MEADOW = (k, extra) => Object.assign({ dir: B36 + k + '/', cell: 256, ax: 128, ay: 231, acts: CORE.concat(['sleep', 'eat']), biome: 'meadow', fps: { death: 9 } }, extra || {});
   // b36 small-size redo: S class, 192 px cells (48 px native), feet 96,173 (puffwool 96,169), death at 10 fps
   const MEADOW_S = (k, ay) => MEADOW(k, { cell: 192, ax: 96, ay: ay || 173, fps: {} });
@@ -58,7 +72,30 @@
       move: [[159, 171, 165, 153, 165, 171], [159, 171, 165, 153, 165, 171], [159, 171, 165, 153, 165, 171]] } }),
     oakback: MEADOW('oakback', { cell: 512, ax: 256, ay: 463 }),
     // b38a Coral Reef: the reef puffer (S, 192 px cells, feet 96,171, the 14 strips, death at 9 fps)
-    reef_puffer: { dir: B38A + 'reef_puffer/', cell: 192, ax: 96, ay: 171, acts: CORE.concat(['sleep', 'eat']), biome: 'reef', fps: { death: 9 } }
+    reef_puffer: { dir: B38A + 'reef_puffer/', cell: 192, ax: 96, ay: 171, acts: CORE.concat(['sleep', 'eat']), biome: 'reef', fps: { death: 9 } },
+    // b38b-f the rest of the reef: S shellcrab / glowjelly / fin raider (192, feet 96,171; the glowjelly has no sleep / eat), L tidesteed /
+    // skimray swim mounts (384, feet 192,347, saddle overlays, per-frame seat), XL isleback turtle (512, feet 256,463, seat, no saddle)
+    shellcrab: { dir: B38B + 'shellcrab/', cell: 192, ax: 96, ay: 171, acts: CORE.concat(['sleep', 'eat']), biome: 'reef' },
+    glowjelly: { dir: B38D + 'glowjelly/', cell: 192, ax: 96, ay: 171, acts: CORE.slice(), biome: 'reef' },
+    fin_raider: { dir: B38E + 'fin_raider/', cell: 192, ax: 96, ay: 171, acts: CORE.concat(['sleep', 'eat']), biome: 'reef' },
+    tidesteed: { dir: B38C + 'tidesteed/', cell: 384, ax: 192, ay: 347, acts: CORE.concat(['sleep', 'eat', 'saddle_idle', 'saddle_move']), biome: 'reef',
+      seat: { x: [192, 192, 180], idle: [[112, 108, 112, 116], [116, 112, 116, 120], [128, 124, 128, 132]],
+        move: [[112, 104, 108, 116, 120, 116], [116, 108, 112, 120, 124, 120], [128, 120, 124, 132, 136, 132]] } },
+    skimray: { dir: B38C + 'skimray/', cell: 384, ax: 192, ay: 347, acts: CORE.concat(['sleep', 'eat', 'saddle_idle', 'saddle_move']), biome: 'reef',
+      seat: { x: [192, 192, 184], idle: [[156, 152, 156, 160], [156, 152, 156, 160], [188, 184, 188, 192]],
+        move: [[156, 148, 152, 160, 164, 160], [156, 148, 152, 160, 164, 160], [188, 180, 184, 192, 196, 192]] } },
+    // the b38f profile revision moved the neutral seat to y 176 (on the shell, in front of the coral crown), so the drawn seat is the
+    // manifest seat again (sdy, a drawn-only nudge, stays supported but unused)
+    isleback_turtle: { dir: B38F + 'isleback_turtle/', cell: 512, ax: 256, ay: 463, acts: CORE.concat(['sleep', 'eat']), biome: 'reef',
+      seat: { x: [256, 256, 236], idle: [[176, 172, 176, 180], [176, 172, 176, 180], [176, 172, 176, 180]],
+        move: [[176, 168, 172, 180, 180, 176], [176, 168, 172, 180, 180, 176], [176, 176, 176, 176, 176, 176]] } },
+    // b38g the reef boss (XL, 512 px cells, feet 256,463): the 12 core strips + a 6-frame roar at 10 fps (the wind-up telegraph)
+    tide_hydra: { dir: B38G + 'tide_hydra/', cell: 512, ax: 256, ay: 463, acts: CORE.concat(['roar']), biome: 'reef', nf: { roar: 6 }, fps: { roar: 10 } },
+    // b40a the first tundra species (S, 192 px cells, feet 96,171, the 14 strips)
+    pengling: { dir: B40A + 'pengling/', cell: 192, ax: 96, ay: 171, acts: CORE.concat(['sleep', 'eat']), biome: 'tundra' },
+    // b40b / b40c the tundra neutral + hostile canines (S, 192 px cells, feet 96,171, the 14 strips each)
+    frostfox: { dir: B40B + 'frostfox/', cell: 192, ax: 96, ay: 171, acts: CORE.concat(['sleep', 'eat']), biome: 'tundra' },
+    rimewolf: { dir: B40C + 'rimewolf/', cell: 192, ax: 96, ay: 171, acts: CORE.concat(['sleep', 'eat']), biome: 'tundra' }
   };
   const KINDS = Object.keys(SPECS);
   const has = (o, k) => !!o && Object.prototype.hasOwnProperty.call(o, k);
@@ -69,6 +106,8 @@
     return KINDS.filter((k) => SPECS[k].biome === biome || more.indexOf(k) >= 0);
   }
   // fpsOf(act, kind): the action's fps (a batch may override it per creature)
+  // framesOf(act, kind): the action's frame count (a batch may override it per creature)
+  const framesOf = (act, kind) => { const sp = kind && has(SPECS, kind) ? SPECS[kind] : null; return sp && sp.nf && sp.nf[act] > 0 ? sp.nf[act] : (has(ACT, act) ? ACT[act][0] : ACT.idle[0]); };
   const fpsOf = (act, kind) => { const sp = kind && has(SPECS, kind) ? SPECS[kind] : null; return sp && sp.fps && sp.fps[act] > 0 ? sp.fps[act] : (has(ACT, act) ? ACT[act][1] : ACT.idle[1]); };
 
   // ID[kind][act] = [down, up, right, left(=right)] strip ids, built once
@@ -113,11 +152,12 @@
   // kind (optional) applies that creature's fps override
   function frameIndex(act, t, kind) {
     const a = has(ACT, act) ? ACT[act] : ACT.idle;
+    const n = kind ? framesOf(act, kind) : a[0];
     const f = Math.floor(Math.max(0, Number(t) || 0) * (kind ? fpsOf(act, kind) : a[1]));
-    return a[2] ? f % a[0] : Math.min(a[0] - 1, f);
+    return a[2] ? f % n : Math.min(n - 1, f);
   }
   // seconds a one-shot action takes (death / attack / roar)
-  const duration = (act, kind) => (has(ACT, act) ? ACT[act][0] / (kind ? fpsOf(act, kind) : ACT[act][1]) : 0);
+  const duration = (act, kind) => (has(ACT, act) ? (kind ? framesOf(act, kind) / fpsOf(act, kind) : ACT[act][0] / ACT[act][1]) : 0);
   // actionFor(kind, st): st = {dying, ko, eating, ph:'wind'|'strike'|'rest'|'', moving}. Falls back to an action the creature has.
   //   dying -> death; eating (just fed) -> eat; ko -> sleep; wind-up -> roar (when it has one, the boss telegraph) else attack; strike -> attack;
   //   moving -> move; else idle. A creature without sleep / eat shows idle.
@@ -141,7 +181,7 @@
     const ys = sp.seat[moving ? 'move' : 'idle'][d];
     const f = ((frame | 0) % ys.length + ys.length) % ys.length;
     out.x = (sp.seat.x[d] - sp.ax) / SCALE * (dir === LEFT ? -1 : 1);
-    out.y = (sp.ay - ys[f]) / SCALE;
+    out.y = (sp.ay - ys[f]) / SCALE - (sp.sdy || 0);
     return true;
   }
   // flip: a left-facing strip is the right strip mirrored; down-only actions (sleep, eat) never mirror
@@ -172,7 +212,7 @@
     const baked = {};      // id -> strip
     const okKind = {};
     function bake(f, im) {
-      const sp = SPECS[f.kind], n = ACT[f.act][0];
+      const sp = SPECS[f.kind], n = framesOf(f.act, f.kind);
       const iw = im.naturalWidth || im.width || 0, ih = im.naturalHeight || im.height || 0;
       // the cell is the PNG height (square cells, the manifest frame_h); a redo that changed the cell size still bakes at 1/4 with the
       // anchor scaled to it. A height under 64 px or not a 4x multiple is rejected.
@@ -242,5 +282,5 @@
   }
 
   return { SPECS: SPECS, ACT: ACT, DIRS: DIRS, KINDS: KINDS, SCALE: SCALE, DOWN: DOWN, UP: UP, RIGHT: RIGHT, LEFT: LEFT,
-    stripId: stripId, files: files, kindsFor: kindsFor, fpsOf: fpsOf, dirCode: dirCode, frameIndex: frameIndex, duration: duration, actionFor: actionFor, saddleFor: saddleFor, seatOffset: seatOffset, flipFor: flipFor, create: create };
+    stripId: stripId, files: files, kindsFor: kindsFor, fpsOf: fpsOf, framesOf: framesOf, dirCode: dirCode, frameIndex: frameIndex, duration: duration, actionFor: actionFor, saddleFor: saddleFor, seatOffset: seatOffset, flipFor: flipFor, create: create };
 });

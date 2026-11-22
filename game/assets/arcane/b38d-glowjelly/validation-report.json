@@ -1,0 +1,15 @@
+{
+  "batch": "b38d",
+  "label": "glowjelly",
+  "generated_utc": "2026-11-22T09:44:38.379533Z",
+  "files": 12,
+  "duplicate_ids": 0,
+  "blocking": {},
+  "warnings": {},
+  "standing_heights": {
+    "glowjelly/down": 144,
+    "glowjelly/up": 144,
+    "glowjelly/right": 144
+  },
+  "status": "provisional"
+}

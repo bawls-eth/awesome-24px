@@ -2241,6 +2241,12 @@ class TownScene extends Phaser.Scene {
     this.padInput.x = Phaser.Math.Clamp(x, -1, 1);
     this.padInput.y = Phaser.Math.Clamp(y, -1, 1);
     if (first) return;
+    if (this.navSheetOpen()) { // review N3: the sheet is modal for the pad too: no walking, no A/X/Start behind it; B closes it
+      this.padInput.x = 0;
+      this.padInput.y = 0;
+      if (justPressed(1)) this.closeNavSheet();
+      return;
+    }
 
     if (justPressed(0) && this.canAct()) this.interact();
     if (justPressed(2) && this.canAct()) this.giveNearestVillagerGift();
@@ -2255,6 +2261,7 @@ class TownScene extends Phaser.Scene {
   // overlay's normal close logic (timers, flags) runs unchanged. Returns
   // false when nothing was open.
   closeTopOverlay() {
+    if (this.navSheetOpen()) { this.closeNavSheet(); return true; } // the sheet sits above every Town overlay
     const overlays = [
       ['mapOpen', 'map-close-btn'], ['polyrollOpen', 'polyroll-close-btn'],
       ['achievementsOpen', 'achievements-close-btn'], ['outfitShopOpen', 'outfit-close-btn'],
@@ -2379,8 +2386,13 @@ class TownScene extends Phaser.Scene {
   // so chat/overlay state is respected no matter which input triggered it
   // (keyboard, on-screen button, or shake).
   canAct() {
-    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen && !this.mapOpen && !this.museumOpen && !this.workbenchOpen && !this.mailboxOpen && !this.homeOpen && !this.dailiesOpen && !this.journalOpen && !this.realmMenuOpen && !this.postcardsOpen;
+    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen && !this.mapOpen && !this.museumOpen && !this.workbenchOpen && !this.mailboxOpen && !this.homeOpen && !this.dailiesOpen && !this.journalOpen && !this.realmMenuOpen && !this.postcardsOpen && !this.navSheetOpen(); // review N3: nothing acts behind the "Where to?" sheet
   }
+
+  navSheetOpen() { try { return typeof MMNav !== 'undefined' && MMNav.isOpen(); } catch (e) { return false; } }
+  // review N2: one dialog at a time. Anything that takes over the screen (Realm invite, Realm embed / arena, a Town overlay)
+  // closes the sheet first, so focus is never trapped in a sheet hidden behind it and the sheet is not still open on return.
+  closeNavSheet() { try { if (this.navSheetOpen()) MMNav.close(); } catch (e) { /* nav module missing: nothing to close */ } }
 
   // Shake is just a fun alternate trigger for the same interact() logic used
   // by the desktop 'E' key and the mobile Interact button.
@@ -3029,6 +3041,18 @@ class TownScene extends Phaser.Scene {
     if (close) close.addEventListener('click', () => this.closePostcards());
     const ov = document.getElementById('postcards-overlay');
     if (ov) ov.addEventListener('click', (e) => { if (e.target === ov) this.closePostcards(); });
+    // review P1x: a real modal. Esc closes it from anywhere, Tab / Shift+Tab stay inside it, and Enter / Space on its
+    // controls are not taken by the Town's "Enter focuses chat" or Phaser hotkeys.
+    if (ov) ov.addEventListener('keydown', (e) => { if (this.postcardsOpen && (e.key === 'Enter' || e.key === ' ')) e.stopPropagation(); });
+    document.addEventListener('keydown', (e) => {
+      if (!this.postcardsOpen || !ov) return;
+      if (e.key === 'Escape' || e.key === 'Esc') { e.preventDefault(); e.stopPropagation(); this.closePostcards(); return; }
+      if (e.key !== 'Tab') return;
+      const f = Array.from(ov.querySelectorAll('button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])')).filter((n) => n.offsetParent !== null);
+      if (!f.length) { e.preventDefault(); return; }
+      const i = f.indexOf(document.activeElement);
+      if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); } else if (!e.shiftKey && (i < 0 || i === f.length - 1)) { e.preventDefault(); f[0].focus(); }
+    }, true);
   }
 
   isNearPostcards(radius = POSTCARD_RADIUS) {
@@ -3045,15 +3069,32 @@ class TownScene extends Phaser.Scene {
   openPostcards() {
     const ov = document.getElementById('postcards-overlay');
     if (!ov) return;
+    this.closeNavSheet();
+    const was = this.postcardsOpen;
     this.postcardsOpen = true;
     this.renderPostcards();
     ov.classList.remove('hidden');
+    if (!was) { // review P1x: focus moves into the dialog and comes back to where it was on close
+      const a = document.activeElement;
+      this._postcardsReturn = a && a !== document.body && !ov.contains(a) ? a : null;
+      const c = document.getElementById('postcards-close-btn');
+      if (c) { try { c.focus(); } catch (e) { /* ignore */ } }
+    }
   }
 
   closePostcards() {
+    const was = this.postcardsOpen;
     this.postcardsOpen = false;
     const ov = document.getElementById('postcards-overlay');
     if (ov) ov.classList.add('hidden');
+    if (!was) return;
+    this.updatePostcardHint(); // shows "Read the postcards" again when the player is still next to the board
+    const back = [this._postcardsReturn, this.postcardsBtn].find((n) => n && document.contains(n) && n.getClientRects().length > 0); // (fixed-position: no offsetParent)
+    this._postcardsReturn = null;
+    try {
+      if (back) back.focus();
+      else if (ov && ov.contains(document.activeElement)) document.activeElement.blur(); // back to the game (body)
+    } catch (e) { /* ignore */ }
   }
 
   renderPostcards() {
@@ -3176,7 +3217,12 @@ class TownScene extends Phaser.Scene {
       for (let i = 0; i < 4 && this.closeTopOverlay(); i++); // never stack the sheet on a town overlay
       MMNav.open();
     });
-    MMNav.onOpen(() => btn.setAttribute('aria-expanded', 'true'));
+    MMNav.onOpen(() => {
+      btn.setAttribute('aria-expanded', 'true');
+      // review N1: a key held when the sheet opened must not stay "down" (the sheet eats keydowns; keyups pass through to release it)
+      try { this.input.keyboard.resetKeys(); } catch (e) { /* no keyboard plugin */ }
+      if (this.padInput) { this.padInput.x = 0; this.padInput.y = 0; }
+    });
     MMNav.onClose(() => btn.setAttribute('aria-expanded', 'false'));
     MMNav.onSettings(() => {
       const panel = document.getElementById('player-list-panel');
@@ -3240,6 +3286,7 @@ class TownScene extends Phaser.Scene {
   // The big Realm runs in a same-origin full-screen frame over the town, so the player never leaves the game page.
   openRealmEmbed(href) {
     if (this.realmEmbed) return;
+    this.closeNavSheet();
     const wrap = document.createElement('div');
     wrap.id = 'realm-embed';
     const frame = document.createElement('iframe');
@@ -3270,7 +3317,7 @@ class TownScene extends Phaser.Scene {
     if (this.realmMenuOpen || this.inRealm || this.inUnderground) return;
     this.realmMenuOpen = true;
     this.markGateReached();
-    if (typeof MMNav !== 'undefined' && MMNav.isOpen()) MMNav.close(); // never two dialogs at once
+    this.closeNavSheet(); // never two dialogs at once
     document.getElementById('realm-menu').classList.remove('hidden');
     this._friendsAuto = false; // "Play with friends" opens by itself once somebody else is in town
     const mm = document.getElementById('realm-menu-madmaze');
@@ -3381,6 +3428,7 @@ class TownScene extends Phaser.Scene {
   showRealmInvite(inv) {
     if (this.inRealm || this.inUnderground) { this._deferredInvite = { inv, at: Date.now() }; return; } // busy: show it the moment we are back in town (for up to 60 s)
     this._deferredInvite = null;
+    this.closeNavSheet(); // review N2: the invite (z 100000) must be reachable by keyboard, not hidden behind a focus-trapping sheet
     this.realmInviteIn = inv;
     const el = document.getElementById('realm-invite');
     document.getElementById('realm-invite-text').textContent = inv.mode === '2v2' ? `⚔️ ${inv.fromName} invites you to a 2v2 in the Realm!` : inv.mode === 'duel' ? `⚔️ ${inv.fromName} challenges you to a duel in the Realm!` : `🌀 ${inv.fromName} invites you to fight in the Realm together!`;
@@ -3415,6 +3463,7 @@ class TownScene extends Phaser.Scene {
   // opts: { role: 'host'|'guest', link } starts a two-player run; nothing = solo.
   enterRealm(opts = {}) {
     if (this.inRealm || this.inUnderground) return;
+    this.closeNavSheet();
     this.closeRealmGateMenu();
     this.inRealm = true;
     this.incrementStat('realmVisits');

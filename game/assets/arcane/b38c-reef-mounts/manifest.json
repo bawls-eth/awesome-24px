@@ -1,0 +1,1590 @@
+{
+  "batch": "b38c",
+  "label": "reef-mounts",
+  "assets": [
+    {
+      "id": "tidesteed_idle_down",
+      "path": "creatures/tidesteed/tidesteed_idle_down.png",
+      "category": "enemy",
+      "enemy": "tidesteed",
+      "creature": "tidesteed",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 112
+        },
+        {
+          "x": 192,
+          "y": 108
+        },
+        {
+          "x": 192,
+          "y": 112
+        },
+        {
+          "x": 192,
+          "y": 116
+        }
+      ]
+    },
+    {
+      "id": "tidesteed_move_down",
+      "path": "creatures/tidesteed/tidesteed_move_down.png",
+      "category": "enemy",
+      "enemy": "tidesteed",
+      "creature": "tidesteed",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 112
+        },
+        {
+          "x": 192,
+          "y": 104
+        },
+        {
+          "x": 192,
+          "y": 108
+        },
+        {
+          "x": 192,
+          "y": 116
+        },
+        {
+          "x": 192,
+          "y": 120
+        },
+        {
+          "x": 192,
+          "y": 116
+        }
+      ]
+    },
+    {
+      "id": "tidesteed_attack_down",
+      "path": "creatures/tidesteed/tidesteed_attack_down.png",
+      "category": "enemy",
+      "enemy": "tidesteed",
+      "creature": "tidesteed",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 112
+        },
+        {
+          "x": 192,
+          "y": 104
+        },
+        {
+          "x": 192,
+          "y": 96
+        },
+        {
+          "x": 192,
+          "y": 116
+        },
+        {
+          "x": 192,
+          "y": 112
+        }
+      ]
+    },
+    {
+      "id": "tidesteed_death_down",
+      "path": "creatures/tidesteed/tidesteed_death_down.png",
+      "category": "enemy",
+      "enemy": "tidesteed",
+      "creature": "tidesteed",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 112
+        },
+        {
+          "x": 192,
+          "y": 120
+        },
+        {
+          "x": 192,
+          "y": 132
+        },
+        {
+          "x": 192,
+          "y": 178
+        },
+        {
+          "x": 192,
+          "y": 220
+        }
+      ]
+    },
+    {
+      "id": "tidesteed_idle_up",
+      "path": "creatures/tidesteed/tidesteed_idle_up.png",
+      "category": "enemy",
+      "enemy": "tidesteed",
+      "creature": "tidesteed",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 116
+        },
+        {
+          "x": 192,
+          "y": 112
+        },
+        {
+          "x": 192,
+          "y": 116
+        },
+        {
+          "x": 192,
+          "y": 120
+        }
+      ]
+    },
+    {
+      "id": "tidesteed_move_up",
+      "path": "creatures/tidesteed/tidesteed_move_up.png",
+      "category": "enemy",
+      "enemy": "tidesteed",
+      "creature": "tidesteed",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 116
+        },
+        {
+          "x": 192,
+          "y": 108
+        },
+        {
+          "x": 192,
+          "y": 112
+        },
+        {
+          "x": 192,
+          "y": 120
+        },
+        {
+          "x": 192,
+          "y": 124
+        },
+        {
+          "x": 192,
+          "y": 120
+        }
+      ]
+    },
+    {
+      "id": "tidesteed_attack_up",
+      "path": "creatures/tidesteed/tidesteed_attack_up.png",
+      "category": "enemy",
+      "enemy": "tidesteed",
+      "creature": "tidesteed",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 116
+        },
+        {
+          "x": 192,
+          "y": 108
+        },
+        {
+          "x": 192,
+          "y": 100
+        },
+        {
+          "x": 192,
+          "y": 120
+        },
+        {
+          "x": 192,
+          "y": 116
+        }
+      ]
+    },
+    {
+      "id": "tidesteed_death_up",
+      "path": "creatures/tidesteed/tidesteed_death_up.png",
+      "category": "enemy",
+      "enemy": "tidesteed",
+      "creature": "tidesteed",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 116
+        },
+        {
+          "x": 192,
+          "y": 124
+        },
+        {
+          "x": 192,
+          "y": 136
+        },
+        {
+          "x": 192,
+          "y": 179
+        },
+        {
+          "x": 192,
+          "y": 221
+        }
+      ]
+    },
+    {
+      "id": "tidesteed_idle_right",
+      "path": "creatures/tidesteed/tidesteed_idle_right.png",
+      "category": "enemy",
+      "enemy": "tidesteed",
+      "creature": "tidesteed",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 180,
+          "y": 128
+        },
+        {
+          "x": 180,
+          "y": 124
+        },
+        {
+          "x": 180,
+          "y": 128
+        },
+        {
+          "x": 180,
+          "y": 132
+        }
+      ]
+    },
+    {
+      "id": "tidesteed_move_right",
+      "path": "creatures/tidesteed/tidesteed_move_right.png",
+      "category": "enemy",
+      "enemy": "tidesteed",
+      "creature": "tidesteed",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 180,
+          "y": 128
+        },
+        {
+          "x": 180,
+          "y": 120
+        },
+        {
+          "x": 180,
+          "y": 124
+        },
+        {
+          "x": 180,
+          "y": 132
+        },
+        {
+          "x": 180,
+          "y": 136
+        },
+        {
+          "x": 180,
+          "y": 132
+        }
+      ]
+    },
+    {
+      "id": "tidesteed_attack_right",
+      "path": "creatures/tidesteed/tidesteed_attack_right.png",
+      "category": "enemy",
+      "enemy": "tidesteed",
+      "creature": "tidesteed",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 180,
+          "y": 128
+        },
+        {
+          "x": 180,
+          "y": 120
+        },
+        {
+          "x": 180,
+          "y": 116
+        },
+        {
+          "x": 180,
+          "y": 132
+        },
+        {
+          "x": 180,
+          "y": 128
+        }
+      ]
+    },
+    {
+      "id": "tidesteed_death_right",
+      "path": "creatures/tidesteed/tidesteed_death_right.png",
+      "category": "enemy",
+      "enemy": "tidesteed",
+      "creature": "tidesteed",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 180,
+          "y": 128
+        },
+        {
+          "x": 180,
+          "y": 136
+        },
+        {
+          "x": 180,
+          "y": 148
+        },
+        {
+          "x": 180,
+          "y": 189
+        },
+        {
+          "x": 180,
+          "y": 228
+        }
+      ]
+    },
+    {
+      "id": "tidesteed_sleep_down",
+      "path": "creatures/tidesteed/tidesteed_sleep_down.png",
+      "category": "enemy",
+      "enemy": "tidesteed",
+      "creature": "tidesteed",
+      "action": "sleep",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 112
+        },
+        {
+          "x": 192,
+          "y": 116
+        },
+        {
+          "x": 192,
+          "y": 112
+        },
+        {
+          "x": 192,
+          "y": 108
+        }
+      ]
+    },
+    {
+      "id": "tidesteed_eat_down",
+      "path": "creatures/tidesteed/tidesteed_eat_down.png",
+      "category": "enemy",
+      "enemy": "tidesteed",
+      "creature": "tidesteed",
+      "action": "eat",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 112
+        },
+        {
+          "x": 192,
+          "y": 104
+        },
+        {
+          "x": 192,
+          "y": 120
+        },
+        {
+          "x": 192,
+          "y": 112
+        }
+      ]
+    },
+    {
+      "id": "tidesteed_saddle_idle_down",
+      "path": "creatures/tidesteed/tidesteed_saddle_idle_down.png",
+      "category": "mount",
+      "enemy": "tidesteed",
+      "creature": "tidesteed",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 112
+        },
+        {
+          "x": 192,
+          "y": 108
+        },
+        {
+          "x": 192,
+          "y": 112
+        },
+        {
+          "x": 192,
+          "y": 116
+        }
+      ]
+    },
+    {
+      "id": "tidesteed_saddle_move_down",
+      "path": "creatures/tidesteed/tidesteed_saddle_move_down.png",
+      "category": "mount",
+      "enemy": "tidesteed",
+      "creature": "tidesteed",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 112
+        },
+        {
+          "x": 192,
+          "y": 104
+        },
+        {
+          "x": 192,
+          "y": 108
+        },
+        {
+          "x": 192,
+          "y": 116
+        },
+        {
+          "x": 192,
+          "y": 120
+        },
+        {
+          "x": 192,
+          "y": 116
+        }
+      ]
+    },
+    {
+      "id": "tidesteed_saddle_idle_up",
+      "path": "creatures/tidesteed/tidesteed_saddle_idle_up.png",
+      "category": "mount",
+      "enemy": "tidesteed",
+      "creature": "tidesteed",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 116
+        },
+        {
+          "x": 192,
+          "y": 112
+        },
+        {
+          "x": 192,
+          "y": 116
+        },
+        {
+          "x": 192,
+          "y": 120
+        }
+      ]
+    },
+    {
+      "id": "tidesteed_saddle_move_up",
+      "path": "creatures/tidesteed/tidesteed_saddle_move_up.png",
+      "category": "mount",
+      "enemy": "tidesteed",
+      "creature": "tidesteed",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 116
+        },
+        {
+          "x": 192,
+          "y": 108
+        },
+        {
+          "x": 192,
+          "y": 112
+        },
+        {
+          "x": 192,
+          "y": 120
+        },
+        {
+          "x": 192,
+          "y": 124
+        },
+        {
+          "x": 192,
+          "y": 120
+        }
+      ]
+    },
+    {
+      "id": "tidesteed_saddle_idle_right",
+      "path": "creatures/tidesteed/tidesteed_saddle_idle_right.png",
+      "category": "mount",
+      "enemy": "tidesteed",
+      "creature": "tidesteed",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 180,
+          "y": 128
+        },
+        {
+          "x": 180,
+          "y": 124
+        },
+        {
+          "x": 180,
+          "y": 128
+        },
+        {
+          "x": 180,
+          "y": 132
+        }
+      ]
+    },
+    {
+      "id": "tidesteed_saddle_move_right",
+      "path": "creatures/tidesteed/tidesteed_saddle_move_right.png",
+      "category": "mount",
+      "enemy": "tidesteed",
+      "creature": "tidesteed",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 180,
+          "y": 128
+        },
+        {
+          "x": 180,
+          "y": 120
+        },
+        {
+          "x": 180,
+          "y": 124
+        },
+        {
+          "x": 180,
+          "y": 132
+        },
+        {
+          "x": 180,
+          "y": 136
+        },
+        {
+          "x": 180,
+          "y": 132
+        }
+      ]
+    },
+    {
+      "id": "skimray_idle_down",
+      "path": "creatures/skimray/skimray_idle_down.png",
+      "category": "enemy",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 152
+        },
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 160
+        }
+      ]
+    },
+    {
+      "id": "skimray_move_down",
+      "path": "creatures/skimray/skimray_move_down.png",
+      "category": "enemy",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 148
+        },
+        {
+          "x": 192,
+          "y": 152
+        },
+        {
+          "x": 192,
+          "y": 160
+        },
+        {
+          "x": 192,
+          "y": 164
+        },
+        {
+          "x": 192,
+          "y": 160
+        }
+      ]
+    },
+    {
+      "id": "skimray_attack_down",
+      "path": "creatures/skimray/skimray_attack_down.png",
+      "category": "enemy",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 148
+        },
+        {
+          "x": 192,
+          "y": 140
+        },
+        {
+          "x": 192,
+          "y": 160
+        },
+        {
+          "x": 192,
+          "y": 156
+        }
+      ]
+    },
+    {
+      "id": "skimray_death_down",
+      "path": "creatures/skimray/skimray_death_down.png",
+      "category": "enemy",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 164
+        },
+        {
+          "x": 192,
+          "y": 176
+        },
+        {
+          "x": 192,
+          "y": 197
+        },
+        {
+          "x": 192,
+          "y": 234
+        }
+      ]
+    },
+    {
+      "id": "skimray_idle_up",
+      "path": "creatures/skimray/skimray_idle_up.png",
+      "category": "enemy",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 152
+        },
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 160
+        }
+      ]
+    },
+    {
+      "id": "skimray_move_up",
+      "path": "creatures/skimray/skimray_move_up.png",
+      "category": "enemy",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 148
+        },
+        {
+          "x": 192,
+          "y": 152
+        },
+        {
+          "x": 192,
+          "y": 160
+        },
+        {
+          "x": 192,
+          "y": 164
+        },
+        {
+          "x": 192,
+          "y": 160
+        }
+      ]
+    },
+    {
+      "id": "skimray_attack_up",
+      "path": "creatures/skimray/skimray_attack_up.png",
+      "category": "enemy",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 148
+        },
+        {
+          "x": 192,
+          "y": 140
+        },
+        {
+          "x": 192,
+          "y": 160
+        },
+        {
+          "x": 192,
+          "y": 156
+        }
+      ]
+    },
+    {
+      "id": "skimray_death_up",
+      "path": "creatures/skimray/skimray_death_up.png",
+      "category": "enemy",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 164
+        },
+        {
+          "x": 192,
+          "y": 176
+        },
+        {
+          "x": 192,
+          "y": 197
+        },
+        {
+          "x": 192,
+          "y": 234
+        }
+      ]
+    },
+    {
+      "id": "skimray_idle_right",
+      "path": "creatures/skimray/skimray_idle_right.png",
+      "category": "enemy",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 184,
+          "y": 188
+        },
+        {
+          "x": 184,
+          "y": 184
+        },
+        {
+          "x": 184,
+          "y": 188
+        },
+        {
+          "x": 184,
+          "y": 192
+        }
+      ]
+    },
+    {
+      "id": "skimray_move_right",
+      "path": "creatures/skimray/skimray_move_right.png",
+      "category": "enemy",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 184,
+          "y": 188
+        },
+        {
+          "x": 184,
+          "y": 180
+        },
+        {
+          "x": 184,
+          "y": 184
+        },
+        {
+          "x": 184,
+          "y": 192
+        },
+        {
+          "x": 184,
+          "y": 196
+        },
+        {
+          "x": 184,
+          "y": 192
+        }
+      ]
+    },
+    {
+      "id": "skimray_attack_right",
+      "path": "creatures/skimray/skimray_attack_right.png",
+      "category": "enemy",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 184,
+          "y": 188
+        },
+        {
+          "x": 184,
+          "y": 180
+        },
+        {
+          "x": 184,
+          "y": 172
+        },
+        {
+          "x": 184,
+          "y": 192
+        },
+        {
+          "x": 184,
+          "y": 188
+        }
+      ]
+    },
+    {
+      "id": "skimray_death_right",
+      "path": "creatures/skimray/skimray_death_right.png",
+      "category": "enemy",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 184,
+          "y": 188
+        },
+        {
+          "x": 184,
+          "y": 196
+        },
+        {
+          "x": 184,
+          "y": 208
+        },
+        {
+          "x": 184,
+          "y": 218
+        },
+        {
+          "x": 184,
+          "y": 249
+        }
+      ]
+    },
+    {
+      "id": "skimray_sleep_down",
+      "path": "creatures/skimray/skimray_sleep_down.png",
+      "category": "enemy",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "sleep",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 160
+        },
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 152
+        }
+      ]
+    },
+    {
+      "id": "skimray_eat_down",
+      "path": "creatures/skimray/skimray_eat_down.png",
+      "category": "enemy",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "eat",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 148
+        },
+        {
+          "x": 192,
+          "y": 164
+        },
+        {
+          "x": 192,
+          "y": 156
+        }
+      ]
+    },
+    {
+      "id": "skimray_saddle_idle_down",
+      "path": "creatures/skimray/skimray_saddle_idle_down.png",
+      "category": "mount",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 152
+        },
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 160
+        }
+      ]
+    },
+    {
+      "id": "skimray_saddle_move_down",
+      "path": "creatures/skimray/skimray_saddle_move_down.png",
+      "category": "mount",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 148
+        },
+        {
+          "x": 192,
+          "y": 152
+        },
+        {
+          "x": 192,
+          "y": 160
+        },
+        {
+          "x": 192,
+          "y": 164
+        },
+        {
+          "x": 192,
+          "y": 160
+        }
+      ]
+    },
+    {
+      "id": "skimray_saddle_idle_up",
+      "path": "creatures/skimray/skimray_saddle_idle_up.png",
+      "category": "mount",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 152
+        },
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 160
+        }
+      ]
+    },
+    {
+      "id": "skimray_saddle_move_up",
+      "path": "creatures/skimray/skimray_saddle_move_up.png",
+      "category": "mount",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 148
+        },
+        {
+          "x": 192,
+          "y": 152
+        },
+        {
+          "x": 192,
+          "y": 160
+        },
+        {
+          "x": 192,
+          "y": 164
+        },
+        {
+          "x": 192,
+          "y": 160
+        }
+      ]
+    },
+    {
+      "id": "skimray_saddle_idle_right",
+      "path": "creatures/skimray/skimray_saddle_idle_right.png",
+      "category": "mount",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 184,
+          "y": 188
+        },
+        {
+          "x": 184,
+          "y": 184
+        },
+        {
+          "x": 184,
+          "y": 188
+        },
+        {
+          "x": 184,
+          "y": 192
+        }
+      ]
+    },
+    {
+      "id": "skimray_saddle_move_right",
+      "path": "creatures/skimray/skimray_saddle_move_right.png",
+      "category": "mount",
+      "enemy": "skimray",
+      "creature": "skimray",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 347
+      },
+      "seat": [
+        {
+          "x": 184,
+          "y": 188
+        },
+        {
+          "x": 184,
+          "y": 180
+        },
+        {
+          "x": 184,
+          "y": 184
+        },
+        {
+          "x": 184,
+          "y": 192
+        },
+        {
+          "x": 184,
+          "y": 196
+        },
+        {
+          "x": 184,
+          "y": 192
+        }
+      ]
+    }
+  ]
+}

@@ -93,6 +93,19 @@
     var o; try { o = JSON.parse(raw); } catch (e) { return null; }
     return isObj(o) && isObj(o.realm) ? o.realm : null;
   }
+  // The world Realm keeps its own save (RealmWorld.SAVE_KEY); its presence means the realm progress above is today's Realm, not an old arena.
+  var WORLD_KEY = 'pixeltown-realm-v1';
+  function worldPlayed() { try { return localStorage.getItem(WORLD_KEY) !== null; } catch (e) { return false; } }
+  function showOffer() { return !offerHidden && (P.legacyOffer ? P.legacyOffer(legacyRealm(), profile, worldPlayed()) : !profile.migratedFrom && !!legacyRealm()); }
+  // Read-only: the Realm HUD level ("Lv N", account-wide) for the hero the Realm plays as (active id, else the first hero, as the picker does).
+  function realmTag() {
+    if (!P.realmLevel || !P.realmHeroId) return null;
+    var lv = P.realmLevel(legacyRealm());
+    if (lv === null) return null;
+    var raw = null; try { raw = localStorage.getItem(ACTIVE_KEY); } catch (e) { raw = null; }
+    var id = P.realmHeroId(profile, raw);
+    return id ? { id: id, level: lv } : null;
+  }
   function clsName(id) { var c = C.CLASSES[id]; return c ? c.name : id; }
   function itemInfo(it) {
     if (it.keepsake) return { name: 'Keepsake' + (it.from ? ' of ' + String(it.from).replace(/[\u0000-\u001f]/g, '') : ''), icon: I.KIND_ICONS.keepsake, tier: null, color: '#ffd36b' };
@@ -458,6 +471,14 @@
     wrap.appendChild(bar);
     wrap.appendChild(el('span', 'xptext', maxed ? 'Level ' + h.level + ' (max)' : 'Level ' + h.level + ': ' + h.xp + ' / ' + need + ' xp'));
     li.appendChild(wrap);
+    // FUN1: one clear goal to chase on the card itself (read-only, from MMUnlocks): the next ability unlock for this hero.
+    if (U && U.next) {
+      var nlv = Math.max(1, Math.min(P.MAX_LEVEL, Math.floor(Number(h.level)) || 1)), nn = null;
+      try { nn = U.next(h.cls, nlv); } catch (e) { nn = null; }
+      var ng = el('p', 'nextgoal', nn ? 'Next unlock: ' + nn.name + ' at Lantern Level ' + nn.lv + ' (' + (nn.lv - nlv) + ' to go)' : 'Every unlock reached. Retire at level ' + P.MAX_LEVEL + ' for full fame.');
+      ng.setAttribute('data-next-lv', nn ? String(nn.lv) : '');
+      li.appendChild(ng);
+    }
     var stats = el('ul', 'stats'); stats.setAttribute('aria-label', h.name + ' stats');
     var life = Math.min(c.cap.life, c.base.life + c.gain.life * (h.level - 1));
     var foc = C.maxFocus(h.cls, h.level, 0);
@@ -478,7 +499,8 @@
     if (selected && !heroById(selected)) selected = null;
     if (!selected && profile.heroes.length) selected = profile.heroes[0].id;
     $('fame').textContent = 'Account fame: ' + profile.fame;
-    $('import-offer').hidden = !(!profile.migratedFrom && legacyRealm() && !offerHidden);
+    $('import-offer').hidden = !showOffer();
+    var realmLv = realmTag();
 
     var ul = $('heroes'); ul.textContent = '';
     profile.heroes.forEach(function (h) {
@@ -486,8 +508,9 @@
       var ac = A && A.artClassFor(h.cls);
       if (ac) { var cv = el('canvas', 'heroart'); cv.width = 96; cv.height = 96; cv.setAttribute('data-art', ac); cv.setAttribute('aria-hidden', 'true'); cv.hidden = true; li.appendChild(cv); }
       li.appendChild(el('div', 'hname', h.name));
-      var meta = el('div', 'meta', clsName(h.cls) + ' - Level ' + h.level + ' - fame ' + h.fame);
+      var meta = el('div', 'meta', clsName(h.cls) + ' - Lantern Level ' + h.level + ' - fame ' + h.fame); // FUN1: say which level this is (the Realm keeps its own, tagged below)
       meta.appendChild(el('span', 'tag mode', h.mode === 'picnic' ? 'Picnic' : h.mode === 'hardcore' ? 'Hardcore' : 'Classic'));
+      if (realmLv && realmLv.id === h.id) { var rl = el('span', 'tag realm-lv', 'Realm Lv ' + realmLv.level); rl.setAttribute('data-realm-level', String(realmLv.level)); rl.title = 'The level the Realm shows for this hero (shared Realm level). Lantern Level is this camp\'s own level.'; rl.setAttribute('aria-label', 'Realm level ' + realmLv.level + ' (the level the Realm shows)'); meta.appendChild(rl); }
       li.appendChild(meta);
       heroDetails(li, h);
       var row = el('div', 'row');

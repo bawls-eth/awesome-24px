@@ -30,6 +30,14 @@
   </div>
   <ul id="calm-list" class="calm-list" aria-label="Ideas"></ul>
 </section>
+<section id="coll-card" class="coll-card" aria-labelledby="coll-title">
+  <button id="coll-open" class="coll-open" type="button" aria-controls="coll-sheet" aria-expanded="false">
+    <span class="coll-ico" aria-hidden="true">&#128214;</span>
+    <span id="coll-title" class="coll-title">Collections</span>
+    <span id="coll-sum" class="coll-sum"></span>
+  </button>
+  <ul id="coll-steps" class="coll-steps" aria-label="First things you could find" hidden></ul>
+</section>
 <main id="stage">
   <canvas id="map" aria-label="World map" role="img"></canvas>
   <div id="toast" role="status" aria-live="polite"></div>
@@ -72,6 +80,14 @@
   <p id="gift-note" class="card-sub" role="status" aria-live="polite"></p>
   <div class="card-actions"><button id="gift-claim" type="button">Claim</button></div>
 </section>
+<section id="coll-sheet" class="card coll-sheet" hidden role="dialog" aria-labelledby="coll-sheet-title">
+  <div class="card-head">
+    <h2 id="coll-sheet-title">Collections</h2>
+    <button id="coll-close" type="button" aria-label="Close the collections">&times;</button>
+  </div>
+  <p id="coll-note" class="card-sub coll-note"></p>
+  <ul id="coll-sets" class="coll-sets" aria-label="Collections"></ul>
+</section>
 <div id="iris" aria-hidden="true"></div>
 <script src="../shared/mm-nav.js" data-mount="manual"></script>
 <script src="../shared/mm-map.js"></script>
@@ -87,5 +103,7 @@
 <script src="gift.js"></script>
 <script src="../shared/mm-calm-goals.js"></script>
 <script src="calm.js"></script>
+<script src="../shared/mm-collections.js"></script>
+<script src="collections.js"></script>
 </body>
 </html>

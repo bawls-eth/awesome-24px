@@ -77,6 +77,7 @@ legend{color:var(--gold);font-size:.9rem;padding:0 6px}
 .find{display:flex;align-items:center;flex-wrap:wrap;gap:4px}
 .find .item{cursor:default;display:inline-flex;align-items:center}
 .tag.src{background:#24456a}
+.tag.realm-lv{background:#5a3a1a;color:#ffe3a8}
 
 /* abilities and unlocks viewer (read-only) */
 .btn.abil{min-height:48px}
@@ -96,3 +97,4 @@ legend{color:var(--gold);font-size:.9rem;padding:0 6px}
 .pregear{margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
 .pregear[hidden],.pregear .btn[hidden],#restore-summary[hidden]{display:none}
 #restore-summary,#pregear-note{overflow-wrap:anywhere}
+.nextgoal{margin:6px 0 2px;font-size:13px;color:#ffe3a8}

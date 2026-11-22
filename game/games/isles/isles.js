@@ -50,11 +50,28 @@
 // island preloads its own biome's strips plus your stable's); the craft panel shows the b34b item icons by id over the text label.
 // AW3 (Codex redo): the b36 strips are at their size class (S 48 / M 64 / L 96 / XL 128 native; no 2x oakback), the b35 edge masks are
 // drawn as delivered, the Coral Reef preloads the b38a reef puffer, and a strip's ground shadow is sized to its measured body width.
+// AW4: the reef preloads all seven b38a-f species (108 strips); the tidesteed / skimray swim mounts draw body + saddle overlay with the
+// hero on the seat, the isleback turtle rides bare; __isles.riding() also reports seatY / seatX (where the hero was last drawn).
+// AW5: the reef also preloads the b38g Tide Hydra (its 6-frame roar runs over the wind-up; boss frames use the per-creature timing) and
+// the tundra preloads the b40a pengling. art-audit-3: and the b40b frostfox + b40c rimewolf (42 tundra strips; the aurora frostfox stays
+// the code-drawn palette swap).
 // XW1: the craft panel lists every MMIsleCraft recipe (ALL_IDS, groups Travel / Saddles / Supplies / Trophies); an alternative recipe
 // unlocks by its output item (rocket_core_drift opens mars from a fresh save) and the sea chart's "Craft it" points at a reachable build;
 // a daily gather spot can add a seeded bonus find (MMIsleCraft.bonusFind). Riding shows one 44 px ability button (key F while riding)
 // for the mount's MMMountAbility (12 abilities; never damage, never touches tames / party / boss / items); ?ability=0 turns them off.
 // The feedback widget is a static script tag; ?test=1 exposes __isles.events() (a {t, kind} ring buffer, no text).
+// IF1 (NEXT-SLICES-4): calm HP recovery (MMIsleRest: rest spots heal to full, slow regen out of danger, never in a boss fight; creature
+// hits are halved while the mars air is empty), a pouch per island (MMIslePouch.starter; ?pouch=classic = the old jungle pouch) and
+// feeding from the pack (IsleCreatures.foodFor(def, pouch, inv, reserve): the pouch first, never what a locked travel recipe needs),
+// seeded food glints for every diet item (MMIsleCraft.FOOD_NODES, a labelled vine rope patch by the jungle dock), journal sightings,
+// forage sparkles after 40 s without a reward (<= 6 per island a day, save.spark), and a locked island opened by URL lands at the home
+// dock (?test=1 keeps the old direct load for tests). Events gain the kinds spot, rest and sparkle. ?rest=0 turns rest / regen off.
+// TD1 (NEXT-SLICES-4): tundra + mars depth. Rares from a page-side table (RARE_EXTRA: an aurora frostfox on the tundra at night, a chrome
+// rustbeetle on mars; seeded IsleCreatures.rareSpot, one alive, a code palette swap, a tame adds aurora_shard / chrome_flake), thin ice
+// (a crack telegraph after 1 s on one tile, slush x0.6 for 20 s, never damage), a hot spring soak ("Warm and rested"), an aurora night
+// on a page clock (?aurora=1 / 0), once-a-day glints (save.glint), the air warning at 20 s with an arrow home, and a short rocket lift-off
+// when sailing to mars (a tap, a key or reduced motion skips it; nothing is used up). Events gain ice_warn, ice_crack, soak, glint,
+// rare_tame and launch.
 (function () {
   'use strict';
   const CRAFT = window.MMIsleCraft || null;
@@ -62,6 +79,8 @@
   const FOG = window.MMFog, PROF = window.MMProfile, ISL = window.MMIsles, TAMES = window.MMTames, RNG = window.MMRng;
   const TM = window.MMTame, CMP = window.MMCompanion, IC = window.IsleCreatures, HS = window.MMHomestead, MS = window.MMCreatureStrips;
   const HB = window.MMHomeBuild || null; // X7: decor crafting (optional; without it the starter stock still places)
+  // IF1 (optional: without them the B9 pouch and no regen). ?rest=0 turns rest / regen / mercy off (HP only heals on a respawn, as before)
+  const POUCH = window.MMIslePouch || null, REST = new URLSearchParams(location.search).get('rest') === '0' ? null : window.MMIsleRest || null;
   const $ = (id) => document.getElementById(id);
   const has = (o, k) => !!o && Object.prototype.hasOwnProperty.call(o, k);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -71,6 +90,16 @@
   const TEST = Q.get('test') === '1';
   const ART = Q.get('art') !== '0';
   const LOW = Q.get('perf') === 'low';
+  // PI2 (NEXT-SLICES-4): the graphics tier. The shared lowGfx pref (pixeltown-access-v1, MMAccess) forces MMPerf's low tier, as does
+  // ?perf=low (which also keeps its older, smaller creature cap and one companion). The low tier: dpr 1, at most 12 glint sparks a frame,
+  // no ground shadows, still terrain decor (glints, pen guests, aurora drift, steam), companion AI stepped at 15 Hz and the fog reveal at
+  // 10 Hz. Gameplay never changes with the pref. No pref (and no MMPerf) = the high tier, drawn exactly as before.
+  const PERF = window.MMPerf || null;
+  const ACC = (() => { try { return window.MMAccess && window.MMAccess.prefs ? window.MMAccess.prefs.load(window.localStorage) : null; } catch (e) { return null; } })();
+  const GFX_TIER = LOW || (ACC && ACC.lowGfx === true) ? 'low' : PERF ? PERF.profile([], ACC || {}, null).tier : 'high';
+  const GFX_LOW = GFX_TIER === 'low';
+  const GFX = { tier: GFX_TIER, sparks: GFX_LOW ? (PERF ? PERF.CAPS.low.sparks : 12) : Infinity, ghosts: GFX_LOW ? (PERF ? PERF.CAPS.low.deathGhosts : 4) : 6,
+    terrainAnim: !GFX_LOW, aiHz: GFX_LOW ? 15 : 0, fogHz: GFX_LOW ? 10 : 0, shadows: !GFX_LOW };
   const TAME = Q.get('tame') !== '0', COMPANIONS = Q.get('companions') !== '0', MOUNTS = Q.get('mounts') !== '0';
   const SADDLES = Q.get('saddles') !== '0' && !!CRAFT; // X4: ?saddles=0 rides every mount bareback (today's free riding)
   const TILE = CB.TILE, CPX = CB.CPX, CH = CB.CH;
@@ -87,12 +116,22 @@
   const S = store || memStore;
   const readJson = (k) => { try { const s = S.getItem(k); return typeof s === 'string' ? JSON.parse(s) : null; } catch (e) { return null; } };
   let save = ISL.load(S, Date.now());
+  // PI2: one-thumb mode (auto-attack the nearest foe + the mount ability button by the stick). The same per-device switch as the Realm's
+  // one-thumb mode (mm-auto-fire + mm-aim-toggle both '1', never in a save); ?onethumb=1 / 0 forces it for this visit.
+  const OT_KEYS = ['mm-auto-fire', 'mm-aim-toggle'];
+  let ONE_THUMB = Q.get('onethumb') === '1' ? true : Q.get('onethumb') === '0' ? false : OT_KEYS.every((k) => { try { return S.getItem(k) === '1'; } catch (e) { return false; } });
   const tames = TAMES.load(S); // corrupt -> the empty stable; written only on a tame / party / mount change
 
   // the island: ?isle= (isle id or pack id), else from the Hub the island you were last on (Hearth Isle for a new save), else the jungle (B8)
   const rawIsle = Q.get('isle');
   const wantIsle = rawIsle ? ISL.isleFor(rawIsle) : (Q.get('from') === 'hub' ? save.at : '');
-  const ISLE = wantIsle && has(ISL.ISLES, wantIsle) && ISL.ISLES[wantIsle].pack && BP.resolveId(ISL.ISLES[wantIsle].pack) ? wantIsle : 'jungle';
+  const pickIsle = wantIsle && has(ISL.ISLES, wantIsle) && ISL.ISLES[wantIsle].pack && BP.resolveId(ISL.ISLES[wantIsle].pack) ? wantIsle : 'jungle';
+  // IF1: a locked island (reef without a raft, mars without a rocket core) opened by URL - a shared or stale link, a Continue URL -
+  // lands at the home dock instead, so no trip and no visit medal is skipped. ?test=1 keeps the direct load for the test bots.
+  const openAtLoad = (id) => ['home', 'jungle', 'ice'].indexOf(id) >= 0 || ISL.isUnlocked(save, id) || (Array.isArray(save.visited) && save.visited.indexOf(id) >= 0);
+  const URL_LOCKED = !TEST && !openAtLoad(pickIsle) ? pickIsle : '';
+  const ISLE = URL_LOCKED ? 'home' : pickIsle;
+  if (URL_LOCKED) { try { const q = new URLSearchParams(location.search); q.set('isle', 'meadow'); q.set('at', 'dock'); q.delete('seed'); history.replaceState(null, '', location.pathname + '?' + q.toString()); } catch (e) { /* ignore */ } }
   const PACK_ID = BP.resolveId(ISL.ISLES[ISLE].pack);
   const PACK = BP.get(PACK_ID);
   const DRAW_BIOME = { meadow: 'home', tundra: 'ice' }[PACK_ID] || PACK_ID;
@@ -101,7 +140,7 @@
   const isleName = (id) => { const isle = ISL.ISLES[id]; const pk = isle && BP.get(isle.pack); return pk ? pk.name : id; };
   const todayQ = Q.get('today');
 
-  const seedQ = Q.get('seed');
+  const seedQ = URL_LOCKED ? null : Q.get('seed');
   const savedIsle = save.isles[ISLE] || null;
   const SEED = seedQ && /^\d{1,12}$/.test(seedQ) ? seedQ : (savedIsle && savedIsle.seed ? savedIsle.seed : '1');
 
@@ -141,7 +180,19 @@
   const heroSolidAt = (tx, ty) => (inWorld(tx, ty) && PASS_T[O.tileAt(world, tx, ty)] === 1 ? false : solidAt(tx, ty) || (swimAt(tx, ty) && !CMP.canSwim(ride)));
   const walkableAt = (tx, ty) => !solidAt(tx, ty) && !swimAt(tx, ty);
   const tileOf = (px) => Math.floor(px / TILE);
-  function moveScaleAt(tx, ty) { const t = O.tileAt(world, tx, ty); return NOSLOW_T[t] || PASS_T[t] ? 1 : SLOW[t] || 1; }
+  function moveScaleAt(tx, ty) { const t = O.tileAt(world, tx, ty); return NOSLOW_T[t] || PASS_T[t] ? 1 : crackedAt(tx, ty) ? THIN_SLOW : SLOW[t] || 1; }
+  // TD1 thin ice (tundra): standing on one ice_thin tile shows a crack telegraph after ICE_WARN s and cracks it at ICE_CRACK s into slush
+  // for ICE_SLUSH s (x THIN_SLOW footing only: never damage, never water, never a trap). The cracked tiles live in two fixed arrays (no
+  // per-frame allocation, no change to world.terrain or the baked chunks); ?thinice=0 turns it off.
+  const ICE_THIN_T = O.TERRAIN_ALL.ice_thin, ICE_WARN = 1.0, ICE_CRACK = 1.5, ICE_SLUSH = 20, THIN_SLOW = 0.6, CRACK_MAX = 32;
+  const THIN_ICE = PACK_ID === 'tundra' && ICE_THIN_T !== undefined && Q.get('thinice') !== '0';
+  const ice = { tile: -1, t: 0, n: 0, made: 0, warnN: 0, told: false, idx: new Int32Array(CRACK_MAX).fill(-1), until: new Float64Array(CRACK_MAX) };
+  function crackedAt(tx, ty) {
+    if (!ice.n) return false;
+    const k = ty * W + tx;
+    for (let i = 0; i < CRACK_MAX; i++) if (ice.idx[i] === k) return true;
+    return false;
+  }
   const bandName = (z) => (PACK.bands[z] ? PACK.bands[z].name.replace(/_/g, ' ') : 'open sea');
 
   // props / sites per chunk, baked into the chunk canvas (never drawn per frame)
@@ -152,7 +203,8 @@
 
   // ---------- canvas ----------
   const view = $('view'), g = view.getContext('2d');
-  let DPR = LOW ? 1 : Math.min(2, window.devicePixelRatio || 1);
+  let DPR = GFX_LOW ? 1 : Math.min(2, window.devicePixelRatio || 1);
+  if (PERF) PERF.applyCanvas(view, GFX_TIER); // PI2: tags the canvas (data-mm-tier); the backing store stays the page's own
   let VW = 0, VH = 0;
   function resize() {
     VW = Math.max(1, window.innerWidth); VH = Math.max(1, window.innerHeight);
@@ -307,7 +359,7 @@
     return MS.frameIndex(a, el, c.sk);
   }
   // dying creatures play their death strip from a fixed pool (6 slots, reused)
-  const deadPool = []; for (let i = 0; i < 6; i++) deadPool.push({ on: false, sk: '', x: 0, y: 0, dir: 0, t0: 0, id: '' });
+  const deadPool = []; for (let i = 0; i < GFX.ghosts; i++) deadPool.push({ on: false, sk: '', x: 0, y: 0, dir: 0, t0: 0, id: '' });
   let deathsShown = 0;
   function addDeath(c) {
     if (!STRIPS || !c.sk || !STRIPS.has(c.sk)) return;
@@ -326,17 +378,48 @@
   let creatures = [];
   let uid = 0, simT = 0;
   const rng = RNG.create('isles|' + PACK_ID + '|' + SEED + '|ai');
-  const rare = { spot: IC.rareSpot ? IC.rareSpot(world, PACK, SEED, walkableAt) : null, live: 0, done: false, n: 0 };
+  // TD1: the tundra and mars rares come from this page-side table (the packs carry no `rare` there, so pack-golden stays identical): the
+  // same seeded IsleCreatures.rareSpot, at most one alive. Each is a code palette swap of its species (aurora frostfox, only out on an
+  // aurora night; chrome rustbeetle), tameable like the plain one, and a tame (never a kill) adds its MMIsleCraft rare item.
+  const RARE_EXTRA = { tundra: { frostfox: { zone: 3 } }, mars: { rustbeetle: { zone: 3 } } };
+  const RARE_VARIANT = { frostfox: { v: 'aurora', name: 'Aurora Frostfox', item: 'aurora_shard', night: true, tint: '#7fffd4', glow: '#e0b8ff' },
+    rustbeetle: { v: 'chrome', name: 'Chrome Rustbeetle', item: 'chrome_flake', night: false, tint: '#dfe8f2', glow: '#ffffff' } };
+  const RARE_PACK = !PACK.rare && has(RARE_EXTRA, PACK_ID) && Q.get('rares') !== '0' ? { id: PACK.id, rare: RARE_EXTRA[PACK_ID] } : PACK;
+  const rare = { spot: IC.rareSpot ? IC.rareSpot(world, RARE_PACK, SEED, walkableAt) : null, live: 0, done: false, n: 0 };
+  const RARE_VAR = rare.spot && RARE_PACK !== PACK && has(RARE_VARIANT, rare.spot.creature) ? RARE_VARIANT[rare.spot.creature] : null;
+  // the variant's look: the species' code bake recoloured once (source-atop tint + a few glints), cached per bake
+  const varArt = {};
+  function variantArt(a, V) {
+    if (!a || !V) return a;
+    const key = a.id + '|' + V.v;
+    if (varArt[key]) return varArt[key];
+    const frames = {};
+    Object.keys(a.frames).forEach((act) => {
+      frames[act] = a.frames[act].map((cv, fi) => {
+        const c2 = mk(cv.width, cv.height), x = c2.getContext('2d');
+        x.drawImage(cv, 0, 0);
+        x.globalCompositeOperation = 'source-atop';
+        x.globalAlpha = 0.55; x.fillStyle = V.tint; x.fillRect(0, 0, cv.width, cv.height);
+        x.globalAlpha = 0.9; x.fillStyle = V.glow;
+        const u = Math.max(2, Math.round(cv.width / 24));
+        for (let k = 0; k < 5; k++) x.fillRect(Math.round(cv.width * (0.3 + 0.1 * ((k * 3 + fi) % 5))), Math.round(cv.height * (0.35 + 0.09 * ((k * 2 + fi) % 5))), u, u);
+        return c2;
+      });
+    });
+    varArt[key] = Object.assign({}, a, { frames: frames, id: a.id + '_' + V.v });
+    return varArt[key];
+  }
   const isBig = (c) => c.size === 'L' || c.size === 'XL';
 
-  function addCreature(sp, x, y, gi, j, wid) {
+  function addCreature(sp, x, y, gi, j, wid, own) { // own: a creature-owned MMRng stream (TD1 rares) instead of the shared AI stream
+    const R = own || rng;
     const kind = IC.kindOf(sp, gi);
     const s = specOf(sp, kind);
     const c = { uid: ++uid, sp: sp, kind: kind, base: s.base, x: x, y: y, hx: x, hy: y, vx: 0, vy: 0, hp: s.hp, maxHp: s.hp, rad: s.rad, size: s.size, mood: s.mood,
-      angry: 0, think: rng.next() * 0.1, cd: 0, flash: 0, moving: false, t: rng.next() * 4, gi: gi, seen: false, art: null,
+      angry: 0, think: R.next() * 0.1, cd: 0, flash: 0, moving: false, t: R.next() * 4, gi: gi, seen: false, art: null,
       ph: '', pt: 0, ang: 0, ox: x, oy: y, hitDone: false, tgAt: -1, ko: false, calm: false, hostile: s.mood === 'hostile', awake: true,
       tm: null, tmAcc: 0, leaving: 0, wid: wid || (gi >= 0 ? 'g' + gi + '_' + (j | 0) : 'u' + uid), lv: 1,
-      sk: stripKind(kind), dir: 0, act: '', at0: 0, eatT: 0, drawn: '', src: '', swim: false, rare: false };
+      sk: stripKind(kind), dir: 0, act: '', at0: 0, eatT: 0, drawn: '', src: '', swim: false, rare: false, rng: own || null };
     c.swim = !!(s.def && s.def.behaviours && s.def.behaviours.indexOf('swim') >= 0);
     c.def = s.def;
     if (s.def) c.lv = IC.levelFor(s.def, SEED, c.wid);
@@ -383,12 +466,15 @@
   function rareTick(htx, hty) {
     const sp = rare.spot;
     if (!sp || rare.live || rare.done || creatures.length >= CAP) return;
+    if (RARE_VAR && RARE_VAR.night && !tdNight()) return; // TD1: the aurora frostfox only comes out on an aurora night
     const dd = Math.hypot(sp.x - htx, sp.y - hty);
     if (dd > SPAWN_R || dd < 7) return;
     const s = specOf(sp.creature, IC.kindOf(sp.creature, -1));
     if (isBig({ size: s.size }) && bigN >= BIG_CAP) return;
-    const c = addCreature(sp.creature, (sp.x + 0.5) * TILE, (sp.y + 0.5) * TILE, -1, 0, 'rare_' + sp.creature);
+    // TD1: a page-table rare wanders on its own seeded stream, so its coming and going never reshuffles the island's other creatures
+    const c = addCreature(sp.creature, (sp.x + 0.5) * TILE, (sp.y + 0.5) * TILE, -1, 0, 'rare_' + sp.creature, RARE_VAR ? RNG.create('isles|' + PACK_ID + '|' + SEED + '|rare|' + rare.n) : null);
     c.rare = true;
+    if (RARE_VAR) { c.variant = RARE_VAR.v; c.sk = null; c.art = variantArt(c.art, RARE_VAR); } // TD1: the code-drawn palette swap
     rare.live = c.uid; rare.n++;
     if (isBig(c)) bigN++;
   }
@@ -402,10 +488,15 @@
     if (c.ko || c.ph) { if (c.ko) { c.vx = 0; c.vy = 0; } return; }
     const dx = hero.x - c.x, dy = hero.y - c.y, d = Math.hypot(dx, dy) || 1;
     if (c.leaving > 0) { c.vx = -dx / d * s.speed * 1.4; c.vy = -dy / d * s.speed * 1.4; return; }
-    if (c.calm) { c.vx = 0; c.vy = 0; return; } // befriending: it stays and watches you
+    // befriending: it stays and watches you; IF1: when you drift off a little it pads after you (so a short step back never loses it)
+    if (c.calm) { if (POUCH && d > 1.8 * TILE && d < 6 * TILE && !hero.dead) { c.vx = dx / d * s.speed * 0.5; c.vy = dy / d * s.speed * 0.5; } else { c.vx = 0; c.vy = 0; } return; }
     const home = Math.hypot(c.x - c.hx, c.y - c.hy);
     if (home > LEASH) { c.angry = 0; const hd = home || 1; c.vx = (c.hx - c.x) / hd * s.speed; c.vy = (c.hy - c.y) / hd * s.speed; return; }
-    const chase = !hero.dead && s.dmg > 0 && c.mood !== 'shy' && (c.angry > 0 || (c.mood === 'hostile' && d < s.aggroR));
+    // IF1 mercy: a badly hurt hero (<= 1/3 HP) who has not shot for a second is left alone by wild creatures (they break off the chase;
+    // an attack already winding up still lands). Never in a boss fight. Shooting again ends it.
+    // A rest spot (dock, campfire, hot spring, dome, home) is a safe room: nothing starts a chase or an attack on you while you stand there.
+    const mercy = !!REST && ((hero.hp <= hero.maxHp / 3 && hero.shotT <= 1) || heroResting()) && !(bz.engaged && bossAlive());
+    const chase = !hero.dead && !mercy && s.dmg > 0 && c.mood !== 'shy' && (c.angry > 0 || (c.mood === 'hostile' && d < s.aggroR));
     if (chase) {
       if (c.cd <= 0 && d < c.rad + HERO_R + s.atk.reach * 0.8) { startAttack(c, s, dx, dy); return; }
       c.vx = dx / d * s.speed * 1.15; c.vy = dy / d * s.speed * 1.15; return;
@@ -413,15 +504,25 @@
     // shy creatures flee when startled (hit, or the hero shooting nearby); with ?tame=0 they flee whenever the hero is close (B8)
     if (c.mood === 'shy' && d < 4 * TILE && (!TAME || !c.tm || c.angry > 0 || hero.shotT > 0)) { c.vx = -dx / d * s.speed * 1.2; c.vy = -dy / d * s.speed * 1.2; return; }
     if (c.mood === 'shy' && c.angry > 0 && d < 8 * TILE) { c.vx = -dx / d * s.speed * 1.2; c.vy = -dy / d * s.speed * 1.2; return; }
-    if (rng.next() < 0.12) {
-      if (rng.next() < 0.45) { c.vx = 0; c.vy = 0; }
-      else { const a = rng.next() * Math.PI * 2; c.vx = Math.cos(a) * s.speed * 0.5; c.vy = Math.sin(a) * s.speed * 0.5; }
+    // IF1: a feed / calm tameable smells food it likes in your pouch or bag and wanders over (never while you shoot or after a scare)
+    if (curious(c, d)) { const k = d > 3 * TILE ? 0.55 : 0.3; c.vx = dx / d * s.speed * k; c.vy = dy / d * s.speed * k; return; }
+    const R = c.rng || rng;
+    if (R.next() < 0.12) {
+      if (R.next() < 0.45) { c.vx = 0; c.vy = 0; }
+      else { const a = R.next() * Math.PI * 2; c.vx = Math.cos(a) * s.speed * 0.5; c.vy = Math.sin(a) * s.speed * 0.5; }
     }
+  }
+  function curious(c, d) {
+    if (!TAME || !POUCH || hero.dead || hero.shotT > 0 || c.angry > 0 || !c.tm || c.tm.st !== 'wild' || d > 7 * TILE || d < 1.5 * TILE) return false;
+    const def = c.def, diet = def && def.tame && def.tame.method !== 'knockout' ? def.diet : null;
+    if (!diet) return false;
+    for (let i = 0; i < diet.length; i++) if ((pouch[diet[i]] | 0) > 0 || (!CLASSIC_POUCH && invCount(diet[i]) > 0)) return true;
+    return false;
   }
   const HURT_LOG = []; // last few hero hits {t, uid} (test handle; fixed size)
   function dealHero(c, s) {
     const before = hero.hp;
-    hurtHero(s.dmg * 2);
+    hurtHero(s.dmg * 2, true);
     if (hero.hp < before) { if (HURT_LOG.length >= 8) HURT_LOG.shift(); HURT_LOG.push({ t: simT, uid: c.uid, tg: c.tgAt }); }
   }
   function attackStep(c, s, dt) {
@@ -455,9 +556,22 @@
       c.moving = Math.abs(c.vx) + Math.abs(c.vy) > 4;
       c.awake = !c.ko;
       c.hostile = !c.ko && !c.calm && s.dmg > 0 && (c.mood === 'hostile' || c.angry > 0);
-      if (!c.seen && Math.abs(hero.x - c.x) < 8 * TILE && Math.hypot(hero.x - c.x, hero.y - c.y) < 8 * TILE) { c.seen = true; ISL.noteLog(save, 'seen', c.kind || c.sp, 1); dirty = true; }
+      if (!c.seen && Math.abs(hero.x - c.x) < 8 * TILE && Math.hypot(hero.x - c.x, hero.y - c.y) < 8 * TILE) { c.seen = true; noteSeen(c); }
     }
     if (creatures.length && creatures.some((c) => c.leaving > 0 && c.leaving <= 0.01)) removeWhere((c) => c.leaving > 0 && c.leaving <= 0.01, 0);
+  }
+  // IF1: the first sighting of a species ever is a journal entry (a small reward beat); later ones just count
+  function noteSeen(c) {
+    const k = c.kind || c.sp, first = !(save.log && save.log.seen && save.log.seen[k] > 0);
+    ISL.noteLog(save, 'seen', k, 1); dirty = true;
+    // TD1: a rare variant is its own journal line (frostfox_aurora / rustbeetle_chrome), on top of its species
+    const vk = c.variant ? k + '_' + c.variant : '', vFirst = !!vk && !(save.log && save.log.seen && save.log.seen[vk] > 0);
+    if (vk) ISL.noteLog(save, 'seen', vk, 1);
+    if (vFirst && RARE_VAR) { toast('New in your journal: ' + RARE_VAR.name + ' (rare)!'); logEvent('spot'); reward(); return; }
+    if (!first) return;
+    const d = CR.get(k);
+    toast('New in your journal: ' + (d ? d.name : String(k).replace(/_/g, ' ')) + '.');
+    logEvent('spot'); reward();
   }
   const creatureSolid = (c, tx, ty) => solidAt(tx, ty) || (!c.swim && swimAt(tx, ty));
   function removeWhere(fn, cool) {
@@ -477,12 +591,16 @@
     const tx = Math.floor(savedIsle.pos.x), ty = Math.floor(savedIsle.pos.y);
     if (tx >= 0 && ty >= 0 && tx < W && ty < H && walkableAt(tx, ty)) { hero.x = (savedIsle.pos.x) * TILE; hero.y = (savedIsle.pos.y) * TILE; }
   }
-  if (Q.get('at') === 'dock' && world.dock) { hero.x = (world.dock.x + 0.5) * TILE; hero.y = (world.dock.y + 0.5) * TILE; }
+  if ((Q.get('at') === 'dock' || URL_LOCKED) && world.dock) { hero.x = (world.dock.x + 0.5) * TILE; hero.y = (world.dock.y + 0.5) * TILE; }
   // X7: HP carries across a trip (save.hp, absent = full); a knocked-out hero is saved as full (they respawn anyway)
   if (typeof save.hp === 'number' && save.hp >= 1) hero.hp = Math.min(maxHp, save.hp);
   let god = false, xp = 0, kills = 0, tamedN = 0, heroLost = 0;
   const loot = {};
-  const pouch = Object.assign({}, IC.STARTER_POUCH);
+  // IF1: the island's own pouch (the jungle pouch plus its staple food); ?pouch=classic is the old jungle pouch and pouch-only feeding
+  const CLASSIC_POUCH = Q.get('pouch') === 'classic' || !POUCH;
+  const pouch = POUCH ? POUCH.starter(ISLE, { classic: CLASSIC_POUCH }) : Object.assign({}, IC.STARTER_POUCH);
+  let lastHurtT = -1e9, lastRewardT = 0; // IF1: sim time of the last hit taken (regen) and of the last reward (sparkles)
+  function reward() { lastRewardT = simT; }
   function blocked(x, y) {
     const r = HERO_R - 1;
     return heroSolidAt(tileOf(x - r), tileOf(y - r)) || heroSolidAt(tileOf(x + r), tileOf(y - r)) || heroSolidAt(tileOf(x - r), tileOf(y + r)) || heroSolidAt(tileOf(x + r), tileOf(y + r));
@@ -518,12 +636,17 @@
     if (!blocked(nx, hero.y)) hero.x = nx;
     if (!blocked(hero.x, ny)) hero.y = ny;
   }
-  function hurtHero(n) {
+  // soft (creature hits, IF1): a hit never takes you from above a quarter of your health straight to 0 - it leaves 1 HP, and the mercy
+  // rule then lets you walk away. Boss attacks and the test hook are not soft (boss balance is unchanged).
+  function hurtHero(n, soft) {
     if (god || hero.dead || hero.iframes > 0) return;
     if (ride) n = CMP.riderDamage(ride, n);
     if (!(n > 0)) return;
+    if (REST && ENVR.oxygen && envS.emptyO) n = Math.max(1, Math.round(n * REST.hitScale(true))); // IF1: out of air, hits are halved
     const hpBefore = hero.hp;
+    lastHurtT = simT;
     hero.hp = Math.max(0, hero.hp - n); hero.iframes = 0.6;
+    if (soft && REST && hero.hp <= 0 && hpBefore > hero.maxHp / 4) hero.hp = 1;
     heroLost += hpBefore - hero.hp;
     if (hero.hp <= 0) {
       hero.dead = true;
@@ -560,6 +683,24 @@
     if (bolts.length < 60) bolts.push({ x: hero.x, y: hero.y - 6, vx: dx / l * BOLT_SPEED, vy: dy / l * BOLT_SPEED, life: BOLT_LIFE, soothe: soothe && TAME });
     return true;
   }
+  // PI2 one-thumb auto-attack: the nearest hostile creature (in soothe mode: the nearest awake, unsoothed one, to knock out for a tame) or a
+  // live boss within AUTO_R, one pass, no arrays. Fires through fire(), so the cooldown, mount and death rules are the same as a tap.
+  const AUTO_R = 7 * TILE;
+  let autoN = 0;
+  function autoAttack() {
+    let best = null, bd = AUTO_R, bx = 0, by = 0;
+    const sooth = soothe && TAME;
+    for (let i = 0; i < creatures.length; i++) {
+      const c = creatures[i];
+      if (c.calm || c.ko || !(c.hostile || (sooth && c.tm))) continue;
+      const d = Math.hypot(c.x - hero.x, c.y - 8 - hero.y);
+      if (d < bd) { bd = d; best = c; bx = c.x; by = c.y - 8; }
+    }
+    if (bossAlive() && !bz.ko) { const d = Math.hypot(bz.x - hero.x, bz.y - 36 - hero.y); if (d < bd + 2 * TILE) { best = bz; bx = bz.x; by = bz.y - 30; } }
+    if (!best) return false;
+    if (fire(bx - hero.x, by - hero.y)) { autoN++; return true; }
+    return false;
+  }
   // X4 drops: the creature's MMCreatures DROP_TABLES (its first table always rolls, a second one half the time), one weighted row each
   // with a count in [min, max], from a seeded drop stream. Everything goes into `inv` (crafting); food also refills the taming pouch.
   const DEFAULT_DROPS = { jungle: 'jungle_loot', reef: 'reef_loot', tundra: 'frost_loot', mars: 'mars_loot', meadow: 'fluff' };
@@ -584,7 +725,7 @@
       DROP_LOG.push({ sp: c.kind || c.sp, item: row[0], n: n, added: added });
       if (added) got.push(itemName(row[0]) + ' x' + added);
     }
-    if (got.length) toast('Dropped ' + got.join(', ') + '.');
+    if (got.length) { toast('Dropped ' + got.join(', ') + '.'); reward(); }
   }
   function killCreature(c) {
     const s = specOf(c.sp, c.kind);
@@ -655,16 +796,19 @@
     c.tm = r.state;
     if (r.events.length) syncTame(c, r.events); else syncTame(c, null);
   }
+  // the nearest sleeper / befriended creature in reach; IF1: one you have food for comes first, and of those the one furthest along
+  // (two calm creatures side by side: you keep feeding the one you started)
   function feedTarget() {
-    let best = null, bd = 1e9;
+    let best = null, bd = 1e9, fed = null, fk = -1e9;
     for (let i = 0; i < creatures.length; i++) {
       const c = creatures[i];
       if (!c.tm || !(c.ko || c.calm)) continue;
       const d = Math.hypot(hero.x - c.x, hero.y - c.y);
       if (d > (c.ko ? FEED_R : TM.K.CALM_RANGE)) continue;
       if (d < bd) { bd = d; best = c; }
+      if (POUCH) { const k = (c.tm.need > 0 ? c.tm.prog / c.tm.need : 0) * 1000 - d; if (k > fk) { const f = foodOf(CR.get(c.kind)); if (f && f.have) { fk = k; fed = c; } } }
     }
-    return best;
+    return fed || best;
   }
   function feed() {
     if (!TAME || hero.dead) return { ok: false, why: 'off' };
@@ -672,19 +816,39 @@
     const c = feedTarget();
     if (!c) return { ok: false, why: 'none' };
     const def = CR.get(c.kind), nm = def.name;
-    const f = IC.foodFor(def, pouch);
-    if (!f || !f.have) { toast(nm + ' wants ' + IC.foodName(f && f.id) + '. You have none.'); return { ok: false, why: 'nofood' }; }
+    const f = foodOf(def);
+    if (!f || !f.have) { toast(noFoodText(nm, f)); return { ok: false, why: 'nofood', kept: f ? f.kept : '' }; }
     const r = TM.step(c.kind, c.tm, { offer: f.id, playerDist: Math.hypot(hero.x - c.x, hero.y - c.y) }, c.tmAcc);
     c.tmAcc = 0;
     c.tm = r.state;
     const ev = r.events;
-    if (ev.indexOf('fed') >= 0) { pouch[f.id] = Math.max(0, pouch[f.id] - 1); c.eatT = 0.8; }
+    if (ev.indexOf('fed') >= 0) {
+      if (f.from === 'inv') { save.inv = invTake(f.id, 1); toast('Used 1 ' + IC.foodName(f.id) + ' from your bag (' + invCount(f.id) + ' left).'); }
+      else pouch[f.id] = Math.max(0, pouch[f.id] - 1);
+      c.eatT = 0.8;
+    }
     if (ev.indexOf('toofast') >= 0) toast(nm + ' is still chewing.');
     if (ev.indexOf('refused') >= 0) toast(nm + ' turns its nose up.');
     if (c.tm.st === 'tamed') { finishTame(c); return { ok: true, tamed: true, events: ev }; }
     syncTame(c, ev);
     if (ev.indexOf('fed') >= 0) logEvent('tame_progress');
     return { ok: ev.indexOf('fed') >= 0, events: ev, prog: c.tm.prog, need: c.tm.need };
+  }
+
+  // IF1: what feeding offers: the pouch first, then the pack minus what a locked travel recipe (or your first o2 tank) still needs
+  function feedReserve() {
+    if (!POUCH || !CRAFT || !CRAFT.recipesFor) return {};
+    const ids = [];
+    Object.keys(ITEM_FOR_ISLE).forEach((isle) => { const it = ITEM_FOR_ISLE[isle]; if (!isleOpen(isle) && !invCount(it)) CRAFT.recipesFor(it).forEach((id) => ids.push(id)); });
+    if (!invCount('o2_tank')) CRAFT.recipesFor('o2_tank').forEach((id) => ids.push(id));
+    return POUCH.reserveFor(ids, save.inv);
+  }
+  const foodOf = (def) => IC.foodFor(def, pouch, CLASSIC_POUCH ? null : save.inv, CLASSIC_POUCH ? null : feedReserve());
+  const foodHave = (f) => (f.from === 'inv' ? invCount(f.id) : pouch[f.id] | 0);
+  function noFoodText(nm, f) {
+    const id = f && f.id, w = POUCH ? POUCH.where(id) : '';
+    if (f && f.kept) return nm + ' wants ' + IC.foodName(f.kept) + '. Your ' + IC.foodName(f.kept) + ' is kept for a travel craft; gather a little more' + (w ? ': ' + w : '') + '.';
+    return nm + ' wants ' + IC.foodName(id) + '. You have none yet' + (w ? ': ' + w : '') + '.';
   }
 
   // the party: MMCompanion states for up to MAX_ACTIVE (1 on the low tier) tames from tames.party
@@ -716,7 +880,9 @@
   function loadParty() {
     tames.party.forEach((id, k) => { const ent = TAMES.find(tames, id); if (ent) spawnCompanion(ent, hero.x + (k ? 40 : -40), hero.y + 30); });
   }
+  let partyAcc = 0, partySteps = 0;
   function stepParty(dt) {
+    partySteps++;
     compCtx.enemies = creatures;
     for (let i = 0; i < party.length; i++) {
       const p = party[i];
@@ -729,7 +895,14 @@
     const def = CR.get(c.kind);
     const ent = adoptTame(def, c.tm.bond, c.x, c.y, false);
     removeWhere((x) => x === c, 90000);
-    toast(ent ? def.name + ' joined you!' : def.name + ' is happy. Your bond grows.');
+    // TD1: taming the island's rare variant (never killing it) gives its rare item; the tame keeps the look as its cosmetic
+    const V = c.variant && RARE_VAR && RARE_VAR.v === c.variant ? RARE_VAR : null;
+    if (V) {
+      const got = invAdd(V.item, 1);
+      if (ent && TAMES.setCosmetic(tames, ent.id, V.v)) { TAMES.rename(tames, ent.id, V.name); TAMES.write(S, tames); }
+      toast((ent ? V.name + ' joined you!' : V.name + ' is happy. Your bond grows.') + (got ? ' +1 ' + HS.resName(V.item) + '.' : ''));
+      logEvent('rare_tame');
+    } else toast(ent ? def.name + ' joined you!' : def.name + ' is happy. Your bond grows.');
     logEvent('tame');
     refreshMount();
     checkMedals();
@@ -752,12 +925,12 @@
     }
     TAMES.write(S, tames);
     ISL.noteLog(save, 'tamed', def.id, 1); dirty = true;
-    tamedN++;
+    tamedN++; reward();
     return ent;
   }
 
   // mount: the tames.mount entry (else the first rideable tame) through MMCompanion.ride
-  let ride = null, rideArt = null, mountEnt = null, rideKind = null, rideDir = 0, rideDrawn = '', saddleDrawn = '';
+  let ride = null, rideArt = null, mountEnt = null, rideKind = null, rideDir = 0, rideDrawn = '', saddleDrawn = '', rideLift = 0, rideDx = 0; // rideLift / rideDx: where the hero was last drawn (test handle)
   function refreshMount() {
     mountEnt = null;
     if (!MOUNTS) return;
@@ -1134,9 +1307,10 @@
 
   // ---------- fog + minimap ----------
   let fog = (savedIsle && savedIsle.seed === SEED && FOG.decode(savedIsle.fog)) || FOG.make();
-  let fogDirty = true, lastFogTile = '';
+  let fogDirty = true, lastFogTile = -1, fogAcc = 0, fogCalls = 0; // PI2: an integer tile key (no per-frame string); the low tier reveals at 10 Hz
   function revealFog() {
-    const tx = tileOf(hero.x), ty = tileOf(hero.y), k = tx + ',' + ty;
+    fogCalls++;
+    const tx = tileOf(hero.x), ty = tileOf(hero.y), k = ty * 65536 + tx;
     if (k === lastFogTile) return;
     lastFogTile = k;
     if (FOG.reveal(fog, tx, ty, 10) > 0) { fogDirty = true; dirty = true; }
@@ -1197,6 +1371,7 @@
   const MOOD_COL = { shy: '#9ad07a', neutral: '#e0c060', hostile: '#e0604a' };
   let camX = 0, camY = 0;
   function render() {
+    sparksDrawn = GFX.sparks === Infinity ? -1 : GFX.sparks - sparkLeft; sparkLeft = GFX.sparks; // the last frame's count (-1 = uncapped)
     g.setTransform(DPR, 0, 0, DPR, 0, 0);
     camX = Math.round(hero.x - VW / 2); camY = Math.round(hero.y - VH / 2);
     const deep = PAL.deep_water ? PAL.deep_water[0] : '#1d3f7a';
@@ -1209,6 +1384,7 @@
       if (cv) g.drawImage(cv, cx * CPX - camX, cy * CPX - camY, CPX, CPX);
     }
     drawGround();
+    drawTdGround(); // TD1: thin-ice cracks / slush, glints
     drawArena();
     drawBossGround();
     // telegraphs first (on the ground, under every body)
@@ -1230,14 +1406,14 @@
       let top = sy - c.rad * 2.4;
       if (st) {
         const a = c.art;
-        if (a && a.shadow && !LOW) { const w0 = a.w / a.dpr, w = Math.min(w0, st.w * 0.8, st.span), h = a.shadow.height / a.dpr * w / w0; g.drawImage(a.shadow, sx - w / 2, sy - h / 2, w, h); } // AW2 / AW3: shadow no wider than the body
+        if (a && a.shadow && GFX.shadows) { const w0 = a.w / a.dpr, w = Math.min(w0, st.w * 0.8, st.span), h = a.shadow.height / a.dpr * w / w0; g.drawImage(a.shadow, sx - w / 2, sy - h / 2, w, h); } // AW2 / AW3: shadow no wider than the body
         STRIPS.draw(g, st, stripFrame(c), sx, sy, 1, MS.flipFor(c.act, c.dir));
         c.drawn = st.id; c.src = 'png';
         top = Math.min(top, sy - (st.ay - st.top) - 2);
       } else if (c.art) {
         const a = c.art, act = c.moving ? 'move' : 'idle', fr = a.frames[act][CD.frameAt(act, c.t)];
         const w = a.w / a.dpr, h = a.h / a.dpr;
-        if (a.shadow && !LOW) g.drawImage(a.shadow, sx - w / 2, sy - (a.shadow.height / a.dpr) / 2, w, a.shadow.height / a.dpr);
+        if (a.shadow && GFX.shadows) g.drawImage(a.shadow, sx - w / 2, sy - (a.shadow.height / a.dpr) / 2, w, a.shadow.height / a.dpr);
         if (c.vx < -4) { g.save(); g.translate(sx, 0); g.scale(-1, 1); g.drawImage(fr, -w / 2, sy - a.ay / a.dpr, w, h); g.restore(); }
         else g.drawImage(fr, sx - w / 2, sy - a.ay / a.dpr, w, h);
         c.drawn = a.id; c.src = 'code';
@@ -1284,7 +1460,7 @@
       if (rst) {
         // the mount's own strip, then the separate saddle overlay (same view, same frame), then the hero on the manifest seat
         const ra = heroMoving ? 'move' : 'idle', fr = MS.frameIndex(ra, hero.t), flip = rideDir === MS.LEFT;
-        if (rideArt && rideArt.shadow && !LOW) { const a = rideArt, w0 = a.w / a.dpr, w = Math.min(w0, rst.w * 0.8, rst.span), h = a.shadow.height / a.dpr * w / w0; g.drawImage(a.shadow, hx - w / 2, hy - h / 2, w, h); }
+        if (rideArt && rideArt.shadow && GFX.shadows) { const a = rideArt, w0 = a.w / a.dpr, w = Math.min(w0, rst.w * 0.8, rst.span), h = a.shadow.height / a.dpr * w / w0; g.drawImage(a.shadow, hx - w / 2, hy - h / 2, w, h); }
         STRIPS.draw(g, rst, fr, hx, hy, 1, flip);
         if (sad && sad !== rst) STRIPS.draw(g, sad, fr, hx, hy, 1, flip);
         rideDrawn = rst.id; saddleDrawn = sad && sad !== rst ? sad.id : '';
@@ -1292,18 +1468,22 @@
       } else if (rideArt) {
         rideDrawn = rideArt.id; saddleDrawn = '';
         const a = rideArt, act = heroMoving ? 'move' : 'idle', fr = a.frames[act][CD.frameAt(act, hero.t)], w = a.w / a.dpr, h = a.h / a.dpr;
-        if (a.shadow && !LOW) g.drawImage(a.shadow, hx - w / 2, hy - (a.shadow.height / a.dpr) / 2, w, a.shadow.height / a.dpr);
+        if (a.shadow && GFX.shadows) g.drawImage(a.shadow, hx - w / 2, hy - (a.shadow.height / a.dpr) / 2, w, a.shadow.height / a.dpr);
         if (hero.face.x < 0) { g.save(); g.translate(hx, 0); g.scale(-1, 1); g.drawImage(fr, -w / 2, hy - a.ay / a.dpr, w, h); g.restore(); }
         else g.drawImage(fr, hx - w / 2, hy - a.ay / a.dpr, w, h);
       } else { g.fillStyle = '#8a6a4a'; g.beginPath(); g.ellipse(hx, hy - 8, 26, 14, 0, 0, Math.PI * 2); g.fill(); }
     }
-    if (!hero.dead && !(hero.iframes > 0 && Math.floor(hero.iframes * 12) % 2)) {
+    rideLift = lift; rideDx = rdx;
+    if (!hero.dead && (REDUCED || !(hero.iframes > 0 && Math.floor(hero.iframes * 12) % 2))) { // PI2: reduced motion: no blink, a steady fade
+      if (REDUCED && hero.iframes > 0) g.globalAlpha = 0.6;
       if (ART) {
-        if (!LOW && !ride) g.drawImage(heroArt.shadow, hx - 12, hy - 2, 24, 8);
+        if (GFX.shadows && !ride) g.drawImage(heroArt.shadow, hx - 12, hy - 2, 24, 8);
         g.drawImage(heroArt.frames[Math.floor(hero.t * 6) % 2], hx - 16 + rdx, hy - 28 + lift, 32, 32);
       } else { g.fillStyle = CLASS_COL[HERO.cls] || '#4f9a45'; g.beginPath(); g.arc(hx, hy - 8 + lift, HERO_R, 0, Math.PI * 2); g.fill(); }
+      g.globalAlpha = 1;
     }
     if (abil && ride && !hero.dead && (abil.ph === 'active' || abil.ph === 'wind')) drawAbility(hx, hy);
+    drawTdSky(hx, hy); // TD1: night tint + aurora band, the air arrow, soak steam
   }
   // XW1: the ability's look: a windup line ahead (charge), a ring for stomp / roar / the warm aura, a soft glow while the rest are on
   function drawAbility(hx, hy) {
@@ -1322,7 +1502,10 @@
   }
   const drawBuf = [];
   const TG_COL = '#ffb347', TG_BIG = '#ff6a3a';
-  const REDUCED = (() => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } })();
+  // PI2: reduced motion = the OS setting or the shared "screen flashes off" pref (MMSideAccess sets data-reduce-motion on <html>)
+  const REDUCED = (() => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } })() || !!(window.MMSideAccess && window.MMSideAccess.reduced());
+  const STILL = REDUCED || !GFX.terrainAnim; // still terrain decor: reduced motion, or the low graphics tier (telegraphs keep their own rule)
+  let sparkLeft = 0, sparksDrawn = 0, drawCalls = 0;
   // the wind-up telegraph: the full shape outlined, filled as the wind-up runs out (big creatures: thicker, hotter colour)
   function drawTelegraph(c, sx, sy) {
     const s = specOf(c.sp, c.kind), a = s.atk;
@@ -1392,7 +1575,7 @@
       const p = s.springs[i], sx = p.x - camX, sy = p.y - camY;
       g.globalAlpha = 0.85; g.fillStyle = '#3aa8a0'; g.beginPath(); g.arc(sx, sy, p.r, 0, Math.PI * 2); g.fill();
       g.globalAlpha = 1; g.strokeStyle = '#f2e0a0'; g.lineWidth = 3; g.stroke();
-      const k = REDUCED ? 0 : (simT * 12) % 10; // steam puffs rise (static with reduced motion)
+      const k = STILL ? 0 : (simT * 12) % 10; // steam puffs rise (static with reduced motion)
       g.fillStyle = 'rgba(255,255,255,0.65)'; g.fillRect(sx - 12, sy - 16 - k, 5, 6); g.fillRect(sx + 7, sy - 10 - ((k + 5) % 10), 5, 6);
     }
     if (s.ice && s.ice.length) for (let i = 0; i < s.ice.length; i++) {
@@ -1435,17 +1618,17 @@
     const st = stripOf(bz, bz.moving);
     if (st) {
       const a = bz.art;
-      if (a && a.shadow && !LOW) { const w = a.w / a.dpr; g.drawImage(a.shadow, sx - w / 2, sy - (a.shadow.height / a.dpr) / 2, w, a.shadow.height / a.dpr); }
+      if (a && a.shadow && GFX.shadows) { const w = a.w / a.dpr; g.drawImage(a.shadow, sx - w / 2, sy - (a.shadow.height / a.dpr) / 2, w, a.shadow.height / a.dpr); }
       let fr;
-      if (bz.act === 'roar' && bz.tele.length) { const tg = bz.tele[bz.tele.length - 1]; fr = MS.frameIndex('roar', clamp((simT - tg.t0) / tg.windup, 0, 0.999) * MS.duration('roar')); }
-      else if (bz.act === 'idle' || bz.act === 'move' || bz.act === 'sleep' || bz.act === 'eat') fr = MS.frameIndex(bz.act, bz.t);
-      else fr = MS.frameIndex(bz.act, simT - bz.at0);
+      if (bz.act === 'roar' && bz.tele.length) { const tg = bz.tele[bz.tele.length - 1]; fr = MS.frameIndex('roar', clamp((simT - tg.t0) / tg.windup, 0, 0.999) * MS.duration('roar', bz.sk), bz.sk); }
+      else if (bz.act === 'idle' || bz.act === 'move' || bz.act === 'sleep' || bz.act === 'eat') fr = MS.frameIndex(bz.act, bz.t, bz.sk);
+      else fr = MS.frameIndex(bz.act, simT - bz.at0, bz.sk);
       STRIPS.draw(g, st, fr, sx, sy, 1, MS.flipFor(bz.act, bz.dir));
       bz.drawn = st.id; bz.src = 'png';
       top = sy - (st.ay - st.top) - 2;
     } else if (bz.art) {
       const a = bz.art, act = bz.moving ? 'move' : 'idle', fr = a.frames[act][CD.frameAt(act, bz.t)], w = a.w / a.dpr, h = a.h / a.dpr;
-      if (a.shadow && !LOW) g.drawImage(a.shadow, sx - w / 2, sy - (a.shadow.height / a.dpr) / 2, w, a.shadow.height / a.dpr);
+      if (a.shadow && GFX.shadows) g.drawImage(a.shadow, sx - w / 2, sy - (a.shadow.height / a.dpr) / 2, w, a.shadow.height / a.dpr);
       if (bz.vx < -4) { g.save(); g.translate(sx, 0); g.scale(-1, 1); g.drawImage(fr, -w / 2, sy - a.ay / a.dpr, w, h); g.restore(); }
       else g.drawImage(fr, sx - w / 2, sy - a.ay / a.dpr, w, h);
       bz.drawn = a.id; bz.src = 'code';
@@ -1486,7 +1669,7 @@
     const tm = c.tm, bw = Math.max(20, c.rad * 1.6);
     if (c.ko) {
       g.fillStyle = '#e8e0ff'; g.font = 'bold 12px monospace';
-      const k = Math.floor(simT * 2) % 3;
+      const k = REDUCED ? 0 : Math.floor(simT * 2) % 3; // PI2: still Zs with reduced motion
       g.fillText('z', sx + c.rad * 0.6, top - 2 - k * 3); g.fillText('Z', sx + c.rad * 0.6 + 6, top - 10 - k * 3);
     } else if (c.calm) drawHeart(sx, top - 12, '#ff7aa8');
     if (tm.torpor > 0 && !c.ko && tm.torporMax > 0) { g.fillStyle = '#2a1b2a'; g.fillRect(sx - bw / 2, top + 0, bw, 3); g.fillStyle = '#a77ae0'; g.fillRect(sx - bw / 2, top, bw * clamp(tm.torpor / tm.torporMax, 0, 1), 3); }
@@ -1599,7 +1782,7 @@
       const fGot = f ? invAdd(f, 1) : 0;
       r.find = fGot ? f : '';
       toast('You found ' + HS.resName(r.kind) + '. (' + r.total + ' in your log)' + (fGot ? ' And a little ' + HS.resName(f) + '.' : ''));
-      logEvent('gather');
+      logEvent('gather'); reward();
       dirty = true; persist();
     }
     else if (r.why === 'today') toast('Already gathered here today. It grows back tomorrow.');
@@ -1611,7 +1794,7 @@
   const ITEM_NAME = { raft: 'Raft', rocket_core: 'Rocket core', feast: 'Feast', sleepy_herb: 'Sleepy herb', warm_cloak: 'Warm cloak', o2_tank: 'O2 tank',
     // XW1: the XD1 recipe outputs
     heat_pack: 'Heat pack', glow_lamp: 'Glow lamp', bone_charm: 'Bone charm', honey_cake: 'Honey cake', sea_salt_snack: 'Sea salt snack', stone_bench: 'Stone bench',
-    berry_jam: 'Berry jam', signal_beacon: 'Signal beacon', trophy_tyrant: 'Tyrant trophy', trophy_hydra: 'Hydra trophy', trophy_dragon: 'Dragon trophy', trophy_titan: 'Titan trophy' };
+    berry_jam: 'Berry jam', signal_beacon: 'Signal beacon', aurora_lamp: 'Aurora lamp', chrome_beacon: 'Chrome beacon', aurora_shard: 'Aurora shard', chrome_flake: 'Chrome flake', trophy_tyrant: 'Tyrant trophy', trophy_hydra: 'Hydra trophy', trophy_dragon: 'Dragon trophy', trophy_titan: 'Titan trophy' };
   // XW1: a recipe row's label: an alternative recipe names its build so the two rocket core rows read apart
   const RECIPE_LABEL = { rocket_core_drift: 'Rocket core (drift build)', o2_tank_kelp: 'O2 tank (kelp build)' };
   const SADDLE_OF = {};
@@ -1757,11 +1940,63 @@
     if (!nodeChunks.has(ck)) nodeChunks.set(ck, []);
     nodeChunks.get(ck).push(n);
   });
+  const addNode = (n) => {
+    nodes.push(n); nodeAt.set(n.y * W + n.x, n);
+    const ck = Math.floor(n.y / CH) * 4096 + Math.floor(n.x / CH);
+    if (!nodeChunks.has(ck)) nodeChunks.set(ck, []);
+    nodeChunks.get(ck).push(n);
+  };
+  // IF1: food glints (MMIsleCraft.FOOD_NODES on seeded walkable tiles; a vine rope patch by the jungle dock, labelled), never on a
+  // resource node or a gather spot; picked up and grown back like any other node
+  const spotTiles = new Set(spots.map((p) => p.y * W + p.x));
+  const FOOD_GLINTS = POUCH && CRAFT ? POUCH.place(world, PACK_ID, SEED, (tx, ty) => walkableAt(tx, ty) && !solidAt(tx, ty), NAMES, (i) => nodeAt.has(i) || spotTiles.has(i)) : [];
+  FOOD_GLINTS.forEach((f, k) => addNode({ i: -1 - k, x: f.x, y: f.y, kind: f.kind, until: 0, picks: 0, respawn: f.respawn, label: f.label, food: true }));
+  // IF1: forage sparkles: after SPARKLE_AFTER s with no reward, one small seeded find appears within SPARKLE_R tiles (<= 6 per island a
+  // day, counted in save.spark; picked once, never regrows; nothing is lost if you never pick it)
+  if (!save.spark || save.spark.day !== DAY) save.spark = { day: DAY, n: {} };
+  let sparkle = null, sparkTry = 0;
+  function sparkTick() {
+    if (!POUCH || !CRAFT || hero.dead || simT - lastRewardT < POUCH.SPARKLE_AFTER) return;
+    // an unpicked sparkle you walked far away from moves back near you (it is the same sparkle: the day's count does not grow)
+    const moving = !!sparkle && sparkle.until === 0;
+    if (moving && Math.hypot((sparkle.x + 0.5) * TILE - hero.x, (sparkle.y + 0.5) * TILE - hero.y) <= (POUCH.SPARKLE_R + 4) * TILE) return;
+    const used = (save.spark.n[ISLE] | 0) - (moving ? 1 : 0);
+    if (used >= POUCH.SPARKLES_PER_DAY || (bz.engaged && bossAlive())) return;
+    if (moving) { nodeAt.delete(sparkle.y * W + sparkle.x); sparkle.until = Infinity; }
+    const rs = RNG.create('isles|spark|' + ISLE + '|' + SEED + '|' + DAY + '|' + used + '|' + (sparkTry++));
+    // a tile the hero can walk to: a small flood fill (4-neighbour, <= SPARKLE_R steps) from the hero's tile, then one seeded pick among
+    // the tiles 2-6 steps away (further ones only when nothing is that close); runs once per sparkle, never per frame
+    const hx = tileOf(hero.x), hy = tileOf(hero.y), R = POUCH.SPARKLE_R, seen = new Map(), q = [hy * W + hx], near = [], far = [];
+    seen.set(q[0], 0);
+    for (let h = 0; h < q.length; h++) {
+      const i = q[h], st = seen.get(i), x = i % W, y = (i - x) / W;
+      if (st >= 2 && !nodeAt.has(i)) (st <= 6 ? near : far).push(i);
+      if (st >= R) continue;
+      for (let k = 0; k < 4; k++) {
+        const nx = x + (k === 0) - (k === 1), ny = y + (k === 2) - (k === 3), ni = ny * W + nx;
+        if (!inWorld(nx, ny) || seen.has(ni) || !walkableAt(nx, ny) || heroSolidAt(nx, ny)) continue;
+        seen.set(ni, st + 1); q.push(ni);
+      }
+    }
+    const pool = near.length ? near : far;
+    if (!pool.length) return;
+    const i = pool[Math.floor(rs.next() * pool.length)];
+    sparkle = { i: -1000 - used, x: i % W, y: Math.floor(i / W), kind: POUCH.sparkle(ISLE, rs.next()), until: 0, picks: 0, respawn: 0, sparkle: true };
+    addNode(sparkle);
+    save.spark.n[ISLE] = used + 1; dirty = true;
+    logEvent('sparkle');
+  }
   let picked = 0, lastNodeTile = -1;
   const nodeReady = (n) => n.until <= clock.now();
   // called every sim step: one Map lookup by the hero's tile index (no allocation); a node fires once per arrival on its tile
   function nodeTick() {
     if (hero.dead || !CRAFT || !nodes.length) return;
+    // IF1: a sparkle is picked up within a tile of its centre (it is small and shiny: brushing past is enough)
+    if (sparkle && sparkle.until === 0 && Math.abs((sparkle.x + 0.5) * TILE - hero.x) < TILE && Math.abs((sparkle.y + 0.5) * TILE - hero.y) < TILE) {
+      const sk = sparkle.y * W + sparkle.x, got = invAdd(sparkle.kind, 1);
+      sparkle.until = Infinity; nodeAt.delete(sk); sparkle.picks++; picked++; reward();
+      toast(got ? 'A forage sparkle: +1 ' + HS.resName(sparkle.kind) + ' (' + invCount(sparkle.kind) + ' in your pack)' : 'A forage sparkle, but your pack has no room for it.');
+    }
     const k = tileOf(hero.y) * W + tileOf(hero.x);
     const n = nodeAt.get(k);
     if (!n) { lastNodeTile = -1; return; }
@@ -1770,8 +2005,9 @@
     if (!nodeReady(n)) return;
     const got = invAdd(n.kind, 1);
     if (!got) { toast('Your pack has no room for more ' + HS.resName(n.kind) + '.'); return; }
-    n.until = clock.now() + RESPAWN[n.kind] * 1000; n.picks++; picked++;
-    toast('+1 ' + HS.resName(n.kind) + ' (' + invCount(n.kind) + ' in your pack)');
+    if (n.sparkle) { n.until = Infinity; nodeAt.delete(k); lastNodeTile = -1; } else n.until = clock.now() + (n.respawn || RESPAWN[n.kind] || 300) * 1000;
+    n.picks++; picked++; reward();
+    toast((n.sparkle ? 'A forage sparkle: ' : '') + '+1 ' + HS.resName(n.kind) + ' (' + invCount(n.kind) + ' in your pack)');
   }
   // node art: one small canvas per resource kind, baked once (code art; shape by kind family)
   const NODE_COL = { wood: ['#8a5a32', '#5a3a1e'], driftwood: ['#b09070', '#7a5a3a'], stone: ['#a0a4a8', '#6a6e72'], iron: ['#7a6a66', '#b0603a'],
@@ -1779,9 +2015,14 @@
     clover: ['#6ac05a', '#3a8a2a'], kelp: ['#4a9a6a', '#2a6a4a'], vine_rope: ['#5aa04a', '#2f6a2a'], apple: ['#e0443a', '#5a8a2a'],
     jungle_berry: ['#b03a8a', '#5a8a2a'], frostberry: ['#5a8ae0', '#3a6a5a'], cocoa: ['#a0602a', '#5a3a1a'], amber: ['#f2a83a', '#a0601a'],
     frost_crystal: ['#bfe8ff', '#5a9ad0'], ice: ['#e4f4ff', '#9ac4e0'], ice_core: ['#8ae8f0', '#3a9aa8'], meteor_glass: ['#8a5ac0', '#4a2a6a'],
-    salt: ['#f8f8f0', '#c0c0b0'], spring_salt: ['#f0f8f8', '#a8c8c8'] };
+    salt: ['#f8f8f0', '#c0c0b0'], spring_salt: ['#f0f8f8', '#a8c8c8'],
+    // IF1 food glints
+    fish: ['#8ac8f0', '#3a6a9a'], flower: ['#f2a0c8', '#5a9a3a'], hay: ['#e8d070', '#a08a3a'], nectar: ['#ffd84a', '#c08a1a'], bug: ['#6a8a3a', '#3a3a2a'],
+    sea_melon: ['#7ad07a', '#2f7a4a'], greenhouse_potato: ['#c8a070', '#7a5a3a'], golden_apple: ['#ffd23a', '#a07a1a'] };
   const NODE_SHAPE = { wood: 'log', driftwood: 'log', amber: 'gem', frost_crystal: 'gem', ice: 'gem', ice_core: 'gem', meteor_glass: 'gem', salt: 'gem', spring_salt: 'gem',
-    apple: 'berry', jungle_berry: 'berry', frostberry: 'berry', cocoa: 'berry', fiber: 'tuft', clover: 'tuft', kelp: 'tuft', vine_rope: 'tuft' };
+    apple: 'berry', jungle_berry: 'berry', frostberry: 'berry', cocoa: 'berry', fiber: 'tuft', clover: 'tuft', kelp: 'tuft', vine_rope: 'tuft',
+    fish: 'gem', flower: 'berry', hay: 'tuft', nectar: 'gem', sea_melon: 'berry', golden_apple: 'berry' };
+  const nodeLabel = {}; // IF1: a labelled glint's name tag, baked once per label
   const nodeArt = {};
   function bakeNode(kind) {
     if (nodeArt[kind]) return nodeArt[kind];
@@ -1801,7 +2042,7 @@
   function drawNodes() {
     if (!nodes.length) return;
     const c0 = Math.floor(camX / CPX), c1 = Math.floor((camX + VW) / CPX), r0 = Math.floor(camY / CPX), r1 = Math.floor((camY + VH) / CPX), now = clock.now();
-    const tw = REDUCED ? 0 : Math.sin(simT * 3) * 1.5;
+    const tw = STILL ? 0 : Math.sin(simT * 3) * 1.5;
     for (let cy = r0; cy <= r1; cy++) for (let cx = c0; cx <= c1; cx++) {
       const l = nodeChunks.get(cy * 4096 + cx);
       if (!l) continue;
@@ -1810,7 +2051,9 @@
         if (n.until > now) continue;
         const sx = n.x * TILE - camX, sy = n.y * TILE - camY;
         g.drawImage(bakeNode(n.kind), sx + 3, sy + 3, 26, 26);
-        g.fillStyle = '#fff4a8'; g.fillRect(sx + 24, sy + 3 - tw, 3, 3); // a small glint
+        if (sparkLeft > 0) { sparkLeft--; g.fillStyle = '#fff4a8'; g.fillRect(sx + 24, sy + 3 - tw, 3, 3); } // a small glint (PI2: capped per frame on the low tier)
+        if (n.sparkle && sparkLeft > 0) { sparkLeft--; g.fillStyle = '#fff4a8'; g.fillRect(sx + 4, sy + 6 + tw, 3, 3); g.fillRect(sx + 14, sy - 2 - tw, 3, 3); }
+        if (n.label) { const lb = nodeLabel[n.label] || (nodeLabel[n.label] = bakeLabel(n.label)); g.drawImage(lb.cv, sx + TILE / 2 - lb.w / 2, sy + TILE + 2, lb.w, lb.h); }
       }
     }
   }
@@ -1871,6 +2114,33 @@
     mark(world.spawnPoint.x, world.spawnPoint.y, 3);
     if (world.dock) mark(world.dock.x, world.dock.y, 2);
   }
+  // IF1 rest spots, baked once on every island: the shelter tiles above, any dock, campfires, hot springs, domes / landing pads, and the
+  // homestead on Hearth Isle (everything near the spawn point). MMIsleRest heals to full there; elsewhere it regens slowly out of danger.
+  const RESTT = new Uint8Array(W * H);
+  {
+    const mark = (x, y, r) => { for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { const tx = x + dx, ty = y + dy; if (inWorld(tx, ty) && dx * dx + dy * dy <= r * r) RESTT[ty * W + tx] = 1; } };
+    if (SHELTER) for (let i = 0; i < W * H; i++) if (SHELTER[i]) RESTT[i] = 1;
+    for (let i = 0; i < W * H; i++) { const n = NAMES[world.terrain[i]]; if (n === 'hot_spring' || n === 'habitat_floor' || n === 'landing_pad') mark(i % W, Math.floor(i / W), n === 'hot_spring' ? 2 : 0); }
+    world.props.forEach((p) => { if (p.kind === 'campfire') mark(p.x, p.y, 3); else if (p.kind === 'hot_spring_steam') mark(p.x, p.y, 2); });
+    if (world.dock) mark(world.dock.x, world.dock.y, 2);
+    if (HOME) mark(world.spawnPoint.x, world.spawnPoint.y, 10);
+  }
+  // a few points of the air shelters (domes, landing pads, oxygen plants, the dock) for the "nearest dome" hint arrow (sampled once)
+  const SHELTER_PTS = [];
+  if (SHELTER && ENVR.oxygen) for (let y = 0; y < H; y += 3) for (let x = 0; x < W; x += 3) if (SHELTER[y * W + x] && SHELTER_PTS.length < 600) SHELTER_PTS.push({ x: x, y: y });
+  let restS = REST ? REST.init() : null, restAcc = 0, restMode = '';
+  function heroResting() { const tx = tileOf(hero.x), ty = tileOf(hero.y); return inWorld(tx, ty) && RESTT[ty * W + tx] === 1; }
+  function restStep(dt) {
+    if (!REST || god) return;
+    const tx = tileOf(hero.x), ty = tileOf(hero.y), R6 = REST.K.HOSTILE_TILES * TILE;
+    let near = false;
+    for (let i = 0; i < creatures.length && !near; i++) { const c = creatures[i]; if ((c.hostile || c.ph === 'wind' || c.ph === 'strike') && Math.hypot(c.x - hero.x, c.y - hero.y) < R6) near = true; }
+    const r = REST.step(restS, { dt: dt, hp: hero.hp, maxHp: hero.maxHp, hurtAgo: simT - lastHurtT, hostileNear: near, inShelter: inWorld(tx, ty) && RESTT[ty * W + tx] === 1,
+      atHome: false, atDock: nearDock(), envEmpty: !!(ENVR.oxygen && envS.emptyO), bossEngaged: !!(bz.engaged && bossAlive()) || bz.tele.length > 0 || bz.live.length > 0, dead: hero.dead });
+    restS = r.state; restMode = r.mode;
+    if (r.heal > 0) { hero.hp = Math.min(hero.maxHp, hero.hp + r.heal); dirty = true; }
+    if (r.toast) { toast(r.toast); logEvent('rest'); }
+  }
   const envS = { warmT: 0, o2T: 0, o2Hurt: 0, acc: 0, warm: null, o2: null, warnW: false, warnO: false, emptyW: false, emptyO: false, move: GRAV.move, lost: 0 };
   const sheltered = () => !!SHELTER && SHELTER[tileOf(hero.y) * W + tileOf(hero.x)] === 1;
   function envStep(dt) {
@@ -1897,9 +2167,11 @@
       envS.o2T = ENV.advance(envS.o2T, m0.rate, d, m0.max);
       const m = ENV.oxygen(envS.o2T, sh, tank);
       envS.o2 = m;
-      if (m.warn && !envS.warnO) toast('Air is running low. Head back to a dome or the landing pad.');
+      // TD1: the page warns AIR_WARN s before empty (earlier than the module's 10 s), and the arrow points home while it is low
+      const low = m.warn || (!m.empty && m.left <= AIR_WARN);
+      if (low && !envS.warnO) toast('Air is running low (' + Math.ceil(m.left) + ' s left). Follow the arrow to a dome or the landing pad.');
       if (m.empty && !envS.emptyO) toast('Out of air: 1 HP every 3 s until you reach a dome. It never takes your last HP.');
-      envS.warnO = m.warn; envS.emptyO = m.empty;
+      envS.warnO = low; envS.emptyO = m.empty;
       if (m.hurt > envS.o2Hurt && !god) { const before = hero.hp; hero.hp = Math.max(Math.min(1, hero.hp), hero.hp - (m.hurt - envS.o2Hurt)); envS.lost += before - hero.hp; }
       envS.o2Hurt = m.hurt;
     }
@@ -1907,14 +2179,14 @@
   }
   const envEls = { box: $('hud-env'), warm: $('env-warm'), o2: $('env-o2') };
   const envLast = { warm: null, o2: null };
-  function envMeter(k, m, text) {
-    const el = envEls[k], v = m ? text + (m.empty ? '!' : '') : '';
+  function envMeter(k, m, text, warn) {
+    const el = envEls[k], v = m ? text + (m.empty ? '!' : '') + (warn ? '~' : '') : '';
     if (envLast[k] === v) return;
     envLast[k] = v;
     el.hidden = !m;
     if (!m) return;
     el.querySelector('.val').textContent = text;
-    el.classList.toggle('warn', m.warn);
+    el.classList.toggle('warn', !!warn);
     el.classList.toggle('empty', m.empty);
   }
   function envHud() {
@@ -1922,8 +2194,225 @@
     const w = ENVR.warmth ? envS.warm || ENV.warmth(envS.warmT, false, false) : null;
     const o = ENVR.oxygen ? envS.o2 || ENV.oxygen(envS.o2T, false, false) : null;
     if (envEls.box.hidden === !!(w || o)) envEls.box.hidden = !(w || o);
-    envMeter('warm', w, w ? (w.empty ? 'cold (slow)' : w.pct + '%') : '');
-    envMeter('o2', o, o ? (o.empty ? 'empty' : Math.ceil(o.left) + ' s') : '');
+    envMeter('warm', w, w ? (w.empty ? 'cold (slow)' : w.pct + '%') : '', !!w && w.warn);
+    envMeter('o2', o, o ? (o.empty ? 'empty' : Math.ceil(o.left) + ' s') : '', !!o && (o.warn || (!o.empty && o.left <= AIR_WARN)));
+  }
+  // ---------- TD1 (NEXT-SLICES-4): tundra + mars depth ----------
+  // Aurora night (tundra): a page clock (seconds on the island, never the real time of day) passes dusk at DUSK s of every DAY_LEN s
+  // cycle; ?aurora=1 forces the night, ?aurora=0 keeps it day. At night a calm aurora band (one cached canvas, a slow drift; static with
+  // reduced motion) shows over a soft night tint, aurora crystals glint, and the aurora frostfox can come out. Purely cosmetic otherwise.
+  const DAY_LEN = 300, DUSK = 150, AIR_WARN = 20, SOAK_SEC = 2, LAUNCH_SEC = 2.5;
+  const AUR_ON = PACK_ID === 'tundra' && Q.get('aurora') !== '0', AUR_FORCE = AUR_ON && Q.get('aurora') === '1';
+  function tdNight() { return AUR_ON && (AUR_FORCE || simT % DAY_LEN >= DUSK); }
+  const nightK = () => (!tdNight() ? 0 : AUR_FORCE ? 1 : clamp((simT % DAY_LEN - DUSK) / 8, 0, 1));
+  let auroraCv = null, auroraDrawn = 0;
+  function auroraBand() { // baked once: three soft ribbons (green, teal, violet) on a 256 px tileable strip
+    if (auroraCv) return auroraCv;
+    const w = 256, h = 72, cv = mk(w, h), c = cv.getContext('2d');
+    const rib = [['#7fffd4', 0.35, 26, 10, 1], ['#5ad8ff', 0.28, 38, 8, 2], ['#c8a0ff', 0.22, 18, 6, 3]];
+    rib.forEach((r) => {
+      for (let x = 0; x < w; x += 2) {
+        const y = r[2] + Math.sin((x / w) * Math.PI * 2 * r[4]) * r[3], hh = 10 + Math.sin((x / w) * Math.PI * 2 * (r[4] + 1)) * 4;
+        c.fillStyle = r[0]; c.globalAlpha = r[1]; c.fillRect(x, y, 2, hh);
+        c.globalAlpha = r[1] * 0.5; c.fillRect(x, y + hh, 2, hh * 1.6);
+      }
+    });
+    auroraCv = cv;
+    return cv;
+  }
+  // Hot spring soak (tundra): SOAK_SEC s standing in a hot_spring gives "Warm and rested": full warmth and full HP (the IF1 rest; never in a
+  // boss fight). Spring salt still gathers there. Once per soak: step out and back in for another.
+  const HOT_T = O.TERRAIN_ALL.hot_spring;
+  const soak = { t: 0, done: false, n: 0 };
+  function soakStep(dt) {
+    const on = PACK_ID === 'tundra' && HOT_T !== undefined && !hero.dead && O.tileAt(world, tileOf(hero.x), tileOf(hero.y)) === HOT_T;
+    if (!on) { soak.t = 0; soak.done = false; return; }
+    soak.t += dt;
+    if (soak.done || soak.t < SOAK_SEC) return;
+    soak.done = true; soak.n++;
+    envS.warmT = 0;
+    if (ENV && ENVR.warmth) { envS.warm = ENV.warmth(0, true, invCount('warm_cloak') > 0); envS.warnW = false; envS.emptyW = false; }
+    if (!(bz.engaged && bossAlive())) hero.hp = hero.maxHp;
+    dirty = true;
+    toast('Warm and rested. The hot spring soaks the cold away.');
+    logEvent('soak'); reward();
+  }
+  function iceStep(dt) {
+    if (!THIN_ICE) return;
+    const tx = tileOf(hero.x), ty = tileOf(hero.y), k = ty * W + tx;
+    if (hero.dead || O.tileAt(world, tx, ty) !== ICE_THIN_T || crackedAt(tx, ty)) { ice.tile = -1; ice.t = 0; return; }
+    // only standing still and idle on one tile cracks it: walking across (even slowly), shooting, or feeding a creature never does
+    const busy = heroMoving || hero.shotT > 0 || (TAME && !!feedTarget());
+    if (k !== ice.tile || busy) { ice.tile = k; ice.t = 0; }
+    if (busy) return;
+    const was = ice.t;
+    ice.t += dt;
+    if (was < ICE_WARN && ice.t >= ICE_WARN) { ice.warnN++; logEvent('ice_warn'); if (!ice.told) toast('The thin ice creaks. Step off, or it cracks into slush (it only slows you).'); }
+    if (ice.t < ICE_CRACK) return;
+    let slot = 0; // a free slot, else the one that thaws first
+    for (let i = 0; i < CRACK_MAX; i++) { if (ice.idx[i] < 0) { slot = i; break; } if (ice.until[i] < ice.until[slot]) slot = i; }
+    if (ice.idx[slot] < 0) ice.n++;
+    ice.idx[slot] = k; ice.until[slot] = simT + ICE_SLUSH; ice.made++;
+    ice.tile = -1; ice.t = 0;
+    logEvent('ice_crack');
+    if (!ice.told) { ice.told = true; toast('The ice cracked into slush: slower for a little while, never dangerous.'); }
+  }
+  function iceThaw() { // 5 Hz: slush turns back into thin ice after ICE_SLUSH s
+    if (!ice.n) return;
+    for (let i = 0; i < CRACK_MAX; i++) if (ice.idx[i] >= 0 && ice.until[i] <= simT) { ice.idx[i] = -1; ice.n--; }
+  }
+  // Once-a-day glints (save.glint, isles only): aurora crystals (the aurora_crystal tiles and crystal_blue props) glint at night on the
+  // tundra and give an aurora shard; on mars the rover / probe wrecks give a chrome flake (salvage). Picked within GLINT_R of the glint.
+  const GLINT_R = 1.6 * TILE;
+  const GLINTS = [];
+  (function findGlints() {
+    if (PACK_ID === 'tundra') {
+      const ac = O.TERRAIN_ALL.aurora_crystal;
+      for (let i = 0; i < W * H && GLINTS.length < 8; i++) if (world.terrain[i] === ac) GLINTS.push({ x: i % W, y: Math.floor(i / W), item: 'aurora_shard', night: true });
+      world.props.forEach((p) => { if (p.kind === 'crystal_blue' && GLINTS.length < 16) GLINTS.push({ x: p.x, y: p.y, item: 'aurora_shard', night: true }); });
+    } else if (PACK_ID === 'mars') {
+      world.props.forEach((p) => { if ((p.kind === 'rover_wreck' || p.kind === 'probe_lander') && GLINTS.length < 16) GLINTS.push({ x: p.x, y: p.y, item: 'chrome_flake', night: false }); });
+    }
+    GLINTS.forEach((q, i) => { q.i = i; });
+  }());
+  if (GLINTS.length && (!save.glint || save.glint.day !== DAY)) save.glint = { day: DAY, n: {} };
+  const glintTaken = (q) => !!save.glint && Array.isArray(save.glint.n[ISLE]) && save.glint.n[ISLE].indexOf(q.i) >= 0;
+  const glintLive = (q) => !glintTaken(q) && (!q.night || tdNight());
+  function glintCheck() {
+    if (!GLINTS.length || hero.dead) return;
+    for (let i = 0; i < GLINTS.length; i++) {
+      const q = GLINTS[i];
+      if (!glintLive(q) || Math.hypot((q.x + 0.5) * TILE - hero.x, (q.y + 0.5) * TILE - hero.y) > GLINT_R) continue;
+      const got = invAdd(q.item, 1);
+      if (!got) { toast('Your pack has no room for a ' + HS.resName(q.item) + '.'); continue; }
+      if (!Array.isArray(save.glint.n[ISLE])) save.glint.n[ISLE] = [];
+      save.glint.n[ISLE].push(q.i); dirty = true;
+      toast('+1 ' + HS.resName(q.item) + ' (' + invCount(q.item) + ' in your pack). ' + (q.night ? 'Each aurora crystal gives one shard a day, at night.' : 'Each wreck has a little chrome to salvage once a day.'));
+      logEvent('glint'); reward();
+    }
+  }
+  // the air arrow (mars): while the air is low and you are outside, it points to the nearest dome / landing pad (aimed at 5 Hz, drawn
+  // every frame from two numbers)
+  const airArrow = { on: false, ang: 0, tiles: 0 };
+  function airAim() {
+    airArrow.on = false;
+    if (!ENVR.oxygen || !envS.o2 || !(envS.warnO || envS.emptyO) || hero.dead || sheltered() || !SHELTER_PTS.length) return;
+    const tx = hero.x / TILE, ty = hero.y / TILE;
+    let b = null, bd = Infinity;
+    for (let i = 0; i < SHELTER_PTS.length; i++) { const p = SHELTER_PTS[i], d = (p.x - tx) * (p.x - tx) + (p.y - ty) * (p.y - ty); if (d < bd) { bd = d; b = p; } }
+    airArrow.on = true; airArrow.ang = Math.atan2(b.y - ty, b.x - tx); airArrow.tiles = Math.round(Math.sqrt(bd));
+  }
+  let tdAcc = 0;
+  function tdStep(dt) {
+    iceStep(dt);
+    soakStep(dt);
+    tdAcc += dt;
+    if (tdAcc < 0.2) return;
+    tdAcc = 0;
+    iceThaw(); glintCheck(); airAim();
+  }
+  // ground layer: the crack telegraph, the slush patches, the glints (only what is on screen; constant colours, no allocation)
+  const SLUSH_COL = PAL.slush ? PAL.slush[0] : '#a4b4c4';
+  function crackLines(sx, sy, k) { // a star of cracks from the tile centre, k = 0..1 of its full length
+    const cx = sx + TILE / 2, cy = sy + TILE / 2, r = 4 + 18 * k; // reaches past the tile edge so it shows around the hero's feet
+    g.beginPath();
+    g.moveTo(cx, cy); g.lineTo(cx - r, cy - r * 0.5); g.moveTo(cx, cy); g.lineTo(cx + r, cy - r * 0.3);
+    g.moveTo(cx, cy); g.lineTo(cx + r * 0.3, cy + r); g.moveTo(cx, cy); g.lineTo(cx - r * 0.6, cy + r * 0.7);
+    g.stroke();
+  }
+  let crackDrawn = 0;
+  function drawTdGround() {
+    if (THIN_ICE) {
+      if (ice.n) {
+        g.strokeStyle = '#4a6a8a'; g.lineWidth = 1.5;
+        for (let i = 0; i < CRACK_MAX; i++) {
+          if (ice.idx[i] < 0) continue;
+          const tx = ice.idx[i] % W, ty = (ice.idx[i] - tx) / W, sx = tx * TILE - camX, sy = ty * TILE - camY;
+          if (sx < -TILE || sy < -TILE || sx > VW || sy > VH) continue;
+          g.fillStyle = SLUSH_COL; g.globalAlpha = 0.85; g.fillRect(sx, sy, TILE, TILE); g.globalAlpha = 1;
+          crackLines(sx, sy, 1);
+        }
+      }
+      if (ice.tile >= 0 && ice.t >= ICE_WARN) { // the telegraph: cracks spreading over the tile (a static full overlay with reduced motion)
+        const tx = ice.tile % W, ty = (ice.tile - tx) / W, sx = tx * TILE - camX, sy = ty * TILE - camY;
+        const k = REDUCED ? 1 : clamp((ice.t - ICE_WARN) / (ICE_CRACK - ICE_WARN), 0.15, 1);
+        g.globalAlpha = 0.9; g.strokeStyle = '#ffffff'; g.lineWidth = 2; crackLines(sx, sy, k);
+        g.strokeStyle = '#2a4a6a'; g.lineWidth = 1; crackLines(sx, sy, k); g.globalAlpha = 1;
+        g.strokeStyle = '#ffffff'; g.lineWidth = 2; g.globalAlpha = REDUCED ? 1 : 0.6 + 0.4 * Math.sin(simT * 14); g.strokeRect(sx + 1, sy + 1, TILE - 2, TILE - 2); g.globalAlpha = 1;
+        crackDrawn++;
+      }
+    }
+    if (GLINTS.length) {
+      const tw = STILL ? 0 : Math.sin(simT * 4);
+      for (let i = 0; i < GLINTS.length; i++) {
+        const q = GLINTS[i];
+        if (!glintLive(q)) continue;
+        const sx = q.x * TILE - camX + TILE / 2, sy = q.y * TILE - camY + TILE / 2;
+        if (sx < -TILE || sy < -TILE || sx > VW + TILE || sy > VH + TILE) continue;
+        g.fillStyle = q.night ? '#c8fff0' : '#f4f8ff';
+        if (sparkLeft > 0) { sparkLeft--; g.fillRect(sx - 1, sy - 9 - tw * 2, 3, 3); g.fillRect(sx + 7, sy - 3 + tw, 2, 2); g.fillRect(sx - 8, sy + 1 - tw, 2, 2); }
+        g.fillStyle = q.night ? '#7fffd4' : '#b8c8d8'; g.fillRect(sx - 4, sy - 5, 9, 1); g.fillRect(sx, sy - 9, 1, 9);
+      }
+    }
+  }
+  // sky layer (screen space, over the world, under the DOM HUD): the night tint + the aurora band; the air arrow; the soak steam
+  function drawTdSky(hx, hy) {
+    const nk = nightK();
+    if (nk > 0) {
+      g.globalAlpha = 0.3 * nk; g.fillStyle = '#0a1030'; g.fillRect(0, 0, VW, VH);
+      const band = auroraBand(), bw = band.width, bh = band.height * (VW > 700 ? 1.4 : 1), off = STILL ? 0 : (simT * 6) % bw;
+      g.globalAlpha = 0.9 * nk;
+      for (let x = -off; x < VW; x += bw) g.drawImage(band, Math.round(x), 0, bw, bh);
+      g.globalAlpha = 1;
+      auroraDrawn++;
+    }
+    if (airArrow.on && !hero.dead) {
+      const r = 40, ca = Math.cos(airArrow.ang), sa = Math.sin(airArrow.ang), ax = hx + ca * r, ay = hy - 12 + sa * r;
+      g.fillStyle = envS.emptyO ? '#f0b0a0' : '#f2d06b'; g.strokeStyle = '#1a1a1a'; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(ax + ca * 14, ay + sa * 14); g.lineTo(ax - ca * 8 - sa * 10, ay - sa * 8 + ca * 10); g.lineTo(ax - ca * 3, ay - sa * 3); g.lineTo(ax - ca * 8 + sa * 10, ay - sa * 8 - ca * 10); g.closePath();
+      g.stroke(); g.fill();
+    }
+    if (soak.t > 0 && !hero.dead) { // steam puffs while soaking (still with reduced motion)
+      const k = STILL ? 0.3 : (simT * 1.5) % 1;
+      g.fillStyle = '#f4ffff'; g.strokeStyle = '#7fc4c4'; g.lineWidth = 1; g.globalAlpha = 0.9 - 0.45 * k;
+      g.beginPath(); g.arc(hx - 9, hy - 30 - k * 14, 4 + k * 3, 0, Math.PI * 2); g.fill(); g.stroke();
+      g.beginPath(); g.arc(hx + 10, hy - 24 - k * 12, 3 + k * 3, 0, Math.PI * 2); g.fill(); g.stroke();
+      g.beginPath(); g.arc(hx + 2, hy - 40 - k * 10, 3 + k * 2, 0, Math.PI * 2); g.fill(); g.stroke();
+      g.globalAlpha = 1;
+    }
+  }
+  // Rocket launch (sailing to mars): a 2.5 s code-art lift-off, then the mars landing pad. A tap, a key or reduced motion skips it; the
+  // rocket core is never used up (it stays in the pack and mars stays open). ?launch=0 skips the scene too.
+  const launch = { on: false, t: 0, url: '', n: 0, skipped: 0 };
+  const STARS = [];
+  { const r = RNG.create('isles|stars'); for (let i = 0; i < 28; i++) STARS.push([r.next(), r.next() * 0.7, r.next() < 0.3 ? 2 : 1]); }
+  function launchGo(skip) {
+    if (!launch.on) return false;
+    launch.on = false; if (skip) launch.skipped++;
+    location.href = launch.url;
+    return true;
+  }
+  function drawLaunch() {
+    const t = launch.t, p = clamp((t - 0.6) / (LAUNCH_SEC - 0.6), 0, 1), ease = p * p;
+    g.globalAlpha = 0.6 + 0.3 * p; g.fillStyle = '#080a1c'; g.fillRect(0, 0, VW, VH); g.globalAlpha = 1;
+    g.fillStyle = '#f4f8ff';
+    for (let i = 0; i < STARS.length; i++) g.fillRect(Math.round(STARS[i][0] * VW), Math.round(STARS[i][1] * VH), STARS[i][2], STARS[i][2]);
+    const cx = Math.round(VW / 2), pad = Math.round(VH * 0.78);
+    g.fillStyle = '#8a8e92'; g.fillRect(cx - 46, pad, 92, 10); g.fillStyle = '#c8ccd0'; g.fillRect(cx - 40, pad - 4, 80, 5);
+    g.fillStyle = '#5a5e62'; g.fillRect(cx - 34, pad - 70, 6, 70);
+    const shake = t < 0.6 && !REDUCED ? Math.round(Math.sin(t * 60)) : 0, by = Math.round(pad - 6 - ease * (VH * 0.9)) + shake;
+    // smoke at the pad, the flame, then the rocket (white body, red nose and fins, a blue window)
+    g.fillStyle = '#d8d8d8'; g.globalAlpha = 0.7 * (1 - p * 0.6);
+    for (let i = -2; i <= 2; i++) { g.beginPath(); g.arc(cx + i * 16, pad - 2, 9 + t * 6 + Math.abs(i) * 2, 0, Math.PI * 2); g.fill(); }
+    g.globalAlpha = 1;
+    const fl = 12 + ((t * 40) % 3) * 3 + p * 18;
+    g.fillStyle = '#ff8a2a'; g.beginPath(); g.moveTo(cx - 8, by); g.lineTo(cx + 8, by); g.lineTo(cx, by + fl + 8); g.closePath(); g.fill();
+    g.fillStyle = '#ffe07a'; g.beginPath(); g.moveTo(cx - 4, by); g.lineTo(cx + 4, by); g.lineTo(cx, by + fl * 0.6); g.closePath(); g.fill();
+    g.fillStyle = '#c8402a'; g.beginPath(); g.moveTo(cx - 10, by - 6); g.lineTo(cx - 18, by + 2); g.lineTo(cx - 10, by - 16); g.closePath(); g.fill();
+    g.beginPath(); g.moveTo(cx + 10, by - 6); g.lineTo(cx + 18, by + 2); g.lineTo(cx + 10, by - 16); g.closePath(); g.fill();
+    g.fillStyle = '#f4f4f0'; g.fillRect(cx - 10, by - 52, 20, 52);
+    g.fillStyle = '#c8402a'; g.beginPath(); g.moveTo(cx - 10, by - 52); g.lineTo(cx + 10, by - 52); g.lineTo(cx, by - 70); g.closePath(); g.fill();
+    g.fillStyle = '#3a7ac0'; g.fillRect(cx - 4, by - 42, 8, 8); g.fillStyle = '#9ad0ff'; g.fillRect(cx - 3, by - 41, 3, 3);
   }
   // dock + sea chart
   const DOCK_R = 2.5 * TILE;
@@ -1937,12 +2426,22 @@
     q.set('isle', ISLE_PARAM[id] || id); q.delete('seed'); q.delete('from');
     // X7: the Home dock always lands at the dock; any other island you have a saved spot on picks up where you left it (position + fog)
     if (id !== 'home' && ISL.lastPos(save, id) && save.isles[id].seed) q.delete('at'); else q.set('at', 'dock');
+    if (id === 'mars') q.set('at', 'dock'); // TD1: a rocket always lands on the mars landing pad
     travelling = id;
     if (ride) dismount();
     persist();
-    toast('Sailing to ' + isleName(id) + '...');
     logEvent('sail');
-    location.href = location.pathname + '?' + q.toString();
+    const url = location.pathname + '?' + q.toString();
+    // TD1: to mars, a short lift-off first (never with reduced motion or ?launch=0; a tap or a key skips it). Nothing is used up.
+    if (id === 'mars' && !REDUCED && Q.get('launch') !== '0') {
+      if (panelKind) closePanel();
+      launch.on = true; launch.t = 0; launch.url = url; launch.n++;
+      logEvent('launch');
+      toast('Lift-off! Tap to skip.');
+      return true;
+    }
+    toast((id === 'mars' ? 'Flying' : 'Sailing') + ' to ' + isleName(id) + '...');
+    location.href = url;
     return true;
   }
   // medals: computed from the saves, the summary key is additive and each new medal is announced once
@@ -1980,7 +2479,7 @@
       if (build) { g.strokeStyle = 'rgba(255,244,214,0.55)'; g.lineWidth = 2; g.strokeRect(homeO.x * TILE - camX, homeO.y * TILE - camY, HS.GRID_W * TILE, HS.GRID_W * TILE); }
       drawPedestal();
       for (let i = 0; i < guests.length; i++) {
-        const q = guests[i], sx = q.x - camX, sy = q.y - camY + Math.sin(simT * 2 + q.t) * 1.5;
+        const q = guests[i], sx = q.x - camX, sy = q.y - camY + (STILL ? 0 : Math.sin(simT * 2 + q.t) * 1.5);
         if (sx < -80 || sy < -80 || sx > VW + 80 || sy > VH + 80) continue;
         const qs = STRIPS && q.sk && STRIPS.has(q.sk) ? STRIPS.get(q.sk, 'idle', MS.DOWN) : null;
         if (qs) STRIPS.draw(g, qs, MS.frameIndex('idle', simT + q.t), sx, sy, 0.6, false);
@@ -1997,7 +2496,7 @@
       }
     }
     drawNodes();
-    const tw = REDUCED ? 0 : Math.sin(simT * 4) * 2;
+    const tw = STILL ? 0 : Math.sin(simT * 4) * 2;
     for (let i = 0; i < spots.length; i++) {
       const p = spots[i];
       if (HS.taken(save.gather, ISLE, p.idx)) continue;
@@ -2006,6 +2505,8 @@
       const amb = p.kind === 'amber' && IA && IA.propsActive() ? IA.props().amber_node : null; // b33 amber node under the amber sparkle
       if (amb) g.drawImage(amb.img, Math.round(sx - amb.ax), Math.round(sy + TILE / 2 - 2 - amb.ay), amb.w, amb.h);
       else { g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(sx - 7, sy + 5, 14, 3); }
+      if (sparkLeft <= 0) { g.fillStyle = '#f2b84b'; g.fillRect(sx - 2, sy - 5, 5, 5); continue; } // PI2: past the low-tier spark cap, just the gold dot
+      sparkLeft--;
       g.fillStyle = '#fff4a8'; g.fillRect(sx - 1, sy - 8 - tw, 3, 11); g.fillRect(sx - 6, sy - 4 - tw, 13, 3);
       g.fillStyle = '#f2b84b'; g.fillRect(sx - 2, sy - 5 - tw, 5, 5);
     }
@@ -2044,6 +2545,9 @@
           cost.dataset.isle = id; cost.dataset.need = need;
           b.setAttribute('aria-label', isleName(id) + ' is locked. ' + cost.textContent);
           panelBody.appendChild(cost);
+          // IF1: where the short inputs grow (the raft's vine rope: the jungle ferns by the dock)
+          const ws = POUCH ? Object.keys(rc.in).filter((k) => invCount(k) < rc.in[k] && POUCH.where(k)).map((k) => POUCH.where(k)) : [];
+          if (ws.length) { const wp = el('p', 'dest-cost dest-where', 'Found: ' + ws.join('; ') + '.'); wp.dataset.isle = id; panelBody.appendChild(wp); }
         }
       });
     } else if (kind === 'craft') {
@@ -2073,6 +2577,13 @@
       const ml = el('ul', 'log-list'); ml.id = 'log-medals';
       ISL.MEDAL_IDS.forEach((id) => { const on = medals.indexOf(id) >= 0; const li = el('li', on ? 'on' : 'dim', (on ? '[x] ' : '[ ] ') + (ISL.MEDAL_NAMES[id] || id)); li.dataset.medal = id; ml.appendChild(li); });
       panelBody.appendChild(ml);
+      // PI2: controls (per device, the same switch as the Realm's one-thumb mode)
+      panelBody.appendChild(el('h3', '', 'Controls'));
+      const ot = el('button', 'dest', 'One-thumb mode: ' + (ONE_THUMB ? 'on' : 'off')); ot.type = 'button'; ot.id = 'log-onethumb';
+      ot.setAttribute('aria-pressed', String(ONE_THUMB));
+      ot.addEventListener('click', () => { setOneThumb(!ONE_THUMB); ot.textContent = 'One-thumb mode: ' + (ONE_THUMB ? 'on' : 'off'); ot.setAttribute('aria-pressed', String(ONE_THUMB)); });
+      panelBody.appendChild(ot);
+      panelBody.appendChild(el('p', 'dim', 'Shots go to the nearest foe by themselves, and the mount ability button sits by the move stick.'));
       const fb = el('div', 'fb-host'); fb.id = 'log-feedback';
       panelBody.appendChild(fb);
       mountFeedback(fb);
@@ -2146,6 +2657,8 @@
           need.appendChild(li);
         });
         info.appendChild(need);
+        // IF1: a travel recipe says where its missing inputs grow ("Found: vine rope grows on the Verdant Jungle ferns by the dock ...")
+        if (isle && !isleOpen(isle) && POUCH) Object.keys(r.in).forEach((k) => { const w = invCount(k) < r.in[k] ? POUCH.where(k) : ''; if (w) { const d = el('div', 'rc-note rc-where', 'Found: ' + w + '.'); d.dataset.item = k; info.appendChild(d); } });
         row.appendChild(info);
         const b = el('button', 'rc-btn', 'Craft'); b.type = 'button'; b.dataset.recipe = id;
         b.setAttribute('aria-label', 'Craft ' + (has(RECIPE_LABEL, id) ? RECIPE_LABEL[id] : itemName(item)));
@@ -2305,14 +2818,18 @@
   hud.hero.textContent = HERO.name + ' - ' + HERO.cls + ' Lv ' + HERO.level;
   const lastHud = {};
   const setText = (k, v) => { if (lastHud[k] !== v) { lastHud[k] = v; hud[k].textContent = v; } };
+  let hpLast = '';
+  const hpBar = $('hp-bar');
   function drawHud() {
     const tx = tileOf(hero.x), ty = tileOf(hero.y);
     setText('isle', PACK.name + ' - ' + bandName(O.zoneAt(world, tx, ty)));
     setText('hp', Math.ceil(hero.hp) + ' / ' + hero.maxHp);
     hud.fill.style.width = Math.round(100 * hero.hp / hero.maxHp) + '%';
+    const hpSt = hero.dead || hero.hp <= 0 ? 'empty' : hero.hp <= hero.maxHp * 0.3 ? 'low' : 'ok'; // PI2: the heart's shape follows (not colour alone)
+    if (hpSt !== hpLast) { hpLast = hpSt; hpBar.dataset.state = hpSt; hpBar.classList.toggle('low', hpSt === 'low'); hpBar.classList.toggle('empty', hpSt === 'empty'); }
     const lootN = Object.keys(loot).reduce((n, k) => n + loot[k], 0);
     setText('info', 'XP ' + xp + '  Kills ' + kills + '  Loot ' + lootN + (tames.roster.length ? '  Tames ' + tames.roster.length : '') + (party.length ? '  Party ' + party.length : ''));
-    const tn = NAMES[O.tileAt(world, tx, ty)] || '';
+    const tn = crackedAt(tx, ty) ? 'slush (cracked ice)' : NAMES[O.tileAt(world, tx, ty)] || '';
     setText('ground', tn.replace(/_/g, ' ') + (hero.scale < 1 ? ' (slow x' + Math.round(hero.scale * 100) / 100 + ')' : '') + (ride ? ' (riding x' + Math.round(hero.scale * 100) / 100 + ')' : ''));
     // the calm hint line + the Feed / Soothe / Ride buttons
     const ft = TAME ? feedTarget() : null;
@@ -2399,10 +2916,45 @@
     if (bz.st.dig) return 'The ' + nm + ' is underground.';
     return '';
   }
+  const DIR8 = ['east', 'south-east', 'south', 'south-west', 'west', 'north-west', 'north', 'north-east'];
+  const ARROW8 = ['\u2192', '\u2198', '\u2193', '\u2199', '\u2190', '\u2196', '\u2191', '\u2197'];
+  const dir8 = (dx, dy) => ((Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) % 8) + 8) % 8;
+  // IF1: out of air (or running low) away from shelter: the nearest dome / landing pad, by direction with an arrow
+  function airHint() {
+    if (!ENVR.oxygen || !envS.o2 || !(envS.warnO || envS.o2.empty) || sheltered() || hero.dead || !SHELTER_PTS.length) return '';
+    const tx = hero.x / TILE, ty = hero.y / TILE;
+    let b = null, bd = Infinity;
+    for (let i = 0; i < SHELTER_PTS.length; i++) { const p = SHELTER_PTS[i], d = (p.x - tx) * (p.x - tx) + (p.y - ty) * (p.y - ty); if (d < bd) { bd = d; b = p; } }
+    const k = dir8(b.x - tx, b.y - ty);
+    return (envS.o2.empty ? 'Out of air (hits are halved): head ' : 'Air is low: head ') + ARROW8[k] + ' ' + DIR8[k] + ' to the nearest dome, ' + Math.max(1, Math.round(Math.sqrt(bd))) + ' tiles.';
+  }
+  // IF1: the nearest ready glint or sparkle within `r` tiles (sparkles first), for the hint
+  function glintHint(r) {
+    let b = null, bd = r * TILE;
+    for (let i = 0; i < nodes.length; i++) {
+      const n = nodes[i];
+      if (!nodeReady(n)) continue;
+      const d = Math.hypot((n.x + 0.5) * TILE - hero.x, (n.y + 0.5) * TILE - hero.y) - (n.sparkle ? 1e4 : 0);
+      if (d < bd) { bd = d; b = n; }
+    }
+    if (!b) return '';
+    const k = dir8((b.x + 0.5) * TILE - hero.x, (b.y + 0.5) * TILE - hero.y);
+    return (b.sparkle ? 'A forage sparkle (' + HS.resName(b.kind) + ')' : 'A glint of ' + HS.resName(b.kind)) + ' is to the ' + DIR8[k] + ' ' + ARROW8[k] + ': walk over it to pick it up.';
+  }
+  // IF1: on the jungle without the raft's vine rope: where it grows
+  function vineHint() {
+    if (ISLE !== 'jungle' || !CRAFT || isleOpen('reef') || invCount('raft') || invCount('vine_rope') >= 2) return '';
+    const v = nodes.find((n) => n.kind === 'vine_rope' && n.label && nodeReady(n));
+    if (!v) return '';
+    const k = dir8((v.x + 0.5) * TILE - hero.x, (v.y + 0.5) * TILE - hero.y);
+    return 'Vine rope for the raft grows on the ferns by the dock, to the ' + DIR8[k] + ' ' + ARROW8[k] + ': walk over a "vine rope" glint.';
+  }
   function hintText(ft) {
     if (build) return 'Decorating: tap open ground to place, tap an item to pick it up. E works too.';
     const bh = bossHint();
     if (bh) return bh;
+    const ah = airHint();
+    if (ah) return ah;
     if (nearPedestal() && !bossAlive()) return document.body.classList.contains('touch') ? 'The trophy pedestal. Tap Trophies to look, or for a rematch.' : 'The trophy pedestal. Press P or Trophies to look, or for a rematch.';
     if (nearDock() && !ride) return document.body.classList.contains('touch') ? 'The dock. Tap Sail to open the sea chart.' : 'The dock. Press T or Sail to open the sea chart.';
     if (spotNear()) return 'Something to gather here. Press G or Gather.';
@@ -2411,7 +2963,7 @@
     { const fx = tileOf(hero.x + hero.face.x * TILE * 1.2), fy = tileOf(hero.y + hero.face.y * TILE * 1.2); if (swimAt(fx, fy) && !solidAt(fx, fy)) return 'Open water. Ride a Tidesteed or Skimray to swim across.'; }
     if (!TAME) return '';
     if (ft) {
-      const def = CR.get(ft.kind), f = IC.foodFor(def, pouch), food = IC.foodName(f.id) + ' x' + (pouch[f.id] | 0);
+      const def = CR.get(ft.kind), f = foodOf(def), food = IC.foodName(f.id) + ' x' + foodHave(f) + (f.from === 'inv' ? ' (from your bag)' : '');
       const prog = Math.floor(ft.tm.prog) + '/' + ft.tm.need;
       if (ft.ko) return def.name + ' is asleep (' + Math.ceil(TM.sleepLeft(ft.tm)) + ' s). Feed it ' + food + ' - ' + prog + '. Do not hit it.';
       return def.name + ' trusts you. Stay calm and feed it ' + food + ' - ' + prog + '.';
@@ -2419,9 +2971,11 @@
     let best = null, bd = 5 * TILE;
     for (let i = 0; i < creatures.length; i++) { const c = creatures[i]; if (!c.tm) continue; const d = Math.hypot(hero.x - c.x, hero.y - c.y); if (d < bd) { bd = d; best = c; } }
     if (!best) { // FT2: nothing tameable in reach - say where the nearest one is (or to explore), never a blank hint
+      if (sparkle && nodeReady(sparkle)) { const sh = glintHint(POUCH ? POUCH.SPARKLE_R + 4 : 14); if (sh) return sh; } // IF1
+      const vh = vineHint(); if (vh) return vh;
       let far = null, fd = Infinity; for (let i = 0; i < creatures.length; i++) { const c = creatures[i]; if (!c.tm) continue; const d = Math.hypot(hero.x - c.x, hero.y - c.y); if (d < fd) { fd = d; far = c; } }
-      if (!far) return 'Explore the island: walk on to find a creature to tame.';
-      const ang = Math.atan2(far.y - hero.y, far.x - hero.x), dir = ['east', 'south-east', 'south', 'south-west', 'west', 'north-west', 'north', 'north-east'][((Math.round(ang / (Math.PI / 4)) % 8) + 8) % 8];
+      if (!far) { const gh = glintHint(24); return gh || 'Explore the island: walk on to find a creature to tame.'; }
+      const dir = DIR8[dir8(far.x - hero.x, far.y - hero.y)];
       return 'A ' + CR.get(far.kind).name + ' is to the ' + dir + ': walk over to tame it.';
     }
     const def = CR.get(best.kind);
@@ -2454,7 +3008,9 @@
   const keys = {};
   const KEYMAP = { ArrowUp: 'u', KeyW: 'u', ArrowDown: 'd', KeyS: 'd', ArrowLeft: 'l', KeyA: 'l', ArrowRight: 'r', KeyD: 'r' };
   let firing = false, aim = null;
+  document.addEventListener('pointerdown', () => { if (launch.on) launchGo(true); }, true); // TD1: a tap skips the lift-off
   document.addEventListener('keydown', (e) => {
+    if (launch.on) { launchGo(true); e.preventDefault(); return; }
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (KEYMAP[e.code]) { keys[KEYMAP[e.code]] = true; e.preventDefault(); }
     if (e.code === 'Space') { firing = true; aim = null; e.preventDefault(); }
@@ -2515,6 +3071,21 @@
   $('btn-craft').addEventListener('click', () => { if (panelKind === 'craft') closePanel(); else openPanel('craft'); });
   const coarse = (() => { try { return window.matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } })();
   if (coarse || Q.get('touch') === '1' || ('ontouchstart' in window && window.innerWidth <= 700)) document.body.classList.add('touch');
+  // PI2: one-thumb layout. On touch the mount ability button moves next to the move stick (the same thumb reaches both); off, it goes
+  // back to its place in the action column. The DOM moves only when the mode changes.
+  const actsEl = $('acts'), touchEl = $('touch');
+  function applyOneThumb() {
+    document.body.classList.toggle('one-thumb', ONE_THUMB);
+    const home = ONE_THUMB && document.body.classList.contains('touch') ? touchEl : actsEl;
+    if (btn.ability.parentNode !== home) { if (home === actsEl) actsEl.insertBefore(btn.ability, btn.cmd); else home.appendChild(btn.ability); }
+  }
+  function setOneThumb(on) {
+    ONE_THUMB = !!on;
+    OT_KEYS.forEach((k) => { try { S.setItem(k, ONE_THUMB ? '1' : '0'); } catch (e) { /* this visit only */ } });
+    applyOneThumb();
+    return ONE_THUMB;
+  }
+  applyOneThumb();
 
   const vec = { mx: 0, my: 0 };
   function inputVec() {
@@ -2535,15 +3106,18 @@
     if (ride) CMP.rideStep(ride, dt);
     if (ride && abil && !hero.dead) abilityStep(dt);
     if (!hero.dead) moveHero(mx, my, dt);
-    revealFog();
+    if (ONE_THUMB && !hero.dead && hero.cd <= 0 && !firing && !build) autoAttack(); // PI2: one-thumb mode fires at the nearest foe by itself
+    if (!GFX.fogHz) revealFog(); else if ((fogAcc += dt) >= 1 / GFX.fogHz - 1e-9) { fogAcc = 0; revealFog(); }
     nodeTick();
     spawnT -= dt;
-    if (spawnT <= 0) { spawnT = 0.5; spawnTick(); bossCheck(); bossTick(); }
+    if (spawnT <= 0) { spawnT = 0.5; spawnTick(); bossCheck(); bossTick(); sparkTick(); }
     stepCreatures(dt);
     if (bz.st) bossStep(dt);
     if (ENV_ON) envStep(dt);
+    tdStep(dt); // TD1: thin ice, hot spring soak, glints, the air arrow
+    restAcc += dt; if (restAcc >= 0.2) { restStep(restAcc); restAcc = 0; } // IF1: 5 Hz is plenty for a calm heal
     stepBolts(dt);
-    if (party.length) stepParty(dt);
+    if (party.length) { if (!GFX.aiHz) stepParty(dt); else if ((partyAcc += dt) >= 1 / GFX.aiHz - 1e-9) { stepParty(partyAcc); partyAcc = 0; } } // PI2: 15 Hz on the low tier
     saveT -= dt;
     if (saveT <= 0) { saveT = 4; if (dirty) persist(); }
   }
@@ -2551,6 +3125,12 @@
   function frame(now) {
     const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
     last = now;
+    if (launch.on) { // TD1: the rocket lift-off plays over a frozen island, then the page goes to the mars landing pad
+      launch.t += dt; render(); drawLaunch();
+      if (launch.t >= LAUNCH_SEC) launchGo(false);
+      requestAnimationFrame(frame);
+      return;
+    }
     if (!paused) {
       const v = inputVec();
       if (firing) { if (aim) fire(aim.x - (hero.x - camX), aim.y - (hero.y - camY)); else fire(0, 0); }
@@ -2559,7 +3139,7 @@
     }
     render();
     miniT -= dt; hudT -= dt;
-    if (miniT <= 0) { miniT = LOW ? 0.5 : 0.25; drawMini(); }
+    if (miniT <= 0) { miniT = GFX_LOW ? 0.5 : 0.25; drawMini(); }
     if (hudT <= 0) { hudT = 0.2; drawHud(); if (craftDirty && panelKind === 'craft') renderCraft(''); }
     requestAnimationFrame(frame);
   }
@@ -2581,6 +3161,7 @@
   requestAnimationFrame(frame);
   if (!savedIsle && !medalLog.length) toast(HOME ? 'Welcome home to ' + PACK.name + '.' : 'Welcome to the ' + PACK.name + '!');
   if (saddleGift) toast('A ' + itemName(saddleGift).toLowerCase() + ' for your mount is in your pack, free.');
+  if (URL_LOCKED) toast(isleName(URL_LOCKED) + ' opens with a ' + itemName(ITEM_FOR_ISLE[URL_LOCKED] || '').toLowerCase() + '. You are at the Hearth Isle dock: craft one and sail from here.');
 
   // ---------- NAV slice D: shared Menu (top-left; the old "<-" link stays in the DOM as mm-nav-legacy) ----------
   if (window.MMNav) {
@@ -2623,7 +3204,7 @@
       creatures: () => creatures.map((c) => ({ uid: c.uid, sp: c.sp, kind: c.kind, base: c.base, x: c.x, y: c.y, hp: c.hp, maxHp: c.maxHp, mood: c.mood, size: c.size, art: !!c.art,
         ph: c.ph, tg: c.ph === 'wind' ? { shape: specOf(c.sp, c.kind).atk.shape, left: c.pt, windup: specOf(c.sp, c.kind).atk.windup, big: specOf(c.sp, c.kind).atk.big } : null,
         ko: c.ko, calm: c.calm, hostile: c.hostile, lv: c.lv, st: c.tm ? c.tm.st : null, torpor: c.tm ? c.tm.torpor : 0, torporMax: c.tm ? c.tm.torporMax : 0,
-        prog: c.tm ? c.tm.prog : 0, need: c.tm ? c.tm.need : 0, src: c.src, drawn: c.drawn, act: c.act, dir: c.dir })),
+        prog: c.tm ? c.tm.prog : 0, need: c.tm ? c.tm.need : 0, src: c.src, drawn: c.drawn, act: c.act, dir: c.dir, rare: !!c.rare, variant: c.variant || '' })),
       // PNG creature strips (b31a / b32) and b33 props: readiness, what was drawn, death strips shown, props baked from PNG vs code
       stripsReady: () => (STRIPS ? STRIPS.ready.then(() => ({ on: true, kinds: STRIPS.kinds.filter((k) => STRIPS.has(k)), count: STRIPS.count() })) : { on: false, kinds: [], count: 0 }),
       // a baked strip's drawn size in native px (AW3 size-class checks), or null when that creature has no PNG set
@@ -2641,9 +3222,26 @@
       soothe: (on) => { if (!TAME) return false; soothe = on !== false; setIco(btn.soothe.querySelector('.ico'), soothe ? 'ui_tranq_on' : 'ui_tranq_off'); return soothe; },
       feed: () => feed(),
       pouch: () => Object.assign({}, pouch),
+      // IF1
+      foodFor: (kind) => { const d = CR.get(kind); return d ? foodOf(d) : null; },
+      reserve: () => feedReserve(),
+      foodGlints: () => FOOD_GLINTS.map((f) => Object.assign({}, f)),
+      sparkle: () => (sparkle ? { x: sparkle.x, y: sparkle.y, kind: sparkle.kind, ready: nodeReady(sparkle) } : null),
+      sparkles: () => (save.spark && save.spark.n ? save.spark.n[ISLE] | 0 : 0),
+      rest: () => ({ mode: restMode, spot: inWorld(tileOf(hero.x), tileOf(hero.y)) && RESTT[tileOf(hero.y) * W + tileOf(hero.x)] === 1, hurtAgo: simT - lastHurtT, sinceReward: simT - lastRewardT, told: restS ? restS.told : false }),
+      restSpot: (want) => { // a walkable rest tile (want true) or a tile away from every rest spot (want false), with walkable neighbours
+        for (let y = 3; y < H - 3; y++) for (let x = 3; x < W - 3; x++) {
+          let ok = true;
+          for (let dy = -1; dy <= 1 && ok; dy++) for (let dx = -1; dx <= 1 && ok; dx++) if (!walkableAt(x + dx, y + dy) || heroSolidAt(x + dx, y + dy) || (RESTT[(y + dy) * W + x + dx] === 1) !== !!want) ok = false;
+          if (ok && (want || !(world.dock && Math.hypot(x - world.dock.x, y - world.dock.y) < 6))) return { x: x, y: y };
+        }
+        return null;
+      },
+      urlLocked: URL_LOCKED,
+      restPoints: () => { const o = []; for (let y = 1; y < H - 1 && o.length < 800; y += 2) for (let x = 1; x < W - 1 && o.length < 800; x += 2) if (RESTT[y * W + x] === 1 && walkableAt(x, y) && !heroSolidAt(x, y)) o.push({ x: x, y: y }); return o; },
       party: () => party.map((p) => ({ id: p.ent.id, sp: p.ent.sp, x: p.cs.x, y: p.cs.y, mode: p.cs.mode, hits: p.cs.hits || 0, dmg: p.dmg, down: p.cs.down })),
       ride: () => toggleRide(),
-      riding: () => (ride ? { id: ride.id, speed: ride.m.speed, lift: ride.m.lift, overlay: CMP.overlay(ride, false).dy, drawn: rideDrawn, saddle: saddleDrawn } : null),
+      riding: () => (ride ? { id: ride.id, speed: ride.m.speed, lift: ride.m.lift, overlay: CMP.overlay(ride, false).dy, drawn: rideDrawn, saddle: saddleDrawn, seatY: rideLift, seatX: rideDx } : null),
       mountId: () => (mountEnt ? mountEnt.id : null),
       // XW1
       ability: () => (abil ? { id: abilDef.id, name: abilDef.name, kind: abilDef.kind, ph: abil.ph, cd: abil.cd, t: abil.t, breath: abil.breath, uses: abilUses, ready: MA.ready(abil),
@@ -2656,11 +3254,17 @@
       tamesLive: () => JSON.parse(JSON.stringify(tames)),
       hurtLog: () => HURT_LOG.slice(),
       simT: () => simT,
+      setTime: (t) => { simT = Number(t) || 0; hero.t = simT; return simT; }, // PI2: one sim time on two pages (seeded frame comparisons)
       hint: () => hintText(TAME ? feedTarget() : null),
       nextTo: (id, dx) => { const c = creatures.find((x) => x.uid === id); if (!c) return null; hero.x = c.x + (Number(dx) || 0); hero.y = c.y; return snap(); },
       clearCreatures: () => { creatures = []; rare.live = 0; groupState.forEach((s) => { s.alive = 0; s.until = clock.now() + 1e9; }); },
       spawnTick: () => { spawnTick(); return creatures.length; },
       fire: (dx, dy) => { hero.cd = 0; return fire(dx, dy); },
+      // PI2: the graphics tier and the access state (sparks = glints drawn in the last frame, -1 when uncapped)
+      gfx: () => ({ tier: GFX.tier, low: GFX_LOW, dpr: DPR, sparks: GFX.sparks === Infinity ? null : GFX.sparks, ghosts: deadPool.length, terrainAnim: GFX.terrainAnim,
+        aiHz: GFX.aiHz, fogHz: GFX.fogHz, shadows: GFX.shadows, still: STILL, sparksDrawn: sparksDrawn, partySteps: partySteps, fogCalls: fogCalls, cap: CAP }),
+      access: () => ({ oneThumb: ONE_THUMB, reduced: REDUCED, autoN: autoN, abilityBy: btn.ability.parentNode ? btn.ability.parentNode.id : '' }),
+      setOneThumb: (on) => setOneThumb(on),
       stats: () => ({ xp: xp, kills: kills, tamed: tamedN, loot: Object.assign({}, loot), bolts: bolts.length, chunks: chunkCache.size(), fog: FOG.count(fog), cap: CAP, dpr: DPR }),
       save: () => { persist(); return JSON.parse(S.getItem(ISL.KEY) || 'null'); },
       // B10
@@ -2723,6 +3327,16 @@
         tame: bz.st && bz.st.tame ? { st: bz.st.tame.st, how: bz.st.tame.how, torpor: bz.st.tame.torpor, torporMax: bz.st.tame.torporMax, prog: bz.st.tame.prog, need: bz.st.tame.need, asleep: bz.ko } : null,
         arenaSrc: arenaSrc, arenaDrawn: arenaDrawn, reduced: REDUCED, tg: Object.assign({}, BOSS_TG), src: bz.src, drawn: bz.drawn, sk: bz.sk }),
       bossLog: () => JSON.parse(JSON.stringify(BOSS_LOG)),
+      // TD1
+      td: () => ({ night: tdNight(), nightK: nightK(), aurora: AUR_ON, auroraDrawn: auroraDrawn, dayLen: DAY_LEN, dusk: DUSK,
+        ice: { on: THIN_ICE, tile: ice.tile, t: ice.t, warnN: ice.warnN, made: ice.made, live: ice.n, drawn: crackDrawn, slow: THIN_SLOW },
+        soak: { t: soak.t, n: soak.n }, glints: GLINTS.map((q) => ({ i: q.i, x: q.x, y: q.y, item: q.item, night: q.night, live: glintLive(q), taken: glintTaken(q) })),
+        air: { arrow: airArrow.on, ang: airArrow.ang, tiles: airArrow.tiles, warnAt: AIR_WARN, low: !!envS.warnO, empty: !!envS.emptyO },
+        launch: { on: launch.on, t: launch.t, n: launch.n, skipped: launch.skipped, url: launch.url, sec: LAUNCH_SEC },
+        rare: RARE_VAR ? { v: RARE_VAR.v, name: RARE_VAR.name, item: RARE_VAR.item, night: RARE_VAR.night } : null, reduced: REDUCED }),
+      cracked: (tx, ty) => crackedAt(tx, ty),
+      moveScale: (tx, ty) => moveScaleAt(tx, ty),
+      findTerrain: (name, walk) => { const want = O.TERRAIN_ALL[name]; for (let y = 4; y < H - 4; y++) for (let x = 4; x < W - 4; x++) if (world.terrain[y * W + x] === want && (!walk || (walkableAt(x, y) && !heroSolidAt(x, y)))) return { x: x, y: y }; return null; },
       // XB
       bossSig: () => (bz.st ? { id: BOSS_ID, heads: bz.st.heads ? bz.st.heads.slice() : null, springs: bz.st.springs ? bz.st.springs.map((p) => Object.assign({}, p)) : null,
         ice: bz.st.ice.map((p) => ({ id: p.id, ttl: p.ttl, zone: Object.assign({}, p.zone) })), sub: bz.st.sub, dig: bz.st.dig, rematch: bz.st.rematch, rm: bz.rm, onIce: bz.onIce,

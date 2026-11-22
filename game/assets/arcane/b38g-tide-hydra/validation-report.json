@@ -1,0 +1,15 @@
+{
+  "batch": "b38g",
+  "label": "tide-hydra",
+  "generated_utc": "2026-11-22T16:48:03.009088Z",
+  "files": 15,
+  "duplicate_ids": 0,
+  "blocking": {},
+  "warnings": {},
+  "standing_heights": {
+    "tide_hydra/down": 412,
+    "tide_hydra/up": 412,
+    "tide_hydra/right": 400
+  },
+  "status": "provisional"
+}

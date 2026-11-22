@@ -8,6 +8,10 @@
 <link rel="stylesheet" href="../../shared/mm-nav.css">
 <link rel="stylesheet" href="../../shared/mm-feedback.css">
 <!-- Local-only page: no database, no network module, no game engine. Pure shared modules + one light canvas loop. -->
+<!-- PI2: the shared access prefs (pixeltown-access-v1: --ui-scale, reduced motion) and the graphics tier (lowGfx -> MMPerf low), read only -->
+<script src="../../shared/mm-access.js"></script>
+<script src="../../shared/mm-side-access.js"></script>
+<script src="../../shared/mm-perf.js"></script>
 <script src="../../shared/rng.js"></script>
 <script src="../../shared/mm-biome-packs.js"></script>
 <script src="../../shared/mm-overworld.js"></script>
@@ -15,6 +19,8 @@
 <script src="../../shared/mm-isle-art.js"></script>
 <script src="../../shared/mm-creatures.js"></script>
 <script src="../../shared/mm-isle-craft.js"></script>
+<script src="../../shared/mm-isle-pouch.js"></script>
+<script src="../../shared/mm-isle-rest.js"></script>
 <script src="../../shared/mm-creature-draw.js"></script>
 <script src="../../shared/mm-creature-strips.js"></script>
 <script src="../../shared/mm-fog.js"></script>
@@ -42,7 +48,7 @@
       <div id="hud-isle" class="hud-isle">Verdant Jungle</div>
     </div>
   </div>
-  <div class="bar" aria-label="Health"><div id="hp-fill" class="fill"></div><span id="hp-text" class="bar-text">20 / 20</span></div>
+  <div id="hp-bar" class="bar hp-bar" aria-label="Health" data-state="ok"><div id="hp-fill" class="fill"></div><span class="shp shp-hp" aria-hidden="true"></span><span id="hp-text" class="bar-text">20 / 20</span></div>
   <div id="hud-info" class="hud-info">XP 0</div>
   <div id="hud-ground" class="hud-info"></div>
   <div id="hud-tame" class="hud-tame" aria-live="off">
@@ -52,11 +58,11 @@
     <span id="tm-saddle" class="meter" hidden><span class="ico" data-ico="ui_saddle"></span><span class="lbl">Saddle</span> <span class="val"></span></span>
   </div>
   <div id="hud-env" class="hud-env" hidden>
-    <span id="env-warm" class="meter env" hidden><span class="lbl">Warmth</span> <span class="val"></span></span>
-    <span id="env-o2" class="meter env" hidden><span class="lbl">Air</span> <span class="val"></span></span>
+    <span id="env-warm" class="meter env" hidden><span class="shp shp-warm" aria-hidden="true"></span><span class="lbl">Warmth</span> <span class="val"></span></span>
+    <span id="env-o2" class="meter env" hidden><span class="shp shp-o2" aria-hidden="true"></span><span class="lbl">Air</span> <span class="val"></span></span>
   </div>
   <div id="hud-abil" class="hud-env" hidden>
-    <span id="abil-breath" class="meter env"><span class="lbl">Breath</span> <span class="val"></span></span>
+    <span id="abil-breath" class="meter env"><span class="shp shp-o2" aria-hidden="true"></span><span class="lbl">Breath</span> <span class="val"></span></span>
   </div>
   <div class="hud-btns">
     <button id="btn-home" type="button" hidden aria-label="Fast travel to the home dock">Home dock</button>

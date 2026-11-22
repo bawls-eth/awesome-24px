@@ -6,7 +6,8 @@
 //   the strips with no horizontal scroll; plus no per-frame allocation in the strip draw path, no console errors and 0 DB requests.
 // AW2: the jungle now preloads 8 species (+ the b32s stegolith; glimmerfrog gains its b31af sleep / eat): 129 strips; 3d a ridden
 // Stegolith (saddle_stegolith in the pack) draws its b32s body + saddle overlay; 5b a fed glimmerfrog plays its b31af eat strip.
-// AW3: 8 the Coral Reef (?isle=reef) preloads only the b38a reef puffer (14 strips, 48 px S class) and draws it from PNG, desktop + phone.
+// AW3: 8 the Coral Reef (?isle=reef) preloads the b38a reef puffer (14 strips, 48 px S class) and draws it from PNG, desktop + phone.
+// AW4: the reef now preloads all seven b38a-f species (108 strips; AW5: + the b38g hydra, 123) and the shellcrab draws from PNG too (details: isle-reef-art.test.js).
 // Run: BASE=http://localhost:8841/game/index.html NODE_PATH=$(npm root -g) node game/tests/isle-creature-art.test.js
 const fs = require('fs');
 const path = require('path');
@@ -134,8 +135,8 @@ const PIXELS = (I, a) => {
     const r = I.feed(); I.render(); return { r, now: c() ? c().drawn : null, src: c() ? c().src : null };
   });
   check('5b a fed Glimmerfrog plays its b31af eat strip', frog.r && frog.r.ok && frog.now === 'glimmerfrog_eat_down' && frog.src === 'png', JSON.stringify(frog));
-  check('1g desktop: no console errors, no offsite requests, 0 DB requests, every b31a / b31af / b32 / b32s / b33 PNG answered 200, no b35 / b36 / b38a on the jungle',
-    d.errors.length === 0 && d.offsite.length === 0 && d.db.count() === 0 && d.pngs.length >= 113 && d.pngs.every((p) => p.s === 200) && !d.pngs.some((p) => /^b3([56]|8a)-/.test(p.u))
+  check('1g desktop: no console errors, no offsite requests, 0 DB requests, every b31a / b31af / b32 / b32s / b33 PNG answered 200, no b35 / b36 / b38 on the jungle',
+    d.errors.length === 0 && d.offsite.length === 0 && d.db.count() === 0 && d.pngs.length >= 113 && d.pngs.every((p) => p.s === 200) && !d.pngs.some((p) => /^b3([56]|8[a-f])-/.test(p.u))
     && d.pngs.some((p) => /^b32s-stegolith\/creatures\/stegolith\/stegolith_saddle_move_right\.png$/.test(p.u)), d.errors.concat(d.offsite).join(' | ') + ' pngs ' + d.pngs.length);
 
   // ---- 2 ?art=0 falls back ----
@@ -193,7 +194,7 @@ const PIXELS = (I, a) => {
   const scroll = await p.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
   check('7 phone 390x844: the PNG strip draws at dpr 2, no horizontal scroll, no errors, 0 DB requests', pp.src === 'png' && pp.ratio > 0.6 && scroll && p.errors.length === 0 && p.db.count() === 0, JSON.stringify(pp) + p.errors.join(' | '));
 
-  // ---- 8 AW3 b38a: the Coral Reef preloads the reef puffer (14 strips, 192 px cells -> 48 px S class); other reef species stay code ----
+  // ---- 8 AW3 b38a: the Coral Reef preloads the reef puffer (14 strips, 192 px cells -> 48 px S class); AW4: plus b38b-f (108 strips) ----
   const B38A_PAL = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'assets', 'arcane', 'b38a-reef-puffer', 'palette.json'), 'utf8')).colors;
   for (const [lab, vp] of [['desktop', { viewport: { width: 1000, height: 700 } }], ['phone', { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true }]]) {
     const rf = await open(browser, vp, '&isle=reef');
@@ -203,13 +204,13 @@ const PIXELS = (I, a) => {
     const rmore = await ev(rf.page, (I) => {
       const h = I.hero(), u = I.spawn('shellcrab', h.tx + 2, h.ty); I.step(0, 0, 0.02); I.render();
       const c = I.creatures().find((x) => x.uid === u); I.clearCreatures();
-      return { crab: c.src, size: I.stripSize('reef_puffer', 'idle', 0), eat: I.stripSize('reef_puffer', 'eat', 3) };
+      return { crab: c.src, crabDrawn: c.drawn, size: I.stripSize('reef_puffer', 'idle', 0), eat: I.stripSize('reef_puffer', 'eat', 3) };
     });
     const rp = rf.pngs.filter((p) => /^b38a-reef-puffer\//.test(p.u));
-    check('8 ' + lab + ': the reef isle preloads only the b38a reef puffer (14 PNGs, all 200), it draws from its strip at 48 px (b38a palette), the shellcrab stays code',
-      rready.on && rready.kinds.join() === 'reef_puffer' && rready.count === 14 && rp.length === 14 && rp.every((p) => p.s === 200)
+    check('8 ' + lab + ': the reef isle preloads the seven b38a-f species + the b38g hydra (108 + 15 strips; the 14 b38a PNGs all 200), the puffer draws from its strip at 48 px (b38a palette), the shellcrab from its b38b strip',
+      rready.on && rready.kinds[0] === 'reef_puffer' && rready.kinds.length === 8 && rready.count === 123 && rp.length === 14 && rp.every((p) => p.s === 200)
       && rpx.src === 'png' && /^reef_puffer_(idle|move)_(down|up|right)$/.test(rpx.drawn) && rpx.changed > 150 && rpx.ratio > 0.6
-      && rmore.crab === 'code' && rmore.size.w === 48 && rmore.size.ay === 171 / 4 && rmore.eat.id === 'reef_puffer_eat_down'
+      && rmore.crab === 'png' && /^shellcrab_/.test(rmore.crabDrawn) && rmore.size.w === 48 && rmore.size.ay === 171 / 4 && rmore.eat.id === 'reef_puffer_eat_down'
       && rf.errors.length === 0 && rf.offsite.length === 0 && rf.db.count() === 0, JSON.stringify([rready, rpx, rmore, rp.length]) + rf.errors.join(' | '));
   }
 
