@@ -65,6 +65,14 @@ const echoTune = (p) => p.evaluate(() => { __echo.listen(); const s = __echo.seq
   const sv = await lj(p, KEY), md = await lj(p, MKEY), pr = await lj(p, 'pixeltown-profile-v1');
   check('own save key + hub medal summary (round1, t6)', sv.v === 1 && sv.rounds === 1 && md.v === 1 && md.m.includes('round1') && md.m.includes('t6') && !md.m.includes('t10'), JSON.stringify([sv, md]));
   check('hub map progress: Echo node bronze + silver from the arcade milestones', !!(pr && pr.nodes['w5-echo'] && pr.nodes['w5-echo'].medals.b && pr.nodes['w5-echo'].medals.s && !pr.nodes['w5-echo'].medals.g), JSON.stringify(pr && pr.nodes['w5-echo']));
+  const kit = await p.evaluate(() => {
+    const r = document.getElementById('result'), c = document.getElementById('r-copy').getBoundingClientRect();
+    const small = Array.from(r.querySelectorAll('*')).filter((e) => Array.from(e.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim()) && parseFloat(getComputedStyle(e).fontSize) < 12).map((e) => e.className || e.tagName);
+    const foc = r.querySelector('button, a');
+    return { card: r.classList.contains('mk-card'), code: document.getElementById('r-code').textContent, goal: document.getElementById('r-goal').textContent, menu: !!r.querySelector('a.mk-link[href]'), copy: [c.width, c.height], small, first: foc && foc.id, medals: !!r.querySelector('#r-medals'), best: !!r.querySelector('.mk-row .mk-new') };
+  });
+  check('kit: shared result card with share code BLOOM1, a goal line, a Menu link, medals kept', kit.card && kit.code === 'BLOOM1' && kit.goal.length > 0 && kit.menu && kit.medals, JSON.stringify(kit));
+  check('kit: Copy is >= 44 px, Play again is the first focusable, no text under 12 px', kit.copy[0] >= 44 && kit.copy[1] >= 44 && kit.first === 'again' && kit.small.length === 0, JSON.stringify(kit));
   const btns = await p.evaluate(() => ['again', 'replay'].map((id) => { const r = document.getElementById(id).getBoundingClientRect(); return [id, r.width, r.height]; }));
   check('phone: Play again / Replay seed are >= 44 px', btns.every((x) => x[1] >= 44 && x[2] >= 44), JSON.stringify(btns));
   await p.tap('#replay');
@@ -101,8 +109,21 @@ const echoTune = (p) => p.evaluate(() => { __echo.listen(); const s = __echo.seq
   check('reduced motion + low graphics prefs read; particles capped at 24', rm.reduced && rm.low && rm.parts <= 24, JSON.stringify(rm));
   const dw = await q.evaluate(() => { const b = document.getElementById('board').getBoundingClientRect(); return { w: b.width, x: b.left }; });
   check('desktop: board is centred and capped in width', dw.w <= 560 && dw.x > 100, JSON.stringify(dw));
+  await q.evaluate(() => __echo.end());
+  await q.keyboard.press('r');
+  check('kit: R right at the end is held for a moment (no skipped result card)', await q.evaluate(() => __echo.run.state === 'over' && !document.getElementById('result').hidden));
+  await q.waitForTimeout(450);
+  const dk = await q.evaluate(() => ({ code: document.getElementById('r-code').textContent, seed: __echo.run.seed }));
+  check('kit: desktop card shows the share code of the round seed', dk.code === dk.seed.toUpperCase() && /^[A-Z0-9]{1,24}$/.test(dk.code), JSON.stringify(dk));
+  await q.keyboard.press('r');
+  check('kit: R on the result card plays again', await q.evaluate(() => __echo.run.state === 'play' && document.getElementById('result').hidden));
   check('desktop: no console errors, 0 DB requests', d.errors.length === 0 && d.db.count() === 0, JSON.stringify(d.errors));
   await d.ctx.close();
+  // share code in the URL sings the same tune as the seed it came from; a bad code is ignored safely
+  const tuneFor = async (qs) => { const x = await open(browser, { viewport: { width: 1280, height: 800 } }, '?test=1&' + qs, { [KEY]: JSON.stringify({ v: 1, hint: true }) }); await x.page.click('#play'); const r = await x.page.evaluate(() => ({ seed: __echo.run.seed, t: JSON.stringify(__echo.seq(20)) })); const ok = x.errors.length === 0 && x.db.count() === 0; await x.ctx.close(); return Object.assign(r, { ok }); };
+  const sc = await tuneFor('seed=BLOOM1'), sl = await tuneFor('seed=bloom1'), sb = await tuneFor('seed=%3Cb%3E!!');
+  check('kit: ?seed=BLOOM1 (share code) sings the bloom1 tune', sc.seed === 'bloom1' && sc.t === sl.t && sc.ok, sc.seed);
+  check('kit: an invalid share code is ignored (fresh seed, no errors)', /^[a-z0-9]+$/.test(sb.seed) && sb.ok, sb.seed);
   await browser.close();
   done();
 })().catch((e) => { console.error(e); process.exit(1); });
