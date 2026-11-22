@@ -125,6 +125,93 @@
   const pick = { tier: 0, dur: 0 };
   const slimes = [];
 
+  // ---------- dive runs + juice (dd-run.js; personal bests in 'pixeltown-deepdelve-runs-v1') ----------
+  const RUNS = CREATIVE ? null : window.MMDDRun || null;
+  let climbTipShown = false, runRec = null, run = null, runDepth0 = 0, shakeT = 0, shakeAmp = 0, comboShown = false, pbDepthShown = false;
+  const calm = () => reduced || ACCESS.lowGfx; // no camera shake on reduce motion or low graphics
+  let sfxBox = null;
+  function sfx(name) {
+    try {
+      if (!sfxBox && window.MMSfx && !TEST) sfxBox = MMSfx.create({ storage: localStorage });
+      if (sfxBox) sfxBox.play(name);
+    } catch (e) { /* audio is optional */ }
+  }
+  function shake(amp, t) { if (calm()) return; shakeAmp = Math.max(shakeAmp, amp); shakeT = Math.max(shakeT, t); }
+  function pop(text, cls) {
+    const box = $('pops'); if (!box) return;
+    while (box.childNodes.length > 4) box.removeChild(box.firstChild);
+    const el = document.createElement('div'); el.className = 'pop' + (cls ? ' ' + cls : ''); el.textContent = text;
+    el.style.left = ((box.childNodes.length % 3) - 1) * 28 + 'px';
+    box.appendChild(el);
+    setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 950);
+  }
+  const nowS = () => performance.now() / 1000;
+  function renderDive() {
+    const el = $('hud-dive'); if (!el) return;
+    if (!run || !runRec) { el.textContent = ''; return; }
+    el.textContent = modName(run.mod) + ': ' + run.depth + ' deep | Best ' + (runRec.best.depth || '-') + (run.armed ? ' | Climb out for x' + RUNS.SAFE_BONUS : '');
+  }
+  const modName = (id) => { const m = RUNS && RUNS.MODS.filter((x) => x.id === id)[0]; return m ? m.name : 'Dive'; };
+  function startRun() {
+    if (!RUNS) return;
+    if (!runRec) runRec = RUNS.load(localStorage);
+    run = RUNS.start(runDepth0, RUNS.modFor(SEED, runRec.runs).id); pbDepthShown = false; comboShown = false; $('combo').textContent = '';
+    renderDive();
+  }
+  function onMined(item, now) {
+    if (!run) return null;
+    const r = RUNS.mined(run, item, now === undefined ? nowS() : now);
+    if (r.ore) { pop('+' + (r.ore * (run.mod === 'veins' ? 16 : 8)) + ' ' + item.replace(/_ore$/, '').replace(/_/g, ' '), 'ore'); sfx('pickup'); shake(0.06, 0.16); }
+    else { sfx('hit'); shake(0.025, 0.08); }
+    if (r.combo >= 2) {
+      const c = $('combo'); c.textContent = 'Combo x' + r.combo; c.className = r.combo >= 5 ? 'hot' : ''; comboShown = true;
+      if (r.combo % 5 === 0) { pop('Combo x' + r.combo + '!', 'pb'); sfx('claim'); }
+    }
+    return r;
+  }
+  function tickRun(absDepth) {
+    if (!run) return;
+    if (comboShown && !RUNS.comboLive(run, nowS())) { comboShown = false; $('combo').textContent = ''; }
+    const wasArmed = run.armed;
+    if (RUNS.depth(run, absDepth)) {
+      if (!pbDepthShown && runRec.best.depth > 0 && run.depth > runRec.best.depth) { pbDepthShown = true; pop('New depth record!', 'pb'); sfx('levelup'); }
+      renderDive();
+    } else if (wasArmed !== run.armed) renderDive();
+    if (!wasArmed && run.armed && !climbTipShown) { climbTipShown = true; toast('Deep enough! Climb back out for a x' + RUNS.SAFE_BONUS + ' bonus: look down, jump and Place a block under you.'); }
+    if (run.armed && absDepth <= runDepth0) endRun(true, 'You climbed back out alive: x' + RUNS.SAFE_BONUS + ' score bonus.');
+  }
+  // End the dive and show the summary. `safe` = surfaced alive (bonus); otherwise the dive ended in a fall.
+  function endRun(safe, why) {
+    if (!run || !runRec) return null;
+    const short = run.depth < 2 && run.blocks < 5; // a stumble near the surface is not worth a summary
+    const sum = RUNS.finish(runRec, run, safe);
+    RUNS.save(localStorage, runRec);
+    startRun();
+    if (short) return sum;
+    showSummary(sum, why);
+    if (sum.any) sfx('levelup');
+    return sum;
+  }
+  function showSummary(sum, why) {
+    $('run-title').textContent = sum.safe ? 'Dive complete!' : 'Dive over';
+    $('run-why').textContent = why || '';
+    $('run-score').textContent = 'Score ' + sum.score + (sum.pb.score ? '  New best!' : '  (best ' + runRec.best.score + ')');
+    const ul = $('run-stats'); while (ul.firstChild) ul.removeChild(ul.firstChild);
+    [['Depth', sum.depth, 'depth', sum.prev.depth], ['Ores', sum.ores, 'ores', sum.prev.ores], ['Best combo', 'x' + sum.combo, 'combo', sum.prev.combo], ['Blocks', sum.blocks, '', 0]].forEach((r) => {
+      const li = document.createElement('li'); if (r[2] && sum.pb[r[2]]) li.className = 'pb';
+      li.textContent = r[0] + ': ' + r[1];
+      const sm = document.createElement('small'); sm.textContent = r[2] ? (sum.pb[r[2]] ? 'New personal best!' : 'Best ' + (r[2] === 'combo' ? 'x' : '') + r[3]) : 'Dives: ' + runRec.runs;
+      li.appendChild(sm); ul.appendChild(li);
+    });
+    const nx = RUNS.MODS.filter((m) => m.id === run.mod)[0];
+    $('run-next').textContent = 'This dive: ' + modName(sum.mod) + '. Next dive: ' + nx.name + ' (' + nx.desc + ')';
+    $('run-tip').textContent = sum.short > 0 && sum.short <= 5 ? 'Only ' + sum.short + ' blocks short of your deepest dive!' : sum.safe ? 'Surfacing alive pays x' + RUNS.SAFE_BONUS + '. Go deeper next time?' : 'Tip: climb back out alive for a x' + RUNS.SAFE_BONUS + ' score bonus. Chain breaks within ' + RUNS.COMBO_GAP + ' s for combos.';
+    togglePanel('craft', false); togglePanel('goals', false);
+    $('run-panel').hidden = false;
+    try { $('run-again').focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+  }
+  function closeSummary() { $('run-panel').hidden = true; input.mine = false; }
+
   // ---------- meta: goals, mode, migration stamp (localStorage 'pixeltown-deepdelve-v1', corrupt-safe) ----------
   const clampInt = (v, lo, hi) => (typeof v === 'number' && isFinite(v) ? Math.max(lo, Math.min(hi, Math.floor(v))) : lo);
   function sanitiseMeta(raw) {
@@ -246,6 +333,7 @@
     if (CREATIVE || player.iframes > 0) return; // the calm creative world has no hazards
     player.iframes = 0.6;
     player.hp -= n;
+    sfx('hurt'); shake(0.12, 0.25);
     if (player.hp <= 0) { die(deathMsg || 'You were defeated. Back to the surface.'); return; }
     if (msg) toast(msg);
     renderHud();
@@ -263,6 +351,7 @@
     meta.goals.secretVoid = true;
     saveMeta();
     respawn(msg);
+    endRun(false, msg);
   }
   function respawn(msg) {
     player.x = spawn.x; player.y = spawn.y; player.z = spawn.z; player.vy = 0; player.hp = 10; player.peak = player.y; player.iframes = 1; lavaT = 0;
@@ -361,7 +450,7 @@
     const dirty = world.setBlock(wx, wy, wz, B.AIR);
     if (!dirty.length) return false;
     const item = ITEM_OF[id];
-    if (item && !CREATIVE) { inv[item] = (inv[item] | 0) + 1; found[item] = 1; }
+    if (item && !CREATIVE) { inv[item] = (inv[item] | 0) + 1; found[item] = 1; onMined(item); }
     if (!CREATIVE) findBlueprint(id, wy);
     if (!CREATIVE) wearPick(NEED_TIER[id] ? 2 : 1);
     afterEdit(dirty);
@@ -677,15 +766,31 @@
 
   // ---------- main loop ----------
   let mineTarget = null, mineProg = 0, last = 0, spawnT = 6;
+  // Mining progress bar under the crosshair (DOM width, only touched when it moves by 5% or more)
+  let progShown = -1;
+  function showProg(f) {
+    const v = f <= 0 ? 0 : Math.min(1, Math.round(f * 20) / 20);
+    if (v === progShown) return;
+    progShown = v; const el = $('mineprog'); if (!el) return;
+    el.style.width = Math.round(v * 100) + '%'; el.parentNode.hidden = v <= 0;
+  }
   function updateMining(dt) {
+    mineStep(dt);
+    const hard = mineTarget && lastHit ? (HARDNESS[lastHit.id] || 0.8) * (CREATIVE ? 0.35 : 1) : 0;
+    showProg(hard && mineProg > 0.001 ? mineProg / hard : 0);
+  }
+  let lastHit = null;
+  function mineStep(dt) {
+    lastHit = null;
     if (atkCd > 0) atkCd -= dt;
     if (input.mine && (attackSlime(true) || attackCreature(true) || attackWyrm(true))) { mineTarget = null; mineProg = 0; return; }
     if (input.mine && benches.length) { const bi = benchAtLook(); if (bi >= 0) { pickUpBench(bi); input.mine = false; return; } }
     const hit = input.mine ? raycast(5) : null;
+    lastHit = hit;
     if (!hit || hit.id === B.BEDROCK || hit.id === B.LAVA) { mineTarget = null; mineProg = 0; return; }
     const key = hit.cell.join(',');
     if (mineTarget !== key) { mineTarget = key; mineProg = 0; }
-    if (!CREATIVE && (NEED_TIER[hit.id] | 0) > pick.tier) { if (mineProg === 0) toast('Too hard! Needs a ' + TIER_NAME[NEED_TIER[hit.id]].toLowerCase() + ' pick or better.'); mineProg = 0.001; return; }
+    if (!CREATIVE && (NEED_TIER[hit.id] | 0) > pick.tier) { if (mineProg === 0) toast('Too hard! Needs a ' + TIER_NAME[NEED_TIER[hit.id]].toLowerCase() + ' pick or better. Open Craft (C) to make one.'); mineProg = 0.001; return; }
     mineProg += dt * (1 + pick.tier * 0.4);
     if (mineProg >= (HARDNESS[hit.id] || 0.8) * (CREATIVE ? 0.35 : 1)) { mineBlock(hit.cell[0], hit.cell[1], hit.cell[2]); mineTarget = null; mineProg = 0; }
   }
@@ -699,7 +804,9 @@
     if (!camera) return;
     const moving = Math.hypot(input.fwd, input.strafe) > 0.1 && player.onGround;
     bobOffset = reduced || !moving ? 0 : Math.sin(performance.now() / 110) * 0.035;
-    camera.position.set(player.x, player.y + EYE + bobOffset, player.z);
+    let sx = 0, sy = 0;
+    if (shakeT > 0) { const a = shakeAmp * Math.min(1, shakeT * 6), q = performance.now() / 16; sx = Math.sin(q * 2.3) * a; sy = Math.cos(q * 3.1) * a; }
+    camera.position.set(player.x + sx, player.y + EYE + bobOffset + sy, player.z);
     camera.rotation.set(player.pitch, player.yaw, 0);
     // sky/fog colour only depends on the column and depth: recompute when either changes
     const fx = Math.floor(player.x), fz = Math.floor(player.z);
@@ -738,6 +845,7 @@
     if (gov.auto && last && backlog < 8) govFrame(t - last, t);
     const dt = Math.min(0.05, (t - last) / 1000 || 0); last = t;
     if (!world) return;
+    if (shakeT > 0) { shakeT = Math.max(0, shakeT - dt); if (!shakeT) shakeAmp = 0; }
     if (!TEST) {
       physics(dt); updateMining(dt);
       if (!CREATIVE) {
@@ -774,7 +882,7 @@
       else if (k === 't') craftTorch();
       else if (k === 'g') togglePanel('goals');
       else if (k === 'm') setMode(meta.mode === 'creative' ? 'survival' : 'creative');
-      else if (k === 'escape') togglePanel('craft', false);
+      else if (k === 'escape') { togglePanel('craft', false); togglePanel('goals', false); closeSummary(); }
       else if (/^[1-9]$/.test(k)) { const it = hotbarItems()[+k - 1]; if (it) { sel = it.item; renderHud(); } }
     });
     window.addEventListener('keyup', (e) => {
@@ -839,6 +947,8 @@
     $('world-btn').addEventListener('click', switchWorld);
     $('close-craft').addEventListener('click', () => togglePanel('craft', false));
     $('close-goals').addEventListener('click', () => togglePanel('goals', false));
+    $('close-run').addEventListener('click', closeSummary);
+    $('run-again').addEventListener('click', closeSummary);
     $('smelt-iron').addEventListener('click', () => smeltOre('iron_ore'));
     $('smelt-gold').addEventListener('click', () => smeltOre('gold_ore'));
     $('craft-btn').addEventListener('click', craftTorch);
@@ -879,6 +989,7 @@
     if (CREATIVE) return;
     const d = depthNow();
     if (d > meta.goals.maxDepth) { meta.goals.maxDepth = Math.min(99, d); saveMeta(); }
+    tickRun(d);
     if (d >= 8) award('bronze');
     if (d >= 20) award('depth20');
     if (d >= 40) award('depth40');
@@ -920,7 +1031,7 @@
     });
     renderBuilds();
     const nDone = MEDALS.concat(EXTRA).filter((m) => meta.goals[m.id]).length;
-    $('goal-stats').textContent = 'Goals: ' + nDone + '/' + (MEDALS.length + EXTRA.length) + ' | Torches: ' + meta.goals.torches + '/10 | Deepest: ' + meta.goals.maxDepth + ' | Deaths: ' + meta.goals.deaths + (meta.cave && meta.cave.seed !== null ? ' | Old cave seed: ' + meta.cave.seed : '');
+    $('goal-stats').textContent = 'Goals: ' + nDone + '/' + (MEDALS.length + EXTRA.length) + ' | Torches: ' + meta.goals.torches + '/10 | Deepest: ' + meta.goals.maxDepth + ' | Deaths: ' + meta.goals.deaths + (meta.cave && meta.cave.seed !== null ? ' | Old cave seed: ' + meta.cave.seed : '') + (runRec ? ' | Dives: ' + runRec.runs + ' (' + runRec.safe + ' climbed out) | Best dive: score ' + runRec.best.score + ', ' + runRec.best.depth + ' deep, combo x' + runRec.best.combo : '');
   }
 
   // ---------- crafting + smelting ----------
@@ -1045,6 +1156,7 @@
   function togglePanel(name, on) {
     const el = $(name + '-panel'), want = on === undefined ? el.hidden : on;
     ['craft', 'goals'].forEach((n) => { $(n + '-panel').hidden = true; });
+    if (want) $('run-panel').hidden = true;
     el.hidden = !want;
     if (want) { try { document.exitPointerLock(); } catch (e) { /* ignore */ } if (name === 'craft') renderCraft(); else renderGoals(); }
   }
@@ -1621,10 +1733,17 @@
         if (lightDirty || !win.light) relight();
         return lightAt(x, y, z);
       }, worldUrl, switchWorld, outlineHex: () => (outline ? outline.material.color.getHex() : 0),
+      introText, prog: showProg, mining: (dt) => updateMining(dt), progShown: () => progShown,
+      run: { get state() { return run; }, get rec() { return runRec; }, start: startRun, end: endRun, mined: onMined, tick: tickRun, close: closeSummary, depth0: () => runDepth0, shake: () => ({ t: shakeT, amp: shakeAmp }), MMDDRun: RUNS },
       craft: craftTorch, mouthSite: () => mouthSite, aimed: () => aimed, aim, outlineVisible: () => !!(outline && outline.visible), surfaceY: (x, z) => MMChunks.surfaceY(x, z, SEED), ready: true,
     };
   }
 
+  // First hint: touch players get touch words (they have no mouse buttons or keys); both learn the dive goal.
+  function introText() {
+    const how = $('touch').hidden ? 'Click the view to look around. Hold left to mine, right to place. WASD + Space.' : 'Drag the view to look, use the stick to move, hold Mine to dig.';
+    return CREATIVE ? how : how + ' Dive deep, then climb back out for a bonus.';
+  }
   // ---------- boot ----------
   async function boot() {
     $('hud-seed').textContent = 'Seed ' + SEED;
@@ -1672,6 +1791,8 @@
       } catch (e) { /* ignore corrupt save */ }
     }
     migrateTown();
+    runDepth0 = Math.max(0, Math.floor(-spawn.y));
+    startRun();
     if (CREATIVE) { PLACEABLE.forEach((p) => { inv[p[0]] = 999; }); if (BUILD) BUILD.BLUEPRINTS.forEach((bp) => { inv[bp.item] = 1; }); }
     if (WYRM_ON) await loadWyrmScript();
     wyrmInit();
@@ -1682,8 +1803,8 @@
     bindControls();
     renderHud();
     if (TEST) exposeTest();
-    say(TEST ? '' : 'Click the view to look around. Hold left to mine, right to place. WASD + Space.');
-    if (!TEST) setTimeout(() => say(''), 5000);
+    say(TEST ? '' : introText());
+    if (!TEST) setTimeout(() => say(''), 6000);
     requestAnimationFrame(frame);
   }
   boot();

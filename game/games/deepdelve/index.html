@@ -25,13 +25,17 @@
 <main id="stage">
   <canvas id="gl" aria-label="Deepdelve world"></canvas>
   <div id="cross" aria-hidden="true"></div>
+  <div id="minebar" aria-hidden="true" hidden><div id="mineprog"></div></div>
   <div id="hud" aria-live="polite">
     <span id="hud-hp"></span> <span id="hud-depth"></span> <span id="hud-time"></span> <span id="hud-seed"></span>
     <div id="hpbar" role="progressbar" aria-label="Health" aria-valuemin="0" aria-valuemax="10" aria-valuenow="10"><div id="hpfill"></div></div>
     <div id="hud-pick"></div>
     <div id="hud-goal"></div>
     <div id="creative-note" hidden></div>
+    <div id="hud-dive"></div>
   </div>
+  <div id="combo" aria-hidden="true"></div>
+  <div id="pops" aria-hidden="true"></div>
   <p id="msg" role="status" aria-live="polite">Loading the mine...</p>
   <section id="craft-panel" class="panel" role="dialog" aria-label="Crafting" hidden>
     <div class="ph"><h2>Crafting</h2><button class="btn mini" id="close-craft" type="button">Close</button></div>
@@ -52,6 +56,15 @@
     <p id="build-stats" class="note"></p>
     <p id="goal-stats" class="note"></p>
   </section>
+  <section id="run-panel" class="panel" role="dialog" aria-label="Dive summary" hidden>
+    <div class="ph"><h2 id="run-title">Dive over</h2><button class="btn mini" id="close-run" type="button">Close</button></div>
+    <p id="run-why" class="note"></p>
+    <p id="run-score"></p>
+    <ul id="run-stats"></ul>
+    <p id="run-tip" class="note"></p>
+    <p id="run-next" class="note"></p>
+    <button class="btn big" id="run-again" type="button">Dive again</button>
+  </section>
   <div id="touch" hidden>
     <div id="joy" aria-label="Move"><div id="knob"></div></div>
     <div id="tbtns">
@@ -64,6 +77,8 @@
 </main>
 <nav id="hotbar" aria-label="Hotbar"></nav>
 <script src="../../shared/rng.js"></script>
+<script src="../../shared/sfx.js"></script>
+<script src="dd-run.js"></script>
 <script src="../../shared/mm-chunks.js"></script>
 <script src="../../shared/mm-light.js"></script>
 <script src="../../shared/mm-recipes.js"></script>
@@ -79,7 +94,7 @@
 (function () {
   if (!window.MMNav) return;
   MMNav.mount({ page: 'deepdelve', legacy: '#back-hub,#back-town', avoid: '.bar h1', backHref: '../../hub/index.html', backLabel: 'World map' });
-  var cover = [], shut = ['craft-panel','goals-panel'];
+  var cover = [], shut = ['craft-panel','goals-panel','run-panel'];
   function open(ids) { return ids.some(function (id) { var e = document.getElementById(id); return e && !e.hidden; }); }
   function sync() { MMNav.setCovered(open(cover)); if (open(cover) || open(shut)) MMNav.close(); }
   var mo = window.MutationObserver ? new MutationObserver(sync) : null;
