@@ -3698,7 +3698,7 @@ class RealmArena {
   _mountMenuBtn() {
     if (this._menuBtn || typeof document === 'undefined') return;
     const hud = document.getElementById('realm-hud'); if (!hud) return;
-    const b = document.createElement('button'); b.id = 'realm-menu-btn'; b.type = 'button'; b.textContent = '☰'; b.setAttribute('aria-label', 'Open menu (Esc)');
+    const b = document.createElement('button'); b.id = 'realm-menu-btn'; b.type = 'button'; b.textContent = '☰'; b.setAttribute('aria-label', 'Open menu: heroes, restart, leave (Esc)'); b.title = 'Menu (Esc)';
     const lb = document.getElementById('realm-leave-btn'); hud.insertBefore(b, lb || null);
     b.addEventListener('click', () => this.setMenu(true));
     this._menuBtn = b;
@@ -3752,7 +3752,7 @@ class RealmArena {
     const wrap = document.createElement('div');
     wrap.id = 'realm-pause'; wrap.className = 'rm-panel hidden'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-label', 'Menu'); wrap.style.display = 'none';
     wrap.innerHTML = '<div class="realm-bp-card rm-card"><div class="realm-bp-head"><strong>☰ Menu</strong><button id="realm-menu-close" type="button" data-m="resume" aria-label="Close menu">✖</button></div>'
-      + '<div class="rm-main"><button type="button" class="rm-btn" data-m="resume">▶ Resume</button><button type="button" class="rm-btn" data-m="heroes">🦸 Pick hero</button><button type="button" class="rm-btn" data-m="herostats">📊 Hero stats</button><button type="button" class="rm-btn" data-m="restart">↻ Restart run</button><p class="rm-note dim"></p><p class="rm-stash dim hidden" aria-live="polite"></p><button type="button" class="rm-btn" data-m="leave">🚪 Leave to start</button></div>'
+      + '<div class="rm-main"><button type="button" class="rm-btn" data-m="resume">▶ Resume</button><button type="button" class="rm-btn" data-m="heroes">🦸 Pick hero</button><button type="button" class="rm-btn" data-m="herostats">📊 Hero stats</button><button type="button" class="rm-btn" data-m="restart">↻ Restart run</button><p class="rm-note dim"></p><p class="rm-stash dim hidden" aria-live="polite"></p><button type="button" class="rm-btn" data-m="leave">🚪 Leave</button></div>'
       + '<div class="rm-confirm hidden"><p class="rm-restart-copy"></p><button type="button" class="rm-btn" data-m="restart-yes">Yes, restart</button><button type="button" class="rm-btn" data-m="restart-no">Keep playing</button></div>'
       + '<div class="rm-settings"><strong>Settings</strong><button type="button" class="rm-tog" data-set="sound"></button><button type="button" class="rm-tog" data-set="motion"></button><button type="button" class="rm-tog" data-set="aim"></button></div></div>';
     ov.appendChild(wrap);

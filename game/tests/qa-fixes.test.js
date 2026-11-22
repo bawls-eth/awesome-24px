@@ -46,11 +46,14 @@ async function summaryLinks(browser, qs) {
 
   // 1. Mad Maze exit
   check('Leave with ?from=hub goes to the hub', (await leaveTarget(browser, '&from=hub')) === '/game/hub/index.html');
-  check('Leave without from goes to the town', (await leaveTarget(browser, '')) === '/game/index.html');
-  check('Leave with from=hubX stays on the town', (await leaveTarget(browser, '&from=hubX')) === '/game/index.html');
-  check('Leave with hostile from=<img> stays on the town', (await leaveTarget(browser, '&from=' + encodeURIComponent('<img src=x onerror=alert(1)>'))) === '/game/index.html');
+  // NAV-AUDIT #12: with no previous place, Leave goes to the World map, never the Town join form with an empty name
+  check('Leave without from (no previous place) goes to the World map', (await leaveTarget(browser, '')) === '/game/hub/index.html');
+  check('Leave with from=hubX also falls back to the World map', (await leaveTarget(browser, '&from=hubX')) === '/game/hub/index.html');
+  check('Leave with hostile from=<img> falls back to the World map', (await leaveTarget(browser, '&from=' + encodeURIComponent('<img src=x onerror=alert(1)>'))) === '/game/hub/index.html');
+  // NAV-AUDIT #8: one label scheme; the button always says Leave, its aria-label / title name the destination
   let s = await open(browser, G('games/mad-maze/index.html?test=1&from=hub'));
-  check('Leave button is labelled for the map when from=hub', /Back to the map/.test(await s.page.textContent('#realm-leave-btn')));
+  const lbHub = await s.page.evaluate(() => { const b = document.getElementById('realm-leave-btn'); return { t: b.textContent, a: b.getAttribute('aria-label'), ti: b.title }; });
+  check('Leave button reads Leave and is labelled for the map when from=hub', /Leave/.test(lbHub.t) && /back to the map/.test(lbHub.a) && lbHub.ti === 'Back to the map', JSON.stringify(lbHub));
   await s.ctx.close();
   s = await open(browser, G('games/mad-maze/index.html?test=1'));
   check('Leave button label unchanged without from', /Leave/.test(await s.page.textContent('#realm-leave-btn')));
@@ -60,11 +63,11 @@ async function summaryLinks(browser, qs) {
   check('summary Back link targets the hub (from=hub)', r.home === '../../hub/index.html' && r.homeText === 'Back to the map', JSON.stringify(r));
   check('summary New dungeon link still works and keeps from=hub', /^\?mode=dungeon&seed=2/.test(r.again) && /from=hub/.test(r.again) && r.againText === 'New dungeon', r.again);
   r = await summaryLinks(browser, '');
-  check('summary Back link is the town without from', r.home === '../../index.html' && r.homeText === 'Back to town' && !/from=/.test(r.again), JSON.stringify(r));
+  check('summary Back link is the World map without from (no previous place), New dungeon adds no from=', r.home === '../../hub/index.html' && r.homeText === 'Back to the map' && !/from=/.test(r.again), JSON.stringify(r));
   r = await summaryLinks(browser, '&from=hubX');
-  check('summary ignores from=hubX', r.home === '../../index.html' && r.homeText === 'Back to town', JSON.stringify(r));
+  check('summary ignores from=hubX (World map fallback, no from= kept)', r.home === '../../hub/index.html' && r.homeText === 'Back to the map' && !/from=/.test(r.again), JSON.stringify(r));
   r = await summaryLinks(browser, '&from=' + encodeURIComponent('<img src=x>'));
-  check('summary ignores hostile from=<img>', r.home === '../../index.html' && !/img/.test(r.again), JSON.stringify(r));
+  check('summary ignores hostile from=<img>', r.home === '../../hub/index.html' && !/img/.test(r.again) && !/img/.test(r.homeText), JSON.stringify(r));
 
   // 2. Hub: node links carry ?from=hub, phone header and map
   s = await open(browser, G('hub/index.html'), PHONE);

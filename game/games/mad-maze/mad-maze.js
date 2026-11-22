@@ -9,12 +9,35 @@
   // ?return=<world url> (set by a Realm World portal): a same-origin relative link back to the portal tile, exact shape only.
   const RETURN_RE = /^index\.html\?mode=world&seed=[A-Za-z0-9_-]{1,24}&at=\d{1,4},\d{1,4}(&test=1)?$/;
   const RETURN = params.get('mode') === 'dungeon' && RETURN_RE.test(params.get('return') || '') ? params.get('return') : null;
-  const HOME = RETURN || (FROM_HUB ? '../../hub/index.html' : '../../index.html');
   // Embedded in the town page (same-origin iframe): leaving to town closes the overlay instead of navigating away.
   const EMBED = (() => { try { return window.self !== window.top; } catch (e) { return false; } })();
+  // Where Leave goes (NAV-AUDIT #12): a dungeon portal run goes back to the world; ?from=hub goes to the map; the Town iframe keeps
+  // its town exit (posts close-realm); otherwise the place the player came from (MMNav.backTarget: same-origin referrer, then the
+  // last stored place that is not the Realm or the Town), else the World map. Never the Town join form with an empty name.
+  const HUB = '../../hub/index.html';
+  const HERE = 'game/games/mad-maze/index.html';
+  const NAV = window.MMNav || null;
+  function homeTarget() {
+    if (RETURN) return { href: RETURN, label: 'Back to the world' };
+    if (FROM_HUB) return { href: HUB, label: 'Back to the map' };
+    if (EMBED) return { href: '../../index.html', label: 'Back to town' };
+    const map = { href: HUB, label: 'Back to the map' };
+    if (!NAV) return map;
+    try {
+      const b = NAV.backTarget({ referrer: document.referrer, origin: location.origin, file: HERE, current: 'realm', backHref: HUB, backLabel: 'the map' });
+      if (b && b.id && b.id !== 'map') return { href: b.href, label: b.label };
+      if (b && b.id === 'map') return map;
+      const s = NAV.state(); // no usable referrer: the place visited before the Realm (stored by mm-nav, additive key)
+      const e = [s.last, s.prev].find((x) => x && x.id !== 'realm');
+      if (e && e.id !== 'town' && e.id !== 'map') { const href = NAV.urlFor(e.url, HERE); const p = NAV.place(e.id); if (href && p) return { href, label: 'Back to ' + p.name }; }
+    } catch (e) { /* fall back to the map */ }
+    return map;
+  }
+  const HOME_T = homeTarget();
+  const HOME = HOME_T.href;
+  const HOME_LABEL = HOME_T.label;
   function leaveToTown() { if (EMBED) { try { window.parent.postMessage({ pixeltown: 'close-realm' }, location.origin); return; } catch (e) { /* fall through */ } } location.href = HOME; }
   if (EMBED) document.addEventListener('click', (ev) => { const a = ev.target.closest && ev.target.closest('a[href$="../../index.html"]'); if (a) { ev.preventDefault(); leaveToTown(); } }, true);
-  const HOME_LABEL = RETURN ? 'Back to the world' : FROM_HUB ? 'Back to the map' : 'Back to town';
 
   function loadSave() {
     try {
@@ -69,8 +92,14 @@
     base.addEventListener('pointermove', (e) => { if (e.pointerId === pid) set(e); });
     ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((ev) => base.addEventListener(ev, (e) => { if (pid === null || e.pointerId === pid) end(); }));
   };
-  if (FROM_HUB) { const lb = document.getElementById('realm-leave-btn'); lb.textContent = window.innerWidth >= 561 ? '✖ Back to the map' : '✖ Map'; lb.setAttribute('aria-label', 'Back to the map: leave Mad Maze'); } // short label on phones so it is never cut off
-  if (RETURN) { const lb = document.getElementById('realm-leave-btn'); lb.textContent = '✖ Exit'; lb.setAttribute('aria-label', 'Exit: leave the dungeon and go back to the world'); lb.title = 'To the world'; }
+  // One exit scheme (NAV-AUDIT #8): the button always reads "Leave" (ends the run); its aria-label / title say where it goes
+  // ("Back to the world" from a dungeon portal run, else "Back to <place>"). The id stays #realm-leave-btn.
+  (function leaveLabel() {
+    const lb = document.getElementById('realm-leave-btn'); if (!lb) return;
+    lb.textContent = '✖ Leave';
+    lb.setAttribute('aria-label', (RETURN ? 'Leave the dungeon: ' : 'Leave the Realm: ') + HOME_LABEL.charAt(0).toLowerCase() + HOME_LABEL.slice(1));
+    lb.title = HOME_LABEL;
+  })();
   document.getElementById('realm-leave-btn').addEventListener('click', () => arena.leave());
   for (let i = 0; i < 4; i++) document.getElementById(`realm-ab-${i}`).addEventListener('pointerdown', (e) => { e.preventDefault(); arena.cast(i); });
   document.getElementById('realm-bp-btn').addEventListener('click', () => arena.setPaused(true));
@@ -90,7 +119,7 @@
     const dSeed = dailyFor('dungeon');
     const hasSeed = !!EXPLICIT_SEED || !!dSeed;
     // layout version: explicit ?lv=2, or a fresh random seed (new run); a link with a seed and no lv keeps the original layouts
-    dungeon = MMDungeonRun.create(arena, { bosses: params.get('bosses') === 'classic' ? 'classic' : '', layout: (params.get('lv') === '2' || !hasSeed || !!dSeed) ? 2 : 1, seed: hasSeed ? (EXPLICIT_SEED || dSeed) : String(Date.now() % 100000), home: HOME, homeLabel: HOME_LABEL, test: TEST, returnTo: RETURN, biome: DBIOME });
+    dungeon = MMDungeonRun.create(arena, { bosses: params.get('bosses') === 'classic' ? 'classic' : '', layout: (params.get('lv') === '2' || !hasSeed || !!dSeed) ? 2 : 1, seed: hasSeed ? (EXPLICIT_SEED || dSeed) : String(Date.now() % 100000), home: HOME, homeLabel: HOME_LABEL, fromHub: FROM_HUB, test: TEST, returnTo: RETURN, biome: DBIOME });
     document.body.classList.add('dungeon-mode');
   }
   if (WORLD) {
@@ -433,7 +462,7 @@
     host.classList.add('ico-host');
     host.insertBefore(iconImg(id, host), host.firstChild);
   }
-  const ICON_TARGETS = [['#realm-bp-btn', 'icon_backpack'], ['#realm-board-btn', 'icon_board'], ['#realm-leave-btn', 'icon_back'], ['#realm-menu-btn', 'icon_settings'],
+  const ICON_TARGETS = [['#realm-bp-btn', 'icon_backpack'], ['#realm-board-btn', 'icon_board'], ['#realm-leave-btn', 'icon_back'], // #realm-menu-btn keeps its ☰ glyph: the gear art belongs to Settings only (NAV-AUDIT #9)
     ['#realm-bp-close, #realm-board-close, #realm-hero-close, #realm-menu-close, #realm-shop-close', 'icon_close'], ['#realm-board-hero', 'icon_board'],
     ['.rm-btn[data-m="resume"]', 'icon_play'], ['.rm-btn[data-m="heroes"]', 'icon_party'], ['.rm-btn[data-m="herostats"]', 'icon_board'], ['.rm-btn[data-m="restart"]', 'icon_restart'],
     ['.rm-btn[data-m="leave"]', 'icon_nexus'], ['.rm-btn[data-d="again"]', 'icon_restart'], ['.rm-btn[data-d="leave"]', 'icon_nexus']];
@@ -617,6 +646,8 @@
     const card = mkEl('div', 'realm-bp-card rm-card'); const head = mkEl('div', 'realm-bp-head'); head.appendChild(mkEl('strong', '', '⚙ Settings'));
     const x = mkEl('button', '', '✖'); x.type = 'button'; x.id = 'mm-settings-x'; x.setAttribute('aria-label', 'Close settings'); x.addEventListener('click', axClose); head.appendChild(x);
     axBody = mkEl('div', 'mm-set-body'); card.append(head, axBody); axEl.appendChild(card); overlayEl.appendChild(axEl);
+    // Feedback box at the end of the sheet (its own host: axRender rebuilds axBody, never this)
+    const fb = mkEl('div', 'mm-set-feedback'); fb.id = 'mm-settings-feedback'; card.appendChild(fb); feedbackMount(fb);
     axEl.addEventListener('click', (e) => {
       const b = e.target.closest('button[data-ax]'); if (!b) return; const k = b.dataset.ax, v = b.dataset.v;
       if (k === 'palette') axSet('palette', v);
@@ -627,7 +658,7 @@
       else axSet(k, !axPrefs[k]);
     });
     axEl.addEventListener('keydown', (e) => { // keep Tab inside the sheet
-      if (e.key !== 'Tab') return; const bs = Array.from(axEl.querySelectorAll('button')).filter((q) => !q.disabled); if (!bs.length) return;
+      if (e.key !== 'Tab') return; const bs = Array.from(axEl.querySelectorAll('button, textarea, input, select, a[href]')).filter((q) => !q.disabled && q.getClientRects().length); if (!bs.length) return;
       const i = bs.indexOf(document.activeElement); const nx = e.shiftKey ? (i <= 0 ? bs.length - 1 : i - 1) : (i === bs.length - 1 ? 0 : i + 1); e.preventDefault(); bs[nx].focus();
     });
   }
@@ -644,6 +675,26 @@
     if (window.RealmAudio) tog('music', 'Ambient music', RealmAudio.isOn());
     const d = mkEl('button', 'rm-btn', 'Done'); d.type = 'button'; d.dataset.ax = 'done'; axBody.appendChild(d);
   }
+  // Feedback box (shared/mm-feedback.js, local-only notes): loaded on the first settings open. The tag is added from here, guarded:
+  // a missing file only drops the box. Under ?test=1 it loads only with ?feedback=1, so test runs never see a 404 for it.
+  function feedbackMount(host) {
+    const go = () => { if (window.MMFeedback && typeof MMFeedback.mount === 'function') { try { MMFeedback.mount(host, { page: 'realm' }); } catch (e) { /* the box never breaks settings */ } } };
+    // typing a note must not drive the hero (WASD, B, K ...): keys stop at the box; Tab still reaches the sheet's focus trap
+    ['keydown', 'keyup'].forEach((t) => host.addEventListener(t, (e) => { if (e.key !== 'Tab' && e.key !== 'Escape') e.stopPropagation(); }));
+    if (window.MMFeedback) { go(); return; }
+    if (params.get('feedback') === '0' || (TEST && params.get('feedback') !== '1')) return;
+    const src = '../../shared/mm-feedback.js';
+    if (!document.querySelector('script[src="' + src + '"]')) {
+      const s = document.createElement('script'); s.src = src; s.async = true;
+      s.addEventListener('load', () => {
+        if (!document.querySelector('link[href*="mm-feedback.css"]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = '../../shared/mm-feedback.css'; document.head.appendChild(l); }
+        go();
+      });
+      s.addEventListener('error', () => { s.remove(); });
+      document.head.appendChild(s);
+    }
+  }
+
   if (AX_ON) {
     axApply(axPrefs);
     // gear icon (always reachable) + a Settings button in the Esc menu (the menu DOM is built lazily by the arena)
@@ -667,6 +718,40 @@
   // Realm audio (SA2) and the first-run tutorial (TU2): optional files; the page runs without them.
   if (window.RealmAudio) { try { RealmAudio.attach({ arena, zone: () => { try { if (realmWorld) { const zi = realmWorld.api.zone(); return zi ? zi.zone : 0; } } catch (e) { /* fall through */ } return dungeon ? 3 : 0; } }); } catch (e) { /* audio never breaks the page */ } }
   if (window.RealmTutorial && WORLD && realmWorld) { try { RealmTutorial.attach({ arena, world: realmWorld.api, params, test: TEST, overlay: overlayEl, profile: () => { try { return heroState().prof; } catch (e) { return null; } } }); } catch (e) { /* the tutorial never breaks the page */ } }
+
+  // ---------- MMNav (NAV-AUDIT 4.1, slice C): the shared Menu button + "Where to?" sheet on the Realm world and dungeon pages ----------
+  // mm-nav stays off by itself inside the Town iframe and with ?nav=0. The Realm HUD row moves right of the button (avoid), so the HP bar,
+  // the zone line, the minimap and the sticks are never under it. Opening the sheet pauses a solo run; a Realm dialog opening closes it,
+  // and the button hides while one is up (no stacked overlays). The bottom gear hides under the other dialogs too (NAV-AUDIT #9).
+  const navMode = !!(NAV && (WORLD || dungeon));
+  const navOn = navMode && NAV.mount({ page: 'realm', avoid: '#realm-hud', record: !dungeon, backHref: HOME.replace(/,/g, '%2C'), backLabel: HOME_LABEL.replace(/^Back to /, '') }) === true;
+  if (navOn) {
+    if (dungeon) { try { NAV.markPlace('realm', '', 'game/games/mad-maze/index.html?mode=world'); } catch (e) { /* storage blocked */ } } // Continue goes to the world, not to this one-off dungeon
+    document.body.classList.add('mm-nav-realm');
+    let navPaused = false;
+    NAV.onOpen(() => { if (arena.active && !arena.paused && !arena.panel && !arena.team && arena.state === 'play') { arena.paused = true; navPaused = true; arena.keys = {}; arena.mouse.down = false; arena.aimVec.on = false; } });
+    NAV.onClose(() => { if (navPaused) { navPaused = false; if (!arena.panel && arena.active) arena.paused = false; } });
+    if (AX_ON) NAV.onSettings(() => axOpen(false));
+    const navRoot = document.getElementById('mm-nav-root'); // leaving through the sheet saves the run first, like Leave
+    if (navRoot) navRoot.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('a[href]')) { try { arena.onSave(arena.save); } catch (err) { /* keep navigating */ } } }, true);
+  }
+  (function dialogWatch() { // one cheap poll: which Realm dialogs are visible right now
+    const shown = (n) => !!n && !n.classList.contains('hidden') && n.getClientRects().length > 0 && getComputedStyle(n).display !== 'none';
+    const tick = () => {
+      let any = false, other = false;
+      overlayEl.querySelectorAll('[role="dialog"]').forEach((n) => { if (shown(n)) { any = true; if (n.id !== 'mm-settings' && n.id !== 'realm-pause') other = true; } });
+      ['mm-summary', 'rw-nexus'].forEach((id) => { const n = document.getElementById(id); if (shown(n)) { any = true; other = true; } });
+      document.body.classList.toggle('mm-realm-dialog', other);
+      if (navOn) { if (any && NAV.isOpen()) NAV.close(); NAV.setCovered(any); }
+      document.querySelectorAll('#realm-pause [data-m="leave"], #realm-death [data-d="leave"]').forEach((b) => { if (!b.title) { b.title = HOME_LABEL; b.setAttribute('aria-label', 'Leave: ' + HOME_LABEL.charAt(0).toLowerCase() + HOME_LABEL.slice(1)); } });
+    };
+    let raf = 0; const sched = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; try { tick(); } catch (e) { /* cosmetic only */ } }); };
+    const isDlg = (n) => n && n.nodeType === 1 && (n.getAttribute('role') === 'dialog' || n.id === 'mm-summary' || n.id === 'rw-nexus');
+    // a dialog shows / hides by class or style: react in the next frame (HUD bars restyling every frame are ignored)
+    const mo = new MutationObserver((recs) => { for (let k = 0; k < recs.length; k++) { const r = recs[k]; if (r.type === 'attributes' ? isDlg(r.target) : (Array.prototype.some.call(r.addedNodes, isDlg) || Array.prototype.some.call(r.removedNodes, isDlg))) { sched(); return; } } });
+    mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'hidden'] });
+    tick(); setInterval(sched, 500);
+  })();
 
   if (TEST) window.__mm = { applyWeapon, arena, dungeon: dungeon ? dungeon.api : null, world: realmWorld ? realmWorld.api : null, team: (realmWorld && realmWorld.team) || null };
   arena.start();

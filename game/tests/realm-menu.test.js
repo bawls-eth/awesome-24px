@@ -11,6 +11,8 @@ const SAVE = { realm: { level: 3, xp: 4, shards: 123, bestWave: 2, deaths: 0, it
 async function open(browser, opts) {
   const ctx = await browser.newContext(opts || { viewport: { width: 1000, height: 700 } });
   await ctx.route('**/game/index.html*', (r) => r.fulfill({ contentType: 'text/html', body: '<!doctype html><title>town</title>town' })); // the exit target: no network
+  // NAV-AUDIT #12: with no previous place, Leave goes to the World map (not the Town join form); stub it too
+  await ctx.route('**/game/hub/index.html*', (r) => r.fulfill({ contentType: 'text/html', body: '<!doctype html><title>hub</title>hub' }));
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
@@ -40,7 +42,7 @@ const vis = (page, sel) => page.evaluate((s) => { const e = document.querySelect
   check('☰ button opens the menu and pauses the run', await vis(page, '#realm-pause') && await A(page, (a) => a.panel === 'menu' && a.paused));
   const c0 = await A(page, (a) => a.clock); await page.waitForTimeout(500);
   check('the run is frozen while the menu is open', (await A(page, (a) => a.clock)) === c0);
-  check('menu shows Resume, Restart run, Leave and the 3 settings', await page.evaluate(() => { const t = document.getElementById('realm-pause').innerText; return /Resume/.test(t) && /Restart run/.test(t) && /Leave to start/.test(t) && /Sound/.test(t) && /Reduce motion/.test(t) && /Aim assist/.test(t); }));
+  check('menu shows Resume, Restart run, Leave and the 3 settings', await page.evaluate(() => { const t = document.getElementById('realm-pause').innerText; return /Resume/.test(t) && /Restart run/.test(t) && /Leave/.test(t) && !/Leave to start/.test(t) && /Sound/.test(t) && /Reduce motion/.test(t) && /Aim assist/.test(t); }));
   await page.click('#realm-pause button[data-m="resume"].rm-btn');
   check('Resume closes the menu and the run continues', !(await vis(page, '#realm-pause')) && await A(page, (a) => !a.paused && a.panel === null));
   await page.waitForTimeout(400);
@@ -120,12 +122,13 @@ const vis = (page, sel) => page.evaluate((s) => { const e = document.querySelect
   // ---------- leave ----------
   await A(page, (a) => a._die());
   await page.waitForFunction(() => { const e = document.getElementById('realm-death'); return !!e && !e.classList.contains('hidden'); }, null, { timeout: 6000 });
-  await Promise.all([page.waitForURL(/\/game\/index\.html/, { timeout: 8000 }), page.click('#realm-death button[data-d="leave"]')]);
-  check('Leave on the death screen goes back to town', /\/game\/index\.html/.test(page.url()));
+  // NAV-AUDIT #12: no previous place (no referrer, empty mm-nav storage) -> the World map, never the Town join form
+  await Promise.all([page.waitForURL(/\/game\/hub\/index\.html/, { timeout: 8000 }), page.click('#realm-death button[data-d="leave"]')]);
+  check('Leave on the death screen goes back to the World map (no previous place)', /\/game\/hub\/index\.html/.test(page.url()));
   await page.goto(MAZE); await page.waitForFunction(() => window.__mm && window.__mm.arena);
   await page.click('#realm-menu-btn');
-  await Promise.all([page.waitForURL(/\/game\/index\.html/, { timeout: 8000 }), page.click('#realm-pause button[data-m="leave"]')]);
-  check('Leave to start (menu) exits', /\/game\/index\.html/.test(page.url()));
+  await Promise.all([page.waitForURL(/\/game\/hub\/index\.html/, { timeout: 8000 }), page.click('#realm-pause button[data-m="leave"]')]);
+  check('Leave (menu) exits to the World map', /\/game\/hub\/index\.html/.test(page.url()));
   errs.push(...P.errors); await P.ctx.close();
 
   // ---------- default behaviour without menu mode (town gate) ----------
@@ -135,13 +138,13 @@ const vis = (page, sel) => page.evaluate((s) => { const e = document.querySelect
   await A(pg, (a) => { a.setMenu(true); });
   check('menu mode off: setMenu is a no-op', await A(pg, (a) => !a.panel) && !(await vis(pg, '#realm-pause')));
   await A(pg, (a) => { a.run.wave = 2; a._die(); });
-  await Promise.all([pg.waitForURL(/\/game\/index\.html/, { timeout: 9000 }), pg.waitForTimeout(0)]);
-  check('menu mode off: death exits as before (onExit death), no death screen', /\/game\/index\.html/.test(pg.url()));
+  await Promise.all([pg.waitForURL(/\/game\/hub\/index\.html/, { timeout: 9000 }), pg.waitForTimeout(0)]);
+  check('menu mode off: death exits as before (onExit death), no death screen', /\/game\/hub\/index\.html/.test(pg.url()));
   errs.push(...Q.errors); await Q.ctx.close();
   const R = await open(browser); const rg = R.page;
   await A(rg, (a) => { a.setMenuMode(false); });
-  await Promise.all([rg.waitForURL(/\/game\/index\.html/, { timeout: 8000 }), rg.keyboard.press('Escape')]);
-  check('menu mode off: Esc still leaves immediately', /\/game\/index\.html/.test(rg.url()));
+  await Promise.all([rg.waitForURL(/\/game\/hub\/index\.html/, { timeout: 8000 }), rg.keyboard.press('Escape')]);
+  check('menu mode off: Esc still leaves immediately', /\/game\/hub\/index\.html/.test(rg.url()));
   errs.push(...R.errors); await R.ctx.close();
   const main = fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8');
   check('town gate (main.js) does not opt in to the menu mode', main.indexOf('setMenuMode') < 0);

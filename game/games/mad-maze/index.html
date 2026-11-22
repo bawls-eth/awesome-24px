@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="mad-maze.css">
 <link rel="stylesheet" href="../../realm-ui.css">
 <link rel="stylesheet" href="realm-cave.css">
+<link rel="stylesheet" href="../../shared/mm-nav.css">
 </head>
 <body>
 <div id="realm-overlay">
@@ -17,7 +18,7 @@
     <div id="realm-info"><span id="realm-level">Lv 1</span><span id="realm-wave"></span><span id="realm-biome"></span><span id="realm-shards"></span><span id="realm-best"></span></div>
     <button id="realm-bp-btn" type="button" aria-label="Open backpack (B)">🎒</button>
     <button id="realm-board-btn" type="button" aria-label="Open kill board (K)">📊</button>
-    <button id="realm-leave-btn" type="button" aria-label="Leave Mad Maze">✖ Leave</button>
+    <button id="realm-leave-btn" type="button" aria-label="Leave the Realm">✖ Leave</button>
   </div>
   <div id="realm-partner" class="hidden"><span id="realm-partner-name">Partner</span><div class="bar"><div id="realm-partner-fill"></div></div></div>
   <div id="realm-boss" class="hidden" data-phase="1"><span id="realm-boss-name">Gloomheart</span><div class="bar"><div id="realm-boss-fill"></div></div></div>
@@ -98,6 +99,8 @@
 <script src="realm-audio.js"></script>
 <script src="realm-tutorial.js"></script>
 <script src="world-team.js"></script>
+<!-- shared Menu + "Where to?" sheet; mad-maze.js mounts it (world / dungeon only). mm-feedback.js is added by mad-maze.js on the first settings open (guarded). -->
+<script src="../../shared/mm-nav.js" data-page="realm" data-mount="manual"></script>
 <script src="mad-maze.js"></script>
 </body>
 </html>
