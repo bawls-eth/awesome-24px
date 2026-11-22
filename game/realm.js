@@ -291,7 +291,12 @@ function rmCleanCount(v) {
 // can always tell the items apart: identity is (n, u) when both copies have a tag, and (n, id, r, t, a) as before when either lacks one (an item
 // from before UR, or one an old build rewrote: old cleaners drop unknown keys, which is harmless). Additive key: absent or corrupt = no tag.
 const RM_TAG_MAX = 2147483647;
-function rmItemTag() { return 1 + Math.floor(Math.random() * (RM_TAG_MAX - 1)); }
+// The tag is an identity nonce, never a gameplay roll: it comes from crypto.getRandomValues (Math.random stays untouched, so the forge and vendor stay
+// free of randomness as their tests assert); Math.random only where crypto is missing.
+function rmItemTag() {
+  try { if (typeof crypto !== 'undefined' && crypto && typeof crypto.getRandomValues === 'function') { const b = new Uint32Array(1); crypto.getRandomValues(b); return 1 + (b[0] % (RM_TAG_MAX - 1)); } } catch (e) { /* fall back below */ }
+  return 1 + Math.floor(Math.random() * (RM_TAG_MAX - 1));
+}
 function rmCleanTag(u) { return Number.isInteger(u) && u > 0 && u <= RM_TAG_MAX ? u : 0; }
 // The `known` set a tab keeps for the merge: every uid storage held at its last sync, plus for each TAGGED item `n:`, `n:u` and `n#id/r/t/a` (which
 // item that uid named). Plain number lookups (known.has(n)) work as before; rmKnownSame asks whether `it` is the very item this tab saw under its uid:

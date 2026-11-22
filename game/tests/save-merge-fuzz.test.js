@@ -161,7 +161,7 @@ const gpOf = (g) => ({ b: g && g.b > 0 ? g.b : 0, d: g && g.d > 0 ? g.d : 0 });
 function runOne(seed, trace) {
   const R = prng(seed);
   const ri = (n) => Math.floor(R() * n);
-  const RU = prng(seed ^ 0x5bd1e995); // UR tags (realm.js rmItemTag uses Math.random) come from their own stream, so every op sequence stays as it was before UR
+  const RU = prng(seed ^ 0x5bd1e995); // UR tags (realm.js rmItemTag uses crypto.getRandomValues) come from their own stream, so every op sequence stays as it was before UR
   const tag = () => 1 + Math.floor(RU() * 2147483646);
   const issues = [];
   const bad = (code, info) => { issues.push(code + (info ? ' ' + info : '')); };
