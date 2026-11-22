@@ -36,5 +36,25 @@
     const total = good + s.reduce((a, b) => a + b, 0);       // better than current: must hold 3 s
     return total >= STEP_UP_MS ? result(TIERS[ci + 1], 0, false) : result(cur, total, false);
   }
-  return { TIERS, CAPS, STEP_UP_MS, profile, tierFor };
+  // applyCanvas(canvas, tier, logical?) (AC1, additive): tags a canvas with its tier and returns {tier, dpr, caps}.
+  // dpr = the tier's cap, never above the device's own ratio (low tier: always 1). With logical {w, h} the backing store is
+  // resized to logical * dpr; without it the canvas is left exactly as it is (pages with a fixed 1:1 pixel-art backing).
+  // Unknown tiers read as 'high'. Never throws (a missing canvas just returns the numbers).
+  function applyCanvas(canvas, tier, logical) {
+    const t = TIERS.indexOf(tier) >= 0 ? tier : 'high';
+    const caps = Object.assign({}, CAPS[t]);
+    let dev = 1;
+    try { dev = typeof window !== 'undefined' && window.devicePixelRatio > 0 ? window.devicePixelRatio : 1; } catch (e) { dev = 1; }
+    const dpr = t === 'low' ? 1 : Math.max(1, Math.min(caps.dpr, dev));
+    try {
+      if (canvas && canvas.setAttribute) canvas.setAttribute('data-mm-tier', t);
+      if (canvas && logical && logical.w > 0 && logical.h > 0) {
+        const w = Math.round(logical.w * dpr), h = Math.round(logical.h * dpr);
+        if (canvas.width !== w) canvas.width = w;
+        if (canvas.height !== h) canvas.height = h;
+      }
+    } catch (e) { /* a detached or locked canvas keeps its size */ }
+    return { tier: t, dpr, caps };
+  }
+  return { TIERS, CAPS, STEP_UP_MS, profile, tierFor, applyCanvas };
 });
