@@ -95,6 +95,13 @@
   }
   if (WORLD) {
     realmWorld = RealmWorld.create(arena, { seed: dailyFor('world') || params.get('seed'), at: params.get('at'), test: TEST, home: HOME, assetRoot: params.get('tileart') === '0' ? null : '../../assets/arcane/' });
+    // CO3: same-device co-op (BroadcastChannel only) behind ?party=local; ?seat=0-3 pins a seat (else auto). Without the flag nothing is opened.
+    // The seat feeds realm-world's gear player ('p' + seat) through setTeam, so every seat rolls its own tiers on a shared kill.
+    if (params.get('party') === 'local' && window.MMWorldTeam) {
+      const seatQ = /^[0-3]$/.test(params.get('seat') || '') ? Number(params.get('seat')) : undefined;
+      realmWorld.team = MMWorldTeam.create(arena, realmWorld.api, { party: 'local', seed: realmWorld.api.seed, seat: seatQ, loot: true });
+      if (realmWorld.team.ok && realmWorld.api.setTeam) realmWorld.api.setTeam(realmWorld.team);
+    }
     document.body.classList.add('world-mode');
   }
 
@@ -661,7 +668,7 @@
   if (window.RealmAudio) { try { RealmAudio.attach({ arena, zone: () => { try { if (realmWorld) { const zi = realmWorld.api.zone(); return zi ? zi.zone : 0; } } catch (e) { /* fall through */ } return dungeon ? 3 : 0; } }); } catch (e) { /* audio never breaks the page */ } }
   if (window.RealmTutorial && WORLD && realmWorld) { try { RealmTutorial.attach({ arena, world: realmWorld.api, params, test: TEST, overlay: overlayEl, profile: () => { try { return heroState().prof; } catch (e) { return null; } } }); } catch (e) { /* the tutorial never breaks the page */ } }
 
-  if (TEST) window.__mm = { applyWeapon, arena, dungeon: dungeon ? dungeon.api : null, world: realmWorld ? realmWorld.api : null };
+  if (TEST) window.__mm = { applyWeapon, arena, dungeon: dungeon ? dungeon.api : null, world: realmWorld ? realmWorld.api : null, team: (realmWorld && realmWorld.team) || null };
   arena.start();
   // A fresh world visit with several owned heroes opens the picker first (?heropick=0 skips it).
   if (HERO_UI && (!TEST || params.get('heropick') === '1')) { try { if (heroState().prof.heroes.length !== 1) arena.openHeroPanel('pick'); } catch (e) { /* ignore */ } }

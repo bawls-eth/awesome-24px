@@ -26,7 +26,7 @@
   const frame = document.getElementById('world');
   window.__fixture = { seed: seed, seat: seat, team: null, bagsSeen: [] };
   if (!MMPartyBC.seedOk(seed)) { window.__fixture.error = 'bad seed'; return; }
-  frame.src = '../../games/mad-maze/index.html?mode=world&test=1&party=local&seed=' + encodeURIComponent(seed);
+  frame.src = '../../games/mad-maze/index.html?mode=world&test=1&party=local&seed=' + encodeURIComponent(seed) + (seat === undefined ? '' : '&seat=' + seat);
   // the tiny wrapper CO3 replaces: wait for the world page's test hooks, then attach the team controller
   const t0 = Date.now();
   (function wait() {

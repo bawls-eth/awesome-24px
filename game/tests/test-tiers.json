@@ -1070,5 +1070,9 @@
   "gear-forge-ui.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "world-party.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
