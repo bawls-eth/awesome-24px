@@ -1,7 +1,7 @@
 {
   "about": "QT Town first-ten-minutes gate (NEXT-SLICES-3). OFFLINE only (blockDb + SDK stub + Play offline). Fresh profiles (localStorage cleared). Simulated time: the Phaser loop sleeps and the test steps game.headlessStep with a fixed 1/60 s. targets = the QT acceptance numbers. knownIssues = the measured value on the base branch for a target the game misses today (assert: not worse than this baseline; print the gap). legacySmall / legacyTiny / legacyUnderCanvas = frozen allow-lists of controls under 44 px / text under 12 px / controls whose centre shows the canvas, seen on the base branch: they may only shrink, a new offender fails.",
   "wallBudgetMs": 90000,
-  "targets": { "offlineOfferMs": 6000, "tapsToFirstMove": 5, "firstMoveMs": 10000, "firstInteraction": 60, "gateReach": 90, "whereToTaps": 1, "places": 12 },
+  "targets": { "offlineOfferMs": 6000, "tapsToFirstMove": 5, "firstMoveMs": 10000, "firstInteraction": 60, "gateReach": 90, "whereToTaps": 1, "places": 14 },
   "profiles": [
     { "id": "town-phone", "viewport": { "width": 390, "height": 844 }, "touch": true, "seed": 20261122, "clock": 0 },
     { "id": "town-desktop", "viewport": { "width": 1280, "height": 720 }, "touch": false, "seed": 4242, "clock": 0 }

@@ -74,7 +74,7 @@ async function hub(browser, label, ctxOpts) {
   // every game node: a strip entry, a label on its map, and <= 2 taps (strip, Play) from this FRESH save
   const games = await pg.evaluate(() => window.__hub.gameNodes());
   const links = await pg.evaluate(() => window.__hub.links());
-  check(L('10 game nodes (Hearthvale, Lantern, Deepdelve, Angler, Bug Safari, Jam, Stalk, Pixel Pop, Lantern Dash, Isles) all have links'), games.length === 10 && ['w2-lantern', 'w3-deepdelve', 'w4-angler', 'w5-safari', 'w5-jam', 'w5-stalk', 'w5-pop', 'w5-dash', 'w7-isles', 'w1-hearthvale'].every((id) => games.includes(id) && links[id]), games.join(','));
+  check(L('12 game nodes (Hearthvale, Lantern, Deepdelve, Angler, Bug Safari, Jam, Stalk, Pixel Pop, Lantern Dash, Stack Tower, Echo Garden, Isles) all have links'), games.length === 12 && ['w2-lantern', 'w3-deepdelve', 'w4-angler', 'w5-safari', 'w5-jam', 'w5-stalk', 'w5-pop', 'w5-dash', 'w5-stack', 'w5-echo', 'w7-isles', 'w1-hearthvale'].every((id) => games.includes(id) && links[id]), games.join(','));
   const fresh = await pg.evaluate(() => localStorage.getItem('pixeltown-hub-v1'));
   for (const id of games) {
     const before = await pg.evaluate(() => window.__hub.at);
@@ -126,10 +126,10 @@ async function hub(browser, label, ctxOpts) {
     check(L('desktop: the hint stays the footer text (no chip)'), !chip.vis && (await rect(pg, '#hint')).vis);
   }
 
-  // Menu opens the sheet with the 12 places; exactly one dialog
+  // Menu opens the sheet with the 14 places; exactly one dialog
   await tap(pg, '#mm-nav-btn');
   const sh = await pg.evaluate(() => ({ dests: document.querySelectorAll('#mm-nav-sheet .mm-nav-dest').length, dialogs: [...document.querySelectorAll('[role=dialog][aria-modal=true]')].filter((n) => !n.hidden && n.getBoundingClientRect().height > 0).length, back: document.querySelector('#mm-nav-back .mm-nav-row-label').textContent }));
-  check(L('Menu opens "Where to?" with 12 places, one dialog, Back to Town'), sh.dests === 12 && sh.dialogs === 1 && sh.back === 'Back to Town', JSON.stringify(sh));
+  check(L('Menu opens "Where to?" with 14 places, one dialog, Back to Town'), sh.dests === 14 && sh.dialogs === 1 && sh.back === 'Back to Town', JSON.stringify(sh));
   await pg.keyboard.press('Escape');
   check(L('Esc closes the sheet'), !(await pg.evaluate(() => window.MMNav.isOpen())));
   return o;
@@ -177,10 +177,10 @@ async function isles(browser, label, ctxOpts) {
   const dlg = await pg.evaluate(() => [...document.querySelectorAll('[role=dialog][aria-modal=true]')].filter((n) => !n.hidden && n.getBoundingClientRect().height > 0).length);
   check(L('one dialog at a time'), dlg === 1, String(dlg));
 
-  // the Menu closes the page panel (no stacking) and shows the 12 places
+  // the Menu closes the page panel (no stacking) and shows the 14 places
   await tap(pg, '#mm-nav-btn');
   const nav = await pg.evaluate(() => ({ open: window.MMNav.isOpen(), panel: document.getElementById('panel').hidden, dests: document.querySelectorAll('#mm-nav-sheet .mm-nav-dest').length, settings: !document.getElementById('mm-nav-settings').hidden }));
-  check(L('Menu opens the sheet, closes the craft panel, offers Settings (the island log)'), nav.open && nav.panel && nav.dests === 12 && nav.settings, JSON.stringify(nav));
+  check(L('Menu opens the sheet, closes the craft panel, offers Settings (the island log)'), nav.open && nav.panel && nav.dests === 14 && nav.settings, JSON.stringify(nav));
   await tap(pg, '#mm-nav-settings');
   const lg = await pg.evaluate(() => ({ nav: window.MMNav.isOpen(), title: document.getElementById('panel-title').textContent }));
   check(L('Settings opens the island log'), !lg.nav && lg.title === 'Island log', JSON.stringify(lg));
