@@ -126,10 +126,10 @@ async function hub(browser, label, ctxOpts) {
     check(L('desktop: the hint stays the footer text (no chip)'), !chip.vis && (await rect(pg, '#hint')).vis);
   }
 
-  // Menu opens the sheet with the 10 places; exactly one dialog
+  // Menu opens the sheet with the 12 places; exactly one dialog
   await tap(pg, '#mm-nav-btn');
   const sh = await pg.evaluate(() => ({ dests: document.querySelectorAll('#mm-nav-sheet .mm-nav-dest').length, dialogs: [...document.querySelectorAll('[role=dialog][aria-modal=true]')].filter((n) => !n.hidden && n.getBoundingClientRect().height > 0).length, back: document.querySelector('#mm-nav-back .mm-nav-row-label').textContent }));
-  check(L('Menu opens "Where to?" with 10 places, one dialog, Back to Town'), sh.dests === 10 && sh.dialogs === 1 && sh.back === 'Back to Town', JSON.stringify(sh));
+  check(L('Menu opens "Where to?" with 12 places, one dialog, Back to Town'), sh.dests === 12 && sh.dialogs === 1 && sh.back === 'Back to Town', JSON.stringify(sh));
   await pg.keyboard.press('Escape');
   check(L('Esc closes the sheet'), !(await pg.evaluate(() => window.MMNav.isOpen())));
   return o;
@@ -177,10 +177,10 @@ async function isles(browser, label, ctxOpts) {
   const dlg = await pg.evaluate(() => [...document.querySelectorAll('[role=dialog][aria-modal=true]')].filter((n) => !n.hidden && n.getBoundingClientRect().height > 0).length);
   check(L('one dialog at a time'), dlg === 1, String(dlg));
 
-  // the Menu closes the page panel (no stacking) and shows the 10 places
+  // the Menu closes the page panel (no stacking) and shows the 12 places
   await tap(pg, '#mm-nav-btn');
   const nav = await pg.evaluate(() => ({ open: window.MMNav.isOpen(), panel: document.getElementById('panel').hidden, dests: document.querySelectorAll('#mm-nav-sheet .mm-nav-dest').length, settings: !document.getElementById('mm-nav-settings').hidden }));
-  check(L('Menu opens the sheet, closes the craft panel, offers Settings (the island log)'), nav.open && nav.panel && nav.dests === 10 && nav.settings, JSON.stringify(nav));
+  check(L('Menu opens the sheet, closes the craft panel, offers Settings (the island log)'), nav.open && nav.panel && nav.dests === 12 && nav.settings, JSON.stringify(nav));
   await tap(pg, '#mm-nav-settings');
   const lg = await pg.evaluate(() => ({ nav: window.MMNav.isOpen(), title: document.getElementById('panel-title').textContent }));
   check(L('Settings opens the island log'), !lg.nav && lg.title === 'Island log', JSON.stringify(lg));

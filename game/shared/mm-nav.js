@@ -50,6 +50,8 @@
     { id: 'angler', icon: '🎣', name: 'Angler', path: 'game/games/angler/index.html', desc: 'Calm fishing, ponds and a journal' },
     { id: 'deepdelve', icon: '⛏️', name: 'Deepdelve', path: 'game/games/deepdelve/index.html', desc: 'Dig, mine and build underground (3D)' },
     { id: 'stalk', icon: '🥬', name: 'Stalk Market', path: 'game/games/stalk/index.html', desc: 'Buy low, sell high, once a week' },
+    { id: 'pop', icon: '🧩', name: 'Pixel Pop', path: 'game/games/pop/index.html', desc: 'Merge twin tiles, chain combos in 90 s' },
+    { id: 'dash', icon: '🕯️', name: 'Lantern Dash', path: 'game/games/dash/index.html', desc: 'One-button night run: jump, chase your ghost' },
   ].map((p) => Object.freeze(p)));
   const BY_ID = Object.create(null);
   PLACES.forEach((p) => { BY_ID[p.id] = p; });

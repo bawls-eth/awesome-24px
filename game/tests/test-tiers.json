@@ -651,6 +651,14 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "pop-page.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "dash-page.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "town-links.test.js": {
     "class": "live",
     "tier": "smoke"
