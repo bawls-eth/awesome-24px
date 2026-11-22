@@ -285,6 +285,29 @@ function rmCleanCount(v) {
   v = Math.floor(Number(v));
   return Number.isFinite(v) && v > 0 ? Math.min(v, 9999999) : 0;
 }
+// UR (item tag): every item CREATED from now on carries `u`, a random 31-bit tag, next to its integer uid `n`. Uids still come from the shared
+// `nextUid` counter (so every uid sequence stays as it was, and every build, old ones included, loads the item: they cap uids at 9,999,999, which
+// rules out salting the uid itself), but two tabs that picked under the same uid before either synced now hold two different `u`s, so the merge
+// can always tell the items apart: identity is (n, u) when both copies have a tag, and (n, id, r, t, a) as before when either lacks one (an item
+// from before UR, or one an old build rewrote: old cleaners drop unknown keys, which is harmless). Additive key: absent or corrupt = no tag.
+const RM_TAG_MAX = 2147483647;
+function rmItemTag() { return 1 + Math.floor(Math.random() * (RM_TAG_MAX - 1)); }
+function rmCleanTag(u) { return Number.isInteger(u) && u > 0 && u <= RM_TAG_MAX ? u : 0; }
+// The `known` set a tab keeps for the merge: every uid storage held at its last sync, plus for each TAGGED item `n:`, `n:u` and `n#id/r/t/a` (which
+// item that uid named). Plain number lookups (known.has(n)) work as before; rmKnownSame asks whether `it` is the very item this tab saw under its uid:
+// by tag, or (a copy an old build rewrote without its tag) by id / r / t / a. Knowledge of an untagged item keeps the old uid-only rule.
+const rmItemFp = (it) => it.id + '/' + it.r + '/' + (it.t || 0) + '/' + (it.a || 0);
+function rmKnownOf(items) {
+  const k = new Set();
+  (items || []).forEach((it) => { k.add(it.n); if (it.u) { k.add(it.n + ':'); k.add(it.n + ':' + it.u); k.add(it.n + '#' + rmItemFp(it)); } });
+  return k;
+}
+function rmKnownSame(known, it) {
+  if (!known.has(it.n)) return false;
+  if (!known.has(it.n + ':')) return true;
+  return it.u ? known.has(it.n + ':' + it.u) : known.has(it.n + '#' + rmItemFp(it));
+}
+function rmTagged(it) { if (it && typeof it === 'object') it.u = rmItemTag(); return it; } // stamp a NEW item entry (returns it)
 
 // Everything read back from localStorage goes through here (additive fields: old saves load as level 1).
 function rmCleanSave(s) {
@@ -308,6 +331,7 @@ function rmCleanSave(s) {
     if (!uid || seen.has(uid) || !def || !(rar >= 0 && rar < RM_RARITIES.length)) return;
     seen.add(uid);
     const o = { n: uid, id, r: rar }; // an item without `t` (every item before G7) stays exactly {n, id, r}
+    const tg = rmCleanTag(it.u); if (tg) o.u = tg; // UR: only when present and valid (an untagged item stays byte-identical)
     const g = rmCleanGear(id, rar, it, aliasT);
     if (g.t) {
       o.t = g.t; if (g.a) o.a = g.a;
@@ -383,13 +407,18 @@ function rmMergeSave(mine, stored, opts) {
   const byUid = new Map(b.items.map((it) => [it.n, it]));
   a.items.forEach((it) => {
     const other = byUid.get(it.n);
-    if (!other) { if (known.has(it.n)) return; items.push({ ...it }); return; } // gone from storage because another tab sold it, or new here
-    if (other.id === it.id && other.r === it.r && (other.t || 0) === (it.t || 0) && (other.a || 0) === (it.a || 0)) { // same item: identity is (n, id, r, t, a) ...
+    if (!other) { if (rmKnownSame(known, it)) return; items.push({ ...it }); return; } // gone from storage because another tab sold it, or new here
+    const tagged = !!(it.u && other.u); // UR: both copies carry a tag, so (n, u) is the identity
+    // UR (FZ uid reuse): this tab knew THIS item under uid n, and storage now holds a DIFFERENT tagged item under n: the one this tab knew left storage
+    // (sold / used in another tab) and a tab that had not seen it yet picked its own item under the same uid. Drop this stale copy; storage's is taken below.
+    if (tagged && it.u !== other.u && rmKnownSame(known, it)) return;
+    if ((!tagged || it.u === other.u) && other.id === it.id && other.r === it.r && (other.t || 0) === (it.t || 0) && (other.a || 0) === (it.a || 0)) { // same item: identity is (n, id, r, t, a) ...
       // ... unless this tab never saw that uid in storage (FZ issue A): then both tabs picked their own copy under the same uid before either synced,
-      // so they are two items and this tab's gets a fresh uid below. Only when the caller tracks `known` (RealmArena always does).
-      if (!(opts.known && !known.has(it.n))) {
-        // FZ issue B: never drop `sig` / `f` that storage holds for the same item (this copy may come from an old tab's stripped write); this tab's wins when both have one
-        const o = { ...it }; if (!o.sig && other.sig) o.sig = other.sig; if (!o.f && other.f) o.f = { ...other.f };
+      // so they are two items and this tab's gets a fresh uid below. Only when the caller tracks `known` (RealmArena always does). Equal tags are
+      // always the same item (UR), so a twin is renumbered only when a copy has no tag.
+      if (tagged || !(opts.known && !known.has(it.n))) {
+        // FZ issue B: never drop `sig` / `f` (or the UR tag) that storage holds for the same item (this copy may come from an old tab's stripped write); this tab's wins when both have one
+        const o = { ...it }; if (!o.sig && other.sig) o.sig = other.sig; if (!o.f && other.f) o.f = { ...other.f }; if (!o.u && other.u) o.u = other.u;
         items.push(o); return;
       }
     }
@@ -399,7 +428,7 @@ function rmMergeSave(mine, stored, opts) {
   b.items.forEach((it) => {
     if (have.has(it.n)) return;
     const mineHas = a.items.some((x) => x.n === it.n);
-    if (!mineHas && known.has(it.n)) return; // sold here
+    if (!mineHas && rmKnownSame(known, it)) return; // sold here (UR: only the very item this tab saw; a new tagged item that reused the uid is taken)
     items.push({ ...it }); have.add(it.n);
   });
   const eq = { ...a.eq }; Object.keys(eq).forEach((slot) => { if (remap[eq[slot]] !== undefined) eq[slot] = remap[eq[slot]]; });
@@ -425,7 +454,7 @@ class RealmArena {
     this.onSave = (sv) => { this._saveDirty = false; if (this._saveTimer) { clearTimeout(this._saveTimer); this._saveTimer = 0; } this.saveWrites = (this.saveWrites || 0) + 1; return this._persist(sv); }; // every save goes through the cross-tab merge first (and covers a pending saveSoon, review F16)
     this.onExit = onExit || (() => {});
     this.save = rmCleanSave(save);
-    this._baseShards = this.save.shards; this._baseDust = this.save.dust || 0; this._baseGp = rmGpOf(this.save.gp); this._known = new Set(this.save.items.map((it) => it.n)); this.saveOk = true; this.saveFails = 0; this.walls = null; this.extraGuard = 0;
+    this._baseShards = this.save.shards; this._baseDust = this.save.dust || 0; this._baseGp = rmGpOf(this.save.gp); this._known = rmKnownOf(this.save.items); this.saveOk = true; this.saveFails = 0; this.walls = null; this.extraGuard = 0;
     this.dungeon = null; this.fixedWorld = null; // optional run controller + fixed-size world (Mad Maze dungeons); null = classic waves
     this.world = null; this.mode = 'waves'; this.camera = { x: 0, y: 0, vw: 960, vh: RM_SHORT }; this._camF = { x: 0, y: 0 }; // setWorld / setMode: a scrolling world with a camera (null = the screen is the world, today's behaviour)
     this._solidAt = null; this._shotSolidAt = null; this._curDm = 1; this.onEnemyKilled = null; this.onEnemyHit = null; // world tile collision + additive kill / hit callbacks (default null)
@@ -519,7 +548,7 @@ class RealmArena {
   // The three-way merge bookkeeping (_known uids, shard / dust / pity bases) = exactly what `stored` (the raw realm in storage) holds.
   _syncBase(stored) {
     const st = rmCleanSave(stored);
-    this._known = new Set(st.items.map((it) => it.n)); this._baseShards = st.shards; this._baseDust = st.dust || 0; this._baseGp = rmGpOf(st.gp);
+    this._known = rmKnownOf(st.items); this._baseShards = st.shards; this._baseDust = st.dust || 0; this._baseGp = rmGpOf(st.gp);
     return st;
   }
 
@@ -533,7 +562,7 @@ class RealmArena {
     let ok = ret !== false;
     if (stored) {
       const st = this._syncBase(stored);
-      ok = ok && st.shards === this.save.shards && st.items.length === this.save.items.length && st.items.every((it, i) => it.n === this.save.items[i].n && it.r === this.save.items[i].r && (it.t || 0) === (this.save.items[i].t || 0));
+      ok = ok && st.shards === this.save.shards && (st.dust || 0) === (this.save.dust || 0) && st.items.length === this.save.items.length && st.items.every((it, i) => it.n === this.save.items[i].n && it.r === this.save.items[i].r && (it.t || 0) === (this.save.items[i].t || 0));
     } else { // nothing readable in storage (no storage, or a page that saves elsewhere): keep every item as new here, never drop one
       this._known = new Set();
       // FZ issue C: a FAILED write leaves the bases where they were (the unsaved shards / dust / pity are still this tab's delta for the next merge)
@@ -3204,7 +3233,7 @@ class RealmArena {
     const def = RM_BASE_ITEMS[(sv.deaths + w) % RM_BASE_ITEMS.length]; const rar = RM_RARITIES[rarity];
     let text;
     let n = 0;
-    if (sv.items.length >= RM_BACKPACK) { sv.shards += rar.sell; text = `pack full, cache sold +${rar.sell} 💎`; } else { n = sv.nextUid++; sv.items.push({ n, id: def.id, r: rarity }); text = `cache: ${def.icon} ${rar.name} ${def.name}`; }
+    if (sv.items.length >= RM_BACKPACK) { sv.shards += rar.sell; text = `pack full, cache sold +${rar.sell} 💎`; } else { n = sv.nextUid++; sv.items.push(rmTagged({ n, id: def.id, r: rarity })); text = `cache: ${def.icon} ${rar.name} ${def.name}`; }
     return { id: def.id, rarity, text, n }; // n = backpack uid of the cache item (0 = sold)
   }
 
@@ -3229,7 +3258,7 @@ class RealmArena {
     if (!this.shopStock().some((o) => o.id === id && o.r === r)) return false;
     const price = RM_RARITIES[r].sell * RM_SHOP_MULT;
     if (sv.shards < price || sv.items.length >= RM_BACKPACK) return false;
-    sv.shards -= price; sv.items.push({ n: sv.nextUid++, id, r });
+    sv.shards -= price; sv.items.push(rmTagged({ n: sv.nextUid++, id, r }));
     this.displayShards = sv.shards;
     this._snd('pickup');
     this._itemText2(this.player.x, this.player.y - 24, id, r, RM_ITEM_BY_ID[id].name, RM_ITEM_BY_ID[id].icon, RM_RARITIES[r].color);
@@ -3371,7 +3400,7 @@ class RealmArena {
       sv.shards += val; this.lastFullSale = { id, r: rarity, t: gt, shards: val }; // test hook
       this._floatText(this.player.x, this.player.y - 24, `sold ${def.name} +${val} 💎`, rar.color);
     } else {
-      const ent = { n: sv.nextUid++, id, r: rarity };
+      const ent = rmTagged({ n: sv.nextUid++, id, r: rarity });
       if (gear && typeof gear === 'object' && !Array.isArray(gear)) {
         const g = rmCleanGear(id, rarity, gear);
         if (g.t) { ent.t = g.t; if (g.a) ent.a = g.a; const sg = rmCleanSig(id, g.t, g.a, gear.sig); if (sg) ent.sig = sg; }
@@ -4079,7 +4108,7 @@ class RealmArena {
     // otherwise see a uid collision in the cross-tab merge and keep both copies. Its t / a / sig / f and its slot are kept.
     const ki = sv.items.indexOf(c.keep); const old = c.keep.n;
     const n = Math.max(sv.nextUid || 1, 1 + sv.items.reduce((m, x) => Math.max(m, x.n), 0)); sv.nextUid = n + 1;
-    c.keep = Object.assign({}, c.keep, { n, r: c.keep.r + 1 });
+    c.keep = Object.assign({}, c.keep, { n, r: c.keep.r + 1, u: rmItemTag() }); // a new entry: a new UR tag
     if (c.keep.f) c.keep.f = { id: c.keep.f.id, v: c.keep.f.v };
     if (ki >= 0) sv.items[ki] = c.keep; else sv.items.push(c.keep);
     RM_EQ_KEYS.forEach((slot) => { if (sv.eq[slot] === old) sv.eq[slot] = n; });
@@ -4143,6 +4172,7 @@ class RealmArena {
   // reforge(uid, affixId) -> the new uid, or 0. Charges exactly the shown dust + shards once; the entry is replaced (a fresh uid, so the cross-tab merge
   // carries the new `f` like a new item) keeping t, a, sig and its slot.
   reforge(uid, affixId) {
+    if (this.forgeOn()) this.resyncSave(); // FZ I6-dust: price it against what every tab has written (another tab may have spent this dust already)
     const opts = this.reforgeOptions(uid);
     const o = opts ? opts.find((x) => x.id === affixId) : null;
     if (!o || o.current || !o.afford) return 0;
@@ -4152,19 +4182,34 @@ class RealmArena {
     let nf = null; try { nf = MMGearForge.reforge(this._forgeView(it), affixId); } catch (e) { nf = null; }
     if (!nf || !nf.f || nf.f.id !== o.id) return 0;
     const n = sv.nextUid++;
-    const ne = { n, id: it.id, r: it.r, t: it.t };
+    const ne = { n, id: it.id, r: it.r, u: rmItemTag(), t: it.t }; // a new entry: a new UR tag
     if (it.a) ne.a = it.a;
     if (it.sig) ne.sig = it.sig;
     ne.f = { id: nf.f.id, v: nf.f.v };
+    const undo = this._dustTxnStart();
     sv.items[i] = ne;
     RM_EQ_KEYS.forEach((slot) => { if (sv.eq[slot] === uid) sv.eq[slot] = n; });
+    sv.dust = (sv.dust || 0) - o.cost.dust; sv.shards -= o.cost.shards;
+    if (!this._dustTxnCommit(undo)) return 0;
     // review F13: a pending Lantern find of the old uid moves to the new one (same id / r / t / a), so the next settle still pays it
     try { if (typeof MMStash !== 'undefined' && MMStash.renumberFindIn && typeof localStorage !== 'undefined') MMStash.renumberFindIn(localStorage, uid, n, ne); } catch (e) { /* storage blocked: the find stays as it was */ }
-    sv.dust = (sv.dust || 0) - o.cost.dust; sv.shards -= o.cost.shards;
     this._forgeUid = n; this._forgeAsk = null;
     this._snd('levelup');
-    this._afterGearChange();
+    this._afterGearChange(true);
     return n;
+  }
+  // FZ I6-dust: a dust spend is a transaction. The caller resyncs first (so the balance it checks is what storage holds plus this tab's own unsaved
+  // delta), then the spend is written AT ONCE. If that write fails while storage holds a realm, the spend is undone: otherwise another tab could
+  // spend the same dust from storage's balance, and the three-way merge (which never goes below 0) would hand out the difference for free.
+  // With no readable storage at all (a page that saves elsewhere) no other tab can see this dust, so the spend stands as before.
+  _dustTxnStart() { return JSON.parse(JSON.stringify(this.save)); }
+  _dustTxnCommit(undo) {
+    const ok = this.onSave(this.save);
+    if (ok !== false || !rmReadStoredRealm()) return true;
+    this._adopt(rmCleanSave(undo)); this.displayShards = this.save.shards;
+    try { if (this.player) this._floatText(this.player.x, this.player.y - 60, 'Not saved (storage full): nothing was charged', '#ff9a8a'); } catch (e) { /* cosmetic */ }
+    this._syncHud(); this.renderBackpack();
+    return false;
   }
   // The Forge section of the open item (DOM + textContent only; 44 px targets). Built after the backpack list is rendered.
   _forgeDom(root) {
@@ -4265,13 +4310,16 @@ class RealmArena {
   }
   // vendorBuy(id, t) -> the new item's uid, or 0. Charges exactly the listed dust once; refused without the dust or a free backpack slot.
   vendorBuy(id, t) {
+    if (this.vendorOn()) this.resyncSave(); // FZ I6-dust: the balance every tab has written (see _dustTxnCommit)
     const o = (this.vendorStock() || []).find((x) => x.id === id && x.t === t);
     if (!o || !o.afford || !o.room) return 0;
+    const undo = this._dustTxnStart();
     const sv = this.save; const n = Math.max(sv.nextUid || 1, 1 + sv.items.reduce((m, x) => Math.max(m, x.n), 0)); sv.nextUid = n + 1;
     sv.dust = (sv.dust || 0) - o.price;
-    sv.items.push({ n, id: o.id, r: 0, t: o.t });
+    sv.items.push({ n, id: o.id, r: 0, u: rmItemTag(), t: o.t });
+    if (!this._dustTxnCommit(undo)) return 0;
     this._snd('pickup');
-    this._afterGearChange();
+    this._afterGearChange(true);
     return n;
   }
   // vendorBuyBackInfo(uid) -> { dust } or null (T1-T3 tiered items only; soulbound / T4+ / classic items are refused).
@@ -4308,12 +4356,12 @@ class RealmArena {
     return true;
   }
 
-  _afterGearChange() {
+  _afterGearChange(saved) { // saved: the caller has just written this change (a dust transaction), so no second write
     this.markStatsDirty(); this._calcStats();
     const p = this.player;
     p.hp = Math.min(this.stats.maxHp, p.hp); // swapping gear never heals (no free HP by toggling a charm); losing max HP just lowers the cap
     this.displayShards = this.save.shards;
-    this.onSave(this.save);
+    if (!saved) this.onSave(this.save);
     this._syncHud(); this.renderBackpack();
   }
 
