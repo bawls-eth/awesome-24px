@@ -135,3 +135,34 @@ body.touch.abil-on .boss-bar { bottom: calc(270px + env(safe-area-inset-bottom))
 .trophy-row.on .rc-name { color: #b9e08a; }
 .trophy-row.gold .rc-name { color: #f2c84b; }
 .trophy-row .rc-note { font-size: 12px; }
+/* PI2: the shared HUD / text size (pixeltown-access-v1 hudScale -> --ui-scale on <html>, set by mm-side-access.js) reaches the HUD, the
+   panels and the action buttons. Default 1 = the sizes above, unchanged. Text stays >= 12 px x scale; 44 px targets stay 44 px or more. */
+:root { --us: var(--ui-scale, 1); }
+html, body { font-size: calc(14px * var(--us)); }
+#hud { max-width: min(calc(300px * var(--us)), calc(100% - 150px)); }
+.hud-isle, .hud-info, .hud-tame, .hud-env, .bar-text, .hint, .help, .log-list, .rc-note, .rc-need, .panel .dest-cost, .bb-head, .decor button, .trophy-row .rc-note { font-size: calc(12px * var(--us)); }
+.bar { height: calc(14px * var(--us)); }
+.bar-text { line-height: calc(14px * var(--us)); }
+.btn.small { font-size: calc(18px * var(--us)); }
+#back { font-size: calc(13px * var(--us)); }
+.hud-btns { flex-wrap: wrap; }
+.hud-btns button { font-size: calc(13px * var(--us)); }
+.panel h2 { font-size: calc(16px * var(--us)); }
+.panel h3 { font-size: calc(13px * var(--us)); }
+.meter { min-height: calc(24px * var(--us)); }
+.meter.env .shp { width: calc(10px * var(--us)); height: calc(10px * var(--us)); }
+#btn-ability .ring { width: calc(22px * var(--us)); height: calc(22px * var(--us)); flex-basis: calc(22px * var(--us)); }
+.boss-bar .bar { height: calc(10px * var(--us)); }
+/* PI2: the HP heart (a shape, not colour alone): a full heart; low HP (<= 30%) a heart with a crack cut through it; 0 HP a hollow box */
+.hp-bar .shp-hp { position: absolute; left: 3px; top: 50%; width: calc(10px * var(--us)); height: calc(10px * var(--us)); transform: translateY(-50%); background: #fff;
+  clip-path: polygon(50% 100%, 0 40%, 0 15%, 15% 0, 35% 0, 50% 20%, 65% 0, 85% 0, 100% 15%, 100% 40%); z-index: 1; }
+.hp-bar.low .shp-hp { clip-path: polygon(50% 100%, 0 40%, 0 15%, 15% 0, 35% 0, 50% 20%, 40% 45%, 60% 60%, 45% 100%, 55% 100%, 70% 55%, 55% 40%, 65% 0, 85% 0, 100% 15%, 100% 40%); background: #ffe08a; }
+.hp-bar.empty .shp-hp { background: transparent; border: 2px solid #fff; clip-path: none; border-radius: 2px; box-sizing: border-box; }
+/* PI2: warmth gets a shape per state too (air already had one): warn = a low flame (trapezoid), empty = a snowflake cross */
+.meter.env.warn .shp-warm { clip-path: polygon(30% 40%, 70% 40%, 100% 100%, 0 100%); }
+.meter.env.empty .shp-warm { clip-path: polygon(40% 0, 60% 0, 60% 40%, 100% 40%, 100% 60%, 60% 60%, 60% 100%, 40% 100%, 40% 60%, 0 60%, 0 40%, 40% 40%); }
+/* PI2: one-thumb mode on phones: the mount ability button sits just above the move stick */
+body.touch.one-thumb #touch #btn-ability { position: absolute; left: calc(16px + env(safe-area-inset-left)); bottom: calc(20px + 132px + 12px + env(safe-area-inset-bottom)); z-index: 3; min-width: 64px; }
+/* PI2: reduced motion (the OS setting or the shared "screen flashes off" pref): no CSS transitions or animations anywhere on the page */
+html[data-reduce-motion="1"] *, html[data-reduce-motion="1"] *::before, html[data-reduce-motion="1"] *::after { transition: none !important; animation: none !important; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
