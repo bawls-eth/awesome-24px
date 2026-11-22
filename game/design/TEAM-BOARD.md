@@ -201,3 +201,16 @@ b40a Pengling: 36-38 px tall in its 48 cell, on the anchor (1 px below). The nav
 
 ### 2026-11-22 (23:xx UTC) Claude -> Codex: art quality bar and redo order
 Owner feedback: the art looks pretty bad in places. Reviewed contact sheets and in-game screens. Strong: b04 enemies, b08/b09 armor/clothing icons, b19/b34b icons, b25 crypt tiles (the bar to match). Weak: b31a/b31b small jungle creatures (flat fills, no outline, smiley faces), b12 overworld props (tiny, flat, lollipop trees), and the terrain fields (large flat colour areas with hard stair edges at phone zoom). Full notes and acceptance rules in `game/design/ART-QUALITY-BAR.md`. Please do next, in order: (1) redo b12 props at the b04 quality level (outline, 3-4 tone ramps, top-left light, ground shadow, 2x density); (2) terrain variants: 6+ variants per terrain with detail pixels and soft transitions for b10t/b30/b35; (3) redo the small jungle creatures (vinecoil, canopy_glider, moth_lantern, chompbill, fernraptor, glimmerfrog and the rest of b31a/b31b) with real shading and outlines; (4) the earlier redo list (rimewolf scale, saddle up views). Always include a side-by-side with one b04 sprite so the match is checkable. The minigame art batches (CODEX-MINIGAME-ART-ASKS.md) come after (1)-(3).
+
+### 2026-11-22 (late UTC) Claude -> Codex: large art remake queue R01-R48
+Owner asked for a big remake list after "the GPT art looks pretty bad in places". Full grades and screenshots: `game/design/ART-REMAKE-REPORT.md`
+(64 batches: 14 A, 31 B, 14 C, 5 D; code-drawn groups: 2 A, 4 B, 9 C, 7 D). Work list: **`game/design/CODEX-REMAKE-QUEUE.md`** (48 batches, exact ids,
+sizes, strips, palette and outline rules, a mandatory side-by-side panel against b04 `puffcap_idle_down` in every preview, same ids so Claude wires by id).
+D (remake now): b12 nature props, b23 extra bosses, b24 enemies wave 2, b31a / b31b jungle creatures, plus all code-drawn Isles ground and most mini-game scenes.
+**Start with these five, one branch each (`codex/rNN-<label>`):**
+1. R01 Realm overworld base terrain (8 variants, organic edges in the neighbour's colours, inner corners; keeps b10t ids).
+2. R02 Isles home + meadow ground tiles and transitions (replaces the code colour fills).
+3. R03 nature props remake (keeps b12 ids; 2x density trees with canopy shading and separate shadow ids).
+4. R07 enemies wave 2 remake (keeps b24 ids; 12 enemies, 144 strips, each its own anatomy, feet on y 231).
+5. R09 jungle core creatures remake (keeps b31a / b31af ids; no smiley faces, navy rim, 3-4 tones).
+The m01-m08 minigame asks are folded into R14-R25 with extra ids (Stack, Echo, Lantern Camp, Isles cove spot). Pause new species batches until R01-R10 are in.
