@@ -87,3 +87,7 @@ html[data-reduce-motion="1"] *, html[data-reduce-motion="1"] *::before, html[dat
 #go-practice { font:inherit; font-size:calc(14px * var(--ui-scale,1)); font-weight:bold; color:#1d2b20; background:var(--accent); border:0; border-radius:10px; min-height:48px; padding:8px 12px; cursor:pointer; width:100%; }
 #go-practice[hidden] { display:none; }
 #go-practice:focus-visible { outline:3px solid #fff; outline-offset:2px; }
+
+/* VAR1 practice market mood */
+#pr-mood { margin:6px 0; padding:6px 10px; border-radius:8px; border:1px solid currentColor; font-size:calc(14px * var(--ui-scale,1)); line-height:1.4; }
+#pr-mood[hidden] { display:none; }

@@ -290,20 +290,67 @@
   // A seeded pretend week ('practice|N', N counts up per round: no Math.random). Own bells, own key
   // (pixeltown-stalk-practice-v1: {v, n, best, rounds}); never touches the real save, medals or hub profile.
   var PKEY = 'pixeltown-stalk-practice-v1', PSTART = 1000;
+  // VAR1 market moods (practice week ONLY; the real week, save, medals and stats never see them). Each mood is a set of
+  // honest pattern odds shown in full on screen. A mood is picked from the practice round number (seeded, equal 1 in 4 odds);
+  // the week is then the first seeded week 'practice|N|k' whose pattern matches a seeded pick from those odds.
+  // ?mods=0 turns moods off (plain practice weeks). Test pages (?test=1) keep them off unless ?mods=1.
+  var MOODS = {
+    usual: { name: 'Usual Week', line: 'Normal odds, same as the real market.', w: { decreasing: 0.25, random: 0.30, largeSpike: 0.25, smallSpike: 0.20 } },
+    festival: { name: 'Festival Week', line: 'Visitors in town: spikes are more likely.', w: { decreasing: 0.10, random: 0.25, largeSpike: 0.40, smallSpike: 0.25 } },
+    quiet: { name: 'Quiet Week', line: 'Few buyers: prices tend to drift down.', w: { decreasing: 0.45, random: 0.35, largeSpike: 0.10, smallSpike: 0.10 } },
+    jumpy: { name: 'Jumpy Week', line: 'Rumours everywhere: prices bounce up and down more often.', w: { decreasing: 0.15, random: 0.55, largeSpike: 0.15, smallSpike: 0.15 } }
+  };
+  var MOOD_IDS = ['usual', 'festival', 'quiet', 'jumpy'];
+  var MOODS_ON = qs.get('mods') !== '0' && (!TEST || qs.get('mods') === '1');
+  function hash01(str) { var h = 2166136261 >>> 0; for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } h ^= h >>> 13; h = Math.imul(h, 0x5bd1e995) >>> 0; h ^= h >>> 15; return (h >>> 0) / 4294967296; }
+  function moodFor(n) { return MOODS_ON ? MOOD_IDS[Math.floor(hash01('mood|' + n) * MOOD_IDS.length) % MOOD_IDS.length] : null; }
+  function pickPattern(mood, n) {
+    var r = hash01('moodpat|' + n), acc = 0, w = MOODS[mood].w;
+    for (var i = 0; i < M.PATTERNS.length; i++) { acc += w[M.PATTERNS[i]]; if (r < acc) return M.PATTERNS[i]; }
+    return M.PATTERNS[M.PATTERNS.length - 1];
+  }
+  function practiceWeek(n, mood) {
+    if (!mood) return M.generateWeek('practice|' + n);
+    var want = pickPattern(mood, n);
+    for (var k = 0; k < 400; k++) { var w = M.generateWeek('practice|' + n + '|' + k); if (w.pattern === want) return w; }
+    return M.generateWeek('practice|' + n);
+  }
+  function oddsLine(mood) { return M.PATTERNS.map(function (p) { return M.PATTERN_NAMES[p] + ' ' + Math.round(MOODS[mood].w[p] * 100) + '%'; }).join(', '); }
+  // The advisor estimate uses the usual odds as its starting point; in a mood week, re-weight it by the mood odds (Bayes), honestly.
+  function moodProbs(probs, mood) {
+    if (!mood) return probs;
+    var base = MOODS.usual.w, w = MOODS[mood].w, out = {}, tot = 0;
+    M.PATTERNS.forEach(function (p) { out[p] = probs[p] * w[p] / base[p]; tot += out[p]; });
+    M.PATTERNS.forEach(function (p) { out[p] = tot > 0 ? out[p] / tot : w[p]; });
+    return out;
+  }
   function cleanPr(raw) {
     var o = raw && typeof raw === 'object' ? raw : {};
     function n(v, lo, hi) { v = Math.trunc(Number(v)); return isFinite(v) ? Math.max(lo, Math.min(hi, v)) : 0; }
     var best = Math.trunc(Number(o.best));
-    return { v: 1, n: n(o.n, 0, 999999), best: isFinite(best) ? Math.max(-PSTART, Math.min(99999999, best)) : 0, rounds: n(o.rounds, 0, 999999), hasBest: o.hasBest === true };
+    var out = { v: 1, n: n(o.n, 0, 999999), best: isFinite(best) ? Math.max(-PSTART, Math.min(99999999, best)) : 0, rounds: n(o.rounds, 0, 999999), hasBest: o.hasBest === true };
+    // VAR1 (additive): best practice profit per market mood, {moodId: bells}. Only known moods survive.
+    out.moodBest = {};
+    if (o.moodBest && typeof o.moodBest === 'object' && !Array.isArray(o.moodBest)) MOOD_IDS.forEach(function (m) {
+      if (!Object.prototype.hasOwnProperty.call(o.moodBest, m)) return; var v = Math.trunc(Number(o.moodBest[m])); if (isFinite(v)) out.moodBest[m] = Math.max(-PSTART, Math.min(99999999, v));
+    });
+    return out;
   }
   var prSave = cleanPr(S.get(PKEY, null));
   var pr = null;
   function prPersist() { S.set(PKEY, prSave); }
   function prStart() {
     prSave.n += 1; prPersist();
-    pr = { n: prSave.n, wk: M.generateWeek('practice|' + prSave.n), slot: 0, bells: PSTART, hold: 0, invested: 0, earned: 0, marks: [], done: false };
+    var mood = moodFor(prSave.n);
+    pr = { n: prSave.n, mood: mood, wk: practiceWeek(prSave.n, mood), slot: 0, bells: PSTART, hold: 0, invested: 0, earned: 0, marks: [], done: false };
     $('pr-start').hidden = true; $('pr-end').hidden = true; $('pr-play').hidden = false; $('pr-actions').hidden = false; $('pr-odds').hidden = false;
     $('pr-msg').textContent = 'Sunday: buy stalks, then step through the week.';
+    var pm = $('pr-mood'); pm.hidden = !mood; pm.textContent = '';
+    if (mood) {
+      var t = document.createElement('strong'); t.textContent = 'Market mood: ' + MOODS[mood].name; pm.appendChild(t);
+      pm.appendChild(document.createTextNode(' - ' + MOODS[mood].line + ' Pattern odds this week: ' + oddsLine(mood) + '. Practice only.'));
+      pm.dataset.mood = mood;
+    }
     prRender(); try { $('pr-buy').focus({ preventScroll: true }); } catch (e) { /* ignore */ }
   }
   function prPrice() { return M.priceAt(pr.wk, pr.slot); }
@@ -340,6 +387,8 @@
     var sells = pr.wk.sell, peak = Math.max.apply(null, sells), peakSlot = sells.indexOf(peak) + 1;
     var hadBest = prSave.hasBest, isBest = !hadBest || profit > prSave.best;
     if (isBest) { prSave.best = profit; prSave.hasBest = true; }
+    var moodHad = pr.mood && Object.prototype.hasOwnProperty.call(prSave.moodBest, pr.mood), moodNew = pr.mood && (!moodHad || profit > prSave.moodBest[pr.mood]);
+    if (moodNew) prSave.moodBest[pr.mood] = profit;
     prSave.rounds += 1; prPersist();
     beep(profit > 0 ? 'claim' : 'ui_tap');
     $('pr-actions').hidden = true; $('pr-odds').hidden = true; $('pr-end').hidden = false;
@@ -352,7 +401,7 @@
       pr.invested ? (pr.marks.length ? 'You sold on ' + pr.marks.map(function (i) { return M.slotLabel(i); }).join(', ') + '.' : 'You never sold.') : 'You did not buy any stalks this time.',
       spoiled ? spoiled + ' stalks spoiled at the end of the week.' : 'Nothing spoiled.',
       'Practice best: ' + signed(prSave.best) + ' bells over ' + prSave.rounds + ' practice week(s).'
-    ].forEach(function (t) { var li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
+    ].concat(pr.mood ? ['Market mood was ' + MOODS[pr.mood].name + ' (' + oddsLine(pr.mood) + '). ' + MOODS[pr.mood].name + ' best: ' + signed(prSave.moodBest[pr.mood]) + ' bells' + (moodNew && moodHad ? ' (new!)' : '') + '.'] : []).forEach(function (t) { var li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
     drawChartOn($('pr-chart'), pr.wk, M.SLOTS - 1, 1, pr.marks);
     prBestLine();
     try { $('pr-again').focus({ preventScroll: true }); } catch (e) { /* ignore */ }
@@ -366,8 +415,8 @@
     $('pr-pl').textContent = pr.hold && !sun ? 'Sell all now: ' + signed(now) : pr.invested ? 'Week so far: ' + signed(pr.earned - pr.invested) : '';
     $('pr-pl').className = now > 0 ? 'up' : now < 0 ? 'down' : '';
     $('pr-stat').textContent = 'Practice bells ' + fmt(pr.bells) + ' - stalks ' + pr.hold + ' - paid ' + pr.wk.buyPrice + ' each';
-    var a = M.advise(M.knownPrices(pr.wk, pr.slot));
-    $('pr-odds').textContent = a.ready ? 'Honest odds from the prices so far: ' + M.PATTERNS.map(function (p) { return M.PATTERN_NAMES[p] + ' ' + Math.round(a.probs[p] * 100) + '%'; }).join(', ') + '.' : 'Odds appear after Monday\'s two prices.';
+    var a = M.advise(M.knownPrices(pr.wk, pr.slot)), ap = moodProbs(a.probs, pr.mood);
+    $('pr-odds').textContent = a.ready ? 'Honest odds from the prices so far' + (pr.mood ? ' and the ' + MOODS[pr.mood].name + ' mood' : '') + ': ' + M.PATTERNS.map(function (p) { return M.PATTERN_NAMES[p] + ' ' + Math.round(ap[p] * 100) + '%'; }).join(', ') + '.' : 'Odds appear after Monday\'s two prices.';
     $('pr-buy').disabled = !sun || Math.floor(pr.bells / pr.wk.buyPrice) < 1 || pr.hold >= M.MAX_HOLD;
     $('pr-sell').disabled = sun || pr.hold < 1;
     $('pr-sell').textContent = pr.hold && !sun ? 'Sell all (' + pr.hold + ')' : 'Sell all';
@@ -419,6 +468,7 @@
       buy: function (n) { return doBuy(n); },
       sellNeighbour: function (id, n) { return doSellNb(id, n); },
       sell: function (n) { return doSell(n); },
+      moods: { get on() { return MOODS_ON; }, list: MOOD_IDS, info: MOODS, moodFor: moodFor, practiceWeek: practiceWeek, probs: moodProbs },
       practice: { start: prStart, buy: prBuy, sell: prSell, next: prNext, get state() { return pr; }, get saved() { return prSave; } }
     };
   }
