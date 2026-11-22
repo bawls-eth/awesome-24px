@@ -1,0 +1,226 @@
+/* MMNav: shared Menu button + "Where to?" sheet (see mm-nav.js for the API, design/NAV-AUDIT.md 4.1).
+   Positioning tokens a page may override on :root:
+     --mm-nav-top / --mm-nav-left   base corner (default 8px + safe area)
+     --mm-nav-x / --mm-nav-y        extra offset (mount({offset:{x,y}}) sets these)
+     --mm-nav-z                     button z-index (default 9000: above game HUDs, below full-screen page modals)
+     --mm-nav-sheet-z               sheet + backdrop z-index (default 9100)
+     --mm-nav-btn-w                 button width (48px under 480 px wide, 104px with the "Menu" word)
+     --mm-nav-reserve               room a page leaves for the button (button width + 8px + x offset; used by .mm-nav-avoid)
+   Colour tokens live on #mm-nav-root (dark by default; add class mm-nav-light to <body> for light). */
+:root {
+  --mm-nav-top: calc(8px + env(safe-area-inset-top, 0px));
+  --mm-nav-left: calc(8px + env(safe-area-inset-left, 0px));
+  --mm-nav-x: 0px;
+  --mm-nav-y: 0px;
+  --mm-nav-z: 9000;
+  --mm-nav-sheet-z: 9100;
+  --mm-nav-size: 48px;
+  --mm-nav-btn-w: 104px;
+  --mm-nav-reserve: calc(var(--mm-nav-btn-w) + 8px + var(--mm-nav-x));
+}
+@media (max-width: 479px) { :root { --mm-nav-btn-w: 48px; } }
+#mm-nav-root {
+  --mm-nav-bg: #1d2230;
+  --mm-nav-bg2: #283044;
+  --mm-nav-fg: #f4efe2;
+  --mm-nav-dim: #b9c0d0;
+  --mm-nav-line: #46506a;
+  --mm-nav-accent: #ffcf5a;
+  --mm-nav-shade: rgba(6, 8, 14, 0.62);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.25;
+}
+body.mm-nav-light #mm-nav-root {
+  --mm-nav-bg: #fffaf0;
+  --mm-nav-bg2: #f1e8d4;
+  --mm-nav-fg: #2c2418;
+  --mm-nav-dim: #5c5140;
+  --mm-nav-line: #cdbf9f;
+  --mm-nav-accent: #2a8fd0;
+  --mm-nav-shade: rgba(20, 16, 8, 0.45);
+}
+#mm-nav-root [hidden] { display: none !important; }
+#mm-nav-root *, #mm-nav-root *::before, #mm-nav-root *::after { box-sizing: border-box; }
+
+/* Corner button */
+#mm-nav-btn {
+  position: fixed;
+  top: calc(var(--mm-nav-top) + var(--mm-nav-y));
+  left: calc(var(--mm-nav-left) + var(--mm-nav-x));
+  z-index: var(--mm-nav-z);
+  width: var(--mm-nav-btn-w);
+  height: var(--mm-nav-size);
+  margin: 0;
+  padding: 0 8px;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 2px solid var(--mm-nav-line);
+  border-radius: 12px;
+  background: var(--mm-nav-bg);
+  color: var(--mm-nav-fg);
+  font: 600 15px/1 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+#mm-nav-btn .mm-nav-ico { font-size: 22px; line-height: 1; }
+#mm-nav-btn:hover { border-color: var(--mm-nav-accent); }
+#mm-nav-btn:focus-visible, #mm-nav-root a:focus-visible, #mm-nav-root button:focus-visible {
+  outline: 3px solid var(--mm-nav-accent);
+  outline-offset: 2px;
+}
+body.mm-nav-covered #mm-nav-btn { display: none; }
+@media (max-width: 479px) {
+  #mm-nav-btn { padding: 0; }
+  #mm-nav-btn .mm-nav-btn-label { display: none; }
+}
+
+/* Legacy page links: hidden visually while mm-nav is on, still in the DOM (and shown with ?nav=0). */
+body.mm-nav-on .mm-nav-legacy {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: 1px !important;
+  max-height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  border: 0 !important;
+}
+/* Page elements that would sit under the button move right. */
+body.mm-nav-on .mm-nav-avoid { margin-left: var(--mm-nav-reserve) !important; }
+
+/* Sheet */
+.mm-nav-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--mm-nav-sheet-z);
+  background: var(--mm-nav-shade);
+}
+.mm-nav-sheet {
+  position: fixed;
+  z-index: calc(var(--mm-nav-sheet-z) + 1);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 85vh;
+  max-height: 85dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+  padding-left: calc(12px + env(safe-area-inset-left, 0px));
+  padding-right: calc(12px + env(safe-area-inset-right, 0px));
+  background: var(--mm-nav-bg);
+  color: var(--mm-nav-fg);
+  border-top: 2px solid var(--mm-nav-line);
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.45);
+  animation: mm-nav-up 160ms ease-out;
+}
+@keyframes mm-nav-up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (min-width: 720px) {
+  .mm-nav-sheet {
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    top: 50%;
+    width: 520px;
+    max-width: calc(100vw - 32px);
+    transform: translate(-50%, -50%);
+    border: 2px solid var(--mm-nav-line);
+    border-radius: 16px;
+    animation: mm-nav-fade 140ms ease-out;
+  }
+}
+@keyframes mm-nav-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .mm-nav-sheet, #mm-nav-btn { animation: none !important; transition: none !important; }
+}
+
+.mm-nav-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.mm-nav-title { margin: 0; font-size: 20px; font-weight: 700; }
+.mm-nav-close {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  border: 2px solid var(--mm-nav-line);
+  border-radius: 12px;
+  background: var(--mm-nav-bg2);
+  color: var(--mm-nav-fg);
+  font-size: 20px;
+  cursor: pointer;
+}
+.mm-nav-top { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.mm-nav-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 2px solid var(--mm-nav-line);
+  background: var(--mm-nav-bg2);
+  color: var(--mm-nav-fg);
+  text-decoration: none;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.mm-nav-continue { border-color: var(--mm-nav-accent); }
+.mm-nav-row .mm-nav-ico { font-size: 22px; flex: 0 0 auto; }
+
+.mm-nav-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+@media (min-width: 720px) { .mm-nav-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.mm-nav-grid li { margin: 0; padding: 0; min-width: 0; }
+.mm-nav-dest {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  height: 100%;
+  min-height: 64px;
+  padding: 8px;
+  border-radius: 12px;
+  border: 2px solid var(--mm-nav-line);
+  background: var(--mm-nav-bg2);
+  color: var(--mm-nav-fg);
+  text-decoration: none;
+}
+.mm-nav-dest:hover, .mm-nav-row:hover { border-color: var(--mm-nav-accent); }
+.mm-nav-dest[aria-current="page"] { border-style: dashed; }
+.mm-nav-dest .mm-nav-ico { font-size: 28px; line-height: 32px; width: 32px; text-align: center; flex: 0 0 32px; }
+.mm-nav-dest-text { display: flex; flex-direction: column; min-width: 0; }
+.mm-nav-dest-name { font-weight: 700; font-size: 15px; overflow-wrap: anywhere; }
+.mm-nav-dest-desc { font-size: 12px; color: var(--mm-nav-dim); overflow-wrap: anywhere; }
+
+.mm-nav-foot { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.mm-nav-foot-btn {
+  flex: 1 1 120px;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 2px solid var(--mm-nav-line);
+  background: transparent;
+  color: var(--mm-nav-fg);
+  font: 600 14px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  text-decoration: none;
+  cursor: pointer;
+}

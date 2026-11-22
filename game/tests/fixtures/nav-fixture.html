@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MMNav fixture</title>
+<link rel="stylesheet" href="../../shared/mm-nav.css">
+<style>
+  html, body { margin: 0; background: #0d0f14; color: #eee; font: 15px system-ui, sans-serif; }
+  /* a fake game HUD: a top-left HP bar the button must not cover, and an old Hub/Town pair */
+  #fake-hud { position: fixed; top: 8px; left: 8px; z-index: 50; display: flex; gap: 8px; }
+  #fake-hp { width: 140px; height: 20px; background: #a33; border-radius: 6px; }
+  .old-link { display: inline-block; min-width: 44px; min-height: 44px; line-height: 44px; padding: 0 8px; background: #333; color: #fff; }
+  main { padding: 80px 16px 16px; }
+</style>
+</head>
+<body>
+<div id="fake-hud"><div id="fake-hp" aria-label="HP"></div></div>
+<a id="old-hub" class="old-link" href="../../hub/index.html">Hub</a>
+<a id="old-town" class="old-link" href="../../index.html">Town</a>
+<main><h1>Fixture</h1><p>A page that mounts MMNav like a game page does.</p></main>
+<script src="../../shared/mm-nav.js" data-mount="manual"></script>
+<script>
+  // Mount snippet as pages use it, with a fallback Back and the old links marked legacy.
+  MMNav.mount({ backHref: '../../hub/index.html', backLabel: 'World map', legacy: '#old-hub,#old-town', avoid: '#fake-hud' });
+</script>
+</body>
+</html>

@@ -1102,5 +1102,13 @@
   "ftue-ft2.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "shared-mm-nav.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "nav-sheet.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }
