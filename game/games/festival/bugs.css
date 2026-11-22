@@ -82,3 +82,4 @@ html[data-reduce-motion="1"] *, html[data-reduce-motion="1"] *::before, html[dat
 #overlay button.again { font-size:calc(18px * var(--ui-scale,1)); min-width:160px; min-height:56px; font-weight:bold; }
 #overlay .keyhint { font-size:calc(12px * var(--ui-scale,1)); }
 @media (pointer: coarse) { #overlay .keyhint { display:none; } }
+#hud-best.ahead { color:#1d2b20; background:var(--accent); font-weight:bold; }

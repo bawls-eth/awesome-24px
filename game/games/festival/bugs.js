@@ -364,6 +364,7 @@
     $('hud-time').classList.toggle('hurry', mode === 'play' && left <= 10);
     $('hud-score').textContent = String(Math.round(st.score));
     $('hud-score').classList.toggle('bump', scoreBump > 0 && !reduced);
+    if (mode === 'play' && arenaId) { var pbv = save.best[arenaId], ahead = pbv > 0 && Math.round(st.score) > pbv, hb = $('hud-best'); hb.textContent = ahead ? 'New best!' : 'Best ' + pbv; hb.classList.toggle('ahead', ahead); }
     var frac = st.combo > 0 ? Math.max(0, 1 - (st.time - st.lastCatchAt) / B.COMBO_WINDOW) : 0;
     $('combo-bar').style.width = (frac * 100).toFixed(0) + '%';
     $('combo-text').textContent = st.combo > 1 ? 'Combo x' + mult(st.combo).toFixed(2).replace(/0$/, '') : (st.combo === 1 ? 'Combo 1' : 'No combo');

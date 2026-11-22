@@ -98,6 +98,10 @@ async function open(browser, opts) {
   check('one tap on Play again restarts the same arena', re.mode === 'play' && re.arena === 'Meadow' && re.time === 0, JSON.stringify(re));
   check('the HUD shows the best to chase', /^Best \d+$/.test(re.best) && re.best !== 'Best 0', re.best);
 
+  // passing the best mid-run lights the HUD up (the saved best only changes at the end)
+  const ah = await p.evaluate(() => { const B = window.__bugs, before = document.getElementById('hud-best').textContent; B.setPlayer(10, 7, true); for (let i = 0; i < 6; i++) { B.spawn('beetle', 10.3, 7); B.swing(); B.step(0.4); } B.render(); const hb = document.getElementById('hud-best'); const r = { before, after: hb.textContent, cls: hb.classList.contains('ahead'), saved: B.save.best.meadow }; B.start('meadow', { seed: 'fun-again', empty: true }); return r; });
+  check('passing the best mid-run shows New best! without saving early', /^Best \d+$/.test(ah.before) && ah.after === 'New best!' && ah.cls && ah.before === 'Best ' + ah.saved, JSON.stringify(ah));
+
   // a worse second run: the chase line says how far off the best it was
   const second = await p.evaluate(() => { const B = window.__bugs; B.step(91); return { chase: document.getElementById('sum-chase').textContent, best: B.summary.best }; });
   check('a lower score shows the points still needed', /^\d+ points to beat your best\.$/.test(second.chase) && second.chase.startsWith(String(second.best)), JSON.stringify(second));
