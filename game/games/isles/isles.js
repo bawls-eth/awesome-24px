@@ -1610,11 +1610,19 @@
       panelBody.appendChild(el('p', 'calm', 'The boat is ready whenever you are. Where to?'));
       DESTS.filter((id) => id !== ISLE).forEach((id) => {
         const open = isleOpen(id), need = ITEM_FOR_ISLE[id];
-        const b = el('button', open ? 'dest' : 'dest locked', open ? (id === 'home' ? 'Home: ' : 'Sail to ') + isleName(id) : isleName(id) + ': needs a ' + itemName(need).toLowerCase() + ' (craft it)');
+        const b = el('button', open ? 'dest' : 'dest locked', open ? (id === 'home' ? 'Home dock: ' : 'Sail to ') + isleName(id) : isleName(id) + ': needs a ' + itemName(need).toLowerCase());
         b.type = 'button'; b.dataset.isle = id;
         if (!open) { b.disabled = true; b.setAttribute('aria-disabled', 'true'); b.dataset.need = need || ''; }
         b.addEventListener('click', () => travelTo(id));
-        panelBody.appendChild(b);
+        if (open) { panelBody.appendChild(b); return; }
+        // NAV slice D: a locked row is not a dead end - "Craft it" opens the craft panel at that recipe
+        const row = el('div', 'dest-row'); row.dataset.isle = id;
+        row.appendChild(b);
+        const c = el('button', 'craft-it', 'Craft it'); c.type = 'button'; c.dataset.need = need || ''; c.dataset.isle = id;
+        c.setAttribute('aria-label', 'Craft a ' + itemName(need).toLowerCase() + ' for ' + isleName(id));
+        c.addEventListener('click', () => openCraftFor(need));
+        row.appendChild(c);
+        panelBody.appendChild(row);
       });
     } else if (kind === 'craft') {
       panelTitle.textContent = 'Craft';
@@ -1635,13 +1643,44 @@
       const ml = el('ul', 'log-list'); ml.id = 'log-medals';
       ISL.MEDAL_IDS.forEach((id) => { const on = medals.indexOf(id) >= 0; const li = el('li', on ? 'on' : 'dim', (on ? '[x] ' : '[ ] ') + (ISL.MEDAL_NAMES[id] || id)); li.dataset.medal = id; ml.appendChild(li); });
       panelBody.appendChild(ml);
+      const fb = el('div', 'fb-host'); fb.id = 'log-feedback';
+      panelBody.appendChild(fb);
+      mountFeedback(fb);
     }
     panel.hidden = false;
     paused = true;
+    if (window.MMNav) { try { window.MMNav.close(); } catch (e) { /* ignore */ } } // never two dialogs at once
     const first = panelBody.querySelector('button') || $('panel-close');
     try { first.focus(); } catch (e) { /* ignore */ }
   }
   $('panel-close').addEventListener('click', closePanel);
+  // open the craft panel and bring one recipe into view (the sea chart's "Craft it")
+  function openCraftFor(id) {
+    openPanel('craft');
+    if (panelKind !== 'craft' || !id) return;
+    const row = panelBody.querySelector('.recipe[data-recipe="' + String(id).replace(/[^a-z0-9_]/gi, '') + '"]');
+    if (!row) return;
+    row.classList.add('want');
+    try { row.scrollIntoView({ block: 'nearest' }); } catch (e) { /* ignore */ }
+    const b = row.querySelector('button.rc-btn');
+    if (b && !b.disabled) { try { b.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+  }
+  // NAV slice D: the shared feedback widget (game/shared/mm-feedback.js, another slice) mounts in the island log when present.
+  // Loaded on demand the first time the log opens (a missing file is a harmless 404; ?test=1 pages skip the request unless
+  // ?feedback=1, so page tests stay console-clean until that file lands).
+  let fbTried = false;
+  function mountFeedback(host) {
+    const go = () => { if (window.MMFeedback && host.isConnected && !host.dataset.fb) { host.dataset.fb = '1'; try { window.MMFeedback.mount(host, { page: 'isles' }); } catch (e) { /* widget is optional */ } } };
+    if (window.MMFeedback) { go(); return; }
+    if (fbTried || (TEST && Q.get('feedback') !== '1')) return;
+    fbTried = true;
+    const sc = document.createElement('script');
+    sc.src = '../../shared/mm-feedback.js';
+    sc.async = true;
+    sc.onload = () => { if (panelKind === 'log') go(); };
+    sc.onerror = () => { /* not installed: nothing to show */ };
+    document.head.appendChild(sc);
+  }
   // the craft panel: your pack, then every recipe grouped (travel, saddles, supplies) with have / need per input and a Craft button.
   // Rebuilt only when it opens or the pack changes (never per frame); plain text nodes only.
   const CRAFT_GROUPS = [['Travel', (id) => has(UNLOCK_BY_ITEM, id)], ['Saddles', (id) => /^saddle_/.test(id)], ['Supplies', (id) => !has(UNLOCK_BY_ITEM, id) && !/^saddle_/.test(id)]];
@@ -1845,7 +1884,7 @@
     if (build) return 'Decorating: tap open ground to place, tap an item to pick it up. E works too.';
     const bh = bossHint();
     if (bh) return bh;
-    if (nearDock() && !ride) return 'The dock. Press T or Sail to open the sea chart.';
+    if (nearDock() && !ride) return document.body.classList.contains('touch') ? 'The dock. Tap Sail to open the sea chart.' : 'The dock. Press T or Sail to open the sea chart.';
     if (spotNear()) return 'Something to gather here. Press G or Gather.';
     if (ride) return 'Riding ' + (mountEnt ? mountEnt.nm || 'your mount' : 'your mount') + (CMP.canSwim(ride) && swimAt(tileOf(hero.x), tileOf(hero.y)) ? ' through the water' : '') + '. Press R or Ride to get off.';
     { const fx = tileOf(hero.x + hero.face.x * TILE * 1.2), fy = tileOf(hero.y + hero.face.y * TILE * 1.2); if (swimAt(fx, fy) && !solidAt(fx, fy)) return 'Open water. Ride a Tidesteed or Skimray to swim across.'; }
@@ -2016,6 +2055,19 @@
   requestAnimationFrame(frame);
   if (!savedIsle && !medalLog.length) toast(HOME ? 'Welcome home to ' + PACK.name + '.' : 'Welcome to the ' + PACK.name + '!');
   if (saddleGift) toast('A ' + itemName(saddleGift).toLowerCase() + ' for your mount is in your pack, free.');
+
+  // ---------- NAV slice D: shared Menu (top-left; the old "<-" link stays in the DOM as mm-nav-legacy) ----------
+  if (window.MMNav) {
+    try {
+      const NAV = window.MMNav;
+      if (NAV.mount({ page: 'isles', sub: isleName(ISLE), legacy: '#back' }) === true) {
+        NAV.markPlace('isles', isleName(ISLE), 'game/games/isles/index.html?isle=' + (ISLE_PARAM[ISLE] || ISLE));
+        NAV.onOpen(() => { if (!panel.hidden) closePanel(); paused = true; });
+        NAV.onClose(() => { if (panel.hidden) paused = false; });
+        NAV.onSettings(() => openPanel('log'));
+      }
+    } catch (e) { /* the isles work without the shared menu */ }
+  }
 
   // ---------- test handle ----------
   if (TEST) {

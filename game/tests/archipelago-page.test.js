@@ -96,7 +96,8 @@ const frames = (page, n) => page.evaluate((k) => new Promise((res) => { let i = 
   check('pixeltown-archipelago-v1 holds the jungle seed, position and fog', saved && saved.isles.jungle.seed === '123' && saved.isles.jungle.pos && saved.isles.jungle.fog.length > 0 && saved.log.seen && Object.keys(saved.log.seen).length > 0, JSON.stringify(saved && saved.isles));
   check('MMProfile key and town save are untouched (read only)', keys.mm === JSON.stringify(PROFILE) && keys.town === '{"realm":{"level":3}}');
   // B10: the page is also the single writer of its medal summary key (pixeltown-medals-isles-v1); still no tames write without a tame
-  check('only own keys written (no tames write; the B10 medal summary is the only addition)', keys.all.filter((k) => !['pixeltown-mm-v1', 'pixeltown-mm-active-v1', 'pixeltown-save-v1', 'pixeltown-archipelago-v1', 'pixeltown-medals-isles-v1'].includes(k)).length === 0, keys.all.join(','));
+  // NAV slice D: the shared Menu (mm-nav) records the last place under its own additive key pixeltown-nav-v1
+  check('only own keys written (no tames write; the B10 medal summary and the mm-nav last place are the only additions)', keys.all.filter((k) => !['pixeltown-mm-v1', 'pixeltown-mm-active-v1', 'pixeltown-save-v1', 'pixeltown-archipelago-v1', 'pixeltown-medals-isles-v1', 'pixeltown-nav-v1'].includes(k)).length === 0, keys.all.join(','));
   const med = await pg.evaluate(() => JSON.parse(localStorage.getItem('pixeltown-medals-isles-v1')));
   check('B10 medal summary is {v:1, m:[visit_jungle]} after a first jungle visit', med && med.v === 1 && JSON.stringify(med.m) === JSON.stringify(['visit_jungle']), JSON.stringify(med));
   await pg.screenshot({ path: path.join(process.env.SHOTS || require('os').tmpdir(), 'isles-desktop.png') }).catch(() => {});
@@ -109,11 +110,12 @@ const frames = (page, n) => page.evaluate((k) => new Promise((res) => { let i = 
   await frames(p.page, 20);
   const m = await p.page.evaluate(() => {
     const r = (id) => { const b = document.getElementById(id).getBoundingClientRect(); return { w: b.width, h: b.height, x: b.left, r: b.right, vis: getComputedStyle(document.getElementById(id)).display !== 'none' }; };
-    return { sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, bw: document.body.scrollWidth, stick: r('stick'), fire: r('btn-fire'), map: r('btn-map'), back: r('back'), mini: r('mini-wrap') };
+    return { sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, bw: document.body.scrollWidth, stick: r('stick'), fire: r('btn-fire'), map: r('btn-map'), back: r('back'), menu: r('mm-nav-btn'), backInDom: !!document.getElementById('back'), mini: r('mini-wrap') };
   });
   check('phone: no horizontal scroll', m.sw <= m.cw && m.bw <= m.cw, JSON.stringify(m));
   check('phone: touch joystick shown', m.stick.vis && m.stick.w >= 100, JSON.stringify(m.stick));
-  check('phone: buttons are at least 44px', [m.fire, m.map, m.back].every((b) => b.vis && b.w >= 44 && b.h >= 44), JSON.stringify([m.fire, m.map, m.back]));
+  // NAV slice D: the old top-left "<-" link is now mm-nav-legacy (hidden, still in the DOM); the shared Menu button replaces it
+  check('phone: buttons are at least 44px (Menu replaces the old back link, which stays in the DOM)', [m.fire, m.map, m.menu].every((b) => b.vis && b.w >= 44 && b.h >= 44) && m.backInDom, JSON.stringify([m.fire, m.map, m.menu, m.back]));
   check('phone: everything fits inside the screen', [m.fire, m.map, m.mini, m.stick].every((b) => b.x >= 0 && b.r <= m.cw), JSON.stringify(m));
   const st = await p.page.locator('#stick').boundingBox();
   await ev(p.page, (I) => I.god(true));

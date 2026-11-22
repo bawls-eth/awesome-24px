@@ -89,7 +89,8 @@ async function tap(page, id) {
   await s.ctx.close();
 
   // Angler and Bug Safari nodes link to their real pages.
-  for (const [at, want] of [['w4-angler', '../games/angler/index.html'], ['w5-safari', '../games/festival/bugs.html']]) {
+  // NAV slice D: Campfire Jam and Stalk Market are in LINKS too (they used to say "Coming soon").
+  for (const [at, want] of [['w4-angler', '../games/angler/index.html'], ['w5-safari', '../games/festival/bugs.html'], ['w5-jam', '../games/jam/index.html'], ['w5-stalk', '../games/stalk/index.html']]) {
     const l = await open(browser, { viewport: { width: 1100, height: 760 } }, { 'pixeltown-save-v1': TOWN, 'pixeltown-hub-v1': JSON.stringify({ v: 1, at }) });
     await l.page.keyboard.press('Enter');
     check('hub ' + at + ' Play link is ' + want, (await l.page.getAttribute('#card-play', 'href')) === want);
@@ -106,6 +107,24 @@ async function tap(page, id) {
     check('w7-isles view: no console errors', l.errors.length === 0, l.errors.join(' | '));
     await l.ctx.close();
   }
+  // NAV slice D: on a fresh save the map PATH to Deepdelve is still locked (the medal game is unchanged: 8 medals),
+  // but the game itself is open: tapping it in the games strip opens its card with a Play link and does not move
+  // the villager or record a visit (medal / unlock progress is untouched). Before slice D this was a dead end.
+  {
+    const f = await open(browser, { viewport: { width: 1100, height: 760 }, reducedMotion: 'reduce' }); // reduced: Play is a plain link (no iris), so the test can cancel it
+    const st = await f.page.evaluate(() => ({ walk: window.__hub.isReachable('w3-deepdelve'), play: window.__hub.isPlayable('w3-deepdelve') }));
+    check('fresh save: Deepdelve path is a locked bonus, the game is playable', st.walk === false && st.play === true, JSON.stringify(st));
+    const hubBefore = await f.page.evaluate(() => localStorage.getItem('pixeltown-hub-v1'));
+    await f.page.click('#hub-games button[data-node="w3-deepdelve"]');
+    const c = await f.page.evaluate(() => ({ title: document.getElementById('card-title').textContent, href: document.getElementById('card-play').getAttribute('href'), play: !document.getElementById('card-play').hidden, bonus: document.getElementById('card-bonus').textContent, at: window.__hub.at }));
+    check('fresh save: Deepdelve card has Play and says the map path is a bonus', c.title === 'Deepdelve' && c.href === '../games/deepdelve/index.html' && c.play && /bonus/.test(c.bonus) && c.at === 'w0-square', JSON.stringify(c));
+    await f.page.evaluate(() => document.getElementById('card-play').addEventListener('click', (e) => e.preventDefault()));
+    await f.page.click('#card-play');
+    check('Play on an unwalked game records no visit exit (unlock progress unchanged)', (await f.page.evaluate(() => localStorage.getItem('pixeltown-hub-v1'))) === hubBefore);
+    check('fresh-save strip: no console errors', f.errors.length === 0, f.errors.join(' | '));
+    await f.ctx.close();
+  }
+
   // Hostile saved positions fall back to the start node (never Object.prototype members).
   for (const bad of ['constructor', 'toString', '__proto__']) {
     const h = await open(browser, { viewport: { width: 1100, height: 760 } }, { 'pixeltown-save-v1': TOWN, 'pixeltown-hub-v1': '{"v":1,"at":"' + bad + '"}' });

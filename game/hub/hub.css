@@ -40,3 +40,20 @@ button, .btn { min-height: 48px; min-width: 48px; padding: 0 18px; background: v
 /* AX2-side: text size from pixeltown-access-v1 (--ui-scale) and reduce motion (data-reduce-motion) */
 body { font-size: calc(16px * var(--ui-scale,1)); }
 html[data-reduce-motion="1"] *, html[data-reduce-motion="1"] *::before, html[data-reduce-motion="1"] *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+
+/* NAV slice D: shared Menu button (mm-nav), a Town button, a games strip, node labels and a phone hint chip */
+body.mm-nav-on #hud { min-height: 64px; }
+.town-btn { flex: 0 0 auto; white-space: nowrap; }
+.hub-games { display: flex; gap: 6px; padding: 6px 8px; overflow-x: auto; background: var(--line); border-bottom: 2px solid var(--line); scrollbar-width: thin; flex: 0 0 auto; }
+.hub-games button { flex: 0 0 auto; min-height: 44px; padding: 0 10px; background: #2b4236; color: var(--ink); border: 2px solid #3d5a4a; font-size: calc(13px * var(--ui-scale,1)); font-weight: bold; white-space: nowrap; }
+.hub-games button:hover, .hub-games button:focus-visible { border-color: var(--accent); }
+.hub-games .g-ico { margin-right: 6px; }
+.card-bonus { margin: 4px 0; font-size: calc(13px * var(--ui-scale,1)); color: var(--accent); }
+.hint-chip { display: none; position: absolute; left: 8px; bottom: 8px; max-width: calc(100% - 16px); align-items: center; gap: 4px; padding: 0 0 0 10px; background: rgba(12,20,15,.92); border: 2px solid var(--accent); color: var(--ink); font-size: calc(13px * var(--ui-scale,1)); z-index: 3; }
+.hint-chip button { min-height: 44px; min-width: 44px; padding: 0; background: transparent; color: var(--ink); border: 0; font-size: 22px; }
+@media (max-width: 480px) {
+  .hint-chip:not([hidden]) { display: flex; }
+  #bar { gap: 6px; padding: 6px 8px; }
+  #bar button, #bar .btn { padding: 0 10px; }
+  .town-btn { margin-right: auto; }
+}
