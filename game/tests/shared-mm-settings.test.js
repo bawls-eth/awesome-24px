@@ -54,6 +54,8 @@ const layout = (page) => ev(page, () => {
     check(name + ': panel sits below the Menu button and inside the screen', L.top >= L.menuBottom && L.left >= 0 && L.right <= L.w && L.bottom <= L.h, JSON.stringify(L));
     check(name + ': no horizontal scroll', L.sw <= L.cw, L.sw + ' > ' + L.cw);
     check(name + ': 8-bit frame (square corners, 4 px border, monospace)', L.rad === '0px' && L.bw >= 4 && /mono|Courier|Menlo|Consolas|pixel/i.test(L.font), JSON.stringify(L));
+    check(name + ': panel uses the shared MM8 palette (--px-panel navy)', await ev(pg, () => getComputedStyle(document.getElementById('mmset')).backgroundColor === 'rgb(29, 43, 83)'
+      && document.body.classList.contains('px8')));
     check(name + ': focus moves into the panel (Close)', await ev(pg, () => document.activeElement && document.activeElement.id === 'mmset-close'));
 
     // toggles write the existing keys
@@ -72,6 +74,10 @@ const layout = (page) => ev(page, () => {
     check(name + ': low graphics, high contrast, reduce motion mirrored on <html>', await ev(pg, () => { const h = document.documentElement;
       return JSON.parse(localStorage.getItem('pixeltown-access-v1')).lowGfx === true && h.getAttribute('data-low-gfx') === '1' && h.getAttribute('data-high-contrast') === '1'
         && localStorage.getItem('mm-high-contrast') === '1' && localStorage.getItem('mm-reduce-motion') === (h.getAttribute('data-reduce-motion') === '1' ? '1' : '0'); }));
+    check(name + ': MM8 theme hooks: html.reduce-motion follows, high contrast turns the panel black, MM8.lowGfx() sees it', await ev(pg, () => {
+      const h = document.documentElement; const rm = h.getAttribute('data-reduce-motion') === '1';
+      return h.classList.contains('reduce-motion') === rm && MM8.reducedMotion() === rm && MM8.lowGfx() === true
+        && getComputedStyle(document.getElementById('mmset')).backgroundColor === 'rgb(0, 0, 0)'; }));
     await tap('#mmset-sound');
     await tap('#mmset-music');
     check(name + ': sound off -> mm-sfx-muted 1, music on -> mm-music 1', await ev(pg, () => localStorage.getItem('mm-sfx-muted') === '1' && localStorage.getItem('mm-music') === '1'));

@@ -1,13 +1,13 @@
 /* MMFeedback: "Suggest or report a bug" box (see mm-feedback.js). 8-bit look: square corners, 2-4 px pixel borders, hard shadows.
-   Tokens follow the shared theme (mm-8bit.css --mm8-*) when loaded; a page may still override the --mmfb-* tokens on .mmfb. */
+   Tokens follow the shared theme (mm-8bit.css --px-*) when loaded; a page may still override the --mmfb-* tokens on .mmfb. */
 .mmfb {
-  --mmfb-bg: var(--mm8-bg, #1a1c2c);
-  --mmfb-bg2: var(--mm8-bg2, #333c57);
-  --mmfb-fg: var(--mm8-fg, #f4f4f4);
-  --mmfb-dim: var(--mm8-dim, #94b0c2);
-  --mmfb-line: var(--mm8-line, #f4f4f4);
-  --mmfb-accent: var(--mm8-accent, #ffcd75);
-  --mmfb-shadow: var(--mm8-shadow, #000000);
+  --mmfb-bg: var(--px-panel, #1d2b53);
+  --mmfb-bg2: var(--px-bg, #12142a);
+  --mmfb-fg: var(--px-text, #fff1e8);
+  --mmfb-dim: var(--px-dim, #c2c3c7);
+  --mmfb-line: var(--px-7, #fff1e8);
+  --mmfb-accent: var(--px-accent, #ffa300);
+  --mmfb-shadow: var(--px-ink, #0b0d1a);
   box-sizing: border-box;
   max-width: 100%;
   margin: 8px 0;
@@ -16,7 +16,7 @@
   box-shadow: 3px 3px 0 var(--mmfb-shadow);
   background: var(--mmfb-bg);
   color: var(--mmfb-fg);
-  font-family: var(--mm8-font, ui-monospace, "Courier New", Menlo, Consolas, monospace);
+  font-family: var(--px-font, "Courier New", Courier, "Lucida Console", Monaco, "DejaVu Sans Mono", "Liberation Mono", monospace);
   font-size: 14px;
   line-height: 1.4;
 }
@@ -29,7 +29,7 @@
   font: inherit; font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; text-align: left; cursor: pointer;
 }
 .mmfb-head:focus-visible, .mmfb-btn:focus-visible, .mmfb-chip:focus-visible, .mmfb-text:focus-visible {
-  outline: 2px solid var(--mmfb-accent); outline-offset: 2px;
+  outline: 3px solid var(--px-10, #ffec27); outline-offset: 2px;
 }
 .mmfb-body { padding: 0 14px 14px; }
 .mmfb-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 10px; }

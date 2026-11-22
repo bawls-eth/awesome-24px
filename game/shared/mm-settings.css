@@ -1,15 +1,15 @@
 /* MMSettings panel, toasts and tooltips in the shared 8-bit look. Tokens fall back to built-in values when the page has not
-   loaded the shared theme (mm-8bit.css). Text >= 12 px, targets >= 44 px. The panel starts below the Menu button (top-left). */
+   loaded the shared theme (mm-8bit.css, --px-*). Text >= 12 px, targets >= 44 px. The panel starts below the Menu button (top-left). */
 .mmset, .mm8-toasts, [data-mm-tip] {
-  --mmset-bg: var(--mm8-bg, #1a1c2c);
-  --mmset-bg2: var(--mm8-bg2, #333c57);
-  --mmset-fg: var(--mm8-fg, #f4f4f4);
-  --mmset-dim: var(--mm8-dim, #94b0c2);
-  --mmset-line: var(--mm8-line, #f4f4f4);
-  --mmset-shadow: var(--mm8-shadow, #000000);
-  --mmset-on: var(--mm8-good, #38b764);
-  --mmset-accent: var(--mm8-accent, #ffcd75);
-  --mmset-font: var(--mm8-font, ui-monospace, "Courier New", Menlo, Consolas, monospace);
+  --mmset-bg: var(--px-panel, #1d2b53);
+  --mmset-bg2: var(--px-bg, #12142a);
+  --mmset-fg: var(--px-text, #fff1e8);
+  --mmset-dim: var(--px-dim, #c2c3c7);
+  --mmset-line: var(--px-7, #fff1e8);
+  --mmset-shadow: var(--px-ink, #0b0d1a);
+  --mmset-on: var(--px-good, #00e436);
+  --mmset-accent: var(--px-accent, #ffa300);
+  --mmset-font: var(--px-font, "Courier New", Courier, "Lucida Console", Monaco, "DejaVu Sans Mono", "Liberation Mono", monospace);
 }
 .mmset-back[hidden], .mmset[hidden] { display: none !important; }
 .mmset-back { position: fixed; inset: 0; z-index: 9990; background: rgba(0, 0, 0, 0.6); }
@@ -62,7 +62,7 @@
 .mmset-toggle[aria-checked="true"] .mmset-state { background: var(--mmset-on); color: #0b0f14; }
 .mmset-opts { display: flex; gap: 6px; flex-wrap: wrap; }
 .mmset-opt[aria-pressed="true"] { background: var(--mmset-accent); color: #0b0f14; font-weight: 700; }
-.mmset button:focus-visible, .mmset textarea:focus-visible { outline: 3px solid var(--mmset-accent); outline-offset: 2px; }
+.mmset button:focus-visible, .mmset textarea:focus-visible { outline: 3px solid var(--px-10, #ffec27); outline-offset: 2px; }
 .mmset-keys { margin: 0 0 8px; padding: 0; }
 .mmset-key { display: flex; justify-content: space-between; gap: 8px; padding: 6px 10px; background: var(--mmset-bg2); margin-bottom: 4px; font-size: calc(13px * var(--ui-scale, 1)); }
 .mmset-key dt { font-weight: 700; color: var(--mmset-accent); }

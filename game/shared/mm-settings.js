@@ -96,6 +96,7 @@
       el.style.setProperty('--ui-scale', String(v['text-size']));
       const at = (n, on) => { if (on) el.setAttribute(n, '1'); else el.removeAttribute(n); };
       at('data-reduce-motion', v['reduce-motion'] || !v.flashes);
+      if (el.classList) el.classList.toggle('reduce-motion', !!(v['reduce-motion'] || !v.flashes)); // MM8.reducedMotion() reads this class
       at('data-low-gfx', v['low-gfx']);
       at('data-high-contrast', v['high-contrast']);
     }
