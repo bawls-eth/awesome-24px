@@ -43,20 +43,12 @@
       "minHp": 92,
       "portalWalk": 16.1,
       "portalPathTiles": 103,
-<<<<<<< HEAD
-      "firstFrameMs": 370,
-=======
-      "firstFrameMs": 465,
->>>>>>> ftue-ft2
+      "firstFrameMs": 390,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-<<<<<<< HEAD
-      "wallMs": 8672
-=======
-      "wallMs": 10526
->>>>>>> ftue-ft2
+      "wallMs": 8476
     },
     "world-shore-b": {
       "seed": "4242",
@@ -93,20 +85,12 @@
       "minHp": 73,
       "portalWalk": 14.8,
       "portalPathTiles": 105,
-<<<<<<< HEAD
-      "firstFrameMs": 335,
-=======
-      "firstFrameMs": 430,
->>>>>>> ftue-ft2
+      "firstFrameMs": 369,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-<<<<<<< HEAD
-      "wallMs": 7639
-=======
-      "wallMs": 10427
->>>>>>> ftue-ft2
+      "wallMs": 7949
     },
     "world-shore-c": {
       "seed": "12345",
@@ -143,20 +127,12 @@
       "minHp": 79,
       "portalWalk": 16.1,
       "portalPathTiles": 103,
-<<<<<<< HEAD
-      "firstFrameMs": 330,
-=======
-      "firstFrameMs": 446,
->>>>>>> ftue-ft2
+      "firstFrameMs": 379,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-<<<<<<< HEAD
-      "wallMs": 8127
-=======
-      "wallMs": 10636
->>>>>>> ftue-ft2
+      "wallMs": 8282
     },
     "world-shore-d": {
       "seed": "4242",
@@ -193,20 +169,12 @@
       "minHp": 100,
       "portalWalk": 14.8,
       "portalPathTiles": 105,
-<<<<<<< HEAD
-      "firstFrameMs": 329,
-=======
-      "firstFrameMs": 345,
->>>>>>> ftue-ft2
+      "firstFrameMs": 353,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-<<<<<<< HEAD
-      "wallMs": 7912
-=======
-      "wallMs": 9911
->>>>>>> ftue-ft2
+      "wallMs": 7880
     },
     "world-shore-e": {
       "seed": "31337",
@@ -243,20 +211,12 @@
       "minHp": 100,
       "portalWalk": 12,
       "portalPathTiles": 81,
-<<<<<<< HEAD
-      "firstFrameMs": 398,
-=======
-      "firstFrameMs": 402,
->>>>>>> ftue-ft2
+      "firstFrameMs": 404,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-<<<<<<< HEAD
-      "wallMs": 7930
-=======
-      "wallMs": 8715
->>>>>>> ftue-ft2
+      "wallMs": 8338
     },
     "world-shore-f": {
       "seed": "777",
@@ -293,20 +253,12 @@
       "minHp": 100,
       "portalWalk": 11.6,
       "portalPathTiles": 78,
-<<<<<<< HEAD
-      "firstFrameMs": 574,
-=======
-      "firstFrameMs": 394,
->>>>>>> ftue-ft2
+      "firstFrameMs": 387,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-<<<<<<< HEAD
-      "wallMs": 10304
-=======
-      "wallMs": 8476
->>>>>>> ftue-ft2
+      "wallMs": 8374
     }
   },
   "isles": {
@@ -325,20 +277,12 @@
       "nearEmpty": 0,
       "deaths": 0,
       "kills": 0,
-<<<<<<< HEAD
-      "firstFrameMs": 968,
-=======
-      "firstFrameMs": 693,
->>>>>>> ftue-ft2
+      "firstFrameMs": 773,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-<<<<<<< HEAD
-      "wallMs": 1396
-=======
-      "wallMs": 1145
->>>>>>> ftue-ft2
+      "wallMs": 1191
     },
     "isles-jungle-b": {
       "seed": "777",
@@ -355,20 +299,12 @@
       "nearEmpty": 0,
       "deaths": 0,
       "kills": 0,
-<<<<<<< HEAD
-      "firstFrameMs": 682,
-=======
-      "firstFrameMs": 683,
->>>>>>> ftue-ft2
+      "firstFrameMs": 729,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-<<<<<<< HEAD
-      "wallMs": 1116
-=======
-      "wallMs": 1115
->>>>>>> ftue-ft2
+      "wallMs": 1182
     },
     "isles-jungle-c": {
       "seed": "4242",
@@ -385,20 +321,12 @@
       "nearEmpty": 0,
       "deaths": 0,
       "kills": 0,
-<<<<<<< HEAD
-      "firstFrameMs": 666,
-=======
-      "firstFrameMs": 734,
->>>>>>> ftue-ft2
+      "firstFrameMs": 788,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-<<<<<<< HEAD
-      "wallMs": 1067
-=======
-      "wallMs": 1143
->>>>>>> ftue-ft2
+      "wallMs": 1201
     },
     "isles-jungle-d": {
       "seed": "31337",
@@ -415,20 +343,12 @@
       "nearEmpty": 0,
       "deaths": 0,
       "kills": 0,
-<<<<<<< HEAD
-      "firstFrameMs": 697,
-=======
-      "firstFrameMs": 703,
->>>>>>> ftue-ft2
+      "firstFrameMs": 740,
       "smallButtons": 0,
       "stickOverlaps": 0,
       "tinyText": 0,
       "consoleErrors": 0,
-<<<<<<< HEAD
-      "wallMs": 1109
-=======
-      "wallMs": 1124
->>>>>>> ftue-ft2
+      "wallMs": 1157
     }
   },
   "dbAttempts": 0

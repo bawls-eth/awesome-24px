@@ -1110,5 +1110,9 @@
   "nav-sheet.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "nav-realm.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }

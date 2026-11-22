@@ -1469,7 +1469,9 @@
     const NX_WALK = NX_ON && !/[?&]nexuswalk=0(&|$)/.test(typeof location !== 'undefined' ? location.search : '');
     const NX_VW = 640; const NX_VH = 480; const NX_R = 10; // walk view (world px, 4:3) and the hero's collision radius
     const nxHero = { x: 0, y: 0, moving: false, aim: 0, mx: 0, my: 1, iframes: 0 }; let nxRaf = 0; let nxLast = 0; let nxNearI = null; const nxCam = { x: 0, y: 0 };
-    const NX_NAME = { realm: 'The Realm', warren: 'Warren dungeon', bramble: 'Bramble dungeon', vault: 'Lantern stash (vault)', meadow: 'Meadow dungeon', crypt: 'Crypt dungeon' };
+    const NX_NAME = { realm: 'The Realm', warren: 'Warren dungeon', bramble: 'Bramble dungeon', vault: 'Lantern vault', meadow: 'Meadow dungeon', crypt: 'Crypt dungeon' };
+    // Shown name of a Nexus portal (display only; MMNexus keeps its ids and labels): the vault says where it leads (NAV-AUDIT 4.1 renames).
+    const nxPortalName = (q) => (q && q.id === 'vault' ? 'Lantern vault' : q ? q.label : '');
     const nxSite = NX_ON ? (() => { const f = nearestFree(world.spawnPoint.x + 3, world.spawnPoint.y - 1, 8) || nearestFree(world.spawnPoint.x - 3, world.spawnPoint.y, 8); return f ? { tx: f.x, ty: f.y, x: (f.x + 0.5) * TILE, y: (f.y + 0.5) * TILE } : null; })() : null;
     const nxBtn = document.createElement('button'); nxBtn.id = 'rw-nexus-go'; nxBtn.type = 'button'; nxBtn.className = 'hidden'; nxBtn.textContent = 'Visit the Nexus (Enter)'; nxBtn.setAttribute('aria-label', 'Visit the Nexus hub'); ov.appendChild(nxBtn);
     let nxNear = false; let nxOpen = false; let nxEnterTile = null; let nxTalkN = 0; const nxPortrait = {}; let nxDom = null;
@@ -1517,7 +1519,7 @@
         if (a) drawArt(g, a, 0, q.x, q.y + 23);
         else { g.globalAlpha = 0.3; g.fillStyle = '#a98bff'; g.beginPath(); g.arc(q.x, q.y, 30, 0, 7); g.fill(); g.globalAlpha = 1; g.strokeStyle = '#a98bff'; g.lineWidth = 4; g.beginPath(); g.arc(q.x, q.y, 24, 0, 7); g.stroke(); }
         g.restore();
-        g.font = 'bold 22px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(q.label, q.x + 1, q.y - 37); g.fillStyle = '#e8dcff'; g.fillText(q.label, q.x, q.y - 38);
+        g.font = 'bold 22px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(nxPortalName(q), q.x + 1, q.y - 37); g.fillStyle = '#e8dcff'; g.fillText(nxPortalName(q), q.x, q.y - 38);
       });
       L.npcs.forEach((n) => {
         const im = nxPortrait[n.npc]; const x = n.x; const y = n.y;
@@ -1585,7 +1587,7 @@
       const rowN = document.createElement('div'); rowN.className = 'nx-row'; const rowNl = document.createElement('b'); rowNl.textContent = 'Talk to'; rowN.appendChild(rowNl);
       const spot = (x, y, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'nx-spot'; b.tabIndex = -1; b.setAttribute('aria-hidden', 'true'); b.style.left = (x / cv.width * 100) + '%'; b.style.top = (y / cv.height * 100) + '%'; b.addEventListener('click', fn); stage.appendChild(b); };
       if (!NX_WALK) L.portals.forEach((q) => {
-        const b = document.createElement('button'); b.type = 'button'; b.dataset.portal = q.id; b.textContent = q.id === 'realm' ? 'Back to the Realm portal' : q.id === 'vault' ? 'Vault: Lantern stash' : q.label + ' portal'; b.setAttribute('aria-label', q.id === 'vault' ? 'Vault portal: open the Lantern stash' : q.id === 'realm' ? 'Realm portal: go back to the Realm' : 'Enter the ' + q.label + ' dungeon');
+        const b = document.createElement('button'); b.type = 'button'; b.dataset.portal = q.id; b.textContent = q.id === 'realm' ? 'Back to the Realm portal' : q.id === 'vault' ? 'Lantern vault: your stash' : q.label + ' portal'; b.setAttribute('aria-label', q.id === 'vault' ? 'Lantern vault portal: open the Lantern stash' : q.id === 'realm' ? 'Realm portal: go back to the Realm' : 'Enter the ' + q.label + ' dungeon');
         b.addEventListener('click', () => nxPortal(q)); rowP.appendChild(b); spot(q.x, q.y, () => nxPortal(q));
       });
       if (!NX_WALK) L.npcs.forEach((n) => {
@@ -1614,7 +1616,7 @@
     function nxLabel(it) {
       if (!it) return '';
       if (it.kind === 'npc') { const nm = NPC_NAME[it.ref.npc] || it.ref.id; return it.ref.role === 'quests' ? 'Quest board: ' + nm : 'Talk to ' + nm; }
-      const q = it.ref; return q.id === 'realm' ? 'Back to the Realm' : q.id === 'vault' ? 'Vault: open the Lantern stash' : 'Enter the ' + q.label + ' dungeon';
+      const q = it.ref; return q.id === 'realm' ? 'Back to the Realm' : q.id === 'vault' ? 'Lantern vault: open your stash' : 'Enter the ' + q.label + ' dungeon';
     }
     function nxNearest() {
       const L = NX.layout(); const h = nxHero; let best = null; let bd = Infinity;
@@ -2096,7 +2098,7 @@
       worldStatus: { on: STATUS_ON, table: BOLT_ST, forCreature: boltStatusFor, roll: boltRoll, log: stLog },
       ttk: { on: TTK_ON }, firstBag: { on: FIRSTBAG_ON, kill: FIRSTBAG_KILL, fresh: fbFresh, kills: () => fbKills, dropped: () => fbDropped, forced: () => fbForced, spent: () => save.fb === 1 }, explore: { on: EXPLORE_ON, every: EXPLORE_EVERY, pct: EXPLORE_PCT, xp: () => exploreXp, pending: () => exploreCells },
       pickups: { on: PICK_ON, cap: PICK_CAP, magnet: MAGNET_R, list: () => picks.map((q) => ({ type: q.type, art: q.art, value: q.value, tier: q.tier, x: q.x, y: q.y, lifeMs: q.lifeMs })), spawn: spawnPickups, got: () => Object.assign({}, pickGot), total: () => pickTotal },
-      nexus: { on: NX_ON, site: nxSite, open: nexusOpen, close: nexusClose, isOpen: () => nxOpen, near: () => nxNear, enterTile: () => nxEnterTile, talk: (id) => { const n = NX_ON && NX.layout().npcs.find((x) => x.id === id); if (n) { nxBuild(); nxTalk(n); } return nxDom && nxDom.last; }, portal: (id) => { const q = NX_ON && NX.layout().portals.find((x) => x.id === id); return q ? nxPortal(q) : null; }, lastUrl: () => api.lastNexusUrl || null, today: todayUtc,
+      nexus: { on: NX_ON, site: nxSite, portalName: (id) => (NX_ON ? nxPortalName(NX.layout().portals.find((q) => q.id === id)) : ''), promptFor: (id) => { const q = NX_ON ? NX.layout().portals.find((p) => p.id === id) : null; return q ? nxLabel({ kind: 'portal', ref: q }) : ''; }, open: nexusOpen, close: nexusClose, isOpen: () => nxOpen, near: () => nxNear, enterTile: () => nxEnterTile, talk: (id) => { const n = NX_ON && NX.layout().npcs.find((x) => x.id === id); if (n) { nxBuild(); nxTalk(n); } return nxDom && nxDom.last; }, portal: (id) => { const q = NX_ON && NX.layout().portals.find((x) => x.id === id); return q ? nxPortal(q) : null; }, lastUrl: () => api.lastNexusUrl || null, today: todayUtc,
         // walkable plaza (PLAYTEST-REVIEW-2 #5); step(mx, my, dt) injects input for tests, place() only accepts free plaza points
         walk: { on: NX_WALK, view: { w: NX_VW, h: NX_VH }, hero: () => ({ x: nxHero.x, y: nxHero.y, tx: Math.floor(nxHero.x / TILE), ty: Math.floor(nxHero.y / TILE), moving: nxHero.moving }), cam: () => ({ x: nxCam.x, y: nxCam.y }),
           near: () => (nxNearI ? { kind: nxNearI.kind, id: nxNearI.ref.id } : null), act: () => nxAct(), step: (mx, my, dt) => { if (nxOpen && NX_WALK) nxWalkStep(Number(dt) || 1 / 60, Number(mx) || 0, Number(my) || 0); return { x: nxHero.x, y: nxHero.y }; },
