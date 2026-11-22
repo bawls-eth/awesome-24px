@@ -1,0 +1,234 @@
+{
+  "batch": "b34b",
+  "label": "crafting-icons",
+  "assets": [
+    {
+      "id": "icon_saddle_tusktop",
+      "path": "items/icon_saddle_tusktop.png",
+      "category": "item",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "icon_saddle_stegolith",
+      "path": "items/icon_saddle_stegolith.png",
+      "category": "item",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "icon_saddle_tyrant",
+      "path": "items/icon_saddle_tyrant.png",
+      "category": "item",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "icon_saddle_shagtusk",
+      "path": "items/icon_saddle_shagtusk.png",
+      "category": "item",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "icon_saddle_sabrefang",
+      "path": "items/icon_saddle_sabrefang.png",
+      "category": "item",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "icon_saddle_tidesteed",
+      "path": "items/icon_saddle_tidesteed.png",
+      "category": "item",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "icon_saddle_skimray",
+      "path": "items/icon_saddle_skimray.png",
+      "category": "item",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "icon_saddle_strider",
+      "path": "items/icon_saddle_strider.png",
+      "category": "item",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "icon_saddle_grazer",
+      "path": "items/icon_saddle_grazer.png",
+      "category": "item",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "icon_saddle_titan",
+      "path": "items/icon_saddle_titan.png",
+      "category": "item",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "icon_raft",
+      "path": "items/icon_raft.png",
+      "category": "item",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "icon_rocket_core",
+      "path": "items/icon_rocket_core.png",
+      "category": "item",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "icon_warm_cloak",
+      "path": "items/icon_warm_cloak.png",
+      "category": "item",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "icon_o2_tank",
+      "path": "items/icon_o2_tank.png",
+      "category": "item",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "icon_gear_dust",
+      "path": "items/icon_gear_dust.png",
+      "category": "item",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "ui_icon_forge",
+      "path": "ui/ui_icon_forge.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": {
+        "x": 24,
+        "y": 24
+      }
+    },
+    {
+      "id": "ui_icon_vendor",
+      "path": "ui/ui_icon_vendor.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "anchor": {
+        "x": 24,
+        "y": 24
+      }
+    },
+    {
+      "id": "ui_set_banded",
+      "path": "ui/ui_set_banded.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 16,
+      "frame_h": 16,
+      "anchor": {
+        "x": 8,
+        "y": 8
+      }
+    },
+    {
+      "id": "ui_set_dread",
+      "path": "ui/ui_set_dread.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 16,
+      "frame_h": 16,
+      "anchor": {
+        "x": 8,
+        "y": 8
+      }
+    }
+  ]
+}
