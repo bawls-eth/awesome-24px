@@ -85,3 +85,11 @@ html[data-reduce-motion="1"] *, html[data-reduce-motion="1"] *::before, html[dat
 #hud-best.ahead { color:#1d2b20; background:var(--accent); font-weight:bold; }
 /* The full-screen menu covers the touch controls, so take them out of the layout while it is open (they cannot be hit anyway). */
 body:has(#overlay:not([hidden])) #touch { visibility: hidden; }
+
+/* VAR1 run modifiers */
+#hud #hud-mod { color:#ffe08a; border:1px solid #6b5a1e; }
+#hud #hud-mod[hidden] { display:none; }
+.card .cardmod { color:#5a3200; font-weight:bold; }
+.modlist ul { margin:4px 0; padding-left:20px; }
+.modlist li { margin:2px 0; font-size:calc(13px * var(--ui-scale,1)); }
+.modline { color:#ffe08a; }

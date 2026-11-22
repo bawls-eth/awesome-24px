@@ -104,13 +104,63 @@
   };
   const held = { ptr: false, key: false, pad: false, test: false, btn: false };
 
+  // ---- VAR1: a seeded spot condition per visit (page load), one line each, honest numbers. Not in the tournament
+  // (same bites for everyone) or the Isles Cove. ?mods=0 turns it off; test pages keep it off unless ?mods=1.
+  const CONDS = {
+    calm: { name: 'Calm water', line: 'Bites come 20% slower, but each bite waits 0.3 s longer for you.', wait: 1.2, window: 0.3, rare: 1, common: 1 },
+    windy: { name: 'Windy', line: 'Bites come 15% slower; rare fish (3/5 and up) bite 1.5x as often.', wait: 1.15, window: 0, rare: 1.5, common: 1 },
+    rush: { name: 'Fish-rush hour', line: 'Bites come 40% faster; common fish (1/5) bite 1.5x as often.', wait: 0.6, window: 0, rare: 1, common: 1.5 }
+  };
+  const COND_IDS = ['calm', 'windy', 'rush'];
+  const CONDS_ON = params.get('mods') !== '0' && (!TEST || params.get('mods') === '1');
+  const visitSeed = TEST ? 'visit|' + (/^[\w-]{1,32}$/.test(params.get('seed') || '') ? params.get('seed') : 'angler') : String(Date.now()) + Math.random();
+  const condCache = {};
+  function condFor(spot) {
+    if (!CONDS_ON || spot === COVE || A.SPOTS.indexOf(spot) < 0) return null;
+    if (!condCache[spot]) condCache[spot] = COND_IDS[Math.floor(Rng.create(visitSeed + '|cond|' + spot).next() * COND_IDS.length) % COND_IDS.length];
+    return condCache[spot];
+  }
+  const activeCond = () => (g.tour ? null : condFor(g.spot));
+  const condMult = (id, f) => (!id ? 1 : f.rarity >= 3 ? CONDS[id].rare : f.rarity <= 1 ? CONDS[id].common : 1);
+  // Same walk as I.bug.rollFish (one rng() call), with the spot condition's weights on top.
+  function rollWithCond(spot, c, gear, bugId, id) {
+    if (!id || (CONDS[id].rare === 1 && CONDS[id].common === 1)) return I.bug.rollFish(rng, spot, c, gear, bugId);
+    const p = A.pool(spot, c);
+    if (!p.length) return null;
+    const ws = p.map((f) => A.weightOf(f, c, gear) * (bugId ? I.bug.mult(bugId, f) : 1) * condMult(id, f));
+    let total = 0; ws.forEach((w) => { total += w; });
+    let r = rng() * total;
+    for (let i = 0; i < p.length; i++) { r -= ws[i]; if (r < 0) return p[i]; }
+    return p[p.length - 1];
+  }
+  // Honest odds for the HUD: chance of a rare-or-better fish here, with and without the condition.
+  function rareShare(id) {
+    const c = nowCtx(), p = A.pool(g.spot, c), gear = { lure: journal.gear.lure, bait: false };
+    let t = 0, r = 0;
+    p.forEach((f) => { const w = A.weightOf(f, c, gear) * (journal.bugBait ? I.bug.mult(journal.bugBait, f) : 1) * condMult(id, f); t += w; if (f.rarity >= 3) r += w; });
+    return t ? r / t : 0;
+  }
+  function renderCond() {
+    const id = activeCond(), tag = $('cond'), line = $('cond-line');
+    if (!tag || !line) return;
+    tag.hidden = !id; line.hidden = !id; tag.textContent = id ? CONDS[id].name : '';
+    if (id) { tag.dataset.cond = id; line.textContent = CONDS[id].name + ': ' + CONDS[id].line + (rareShare(null) > 0 ? ' Rare-or-better chance here: ' + Math.round(rareShare(id) * 100) + '% (usually ' + Math.round(rareShare(null) * 100) + '%).' : ' No rare fish at this spot right now.'); }
+  }
+
   // ---- FUN1: streaks, reaction time, personal bests, sound cues, screen shake ----
   // Own additive key pixeltown-angler-fun-v1 {v, bestStreak, bestReact (ms, 0 = none), streak}; the journal format is untouched.
   const FUN_KEY = 'pixeltown-angler-fun-v1';
   function cleanFun(raw) {
     const o = raw && typeof raw === 'object' ? raw : {};
     const n = (v, hi) => { v = Math.floor(Number(v)); return isFinite(v) ? Math.max(0, Math.min(hi, v)) : 0; };
-    return { v: 1, bestStreak: n(o.bestStreak, 99999), bestReact: n(o.bestReact, 1000), streak: n(o.streak, 99999) };
+    const out = { v: 1, bestStreak: n(o.bestStreak, 99999), bestReact: n(o.bestReact, 1000), streak: n(o.streak, 99999), cond: {} };
+    // VAR1 (additive): bests per spot condition {condId: {size (cm), react (ms, 0 = none), n (catches)}}. Known ids only.
+    const c = o.cond && typeof o.cond === 'object' && !Array.isArray(o.cond) ? o.cond : {};
+    COND_IDS.forEach((id) => {
+      const e = Object.prototype.hasOwnProperty.call(c, id) && c[id] && typeof c[id] === 'object' ? c[id] : null;
+      if (e) out.cond[id] = { size: n(e.size, 9999), react: n(e.react, 1000), n: n(e.n, 999999) };
+    });
+    return out;
   }
   let fun = cleanFun(Store.get(FUN_KEY, null));
   const saveFun = () => { fun = cleanFun(fun); Store.set(FUN_KEY, fun); };
@@ -168,6 +218,7 @@
       g.bite = A.bite(rng); // cove bait (kelp / shell / pearl) is never used up; Market bait stays in the bag here
     } else {
       g.bite = A.bite(rng);
+      const cid = activeCond(); if (cid) { g.bite.wait *= CONDS[cid].wait; g.bite.window += CONDS[cid].window; }
       const u = D.economy.useBait(journal);
       if (u.type) { journal = u.journal; g.baitUsed = u.type; g.bite.wait *= A.BAITS[u.type].waitMult; saveJournal(); }
     }
@@ -213,7 +264,7 @@
     else if (g.forced) f = A.BY_ID[g.forced] || A.COVE_BY_ID[g.forced];
     else if (g.spot === COVE) f = I.cove.roll(rng, journal.coveBait);
     else if (lair && lair.ready && (!g.bossGate || B.gateOpen(journal, lair.boss)) && rng() < g.bossChance) f = A.BY_ID[lair.boss];
-    else f = I.bug.rollFish(rng, g.spot, c, { lure: journal.gear.lure, bait: g.baitUsed === 'plain', baitType: g.baitUsed }, journal.bugBait);
+    else f = rollWithCond(g.spot, c, { lure: journal.gear.lure, bait: g.baitUsed === 'plain', baitType: g.baitUsed }, journal.bugBait, activeCond());
     g.forced = null;
     if (!f) { finish('none', 'Nothing here', 'This spot is closed.'); return; }
     g.fish = f; g.size = g.cf ? g.cf.size : A.rollSize(rng, f, { big: g.baitUsed === 'big' }); g.boss = !!f.boss;
@@ -273,7 +324,15 @@
     if (newReact) fun.bestReact = g.react;
     saveFun();
     cue(f.rarity >= 3 || f.boss ? 'bag_rare' : 'levelup'); shake(f.rarity >= 4 || !!f.boss);
-    g.funLine = 'Streak ' + fun.streak + (newStreak ? ' - new best!' : ' (best ' + fun.bestStreak + ')') + (g.react ? ' - strike ' + g.react + ' ms' + (newReact ? ' - fastest yet!' : '') : '');
+    const cid = g.cf || f.cove ? null : activeCond(); let condNote = '';
+    if (cid) {
+      const e = fun.cond[cid] || { size: 0, react: 0, n: 0 };
+      const big = g.size > e.size, fast = g.react > 0 && (e.react === 0 || g.react < e.react);
+      e.n += 1; if (big) e.size = g.size; if (fast) e.react = g.react; fun.cond[cid] = e;
+      condNote = ' - ' + CONDS[cid].name + ' best ' + e.size + ' cm' + (big && e.n > 1 ? ' (new!)' : '');
+    }
+    saveFun();
+    g.funLine = 'Streak ' + fun.streak + (newStreak ? ' - new best!' : ' (best ' + fun.bestStreak + ')') + (g.react ? ' - strike ' + g.react + ' ms' + (newReact ? ' - fastest yet!' : '') : '') + condNote;
     return g.funLine;
   }
   function sizeWord(f, cm) {
@@ -388,6 +447,7 @@
     const bs = $('bug-sum'), bt = journal.bugBait ? 'Bug bait: ' + I.BUG_BAITS[journal.bugBait].name : '';
     if (bs.textContent !== bt) bs.textContent = bt;
     bs.hidden = !bt;
+    renderCond();
     $('gear-btn').disabled = g.state !== 'idle';
   }
   function needText(r) {
@@ -849,6 +909,7 @@
       dismiss, redraw: draw, rng, setWeather, setGear, renderStatus,
       get gear() { return journal.gear; }, get bait() { return journal.bait; }, get weather() { return nowCtx().weather; },
       get boss() { return g.boss; }, get phase() { return g.reel ? g.reel.phase : -1; }, get fish() { return g.fish && g.fish.id; },
+      cond: { get on() { return CONDS_ON; }, info: CONDS, ids: COND_IDS, condFor, get active() { return activeCond(); }, rareShare },
       fun: { get state() { return cleanFun(fun); }, get sounds() { return sounds; }, get shakes() { return shakes; }, get react() { return g.react; } },
       get fanfare() { return { reduced: reduced(), active: !!g.fan, t: g.fan ? g.fan.t : 0 }; },
       get day() { return today(); }, setDay(n) { dayOverride = D.clampDay(n, null); if (ready) { renderStatus(); } return today(); },

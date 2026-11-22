@@ -46,14 +46,30 @@
   // FUN1 personal bests (own additive key): best combo per arena, runs played, so the summary can show the chase.
   var PB_KEY = 'pixeltown-bugs-pb-v1';
   function cleanPb(raw) {
-    var o = { v: 1, combo: {}, runs: 0 };
+    var o = { v: 1, combo: {}, runs: 0, mod: {} };
     if (raw && typeof raw === 'object') {
+      // VAR1 (additive): best score per arena per run modifier, {arena:{modId:score}}. Plain bests stay in pixeltown-bugs-v1.
+      if (raw.mod && typeof raw.mod === 'object' && !Array.isArray(raw.mod)) ALL.forEach(function (a) {
+        var src = Object.prototype.hasOwnProperty.call(raw.mod, a.id) ? raw.mod[a.id] : null; if (!src || typeof src !== 'object') return;
+        B.MOD_IDS.forEach(function (m) { var n = Math.floor(Number(src[m])); if (isFinite(n) && n > 0) { o.mod[a.id] = o.mod[a.id] || {}; o.mod[a.id][m] = Math.min(99999, n); } });
+      });
       var r = Math.floor(Number(raw.runs)); o.runs = isFinite(r) && r > 0 ? Math.min(999999, r) : 0;
       if (raw.combo && typeof raw.combo === 'object') ALL.forEach(function (a) { var n = Math.floor(Number(raw.combo[a.id])); if (isFinite(n) && n > 0) o.combo[a.id] = Math.min(999, n); });
     }
     return o;
   }
   var pb = cleanPb(S.get(PB_KEY, null));
+  // VAR1 run modifiers: on by default; ?mods=0 turns them off. Test pages (?test=1) keep them off unless ?mods=1, so older tests see plain runs.
+  var MODS_ON = qs.get('mods') !== '0' && (!TEST || qs.get('mods') === '1');
+  var nextRun = {}, rollN = 0, runSeed = null, runMod = null;
+  function rollNext(id) {
+    var seed = TEST ? 'var-' + id + '-' + (++rollN) : String(Date.now()) + Math.random();
+    nextRun[id] = { seed: seed, mod: MODS_ON ? B.pickMod(seed) : null };
+    return nextRun[id];
+  }
+  function peekNext(id) { return nextRun[id] || rollNext(id); }
+  function modBest(id, m) { return m && pb.mod[id] && pb.mod[id][m] ? pb.mod[id][m] : 0; }
+  function bestFor(id, m) { return m ? modBest(id, m) : save.best[id]; }
   var NEAR_RADIUS = 2.4, CATCH_R = 1.2; // a swing that misses a visible bug within this many tiles is a near miss
   var MILESTONES = [3, 5, 8];
   function arenaStars() { return ALL.reduce(function (n, a) { return n + save.stars[a.id]; }, 0); }
@@ -103,11 +119,16 @@
     opts = opts || {};
     var a = B.arena(id); if (!a) return null;
     arenaId = id;
-    var seed = opts.seed !== undefined ? opts.seed : (String(Date.now()) + Math.random());
-    game = B.createRun({ seed: seed, arena: id, night: !!a.night, glade: !!a.glade, width: W, height: H, empty: !!opts.empty, count: opts.count });
+    var seed, mod = null;
+    if (opts.seed !== undefined) { seed = opts.seed; mod = MODS_ON && B.modFor(opts.mod) ? opts.mod : null; }
+    else { var nx = peekNext(id); seed = nx.seed; mod = nx.mod; }
+    rollNext(id); // the card already shows the next run's modifier
+    runSeed = seed; runMod = mod;
+    game = B.createRun({ seed: seed, arena: id, night: !!a.night, glade: !!a.glade, width: W, height: H, empty: !!opts.empty, count: opts.count, mod: mod });
     rng = R.create('page:' + seed);
     meta = {}; gmeta = {}; popups = []; particles = []; shake = 0; swingAnim = 0; nearMisses = 0; banner = null; scoreBump = 0; chainWas = 0; warned = false;
-    $('hud-best').textContent = 'Best ' + save.best[id];
+    $('hud-best').textContent = 'Best ' + bestFor(id, mod);
+    var hm = $('hud-mod'); if (hm) { hm.hidden = !mod; hm.textContent = mod ? B.MODS[mod].name : ''; hm.title = mod ? B.MODS[mod].line : ''; }
     mode = 'play'; overlay.hidden = true;
     $('hud-arena').textContent = NAMES[id];
     if (!hintSeen()) showHint(); else hideHint();
@@ -129,7 +150,7 @@
         game.state.bugs.forEach(function (b) {
           if (res.caught.indexOf(b.id) < 0) return;
           metaFor(b).caughtAt = st.time;
-          var pts = B.TYPES[b.type].points;
+          var md = runMod ? B.MODS[runMod] : null, pts = Math.round(B.TYPES[b.type].points * (md && md.points ? md.points : 1) * (b.glow && md && md.glowMult ? md.glowMult : 1));
           popups.push({ x: b.x, y: b.y, t: 0, text: '+' + pts + (st.combo > 1 ? ' x' + mult(st.combo).toFixed(1) : '') });
           if (!reduced) for (var i = 0; i < gfx.burst; i++) particles.push({ x: b.x, y: b.y, vx: (rng.next() - .5) * 3, vy: (rng.next() - .5) * 3, t: 0 });
         });
@@ -154,10 +175,12 @@
   }
   function endRun() {
     var st = game.state, score = Math.round(st.score), stars = B.starsFor(arenaId, score);
-    var prevBest = save.best[arenaId], prevStars = save.stars[arenaId];
+    var prevBest = bestFor(arenaId, runMod), prevStars = save.stars[arenaId];
     var oldTotal = totalStars();
     if (stars > prevStars) save.stars[arenaId] = stars;
-    if (score > prevBest) save.best[arenaId] = Math.min(99999, score);
+    // VAR1: a modifier run keeps its own best, so it never overwrites the plain best (stars keep the same score rule)
+    if (runMod) { if (score > prevBest) { pb.mod[arenaId] = pb.mod[arenaId] || {}; pb.mod[arenaId][runMod] = Math.min(99999, score); } }
+    else if (score > prevBest) save.best[arenaId] = Math.min(99999, score);
     var counts = {};
     st.caughtTypes.forEach(function (t) { counts[t] = (counts[t] || 0) + 1; if (save.journal[t] !== undefined) save.journal[t] = Math.min(999999, save.journal[t] + 1); });
     var doneBefore = goals.done[arenaId] || [], newGoals = [];
@@ -176,7 +199,7 @@
       if (!unlocked(ni)) { nextHint = NAMES[ALL[ni].id] + ' unlocks at ' + needStars(ni) + ' stars (you have ' + totalStars() + ').'; break; }
     }
     if (!nextHint) nextHint = 'Every arena is unlocked. Go for 3 stars everywhere!';
-    lastSummary = { arena: arenaId, score: score, stars: stars, gained: gained, bestCombo: st.bestCombo, hint: nextHint, caught: st.caught, counts: counts, best: save.best[arenaId], newlyUnlocked: newly, newBest: score > prevBest, prevBest: prevBest, nearMisses: nearMisses, comboBest: pb.combo[arenaId] || 0, newComboBest: st.bestCombo > prevCombo && prevCombo > 0,
+    lastSummary = { arena: arenaId, score: score, stars: stars, gained: gained, bestCombo: st.bestCombo, hint: nextHint, caught: st.caught, counts: counts, best: bestFor(arenaId, runMod), mod: runMod, seed: runSeed, newlyUnlocked: newly, newBest: score > prevBest, prevBest: prevBest, nearMisses: nearMisses, comboBest: pb.combo[arenaId] || 0, newComboBest: st.bestCombo > prevCombo && prevCombo > 0,
       goals: newGoals.map(function (gid) { return B.goalsFor(arenaId).filter(function (g) { return g.id === gid; })[0].text; }) };
     mode = 'summary';
     hideHint();
@@ -279,6 +302,7 @@
       else if (!b.mound) { circle(g, x, y + 2, 3, '#a8895a'); g.fillStyle = '#6e5836'; g.fillRect(x - 3, y + 2, 6, 1); }
       g.restore(); return;
     }
+    if (b.glow) circle(g, x, y, 6, 'rgba(255,240,140,' + (reduced || gfx.low ? 0.4 : 0.3 + 0.2 * Math.sin(time * 4 + m.ph)).toFixed(2) + ')'); // VAR1 glow bug: steady with reduced motion / low gfx
     drawSpecies(g, b.type, x, y, flap, time);
     g.restore();
   }
@@ -364,7 +388,7 @@
     $('hud-time').classList.toggle('hurry', mode === 'play' && left <= 10);
     $('hud-score').textContent = String(Math.round(st.score));
     $('hud-score').classList.toggle('bump', scoreBump > 0 && !reduced);
-    if (mode === 'play' && arenaId) { var pbv = save.best[arenaId], ahead = pbv > 0 && Math.round(st.score) > pbv, hb = $('hud-best'); hb.textContent = ahead ? 'New best!' : 'Best ' + pbv; hb.classList.toggle('ahead', ahead); }
+    if (mode === 'play' && arenaId) { var pbv = bestFor(arenaId, runMod), ahead = pbv > 0 && Math.round(st.score) > pbv, hb = $('hud-best'); hb.textContent = ahead ? 'New best!' : 'Best ' + pbv; hb.classList.toggle('ahead', ahead); }
     var frac = st.combo > 0 ? Math.max(0, 1 - (st.time - st.lastCatchAt) / B.COMBO_WINDOW) : 0;
     $('combo-bar').style.width = (frac * 100).toFixed(0) + '%';
     $('combo-text').textContent = st.combo > 1 ? 'Combo x' + mult(st.combo).toFixed(2).replace(/0$/, '') : (st.combo === 1 ? 'Combo 1' : 'No combo');
@@ -384,10 +408,17 @@
       b.className = 'card'; b.dataset.arena = a.id;
       b.appendChild(el('strong', NAMES[a.id] + (a.glade ? ' (night variant)' : (a.night ? ' (night)' : ''))));
       b.appendChild(el('span', open ? stars(save.stars[a.id]) : 'Locked'));
+      if (open && MODS_ON) { var nm0 = peekNext(a.id).mod, mt = el('small', 'Next run: ' + B.MODS[nm0].name, 'cardmod'); mt.dataset.mod = nm0; mt.title = B.MODS[nm0].line; b.appendChild(mt); }
       var ns = save.stars[a.id]; var sm = el('small', open ? 'Best ' + save.best[a.id] + '  |  ' + (ns < 3 ? 'next star at ' + a.stars[ns] : 'all 3 stars') : 'Needs ' + needStars(i) + ' stars'); sm.className = 'cardnext'; b.appendChild(sm); // FUN1: the next target, not a bare 60/120/200
       grid.appendChild(b);
     });
     overlay.appendChild(grid);
+    if (MODS_ON) {
+      var ml = el('div', undefined, 'modlist'); ml.id = 'mod-list';
+      ml.appendChild(el('p', 'Run modifiers: every run rolls one of these ' + B.MOD_IDS.length + ', each with a 1 in ' + B.MOD_IDS.length + ' chance. Modifier bests are kept apart from plain bests. Add ?mods=0 to the address to play plain runs.', 'dim'));
+      var ul = el('ul'); B.MOD_IDS.forEach(function (m) { var li = el('li', B.MODS[m].name + ': ' + B.MODS[m].line); li.dataset.mod = m; ul.appendChild(li); }); ml.appendChild(ul);
+      overlay.appendChild(ml);
+    }
     var rule = el('p', 'Unlock rule: Meadow is always open. Every other arena opens when your total stars across all arenas reach 2 x (its number - 1): Orchard 2, Pond Edge 4, Forest 6, Dunes 8, Cliffs 10, Marsh 12, Lantern Glade 14, Night Glade 16. Earn 1 to 3 stars per arena by score, and 1 star for each journal goal you finish. Nothing is ever locked by time.', 'dim'); rule.id = 'unlock-rule'; overlay.appendChild(rule);
     var row = el('div', undefined, 'row');
     var j = btn('Bug journal', showJournal); j.id = 'open-journal'; row.appendChild(j);
@@ -443,6 +474,7 @@
   function showSummary() {
     var s = lastSummary; clear(overlay); overlay.hidden = false;
     overlay.appendChild(el('h2', 'Time! ' + NAMES[s.arena]));
+    if (s.mod) { var smd = el('p', s.mod ? B.MODS[s.mod].name + ': ' + B.MODS[s.mod].line : '', 'modline'); smd.id = 'sum-mod'; overlay.appendChild(smd); }
     var st = el('p', stars(s.stars), 'stars'); st.id = 'sum-stars'; overlay.appendChild(st);
     var sc = el('p', 'Score ' + s.score + (s.newBest ? '  (new best!)' : '  (best ' + s.best + ')')); sc.id = 'sum-score'; overlay.appendChild(sc);
     // FUN1: the personal-best chase in one honest line, and Play again right under the result (one tap, or Enter / R)
@@ -450,6 +482,7 @@
     var ch = el('p', chase, s.newBest ? 'chase win' : 'chase'); ch.id = 'sum-chase'; overlay.appendChild(ch);
     var top = el('div', undefined, 'row'); top.id = 'sum-actions';
     var again = btn('Play again', function () { startArena(s.arena); }, false); again.id = 'again'; again.className = 'again'; top.appendChild(again);
+    var rp = btn('Replay seed', function () { startArena(s.arena, { seed: s.seed, mod: s.mod }); }, false); rp.id = 'replay'; rp.title = 'Same bugs, same start, same modifier'; top.appendChild(rp);
     var back = btn('Arenas', showMenu); back.id = 'to-menu'; top.appendChild(back);
     overlay.appendChild(top);
     overlay.appendChild(el('p', 'Enter or R plays again.', 'dim keyhint'));
@@ -536,6 +569,10 @@
       get warned() { return warned; },
       get popups() { return popups.map(function (p) { return p.text; }); },
       get pb() { return JSON.parse(JSON.stringify(pb)); },
+      get mod() { return runMod; },
+      get seed() { return runSeed; },
+      get modsOn() { return MODS_ON; },
+      nextFor: function (id) { return JSON.parse(JSON.stringify(peekNext(id))); },
       get particles() { return particles.length; },
       get gfx() { return { tier: gfx.tier, low: gfx.low, cap: gfx.cap, burst: gfx.burst, dpr: gfx.dpr || 1 }; },
       render: render,

@@ -83,6 +83,18 @@
     "class": "browser",
     "tier": "full"
   },
+  "bugs-variety.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "stalk-moods.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "angler-conditions.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "cave-craft.test.js": {
     "class": "live",
     "tier": "full"
