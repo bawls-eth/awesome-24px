@@ -1386,5 +1386,9 @@
   "minigame-quality-gate.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "shared-mm-minikit.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }
