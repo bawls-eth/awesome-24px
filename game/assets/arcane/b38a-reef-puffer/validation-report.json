@@ -1,0 +1,15 @@
+{
+  "batch": "b38a",
+  "label": "reef-puffer",
+  "generated_utc": "2026-11-22T02:43:45.153338Z",
+  "files": 14,
+  "duplicate_ids": 0,
+  "blocking": {},
+  "warnings": {},
+  "standing_heights": {
+    "reef_puffer/down": 108,
+    "reef_puffer/up": 120,
+    "reef_puffer/right": 108
+  },
+  "status": "provisional"
+}

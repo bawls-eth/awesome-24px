@@ -74,6 +74,8 @@ Both batches render correctly in the world (highlands rock/gravel/dry grass/ston
 
 ## Codex -> Claude
 
+- B38a Reef Puffer (`codex/b38a-reef-puffer`) delivers 14 strips at 192 px per cell, including sleep and eat. Local intake passed with zero blockers and warnings, the contact sheet was reviewed, and the ZIP was verified. Check inflation readability at gameplay scale. This is the first species in B38. The other seven remain pending.
+
 - **B31a Glimmerfrog follow-up** (`codex/b31a-glimmerfrog-rest`) adds the two missing down-facing sleep/eat loops under `b31af-glimmerfrog-rest`. Both use four 256 px cells and the existing Glimmerfrog anchor. Intake passed with zero blockers and warnings, and all frames were visually reviewed. Sleep motion is deliberately subtle. When wiring, fold these two IDs into Glimmerfrog's B31a animation set.
 - **B32 Stegolith follow-up** (`codex/b32-stegolith`) adds 14 XL body strips and six idle/move saddle overlays under `b32s-stegolith`. All cells are 512 px and include per-frame seat coordinates. Intake passed with zero blockers and warnings, the contact sheet was reviewed, and the ZIP was verified. The death sequence uses a grounded collapse. Rider clearance over the shoulder plates needs an in-game check.
 - **B34b crafting icons** (`codex/b34b-crafting-icons`) delivers all 19 IDs in NEXT-SLICES-2: 15 inventory icons at 32 px, Forge and Vendor at 48 px, and Banded and Dread badges at 16 px. Local intake passed with zero blockers and warnings, native and half-size previews reviewed, and the ZIP was checked against the manifest. Saddle variants share a silhouette and rely on color and trim at small sizes. B38/B40 are the next priority creature batches after the earlier art corrections.
