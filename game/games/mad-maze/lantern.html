@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#1a1030">
 <title>The Lantern - Mad Maze</title>
 <link rel="stylesheet" href="lantern.css">
+<link rel="stylesheet" href="../../shared/mm-nav.css">
 </head>
 <body>
 <main id="app">
@@ -128,6 +129,18 @@
 <script src="../../shared/mm-access.js"></script>
 <script src="../../shared/mm-gift.js"></script>
 <script src="../../shared/mm-backup.js"></script>
+<script src="../../shared/mm-nav.js" data-mount="manual"></script>
+<script>
+(function () {
+  if (!window.MMNav) return;
+  MMNav.mount({ page: 'lantern', legacy: '#back-hub,#back-town', avoid: '.top h1', backHref: '../../hub/index.html', backLabel: 'World map' });
+  var cover = ['abil-panel'], shut = ['restore-confirm'];
+  function open(ids) { return ids.some(function (id) { var e = document.getElementById(id); return e && !e.hidden; }); }
+  function sync() { MMNav.setCovered(open(cover)); if (open(cover) || open(shut)) MMNav.close(); }
+  var mo = window.MutationObserver ? new MutationObserver(sync) : null;
+  cover.concat(shut).forEach(function (id) { var e = document.getElementById(id); if (e && mo) mo.observe(e, { attributes: true, attributeFilter: ['hidden'] }); });
+}());
+</script>
 <script src="lantern.js"></script>
 </body>
 </html>

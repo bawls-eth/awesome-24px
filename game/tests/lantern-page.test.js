@@ -194,7 +194,7 @@ const prof = (page) => page.evaluate((K) => JSON.parse(localStorage.getItem(K) |
   s = await open(browser, { mm: { v: 1, heroes: [hero({ name: 'Phone' })] }, viewport: { width: 390, height: 844 } });
   await s.page.waitForTimeout(300);
   const lay = await s.page.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth,
-    small: [...document.querySelectorAll('button, .btn, select, input[type=text]')].filter((n) => n.offsetParent && n.getBoundingClientRect().height < 47.5 && !n.closest('.choice')).map((n) => n.id || n.className) }));
+    small: [...document.querySelectorAll('button, .btn, select, input[type=text]')].filter((n) => n.offsetParent && !n.classList.contains('mm-nav-legacy') && n.getBoundingClientRect().height < 47.5 && !n.closest('.choice')).map((n) => n.id || n.className) }));
   check('390x844: no horizontal scroll', lay.sw <= lay.cw, JSON.stringify(lay));
   check('390x844: touch targets at least 48px', lay.small.length === 0, lay.small.join());
   check('zero off-origin requests', s.reqs.every((u) => u.startsWith(ORIGIN + '/') || u.startsWith('data:') || u.startsWith('blob:')), s.reqs.join(' '));

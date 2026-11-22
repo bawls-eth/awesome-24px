@@ -315,6 +315,7 @@
   window.addEventListener('keyup', function (e) { if (KEYMAP[e.code]) releaseSource('k:' + e.code); });
   window.addEventListener('blur', function () { Object.keys(laneKeys).forEach(releaseSource); if (mode === 'play' && !TEST) pause(); });
   document.addEventListener('visibilitychange', function () { if (document.hidden && mode === 'play') pause(); });
+  if (window.MMNav && MMNav.onOpen) MMNav.onOpen(function () { if (mode === 'play' && !TEST) pause(); }); // the Menu sheet pauses the song
   window.addEventListener('pointerdown', ensureAudio, { passive: true });
 
   function bindPointer(node, laneOf) {
