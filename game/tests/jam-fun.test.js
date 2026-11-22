@@ -122,6 +122,27 @@ const box = (p, sel) => p.evaluate((s) => { const e = document.querySelector(s);
   check('low graphics: console clean, 0 DB requests', d.errors.length === 0 && d.db.count() === 0, d.errors.join(' | '));
   await d.ctx.close();
 
+  // ---- JM5: one-thumb Assist (2 lanes, separate bests) + section Practice best, phone and desktop ----
+  for (const [form, opts] of [['phone', PHONE], ['desktop', { viewport: { width: 1280, height: 800 } }]]) {
+    d = await open(browser, opts, JSON.stringify({ v: 1, hint: true, offsetMs: 0, plays: 0 })); p = d.page;
+    const off = await p.evaluate(() => { const b = document.getElementById('pref-assist'), r = b.getBoundingClientRect(); return { on: window.__jam.assist.on, pressed: b.getAttribute('aria-pressed'), text: b.textContent, h: r.height, w: r.width }; });
+    check(`${form} assist: off by default, labelled, 44 px target`, off.on === false && off.pressed === 'false' && /Assist/.test(off.text) && off.h >= 44 && off.w >= 44, JSON.stringify(off));
+    await p.click('#pref-assist');
+    const st = await p.evaluate(() => { window.__jam.start('warm-embers', 'easy'); const c = window.__jam.chart.notes, last = {}; let gap = Infinity; c.forEach((n) => { if (last[n.lane] !== undefined) gap = Math.min(gap, n.t - last[n.lane]); last[n.lane] = n.t + (n.hold || 0); }); return { on: window.__jam.assist.on, active: window.__jam.assist.active, lanes: [...new Set(c.map((n) => n.lane))].sort().join(''), gap, hud: document.getElementById('hud-song').textContent, stored: JSON.parse(localStorage.getItem('pixeltown-jam-assist-v1') || 'null') }; });
+    check(`${form} assist: toggle saved in its own key, chart folds to the 2 inner lanes, notes >= 180 ms apart, HUD says Assist`, st.on && st.active && st.stored && st.stored.on === true && st.lanes === 'FJ' && st.gap >= 180 && /^Assist: /.test(st.hud), JSON.stringify(st));
+    const hit = await p.evaluate(() => { const J = window.__jam, n = J.chart.notes[0]; J.at(n.t); const outer = n.lane === 'F' ? 'D' : 'K'; const j = J.press(outer); if (n.hold) { J.at(n.t + n.hold); J.release(outer); } return j; });
+    check(`${form} assist: the outer pad hits the note on its inner lane`, hit && hit !== 'miss', String(hit));
+    await drive(p, []);
+    const fin = await p.evaluate(() => ({ mode: window.__jam.mode, a: window.__jam.assist, save: window.__jam.save, note: (document.getElementById('assist-note') || {}).textContent || '', raw: JSON.parse(localStorage.getItem('pixeltown-jam-v1')) }));
+    check(`${form} assist: run kept as a separate Assist best; no song best, stars or plays in pixeltown-jam-v1`, fin.mode === 'results' && fin.a.best['warm-embers'] && fin.a.best['warm-embers'].easy.score > 0 && !fin.save.best['warm-embers'] && fin.save.plays === 0 && !(fin.raw.best && fin.raw.best['warm-embers']) && /never count toward stars, S-rank/.test(fin.note), JSON.stringify(fin.a));
+    // section practice: bars 1-2 at 75%, one full pass loops back and records a section best only in the assist key
+    await p.evaluate(() => { window.__jam.menu(); document.getElementById('pref-assist').click(); });
+    const pr = await p.evaluate(() => { const J = window.__jam; J.start('warm-embers', 'easy', { practice: { speed: 0.75, loop: [1, 2] } }); const lp = J.practice.loop; J.chart.notes.filter((n) => n.t >= lp.a - 1 && n.t < lp.b && !n.hold).forEach((n) => { J.at(n.t); J.press(n.lane); }); J.at(lp.b + 5); return { assist: J.assist.active, hud: document.getElementById('hud-song').textContent, loops: J.practice.loops, best: J.sectionBest(), sec: J.assist.section, saveBest: !!J.save.best['warm-embers'], plays: J.save.plays }; });
+    check(`${form} practice: labelled Practice, 75% section loop keeps its own section best, song bests untouched`, !pr.assist && /^Practice: /.test(pr.hud) && pr.loops >= 1 && pr.best > 0 && pr.sec['warm-embers:easy:75:1-2'] === pr.best && !pr.saveBest && pr.plays === 0, JSON.stringify(pr));
+    check(`${form} assist/practice: console clean, 0 DB requests`, d.errors.length === 0 && d.db.count() === 0, d.errors.join(' | '));
+    await d.ctx.close();
+  }
+
   await browser.close();
   done();
 })();
