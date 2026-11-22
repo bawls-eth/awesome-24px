@@ -467,6 +467,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-endgame.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "shared-mm-gear-forge.test.js": {
     "class": "node",
     "tier": "smoke"
