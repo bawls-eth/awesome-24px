@@ -50,6 +50,8 @@
 // island preloads its own biome's strips plus your stable's); the craft panel shows the b34b item icons by id over the text label.
 // AW3 (Codex redo): the b36 strips are at their size class (S 48 / M 64 / L 96 / XL 128 native; no 2x oakback), the b35 edge masks are
 // drawn as delivered, the Coral Reef preloads the b38a reef puffer, and a strip's ground shadow is sized to its measured body width.
+// AW4: the reef preloads all seven b38a-f species (108 strips); the tidesteed / skimray swim mounts draw body + saddle overlay with the
+// hero on the seat, the isleback turtle rides bare; __isles.riding() also reports seatY / seatX (where the hero was last drawn).
 // XW1: the craft panel lists every MMIsleCraft recipe (ALL_IDS, groups Travel / Saddles / Supplies / Trophies); an alternative recipe
 // unlocks by its output item (rocket_core_drift opens mars from a fresh save) and the sea chart's "Craft it" points at a reachable build;
 // a daily gather spot can add a seeded bonus find (MMIsleCraft.bonusFind). Riding shows one 44 px ability button (key F while riding)
@@ -757,7 +759,7 @@
   }
 
   // mount: the tames.mount entry (else the first rideable tame) through MMCompanion.ride
-  let ride = null, rideArt = null, mountEnt = null, rideKind = null, rideDir = 0, rideDrawn = '', saddleDrawn = '';
+  let ride = null, rideArt = null, mountEnt = null, rideKind = null, rideDir = 0, rideDrawn = '', saddleDrawn = '', rideLift = 0, rideDx = 0; // rideLift / rideDx: where the hero was last drawn (test handle)
   function refreshMount() {
     mountEnt = null;
     if (!MOUNTS) return;
@@ -1297,6 +1299,7 @@
         else g.drawImage(fr, hx - w / 2, hy - a.ay / a.dpr, w, h);
       } else { g.fillStyle = '#8a6a4a'; g.beginPath(); g.ellipse(hx, hy - 8, 26, 14, 0, 0, Math.PI * 2); g.fill(); }
     }
+    rideLift = lift; rideDx = rdx;
     if (!hero.dead && !(hero.iframes > 0 && Math.floor(hero.iframes * 12) % 2)) {
       if (ART) {
         if (!LOW && !ride) g.drawImage(heroArt.shadow, hx - 12, hy - 2, 24, 8);
@@ -2643,7 +2646,7 @@
       pouch: () => Object.assign({}, pouch),
       party: () => party.map((p) => ({ id: p.ent.id, sp: p.ent.sp, x: p.cs.x, y: p.cs.y, mode: p.cs.mode, hits: p.cs.hits || 0, dmg: p.dmg, down: p.cs.down })),
       ride: () => toggleRide(),
-      riding: () => (ride ? { id: ride.id, speed: ride.m.speed, lift: ride.m.lift, overlay: CMP.overlay(ride, false).dy, drawn: rideDrawn, saddle: saddleDrawn } : null),
+      riding: () => (ride ? { id: ride.id, speed: ride.m.speed, lift: ride.m.lift, overlay: CMP.overlay(ride, false).dy, drawn: rideDrawn, saddle: saddleDrawn, seatY: rideLift, seatX: rideDx } : null),
       mountId: () => (mountEnt ? mountEnt.id : null),
       // XW1
       ability: () => (abil ? { id: abilDef.id, name: abilDef.name, kind: abilDef.kind, ph: abil.ph, cd: abil.cd, t: abil.t, breath: abil.breath, uses: abilUses, ready: MA.ready(abil),
