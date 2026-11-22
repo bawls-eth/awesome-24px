@@ -84,3 +84,6 @@ html[data-reduce-motion="1"] *, html[data-reduce-motion="1"] *::before, html[dat
 @media (prefers-reduced-motion: reduce) { .pop { animation:none; } }
 #practice [hidden] { display:none !important; }
 .stat strong.pop { display:inline-block; }
+#go-practice { font:inherit; font-size:calc(14px * var(--ui-scale,1)); font-weight:bold; color:#1d2b20; background:var(--accent); border:0; border-radius:10px; min-height:48px; padding:8px 12px; cursor:pointer; width:100%; }
+#go-practice[hidden] { display:none; }
+#go-practice:focus-visible { outline:3px solid #fff; outline-offset:2px; }

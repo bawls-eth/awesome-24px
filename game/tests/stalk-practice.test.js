@@ -73,6 +73,11 @@ const PAGE = ORIGIN + '/game/games/stalk/index.html';
   const fb = await p.evaluate(() => ({ msg: document.getElementById('msg').textContent, d: window.__stalk.wk.sell[2] - window.__stalk.wk.buyPrice, pop: document.getElementById('st-profit').classList.contains('pop') }));
   check('real sale message compares with the Sunday price', fb.msg.replace(/,/g, '').includes('(' + (fb.d > 0 ? '+' : '') + fb.d + ' against the Sunday price)'), fb.msg);
   check('week profit pops after a sale (motion allowed)', fb.pop);
+  check('weekday with stalks owned: no practice nudge', await p.evaluate(() => document.getElementById('go-practice').hidden));
+  await p.evaluate(() => window.__stalk.setTime(101, 3));
+  check('weekday with nothing to sell: practice button offered (44px+)', await p.evaluate(() => { const b = document.getElementById('go-practice'); const r = b.getBoundingClientRect(); return !b.hidden && window.__stalk.save.holdings === 0 && r.height >= 44; }));
+  await p.tap('#go-practice');
+  check('the nudge starts a practice week', await p.evaluate(() => { const s = window.__stalk.practice.state; return s && s.slot === 0 && !s.done && !document.getElementById('pr-play').hidden; }));
   check('Menu button present and clear of the trade and sound buttons', await p.evaluate(() => {
     const m = document.getElementById('mm-nav-btn'); if (!m) return false;
     const a = m.getBoundingClientRect();

@@ -215,6 +215,7 @@
       ? 'Selling closed: the market only buys stalks Monday to Saturday. Buying is open today.'
       : 'Buying closed: stalks can only be bought on Sunday. Selling is open now.';
     $('buy1').textContent = 'Buy 1';
+    $('go-practice').hidden = sunday || save.holdings > 0; // dead-end fix: a weekday with nothing to sell offers the quick practice week
     $('sellall').textContent = save.holdings > 0 && !sunday ? 'Sell all (' + save.holdings + ')' : 'Sell all';
     var known = M.knownPrices(wk, slot);
     $('chart-alt').textContent = 'Known prices: ' + known.join(', ') + '. Price history changes twice a day, Monday to Saturday.';
@@ -374,6 +375,7 @@
     drawChartOn($('pr-chart'), pr.wk, pr.slot, 1, pr.marks);
   }
   $('pr-start').addEventListener('click', prStart);
+  $('go-practice').addEventListener('click', function () { if (!pr || pr.done) prStart(); try { $('practice').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }); } catch (e) { /* ignore */ } });
   $('pr-again').addEventListener('click', prStart);
   $('pr-buy').addEventListener('click', prBuy);
   $('pr-sell').addEventListener('click', prSell);
