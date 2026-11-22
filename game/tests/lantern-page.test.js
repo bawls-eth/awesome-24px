@@ -105,7 +105,8 @@ const prof = (page) => page.evaluate((K) => JSON.parse(localStorage.getItem(K) |
   await s.page.setInputFiles('#restore', { name: 'b.json', mimeType: 'application/json', buffer: fs.readFileSync(dlPath) });
   await s.page.waitForSelector('#restore-confirm:not([hidden])');
   const listed = await s.page.locator('#restore-list li').allTextContents();
-  check('restore shows a confirmation panel listing the keys, and has changed nothing yet', listed.length === 2 && listed.some((t) => t.includes(MM)) && listed.some((t) => t.includes(SAVE)) && (await s.page.evaluate((K) => localStorage.getItem(K), MM)) === null);
+  // the hub map progress key (pixeltown-profile-v1, written by MMHubProfile.sync for the hero) is backed up too
+  check('restore shows a confirmation panel listing the keys, and has changed nothing yet', listed.length === Object.keys(bundle.keys).length && listed.length === (bundle.keys['pixeltown-profile-v1'] ? 3 : 2) && listed.some((t) => t.includes(MM)) && listed.some((t) => t.includes(SAVE)) && (await s.page.evaluate((K) => localStorage.getItem(K), MM)) === null);
   await s.page.click('#restore-no');
   check('Cancel hides the panel and changes nothing', (await s.page.isHidden('#restore-confirm')) && (await s.page.evaluate((K) => localStorage.getItem(K), MM)) === null && (await s.page.evaluate((K) => localStorage.getItem(K), SAVE)) === null);
   await s.page.setInputFiles('#restore', { name: 'b.json', mimeType: 'application/json', buffer: fs.readFileSync(dlPath) });

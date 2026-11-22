@@ -22,6 +22,7 @@
   </div>
 </header>
 <nav id="hub-games" class="hub-games" aria-label="Games: tap one to play"></nav>
+<a id="hub-continue" class="hub-continue" href="#" hidden><span class="c-ico" aria-hidden="true"></span><span class="c-txt"></span></a>
 <main id="stage">
   <canvas id="map" aria-label="World map" role="img"></canvas>
   <div id="toast" role="status" aria-live="polite"></div>
@@ -47,6 +48,8 @@
   <p id="card-bonus" class="card-bonus" hidden></p>
   <p id="card-ach-n" class="ach-n" hidden></p>
   <ul id="card-ach" class="ach" aria-label="Game medals" hidden></ul>
+  <p id="card-goals-n" class="ach-n" hidden>Clears this place on the map:</p>
+  <ul id="card-goals" class="ach goals" aria-label="Map goals" hidden></ul>
   <div class="card-actions">
     <a id="card-play" class="btn" href="#">Play</a>
     <span id="card-soon" class="btn disabled" hidden>Coming soon</span>

@@ -211,6 +211,10 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "hub-progress.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "integration.test.js": {
     "class": "live",
     "tier": "smoke"

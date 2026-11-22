@@ -24,7 +24,7 @@
   // ---------- save ----------
   function sanitize(raw) { return B.cleanSave(raw); }
   var save = sanitize(S.get(KEY, null));
-  function persist() { S.set(KEY, { v: 1, stars: save.stars, best: save.best, journal: save.journal }); }
+  function persist() { S.set(KEY, { v: 1, stars: save.stars, best: save.best, journal: save.journal }); try { var st = B.ARENAS.reduce(function (n, a) { return n + save.stars[a.id]; }, 0), j = save.journal; window.MMHubProfile.sync(localStorage, 'bugs', [Object.keys(j).some(function (k) { return j[k] > 0; }) && 'catch1', st >= 6 && 'stars6', (j.goldbeetle > 0 || j.moonwing > 0) && 'rare', st >= 24 && 'stars24']); } catch (e) { /* hub map progress is optional */ } }
   persist();
   function totalStars() { return B.ARENAS.reduce(function (n, a) { return n + save.stars[a.id]; }, 0); }
   function needStars(i) { return i * 2; }

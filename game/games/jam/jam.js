@@ -30,7 +30,7 @@
 
   // ---------- save (only pixeltown-jam-v1) ----------
   var save = SG.cleanSave(S.get(KEY, null));
-  function persist() { S.set(KEY, save); }
+  function persist() { S.set(KEY, save); try { var st = SG.totalStars(save); window.MMHubProfile.sync(localStorage, 'jam', [save.plays >= 1 && 'play', st >= 1 && 'star1', st >= 12 && 'stars12', save.fullCombo === true && 'fullcombo', SG.SONGS.some(function (s) { var b = save.best[s.id]; return !!(b && b.hard && b.hard.stars >= 3); }) && 'hard3']); } catch (e) { /* hub map progress is optional */ } }
   persist();
   function applyPrefs() {
     prefShapes = SG.prefOf(save, 'shapes'); prefLefty = SG.prefOf(save, 'lefty');
