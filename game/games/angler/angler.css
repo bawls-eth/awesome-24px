@@ -80,3 +80,8 @@ html[data-reduce-motion="1"] *, html[data-reduce-motion="1"] *::before, html[dat
 /* result panel sits below the landed fish (drawn at 47% of the scene) so the catch stays visible */
 #result { top:auto; bottom:56px; transform:translateX(-50%); }
 #result #res-fun { color:var(--acc); font-weight:700; margin:-4px 0 12px; }
+
+/* VAR1 spot condition */
+#cond { color:#9fe0ff; border:1px solid #2d6a8a; border-radius:6px; padding:2px 8px; }
+#cond[hidden], #cond-line[hidden] { display:none; }
+#cond-line { margin:0; padding:4px 8px; background:#0b1b27; color:#cfe6f5; font-size:calc(13px * var(--ui-scale,1)); line-height:1.35; }
