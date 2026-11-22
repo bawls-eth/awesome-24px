@@ -115,3 +115,7 @@
 - 2026-11-22 (21:xx UTC): Mini-game fun pass: Jam (combo/PB/one-tap restart), Angler (streaks, reaction time, clearer fails), Stalk (trade buttons up, practice week), Deepdelve (dive rounds, modifiers, PBs), Bug Safari (near-miss, combos, PB), Lantern (clear rank + next goal); two NEW games: Pixel Pop and Lantern Dash. Realm endgame: relic book + chase line, dungeon mutators + deep runs, Trial of Six boss rush. Isles low-gfx/accessibility tier. Frostfox/rimewolf wired; art audit 0 blockers, 2 needs-redo (ART-AUDIT-3.md); Codex minigame art batches posted (CODEX-MINIGAME-ART-ASKS.md). Hub map fix (phone). Full suite 341/341 on 789b246.
 - Feedback: received 0, implemented 0, rejected 0.
 - OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.
+
+- 2026-11-22 (23:xx UTC, 2nd session): Run variety (Bug Safari modifiers + Replay seed, Stalk practice moods, Angler spot conditions); new games Stack Tower and Echo Garden; arcade medals on the Hub map (profile ARCADE group); shared result card MMMiniKit with seed share codes on the four arcade games; minigame quality gate test; Pop hint + Dash fairness pass; Jam practice bests + one-thumb Assist; Lantern access; Menu legacy links out of tab order. NEXT-SLICES-5.md + RESEARCH-MINIGAMES.md written (owner decisions listed there). Full suite 348/348 on d96d800.
+- Feedback: received 0, implemented 0, rejected 0.
+- OpenAI image credits: today 0.00 USD, total 1.96 USD, images today 0.

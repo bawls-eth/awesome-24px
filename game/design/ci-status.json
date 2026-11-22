@@ -1,9 +1,9 @@
 {
-  "sha": "789b2467aaa292b3be4b11ae1d5a3f78e488e1fd",
-  "generated_utc": "2026-11-22T21:35:00Z",
+  "sha": "d96d8009e070865f5cca4265284e27e3e0a8d1b7",
+  "generated_utc": "2026-11-22T23:11:00Z",
   "full_suite_green": true,
   "beta_green": null,
-  "suites_passed": 341,
-  "suites_total": 341,
-  "notes": "Full run on this exact sha, run as 3 parallel shards (--shard i/3 --lock-live): 338/341 on the first pass. The 3 misses were timing/load flakes from running 3 shards at once (first-ten-minutes first-frame 3.67 s vs 3.0 s, gear-dungeon-drops, realm-boss page race); each was rerun alone on the same sha and passed, so 341/341. Includes minigame fun passes (Jam, Angler, Stalk practice week, Deepdelve dives, Bug Safari, Lantern), Pixel Pop and Lantern Dash, isles low-gfx/access, Realm endgame (relic book, mutators, deep runs, Trial of Six), frostfox/rimewolf wiring, hub map fix. Beta runs only on owner request."
+  "suites_passed": 348,
+  "suites_total": 348,
+  "notes": "Full run on this exact sha as 3 parallel shards (--shard i/3 --lock-live): 346/348 on the first pass. The 2 misses (art-six-heroes rogue preview, nav-realm Menu-under-summary) were load flakes while 3 shards ran at once; each passed when rerun alone on the same sha, so 348/348. Includes run variety (Bug Safari/Stalk/Angler), Stack Tower, Echo Garden, arcade milestones, shared result card (MMMiniKit), minigame quality gate, Jam assist/practice, Lantern access, Menu tab-order fix. Beta runs only on owner request."
 }
