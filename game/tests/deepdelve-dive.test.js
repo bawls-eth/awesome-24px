@@ -129,6 +129,17 @@ async function open(browser, opts, q, init) {
   check('desktop: Escape closes the summary', d6 === false);
   const d7 = await D.page.evaluate(() => { const d = window.__dd; d.panel('goals', true); const g = !document.getElementById('goals-panel').hidden; document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); return { g, after: !document.getElementById('goals-panel').hidden }; });
   check('desktop: Escape closes the goals panel too', d7.g === true && d7.after === false, JSON.stringify(d7));
+  const mp = await D.page.evaluate(() => {
+    const d = window.__dd, s = d.spawn; d.setPos(s.x, s.y, s.z); d.step(1 / 60, 30); d.player.pitch = -1.55; d.player.yaw = 0;
+    const target = d.raycast(5), before = target && d.getBlock(...target.cell);
+    d.input.mine = true; d.mining(0.12);
+    const mid = { p: d.progShown(), shown: !document.getElementById('minebar').hidden, w: document.getElementById('mineprog').style.width };
+    for (let i = 0; i < 40 && d.getBlock(...target.cell) === before; i++) d.mining(0.05);
+    d.input.mine = false; d.mining(0.05);
+    return { mid, broke: d.getBlock(...target.cell) !== before, end: d.progShown(), hiddenAfter: document.getElementById('minebar').hidden };
+  });
+  check('mining bar: fills under the crosshair while a block is being mined', mp.mid.p > 0 && mp.mid.p < 1 && mp.mid.shown && /%$/.test(mp.mid.w), JSON.stringify(mp));
+  check('mining bar: the block breaks and the bar hides again', mp.broke === true && mp.end === 0 && mp.hiddenAfter === true);
   if (process.env.SHOTS) await D.page.screenshot({ path: process.env.SHOTS + '/dive-desktop.png' });
   check('desktop: console clean', D.errors.length === 0, D.errors.join(' | '));
   check('desktop: zero DB requests', D.db.count() === 0);

@@ -79,3 +79,6 @@ html[data-dd-world="creative"] .bar h1 { color:#9ff0d8; }
 #run-stats small { display:block; color:var(--mut); font-size:calc(13px * var(--ui-scale,1)); }
 .btn.big { width:100%; min-height:56px; margin-top:6px; font-size:calc(18px * var(--ui-scale,1)); border-color:var(--acc); }
 @media (prefers-reduced-motion: reduce) { .pop { animation:none; } }
+#minebar { position:absolute; left:50%; top:calc(50% + 14px); width:48px; height:6px; margin-left:-24px; background:rgba(7,13,18,.7); border:1px solid rgba(255,255,255,.6); border-radius:3px; overflow:hidden; pointer-events:none; }
+#minebar[hidden] { display:none; }
+#mineprog { height:100%; width:0; background:var(--acc); }

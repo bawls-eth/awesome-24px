@@ -765,11 +765,27 @@
 
   // ---------- main loop ----------
   let mineTarget = null, mineProg = 0, last = 0, spawnT = 6;
+  // Mining progress bar under the crosshair (DOM width, only touched when it moves by 5% or more)
+  let progShown = -1;
+  function showProg(f) {
+    const v = f <= 0 ? 0 : Math.min(1, Math.round(f * 20) / 20);
+    if (v === progShown) return;
+    progShown = v; const el = $('mineprog'); if (!el) return;
+    el.style.width = Math.round(v * 100) + '%'; el.parentNode.hidden = v <= 0;
+  }
   function updateMining(dt) {
+    mineStep(dt);
+    const hard = mineTarget && lastHit ? (HARDNESS[lastHit.id] || 0.8) * (CREATIVE ? 0.35 : 1) : 0;
+    showProg(hard && mineProg > 0.001 ? mineProg / hard : 0);
+  }
+  let lastHit = null;
+  function mineStep(dt) {
+    lastHit = null;
     if (atkCd > 0) atkCd -= dt;
     if (input.mine && (attackSlime(true) || attackCreature(true) || attackWyrm(true))) { mineTarget = null; mineProg = 0; return; }
     if (input.mine && benches.length) { const bi = benchAtLook(); if (bi >= 0) { pickUpBench(bi); input.mine = false; return; } }
     const hit = input.mine ? raycast(5) : null;
+    lastHit = hit;
     if (!hit || hit.id === B.BEDROCK || hit.id === B.LAVA) { mineTarget = null; mineProg = 0; return; }
     const key = hit.cell.join(',');
     if (mineTarget !== key) { mineTarget = key; mineProg = 0; }
@@ -1716,6 +1732,7 @@
         if (lightDirty || !win.light) relight();
         return lightAt(x, y, z);
       }, worldUrl, switchWorld, outlineHex: () => (outline ? outline.material.color.getHex() : 0),
+      prog: showProg, mining: (dt) => updateMining(dt), progShown: () => progShown,
       run: { get state() { return run; }, get rec() { return runRec; }, start: startRun, end: endRun, mined: onMined, tick: tickRun, close: closeSummary, depth0: () => runDepth0, shake: () => ({ t: shakeT, amp: shakeAmp }), MMDDRun: RUNS },
       craft: craftTorch, mouthSite: () => mouthSite, aimed: () => aimed, aim, outlineVisible: () => !!(outline && outline.visible), surfaceY: (x, z) => MMChunks.surfaceY(x, z, SEED), ready: true,
     };
