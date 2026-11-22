@@ -1170,5 +1170,9 @@
   "nav-town.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "town-isles-sign.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

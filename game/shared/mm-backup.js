@@ -79,7 +79,9 @@
     'pixeltown-archipelago-v1': (o, v) => (isObj(v) ? (o.isles ? o.isles.clean(v) : cleanPlain(v)) : undefined),
     'pixeltown-medals-isles-v1': (o, v) => (isObj(v) ? (o.isles ? o.isles.cleanMedals(v) : cleanPlain(v)) : undefined),
     // Feedback box notes (device-only, never sent anywhere): the owner cleaner keeps only the known entry fields.
-    'pixeltown-feedback-v1': (o, v) => (isObj(v) ? (o.feedback ? o.feedback.clean(v) : cleanPlain(v)) : undefined)
+    'pixeltown-feedback-v1': (o, v) => (isObj(v) ? (o.feedback ? o.feedback.clean(v) : cleanPlain(v)) : undefined),
+    // Town Realm Gate pointer chip (UI only): keep just the two known booleans, the shape main.js loadGatePointer() reads.
+    'pixeltown-gate-pointer-v1': (o, v) => (isObj(v) ? { v: 1, dismissed: v.dismissed === true, reached: v.reached === true } : undefined)
   };
   const KNOWN = Object.keys(CLEANERS).concat(['pixeltown-panel-collapsed']);
   const NAMES = {
@@ -89,7 +91,7 @@
     'pixeltown-stalk-v1': 'Stalk Market save', 'pixeltown-jam-v1': 'Jam save',
     'pixeltown-access-v1': 'accessibility settings', 'pixeltown-gift-v1': 'daily gift',
     'pixeltown-tames-v1': 'tamed creatures', 'pixeltown-archipelago-v1': 'Archipelago progress', 'pixeltown-medals-isles-v1': 'Archipelago medals',
-    'pixeltown-feedback-v1': 'feedback notes'
+    'pixeltown-feedback-v1': 'feedback notes', 'pixeltown-gate-pointer-v1': 'Realm Gate pointer setting'
   };
   const label = (k) => NAMES[k] || k;
 
