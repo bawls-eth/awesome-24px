@@ -66,6 +66,15 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
   check('save is additive own key; medal summary key written for the hub', sv.v === 1 && sv.rounds === 1 && sv.best === end.run && md.v === 1 && md.m.includes('round1'), JSON.stringify([sv, md]));
   const btns = await p.evaluate(() => ['again', 'replay', 'btn-mute'].map((id) => { const r = document.getElementById(id).getBoundingClientRect(); return [id, r.width, r.height]; }));
   check('phone: Play again / Replay seed / Sound are >= 44 px', btns.every((x) => x[1] >= 44 && x[2] >= 44), JSON.stringify(btns));
+  // MK1 shared result card: share code, goal line, Menu, 44 px Copy, text >= 12 px
+  const kit = await p.evaluate(() => {
+    const r = document.getElementById('result'), c = document.getElementById('r-copy').getBoundingClientRect();
+    const small = Array.from(r.querySelectorAll('*')).filter((e) => e.childNodes.length && Array.from(e.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim()) && parseFloat(getComputedStyle(e).fontSize) < 12).map((e) => e.className || e.tagName);
+    const foc = r.querySelector('button, a');
+    return { card: r.classList.contains('mk-card'), code: document.getElementById('r-code').textContent, goal: document.getElementById('r-goal').textContent, menu: !!r.querySelector('a.mk-link[href]'), copy: [c.width, c.height], small, first: foc && foc.id, medals: !!r.querySelector('#r-medals') };
+  });
+  check('kit: shared result card with share code DEMO1, a goal line and a Menu link', kit.card && kit.code === 'DEMO1' && kit.goal.length > 0 && kit.menu && kit.medals, JSON.stringify(kit));
+  check('kit: Copy is >= 44 px, Play again is the first focusable, no text under 12 px', kit.copy[0] >= 44 && kit.copy[1] >= 44 && kit.first === 'again' && kit.small.length === 0, JSON.stringify(kit));
   await p.tap('#replay');
   const b2 = await p.evaluate(() => ({ v: __pop.values(), seed: __pop.run.seed, st: __pop.run.state, score: __pop.run.score }));
   check('Replay seed deals the very same board (seeded)', JSON.stringify(b2.v) === JSON.stringify(b1) && b2.seed === 'demo1' && b2.st === 'play' && b2.score === 0);
@@ -138,6 +147,9 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
   await q.evaluate(() => __pop.set([[1, 1, 3, 2, 3, 2], [2, 3, 2, 3, 2, 3], [3, 2, 3, 2, 3, 2], [2, 3, 2, 3, 2, 3], [3, 2, 3, 2, 3, 2]]));
   await q.mouse.move(bb2.x + bb2.width * 0.1, bb2.y + bb2.height * (0.5 / 6));
   check('chain preview: a mouse hovering a pair outlines it without popping', await q.evaluate(() => __pop.preview && __pop.preview.size === 2 && __pop.values()[0][0] === 1));
+  await q.evaluate(() => __pop.end());
+  await q.keyboard.press('r');
+  check('kit: R on the result card plays again', await q.evaluate(() => __pop.run.state === 'play' && document.getElementById('result').hidden));
   check('desktop: no console errors, 0 DB requests', d.errors.length === 0 && d.db.count() === 0, JSON.stringify(d.errors));
   await d.ctx.close();
   const o = await open(browser, { viewport: { width: 1280, height: 800 } }, '?test=1&hints=0', { [KEY]: JSON.stringify({ v: 1, hint: true }) });
@@ -145,6 +157,11 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
   check('?hints=0 turns the idle hint off', await o.page.evaluate(() => { __pop.step(10); return __pop.hintsOn === false && __pop.hint === null; }));
   check('hints=0 page: no console errors, 0 DB requests', o.errors.length === 0 && o.db.count() === 0, JSON.stringify(o.errors));
   await o.ctx.close();
+  // share code in the URL deals the same board as the seed it came from; a bad code is ignored safely
+  const boardFor = async (qs) => { const x = await open(browser, { viewport: { width: 1280, height: 800 } }, '?test=1&' + qs, { [KEY]: JSON.stringify({ v: 1, hint: true }) }); await x.page.click('#play'); const r = await x.page.evaluate(() => ({ v: __pop.values(), seed: __pop.run.seed })); const ok = x.errors.length === 0 && x.db.count() === 0; await x.ctx.close(); return Object.assign(r, { ok }); };
+  const sc = await boardFor('seed=DEMO1'), sl = await boardFor('seed=demo1'), sb = await boardFor('seed=%3Cb%3Ebad%3C%2Fb%3E');
+  check('kit: ?seed=DEMO1 (share code) plays the demo1 board', sc.seed === 'demo1' && JSON.stringify(sc.v) === JSON.stringify(sl.v) && sc.ok, sc.seed);
+  check('kit: an invalid share code is ignored (fresh seed, no errors)', sb.seed !== '<b>bad</b>' && /^[a-z0-9]+$/.test(sb.seed) && sb.ok, sb.seed);
   await browser.close();
   done();
 })().catch((e) => { console.error(e); process.exit(1); });

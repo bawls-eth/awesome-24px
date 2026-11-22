@@ -208,6 +208,7 @@
     if (run.state !== 'play') return;
     run.state = 'over';
     save.rounds++;
+    const prevBest = save.best, prevTile = save.bestTile, prevChain = save.bestChain;
     const newBest = run.score > save.best;
     if (newBest) save.best = run.score;
     if (run.maxTile > save.bestTile) save.bestTile = run.maxTile;
@@ -215,16 +216,42 @@
     award('round1');
     persist();
     play('levelup');
-    $('r-score').textContent = String(run.score);
-    $('r-best').textContent = newBest ? 'New personal best!' : 'Best: ' + save.best;
-    $('r-best').className = newBest ? 'new' : 'dim';
-    $('r-line').textContent = 'Best tile ' + run.maxTile + ' / best chain x' + run.bestChain + ' / seed ' + run.seed;
-    $('r-new').textContent = run.newMedals.length ? 'New medal: ' + run.newMedals.map((m) => MEDALS.find((x) => x[0] === m)[1]).join(', ') : '';
-    medalList($('r-medals'));
+    showResult(newBest, prevBest, prevTile, prevChain);
     $('result').hidden = false;
     msg('');
-    $('again').focus({ preventScroll: true });
+    if (resCard) resCard.focus(); else $('again').focus({ preventScroll: true });
     hud();
+  }
+  // MK1: the shared result card (MMMiniKit); ids r-score / r-best / r-line / r-new / r-medals / again / replay kept
+  const rMedals = $('r-medals');
+  let resCard = null;
+  function showResult(newBest, prevBest, prevTile, prevChain) {
+    medalList(rMedals);
+    const lines = [
+      { id: 'r-best', text: newBest ? 'New personal best!' : 'Best: ' + save.best, cls: newBest ? 'new' : 'dim' },
+      { id: 'r-line', text: 'Best tile ' + run.maxTile + ' / best chain x' + run.bestChain + ' / seed ' + run.seed, cls: 'dim' },
+      { id: 'r-new', text: run.newMedals.length ? 'New medal: ' + run.newMedals.map((m) => MEDALS.find((x) => x[0] === m)[1]).join(', ') : '', cls: 'new' },
+    ];
+    if (!window.MMMiniKit) {
+      // fallback without the kit: the old static card
+      $('r-score').textContent = String(run.score); lines.forEach((l) => { $(l.id).textContent = l.text; $(l.id).className = l.cls; });
+      return;
+    }
+    const K = window.MMMiniKit;
+    const vm = K.result({
+      headline: ['Time! ', { text: String(run.score), id: 'r-score' }, ' points'],
+      stats: [
+        { label: 'Score', value: K.fmt(run.score), best: newBest && prevBest > 0 },
+        { label: 'Best tile', value: String(run.maxTile), best: run.maxTile > prevTile && prevTile > 0 },
+        { label: 'Best chain', value: 'x' + run.bestChain, best: run.bestChain > prevChain && prevChain > 0 },
+      ],
+      lines,
+      goalText: nextGoal(),
+      seed: run.seed,
+      menuHref: '../../index.html',
+      ids: { again: 'again', replay: 'replay', code: 'r-code', copy: 'r-copy', goal: 'r-goal' },
+    });
+    resCard = K.panel($('result'), vm, { again: () => start(), replay: (sd) => start(sd), extra: [rMedals] });
   }
   function medalList(ul) {
     while (ul.firstChild) ul.removeChild(ul.firstChild);
@@ -340,9 +367,14 @@
     if (mv) { cur.c = Math.max(0, Math.min(W - 1, cur.c + mv[0])); cur.r = Math.max(0, Math.min(H - 1, cur.r + mv[1])); showCur = true; setPreview(cur.c, cur.r); ev.preventDefault(); }
     else if (k === 'Enter' || k === ' ') { showCur = true; tap(cur.c, cur.r); ev.preventDefault(); }
   });
-  $('play').addEventListener('click', () => { save.hint = true; persist(); start(params.get('seed') || undefined); });
-  $('again').addEventListener('click', () => start());
-  $('replay').addEventListener('click', () => start(run.seed));
+  // ?seed= takes a share code (A-Z0-9, any case) or the old seed form; anything else is ignored (a fresh seed)
+  function urlSeed() {
+    const raw = params.get('seed');
+    const code = window.MMMiniKit ? window.MMMiniKit.parseSeedCode(raw || '') : null;
+    return code || raw || undefined;
+  }
+  $('play').addEventListener('click', () => { save.hint = true; persist(); start(urlSeed()); });
+  if (!window.MMMiniKit) { $('again').addEventListener('click', () => start()); $('replay').addEventListener('click', () => start(run.seed)); }
   const mute = $('btn-mute');
   function syncMute() { const m = !!(sfx && sfx.isMuted()); mute.textContent = m ? 'Sound off' : 'Sound on'; mute.setAttribute('aria-pressed', m ? 'true' : 'false'); }
   mute.addEventListener('click', () => { if (sfx) sfx.setMuted(!sfx.isMuted()); syncMute(); });
