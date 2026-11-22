@@ -12,7 +12,7 @@ const PAGE = ORIGIN + '/game/games/mad-maze/index.html';
 const SEED = '12345';
 const SAVE = { realm: { level: 3, xp: 0, shards: 0, bestWave: 0, items: [], nextUid: 1, eq: {} } };
 
-async function open(browser, q, realmSave) {
+async function open(browser, q, realmSave, untilEvId) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
   await ctx.routeWebSocket(/.*/, (ws) => ws.close());
   await ctx.route('**/game/index.html*', (r) => r.fulfill({ contentType: 'text/html', body: '<!doctype html><title>town</title>town' }));
@@ -23,8 +23,25 @@ async function open(browser, q, realmSave) {
   await page.goto(ORIGIN + '/game/games/mad-maze/lantern.css');
   await page.evaluate(([v, r]) => { localStorage.clear(); localStorage.setItem('pixeltown-save-v1', v); localStorage.setItem('mm-aim-assist', '0'); if (r) localStorage.setItem('pixeltown-realm-v1', r); }, [JSON.stringify(SAVE), realmSave ? JSON.stringify(realmSave) : null]);
   page.errors.length = 0;
+  // Freeze the real-time loop on the first frame the arena is in play. A watcher installed BEFORE the page loads (not a poll started after the load event,
+  // which on a slow machine arrives seconds later): the 2 s / 3 s spawn shields and the event clock all tick in _update, so sampling later read the
+  // shield as 0 (or 2.03) and an event already spawned. With untilEvId (the ?safereturn=0 case, which asserts the raid spawns on arrival) it freezes once
+  // that event has spawned instead.
+  await page.addInitScript((evId) => {
+    window.__frozen = false;
+    const tick = () => {
+      const m = window.__mm;
+      if (m && m.world && m.arena && m.arena.active && m.arena.state === 'play') {
+        let ok = true;
+        if (evId) { const e = m.world.events().find((x) => x.id === evId); ok = !!(e && e.spawned > 0); }
+        if (ok) { const a = m.arena; a.active = false; cancelAnimationFrame(a._raf); a.paused = false; window.__frozen = true; return; }
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, untilEvId || null);
   await page.goto(PAGE + '?mode=world&test=1&seed=' + SEED + q);
-  await page.waitForFunction(() => window.__mm && window.__mm.world && window.__mm.arena.active && window.__mm.arena.state === 'play', null, { timeout: 30000 });
+  await page.waitForFunction(() => window.__frozen === true, null, { timeout: 30000 });
   return { ctx, page };
 }
 const arrival = (page) => page.evaluate(() => { const a = window.__mm.arena, w = window.__mm.world; return { tile: [Math.floor(a.player.x / 32), Math.floor(a.player.y / 32)], iframes: a.player.iframes, last: w.safeReturn.last(), on: w.safeReturn.on, events: w.events().map((e) => ({ id: e.id, phase: e.phase, spawned: e.spawned })) }; });
@@ -79,7 +96,7 @@ for (let slot = 1; slot < 200 && !pick; slot++) {
   errs.push(...E.page.errors); await E.ctx.close();
 
   // ===== ?safereturn=0: today's behaviour (portal tile, 2 s, the raid spawns 9 tiles away) =====
-  const F = await open(browser, '&at=' + pick.at.join(',') + '&safereturn=0', rs);
+  const F = await open(browser, '&at=' + pick.at.join(',') + '&safereturn=0', rs, pick.ev.id);
   const f1 = await arrival(F.page);
   const evf = f1.events.find((x) => x.id === pick.ev.id);
   check('?safereturn=0: stays on the arrival tile with the old 2 s, nothing recorded, and the event spawns right there', f1.on === false && f1.tile[0] === pick.at[0] && f1.tile[1] === pick.at[1] && f1.iframes <= 2 && f1.last === null && evf && evf.spawned > 0, JSON.stringify(f1));
