@@ -98,7 +98,7 @@
     try { return !!(win && win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { return false; }
   }
   // el: the card container (section). vm: result() output (or raw input).
-  // on: { again, replay(seed), more: [fn per vm.more button], extra: [nodes kept in the card], keyReady() -> false holds R / Enter }
+  // on: { again, replay(seed), more: [fn per vm.more button], extra: [nodes kept in the card], keyReady() -> false holds R / Enter, holdMs }
   function panel(el, vm, on) {
     if (!el) return null;
     if (!vm || !vm.ids) vm = result(vm);
@@ -121,7 +121,7 @@
     });
     var menu = null;
     if (vm.menuHref) { menu = mk(doc, 'a', 'mk-btn mk-link', vm.menuLabel, vm.ids.menu); menu.href = vm.menuHref; acts.appendChild(menu); }
-    var h = mk(doc, 'h2', 'mk-head');
+    var h = mk(doc, 'h2', 'mk-head', null, vm.ids.head || '');
     vm.headline.forEach(function (p) { h.appendChild(p.id ? mk(doc, 'span', '', p.text, p.id) : doc.createTextNode(p.text)); });
     el.appendChild(h);
     if (vm.stats.length) {
@@ -170,7 +170,8 @@
         else if (k === 'Enter') { if (ae && el.contains(ae) && /^(BUTTON|A)$/.test(ae.tagName)) return; ev.preventDefault(); el.__mkOn.again(); }
       });
     }
-    el.__mkOn = { again: function () { if (!el.hidden) again.click(); }, ready: function () { return !on.keyReady || !!on.keyReady(); } };
+    var shownAt = Date.now(), hold = Math.max(0, Number(on.holdMs) || 0); // holdMs: a short pause so a key held at the end does not skip the card
+    el.__mkOn = { again: function () { if (!el.hidden) again.click(); }, ready: function () { return Date.now() - shownAt >= hold && (!on.keyReady || !!on.keyReady()); } };
     return { again: again, replay: replay, more: more, copy: copy, menu: menu, vm: vm, focus: function () { try { again.focus({ preventScroll: true }); } catch (e) { again.focus(); } } };
   }
 

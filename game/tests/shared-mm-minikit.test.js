@@ -101,6 +101,11 @@ check('panel: keyReady false holds R', again === before3);
 armed = true; key('r');
 check('panel: keyReady true lets R play again', again === before3 + 1);
 root.hidden = false;
+const r4 = el('section', doc); let a4 = 0;
+K.panel(r4, K.result({ headline: 'x', ids: { head: 'r-title' } }), { again: () => a4++, holdMs: 60000 });
+root.hidden = true; r3.hidden = true; key('r');
+check('panel: holdMs holds keys right after the card shows; head id applied', a4 === 0 && r4.children.some((c) => c.id === 'r-title'));
+root.hidden = false;
 // copy with no clipboard: honest failure text, no throw
 const p2 = K.panel(el('section', doc), K.result({ headline: 'x', seed: 'abc' }), {});
 p2.copy.click();

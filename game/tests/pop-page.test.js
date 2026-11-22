@@ -149,6 +149,9 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
   check('chain preview: a mouse hovering a pair outlines it without popping', await q.evaluate(() => __pop.preview && __pop.preview.size === 2 && __pop.values()[0][0] === 1));
   await q.evaluate(() => __pop.end());
   await q.keyboard.press('r');
+  check('kit: R right at the end is held for a moment (no skipped result card)', await q.evaluate(() => __pop.run.state === 'over' && !document.getElementById('result').hidden));
+  await q.waitForTimeout(450);
+  await q.keyboard.press('r');
   check('kit: R on the result card plays again', await q.evaluate(() => __pop.run.state === 'play' && document.getElementById('result').hidden));
   check('desktop: no console errors, 0 DB requests', d.errors.length === 0 && d.db.count() === 0, JSON.stringify(d.errors));
   await d.ctx.close();

@@ -65,6 +65,14 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
   check('own save key + hub medal summary written (round1 now, f40 not yet)', sv.v === 1 && sv.rounds === 1 && md.v === 1 && md.m.includes('round1') && !md.m.includes('f40'), JSON.stringify([sv, md]));
   check('hub map progress: the arcade milestone gives the Stack node a bronze', !!(pr && pr.nodes['w5-stack'] && pr.nodes['w5-stack'].medals.b && pr.games.stack.done.includes('round1')), JSON.stringify(pr && pr.nodes['w5-stack']));
   check('the W0 "all 6 games" goal is not cleared by an arcade game', !(pr.nodes['w0-practice'] && pr.nodes['w0-practice'].exits.includes('normal')) && !(pr.nodes['w0-first']));
+  const kit = await p.evaluate(() => {
+    const r = document.getElementById('result'), c = document.getElementById('r-copy').getBoundingClientRect();
+    const small = Array.from(r.querySelectorAll('*')).filter((e) => Array.from(e.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim()) && parseFloat(getComputedStyle(e).fontSize) < 12).map((e) => e.className || e.tagName);
+    const foc = r.querySelector('button, a');
+    return { card: r.classList.contains('mk-card'), code: document.getElementById('r-code').textContent, goal: document.getElementById('r-goal').textContent, menu: !!r.querySelector('a.mk-link[href]'), copy: [c.width, c.height], small, first: foc && foc.id, medals: !!r.querySelector('#r-medals'), rows: r.querySelectorAll('.mk-row').length };
+  });
+  check('kit: shared result card with share code TOW1, 3 stat rows, a goal line, a Menu link, medals kept', kit.card && kit.code === 'TOW1' && kit.rows === 3 && kit.goal.length > 0 && kit.menu && kit.medals, JSON.stringify(kit));
+  check('kit: Copy is >= 44 px, Play again is the first focusable, no text under 12 px', kit.copy[0] >= 44 && kit.copy[1] >= 44 && kit.first === 'again' && kit.small.length === 0, JSON.stringify(kit));
   const btns = await p.evaluate(() => ['again', 'replay'].map((id) => { const r = document.getElementById(id).getBoundingClientRect(); return [id, r.width, r.height]; }));
   check('phone: Play again / Replay seed are >= 44 px', btns.every((x) => x[1] >= 44 && x[2] >= 44), JSON.stringify(btns));
   await p.tap('#replay');
@@ -100,8 +108,19 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
   check('reduced motion: no shake or flash; low graphics: particles capped at 24', rm.reduced && rm.low && rm.shake === 0 && rm.flash === 0 && rm.parts <= 24, JSON.stringify(rm));
   const dw = await q.evaluate(() => { const b = document.getElementById('board').getBoundingClientRect(); return { w: b.width, x: b.left }; });
   check('desktop: board is centred and capped in width', dw.w <= 560 && dw.x > 100, JSON.stringify(dw));
+  await q.evaluate(() => __stack.end());
+  await q.waitForTimeout(450);
+  const dk = await q.evaluate(() => ({ code: document.getElementById('r-code').textContent, seed: __stack.run.seed }));
+  check('kit: desktop card shows the share code of the round seed', dk.code === dk.seed.toUpperCase() && /^[A-Z0-9]{1,24}$/.test(dk.code), JSON.stringify(dk));
+  await q.keyboard.press('r');
+  check('kit: R on the result card plays again', await q.evaluate(() => __stack.run.state === 'play' && document.getElementById('result').hidden));
   check('desktop: no console errors, 0 DB requests', d.errors.length === 0 && d.db.count() === 0, JSON.stringify(d.errors));
   await d.ctx.close();
+  // share code in the URL swings the same blocks as the seed it came from; a bad code is ignored safely
+  const logFor = async (qs) => { const x = await open(browser, { viewport: { width: 1280, height: 800 } }, '?test=1&' + qs, { [KEY]: JSON.stringify({ v: 1, hint: true }) }); await x.page.click('#play'); const r = await x.page.evaluate(() => { for (let i = 0; i < 6; i++) { __stack.align(0); __stack.drop(); } return { seed: __stack.run.seed, log: JSON.stringify(__stack.run.log) }; }); const ok = x.errors.length === 0 && x.db.count() === 0; await x.ctx.close(); return Object.assign(r, { ok }); };
+  const sc = await logFor('seed=TOW1'), sl = await logFor('seed=tow1'), sb = await logFor('seed=%3Cb%3E!!');
+  check('kit: ?seed=TOW1 (share code) swings the tow1 blocks', sc.seed === 'tow1' && sc.log === sl.log && sc.ok, sc.seed);
+  check('kit: an invalid share code is ignored (fresh seed, no errors)', /^[a-z0-9]+$/.test(sb.seed) && sb.ok, sb.seed);
   await browser.close();
   done();
 })().catch((e) => { console.error(e); process.exit(1); });

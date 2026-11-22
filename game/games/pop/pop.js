@@ -251,7 +251,7 @@
       menuHref: '../../index.html',
       ids: { again: 'again', replay: 'replay', code: 'r-code', copy: 'r-copy', goal: 'r-goal' },
     });
-    resCard = K.panel($('result'), vm, { again: () => start(), replay: (sd) => start(sd), extra: [rMedals] });
+    resCard = K.panel($('result'), vm, { again: () => start(), replay: (sd) => start(sd), extra: [rMedals], holdMs: 400 });
   }
   function medalList(ul) {
     while (ul.firstChild) ul.removeChild(ul.firstChild);
