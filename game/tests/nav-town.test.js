@@ -173,7 +173,8 @@ const overlap = (a, b) => a && b && a.vis && b.vis && a.x < b.x + b.w && b.x < a
     // The Realm inside the Town iframe keeps its own Leave: no MMNav there.
     await tap('#realm-menu-madmaze');
     await page.waitForSelector('#realm-embed iframe', { timeout: 8000 });
-    const frame = page.frames().find((f) => /mad-maze\/index\.html/.test(f.url()));
+    let frame = null;
+    for (let i = 0; i < 40 && !frame; i++) { frame = page.frames().find((f) => /mad-maze\/index\.html/.test(f.url())); if (!frame) await page.waitForTimeout(250); } // the frame attaches a moment after the iframe element appears (flaky under load otherwise)
     let inFrame = null;
     if (frame) { await frame.waitForLoadState('load'); await page.waitForTimeout(1200); inFrame = await frame.evaluate(() => ({ btn: !!document.getElementById('mm-nav-btn'), sheet: !!document.getElementById('mm-nav-sheet'), mounted: !!(window.MMNav && window.MMNav.mounted()) })); }
     check(L('the in-page Realm iframe mounts no MMNav (button, sheet)'), inFrame && !inFrame.btn && !inFrame.sheet && !inFrame.mounted, JSON.stringify(inFrame));
