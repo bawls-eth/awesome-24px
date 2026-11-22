@@ -107,6 +107,14 @@ async function open(browser, opts) {
   await p.reload(); await p.waitForFunction(() => window.__bugs);
   const cl = await p.evaluate(() => window.__bugs.pb);
   check('a bad pb key is cleaned (unknown arenas and bad numbers dropped)', cl.runs === 0 && Object.keys(cl.combo).length === 0, JSON.stringify(cl));
+  // arena cards name the next star target instead of a bare threshold list
+  await p.evaluate(() => window.__bugs.menu());
+  const mc = await p.evaluate(() => { const c = document.querySelector('#overlay .card[data-arena="meadow"] small'); const o = document.querySelector('#overlay .card[data-arena="orchard"] small'); return { m: c.textContent, o: o.textContent, px: parseFloat(getComputedStyle(c).fontSize) }; });
+  const meadowStars = await p.evaluate(() => window.__bugs.save.stars.meadow);
+  check('open arena card shows the next star target', meadowStars < 3 ? /^Best \d+ {2}\| {2}next star at \d+$/.test(mc.m) : /all 3 stars$/.test(mc.m), JSON.stringify(mc));
+  check('locked arena card still says what it needs', /^Needs \d+ stars$/.test(mc.o) || /next star at|all 3 stars/.test(mc.o), JSON.stringify(mc));
+  check('card hint text is 12 px+', mc.px >= 12, JSON.stringify(mc));
+
   await ph.ctx.close();
 
   // ---- desktop: keyboard restart ----

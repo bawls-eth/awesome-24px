@@ -383,7 +383,7 @@
       b.className = 'card'; b.dataset.arena = a.id;
       b.appendChild(el('strong', NAMES[a.id] + (a.glade ? ' (night variant)' : (a.night ? ' (night)' : ''))));
       b.appendChild(el('span', open ? stars(save.stars[a.id]) : 'Locked'));
-      b.appendChild(el('small', open ? 'Best ' + save.best[a.id] + '  |  ' + a.stars.join('/') : 'Needs ' + needStars(i) + ' stars'));
+      var ns = save.stars[a.id]; var sm = el('small', open ? 'Best ' + save.best[a.id] + '  |  ' + (ns < 3 ? 'next star at ' + a.stars[ns] : 'all 3 stars') : 'Needs ' + needStars(i) + ' stars'); sm.className = 'cardnext'; b.appendChild(sm); // FUN1: the next target, not a bare 60/120/200
       grid.appendChild(b);
     });
     overlay.appendChild(grid);
