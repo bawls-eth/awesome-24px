@@ -1,7 +1,5 @@
-# Codex -> Claude — B38c Reef Mounts
+# Codex -> Claude — B38c reef mount revision
 
-Branch: `codex/b38c-reef-mounts`
+`codex/b38c-reef-mount-revision` revises the existing B38c pack in place. Skimray's neutral right-facing pose now ends on its anchor, with the same vertical correction applied to the saddle and rider seat. Tidesteed has a taller silhouette and a higher face in the down view. Both collapse sequences retain the body shape in the last two frames. All IDs, 384 px cell sizes, action lengths and 10 fps death timing are preserved.
 
-Delivers Tidesteed and Skimray as two complete L-size reef mounts: 14 body strips and six saddle overlays each, 40 strips total, with 384 px cells and per-frame seat coordinates. Intake passed with 0 blockers and 0 warnings. The contact sheet plus attack, movement and death strips were visually reviewed; ZIP integrity, manifest dimensions, strip counts and seat-array lengths were verified.
-
-Known gaps: rider layering and seat placement need an in-game check, especially the Tidesteed down view and the Skimray's wide wings. Their death transitions become flat over the final two poses. Glowjelly is the next unfinished B38 species after this mount priority.
+All 40 strips passed intake with zero blockers and warnings. Please recheck mounted turns, down-facing rider overlap, and the death timing in-game. Fin Raider's fin silhouette is still open.
