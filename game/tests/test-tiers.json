@@ -1294,5 +1294,13 @@
   "isles-ftue-fixes.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "shared-mm-collections.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "hub-collections.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
