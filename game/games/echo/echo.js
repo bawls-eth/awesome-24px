@@ -14,10 +14,10 @@
     ['t10', '10-note tune', 'Echo a 10-note tune'],
   ];
   const FLOWERS = [
-    { name: 'Red tulip', c: '#ff6b6b', d: '#a8323a', hz: 262, shape: 'tulip' },
-    { name: 'Sun daisy', c: '#ffe066', d: '#b08a1a', hz: 330, shape: 'daisy' },
-    { name: 'Blue bell', c: '#5cc8ff', d: '#1f6f9e', hz: 392, shape: 'bell' },
-    { name: 'Star lily', c: '#c99bff', d: '#6a45a8', hz: 523, shape: 'star' },
+    { name: 'Red tulip', c: '#ff004d', d: '#7e2553', hz: 262, shape: 'tulip' },
+    { name: 'Sun daisy', c: '#ffec27', d: '#ab5236', hz: 330, shape: 'daisy' },
+    { name: 'Blue bell', c: '#29adff', d: '#1d2b53', hz: 392, shape: 'bell' },
+    { name: 'Star lily', c: '#ff77a8', d: '#7e2553', hz: 523, shape: 'star' },
   ];
   const $ = (id) => document.getElementById(id);
   const params = new URLSearchParams(location.search);
@@ -245,51 +245,54 @@
     floats = floats.filter((f) => f.t > 0);
   }
   function petal(x, y, s, c) { g.fillStyle = c; g.fillRect(Math.round(x - s / 2), Math.round(y - s / 2), s, s); }
+  function ptext(str, x, y, scale, color, align) {
+    if (window.MM8) { MM8.text(g, str, x, y, scale, color, { align: align || 'left' }); return; }
+    g.font = 'bold ' + (8 * scale) + 'px monospace'; g.textAlign = align || 'left'; g.textBaseline = 'top'; g.fillStyle = color; g.fillText(str, x, y);
+  }
+  // 8-bit flower sprites, 13x13 art pixels: o ink outline, p petal, h petal highlight, c centre, w white petal
+  const SPR = {
+    tulip: ['..o.......o..', '.oho.ooo.oho.', '.ohpoohpoppo.', '.ohppohppppo.', '.ohpppppppo..', '.oppppppppo..', '.oppppppppo..', '..opppppppo..', '..oppppppo...', '...oppppo....', '....oooo.....', '.............', '.............'],
+    daisy: ['....owo......', '..owowowo....', '.owwowowwo...', 'owwwocccowwo.', 'owwocccccowo.', '.ooccchccoo..', 'owwocccccowo.', 'owwwocccowwo.', '.owwowowwo...', '..owowowo....', '....owo......', '.............', '.............'],
+    bell: ['.....oo......', '....ohpo.....', '...ohpppo....', '...ohpppo....', '..ohppppo....', '..ohpppppo...', '.ohppppppo...', '.ohpppppppo..', 'ohppppppppo..', 'oppopppoppo..', '.oo.oco.oo...', '.....o.......', '.............'],
+    star: ['......o......', '.....oho.....', '.....ohpo....', 'oooooohpooooo', 'ohhpppcppppo.', '.ohpppcpppo..', '..oppcccppo..', '..oppppppo...', '.ohppoopppo..', '.oppo..oppo..', '.oo......oo..', '.............', '.............'],
+  };
+  const STEM = ['......o......', '.....ogo.....', '.oo..ogo..oo.', 'oggo.ogo.oggo', '.oggoogooggo.', '..ooogggooo..', '.....ogo.....', '.....ogo.....'];
+  function sprite(rows, x, y, u, map) { for (let r = 0; r < rows.length; r++) for (let k = 0; k < rows[r].length; k++) { const c = map[rows[r][k]]; if (!c) continue; g.fillStyle = c; g.fillRect(x + k * u, y + r * u, u, u); } }
   function drawFlower(i) {
     const f = FLOWERS[i], p = PAD[i], on = lit[i] > 0, hint = hintT[i] > 0;
     const cx = p.x + p.w / 2, cy = p.y + p.h / 2 - 8;
-    // bed
-    g.fillStyle = on ? '#2f4a33' : '#1d2c22'; g.fillRect(p.x + 4, p.y + 4, p.w - 8, p.h - 8);
-    if (hint) { g.strokeStyle = '#ffd166'; g.lineWidth = 4; g.strokeRect(p.x + 8, p.y + 8, p.w - 16, p.h - 16); }
-    if (showCur && cur === i && run.state === 'play') { g.strokeStyle = '#fff'; g.lineWidth = 3; g.strokeRect(p.x + 6, p.y + 6, p.w - 12, p.h - 12); }
-    const sc = on && !reduced ? 1.18 : 1;
+    // bed: checker soil tiles with an ink frame (lights up when sung)
+    const x0 = p.x + 4, y0 = p.y + 4, w0 = p.w - 8, h0 = p.h - 8;
+    g.fillStyle = '#0b0d1a'; g.fillRect(x0, y0, w0, h0);
+    g.fillStyle = on ? '#008751' : '#12142a'; g.fillRect(x0 + 4, y0 + 4, w0 - 8, h0 - 8);
+    g.fillStyle = on ? '#00e436' : '#0b0d1a'; for (let yy = y0 + 4; yy < y0 + h0 - 8; yy += 8) for (let xx = x0 + 4 + ((yy - y0) / 8 & 1) * 8; xx < x0 + w0 - 8; xx += 16) g.fillRect(xx, yy, 4, 4);
+    g.fillStyle = on ? f.c : '#5f574f'; g.fillRect(x0 + 4, y0 + 4, w0 - 8, 2); g.fillRect(x0 + 4, y0 + 4, 2, h0 - 8);
+    if (hint) { g.fillStyle = '#ffec27'; for (let k = 0; k < 4; k++) { const hx = k % 2 ? x0 + w0 - 20 : x0 + 8, hy = k < 2 ? y0 + 8 : y0 + h0 - 20; g.fillRect(hx, hy, 12, 4); g.fillRect(k % 2 ? hx + 8 : hx, k < 2 ? hy : hy - 8, 4, 12); } }
+    if (showCur && cur === i && run.state === 'play') { g.fillStyle = '#fff1e8'; g.fillRect(x0 + 6, y0 + 6, w0 - 12, 3); g.fillRect(x0 + 6, y0 + h0 - 9, w0 - 12, 3); g.fillRect(x0 + 6, y0 + 6, 3, h0 - 12); g.fillRect(x0 + w0 - 9, y0 + 6, 3, h0 - 12); }
+    const u = on && !reduced ? 7 : 6;
     const col = on ? f.c : f.d;
-    // stem and leaves
-    g.fillStyle = '#3a8f4a'; g.fillRect(cx - 3, cy + 22, 6, 50);
-    g.fillRect(cx - 18, cy + 40, 15, 8); g.fillRect(cx + 3, cy + 30, 15, 8);
-    const u = 14 * sc;
-    if (f.shape === 'tulip') {
-      for (let k = -1; k <= 1; k++) petal(cx + k * u, cy, u + 2, col);
-      petal(cx - u, cy - u, u, col); petal(cx + u, cy - u, u, col); petal(cx, cy + u * 0.8, u * 2, col);
-    } else if (f.shape === 'daisy') {
-      for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; petal(cx + Math.cos(a) * u * 1.6, cy + Math.sin(a) * u * 1.6, u, on ? '#ffffff' : '#9c9cb0'); }
-      petal(cx, cy, u * 1.6, col);
-    } else if (f.shape === 'bell') {
-      petal(cx, cy - u, u * 1.4, col); petal(cx, cy + 2, u * 2.4, col); petal(cx - u * 1.2, cy + u * 1.2, u, col); petal(cx + u * 1.2, cy + u * 1.2, u, col);
-    } else {
-      for (let k = 0; k < 5; k++) { const a = -Math.PI / 2 + k * Math.PI * 2 / 5; petal(cx + Math.cos(a) * u * 1.7, cy + Math.sin(a) * u * 1.7, u * 1.1, col); }
-      petal(cx, cy, u * 1.4, on ? '#fff3b0' : '#8a7a40');
-    }
-    if (on && !lowGfx) { g.fillStyle = f.c + '33'; g.fillRect(p.x + 4, p.y + 4, p.w - 8, p.h - 8); }
-    // number label (never colour alone)
-    g.fillStyle = on ? '#fff' : '#b3a9d6'; g.font = 'bold 18px ui-monospace, Menlo, monospace'; g.textAlign = 'left'; g.textBaseline = 'top';
-    g.fillText(String(i + 1), p.x + 14, p.y + 12);
-    g.font = '12px ui-monospace, Menlo, monospace'; g.textAlign = 'center'; g.textBaseline = 'bottom';
-    g.fillText(f.name, cx, p.y + p.h - 10);
+    const map = { o: '#0b0d1a', p: col, h: on ? '#fff1e8' : f.c, c: on ? '#ffa300' : '#ab5236', w: on ? '#fff1e8' : '#c2c3c7', g: on ? '#00e436' : '#008751' };
+    sprite(STEM, Math.round(cx - 6.5 * 4), Math.round(cy + 27), 4, map);
+    sprite(SPR[f.shape] || SPR.star, Math.round(cx - 6 * u), Math.round(cy + 31 - 11 * u), u, map);
+    if (on && !lowGfx) { g.fillStyle = '#fff1e8'; [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => { g.fillRect(Math.round(cx + sx * 52), Math.round(cy + sy * 40), 4, 4); g.fillRect(Math.round(cx + sx * 52) - 4, Math.round(cy + sy * 40), 12, 4); g.fillRect(Math.round(cx + sx * 52), Math.round(cy + sy * 40) - 4, 4, 12); }); }
+    // number label + name (never colour alone)
+    g.fillStyle = '#0b0d1a'; g.fillRect(p.x + 10, p.y + 10, 22, 26);
+    ptext(String(i + 1), p.x + 14, p.y + 13, 3, on ? '#ffec27' : '#fff1e8');
+    ptext(f.name.toUpperCase(), Math.round(cx), p.y + p.h - 26, 2, on ? '#fff1e8' : '#c2c3c7', 'center');
   }
   function draw() {
-    g.setTransform(1, 0, 0, 1, 0, 0);
-    g.fillStyle = '#10180f'; g.fillRect(0, 0, CW, CH);
+    g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = false;
+    g.fillStyle = '#0b0d1a'; g.fillRect(0, 0, CW, CH);
     for (let i = 0; i < 4; i++) drawFlower(i);
-    // the tune so far: little dots (filled = echoed)
+    // the tune so far: pixel notes (filled = echoed)
     if (run.state === 'play') {
-      const n = run.len, w = Math.min(14, (CW - 40) / n), x0 = CW / 2 - (n * w) / 2;
-      for (let k = 0; k < n; k++) { g.fillStyle = (run.phase === 'input' ? k < run.pos : k < run.showI) ? '#ffd166' : '#ffffff33'; g.fillRect(x0 + k * w + 2, CH / 2 - 4, w - 4, 8); }
+      const n = run.len, w = Math.max(4, Math.floor(Math.min(14, (CW - 40) / n) / 2) * 2), x0 = Math.round(CW / 2 - (n * w) / 2);
+      g.fillStyle = '#0b0d1a'; g.fillRect(x0 - 4, CH / 2 - 8, n * w + 8, 16);
+      for (let k = 0; k < n; k++) { g.fillStyle = (run.phase === 'input' ? k < run.pos : k < run.showI) ? '#ffec27' : '#5f574f'; g.fillRect(x0 + k * w + 1, CH / 2 - 4, w - 2, 8); }
     }
-    parts.forEach((p) => { g.globalAlpha = Math.min(1, p.t * 2); g.fillStyle = p.c; g.fillRect(p.x - 3, p.y - 3, 5, 5); });
+    parts.forEach((p) => { g.fillStyle = p.t < 0.15 ? '#5f574f' : p.c; g.fillRect(Math.round(p.x / 2) * 2 - 3, Math.round(p.y / 2) * 2 - 3, 6, 6); });
     g.globalAlpha = 1;
-    g.font = 'bold 18px ui-monospace, Menlo, monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    floats.forEach((f) => { g.globalAlpha = Math.min(1, f.t * 2); g.fillStyle = '#000'; g.fillText(f.text, f.x + 1, f.y + 2); g.fillStyle = f.color; g.fillText(f.text, f.x, f.y); });
+    floats.forEach((f) => { ptext(String(f.text).toUpperCase(), Math.round(f.x), Math.round(f.y) - 7, 2, f.t < 0.15 ? '#c2c3c7' : f.color, 'center'); });
     g.globalAlpha = 1;
   }
   let last = 0, lastHud = -1;
