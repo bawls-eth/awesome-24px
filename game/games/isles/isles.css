@@ -232,3 +232,12 @@ body.panel-open .hint, body.panel-open .howto { visibility: hidden; }
 /* BB: the Feed button fills up while the creature chews (--p 0..1, a few times a second); still tappable, it just says how long */
 #btn-feed { white-space: nowrap; min-width: 96px; }
 #btn-feed.chew { background: linear-gradient(90deg, #b9e08a calc(var(--p, 1) * 100%), #c8b07a 0); color: #3a2c10; }
+/* BB (a11y sweep): the island name is the page's <h1> (HUD look kept); the toast text is light on its dark plate (was 1.2:1) */
+h1.hud-isle { margin: 0; font-size: calc(12px * var(--us)); font-weight: normal; line-height: inherit; }
+#isle-main { display: block; }
+#toast { color: #fff1e8; }
+/* BB: high contrast (MMSettings / mm-high-contrast sets data-high-contrast on <html>): solid plates, white text, stronger edges */
+:root[data-high-contrast] #toast, :root[data-high-contrast] .hint, :root[data-high-contrast] #hud, :root[data-high-contrast] .panel, :root[data-high-contrast] .howto, :root[data-high-contrast] .boss-bar { background: #000; color: #fff; }
+:root[data-high-contrast] .hud-isle, :root[data-high-contrast] .hud-info, :root[data-high-contrast] .dim, :root[data-high-contrast] .rc-note, :root[data-high-contrast] .dest-cost { color: #fff !important; }
+:root[data-high-contrast] #hud, :root[data-high-contrast] .hint, :root[data-high-contrast] .panel, :root[data-high-contrast] #toast { outline: 2px solid #fff; }
+:root[data-high-contrast] button { outline: 2px solid #000; }

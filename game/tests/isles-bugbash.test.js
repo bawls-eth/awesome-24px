@@ -191,7 +191,32 @@ const KO = (I) => {
   });
   ck(lb.h < 60 && lb.l >= lb.hudR - 1 && lb.r <= lb.miniL + 1, '4e: landscape: the boss bar is one short strip between the HUD and the minimap (also while riding with an ability)', lb);
 
-  for (const o of all)ck(o.errors.length === 0, 'no console errors / audio warnings', o.errors.slice(0, 4));
+  // ---- 5: a11y sweep findings: landmarks, toast contrast, sail is a named keyboard stop, high contrast + reduce motion prefs ----
+  const a = await open(browser, { viewport: { width: 1280, height: 720 } }, '&isle=meadow&at=dock',
+    Object.assign({ 'mm-high-contrast': '1', 'mm-reduce-motion': '1' }, HERO_KEYS));
+  await frames(a.page, 20);
+  const ax = await a.page.evaluate(() => {
+    const h1 = document.querySelector('h1'), r = h1 && h1.getBoundingClientRect();
+    const t = document.getElementById('toast'); t.textContent = 'Test toast'; t.classList.add('on');
+    const c = getComputedStyle(t).color, bg = getComputedStyle(t).backgroundColor;
+    const sail = document.getElementById('btn-sail');
+    return { main: !!document.querySelector('main'), h1: h1 && h1.textContent, h1vis: !!(r && r.width > 0 && r.height > 0), canvas: document.getElementById('view').getAttribute('aria-label'),
+      toast: c, toastBg: bg, sail: sail.getAttribute('aria-label'), sailShown: !sail.hidden,
+      hc: document.documentElement.getAttribute('data-high-contrast'), hudBg: getComputedStyle(document.getElementById('hud')).backgroundColor,
+      rm: document.documentElement.getAttribute('data-reduce-motion') };
+  });
+  const lum = (s) => { const m = s.match(/\d+(\.\d+)?/g).slice(0, 3).map(Number).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]; };
+  const ratio = (x, y) => { const A = lum(x), B = lum(y); return (Math.max(A, B) + 0.05) / (Math.min(A, B) + 0.05); };
+  ck(ax.main && ax.h1vis && /Hearth Isle/.test(ax.h1) && /Island view/.test(ax.canvas), '5a: a <main> landmark, a visible <h1> naming the island, a labelled canvas', ax);
+  ck(ratio(ax.toast, ax.toastBg) >= 4.5, '5b: the toast text has >= 4.5:1 contrast', { ax, r: ratio(ax.toast, ax.toastBg) });
+  ck(ax.sailShown && /^Sail/.test(ax.sail), '5c: at the dock the Sail button is a named keyboard stop ("Sail: ...")', ax.sail);
+  ck(ax.hc === '1' && /rgb\(0, 0, 0\)/.test(ax.hudBg) && ax.rm === '1', '5d: mm-high-contrast and mm-reduce-motion are applied on the isles page', ax);
+  const tabs = [];
+  await a.page.evaluate(() => document.activeElement && document.activeElement.blur());
+  for (let i = 0; i < 6; i++) { await a.page.keyboard.press('Tab'); tabs.push(await a.page.evaluate(() => (document.activeElement.getAttribute('aria-label') || document.activeElement.textContent || '').trim().slice(0, 30))); }
+  ck(tabs.some((n) => /^Sail/.test(n)) && tabs.some((n) => /pack/i.test(n)), '5e: Pack and Sail are reachable within 6 Tab presses', tabs);
+
+  for (const o of all) ck(o.errors.length === 0, 'no console errors / audio warnings', o.errors.slice(0, 4));
   ck(all.every((o) => o.db.count() === 0), 'blockDb saw 0 database requests', all.map((o) => o.db.count()));
   await browser.close();
   done();
