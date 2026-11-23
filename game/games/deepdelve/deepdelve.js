@@ -1186,6 +1186,12 @@
     queueSave(); renderHud();
     return true;
   }
+  // G-18 (b11-07, b15-12): a craft row reads 'Plank' / 'Torch x4', not 'plank > plank' (the recipe name only when it differs from the item)
+  function craftLabel(r) {
+    const out = String(MMDDCraft.outText(r) || '').replace(/_/g, ' '), base = String(r.id || '').replace(/_/g, ' ');
+    const t = out.indexOf(base) === 0 ? out : base + ': ' + out;
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
   function renderCraft() {
     const ul = $('recipes');
     while (ul.firstChild) ul.removeChild(ul.firstChild);
@@ -1197,7 +1203,7 @@
       if (only && !r.ready) return;
       const li = document.createElement('li');
       const info = document.createElement('span'); info.className = 'ri';
-      const nm = document.createElement('strong'); nm.textContent = r.id.replace(/_/g, ' ') + ' > ' + MMDDCraft.outText(r);
+      const nm = document.createElement('strong'); nm.textContent = craftLabel(r);
       const ct = document.createElement('small'); ct.textContent = costText(r.cost) + ' (' + r.station + ')' + (r.reason ? ' - ' + r.reason : '');
       info.appendChild(nm); info.appendChild(ct);
       const b = document.createElement('button'); b.type = 'button'; b.className = 'btn mini'; b.dataset.recipe = r.id; b.textContent = 'Craft';
@@ -1211,7 +1217,7 @@
       if (only && !r.ready) return;
       const li = document.createElement('li');
       const info = document.createElement('span'); info.className = 'ri';
-      const nm = document.createElement('strong'); nm.textContent = (r.locked ? '[locked] ' : '') + r.id.replace(/_/g, ' ') + ' > ' + MMDDCraft.outText(r);
+      const nm = document.createElement('strong'); nm.textContent = (r.locked ? '[locked] ' : '') + craftLabel(r);
       const ct = document.createElement('small'); ct.textContent = costText(r.cost) + ' (' + (r.kind === 'grotto' ? 'grotto' : 'blueprint') + ')' + (r.reason ? ' - ' + r.reason : '');
       info.appendChild(nm); info.appendChild(ct);
       const b = document.createElement('button'); b.type = 'button'; b.className = 'btn mini'; b.dataset.recipe = r.id; b.textContent = 'Craft';
