@@ -179,6 +179,7 @@ const FIGHT = (I, o) => {
     I.soothe(false);
     let feeds = 0;
     out.hit = I.feed(); feeds++; // a feast while asleep
+    out.early = I.feed(); out.earlyToast = document.getElementById('toast').textContent; // bug bash: too soon -> honest seconds, no feast used
     for (let k = 0; k < 10 && I.boss().st === 'taming'; k++) { I.step(0, 0, 10.2); const r = I.feed(); if (r.ok) feeds++; }
     out.feeds = feeds; out.done = I.boss().done; out.feastLeft = I.inv().feast || 0;
     out.tames = I.tames(); out.medals = I.medals(); out.beat = I.save().beat; out.mount = I.mountId();
@@ -189,6 +190,7 @@ const FIGHT = (I, o) => {
     return out;
   }, FIGHT.toString());
   const ent = tm.tames && tm.tames.roster.find((t) => t.sp === 'fernjaw_tyrant');
+  check('3: feeding the sleeping boss again too soon says how long it still chews ("ready in N s") and uses no feast', tm.early && !tm.early.ok && /still chewing: ready in \d+ s\./.test(tm.earlyToast), JSON.stringify({ e: tm.early, t: tm.earlyToast }));
   check('3: at weary (10% HP) the Fernjaw Tyrant can be fed; with no feast in inv nothing starts', tm.weary === 'weary' && tm.frac < 0.1 && tm.frac > 0.09 && tm.feedable && tm.tameable && tm.nofood.why === 'nofood', JSON.stringify(tm).slice(0, 300));
   check('3: a feast from inv starts the boss-tame (one feast used)', tm.start.ok && tm.start.started && tm.st1 === 'taming' && tm.feast1 === 7, JSON.stringify(tm.start));
   check('3: soothe shots put it to sleep, more feasts tame it (each feed uses one feast)', tm.asleep && tm.done === 'tamed' && tm.feeds >= 2 && tm.feastLeft === 7 - tm.feeds, JSON.stringify({ a: tm.asleep, s: tm.sootheT, f: tm.feeds, d: tm.done, l: tm.feastLeft }));
