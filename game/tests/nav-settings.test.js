@@ -46,7 +46,7 @@ async function run(browser, label, opts, tap) {
   await tap(page, '#mm-nav-settings');
   await page.waitForSelector('#mmset:not([hidden])', { timeout: 5000 });
   const s1 = await page.evaluate(() => ({ nav: MMNav.isOpen(), page: document.getElementById('mmset').dataset.page, groups: [...document.querySelectorAll('#mmset .mmset-group')].map((g) => g.dataset.group).join(), fb: !!document.querySelector('#mmset-fb textarea'), focus: document.activeElement && document.activeElement.id, dialogs: [...document.querySelectorAll('[role=dialog]')].filter((n) => !n.hidden && n.getClientRects().length).length }));
-  check(L('Settings loads the shared panel on demand: Menu closed, panel open for page "map", 4 groups, focus on Close, one dialog'), !s1.nav && s1.page === 'map' && s1.groups === 'play,see,hear,help' && s1.focus === 'mmset-close' && s1.dialogs === 1, JSON.stringify(s1));
+  check(L('Settings loads the shared panel on demand: Menu closed, panel open for page "map", See / Hear / Help (no shooter-only Play group on the Hub), focus on Close, one dialog'), !s1.nav && s1.page === 'map' && s1.groups === 'see,hear,help' && s1.focus === 'mmset-close' && s1.dialogs === 1, JSON.stringify(s1));
   check(L('the Help group has the feedback box (mm-feedback.js loaded on demand too)'), s1.fb, JSON.stringify(s1));
 
   // P0: keys typed in the feedback box never reach the map's hotkeys (WASD walk the villager, Enter opens a node)

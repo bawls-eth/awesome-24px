@@ -449,7 +449,8 @@
     const S = window.MMSettings;
     if (!S || typeof S.mount !== 'function') return false;
     try {
-      const p = S.mount({ page: cur.id || 'page' });
+      // The Play group (auto-fire, aim assist, ...) only means something in the Realm; elsewhere the panel stays short.
+      const p = S.mount({ page: cur.id || 'page', play: cur.id === 'realm' });
       if (p && p.open) { p.open(); return true; }
     } catch (e) { /* a broken panel must not break the menu */ }
     return false;
