@@ -470,7 +470,7 @@
     var sells = pr.wk.sell, peak = Math.max.apply(null, sells), peakSlot = sells.indexOf(peak) + 1;
     var hadBest = prSave.hasBest, isBest = hadBest ? profit > prSave.best : profit >= 0; // G-18 (b11-05): a first-week loss is never stored as the practice best
     if (isBest) { prSave.best = profit; prSave.hasBest = true; }
-    var moodHad = pr.mood && Object.prototype.hasOwnProperty.call(prSave.moodBest, pr.mood), moodNew = pr.mood && (!moodHad || profit > prSave.moodBest[pr.mood]);
+    var moodHad = pr.mood && Object.prototype.hasOwnProperty.call(prSave.moodBest, pr.mood), moodNew = pr.mood && (moodHad ? profit > prSave.moodBest[pr.mood] : profit >= 0); // G-18 (b11-05): like the practice best, a loss is never a mood best
     if (moodNew) prSave.moodBest[pr.mood] = profit;
     prSave.rounds += 1; prPersist();
     beep(profit > 0 ? 'claim' : 'ui_tap');
@@ -484,7 +484,7 @@
       pr.invested ? (pr.marks.length ? 'You sold on ' + pr.marks.map(function (i) { return M.slotLabel(i); }).join(', ') + '.' : 'You never sold.') : 'You did not buy any stalks this time.',
       spoiled ? spoiled + ' stalks spoiled at the end of the week.' : 'Nothing spoiled.',
       (prSave.hasBest ? 'Practice best: ' + signed(prSave.best) + ' bells' : 'No practice best yet (a loss never counts)') + ' over ' + prSave.rounds + ' practice week(s).'
-    ].concat(pr.mood ? ['Market mood was ' + MOODS[pr.mood].name + ' (' + oddsLine(pr.mood) + '). ' + MOODS[pr.mood].name + ' best: ' + signed(prSave.moodBest[pr.mood]) + ' bells' + (moodNew && moodHad ? ' (new!)' : '') + '.'] : []).forEach(function (t) { var li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
+    ].concat(pr.mood ? ['Market mood was ' + MOODS[pr.mood].name + ' (' + oddsLine(pr.mood) + '). ' + MOODS[pr.mood].name + ' best: ' + (Object.prototype.hasOwnProperty.call(prSave.moodBest, pr.mood) ? signed(prSave.moodBest[pr.mood]) + ' bells' + (moodNew && moodHad ? ' (new!)' : '') : 'none yet (a loss is not a best)') + '.'] : []).forEach(function (t) { var li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
     drawChartOn($('pr-chart'), pr.wk, M.SLOTS - 1, 1, pr.marks);
     prBestLine();
     // Shared result card (MMMiniKit): headline, stat rows, the lines above, and one Play again button.
