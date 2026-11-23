@@ -39,15 +39,21 @@
 <script src="isle-creatures.js"></script>
 <script src="../../shared/mm-nav.js" data-mount="manual"></script>
 <script src="../../shared/mm-feedback.js"></script>
+<!-- BB: universal controls, chiptune cues and the shared Settings sheet (CONTROLS.md, CHIP-AUDIO.md, SETTINGS-WIRING.md) -->
+<script src="../../shared/mm-input.js"></script>
+<script src="../../shared/mm-chip.js"></script>
+<script src="../../shared/sfx.js"></script>
+<script src="../../shared/mm-settings.js"></script>
 </head>
 <body>
-<canvas id="view" aria-label="Island view" role="img"></canvas>
+<main id="isle-main" aria-label="Hearthvale Isles">
+<canvas id="view" aria-label="Island view: your hero, creatures and the island around you" role="img"></canvas>
 <header id="hud">
   <a class="btn small" id="back" href="../../hub/index.html" aria-label="Back to the World map">&larr; World map</a>
   <div class="hud-row">
     <div class="hud-main">
       <div id="hud-hero" class="hud-hero">Wanderer</div>
-      <div id="hud-isle" class="hud-isle">Verdant Jungle</div>
+      <h1 id="hud-isle" class="hud-isle">Verdant Jungle</h1>
     </div>
     <button id="btn-pack" class="px-btn" type="button" aria-haspopup="dialog" aria-label="Open the pack: party, craft, log and help"><span class="pack-ico" aria-hidden="true"></span>Pack</button>
   </div>
@@ -83,7 +89,7 @@
   <button id="btn-ability" type="button" hidden aria-label="Mount ability"><span class="ring" aria-hidden="true"></span><span class="txt">Ability</span></button>
   <button id="btn-cmd" type="button" hidden aria-label="Party command: follow"><span class="ico" data-ico="ui_cmd_follow"></span><span class="txt">Follow</span></button>
   <button id="btn-gather" type="button" hidden aria-label="Gather here">Gather</button>
-  <button id="btn-sail" type="button" hidden aria-label="Open the sea chart">Sail</button>
+  <button id="btn-sail" type="button" hidden aria-label="Sail: open the sea chart">Sail</button>
   <button id="btn-build" type="button" hidden aria-pressed="false" aria-label="Decorate your island">Decor</button>
   <button id="btn-trophy" type="button" hidden aria-label="Open the trophy pedestal">Trophies</button>
 </div>
@@ -123,7 +129,8 @@
     <li>Pack: party, craft, log and help. Sail at docks.</li>
   </ol>
 </div>
-<p id="help" class="help" hidden>Keys: WASD / arrows move. Space fires. M map. F feeds, Q soothe, R rides (F = mount ability while riding), C party command. G gathers, K crafts, T sails at a dock, L log, B decor at home, P trophies at home.</p>
+</main>
+<p id="help" class="help" hidden>Keys: WASD / arrows move. Space / Enter fires. F, Shift or E feeds (the mount ability while riding). Esc / P menu. M map, Q soothe, R rides, C party command. G gathers, K crafts, T sails at a dock, L log, B decor at home, P trophies at home.</p>
 <script src="isles.js"></script>
 </body>
 </html>

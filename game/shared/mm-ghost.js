@@ -39,9 +39,10 @@
     if (typeof str !== 'string' || str.length > MAX_BYTES) return null;
     const parts = str.split('|');
     if (parts.length !== 4 || parts[0] !== 'g1') return null;
-    const stride = parseInt(parts[1], 10), timeMs = parseInt(parts[2], 36);
-    if (!(stride >= 1) || !isFinite(timeMs)) return null;
-    const nums = parts[3] === '' ? [] : parts[3].split(',').map((v) => parseInt(v, 36));
+    const stride = /^[0-9]{1,4}$/.test(parts[1]) ? parseInt(parts[1], 10) : NaN, timeMs = /^[0-9a-z]{1,12}$/.test(parts[2]) ? parseInt(parts[2], 36) : NaN;
+    if (!(stride >= 1 && stride <= 4096) || !isFinite(timeMs) || timeMs < 0) return null; // encode never writes these
+    // strict base-36 ints: parseInt alone read '1x!' as 1 and 'ab.c' as 371, so junk decoded to a plausible path
+    const nums = parts[3] === '' ? [] : parts[3].split(',').map((v) => (/^-?[0-9a-z]{1,12}$/.test(v) ? parseInt(v, 36) : NaN));
     if (nums.length % 2 || nums.some((n) => !isFinite(n))) return null;
     const points = []; let x = 0, y = 0;
     for (let i = 0; i < nums.length; i += 2) { x += nums[i]; y += nums[i + 1]; points.push([x, y]); }

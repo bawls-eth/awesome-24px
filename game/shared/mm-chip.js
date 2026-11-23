@@ -74,7 +74,9 @@
     shot: 'shoot', levelup: 'level_up', bag_rare: 'chest', boss_awaken: 'boss', claim: 'confirm', ui_tap: 'blip',
     sell: 'confirm', achievement: 'unlock', deny: 'error', stack: 'stack_drop', drop: 'stack_drop', open: 'ui_open', close: 'ui_close',
   };
-  const resolve = (name) => (SFX[name] ? name : (ALIASES[name] && SFX[ALIASES[name]] ? ALIASES[name] : null));
+  const own = (o, k) => typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k);
+  // own keys only: 'toString' / 'constructor' / '__proto__' used to resolve to Object.prototype members
+  const resolve = (name) => (own(SFX, name) ? name : (own(ALIASES, name) && own(SFX, ALIASES[name]) ? ALIASES[name] : null));
 
   // ---------------- music cues ----------------
   // Track strings: one token per eighth note. Degrees 1-7 of the cue's scale, ' = octave up, , = octave down, # / b = sharp / flat,
@@ -127,16 +129,20 @@
   // Deterministic event list: [{step, t, ch, duty, midi, len, vol, drum}] for `loops` passes of the cue.
   // Seeded variation: on passes after the first, some lead notes step to a neighbouring scale tone and some hats drop out.
   function render(name, seed, loops) {
-    const cue = typeof name === 'string' ? CUES[name] : name;
-    if (!cue) return [];
-    loops = Math.max(1, loops | 0 || 1);
+    const cue = typeof name === 'string' ? (own(CUES, name) ? CUES[name] : null) : name;
+    if (!cue || typeof cue !== 'object') return [];
+    // a hand-made cue object is clamped (bars 1..64, bpm 20..400, loops 1..256) so hostile data cannot hang or blow memory
+    loops = Math.min(256, Math.max(1, loops | 0 || 1));
+    const bars = Math.min(64, Math.max(0, Math.floor(Number(cue.bars)) || 0)), bpm = Math.min(400, Math.max(20, Number(cue.bpm) || 120));
+    if (!bars || !own(SCALES, cue.scale)) return [];
     const R = rng((seed | 0) + 7919);
-    const steps = cue.bars * 8, sp = 60 / cue.bpm / 2, out = [];
+    const steps = bars * 8, sp = 60 / bpm / 2, out = [];
     for (let pass = 0; pass < loops; pass++) {
       TRACKS.forEach((tk) => {
         const tr = cue[tk];
-        if (!tr) return;
+        if (!tr || typeof tr !== 'object') return;
         const tt = toks(tr.notes);
+        if (!tt.length) return;
         for (let i = 0; i < steps; i++) {
           const tok = tt[i % tt.length];
           const step = pass * steps + i;
@@ -162,7 +168,7 @@
     out.sort((a, b) => a.t - b.t || (a.ch < b.ch ? -1 : a.ch > b.ch ? 1 : 0));
     return out;
   }
-  const cueLength = (name) => { const c = CUES[name]; return c ? c.bars * 8 * (60 / c.bpm / 2) : 0; };
+  const cueLength = (name) => { const c = own(CUES, name) ? CUES[name] : null; return c ? c.bars * 8 * (60 / c.bpm / 2) : 0; };
 
   // ---------------- WebAudio plumbing ----------------
   function pulseWave(ctx, duty, cache) {
@@ -237,8 +243,11 @@
       let n = 0;
       while (cur) {
         if (idx >= events.length) {
-          if (!cue.loop) { cur = null; break; }
-          pass++; t0 += len; load();
+          if (!cue.loop || !(len > 0)) { cur = null; break; }
+          pass++; t0 += len;
+          // a tab hidden for minutes: jump whole passes at once instead of rendering (and skipping) every one of them
+          if (t0 + len < now - 0.05) { const skip = Math.floor((now - 0.05 - t0) / len); pass += skip; t0 += skip * len; }
+          load();
           continue;
         }
         const e = events[idx], at = t0 + e.t;
@@ -251,7 +260,7 @@
       return n;
     }
     return {
-      start(name) { if (!CUES[name]) return false; if (cur === name) return true; cur = name; pass = 0; t0 = ctx.currentTime + 0.05; load(); tick(); return true; },
+      start(name) { if (!own(CUES, name)) return false; if (cur === name) return true; cur = name; pass = 0; t0 = ctx.currentTime + 0.05; load(); tick(); return true; },
       stop() { cur = null; events = []; },
       tick,
       get cue() { return cur; },

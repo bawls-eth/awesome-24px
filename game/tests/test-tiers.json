@@ -583,6 +583,14 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-bugbash-fuzz.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-bugbash-browser.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "shared-mm-town-heroes.test.js": {
     "class": "node",
     "tier": "smoke"
@@ -1383,6 +1391,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "isles-bugbash.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "isles-access.test.js": {
     "class": "browser",
     "tier": "full"
@@ -1494,5 +1506,21 @@
   "net-hostile-presence.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "save-hostile-fuzz.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "save-compat-pages.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "save-race-tabs.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "shared-mm-save-merge.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }

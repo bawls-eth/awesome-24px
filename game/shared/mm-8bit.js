@@ -14,7 +14,7 @@
     for (var i = 0; i < PAL.length; i++) { var p = hexRgb(PAL[i]);
       var d = (p[0] - c[0]) * (p[0] - c[0]) * 0.3 + (p[1] - c[1]) * (p[1] - c[1]) * 0.59 + (p[2] - c[2]) * (p[2] - c[2]) * 0.11;
       if (d < bd) { bd = d; best = i; } } return PAL[best]; }
-  function col(c) { if (typeof c === 'number') return PAL[((Math.floor(c) % 16) + 16) % 16];
+  function col(c) { if (typeof c === 'number') return isFinite(c) ? PAL[((Math.floor(c) % 16) + 16) % 16] : PAL[7]; // NaN used to give undefined
     if (typeof c === 'string' && Object.prototype.hasOwnProperty.call(NAMES, c)) return PAL[NAMES[c]]; return c || PAL[7]; }
 
   // 5x7 bitmap font: each glyph = 7 rows of 5 bits (16 = leftmost)
@@ -52,7 +52,7 @@
   }
 
   // integer CSS scale that fits availW (always >= 1)
-  function crispScale(logicalW, availW) { var s = Math.floor((availW || logicalW) / logicalW); return Math.max(1, s || 1); }
+  function crispScale(logicalW, availW) { var s = Math.floor((availW || logicalW) / logicalW); return isFinite(s) && s >= 1 ? s : 1; } // 0 / NaN width used to give Infinity
   // MM8.crisp(canvas, logicalW, logicalH, opts): backing store = logical size, pixelated, integer CSS scale (opts.fit:false keeps CSS size)
   function crisp(canvas, logicalW, logicalH, opts) {
     opts = opts || {};
@@ -112,10 +112,13 @@
   } catch (e) { return false; } }
 
   // palette-quantised square particles; rng should be seeded (returns [0,1))
-  function particles(rng, cap) { var list = []; cap = cap || 64;
+  // no rng: a fixed-seed LCG per particle system (never Math.random), so a burst is the same every run
+  function lcg(seed) { var q = seed >>> 0; return function () { q = (Math.imul(q, 1664525) + 1013904223) >>> 0; return q / 4294967296; }; }
+  function particles(rng, cap) { var list = []; cap = Math.max(0, Math.min(4096, Math.floor(Number(cap)) || 64));
+    var r = typeof rng === 'function' ? rng : lcg(0x8b17);
     return {
       list: list,
-      burst: function (x, y, n, color, speed) { var r = rng || Math.random, c = nearest(col(color)); speed = speed || 2;
+      burst: function (x, y, n, color, speed) { var c = nearest(col(color)); speed = Number(speed) || 2; n = Math.floor(Number(n)) || 0;
         if (lowGfx()) n = Math.min(n, 4);
         n = Math.max(0, Math.min(n, cap - list.length));
         for (var i = 0; i < n; i++) { var a = r() * Math.PI * 2, v = speed * (0.4 + r() * 0.8);

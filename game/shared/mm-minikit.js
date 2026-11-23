@@ -5,7 +5,7 @@
 (function (root) {
   'use strict';
   var NEAR = 0.03; // "So close!" only within 3% of a goal
-  var CODE_RE = /^[A-Z0-9]{1,24}$/;
+  var CODE_RE = /^(?:\.?[A-Za-z]|[0-9_-])+$/; // share code alphabet: A-Z 0-9 _ - and '.' before a letter that was upper case
 
   function num(v) { v = Number(v); return isFinite(v) ? v : 0; }
   function fmt(n) {
@@ -49,22 +49,26 @@
     if (goal.target !== undefined && nearMiss(value, goal.target, goal.lower)) return 'So close! Next goal: ' + label;
     return 'Next goal: ' + label;
   }
-  // seed -> share code (A-Z0-9, 24 chars or fewer); '' when nothing usable is left
+  // seed -> share code; '' when nothing usable is left. Seed chars outside A-Z a-z 0-9 _ - are dropped and the seed is cut to
+  // 24 chars (the games' own seed rule). Lower-case letters and digits read as before (abc123 -> ABC123), so old codes still
+  // work; '-' and '_' are kept, and an upper-case letter is written as '.' + letter, so every game seed round-trips exactly.
   function seedCode(seed) {
-    var s = String(seed === undefined || seed === null ? '' : seed).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 24);
-    return s;
+    var s = String(seed === undefined || seed === null ? '' : seed).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24);
+    return s.replace(/[A-Z]/g, '.$&').toUpperCase();
   }
-  // share code -> seed (lower case) or null. Case-insensitive; rejects anything over 24 chars or outside A-Z0-9.
+  // share code -> seed or null. Case-insensitive; trims; rejects anything that does not decode to 1-24 seed chars.
   function parseSeedCode(code) {
     if (typeof code !== 'string') return null;
-    var c = code.trim().toUpperCase();
-    if (!CODE_RE.test(c)) return null;
-    return c.toLowerCase();
+    var c = code.trim();
+    if (c.length > 48 || !CODE_RE.test(c)) return null;
+    var out = c.replace(/\.([A-Za-z])|([A-Za-z])/g, function (m, up, lo) { return up ? up.toUpperCase() : lo.toLowerCase(); });
+    return out.length >= 1 && out.length <= 24 ? out : null;
   }
   // build the view model the panel draws (pure; never mutates input)
   function result(o) {
     o = o || {};
-    var stats = (Array.isArray(o.stats) ? o.stats : []).slice(0, 4).map(function (s) {
+    var obj = function (v) { return v && typeof v === 'object' ? v : {}; }; // a null / number entry used to throw (s.label of null)
+    var stats = (Array.isArray(o.stats) ? o.stats : []).slice(0, 4).map(obj).map(function (s) {
       return { label: String(s.label || ''), value: String(s.value === undefined ? '' : s.value), best: !!s.best, id: s.id ? String(s.id) : '' };
     });
     var seed = o.seed !== undefined && o.seed !== null && o.seed !== '' ? String(o.seed) : '';
@@ -72,14 +76,14 @@
     var goal = o.goal === undefined ? nextGoal(o.medals) : o.goal;
     return {
       title: String(o.title || 'Round over'),
-      headline: Array.isArray(o.headline) ? o.headline.map(function (p) { return typeof p === 'string' ? { text: p } : { text: String(p.text), id: p.id ? String(p.id) : '' }; }) : [{ text: String(o.headline || '') }],
+      headline: Array.isArray(o.headline) ? o.headline.map(function (p) { return typeof p === 'string' ? { text: p } : { text: String(obj(p).text === undefined ? '' : obj(p).text), id: obj(p).id ? String(obj(p).id) : '' }; }) : [{ text: String(o.headline || '') }],
       stats: stats,
-      lines: (Array.isArray(o.lines) ? o.lines : []).map(function (l) { return { id: l.id ? String(l.id) : '', text: String(l.text || ''), cls: l.cls ? String(l.cls) : '' }; }),
+      lines: (Array.isArray(o.lines) ? o.lines : []).map(obj).map(function (l) { return { id: l.id ? String(l.id) : '', text: String(l.text || ''), cls: l.cls ? String(l.cls) : '' }; }),
       goal: o.goalText !== undefined ? String(o.goalText) : goalLine(o.value, goal),
       seed: seed,
       code: code,
       replay: !!seed && o.replay !== false,
-      more: (Array.isArray(o.more) ? o.more : []).slice(0, 2).map(function (m) { return { id: m.id ? String(m.id) : '', label: String(m.label || '') }; }),
+      more: (Array.isArray(o.more) ? o.more : []).slice(0, 2).map(obj).map(function (m) { return { id: m.id ? String(m.id) : '', label: String(m.label || '') }; }),
       menuHref: o.menuHref ? String(o.menuHref) : '',
       menuLabel: String(o.menuLabel || 'Menu'),
       ids: Object.assign({ again: 'mk-again', replay: 'mk-replay', copy: 'mk-copy', code: 'mk-code', goal: 'mk-goal', menu: 'mk-menu' }, o.ids || {}),

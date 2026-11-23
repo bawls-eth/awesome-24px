@@ -81,7 +81,7 @@
     out.comets = uniq(strList(raw.comets, 100));
     out.tokens = int(raw.tokens, 0, MAX_TOKENS, 0);
     out.unlocks = uniq(strList(raw.unlocks, 200));
-    out.games = isObj(raw.games) ? raw.games : {};
+    out.games = (() => { const g = {}; if (isObj(raw.games)) Object.keys(raw.games).slice(0, 64).forEach((k) => { const e = raw.games[k]; if (!/^[a-z0-9_-]{1,24}$/.test(k) || !isObj(e)) return; const done = Array.isArray(e.done) ? e.done.filter((id, i, a) => typeof id === 'string' && id.length <= 40 && a.indexOf(id) === i).slice(0, 200) : []; let rest = {}; try { const s = JSON.stringify(e); if (s && s.length < 4000) rest = JSON.parse(s); } catch (x) { rest = {}; } if (Object.prototype.hasOwnProperty.call(rest, '__proto__')) delete rest.__proto__; g[k] = Object.assign(rest, { done }); }); return g; })(); // bug bash S4 (shared lane): bounded, so a 5 MB games value can no longer make every save() hit the quota
     out.results = (Array.isArray(raw.results) ? raw.results : []).map(cleanResult).filter(Boolean).slice(-MAX_RESULTS);
     return out;
   }

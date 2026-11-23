@@ -81,8 +81,16 @@
     // Feedback box notes (device-only, never sent anywhere): the owner cleaner keeps only the known entry fields.
     'pixeltown-feedback-v1': (o, v) => (isObj(v) ? (o.feedback ? o.feedback.clean(v) : cleanPlain(v)) : undefined),
     // Town Realm Gate pointer chip (UI only): keep just the two known booleans, the shape main.js loadGatePointer() reads.
-    'pixeltown-gate-pointer-v1': (o, v) => (isObj(v) ? { v: 1, dismissed: v.dismissed === true, reached: v.reached === true } : undefined)
+    'pixeltown-gate-pointer-v1': (o, v) => (isObj(v) ? { v: 1, dismissed: v.dismissed === true, reached: v.reached === true } : undefined),
+    // Bug bash S3 (additive, VERSION stays 2): progress keys the export used to leave out, so Backup -> Restore on a new device lost
+    // them. Each owner game cleans its own save on load (like realm / jam above); here they only pass the plain-JSON bounds.
+    'pixeltown-mm-active-v1': (o, v) => (o.profile && o.profile.cleanActive ? o.profile.cleanActive(v) : cleanPlain(v)),
+    'pixeltown-bugs-goals-v1': (o, v) => (isObj(v) ? (o.bugs && o.bugs.cleanGoals ? o.bugs.cleanGoals(v) : cleanPlain(v)) : undefined)
   };
+  ['pixeltown-jam-assist-v1', 'pixeltown-deepdelve-v1', 'pixeltown-deepdelve-runs-v1', 'pixeltown-deepdelve-creative-v1', 'pixeltown-angler-fun-v1',
+    'pixeltown-stalk-practice-v1', 'pixeltown-bugs-pb-v1', 'pixeltown-dash-v1', 'pixeltown-pop-v1', 'pixeltown-stack-v1', 'pixeltown-echo-v1']
+    .concat(['angler', 'bugs', 'dash', 'deepdelve', 'echo', 'pop', 'stack', 'stalk'].map((g) => 'pixeltown-medals-' + g + '-v1'))
+    .forEach((k) => { CLEANERS[k] = (o, v) => cleanPlain(v); });
   const KNOWN = Object.keys(CLEANERS).concat(['pixeltown-panel-collapsed']);
   const NAMES = {
     'pixeltown-save-v1': 'town save', 'pixeltown-mm-v1': 'Mad Maze heroes and stash', 'pixeltown-hub-v1': 'hub map',
@@ -91,7 +99,14 @@
     'pixeltown-stalk-v1': 'Stalk Market save', 'pixeltown-jam-v1': 'Jam save',
     'pixeltown-access-v1': 'accessibility settings', 'pixeltown-gift-v1': 'daily gift',
     'pixeltown-tames-v1': 'tamed creatures', 'pixeltown-archipelago-v1': 'Archipelago progress', 'pixeltown-medals-isles-v1': 'Archipelago medals',
-    'pixeltown-feedback-v1': 'feedback notes', 'pixeltown-gate-pointer-v1': 'Realm Gate pointer setting'
+    'pixeltown-feedback-v1': 'feedback notes', 'pixeltown-gate-pointer-v1': 'Realm Gate pointer setting',
+    'pixeltown-mm-active-v1': 'active Mad Maze hero', 'pixeltown-bugs-goals-v1': 'Bug Safari goals', 'pixeltown-bugs-pb-v1': 'Bug Safari bests',
+    'pixeltown-jam-assist-v1': 'Jam assist setting', 'pixeltown-deepdelve-v1': 'Deepdelve progress', 'pixeltown-deepdelve-runs-v1': 'Deepdelve dives',
+    'pixeltown-deepdelve-creative-v1': 'Deepdelve creative world', 'pixeltown-angler-fun-v1': 'Angler bests', 'pixeltown-stalk-practice-v1': 'Stalk Market practice',
+    'pixeltown-dash-v1': 'Dash bests', 'pixeltown-pop-v1': 'Pop bests', 'pixeltown-stack-v1': 'Stack bests', 'pixeltown-echo-v1': 'Echo Garden bests',
+    'pixeltown-medals-angler-v1': 'Angler medals', 'pixeltown-medals-bugs-v1': 'Bug Safari medals', 'pixeltown-medals-dash-v1': 'Dash medals',
+    'pixeltown-medals-deepdelve-v1': 'Deepdelve medals', 'pixeltown-medals-echo-v1': 'Echo Garden medals', 'pixeltown-medals-pop-v1': 'Pop medals',
+    'pixeltown-medals-stack-v1': 'Stack medals', 'pixeltown-medals-stalk-v1': 'Stalk Market medals'
   };
   const label = (k) => NAMES[k] || k;
 

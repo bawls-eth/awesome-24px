@@ -25,18 +25,24 @@
   const CODES = Object.freeze({
     KeyW: 'up', KeyS: 'down', KeyA: 'left', KeyD: 'right', Space: 'primary', NumpadEnter: 'primary',
     ShiftLeft: 'secondary', ShiftRight: 'secondary', KeyE: 'secondary', KeyP: 'menu', KeyR: 'restart',
+    // additive: the rest of the scheme by code, for keyboards / IMEs that report key 'Unidentified' or 'Process'
+    ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Enter: 'primary', Escape: 'menu',
   });
   const LABELS = Object.freeze({ move: 'WASD / arrows', primary: 'Space / Enter', secondary: 'Shift / E', menu: 'Esc / P', restart: 'R' });
   const TOUCH = Object.freeze({ move: 'stick (bottom left)', primary: 'big button', secondary: 'small button', menu: 'Menu (top left)', restart: 'Menu > Restart' });
   const DEAD = 0.22;
   const TOUCH_MIN_PX = 56;
 
-  function norm(k) { return String(k == null ? '' : k).toLowerCase(); }
+  function norm(k) { try { return String(k == null ? '' : k).toLowerCase(); } catch (e) { return ''; } }
+  // own keys only: 'constructor' / '__proto__' / 'toString' used to read Object.prototype members and count as actions
+  const own = Object.prototype.hasOwnProperty;
+  const keyAct = (k) => (own.call(KEYS, k) ? KEYS[k] : null);
+  const codeAct = (c) => (typeof c === 'string' && own.call(CODES, c) ? CODES[c] : null);
 
   // actionOf('Enter') -> 'primary'; actionOf(event) also works (reads .key, falls back to .code).
   function actionOf(k) {
-    if (k && typeof k === 'object') { const a = KEYS[norm(k.key)]; return a || CODES[k.code] || null; }
-    return KEYS[norm(k)] || null;
+    if (k && typeof k === 'object') { const a = keyAct(norm(k.key)); return a || codeAct(k.code) || null; }
+    return keyAct(norm(k));
   }
   function keysFor(action) { return Object.keys(KEYS).filter((k) => KEYS[k] === action); }
   function isTyping(t) { // never steal keys from a text field
@@ -56,9 +62,11 @@
   function down(b) { return !!b && (b.pressed === true || (+b.value || 0) > 0.5); }
   // Standard-mapping pad -> the same actions. A=primary, B/X=secondary, Start=menu, Back=restart.
   function readPad(pad, out) {
-    const r = out || { move: { x: 0, y: 0 }, primary: false, secondary: false, menu: false, restart: false };
+    const r = out && typeof out === 'object' ? out : { move: { x: 0, y: 0 }, primary: false, secondary: false, menu: false, restart: false };
+    if (!r.move || typeof r.move !== 'object') r.move = { x: 0, y: 0 }; // a reused `out` without .move used to throw
     const a = (pad && pad.axes) || [], b = (pad && pad.buttons) || [];
-    let x = +a[0] || 0, y = +a[1] || 0;
+    const ax = (v) => { v = +v; return isFinite(v) ? Math.max(-1, Math.min(1, v)) : 0; }; // a broken pad reporting Infinity used to give NaN moves
+    let x = ax(a[0]), y = ax(a[1]);
     if (down(b[14])) x = -1; if (down(b[15])) x = 1; if (down(b[12])) y = -1; if (down(b[13])) y = 1;
     const m = Math.hypot(x, y);
     if (m <= DEAD) { r.move.x = 0; r.move.y = 0; } else { const s = Math.min(1, (m - DEAD) / (1 - DEAD)) / m; r.move.x = x * s; r.move.y = y * s; }
@@ -70,8 +78,8 @@
   function create() {
     const held = Object.create(null), edge = Object.create(null);
     const st = {
-      press(k) { const a = typeof k === 'string' && ACTIONS.includes(k) && !KEYS[norm(k)] ? k : actionOf(k); if (!a) return null; if (!held[a]) edge[a] = true; held[a] = (held[a] || 0) + 1; return a; },
-      release(k) { const a = typeof k === 'string' && ACTIONS.includes(k) && !KEYS[norm(k)] ? k : actionOf(k); if (!a) return null; held[a] = Math.max(0, (held[a] || 0) - 1); return a; },
+      press(k) { const a = typeof k === 'string' && ACTIONS.includes(k) && !keyAct(norm(k)) ? k : actionOf(k); if (!a) return null; if (!held[a]) edge[a] = true; held[a] = (held[a] || 0) + 1; return a; },
+      release(k) { const a = typeof k === 'string' && ACTIONS.includes(k) && !keyAct(norm(k)) ? k : actionOf(k); if (!a) return null; held[a] = Math.max(0, (held[a] || 0) - 1); return a; },
       clear() { ACTIONS.forEach((a) => { held[a] = 0; edge[a] = false; }); },
       held(a) { return (held[a] || 0) > 0; },
       pressed(a) { const e = !!edge[a]; edge[a] = false; return e; }, // true once per press
@@ -84,8 +92,10 @@
 
   // Browser helper: tracks window key events into a tracker; calls onAction(action, event) on each fresh press.
   function attach(target, onAction) {
-    const t = create(), keyOf = (e) => (KEYS[norm(e.key)] ? norm(e.key) : e);
-    const kd = (e) => { if (isTyping(e.target)) return; const a = actionOf(e); if (!a) return; const wasHeld = t.held(a); if (!e.repeat) t.press(keyOf(e)); if (!wasHeld && !e.repeat && onAction) onAction(a, e); };
+    const t = create(), keyOf = (e) => (keyAct(norm(e.key)) ? norm(e.key) : e);
+    // Ctrl / Cmd / Alt chords (Ctrl+R reload, Cmd+P print, Cmd+W) are the browser's, not the game's: on macOS the plain key's
+    // keyup never arrives while Cmd is down, so reading them left the action stuck held.
+    const kd = (e) => { if (isTyping(e.target) || e.ctrlKey || e.metaKey || e.altKey) return; const a = actionOf(e); if (!a) return; const wasHeld = t.held(a); if (!e.repeat) t.press(keyOf(e)); if (!wasHeld && !e.repeat && onAction) onAction(a, e); };
     const ku = (e) => { if (actionOf(e)) t.release(keyOf(e)); };
     const bl = () => t.clear();
     target.addEventListener('keydown', kd); target.addEventListener('keyup', ku); target.addEventListener('blur', bl);
