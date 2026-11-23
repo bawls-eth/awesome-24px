@@ -714,7 +714,8 @@
       const d = Math.hypot(c.x - hero.x, c.y - 8 - hero.y);
       if (d < bd) { bd = d; best = c; bx = c.x; by = c.y - 8; }
     }
-    if (bossAlive() && !bz.ko) { const d = Math.hypot(bz.x - hero.x, bz.y - 36 - hero.y); if (d < bd + 2 * TILE) { best = bz; bx = bz.x; by = bz.y - 30; } }
+    const wearyTame = bz.st && bz.st.st === 'weary' && TAME && BOSS_TAMEABLE && !bz.rm; // G-22: auto-attack never finishes a boss you could tame
+    if (bossAlive() && !bz.ko && !wearyTame) { const d = Math.hypot(bz.x - hero.x, bz.y - 36 - hero.y); if (d < bd + 2 * TILE) { best = bz; bx = bz.x; by = bz.y - 30; } }
     if (!best) return false;
     if (fire(bx - hero.x, by - hero.y)) { autoN++; return true; }
     return false;
@@ -754,8 +755,13 @@
     removeWhere((x) => x === c, 90000);
   }
   // hitCreature(c, dmg, how): how = 'soothe' (bolt in soothe mode) | 'comp' (a companion) | undefined (plain bolt)
+  // G-22 (b05-03): companions never attack what you are taming: the last soothe target (6 s), a creature with tame progress or torpor, a
+  // KO / calm sleeper. compSkip is the MMCompanion ctx.skip predicate and the guard on a companion hit.
+  let sootheTgt = null, sootheAt = -1e9;
+  const compSkip = (e) => !!e && ((e === sootheTgt && simT - sootheAt < 6) || !!e.ko || !!e.calm || !!(e.tm && (e.tm.torpor > 0 || e.tm.prog > 0)));
   function hitCreature(c, dmg, how) {
     const sooth = how === 'soothe';
+    if (sooth) { sootheTgt = c; sootheAt = simT; }
     const real = sooth ? dmg * SOOTHE_DMG : dmg;
     c.flash = 0.12;
     if (how !== 'comp') cue('hit');
@@ -902,7 +908,7 @@
   let compCur = null, compLand = false;
   const AIRWATER = ['swim', 'fly', 'glide', 'float'];
   const landOnly = (def) => !!def && !(Array.isArray(def.behaviours) && def.behaviours.some((b) => AIRWATER.indexOf(b) >= 0));
-  const compCtx = { owner: hero, enemies: creatures, pickups: [], def: null, speed: SPEED,
+  const compCtx = { owner: hero, enemies: creatures, pickups: [], def: null, speed: SPEED, skip: (e) => compSkip(e), // G-22
     blocked: (x, y) => { const tx = tileOf(x), ty = tileOf(y); return solidAt(tx, ty) || (compLand && !!compCur && swimAt(tx, ty) && !swimAt(tileOf(compCur.x), tileOf(compCur.y))); } };
   function spawnCompanion(ent, x, y) {
     if (!COMPANIONS || !ent) return null;
@@ -942,7 +948,7 @@
         if (!swimAt(tileOf(bx), tileOf(by)) && !solidAt(tileOf(bx), tileOf(by))) { p.cs.x = bx; p.cs.y = by; }
         else if (!swimAt(tileOf(hero.x), tileOf(hero.y))) { p.cs.x = hero.x; p.cs.y = hero.y; }
       }
-      if (out.hit >= 0 && p.dmg > 0) { const e = creatures[out.hit]; if (e && e.hostile) { p.cs.hits = (p.cs.hits || 0) + 1; hitCreature(e, p.dmg, 'comp'); } }
+      if (out.hit >= 0 && p.dmg > 0) { const e = creatures[out.hit]; if (e && e.hostile && !compSkip(e)) { p.cs.hits = (p.cs.hits || 0) + 1; hitCreature(e, p.dmg, 'comp'); } }
     }
   }
   function finishTame(c) {
@@ -1203,7 +1209,7 @@
       else if (e.type === 'weary') {
         bz.tele.length = 0; bz.live.length = 0;
         cue('warn');
-        toast(TAME && e.canTame ? 'The ' + bossName() + ' is weary. Feed it a feast (F) to tame it, or finish it.' : 'The ' + bossName() + ' is weary. Finish it!');
+        toast(TAME && e.canTame ? 'The ' + bossName() + ' is weary. Hold fire and offer a feast (F).' : 'The ' + bossName() + ' is weary. Finish it!');
       } else if (e.type === 'tame_start') toast('The ' + bossName() + ' takes the feast. Soothe shots (Q) put it to sleep, then feed it more feasts.');
       else if (e.type === 'no_tame') toast('The ' + bossName() + ' cannot be tamed.');
       else if (e.type === 'tame') {
@@ -1261,6 +1267,7 @@
       inp.hero.x = hero.x; inp.hero.y = hero.y; inp.dmg = bz.dmg; inp.torporHit = bz.torpor; inp.feast = false; inp.offer = null;
       inp.playerDist = Math.hypot(hero.x - bz.st.x, hero.y - bz.st.y);
       inp.head = bz.hd; // XB: the hydra head your bolts struck (the engine picks the next head left when it is gone)
+      inp.noTame = !(TAME && BOSS_TAMEABLE); // G-22: the weary grace only protects a boss this page can actually tame
       bz.dmg = 0; bz.torpor = 0;
       const r = BOSS.step(bz.st, inp, BOSS_DT);
       if (r.state) bz.st = r.state;

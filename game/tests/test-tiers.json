@@ -1552,5 +1552,13 @@
   "beta-g04-full-pack.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "beta-g22-tame-safe.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "shared-mm-companion-tame-skip.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }
