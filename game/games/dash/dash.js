@@ -128,7 +128,7 @@
   const canvas = $('view'), g = canvas.getContext('2d');
   canvas.width = VW; canvas.height = VH; g.imageSmoothingEnabled = false;
   const run = { state: 'ready', seed: '', f: 0, wx: 0, dist: 0, flies: 0, combo: 0, bestCombo: 0, perfects: 0, bonus: 0, score: 0, newMedals: [], ins: [], open: -1, near: 0 };
-  let C = null, P = body(), G = null, ghostIn = null, gi = 0, ghostC = null;
+  let C = null, P = body(), G = null, ghostEv = null, ge = 0, ghostC = null, paused = false;
   let parts = [], floats = [], shake = 0, flash = 0, acc = 0, ghostTag = false;
 
   function newSeed() { return (Date.now().toString(36) + (save.runs % 1296).toString(36)).slice(-8); }
@@ -138,13 +138,14 @@
     C = { obs: built.obs, flies: built.flies, lo: 0, next: 0 };
     Object.assign(run, { state: 'play', f: 0, wx: 0, dist: 0, flies: 0, combo: 0, bestCombo: 0, perfects: 0, bonus: 0, score: 0, newMedals: [], ins: [], open: -1, near: 0 });
     built.obs.forEach((o) => { o.clr = 1e9; });
-    P = body(); parts = []; floats = []; shake = 0; acc = 0;
+    P = body(); parts = []; floats = []; shake = 0; acc = 0; paused = false; physDown = false;
     if (save.ghost && save.ghost.seed === run.seed && save.ghost.pv === PV) {
-      G = body(); ghostIn = save.ghost.in; gi = 0;
+      G = body(); ghostEv = []; ge = 0; save.ghost.in.forEach((p) => { ghostEv.push([p[0], 1], [Math.max(p[0], p[1]), 0]); });
       ghostC = { obs: built.obs, lo: 0 };
-    } else { G = null; ghostIn = null; ghostC = null; }
+    } else { G = null; ghostEv = null; ghostC = null; }
     $('intro').hidden = true; $('result').hidden = true;
     $('jump').textContent = 'Jump (hold = higher)';
+    musicOn('minigame');
     msg(G ? 'Race your ghost: best ' + save.ghost.dist + ' m on this course.' : 'Tap to jump. Jump late for a Perfect!');
     hud();
   }
@@ -153,13 +154,26 @@
   function down() {
     // after a crash the same button runs the course again (a short pause stops a mashed jump from skipping the result)
     physDown = true;
+    if (paused) { setPaused(false); return; } // the tap that resumes is not also a jump
     if (run.state === 'over' && rearm && performance.now() - endAt > 700) { start(run.seed); return; }
     if (run.state !== 'play') return;
     if (run.open < 0) { run.open = run.f; press(P); }
   }
   let physDown = false;
+  // Pause: P, losing focus or hiding the tab freezes the run and lets go of the jump (a lost key-up must not leave it held).
+  function setPaused(on) {
+    on = !!on && run.state === 'play';
+    if (on === paused) return;
+    paused = on;
+    if (on) { closeInput(); physDown = false; msg('Paused. Tap or press Space to go on.'); try { if (sfx) sfx.stopMusic(true); } catch (e) { /* ignore */ } }
+    else { msg(''); last = 0; acc = 0; musicOn('minigame'); }
+  }
+  function musicOn(cue) { try { if (sfx && sfx.musicOn) sfx.music(cue); } catch (e) { /* music is optional */ } }
+  document.addEventListener('visibilitychange', () => { if (document.hidden) setPaused(true); });
+  window.addEventListener('blur', () => { if (!TEST) setPaused(true); });
+  window.addEventListener('pagehide', () => setPaused(true));
   function closeInput() {
-    if (run.open >= 0) { run.ins.push([run.open, Math.max(run.f, run.open + 1)]); run.open = -1; }
+    if (run.open >= 0) { run.ins.push([run.open, run.f]); run.open = -1; } // exact release frame (a same-frame tap is [f, f]) so the ghost replays it faithfully
     release(P);
   }
   function up() {
@@ -179,8 +193,8 @@
     const f = run.f, sp = speedAt(f);
     // ghost inputs replay on the same frame numbers
     if (G && !G.dead) {
-      while (gi < ghostIn.length && ghostIn[gi][0] === f) { press(G); gi++; }
-      for (let i = Math.max(0, gi - 2); i < gi; i++) if (ghostIn[i][1] === f) release(G);
+      // press/release events in recorded order (a release and the next press on the same frame keep their real order)
+      while (ge < ghostEv.length && ghostEv[ge][0] <= f) { if (ghostEv[ge][1]) press(G); else release(G); ge++; }
       stepBody(G, ghostC, run.wx, sp);
     }
     const ev = stepBody(P, C, run.wx, sp);
@@ -189,8 +203,8 @@
       const o = C.obs[i]; if (o.x > run.wx + 8) break;
       if (o.t !== 'gap' && run.wx + 7 > o.x && run.wx - 7 < o.x + o.w) o.clr = Math.min(o.clr, (GROUND - o.h) - P.y);
     }
-    if (ev === 'jump') { play('ui_tap'); burst(PX, GROUND, '#c9b48a', 6, true); }
-    if (ev === 'land') burst(PX, GROUND, '#c9b48a', 4, true);
+    if (ev === 'jump') { play('jump'); burst(PX, GROUND, '#c9b48a', 6, true); }
+    if (ev === 'land') { play('land'); burst(PX, GROUND, '#c9b48a', 4, true); }
     // cleared obstacles: perfect = took off within PERFECT_S of the obstacle's front edge
     while (C.next < C.obs.length && C.obs[C.next].x + C.obs[C.next].w < run.wx - 8) {
       const o = C.obs[C.next]; C.next++;
@@ -204,7 +218,7 @@
         run.combo++; run.perfects++; run.bonus += 5 * run.combo;
         if (run.combo > run.bestCombo) run.bestCombo = run.combo;
         floats.push({ x: PX, y: P.y - 30, text: 'Perfect' + (run.combo > 1 ? ' x' + run.combo : ''), color: '#ffd166', t: 0.8 });
-        play('pickup'); flash = 0.12;
+        play('perfect'); flash = 0.12;
         if (run.combo >= 10) award('perfect10');
       } else {
         if (run.combo >= 3) floats.push({ x: PX, y: P.y - 30, text: 'combo ended', color: '#a7b4d4', t: 0.7 });
@@ -216,7 +230,7 @@
     // fireflies
     for (let i = 0; i < C.flies.length; i++) {
       const fl = C.flies[i]; if (fl.x > run.wx + 20) break; if (fl.got || fl.x < run.wx - 20) continue;
-      if (Math.abs(fl.x - run.wx) < 16 && Math.abs(fl.y - (P.y - 14)) < 22) { fl.got = true; run.flies++; burst(PX, fl.y, '#fff27a', 8, false); floats.push({ x: PX + 10, y: fl.y - 10, text: '+10', color: '#fff27a', t: 0.6 }); play('pickup'); }
+      if (Math.abs(fl.x - run.wx) < 16 && Math.abs(fl.y - (P.y - 14)) < 22) { fl.got = true; run.flies++; burst(PX, fl.y, '#fff27a', 8, false); floats.push({ x: PX + 10, y: fl.y - 10, text: '+10', color: '#fff27a', t: 0.6 }); play('coin'); }
     }
     run.wx += sp * STEP; run.f++;
     run.dist = Math.floor(run.wx / 10);
@@ -240,7 +254,7 @@
     if (!save.ghost || save.ghost.seed !== run.seed || save.ghost.pv !== PV || run.dist > save.ghost.dist) save.ghost = { seed: run.seed, in: run.ins.slice(0, 4000), dist: run.dist, pv: PV };
     award('run1');
     persist();
-    play('hurt');
+    play('death'); musicOn('results');
     if (!reduced) shake = 8;
     burst(PX, P.y - 10, '#ffb347', 16, false);
     run.why = P.dead === 'fell' ? 'gap' : P.ground ? 'nojump' : P.vy > 0 ? 'early' : 'late';
@@ -421,7 +435,7 @@
   let last = 0, lastHud = '';
   function frame(ts) {
     const dt = last ? Math.min(0.1, (ts - last) / 1000) : 0; last = ts;
-    if (!TEST && run.state === 'play') { acc += dt; while (acc >= STEP && run.state === 'play') { tick(); acc -= STEP; } }
+    if (!TEST && run.state === 'play' && !paused) { acc += dt; while (acc >= STEP && run.state === 'play') { tick(); acc -= STEP; } }
     fx(dt);
     draw();
     const h = run.dist + '|' + run.combo; if (h !== lastHud) { lastHud = h; hud(); }
@@ -437,12 +451,15 @@
   jb.addEventListener('click', (ev) => { if (ev.detail === 0) { down(); setTimeout(up, 120); } }); // keyboard activation of the button
   document.addEventListener('keydown', (ev) => {
     // quick restart: R after a crash runs the same course again (same short pause as the big button)
-    if ((ev.key === 'r' || ev.key === 'R') && run.state === 'over' && !ev.repeat && performance.now() - endAt > 700) { ev.preventDefault(); start(run.seed); return; }
-    if (!KEYS[ev.key] || run.state !== 'play') return;
+    const act = window.MMInput ? MMInput.actionOf(ev) : null;
+    if (window.MMInput && MMInput.isTyping && MMInput.isTyping(ev.target)) return;
+    if ((act === 'menu' && (ev.key === 'p' || ev.key === 'P')) && run.state === 'play' && !ev.repeat) { ev.preventDefault(); setPaused(!paused); return; }
+    if ((ev.key === 'r' || ev.key === 'R' || act === 'restart') && run.state === 'over' && !ev.repeat && performance.now() - endAt > 700) { ev.preventDefault(); start(run.seed); return; }
+    if (!(KEYS[ev.key] || act === 'primary' || act === 'up') || run.state !== 'play') return;
     const ae = document.activeElement; if (ae && ae !== jb && /^(BUTTON|A|INPUT)$/.test(ae.tagName)) return;
     ev.preventDefault(); if (!ev.repeat) down();
   });
-  document.addEventListener('keyup', (ev) => { if (KEYS[ev.key]) up(); });
+  document.addEventListener('keyup', (ev) => { const a = window.MMInput ? MMInput.actionOf(ev) : null; if (KEYS[ev.key] || a === 'primary' || a === 'up') up(); });
   // ?seed= takes a share code (A-Z0-9, any case) or the old seed form; anything invalid is ignored (a fresh seed)
   function urlSeed() {
     const raw = params.get('seed');
@@ -455,6 +472,20 @@
   function syncMute() { const m = !!(sfx && sfx.isMuted()); mute.textContent = m ? 'Sound off' : 'Sound on'; mute.setAttribute('aria-pressed', m ? 'true' : 'false'); }
   mute.addEventListener('click', () => { if (sfx) sfx.setMuted(!sfx.isMuted()); syncMute(); });
   syncMute();
+  // Settings (shared panel): the Menu sheet's Settings entry opens it; sound / low graphics / reduce motion apply live
+  try {
+    if (window.MMSettings && window.MMNav && MMNav.onSettings) { const S = MMSettings.mount({ page: 'dash' }); MMNav.onSettings(() => { setPaused(true); S.open(); }); }
+  } catch (e) { /* settings are optional */ }
+  try { if (window.MMNav && MMNav.onOpen) MMNav.onOpen(() => setPaused(true)); } catch (e) { /* optional */ }
+  window.addEventListener('mm-settings-change', (ev) => {
+    const d = ev && ev.detail || {};
+    try {
+      if (d.id === 'sound' && sfx) { sfx.setMuted(!d.value); syncMute(); }
+      if (d.id === 'music' && sfx) { sfx.setMusic(!!d.value); if (d.value && run.state === 'play') musicOn('minigame'); }
+      if (d.id === 'low-gfx') lowGfx = !!d.value;
+      if (d.id === 'reduce-motion') reduced = !!d.value;
+    } catch (e) { /* ignore */ }
+  });
   $('how').hidden = save.hint;
   $('play').textContent = save.hint ? 'Run' : 'Got it, run';
   medalList($('i-medals'));
@@ -465,7 +496,7 @@
 
   window.__dash = {
     get run() { return run; }, get save() { return save; }, get player() { return P; }, get ghost() { return G; }, get course() { return C; },
-    get reduced() { return reduced; }, get lowGfx() { return lowGfx; },
+    get paused() { return paused; }, setPaused, get reduced() { return reduced; }, get lowGfx() { return lowGfx; },
     start, down, up, course,
     // advance n fixed steps; auto: jump when the next obstacle front is `lead` px ahead (a simple bot for tests)
     step(n, auto) {
@@ -480,6 +511,6 @@
       return run.state;
     },
     counts: () => ({ parts: parts.length, floats: floats.length, shake, ghostTag, floatTexts: floats.map((x) => x.text) }),
-    tuning: { COYOTE, BUFFER, PV, NEAR }, speedAt, draw() { draw(); },
+    tuning: { COYOTE, BUFFER, PV, NEAR }, speedAt, sim: { body, stepBody, press, release }, draw() { draw(); },
   };
 }());
