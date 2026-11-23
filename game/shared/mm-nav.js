@@ -52,7 +52,15 @@
     { id: 'stalk', icon: '🥬', name: 'Stalk Market', path: 'game/games/stalk/index.html', desc: 'Buy low, sell high, once a week' },
     { id: 'pop', icon: '🧩', name: 'Pixel Pop', path: 'game/games/pop/index.html', desc: 'Merge twin tiles, chain combos in 90 s' },
     { id: 'dash', icon: '🕯️', name: 'Lantern Dash', path: 'game/games/dash/index.html', desc: 'One-button night run: jump, chase your ghost' },
+    { id: 'stack', icon: '🏯', name: 'Stack Tower', path: 'game/games/stack/index.html', desc: 'Drop swinging blocks, land Perfects, build high' },
+    { id: 'echo', icon: '🌷', name: 'Echo Garden', path: 'game/games/echo/index.html', desc: 'Calm memory tunes: watch the flowers, sing them back' },
   ].map((p) => Object.freeze(p)));
+  // HS1 groups for the "Where to?" sheet (the Hub home screen uses the same three). The World map closes Adventure.
+  const GROUPS = Object.freeze([
+    Object.freeze({ id: 'adventure', title: 'Adventure', places: Object.freeze(['town', 'realm', 'isles', 'lantern', 'map']) }),
+    Object.freeze({ id: 'arcade', title: 'Arcade', places: Object.freeze(['pop', 'dash', 'stack', 'echo', 'jam']) }),
+    Object.freeze({ id: 'quick', title: 'Quick games', places: Object.freeze(['angler', 'bugs', 'stalk', 'deepdelve']) }),
+  ]);
   const BY_ID = Object.create(null);
   PLACES.forEach((p) => { BY_ID[p.id] = p; });
   const fileOf = (path) => path.split('?')[0];
@@ -241,6 +249,15 @@
     if (typeof sel !== 'string' || !sel) return;
     try { document.querySelectorAll(sel).forEach((n) => n.classList.add(cls)); } catch (e) { /* bad selector */ }
   }
+  // The 1 px legacy links leave the tab order and the a11y tree while the Menu is mounted
+  // (unmounted pages never call this, so the links keep working there).
+  function hideLegacy() {
+    document.querySelectorAll('.mm-nav-legacy:not([data-mm-nav-hid])').forEach((n) => {
+      n.setAttribute('data-mm-nav-hid', n.hasAttribute('tabindex') ? n.getAttribute('tabindex') : '');
+      n.setAttribute('tabindex', '-1');
+      n.setAttribute('aria-hidden', 'true');
+    });
+  }
   function row(id, icon, label, href, cls) {
     const a = el('a', { id, class: 'mm-nav-row ' + (cls || ''), href });
     a.appendChild(el('span', { class: 'mm-nav-ico', 'aria-hidden': 'true' }, icon));
@@ -270,8 +287,22 @@
 
     const top = el('div', { class: 'mm-nav-top' });
     sheet.appendChild(top);
-    const grid = el('ul', { class: 'mm-nav-grid', 'aria-label': 'Places' });
-    PLACES.forEach((p) => {
+    // HS1: the places in the same three groups as the Hub home screen (Adventure / Arcade / Quick games), pixel cards.
+    // Every registry place is still listed exactly once (a place missing from GROUPS lands in the last group).
+    const listed = Object.create(null);
+    GROUPS.forEach((g) => g.places.forEach((id) => { listed[id] = 1; }));
+    const grids = GROUPS.map((g, gi) => {
+      const sec = el('section', { class: 'mm-nav-group', 'data-group': g.id, 'aria-labelledby': 'mm-nav-g-' + g.id });
+      sec.appendChild(el('h3', { id: 'mm-nav-g-' + g.id, class: 'mm-nav-group-title' }, g.title));
+      const ul = el('ul', { class: 'mm-nav-grid', 'aria-label': g.title });
+      sec.appendChild(ul);
+      sheet.appendChild(sec);
+      return { ids: gi === GROUPS.length - 1 ? g.places.concat(PLACES.map((p) => p.id).filter((id) => !listed[id])) : g.places, ul };
+    });
+    grids.forEach((gr) => gr.ids.forEach((id) => {
+      const p = BY_ID[id];
+      if (!p) return;
+      const grid = gr.ul;
       const li = el('li');
       const a = el('a', { class: 'mm-nav-dest', href: urlFor(p.id, cur.file), 'data-place': p.id });
       if (p.id === cur.id) a.setAttribute('aria-current', 'page');
@@ -282,8 +313,7 @@
       a.appendChild(t);
       li.appendChild(a);
       grid.appendChild(li);
-    });
-    sheet.appendChild(grid);
+    }));
 
     const foot = el('div', { class: 'mm-nav-foot' });
     const mapA = el('a', { id: 'mm-nav-map', class: 'mm-nav-foot-btn', href: urlFor('map', cur.file) }, '🧭 World map');
@@ -384,6 +414,10 @@
     tag(opts.legacy || opts.backLegacy, 'mm-nav-legacy');
     tag(opts.avoid, 'mm-nav-avoid');
     ui = build();
+    hideLegacy();
+    if (typeof MutationObserver === 'function') {
+      try { new MutationObserver(hideLegacy).observe(document.body, { childList: true, subtree: true }); } catch (e) { /* ignore */ }
+    }
     document.body.classList.add('mm-nav-on');
     window.addEventListener('keydown', onKey, true);
     return true;
@@ -407,7 +441,7 @@
   }
 
   return {
-    KEY, PLACES, mount, open, close, markPlace, setCovered,
+    KEY, PLACES, GROUPS, mount, open, close, markPlace, setCovered,
     isOpen: () => !!(ui && ui.isOpen),
     mounted: () => !!ui,
     current: () => Object.assign({}, cur),

@@ -87,3 +87,35 @@ html[data-reduce-motion="1"] *, html[data-reduce-motion="1"] *::before, html[dat
 #go-practice { font:inherit; font-size:calc(14px * var(--ui-scale,1)); font-weight:bold; color:#1d2b20; background:var(--accent); border:0; border-radius:10px; min-height:48px; padding:8px 12px; cursor:pointer; width:100%; }
 #go-practice[hidden] { display:none; }
 #go-practice:focus-visible { outline:3px solid #fff; outline-offset:2px; }
+
+/* VAR1 practice market mood */
+#pr-mood { margin:6px 0; padding:6px 10px; border-radius:8px; border:1px solid currentColor; font-size:calc(14px * var(--ui-scale,1)); line-height:1.4; }
+#pr-mood[hidden] { display:none; }
+
+/* ===== 8-bit pass (mg-8bit-b): market stall look, square stepped frames, bevelled pixel buttons, crisp charts ===== */
+:root { --px-ink:#0d160f; --px-hi:rgba(255,255,255,.25); --px-lo:rgba(0,0,0,.35); }
+html, body { font-family:var(--px-font, "Courier New", monospace); -webkit-font-smoothing:none; }
+body { background-color:var(--bg); background-image:linear-gradient(rgba(255,255,255,.03) 2px, transparent 2px); background-size:100% 4px; }
+#stage *, #top * { border-radius:0 !important; }
+#top h1 { text-transform:uppercase; letter-spacing:2px; color:var(--accent); text-shadow:2px 2px 0 var(--px-ink); }
+/* striped awning over the price board */
+#stats { position:relative; padding-top:16px; }
+#stats::before { content:''; position:absolute; left:-4px; right:-4px; top:0; height:12px; background:repeating-linear-gradient(90deg, #e76f51 0 16px, #f4f1de 16px 32px); box-shadow:0 0 0 3px var(--px-ink), 0 6px 0 0 rgba(0,0,0,.35); }
+.stat, #price-card, .card, #hint, ul.cards li, #pr-mood { border:0; box-shadow:inset 0 0 0 3px #3d5a42, 0 0 0 3px var(--px-ink), 6px 6px 0 3px rgba(0,0,0,.4); margin:3px; }
+#hint { box-shadow:inset 0 0 0 3px var(--accent), 0 0 0 3px var(--px-ink), 6px 6px 0 3px rgba(0,0,0,.4); }
+.stat .lbl, .card h2, #market-notes h3 { text-transform:uppercase; letter-spacing:1px; }
+.card h2 { color:var(--accent); text-shadow:2px 2px 0 var(--px-ink); }
+.stat strong { color:#fff; text-shadow:2px 2px 0 var(--px-ink); }
+#price { text-shadow:3px 3px 0 var(--px-ink), -2px -2px 0 #b57edc; letter-spacing:2px; }
+#icon { image-rendering:pixelated; }
+#chart, #pr-chart { border:0; image-rendering:pixelated; box-shadow:0 0 0 3px var(--px-ink), 0 0 0 6px #3d5a42, 0 0 0 9px var(--px-ink); margin:10px 0; }
+.big, #hint button, #nb-list button, #go-practice, #btn-mute { border:0; text-transform:uppercase; letter-spacing:1px; font-weight:bold;
+  box-shadow:inset -4px -4px 0 var(--px-lo), inset 4px 4px 0 var(--px-hi), 0 0 0 3px var(--px-ink), 0 5px 0 3px var(--px-ink); margin-bottom:6px; }
+.big:active:not([disabled]), #hint button:active, #nb-list button:active:not([disabled]), #go-practice:active { transform:translateY(4px); box-shadow:inset 4px 4px 0 var(--px-lo), 0 0 0 3px var(--px-ink); }
+.big[disabled], #nb-list button[disabled] { background:repeating-linear-gradient(45deg,#4a5650 0 4px,#424d47 4px 8px); box-shadow:0 0 0 3px var(--px-ink); }
+.medal { border-radius:0 !important; box-shadow:2px 2px 0 var(--px-ink); }
+#advisor-bars .bar { height:6px; background:repeating-linear-gradient(90deg, var(--accent) 0 6px, #c9a040 6px 8px); }
+ul.cards li.done { box-shadow:inset 0 0 0 3px var(--buy), 0 0 0 3px var(--px-ink), 6px 6px 0 3px rgba(0,0,0,.4); }
+#nb-list li.best { box-shadow:inset 0 0 0 3px var(--accent), 0 0 0 3px var(--px-ink), 6px 6px 0 3px rgba(0,0,0,.4); }
+.pop { animation-timing-function:steps(3, end); }
+body.px8 { background-color:var(--bg); color:var(--ink); }

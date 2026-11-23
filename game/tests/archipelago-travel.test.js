@@ -10,7 +10,7 @@ const { check, done, blockDb } = require('./helpers');
 const TAMES = require('../shared/mm-tames.js');
 const ORIGIN = (process.env.BASE || 'http://localhost:8440/game/index.html').replace(/\/game\/index\.html.*$/, '');
 const PAGE = ORIGIN + '/game/games/isles/index.html';
-const HUB = ORIGIN + '/game/hub/index.html';
+const HUB = ORIGIN + '/game/hub/index.html?map=1'; // HS1: map view (the default view is the home screen)
 const TOWN = '{"realm":{"level":3},"name":"Bo"}';
 const PHONE = { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true };
 const DESK = { viewport: { width: 1000, height: 700 } };
@@ -75,6 +75,7 @@ const ready = (page) => page.waitForFunction(() => window.__isles && window.__is
   await frames(pg, 10);
   const reef = await ev(pg, (I) => ({ pack: I.world.pack, ok: I.verify().ok, isle: I.isle, near: I.nearDock(), url: location.search }));
   check('2d: sailing changes world.pack to reef, verify ok, and you land at the reef dock', reef.pack === 'reef' && reef.ok && reef.isle === 'reef' && reef.near && /at=dock/.test(reef.url), JSON.stringify(reef));
+  await pg.click('#btn-pack'); // 8B: Home dock sits in the Pack's Party tab
   check('2e: Home button is shown away from home (44 px)', await pg.locator('#btn-home').isVisible() && (await pg.locator('#btn-home').boundingBox()).height >= 44);
   await Promise.all([pg.waitForNavigation(), pg.click('#btn-home')]);
   await ready(pg);

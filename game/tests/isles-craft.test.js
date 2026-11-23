@@ -115,7 +115,7 @@ const panelInfo = (page) => page.evaluate(() => {
 
   // ---- 1c. the craft panel (desktop) ----
   await ev(gp, (I) => { I.give('wood', 4); I.give('vine_rope', 1); });
-  await gp.click('#btn-craft');
+  await gp.click('#btn-pack'); await gp.click('#btn-craft'); // 8B: Craft / Log / Home dock live in the Pack (one button, tabbed panel)
   const cp = await panelInfo(gp);
   const inv = await ev(gp, (I) => I.inv());
   const raft = cp.rows.find((r) => r.id === 'raft');
@@ -146,10 +146,12 @@ const panelInfo = (page) => page.evaluate(() => {
   await ev(P.page, (I) => { I.pause(true); I.god(true); I.clearCreatures(); const ns = I.nodes(); const n = ns.find((q) => ns.filter((o) => Math.abs(o.x - q.x) < 6 && Math.abs(o.y - q.y) < 10).length >= 3) || ns[0]; I.teleport(n.x - 2, n.y + 1); I.render(); I.give('hide', 2); I.give('vine_rope', 2); I.give('amber', 1); });
   await frames(P.page, 6);
   await shot(P.page, 'x4-gather-phone');
+  const packBtn = await P.page.locator('#btn-pack').boundingBox(); // 8B: Craft is a tab in the Pack
+  await P.page.tap('#btn-pack');
   const craftBtn = await P.page.locator('#btn-craft').boundingBox();
   await P.page.tap('#btn-craft');
   const pp = await panelInfo(P.page);
-  check('1d: phone 390x844: Craft button >= 44 px, panel inside the viewport, no horizontal scroll', craftBtn && craftBtn.height >= 44 && craftBtn.width >= 44 && pp.open && pp.rect.l >= 0 && pp.rect.r <= 390 && pp.rect.t >= 0 && pp.rect.b <= 844 && !pp.hscroll, JSON.stringify({ craftBtn, rect: pp.rect }));
+  check('1d: phone 390x844: Craft button >= 44 px, panel inside the viewport, no horizontal scroll', packBtn && packBtn.height >= 44 && packBtn.width >= 44 && craftBtn && craftBtn.height >= 44 && craftBtn.width >= 44 && pp.open && pp.rect.l >= 0 && pp.rect.r <= 390 && pp.rect.t >= 0 && pp.rect.b <= 844 && !pp.hscroll, JSON.stringify({ craftBtn, rect: pp.rect }));
   check('1d: phone: recipe buttons >= 44 px and the Tusktop saddle is craftable', pp.rows.every((r) => r.btn.w >= 44 && r.btn.h >= 44) && pp.rows.find((r) => r.id === 'saddle_tusktop').btn.dis === false, JSON.stringify(pp.rows.find((r) => r.id === 'saddle_tusktop')));
   await shot(P.page, 'x4-craft-phone');
   await P.page.tap('#panel-body button.rc-btn[data-recipe="saddle_tusktop"]');
@@ -194,7 +196,7 @@ const panelInfo = (page) => page.evaluate(() => {
   await shot(up, 'x4-chart-locked');
   await up.keyboard.press('Escape');
   await ev(up, (I) => { I.give('wood', 4); I.give('vine_rope', 2); });
-  await up.click('#btn-craft');
+  await up.click('#btn-pack'); await up.click('#btn-craft');
   await up.click('#panel-body button.rc-btn[data-recipe="raft"]');
   const r1 = await ev(up, (I) => ({ unlock: I.unlock(), inv: I.inv(), open: I.isleOpen('reef') }));
   const raftRow = await panelInfo(up);

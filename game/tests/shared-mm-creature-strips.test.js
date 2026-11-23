@@ -197,6 +197,17 @@ const man = (d) => JSON.parse(fs.readFileSync(path.join(ART, d, 'manifest.json')
   check('b34b: ITEM_ICONS are the 15 manifest items, each file exists from the isles page; unknown ids have no icon', im.length === 15 && im.slice().sort().join() === A.ITEM_ICONS.slice().sort().join()
     && A.ITEM_ICONS.every((id) => fs.existsSync(path.join(__dirname, '..', 'games', 'isles', A.iconUrl(id)))) && A.iconUrl('feast') === null && A.iconUrl({}) === null);
 
+  // 8B: the light rim (pure buffer pass, baked once): a 1 px ring outside the silhouette, never inside it, never across a frame cell
+  {
+    const w = 8, h = 4, d = new Uint8ClampedArray(w * h * 4);
+    const set = (x, y) => { const i = (y * w + x) * 4; d[i] = 10; d[i + 1] = 20; d[i + 2] = 30; d[i + 3] = 255; };
+    set(1, 1); set(2, 1); set(3, 1); // frame 0 (cells of 4 px): a bar touching the cell's right edge
+    const out = M.rimPixels(d, w, h, 4, [255, 241, 232, 230]);
+    const px = (x, y) => Array.from(out.slice((y * w + x) * 4, (y * w + x) * 4 + 4)).join();
+    check('8B rim: transparent pixels next to the body get the light rim colour (left, above, below)', px(0, 1) === '255,241,232,230' && px(2, 0) === '255,241,232,230' && px(2, 2) === '255,241,232,230');
+    check('8B rim: body pixels are untouched and far pixels stay transparent', px(2, 1) === '10,20,30,255' && px(0, 3) === '0,0,0,0' && px(6, 3) === '0,0,0,0');
+    check('8B rim: the rim never bleeds into the next frame cell, and the input buffer is not changed', px(4, 1) === '0,0,0,0' && d[3] === 0 && M.rimPixels(d, w, h, 4).length === d.length);
+  }
   if (failed) { console.log(failed + ' FAILED'); process.exit(1); }
   console.log('ALL PASSED');
 })().catch((e) => { console.error(e); process.exit(1); });

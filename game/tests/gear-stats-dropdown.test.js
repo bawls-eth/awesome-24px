@@ -31,6 +31,7 @@ async function open(browser, query, viewport) {
   await page.goto(MAZE + (query || ''));
   await page.waitForFunction(() => window.__mm && window.__mm.arena && window.__mm.arena.active, null, { timeout: 15000 });
   await page.evaluate(() => { const a = window.__mm.arena; a.state = 'play'; a.eBullets.forEach((b) => { b.active = false; }); a.enemies.forEach((e) => { e.active = false; }); a._calcStats(); a.setPaused(true); });
+  await page.click('#realm-bp-tab-stats'); // BP8: the Stats table lives on the backpack's Stats tab
   return { ctx, page, errors, db };
 }
 const box = (page) => page.evaluate(() => {

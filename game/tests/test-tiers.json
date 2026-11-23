@@ -7,6 +7,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "town-8bit-menu.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "angler-tournament.test.js": {
     "class": "browser",
     "tier": "smoke"
@@ -80,6 +84,18 @@
     "tier": "full"
   },
   "bugs-fun.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "bugs-variety.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "stalk-moods.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "angler-conditions.test.js": {
     "class": "browser",
     "tier": "full"
   },
@@ -223,6 +239,10 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "hub-home.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "hub-progress.test.js": {
     "class": "browser",
     "tier": "full"
@@ -268,6 +288,10 @@
     "tier": "smoke"
   },
   "stalk-notes.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "lantern-intro-help.test.js": {
     "class": "browser",
     "tier": "smoke"
   },
@@ -547,6 +571,14 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-town-heroes.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "town-heroes.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "shared-mm-island-wilds.test.js": {
     "class": "node",
     "tier": "smoke"
@@ -644,6 +676,10 @@
     "tier": "smoke"
   },
   "shared-sfx-motion.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-chip.test.js": {
     "class": "node",
     "tier": "smoke"
   },
@@ -1363,8 +1399,60 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "stack-page.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "echo-bugbash.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "echo-page.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "art-audit-tool.test.js": {
     "class": "node",
+    "tier": "smoke"
+  },
+  "minigame-quality-gate.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "shared-mm-minikit.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-pixelize.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "pixelize-page.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "shared-mm-8bit.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-settings.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "shared-mm-input.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "realm-universal-controls.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "realm-backpack-8bit.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "realm-hud-8bit.test.js": {
+    "class": "browser",
     "tier": "smoke"
   }
 }

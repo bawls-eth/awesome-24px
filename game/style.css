@@ -512,8 +512,10 @@ html, body {
   border: 1px solid var(--ac-border);
   border-radius: 999px;
   color: var(--ac-text-muted);
-  font-size: 11px;
-  padding: 3px 10px;
+  font-size: 12px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 3px 14px;
   cursor: pointer;
 }
 
@@ -2295,6 +2297,11 @@ body.touch-device .key-hint { display: none; }
   body.touch-device #chat-panel { right: 200px; }
   /* Short landscape: the bag bar wraps to two rows; keep it compact so it stays above the chat bar. */
   #inventory-panel { padding: 3px 8px; font-size: 11px; gap: 0 6px; line-height: 1.2; }
+  /* 8-bit pass: the 3 px borders made the bag bar and chat bar taller; give the height back in short landscape so they never touch. */
+  #inventory-panel { border-width: 2px; box-shadow: 2px 2px 0 var(--tb-ink); padding: 2px 8px; }
+  body.touch-device #chat-log { max-height: 28px; }
+  /* The 44 px Clear button floats above the bar's right end instead of adding a row to it. */
+  #chat-clear-btn { position: absolute; right: 6px; top: -48px; margin: 0; }
   /* Bottom-centre, in the free strip between the joystick and the action buttons. */
   #walkie-panel {
     top: auto;
@@ -2828,3 +2835,105 @@ body.touch-device #postcards-hint { bottom: calc(188px + env(safe-area-inset-bot
   /* The quick-chat phrases wrap instead of running out of the 320 px chat panel (the last one was clipped). */
   #quick-chat-row { flex-wrap: wrap; overflow-x: visible; }
 }
+
+/* ===================== 8-bit Town (town-8bit) =====================
+   One pixel-styled menu panel: hero line, three tabs (Town / Stats / More), a tidy 2-column button grid and a plain
+   stat block. Hard pixel edges (no radius), solid dark outlines and stepped drop shadows. Every control >= 44 px
+   tall, every line >= 12 px. The tokens live on :root so the shared mm-8bit theme can retune them. */
+:root {
+  /* mapped onto the shared 16-colour MM8 palette (shared/mm-8bit.css, loaded before this file) */
+  --tb-ink: var(--px-ink, #0b0d1a);     /* outline / text on light */
+  --tb-paper: var(--px-7, #fff1e8);     /* panel fill */
+  --tb-paper-2: #f7dcc4;                /* inset / idle tab: px-15 peach lifted one step for AA text */
+  --tb-accent: var(--px-1, #1d2b53);    /* active tab */
+  --tb-accent-ink: var(--px-7, #fff1e8);
+  --tb-gold: #8a3f20;                   /* px-4 brown, one step darker for AA on the paper */
+  --tb-font: var(--px-font, "Courier New", Courier, monospace);
+  --tb-shadow: 3px 3px 0 var(--tb-ink);
+}
+#player-list-panel {
+  border-radius: 0; border: 3px solid var(--tb-ink); background: var(--tb-paper);
+  box-shadow: var(--tb-shadow); padding: 8px;
+}
+#hero-line {
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 6px;
+  margin: 6px 0; padding: 4px 6px; background: var(--tb-paper-2); border: 2px solid var(--tb-ink);
+  font-size: 13px; line-height: 1.3; color: var(--tb-ink);
+}
+#hero-name { font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+#hero-stats { font-size: 12px; color: var(--tb-gold); font-weight: 700; }
+#town-tabs { display: flex; gap: 3px; margin: 0 0 6px; }
+#player-list-panel #town-tabs .town-tab {
+  flex: 1 1 0; min-width: 0; min-height: 44px; width: auto; margin: 0; padding: 2px 1px; display: flex; align-items: center;
+  justify-content: center; text-align: center; font: inherit; font-size: 12px; font-weight: 800; line-height: 1.1;
+  color: var(--tb-ink); background: var(--tb-paper-2); border: 2px solid var(--tb-ink); border-radius: 0;
+  box-shadow: inset -2px -2px 0 rgba(0, 0, 0, 0.18); cursor: pointer; box-sizing: border-box;
+}
+#player-list-panel #town-tabs .town-tab.active { background: var(--tb-accent); color: var(--tb-accent-ink); box-shadow: inset 2px 2px 0 rgba(0, 0, 0, 0.25); }
+#player-list-panel #town-tabs .town-tab:focus-visible { outline: 3px solid var(--ac-orange); outline-offset: 1px; }
+.town-pane.hidden { display: none !important; }
+#town-quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 6px; }
+#town-quick-grid > * {
+  margin: 0 !important; min-height: 44px; padding: 2px 3px !important; display: flex !important; align-items: center;
+  justify-content: center; box-sizing: border-box; width: 100%; font: inherit; font-size: 12px !important; font-weight: 700;
+  color: var(--tb-ink) !important; background: var(--tb-paper-2) !important; border: 2px solid var(--tb-ink) !important;
+  border-radius: 0 !important; box-shadow: inset -2px -2px 0 rgba(0, 0, 0, 0.15); text-decoration: none; text-align: center;
+  line-height: 1.15; cursor: pointer;
+}
+#town-quick-grid > *:active { box-shadow: inset 2px 2px 0 rgba(0, 0, 0, 0.25); }
+#town-quick-grid > #achievements-badge { color: var(--tb-gold) !important; }
+#stat-block { display: grid; grid-template-columns: 1fr auto; margin: 6px 0 0; border: 2px solid var(--tb-ink); font-size: 12px; color: var(--tb-ink); background: var(--tb-paper); }
+#stat-block dt, #stat-block dd { margin: 0; padding: 4px 6px; border-bottom: 1px dashed rgba(43, 29, 20, 0.35); line-height: 1.3; }
+#stat-block dd { font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; }
+#stat-block dt:last-of-type, #stat-block dd:last-of-type { border-bottom: 0; }
+#town-pane-stats #status-row { border-top: 0; margin-top: 0; gap: 3px; }
+#town-pane-stats #streak-badge, #town-pane-stats #town-rating { border: 2px solid var(--tb-ink); background: var(--tb-paper-2); color: var(--tb-ink); }
+#settings-section > button, #settings-section > a { border-radius: 0; }
+/* Inventory: the same hard-edged pixel panel. */
+#inventory-panel { border-radius: 0; border: 3px solid var(--tb-ink); background: var(--tb-paper); box-shadow: var(--tb-shadow); }
+/* Toasts, banners, hint pills, chat and the touch buttons share the same hard-edged look. */
+#achievement-toast, #whats-new-banner, #gate-pointer, #build-mode-banner, #realm-gate-hint, #dig-hole-hint,
+#isles-sign-hint, #postcards-hint, #fish-hint-btn, #gift-hint-btn, #walkie-talk-btn, #memo-inbox-btn, #chat-panel,
+#chat-input, #chat-send-btn, #quick-chat-row button, #emote-toggle-btn, #tilt-toggle-btn, .ab-btn, #where-to-btn, #panel-toggle {
+  border-radius: 0 !important;
+}
+#achievement-toast, #whats-new-banner, #gate-pointer, #build-mode-banner { border: 3px solid var(--tb-ink) !important; box-shadow: var(--tb-shadow) !important; }
+#chat-panel { border: 3px solid var(--tb-ink); box-shadow: var(--tb-shadow); }
+#quick-chat-row button, #chat-send-btn, #where-to-btn { border: 2px solid var(--tb-ink) !important; box-shadow: inset -2px -2px 0 rgba(0, 0, 0, 0.18); }
+#walkie-talk-btn, .ab-btn, #emote-toggle-btn, #tilt-toggle-btn { border: 3px solid var(--tb-ink) !important; }
+.join-card, .achievements-card { border-radius: 0 !important; border: 3px solid var(--tb-ink) !important; box-shadow: 4px 4px 0 var(--tb-ink) !important; }
+.join-card h1 { letter-spacing: 0.04em; text-shadow: 2px 2px 0 rgba(43, 29, 20, 0.25); }
+#join-btn, #join-offline-btn, #join-continue, .join-card input, .species-tab, .avatar-choice { border-radius: 0 !important; }
+#join-btn, #join-offline-btn { border: 3px solid var(--tb-ink) !important; box-shadow: 3px 3px 0 var(--tb-ink) !important; }
+#join-btn:active, #join-offline-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--tb-ink) !important; }
+/* Crisp pixels: the world is pixel art, so the canvas scales without smoothing (CSS only, no per-frame cost). */
+#game-container canvas { image-rendering: pixelated; }
+/* Touch strip: Emotes, A, More, Chat by default; Build, Photo and Tilt live behind More and open above it, so A and
+   Chat never move under the thumb.  closed: [Emotes][A] / [More][C]   open: [    ][B] / [Tilt][P] / [Emotes][A] / [More][C] */
+#action-buttons { grid-template-columns: 64px 50px; grid-template-rows: repeat(2, 50px); }
+#action-buttons #emote-toggle-btn { grid-column: 1; grid-row: 1; }
+#action-buttons #interact-btn { grid-column: 2; grid-row: 1; }
+#action-buttons #hud-more-btn { grid-column: 1; grid-row: 2; }
+#action-buttons #mobile-chat-btn { grid-column: 2; grid-row: 2; }
+#action-buttons:not(.more-open) #build-toggle-btn, #action-buttons:not(.more-open) #mobile-photo-btn,
+#action-buttons:not(.more-open) #tilt-toggle-btn { display: none; }
+#action-buttons.more-open { grid-template-rows: repeat(4, 50px); }
+#action-buttons.more-open #build-toggle-btn { grid-column: 2; grid-row: 1; }
+#action-buttons.more-open #tilt-toggle-btn { grid-column: 1; grid-row: 2; }
+#action-buttons.more-open #mobile-photo-btn { grid-column: 2; grid-row: 2; }
+#action-buttons.more-open #emote-toggle-btn { grid-column: 1; grid-row: 3; }
+#action-buttons.more-open #interact-btn { grid-column: 2; grid-row: 3; }
+#action-buttons.more-open #hud-more-btn { grid-column: 1; grid-row: 4; }
+#action-buttons.more-open #mobile-chat-btn { grid-column: 2; grid-row: 4; }
+#action-buttons #hud-more-btn {
+  width: 64px; height: 50px; padding: 0 4px; font: inherit; font-size: 12px; font-weight: 800; line-height: 1.1;
+  border-radius: 0; border: 3px solid var(--tb-ink); background: var(--tb-paper); color: var(--tb-ink); cursor: pointer;
+}
+#action-buttons.more-open #hud-more-btn { background: var(--tb-accent); color: var(--tb-accent-ink); }
+/* MM8 type: the shared bold monospace for the menu headings, tabs, hero line, banners and the title. */
+#hero-line, #player-list-panel h2, #player-list-panel #town-tabs .town-tab, #hud-more-btn, #achievement-toast, #whats-new-banner,
+#build-mode-banner, #gate-pointer, #stat-block, .join-card h1 { font-family: var(--tb-font); }
+#player-list-panel #town-tabs .town-tab { letter-spacing: 0; flex-direction: column; gap: 1px; }
+.join-card h1 { text-transform: uppercase; letter-spacing: 0.08em; font-weight: 900; }
+#join-btn, #join-offline-btn { font-family: var(--tb-font); font-weight: 900; text-transform: uppercase; letter-spacing: 0.06em; }
+#join-btn:focus-visible, #join-offline-btn:focus-visible, #hud-more-btn:focus-visible, #town-quick-grid > *:focus-visible { outline: 3px solid var(--px-10, #ffec27); outline-offset: 2px; }

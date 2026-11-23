@@ -117,6 +117,8 @@ async function open(browser, url, { heroes, active, opts } = {}) {
     await B.page.waitForTimeout(600);
     await B.page.evaluate(() => window.__mm.arena.setPaused(true));
     await B.page.waitForTimeout(500);
+    // BP8: icons on the hidden backpack tabs load at low priority; wait (bounded) until every icon has finished loading or been removed
+    await B.page.waitForFunction(() => Array.from(document.querySelectorAll('#realm-backpack-body img.rm-gear-ico')).every((i) => i.complete), null, { timeout: 5000 }).catch(() => {});
     const o = await B.page.evaluate(() => {
       const li = document.querySelector('#realm-bp-list li[data-uid="1"]');
       const imgs = Array.from(document.querySelectorAll('#realm-backpack-body img.rm-gear-ico')).map((i) => ({ id: i.dataset.gico, ok: i.complete && i.naturalWidth === 16 }));

@@ -29,7 +29,7 @@ async function open(browser, { seed, ctxOpts, query } = {}) {
   page.on('websocket', (w) => sockets.push(w.url()));
   page.on('request', (r) => { if (!r.url().startsWith(ORIGIN)) remote.push(r.url()); });
   await page.addInitScript(initScript(seed));
-  await page.goto(ORIGIN + '/game/hub/index.html?test=1' + (query || ''));
+  await page.goto(ORIGIN + '/game/hub/index.html?test=1&map=1' + (query || ''));
   await page.waitForFunction(() => window.__hub && window.__coll);
   return { ctx, page, errors, sockets, remote, db };
 }

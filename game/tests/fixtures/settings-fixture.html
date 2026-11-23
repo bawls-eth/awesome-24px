@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MMSettings fixture</title>
+<style>
+  html, body { margin: 0; background: #0d0f14; color: #eee; font: 15px system-ui, sans-serif; }
+  #menu { position: fixed; top: 8px; left: 8px; width: 48px; height: 48px; }
+  #open { margin: 80px 16px; min-height: 44px; }
+</style>
+</head>
+<body>
+<button id="menu" type="button">Menu</button>
+<button id="open" type="button">Open settings</button>
+<link rel="stylesheet" href="../../shared/mm-8bit.css">
+<script src="../../shared/mm-8bit.js"></script>
+<script src="../../shared/mm-access.js"></script>
+<script src="../../shared/mm-feedback.js"></script>
+<script src="../../shared/mm-settings.js"></script>
+<script>
+  // A page hotkey that must never see keys typed inside the settings panel.
+  window.__hot = 0;
+  window.addEventListener('keydown', function () { window.__hot++; });
+  window.__changes = [];
+  window.addEventListener('mm-settings-change', function (e) { window.__changes.push(e.detail); });
+  window.__set = MMSettings.mount({ page: 'fixture' });
+  document.getElementById('open').addEventListener('click', function () { window.__set.open(); });
+</script>
+</body>
+</html>

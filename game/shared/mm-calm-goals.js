@@ -28,6 +28,8 @@
     stalk: Object.freeze({ place: 'stalk', icon: '🥬', name: 'Stalk Market', url: 'game/games/stalk/index.html' }),
     pop: Object.freeze({ place: 'pop', icon: '🧩', name: 'Pixel Pop', url: 'game/games/pop/index.html' }),
     dash: Object.freeze({ place: 'dash', icon: '🕯️', name: 'Lantern Dash', url: 'game/games/dash/index.html' }),
+    stack: Object.freeze({ place: 'stack', icon: '🏯', name: 'Stack Tower', url: 'game/games/stack/index.html' }),
+    echo: Object.freeze({ place: 'echo', icon: '🌷', name: 'Echo Garden', url: 'game/games/echo/index.html' }),
   });
   // Every medal the Hub shows, in each game's own order (first steps first), with a plain, friendly line on what to try.
   const MEDALS = Object.freeze({
@@ -94,6 +96,18 @@
       ['m500', '500 metres', 'Run 500 m in Lantern Dash. Hold the button to jump further over gaps.'],
       ['perfect10', 'Ten perfects', 'In Lantern Dash, jump late, just before a rock, ten times in a row.'],
       ['m1500', '1,500 metres', 'Run 1,500 m in Lantern Dash. Race your ghost on the same course.'],
+    ],
+    stack: [
+      ['round1', 'A first tower', 'Build a tower in Stack Tower: tap to drop each swinging block.'],
+      ['f15', '15 floors', 'Stack 15 floors in one Stack Tower round. Drop when the block is right above.'],
+      ['perfect5', 'Five perfects', 'In Stack Tower, land five blocks flush in a row. Three make the block wider.'],
+      ['f40', '40 floors', 'Stack 40 floors in one Stack Tower round. The best line shows your record.'],
+    ],
+    echo: [
+      ['round1', 'A first bloom', 'Play one calm round of Echo Garden: watch the flowers, then sing them back.'],
+      ['t6', 'A 6-note tune', 'Echo a 6-note tune in Echo Garden. Saying the colours quietly helps.'],
+      ['clean8', 'Eight, no wilts', 'In Echo Garden, reach an 8-note tune without a wilted leaf.'],
+      ['t10', 'A 10-note tune', 'Echo a 10-note tune in Echo Garden. Take your time: there is no rush per note.'],
     ],
   });
   const ORDER = Object.freeze(Object.keys(GAMES)); // isles, angler, jam first: the three first steps

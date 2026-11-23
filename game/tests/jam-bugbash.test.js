@@ -34,6 +34,30 @@ for (const s of G.SONGS) {
     check(name + ': no errors', errors.length === 0, errors.join('|'));
     await ctx.close();
   }
+  {
+    // universal controls + chip cues, test-mode page; 150% text must not overflow sideways
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
+    await ctx.addInitScript(() => { try { localStorage.setItem('pixeltown-access-v1', JSON.stringify({ v: 1, textScale: 1.5, lowGfx: true })); } catch (e) { /* ignore */ } });
+    const p = await ctx.newPage();
+    const errors = [];
+    p.on('pageerror', (e) => errors.push(e.message));
+    await p.goto(PAGE + '?test=1');
+    await p.waitForFunction(() => window.__jam);
+    check('MMInput and MMChip are loaded', await p.evaluate(() => !!window.MMInput && !!window.MMChip));
+    check('150% text: no sideways scroll on the menu', await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+    await p.keyboard.press('Space');
+    check('Space starts the recommended song (Primary)', await p.evaluate(() => window.__jam.mode === 'play'));
+    check('starting plays the select cue', await p.evaluate(() => window.__jam.sfxLog.indexOf('select') >= 0));
+    await p.keyboard.press('Escape');
+    check('Esc pauses and plays ui_open', await p.evaluate(() => window.__jam.mode === 'pause' && window.__jam.sfxLog.indexOf('ui_open') >= 0));
+    await p.keyboard.press('r');
+    check('R restarts from Paused', await p.evaluate(() => window.__jam.mode === 'play'));
+    await p.keyboard.press('Escape');
+    await p.keyboard.press('Enter');
+    check('Enter resumes from Paused (Primary) and plays ui_close', await p.evaluate(() => window.__jam.mode === 'play' && window.__jam.sfxLog.indexOf('ui_close') >= 0));
+    check('no errors (low-gfx, 150% text)', errors.length === 0, errors.join('|'));
+    await ctx.close();
+  }
   await browser.close();
   console.log(failed ? failed + ' FAILED' : 'ALL PASSED');
   process.exit(failed ? 1 : 0);

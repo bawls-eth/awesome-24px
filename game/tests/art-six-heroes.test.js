@@ -53,7 +53,7 @@ const PHONE = { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile:
     NEW.every((k) => k in dis) && dis.rogue === false && dis.warlock === false && dis.necromancer === false && dis.berserker === false && dis.paladin === true && dis.druid === true, JSON.stringify(dis));
   for (const k of ['rogue', 'warlock', 'berserker', 'necromancer']) {
     await U.page.selectOption('#new-class', k);
-    await U.page.waitForTimeout(200);
+    await U.page.waitForFunction(() => { const c = document.getElementById('new-class-art'); if (!c || c.hidden) return false; const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i]) n++; return n > 300; }, null, { timeout: 8000 }).catch(() => {}); // the art set loads async: wait for it instead of a fixed 200 ms
     check('class select shows the ' + k + ' art preview', await U.page.evaluate(() => { const c = document.getElementById('new-class-art'); if (c.hidden) return false; const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4) if (d[i]) n++; return n > 300; }));
   }
   check('picker: no console errors', U.errors.length === 0, U.errors.join(' | '));

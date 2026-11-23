@@ -60,7 +60,7 @@ async function run(label, ctxOpts, tapper) {
     return { dialogs: dialogs.length, open: vis(sheet), title: t && t.textContent, dests, small: ctrls.filter((c) => c.w < 44 || c.h < 44), focusIn: sheet.contains(document.activeElement), back: back && back.querySelector('.mm-nav-row-label').textContent, backHref: back && back.getAttribute('href'), cont: !!document.getElementById('mm-nav-continue'), sw: document.documentElement.scrollWidth, iw: window.innerWidth, ssw: sheet.scrollWidth, scw: sheet.clientWidth, expanded: document.getElementById('mm-nav-btn').getAttribute('aria-expanded') };
   });
   check(L('3: one tap opens the sheet, exactly one visible modal dialog, labelled "Where to?"'), sh.open && sh.dialogs === 1 && sh.title === 'Where to?' && sh.expanded === 'true', JSON.stringify({ open: sh.open, d: sh.dialogs, t: sh.title }));
-  check(L('12 places listed with icon, name and one-line description'), sh.dests.length === 12 && sh.dests.every((d) => d.icon && d.name && d.desc && d.href), JSON.stringify(sh.dests.map((d) => d.id)));
+  check(L('14 places listed with icon, name and one-line description'), sh.dests.length === 14 && sh.dests.every((d) => d.icon && d.name && d.desc && d.href), JSON.stringify(sh.dests.map((d) => d.id)));
   check(L('every destination and control is at least 44x44'), sh.dests.every((d) => d.w >= 44 && d.h >= 44) && sh.small.length === 0, JSON.stringify(sh.small));
   check(L('destination hrefs are relative to the page depth'), sh.dests.find((d) => d.id === 'town').href === '../../index.html' && sh.dests.find((d) => d.id === 'realm').href === '../../games/mad-maze/index.html?mode=world', JSON.stringify(sh.dests.map((d) => d.href)));
   check(L('focus moved into the sheet'), sh.focusIn);
@@ -136,7 +136,7 @@ async function run(label, ctxOpts, tapper) {
   await page.reload();
   await tapper(page, '#mm-nav-btn');
   const cr = await page.evaluate(() => ({ cont: !!document.getElementById('mm-nav-continue'), polluted: ({}).x, imgs: document.querySelectorAll('#mm-nav-root img').length, dests: document.querySelectorAll('.mm-nav-dest').length }));
-  check(L('corrupt pixeltown-nav-v1 -> defaults (no Continue, no pollution, no injected markup)'), !cr.cont && cr.polluted === undefined && cr.imgs === 0 && cr.dests === 12, JSON.stringify(cr));
+  check(L('corrupt pixeltown-nav-v1 -> defaults (no Continue, no pollution, no injected markup)'), !cr.cont && cr.polluted === undefined && cr.imgs === 0 && cr.dests === 14, JSON.stringify(cr));
 
   // ?nav=0 and embedded: no button, legacy links stay visible
   await page.goto(FIXTURE + '?nav=0');

@@ -31,6 +31,8 @@
     'w5-stalk': '../games/stalk/index.html',
     'w5-pop': '../games/pop/index.html',
     'w5-dash': '../games/dash/index.html',
+    'w5-stack': '../games/stack/index.html',
+    'w5-echo': '../games/echo/index.html',
     // Level nodes open the game (and sub-mode) whose own save clears them (goals: MMHubProfile.MILESTONES).
     'w2-burrow': '../games/mad-maze/index.html?mode=dungeon&from=hub',
     'w2-keep': '../games/mad-maze/index.html?mode=world&from=hub',
@@ -54,7 +56,7 @@
   // NAV slice D: every game node with a real page is always open to play (from a fresh save too). Map paths,
   // medals and the unlock rules are unchanged: they are a bonus goal (walking the map), never a gate on a game.
   const GAME_ICON = { 'w1-hearthvale': '\u{1F3E1}', 'w2-lantern': '\u{1F3EE}', 'w3-deepdelve': '\u26CF\uFE0F', 'w4-angler': '\u{1F3A3}',
-    'w5-safari': '\u{1F98B}', 'w5-jam': '\u{1F3B8}', 'w5-stalk': '\u{1F96C}', 'w5-pop': '\u{1F9E9}', 'w5-dash': '\u{1F56F}\uFE0F', 'w7-isles': '\u{1F3DD}\uFE0F' };
+    'w5-safari': '\u{1F98B}', 'w5-jam': '\u{1F3B8}', 'w5-stalk': '\u{1F96C}', 'w5-pop': '\u{1F9E9}', 'w5-dash': '\u{1F56F}\uFE0F', 'w5-stack': '\u{1F3EF}', 'w5-echo': '\u{1F337}', 'w7-isles': '\u{1F3DD}\uFE0F' };
   const playable = (n) => !!n && (n.type === 'game' || n.type === 'gate') && !!LINKS[n.id];
   const GAME_NODES = MAP.nodes.filter((n) => n.type === 'game' && LINKS[n.id]);
 
@@ -662,16 +664,18 @@
   document.addEventListener('keydown', (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (!$('card').hidden) { if (e.key === 'Escape') closeCard(); return; }
+    if (homeOn()) return; // HS1: the home screen is a normal page (links / buttons); the map's keys wait for the map view
     const d = KEYDIR[e.key];
     if (d) { e.preventDefault(); step(d[0], d[1]); return; }
     if ((e.key === 'Enter' || e.key === ' ') && e.target.tagName !== 'BUTTON') { e.preventDefault(); if (!walker.wps) openNode(hub.at); }
   });
 
+  const homeOn = () => document.body.classList.contains('home-on');
   const pad = { dir: '', a: false, b: false };
   function pollPad() {
     let gp = null;
     try { const l = navigator.getGamepads ? navigator.getGamepads() : []; for (let i = 0; i < l.length; i++) if (l[i]) { gp = l[i]; break; } } catch (e) { return; }
-    if (!gp) return;
+    if (!gp || homeOn()) return;
     const bt = (i) => !!(gp.buttons[i] && gp.buttons[i].pressed);
     let dir = '';
     if (bt(12) || gp.axes[1] < -0.6) dir = 'u'; else if (bt(13) || gp.axes[1] > 0.6) dir = 'd';

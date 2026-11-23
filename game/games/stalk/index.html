@@ -4,7 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Stalk Market - Pixeltown</title>
+<link rel="stylesheet" href="../../shared/mm-8bit.css">
 <link rel="stylesheet" href="stalk.css">
+<script src="../../shared/mm-8bit.js"></script>
 <script src="../../shared/mm-access.js"></script>
 <script src="../../shared/mm-side-access.js"></script>
 <link rel="stylesheet" href="../../shared/mm-nav.css">
@@ -60,6 +62,7 @@
     <p class="dim">A pretend week that plays in a minute: buy on Sunday, step through the half-days, sell when you like. It has its own 1,000 practice bells and never changes your real stall, medals or stats.</p>
     <button id="pr-start" type="button" class="big buy">Start a practice week</button>
     <div id="pr-play" hidden>
+      <p id="pr-mood" hidden></p>
       <div id="pr-top"><span id="pr-when"></span> <strong id="pr-price"></strong> <span id="pr-pl"></span></div>
       <p id="pr-stat" class="dim"></p>
       <canvas id="pr-chart" width="340" height="150" role="img" aria-label="Practice week prices"></canvas>

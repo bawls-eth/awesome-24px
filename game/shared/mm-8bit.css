@@ -1,0 +1,60 @@
+/* MM8: shared 8-bit theme for Pixeltown mini-games. Palette-limited, no blur, no gradients, local fonts only.
+   Use: <link rel="stylesheet" href="../../shared/mm-8bit.css"> (+ mm-8bit.js adds class "px8" to <body>).
+   See game/design/EIGHTBIT-STYLE.md */
+:root {
+  --px-0: #000000; --px-1: #1d2b53; --px-2: #7e2553; --px-3: #008751;
+  --px-4: #ab5236; --px-5: #5f574f; --px-6: #c2c3c7; --px-7: #fff1e8;
+  --px-8: #ff004d; --px-9: #ffa300; --px-10: #ffec27; --px-11: #00e436;
+  --px-12: #29adff; --px-13: #83769c; --px-14: #ff77a8; --px-15: #ffccaa;
+  --px-ink: #0b0d1a; --px-bg: #12142a; --px-panel: #1d2b53; --px-text: #fff1e8; --px-dim: #c2c3c7;
+  --px-accent: #ffa300; --px-good: #00e436; --px-bad: #ff004d; --px-sky: #29adff;
+  --px-font: "Courier New", Courier, "Lucida Console", Monaco, "DejaVu Sans Mono", "Liberation Mono", monospace;
+  --px-ring2: 0 -2px 0 0 var(--px-ink), 0 2px 0 0 var(--px-ink), -2px 0 0 0 var(--px-ink), 2px 0 0 0 var(--px-ink);
+  --px-ring4: 0 -4px 0 0 var(--px-ink), 0 4px 0 0 var(--px-ink), -4px 0 0 0 var(--px-ink), 4px 0 0 0 var(--px-ink);
+}
+.px8, .px8 button, .px8 input, .px8 select { font-family: var(--px-font); }
+body.px8 { background-color: var(--px-bg); color: var(--px-text); }
+.px8 h1, .px8 h2, .px-title { font-family: var(--px-font); font-weight: 900; letter-spacing: .12em; text-transform: uppercase;
+  text-shadow: 2px 2px 0 var(--px-ink), -1px 0 0 var(--px-ink), 0 -1px 0 var(--px-ink); }
+.px8 canvas, canvas.px-crisp { image-rendering: pixelated; image-rendering: crisp-edges; }
+@supports (image-rendering: pixelated) { .px8 canvas, canvas.px-crisp { image-rendering: pixelated; } }
+.px8 small, .px8 .dim { font-size: max(12px, .8em); }
+
+/* panel: square, stepped 4px ink ring + hard drop shadow (no radius, no blur) */
+.px-panel { background: var(--px-panel); color: var(--px-text); border: 0; border-radius: 0; padding: 12px; margin: 6px;
+  box-shadow: var(--px-ring4), inset 0 2px 0 0 rgba(255,241,232,.18), inset 0 -3px 0 0 rgba(0,0,0,.35), 6px 8px 0 0 rgba(0,0,0,.5); }
+.px-card { background: var(--px-1); color: var(--px-text); padding: 8px 10px; margin: 4px; border-radius: 0;
+  box-shadow: var(--px-ring2), inset 0 -3px 0 0 rgba(0,0,0,.3); }
+
+/* button: chunky, stepped outline, 3D bottom lip, presses down */
+.px-btn { font-family: var(--px-font); font-weight: 900; font-size: max(14px, calc(14px * var(--ui-scale, 1))); letter-spacing: .08em;
+  text-transform: uppercase; min-height: 44px; min-width: 44px; padding: 8px 14px; margin: 4px 4px 10px;
+  background: var(--px-accent); color: var(--px-ink); border: 0; border-radius: 0; cursor: pointer; text-shadow: none;
+  box-shadow: var(--px-ring2), inset 0 -4px 0 0 rgba(0,0,0,.28), inset 0 2px 0 0 rgba(255,255,255,.35), 0 6px 0 0 var(--px-ink);
+  transform: translateY(0); }
+.px-btn:hover { filter: brightness(1.12); }
+.px-btn:active { transform: translateY(4px); box-shadow: var(--px-ring2), inset 0 4px 0 0 rgba(0,0,0,.28), 0 2px 0 0 var(--px-ink); }
+.px-btn:focus-visible { outline: 3px solid var(--px-10); outline-offset: 5px; }
+.px-btn:disabled, .px-btn[aria-disabled="true"] { background: var(--px-5); color: var(--px-6); cursor: not-allowed; filter: none; }
+.px-btn.alt { background: var(--px-12); } .px-btn.good { background: var(--px-11); }
+.px-btn.bad { background: var(--px-8); color: var(--px-7); } .px-btn.ghost { background: var(--px-1); color: var(--px-text); }
+
+.px-badge { display: inline-block; font-family: var(--px-font); font-weight: 900; font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+  padding: 2px 6px; margin: 2px 4px; background: var(--px-10); color: var(--px-ink); border-radius: 0; box-shadow: var(--px-ring2); }
+.px-badge.dim { background: var(--px-5); color: var(--px-6); }
+
+/* bar: segmented meter; child element is the fill (set its width %) */
+.px-bar { position: relative; height: 12px; background: var(--px-ink); border-radius: 0; overflow: hidden;
+  box-shadow: 0 0 0 2px var(--px-ink), 0 0 0 4px var(--px-6); margin: 8px 6px; }
+.px-bar > * { height: 100%; background-color: var(--px-11); border-radius: 0;
+  background-image: repeating-linear-gradient(90deg, transparent 0 6px, rgba(0,0,0,.35) 6px 8px); }
+
+/* optional subtle CRT: ?crt=1 adds html.px-crt (off by default) */
+html.px-crt body::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+  background: repeating-linear-gradient(0deg, rgba(0,0,0,.08) 0 1px, transparent 1px 3px); }
+html.low-gfx.px-crt body::after { display: none; }
+
+.px-blink { animation: px-blink 1s steps(2, start) infinite; }
+@keyframes px-blink { to { visibility: hidden; } }
+@media (prefers-reduced-motion: reduce) { .px-btn:active { transform: none; } .px-blink { animation: none !important; } }
+html.reduce-motion .px-btn:active { transform: none; } html.reduce-motion .px-blink { animation: none !important; }

@@ -72,6 +72,25 @@ const memStore = (init) => { const d = Object.assign({}, init); return { d, getI
   check('Festival Finale clears when all three festival games reached their first medal', fin.nodes['w5-finale'].exits.includes('normal') && fin.nodes['w0-sparkle'].exits.includes('normal'));
 }
 
+// ---- arcade milestone group (additive: pop, dash, stack, echo clear their own map node's bronze / silver / gold)
+{
+  const nodes = Object.fromEntries(M.MAP.nodes.map((n) => [n.id, n]));
+  const A = Prof.ARCADE;
+  check('arcade group: pop, dash, stack, echo, 4 milestones each, never inside MILESTONES', JSON.stringify(Object.keys(A)) === '["pop","dash","stack","echo"]' && Object.keys(A).every((g) => A[g].length === 4 && !(g in Prof.MILESTONES)));
+  check('each arcade milestone hits its own open game node with b, s, s, g', Object.keys(A).every((g) => A[g].every((m, i) => m.hits.length === 1 && m.hits[0].node === 'w5-' + g && nodes['w5-' + g] && nodes['w5-' + g].type === 'game' && !nodes['w5-' + g].secret && m.hits[0].exit === 'normal' && m.hits[0].medal === ['b', 's', 's', 'g'][i])));
+  check('arcade ids match the hub medal strips', (() => { const HM = require('../hub/medals.js'); return Object.keys(A).every((g) => JSON.stringify(A[g].map((m) => m.id)) === JSON.stringify(HM.GAMES[g].medals.map((x) => x[0]))); })());
+  let r = Prof.syncGame(Prof.defaults(), 'stack', ['round1', 'f15', 'bogus', 'f15']);
+  check('arcade sync reports known ids once and lights bronze + silver', JSON.stringify(r.added) === '["round1","f15"]' && r.profile.nodes['w5-stack'].medals.b && r.profile.nodes['w5-stack'].medals.s && !r.profile.nodes['w5-stack'].medals.g && r.profile.tokens === 20, JSON.stringify(r.profile.nodes['w5-stack']));
+  check('arcade progress never clears the W0 cross-game goals (all 6 games keeps its meaning)', !r.profile.nodes['w0-first'] && !r.profile.nodes['w0-practice'] && Prof.DERIVED.find((d) => d.node === 'w0-practice').test(6) && !Prof.DERIVED.find((d) => d.node === 'w0-practice').test(5));
+  r = Prof.syncGame(r.profile, 'stack', ['round1', 'f15', 'f40']);
+  check('re-sync adds only the new id (gold), Tokens once', JSON.stringify(r.added) === '["f40"]' && r.profile.nodes['w5-stack'].medals.g && r.profile.tokens === 30);
+  const hostileA = Prof.syncGame({ games: { echo: { done: ['t10', '<img>', {}] } } }, 'echo', ['t10', 'round1']);
+  check('arcade: stored done ids are not re-reported; hostile entries dropped', JSON.stringify(hostileA.added) === '["round1"]' && JSON.stringify(hostileA.profile.games.echo.done) === '["t10","round1"]');
+  const gl = Prof.goalsFor(r.profile, 'w5-stack');
+  check('goalsFor lists the four arcade goals with done flags', gl.length === 4 && gl.every((x) => x.game === 'stack') && gl.filter((x) => x.done).length === 3);
+  check('six-game milestones unchanged by the arcade group', Object.keys(Prof.MILESTONES).join(',') === 'jam,bugs,stalk,angler,deepdelve,lantern');
+}
+
 // ---- map validation
 check('shipped map validates', M.validate(M.MAP).ok, JSON.stringify(M.validate(M.MAP).errors));
 check('shipped map has worlds W0..W7', ['w0', 'w1', 'w2', 'w3', 'w4', 'w5', 'w6', 'w7'].every((w) => M.MAP.nodes.some((n) => n.world === w)));

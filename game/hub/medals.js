@@ -14,6 +14,9 @@
     // Pixel Pop (games/pop) and Lantern Dash (games/dash): each writes its own pixeltown-medals-<game>-v1
     pop: { node: 'w5-pop', name: 'Pixel Pop', medals: [['round1', 'First round'], ['chain5', '5x chain'], ['tile9', 'Make a 9'], ['score25k', '25,000 points']] },
     dash: { node: 'w5-dash', name: 'Lantern Dash', medals: [['run1', 'First run'], ['m500', '500 m'], ['perfect10', '10x perfect'], ['m1500', '1,500 m']] },
+    // Stack Tower (games/stack) and Echo Garden (games/echo): own pixeltown-medals-<game>-v1 keys
+    stack: { node: 'w5-stack', name: 'Stack Tower', medals: [['round1', 'First tower'], ['f15', '15 floors'], ['perfect5', '5x perfect'], ['f40', '40 floors']] },
+    echo: { node: 'w5-echo', name: 'Echo Garden', medals: [['round1', 'First bloom'], ['t6', '6-note tune'], ['clean8', 'No-wilt 8'], ['t10', '10-note tune']] },
     deepdelve: { node: 'w3-deepdelve', name: 'Deepdelve', medals: [['bronze', 'Depth 8'], ['silver', 'Iron pick'], ['secret', 'Lava Lake'], ['depth20', 'Depth 20'], ['depth40', 'Depth 40'], ['crawler', 'Crawler slain'], ['wyrm', 'Rock Wyrm'], ['torches10', '10 torches'], ['build1', 'First build'], ['build3', 'Three builds']] },
     // Hearthvale Isles (games/isles, MMIsles.MEDAL_IDS): first tames, a tame per size class, each island visited, each boss lair seen
     isles: { node: 'w7-isles', name: 'Hearthvale Isles', medals: [['tame1', 'First tame'], ['log6', '6 creatures seen'], ['ride1', 'First ride'], ['stable5', '5 tames'],
