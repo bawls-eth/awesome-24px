@@ -24,7 +24,7 @@ async function open(browser, viewport, touch) {
   await page.fill('#name-input', 'ADMIN8bit');
   await page.click('.species-tab'); await page.waitForTimeout(100);
   await page.click('.avatar-choice');
-  await page.click('#join-btn');
+  await page.click('button:has-text("Join Town")'); // SDK stubbed + DB blocked: the join fails at once and offers Play offline
   await page.waitForSelector('#join-offline-btn:not(.hidden)', { timeout: 15000 });
   await page.click('#join-offline-btn');
   await page.waitForFunction(() => window.__g && window.__g.scene.getScene('Town') && window.__g.scene.getScene('Town').localBody, null, { timeout: 20000 });
