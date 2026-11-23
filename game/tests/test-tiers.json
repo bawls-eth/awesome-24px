@@ -1688,5 +1688,9 @@
   "beta-w15-stalk-compass.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-w18-isles-howto.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

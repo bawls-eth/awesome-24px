@@ -117,3 +117,12 @@ Each entry: item, files, test, how to retest by hand. Screenshots in `fixes/img/
 ## W-15 Stalk compass (b11-06, b12-17, P3) - fixed
 - Files: `games/stalk/stalk.css` (scroll-margin-top 64 px on the cards / sections = 48 px Menu button + 8 + 8).
 - Test: `tests/beta-w15-stalk-compass.test.js` (390x844 + 1280x720; 4 asserts fail on the old CSS). `stalk-page`, `stalk-bugbash` green.
+
+## W-18 Isles HUD polish (b05-10, b06-09, b15-14 fixed; b06-07 names, b06-08 rocket, b05-09 log gap, b06-06, b05-08 open)
+- Files: `games/isles/index.html` (one close button), `games/isles/isles.js` (one line: the button hides the card), `games/isles/isles.css` (appended block).
+- The first-visit how-to card has a 44 px close button (keyboard / screen reader reachable); on desktop it sits bottom-left instead of over the hero at the centre; while it is up, toasts print at 64% height instead of on its text.
+- b05-09: the source text is "Look for sparkles." (no double space in isles.js); the gap is a rendering / width effect not reproduced here, left open.
+- Test: `tests/beta-w18-isles-howto.test.js`. `isles-bugbash`, `isles-first-ten`, `isles-ftue-fixes`, `isles-access` green.
+
+## Tried and reverted
+- W-07 hide "Hold to talk" offline (b08-06): a `town-offline` body class from main.js + one CSS rule worked, but `town-bugbash` asserts the offline walkie pill is visible and 44-56 px tall (its layout check runs offline). Changing that test is a QA / owner call, so the change was reverted; ready to re-apply (2 lines) once the test is updated.

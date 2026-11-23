@@ -246,3 +246,11 @@ h1.hud-isle { text-transform: none; letter-spacing: normal; font-family: inherit
 @media (max-width: 600px) and (min-height: 501px) {
   .panel { top: calc(64px + env(safe-area-inset-top)); transform: translateX(-50%); max-height: calc(100% - 72px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
 }
+
+/* W-18 (b05-10, b06-09, b15-14): the first-visit how-to card has a 44 px close button; on desktop it sits bottom-left, off the hero at the
+   screen centre; while it is up, toasts print below it instead of on its text (phone). */
+.howto-x { position: absolute; right: 2px; top: 2px; min-width: 44px; min-height: 44px; padding: 0; border: 0; background: transparent; color: var(--px-accent, #ffd166); font: bold 16px monospace; pointer-events: auto; cursor: pointer; }
+.howto-x:focus-visible { outline: 3px solid #ffec27; }
+.howto-title { padding-right: 40px; }
+@media (min-width: 601px) { .howto { top: auto; bottom: 24px; left: 24px; transform: none; } }
+body:has(#howto:not([hidden])) #toast { top: 64%; }

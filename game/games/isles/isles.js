@@ -3304,6 +3304,7 @@
     box.hidden = false;
     const hide = () => { box.hidden = true; };
     setTimeout(hide, 9000);
+    const x = $('howto-close'); if (x) x.addEventListener('click', hide); // W-18 (b15-14): a real close control (44 px), keyboard / screen reader reachable
     window.addEventListener('keydown', function once() { setTimeout(hide, 2500); window.removeEventListener('keydown', once); });
     window.addEventListener('pointerdown', function once() { setTimeout(hide, 2500); window.removeEventListener('pointerdown', once); });
   })();
