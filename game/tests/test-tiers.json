@@ -1777,7 +1777,7 @@
     "class": "browser",
     "tier": "full"
   },
-  "beta-r3-boss-bar-fall": {
+  "beta-r3-boss-bar-fall.test.js": {
     "class": "browser",
     "tier": "smoke"
   },
