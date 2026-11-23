@@ -64,3 +64,9 @@ Each entry: item, files, test, how to retest by hand. Screenshots in `fixes/img/
 - Stack: the intro / result card starts at 76 px (below the header row). The test's disjoint check also passed on the old CSS at 390x844 (b09-09 was seen at another size), so it is a guard, not a repro.
 - OPEN b09-08 (Dash result above the fold): `dash-page` pins the result card below the scene and the card is ~590 px tall at 390x844, so CSS reordering cannot meet "top < 400 and fully visible" without breaking Run again under the thumb. Needs a compact result card (dash.js / minikit, Gameplay).
 - Test: `tests/beta-w09-arcade-layout.test.js` (6 asserts fail on the old CSS). `pop-page`, `dash-page`, `dash-bugbash`, `stack-page`, `jam-page`, `hub-page`, `hub-home` green.
+
+## W-11 Bug Safari clarity (b10-11) - fixed
+- Files: `games/festival/bugs.js` (draw only).
+- Fix: each bug is drawn through two small scratch canvases (sprite + silhouette composited at 4 offsets = 1 px rim), at 2x when the field shows under 1.8x screen scale (phones), 1x on desktop. Rim is dark ink, or a light rim on the dark arenas (night glade, lantern) so it is >= 3:1 against every ground. Ground checker at half contrast. No getImageData, layout read at most once a second; sim, hit areas and scores untouched. Hook `__bugs.bugArt()`.
+- Measured: phone bugs 8-10 px -> 23-27 screen px on the long side.
+- Test: `tests/beta-w11-bug-clarity.test.js` (old code fails at the hook). `bugs-page`, `bugs-polish`, `bugs-bb`, `bugs-fun`, `minigame-lowgfx` green.

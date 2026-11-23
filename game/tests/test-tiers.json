@@ -1584,5 +1584,9 @@
   "beta-w09-arcade-layout.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-w11-bug-clarity.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
