@@ -63,6 +63,13 @@ async function open(browser, q, opts, pre) {
   check('touch: no horizontal scroll', t.sw <= 390);
   await P.ctx.close();
 
+  // landscape phone at 150% text: no horizontal scroll, and the HUD leaves most of the short view free
+  const L = await open(browser, '&seed=11', { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true }, "try{localStorage.setItem('pixeltown-access-v1',JSON.stringify({hudScale:1.5}))}catch(e){}");
+  const lm = await L.page.evaluate(() => ({ sw: document.documentElement.scrollWidth, hud: document.getElementById('hud').getBoundingClientRect().height, stage: document.getElementById('stage').getBoundingClientRect().height }));
+  check('landscape 150%: no horizontal scroll', lm.sw <= 844, JSON.stringify(lm));
+  check('landscape 150%: the HUD takes under 70% of the short view', lm.hud < lm.stage * 0.7, JSON.stringify(lm));
+  await L.ctx.close();
+
   // hostile saved position: far outside the world, then inside rock
   const pre = (pos) => `try { localStorage.setItem('x','1'); } catch (e) {} window.__pos = ${JSON.stringify(pos)};`;
   void pre;
