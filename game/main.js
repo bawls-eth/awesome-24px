@@ -1662,6 +1662,7 @@ class TownScene extends Phaser.Scene {
     this.setupSharedSettings();
     this.setupReduceMotionToggle();
     this.setupPhotoMode();
+    this.setupEscClose();
     this.setupFishHint();
     this.setupGiftHint();
     this.setupSaveBackup();
@@ -4433,6 +4434,24 @@ class TownScene extends Phaser.Scene {
       setReduceMotion(!reduceMotion);
       render();
     });
+  }
+
+  // G-12 (b07-01, b04-08): Esc (and P, the universal Menu key) closes the top Town overlay through closeTopOverlay, so every overlay's
+  // own close logic runs. Window bubble phase: the nav sheet (window capture), Postcards (document) and the Museum (its own window
+  // listener) keep their own Esc and are skipped here, so one press never closes two layers. Typing in a text field: untouched
+  // (the chat box blurs itself). A key that closed an overlay is consumed, so P never also opens a menu / takes a photo.
+  setupEscClose() {
+    this._escCloseKey = (e) => {
+      if (e.defaultPrevented || e.repeat) return;
+      const k = e.key;
+      if (k !== 'Escape' && k !== 'Esc' && k !== 'p' && k !== 'P') return;
+      const t = e.target;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || ''))) return;
+      if (this.museumOpen || this.postcardsOpen || this.navSheetOpen()) return;
+      if (this.closeTopOverlay()) { e.preventDefault(); e.stopImmediatePropagation(); }
+    };
+    window.addEventListener('keydown', this._escCloseKey);
+    this.events.once('shutdown', () => window.removeEventListener('keydown', this._escCloseKey));
   }
 
   setupPhotoMode() {
