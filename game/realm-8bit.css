@@ -63,3 +63,7 @@ html body .rm-btn { border-radius: 0; font-family: var(--px-font, monospace); fo
 
 @media (prefers-reduced-motion: reduce) { html body #realm-abilities .realm-ab:active, html body #realm-bp-btn:active { transform: none; } }
 html.low-gfx body #realm-abilities .realm-ab, html.low-gfx body #realm-banner { box-shadow: 0 0 0 2px var(--r8-ink); }
+
+/* ---- bug bash: the HP numbers never wrap to a second line in a narrow (phone) HP bar ---- */
+html body #realm-hp-text { white-space: nowrap; overflow: hidden; }
+@media (max-width: 560px) { html body #realm-hp-text { letter-spacing: 0; font-size: 10px; } }

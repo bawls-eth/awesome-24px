@@ -269,6 +269,20 @@
         default: if (sd) rect(g, '#000', cx - 1, cy - 1, 2, 2);
       }
     }
+    // Terrain depth (bug bash): seeded per-tile detail baked ONCE into the chunk canvas (no per-frame work): soft light / shade patches on a
+    // 4-tile grid so open ground reads as rolling, plus 0-2 tiny square pebbles / tufts per tile. Low-contrast squares only (never round, so the
+    // bright round shapes stay bullets). ?tiledetail=0 = the flat look.
+    const TILE_DETAIL = !/[?&]tiledetail=0(&|$)/.test(qs0);
+    function tileDetail(g, wx, wy, px, py) {
+      const v = (h2(wx >> 2, wy >> 2, 501) + h2((wx + 2) >> 2, (wy + 2) >> 2, 502)) * 0.5;
+      if (v < 0.32) rect(g, 'rgba(0,0,0,0.08)', px, py, TILE, TILE);
+      else if (v > 0.72) rect(g, 'rgba(255,255,255,0.05)', px, py, TILE, TILE);
+      const n = Math.floor(h2(wx, wy, 503) * 3); // 0..2 specks
+      for (let k = 0; k < n; k++) {
+        const r = h2(wx + k * 17, wy, 504); const sx = px + 2 + Math.floor(h2(wx, wy + k * 13, 505) * (TILE - 6)); const sy = py + 2 + Math.floor(h2(wx * 3 + k, wy * 5, 506) * (TILE - 6));
+        rect(g, r < 0.5 ? 'rgba(0,0,0,0.16)' : 'rgba(255,255,255,0.10)', sx, sy, r < 0.25 ? 3 : 2, 2);
+      }
+    }
     function buildChunk(cx, cy) {
       chunkBuilds++;
       const cv = document.createElement('canvas'); cv.width = CPX; cv.height = CPX;
@@ -288,6 +302,7 @@
           rect(g, pal[0], px, py, TILE, TILE);
           for (let k = 0; k < 3; k++) { const r = h2(wx * 3 + k, wy, 7); if (r < 0.55) rect(g, r < 0.27 ? pal[1] : pal[2], px + Math.floor(h2(wx, wy * 5 + k, 11) * 26), py + Math.floor(h2(wx * 7 + k, wy, 13) * 26), t === T.flower_meadow ? 3 : 6, t === T.flower_meadow ? 3 : 4); }
         }
+        if (TILE_DETAIL && t !== T.deep_water && t !== T.shallow_water && !solid[i]) tileDetail(g, wx, wy, px, py);
         if (solid[i] && t !== T.deep_water) { rect(g, 'rgba(0,0,0,0.28)', px, py, TILE, TILE); rect(g, 'rgba(255,255,255,0.18)', px, py, TILE, 4); rect(g, 'rgba(0,0,0,0.35)', px, py + TILE - 5, TILE, 5); }
         // Transition sprites already draw the terrain boundary.
         if (transition) continue;
@@ -469,6 +484,36 @@
     zoneEl.innerHTML = '<div class="rw-zname"></div><div class="rw-zsub"><span class="rw-arrow" aria-hidden="true">➤</span> <span class="rw-coords"></span></div>';
     const ov = document.getElementById('realm-overlay') || document.body;
     ov.appendChild(mini); ov.appendChild(zoneEl);
+    // ---------- 'Next goal' line (bug bash): ONE short HUD line from the existing goal sources, no new state: an unclaimed daily quest reward,
+    // else the first open daily quest (MMQuests) with its progress, else the next zone inland (MMZones recLv), else a boss altar.
+    // textContent only, refreshed at most once a second, hidden while the first-run coach talks or a phone panel covers the corner. ?goal=0 = off.
+    const GOAL_ON = !/[?&]goal=0(&|$)/.test(qs0);
+    const goalEl = document.createElement('div'); goalEl.id = 'rw-goal'; goalEl.className = 'hidden';
+    if (GOAL_ON) ov.appendChild(goalEl);
+    let goalTxt = ''; let goalT = 0;
+    function goalText(zi) {
+      try {
+        if (window.MMQuests && save.quests) {
+          const rows = MMQuests.summary(save.quests, questDate());
+          if (rows.some((q) => q.done && !q.claimed)) return 'Claim your quest reward at the Nexus';
+          const q = rows.find((r) => !r.done);
+          if (q) return q.text + (q.need > 1 ? ` (${Math.min(q.p, q.need)}/${q.need})` : '');
+        }
+        const zs = (Z.TABLES && Z.TABLES.ZONES) || []; const z = zi && zi.zone >= 0 && zi.zone <= 3 ? zi.zone : 0;
+        const next = zs[z + 1]; const lv = arena.save && arena.save.level | 0;
+        if (next && next.name) return lv >= (next.recLv | 0) ? `Head inland to the ${next.name}` : `Reach Lv ${next.recLv} for ${next.name} (Lv ${lv})`;
+        return 'Find a boss altar and defeat its guardian';
+      } catch (e) { return ''; }
+    }
+    function goalTick(zi, force) {
+      if (!GOAL_ON) return;
+      goalT -= 0.25; if (goalT > 0 && !force) return; goalT = 1;
+      const coach = document.getElementById('mm-coach');
+      const coachUp = !!coach && !coach.classList.contains('hidden') && coach.getClientRects().length > 0 && getComputedStyle(coach).display !== 'none';
+      const t = goalText(zi); const txt = t ? 'Next goal: ' + t : '';
+      if (txt !== goalTxt) { goalTxt = txt; goalEl.textContent = txt; goalEl.title = txt; }
+      goalEl.classList.toggle('hidden', !txt || coachUp || panelHid);
+    }
     function toggleMinimap() {
       const expanded = mini.classList.toggle('big');
       mini.setAttribute('aria-pressed', String(expanded));
@@ -571,6 +616,7 @@
       const zi = Z.zoneInfoAt(world, tx, ty); lastZone = zi; zoneCross(zi, tx, ty); fireBudgetFor(zi); if (gearHintSt.checked) gearHintNote();
       const txt = `${zi.name} · ${zi.danger}`;
       if (txt !== zoneTxt || force) { zoneTxt = txt; zName.textContent = txt; zName.style.color = zi.color; zoneEl.dataset.zone = String(zi.zone); }
+      goalTick(zi, force);
       const dx = world.center.x - tx; const dy = world.center.y - ty; const dist = Math.round(Math.hypot(dx, dy));
       let goal = null;
       let goalDistance = Infinity;
@@ -1369,6 +1415,7 @@
       const open = !!arena.panel && typeof matchMedia === 'function' && matchMedia('(max-width: 700px)').matches; // phone width only: there the panels cover the corner HUD // the arena's own panel state (backpack / board / menu / shop / hero), read-only; the DOM mutations below only say when to look
       if (open === panelHid) return;
       panelHid = open; mini.style.display = open ? 'none' : ''; zoneEl.style.display = open ? 'none' : '';
+      if (GOAL_ON) goalEl.classList.toggle('hidden', open || !goalTxt);
     }
     if (typeof window !== 'undefined') window.addEventListener('resize', syncPanels);
     if (typeof MutationObserver === 'function') new MutationObserver((recs) => { for (let i = 0; i < recs.length; i++) if (PANEL_IDS[recs[i].target.id]) { syncPanels(); return; } }).observe(ov, { attributes: true, subtree: true, attributeFilter: ['class', 'style'] });

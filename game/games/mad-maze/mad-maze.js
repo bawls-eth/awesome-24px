@@ -662,6 +662,7 @@
       else if (k === 'autoFire' && AX2) { arena.setAutoFire(!arena.access2().autoFire); axRender(); }
       else if (k === 'aimToggle' && AX2) { arena.setAimToggle(!arena.access2().aimToggle); axRender(); }
       else if (k === 'shapes' && AX2) { arena.setBulletShapes(!arena.access2().shapes); axRender(); }
+      else if (k === 'shared') { if (SHARED) { axClose(); SHARED.open(); } }
       else if (k === 'done') axClose();
       else axSet(k, !axPrefs[k]);
     });
@@ -689,6 +690,7 @@
       tog('aimToggle', 'Aim: tap to toggle (instead of hold)', c.aimToggle);
       tog('shapes', 'Bullet shapes', c.shapes || p.palette !== 'normal', p.palette !== 'normal' ? ' (always with this palette)' : '');
     }
+    if (SHARED) { const sb = mkEl('button', 'rm-tog', '🔊 Sound, music, aim assist...'); sb.type = 'button'; sb.id = 'mm-settings-shared'; sb.dataset.ax = 'shared'; axBody.appendChild(sb); }
     const d = mkEl('button', 'rm-btn', 'Done'); d.type = 'button'; d.dataset.ax = 'done'; axBody.appendChild(d);
   }
   // Feedback box (shared/mm-feedback.js, local-only notes): loaded on the first settings open. The tag is added from here, guarded:
@@ -709,6 +711,36 @@
       s.addEventListener('error', () => { s.remove(); });
       document.head.appendChild(s);
     }
+  }
+
+  // Shared Settings panel (shared/mm-settings.js, SETTINGS-WIRING.md): sound, music, aim assist and the rest of the one cross-game panel.
+  // The Realm's own sheet (#mm-settings, ids kept for its tests) links to it; every change there applies live through the arena's setters.
+  // ?mmsettings=0 leaves it out (the page as before).
+  const SHARED = AX_ON && window.MMSettings && params.get('mmsettings') !== '0' ? (() => { try { return MMSettings.mount({ page: 'realm', feedback: false }); } catch (e) { return null; } })() : null;
+  if (SHARED) {
+    window.addEventListener('mm-settings-change', (ev) => {
+      const d = ev && ev.detail ? ev.detail : {}; const v = d.value;
+      try {
+        if (d.id === 'auto-fire' && AX2) arena.setAutoFire(!!v);
+        else if (d.id === 'aim-toggle' && AX2) arena.setAimToggle(!!v);
+        else if (d.id === 'one-thumb' && AX2) arena.setOneThumb(!!v);
+        else if (d.id === 'bullet-shapes' && AX2) arena.setBulletShapes(!!v);
+        else if (d.id === 'aim-assist' && arena.setAimAssist) arena.setAimAssist(!!v);
+        else if (d.id === 'sound') { if (arena.sfx) arena.sfx.setMuted(!v); if (window.RealmAudio) RealmAudio.tick(); }
+        else if (d.id === 'music') { if (window.RealmAudio) RealmAudio.tick(); }
+        else if (d.id === 'reduce-motion') arena.setReduceMotion(!!v);
+        else if (d.id === 'text-size' || d.id === 'flashes' || d.id === 'low-gfx') {
+          axPrefs = AXM.prefs.load(localStorage);
+          if (d.id === 'low-gfx' && !v) { perfSt.samples.length = 0; perfSt.auto = false; perfSt.prev = null; }
+          axApply(axPrefs);
+        }
+      } catch (e) { /* a setting never breaks the run */ }
+      axRender();
+    });
+    // Esc closes the shared panel first (the arena would otherwise toggle its menu underneath)
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && SHARED.isOpen()) { SHARED.close(); e.stopPropagation(); e.preventDefault(); } }, true);
+    // keys typed in the panel never drive the hero
+    ['keydown', 'keyup'].forEach((t) => SHARED.el.addEventListener(t, (e) => { if (e.key !== 'Tab' && e.key !== 'Escape') e.stopPropagation(); }));
   }
 
   if (AX_ON) {

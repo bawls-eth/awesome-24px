@@ -687,7 +687,9 @@ class RealmArena {
     this._padPrev = [false, false, false, false]; this._aimTargets = [];
     this.sfx = null; this._gesture = false; this._actx = null;
     this._padPause = false; this._padWas = false;
-    this._padRes = { move: { x: 0, y: 0 }, aim: { x: 0, y: 0, on: false }, fire: false, ability: [false, false, false, false], pause: false }; // reused every frame (no per-frame allocation)
+    this._holdFire = rmFlag('holdfire') !== '0'; // world rule: off-screen shooters hold their fire; ?holdfire=0 (or setHoldFire(false)) lets them shoot
+    this._padBack = false; // pad Back / Select (button 8): restart edge (fall screen or open menu only)
+    this._padRes = { move: { x: 0, y: 0 }, aim: { x: 0, y: 0, on: false }, fire: false, ability: [false, false, false, false], pause: false, back: false }; // reused every frame (no per-frame allocation)
     this._aimAssist = true; this._reduced = false;
     // AR (NEXT-SLICES-3 Wave 4): Realm one-thumb access, opt-in per page (enableAccess2(); the town classic arena never calls it, duels never use it).
     this._ax2 = false; this._autoFire = false; this._aimToggle = false; this._shapes = false; this._aimPressMax = 0; this.autoFireN = 0;
@@ -799,7 +801,7 @@ class RealmArena {
 
   // The pad went away: forget its held buttons so a reconnect cannot fire a stale edge.
   _padGone() {
-    if (this._padWas) { this._padPrev.fill(false); this._padPause = false; this._padWas = false; }
+    if (this._padWas) { this._padPrev.fill(false); this._padPause = false; this._padBack = false; this._padWas = false; }
     return null;
   }
 
@@ -813,14 +815,22 @@ class RealmArena {
     if (m <= D) { r.aim.x = 0; r.aim.y = 0; r.aim.on = false; } else { const o = Math.min(1, (m - D) / (1 - D)); r.aim.x = (x / m) * o; r.aim.y = (y / m) * o; r.aim.on = o > 0; }
     r.ability[0] = dn(b[0]) || dn(b[5]); r.ability[1] = dn(b[1]) || dn(b[4]); r.ability[2] = dn(b[2]); r.ability[3] = dn(b[3]);
     r.pause = dn(b[9]);
+    r.back = dn(b[8]);
     return r;
   }
 
   // Start (button 9) opens / closes the pause + backpack panel, like B / Esc: one toggle per press.
   _padPauseEdge() {
     const on = !!(this._pad && this._pad.pause);
-    if (on && !this._padPause) { if (this.panel || this.paused) this.setPaused(false); else this._panel('bp'); }
+    if (on && !this._padPause && !this._deathShown) { if (this.panel || this.paused) this.setPaused(false); else this._panel('bp'); }
     this._padPause = on;
+    // Universal Restart (CONTROLS.md): pad Back / Select restarts only where R does (the fall screen, or the open menu's confirm).
+    const bk = !!(this._pad && this._pad.back);
+    if (bk && !this._padBack) {
+      if (this._deathShown) { const b = this._deathDom && this._deathDom.querySelector('button[data-d="again"]'); if (b) b.click(); }
+      else if (this.panel === 'menu' && this.canRestart && this.canRestart()) this._menuConfirm(true);
+    }
+    this._padBack = bk;
   }
 
   countActive(name) {
@@ -2947,6 +2957,7 @@ class RealmArena {
   // World mode only: may this enemy shoot? It must be on screen (a 24 px margin) and within RM_FIRE_RANGE x the view's half-diagonal of
   // the player, so nothing snipes from outside the camera. The classic arena and dungeons (the whole room is the view) are unchanged.
   _canFire(e, p) {
+    if (!this._holdFire) return true;
     if (this._dv && !this.world) { const cx = this.camera.x; return e.type === 'boss' || (e.x >= cx - 40 && e.x <= cx + this._dv.vw + 40); } // dungeon view (phone portrait): shooters far outside the slice hold their fire
     if (!this.world || this.mode !== 'world' || this.dungeon) return true;
     const c = this.camera; const m = 24;
@@ -3368,6 +3379,7 @@ class RealmArena {
     this.lastLoss = 0;
     this.state = 'dead';
     this.deadT = 2.6;
+    this._snd('death'); // CHIP-AUDIO: the fall jingle (MMChip voice; old sfx.js recipes skip unknown names)
     this.shake = 14;
     this._burst(this.player.x, this.player.y, '#ff6f91', 30, 300);
     this._deathZone = this._worldCopy() ? this._zoneLabel() : '';
@@ -3961,6 +3973,7 @@ class RealmArena {
     if (name && this.state === 'dead') return; // no panels while the death message runs (it would freeze the exit)
     const prev = this.panel || null;
     this._panelSet(name);
+    if (prev !== (name || null)) this._snd(name ? 'ui_open' : 'ui_close'); // CHIP-AUDIO: panel open / close blips (rate-limited by MMSfx)
     if (this.onPanel && prev !== (name || null)) { try { this.onPanel(name || null, prev); } catch (e) { /* a page hook never breaks the panels */ } } // optional page hook (realm-world: Nexus return)
   }
 
@@ -3979,6 +3992,8 @@ class RealmArena {
   setPaused(on) { this._panel(on ? 'bp' : null); } // false closes whichever panel is open
 
   setBoard(on) { this._panel(on ? 'board' : null); }
+  // The off-screen hold-fire rule (world + phone dungeon slice). On by default; ?holdfire=0 starts with it off. Returns the new state.
+  setHoldFire(on) { this._holdFire = on !== false; return this._holdFire; }
   // Hero picker / stats panel (only when the page wired onHeroPanel): tab 'pick' or 'stats'.
   openHeroPanel(tab) { if (!this.onHeroPanel || !this.active || this.team) return false; this._heroTab = tab === 'stats' ? 'stats' : 'pick'; this._panel('hero'); return true; }
 
