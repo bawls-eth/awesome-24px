@@ -35,4 +35,17 @@ check('backup bundle exports the access key', B.bundle(fake({ [K]: '{"palette":"
 check('restore cleans access prefs through the owner', (() => { const st = fake(); const r = B.restore(st, { format: 'pixeltown-backup', v: 2, keys: { [K]: '{"palette":"neon","hudScale":1.25,"x":1}' } }); const v = JSON.parse(st._m[K]); return r.ok && v.palette === 'normal' && v.hudScale === 1.25 && v.x === undefined; })());
 check('a v2 backup without the new keys still restores', B.restore(fake(), { format: 'pixeltown-backup', v: 2, keys: { 'pixeltown-save-v1': '{"name":"Bo"}' } }).ok);
 check('restore of a non-object access value is cleaned to defaults', (() => { const p = B.plan({ format: 'pixeltown-backup', v: 2, keys: { [K]: '[1,2]' } }); return p.ok && J(JSON.parse(p.entries[K])) === J(D); })());
+// chrome-8bit: the shared Settings panel (MMSettings) writes the same access key, keeps unknown-to-it fields, and the owner still reads it.
+{
+  const S = require('../shared/mm-settings.js');
+  const st = fake({ [K]: '{"v":1,"palette":"protanopia","hudScale":1,"flashes":true,"bulletOutline":false,"lowGfx":false}' });
+  check('settings: text size 1.5 is stored as hudScale and read back by MMAccess', S.set(st, 'text-size', 1.5) && P.load(st).hudScale === 1.5);
+  check('settings: palette and bulletOutline are kept when settings write', P.load(st).palette === 'protanopia' && P.load(st).bulletOutline === false);
+  check('settings: low graphics + flashes off land in the access prefs', S.set(st, 'low-gfx', true) && S.set(st, 'flashes', false) && P.load(st).lowGfx === true && P.load(st).flashes === false);
+  check('settings: bad text size refused, stored value unchanged', S.set(st, 'text-size', 9) === false && P.load(st).hudScale === 1.5);
+  check('settings: one-thumb sets mm-auto-fire and mm-aim-toggle', S.set(st, 'one-thumb', true) && st._m['mm-auto-fire'] === '1' && st._m['mm-aim-toggle'] === '1' && S.read(st)['one-thumb'] === true);
+  check('settings: sound off = mm-sfx-muted 1; aim assist defaults on', S.set(st, 'sound', false) && st._m['mm-sfx-muted'] === '1' && S.read(fake())['aim-assist'] === true);
+  check('settings: corrupt access key reads defaults, throwing storage never throws', S.read(fake({ [K]: '{bad' }))['text-size'] === 1 && S.read(fake({}, { throwGet: true })).sound === true && S.set(fake({}, { throwSet: true }), 'music', true) === false);
+  check('settings: four groups Play/See/Hear/Help and the five universal controls', S.GROUPS.map((g) => g.title).join() === 'Play,See,Hear,Help' && S.CONTROLS.map((c) => c[0]).join() === 'Move,Primary,Secondary,Menu,Restart');
+}
 console.log((bad ? 'FAILED ' + bad + ' of ' : 'ok ') + n + ' assertions'); process.exit(bad ? 1 : 0);

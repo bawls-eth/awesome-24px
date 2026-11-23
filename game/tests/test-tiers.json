@@ -1391,6 +1391,7 @@
     "class": "node",
     "tier": "smoke"
   },
+<<<<<<< HEAD
   "shared-mm-pixelize.test.js": {
     "class": "node",
     "tier": "smoke"
@@ -1402,5 +1403,10 @@
   "shared-mm-8bit.test.js": {
     "class": "node",
     "tier": "smoke"
+=======
+  "shared-mm-settings.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+>>>>>>> chrome-8bit
   }
 }
