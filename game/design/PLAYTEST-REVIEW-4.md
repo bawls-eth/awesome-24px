@@ -17,8 +17,12 @@ This review judges feel, not just bugs. The companion plan is `SIMPLIFY-PLAN.md`
   - On the Isles, the first tame on Hearth Isle **succeeded** after about 20 Feed taps.
   - The blocked counts for this run are separate from the arcade figures under Safety.
 - **Adventure:** `STAGE=adventure` re-runs the `journey3.js` stages (Town offline, then the Realm with the first fight; the Isles) in the same output folder. They ran on the phone only, under the same blocking rules. The Nexus, dungeon, backpack, stats, craft and boat findings use journey3 again plus PLAYTEST-REVIEW-3, which was played on this same build family. Where a finding comes only from review 3, it is marked **(R3)**.
+- **Desktop (1280x720), short pass:** launch, the Hub, and Jam, Angler, Deepdelve and the Lantern for 15 s each.
+  - The Hub shows **27 buttons and 148 words**. The map, the only thing that moves, is squeezed to 253x240 px under 3 goal rows, a Collections bar and 3 more buttons (shot 20).
+  - Nowhere in the chip row is there a door to the Realm: the main adventure is reached through Hearthvale (Town) and its gate, or the Lantern.
+  - Jam's first screen has 453 words, and the Lantern's has 483.
 - **Not done, and why:**
-  - **No desktop arcade pass.** The 00:30 UTC deadline and a shared machine (one browser at a time) left no time, so the desktop opinions come from review 3.
+  - **No full desktop arcade pass.** The 00:30 UTC deadline and a shared machine (one browser at a time) left only the short pass above.
   - **60-120 s per game was not reached.** Each game got 40-70 s.
   - **The mashing input is crude.** It cannot judge skill curves. It does tell you what a new player sees, how many words stand before "Play", and whether a stray tap throws you out.
 - **Safety:** every Firebase and identity request and WebSocket was blocked in the context before any page loaded (the `blockDb` rule). The arcade run blocked 26 HTTP requests and 1 WebSocket, and **0 sockets were opened**. There were 0 page errors, 0 console errors and 0 HTTP 4xx. The Town was joined offline only, and the bot never chatted.
@@ -90,7 +94,7 @@ This review judges feel, not just bugs. The companion plan is `SIMPLIFY-PLAN.md`
 | 11 | P1 | Lantern | 482 words. The hero is separate from the Realm hero | Fold into the Adventure as the camp screen (Plan section 2) |
 | 12 | P1 | Jam | 15 buttons before play (Relax, Assist, Concert, 4 difficulty rows) | Play plus Options |
 | 13 | P1 | Hub | "Campfire" and "Campfire Jam" are one game under two names | One name everywhere |
-| 14 | P1 | Hub | The Realm, the main adventure, is not in the first visible chips | The Adventure door first |
+| 14 | P1 | Hub | The Realm, the main adventure, has no chip in the Hub's game row on phone or desktop (shot 20). It is reached through the Town gate or the Lantern | The Adventure door first |
 | 15 | P1 | Hub | "Open" button, "0 ★ 0 0%" header | Verb labels. Drop zero counters for new players |
 | 16 | P1 | Bug Safari | 8 of 9 arenas shown locked on the first screen | Show what is open. Reveal the rest after a run |
 | 17 | P1 | Bug Safari | Developer text "Add ?mods=0 to the address" and point multipliers on screen | Remove from the player UI |
@@ -137,4 +141,4 @@ This review judges feel, not just bugs. The companion plan is `SIMPLIFY-PLAN.md`
 
 ## Screenshot index (`game/design/playtest4/`)
 
-01 root (Town join) · 02 Hub first screen · 03 Jam first screen (text wall) · 04 Jam play · 05 Angler first screen · 06 Angler spooked modal · 07 Bug Safari locked grid · 08 Bug Safari play · 09 Stalk Sunday · 10 Deepdelve phone · 11 Stack: stray tap leads to Town join · 12 Pixel Pop play · 13 Echo Garden play · 14 Lantern Dash play · 15 The Lantern camp text wall · 16 Town phone HUD (13 counters, 6 action buttons) · 17 Realm first fight (Swarm countdown, clipped status line) · 18 Isles feeding, "still chewing" · 19 Isles craft panel.
+01 root (Town join) · 02 Hub first screen · 03 Jam first screen (text wall) · 04 Jam play · 05 Angler first screen · 06 Angler spooked modal · 07 Bug Safari locked grid · 08 Bug Safari play · 09 Stalk Sunday · 10 Deepdelve phone · 11 Stack: stray tap leads to Town join · 12 Pixel Pop play · 13 Echo Garden play · 14 Lantern Dash play · 15 The Lantern camp text wall · 20 desk Hub (27 buttons, map 253x240) · 16 Town phone HUD (13 counters, 6 action buttons) · 17 Realm first fight (Swarm countdown, clipped status line) · 18 Isles feeding, "still chewing" · 19 Isles craft panel.
