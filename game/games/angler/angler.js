@@ -790,7 +790,7 @@
     ridge([[0, 112], [60, 84], [130, 110], [210, 80], [W, 104]], night ? '#18253f' : '#7fb5a0', 8);
     ridge([[0, 130], [80, 100], [170, 135], [260, 95], [W, 125]], night ? '#1d2d4a' : '#5aa56a', 8);
     c.fillStyle = night ? '#24375a' : '#4a9058'; for (let xx = 0; xx < W; xx += 16) c.fillRect(xx, WATER - 8, 8, 8);
-    if (night) { c.fillStyle = '#fff'; for (let i = 0; i < 14; i++) c.fillRect((i * 53) % W, (i * 29) % 80, 2, 2); c.fillStyle = '#f4f1d0'; c.fillRect(256, 20, 16, 16); c.fillStyle = skyB[0]; c.fillRect(264, 20, 8, 8); }
+    if (night) { c.fillStyle = '#fff'; for (let i = 0; i < 14; i++) c.fillRect((i * 53) % W, (i * 29) % 80, 2, 2); c.fillStyle = '#f4f1d0'; [[6, 4], [4, 8], [2, 12], [2, 12], [2, 12], [4, 8], [6, 4]].forEach(([o, w], i) => c.fillRect(256 + o, 18 + i * 2, w, 2)); c.fillStyle = skyB[0]; [[8, 4], [8, 6], [8, 6], [8, 6], [8, 4]].forEach(([o, w], i) => c.fillRect(256 + o + 2, 20 + i * 2, w, 2)); }
     else { c.fillStyle = '#ffe066'; c.fillRect(250, 18, 20, 20); c.fillStyle = '#fff6b0'; c.fillRect(254, 22, 8, 8); c.fillStyle = '#fff'; c.fillRect(40, 62, 40, 10); c.fillRect(50, 56, 24, 8); c.fillRect(150, 74, 44, 10); c.fillRect(158, 68, 24, 6); c.fillStyle = '#d8eef8'; c.fillRect(40, 70, 40, 2); c.fillRect(150, 82, 44, 2); }
     // water
     const spotHue = { west: '#2f86c7', east: '#2a78a8', river: '#3a9bb5', pier: '#1f5f9e', ice: '#9fd6ea', mangrove: '#2c7f6a', cove: '#1d9aa6' }[g.spot];
