@@ -571,6 +571,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-bugbash-browser.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "shared-mm-town-heroes.test.js": {
     "class": "node",
     "tier": "smoke"

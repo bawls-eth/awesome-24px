@@ -62,9 +62,11 @@
   function down(b) { return !!b && (b.pressed === true || (+b.value || 0) > 0.5); }
   // Standard-mapping pad -> the same actions. A=primary, B/X=secondary, Start=menu, Back=restart.
   function readPad(pad, out) {
-    const r = out || { move: { x: 0, y: 0 }, primary: false, secondary: false, menu: false, restart: false };
+    const r = out && typeof out === 'object' ? out : { move: { x: 0, y: 0 }, primary: false, secondary: false, menu: false, restart: false };
+    if (!r.move || typeof r.move !== 'object') r.move = { x: 0, y: 0 }; // a reused `out` without .move used to throw
     const a = (pad && pad.axes) || [], b = (pad && pad.buttons) || [];
-    let x = +a[0] || 0, y = +a[1] || 0;
+    const ax = (v) => { v = +v; return isFinite(v) ? Math.max(-1, Math.min(1, v)) : 0; }; // a broken pad reporting Infinity used to give NaN moves
+    let x = ax(a[0]), y = ax(a[1]);
     if (down(b[14])) x = -1; if (down(b[15])) x = 1; if (down(b[12])) y = -1; if (down(b[13])) y = 1;
     const m = Math.hypot(x, y);
     if (m <= DEAD) { r.move.x = 0; r.move.y = 0; } else { const s = Math.min(1, (m - DEAD) / (1 - DEAD)) / m; r.move.x = x * s; r.move.y = y * s; }

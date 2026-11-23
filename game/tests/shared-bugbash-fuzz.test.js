@@ -95,6 +95,8 @@ try {
   check('hostile keys never throw', HOSTILE.every((k) => noThrow(() => I.actionOf(k))) && noThrow(() => I.actionOf({ key: Symbol('x') })));
   check('code fallback covers arrows / Enter / Escape (key Unidentified)', I.actionOf({ key: 'Unidentified', code: 'ArrowLeft' }) === 'left' && I.actionOf({ key: 'Process', code: 'Enter' }) === 'primary' && I.actionOf({ key: 'Unidentified', code: 'Escape' }) === 'menu');
   check('hint text matches the CONTROLS.md example', I.hint({ only: ['move', 'primary', 'secondary', 'menu'], names: { primary: 'fire' } }) === 'WASD / arrows move · Space / Enter fire · Shift / E alt · Esc / P menu');
+  check('readPad with a reused out object lacking .move does not throw', noThrow(() => I.readPad({ axes: [1, 0], buttons: [] }, {})) && I.readPad({ axes: [1, 0], buttons: [] }, {}).move.x > 0.9);
+  check('readPad with NaN axes / junk buttons is neutral', (() => { const p = I.readPad({ axes: [NaN, Infinity], buttons: [null, { value: NaN }, 'x'] }); return p.move.x === 0 && p.move.y === 0 && !p.primary && !p.secondary; })());
   const t = I.create();
   t.press('constructor'); t.press('__proto__');
   check('tracker ignores prototype names', ['up', 'down', 'left', 'right', 'primary', 'secondary', 'menu', 'restart'].every((a) => !t.held(a)));

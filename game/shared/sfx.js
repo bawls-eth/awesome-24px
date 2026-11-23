@@ -9,7 +9,9 @@
   else {
     root.MMSfx = factory(null);
     try {
-      if (!root.MMChip && typeof document !== 'undefined' && document.currentScript && document.currentScript.src) {
+      // once per page: sfx.js loaded twice (two bundles on one page) used to inject a second mm-chip.js
+      if (!root.MMChip && !root.__mmChipLoading && typeof document !== 'undefined' && document.currentScript && document.currentScript.src) {
+        root.__mmChipLoading = true;
         const el = document.createElement('script');
         el.src = document.currentScript.src.replace(/sfx\.js(\?.*)?$/, 'mm-chip.js$1');
         el.async = true;
