@@ -2118,7 +2118,7 @@ class RealmArena {
     };
     this.onKeyUp = (e) => { const k = e.key.toLowerCase(); this.keys[k] = false; if (k === 'enter') this.keys[' '] = false; };
     this._syncHelp();
-    this.onBlur = () => { this.keys = {}; this.mouse.down = false; };
+    this.onBlur = () => { this.keys = {}; this.mouse.down = false; this.moveVec.x = 0; this.moveVec.y = 0; this.aimVec.on = false; this.aimVec.x = 0; this.aimVec.y = 0; }; // G-18 (b01-08): a lost pointerup never leaves the sticks running
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('keyup', this.onKeyUp);
     window.addEventListener('blur', this.onBlur);
