@@ -27,10 +27,15 @@
   try { lowGfx = !!(window.MMAccess && MMAccess.prefs.load(localStorage).lowGfx); } catch (e) { lowGfx = false; }
   let sfx = null;
   try { sfx = window.MMSfx ? MMSfx.create({ storage: localStorage }) : null; } catch (e) { sfx = null; }
-  const play = (n) => { try { if (sfx) sfx.play(n); } catch (e) { /* ignore */ } };
+  const cues = []; // test aid: the last cue names asked of MMSfx
+  const play = (n) => { cues.push(n); if (cues.length > 40) cues.shift(); try { if (sfx) sfx.play(n); } catch (e) { /* ignore */ } };
+  // Flowers sing through MMChip's bloom_c/d/e/g (C D E G) cues; the old soft sine stays only as the fallback without MMChip.
+  const BLOOM = ['bloom_c', 'bloom_d', 'bloom_e', 'bloom_g'];
+  const hasChip = () => !!(window.MMChip && MMChip.SFX && MMChip.SFX.bloom_c && sfx);
   // Flower notes: a soft sine through the same mute switch as MMSfx (no context until a tap).
   let actx = null;
   function tone(i, dur) {
+    if (hasChip()) { play(BLOOM[i]); return; }
     if (!sfx || sfx.isMuted()) return;
     try {
       if (!actx) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; actx = new AC(); }
@@ -132,7 +137,7 @@
     // a miss: wilt a leaf, show the right flower, replay slower (or end gently on the last leaf)
     run.leaves--; run.wilts++; run.wiltsThis = (run.wiltsThis || 0) + 1;
     hintT[want] = 1.1;
-    play('ui_tap');
+    play('error');
     floatText(PAD[i].x + PAD[i].w / 2, PAD[i].y + 24, 'wilt', '#b3a9d6');
     run.nearPos = run.pos;
     if (run.leaves <= 0) { run.why = 'wilted'; hud(); end(); return { ok: false, over: true }; }
@@ -145,7 +150,8 @@
   // ---------- flow ----------
   function newSeed() { return (Date.now().toString(36) + (save.rounds % 1296).toString(36)).slice(-8); }
   function start(seed) {
-    run.seed = (typeof seed === 'string' && /^[A-Za-z0-9_-]{1,24}$/.test(seed)) ? seed : newSeed();
+    // seeds are canonical lower-case A-Z0-9 so the share code (upper case, no - or _) always sings the very same tune
+    run.seed = (typeof seed === 'string' && /^[A-Za-z0-9_-]{1,24}$/.test(seed) && /[A-Za-z0-9]/.test(seed)) ? seed.toLowerCase().replace(/[^a-z0-9]/g, '') : newSeed();
     rng = MMRng.create('echo-garden:' + run.seed);
     makeSeq();
     Object.assign(run, { state: 'play', score: 0, time: ROUND, len: START_LEN, pos: 0, leaves: LEAVES, wilts: 0, wiltsThis: 0, best: 0, newMedals: [], why: '', nearPos: 0 });
@@ -170,6 +176,7 @@
     if (newBest) save.best = run.best;
     if (run.score > save.bestScore) save.bestScore = run.score;
     award('round1');
+    if (run.why === 'time' && run.wilts === 0 && run.best >= START_LEN) play('perfect'); // a whole calm round with no wilted leaf
     persist();
     showResult(newBest, prevBest, prevScore);
     $('result').hidden = false;
@@ -290,6 +297,8 @@
       g.fillStyle = '#0b0d1a'; g.fillRect(x0 - 4, CH / 2 - 8, n * w + 8, 16);
       for (let k = 0; k < n; k++) { g.fillStyle = (run.phase === 'input' ? k < run.pos : k < run.showI) ? '#ffec27' : '#5f574f'; g.fillRect(x0 + k * w + 1, CH / 2 - 4, w - 2, 8); }
     }
+    // leaves left (colour + shape + count: a full green leaf, a grey bare stalk once wilted)
+    if (run.state === 'play') for (let k = 0; k < LEAVES; k++) { const lx = Math.round(CW / 2 - (LEAVES * 18) / 2) + k * 18, ly = CH / 2 - 26, ok = k < run.leaves; g.fillStyle = '#0b0d1a'; g.fillRect(lx, ly, 14, 10); g.fillStyle = ok ? '#00e436' : '#5f574f'; g.fillRect(lx + 2, ok ? ly + 2 : ly + 6, 10, ok ? 6 : 2); if (ok) { g.fillStyle = '#008751'; g.fillRect(lx + 6, ly + 2, 2, 6); } }
     parts.forEach((p) => { g.fillStyle = p.t < 0.15 ? '#5f574f' : p.c; g.fillRect(Math.round(p.x / 2) * 2 - 3, Math.round(p.y / 2) * 2 - 3, 6, 6); });
     g.globalAlpha = 1;
     floats.forEach((f) => { ptext(String(f.text).toUpperCase(), Math.round(f.x), Math.round(f.y) - 7, 2, f.t < 0.15 ? '#c2c3c7' : f.color, 'center'); });
@@ -309,16 +318,22 @@
     const c = Math.floor(((ev.clientX - b.left) / b.width) * 2), r = Math.floor(((ev.clientY - b.top) / b.height) * 2);
     return Math.max(0, Math.min(1, r)) * 2 + Math.max(0, Math.min(1, c));
   }
-  canvas.addEventListener('pointerdown', (ev) => { ev.preventDefault(); showCur = false; tap(padAt(ev)); });
+  canvas.addEventListener('pointerdown', (ev) => { if (ev.button > 0) return; ev.preventDefault(); showCur = false; tap(padAt(ev)); });
+  // Keys: 1-4 tap a flower; MMInput actions (arrows / WASD move the cursor, Enter / Space tap) are the universal aliases.
+  const actionOf = (ev) => (window.MMInput ? MMInput.actionOf(ev) : ({ ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down', Enter: 'primary', ' ': 'primary' }[ev.key] || null));
   document.addEventListener('keydown', (ev) => {
-    if (run.state !== 'play' || ev.repeat) return;
-    const ae = document.activeElement; if (ae && ae !== canvas && /^(BUTTON|A|INPUT)$/.test(ae.tagName)) return;
+    if (run.state !== 'play' || ev.repeat || ev.ctrlKey || ev.metaKey || ev.altKey) return;
+    if (window.MMInput && MMInput.isTyping(ev.target)) return;
+    const ae = document.activeElement; if (ae && ae !== canvas && /^(BUTTON|A|INPUT|SELECT|TEXTAREA)$/.test(ae.tagName)) return;
     const k = ev.key;
     if (/^[1-4]$/.test(k)) { cur = Number(k) - 1; tap(cur); ev.preventDefault(); return; }
-    const mv = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[k];
+    const act = actionOf(ev);
+    const mv = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] }[act];
     if (mv) { const c = Math.max(0, Math.min(1, (cur % 2) + mv[0])), r = Math.max(0, Math.min(1, Math.floor(cur / 2) + mv[1])); cur = r * 2 + c; showCur = true; ev.preventDefault(); }
-    else if (k === 'Enter' || k === ' ') { showCur = true; tap(cur); ev.preventDefault(); }
+    else if (act === 'primary') { showCur = true; tap(cur); ev.preventDefault(); }
   });
+  // coming back to the tab: no catch-up jump (frame() already caps dt), and let go of any half-held state
+  document.addEventListener('visibilitychange', () => { last = 0; });
   // ?seed= takes a share code (A-Z0-9, any case) or the old seed form; anything invalid is ignored (a fresh seed)
   function urlSeed() {
     const raw = params.get('seed');
@@ -331,6 +346,16 @@
   function syncMute() { const m = !!(sfx && sfx.isMuted()); mute.textContent = m ? 'Sound off' : 'Sound on'; mute.setAttribute('aria-pressed', m ? 'true' : 'false'); }
   mute.addEventListener('click', () => { if (sfx) sfx.setMuted(!sfx.isMuted()); syncMute(); });
   syncMute();
+  // Settings (shared panel): the Menu sheet's Settings entry opens it; live changes re-read sound / motion / low graphics
+  let settings = null;
+  try { if (window.MMSettings) settings = MMSettings.mount({ page: 'echo' }); } catch (e) { settings = null; }
+  try { if (settings && window.MMNav && MMNav.onSettings) MMNav.onSettings(() => settings.open()); } catch (e) { /* optional */ }
+  window.addEventListener('mm-settings-change', () => {
+    try { if (window.MMMotion) reduced = MMMotion.reduced(window, localStorage) || !!(window.MMSideAccess && MMSideAccess.reduced()); } catch (e) { /* keep */ }
+    try { if (window.MMAccess) lowGfx = !!MMAccess.prefs.load(localStorage).lowGfx; } catch (e) { /* keep */ }
+    try { const m = localStorage.getItem('mm-sfx-muted'); if (sfx && m !== null) sfx.setMuted(m === '1'); } catch (e) { /* keep */ }
+    syncMute();
+  });
 
   $('how').hidden = save.hint;
   $('play').textContent = save.hint ? 'Play' : 'Got it, play';
@@ -347,6 +372,7 @@
     // test helper: sing the tune through to the input phase
     listen() { let n = 0; while (run.state === 'play' && run.phase !== 'input' && n++ < 2000) update(0.05, true); return run.phase; },
     tap, start, end, step(dt) { update(dt, true); },
+    cues: () => cues.slice(), settings: () => settings,
     counts: () => ({ parts: parts.length, floats: floats.length }),
   };
 }());

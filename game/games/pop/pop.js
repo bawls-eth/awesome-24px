@@ -23,7 +23,7 @@
   // idle hint: after 6 s without a pop the best move glows (static outline with reduced motion); ?hints=0 turns it off
   const HINTS = params.get('hints') !== '0', HINT_AFTER = 6;
   // combo audio ladder: each chain step plays a brighter sound (chain 1, 2, 3, 4+)
-  const LADDER = ['pickup', 'claim', 'bag_rare', 'levelup'];
+  const LADDER = ['pop', 'combo2', 'combo3', 'combo4', 'combo5', 'combo6', 'combo7', 'combo8']; // MMChip cues (CHIP-AUDIO.md): one brighter step per chain link
   let reduced = false, lowGfx = false;
   try { reduced = (window.MMMotion ? MMMotion.reduced(window, localStorage) : false) || !!(window.MMSideAccess && MMSideAccess.reduced()); } catch (e) { reduced = false; }
   try { lowGfx = !!(window.MMAccess && MMAccess.prefs.load(localStorage).lowGfx); } catch (e) { lowGfx = false; }
@@ -167,7 +167,7 @@
       floatText(at[0], at[1], '+' + pts + (chain > 1 ? '  x' + chain : ''), chain > 1 ? '#ffd166' : '#fff');
       if (big) floatText(at[0], Math.max(0, at[1] - 1), 'Big pop!', '#66f0d0');
       if (t.v > run.maxTile) {
-        if (t.v >= 5 && run.maxTile >= 4) { run.time = Math.min(ROUND, run.time + 5); floatText(at[0], Math.min(H - 1, at[1] + 1), '+5s', '#7fd18b'); msg('New best tile: level ' + t.v + '. Plus 5 seconds!'); }
+        if (t.v >= 5) { run.time = Math.min(ROUND, run.time + 5); floatText(at[0], Math.min(H - 1, at[1] + 1), '+5s', '#7fd18b'); msg('New best tile: level ' + t.v + '. Plus 5 seconds!'); }
         run.maxTile = t.v;
       }
       gravity();
@@ -178,6 +178,7 @@
     if (chain > run.bestChain) run.bestChain = chain;
     if (chain >= 2) { msg('Chain x' + chain + '!'); bump(3 + chain * 2); }
     play(LADDER[Math.min(chain, LADDER.length) - 1]);
+    if (showCur) setPreview(cur.c, cur.r);
     if (chain >= 5) award('chain5');
     if (run.maxTile >= 9) award('tile9');
     if (run.score >= 25000) award('score25k');
@@ -199,7 +200,9 @@
   // ---------- flow ----------
   function newSeed() { return (Date.now().toString(36) + (save.rounds % 1296).toString(36)).slice(-8); }
   function start(seed) {
-    run.seed = (typeof seed === 'string' && /^[A-Za-z0-9_-]{1,24}$/.test(seed)) ? seed : newSeed();
+    // seeds are kept in share-code form (a-z0-9, 24 max) so the shown code and the seed always play the same board
+    const sd = typeof seed === 'string' ? seed.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 24) : '';
+    run.seed = sd || newSeed();
     rng = MMRng.create('pixel-pop:' + run.seed);
     Object.assign(run, { state: 'play', score: 0, time: ROUND, maxTile: 3, bestChain: 0, pops: 0, newMedals: [] });
     parts = []; floats = []; idle = 0; hint = null; preview = null; fill();
@@ -373,6 +376,7 @@
     const dt = last ? Math.min(0.05, (ts - last) / 1000) : 0; last = ts;
     update(dt, false);
     draw();
+    $('timefill').style.transform = 'scaleX(' + Math.max(0, Math.min(1, run.time / ROUND)) + ')';
     const s = Math.ceil(run.time); if (s !== lastHud) { lastHud = s; hud(); }
     requestAnimationFrame(frame);
   }
@@ -382,22 +386,26 @@
     const b = canvas.getBoundingClientRect();
     return { c: Math.floor(((ev.clientX - b.left) / b.width) * W), r: Math.floor(((ev.clientY - b.top) / b.height) * H) };
   }
-  canvas.addEventListener('pointerdown', (ev) => { ev.preventDefault(); showCur = false; const p = cellAt(ev); tap(p.c, p.r); });
+  canvas.addEventListener('pointerdown', (ev) => { if (ev.button > 0 || ev.isPrimary === false) return; ev.preventDefault(); showCur = false; const p = cellAt(ev); tap(p.c, p.r); });
   // chain preview: a mouse hovering a group outlines it and shows the chain it would set off (touch taps pop at once)
   canvas.addEventListener('pointermove', (ev) => { if (ev.pointerType !== 'mouse') return; const p = cellAt(ev); setPreview(p.c, p.r); });
   canvas.addEventListener('pointerleave', () => { preview = null; });
   document.addEventListener('keydown', (ev) => {
     if (run.state !== 'play') return;
     const ae = document.activeElement; if (ae && ae !== canvas && /^(BUTTON|A|INPUT)$/.test(ae.tagName)) return;
-    const k = ev.key, mv = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1], a: [-1, 0], d: [1, 0], w: [0, -1], s: [0, 1] }[k];
+    if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+    if (window.MMInput && MMInput.isTyping(ev.target)) return;
+    // universal controls (CONTROLS.md): move = WASD / arrows, primary = Space / Enter or Shift / E
+    const act = window.MMInput ? MMInput.actionOf(ev) : null, k = ev.key;
+    const mv = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] }[act] || { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1], a: [-1, 0], d: [1, 0], w: [0, -1], s: [0, 1] }[k];
     if (mv) { cur.c = Math.max(0, Math.min(W - 1, cur.c + mv[0])); cur.r = Math.max(0, Math.min(H - 1, cur.r + mv[1])); showCur = true; setPreview(cur.c, cur.r); ev.preventDefault(); }
-    else if (k === 'Enter' || k === ' ') { showCur = true; tap(cur.c, cur.r); ev.preventDefault(); }
+    else if (act === 'primary' || k === 'Enter' || k === ' ') { showCur = true; tap(cur.c, cur.r); ev.preventDefault(); }
   });
   // ?seed= takes a share code (A-Z0-9, any case) or the old seed form; anything else is ignored (a fresh seed)
   function urlSeed() {
     const raw = params.get('seed');
     const code = window.MMMiniKit ? window.MMMiniKit.parseSeedCode(raw || '') : null;
-    return code || raw || undefined;
+    return code || (raw && /^[A-Za-z0-9_-]{1,24}$/.test(raw) ? raw : undefined);
   }
   $('play').addEventListener('click', () => { save.hint = true; persist(); start(urlSeed()); });
   if (!window.MMMiniKit) { $('again').addEventListener('click', () => start()); $('replay').addEventListener('click', () => start(run.seed)); }

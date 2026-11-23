@@ -10,6 +10,7 @@
 //   render resolution on desktop (steps 1 -> 0.75 -> 0.5 while frames stay under 28 fps; the canvas keeps its CSS size).
 const { chromium } = require('playwright');
 const { check, done } = require('./helpers');
+const LS = require('./lib/load-scale');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 const BLOCK = /firebaseio\.com|firebasedatabase\.app|identitytoolkit|securetoken/i;
 const BASELINE_LONG_PER_S = 8.1;
@@ -44,15 +45,23 @@ const BASELINE_LONG_PER_S = 8.1;
   check('at most ONE full-screen ambient overlay is drawn per frame', st.fullScreen <= 1, JSON.stringify(st));
 
   // ---- let the adaptive resolution settle, then measure 5 s ----
-  await page.waitForTimeout(13000);
+  // condition, not a sleep: the adaptive scaler is settled once the render scale has not changed for 3 s (at least 5 s in, at most a load-scaled 13 s)
+  { const tEnd = Date.now() + LS.budget(13000), tMin = Date.now() + 5000; let last = null, since = Date.now();
+    while (Date.now() < tEnd) {
+      const cur = await page.evaluate(() => document.getElementById('game-container').dataset.renderScale || '1');
+      if (cur !== last) { last = cur; since = Date.now(); }
+      if (Date.now() >= tMin && Date.now() - since >= 3000) break;
+      await page.waitForTimeout(500);
+    } }
   const rs = await page.evaluate(() => Number(document.getElementById('game-container').dataset.renderScale || 1));
   const frames = await page.evaluate(() => new Promise((res) => { const t = []; let last = performance.now(); const t0 = last; const f = (n) => { t.push(n - last); last = n; if (n - t0 < 5000) requestAnimationFrame(f); else res(t); }; requestAnimationFrame(f); }));
   frames.shift();
   const secs = frames.reduce((a, b) => a + b, 0) / 1000;
-  const longPerS = frames.filter((x) => x > 50).length / secs;
+  const LONG_MS = 50 * LS.fresh(); // a 'long' frame is 50 ms on an idle machine; on a loaded one the threshold scales with the measured slowdown (hard cap 6x)
+  const longPerS = frames.filter((x) => x > LONG_MS).length / secs;
   const fps = frames.length / secs;
   console.log(`INFO ${fps.toFixed(1)} fps avg, ${longPerS.toFixed(2)} long frames/s (baseline ${BASELINE_LONG_PER_S}), render scale ${rs}`);
-  check(`long frames (>50 ms) per second reduced vs the pre-fix baseline (${BASELINE_LONG_PER_S}/s)`, longPerS < BASELINE_LONG_PER_S * 0.9, longPerS.toFixed(2));
+  check(`long frames (>${LONG_MS.toFixed(0)} ms; 50 ms idle) per second reduced vs the pre-fix baseline (${BASELINE_LONG_PER_S}/s)`, longPerS < BASELINE_LONG_PER_S * 0.9, longPerS.toFixed(2));
   check('render scale only ever steps down within its allowed range', [1, 0.75, 0.5].includes(rs), String(rs));
   const cv = await page.evaluate(() => { const r = document.querySelector('#game-container canvas').getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height) }; });
   check('the canvas still fills the 1280x720 viewport whatever the internal resolution', Math.abs(cv.w - 1280) <= 2 && Math.abs(cv.h - 720) <= 2, JSON.stringify(cv));

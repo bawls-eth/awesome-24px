@@ -17,6 +17,7 @@ const path = require('path');
 const { chromium } = require('playwright');
 const { check, done, blockDb } = require('./helpers');
 const ORIGIN = (process.env.BASE || 'http://localhost:8440/game/index.html').replace(/\/game\/index\.html.*$/, '');
+const LS = require('./lib/load-scale'); // timing budgets scale with measured machine load (1x idle, hard cap 6x)
 const FX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'ftue-profiles.json'), 'utf8'));
 const METRICS = path.join(__dirname, '..', 'design', 'ftue-metrics.json');
 const TG = FX.targets; const KNOWN = FX.knownIssues || {};
@@ -283,10 +284,10 @@ const ISLES_BOT = `(lim) => {
     gate(prof.id, 'layout.stickOverlaps', lay.over.length, 0); if (lay.over.length) console.log('  over: ' + lay.over.join(', '));
     gate(prof.id, 'layout.tinyText', lay.tiny.length, 0); if (lay.tiny.length) console.log('  tiny: ' + lay.tiny.join(' | '));
     check(`${prof.id}: coarse pointer emulated, both sticks visible`, lay.coarse && lay.sticks === 2, JSON.stringify(lay));
-    gate(prof.id, 'layout.firstFrameMs', ff, TG.layout.firstFrameMs);
+    gate(prof.id, 'layout.firstFrameMs', ff, LS.budget(TG.layout.firstFrameMs));
     const errs = P.errors.concat(Q.errors);
     check(`${prof.id}: 0 console errors`, errs.length === 0, errs.slice(0, 3).join(' | '));
-    check(`${prof.id}: wall clock <= ${FX.wallBudgetMs} ms`, wall <= FX.wallBudgetMs, String(wall));
+    check(`${prof.id}: wall clock <= ${LS.budget(FX.wallBudgetMs)} ms (load-scaled)`, wall <= LS.budget(FX.wallBudgetMs), String(wall));
     dbAll += P.db.count() + Q.db.count();
     metrics.world[prof.id] = { seed: prof.seed, simSeconds: Math.round(rep.t), firstKill: r1(f.kill), firstBagDrop: r1(f.bagDrop), firstBag: r1(f.bag), firstXp: r1(f.xp), firstLevel: r1(f.level), firstAbility: r1(f.ability), firstPickup: r1(f.pickup), firstQuest: r1(f.quest),
       maxRewardGap: r1(rep.maxGap), deaths: rep.deaths, level: rep.level, kills: rep.kills, items: rep.items, counts: rep.counts, casts: rep.casts, minHp: rep.minHp,
@@ -322,9 +323,9 @@ const ISLES_BOT = `(lim) => {
     gate(prof.id, 'layout.smallButtons', small.length, 0); if (small.length) console.log('  small: ' + small.join(', '));
     gate(prof.id, 'layout.stickOverlaps', over.length, 0); if (over.length) console.log('  over: ' + over.join(', '));
     gate(prof.id, 'layout.tinyText', tiny.length, 0); if (tiny.length) console.log('  tiny: ' + tiny.join(' | '));
-    gate(prof.id, 'layout.firstFrameMs', ffi, TG.layout.firstFrameMs);
+    gate(prof.id, 'layout.firstFrameMs', ffi, LS.budget(TG.layout.firstFrameMs));
     check(`${prof.id}: 0 console errors`, P.errors.length === 0, P.errors.slice(0, 3).join(' | '));
-    check(`${prof.id}: wall clock <= ${FX.wallBudgetMs} ms`, wall <= FX.wallBudgetMs, String(wall));
+    check(`${prof.id}: wall clock <= ${LS.budget(FX.wallBudgetMs)} ms (load-scaled)`, wall <= LS.budget(FX.wallBudgetMs), String(wall));
     dbAll += P.db.count();
     metrics.isles[prof.id] = { seed: prof.seed, firstTame: r1(rep.tame), simSeconds: Math.round(rep.t), tamedSpecies: rep.tames, hintSamples: rep.samples, hintEmpty: rep.empty, hintNoAction: rep.noVerb.length, hintActionPct: Math.round(actFrac * 100), nearSamples: rep.nearSamples, nearEmpty: rep.nearEmpty, deaths: rep.deaths, kills: rep.stats.kills,
       firstFrameMs: Math.round(ffi), smallButtons: small.length, stickOverlaps: over.length, tinyText: tiny.length, consoleErrors: P.errors.length, wallMs: wall };

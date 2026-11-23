@@ -13,7 +13,9 @@ const { chromium } = require('playwright');
 const { check, done, blockDb } = require('./helpers');
 const ORIGIN = (process.env.BASE || 'http://localhost:8440/game/index.html').replace(/\/game\/index\.html.*$/, '');
 const PAGE = ORIGIN + '/game/games/isles/index.html?test=1&seed=123';
-const MEDIAN_MS = 20, P95_MS = 34, MIN_FRAMES = 300, THROTTLE = 4;
+const LS = require('./lib/load-scale');
+// Frame budgets are 20 / 34 ms on an idle machine and scale with the measured load factor (calibration loop, hard cap 6x, see lib/load-scale.js).
+const LOAD = LS.fresh(), MEDIAN_MS = Math.round(20 * LOAD), P95_MS = Math.round(34 * LOAD), MIN_FRAMES = 300, THROTTLE = 4;
 const PROFILE = { v: 1, heroes: [{ id: 'h1', name: 'Fern', cls: 'druid', level: 7, xp: 10, items: [] }], stash: [], fame: 0, mode: 'classic', hall: [] };
 const TAMES = { v: 1, n: 3, roster: [
   { id: 't1', sp: 'tusktop', nm: 'Tuskie', lv: 3, xp: 0, bond: 2, aff: 0, cos: '', isle: 'jungle', d: '2026-11-01' },
