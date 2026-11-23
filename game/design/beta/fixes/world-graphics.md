@@ -118,10 +118,11 @@ Each entry: item, files, test, how to retest by hand. Screenshots in `fixes/img/
 - Files: `games/stalk/stalk.css` (scroll-margin-top 64 px on the cards / sections = 48 px Menu button + 8 + 8).
 - Test: `tests/beta-w15-stalk-compass.test.js` (390x844 + 1280x720; 4 asserts fail on the old CSS). `stalk-page`, `stalk-bugbash` green.
 
-## W-18 Isles HUD polish (b05-10, b06-09, b15-14 fixed; b06-07 names, b06-08 rocket, b05-09 log gap, b06-06, b05-08 open)
+## W-18 Isles HUD polish (b05-10, b06-09, b15-14, b06-07 fixed; b06-08 rocket, b05-09 log gap, b06-06, b05-08 open)
 - Files: `games/isles/index.html` (one close button), `games/isles/isles.js` (one line: the button hides the card), `games/isles/isles.css` (appended block).
 - The first-visit how-to card has a 44 px close button (keyboard / screen reader reachable); on desktop it sits bottom-left instead of over the hero at the centre; while it is up, toasts print at 64% height instead of on its text.
 - b05-09: the source text is "Look for sparkles." (no double space in isles.js); the gap is a rendering / width effect not reproduced here, left open.
+- b06-07: phone HUD hero and island names wrap instead of ellipsis.
 - Test: `tests/beta-w18-isles-howto.test.js`. `isles-bugbash`, `isles-first-ten`, `isles-ftue-fixes`, `isles-access` green.
 
 ## Tried and reverted

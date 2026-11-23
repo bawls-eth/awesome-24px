@@ -35,6 +35,8 @@ const box = (page, sel) => page.evaluate((s) => { const e = document.querySelect
   await pp.waitForTimeout(250);
   const c2 = await box(pp, '#howto'), t2 = await box(pp, '#toast');
   check('phone: with the card up, a toast does not print on the card', c2 && t2 && !hit(c2, t2), JSON.stringify({ c2, t2 }));
+  const names = await pp.evaluate(() => ['.hud-hero', '.hud-isle'].map((s) => { const e = document.querySelector('#hud ' + s); return e ? { t: e.textContent, clipped: e.scrollWidth > e.clientWidth + 1 || getComputedStyle(e).textOverflow === 'ellipsis' } : null; }));
+  check('phone: the HUD hero and island names are not ellipsised (b06-07)', names.every((n) => n && !n.clipped && n.t.length > 3), JSON.stringify(names));
   await pp.focus('#howto-close'); await pp.keyboard.press('Enter');
   check('phone: the close button works from the keyboard', (await box(pp, '#howto')) === null);
   errs.push(...P.errors); await P.ctx.close();

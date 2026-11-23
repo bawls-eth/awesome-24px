@@ -254,3 +254,5 @@ h1.hud-isle { text-transform: none; letter-spacing: normal; font-family: inherit
 .howto-title { padding-right: 40px; }
 @media (min-width: 601px) { .howto { top: auto; bottom: 24px; left: 24px; transform: none; } }
 body:has(#howto:not([hidden])) #toast { top: 64%; }
+/* W-18 (b06-07, b05-10): on phones the hero and island names wrap to a second line instead of 'Wanderer - ...' / 'Frostfang Tund...' */
+@media (max-width: 600px) { #hud .hud-hero, #hud .hud-isle { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; } }
