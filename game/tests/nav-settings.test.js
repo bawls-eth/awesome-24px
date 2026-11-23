@@ -114,6 +114,20 @@ async function run(browser, label, opts, tap) {
   const g6 = await page.evaluate(() => !document.getElementById('coll-sheet').hidden);
   check(L('Home screen: A presses the focused Collections card (book opens), B closes the book'), g5 && !g6, JSON.stringify({ g5, g6 }));
 
+  // keyboard: Esc / P open the Menu on the Hub (CONTROLS.md), Esc closes it; with the book open Esc only closes the book
+  await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
+  await page.keyboard.press('Escape');
+  const k1 = await page.evaluate(() => MMNav.isOpen());
+  await page.keyboard.press('Escape');
+  const k2 = await page.evaluate(() => MMNav.isOpen());
+  await page.keyboard.press('p');
+  const k3 = await page.evaluate(() => MMNav.isOpen());
+  await page.keyboard.press('Escape');
+  await page.click('#home-coll');
+  await page.keyboard.press('Escape');
+  const k4 = await page.evaluate(() => ({ nav: MMNav.isOpen(), book: !document.getElementById('coll-sheet').hidden }));
+  check(L('keyboard: Esc opens the Menu, Esc closes it, P opens it; with the book open Esc only closes the book'), k1 && !k2 && k3 && !k4.nav && !k4.book, JSON.stringify({ k1, k2, k3, k4 }));
+
   const save = await page.evaluate(() => localStorage.getItem('pixeltown-save-v1'));
   check(L('pixeltown-save-v1 byte-identical'), save === SAVE);
   check(L('no console errors'), errors.length === 0, errors.join(' | '));

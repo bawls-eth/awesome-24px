@@ -664,6 +664,12 @@
   document.addEventListener('keydown', (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (!$('card').hidden) { if (e.key === 'Escape') closeCard(); return; }
+    // CONTROLS.md: Esc / P is Menu. With nothing else open (book, gift card, a text field) it opens the shared Menu.
+    if ((e.key === 'Escape' || e.key === 'p' || e.key === 'P') && window.MMNav && MMNav.mounted && MMNav.mounted() && !MMNav.isOpen()) {
+      const t = e.target, typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+      const up = (id) => { const n = document.getElementById(id); return !!(n && !n.hidden); };
+      if (!typing && !up('coll-sheet') && !up('gift-card') && !up('mmset')) { e.preventDefault(); MMNav.open(); return; }
+    }
     if (homeOn()) return; // HS1: the home screen is a normal page (links / buttons); the map's keys wait for the map view
     const d = KEYDIR[e.key];
     if (d) { e.preventDefault(); step(d[0], d[1]); return; }
