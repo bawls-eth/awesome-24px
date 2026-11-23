@@ -231,6 +231,10 @@
     "class": "live",
     "tier": "full"
   },
+  "deepdelve-bugbash.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "deepdelve-goals.test.js": {
     "class": "browser",
     "tier": "full"

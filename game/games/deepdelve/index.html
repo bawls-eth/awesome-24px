@@ -10,6 +10,7 @@
 <script src="../../shared/mm-access.js"></script>
 <script src="../../shared/mm-side-access.js"></script>
 <link rel="stylesheet" href="../../shared/mm-nav.css">
+<link rel="stylesheet" href="../../shared/mm-settings.css">
 </head>
 <body>
 <header class="bar">
@@ -79,7 +80,9 @@
 </main>
 <nav id="hotbar" aria-label="Hotbar"></nav>
 <script src="../../shared/rng.js"></script>
+<script src="../../shared/mm-chip.js"></script>
 <script src="../../shared/sfx.js"></script>
+<script src="../../shared/mm-input.js"></script>
 <script src="dd-run.js"></script>
 <script src="../../shared/mm-chunks.js"></script>
 <script src="../../shared/mm-light.js"></script>
@@ -103,6 +106,13 @@
   function sync() { MMNav.setCovered(open(cover)); if (open(cover) || open(shut)) MMNav.close(); }
   var mo = window.MutationObserver ? new MutationObserver(sync) : null;
   cover.concat(shut).forEach(function (id) { var e = document.getElementById(id); if (e && mo) mo.observe(e, { attributes: true, attributeFilter: ['hidden'] }); });
+}());
+</script>
+<script src="../../shared/mm-settings.js"></script>
+<script>
+(function () {
+  // Settings (text size, reduce motion, low graphics, sound) from the Menu sheet; deepdelve.js listens for mm-settings-change.
+  try { var S = window.MMSettings && MMSettings.mount({ page: 'deepdelve' }); if (S && window.MMNav && MMNav.onSettings) MMNav.onSettings(function () { S.open(); }); } catch (e) { /* settings are optional */ }
 }());
 </script>
 <script src="../../shared/profile.js"></script>
