@@ -1544,5 +1544,9 @@
   "beta-w02-boss-popin.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-w08-angler-layout.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

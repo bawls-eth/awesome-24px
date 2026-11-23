@@ -136,3 +136,32 @@ body.px8 { background-color:var(--bg); color:var(--ink); }
 @media (max-height:520px) and (orientation:landscape) { #pregame .panel { margin-top:0; } #msg { min-height:calc(2 * 1.25em + 12px); } }
 /* short landscape screens: the page scrolls instead of squeezing the scene to a sliver */
 @media (max-height:520px) { html, body { height:auto; min-height:100%; } #stage { flex:0 0 auto; } #scene { flex:0 0 auto; height:min(86vh, 360px); width:auto; max-height:none; } }
+
+/* W-08 (b10-01, b10-02, b10-16, b12-13): the scene keeps a guaranteed size.
+   Narrow / short portrait (390x844 at 150% text = 260x563 CSS px): status chips + the 4 buttons collapse into one scrolling row, the spot grid
+   becomes a one-row scroller, the status line drops to 2 lines; the scene never goes below 300 px tall (the page scrolls instead of crushing it).
+   Landscape phones and desktop: the chrome moves into a side column and the scene uses the full height (no fold, integer-ish upscale). */
+@media (max-width:340px), (orientation:portrait) and (max-height:640px) {
+  #status { flex-wrap:nowrap; overflow-x:auto; overflow-y:hidden; scrollbar-width:thin; padding:4px 8px; gap:8px; }
+  #status > * { flex:0 0 auto; white-space:nowrap; }
+  #status #gear-btn { margin-left:0; }
+  .bar { padding:4px 6px; gap:6px; }
+  #spots { display:flex; overflow-x:auto; overflow-y:hidden; gap:8px; padding:6px 8px calc(6px + env(safe-area-inset-bottom)); scrollbar-width:thin; }
+  #spots .btn { flex:0 0 auto; min-width:96px; max-width:150px; white-space:normal; line-height:1.1; font-size:calc(12px * var(--ui-scale,1)); }
+  #cond-line { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #stage { padding:6px 0 4px; gap:6px; flex:1 0 auto; }
+  #msg { min-height:calc(2 * 1.2em + 10px); padding:4px 8px; font-size:calc(13px * var(--ui-scale,1)); line-height:1.2; }
+  #scene { flex:1 0 300px; min-height:300px; }
+  html, body { height:auto; min-height:100%; }
+}
+@media (orientation:landscape) and (max-height:520px), (min-width:900px) and (min-aspect-ratio:4/3) {
+  html, body { height:100%; min-height:0; }
+  body { display:grid; grid-template-columns:minmax(0,1fr) minmax(280px,min(46vw,440px)); grid-template-rows:auto auto auto minmax(0,1fr); overflow:hidden; }
+  .bar { grid-column:2; grid-row:1; }
+  #status { grid-column:2; grid-row:2; }
+  #cond-line { grid-column:2; grid-row:3; }
+  #spots { grid-column:2; grid-row:4; align-content:start; overflow-y:auto; }
+  #stage { grid-column:1; grid-row:1 / span 4; flex:none; height:100%; min-height:0; padding:8px 0 6px; }
+  #scene { flex:1 1 0; height:auto; min-height:0; max-height:100%; width:auto; }
+  #msg { min-height:calc(2 * 1.25em + 12px); }
+}
