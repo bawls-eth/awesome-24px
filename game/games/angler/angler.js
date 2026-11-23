@@ -441,7 +441,7 @@
     const before = anyHeld(); held[src] = v; const after = anyHeld();
     if (!before && after) onDown();
   }
-  const ignoreEl = (t) => t && t.closest && t.closest('button, a, select, input, label, .overlay, #result, #status, #pregame, #mmset, .mmset-back, [id^="mm-nav"], [class^="mm-nav"]');
+  const ignoreEl = (t) => t && t.closest && t.closest('button, a, select, input, label, .overlay, #result, #status, #pregame, #mmset, .mmset-back, [id^="mm-nav"]');
   document.addEventListener('pointerdown', (e) => { if (ignoreEl(e.target)) return; setInput('ptr', true); });
   const up = () => setInput('ptr', false);
   document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
@@ -497,7 +497,6 @@
       if (g.state !== 'result') setInput('pad', a); else held.pad = a;
     } catch (e) { /* ignore */ }
   }
-  $('res-ok').addEventListener('click', dismiss);
   // on-screen reel button (shown during a boss fight): hold to reel, release to ease off
   const reelBtn = $('reel-btn');
   reelBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); setInput('btn', true); });
