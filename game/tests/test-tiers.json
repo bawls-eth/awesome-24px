@@ -1552,5 +1552,9 @@
   "beta-s06-art-cache.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-s04-coop-save.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

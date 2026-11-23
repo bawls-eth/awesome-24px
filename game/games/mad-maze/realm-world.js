@@ -49,7 +49,7 @@
     if (typeof o === 'string') { try { o = JSON.parse(o); } catch (e) { o = null; } }
     if (!o || typeof o !== 'object' || Array.isArray(o)) o = {};
     const out = {};
-    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo|evT|evDone|finds|discovered|shrineAt|chests|quests|bossKeys|bossPortal|questBags|gp|gearOn|fb)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
+    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo|evT|evDone|finds|discovered|shrineAt|chests|quests|bossKeys|bossPortal|questBags|gp|gearOn|fb|seatPos)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
     out.v = 1;
     out.seed = cleanSeed(o.seed);
     out.version = Number.isInteger(o.version) && o.version > 0 && o.version < 1000 ? o.version : 0;
@@ -78,6 +78,11 @@
     // gear pity (additive, G9): {b: z3 boss kills since the last T12, d: crypt boss kills since the last T10+}, each an int 0..9999; garbage -> defaults (key left out)
     if (o.gp && typeof o.gp === 'object' && !Array.isArray(o.gp)) { const g = (v) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(9999, Math.floor(v))) : 0); const gp = { b: g(o.gp.b), d: g(o.gp.d) }; if (gp.b || gp.d) out.gp = gp; }
     if (o.gearOn === true) out.gearOn = true;
+    // co-op seat positions (additive, beta S-04): only written with ?party=local; {'0'..'3': {x, y}}, at most 4 entries, key left out when empty
+    if (o.seatPos && typeof o.seatPos === 'object' && !Array.isArray(o.seatPos)) {
+      const sp = {}; ['0', '1', '2', '3'].forEach((k) => { const q = o.seatPos[k]; if (q && typeof q === 'object' && Number.isInteger(q.x) && Number.isInteger(q.y) && q.x >= 0 && q.y >= 0 && q.x < 4096 && q.y < 4096) sp[k] = { x: q.x, y: q.y }; });
+      if (Object.keys(sp).length) out.seatPos = sp;
+    }
     if (o.fb === 1) out.fb = 1; // FT2 (additive): this save has picked up its first world bag, so the first-bag guarantee is spent
     const r = o.returnTo && typeof o.returnTo === 'object' ? o.returnTo : null;
     if (o.finds !== undefined) out.finds = window.MMStash ? MMStash.cleanFinds(o.finds) : o.finds; // owned by MMStash (Lantern payout)
@@ -85,11 +90,39 @@
     return out;
   }
   function readSave() { try { return cleanSave(localStorage.getItem(SAVE_KEY)); } catch (e) { return cleanSave(null); } }
+  // Beta S-04 (b14-06): the co-op seat of this page (0-3), or -1 solo; set by create() from the world team (?party=local only).
+  let saveSeat = () => -1;
+  // Merge what another page saved meanwhile (same seed only): discovered fog = union of the bitsets, kill/portal counters = max,
+  // opened chests = union, shrine use = latest, event clock = max. Position: in co-op each seat writes seatPos[seat] and only
+  // seat 0 (or solo) writes the canonical `pos`; solo saves keep exactly today's shape (no seatPos key).
+  function mergeStored(c, cur) {
+    const st = cleanSave(cur);
+    if (st.seed !== c.seed) return c;
+    const F = window.MMFog;
+    if (F && st.discovered) {
+      const a = F.decode(st.discovered), b = c.discovered ? F.decode(c.discovered) : null;
+      if (a && b) { for (let i = 0; i < a.length; i++) a[i] |= b[i]; c.discovered = F.encode(a); } else if (a && !b) c.discovered = st.discovered;
+    }
+    if (st.stats && c.stats) Object.keys(st.stats).forEach((k) => { c.stats[k] = Math.max(c.stats[k] || 0, st.stats[k] || 0); });
+    if (st.chests) { const u = (c.chests || []).slice(); st.chests.forEach((id) => { if (u.indexOf(id) < 0 && u.length < 64) u.push(id); }); c.chests = u; }
+    if (st.shrineAt) { const m = Object.assign({}, st.shrineAt, c.shrineAt || {}); Object.keys(st.shrineAt).forEach((k) => { m[k] = Math.max(m[k] || 0, st.shrineAt[k]); }); c.shrineAt = m; }
+    c.evT = Math.max(c.evT || 0, st.evT || 0);
+    const seat = saveSeat();
+    if (seat >= 0) {
+      const sp = Object.assign({}, st.seatPos || {}, c.seatPos || {});
+      if (c.pos) sp[String(seat)] = { x: c.pos.x, y: c.pos.y };
+      c.seatPos = sp;
+      if (seat > 0) c.pos = st.pos; // only seat 0 moves the canonical position
+    }
+    return c;
+  }
   function writeSave(s) {
     try {
-      const c = cleanSave(s); // `finds` belongs to MMStash: always keep what storage holds (never an older in-memory copy)
+      let c = cleanSave(s); // `finds` belongs to MMStash: always keep what storage holds (never an older in-memory copy)
       let cur = null; try { cur = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) { cur = null; }
       if (cur && typeof cur === 'object' && cur.finds !== undefined) c.finds = window.MMStash ? MMStash.cleanFinds(cur.finds) : cur.finds; else delete c.finds;
+      if (cur && typeof cur === 'object' && !Array.isArray(cur)) c = mergeStored(c, cur);
+      if (c.seatPos && !Object.keys(c.seatPos).length) delete c.seatPos;
       localStorage.setItem(SAVE_KEY, JSON.stringify(c)); return true;
     } catch (e) { return false; }
   }
@@ -733,6 +766,10 @@
     // or setTeam) rolls as 'p' + N, so two seats on the same seed and kill get different streams; solo (no seat yet) stays 'p0' = today's seat-0 stream.
     // setGearPlayer (test hook) overrides it.
     let gearPlayerSet = null; let gearTeam = opts.team || null;
+    saveSeat = () => { // beta S-04: same seat rule as gearPlayerId, but solo (no team) is -1 so solo saves never get seatPos
+      const tm = gearTeam || arena.worldTeam || null; let st = -1; try { st = tm && tm.ok !== false ? Number(tm.seat) : -1; } catch (e) { st = -1; }
+      return Number.isInteger(st) && st >= 0 && st < 4 ? st : -1;
+    };
     function gearPlayerId() {
       if (gearPlayerSet !== null) return gearPlayerSet;
       const tm = gearTeam || arena.worldTeam || null; let st = -1; try { st = tm && tm.ok !== false ? Number(tm.seat) : -1; } catch (e) { st = -1; }

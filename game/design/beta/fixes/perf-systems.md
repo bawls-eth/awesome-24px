@@ -45,6 +45,7 @@ Run each alone: `BASE=http://localhost:<port>/game/index.html /tmp/bt.sh node ga
 - Re-verify: Chrome, Settings > Privacy > Block all site data for localhost, open Deepdelve: the mine loads and says progress cannot be saved.
 
 ## S-06 mm-art JSON cache (b13-01, P1)
+- Commit: e4dec07.
 - mm-art.js `fetchJson`: per-page `jsonCache` keyed by the absolute url, holding the in-flight Promise; a null result (404, network
   error, no fetch) is evicted so a retry fetches again. Exported as `MMArt.fetchJson`. Callers only read the parsed manifests.
 - realm-world.js (slot 1, small hunk): new `rwJson` helper near the top; `loadTileArt` and the world-prop loader use it (they fetched
@@ -55,3 +56,15 @@ Run each alone: `BASE=http://localhost:<port>/game/index.html /tmp/bt.sh node ga
 - Test: `game/tests/beta-s06-art-cache.test.js` (full tier, browser): once-per-url, >= 100 fewer requests, fewer bytes, art still
   resolves, 404 retry refetches. world-art, enemy-art, item-icons, bolt-art, art-integration, world-page, shared-bugbash-fuzz green.
 - Re-verify: DevTools Network, filter `.json`, load `games/mad-maze/index.html?mode=world`: INDEX.json appears once.
+
+## S-04 Co-op seats merge the realm save (b14-06, P1)
+- realm-world.js (slot 1; functions touched): `cleanSave` (accepts the additive `seatPos`, max 4 cleaned entries), `writeSave` (now
+  re-reads storage and calls the new `mergeStored`), new module `saveSeat` (set in `create()` next to `gearTeam`, same seat rule as
+  gearPlayerId but -1 solo). Merge (same seed only): discovered fog = bitwise OR, stats = max, chests = union, shrineAt = latest,
+  evT = max, finds as before (storage wins). With ?party=local each seat writes `seatPos[seat]`; only seat 0 writes the canonical `pos`.
+  Solo saves keep today's shape (no `seatPos`).
+- Test: `game/tests/beta-s04-coop-save.test.js` (full): A explores, B saves -> stored fog is a superset of A's plus B's cells; pos stays
+  seat 0's, seatPos[1] = B's tile; A's next save keeps B's cells; fresh solo profile has no seatPos. world-fog, world-party,
+  world-safereturn, world-stash, gear-save-tolerance, world-page, shared-mm-fog green.
+- Re-verify: open `games/mad-maze/index.html?mode=world&party=local&seed=x&seat=0` and `...&seat=1` in two tabs, explore in tab 0, then
+  walk in tab 1 for a few seconds, reload tab 0: its minimap still shows everything tab 0 uncovered.
