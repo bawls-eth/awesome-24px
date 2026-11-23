@@ -30,4 +30,6 @@ Capabilities and limits (honest): testers drive headless Chromium (Playwright) w
 Launched after phase 1 reports arrive (they depend on the findings): 1 Lead Architect (fable: triage, assignment, code review, integration), 2 Gameplay Engineer (opus), 3 World + Graphics Engineer (opus, multimodal), 4 Performance + Systems Engineer (opus), 5 QA + Integration Engineer (opus: verifies every fix on its branch, regression runs, release approval). Model reassignment is logged here if a lane underperforms.
 
 ## Findings tally
-(filled in after phase 1)
+Phase 1 complete (15/15 reports merged): **194 findings: 3 P0, 15 P1, 76 P2, 100 P3** (as rated by testers). Lead Architect (fable) triage: 60 work items after dedupe/re-rating (2 P0, 15 P1, 33 P2, 10 P3 batches), 11 owner decisions (O-01..O-11), file-ownership map: see game/design/beta/TRIAGE.md and assignments/*.md.
+
+Phase 2 (started 06:15 UTC, branches unpushed, integrated by the coordinator after the 06:49 merge): dev-perf (Performance+Systems, opus, :9470), dev-gameplay (Gameplay, opus, :9471), dev-world (World+Graphics, opus, :9472), dev-qa (QA+Integration, opus, :9473, verifies every fix, RELEASE-READINESS.md at 09:30). Engineers' deadline 09:30 UTC; QA 10:00; coordinator merges + sharded full suite + stamp before 11:44 UTC for the 11:49 UTC merge; testers retest affected areas afterwards (re-test table in assignments/qa.md).
