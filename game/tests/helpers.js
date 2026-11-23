@@ -29,8 +29,19 @@ async function launch(viewport = { width: 1000, height: 700 }, seedSave, touch =
   await page.click('.avatar-choice');
   await page.click('#join-btn');
   await page.waitForSelector('#player-list-panel', { timeout: 20000 });
+  await townReady(page);
   await page.waitForTimeout(1500);
   return { browser, page, errors };
+}
+// Wait for a condition, not a sleep: the Town scene is fully created (its create() sets lifetimeStats late, then the local body
+// and the camera). On a loaded box the panel appears before create() finishes, which gave 'Cannot read properties of undefined'.
+// Safe to call again after a reload / re-join; the timeout scales with machine load (hard cap 6x) and never fails the test itself.
+async function townReady(page, timeout) {
+  const LS = require('./lib/load-scale');
+  await page.waitForFunction(() => {
+    const g = window.__g; const s = g && g.scene && g.scene.getScene && g.scene.getScene('Town');
+    return !!(s && s.sys && s.sys.isActive() && s.lifetimeStats && s.localBody && s.cameras && s.cameras.main);
+  }, null, { timeout: timeout || LS.budget(20000), polling: 100 }).catch(() => { /* a test that never expects a Town (rare) still gets its own assertions */ });
 }
 const scene = (page, fn, arg) => page.evaluate(`(${fn.toString()})(window.__g.scene.getScene('Town'), ${JSON.stringify(arg)})`);
 
@@ -62,4 +73,4 @@ function check(name, cond, extra = '') {
   if (!cond) failed++;
 }
 const done = () => { console.log(failed ? `${failed} FAILED` : 'ALL PASSED'); process.exitCode = failed ? 1 : 0; };
-module.exports = { launch, scene, check, done, expandPanel, blockDb, DB_HOSTS };
+module.exports = { townReady, launch, scene, check, done, expandPanel, blockDb, DB_HOSTS };
