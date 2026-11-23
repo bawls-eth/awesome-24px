@@ -1,0 +1,21 @@
+{
+  "batch": "r09",
+  "label": "jungle-core",
+  "generated_utc": "2026-11-23T08:46:22.824692Z",
+  "files": 42,
+  "duplicate_ids": 0,
+  "blocking": {},
+  "warnings": {},
+  "standing_heights": {
+    "chompbill/down": 168,
+    "chompbill/up": 168,
+    "chompbill/right": 144,
+    "fernraptor/down": 168,
+    "fernraptor/up": 168,
+    "fernraptor/right": 140,
+    "glimmerfrog/down": 112,
+    "glimmerfrog/up": 112,
+    "glimmerfrog/right": 104
+  },
+  "status": "provisional"
+}
