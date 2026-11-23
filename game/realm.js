@@ -3391,7 +3391,8 @@ class RealmArena {
     this.shake = 14;
     this._burst(this.player.x, this.player.y, '#ff6f91', 30, 300);
     this._deathZone = this._worldCopy() ? this._zoneLabel() : '';
-    this._showBanner(`You fell in the Realm…  no 💎 lost — ${cache.text}  ·  ${this._deathZone ? `in ${this._deathZone}` : `wave ${Math.max(1, this.run.wave)}`}, ${this.run.kills} kills, +${this.run.shards} 💎 this run`, 2.6);
+    const dg = this.dungeon && this.dungeon.api && typeof this.dungeon.api.fellText === 'string' ? this.dungeon.api.fellText : ''; // G-24 (b03-14): "You fell in the Crypt", no "wave" in a dungeon
+    this._showBanner(dg ? `${dg}…  no 💎 lost — ${cache.text}  ·  ${this.run.kills} kills, +${this.run.shards} 💎 this run` : `You fell in the Realm…  no 💎 lost — ${cache.text}  ·  ${this._deathZone ? `in ${this._deathZone}` : `wave ${Math.max(1, this.run.wave)}`}, ${this.run.kills} kills, +${this.run.shards} 💎 this run`, 2.6);
     this.onSave(this.save);
     this._syncHud();
   }

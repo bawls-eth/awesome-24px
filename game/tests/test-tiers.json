@@ -1624,5 +1624,9 @@
   "beta-g15-tutorial-first-minute.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "beta-g24-dungeon-doors.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }

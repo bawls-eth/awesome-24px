@@ -318,7 +318,7 @@
       const dmg = MMSplash.slamDmg(e.dmgMul || 1, Math.max(0, d), MMSplash.slamR(2));
       if (dmg > 0) { slamHits++; arena._hitPlayer(arena._guarded(dmg)); }
     }
-    const api = { mut: MUT ? { ids: MUT.ids.slice(), label: MUT.label, text: MUT.text, fx: Object.assign({}, MUT.fx) } : null, floor, baseSeed, deep: deepInfo, pickups: () => drops.map((q) => ({ type: q.type, x: q.x, y: q.y, value: q.value, tier: q.tier })), pickStats: () => ({ live: drops.length, total: pickTotal, got: Object.assign({}, pickGot), magnet: MAGNET_R, on: pickOn }), lair, seed, biome, bossBolt, bossSig, sigCount: () => sigN, layoutVersion: layoutV, narrow: narrowOn, graph: dungeon, state, arena, granted, grantItem, get gearOn() { return gearOn; }, get gear() { return gearGot; }, gp: () => gpNow() };
+    const api = { fellText: B.fell, mut: MUT ? { ids: MUT.ids.slice(), label: MUT.label, text: MUT.text, fx: Object.assign({}, MUT.fx) } : null, floor, baseSeed, deep: deepInfo, pickups: () => drops.map((q) => ({ type: q.type, x: q.x, y: q.y, value: q.value, tier: q.tier })), pickStats: () => ({ live: drops.length, total: pickTotal, got: Object.assign({}, pickGot), magnet: MAGNET_R, on: pickOn }), lair, seed, biome, bossBolt, bossSig, sigCount: () => sigN, layoutVersion: layoutV, narrow: narrowOn, graph: dungeon, state, arena, granted, grantItem, get gearOn() { return gearOn; }, get gear() { return gearGot; }, gp: () => gpNow() };
     // Lantern stash payout (MMStash): every kept find of this run is paid into the stash when the summary shows (win or fall)
     const ST = window.MMStash && window.MMProfile ? window.MMStash : null; const shards0 = arena.save.shards;
     if (ST) {
@@ -757,8 +757,24 @@
       deepHide();
       sumEl.classList.remove('hidden');
       api.summary = s; api.summaryTitle = sumEl.querySelector('h2').textContent;
+      if (died && !backWorld) { // G-24 (b03-13): "Try again (same seed)" on the fall summary; R / pad Back press it
+        const row = sumEl.querySelector('.mm-sum-btns');
+        if (row && !sumEl.querySelector('#mm-sum-retry')) {
+          const a = document.createElement('a'); a.className = 'mm-btn'; a.id = 'mm-sum-retry'; a.textContent = 'Try again (same seed)';
+          let q = null; try { q = new URLSearchParams(location.search); } catch (e) { q = null; }
+          if (q) { q.set('mode', 'dungeon'); q.set('seed', String(baseSeed)); q.delete('floor'); a.href = 'index.html?' + q.toString(); }
+          row.insertBefore(a, row.firstChild); api.retryUrl = a.getAttribute('href');
+          try { a.focus({ preventScroll: true }); } catch (e) { /* focus is cosmetic */ }
+        }
+      }
     }
     function finish() { if (finished) return; deepHide(); arena.stop(); showSummary(false); }
+    window.addEventListener('keydown', (e) => { // G-24: R (universal Restart) / Backspace (pad Back) on the fall summary = Try again (same seed)
+      if (sumEl.classList.contains('hidden') || e.repeat) return;
+      const k = String(e.key || '').toLowerCase(); if (k !== 'r' && k !== 'backspace') return;
+      const a = sumEl.querySelector('#mm-sum-retry'); if (!a) return;
+      e.preventDefault(); e.stopImmediatePropagation(); api.retryPressed = (api.retryPressed || 0) + 1; if (opts.navigate !== false) a.click();
+    }, true);
 
     // ---------- DV1: mutator chip + deep-run stairs / off-ramp ----------
     // The chip names the run's mutator(s) under the map button (textContent only). After the boss, a calm choice: the stairs down to the next floor
@@ -857,6 +873,20 @@
         // scheduled boss bullets
         if (queue.length) { const now = arena.clock; queue = queue.filter((q) => { if (q.at > now) return true; arena.fireEnemyBullet(q.x, q.y, q.a, q.s, q.k); return false; }); }
         bossExtras(dt);
+        // G-24 (b03-02) corner-slip: pushing toward an open door up to 14 px off its centre line slides the hero onto the line (no wiggling)
+        if (!state.doorsClosed()) {
+          const k = arena.keys || {}; const mv = arena.moveVec || { x: 0, y: 0 };
+          const ix = (k.d || k.arrowright ? 1 : 0) - (k.a || k.arrowleft ? 1 : 0) + (mv.x || 0), iy = (k.s || k.arrowdown ? 1 : 0) - (k.w || k.arrowup ? 1 : 0) + (mv.y || 0);
+          for (const o of curDoors()) {
+            if (o.status !== 'open') continue;
+            const cx = (o.tile.x + 0.5) * T; const cy = (o.tile.y + 0.5) * T; const ax = cx - p.x, ay = cy - p.y;
+            const horiz = Math.abs(ax) >= Math.abs(ay); const along = horiz ? ax : ay, off = horiz ? ay : ax, push = horiz ? ix : iy;
+            if (Math.abs(along) > T * 1.4 || Math.abs(off) < 0.5 || Math.abs(off) > 14 || !(push * along > 0.2)) continue;
+            const st = Math.sign(off) * Math.min(Math.abs(off), 120 * dt); const nx = horiz ? p.x : p.x + st, ny = horiz ? p.y + st : p.y;
+            if (!arena._blocked(nx, ny, RM_PLAYER.r)) { p.x = nx; p.y = ny; }
+            break;
+          }
+        }
         // doors: walking into an open door, or bumping a locked one
         const sealed = state.doorsClosed();
         if (!sealed) for (const o of curDoors()) {
