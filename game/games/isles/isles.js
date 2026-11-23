@@ -1684,7 +1684,9 @@
   }
 
   // ---------- B10: homestead (Hearth Isle only, local save), gather spots, travel, medals ----------
-  const DAY = todayQ && /^\d{4}-\d{2}-\d{2}$/.test(todayQ) ? todayQ : (() => { try { return new Date().toISOString().slice(0, 10); } catch (e) { return ''; } })();
+  // the day key comes from Date.now() (the same source as the page clock and the save load), never from a bare `new Date()`: a second
+  // time source made the daily spots, sparkles and bonus finds follow the wall calendar even when the page clock is pinned (tests)
+  const DAY = todayQ && /^\d{4}-\d{2}-\d{2}$/.test(todayQ) ? todayQ : (() => { try { return new Date(Date.now()).toISOString().slice(0, 10); } catch (e) { return ''; } })();
   const tileName = (tx, ty) => NAMES[O.tileAt(world, tx, ty)] || '';
   const WET = { deep_water: 1, shallow_water: 1, abyss: 1, lagoon: 1, dust_sea: 1 };
   const homeO = HOME ? HS.origin(world.spawnPoint, world.center, W, H) : null;
