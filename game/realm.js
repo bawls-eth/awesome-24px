@@ -690,7 +690,7 @@ class RealmArena {
     this._padPause = false; this._padWas = false;
     this._holdFire = rmFlag('holdfire') !== '0'; // world rule: off-screen shooters hold their fire; ?holdfire=0 (or setHoldFire(false)) lets them shoot
     this._padBack = false; // pad Back / Select (button 8): restart edge (fall screen or open menu only)
-    this._padRes = { move: { x: 0, y: 0 }, aim: { x: 0, y: 0, on: false }, fire: false, ability: [false, false, false, false], pause: false, back: false }; // reused every frame (no per-frame allocation)
+    this._padRes = { move: { x: 0, y: 0 }, aim: { x: 0, y: 0, on: false }, fire: false, ability: [false, false, false, false], pause: false }; // reused every frame (no per-frame allocation)
     this._aimAssist = true; this._reduced = false;
     // AR (NEXT-SLICES-3 Wave 4): Realm one-thumb access, opt-in per page (enableAccess2(); the town classic arena never calls it, duels never use it).
     this._ax2 = false; this._autoFire = false; this._aimToggle = false; this._shapes = false; this._aimPressMax = 0; this.autoFireN = 0;
@@ -802,7 +802,7 @@ class RealmArena {
 
   // The pad went away: forget its held buttons so a reconnect cannot fire a stale edge.
   _padGone() {
-    if (this._padWas) { this._padPrev.fill(false); this._padPause = false; this._padBack = false; this._padWas = false; }
+    if (this._padWas) { this._padPrev.fill(false); this._padPause = false; this._padBack = false; this._padBk = false; this._padWas = false; }
     return null;
   }
 
@@ -816,7 +816,7 @@ class RealmArena {
     if (m <= D) { r.aim.x = 0; r.aim.y = 0; r.aim.on = false; } else { const o = Math.min(1, (m - D) / (1 - D)); r.aim.x = (x / m) * o; r.aim.y = (y / m) * o; r.aim.on = o > 0; }
     r.ability[0] = dn(b[0]) || dn(b[5]); r.ability[1] = dn(b[1]) || dn(b[4]); r.ability[2] = dn(b[2]); r.ability[3] = dn(b[3]);
     r.pause = dn(b[9]);
-    r.back = dn(b[8]);
+    this._padBk = dn(b[8]); // Back / Select (restart edge): kept beside the result so it stays the same shape as MMPad.read
     return r;
   }
 
@@ -826,7 +826,7 @@ class RealmArena {
     if (on && !this._padPause && !this._deathShown) { if (this.panel || this.paused) this.setPaused(false); else this._panel('bp'); }
     this._padPause = on;
     // Universal Restart (CONTROLS.md): pad Back / Select restarts only where R does (the fall screen, or the open menu's confirm).
-    const bk = !!(this._pad && this._pad.back);
+    const bk = !!(this._pad && this._padBk);
     if (bk && !this._padBack) {
       if (this._deathShown) { const b = this._deathDom && this._deathDom.querySelector('button[data-d="again"]'); if (b) b.click(); }
       else if (this.panel === 'menu' && this.canRestart && this.canRestart()) this._menuConfirm(true);
