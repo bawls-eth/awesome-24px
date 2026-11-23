@@ -38,7 +38,22 @@
     return { v: 1, runs: ci(o.runs, 999999), safe: ci(o.safe, 999999), best: { score: ci(b.score, 9999999), depth: ci(b.depth, 999), ores: ci(b.ores, 99999), combo: ci(b.combo, 9999) } };
   }
   function load(storage) { try { return clean(storage.getItem(KEY)); } catch (e) { return clean(null); } }
-  function save(storage, rec) { try { storage.setItem(KEY, JSON.stringify(clean(rec))); return true; } catch (e) { return false; } }
+  // Merge-on-write (bugbash/saves.md S2/S7): bests and counters only go up against what storage holds now, so a stale second tab
+  // can never lower another tab's best or dive count; fields a newer build stored are kept. The caller re-reads before finish(),
+  // so its counters already include every other tab's dives (max, not sum, never double-counts).
+  function save(storage, rec) {
+    try {
+      let raw = null;
+      try { const s = storage.getItem(KEY); raw = typeof s === 'string' && s.length < 50000 ? JSON.parse(s) : null; } catch (e) { raw = null; }
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) raw = null;
+      const mine = clean(rec), cur = clean(raw), out = {};
+      if (raw) Object.keys(raw).forEach((k) => { if (k !== '__proto__' && k !== 'constructor' && k !== 'prototype') out[k] = raw[k]; });
+      Object.assign(out, mine, { runs: Math.max(mine.runs, cur.runs), safe: Math.max(mine.safe, cur.safe), best: {} });
+      Object.keys(mine.best).forEach((k) => { out.best[k] = Math.max(mine.best[k], cur.best[k]); });
+      storage.setItem(KEY, JSON.stringify(out));
+      return true;
+    } catch (e) { return false; }
+  }
 
   function start(startDepth, mod) { return { mod: MODS.some((m) => m.id === mod) ? mod : 'plain', start: ci(startDepth, 999), depth: 0, blocks: 0, ores: 0, orePts: 0, combo: 0, bestCombo: 0, lastBreak: -99, armed: false }; }
   // Depth below where the dive started (blocks). Returns true when it became a new dive maximum.

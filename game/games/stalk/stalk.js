@@ -393,7 +393,25 @@
   }
   var prSave = cleanPr(S.get(PKEY, null));
   var pr = null;
-  function prPersist() { S.set(PKEY, prSave); }
+  // Merge-on-write (bugbash/saves.md S2/S7): weeks / rounds = stored + this tab's own, bests never lowered by a stale second tab,
+  // unknown fields kept. best can be negative and only counts with hasBest, so it keeps its own rule here.
+  var prBase = JSON.parse(JSON.stringify(prSave));
+  function prPersist() {
+    var M = window.MMSaveMerge;
+    if (!M) { S.set(PKEY, prSave); return; }
+    var raw = S.get(PKEY, null), st = cleanPr(raw);
+    var m = M.merge(raw, prBase, prSave, M.SPECS[PKEY]);
+    m.hasBest = st.hasBest || prSave.hasBest;
+    m.best = st.hasBest && prSave.hasBest ? Math.max(st.best, prSave.best) : st.hasBest ? st.best : prSave.best;
+    var mb = {};
+    MOOD_IDS.forEach(function (k) {
+      var a = Object.prototype.hasOwnProperty.call(st.moodBest, k), b = Object.prototype.hasOwnProperty.call(prSave.moodBest, k);
+      if (a || b) mb[k] = a && b ? Math.max(st.moodBest[k], prSave.moodBest[k]) : a ? st.moodBest[k] : prSave.moodBest[k];
+    });
+    var c = cleanPr(Object.assign({}, m, { moodBest: mb }));
+    S.set(PKEY, Object.assign(m, c, { moodBest: Object.assign({}, m.moodBest && typeof m.moodBest === 'object' && !Array.isArray(m.moodBest) ? m.moodBest : {}, c.moodBest) }));
+    prSave = c; prBase = JSON.parse(JSON.stringify(prSave));
+  }
   function prStart() {
     prSave.n += 1; prPersist();
     var mood = moodFor(prSave.n);

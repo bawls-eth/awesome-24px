@@ -187,6 +187,7 @@
   function endRun(safe, why) {
     if (!run || !runRec) return null;
     const short = run.depth < 2 && run.blocks < 5; // a stumble near the surface is not worth a summary
+    runRec = RUNS.load(localStorage); // the freshest bests / counts: another tab may have dived meanwhile (bugbash/saves.md S2)
     const sum = RUNS.finish(runRec, run, safe);
     RUNS.save(localStorage, runRec);
     startRun();

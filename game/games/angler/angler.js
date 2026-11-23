@@ -164,7 +164,27 @@
     return out;
   }
   let fun = cleanFun(Store.get(FUN_KEY, null));
-  const saveFun = () => { fun = cleanFun(fun); Store.set(FUN_KEY, fun); };
+  // Merge-on-write (bugbash/saves.md S2/S7): a stale second tab never lowers a best streak, never slows a best strike, adds only its
+  // own catches per condition, and keeps fields a newer build stored. Without MMSaveMerge: the old plain write.
+  let funBase = JSON.parse(JSON.stringify(fun));
+  const saveFun = () => {
+    fun = cleanFun(fun);
+    const M = window.MMSaveMerge;
+    if (!M) { Store.set(FUN_KEY, fun); return; }
+    const raw = Store.get(FUN_KEY, null), st = cleanFun(raw), m = M.merge(raw, funBase, fun, M.SPECS[FUN_KEY]);
+    const minPos = (a, b) => (a > 0 && b > 0 ? Math.min(a, b) : a > 0 ? a : b);
+    const cond = Object.assign({}, raw && typeof raw === 'object' && raw.cond && typeof raw.cond === 'object' && !Array.isArray(raw.cond) ? raw.cond : {});
+    COND_IDS.forEach((id) => {
+      const a = st.cond[id], b = fun.cond[id], z = funBase.cond[id];
+      if (!a && !b) return;
+      if (!a || !b) { cond[id] = a || b; return; }
+      cond[id] = { size: Math.max(a.size, b.size), react: minPos(a.react, b.react), n: a.n + Math.max(0, b.n - (z ? z.n : 0)) };
+    });
+    m.cond = cond;
+    const c = cleanFun(m);
+    Store.set(FUN_KEY, Object.assign(m, c, { cond: Object.assign(cond, c.cond) }));
+    fun = c; funBase = JSON.parse(JSON.stringify(fun));
+  };
   let sfx = null; const sounds = [];
   function ensureSfx() { if (sfx || !window.MMSfx) return; try { sfx = window.MMSfx.create({ storage: window.localStorage }); } catch (e) { sfx = null; } }
   // Logical cue names stay (tests + CHIP-AUDIO aliases); the 8-bit voice played for each is the Fishing set in CHIP-AUDIO.md.
