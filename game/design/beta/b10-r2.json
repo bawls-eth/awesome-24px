@@ -1,0 +1,345 @@
+[
+ {
+  "id": "b10-r2-01",
+  "severity": "P1",
+  "area": "Angler / large text",
+  "title": "Angler at 150% zoom (portrait phone) squeezes the fishing scene to 27x41 px: unplayable",
+  "steps": [
+   "Open game/games/angler/index.html at an effective 260x563 CSS px viewport (390x844 phone at 150% text/zoom, touch)",
+   "Close the how-to card, tap the water to cast and hook a fish"
+  ],
+  "expected": "Scene keeps a usable size (page scrolls, as the 2026 bugbash fix intended: scene >= 250 px)",
+  "actual": "Scene 200x300 at 260x563 (touch), header/status still tight (title \"WES...\", Bells chip clipped at right edge) but playable.",
+  "viewport": "260x563 (390x844 at 150%)",
+  "url": "/game/games/angler/index.html",
+  "screenshots": [
+   "img/b10-r2-01.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/games/angler/angler.css (flex layout of #stage / #scene; min-height lost when the chrome is tall)",
+  "kind": "bug",
+  "frequency": "always",
+  "replays": "b10-01",
+  "status": "FIXED"
+ },
+ {
+  "id": "b10-r2-02",
+  "severity": "P2",
+  "area": "Angler / landscape",
+  "title": "Angler in landscape phone: lower half of the scene and the reel meter are below the fold",
+  "steps": [
+   "Open the Angler at 844x390 touch, cast and hook a fish"
+  ],
+  "expected": "Scene and reel meter fully visible while reeling (no scroll mid-reel)",
+  "actual": "844x390: scene y=8..329 fully visible while reeling; 563x260: scene 131x197 at y=8, page 282 vs 260 viewport (small scroll only for the message box).",
+  "viewport": "844x390",
+  "url": "/game/games/angler/index.html",
+  "screenshots": [
+   "img/b10-r2-03.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/games/angler/angler.css (header + #status not collapsed in landscape)",
+  "kind": "visual",
+  "frequency": "always",
+  "replays": "b10-02",
+  "status": "FIXED"
+ },
+ {
+  "id": "b10-r2-03",
+  "severity": "P2",
+  "area": "Jam / large text",
+  "title": "Jam at 150% zoom portrait: the four touch pads are pushed below the fold during play",
+  "steps": [
+   "Open Campfire Jam at 260x563 touch (390x844 at 150%)",
+   "Start Warm Embers Normal"
+  ],
+  "expected": "Lanes and pads both visible so you can play with thumbs",
+  "actual": "Jam at 260x563 Warm Embers Normal: pads y=442..510 fully visible, scrollHeight 563 = viewport.",
+  "viewport": "260x563",
+  "url": "/game/games/jam/index.html",
+  "screenshots": [
+   "img/b10-r2-04.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/games/jam/jam.css (#hud rows / #canvas-wrap height not capped)",
+  "kind": "visual",
+  "frequency": "always",
+  "replays": "b10-03",
+  "status": "FIXED"
+ },
+ {
+  "id": "b10-r2-04",
+  "severity": "P2",
+  "area": "Angler / reel",
+  "title": "Reeling can never be lost by being bad: meter drains to 0 but the fish never gets away",
+  "steps": [
+   "Cast and hook any fish (test hook: __angler.tap(); advance(bite.wait+0.3); tap())",
+   "Never hold the reel (or keep the zone off the fish) for 25+ seconds"
+  ],
+  "expected": "Fish escapes (a 'got away' result) when the catch meter empties or after a time limit, like a real fail state",
+  "actual": "Hooked, no input: state went reeling -> result outcome \"lost\" (\"It swam off. No harm done.\", streak kept) after 7.8 s.",
+  "viewport": "390x844",
+  "url": "/game/games/angler/index.html?test=1",
+  "screenshots": [
+   "img/b10-r2-02.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/shared/mm-angler.js:254-266 (tick has no status 'lost'); game/games/angler/angler.js:411-432 (step)",
+  "kind": "balance",
+  "frequency": "always",
+  "replays": "b10-04",
+  "status": "FIXED"
+ },
+ {
+  "id": "b10-r2-05",
+  "severity": "P3",
+  "area": "Jam / menu",
+  "title": "Song list shows a stale HUD from the last run (score, combo, accuracy, judgement, song name, full progress bar)",
+  "steps": [
+   "Play Warm Embers Easy to the end (results), press Songs"
+  ],
+  "expected": "HUD hidden or reset on the song menu",
+  "actual": "Song menu and results card no longer show the stale HUD (score/combo/judgement/song). Minor: the full gold progress bar still sits above the card.",
+  "viewport": "1280x720",
+  "url": "/game/games/jam/index.html",
+  "screenshots": [
+   "img/b10-r2-07.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/games/jam/jam.js showMenu()/showResults (hud elements not cleared)",
+  "kind": "visual",
+  "frequency": "always",
+  "replays": "b10-05",
+  "status": "FIXED"
+ },
+ {
+  "id": "b10-r2-06",
+  "severity": "P3",
+  "area": "Jam / result card",
+  "title": "Assist, Relax and Practice results are bare text, unlike the normal results card",
+  "steps": [
+   "Menu > Assist (One thumb) ON > play Warm Embers Normal to the end",
+   "Also Relax mode and Practice > Start practice"
+  ],
+  "expected": "Same shared result card layout (rank, stars, stat chips, histogram, Play again first)",
+  "actual": "Assist/Relax/Practice result cards not replayed this round.",
+  "viewport": "390x844",
+  "url": "/game/games/jam/index.html",
+  "screenshots": [],
+  "clip": null,
+  "suspect": "game/games/jam/jam.js:340-380 (assist/relax/practice result builders)",
+  "kind": "visual",
+  "frequency": "always",
+  "replays": "b10-06",
+  "status": "NOT RETESTED"
+ },
+ {
+  "id": "b10-r2-07",
+  "severity": "P3",
+  "area": "Jam / Assist",
+  "title": "Assist mode still draws 4 lanes and 4 pads with nothing marking which two lanes are live",
+  "steps": [
+   "Menu > Assist ON > start a song, look at lanes at 9 s"
+  ],
+  "expected": "Obvious 2-lane layout (or pads merged), so a one-thumb player knows where to tap",
+  "actual": "Assist lane layout not replayed.",
+  "viewport": "390x844",
+  "url": "/game/games/jam/index.html?test=1",
+  "screenshots": [],
+  "clip": null,
+  "suspect": "game/games/jam/jam.js assistChart / render",
+  "kind": "ux",
+  "frequency": "always",
+  "replays": "b10-07",
+  "status": "NOT RETESTED"
+ },
+ {
+  "id": "b10-r2-08",
+  "severity": "P3",
+  "area": "Jam / charts",
+  "title": "Difficulty ladder is not monotonic and some Easy charts almost ignore lanes",
+  "steps": [
+   "Generate every chart with MMJamSongs.chartFor(song, tier) and compare notes/sec and lane counts"
+  ],
+  "expected": "Later songs are harder at the same tier; Easy uses all four lanes",
+  "actual": "Chart balance not re-measured.",
+  "viewport": "n/a",
+  "url": "/game/shared/mm-jam-songs.js",
+  "screenshots": [],
+  "clip": null,
+  "suspect": "game/shared/mm-jam-songs.js TIER/pickLane (pattern 'wave'/'jacks' lane bias)",
+  "kind": "balance",
+  "frequency": "always",
+  "replays": "b10-08",
+  "status": "NOT RETESTED"
+ },
+ {
+  "id": "b10-r2-09",
+  "severity": "P3",
+  "area": "Jam / unlocks",
+  "title": "startSong() does not enforce the Hard lock; only the disabled UI button does",
+  "steps": [
+   "With a save that has no Normal stars on Lantern Shuffle, call __jam.start('lantern-shuffle','hard') (test mode)",
+   "Perfect it"
+  ],
+  "expected": "Hard refuses to start until Normal has 2 stars",
+  "actual": "Partly: start(\"warm-embers\",\"hard\") now returns null (locked Hard refused). But start(\"lantern-shuffle\",\"hard\") (the round-1 repro; song itself locked on a fresh save) still starts a run: the guard at jam.js:237 only refuses when the song is unlocked (`&& SG.songUnlocked(...)`), so a locked song + locked tier bypasses it.",
+  "viewport": "1280x720",
+  "url": "/game/games/jam/index.html?test=1",
+  "screenshots": [],
+  "clip": null,
+  "suspect": "game/games/jam/jam.js:232 startSong (no SG.tierUnlocked check)",
+  "kind": "bug",
+  "frequency": "always",
+  "replays": "b10-09",
+  "status": "NOT FIXED"
+ },
+ {
+  "id": "b10-r2-10",
+  "severity": "P3",
+  "area": "Bug Safari / summary",
+  "title": "Summary has weak hierarchy: the score line is the smallest text on the card",
+  "steps": [
+   "Finish a Meadow run (90 s) on a phone"
+  ],
+  "expected": "Shared result card look: big score and stars, stat chips, clear next goal",
+  "actual": "Bug Safari summary on 390x844 still leads with a tiny dim \"Score 0 (best 0)\" line; Bugs caught / Stars gained / Best combo plain text lines below the buttons. Test run was a 0-score idle run, so layout under a real score not seen.",
+  "viewport": "390x844",
+  "url": "/game/games/festival/bugs.html",
+  "screenshots": [
+   "img/b10-r2-06.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/games/festival/bugs.js:548-590 (summary), bugs.css",
+  "kind": "visual",
+  "frequency": "always",
+  "replays": "b10-10",
+  "status": "NOT FIXED"
+ },
+ {
+  "id": "b10-r2-11",
+  "severity": "P2",
+  "area": "Bug Safari / art clarity",
+  "title": "Bugs are tiny and low contrast on the phone field; hard to tell species apart",
+  "steps": [
+   "Open Bug Safari at 390x844, start Meadow"
+  ],
+  "expected": "Targets readable at a glance on a phone",
+  "actual": "Phone field now fills ~340 px wide; ladybugs/butterflies ~16-20 px and clearly readable against the grass.",
+  "viewport": "390x844",
+  "url": "/game/games/festival/bugs.html",
+  "screenshots": [
+   "img/b10-r2-05.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/games/festival/bugs.js render scale / bugs.css #game sizing",
+  "kind": "visual",
+  "frequency": "always",
+  "replays": "b10-11",
+  "status": "FIXED"
+ },
+ {
+  "id": "b10-r2-12",
+  "severity": "P3",
+  "area": "Bug Safari / menu",
+  "title": "Arena menu: dev-speak text and clipped buttons at 1280x720",
+  "steps": [
+   "Open Bug Safari at 1280x720"
+  ],
+  "expected": "Short player-facing text; Bug journal / Settings visible",
+  "actual": "Desktop arena menu: dev-speak \"?mods=0\" text gone, short unlock rule, Bug journal and Settings buttons visible. Minor: HUD stub (90S / 0 / BEST 0) still above the menu.",
+  "viewport": "1280x720",
+  "url": "/game/games/festival/bugs.html",
+  "screenshots": [
+   "img/b10-r2-08.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/games/festival/bugs.js:482-490",
+  "kind": "ux",
+  "frequency": "always",
+  "replays": "b10-12",
+  "status": "FIXED"
+ },
+ {
+  "id": "b10-r2-13",
+  "severity": "P3",
+  "area": "Bug Safari / balance",
+  "title": "Meadow 3 stars is trivially reached; two arenas unlock after one run",
+  "steps": [
+   "Script a chase-bot (sneak, swing within 1.2 tiles) on Meadow seed 123"
+  ],
+  "expected": "First arena takes a few runs to master",
+  "actual": "Star thresholds not re-measured.",
+  "viewport": "390x844",
+  "url": "/game/games/festival/bugs.html?test=1",
+  "screenshots": [],
+  "clip": null,
+  "suspect": "game/shared/mm-bugs.js:41 (ARENAS stars)",
+  "kind": "balance",
+  "frequency": "always",
+  "replays": "b10-13",
+  "status": "NOT RETESTED"
+ },
+ {
+  "id": "b10-r2-14",
+  "severity": "P3",
+  "area": "Angler / art",
+  "title": "Fish sprites are recoloured generic silhouettes; Shrimp is drawn as a blue fish",
+  "steps": [
+   "Open the Journal after catching a Minnow and a Shrimp"
+  ],
+  "expected": "Each species reads as its animal",
+  "actual": "Fish sprites not re-checked.",
+  "viewport": "390x844",
+  "url": "/game/games/angler/index.html",
+  "screenshots": [],
+  "clip": null,
+  "suspect": "game/games/angler/angler.js sprite builder / game/shared/mm-angler.js FISH palette",
+  "kind": "visual",
+  "frequency": "always",
+  "replays": "b10-14",
+  "status": "NOT RETESTED"
+ },
+ {
+  "id": "b10-r2-15",
+  "severity": "P3",
+  "area": "Angler / tournament",
+  "title": "Tournament cast results show no running total or casts left, and repeat the generic next-goal list",
+  "steps": [
+   "Tournament > Start tournament, catch a fish"
+  ],
+  "expected": "Result card shows 'Cast 2/5 - 33 points so far' and hides unrelated goals",
+  "actual": "Tournament cast result card (390x844) still shows the generic \"Catch a fish / Catch 10 species / Beat a boss fish / Next goal\" block and no running total or casts-left.",
+  "viewport": "390x844",
+  "url": "/game/games/angler/index.html?test=1",
+  "screenshots": [
+   "img/b10-r2-02.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/games/angler/angler.js finish()/result card builder",
+  "kind": "ux",
+  "frequency": "always",
+  "replays": "b10-15",
+  "status": "NOT FIXED"
+ },
+ {
+  "id": "b10-r2-16",
+  "severity": "P3",
+  "area": "Angler / layout",
+  "title": "Angler chrome crowds the scene on phone and wastes the screen on desktop",
+  "steps": [
+   "Open the Angler at 390x844 and at 1280x720"
+  ],
+  "expected": "Scene is the hero",
+  "actual": "Angler chrome: phone chrome still large above the scene at 260 wide; desktop not re-opened.",
+  "viewport": "390x844 and 1280x720",
+  "url": "/game/games/angler/index.html",
+  "screenshots": [],
+  "clip": null,
+  "suspect": "game/games/angler/angler.css",
+  "kind": "improvement",
+  "frequency": "always",
+  "replays": "b10-16",
+  "status": "NOT RETESTED"
+ }
+]
