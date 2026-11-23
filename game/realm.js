@@ -3112,7 +3112,11 @@ class RealmArena {
     if (this.onEnemyHit) this.onEnemyHit(e, dmg);
     // G-08 (b01-03): a world shooter hit while it holds its fire (off screen) is provoked for RM_PROVOKE_S: it may fire, and a
     // non-approaching type steps toward the hero until it is on screen. No farming from beyond the edge of the view.
-    if (this.world && this.mode === 'world' && this._holdFire && e.type !== 'boss' && !this._canFire(e, this._nearest(e.x, e.y))) e.provT = RM_PROVOKE_S;
+    // Allocation-free (arena-p2-hotpath): a plain camera-rect test on numbers, no _nearest / _canFire / Math.hypot call per hit.
+    if (this._holdFire && this.world && this.mode === 'world' && !this.dungeon && e.type !== 'boss') {
+      const c = this.camera, ex = e.x, ey = e.y;
+      if (ex < c.x - 24 || ex > c.x + this.W + 24 || ey < c.y - 24 || ey > c.y + this.H + 24) e.provT = RM_PROVOKE_S;
+    }
     e.hp -= dmg; e.flash = 1;
     if (!quiet || e.hp <= 0) this._snd(e.hp > 0 ? 'hit' : 'kill'); // P2: a splashed (quiet) target that survives plays no extra 'hit' (the primary hit just played one; no voice per target)
     if (e.type === 'boss') {
