@@ -1644,5 +1644,9 @@
   "beta-w12-isles-hero.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-w07-town-hud.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

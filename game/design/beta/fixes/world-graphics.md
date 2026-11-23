@@ -77,3 +77,12 @@ Each entry: item, files, test, how to retest by hand. Screenshots in `fixes/img/
 - Dark 2x2 block next to the jungle start: the tiles there are `jungle_floor` / `jungle_moss` (dark speckled jungle floor art) beside `sand` / `wet_sand`; no void or missing tile id around spawn (seed 123). It reads as a hole because the dark jungle floor tile sits as a 2x2 island inside sand; that is generator output (pinned) plus tile art contrast, not a draw bug.
 - Better long-term: the Realm class strips (MMArt b00-b03, true down / up / right) could replace the code hero, but the Isles page does not load mm-art.js; left for a later slot.
 - Test: `tests/beta-w12-isles-hero.test.js` (views per direction, distinct frame sets, 2-frame walk, static idle, pixel hashes differ, reduced motion static; logs the spawn terrain). `isles-bugbash`, `isles-access`, `isles-first-ten`, `isle-art-bake` green.
+
+## W-07 Town HUD overlaps (b07-03, b07-07 fixed; b07-08, offline walkie, quick-chat docking open; b07-02 diagnosed)
+- Files: `game/style.css` (appended block only; the index.html slot 3 was not free yet).
+- b07-07: while the emote wheel is open the quick-chat row is hidden (the wheel covered Fishing! / Nice! / Bye!).
+- b07-03: More tab rows (Settings, Keys, Changelog, Feedback, Sound, Music, Motion, Photo, Backup, Restore) are >= 44 px on phones (were 21-26 px).
+- b07-02: no DOM element paints the black / white box. At its centre only the transparent game container, the canvas, `#settings-section` (153x553, overflowing the panel and clipped) and the transparent `#mobile-controls` are hit: the clipped-overflow compositor artefact already listed in bugbash/town.md, not a page background.
+- Open (need index.html / main.js slot 3): build banner row (b07-08), hide "Hold to talk" offline (needs an offline class from main.js), dock the quick-chat row to the bottom band.
+- Test: `tests/beta-w07-town-hud.test.js` (OFFLINE stub: 0 DB requests, 0 sockets; never chats). `nav-town`, `town-offline`, `town-8bit-menu`, `nav-town-p2` green.
+- Before / after: `img/w07-{emote,more}-{before,after}.jpg`.
