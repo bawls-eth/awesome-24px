@@ -66,14 +66,15 @@ const enter = (s) => {
   check('loot: with a full backpack (24) a new item is sold on the spot for shards (rare = 15)', l3.n === 24 && l3.gained === 15 && l3.sold, JSON.stringify(l3));
 
   // 3. Equipment and the backpack UI.
-  const e1 = await scene(page, (s) => {
+  const e1 = await scene(page, async (s) => {
+    const wake = () => new Promise((res) => { const t0 = performance.now(); (function poll() { if (!document.querySelector('#realm-bp-list button[data-arm]') || performance.now() - t0 > 3000) res(); else setTimeout(poll, 20); })(); }); // G-03: buttons wake 300 ms after a re-render
     const r = s.realm; r.save.items = [{ n: 1, id: 'sparkwand', r: 2 }, { n: 2, id: 'quickwand', r: 0 }, { n: 3, id: 'heartcharm', r: 1 }, { n: 4, id: 'scholarring', r: 0 }, { n: 5, id: 'luckring', r: 0 }]; r.save.nextUid = 6; r.save.eq = {};
     r._calcStats(); const base = { ...r.stats };
     r.setPaused(true); const o = { paused: r.paused, open: !document.getElementById('realm-backpack').classList.contains('hidden'), rows: document.querySelectorAll('#realm-bp-list li').length, statLine: document.getElementById('realm-bp-stats').textContent };
-    document.querySelector('#realm-bp-list button[data-act="equip"][data-uid="1"]').click(); o.dmg = r.stats.dmg; o.base = base.dmg; o.line = document.getElementById('realm-bp-stats').textContent;
-    document.querySelector('#realm-bp-list button[data-act="equip"][data-uid="2"]').click(); o.swapped = r.save.eq.weapon; o.rate = r.stats.rate; o.dmgBack = r.stats.dmg; // one weapon at a time
-    document.querySelector('#realm-bp-list button[data-act="equip"][data-uid="3"]').click(); o.maxHp = r.stats.maxHp; o.baseHp = base.maxHp; // uncommon Hearty Charm: +12 * 1.6 = 19
-    document.querySelector('#realm-bp-list button[data-act="equip"][data-uid="4"]').click(); o.xp = r.stats.xp;
+    await wake(); document.querySelector('#realm-bp-list button[data-act="equip"][data-uid="1"]').click(); o.dmg = r.stats.dmg; o.base = base.dmg; o.line = document.getElementById('realm-bp-stats').textContent;
+    await wake(); document.querySelector('#realm-bp-list button[data-act="equip"][data-uid="2"]').click(); o.swapped = r.save.eq.weapon; o.rate = r.stats.rate; o.dmgBack = r.stats.dmg; // one weapon at a time
+    await wake(); document.querySelector('#realm-bp-list button[data-act="equip"][data-uid="3"]').click(); o.maxHp = r.stats.maxHp; o.baseHp = base.maxHp; // uncommon Hearty Charm: +12 * 1.6 = 19
+    await wake(); document.querySelector('#realm-bp-list button[data-act="equip"][data-uid="4"]').click(); o.xp = r.stats.xp;
     o.on = document.querySelectorAll('#realm-bp-list li.on').length;
     o.saved = JSON.parse(localStorage.getItem('pixeltown-save-v1')).realm.eq;
     return o;
@@ -81,18 +82,23 @@ const enter = (s) => {
   check('backpack: opening it pauses the fight and lists every item with Equip / Sell buttons and a stat summary', e1.paused && e1.open && e1.rows === 5 && /HP/.test(e1.statLine) && /shots\/s/.test(e1.statLine), JSON.stringify(e1));
   check('equip: a rare Spark Wand adds +1.2 damage, equipping another weapon swaps it, an uncommon Hearty Charm adds 19 max HP, a Scholar Ring +12% xp', Math.abs(e1.dmg - (e1.base + 1.2)) < 0.01 && e1.swapped === 2 && Math.abs(e1.rate - 9) < 0.01 && e1.dmgBack === e1.base && e1.maxHp === e1.baseHp + 19 && Math.abs(e1.xp - 1.12) < 0.001 && e1.on === 3, JSON.stringify(e1));
   check('equip: the loadout is saved by item id under the realm key', e1.saved && e1.saved.weapon === 2 && e1.saved.charm === 3 && e1.saved.ring === 4, JSON.stringify(e1.saved));
-  const e2 = await scene(page, (s) => {
+  const e2 = await scene(page, async (s) => {
+    const wake = () => new Promise((res) => { const t0 = performance.now(); (function poll() { if (!document.querySelector('#realm-bp-list button[data-arm]') || performance.now() - t0 > 3000) res(); else setTimeout(poll, 20); })(); }); // G-03: buttons wake 300 ms after a re-render
     const r = s.realm; const o = {};
     const e = r.spawnEnemy('aimed', 600, 100); e.cd = 999; e.dir = 0; const x0 = e.x; const t0 = e.t; window.__st(30); o.frozen = e.x === x0 && e.t === t0; // paused: nothing moves
     r.setPaused(false); o.resumed = !r.paused && document.getElementById('realm-backpack').classList.contains('hidden'); window.__st(30); o.moved = e.t > t0;
     r.setPaused(true);
-    const sh = r.save.shards; document.querySelector('#realm-bp-list button[data-act="discard"][data-uid="2"]').click();
+    // G-03: an equipped item asks "Sure?" first (data-act sell-ask), the second click sells
+    await wake(); const sh = r.save.shards; document.querySelector('#realm-bp-list li[data-uid="2"] button.dc').click();
+    await new Promise((res) => setTimeout(res, 30)); o.asked = /Sure/.test(document.querySelector('#realm-bp-list li[data-uid="2"] button.dc').textContent) && r.save.items.some((i) => i.n === 2);
+    await wake(); await new Promise((res) => { const t0 = performance.now(); (function poll() { const b = document.querySelector('#realm-bp-list li[data-uid="2"] button.dc'); if (!b || !b.disabled || performance.now() - t0 > 3000) res(); else setTimeout(poll, 20); })(); });
+    document.querySelector('#realm-bp-list li[data-uid="2"] button.dc').click();
     o.sold = r.save.shards - sh; o.gone = !r.save.items.some((i) => i.n === 2); o.unequipped = r.save.eq.weapon === undefined; o.rate = r.stats.rate; o.rows = document.querySelectorAll('#realm-bp-list li').length;
     r.setPaused(false); e.active = false;
     return o;
   });
   check('backpack: the game is frozen while it is open and resumes when closed', e2.frozen && e2.resumed && e2.moved, JSON.stringify(e2));
-  check('sell: selling an equipped common item pays 3 shards, removes it, unequips it and the stat bonus goes away', e2.sold === 3 && e2.gone && e2.unequipped && Math.abs(e2.rate - 7.5) < 0.01 && e2.rows === 4, JSON.stringify(e2));
+  check('sell: selling an equipped common item asks "Sure?" first (G-03), then pays 3 shards, removes it, unequips it and the stat bonus goes away', e2.asked && e2.sold === 3 && e2.gone && e2.unequipped && Math.abs(e2.rate - 7.5) < 0.01 && e2.rows === 4, JSON.stringify(e2));
   const e3 = await scene(page, (s) => {
     const r = s.realm; const run = (withWand) => {
       r.save.items = [{ n: 1, id: 'sparkwand', r: 2 }]; r.save.eq = withWand ? { weapon: 1 } : {}; r._calcStats();

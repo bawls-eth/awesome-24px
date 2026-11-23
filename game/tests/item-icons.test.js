@@ -44,7 +44,7 @@ const icons = (page, sel) => page.evaluate((s) => [...document.querySelectorAll(
     check(`${label}: rarity colors still apply`, col.length === 8 && new Set(col).size >= 4, col.join('|'));
     const bd = await p.evaluate(() => getComputedStyle(document.querySelector('#realm-bp-list img.realm-ico')).borderTopColor + '|' + getComputedStyle(document.querySelector('#realm-bp-list .nm')).color);
     check(`${label}: icon border follows rarity color`, bd.split('|')[0] === bd.split('|')[1], bd);
-    check(`${label}: Sell and Equip buttons unchanged`, await p.evaluate(() => document.querySelectorAll('#realm-bp-list button[data-act="discard"]').length === 8 && !!document.querySelector('#realm-bp-list button[data-act="equip"]')));
+    check(`${label}: Sell and Equip buttons unchanged`, await p.evaluate(() => document.querySelectorAll('#realm-bp-list button.dc[data-act="discard"], #realm-bp-list button.dc[data-act="sell-ask"]').length === 8 && !!document.querySelector('#realm-bp-list button[data-act="equip"]')));
     check(`${label}: no horizontal scroll (backpack)`, await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1));
     await p.evaluate(() => { window.__mm.arena.setPaused(false); window.__mm.arena._panel('shop'); });
     await p.waitForTimeout(400);
