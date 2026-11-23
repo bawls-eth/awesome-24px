@@ -80,11 +80,16 @@ Each entry: item id, commit, tests, how a tester re-verifies. Run any test alone
 | G-11 Stalk clock moved back | a864761 | beta-g11-stalk-clock |
 | G-09 Survivor's cache needs effort | 91b1c1c | beta-g09-survivor-cache |
 | G-18 b10-09 Jam tier lock / b04-09 Blacksmith line / b11-05 + b11-11 Stalk | 815763b, 19f381e, c12b547 | beta-g18-small-logic |
+| G-18 b10-05 Jam stale HUD / b04-11 M opens the map / b01-08 blur clears sticks / b11-07 + b15-12 Deepdelve craft labels | 67e04b8, 96369e1, 2a1fda7, 7950773 | beta-g18-small-logic |
+| G-27 b03-09 Trial on a clear field (no mobs / events) / b03-10 Trial fall result line | 82a1061 | beta-g27-trial-polish |
+| G-22 follow-up 2: soothe on = companions skip every tameable creature (fixes an intermittent beta-g22 hit) | 61f8159 | beta-g22-tame-safe, isles-first-ten |
 
 ## Open / not done in this lane
 - O-01 (arcade door rename): waits for the owner (not a safe default).
-- G-18 remaining sub-items (Pop preview, Dash ghost per course, blur clears sticks, Lantern Start-run reason, hero level in HUD, Stats tab deltas,
-  M / Tab map, Isles Back -> Town, mm-nav Back closes the Menu, Deepdelve craft labels, Jam stale HUD, second invite queue), G-19, G-27.
+- G-18 remaining sub-items: Pop preview over-promise (b09-04), Dash ghost per course (b09-07, touches the cross-tab ghost merge), Lantern
+  Start-run reason (b11-09, lantern.js released to Perf), hero level in the Realm HUD (b11-10, needs a design call), Stats tab deltas (b02-08),
+  Isles Back -> Town (b07-14, Town join flow), mm-nav Back closes the Menu (b15-13, history entry side effects), second invite queue (b14-11,
+  net.js). G-19 (AI polish) not started. G-27 gate art / route (b03-11) and boss HP by floor (b03-12, balance, owner) not done.
 - Requests to Perf+Systems: add `pixeltown-deep-v1` (G-25) and `pixeltown-isle-nodes-v1` (G-26) to MMBackup KNOWN (plain-object cleaners).
   The Keepsake `rk` / `md` fields (G-05) need nothing: mm-v1 is cleaned by MMProfile.clean, which keeps them.
 - For World+Graphics: the Bugs festival summary card now holds real pointer taps for its holdMs (G-17 kit default);
