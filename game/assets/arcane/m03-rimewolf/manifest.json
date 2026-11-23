@@ -1,0 +1,738 @@
+{
+  "batch": "m03",
+  "label": "rimewolf",
+  "assets": [
+    {
+      "id": "rimewolf_idle_down",
+      "path": "creatures/rimewolf/rimewolf_idle_down.png",
+      "category": "enemy",
+      "enemy": "rimewolf",
+      "creature": "rimewolf",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 96,
+        "y": 171
+      }
+    },
+    {
+      "id": "rimewolf_mount_idle_down",
+      "path": "creatures/rimewolf/rimewolf_mount_idle_down.png",
+      "category": "mount",
+      "enemy": "rimewolf",
+      "creature": "rimewolf",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 343
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 84
+        },
+        {
+          "x": 192,
+          "y": 80
+        },
+        {
+          "x": 192,
+          "y": 84
+        },
+        {
+          "x": 192,
+          "y": 88
+        }
+      ]
+    },
+    {
+      "id": "rimewolf_saddle_idle_down",
+      "path": "creatures/rimewolf/rimewolf_saddle_idle_down.png",
+      "category": "mount",
+      "enemy": "rimewolf",
+      "creature": "rimewolf",
+      "action": "idle",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 343
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 84
+        },
+        {
+          "x": 192,
+          "y": 80
+        },
+        {
+          "x": 192,
+          "y": 84
+        },
+        {
+          "x": 192,
+          "y": 88
+        }
+      ]
+    },
+    {
+      "id": "rimewolf_move_down",
+      "path": "creatures/rimewolf/rimewolf_move_down.png",
+      "category": "enemy",
+      "enemy": "rimewolf",
+      "creature": "rimewolf",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 96,
+        "y": 171
+      }
+    },
+    {
+      "id": "rimewolf_mount_move_down",
+      "path": "creatures/rimewolf/rimewolf_mount_move_down.png",
+      "category": "mount",
+      "enemy": "rimewolf",
+      "creature": "rimewolf",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 343
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 84
+        },
+        {
+          "x": 192,
+          "y": 76
+        },
+        {
+          "x": 192,
+          "y": 80
+        },
+        {
+          "x": 192,
+          "y": 84
+        },
+        {
+          "x": 192,
+          "y": 88
+        },
+        {
+          "x": 192,
+          "y": 84
+        }
+      ]
+    },
+    {
+      "id": "rimewolf_saddle_move_down",
+      "path": "creatures/rimewolf/rimewolf_saddle_move_down.png",
+      "category": "mount",
+      "enemy": "rimewolf",
+      "creature": "rimewolf",
+      "action": "move",
+      "dir": "down",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 343
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 84
+        },
+        {
+          "x": 192,
+          "y": 76
+        },
+        {
+          "x": 192,
+          "y": 80
+        },
+        {
+          "x": 192,
+          "y": 84
+        },
+        {
+          "x": 192,
+          "y": 88
+        },
+        {
+          "x": 192,
+          "y": 84
+        }
+      ]
+    },
+    {
+      "id": "rimewolf_attack_down",
+      "path": "creatures/rimewolf/rimewolf_attack_down.png",
+      "category": "enemy",
+      "enemy": "rimewolf",
+      "creature": "rimewolf",
+      "action": "attack",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 96,
+        "y": 171
+      }
+    },
+    {
+      "id": "rimewolf_death_down",
+      "path": "creatures/rimewolf/rimewolf_death_down.png",
+      "category": "enemy",
+      "enemy": "rimewolf",
+      "creature": "rimewolf",
+      "action": "death",
+      "dir": "down",
+      "frames": 5,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 96,
+        "y": 171
+      }
+    },
+    {
+      "id": "rimewolf_idle_up",
+      "path": "creatures/rimewolf/rimewolf_idle_up.png",
+      "category": "enemy",
+      "enemy": "rimewolf",
+      "creature": "rimewolf",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 96,
+        "y": 171
+      }
+    },
+    {
+      "id": "rimewolf_mount_idle_up",
+      "path": "creatures/rimewolf/rimewolf_mount_idle_up.png",
+      "category": "mount",
+      "enemy": "rimewolf",
+      "creature": "rimewolf",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 343
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 152
+        },
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 160
+        }
+      ]
+    },
+    {
+      "id": "rimewolf_saddle_idle_up",
+      "path": "creatures/rimewolf/rimewolf_saddle_idle_up.png",
+      "category": "mount",
+      "enemy": "rimewolf",
+      "creature": "rimewolf",
+      "action": "idle",
+      "dir": "up",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 343
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 152
+        },
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 160
+        }
+      ]
+    },
+    {
+      "id": "rimewolf_move_up",
+      "path": "creatures/rimewolf/rimewolf_move_up.png",
+      "category": "enemy",
+      "enemy": "rimewolf",
+      "creature": "rimewolf",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 96,
+        "y": 171
+      }
+    },
+    {
+      "id": "rimewolf_mount_move_up",
+      "path": "creatures/rimewolf/rimewolf_mount_move_up.png",
+      "category": "mount",
+      "enemy": "rimewolf",
+      "creature": "rimewolf",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 343
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 148
+        },
+        {
+          "x": 192,
+          "y": 152
+        },
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 160
+        },
+        {
+          "x": 192,
+          "y": 156
+        }
+      ]
+    },
+    {
+      "id": "rimewolf_saddle_move_up",
+      "path": "creatures/rimewolf/rimewolf_saddle_move_up.png",
+      "category": "mount",
+      "enemy": "rimewolf",
+      "creature": "rimewolf",
+      "action": "move",
+      "dir": "up",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 343
+      },
+      "seat": [
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 148
+        },
+        {
+          "x": 192,
+          "y": 152
+        },
+        {
+          "x": 192,
+          "y": 156
+        },
+        {
+          "x": 192,
+          "y": 160
+        },
+        {
+          "x": 192,
+          "y": 156
+        }
+      ]
+    },
+    {
+      "id": "rimewolf_attack_up",
+      "path": "creatures/rimewolf/rimewolf_attack_up.png",
+      "category": "enemy",
+      "enemy": "rimewolf",
+      "creature": "rimewolf",
+      "action": "attack",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 96,
+        "y": 171
+      }
+    },
+    {
+      "id": "rimewolf_death_up",
+      "path": "creatures/rimewolf/rimewolf_death_up.png",
+      "category": "enemy",
+      "enemy": "rimewolf",
+      "creature": "rimewolf",
+      "action": "death",
+      "dir": "up",
+      "frames": 5,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 96,
+        "y": 171
+      }
+    },
+    {
+      "id": "rimewolf_idle_right",
+      "path": "creatures/rimewolf/rimewolf_idle_right.png",
+      "category": "enemy",
+      "enemy": "rimewolf",
+      "creature": "rimewolf",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 96,
+        "y": 171
+      }
+    },
+    {
+      "id": "rimewolf_mount_idle_right",
+      "path": "creatures/rimewolf/rimewolf_mount_idle_right.png",
+      "category": "mount",
+      "enemy": "rimewolf",
+      "creature": "rimewolf",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 343
+      },
+      "seat": [
+        {
+          "x": 164,
+          "y": 140
+        },
+        {
+          "x": 164,
+          "y": 136
+        },
+        {
+          "x": 164,
+          "y": 140
+        },
+        {
+          "x": 164,
+          "y": 144
+        }
+      ]
+    },
+    {
+      "id": "rimewolf_saddle_idle_right",
+      "path": "creatures/rimewolf/rimewolf_saddle_idle_right.png",
+      "category": "mount",
+      "enemy": "rimewolf",
+      "creature": "rimewolf",
+      "action": "idle",
+      "dir": "right",
+      "frames": 4,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 343
+      },
+      "seat": [
+        {
+          "x": 164,
+          "y": 140
+        },
+        {
+          "x": 164,
+          "y": 136
+        },
+        {
+          "x": 164,
+          "y": 140
+        },
+        {
+          "x": 164,
+          "y": 144
+        }
+      ]
+    },
+    {
+      "id": "rimewolf_move_right",
+      "path": "creatures/rimewolf/rimewolf_move_right.png",
+      "category": "enemy",
+      "enemy": "rimewolf",
+      "creature": "rimewolf",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 96,
+        "y": 171
+      }
+    },
+    {
+      "id": "rimewolf_mount_move_right",
+      "path": "creatures/rimewolf/rimewolf_mount_move_right.png",
+      "category": "mount",
+      "enemy": "rimewolf",
+      "creature": "rimewolf",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 343
+      },
+      "seat": [
+        {
+          "x": 164,
+          "y": 140
+        },
+        {
+          "x": 164,
+          "y": 132
+        },
+        {
+          "x": 164,
+          "y": 136
+        },
+        {
+          "x": 164,
+          "y": 140
+        },
+        {
+          "x": 164,
+          "y": 144
+        },
+        {
+          "x": 164,
+          "y": 140
+        }
+      ]
+    },
+    {
+      "id": "rimewolf_saddle_move_right",
+      "path": "creatures/rimewolf/rimewolf_saddle_move_right.png",
+      "category": "mount",
+      "enemy": "rimewolf",
+      "creature": "rimewolf",
+      "action": "move",
+      "dir": "right",
+      "frames": 6,
+      "frame_w": 384,
+      "frame_h": 384,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 192,
+        "y": 343
+      },
+      "seat": [
+        {
+          "x": 164,
+          "y": 140
+        },
+        {
+          "x": 164,
+          "y": 132
+        },
+        {
+          "x": 164,
+          "y": 136
+        },
+        {
+          "x": 164,
+          "y": 140
+        },
+        {
+          "x": 164,
+          "y": 144
+        },
+        {
+          "x": 164,
+          "y": 140
+        }
+      ]
+    },
+    {
+      "id": "rimewolf_attack_right",
+      "path": "creatures/rimewolf/rimewolf_attack_right.png",
+      "category": "enemy",
+      "enemy": "rimewolf",
+      "creature": "rimewolf",
+      "action": "attack",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 96,
+        "y": 171
+      }
+    },
+    {
+      "id": "rimewolf_death_right",
+      "path": "creatures/rimewolf/rimewolf_death_right.png",
+      "category": "enemy",
+      "enemy": "rimewolf",
+      "creature": "rimewolf",
+      "action": "death",
+      "dir": "right",
+      "frames": 5,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 10,
+      "loop": false,
+      "anchor": {
+        "x": 96,
+        "y": 171
+      }
+    },
+    {
+      "id": "rimewolf_sleep_down",
+      "path": "creatures/rimewolf/rimewolf_sleep_down.png",
+      "category": "enemy",
+      "enemy": "rimewolf",
+      "creature": "rimewolf",
+      "action": "sleep",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 6,
+      "loop": true,
+      "anchor": {
+        "x": 96,
+        "y": 171
+      }
+    },
+    {
+      "id": "rimewolf_eat_down",
+      "path": "creatures/rimewolf/rimewolf_eat_down.png",
+      "category": "enemy",
+      "enemy": "rimewolf",
+      "creature": "rimewolf",
+      "action": "eat",
+      "dir": "down",
+      "frames": 4,
+      "frame_w": 192,
+      "frame_h": 192,
+      "fps": 8,
+      "loop": true,
+      "anchor": {
+        "x": 96,
+        "y": 171
+      }
+    }
+  ]
+}
