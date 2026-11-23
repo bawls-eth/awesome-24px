@@ -3501,20 +3501,25 @@ class TownScene extends Phaser.Scene {
 
   setupRealmInvites() {
     if (!this.net || !this.net.realmListenInvites) return;
-    this.net.realmListenInvites((inv) => this.showRealmInvite(inv));
+    this.net.realmListenInvites((inv) => { if (this.acceptNetInvite(inv)) this.showRealmInvite(inv); });
     document.getElementById('realm-invite-accept').addEventListener('click', () => this.acceptRealmInvite());
     document.getElementById('realm-invite-decline').addEventListener('click', () => this.hideRealmInvite());
     setInterval(() => { const d = this._deferredInvite; if (d && !this.inRealm && !this.inUnderground) { if (Date.now() - d.at < 60000) this.showRealmInvite(d.inv); else this._deferredInvite = null; } }, 1500);
   }
 
-  showRealmInvite(inv) {
-    // Invite spam (netsafety P2-1): only from players in town, one per sender per 10 s, never over an invite already showing.
-    if (!inv || typeof inv !== 'object' || !this.allPlayers.has(inv.from)) return;
-    if (this.realmInviteIn && this.realmInviteIn !== inv) return;
+  // Invite spam (netsafety P2-1), for invites that arrive over the network: only from players in town, one per sender per 10 s,
+  // never over an invite already showing.
+  acceptNetInvite(inv) {
+    if (!inv || typeof inv !== 'object' || typeof inv.from !== 'string' || !this.allPlayers.has(inv.from)) return false;
+    if (this.realmInviteIn) return false;
     this._inviteSeen = this._inviteSeen || new Map();
     const seenAt = this._inviteSeen.get(inv.from);
-    if (seenAt !== undefined && Date.now() - seenAt < 10000 && !(this._deferredInvite && this._deferredInvite.inv === inv)) return;
+    if (seenAt !== undefined && Date.now() - seenAt < 10000) return false;
     this._inviteSeen.set(inv.from, Date.now());
+    return true;
+  }
+
+  showRealmInvite(inv) {
     if (this.inRealm || this.inUnderground) { this._deferredInvite = { inv, at: Date.now() }; return; } // busy: show it the moment we are back in town (for up to 60 s)
     this._deferredInvite = null;
     this.closeNavSheet(); // review N2: the invite (z 100000) must be reachable by keyboard, not hidden behind a focus-trapping sheet

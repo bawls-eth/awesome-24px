@@ -120,15 +120,18 @@ async function open(browser, viewport, touch, qs) {
       const firstDrawn = [...s.remotePlayers.keys()][0];
       if (wired) fire('playerLeft', firstDrawn); else { s.allPlayers.delete(firstDrawn); s.removeRemotePlayer(firstDrawn); s.fillRemoteSlot(); }
       const refilled = s.remotePlayers.size;
-      s.showRealmInvite({ from: 'not-in-town', fromName: 'x', party: 'p1', mode: 'coop' });
-      const strangerShown = !document.getElementById('realm-invite').classList.contains('hidden');
+      const stranger = s.acceptNetInvite({ from: 'not-in-town-id', fromName: 'x', party: 'p1aaaaaaaa', mode: 'coop' });
+      const friendId = [...s.allPlayers.keys()].find((k) => k !== s.net.id);
+      const first = s.acceptNetInvite({ from: friendId, fromName: 'f', party: 'p2aaaaaaaa', mode: 'coop' });
+      const again = s.acceptNetInvite({ from: friendId, fromName: 'f', party: 'p3aaaaaaaa', mode: 'coop' });
+      const strangerShown = stranger || !first || again;
       const legacyTileset = s.safeTexture('baked_1', 0).key;
       return { wired, drawn, refilled, renders, strangerShown, legacyTileset, all: s.allPlayers.size };
     });
     check('flood: at most 60 remote avatars drawn for 150 records', n.drawn === 60 && n.all >= 150, JSON.stringify(n));
     check('flood: a freed slot is refilled from the waiting records', n.refilled === 60, JSON.stringify(n));
     check('flood: the player list is rebuilt a few times, not once per record', n.renders <= 3, JSON.stringify(n));
-    check('invite from an id that is not in town is ignored', !n.strangerShown, JSON.stringify(n));
+    check('network invites: a stranger is ignored, a player in town gets one, a repeat within 10 s is dropped', !n.strangerShown, JSON.stringify(n));
     check('a remote species can never be an arbitrary loaded texture', /^hero_/.test(n.legacyTileset), n.legacyTileset);
     // A11y landmarks + walkie contrast.
     const a = await p.page.evaluate(() => {
