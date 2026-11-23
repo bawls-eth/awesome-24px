@@ -19,12 +19,7 @@ async function restoreFile(page, obj) {
   const text = typeof obj === 'string' ? obj : JSON.stringify(obj);
   page.once('dialog', (d) => d.accept().catch(() => {}));
   await page.setInputFiles('#save-import-input', { name: 'backup.json', mimeType: 'application/json', buffer: Buffer.from(text) });
-  // A fix may show an in-page confirm: press its OK / Restore button if one appears.
-  await page.waitForTimeout(600);
-  for (const sel of ['#mm-confirm-ok', 'button:has-text("Restore")', 'button:has-text("Replace")', 'button:has-text("Yes")']) {
-    const loc = page.locator(sel).filter({ visible: true }).first();
-    if (await loc.count().catch(() => 0)) { await loc.click({ timeout: 1000 }).catch(() => {}); break; }
-  }
+  // The fix asks with window.confirm (accepted by the dialog handler above) after lazy-loading the backup modules.
   await page.waitForTimeout(2500); // the restore reloads after ~800 ms; storage is what we assert
 }
 
@@ -60,6 +55,8 @@ async function restoreFile(page, obj) {
       const bundle = { format: 'pixeltown-backup', v: 2, keys: { [SK]: JSON.stringify(innerTown), 'pixeltown-gift-v1': JSON.stringify({ v: 1, days: 3, last: '2026-11-20' }) } };
       await fresh();
       await restoreFile(page, bundle);
+      // the bundle path lazy-loads the backup modules and reloads: wait for the condition (bounded), not a longer sleep
+      await page.waitForFunction((k) => { try { const s = JSON.parse(localStorage.getItem(k)); return !!s && (s.name === 'ADMINqaBundle' || 'format' in s); } catch (e) { return false; } }, SK, { timeout: 15000 }).catch(() => {});
       const after = await stored(page);
       check('b14-03: after restoring a Lantern bundle the town save is NOT the bundle object (no format / keys)', after && after !== 'CORRUPT' && !('format' in after) && !('keys' in after), JSON.stringify(after).slice(0, 160));
       check('b14-03: the bundle\'s town save fields are restored (name, wood 12, stone 7)', after && after.name === 'ADMINqaBundle' && after.resources && after.resources.wood === 12 && after.resources.stone === 7, JSON.stringify(after).slice(0, 160));
