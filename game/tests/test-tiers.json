@@ -1402,5 +1402,9 @@
   "realm-backpack-8bit.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "realm-hud-8bit.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }
