@@ -350,7 +350,9 @@
     if (p.heroes.length >= HERO_CAP || !unlockedSet(p)[cls] || !Object.prototype.hasOwnProperty.call(MMClasses.CLASSES, cls)) return null;
     let n = 1, id; do { id = 'hero-' + cls + '-' + (n++); } while (p.heroes.some((x) => x.id === id));
     p.heroes.push({ id, name: MMClasses.CLASSES[cls].name.slice(0, 24), cls, level: 1, xp: 0, fame: 0, bonus: 0, mode: p.mode === 'picnic' ? 'picnic' : 'classic', items: [] });
-    try { localStorage.setItem(MMProfile.KEY, JSON.stringify(MMProfile.clean(p))); } catch (e) { return null; }
+    const rec = p.heroes[p.heroes.length - 1];
+    // S-10 (b15-02): with site data blocked the hero cannot be saved; play it for this visit instead of leaving a fresh player stuck in the picker
+    try { localStorage.setItem(MMProfile.KEY, JSON.stringify(MMProfile.clean(p))); } catch (e) { applyHero(rec); rec.sessionOnly = true; return rec; }
     return selectHero(id);
   }
   function selectHero(id) {
@@ -487,7 +489,7 @@
       if (nc) {
         if (nc.disabled) return; const first = heroState().prof.heroes.length === 0; const h = createHero(nc.dataset.newcls);
         if (!h) { status.textContent = 'Could not create that hero (roster full, class locked, or storage blocked).'; return; }
-        creating = false; status.textContent = h.name + ' is ready. Class stats, abilities and art applied.';
+        creating = false; status.textContent = h.sessionOnly ? h.name + ' is ready for this visit (site data is blocked, so heroes are not saved).' : h.name + ' is ready. Class stats, abilities and art applied.';
         if (first) arena.setPaused(false); else renderPick();
         return;
       }
@@ -633,7 +635,7 @@
   const AX_ON = !!AXM && params.get('settings') !== '0';
   // AR (NEXT-SLICES-3 Wave 4): one-thumb mode, aim toggle, bullet shapes, HUD text scale in the Realm. ?access2=0 turns them off (the page as before).
   const AX2 = typeof arena.enableAccess2 === 'function' && params.get('access2') !== '0' ? !!arena.enableAccess2() : false;
-  let axPrefs = AX_ON ? AXM.prefs.load(localStorage) : null;
+  let axPrefs = null; try { axPrefs = AX_ON ? AXM.prefs.load(localStorage) : null; } catch (e) { axPrefs = AX_ON ? AXM.prefs.load(null) : null; } // S-10 (b15-02): blocked site data must not stop the Realm booting
   const PERF_ON = !!window.MMPerf;
   const perfSt = { prev: null, samples: [], result: null, auto: false, pools: { sparks: null, ghosts: null }, pf: null };
   function perfPools() { // keep the original pool arrays so caps are fully reversible
@@ -816,7 +818,7 @@
         else if (d.id === 'music') { if (window.RealmAudio) RealmAudio.tick(); }
         else if (d.id === 'reduce-motion') arena.setReduceMotion(!!v);
         else if (d.id === 'text-size' || d.id === 'flashes' || d.id === 'low-gfx') {
-          axPrefs = AXM.prefs.load(localStorage);
+          try { axPrefs = AXM.prefs.load(localStorage); } catch (e) { axPrefs = AXM.prefs.load(null); } // S-10: storage may be blocked
           if (d.id === 'low-gfx' && !v) { perfSt.samples.length = 0; perfSt.auto = false; perfSt.prev = null; }
           axApply(axPrefs);
         }
@@ -889,5 +891,8 @@
   if (TEST) window.__mm = { applyWeapon, arena, dungeon: dungeon ? dungeon.api : null, world: realmWorld ? realmWorld.api : null, team: (realmWorld && realmWorld.team) || null };
   arena.start();
   // A fresh world visit with several owned heroes opens the picker first (?heropick=0 skips it).
-  if (HERO_UI && (!TEST || params.get('heropick') === '1')) { try { if (heroState().prof.heroes.length !== 1) arena.openHeroPanel('pick'); } catch (e) { /* ignore */ } }
+  // S-10 (b15-02): with site data blocked nothing can be saved, so the picker is not forced open on every visit (the profile always reads as
+  // fresh); the run starts with base stats and Menu > Heroes still creates a hero for this visit.
+  const storageOk = (() => { try { const k = '__mm_probe'; localStorage.setItem(k, '1'); localStorage.removeItem(k); return true; } catch (e) { return false; } })();
+  if (HERO_UI && storageOk && (!TEST || params.get('heropick') === '1')) { try { if (heroState().prof.heroes.length !== 1) arena.openHeroPanel('pick'); } catch (e) { /* ignore */ } }
 })();

@@ -481,15 +481,15 @@ body.touch-device #rw-rush, body.touch-device #rw-rush-go { bottom: calc(230px +
 /* W-05 (b01-06): the goal line wraps to a second line instead of an ellipsis, so the target (zone, count) is always readable. */
 #rw-goal { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
 
-/* W-16 (b03-04, b03-06, b03-08): dungeon HUD.
-   Desktop: the 17x13 room sits in the band between the top HUD / boss bar (ends ~106 px) and the key-hint line, so the boss bar never covers the
-   N door row and the S door row is never under the ability bar; the Q/E/R/F bar docks as a column in the free left margin outside the room.
-   (The pointer maps through the canvas bounding rect, so the CSS size is safe; the aspect ratio comes from the canvas backing store.)
+/* W-16 (b03-04, b03-06, b03-08): dungeon HUD. The room canvas keeps its full size (realm-polish3 pins the full-height room); the HUD moves
+   out of the room instead, into the side margins of the 17x13 room on wide desktop screens: the Q/E/R/F bar as a column in the left margin,
+   the key-hint line wrapped in the left margin under the map button, the boss bar in the right margin under the mini-map. So the S door row,
+   the N door row and a hero entering through either are never under HUD.
    Phone portrait: the boss bar sits left of the mini-map and under the mutator chip, above the room. */
-@media (min-width: 900px) and (min-aspect-ratio: 5/4) {
-  body.dungeon-mode:not(.touch-device) #realm-canvas { top: calc(112px + env(safe-area-inset-top, 0px)) !important; height: calc(100vh - 112px - 32px - env(safe-area-inset-top, 0px)) !important; width: auto !important; left: 50% !important; transform: translateX(-50%); }
+@media (min-width: 1100px) and (min-aspect-ratio: 16/10) {
   body.dungeon-mode:not(.touch-device) #realm-abilities { left: calc(16px + env(safe-area-inset-left, 0px)); bottom: calc(64px + env(safe-area-inset-bottom, 0px)); transform: none; flex-direction: column; }
-  body.dungeon-mode:not(.touch-device) #realm-help { bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+  body.dungeon-mode:not(.touch-device) #realm-help { left: calc(10px + env(safe-area-inset-left, 0px)); right: auto; top: calc(132px + env(safe-area-inset-top, 0px)); bottom: auto; transform: none; width: calc((100vw - 100vh * 17 / 13) / 2 - 20px); max-width: none; white-space: normal; text-align: left; font-size: 11px; line-height: 1.35; }
+  body.dungeon-mode:not(.touch-device) #realm-boss { left: auto; right: calc(10px + env(safe-area-inset-right, 0px)); transform: none; top: calc(262px + env(safe-area-inset-top, 0px)); width: calc((100vw - 100vh * 17 / 13) / 2 - 20px); }
 }
 @media (max-width: 600px) and (orientation: portrait) {
   body.dungeon-mode #realm-boss { top: calc(150px + env(safe-area-inset-top, 0px)); left: calc(8px + env(safe-area-inset-left, 0px)); right: auto; transform: none; width: calc(100vw - 8px - 116px); }

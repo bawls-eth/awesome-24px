@@ -8,6 +8,16 @@ const ORIGIN = (process.env.BASE || 'http://localhost:8440/game/index.html').rep
 const hero = { id: 'h1', name: 'Aya', cls: 'ranger', level: 5, xp: 0, fame: 0, bonus: 0, mode: 'classic', items: [] };
 const prof = { v: 1, heroes: [hero], stash: new Array(16).fill(null), fame: 0, mode: 'classic', hall: [], migratedFrom: null };
 
+// G-07: an altar wakes only for a hero standing in its zone (or deeper), so the wake spot is a free tile 2-4 tiles from the altar whose zone is
+// >= the altar's zone (first match in a fixed ring order; falls back to 3 tiles south, the old spot).
+const PLACE_IN_ZONE = (s) => { const a = window.__mm.arena, w = window.__mm.world, Z = window.MMZones; let best = null;
+  for (let r = 2; r <= 4 && !best; r++) for (let dy = -r; dy <= r && !best; dy++) for (let dx = -r; dx <= r && !best; dx++) {
+    if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue; const tx = s.x + dx, ty = s.y + dy;
+    const z = Z.zoneInfoAt(w.world, tx + 0.5, ty + 0.5).zone; if (z >= s.zone && z <= 3 && !(w.solidAt && w.solidAt((tx + 0.5) * 32, (ty + 0.5) * 32))) best = { tx, ty };
+  }
+  if (!best) best = { tx: s.x, ty: s.y + 3 };
+  a.player.x = (best.tx + 0.5) * 32; a.player.y = (best.ty + 0.5) * 32; a.player.iframes = 1e9; return best; };
+
 async function open(browser, seed, block) {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 } });
   await blockDb(ctx);
@@ -32,7 +42,7 @@ async function open(browser, seed, block) {
   const seeds = [11, 4242, 90210];
   for (const seed of seeds) {
     const O = await open(browser, seed, false); const pg = O.page;
-    const info = await pg.evaluate(() => { const a = window.__mm.arena, s = window.__mm.world.bossSites(); const p = a.player; return { p: { x: p.x, y: p.y }, sites: s.map((q) => ({ boss: q.boss, x: q.x, y: q.y, d: Math.hypot(p.x - (q.x + 0.5) * 32, p.y - (q.y + 0.5) * 32) / 32 })) }; });
+    const info = await pg.evaluate(() => { const a = window.__mm.arena, s = window.__mm.world.bossSites(); const p = a.player; return { p: { x: p.x, y: p.y }, sites: s.map((q) => ({ boss: q.boss, x: q.x, y: q.y, zone: q.zone, d: Math.hypot(p.x - (q.x + 0.5) * 32, p.y - (q.y + 0.5) * 32) / 32 })) }; });
     await pg.waitForTimeout(seed === seeds[0] ? 30000 : 4000); // standing on the shore
     const near = info.sites.filter((s) => s.d <= 16).map((s) => s.boss);
     const extra = O.reqs.filter((id) => id !== 'void_oracle' && near.indexOf(id) < 0);
@@ -42,7 +52,7 @@ async function open(browser, seed, block) {
     await pg.evaluate((s) => { const a = window.__mm.arena; a.player.x = (s.x + 13.5) * 32; a.player.y = (s.y + 0.5) * 32; a.player.iframes = 1e9; window.__bossArt.scan(); }, site);
     const pre = await pg.waitForFunction((id) => window.__mm.arena._bossArt.has(id) && window.__mm.arena._bossArt.anim(id, 'idle', 'down'), site.boss, { timeout: 15000 }).then(() => true).catch(() => false);
     check('seed ' + seed + ': ' + site.boss + ' strips are loaded before it wakes (13 tiles away, not live yet)', pre && !(await pg.evaluate(() => window.__mm.world.bossSites()[0].live)));
-    await pg.evaluate((s) => { const a = window.__mm.arena; a.player.x = (s.x + 0.5) * 32; a.player.y = (s.y + 3.5) * 32; }, site);
+    await pg.evaluate(`(${PLACE_IN_ZONE.toString()})(${JSON.stringify(site)})`);
     const live = await pg.waitForFunction(() => window.__mm.world.bossSites()[0].live && window.__w02.first.length > 0, null, { timeout: 10000 }).then(() => true).catch(() => false);
     const first = await pg.evaluate(() => window.__w02.first);
     check('seed ' + seed + ': on "awakens" the first boss frame is the sprite (fallback 0)', live && first.length >= 1 && first[0].ok === true && first[0].name === site.boss, JSON.stringify(first));
@@ -52,7 +62,7 @@ async function open(browser, seed, block) {
   // Blocked art: the procedural boss draws and the fight keeps running.
   const B = await open(browser, seeds[0], true); const bp = B.page;
   const s0 = await bp.evaluate(() => window.__mm.world.bossSites()[0]);
-  await bp.evaluate((s) => { const a = window.__mm.arena; a.player.x = (s.x + 0.5) * 32; a.player.y = (s.y + 3.5) * 32; a.player.iframes = 1e9; }, s0);
+  await bp.evaluate(`(${PLACE_IN_ZONE.toString()})(${JSON.stringify(s0)})`);
   const bl = await bp.waitForFunction(() => window.__mm.world.bossSites()[0].live && window.__w02.first.length > 0, null, { timeout: 10000 }).then(() => true).catch(() => false);
   const c0 = await bp.evaluate(() => window.__mm.arena.clock); await bp.waitForTimeout(1500);
   const after = await bp.evaluate(() => { const a = window.__mm.arena, e = window.__mm.world.bossEntity(0); return { clock: a.clock, state: a.state, active: !!(e && e.active), hp: e && e.hp, first: window.__w02.first }; });
