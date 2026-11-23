@@ -21,6 +21,11 @@ tutorial coach, world HUD, dungeons, death / fall screen, settings, hostile save
 | 13 | a11y sweep: no `<main>`, no h1, unlabelled `#realm-canvas`. | Low | `index.html` (overlay `role=main`, screen-reader h1), `realm.js` (canvas `role=img` + label). |
 | 14 | a11y sweep: world primary action 12 Tabs away; the dungeon had zero Tab stops (Tab was swallowed as the map key). | High (keyboard) | The play field `#realm-canvas-wrap` is a labelled Tab stop (first in the overlay, focus ring); dungeon Tab toggles the map only while the play field has focus, M toggles it anywhere. |
 | 15 | a11y sweep: high-contrast / reduce-motion prefs never reached `<html>` on Realm pages. | Low | `mm-settings.js` is now on the page; its boot `apply()` sets `data-high-contrast` / `data-reduce-motion`. |
+| 16 | Co-op (?party=local) on phones: the partner distance chip sat on top of the goal line; its text was 11 px. | Low | `realm-world.js` goal line stops short of the chip; `world-team.js` chip 12 px. |
+| 17 | Phone boss fights (Trial of Six, altars): the zone line covered the boss bar's name ("Lich King · phase 1"). | Medium | `realm-world.js`: the zone line moves under the boss bar; the goal line steps aside during a boss fight. |
+
+Also played without finding new bugs: all four dungeon biomes, floor 2-3 deep runs, mutators (Swarm, Mirror), ?difficulty=off, rapid bag / board / Esc taps,
+portrait to landscape resize mid-run, hero picker at 390 / 844x390 / 1280, backpack compare, Nexus open, Trial of Six step 1 then the rest choice, reduced motion + low gfx + 150% text.
 
 ## Open (not fixed)
 | Title | Repro | Expected / actual | Severity | Where |
