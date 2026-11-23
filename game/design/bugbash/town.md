@@ -20,6 +20,8 @@ rotate. New test: `game/tests/town-bugbash.test.js` (browser, smoke). Screenshot
 12. **Net safety (main.js side of netsafety.md)**: at most 60 remote avatars drawn (freed slots refill), player list rebuilt at most every 250 ms, blocks drawn capped at 1500, Realm invites only from players in town / 1 per sender per 10 s / never over a showing one, walkie memos typed + size-capped + bestie-only, `?legacyart=1` resolves only real species keys.
 13. **A11y**: `role=main` + one hidden `<h1>` + canvas `aria-label`; landscape counters 12 px; `mm-reduce-motion` honoured (`data-reduce-motion` on `<html>`); 150% text moves the gate chip below the zoomed Menu and scales chat / quick chat / chip text. 24 of 27 town a11y offenders gone (allow-list pruned).
 14. **Shared Settings**: "⚙️ Settings" in More opens `MMSettings`; sound, music, reduced motion and text size reach the Town live; the Town does not act behind it.
+16. **Front door**: a plain visit to `game/index.html` (no query, no same-origin referrer, top window, not webdriver) now opens the Hub Home with `location.replace`; any query (`?from=hub`, `?town=1`, ...), in-game links and iframes stay. The Town's "World map" link opens `hub/index.html?map=1`. Test: `town-front-door.test.js`.
+17. **Realm invite guard** applies to network invites only (`acceptNetInvite`), so local/test invites still open.
 15. **town-perf.test.js joined the LIVE town** (HTTP-only block): now blockDb + SDK stub + Play offline, class browser.
 
 ## Open
