@@ -35,4 +35,5 @@ portrait to landscape resize mid-run, hero picker at 390 / 844x390 / 1280, backp
 | A big shore creature with dense bullet rings near the Lv 1 spawn on some seeds ("Safe-ish") | fresh world, walk east 3 s (desktop, seed varies) | first fight felt busy for Lv 1 | Low (tuning) | mm-zones / world spawn tables |
 
 ## Elsewhere (other lanes)
+- Town (`game/index.html`, town lane): it loads `realm-ui.css?v=20261122r`, `realm-8bit.css?v=20261122a` and `realm.js?v=20261122r`. Bump those `?v=` stamps when this branch merges so the in-town Realm overlay picks up the fixes (locked ability labels, backpack tabs, HP text, death / panel cues, pad Back).
 - Note from intake: the b12r props redraw is NOT wired here (Codex redoes it at 1:1).
