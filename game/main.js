@@ -2127,6 +2127,20 @@ class TownScene extends Phaser.Scene {
 
     const photoBtn = document.getElementById('mobile-photo-btn');
     if (photoBtn) photoBtn.addEventListener('click', () => this.takePhoto());
+    // town-8bit: the touch strip shows Emotes, A, Chat and one "More" button; Build, Photo and Tilt sit behind More
+    // (a class on #action-buttons, no per-frame work). Build mode keeps the tray open so B stays under the thumb.
+    const moreBtn = document.getElementById('hud-more-btn');
+    const strip = document.getElementById('action-buttons');
+    if (moreBtn && strip) {
+      const setMore = (open) => {
+        strip.classList.toggle('more-open', open);
+        moreBtn.setAttribute('aria-expanded', String(open));
+        moreBtn.textContent = open ? '✕ Less' : '☰ More';
+      };
+      this.setHudMore = setMore;
+      setMore(false);
+      moreBtn.addEventListener('click', () => setMore(!strip.classList.contains('more-open')));
+    }
   }
 
   // Virtual analog stick (replaces the old 4-button D-pad). Pointer events

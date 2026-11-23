@@ -2899,3 +2899,25 @@ body.touch-device #postcards-hint { bottom: calc(188px + env(safe-area-inset-bot
 #join-btn:active, #join-offline-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--tb-ink) !important; }
 /* Crisp pixels: the world is pixel art, so the canvas scales without smoothing (CSS only, no per-frame cost). */
 #game-container canvas { image-rendering: pixelated; }
+/* Touch strip: Emotes, A, More, Chat by default; Build, Photo and Tilt live behind More and open above it, so A and
+   Chat never move under the thumb.  closed: [Emotes][A] / [More][C]   open: [    ][B] / [Tilt][P] / [Emotes][A] / [More][C] */
+#action-buttons { grid-template-columns: 64px 50px; grid-template-rows: repeat(2, 50px); }
+#action-buttons #emote-toggle-btn { grid-column: 1; grid-row: 1; }
+#action-buttons #interact-btn { grid-column: 2; grid-row: 1; }
+#action-buttons #hud-more-btn { grid-column: 1; grid-row: 2; }
+#action-buttons #mobile-chat-btn { grid-column: 2; grid-row: 2; }
+#action-buttons:not(.more-open) #build-toggle-btn, #action-buttons:not(.more-open) #mobile-photo-btn,
+#action-buttons:not(.more-open) #tilt-toggle-btn { display: none; }
+#action-buttons.more-open { grid-template-rows: repeat(4, 50px); }
+#action-buttons.more-open #build-toggle-btn { grid-column: 2; grid-row: 1; }
+#action-buttons.more-open #tilt-toggle-btn { grid-column: 1; grid-row: 2; }
+#action-buttons.more-open #mobile-photo-btn { grid-column: 2; grid-row: 2; }
+#action-buttons.more-open #emote-toggle-btn { grid-column: 1; grid-row: 3; }
+#action-buttons.more-open #interact-btn { grid-column: 2; grid-row: 3; }
+#action-buttons.more-open #hud-more-btn { grid-column: 1; grid-row: 4; }
+#action-buttons.more-open #mobile-chat-btn { grid-column: 2; grid-row: 4; }
+#action-buttons #hud-more-btn {
+  width: 64px; height: 50px; padding: 0 4px; font: inherit; font-size: 12px; font-weight: 800; line-height: 1.1;
+  border-radius: 0; border: 3px solid var(--tb-ink); background: var(--tb-paper); color: var(--tb-ink); cursor: pointer;
+}
+#action-buttons.more-open #hud-more-btn { background: var(--tb-accent); color: var(--tb-accent-ink); }
