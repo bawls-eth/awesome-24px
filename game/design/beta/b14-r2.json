@@ -1,0 +1,137 @@
+[
+ {
+  "id": "b14-01", "status": "FIXED", "severity": "P0", "area": "saves / Town",
+  "title": "Two Town tabs: the stale tab no longer erases the other tab's resources and lifetime stats (S-02)",
+  "steps": ["One browser context, Town tab A and tab B, both 'Play offline' as ADMINb14r2 (B opened after A joined)", "Tab A: gainResource('wood',1) x5", "Tab B: pick 2 fruit", "Read pixeltown-save-v1; then open a third Town tab C: +3 stone, A +1 wood, B +1 fruit"],
+  "expected": "wood 5 and fruit 2 both kept, lifetimeStats too; same with three tabs",
+  "actual": "Stored {wood:5, fruit:2}, lifetimeStats {wood:5, fruit:2}; tab A's in-memory resources also adopted B's fruit (HUD shows it). Three tabs: {wood:6, stone:3, fruit:3}, lifetimeStats {wood:6, fruit:3, stone:3}. No database traffic, no page errors. QA replay beta-retest-b14 on port 9514: ALL PASSED.",
+  "viewport": "1280x720", "url": "/game/index.html", "screenshots": ["img/b14-r2-01.png"], "clip": null,
+  "suspect": null, "kind": "bug", "frequency": "always"
+ },
+ {
+  "id": "b14-02", "status": "FIXED", "severity": "P0", "area": "saves / Backup",
+  "title": "Lantern Restore while Town tabs are open now survives the Town tab's next action (S-02)",
+  "steps": ["Town tabs A, B, C open (3-tab state above)", "Tab 4: lantern.html -> Back up my progress (real download) -> edit its town save to wood 12, stone 7, achievements craft1+fish1, lifetimeStats wood 40 -> Restore that file -> Confirm ('Restored 1 saved item.')", "Back to tab A: catch 1 fish; tab C: +1 stone", "Read pixeltown-save-v1"],
+  "expected": "restored progress stays plus the new fish / stone",
+  "actual": "Stored {wood:12, stone:8, fish:1}, achievements [craft1, fish1, wood10], lifetimeStats {wood:40, fish:1, stone:1}. The Town tab adopted the restore live (HUD 12/8/1, 'Lumberjack unlocked' toast from the restored wood 40). Variant: restore a town save with a DIFFERENT name -> the Town tab says 'Your save changed in another tab. Reloading...', its fish caught in that 800 ms is NOT written back, the join card comes back prefilled with the restored name (img/b14-r2-08.png).",
+  "viewport": "1280x720", "url": "/game/games/mad-maze/lantern.html + /game/index.html", "screenshots": ["img/b14-r2-02.png", "img/b14-r2-08.png"], "clip": null,
+  "suspect": null, "kind": "bug", "frequency": "always"
+ },
+ {
+  "id": "b14-03", "status": "FIXED", "severity": "P0", "area": "saves / Backup",
+  "title": "Town Restore validates the file; a Lantern bundle is restored through MMBackup instead of being written as the town save (S-01)",
+  "steps": ["Town -> More -> Restore -> {\"hello\":1}, an array, '{\"name\":\"x\",' (truncated), null, an old Town-only file (wood 99), a Lantern bundle (town save wood 77)", "Repeat with a second Town tab open"],
+  "expected": "junk changes nothing; old Town file and Lantern bundle restore the town save",
+  "actual": "Junk / array / truncated / null: pixeltown-save-v1 byte-identical, chat line 'That is not a Pixeltown save. Nothing was changed.'. Old Town file: restored (wood 99) and reloads. Lantern bundle: confirm 'Restore this backup? It will replace these saves on this device: - town save', then wood 77 and the page reloads to the join card (img). Never {format, keys} in the town save. With a second Town tab open the restore also sticks (tab B adopts it and its next fruit adds on top: {wood:77, stone:1, fruit:1}). Minor: under load the bundle confirm took ~1.5-2 s to appear with no 'reading...' feedback (lazy-loaded backup modules); see b14-r2-N02.",
+  "viewport": "1280x720", "url": "/game/index.html", "screenshots": ["img/b14-r2-03.png"], "clip": null,
+  "suspect": null, "kind": "bug", "frequency": "always"
+ },
+ {
+  "id": "b14-04", "status": "FIXED", "severity": "P1", "area": "saves / Backup",
+  "title": "One corrupt key no longer fails the whole backup: it is skipped and named (S-03)",
+  "steps": ["Fresh profile: lantern.html -> Restore a bundle with a good town save, a good realm save and pixeltown-gift-v1 = '{\"v\":1,\"days\":3,'", "Confirm"],
+  "expected": "valid entries restore; the broken daily gift is skipped and named",
+  "actual": "Confirm reads 'Will restore: Realm progress, town save. Cannot restore (damaged in the file): daily gift. Those stay as they are on this device.' After Confirm: town and realm written, gift untouched (null). A bundle whose ONLY key is a corrupt town save still refuses as a whole (correct, nothing to restore).",
+  "viewport": "1280x720", "url": "/game/games/mad-maze/lantern.html", "screenshots": ["img/b14-r2-04.png"], "clip": null,
+  "suspect": null, "kind": "bug", "frequency": "always"
+ },
+ {
+  "id": "b14-05", "status": "NOT FIXED", "severity": "P2", "area": "saves / Backup",
+  "title": "Town '💾 Backup' still saves only the town save (S-13, waiting on owner decision O-04)",
+  "steps": ["Town -> More -> 💾 Backup"],
+  "expected": "the full MMBackup bundle (per O-04 proposal)",
+  "actual": "Downloaded pixeltown-save-<ts>.json is the raw town save (782 bytes, top keys name, species, frame, caveSeed, ...; no format/keys). Known and parked (O-04), re-confirmed only. The Town Restore side now accepts both formats, so only export remains.",
+  "viewport": "1280x720", "url": "/game/index.html", "screenshots": [], "clip": null,
+  "suspect": "game/main.js:4549 exportSave (JSON.stringify(loadSave()))", "kind": "ux", "frequency": "always"
+ },
+ {
+  "id": "b14-06", "status": "NOT FIXED", "severity": "P2", "area": "multiplayer / co-op ?party=local",
+  "title": "Co-op seats: map discovery now merges (fixed), but a seat's position is still overwritten by the other seat's stale seatPos",
+  "steps": ["Tab A: /game/games/mad-maze/index.html?mode=world&party=local&seed=b14fogNNN&seat=0&test=1; tab B same with seat=1", "A walks south 7 s, then B walks north 7 s", "Close A first, then B", "Reopen seat 0 (same URL)"],
+  "expected": "discovery = union of both seats; each seat resumes where it stood",
+  "actual": "Discovery FIXED: 14 -> A 30 -> after B's save 35 (union; round 1 dropped to B's count), reopen 35; also 13 -> 38 -> 46 in a second run. Position NOT fixed: while both are open B's save rewrites seatPos['0'] back to A's boot tile (stored 66 -> 34); A's pagehide save puts 66 back, but when B closes last it reverts again, and seat 0 reopens at (166,34) = its start tile instead of (166,66). Cause: mergeStored builds seatPos as Object.assign({}, stored.seatPos, c.seatPos), so the in-memory copy's stale entries for OTHER seats win over storage; it should take only c.seatPos[mySeat] (sp[seat] = c.pos) on top of the stored map. Downgraded to P2: only position, and only ?party=local.",
+  "viewport": "1280x720", "url": "/game/games/mad-maze/index.html?mode=world&party=local", "screenshots": ["img/b14-r2-05.png"], "clip": null,
+  "suspect": "game/games/mad-maze/realm-world.js:112 (Object.assign({}, st.seatPos || {}, c.seatPos || {}))", "kind": "bug", "frequency": "always"
+ },
+ {
+  "id": "b14-07", "status": "NOT FIXED", "severity": "P3", "area": "multiplayer / presence",
+  "title": "Remote names: zero-width characters kept, duplicate of my own name and '[Server] Reset' still shown as-is",
+  "steps": ["Town with the fake-SDK harness (net-hostile-presence pattern), blockDb", "Emit presence 'ADMINb14a' (= me), 'a\\u200b\\u200b\\u200bb', '[Server] Reset'"],
+  "expected": "invisible chars stripped, name clashes marked",
+  "actual": "Same as round 1: list 'ADMINb14a (you)' and a second 'ADMINb14a', 'a​​​b' renders as 'ab', '[Server] Reset' listed. UNSAFE_TEXT_CHARS unchanged (no U+200B-200F / 2060-2064 / FEFF). Not in the round-2 fix list.",
+  "viewport": "1280x720", "url": "/game/index.html", "screenshots": ["img/b14-r2-06.png"], "clip": null,
+  "suspect": "game/net.js:30", "kind": "bug", "frequency": "always"
+ },
+ {
+  "id": "b14-08", "status": "NOT FIXED", "severity": "P3", "area": "multiplayer / presence",
+  "title": "16-char cap still splits ZWJ emoji / combining marks",
+  "steps": ["Remote name '👨‍👩‍👧‍👦' x4; Zalgo name"],
+  "expected": "cut on grapheme boundaries",
+  "actual": "Tag '👨‍👩‍👧‍👦👨‍👩‍👧‍👦👨‍' (dangling ZWJ), Zalgo cut to 'Z̵̢̛̤̮͎̦̯̓̐̈͗a̸̧'. cleanText still Array.from (code points).",
+  "viewport": "1280x720", "url": "/game/index.html", "screenshots": ["img/b14-r2-06.png"], "clip": null,
+  "suspect": "game/net.js:32-36 cleanText", "kind": "bug", "frequency": "always"
+ },
+ {
+  "id": "b14-09", "status": "NOT FIXED", "severity": "P3", "area": "multiplayer / player list",
+  "title": "Player list: 16 full-width chars still overflow; RTL name still flips the score order",
+  "steps": ["Remote names 'Ｗ' x16, 'W' x16, 'مرحبا بالجميع'", "IN TOWN list, desktop"],
+  "expected": "ellipsis before the heart; 'name — ⭐score' order kept",
+  "actual": "Unchanged: renderPlayerList builds one text span '${name} — ⭐${score}' with no dir=auto / <bdi>.",
+  "viewport": "1280x720", "url": "/game/index.html", "screenshots": ["img/b14-r2-06.png"], "clip": null,
+  "suspect": "game/main.js:9519-9547 renderPlayerList", "kind": "visual", "frequency": "always"
+ },
+ {
+  "id": "b14-10", "status": "NOT FIXED", "severity": "P3", "area": "multiplayer / presence cap",
+  "title": "60 sprites drawn but the list still lists every record (101 lines for 100 players)",
+  "steps": ["Emit 100 valid presence records", "remove 30, churn one id 300x, remove all, 80 change-only records"],
+  "expected": "list matches what is drawn or says '+N more'",
+  "actual": "drawn 60 / list 101; after removing 30 drawn: drawn refills to 60 / list 71; churn x300 and remove-all leave no leaked objects (951 -> 1131 -> 951). Cap itself still correct.",
+  "viewport": "1280x720", "url": "/game/index.html", "screenshots": ["img/b14-r2-07.png"], "clip": null,
+  "suspect": "game/main.js:9523 renderPlayerList iterates allPlayers", "kind": "ux", "frequency": "always"
+ },
+ {
+  "id": "b14-11", "status": "NOT FIXED", "severity": "P3", "area": "multiplayer / Realm invites",
+  "title": "A second invite while one is showing is still dropped (code check)",
+  "steps": ["Code read only this round (needs the fake-SDK invite harness)"],
+  "expected": "queued or sender told",
+  "actual": "acceptNetInvite still 'if (this.realmInviteIn) return false;' (main.js:3638). Not re-run in the browser this round.",
+  "viewport": "390x844", "url": "/game/index.html", "screenshots": [], "clip": null,
+  "suspect": "game/main.js:3638", "kind": "ux", "frequency": "always"
+ },
+ {
+  "id": "b14-12", "status": "NOT FIXED", "severity": "P3", "area": "multiplayer / walkie",
+  "title": "Non-bestie walkie memos still ignored without being removed (code check)",
+  "steps": ["Code read only this round"],
+  "expected": "dropped and removed",
+  "actual": "walkie listener still returns early when v.from !== bestieId (main.js ~9574) without snap.ref.remove(); only playMemo (9671) removes.",
+  "viewport": "390x844", "url": "/game/index.html", "screenshots": [], "clip": null,
+  "suspect": "game/main.js:9574", "kind": "bug", "frequency": "always"
+ },
+ {
+  "id": "b14-13", "status": "NOT FIXED", "severity": "P3", "area": "saves / Backup",
+  "title": "Backup still leaves out settings (part of O-04 / S-13)",
+  "steps": ["Set mm-reduce-motion, mm-high-contrast, mm-auto-fire = '1'", "Lantern -> Back up my progress"],
+  "expected": "settings in the file",
+  "actual": "Bundle had 1 key (town save); none of mm-reduce-motion / mm-high-contrast / mm-auto-fire / mm-sfx-muted present. Parked with O-04.",
+  "viewport": "1280x720", "url": "/game/games/mad-maze/lantern.html", "screenshots": [], "clip": null,
+  "suspect": "game/shared/mm-backup.js KNOWN / CLEANERS", "kind": "improvement", "frequency": "always"
+ },
+ {
+  "id": "b14-r2-N01", "status": "NEW", "severity": "P3", "area": "saves / Backup",
+  "title": "A backup containing one key this build does not know fails the whole file (forward compatibility)",
+  "steps": ["lantern.html -> Restore a bundle with a valid town save plus 'pixeltown-future-v9': '{}' (what a newer build's backup would look like on an older cached build)"],
+  "expected": "unknown keys skipped and named, like damaged keys since S-03",
+  "actual": "No confirm; plan() returns 'unknown-key' ('That backup contains an entry this game does not know (...), so nothing was changed.'). Inconsistent with the new S-03 behaviour for damaged keys.",
+  "viewport": "1280x720", "url": "/game/games/mad-maze/lantern.html", "screenshots": [], "clip": null,
+  "suspect": "game/shared/mm-backup.js:207 (return fail('unknown-key'...) inside the key loop)", "kind": "improvement", "frequency": "always"
+ },
+ {
+  "id": "b14-r2-N02", "status": "NEW", "severity": "P3", "area": "saves / Town Restore",
+  "title": "Town Restore of a full backup shows nothing for ~1.5-2 s before the confirm (lazy-loaded modules)",
+  "steps": ["Town -> More -> Restore -> pick a Lantern backup (machine under load, load/core ~2-3)"],
+  "expected": "an immediate 'Reading backup...' line",
+  "actual": "No feedback until window.confirm appears 1.5-2 s later (loadBackupModules fetches 9 scripts). A player may click Restore again. Old Town-only files restore instantly.",
+  "viewport": "1280x720", "url": "/game/index.html", "screenshots": [], "clip": null,
+  "suspect": "game/main.js restoreBundle -> loadBackupModules (~164-183)", "kind": "ux", "frequency": "often"
+ }
+]
