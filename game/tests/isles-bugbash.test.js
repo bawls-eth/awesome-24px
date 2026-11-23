@@ -175,7 +175,15 @@ const KO = (I) => {
   });
   ck(land.heroClear && !land.stick && !land.fire && !land.acts && land.sw <= land.iw, '4d: landscape 844x390: the hint clears the hero, the stick and the buttons', land);
 
-  for (const o of all) ck(o.errors.length === 0, 'no console errors / audio warnings', o.errors.slice(0, 4));
+  const lb = await l.page.evaluate(() => {
+    document.body.classList.add('abil-on'); const bb = document.getElementById('boss-bar'); bb.hidden = false;
+    const r = bb.getBoundingClientRect(), h = document.getElementById('hud').getBoundingClientRect(), m = document.getElementById('mini-wrap').getBoundingClientRect();
+    const out = { h: Math.round(r.height), l: Math.round(r.left), r: Math.round(r.right), hudR: Math.round(h.right), miniL: Math.round(m.left) };
+    bb.hidden = true; document.body.classList.remove('abil-on'); return out;
+  });
+  ck(lb.h < 60 && lb.l >= lb.hudR - 1 && lb.r <= lb.miniL + 1, '4e: landscape: the boss bar is one short strip between the HUD and the minimap (also while riding with an ability)', lb);
+
+  for (const o of all)ck(o.errors.length === 0, 'no console errors / audio warnings', o.errors.slice(0, 4));
   ck(all.every((o) => o.db.count() === 0), 'blockDb saw 0 database requests', all.map((o) => o.db.count()));
   await browser.close();
   done();

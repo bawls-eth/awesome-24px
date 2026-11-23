@@ -2872,7 +2872,7 @@
   }
   // the party command: follow -> stay -> attack (MMCompanion.setMode on every active companion)
   const CMD_ORDER = ['follow', 'stay', 'attack'];
-  const CMD_NAME = { follow: 'Follow', stay: 'Stay', attack: 'Attack' };
+  const CMD_NAME = { follow: 'Follow', stay: 'Stay', attack: 'Fight' }; // BB: 'Fight', not a second 'Attack' next to the big ATTACK button (the aria label keeps 'attack')
   let cmdMode = '';
   function showCmd(mode) {
     if (cmdMode === mode) return;
@@ -2886,7 +2886,7 @@
     const cur = CMD_ORDER.indexOf(party[0].cs.mode);
     const next = CMD_ORDER[(cur + 1) % CMD_ORDER.length];
     party.forEach((p) => CMP.setMode(p.cs, next));
-    showCmd(next);
+    showCmd(next); cue('select');
     toast({ follow: 'Party: follow me.', stay: 'Party: stay here.', attack: 'Party: attack!' }[next]);
     return next;
   }
@@ -3164,7 +3164,7 @@
   ['pointerup', 'pointercancel', 'pointerleave'].forEach((t) => fireBtn.addEventListener(t, () => { firing = false; }));
   function toggleMap() { mini.hidden = !mini.hidden; $('mini-wrap').hidden = mini.hidden; $('btn-map').setAttribute('aria-pressed', String(!mini.hidden)); }
   $('btn-map').addEventListener('click', toggleMap);
-  function toggleSoothe() { if (!TAME) return false; soothe = !soothe; btn.soothe.setAttribute('aria-pressed', String(soothe)); setIco(btn.soothe.querySelector('.ico'), soothe ? 'ui_tranq_on' : 'ui_tranq_off'); toast(soothe ? 'Soothe shots: they build torpor.' : 'Normal shots.'); return soothe; }
+  function toggleSoothe() { if (!TAME) return false; soothe = !soothe; cue(soothe ? 'select' : 'back'); btn.soothe.setAttribute('aria-pressed', String(soothe)); setIco(btn.soothe.querySelector('.ico'), soothe ? 'ui_tranq_on' : 'ui_tranq_off'); toast(soothe ? 'Soothe shots: they build torpor.' : 'Normal shots.'); return soothe; }
   btn.feed.addEventListener('click', () => { feed(); });
   btn.soothe.addEventListener('click', () => { toggleSoothe(); });
   btn.ride.addEventListener('click', () => { toggleRide(); btn.ride.setAttribute('aria-pressed', String(!!ride)); });

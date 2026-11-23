@@ -226,7 +226,7 @@ body.panel-open .hint, body.panel-open .howto { visibility: hidden; }
   #mini { width: 96px; height: 96px; }
   body.touch .hint, body.touch.abil-on .hint { left: calc(160px + env(safe-area-inset-left)); right: calc(212px + env(safe-area-inset-right)); bottom: calc(8px + env(safe-area-inset-bottom)); transform: none; width: auto; max-width: none; }
   body.touch .decor, body.touch.abil-on .decor { left: calc(160px + env(safe-area-inset-left)); right: calc(212px + env(safe-area-inset-right)); bottom: calc(72px + env(safe-area-inset-bottom)); }
-  body.touch .boss-bar { bottom: auto; top: calc(8px + env(safe-area-inset-top)); left: auto; right: calc(112px + env(safe-area-inset-right)); transform: none; width: min(260px, calc(100% - 560px)); min-width: 180px; }
+  body.touch .boss-bar, body.touch.abil-on .boss-bar { bottom: auto; top: calc(8px + env(safe-area-inset-top)); left: auto; right: calc(112px + env(safe-area-inset-right)); transform: none; width: min(260px, calc(100% - 560px)); min-width: 180px; }
   .howto { left: auto; right: calc(72px + env(safe-area-inset-right)); top: calc(112px + env(safe-area-inset-top)); transform: none; width: min(300px, 38%); }
 }
 /* BB: the Feed button fills up while the creature chews (--p 0..1, a few times a second); still tappable, it just says how long */
