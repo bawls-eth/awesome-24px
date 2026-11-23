@@ -73,6 +73,19 @@ async function open(browser, viewport, touch, qs) {
       return { plot: plot ? plot.depth : null, deco: plot ? 'ok' : objs.filter((c) => c.type === 'Image' && Math.abs(c.y - 700) < 80 && c.x < 200).map((c) => [c.texture.key, c.x, c.y, c.width, c.height, c.depth]) };
     });
     check('phone: the graveyard plot is ground (depth below its tombstones at y 686..694)', g.plot !== null && g.plot < 686, JSON.stringify(g));
+    // One guidance line at a time: the gate chip steps aside while the achievement toast (same top-centre spot) shows.
+    const tg = await p.page.evaluate(async () => {
+      const s = window.__g.scene.getScene('Town');
+      const vis = () => !document.getElementById('gate-pointer').classList.contains('hidden');
+      const before = vis();
+      s.showAchievementToast('test toast');
+      await new Promise((r) => setTimeout(r, 700));
+      const during = vis();
+      document.getElementById('achievement-toast').classList.add('hidden');
+      await new Promise((r) => setTimeout(r, 700));
+      return { before, during, after: vis() };
+    });
+    check('gate chip hides while the achievement toast shows, then comes back', tg.before && !tg.during && tg.after, JSON.stringify(tg));
     // First minute: a fresh player has the gate chip; ambient lines are held, then flushed when the gate is reached.
     const q = await p.page.evaluate(() => {
       const s = window.__g.scene.getScene('Town');

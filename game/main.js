@@ -3350,8 +3350,9 @@ class TownScene extends Phaser.Scene {
     const dy = (REALM_GATE_POS.y + 30) - this.localBody.y;
     const far = Math.hypot(dx, dy) > GATE_POINTER_MIN_DIST;
     // One line of guidance at a time: the What's-new banner (returning players, 10 s) sits where the chip goes, so the chip waits.
-    const wn = document.getElementById('whats-new-banner');
-    const newsUp = !!wn && !wn.classList.contains('hidden');
+    // The achievement toast uses the same top-centre spot.
+    const up = (id) => { const e = document.getElementById(id); return !!e && !e.classList.contains('hidden') && getComputedStyle(e).display !== 'none' && getComputedStyle(e).visibility !== 'hidden' && Number(getComputedStyle(e).opacity) > 0.05; };
+    const newsUp = up('whats-new-banner') || up('achievement-toast');
     const show = !st.dismissed && !st.reached && far && !newsUp && !this.inRealm && !this.inUnderground && !this.realmEmbed && !this.buildMode;
     if (el.classList.contains('hidden') === show) el.classList.toggle('hidden', !show);
     if (!show) return;
@@ -7932,7 +7933,8 @@ class TownScene extends Phaser.Scene {
       stroke: '#000000',
       strokeThickness: 3,
     }).setOrigin(0.5).setDepth(y + 1);
-    this.npcBubble = this.add.text(x, y - 56, '', {
+    // Bubble bottom above the quest sign (centred at y - 46, up to two lines), so the line never sits on "bring 4🪵".
+    this.npcBubble = this.add.text(x, y - 64, '', {
       fontSize: '11px',
       color: '#1c2430',
       backgroundColor: '#ffe066',
