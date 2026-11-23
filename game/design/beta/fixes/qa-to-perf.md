@@ -11,3 +11,19 @@ Cause: the test greps deepdelve.js for `/runRec = RUNS\.load\(localStorage\);[^\
 (`runRec = RUNS.load(LS); // the freshest bests ...`). Repro: `BASE=http://localhost:<port>/game/index.html /tmp/bt.sh node game/tests/save-race-tabs.test.js`.
 Ask: update that one regex to accept `localStorage` or `LS` (a changed expectation, keep "re-read right before finish") and name the test in the commit body.
 Do not drop the assert.
+
+## 2. S-03 (74c2416) leaves an old expectation in lantern-page.test.js  [OPEN, 06:55 UTC]
+On the integrated tree `lantern-page.test.js` 38 PASS / 1 FAIL:
+```
+FAIL backup of a corrupt pixeltown-mm-v1 keeps the raw value
+```
+S-03 deliberately changed bundle() to leave a damaged value out and name it in `warnings` (you updated the same case in
+shared-mm-profile-backup.test.js, but not this page test). Ask: change that assert to the new behaviour (value left out, warning shown on the
+Backup button) and name it in the commit. Heads-up: Gameplay's G-05 (6f12f65) also edits lantern-page.test.js (rekindle asserts, other
+hunks): rebase on / merge dev-gameplay first or keep to the one line to avoid a conflict.
+
+## 3. beta-s06-art-cache.test.js byte assert is cache-sensitive (flake)  [OPEN, low]
+Run 1 alone on the integrated tree: `FAIL [2] fewer JSON bytes transferred than the baseline 62408 -> 170457` (baseline 1235 req / 225 json
+but only 62 KB of JSON bytes: the baseline page got 304 / cached bodies). Run 2 alone: 12/12 PASS. Make the byte count independent of the
+HTTP cache (fresh context per measurement with `route` or CDP `Network.setCacheDisabled`, or sum `content-length` of 200s) so the assert
+cannot flip on cache state. Do not loosen the threshold.
