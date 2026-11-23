@@ -67,10 +67,62 @@ async function blockDb(ctx) {
   return rec;
 }
 
+// Town OFFLINE stub on a context (nav-town.test.js pattern): blockDb + the Firebase SDK answered with an empty script, so the
+// join falls through to "Play offline". Call BEFORE any page navigates. Returns the blockDb record.
+async function offlineStub(ctx) {
+  const db = await blockDb(ctx);
+  await ctx.route(/gstatic\.com\/firebasejs\//, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked (offlineStub) */' }));
+  return db;
+}
+// Expose the Phaser game as window.__g on a page (same rewrite as launch()).
+async function exposeGame(page) {
+  await page.route('**/main.js*', async (route) => {
+    const resp = await route.fetch();
+    const body = (await resp.text()).replace('const game = new Phaser.Game(config);', 'const game = window.__g = new Phaser.Game(config);');
+    route.fulfill({ response: resp, body });
+  });
+}
+// Join the Town through "Play offline" (page must run under offlineStub).
+async function joinOffline(page, name = 'ADMINqa') {
+  await page.fill('#name-input', name);
+  await page.click('.species-tab');
+  await page.click('.avatar-choice');
+  await page.click('button:has-text("Join Town")');
+  await page.waitForSelector('#join-offline-btn:not(.hidden)', { timeout: 9000 });
+  await page.click('#join-offline-btn');
+  await page.waitForFunction(() => window.__g && window.__g.scene.getScene('Town') && window.__g.scene.getScene('Town').localBody, null, { timeout: 20000 });
+  await townReady(page);
+}
+// twoTabs(ctx, url?): two pages in ONE context (shared localStorage, real `storage` events between them), OFFLINE stub,
+// window.__g exposed, errors collected per page. url defaults to BASE (the Town). Returns { db, a, b, errors: {a, b} }.
+async function twoTabs(ctx, url) {
+  const db = await offlineStub(ctx);
+  const errors = { a: [], b: [] };
+  const mk = async (tag) => {
+    const p = await ctx.newPage();
+    p.on('pageerror', (e) => errors[tag].push('pageerror: ' + e.message));
+    p.on('console', (m) => { if (m.type() === 'error') errors[tag].push('console: ' + m.text()); });
+    await exposeGame(p);
+    if (url !== null) await p.goto(url || BASE);
+    return p;
+  };
+  const a = await mk('a'); const b = await mk('b');
+  return { db, a, b, errors };
+}
+// throwingStorage(ctx): every page in the context sees a `localStorage` getter that throws SecurityError (storage blocked /
+// some private modes). sessionStorage is left alone. Call BEFORE any page navigates.
+async function throwingStorage(ctx) {
+  await ctx.addInitScript(() => {
+    try {
+      Object.defineProperty(window, 'localStorage', { configurable: true, get() { throw new DOMException('The operation is insecure.', 'SecurityError'); } });
+    } catch (e) { /* ignore */ }
+  });
+}
+
 let failed = 0;
 function check(name, cond, extra = '') {
   console.log((cond ? 'PASS ' : 'FAIL ') + name + (cond ? '' : ' ' + extra));
   if (!cond) failed++;
 }
 const done = () => { console.log(failed ? `${failed} FAILED` : 'ALL PASSED'); process.exitCode = failed ? 1 : 0; };
-module.exports = { townReady, launch, scene, check, done, expandPanel, blockDb, DB_HOSTS };
+module.exports = { townReady, launch, scene, check, done, expandPanel, blockDb, DB_HOSTS, offlineStub, exposeGame, joinOffline, twoTabs, throwingStorage };
