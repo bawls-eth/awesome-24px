@@ -1632,5 +1632,9 @@
   "beta-g25-floor-gate.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "beta-g16-reel-lost.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }
