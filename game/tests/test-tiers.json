@@ -1776,5 +1776,9 @@
   "beta-r3-lantern-blocked.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-r3-boss-bar-fall": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }

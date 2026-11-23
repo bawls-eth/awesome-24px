@@ -234,7 +234,10 @@
     if (!SG.song(id)) return null;
     // G-18 (b10-09): the tier lock is enforced here, not only by the disabled button (any entry point: Quick play, Concert, a query, a test
     // hook). A locked Hard falls back to nothing: no run starts. Concert and practice pick their own (already unlocked) tiers.
-    if (SG.TIERS.indexOf(tr) >= 0 && SG.tierUnlocked && !SG.tierUnlocked(save, id, tr) && SG.songUnlocked && SG.songUnlocked(save, id)) return null;
+    // Round 3 (b09/b10): a locked SONG is refused too (Lantern Shuffle Hard on a fresh save used to slip through because the old check only
+    // looked at the tier of an already open song). Warm Embers is always open, so a fresh player can still start it.
+    if (SG.songUnlocked && !SG.songUnlocked(save, id)) return null;
+    if (SG.TIERS.indexOf(tr) >= 0 && SG.tierUnlocked && !SG.tierUnlocked(save, id, tr)) return null;
     ensureAudio(); hudShown(true);
     songId = id; tier = SG.TIERS.indexOf(tr) >= 0 ? tr : 'normal';
     chart = opts.chart || SG.chartFor(id, tier, opts.seed !== undefined ? opts.seed : qs.get('seed') || undefined);

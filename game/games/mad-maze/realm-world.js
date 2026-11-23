@@ -109,8 +109,11 @@
     c.evT = Math.max(c.evT || 0, st.evT || 0);
     const seat = saveSeat();
     if (seat >= 0) {
-      const sp = Object.assign({}, st.seatPos || {}, c.seatPos || {});
-      if (c.pos) sp[String(seat)] = { x: c.pos.x, y: c.pos.y };
+      // b14-06: every OTHER seat's entry comes from storage (that seat's own page wrote it last); only this page's seat comes from memory.
+      // The old order let this page's stale copy of seat 0 win, so seat 0 reopened on its start tile.
+      const k = String(seat), mine = c.pos ? { x: c.pos.x, y: c.pos.y } : (c.seatPos && c.seatPos[k]) || (st.seatPos && st.seatPos[k]) || null;
+      const sp = Object.assign({}, c.seatPos || {}, st.seatPos || {});
+      if (mine) sp[k] = mine; else delete sp[k];
       c.seatPos = sp;
       if (seat > 0) c.pos = st.pos; // only seat 0 moves the canonical position
     }
