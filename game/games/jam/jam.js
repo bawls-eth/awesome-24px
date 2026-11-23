@@ -584,7 +584,7 @@
     if (!save.hint) {
       var h = el('div'); h.id = 'hint'; h.setAttribute('role', 'note');
       h.appendChild(el('strong', 'How to play'));
-      h.appendChild(el('p', 'Notes fall down four lanes. Press D F J K (or the arrow keys, or tap the lanes) as a note reaches the bright line. Hold the long notes until they end. Perfect, Great and Good score; a miss breaks your combo.'));
+      h.appendChild(el('p', 'Tap each note as it reaches the bright line. Keys D F J K, arrows, or touch. Hold long notes.'));
       var ok = btn('Got it', function () { save.hint = true; persist(); showMenu(); }); ok.id = 'hint-ok'; h.appendChild(ok);
       overlay.appendChild(h);
     }
@@ -596,7 +596,7 @@
     rb.textContent = 'Relax mode: ' + (prefRelax ? 'On' : 'Off'); rb.setAttribute('aria-pressed', prefRelax ? 'true' : 'false'); rb.classList.toggle('sel', prefRelax);
     rb.addEventListener('click', function () { SG.setPref(save, 'relax', !prefRelax); persist(); applyPrefs(); showMenu(); });
     rrow.appendChild(rb);
-    var rinfo = el('span', prefRelax ? 'Relax is on: songs keep their notes, nothing can fail and there is no score. Stars only come from normal play.' : 'Relax mode: play any open song with no fail and no score.', 'dim'); rinfo.id = 'relax-info'; rrow.appendChild(rinfo);
+    var rinfo = el('span', prefRelax ? 'Relax on: nothing can fail, no score. Stars only come from normal play.' : 'Play any song with no fail and no score.', 'dim'); rinfo.id = 'relax-info'; rrow.appendChild(rinfo);
     overlay.appendChild(rrow);
     var openN = SG.SONGS.filter(function (x) { return SG.songUnlocked(save, x.id); }).length;
     var crow = el('div', undefined, 'row'); crow.id = 'concert-row';
@@ -664,7 +664,7 @@
     thLab(); prow.appendChild(th);
     overlay.appendChild(prow);
     var rule = el('p', 'Unlock rule: Warm Embers is always open. Lantern Shuffle opens at 2 total stars, Moth Parade at 5, Starlit Stomp at 8, then Kettle Song at 10, Owl Hour at 13, Comet Tail at 16, Fern Lullaby at 19, Spark Reel at 22, Dewdrop Drift at 25 and Harvest Moonrise at 28. A secret song waits for a full combo on any Hard chart. Hard needs 2 stars on that song’s Normal. Stars come from accuracy: 50%, 75%, 90%.', 'dim'); rule.id = 'unlock-rule';
-    overlay.appendChild(rule);
+    var rd = document.createElement('details'); rd.id = 'unlock-details'; rd.appendChild(el('summary', 'How songs unlock')); rd.appendChild(rule); overlay.appendChild(rd);
     var row2 = el('div', undefined, 'row'); row2.appendChild(homeLink('menu-back')); overlay.appendChild(row2);
   }
   function showPracticeSetup(id) {

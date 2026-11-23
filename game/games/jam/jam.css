@@ -99,3 +99,20 @@ body[data-relax="1"] #progress-bar { background:#8ecae6; }
 #hud-song:empty { display:none; }
 /* phones: taller touch pads use the free space under the lanes (easier to hit without looking) */
 @media (pointer: coarse) and (min-height: 700px) { #pads .pad { min-height:96px; } }
+
+/* bug bash: short landscape screens (phones on their side). Lanes on the left at full height, HUD and pads on the right, no scrolling mid-song. */
+@media (orientation: landscape) and (max-height: 520px) {
+  #top { max-width:none; padding:2px 8px 2px 64px; min-height:0; }
+  #top .back { min-height:40px; }
+  #stage { max-width:none; padding:0 8px 6px; display:grid; grid-template-columns:auto 1fr; grid-template-areas:"canvas hud" "canvas prog" "canvas pads" "canvas help"; grid-template-rows:auto auto 1fr auto; column-gap:12px; align-items:start; }
+  #canvas-wrap { grid-area:canvas; width:auto; }
+  #game { width:calc((100vh - 64px) * 0.762); max-height:calc(100vh - 64px); }
+  #hud { grid-area:hud; }
+  #progress { grid-area:prog; }
+  #pads { grid-area:pads; display:grid; align-self:stretch; }
+  #pads .pad { min-height:max(72px, calc(100vh - 225px)); }
+  #help { grid-area:help; display:block; }
+  #overlay { position:fixed; inset:0; z-index:30; border-radius:0; padding:12px 12px 24px; background:#0d0a16; }
+  body.mm-nav-on #overlay { padding-top:56px; }
+}
+#unlock-details summary { cursor:pointer; min-height:48px; display:flex; align-items:center; color:var(--accent); }
