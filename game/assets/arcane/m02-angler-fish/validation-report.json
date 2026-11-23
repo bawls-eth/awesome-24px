@@ -1,0 +1,23 @@
+{
+  "batch": "m02",
+  "assets": 73,
+  "species": 24,
+  "blocking": 0,
+  "notes": "Static manifest and generator validation only; full repository art audit and in-game QA pending.",
+  "checks": {
+    "unique_ids": true,
+    "native_sizes": [
+      32,
+      48,
+      64
+    ],
+    "four_x_nearest_neighbor": true,
+    "alpha": "indexed transparent/opaque",
+    "source": "deterministic native sprite generator"
+  },
+  "warnings": [
+    "Species IDs differ from game catalog; aliases require Claude review",
+    "Preview uses a shared palette; view original sprites for correct colors",
+    "Full node/browser and gameplay testing not performed"
+  ]
+}
