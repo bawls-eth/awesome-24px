@@ -1,0 +1,15 @@
+{
+  "batch": "m03",
+  "label": "rimewolf",
+  "generated_utc": "2026-11-23T02:15:39.612440Z",
+  "files": 26,
+  "duplicate_ids": 0,
+  "blocking": {},
+  "warnings": {},
+  "standing_heights": {
+    "rimewolf/down": 60,
+    "rimewolf/up": 92,
+    "rimewolf/right": 108
+  },
+  "status": "provisional"
+}
