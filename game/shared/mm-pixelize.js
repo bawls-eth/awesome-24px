@@ -11,12 +11,12 @@
   var DEFAULTS = {
     size: 32,          // native output size in px (square); use sizeClassFor() / SIZE_CLASSES
     pad: 1,            // transparent border kept free for the outline
-    alpha: 110,        // alpha threshold (0..255): >= becomes opaque, below becomes transparent
-    colors: 12,        // median-cut palette size for the body (before shade/highlight/outline)
-    maxColors: 18,     // final cap on distinct colours after every pass
+    alpha: 80,         // alpha threshold (0..255): >= becomes opaque, below becomes transparent
+    colors: 7,         // median-cut palette size for the body (before shade/highlight/outline)
+    maxColors: 16,     // final cap on distinct colours after every pass
     ramp: null,        // optional fixed ramp: array of '#rrggbb' (e.g. MM8.PAL); overrides median cut
     dither: 0,         // 0..1 ordered (Bayer 2x2) dither strength applied before palette mapping
-    outline: 0.62,     // 0..1 how much darker the outline is than the pixel it wraps (colour-matched, never pure black)
+    outline: 0.72,     // 0..1 how much darker the outline is than the pixel it wraps (colour-matched, never pure black)
     highlight: 0.22,   // 0..1 lighten toward warm white on top-left edge pixels (0 = off)
     shade: 0.18,       // 0..1 darken bottom-right edge pixels for a cheap 2-tone volume (0 = off)
     saturate: 0.12     // 0..1 small saturation boost so flat vector fills read as deliberate colour
@@ -182,7 +182,8 @@
     var placed = placeOn(small, size, pad + Math.floor((inner - tw) / 2), pad + (inner - th)); // feet on the baseline
     placed = lightPass(placed, o.highlight, o.shade);
     placed = outline(placed, o.outline);
-    if (o.maxColors && countColors(placed) > o.maxColors) placed = quantise(placed, medianCut(placed, o.maxColors), 0);
+    var cap = o.maxColors ? Math.min(o.maxColors, 8 + Math.floor(size / 4)) : 0; // S16: 12, M32: 16, L48+: maxColors
+    if (cap && countColors(placed) > cap) placed = quantise(placed, medianCut(placed, cap), 0);
     placed.palette = paletteOf(placed); placed.colors = placed.palette.length;
     return placed;
   }

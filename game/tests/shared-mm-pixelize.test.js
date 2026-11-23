@@ -68,7 +68,7 @@ function synth() {
     for (let y = 0; y < 16; y++) { const i = (y * 16 + 8) * 4; if (r.data[i + 3]) { const j = i + 64 * 2; return (r.data[i] + r.data[i + 1] + r.data[i + 2]) < (r.data[j] + r.data[j + 1] + r.data[j + 2]); } }
     return false; })(), darkest.join(','));
   check('pixelize is deterministic', P.hash(P.pixelize(src, { size: 16 })) === P.hash(r));
-  const GOLDEN16 = 'dd42395c', GOLDEN32 = '0fb4be72';
+  const GOLDEN16 = 'eefde69a', GOLDEN32 = '04a99f23';
   const g16 = P.hash(r), g32 = P.hash(P.pixelize(src, { size: 32, dither: 0.5 }));
   check('golden output 16 px', g16 === GOLDEN16, g16);
   check('golden output 32 px with dither', g32 === GOLDEN32, g32);
