@@ -56,3 +56,36 @@ Each entry: item id, commit, tests, how a tester re-verifies. Run any test alone
 - Tests: `beta-g23-trial-enter.test.js`; world-nexus, world-boss-rush, world-nexus-walk green.
 - Retest: Lv 20+, Nexus > Trial of Six, fight beside the Nexus portal and hold Enter: you keep firing, the Nexus does not open,
   the button reads "Finish the fight first" (disabled). Leave the Trial: "Visit the Nexus" and Enter work again.
+
+## P2 (no tester round needed, but each has a test)
+| item | commit | test | re-verify |
+|---|---|---|---|
+| G-12 Esc / P close Town overlays; Nexus Esc board first | 05f4092 | beta-g12-esc-close | Town: open Journal / Map / Today / Achievements / Home / Polyroll, Esc closes; Museum or Postcards over Journal: one Esc closes one layer. Nexus quest board: Esc closes the board, Esc again leaves. |
+| G-13 beach item wins over fish / wildlife | ea61cba | beta-g13-beach-first | Stand on a shell by the west pond: A picks the shell, no cast. No "E: log" label while reeling. |
+| G-06 canon zone names; goal line in reach | 873ff28 | beta-g06-quest-zones | Quests say Midlands / Highlands (never Meadows / Deeps); a Lv 1 hero's goal line is the level goal. |
+| G-07 altar wakes by zone | eb73a2c | beta-g07-altar-zone | Stand on a Shore tile near a Midlands altar: nothing wakes; step into the Midlands: it wakes ("above your level" note when under-levelled). |
+| G-08 provoked off-screen shooters | 4158e08 | beta-g08-provoke | Shoot a Whirler beyond the view edge: it fires back / walks in for 4 s. |
+| G-15 tutorial first minute | 350bd99 | beta-g15-tutorial-first-minute | Fresh Realm: no Raid / Swarm countdown while the coach runs; the bag step drops a bag nearby; a fall hides the coach card. |
+| G-24 dungeon doors, Try again, biome banner | f90d13b | beta-g24-dungeon-doors | Walk into a door ~10 px off-centre: you slide in. Fall: banner "You fell in the Crypt"; summary "Try again (same seed)", R presses it. |
+| G-25 ?floor= gate | 64ff5e4 | beta-g25-floor-gate | Fresh save, ?mode=dungeon&floor=3: floor 1 with a note. Clear floor 1 / 2 first and the stairs (or the URL) open the next. |
+| G-16 Angler reel can end | cea143e | beta-g16-reel-lost | Hook a fish and never press: ~6 s after the meter empties, "It swam off. No harm done." |
+| G-17 result card click guard; Stack Menu | e975f1c | beta-g17-result-guard | Pop / Echo / Stack / Dash: tap Play again right as the card opens: nothing; a moment later it works. Stack result has Menu. |
+| G-10 Deepdelve placed blocks score nothing | 0c80e8b | beta-g10-placed-blocks | Place and mine the same coal 10 times in a dive: ores / combo stay 0. |
+| G-26 Isles nodes / pouch persist; Craft; full pack | 4fd46e4 | beta-g26-isles-economy | Pick glints, reload: still picked. Feed (pouch -1), reload: still -1. Double-tap Craft: one item. Full pack + G: "Pack full", spot kept. |
+| G-14 one first move; map start; pill "Home" | aeacde4 | beta-g14-one-first-move | Fresh browser: Hub PLAY, the Next line and the highlighted card all go to the guided Realm adventure. Map: the start square opens the Town. Town join card pill reads "Home". |
+
+## P3
+| item | commit | test |
+|---|---|---|
+| G-11 Stalk clock moved back | a864761 | beta-g11-stalk-clock |
+| G-09 Survivor's cache needs effort | 91b1c1c | beta-g09-survivor-cache |
+| G-18 b10-09 Jam tier lock / b04-09 Blacksmith line / b11-05 + b11-11 Stalk | 815763b, 19f381e, c12b547 | beta-g18-small-logic |
+
+## Open / not done in this lane
+- O-01 (arcade door rename): waits for the owner (not a safe default).
+- G-18 remaining sub-items (Pop preview, Dash ghost per course, blur clears sticks, Lantern Start-run reason, hero level in HUD, Stats tab deltas,
+  M / Tab map, Isles Back -> Town, mm-nav Back closes the Menu, Deepdelve craft labels, Jam stale HUD, second invite queue), G-19, G-27.
+- Requests to Perf+Systems: add `pixeltown-deep-v1` (G-25) and `pixeltown-isle-nodes-v1` (G-26) to MMBackup KNOWN (plain-object cleaners).
+  The Keepsake `rk` / `md` fields (G-05) need nothing: mm-v1 is cleaned by MMProfile.clean, which keeps them.
+- For World+Graphics: the Bugs festival summary card now holds real pointer taps for its holdMs (G-17 kit default);
+  realm-ui.css, index.html (pill done), isles.js (G-20/21/22/26 done) and lantern.js are released.
