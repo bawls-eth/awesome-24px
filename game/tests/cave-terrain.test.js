@@ -1,5 +1,5 @@
 // Cave slice A4 (part 1): seeded, deterministic, bigger terrain with hills and trees; the seed is saved.
-const { launch, scene, check, done } = require('./helpers');
+const { launch, scene, check, done, townReady } = require('./helpers');
 const SAVE = 'pixeltown-save-v1';
 
 // Page-side: a stable fingerprint of the whole world (every block kind at every cell).
@@ -102,7 +102,7 @@ const enter = (s) => { s.enterUnderground(); const u = s.underground; u.stop(); 
   // Save: a missing / invalid seed is replaced once with a valid one and then stays stable.
   ({ browser, page, errors } = await launch({ width: 1000, height: 700 }, { resources: { stone: 1 } }));
   const s1 = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)).caveSeed, SAVE);
-  await page.reload(); await page.fill('#name-input', 'ADMINtest'); await page.click('.species-tab'); await page.click('.avatar-choice'); await page.click('#join-btn'); await page.waitForSelector('#player-list-panel'); await page.waitForTimeout(800);
+  await page.reload(); await page.fill('#name-input', 'ADMINtest'); await page.click('.species-tab'); await page.click('.avatar-choice'); await page.click('#join-btn'); await page.waitForSelector('#player-list-panel'); await townReady(page); await page.waitForTimeout(800);
   const s2 = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)).caveSeed, SAVE);
   check('save: with no caveSeed a valid random seed is created, saved (additive key) and kept on reload', Number.isInteger(s1) && s1 > 0 && s1 < 4294967296 && s1 === s2, JSON.stringify([s1, s2]));
   await browser.close();

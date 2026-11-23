@@ -31,8 +31,13 @@
   // Hub medal summary: its own additive key, read by the hub page only.
   function persist() { S.set(KEY, save); try { var m = ['bronze', 'silver', 'gold'].filter(function (k) { return save.medals && save.medals[k] === true; }); window.localStorage.setItem('pixeltown-medals-stalk-v1', JSON.stringify({ v: 1, m: m })); } catch (e) { /* storage blocked */ } try { window.MMHubProfile.sync(localStorage, 'stalk', [(save.invested > 0 || save.played >= 1) && 'trade'].concat(m)); } catch (e) { /* hub map progress is optional */ } }
 
+  // Clock safety: if the device clock shows the week just BEFORE the saved one (a reset or a timezone hop), trading pauses
+  // instead of treating it as a rollover (which would spoil real stalks). Far-off weeks roll over as usual.
+  var clockBack = false, settings = null;
   function sync() {
     var w = curWeek();
+    clockBack = save.week > w && save.week - w <= 1;
+    if (clockBack) { if (!wk || wk.seed !== String(w)) wk = M.generateWeek(w); return false; }
     var r = M.syncWeek(save, w);
     if (r.rolled) { save = r.save; if (r.spoiled > 0) spoiledNote = r.spoiled; persist(); }
     if (!wk || wk.seed !== String(w)) wk = M.generateWeek(w);
@@ -63,6 +68,7 @@
   function pop(el) { if (reduced || !el) return; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
   function signed(n) { return (n > 0 ? '+' : '') + fmt(n); }
   function say(t) { msgText = t; $('msg').textContent = t; }
+  var CLOCK_MSG = 'Your clock shows an earlier week than your last visit, so trading is paused. Practice still works.';
 
   // 8-bit turnip: hand-placed 16x16 pixel sprite drawn at 3x (48 px canvas)
   var TURNIP = [
@@ -236,15 +242,15 @@
     $('price-note').textContent = sunday
       ? 'Buy price today. Stalks cannot be sold on Sunday.'
       : 'Sell price now. You paid ' + (save.holdings ? 'up to ' : '') + 'about ' + wk.buyPrice + ' on Sunday.' + (save.holdings ? ' Sell all now: ' + signed(save.earned + save.holdings * price - save.invested) + ' bells for the week.' : '');
-    $('buy1').disabled = !sunday || M.maxBuy(save, wk) < 1;
-    $('buy10').disabled = !sunday || M.maxBuy(save, wk) < 10;
-    $('sell1').disabled = sunday || save.holdings < 1;
-    $('sellall').disabled = sunday || save.holdings < 1;
-    $('market-reason').textContent = sunday
-      ? 'Selling closed: the market only buys stalks Monday to Saturday. Buying is open today.'
+    $('buy1').disabled = clockBack || !sunday || M.maxBuy(save, wk) < 1;
+    $('buy10').disabled = clockBack || !sunday || M.maxBuy(save, wk) < 10;
+    $('sell1').disabled = clockBack || sunday || save.holdings < 1;
+    $('sellall').disabled = clockBack || sunday || save.holdings < 1;
+    $('market-reason').textContent = clockBack ? CLOCK_MSG : sunday
+      ? (M.maxBuy(save, wk) < 1 && save.holdings < M.MAX_HOLD ? 'Not enough bells for a stalk today. A practice week has its own bells, and a fresh week tops you up.' : 'Selling closed: the market only buys stalks Monday to Saturday. Buying is open today.')
       : 'Buying closed: stalks can only be bought on Sunday. Selling is open now.';
     $('buy1').textContent = 'Buy 1';
-    $('go-practice').hidden = sunday || save.holdings > 0; // dead-end fix: a weekday with nothing to sell offers the quick practice week
+    $('go-practice').hidden = sunday || save.holdings > 0 || clockBack; // dead-end fix: a weekday with nothing to sell offers the quick practice week
     $('sellall').textContent = save.holdings > 0 && !sunday ? 'Sell all (' + save.holdings + ')' : 'Sell all';
     var known = M.knownPrices(wk, slot);
     $('chart-alt').textContent = 'Known prices: ' + known.join(', ') + '. Price history changes twice a day, Monday to Saturday.';
@@ -275,17 +281,20 @@
     funds: 'Not enough bells for that.', limit: 'Your stall holds at most ' + M.MAX_HOLD + ' stalks.',
     holdings: 'You do not own that many.', quantity: 'Pick at least one.'
   };
+  function paused() { if (!clockBack) return false; beep('error'); say(CLOCK_MSG); render(); return true; }
   function doBuy(n) {
     sync();
+    if (paused()) return { ok: false, reason: 'clock', save: save };
     var r = M.buy(save, wk, curSlot(), n);
-    if (!r.ok) { say(REASONS[r.reason] || 'Cannot do that.'); render(); return r; }
+    if (!r.ok) { beep('error'); say(REASONS[r.reason] || 'Cannot do that.'); render(); return r; }
     save = M.latchGoals(r.save, wk); persist(); beep('pickup'); // buy cue
     say('Bought ' + r.qty + ' for ' + fmt(r.cost) + ' bells.'); render(); return r;
   }
   function doSell(n) {
     sync();
+    if (paused()) return { ok: false, reason: 'clock', save: save };
     var r = M.sell(save, wk, curSlot(), n);
-    if (!r.ok) { say(REASONS[r.reason] || 'Cannot do that.'); render(); return r; }
+    if (!r.ok) { beep('error'); say(save.holdings < 1 && curSlot() > 0 ? 'You have no stalks to sell.' : (REASONS[r.reason] || 'Cannot do that.')); render(); return r; }
     var before = M.goalsDone(save, wk);
     save = M.latchGoals(r.save, wk); persist(); beep('levelup'); // sell cue
     var vs = r.gain - r.qty * wk.buyPrice;
@@ -293,9 +302,10 @@
   }
   function doSellNb(id, n) {
     sync();
+    if (paused()) return { ok: false, reason: 'clock', save: save };
     var qty = n === undefined ? save.holdings : n;
     var r = M.sellToNeighbour(save, id, curWeek(), curSlot(), qty);
-    if (!r.ok) { say(r.reason === 'fee' ? 'That deal would not cover the fee.' : (REASONS[r.reason] || 'Cannot do that.')); render(); return r; }
+    if (!r.ok) { beep('error'); say(r.reason === 'fee' ? 'That deal would not cover the fee.' : (REASONS[r.reason] || 'Cannot do that.')); render(); return r; }
     var before = M.goalsDone(save, wk);
     save = M.latchGoals(r.save, wk); persist(); beep('levelup');
     say('Sold ' + r.qty + ' to a neighbour at ' + r.price + ' each, fee ' + r.fee + ': +' + fmt(r.gain) + ' bells.' + (save.goals !== before ? ' A weekly goal is done!' : '')); render(); return r;
@@ -307,11 +317,27 @@
   $('hint-ok').addEventListener('click', function () { save.hint = true; persist(); render(); });
   $('btn-mute').addEventListener('click', function () { ensureSfx(); if (sfx) sfx.setMuted(!sfx.isMuted()); syncMute(); });
   if (!window.MMSfx) $('btn-mute').hidden = true;
+  if (window.MMSettings && MMSettings.mount) {
+    try {
+      settings = MMSettings.mount({ page: 'stalk' });
+      if (settings) { var sb = $('btn-settings'); sb.hidden = false; sb.addEventListener('click', function () { settings.open(); }); window.addEventListener('mm-settings-change', function () { syncMute(); try { reduced = (window.MMMotion ? window.MMMotion.reduced(window, window.localStorage) : false) || !!(window.MMSideAccess && window.MMSideAccess.reduced()); } catch (e) { /* keep */ } }); }
+    } catch (e) { settings = null; }
+  }
+  function dialogOpen() { return !!(settings && settings.isOpen && settings.isOpen()) || !!document.querySelector('dialog[open], [role="dialog"]:not([hidden])'); }
   window.addEventListener('keydown', function (e) {
-    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.ctrlKey || e.metaKey || e.altKey || !e.key) return;
+    var tg = e.target, typing = window.MMInput ? MMInput.isTyping(tg) : !!(tg && /^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName));
+    if (typing || dialogOpen()) return; // never steal keys from a text box or an open dialog
     var k = e.key.toLowerCase();
-    if (k === 'b') { doBuy(e.shiftKey ? 10 : 1); e.preventDefault(); }
-    else if (k === 's') { doSell(e.shiftKey ? save.holdings : 1); e.preventDefault(); }
+    if (k === 'b') { doBuy(e.shiftKey ? 10 : 1); e.preventDefault(); return; }
+    if (k === 's') { doSell(e.shiftKey ? save.holdings : 1); e.preventDefault(); return; }
+    // Universal controls (CONTROLS.md) drive the practice week: Space/Enter = primary (buy on Sunday, else next half-day), E = sell all, R = play again.
+    var onBtn = tg && /^(BUTTON|A|SUMMARY)$/.test(tg.tagName);
+    var a = window.MMInput ? MMInput.actionOf(e) : null;
+    if (!pr || !a || e.repeat) return;
+    if (a === 'primary' && !onBtn && !pr.done) { if (pr.slot === 0) { if (!prBuy()) prNext(); } else prNext(); e.preventDefault(); }
+    else if (a === 'secondary' && k === 'e' && !pr.done) { prSell(); e.preventDefault(); }
+    else if (a === 'restart' && pr.done && !onBtn) { prStart(); e.preventDefault(); }
   });
 
 
@@ -421,8 +447,8 @@
     prSave.rounds += 1; prPersist();
     beep(profit > 0 ? 'claim' : 'ui_tap');
     $('pr-actions').hidden = true; $('pr-odds').hidden = true; $('pr-end').hidden = false;
+    var title = (profit > 0 ? 'Profit ' : profit < 0 ? 'Loss ' : 'Even ') + signed(profit) + ' bells' + (isBest && hadBest ? ' - new practice best!' : '');
     $('pr-when').textContent = 'Week over'; $('pr-pl').textContent = ''; $('pr-stat').textContent = 'Final practice bells ' + fmt(pr.bells) + '. Rings on the chart mark where you sold.';
-    $('pr-end-title').textContent = (profit > 0 ? 'Profit ' : profit < 0 ? 'Loss ' : 'Even ') + signed(profit) + ' bells' + (isBest && hadBest ? ' - new practice best!' : '');
     var ul = $('pr-end-list'); ul.textContent = '';
     [
       'This was a "' + M.PATTERN_NAMES[pr.wk.pattern] + '" week. ' + M.PATTERN_HINTS[pr.wk.pattern],
@@ -433,6 +459,17 @@
     ].concat(pr.mood ? ['Market mood was ' + MOODS[pr.mood].name + ' (' + oddsLine(pr.mood) + '). ' + MOODS[pr.mood].name + ' best: ' + signed(prSave.moodBest[pr.mood]) + ' bells' + (moodNew && moodHad ? ' (new!)' : '') + '.'] : []).forEach(function (t) { var li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
     drawChartOn($('pr-chart'), pr.wk, M.SLOTS - 1, 1, pr.marks);
     prBestLine();
+    // Shared result card (MMMiniKit): headline, stat rows, the lines above, and one Play again button.
+    var vm = { title: 'Practice week', headline: [{ text: title, id: 'pr-end-title' }], ids: { again: 'pr-again', head: 'pr-end-head', goal: 'pr-end-goal' },
+      stats: [{ label: 'Profit', value: signed(profit) }, { label: 'Final bells', value: fmt(pr.bells) }, { label: 'Practice best', value: signed(prSave.best), best: isBest && hadBest }],
+      goalText: 'Practice weeks never touch your real stall, medals or stats.', replay: false };
+    var card = null;
+    if (window.MMMiniKit && MMMiniKit.panel) { try { card = MMMiniKit.panel($('pr-card'), MMMiniKit.result(vm), { again: prStart, extra: [ul] }); } catch (e) { card = null; } }
+    if (!card) { // fallback without the kit: plain title + list + button
+      var pc = $('pr-card'); pc.textContent = '';
+      var h = document.createElement('h3'); h.id = 'pr-end-title'; h.textContent = title; pc.appendChild(h); pc.appendChild(ul);
+      var ab = document.createElement('button'); ab.type = 'button'; ab.id = 'pr-again'; ab.className = 'big buy'; ab.textContent = 'Play again'; ab.addEventListener('click', prStart); pc.appendChild(ab);
+    }
     try { $('pr-again').focus({ preventScroll: true }); } catch (e) { /* ignore */ }
   }
   function prBestLine() { $('pr-best').textContent = prSave.hasBest ? 'Practice best: ' + signed(prSave.best) + ' bells (' + prSave.rounds + ' played).' : 'No practice weeks played yet.'; }
@@ -453,8 +490,8 @@
     drawChartOn($('pr-chart'), pr.wk, pr.slot, 1, pr.marks);
   }
   $('pr-start').addEventListener('click', prStart);
+  $('entry-practice').addEventListener('click', function () { if (!pr || pr.done) prStart(); try { $('practice').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }); } catch (e) { /* ignore */ } });
   $('go-practice').addEventListener('click', function () { if (!pr || pr.done) prStart(); try { $('practice').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }); } catch (e) { /* ignore */ } });
-  $('pr-again').addEventListener('click', prStart);
   $('pr-buy').addEventListener('click', prBuy);
   $('pr-sell').addEventListener('click', prSell);
   $('pr-next').addEventListener('click', prNext);

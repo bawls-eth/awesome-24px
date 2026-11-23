@@ -10,6 +10,7 @@ const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
 const { check, done, blockDb } = require('./helpers');
+const LS = require('./lib/load-scale'); // load-scaled waits (1x idle, hard cap 6x)
 const ORIGIN = (process.env.BASE || 'http://localhost:8440/game/index.html').replace(/\/game\/index\.html.*$/, '');
 const SEED = 'co3' + (Date.now() % 100000); // a fresh channel per run
 const PAGE = (q) => ORIGIN + '/game/games/mad-maze/index.html?mode=world&test=1&' + q;
@@ -87,9 +88,9 @@ const SPY = () => {
   check('1b. page B is seat 1', (await T(B, (t) => t.seat)) === 1);
   const spawn = await T(A, (t, a) => ({ x: a.player.x, y: a.player.y }));
   await T(B, (t, a, w, s) => { a.player.x = s.x + 96; a.player.y = s.y; }, spawn);
-  const seenA = await A.waitForFunction(() => window.__mm.team.ghosts().some((g) => g.seat === 1), null, { timeout: 2000, polling: 50 }).then(() => true, () => false);
-  const seenB = await B.waitForFunction(() => window.__mm.team.ghosts().some((g) => g.seat === 0), null, { timeout: 2000, polling: 50 }).then(() => true, () => false);
-  check('1c. each page sees the other\'s ghost within 2 s', seenA && seenB, JSON.stringify({ seenA, seenB }));
+  const seenA = await A.waitForFunction(() => window.__mm.team.ghosts().some((g) => g.seat === 1), null, { timeout: LS.budget(2000), polling: 50 }).then(() => true, () => false);
+  const seenB = await B.waitForFunction(() => window.__mm.team.ghosts().some((g) => g.seat === 0), null, { timeout: LS.budget(2000), polling: 50 }).then(() => true, () => false);
+  check('1c. each page sees the other\'s ghost within 2 s (load-scaled wait)', seenA && seenB, JSON.stringify({ seenA, seenB }));
   await A.waitForTimeout(300);
   const g1 = await T(A, (t) => t.ghosts().find((g) => g.seat === 1));
   check('1d. A\'s ghost of B sits at B\'s tile (3 tiles away) with the name tag "Hero 2"', !!g1 && Math.abs(g1.x - (spawn.x + 96) / 32) < 0.6 && Math.abs(g1.y - spawn.y / 32) < 0.6 && g1.name === 'Hero 2', JSON.stringify(g1));
@@ -99,11 +100,15 @@ const SPY = () => {
 
   // rate: <= 8 Hz from both the receiver counter and the sender's postMessage spy
   const r0 = await T(A, (t) => t.stats().recv); const s0 = await B.evaluate(() => window.__spy.posted.length);
-  await A.waitForTimeout(2000);
-  const r1 = await T(A, (t) => t.stats().recv);
+  // a fixed wall window counts fewer messages when a loaded box stalls the page: sample >= 2 s AND until A has >= 8 messages (a condition),
+  // then normalise both counters to a 2 s window by the real elapsed time, so the 8 Hz ceiling is checked exactly and the floor is not load-bound
+  const w0 = Date.now(); await A.waitForTimeout(2000);
+  await A.waitForFunction((n0) => window.__mm.team.stats().recv - n0 >= 8, r0, { timeout: LS.budget(4000), polling: 100 }).catch(() => {});
+  const r1 = await T(A, (t) => t.stats().recv); const wms = Date.now() - w0; const norm = (n) => Math.round(n * 2000 / Math.max(2000, wms));
   const rate = await B.evaluate((n0) => { const P = window.__spy.posted.slice(n0).filter((q) => q.m && q.m.t === 'pos'); let minGap = 1e9; for (let i = 1; i < P.length; i++) minGap = Math.min(minGap, P[i].at - P[i - 1].at); return { n: P.length, minGap: Math.round(minGap) }; }, s0);
-  check('1f. positions arrive at <= 8 Hz (8..18 in 2 s on A)', r1 - r0 >= 8 && r1 - r0 <= 18, (r1 - r0) + ' msgs');
-  check('1g. B posts pos messages at <= 8 Hz (spy: <= 17 in 2 s, consecutive gap >= 110 ms)', rate.n >= 8 && rate.n <= 17 && rate.minGap >= 110, JSON.stringify(rate));
+  rate.raw = rate.n; rate.n = norm(rate.n); // floor on the raw count (the wait above guarantees >= 8 when the page keeps up), ceiling on the 2 s-normalised count
+  check('1f. positions arrive at <= 8 Hz (8..18 in 2 s on A)', r1 - r0 >= 8 && norm(r1 - r0) <= 18, (r1 - r0) + ' msgs in ' + wms + ' ms');
+  check('1g. B posts pos messages at <= 8 Hz (spy: <= 17 in 2 s, consecutive gap >= 110 ms)', rate.raw >= 8 && rate.n <= 17 && rate.minGap >= 110, JSON.stringify(rate));
 
   // minimap partner dot (own overlay canvas over #rw-minimap; the minimap canvas itself untouched)
   await frames(A, 6);

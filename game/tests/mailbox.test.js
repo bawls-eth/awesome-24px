@@ -1,4 +1,4 @@
-const { launch, scene, check, done } = require('./helpers');
+const { launch, scene, check, done, townReady } = require('./helpers');
 const AFF = { villagerAffinity: { mocha: 60, lily: 30, buster: 12 } };
 
 (async () => {
@@ -42,7 +42,7 @@ const AFF = { villagerAffinity: { mocha: 60, lily: 30, buster: 12 } };
   check('claim: Pen Pal achievement + lettersRead stat', c.pen === true && c.stat === 1);
   await page.reload();
   await page.fill('#name-input', 'ADMINtest'); await page.click('.species-tab'); await page.waitForTimeout(150); await page.click('.avatar-choice'); await page.click('#join-btn');
-  await page.waitForSelector('#player-list-panel'); await page.waitForTimeout(1500);
+  await page.waitForSelector('#player-list-panel'); await townReady(page); await page.waitForTimeout(1500);
   const d = await scene(page, (s) => {
     const left = s.unclaimedLetters().length; const total = s.lettersForDay(s.questDayBucket(), s.mailTiers()).length;
     const real = s.questDayBucket(); s.questDayBucket = () => real + 1;
