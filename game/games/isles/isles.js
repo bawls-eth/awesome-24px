@@ -1472,28 +1472,50 @@
   }
 
   // ---------- hero sprite (code art, baked once) ----------
+  // W-12 (b12-09): three true views (down = face, up = back of the head, right = profile; left mirrors right) x 2 walk frames, baked once.
+  // While moving the 2-frame walk cycle plays; idle and reduced motion hold frame 0.
   const heroArt = (() => {
-    const s = Math.round(32 * DPR), frames = [];
-    const col = CLASS_COL[HERO.cls] || '#4f9a45';
-    for (let f = 0; f < 2; f++) {
-      const cv = mk(s, s), c = cv.getContext('2d');
-      c.scale(DPR, DPR);
-      const bob = f ? 1 : 0;
-      c.fillStyle = '#2a1c14'; c.fillRect(11, 26 - bob, 4, 5); c.fillRect(17, 26 + bob - 1, 4, 5);
-      c.fillStyle = col; c.fillRect(9, 14 + bob, 14, 13);
-      c.fillStyle = '#f0c8a0'; c.fillRect(10, 4 + bob, 12, 11);
-      c.fillStyle = '#1e1a22'; c.fillRect(13, 8 + bob, 2, 3); c.fillRect(18, 8 + bob, 2, 3);
-      c.fillStyle = col; c.fillRect(9, 2 + bob, 14, 4);
-      c.fillStyle = '#0c140f'; c.fillRect(9, 26 + bob, 14, 1);
-      // 8B: a crisp light rim around the hero, baked once here (never per frame), so the hero reads on any ground
-      let rc = cv;
-      for (let k = 0; k < Math.max(1, Math.round(DPR)) && MS && MS.rimCanvas; k++) rc = MS.rimCanvas(rc, 0, null, mk) || rc; // 1 logical px thick
-      frames.push(rc);
-    }
+    const s = Math.round(32 * DPR);
+    const col = CLASS_COL[HERO.cls] || '#4f9a45', skin = '#f0c8a0', boot = '#2a1c14', ink = '#1e1a22';
+    const views = {};
+    ['down', 'up', 'right'].forEach((v) => {
+      views[v] = [];
+      for (let f = 0; f < 2; f++) {
+        const cv = mk(s, s), c = cv.getContext('2d');
+        c.scale(DPR, DPR);
+        const step = f ? 1 : 0;
+        if (v === 'right') { // profile: legs scissor, one eye, nose and hood toward +x
+          c.fillStyle = boot; c.fillRect(12 + step * 2, 26, 4, 5); c.fillRect(16 - step * 2, 26, 4, 5);
+          c.fillStyle = col; c.fillRect(11, 14, 11, 13); c.fillRect(10, 16 + step, 3, 7); // body + trailing arm
+          c.fillStyle = skin; c.fillRect(12, 4, 11, 11); c.fillRect(23, 9, 1, 2); // head + nose
+          c.fillStyle = ink; c.fillRect(19, 8, 2, 3);
+          c.fillStyle = col; c.fillRect(11, 2, 12, 4); c.fillRect(11, 2, 4, 9); // hood over the back of the head
+        } else if (v === 'up') { // back view: no face, hood / hair covers the head
+          c.fillStyle = boot; c.fillRect(11, 26 - step, 4, 5); c.fillRect(17, 25 + step, 4, 5);
+          c.fillStyle = col; c.fillRect(9, 14, 14, 13);
+          c.fillStyle = 'rgba(0,0,0,0.18)'; c.fillRect(15, 15, 2, 11); // back seam
+          c.fillStyle = skin; c.fillRect(10, 4, 12, 11);
+          c.fillStyle = col; c.fillRect(9, 2, 14, 11);
+        } else { // down: the original front view
+          c.fillStyle = boot; c.fillRect(11, 26 - step, 4, 5); c.fillRect(17, 26 + step - 1, 4, 5);
+          c.fillStyle = col; c.fillRect(9, 14 + step, 14, 13);
+          c.fillStyle = skin; c.fillRect(10, 4 + step, 12, 11);
+          c.fillStyle = ink; c.fillRect(13, 8 + step, 2, 3); c.fillRect(18, 8 + step, 2, 3);
+          c.fillStyle = col; c.fillRect(9, 2 + step, 14, 4);
+        }
+        c.fillStyle = '#0c140f'; c.fillRect(9, 30, 14, 1);
+        // 8B: a crisp light rim around the hero, baked once here (never per frame), so the hero reads on any ground
+        let rc = cv;
+        for (let k = 0; k < Math.max(1, Math.round(DPR)) && MS && MS.rimCanvas; k++) rc = MS.rimCanvas(rc, 0, null, mk) || rc; // 1 logical px thick
+        views[v].push(rc);
+      }
+    });
     const sh = mk(Math.round(24 * DPR), Math.round(8 * DPR)), sc = sh.getContext('2d');
     sc.fillStyle = 'rgba(0,0,0,0.28)'; sc.beginPath(); sc.ellipse(sh.width / 2, sh.height / 2, sh.width / 2, sh.height / 2, 0, 0, Math.PI * 2); sc.fill();
-    return { frames: frames, shadow: sh };
+    return { frames: views.down, views: views, shadow: sh };
   })();
+  const heroDraw = { view: 'down', frame: 0, flip: false, id: '' }; // test hook: what the last frame drew
+  function heroView() { const fx = hero.face.x, fy = hero.face.y; if (Math.abs(fy) > Math.abs(fx)) return fy > 0 ? 'down' : 'up'; return 'right'; }
 
   // ---------- render ----------
   const MOOD_COL = { shy: '#9ad07a', neutral: '#e0c060', hostile: '#e0604a' };
@@ -1606,7 +1628,10 @@
       if (REDUCED && hero.iframes > 0) g.globalAlpha = 0.6;
       if (ART) {
         if (GFX.shadows && !ride) g.drawImage(heroArt.shadow, hx - 12, hy - 2, 24, 8);
-        g.drawImage(heroArt.frames[Math.floor(hero.t * 6) % 2], hx - 16 + rdx, hy - 28 + lift, 32, 32);
+        const hv = heroView(), hf = heroMoving && !REDUCED && !ride ? Math.floor(hero.t * 6) % 2 : 0, flipH = hv === 'right' && hero.face.x < 0;
+        heroDraw.view = hv; heroDraw.frame = hf; heroDraw.flip = flipH; heroDraw.id = hv + hf + (flipH ? 'L' : '');
+        if (flipH) { g.save(); g.translate(hx + rdx, 0); g.scale(-1, 1); g.drawImage(heroArt.views[hv][hf], -16, hy - 28 + lift, 32, 32); g.restore(); }
+        else g.drawImage(heroArt.views[hv][hf], hx - 16 + rdx, hy - 28 + lift, 32, 32);
       } else { g.fillStyle = CLASS_COL[HERO.cls] || '#4f9a45'; g.beginPath(); g.arc(hx, hy - 8 + lift, HERO_R, 0, Math.PI * 2); g.fill(); }
       g.globalAlpha = 1;
     }
@@ -3294,6 +3319,7 @@
     box.hidden = false;
     const hide = () => { box.hidden = true; };
     setTimeout(hide, 9000);
+    const x = $('howto-close'); if (x) x.addEventListener('click', hide); // W-18 (b15-14): a real close control (44 px), keyboard / screen reader reachable
     window.addEventListener('keydown', function once() { setTimeout(hide, 2500); window.removeEventListener('keydown', once); });
     window.addEventListener('pointerdown', function once() { setTimeout(hide, 2500); window.removeEventListener('pointerdown', once); });
   })();
@@ -3482,6 +3508,7 @@
       deathsShown: () => deathsShown,
       render: () => { render(); return true; },
       face: (x, y) => { const l = Math.hypot(x, y) || 1; hero.face.x = x / l; hero.face.y = y / l; return true; },
+      heroDraw: () => Object.assign({}, heroDraw), setMoving: (on) => { heroMoving = !!on; return heroMoving; }, // W-12 hooks
       spawn: (sp, tx, ty) => (SPAWNABLE.indexOf(sp) >= 0 && creatures.length < CAP ? addCreature(sp, (tx + 0.5) * TILE, (ty + 0.5) * TILE, -1).uid : null),
       flags: () => ({ tame: TAME, companions: COMPANIONS, mounts: MOUNTS, saddles: SADDLES }),
       anger: (id) => { const c = creatures.find((x) => x.uid === id); if (c) c.angry = 30; return !!c; },

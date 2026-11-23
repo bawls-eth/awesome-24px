@@ -35,3 +35,6 @@ ul.medals li.on { color:#111; background:var(--accent); font-weight:bold; }
 /* the intro / result cards stay on screen and scroll inside themselves (landscape phones, 150% text) so Play again is always reachable */
 .overlay { position:fixed; left:max(16px, calc(50% - 264px)); right:max(16px, calc(50% - 264px)); top:60px; max-height:calc(100vh - 72px); max-height:calc(100dvh - 72px); overflow-y:auto; overscroll-behavior:contain; }
 @media (max-height:520px) { .overlay { top:8px; max-height:calc(100vh - 16px); max-height:calc(100dvh - 16px); } }
+/* W-09 (b09-09): the intro / result card starts below the header row, so it never covers the title or the Sound button */
+.overlay { top:calc(76px + env(safe-area-inset-top, 0px)); max-height:calc(100vh - 88px); max-height:calc(100dvh - 88px); }
+@media (max-height:520px) { .overlay { top:calc(68px + env(safe-area-inset-top, 0px)); max-height:calc(100dvh - 76px); } }

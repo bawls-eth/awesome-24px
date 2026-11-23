@@ -2961,3 +2961,11 @@ body.a11y-hud-scaled #chat-log, body.a11y-hud-scaled #quick-chat-row button, bod
 }
 /* Very narrow views (200% browser zoom on a phone): there is no room for the chip beside the Menu; Where to? still lists the Realm. */
 @media (max-width: 300px) { #gate-pointer { display: none !important; } }
+
+/* W-07 (b07-07, b08-06): while the emote wheel is open the quick-chat phrases step aside (the wheel sat on Fishing! / Nice! / Bye!). */
+body:has(#emote-popup:not(.hidden)) #quick-chat-row { visibility: hidden; }
+/* W-07 (b07-03): the people panel's More tab rows are real 44 px touch targets on phones (were 21-26 px; Settings was a small chip). */
+@media (max-width: 900px), (pointer: coarse) {
+  #settings-section button, #settings-section select, #settings-section a { min-height: 44px; box-sizing: border-box; }
+  #settings-section #town-settings-btn { min-width: 44px; width: 100%; }
+}

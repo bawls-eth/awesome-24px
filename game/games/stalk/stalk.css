@@ -136,3 +136,5 @@ body.px8 { background-color:var(--bg); color:var(--ink); }
 body.mm-nav-on #top h1 { min-height:48px; display:flex; align-items:center; }
 body.mm-nav-on #back { visibility:hidden; }
 body.mm-nav-on #town { display:none !important; }
+/* W-15 (b11-06, b12-17): sections scrolled into view stop below the fixed Menu (compass) button: 48 px button + 8 px top + 8 px gap */
+#practice, .card, section[id] { scroll-margin-top: 64px; }

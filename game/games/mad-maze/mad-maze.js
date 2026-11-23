@@ -165,9 +165,18 @@
       return h ? h.cls : null;
     } catch (e) { return null; }
   }
+  // W-01: one strip promise per art class (picker preload, page load and hero switch share it), so a switch never waits on a second fetch.
+  const heroArtCache = new Map();
+  const heroArtStat = { fallback: 0, applied: 0, failed: 0 }; // test counters (window.__heroArt)
+  function heroArtP(ac) {
+    if (!ac || !window.MMArt) return Promise.resolve(null);
+    if (!heroArtCache.has(ac)) heroArtCache.set(ac, MMArt.loadClass('../../assets/arcane/', ac).then((set) => (set && set.has(ac) && set.anim(ac, 'idle', 'down') ? set : null)).catch(() => null));
+    return heroArtCache.get(ac);
+  }
+  window.__heroArt = { stat: heroArtStat, cached: () => Array.from(heroArtCache.keys()) };
   const artClass = window.MMArt ? MMArt.artClassFor(activeHeroClass()) : null;
-  if (artClass) {
-    MMArt.loadClass('../../assets/arcane/', artClass).then((set) => { if (set.has(artClass)) arena.setHeroArt(set, artClass); }).catch(() => {});
+  if (artClass) { // only applied while it is still the active hero's class (a later pick must not be overwritten by this slower request)
+    heroArtP(artClass).then((set) => { if (set && MMArt.artClassFor(activeHeroClass()) === artClass) { arena.setHeroArt(set, artClass); heroArtStat.applied++; } }).catch(() => {});
   }
 
   // Dungeon tile art (b25 floors / walls / doors / torches / chests); ?dtiles=0 keeps the code-drawn rooms. Missing art falls back silently.
@@ -254,10 +263,54 @@
   if (window.MMArt && MMArt.loadItems && params.get('itemart') !== '0') {
     MMArt.loadItems('../../assets/arcane/').then((set) => { if (set.ids().length) arena.setItemArt(set); }).catch(() => {});
   }
+  // T-bags (b02-06): the world loot bags use the b15 bag art (6 tiers, outlined, 24 px) instead of the code squares, and a T12 drop shows the
+  // red bag with its soulbound sparkle baked in (static; no per-frame work). Swapped into the arena's bag sprite table once the strips load;
+  // any failure keeps the code bags. ?bagart=0 turns it off.
+  const BAG_ART = { stat: { loaded: 0, t12: 0 } }; window.__bagArt = BAG_ART;
+  if (realmWorld && arena.sprites && Array.isArray(arena.sprites.worldBag) && params.get('bagart') !== '0') {
+    const BDIR = '../../assets/arcane/b15-loot-bags-and-drops/sprites/';
+    const ids = ['bag_brown', 'bag_pink', 'bag_purple', 'bag_cyan', 'bag_white', 'bag_gold', 'bag_red', 'bag_soulbound_sparkle']; // index = MMZones BAG_TIERS order, then T12 red + sparkle
+    const load = (id) => new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = BDIR + id + '.png'; });
+    Promise.all(ids.map(load)).then((ims) => {
+      if (ims.slice(0, 7).some((im) => !im || im.naturalWidth < 24)) return; // all or nothing: never a mixed set
+      const bake = (im, spark) => { const c = document.createElement('canvas'); c.width = c.height = 26; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
+        g.drawImage(im, 0, 0, 24, 24, 1, 2, 24, 24); if (spark) g.drawImage(spark, 24, 0, 24, 24, 1, 0, 24, 24); return c; }; // frame 0 of each strip, feet at y 23
+      for (let i = 0; i < 6; i++) arena.sprites.worldBag[i] = bake(ims[i], null);
+      arena.sprites.worldBag[6] = bake(ims[6], ims[7] && ims[7].naturalWidth >= 48 ? ims[7] : null);
+      BAG_ART.stat.loaded = 7;
+      const od = arena.dropBag;
+      arena.dropBag = function (x, y, rarity, itemId, worldLoot, gear) { const b = od.apply(arena, arguments); if (b && gear && gear.t === 12) { b.tier = 6; BAG_ART.stat.t12++; } return b; };
+    }).catch(() => {});
+  }
+
   // Boss art: loaded lazily, one boss at a time (the realm asks for a boss id the first time that boss is drawn); ?bossart=0 disables it.
+  // W-02: also preloaded before it wakes: a world boss site within 16 tiles (wake radius is 9) and a dungeon room next to the boss room.
   if (window.MMArt && MMArt.loadBosses && params.get('bossart') !== '0') {
-    MMArt.loadBosses('../../assets/arcane/', [MMArt.bossArtFor(0)]).then((set) => {
-      arena.setBossArt(set, (id) => { MMArt.loadBosses('../../assets/arcane/', [id]).then((s2) => set.merge(s2)).catch(() => {}); });
+    const BROOT = '../../assets/arcane/'; const bossReq = Object.create(null); const bossStat = { req: [], merged: [] }; let bossSet = null;
+    const wantBoss = (id) => {
+      if (!bossSet || typeof id !== 'string' || bossReq[id] || bossSet.has(id) || MMArt.BOSS_MAP.indexOf(id) < 0) return;
+      bossReq[id] = 1; bossStat.req.push(id);
+      MMArt.loadBosses(BROOT, [id]).then((s2) => { bossSet.merge(s2); bossStat.merged.push(id); }).catch(() => {});
+    };
+    const PRE_R = 16 * 32;
+    const nearScan = () => {
+      const p = arena.player; if (!bossSet || !p) return;
+      try {
+        if (realmWorld && realmWorld.api && realmWorld.api.bossArtIds) {
+          const ids = realmWorld.api.bossArtIds(); const sites = ids.length ? realmWorld.api.bossSites() : [];
+          for (let i = 0; i < sites.length; i++) { const s = sites[i]; if (!bossSet.has(s.boss) && !bossReq[s.boss] && Math.hypot(p.x - (s.x + 0.5) * 32, p.y - (s.y + 0.5) * 32) <= PRE_R) wantBoss(s.boss); }
+        } else if (dungeon && dungeon.api && dungeon.api.graph && window.MMBiomes && MMBiomes.bossFor) {
+          const g = dungeon.api.graph, cur = dungeon.api.room; const boss = (g.rooms || []).find((r) => r.type === 'boss');
+          if (boss && cur !== null && cur !== undefined && (cur === boss.id || (g.doors || []).some((d) => (d.a === cur && d.b === boss.id) || (d.b === cur && d.a === boss.id)))) {
+            const bf = MMBiomes.bossFor(dungeon.api.biome, dungeon.api.seed, params.get('bosses') === 'classic'); if (bf && bf.boss_art) wantBoss(bf.boss_art);
+          }
+        }
+      } catch (e) { /* the lazy first-draw loader still covers it */ }
+    };
+    window.__bossArt = { stat: bossStat, scan: nearScan };
+    MMArt.loadBosses(BROOT, [MMArt.bossArtFor(0)]).then((set) => {
+      bossSet = set; arena.setBossArt(set, wantBoss); nearScan();
+      setInterval(nearScan, 500);
     }).catch(() => {});
   }
 
@@ -278,8 +331,12 @@
     if (arena.refreshHeroLevel) arena.refreshHeroLevel();
     applyWeapon();
     if (arena.setBoltClass) arena.setBoltClass(h.cls);
-    arena.setHeroArt(null);
-    if (ac) MMArt.loadClass('../../assets/arcane/', ac).then((set) => { const cur = heroState().hero; if (set.has(ac) && cur && cur.id === h.id) arena.setHeroArt(set, ac); }).catch(() => {});
+    // W-01: the previous sprite stays on screen until the new strip resolves (no fallback orb / empty frame); the code fallback only when it fails.
+    if (!ac) { arena.setHeroArt(null); heroArtStat.fallback++; return; }
+    heroArtP(ac).then((set) => {
+      const cur = heroState().hero; if (!cur || cur.id !== h.id) return;
+      if (set) { arena.setHeroArt(set, ac); heroArtStat.applied++; } else { arena.setHeroArt(null); heroArtStat.fallback++; heroArtStat.failed++; }
+    }).catch(() => {});
   }
   const HERO_CAP = 12; // MMProfile roster cap (same as the Lantern)
   function unlockedSet(prof) {
@@ -374,6 +431,7 @@
         grid.appendChild(b);
       });
       body.appendChild(grid); loadArts(list.owned); paintArts();
+      list.owned.slice(0, 6).forEach((h) => { if (window.MMArt) heroArtP(MMArt.artClassFor(h.cls)); }); // W-01: warm the full class strips while the picker is open
       const nb = mk('button', 'rm-btn hp-newbtn', st.prof.heroes.length >= HERO_CAP ? 'Roster full (' + HERO_CAP + ' heroes)' : '＋ New hero'); nb.type = 'button'; nb.dataset.newhero = '1'; nb.disabled = st.prof.heroes.length >= HERO_CAP; body.appendChild(nb);
     }
     function renderStats() {
@@ -438,6 +496,7 @@
       status.textContent = 'Now playing ' + h.name + ' (' + HS.className(MMClasses, h.cls) + '). Class stats, abilities and art applied; your run continues.';
       renderPick();
     });
+    body.addEventListener('pointerover', (e) => { const b = e.target.closest && e.target.closest('button[data-hero]'); if (!b || b.disabled) return; const h = heroState().prof.heroes.find((x) => x.id === b.dataset.hero); if (h && window.MMArt) heroArtP(MMArt.artClassFor(h.cls)); });
     const bh = document.getElementById('realm-board-hero'); if (bh) bh.addEventListener('click', () => arena.openHeroPanel('stats'));
     setInterval(() => { try { const zi = realmWorld.api.zone(); if (zi && zi.zone < 4) deepest.z = Math.max(deepest.z, zi.zone); } catch (e) { /* ignore */ } }, 1500);
     window.__heroUi = { select: selectHero, create: createHero, open: (t) => arena.openHeroPanel(t) };

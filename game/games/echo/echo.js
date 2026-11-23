@@ -120,6 +120,15 @@
     if (parts.length > 160) parts.splice(0, parts.length - 160);
   }
   function floatText(x, y, text, color) { floats.push({ x, y, text, color: color || '#fff', t: 1.1 }); }
+  // W-10 (b09-03, b12-12): the "+N in bloom" line is anchored above the board (DOM), never over the flower names or the tune / leaves widget.
+  const bloomEl = document.createElement('div'); bloomEl.id = 'echo-bloom'; bloomEl.setAttribute('aria-hidden', 'true');
+  if (canvas.parentNode) canvas.parentNode.insertBefore(bloomEl, canvas);
+  let bloomT = 0;
+  function bloomText(text) {
+    bloomEl.textContent = text; bloomEl.style.top = Math.max(0, canvas.offsetTop - 22) + 'px';
+    bloomEl.classList.remove('on'); void bloomEl.offsetWidth; bloomEl.classList.add('on');
+    clearTimeout(bloomT); bloomT = setTimeout(() => { bloomEl.classList.remove('on'); }, 1100);
+  }
   const msg = (t) => { $('msg').textContent = t; };
   function light(i, dur) { lit[i] = dur; tone(i, Math.min(0.6, dur + 0.15)); }
 
@@ -139,7 +148,7 @@
         const pts = run.len * 10 + (run.wiltsThis ? 0 : run.len * 5);
         run.score += pts;
         if (run.len > run.best) run.best = run.len;
-        floatText(CW / 2, CH / 2, '+' + pts + (run.wiltsThis ? '' : '  in bloom!'), '#ffd166');
+        bloomText('+' + pts + (run.wiltsThis ? '' : '  in bloom!'));
         burst(i, '#fff', 14);
         play(run.len >= 6 ? 'levelup' : 'pickup');
         if (run.len >= 6) award('t6');
@@ -157,7 +166,7 @@
     run.leaves--; run.wilts++; run.wiltsThis = (run.wiltsThis || 0) + 1;
     hintT[want] = 1.1;
     play('error');
-    floatText(PAD[i].x + PAD[i].w / 2, PAD[i].y + 24, 'wilt', '#b3a9d6');
+    floatText(PAD[i].x + PAD[i].w / 2, PAD[i].y + 56, 'wilt', '#b3a9d6'); // starts low enough that its 26 px rise stays inside the card
     run.nearPos = run.pos;
     if (run.leaves <= 0) { run.why = 'wilted'; hud(); end(); return { ok: false, over: true }; }
     msg('That was the ' + FLOWERS[want].name + ' (' + (want + 1) + '). ' + run.leaves + (run.leaves === 1 ? ' leaf' : ' leaves') + ' left.');
@@ -284,6 +293,7 @@
   };
   const STEM = ['......o......', '.....ogo.....', '.oo..ogo..oo.', 'oggo.ogo.oggo', '.oggoogooggo.', '..ooogggooo..', '.....ogo.....', '.....ogo.....'];
   function sprite(rows, x, y, u, map) { for (let r = 0; r < rows.length; r++) for (let k = 0; k < rows[r].length; k++) { const c = map[rows[r][k]]; if (!c) continue; g.fillStyle = c; g.fillRect(x + k * u, y + r * u, u, u); } }
+  const LABEL_UP = 34; // name label top above the card bottom: clear of the selection frame's bottom bar (W-10)
   function drawFlower(i) {
     const f = FLOWERS[i], p = PAD[i], on = lit[i] > 0, hint = hintT[i] > 0;
     const cx = p.x + p.w / 2, cy = p.y + p.h / 2 - 8;
@@ -304,7 +314,7 @@
     // number label + name (never colour alone)
     g.fillStyle = '#0b0d1a'; g.fillRect(p.x + 10, p.y + 10, 22, 26);
     ptext(String(i + 1), p.x + 14, p.y + 13, 3, on ? '#ffec27' : '#fff1e8');
-    ptext(f.name.toUpperCase(), Math.round(cx), p.y + p.h - 26, 2, on ? '#fff1e8' : '#c2c3c7', 'center');
+    ptext(f.name.toUpperCase(), Math.round(cx), p.y + p.h - LABEL_UP, 2, on ? '#fff1e8' : '#c2c3c7', 'center');
   }
   function draw() {
     g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = false;
@@ -392,6 +402,11 @@
     listen() { let n = 0; while (run.state === 'play' && run.phase !== 'input' && n++ < 2000) update(0.05, true); return run.phase; },
     tap, start, end, step(dt) { update(dt, true); },
     cues: () => cues.slice(), settings: () => settings,
-    counts: () => ({ parts: parts.length, floats: floats.length }),
+    counts: () => ({ parts: parts.length, floats: floats.length + (bloomEl.classList.contains('on') ? 1 : 0) }), // floating text: canvas floats + the DOM bloom line
+    // W-10 layout hooks (canvas units): flower name label rects, the centre widget rect, live canvas floats, the DOM bloom line
+    labels: () => FLOWERS.map((f, i) => { const p = PAD[i], w = f.name.length * 12; return { x: p.x + p.w / 2 - w / 2, y: p.y + p.h - LABEL_UP, w, h: 14 }; }),
+    widget: () => ({ x: CW / 2 - 27, y: CH / 2 - 26, w: 54, h: 34 }),
+    floatRects: () => floats.map((f) => { const w = String(f.text).length * 12; return { text: f.text, x: f.x - w / 2, y: f.y - 7, w, h: 14 }; }),
+    bloomEl: () => bloomEl,
   };
 }());

@@ -43,3 +43,5 @@ ul.medals li.on { color:#111; background:var(--accent); font-weight:bold; }
   #hud { grid-template-columns:repeat(2,1fr); }
   #stage .overlay { right:16px; top:8px; max-height:calc(100vh - 100px); max-height:calc(100dvh - 100px); }
 }
+/* W-09 (b09-01): a 5-6 digit score stays on one line (the stat box never grows / the HUD row never jumps) */
+.stat strong { overflow-wrap:normal; white-space:nowrap; font-variant-numeric:tabular-nums; font-size:min(18px, 4.6vw); }
