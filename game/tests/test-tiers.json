@@ -1676,5 +1676,9 @@
   "beta-w03-terrain.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-w04-nexus.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

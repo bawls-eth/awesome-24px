@@ -96,3 +96,13 @@ Each entry: item, files, test, how to retest by hand. Screenshots in `fixes/img/
 - Bake: 8-10 ms per chunk in the test (budget 60); `world-perf` green.
 - Test: `tests/beta-w03-terrain.test.js` (3 seeds). `shared-mm-chunk-bake`, `shared-mm-overworld-golden`, `world-art`, `world-props-godlands`, `world-props-b26`, `world-perf` green.
 - Before / after: `img/w03-{before,after}-{shore,god}.jpg`.
+
+## W-04 Nexus (b04-05, b04-06, b04-07, b04-10, b02-13, b02-15) - fixed (plaza tile art is Codex ask B-01)
+- Files: `games/mad-maze/realm-world.js` (slot 3, Nexus section only: view size, camera clamp, plaza ring, label clamp, injected CSS, hooks).
+- b04-05 void bands: the camera stays on the floor (outer wall ring excluded, centred if the plaza is smaller than the view) and the ring is painted as a stone kerb, never a black void.
+- b04-07 phone: portrait phones get a 400x540 walk view (stage `nx-tall`), 57% of a 390x844 screen instead of ~32%. Portal labels use the monospace pixel stack and are clamped inside the floor the camera can show (were cut at the plaza edges: 'dow', 'Bran').
+- b04-06 / b02-13: while the stall or the quest board is open the move / aim sticks are hidden (taps hit Buy, not the stick); the NPC line box never shrinks (flex none), so 'Take your time.' fits.
+- b04-10 desktop: the daily quest board opens as a panel beside the plaza (right column) with every Claim button on screen, no scroll.
+- Not done: stall buttons still use the rounded system-font Nexus style (b02-15 style half); the 8-bit restyle of the Nexus DOM is a larger CSS pass.
+- Test: `tests/beta-w04-nexus.test.js` (4 asserts fail on the old code). `world-nexus-walk`, `world-nexus`, `nexus-vendor` green.
+- Before / after: `img/w04-desk-corner-*.jpg`, `img/w04-desk-board-*.jpg`, `img/w04-phone-stall-after.jpg`.

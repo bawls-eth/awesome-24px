@@ -1638,7 +1638,9 @@
     const NX = window.MMNexus || null;
     const NX_ON = !!NX && !!window.MMQuests && !/[?&]nexus=0(&|$)/.test(typeof location !== 'undefined' ? location.search : '');
     const NX_WALK = NX_ON && !/[?&]nexuswalk=0(&|$)/.test(typeof location !== 'undefined' ? location.search : '');
-    const NX_VW = 640; const NX_VH = 480; const NX_R = 10; // walk view (world px, 4:3) and the hero's collision radius
+    // W-04 (b04-07): portrait phones get a tall walk view (400x540 world px) so the plaza fills >= 55% of the screen instead of a 4:3 strip
+    const NX_TALL = typeof window !== 'undefined' && window.innerWidth < 600 && window.innerHeight > window.innerWidth * 1.3;
+    const NX_VW = NX_TALL ? 400 : 640; const NX_VH = NX_TALL ? 540 : 480; const NX_R = 10; // walk view (world px) and the hero's collision radius
     const nxHero = { x: 0, y: 0, moving: false, aim: 0, mx: 0, my: 1, iframes: 0 }; let nxRaf = 0; let nxLast = 0; let nxNearI = null; const nxCam = { x: 0, y: 0 };
     const NX_NAME = { realm: 'The Realm', warren: 'Warren dungeon', bramble: 'Bramble dungeon', vault: 'Lantern vault', meadow: 'Meadow dungeon', crypt: 'Crypt dungeon' };
     // Shown name of a Nexus portal (display only; MMNexus keeps its ids and labels): the vault says where it leads (NAV-AUDIT 4.1 renames).
@@ -1660,6 +1662,9 @@
       + '#rw-nexus .nx-talk{max-width:760px;width:100%;margin:10px auto;box-sizing:border-box;padding:10px 12px;border-radius:10px;background:#231b42;border:1px solid #4a3d85;min-height:44px}#rw-nexus .nx-talk b{color:#ffe27a}'
       + '#rw-nx-act{display:block;margin:8px auto 0;min-height:48px !important;border-color:#ffe27a !important;background:#3a2c10 !important;max-width:100%;white-space:normal}#rw-nx-act.hidden{visibility:hidden}#rw-nexus .nx-stage:focus-visible{outline:3px solid #ffe27a}'
       + 'body.nx-walking #realm-stick-move{z-index:90}body.touch-device.nx-walking #rw-nexus{padding-bottom:calc(170px + env(safe-area-inset-bottom,0px))}'
+      + '#rw-nexus.nx-tall .nx-stage{aspect-ratio:400/540;width:min(100%,calc((100vh - 250px)*400/540))}#rw-nexus .nx-talk{flex:0 0 auto;overflow-wrap:anywhere}' // W-04
+      + 'body.nx-walking:has(#rw-nx-stall:not(.hidden)) .realm-stick,body.nx-walking:has(#rw-nx-board:not(.hidden)) .realm-stick{display:none !important}' // W-04 (b04-06, b02-13): no stick over the Buy / Claim rows
+      + '@media (min-width:1000px) and (min-height:560px){#rw-nexus .nx-board:not(.hidden){position:fixed;right:16px;top:64px;width:min(400px,calc(50vw - 350px));max-height:calc(100vh - 80px);overflow-y:auto;z-index:2;margin:0}}' // W-04 (b04-10): the board opens beside the plaza, not below the fold
       + '#rw-nexus .nx-board{max-width:760px;width:100%;margin:0 auto 12px;box-sizing:border-box;padding:10px 12px;border-radius:10px;background:#1d2a2a;border:1px solid #3b6b5f}#rw-nexus .nx-board.hidden{display:none}#rw-nexus .nx-q{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid #2f4a45}#rw-nexus .nx-q:first-of-type{border-top:0}#rw-nexus .nx-q span{flex:1}#rw-nexus .nx-q em{color:#8fe9ff;font-style:normal}'
       // PLAYTEST-REVIEW-2 #8: an unfinished quest's Claim is outline-only (dashed, muted, no fill) and the row carries a progress bar
       + '#rw-nexus .nx-stall{background:#2a2418;border-color:#6b5a36}#rw-nexus .nx-st-head{display:flex;align-items:center;gap:8px;justify-content:space-between}#rw-nexus .nx-st-note,#rw-nexus .nx-st-wallet{margin:6px 0;font-size:13px}#rw-nexus .nx-st-sub{display:block;margin:10px 0 6px;font-size:12px;color:#e8d9b0}#rw-nexus .nx-stall button{height:auto;padding:6px 10px;white-space:normal;max-width:100%;text-align:left}#rw-nexus .nx-stall button:disabled{background:transparent;border-style:dashed;border-color:#6b6390;color:#a59cc4;cursor:not-allowed}#rw-nexus .nx-st-q{flex:0 0 100%}#rw-nx-forge{margin:4px 0}'
@@ -1672,10 +1677,12 @@
       img.onload = () => { if (img.naturalHeight >= 64) { nxPortrait[id] = img; if (done) done(); } };
       img.src = opts.assetRoot.replace(/\/+$/, '') + '/b21-npcs-and-vendors/enemies/' + id + '/' + id + '_idle_down.png';
     }
+    const nxLabels = []; // W-04 test hook: portal label rects in plaza px (rebuilt per plaza draw)
     function nxDrawPlaza() { // one static draw per open / art arrival (1280x960 = the 40x30 tile plaza at 32 px)
-      if (!nxDom) return;
+      if (!nxDom) return; nxLabels.length = 0;
       const L = NX.layout(); const c = nxDom.plaza; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
       g.fillStyle = '#0e0a18'; g.fillRect(0, 0, c.width, c.height);
+      g.fillStyle = '#2e2742'; g.fillRect(0, 0, L.w * TILE, L.h * TILE); g.fillStyle = '#3d3457'; for (let i = 0; i < L.w; i++) { g.fillRect(i * TILE + 2, 2, TILE - 4, TILE - 6); g.fillRect(i * TILE + 2, (L.h - 1) * TILE + 2, TILE - 4, TILE - 6); } for (let j = 1; j < L.h - 1; j++) { g.fillRect(2, j * TILE + 2, TILE - 4, TILE - 6); g.fillRect((L.w - 1) * TILE + 2, j * TILE + 2, TILE - 4, TILE - 6); } // W-04: a stone kerb ring, never a void band
       for (let ty = 1; ty < L.h - 1; ty++) for (let tx = 1; tx < L.w - 1; tx++) { g.fillStyle = (tx + ty) % 2 ? '#4b4660' : '#554f6c'; g.fillRect(tx * TILE, ty * TILE, TILE, TILE); }
       g.fillStyle = '#6d6788'; for (let i = 1; i < L.w - 1; i++) { g.fillRect(i * TILE, TILE, TILE, 2); g.fillRect(i * TILE, (L.h - 2) * TILE + 30, TILE, 2); }
       const pad = wArt.spawn_pad; const sp = L.spawn;
@@ -1693,8 +1700,11 @@
         if (a) drawArt(g, a, 0, q.x, q.y + 23);
         else { g.globalAlpha = 0.3; g.fillStyle = '#a98bff'; g.beginPath(); g.arc(q.x, q.y, 30, 0, 7); g.fill(); g.globalAlpha = 1; g.strokeStyle = '#a98bff'; g.lineWidth = 4; g.beginPath(); g.arc(q.x, q.y, 24, 0, 7); g.stroke(); }
         g.restore();
-        g.font = 'bold 22px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(nxPortalName(q), q.x + 1, q.y - 37); g.fillStyle = '#e8dcff'; g.fillText(nxPortalName(q), q.x, q.y - 38);
-        const nm = nxMutOf(q); if (nm) { g.font = 'bold 16px system-ui, sans-serif'; g.fillStyle = '#000'; g.fillText('✦ ' + nm.label, q.x + 1, q.y - 59); g.fillStyle = '#c9b6ff'; g.fillText('✦ ' + nm.label, q.x, q.y - 60); }
+        // W-04 (b04-07, b02-15): pixel font, and the label is kept inside the floor the camera can show (it was cut at the plaza edges)
+        g.font = 'bold 20px ui-monospace, Menlo, Consolas, monospace'; g.textAlign = 'center'; const nmP = nxPortalName(q); const lw = g.measureText(nmP).width;
+        const lx = Math.max(TILE + lw / 2 + 4, Math.min((L.w - 1) * TILE - lw / 2 - 4, q.x)); nxLabels.push({ id: q.id, x: lx - lw / 2, y: q.y - 56, w: lw, h: 24 });
+        g.fillStyle = '#000'; g.fillText(nmP, lx + 2, q.y - 36); g.fillStyle = '#e8dcff'; g.fillText(nmP, lx, q.y - 38);
+        const nm = nxMutOf(q); if (nm) { g.font = 'bold 15px ui-monospace, Menlo, Consolas, monospace'; const mw = g.measureText('+ ' + nm.label).width; const mx = Math.max(TILE + mw / 2 + 4, Math.min((L.w - 1) * TILE - mw / 2 - 4, q.x)); g.fillStyle = '#000'; g.fillText('✦ ' + nm.label, mx + 2, q.y - 58); g.fillStyle = '#c9b6ff'; g.fillText('✦ ' + nm.label, mx, q.y - 60); }
       });
       if (RUSH_ON && L.trial) { // RE2: the Trial gate, code-drawn (no art id): a gold ring and its name
         const q = L.trial; g.save(); g.globalAlpha = 0.3; g.fillStyle = '#ffd45a'; g.beginPath(); g.arc(q.x, q.y, 30, 0, 7); g.fill(); g.globalAlpha = 1; g.strokeStyle = '#ffd45a'; g.lineWidth = 4; g.beginPath(); g.arc(q.x, q.y, 24, 0, 7); g.stroke(); g.restore();
@@ -1918,7 +1928,7 @@
       let plaza = cv; let act = null;
       if (NX_WALK) { // the plaza is drawn once offscreen; the stage canvas shows a camera window onto it with the walking hero
         plaza = document.createElement('canvas'); plaza.width = NX.W * TILE; plaza.height = NX.H * TILE;
-        root.classList.add('nx-walk'); stage.tabIndex = 0; stage.setAttribute('role', 'application'); stage.setAttribute('aria-label', 'The Nexus plaza: walk with WASD, the arrow keys or the move stick');
+        root.classList.add('nx-walk'); if (NX_TALL) root.classList.add('nx-tall'); stage.tabIndex = 0; stage.setAttribute('role', 'application'); stage.setAttribute('aria-label', 'The Nexus plaza: walk with WASD, the arrow keys or the move stick');
         act = document.createElement('button'); act.type = 'button'; act.id = 'rw-nx-act'; act.className = 'hidden'; act.tabIndex = -1; act.addEventListener('click', () => nxAct());
       }
       const L = NX.layout(); const lists = document.createElement('div'); lists.className = 'nx-lists';
@@ -2003,7 +2013,8 @@
     }
     function nxWalkDraw() {
       const c = nxDom.cv; const g = c.getContext('2d'); const h = nxHero; const L = NX.layout(); g.imageSmoothingEnabled = false;
-      nxCam.x = Math.round(Math.max(0, Math.min(L.w * TILE - NX_VW, h.x - NX_VW / 2))); nxCam.y = Math.round(Math.max(0, Math.min(L.h * TILE - NX_VH, h.y - NX_VH / 2)));
+      const cl = (v, lo, hi) => (hi < lo ? (lo + hi) / 2 : Math.max(lo, Math.min(hi, v))); // W-04 (b04-05): the view stays on the floor (ring excluded); a plaza smaller than the view is centred
+      nxCam.x = Math.round(cl(h.x - NX_VW / 2, TILE, (L.w - 1) * TILE - NX_VW)); nxCam.y = Math.round(cl(h.y - NX_VH / 2, TILE, (L.h - 1) * TILE - NX_VH));
       g.drawImage(nxDom.plaza, nxCam.x, nxCam.y, NX_VW, NX_VH, 0, 0, NX_VW, NX_VH);
       g.save(); g.translate(-nxCam.x, -nxCam.y);
       if (nxNearI) { const r = nxNearI.ref; g.strokeStyle = '#ffe27a'; g.lineWidth = 3; g.beginPath(); g.arc(r.x, r.y, nxNearI.kind === 'npc' ? 30 : 36, 0, Math.PI * 2); g.stroke(); }
@@ -2461,7 +2472,7 @@
       pickups: { on: PICK_ON, cap: PICK_CAP, magnet: MAGNET_R, list: () => picks.map((q) => ({ type: q.type, art: q.art, value: q.value, tier: q.tier, x: q.x, y: q.y, lifeMs: q.lifeMs })), spawn: spawnPickups, got: () => Object.assign({}, pickGot), total: () => pickTotal },
       nexus: { on: NX_ON, site: nxSite, portalName: (id) => (NX_ON ? nxPortalName(NX.layout().portals.find((q) => q.id === id)) : ''), promptFor: (id) => { const q = NX_ON ? NX.layout().portals.find((p) => p.id === id) : null; return q ? nxLabel({ kind: 'portal', ref: q }) : ''; }, open: nexusOpen, close: nexusClose, isOpen: () => nxOpen, near: () => nxNear, enterTile: () => nxEnterTile, talk: (id) => { const n = NX_ON && NX.layout().npcs.find((x) => x.id === id); if (n) { nxBuild(); nxTalk(n); } return nxDom && nxDom.last; }, stall: { on: () => NX_ON && nxStallOn(), open: () => NX_ON && nxStallOpen(), isOpen: () => !!(nxDom && nxDom.stall && nxDom.stall.isConnected && !nxDom.stall.classList.contains('hidden')), forge: () => NX_ON && nxStallForge() }, portal: (id) => { const q = NX_ON && NX.layout().portals.find((x) => x.id === id); return q ? nxPortal(q) : null; }, lastUrl: () => api.lastNexusUrl || null, today: todayUtc,
         // walkable plaza (PLAYTEST-REVIEW-2 #5); step(mx, my, dt) injects input for tests, place() only accepts free plaza points
-        walk: { on: NX_WALK, view: { w: NX_VW, h: NX_VH }, hero: () => ({ x: nxHero.x, y: nxHero.y, tx: Math.floor(nxHero.x / TILE), ty: Math.floor(nxHero.y / TILE), moving: nxHero.moving }), cam: () => ({ x: nxCam.x, y: nxCam.y }),
+        walk: { on: NX_WALK, view: { w: NX_VW, h: NX_VH }, labels: () => nxLabels.map((r) => Object.assign({}, r)), tall: NX_TALL, hero: () => ({ x: nxHero.x, y: nxHero.y, tx: Math.floor(nxHero.x / TILE), ty: Math.floor(nxHero.y / TILE), moving: nxHero.moving }), cam: () => ({ x: nxCam.x, y: nxCam.y }),
           near: () => (nxNearI ? { kind: nxNearI.kind, id: nxNearI.ref.id } : null), act: () => nxAct(), step: (mx, my, dt) => { if (nxOpen && NX_WALK) nxWalkStep(Number(dt) || 1 / 60, Number(mx) || 0, Number(my) || 0); return { x: nxHero.x, y: nxHero.y }; },
           place: (x, y) => { if (!nxOpen || !NX_WALK || !nxFree(Number(x), Number(y))) return false; nxHero.x = Number(x); nxHero.y = Number(y); nxSyncPrompt(); return true; }, running: () => nxRaf !== 0 } },
       quests: { date: questDate, list: () => MMQuests.quests(questDate()), summary: () => MMQuests.summary(save.quests, questDate()), state: () => JSON.parse(JSON.stringify(save.quests || MMQuests.fresh(questDate()))), event: nxQuestEvent, claim: nxClaim, flush: () => { qDirty = false; return writeSave(save); } },
