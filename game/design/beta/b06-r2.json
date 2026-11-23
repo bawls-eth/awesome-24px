@@ -1,0 +1,229 @@
+[
+ {
+  "id": "b06-r2-01",
+  "replays": "b06-01",
+  "status": "NOT FIXED",
+  "severity": "P2",
+  "area": "tundra creature art",
+  "title": "Tundra: glacier_shellback, icicle_bat, shagtusk, sabrefang still look like generic recolored templates",
+  "steps": [
+   "?test=1&isle=tundra&bosses=0, 390x844",
+   "spawn every __isles.packSpecies below the hero, screenshot"
+  ],
+  "expected": "Each species reads as its name (bat, shelled creature, tusked/fanged beast)",
+  "actual": "Same horned blob / saddled quadruped templates as round 1; icicle bat is still not a bat. creatures().src is now empty for all (was \"code\"), so the hook no longer shows art source. Matches W-17/W-18 \"not landed\".",
+  "viewport": "390x844",
+  "url": "/game/games/isles/index.html?test=1",
+  "screenshots": [
+   "img/b06-r2-01.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/games/isles/isles.js STRIPS; game/shared/mm-creature-draw.js",
+  "kind": "visual",
+  "frequency": "always"
+ },
+ {
+  "id": "b06-r2-02",
+  "replays": "b06-02",
+  "status": "NOT FIXED",
+  "severity": "P2",
+  "area": "mars creature art",
+  "title": "Mars: five species still drawn from two shared templates",
+  "steps": [
+   "?test=1&isle=mars&bosses=0",
+   "spawn the 5 pack species, screenshot"
+  ],
+  "expected": "Five distinct creatures",
+  "actual": "Unchanged: roly/bubblemoth/dust_devil are one horned blob, rustbeetle/crater_strider one saddled quadruped",
+  "viewport": "390x844",
+  "url": "/game/games/isles/index.html?test=1",
+  "screenshots": [
+   "img/b06-r2-02.jpg"
+  ],
+  "clip": null,
+  "suspect": null,
+  "kind": "visual",
+  "frequency": "always"
+ },
+ {
+  "id": "b06-r2-03",
+  "replays": "b06-03",
+  "status": "NOT FIXED",
+  "severity": "P2",
+  "area": "bosses art",
+  "title": "Frost Dragon and Red Titan still the same recolored bipedal bear body",
+  "steps": [
+   "?test=1&isle=tundra / mars, bossSpawn, place hero near, wait 1.2 s"
+  ],
+  "expected": "Dragon looks like a dragon, titan a colossus",
+  "actual": "boss().src is \"code\" for both (arenaSrc \"code\"); no wings/dragon traits. Same sprite as round 1.",
+  "viewport": "390x844",
+  "url": "/game/games/isles/index.html?test=1",
+  "screenshots": [
+   "img/b06-r2-03.jpg",
+   "img/b06-r2-04.jpg"
+  ],
+  "clip": null,
+  "suspect": null,
+  "kind": "visual",
+  "frequency": "always"
+ },
+ {
+  "id": "b06-r2-04",
+  "replays": "b06-04",
+  "status": "FIXED",
+  "severity": "P2",
+  "area": "boss tame",
+  "title": "Weary boss killed by continued fire",
+  "steps": [
+   "?test=1&isle=jungle, give 3 feast, bossSpawn, bossHit(2400)",
+   "bossHit(14) every 0.25 s sim for 6 s (held fire)",
+   "bossFeed()"
+  ],
+  "expected": "Boss survives held fire so Feed still possible",
+  "actual": "Boss stayed weary at 1 HP for the whole 6 s of held fire (260 -> 1, never dead); feedable true; bossFeed started taming (st taming, need 7). G-22 grace works. Note: one bossFeed right after bossHit with the hero ~108 px away returned why:none, then worked after a 3 s step (radius / drift, not a confirmed bug).",
+  "viewport": "390x844",
+  "url": "/game/games/isles/index.html?test=1&isle=jungle",
+  "screenshots": [
+   "img/b06-r2-05.jpg",
+   "img/b06-r2-07.jpg"
+  ],
+  "clip": null,
+  "suspect": null,
+  "kind": "ux",
+  "frequency": "always"
+ },
+ {
+  "id": "b06-r2-05",
+  "replays": "b06-05",
+  "status": "NOT FIXED (partly improved)",
+  "severity": "P2",
+  "area": "creature density",
+  "title": "Open isles empty at start",
+  "steps": [
+   "?test=1 on meadow, jungle, tundra",
+   "creatures().length at start, then walk 4 legs x 3 x 2.5 s sim"
+  ],
+  "expected": "Some creatures near the hero at the start",
+  "actual": "Start counts: meadow 0, jungle 0, tundra 2 (same as round 1). While walking, counts reached meadow 17, jungle 21, tundra 14 (round 1: 1 in view), so exploring density is much healthier. Only the empty first screen remains.",
+  "viewport": "390x844",
+  "url": "/game/games/isles/index.html?test=1",
+  "screenshots": [
+   "img/b06-r2-06.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/games/isles/isles.js spawnTick initial fill",
+  "kind": "balance",
+  "frequency": "often"
+ },
+ {
+  "id": "b06-r2-06",
+  "replays": "b06-06",
+  "status": "NOT FIXED",
+  "severity": "P3",
+  "area": "terrain look",
+  "title": "Start areas read as flat fields",
+  "steps": [
+   "?isle=jungle at 390x844 no test flag"
+  ],
+  "expected": "Visual variety on first screen",
+  "actual": "Jungle start is still two flat sand/fern blocks, no props in view.",
+  "viewport": "390x844",
+  "url": "/game/games/isles/index.html?isle=jungle",
+  "screenshots": [
+   "img/b06-r2-06.jpg"
+  ],
+  "clip": null,
+  "suspect": null,
+  "kind": "visual",
+  "frequency": "always"
+ },
+ {
+  "id": "b06-r2-07",
+  "replays": "b06-07",
+  "status": "FIXED",
+  "severity": "P3",
+  "area": "phone HUD",
+  "title": "Island name truncated",
+  "steps": [
+   "Open any isle at 390x844"
+  ],
+  "expected": "Full names readable",
+  "actual": "Hero line wraps to \"Wanderer - ranger Lv 1\" and the area (\"Frostfang Tundra - ice coast\", \"Verdant Jungle - beach\", \"Red Waste - canyon heart\") shows in full over 2-3 lines; no ellipsis. HUD box is taller but clear of the how-to card.",
+  "viewport": "390x844",
+  "url": "/game/games/isles/index.html?isle=jungle",
+  "screenshots": [
+   "img/b06-r2-01.jpg",
+   "img/b06-r2-06.jpg"
+  ],
+  "clip": null,
+  "suspect": null,
+  "kind": "visual",
+  "frequency": "always"
+ },
+ {
+  "id": "b06-r2-08",
+  "replays": "b06-08",
+  "status": "NOT FIXED",
+  "severity": "P3",
+  "area": "lift-off scene",
+  "title": "Rocket drawn at the bottom edge under toast and buttons",
+  "steps": [
+   "?test=1&isle=meadow&at=dock, give rocket_core_drift inputs, craft, travel(\"mars\"), shot 0.7 s in"
+  ],
+  "expected": "Rocket readable in the middle",
+  "actual": "Rocket rises from the bottom, partly behind the dock hint toast and the Sail/Decor buttons; \"Lift-off! Tap to skip.\" toast overlaps the how-to card.",
+  "viewport": "390x844",
+  "url": "/game/games/isles/index.html?test=1",
+  "screenshots": [
+   "img/b06-r2-08.jpg"
+  ],
+  "clip": null,
+  "suspect": null,
+  "kind": "visual",
+  "frequency": "always"
+ },
+ {
+  "id": "b06-r2-09",
+  "replays": "b06-09",
+  "status": "NOT FIXED",
+  "severity": "P3",
+  "area": "how-to card",
+  "title": "How-to card covers the centre and bosses; toasts stack on it",
+  "steps": [
+   "Open any isle first time at 390x844, wait 3-8 s"
+  ],
+  "expected": "Card auto-hides / moves off the play area",
+  "actual": "Card is still open and covers the middle of the screen and the top of the Red Titan; medal / journal toasts still print over it.",
+  "viewport": "390x844",
+  "url": "/game/games/isles/index.html?test=1",
+  "screenshots": [
+   "img/b06-r2-04.jpg",
+   "img/b06-r2-08.jpg"
+  ],
+  "clip": null,
+  "suspect": null,
+  "kind": "visual",
+  "frequency": "always"
+ },
+ {
+  "id": "b06-r2-10",
+  "replays": "b06-10",
+  "status": "FIXED",
+  "severity": "P3",
+  "area": "hero facing (W-12)",
+  "title": "Hero turns to its walk direction (extra check)",
+  "steps": [
+   "Desktop 1280x720, hold ArrowRight / Left / Down / Up 0.5 s each, read __isles.heroDraw()"
+  ],
+  "expected": "View follows direction",
+  "actual": "right0, right0L (flipped), down0, up1: correct each time. (A step()-driven check showed right0 only because step() without render() does not refresh heroDraw; real key input is correct.)",
+  "viewport": "1280x720",
+  "url": "/game/games/isles/index.html?isle=meadow&test=1",
+  "screenshots": [],
+  "clip": null,
+  "suspect": null,
+  "kind": "bug",
+  "frequency": "always"
+ }
+]
