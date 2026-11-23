@@ -94,11 +94,13 @@
     const el = doc && doc.documentElement;
     if (el) {
       el.style.setProperty('--ui-scale', String(v['text-size']));
+      if (v['text-size'] >= 1.25) el.setAttribute('data-ui-big', '1'); else el.removeAttribute('data-ui-big'); // layout hook (mm-side-access.js)
       const at = (n, on) => { if (on) el.setAttribute(n, '1'); else el.removeAttribute(n); };
       at('data-reduce-motion', v['reduce-motion'] || !v.flashes);
       if (el.classList) el.classList.toggle('reduce-motion', !!(v['reduce-motion'] || !v.flashes)); // MM8.reducedMotion() reads this class
       at('data-low-gfx', v['low-gfx']);
       at('data-high-contrast', v['high-contrast']);
+      try { if (win && win.MMAccess && win.MMAccess.applyContrast) win.MMAccess.applyContrast(doc, storage); } catch (e) { /* attribute above is enough */ }
     }
     return v;
   }
@@ -117,7 +119,8 @@
   }
   let panel = null;
 
-  // mount(opts) -> api. opts: {page, storage, feedback (default true), onChange(id, value)}. Creates the hidden dialog once per page.
+  // mount(opts) -> api. opts: {page, storage, feedback (default true), play (default true: false hides the shooter-only Play group
+  // on pages without aiming, e.g. the Hub or the arcade games), onChange(id, value)}. Creates the hidden dialog once per page.
   function mount(opts) {
     if (!win || !win.document) return null;
     if (panel) return panel;
@@ -176,6 +179,7 @@
       if (typeof o.onChange === 'function') { try { o.onChange(id, now); } catch (e) { /* page bug must not break settings */ } }
     }
     GROUPS.forEach((g) => {
+      if (g.id === 'play' && o.play === false) return;
       const sec = el('section', 'mmset-group');
       sec.setAttribute('data-group', g.id);
       const h = el('h3', 'mmset-gh', g.title);

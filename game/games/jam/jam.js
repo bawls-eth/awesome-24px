@@ -55,7 +55,19 @@
     return o;
   }
   var assist = cleanAssist(S.get(AKEY, null)), assistRun = false, assistLast = null;
-  function persistAssist() { S.set(AKEY, { on: assist.on, best: assist.best, section: assist.section }); }
+  // Merge-on-write (bugbash/saves.md S2): a stale second tab keeps every assist / section best another tab saved, and only writes
+  // the On/Off toggle when this tab changed it. Fields a newer build stored stay stored. Without MMSaveMerge: the old plain write.
+  var assistBase = JSON.parse(JSON.stringify(assist));
+  function persistAssist() {
+    var M = window.MMSaveMerge;
+    if (!M) { S.set(AKEY, { on: assist.on, best: assist.best, section: assist.section }); return; }
+    var mine = { best: assist.best, section: assist.section };
+    if (assist.on !== assistBase.on) mine.on = assist.on;
+    var m = M.merge(S.get(AKEY, null), assistBase, mine, M.SPECS[AKEY]);
+    if (typeof m.on !== 'boolean') m.on = assist.on;
+    S.set(AKEY, m);
+    assist = cleanAssist(m); assistBase = JSON.parse(JSON.stringify(assist));
+  }
   // Outer lanes fold onto the nearest inner lane (D->F, K->J); notes then thinned to >= 180 ms apart per lane.
   function assistChart(c) {
     var map = { D: 'F', F: 'F', J: 'J', K: 'J' }, last = {};

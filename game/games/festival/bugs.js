@@ -43,7 +43,29 @@
   var save = sanitize(S.get(KEY, null));
   var goals = B.cleanGoals(S.get(GOALS_KEY, null));
   // Own additive keys only: the run save, the goals list, and the hub medal summary {v:1,m:[...]} (read by hub/medals.js).
-  function persist() { S.set(KEY, { v: 1, stars: save.stars, best: save.best, journal: save.journal }); S.set(GOALS_KEY, goals); S.set(MEDALS_KEY, { v: 1, m: B.medalsFor(save, goals) }); try { var st = totalStars(), j = save.journal; window.MMHubProfile.sync(localStorage, 'bugs', [Object.keys(j).some(function (k) { return j[k] > 0; }) && 'catch1', st >= 6 && 'stars6', (j.goldbeetle > 0 || j.moonwing > 0) && 'rare', st >= 24 && 'stars24']); } catch (e) { /* hub map progress is optional */ } }
+  // Merge-on-write (bugbash/saves.md S2/S7): a stale second tab never lowers stars / bests, never drops another tab's catches or
+  // goals; goals / pb fields a newer build stored stay stored. Without MMSaveMerge (shared/mm-save-merge.js): the old plain write.
+  var isO = function (v) { return !!v && typeof v === 'object' && !Array.isArray(v); };
+  var saveBase = JSON.parse(JSON.stringify(save));
+  function writeSaves() {
+    var M = window.MMSaveMerge;
+    if (!M) { S.set(KEY, { v: 1, stars: save.stars, best: save.best, journal: save.journal }); S.set(GOALS_KEY, goals); return; }
+    var raw = S.get(KEY, null), st = sanitize(raw), j = {};
+    var m = M.merge(raw, saveBase, { v: 1, stars: save.stars, best: save.best, journal: save.journal }, { maxMap: ['stars', 'best'] });
+    // journal = catch counts: what storage holds + this tab's own new catches (never double-counted, never lowered)
+    Object.keys(st.journal).forEach(function (t) { j[t] = Math.min(999999, st.journal[t] + Math.max(0, (save.journal[t] || 0) - (saveBase.journal[t] || 0))); });
+    m.journal = j;
+    // this key is stored exactly as cleaned (unknown / hostile fields dropped, guarded by bugs-page.test.js)
+    var c = sanitize(m);
+    S.set(KEY, { v: 1, stars: c.stars, best: c.best, journal: c.journal });
+    save = c; saveBase = JSON.parse(JSON.stringify(save));
+    // goals: done goals stay done in every tab (union per arena)
+    var gr = S.get(GOALS_KEY, null), gs = B.cleanGoals(gr), done = {};
+    Object.keys(goals.done).forEach(function (a) { done[a] = (gs.done[a] || []).concat(goals.done[a].filter(function (id) { return (gs.done[a] || []).indexOf(id) < 0; })); });
+    goals = B.cleanGoals({ v: 1, done: done });
+    S.set(GOALS_KEY, Object.assign({}, isO(gr) ? gr : {}, { v: 1, done: Object.assign({}, isO(gr) && isO(gr.done) ? gr.done : {}, goals.done) }));
+  }
+  function persist() { writeSaves(); S.set(MEDALS_KEY, { v: 1, m: B.medalsFor(save, goals) }); try { var st = totalStars(), j = save.journal; window.MMHubProfile.sync(localStorage, 'bugs', [Object.keys(j).some(function (k) { return j[k] > 0; }) && 'catch1', st >= 6 && 'stars6', (j.goldbeetle > 0 || j.moonwing > 0) && 'rare', st >= 24 && 'stars24']); } catch (e) { /* hub map progress is optional */ } }
   persist();
   // FUN1 personal bests (own additive key): best combo per arena, runs played, so the summary can show the chase.
   var PB_KEY = 'pixeltown-bugs-pb-v1';
@@ -60,7 +82,15 @@
     }
     return o;
   }
-  var pb = cleanPb(S.get(PB_KEY, null));
+  var pb = cleanPb(S.get(PB_KEY, null)), pbBase = JSON.parse(JSON.stringify(pb));
+  // merge-on-write: max combo / modifier bests, runs = stored + this tab's own runs; unknown fields kept (bugbash/saves.md S2)
+  function persistPb() {
+    var M = window.MMSaveMerge;
+    if (!M) { S.set(PB_KEY, pb); return; }
+    var m = M.merge(S.get(PB_KEY, null), pbBase, pb, M.SPECS[PB_KEY]), c = cleanPb(m);
+    S.set(PB_KEY, Object.assign(m, { v: 1, runs: c.runs }));
+    pb = c; pbBase = JSON.parse(JSON.stringify(pb));
+  }
   // VAR1 run modifiers: on by default; ?mods=0 turns them off. Test pages (?test=1) keep them off unless ?mods=1, so older tests see plain runs.
   var MODS_ON = qs.get('mods') !== '0' && (!TEST || qs.get('mods') === '1');
   var nextRun = {}, rollN = 0, runSeed = null, runMod = null;
@@ -201,7 +231,7 @@
     var prevCombo = pb.combo[arenaId] || 0;
     if (st.bestCombo > prevCombo) pb.combo[arenaId] = Math.min(999, st.bestCombo);
     pb.runs = Math.min(999999, pb.runs + 1);
-    S.set(PB_KEY, pb);
+    persistPb();
     var nextHint = '';
     for (var ni = 0; ni < ALL.length; ni++) {
       if (!unlocked(ni)) { nextHint = NAMES[ALL[ni].id] + ' unlocks at ' + needStars(ni) + ' stars (you have ' + totalStars() + ').'; break; }

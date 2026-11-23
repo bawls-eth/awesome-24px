@@ -1,4 +1,8 @@
 {
+  "nav-settings.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "a11y-viewport-sweep.test.js": {
     "class": "browser",
     "tier": "full"
@@ -599,6 +603,14 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "town-bugbash.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "town-front-door.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "shared-mm-island-wilds.test.js": {
     "class": "node",
     "tier": "smoke"
@@ -848,7 +860,7 @@
     "tier": "full"
   },
   "town-perf.test.js": {
-    "class": "live",
+    "class": "browser",
     "tier": "full"
   },
   "jam-first-visit.test.js": {

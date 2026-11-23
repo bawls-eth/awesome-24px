@@ -1,5 +1,6 @@
-// Town desktop performance + desktop HUD target sizes. The Firebase database host is BLOCKED for every request (same trick as
-// realm-playthrough.test.js), so nothing touches the live database; the bot is named ADMIN* and never chats.
+// Town desktop performance + desktop HUD target sizes. OFFLINE only (bug bash 2026-11-23, netsafety P2-3): every database host is
+// blocked for HTTP AND WebSocket (blockDb), the Firebase SDK is answered with an empty stub and the bot enters through "Play offline",
+// so it never joins live presence (it used to: blocking HTTP alone let the SDK socket through). ADMIN* name, never chats.
 // Run: BASE=http://localhost:8440/game/index.html NODE_PATH=$(npm root -g) node game/tests/town-perf.test.js
 //
 // Pre-fix baseline (recorded on the CI-like box, 1280x720, headless software rendering, Town idle, DB blocked):
@@ -9,18 +10,25 @@
 //   and flushed every frame. Fixes: one ambient layer drawn only when visible, static Graphics baked to textures, and an adaptive
 //   render resolution on desktop (steps 1 -> 0.75 -> 0.5 while frames stay under 28 fps; the canvas keeps its CSS size).
 const { chromium } = require('playwright');
-const { check, done } = require('./helpers');
+const { check, done, blockDb } = require('./helpers');
 const LS = require('./lib/load-scale');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
-const BLOCK = /firebaseio\.com|firebasedatabase\.app|identitytoolkit|securetoken/i;
+const SDK = /gstatic\.com\/firebasejs\//;
+// The SDK stub makes "Join Town" fall through to the offline offer; take it.
+async function joinOffline(page, name) {
+  await page.fill('#name-input', name);
+  await page.click('button:has-text("Join Town")');
+  await page.waitForSelector('#join-offline-btn:not(.hidden)', { timeout: 30000 });
+  await page.click('#join-offline-btn');
+}
 const BASELINE_LONG_PER_S = 8.1;
 
 (async () => {
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 } });
   const errors = [];
-  const dbHits = [];
-  await ctx.route('**/*', (route) => { const u = route.request().url(); if (BLOCK.test(u)) { dbHits.push(u); return route.abort(); } return route.continue(); });
+  const db = await blockDb(ctx);
+  await ctx.route(SDK, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by town-perf.test.js */' }));
   const page = await ctx.newPage();
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|ERR_FAILED|net::/.test(m.text())) errors.push('console: ' + m.text()); });
@@ -28,10 +36,7 @@ const BASELINE_LONG_PER_S = 8.1;
   const scene = (fn, arg) => page.evaluate(`(${fn.toString()})(window.__g.scene.getScene('Town'), ${JSON.stringify(arg)})`);
 
   await page.goto(BASE);
-  await page.fill('#name-input', 'ADMINperf');
-  await page.click('.species-tab'); await page.waitForTimeout(150);
-  await page.click('.avatar-choice');
-  await page.click('#join-btn');
+  await joinOffline(page, 'ADMINperf');
   await page.waitForSelector('#player-list-panel', { timeout: 30000 });
   await page.waitForFunction(() => window.__g && window.__g.scene.getScene('Town') && window.__g.scene.getScene('Town').localBody, null, { timeout: 30000 });
 
@@ -90,21 +95,20 @@ const BASELINE_LONG_PER_S = 8.1;
   // ---- phone: layout intact ----
   const b2 = await chromium.launch();
   const c2 = await b2.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
-  await c2.route('**/*', (route) => (BLOCK.test(route.request().url()) ? route.abort() : route.continue()));
+  const db2 = await blockDb(c2);
+  await c2.route(SDK, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by town-perf.test.js */' }));
   const p2 = await c2.newPage();
   const e2 = [];
   p2.on('pageerror', (e) => e2.push(e.message));
   p2.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource|ERR_FAILED|net::/.test(m.text())) e2.push(m.text()); });
   await p2.goto(BASE);
-  await p2.fill('#name-input', 'ADMINperfm');
-  await p2.click('.species-tab'); await p2.waitForTimeout(150);
-  await p2.click('.avatar-choice');
-  await p2.click('#join-btn');
+  await joinOffline(p2, 'ADMINperfm');
   await p2.waitForSelector('#player-list-panel', { timeout: 30000 });
   await p2.waitForTimeout(1500);
   const ph = await p2.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: window.innerWidth, chat: document.getElementById('chat-input').getBoundingClientRect().height, scale: document.getElementById('game-container').dataset.renderScale || '1' }));
   check('phone 390x844: no horizontal scroll, render scale untouched (adaptive scaling is desktop-only)', ph.sw <= ph.iw && ph.scale === '1', JSON.stringify(ph));
   check('phone: no console errors', e2.length === 0, e2.join(' | '));
+  check('0 database requests or sockets (desktop + phone)', db.count() === 0 && db2.count() === 0, JSON.stringify({ d: db.http.concat(db.ws).slice(0, 2), p: db2.http.concat(db2.ws).slice(0, 2) }));
   await b2.close();
   done();
 })().catch((e) => { console.error(e); process.exit(1); });

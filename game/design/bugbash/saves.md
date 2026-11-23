@@ -17,7 +17,7 @@ the field was introduced in 75f9b38 together with that rule, so no real old save
 
 ## Open bugs (owner files are in other lanes: exact fixes below)
 
-### S1 - P0 (data loss) - a second tab silently erases the best score, rounds and medals of Pop / Stack / Echo / Dash
+### S1 - P0 (data loss) - FIXED (bb-saves-fix) - a second tab silently erases the best score, rounds and medals of Pop / Stack / Echo / Dash
 - Repro: open `games/pop/index.html` in two tabs. Tab A: play a round, score 900 (new best). Tab B (opened before A finished): play a poor
   round. Reload: the best is B's old best; A's round count and any medal only A earned are gone (`pixeltown-pop-v1`, and
   `pixeltown-medals-pop-v1`, which is rewritten from B's stale list). `save-race-tabs.test.js` shows `{"A":900,"stored":3}`.
@@ -41,7 +41,7 @@ the field was introduced in 75f9b38 together with that rule, so no real old save
   `SPECS` already has pop / stack / echo / dash (max bests, count rounds/runs as stored + this tab's own increase, union medals, hint
   only turns on). Then flip the `KNOWN(...)` lines in save-race-tabs.test.js to `check(...)`.
 
-### S2 - P0 (data loss) - same stale-tab overwrite in Jam assist, Stalk practice, Angler fun, Bugs pb / journal, Deepdelve runs
+### S2 - P0 (data loss) - FIXED (bb-saves-fix) - same stale-tab overwrite in Jam assist, Stalk practice, Angler fun, Bugs pb / journal, Deepdelve runs
 - `pixeltown-jam-assist-v1`: `game/games/jam/jam.js:57-58` (`assist` loaded once, `persistAssist` writes it whole). Repro in
   save-race-tabs.test.js: a stale tab toggling "Assist (one thumb)" wipes the assist best another tab saved (`{"on":true,"best":{}}`).
   Fix: `function persistAssist() { var mine = { on: assist.on, best: assist.best, section: assist.section }; var m = window.MMSaveMerge ? MMSaveMerge.merge(S.get(AKEY, null), assistBase, mine, MMSaveMerge.SPECS[AKEY]) : mine; S.set(AKEY, m); assist = cleanAssist(m); assistBase = JSON.parse(JSON.stringify(m)); }` with `var assistBase = JSON.parse(JSON.stringify(assist));` after line 57.
@@ -81,14 +81,23 @@ the field was introduced in 75f9b38 together with that rule, so no real old save
   show the player's new progress as gone for the rest of the session on a full device.
 - Fix: in `readRaw`, return `mem[key]` first when `Object.prototype.hasOwnProperty.call(mem, key)` (writeRaw already deletes it on a good write).
 
-### S6 - P3 - small-save loaders reset a save whose JSON grows past 4 KB
+### S6 - P3 - FIXED (bb-saves-fix: 120000 bound) - small-save loaders reset a save whose JSON grows past 4 KB
 - `pop/pop.js:39`, `stack/stack.js:35`, `echo/echo.js:50`: `s.length < 4000` else defaults; the next persist overwrites the real save.
   Today the saves are ~150 bytes, so this is latent; one future additive field (a ghost / history list) turns it into silent loss.
   Fix: use the same 120000 bound as `dash/dash.js:39`.
 
-### S7 - P3 - arcade loaders drop unknown fields (not forward compatible)
+### S7 - P3 - FIXED for Pop / Stack / Echo / Dash / Jam assist / Stalk practice / Angler fun / Bugs goals + pb / Deepdelve runs (bb-saves-fix; `pixeltown-bugs-v1` stays strictly cleaned on write, as bugs-page.test.js requires) - arcade loaders drop unknown fields (not forward compatible)
 - The same `load()` functions return only the fields they know, so an older cached tab writes away a field a newer build added.
   The MMSaveMerge fix in S1 also solves this (storage-only fields are kept by `merge`).
+
+### Fix notes (bb-saves-fix)
+- Every listed writer merges on write against what storage holds now (`MMSaveMerge.merge` + the owner's cleaner); memory keeps only
+  cleaned known fields, storage keeps unknown fields. Without `shared/mm-save-merge.js` each game falls back to its old plain write.
+- Beyond the SPECS: Dash keeps the longer ghost on the same course; Angler per-condition bests merge by hand (size max, strike = smaller
+  positive ms, catches counted with a base; the SPEC's `maxMap: ['cond']` would keep the slower strike); Stalk best keeps its hasBest rule;
+  Bugs journal counts = stored + this tab's own catches; Bugs goals union per arena; Jam assist writes On/Off only when this tab toggled it.
+- Medals keys (`pixeltown-medals-{pop,stack,echo,dash}-v1`) are unioned too. Tests: save-race-tabs.test.js (all former KNOWN-BUG lines are
+  checks; plus Dash, Stalk, Angler, Bugs, Deepdelve and the no-helper fallback), save-hostile-fuzz.test.js (MMDDRun race is a check).
 
 ## Checked and fine (no bug)
 - Town `writeSave` merges a fresh `loadSave()` into every write (main.js:158-164): two tabs keep each other's fields (guarded by a test now).

@@ -2,6 +2,22 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+<script>
+/* Front door: a plain visit (no query string, no same-origin referrer, not framed, not an automated browser) opens the 8-bit Home
+   (hub/index.html), whose Play / Town card come back here as ?from=hub. Any query (?from=, ?town=1, ?play=1, ?legacyart=...),
+   a link from inside the game, or an iframe stays in the Town. location.replace: Back never bounces between the two. */
+(function () {
+  try {
+    var l = window.location;
+    if (l.search && l.search.length > 1) return;
+    if (window.top !== window.self) return;
+    if (navigator.webdriver) return;
+    if (document.referrer) { try { if (new URL(document.referrer).origin === l.origin) return; } catch (e) { /* bad referrer: treat as external */ } }
+    if (!/(\/|\/index\.html)$/.test(l.pathname)) return; /* only a path whose folder is known (/game/ or /game/index.html) */
+    l.replace(new URL('hub/index.html', l.href).href);
+  } catch (e) { /* stay in the Town */ }
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
 <title>Hearthvale</title>
 <link rel="stylesheet" href="style.css?v=20261123a" />
@@ -74,7 +90,7 @@
       <div id="town-quick-grid">
       <button id="achievements-badge" type="button">🏆 <b id="achievement-count">0</b>/<span id="achievement-cap"></span></button>
       <button id="map-btn" type="button" title="Town map (M)">🗺️ Map</button>
-      <a id="world-map-link" href="./hub/index.html" title="Open the world map">🧭 World map</a>
+      <a id="world-map-link" href="./hub/index.html?map=1" title="Open the world map">🧭 World map</a>
       <button id="museum-badge" type="button" title="Museum collection">🏛️ Museum</button>
       <button id="dailies-btn" type="button" title="Today's chores (J)">📋 Today</button>
       <button id="journal-btn" type="button" title="Angler's journal (L)">🐟 Journal</button>
@@ -530,7 +546,9 @@
 <script src="shared/mm-access.js?v=20261121d"></script>
 <script src="shared/mm-aim.js?v=20261121d"></script>
 <script src="shared/profile.js?v=20261121d"></script>
-<script src="shared/mm-town-heroes.js?v=20261123a"></script>
+<script src="shared/mm-town-heroes.js?v=20261123b"></script>
+<script src="shared/mm-pixelize.js?v=20261123a"></script>
+<script src="shared/mm-settings.js?v=20261123a"></script>
 <script src="shared/mm-perf.js?v=20261122t"></script>
 <script src="hub/medals.js?v=20261122t"></script>
 <script src="shared/mm-chip.js?v=20261122c"></script>

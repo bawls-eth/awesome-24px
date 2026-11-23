@@ -6,6 +6,12 @@ body { display: flex; flex-direction: column; height: 100dvh; }
 #hud { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 12px; background: var(--panel); border-bottom: 2px solid var(--line); min-height: 48px; }
 .hud-main { display: flex; flex-direction: column; min-width: 0; }
 .hud-name { font-weight: bold; overflow-wrap: anywhere; }
+.hud-h1 { margin: 0; font-size: inherit; font-weight: inherit; line-height: inherit; }
+/* Keyboard: the first Tab stop on the map view opens the place the villager stands on (visible only while focused). */
+.map-play { position: fixed; left: 50%; top: 8px; transform: translateX(-50%); z-index: 9500; }
+.map-play:not(:focus) { left: -10000px; transform: none; } /* off screen (full 48 px target) until focused: a skip-link pattern */
+.map-play:focus-visible { outline: 3px solid var(--px-10, #ffec27); outline-offset: 2px; }
+body.home-on .map-play { display: none; }
 .hud-world { color: var(--dim); font-size: calc(13px * var(--ui-scale,1)); overflow-wrap: anywhere; }
 .hud-stats { display: flex; gap: 12px; font-size: calc(14px * var(--ui-scale,1)); white-space: nowrap; }
 #stage { flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
@@ -153,4 +159,10 @@ body.home-on #hud, body.home-on #hub-games, body.home-on #hub-continue, body.hom
 #view-toggle { flex: 0 0 auto; }
 body.home-on #bar { background: var(--px-ink, #0b0d1a); border-top-color: var(--px-1, #1d2b53); }
 @media (max-width: 480px) { .home-in { gap: 6px; padding: 6px 10px 8px; } }
+/* Bug bash: big text (Settings > Text size, html[data-ui-big]) never cuts a game name to "Lantern C...": names and hints wrap,
+   and on phones the cards go one per row so each name fits. */
+html[data-ui-big] .hc-name, html[data-ui-big] .hc-hint, html[data-ui-big] .hn-txt, html[data-ui-big] .hp-sub { white-space: normal; overflow-wrap: anywhere; text-overflow: clip; }
+@media (max-width: 560px) { html[data-ui-big] .home-cards { grid-template-columns: minmax(0, 1fr); } }
 @media (prefers-reduced-motion: reduce) { .home-play:active, .home-card:active, .home-coll:active { transform: none; } }
+/* Big text on a narrow phone: the footer buttons wrap onto two rows instead of cutting "Open" off the screen. */
+@media (max-width: 420px) { html[data-ui-big] #bar { flex-wrap: wrap; justify-content: center; flex-shrink: 0; } html[data-ui-big] #bar button, html[data-ui-big] #bar .btn { flex: 1 1 auto; padding: 0 8px; } }

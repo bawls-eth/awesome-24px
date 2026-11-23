@@ -11,7 +11,7 @@ const SAVE_KEY = 'pixeltown-save-v1';
 const LEGACY_RE = /\/i\/[a-z_]+-strip\.png|mooncats-strip\.png/;
 const LEGACY_SHEET_RE = /\/i\/(coolcats|punks|pudgypenguins|doge|apes|zombies|mohawks|blondies|aliens|alienclan|apepunks|coolcats_[a-z]+|genius|goldenpunks|halloweenpunks|phunks|punkettes|avalanchepunks|expansionpunks|frontpunks|intlpunks|morepunks|punks_[a-z]+|aliens_[a-z]+|punkrocks|boredapes)-strip\.png|mooncats-strip\.png/;
 
-async function open(browser, viewport, touch, seedSave) {
+async function open(browser, viewport, touch, seedSave, opts) {
   const ctx = await browser.newContext(touch ? { viewport, hasTouch: true, isMobile: true } : { viewport });
   const db = await blockDb(ctx);
   await ctx.route(/gstatic\.com\/firebasejs\//, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by town-heroes.test.js */' }));
@@ -21,13 +21,19 @@ async function open(browser, viewport, touch, seedSave) {
   const legacy = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
-  page.on('request', (r) => { if (LEGACY_SHEET_RE.test(r.url())) legacy.push(r.url()); });
+  const strips = [], atlas = [];
+  page.on('request', (r) => {
+    if (LEGACY_SHEET_RE.test(r.url())) legacy.push(r.url());
+    if (/\/characters\/[a-z]+\/[a-z]+_(idle|walk)_(down|up|right)\.png/.test(r.url())) strips.push(r.url());
+    if (/town-heroes-atlas\.png/.test(r.url())) atlas.push(r.url());
+  });
+  if (opts && opts.noAtlas) await page.route(/town-heroes-atlas\.png/, (r) => r.fulfill({ status: 404, body: 'gone' }));
   await page.route('**/main.js*', async (route) => {
     const resp = await route.fetch();
     const body = (await resp.text()).replace('const game = new Phaser.Game(config);', 'const game = window.__g = new Phaser.Game(config);');
     route.fulfill({ response: resp, body });
   });
-  return { ctx, page, db, errors, legacy };
+  return { ctx, page, db, errors, legacy, strips, atlas };
 }
 
 async function enter(page, tap) {
@@ -95,6 +101,10 @@ const townTex = (page) => page.evaluate(() => {
       const t2 = await townTex(p.page);
       check(`${label}: outfit change re-textures to the hero`, t2.key === 'hero_paladin' && t2.species === 'hero_paladin', JSON.stringify(t2));
       check(`${label}: no request to the legacy punk/mooncat sheets`, p.legacy.length === 0, p.legacy.slice(0, 3).join(','));
+      check(`${label}: heroes come from ONE atlas request`, p.atlas.length === 1, JSON.stringify(p.atlas));
+      check(`${label}: no full-size hero strip is downloaded (atlas instead of ~650 KB)`, p.strips.length === 0, p.strips.slice(0, 2).join(','));
+      const freed = await p.page.evaluate(() => !window.__g.scene.getScene('Town').textures.exists('htatlas'));
+      check(`${label}: the atlas texture is freed after the bake`, freed);
       check(`${label}: 0 console errors`, p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
       check(`${label}: 0 database requests`, p.db.count() === 0, JSON.stringify({ http: p.db.http.slice(0, 2), ws: p.db.ws.slice(0, 2) }));
       await p.ctx.close();
@@ -127,6 +137,22 @@ const townTex = (page) => page.evaluate(() => {
       check(`${label}: legacy save: 0 database requests`, p.db.count() === 0);
       await p.ctx.close();
     }
+  }
+  // 3) Atlas missing (404): the strips are fetched and baked as before, the hero still renders and animates.
+  {
+    const p = await open(browser, { width: 1280, height: 800 }, false, null, { noAtlas: true });
+    await p.page.goto(BASE, { waitUntil: 'domcontentloaded' });
+    await p.page.waitForSelector('#avatar-grid .avatar-choice');
+    await p.page.fill('#name-input', 'ADMINatlas');
+    await p.page.click('#avatar-grid .avatar-choice[data-hero="warlock"]');
+    await p.page.click('button:has-text("Join Town")');
+    await enter(p.page, (sel) => p.page.click(sel));
+    const t = await townTex(p.page);
+    const frames = await p.page.evaluate(() => window.__g.scene.getScene('Town').textures.get('hero_warlock').getFrameNames().length);
+    check('atlas 404: falls back to the hero strips', p.strips.length === 60, String(p.strips.length));
+    check('atlas 404: the hero still renders with all 30 frames', t.key === 'hero_warlock' && frames >= 30, JSON.stringify(t) + ' ' + frames);
+    check('atlas 404: no page errors', p.errors.filter((e) => !/404|Failed to load|htatlas/.test(e)).length === 0, p.errors.slice(0, 3).join(' | '));
+    await p.ctx.close();
   }
   await browser.close();
   done();
