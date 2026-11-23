@@ -567,6 +567,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-bugbash-fuzz.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "shared-mm-town-heroes.test.js": {
     "class": "node",
     "tier": "smoke"

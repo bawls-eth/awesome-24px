@@ -18,6 +18,9 @@
     } catch (e) { /* the RECIPES fallback still plays */ }
   }
 }(typeof self !== 'undefined' ? self : this, function (CHIP) {
+  const own = (o, k) => typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k);
+  // resume() is a Promise in every modern browser and rejects under some autoplay policies (Safari): never leave it unhandled
+  const wake = (c) => { if (c.state === 'suspended' && c.resume) { try { const p = c.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* ignore */ } } };
   const chip = () => CHIP || (typeof self !== 'undefined' && self.MMChip) || null;
   const KEY = 'mm-sfx-muted';
   const LIMITS = { shot: 12, hit: 16, portal: 4, bag_rare: 4, boss_awaken: 2, warn: 4, claim: 4, ui_tap: 10 }; // max per second
@@ -49,7 +52,7 @@
     };
     let ctx = null, master = null, noiseBuf = null;
     let muted = false, music = false, volume = 0.8;
-    const recent = {}; // name -> array of ctx times
+    const recent = Object.create(null); // name -> array of ctx times
     const cache = {}; // MMChip periodic waves + noise buffer for this context
     let musicBus = null, sfxBus = null, seq = null, seqTimer = null, wantCue = null;
     const timer = opts.timer || (typeof setInterval === 'function' ? { set: (f, ms) => setInterval(f, ms), clear: (h) => clearInterval(h) } : null);
@@ -75,7 +78,7 @@
       return ctx;
     }
     function allowed(name, now) {
-      const lim = LIMITS[name];
+      const lim = own(LIMITS, name) ? LIMITS[name] : 0;
       if (!lim) return true;
       const arr = recent[name] || (recent[name] = []);
       while (arr.length && now - arr[0] >= 1) arr.shift();
@@ -115,13 +118,13 @@
     function play(name) {
       if (muted) return false;
       const C = chip(), chipName = C && C.resolve ? C.resolve(name) : null;
-      const rec = RECIPES[name];
+      const rec = own(RECIPES, name) ? RECIPES[name] : null;
       if (!rec && !chipName) return false;
       const c = ensure();
       if (!c) return false;
       try {
         if (!allowed(name, c.currentTime)) return false;
-        if (c.state === 'suspended' && c.resume) c.resume();
+        wake(c);
         if (chipName) { duck(c); C.playSfx(c, sfxBus || master || c.destination, chipName, cache); } else rec.forEach((r) => voice(c, r));
         if (wantCue && !(seq && seq.cue)) playMusic(wantCue); // a gesture-driven sound is the earliest safe moment to start music
         return true;
@@ -131,13 +134,13 @@
     // (callers invoke play/music from a user gesture). Unknown cue or no MMChip -> false.
     function playMusic(cue) {
       const C = chip();
-      if (!C || !C.CUES || !C.CUES[cue]) return false;
+      if (!C || !C.CUES || !own(C.CUES, cue)) return false;
       wantCue = cue;
       if (muted || !music || lowPower()) { stopMusic(true); return false; }
       const c = ensure();
       if (!c) return false;
       try {
-        if (c.state === 'suspended' && c.resume) c.resume();
+        wake(c);
         if (!seq) seq = C.sequencer({ ctx: c, dest: musicBus || master || c.destination, cache, seed: opts.seed | 0 });
         seq.start(cue);
         if (!seqTimer && timer) seqTimer = timer.set(() => { try { if (seq) seq.tick(); } catch (e) { /* ignore */ } }, 50);
@@ -184,7 +187,7 @@
       const c = ensure();
       if (!c) return false;
       try {
-        if (c.state === 'suspended' && c.resume) c.resume();
+        wake(c);
         const g = c.createGain(); g.gain.setValueAtTime(0.018, c.currentTime);
         let tail = g;
         if (c.createBiquadFilter) { const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 420; f.connect(g); tail = f; }

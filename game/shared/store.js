@@ -4,14 +4,16 @@
   if (typeof module === 'object' && module.exports) module.exports = factory(root);
   else root.MMStore = factory(root);
 }(typeof self !== 'undefined' ? self : this, function (root) {
-  const mem = {};
+  const mem = Object.create(null); // key -> JSON string; only holds keys whose last storage write failed (blocked / quota)
   function ls() {
     try { return (typeof localStorage !== 'undefined' && localStorage) || root.localStorage || null; } catch (e) { return null; }
   }
   function readRaw(key) {
+    // A key whose last write failed (quota exceeded, private mode) lives in memory and is newer than whatever storage holds.
+    if (Object.prototype.hasOwnProperty.call(mem, key)) return mem[key];
     const s = ls();
     if (s) { try { return s.getItem(key); } catch (e) { /* fall through */ } }
-    return Object.prototype.hasOwnProperty.call(mem, key) ? mem[key] : null;
+    return null;
   }
   function writeRaw(key, str) {
     const s = ls();

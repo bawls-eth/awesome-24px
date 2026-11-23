@@ -141,7 +141,11 @@
     return imageCache[url];
   }
   function fetchJson(url) {
-    return root.fetch(url).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+    // no fetch (old WebView, node) or a synchronous throw (bad URL) used to escape load(), which promises never to reject
+    var p;
+    try { p = root && typeof root.fetch === 'function' ? root.fetch(url) : null; } catch (e) { p = null; }
+    if (!p || typeof p.then !== 'function') return Promise.resolve(null);
+    return p.then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
   }
 
   // scales.json: { scales: { <asset id>: { display_scale } } }. Missing or malformed file -> every scale is 1.
@@ -167,7 +171,7 @@
       var jobs = [];
       assets.forEach(function (a) {
         var key = a && typeof a.class === 'string' ? a.class : (a && typeof a.enemy === 'string' ? a.enemy : (a && typeof a.boss === 'string' ? a.boss : null)); // heroes are keyed by class, enemies by creature name, bosses by boss id (items have no action/dir and are skipped here)
-        if (!a || typeof a !== 'object' || typeof a.path !== 'string' || !key || typeof a.action !== 'string' || !DIRS[a.dir]) return;
+        if (!a || typeof a !== 'object' || typeof a.path !== 'string' || !key || typeof a.action !== 'string' || !(typeof a.dir === 'string' && Object.prototype.hasOwnProperty.call(DIRS, a.dir))) return;
         if (opts.only && opts.only.indexOf(key) < 0) return;
         if (opts.actions && opts.actions.indexOf(a.action) < 0) return;
         if (opts.dirs && opts.dirs.indexOf(a.dir) < 0) return;
