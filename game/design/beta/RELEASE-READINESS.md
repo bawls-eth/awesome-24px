@@ -5,7 +5,9 @@ carries `dev-qa`: QA re-tests + helpers). Lane tips: dev-perf 43d8f18 (last comm
 Merges: only `game/tests/test-tiers.json` conflicted (key union, no value clash). No non-trivial conflict (qa-conflicts.md).
 Evidence per item: `fixes/qa-verification.md`. Failure notes with repro: `fixes/qa-to-perf.md`, `qa-to-gameplay.md`, `qa-to-world.md`.
 
-## Recommendation: NO-GO as of 09:15. GO once the 7 small follow-ups below are in (all one-liners or test expectations, ~30-60 min).
+Re-checked at 09:28 UTC: no lane branch has moved since 07:50, so every finding below still stands.
+
+## Recommendation: NO-GO as of 09:28. GO once the 7 small follow-ups below are in (all one-liners or test expectations, ~30-60 min).
 Both P0s and every code P1 are verified fixed, with QA's own replays of the tester steps. But the merged tree has 10 red existing / beta
 tests (gate rule 3: zero failures), each bisected to one lane commit. None is a data-loss or save-format risk; two are real product bugs
 (G-08 hot-path allocation, Realm boot with blocked storage now reachable from Home), the rest are a swallowed test handle and stale asserts.
