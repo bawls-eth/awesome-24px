@@ -580,7 +580,10 @@
     if (!phone && area > 0) r = Math.min(r, Math.max(0.6, Math.sqrt(MAX_PIXELS / area)));
     return r;
   }
-  const pixelRatio = () => basePixelRatio() * LEVELS[gov.level].scale;
+  // 8-bit pass: the 3D view renders at half resolution and the canvas is upscaled with image-rendering: pixelated, so every
+  // block face reads as chunky 2x2 pixels (and the fill cost halves twice). ?px=0 renders at the old full resolution.
+  const PX8 = params.get('px') === '0' ? 1 : 0.5;
+  const pixelRatio = () => basePixelRatio() * LEVELS[gov.level].scale * PX8;
   function govAvg() {
     if (!gov.count) return 0;
     let t = 0;
