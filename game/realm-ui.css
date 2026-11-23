@@ -274,3 +274,6 @@ body:has(#realm-backpack:not(.hidden)) #rw-goal { display: none !important; }
 body:has(#realm-backpack:not(.hidden)) #realm-chase-toast { top: 12px !important; bottom: auto !important; left: calc(12px + env(safe-area-inset-left, 0px)) !important; transform: none !important;
   max-width: calc((100% - 460px) / 2 - 24px) !important; z-index: 31; }
 @media (max-width: 699px) { body:has(#realm-backpack:not(.hidden)) #realm-chase-toast { display: none !important; } }
+/* W-05 r3 (b15-r2, 150% zoom = 260x563 and 320 px): the HUD wraps to three rows (bars / Leave / info line) below 361 px, so the XP bar sits
+   under the whole HUD block instead of over the Menu button (row 2) and the info line (row 3). The zone / goal lines follow it (zonePlace). */
+@media (max-width: 360px) { #realm-xp { top: calc(var(--st) + 126px); } #realm-boss { top: calc(var(--st) + 150px); } #realm-partner { top: calc(var(--st) + 190px); } }

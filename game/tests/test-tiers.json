@@ -1764,5 +1764,17 @@
   "beta-retest-b02.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-w05r3-hud-narrow.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r3-blacksmith-godgate.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r3-lantern-blocked.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
