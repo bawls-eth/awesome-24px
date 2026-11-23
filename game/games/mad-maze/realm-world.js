@@ -531,8 +531,12 @@
         if (window.MMQuests && save.quests) {
           const rows = MMQuests.summary(save.quests, questDate());
           if (rows.some((q) => q.done && !q.claimed)) return 'Claim your quest reward at the Nexus';
-          const q = rows.find((r) => !r.done);
-          if (q) return q.text + (q.need > 1 ? ` (${Math.min(q.p, q.need)}/${q.need})` : '');
+          // G-06: a daily quest leads the goal line only when it is in reach: its zone's recLv <= hero level + 2 (a boss quest: the Midlands
+          // recLv, where the first altars wake). A Lv 1 hero keeps the level goal instead of "Defeat 20 creatures in the Highlands".
+          const zq = (Z.TABLES && Z.TABLES.ZONES) || []; const lvq = arena.save && arena.save.level | 0;
+          const reach = (r) => { const zz = Number.isInteger(r.zone) && r.zone >= 0 && r.zone <= 3 ? r.zone : r.kind === 'boss' ? 1 : -1; return zz < 0 || (((zq[zz] || {}).recLv | 0) <= lvq + 2); };
+          const q = rows.find((r) => !r.done); // the next quest on the board; out of reach = the level goal stays (no skipping ahead)
+          if (q && reach(q)) return q.text + (q.need > 1 ? ` (${Math.min(q.p, q.need)}/${q.need})` : '');
         }
         const zs = (Z.TABLES && Z.TABLES.ZONES) || []; const z = zi && zi.zone >= 0 && zi.zone <= 3 ? zi.zone : 0;
         const next = zs[z + 1]; const lv = arena.save && arena.save.level | 0;
