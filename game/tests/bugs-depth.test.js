@@ -8,7 +8,7 @@ const B = require('../shared/mm-bugs.js');
 const HM = require('../hub/medals.js');
 const ORIGIN = (process.env.BASE || 'http://localhost:8440/game/index.html').replace(/\/game\/index\.html.*$/, '');
 const URL = ORIGIN + '/game/games/festival/bugs.html?test=1';
-const HUB = ORIGIN + '/game/hub/index.html';
+const HUB = ORIGIN + '/game/hub/index.html?map=1'; // HS1: map view (the default view is the home screen)
 const PHONE = { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true };
 const MK = 'pixeltown-medals-bugs-v1', GK = 'pixeltown-bugs-goals-v1';
 const all = [];

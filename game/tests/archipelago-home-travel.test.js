@@ -15,7 +15,7 @@ const { check, done, blockDb } = require('./helpers');
 const TAMES = require('../shared/mm-tames.js');
 const ORIGIN = (process.env.BASE || 'http://localhost:8440/game/index.html').replace(/\/game\/index\.html.*$/, '');
 const PAGE = ORIGIN + '/game/games/isles/index.html';
-const HUB = ORIGIN + '/game/hub/index.html';
+const HUB = ORIGIN + '/game/hub/index.html?map=1'; // HS1: map view (the default view is the home screen)
 const SHOTS = process.env.SHOTS || '';
 const TOWN = '{"realm":{"level":3},"name":"Bo"}';
 const PHONE = { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true };

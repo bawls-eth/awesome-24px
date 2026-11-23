@@ -664,16 +664,18 @@
   document.addEventListener('keydown', (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (!$('card').hidden) { if (e.key === 'Escape') closeCard(); return; }
+    if (homeOn()) return; // HS1: the home screen is a normal page (links / buttons); the map's keys wait for the map view
     const d = KEYDIR[e.key];
     if (d) { e.preventDefault(); step(d[0], d[1]); return; }
     if ((e.key === 'Enter' || e.key === ' ') && e.target.tagName !== 'BUTTON') { e.preventDefault(); if (!walker.wps) openNode(hub.at); }
   });
 
+  const homeOn = () => document.body.classList.contains('home-on');
   const pad = { dir: '', a: false, b: false };
   function pollPad() {
     let gp = null;
     try { const l = navigator.getGamepads ? navigator.getGamepads() : []; for (let i = 0; i < l.length; i++) if (l[i]) { gp = l[i]; break; } } catch (e) { return; }
-    if (!gp) return;
+    if (!gp || homeOn()) return;
     const bt = (i) => !!(gp.buttons[i] && gp.buttons[i].pressed);
     let dir = '';
     if (bt(12) || gp.axes[1] < -0.6) dir = 'u'; else if (bt(13) || gp.axes[1] > 0.6) dir = 'd';

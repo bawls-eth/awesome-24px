@@ -57,7 +57,7 @@ async function hub(browser, label, ctxOpts) {
   const mobile = !!ctxOpts.isMobile;
   const tap = tapper(mobile);
   const L = (s) => '[hub ' + label + '] ' + s;
-  const o = await open(browser, ctxOpts, HUB);
+  const o = await open(browser, ctxOpts, HUB + '?map=1'); // HS1: the map view (the home screen is the default)
   const pg = o.page;
   await pg.waitForFunction(() => window.__hub && document.getElementById('mm-nav-btn'));
   await pg.waitForTimeout(200);

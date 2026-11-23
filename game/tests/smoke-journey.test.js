@@ -22,6 +22,8 @@ const FIX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'smoke-j
 const THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js';
 const NAME = 'ADMINsmoke';
 const IDS = ['town', 'map', 'realm', 'lantern', 'isles', 'jam', 'bugs', 'angler', 'deepdelve', 'stalk', 'pop', 'dash', 'stack', 'echo'];
+// HS1: the Where-to sheet lists the places in its three groups (Adventure, Arcade, Quick games); the journey keeps IDS order
+const SHEET_IDS = ['town', 'realm', 'isles', 'lantern', 'map', 'pop', 'dash', 'stack', 'echo', 'jam', 'angler', 'bugs', 'stalk', 'deepdelve'];
 const AUDITS = ['small', 'tinyText', 'overStick'];
 // The allow-lists may only shrink: these are the sizes frozen with the first fixture. Lower them when entries are removed.
 const FROZEN_MAX = { allow404: 0, offOrigin: 2, small: 9, tinyText: 2, overStick: 2 };
@@ -143,7 +145,7 @@ async function journey(browser, label, viewport, touch, out) {
   for (const id of IDS) {
     await openWhereTo();
     const dests = await page.evaluate(() => [...document.querySelectorAll('#mm-nav-sheet .mm-nav-dest')].map((a) => a.dataset.place));
-    check(L(`town sheet lists all 14 places before ${id}`), dests.join(',') === IDS.join(','), dests.join(','));
+    check(L(`town sheet lists all 14 places before ${id}`), dests.join(',') === SHEET_IDS.join(','), dests.join(','));
     const sel = `#mm-nav-sheet .mm-nav-dest[data-place="${id}"]`;
     await page.locator(sel).scrollIntoViewIfNeeded();
     await Promise.all([page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 20000 }), tap(sel)]);

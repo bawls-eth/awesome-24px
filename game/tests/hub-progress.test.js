@@ -8,7 +8,7 @@ const { chromium } = require('playwright');
 const { check, done, blockDb } = require('./helpers');
 const JS = require('../shared/mm-jam-songs.js');
 const ORIGIN = (process.env.BASE || 'http://localhost:8440/game/index.html').replace(/\/game\/index\.html.*$/, '');
-const HUB = ORIGIN + '/game/hub/index.html';
+const HUB = ORIGIN + '/game/hub/index.html?map=1'; // HS1: map view (the default view is the home screen)
 const GAME = ORIGIN + '/game/games/';
 const PROFILE = 'pixeltown-profile-v1';
 const TOWN = JSON.stringify({ name: 'Mossy', species: 'coolcats', frame: 2, coins: 77 });

@@ -22,7 +22,7 @@ const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 const FX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'town-ftue-profiles.json'), 'utf8'));
 const METRICS = path.join(__dirname, '..', 'design', 'ftue-metrics.json');
 const TG = FX.targets; const KNOWN = FX.knownIssues || {};
-const IDS = 'town,map,realm,lantern,isles,jam,bugs,angler,deepdelve,stalk,pop,dash,stack,echo';
+const IDS = 'town,realm,isles,lantern,map,pop,dash,stack,echo,jam,angler,bugs,stalk,deepdelve'; // HS1: grouped order (Adventure, Arcade, Quick games)
 const r1 = (v) => (v === null || v === undefined ? null : Math.round(v * 10) / 10);
 
 // a target check: pass at the target; a known issue (fixture baseline) passes only when not worse than its baseline, and prints the gap
