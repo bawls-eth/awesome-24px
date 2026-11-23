@@ -38,11 +38,10 @@ Test: `game/tests/isles-bugbash.test.js` (38 checks). Screenshots: `img/isles-la
 14. A land companion (Fern Raptor) idled on deep water at the shore (its follow spot or a catch-up teleport landed in the sea): land
     companions no longer step from land into water, and one left in water steps out behind you. Swimmers / fliers unchanged. (6a,
     fails 40/40 on the old code)
+15. The boss tame's early feast said only "is still chewing.": it now says "ready in N s" too (isles-boss test 3).
 
 ## Open (not fixed)
 
-- **Boss "still chewing" toast has no timing** (low): `bossFeed` path (`e.ev === 'toofast'` in `isles.js` ~1170) still says
-  "The X is still chewing." Needs the boss tame state's feed clock from `mm-isle-boss.js` to show seconds like creatures do.
 - **Toast can cover the boss sprite** (low, phones): the toast sits at 22% height, where an engaged boss usually stands.
 - **How-to card overlaps the Map button a little in landscape** (cosmetic; it has pointer-events: none and fades after 9 s or 2.5 s
   after the first input).

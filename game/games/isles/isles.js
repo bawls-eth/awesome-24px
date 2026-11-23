@@ -1209,7 +1209,11 @@
       else if (e.type === 'tame') {
         if (e.ev === 'ko') toast('The ' + bossName() + ' is asleep. Feed it feasts (F). Do not hit it.');
         else if (e.ev === 'fed') { save.inv = invTake('feast', 1); bz.eatT = 0.8; }
-        else if (e.ev === 'toofast') toast('The ' + bossName() + ' is still chewing.');
+        else if (e.ev === 'toofast') { // BB: honest timing, like a creature's Feed button
+          const tm = bz.st && bz.st.tame, bd = bz.st && CR.get(bz.st.id), every = bd && bd.tame ? bd.tame.feedEvery : 0;
+          const left = tm && every ? Math.max(1, Math.ceil(every - (tm.t - tm.lastFeed))) : 0;
+          toast('The ' + bossName() + ' is still chewing' + (left ? ': ready in ' + left + ' s.' : '.'));
+        }
         else if (e.ev === 'cannot_feed') toast('Put it to sleep with soothe shots (Q) first.');
         else if (e.ev === 'wake') toast('The ' + bossName() + ' woke up. It is still weary: soothe it again.');
       } else if (e.type === 'tamed') { cue('chest'); bossTamed(); }
