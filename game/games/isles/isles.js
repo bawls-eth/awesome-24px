@@ -116,6 +116,7 @@
   const S = store || memStore;
   const readJson = (k) => { try { const s = S.getItem(k); return typeof s === 'string' ? JSON.parse(s) : null; } catch (e) { return null; } };
   let save = ISL.load(S, Date.now());
+  const FIRST_VISIT = !save || !save.isles || !Object.keys(save.isles).length; // 8B: the how-to card shows only then
   // PI2: one-thumb mode (auto-attack the nearest foe + the mount ability button by the stick). The same per-device switch as the Realm's
   // one-thumb mode (mm-auto-fire + mm-aim-toggle both '1', never in a save); ?onethumb=1 / 0 forces it for this visit.
   const OT_KEYS = ['mm-auto-fire', 'mm-aim-toggle'];
@@ -279,7 +280,7 @@
     if (!cv) return bakeFlat(cx, cy);
     const c = cv.getContext('2d');
     // 8B: the code-drawn terrain gets seeded detail pixels (8 tile variants) and stepped edges, once per chunk bake
-    if (code && window.MMIsleArt && window.MMIsleArt.detail) window.MMIsleArt.detail(c, world.terrain, W, H, cx, cy, { names: NAMES, palette: PAL, tile: TILE, ch: CH, seed: parseInt(SEED, 10) % 100003 });
+    if (code && !GFX_LOW && window.MMIsleArt && window.MMIsleArt.detail) window.MMIsleArt.detail(c, world.terrain, W, H, cx, cy, { names: NAMES, palette: PAL, tile: TILE, ch: CH, seed: parseInt(SEED, 10) % 100003, create: mk });
     // props of this chunk and its 8 neighbours, back to front: a 64 px tree near a chunk edge is painted on both sides of the seam
     const pa = IA && IA.propsActive() ? IA.props() : null, list = [];
     for (let ny = cy - 1; ny <= cy + 1; ny++) for (let nx = cx - 1; nx <= cx + 1; nx++) { const l = chunkProps.get(nx + ',' + ny); if (l) for (let i = 0; i < l.length; i++) list.push(l[i]); }
@@ -3104,14 +3105,12 @@
   $('tab-party').addEventListener('click', () => { if (panelKind !== 'party') openPanel('party'); });
   $('tab-help').addEventListener('click', () => { if (panelKind !== 'help') openPanel('help'); });
   $('btn-pack').addEventListener('click', () => { if (PACK_TABS[panelKind]) closePanel(); else openPanel('party'); });
-  // 8B: the short how-to shows once, on the first visit (own additive key), and never blocks a tap (pointer-events: none); Help keeps it
+  // 8B: the short how-to shows once, on the first visit (no island in the archipelago save yet: no new storage key), and never blocks a
+  // tap (pointer-events: none); the Help tab keeps it
   (function howto() {
-    const K = 'pixeltown-isles-howto-v1', box = $('howto');
-    let seen = false;
-    try { seen = !!(store && store.getItem(K)); } catch (e) { seen = true; }
-    if (seen) return;
+    const box = $('howto');
+    if (!FIRST_VISIT) return;
     box.hidden = false;
-    try { if (store) store.setItem(K, '1'); } catch (e) { /* ignore */ }
     const hide = () => { box.hidden = true; };
     setTimeout(hide, 9000);
     window.addEventListener('keydown', function once() { setTimeout(hide, 2500); window.removeEventListener('keydown', once); });

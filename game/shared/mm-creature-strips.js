@@ -274,8 +274,9 @@
           }
         }
       } catch (e) { src = im; sw = cell; top = 0; span = w; }
-      // 8B: opts.rim bakes a rimmed copy too (draw(..., rim=true) uses it: the isles' party and mount); top / span stay the body's
-      const rim = o.rim && src !== im ? rimCanvas(src, w, o.rim === true ? null : o.rim, mk) : null;
+      // 8B: opts.rim allows a rimmed copy (draw(..., rim=true): the isles' party and mount). It is baked lazily, ONCE, the first time a
+      // strip is drawn with the rim (a handful of strips, not every loaded one); top / span stay the body's. undefined = not baked yet.
+      const rim = o.rim && src !== im ? undefined : null;
       // w / h / ax / ay / top / span in native (drawn) px; sw / sh the source cell
       return { id: f.id, kind: f.kind, act: f.act, src: src, rim: rim, frames: frames, sw: sw, sh: sw, w: w, h: h, ax: sp.ax * r / SCALE, ay: sp.ay * r / SCALE, top: top, span: span };
     }
@@ -290,6 +291,7 @@
       },
       draw(ctx, s, frame, x, y, scale, flip, rim) {
         if (!s || !ctx) return false;
+        if (rim && s.rim === undefined) s.rim = rimCanvas(s.src, s.w, o.rim === true ? null : o.rim, mk);
         const k = scale > 0 ? scale : 1, f = ((frame | 0) % s.frames + s.frames) % s.frames, img = rim && s.rim ? s.rim : s.src;
         const dw = s.w * k, dh = s.h * k;
         if (flip) {

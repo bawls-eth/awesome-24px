@@ -212,6 +212,9 @@ async function isles(browser, label, ctxOpts) {
   check(L('pixeltown-save-v1 is byte-identical'), (await pg.evaluate(() => localStorage.getItem('pixeltown-save-v1'))) === SAVE);
   const sc = await pg.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }));
   check(L('no horizontal scroll'), sc.sw <= sc.cw, JSON.stringify(sc));
+  // 8B: the how-to is a first-visit card only: after a reload (the island is now in the archipelago save) it stays hidden; Help keeps it
+  await pg.reload(); await pg.waitForSelector('#mm-nav-btn'); await pg.waitForTimeout(300);
+  check(L('8B: a return visit does not show the how-to card again'), (await pg.evaluate(() => document.getElementById('howto').hidden)) === true);
   return o;
 }
 
