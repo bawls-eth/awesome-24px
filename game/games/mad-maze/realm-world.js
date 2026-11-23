@@ -531,8 +531,12 @@
         if (window.MMQuests && save.quests) {
           const rows = MMQuests.summary(save.quests, questDate());
           if (rows.some((q) => q.done && !q.claimed)) return 'Claim your quest reward at the Nexus';
-          const q = rows.find((r) => !r.done);
-          if (q) return q.text + (q.need > 1 ? ` (${Math.min(q.p, q.need)}/${q.need})` : '');
+          // G-06: a daily quest leads the goal line only when it is in reach: its zone's recLv <= hero level + 2 (a boss quest: the Midlands
+          // recLv, where the first altars wake). A Lv 1 hero keeps the level goal instead of "Defeat 20 creatures in the Highlands".
+          const zq = (Z.TABLES && Z.TABLES.ZONES) || []; const lvq = arena.save && arena.save.level | 0;
+          const reach = (r) => { const zz = Number.isInteger(r.zone) && r.zone >= 0 && r.zone <= 3 ? r.zone : r.kind === 'boss' ? 1 : -1; return zz < 0 || (((zq[zz] || {}).recLv | 0) <= lvq + 2); };
+          const q = rows.find((r) => !r.done); // the next quest on the board; out of reach = the level goal stays (no skipping ahead)
+          if (q && reach(q)) return q.text + (q.need > 1 ? ` (${Math.min(q.p, q.need)}/${q.need})` : '');
         }
         const zs = (Z.TABLES && Z.TABLES.ZONES) || []; const z = zi && zi.zone >= 0 && zi.zone <= 3 ? zi.zone : 0;
         const next = zs[z + 1]; const lv = arena.save && arena.save.level | 0;
@@ -2029,7 +2033,12 @@
       nxNear = true; return true; // the prompt shows again next tick if the player is still beside the portal
     }
     window.addEventListener('keydown', (ev) => {
-      if (nxOpen && ev.key === 'Escape') { ev.preventDefault(); ev.stopImmediatePropagation(); nexusClose(); return; }
+      if (nxOpen && ev.key === 'Escape') { // G-12: Esc closes the quest board / stall first, the Nexus on the next press
+        ev.preventDefault(); ev.stopImmediatePropagation();
+        if (nxDom && !nxDom.board.classList.contains('hidden')) { nxDom.board.classList.add('hidden'); return; }
+        if (nxDom && nxDom.stall && !nxDom.stall.classList.contains('hidden')) { nxStallHide(); return; }
+        nexusClose(); return;
+      }
       if (nxOpen && NX_WALK) { // walking: E / Enter / Space use the nearby portal or NPC; fire, ability and panel keys do nothing in the plaza
         const k = String(ev.key || '').toLowerCase(); const onBtn = !!(ev.target && ev.target.closest && ev.target.closest('button'));
         if ((k === 'e' || k === 'shift' || ((k === 'enter' || k === ' ') && !onBtn)) && nxNearI && !ev.repeat) { ev.preventDefault(); ev.stopImmediatePropagation(); nxAct(); return; }
@@ -2186,6 +2195,8 @@
     function nxBoardRender() {
       const b = nxDom.board; b.textContent = '';
       const h = document.createElement('b'); h.textContent = 'Daily quests · ' + questDate(); b.appendChild(h);
+      const bx = document.createElement('button'); bx.type = 'button'; bx.id = 'rw-nx-board-close'; bx.textContent = 'Close'; bx.setAttribute('aria-label', 'Close the quest board'); // G-12
+      bx.style.cssText = 'float:right;min-height:44px;min-width:44px'; bx.addEventListener('click', () => b.classList.add('hidden')); b.insertBefore(bx, h);
       MMQuests.summary(save.quests, questDate()).forEach((q) => {
         const row = document.createElement('div'); row.className = 'nx-q'; row.dataset.quest = q.id;
         const t = document.createElement('span'); t.textContent = q.text + ' (' + q.p + '/' + q.need + ') '; const r = document.createElement('em'); r.textContent = '+' + q.reward.shards + ' 💎' + (QBAG_ON && q.reward.bag ? ' · ' + q.reward.bag + ' bag' : ''); t.appendChild(r);
