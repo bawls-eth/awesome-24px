@@ -166,13 +166,18 @@
     play('levelup');
     showResult(newBest, prevBest, prevCombo);
     $('result').hidden = false;
+    resShownAt = performance.now();
     msg('');
     if (resCard) resCard.focus(); else $('again').focus({ preventScroll: true });
     hud();
   }
   // MK1: the shared result card (MMMiniKit); ids r-title / r-score / r-best / r-line / r-new / r-medals / again / replay kept
   const rMedals = $('r-medals');
-  let resCard = null;
+  let resCard = null, resShownAt = -1e9;
+  // taps still landing from the round (or a mashing finger) must not hit Play again / Replay / Copy the instant the card appears
+  $('result').addEventListener('click', (ev) => { if (performance.now() - resShownAt < 450) { ev.stopPropagation(); ev.preventDefault(); } }, true);
+  // the result card never navigates: any link inside it is neutralised (belt and braces)
+  $('result').addEventListener('click', (ev) => { const a = ev.target && ev.target.closest && ev.target.closest('a'); if (a) ev.preventDefault(); }, true);
   function showResult(newBest, prevBest, prevCombo) {
     medalList(rMedals);
     const title = run.why === 'missed' ? 'It fell! ' : 'Time! ';
@@ -198,7 +203,7 @@
       lines,
       goalText: nextGoal(),
       seed: run.seed,
-      menuHref: '../../index.html',
+      // no Town link on the card: a mashing finger landing on it left the game (bug bash). The Menu button (MMNav) is the way out.
       ids: { head: 'r-title', again: 'again', replay: 'replay', code: 'r-code', copy: 'r-copy', goal: 'r-goal' },
     }), { again: () => start(), replay: (sd) => start(sd), extra: [rMedals], holdMs: 400 });
   }
