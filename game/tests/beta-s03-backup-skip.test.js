@@ -62,7 +62,12 @@ const big = { format: 'pixeltown-backup', v: 2, keys: { 'pixeltown-stalk-v1': '{
 const pb = B.plan(big);
 check('[5] an oversized key is skipped, the small one restores', pb.ok === true && pb.keys.join() === 'pixeltown-jam-v1' && pb.skipped[0].key === 'pixeltown-stalk-v1');
 check('[5] the panel-collapsed special case still validated', B.plan({ format: 'pixeltown-backup', v: 2, keys: { 'pixeltown-panel-collapsed': '"1"' } }).entries['pixeltown-panel-collapsed'] === '1' && B.plan({ format: 'pixeltown-backup', v: 2, keys: { 'pixeltown-panel-collapsed': 'yes' } }).ok === false);
-check('[5] an unknown key still refuses the whole file', B.plan({ format: 'pixeltown-backup', v: 2, keys: { 'pixeltown-jam-v1': '{}', 'evil-key': '{}' } }).error === 'unknown-key');
+{ // b14 P3 (round 3): an unknown key is skipped, never written, and named; only-unknown files are still refused
+  const pu = B.plan({ format: 'pixeltown-backup', v: 2, keys: { 'pixeltown-jam-v1': '{}', 'evil-key': '{}' } });
+  check('[5] an unknown key is skipped, the known key still restores', pu.ok === true && pu.keys.join() === 'pixeltown-jam-v1' && !('evil-key' in pu.entries));
+  check('[5] the message names the unknown key as skipped', /Skipped \(not known by this version of the game\): evil-key/.test(pu.message), pu.message);
+  check('[5] a file of only unknown keys is refused', B.plan({ format: 'pixeltown-backup', v: 2, keys: { 'evil-key': '{}' } }).error === 'unknown-key');
+}
 // QA -> PS 4: the G-25 / G-26 additive keys are part of the Backup now (cleaned, labelled), so a Backup / Restore keeps them
 {
   const nodes = JSON.stringify({ v: 1, isles: { reef: { n: [[3, 99999], [1, 'x']], p: { berry: 5 } } } });

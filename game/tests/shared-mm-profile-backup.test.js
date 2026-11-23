@@ -88,7 +88,8 @@ const TOWN = JSON.stringify({ name: 'Ben', species: 'doge', coins: 1 });
   check('angler-style single export is rejected, town save untouched', !r.ok && r.error === 'not-a-town-save' && st._m['pixeltown-save-v1'] === TOWN && /not a town save/.test(r.message));
   check('plan() alone never writes', (() => { const s2 = fake({ k: 'v' }); const pl = B.plan({ format: 'pixeltown-backup', v: 2, keys: { 'pixeltown-mm-v1': '{}' } }); return pl.ok && !('pixeltown-mm-v1' in s2._m); })());
   const un = B.restore(fake({ 'pixeltown-save-v1': TOWN }), { format: 'pixeltown-backup', v: 2, keys: { 'pixeltown-save-v1': '{"name":"x"}', 'pixeltown-evil-v1': '{}' } });
-  check('unknown pixeltown-* key rejects the whole file', !un.ok && un.error === 'unknown-key');
+  // beta b14 P3 changed this: the unknown key is skipped and named, the known town save restores
+  check('unknown pixeltown-* key is skipped, the rest restores', un.ok && un.skipped.length === 1 && un.skipped[0].key === 'pixeltown-evil-v1');
   const st2 = fake({ 'pixeltown-save-v1': TOWN });
   const un2 = B.restore(st2, { format: 'pixeltown-backup', v: 2, keys: { 'pixeltown-save-v1': '{"name":"x"}', 'pixeltown-mm-v1': 'not json' } });
   // beta S-03 (b14-04) changed this: one damaged value is skipped and named, the rest restores (it used to reject the whole file).

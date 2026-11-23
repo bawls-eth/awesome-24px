@@ -1780,5 +1780,13 @@
   "beta-r3-boss-bar-fall": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "beta-s07-town-cull.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-s08-town-three-lazy.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

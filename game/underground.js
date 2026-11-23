@@ -240,6 +240,19 @@ function ugBuildTextures() {
   return out;
 }
 
+// Beta S-08 (b13-02): three.js is no longer a render-blocking script on every Town load (about 650 KB). It is loaded on the first
+// cave open (one in-flight promise; a failure clears it so the next try retries) as the ES module build, which also removes the
+// "three.min.js is deprecated" console warning. Resolves true when THREE is ready, false when it could not be loaded.
+const UG_THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js';
+let ugThreePromise = null;
+function ugEnsureThree() {
+  if (typeof THREE !== 'undefined') return Promise.resolve(true);
+  if (ugThreePromise) return ugThreePromise;
+  ugThreePromise = import(UG_THREE_URL).then((m) => { window.THREE = m; return true; }).catch(() => { ugThreePromise = null; return false; });
+  return ugThreePromise;
+}
+window.ugEnsureThree = ugEnsureThree;
+
 class UndergroundWorld {
   constructor({ canvasWrap, resources, inventory, seed, onResourceChange, onExit, onHealthChange, onFlyChange, onHotbarChange, onClockChange, pick, onPickChange, onOpenTable }) {
     this.canvasWrap = canvasWrap;
