@@ -14,7 +14,10 @@
     ['perfect5', '5x perfect', 'Land 5 Perfects in a row'],
     ['f40', '40 floors', 'Stack 40 floors in one round'],
   ];
-  const HUES = ['#7fd18b', '#5cc8ff', '#c99bff', '#ff8fb1', '#ffb347', '#ffe066', '#66f0d0', '#f0a8ff'];
+  // 8-bit palette (MM8): block fill -> its shade and its light edge
+  const HUES = ['#00e436', '#29adff', '#ff77a8', '#ffa300', '#ffec27', '#83769c', '#ff004d', '#ffccaa'];
+  const SHADE = { '#00e436': '#008751', '#29adff': '#1d2b53', '#ff77a8': '#7e2553', '#ffa300': '#ab5236', '#ffec27': '#ffa300', '#83769c': '#5f574f', '#ff004d': '#7e2553', '#ffccaa': '#ab5236', '#c2c3c7': '#5f574f' };
+  const INK = '#0b0d1a';
   const $ = (id) => document.getElementById(id);
   const params = new URLSearchParams(location.search);
   const TEST = params.get('test') === '1';
@@ -62,7 +65,7 @@
     run.log.push([side, sp, hue]);
   }
   function reset() {
-    tower = [{ x: (CW - BASE) / 2, w: BASE, c: '#c9bdf5', s: 1 }];
+    tower = [{ x: (CW - BASE) / 2, w: BASE, c: '#c2c3c7', s: 1 }];
     falling = []; parts = []; floats = []; shake = 0; camY = 0; flash = 0;
     spawn();
   }
@@ -94,8 +97,8 @@
       let nx = top.x, nw = m.w;
       if (run.combo >= 3) { nw = Math.min(MAXW, m.w + 10); nx = Math.max(0, Math.min(CW - nw, top.x - (nw - m.w) / 2)); }
       tower.push({ x: nx, w: nw, c: m.c, s: 1.25 });
-      burst(nx + nw / 2, y, '#fff', run.combo >= 3 ? 16 : 10);
-      floatText(nx + nw / 2, y - 14, run.combo >= 3 ? 'Perfect x' + run.combo + '  wider!' : 'Perfect' + (run.combo > 1 ? ' x' + run.combo : '') + '!', '#ffd166');
+      burst(nx + nw / 2, y, '#fff1e8', run.combo >= 3 ? 16 : 10);
+      floatText(nx + nw / 2, y - 14, run.combo >= 3 ? 'Perfect x' + run.combo + '  wider!' : 'Perfect' + (run.combo > 1 ? ' x' + run.combo : '') + '!', '#ffec27');
       flash = reduced ? 0 : 0.25;
       play(run.combo >= 3 ? 'claim' : 'pickup');
       msg(run.combo >= 3 ? 'Perfect x' + run.combo + ': the block grows!' : 'Perfect!');
@@ -115,7 +118,7 @@
       tower.push({ x: l, w: ov, c: m.c, s: 1.12 });
       run.combo = 0;
       const near = Math.round(Math.abs(dx));
-      if (near <= 12) { floatText(l + ov / 2, y - 14, near + ' px from perfect', '#c9bdf5'); msg(near + ' px from a Perfect. So close!'); } else msg(ov < 30 ? 'Careful: a thin block now. Aim for Perfects to widen it.' : '');
+      if (near <= 12) { floatText(l + ov / 2, y - 14, near + ' px from perfect', '#ff77a8'); msg(near + ' px from a Perfect. So close!'); } else msg(ov < 30 ? 'Careful: a thin block now. Aim for Perfects to widen it.' : '');
       bump(2); play('ui_tap');
       res = { perfect: false, w: ov, cut: cutW };
     }
@@ -124,7 +127,7 @@
     if (run.combo >= 5) award('perfect5');
     if (run.floors >= 15) award('f15');
     if (run.floors >= 40) award('f40');
-    if (save.best > 0 && run.floors === save.best + 1) { floatText(CW / 2, floorY(i) - 34, 'New best floor!', '#7fd18b'); play('levelup'); }
+    if (save.best > 0 && run.floors === save.best + 1) { floatText(CW / 2, floorY(i) - 34, 'New best floor!', '#00e436'); play('levelup'); }
     spawn();
     hud();
     return res;
@@ -237,53 +240,70 @@
     shake = Math.max(0, shake - dt * 30);
     flash = Math.max(0, flash - dt);
   }
+  function ptext(str, x, y, scale, color, align) {
+    if (window.MM8) { MM8.text(g, str, x, y - Math.floor(7 * scale / 2), scale, color, { align: align || 'center' }); return; }
+    g.font = 'bold ' + (8 * scale) + 'px monospace'; g.textAlign = align || 'center'; g.textBaseline = 'middle'; g.fillStyle = color; g.fillText(str, x, y);
+  }
+  // 8-bit brick block: ink outline, light top edge, shade bottom, brick seams, lit lantern windows
   function block(x, y, w, c, s) {
-    const h = BH * (s || 1), yy = y + BH - h;
-    g.fillStyle = '#0007'; g.fillRect(x + 2, yy + 3, w, h);
+    const h = Math.max(2, Math.round(BH * (s || 1) / 2) * 2), yy = Math.round(y + BH - h); x = Math.round(x); w = Math.round(w);
+    const dark = SHADE[c] || '#5f574f';
+    g.fillStyle = INK; g.fillRect(x + 2, yy + 2, w, h);                     // hard shadow
+    g.fillStyle = INK; g.fillRect(x - 2, yy, w + 4, h); g.fillRect(x, yy - 2, w, h + 2);
     g.fillStyle = c; g.fillRect(x, yy, w, h);
-    g.fillStyle = '#ffffff44'; g.fillRect(x, yy, w, 3);
-    g.fillStyle = '#00000033'; g.fillRect(x, yy + h - 4, w, 4);
-    // lantern windows every 18 px (original pixel motif)
-    g.fillStyle = '#1b1830';
-    for (let wx = x + 7; wx + 6 <= x + w - 4; wx += 18) g.fillRect(wx, yy + 7, 6, 7);
+    g.fillStyle = '#fff1e8'; g.fillRect(x + 2, yy, Math.max(0, w - 4), 2);
+    g.fillStyle = dark; g.fillRect(x, yy + h - 4, w, 4); g.fillRect(x + w - 2, yy, 2, h);
+    if (h >= BH - 2) {
+      g.fillStyle = dark; for (let bx = x + 12; bx < x + w - 4; bx += 24) g.fillRect(bx, yy + 2, 2, h - 6);
+      g.fillStyle = INK; for (let wx = x + 5; wx + 6 <= x + w - 5; wx += 24) { g.fillRect(wx, yy + 6, 6, 8); }
+      g.fillStyle = '#ffec27'; for (let wx = x + 5; wx + 6 <= x + w - 5; wx += 24) { g.fillRect(wx + 2, yy + 8, 2, 4); }
+    }
   }
   function draw() {
-    g.setTransform(1, 0, 0, 1, 0, 0);
-    // night sky gets deeper as you climb
-    const t = Math.min(1, camY / 900);
-    g.fillStyle = t > 0.5 ? '#0c0a1c' : '#151230'; g.fillRect(0, 0, CW, CH);
-    if (!lowGfx) { g.fillStyle = '#ffffff22'; for (let i = 0; i < 18; i++) { const sx = (i * 97) % CW, sy = ((i * 53) + camY * 0.2) % CH; g.fillRect(sx, sy, 2, 2); } }
-    if (shake > 0) g.translate((shake * ((Math.floor(performance.now() / 16) % 2) ? 1 : -1)) * 0.6, 0);
-    g.translate(0, camY);
-    // ground
-    g.fillStyle = '#2a2548'; g.fillRect(0, CH - GROUND, CW, GROUND + 400);
-    g.fillStyle = '#3a8f4a'; g.fillRect(0, CH - GROUND, CW, 6);
+    g.setTransform(1, 0, 0, 1, 0, 0); g.imageSmoothingEnabled = false;
+    // night sky: stepped bands that darken as you climb (palette only, no gradient)
+    const t = Math.min(1, camY / 900), bands = t > 0.5 ? ['#0b0d1a', '#0b0d1a', '#0b0d1a', '#12142a', '#12142a', '#1d2b53'] : ['#12142a', '#12142a', '#1d2b53', '#1d2b53', '#1d2b53', '#7e2553'];
+    const bh = CH / bands.length; bands.forEach((c, i) => { g.fillStyle = c; g.fillRect(0, Math.round(i * bh), CW, Math.ceil(bh)); });
+    for (let i = 1; i < bands.length; i++) { g.fillStyle = bands[i]; for (let x = (i % 2) * 4; x < CW; x += 8) g.fillRect(x, Math.round(i * bh) - 4, 4, 4); }
+    if (!lowGfx) { for (let i = 0; i < 18; i++) { const sx = ((i * 97) % CW) & ~1, sy = Math.round(((i * 53) + camY * 0.2) % CH) & ~1; g.fillStyle = i % 4 ? '#83769c' : '#fff1e8'; g.fillRect(sx, sy, 2, 2); if (i % 6 === 0) { g.fillRect(sx - 2, sy, 6, 2); g.fillRect(sx, sy - 2, 2, 6); } } }
+    if (shake > 0) g.translate(Math.round((shake * ((Math.floor(performance.now() / 16) % 2) ? 1 : -1)) * 0.6), 0);
+    g.translate(0, Math.round(camY));
+    // distant town skyline: stepped rooftops with a few lit windows (world space, so it sinks as you climb)
+    const SKY = [28, 44, 44, 20, 60, 60, 36, 24, 52, 52, 52, 30, 40, 18, 46, 46, 26, 34];
+    for (let i = 0; i < SKY.length; i++) { const bx = i * 20, h = SKY[i], by = CH - GROUND - h;
+      g.fillStyle = '#12142a'; g.fillRect(bx, by, 20, h); g.fillStyle = '#1d2b53'; g.fillRect(bx, by, 20, 2);
+      if (!lowGfx) { g.fillStyle = '#ffa300'; for (let wy = by + 8; wy < CH - GROUND - 6; wy += 12) if ((i * 7 + wy) % 3 === 0) g.fillRect(bx + 6, wy, 4, 4); } }
+    // ground: grass lip over stepped dirt
+    g.fillStyle = '#ab5236'; g.fillRect(0, CH - GROUND, CW, GROUND + 400);
+    g.fillStyle = '#7e2553'; for (let x = 0; x < CW; x += 16) { g.fillRect(x, CH - GROUND + 12, 2, 8); g.fillRect(x + 8, CH - GROUND + 24, 2, 8); } g.fillRect(0, CH - GROUND + 20, CW, 2);
+    g.fillStyle = '#00e436'; g.fillRect(0, CH - GROUND, CW, 4); g.fillStyle = '#008751'; g.fillRect(0, CH - GROUND + 4, CW, 2);
+    for (let x = 4; x < CW; x += 12) { g.fillStyle = '#00e436'; g.fillRect(x, CH - GROUND - 2, 2, 2); }
     // best marker
     if (save.best > 0) {
-      const by = floorY(save.best);
-      g.fillStyle = '#ffd16699';
-      for (let x = 0; x < CW; x += 14) g.fillRect(x, by, 8, 2);
-      g.font = 'bold 12px ui-monospace, Menlo, monospace'; g.textAlign = 'left'; g.textBaseline = 'bottom';
-      g.fillStyle = '#ffd166'; g.fillText('best ' + save.best, 4, by - 2);
+      const by = Math.round(floorY(save.best));
+      g.fillStyle = '#ffa300';
+      for (let x = 0; x < CW; x += 12) g.fillRect(x, by, 6, 2);
+      ptext('BEST ' + save.best, 4, by - 8, 1, '#ffec27', 'left');
     }
     tower.forEach((b, i) => block(b.x, floorY(i), b.w, b.c, b.s));
     if (mover && run.state === 'play') {
-      const y = floorY(tower.length);
-      // drop guide: the top block's edges, faint
+      const y = Math.round(floorY(tower.length));
+      // drop guide: the top block's edges as dashed pixel lines
       const top = tower[tower.length - 1];
-      g.fillStyle = '#ffffff18'; g.fillRect(top.x, y, top.w, BH);
+      g.fillStyle = '#c2c3c7'; for (let yy = y; yy < y + BH; yy += 6) { g.fillRect(Math.round(top.x), yy, 2, 3); g.fillRect(Math.round(top.x + top.w) - 2, yy, 2, 3); }
       block(mover.x, y, mover.w, mover.c, 1);
     }
     falling.forEach((f) => {
-      g.save(); g.translate(f.x + f.w / 2, f.y + BH / 2); g.rotate(f.rot);
-      g.globalAlpha = 0.85; block(-f.w / 2, -BH / 2, f.w, f.c, 1); g.restore(); g.globalAlpha = 1;
+      // tumble in 90-degree-ish steps (8-bit) instead of smooth rotation
+      const rot = Math.round(f.rot / (Math.PI / 8)) * (Math.PI / 8);
+      g.save(); g.translate(Math.round(f.x + f.w / 2), Math.round(f.y + BH / 2)); g.rotate(rot);
+      block(-f.w / 2, -BH / 2, f.w, f.c, 1); g.restore();
     });
-    parts.forEach((p) => { g.globalAlpha = Math.min(1, p.t * 2); g.fillStyle = p.c; g.fillRect(p.x - 3, p.y - 3, 6, 6); });
+    parts.forEach((p) => { g.fillStyle = p.t < 0.15 ? '#5f574f' : p.c; g.fillRect(Math.round(p.x / 2) * 2 - 3, Math.round(p.y / 2) * 2 - 3, 6, 6); });
     g.globalAlpha = 1;
-    g.font = 'bold 16px ui-monospace, Menlo, monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    floats.forEach((f) => { g.globalAlpha = Math.min(1, f.t * 2); g.fillStyle = '#000'; g.fillText(f.text, f.x + 1, f.y + 2); g.fillStyle = f.color; g.fillText(f.text, f.x, f.y); });
+    floats.forEach((f) => { ptext(f.text, Math.round(f.x), Math.round(f.y), 2, f.t < 0.2 ? '#c2c3c7' : f.color); });
     g.globalAlpha = 1;
-    if (flash > 0 && !lowGfx) { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = 'rgba(255,255,255,' + (flash * 0.4) + ')'; g.fillRect(0, 0, CW, CH); }
+    if (flash > 0 && !lowGfx) { g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = flash > 0.15 ? 'rgba(255,241,232,0.3)' : 'rgba(255,241,232,0.12)'; g.fillRect(0, 0, CW, CH); }
   }
   let last = 0, lastHud = -1;
   function frame(ts) {

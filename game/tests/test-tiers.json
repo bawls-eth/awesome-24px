@@ -1398,5 +1398,9 @@
   "pixelize-page.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "shared-mm-8bit.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }

@@ -13,7 +13,10 @@
     ['tile9', 'Make a 9', 'Merge up to a level 9 tile'],
     ['score25k', '25,000 points', 'Score 25,000 in one round'],
   ];
-  const COLORS = ['#000', '#7fd18b', '#5cc8ff', '#c99bff', '#ff8fb1', '#ffb347', '#ffe066', '#ff6b6b', '#66f0d0', '#ffffff', '#f0a8ff', '#a8ffb0'];
+  // 8-bit palette (MM8 / design/EIGHTBIT-STYLE.md): one fill + one shade per tile level
+  const COLORS = ['#000000', '#00e436', '#29adff', '#ff77a8', '#ffa300', '#ff004d', '#ffec27', '#83769c', '#ffccaa', '#fff1e8', '#c2c3c7', '#008751'];
+  const SHADE = ['#000000', '#008751', '#1d2b53', '#7e2553', '#ab5236', '#7e2553', '#ffa300', '#5f574f', '#ab5236', '#c2c3c7', '#5f574f', '#1d2b53'];
+  const INK = '#0b0d1a';
   const $ = (id) => document.getElementById(id);
   const params = new URLSearchParams(location.search);
   const TEST = params.get('test') === '1';
@@ -268,34 +271,54 @@
   }
 
   // ---------- draw ----------
-  function rr(x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+  // 8-bit text: MM8 5x7 bitmap font when loaded, monospace fallback otherwise
+  function ptext(str, x, y, scale, color, align) {
+    if (window.MM8) { MM8.text(g, str, x, y - Math.floor(7 * scale / 2), scale, color, { align: align || 'center' }); return; }
+    g.font = 'bold ' + (8 * scale) + 'px monospace'; g.textAlign = align || 'center'; g.textBaseline = 'middle'; g.fillStyle = color; g.fillText(str, x, y);
+  }
+  // stepped pixel box: notched corners (n px), whole-pixel coords
+  function pbox(x, y, w, h, n, col) { x = Math.round(x); y = Math.round(y); w = Math.round(w); h = Math.round(h); g.fillStyle = col; g.fillRect(x + n, y, w - 2 * n, h); g.fillRect(x, y + n, w, h - 2 * n); }
+  // pixel ring (4 px thick) around a cell, stepped corners
+  function pring(x, y, w, h, col) { g.fillStyle = col; const u = 4;
+    g.fillRect(x + u, y, w - 2 * u, u); g.fillRect(x + u, y + h - u, w - 2 * u, u); g.fillRect(x, y + u, u, h - 2 * u); g.fillRect(x + w - u, y + u, u, h - 2 * u); }
+  // per-level face sprites on a 4 px grid (12 cols): e = eye, m = mouth, s = sparkle
+  const FACES = [
+    null,
+    ['', '', '..e....e..', '..e....e..', '', '...mmmm...'],
+    ['', '', '..ee..ee..', '..ee..ee..', '', '...m..m...', '....mm....'],
+    ['', '', '.ee....ee.', '..e....e..', '', '..mmmmmm..'],
+    ['', '.e......e.', '..e....e..', '..e....e..', '', '..m....m..', '...mmmm...'],
+    ['', '', '.eee..eee.', '..e....e..', '', '..mmmmmm..', '...mmmm...'],
+    ['', '.s......s.', '..ee..ee..', '..ee..ee..', '', '...mmmm...', '...m..m...'],
+    ['', '', '.e.e..e.e.', '..e....e..', '', '.mmmmmmmm.', '..m.m.m...'],
+  ];
   function drawTile(t, c) {
-    const col = COLORS[Math.min(t.v, COLORS.length - 1)];
-    const wob = t.wob > 0 ? Math.sin(t.wob * 40) * 4 : 0;
-    const cx = c * CELL + CELL / 2 + wob, cy = t.y * CELL + CELL / 2, sz = (CELL - 8) * t.s;
-    g.save(); g.translate(cx, cy);
-    g.fillStyle = '#0006'; rr(-sz / 2 + 2, -sz / 2 + 4, sz, sz, 12); g.fill();
-    g.fillStyle = col; rr(-sz / 2, -sz / 2, sz, sz, 12); g.fill();
-    g.fillStyle = '#ffffff55'; g.fillRect(-sz / 2 + 8, -sz / 2 + 6, sz * 0.35, 6); g.fillRect(-sz / 2 + 8, -sz / 2 + 12, 6, 6);
-    g.fillStyle = '#00000022'; g.fillRect(-sz / 2 + 6, sz / 2 - 10, sz - 12, 5);
-    // pixel face: two eyes, mouth grows with level
-    g.fillStyle = '#1b1830';
-    g.fillRect(-12, -6, 6, 8); g.fillRect(6, -6, 6, 8);
-    g.fillRect(-6, 8, 12, t.v >= 4 ? 5 : 3);
-    g.font = 'bold 16px ui-monospace, Menlo, monospace'; g.textAlign = 'right'; g.textBaseline = 'top';
-    g.fillText(String(t.v), sz / 2 - 6, -sz / 2 + 5);
-    if (t.v >= 6) { g.fillStyle = '#fff'; g.fillRect(-4, -sz / 2 - 3, 8, 6); }
-    g.restore();
+    const lv = Math.min(t.v, COLORS.length - 1), col = COLORS[lv], dark = SHADE[lv];
+    const wob = t.wob > 0 ? (Math.sin(t.wob * 40) > 0 ? 4 : -4) : 0;
+    const sz = Math.max(8, Math.round((CELL - 8) * t.s / 4) * 4);
+    const x = Math.round((c * CELL + CELL / 2 + wob - sz / 2) / 4) * 4, y = Math.round((t.y * CELL + CELL / 2 - sz / 2) / 4) * 4;
+    pbox(x + 4, y + 4, sz, sz, 4, INK);              // hard drop shadow
+    pbox(x - 4, y - 4, sz + 8, sz + 8, 8, INK);      // ink outline
+    pbox(x, y, sz, sz, 4, dark);                     // shade
+    pbox(x, y, sz - 4, sz - 8, 4, col);              // face colour (shade shows as a 1-step bevel)
+    g.fillStyle = '#fff1e8'; g.fillRect(x + 8, y + 4, 12, 4); g.fillRect(x + 4, y + 8, 4, 8); // highlight pixels
+    if (sz >= CELL - 12) {
+      const face = FACES[Math.min(lv, FACES.length - 1)] || FACES[1];
+      face.forEach((row, r) => { for (let i = 0; i < row.length; i++) { const ch = row[i]; if (ch === '.' ) continue;
+        g.fillStyle = ch === 's' ? '#fff1e8' : INK; g.fillRect(x + 8 + i * 4, y + 12 + r * 4, 4, 4); } });
+      g.fillStyle = INK; g.fillRect(x + sz - 22, y + 2, 20, 18);
+      ptext(String(t.v), x + sz - 12, y + 11, 2, lv >= 6 ? '#ffec27' : '#fff1e8');
+    }
+    if (t.v >= 6) { g.fillStyle = '#ffec27'; g.fillRect(x + sz / 2 - 8, y - 12, 4, 4); g.fillRect(x + sz / 2 - 4, y - 16, 8, 8); g.fillRect(x + sz / 2 + 4, y - 12, 4, 4); }
   }
   // outline every tile of a group and badge the tapped one with the chain it sets off
   function outline(p, col, a) {
-    g.save(); g.globalAlpha = a; g.strokeStyle = col; g.lineWidth = 4;
-    p.cells.forEach(([x, y]) => { rr(x * CELL + 3, y * CELL + 3, CELL - 6, CELL - 6, 12); g.stroke(); });
+    g.save(); g.globalAlpha = a;
+    p.cells.forEach(([x, y]) => { pring(x * CELL, y * CELL, CELL, CELL, col); });
     if (p.chain > 1) {
       const bx = p.c * CELL + CELL / 2, by = (p.r + 1) * CELL - 13; // bottom of the tile: keeps its level number readable
-      g.globalAlpha = 1; g.fillStyle = '#1b1830'; rr(bx - 20, by - 10, 40, 20, 8); g.fill();
-      g.fillStyle = col; g.font = 'bold 14px ui-monospace, Menlo, monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
-      g.fillText('x' + p.chain, bx, by + 1);
+      g.globalAlpha = 1; pbox(bx - 22, by - 12, 44, 24, 4, col); pbox(bx - 18, by - 8, 36, 16, 2, INK);
+      ptext('x' + p.chain, bx, by, 2, col);
     }
     g.restore();
   }
@@ -326,20 +349,23 @@
   }
   function draw() {
     g.setTransform(1, 0, 0, 1, 0, 0);
-    g.fillStyle = '#120f22'; g.fillRect(0, 0, CW, CH);
+    g.imageSmoothingEnabled = false;
+    g.fillStyle = '#1d2b53'; g.fillRect(0, 0, CW, CH);
     if (shake > 0) g.translate((shake * ((Math.floor(performance.now() / 16) % 2) ? 1 : -1)) * 0.6, 0);
-    g.fillStyle = '#1b1733';
-    for (let c = 0; c < W; c++) for (let r = 0; r < H; r++) if ((c + r) % 2) g.fillRect(c * CELL, r * CELL, CELL, CELL);
+    // 8-bit checker floor with a 4 px dither seam between cells
+    for (let c = 0; c < W; c++) for (let r = 0; r < H; r++) {
+      g.fillStyle = (c + r) % 2 ? '#1d2b53' : '#162042'; g.fillRect(c * CELL, r * CELL, CELL, CELL);
+      g.fillStyle = '#0b0d1a'; for (let i = 0; i < CELL; i += 8) { g.fillRect(c * CELL + i, r * CELL, 4, 4); g.fillRect(c * CELL, r * CELL + i + 4, 4, 4); }
+    }
     for (let c = 0; c < W; c++) for (let r = 0; r < H; r++) { const t = grid[c] && grid[c][r]; if (t) drawTile(t, c); }
     if (run.state === 'play') {
-      if (hint) outline(hint, '#ffd166', reduced ? 1 : 0.55 + 0.45 * Math.abs(Math.sin(pulse * 3)));
-      if (preview && (!hint || preview.c !== hint.c || preview.r !== hint.r)) outline(preview, '#ffffff', 0.9);
+      if (hint) outline(hint, '#ffec27', reduced ? 1 : 0.55 + 0.45 * Math.abs(Math.sin(pulse * 3)));
+      if (preview && (!hint || preview.c !== hint.c || preview.r !== hint.r)) outline(preview, '#fff1e8', 0.9);
     }
-    if (showCur && run.state === 'play') { g.strokeStyle = '#fff'; g.lineWidth = 3; rr(cur.c * CELL + 2, cur.r * CELL + 2, CELL - 4, CELL - 4, 12); g.stroke(); }
-    parts.forEach((p) => { g.globalAlpha = Math.min(1, p.t * 2); g.fillStyle = p.c; g.fillRect(p.x - 3, p.y - 3, 6, 6); });
-    g.globalAlpha = 1;
-    g.font = 'bold 18px ui-monospace, Menlo, monospace'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    floats.forEach((f) => { g.globalAlpha = Math.min(1, f.t * 2); g.fillStyle = '#000'; g.fillText(f.text, f.x + 1, f.y + 2); g.fillStyle = f.color; g.fillText(f.text, f.x, f.y); });
+    if (showCur && run.state === 'play') { pring(cur.c * CELL, cur.r * CELL, CELL, CELL, '#fff1e8'); pring(cur.c * CELL + 4, cur.r * CELL + 4, CELL - 8, CELL - 8, INK); }
+    // square pixel particles, snapped to a 4 px grid; fade = palette step, not alpha
+    parts.forEach((p) => { g.fillStyle = p.t < 0.15 ? '#5f574f' : p.c; g.fillRect(Math.round(p.x / 4) * 4 - 4, Math.round(p.y / 4) * 4 - 4, 8, 8); });
+    floats.forEach((f) => { ptext(f.text, Math.round(f.x), Math.round(f.y), 3, f.t < 0.15 ? '#c2c3c7' : f.color); });
     g.globalAlpha = 1;
   }
   let lastHud = -1;

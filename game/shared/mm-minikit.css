@@ -20,3 +20,23 @@
 .mk-card .mk-btn:focus-visible { outline:3px solid #fff; outline-offset:2px; }
 @media (prefers-reduced-motion: no-preference) { .mk-card:not(.mk-still) .mk-new { animation:mk-pop .4s ease-out 1; } }
 @keyframes mk-pop { from { transform:scale(.7); opacity:0; } to { transform:scale(1); opacity:1; } }
+/* 8-bit look (MM8, design/EIGHTBIT-STYLE.md): square corners, stepped ink rings, hard pixel shadows, local mono font. */
+.mk-card { font-family: "Courier New", Courier, "Lucida Console", Monaco, "DejaVu Sans Mono", monospace; }
+.mk-card .mk-head { font-weight: 900; text-transform: uppercase; letter-spacing: .1em; color: var(--accent, #ffa300); text-shadow: 2px 2px 0 #0b0d1a, 4px 4px 0 #7e2553; }
+.mk-card .mk-stats { background: #0b0d1a; padding: 8px 10px; margin: 4px 4px 6px; box-shadow: 0 0 0 2px #0b0d1a, 0 0 0 4px #5f574f; }
+.mk-card .mk-row dt { text-transform: uppercase; letter-spacing: .06em; font-size: calc(12px * var(--ui-scale, 1)); }
+.mk-card .mk-row dd { font-variant-numeric: tabular-nums; color: #fff1e8; }
+.mk-card .mk-row.mk-best dd { color: #ffec27; }
+.mk-card .mk-new { border-radius: 0; background: #ffec27; color: #0b0d1a; text-transform: uppercase; letter-spacing: .06em;
+  box-shadow: 0 -2px 0 0 #0b0d1a, 0 2px 0 0 #0b0d1a, -2px 0 0 0 #0b0d1a, 2px 0 0 0 #0b0d1a; margin: 0 2px; }
+.mk-card .mk-code { background: #0b0d1a; color: #ffec27; padding: 2px 6px; box-shadow: 0 0 0 2px #5f574f; font-weight: 900; }
+.mk-card .mk-btn { border-radius: 0; color: #0b0d1a; background: #29adff; text-transform: uppercase; letter-spacing: .08em; font-weight: 900; margin: 2px 4px 8px;
+  box-shadow: 0 -2px 0 0 #0b0d1a, 0 2px 0 0 #0b0d1a, -2px 0 0 0 #0b0d1a, 2px 0 0 0 #0b0d1a, inset 0 -4px 0 0 rgba(0,0,0,.28), inset 0 2px 0 0 rgba(255,255,255,.4), 0 6px 0 0 #0b0d1a; }
+.mk-card .mk-primary { background: #00e436; }
+.mk-card .mk-link { background: #1d2b53; color: #ffa300; border: 0; }
+.mk-card .mk-btn:hover { filter: brightness(1.1); }
+.mk-card .mk-btn:active { transform: translateY(4px); box-shadow: 0 -2px 0 0 #0b0d1a, 0 2px 0 0 #0b0d1a, -2px 0 0 0 #0b0d1a, 2px 0 0 0 #0b0d1a, inset 0 4px 0 0 rgba(0,0,0,.28); }
+.mk-card .mk-btn:focus-visible { outline: 3px solid #ffec27; outline-offset: 5px; }
+@media (prefers-reduced-motion: reduce) { .mk-card .mk-btn:active { transform: none; } }
+@keyframes mk-pop { 0% { transform: scale(.5); opacity: 0; } 50% { transform: scale(1.25); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+.mk-card:not(.mk-still) .mk-new { animation-timing-function: steps(3, end); }
