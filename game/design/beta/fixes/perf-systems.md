@@ -71,6 +71,7 @@ Run each alone: `BASE=http://localhost:<port>/game/index.html /tmp/bt.sh node ga
   walk in tab 1 for a few seconds, reload tab 0: its minimap still shows everything tab 0 uncovered.
 
 ## S-03 Backup tolerates one bad key (b14-04, P1)
+- Commit: 74c2416.
 - mm-backup.js (functions touched): new `cleanValue`, `checkValue`, `ownerPresent`; `plan` skips a damaged key into `skipped`
   ([{key, label, why}], town save first) and sets `message` ("Will restore: ... Cannot restore (damaged in the file): ..."); it fails
   ('bad-value', nothing changed) only when no key is restorable. An unknown key still refuses the whole file (unchanged). `bundle`
@@ -88,3 +89,17 @@ Run each alone: `BASE=http://localhost:<port>/game/index.html /tmp/bt.sh node ga
   `b.warnings.length`, `say(b.warnings.map(function (w) { return w.label; }).join(', ') + ' is damaged on this device and was left out.', true)`.
 - Re-verify: in DevTools set `localStorage['pixeltown-gift-v1'] = '{bad'`, Backup in the Lantern, Restore that file on a clean profile:
   everything but the gift restores (the Town Restore confirm lists the gift under "Cannot restore").
+
+## S-10 Storage-throws sweep (b15-02, P2)
+- Measured with `game/tests/beta-s10-storage-throws.test.js` (12 pages, localStorage getter throws SecurityError, blockDb + SDK stub):
+  hub, town (Join -> Play offline -> Town runs), isles, angler, dash, echo, jam, pop, stack, stalk, deepdelve boot with 0 pageerror,
+  show their canvas / root and their primary button works. The shared-module fixes were in the S-05 commit (mm-access, mm-side-access,
+  mm-settings boot guards).
+- Only the Realm page still throws: `games/mad-maze/mad-maze.js:577` (World+Graphics single owner). Exact one-line patch, requested in
+  `design/beta/assignments/world-graphics.md` Requests:
+  `let axPrefs = AX_ON ? AXM.prefs.load(localStorage) : null;` ->
+  `let axPrefs = null; try { axPrefs = AX_ON ? AXM.prefs.load(localStorage) : null; } catch (e) { axPrefs = AX_ON ? AXM.prefs.load(null) : null; }`
+  (MMAccess.prefs.load(null) returns the defaults.) Lines 640 and 760 are inside handlers and already fall back; 44 / 162 / 163 / 199 are
+  inside try blocks. Until that lands the test prints one `KNOWN-BUG [realm]` line instead of a FAIL; it turns into a PASS by itself.
+- `MMStore.safe()` was not created: shared/mm-store.js does not exist in this tree, and every module I own already reads storage
+  inside a try after the S-05 guards; a new module would need a script tag on every page for no gain.

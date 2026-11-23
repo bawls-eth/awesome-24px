@@ -1560,5 +1560,9 @@
   "beta-s03-backup-skip.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "beta-s10-storage-throws.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
