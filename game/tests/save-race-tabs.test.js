@@ -131,6 +131,29 @@ const stored = (page, k) => page.evaluate((key) => JSON.parse(localStorage.getIt
     await ctx.close();
   }
 
+  // Graceful fallback: without shared/mm-save-merge.js (blocked) every game still saves with the old plain write, 0 errors.
+  {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const db = await blockDb(ctx);
+    await ctx.route(/mm-save-merge\.js/, (r) => r.abort());
+    const errors = [];
+    for (const g of ARCADE) {
+      const p = await tab(ctx, 'games/' + g.id + '/index.html', errors);
+      const r = await p.evaluate(([h, fn, key]) => { const had = !!window.MMSaveMerge; (0, eval)('(' + fn + ')')(window[h], true); const o = JSON.parse(localStorage.getItem(key) || 'null'); return { had, best: o && o.best, mine: window[h].save.best }; }, [g.hook, g.play.toString(), g.key]);
+      check(`${g.id}: without MMSaveMerge the round is still saved (plain write)`, !r.had && r.best === r.mine && r.best > 0, JSON.stringify(r));
+      await p.close();
+    }
+    const j = await tab(ctx, 'games/jam/index.html', errors);
+    if (await j.evaluate(() => !!document.getElementById('pref-assist'))) {
+      await j.click('#pref-assist'); await j.waitForTimeout(200);
+      const st = await stored(j, 'pixeltown-jam-assist-v1');
+      check('jam: without MMSaveMerge the Assist toggle still saves', st && st.on === true, JSON.stringify(st));
+    }
+    check('fallback: 0 page / console errors', errors.length === 0, errors.slice(0, 3).join(' | '));
+    check('fallback: 0 database requests', db.count() === 0);
+    await ctx.close();
+  }
+
   // Deepdelve runs (MMDDRun): both tabs load, both finish a dive (the page re-reads before finish), nothing is lost.
   {
     const R = require('../games/deepdelve/dd-run.js');

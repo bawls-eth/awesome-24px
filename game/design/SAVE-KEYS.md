@@ -36,10 +36,10 @@ Backup: yes = exported by `MMBackup` (shared/mm-backup.js KNOWN), **NO** = not e
 | `pixeltown-bugs-v1` | games/festival/bugs.js | `{v, stars:{arena:n}, best:{arena:n}, journal:{sp:n}}` | 1 | MMBugs.cleanSave | progress | yes |
 | `pixeltown-bugs-goals-v1` | bugs.js | `{v, done:{arena:[goalId]}}` | 1 | MMBugs.cleanGoals | progress | **NO** |
 | `pixeltown-bugs-pb-v1` | bugs.js | `{v, combo:{arena:n}, runs, mod:{arena:{mod:n}}}` | 1 | bugs.js `cleanPb` | progress | **NO** |
-| `pixeltown-dash-v1` | games/dash/dash.js | `{v, hint, best, bestScore, bestCombo, runs, medals, ghost}` | 1 | dash.js `load` (< 120 kB) + `cleanGhost` | progress | **NO** |
-| `pixeltown-pop-v1` | games/pop/pop.js | `{v, hint, best, bestTile, bestChain, rounds, medals}` | 1 | pop.js `load` (< 4 kB) | progress | **NO** |
-| `pixeltown-stack-v1` | games/stack/stack.js | `{v, hint, best, bestCombo, rounds, medals}` | 1 | stack.js `load` (< 4 kB) | progress | **NO** |
-| `pixeltown-echo-v1` | games/echo/echo.js | `{v, hint, best, bestScore, rounds, medals}` | 1 | echo.js `load` (< 4 kB) | progress | **NO** |
+| `pixeltown-dash-v1` | games/dash/dash.js | `{v, hint, best, bestScore, bestCombo, runs, medals, ghost}` | 1 | dash.js `load` (< 120 kB) + `cleanGhost`, merge-on-write | progress | **NO** |
+| `pixeltown-pop-v1` | games/pop/pop.js | `{v, hint, best, bestTile, bestChain, rounds, medals}` | 1 | pop.js `load` (< 120 kB), merge-on-write | progress | **NO** |
+| `pixeltown-stack-v1` | games/stack/stack.js | `{v, hint, best, bestCombo, rounds, medals}` | 1 | stack.js `load` (< 120 kB), merge-on-write | progress | **NO** |
+| `pixeltown-echo-v1` | games/echo/echo.js | `{v, hint, best, bestScore, rounds, medals}` | 1 | echo.js `load` (< 120 kB), merge-on-write | progress | **NO** |
 | `pixeltown-medals-angler-v1` | angler.js | `{v, m:[id]}` | 1 | MMHubMedals.clean | progress | **NO** |
 | `pixeltown-medals-bugs-v1` | bugs.js | `{v, m:[id]}` | 1 | MMHubMedals.clean | progress | **NO** |
 | `pixeltown-medals-dash-v1` | dash.js | `{v, m:[id]}` | 1 | MMHubMedals.clean | progress | **NO** |
