@@ -24,7 +24,7 @@ const vis = (page, sel) => page.evaluate((s) => { const e = document.querySelect
 
   // ---- Town: join offline ----
   await page.goto(BASE);
-  await page.fill('#name-input', 'Offline');
+  await page.fill('#name-input', 'ADMINplaythru'); // ctx.route() does not stop the SDK WebSocket, so this bot does join live presence: ADMIN* only (AGENTS.md)
   await page.click('.species-tab'); await page.waitForTimeout(150);
   await page.click('.avatar-choice');
   await page.click('#join-btn');

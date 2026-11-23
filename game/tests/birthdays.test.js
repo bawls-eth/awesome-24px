@@ -85,6 +85,7 @@ const { launch, scene, check, done, expandPanel } = require('./helpers');
   await page.evaluate(() => { window.dayFor = (s, idx) => { const d0 = Math.floor(Date.now() / 86400000); for (let d = d0; d < d0 + 20; d++) if (birthdayIndexForDay(d) === idx) return d; return null; }; });
   const day0 = await scene(page, (s) => { const d = window.dayFor(s, 3); s.questDayBucket = () => d; s.refreshBirthdays(); return d; });
   await expandPanel(page);
+  await page.click('#town-tab-stats'); await page.waitForTimeout(150); // town-8bit: status lines live in the Stats tab of the menu panel
   const ph = await page.evaluate(() => { const r = document.getElementById('birthday-line').getBoundingClientRect(); return { w: r.width, l: r.left, r: r.right, sw: document.documentElement.scrollWidth, text: document.getElementById('birthday-line').textContent }; });
   check('phone: birthday line visible, inside the panel, no overflow', ph.w > 0 && ph.l >= 0 && ph.r <= 390 && ph.sw <= 390 && /birthday/.test(ph.text), JSON.stringify(ph));
   if (process.env.SHOTS) await page.screenshot({ path: process.env.SHOTS + '/bday-phone.png' });

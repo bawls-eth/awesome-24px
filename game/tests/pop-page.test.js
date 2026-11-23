@@ -66,6 +66,15 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
   check('save is additive own key; medal summary key written for the hub', sv.v === 1 && sv.rounds === 1 && sv.best === end.run && md.v === 1 && md.m.includes('round1'), JSON.stringify([sv, md]));
   const btns = await p.evaluate(() => ['again', 'replay', 'btn-mute'].map((id) => { const r = document.getElementById(id).getBoundingClientRect(); return [id, r.width, r.height]; }));
   check('phone: Play again / Replay seed / Sound are >= 44 px', btns.every((x) => x[1] >= 44 && x[2] >= 44), JSON.stringify(btns));
+  // MK1 shared result card: share code, goal line, Menu, 44 px Copy, text >= 12 px
+  const kit = await p.evaluate(() => {
+    const r = document.getElementById('result'), c = document.getElementById('r-copy').getBoundingClientRect();
+    const small = Array.from(r.querySelectorAll('*')).filter((e) => e.childNodes.length && Array.from(e.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim()) && parseFloat(getComputedStyle(e).fontSize) < 12).map((e) => e.className || e.tagName);
+    const foc = r.querySelector('button, a');
+    return { card: r.classList.contains('mk-card'), code: document.getElementById('r-code').textContent, goal: document.getElementById('r-goal').textContent, menu: !!r.querySelector('a.mk-link[href]'), copy: [c.width, c.height], small, first: foc && foc.id, medals: !!r.querySelector('#r-medals') };
+  });
+  check('kit: shared result card with share code DEMO1, a goal line and a Menu link', kit.card && kit.code === 'DEMO1' && kit.goal.length > 0 && kit.menu && kit.medals, JSON.stringify(kit));
+  check('kit: Copy is >= 44 px, Play again is the first focusable, no text under 12 px', kit.copy[0] >= 44 && kit.copy[1] >= 44 && kit.first === 'again' && kit.small.length === 0, JSON.stringify(kit));
   await p.tap('#replay');
   const b2 = await p.evaluate(() => ({ v: __pop.values(), seed: __pop.run.seed, st: __pop.run.state, score: __pop.run.score }));
   check('Replay seed deals the very same board (seeded)', JSON.stringify(b2.v) === JSON.stringify(b1) && b2.seed === 'demo1' && b2.st === 'play' && b2.score === 0);
@@ -79,6 +88,45 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
   for (const k of ['ArrowLeft', 'ArrowLeft', 'ArrowUp', 'ArrowUp', 'ArrowUp']) await p.keyboard.press(k);
   await p.keyboard.press('Enter');
   check('keyboard: arrows move the cursor, Enter pops', await p.evaluate((sc) => __pop.run.score > sc, kb0));
+  // ---- second pass: chain preview, combo audio ladder, idle hint ----
+  const CHAINB = [[1, 3, 1, 3, 1, 3], [3, 1, 3, 1, 4, 4], [1, 3, 1, 3, 2, 3], [3, 1, 3, 1, 2, 1], [1, 3, 1, 3, 1, 3]];
+  const pv = await p.evaluate((B) => {
+    __pop.set(B); const before = JSON.stringify(__pop.values());
+    const pr = __pop.predict(2, 4), lone = __pop.predict(0, 0);
+    const same = JSON.stringify(__pop.values()) === before;
+    const r = __pop.tap(2, 4);
+    return { pr, lone, same, chain: r.chain, sound: __pop.lastSound };
+  }, CHAINB);
+  check('chain preview: a twin pair that lands next to its twin predicts a x2 chain (group of 2, new tile 3)', pv.pr && pv.pr.size === 2 && pv.pr.chain === 2 && pv.pr.cells.length === 2, JSON.stringify(pv.pr));
+  check('chain preview: never touches the board (or the seeded refills); a lone tile predicts nothing', pv.same && pv.lone === null);
+  check('chain preview is a safe lower bound: the real pop chained at least as far', pv.chain >= pv.pr.chain, JSON.stringify(pv));
+  check('combo audio ladder: a x2 chain plays the brighter "combo2" chip step', pv.sound === ['pop', 'combo2', 'combo3', 'combo4', 'combo5', 'combo6', 'combo7', 'combo8'][Math.min(pv.chain, 8) - 1], JSON.stringify(pv));
+  const lad = await p.evaluate(() => {
+    __pop.set([[1, 1, 3, 2, 3, 2], [2, 3, 2, 3, 2, 3], [3, 2, 3, 2, 3, 2], [2, 3, 2, 3, 2, 3], [3, 2, 3, 2, 3, 2]]);
+    const r = __pop.tap(0, 1), one = __pop.lastSound;
+    __pop.set([[1, 2, 1, 2, 1, 2], [2, 1, 2, 1, 2, 1], [1, 2, 1, 2, 1, 2], [2, 1, 2, 1, 2, 1], [1, 2, 1, 2, 1, 1]]);
+    __pop.tap(0, 0);
+    return { chain: r.chain, one, miss: __pop.lastSound };
+  });
+  check('combo audio ladder: a plain pop plays the base "pop" chip step', lad.chain !== 1 || lad.one === 'pop', JSON.stringify(lad));
+  check('combo audio ladder: a lone tile only plays the soft tap (no ladder step)', lad.miss === 'ui_tap', JSON.stringify(lad));
+  await p.evaluate(() => { document.getElementById('board').focus(); });
+  await p.keyboard.press('ArrowRight');
+  check('chain preview follows the keyboard cursor', await p.evaluate(() => { const pr = __pop.preview; return pr === null || (Array.isArray(pr.cells) && pr.size >= 2); }));
+  const hn = await p.evaluate(() => {
+    __pop.tap(-1, -1); // no-op
+    __pop.set([[1, 2, 1, 2, 1, 2], [2, 1, 2, 1, 2, 1], [1, 2, 1, 2, 1, 2], [2, 1, 2, 1, 2, 1], [1, 2, 1, 2, 3, 3]]);
+    __pop.tap(0, 0); // a miss counts as activity: idle timer restarts
+    __pop.step(5);
+    const early = __pop.hint;
+    __pop.step(1.2);
+    const h = __pop.hint, m = document.getElementById('msg').textContent, best = __pop.bestMove();
+    const r = __pop.tap(h.c, h.r);
+    return { early, h: h && { c: h.c, r: h.r, size: h.size }, best: { c: best.c, r: best.r }, m, popped: !!r, after: __pop.hint, on: __pop.hintsOn };
+  });
+  check('idle hint: nothing for the first 6 s of thinking', hn.on && hn.early === null, JSON.stringify(hn));
+  check('idle hint: after 6 s the best move glows and the status line nudges (no penalty, no timer change)', hn.h && hn.h.size >= 2 && hn.h.c === hn.best.c && hn.h.r === hn.best.r && /psst/i.test(hn.m), JSON.stringify(hn));
+  check('idle hint: popping clears the glow', hn.popped && hn.after === null, JSON.stringify(hn));
   check('phone: no console errors, 0 DB requests', s.errors.length === 0 && s.db.count() === 0, JSON.stringify(s.errors) + s.db.count());
   await s.ctx.close();
 
@@ -93,8 +141,53 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
   check('reduced motion: no screen shake; low graphics: particles capped at 24', rm.reduced && rm.low && rm.shake === 0 && rm.parts <= 24, JSON.stringify(rm));
   const dw = await q.evaluate(() => { const b = document.getElementById('board').getBoundingClientRect(); return { w: b.width, x: b.left, vw: innerWidth }; });
   check('desktop: board is centred and capped in width', dw.w <= 560 && dw.x > 100, JSON.stringify(dw));
+  const hm = await q.evaluate(() => { __pop.step(4); const a = __pop.hint; __pop.step(3); return { a, b: __pop.hint }; });
+  check('reduced motion: the idle hint still appears (a steady outline, no pulse)', hm.a === null && hm.b && hm.b.size >= 2, JSON.stringify(hm));
+  const bb2 = await q.locator('#board').boundingBox();
+  await q.evaluate(() => __pop.set([[1, 1, 3, 2, 3, 2], [2, 3, 2, 3, 2, 3], [3, 2, 3, 2, 3, 2], [2, 3, 2, 3, 2, 3], [3, 2, 3, 2, 3, 2]]));
+  await q.mouse.move(bb2.x + bb2.width * 0.1, bb2.y + bb2.height * (0.5 / 6));
+  check('chain preview: a mouse hovering a pair outlines it without popping', await q.evaluate(() => __pop.preview && __pop.preview.size === 2 && __pop.values()[0][0] === 1));
+  await q.evaluate(() => __pop.end());
+  await q.keyboard.press('r');
+  check('kit: R right at the end is held for a moment (no skipped result card)', await q.evaluate(() => __pop.run.state === 'over' && !document.getElementById('result').hidden));
+  await q.waitForTimeout(450);
+  await q.keyboard.press('r');
+  check('kit: R on the result card plays again', await q.evaluate(() => __pop.run.state === 'play' && document.getElementById('result').hidden));
   check('desktop: no console errors, 0 DB requests', d.errors.length === 0 && d.db.count() === 0, JSON.stringify(d.errors));
   await d.ctx.close();
+  const o = await open(browser, { viewport: { width: 1280, height: 800 } }, '?test=1&hints=0', { [KEY]: JSON.stringify({ v: 1, hint: true }) });
+  await o.page.click('#play');
+  check('?hints=0 turns the idle hint off', await o.page.evaluate(() => { __pop.step(10); return __pop.hintsOn === false && __pop.hint === null; }));
+  check('hints=0 page: no console errors, 0 DB requests', o.errors.length === 0 && o.db.count() === 0, JSON.stringify(o.errors));
+  await o.ctx.close();
+  // share code in the URL deals the same board as the seed it came from; a bad code is ignored safely
+  const boardFor = async (qs) => { const x = await open(browser, { viewport: { width: 1280, height: 800 } }, '?test=1&' + qs, { [KEY]: JSON.stringify({ v: 1, hint: true }) }); await x.page.click('#play'); const r = await x.page.evaluate(() => ({ v: __pop.values(), seed: __pop.run.seed })); const ok = x.errors.length === 0 && x.db.count() === 0; await x.ctx.close(); return Object.assign(r, { ok }); };
+  const sc = await boardFor('seed=DEMO1'), sl = await boardFor('seed=demo1'), sb = await boardFor('seed=%3Cb%3Ebad%3C%2Fb%3E');
+  check('kit: ?seed=DEMO1 (share code) plays the demo1 board', sc.seed === 'demo1' && JSON.stringify(sc.v) === JSON.stringify(sl.v) && sc.ok, sc.seed);
+  check('kit: an invalid share code is ignored (fresh seed, no errors)', sb.seed !== '<b>bad</b>' && /^[a-z0-9]+$/.test(sb.seed) && sb.ok, sb.seed);
+  // ---- bug bash: seeds, bonus, keys, hostile saves, layout ----
+  const zz = await open(browser, { viewport: { width: 1280, height: 720 } }, '?test=1&seed=a-b_C', { [KEY]: JSON.stringify({ v: 1, hint: true, best: 'x', medals: 'no', rounds: -5, bestTile: 1e99 }) });
+  await zz.page.click('#play');
+  const bs = await zz.page.evaluate(() => { const r = { seed: __pop.run.seed, v: JSON.stringify(__pop.values()) }; __pop.start('ABC'); r.v2 = JSON.stringify(__pop.values()); r.seed2 = __pop.run.seed; return r; });
+  check('seed is normalised to share-code form, so the code and the seed play the same board', bs.seed === 'abc' && bs.seed2 === 'abc' && bs.v === bs.v2, JSON.stringify(bs));
+  const hs = await zz.page.evaluate(() => ({ best: __pop.save.best, rounds: __pop.save.rounds, tile: __pop.save.bestTile, med: __pop.save.medals.length }));
+  check('hostile save (wrong types, negatives, huge numbers) is cleaned to safe values', hs.best === 0 && hs.rounds === 0 && hs.tile === 99 && hs.med === 0, JSON.stringify(hs));
+  const bonus = await zz.page.evaluate(() => { __pop.start('bonus1'); __pop.set([[1,2,1,2,1,2],[2,1,2,1,2,1],[1,2,1,2,1,2],[2,1,2,1,2,1],[3,3,3,3,3,1]]); __pop.run.time = 50; __pop.tap(4, 2); return { t: __pop.run.time, m: __pop.run.maxTile }; });
+  check('a Big pop that jumps straight to level 5 still earns the +5 s bonus', bonus.m >= 5 && bonus.t >= 55, JSON.stringify(bonus));
+  const lay = await zz.page.evaluate(() => { const b = document.getElementById('board').getBoundingClientRect(); return { bottom: b.bottom, vh: innerHeight, scrollW: document.documentElement.scrollWidth, vw: innerWidth }; });
+  check('desktop 1280x720: the whole board fits above the fold', lay.bottom <= lay.vh && lay.scrollW <= lay.vw, JSON.stringify(lay));
+  check('MMInput is loaded for the universal key map', await zz.page.evaluate(() => !!window.MMInput && MMInput.actionOf('w') === 'up'));
+  check('bug-bash page: no console errors, 0 DB requests', zz.errors.length === 0 && zz.db.count() === 0, JSON.stringify(zz.errors));
+  await zz.ctx.close();
+  const ls = await open(browser, { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true }, '?test=1', { [KEY]: JSON.stringify({ v: 1, hint: true }) });
+  await ls.page.click('#play');
+  const lb = await ls.page.evaluate(() => { const b = document.getElementById('board').getBoundingClientRect(); return { top: b.top, bottom: b.bottom, h: b.height / 6, vh: innerHeight, sw: document.documentElement.scrollWidth, vw: innerWidth }; });
+  check('landscape phone: the board fits the screen height with cells >= 44 px', lb.bottom <= lb.vh && lb.h >= 44 && lb.sw <= lb.vw, JSON.stringify(lb));
+  await ls.page.evaluate(() => __pop.step(95));
+  const lr = await ls.page.evaluate(() => { const r = document.getElementById('result'), b = r.getBoundingClientRect(); return { bottom: b.bottom, top: b.top, vh: innerHeight, vis: !r.hidden }; });
+  check('landscape phone: the result card stays on screen (scrolls inside itself)', lr.vis && lr.bottom <= lr.vh + 1 && lr.top >= 0, JSON.stringify(lr));
+  check('landscape page: no console errors', ls.errors.length === 0, JSON.stringify(ls.errors));
+  await ls.ctx.close();
   await browser.close();
   done();
 })().catch((e) => { console.error(e); process.exit(1); });

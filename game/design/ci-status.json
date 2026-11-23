@@ -1,9 +1,9 @@
 {
-  "sha": "789b2467aaa292b3be4b11ae1d5a3f78e488e1fd",
-  "generated_utc": "2026-11-22T21:35:00Z",
+  "sha": "3f787ff864d1102908b77510bda4972f7049bee0",
+  "generated_utc": "2026-11-23T05:05:51Z",
   "full_suite_green": true,
   "beta_green": null,
-  "suites_passed": 341,
-  "suites_total": 341,
-  "notes": "Full run on this exact sha, run as 3 parallel shards (--shard i/3 --lock-live): 338/341 on the first pass. The 3 misses were timing/load flakes from running 3 shards at once (first-ten-minutes first-frame 3.67 s vs 3.0 s, gear-dungeon-drops, realm-boss page race); each was rerun alone on the same sha and passed, so 341/341. Includes minigame fun passes (Jam, Angler, Stalk practice week, Deepdelve dives, Bug Safari, Lantern), Pixel Pop and Lantern Dash, isles low-gfx/access, Realm endgame (relic book, mutators, deep runs, Trial of Six), frostfox/rimewolf wiring, hub map fix. Beta runs only on owner request."
+  "suites_passed": 384,
+  "suites_total": 384,
+  "notes": "Full run on this exact sha, run as 4 parallel shards (--shard i/4 --lock-live): 382/384 on the first pass. PASSED ONLY ON SOLO RERUN (failed in the parallel pass, passed alone on the same sha; load flakes unless they recur): isles-tundra-mars.test.js, realm-duel.test.js. Stamped by tools/stamp.sh; the stamp commit changes only game/design/ci-status.json. Beta runs only on owner request."
 }

@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stack Tower - Pixeltown</title>
+<link rel="stylesheet" href="stack.css">
+<link rel="stylesheet" href="../../shared/mm-minikit.css">
+<link rel="stylesheet" href="../../shared/mm-8bit.css">
+<link rel="stylesheet" href="../../shared/mm-8bit-arcade.css">
+<script src="../../shared/mm-8bit.js"></script>
+<script src="../../shared/mm-access.js"></script>
+<script src="../../shared/mm-side-access.js"></script>
+<link rel="stylesheet" href="../../shared/mm-nav.css">
+</head>
+<body>
+<header id="top">
+  <a class="back" id="back" href="../../index.html">&larr; Town</a>
+  <h1>Stack Tower</h1>
+  <button id="btn-mute" type="button" aria-pressed="false">Sound on</button>
+  <a class="back" id="town" href="../../index.html">Town</a>
+</header>
+<main id="stage">
+  <section id="hud" aria-label="Round">
+    <div class="stat"><span class="lbl">Floors</span><strong id="h-score">0</strong></div>
+    <div class="stat"><span class="lbl">Time</span><strong id="h-time">90</strong></div>
+    <div class="stat"><span class="lbl">Perfect</span><strong id="h-combo">0</strong></div>
+    <div class="stat"><span class="lbl">Best</span><strong id="h-best">0</strong></div>
+  </section>
+  <div id="timebar" aria-hidden="true"><div id="timefill"></div></div>
+  <canvas id="board" width="360" height="480" tabindex="0" role="application" aria-label="Stack Tower: tap, Space or Enter to drop the swinging block onto the tower."></canvas>
+  <button class="big" id="drop" type="button">Drop</button>
+  <p id="msg" role="status" aria-live="polite"></p>
+  <p id="goal" class="dim"></p>
+
+  <section class="card overlay" id="intro" aria-label="How to play">
+    <h2>Stack Tower</h2>
+    <div id="how">
+      <p><strong>Tap</strong> to drop the swinging block onto the tower. The part that <strong>hangs over</strong> the edge falls off.</p>
+      <p>Land it <strong>right on top</strong> for a Perfect. Three Perfects in a row make the block <strong>wider</strong> again.</p>
+      <p class="dim">The swing speeds up as you climb. Miss the tower completely and the round ends. 90 seconds at most.</p>
+    </div>
+    <ul class="medals" id="i-medals" aria-label="Medals"></ul>
+    <div class="row"><button class="big" id="play" type="button">Play</button></div>
+  </section>
+
+  <section class="card overlay" id="result" hidden aria-label="Round over" aria-live="polite">
+    <h2 id="r-title">Round over: <span id="r-score">0</span></h2>
+    <p id="r-best" class="dim"></p>
+    <p id="r-line" class="dim"></p>
+    <p id="r-new" class="new"></p>
+    <ul class="medals" id="r-medals" aria-label="Medals"></ul>
+    <div class="row">
+      <button class="big" id="again" type="button">Play again</button>
+      <button class="big alt" id="replay" type="button">Replay seed</button>
+    </div>
+  </section>
+  <p class="dim">Keys: Space, Enter or Down drops. Free to play: no timers outside a round, nothing to buy.</p>
+</main>
+<script src="../../shared/store.js"></script>
+<script src="../../shared/motion.js"></script>
+<script src="../../shared/rng.js"></script>
+<script src="../../shared/sfx.js"></script>
+<script src="../../shared/profile.js"></script>
+<script src="../../shared/mm-nav.js" data-mount="manual"></script>
+<script>
+(function () {
+  if (!window.MMNav) return;
+  MMNav.mount({ page: 'stack', avoid: '#top h1', backHref: '../../index.html', backLabel: 'Town' });
+  // the Menu button replaces the old links outright (no 1 px hidden links left behind); without MMNav they stay
+  if (document.body.classList.contains('mm-nav-on')) ['back', 'town'].forEach(function (id) { var e = document.getElementById(id); if (e) e.hidden = true; });
+  var cover = [], shut = ['result'];
+  function open(ids) { return ids.some(function (id) { var e = document.getElementById(id); return e && !e.hidden; }); }
+  function sync() { MMNav.setCovered(open(cover)); if (open(cover) || open(shut)) MMNav.close(); }
+  var mo = window.MutationObserver ? new MutationObserver(sync) : null;
+  cover.concat(shut).forEach(function (id) { var e = document.getElementById(id); if (e && mo) mo.observe(e, { attributes: true, attributeFilter: ['hidden'] }); });
+}());
+</script>
+<script src="../../shared/mm-minikit.js"></script>
+<script src="../../shared/mm-save-merge.js"></script>
+<script src="stack.js"></script>
+</body>
+</html>

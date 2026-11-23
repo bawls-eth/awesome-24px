@@ -70,7 +70,7 @@ async function summaryLinks(browser, qs) {
   check('summary ignores hostile from=<img>', r.home === '../../hub/index.html' && !/img/.test(r.again) && !/img/.test(r.homeText), JSON.stringify(r));
 
   // 2. Hub: node links carry ?from=hub, phone header and map
-  s = await open(browser, G('hub/index.html'), PHONE);
+  s = await open(browser, G('hub/index.html?map=1'), PHONE /* HS1: the map view */);
   await s.page.waitForFunction(() => window.__hub);
   const src = await s.page.evaluate(() => fetch('hub.js').then((r) => r.text()));
   const links = {};

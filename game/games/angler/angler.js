@@ -24,7 +24,7 @@
   // AC1 graphics tier: the shared "Low graphics" pref (pixeltown-access-v1 lowGfx, read with MMAccess) forces MMPerf's low tier:
   // no water shimmer, fewer rain/snow drops, one splash ring and fanfare sparks capped at MMPerf's low cap.
   // Without the pref (or without MMPerf) the tier is 'high' and every frame draws exactly as before.
-  const gfx = (() => {
+  const computeGfx = () => {
     let prefs = null, tier = 'high';
     try { prefs = window.MMAccess ? window.MMAccess.prefs.load(window.localStorage) : null; } catch (e) { prefs = null; }
     try { if (window.MMPerf) tier = window.MMPerf.profile([], prefs).tier; } catch (e) { tier = 'high'; }
@@ -32,7 +32,8 @@
     let dpr = 1;
     try { if (window.MMPerf && window.MMPerf.applyCanvas) dpr = window.MMPerf.applyCanvas(cv, tier).dpr; } catch (e) { dpr = 1; }
     return { tier, low, dpr, cap: low && window.MMPerf ? window.MMPerf.CAPS.low.sparks : Infinity, drops: low ? 16 : 40, rings: low ? 1 : 3 };
-  })();
+  };
+  let gfx = computeGfx();
 
   // ---- rng / clock / date (seeded and fake in test mode) ----
   let rng = Math.random;
@@ -104,19 +105,93 @@
   };
   const held = { ptr: false, key: false, pad: false, test: false, btn: false };
 
+  // ---- VAR1: a seeded spot condition per visit (page load), one line each, honest numbers. Not in the tournament
+  // (same bites for everyone) or the Isles Cove. ?mods=0 turns it off; test pages keep it off unless ?mods=1.
+  const CONDS = {
+    calm: { name: 'Calm water', line: 'Bites come 20% slower, but each bite waits 0.3 s longer for you.', wait: 1.2, window: 0.3, rare: 1, common: 1 },
+    windy: { name: 'Windy', line: 'Bites come 15% slower; rare fish (3/5 and up) bite 1.5x as often.', wait: 1.15, window: 0, rare: 1.5, common: 1 },
+    rush: { name: 'Fish-rush hour', line: 'Bites come 40% faster; common fish (1/5) bite 1.5x as often.', wait: 0.6, window: 0, rare: 1, common: 1.5 }
+  };
+  const COND_IDS = ['calm', 'windy', 'rush'];
+  const CONDS_ON = params.get('mods') !== '0' && (!TEST || params.get('mods') === '1');
+  const visitSeed = TEST ? 'visit|' + (/^[\w-]{1,32}$/.test(params.get('seed') || '') ? params.get('seed') : 'angler') : String(Date.now()) + Math.random();
+  const condCache = {};
+  function condFor(spot) {
+    if (!CONDS_ON || spot === COVE || A.SPOTS.indexOf(spot) < 0) return null;
+    if (!condCache[spot]) condCache[spot] = COND_IDS[Math.floor(Rng.create(visitSeed + '|cond|' + spot).next() * COND_IDS.length) % COND_IDS.length];
+    return condCache[spot];
+  }
+  const activeCond = () => (g.tour ? null : condFor(g.spot));
+  const condMult = (id, f) => (!id ? 1 : f.rarity >= 3 ? CONDS[id].rare : f.rarity <= 1 ? CONDS[id].common : 1);
+  // Same walk as I.bug.rollFish (one rng() call), with the spot condition's weights on top.
+  function rollWithCond(spot, c, gear, bugId, id) {
+    if (!id || (CONDS[id].rare === 1 && CONDS[id].common === 1)) return I.bug.rollFish(rng, spot, c, gear, bugId);
+    const p = A.pool(spot, c);
+    if (!p.length) return null;
+    const ws = p.map((f) => A.weightOf(f, c, gear) * (bugId ? I.bug.mult(bugId, f) : 1) * condMult(id, f));
+    let total = 0; ws.forEach((w) => { total += w; });
+    let r = rng() * total;
+    for (let i = 0; i < p.length; i++) { r -= ws[i]; if (r < 0) return p[i]; }
+    return p[p.length - 1];
+  }
+  // Honest odds for the HUD: chance of a rare-or-better fish here, with and without the condition.
+  function rareShare(id) {
+    const c = nowCtx(), p = A.pool(g.spot, c), gear = { lure: journal.gear.lure, bait: false };
+    let t = 0, r = 0;
+    p.forEach((f) => { const w = A.weightOf(f, c, gear) * (journal.bugBait ? I.bug.mult(journal.bugBait, f) : 1) * condMult(id, f); t += w; if (f.rarity >= 3) r += w; });
+    return t ? r / t : 0;
+  }
+  function renderCond() {
+    const id = activeCond(), tag = $('cond'), line = $('cond-line');
+    if (!tag || !line) return;
+    tag.hidden = !id; line.hidden = !id; tag.textContent = id ? CONDS[id].name : '';
+    if (id) { tag.dataset.cond = id; line.textContent = CONDS[id].name + ': ' + CONDS[id].line + (rareShare(null) > 0 ? ' Rare-or-better chance here: ' + Math.round(rareShare(id) * 100) + '% (usually ' + Math.round(rareShare(null) * 100) + '%).' : ' No rare fish at this spot right now.'); }
+  }
+
   // ---- FUN1: streaks, reaction time, personal bests, sound cues, screen shake ----
   // Own additive key pixeltown-angler-fun-v1 {v, bestStreak, bestReact (ms, 0 = none), streak}; the journal format is untouched.
   const FUN_KEY = 'pixeltown-angler-fun-v1';
   function cleanFun(raw) {
     const o = raw && typeof raw === 'object' ? raw : {};
     const n = (v, hi) => { v = Math.floor(Number(v)); return isFinite(v) ? Math.max(0, Math.min(hi, v)) : 0; };
-    return { v: 1, bestStreak: n(o.bestStreak, 99999), bestReact: n(o.bestReact, 1000), streak: n(o.streak, 99999) };
+    const out = { v: 1, bestStreak: n(o.bestStreak, 99999), bestReact: n(o.bestReact, 1000), streak: n(o.streak, 99999), cond: {} };
+    // VAR1 (additive): bests per spot condition {condId: {size (cm), react (ms, 0 = none), n (catches)}}. Known ids only.
+    const c = o.cond && typeof o.cond === 'object' && !Array.isArray(o.cond) ? o.cond : {};
+    COND_IDS.forEach((id) => {
+      const e = Object.prototype.hasOwnProperty.call(c, id) && c[id] && typeof c[id] === 'object' ? c[id] : null;
+      if (e) out.cond[id] = { size: n(e.size, 9999), react: n(e.react, 1000), n: n(e.n, 999999) };
+    });
+    return out;
   }
   let fun = cleanFun(Store.get(FUN_KEY, null));
-  const saveFun = () => { fun = cleanFun(fun); Store.set(FUN_KEY, fun); };
+  // Merge-on-write (bugbash/saves.md S2/S7): a stale second tab never lowers a best streak, never slows a best strike, adds only its
+  // own catches per condition, and keeps fields a newer build stored. Without MMSaveMerge: the old plain write.
+  let funBase = JSON.parse(JSON.stringify(fun));
+  const saveFun = () => {
+    fun = cleanFun(fun);
+    const M = window.MMSaveMerge;
+    if (!M) { Store.set(FUN_KEY, fun); return; }
+    const raw = Store.get(FUN_KEY, null), st = cleanFun(raw), m = M.merge(raw, funBase, fun, M.SPECS[FUN_KEY]);
+    const minPos = (a, b) => (a > 0 && b > 0 ? Math.min(a, b) : a > 0 ? a : b);
+    const cond = Object.assign({}, raw && typeof raw === 'object' && raw.cond && typeof raw.cond === 'object' && !Array.isArray(raw.cond) ? raw.cond : {});
+    COND_IDS.forEach((id) => {
+      const a = st.cond[id], b = fun.cond[id], z = funBase.cond[id];
+      if (!a && !b) return;
+      if (!a || !b) { cond[id] = a || b; return; }
+      cond[id] = { size: Math.max(a.size, b.size), react: minPos(a.react, b.react), n: a.n + Math.max(0, b.n - (z ? z.n : 0)) };
+    });
+    m.cond = cond;
+    const c = cleanFun(m);
+    Store.set(FUN_KEY, Object.assign(m, c, { cond: Object.assign(cond, c.cond) }));
+    fun = c; funBase = JSON.parse(JSON.stringify(fun));
+  };
   let sfx = null; const sounds = [];
   function ensureSfx() { if (sfx || !window.MMSfx) return; try { sfx = window.MMSfx.create({ storage: window.localStorage }); } catch (e) { sfx = null; } }
-  function cue(name) { sounds.push(name); if (sounds.length > 30) sounds.shift(); if (sfx) { try { sfx.play(name); } catch (e) { /* ignore */ } } }
+  // Logical cue names stay (tests + CHIP-AUDIO aliases); the 8-bit voice played for each is the Fishing set in CHIP-AUDIO.md.
+  const CHIP_VOICE = { ui_tap: 'splash', warn: 'bite', hurt: 'miss', levelup: 'catch', bag_rare: 'chest', boss_awaken: 'boss' };
+  function cue(name) { sounds.push(name); if (sounds.length > 30) sounds.shift(); if (sfx) { try { sfx.play(CHIP_VOICE[name] || name); } catch (e) { /* ignore */ } } }
+  let reelTick = 0; // rate limit for the reel voice while the line is held
+  function reelCue(dt) { reelTick -= dt; if (reelTick > 0) return; reelTick = 0.22; if (sfx) { try { sfx.play('reel'); } catch (e) { /* ignore */ } } }
   ['pointerdown', 'keydown'].forEach((n) => window.addEventListener(n, ensureSfx, { passive: true }));
   let shakes = 0;
   function shake(big) { // CSS shake on the canvas; off with reduced motion and the low graphics tier
@@ -168,24 +243,62 @@
       g.bite = A.bite(rng); // cove bait (kelp / shell / pearl) is never used up; Market bait stays in the bag here
     } else {
       g.bite = A.bite(rng);
+      const cid = activeCond(); if (cid) { g.bite.wait *= CONDS[cid].wait; g.bite.window += CONDS[cid].window; }
       const u = D.economy.useBait(journal);
       if (u.type) { journal = u.journal; g.baitUsed = u.type; g.bite.wait *= A.BAITS[u.type].waitMult; saveJournal(); }
     }
-    g.state = 'waiting'; g.t = 0; g.react = 0;
+    g.state = 'waiting'; g.t = 0; g.react = 0; g.newSize = g.newStreak = g.newReact = false;
     g.baited = !!g.baitUsed; cue('ui_tap');
     setMsg(g.tour ? 'Tournament cast ' + journal.tour.run.used + '/' + D.CASTS + '. Waiting for a bite...' : g.baited ? 'Bait on the hook! Waiting for a bite...' : 'Waiting for a bite... (do not press yet)');
     renderSpots();
   }
+  // Result card: the shared MMMiniKit card (stats, medals, next goal, Play again first). Ids res-title / res-detail / res-fun / res-ok are kept.
+  const MEDAL_DEFS = [['catch1', 'Catch a fish', 1], ['species10', 'Catch 10 species', 10], ['boss1', 'Beat a boss fish', 0]];
+  function medalList() {
+    const n = A.journal.speciesCount(journal), t = A.journal.trophyCount(journal);
+    return MEDAL_DEFS.map((m) => ({ id: m[0], label: m[1], target: m[2] || undefined, earned: m[0] === 'boss1' ? t >= 1 : n >= m[2] }));
+  }
+  function resultStats(outcome) {
+    const st = [];
+    if (outcome === 'caught' && g.fish) st.push({ label: 'Size', value: g.size + ' cm', best: !!g.newSize, id: 'res-size' });
+    st.push({ label: 'Streak', value: String(fun.streak), best: !!g.newStreak, id: 'res-streak' });
+    if (outcome === 'caught' && g.react > 0) st.push({ label: 'Strike', value: g.react + ' ms', best: !!g.newReact, id: 'res-strike' });
+    st.push({ label: 'Best streak', value: String(fun.bestStreak), id: 'res-beststreak' });
+    return st;
+  }
+  function buildResult(outcome, title, detail, funLine) {
+    const MK = window.MMMiniKit, el = $('result'), medals = medalList(), again = outcome === 'caught' ? 'Cast again' : 'Try again';
+    if (!MK) { // card kit missing: plain fallback keeps the page playable
+      el.textContent = '';
+      const h = mk('h2', '', title); h.id = 'res-title'; const d = mk('p', '', detail); d.id = 'res-detail'; const b = mk('button', 'btn primary', again); b.id = 'res-ok'; b.type = 'button'; b.addEventListener('click', dismiss);
+      el.appendChild(h); el.appendChild(d); el.appendChild(b); return;
+    }
+    const extra = [];
+    if (outcome === 'caught' && g.fish) {
+      const c = document.createElement('canvas'); c.width = 48; c.height = 28; c.id = 'res-sprite'; c.className = 'res-sprite'; c.setAttribute('aria-hidden', 'true');
+      const cx = c.getContext('2d'); cx.imageSmoothingEnabled = false; drawFish(cx, 24, 14, 16, g.fish, false); extra.push(c);
+    }
+    const ul = mk('ul', 'mk-medals'); ul.id = 'res-medals'; ul.setAttribute('aria-label', 'Medals');
+    medals.forEach((m) => { const li = mk('li', m.earned ? 'on' : '', (m.earned ? '\u2605 ' : '\u2606 ') + m.label); li.dataset.medal = m.id; ul.appendChild(li); });
+    extra.push(ul);
+    const vm = MK.result({
+      title, headline: [{ text: title, id: 'res-title' }], stats: resultStats(outcome),
+      lines: [{ id: 'res-detail', text: detail, cls: 'dim' }].concat(funLine ? [{ id: 'res-fun', text: funLine, cls: 'fun' }] : []),
+      medals, value: A.journal.speciesCount(journal), menuHref: '../../hub/index.html', menuLabel: 'Hub', ids: { again: 'res-ok', head: 'res-head' },
+    });
+    const pn = MK.panel(el, vm, { again: dismiss, extra, holdMs: TEST ? 0 : 300, keyReady: () => g.state === 'result' });
+    pn.again.textContent = again;
+    el.classList.add('panel');
+    return pn;
+  }
   function finish(outcome, title, detail, funLine) {
     g.state = 'result'; g.result = { outcome, fish: g.fish && g.fish.id, size: g.size };
-    $('res-title').textContent = title; $('res-detail').textContent = detail;
-    $('res-fun').textContent = funLine || ''; $('res-fun').hidden = !funLine;
-    $('res-ok').textContent = outcome === 'caught' ? 'Cast again' : 'Try again';
+    const pn = buildResult(outcome, title, detail, funLine);
     $('result').hidden = false; g.resultAt = g.t;
     $('res-title').className = outcome === 'caught' && g.fish ? 'r' + g.fish.rarity : '';
     setMsg(title); renderSpots();
     if (g.tour) afterTourCast();
-    if (!TEST) setTimeout(() => { try { $('res-ok').focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 0);
+    if (!TEST) setTimeout(() => { try { if (pn && pn.focus && g.state === 'result') pn.focus(); } catch (e) { /* ignore */ } }, 0);
   }
   function dismiss() {
     if (g.state !== 'result') return;
@@ -213,7 +326,7 @@
     else if (g.forced) f = A.BY_ID[g.forced] || A.COVE_BY_ID[g.forced];
     else if (g.spot === COVE) f = I.cove.roll(rng, journal.coveBait);
     else if (lair && lair.ready && (!g.bossGate || B.gateOpen(journal, lair.boss)) && rng() < g.bossChance) f = A.BY_ID[lair.boss];
-    else f = I.bug.rollFish(rng, g.spot, c, { lure: journal.gear.lure, bait: g.baitUsed === 'plain', baitType: g.baitUsed }, journal.bugBait);
+    else f = rollWithCond(g.spot, c, { lure: journal.gear.lure, bait: g.baitUsed === 'plain', baitType: g.baitUsed }, journal.bugBait, activeCond());
     g.forced = null;
     if (!f) { finish('none', 'Nothing here', 'This spot is closed.'); return; }
     g.fish = f; g.size = g.cf ? g.cf.size : A.rollSize(rng, f, { big: g.baitUsed === 'big' }); g.boss = !!f.boss;
@@ -236,6 +349,7 @@
   function land() {
     if (g.fish.cove) { landCove(); return; }
     const f = g.fish, isNew = !journal.caught[f.id];
+    g.newSize = !isNew && g.size > journal.caught[f.id].best;
     const firstTrophy = f.boss && !journal.trophies[f.id];
     journal = A.journal.record(journal, f.id, g.size);
     if (f.boss) { journal = A.journal.addTrophy(journal, f.id); journal = B.addHall(journal, f.id, g.size, todayStr()); }
@@ -256,6 +370,7 @@
   // Cove fish go to their own journal key: no stock, no bells, no bait drops (no currency here), just the collection.
   function landCove() {
     const f = g.fish, isNew = !journal.cove[f.id];
+    g.newSize = !isNew && g.size > journal.cove[f.id].best;
     journal = I.cove.record(journal, f.id, g.size);
     saveJournal(); renderStatus();
     g.fan = { t: 0, big: f.rarity >= 4 };
@@ -269,11 +384,21 @@
     fun.streak += 1;
     const newStreak = fun.streak > fun.bestStreak && fun.streak >= 2;
     if (fun.streak > fun.bestStreak) fun.bestStreak = fun.streak;
+    g.newStreak = newStreak;
     const newReact = g.react > 0 && (fun.bestReact === 0 || g.react < fun.bestReact);
+    g.newReact = newReact;
     if (newReact) fun.bestReact = g.react;
     saveFun();
     cue(f.rarity >= 3 || f.boss ? 'bag_rare' : 'levelup'); shake(f.rarity >= 4 || !!f.boss);
-    g.funLine = 'Streak ' + fun.streak + (newStreak ? ' - new best!' : ' (best ' + fun.bestStreak + ')') + (g.react ? ' - strike ' + g.react + ' ms' + (newReact ? ' - fastest yet!' : '') : '');
+    const cid = g.cf || f.cove ? null : activeCond(); let condNote = '';
+    if (cid) {
+      const e = fun.cond[cid] || { size: 0, react: 0, n: 0 };
+      const big = g.size > e.size, fast = g.react > 0 && (e.react === 0 || g.react < e.react);
+      e.n += 1; if (big) e.size = g.size; if (fast) e.react = g.react; fun.cond[cid] = e;
+      condNote = ' - ' + CONDS[cid].name + ' best ' + e.size + ' cm' + (big && e.n > 1 ? ' (new!)' : '');
+    }
+    saveFun();
+    g.funLine = 'Streak ' + fun.streak + (newStreak ? ' - new best!' : ' (best ' + fun.bestStreak + ')') + (g.react ? ' - strike ' + g.react + ' ms' + (newReact ? ' - fastest yet!' : '') : '') + condNote;
     return g.funLine;
   }
   function sizeWord(f, cm) {
@@ -290,6 +415,7 @@
       else if (s === 'missed') { cue('hurt'); finish('missed', 'Too slow', 'The bite lasts ' + g.bite.window.toFixed(1) + ' s. Press the moment you see the "!".' + breakStreak()); }
     } else if (g.state === 'reeling') {
       const r = g.reel.tick(dt, anyHeld());
+      if (anyHeld()) reelCue(dt); else reelTick = 0;
       if (g.boss && r.phase !== g.lastPhase) { g.lastPhase = r.phase; g.phaseAt = g.t; }
       if (r.status === 'reeling' && g.surge) {
         const sp = B.phaseAt(g.surge, g.t), ts = B.tensionStep(g.strain, dt, anyHeld(), sp === 'surge');
@@ -304,24 +430,91 @@
     else g.bobY = reduced() || g.state !== 'waiting' ? 0 : Math.sin(g.t * 3) * 1.5;
   }
 
+  // ---- shared settings (MMSettings) and the pre-game card ----
+  let Settings = null;
+  try { if (window.MMSettings && window.MMSettings.mount) Settings = window.MMSettings.mount({ page: 'angler' }); } catch (e) { Settings = null; }
+  if (Settings && window.MMNav && window.MMNav.onSettings) window.MMNav.onSettings(() => { if (g.state === 'idle' || g.state === 'result') Settings.open(); });
+  window.addEventListener('mm-settings-change', (e) => {
+    const d = (e && e.detail) || {};
+    if (d.id === 'sound') { ensureSfx(); if (sfx) { try { sfx.setMuted(!d.value); } catch (er) { /* ignore */ } } }
+    else if (d.id === 'low-gfx') { gfx = computeGfx(); ctx.imageSmoothingEnabled = false; if (ready) draw(); }
+  });
+  const PREGAME_KEY = 'pixeltown-angler-intro-v1'; // sessionStorage: the card shows once per visit, never blocks a test run
+  function pregameText() {
+    const touch = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+    const keys = window.MMInput ? window.MMInput.hint({ touch, only: ['primary', 'secondary', 'menu'], names: { primary: 'cast / reel', secondary: 'next spot', menu: 'menu' } }) : '';
+    return { how: 'Cast, wait for the "!", then press to hook. Hold to reel and keep the fish in the green zone.', keys: touch ? 'Tap the water to cast and reel. Menu is top left.' : keys };
+  }
+  let pgTabbed = false;
+  function openPregame() {
+    const el = $('pregame'); if (!el) return;
+    const t = pregameText(); $('pg-how').textContent = t.how; $('pg-keys').textContent = t.keys;
+    pgTabbed = false; el.hidden = false; try { $('pg-play').focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+  }
+  function closePregame() {
+    $('pregame').hidden = true;
+    try { sessionStorage.setItem(PREGAME_KEY, '1'); } catch (e) { /* storage blocked: the card just shows next visit */ }
+  }
+  $('pg-play').addEventListener('click', closePregame);
+  // Play has focus when the card opens, so the first Tab press would skip past it. Keep that first Tab on Play (it stays the first stop; Tab 2 moves on).
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab' || $('pregame').hidden || pgTabbed) return;
+    pgTabbed = true;
+    if (document.activeElement === $('pg-play') && !e.shiftKey) e.preventDefault();
+  }, true);
+
   // ---- input ----
   function setInput(src, v) {
     const before = anyHeld(); held[src] = v; const after = anyHeld();
     if (!before && after) onDown();
   }
-  const ignoreEl = (t) => t && t.closest && t.closest('button, a, select, input, label, .overlay, #result, #status');
+  const ignoreEl = (t) => t && t.closest && t.closest('button, a, select, input, label, .overlay, #result, #status, #pregame, #mmset, .mmset-back, [id^="mm-nav"]');
   document.addEventListener('pointerdown', (e) => { if (ignoreEl(e.target)) return; setInput('ptr', true); });
   const up = () => setInput('ptr', false);
   document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
   window.addEventListener('blur', () => { held.ptr = held.key = held.pad = held.btn = false; });
+  // Controls follow CONTROLS.md through MMInput: Primary = Space / Enter (cast, strike, hold to reel, dismiss a result),
+  // Secondary = Shift / E (next open spot while idle), Menu = Esc / P (close a panel, else the Menu sheet), Restart = R (cast again from a result).
+  let navWasOpen = false;
+  window.addEventListener('keydown', () => { navWasOpen = !!(window.MMNav && MMNav.isOpen && MMNav.isOpen()); }, true);
+  const anyPanelOpen = () => overlayOpen() || (!$('pregame').hidden) || !!(Settings && Settings.isOpen());
+  function nextSpot() {
+    if (g.state !== 'idle' || g.tour) return false;
+    const list = A.SPOTS.concat(coveOpen() ? [COVE] : []).filter((id) => !spotLocked(id)), i = list.indexOf(g.spot);
+    if (list.length < 2) return false;
+    return pickSpot(list[(i + 1) % list.length]);
+  }
+  function closeTopPanel() {
+    if (Settings && Settings.isOpen()) { Settings.close(); return true; }
+    if (!$('journal').hidden) { closeJournal(); return true; }
+    if (!$('gear').hidden) { closeGear(); return true; }
+    const o = ['tourney', 'market', 'aquarium'].find((id) => !$(id).hidden);
+    if (o) { closeOverlay(o); return true; }
+    return false;
+  }
+  const actionOf = (e) => (window.MMInput ? window.MMInput.actionOf(e) : (e.code === 'Space' || e.key === 'Enter' ? 'primary' : null));
   document.addEventListener('keydown', (e) => {
-    if (e.code !== 'Space' || e.repeat) return;
-    if (overlayOpen()) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (window.MMInput && MMInput.isTyping(e.target)) return;
+    const a = actionOf(e);
+    if (a === 'menu') {
+      if (e.repeat) return;
+      if (closeTopPanel()) { e.preventDefault(); return; }
+      if (!$('pregame').hidden) return;
+      if (window.MMNav && MMNav.isOpen && MMNav.mounted()) { if (e.key === 'Escape' && navWasOpen) return; if (MMNav.isOpen()) MMNav.close(); else MMNav.open(); e.preventDefault(); }
+      return;
+    }
+    if (anyPanelOpen()) return;
+    if (a === 'restart') { if (!e.repeat && g.state === 'result' && (g.t - g.resultAt > 0.25 || TEST)) { e.preventDefault(); dismiss(); } return; }
+    if (a === 'secondary') { if (!e.repeat) { e.preventDefault(); nextSpot(); } return; }
+    if (a !== 'primary' || e.repeat) return;
+    const tag = e.target && e.target.tagName;
+    if (e.key === 'Enter' && (tag === 'BUTTON' || tag === 'A')) return; // Enter on a focused control presses that control
     e.preventDefault();
     if (g.state === 'result') { if (g.t - g.resultAt > 0.25 || TEST) dismiss(); return; }
     setInput('key', true);
   });
-  document.addEventListener('keyup', (e) => { if (e.code === 'Space') setInput('key', false); });
+  document.addEventListener('keyup', (e) => { if (actionOf(e) === 'primary') setInput('key', false); });
   function pollPad() {
     try {
       const pads = navigator.getGamepads ? navigator.getGamepads() : [];
@@ -331,7 +524,6 @@
       if (g.state !== 'result') setInput('pad', a); else held.pad = a;
     } catch (e) { /* ignore */ }
   }
-  $('res-ok').addEventListener('click', dismiss);
   // on-screen reel button (shown during a boss fight): hold to reel, release to ease off
   const reelBtn = $('reel-btn');
   reelBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); setInput('btn', true); });
@@ -388,6 +580,7 @@
     const bs = $('bug-sum'), bt = journal.bugBait ? 'Bug bait: ' + I.BUG_BAITS[journal.bugBait].name : '';
     if (bs.textContent !== bt) bs.textContent = bt;
     bs.hidden = !bt;
+    renderCond();
     $('gear-btn').disabled = g.state !== 'idle';
   }
   function needText(r) {
@@ -508,12 +701,6 @@
   function closeGear() { $('gear').hidden = true; $('gear-btn').focus(); }
   $('gear-btn').addEventListener('click', openGear);
   $('gear-close').addEventListener('click', closeGear);
-  document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape') return;
-    if (!$('journal').hidden) closeJournal(); else if (!$('gear').hidden) closeGear();
-    else ['tourney', 'market', 'aquarium'].forEach((id) => { if (!$(id).hidden) closeOverlay(id); });
-  });
-
   // ---- depth: tournament / market / aquarium ----
   const BAIT_NAMES = { plain: 'Plain', quick: 'Quick-bite', rare: 'Rare-lure', big: 'Big-fish' };
   function totalCaught() { let n = 0; Object.keys(journal.caught).forEach((id) => { n += journal.caught[id].n; }); return n; }
@@ -687,37 +874,59 @@
 
   // ---- drawing ----
   function hashOf(s) { let h = 7; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; }
+  // 8-bit pass: fish are rasterised onto a chunky cell grid (cell = size/7, at least 1 px) with a dark outline,
+  // a stepped belly shade, a dorsal fin, a forked tail and a 1-cell eye. Same size/footprint as before, seeded by fish id.
   function drawFish(c, x, y, s, f, silhouette) {
     const h = hashOf(f.id), hue = h % 360, flat = f.behaviour === 'sinker', long = (h >> 3) % 3;
-    const body = silhouette ? '#10202c' : 'hsl(' + hue + ',60%,' + (45 + f.rarity * 3) + '%)';
+    const light = 45 + f.rarity * 3;
+    const body = silhouette ? '#10202c' : 'hsl(' + hue + ',60%,' + light + '%)';
+    const belly = silhouette ? '#10202c' : 'hsl(' + hue + ',55%,' + Math.min(85, light + 18) + '%)';
     const fin = silhouette ? '#10202c' : 'hsl(' + hue + ',65%,30%)';
+    const ink = silhouette ? '#0a141c' : '#0b1620';
     const bw = s * (1 + long * 0.18), bh = s * (flat ? 0.4 : 0.6);
-    c.fillStyle = fin;
-    c.beginPath(); c.moveTo(x - bw * 0.7, y); c.lineTo(x - bw * 1.2, y - bh * 0.7); c.lineTo(x - bw * 1.2, y + bh * 0.7); c.closePath(); c.fill();
-    c.beginPath(); c.moveTo(x - bw * 0.1, y - bh * 0.4); c.lineTo(x + bw * 0.2, y - bh * 0.9); c.lineTo(x + bw * 0.4, y - bh * 0.4); c.closePath(); c.fill();
-    c.fillStyle = body;
-    c.beginPath(); c.ellipse(x, y, bw * 0.8, bh * 0.5, 0, 0, Math.PI * 2); c.fill();
+    const u = Math.max(1, Math.round(s / 7)), x0 = Math.round(x), y0 = Math.round(y);
+    const nx = Math.ceil(bw * 1.3 / u) + 1, ny = Math.ceil(bh * 1.0 / u) + 1;
+    const ex = bw * 0.8, ey = bh * 0.5;
+    const kind = (px, py) => {
+      const e = (px * px) / (ex * ex) + (py * py) / (ey * ey);
+      if (e <= 1) return py > ey * 0.25 ? 2 : 1;
+      if (px < -bw * 0.65 && px > -bw * 1.25 && Math.abs(py) <= (-px - bw * 0.65) * (bh * 0.75) / (bw * 0.55) && !(Math.abs(py) < bh * 0.12 && px < -bw * 1.05)) return 3; // forked tail
+      if (py < -ey * 0.6 && py > -bh * 0.95 && px > -bw * 0.15 && px < bw * 0.4 && (px + bw * 0.15) > (-py - ey * 0.6) * 0.6) return 3; // dorsal fin
+      return 0;
+    };
+    const cells = [];
+    for (let j = -ny; j <= ny; j++) for (let i = -nx; i <= nx; i++) { const k = kind(i * u, j * u); if (k) cells.push([i, j, k]); }
+    if (u >= 2 || silhouette) { c.fillStyle = ink; cells.forEach(([i, j]) => c.fillRect(x0 + i * u - u, y0 + j * u - u, u * 3, u * 3)); }
+    cells.forEach(([i, j, k]) => { c.fillStyle = k === 1 ? body : k === 2 ? belly : fin; c.fillRect(x0 + i * u, y0 + j * u, u, u); });
     if (!silhouette) {
-      c.fillStyle = 'rgba(255,255,255,.35)'; c.fillRect(x - bw * 0.4, y + bh * 0.1, bw * 0.7, Math.max(1, bh * 0.12));
-      c.fillStyle = '#fff'; c.fillRect(x + bw * 0.4, y - bh * 0.2, Math.max(1.5, s * 0.1), Math.max(1.5, s * 0.1));
-      c.fillStyle = '#111'; c.fillRect(x + bw * 0.5, y - bh * 0.12, Math.max(1, s * 0.05), Math.max(1, s * 0.05));
+      c.fillStyle = 'rgba(255,255,255,.35)'; c.fillRect(x0 - Math.round(bw * 0.3 / u) * u, y0 - Math.round(ey * 0.6 / u) * u, Math.max(u, Math.round(bw * 0.4 / u) * u), u);
+      const exx = x0 + Math.round(bw * 0.45 / u) * u, eyy = y0 - Math.round(bh * 0.15 / u) * u;
+      c.fillStyle = '#fff'; c.fillRect(exx, eyy, u * (u > 2 ? 2 : 1), u * (u > 2 ? 2 : 1));
+      c.fillStyle = '#111'; c.fillRect(exx + (u > 2 ? u : 0), eyy + (u > 2 ? u : 0), u, u);
     }
   }
   const BX = 200, BY = 255, FY = 228; // FY: landed fish + fanfare centre, kept above the result panel
   function draw() {
     const c = ctx, t = g.t;
     const night = nowCtx().hour >= 19 || nowCtx().hour < 6;
-    c.fillStyle = night ? '#16213f' : '#7cc7ee'; c.fillRect(0, 0, W, WATER);
-    c.fillStyle = night ? '#2a3a66' : '#a9dcf5'; c.fillRect(0, 100, W, 70);
-    c.fillStyle = night ? '#1d2d4a' : '#5aa56a'; c.beginPath(); c.moveTo(0, WATER); c.lineTo(0, 130); c.lineTo(80, 100); c.lineTo(170, 135); c.lineTo(260, 95); c.lineTo(W, 125); c.lineTo(W, WATER); c.fill();
-    if (night) { c.fillStyle = '#fff'; for (let i = 0; i < 14; i++) c.fillRect((i * 53) % W, (i * 29) % 80, 2, 2); }
-    else { c.fillStyle = '#fff'; c.fillRect(40, 62, 40, 10); c.fillRect(50, 56, 24, 8); c.fillRect(150, 74, 44, 10); }
+    // 8-bit sky: stepped colour bands (no smooth gradient)
+    const skyB = night ? ['#0f1730', '#131c3a', '#16213f', '#1c2a50', '#22325c', '#2a3a66'] : ['#5fb6e6', '#6cbeea', '#7cc7ee', '#8fd0f1', '#a0d8f3', '#b4e2f6'];
+    for (let i = 0; i < skyB.length; i++) { c.fillStyle = skyB[i]; c.fillRect(0, Math.floor(i * WATER / skyB.length), W, Math.ceil(WATER / skyB.length) + 1); }
+    // stepped parallax: far hills (8 px columns, 4 px steps) then near hills
+    const ridge = (pts, col, cw) => { c.fillStyle = col; for (let xx = 0; xx < W; xx += cw) { let k = 0; while (k < pts.length - 2 && pts[k + 1][0] <= xx) k++; const [ax, ay] = pts[k], [bx2, by2] = pts[k + 1]; const yy = Math.round((ay + (by2 - ay) * Math.min(1, Math.max(0, (xx - ax) / (bx2 - ax)))) / 4) * 4; c.fillRect(xx, yy, cw, WATER - yy); } };
+    ridge([[0, 112], [60, 84], [130, 110], [210, 80], [W, 104]], night ? '#18253f' : '#7fb5a0', 8);
+    ridge([[0, 130], [80, 100], [170, 135], [260, 95], [W, 125]], night ? '#1d2d4a' : '#5aa56a', 8);
+    c.fillStyle = night ? '#24375a' : '#4a9058'; for (let xx = 0; xx < W; xx += 16) c.fillRect(xx, WATER - 8, 8, 8);
+    if (night) { c.fillStyle = '#fff'; for (let i = 0; i < 14; i++) c.fillRect((i * 53) % W, (i * 29) % 80, 2, 2); c.fillStyle = '#f4f1d0'; [[6, 4], [4, 8], [2, 12], [2, 12], [2, 12], [4, 8], [6, 4]].forEach(([o, w], i) => c.fillRect(256 + o, 18 + i * 2, w, 2)); c.fillStyle = skyB[0]; [[8, 4], [8, 6], [8, 6], [8, 6], [8, 4]].forEach(([o, w], i) => c.fillRect(256 + o + 2, 20 + i * 2, w, 2)); }
+    else { c.fillStyle = '#ffe066'; c.fillRect(250, 18, 20, 20); c.fillStyle = '#fff6b0'; c.fillRect(254, 22, 8, 8); c.fillStyle = '#fff'; c.fillRect(40, 62, 40, 10); c.fillRect(50, 56, 24, 8); c.fillRect(150, 74, 44, 10); c.fillRect(158, 68, 24, 6); c.fillStyle = '#d8eef8'; c.fillRect(40, 70, 40, 2); c.fillRect(150, 82, 44, 2); }
     // water
     const spotHue = { west: '#2f86c7', east: '#2a78a8', river: '#3a9bb5', pier: '#1f5f9e', ice: '#9fd6ea', mangrove: '#2c7f6a', cove: '#1d9aa6' }[g.spot];
     c.fillStyle = spotHue; c.fillRect(0, WATER, W, H - WATER);
     if (g.spot === COVE) { c.fillStyle = '#ff8f7a'; [24, 120, 236, 300].forEach((x, i) => { c.fillRect(x, H - 30 - i * 3, 6, 30 + i * 3); c.fillRect(x - 5, H - 22 - i * 3, 5, 4); c.fillRect(x + 6, H - 16 - i * 3, 5, 4); }); }
-    c.fillStyle = 'rgba(0,0,0,.12)';
-    for (let y = WATER + 16; y < H; y += 24) c.fillRect(0, y, W, 8);
+    for (let k = 0; k < 4; k++) { c.fillStyle = 'rgba(0,0,0,' + (0.07 * k) + ')'; c.fillRect(0, WATER + Math.round((H - WATER) * k / 4), W, Math.ceil((H - WATER) / 4)); }
+    c.fillStyle = 'rgba(0,0,0,.10)';
+    for (let y = WATER + 16; y < H; y += 24) for (let xx = (y >> 3) % 2 ? 0 : 8; xx < W; xx += 16) c.fillRect(xx, y, 8, 4);
+    c.fillStyle = 'rgba(255,255,255,.35)'; for (let xx = 0; xx < W; xx += 12) c.fillRect(xx, WATER, 6, 2);
     if (!reduced() && !gfx.low) { // water shimmer: off with reduced motion and on the low tier
       c.fillStyle = 'rgba(255,255,255,.22)';
       for (let i = 0; i < 18; i++) {
@@ -741,46 +950,53 @@
     c.fillStyle = '#d9534f'; c.fillRect(40, 118, 14, 18); c.fillStyle = '#f1c9a5'; c.fillRect(42, 106, 10, 10); c.fillStyle = '#e2b84a'; c.fillRect(40, 102, 14, 5);
     c.fillStyle = '#334'; c.fillRect(42, 136, 4, 14); c.fillRect(48, 136, 4, 14);
     const tipX = 88, tipY = g.state === 'reeling' ? 86 : 96;
-    c.strokeStyle = '#5a3a1a'; c.lineWidth = 2; c.beginPath(); c.moveTo(52, 124); c.lineTo(tipX, tipY); c.stroke();
+    const pxLine = (ax, ay, bx2, by2, col, w) => { c.fillStyle = col; const n = Math.max(Math.abs(bx2 - ax), Math.abs(by2 - ay)) / w; for (let i = 0; i <= n; i++) c.fillRect(Math.round((ax + (bx2 - ax) * i / n) / w) * w, Math.round((ay + (by2 - ay) * i / n) / w) * w, w, w); };
+    pxLine(52, 124, tipX, tipY, '#5a3a1a', 2);
+    c.fillStyle = '#2a1a10'; c.fillRect(40, 136, 14, 2); c.fillStyle = '#b83a36'; c.fillRect(40, 118, 2, 18); c.fillStyle = '#7a4a20'; for (let xx = 0; xx < 96; xx += 12) c.fillRect(xx, 150, 2, 14);
     const active = g.state === 'waiting' || g.state === 'biting' || g.state === 'reeling';
     const bx = g.state === 'reeling' ? BX - 20 : BX, by = (g.state === 'reeling' ? 215 : BY) + g.bobY;
     if (active) {
-      c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = 1; c.beginPath(); c.moveTo(tipX, tipY); c.quadraticCurveTo((tipX + bx) / 2, tipY - 10, bx, by - 3); c.stroke();
+      c.fillStyle = 'rgba(255,255,255,.85)'; for (let i = 0; i <= 40; i++) { const q = i / 40, mx = (tipX + bx) / 2, my = tipY - 10; const lx = (1 - q) * (1 - q) * tipX + 2 * (1 - q) * q * mx + q * q * bx, ly = (1 - q) * (1 - q) * tipY + 2 * (1 - q) * q * my + q * q * (by - 3); c.fillRect(Math.round(lx), Math.round(ly), 1, 1); }
       c.fillStyle = '#fff'; c.fillRect(bx - 4, by - 3, 8, 6); c.fillStyle = '#e63946'; c.fillRect(bx - 4, by - 8, 8, 5);
-      c.fillStyle = 'rgba(255,255,255,.5)'; c.fillRect(bx - 10, by + 4, 20, 2);
-      if (g.state === 'biting') { c.fillStyle = '#ffd166'; c.font = 'bold 30px sans-serif'; c.textAlign = 'center'; c.fillText('!', bx, by - 20); }
+      c.fillStyle = 'rgba(255,255,255,.5)'; c.fillRect(Math.round(bx) - 10, Math.round(by) + 4, 6, 2); c.fillRect(Math.round(bx) + 4, Math.round(by) + 4, 6, 2); c.fillStyle = '#0b1620'; c.fillRect(Math.round(bx) - 4, Math.round(by) - 1, 8, 1);
+      if (g.state === 'biting') { c.fillStyle = '#ffd166'; c.font = 'bold 30px monospace'; c.textAlign = 'center'; c.fillText('!', bx, by - 20); }
     } else if (g.state === 'idle') {
-      c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = 1; c.beginPath(); c.moveTo(tipX, tipY); c.lineTo(tipX + 4, 150); c.stroke();
+      c.fillStyle = 'rgba(255,255,255,.85)'; for (let yy = tipY; yy < 150; yy++) c.fillRect(Math.round(tipX + 4 * (yy - tipY) / (150 - tipY)), yy, 1, 1);
     }
     if (g.state === 'reeling' && g.reel) drawReel(c);
     if (g.splash && g.state === 'reeling') drawSplash(c);
     if (g.fan && g.state === 'result') drawFanfare(c);
     if (g.state === 'result' && g.result && g.result.outcome === 'caught') drawFish(c, W / 2, FY, 46, g.fish, false);
     if (g.state === 'idle' || g.state === 'result') {
-      c.fillStyle = night ? 'rgba(255,255,255,.7)' : 'rgba(0,0,0,.45)'; c.font = '12px sans-serif'; c.textAlign = 'left'; c.fillText(spotName(g.spot), 8, 18);
+      c.fillStyle = night ? 'rgba(255,255,255,.7)' : 'rgba(0,0,0,.45)'; c.font = '12px monospace'; c.textAlign = 'left'; c.fillText(spotName(g.spot), 8, 18);
     }
+  }
+  // stepped pixel ellipse ring (2 px dots) replacing smooth ellipse strokes
+  function pxRing(c, cx, cy, rx, ry) {
+    c.fillStyle = c.strokeStyle; const n = Math.max(12, Math.round((rx + ry) / 2));
+    for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2; c.fillRect(Math.round((cx + Math.cos(a) * rx) / 2) * 2, Math.round((cy + Math.sin(a) * ry) / 2) * 2, 2, 2); }
   }
   // boss splash: expanding ripple rings; with reduce-motion one static ring and a label
   function drawSplash(c) {
     const t = g.splash.t, cx = BX - 20, cy = 215 + 24;
     c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = 2;
     if (reduced()) {
-      c.beginPath(); c.ellipse(cx, cy, 34, 12, 0, 0, Math.PI * 2); c.stroke();
-      c.fillStyle = '#fff'; c.font = 'bold 12px sans-serif'; c.textAlign = 'center'; c.fillText('SPLASH!', cx, cy - 18);
+      pxRing(c, cx, cy, 34, 12);
+      c.fillStyle = '#fff'; c.font = 'bold 12px monospace'; c.textAlign = 'center'; c.fillText('SPLASH!', cx, cy - 18);
       return;
     }
     if (t > 2) return;
     for (let i = 0; i < gfx.rings; i++) {
       const k = t - i * 0.25; if (k < 0) continue;
       c.globalAlpha = Math.max(0, 1 - k / 1.4);
-      c.beginPath(); c.ellipse(cx, cy, 8 + k * 50, 3 + k * 18, 0, 0, Math.PI * 2); c.stroke();
+      pxRing(c, cx, cy, 8 + k * 50, 3 + k * 18);
     }
     c.globalAlpha = 1;
   }
   function drawFanfare(c) {
     const f = g.fan, rare = ['', '#cfd8dc', '#8fe08f', '#6db8ff', '#c88bff', '#ffc24a'][g.fish.rarity];
     c.fillStyle = rare; c.textAlign = 'center';
-    if (reduced()) { c.font = 'bold 22px sans-serif'; c.fillText('\u2605 CAUGHT \u2605', W / 2, FY - 44); return; } // no motion
+    if (reduced()) { c.font = 'bold 22px monospace'; c.fillText('\u2605 CAUGHT \u2605', W / 2, FY - 44); return; } // no motion
     if (f.t > 1.4) return;
     const n = Math.min(f.big ? 28 : 14, gfx.cap);
     for (let i = 0; i < n; i++) {
@@ -793,8 +1009,10 @@
   function drawReel(c) {
     const r = g.reel, bx = 268, bw = 34, top = 60, bot = 440, hgt = bot - top;
     const yOf = (v) => bot - v * hgt;
-    c.fillStyle = 'rgba(8,20,30,.78)'; c.fillRect(bx - 6, top - 8, bw + 12, hgt + 16);
+    c.fillStyle = '#0b1620'; c.fillRect(bx - 6, top - 8, bw + 12, hgt + 16);
+    c.fillStyle = '#3a6f8f'; c.fillRect(bx - 3, top - 5, bw + 6, hgt + 10);
     c.fillStyle = '#12384f'; c.fillRect(bx, top, bw, hgt);
+    c.fillStyle = 'rgba(255,255,255,.08)'; for (let yy = top; yy < bot; yy += 20) c.fillRect(bx, yy, bw, 2);
     const zTop = yOf(Math.min(1, r.tension + r.zone / 2)), zBot = yOf(Math.max(0, r.tension - r.zone / 2));
     const ok = r.inZone();
     c.fillStyle = ok ? 'rgba(111,227,160,.65)' : 'rgba(255,209,102,.5)'; c.fillRect(bx, zTop, bw, zBot - zTop);
@@ -804,18 +1022,19 @@
     c.fillStyle = 'rgba(255,60,60,' + (0.25 + 0.6 * danger) + ')'; c.fillRect(bx, top, bw, 10);
     if (danger > 0) { c.fillStyle = '#ff6b6b'; c.fillRect(bx - 4, top - 6, (bw + 8) * danger, 4); }
     drawFish(c, bx + bw / 2 + r.side * 24, yOf(r.pos), 12, g.fish, false);
-    if (r.side) { c.fillStyle = '#ff9f1c'; c.font = 'bold 14px sans-serif'; c.textAlign = 'center'; c.fillText(r.side > 0 ? '>>' : '<<', bx + bw / 2 + r.side * 24, yOf(r.pos) - 12); }
+    if (r.side) { c.fillStyle = '#ff9f1c'; c.font = 'bold 14px monospace'; c.textAlign = 'center'; c.fillText(r.side > 0 ? '>>' : '<<', bx + bw / 2 + r.side * 24, yOf(r.pos) - 12); }
     // catch meter, horizontal
     c.fillStyle = 'rgba(8,20,30,.78)'; c.fillRect(20, 14, 200, 18);
     c.fillStyle = '#12384f'; c.fillRect(24, 18, 192, 10);
-    c.fillStyle = '#6fe3a0'; c.fillRect(24, 18, 192 * r.meter, 10);
-    c.fillStyle = '#fff'; c.font = '10px sans-serif'; c.textAlign = 'left'; c.fillText('CATCH', 24, 44);
+    c.fillStyle = '#6fe3a0'; c.fillRect(24, 18, Math.floor(192 * r.meter / 8) * 8, 10);
+    c.fillStyle = 'rgba(0,0,0,.35)'; for (let xx = 24 + 6; xx < 216; xx += 8) c.fillRect(xx, 18, 2, 10); c.fillStyle = 'rgba(255,255,255,.3)'; c.fillRect(24, 18, Math.floor(192 * r.meter / 8) * 8, 2);
+    c.fillStyle = '#fff'; c.font = '10px monospace'; c.textAlign = 'left'; c.fillText('CATCH', 24, 44);
     if (r.boss) {
       const names = PHASE_NAMES[g.fish.id] || [], nph = names.length || 1;
       c.fillStyle = 'rgba(8,20,30,.78)'; c.fillRect(20, 52, 200, 34);
       c.fillStyle = '#4a1d1d'; c.fillRect(24, 68, 192, 8);
       c.fillStyle = '#e63946'; c.fillRect(24, 68, 192 * (1 - r.meter), 8);
-      c.fillStyle = '#ffd166'; c.font = 'bold 11px sans-serif'; c.textAlign = 'left';
+      c.fillStyle = '#ffd166'; c.font = 'bold 11px monospace'; c.textAlign = 'left';
       c.fillText((BOSS_NAMES[g.fish.id] || g.fish.name).toUpperCase() + ' HP', 24, 64);
       const flash = !reduced() && g.t - g.phaseAt < 1.2;
       c.fillStyle = flash ? 'rgba(255,209,102,.95)' : 'rgba(8,20,30,.78)'; c.fillRect(60, 92, 120, 20);
@@ -836,11 +1055,12 @@
   ready = true; initFilters(); renderSpots(); renderJournalCount(); renderStatus();
   $('spot-title').textContent = spotName(g.spot); setMsg(idleMsg());
   draw();
+  (function () { let seen = false; try { seen = sessionStorage.getItem(PREGAME_KEY) === '1'; } catch (e) { seen = false; } if (!seen && (!TEST || params.get('intro') === '1')) openPregame(); })();
   if (TEST) {
     window.__angler = {
       get state() { return g.state; }, get result() { return g.result; }, get reel() { return g.reel; },
       get bite() { return g.bite; }, get journal() { return A.journal.clean(journal); }, get full() { return journal; }, get spot() { return g.spot; },
-      get reduced() { return reduced(); }, get bobY() { return g.bobY; },
+      get reduced() { return reduced(); }, pregame: { get open() { return !$('pregame').hidden; }, show: openPregame, close: closePregame }, settings: Settings, nextSpot, medalList, get bobY() { return g.bobY; },
       get gfx() { return { tier: gfx.tier, low: gfx.low, dpr: gfx.dpr, cap: gfx.cap === Infinity ? null : gfx.cap, drops: gfx.drops, rings: gfx.rings }; },
       setHold(v) { setInput('test', !!v); },
       tap() { setInput('test', true); setInput('test', false); },
@@ -849,6 +1069,7 @@
       dismiss, redraw: draw, rng, setWeather, setGear, renderStatus,
       get gear() { return journal.gear; }, get bait() { return journal.bait; }, get weather() { return nowCtx().weather; },
       get boss() { return g.boss; }, get phase() { return g.reel ? g.reel.phase : -1; }, get fish() { return g.fish && g.fish.id; },
+      cond: { get on() { return CONDS_ON; }, info: CONDS, ids: COND_IDS, condFor, get active() { return activeCond(); }, rareShare },
       fun: { get state() { return cleanFun(fun); }, get sounds() { return sounds; }, get shakes() { return shakes; }, get react() { return g.react; } },
       get fanfare() { return { reduced: reduced(), active: !!g.fan, t: g.fan ? g.fan.t : 0 }; },
       get day() { return today(); }, setDay(n) { dayOverride = D.clampDay(n, null); if (ready) { renderStatus(); } return today(); },

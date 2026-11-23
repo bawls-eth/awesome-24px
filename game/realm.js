@@ -501,6 +501,7 @@ class RealmArena {
 
     this.canvas = document.createElement('canvas');
     this.canvas.id = 'realm-canvas';
+    this.canvas.setAttribute('role', 'img'); this.canvas.setAttribute('aria-label', 'Realm play field');
     this.container.appendChild(this.canvas);
     this.ctx = this.canvas.getContext('2d');
 
@@ -687,6 +688,8 @@ class RealmArena {
     this._padPrev = [false, false, false, false]; this._aimTargets = [];
     this.sfx = null; this._gesture = false; this._actx = null;
     this._padPause = false; this._padWas = false;
+    this._holdFire = rmFlag('holdfire') !== '0'; // world rule: off-screen shooters hold their fire; ?holdfire=0 (or setHoldFire(false)) lets them shoot
+    this._padBack = false; // pad Back / Select (button 8): restart edge (fall screen or open menu only)
     this._padRes = { move: { x: 0, y: 0 }, aim: { x: 0, y: 0, on: false }, fire: false, ability: [false, false, false, false], pause: false }; // reused every frame (no per-frame allocation)
     this._aimAssist = true; this._reduced = false;
     // AR (NEXT-SLICES-3 Wave 4): Realm one-thumb access, opt-in per page (enableAccess2(); the town classic arena never calls it, duels never use it).
@@ -799,7 +802,7 @@ class RealmArena {
 
   // The pad went away: forget its held buttons so a reconnect cannot fire a stale edge.
   _padGone() {
-    if (this._padWas) { this._padPrev.fill(false); this._padPause = false; this._padWas = false; }
+    if (this._padWas) { this._padPrev.fill(false); this._padPause = false; this._padBack = false; this._padBk = false; this._padWas = false; }
     return null;
   }
 
@@ -813,14 +816,22 @@ class RealmArena {
     if (m <= D) { r.aim.x = 0; r.aim.y = 0; r.aim.on = false; } else { const o = Math.min(1, (m - D) / (1 - D)); r.aim.x = (x / m) * o; r.aim.y = (y / m) * o; r.aim.on = o > 0; }
     r.ability[0] = dn(b[0]) || dn(b[5]); r.ability[1] = dn(b[1]) || dn(b[4]); r.ability[2] = dn(b[2]); r.ability[3] = dn(b[3]);
     r.pause = dn(b[9]);
+    this._padBk = dn(b[8]); // Back / Select (restart edge): kept beside the result so it stays the same shape as MMPad.read
     return r;
   }
 
   // Start (button 9) opens / closes the pause + backpack panel, like B / Esc: one toggle per press.
   _padPauseEdge() {
     const on = !!(this._pad && this._pad.pause);
-    if (on && !this._padPause) { if (this.panel || this.paused) this.setPaused(false); else this._panel('bp'); }
+    if (on && !this._padPause && !this._deathShown) { if (this.panel || this.paused) this.setPaused(false); else this._panel('bp'); }
     this._padPause = on;
+    // Universal Restart (CONTROLS.md): pad Back / Select restarts only where R does (the fall screen, or the open menu's confirm).
+    const bk = !!(this._pad && this._padBk);
+    if (bk && !this._padBack) {
+      if (this._deathShown) { const b = this._deathDom && this._deathDom.querySelector('button[data-d="again"]'); if (b) b.click(); }
+      else if (this.panel === 'menu' && this.canRestart && this.canRestart()) this._menuConfirm(true);
+    }
+    this._padBack = bk;
   }
 
   countActive(name) {
@@ -2057,6 +2068,15 @@ class RealmArena {
 
   // ---------- input ----------
 
+  // The one-line control hint, built from the shared MMInput mapping so it never drifts from the keys (old aliases listed after).
+  _syncHelp() {
+    if (typeof document === 'undefined' || typeof MMInput === 'undefined') return;
+    const el = document.querySelector('#realm-help .key-hint'); if (!el) return;
+    const base = MMInput.hint({ only: ['move', 'primary', 'secondary', 'menu'], names: { primary: 'fire', secondary: 'ability 2', menu: 'menu' } });
+    el.textContent = base + ' · mouse aims · Q E R F abilities · B bag · K board';
+    el.dataset.mmInput = '1';
+  }
+
   _bindInput() {
     this.onKeyDown = (e) => {
       if (!this.active) return;
@@ -2067,6 +2087,22 @@ class RealmArena {
         if (this.paused || this.panel) this.setPaused(false); else this.leave();
         return;
       }
+      // Universal controls (shared/mm-input.js, design/CONTROLS.md): P = Menu/Pause, R = Restart where safe, Shift = E, Enter = Space (fire).
+      // Every old key keeps its meaning; these only add aliases.
+      const act = typeof MMInput !== 'undefined' && !MMInput.isTyping(e.target) ? MMInput.actionOf(e) : null;
+      if (act === 'restart' && !e.repeat && (this._deathShown || this.panel === 'menu')) { // R is Shield in play: restart only from the fall screen or the open menu
+        e.preventDefault();
+        if (this._deathShown) { const b = this._deathDom && this._deathDom.querySelector('button[data-d="again"]'); if (b) b.click(); } else if (this.canRestart()) this._menuConfirm(true);
+        return;
+      }
+      if (k === 'p' && act === 'menu') {
+        e.preventDefault(); if (e.repeat || this._deathShown) return;
+        if (this._menuMode) { this._escMenu(); return; }
+        if (this.paused || this.panel) this.setPaused(false); else this._panel('bp'); // like pad Start: P pauses, never leaves
+        return;
+      }
+      if (k === 'shift' && act === 'secondary') { if (!e.repeat) this.cast(1); return; } // Shift = E (second ability)
+      if (k === 'enter' && act === 'primary') { const onBtn = !!(e.target && e.target.closest && e.target.closest('button, a, summary')); if (!onBtn) this.keys[' '] = true; return; } // Enter fires like Space
       if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault();
       if (!e.repeat) {
         const ai = RM_ABILITIES.findIndex((a) => a.key === k);
@@ -2077,7 +2113,8 @@ class RealmArena {
       }
       this.keys[k] = true;
     };
-    this.onKeyUp = (e) => { this.keys[e.key.toLowerCase()] = false; };
+    this.onKeyUp = (e) => { const k = e.key.toLowerCase(); this.keys[k] = false; if (k === 'enter') this.keys[' '] = false; };
+    this._syncHelp();
     this.onBlur = () => { this.keys = {}; this.mouse.down = false; };
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('keyup', this.onKeyUp);
@@ -2921,6 +2958,7 @@ class RealmArena {
   // World mode only: may this enemy shoot? It must be on screen (a 24 px margin) and within RM_FIRE_RANGE x the view's half-diagonal of
   // the player, so nothing snipes from outside the camera. The classic arena and dungeons (the whole room is the view) are unchanged.
   _canFire(e, p) {
+    if (!this._holdFire) return true;
     if (this._dv && !this.world) { const cx = this.camera.x; return e.type === 'boss' || (e.x >= cx - 40 && e.x <= cx + this._dv.vw + 40); } // dungeon view (phone portrait): shooters far outside the slice hold their fire
     if (!this.world || this.mode !== 'world' || this.dungeon) return true;
     const c = this.camera; const m = 24;
@@ -3342,6 +3380,7 @@ class RealmArena {
     this.lastLoss = 0;
     this.state = 'dead';
     this.deadT = 2.6;
+    this._snd('death'); // CHIP-AUDIO: the fall jingle (MMChip voice; old sfx.js recipes skip unknown names)
     this.shake = 14;
     this._burst(this.player.x, this.player.y, '#ff6f91', 30, 300);
     this._deathZone = this._worldCopy() ? this._zoneLabel() : '';
@@ -3935,6 +3974,7 @@ class RealmArena {
     if (name && this.state === 'dead') return; // no panels while the death message runs (it would freeze the exit)
     const prev = this.panel || null;
     this._panelSet(name);
+    if (prev !== (name || null)) this._snd(name ? 'ui_open' : 'ui_close'); // CHIP-AUDIO: panel open / close blips (rate-limited by MMSfx)
     if (this.onPanel && prev !== (name || null)) { try { this.onPanel(name || null, prev); } catch (e) { /* a page hook never breaks the panels */ } } // optional page hook (realm-world: Nexus return)
   }
 
@@ -3953,6 +3993,8 @@ class RealmArena {
   setPaused(on) { this._panel(on ? 'bp' : null); } // false closes whichever panel is open
 
   setBoard(on) { this._panel(on ? 'board' : null); }
+  // The off-screen hold-fire rule (world + phone dungeon slice). On by default; ?holdfire=0 starts with it off. Returns the new state.
+  setHoldFire(on) { this._holdFire = on !== false; return this._holdFire; }
   // Hero picker / stats panel (only when the page wired onHeroPanel): tab 'pick' or 'stats'.
   openHeroPanel(tab) { if (!this.onHeroPanel || !this.active || this.team) return false; this._heroTab = tab === 'stats' ? 'stats' : 'pick'; this._panel('hero'); return true; }
 
@@ -4445,29 +4487,132 @@ class RealmArena {
     return `${num} ${def.text}`;
   }
 
+  // BP8: the backpack is one clean 8-bit panel. Top: hero name / class / level with HP and XP bars. Tabs (max 3): Gear (slots grid with tier
+  // colour + letter/shape badges, the item list, shop, forge, dust), Stats (Power / Defense / Speed / Luck with a one-line meaning and the
+  // +/- of the hovered or tapped item, the old stat line and the full Stats table drop-down), Relics ("Collections": the chase line + relic book).
+  // Every id the old panel had is kept; nothing is removed, only regrouped. The open tab is remembered for this page only.
+  bpTab(name) {
+    if (name === 'gear' || name === 'stats' || name === 'relics') {
+      this._bpTabName = name;
+      const root = document.getElementById('realm-backpack-body');
+      if (root) {
+        root.querySelectorAll('[data-bp-tab]').forEach((b) => { const on = b.dataset.bpTab === name; b.setAttribute('aria-selected', on ? 'true' : 'false'); b.tabIndex = on ? 0 : -1; b.classList.toggle('on', on); });
+        root.querySelectorAll('[data-bp-pane]').forEach((p) => { p.hidden = p.dataset.bpPane !== name; });
+        const rp = name === 'relics' && root.querySelector('#realm-bp-pane-relics'); if (rp) this._chaseDom(rp, rp.querySelector('.rm-bp8-h')); // fresh pity numbers each visit
+      }
+    }
+    return this._bpTabName || 'gear';
+  }
+  // The four plain stats (rounded), from a stats object.
+  _bp4(st) {
+    return {
+      power: Math.round((Number(st.dmg) || 0) * 10) / 10,
+      defense: Math.round(Number(st.maxHp) || 0) + Math.round((Number(st.guard) || 0) * 10) / 10,
+      speed: Math.round(Number(st.speed) || 0),
+      luck: Math.round((Number(st.crit) || 0) * 1000) / 10,
+    };
+  }
+  // The +/- of wearing item uid instead of what is in its slot now (or of taking it off when worn): { power, defense, speed, luck }, or null.
+  bpDelta(uid) {
+    const sv = this.save; if (!sv) return null;
+    const it = sv.items.find((x) => x.n === Number(uid)); const def = it && RM_ITEM_BY_ID[it.id]; if (!def || !def.slot || def.inert) return null;
+    let a = null, b = null;
+    try { a = this._calcStats({ eqOverride: {} }); const ov = {}; ov[def.slot] = sv.eq[def.slot] === it.n ? 0 : it.n; b = this._calcStats({ eqOverride: ov }); } catch (e) { return null; }
+    const x = this._bp4(a), y = this._bp4(b), out = {};
+    Object.keys(x).forEach((k) => { out[k] = Math.round((y[k] - x[k]) * 10) / 10; });
+    return out;
+  }
+  _bpTopHtml() {
+    const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+    const sv = this.save, st = this.stats || {}, p = this.player;
+    const pvp = !!(this.team && this.team.isPvp);
+    const name = this.heroProfile && this.heroProfile.name && !pvp ? String(this.heroProfile.name).slice(0, 24) : 'Hero';
+    const cls = this.heroClass(); const C = cls ? cls.charAt(0).toUpperCase() + cls.slice(1) : 'Adventurer';
+    const mx = Math.max(1, Math.round(st.maxHp || 1)); const hp = Math.max(0, Math.min(mx, Math.round(p && Number.isFinite(p.hp) ? p.hp : mx)));
+    const max = sv.level >= RM_MAX_LEVEL; const need = max ? 1 : rmXpNeeded(sv.level); const xp = max ? 1 : Math.max(0, Math.min(need, sv.xp || 0));
+    const bar = (k, lab, v, m, txt) => `<div class="rm-bp8-bar ${k}" role="meter" aria-label="${lab}" aria-valuemin="0" aria-valuemax="${m}" aria-valuenow="${v}"><span class="lb">${lab}</span><span class="px-bar"><span style="width:${Math.round((v / m) * 100)}%"></span></span><span class="vl">${esc(txt)}</span></div>`;
+    return `<div id="realm-bp-top" class="rm-bp8-top"><div class="who"><b class="nm">${esc(name)}</b><span class="cl">${esc(C)}</span><span class="px-badge lv">Lv ${sv.level}</span></div>`
+      + bar('hp', 'HP', hp, mx, `${hp} / ${mx}`) + bar('xp', 'XP', xp, need, max ? 'MAX' : `${xp} / ${need}`) + '</div>';
+  }
+  // The stat block: four plain stats, each with a one-line meaning and (data-d) the +/- of the item being looked at.
+  _bpStatBlockHtml() {
+    const v = this._bp4(this.stats || {});
+    const rows = [['power', 'Power', 'P', 'How hard each shot hits'], ['defense', 'Defense', 'D', 'How much hurt you can take'], ['speed', 'Speed', 'S', 'How fast you move'], ['luck', 'Luck', 'L', 'Chance of a critical hit (%)']];
+    return `<div id="realm-bp-stat4" class="rm-bp8-stat4" aria-live="polite">${rows.map(([k, lab, ch, mean]) => `<div class="s4" data-s4="${k}"><span class="ic" aria-hidden="true">${ch}</span><span class="lb">${lab}</span><b class="vl">${v[k]}</b><span class="dd" data-d=""></span><span class="mn">${mean}</span></div>`).join('')}<div class="s4-for dim" id="realm-bp-stat4-for">Tap an item on the Gear tab to see its +/-</div></div>`;
+  }
+  // Fill the stat block's +/- for one item (uid) or clear it (0). The block shows on the Stats tab and as a strip on the Gear tab.
+  bpShowDelta(uid) {
+    const d = uid ? this.bpDelta(uid) : null; const it = d && this.save.items.find((x) => x.n === Number(uid)); const def = it && RM_ITEM_BY_ID[it.id];
+    document.querySelectorAll('#realm-bp-stat4 [data-s4], #realm-bp-cmp4 [data-s4]').forEach((row) => {
+      const k = row.dataset.s4, el = row.querySelector('.dd'); const n = d ? d[k] : 0;
+      el.textContent = d && n ? (n > 0 ? '+' : '') + n : d ? '=' : '';
+      el.dataset.d = d ? (n > 0 ? 'up' : n < 0 ? 'down' : 'same') : '';
+    });
+    const txt = def ? (this.save.eq[def.slot] === it.n ? 'Taking off: ' : 'Wearing: ') + def.name : 'Hover or tap an item to see its +/-';
+    document.querySelectorAll('#realm-bp-stat4-for, #realm-bp-cmp4 .s4-for').forEach((f) => { f.textContent = !def && f.id === 'realm-bp-stat4-for' ? 'Tap an item on the Gear tab to see its +/-' : txt; }); // the Stats tab has no items to tap
+    this._bpDeltaUid = d ? Number(uid) : 0;
+    return d;
+  }
+  // A compact strip of the same four stats over the item list (Gear tab), so compare-on-tap needs no tab switch.
+  _bpCmpStripHtml() {
+    const v = this._bp4(this.stats || {});
+    return `<div id="realm-bp-cmp4" class="rm-bp8-cmp4" aria-live="polite">${[['power', 'PWR'], ['defense', 'DEF'], ['speed', 'SPD'], ['luck', 'LCK']].map(([k, l]) => `<span class="s4" data-s4="${k}"><span class="lb">${l}</span><b class="vl">${v[k]}</b><span class="dd" data-d=""></span></span>`).join('')}<span class="s4-for dim">Hover or tap an item to see its +/-</span></div>`;
+  }
+  // A small badge: rarity letter in a rarity-shaped chip (shape + letter, never colour alone).
+  _bpBadge(it) {
+    const r = Math.max(0, Math.min(RM_RARITIES.length - 1, it.r | 0)); const rar = RM_RARITIES[r];
+    return `<span class="rm-bp8-badge r${r}" style="--bc:${rar.color}" title="${rar.name}" aria-hidden="true">${rar.name.charAt(0)}</span>`;
+  }
+  _bindBpTabs(root) {
+    if (!root || root.dataset.bpTabBound) return;
+    root.dataset.bpTabBound = '1';
+    root.addEventListener('click', (e) => {
+      const t = e.target.closest && e.target.closest('[data-bp-tab]'); if (t) { this.bpTab(t.dataset.bpTab); return; }
+      const row = e.target.closest && e.target.closest('#realm-bp-list li[data-uid]'); // compare-on-tap: a tap on a row (not on its buttons) shows its +/-
+      if (row && !e.target.closest('button')) { const u = Number(row.dataset.uid); this.bpShowDelta(this._bpDeltaUid === u && !this._bpHoverUid ? 0 : u); this._bpHoverUid = 0; }
+    });
+    root.addEventListener('keydown', (e) => { // arrow keys move between the three tabs
+      const t = e.target.closest && e.target.closest('[data-bp-tab]'); if (!t || (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft')) return;
+      const order = ['gear', 'stats', 'relics']; const i = order.indexOf(t.dataset.bpTab); const n = order[(i + (e.key === 'ArrowRight' ? 1 : 2)) % 3];
+      e.preventDefault(); e.stopPropagation(); this.bpTab(n); const nb = root.querySelector(`[data-bp-tab="${n}"]`); if (nb) nb.focus();
+    });
+    const look = (e) => { const row = e.target.closest && e.target.closest('#realm-bp-list li[data-uid]'); if (row && Number(row.dataset.uid) !== this._bpDeltaUid) { this.bpShowDelta(Number(row.dataset.uid)); this._bpHoverUid = Number(row.dataset.uid); } };
+    root.addEventListener('mouseover', (e) => { if (!e.sourceCapabilities || !e.sourceCapabilities.firesTouchEvents) look(e); });
+    root.addEventListener('focusin', look);
+  }
+
   renderBackpack() {
     const root = document.getElementById('realm-backpack-body');
     if (!root) return;
     const sv = this.save;
     const eqUids = new Set(RM_SLOTS.map((sl) => sv.eq[sl]).filter(Boolean));
-    const grid = RM_SLOTS.length > 3 ? ' style="grid-template-columns:repeat(auto-fit,minmax(78px,1fr))"' : ''; // 4 slots (armor): wraps to 2x2 on a phone
-    let html = `<div id="realm-bp-stats">${this._statLine()}</div>${this._statsDropHtml()}<button type="button" class="eq" data-open-shop="1" aria-label="Open the shop (V)" style="min-height:44px;margin:4px 0">🛒 Shop (V)</button><div class="realm-bp-slots"${grid}>`;
+    const tab = this.bpTab();
+    const tb = (k, lab) => `<button type="button" role="tab" class="rm-bp8-tab${tab === k ? ' on' : ''}" data-bp-tab="${k}" id="realm-bp-tab-${k}" aria-controls="realm-bp-pane-${k}" aria-selected="${tab === k ? 'true' : 'false'}" tabindex="${tab === k ? 0 : -1}">${lab}</button>`;
+    let html = `<div class="rm-bp8">${this._bpTopHtml()}<div class="rm-bp8-tabs" role="tablist" aria-label="Backpack">${tb('gear', 'Gear')}${tb('stats', 'Stats')}${tb('relics', 'Relics')}</div>`;
+    html += `<section id="realm-bp-pane-gear" class="rm-bp8-pane" data-bp-pane="gear" role="tabpanel" aria-labelledby="realm-bp-tab-gear"${tab === 'gear' ? '' : ' hidden'}>`;
+    html += `<div class="realm-bp-slots rm-bp8-slots" data-n="${RM_SLOTS.length}">`;
     RM_SLOTS.forEach((slot) => {
       const it = sv.items.find((x) => x.n === sv.eq[slot]);
       const cw = !it && slot === 'weapon' ? this._classWeaponName() : ''; // PT2 #15: the class weapon the hero fires, not "weapon: empty"
-      html += `<div class="realm-bp-slot" data-slot="${slot}">${it ? `<span style="color:${RM_RARITIES[it.r].color}">${this._icon(RM_ITEM_BY_ID[it.id])} ${this._tierTag(it)}${RM_ITEM_BY_ID[it.id].name}</span>` : cw ? `<span class="rm-classwpn" title="Class weapon">${this._slotIcon('weapon')}${cw}</span>` : `<span class="dim">${slot === 'armor' ? this._slotIcon('armor') : ''}${slot}: empty</span>`}</div>`;
+      const tc = it && it.t && RM_GEAR_ON && typeof MMGear !== 'undefined' ? MMGear.TIER_COLORS[it.t - 1] || '' : '';
+      html += `<div class="realm-bp-slot${it ? ' full' : ''}" data-slot="${slot}"${tc ? ` style="--tc:${tc}"` : it ? ` style="--tc:${RM_RARITIES[it.r].color}"` : ''}><span class="sl" aria-hidden="true">${slot}</span>${it ? `${this._bpBadge(it)}<span style="color:${RM_RARITIES[it.r].color}">${this._icon(RM_ITEM_BY_ID[it.id])} ${this._tierTag(it)}${RM_ITEM_BY_ID[it.id].name}</span>` : cw ? `<span class="rm-classwpn" title="Class weapon">${this._slotIcon('weapon')}${cw}</span>` : `<span class="dim">${slot === 'armor' ? this._slotIcon('armor') : ''}${slot}: empty</span>`}</div>`;
     });
-    html += `</div><div class="realm-bp-count">${sv.items.length} / ${RM_BACKPACK} items${this.forgeOn() ? ` · <span id="realm-bp-dust">✨ ${sv.dust || 0} dust</span>` : ''}</div><ul id="realm-bp-list">`;
+    html += `</div><div class="rm-bp8-row"><div class="realm-bp-count">${sv.items.length} / ${RM_BACKPACK} items${this.forgeOn() ? ` · <span id="realm-bp-dust">✨ ${sv.dust || 0} dust</span>` : ''}</div><button type="button" class="eq" data-open-shop="1" aria-label="Open the shop (V)">🛒 Shop (V)</button></div>${this._bpCmpStripHtml()}<ul id="realm-bp-list">`;
     if (!sv.items.length) html += '<li class="dim">Nothing yet — defeat enemies to find loot bags.</li>';
     sv.items.forEach((it) => {
       const def = RM_ITEM_BY_ID[it.id]; const rar = RM_RARITIES[it.r]; const on = eqUids.has(it.n); const sell = rmSellValue(it); const why = on ? '' : this._gearWhy(it);
-      html += `<li data-uid="${it.n}" class="${on ? 'on' : ''}"><span class="nm" style="color:${rar.color}">${this._icon(def)} ${this._tierTag(it)}${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(it)}</span>${this._affixHtml(it, def)}${def.slot === 'weapon' ? this._cmpHtml(it, on) : ''}${def.inert ? '<button type="button" class="eq" disabled aria-label="Not usable yet">Equip</button>' : def.wpn && !on && !this._wpnCanEquip(def) ? `<button type="button" class="eq" disabled data-wpn-lock="1" aria-label="${this._wpnHint(def)} only" title="${this._wpnHint(def)}">🔒 ${def.family.charAt(0).toUpperCase() + def.family.slice(1)}</button>` : why ? this._gearLockHtml(it, def, why) : `<button type="button" class="eq" data-act="equip" data-uid="${it.n}">${on ? 'Unequip' : 'Equip'}</button>`}${this.combinable(it.n) ? `<button type="button" class="eq" data-combine="${it.n}" aria-label="Combine ${RM_COMBINE_COUNT} ${rar.name} ${def.name} into one ${RM_RARITIES[it.r + 1].name}">Combine ${RM_COMBINE_COUNT}→${RM_RARITIES[it.r + 1].name}</button>` : ''}<button type="button" class="dc" data-act="discard" data-uid="${it.n}" aria-label="Sell ${def.name} for ${sell} shards">Sell ${sell}💎</button></li>`;
+      html += `<li data-uid="${it.n}" class="${on ? 'on' : ''}"><span class="nm" style="color:${rar.color}">${this._bpBadge(it)}${this._icon(def)} ${this._tierTag(it)}${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(it)}</span>${this._affixHtml(it, def)}${def.slot === 'weapon' ? this._cmpHtml(it, on) : ''}${def.inert ? '<button type="button" class="eq" disabled aria-label="Not usable yet">Equip</button>' : def.wpn && !on && !this._wpnCanEquip(def) ? `<button type="button" class="eq" disabled data-wpn-lock="1" aria-label="${this._wpnHint(def)} only" title="${this._wpnHint(def)}">🔒 ${def.family.charAt(0).toUpperCase() + def.family.slice(1)}</button>` : why ? this._gearLockHtml(it, def, why) : `<button type="button" class="eq" data-act="equip" data-uid="${it.n}">${on ? 'Unequip' : 'Equip'}</button>`}${this.combinable(it.n) ? `<button type="button" class="eq" data-combine="${it.n}" aria-label="Combine ${RM_COMBINE_COUNT} ${rar.name} ${def.name} into one ${RM_RARITIES[it.r + 1].name}">Combine ${RM_COMBINE_COUNT}→${RM_RARITIES[it.r + 1].name}</button>` : ''}<button type="button" class="dc" data-act="discard" data-uid="${it.n}" aria-label="Sell ${def.name} for ${sell} shards">Sell ${sell}💎</button></li>`;
     });
-    html += '</ul>';
+    html += '</ul></section>';
+    html += `<section id="realm-bp-pane-stats" class="rm-bp8-pane" data-bp-pane="stats" role="tabpanel" aria-labelledby="realm-bp-tab-stats"${tab === 'stats' ? '' : ' hidden'}>${this._bpStatBlockHtml()}<div id="realm-bp-stats">${this._statLine()}</div>${this._statsDropHtml()}</section>`;
+    html += `<section id="realm-bp-pane-relics" class="rm-bp8-pane" data-bp-pane="relics" role="tabpanel" aria-labelledby="realm-bp-tab-relics"${tab === 'relics' ? '' : ' hidden'}><div class="rm-bp8-h">Collections</div></section></div>`;
     if (this._forgeUid && !sv.items.some((x) => x.n === this._forgeUid)) { this._forgeUid = 0; this._forgeAsk = null; }
-    root.innerHTML = html; this._fixIcons(root); this._bindCmp(root); this._bindStatsDrop(root); this._forgeDom(root); this._bindForge(root); this._relicDom(root);
-    const sbx = document.getElementById('realm-bp-stats-box'); if (sbx && !sbx.hidden) this._chaseDom(sbx);
+    root.innerHTML = html; this._fixIcons(root); this._bindCmp(root); this._bindStatsDrop(root); this._bindBpTabs(root);
+    const gp = root.querySelector('#realm-bp-pane-gear'), rp = root.querySelector('#realm-bp-pane-relics');
+    this._forgeDom(gp || root); this._bindForge(root); this._relicDom(rp || root);
+    if (rp) { this._chaseDom(rp, rp.querySelector('.rm-bp8-h')); if (rp.children.length < 2) { const e = document.createElement('div'); e.className = 'dim rm-bp8-none'; e.textContent = 'Relics you find in the godlands are listed here.'; rp.appendChild(e); } }
     if (this._cmpOnUid) { const on = root.querySelector(`#realm-bp-list li[data-uid="${this._cmpOnUid}"]`); if (on) on.classList.add('cmp-on'); } // a long-pressed compare line survives a re-render
+    if (this._bpDeltaUid) this.bpShowDelta(sv.items.some((x) => x.n === this._bpDeltaUid) ? this._bpDeltaUid : 0);
     root.querySelectorAll('img.rm-slot-ico, img.rm-gear-ico').forEach((img) => { if (img.complete && !img.naturalWidth) img.remove(); else img.addEventListener('error', () => img.remove(), { once: true }); });
   }
 
@@ -4506,10 +4651,11 @@ class RealmArena {
   }
   setStatsOpen(on) {
     this._bpStatsOpen = !!on;
+    if (on && this.bpTab() !== 'stats') this.bpTab('stats'); // BP8: the table lives on the Stats tab
     try { sessionStorage.setItem('pixeltown-bp-stats-open', on ? '1' : '0'); } catch (e) { /* blocked storage: remembered for this page only */ }
     const btn = document.getElementById('realm-bp-stats-toggle'); const box = document.getElementById('realm-bp-stats-box');
     if (btn) { btn.setAttribute('aria-expanded', on ? 'true' : 'false'); const ar = btn.querySelector('.ar'); if (ar) ar.textContent = on ? '▾' : '▸'; }
-    if (box) { box.hidden = !on; box.innerHTML = on ? this._statsBoxHtml() : ''; if (on) { this._chaseDom(box); this._fixIcons(box); box.querySelectorAll('img.rm-gear-ico').forEach((img) => { if (img.complete && !img.naturalWidth) img.remove(); else img.addEventListener('error', () => img.remove(), { once: true }); }); } }
+    if (box) { box.hidden = !on; box.innerHTML = on ? this._statsBoxHtml() : ''; if (on) { this._fixIcons(box); box.querySelectorAll('img.rm-gear-ico').forEach((img) => { if (img.complete && !img.naturalWidth) img.remove(); else img.addEventListener('error', () => img.remove(), { once: true }); }); } }
     return this._bpStatsOpen;
   }
   _statIco(id) {
@@ -4565,14 +4711,14 @@ class RealmArena {
   }
   chaseInfo() { if (!this.chaseOn() || !this.save) return null; try { return MMEndgame.chase({ gp: this.chaseGp(), items: this.save.items }); } catch (e) { return null; } }
   relicInfo() { if (!this.chaseOn() || !this.save) return null; try { return MMEndgame.relicBook({ items: this.save.items }); } catch (e) { return null; } }
-  _chaseDom(box) {
+  _chaseDom(box, after) {
     if (!box || !RM_GEAR_ON) return;
     const c = this.chaseInfo(); if (!c) return;
     const d = document.createElement('div'); d.id = 'realm-bp-chase'; d.className = 'rm-chase-line';
     d.style.cssText = 'margin:2px 0 6px;padding:4px 6px;border-radius:8px;background:rgba(255,215,90,.08);color:#f2e3b3;font-size:12px;line-height:1.35;overflow-wrap:anywhere';
     const a = document.createElement('div'); a.className = 'pity'; a.textContent = '🌟 ' + c.text;
     const b = document.createElement('div'); b.className = 'luck'; b.style.color = '#8b949e'; b.textContent = c.luckText + (c.bestTier ? ' · best tier T' + c.bestTier : '');
-    d.append(a, b); box.insertBefore(d, box.firstChild);
+    d.append(a, b); const old = document.getElementById('realm-bp-chase'); if (old) old.remove(); box.insertBefore(d, after ? after.nextSibling : box.firstChild);
   }
   _relicDom(root) {
     if (!root) return;

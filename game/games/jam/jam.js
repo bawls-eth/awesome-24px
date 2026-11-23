@@ -35,6 +35,46 @@
 
   // ---------- save (only pixeltown-jam-v1) ----------
   var save = SG.cleanSave(S.get(KEY, null));
+  // ---------- JM5 Assist (one thumb) + section-practice bests: own key, never touches pixeltown-jam-v1 bests/stars ----------
+  var AKEY = 'pixeltown-jam-assist-v1', ASSIST_GAP = 180, AMAX = 10000000;
+  var RANKS_OK = ['S', 'A', 'B', 'C', 'D'];
+  function cleanAssist(raw) {
+    var o = { on: false, best: {}, section: {} };
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return o;
+    o.on = raw.on === true;
+    var b = raw.best && typeof raw.best === 'object' && !Array.isArray(raw.best) ? raw.best : {};
+    SG.SONGS.forEach(function (sg) {
+      var e = Object.prototype.hasOwnProperty.call(b, sg.id) && b[sg.id] && typeof b[sg.id] === 'object' ? b[sg.id] : null; if (!e) return;
+      SG.TIERS.forEach(function (t) {
+        var x = Object.prototype.hasOwnProperty.call(e, t) ? e[t] : null;
+        if (x && typeof x === 'object' && Number.isFinite(x.score) && x.score > 0) { (o.best[sg.id] = o.best[sg.id] || {})[t] = { score: Math.min(AMAX, Math.floor(x.score)), rank: RANKS_OK.indexOf(x.rank) >= 0 ? x.rank : 'D' }; }
+      });
+    });
+    var sc = raw.section && typeof raw.section === 'object' && !Array.isArray(raw.section) ? raw.section : {};
+    Object.keys(sc).slice(0, 200).forEach(function (k) { if (/^[a-z0-9-]{1,40}:(easy|normal|hard):(50|75|100):\d{1,3}-\d{1,3}$/.test(k) && Number.isFinite(sc[k]) && sc[k] > 0) o.section[k] = Math.min(5000, Math.floor(sc[k])); });
+    return o;
+  }
+  var assist = cleanAssist(S.get(AKEY, null)), assistRun = false, assistLast = null;
+  // Merge-on-write (bugbash/saves.md S2): a stale second tab keeps every assist / section best another tab saved, and only writes
+  // the On/Off toggle when this tab changed it. Fields a newer build stored stay stored. Without MMSaveMerge: the old plain write.
+  var assistBase = JSON.parse(JSON.stringify(assist));
+  function persistAssist() {
+    var M = window.MMSaveMerge;
+    if (!M) { S.set(AKEY, { on: assist.on, best: assist.best, section: assist.section }); return; }
+    var mine = { best: assist.best, section: assist.section };
+    if (assist.on !== assistBase.on) mine.on = assist.on;
+    var m = M.merge(S.get(AKEY, null), assistBase, mine, M.SPECS[AKEY]);
+    if (typeof m.on !== 'boolean') m.on = assist.on;
+    S.set(AKEY, m);
+    assist = cleanAssist(m); assistBase = JSON.parse(JSON.stringify(assist));
+  }
+  // Outer lanes fold onto the nearest inner lane (D->F, K->J); notes then thinned to >= 180 ms apart per lane.
+  function assistChart(c) {
+    var map = { D: 'F', F: 'F', J: 'J', K: 'J' }, last = {};
+    var notes = c.notes.map(function (n) { return Object.assign({}, n, { lane: map[n.lane] || n.lane }); }).sort(function (a, b) { return a.t - b.t; })
+      .filter(function (n) { var end = last[n.lane]; if (end !== undefined && n.t < end + ASSIST_GAP) return false; last[n.lane] = n.t + (n.hold || 0); return true; });
+    return Object.assign({}, c, { notes: notes, assist: true });
+  }
   function persist() { S.set(KEY, save); try { var st = SG.totalStars(save); window.MMHubProfile.sync(localStorage, 'jam', [save.plays >= 1 && 'play', st >= 1 && 'star1', st >= 12 && 'stars12', save.fullCombo === true && 'fullcombo', SG.SONGS.some(function (s) { var b = save.best[s.id]; return !!(b && b.hard && b.hard.stars >= 3); }) && 'hard3']); } catch (e) { /* hub map progress is optional */ } }
   persist();
   function applyPrefs() {
@@ -71,14 +111,15 @@
   var sparks = [], banner = null, comboPop = 0, milestonesHit = [], fxRng = R.create('jam-fx'), lastPrevBest = null;
   function lowGfx() { try { return !!(window.MMAccess && window.MMAccess.prefs.load(window.localStorage).lowGfx); } catch (e) { return false; } }
   function isMilestone(c) { return MILESTONES.indexOf(c) >= 0 || (c > 100 && c % 50 === 0); }
-  function sfxPlay(name) { if (TEST || !sfx) return; try { sfx.play(name); } catch (e) { /* ignore */ } }
+  var sfxLog = [];
+  function sfxPlay(name) { sfxLog.push(name); if (sfxLog.length > 40) sfxLog.shift(); if (TEST || !sfx) return; try { sfx.play(name); } catch (e) { /* ignore */ } }
   function showBanner(text, col) { banner = { text: text, col: col, t: 0 }; }
   function afterHit(j, idx, prevCombo) {
     if (relax || !run) return;
     var c = run.state.combo;
     if (j && j !== 'miss') {
       comboPop = 1;
-      if (isMilestone(c)) { milestonesHit.push(c); showBanner(c + ' combo!', '#ffd166'); sfxPlay(c >= 50 ? 'levelup' : 'pickup'); }
+      if (isMilestone(c)) { milestonesHit.push(c); showBanner(c + ' combo!', '#ffd166'); sfxPlay('combo' + Math.max(1, Math.min(8, Math.ceil(c / 15)))); }
       if (!reduced && !lowGfx() && (j === 'perfect' || j === 'great')) {
         var n = j === 'perfect' ? 6 : 3, x = colOf(idx) * LANE_W + LANE_W / 2;
         for (var i = 0; i < n; i++) sparks.push({ x: x + fxRng.int(-12, 12), y: HIT_Y, vx: (fxRng.next() - 0.5) * 120, vy: -60 - fxRng.next() * 140, t: 0, col: j === 'perfect' ? '#fff3b0' : LANE_COL[idx] });
@@ -196,10 +237,13 @@
     chart = opts.chart || SG.chartFor(id, tier, opts.seed !== undefined ? opts.seed : qs.get('seed') || undefined);
     practice = opts.practice ? makePractice(id, opts.practice) : null;
     relax = !practice && opts.relax === true;
+    assistRun = !relax && !concert && (opts.assist !== undefined ? opts.assist === true : assist.on);
+    if (assistRun) chart = assistChart(chart);
+    document.body.dataset.assist = assistRun ? '1' : '0';
     if (relax) concert = null;
     document.body.dataset.relax = relax ? '1' : '0';
     ghost = null;
-    if (!practice && !relax && (opts.ghost === true || (opts.ghost !== false && SG.prefOf(save, 'ghost')))) {
+    if (!practice && !relax && !assistRun && (opts.ghost === true || (opts.ghost !== false && SG.prefOf(save, 'ghost')))) {
       var gd = SG.ghostOf(save, id, tier);
       if (gd && chart.song === id && chart.seed === 'base' && gd.length === chart.notes.length) ghost = gd; // only for the exact same base chart
     }
@@ -216,9 +260,9 @@
     var startAt = practice && practice.loop ? loopStart() : 0;
     if (startAt) { pausedTotal = -startAt / practice.speed; testNow = startAt; frozenAt = startAt; }
     evIdx = firstEvent(startAt);
-    mode = 'play'; overlay.hidden = true;
+    mode = 'play'; overlay.hidden = true; sfxPlay('select');
     $('hud-speed').textContent = practice ? 'Speed ' + Math.round(practice.speed * 100) + '%' : '';
-    $('hud-song').textContent = (practice ? 'Practice: ' : '') + (relax ? 'Relax: ' : '') + (concert ? 'Concert ' + (concert.idx + 1) + '/' + concert.ids.length + ': ' : '') + SG.song(id).name + ' / ' + SG.TIER_NAMES[tier];
+    $('hud-song').textContent = (practice ? 'Practice: ' : '') + (assistRun ? 'Assist: ' : '') + (relax ? 'Relax: ' : '') + (concert ? 'Concert ' + (concert.idx + 1) + '/' + concert.ids.length + ': ' : '') + SG.song(id).name + ' / ' + SG.TIER_NAMES[tier];
     updateHud();
     return run;
   }
@@ -226,6 +270,7 @@
     if (mode !== 'play') return;
     if (practice) { finishPractice(); return; }
     if (relax) { finishRelax(); return; }
+    if (assistRun && !practice) { finishAssist(); return; }
     releaseAll();
     run.update();
     var res = run.result();
@@ -235,6 +280,7 @@
     lastResult = res;
     lastReport = SG.record(save, songId, tier, res);
     persist();
+    sfxPlay(res.fullCombo ? 'perfect' : (res.rank === 'S' || res.rank === 'A') ? 'level_up' : 'confirm');
     frozenAt = songNow(); mode = 'results';
     if (concert) { concertAfterSong(res); return; }
     showResults();
@@ -265,8 +311,17 @@
     return Jam.createRun(c, { clock: songNow, offset: SG.offsetOf(save) * sp }); // offset shifts judging only, never the clock
   }
   function firstEvent(t) { if (!events) return 0; var i = 0; while (i < events.length && events[i].t < t) i++; return i; }
+  // Section practice best (hits in one pass of the A-B loop), kept in the Assist key: never a song best.
+  function sectionKey() { return practice && practice.loopBars && !assistRun ? songId + ':' + tier + ':' + Math.round(practice.speed * 100) + ':' + practice.loopBars[0] + '-' + practice.loopBars[1] : null; }
+  function recordSection(hits) {
+    var k = sectionKey(); if (!k) return { key: null, best: null, isNew: false };
+    var prev = assist.section[k] || 0;
+    if (hits > prev) { assist.section[k] = hits; persistAssist(); }
+    return { key: k, best: Math.max(prev, hits), isNew: hits > prev };
+  }
   function loopBack() {
     releaseAll();
+    try { run.update(); recordSection(run.result().hits); } catch (e) { /* ignore */ }
     var at = loopStart();
     run = makeRun(); practice.loops++;
     popups = []; rings = []; glows = []; held = {}; laneKeys = {}; ptrLane = {}; lastJudge = null;
@@ -274,10 +329,31 @@
     evIdx = firstEvent(at);
     updateHud();
   }
+  function finishAssist() {
+    releaseAll(); run.update();
+    var res = run.result();
+    var prev = assist.best[songId] && assist.best[songId][tier], nb = res.score > 0 && (!prev || res.score > prev.score);
+    if (nb) { (assist.best[songId] = assist.best[songId] || {})[tier] = { score: res.score, rank: res.rank }; persistAssist(); }
+    assistLast = { score: res.score, rank: res.rank, hits: res.hits, notes: chart.notes.length, newBest: nb, best: assist.best[songId] && assist.best[songId][tier] ? assist.best[songId][tier].score : 0 };
+    frozenAt = songNow(); mode = 'results';
+    var sid = songId, tr = tier;
+    clear(overlay); overlay.hidden = false;
+    overlay.appendChild(el('h2', 'Assist: ' + SG.song(sid).name + ' / ' + SG.TIER_NAMES[tr]));
+    var n = el('p', 'Assist (one thumb, 2 lanes). Assist runs never count toward stars, S-rank or unlocks; their bests are kept apart.'); n.id = 'assist-note'; overlay.appendChild(n);
+    var sc = el('p', 'Score ' + res.score + '  Rank ' + res.rank + '  (' + res.hits + ' / ' + chart.notes.length + ' notes)'); sc.id = 'assist-score'; overlay.appendChild(sc);
+    var bb = el('p', 'Assist best ' + assistLast.best + (assistLast.newBest ? ' (new)' : ''), 'dim'); bb.id = 'assist-best'; overlay.appendChild(bb);
+    var row = el('div', undefined, 'row');
+    var again = btn('Play again (Assist)', function () { startSong(sid, tr, { assist: true }); }); again.id = 'again'; row.appendChild(again);
+    var back = btn('Songs', showMenu); back.id = 'to-menu'; row.appendChild(back);
+    row.appendChild(homeLink('menu-back'));
+    overlay.appendChild(row);
+    try { again.focus(); } catch (e) { /* ignore */ }
+  }
   function finishPractice() {
     releaseAll(); run.update();
     var res = run.result();
-    practiceLast = { hits: res.hits, counts: res.counts, speed: practice.speed, loops: practice.loops, saved: false };
+    var sr = recordSection(res.hits);
+    practiceLast = { hits: res.hits, counts: res.counts, speed: practice.speed, loops: practice.loops, saved: false, sectionKey: sr.key, sectionBest: sr.best, sectionNew: sr.isNew };
     frozenAt = songNow(); mode = 'results';
     showPracticeDone(res);
   }
@@ -316,6 +392,7 @@
     if (mode !== 'play' || paused) return;
     frozenAt = songNow(); paused = true; mode = 'pause';
     if (!TEST) { if (audioMode) { try { actx.suspend(); } catch (e) { /* ignore */ } } else pauseSrc = performance.now(); }
+    sfxPlay('ui_open');
     if (quiet === true) { navPaused = true; return; }
     showPause();
   }
@@ -323,12 +400,13 @@
     navPaused = false;
     if (mode !== 'pause') return;
     if (!TEST) { if (audioMode) { try { actx.resume(); } catch (e) { /* ignore */ } } else pausedTotal += performance.now() - pauseSrc; }
-    paused = false; mode = 'play'; overlay.hidden = true;
+    paused = false; mode = 'play'; overlay.hidden = true; sfxPlay('ui_close');
   }
 
   // ---------- input ----------
   function press(lane) {
     if (mode !== 'play' || !run) return null;
+    if (assistRun) lane = lane === 'D' ? 'F' : lane === 'K' ? 'J' : lane; // either half of the board hits its inner lane
     var idx = LANES.indexOf(lane); if (idx < 0) return null;
     flashes[idx] = 1;
     var prevCombo = run.state.combo;
@@ -347,6 +425,7 @@
   }
   function release(lane) {
     if (mode !== 'play' || !run) return null;
+    if (assistRun) lane = lane === 'D' ? 'F' : lane === 'K' ? 'J' : lane;
     if (prefTapHolds && run.state.holds[lane]) { held[lane] = false; return 'tap-hold'; } // tap only: the long note finishes by itself
     var prevCombo = run.state.combo;
     var r = run.release(lane); held[lane] = false;
@@ -376,6 +455,13 @@
     }
     if (e.code === 'Escape' || e.code === 'KeyP') { if (mode === 'play') pause(); else if (mode === 'pause') resume(); return; }
     if (e.code === 'KeyR' && mode === 'results' && !e.repeat) { var ag = $('again'); if (ag && !overlay.hidden) { e.preventDefault(); ag.click(); } return; }
+    // universal controls (MMInput): R restarts from Paused, Space/Enter is Primary when no button has focus
+    var act = window.MMInput ? window.MMInput.actionOf(e) : null;
+    if (act === 'restart' && mode === 'pause' && !e.repeat) { var rsb = $('restart'); if (rsb) { e.preventDefault(); rsb.click(); } return; }
+    if (act === 'primary' && !e.repeat && (!document.activeElement || document.activeElement === document.body) && !overlay.hidden) {
+      var pb = mode === 'menu' ? $('quick-play') : mode === 'pause' ? $('resume') : mode === 'results' ? $('again') : null;
+      if (pb) { e.preventDefault(); pb.click(); return; }
+    }
     var lane = KEYMAP[e.code];
     if (!lane) return;
     lane = L(lane);
@@ -473,14 +559,36 @@
   // ---------- render ----------
   var speed = (HIT_Y - 10) / APPROACH_MS;
   function noteY(t, now) { return HIT_Y - (t - now) * speed; }
+  // 8-bit pass: every note is a chunky pixel sprite (3 px cells), with a dark 1-cell outline and a light top-left bevel
+  var PXC = 3;
+  function inShape(idx, dx, dy, r) {
+    if (idx === 0) return dx * dx + dy * dy <= r * r;
+    if (idx === 1) return Math.abs(dx) + Math.abs(dy) <= r;
+    if (idx === 2) return Math.abs(dx) <= r * 0.85 && Math.abs(dy) <= r * 0.85;
+    return dy <= r * 0.8 && dy >= -r && Math.abs(dx) <= (dy + r) / 1.8 * 1.0 + 0.5;
+  }
+  function pxBlit(g, idx, x, y, r, col, outline) {
+    var c = PXC, n = Math.ceil((r + c) / c), x0 = Math.round(x), y0 = Math.round(y), keep = g.fillStyle;
+    for (var j = -n; j <= n; j++) for (var i = -n; i <= n; i++) {
+      var dx = i * c + c / 2 - c / 2, dy = j * c;
+      if (!inShape(idx, dx, dy, r)) {
+        if (outline && inShape(idx, dx, dy, r + c)) { g.fillStyle = outline; g.fillRect(x0 + i * c - 1, y0 + j * c - 1, c, c); }
+        continue;
+      }
+      g.fillStyle = col; g.fillRect(x0 + i * c - 1, y0 + j * c - 1, c, c);
+    }
+    g.fillStyle = keep;
+  }
   function shape(g, idx, x, y, r) {
-    g.beginPath();
-    if (idx === 0) g.arc(x, y, r, 0, 6.283);
-    else if (idx === 1) { g.moveTo(x, y - r); g.lineTo(x + r, y); g.lineTo(x, y + r); g.lineTo(x - r, y); g.closePath(); }
-    else if (idx === 2) g.rect(x - r * 0.85, y - r * 0.85, r * 1.7, r * 1.7);
-    else { g.moveTo(x, y - r); g.lineTo(x + r, y + r * 0.8); g.lineTo(x - r, y + r * 0.8); g.closePath(); }
-    g.fill();
-    if (prefShapes || prefLaneShapes) { g.lineWidth = 3; g.strokeStyle = '#0b0814'; g.stroke(); g.lineWidth = 1; }
+    var col = g.fillStyle, a = g.globalAlpha;
+    pxBlit(g, idx, x, y, r, col, r >= 8 ? '#0b0814' : null);
+    if (r >= 8) { g.globalAlpha = a * 0.35; pxBlit(g, idx, x, y, r, '#ffffff', null); g.globalAlpha = a; pxBlit(g, idx, x, y + PXC, r - PXC, col, null); }
+    g.fillStyle = col;
+  }
+  // stepped colour bands instead of smooth gradients (no banding blur, reads as 8-bit)
+  function bands(g, x, y, w, h, cols) {
+    var bh = Math.ceil(h / cols.length);
+    for (var i = 0; i < cols.length; i++) { g.fillStyle = cols[i]; g.fillRect(x, y + i * bh, w, bh); }
   }
   function render(time) {
     var g = ctx; g.setTransform(1, 0, 0, 1, 0, 0);
@@ -488,30 +596,37 @@
     var ox = 0;
     if (shake > 0 && !reduced && !relax) ox = Math.round(Math.sin(time * 90) * 2);
     g.save(); g.translate(ox, 0);
-    var bg = g.createLinearGradient(0, 0, 0, CH);
-    if (relax) { bg.addColorStop(0, '#101a2a'); bg.addColorStop(1, '#1d2a3a'); } else { bg.addColorStop(0, '#120e1e'); bg.addColorStop(1, '#2a1a2e'); }
-    g.fillStyle = bg; g.fillRect(0, 0, CW, CH);
-    stars.forEach(function (s) { g.fillStyle = 'rgba(255,255,255,' + (reduced ? 0.6 : 0.4 + 0.3 * Math.sin(time * 2 + s.p)) + ')'; g.fillRect(s.x, s.y, 2, 2); });
+    g.imageSmoothingEnabled = false;
+    bands(g, 0, 0, CW, CH, relax ? ['#0e1626', '#101a2a', '#13202f', '#172534', '#1a2838', '#1d2a3a'] : ['#100c1a', '#140f20', '#191326', '#1e152a', '#24182d', '#2a1a2e']);
+    stars.forEach(function (s) { var tw = reduced ? 1 : Math.sin(time * 2 + s.p); g.fillStyle = tw > 0.3 ? '#ffffff' : '#7a6f99'; g.fillRect(Math.round(s.x / 2) * 2, Math.round(s.y / 2) * 2, 2, 2); if (tw > 0.85) { g.fillRect(Math.round(s.x / 2) * 2 - 2, Math.round(s.y / 2) * 2, 6, 2); g.fillRect(Math.round(s.x / 2) * 2, Math.round(s.y / 2) * 2 - 2, 2, 6); } });
+    // pixel tree line + crowd silhouettes at the bottom (stepped parallax)
+    g.fillStyle = relax ? '#0b1420' : '#0d0a16';
+    for (var tx = 0; tx < CW; tx += 8) { var th = 8 + ((tx * 37) % 5) * 4; g.fillRect(tx, CH - th - 12, 8, th + 12); }
     // campfire glow, grows with combo; steady when reduced
     var flick = reduced || relax ? 0 : Math.sin(time * 9) * 0.04 + Math.sin(time * 5.3) * 0.03;
     var glow = relax ? 0.5 : Math.min(1, 0.3 + combo / 40) + flick;
-    var rg = g.createRadialGradient(CW / 2, CH - 20, 5, CW / 2, CH - 20, 150);
-    rg.addColorStop(0, 'rgba(255,170,60,' + (0.55 * glow).toFixed(3) + ')'); rg.addColorStop(1, 'rgba(255,120,40,0)');
-    g.fillStyle = rg; g.fillRect(0, CH - 190, CW, 190);
+    // campfire glow: four stepped pixel rings instead of a soft radial blur
+    for (var gs = 4; gs >= 1; gs--) { g.fillStyle = 'rgba(255,150,50,' + (0.14 * glow).toFixed(3) + ')'; var gw = gs * 40, gh = gs * 24; g.fillRect(CW / 2 - gw, CH - gh, gw * 2, gh); }
+    // the campfire itself: pixel logs and a flickering flame
+    var fx = CW / 2, fy = CH - 6, fk = reduced ? 0 : Math.floor(time * 8) % 3;
+    g.fillStyle = '#5a3a22'; g.fillRect(fx - 18, fy - 4, 36, 4); g.fillStyle = '#7a4e2c'; g.fillRect(fx - 14, fy - 7, 28, 3);
+    g.fillStyle = '#ff6b3d'; g.fillRect(fx - 9, fy - 16 - fk * 2, 18, 10 + fk * 2); g.fillStyle = '#ffb347'; g.fillRect(fx - 6, fy - 20 - fk * 2, 12, 12); g.fillStyle = '#fff3b0'; g.fillRect(fx - 3, fy - 14 - fk, 6, 6);
     // lanes
     for (var i = 0; i < 4; i++) {
       g.fillStyle = i % 2 ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.09)'; g.fillRect(i * LANE_W, 0, LANE_W, CH);
       var fl = laneAt(i);
       if (flashes[fl] > 0) { g.fillStyle = LANE_COL[fl]; g.globalAlpha = reduced ? 0.25 : flashes[fl] * 0.35; g.fillRect(i * LANE_W, 0, LANE_W, HIT_Y + 20); g.globalAlpha = 1; }
-      g.strokeStyle = 'rgba(255,255,255,0.12)'; g.beginPath(); g.moveTo(i * LANE_W + 0.5, 0); g.lineTo(i * LANE_W + 0.5, CH); g.stroke();
+      g.fillStyle = 'rgba(0,0,0,0.45)'; g.fillRect(i * LANE_W, 0, 2, CH);
+      for (var dy2 = 0; dy2 < HIT_Y; dy2 += 12) { g.fillStyle = 'rgba(255,255,255,0.10)'; g.fillRect(i * LANE_W + 2, dy2, 2, 6); }
     }
     // hit-flash lane glow: a colour-coded column rising from the hit line; steady and short when reduced
     glows.forEach(function (q) {
-      var a = reduced ? 0.4 : 0.55 * (1 - q.t / 0.35), gg = g.createLinearGradient(0, HIT_Y, 0, HIT_Y - 170);
-      gg.addColorStop(0, q.col); gg.addColorStop(1, 'rgba(255,255,255,0)');
-      g.globalAlpha = Math.max(0, a); g.fillStyle = gg; g.fillRect(colOf(q.lane) * LANE_W, HIT_Y - 170, LANE_W, 175); g.globalAlpha = 1;
+      var a = reduced ? 0.4 : 0.55 * (1 - q.t / 0.35);
+      g.fillStyle = q.col;
+      for (var st = 0; st < 5; st++) { g.globalAlpha = Math.max(0, a * (1 - st / 5)); g.fillRect(colOf(q.lane) * LANE_W + 2, HIT_Y + 5 - (st + 1) * 35, LANE_W - 2, 35); }
+      g.globalAlpha = 1;
     });
-    g.fillStyle = 'rgba(255,255,255,0.7)'; g.fillRect(0, HIT_Y - 1, CW, 3);
+    g.fillStyle = '#0b0814'; g.fillRect(0, HIT_Y - 3, CW, 7); g.fillStyle = '#fff3b0'; for (var hx = 0; hx < CW; hx += 8) g.fillRect(hx, HIT_Y - 1, 6, 3);
     g.font = 'bold 16px monospace'; g.textAlign = 'center';
     for (i = 0; i < 4; i++) {
       g.fillStyle = LANE_COL[laneAt(i)]; g.globalAlpha = 0.9; shape(g, laneAt(i), i * LANE_W + LANE_W / 2, HIT_Y + 30, 14); g.globalAlpha = 1;
@@ -527,11 +642,11 @@
         if (n.state === 'done' && n.judge !== 'miss') return;
         var dim = n.state === 'done';
         g.globalAlpha = dim ? 0.3 : 1;
-        if (n.hold) { g.fillStyle = LANE_COL[idx]; g.globalAlpha = (dim ? 0.15 : 0.45); g.fillRect(x - 12, Math.min(yTail, y), 24, Math.abs(y - yTail)); g.globalAlpha = dim ? 0.3 : 1; }
+        if (n.hold) { var hy0 = Math.round(Math.min(yTail, y)), hh = Math.round(Math.abs(y - yTail)); g.globalAlpha = (dim ? 0.15 : 0.6); g.fillStyle = '#0b0814'; g.fillRect(Math.round(x) - 12, hy0, 24, hh); g.fillStyle = LANE_COL[idx]; g.fillRect(Math.round(x) - 9, hy0, 18, hh); g.fillStyle = 'rgba(255,255,255,0.35)'; for (var hs = hy0; hs < hy0 + hh; hs += 9) g.fillRect(Math.round(x) - 9, hs, 18, 3); g.globalAlpha = dim ? 0.3 : 1; }
         var yy = n.state === 'holding' ? HIT_Y : y;
         g.fillStyle = LANE_COL[idx]; shape(g, idx, x, yy, prefShapes || prefLaneShapes ? 17 : 15);
         if (prefLaneShapes) { g.fillStyle = '#0b0814'; shape(g, idx, x, yy, 6); } // the lane's own shape inside the note, so lanes never rely on colour
-        else { g.strokeStyle = '#fff'; g.lineWidth = 2; g.beginPath(); g.arc(x, yy, 3, 0, 6.283); g.stroke(); g.lineWidth = 1; }
+        else { g.fillStyle = '#0b0814'; g.fillRect(Math.round(x) - 3, Math.round(yy) - 3, 6, 6); g.fillStyle = '#ffffff'; g.fillRect(Math.round(x) - 3, Math.round(yy) - 3, 3, 3); }
         g.globalAlpha = 1;
       });
       if (ghost) {
@@ -545,19 +660,23 @@
         });
         g.globalAlpha = 1; g.lineWidth = 1;
       }
-      rings.forEach(function (r) { g.strokeStyle = LANE_COL[r.lane]; g.globalAlpha = 1 - r.t / 0.3; g.beginPath(); g.arc(colOf(r.lane) * LANE_W + LANE_W / 2, HIT_Y, 14 + r.t * 90, 0, 6.283); g.stroke(); g.globalAlpha = 1; });
+      rings.forEach(function (r) { var rr = Math.round((14 + r.t * 90) / 3) * 3, rx = colOf(r.lane) * LANE_W + LANE_W / 2; g.fillStyle = LANE_COL[r.lane]; g.globalAlpha = Math.max(0, 1 - r.t / 0.3);
+        g.fillRect(rx - rr, HIT_Y - rr, rr * 2, 3); g.fillRect(rx - rr, HIT_Y + rr - 3, rr * 2, 3); g.fillRect(rx - rr, HIT_Y - rr, 3, rr * 2); g.fillRect(rx + rr - 3, HIT_Y - rr, 3, rr * 2); g.globalAlpha = 1; });
       g.font = 'bold 14px monospace';
-      popups.forEach(function (p) { var y = HIT_Y - 40 - (reduced ? 0 : p.t * 40); g.globalAlpha = reduced ? 1 : 1 - p.t / 0.6; g.fillStyle = '#000'; g.fillText(p.text, p.x + 1, y + 1); g.fillStyle = p.col; g.fillText(p.text, p.x, y);
+      popups.forEach(function (p) { var y = HIT_Y - 40 - (reduced ? 0 : Math.round(p.t * 40 / 3) * 3); g.globalAlpha = reduced ? 1 : (p.t < 0.4 ? 1 : 0.5);
+        if (window.MM8 && MM8.text) MM8.text(g, String(p.text).toUpperCase(), p.x, y - 12, 2, p.col, { align: 'center', shadow: '#0b0814' });
+        else { g.fillStyle = '#000'; g.fillText(p.text, p.x + 1, y + 1); g.fillStyle = p.col; g.fillText(p.text, p.x, y); }
         if (p.tag) { g.font = 'bold 10px monospace'; g.fillStyle = p.tag === 'early' ? '#9bf6ff' : '#ffadad'; g.fillText(p.tag, p.x, y + 12); g.font = 'bold 14px monospace'; }
         g.globalAlpha = 1; });
-      sparks.forEach(function (p) { g.globalAlpha = Math.max(0, 1 - p.t / 0.5); g.fillStyle = p.col; g.fillRect(p.x - 2, p.y - 2, 4, 4); });
+      sparks.forEach(function (p) { g.globalAlpha = p.t < 0.3 ? 1 : 0.5; g.fillStyle = p.col; g.fillRect(Math.round(p.x / 3) * 3 - 2, Math.round(p.y / 3) * 3 - 2, 4, 4); });
       g.globalAlpha = 1;
       // big centred combo: the number players actually watch; pops a little on each hit (steady when reduced)
       if (!relax && !practice && combo >= 5) {
         var cs = 34 + (reduced ? 0 : Math.round(comboPop * 8));
         g.font = 'bold ' + cs + 'px monospace'; g.globalAlpha = 0.32 + Math.min(0.4, combo / 100);
-        g.fillStyle = combo >= 50 ? '#ffd166' : '#ffffff'; g.fillText(String(combo), CW / 2, 120);
-        g.font = 'bold 12px monospace'; g.fillText('COMBO', CW / 2, 138); g.globalAlpha = 1;
+        if (window.MM8 && MM8.text) { MM8.text(g, String(combo), CW / 2, 92 - (cs > 36 ? 3 : 0), cs > 36 ? 5 : 4, combo >= 50 ? '#ffd166' : '#ffffff', { align: 'center', shadow: '#0b0814' }); MM8.text(g, 'COMBO', CW / 2, 128, 2, combo >= 50 ? '#ffd166' : '#ffffff', { align: 'center', shadow: '#0b0814' }); }
+        else { g.fillStyle = combo >= 50 ? '#ffd166' : '#ffffff'; g.fillText(String(combo), CW / 2, 120); g.font = 'bold 12px monospace'; g.fillText('COMBO', CW / 2, 138); }
+        g.globalAlpha = 1;
       }
       if (banner) {
         var ba = banner.t < 0.8 ? 1 : Math.max(0, 1 - (banner.t - 0.8) / 0.3), bs = reduced ? 22 : 22 + Math.round(Math.max(0, 0.15 - banner.t) * 60);
@@ -578,13 +697,13 @@
     return 'Timing: you averaged ' + how + ' over ' + res.hits + ' hits (offset ' + fmtOff(SG.offsetOf(save)) + ').';
   }
   function showMenu() {
-    mode = 'menu'; run = null; chart = null; paused = false; concert = null; practice = null; relax = false; document.body.dataset.practice = '0'; document.body.dataset.relax = '0';
+    mode = 'menu'; run = null; chart = null; paused = false; concert = null; practice = null; relax = false; assistRun = false; document.body.dataset.assist = '0'; document.body.dataset.practice = '0'; document.body.dataset.relax = '0';
     clear(overlay); overlay.hidden = false;
     overlay.appendChild(el('h2', 'Campfire Jam'));
     if (!save.hint) {
       var h = el('div'); h.id = 'hint'; h.setAttribute('role', 'note');
       h.appendChild(el('strong', 'How to play'));
-      h.appendChild(el('p', 'Notes fall down four lanes. Press D F J K (or the arrow keys, or tap the lanes) as a note reaches the bright line. Hold the long notes until they end. Perfect, Great and Good score; a miss breaks your combo.'));
+      h.appendChild(el('p', 'Tap each note as it reaches the bright line. Keys D F J K, arrows, or touch. Hold long notes.'));
       var ok = btn('Got it', function () { save.hint = true; persist(); showMenu(); }); ok.id = 'hint-ok'; h.appendChild(ok);
       overlay.appendChild(h);
     }
@@ -596,8 +715,15 @@
     rb.textContent = 'Relax mode: ' + (prefRelax ? 'On' : 'Off'); rb.setAttribute('aria-pressed', prefRelax ? 'true' : 'false'); rb.classList.toggle('sel', prefRelax);
     rb.addEventListener('click', function () { SG.setPref(save, 'relax', !prefRelax); persist(); applyPrefs(); showMenu(); });
     rrow.appendChild(rb);
-    var rinfo = el('span', prefRelax ? 'Relax is on: songs keep their notes, nothing can fail and there is no score. Stars only come from normal play.' : 'Relax mode: play any open song with no fail and no score.', 'dim'); rinfo.id = 'relax-info'; rrow.appendChild(rinfo);
+    var arow = el('div', undefined, 'row'); arow.id = 'assist-row';
+    var ab = el('button'); ab.type = 'button'; ab.className = 'pick'; ab.id = 'pref-assist';
+    ab.textContent = 'Assist (one thumb): ' + (assist.on ? 'On' : 'Off'); ab.setAttribute('aria-pressed', assist.on ? 'true' : 'false'); ab.classList.toggle('sel', assist.on);
+    ab.addEventListener('click', function () { assist.on = !assist.on; persistAssist(); showMenu(); var f = $('pref-assist'); if (f) f.focus(); });
+    arow.appendChild(ab);
+    var ainfo = el('span', assist.on ? 'Assist is on: 2 lanes, any pad on a side hits it. Scores go to separate Assist bests, never stars or S-rank.' : 'Assist: fold the 4 lanes into 2 for one-thumb play (separate bests).', 'dim'); ainfo.id = 'assist-info'; arow.appendChild(ainfo);
+    var rinfo = el('span', prefRelax ? 'Relax on: nothing can fail, no score. Stars only come from normal play.' : 'Play any song with no fail and no score.', 'dim'); rinfo.id = 'relax-info'; rrow.appendChild(rinfo);
     overlay.appendChild(rrow);
+    overlay.appendChild(arow);
     var openN = SG.SONGS.filter(function (x) { return SG.songUnlocked(save, x.id); }).length;
     var crow = el('div', undefined, 'row'); crow.id = 'concert-row';
     var cbn = btn('Concert (3 songs)', showConcertSetup, openN < SG.CONCERT_SIZE); cbn.id = 'btn-concert'; crow.appendChild(cbn);
@@ -664,7 +790,7 @@
     thLab(); prow.appendChild(th);
     overlay.appendChild(prow);
     var rule = el('p', 'Unlock rule: Warm Embers is always open. Lantern Shuffle opens at 2 total stars, Moth Parade at 5, Starlit Stomp at 8, then Kettle Song at 10, Owl Hour at 13, Comet Tail at 16, Fern Lullaby at 19, Spark Reel at 22, Dewdrop Drift at 25 and Harvest Moonrise at 28. A secret song waits for a full combo on any Hard chart. Hard needs 2 stars on that song’s Normal. Stars come from accuracy: 50%, 75%, 90%.', 'dim'); rule.id = 'unlock-rule';
-    overlay.appendChild(rule);
+    var rd = document.createElement('details'); rd.id = 'unlock-details'; rd.appendChild(el('summary', 'How songs unlock')); rd.appendChild(rule); overlay.appendChild(rd);
     var row2 = el('div', undefined, 'row'); row2.appendChild(homeLink('menu-back')); overlay.appendChild(row2);
   }
   function showPracticeSetup(id) {
@@ -709,7 +835,8 @@
   function showPracticeDone(res) {
     clear(overlay); overlay.hidden = false;
     overlay.appendChild(el('h2', 'Practice done: ' + SG.song(songId).name));
-    var n = el('p', 'Speed ' + Math.round(practice.speed * 100) + '%. No score, no stars, nothing saved.'); n.id = 'practice-note'; overlay.appendChild(n);
+    var n = el('p', 'Speed ' + Math.round(practice.speed * 100) + '%. No score, no stars, nothing saved to song bests.'); n.id = 'practice-note'; overlay.appendChild(n);
+    if (practiceLast && practiceLast.sectionKey) { var sb = el('p', 'Section best (Practice, bars ' + practice.loopBars[0] + '-' + practice.loopBars[1] + ' at ' + Math.round(practice.speed * 100) + '%): ' + practiceLast.sectionBest + ' hits' + (practiceLast.sectionNew ? ' (new)' : '') + '. Kept apart from song bests.', 'dim'); sb.id = 'practice-section-best'; overlay.appendChild(sb); }
     var c = el('p', 'You hit ' + res.hits + ' notes: ' + res.counts.perfect + ' perfect, ' + res.counts.great + ' great, ' + res.counts.good + ' good, ' + res.counts.miss + ' missed.', 'dim'); c.id = 'practice-counts'; overlay.appendChild(c);
     var cfg = { speed: practice.speed, loop: practice.loopBars }, sid = songId, tr = tier;
     var row = el('div', undefined, 'row');
@@ -969,7 +1096,7 @@
     g.fillStyle = '#1a1626'; g.fillRect(0, 0, W, H);
     for (var i = 0; i < n; i++) {
       var h = Math.round(hg.bins[i] / mx * (H - 34)), c = i < (n - 1) / 2 ? '#9bf6ff' : i > (n - 1) / 2 ? '#ffadad' : '#fff3b0';
-      g.fillStyle = c; g.fillRect(10 + i * bw + 1, H - 18 - h, bw - 2, h);
+      g.fillStyle = c; g.fillRect(Math.round(10 + i * bw + 1), H - 18 - h, Math.floor(bw - 2), h); g.fillStyle = 'rgba(0,0,0,0.3)'; g.fillRect(Math.round(10 + i * bw + bw - 5), H - 18 - h, 3, h);
     }
     g.fillStyle = '#a79bc0'; g.font = '11px monospace'; g.textAlign = 'left'; g.fillText('early', 10, H - 4); g.textAlign = 'center'; g.fillText('on time', W / 2, H - 4); g.textAlign = 'right'; g.fillText('late', W - 10, H - 4);
     g.strokeStyle = '#a79bc0'; g.beginPath(); g.moveTo(W / 2, 4); g.lineTo(W / 2, H - 18); g.stroke();
@@ -984,7 +1111,7 @@
     g.strokeStyle = '#ffb347'; g.lineWidth = 2; g.beginPath();
     hist.forEach(function (h, i) { if (i) g.lineTo(px(i), py(h.acc)); else g.moveTo(px(i), py(h.acc)); });
     g.stroke(); g.lineWidth = 1;
-    hist.forEach(function (h, i) { g.fillStyle = i === n - 1 ? '#ffffff' : '#ffb347'; g.beginPath(); g.arc(px(i), py(h.acc), i === n - 1 ? 5 : 3.5, 0, 6.283); g.fill(); });
+    hist.forEach(function (h, i) { var d = i === n - 1 ? 5 : 3; g.fillStyle = '#0b0814'; g.fillRect(Math.round(px(i)) - d - 1, Math.round(py(h.acc)) - d - 1, d * 2 + 2, d * 2 + 2); g.fillStyle = i === n - 1 ? '#ffffff' : '#ffb347'; g.fillRect(Math.round(px(i)) - d, Math.round(py(h.acc)) - d, d * 2, d * 2); });
   }
 
   // ---------- loop ----------
@@ -1018,6 +1145,8 @@
       get results() { return resultsData ? JSON.parse(JSON.stringify(resultsData)) : null; },
       get practice() { return practice ? { speed: practice.speed, loop: practice.loop ? { a: practice.loop.a, b: practice.loop.b, aBar: practice.loopBars[0], bBar: practice.loopBars[1] } : null, loops: practice.loops } : null; },
       get relax() { return relax; },
+      sectionBest: function () { return sectionKey() ? assist.section[sectionKey()] || 0 : null; },
+      get assist() { return { on: assist.on, active: assistRun, best: JSON.parse(JSON.stringify(assist.best)), section: Object.assign({}, assist.section), last: assistLast ? Object.assign({}, assistLast) : null }; },
       get relaxResult() { return relaxLast ? JSON.parse(JSON.stringify(relaxLast)) : null; },
       get popups() { return popups.map(function (q) { return q.text; }); },
       get laneShapes() { return prefLaneShapes; },
@@ -1038,6 +1167,7 @@
       get cal() { return cal ? { state: cal.state, taps: cal.taps.length, now: calNow, beats: cal.state === 'run' || cal.state === 'done' ? calMeasured() : [], result: cal.result } : null; },
       calStep: calStep, calTap: calTap,
       get sfx() { return sfx; },
+      get sfxLog() { return sfxLog.slice(); },
       get audio() { return !!actx; },
       start: startSong, step: step, press: press, release: release, pause: pause, resume: resume, menu: showMenu,
       at: function (ms) { if (ms > testNow) step((ms - testNow) / (practice ? practice.speed : 1)); }

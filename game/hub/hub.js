@@ -31,6 +31,8 @@
     'w5-stalk': '../games/stalk/index.html',
     'w5-pop': '../games/pop/index.html',
     'w5-dash': '../games/dash/index.html',
+    'w5-stack': '../games/stack/index.html',
+    'w5-echo': '../games/echo/index.html',
     // Level nodes open the game (and sub-mode) whose own save clears them (goals: MMHubProfile.MILESTONES).
     'w2-burrow': '../games/mad-maze/index.html?mode=dungeon&from=hub',
     'w2-keep': '../games/mad-maze/index.html?mode=world&from=hub',
@@ -54,7 +56,7 @@
   // NAV slice D: every game node with a real page is always open to play (from a fresh save too). Map paths,
   // medals and the unlock rules are unchanged: they are a bonus goal (walking the map), never a gate on a game.
   const GAME_ICON = { 'w1-hearthvale': '\u{1F3E1}', 'w2-lantern': '\u{1F3EE}', 'w3-deepdelve': '\u26CF\uFE0F', 'w4-angler': '\u{1F3A3}',
-    'w5-safari': '\u{1F98B}', 'w5-jam': '\u{1F3B8}', 'w5-stalk': '\u{1F96C}', 'w5-pop': '\u{1F9E9}', 'w5-dash': '\u{1F56F}\uFE0F', 'w7-isles': '\u{1F3DD}\uFE0F' };
+    'w5-safari': '\u{1F98B}', 'w5-jam': '\u{1F3B8}', 'w5-stalk': '\u{1F96C}', 'w5-pop': '\u{1F9E9}', 'w5-dash': '\u{1F56F}\uFE0F', 'w5-stack': '\u{1F3EF}', 'w5-echo': '\u{1F337}', 'w7-isles': '\u{1F3DD}\uFE0F' };
   const playable = (n) => !!n && (n.type === 'game' || n.type === 'gate') && !!LINKS[n.id];
   const GAME_NODES = MAP.nodes.filter((n) => n.type === 'game' && LINKS[n.id]);
 
@@ -609,6 +611,7 @@
   });
   $('card-close').addEventListener('click', closeCard);
   $('open-btn').addEventListener('click', () => { if (!walker.wps) openNode(hub.at); });
+  if ($('map-play')) $('map-play').addEventListener('click', () => { if (!walker.wps) openNode(hub.at); });
 
   // ---------- input ----------
   function canvasPoint(e) {
@@ -662,12 +665,43 @@
   document.addEventListener('keydown', (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     if (!$('card').hidden) { if (e.key === 'Escape') closeCard(); return; }
+    // CONTROLS.md: Esc / P is Menu. With nothing else open (book, gift card, a text field) it opens the shared Menu.
+    if ((e.key === 'Escape' || e.key === 'p' || e.key === 'P') && window.MMNav && MMNav.mounted && MMNav.mounted() && !MMNav.isOpen()) {
+      const t = e.target, typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+      const up = (id) => { const n = document.getElementById(id); return !!(n && !n.hidden); };
+      if (!typing && !up('coll-sheet') && !up('gift-card') && !up('mmset')) { e.preventDefault(); MMNav.open(); return; }
+    }
+    if (homeOn()) return; // HS1: the home screen is a normal page (links / buttons); the map's keys wait for the map view
     const d = KEYDIR[e.key];
     if (d) { e.preventDefault(); step(d[0], d[1]); return; }
     if ((e.key === 'Enter' || e.key === ' ') && e.target.tagName !== 'BUTTON') { e.preventDefault(); if (!walker.wps) openNode(hub.at); }
   });
 
-  const pad = { dir: '', a: false, b: false };
+  const homeOn = () => document.body.classList.contains('home-on');
+  const pad = { dir: '', a: false, b: false, st: false };
+  // Home screen with a pad: the d-pad walks the focus through the home links and footer buttons, A presses, B closes a card.
+  function homeTargets() {
+    return Array.prototype.filter.call(document.querySelectorAll('#home a[href], #home button, #bar a[href], #bar button'),
+      (n) => !n.hidden && !n.disabled && n.getClientRects().length > 0 && getComputedStyle(n).visibility !== 'hidden');
+  }
+  function homePad(dir, a, b) {
+    const sheetOpen = (id) => { const n = document.getElementById(id); return !!(n && !n.hidden); };
+    if (dir && dir !== pad.dir && !sheetOpen('coll-sheet') && !sheetOpen('gift-card')) {
+      const f = homeTargets();
+      if (f.length) {
+        const i = f.indexOf(document.activeElement);
+        const k = i < 0 ? 0 : (i + (dir === 'd' || dir === 'r' ? 1 : -1) + f.length) % f.length;
+        try { f[k].focus(); f[k].scrollIntoView({ block: 'nearest' }); } catch (e) { /* ignore */ }
+      }
+    }
+    pad.dir = dir;
+    if (a && !pad.a) { const n = document.activeElement; if (n && n !== document.body && n.click) n.click(); else { const p = $('home-play'); if (p) p.focus(); } }
+    if (b && !pad.b) {
+      if (sheetOpen('coll-sheet')) { const x = $('coll-close'); if (x) x.click(); }
+      else if (sheetOpen('gift-card')) { const x = $('gift-close'); if (x) x.click(); }
+    }
+    pad.a = a; pad.b = b;
+  }
   function pollPad() {
     let gp = null;
     try { const l = navigator.getGamepads ? navigator.getGamepads() : []; for (let i = 0; i < l.length; i++) if (l[i]) { gp = l[i]; break; } } catch (e) { return; }
@@ -676,6 +710,13 @@
     let dir = '';
     if (bt(12) || gp.axes[1] < -0.6) dir = 'u'; else if (bt(13) || gp.axes[1] > 0.6) dir = 'd';
     else if (bt(14) || gp.axes[0] < -0.6) dir = 'l'; else if (bt(15) || gp.axes[0] > 0.6) dir = 'r';
+    // Start opens the shared Menu (CONTROLS.md); while the Menu or a dialog is up the pad belongs to it (MMNav polls its own).
+    const st = bt(9), wasSt = pad.st; pad.st = st;
+    const navOpen = !!(window.MMNav && MMNav.isOpen && MMNav.isOpen());
+    const setOpen = (() => { const d = document.getElementById('mmset'); return !!(d && !d.hidden); })();
+    if (navOpen || setOpen) { if (navOpen && st && !wasSt) MMNav.close(); pad.dir = dir; pad.a = bt(0); pad.b = bt(1); return; } // Start toggles the Menu
+    if (st && !wasSt && window.MMNav && MMNav.open && $('card').hidden) { pad.dir = dir; pad.a = bt(0); pad.b = bt(1); MMNav.open(); return; }
+    if (homeOn()) { homePad(dir, bt(0), bt(1)); return; }
     if (dir && dir !== pad.dir && $('card').hidden) step({ l: -1, r: 1 }[dir] || 0, { u: -1, d: 1 }[dir] || 0);
     pad.dir = dir;
     const a = bt(0), b = bt(1);

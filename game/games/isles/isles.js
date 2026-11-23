@@ -108,7 +108,18 @@
   const ABIL = !!MA && Q.get('mounts') !== '0' && MA.enabled(location.search);
   // XW1: the test-only reward log (?test=1): a ring buffer of {t, kind}, no text
   const EVENTS = [], EVENT_MAX = 64;
-  function logEvent(kind) { if (!TEST) return; if (EVENTS.length >= EVENT_MAX) EVENTS.shift(); EVENTS.push({ t: Math.round(simT * 1000) / 1000, kind: kind }); }
+  // BB: chiptune cues (MMSfx -> MMChip voices, CHIP-AUDIO.md). Mute / Music follow the shared keys (mm-sfx-muted, Music); the
+  // AudioContext is only made by a sound from a tap or key. SOUNDS is a small name ring the test handle reads (no audio needed).
+  const SOUNDS = [];
+  let sfx = null;
+  try { sfx = window.MMSfx ? window.MMSfx.create({ storage: window.localStorage }) : null; } catch (e) { sfx = null; }
+  let heard = false; // no AudioContext before the first tap or key (browsers block it and warn); load-time medals stay silent
+  const hear = () => { heard = true; window.removeEventListener('pointerdown', hear, true); window.removeEventListener('keydown', hear, true); };
+  window.addEventListener('pointerdown', hear, true); window.addEventListener('keydown', hear, true);
+  function cue(name) { if (SOUNDS.length >= 40) SOUNDS.shift(); SOUNDS.push(name); if (sfx && heard) { try { sfx.play(name); } catch (e) { /* audio is optional */ } } }
+  const CUE_OF = { gather: 'pickup', glint: 'pickup', sparkle: 'coin', spot: 'blip', tame: 'level_up', rare_tame: 'chest', tame_progress: 'pop', craft: 'confirm',
+    medal: 'unlock', sail: 'portal', launch: 'portal', ride: 'select', ability: 'jump', ice_crack: 'warn', rematch: 'boss', rematch_won: 'chest' };
+  function logEvent(kind) { if (Object.prototype.hasOwnProperty.call(CUE_OF, kind)) cue(CUE_OF[kind]); if (!TEST) return; if (EVENTS.length >= EVENT_MAX) EVENTS.shift(); EVENTS.push({ t: Math.round(simT * 1000) / 1000, kind: kind }); }
 
   // ---------- storage (own keys only; every access guarded) ----------
   const store = (() => { try { return window.localStorage; } catch (e) { return null; } })();
@@ -116,6 +127,7 @@
   const S = store || memStore;
   const readJson = (k) => { try { const s = S.getItem(k); return typeof s === 'string' ? JSON.parse(s) : null; } catch (e) { return null; } };
   let save = ISL.load(S, Date.now());
+  const FIRST_VISIT = !save || !save.isles || !Object.keys(save.isles).length; // 8B: the how-to card shows only then
   // PI2: one-thumb mode (auto-attack the nearest foe + the mount ability button by the stick). The same per-device switch as the Realm's
   // one-thumb mode (mm-auto-fire + mm-aim-toggle both '1', never in a save); ?onethumb=1 / 0 forces it for this visit.
   const OT_KEYS = ['mm-auto-fire', 'mm-aim-toggle'];
@@ -274,9 +286,12 @@
   function bakeArt(cx, cy) {
     let cv = null;
     if (IA && IA.active()) { const src = IA.chunk(world.terrain, W, cx, cy); if (src) { cv = mk(CPX, CPX); cv.getContext('2d').drawImage(src, 0, 0, CPX, CPX); } }
-    if (!cv) cv = CB.bakeChunkCanvas(mk, world.terrain, W, cx, cy, PAL, null, { names: NAMES, h: H });
+    let code = false;
+    if (!cv) { cv = CB.bakeChunkCanvas(mk, world.terrain, W, cx, cy, PAL, null, { names: NAMES, h: H }); code = !!cv; }
     if (!cv) return bakeFlat(cx, cy);
     const c = cv.getContext('2d');
+    // 8B: the code-drawn terrain gets seeded detail pixels (8 tile variants) and stepped edges, once per chunk bake
+    if (code && !GFX_LOW && window.MMIsleArt && window.MMIsleArt.detail) window.MMIsleArt.detail(c, world.terrain, W, H, cx, cy, { names: NAMES, palette: PAL, tile: TILE, ch: CH, seed: parseInt(SEED, 10) % 100003, create: mk });
     // props of this chunk and its 8 neighbours, back to front: a 64 px tree near a chunk edge is painted on both sides of the seam
     const pa = IA && IA.propsActive() ? IA.props() : null, list = [];
     for (let ny = cy - 1; ny <= cy + 1; ny++) for (let nx = cx - 1; nx <= cx + 1; nx++) { const l = chunkProps.get(nx + ',' + ny); if (l) for (let i = 0; i < l.length; i++) list.push(l[i]); }
@@ -336,7 +351,7 @@
   // b31a / b32 PNG strips: loaded once (the jungle loads all five species, other isles only the species in your stable), baked to native
   // size; a creature without a complete set (or ?art=0) keeps the code-drawn MMCreatureDraw bake above.
   const STRIP_KINDS = MS ? MS.kindsFor(PACK_ID, tames.roster.map((t) => t.sp)) : [];
-  const STRIPS = ART && MS && STRIP_KINDS.length ? MS.create({ kinds: STRIP_KINDS, create: mk }) : null;
+  const STRIPS = ART && MS && STRIP_KINDS.length ? MS.create({ kinds: STRIP_KINDS, create: mk, rim: true }) : null;
   const stripKind = (k) => (MS && k && has(MS.SPECS, k) ? k : null);
   const stState = { dying: false, ko: false, eating: false, ph: '', moving: false }; // reused every frame
   const seat = { x: 0, y: 0 };
@@ -600,7 +615,8 @@
   const CLASSIC_POUCH = Q.get('pouch') === 'classic' || !POUCH;
   const pouch = POUCH ? POUCH.starter(ISLE, { classic: CLASSIC_POUCH }) : Object.assign({}, IC.STARTER_POUCH);
   let lastHurtT = -1e9, lastRewardT = 0; // IF1: sim time of the last hit taken (regen) and of the last reward (sparkles)
-  function reward() { lastRewardT = simT; }
+  let lastFindT = 0; // the first-ten pity's clock: the last find (an item, tame, drop or journal entry); a hot-spring soak is a rest, not a find
+  function reward(rest) { lastRewardT = simT; if (!rest) lastFindT = simT; }
   function blocked(x, y) {
     const r = HERO_R - 1;
     return heroSolidAt(tileOf(x - r), tileOf(y - r)) || heroSolidAt(tileOf(x + r), tileOf(y - r)) || heroSolidAt(tileOf(x - r), tileOf(y + r)) || heroSolidAt(tileOf(x + r), tileOf(y + r));
@@ -646,6 +662,7 @@
     const hpBefore = hero.hp;
     lastHurtT = simT;
     hero.hp = Math.max(0, hero.hp - n); hero.iframes = 0.6;
+    cue(hero.hp <= 0 ? 'death' : 'hurt');
     if (soft && REST && hero.hp <= 0 && hpBefore > hero.maxHp / 4) hero.hp = 1;
     heroLost += hpBefore - hero.hp;
     if (hero.hp <= 0) {
@@ -680,6 +697,7 @@
     let l = Math.hypot(dx, dy);
     if (!(l > 0)) { const t = nearestTarget(9 * TILE); if (t) { dx = t.x - hero.x; dy = t.y - hero.y; } else { dx = hero.face.x; dy = hero.face.y; } l = Math.hypot(dx, dy) || 1; }
     hero.cd = FIRE_CD; hero.shotT = 2;
+    cue('shoot');
     if (bolts.length < 60) bolts.push({ x: hero.x, y: hero.y - 6, vx: dx / l * BOLT_SPEED, vy: dy / l * BOLT_SPEED, life: BOLT_LIFE, soothe: soothe && TAME });
     return true;
   }
@@ -730,6 +748,7 @@
   function killCreature(c) {
     const s = specOf(c.sp, c.kind);
     xp += XP_BY_SIZE[s.size] || 4; kills++;
+    cue('kill');
     addDeath(c);
     rollLoot(c);
     removeWhere((x) => x === c, 90000);
@@ -739,6 +758,7 @@
     const sooth = how === 'soothe';
     const real = sooth ? dmg * SOOTHE_DMG : dmg;
     c.flash = 0.12;
+    if (how !== 'comp') cue('hit');
     if (TAME && c.tm) {
       const left = c.hp - real;
       const r = TM.step(c.kind, c.tm, { dmg: real, torporHit: sooth ? dmg : 0, hits: 1, lethal: left <= 0, hpFrac: clamp(left / c.maxHp, 0, 1),
@@ -810,6 +830,29 @@
     }
     return fed || best;
   }
+  // BB: honest feed pacing on the button itself. A creature eats once every feedEvery seconds (MMCreatures); the button says
+  // 'Feed 2/6' when it will eat and 'Chewing 3s' with a filling bar while it chews, and a soft blip says it is ready again.
+  // Tapping early still only shows how long is left: nothing is lost and nothing hurries you.
+  function chewLeft(c) {
+    const def = c && c.tm ? CR.get(c.kind) : null, every = def && def.tame ? def.tame.feedEvery : 0;
+    return every > 0 ? every - (c.tm.t + (c.tmAcc || 0) - c.tm.lastFeed) : 0;
+  }
+  let feedLbl = '', feedChew = false;
+  function feedHud(ft) {
+    if (btn.feed.hidden) { feedChew = false; return; }
+    let lbl = 'Feed', p = 1;
+    if (ft && ft.tm && ft.tm.need > 0) {
+      const def = CR.get(ft.kind), every = def && def.tame ? def.tame.feedEvery : 0, left = chewLeft(ft);
+      if (left > 0.05 && ft.tm.fed > 0) { lbl = 'Chewing ' + Math.ceil(left) + 's'; p = clamp(1 - left / every, 0, 1); }
+      else lbl = 'Feed ' + Math.floor(ft.tm.prog) + '/' + ft.tm.need;
+    }
+    const chew = p < 1;
+    if (feedChew && !chew) cue('select');
+    feedChew = chew;
+    btn.feed.style.setProperty('--p', String(Math.round(p * 100) / 100));
+    btn.feed.classList.toggle('chew', chew);
+    if (lbl !== feedLbl) { feedLbl = lbl; btn.feed.textContent = lbl; btn.feed.setAttribute('aria-label', chew ? 'Feed: still chewing, ' + lbl.slice(8) + ' left' : lbl === 'Feed' ? 'Feed the creature' : 'Feed the creature, ' + lbl.slice(5) + ' fed'); }
+  }
   function feed() {
     if (!TAME || hero.dead) return { ok: false, why: 'off' };
     if (bossFeedable()) return bossFeed();
@@ -817,7 +860,7 @@
     if (!c) return { ok: false, why: 'none' };
     const def = CR.get(c.kind), nm = def.name;
     const f = foodOf(def);
-    if (!f || !f.have) { toast(noFoodText(nm, f)); return { ok: false, why: 'nofood', kept: f ? f.kept : '' }; }
+    if (!f || !f.have) { cue('error'); toast(noFoodText(nm, f)); return { ok: false, why: 'nofood', kept: f ? f.kept : '' }; }
     const r = TM.step(c.kind, c.tm, { offer: f.id, playerDist: Math.hypot(hero.x - c.x, hero.y - c.y) }, c.tmAcc);
     c.tmAcc = 0;
     c.tm = r.state;
@@ -827,7 +870,7 @@
       else pouch[f.id] = Math.max(0, pouch[f.id] - 1);
       c.eatT = 0.8;
     }
-    if (ev.indexOf('toofast') >= 0) toast(nm + ' is still chewing.');
+    if (ev.indexOf('toofast') >= 0) toast(nm + ' is still chewing: ready in ' + Math.max(1, Math.ceil(chewLeft(c))) + ' s.'); // BB: honest, no guessing
     if (ev.indexOf('refused') >= 0) toast(nm + ' turns its nose up.');
     if (c.tm.st === 'tamed') { finishTame(c); return { ok: true, tamed: true, events: ev }; }
     syncTame(c, ev);
@@ -854,7 +897,13 @@
   // the party: MMCompanion states for up to MAX_ACTIVE (1 on the low tier) tames from tames.party
   const party = [];   // {cs, ent, def, ctxDef, art, dmg}
   const partyStates = [];
-  const compCtx = { owner: hero, enemies: creatures, pickups: [], blocked: (x, y) => solidAt(tileOf(x), tileOf(y)), def: null, speed: SPEED };
+  // BB: a land companion (no swim / fly / glide / float behaviour) does not walk out onto open water; one already standing in water
+  // (a catch-up teleport) may still walk out of it. Swimmers and fliers cross freely, as before.
+  let compCur = null, compLand = false;
+  const AIRWATER = ['swim', 'fly', 'glide', 'float'];
+  const landOnly = (def) => !!def && !(Array.isArray(def.behaviours) && def.behaviours.some((b) => AIRWATER.indexOf(b) >= 0));
+  const compCtx = { owner: hero, enemies: creatures, pickups: [], def: null, speed: SPEED,
+    blocked: (x, y) => { const tx = tileOf(x), ty = tileOf(y); return solidAt(tx, ty) || (compLand && !!compCur && swimAt(tx, ty) && !swimAt(tileOf(compCur.x), tileOf(compCur.y))); } };
   function spawnCompanion(ent, x, y) {
     if (!COMPANIONS || !ent) return null;
     const def = CR.get(ent.sp);
@@ -886,8 +935,13 @@
     compCtx.enemies = creatures;
     for (let i = 0; i < party.length; i++) {
       const p = party[i];
-      compCtx.def = p.ctxDef;
+      compCtx.def = p.ctxDef; compCur = p.cs; compLand = p.land === undefined ? (p.land = landOnly(p.def)) : p.land;
       const out = CMP.update(p.cs, compCtx, dt);
+      if (compLand && swimAt(tileOf(p.cs.x), tileOf(p.cs.y))) { // BB: a land companion that ended up in water (catch-up teleport) steps out behind you
+        const bx = hero.x - hero.face.x * TILE * 0.9, by = hero.y - hero.face.y * TILE * 0.9;
+        if (!swimAt(tileOf(bx), tileOf(by)) && !solidAt(tileOf(bx), tileOf(by))) { p.cs.x = bx; p.cs.y = by; }
+        else if (!swimAt(tileOf(hero.x), tileOf(hero.y))) { p.cs.x = hero.x; p.cs.y = hero.y; }
+      }
       if (out.hit >= 0 && p.dmg > 0) { const e = creatures[out.hit]; if (e && e.hostile) { p.cs.hits = (p.cs.hits || 0) + 1; hitCreature(e, p.dmg, 'comp'); } }
     }
   }
@@ -1148,17 +1202,22 @@
       else if (e.type === 'phase') { bz.phaseName = e.name; logPush(BOSS_LOG.phase, { phase: e.phase, name: e.name, frac: Math.round(1e4 * bz.st.hp / bz.st.hpMax) / 1e4, t: simT }, 8); toast(bossName() + ': ' + e.name + '!'); }
       else if (e.type === 'weary') {
         bz.tele.length = 0; bz.live.length = 0;
+        cue('warn');
         toast(TAME && e.canTame ? 'The ' + bossName() + ' is weary. Feed it a feast (F) to tame it, or finish it.' : 'The ' + bossName() + ' is weary. Finish it!');
       } else if (e.type === 'tame_start') toast('The ' + bossName() + ' takes the feast. Soothe shots (Q) put it to sleep, then feed it more feasts.');
       else if (e.type === 'no_tame') toast('The ' + bossName() + ' cannot be tamed.');
       else if (e.type === 'tame') {
         if (e.ev === 'ko') toast('The ' + bossName() + ' is asleep. Feed it feasts (F). Do not hit it.');
         else if (e.ev === 'fed') { save.inv = invTake('feast', 1); bz.eatT = 0.8; }
-        else if (e.ev === 'toofast') toast('The ' + bossName() + ' is still chewing.');
+        else if (e.ev === 'toofast') { // BB: honest timing, like a creature's Feed button
+          const tm = bz.st && bz.st.tame, bd = bz.st && CR.get(bz.st.id), every = bd && bd.tame ? bd.tame.feedEvery : 0;
+          const left = tm && every ? Math.max(1, Math.ceil(every - (tm.t - tm.lastFeed))) : 0;
+          toast('The ' + bossName() + ' is still chewing' + (left ? ': ready in ' + left + ' s.' : '.'));
+        }
         else if (e.ev === 'cannot_feed') toast('Put it to sleep with soothe shots (Q) first.');
         else if (e.ev === 'wake') toast('The ' + bossName() + ' woke up. It is still weary: soothe it again.');
-      } else if (e.type === 'tamed') bossTamed();
-      else if (e.type === 'dead') bossDefeated();
+      } else if (e.type === 'tamed') { cue('chest'); bossTamed(); }
+      else if (e.type === 'dead') { cue('chest'); bossDefeated(); }
       else if (e.type === 'escaped') { bz.done = 'escaped'; bz.st = null; bz.tele.length = 0; bz.live.length = 0; toast('The ' + bossName() + ' slipped away. It will be back next visit.'); }
       // XB signature mechanics: a short tip the first time each one shows up in a fight
       else if (e.type === 'head_cut') { if (e.left > 0) toast('A head falls! ' + e.left + ' left. Cut them in any order.'); }
@@ -1181,7 +1240,7 @@
     const st = bz.st.st;
     bz.t += dt; bz.flash -= dt; if (bz.eatT > 0) bz.eatT -= dt;
     const fromSite = Math.hypot(hero.x - bz.sx, hero.y - bz.sy);
-    if (!bz.engaged && !hero.dead && (fromSite <= ARENA_R || bz.dmg > 0 || bz.torpor > 0)) { bz.engaged = true; if (st === 'fight') toast('The ' + bossName() + ' roars! Watch the ground: step out of each shape before it fills.'); }
+    if (!bz.engaged && !hero.dead && (fromSite <= ARENA_R || bz.dmg > 0 || bz.torpor > 0)) { bz.engaged = true; cue('boss'); if (st === 'fight') toast('The ' + bossName() + ' roars! Watch the ground: step out of each shape before it fills.'); }
     if (bz.engaged && st === 'fight' && (hero.dead || fromSite > ARENA_R * 1.35)) { if (bz.rm) { endRematch('left'); return; } disengage(); } // you left the ring: it calls off its attacks (a rematch just ends)
     if (bz.rm && (st === 'weary') && (hero.dead || fromSite > ARENA_R * 1.35)) { endRematch('left'); return; }
     if (!bz.engaged) { bz.dmg = 0; bz.torpor = 0; bz.ph = ''; bz.moving = false; return; }
@@ -1360,7 +1419,10 @@
       c.fillStyle = '#1e1a22'; c.fillRect(13, 8 + bob, 2, 3); c.fillRect(18, 8 + bob, 2, 3);
       c.fillStyle = col; c.fillRect(9, 2 + bob, 14, 4);
       c.fillStyle = '#0c140f'; c.fillRect(9, 26 + bob, 14, 1);
-      frames.push(cv);
+      // 8B: a crisp light rim around the hero, baked once here (never per frame), so the hero reads on any ground
+      let rc = cv;
+      for (let k = 0; k < Math.max(1, Math.round(DPR)) && MS && MS.rimCanvas; k++) rc = MS.rimCanvas(rc, 0, null, mk) || rc; // 1 logical px thick
+      frames.push(rc);
     }
     const sh = mk(Math.round(24 * DPR), Math.round(8 * DPR)), sc = sh.getContext('2d');
     sc.fillStyle = 'rgba(0,0,0,0.28)'; sc.beginPath(); sc.ellipse(sh.width / 2, sh.height / 2, sh.width / 2, sh.height / 2, 0, 0, Math.PI * 2); sc.fill();
@@ -1434,7 +1496,7 @@
       const pm = Math.abs(cs.x - p.lx) + Math.abs(cs.y - p.ly) > 0.4; p.lx = cs.x; p.ly = cs.y;
       const pst = STRIPS && p.sk && STRIPS.has(p.sk) ? STRIPS.get(p.sk, pm ? 'move' : 'idle', (p.dir = cs.face < 0 ? MS.LEFT : MS.RIGHT)) : null;
       if (pst) {
-        STRIPS.draw(g, pst, MS.frameIndex(pm ? 'move' : 'idle', hero.t), sx, sy, 1, p.dir === MS.LEFT);
+        STRIPS.draw(g, pst, MS.frameIndex(pm ? 'move' : 'idle', hero.t), sx, sy, 1, p.dir === MS.LEFT, true); // 8B: party creatures wear the light rim
         drawHeart(sx, sy - (pst.ay - pst.top) - 8, '#ff7aa8');
         continue;
       }
@@ -1461,7 +1523,7 @@
         // the mount's own strip, then the separate saddle overlay (same view, same frame), then the hero on the manifest seat
         const ra = heroMoving ? 'move' : 'idle', fr = MS.frameIndex(ra, hero.t), flip = rideDir === MS.LEFT;
         if (rideArt && rideArt.shadow && GFX.shadows) { const a = rideArt, w0 = a.w / a.dpr, w = Math.min(w0, rst.w * 0.8, rst.span), h = a.shadow.height / a.dpr * w / w0; g.drawImage(a.shadow, hx - w / 2, hy - h / 2, w, h); }
-        STRIPS.draw(g, rst, fr, hx, hy, 1, flip);
+        STRIPS.draw(g, rst, fr, hx, hy, 1, flip, true);
         if (sad && sad !== rst) STRIPS.draw(g, sad, fr, hx, hy, 1, flip);
         rideDrawn = rst.id; saddleDrawn = sad && sad !== rst ? sad.id : '';
         if (MS.seatOffset(rideKind, heroMoving, rideDir, fr, seat)) { lift = -seat.y + 5; rdx = Math.round(seat.x); }
@@ -1677,7 +1739,9 @@
   }
 
   // ---------- B10: homestead (Hearth Isle only, local save), gather spots, travel, medals ----------
-  const DAY = todayQ && /^\d{4}-\d{2}-\d{2}$/.test(todayQ) ? todayQ : (() => { try { return new Date().toISOString().slice(0, 10); } catch (e) { return ''; } })();
+  // the day key comes from Date.now() (the same source as the page clock and the save load), never from a bare `new Date()`: a second
+  // time source made the daily spots, sparkles and bonus finds follow the wall calendar even when the page clock is pinned (tests)
+  const DAY = todayQ && /^\d{4}-\d{2}-\d{2}$/.test(todayQ) ? todayQ : (() => { try { return new Date(Date.now()).toISOString().slice(0, 10); } catch (e) { return ''; } })();
   const tileName = (tx, ty) => NAMES[O.tileAt(world, tx, ty)] || '';
   const WET = { deep_water: 1, shallow_water: 1, abyss: 1, lagoon: 1, dust_sea: 1 };
   const homeO = HOME ? HS.origin(world.spawnPoint, world.center, W, H) : null;
@@ -1956,12 +2020,18 @@
   if (!save.spark || save.spark.day !== DAY) save.spark = { day: DAY, n: {} };
   let sparkle = null, sparkTry = 0;
   function sparkTick() {
-    if (!POUCH || !CRAFT || hero.dead || simT - lastRewardT < POUCH.SPARKLE_AFTER) return;
+    // the first-ten-minutes pity (MMIslePouch.PITY_*): a soak does not reset it, placed 2-3 steps away and no daily cap, so a fresh player
+    // never waits long whatever the spawns did; it is still a plain seeded find (own MMRng stream), it never expires or nags
+    const pity = !!(POUCH && POUCH.PITY_AFTER) && simT < POUCH.PITY_WINDOW;
+    const since = pity ? simT - lastFindT : simT - lastRewardT;
+    // never while you are low on air (mars): a find must not lure you away from the way back to a dome
+    if (!POUCH || !CRAFT || hero.dead || envS.warnO || envS.emptyO || since < (pity ? POUCH.PITY_AFTER : POUCH.SPARKLE_AFTER)) return;
     // an unpicked sparkle you walked far away from moves back near you (it is the same sparkle: the day's count does not grow)
     const moving = !!sparkle && sparkle.until === 0;
     if (moving && Math.hypot((sparkle.x + 0.5) * TILE - hero.x, (sparkle.y + 0.5) * TILE - hero.y) <= (POUCH.SPARKLE_R + 4) * TILE) return;
     const used = (save.spark.n[ISLE] | 0) - (moving ? 1 : 0);
-    if (used >= POUCH.SPARKLES_PER_DAY || (bz.engaged && bossAlive())) return;
+    // the daily cap (and the 40 s wait) after the first ten minutes; the pity window before that (MMIslePouch.sparkleDue)
+    if ((POUCH.sparkleDue ? !POUCH.sparkleDue(since, simT, used) : used >= POUCH.SPARKLES_PER_DAY) || (bz.engaged && bossAlive())) return;
     if (moving) { nodeAt.delete(sparkle.y * W + sparkle.x); sparkle.until = Infinity; }
     const rs = RNG.create('isles|spark|' + ISLE + '|' + SEED + '|' + DAY + '|' + used + '|' + (sparkTry++));
     // a tile the hero can walk to: a small flood fill (4-neighbour, <= SPARKLE_R steps) from the hero's tile, then one seeded pick among
@@ -1970,7 +2040,7 @@
     seen.set(q[0], 0);
     for (let h = 0; h < q.length; h++) {
       const i = q[h], st = seen.get(i), x = i % W, y = (i - x) / W;
-      if (st >= 2 && !nodeAt.has(i)) (st <= 6 ? near : far).push(i);
+      if (st >= 2 && !nodeAt.has(i)) (st <= (pity ? 3 : 6) ? near : far).push(i);
       if (st >= R) continue;
       for (let k = 0; k < 4; k++) {
         const nx = x + (k === 0) - (k === 1), ny = y + (k === 2) - (k === 3), ni = ny * W + nx;
@@ -2235,7 +2305,7 @@
     if (!(bz.engaged && bossAlive())) hero.hp = hero.maxHp;
     dirty = true;
     toast('Warm and rested. The hot spring soaks the cold away.');
-    logEvent('soak'); reward();
+    logEvent('soak'); reward(true);
   }
   function iceStep(dt) {
     if (!THIN_ICE) return;
@@ -2515,11 +2585,45 @@
   const panel = $('panel'), panelBody = $('panel-body'), panelTitle = $('panel-title');
   let panelKind = '';
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
-  function closePanel() { panel.hidden = true; panelKind = ''; paused = false; }
+  let panelOpener = null, viaKeys = false; // BB: a keyboard player's focus goes back to what opened the panel, never lost on <body>
+  window.addEventListener('keydown', () => { viaKeys = true; }, true); window.addEventListener('pointerdown', () => { viaKeys = false; }, true);
+  function closePanel() {
+    const was = !panel.hidden;
+    if (was) cue('ui_close');
+    panel.hidden = true; panelKind = ''; paused = false; document.body.classList.remove('panel-open');
+    const back = panelOpener; panelOpener = null;
+    if (was && viaKeys && back && back.focus && document.activeElement && (document.activeElement === document.body || panel.contains(document.activeElement)) && back.offsetParent !== null) { try { back.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+  }
+  // 8B: the Pack (one button): a tabbed panel - Party (home dock + party), Craft, Log, Help. Other panels (sea chart, decor, trophies) stay
+  // tab-less. The tab row and the party block are static DOM; only their hidden / aria-selected flags change.
+  const PACK_TABS = { party: $('tab-party'), craft: $('btn-craft'), log: $('btn-log'), help: $('tab-help') };
+  const packTabs = $('pack-tabs'), packParty = $('pack-party');
+  function packHud(kind) {
+    const inPack = Object.prototype.hasOwnProperty.call(PACK_TABS, kind);
+    packTabs.hidden = !inPack;
+    packParty.hidden = kind !== 'party';
+    Object.keys(PACK_TABS).forEach((k) => { PACK_TABS[k].setAttribute('aria-selected', String(k === kind)); PACK_TABS[k].classList.toggle('on', k === kind); });
+  }
+  const HOWTO = Array.prototype.map.call(document.querySelectorAll('#howto-list li'), (li) => li.textContent);
   function openPanel(kind) {
     while (panelBody.firstChild) panelBody.removeChild(panelBody.firstChild);
     panelKind = kind;
-    if (kind === 'sail') {
+    packHud(kind);
+    if (kind === 'party') {
+      panelTitle.textContent = 'Pack';
+      const pl = $('party-list');
+      while (pl.firstChild) pl.removeChild(pl.firstChild);
+      if (!party.length) pl.appendChild(el('li', 'dim', 'No party yet. Soothe a creature, then feed it.'));
+      party.forEach((p) => { const li = el('li', '', (p.ent.nm || p.def.name) + ' (' + p.cs.mode + ')'); li.dataset.tame = p.ent.id; pl.appendChild(li); });
+      panelBody.appendChild(el('p', 'dim', 'Stable ' + tames.roster.length + '. XP ' + xp + '. ' + (HOME ? 'You are home.' : 'Home dock takes you home.')));
+    } else if (kind === 'help') {
+      panelTitle.textContent = 'Help';
+      const ol = el('ol', 'howto-list'); ol.id = 'help-list';
+      HOWTO.forEach((t) => ol.appendChild(el('li', '', t)));
+      panelBody.appendChild(ol);
+      panelBody.appendChild(el('p', 'dim', $('help').textContent));
+      if (window.MMSettings) { const sb = el('button', 'dest', 'Settings: text, sound, controls'); sb.type = 'button'; sb.id = 'help-settings'; sb.addEventListener('click', () => openSettings()); panelBody.appendChild(sb); } // BB
+    } else if (kind === 'sail') {
       panelTitle.textContent = 'Sea chart';
       panelBody.appendChild(el('p', 'calm', 'The boat is ready whenever you are. Where to?'));
       DESTS.filter((id) => id !== ISLE).forEach((id) => {
@@ -2588,10 +2692,13 @@
       panelBody.appendChild(fb);
       mountFeedback(fb);
     }
+    if (panel.hidden) { cue('ui_open'); const a = document.activeElement; panelOpener = a && a !== document.body && !panel.contains(a) ? a : null; }
     panel.hidden = false;
+    document.body.classList.add('panel-open'); // BB: the hint line hides under an open panel
+    $('howto').hidden = true; // 8B: the first-visit how-to never sits under a panel
     paused = true;
     if (window.MMNav) { try { window.MMNav.close(); } catch (e) { /* ignore */ } } // never two dialogs at once
-    const first = panelBody.querySelector('button') || $('panel-close');
+    const first = (kind === 'party' && !$('btn-home').hidden ? $('btn-home') : null) || panelBody.querySelector('button') || $('panel-close');
     try { first.focus(); } catch (e) { /* ignore */ }
   }
   $('panel-close').addEventListener('click', closePanel);
@@ -2797,7 +2904,7 @@
   }
   // the party command: follow -> stay -> attack (MMCompanion.setMode on every active companion)
   const CMD_ORDER = ['follow', 'stay', 'attack'];
-  const CMD_NAME = { follow: 'Follow', stay: 'Stay', attack: 'Attack' };
+  const CMD_NAME = { follow: 'Follow', stay: 'Stay', attack: 'Fight' }; // BB: 'Fight', not a second 'Attack' next to the big ATTACK button (the aria label keeps 'attack')
   let cmdMode = '';
   function showCmd(mode) {
     if (cmdMode === mode) return;
@@ -2811,7 +2918,7 @@
     const cur = CMD_ORDER.indexOf(party[0].cs.mode);
     const next = CMD_ORDER[(cur + 1) % CMD_ORDER.length];
     party.forEach((p) => CMP.setMode(p.cs, next));
-    showCmd(next);
+    showCmd(next); cue('select');
     toast({ follow: 'Party: follow me.', stay: 'Party: stay here.', attack: 'Party: attack!' }[next]);
     return next;
   }
@@ -2834,6 +2941,7 @@
     // the calm hint line + the Feed / Soothe / Ride buttons
     const ft = TAME ? feedTarget() : null;
     showBtn('feed', !!ft || bossFeedable());
+    feedHud(ft);
     bossHud();
     envHud();
     showBtn('soothe', TAME);
@@ -2912,8 +3020,8 @@
     }
     if (bz.tele.length) return 'Step out of the glowing shape before it fills!';
     if (bz.onIce) return 'Thin ice: a little slippery. The hot springs are always safe.';
-    if (bz.st.sub) return 'The ' + nm + ' is under the water. Watch for bubbles.';
-    if (bz.st.dig) return 'The ' + nm + ' is underground.';
+    if (bz.st.sub) return 'The ' + nm + ' is under the water. Keep moving and watch for bubbles.';
+    if (bz.st.dig) return 'The ' + nm + ' is underground. Keep moving: it bursts up under a glowing shape.';
     return '';
   }
   const DIR8 = ['east', 'south-east', 'south', 'south-west', 'west', 'north-west', 'north', 'north-east'];
@@ -3012,10 +3120,17 @@
   document.addEventListener('keydown', (e) => {
     if (launch.on) { launchGo(true); e.preventDefault(); return; }
     if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (MI && MI.isTyping(e.target)) return; // BB: never read keys typed into a text field (the feedback box)
     if (KEYMAP[e.code]) { keys[KEYMAP[e.code]] = true; e.preventDefault(); }
     if (e.code === 'Space') { firing = true; aim = null; e.preventDefault(); }
+    // BB universal controls (CONTROLS.md, MMInput): Enter = primary (fire), Shift / E = secondary (the F action), Esc / P = menu.
+    // The old keys all stay. Enter on a focused button keeps clicking that button.
+    if (e.code === 'Enter' || e.code === 'NumpadEnter') { if (!panel.hidden || (e.target && e.target.closest && e.target.closest('button, a'))) return; firing = true; aim = null; e.preventDefault(); }
+    if ((e.code === 'ShiftLeft' || e.code === 'ShiftRight' || (e.code === 'KeyE' && !build)) && !e.repeat && panel.hidden) secondary();
+    if (e.code === 'Escape' && panel.hidden && !(SET && SET.isOpen())) { openMenu(); e.preventDefault(); return; }
+    if (e.code === 'KeyP' && !e.repeat && !nearPedestal() && panelKind !== 'trophy') { if (!panel.hidden) closePanel(); else openMenu(); return; }
     if (e.code === 'KeyM') toggleMap();
-    if (e.code === 'KeyF' && !e.repeat) { if (ride && abil && !(TAME && feedTarget()) && !bossFeedable()) useAbility(); else feed(); } // XW1: F = the mount ability while riding (feeding still wins next to a creature)
+    if (e.code === 'KeyF' && !e.repeat) secondary(); // XW1: F = the mount ability while riding (feeding still wins next to a creature)
     if (e.code === 'KeyQ' && !e.repeat) toggleSoothe();
     if (e.code === 'KeyR' && !e.repeat) toggleRide();
     if (e.code === 'KeyG' && !e.repeat) gatherNear();
@@ -3028,7 +3143,32 @@
     if (e.code === 'KeyE' && !e.repeat && build) buildAt(tileOf(hero.x + hero.face.x * TILE), tileOf(hero.y + hero.face.y * TILE));
     if (e.code === 'Escape' && !panel.hidden) closePanel();
   });
-  document.addEventListener('keyup', (e) => { if (KEYMAP[e.code]) keys[KEYMAP[e.code]] = false; if (e.code === 'Space') firing = false; });
+  document.addEventListener('keyup', (e) => { if (KEYMAP[e.code]) keys[KEYMAP[e.code]] = false; if (e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter') firing = false; });
+  // XW1: F (and the universal secondary: Shift, E, pad B / X) = the mount ability while riding; feeding still wins next to a creature
+  function secondary() { if (ride && abil && !(TAME && feedTarget()) && !bossFeedable()) return useAbility(); return feed(); }
+  // BB: Esc / P / pad Start open the shared Menu sheet (MMNav); without it, the Pack
+  function openMenu() {
+    if (window.MMNav && window.MMNav.mounted && window.MMNav.mounted()) { try { window.MMNav.open(); cue('ui_open'); return true; } catch (e) { /* fall through */ } }
+    openPanel('party'); return false;
+  }
+  // BB: a standard gamepad (MMInput.readPad): left stick / d-pad move, A fires, B / X = secondary, Start = menu. Polled once a frame,
+  // only while a pad is connected (no work and no allocation otherwise).
+  const MI = window.MMInput || null;
+  const pad = { on: false, st: null, prevSec: false, prevMenu: false };
+  window.addEventListener('gamepadconnected', () => { pad.on = true; });
+  function padPoll() {
+    if (!pad.on || !MI || !navigator.getGamepads) return;
+    let gp = null; try { const l = navigator.getGamepads(); for (let i = 0; l && i < l.length; i++) if (l[i]) { gp = l[i]; break; } } catch (e) { gp = null; }
+    if (!gp) { if (pad.st && pad.st.primary) firing = false; return; }
+    const r = pad.st = MI.readPad(gp, pad.st || undefined);
+    padVec.x = r.move.x; padVec.y = r.move.y;
+    if (r.primary) { firing = true; aim = null; } else if (pad.wasFire) firing = false;
+    pad.wasFire = r.primary;
+    if (r.secondary && !pad.prevSec && panel.hidden) secondary();
+    if (r.menu && !pad.prevMenu) { if (!panel.hidden) closePanel(); else openMenu(); }
+    pad.prevSec = r.secondary; pad.prevMenu = r.menu;
+  }
+  const padVec = { x: 0, y: 0 };
   window.addEventListener('blur', () => { Object.keys(keys).forEach((k) => { keys[k] = false; }); firing = false; stick.x = stick.y = 0; });
   view.addEventListener('pointerdown', (e) => {
     if (build) { buildAt(tileOf(e.clientX + camX), tileOf(e.clientY + camY)); return; } // decorating: taps place / pick up, never fire
@@ -3056,7 +3196,7 @@
   ['pointerup', 'pointercancel', 'pointerleave'].forEach((t) => fireBtn.addEventListener(t, () => { firing = false; }));
   function toggleMap() { mini.hidden = !mini.hidden; $('mini-wrap').hidden = mini.hidden; $('btn-map').setAttribute('aria-pressed', String(!mini.hidden)); }
   $('btn-map').addEventListener('click', toggleMap);
-  function toggleSoothe() { if (!TAME) return false; soothe = !soothe; btn.soothe.setAttribute('aria-pressed', String(soothe)); setIco(btn.soothe.querySelector('.ico'), soothe ? 'ui_tranq_on' : 'ui_tranq_off'); toast(soothe ? 'Soothe shots: they build torpor.' : 'Normal shots.'); return soothe; }
+  function toggleSoothe() { if (!TAME) return false; soothe = !soothe; cue(soothe ? 'select' : 'back'); btn.soothe.setAttribute('aria-pressed', String(soothe)); setIco(btn.soothe.querySelector('.ico'), soothe ? 'ui_tranq_on' : 'ui_tranq_off'); toast(soothe ? 'Soothe shots: they build torpor.' : 'Normal shots.'); return soothe; }
   btn.feed.addEventListener('click', () => { feed(); });
   btn.soothe.addEventListener('click', () => { toggleSoothe(); });
   btn.ride.addEventListener('click', () => { toggleRide(); btn.ride.setAttribute('aria-pressed', String(!!ride)); });
@@ -3067,8 +3207,22 @@
   btn.build.addEventListener('click', () => { setBuild(!build); });
   btn.home.addEventListener('click', () => { travelTo('home'); });
   btn.trophy.addEventListener('click', () => { if (panelKind === 'trophy') closePanel(); else openPanel('trophy'); });
-  btn.log.addEventListener('click', () => { if (panelKind === 'log') closePanel(); else openPanel('log'); });
-  $('btn-craft').addEventListener('click', () => { if (panelKind === 'craft') closePanel(); else openPanel('craft'); });
+  btn.log.addEventListener('click', () => { if (panelKind !== 'log') openPanel('log'); });
+  $('btn-craft').addEventListener('click', () => { if (panelKind !== 'craft') openPanel('craft'); });
+  $('tab-party').addEventListener('click', () => { if (panelKind !== 'party') openPanel('party'); });
+  $('tab-help').addEventListener('click', () => { if (panelKind !== 'help') openPanel('help'); });
+  $('btn-pack').addEventListener('click', () => { if (PACK_TABS[panelKind]) closePanel(); else openPanel('party'); });
+  // 8B: the short how-to shows once, on the first visit (no island in the archipelago save yet: no new storage key), and never blocks a
+  // tap (pointer-events: none); the Help tab keeps it
+  (function howto() {
+    const box = $('howto');
+    if (!FIRST_VISIT) return;
+    box.hidden = false;
+    const hide = () => { box.hidden = true; };
+    setTimeout(hide, 9000);
+    window.addEventListener('keydown', function once() { setTimeout(hide, 2500); window.removeEventListener('keydown', once); });
+    window.addEventListener('pointerdown', function once() { setTimeout(hide, 2500); window.removeEventListener('pointerdown', once); });
+  })();
   const coarse = (() => { try { return window.matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } })();
   if (coarse || Q.get('touch') === '1' || ('ontouchstart' in window && window.innerWidth <= 700)) document.body.classList.add('touch');
   // PI2: one-thumb layout. On touch the mount ability button moves next to the move stick (the same thumb reaches both); off, it goes
@@ -3091,6 +3245,7 @@
   function inputVec() {
     let mx = (keys.r ? 1 : 0) - (keys.l ? 1 : 0), my = (keys.d ? 1 : 0) - (keys.u ? 1 : 0);
     if (stick.x || stick.y) { mx = stick.x; my = stick.y; }
+    else if (padVec.x || padVec.y) { mx = padVec.x; my = padVec.y; }
     vec.mx = mx; vec.my = my;
     return vec;
   }
@@ -3122,6 +3277,7 @@
     if (saveT <= 0) { saveT = 4; if (dirty) persist(); }
   }
   let paused = false, last = performance.now();
+  let SET = null; // BB: the shared Settings sheet (MMSettings), mounted with the Menu below
   function frame(now) {
     const dt = Math.min(0.05, Math.max(0, (now - last) / 1000));
     last = now;
@@ -3131,7 +3287,8 @@
       requestAnimationFrame(frame);
       return;
     }
-    if (!paused) {
+    padPoll();
+    if (!paused && !(SET && SET.isOpen())) { // BB: the Settings sheet pauses the island like the Pack does
       const v = inputVec();
       if (firing) { if (aim) fire(aim.x - (hero.x - camX), aim.y - (hero.y - camY)); else fire(0, 0); }
       update(dt, v.mx, v.my);
@@ -3171,9 +3328,29 @@
         NAV.markPlace('isles', isleName(ISLE), 'game/games/isles/index.html?isle=' + (ISLE_PARAM[ISLE] || ISLE));
         NAV.onOpen(() => { if (!panel.hidden) closePanel(); paused = true; });
         NAV.onClose(() => { if (panel.hidden) paused = false; });
-        NAV.onSettings(() => openPanel('log'));
+        NAV.onSettings(() => openSettings());
+        { const lg = $('back'); if (lg) { lg.tabIndex = -1; lg.setAttribute('aria-hidden', 'true'); } } // BB: the hidden legacy link is no keyboard stop (the Menu has Back)
       }
     } catch (e) { /* the isles work without the shared menu */ }
+  }
+  // BB: the shared Settings sheet (SETTINGS-WIRING.md). The Log tab keeps its own feedback box, so the sheet mounts without one.
+  // Live changes: one-thumb, sound and music apply at once; low graphics / reduce motion reshape the island on its next load.
+  if (window.MMSettings) {
+    try { SET = window.MMSettings.mount({ page: 'isles', feedback: false }); } catch (e) { SET = null; }
+  }
+  function openSettings() { if (!SET) { openPanel('log'); return false; } if (!panel.hidden) closePanel(); paused = false; SET.open(); cue('ui_open'); return true; }
+  window.addEventListener('mm-settings-change', (e) => {
+    const d = e && e.detail || {}, v = !!d.value;
+    if (d.id === 'one-thumb') setOneThumb(v);
+    else if (d.id === 'auto-fire' || d.id === 'aim-toggle') { ONE_THUMB = OT_KEYS.every((k) => { try { return S.getItem(k) === '1'; } catch (er) { return false; } }); applyOneThumb(); }
+    else if (d.id === 'sound' && sfx) { sfx.setMuted(!v); if (v) cue('confirm'); }
+    else if (d.id === 'music' && sfx) { sfx.setMusic(v); if (v) sfx.music(HOME ? 'hub' : 'realm'); }
+    else if (d.id === 'low-gfx' || d.id === 'reduce-motion') { if (window.MMSettings && window.MMSettings.toast) window.MMSettings.toast('Applies when the island next loads.'); }
+  });
+  // BB: music (off by default, the shared Music setting) can only start from a gesture: the first tap or key asks for this island's cue
+  if (sfx) {
+    const startMusic = () => { window.removeEventListener('pointerdown', startMusic, true); window.removeEventListener('keydown', startMusic, true); try { if (sfx.musicOn) sfx.music(HOME ? 'hub' : 'realm'); } catch (e) { /* ignore */ } };
+    window.addEventListener('pointerdown', startMusic, true); window.addEventListener('keydown', startMusic, true);
   }
 
   // ---------- test handle ----------
@@ -3181,6 +3358,7 @@
     const snap = () => ({ x: hero.x, y: hero.y, tx: tileOf(hero.x), ty: tileOf(hero.y), hp: hero.hp, maxHp: hero.maxHp, scale: hero.scale, dead: hero.dead,
       terrain: NAMES[O.tileAt(world, tileOf(hero.x), tileOf(hero.y))] });
     window.__isles = {
+      sounds: () => SOUNDS.slice(), settings: () => (SET ? { open: SET.isOpen() } : null), feedLabel: () => btn.feed.textContent, // BB
       world: world, pack: PACK_ID, isle: ISLE, seed: SEED, tile: TILE, art: ART, low: LOW, hero: snap, heroInfo: () => Object.assign({}, HERO), packSpecies: PACK_SPECIES.slice(),
       clock: clock,
       verify: () => O.verify(world),

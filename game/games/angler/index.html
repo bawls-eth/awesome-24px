@@ -4,13 +4,25 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Lakeside Angler</title>
+<link rel="stylesheet" href="../../shared/mm-8bit.css">
+<link rel="stylesheet" href="../../shared/mm-minikit.css">
+<link rel="stylesheet" href="../../shared/mm-settings.css">
 <link rel="stylesheet" href="angler.css">
+<script src="../../shared/mm-8bit.js"></script>
 <script src="../../shared/mm-access.js"></script>
 <script src="../../shared/mm-side-access.js"></script>
 <script src="../../shared/mm-perf.js"></script>
 <link rel="stylesheet" href="../../shared/mm-nav.css">
 </head>
 <body>
+<section id="pregame" class="overlay" aria-label="How to play" hidden>
+  <div class="panel">
+    <h2>Lakeside Angler</h2>
+    <p id="pg-how"></p>
+    <p id="pg-keys" class="rule"></p>
+    <button class="btn primary" id="pg-play" type="button">Play</button>
+  </div>
+</section>
 <header class="bar">
   <a class="btn back" href="../../hub/index.html" id="back-hub">Hub</a>
   <a class="btn back" href="../../index.html" id="back-town">Town</a>
@@ -22,11 +34,13 @@
   <span id="bait-box">Bait <output id="bait-val">0</output> <small id="bait-type"></small></span>
   <span id="bells-box">Bells <output id="bells-val">0</output></span>
   <span id="bug-sum" hidden></span>
+  <span id="cond" hidden></span>
   <button class="btn" id="tourney-btn" type="button">Tournament</button>
   <button class="btn" id="market-btn" type="button">Market</button>
   <button class="btn" id="aquarium-btn" type="button">Aquarium</button>
   <button class="btn" id="gear-btn" type="button">Gear <span id="gear-sum"></span></button>
 </div>
+<p id="cond-line" hidden></p>
 <main id="stage">
   <canvas id="scene" width="320" height="480" aria-label="Fishing scene"></canvas>
   <p id="msg" role="status" aria-live="polite">Pick a spot, then cast.</p>
@@ -34,12 +48,7 @@
     <div id="boss-bar" role="progressbar" aria-label="Line strain" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-phase="calm"><span id="boss-fill"></span><span id="boss-label"></span></div>
     <button class="btn primary" id="reel-btn" type="button">Hold to reel</button>
   </div>
-  <section id="result" class="panel" hidden>
-    <h2 id="res-title"></h2>
-    <p id="res-detail"></p>
-    <p id="res-fun" hidden></p>
-    <button class="btn primary" id="res-ok" type="button">Cast again</button>
-  </section>
+  <section id="result" class="panel" hidden aria-label="Result" aria-live="polite"></section>
 </main>
 <nav id="spots" aria-label="Fishing spots"></nav>
 <section id="gear" class="overlay" hidden>
@@ -100,7 +109,11 @@
 <script src="../../shared/mm-angler-depth.js"></script>
 <script src="../../shared/mm-angler-boss.js"></script>
 <script src="../../shared/mm-angler-isles.js"></script>
+<script src="../../shared/mm-chip.js"></script>
 <script src="../../shared/sfx.js"></script>
+<script src="../../shared/mm-input.js"></script>
+<script src="../../shared/mm-minikit.js"></script>
+<script src="../../shared/mm-settings.js"></script>
 <script src="../../shared/mm-nav.js" data-mount="manual"></script>
 <script>
 (function () {
@@ -114,6 +127,7 @@
 }());
 </script>
 <script src="../../shared/profile.js"></script>
+<script src="../../shared/mm-save-merge.js"></script>
 <script src="angler.js"></script>
 </body>
 </html>

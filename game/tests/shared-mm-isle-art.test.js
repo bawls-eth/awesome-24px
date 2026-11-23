@@ -148,6 +148,18 @@ function stub() {
   if (halo.length || sides.length || old.length) console.log('  ' + halo.concat(sides, old).slice(0, 8).join(' '));
   const ja = []; await A.load({ loadImage: (u) => { ja.push(u); return Promise.resolve({ u }); } });
   check('jungle set unchanged: the default load still asks only the 48 b30 tiles', ja.length === 48 && ja.every((u) => /b30-jungle-terrain-base/.test(u)));
+  // 8B: code-drawn terrain detail (8 seeded variants, stepped edges), painted once per chunk on a stub ctx
+  {
+    const vs = new Set(); for (let y = 0; y < 40; y++) for (let x = 0; x < 40; x++) vs.add(A.detailVariant(x, y, 5));
+    check('8B detail: at least 6 seeded tile variants show up over a 40x40 field (8 in all)', A.DETAIL_VARIANTS >= 6 && vs.size >= 6);
+    const W2 = 16, H2 = 16, ter = new Array(W2 * H2).fill(2); for (let i = 0; i < W2 * 8; i++) ter[i] = 1; // shallow_water over sand
+    const paint = (seed) => { const ops = []; const ctx = { set fillStyle(v) { ops.push('c' + v); }, fillRect: (x, y, w, h) => ops.push([x, y, w, h].join()) };
+      return { n: A.detail(ctx, ter, W2, H2, 0, 0, { names: K.NAMES, palette: K.BIOME_PALETTES.jungle, tile: 32, ch: 16, seed: seed }), ops: ops }; };
+    const a1 = paint(5), a2 = paint(5), a3 = paint(6);
+    check('8B detail: same terrain + seed paint the same pixels; another seed paints different ones', a1.n === 256 && JSON.stringify(a1.ops) === JSON.stringify(a2.ops) && JSON.stringify(a1.ops) !== JSON.stringify(a3.ops));
+    const sandBase = K.BIOME_PALETTES.jungle.sand[0], edge = a1.ops.filter((o, i) => i > 0 && a1.ops[i - 1] === 'c' + sandBase && typeof o === 'string' && /^\d+,254,4,2$/.test(o));
+    check('8B detail: the water / sand border is a stepped line of sand-coloured 4 px steps (not a straight edge)', edge.length >= 16);
+  }
   console.log(bad ? bad + ' of ' + n + ' FAILED' : 'shared-mm-isle-art: ' + n + ' checks passed');
   process.exit(bad ? 1 : 0);
 })();

@@ -184,7 +184,7 @@ const links = (page) => page.evaluate(() => {
     await d.ctx.close();
   }
   {
-    const d = await open(browser, GAME('hub/index.html'), desk);
+    const d = await open(browser, GAME('hub/index.html?map=1') /* HS1 map view */, desk);
     await d.page.waitForFunction(() => window.__hub);
     const id = await d.page.evaluate(() => window.__hub.at);
     const p = await d.page.evaluate(() => window.__hub.nodeClient('w4-angler'));
@@ -198,7 +198,7 @@ const links = (page) => page.evaluate(() => {
 
   // ===== (3) round trip hub -> Hearthvale -> Back pill -> hub =====
   {
-    const d = await open(browser, GAME('hub/index.html'), desk);
+    const d = await open(browser, GAME('hub/index.html?map=1') /* HS1 map view */, desk);
     await d.page.waitForFunction(() => window.__hub);
     const node = await d.page.evaluate(() => (window.__hub.isReachable('w0-hearthvale') ? 'w0-hearthvale' : 'w1-hearthvale'));
     const p = await d.page.evaluate((n) => window.__hub.nodeClient(n), node);

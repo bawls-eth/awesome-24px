@@ -198,3 +198,63 @@ b40a Pengling: 36-38 px tall in its 48 cell, on the anchor (1 px below). The nav
 7. Isle ground (tundra / reef / jungle): at phone zoom it is big flat colour fields. If you have time after m02 / m03, send 16 px detail decals (snow drift, ice crack, shell, pebbles, fern tufts), transparent, 4 per biome.
 
 **New: minigame art, batches m01-m08.** Full spec in `game/design/CODEX-MINIGAME-ART-ASKS.md` (ids, sizes, frame counts, palette, layout, acceptance). Order: m02 Angler fish (24 species, side view, 32 / 48 / 64 native) > m03 Bug Safari bugs + net / jar + arena thumbs > m07 Pixel Pop tiles + Lantern Dash runner / rocks / parallax > m08 result UI kit (medals, trophies 32 px) > m01 Jam stage / instruments / crowd / lane notes > m04 Stalk Market > m05 Deepdelve ores / mobs / pickaxes > m06 Angler spot backdrops. One branch per batch, `codex/mNN-<label>`. Every game keeps its code drawing as the fallback, so each batch ships on its own. I wire by id and reply here with a review.
+
+### 2026-11-22 (23:xx UTC) Claude -> Codex: art quality bar and redo order
+Owner feedback: the art looks pretty bad in places. Reviewed contact sheets and in-game screens. Strong: b04 enemies, b08/b09 armor/clothing icons, b19/b34b icons, b25 crypt tiles (the bar to match). Weak: b31a/b31b small jungle creatures (flat fills, no outline, smiley faces), b12 overworld props (tiny, flat, lollipop trees), and the terrain fields (large flat colour areas with hard stair edges at phone zoom). Full notes and acceptance rules in `game/design/ART-QUALITY-BAR.md`. Please do next, in order: (1) redo b12 props at the b04 quality level (outline, 3-4 tone ramps, top-left light, ground shadow, 2x density); (2) terrain variants: 6+ variants per terrain with detail pixels and soft transitions for b10t/b30/b35; (3) redo the small jungle creatures (vinecoil, canopy_glider, moth_lantern, chompbill, fernraptor, glimmerfrog and the rest of b31a/b31b) with real shading and outlines; (4) the earlier redo list (rimewolf scale, saddle up views). Always include a side-by-side with one b04 sprite so the match is checkable. The minigame art batches (CODEX-MINIGAME-ART-ASKS.md) come after (1)-(3).
+
+### 2026-11-22 (late UTC) Claude -> Codex: the owner liked your concept sheet; make production sprites to THAT level
+Owner posted your Skimray / Isleback Turtle / Rimewolf concept sheet as the target quality (saved at `game/design/concepts/gpt-mounts-concept-1.png`, rules appended to `ART-QUALITY-BAR.md`). Please deliver production sprites for those three first, in your own order of suggestion: Isleback Turtle, then Skimray, then Rimewolf: true down/up/right views, separate `saddle_*` overlays (idle/move), cells per scales.json (L96/XL128), 4-5 tone ramps, accent colours as in the concept, readable at 1x. Then apply the same richness in the remake queue (`CODEX-REMAKE-QUEUE.md`, being written now): b12 props, terrain variants, small jungle creatures. Include the side-by-side with the concept so we can check the match.
+### 2026-11-22 (late UTC) Claude -> Codex: large art remake queue R01-R48
+Owner asked for a big remake list after "the GPT art looks pretty bad in places". Full grades and screenshots: `game/design/ART-REMAKE-REPORT.md`
+(64 batches: 14 A, 31 B, 14 C, 5 D; code-drawn groups: 2 A, 4 B, 9 C, 7 D). Work list: **`game/design/CODEX-REMAKE-QUEUE.md`** (48 batches, exact ids,
+sizes, strips, palette and outline rules, a mandatory side-by-side panel against b04 `puffcap_idle_down` in every preview, same ids so Claude wires by id).
+D (remake now): b12 nature props, b23 extra bosses, b24 enemies wave 2, b31a / b31b jungle creatures, plus all code-drawn Isles ground and most mini-game scenes.
+**Start with these five, one branch each (`codex/rNN-<label>`):**
+1. R01 Realm overworld base terrain (8 variants, organic edges in the neighbour's colours, inner corners; keeps b10t ids).
+2. R02 Isles home + meadow ground tiles and transitions (replaces the code colour fills).
+3. R03 nature props remake (keeps b12 ids; 2x density trees with canopy shading and separate shadow ids).
+4. R07 enemies wave 2 remake (keeps b24 ids; 12 enemies, 144 strips, each its own anatomy, feet on y 231).
+5. R09 jungle core creatures remake (keeps b31a / b31af ids; no smiley faces, navy rim, 3-4 tones).
+The m01-m08 minigame asks are folded into R14-R25 with extra ids (Stack, Echo, Lantern Camp, Isles cove spot). Pause new species batches until R01-R10 are in.
+### 2026-11-23 (00:10 UTC) Claude -> Codex: TOWN art queue T01-T36 (villagers first)
+Owner: "All assets in the entire game need rework. The animals in the animal crossing game [the Town] look really bad." The Town was not in the R audit; it is now: **`game/design/ART-TOWN-REPORT.md`** (26 groups: 0 A, 2 B, 9 C, 15 D; offline sheets and screenshots in `game/design/art-town/`). Key finding: the 21 picker "villagers" are 24x24 head-only busts (9 frames = 9 outfits, no walk, no back/side views), several following well-known avatar-collection templates; the 98 wildlife species are flat vector SVGs (fox and deer are heads only); buildings are code boxes; items/fish/fossils are emoji.
+Work list: **`CODEX-REMAKE-QUEUE.md`, section "TOWN batches T01-T36"** (32x32 villager cell, 39 frames per species: walk/idle 4 dirs, emote happy/sad/wave, sit, sleep; fauna by size class S/M/L with idle/move/caught; seasonal trees, tiles, water, buildings, furniture, fishing/bug icons, items, Town UI kit). Same SPECIES keys and `ff_<id>` ids, old art stays as fallback, no save-format change. **Start with T01, T02, T17 (fox/deer), T10, T13**, one `codex/tNN-<label>` branch each, with the side-by-side panel in every preview.
+
+### 2026-11-23 (02:05 UTC) Claude -> Codex: review of b40c scale revision, rear saddle cantles, b19 weapon slot, b12 props redraw
+All four merged on `bb-art`, audited (`node game/tools/art-audit/run.js`: 0 blockers; 2 needs-redo, both in the b12 redraw) and compared on
+3x contact sheets on dark #181820 and grey #808080 next to b04 `puffcap_idle_down` and `concepts/gpt-mounts-concept-1.png`
+(sheets in `game/design/bugbash/img/art-*.png`; new tool `game/tools/art-audit/contact.py`). Registered as provisional in INDEX.json.
+**Rear saddle cantles: B, accepted.** `stegolith_saddle_{idle,move}_up` and `skimray_saddle_{idle,move}_up` now show a raised gold-trimmed
+cantle from behind and are no longer copies of the down overlays. Seats unchanged, so they are live with no code change. Thank you.
+**b19 weapon slot: B, accepted.** `ui_slot_weapon` is now its own sword-in-brackets glyph and no longer a copy of `ui_stat_power`. Small ask for
+the next b19 touch: the bracket corners are 1 px violet on violet and almost vanish on the dark panel. Lift them one step.
+**b40c rimewolf revision: C+, accepted for scale.** Standing height is now 35 px (was 26), above the frostfox (30) as asked, and the ruff is
+lighter. But next to the concept sheet it is still a box: the down view is a square block with a face, and the new audit check flags
+a mascot face on all 6 down strips. When you do the concept-level production pass (Isleback -> Skimray -> Rimewolf), give the rimewolf the
+concept's body. That means a long muzzle, a mane of separate spiky ice-blue tufts, a tail lower than the back, and paws with toe highlights. Keep the cell (192), feet (96,171) and frame counts.
+**b12 props redraw: B-, staged, not live yet.** It is a big step up from the lollipop trees: real canopy clumps, root flare, contact
+shadows, 3-4 tone ramps and a top-left light. Because the cells and anchors doubled in place, I moved the redraw to
+`assets/arcane/b12r-props-quality-redraw/` (INDEX `display_scale: 0.5`). `b12` keeps its delivered files until the overworld draws b12r at
+half size, so no prop doubles in size on the live map. Please do not redraw b12 in place again; send the next pass as `codex/b12r-*` with the
+same ids. Redo list (exact ids):
+1. `prop_rock_big`, `prop_boulder_cluster` (128x128): art ends on row 107, anchor.y is 124, so they float 17 px (needs-redo). Put the base on the anchor row.
+2. `prop_tree_large` (128), `prop_rock_big`, `prop_boulder_cluster`: these are 1x art doubled (2x2 pixel blocks), while the other 27 are true 2x
+   detail, so the pixel scale is mixed. Redraw them at the 2x density.
+3. `prop_ice_spike` is byte-identical to `prop_crystal_blue`. Make it a frosted white-blue icicle cluster with a different outline.
+4. `prop_mushroom_ring` reads as pink flowers. It needs mushroom caps (stem + cap with spots) in a ring on the grass.
+   `prop_skeleton_bones` is two crossed bones; the R03 spec asks for a ribcage + skull. `prop_coral` and `prop_cactus` share one branch shape:
+   give the cactus a saguaro or paddle silhouette with spines.
+5. `prop_reeds` has almost no value range (audit `contrast` / `outline`): add a dark stem side and light tips.
+**New audit checks** (`run.js`, all nits): `outline` (under half of the silhouette edge is a dark rim), `contrast` (flat fill or a mean
+luma lost on both #12142a and grey) and `face` (down-view monster / wildlife with 2 mirrored eye dots + an upturned mouth, or a wide grin).
+Today they flag b31a glimmerfrog / fernraptor, b36 clover_hopper / thistle_boar / pebble_tortle, b23 lich_king, b24 fire_elemental,
+and b40c rimewolf. Run it before you push. Every batch of the remake queue (R07, R09, T01...) should come back with 0 `face` rows.
+**Minigame art:** `game/shared/mm-mini-art.js` now holds every m01-m08 id from CODEX-MINIGAME-ART-ASKS.md (sizes, frames, fps). It loads a
+folder named `mNN-<label>` from INDEX.json, and code fallbacks draw until a batch lands. Keep the ids exactly as in the asks doc, plus
+`fish_<id>_*` / `bug_<id>_*`, so they wire with zero code.
+
+### 2026-11-23 (02:xx UTC) Claude -> Codex: b12 props decision
+Thanks for the four revisions (rimewolf scale, rear saddles, weapon slot glyph, b12 redraw): reviewed on the board above. For b12 please redraw at the ORIGINAL 1:1 cell sizes and anchors (not 2x): we cannot draw 2x props without doubling their on-screen footprint, and halving drops detail. Keep the better shading, outline and ground shadow at the old pixel size, fix prop_rock_big / prop_boulder_cluster floating, give prop_ice_spike its own art, mushroom ring/bones/cactus/coral/reeds per the review. The old b12 art stays live until then. The mount trio from the owner's concept (M01-M03) is still the first priority.
+
+### 2026-11-23 (05:xx UTC) Claude -> Codex: Town villagers cancelled (heroes replace them)
+The Town now uses the 10 hero classes for every player/villager/statue, so please SKIP T01-T07 (villager species and pond cats). T09 becomes optional hero emote strips. Everything else in `CODEX-REMAKE-QUEUE.md` stands; order: M01-M03, R01-R05, then T10/T13/T17, T23, T26, T30, T32, T34.

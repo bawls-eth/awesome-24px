@@ -4,8 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Bug Safari - Pixeltown</title>
+<link rel="stylesheet" href="../../shared/mm-8bit.css">
 <link rel="stylesheet" href="bugs.css">
+<script src="../../shared/mm-8bit.js"></script>
 <link rel="stylesheet" href="../../shared/mm-nav.css">
+<link rel="stylesheet" href="../../shared/mm-minikit.css">
 <script src="../../shared/mm-access.js"></script>
 <script src="../../shared/mm-side-access.js"></script>
 <script src="../../shared/mm-perf.js"></script>
@@ -23,6 +26,7 @@
     <span id="hud-score">0</span>
     <span id="hud-best" class="dim">Best 0</span>
     <span id="hud-arena"></span>
+    <span id="hud-mod" hidden></span>
     <div id="combo"><div id="combo-bar"></div><span id="combo-text"></span></div>
   </div>
   <div id="canvas-wrap"><canvas id="game" width="320" height="224" aria-label="Bug Safari field"></canvas>
@@ -34,12 +38,16 @@
     <button id="btn-sneak" type="button">Sneak</button>
     <button id="btn-swing" type="button">Swing</button>
   </div>
-  <p id="help">WASD / arrows walk. Hold Shift to sneak. Space or click swings the net.</p>
+  <p id="help">WASD / arrows walk. Hold Shift or E to sneak. Space, Enter or click swings the net. Esc or P pauses.</p>
 </main>
 <script src="../../shared/rng.js"></script>
 <script src="../../shared/store.js"></script>
 <script src="../../shared/mm-bugs.js"></script>
+<script src="../../shared/mm-chip.js"></script>
 <script src="../../shared/sfx.js"></script>
+<script src="../../shared/mm-input.js"></script>
+<script src="../../shared/mm-minikit.js"></script>
+<script src="../../shared/mm-settings.js"></script>
 <script src="../../shared/mm-nav.js" data-mount="manual"></script>
 <script>
 (function () {
@@ -53,6 +61,7 @@
 }());
 </script>
 <script src="../../shared/profile.js"></script>
+<script src="../../shared/mm-save-merge.js"></script>
 <script src="bugs.js"></script>
 </body>
 </html>

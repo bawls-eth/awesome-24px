@@ -81,7 +81,7 @@
     out.comets = uniq(strList(raw.comets, 100));
     out.tokens = int(raw.tokens, 0, MAX_TOKENS, 0);
     out.unlocks = uniq(strList(raw.unlocks, 200));
-    out.games = isObj(raw.games) ? raw.games : {};
+    out.games = (() => { const g = {}; if (isObj(raw.games)) Object.keys(raw.games).slice(0, 64).forEach((k) => { const e = raw.games[k]; if (!/^[a-z0-9_-]{1,24}$/.test(k) || !isObj(e)) return; const done = Array.isArray(e.done) ? e.done.filter((id, i, a) => typeof id === 'string' && id.length <= 40 && a.indexOf(id) === i).slice(0, 200) : []; let rest = {}; try { const s = JSON.stringify(e); if (s && s.length < 4000) rest = JSON.parse(s); } catch (x) { rest = {}; } if (Object.prototype.hasOwnProperty.call(rest, '__proto__')) delete rest.__proto__; g[k] = Object.assign(rest, { done }); }); return g; })(); // bug bash S4 (shared lane): bounded, so a 5 MB games value can no longer make every save() hit the quota
     out.results = (Array.isArray(raw.results) ? raw.results : []).map(cleanResult).filter(Boolean).slice(-MAX_RESULTS);
     return out;
   }
@@ -161,6 +161,16 @@
       ms('retire', 'Retire a hero at level 20', ['w2-lantern', 'normal', 'g'])],
   };
   const GAMES = Object.keys(MILESTONES);
+  // Pocket arcade games (additive group): each medal clears its own map node's bronze / silver / gold. Kept OUT of
+  // MILESTONES and GAMES so the W0 goals ("all 6 games") keep their meaning; done ids live in profile.games[game].done.
+  const arc = (node, ids) => ids.map((id, i) => ms(id[0], id[1], [node, 'normal', ['b', 's', 's', 'g'][i]]));
+  const ARCADE = {
+    pop: arc('w5-pop', [['round1', 'Finish a Pixel Pop round'], ['chain5', 'Set up a 5x chain'], ['tile9', 'Merge up to a level 9 tile'], ['score25k', 'Score 25,000 in one round']]),
+    dash: arc('w5-dash', [['run1', 'Finish a Lantern Dash run'], ['m500', 'Run 500 m'], ['perfect10', 'Chain 10 perfect jumps'], ['m1500', 'Run 1,500 m']]),
+    stack: arc('w5-stack', [['round1', 'Finish a Stack Tower round'], ['f15', 'Stack 15 floors'], ['perfect5', 'Land 5 Perfects in a row'], ['f40', 'Stack 40 floors']]),
+    echo: arc('w5-echo', [['round1', 'Finish an Echo Garden round'], ['t6', 'Echo a 6-note tune'], ['clean8', 'Echo an 8-note tune with no wilted leaf'], ['t10', 'Echo a 10-note tune']]),
+  };
+  const ARCADE_GAMES = Object.keys(ARCADE);
   // Cross-game goals, derived from the games' done lists (never from anything else).
   const FESTIVAL = [['bugs', 'catch1'], ['jam', 'star1'], ['stalk', 'bronze']];
   const DERIVED = [
@@ -170,9 +180,10 @@
     { node: 'w5-finale', label: 'Bug Safari first bug, Jam first star and a Stalk bronze week', test: (n, done) => FESTIVAL.every((f) => done(f[0]).includes(f[1])) },
   ];
   const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+  const groupOf = (game) => (own(MILESTONES, game) ? MILESTONES[game] : own(ARCADE, game) ? ARCADE[game] : null);
   function doneOf(p, game) {
     const g = isObj(p.games) && own(p.games, game) && isObj(p.games[game]) ? p.games[game] : {};
-    const ok = MILESTONES[game].map((m) => m.id);
+    const ok = groupOf(game).map((m) => m.id);
     return uniq(strList(g.done, 64).filter((id) => ok.includes(id)));
   }
   function applyHit(p, h, tokens) {
@@ -183,17 +194,19 @@
   // Pure: {profile, added: [milestone ids]}.
   function syncGame(profile, game, ids) {
     let p = sanitize(profile);
-    if (!own(MILESTONES, game)) return { profile: p, added: [] };
+    const group = groupOf(game);
+    if (!group) return { profile: p, added: [] };
     const want = uniq((Array.isArray(ids) ? ids : []).filter((s) => typeof s === 'string'));
     const done = doneOf(p, game);
     const added = [];
-    MILESTONES[game].forEach((m) => {
+    group.forEach((m) => {
       if (!want.includes(m.id) || done.includes(m.id)) return;
       m.hits.forEach((h, i) => { p = applyHit(p, h, i === 0 ? TOKENS : 0); });
       done.push(m.id); added.push(m.id);
     });
     if (!added.length) return { profile: p, added };
     p.games = Object.assign({}, p.games, { [game]: Object.assign({}, isObj(p.games[game]) ? p.games[game] : {}, { done }) });
+    if (!own(MILESTONES, game)) return { profile: p, added }; // arcade games never touch the cross-game W0 goals
     const doneFor = (g) => doneOf(p, g);
     const played = GAMES.filter((g) => doneFor(g).length > 0).length;
     DERIVED.forEach((d) => {
@@ -213,13 +226,13 @@
   // Read-only: the goals that clear a map node ({game|null, id|null, label, done}).
   function goalsFor(profile, nodeId) {
     const p = sanitize(profile), out = [];
-    GAMES.forEach((g) => {
+    GAMES.concat(ARCADE_GAMES).forEach((g) => {
       const done = doneOf(p, g);
-      MILESTONES[g].forEach((m) => { if (m.hits.some((h) => h.node === nodeId)) out.push({ game: g, id: m.id, label: m.label, done: done.includes(m.id) }); });
+      groupOf(g).forEach((m) => { if (m.hits.some((h) => h.node === nodeId)) out.push({ game: g, id: m.id, label: m.label, done: done.includes(m.id) }); });
     });
     DERIVED.forEach((d) => { if (d.node === nodeId) out.push({ game: null, id: null, label: d.label, done: !!(p.nodes[nodeId] && p.nodes[nodeId].exits.includes('normal')) }); });
     return out;
   }
 
-  return { KEY, TOWN_KEY, MAX_RESULTS, MILESTONES, DERIVED, defaults, sanitize, seedFromTown, load, save, reportResult, report, syncGame, sync, goalsFor };
+  return { KEY, TOWN_KEY, MAX_RESULTS, MILESTONES, ARCADE, DERIVED, defaults, sanitize, seedFromTown, load, save, reportResult, report, syncGame, sync, goalsFor };
 }));

@@ -25,6 +25,7 @@
 
   const $ = (id) => document.getElementById(id);
   const say = (t) => { $('msg').textContent = t || ''; };
+  const touchUI = () => { const t = $('touch'); return !!t && !t.hidden; };
   let msgTimer = 0;
   function toast(t) { say(t); clearTimeout(msgTimer); msgTimer = setTimeout(() => say(''), 2200); }
 
@@ -110,8 +111,10 @@
   const player = { x: 64.5, y: 0, z: 64.5, vy: 0, onGround: false, yaw: 0, pitch: 0, hp: 10, peak: 0, iframes: 0 };
   const input = { fwd: 0, strafe: 0, jump: false, mine: false, down: false };
   const keys = {};
+  let turnKeys = () => 0, pitchKeys = () => 0;
   let world = null, spawn = null, mouthOn = false, mouthSite = null;
-  const reduced = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) || !!(window.MMSideAccess && window.MMSideAccess.reduced());
+  const readReduced = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) || !!(window.MMSideAccess && window.MMSideAccess.reduced()) || document.documentElement.getAttribute('data-reduce-motion') === '1';
+  let reduced = readReduced(); // re-read when the Settings panel changes it (no reload needed)
   const META_KEY = 'pixeltown-deepdelve-v1', TOWN_KEY = 'pixeltown-save-v1';
   // Shared access prefs (pixeltown-access-v1, read-only): text size + reduce motion come via MMSideAccess; lowGfx starts the
   // quality governor at the low view and keeps it there; a colour-blind palette recolours the block outline and the creatures.
@@ -184,6 +187,7 @@
   function endRun(safe, why) {
     if (!run || !runRec) return null;
     const short = run.depth < 2 && run.blocks < 5; // a stumble near the surface is not worth a summary
+    runRec = RUNS.load(localStorage); // the freshest bests / counts: another tab may have dived meanwhile (bugbash/saves.md S2)
     const sum = RUNS.finish(runRec, run, safe);
     RUNS.save(localStorage, runRec);
     startRun();
@@ -208,6 +212,7 @@
     $('run-tip').textContent = sum.short > 0 && sum.short <= 5 ? 'Only ' + sum.short + ' blocks short of your deepest dive!' : sum.safe ? 'Surfacing alive pays x' + RUNS.SAFE_BONUS + '. Go deeper next time?' : 'Tip: climb back out alive for a x' + RUNS.SAFE_BONUS + ' score bonus. Chain breaks within ' + RUNS.COMBO_GAP + ' s for combos.';
     togglePanel('craft', false); togglePanel('goals', false);
     $('run-panel').hidden = false;
+    try { document.exitPointerLock(); } catch (e) { /* ignore */ }
     try { $('run-again').focus({ preventScroll: true }); } catch (e) { /* ignore */ }
   }
   function closeSummary() { $('run-panel').hidden = true; input.mine = false; }
@@ -559,6 +564,12 @@
     resize();
     return true;
   }
+  // Low graphics (Settings or the saved access pref): the governor starts at, and never restores above, the low view.
+  function applyLowGfx() {
+    if (ACCESS.lowGfx) { const i = LEVELS.findIndex((L) => L.view <= 3 && L.scale <= 0.75); govFloor = i < 0 ? 0 : i; gov.level = Math.max(gov.level, govFloor); }
+    else govFloor = 0;
+    applyLevel();
+  }
   // ---------- adaptive quality governor ----------
   // Lowers render scale, then view distance, when the rolling frame time is high; restores slowly when it is low.
   // At most one change per MIN_GAP ms; restores wait longer (and back off further if they bounce straight back).
@@ -580,7 +591,10 @@
     if (!phone && area > 0) r = Math.min(r, Math.max(0.6, Math.sqrt(MAX_PIXELS / area)));
     return r;
   }
-  const pixelRatio = () => basePixelRatio() * LEVELS[gov.level].scale;
+  // 8-bit pass: the 3D view renders at half resolution and the canvas is upscaled with image-rendering: pixelated, so every
+  // block face reads as chunky 2x2 pixels (and the fill cost halves twice). ?px=0 renders at the old full resolution.
+  const PX8 = params.get('px') === '0' ? 1 : 0.5;
+  const pixelRatio = () => basePixelRatio() * LEVELS[gov.level].scale * PX8;
   function govAvg() {
     if (!gov.count) return 0;
     let t = 0;
@@ -790,7 +804,7 @@
     if (!hit || hit.id === B.BEDROCK || hit.id === B.LAVA) { mineTarget = null; mineProg = 0; return; }
     const key = hit.cell.join(',');
     if (mineTarget !== key) { mineTarget = key; mineProg = 0; }
-    if (!CREATIVE && (NEED_TIER[hit.id] | 0) > pick.tier) { if (mineProg === 0) toast('Too hard! Needs a ' + TIER_NAME[NEED_TIER[hit.id]].toLowerCase() + ' pick or better. Open Craft (C) to make one.'); mineProg = 0.001; return; }
+    if (!CREATIVE && (NEED_TIER[hit.id] | 0) > pick.tier) { if (mineProg === 0) toast('Too hard! Needs a ' + TIER_NAME[NEED_TIER[hit.id]].toLowerCase() + ' pick or better. Open Craft' + (touchUI() ? '' : ' (C)') + ' to make one.'); mineProg = 0.001; return; }
     mineProg += dt * (1 + pick.tier * 0.4);
     if (mineProg >= (HARDNESS[hit.id] || 0.8) * (CREATIVE ? 0.35 : 1)) { mineBlock(hit.cell[0], hit.cell[1], hit.cell[2]); mineTarget = null; mineProg = 0; }
   }
@@ -847,6 +861,9 @@
     if (!world) return;
     if (shakeT > 0) { shakeT = Math.max(0, shakeT - dt); if (!shakeT) shakeAmp = 0; }
     if (!TEST) {
+      const ty = turnKeys(), tp = pitchKeys();
+      if (ty) player.yaw += ty * dt * 2.2;
+      if (tp) player.pitch = Math.max(-1.55, Math.min(1.55, player.pitch + tp * dt * 1.8));
       physics(dt); updateMining(dt);
       if (!CREATIVE) {
         tickMobs(dt); tickTime(dt);
@@ -873,22 +890,37 @@
       input.fwd = Math.max(-1, Math.min(1, input.fwd)); input.strafe = Math.max(-1, Math.min(1, input.strafe));
     }
     const joy = { x: 0, y: 0 };
+    // Keyboard (CONTROLS.md aliases): WASD/arrows move, Space/Enter jump, Shift/E place (Shift = down while flying), F mine,
+    // J/L/I/K look (so the whole game is reachable without a mouse), Esc/P close a panel or open the menu.
+    const TURN = { j: 1, l: -1, i: 1, k: -1 };
+    const typing = (e) => { const t = e.target, n = t && t.tagName; return !!t && (t.isContentEditable || n === 'INPUT' || n === 'TEXTAREA' || n === 'SELECT'); };
     window.addEventListener('keydown', (e) => {
-      const k = e.key.toLowerCase();
+      if (e.ctrlKey || e.metaKey || e.altKey || typing(e)) return; // browser shortcuts (Ctrl+C...) and text fields are never game keys
+      const k = (e.key || '').toLowerCase();
       if (KEYMAP[k]) { keys[k] = true; syncKeys(); e.preventDefault(); }
-      else if (k === ' ') { input.jump = true; e.preventDefault(); }
-      else if (k === 'shift') input.down = true;
+      else if (k === ' ' || k === 'enter') { if (k === 'enter' && e.target && e.target.tagName === 'BUTTON') return; input.jump = true; e.preventDefault(); }
+      else if (k === 'shift') { input.down = true; if (!flying() && !e.repeat) placeAtLook(); }
+      else if (k === 'e') { if (!e.repeat) { aim(); placeAtLook(); } }
+      else if (k === 'f') { aim(); input.mine = true; }
+      else if (TURN[k] !== undefined) { keys[k] = true; aim(); }
       else if (k === 'c') togglePanel('craft');
       else if (k === 't') craftTorch();
       else if (k === 'g') togglePanel('goals');
       else if (k === 'm') setMode(meta.mode === 'creative' ? 'survival' : 'creative');
-      else if (k === 'escape') { togglePanel('craft', false); togglePanel('goals', false); closeSummary(); }
+      else if (window.MMInput ? MMInput.actionOf(e) === 'menu' : (k === 'escape' || k === 'p')) { if (!closeAll() && window.MMNav && MMNav.open) MMNav.open(); }
       else if (/^[1-9]$/.test(k)) { const it = hotbarItems()[+k - 1]; if (it) { sel = it.item; renderHud(); } }
     });
     window.addEventListener('keyup', (e) => {
-      const k = e.key.toLowerCase();
-      if (KEYMAP[k]) { keys[k] = false; syncKeys(); } else if (k === ' ') input.jump = false; else if (k === 'shift') input.down = false;
+      const k = (e.key || '').toLowerCase();
+      if (KEYMAP[k]) { keys[k] = false; syncKeys(); } else if (k === ' ' || k === 'enter') input.jump = false; else if (k === 'shift') input.down = false;
+      else if (k === 'f') input.mine = false; else if (TURN[k] !== undefined) keys[k] = false;
     });
+    // losing focus (alt-tab, a dialog, the Menu sheet) must not leave a key "held": the player would walk or mine on alone
+    const releaseAll = () => { Object.keys(keys).forEach((k) => { keys[k] = false; }); input.jump = false; input.down = false; input.mine = false; syncKeys(); };
+    window.addEventListener('blur', releaseAll);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); });
+    turnKeys = () => (keys.j ? 1 : 0) + (keys.l ? -1 : 0);
+    pitchKeys = () => (keys.i ? 1 : 0) + (keys.k ? -1 : 0);
     cv.addEventListener('contextmenu', (e) => e.preventDefault());
     cv.addEventListener('wheel', (e) => {
       const items = hotbarItems(); if (!items.length) return;
@@ -910,6 +942,8 @@
     });
     // touch: look by dragging the canvas, joystick, buttons
     if (coarse || 'ontouchstart' in window) $('touch').hidden = false;
+    // touch players have no keys: the key letters in the tool labels would only confuse them
+    if (!$('touch').hidden) { $('open-craft').textContent = 'Craft'; $('open-goals').textContent = 'Goals'; $('mode-btn').setAttribute('aria-label', CREATIVE ? 'Toggle flying' : 'Toggle creative mode'); }
     let lookId = null, lx = 0, ly = 0;
     cv.addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse') return; lookId = e.pointerId; lx = e.clientX; ly = e.clientY; try { cv.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ } });
     cv.addEventListener('pointermove', (e) => {
@@ -1153,6 +1187,12 @@
     $('smelt-gold').disabled = !near || !MMRecipes.canSmelt(inv, 'gold_ore');
     $('ingots').textContent = 'Iron ore ' + (inv.iron_ore | 0) + ', gold ore ' + (inv.gold_ore | 0) + ', coal ' + (inv.coal | 0) + ' | iron ' + (inv.iron | 0) + ', gold ' + (inv.gold | 0);
   }
+  // Closes whatever panel is open (crafting, goals, dive summary). Returns true when something was open.
+  function closeAll() {
+    const was = ['craft-panel', 'goals-panel', 'run-panel'].some((id) => !$(id).hidden);
+    togglePanel('craft', false); togglePanel('goals', false); closeSummary();
+    return was;
+  }
   function togglePanel(name, on) {
     const el = $(name + '-panel'), want = on === undefined ? el.hidden : on;
     ['craft', 'goals'].forEach((n) => { $(n + '-panel').hidden = true; });
@@ -1164,7 +1204,7 @@
     meta.mode = name === 'creative' ? 'creative' : 'survival';
     if (meta.mode === 'survival') { player.vy = 0; player.peak = player.y; }
     saveMeta(); renderHud();
-    toast(CREATIVE ? (meta.mode === 'creative' ? 'Flying: Space up, Shift down.' : 'Walking. Nothing can hurt you here.') : meta.mode === 'creative' ? 'Creative: Space up, Shift down, no fall damage.' : 'Survival: fall damage on.');
+    toast(CREATIVE ? (meta.mode === 'creative' ? (touchUI() ? 'Flying: Jump up, Down down.' : 'Flying: Space up, Shift down.') : 'Walking. Nothing can hurt you here.') : meta.mode === 'creative' ? (touchUI() ? 'Creative: Jump up, Down down, no fall damage.' : 'Creative: Space up, Shift down, no fall damage.') : 'Survival: fall damage on.');
   }
   // The "Creative world" / "Survival world" toggle: saves, then reloads the page on the other world (seed and flags kept).
   function worldUrl() {
@@ -1721,7 +1761,7 @@
         return { faces: m.faceCount, solid, naive: solid * 6 };
       },
       settle() { manage(Infinity); }, flush, loadedMeshes: () => meshes.size, meshFaces() { let n = 0; meshes.forEach((e) => { n += e.faces; }); return n; },
-      pick, slimes, meta: () => meta, reduced, bob: () => bobOffset, sanitiseMeta, META_KEY,
+      pick, slimes, meta: () => meta, get reduced() { return reduced; }, bob: () => bobOffset, sanitiseMeta, META_KEY,
       setMode, craftRecipe, smeltOre, furnaceNear, checkGoals, lakeCheck, hurt, tickMobs, spawnSlime, autoSpawn, attackSlime, die,
       cellLight, panel: togglePanel, setPick(t, dur) { pick.tier = t; pick.dur = dur === undefined ? PICK_DUR[t] : dur; renderHud(); },
       benches, benchNear, benchAtLook, pickUpBench, placeBench, craftRows: () => MMDDCraft.annotate(inv, { furnace: furnaceNear(), bench: benchNear() }),
@@ -1741,7 +1781,7 @@
 
   // First hint: touch players get touch words (they have no mouse buttons or keys); both learn the dive goal.
   function introText() {
-    const how = $('touch').hidden ? 'Click the view to look around. Hold left to mine, right to place. WASD + Space.' : 'Drag the view to look, use the stick to move, hold Mine to dig.';
+    const how = $('touch').hidden ? 'Click the view to look around. Hold left to mine (or F), right to place (or E). WASD + Space, Esc for the menu.' : 'Drag the view to look, use the stick to move, hold Mine to dig.';
     return CREATIVE ? how : how + ' Dive deep, then climb back out for a bonus.';
   }
   // ---------- boot ----------
@@ -1780,7 +1820,12 @@
       try {
         const d = JSON.parse(savedPlayer);
         if (d && d.inv && typeof d.inv === 'object') for (const k of Object.keys(d.inv)) if (typeof d.inv[k] === 'number' && isFinite(d.inv[k])) inv[k] = Math.max(0, Math.min(9999, d.inv[k] | 0));
-        if (Array.isArray(d.pos) && d.pos.every((v) => typeof v === 'number' && isFinite(v))) { player.x = d.pos[0]; player.y = d.pos[1]; player.z = d.pos[2]; player.peak = player.y; }
+        if (Array.isArray(d.pos) && d.pos.length >= 3 && d.pos.every((v) => typeof v === 'number' && isFinite(v))) {
+          // a hostile or damaged save cannot park the player outside the world or inside solid rock
+          const wx = SIZE * MMChunks.WORLD.cx, wz = SIZE * MMChunks.WORLD.cz, hy = SIZE * MMChunks.WORLD.cy;
+          const px = Math.max(1, Math.min(wx - 1, d.pos[0])), py = Math.max(-(hy - 3), Math.min(3, d.pos[1])), pz = Math.max(1, Math.min(wz - 1, d.pos[2]));
+          if (!collides(px, py, pz)) { player.x = px; player.y = py; player.z = pz; player.peak = player.y; }
+        }
         if (typeof d.sel === 'string') sel = d.sel;
         MMDDCraft.cleanBenches(d.benches).forEach((b) => benches.push(b));
         if (typeof d.t === 'number' && isFinite(d.t)) clock.t = MMDDTime.norm(d.t);
@@ -1798,7 +1843,13 @@
     wyrmInit();
     applyTime(true);
     initRenderer();
-    if (ACCESS.lowGfx) { const i = LEVELS.findIndex((L) => L.view <= 3 && L.scale <= 0.75); govFloor = i < 0 ? 0 : i; gov.level = Math.max(gov.level, govFloor); applyLevel(); }
+    applyLowGfx();
+    window.addEventListener('mm-settings-change', (ev) => {
+      const id = ev && ev.detail && ev.detail.id;
+      if (id === 'reduce-motion') reduced = readReduced();
+      else if (id === 'low-gfx') { ACCESS.lowGfx = ev.detail.value === true; applyLowGfx(); }
+      else if (id === 'sound') { try { if (sfxBox && sfxBox.setMuted) sfxBox.setMuted(ev.detail.value === false); } catch (e) { /* audio is optional */ } }
+    });
     if (outline && ACCESS.palette !== 'normal') outline.material.color.set(ACCESS.ally);
     bindControls();
     renderHud();

@@ -120,6 +120,19 @@
     };
   }
 
+  // VAR1 run variety (additive): one seeded modifier per run. The page shows the name, the one-line effect and the odds.
+  // Equal odds (1 in MOD_IDS.length). Stars and medals keep their rules (score thresholds); the modifier only changes the run.
+  const MODS = {
+    fireflies: { name: 'Fireflies Night', line: '3 bugs glow and are worth double points.', glow: 3, glowMult: 2 },
+    gusty: { name: 'Gusty', line: 'A breeze slowly pushes every bug one way. Points x1.1.', wind: 0.35, points: 1.1 },
+    sneaky: { name: 'Sneaky Season', line: 'Bugs notice you from 4 tiles instead of 3. Points x1.25.', scare: 4, points: 1.25 },
+    calm: { name: 'Calm Day', line: 'Bugs move at 70% speed. Points x0.8.', speed: 0.7, points: 0.8 }
+  };
+  const MOD_IDS = ['fireflies', 'gusty', 'sneaky', 'calm'];
+  function modFor(id) { return Object.prototype.hasOwnProperty.call(MODS, id) ? MODS[id] : null; }
+  // Pure: the same seed always gives the same modifier.
+  function pickMod(seed) { const r = rng('mod:' + seed); return MOD_IDS[Math.floor(r() * MOD_IDS.length) % MOD_IDS.length]; }
+
   function arena(id) { return ALL_ARENAS.find((a) => a.id === id) || null; }
   function starsFor(id, score) {
     const a = arena(id); if (!a) return 0;
@@ -147,10 +160,13 @@
     opts = opts || {};
     const r = rng(opts.seed === undefined ? 'bugs' : opts.seed);
     const night = !!opts.night, glade = !!opts.glade;
+    const MOD = modFor(opts.mod);
+    const SPD = MOD && MOD.speed ? MOD.speed : 1, SCARE = MOD && MOD.scare ? MOD.scare : SCARE_TILES, PTS = MOD && MOD.points ? MOD.points : 1;
     const W = opts.width || 20, H = opts.height || 14;
     const run = {
       time: 0, score: 0, caught: 0, combo: 0, bestCombo: 0, stillT: 0, flowers: [], nextGroup: 1, lastCatchAt: -1e9, cooldown: 0, rareSpawned: false, done: false,
-      player: { x: W / 2, y: H / 2, sneaking: false }, bugs: [], nextId: 1, caughtTypes: [], catchLog: []
+      player: { x: W / 2, y: H / 2, sneaking: false }, bugs: [], nextId: 1, caughtTypes: [], catchLog: [],
+      mod: MOD ? opts.mod : null, wind: null
     };
     // o.mound: a burrower that stays underground until you stand still near it; o.flower: hides in a flower patch.
     function spawn(type, x, y, o) {
@@ -187,6 +203,12 @@
       }
       for (let i = 0; i < left; i++) { const t = COMMON[Math.floor(r() * COMMON.length)]; spawn(t, undefined, undefined, { mound: true }); }
     }
+    // VAR1: modifier extras are rolled after the layout, so a modifier never moves where the bugs start.
+    if (MOD && MOD.glow) {
+      const pool = run.bugs.slice();
+      for (let i = 0; i < MOD.glow && pool.length; i++) pool.splice(Math.floor(r() * pool.length), 1)[0].glow = true;
+    }
+    if (MOD && MOD.wind) { const a = r() * Math.PI * 2; run.wind = { x: Math.cos(a) * MOD.wind, y: Math.sin(a) * MOD.wind }; }
 
     const lastP = { x: run.player.x, y: run.player.y };
     const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -206,7 +228,7 @@
         run.combo = (run.time - run.lastCatchAt <= COMBO_WINDOW) ? run.combo + 1 : 1;
         run.lastCatchAt = run.time;
         const mult = Math.pow(COMBO_MULT, Math.min(run.combo, COMBO_CAP) - 1);
-        run.score += TYPES[b.type].points * mult;
+        run.score += TYPES[b.type].points * mult * PTS * (b.glow && MOD && MOD.glowMult ? MOD.glowMult : 1);
         run.bestCombo = Math.max(run.bestCombo, run.combo);
         run.caught++; run.caughtTypes.push(b.type);
         run.catchLog.push({ type: b.type, sneak: !!run.player.sneaking, flushed: !!b.flushed });
@@ -229,12 +251,16 @@
       run.stillT = moved ? 0 : run.stillT + dt;
       const sneaking = run.player.sneaking;
       const scaredGroups = {};
-      for (const b of run.bugs) if (b.group && b.state !== 'caught' && b.state !== 'hidden' && dist(b, run.player) <= SCARE_TILES && !sneaking) scaredGroups[b.group] = true;
+      for (const b of run.bugs) if (b.group && b.state !== 'caught' && b.state !== 'hidden' && dist(b, run.player) <= SCARE && !sneaking) scaredGroups[b.group] = true;
       const runAway = (b, sp, dt2, spread) => {
         let dx = b.x - run.player.x, dy = b.y - run.player.y;
         const L = Math.hypot(dx, dy) || 1, ang = Math.atan2(dy, dx) + (spread ? ((b.id % 5) - 2) * 0.25 : 0);
-        b.x += Math.cos(ang) * sp * 2.5 * dt2; b.y += Math.sin(ang) * sp * 2.5 * dt2; void L;
+        b.x += Math.cos(ang) * sp * SPD * 2.5 * dt2; b.y += Math.sin(ang) * sp * SPD * 2.5 * dt2; void L;
       };
+      if (run.wind) for (const b of run.bugs) {
+        if (b.state === 'caught' || b.state === 'hidden') continue;
+        b.x = Math.max(0.5, Math.min(W - 0.5, b.x + run.wind.x * dt)); b.y = Math.max(0.5, Math.min(H - 0.5, b.y + run.wind.y * dt));
+      }
       for (const b of run.bugs) {
         if (b.state === 'caught') continue;
         const t = TYPES[b.type];
@@ -259,7 +285,7 @@
         }
         if (b.fleeT > 0) { b.fleeT -= dt; b.state = 'flee'; runAway(b, t.speed, dt, !!b.group); if (b.fleeT <= 0) b.state = 'idle'; continue; }
         if (b.mound && (dist(b, run.player) > BURROW_RADIUS + 0.5 || (moved && !sneaking))) { b.state = 'hidden'; b.hideKind = 'burrow'; continue; }
-        const scared = (dist(b, run.player) <= SCARE_TILES && !sneaking) || (b.group && scaredGroups[b.group]);
+        const scared = (dist(b, run.player) <= SCARE && !sneaking) || (b.group && scaredGroups[b.group]);
         if (scared) {
           if (t.burrower && !b.mound) { b.state = 'hidden'; b.hideT = HIDE_SECONDS; b.hideKind = null; continue; }
           b.state = 'flee';
@@ -273,5 +299,5 @@
     return { state: run, spawn, spawnSwarm, hideInFlower, setPlayer, swing, update, stars: () => starsFor(opts.arena, run.score) };
   }
 
-  return { BASE_SPECIES, GLADE_SPECIES, WARY_RADIUS, DIM_SECONDS, GOALS, GOAL_COUNT, goalsFor, goalsMet, cleanGoals, goalStars, MEDAL_IDS, medalsFor, RUN_SECONDS, SWING_COOLDOWN, SCARE_TILES, FLUSH_RADIUS, BURROW_RADIUS, STILL_SECONDS, FLEE_SECONDS, COMBO_WINDOW, COMBO_MULT, RARE_AT, TYPES, ARENAS, VARIANTS, ALL_ARENAS, arena, starsFor, canSpawn, createRun, cleanSave };
+  return { MODS, MOD_IDS, modFor, pickMod, BASE_SPECIES, GLADE_SPECIES, WARY_RADIUS, DIM_SECONDS, GOALS, GOAL_COUNT, goalsFor, goalsMet, cleanGoals, goalStars, MEDAL_IDS, medalsFor, RUN_SECONDS, SWING_COOLDOWN, SCARE_TILES, FLUSH_RADIUS, BURROW_RADIUS, STILL_SECONDS, FLEE_SECONDS, COMBO_WINDOW, COMBO_MULT, RARE_AT, TYPES, ARENAS, VARIANTS, ALL_ARENAS, arena, starsFor, canSpawn, createRun, cleanSave };
 });

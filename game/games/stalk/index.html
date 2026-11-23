@@ -4,19 +4,28 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Stalk Market - Pixeltown</title>
+<link rel="stylesheet" href="../../shared/mm-8bit.css">
 <link rel="stylesheet" href="stalk.css">
+<script src="../../shared/mm-8bit.js"></script>
 <script src="../../shared/mm-access.js"></script>
 <script src="../../shared/mm-side-access.js"></script>
 <link rel="stylesheet" href="../../shared/mm-nav.css">
+<link rel="stylesheet" href="../../shared/mm-minikit.css">
+<link rel="stylesheet" href="../../shared/mm-settings.css">
 </head>
 <body>
 <header id="top">
   <a class="back" id="back" href="../../index.html">&larr; Town</a>
   <h1>Stalk Market</h1>
+  <button id="btn-settings" type="button" hidden>Settings</button>
   <button id="btn-mute" type="button" aria-pressed="false">Sound on</button>
   <a class="back" id="town" href="../../index.html">Town</a>
 </header>
 <main id="stage">
+  <section id="entry" aria-label="Play">
+    <button id="entry-practice" type="button" class="big buy">Play a practice week</button>
+    <p id="entry-line" class="dim">Practice is open any time. The real market follows the calendar: buy on Sunday, sell Monday to Saturday.</p>
+  </section>
   <section id="stats" aria-label="Your stall">
     <div class="stat"><span class="lbl">Bells</span><strong id="st-bells">0</strong></div>
     <div class="stat"><span class="lbl">Stalks owned</span><strong id="st-owned">0</strong></div>
@@ -43,7 +52,7 @@
   <p id="msg" role="status" aria-live="polite"></p>
 
   <div id="hint" hidden role="note"><strong>How to play</strong>
-    <p>Stalks cost bells on Sunday only. Prices change twice a day, Monday to Saturday, and you can sell any time. Watch the graph and sell when the price is higher than you paid. Unsold stalks spoil when the next week starts. Bells are free play points, never real money.</p>
+    <p>Buy stalks on Sunday. Prices change twice a day, Monday to Saturday. Sell when the price beats what you paid. Unsold stalks spoil next week. Bells are play points, never real money.</p>
     <button id="hint-ok" type="button">Got it</button></div>
   <canvas id="chart" width="340" height="170" role="img" aria-label="This week's stalk prices"></canvas>
   <p id="chart-alt" class="dim"></p>
@@ -60,6 +69,7 @@
     <p class="dim">A pretend week that plays in a minute: buy on Sunday, step through the half-days, sell when you like. It has its own 1,000 practice bells and never changes your real stall, medals or stats.</p>
     <button id="pr-start" type="button" class="big buy">Start a practice week</button>
     <div id="pr-play" hidden>
+      <p id="pr-mood" hidden></p>
       <div id="pr-top"><span id="pr-when"></span> <strong id="pr-price"></strong> <span id="pr-pl"></span></div>
       <p id="pr-stat" class="dim"></p>
       <canvas id="pr-chart" width="340" height="150" role="img" aria-label="Practice week prices"></canvas>
@@ -72,9 +82,8 @@
       <p id="pr-msg" role="status" aria-live="polite"></p>
     </div>
     <div id="pr-end" hidden>
-      <h3 id="pr-end-title"></h3>
+      <section id="pr-card" aria-label="Practice results"></section>
       <ul id="pr-end-list"></ul>
-      <button id="pr-again" type="button" class="big buy">Play again</button>
     </div>
     <p id="pr-best" class="dim"></p>
   </section>
@@ -96,6 +105,9 @@
 <script src="../../shared/motion.js"></script>
 <script src="../../shared/mm-stalk-market.js"></script>
 <script src="../../shared/sfx.js"></script>
+<script src="../../shared/mm-input.js"></script>
+<script src="../../shared/mm-minikit.js"></script>
+<script src="../../shared/mm-settings.js"></script>
 <script src="../../shared/mm-nav.js" data-mount="manual"></script>
 <script>
 (function () {
@@ -109,6 +121,7 @@
 }());
 </script>
 <script src="../../shared/profile.js"></script>
+<script src="../../shared/mm-save-merge.js"></script>
 <script src="stalk.js"></script>
 </body>
 </html>

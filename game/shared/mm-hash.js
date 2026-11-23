@@ -15,18 +15,26 @@
     const ids = [], xs = [], ys = [], rs = [], stamp = [];
     let n = 0;
     let queryStamp = 0;
+    // Footprints over BIG cells (a huge or infinite radius) are not spread over the grid: that loop would hang the frame.
+    // They go in one overflow list every query scans; a query that big scans every item instead. NaN positions never hit.
+    const BIG = 1024, big = [];
+    let bigN = 0;
+    const span = (x0, x1, y0, y1) => (x1 - x0 + 1) * (y1 - y0 + 1);
     const key = (cx, cy) => (cx + 32768) * 65536 + (cy + 32768);
 
     function clear() {
       for (let i = 0; i < usedN; i++) { used[i].length = 0; used[i] = null; }
-      usedN = 0; n = 0;
+      usedN = 0; n = 0; bigN = 0;
     }
 
     function insert(id, x, y, r) {
       const idx = n++;
       ids[idx] = id; xs[idx] = x; ys[idx] = y; rs[idx] = r; stamp[idx] = 0;
+      if (typeof x !== 'number' || typeof y !== 'number' || x !== x || y !== y || !isFinite(x) || !isFinite(y)) return; // stored, never a candidate
+      if (!(r >= 0)) r = 0;
       const x0 = Math.floor((x - r) * inv), x1 = Math.floor((x + r) * inv);
       const y0 = Math.floor((y - r) * inv), y1 = Math.floor((y + r) * inv);
+      if (!(span(x0, x1, y0, y1) <= BIG)) { big[bigN++] = idx; return; }
       for (let cx = x0; cx <= x1; cx++) {
         for (let cy = y0; cy <= y1; cy++) {
           const k = key(cx, cy);
@@ -42,6 +50,12 @@
       const x0 = Math.floor((x - r) * inv), x1 = Math.floor((x + r) * inv);
       const y0 = Math.floor((y - r) * inv), y1 = Math.floor((y + r) * inv);
       const s = ++queryStamp;
+      if (!(span(x0, x1, y0, y1) <= BIG)) { // huge (or NaN) query: every finite item is a candidate
+        if (x !== x || y !== y) return;
+        for (let idx = 0; idx < n; idx++) { if (isFinite(xs[idx]) && isFinite(ys[idx])) { stamp[idx] = s; cb(ids[idx], xs[idx], ys[idx], rs[idx]); } }
+        return;
+      }
+      for (let i = 0; i < bigN; i++) { const idx = big[i]; stamp[idx] = s; cb(ids[idx], xs[idx], ys[idx], rs[idx]); }
       for (let cx = x0; cx <= x1; cx++) {
         for (let cy = y0; cy <= y1; cy++) {
           const c = cells.get(key(cx, cy));

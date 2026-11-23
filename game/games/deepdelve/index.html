@@ -4,10 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Deepdelve</title>
+<link rel="stylesheet" href="../../shared/mm-8bit.css">
 <link rel="stylesheet" href="deepdelve.css">
+<script src="../../shared/mm-8bit.js"></script>
 <script src="../../shared/mm-access.js"></script>
 <script src="../../shared/mm-side-access.js"></script>
 <link rel="stylesheet" href="../../shared/mm-nav.css">
+<link rel="stylesheet" href="../../shared/mm-settings.css">
 </head>
 <body>
 <header class="bar">
@@ -77,7 +80,9 @@
 </main>
 <nav id="hotbar" aria-label="Hotbar"></nav>
 <script src="../../shared/rng.js"></script>
+<script src="../../shared/mm-chip.js"></script>
 <script src="../../shared/sfx.js"></script>
+<script src="../../shared/mm-input.js"></script>
 <script src="dd-run.js"></script>
 <script src="../../shared/mm-chunks.js"></script>
 <script src="../../shared/mm-light.js"></script>
@@ -94,11 +99,20 @@
 (function () {
   if (!window.MMNav) return;
   MMNav.mount({ page: 'deepdelve', legacy: '#back-hub,#back-town', avoid: '.bar h1', backHref: '../../hub/index.html', backLabel: 'World map' });
+  // the old links are clipped to 1 px while the Menu button is on: keep them in the DOM (and for screen readers) but out of the Tab order
+  if (document.body.classList.contains('mm-nav-on')) ['back-hub', 'back-town'].forEach(function (id) { var e = document.getElementById(id); if (e) e.setAttribute('tabindex', '-1'); });
   var cover = [], shut = ['craft-panel','goals-panel','run-panel'];
   function open(ids) { return ids.some(function (id) { var e = document.getElementById(id); return e && !e.hidden; }); }
   function sync() { MMNav.setCovered(open(cover)); if (open(cover) || open(shut)) MMNav.close(); }
   var mo = window.MutationObserver ? new MutationObserver(sync) : null;
   cover.concat(shut).forEach(function (id) { var e = document.getElementById(id); if (e && mo) mo.observe(e, { attributes: true, attributeFilter: ['hidden'] }); });
+}());
+</script>
+<script src="../../shared/mm-settings.js"></script>
+<script>
+(function () {
+  // Settings (text size, reduce motion, low graphics, sound) from the Menu sheet; deepdelve.js listens for mm-settings-change.
+  try { var S = window.MMSettings && MMSettings.mount({ page: 'deepdelve' }); if (S && window.MMNav && MMNav.onSettings) MMNav.onSettings(function () { S.open(); }); } catch (e) { /* settings are optional */ }
 }());
 </script>
 <script src="../../shared/profile.js"></script>

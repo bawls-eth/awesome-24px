@@ -6,13 +6,18 @@
 <meta name="theme-color" content="#0b0716">
 <title>Mad Maze</title>
 <link rel="stylesheet" href="mad-maze.css">
+<link rel="stylesheet" href="../../shared/mm-8bit.css">
 <link rel="stylesheet" href="../../realm-ui.css">
 <link rel="stylesheet" href="realm-cave.css">
 <link rel="stylesheet" href="../../shared/mm-nav.css">
+<link rel="stylesheet" href="../../realm-8bit.css">
+<link rel="stylesheet" href="../../shared/mm-settings.css">
 </head>
 <body>
-<div id="realm-overlay">
-  <div id="realm-canvas-wrap"></div>
+<div id="realm-overlay" role="main">
+  <h1 class="rm-sr-only">Mad Maze: the Realm</h1>
+  <button id="realm-play-focus" class="rm-skip" type="button">Play: focus the game (WASD move, Space fire, Esc menu)</button>
+  <div id="realm-canvas-wrap" tabindex="-1" role="application" aria-label="Play the Realm: WASD or arrows move, Space or Enter fires, Q E R F abilities, Esc menu"></div>
   <div id="realm-hud">
     <div id="realm-hp"><div id="realm-hp-fill"></div><span id="realm-hp-text"></span></div>
     <div id="realm-info"><span id="realm-level">Lv 1</span><span id="realm-wave"></span><span id="realm-biome"></span><span id="realm-shards"></span><span id="realm-best"></span></div>
@@ -77,6 +82,7 @@
 <script src="../../shared/mm-hash.js"></script>
 <script src="../../shared/mm-pad.js"></script>
 <script src="../../shared/mm-aim.js"></script>
+<script src="../../shared/mm-chip.js"></script>
 <script src="../../shared/sfx.js"></script>
 <script src="../../shared/motion.js"></script>
 <script src="../../shared/mm-overworld.js"></script>
@@ -94,6 +100,8 @@
 <script src="../../shared/mm-access.js"></script>
 <script src="../../shared/mm-perf.js"></script>
 <script src="../../shared/mm-tutorial.js"></script>
+<script src="../../shared/mm-input.js"></script>
+<script src="../../shared/mm-settings.js"></script>
 <script src="../../realm.js"></script>
 <script src="dungeon.js"></script>
 <script src="realm-world.js"></script>

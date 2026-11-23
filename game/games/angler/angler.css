@@ -7,7 +7,7 @@ body { display:flex; flex-direction:column; max-width:100vw; overflow-x:hidden; 
 .btn { min-height:48px; min-width:48px; padding:0 12px; border:2px solid #3f7aa0; border-radius:8px; background:var(--panel); color:var(--ink); font:inherit; font-weight:600; display:inline-flex; align-items:center; justify-content:center; gap:4px; text-decoration:none; cursor:pointer; }
 .btn:disabled, .btn.locked { opacity:.45; cursor:not-allowed; }
 .btn.sel { border-color:var(--acc); }
-.btn.primary { background:#2a7f62; border-color:var(--ok); }
+.btn.primary { background:#267559; border-color:var(--ok); }
 .btn:focus-visible, select:focus-visible { outline:3px solid var(--acc); outline-offset:2px; }
 #stage { position:relative; flex:1; min-height:0; display:flex; justify-content:center; align-items:center; padding:4px 0; }
 #scene { height:100%; max-height:100%; max-width:100%; aspect-ratio:2/3; image-rendering:pixelated; background:#4aa3d8; border-radius:6px; touch-action:none; }
@@ -42,7 +42,7 @@ body { display:flex; flex-direction:column; max-width:100vw; overflow-x:hidden; 
 #bossinfo { margin:6px 0 10px; font-size:calc(13px * var(--ui-scale,1)); color:var(--mut); }
 #bossinfo .trophy { color:var(--acc); font-weight:700; }
 .r1 { color:#cfd8dc; } .r2 { color:#8fe08f; } .r3 { color:#6db8ff; } .r4 { color:#c88bff; } .r5 { color:#ffc24a; }
-@media (max-width:480px) { .bar h1 { display:none; } .bar { justify-content:space-between; } #journal-btn { margin-left:auto; } }
+@media (max-width:480px) { .bar h1 { font-size:calc(13px * var(--ui-scale,1)); letter-spacing:1px; min-width:0; } .bar { justify-content:space-between; } #journal-btn { margin-left:auto; } }
 @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }
 
 .row { display:flex; align-items:center; gap:6px; margin:4px 0; flex-wrap:wrap; } .row .grow { flex:1 1 140px; font-size:calc(14px * var(--ui-scale,1)); }
@@ -80,3 +80,59 @@ html[data-reduce-motion="1"] *, html[data-reduce-motion="1"] *::before, html[dat
 /* result panel sits below the landed fish (drawn at 47% of the scene) so the catch stays visible */
 #result { top:auto; bottom:56px; transform:translateX(-50%); }
 #result #res-fun { color:var(--acc); font-weight:700; margin:-4px 0 12px; }
+
+/* VAR1 spot condition */
+#cond { color:#9fe0ff; border:1px solid #2d6a8a; border-radius:6px; padding:2px 8px; }
+#cond[hidden], #cond-line[hidden] { display:none; }
+#cond-line { margin:0; padding:4px 8px; background:#0b1b27; color:#cfe6f5; font-size:calc(13px * var(--ui-scale,1)); line-height:1.35; }
+
+/* ===== 8-bit pass (mg-8bit-b): square stepped frames, bevelled pixel buttons, crisp scene ===== */
+:root { --px-ink:#06121b; --px-hi:rgba(255,255,255,.2); --px-lo:rgba(0,0,0,.4); }
+html, body { font-family:"Courier New", ui-monospace, Menlo, Consolas, monospace; -webkit-font-smoothing:none; }
+body { background-color:var(--bg); background-image:linear-gradient(rgba(255,255,255,.03) 2px, transparent 2px); background-size:100% 4px; }
+.bar, #status, #spots, #cond-line { background:#0b1b27; box-shadow:inset 0 -4px 0 var(--px-ink), inset 0 4px 0 #173a52; }
+.bar h1 { text-transform:uppercase; letter-spacing:2px; color:var(--acc); text-shadow:2px 2px 0 var(--px-ink); font-weight:bold; }
+.bar *, #status *, #spots *, .overlay *, #stage *, #boss-ui * { border-radius:0 !important; }
+.btn { border:0; border-radius:0; font-weight:bold; text-transform:uppercase; letter-spacing:1px;
+  box-shadow:inset -4px -4px 0 var(--px-lo), inset 4px 4px 0 var(--px-hi), 0 0 0 3px var(--px-ink); }
+.btn:active:not(:disabled) { box-shadow:inset 4px 4px 0 var(--px-lo), 0 0 0 3px var(--px-ink); transform:translateY(2px); }
+.btn.sel { box-shadow:inset -4px -4px 0 var(--px-lo), inset 4px 4px 0 var(--px-hi), 0 0 0 3px var(--acc), 0 0 0 6px var(--px-ink); background:#24557a; }
+.btn.primary { background:#267559; }
+.btn:disabled, .btn.locked { opacity:1; color:#6f8a9a; background:repeating-linear-gradient(45deg,#13293a 0 4px,#102233 4px 8px); box-shadow:0 0 0 3px var(--px-ink); }
+#scene { border-radius:0; box-shadow:0 0 0 4px var(--px-ink), 0 0 0 8px #3f7aa0, 0 0 0 12px var(--px-ink); image-rendering:pixelated; }
+#stage { padding:12px 0; }
+#result p { font-size:calc(14px * var(--ui-scale,1)); margin:0 0 8px; }
+.bar, #status, #spots { gap:9px; }
+#status { padding:6px 8px; }
+#result h2 { margin:0 0 4px; }
+#msg { border-radius:0; background:#0b1b27; box-shadow:0 0 0 3px var(--px-ink), inset 0 0 0 2px #3f7aa0; font-weight:bold; padding:8px 14px; }
+.panel { border:0; border-radius:0; background:var(--panel); box-shadow:inset 0 0 0 3px #3f7aa0, 0 0 0 4px var(--px-ink), 8px 8px 0 4px rgba(0,0,0,.5); }
+.panel h2, .panel h3, .jhead h2 { text-transform:uppercase; letter-spacing:1px; color:var(--acc); text-shadow:2px 2px 0 var(--px-ink); }
+.card, .chip, .rank { border-radius:0; box-shadow:inset 0 0 0 2px #24557a, 0 0 0 2px var(--px-ink); }
+.card canvas, #aq-tank { border-radius:0; box-shadow:0 0 0 2px var(--px-ink); }
+.filters select { border-radius:0; border:0; box-shadow:0 0 0 3px var(--px-ink), inset 0 0 0 2px #3f7aa0; }
+#cond { border-radius:0; border:0; box-shadow:0 0 0 2px var(--px-ink), inset 0 0 0 2px #2d6a8a; text-transform:uppercase; font-weight:bold; }
+#boss-bar { border:0; border-radius:0; box-shadow:0 0 0 3px var(--px-ink), inset 0 0 0 3px #3f7aa0; }
+#boss-bar[data-phase="warn"] { box-shadow:0 0 0 3px var(--px-ink), inset 0 0 0 3px var(--acc); }
+#boss-bar[data-phase="surge"] { box-shadow:0 0 0 3px var(--px-ink), inset 0 0 0 3px var(--bad); }
+#boss-fill { background:repeating-linear-gradient(90deg, rgba(255,107,107,.7) 0 6px, rgba(200,60,60,.7) 6px 8px); }
+#bait-val, #bells-val { text-shadow:2px 2px 0 var(--px-ink); }
+body.px8 { background-color:var(--bg); color:var(--ink); }
+
+/* BB-angler: the status line and boss strain bar sit BELOW the scene (they used to cover the bottom of the reel strip), result is a card */
+#stage { flex-direction:column; gap:8px; padding:10px 0 6px; }
+#scene { flex:1 1 0; min-height:0; height:auto; max-height:100%; width:auto; max-width:100%; aspect-ratio:2/3; }
+#msg { position:static; flex:0 0 auto; margin:0 auto; width:fit-content; max-width:96%; min-height:calc(3 * 1.25em + 16px); display:flex; align-items:center; justify-content:center; line-height:1.25; font-size:calc(14px * var(--ui-scale,1)); }
+#boss-ui { position:static; flex:0 0 auto; width:calc(100% - 12px); margin:0 auto; }
+#result { position:fixed; left:50%; top:50%; bottom:auto; transform:translate(-50%,-50%); width:min(92vw,400px); max-height:calc(100vh - 16px); max-height:calc(100dvh - 16px); overflow:auto; z-index:4; text-align:left; }
+#result .mk-head { font-size:calc(18px * var(--ui-scale,1)); }
+#result .mk-line { font-size:calc(14px * var(--ui-scale,1)); color:var(--ink); margin:2px 0; }
+#result .mk-line.dim { color:var(--mut); } #result .mk-line.fun { color:var(--acc); font-weight:700; }
+#result .res-sprite { width:96px; height:56px; image-rendering:pixelated; align-self:center; }
+#result .mk-medals { list-style:none; margin:2px 0; padding:0; display:flex; flex-wrap:wrap; gap:4px 12px; font-size:calc(13px * var(--ui-scale,1)); color:var(--mut); }
+#result .mk-medals .on { color:var(--acc); font-weight:700; }
+#pregame .panel { width:min(92vw,420px); margin-top:12vh; text-align:center; }
+#pregame p { margin:8px 0; } #pregame .btn { min-width:160px; min-height:56px; margin-top:8px; }
+@media (max-height:520px) and (orientation:landscape) { #pregame .panel { margin-top:0; } #msg { min-height:calc(2 * 1.25em + 12px); } }
+/* short landscape screens: the page scrolls instead of squeezing the scene to a sliver */
+@media (max-height:520px) { html, body { height:auto; min-height:100%; } #stage { flex:0 0 auto; } #scene { flex:0 0 auto; height:min(86vh, 360px); width:auto; max-height:none; } }

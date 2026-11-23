@@ -1,0 +1,87 @@
+/* Realm HUD 8-bit skin (FLOW). Loaded LAST on the town page and the Mad Maze page (after realm-ui.css / realm-cave.css), using the shared
+   tokens of shared/mm-8bit.css. Skin only: colours, square corners, stepped ink outlines, hard shadows, the pixel font. Every size, position,
+   id and behaviour stays as realm-ui.css / mad-maze.css set it (border widths are kept, so boxes do not grow). No blur, no gradients
+   except the stepped segment bands the shared theme uses. Honours reduced motion and low-gfx. */
+html body #realm-overlay {
+  --r8-ink: var(--px-ink, #0b0d1a); --r8-panel: var(--px-1, #1d2b53); --r8-text: var(--px-7, #fff1e8); --r8-dim: var(--px-6, #c2c3c7);
+  --r8-hp: var(--px-8, #ff004d); --r8-xp: var(--px-12, #29adff); --r8-gold: var(--px-9, #ffa300); --r8-yel: var(--px-10, #ffec27);
+  --r8-seg: repeating-linear-gradient(90deg, transparent 0 6px, rgba(0, 0, 0, 0.35) 6px 8px);
+}
+
+/* ---- bars: square, ink ring, segmented fill ---- */
+html body #realm-overlay #realm-hp, html body #realm-overlay #realm-xp, html body #realm-boss .bar, html body #realm-partner .bar {
+  border-radius: 0; background: var(--r8-ink); border-color: var(--r8-dim);
+  box-shadow: 0 0 0 2px var(--r8-ink), 3px 3px 0 2px rgba(0, 0, 0, 0.45);
+}
+html body #realm-hp-fill { border-radius: 0; background: var(--r8-hp); background-image: var(--r8-seg); }
+html body #realm-xp-fill { border-radius: 0; background: var(--r8-xp); background-image: var(--r8-seg); }
+html body #realm-boss-fill { border-radius: 0; background: var(--px-2, #7e2553); background-image: var(--r8-seg); }
+html body #realm-partner-fill { border-radius: 0; background: var(--px-11, #00e436); background-image: var(--r8-seg); }
+html body #realm-hp-text, html body #realm-xp-text, html body #realm-info, html body #realm-boss-name, html body #realm-partner-name {
+  font-family: var(--px-font, monospace); font-weight: 900; letter-spacing: 0.06em; color: var(--r8-text);
+  text-shadow: 1px 1px 0 var(--r8-ink), -1px 0 0 var(--r8-ink), 0 -1px 0 var(--r8-ink), 1px 0 0 var(--r8-ink);
+}
+html body #realm-level { color: var(--r8-yel); }
+
+/* ---- top buttons: square chips with a bottom lip (same 44 px boxes) ---- */
+html body #realm-bp-btn, html body #realm-board-btn, html body #realm-menu-btn, html body #realm-leave-btn, html body #realm-aim-btn, html body #mm-map-btn {
+  border-radius: 0; background: var(--r8-panel); border-color: var(--r8-ink); color: var(--r8-text);
+  box-shadow: 0 0 0 2px var(--r8-dim), inset 0 -4px 0 rgba(0, 0, 0, 0.35), 3px 3px 0 2px rgba(0, 0, 0, 0.45);
+}
+html body #realm-leave-btn { font-family: var(--px-font, monospace); font-weight: 900; background: var(--px-2, #7e2553); }
+html body #realm-bp-btn:active, html body #realm-board-btn:active, html body #realm-menu-btn:active, html body #realm-leave-btn:active { box-shadow: 0 0 0 2px var(--r8-dim), inset 0 3px 0 rgba(0, 0, 0, 0.35); }
+html body #realm-hud button:focus-visible, html body #realm-abilities button:focus-visible { outline: 3px solid var(--r8-yel); outline-offset: 3px; }
+
+/* ---- ability buttons: square, ink ring, gold lip; cooling / locked keep their states ---- */
+html body #realm-abilities .realm-ab {
+  border-radius: 0; background: var(--r8-panel); border-color: var(--r8-ink); color: var(--r8-text);
+  box-shadow: 0 0 0 2px var(--r8-gold), inset 0 -4px 0 rgba(0, 0, 0, 0.35), inset 0 2px 0 rgba(255, 241, 232, 0.18), 3px 3px 0 2px rgba(0, 0, 0, 0.45);
+}
+html body #realm-abilities .realm-ab .key { font-family: var(--px-font, monospace); font-weight: 900; color: var(--r8-yel); text-shadow: 1px 1px 0 var(--r8-ink); opacity: 1; }
+html body #realm-abilities .realm-ab .nm, html body #realm-abilities .realm-ab .cd { font-family: var(--px-font, monospace); text-shadow: 1px 1px 0 var(--r8-ink), -1px 0 0 var(--r8-ink); }
+html body #realm-abilities .realm-ab:active { box-shadow: 0 0 0 2px var(--r8-gold), inset 0 3px 0 rgba(0, 0, 0, 0.35); }
+html body #realm-abilities .realm-ab.cooling { box-shadow: 0 0 0 2px var(--px-5, #5f574f), inset 0 -4px 0 rgba(0, 0, 0, 0.35); }
+
+/* ---- sticks: stepped square rings instead of soft discs (same size, same hit area) ---- */
+html body .realm-stick { border-radius: 0; background: rgba(11, 13, 26, 0.35); border-color: var(--r8-dim); box-shadow: 0 0 0 2px var(--r8-ink); }
+html body .realm-stick .knob { border-radius: 0; background: var(--r8-gold); box-shadow: 0 0 0 2px var(--r8-ink), inset 0 -3px 0 rgba(0, 0, 0, 0.3); }
+
+/* ---- minimap frames ---- */
+html body #mm-map, html body #rw-minimap { border-radius: 0; border-color: var(--r8-dim); box-shadow: 0 0 0 2px var(--r8-ink), 4px 4px 0 2px rgba(0, 0, 0, 0.5); image-rendering: pixelated; }
+
+/* ---- banners + control hint ---- */
+html body #realm-banner {
+  border-radius: 0; background: var(--r8-panel); color: var(--r8-yel); border-color: var(--r8-ink);
+  font-family: var(--px-font, monospace); font-weight: 900; letter-spacing: 0.04em;
+  text-shadow: 2px 2px 0 var(--r8-ink); box-shadow: 0 0 0 2px var(--r8-ink), 0 0 0 4px var(--r8-gold), 6px 6px 0 4px rgba(0, 0, 0, 0.5);
+}
+html body #realm-help .key-hint { font-family: var(--px-font, monospace); font-weight: 700; letter-spacing: 0.02em; text-shadow: 1px 1px 0 var(--r8-ink); }
+
+/* ---- the other Realm panels share the backpack's square frame ---- */
+html body #realm-board .realm-bp-card, html body .rm-panel .realm-bp-card { border-radius: 0; box-shadow: 0 0 0 4px var(--r8-ink), 0 0 0 6px var(--r8-dim), 6px 8px 0 4px rgba(0, 0, 0, 0.5); }
+html body .rm-btn { border-radius: 0; font-family: var(--px-font, monospace); font-weight: 900; letter-spacing: 0.06em; box-shadow: 0 0 0 2px var(--r8-ink), inset 0 -4px 0 rgba(0, 0, 0, 0.3); }
+
+@media (prefers-reduced-motion: reduce) { html body #realm-abilities .realm-ab:active, html body #realm-bp-btn:active { transform: none; } }
+html.low-gfx body #realm-abilities .realm-ab, html.low-gfx body #realm-banner { box-shadow: 0 0 0 2px var(--r8-ink); }
+
+/* ---- bug bash: the HP numbers never wrap to a second line in a narrow (phone) HP bar ---- */
+html body #realm-hp-text { white-space: nowrap; overflow: hidden; }
+@media (max-width: 560px) { html body #realm-hp-text { font-size: 12px; letter-spacing: -0.5px; word-spacing: -3px; } }
+/* ---- bug bash: the backpack card is anchored at the top so the Gear / Stats / Relics tabs never jump under the finger when the pane height changes ---- */
+html body #realm-backpack { align-items: flex-start; }
+/* ---- bug bash (a11y sweep): locked / cooling ability slots dim only their icon, never the label text (was 2.9-3.3:1 on navy);
+   the name tag is 12 px (was 10 px). Text: #c2c3c7 on the slot navy (>= 7:1), key letter in the 8-bit yellow. ---- */
+html body #realm-abilities .realm-ab.locked, html body #realm-abilities .realm-ab.cooling { opacity: 1; filter: none; }
+html body #realm-abilities .realm-ab.locked > .ico, html body #realm-abilities .realm-ab.locked > img.realm-ab-img { opacity: 0.35; filter: grayscale(1); }
+html body #realm-abilities .realm-ab.cooling > .ico, html body #realm-abilities .realm-ab.cooling > img.realm-ab-img { opacity: 0.4; }
+html body #realm-abilities .realm-ab .nm { font-size: 12px; letter-spacing: 0; color: #c2c3c7; opacity: 1; }
+html body #realm-abilities .realm-ab .cd { color: #fff1e8; }
+html body #realm-abilities .realm-ab.locked .cd { color: #c2c3c7; }
+html body #realm-abilities .realm-ab .key { color: var(--r8-yel, #ffec27); opacity: 1; }
+/* ---- bug bash (a11y sweep): a page heading for screen readers only; the play field is a keyboard stop with a visible ring ---- */
+.rm-sr-only { font-size: calc(12px * var(--mm-hud-scale, 1)); position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+html body #realm-canvas-wrap:focus { outline: none; }
+html body #realm-canvas-wrap:focus-visible { outline: 3px solid var(--r8-yel, #ffec27); outline-offset: -3px; }
+/* the "Play" keyboard stop: invisible until it has focus, then a chip in the middle of the screen (never over the Menu button or the thumbs) */
+html body #realm-play-focus.rm-skip { position: absolute; left: -10000px; top: 42%; z-index: 40; min-width: 44px; min-height: 44px; margin: 0; white-space: nowrap; }
+html body #realm-play-focus.rm-skip:focus { left: 50%; transform: translateX(-50%); white-space: normal; width: max-content; max-width: calc(100vw - 32px); padding: 8px 12px; background: var(--r8-panel, #1d2b53); color: var(--px-7, #fff1e8); border: 2px solid var(--r8-yel, #ffec27); font: 700 12px var(--px-font, monospace); }

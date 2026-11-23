@@ -224,3 +224,22 @@ body.mm-nav-on .mm-nav-avoid { margin-left: var(--mm-nav-reserve) !important; }
   text-decoration: none;
   cursor: pointer;
 }
+
+/* HS1: the sheet in three groups (Adventure / Arcade / Quick games) of 8-bit pixel cards, like the Hub home screen.
+   Square corners, hard pixel shadows, one-line hint; targets stay >= 64 px tall. */
+.mm-nav-group { margin: 0 0 10px; }
+.mm-nav-group-title { margin: 0 0 6px; font: 700 12px/1.2 ui-monospace, Menlo, Consolas, monospace; letter-spacing: 2px; text-transform: uppercase; color: var(--mm-nav-accent); }
+#mm-nav-root .mm-nav-sheet, #mm-nav-root .mm-nav-row, #mm-nav-root .mm-nav-dest, #mm-nav-root .mm-nav-close, #mm-nav-root .mm-nav-foot-btn, #mm-nav-btn { border-radius: 0; }
+#mm-nav-root .mm-nav-dest { align-items: center; box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.55); }
+#mm-nav-root .mm-nav-dest:hover { border-color: var(--mm-nav-accent); }
+#mm-nav-root .mm-nav-dest-name { font-family: ui-monospace, Menlo, Consolas, monospace; }
+#mm-nav-root .mm-nav-dest-desc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/* Bug bash: the Menu follows the shared 8-bit font (SIMPLIFY-PLAN 4.1: no system sans) and the Settings text size (--ui-scale,
+   set by mm-side-access / mm-settings). Big text on a phone: one place per row so names and hints are not cut. */
+#mm-nav-root, #mm-nav-root .mm-nav-foot-btn { font-family: var(--px-font, ui-monospace, Menlo, Consolas, monospace); }
+#mm-nav-root .mm-nav-title { font-size: calc(20px * var(--ui-scale, 1)); }
+#mm-nav-root .mm-nav-row { font-size: calc(16px * var(--ui-scale, 1)); }
+#mm-nav-root .mm-nav-dest-name { font-size: calc(15px * var(--ui-scale, 1)); }
+#mm-nav-root .mm-nav-dest-desc { font-size: calc(12px * var(--ui-scale, 1)); }
+#mm-nav-root .mm-nav-foot-btn { font-size: calc(14px * var(--ui-scale, 1)); }
+@media (max-width: 560px) { html[data-ui-big] #mm-nav-root .mm-nav-grid { grid-template-columns: minmax(0, 1fr); } }

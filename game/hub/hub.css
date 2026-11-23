@@ -6,6 +6,12 @@ body { display: flex; flex-direction: column; height: 100dvh; }
 #hud { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 12px; background: var(--panel); border-bottom: 2px solid var(--line); min-height: 48px; }
 .hud-main { display: flex; flex-direction: column; min-width: 0; }
 .hud-name { font-weight: bold; overflow-wrap: anywhere; }
+.hud-h1 { margin: 0; font-size: inherit; font-weight: inherit; line-height: inherit; }
+/* Keyboard: the first Tab stop on the map view opens the place the villager stands on (visible only while focused). */
+.map-play { position: fixed; left: 50%; top: 8px; transform: translateX(-50%); z-index: 9500; }
+.map-play:not(:focus) { left: -10000px; transform: none; } /* off screen (full 48 px target) until focused: a skip-link pattern */
+.map-play:focus-visible { outline: 3px solid var(--px-10, #ffec27); outline-offset: 2px; }
+body.home-on .map-play { display: none; }
 .hud-world { color: var(--dim); font-size: calc(13px * var(--ui-scale,1)); overflow-wrap: anywhere; }
 .hud-stats { display: flex; gap: 12px; font-size: calc(14px * var(--ui-scale,1)); white-space: nowrap; }
 #stage { flex: 1; min-height: 0; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
@@ -108,3 +114,55 @@ body.mm-nav-on #hud { min-height: 64px; }
 .coll-go { display: flex; width: 100%; min-height: 44px; font-size: calc(14px * var(--ui-scale,1)); }
 /* Phones: the map keeps >= 55% of the screen. Show the first calm goal only and fold the collection step chips away (the Collections book stays one tap). */
 @media (max-width: 480px) { .calm-item:nth-child(n+2) { display: none; } .coll-steps { display: none; } }
+/* HS1 Home screen (home.js): the default Hub view, a simple 8-bit title screen. The map above stays one tap away (Map toggle / ?map=1).
+   Square pixel borders, hard drop shadows, no rounded panels; every target >= 44 px (cards >= 56 px); text >= 12 px; ui-scale aware. */
+body.home-on #hud, body.home-on #hub-games, body.home-on #hub-continue, body.home-on #calm-card, body.home-on #coll-card, body.home-on #stage, body.home-on #hint { display: none !important; }
+/* Colours come from the shared 8-bit palette (shared/mm-8bit.css, design/EIGHTBIT-STYLE.md); fallbacks keep the page right without it. */
+.home { --h-ink: var(--px-7, #fff1e8); --h-dim: var(--px-6, #c2c3c7); --h-gold: var(--px-9, #ffa300); --h-line: var(--px-ink, #0b0d1a); --h-card: var(--px-1, #1d2b53); --h-card2: var(--px-2, #7e2553);
+  flex: 1 1 auto; min-height: 0; position: relative; overflow: hidden; background: var(--px-bg, #12142a); color: var(--h-ink); font-family: var(--px-font, ui-monospace, Menlo, Consolas, monospace); }
+.home-sky { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+.home-in { position: relative; height: 100%; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 6px;
+  max-width: 560px; margin: 0 auto; padding: 8px 12px 10px; }
+.home-title { margin: 0; min-height: 48px; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+.home-logo { display: block; width: min(232px, 52vw); height: auto; aspect-ratio: 49 / 8; image-rendering: pixelated; image-rendering: crisp-edges; }
+.home-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.home-play { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 60px; padding: 4px 16px; background: var(--h-gold); color: var(--h-line);
+  border: 3px solid var(--h-line); box-shadow: 4px 4px 0 var(--h-line), inset -3px -3px 0 var(--px-4, #ab5236), inset 3px 3px 0 var(--px-10, #ffec27); text-decoration: none; font-weight: bold; }
+.home-play:hover, .home-play:focus-visible { outline: 3px solid var(--h-ink); outline-offset: 2px; }
+.home-play:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--h-line); }
+.hp-arrow { font-size: calc(22px * var(--ui-scale,1)); }
+.hp-txt { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
+#home-play-txt { font-size: calc(22px * var(--ui-scale,1)); letter-spacing: 2px; text-transform: uppercase; }
+.hp-sub { font-size: calc(12px * var(--ui-scale,1)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60vw; }
+.home-next { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 10px; background: var(--h-line); color: var(--h-ink); border: 2px solid var(--h-card); text-decoration: none; font-size: calc(13px * var(--ui-scale,1)); }
+.home-next[hidden] { display: none; }
+.home-next:hover, .home-next:focus-visible { border-color: var(--h-gold); outline: none; }
+.hn-txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.home-groups { flex: 0 0 auto; display: flex; flex-direction: column; gap: 6px; }
+.home-group-title { margin: 0 0 4px; font-size: calc(12px * var(--ui-scale,1)); letter-spacing: 2px; text-transform: uppercase; color: var(--h-gold); text-shadow: 2px 2px 0 var(--h-line); }
+.home-cards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.home-cards li { display: flex; min-width: 0; }
+.home-card, .home-coll { position: relative; flex: 1 1 auto; min-width: 0; min-height: 56px; display: flex; align-items: center; justify-content: flex-start; gap: 8px; padding: 4px 8px;
+  background: var(--h-card); color: var(--h-ink); border: 2px solid var(--h-line); box-shadow: inset 2px 2px 0 var(--h-card2), 3px 3px 0 var(--h-line); text-decoration: none; text-align: left; font-weight: normal; }
+.home-card:hover, .home-card:focus-visible, .home-coll:hover, .home-coll:focus-visible { background: var(--h-card2); outline: 2px solid var(--h-gold); outline-offset: 0; }
+.home-card:active, .home-coll:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--h-line); }
+.hc-ico { flex: 0 0 auto; font-size: calc(22px * var(--ui-scale,1)); width: 30px; text-align: center; }
+.hc-txt { display: flex; flex-direction: column; min-width: 0; }
+.hc-name { font-weight: bold; font-size: calc(13px * var(--ui-scale,1)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hc-hint { color: var(--h-dim); font-size: calc(12px * var(--ui-scale,1)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hc-pips { position: absolute; right: 4px; top: 4px; display: flex; gap: 2px; }
+.hc-pips i { width: 6px; height: 6px; background: var(--px-5, #5f574f); box-shadow: 0 0 0 1px var(--h-line); }
+.hc-pips i.on { background: var(--h-gold); }
+.home-coll { flex: 0 0 auto; width: 100%; font: inherit; cursor: pointer; }
+.home-coll .hc-name { flex: 0 0 auto; }
+.home-coll-sum { flex: 1 1 auto; min-width: 0; text-align: right; color: var(--h-dim); font-size: calc(12px * var(--ui-scale,1)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#view-toggle { flex: 0 0 auto; }
+body.home-on #bar { background: var(--px-ink, #0b0d1a); border-top-color: var(--px-1, #1d2b53); }
+@media (max-width: 480px) { .home-in { gap: 6px; padding: 6px 10px 8px; } }
+/* Bug bash: big text (Settings > Text size, html[data-ui-big]) never cuts a game name to "Lantern C...": names and hints wrap,
+   and on phones the cards go one per row so each name fits. */
+html[data-ui-big] .hc-name, html[data-ui-big] .hc-hint, html[data-ui-big] .hn-txt, html[data-ui-big] .hp-sub { white-space: normal; overflow-wrap: anywhere; text-overflow: clip; }
+@media (max-width: 560px) { html[data-ui-big] .home-cards { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .home-play:active, .home-card:active, .home-coll:active { transform: none; } }
+/* Big text on a narrow phone: the footer buttons wrap onto two rows instead of cutting "Open" off the screen. */
+@media (max-width: 420px) { html[data-ui-big] #bar { flex-wrap: wrap; justify-content: center; flex-shrink: 0; } html[data-ui-big] #bar button, html[data-ui-big] #bar .btn { flex: 1 1 auto; padding: 0 8px; } }

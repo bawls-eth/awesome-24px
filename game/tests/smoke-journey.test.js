@@ -21,10 +21,12 @@ const ORIGIN = new URL(BASE).origin;
 const FIX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'smoke-journey.json'), 'utf8'));
 const THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js';
 const NAME = 'ADMINsmoke';
-const IDS = ['town', 'map', 'realm', 'lantern', 'isles', 'jam', 'bugs', 'angler', 'deepdelve', 'stalk', 'pop', 'dash'];
+const IDS = ['town', 'map', 'realm', 'lantern', 'isles', 'jam', 'bugs', 'angler', 'deepdelve', 'stalk', 'pop', 'dash', 'stack', 'echo'];
+// HS1: the Where-to sheet lists the places in its three groups (Adventure, Arcade, Quick games); the journey keeps IDS order
+const SHEET_IDS = ['town', 'realm', 'isles', 'lantern', 'map', 'pop', 'dash', 'stack', 'echo', 'jam', 'angler', 'bugs', 'stalk', 'deepdelve'];
 const AUDITS = ['small', 'tinyText', 'overStick'];
 // The allow-lists may only shrink: these are the sizes frozen with the first fixture. Lower them when entries are removed.
-const FROZEN_MAX = { allow404: 0, offOrigin: 2, small: 9, tinyText: 2, overStick: 2 };
+const FROZEN_MAX = { allow404: 0, offOrigin: 2, small: 7, tinyText: 0, overStick: 0 };
 const T0 = Date.now();
 
 async function open(browser, viewport, touch) {
@@ -143,7 +145,7 @@ async function journey(browser, label, viewport, touch, out) {
   for (const id of IDS) {
     await openWhereTo();
     const dests = await page.evaluate(() => [...document.querySelectorAll('#mm-nav-sheet .mm-nav-dest')].map((a) => a.dataset.place));
-    check(L(`town sheet lists all 12 places before ${id}`), dests.join(',') === IDS.join(','), dests.join(','));
+    check(L(`town sheet lists all 14 places before ${id}`), dests.join(',') === SHEET_IDS.join(','), dests.join(','));
     const sel = `#mm-nav-sheet .mm-nav-dest[data-place="${id}"]`;
     await page.locator(sel).scrollIntoViewIfNeeded();
     await Promise.all([page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 20000 }), tap(sel)]);
@@ -223,7 +225,7 @@ async function journey(browser, label, viewport, touch, out) {
   (FIX.knownIssues || []).forEach((s) => console.log('  - ' + s));
   for (const label of Object.keys(out)) {
     [...new Set(out[label].known)].forEach((s) => console.log(`  - [${label}] ${s}`));
-    for (const k of AUDITS) { const n = Object.values(fresh[k][label]).reduce((a, b) => a + b.length, 0); console.log(`  - [${label}] ${n} allow-listed ${k} offenders across the 12 places`); }
+    for (const k of AUDITS) { const n = Object.values(fresh[k][label]).reduce((a, b) => a + b.length, 0); console.log(`  - [${label}] ${n} allow-listed ${k} offenders across the 14 places`); }
   }
   if (process.env.UPDATE_FIXTURE) console.log('CURRENT ' + JSON.stringify(fresh));
   // 120 s on an idle machine. On a shared, overloaded box (1-minute load above the core count) the budget scales with the

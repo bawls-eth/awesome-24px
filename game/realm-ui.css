@@ -174,3 +174,81 @@ body.touch-device #realm-stick-aim { right: calc(20px + var(--sr)); }
 #realm-bp-list li .nm { -webkit-touch-callout: none; user-select: none; }
 .realm-bp-slot .rm-classwpn { color: #e6edf3; }
 .realm-bp-slot .rm-slot-ico { width: 20px; height: 20px; image-rendering: pixelated; vertical-align: middle; margin-right: 4px; }
+
+/* ---------- BP8: the backpack as one clean 8-bit panel (tokens from shared/mm-8bit.css, with fallbacks) ---------- */
+#realm-backpack .realm-bp-card { border-radius: 0; background: var(--px-bg, #12142a); color: var(--px-text, #fff1e8);
+  box-shadow: 0 0 0 4px var(--px-ink, #0b0d1a), 0 0 0 6px var(--px-6, #c2c3c7), 6px 8px 0 4px rgba(0, 0, 0, .5); font-family: var(--px-font, monospace); }
+#realm-backpack .realm-bp-head strong { font-family: var(--px-font, monospace); letter-spacing: .1em; text-transform: uppercase; text-shadow: 2px 2px 0 var(--px-ink, #0b0d1a); }
+#realm-backpack #realm-bp-close { border-radius: 0; border: 0; background: var(--px-8, #ff004d); color: var(--px-7, #fff1e8); box-shadow: 0 0 0 2px var(--px-ink, #0b0d1a), inset 0 -3px 0 rgba(0, 0, 0, .3); }
+.rm-bp8 { display: flex; flex-direction: column; gap: 8px; font-size: max(12px, 1em); }
+.rm-bp8 button { font-family: var(--px-font, monospace); }
+.rm-bp8 button:focus-visible { outline: 3px solid var(--px-10, #ffec27); outline-offset: 2px; }
+.rm-bp8-top { background: var(--px-1, #1d2b53); padding: 8px 10px; box-shadow: 0 0 0 2px var(--px-ink, #0b0d1a); display: grid; gap: 4px; }
+.rm-bp8-top .who { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.rm-bp8-top .nm { font-size: 15px; letter-spacing: .06em; text-transform: uppercase; overflow-wrap: anywhere; }
+.rm-bp8-top .cl { color: var(--px-dim, #c2c3c7); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+.rm-bp8-top .px-badge { margin: 0 0 0 auto; }
+.rm-bp8-bar { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; }
+.rm-bp8-bar .px-bar { display: block; margin: 0 4px; height: 10px; }
+.rm-bp8-bar .px-bar > span { display: block; }
+.rm-bp8-bar.hp .px-bar > span { background-color: var(--px-8, #ff004d); }
+.rm-bp8-bar.xp .px-bar > span { background-color: var(--px-12, #29adff); }
+.rm-bp8-bar .vl { min-width: 64px; text-align: right; }
+.rm-bp8-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.rm-bp8-tab { min-height: 44px; border: 0; border-radius: 0; background: var(--px-1, #1d2b53); color: var(--px-dim, #c2c3c7); font-weight: 900; font-size: 13px;
+  letter-spacing: .1em; text-transform: uppercase; cursor: pointer; box-shadow: 0 0 0 2px var(--px-ink, #0b0d1a), inset 0 -3px 0 rgba(0, 0, 0, .3); }
+.rm-bp8-tab.on, .rm-bp8-tab[aria-selected="true"] { background: var(--px-9, #ffa300); color: var(--px-ink, #0b0d1a); }
+.rm-bp8-pane[hidden] { display: none !important; }
+.rm-bp8-pane { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.rm-bp8-h { font-weight: 900; letter-spacing: .12em; text-transform: uppercase; color: var(--px-10, #ffec27); font-size: 13px; }
+.rm-bp8-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rm-bp8-row .realm-bp-count { flex: 1 1 auto; margin: 0; opacity: 1; color: var(--px-dim, #c2c3c7); }
+#realm-backpack .rm-bp8-row button[data-open-shop] { display: inline-block; width: auto; flex: 0 0 auto; border-radius: 0; border: 0; background: var(--px-12, #29adff); color: var(--px-ink, #0b0d1a);
+  font: 900 13px var(--px-font, monospace); letter-spacing: .06em; box-shadow: 0 0 0 2px var(--px-ink, #0b0d1a), inset 0 -3px 0 rgba(0, 0, 0, .3); min-height: 44px; }
+.rm-bp8-slots.realm-bp-slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; margin: 0; }
+.rm-bp8-slots .realm-bp-slot { position: relative; border-radius: 0; min-height: 64px; padding: 18px 6px 6px; background: var(--px-ink, #0b0d1a); font-size: 12px; overflow-wrap: anywhere;
+  box-shadow: 0 0 0 2px var(--tc, var(--px-5, #5f574f)), inset 0 0 0 2px var(--px-ink, #0b0d1a); }
+.rm-bp8-slots .realm-bp-slot .sl { position: absolute; left: 4px; top: 2px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--px-dim, #c2c3c7); }
+.rm-bp8-slots .realm-bp-slot .rm-bp8-badge { position: absolute; right: 3px; top: 3px; }
+.rm-bp8-badge { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; margin-right: 4px; vertical-align: -4px;
+  font: 900 12px/1 var(--px-font, monospace); color: var(--px-ink, #0b0d1a); background: var(--bc, #c2c3c7); }
+.rm-bp8 .rm-tier { font-size: 12px !important; }
+.rm-bp8-badge.r1 { clip-path: polygon(0 4px, 4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px)); }
+.rm-bp8-badge.r2 { clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); width: 22px; height: 22px; }
+.rm-bp8-badge.r3 { clip-path: polygon(50% 0, 100% 100%, 0 100%); padding-top: 5px; box-sizing: border-box; width: 22px; height: 22px; }
+.rm-bp8-badge.r4 { clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); width: 18px; }
+.rm-bp8-badge.r5 { clip-path: polygon(50% 0, 61% 35%, 100% 38%, 68% 60%, 80% 100%, 50% 76%, 20% 100%, 32% 60%, 0 38%, 39% 35%); width: 22px; height: 22px; }
+.rm-bp8 #realm-bp-list li { border-radius: 0; background: var(--px-1, #1d2b53); box-shadow: 0 0 0 2px var(--px-ink, #0b0d1a); cursor: pointer; }
+.rm-bp8 #realm-bp-list li.on { outline: 0; box-shadow: 0 0 0 2px var(--px-ink, #0b0d1a), 0 0 0 4px var(--px-10, #ffec27); }
+.rm-bp8 #realm-bp-list li .rar, .rm-bp8 #realm-bp-list li .st { font-size: 12px; }
+.rm-bp8 #realm-bp-list button, .rm-bp8 .fg { border-radius: 0; border: 0; font-weight: 800; font-size: 12px; box-shadow: 0 0 0 2px var(--px-ink, #0b0d1a), inset 0 -3px 0 rgba(0, 0, 0, .3); }
+.rm-bp8 #realm-bp-list button.eq:not(:disabled) { background: var(--px-11, #00e436); color: var(--px-ink, #0b0d1a); }
+.rm-bp8 #realm-bp-list button.dc { background: var(--px-5, #5f574f); color: var(--px-7, #fff1e8); }
+.rm-bp8 #realm-bp-list button:disabled { background: var(--px-ink, #0b0d1a); color: var(--px-dim, #c2c3c7); }
+.rm-bp8-stat4 { display: grid; gap: 6px; }
+.rm-bp8-stat4 .s4 { display: grid; grid-template-columns: 24px 1fr auto 52px; grid-template-rows: auto auto; align-items: center; column-gap: 8px; padding: 6px 8px;
+  background: var(--px-1, #1d2b53); box-shadow: 0 0 0 2px var(--px-ink, #0b0d1a); }
+.rm-bp8-stat4 .ic { grid-row: 1 / span 2; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: 900; color: var(--px-ink, #0b0d1a); background: var(--px-9, #ffa300); }
+.rm-bp8-stat4 .s4[data-s4="defense"] .ic { background: var(--px-12, #29adff); }
+.rm-bp8-stat4 .s4[data-s4="speed"] .ic { background: var(--px-11, #00e436); }
+.rm-bp8-stat4 .s4[data-s4="luck"] .ic { background: var(--px-10, #ffec27); }
+.rm-bp8-stat4 .lb { font-weight: 900; letter-spacing: .08em; text-transform: uppercase; font-size: 13px; }
+.rm-bp8-stat4 .vl { font-size: 15px; text-align: right; }
+.rm-bp8-stat4 .mn { grid-column: 2 / -1; font-size: 12px; color: var(--px-dim, #c2c3c7); }
+.rm-bp8 .dd { font-weight: 900; font-size: 12px; text-align: right; }
+.rm-bp8 .dd[data-d="up"] { color: var(--px-11, #00e436); }
+.rm-bp8 .dd[data-d="down"] { color: var(--px-8, #ff004d); }
+.rm-bp8 .dd[data-d="same"] { color: var(--px-dim, #c2c3c7); }
+.rm-bp8 .s4-for { font-size: 12px; }
+.rm-bp8-cmp4 { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 6px 8px; background: var(--px-ink, #0b0d1a); box-shadow: 0 0 0 2px var(--px-5, #5f574f); font-size: 12px; }
+.rm-bp8-cmp4 .s4 { display: inline-flex; gap: 4px; align-items: baseline; }
+.rm-bp8-cmp4 .lb { color: var(--px-dim, #c2c3c7); font-weight: 900; }
+.rm-bp8-cmp4 .s4-for { flex: 1 0 100%; }
+.rm-bp8 #realm-bp-stats { margin: 0; font-size: 12px; color: var(--px-12, #29adff); overflow-wrap: anywhere; }
+.rm-bp8 #realm-bp-stats-toggle, .rm-bp8 #realm-bp-relic-toggle { border-radius: 0 !important; border: 0 !important; background: var(--px-1, #1d2b53) !important;
+  box-shadow: 0 0 0 2px var(--px-ink, #0b0d1a), inset 0 -3px 0 rgba(0, 0, 0, .3); font: 900 13px var(--px-font, monospace) !important; letter-spacing: .06em; }
+.rm-bp8 .rm-chase-line { border-radius: 0 !important; box-shadow: 0 0 0 2px var(--px-ink, #0b0d1a); }
+@media (max-width: 420px) {
+  .rm-bp8-slots.realm-bp-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rm-bp8-stat4 .s4 { grid-template-columns: 24px 1fr auto 44px; }
+}

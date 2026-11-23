@@ -201,6 +201,37 @@
     const c = document.createElement('canvas'); c.width = w; c.height = h; return c;
   };
 
+  // 8B: a crisp 1 px light rim just outside a sprite's silhouette, so a hero / party creature reads against any ground. Pure: takes an RGBA
+  // buffer (w x h, cells cw px wide: the rim never bleeds into the next frame) and returns a new one; a transparent pixel with an opaque
+  // 4-neighbour in the same cell gets the rim colour. Called once when baking, never per frame.
+  function rimPixels(d, w, h, cw, rgba) {
+    const c = rgba || [255, 241, 232, 230], out = new Uint8ClampedArray(d), cell = cw > 0 ? cw : w;
+    const op = (x, y) => d[(y * w + x) * 4 + 3] > 127;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = (y * w + x) * 4;
+      if (d[i + 3] > 0) continue;
+      const cx = x % cell;
+      if ((cx > 0 && op(x - 1, y)) || (cx < cell - 1 && op(x + 1, y)) || (y > 0 && op(x, y - 1)) || (y < h - 1 && op(x, y + 1))) {
+        out[i] = c[0]; out[i + 1] = c[1]; out[i + 2] = c[2]; out[i + 3] = c[3];
+      }
+    }
+    return out;
+  }
+  // rimCanvas(canvas, cw, rgba, create): bakes a rimmed copy of a canvas (or null when there is no 2D context / getImageData). Once.
+  function rimCanvas(cv, cw, rgba, create) {
+    try {
+      const w = cv.width, h = cv.height, g = cv.getContext && cv.getContext('2d');
+      if (!g || typeof g.getImageData !== 'function') return null;
+      const mk2 = typeof create === 'function' ? create : defaultCreate;
+      const rc = mk2(w, h), rg = rc && rc.getContext && rc.getContext('2d');
+      if (!rg) return null;
+      const id = rg.createImageData(w, h);
+      id.data.set(rimPixels(g.getImageData(0, 0, w, h).data, w, h, cw, rgba));
+      rg.putImageData(id, 0, 0);
+      return rc;
+    } catch (e) { return null; }
+  }
+
   // create(opts) -> strip set. opts: {art:false (load nothing), kinds, loadImage(url)->Promise<image|null>, create(w,h)->canvas}
   //  .ready: Promise resolving once every load settled. .has(kind): its idle + move strips (all three views) are in.
   //  .get(kind, act, dir) -> baked strip {id, src, frames, sw, sh, w, h, ax, ay, top, span} (falls back to idle of the same view, then idle down)
@@ -243,8 +274,11 @@
           }
         }
       } catch (e) { src = im; sw = cell; top = 0; span = w; }
+      // 8B: opts.rim allows a rimmed copy (draw(..., rim=true): the isles' party and mount). It is baked lazily, ONCE, the first time a
+      // strip is drawn with the rim (a handful of strips, not every loaded one); top / span stay the body's. undefined = not baked yet.
+      const rim = o.rim && src !== im ? undefined : null;
       // w / h / ax / ay / top / span in native (drawn) px; sw / sh the source cell
-      return { id: f.id, kind: f.kind, act: f.act, src: src, frames: frames, sw: sw, sh: sw, w: w, h: h, ax: sp.ax * r / SCALE, ay: sp.ay * r / SCALE, top: top, span: span };
+      return { id: f.id, kind: f.kind, act: f.act, src: src, rim: rim, frames: frames, sw: sw, sh: sw, w: w, h: h, ax: sp.ax * r / SCALE, ay: sp.ay * r / SCALE, top: top, span: span };
     }
     const self = {
       kinds: KINDS,
@@ -255,15 +289,16 @@
         const d = dir & 3;
         return baked[stripId(kind, act, d)] || baked[stripId(kind, 'idle', d)] || baked[stripId(kind, 'idle', DOWN)] || null;
       },
-      draw(ctx, s, frame, x, y, scale, flip) {
+      draw(ctx, s, frame, x, y, scale, flip, rim) {
         if (!s || !ctx) return false;
-        const k = scale > 0 ? scale : 1, f = ((frame | 0) % s.frames + s.frames) % s.frames;
+        if (rim && s.rim === undefined) s.rim = rimCanvas(s.src, s.w, o.rim === true ? null : o.rim, mk);
+        const k = scale > 0 ? scale : 1, f = ((frame | 0) % s.frames + s.frames) % s.frames, img = rim && s.rim ? s.rim : s.src;
         const dw = s.w * k, dh = s.h * k;
         if (flip) {
           ctx.save(); ctx.translate(x, 0); ctx.scale(-1, 1);
-          ctx.drawImage(s.src, f * s.sw, 0, s.sw, s.sh, -s.ax * k, y - s.ay * k, dw, dh);
+          ctx.drawImage(img, f * s.sw, 0, s.sw, s.sh, -s.ax * k, y - s.ay * k, dw, dh);
           ctx.restore();
-        } else ctx.drawImage(s.src, f * s.sw, 0, s.sw, s.sh, x - s.ax * k, y - s.ay * k, dw, dh);
+        } else ctx.drawImage(img, f * s.sw, 0, s.sw, s.sh, x - s.ax * k, y - s.ay * k, dw, dh);
         return true;
       }
     };
@@ -281,6 +316,6 @@
     return self;
   }
 
-  return { SPECS: SPECS, ACT: ACT, DIRS: DIRS, KINDS: KINDS, SCALE: SCALE, DOWN: DOWN, UP: UP, RIGHT: RIGHT, LEFT: LEFT,
+  return { rimPixels: rimPixels, rimCanvas: rimCanvas, SPECS: SPECS, ACT: ACT, DIRS: DIRS, KINDS: KINDS, SCALE: SCALE, DOWN: DOWN, UP: UP, RIGHT: RIGHT, LEFT: LEFT,
     stripId: stripId, files: files, kindsFor: kindsFor, fpsOf: fpsOf, framesOf: framesOf, dirCode: dirCode, frameIndex: frameIndex, duration: duration, actionFor: actionFor, saddleFor: saddleFor, seatOffset: seatOffset, flipFor: flipFor, create: create };
 });

@@ -22,7 +22,7 @@ async function open(browser, { seed, viewport, query, ctx: reuse } = {}) {
       Object.keys(s).forEach((k) => localStorage.setItem(k, typeof s[k] === 'string' ? s[k] : JSON.stringify(s[k])));
     }, seed);
   }
-  await page.goto(ORIGIN + '/game/hub/index.html?test=1' + (query || ''));
+  await page.goto(ORIGIN + '/game/hub/index.html?test=1&map=1' + (query || ''));
   await page.waitForFunction(() => window.__hub);
   return { ctx, page, errors, sockets, remote };
 }

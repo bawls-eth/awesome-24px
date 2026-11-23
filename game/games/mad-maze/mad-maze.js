@@ -101,6 +101,16 @@
     lb.title = HOME_LABEL;
   })();
   document.getElementById('realm-leave-btn').addEventListener('click', () => arena.leave());
+  // Keyboard players: the first Tab stop hands focus to the play field (a11y sweep; the full-screen field itself stays out of the Tab order)
+  (function playFocus() {
+    const b = document.getElementById('realm-play-focus'); const w = document.getElementById('realm-canvas-wrap'); if (!b || !w) return;
+    b.addEventListener('click', () => {
+      try { w.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+      document.body.classList.add('rm-kbd-play'); // keyboard play mode (the field shows its focus ring)
+      try { if (arena._showBanner) arena._showBanner('Playing: WASD move · Space fire · Esc menu', 1.6); } catch (e) { /* ignore */ }
+    });
+    w.addEventListener('blur', () => document.body.classList.remove('rm-kbd-play'));
+  })();
   for (let i = 0; i < 4; i++) document.getElementById(`realm-ab-${i}`).addEventListener('pointerdown', (e) => { e.preventDefault(); arena.cast(i); });
   document.getElementById('realm-bp-btn').addEventListener('click', () => arena.setPaused(true));
   document.getElementById('realm-board-btn').addEventListener('click', () => arena.setBoard(true));
@@ -662,6 +672,7 @@
       else if (k === 'autoFire' && AX2) { arena.setAutoFire(!arena.access2().autoFire); axRender(); }
       else if (k === 'aimToggle' && AX2) { arena.setAimToggle(!arena.access2().aimToggle); axRender(); }
       else if (k === 'shapes' && AX2) { arena.setBulletShapes(!arena.access2().shapes); axRender(); }
+      else if (k === 'shared') { const P = SHARED ? SHARED.panel() : null; if (P) { axClose(); P.open(); } }
       else if (k === 'done') axClose();
       else axSet(k, !axPrefs[k]);
     });
@@ -689,6 +700,7 @@
       tog('aimToggle', 'Aim: tap to toggle (instead of hold)', c.aimToggle);
       tog('shapes', 'Bullet shapes', c.shapes || p.palette !== 'normal', p.palette !== 'normal' ? ' (always with this palette)' : '');
     }
+    if (SHARED) { const sb = mkEl('button', 'rm-tog', '🔊 Sound, music, aim assist...'); sb.type = 'button'; sb.id = 'mm-settings-shared'; sb.dataset.ax = 'shared'; axBody.appendChild(sb); }
     const d = mkEl('button', 'rm-btn', 'Done'); d.type = 'button'; d.dataset.ax = 'done'; axBody.appendChild(d);
   }
   // Feedback box (shared/mm-feedback.js, local-only notes): loaded on the first settings open. The tag is added from here, guarded:
@@ -709,6 +721,51 @@
       s.addEventListener('error', () => { s.remove(); });
       document.head.appendChild(s);
     }
+  }
+
+  // Shared Settings panel (shared/mm-settings.js, SETTINGS-WIRING.md): sound, music, aim assist and the rest of the one cross-game panel.
+  // The Realm's own sheet (#mm-settings, ids kept for its tests) links to it; every change there applies live through the arena's setters.
+  // ?mmsettings=0 leaves it out (the page as before).
+  // Mounted lazily on the first open and taken out of the page again when it closes, so the shared Menu's Settings entry keeps opening the
+  // Realm sheet (mm-nav prefers a mounted #mmset; the Realm sheet is the superset: palette, outline, ambient drone, and this link).
+  const SHARED = AX_ON && window.MMSettings && params.get('mmsettings') !== '0' ? (() => {
+    let P = null; let back = null;
+    function detach() { [back, P && P.el].forEach((n) => { if (n && n.parentNode) n.parentNode.removeChild(n); }); }
+    function panel() {
+      if (!P) {
+        try { P = MMSettings.mount({ page: 'realm', feedback: false, play: true }); } catch (e) { P = null; }
+        if (!P || !P.el) return null;
+        back = document.getElementById('mmset-back');
+        ['keydown', 'keyup'].forEach((t) => P.el.addEventListener(t, (e) => { if (e.key !== 'Tab' && e.key !== 'Escape') e.stopPropagation(); })); // keys typed in the panel never drive the hero
+        new MutationObserver(() => { if (P.el.hidden) detach(); }).observe(P.el, { attributes: true, attributeFilter: ['hidden'] });
+      }
+      if (!P.el.isConnected) { if (back) document.body.appendChild(back); document.body.appendChild(P.el); }
+      return P;
+    }
+    return { panel, isOpen: () => !!P && P.el.isConnected && P.isOpen(), close: () => { if (P) P.close(); } };
+  })() : null;
+  if (SHARED) {
+    window.addEventListener('mm-settings-change', (ev) => {
+      const d = ev && ev.detail ? ev.detail : {}; const v = d.value;
+      try {
+        if (d.id === 'auto-fire' && AX2) arena.setAutoFire(!!v);
+        else if (d.id === 'aim-toggle' && AX2) arena.setAimToggle(!!v);
+        else if (d.id === 'one-thumb' && AX2) arena.setOneThumb(!!v);
+        else if (d.id === 'bullet-shapes' && AX2) arena.setBulletShapes(!!v);
+        else if (d.id === 'aim-assist' && arena.setAimAssist) arena.setAimAssist(!!v);
+        else if (d.id === 'sound') { if (arena.sfx) arena.sfx.setMuted(!v); if (window.RealmAudio) RealmAudio.tick(); }
+        else if (d.id === 'music') { if (window.RealmAudio) RealmAudio.tick(); }
+        else if (d.id === 'reduce-motion') arena.setReduceMotion(!!v);
+        else if (d.id === 'text-size' || d.id === 'flashes' || d.id === 'low-gfx') {
+          axPrefs = AXM.prefs.load(localStorage);
+          if (d.id === 'low-gfx' && !v) { perfSt.samples.length = 0; perfSt.auto = false; perfSt.prev = null; }
+          axApply(axPrefs);
+        }
+      } catch (e) { /* a setting never breaks the run */ }
+      axRender();
+    });
+    // Esc closes the shared panel first (the arena would otherwise toggle its menu underneath)
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && SHARED.isOpen()) { SHARED.close(); e.stopPropagation(); e.preventDefault(); } }, true);
   }
 
   if (AX_ON) {

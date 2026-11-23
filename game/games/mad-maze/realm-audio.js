@@ -10,13 +10,35 @@
   function load() { try { const s = localStorage.getItem(KEY); return typeof s === 'string' && s.length < 200 ? clean(JSON.parse(s)) : clean(null); } catch (e) { return clean(null); } }
   function save(st) { try { localStorage.setItem(KEY, JSON.stringify(clean(st))); } catch (e) { /* storage blocked: the choice lasts for this visit */ } }
 
-  let st = load(), ctl = null, last = { zone: 0, playing: false };
+  // Chip music (CHIP-AUDIO.md): the `realm` loop in zones 0-2, `dungeon` in deep zones, dungeons and boss fights. Off by default; it follows
+  // the shared Music setting (`mm-music`, MMSettings) or, when that was never written, the Town's Music toggle (pixeltown-save-v1.musicEnabled).
+  // It replaces the drone while it plays (never both). Low graphics / muted / hidden tab: silent.
+  function chipMusicPref() {
+    try {
+      const m = localStorage.getItem('mm-music'); if (m === '1' || m === '0') return m === '1';
+      const sv = JSON.parse(localStorage.getItem('pixeltown-save-v1') || 'null'); return !!(sv && typeof sv === 'object' && sv.musicEnabled === true);
+    } catch (e) { return false; }
+  }
+  function cueFor(z) {
+    try { const a = ctl.arena; if (a.dungeon || (a.mode !== 'world' && a.mode) || z >= 3 || (a.enemies && a.enemies.some((e) => e.active && e.type === 'boss'))) return 'dungeon'; } catch (e) { /* fall through */ }
+    return z >= 3 ? 'dungeon' : 'realm';
+  }
+  let st = load(), ctl = null, last = { zone: 0, playing: false, cue: null };
   function sfxOf() { return ctl && ctl.arena && ctl.arena._gesture && ctl.arena.sfx ? ctl.arena.sfx : null; }
   function tick() {
     const f = sfxOf(); if (!f) { last.playing = false; return; }
     let z = 0; try { z = Math.floor(Number(ctl.zone())) || 0; } catch (e) { z = 0; }
     last.zone = z;
     try {
+      const chip = !!(window.MMChip && f.music) && chipMusicPref() && !document.hidden && !f.isMuted();
+      if (chip) {
+        if (f.ambienceOn && f.ambienceOn()) f.stopAmbience();
+        if (!f.musicOn) f.setMusic(true);
+        const cue = cueFor(z);
+        if (f.musicCue() !== cue) f.music(cue);
+        last.cue = f.musicCue(); last.playing = !!last.cue; return;
+      }
+      if (last.cue) { try { f.stopMusic(); } catch (e) { /* ignore */ } last.cue = null; }
       const want = st.ambience && !document.hidden && !f.isMuted();
       if (want) { if (!f.musicOn) f.setMusic(true); last.playing = !!f.ambience(z); }
       else { if (f.musicOn && !st.ambience) f.setMusic(false); else if (f.ambienceOn && f.ambienceOn()) f.stopAmbience(); last.playing = false; }
@@ -37,7 +59,8 @@
     KEY, clean, attach,
     isOn: () => st.ambience,
     setOn(on) { st = clean({ ambience: !!on }); save(st); tick(); return st.ambience; },
-    state: () => ({ on: st.ambience, zone: last.zone, playing: last.playing }),
+    state: () => ({ on: st.ambience, zone: last.zone, playing: last.playing, cue: last.cue, chipMusic: chipMusicPref() }),
+    chipMusicPref, cueFor: (z) => (ctl ? cueFor(z) : (z >= 3 ? 'dungeon' : 'realm')),
     tick,
   };
 })();

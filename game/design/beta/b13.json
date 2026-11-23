@@ -1,0 +1,111 @@
+[
+  {
+    "id": "b13-01", "severity": "P1", "area": "Realm/Arena/Dungeon cold start (network)",
+    "title": "Realm world cold start issues 1,235 requests / 8.0 MB; 2.6 MB of it is duplicate fetches of the same INDEX.json and pack manifests",
+    "steps": ["Open http://localhost:9462/game/games/mad-maze/index.html?mode=world&test=1&seed=777 at 390x844 with an empty cache", "Record all responses for 6 s (page.on('response'))"],
+    "expected": "A few dozen requests; each shared manifest fetched once; art streamed lazily as zones are reached",
+    "actual": "1,235 requests = 939 PNG (2.97 MB) + 225 JSON (3.82 MB) + 63 scripts (1.39 MB) + 7 CSS; 1,077 unique URLs. assets/arcane/INDEX.json fetched 7x (159 KB), b22-items-relics-keys/manifest.json 5x (158 KB), b29-gear-tiers 5x, i01-items-v2 4x, b08-armor 4x ... duplicate-fetch waste about 2.6 MB. Arena (?mode default) = 368 req / 4.7 MB, Dungeon = 438 req / 4.8 MB, Lantern = 197 req / 2.2 MB. 'load' event: 1.1 s at 1x, 3.1 s DOM / 15.5 s load at 6x CPU; on Slow-3G (50 KB/s, 400 ms RTT) DOMContentLoaded 33 s and full load 153 s (6.0 MB transferred in the window). Assets are served with no cache-control by python http.server, so every number is a cold-cache worst case; the duplication is independent of hosting because each MMArt.load* call re-runs fetchJson(INDEX.json) and re-reads each batch manifest.",
+    "viewport": "390x844", "url": "game/games/mad-maze/index.html?mode=world&test=1&seed=777", "screenshots": [], "clip": null,
+    "suspect": "game/shared/mm-art.js:143 (fetchJson has no memo/in-flight cache) called from loadItems:311, loadBolts:354, loadFx:386, loadDungeonTiles:424, loadAll:204; callers game/games/mad-maze/mad-maze.js:170-260",
+    "kind": "perf", "frequency": "always"
+  },
+  {
+    "id": "b13-02", "severity": "P2", "area": "Town / Hub / Deepdelve load weight",
+    "title": "Town (and the Hub it embeds) eagerly download the 654 KB three.min.js on every visit; the file logs a deprecation warning on every load",
+    "steps": ["Open game/index.html?from=hub and game/games/deepdelve/index.html", "Read the console and the network list"],
+    "expected": "three.js only loaded by the page/feature that renders 3D (Deepdelve, the Town underground when entered); no deprecation warning",
+    "actual": "Town transfers 3.28 MB in 46 requests (phaser 1,154 KB, three 654 KB, main.js 442 KB, realm.js 355 KB) before the join screen. three.min.js is used only by underground.js; console shows 'Scripts build/three.js and build/three.min.js are deprecated with r150+, and will be removed with r160' on every Town and Deepdelve load, while the URL is pinned to three@0.160.0 (the version the warning says removes the file; a later bump of the pin will 404). At Slow-3G the Town reaches DOMContentLoaded in 36 s.",
+    "viewport": "390x844", "url": "game/index.html?from=hub", "screenshots": [], "clip": null,
+    "suspect": "game/index.html:539 (script tag), game/underground.js (only THREE user outside deepdelve)",
+    "kind": "perf", "frequency": "always"
+  },
+  {
+    "id": "b13-03", "severity": "P1", "area": "Town (offline stub) with many remote players",
+    "title": "Town with 55 remote players runs at 9-12 fps and 230-330 long tasks per 30 s at 4x CPU; Town idle with 0 remotes is only ~12 fps at 4x",
+    "steps": ["Play offline (SDK stub, DB blocked), CDP CPU throttle 4x, 390x844", "scene.addRemotePlayerCapped x55 (the REMOTE_CAP), jitter targets every 500 ms, churn 1 in 4 ticks, chat bubble every 6th tick, walk with arrow keys for 8 min"],
+    "expected": ">= 30 fps at 4x with the capped crowd",
+    "actual": "Soak (30 s samples, 16 rows): fps 30.1 at t=1 s, then 15.2 / 11.4 / 10.0 / 9.2 ... 11.9 (median frame 67-83 ms, p95 183-317 ms, worst 0.8-1.2 s, one 3.4 s at t=336 s), long tasks 209-335 per 30 s. A/B at 4x 390x844, 6 s each: 0 remotes median 83 ms (12 fps), p95 150; 55 remotes median 83 ms, p95 183; 1280x720 4x: 0 remotes median 83 ms, 55 remotes 67 ms. At 1x 390x844: p95 100 ms -> 200 ms when the 55 remotes are added. Main-thread busy ~100% but ScriptDuration only 7-19%, so cost is render/fill (software GL here; load average was 20+ on the box), not JS. Stable counts (no leak): objs 1118, tweens 170-179, timers 11-21, textures 448-450, DOM nodes 3821, JS listeners 528 over 8 min.",
+    "viewport": "390x844", "url": "game/index.html (offline join)", "screenshots": [], "clip": null,
+    "suspect": "game/main.js:1801 and :4847 (per-remote update loops), addRemotePlayer :5686 (sprite + shadow + name Text per remote = 3 display objects, each name a Phaser Text with its own canvas texture)",
+    "kind": "perf", "frequency": "always"
+  },
+  {
+    "id": "b13-04", "severity": "P2", "area": "Realm world sustained fight",
+    "title": "Realm fight (72 enemies, 700 bullet pool) degrades from ~55 fps to ~35 fps over a 10 min soak at 4x CPU; long tasks climb from ~10 to ~60 per 30 s",
+    "steps": ["Realm world, level 8 save, 390x844, 4x throttle, player invulnerable", "Keep 40 enemies alive around the player, walk randomly with arrow keys + touch taps for 10 min", "Sample every 30 s after forced GC"],
+    "expected": "Flat frame time over time",
+    "actual": "fps 43 (t=33 s) -> 55 (t=93) -> 49 (t=245) -> 38 (t=335) -> 30-38 (t=458-580); ltmax 75-150 ms early, 360-550 ms late. DOM nodes flat (1648 -> 1835), JS listeners 1997 -> 2057, canvases 2, enemies pool 72, bullets pool 700 constant. Caveat: machine load average rose from 6 to 24 during the run, so part of the drop is other agents; counts say no object growth, so I cannot prove a leak. Needs a re-run on a quiet box.",
+    "viewport": "390x844", "url": "game/games/mad-maze/index.html?mode=world&test=1&seed=777", "screenshots": [], "clip": null,
+    "suspect": "game/realm.js (arena update/draw hot path) - unproven",
+    "kind": "perf", "frequency": "once"
+  },
+  {
+    "id": "b13-05", "severity": "P2", "area": "Deepdelve",
+    "title": "Deepdelve start-up and block edits cause long tasks: 0.9-1.0 s first frame at 4x, up to 0.8 s per tap at 1x on phone",
+    "steps": ["Open game/games/deepdelve/index.html?test=1 at 390x844 and 1280x720", "Wait for __dd.ready, walk forward with W for 16 s, sample rAF every 2 s", "Separately: 12 random touchscreen taps on the 390x844 canvas at 1x, log longtask entries"],
+    "expected": "No frame over 100 ms after load; edits cheap",
+    "actual": "4x: first 2 s sample 24 fps with worst frame 883 ms (390) / 17.6 fps, 983 ms (1280); 4 long tasks >100 ms (693 ms max) at 390, 24 (807 ms max) at 1280; then steady 52-57 fps. 1x 390: 49 fps first sample then 60 fps (1 long task 190 ms). 6x 1280: 11.7 fps, 75 long tasks, 320 ms max. Tap test at 1x 390: 12 taps -> 13 long tasks in one tap (max 796 ms), others 50-153 ms. The quality governor stayed at level 0 (view 3 phone / 5 desktop, scale 1.0) through every dip because the dip is a start-up/remesh spike, not a rolling-average one. First survey run with random touch input measured 0.7 fps average with a 13.6 s long task at 4x (worst single frame 10.5 s); I could not reproduce that with clean W-key input, so it is tied to tap handling (mine/place + relight) under throttle.",
+    "viewport": "390x844", "url": "game/games/deepdelve/index.html?test=1", "screenshots": [], "clip": null,
+    "suspect": "game/games/deepdelve/deepdelve.js:518 (MAX_BUILDS=3 meshes/frame), :751 (relight on edit); governor :574-607",
+    "kind": "perf", "frequency": "sometimes"
+  },
+  {
+    "id": "b13-06", "severity": "P2", "area": "Isles load",
+    "title": "Isles takes 3.0-4.8 s to DOMContentLoaded at 4x-6x CPU (5.6 s on Fast-3G) with 249 requests and a 234-392 ms long task on start",
+    "steps": ["Open game/games/isles/index.html at 390x844 with 4x / 6x CPU throttle, and with CDP Fast-3G (200 KB/s, 150 ms RTT)"],
+    "expected": "Interactive in ~1-2 s on a throttled phone",
+    "actual": "4x: DOM 3.06 s (390) / 3.73 s (1280), load 5.1 s / 3.7 s; 6x: DOM 4.8 s; fast3g: DOM 5.6 s, load 13.2 s. 249 requests, 1.63 MB, isles.js alone 245 KB. Soak (150 s, 4x): first sample 26.6 fps with a 667 ms worst frame and 392 ms long task, later 48 fps; heap 2.6 -> 3.0 MB, nodes 1481 -> 1477, listeners 178 -> 178 (no leak).",
+    "viewport": "390x844", "url": "game/games/isles/index.html", "screenshots": [], "clip": null,
+    "suspect": "game/games/isles/isles.js (start-up bake of island art / creatures)",
+    "kind": "perf", "frequency": "always"
+  },
+  {
+    "id": "b13-07", "severity": "P3", "area": "Realm / Dungeon / Deepdelve resize + rotate",
+    "title": "60 rapid rotations at 4x block the main thread 350-450 ms; the Realm canvas then stays at 75% render size until reload",
+    "steps": ["Open the page at 390x844 with 4x throttle", "setViewportSize alternating 844x390 / 390x844 60 times with 40 ms gaps, restore 390x844, wait 1.5 s"],
+    "expected": "Resize debounced; resolution returns to 100% when frame time recovers",
+    "actual": "Realm: 24 long tasks, ltmax 350 ms, worst frame 450 ms; Dungeon 13 / 435 ms; Deepdelve 27 / 247 ms / 283 ms; Isles 6 / 127 ms. After the storm the Realm canvas was 292x633 at CSS 390x844 (0.75 scale, the adaptive-resolution step) instead of 390x844, and stayed there (Deepdelve went 195x331 -> 97x165, i.e. half-res pass halved again). No console errors, heap and DOM unchanged (Realm heap 4.0 -> 4.1 MB, nodes 1501 -> 1507).",
+    "viewport": "390x844", "url": "game/games/mad-maze/index.html?mode=world&test=1&seed=777", "screenshots": [], "clip": null,
+    "suspect": "game/realm.js resize handlers (4 'resize' listeners) and perfEval at game/games/mad-maze/mad-maze.js:617",
+    "kind": "perf", "frequency": "always"
+  },
+  {
+    "id": "b13-08", "severity": "P3", "area": "Realm listeners",
+    "title": "Realm slowly accumulates JS event listeners during play (1997 -> 2057 in 10 min, in steps of 12)",
+    "steps": ["Realm world soak as b13-04", "Read CDP Performance.getMetrics JSEventListeners every 30 s"],
+    "expected": "Plateau after load",
+    "actual": "Steps of +12 at t=62, 93, 153, 519, 550 s; flat otherwise. About +60 per 10 min, tiny but it never goes down. DOM element count stayed 301 and Nodes 1829-1835 (plateau), so this is likely listeners on long-lived nodes (pickup/modal builders) rather than detached DOM.",
+    "viewport": "390x844", "url": "game/games/mad-maze/index.html?mode=world&test=1&seed=777", "screenshots": [], "clip": null,
+    "suspect": "game/games/mad-maze/realm-world.js (23 addEventListener, 0 removeEventListener) / game/realm.js (38 add, 10 remove)",
+    "kind": "perf", "frequency": "sometimes"
+  },
+  {
+    "id": "b13-09", "severity": "P3", "area": "Arcane Frontier page",
+    "title": "arcane-frontier/index.html has no favicon link: every load logs a 404 for /favicon.ico",
+    "steps": ["Open game/games/arcane-frontier/index.html with console open"],
+    "expected": "No console error",
+    "actual": "'Failed to load resource: the server responded with a status of 404' (favicon.ico). All other pages load with 0 console errors/warnings except the three.js deprecation (b13-02) and the expected Firebase block in Town.",
+    "viewport": "1280x720", "url": "game/games/arcane-frontier/index.html", "screenshots": [], "clip": null,
+    "suspect": "game/games/arcane-frontier/index.html <head>",
+    "kind": "bug", "frequency": "always"
+  },
+  {
+    "id": "b13-10", "severity": "P3", "area": "Repo asset weight",
+    "title": "Large unreferenced images sit under game/assets and game/design: 3.4 MB warrior-master-sheet.png, 1.5-1.65 MB raw moth/beetle/preview-all, 1.5 MB concept",
+    "steps": ["find game -name '*.png' -size +300k"],
+    "expected": "Only runtime assets in the deployed folder",
+    "actual": "assets/arcane/reference/warrior-master-sheet.png 3.40 MB, assets/art/raw/dusk_moth.png 1.66 MB, thorn_beetle.png 1.47 MB, puffcap.png 1.12 MB, assets/art/preview-all.png 1.53 MB, design/concepts/gpt-mounts-concept-1.png 1.53 MB, three batch preview.png files 330-460 KB. None was requested in any page load I recorded (so no player cost today), but they ship with the site if the whole game/ folder is deployed. assets/arcane = 28 MB, assets/art = 12 MB.",
+    "viewport": "1280x720", "url": "game/assets/", "screenshots": [], "clip": null,
+    "suspect": null, "kind": "improvement", "frequency": "always"
+  },
+  {
+    "id": "b13-11", "severity": "P3", "area": "Mini games / network",
+    "title": "Static assets have no versioning on art packs (assets/arcane/*) while scripts use ?v=; 1,235 requests would all revalidate or stale-cache on update",
+    "steps": ["Record headers on the Realm load"],
+    "expected": "Fingerprinted or versioned art URLs so long cache lifetimes are safe",
+    "actual": "Scripts carry ?v=20261123x (town) but the 939 PNG and 225 manifest fetches have no version token, so a long max-age on the host would serve stale art after an art update and a short one forces ~1,000 revalidations per cold visit. (Local python server sends no cache-control at all, so this is a design note, not a measured fault.)",
+    "viewport": "390x844", "url": "game/games/mad-maze/index.html?mode=world", "screenshots": [], "clip": null,
+    "suspect": "game/shared/mm-art.js (ASSET_ROOT joins)",
+    "kind": "improvement", "frequency": "always"
+  }
+]

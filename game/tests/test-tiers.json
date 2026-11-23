@@ -1,9 +1,22 @@
 {
+  "nav-settings.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "a11y-viewport-sweep.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 900
+  },
   "town-polish.test.js": {
     "class": "browser",
     "tier": "full"
   },
   "town-offline.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "town-8bit-menu.test.js": {
     "class": "browser",
     "tier": "full"
   },
@@ -80,6 +93,22 @@
     "tier": "full"
   },
   "bugs-fun.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "bugs-bb.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "bugs-variety.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "stalk-moods.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "angler-conditions.test.js": {
     "class": "browser",
     "tier": "full"
   },
@@ -211,6 +240,10 @@
     "class": "live",
     "tier": "full"
   },
+  "deepdelve-bugbash.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "deepdelve-goals.test.js": {
     "class": "browser",
     "tier": "full"
@@ -220,6 +253,10 @@
     "tier": "full"
   },
   "hub-page.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "hub-home.test.js": {
     "class": "browser",
     "tier": "smoke"
   },
@@ -259,11 +296,19 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "jam-bugbash.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "jam-fun.test.js": {
     "class": "browser",
     "tier": "smoke"
   },
   "stalk-notes.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "lantern-intro-help.test.js": {
     "class": "browser",
     "tier": "smoke"
   },
@@ -543,6 +588,30 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-bugbash-fuzz.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-bugbash-browser.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "shared-mm-town-heroes.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "town-heroes.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "town-bugbash.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "town-front-door.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "shared-mm-island-wilds.test.js": {
     "class": "node",
     "tier": "smoke"
@@ -643,6 +712,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-chip.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "site-links.test.js": {
     "class": "live",
     "tier": "full"
@@ -664,6 +737,10 @@
     "tier": "smoke"
   },
   "stalk-page.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "angler-bugbash.test.js": {
     "class": "browser",
     "tier": "smoke"
   },
@@ -784,7 +861,7 @@
     "tier": "full"
   },
   "town-perf.test.js": {
-    "class": "live",
+    "class": "browser",
     "tier": "full"
   },
   "jam-first-visit.test.js": {
@@ -1327,6 +1404,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "isles-bugbash.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "isles-access.test.js": {
     "class": "browser",
     "tier": "full"
@@ -1359,7 +1440,100 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "dash-bugbash.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "stack-page.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "echo-bugbash.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "echo-page.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "art-audit-tool.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "minigame-quality-gate.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "shared-mm-minikit.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-pixelize.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "pixelize-page.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "shared-mm-8bit.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "shared-mm-settings.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "shared-mm-input.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "realm-universal-controls.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "realm-backpack-8bit.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "realm-hud-8bit.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "realm-bugbash.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "art-mini-art.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "stalk-bugbash.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "live-safety.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "net-hostile-presence.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "save-hostile-fuzz.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "save-compat-pages.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 900
+  },
+  "save-race-tabs.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "shared-mm-save-merge.test.js": {
     "class": "node",
     "tier": "smoke"
   }

@@ -37,7 +37,7 @@ body { min-height:100vh; display:flex; flex-direction:column; align-items:center
 #help { font-size:calc(12px * var(--ui-scale,1)); color:var(--dim); margin:0; }
 @media (pointer: coarse), (max-width: 700px) { #touch { display:flex; } #help { display:none; } }
 
-#btn-mute { align-self:center; font:inherit; font-size:calc(12px * var(--ui-scale,1)); color:var(--ink); background:var(--panel); border:1px solid #0d160f; border-radius:8px; min-height:48px; min-width:48px; padding:4px 8px; cursor:pointer; }
+#btn-mute { margin-left:auto; align-self:center; font:inherit; font-size:calc(12px * var(--ui-scale,1)); color:var(--ink); background:var(--panel); border:1px solid #0d160f; border-radius:8px; min-height:48px; min-width:48px; padding:4px 8px; cursor:pointer; }
 #hint { margin-top:8px; background:rgba(13,22,15,.94); border:2px solid var(--accent); border-radius:8px; padding:8px 10px; font-size:calc(13px * var(--ui-scale,1)); }
 #hint[hidden] { display:none; }
 #hint p { margin:4px 0 8px; }
@@ -85,3 +85,61 @@ html[data-reduce-motion="1"] *, html[data-reduce-motion="1"] *::before, html[dat
 #hud-best.ahead { color:#1d2b20; background:var(--accent); font-weight:bold; }
 /* The full-screen menu covers the touch controls, so take them out of the layout while it is open (they cannot be hit anyway). */
 body:has(#overlay:not([hidden])) #touch { visibility: hidden; }
+
+/* VAR1 run modifiers */
+#hud #hud-mod { color:#ffe08a; border:1px solid #6b5a1e; }
+#hud #hud-mod[hidden] { display:none; }
+.card .cardmod { color:#5a3200; font-weight:bold; }
+.modlist ul { margin:4px 0; padding-left:20px; }
+.modlist li { margin:2px 0; font-size:calc(13px * var(--ui-scale,1)); }
+.modline { color:#ffe08a; }
+
+/* ===== 8-bit pass (mg-8bit-b): square stepped frames, chunky pixel HUD/buttons, pixel d-pad style touch controls ===== */
+:root { --px-ink:#0d160f; --px-hi:rgba(255,255,255,.25); --px-lo:rgba(0,0,0,.35); }
+body.px8 { background-color:var(--bg); color:var(--ink); }
+body { background-image:linear-gradient(rgba(255,255,255,.03) 2px, transparent 2px); background-size:100% 4px; -webkit-font-smoothing:none; }
+#stage *, #top * { border-radius:0 !important; }
+#top h1, #overlay h2, #overlay h3 { text-transform:uppercase; letter-spacing:2px; color:var(--accent); text-shadow:2px 2px 0 var(--px-ink); }
+#game { border:0; image-rendering:pixelated; box-shadow:0 0 0 4px var(--px-ink), 0 0 0 8px #4f7a45, 0 0 0 12px var(--px-ink), 8px 8px 0 12px rgba(0,0,0,.4); }
+#canvas-wrap { padding:12px; }
+#hud span { box-shadow:inset 0 -3px 0 var(--px-lo), inset 0 3px 0 var(--px-hi), 0 0 0 3px var(--px-ink); font-weight:bold; text-transform:uppercase; margin:3px; }
+#hud-time { color:#9bf6ff; } #hud-score { color:var(--accent); }
+#combo { box-shadow:0 0 0 3px var(--px-ink); margin:3px; background:repeating-linear-gradient(90deg, var(--panel) 0 6px, #233326 6px 8px); }
+#combo-bar { background:repeating-linear-gradient(90deg, #ff9f1c 0 6px, #e07a1f 6px 8px); box-shadow:inset 0 -3px 0 rgba(0,0,0,.3); }
+#combo span { box-shadow:none !important; margin:0 !important; text-shadow:2px 2px 0 var(--px-ink); }
+#overlay { background:#0d160f; box-shadow:inset 0 0 0 4px #3d5a42; }
+#overlay button, #touch button, #hint button, #btn-mute { border:0; font-weight:bold; text-transform:uppercase; letter-spacing:1px;
+  box-shadow:inset -4px -4px 0 var(--px-lo), inset 4px 4px 0 var(--px-hi), 0 0 0 3px var(--px-ink); margin:3px; }
+#overlay button:active:not([disabled]), #touch button:active, #btn-sneak.on { box-shadow:inset 4px 4px 0 var(--px-lo), 0 0 0 3px var(--px-ink); transform:translateY(2px); }
+#overlay button[disabled] { box-shadow:0 0 0 3px var(--px-ink); background:repeating-linear-gradient(45deg,#4a5650 0 4px,#424d47 4px 8px); }
+#overlay button.card { text-transform:none; }
+#overlay button.card > :first-child { text-transform:uppercase; }
+#journal-list div, #glade-list div, .goal-arena, #sum-counts div, #hint { box-shadow:inset 0 0 0 3px #3d5a42, 0 0 0 3px var(--px-ink), 5px 5px 0 3px rgba(0,0,0,.4); margin:3px; }
+#hint { border:0; box-shadow:inset 0 0 0 3px var(--accent), 0 0 0 3px var(--px-ink); }
+/* touch: square pixel joystick plate and a chunky round-ish (stepped) swing button */
+#joy { border:0; background:repeating-linear-gradient(0deg, rgba(255,255,255,.08) 0 4px, rgba(255,255,255,.12) 4px 8px); box-shadow:inset 0 0 0 4px rgba(255,255,255,.25), 0 0 0 4px var(--px-ink); clip-path:polygon(25% 0,75% 0,75% 8%,92% 8%,92% 25%,100% 25%,100% 75%,92% 75%,92% 92%,75% 92%,75% 100%,25% 100%,25% 92%,8% 92%,8% 75%,0 75%,0 25%,8% 25%,8% 8%,25% 8%); }
+#knob { opacity:1; box-shadow:inset -4px -4px 0 var(--px-lo), inset 4px 4px 0 var(--px-hi); }
+#btn-swing { clip-path:polygon(25% 0,75% 0,75% 8%,92% 8%,92% 25%,100% 25%,100% 75%,92% 75%,92% 92%,75% 92%,75% 100%,25% 100%,25% 92%,8% 92%,8% 75%,0 75%,0 25%,8% 25%,8% 8%,25% 8%); }
+#hud-time.hurry { animation-timing-function:steps(2, end); }
+#hud-score { transition:none; }
+
+/* BB1: the field fits the window height, so a run never needs page scrolling (desktop 1280x720, phone landscape). */
+#canvas-wrap { width:min(100%, max(288px, calc((100vh - 190px) * 1.4286 + 24px))); margin:0 auto; }
+@supports (height:100dvh) { #canvas-wrap { width:min(100%, max(288px, calc((100dvh - 190px) * 1.4286 + 24px))); } }
+/* Phone landscape: the stick and buttons float in the side gutters beside the field instead of sitting below it. */
+@media (orientation: landscape) and (max-height: 520px) and (pointer: coarse) {
+  #top { padding-top:2px; padding-bottom:2px; }
+  #canvas-wrap { width:min(100%, max(288px, calc((100vh - 150px) * 1.4286 + 24px))); }
+  #touch { position:fixed; left:0; right:0; bottom:calc(8px + env(safe-area-inset-bottom)); padding:0 calc(10px + env(safe-area-inset-left)) 0 calc(10px + env(safe-area-inset-right)); z-index:20; pointer-events:none; align-items:flex-end; }
+  #touch > * { pointer-events:auto; }
+  #joy { width:112px; height:112px; } #knob { left:36px; top:36px; }
+  #btn-swing { width:96px; height:96px; }
+  #touch { gap:8px; }
+  #touch #btn-sneak { margin-left:auto; }
+  #help { display:none; }
+}
+/* 150% text: the HUD wraps instead of overflowing, and menu cards keep their text inside the button. */
+#hud { row-gap:2px; }
+#overlay button.card { overflow-wrap:anywhere; }
+/* Bug bash a11y: at 320 px the joystick + sneak + swing row was 333 px wide (horizontal scroll). */
+@media (max-width: 340px) { #joy { width:96px; height:96px; } #knob { left:28px; top:28px; } #btn-swing { width:84px; height:84px; } #btn-sneak { width:72px; } #touch { gap:6px; } }

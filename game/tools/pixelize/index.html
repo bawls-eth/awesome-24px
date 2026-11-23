@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pixelize Review</title>
+<style>
+  :root { --bg: #12142a; --card: #1c1f3a; --ink: #e8e6f2; --dim: #9a98b8; --line: #2e3260; --accent: #ffcf5a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 13px/1.4 system-ui, sans-serif; }
+  header { position: sticky; top: 0; z-index: 2; background: #0d0f22; border-bottom: 1px solid var(--line); padding: 8px 16px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  header h1 { font-size: 15px; margin: 0 12px 0 0; color: var(--accent); }
+  label { color: var(--dim); display: inline-flex; gap: 4px; align-items: center; }
+  input[type=range] { width: 80px; }
+  select, button { background: var(--card); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 3px 6px; }
+  #stat { margin-left: auto; color: var(--dim); }
+  main { padding: 12px 16px; }
+  h2 { font-size: 13px; color: var(--dim); margin: 16px 0 8px; text-transform: uppercase; letter-spacing: .06em; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 10px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 8px; }
+  .card .t { display: flex; justify-content: space-between; gap: 6px; color: var(--dim); font-size: 11px; margin-bottom: 6px; }
+  .card .t b { color: var(--ink); font-weight: 600; }
+  .pair { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+  .card.big { grid-column: span 2; }
+  @media (max-width: 680px) { .card.big { grid-column: auto; } }
+  .col { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10px; color: var(--dim); }
+  .row { display: flex; gap: 6px; align-items: flex-end; }
+  canvas { image-rendering: pixelated; image-rendering: crisp-edges; background: #0a0b18; display: block; }
+  .before canvas { image-rendering: auto; }
+  .sep { width: 1px; align-self: stretch; background: var(--line); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Pixelize review</h1>
+  <label>outline <input id="o-outline" type="range" min="0" max="1" step="0.02"></label>
+  <label>colours <input id="o-colors" type="range" min="4" max="20" step="1"></label>
+  <label>highlight <input id="o-highlight" type="range" min="0" max="0.6" step="0.02"></label>
+  <label>shade <input id="o-shade" type="range" min="0" max="0.6" step="0.02"></label>
+  <label>dither <input id="o-dither" type="range" min="0" max="1" step="0.05"></label>
+  <label>show <select id="o-filter"><option value="">all</option></select></label>
+  <span id="stat">loading...</span>
+</header>
+<main id="main"></main>
+<script src="../../shared/mm-pixelize.js"></script>
+<script>
+(function () {
+  'use strict';
+  var P = window.MMPixelize, q = new URLSearchParams(location.search);
+  var ROOT = '../../', STRIPS = [
+    { id: 'mooncats', src: ROOT + 'assets/mooncats-strip.png', frame: 24, label: 'Mooncats (Town villagers)' },
+    { id: 'tulips', src: ROOT + '../i/tulips-strip.png', frame: 24, label: 'Tulips (Town villagers)' },
+    { id: 'rocks', src: ROOT + '../i/rocks-strip.png', frame: 24, label: 'Rocks (Town villagers)' },
+    { id: 'punkrocks', src: ROOT + '../i/punkrocks-strip.png', frame: 24, label: 'Punk rocks (Town villagers)' },
+    { id: 'boredapes', src: ROOT + '../i/boredapes-strip.png', frame: 28, label: 'Bored apes (Town villagers)' }
+  ];
+  var KEYS = ['outline', 'colors', 'highlight', 'shade', 'dither'];
+  var opts = {}; KEYS.forEach(function (k) { opts[k] = q.has(k) ? +q.get(k) : P.DEFAULTS[k]; });
+  var state = { ready: false, species: [], villagers: [], results: [], bakeMs: 0, loadMs: 0, errors: [] };
+  window.__pixelize = state;
+
+  function loadImg(url) { return new Promise(function (res, rej) { var im = new Image(); im.onload = function () { res(im); }; im.onerror = function () { rej(new Error('missing ' + url)); }; im.src = url; }); }
+  function cv(w, h) { var c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+  function before(im, fr, size, scale) {
+    var c = cv(size * scale, size * scale), g = c.getContext('2d'); g.imageSmoothingEnabled = true;
+    if (fr) { g.imageSmoothingEnabled = false; g.drawImage(im, fr.sx, fr.sy, fr.sw, fr.sh, scale, scale, fr.sw * scale, fr.sh * scale); }
+    else g.drawImage(im, 0, 0, c.width, c.height);
+    return c;
+  }
+  function after(ent, scale) { var c = cv(ent.w * scale, ent.h * scale); P.draw(c.getContext('2d'), ent, 0, 0, scale); return c; }
+  function col(label, canv) { var d = document.createElement('div'); d.className = 'col'; d.appendChild(canv); d.appendChild(document.createTextNode(label)); return d; }
+  function card(item, ent) {
+    var c = document.createElement('div'); c.className = 'card' + (item.cls === 'L48' || item.cls === 'XL64' ? ' big' : ''); c.dataset.id = item.id; c.dataset.group = item.group;
+    c.innerHTML = '<div class="t"><b></b><span></span></div>';
+    c.querySelector('b').textContent = item.name;
+    c.querySelector('span').textContent = item.cls + ' · ' + ent.colors + ' col · ' + ent.ms.toFixed(1) + ' ms';
+    var p = document.createElement('div'); p.className = 'pair';
+    var b = document.createElement('div'); b.className = 'row before';
+    b.appendChild(col('before 1x', before(item.img, item.frame, ent.w, 1))); b.appendChild(col('before 3x', before(item.img, item.frame, ent.w, 3)));
+    var a = document.createElement('div'); a.className = 'row';
+    a.appendChild(col('after 1x', after(ent, 1))); a.appendChild(col('after 3x', after(ent, 3)));
+    var s = document.createElement('div'); s.className = 'sep';
+    p.appendChild(b); p.appendChild(s); p.appendChild(a); c.appendChild(p); return c;
+  }
+
+  function bakeAll() {
+    P.clearCache();
+    var t0 = performance.now(), out = [];
+    state.items.forEach(function (it) {
+      var o = Object.assign({ size: it.size || P.SIZE_CLASSES[it.cls] }, opts);
+      var ent = it.frame ? P.bake({ image: it.img, sx: it.frame.sx, sy: it.frame.sy, sw: it.frame.sw, sh: it.frame.sh }, o) : P.bake(it.img, o);
+      out.push({ item: it, ent: ent });
+    });
+    state.bakeMs = performance.now() - t0; state.results = out; return out;
+  }
+  function render() {
+    var main = document.getElementById('main'); main.innerHTML = '';
+    var filter = document.getElementById('o-filter').value, groups = {};
+    state.results.forEach(function (r) { if (filter && r.item.group !== filter) return; (groups[r.item.group] = groups[r.item.group] || []).push(r); });
+    Object.keys(groups).forEach(function (g) {
+      var h = document.createElement('h2'); h.textContent = g + ' (' + groups[g].length + ')'; main.appendChild(h);
+      var grid = document.createElement('div'); grid.className = 'grid';
+      groups[g].forEach(function (r) { grid.appendChild(card(r.item, r.ent)); }); main.appendChild(grid);
+    });
+    document.getElementById('stat').textContent = state.results.length + ' sprites baked in ' + state.bakeMs.toFixed(0) + ' ms (load ' + state.loadMs.toFixed(0) + ' ms)';
+  }
+  state.rebake = function (o) { if (o) Object.keys(o).forEach(function (k) { opts[k] = o[k]; }); bakeAll(); render(); return state.bakeMs; };
+  state.opts = opts;
+
+  KEYS.forEach(function (k) { var el = document.getElementById('o-' + k); el.value = opts[k];
+    el.addEventListener('change', function () { opts[k] = +el.value; state.rebake(); }); });
+  document.getElementById('o-filter').addEventListener('change', render);
+
+  var t0 = performance.now();
+  fetch(ROOT + 'species-registry.json').then(function (r) { return r.json(); }).then(function (reg) {
+    var sp = reg.species || [];
+    var jobs = sp.map(function (s) { return loadImg(ROOT + 'assets/flora-fauna/svg/' + s.id + '.svg').then(function (im) {
+      return { id: s.id, name: s.common_name || s.id, group: s.category || 'species', cls: P.sizeClassFor(s), img: im }; }); });
+    var vj = STRIPS.map(function (st) { return loadImg(st.src).then(function (im) {
+      var n = Math.min(Math.floor(im.naturalWidth / st.frame), st.id === 'mooncats' ? 9 : 4), out = [];
+      for (var i = 0; i < n; i++) out.push({ id: st.id + '-' + i, name: st.id + ' #' + i, group: 'villagers', cls: 'native', size: st.frame + 2, img: im, frame: { sx: i * st.frame, sy: 0, sw: st.frame, sh: Math.min(st.frame, im.naturalHeight) } });
+      return out; }, function (e) { state.errors.push(String(e.message)); return []; }); });
+    return Promise.all([Promise.all(jobs), Promise.all(vj)]);
+  }).then(function (res) {
+    state.loadMs = performance.now() - t0;
+    state.species = res[0]; state.villagers = [].concat.apply([], res[1]);
+    state.items = state.species.concat(state.villagers);
+    var groups = {}; state.items.forEach(function (it) { groups[it.group] = 1; });
+    var sel = document.getElementById('o-filter'); Object.keys(groups).sort().forEach(function (g) { var o = document.createElement('option'); o.value = o.textContent = g; sel.appendChild(o); });
+    if (q.get('show')) sel.value = q.get('show');
+    bakeAll(); render(); state.ready = true;
+  }).catch(function (e) { state.errors.push(String(e && e.message)); document.getElementById('stat').textContent = 'error: ' + e.message; });
+})();
+</script>
+</body>
+</html>

@@ -4,7 +4,7 @@
 const { chromium } = require('playwright');
 const { check, done } = require('./helpers');
 const ORIGIN = (process.env.BASE || 'http://localhost:8440/game/index.html').replace(/\/game\/index\.html.*$/, '');
-const URL = ORIGIN + '/game/hub/index.html';
+const URL = ORIGIN + '/game/hub/index.html?map=1'; // HS1: the map is behind the Map toggle (?map=1); the default view is the home screen
 const TOWN = JSON.stringify({ name: 'Mossy', species: 'coolcats', frame: 2, coins: 77 });
 
 async function open(browser, opts, seed) {

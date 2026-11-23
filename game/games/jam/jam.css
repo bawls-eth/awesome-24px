@@ -99,3 +99,52 @@ body[data-relax="1"] #progress-bar { background:#8ecae6; }
 #hud-song:empty { display:none; }
 /* phones: taller touch pads use the free space under the lanes (easier to hit without looking) */
 @media (pointer: coarse) and (min-height: 700px) { #pads .pad { min-height:96px; } }
+
+/* ===== 8-bit pass (mg-8bit-b): limited palette, square stepped borders, chunky pixel buttons, crisp canvases ===== */
+:root { --px-ink:#0b0814; --px-hi:rgba(255,255,255,.22); --px-lo:rgba(0,0,0,.38); }
+body { font-family: "Courier New", ui-monospace, Menlo, Consolas, monospace; -webkit-font-smoothing:none;
+  background-color:var(--bg); background-image:linear-gradient(rgba(255,255,255,.025) 2px, transparent 2px); background-size:100% 4px; }
+#stage *, #top *, #overlay * { border-radius:0 !important; }
+#top h1, #overlay h2 { text-transform:uppercase; letter-spacing:2px; text-shadow:2px 2px 0 var(--px-ink); color:#ffd166; }
+#game { image-rendering:pixelated; border:0; border-radius:0; box-shadow:0 0 0 4px var(--px-ink), 0 0 0 8px #3a2e58, 0 0 0 12px var(--px-ink), 8px 8px 0 12px rgba(0,0,0,.5); }
+#canvas-wrap { padding:12px 0; }
+#hud span { background:var(--panel); border-radius:0; box-shadow:inset 0 -3px 0 var(--px-lo), inset 0 3px 0 var(--px-hi), 0 0 0 3px var(--px-ink); font-weight:bold; text-transform:uppercase; margin:3px; }
+#hud-score { color:#ffd166; } #hud-combo { color:#9bf6ff; }
+#progress { height:12px; border-radius:0; box-shadow:0 0 0 3px var(--px-ink); background:repeating-linear-gradient(90deg, var(--panel) 0 6px, #221c36 6px 8px); }
+#progress-bar { background:repeating-linear-gradient(90deg, #ffd166 0 6px, #ffb347 6px 8px); box-shadow:inset 0 -3px 0 rgba(0,0,0,.3); }
+#overlay { border-radius:0; background:#0d0a16; box-shadow:inset 0 0 0 4px #3a2e58; }
+#overlay button, .pad, #btn-mute { border-radius:0; font-weight:bold; text-transform:uppercase; letter-spacing:1px; min-height:48px;
+  border:0; box-shadow:inset -4px -4px 0 var(--px-lo), inset 4px 4px 0 var(--px-hi), 0 0 0 3px var(--px-ink); margin:3px; }
+#overlay button:active, .pad.on, .pad:active { box-shadow:inset 4px 4px 0 var(--px-lo), 0 0 0 3px var(--px-ink); transform:translateY(2px); }
+#overlay button[disabled] { box-shadow:0 0 0 3px var(--px-ink); background:repeating-linear-gradient(45deg,#3a4250 0 4px,#333a46 4px 8px); }
+.card, .cline, .note, #hint, .calpulse, #res-counts div, #overlay p.goal { border-radius:0; border:0; box-shadow:inset 0 0 0 3px #3a2e58, 0 0 0 3px var(--px-ink), 6px 6px 0 3px rgba(0,0,0,.45); margin:6px 3px; }
+.note, #hint { box-shadow:inset 0 0 0 3px #ffb347, 0 0 0 3px var(--px-ink), 6px 6px 0 3px rgba(0,0,0,.45); }
+.card > strong, .card > b { text-transform:uppercase; color:#ffd166; text-shadow:2px 2px 0 var(--px-ink); }
+.stars, .cardstars { text-shadow:2px 2px 0 var(--px-ink); }
+#res-rank, .bigrank { text-shadow:4px 4px 0 var(--px-ink), -2px -2px 0 #ff6b3d; }
+.brow .bar { border-radius:0; box-shadow:0 0 0 2px var(--px-ink); }
+.brow .bar i { box-shadow:inset 0 -3px 0 rgba(0,0,0,.3); }
+#res-histo, #res-spark { border-radius:0; image-rendering:pixelated; box-shadow:0 0 0 3px var(--px-ink), 0 0 0 6px #3a2e58; margin:10px 6px; }
+.pad { color:var(--px-ink); }
+#pads { gap:12px; padding:3px; }
+body.px8 { background-color:var(--bg); color:var(--ink); }
+#game { width:min(100%, max(260px, calc((100vh - 262px) * 0.762))); }
+
+/* bug bash: short landscape screens (phones on their side). Lanes on the left at full height, HUD and pads on the right, no scrolling mid-song. */
+@media (orientation: landscape) and (max-height: 520px) {
+  #top { max-width:none; padding:2px 8px 2px 64px; min-height:0; }
+  #top .back { min-height:40px; }
+  #stage { max-width:none; padding:0 8px 6px; display:grid; grid-template-columns:auto 1fr; grid-template-areas:"canvas hud" "canvas prog" "canvas pads" "canvas help"; grid-template-rows:auto auto 1fr auto; column-gap:12px; align-items:start; }
+  #canvas-wrap { grid-area:canvas; width:auto; padding:6px 6px; }
+  #game { width:calc((100vh - 84px) * 0.762); max-height:calc(100vh - 84px); }
+  #hud { grid-area:hud; }
+  #progress { grid-area:prog; }
+  #pads { grid-area:pads; display:grid; align-self:stretch; }
+  #pads .pad { min-height:max(72px, calc(100vh - 225px)); }
+  #help { display:none; }
+  #overlay { position:fixed; inset:0; z-index:30; border-radius:0; padding:12px 12px 24px; background:#0d0a16; }
+  body.mm-nav-on #overlay { padding-top:56px; }
+}
+#unlock-details summary { cursor:pointer; min-height:48px; display:flex; align-items:center; color:var(--accent); }
+
+@media (pointer: coarse) and (min-height: 700px) and (orientation: portrait) { #canvas-wrap { padding:4px 0; } }

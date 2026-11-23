@@ -694,7 +694,18 @@
     api.mapDrawn = [];
     function toggleMap(force) { const hide = force === undefined ? !mapEl.classList.contains('hidden') : !force; mapEl.classList.toggle('hidden', hide); }
     mapBtn.addEventListener('click', () => toggleMap());
-    window.addEventListener('keydown', (e) => { if (e.key === 'Tab' && !finished) { e.preventDefault(); if (!e.repeat) toggleMap(); } }); // once the summary is up Tab goes back to normal focus movement
+    // Tab = map (as before) from the page, the Play stop or the play field; Shift+Tab always moves focus. From the page itself the Tab also
+    // reaches the Play stop (a11y sweep: the dungeon had zero tab stops). M toggles the map anywhere (not while typing).
+    window.addEventListener('keydown', (e) => {
+      if (finished) return;
+      const tgt = e.target; const typing = !!(tgt && (tgt.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(tgt.tagName || '')));
+      const field = !tgt || tgt === document.body || tgt === document.documentElement; // nothing focused yet
+      if (e.key === 'Tab' && !e.shiftKey && (field || (tgt && (tgt.id === 'realm-canvas-wrap' || tgt.id === 'realm-play-focus')))) {
+        if (!e.repeat) toggleMap();
+        if (!field) e.preventDefault(); // from the page itself the Tab also moves on to the Play stop, so keyboard players are never stuck
+      }
+      else if ((e.key === 'm' || e.key === 'M') && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) { if (!e.repeat) toggleMap(); }
+    }); // once the summary is up Tab goes back to normal focus movement
     function drawMap() {
       const vis = state.visibleRooms(); const g = mapEl.getContext('2d'); const C = 16;
       g.clearRect(0, 0, mapEl.width, mapEl.height); rect(g, 'rgba(8,4,20,0.78)', 0, 0, mapEl.width, mapEl.height);
@@ -730,7 +741,7 @@
       sumEl.innerHTML = `<div class="mm-sum-card"><h2>${died ? '💀 ' + B.fell : s.bossDefeated ? '🌀 ' + B.clear : '🚪 Left the ' + B.name}</h2>
         <p class="mm-sum-sub">Seed ${String(seed).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 24)} · ${mm}:${ss}</p>
         <ul class="mm-sum-stats"><li>Rooms visited <b>${visitedMain()}/${MAIN_ROOMS}</b></li><li>Rooms cleared <b>${s.roomsCleared}</b></li><li>Chests opened <b>${s.chestsOpened}</b></li><li>Keys found <b>${s.keysFound}</b></li><li>Secret room <b>${s.secretFound ? 'found' : 'hidden'}</b></li><li>${B.boss_name} <b>${s.bossDefeated ? 'defeated' : 'alive'}</b></li><li>Chest gold <b>${s.gold} 💎</b></li></ul>
-        <h3>Loot</h3><ul class="mm-sum-loot" id="mm-sum-loot">${items}</ul>${paid && paid.ok ? `<p class="mm-sum-stash" id="mm-sum-stash">🏮 ${ST.text(paid)} (Lantern)</p>` : ''}
+        <h3>Loot</h3><ul class="mm-sum-loot" id="mm-sum-loot">${items}</ul>${died && arena._lastCache ? `<p class="mm-sum-cache" id="mm-sum-cache">💀 ${String(arena._lastCache).replace(/[<>&"]/g, '').replace(/^cache: /, 'Fall cache: ')}</p>` : ''}${paid && paid.ok ? `<p class="mm-sum-stash" id="mm-sum-stash">🏮 ${ST.text(paid)} (Lantern)</p>` : ''}
         <div class="mm-sum-btns">${backWorld ? '' : `<a class="mm-btn" id="mm-sum-again" href="?mode=dungeon&seed=${Number(baseSeed) + 1 || ''}${layoutV === 2 ? '&lv=2' : ''}${biome !== 'warren' ? '&biome=' + biome : ''}${opts.test ? '&test=1' : ''}${hubExit ? '&from=hub' : ''}">New dungeon</a>`}<a class="mm-btn${backWorld ? '' : ' alt'}" id="mm-sum-home" href="${backWorld || homeHref}">${backWorld ? 'Back to the world' : homeText}</a></div></div>`;
       if (gearGot.length) { // tiered finds: "T7 Name" via textContent
         const ul = sumEl.querySelector('#mm-sum-loot'); const none = ul.querySelector('.none'); if (none) none.remove();

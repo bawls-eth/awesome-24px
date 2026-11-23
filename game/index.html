@@ -2,11 +2,28 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+<script>
+/* Front door: a plain visit (no query string, no same-origin referrer, not framed, not an automated browser) opens the 8-bit Home
+   (hub/index.html), whose Play / Town card come back here as ?from=hub. Any query (?from=, ?town=1, ?play=1, ?legacyart=...),
+   a link from inside the game, or an iframe stays in the Town. location.replace: Back never bounces between the two. */
+(function () {
+  try {
+    var l = window.location;
+    if (l.search && l.search.length > 1) return;
+    if (window.top !== window.self) return;
+    if (navigator.webdriver) return;
+    if (document.referrer) { try { if (new URL(document.referrer).origin === l.origin) return; } catch (e) { /* bad referrer: treat as external */ } }
+    if (!/(\/|\/index\.html)$/.test(l.pathname)) return; /* only a path whose folder is known (/game/ or /game/index.html) */
+    l.replace(new URL('hub/index.html', l.href).href);
+  } catch (e) { /* stay in the Town */ }
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
 <title>Hearthvale</title>
-<link rel="stylesheet" href="style.css?v=20261122t" />
-<link rel="stylesheet" href="realm-ui.css?v=20261121d" />
-<link rel="stylesheet" href="shared/mm-nav.css?v=20261122e" />
+<link rel="stylesheet" href="style.css?v=20261123x" />
+<link rel="stylesheet" href="realm-ui.css?v=20261123x" />
+<link rel="stylesheet" href="realm-8bit.css?v=20261123x" />
+<link rel="stylesheet" href="shared/mm-nav.css?v=20261123x" />
 <link rel="stylesheet" href="shared/mm-feedback.css" />
 
 <link rel="manifest" href="manifest.json" />
@@ -61,21 +78,33 @@
   <div id="player-list-panel">
     <button id="panel-toggle" type="button" aria-expanded="true" aria-controls="player-list-panel">👥 In town</button>
     <button id="where-to-btn" type="button" aria-haspopup="dialog" aria-controls="mm-nav-sheet" aria-expanded="false" title="Go to another world or game">🧭 Where to?</button>
-    <h2>In town</h2>
-    <ul id="player-list"></ul>
-    <button id="achievements-badge" type="button">🏆 <b id="achievement-count">0</b>/<span id="achievement-cap"></span></button>
-    <button id="map-btn" type="button" title="Town map (M)">🗺️ Map</button>
-    <a id="world-map-link" href="./hub/index.html" title="Open the world map">🧭 World map</a>
-    <button id="museum-badge" type="button" title="Museum collection">🏛️ Museum</button>
-    <button id="dailies-btn" type="button" title="Today's chores (J)">📋 Today</button>
-    <button id="journal-btn" type="button" title="Angler's journal (L)">🐟 Journal</button>
-    <div id="status-row">
-      <div id="streak-badge" title="Daily login streak">🔥 Day <b id="streak-count">0</b></div>
-      <div id="town-rating" title="How much the town has been built up, shared by everyone">🏘️ <span id="town-rating-label">Empty</span> (<b id="town-rating-count">0</b>/150)</div>
+    <div id="hero-line" aria-live="polite"><b id="hero-name">You</b><span id="hero-stats"></span></div>
+    <div id="town-tabs" role="tablist" aria-label="Town menu">
+      <button id="town-tab-town" class="town-tab active" type="button" role="tab" aria-selected="true" data-pane="town">👥 Town</button>
+      <button id="town-tab-stats" class="town-tab" type="button" role="tab" aria-selected="false" data-pane="stats">📊 Stats</button>
+      <button id="settings-toggle-btn" class="town-tab" type="button" role="tab" aria-selected="false" data-pane="more">☰ More</button>
     </div>
-    <div id="town-tidy" title="Weeds sprout every day — walk up and press E / A to pull them">🌿 Tidy</div>
-    <div id="birthday-line" title="Villager birthdays — give them a gift on the day for a party bonus"></div>
-    <button id="settings-toggle-btn" type="button">⚙️ Settings ▾</button>
+    <div id="town-pane-town" class="town-pane" role="tabpanel" aria-labelledby="town-tab-town">
+      <h2>In town</h2>
+      <ul id="player-list"></ul>
+      <div id="town-quick-grid">
+      <button id="achievements-badge" type="button">🏆 <b id="achievement-count">0</b>/<span id="achievement-cap"></span></button>
+      <button id="map-btn" type="button" title="Town map (M)">🗺️ Map</button>
+      <a id="world-map-link" href="./hub/index.html?map=1" title="Open the world map">🧭 World map</a>
+      <button id="museum-badge" type="button" title="Museum collection">🏛️ Museum</button>
+      <button id="dailies-btn" type="button" title="Today's chores (J)">📋 Today</button>
+      <button id="journal-btn" type="button" title="Angler's journal (L)">🐟 Journal</button>
+      </div>
+    </div>
+    <div id="town-pane-stats" class="town-pane hidden" role="tabpanel" aria-labelledby="town-tab-stats">
+      <div id="status-row">
+        <div id="streak-badge" title="Daily login streak">🔥 Day <b id="streak-count">0</b></div>
+        <div id="town-rating" title="How much the town has been built up, shared by everyone">🏘️ <span id="town-rating-label">Empty</span> (<b id="town-rating-count">0</b>/150)</div>
+      </div>
+      <div id="town-tidy" title="Weeds sprout every day — walk up and press E / A to pull them">🌿 Tidy</div>
+      <div id="birthday-line" title="Villager birthdays — give them a gift on the day for a party bonus"></div>
+      <dl id="stat-block"></dl>
+    </div>
     <div id="settings-section" class="hidden">
       <button id="keys-help-btn" type="button" title="Keyboard shortcuts">❓ Keys</button>
       <button id="changelog-btn" type="button" title="See what's been added">📜 Changelog</button>
@@ -214,6 +243,7 @@
     <div id="action-buttons">
       <button id="emote-toggle-btn" type="button" aria-label="Emotes">😀 Emotes</button>
       <button id="tilt-toggle-btn" type="button">🎮 Tilt</button>
+      <button id="hud-more-btn" type="button" aria-expanded="false" aria-label="More buttons: build, photo, tilt">☰ More</button>
       <button id="build-toggle-btn" class="ab-btn" type="button" aria-label="Build (B)"><span class="ab-letter">B</span><span class="ab-emoji">🧱</span></button>
       <button id="interact-btn" class="ab-btn" type="button" aria-label="Interact (A)"><span class="ab-letter">A</span><span class="ab-emoji">✋</span></button>
       <button id="mobile-photo-btn" class="ab-btn" type="button" aria-label="Photo (P)"><span class="ab-letter">P</span><span class="ab-emoji">📸</span></button>
@@ -511,20 +541,25 @@
 <script src="net.js?v=20261121d"></script>
 <script src="underground.js?v=20261121d"></script>
 <script src="shared/mm-stats.js?v=20261121d"></script>
-<script src="shared/mm-hash.js?v=20261121d"></script>
+<script src="shared/mm-hash.js?v=20261123x"></script>
 <script src="shared/mm-pad.js?v=20261121d"></script>
-<script src="shared/mm-access.js?v=20261121d"></script>
+<script src="shared/mm-access.js?v=20261123x"></script>
 <script src="shared/mm-aim.js?v=20261121d"></script>
-<script src="shared/profile.js?v=20261121d"></script>
+<script src="shared/profile.js?v=20261123x"></script>
+<script src="shared/mm-town-heroes.js?v=20261123x"></script>
+<script src="shared/mm-pixelize.js?v=20261123x"></script>
+<script src="shared/mm-settings.js?v=20261123x"></script>
 <script src="shared/mm-perf.js?v=20261122t"></script>
-<script src="hub/medals.js?v=20261122t"></script>
-<script src="shared/sfx.js?v=20261121d"></script>
-<script src="shared/motion.js?v=20261121d"></script>
+<script src="hub/medals.js?v=20261123x"></script>
+<script src="shared/mm-chip.js?v=20261123x"></script>
+<script src="shared/sfx.js?v=20261123x"></script>
+<script src="shared/motion.js?v=20261123x"></script>
 <script src="shared/mm-patterns.js?v=20261121d"></script>
-<script src="shared/mm-nav.js?v=20261122e" data-page="town" data-mount="manual"></script>
+<script src="shared/mm-nav.js?v=20261123x" data-page="town" data-mount="manual"></script>
 <script src="shared/mm-feedback.js?v=20261122e"></script>
 <script src="realm-team.js?v=20261121d"></script>
-<script src="realm.js?v=20261121d"></script>
-<script src="main.js?v=20261122t"></script>
+<script src="shared/mm-input.js?v=20261123x"></script>
+<script src="realm.js?v=20261123x"></script>
+<script src="main.js?v=20261123x"></script>
 </body>
 </html>
