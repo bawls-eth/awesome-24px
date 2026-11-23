@@ -676,7 +676,7 @@
       g.fillStyle = '#7e2553'; for (var gx = 0; gx < 360; gx += 8) for (var gy = 102 + ((gx >> 3) & 1) * 6; gy < 120; gy += 12) g.fillRect(gx, gy, 4, 2);
       g.fillStyle = '#00e436'; g.fillRect(0, 96, 360, 2); g.fillStyle = '#008751'; g.fillRect(0, 98, 360, 2);
       // lantern glow: stepped pixel rings (dither), no smooth gradient
-      var rings = [[44, 'rgba(255,163,0,.10)'], [30, 'rgba(255,163,0,.14)'], [18, 'rgba(255,236,39,.18)']];
+      var rings = [[32, 'rgba(255,163,0,.12)'], [20, 'rgba(255,236,39,.16)']];
       rings.forEach(function (rg) { var r = rg[0]; g.fillStyle = rg[1]; for (var yy = -r; yy <= r; yy += 4) { var w = Math.round(Math.sqrt(r * r - yy * yy) / 4) * 4; g.fillRect(180 - w, 38 + yy, w * 2, 4); } });
       // post + lantern sprite
       g.fillStyle = '#0b0d1a'; g.fillRect(175, 44, 10, 54); g.fillStyle = '#5f574f'; g.fillRect(177, 44, 6, 52); g.fillStyle = '#83769c'; g.fillRect(177, 44, 2, 52);
