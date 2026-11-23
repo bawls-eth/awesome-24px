@@ -140,12 +140,25 @@
     });
     return imageCache[url];
   }
+  // Beta S-06 (b13-01): one request per JSON url per page. INDEX.json and each manifest used to be fetched again by every loader
+  // (load / loadPacks / loadItems / loadBolts / loadFx / loadDungeonTiles: INDEX.json 7x on a Realm cold start). The in-flight
+  // Promise is shared like imageCache; a failed fetch (null) is evicted so a later call retries. Callers only READ the parsed
+  // object (checked: every loader copies what it keeps), so sharing it is safe.
+  var jsonCache = Object.create(null); // url -> Promise<object|null>
   function fetchJson(url) {
+    var key = String(url);
+    try { if (root && root.document && typeof URL === 'function') key = new URL(key, root.document.baseURI).href; } catch (e) { /* keep the raw url */ }
+    if (jsonCache[key]) return jsonCache[key];
     // no fetch (old WebView, node) or a synchronous throw (bad URL) used to escape load(), which promises never to reject
     var p;
     try { p = root && typeof root.fetch === 'function' ? root.fetch(url) : null; } catch (e) { p = null; }
     if (!p || typeof p.then !== 'function') return Promise.resolve(null);
-    return p.then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+    var out = p.then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }).then(function (j) {
+      if (j === null || j === undefined) { if (jsonCache[key] === out) delete jsonCache[key]; return null; }
+      return j;
+    });
+    jsonCache[key] = out;
+    return out;
   }
 
   // scales.json: { scales: { <asset id>: { display_scale } } }. Missing or malformed file -> every scale is 1.
@@ -447,5 +460,5 @@
     }).then(function () { return set; }).catch(function () { return set; });
   }
 
-  return { GEAR_BATCH: GEAR_BATCH, GEAR_FX_IDS: GEAR_FX_IDS, GEAR_SIG_ITEMS: GEAR_SIG_ITEMS, GEAR_UI_RE: GEAR_UI_RE, gearUiId: gearUiId, gearUiUrl: gearUiUrl, loadDungeonTiles: loadDungeonTiles, DTileSet: DTileSet, loadFx: loadFx, FxSet: FxSet, loadBolts: loadBolts, boltIdFor: boltIdFor, BoltSet: BoltSet, PLAYER_BOLT_CLASSES: PLAYER_BOLT_CLASSES, bossArtFor: bossArtFor, loadBosses: loadBosses, BOSS_MAP: BOSS_MAP, BOSS_EXTRA: BOSS_EXTRA, BOSS_VISIBLE_W: BOSS_VISIBLE_W, BOSS_ACTIONS: BOSS_ACTIONS, loadItems: loadItems, itemIconUrl: itemIconUrl, ITEM_ICON_MAP: ITEM_ICON_MAP, ItemSet: ItemSet, enemyArtFor: enemyArtFor, drifterArtFor: drifterArtFor, loadEnemies: loadEnemies, ENEMY_MAP: ENEMY_MAP, ENEMY_WAVE2: ENEMY_WAVE2, BIOME_ENEMY_MAP: BIOME_ENEMY_MAP, DRIFTER_MAP: DRIFTER_MAP, ENEMY_VISIBLE_W: ENEMY_VISIBLE_W, load: load, loadClass: loadClass, loadAll: loadAll, packIds: packIds, artClassFor: artClassFor, packFor: packFor, frameAt: frameAt, scaleFor: scaleFor, duration: duration, PACKS: PACKS, CLASS_MAP: CLASS_MAP, ArtSet: ArtSet };
+  return { fetchJson: fetchJson, GEAR_BATCH: GEAR_BATCH, GEAR_FX_IDS: GEAR_FX_IDS, GEAR_SIG_ITEMS: GEAR_SIG_ITEMS, GEAR_UI_RE: GEAR_UI_RE, gearUiId: gearUiId, gearUiUrl: gearUiUrl, loadDungeonTiles: loadDungeonTiles, DTileSet: DTileSet, loadFx: loadFx, FxSet: FxSet, loadBolts: loadBolts, boltIdFor: boltIdFor, BoltSet: BoltSet, PLAYER_BOLT_CLASSES: PLAYER_BOLT_CLASSES, bossArtFor: bossArtFor, loadBosses: loadBosses, BOSS_MAP: BOSS_MAP, BOSS_EXTRA: BOSS_EXTRA, BOSS_VISIBLE_W: BOSS_VISIBLE_W, BOSS_ACTIONS: BOSS_ACTIONS, loadItems: loadItems, itemIconUrl: itemIconUrl, ITEM_ICON_MAP: ITEM_ICON_MAP, ItemSet: ItemSet, enemyArtFor: enemyArtFor, drifterArtFor: drifterArtFor, loadEnemies: loadEnemies, ENEMY_MAP: ENEMY_MAP, ENEMY_WAVE2: ENEMY_WAVE2, BIOME_ENEMY_MAP: BIOME_ENEMY_MAP, DRIFTER_MAP: DRIFTER_MAP, ENEMY_VISIBLE_W: ENEMY_VISIBLE_W, load: load, loadClass: loadClass, loadAll: loadAll, packIds: packIds, artClassFor: artClassFor, packFor: packFor, frameAt: frameAt, scaleFor: scaleFor, duration: duration, PACKS: PACKS, CLASS_MAP: CLASS_MAP, ArtSet: ArtSet };
 }));

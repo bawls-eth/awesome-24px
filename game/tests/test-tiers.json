@@ -1548,5 +1548,9 @@
   "beta-s05-deepdelve-storage.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "beta-s06-art-cache.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

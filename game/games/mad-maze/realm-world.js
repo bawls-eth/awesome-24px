@@ -12,6 +12,8 @@
   const TILE = 32; const CH = 16; const CPX = TILE * CH; const MAX_CHUNKS = 24;
   const SEED_RE = /^[A-Za-z0-9_-]{1,24}$/;
   const AT_RE = /^(\d{1,4}),(\d{1,4})$/;
+  // Beta S-06: INDEX.json / manifests through MMArt's per-page JSON cache (one request per url for the whole page); plain fetch without it.
+  const rwJson = (u) => (typeof window !== 'undefined' && window.MMArt && typeof window.MMArt.fetchJson === 'function' ? window.MMArt.fetchJson(u) : fetch(u).then((r) => (r.ok ? r.json() : null)));
 
   // ---------- code palette per terrain: base, two noise shades, edge line ----------
   const PAL = {
@@ -148,12 +150,12 @@
       if (!root || typeof fetch !== 'function') return Promise.resolve(0);
       const join = (a, b) => a.replace(/\/+$/, '') + '/' + String(b).replace(/^\/+/, '');
       const okPath = (p) => typeof p === 'string' && /^[A-Za-z0-9_][A-Za-z0-9_.\/-]*\.png$/.test(p) && p.indexOf('..') < 0;
-      return fetch(join(root, 'INDEX.json')).then((r) => (r.ok ? r.json() : null)).then((idx) => {
+      return rwJson(join(root, 'INDEX.json')).then((idx) => {
         const batches = idx && Array.isArray(idx.batches) ? idx.batches : [];
         return Promise.all(batches.map((b) => {
           const id = b && typeof b.path === 'string' ? b.path.replace(/\/+$/, '').split('/').pop() : '';
           if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(id)) return null;
-          return fetch(join(join(root, id), 'manifest.json')).then((r) => (r.ok ? r.json() : null)).then((m) => {
+          return rwJson(join(join(root, id), 'manifest.json')).then((m) => {
             const assets = m && Array.isArray(m.assets) ? m.assets : [];
             return Promise.all(assets.map((a) => {
               const mt = a && typeof a.id === 'string' ? /^tile_([a-z_]+)_([a-d]|edge_\d{2})$/.exec(a.id) : null;
@@ -389,12 +391,12 @@
       const okPath = (p) => typeof p === 'string' && /^[A-Za-z0-9_][A-Za-z0-9_.\/-]*\.png$/.test(p) && p.indexOf('..') < 0;
       const WANT = /^(portal_[a-z]+|spawn_pad|shrine_(heal|rage|ward)|event_beacon|loot_chest_gold|prop_[a-z0-9_]+|coin_f[1-4]|xp_orb_f[1-4]|heart_pickup|focus_pickup|potion_(life|focus|power|swift|guard|wit)|key_boss)$/;
       let got = 0;
-      return fetch(join(root, 'INDEX.json')).then((r) => (r.ok ? r.json() : null)).then((idx) => {
+      return rwJson(join(root, 'INDEX.json')).then((idx) => {
         const batches = idx && Array.isArray(idx.batches) ? idx.batches : [];
         return Promise.all(batches.map((b) => {
           const id = b && typeof b.path === 'string' ? b.path.replace(/\/+$/, '').split('/').pop() : '';
           if (!/^(b1[2345]|b2[26])-[a-z0-9-]{1,48}$/.test(id)) return null; // b26 = the Godlands prop fix, b22 = key_boss (BK2)
-          return fetch(join(join(root, id), 'manifest.json')).then((r) => (r.ok ? r.json() : null)).then((m) => {
+          return rwJson(join(join(root, id), 'manifest.json')).then((m) => {
             const assets = m && Array.isArray(m.assets) ? m.assets : [];
             return Promise.all(assets.map((a) => {
               if (!a || typeof a.id !== 'string' || !WANT.test(a.id) || !okPath(a.path)) return null;

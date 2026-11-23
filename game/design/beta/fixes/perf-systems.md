@@ -4,7 +4,7 @@ Branch `dev-perf` (from `claude/animal-crossing-game-7z3roh`). Every test below 
 Run each alone: `BASE=http://localhost:<port>/game/index.html /tmp/bt.sh node game/tests/<file>`.
 
 ## S-01 Town Restore validates the file (b14-03, P0)
-- Commit: see `git log --grep "S-01"` on dev-perf.
+- Commit: 3006734 (S-01 and S-02 together: S-02 needs the S-01 `SAVE_RESTORING` flag).
 - main.js (functions touched): new top-level `SAVE_RESTORING`, `SAVE_PREV_KEY`, `loadBackupModules`, `cleanTownSave`, `TOWN_SAVE_FIELDS`;
   `writeSave` (no-op while restoring); Town scene `importSave` (rewritten), new `commitRestore`, `restoreBundle`. index.html untouched:
   the backup tool and its owner cleaners (same list as the Lantern page) load lazily on the first bundle restore.
@@ -33,6 +33,7 @@ Run each alone: `BASE=http://localhost:<port>/game/index.html /tmp/bt.sh node ga
 - Main.js slot 1 released to Gameplay after this commit (S-07 comes back later).
 
 ## S-05 Deepdelve boots when storage throws (b15-01, P1)
+- Commit: 8bdd1c5.
 - deepdelve.js: new `LS` accessor + `LS_NOSAVE` at the top of the IIFE (real storage when readable, else an in-memory Map stand-in);
   every `localStorage` token in the file now goes through `LS` (creativeDoc, kvSet creative path, ACCESS, sfx, startRun, endRun,
   loadMeta, hubMedals, saveMeta, town read); boot() says "Progress cannot be saved in this browser mode." once with the intro.
@@ -42,3 +43,15 @@ Run each alone: `BASE=http://localhost:<port>/game/index.html /tmp/bt.sh node ga
   +1, 0 pageerror; normal context -> no note, real storage, no probe key left. deepdelve-page, side-access, shared-mm-access,
   shared-mm-settings green.
 - Re-verify: Chrome, Settings > Privacy > Block all site data for localhost, open Deepdelve: the mine loads and says progress cannot be saved.
+
+## S-06 mm-art JSON cache (b13-01, P1)
+- mm-art.js `fetchJson`: per-page `jsonCache` keyed by the absolute url, holding the in-flight Promise; a null result (404, network
+  error, no fetch) is evicted so a retry fetches again. Exported as `MMArt.fetchJson`. Callers only read the parsed manifests.
+- realm-world.js (slot 1, small hunk): new `rwJson` helper near the top; `loadTileArt` and the world-prop loader use it (they fetched
+  INDEX.json and every manifest themselves, twice). Plain fetch when MMArt is absent.
+- Numbers (Realm world cold start, same run, baseline = cache line removed): requests 1235 -> 1077, assets JSON 225 -> 67, JSON bytes
+  about 0.4 MB -> 0.03-0.06 MB. Every assets/*.json url is now requested once. The ">= 2 MB" target in the lane file is not reachable on
+  this page: the whole JSON set it loads is about 0.4 MB measured as body bytes (b13 likely counted several pages / uncompressed).
+- Test: `game/tests/beta-s06-art-cache.test.js` (full tier, browser): once-per-url, >= 100 fewer requests, fewer bytes, art still
+  resolves, 404 retry refetches. world-art, enemy-art, item-icons, bolt-art, art-integration, world-page, shared-bugbash-fuzz green.
+- Re-verify: DevTools Network, filter `.json`, load `games/mad-maze/index.html?mode=world`: INDEX.json appears once.
