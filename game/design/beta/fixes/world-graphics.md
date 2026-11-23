@@ -106,3 +106,10 @@ Each entry: item, files, test, how to retest by hand. Screenshots in `fixes/img/
 - Not done: stall buttons still use the rounded system-font Nexus style (b02-15 style half); the 8-bit restyle of the Nexus DOM is a larger CSS pass.
 - Test: `tests/beta-w04-nexus.test.js` (4 asserts fail on the old code). `world-nexus-walk`, `world-nexus`, `nexus-vendor` green.
 - Before / after: `img/w04-desk-corner-*.jpg`, `img/w04-desk-board-*.jpg`, `img/w04-phone-stall-after.jpg`.
+
+## W-06 Town scale (b12-06 fixed; b07-05 / b07-12 / b12-05 sprite scales open)
+- Files: `game/main.js` (slot 3, after merging dev-gameplay's G-12 / G-13; one hunk in drawNoticeBoard).
+- b12-06 Top Scores board: board 110x52 -> 144x76 (moved 30 px east, clear of the Postcards label), text 8 px -> 12 px bold rendered at 2x resolution. Cap height ~8.4 world px = >= 10 screen px on phone (zoom 1.2) and ~13 on desktop; was ~5 px and smeared.
+- Open: one scale table for creatures / NPCs (beaver, heron, capybara, deer <= 1.2x hero; NPCs = hero height; integer texel scale). It touches FF_ASSETS sizes, the museum / wildlife logging and many Town tests, so it needs its own slot. The statue waits for O-10 (owner, art).
+- Test: `tests/beta-w06-town-board.test.js` (OFFLINE stub; 6 asserts fail on the old code). `town-bugbash`, `town-polish`, `nav-town`, `town-heroes` green.
+- Before / after: `img/w06-board-{before,after}.jpg`.

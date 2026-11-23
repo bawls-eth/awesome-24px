@@ -9452,20 +9452,23 @@ class TownScene extends Phaser.Scene {
   }
 
   drawNoticeBoard() {
-    const x = 1350;
+    const x = 1380; // W-06: 30 px east of the old spot, so the bigger board clears the Postcards sign label
     const y = 520;
     const g = this.bakedGfx(y - 1);
     g.fillStyle(0x6b4a30, 1).fillRect(x - 2, y - 4, 4, 30);
-    g.fillStyle(0xe8d9b5, 1).fillRect(x - 55, y - 54, 110, 52);
-    g.lineStyle(2, 0x8f7044, 1).strokeRect(x - 55, y - 54, 110, 52);
+    // W-06 (b12-06): a bigger board and 12 px text rendered at 2x, so TOP SCORES reads (cap height >= 8 screen px at both zooms; was 8 px, smeared).
+    g.fillStyle(0xe8d9b5, 1).fillRect(x - 72, y - 78, 144, 76);
+    g.lineStyle(2, 0x8f7044, 1).strokeRect(x - 72, y - 78, 144, 76);
     g.bake();
-    this.noticeBoardText = this.add.text(x, y - 28, '', {
-      fontSize: '8px',
+    this.noticeBoardText = this.add.text(x, y - 40, '', {
+      fontSize: '12px',
       fontFamily: 'monospace',
+      fontStyle: 'bold',
       color: '#3a2a1a',
       align: 'center',
-      wordWrap: { width: 96 },
-    }).setOrigin(0.5).setDepth(y);
+      wordWrap: { width: 136 },
+    }).setOrigin(0.5).setDepth(y).setResolution(2);
+    this.noticeBoardRect = { x: x - 72, y: y - 78, w: 144, h: 76 };
   }
 
   updateNoticeBoard(sorted) {

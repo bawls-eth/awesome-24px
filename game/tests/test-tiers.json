@@ -1680,5 +1680,9 @@
   "beta-w04-nexus.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-w06-town-board.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
