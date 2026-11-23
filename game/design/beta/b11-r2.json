@@ -1,0 +1,312 @@
+[
+ {
+  "id": "b11-r2-01",
+  "severity": "P2",
+  "area": "lantern",
+  "title": "Rekindle works on LIVING heroes: free hero duplication / level skipping",
+  "steps": [
+   "Open lantern.html",
+   "Create a Classic hero",
+   "Press Rekindle on the healthy hero",
+   "Seed or reach level 20 and press Rekindle 4 times"
+  ],
+  "expected": "Rekindle is described as the post-Fall option; a live hero should not be clonable",
+  "actual": "RETEST: Fresh classic hero card shows only Selected / Abilities / Retire / Test a Fall (0 living Rekindle buttons). After a Fall a Keepsake row appears: \"Rekindle Alder (Lv 1)\"; it rekindles once (\"Alder is rekindled at level 1. The Keepsake stays in the stash\"), then reads \"Rekindled\", disabled, title \"This Keepsake already rekindled a hero\". API: rekindle(living id) -> not-fallen; second use -> used; level-20 classic Keepsake -> one L10 hero; hardcore Fall -> no Keepsake; hardcore Keepsake -> hardcore-no-rekindle.",
+  "viewport": "390x844",
+  "url": "/game/games/mad-maze/lantern.html",
+  "screenshots": [
+   "img/b11-r2-01.jpg",
+   "img/b11-r2-02.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/shared/mm-profile.js:180 rekindle() looks in living p.heroes and never removes the source; game/games/mad-maze/lantern.js:526 renders the button for every hero",
+  "kind": "bug",
+  "frequency": "always",
+  "original_id": "b11-01",
+  "status": "FIXED"
+ },
+ {
+  "id": "b11-r2-02",
+  "severity": "P2",
+  "area": "deepdelve",
+  "title": "Dive score farmable without limit by place/mine loops (ore and combo)",
+  "steps": [
+   "Open deepdelve/index.html?test=1",
+   "Give 1 coal",
+   "Place coal on an air cell and mine it again 100 times (a human can do this inside the 1.6 s combo gap)",
+   "Clip: real-time loop on a phone viewport, 45 cycles in 6 s gave score 810 at 0 deep"
+  ],
+  "expected": "Score should come from depth and newly found ore",
+  "actual": "RETEST: 100 place/mine cycles of coal at an air cell on the surface: placed 100, mined 100, run state unchanged (blocks 0, ores 0, combo 0, bestCombo 0). Not re-checked as a real-time touch loop; genuine ore credit not re-verified.",
+  "viewport": "1280x720",
+  "url": "/game/games/deepdelve/index.html",
+  "screenshots": [],
+  "clip": null,
+  "suspect": "game/games/deepdelve/deepdelve.js:91 PLACEABLE includes ore blocks; :459 mineBlock -> onMined; dd-run.js mined()",
+  "kind": "bug",
+  "frequency": "always",
+  "original_id": "b11-02",
+  "status": "FIXED"
+ },
+ {
+  "id": "b11-r2-03",
+  "severity": "P3",
+  "area": "stalk",
+  "title": "Device clock moved back inside the same week reopens Sunday buying and reveals future prices (unbounded bells)",
+  "steps": [
+   "Override Date to Sun 22 Nov 10:00, buy max",
+   "Move clock to Sat PM same week, Sell all",
+   "Move clock back to Sunday same week",
+   "Buy again"
+  ],
+  "expected": "Once the week has progressed, Sunday buying should not reopen",
+  "actual": "RETEST: Fake clock Sun 22 Nov 10:00, buy 10, Sat PM sell all (+580), clock back to Sunday same week and reload: bells kept 1,680, still Sat PM, message \"Your device clock moved back. The market keeps the latest time you saw, so trading is paused\", Buy 10 did nothing.",
+  "viewport": "1280x720",
+  "url": "/game/games/stalk/index.html",
+  "screenshots": [
+   "img/b11-r2-04.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/games/stalk/stalk.js sync(): only checks save.week > week, no last-seen slot stored",
+  "kind": "balance",
+  "frequency": "always",
+  "original_id": "b11-03",
+  "status": "FIXED"
+ },
+ {
+  "id": "b11-r2-04",
+  "severity": "P3",
+  "area": "stalk",
+  "title": "Neighbour offers are a free max-of-4 sell price every half day",
+  "steps": [
+   "On a weekday with stalks compare Sell all with the neighbour offers"
+  ],
+  "expected": "Neighbour sales to be a tradeoff",
+  "actual": "RETEST: Still Pip 110 / Maple 204 (best price today) / Bramble 53 vs stall 122 at week 2900 slot 8; selling 20 to Pip paid 2,185 (110 each, fee 15). TRIAGE O-07 proposed a cap of stall +15%; not in place (not on my RETEST row, may be pending).",
+  "viewport": "390x844",
+  "url": "/game/games/stalk/index.html",
+  "screenshots": [],
+  "clip": null,
+  "suspect": "game/shared/mm-stalk-market.js:288",
+  "kind": "balance",
+  "frequency": "always",
+  "original_id": "b11-04",
+  "status": "NOT FIXED"
+ },
+ {
+  "id": "b11-r2-05",
+  "severity": "P3",
+  "area": "stalk",
+  "title": "First ever practice week stores a LOSS as 'Practice best'",
+  "steps": [
+   "Play a practice week and lose money"
+  ],
+  "expected": "Best shown only once meaningful",
+  "actual": "RETEST: Ran out of time; did not finish a losing practice week to the end card.",
+  "viewport": "390x844",
+  "url": "/game/games/stalk/index.html",
+  "screenshots": [],
+  "clip": null,
+  "suspect": "stalk.js prEnd isBest = !hadBest",
+  "kind": "ux",
+  "frequency": "always",
+  "original_id": "b11-05",
+  "status": "NOT RETESTED"
+ },
+ {
+  "id": "b11-r2-06",
+  "severity": "P3",
+  "area": "stalk",
+  "title": "Fixed menu (compass) button overlaps the Practice week heading after scrolling",
+  "steps": [
+   "Press Play a practice week (scrolls to the section)"
+  ],
+  "expected": "Heading fully visible",
+  "actual": "RETEST: Practice week heading \"PRACTICE WEEK (QUICK PLAY)\" fully visible next to the compass at 390x844 in two scroll positions. Position dependent, low confidence.",
+  "viewport": "390x844",
+  "url": "/game/games/stalk/index.html",
+  "screenshots": [],
+  "clip": null,
+  "suspect": null,
+  "kind": "visual",
+  "frequency": "often",
+  "original_id": "b11-06",
+  "status": "FIXED"
+ },
+ {
+  "id": "b11-r2-07",
+  "severity": "P3",
+  "area": "deepdelve",
+  "title": "Craft list shows raw-looking titles like 'plank > plank', 'brick > brick', 'stew > stew'",
+  "steps": [
+   "Open Craft panel"
+  ],
+  "expected": "Readable recipe name",
+  "actual": "RETEST: Craft list now reads Plank / Brick / Stew / Bugjar / Pie / Crown with an ingredient line and a Craft button.",
+  "viewport": "390x844",
+  "url": "/game/games/deepdelve/index.html",
+  "screenshots": [
+   "img/b11-r2-06.jpg"
+  ],
+  "clip": null,
+  "suspect": "deepdelve.js renderCraft / MMDDCraft.annotate",
+  "kind": "ux",
+  "frequency": "always",
+  "original_id": "b11-07",
+  "status": "FIXED"
+ },
+ {
+  "id": "b11-r2-08",
+  "severity": "P3",
+  "area": "deepdelve",
+  "title": "HUD says Depth 5 at the surface (known open); first view is a featureless green plain",
+  "steps": [
+   "Load deepdelve fresh"
+  ],
+  "expected": "Depth 0 at the surface; some landmark visible",
+  "actual": "RETEST: Fresh load still shows \"Depth 5\" (Depth 4 on another load) while standing on the flat green surface.",
+  "viewport": "390x844",
+  "url": "/game/games/deepdelve/index.html",
+  "screenshots": [
+   "img/b11-r2-03.jpg"
+  ],
+  "clip": null,
+  "suspect": "deepdelve.js depthNow",
+  "kind": "visual",
+  "frequency": "always",
+  "original_id": "b11-08",
+  "status": "NOT FIXED"
+ },
+ {
+  "id": "b11-r2-09",
+  "severity": "P3",
+  "area": "lantern",
+  "title": "Fresh Lantern: Start run is a greyed button with no reason, and empty-name Create keeps a stale message",
+  "steps": [
+   "Open fresh Lantern",
+   "Press Create hero with an empty name"
+  ],
+  "expected": "Clear 'name your hero' feedback",
+  "actual": "RETEST: Fresh status line still \"Create a hero first: Start run needs a hero to play.\"; an empty-name Create leaves the previous status unchanged (native required validation).",
+  "viewport": "390x844",
+  "url": "/game/games/mad-maze/lantern.html",
+  "screenshots": [],
+  "clip": null,
+  "suspect": "lantern.html #new-name required; lantern.js createHero",
+  "kind": "ux",
+  "frequency": "always",
+  "original_id": "b11-09",
+  "status": "NOT FIXED"
+ },
+ {
+  "id": "b11-r2-10",
+  "severity": "P3",
+  "area": "lantern",
+  "title": "Realm HUD shows Lv 1 for a hero whose Lantern Level is higher (known open, confirmed)",
+  "steps": [
+   "Make heroes, press Start run"
+  ],
+  "expected": "Matching level label",
+  "actual": "RETEST: Realm HUD level not re-checked.",
+  "viewport": "390x844",
+  "url": "/game/games/mad-maze/index.html?hero=hero-ranger-6",
+  "screenshots": [],
+  "clip": null,
+  "suspect": "realm-world.js",
+  "kind": "ux",
+  "frequency": "always",
+  "original_id": "b11-10",
+  "status": "NOT RETESTED"
+ },
+ {
+  "id": "b11-r2-11",
+  "severity": "P3",
+  "area": "stalk",
+  "title": "Last action message (e.g. 'Sold 20 to a neighbour...') persists across the week rollover",
+  "steps": [
+   "?test=1&week=2900&slot=0, buy 20, sell to a neighbour on a weekday",
+   "Roll to week 2901"
+  ],
+  "expected": "Message cleared or replaced by a new-week line",
+  "actual": "RETEST: ?test=1 week 2900 buy 20, neighbour sale, roll to week 2901 slot 0: message is now \"A fresh week has started. The stall buys on Sunday.\"",
+  "viewport": "390x844",
+  "url": "/game/games/stalk/index.html?test=1",
+  "screenshots": [
+   "img/b11-r2-05.jpg"
+  ],
+  "clip": null,
+  "suspect": "stalk.js tick()/sync(): say() only on spoiledNote",
+  "kind": "ux",
+  "frequency": "always",
+  "original_id": "b11-11",
+  "status": "FIXED"
+ },
+ {
+  "id": "b11-r2-12",
+  "severity": "P3",
+  "area": "deepdelve",
+  "title": "Creative world on phone: hotbar clipped at the left edge, Goals panel lists survival goals as 'Depth -8'",
+  "steps": [
+   "390x844 touch, press Creative world",
+   "Look at hotbar",
+   "Open Goals"
+  ],
+  "expected": "Hotbar fits or scrolls to the selection; creative world either hides survival goals or labels them",
+  "actual": "RETEST: Creative hotbar still clipped at both edges at 390 (it scrolls) and Goals in the creative world still lists \"Depth -8\", \"Depth -20\", \"Depth -40\" and survival goals.",
+  "viewport": "390x844",
+  "url": "/game/games/deepdelve/index.html?mode=creative",
+  "screenshots": [
+   "img/b11-r2-07.jpg",
+   "img/b11-r2-08.jpg"
+  ],
+  "clip": null,
+  "suspect": "deepdelve.js goal titles; hotbar css",
+  "kind": "visual",
+  "frequency": "always",
+  "original_id": "b11-12",
+  "status": "NOT FIXED"
+ },
+ {
+  "id": "b11-r2-13",
+  "severity": "P3",
+  "area": "stalk",
+  "title": "Stalk neighbour dwarfs the stall price: 204 vs 122 on the same half-day (confirms b11-04 with numbers)",
+  "steps": [
+   "?test=1&week=2900&slot=8 with 20 stalks"
+  ],
+  "expected": "Stall price competitive with neighbours",
+  "actual": "RETEST: Same as b11-04: stall 122, Maple 204.",
+  "viewport": "390x844",
+  "url": "/game/games/stalk/index.html?test=1",
+  "screenshots": [],
+  "clip": null,
+  "suspect": "mm-stalk-market.js neighbourPrice",
+  "kind": "balance",
+  "frequency": "always",
+  "original_id": "b11-13",
+  "status": "NOT FIXED"
+ },
+ {
+  "id": "b11-r2-14",
+  "original_id": null,
+  "status": "FIXED",
+  "severity": "P3",
+  "area": "deepdelve",
+  "title": "S-05 verification: Deepdelve boots with blocked storage",
+  "steps": [
+   "Block localStorage and sessionStorage getters (SecurityError)",
+   "Open deepdelve/index.html at 390x844"
+  ],
+  "expected": "Boots with a cannot-be-saved note",
+  "actual": "Boots, no console errors, note reads 'Progress cannot be saved in this browser mode. Drag the view to look...'. Verification record, no defect.",
+  "viewport": "390x844",
+  "url": "/game/games/deepdelve/index.html",
+  "screenshots": [
+   "img/b11-r2-03.jpg"
+  ],
+  "clip": null,
+  "suspect": null,
+  "kind": "ux",
+  "frequency": "always"
+ }
+]
