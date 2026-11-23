@@ -43,10 +43,12 @@ check('picnic fame x0.5 (retire 100*1.2*0.5)', P.retire(pk, 'h1').profile.fame =
 check('mode locked once heroes exist', !P.setMode(mk(), 'picnic').ok && P.setMode(P.empty(), 'picnic').ok);
 
 // rekindle
-const lv = (L, m) => P.rekindle(P.clean({ heroes: [{ id: 'h', cls: 'herald', level: L, mode: m }] }), 'h');
+// G-05 (O-05): Rekindle starts from a fallen hero's Keepsake (stash slot), never from a living hero
+const lv = (L, m) => { const f = P.fall(P.clean({ heroes: [{ id: 'h', cls: 'herald', level: L, mode: m }] }), 'h'); return P.rekindle(f.profile, f.profile.stash.findIndex((x) => x && x.keepsake)); };
 check('rekindle L9 -> 4, same class', lv(9).hero.level === 4 && lv(9).hero.cls === 'herald');
 check('rekindle caps at 10', lv(20).hero.level === 10 && lv(1).hero.level === 1);
-check('rekindle not in hardcore', !lv(9, 'hardcore').ok);
+check('rekindle not in hardcore (a hardcore fall leaves no Keepsake)', !lv(9, 'hardcore').ok);
+check('rekindle of a living hero is refused (not-fallen)', P.rekindle(P.clean({ heroes: [{ id: 'h', cls: 'herald', level: 9 }] }), 'h').reason === 'not-fallen');
 
 // retire
 check('retire needs level 20', !P.retire(mk(), 'h1').ok);

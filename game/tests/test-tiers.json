@@ -1560,5 +1560,13 @@
   "shared-mm-companion-tame-skip.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "beta-g05-rekindle.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "shared-mm-profile-rekindle.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }
