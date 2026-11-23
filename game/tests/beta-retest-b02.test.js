@@ -56,7 +56,7 @@ const armed = (page, sel) => page.waitForFunction((s) => { const b = document.qu
       check('b02-02: double-click on Sell of the wand sells exactly one item', after.n === before.n - 1, JSON.stringify({ before, after }));
       check('b02-02: the equipped Iron Cuirass (uid 4) is still in the pack and still equipped', after.uids.includes(4) && after.eq.armor === 4, JSON.stringify(after));
       // a single click on the equipped armor must not sell it straight away (two-step confirm)
-      const sel4 = '#realm-bp-list li[data-uid="4"] button[data-act="discard"]';
+      const sel4 = '#realm-bp-list li[data-uid="4"] button.dc'; // the Sell button (data-act may be "discard" or a confirm step)
       await armed(s.page, sel4);
       await s.page.click(sel4).catch(() => {});
       await s.page.waitForTimeout(200);
