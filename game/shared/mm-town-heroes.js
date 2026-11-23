@@ -2,7 +2,7 @@
 // Pure parts (node-tested in tests/shared-mm-town-heroes.test.js): the hero list, hero keys ('hero_<class>', frame 0, carried in
 // the existing species field), the deterministic legacy species -> hero mapping (stable FNV-1a hash of "species:frame"), frame
 // selection, the box-filter downscale and the stone tint. Browser parts: load the idle/walk strips, bake each hero ONCE into a small
-// 24 px Phaser canvas texture (integer 8x box downscale of a 192 px crop around the feet anchor), alias textures under the old
+// 24 px Phaser canvas texture (integer 7x box downscale of a 168 px crop around the feet anchor), alias textures under the old
 // species keys so any leftover call site renders a mapped hero (never the old sheets), a cheap animator that only calls setFrame,
 // and the join / outfit picker. Never rewrites stored values; unknown keys never throw. ?legacyart=1 brings the old sheets back.
 (function (root, factory) {
@@ -13,12 +13,12 @@
   var PREFIX = 'hero_';
   var DEFAULT_CLASS = 'ranger';
   var SIZE = 24;        // baked frame size (same as the old 24 px strips, so hitboxes/positions stay put)
-  var FACTOR = 8;       // integer downscale: 192 px crop -> 24 px
+  var FACTOR = 7;       // integer downscale: 168 px crop -> 24 px (the union of every idle/walk frame fits: x 48..208, y 72..232)
   var CELL = 256;       // strip cell size (all hero manifests)
   var ANCHOR_X = 128, ANCHOR_Y = 231; // feet anchor (all hero manifests)
   var CROP = SIZE * FACTOR;
-  var CROP_X = ANCHOR_X - CROP / 2;   // 32
-  var CROP_Y = ANCHOR_Y + 8 - CROP;   // 47: feet land on the bottom row
+  var CROP_X = ANCHOR_X - CROP / 2;   // 44
+  var CROP_Y = ANCHOR_Y + 8 - CROP;   // 71: feet land on the bottom rows
   var HEROES = [
     { cls: 'warrior', name: 'Warrior', role: 'Sturdy front-line fighter', pack: 'b00-warrior', portrait: 'bruiser' },
     { cls: 'ranger', name: 'Ranger', role: 'Quick shots from afar', pack: 'b01-ranger-mage-cleric', portrait: 'ranger' },
@@ -237,18 +237,20 @@
       if (tick++ % 30 === 0) {
         list = scene.children.list.filter(function (o) { return o && o.texture && o.setFrame && isHeroKey(o.texture.key); });
       }
-      var dt = Math.max(1, delta || 16);
       for (var i = 0; i < list.length; i++) {
         var s = list[i];
         if (!s.active || !s.visible || s.htStill || !isHeroKey(s.texture.key)) continue;
+        // Players: the Town's walk-cycle hands over its moving flag and the hop-free anchor (htMoving/htAx/htAy); others: own motion.
+        var x = typeof s.htAx === 'number' ? s.htAx : s.x, y = typeof s.htAy === 'number' ? s.htAy : s.y;
         var st = s.htState;
-        if (!st) st = s.htState = { x: s.x, y: s.y, vx: 0, vy: 0, dir: 'down', phase: hash(s.x + ',' + s.y) % 1000 };
-        var k = Math.min(1, dt / 120);
-        st.vx += ((s.x - st.x) * 1000 / dt - st.vx) * k;
-        st.vy += ((s.y - st.y) * 1000 / dt - st.vy) * k;
-        st.x = s.x; st.y = s.y;
-        var moving = st.vx * st.vx + st.vy * st.vy > 30 * 30;
-        if (moving) st.dir = dirFor(st.vx, st.vy, st.dir);
+        if (!st) st = s.htState = { x: x, y: y, vx: 0, vy: 0, dir: 'down', until: 0, phase: hash(Math.round(x) + ',' + Math.round(y)) % 1000 };
+        st.vx = st.vx * 0.6 + (x - st.x) * 0.4;
+        st.vy = st.vy * 0.6 + (y - st.y) * 0.4;
+        st.x = x; st.y = y;
+        var fast = st.vx * st.vx + st.vy * st.vy > 0.25 * 0.25;
+        if (fast) st.until = time + 150;
+        var moving = typeof s.htMoving === 'boolean' ? s.htMoving : time < st.until;
+        if (fast || (moving && Math.abs(st.vx) + Math.abs(st.vy) > 0.01)) st.dir = dirFor(st.vx, st.vy, st.dir);
         var name = frameName(st.dir, moving, time, st.phase);
         if (s.frame && s.frame.name !== name && s.texture.has(name)) s.setFrame(name, false, false);
       }

@@ -74,7 +74,7 @@ check('every frameName is in the layout', ['down', 'up', 'right'].every((d) => [
   const off = H.downsample(data, W, Hh, -100, -100, 2, 8);
   check('downsample: crop outside the source never throws', off.length === 16 && off.every((v) => v === 0));
 }
-check('crop puts the feet anchor on the bottom row', H.CROP_X === 128 - 96 && (231 - H.CROP_Y) / H.FACTOR >= 22 && (231 - H.CROP_Y) / H.FACTOR < 24);
+check('crop puts the feet anchor on the bottom row', H.CROP_X === 128 - (24 * H.FACTOR) / 2 && Number.isInteger(H.FACTOR) && H.CROP_Y <= 72 && H.CROP_X <= 48 && H.CROP_X + 24 * H.FACTOR >= 208 && (231 - H.CROP_Y) / H.FACTOR >= 22 && (231 - H.CROP_Y) / H.FACTOR < 24);
 {
   const px = new Uint8ClampedArray([255, 0, 0, 255, 0, 0, 255, 0]);
   H.stoneTint(px);
