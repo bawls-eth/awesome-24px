@@ -367,7 +367,12 @@ if (IS_TOUCH) document.body.classList.add('touch-device');
   try {
     const p = (typeof MMAccess !== 'undefined' && MMAccess.prefs) ? MMAccess.prefs.load(window.localStorage) : { hudScale: 1, flashes: true, lowGfx: false };
     const osReduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-    document.body.classList.toggle('a11y-reduce-motion', osReduce || p.flashes === false || p.lowGfx === true);
+    // mm-reduce-motion (the shared Settings toggle, mm-settings.js) counts too; mm-settings.js mirrors it on <html>.
+    let mmReduce = false;
+    try { mmReduce = window.localStorage.getItem('mm-reduce-motion') === '1'; } catch (e) { mmReduce = false; }
+    const reduce = osReduce || mmReduce || p.flashes === false || p.lowGfx === true;
+    document.body.classList.toggle('a11y-reduce-motion', reduce);
+    if (reduce) { document.documentElement.setAttribute('data-reduce-motion', '1'); document.documentElement.classList.add('reduce-motion'); }
     document.body.classList.toggle('a11y-hud-scaled', p.hudScale > 1);
     document.body.style.setProperty('--hud-scale', String(p.hudScale || 1));
   } catch (e) { /* prefs are optional */ }
@@ -980,6 +985,8 @@ const RARE_SPECIES = [
   { key: 'aliens_green', label: 'Green Aliens' },
   { key: 'aliens_red', label: 'Red Aliens' },
 ];
+// The only keys a stored/remote species may resolve to as an old sheet (?legacyart=1); everything else becomes a hero.
+const LEGACY_SPECIES_KEYS = new Set(SPECIES.concat(RARE_SPECIES).map((s) => s.key));
 const MERCHANT_POS = { x: 2250, y: 1000 };
 const MERCHANT_RADIUS = 56;
 const MERCHANT_COST = 15;
@@ -1016,6 +1023,8 @@ const GUESTBOOK_RADIUS = 60;
 
 const PANEL_COLLAPSE_KEY = 'pixeltown-panel-collapsed'; // own key; never part of the save
 const GATE_POINTER_KEY = 'pixeltown-gate-pointer-v1'; // own key; never part of the save
+const REMOTE_CAP = 60; // most remote players drawn at once (flood safety; the town's own cap is far lower)
+const BLOCK_DRAW_CAP = 1500; // most build blocks drawn (a hostile /blocks flood must not freeze the town)
 const FIRST_MINUTE_QUIET_MS = 60000; // new players: system chat lines wait this long (or until the gate) behind the gate chip
 const GATE_POINTER_MIN_DIST = 300; // the Realm Gate pointer shows only while the gate is further than this
 // Phone layout: narrow screens (portrait) OR a short touch screen (landscape phone).
@@ -3497,6 +3506,13 @@ class TownScene extends Phaser.Scene {
   }
 
   showRealmInvite(inv) {
+    // Invite spam (netsafety P2-1): only from players in town, one per sender per 10 s, never over an invite already showing.
+    if (!inv || typeof inv !== 'object' || !this.allPlayers.has(inv.from)) return;
+    if (this.realmInviteIn && this.realmInviteIn !== inv) return;
+    this._inviteSeen = this._inviteSeen || new Map();
+    const seenAt = this._inviteSeen.get(inv.from);
+    if (seenAt !== undefined && Date.now() - seenAt < 10000 && !(this._deferredInvite && this._deferredInvite.inv === inv)) return;
+    this._inviteSeen.set(inv.from, Date.now());
     if (this.inRealm || this.inUnderground) { this._deferredInvite = { inv, at: Date.now() }; return; } // busy: show it the moment we are back in town (for up to 60 s)
     this._deferredInvite = null;
     this.closeNavSheet(); // review N2: the invite (z 100000) must be reachable by keyboard, not hidden behind a focus-trapping sheet
@@ -5528,6 +5544,7 @@ class TownScene extends Phaser.Scene {
 
   addBlockVisual(b) {
     if (this.blocks.has(b.key)) return;
+    if (this.blocks.size >= BLOCK_DRAW_CAP) return; // flood safety (netsafety P1-3)
     const def = BLOCK_TYPES[b.type] || BLOCK_TYPES.wood;
     // Path tiles are ground texture, not objects — draw them flat and
     // behind everything (players, props) instead of depth-sorted by y.
@@ -5620,7 +5637,8 @@ class TownScene extends Phaser.Scene {
   // range for whichever sheet is used.
   safeTexture(species, frame) {
     // Heroes: every species (hero_<class> or a legacy key) renders as a hero texture; stored values are never changed.
-    const hero = MMTownHeroes.resolve(species, frame, (k) => MMTownHeroes.legacyArt() && this.textures.exists(k));
+    // ?legacyart=1 keeps an old sheet only for a real species key, never any loaded texture (a remote player as a tileset).
+    const hero = MMTownHeroes.resolve(species, frame, (k) => MMTownHeroes.legacyArt() && LEGACY_SPECIES_KEYS.has(k) && this.textures.exists(k));
     if (this.textures.exists(hero.key)) { species = hero.key; frame = hero.frame; }
     const key = typeof species === 'string' && this.textures.exists(species) ? species : SPECIES[0].key;
     const f = Number.isInteger(frame) && this.textures.get(key).has(frame) ? frame : 0;
@@ -8870,18 +8888,41 @@ class TownScene extends Phaser.Scene {
 
   // ---------- networking ----------
 
+  // Flood safety (netsafety P1-3): MAX_PLAYERS is only enforced by honest clients' join transaction, so a hostile writer can add
+  // hundreds of /players records. Draw at most REMOTE_CAP of them (the rest stay in allPlayers and take a freed slot later), and
+  // rebuild the player list at most once per 250 ms instead of once per record.
+  addRemotePlayerCapped(p) {
+    if (!p || this.remotePlayers.has(p.id) || this.remotePlayers.size >= REMOTE_CAP) return false;
+    this.addRemotePlayer(p);
+    return true;
+  }
+
+  fillRemoteSlot() {
+    for (const [id, p] of this.allPlayers) {
+      if (this.remotePlayers.size >= REMOTE_CAP) return;
+      if (id !== (this.net && this.net.id) && !this.remotePlayers.has(id)) this.addRemotePlayerCapped(p);
+    }
+  }
+
+  scheduleRenderPlayerList() {
+    if (this._plTimer) return;
+    this._plTimer = setTimeout(() => { this._plTimer = null; this.renderPlayerList(); }, 250);
+  }
+
   registerNetHandlers() {
     this.net.on('playerJoined', (p) => {
       if (this.remotePlayers.has(p.id)) return;
       this.allPlayers.set(p.id, p);
-      this.addRemotePlayer(p);
-      this.renderPlayerList();
+      this.addRemotePlayerCapped(p);
+      this.scheduleRenderPlayerList();
     });
 
     this.net.on('playerLeft', (id) => {
       this.allPlayers.delete(id);
+      const hadSprite = this.remotePlayers.has(id);
       this.removeRemotePlayer(id);
-      this.renderPlayerList();
+      if (hadSprite) this.fillRemoteSlot();
+      this.scheduleRenderPlayerList();
     });
 
     this.net.on('playerUpdated', (d) => {
@@ -8891,8 +8932,8 @@ class TownScene extends Phaser.Scene {
         // or broken and later repaired) becomes valid here — show it now
         // instead of never.
         this.allPlayers.set(d.id, d);
-        this.addRemotePlayer(d);
-        this.renderPlayerList();
+        this.addRemotePlayerCapped(d);
+        this.scheduleRenderPlayerList();
         return;
       }
       rp.targetX = d.x;
@@ -8909,7 +8950,7 @@ class TownScene extends Phaser.Scene {
       if (known && (known.score !== d.score || known.title !== d.title)) {
         known.score = d.score || 0;
         known.title = d.title || null;
-        this.renderPlayerList();
+        this.scheduleRenderPlayerList();
       }
 
       if (EMOTES.includes(d.emote) && d.emoteAt && this.lastEmoteAt.get(d.id) !== d.emoteAt) {
@@ -9233,8 +9274,13 @@ class TownScene extends Phaser.Scene {
       this.walkieRef = this.net.db.ref(`walkie/${this.net.id}`);
       this.walkieRef.on('child_added', (snap) => {
         const v = snap.val();
-        if (!v || !v.data) return;
-        const memo = { key: snap.key, from: v.from, fromName: v.fromName || 'someone', data: v.data, mime: v.mime || 'audio/webm' };
+        if (!v || typeof v !== 'object') return;
+        // netsafety P1-2: typed, size-capped, and only from the chosen bestie (as the UI promises), never auto-played from strangers.
+        const data = typeof v.data === 'string' && v.data.length <= 400000 && /^[A-Za-z0-9+/=]+$/.test(v.data) ? v.data : null;
+        if (!data || typeof v.from !== 'string' || !this.bestieId || v.from !== this.bestieId) return;
+        const mime = typeof v.mime === 'string' && /^audio\/(webm|mp4|ogg|mpeg|aac)(;\s*codecs=[\w.]+)?$/i.test(v.mime) ? v.mime : 'audio/webm';
+        const fromName = typeof v.fromName === 'string' && v.fromName.trim() ? v.fromName.trim().slice(0, 16) : 'someone';
+        const memo = { key: snap.key, from: v.from, fromName, data, mime };
         this.voiceMemos.push(memo);
         this.updateMemoBadge();
         if (document.visibilityState === 'visible') this.playMemo(memo);
@@ -9574,6 +9620,18 @@ function startTown(net, data) {
   game.scene.add('Town', TownScene, true, { net, self: data.self, players: data.players, world: data.world });
 
   const gameContainer = document.getElementById('game-container');
+  // A11y landmarks (a11y-viewports #9): the town view is the page's main region with one (visually hidden) heading, and the
+  // canvas says what it is. The join card's own h1 is hidden by now, so there is exactly one h1.
+  try {
+    gameContainer.setAttribute('role', 'main');
+    if (!document.getElementById('town-h1')) {
+      const h1 = document.createElement('h1');
+      h1.id = 'town-h1'; h1.className = 'sr-only'; h1.textContent = 'Hearthvale town';
+      gameContainer.parentNode.insertBefore(h1, gameContainer);
+    }
+    const labelCanvas = () => { const c = gameContainer.querySelector('canvas'); if (c && !c.getAttribute('aria-label')) c.setAttribute('aria-label', 'Hearthvale town: walk with the stick or arrow keys, A or E to interact'); };
+    labelCanvas(); setTimeout(labelCanvas, 0); game.events.once('ready', labelCanvas);
+  } catch (e) { /* landmarks are best effort */ }
   // Adaptive render resolution (desktop only): the canvas keeps its CSS size but renders fewer
   // pixels when frames stay slow (software/low-end GPUs are fill-rate bound). Steps down only,
   // never back up, so it cannot oscillate; the camera zoom is scaled so the view is identical.

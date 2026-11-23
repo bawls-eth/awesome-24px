@@ -91,7 +91,40 @@ async function open(browser, viewport, touch, qs) {
     check('first minute: a reply to the player is never held', q.n2 === q.n0 + 1, JSON.stringify(q));
     check('first minute: reaching the gate shows the held lines', q.n3 > q.n2 && q.quietAfter === null && /ambient test line/.test(q.last.join('|')), JSON.stringify(q));
     const pill = await p.page.evaluate(() => { const b = document.getElementById('walkie-talk-btn'); const r = b.getBoundingClientRect(); return { h: r.height, text: b.innerText.trim() }; });
-    check('phone: no bestie yet -> the walkie pill is one short line', !/bestie/i.test(pill.text) && pill.h < 44, JSON.stringify(pill));
+    check('phone: no bestie yet -> the walkie pill is one short line', !/bestie/i.test(pill.text) && pill.h >= 44 && pill.h < 56, JSON.stringify(pill));
+    // Net safety (design/bugbash/netsafety.md), all local: a 150-record presence flood draws at most 60 avatars, a freed slot is
+    // refilled, the list rebuild is coalesced; invites from ids not in town / repeated within 10 s are ignored; hostile save fields.
+    const n = await p.page.evaluate(async () => {
+      const s = window.__g.scene.getScene('Town');
+      let renders = 0; const orig = s.renderPlayerList.bind(s); s.renderPlayerList = () => { renders++; orig(); };
+      // the real net handlers main.js registered (TownNet.emit, local only: nothing is written anywhere)
+      const fire = (ev, arg) => { if (!s.net.handlers || typeof s.net.handlers[ev] !== 'function') return 0; s.net.emit(ev, arg); return 1; };
+      let wired = 0;
+      for (let i = 0; i < 150; i++) wired = fire('playerJoined', { id: 'ADMINflood' + i, name: 'ADMINflood' + i, species: 'hero_mage', frame: 0, x: 1200 + (i % 20) * 8, y: 600 + Math.floor(i / 20) * 8, facing: 1, score: 0 });
+      if (!wired) for (let i = 0; i < 150; i++) { const q = { id: 'ADMINflood' + i, name: 'x', species: 'hero_mage', frame: 0, x: 1200, y: 600, facing: 1 }; s.allPlayers.set(q.id, q); s.addRemotePlayerCapped(q); s.scheduleRenderPlayerList(); }
+      const drawn = s.remotePlayers.size;
+      await new Promise((r) => setTimeout(r, 600));
+      const firstDrawn = [...s.remotePlayers.keys()][0];
+      if (wired) fire('playerLeft', firstDrawn); else { s.allPlayers.delete(firstDrawn); s.removeRemotePlayer(firstDrawn); s.fillRemoteSlot(); }
+      const refilled = s.remotePlayers.size;
+      s.showRealmInvite({ from: 'not-in-town', fromName: 'x', party: 'p1', mode: 'coop' });
+      const strangerShown = !document.getElementById('realm-invite').classList.contains('hidden');
+      const legacyTileset = s.safeTexture('baked_1', 0).key;
+      return { wired, drawn, refilled, renders, strangerShown, legacyTileset, all: s.allPlayers.size };
+    });
+    check('flood: at most 60 remote avatars drawn for 150 records', n.drawn === 60 && n.all >= 150, JSON.stringify(n));
+    check('flood: a freed slot is refilled from the waiting records', n.refilled === 60, JSON.stringify(n));
+    check('flood: the player list is rebuilt a few times, not once per record', n.renders <= 3, JSON.stringify(n));
+    check('invite from an id that is not in town is ignored', !n.strangerShown, JSON.stringify(n));
+    check('a remote species can never be an arbitrary loaded texture', /^hero_/.test(n.legacyTileset), n.legacyTileset);
+    // A11y landmarks + walkie contrast.
+    const a = await p.page.evaluate(() => {
+      const h1 = [...document.querySelectorAll('h1')].filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.right > 0 && r.bottom > 0 && getComputedStyle(e).display !== 'none' && !e.closest('.hidden'); });
+      const w = getComputedStyle(document.getElementById('walkie-talk-btn'));
+      return { main: !!document.querySelector('main,[role=main]'), h1: h1.map((e) => e.textContent), canvas: document.querySelector('#game-container canvas').getAttribute('aria-label') || '', op: w.opacity, color: w.color };
+    });
+    check('a11y: the town view is a main landmark with one heading and a labelled canvas', a.main && a.h1.length === 1 && /Hearthvale/.test(a.canvas), JSON.stringify(a));
+    check('a11y: the idle walkie pill is fully opaque dark ink (was 2.45:1)', a.op === '1' && a.color === 'rgb(95, 87, 79)', JSON.stringify(a));
     check('phone: 0 console errors', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
     check('phone: 0 database requests', p.db.count() === 0);
     await p.ctx.close();
