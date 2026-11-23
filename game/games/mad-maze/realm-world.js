@@ -1842,9 +1842,10 @@
       el.appendChild(buy);
       el.appendChild(mk('b', 'nx-st-sub', 'Sell back (T1-T3)'));
       const back = mk('div', 'nx-row'); back.id = 'rw-nx-sell'; let any = false;
+      const eqd = new Set(Object.keys(sv.eq || {}).map((k) => sv.eq[k])); // G-03 (b02-14): the equipped piece says so in the Sell-back list
       sv.items.forEach((it) => {
         const info = arena.vendorBuyBackInfo(it.n); if (!info) return; any = true;
-        const def = typeof RM_ITEM_BY_ID !== 'undefined' && RM_ITEM_BY_ID[it.id] ? RM_ITEM_BY_ID[it.id].name : it.id;
+        const def = (typeof RM_ITEM_BY_ID !== 'undefined' && RM_ITEM_BY_ID[it.id] ? RM_ITEM_BY_ID[it.id].name : it.id) + (eqd.has(it.n) ? ' (equipped)' : '');
         if (nxStallAsk === it.n) {
           const q = mk('span', 'nx-st-q', 'Sell ' + def + ' T' + it.t + ' back for ' + info.dust + ' dust?'); back.appendChild(q);
           const y = nxStallBtn('Confirm +' + info.dust + ' dust', 'Confirm: sell ' + def + ' back for ' + info.dust + ' dust', () => { nxStallAsk = 0; arena.vendorSellBack(it.n); nxStallRender(); }); y.dataset.vyes = String(it.n); back.appendChild(y);
@@ -1856,6 +1857,10 @@
       });
       if (!any) back.appendChild(mk('span', 'nx-st-note', 'Nothing to sell back. Tier 1 to 3 gear can be sold here.'));
       el.appendChild(back);
+      // G-03 (b02-14): after every stall re-render Buy / Sell back / Confirm are inert for 300 ms, so a double-tap buys (or sells) once
+      const armed = Array.from(el.querySelectorAll('button[data-vbuy], button[data-vsell], button[data-vyes]')).filter((b) => !b.disabled);
+      armed.forEach((b) => { b.disabled = true; b.dataset.arm = '1'; });
+      setTimeout(() => armed.forEach((b) => { if (b.isConnected && b.dataset.arm) { b.disabled = false; delete b.dataset.arm; } }), 300);
     }
     function nxStallOpen() { nxBuild(); if (!nxStallOn()) return false; nxStallAsk = 0; nxDom.board.classList.add('hidden'); nxStallRender(); nxDom.stall.classList.remove('hidden'); return true; }
     // PLAYTEST-REVIEW-3 #7: Shop and Forge open over the Nexus (the plaza closes underneath) and closing them returns to the Nexus stall.
