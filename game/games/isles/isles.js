@@ -2561,7 +2561,15 @@
   const panel = $('panel'), panelBody = $('panel-body'), panelTitle = $('panel-title');
   let panelKind = '';
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
-  function closePanel() { if (!panel.hidden) cue('ui_close'); panel.hidden = true; panelKind = ''; paused = false; document.body.classList.remove('panel-open'); }
+  let panelOpener = null, viaKeys = false; // BB: a keyboard player's focus goes back to what opened the panel, never lost on <body>
+  window.addEventListener('keydown', () => { viaKeys = true; }, true); window.addEventListener('pointerdown', () => { viaKeys = false; }, true);
+  function closePanel() {
+    const was = !panel.hidden;
+    if (was) cue('ui_close');
+    panel.hidden = true; panelKind = ''; paused = false; document.body.classList.remove('panel-open');
+    const back = panelOpener; panelOpener = null;
+    if (was && viaKeys && back && back.focus && document.activeElement && (document.activeElement === document.body || panel.contains(document.activeElement)) && back.offsetParent !== null) { try { back.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
+  }
   // 8B: the Pack (one button): a tabbed panel - Party (home dock + party), Craft, Log, Help. Other panels (sea chart, decor, trophies) stay
   // tab-less. The tab row and the party block are static DOM; only their hidden / aria-selected flags change.
   const PACK_TABS = { party: $('tab-party'), craft: $('btn-craft'), log: $('btn-log'), help: $('tab-help') };
@@ -2660,7 +2668,7 @@
       panelBody.appendChild(fb);
       mountFeedback(fb);
     }
-    if (panel.hidden) cue('ui_open');
+    if (panel.hidden) { cue('ui_open'); const a = document.activeElement; panelOpener = a && a !== document.body && !panel.contains(a) ? a : null; }
     panel.hidden = false;
     document.body.classList.add('panel-open'); // BB: the hint line hides under an open panel
     $('howto').hidden = true; // 8B: the first-visit how-to never sits under a panel
@@ -3297,6 +3305,7 @@
         NAV.onOpen(() => { if (!panel.hidden) closePanel(); paused = true; });
         NAV.onClose(() => { if (panel.hidden) paused = false; });
         NAV.onSettings(() => openSettings());
+        { const lg = $('back'); if (lg) { lg.tabIndex = -1; lg.setAttribute('aria-hidden', 'true'); } } // BB: the hidden legacy link is no keyboard stop (the Menu has Back)
       }
     } catch (e) { /* the isles work without the shared menu */ }
   }

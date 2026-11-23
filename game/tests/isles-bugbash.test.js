@@ -107,6 +107,14 @@ const KO = (I) => {
   await d.page.keyboard.press('Escape');
   const logShut = await d.page.evaluate(() => document.getElementById('panel').hidden);
   ck(logOpen === 'Island log' && logShut, '2d: the old keys stay: L opens the log and Esc closes the panel (not the menu)', { logOpen, logShut });
+  // keyboard only: the Pack button opens with Enter, Esc closes it and focus comes back to the Pack button; the hidden legacy link is no tab stop
+  await d.page.focus('#btn-pack');
+  await d.page.keyboard.press('Enter');
+  const kOpen = await d.page.evaluate(() => !document.getElementById('panel').hidden);
+  await d.page.keyboard.press('Escape');
+  const kb = await d.page.evaluate(() => ({ shut: document.getElementById('panel').hidden, focus: document.activeElement && document.activeElement.id, legacyTab: document.getElementById('back').tabIndex }));
+  ck(kOpen && kb.shut && kb.focus === 'btn-pack' && kb.legacyTab === -1, '2d2: keyboard: Enter opens the Pack, Esc closes it, focus returns to Pack; the hidden legacy link is not a tab stop', { kOpen, kb });
+  await d.page.evaluate(() => document.activeElement && document.activeElement.blur());
   // Shift = the F action: next to a sleeper it feeds
   await setup(d.page);
   const k2 = await ev(d.page, KO);
