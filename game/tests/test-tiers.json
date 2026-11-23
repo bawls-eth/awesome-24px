@@ -1548,5 +1548,9 @@
   "beta-retest-b15.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-retest-b02.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
