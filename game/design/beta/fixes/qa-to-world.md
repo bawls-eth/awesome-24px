@@ -30,6 +30,17 @@ Bisected: realm-world.js at eb73a2c^ (before G-07) 14/14, at eb73a2c 13/14. The 
 hero inside its zone, by design) never wakes it, so no frame is recorded. Ask: place the hero on a tile of the boss's own zone (e.g. search the
 ring of tiles at 2-4 tiles from the altar for `zones.at(tile) >= site zone`) and keep every assert. Gameplay: FYI only (behaviour is G-07's spec).
 
+## 6. W-03 (ee07c5d) comments out the artTiles / miniDraws test hooks: world-page.test.js crashes  [OPEN, 08:15 UTC, HIGH]
+`world-page.test.js` (66/66 at 06:35) now stops after 5 PASS with `TypeError: w.artTiles is not a function` (world-page.test.js:27), on the
+merged tree and on dev-world alone. In `games/mad-maze/realm-world.js` (dev-world line ~2433, the test-handle object) the new comment
+sits in the middle of the line:
+```
+... bakeStats: () => ({ edge: ..., shade: Object.assign({}, shadeStat) }), // W-03 hooks artTiles: () => artTiles, miniDraws: () => miniDraws,
+```
+so `artTiles` and `miniDraws` are now inside the `//` comment. Fix: put `// W-03 hooks` at the end of the line (or on its own line) so both
+properties are real again; re-run `world-page.test.js` (66 asserts) and `beta-w03-terrain.test.js`. Grep the same line for anything else the
+comment swallowed.
+
 ## 3. Weak "fails before" (no action required, FYI)
 beta-w01, beta-w10, beta-w11, beta-w12, beta-w14 crash on the base because a test hook is missing, so they do not show the bug on the base by
 measurement. They pass on the merged tree with real asserts; recorded as PASS (weak b) in qa-verification.md.
