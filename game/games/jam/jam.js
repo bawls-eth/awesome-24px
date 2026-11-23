@@ -99,14 +99,15 @@
   var sparks = [], banner = null, comboPop = 0, milestonesHit = [], fxRng = R.create('jam-fx'), lastPrevBest = null;
   function lowGfx() { try { return !!(window.MMAccess && window.MMAccess.prefs.load(window.localStorage).lowGfx); } catch (e) { return false; } }
   function isMilestone(c) { return MILESTONES.indexOf(c) >= 0 || (c > 100 && c % 50 === 0); }
-  function sfxPlay(name) { if (TEST || !sfx) return; try { sfx.play(name); } catch (e) { /* ignore */ } }
+  var sfxLog = [];
+  function sfxPlay(name) { sfxLog.push(name); if (sfxLog.length > 40) sfxLog.shift(); if (TEST || !sfx) return; try { sfx.play(name); } catch (e) { /* ignore */ } }
   function showBanner(text, col) { banner = { text: text, col: col, t: 0 }; }
   function afterHit(j, idx, prevCombo) {
     if (relax || !run) return;
     var c = run.state.combo;
     if (j && j !== 'miss') {
       comboPop = 1;
-      if (isMilestone(c)) { milestonesHit.push(c); showBanner(c + ' combo!', '#ffd166'); sfxPlay(c >= 50 ? 'levelup' : 'pickup'); }
+      if (isMilestone(c)) { milestonesHit.push(c); showBanner(c + ' combo!', '#ffd166'); sfxPlay('combo' + Math.max(1, Math.min(8, Math.ceil(c / 15)))); }
       if (!reduced && !lowGfx() && (j === 'perfect' || j === 'great')) {
         var n = j === 'perfect' ? 6 : 3, x = colOf(idx) * LANE_W + LANE_W / 2;
         for (var i = 0; i < n; i++) sparks.push({ x: x + fxRng.int(-12, 12), y: HIT_Y, vx: (fxRng.next() - 0.5) * 120, vy: -60 - fxRng.next() * 140, t: 0, col: j === 'perfect' ? '#fff3b0' : LANE_COL[idx] });
@@ -247,7 +248,7 @@
     var startAt = practice && practice.loop ? loopStart() : 0;
     if (startAt) { pausedTotal = -startAt / practice.speed; testNow = startAt; frozenAt = startAt; }
     evIdx = firstEvent(startAt);
-    mode = 'play'; overlay.hidden = true;
+    mode = 'play'; overlay.hidden = true; sfxPlay('select');
     $('hud-speed').textContent = practice ? 'Speed ' + Math.round(practice.speed * 100) + '%' : '';
     $('hud-song').textContent = (practice ? 'Practice: ' : '') + (assistRun ? 'Assist: ' : '') + (relax ? 'Relax: ' : '') + (concert ? 'Concert ' + (concert.idx + 1) + '/' + concert.ids.length + ': ' : '') + SG.song(id).name + ' / ' + SG.TIER_NAMES[tier];
     updateHud();
@@ -267,6 +268,7 @@
     lastResult = res;
     lastReport = SG.record(save, songId, tier, res);
     persist();
+    sfxPlay(res.fullCombo ? 'perfect' : (res.rank === 'S' || res.rank === 'A') ? 'level_up' : 'confirm');
     frozenAt = songNow(); mode = 'results';
     if (concert) { concertAfterSong(res); return; }
     showResults();
@@ -378,6 +380,7 @@
     if (mode !== 'play' || paused) return;
     frozenAt = songNow(); paused = true; mode = 'pause';
     if (!TEST) { if (audioMode) { try { actx.suspend(); } catch (e) { /* ignore */ } } else pauseSrc = performance.now(); }
+    sfxPlay('ui_open');
     if (quiet === true) { navPaused = true; return; }
     showPause();
   }
@@ -385,7 +388,7 @@
     navPaused = false;
     if (mode !== 'pause') return;
     if (!TEST) { if (audioMode) { try { actx.resume(); } catch (e) { /* ignore */ } } else pausedTotal += performance.now() - pauseSrc; }
-    paused = false; mode = 'play'; overlay.hidden = true;
+    paused = false; mode = 'play'; overlay.hidden = true; sfxPlay('ui_close');
   }
 
   // ---------- input ----------
@@ -440,6 +443,13 @@
     }
     if (e.code === 'Escape' || e.code === 'KeyP') { if (mode === 'play') pause(); else if (mode === 'pause') resume(); return; }
     if (e.code === 'KeyR' && mode === 'results' && !e.repeat) { var ag = $('again'); if (ag && !overlay.hidden) { e.preventDefault(); ag.click(); } return; }
+    // universal controls (MMInput): R restarts from Paused, Space/Enter is Primary when no button has focus
+    var act = window.MMInput ? window.MMInput.actionOf(e) : null;
+    if (act === 'restart' && mode === 'pause' && !e.repeat) { var rsb = $('restart'); if (rsb) { e.preventDefault(); rsb.click(); } return; }
+    if (act === 'primary' && !e.repeat && (!document.activeElement || document.activeElement === document.body) && !overlay.hidden) {
+      var pb = mode === 'menu' ? $('quick-play') : mode === 'pause' ? $('resume') : mode === 'results' ? $('again') : null;
+      if (pb) { e.preventDefault(); pb.click(); return; }
+    }
     var lane = KEYMAP[e.code];
     if (!lane) return;
     lane = L(lane);
@@ -681,7 +691,7 @@
     if (!save.hint) {
       var h = el('div'); h.id = 'hint'; h.setAttribute('role', 'note');
       h.appendChild(el('strong', 'How to play'));
-      h.appendChild(el('p', 'Notes fall down four lanes. Press D F J K (or the arrow keys, or tap the lanes) as a note reaches the bright line. Hold the long notes until they end. Perfect, Great and Good score; a miss breaks your combo.'));
+      h.appendChild(el('p', 'Tap each note as it reaches the bright line. Keys D F J K, arrows, or touch. Hold long notes.'));
       var ok = btn('Got it', function () { save.hint = true; persist(); showMenu(); }); ok.id = 'hint-ok'; h.appendChild(ok);
       overlay.appendChild(h);
     }
@@ -699,7 +709,7 @@
     ab.addEventListener('click', function () { assist.on = !assist.on; persistAssist(); showMenu(); var f = $('pref-assist'); if (f) f.focus(); });
     arow.appendChild(ab);
     var ainfo = el('span', assist.on ? 'Assist is on: 2 lanes, any pad on a side hits it. Scores go to separate Assist bests, never stars or S-rank.' : 'Assist: fold the 4 lanes into 2 for one-thumb play (separate bests).', 'dim'); ainfo.id = 'assist-info'; arow.appendChild(ainfo);
-    var rinfo = el('span', prefRelax ? 'Relax is on: songs keep their notes, nothing can fail and there is no score. Stars only come from normal play.' : 'Relax mode: play any open song with no fail and no score.', 'dim'); rinfo.id = 'relax-info'; rrow.appendChild(rinfo);
+    var rinfo = el('span', prefRelax ? 'Relax on: nothing can fail, no score. Stars only come from normal play.' : 'Play any song with no fail and no score.', 'dim'); rinfo.id = 'relax-info'; rrow.appendChild(rinfo);
     overlay.appendChild(rrow);
     overlay.appendChild(arow);
     var openN = SG.SONGS.filter(function (x) { return SG.songUnlocked(save, x.id); }).length;
@@ -768,7 +778,7 @@
     thLab(); prow.appendChild(th);
     overlay.appendChild(prow);
     var rule = el('p', 'Unlock rule: Warm Embers is always open. Lantern Shuffle opens at 2 total stars, Moth Parade at 5, Starlit Stomp at 8, then Kettle Song at 10, Owl Hour at 13, Comet Tail at 16, Fern Lullaby at 19, Spark Reel at 22, Dewdrop Drift at 25 and Harvest Moonrise at 28. A secret song waits for a full combo on any Hard chart. Hard needs 2 stars on that song’s Normal. Stars come from accuracy: 50%, 75%, 90%.', 'dim'); rule.id = 'unlock-rule';
-    overlay.appendChild(rule);
+    var rd = document.createElement('details'); rd.id = 'unlock-details'; rd.appendChild(el('summary', 'How songs unlock')); rd.appendChild(rule); overlay.appendChild(rd);
     var row2 = el('div', undefined, 'row'); row2.appendChild(homeLink('menu-back')); overlay.appendChild(row2);
   }
   function showPracticeSetup(id) {
@@ -1145,6 +1155,7 @@
       get cal() { return cal ? { state: cal.state, taps: cal.taps.length, now: calNow, beats: cal.state === 'run' || cal.state === 'done' ? calMeasured() : [], result: cal.result } : null; },
       calStep: calStep, calTap: calTap,
       get sfx() { return sfx; },
+      get sfxLog() { return sfxLog.slice(); },
       get audio() { return !!actx; },
       start: startSong, step: step, press: press, release: release, pause: pause, resume: resume, menu: showMenu,
       at: function (ms) { if (ms > testNow) step((ms - testNow) / (practice ? practice.speed : 1)); }

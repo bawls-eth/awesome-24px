@@ -32,3 +32,6 @@ ul.medals li.on { color:#111; background:var(--accent); font-weight:bold; }
 .new { color:var(--accent); font-weight:bold; }
 .back[hidden] { display:none !important; }
 #drop { width:100%; min-height:64px; font-size:20px; flex:none; touch-action:none; }
+/* the intro / result cards stay on screen and scroll inside themselves (landscape phones, 150% text) so Play again is always reachable */
+.overlay { position:fixed; left:max(16px, calc(50% - 264px)); right:max(16px, calc(50% - 264px)); top:60px; max-height:calc(100vh - 72px); max-height:calc(100dvh - 72px); overflow-y:auto; overscroll-behavior:contain; }
+@media (max-height:520px) { .overlay { top:8px; max-height:calc(100vh - 16px); max-height:calc(100dvh - 16px); } }

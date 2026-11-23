@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Lakeside Angler</title>
 <link rel="stylesheet" href="../../shared/mm-8bit.css">
+<link rel="stylesheet" href="../../shared/mm-minikit.css">
+<link rel="stylesheet" href="../../shared/mm-settings.css">
 <link rel="stylesheet" href="angler.css">
 <script src="../../shared/mm-8bit.js"></script>
 <script src="../../shared/mm-access.js"></script>
@@ -38,14 +40,17 @@
     <div id="boss-bar" role="progressbar" aria-label="Line strain" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-phase="calm"><span id="boss-fill"></span><span id="boss-label"></span></div>
     <button class="btn primary" id="reel-btn" type="button">Hold to reel</button>
   </div>
-  <section id="result" class="panel" hidden>
-    <h2 id="res-title"></h2>
-    <p id="res-detail"></p>
-    <p id="res-fun" hidden></p>
-    <button class="btn primary" id="res-ok" type="button">Cast again</button>
-  </section>
+  <section id="result" class="panel" hidden aria-label="Result" aria-live="polite"></section>
 </main>
 <nav id="spots" aria-label="Fishing spots"></nav>
+<section id="pregame" class="overlay" aria-label="How to play" hidden>
+  <div class="panel">
+    <h2>Lakeside Angler</h2>
+    <p id="pg-how"></p>
+    <p id="pg-keys" class="rule"></p>
+    <button class="btn primary" id="pg-play" type="button">Play</button>
+  </div>
+</section>
 <section id="gear" class="overlay" hidden>
   <div class="panel wide">
     <div class="jhead"><h2>Gear</h2><button class="btn" id="gear-close" type="button">Close</button></div>
@@ -104,7 +109,11 @@
 <script src="../../shared/mm-angler-depth.js"></script>
 <script src="../../shared/mm-angler-boss.js"></script>
 <script src="../../shared/mm-angler-isles.js"></script>
+<script src="../../shared/mm-chip.js"></script>
 <script src="../../shared/sfx.js"></script>
+<script src="../../shared/mm-input.js"></script>
+<script src="../../shared/mm-minikit.js"></script>
+<script src="../../shared/mm-settings.js"></script>
 <script src="../../shared/mm-nav.js" data-mount="manual"></script>
 <script>
 (function () {

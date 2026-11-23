@@ -1,15 +1,15 @@
 {
   "batch": "b40c",
   "label": "rimewolf",
-  "generated_utc": "2026-11-22T19:49:20.930013Z",
+  "generated_utc": "2026-11-22T20:46:07.231957Z",
   "files": 14,
   "duplicate_ids": 0,
   "blocking": {},
   "warnings": {},
   "standing_heights": {
-    "rimewolf/down": 120,
-    "rimewolf/up": 132,
-    "rimewolf/right": 132
+    "rimewolf/down": 140,
+    "rimewolf/up": 140,
+    "rimewolf/right": 140
   },
   "status": "provisional"
 }

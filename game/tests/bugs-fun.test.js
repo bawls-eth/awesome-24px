@@ -76,7 +76,7 @@ async function open(browser, opts) {
   await p.evaluate(() => window.__bugs.step(15));
   const sm = await p.evaluate(() => {
     const B = window.__bugs, a = document.getElementById('again'), r = a.getBoundingClientRect();
-    const kids = [...document.getElementById('overlay').children].map((e) => e.id || e.tagName);
+    const kids = [...document.querySelectorAll('#overlay *')].map((e) => e.id).filter(Boolean); // result card is MMMiniKit now: compare document order
     return { mode: B.mode, focused: document.activeElement === a, w: r.width, h: r.height, inView: r.bottom <= innerHeight, idxActions: kids.indexOf('sum-actions'), idxCounts: kids.indexOf('sum-counts'),
       chase: document.getElementById('sum-chase').textContent, pb: B.pb, near: document.getElementById('sum-near').textContent, cbest: document.getElementById('sum-combo-best').textContent };
   });
