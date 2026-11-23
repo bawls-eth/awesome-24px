@@ -563,6 +563,14 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-town-heroes.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "town-heroes.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "shared-mm-island-wilds.test.js": {
     "class": "node",
     "tier": "smoke"

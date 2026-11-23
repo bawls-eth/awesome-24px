@@ -632,7 +632,7 @@ const NPC_LINES = [
   "I dug a hole once. Found nothing but more dirt. 0/10, not recommending it.",
   "If you listen closely during K.K. Slider's set, you can hear the campfire keeping time.",
   "Fossils are just rocks with better marketing, and I stand by that.",
-  "I've met every species in this town except whichever one you just picked. Rude, honestly.",
+  "I've met every kind of hero in this town except whichever one you just picked. Rude, honestly.",
   "Someone should really build a fence around my research. Hint hint.",
   "The shells on the beach regrow overnight. I have theories. None of them are good.",
   "I tried the Polyroll dice once. Lost all my stars in four seconds. Science.",
@@ -693,7 +693,7 @@ const NPC2_NIGHT_LINES = [
 // (same deterministic wall-clock-hash trick as the merchant/quest), a
 // small star reward for a correct first answer, no retry once answered.
 const TRIVIA_QUESTIONS = [
-  { q: 'How many villager species can you pick from on the join screen?', choices: ['9', '15', '21', '29'], correct: 2 },
+  { q: 'How many heroes can you pick from on the join screen?', choices: ['6', '8', '10', '12'], correct: 2 },
   { q: "What does Professor Byte's daily quest reset at?", choices: ['Noon local time', 'Midnight UTC', 'Every Monday', 'It never resets'], correct: 1 },
   { q: 'What do butterflies turn into at night?', choices: ['Moths', 'Fireflies', 'Nothing, they hide', 'Bats'], correct: 1 },
   { q: 'How much does a stone fence cost to place?', choices: ['1 wood', '1 stone', '2 flowers', '3 stone'], correct: 1 },
@@ -1414,13 +1414,15 @@ class TownScene extends Phaser.Scene {
   }
 
   preload() {
-    SPECIES.forEach((s) => {
+    // Town heroes (shared/mm-town-heroes.js): the hero strips replace the old species/decor sheets; ?legacyart=1 loads both.
+    MMTownHeroes.preload(this);
+    if (MMTownHeroes.legacyArt()) SPECIES.forEach((s) => {
       this.load.spritesheet(s.key, `../i/${s.key}-strip.png`, {
         frameWidth: FRAME_SIZE,
         frameHeight: FRAME_SIZE,
       });
     });
-    RARE_SPECIES.forEach((s) => {
+    if (MMTownHeroes.legacyArt()) RARE_SPECIES.forEach((s) => {
       this.load.spritesheet(s.key, `../i/${s.key}-strip.png`, {
         frameWidth: FRAME_SIZE,
         frameHeight: FRAME_SIZE,
@@ -1428,18 +1430,21 @@ class TownScene extends Phaser.Scene {
     });
     this.load.spritesheet('tulips', '../i/tulips-strip.png', { frameWidth: FRAME_SIZE, frameHeight: FRAME_SIZE });
     this.load.spritesheet('rocks', '../i/rocks-strip.png', { frameWidth: FRAME_SIZE, frameHeight: FRAME_SIZE });
-    this.load.spritesheet('punkrocks', '../i/punkrocks-strip.png', { frameWidth: FRAME_SIZE, frameHeight: FRAME_SIZE });
+    if (MMTownHeroes.legacyArt()) this.load.spritesheet('punkrocks', '../i/punkrocks-strip.png', { frameWidth: FRAME_SIZE, frameHeight: FRAME_SIZE });
     // mooncatrescue-strip.png is the one collection in i/ with no transparency
     // (solid white background baked in) — assets/ holds a chroma-keyed copy
     // just for the game; the original in i/ is left untouched.
-    this.load.spritesheet('mooncats', 'assets/mooncats-strip.png', { frameWidth: FRAME_SIZE, frameHeight: FRAME_SIZE });
-    this.load.spritesheet('boredapes', '../i/boredapes-strip.png', { frameWidth: 28, frameHeight: 28 });
+    if (MMTownHeroes.legacyArt()) this.load.spritesheet('mooncats', 'assets/mooncats-strip.png', { frameWidth: FRAME_SIZE, frameHeight: FRAME_SIZE });
+    if (MMTownHeroes.legacyArt()) this.load.spritesheet('boredapes', '../i/boredapes-strip.png', { frameWidth: 28, frameHeight: 28 });
     FF_ASSETS.forEach((a) => {
       this.load.svg(`ff_${a.id}`, `assets/flora-fauna/svg/${a.id}.svg`, { width: 64, height: 64 });
     });
   }
 
   create() {
+    // Bake every hero once (24 px, crisp), alias the old species keys to mapped heroes, start the setFrame-only animator.
+    MMTownHeroes.bake(this, SPECIES.concat(RARE_SPECIES).map((s) => s.key).concat(['boredapes']));
+    MMTownHeroes.animate(this);
     this.physics.world.setBounds(this.world.originX, this.world.originY, this.world.width, this.world.height);
     this.cameras.main.setBounds(this.world.originX, this.world.originY, this.world.width, this.world.height);
     // Phones (and especially standalone "Add to Home Screen" launches, which
@@ -1804,6 +1809,7 @@ class TownScene extends Phaser.Scene {
   // ---------- walk-cycle (squash/stretch hop, since the source sprites are single-pose) ----------
 
   applyBob(state, visual, shadow, anchorX, anchorY, moving, delta) {
+    visual.htMoving = moving; visual.htAx = anchorX; visual.htAy = anchorY; // read by the hero animator (shared/mm-town-heroes.js)
     if (reduceMotion) {
       state.phase = 0;
       state.lift = 0;
@@ -3517,7 +3523,8 @@ class TownScene extends Phaser.Scene {
         onSave: (s) => writeSave({ realm: s }),
         onExit: (why) => this.exitRealm(why),
       });
-      this.realm.setAvatar(`../i/${this.selfData.species}-strip.png`, this.selfData.frame || 0, FRAME_SIZE);
+      const av = MMTownHeroes.legacyArt() ? null : MMTownHeroes.avatarArgs(this.selfData.species, this.selfData.frame);
+      this.realm.setAvatar(av ? av.url : `../i/${this.selfData.species}-strip.png`, av ? av.frame : this.selfData.frame || 0, FRAME_SIZE);
       this.setupRealmControls();
     }
     if (opts.role && opts.link) { this.realm.setTeam(opts.role, opts.link, this.selfData.name, opts.mode, opts.slot); document.getElementById('realm-overlay').classList.add('team'); } else document.getElementById('realm-overlay').classList.remove('team');
@@ -3612,7 +3619,8 @@ class TownScene extends Phaser.Scene {
           if (b) b.classList.toggle('active', !!on);
         },
       });
-      this.underground.setAvatar(`../i/${this.selfData.species}-strip.png`, this.selfData.frame || 0, FRAME_SIZE);
+      const av = MMTownHeroes.legacyArt() ? null : MMTownHeroes.avatarArgs(this.selfData.species, this.selfData.frame);
+      this.underground.setAvatar(av ? av.url : `../i/${this.selfData.species}-strip.png`, av ? av.frame : this.selfData.frame || 0, FRAME_SIZE);
       this.setupUndergroundControls();
     }
     this.underground.start();
@@ -5563,14 +5571,15 @@ class TownScene extends Phaser.Scene {
   }
 
   createLocalPlayer(playerData) {
-    this.localBody = this.physics.add.sprite(playerData.x, playerData.y, playerData.species, playerData.frame).setVisible(false);
+    const heroTex = this.safeTexture(playerData.species, playerData.frame);
+    this.localBody = this.physics.add.sprite(playerData.x, playerData.y, heroTex.key, heroTex.frame).setVisible(false);
     this.localBody.body.setCollideWorldBounds(true);
     // Feet-sized hitbox: was 16x16 at offset (4,12), which stuck 4px out
     // below the 24px sprite so you stopped short of things above you and
     // snagged on corners; 14x12 ends exactly at the sprite's feet.
     this.localBody.body.setSize(14, 12).setOffset(5, 12);
 
-    this.localVisual = this.add.sprite(playerData.x, playerData.y, playerData.species, playerData.frame);
+    this.localVisual = this.add.sprite(playerData.x, playerData.y, heroTex.key, heroTex.frame);
     if (playerData.facing === -1) this.localVisual.setFlipX(true);
 
     this.localShadow = this.createShadow(playerData.x, playerData.y);
@@ -5583,6 +5592,9 @@ class TownScene extends Phaser.Scene {
   // sheet instead of Phaser's missing-texture box, and keep the frame in
   // range for whichever sheet is used.
   safeTexture(species, frame) {
+    // Heroes: every species (hero_<class> or a legacy key) renders as a hero texture; stored values are never changed.
+    const hero = MMTownHeroes.resolve(species, frame, (k) => MMTownHeroes.legacyArt() && this.textures.exists(k));
+    if (this.textures.exists(hero.key)) { species = hero.key; frame = hero.frame; }
     const key = typeof species === 'string' && this.textures.exists(species) ? species : SPECIES[0].key;
     const f = Number.isInteger(frame) && this.textures.get(key).has(frame) ? frame : 0;
     return { key, frame: f };
@@ -5885,7 +5897,8 @@ class TownScene extends Phaser.Scene {
       const species = SPECIES[Math.floor(worldHash(i, 1, 43) * SPECIES.length)];
       const frame = Math.floor(worldHash(i, 2, 44) * FRAME_COUNT);
       const range = 60 + worldHash(i, 3, 45) * 80;
-      const critter = this.add.sprite(x, y, species.key, frame).setDepth(y);
+      const critTex = this.safeTexture(species.key, frame);
+      const critter = this.add.sprite(x, y, critTex.key, critTex.frame).setDepth(y);
       critter.prevX = x;
       this.tweens.add({
         targets: critter,
@@ -6543,6 +6556,7 @@ class TownScene extends Phaser.Scene {
       const startX = (range[0] + range[1]) / 2;
       const cat = this.add.sprite(startX, y, 'mooncats', frame).setDepth(-1);
       cat.prevX = startX;
+      if (!MMTownHeroes.legacyArt()) return; // hero statues (stone-tinted, baked once) stand still at the same spots
       this.tweens.add({
         targets: cat,
         x: { from: range[0], to: range[1] },
@@ -7227,9 +7241,8 @@ class TownScene extends Phaser.Scene {
   }
 
   randomizeOutfit() {
-    const species = SPECIES[Math.floor(Math.random() * SPECIES.length)];
-    this.outfitSpecies = species.key;
-    this.outfitFrame = Math.floor(Math.random() * FRAME_COUNT);
+    this.outfitSpecies = MMTownHeroes.heroKey(MMTownHeroes.CLASSES[Math.floor(Math.random() * MMTownHeroes.CLASSES.length)]);
+    this.outfitFrame = 0;
     this.renderOutfitTabs();
     this.renderOutfitGrid();
     SFX.pop();
@@ -7237,7 +7250,10 @@ class TownScene extends Phaser.Scene {
 
   renderOutfitTabs() {
     const el = document.getElementById('outfit-species-tabs');
-    el.innerHTML = '';
+    MMTownHeroes.renderPicker(el, document.getElementById('outfit-avatar-grid'), this.outfitSpecies, this.outfitFrame, (key, f) => {
+      this.outfitSpecies = key; this.outfitFrame = f; this.renderOutfitTabs();
+    });
+    if (el) return; // the 10 heroes; the old species tabs below stay for reference only
     SPECIES.forEach((s) => {
       const btn = document.createElement('button');
       btn.type = 'button';
@@ -7255,6 +7271,7 @@ class TownScene extends Phaser.Scene {
 
   renderOutfitGrid() {
     const el = document.getElementById('outfit-avatar-grid');
+    if (el) return; // drawn by renderOutfitTabs (MMTownHeroes.renderPicker)
     el.innerHTML = '';
     for (let frame = 0; frame < FRAME_COUNT; frame++) {
       const btn = document.createElement('button');
@@ -7273,8 +7290,9 @@ class TownScene extends Phaser.Scene {
   applyOutfit() {
     this.selfData.species = this.outfitSpecies;
     this.selfData.frame = this.outfitFrame;
-    this.localVisual.setTexture(this.outfitSpecies, this.outfitFrame);
-    this.localBody.setTexture(this.outfitSpecies, this.outfitFrame);
+    const oTex = this.safeTexture(this.outfitSpecies, this.outfitFrame);
+    this.localVisual.setTexture(oTex.key, oTex.frame);
+    this.localBody.setTexture(oTex.key, oTex.frame);
     writeSave({ species: this.outfitSpecies, frame: this.outfitFrame });
     this.net.updateAppearance(this.outfitSpecies, this.outfitFrame);
     this.closeOutfitShop();
@@ -7720,7 +7738,8 @@ class TownScene extends Phaser.Scene {
     const species = this.merchantSpecies();
     if (this.isMerchantVisiting()) {
       this.merchantSprite.setTexture(species.key, 0).setVisible(true);
-      this.merchantSign.setText(`🛒 Mystery Merchant\nselling: ${species.label}`);
+      const lookName = MMTownHeroes.legacyArt() ? species.label : `${MMTownHeroes.heroOf(MMTownHeroes.classFor(species.key, Math.floor(this.merchantHash(3) * 9))).name} look`;
+      this.merchantSign.setText(`🛒 Mystery Merchant\nselling: ${lookName}`);
     } else {
       this.merchantSprite.setVisible(false);
       const hour = new Date().getHours();
@@ -7755,8 +7774,9 @@ class TownScene extends Phaser.Scene {
     }
     this.selfData.species = species.key;
     this.selfData.frame = frame;
-    this.localVisual.setTexture(species.key, frame);
-    this.localBody.setTexture(species.key, frame);
+    const mTex = this.safeTexture(species.key, frame);
+    this.localVisual.setTexture(mTex.key, mTex.frame);
+    this.localBody.setTexture(mTex.key, mTex.frame);
     writeSave({ species: species.key, frame });
     this.net.updateAppearance(species.key, frame);
     this.awardPoint(-MERCHANT_COST, `🛒 bought ${species.label}!`, this.localBody.x, this.localBody.y - 30, 'sell');
@@ -8122,7 +8142,8 @@ class TownScene extends Phaser.Scene {
       this.addObstacleRect({ x, y, width: w, height: h });
 
       const spot = this.villagerSpotFor(v, Date.now());
-      const sprite = this.add.sprite(spot.x, spot.y, v.species, v.frame).setDepth(spot.y);
+      const vTex = this.safeTexture(v.species, v.frame);
+      const sprite = this.add.sprite(spot.x, spot.y, vTex.key, vTex.frame).setDepth(spot.y);
       const nameText = this.add.text(spot.x, spot.y - 26, v.name, {
         fontSize: '11px', fontFamily: 'monospace', color: '#ffffff', stroke: '#000000', strokeThickness: 3,
       }).setOrigin(0.5).setDepth(spot.y + 1);
@@ -9298,8 +9319,9 @@ const joinOverlay = document.getElementById('join-overlay');
 const hud = document.getElementById('hud');
 
 let savedProfile = loadSave();
-let selectedSpecies = SPECIES.some((s) => s.key === savedProfile.species) ? savedProfile.species : SPECIES[0].key;
-let selectedFrame = Number.isInteger(savedProfile.frame) && savedProfile.frame >= 0 && savedProfile.frame < FRAME_COUNT
+// Heroes: a saved hero key or legacy species is kept as-is (never rewritten); no save -> the ranger.
+let selectedSpecies = MMTownHeroes.pickStart(savedProfile.species, savedProfile.frame).key;
+let selectedFrame = MMTownHeroes.isHeroKey(selectedSpecies) ? 0 : Number.isInteger(savedProfile.frame) && savedProfile.frame >= 0 && savedProfile.frame < FRAME_COUNT
   ? savedProfile.frame
   : 0;
 if (savedProfile.name) nameInput.value = savedProfile.name;
@@ -9316,7 +9338,7 @@ try {
       const hasProfile = raw && typeof raw === 'object' ? true : !!localStorage.getItem(MMHubProfile.TOWN_KEY);
       if (hasProfile && prof.name && prof.name !== 'Villager') {
         nameInput.value = prof.name.slice(0, 16);
-        if (SPECIES.some((s) => s.key === prof.species)) {
+        if (MMTownHeroes.isHeroKey(prof.species) || SPECIES.some((s) => s.key === prof.species)) {
           selectedSpecies = prof.species;
           selectedFrame = prof.frame >= 0 && prof.frame < FRAME_COUNT ? prof.frame : 0;
         }
@@ -9326,7 +9348,10 @@ try {
 } catch (e) { /* prefill is best-effort */ }
 
 function renderSpeciesTabs() {
-  speciesTabsEl.innerHTML = '';
+  MMTownHeroes.renderPicker(speciesTabsEl, avatarGridEl, selectedSpecies, selectedFrame, (key, f) => {
+    selectedSpecies = key; selectedFrame = f; renderSpeciesTabs();
+  });
+  if (speciesTabsEl) return; // the 10 heroes (shared/mm-town-heroes.js)
   SPECIES.forEach((s) => {
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -9343,6 +9368,7 @@ function renderSpeciesTabs() {
 }
 
 function renderAvatarGrid() {
+  if (avatarGridEl) return; // drawn by renderSpeciesTabs (MMTownHeroes.renderPicker)
   avatarGridEl.innerHTML = '';
   for (let frame = 0; frame < FRAME_COUNT; frame++) {
     const btn = document.createElement('button');
