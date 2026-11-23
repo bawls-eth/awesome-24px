@@ -599,10 +599,12 @@ const FF_ASSETS = [
   { id: 'bluebell', w: 16, h: 20, zone: 'meadow', name: 'Common Bluebell', kind: 'flora' },
   { id: 'lavender', w: 18, h: 22, zone: 'meadow', name: 'Lavender', kind: 'flora' },
 ];
+// y/range: the legacy mooncats' walk over the water (?legacyart=1). bank: where the stone hero statues stand instead, on dry land
+// along the main pond's north-west bank (outside MAIN_POND's rim, clear of the shells, the heron, the dock and the bridge).
 const POND_CATS = [
-  { y: 552, frame: 0, range: [180, 330] },
-  { y: 578, frame: 3, range: [150, 300] },
-  { y: 648, frame: 6, range: [170, 320] },
+  { y: 552, frame: 0, range: [180, 330], bank: { x: 112, y: 524 } },
+  { y: 578, frame: 3, range: [150, 300], bank: { x: 152, y: 490 } },
+  { y: 648, frame: 6, range: [170, 320], bank: { x: 374, y: 490 } },
 ];
 const WINDMILL_POS = { x: 250, y: 200 };
 // Purely cosmetic seasonal ground decor — a snowman in winter, a pumpkin
@@ -625,9 +627,9 @@ const DAILY_DEAL_BONUS = 0.5; // +50% sell price on one resource, picked daily
 const BULK_SELL_THRESHOLD = 10; // sell 10+ of one resource at once for a bonus
 const BULK_SELL_BONUS = 0.2; // +20% on any resource that hits the threshold
 const NPC_LINES = [
-  "Did you know the pond cats never actually get wet? Mysteries of pixel physics.",
+  "Those stone heroes by the pond have stood guard so long the frogs think they're furniture.",
   "I've been counting your footsteps. You're very consistent. It's admirable.",
-  "The Bored Ape statue hasn't blinked once since I've been standing here.",
+  "The hero statue hasn't blinked once since I've been standing here.",
   "Turnip prices are basically vibes-based. Don't ask me to explain further.",
   "I dug a hole once. Found nothing but more dirt. 0/10, not recommending it.",
   "If you listen closely during K.K. Slider's set, you can hear the campfire keeping time.",
@@ -667,7 +669,7 @@ const NPC2_LINES = [
   "Back in my day we didn't have a shop. We just argued about turnip prices for free.",
   "That dock's been 'temporary' for forty years. Nobody's fixing it. Nobody asked me either.",
   "Heard the Professor's been talking to himself again. Takes one to know one, I guess.",
-  "The pond cats ignore me completely. Rude, but I respect the commitment.",
+  "Those stone heroes on the bank ignore me completely. Rude, but I respect the commitment.",
   "Rain or shine, I'm out here. Mostly because nobody built me a house.",
   "Don't trust anyone who's never fallen off a dock. Builds character, and bruises.",
   "I've seen things in this pond. Mostly reflections. Still counts.",
@@ -1014,6 +1016,7 @@ const GUESTBOOK_RADIUS = 60;
 
 const PANEL_COLLAPSE_KEY = 'pixeltown-panel-collapsed'; // own key; never part of the save
 const GATE_POINTER_KEY = 'pixeltown-gate-pointer-v1'; // own key; never part of the save
+const FIRST_MINUTE_QUIET_MS = 60000; // new players: system chat lines wait this long (or until the gate) behind the gate chip
 const GATE_POINTER_MIN_DIST = 300; // the Realm Gate pointer shows only while the gate is further than this
 // Phone layout: narrow screens (portrait) OR a short touch screen (landscape phone).
 const PANEL_PHONE_QUERY = '(max-width: 600px), (max-height: 500px) and (pointer: coarse)';
@@ -1181,7 +1184,7 @@ const VILLAGERS = [
     ],
     closeLines: [
       "You're my training buddy now, official, no takebacks.",
-      "Knew you had it in you! High five! ...okay, paw-bump works too.",
+      "Knew you had it in you! High five! ...okay, gauntlet-bump works too.",
     ],
   },
   {
@@ -1254,7 +1257,7 @@ const VILLAGER_PERSONALITY_LINES = {
     morning: ["Good morning. My beauty routine takes ninety minutes. You're welcome."],
     evening: ["The sunset matches my roof. I arranged that, obviously."],
     night: ["*yawn* A lady needs her beauty sleep. Do come back tomorrow."],
-    rain: ["This drizzle is simply ruining my fur. Hold the umbrella higher, please."],
+    rain: ["This drizzle is simply ruining my cape. Hold the umbrella higher, please."],
   },
   Jock: {
     any: [
@@ -1278,7 +1281,7 @@ const VILLAGER_PERSONALITY_LINES = {
   },
   Cranky: {
     any: [
-      "Kids these days and their fishing rods. We used our paws. Built character.",
+      "Kids these days and their fishing rods. We used our bare hands. Built character.",
       "My knees say the weather's turning. My knees are never wrong.",
     ],
     morning: ["What's so good about mornings? Name one thing. ...Coffee. Fine."],
@@ -1445,6 +1448,7 @@ class TownScene extends Phaser.Scene {
     // Bake every hero once (24 px, crisp), alias the old species keys to mapped heroes, start the setFrame-only animator.
     MMTownHeroes.bake(this, SPECIES.concat(RARE_SPECIES).map((s) => s.key).concat(['boredapes']));
     MMTownHeroes.animate(this);
+    this.pixelizeFloraFauna();
     this.physics.world.setBounds(this.world.originX, this.world.originY, this.world.width, this.world.height);
     this.cameras.main.setBounds(this.world.originX, this.world.originY, this.world.width, this.world.height);
     // Phones (and especially standalone "Add to Home Screen" launches, which
@@ -1460,6 +1464,7 @@ class TownScene extends Phaser.Scene {
 
     this.obstacles = this.physics.add.staticGroup();
     this.remotePlayers = new Map();
+    this.startFirstMinuteQuiet();
 
     this.drawOcean();
     this.drawWilderness();
@@ -2055,7 +2060,7 @@ class TownScene extends Phaser.Scene {
         d.setVisible(raining);
         if (raining) d.setPosition(Phaser.Math.Between(0, this.scale.width), Phaser.Math.Between(0, this.scale.height));
       });
-      if (wasKnown) this.addChatLine({ system: true, text: raining ? '🌧️ it started raining' : '☀️ the rain cleared up' });
+      if (wasKnown) this.addChatLine({ system: true, ambient: true, text: raining ? '🌧️ it started raining' : '☀️ the rain cleared up' });
     }
     if (!raining) return;
     const w = this.scale.width;
@@ -3294,15 +3299,34 @@ class TownScene extends Phaser.Scene {
 
   markGateReached() {
     if (this.gatePointer && !this.gatePointer.reached) this.saveGatePointer({ reached: true });
+    this.flushQuietLines();
+  }
+
+  // First minute, one line of guidance: while the gate chip still guides a new player, ambient announcements (Bug-Off, weather)
+  // wait, so the chip is the only hint on screen. They appear after FIRST_MINUTE_QUIET_MS, or as soon as the gate is reached.
+  // Replies to the player's own actions (chat errors, saves, achievements) are never held.
+  startFirstMinuteQuiet() {
+    const st = this.loadGatePointer();
+    if (st.dismissed || st.reached) return;
+    this._quietLines = [];
+    this.time.delayedCall(FIRST_MINUTE_QUIET_MS, () => this.flushQuietLines());
+  }
+
+  flushQuietLines() {
+    const held = this._quietLines;
+    this._quietLines = null;
+    if (held) held.forEach((l) => this.addChatLine(l));
   }
 
   setupGatePointer() {
     this.gatePointer = this.loadGatePointer();
     this._gatePointerAt = 0;
+
     const close = document.getElementById('gate-pointer-close');
     if (close) close.addEventListener('click', () => {
       this.saveGatePointer({ dismissed: true });
       document.getElementById('gate-pointer').classList.add('hidden');
+      this.flushQuietLines();
     });
   }
 
@@ -3881,7 +3905,7 @@ class TownScene extends Phaser.Scene {
     if (live && !this.bugOffActive) {
       this.bugOffActive = true;
       this.bugs.filter((b) => b.extra).forEach((b) => this.placeBug(b));
-      this.addChatLine({ system: true, text: '🦋 The Bug-Off is LIVE! Catch 5 / 10 / 15 bugs for Bronze / Silver / Gold.' });
+      this.addChatLine({ system: true, ambient: true, text: '🦋 The Bug-Off is LIVE! Catch 5 / 10 / 15 bugs for Bronze / Silver / Gold.' });
     } else if (!live && this.bugOffActive) {
       this.bugOffActive = false;
       this.bugs.filter((b) => b.extra).forEach((b) => {
@@ -6032,13 +6056,38 @@ class TownScene extends Phaser.Scene {
     this.tweens.add({ targets: this.ffSparkles, alpha: { from: 1, to: 0.2 }, angle: 90, duration: 650, yoyo: true, repeat: -1 });
   }
 
+  // 8-bit look for the wildlife (shared/mm-pixelize.js, design/PIXELIZE.md): every loaded ff_<id> SVG is baked ONCE, here, into a
+  // crisp canvas texture ffpx_<id> at half its display size, then drawn at 2x (setDisplaySize is unchanged, so layout and reach stay).
+  // ?pixelize=0 (or a missing module, or a failed bake) keeps the original SVG art. Never per frame.
+  pixelizeFloraFauna() {
+    this.ffPixelized = 0;
+    if (!window.MMPixelize || !MMPixelize.enabled()) return;
+    const t0 = performance.now();
+    FF_ASSETS.forEach((a) => {
+      const src = `ff_${a.id}`;
+      if (!this.textures.exists(src) || this.textures.exists(`ffpx_${a.id}`)) return;
+      try {
+        const img = this.textures.get(src).getSourceImage();
+        if (!img || !(img.naturalWidth || img.width)) return;
+        const px = Math.max(8, Math.round(Math.max(14, a.w, a.h) / 2));
+        const ent = MMPixelize.bake(img, { size: px, key: `ff_${a.id}@${px}` });
+        if (ent && ent.canvas && ent.w > 0) { this.textures.addCanvas(`ffpx_${a.id}`, ent.canvas); this.ffPixelized++; }
+      } catch (e) { /* this species keeps its SVG */ }
+    });
+    this.ffPixelizeMs = Math.round(performance.now() - t0);
+  }
+
+  floraFaunaKey(id) {
+    return this.textures.exists(`ffpx_${id}`) ? `ffpx_${id}` : `ff_${id}`;
+  }
+
   addFloraFaunaSpecimen(a, move, s, i) {
     // The SVGs are square, so a non-square w/h used to squash the art
     // (pine 72x96, joshua tree 80x104...). Keep the bigger side, square;
     // never below 14px so the microscopic species stay findable specks.
     const size = Math.max(14, a.w, a.h);
     const fly = move === 'fly';
-    const sprite = this.add.image(s.x, s.y, `ff_${a.id}`).setDisplaySize(size, size).setDepth(fly ? s.y + 40 : s.y);
+    const sprite = this.add.image(s.x, s.y, this.floraFaunaKey(a.id)).setDisplaySize(size, size).setDepth(fly ? s.y + 40 : s.y);
     const inWater = !!s.pond && FF_IN_WATER.has(a.id);
     const spec = {
       id: a.id, name: a.name, x: s.x, y: s.y, px: s.x, py: s.y, sprite, move, pond: s.pond, ocean: s.ocean,
@@ -6525,7 +6574,8 @@ class TownScene extends Phaser.Scene {
   // gap isn't, so you can still walk in and look around.
   drawGraveyard() {
     const { x, y } = GRAVEYARD_POS;
-    const g = this.bakedGfx(y - 2);
+    // The plot is ground: under the tombstones and anyone walking in (it used to sit at y - 2, over the stones at y - 6..-14).
+    const g = this.bakedGfx(-1);
     g.fillStyle(0x3a4a38, 1).fillRect(x - 70, y - 50, 140, 90);
     g.lineStyle(3, 0x5a6a52, 1).strokeRect(x - 70, y - 50, 140, 90);
     g.bake();
@@ -6552,11 +6602,17 @@ class TownScene extends Phaser.Scene {
   }
 
   drawPondCats() {
-    POND_CATS.forEach(({ y, frame, range }) => {
+    POND_CATS.forEach(({ y, frame, range, bank }) => {
+      if (!MMTownHeroes.legacyArt()) {
+        // Hero statues (stone-tinted, baked once) stand still on the bank, depth-sorted by their feet like any land sprite.
+        const statue = this.add.sprite(bank.x, bank.y, 'mooncats', frame).setDepth(bank.y + 12);
+        statue.htStill = true;
+        statue.pondStatue = true;
+        return;
+      }
       const startX = (range[0] + range[1]) / 2;
       const cat = this.add.sprite(startX, y, 'mooncats', frame).setDepth(-1);
       cat.prevX = startX;
-      if (!MMTownHeroes.legacyArt()) return; // hero statues (stone-tinted, baked once) stand still at the same spots
       this.tweens.add({
         targets: cat,
         x: { from: range[0], to: range[1] },
@@ -7742,7 +7798,7 @@ class TownScene extends Phaser.Scene {
     const species = this.merchantSpecies();
     if (this.isMerchantVisiting()) {
       this.merchantSprite.setTexture(species.key, 0).setVisible(true);
-      const lookName = MMTownHeroes.legacyArt() ? species.label : `${MMTownHeroes.heroOf(MMTownHeroes.classFor(species.key, Math.floor(this.merchantHash(3) * 9))).name} look`;
+      const lookName = this.merchantLookName(species);
       this.merchantSign.setText(`🛒 Mystery Merchant\nselling: ${lookName}`);
     } else {
       this.merchantSprite.setVisible(false);
@@ -7757,6 +7813,12 @@ class TownScene extends Phaser.Scene {
       const whenLabel = nextIsToday ? 'today' : 'tomorrow';
       this.merchantSign.setText(`🛒 closed — back at ${nextStart}:00 ${whenLabel}`);
     }
+  }
+
+  // What the merchant sells, by name: the hero look today's species maps to (the old collection label only with ?legacyart=1).
+  merchantLookName(species) {
+    if (MMTownHeroes.legacyArt()) return species.label;
+    return `${MMTownHeroes.heroOf(MMTownHeroes.classFor(species.key, Math.floor(this.merchantHash(3) * 9))).name} look`;
   }
 
   isNearMerchant() {
@@ -7783,7 +7845,7 @@ class TownScene extends Phaser.Scene {
     this.localBody.setTexture(mTex.key, mTex.frame);
     writeSave({ species: species.key, frame });
     this.net.updateAppearance(species.key, frame);
-    this.awardPoint(-MERCHANT_COST, `🛒 bought ${species.label}!`, this.localBody.x, this.localBody.y - 30, 'sell');
+    this.awardPoint(-MERCHANT_COST, `🛒 bought the ${this.merchantLookName(species)}!`, this.localBody.x, this.localBody.y - 30, 'sell');
     this.incrementStat('merchantBuys');
   }
 
@@ -9025,7 +9087,8 @@ class TownScene extends Phaser.Scene {
     chatInput.blur();
   }
 
-  addChatLine({ name, text, system, old }) {
+  addChatLine({ name, text, system, old, ambient }) {
+    if (ambient && this._quietLines) { this._quietLines.push({ name, text, system }); return; }
     const chatLog = document.getElementById('chat-log');
     const line = document.createElement('div');
     line.className = system ? 'chat-line system' : 'chat-line';

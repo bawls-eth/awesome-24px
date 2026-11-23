@@ -1,7 +1,8 @@
 // MMTownHeroes: the Town's playable characters are our 10 Realm hero classes (original art in assets/arcane/b00..b03).
 // Pure parts (node-tested in tests/shared-mm-town-heroes.test.js): the hero list, hero keys ('hero_<class>', frame 0, carried in
 // the existing species field), the deterministic legacy species -> hero mapping (stable FNV-1a hash of "species:frame"), frame
-// selection, the box-filter downscale and the stone tint. Browser parts: load the idle/walk strips, bake each hero ONCE into a small
+// selection, the box-filter downscale and the stone tint. Browser parts: load ONE pre-baked atlas (assets/arcane/town-heroes-atlas.png,
+// made by tools/bake-hero-atlas.js with downsample(); the idle/walk strips are only fetched if it fails), bake each hero ONCE into a small
 // 24 px Phaser canvas texture (integer 7x box downscale of a 168 px crop around the feet anchor), alias textures under the old
 // species keys so any leftover call site renders a mapped hero (never the old sheets), a cheap animator that only calls setFrame,
 // and the join / outfit picker. Never rewrites stored values; unknown keys never throw. ?legacyart=1 brings the old sheets back.
@@ -145,12 +146,34 @@
 
   // ---------- browser ----------
   var srcKey = function (cls, a, d) { return 'htsrc_' + cls + '_' + a + '_' + d; };
-  function preload(scene) {
+  // The pre-baked atlas (tools/bake-hero-atlas.js): row = HEROES index, column = frameLayout() index, SIZE px cells. ~60 KB, one
+  // request, instead of 60 full-size strips (~650 KB). If it fails to load, the strips are fetched and baked at load as before.
+  var ATLAS_KEY = 'htatlas';
+  var ATLAS_URL = 'assets/arcane/town-heroes-atlas.png?v=20261123a';
+  function loadStrips(scene) {
     HEROES.forEach(function (h) {
       Object.keys(ACTIONS).forEach(function (a) {
         DIRS.forEach(function (d) { scene.load.image(srcKey(h.cls, a, d), stripUrl(h.cls, a, d)); });
       });
     });
+  }
+  function preload(scene) {
+    var onErr = function (file) {
+      if (!file || file.key !== ATLAS_KEY) return;
+      scene.load.off('loaderror', onErr);
+      loadStrips(scene); // fallback: the loader is still running, so the strips join this same load
+    };
+    scene.load.on('loaderror', onErr);
+    scene.load.image(ATLAS_KEY, ATLAS_URL);
+  }
+  // Copy one hero row out of the atlas (the exact pixels the strip bake would make), or null when the atlas is not there.
+  function rowFromAtlas(scene, cls, canvas) {
+    if (!scene.textures.exists(ATLAS_KEY)) return false;
+    var img = scene.textures.get(ATLAS_KEY).getSourceImage();
+    var row = HEROES.indexOf(heroOf(cls));
+    if (!img || row < 0 || img.height < (row + 1) * SIZE || img.width < canvas.width) return false;
+    canvas.getContext('2d').drawImage(img, 0, row * SIZE, canvas.width, SIZE, 0, 0, canvas.width, SIZE);
+    return true;
   }
   var baked = Object.create(null); // cls -> canvas (row of SIZE frames, layout order)
   function bakeClass(scene, cls) {
@@ -158,6 +181,7 @@
     var layout = frameLayout();
     var canvas = document.createElement('canvas');
     canvas.width = SIZE * layout.length; canvas.height = SIZE;
+    if (rowFromAtlas(scene, cls, canvas)) { baked[cls] = canvas; return canvas; }
     var ctx = canvas.getContext('2d');
     var scratch = document.createElement('canvas');
     var sctx = scratch.getContext('2d', { willReadFrequently: true });
@@ -206,7 +230,7 @@
       var tex = addCanvasTexture(scene, key, c, names);
       tex.add(0, 0, 0, 0, SIZE, SIZE);
     });
-    if (legacyArt()) return;
+    if (legacyArt()) { if (scene.textures.exists(ATLAS_KEY)) scene.textures.remove(ATLAS_KEY); return; }
     (legacyKeys || []).concat(STATUE_KEYS).forEach(function (k) {
       if (typeof k !== 'string' || scene.textures.exists(k)) return;
       var statue = STATUE_KEYS.indexOf(k) >= 0;
@@ -226,6 +250,7 @@
       }
       addCanvasTexture(scene, k, canvas, names);
     });
+    if (scene.textures.exists(ATLAS_KEY)) scene.textures.remove(ATLAS_KEY); // every hero row is copied out: free the atlas
   }
   // Animator: every frame, hero sprites get an idle/walk frame from their own smoothed on-screen motion. Only setFrame, no redraws;
   // the sprite list is refreshed every 30 frames. Sprites can opt out with sprite.htStill = true.
@@ -306,6 +331,7 @@
     heroOf: heroOf, heroKey: heroKey, classOfKey: classOfKey, isHeroKey: isHeroKey, hash: hash, classFor: classFor,
     resolve: resolve, pickStart: pickStart, legacyArt: legacyArt, stripUrl: stripUrl, portraitUrl: portraitUrl,
     frameLayout: frameLayout, dirFor: dirFor, frameName: frameName, downsample: downsample, stoneTint: stoneTint,
+    ATLAS_KEY: ATLAS_KEY, ATLAS_URL: ATLAS_URL,
     preload: preload, bake: bake, animate: animate, avatarArgs: avatarArgs, renderPicker: renderPicker
   };
 }));

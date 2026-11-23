@@ -1119,6 +1119,9 @@ body.touch-device #ug-hotbar {
   -webkit-user-select: none;
 }
 
+/* No bestie yet: one short line ("Hold to talk"), not a two-line hint competing with the gate chip in the first minute. */
+#walkie-talk-btn:disabled br, #walkie-talk-btn:disabled #bestie-label { display: none; }
+
 #walkie-talk-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -2898,7 +2901,9 @@ body.touch-device #postcards-hint { bottom: calc(188px + env(safe-area-inset-bot
   border-radius: 0 !important;
 }
 #achievement-toast, #whats-new-banner, #gate-pointer, #build-mode-banner { border: 3px solid var(--tb-ink) !important; box-shadow: var(--tb-shadow) !important; }
-#chat-panel { border: 3px solid var(--tb-ink); box-shadow: var(--tb-shadow); }
+/* #chat-panel is a transparent stack (log lines, quick-chat buttons, input): no frame of its own, or an empty 156 px box sat over the
+   middle of a phone screen. Its children carry the 8-bit borders. */
+#chat-panel { border: 0; box-shadow: none; }
 #quick-chat-row button, #chat-send-btn, #where-to-btn { border: 2px solid var(--tb-ink) !important; box-shadow: inset -2px -2px 0 rgba(0, 0, 0, 0.18); }
 #walkie-talk-btn, .ab-btn, #emote-toggle-btn, #tilt-toggle-btn { border: 3px solid var(--tb-ink) !important; }
 .join-card, .achievements-card { border-radius: 0 !important; border: 3px solid var(--tb-ink) !important; box-shadow: 4px 4px 0 var(--tb-ink) !important; }

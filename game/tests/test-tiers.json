@@ -571,6 +571,10 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "town-bugbash.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "shared-mm-island-wilds.test.js": {
     "class": "node",
     "tier": "smoke"
