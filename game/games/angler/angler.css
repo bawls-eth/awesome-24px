@@ -134,3 +134,5 @@ body.px8 { background-color:var(--bg); color:var(--ink); }
 #pregame .panel { width:min(92vw,420px); margin-top:12vh; text-align:center; }
 #pregame p { margin:8px 0; } #pregame .btn { min-width:160px; min-height:56px; margin-top:8px; }
 @media (max-height:520px) and (orientation:landscape) { #pregame .panel { margin-top:0; } #msg { min-height:calc(2 * 1.25em + 12px); } }
+/* short landscape screens: the page scrolls instead of squeezing the scene to a sliver */
+@media (max-height:520px) { html, body { height:auto; min-height:100%; } #stage { flex:0 0 auto; } #scene { flex:0 0 auto; height:min(86vh, 360px); width:auto; max-height:none; } }
