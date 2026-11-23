@@ -19,6 +19,7 @@
   // lists the goal) or HIDDEN below; "Coming soon" is only a fallback for a node with neither.
   const FROM_HUB = '../index.html?from=hub';
   const LINKS = Object.assign(Object.create(null), {
+    'w0-square': FROM_HUB, // G-14 (b08-05): the default node (where a fresh map opens) is never a "Coming soon" dead end: it opens the Town square
     'w0-hearthvale': FROM_HUB,
     'w1-hearthvale': FROM_HUB,
     'w2-lantern': '../games/mad-maze/lantern.html?from=hub',

@@ -35,7 +35,9 @@ const errs = (page) => { const e = []; page.on('pageerror', (x) => e.push('pagee
     check('plain visit lands on the Hub Home (hub/index.html)', /\/game\/hub\/index\.html$/.test(u.pathname) && !u.search, page.url());
     await page.waitForSelector('#home-play', { timeout: 15000 }).catch(() => {});
     const play = await page.evaluate(() => { const a = document.getElementById('home-play'); return a && a.getAttribute('href'); });
-    check('the Home Play button leads back into the Town (?from=hub)', play === '../index.html?from=hub', String(play));
+    // G-14 (b08-02): a fresh profile's Play is the guided Realm adventure (one first move); the Town stays one tap away on its card
+    const townCard = await page.evaluate(() => { const a = document.querySelector('#home-groups a.home-card[data-place="town"]'); return a && a.getAttribute('href'); });
+    check('the Home Play button starts the guided adventure (?from=hub) and the Town card leads back into the Town', play === '../games/mad-maze/index.html?mode=world&from=hub' && townCard === '../index.html?from=hub', String(play) + ' ' + String(townCard));
     await page.goBack().catch(() => {});
     check('Back does not bounce into the redirect again (location.replace)', !/\/game\/index\.html$/.test(new URL(page.url()).pathname) || page.url() === 'about:blank', page.url());
     check('plain visit: 0 database requests', db.count() === 0);
