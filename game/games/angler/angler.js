@@ -445,16 +445,23 @@
     const keys = window.MMInput ? window.MMInput.hint({ touch, only: ['primary', 'secondary', 'menu'], names: { primary: 'cast / reel', secondary: 'next spot', menu: 'menu' } }) : '';
     return { how: 'Cast, wait for the "!", then press to hook. Hold to reel and keep the fish in the green zone.', keys: touch ? 'Tap the water to cast and reel. Menu is top left.' : keys };
   }
+  let pgTabbed = false;
   function openPregame() {
     const el = $('pregame'); if (!el) return;
     const t = pregameText(); $('pg-how').textContent = t.how; $('pg-keys').textContent = t.keys;
-    el.hidden = false; try { $('pg-play').focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+    pgTabbed = false; el.hidden = false; try { $('pg-play').focus({ preventScroll: true }); } catch (e) { /* ignore */ }
   }
   function closePregame() {
     $('pregame').hidden = true;
     try { sessionStorage.setItem(PREGAME_KEY, '1'); } catch (e) { /* storage blocked: the card just shows next visit */ }
   }
   $('pg-play').addEventListener('click', closePregame);
+  // Play has focus when the card opens, so the first Tab press would skip past it. Keep that first Tab on Play (it stays the first stop; Tab 2 moves on).
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab' || $('pregame').hidden || pgTabbed) return;
+    pgTabbed = true;
+    if (document.activeElement === $('pg-play') && !e.shiftKey) e.preventDefault();
+  }, true);
 
   // ---- input ----
   function setInput(src, v) {
