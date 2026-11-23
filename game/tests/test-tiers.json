@@ -1612,5 +1612,9 @@
   "beta-g06-quest-zones.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "beta-g07-altar-zone.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }

@@ -906,16 +906,24 @@
       return e;
     }
     const bossReadyNow = new Uint8Array(world.bossSites.length); // refreshed by bossTick (2 Hz) so drawing never builds lookup strings
+    const bossWarned = new Set(); // G-07: "above your level" said once per altar per visit
     function bossTick() {
       if (rush.on) return; // RE2: no altar boss wakes during the Trial of Six
       const p = arena.player; const alive = bossAlive();
+      const pz0 = Z.zoneInfoAt(world, p.x / TILE, p.y / TILE).zone; const pzone = pz0 >= 0 && pz0 <= 3 ? pz0 : -1; // G-07: the void (255) wakes nothing
       for (let i = 0; i < bossLive.length; i++) {
         const b = world.bossSites[i]; const bx = (b.x + 0.5) * TILE; const by = (b.y + 0.5) * TILE; const d = Math.hypot(p.x - bx, p.y - by);
         const e = bossLive[i];
         bossReadyNow[i] = !e && zones.bossReady(b, arena.clock) ? 1 : 0;
         if (e && !e.active) { bossLive[i] = null; miniKey = ''; continue; }
         if (e) { if (d > 40 * TILE) { e.active = false; bossLive[i] = null; arena._syncBoss(); miniKey = ''; } continue; } // walked away: it rests (no cooldown)
-        if (alive < 0 && !arena._boss() && d < 9 * TILE && zones.bossReady(b, arena.clock)) spawnBoss(i); // never next to a raid boss
+        // G-07 (b01-02, b04-13): an altar wakes only for a hero standing in its zone or deeper (or right on the altar, 3 tiles): a Midlands
+        // boss never wakes for a hero still on a Shore tile beside the border. A hero below its recommended level gets a one-time note.
+        if (alive < 0 && !arena._boss() && d < 9 * TILE && zones.bossReady(b, arena.clock) && (pzone >= b.zone || d < 3 * TILE)) {
+          spawnBoss(i); // never next to a raid boss
+          const rl = (((Z.TABLES && Z.TABLES.ZONES) || [])[b.zone] || {}).recLv | 0; const lv = (arena.save && arena.save.level) | 0;
+          if (bossLive[i] && rl > lv && !bossWarned.has(i)) { bossWarned.add(i); say(BOSS_NAME[i] + ' is above your level (rec. Lv ' + rl + ')'); }
+        }
       }
     }
     function bossesKey() { let k = ''; for (let i = 0; i < bossLive.length; i++) k += bossLive[i] ? 'L' : zones && zones.bossReady(world.bossSites[i], arena.clock) ? 'R' : 'c'; return k; }
