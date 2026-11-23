@@ -1668,5 +1668,9 @@
   "beta-g11-stalk-clock.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "beta-g09-survivor-cache.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }

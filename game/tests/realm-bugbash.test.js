@@ -198,7 +198,7 @@ async function open(browser, q, opts, store) {
 
   // ---- dungeon fall: the summary names the fall cache it stashed (was "Loot: no items" next to "Stashed 1 item") ----
   ({ ctx, page } = await open(browser, 'mode=dungeon&biome=crypt&test=1&seed=42', { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }));
-  await page.evaluate(() => { const a = window.__mm.arena; a.player.hp = 0; a._die(); });
+  await page.evaluate(() => { const a = window.__mm.arena; a.player.hp = 0; a._cacheAliveT = 60; a._die(); }); // G-09: a minute alive earns the cache
   await page.waitForFunction(() => { const s = document.getElementById('mm-summary'); return s && !s.classList.contains('hidden') && s.textContent.length > 20; }, null, { timeout: 10000 });
   const sum = await page.evaluate(() => ({ cache: (document.getElementById('mm-sum-cache') || {}).textContent || '', stash: (document.getElementById('mm-sum-stash') || {}).textContent || '', st: window.__mm.dungeon.stash }));
   check('dungeon fall summary lists the fall cache that the stash line counts', /^💀 (Fall cache: |pack full)/.test(sum.cache) && !/[<>]/.test(sum.cache), JSON.stringify(sum));

@@ -85,7 +85,7 @@ const menuNote = async (page) => { await page.click('#realm-menu-btn'); const t 
   // ================= Survivor's Cache: death keeps shards, the cache item is stashed =================
   await page.evaluate((k) => { const p = JSON.parse(localStorage.getItem(k)); p.stash[7] = null; localStorage.setItem(k, JSON.stringify(p)); }, MM);
   const d0 = await A(page, (a) => ({ shards: a.save.shards, items: a.save.items.length }));
-  await A(page, (a) => { a._hitPlayer = RealmArena.prototype._hitPlayer; a.player.iframes = 0; a._die(); });
+  await A(page, (a) => { a._hitPlayer = RealmArena.prototype._hitPlayer; a.player.iframes = 0; a._cacheAliveT = 60; a._die(); }); // G-09: a minute alive earns the cache
   await page.waitForSelector('#realm-death:not(.hidden)', { timeout: 8000 });
   const d1 = await A(page, (a, w) => ({ shards: a.save.shards, items: a.save.items.length, last: w.lastSettle(), recent: w.finds().recent[0], recap: document.querySelector('#realm-death .rm-recap').textContent }));
   const mm3 = await LS(page, MM);
@@ -112,7 +112,7 @@ const menuNote = async (page) => { await page.click('#realm-menu-btn'); const t 
   const D2 = await context(browser, fixtures()); const dp2 = D2.page;
   await dp2.goto(PAGE + '?mode=dungeon&seed=6&lv=2&test=1'); await waitPlay(dp2);
   const sh2 = await A(dp2, (a) => a.save.shards);
-  await A(dp2, (a) => { a.run.wave = 4; a._die(); });
+  await A(dp2, (a) => { a.run.wave = 4; a._cacheAliveT = 60; a._die(); }); // G-09
   await dp2.waitForSelector('#mm-summary:not(.hidden)', { timeout: 8000 });
   const dl = await dp2.evaluate(() => ({ line: (document.getElementById('mm-sum-stash') || {}).textContent || '', head: document.querySelector('#mm-summary h2').textContent, shards: window.__mm.arena.save.shards }));
   check('dungeon fall: summary stashes the Survivor\'s Cache item, no shards lost', /fell/.test(dl.head) && /Stashed 1 item, \+0 shards/.test(dl.line) && dl.shards >= sh2 && (await LS(dp2, MM)).stash[1] !== null, JSON.stringify(dl));

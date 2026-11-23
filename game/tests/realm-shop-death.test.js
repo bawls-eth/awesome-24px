@@ -18,12 +18,13 @@ const enter = (s) => {
     const r = s.realm; const out = [];
     for (const wave of [1, 4, 7]) {
       r.state = 'play'; r.run.wave = wave; r.save.shards = 100; const n0 = r.save.items.length; const dead0 = r.save.deaths;
+      r._cacheAliveT = 60; // G-09: a cache needs 3 kills or a minute alive since the last one
       r._die();
       const it = r.save.items[r.save.items.length - 1];
       out.push({ wave, shards: r.save.shards, added: r.save.items.length - n0, rar: it && it.r, deaths: r.save.deaths - dead0, lastLoss: r.lastLoss, banner: document.getElementById('realm-banner').textContent });
     }
     r.state = 'play'; r.run.wave = 7; r.save.shards = 100; r.save.items = []; for (let i = 0; i < 24; i++) r.save.items.push({ n: 900 + i, id: 'sparkwand', r: 0 }); r.save.nextUid = 1000;
-    r._die(); out.push({ full: true, shards: r.save.shards, len: r.save.items.length });
+    r._cacheAliveT = 60; r._die(); out.push({ full: true, shards: r.save.shards, len: r.save.items.length });
     r.save.items = []; r.state = 'play';
     return out;
   });

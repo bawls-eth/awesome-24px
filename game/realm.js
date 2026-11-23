@@ -227,6 +227,7 @@ function rmCleanForged(t, f) {
   return { id: f.id, v: Math.round(v * 1000) / 1000 };
 }
 // Sell value: the rarity's value, plus 2 x tier for tiered gear (MMGear.sellValue) while gear is on.
+const RM_CACHE_KILLS = 3, RM_CACHE_ALIVE_S = 60; // G-09: a Survivor's cache needs this many kills or seconds alive since the last one
 const RM_PROVOKE_S = 4; // G-08: seconds a world shooter hit from off screen ignores hold-fire
 const RM_ARM_MS = 300, RM_SELL_ASK_MS = 3000; // G-03: backpack buttons wake 300 ms after a re-render; a protected Sell's "Sure?" lasts 3 s
 function rmSellValue(it) { return RM_GEAR_ON && it && it.t ? MMGear.sellValue(it.r, it.t) : RM_RARITIES[it.r].sell; }
@@ -2695,6 +2696,7 @@ class RealmArena {
     if (this.paused) { this._readPad(); this._padPauseEdge(); return; } // backpack open (Start can still close it)
     const p = this.player;
     this._stT += dt; this._stTick(dt); this._focusTick(dt); this._gearTick(dt);
+    if (this.state === 'play') this._cacheAliveT = (this._cacheAliveT || 0) + dt; // G-09: time alive since the last Survivor's cache
     this._accT += dt; if (this._accT >= 1) { this._accT = 0; this.refreshAccess(); }
     this.shake = Math.max(0, this.shake - dt * 30);
     this.flash = Math.max(0, this.flash - dt * 2.2);
@@ -3301,6 +3303,14 @@ class RealmArena {
   // Deterministic (no randomness): the item cycles with your falls so repeat runs bring variety.
   _deathBonus() {
     const sv = this.save; const w = Math.max(1, this.run.wave);
+    // G-09 (owner default O-06): the Survivor's cache needs effort: 3+ kills or 60 s alive since the last cache (shards are still never lost).
+    // Counted per page visit (kills from save.kills, time from _cacheAliveT, which _update adds while you play).
+    const kills = (sv.kills | 0) - (typeof this._cacheKAt === 'number' ? this._cacheKAt : (sv.kills | 0) - (this.run.kills | 0));
+    if (kills < RM_CACHE_KILLS && (this._cacheAliveT || 0) < RM_CACHE_ALIVE_S) {
+      this._cacheKAt = sv.kills | 0; this._cacheAliveT = 0;
+      return { id: '', rarity: 0, text: 'no cache this time (3 kills or a minute alive earns one)', n: 0 };
+    }
+    this._cacheKAt = sv.kills | 0; this._cacheAliveT = 0;
     const rarity = w >= 6 ? 2 : w >= 3 ? 1 : 0;
     const def = RM_BASE_ITEMS[(sv.deaths + w) % RM_BASE_ITEMS.length]; const rar = RM_RARITIES[rarity];
     let text;

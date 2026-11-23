@@ -150,7 +150,7 @@ const dash = (page) => page.evaluate(() => { const a = window.__mm.arena; a.abil
   const old = await O.page.evaluate(([k]) => {
     const a = window.__mm.arena; const mem = JSON.stringify(a.save); a.onSave(a.save);
     const st = a.shopStock();
-    const cache = a._deathBonus(); // classic death cache still cycles the 7 classic items
+    a._cacheAliveT = 60; const cache = a._deathBonus(); // classic death cache still cycles the 7 classic items (G-09: after a minute alive)
     return { mem, stored: JSON.stringify(JSON.parse(localStorage.getItem(k)).realm), cls: a.heroClass(), lv: a.heroLevel(), unl: a._unl(), wpnShop: st.some((o) => /^wpn_/.test(o.id)), n: st.length, cache: cache.id, nova: (a.abilityCd = [0, 0, 0, 0], a.state = 'play', a.paused = false, a.pBullets.forEach((b) => { b.active = false; }), a.cast(1), a.pBullets.filter((b) => b.active).length) };
   }, [SAVE]);
   check('an old classic save loads unchanged (memory and storage)', old.mem === JSON.stringify(OLD) && old.stored === JSON.stringify(OLD), old.mem + ' | ' + old.stored);
