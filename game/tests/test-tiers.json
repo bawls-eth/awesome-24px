@@ -1470,5 +1470,13 @@
   "stalk-bugbash.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "live-safety.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "net-hostile-presence.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
