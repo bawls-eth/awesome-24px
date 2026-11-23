@@ -81,12 +81,13 @@ Each entry: item id, commit, tests, how a tester re-verifies. Run any test alone
 | G-09 Survivor's cache needs effort | 91b1c1c | beta-g09-survivor-cache |
 | G-18 b10-09 Jam tier lock / b04-09 Blacksmith line / b11-05 + b11-11 Stalk | 815763b, 19f381e, c12b547 | beta-g18-small-logic |
 | G-18 b10-05 Jam stale HUD / b04-11 M opens the map / b01-08 blur clears sticks / b11-07 + b15-12 Deepdelve craft labels | 67e04b8, 96369e1, 2a1fda7, 7950773 | beta-g18-small-logic |
+| G-18 b09-07 Dash: a shorter run on another course keeps the best ghost (cross-tab merge unchanged) | 8c2b9b9 | beta-g18-small-logic, dash-page |
 | G-27 b03-09 Trial on a clear field (no mobs / events) / b03-10 Trial fall result line | 82a1061 | beta-g27-trial-polish |
 | G-22 follow-up 2: soothe on = companions skip every tameable creature (fixes an intermittent beta-g22 hit) | 61f8159 | beta-g22-tame-safe, isles-first-ten |
 
 ## Open / not done in this lane
 - O-01 (arcade door rename): waits for the owner (not a safe default).
-- G-18 remaining sub-items: Pop preview over-promise (b09-04), Dash ghost per course (b09-07, touches the cross-tab ghost merge), Lantern
+- G-18 remaining sub-items: Pop preview over-promise (b09-04), Lantern
   Start-run reason (b11-09, lantern.js released to Perf), hero level in the Realm HUD (b11-10, needs a design call), Stats tab deltas (b02-08),
   Isles Back -> Town (b07-14, Town join flow), mm-nav Back closes the Menu (b15-13, history entry side effects), second invite queue (b14-11,
   net.js). G-19 (AI polish) not started. G-27 gate art / route (b03-11) and boss HP by floor (b03-12, balance, owner) not done.
