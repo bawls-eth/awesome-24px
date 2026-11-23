@@ -231,6 +231,33 @@ try {
   check('fmt / fmtTime on hostile numbers', K.fmt(NaN) === '0' && K.fmt(Infinity) === '0' && K.fmtTime(-5) === '0.0s' && K.fmtTime(61500) === '1:01.5s');
 }
 
+// ---- MMBackup: progress keys the export used to leave out (saves lane S3) ----
+{
+  const B = fresh('mm-backup.js');
+  const keys = ['pixeltown-mm-active-v1', 'pixeltown-jam-assist-v1', 'pixeltown-deepdelve-v1', 'pixeltown-deepdelve-runs-v1', 'pixeltown-deepdelve-creative-v1',
+    'pixeltown-angler-fun-v1', 'pixeltown-stalk-practice-v1', 'pixeltown-bugs-goals-v1', 'pixeltown-bugs-pb-v1', 'pixeltown-dash-v1', 'pixeltown-pop-v1',
+    'pixeltown-stack-v1', 'pixeltown-echo-v1'].concat(['angler', 'bugs', 'dash', 'deepdelve', 'echo', 'pop', 'stack', 'stalk'].map((g) => 'pixeltown-medals-' + g + '-v1'));
+  check('MMBackup exports all 21 progress keys it used to drop (and stays under MAX_KEYS)', keys.every((k) => B.KNOWN.indexOf(k) >= 0) && B.KNOWN.length <= 50);
+  const mem = (init) => { const m = Object.assign({}, init); return { _m: m, getItem: (k) => (k in m ? m[k] : null), setItem: (k, v) => { m[k] = String(v); }, removeItem: (k) => { delete m[k]; } }; };
+  const val = (k) => k === 'pixeltown-mm-active-v1' ? { v: 1, heroId: 'h1' } : k === 'pixeltown-bugs-goals-v1' ? { v: 1, done: {} } : { v: 1, best: 4321, medals: ['bronze'], m: ['bronze'], ghost: { in: [1, 2, 3] } };
+  const src = mem(Object.fromEntries(keys.map((k) => [k, JSON.stringify(val(k))])));
+  const pl = B.plan(JSON.stringify(B.bundle(src))), dst = mem();
+  const ap = pl.ok ? B.apply(dst, pl) : { ok: false };
+  const lost = keys.filter((k) => k !== 'pixeltown-bugs-goals-v1' && dst._m[k] !== JSON.stringify(val(k)));
+  check('...and bundle -> plan -> apply restores them on a new device', pl.ok && ap.ok && !lost.length && 'pixeltown-bugs-goals-v1' in dst._m, JSON.stringify({ e: pl.error, lost }));
+  const bad = B.plan({ format: 'pixeltown-backup', v: 2, keys: { 'pixeltown-pop-v1': '{"__proto__":{"x":1},"best":3}' } });
+  check('...with __proto__ dropped from a restored arcade save', bad.ok && JSON.parse(bad.entries['pixeltown-pop-v1']).best === 3 && !Object.prototype.hasOwnProperty.call(JSON.parse(bad.entries['pixeltown-pop-v1']), '__proto__'));
+}
+
+// ---- MMHubProfile.sanitize: profile.games bounded (saves lane S4) ----
+{
+  const HP = fresh('profile.js');
+  const huge = HP.sanitize({ games: { lantern: { done: ['a'], blob: 'x'.repeat(5e6) }, bugs: { done: ['catch1', 'catch1', 5], extra: 1 }, 'Bad Key!': { done: ['x'] }, pop: 'str', jam: { done: Array.from({ length: 5000 }, (_, i) => 'id' + i) } } });
+  check('profile.games: a 5 MB entry keeps only its done list (every later save used to hit the quota)', JSON.stringify(huge).length < 20000 && huge.games.lantern.done.join() === 'a' && huge.games.lantern.blob === undefined);
+  check('profile.games: real fields kept, done de-duplicated, junk keys / non-objects dropped, done capped at 200', huge.games.bugs.extra === 1 && huge.games.bugs.done.join() === 'catch1' && !('Bad Key!' in huge.games) && !('pop' in huge.games) && huge.games.jam.done.length === 200);
+  check('profile.games: sanitize is idempotent', JSON.stringify(HP.sanitize(huge)) === JSON.stringify(huge));
+}
+
 // ---- MMMotion ----
 {
   const Mo = fresh('motion.js');
