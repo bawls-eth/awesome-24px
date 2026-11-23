@@ -1407,6 +1407,10 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "dash-bugbash.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "stack-page.test.js": {
     "class": "browser",
     "tier": "smoke"
