@@ -121,3 +121,21 @@ Run each alone: `BASE=http://localhost:<port>/game/index.html /tmp/bt.sh node ga
 - arcane-frontier/index.html: `<link rel="icon" ... href="../../icons/favicon-32.png">` (the Town's favicon). Test
   `game/tests/beta-s14-favicon.test.js` (node, smoke). The `?v=` on art manifests part is not done: it changes cache keys for 1,000+
   files and needs the design note first (lane file).
+
+## S-11 rotate storm, Deepdelve part (b13-07)
+- deepdelve.js (slot 1): new `onResize` (one re-size 150 ms after the last resize event) replaces the direct `resize` listener;
+  `govFrame` ignores frames within 1 s of a resize (`lastResizeAt`, declared beside `gov`), and the sample window is reset.
+  Before: 60 rotations = 120 drawing-buffer re-allocations and the governor could halve the scale (b13: 195x331 -> 97x165) and keep it.
+- Test: `game/tests/beta-s11-deepdelve-rotate.test.js` (full): backing size after the storm = fresh load, governor level unchanged,
+  <= 12 re-sizes (old code: 120, verified by serving the old file), governor still reacts to real slow frames. deepdelve-perf,
+  deepdelve-fps, deepdelve-page green.
+- Realm part (realm.js resize handlers, mad-maze.js perfEval) and the 10-minute soak / listener-step bisect are NOT done: realm.js and
+  mad-maze.js are not my files and the soak needs a quiet machine (load stayed 6-19). Finding for Gameplay / WG: debounce the 4 Realm
+  'resize' listeners the same way and skip perfEval samples within 1 s of a resize, or the adaptive step stays at 0.75.
+
+## S-09 Deepdelve frame spikes (b13-05): measured, no code change
+- Today (load 5-6): 12 taps at 1x 390 -> 2 long tasks > 100 ms (112, 107; acceptance <= 2: met); first 2 s at 4x -> worst frame 433 ms
+  (acceptance <= 300: not met), long tasks [77, 351]. Relight after an edit costs 4-14 ms at 1x (full 5x5-chunk window), so it is not
+  the spike. The 351 ms task is native (the profile's self time is "(program)", first GL program compile / upload), not JS. A
+  `renderer.compile(scene, camera)` behind the loading text would move it before "Loading the mine..." clears; left for a quiet-machine
+  measurement, since the numbers swing 2x with load.

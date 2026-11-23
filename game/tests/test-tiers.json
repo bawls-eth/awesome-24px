@@ -1568,5 +1568,9 @@
   "beta-s14-favicon.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "beta-s11-deepdelve-rotate.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
