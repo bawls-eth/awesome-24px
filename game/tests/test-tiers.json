@@ -1764,5 +1764,9 @@
   "beta-retest-b02.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-s07-town-cull.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

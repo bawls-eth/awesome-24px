@@ -1707,6 +1707,7 @@ class TownScene extends Phaser.Scene {
   }
 
   update(time, delta) {
+    this.cullOffscreen();
     this.pollGamepad();
     this.updateLocalMovement(time, delta);
     this.updateRemoteInterpolation(delta);
@@ -2050,6 +2051,38 @@ class TownScene extends Phaser.Scene {
       strokeThickness: 3,
     }).setOrigin(0.5).setDepth(100002);
     this.tweens.add({ targets: t, y: y - 24, alpha: { from: 1, to: 0 }, duration: 900, onComplete: () => t.destroy() });
+  }
+
+  // ---------- beta S-07 (b13-03): camera culling ----------
+  // Phaser 3 batches every game object every frame, on-screen or not: in the Town ~800 of ~950 objects (decor, trees, labels, the
+  // other island quadrants) are off camera at any time. Every 4th frame (or when the camera moved 48+ px) each top-level, world-space
+  // object whose box lies fully outside the camera view plus a 320 px margin is excluded from the main camera through `cameraFilter`
+  // (its own `visible` flag, which game code uses, is never touched). The margin covers anything that moves between two passes.
+  cullOffscreen() {
+    const cam = this.cameras && this.cameras.main;
+    if (!cam || !this.sys.displayList) return;
+    if (this.cullOff) { if (this._culled) { this.sys.displayList.list.forEach((o) => { o.cameraFilter &= ~cam.id; }); this._culled = 0; this._cullAt = null; } return; } // test / debug switch
+    const v = cam.worldView;
+    if (!(v.width > 0)) return;
+    this._cullN = ((this._cullN || 0) + 1) % 4;
+    const moved = this._cullAt ? Math.abs(this._cullAt.x - v.x) + Math.abs(this._cullAt.y - v.y) : Infinity;
+    if (this._cullN !== 0 && moved < 48) return;
+    this._cullAt = { x: v.x, y: v.y };
+    const M = 320, x0 = v.x - M, y0 = v.y - M, x1 = v.right + M, y1 = v.bottom + M;
+    const bit = cam.id;
+    const list = this.sys.displayList.list;
+    let culled = 0;
+    for (let i = 0; i < list.length; i++) {
+      const o = list[i];
+      if (o.scrollFactorX !== 1 || o.scrollFactorY !== 1 || o.type === 'Container' || o.type === 'Graphics' || o.type === 'Particles' || o.type === 'ParticleEmitter') continue;
+      const w = o.displayWidth, h = o.displayHeight;
+      if (!(w > 0) || !(h > 0)) continue;
+      const r = (o.rotation ? Math.max(w, h) : 0); // rotated: use a square that contains it
+      const left = o.x - w * (o.originX === undefined ? 0.5 : o.originX) - r, top = o.y - h * (o.originY === undefined ? 0.5 : o.originY) - r;
+      const out = left + w + 2 * r < x0 || left > x1 || top + h + 2 * r < y0 || top > y1;
+      if (out) { if (!(o.cameraFilter & bit)) o.cameraFilter |= bit; culled++; } else if (o.cameraFilter & bit) o.cameraFilter &= ~bit;
+    }
+    this._culled = culled;
   }
 
   // ---------- day/night ambience ----------
