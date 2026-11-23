@@ -113,3 +113,7 @@ Each entry: item, files, test, how to retest by hand. Screenshots in `fixes/img/
 - Open: one scale table for creatures / NPCs (beaver, heron, capybara, deer <= 1.2x hero; NPCs = hero height; integer texel scale). It touches FF_ASSETS sizes, the museum / wildlife logging and many Town tests, so it needs its own slot. The statue waits for O-10 (owner, art).
 - Test: `tests/beta-w06-town-board.test.js` (OFFLINE stub; 6 asserts fail on the old code). `town-bugbash`, `town-polish`, `nav-town`, `town-heroes` green.
 - Before / after: `img/w06-board-{before,after}.jpg`.
+
+## W-15 Stalk compass (b11-06, b12-17, P3) - fixed
+- Files: `games/stalk/stalk.css` (scroll-margin-top 64 px on the cards / sections = 48 px Menu button + 8 + 8).
+- Test: `tests/beta-w15-stalk-compass.test.js` (390x844 + 1280x720; 4 asserts fail on the old CSS). `stalk-page`, `stalk-bugbash` green.

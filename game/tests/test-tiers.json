@@ -1684,5 +1684,9 @@
   "beta-w06-town-board.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-w15-stalk-compass.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
