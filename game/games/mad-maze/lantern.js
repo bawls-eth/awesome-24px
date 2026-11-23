@@ -595,7 +595,7 @@
       var b = el('button', 'slot' + (it ? ' full' : '')); if (it) fillItem(b, it); b.type = 'button';
       b.setAttribute('role', 'listitem'); b.setAttribute('data-slot', i);
       b.setAttribute('aria-label', it ? 'Stash slot ' + (i + 1) + ': ' + itemLabel(it) + '. Give to selected hero' : 'Stash slot ' + (i + 1) + ' empty');
-      if (it) b.addEventListener('click', function () { toHero(selected, i); });
+      if (it) b.addEventListener('click', function () { toHero(selected, i); }); else { b.setAttribute('tabindex', '-1'); b.setAttribute('aria-disabled', 'true'); } // empty slots are not Tab stops
       grid.appendChild(b);
     });
 
@@ -648,7 +648,8 @@
     var id = $('new-class').value, c = C.CLASSES[id];
     var ok = unlockedClasses();
     var locked = CLS_ORDER.filter(function (x) { return !ok[x]; }).map(function (x) { return clsName(x) + ': ' + unlockText(x); });
-    $('new-class-note').textContent = (c ? c.ability.name + ' is the signature move. ' : '') + (locked.length ? 'To unlock: ' + locked.join('; ') + '.' : '');
+    $('new-class-note').textContent = (c ? c.ability.name + ' is the signature move.' : '') + (locked.length ? ' ' + locked.length + ' more to unlock (see Help).' : '');
+    var ul = $('help-unlocks'); if (ul) { ul.textContent = ''; locked.forEach(function (t) { ul.appendChild(el('li', '', t)); }); $('help-unlocks-title').hidden = !locked.length; }
   }
 
   // ---------- scene (procedural, decorative) ----------
