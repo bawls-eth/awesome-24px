@@ -179,6 +179,8 @@
     s.played = raw.played === undefined ? s.history.length : int(raw.played, 0, MAX_WEEK, 0);
     s.wkBest = s.week < 0 ? 0 : int(raw.wkBest, 0, MAX_PRICE, 0);
     s.goals = s.week < 0 ? 0 : int(raw.goals, 0, 7, 0);
+    // G-11 (additive): the furthest week / slot this save has seen ({ w, s }); only kept when present, so an old save stays byte-identical
+    if (raw.seen && typeof raw.seen === 'object' && !Array.isArray(raw.seen)) s.seen = { w: int(raw.seen.w, 0, MAX_WEEK, 0), s: int(raw.seen.s, 0, SLOTS - 1, 0) };
     return s;
   }
   function clone(s) { return JSON.parse(JSON.stringify(s)); }

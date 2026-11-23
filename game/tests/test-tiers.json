@@ -1664,5 +1664,9 @@
   "beta-g14-one-first-move.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "beta-g11-stalk-clock.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }

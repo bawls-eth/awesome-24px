@@ -61,7 +61,7 @@ const notesText = (p) => p.evaluate(() => [...document.querySelectorAll('#notes-
   check('the rendered panel never contains urgency words like "hurry", "last chance" or "miss out" (all 13 slots)', pageBad.length === 0, pageBad.join(' || '));
   check('phone 390: no horizontal scroll', await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1 && document.body.scrollWidth <= window.innerWidth + 1));
   check('phone 390: every visible button in the page is at least 44 px', await p.evaluate(() => [...document.querySelectorAll('#stage button')].filter((b) => b.offsetParent !== null).every((b) => { const r = b.getBoundingClientRect(); return r.height >= 44 && r.width >= 44; })));
-  check('save keys unchanged (notes add nothing to the save)', await p.evaluate((k) => Object.keys(JSON.parse(localStorage.getItem(k))).sort().join(), KEY) === 'balance,best,earned,goals,hint,history,holdings,invested,last,medals,played,total,v,week,wkBest');
+  check('save keys unchanged (notes add nothing to the save)', await p.evaluate((k) => Object.keys(JSON.parse(localStorage.getItem(k))).sort().join(), KEY) === 'balance,best,earned,goals,hint,history,holdings,invested,last,medals,played,seen,total,v,week,wkBest');
   check('no console errors', d.errors.length === 0, d.errors.join('|'));
   await d.ctx.close();
 

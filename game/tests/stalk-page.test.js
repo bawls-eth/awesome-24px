@@ -65,7 +65,7 @@ const stored = (p) => p.evaluate((k) => JSON.parse(localStorage.getItem(k)), KEY
   }));
   check('spoilage message shown', (await p.textContent('#msg')).includes('spoiled'));
   const sv = await stored(p);
-  check('persisted only under pixeltown-stalk-v1 with known keys', Object.keys(sv).sort().join() === 'balance,best,earned,goals,hint,history,holdings,invested,last,medals,played,total,v,week,wkBest', Object.keys(sv).join());
+  check('persisted only under pixeltown-stalk-v1 with known keys', Object.keys(sv).sort().join() === 'balance,best,earned,goals,hint,history,holdings,invested,last,medals,played,seen,total,v,week,wkBest', Object.keys(sv).join());
   await p.reload(); await p.waitForFunction(() => window.__stalk);
   check('reload keeps history from storage (URL week 100 differs, so it rolls over)', await p.evaluate(() => window.__stalk.save.week === 100 && window.__stalk.save.history.some((h) => h.week === 200)));
   check('no console errors / no 404s / zero off-origin', d.errors.length === 0 && d.bad.length === 0 && d.reqs.every((u) => u.startsWith(ORIGIN + '/') || u.startsWith('data:')), d.errors.concat(d.bad).join('|'));
@@ -117,9 +117,9 @@ const stored = (p) => p.evaluate((k) => JSON.parse(localStorage.getItem(k)), KEY
   // slice 1: advisor, animated chart, sound cues
   const a1 = await open(browser, { viewport: { width: 800, height: 600 } }, '?test=1&week=100');
   check('advisor says "need two prices" on Sunday', (await a1.page.textContent('#advisor-text')).includes('need two'));
+  await a1.page.click('#buy1'); // G-11: buy on Sunday first (moving the clock back to Sunday later in the week is now a paused clock-back)
   await a1.page.evaluate(() => window.__stalk.setTime(100, 2));
   check('advisor gives an estimate after two prices', /estimate/.test(await a1.page.textContent('#advisor-text')) && (await a1.page.$$('#advisor-bars li')).length === 4);
-  await a1.page.evaluate(() => window.__stalk.setTime(100, 0)); await a1.page.click('#buy1');
   await a1.page.evaluate(() => window.__stalk.setTime(100, 3)); await a1.page.click('#sell1');
   check('buy and sell play sound cues through MMSfx names', await a1.page.evaluate(() => window.__stalk.sounds.join() === 'pickup,levelup'));
   await a1.page.evaluate(() => window.__stalk.step(1));

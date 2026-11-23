@@ -24,7 +24,11 @@
     testSlot = qsl === null ? 0 : M.clampSlot(qsl);
   }
   function curWeek() { return testWeek !== null ? testWeek : M.weekNumber(new Date()); }
-  function curSlot() { return testSlot !== null ? testSlot : M.slotOf(new Date()); }
+  function realSlot() { return testSlot !== null ? testSlot : M.slotOf(new Date()); }
+  // G-11 (b11-04 clock part): the furthest slot seen this week is kept (save.seen, additive). A device clock moved back inside the week
+  // shows that furthest slot (no Sunday buy reopening, no future prices revealed) and pauses trading with a plain note.
+  var slotBack = false;
+  function curSlot() { var r = realSlot(); return slotBack && save.seen && save.seen.w === curWeek() && save.seen.s > r ? save.seen.s : r; }
 
   var save = M.cleanSave(S.get(KEY, null));
   var wk = null, spoiledNote = 0, msgText = '';
@@ -35,8 +39,10 @@
   // instead of treating it as a rollover (which would spoil real stalks). Far-off weeks roll over as usual.
   var clockBack = false, settings = null;
   function sync() {
-    var w = curWeek();
-    clockBack = save.week > w && save.week - w <= 1;
+    var w = curWeek(), rs = realSlot();
+    slotBack = !!(save.seen && save.seen.w === w && save.seen.s > rs);
+    clockBack = (save.week > w && save.week - w <= 1) || slotBack;
+    if (!clockBack && (!save.seen || save.seen.w < w || (save.seen.w === w && save.seen.s < rs))) { save.seen = { w: w, s: rs }; persist(); }
     if (clockBack) { if (!wk || wk.seed !== String(w)) wk = M.generateWeek(w); return false; }
     var r = M.syncWeek(save, w);
     if (r.rolled) { save = r.save; if (r.spoiled > 0) spoiledNote = r.spoiled; persist(); }
@@ -69,6 +75,8 @@
   function signed(n) { return (n > 0 ? '+' : '') + fmt(n); }
   function say(t) { msgText = t; $('msg').textContent = t; }
   var CLOCK_MSG = 'Your clock shows an earlier week than your last visit, so trading is paused. Practice still works.';
+  var SLOT_MSG = 'Your device clock moved back. The market keeps the latest time you saw, so trading is paused until then. Practice still works.'; // G-11
+  function clockMsg() { return slotBack ? SLOT_MSG : CLOCK_MSG; }
 
   // 8-bit turnip: hand-placed 16x16 pixel sprite drawn at 3x (48 px canvas)
   var TURNIP = [
@@ -246,7 +254,7 @@
     $('buy10').disabled = clockBack || !sunday || M.maxBuy(save, wk) < 10;
     $('sell1').disabled = clockBack || sunday || save.holdings < 1;
     $('sellall').disabled = clockBack || sunday || save.holdings < 1;
-    $('market-reason').textContent = clockBack ? CLOCK_MSG : sunday
+    $('market-reason').textContent = clockBack ? clockMsg() : sunday
       ? (M.maxBuy(save, wk) < 1 && save.holdings < M.MAX_HOLD ? 'Not enough bells for a stalk today. A practice week has its own bells, and a fresh week tops you up.' : 'Selling closed: the market only buys stalks Monday to Saturday. Buying is open today.')
       : 'Buying closed: stalks can only be bought on Sunday. Selling is open now.';
     $('buy1').textContent = 'Buy 1';
@@ -281,7 +289,7 @@
     funds: 'Not enough bells for that.', limit: 'Your stall holds at most ' + M.MAX_HOLD + ' stalks.',
     holdings: 'You do not own that many.', quantity: 'Pick at least one.'
   };
-  function paused() { if (!clockBack) return false; beep('error'); say(CLOCK_MSG); render(); return true; }
+  function paused() { if (!clockBack) return false; beep('error'); say(clockMsg()); render(); return true; }
   function doBuy(n) {
     sync();
     if (paused()) return { ok: false, reason: 'clock', save: save };
