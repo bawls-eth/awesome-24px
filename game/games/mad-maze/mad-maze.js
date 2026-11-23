@@ -101,6 +101,16 @@
     lb.title = HOME_LABEL;
   })();
   document.getElementById('realm-leave-btn').addEventListener('click', () => arena.leave());
+  // Keyboard players: the first Tab stop hands focus to the play field (a11y sweep; the full-screen field itself stays out of the Tab order)
+  (function playFocus() {
+    const b = document.getElementById('realm-play-focus'); const w = document.getElementById('realm-canvas-wrap'); if (!b || !w) return;
+    b.addEventListener('click', () => {
+      try { w.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+      document.body.classList.add('rm-kbd-play'); // keyboard play mode (the field shows its focus ring)
+      try { if (arena._showBanner) arena._showBanner('Playing: WASD move · Space fire · Esc menu', 1.6); } catch (e) { /* ignore */ }
+    });
+    w.addEventListener('blur', () => document.body.classList.remove('rm-kbd-play'));
+  })();
   for (let i = 0; i < 4; i++) document.getElementById(`realm-ab-${i}`).addEventListener('pointerdown', (e) => { e.preventDefault(); arena.cast(i); });
   document.getElementById('realm-bp-btn').addEventListener('click', () => arena.setPaused(true));
   document.getElementById('realm-board-btn').addEventListener('click', () => arena.setBoard(true));

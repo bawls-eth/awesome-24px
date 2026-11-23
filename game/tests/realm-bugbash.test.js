@@ -165,7 +165,21 @@ async function open(browser, q, opts, store) {
     await page.evaluate(() => { document.activeElement && document.activeElement.blur && document.activeElement.blur(); });
     const stops = [];
     for (let i = 0; i < 4; i++) { await page.keyboard.press('Tab'); stops.push(await page.evaluate(() => { const e = document.activeElement; return e ? (e.id || e.tagName) + ':' + ((e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 30)) : ''; })); }
-    check(`[${tag}] the play field is a keyboard stop within 3 Tabs, named "Play ..."`, stops.slice(0, 3).some((s) => /^realm-canvas-wrap:Play/.test(s)), stops.join(' / '));
+    const k = stops.slice(0, 3).findIndex((s) => /^realm-play-focus:Play/.test(s));
+    check(`[${tag}] a "Play" keyboard stop within 3 Tabs`, k >= 0, stops.join(' / '));
+    if (k >= 0) {
+      await page.evaluate(() => document.getElementById('realm-play-focus').focus());
+      await page.keyboard.press('Enter');
+      check(`[${tag}] Enter on it hands focus to the labelled play field (out of the Tab order itself)`, await page.evaluate(() => { const w = document.getElementById('realm-canvas-wrap'); return document.activeElement === w && w.tabIndex === -1 && /^Play/.test(w.getAttribute('aria-label')); }));
+      if (tag === 'mode=dungeon') {
+        const before = await page.evaluate(() => !document.getElementById('mm-map').classList.contains('hidden'));
+        await page.keyboard.press('Tab');
+        const after = await page.evaluate(() => ({ map: !document.getElementById('mm-map').classList.contains('hidden'), focus: document.activeElement && document.activeElement.id }));
+        check('[dungeon] Tab on the play field still toggles the map (focus stays)', after.map !== before && after.focus === 'realm-canvas-wrap', JSON.stringify(after));
+        await page.keyboard.press('m');
+        check('[dungeon] M toggles the map too', await page.evaluate((b) => !document.getElementById('mm-map').classList.contains('hidden') === b, before));
+      }
+    }
     check(`[${tag}] no page errors (a11y)`, page.errors.length === 0, page.errors.join(' | '));
     await ctx.close();
   }
