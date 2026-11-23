@@ -940,6 +940,7 @@
     const bossReadyNow = new Uint8Array(world.bossSites.length); // refreshed by bossTick (2 Hz) so drawing never builds lookup strings
     const bossWarned = new Set(); // G-07: "above your level" said once per altar per visit
     function rushOnNow() { try { return RUSH_ON && rush.on; } catch (e) { return false; } } // G-27 (TDZ-safe: the Trial block sits later in this file)
+    let bossGateWarn = 0; // b04-13 soft gate warnings shown (test hook)
     function bossTick() {
       if (rush.on) return; // RE2: no altar boss wakes during the Trial of Six
       const p = arena.player; const alive = bossAlive();
@@ -952,10 +953,13 @@
         if (e) { if (d > 40 * TILE) { e.active = false; bossLive[i] = null; arena._syncBoss(); miniKey = ''; } continue; } // walked away: it rests (no cooldown)
         // G-07 (b01-02, b04-13): an altar wakes only for a hero standing in its zone or deeper (or right on the altar, 3 tiles): a Midlands
         // boss never wakes for a hero still on a Shore tile beside the border. A hero below its recommended level gets a one-time note.
+        // b04-13 soft gate (Godlands altars): a hero below the zone's recommended level gets a clear warning at the wake radius and the boss waits; stepping onto
+        // the altar (3 tiles) still wakes it on purpose (not a hard block).
+        const rl = (((Z.TABLES && Z.TABLES.ZONES) || [])[b.zone] || {}).recLv | 0; const lv = (arena.save && arena.save.level) | 0; const under = rl > lv; const gate = under && b.zone >= 3; // the gate: Godlands (Lethal) only
         if (alive < 0 && !arena._boss() && d < 9 * TILE && zones.bossReady(b, arena.clock) && (pzone >= b.zone || d < 3 * TILE)) {
+          if (gate && d >= 3 * TILE) { if (!bossWarned.has(i)) { bossWarned.add(i); bossGateWarn++; say(BOSS_NAME[i] + ' is far above your level (rec. Lv ' + rl + '). It sleeps for now: step onto its altar to wake it anyway.'); } continue; }
           spawnBoss(i); // never next to a raid boss
-          const rl = (((Z.TABLES && Z.TABLES.ZONES) || [])[b.zone] || {}).recLv | 0; const lv = (arena.save && arena.save.level) | 0;
-          if (bossLive[i] && rl > lv && !bossWarned.has(i)) { bossWarned.add(i); say(BOSS_NAME[i] + ' is above your level (rec. Lv ' + rl + ')'); }
+          if (bossLive[i] && under && !bossWarned.has(i)) { bossWarned.add(i); say(BOSS_NAME[i] + ' is above your level (rec. Lv ' + rl + ')'); }
         }
       }
     }
@@ -1877,7 +1881,7 @@
       if (n.role === 'heal') { const p = arena.player; const was = p.hp; p.hp = arena.stats.maxHp; arena._syncHud(); nxSay(name, was < p.hp ? 'There. Whole again, no charge.' : 'You look perfectly well to me.'); return; }
       if (n.role === 'oracle') { const o = MMQuests.oracle(todayUtc()); nxSay(name, o ? o.text : 'The mists are quiet.'); return; }
       if (n.role === 'quests') { if (typeof nxBoardOpen === 'function') nxBoardOpen(); nxSay(name, 'Here is the day\'s board. Three jobs, free to take.'); return; }
-      if (n.stall && nxStallOn()) { nxStallOpen(); if (n.stall === 'forge') { const fb = document.getElementById('rw-nx-forge'); if (fb) { fb.classList.add('nx-hi'); try { fb.focus({ preventScroll: true }); } catch (e) { /* focus is cosmetic */ } } } // G-18 (b04-09): the Blacksmith points at the Forge button in this stall
+      if (n.stall && nxStallOn()) { nxStallOpen(n.stall); if (n.stall === 'forge') { const fb = document.getElementById('rw-nx-forge'); if (fb) { fb.classList.add('nx-hi'); try { fb.focus({ preventScroll: true }); } catch (e) { /* focus is cosmetic */ } } } // G-18 (b04-09): the Blacksmith points at the Forge button in this stall
         nxSay(name, n.stall === 'forge' ? 'The anvil is yours to use. Tap "Open the Forge" below to salvage and reforge your gear.' : 'Same goods, same prices, every day. Take your time.'); return; }
       if (n.role === 'shop' && typeof arena.setShop === 'function') { nxSay(name, 'Take a look. Everything is priced in 💎 shards, same every day.'); nxStallShop(); return; } // forge/stall off: the vendor still opens the classic shop
       const key = n.role === 'rumours' ? 'rumours' : n.role === 'shop' ? 'vendor' : n.role === 'combine' ? 'blacksmith' : 'guide';
@@ -1892,10 +1896,12 @@
       const el = nxDom.stall; el.textContent = '';
       if (!nxStallOn()) { el.classList.add('hidden'); return; }
       const sv = arena.save; const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
-      const head = mk('div', 'nx-st-head'); head.appendChild(mk('b', '', 'Vendor stall'));
-      head.appendChild(nxStallBtn('Close stall', 'Close the vendor stall', () => nxStallHide()));
+      const forge = nxStallKind === 'forge'; // b04-09: the Blacksmith opens the same stall, titled as his forge (the shelf stays below it)
+      el.setAttribute('aria-label', forge ? 'Blacksmith forge' : 'Vendor stall');
+      const head = mk('div', 'nx-st-head'); head.appendChild(mk('b', '', forge ? "Blacksmith's forge" : 'Vendor stall'));
+      head.appendChild(nxStallBtn(forge ? 'Close forge' : 'Close stall', forge ? 'Close the Blacksmith forge' : 'Close the vendor stall', () => nxStallHide()));
       el.appendChild(head);
-      el.appendChild(mk('p', 'nx-st-note', 'Fixed prices in dust. The shelf is the same every day.'));
+      el.appendChild(mk('p', 'nx-st-note', forge ? 'Salvage and reforge your gear in the Forge. The shared shelf (fixed prices in dust) is below.' : 'Fixed prices in dust. The shelf is the same every day.'));
       el.appendChild(mk('p', 'nx-st-wallet', 'You have ' + (sv.dust || 0) + ' dust · ' + sv.items.length + ' items carried'));
       const fg = nxStallBtn('⚒ Open the Forge', 'Open the Forge in your backpack', () => nxStallForge()); fg.id = 'rw-nx-forge'; el.appendChild(fg);
       // The classic shop (priced in 💎 shards, every unlocked rarity) stays one tap away: the dust stall only sells fixed T1-T3 goods, and dust starts at 0.
@@ -1931,7 +1937,8 @@
       armed.forEach((b) => { b.disabled = true; b.dataset.arm = '1'; });
       setTimeout(() => armed.forEach((b) => { if (b.isConnected && b.dataset.arm) { b.disabled = false; delete b.dataset.arm; } }), 300);
     }
-    function nxStallOpen() { nxBuild(); if (!nxStallOn()) return false; nxStallAsk = 0; nxDom.board.classList.add('hidden'); nxStallRender(); nxDom.stall.classList.remove('hidden'); return true; }
+    let nxStallKind = 'shop';
+    function nxStallOpen(kind) { nxBuild(); if (!nxStallOn()) return false; nxStallKind = kind === 'forge' ? 'forge' : 'shop'; nxStallAsk = 0; nxDom.board.classList.add('hidden'); nxStallRender(); nxDom.stall.classList.remove('hidden'); return true; }
     // PLAYTEST-REVIEW-3 #7: Shop and Forge open over the Nexus (the plaza closes underneath) and closing them returns to the Nexus stall.
     // nxReturn remembers that origin only for a panel opened from the stall; any other panel, a death or a leave forgets it.
     let nxReturn = null;
@@ -1944,7 +1951,7 @@
       if (name) { if (name !== 'shop' && name !== 'bp') nxReturn = null; return; } // shop <-> backpack keeps the origin; a menu / board / hero panel drops it
       nxReturn = null;
       if (leaving || !arena.active || arena.state !== 'play') return;
-      if (nexusOpen()) nxStallOpen();
+      if (nexusOpen()) nxStallOpen(nxStallKind);
     };
     function nxStallHide() { nxStallAsk = 0; if (!nxDom || !nxDom.stall) return; nxDom.stall.classList.add('hidden'); nxDom.stall.textContent = ''; } // emptied: no hidden buttons linger
     function nxBuild() {
@@ -2480,7 +2487,7 @@
       
       bossesClassic, rosterClassic, bandsClassic, bossArtIds: () => world.bossSites.map((b) => b.boss),
       bossSites: () => world.bossSites.map((b, i) => ({ i, x: b.x, y: b.y, zone: b.zone, boss: b.boss, name: BOSS_NAME[i], live: !!(bossLive[i] && bossLive[i].active), ready: !!zones && zones.bossReady(b, arena.clock) })),
-      bossEntity: (i) => bossLive[i] || null, bossTick,
+      bossEntity: (i) => bossLive[i] || null, bossTick, bossGateWarns: () => bossGateWarn,
       // slice 7
       rush: { on: RUSH_ON, start: rushStart, next: rushNext, rest: rushRest, leave: () => rushEnd('leave'), entity: () => rush.e, ladder: () => rush.ladder, state: () => ({ on: rush.on, phase: rush.phase, i: rush.i, kills: rush.kills, n: rush.n, log: rush.log.slice() }) },
       safeReturn: { on: SAFE_ON, shield: SAFE_SHIELD, hop: SAFE_HOP, last: () => lastReturn }, portalPrompt: () => promptFor, portalUrls, portalSeed, enterPortal, lastPortalUrl: null, RETURN_RE,
