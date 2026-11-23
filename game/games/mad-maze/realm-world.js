@@ -600,6 +600,13 @@
       event.stopPropagation();
       if (!event.repeat) toggleMinimap();
     });
+    // G-18 (b04-11): M toggles the big map in the overworld too (the dungeon already had it); never while typing or in the Nexus
+    window.addEventListener('keydown', (event) => {
+      if ((event.key !== 'm' && event.key !== 'M') || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
+      const t = event.target; if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || ''))) return;
+      if (typeof nxOpen !== 'undefined' && nxOpen) return;
+      toggleMinimap();
+    });
     const zName = zoneEl.querySelector('.rw-zname'); const zArrow = zoneEl.querySelector('.rw-arrow'); const zCoords = zoneEl.querySelector('.rw-coords');
     let miniBase = null;
     // fog of discovered tiles: 8x8-tile cells (MMFog), revealed within ~12 tiles of the player, saved in `discovered`; ?fog=0 turns it off
