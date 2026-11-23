@@ -671,15 +671,45 @@
   });
 
   const homeOn = () => document.body.classList.contains('home-on');
-  const pad = { dir: '', a: false, b: false };
+  const pad = { dir: '', a: false, b: false, st: false };
+  // Home screen with a pad: the d-pad walks the focus through the home links and footer buttons, A presses, B closes a card.
+  function homeTargets() {
+    return Array.prototype.filter.call(document.querySelectorAll('#home a[href], #home button, #bar a[href], #bar button'),
+      (n) => !n.hidden && !n.disabled && n.getClientRects().length > 0 && getComputedStyle(n).visibility !== 'hidden');
+  }
+  function homePad(dir, a, b) {
+    const sheetOpen = (id) => { const n = document.getElementById(id); return !!(n && !n.hidden); };
+    if (dir && dir !== pad.dir && !sheetOpen('coll-sheet') && !sheetOpen('gift-card')) {
+      const f = homeTargets();
+      if (f.length) {
+        const i = f.indexOf(document.activeElement);
+        const k = i < 0 ? 0 : (i + (dir === 'd' || dir === 'r' ? 1 : -1) + f.length) % f.length;
+        try { f[k].focus(); f[k].scrollIntoView({ block: 'nearest' }); } catch (e) { /* ignore */ }
+      }
+    }
+    pad.dir = dir;
+    if (a && !pad.a) { const n = document.activeElement; if (n && n !== document.body && n.click) n.click(); else { const p = $('home-play'); if (p) p.focus(); } }
+    if (b && !pad.b) {
+      if (sheetOpen('coll-sheet')) { const x = $('coll-close'); if (x) x.click(); }
+      else if (sheetOpen('gift-card')) { const x = $('gift-close'); if (x) x.click(); }
+    }
+    pad.a = a; pad.b = b;
+  }
   function pollPad() {
     let gp = null;
     try { const l = navigator.getGamepads ? navigator.getGamepads() : []; for (let i = 0; i < l.length; i++) if (l[i]) { gp = l[i]; break; } } catch (e) { return; }
-    if (!gp || homeOn()) return;
+    if (!gp) return;
     const bt = (i) => !!(gp.buttons[i] && gp.buttons[i].pressed);
     let dir = '';
     if (bt(12) || gp.axes[1] < -0.6) dir = 'u'; else if (bt(13) || gp.axes[1] > 0.6) dir = 'd';
     else if (bt(14) || gp.axes[0] < -0.6) dir = 'l'; else if (bt(15) || gp.axes[0] > 0.6) dir = 'r';
+    // Start opens the shared Menu (CONTROLS.md); while the Menu or a dialog is up the pad belongs to it (MMNav polls its own).
+    const st = bt(9), wasSt = pad.st; pad.st = st;
+    const navOpen = !!(window.MMNav && MMNav.isOpen && MMNav.isOpen());
+    const setOpen = (() => { const d = document.getElementById('mmset'); return !!(d && !d.hidden); })();
+    if (navOpen || setOpen) { pad.dir = dir; pad.a = bt(0); pad.b = bt(1); return; }
+    if (st && !wasSt && window.MMNav && MMNav.open && $('card').hidden) { pad.dir = dir; pad.a = bt(0); pad.b = bt(1); MMNav.open(); return; }
+    if (homeOn()) { homePad(dir, bt(0), bt(1)); return; }
     if (dir && dir !== pad.dir && $('card').hidden) step({ l: -1, r: 1 }[dir] || 0, { u: -1, d: 1 }[dir] || 0);
     pad.dir = dir;
     const a = bt(0), b = bt(1);

@@ -1,4 +1,8 @@
 {
+  "nav-settings.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "town-polish.test.js": {
     "class": "browser",
     "tier": "full"
