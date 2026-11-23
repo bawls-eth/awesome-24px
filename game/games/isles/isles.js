@@ -763,11 +763,11 @@
   }
   // hitCreature(c, dmg, how): how = 'soothe' (bolt in soothe mode) | 'comp' (a companion) | undefined (plain bolt)
   // G-22 (b05-03): companions never attack what you are taming. Always skipped: a KO / calm sleeper. While soothe mode is on: the last
-  // soothe target (6 s) and any creature with soothe torpor. With soothe off (you are hunting) they fight anything hostile, as before.
+  // soothe target (6 s) and any tameable creature (it has a tame state). With soothe off (you are hunting) they fight anything hostile, as before.
   // (Plain befriend progress is not a skip: it builds up passively near every wild creature.) compSkip is the MMCompanion ctx.skip
   // predicate and the guard on a companion hit.
   let sootheTgt = null, sootheAt = -1e9;
-  const compSkip = (e) => !!e && (!!e.ko || !!e.calm || (soothe && TAME && ((e === sootheTgt && simT - sootheAt < 6) || !!(e.tm && e.tm.torpor > 0))));
+  const compSkip = (e) => !!e && (!!e.ko || !!e.calm || (soothe && TAME && ((e === sootheTgt && simT - sootheAt < 6) || !!e.tm))); // soothe on: any tameable creature (it may be the next soothe target before the first bolt lands)
   function hitCreature(c, dmg, how) {
     const sooth = how === 'soothe';
     if (sooth) { sootheTgt = c; sootheAt = simT; }
