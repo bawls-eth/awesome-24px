@@ -1588,5 +1588,57 @@
   "beta-w11-bug-clarity.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-g04-full-pack.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "beta-g22-tame-safe.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "shared-mm-companion-tame-skip.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "beta-g05-rekindle.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "shared-mm-profile-rekindle.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "beta-s01-town-restore.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "beta-s02-town-two-tabs.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "beta-s05-deepdelve-storage.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "beta-s06-art-cache.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-s04-coop-save.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-s03-backup-skip.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "beta-g23-trial-enter.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "beta-g20-isles-stable.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }

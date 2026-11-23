@@ -553,7 +553,7 @@
       return o;
     }
     function gearGrant(g, x, y) {
-      const sv = arena.save; const n0 = sv.items.length; const full = n0 >= RM_BACKPACK;
+      const sv = arena.save; const n0 = sv.items.length; const full = n0 >= RM_BACKPACK; let took = true;
       // collectItem's burst and text draw the arena rng: swap in a throwaway seeded stream so no later arena draw (bags, enemy AI) shifts when gear drops
       const keep = arena.rng; const fx = MMRng.create('dgearfx:' + seed + ':' + gearGot.length); arena.rng = () => fx.next();
       try {
@@ -561,10 +561,11 @@
         // review F2: the tier, affix seed and (with the GW gate open) the T12 boss signature go INTO collectItem, so the entry the stash records (onItem)
         // and the one written to storage already carry them: no T0 copy, and a soulbound T11+ is never paid to the Lantern stash.
         const gear = { t: g.t }; if (g.a) gear.a = g.a; if (g.sig && typeof RM_FORGE_ON !== 'undefined' && RM_FORGE_ON === true) gear.sig = g.sig;
-        arena.collectItem(g.id, g.r, gear);
+        took = arena.collectItem(g.id, g.r, gear); // G-04: false = a full pack left this upgrade on the ground as a bag (not sold)
       } finally { arena.rng = keep; }
       const d = MMGear.describe({ id: g.id, r: g.r, t: g.t, a: g.a }); const rar = RM_RARITIES[g.r] || RM_RARITIES[0];
-      const rec = { id: g.id, r: g.r, t: g.t, a: g.a || 0, slot: g.slot, name: d ? d.name : g.id, color: d ? d.tierColor : rar.color, rarName: rar.name, sold: full };
+      const rec = { id: g.id, r: g.r, t: g.t, a: g.a || 0, slot: g.slot, name: d ? d.name : g.id, color: d ? d.tierColor : rar.color, rarName: rar.name, sold: full && took !== false };
+      if (took === false) rec.waiting = true;
       gearGot.push(rec);
       if (typeof x === 'number') { arena.rng = () => fx.next(); try { arena._floatText(x, y, rec.name, rec.color); } finally { arena.rng = keep; } }
       return rec;
@@ -745,7 +746,7 @@
         <div class="mm-sum-btns">${backWorld ? '' : `<a class="mm-btn" id="mm-sum-again" href="?mode=dungeon&seed=${Number(baseSeed) + 1 || ''}${layoutV === 2 ? '&lv=2' : ''}${biome !== 'warren' ? '&biome=' + biome : ''}${opts.test ? '&test=1' : ''}${hubExit ? '&from=hub' : ''}">New dungeon</a>`}<a class="mm-btn${backWorld ? '' : ' alt'}" id="mm-sum-home" href="${backWorld || homeHref}">${backWorld ? 'Back to the world' : homeText}</a></div></div>`;
       if (gearGot.length) { // tiered finds: "T7 Name" via textContent
         const ul = sumEl.querySelector('#mm-sum-loot'); const none = ul.querySelector('.none'); if (none) none.remove();
-        gearGot.forEach((g) => { const li = document.createElement('li'); li.className = 'mm-sum-gear'; li.style.color = g.color; li.textContent = g.name + ' '; const sm = document.createElement('small'); sm.textContent = g.rarName + (g.sold ? ' (sold, pack full)' : ''); li.appendChild(sm); ul.appendChild(li); });
+        gearGot.forEach((g) => { const li = document.createElement('li'); li.className = 'mm-sum-gear'; li.style.color = g.color; li.textContent = g.name + ' '; const sm = document.createElement('small'); sm.textContent = g.rarName + (g.sold ? ' (sold, pack full)' : g.waiting ? ' (left on the ground, pack full)' : ''); li.appendChild(sm); ul.appendChild(li); });
       }
       if (MUT || floor > 1) { // DV1: the mutator and the floor on their own rows (textContent)
         const st = sumEl.querySelector('.mm-sum-stats');

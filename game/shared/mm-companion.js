@@ -80,13 +80,16 @@
     && Number.isFinite(e.x) && Number.isFinite(e.y);
   const d2 = (ax, ay, bx, by) => (ax - bx) * (ax - bx) + (ay - by) * (ay - by);
 
-  function nearestEnemy(c, owner, enemies, r) {
+  // G-22: `skip(e)` (optional, from ctx.skip) leaves out a creature the hero is taming (the soothe target, one with tame progress, a KO
+  // sleeper): an attack-mode companion never hits it. Same MAX_SCAN bound; a throwing predicate counts as "skip".
+  const skipped = (skip, e) => { if (typeof skip !== 'function') return false; try { return !!skip(e); } catch (er) { return true; } };
+  function nearestEnemy(c, owner, enemies, r, skip) {
     let best = -1, bd = r * r;
     const n = Math.min(enemies.length, MAX_SCAN);
     c.scanned = n;
     for (let i = 0; i < n; i++) {
       const e = enemies[i];
-      if (!alive(e)) continue;
+      if (!alive(e) || skipped(skip, e)) continue;
       const dd = d2(e.x, e.y, owner.x, owner.y);
       if (dd <= bd) { bd = dd; best = i; }
     }
@@ -168,7 +171,7 @@
     c.scanned = 0;
     if (c.think >= THINK_DT) {
       c.think -= THINK_DT * Math.floor(c.think / THINK_DT);
-      if (c.mode === 'attack') c.tgt = nearestEnemy(c, owner, enemies, SEEK_R);
+      if (c.mode === 'attack') c.tgt = nearestEnemy(c, owner, enemies, SEEK_R, cx.skip);
       else if (c.mode === 'fetch' && c.phase === 'out' && c.carry < 0) c.carry = nearestPickup(owner, pickups, FETCH_R);
     }
 
@@ -177,7 +180,7 @@
       mv = { mx: 0, my: 0 };
     } else if (c.mode === 'attack') {
       const e = c.tgt >= 0 ? enemies[c.tgt] : null;
-      if (e && alive(e) && d2(e.x, e.y, owner.x, owner.y) <= SEEK_R * SEEK_R) {
+      if (e && alive(e) && !skipped(cx.skip, e) && d2(e.x, e.y, owner.x, owner.y) <= SEEK_R * SEEK_R) {
         const dd = Math.sqrt(d2(e.x, e.y, c.x, c.y));
         if (dd > range) {
           const k = (dd - range * 0.8) / dd;

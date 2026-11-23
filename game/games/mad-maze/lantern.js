@@ -12,7 +12,10 @@
     'picnic-no-fall': 'Picnic heroes never Fall',
     'hardcore-no-rekindle': 'Hardcore heroes cannot Rekindle',
     'roster-full': 'Your roster is full (12 heroes)',
-    'no-hero': 'That hero is gone'
+    'no-hero': 'That hero is gone',
+    'not-fallen': 'Only a fallen hero\'s Keepsake can Rekindle', // G-05
+    'used': 'This Keepsake already rekindled a hero',
+    'no-keepsake': 'That is not a Keepsake'
   };
   // Coming back to the Lantern settles the loot of the Realm World and its Warrens (MMStash): kept finds are copied into the stash
   // (then the active hero's pack); `pixeltown-save-v1` is only read for the realm backpack, never written.
@@ -191,11 +194,12 @@
     say('Fallen. ' + r.fame + ' fame banked' + (r.keepsake ? ', and a Keepsake waits in the stash.' : r.keepsakeLost ? '. The stash is full, so the Keepsake could not be stored. Free a slot before the next Fall.' : '.'));
     render(); return r;
   }
-  function doRekindle(heroId) {
-    var r = P.rekindle(profile, heroId);
+  // G-05: src is a stash slot holding a fallen hero's Keepsake (a living hero id is refused by MMProfile: 'not-fallen')
+  function doRekindle(src) {
+    var r = P.rekindle(profile, src);
     if (!r.ok) { say(REASONS[r.reason] || 'Cannot rekindle.', true); return r; }
     profile = r.profile; save(); selected = r.hero.id;
-    say('Rekindled at level ' + r.hero.level + '.'); render(); return r;
+    say(r.hero.name + ' is rekindled at level ' + r.hero.level + '. The Keepsake stays in the stash as a memento.'); render(); return r;
   }
   function doRetire(heroId) {
     var r = P.retire(profile, heroId);
@@ -523,12 +527,7 @@
         ab.addEventListener('click', function () { openAbilities(h.id, ab); });
         row.appendChild(ab);
       }
-      var rk = el('button', 'btn rekindle', 'Rekindle'); rk.type = 'button';
-      var rkWhy = h.mode === 'hardcore' ? REASONS['hardcore-no-rekindle'] : profile.heroes.length >= 12 ? REASONS['roster-full'] : '';
-      if (rkWhy) { rk.disabled = true; rk.title = rkWhy; }
-      rk.addEventListener('click', function () { doRekindle(h.id); });
-      pick.setAttribute('aria-label', (h.id === selected ? 'Selected hero ' : 'Select hero ') + h.name);
-      rk.setAttribute('aria-label', 'Rekindle ' + h.name + ' at half level');
+      pick.setAttribute('aria-label', (h.id === selected ? 'Selected hero ' : 'Select hero ') + h.name); // G-05: no Rekindle on a living hero (it was a free clone); it lives on the Keepsake now
       var rt = el('button', 'btn retire', confirmRetire === h.id ? 'Tap again to retire' : 'Retire'); rt.type = 'button';
       var rtWhy = h.level < P.MAX_LEVEL ? 'Reach level 20 to retire (now ' + h.level + ')' : '';
       if (rtWhy) { rt.disabled = true; rt.title = rtWhy; }
@@ -538,7 +537,7 @@
       });
       rt.setAttribute('aria-label', (confirmRetire === h.id ? 'Confirm: retire ' : 'Retire ') + h.name + ' to the Hall');
       rt.textContent = confirmRetire === h.id ? 'Tap again to retire' : 'Retire to the Hall';
-      row.appendChild(rk); row.appendChild(rt);
+      row.appendChild(rt);
       if (confirmRetire === h.id) {
         var cn = el('button', 'btn keep', 'Keep playing'); cn.type = 'button'; cn.setAttribute('aria-label', 'Cancel retire for ' + h.name);
         cn.addEventListener('click', function () { confirmRetire = null; say('Retire cancelled. ' + h.name + ' is still here.'); render(); });
@@ -555,7 +554,6 @@
         row.appendChild(tf);
       }
       li.appendChild(row);
-      if (rkWhy) li.appendChild(el('span', 'reason', rkWhy));
       if (rtWhy) li.appendChild(el('span', 'reason', rtWhy));
       ul.appendChild(li);
     });
@@ -598,6 +596,26 @@
       if (it) b.addEventListener('click', function () { toHero(selected, i); }); else { b.setAttribute('tabindex', '-1'); b.setAttribute('aria-disabled', 'true'); } // empty slots are not Tab stops
       grid.appendChild(b);
     });
+    // G-05: Rekindle lives on a fallen hero's Keepsake: one row per Keepsake in the stash, disabled with its reason (used / hardcore / roster full)
+    var rkl = $('rekindle-list');
+    if (!rkl) { rkl = el('ul', 'items rekindle-list'); rkl.id = 'rekindle-list'; rkl.setAttribute('aria-label', 'Rekindle from a Keepsake'); grid.parentNode.insertBefore(rkl, grid.nextSibling); }
+    rkl.textContent = '';
+    profile.stash.forEach(function (it, i) {
+      if (!it || it.keepsake !== true) return;
+      var why = P.rekindleCheck ? P.rekindleCheck(profile, i) : '';
+      var lvl = Math.max(1, Math.min(10, Math.floor((it.level || 1) / 2)));
+      var nm = String(it.from || 'Hero').replace(/[\u0000-\u001f]/g, '');
+      var li = el('li', 'rk-row'); li.setAttribute('data-slot', i);
+      var b = el('button', 'btn rekindle rekindle-ks', it.rk ? 'Rekindled' : 'Rekindle ' + nm + ' (Lv ' + lvl + ')'); b.type = 'button'; b.setAttribute('data-slot', i);
+      b.style.minHeight = '44px';
+      b.setAttribute('aria-label', it.rk ? 'Keepsake of ' + nm + ': already rekindled' : 'Rekindle ' + nm + ' from the Keepsake, a new ' + clsName(it.cls) + ' at level ' + lvl);
+      if (why) { b.disabled = true; b.title = REASONS[why] || why; }
+      b.addEventListener('click', function () { doRekindle(i); });
+      li.appendChild(b);
+      if (why) { var w = el('span', 'muted rk-why', REASONS[why] || why); li.appendChild(w); }
+      rkl.appendChild(li);
+    });
+    rkl.hidden = !rkl.children.length;
 
     // hall
     var hall = $('hall'); hall.textContent = '';

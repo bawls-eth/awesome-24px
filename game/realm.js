@@ -2683,7 +2683,7 @@ class RealmArena {
   _floatText(x, y, text, color) {
     const t = this._take(this.texts);
     if (!t) return null;
-    t.active = true; t.x = x; t.y = y; t.vy = -48; t.life = 0.7; t.text = text; t.color = color; t.ico = ''; t.plain = '';
+    t.active = true; t.x = x; t.y = y; t.vy = -48; t.life = 0.7; t.text = text; t.color = color; t.ico = ''; t.plain = ''; t.outline = '';
     return t;
   }
 
@@ -3457,16 +3457,43 @@ class RealmArena {
   // Picks an item up. A full backpack sells it on the spot for shards.
   // gear (optional, additive): { t, a?, sig? } of a tiered drop. The entry is built WITH them before onItem (the stash record) and the save write, so no
   // T0 copy of a tiered drop ever reaches storage or the stash (review F2). Cleaned like a stored item (rmCleanGear / rmCleanSig).
-  collectItem(id, rarity, gear) {
-    this._snd('pickup');
+  // G-04 (b02-04/05, owner default O-06): is this drop worth more than a free slot? A tiered drop above the best tier held in its slot, a T12 chase
+  // piece, or a signature / relic. Such a drop is never auto-sold by a full pack.
+  _fullPackKeeps(id, gear, gt) {
+    if (!gt) return false;
+    if (gt >= 12 || (gear && gear.sig)) return true;
+    if (RM_GEAR_ON && typeof MMGear !== 'undefined' && typeof MMGear.isSig === 'function' && MMGear.isSig(id)) return true;
+    const sl = (RM_ITEM_BY_ID[id] || {}).slot; let best = 0;
+    this.save.items.forEach((x) => { if (x && x.t && (RM_ITEM_BY_ID[x.id] || {}).slot === sl) best = Math.max(best, x.t); });
+    return gt > best;
+  }
+  // A HUD toast for the full pack (the banner line, not a faint float text), at most once per 4 s.
+  _fullPackToast(text) {
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (this._fullToastAt && now - this._fullToastAt < 4000) return false;
+    this._fullToastAt = now; this.lastFullToast = text; // test hook
+    try { this._showBanner(text, 2.5); } catch (e) { /* cosmetic */ }
+    return true;
+  }
+  // collectItem(id, rarity, gear, fromBag) -> true when the drop was taken (into the pack, or sold by a full pack), false when an upgrade waits on the
+  // ground for room (G-04). fromBag: the caller keeps its own bag on the ground; otherwise a direct grant (chest, rush) is dropped as a bag at the hero.
+  collectItem(id, rarity, gear, fromBag) {
     const sv = this.save; const def = RM_ITEM_BY_ID[id]; const rar = RM_RARITIES[rarity];
     if (sv.items.length >= RM_BACKPACK) {
       // review F11: a full pack sells a tiered drop at its tiered value (rmSellValue, the same price the backpack's Sell button pays), never the classic one
       const gt = gear && typeof gear === 'object' && !Array.isArray(gear) ? rmCleanGear(id, rarity, gear).t : 0;
+      if (this._fullPackKeeps(id, gear, gt)) { // G-04: an upgrade stays on the ground, nothing paid, nothing saved
+        this._fullPackToast(`Backpack full: make room for ${def.name} T${gt}`);
+        if (!fromBag && this.player) { const b = this.dropBag(this.player.x, this.player.y + 30, rarity, id, null, gear); if (b) { b.id = id; b.vx = 0; b.vy = 0; b.waitRoom = true; } }
+        return false;
+      }
+      this._snd('pickup');
       const val = rmSellValue(gt ? { r: rarity, t: gt } : { r: rarity });
       sv.shards += val; this.lastFullSale = { id, r: rarity, t: gt, shards: val }; // test hook
-      this._floatText(this.player.x, this.player.y - 24, `sold ${def.name} +${val} 💎`, rar.color);
+      const ft = this._floatText(this.player.x, this.player.y - 24, `sold ${def.name} +${val} 💎`, rar.color); if (ft) ft.outline = '#0b0d1a'; // G-04: readable on grass
+      this._fullPackToast(`Backpack full: sold ${def.name} +${val} 💎`);
     } else {
+      this._snd('pickup');
       const ent = rmTagged({ n: sv.nextUid++, id, r: rarity }); const prevBest = this._bestTierHeld();
       if (gear && typeof gear === 'object' && !Array.isArray(gear)) {
         const g = rmCleanGear(id, rarity, gear);
@@ -3480,6 +3507,7 @@ class RealmArena {
     }
     this.onSave(this.save);
     this._syncHud(); if (this.paused) this.renderBackpack();
+    return true;
   }
 
   _updateBags(dt) {
@@ -3487,13 +3515,24 @@ class RealmArena {
     for (let i = 0; i < this.bags.length; i++) {
       const b = this.bags[i];
       if (!b.active) continue;
+      if (b.waitRoom && Number.isFinite(b.lifetime) && Math.hypot(p.x - b.x, p.y - b.y) < 240) b.t = Math.min(b.t, Math.max(0.3, b.lifetime - 10)); // G-04: never vanishes while you stand by it
       b.t += dt;
-      if (b.t >= b.lifetime) { b.active = false; b.gear = null; continue; } // review F9: an inactive bag never keeps its tier
+      if (b.t >= b.lifetime) { b.active = false; b.gear = null; b.waitRoom = false; continue; } // review F9: an inactive bag never keeps its tier
       b.x += b.vx * dt; b.y += b.vy * dt; b.vx *= 0.93; b.vy *= 0.93;
       b.x = Math.max(14, Math.min(this._bw() - 14, b.x)); b.y = Math.max(14, Math.min(this._bh() - 14, b.y));
       const dx = p.x - b.x; const dy = p.y - b.y; const d = Math.hypot(dx, dy) || 1;
+      const full = this.save.items.length >= RM_BACKPACK;
+      if (b.waitRoom && !full) b.waitRoom = false; // room again: the bag behaves like any other
+      if (b.waitRoom) { // G-04: an upgrade waiting for room does not drift into you, and does not vanish while you stand near it
+        if (d < 20 && !this.down) this._fullPackToast(`Backpack full: make room for ${(RM_ITEM_BY_ID[b.id] || {}).name || 'this item'}`);
+        continue;
+      }
       if (b.t > 0.4 && d < 110) { const k = (230 * dt) / d; b.x += dx * k; b.y += dy * k; } // bags drift toward you
-      if (b.t > 0.25 && d < 20 && !this.down) { const g = b.gear; b.active = false; this.collectItem(b.id, b.r, g || undefined); b.gear = null; continue; } // the tier goes INTO the pickup (a full pack sells it at its tiered value, review F11)
+      if (b.t > 0.25 && d < 20 && !this.down) { // the tier goes INTO the pickup (a full pack sells it at its tiered value, review F11)
+        const g = b.gear; b.active = false;
+        if (this.collectItem(b.id, b.r, g || undefined, true) === false) { b.active = true; b.waitRoom = true; continue; } // G-04: kept on the ground, tier and all
+        b.gear = null; continue;
+      }
       const q = this.team && this.role === 'host' && this.team.partner && this.team.partner.ready && !this.team.partner.down ? this.team.partner : null;
       // `loot` stays [id, r] (the wire format never carries t / a / sig). Review F9, the choice: a TIERED bag (b.gear) is never handed to a partner at all, so a
       // T12 can never arrive there as a T0 copy and soulbound gear never crosses; each seat rolls its own tiered drops locally (seeded per seat). Armor too.
@@ -5053,7 +5092,10 @@ class RealmArena {
         g.drawImage(ic, x0, t.y - 15); g.textAlign = 'left';
         g.fillStyle = '#000'; g.fillText(t.plain, x0 + 23, t.y + 1); g.fillStyle = t.color; g.fillText(t.plain, x0 + 22, t.y);
         g.textAlign = 'center';
-      } else { g.fillStyle = '#000'; g.fillText(t.text, t.x + 1, t.y + 1); g.fillStyle = t.color; g.fillText(t.text, t.x, t.y); }
+      } else {
+        if (t.outline) { g.lineWidth = 4; g.strokeStyle = t.outline; g.strokeText(t.text, t.x, t.y); } // G-04: a dark outline (full-pack sale text on grass)
+        g.fillStyle = '#000'; g.fillText(t.text, t.x + 1, t.y + 1); g.fillStyle = t.color; g.fillText(t.text, t.x, t.y);
+      }
       t.y = ty0;
     }
     g.globalAlpha = 1;

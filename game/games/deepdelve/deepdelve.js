@@ -23,6 +23,28 @@
   const CREATIVE_KEY = 'pixeltown-deepdelve-creative-v1';
   const GROTTO = window.MMDDGrotto || null, BUILD = window.MMDDBuild || null;
 
+  // Beta S-05 (b15-01): `localStorage` itself can throw (SecurityError: cookies / site data blocked). Every read and write in this
+  // file goes through LS: the real storage when it can be read, else an in-memory stand-in so the mine still boots and plays.
+  // LS_NOSAVE is true when nothing will persist (blocked getter, or a probe write that throws), and the status line says so once.
+  let LS_NOSAVE = false;
+  const LS = (function () {
+    let s = null;
+    try { s = window.localStorage; if (s) s.getItem('pixeltown-deepdelve-v1'); } catch (e) { s = null; }
+    if (s) {
+      try { s.setItem('pixeltown-deepdelve-probe', '1'); s.removeItem('pixeltown-deepdelve-probe'); } catch (e) { LS_NOSAVE = true; }
+      return s;
+    }
+    LS_NOSAVE = true;
+    const m = new Map();
+    return {
+      getItem: (k) => (m.has(String(k)) ? m.get(String(k)) : null),
+      setItem: (k, v) => { m.set(String(k), String(v)); },
+      removeItem: (k) => { m.delete(String(k)); },
+      key: (i) => Array.from(m.keys())[i] || null,
+      get length() { return m.size; },
+      clear: () => m.clear(),
+    };
+  }());
   const $ = (id) => document.getElementById(id);
   const say = (t) => { $('msg').textContent = t || ''; };
   const touchUI = () => { const t = $('touch'); return !!t && !t.hidden; };
@@ -34,7 +56,7 @@
   let idb = null;
   function creativeDoc() {
     try {
-      const o = JSON.parse(localStorage.getItem(CREATIVE_KEY) || 'null');
+      const o = JSON.parse(LS.getItem(CREATIVE_KEY) || 'null');
       if (o && typeof o === 'object' && !Array.isArray(o) && o.v === 1 && o.kv && typeof o.kv === 'object' && !Array.isArray(o.kv)) return o;
     } catch (e) { /* corrupt or blocked: start fresh */ }
     return { v: 1, kv: {} };
@@ -69,7 +91,7 @@
   function kvSet(k, v) {
     memStore.set(k, v);
     return new Promise((resolve) => {
-      if (CREATIVE) { try { const d = creativeDoc(); d.kv[k] = v; localStorage.setItem(CREATIVE_KEY, JSON.stringify(d)); return resolve(true); } catch (e) { return resolve(false); } }
+      if (CREATIVE) { try { const d = creativeDoc(); d.kv[k] = v; LS.setItem(CREATIVE_KEY, JSON.stringify(d)); return resolve(true); } catch (e) { return resolve(false); } }
       if (!idb) return resolve(false);
       try {
         const tx = idb.transaction('kv', 'readwrite');
@@ -120,7 +142,7 @@
   // quality governor at the low view and keeps it there; a colour-blind palette recolours the block outline and the creatures.
   const ACCESS = (function () {
     let p = null;
-    try { p = window.MMAccess && MMAccess.prefs ? MMAccess.prefs.load(localStorage) : null; } catch (e) { p = null; }
+    try { p = window.MMAccess && MMAccess.prefs ? MMAccess.prefs.load(LS) : null; } catch (e) { p = null; }
     p = p || { palette: 'normal', hudScale: 1, flashes: true, lowGfx: false };
     const pal = window.MMAccess ? MMAccess.palette(p.palette) : { name: 'normal', ally: '#5ad1ff', enemy: '#ffb347' };
     return { palette: pal.name, ally: pal.ally, enemy: pal.enemy, scale: p.hudScale, lowGfx: p.lowGfx === true, reduced };
@@ -135,7 +157,7 @@
   let sfxBox = null;
   function sfx(name) {
     try {
-      if (!sfxBox && window.MMSfx && !TEST) sfxBox = MMSfx.create({ storage: localStorage });
+      if (!sfxBox && window.MMSfx && !TEST) sfxBox = MMSfx.create({ storage: LS });
       if (sfxBox) sfxBox.play(name);
     } catch (e) { /* audio is optional */ }
   }
@@ -157,7 +179,7 @@
   const modName = (id) => { const m = RUNS && RUNS.MODS.filter((x) => x.id === id)[0]; return m ? m.name : 'Dive'; };
   function startRun() {
     if (!RUNS) return;
-    if (!runRec) runRec = RUNS.load(localStorage);
+    if (!runRec) runRec = RUNS.load(LS);
     run = RUNS.start(runDepth0, RUNS.modFor(SEED, runRec.runs).id); pbDepthShown = false; comboShown = false; $('combo').textContent = '';
     renderDive();
   }
@@ -187,9 +209,9 @@
   function endRun(safe, why) {
     if (!run || !runRec) return null;
     const short = run.depth < 2 && run.blocks < 5; // a stumble near the surface is not worth a summary
-    runRec = RUNS.load(localStorage); // the freshest bests / counts: another tab may have dived meanwhile (bugbash/saves.md S2)
+    runRec = RUNS.load(LS); // the freshest bests / counts: another tab may have dived meanwhile (bugbash/saves.md S2)
     const sum = RUNS.finish(runRec, run, safe);
-    RUNS.save(localStorage, runRec);
+    RUNS.save(LS, runRec);
     startRun();
     if (short) return sum;
     showSummary(sum, why);
@@ -245,14 +267,14 @@
     }
     return out;
   }
-  function loadMeta() { try { return sanitiseMeta(localStorage.getItem(META_KEY)); } catch (e) { return sanitiseMeta(null); } }
+  function loadMeta() { try { return sanitiseMeta(LS.getItem(META_KEY)); } catch (e) { return sanitiseMeta(null); } }
   // Hub medal summary: this game's own additive key, read by the hub page only.
-  function hubMedals() { if (CREATIVE) return; try { const g = meta.goals, m = ['bronze', 'silver', 'secret', 'depth20', 'depth40', 'crawler', 'wyrm', 'torches10', 'build1', 'build3'].filter((k) => g[k] === true); localStorage.setItem('pixeltown-medals-deepdelve-v1', JSON.stringify({ v: 1, m })); } catch (e) { /* storage blocked */ } try { const g = meta.goals; window.MMHubProfile.sync(localStorage, 'deepdelve', [g.maxDepth >= 1 && 'dig'].concat(['bronze', 'silver', 'secret', 'depth20', 'depth40', 'wyrm'].filter((k) => g[k] === true))); } catch (e) { /* hub map progress is optional */ } }
-  function saveMeta() { if (CREATIVE) return true; hubMedals(); try { localStorage.setItem(META_KEY, JSON.stringify(meta)); return true; } catch (e) { return false; } }
+  function hubMedals() { if (CREATIVE) return; try { const g = meta.goals, m = ['bronze', 'silver', 'secret', 'depth20', 'depth40', 'crawler', 'wyrm', 'torches10', 'build1', 'build3'].filter((k) => g[k] === true); LS.setItem('pixeltown-medals-deepdelve-v1', JSON.stringify({ v: 1, m })); } catch (e) { /* storage blocked */ } try { const g = meta.goals; window.MMHubProfile.sync(LS, 'deepdelve', [g.maxDepth >= 1 && 'dig'].concat(['bronze', 'silver', 'secret', 'depth20', 'depth40', 'wyrm'].filter((k) => g[k] === true))); } catch (e) { /* hub map progress is optional */ } }
+  function saveMeta() { if (CREATIVE) return true; hubMedals(); try { LS.setItem(META_KEY, JSON.stringify(meta)); return true; } catch (e) { return false; } }
   // Read-only look at the old in-town cave keys; never writes or deletes anything on the town save.
   function readTownCave() {
     let o;
-    try { const raw = localStorage.getItem(TOWN_KEY); if (!raw) return null; o = JSON.parse(raw); } catch (e) { return null; }
+    try { const raw = LS.getItem(TOWN_KEY); if (!raw) return null; o = JSON.parse(raw); } catch (e) { return null; }
     if (!o || typeof o !== 'object' || Array.isArray(o)) return null;
     if (o.caveSeed === undefined && o.caveInv === undefined && o.cavePick === undefined) return null;
     return sanitiseMeta({ cave: { seed: o.caveSeed, inv: o.caveInv, pick: o.cavePick } }).cave;
@@ -1854,8 +1876,9 @@
     bindControls();
     renderHud();
     if (TEST) exposeTest();
-    say(TEST ? '' : introText());
-    if (!TEST) setTimeout(() => say(''), 6000);
+    const NOSAVE_NOTE = 'Progress cannot be saved in this browser mode.'; // beta S-05: said once, with the intro
+    say(LS_NOSAVE ? NOSAVE_NOTE + (TEST ? '' : ' ' + introText()) : (TEST ? '' : introText()));
+    if (!TEST) setTimeout(() => say(''), LS_NOSAVE ? 9000 : 6000);
     requestAnimationFrame(frame);
   }
   boot();

@@ -714,7 +714,8 @@
       const d = Math.hypot(c.x - hero.x, c.y - 8 - hero.y);
       if (d < bd) { bd = d; best = c; bx = c.x; by = c.y - 8; }
     }
-    if (bossAlive() && !bz.ko) { const d = Math.hypot(bz.x - hero.x, bz.y - 36 - hero.y); if (d < bd + 2 * TILE) { best = bz; bx = bz.x; by = bz.y - 30; } }
+    const wearyTame = bz.st && bz.st.st === 'weary' && TAME && BOSS_TAMEABLE && !bz.rm; // G-22: auto-attack never finishes a boss you could tame
+    if (bossAlive() && !bz.ko && !wearyTame) { const d = Math.hypot(bz.x - hero.x, bz.y - 36 - hero.y); if (d < bd + 2 * TILE) { best = bz; bx = bz.x; by = bz.y - 30; } }
     if (!best) return false;
     if (fire(bx - hero.x, by - hero.y)) { autoN++; return true; }
     return false;
@@ -754,8 +755,15 @@
     removeWhere((x) => x === c, 90000);
   }
   // hitCreature(c, dmg, how): how = 'soothe' (bolt in soothe mode) | 'comp' (a companion) | undefined (plain bolt)
+  // G-22 (b05-03): companions never attack what you are taming. Always skipped: a KO / calm sleeper. While soothe mode is on: the last
+  // soothe target (6 s) and any creature with soothe torpor. With soothe off (you are hunting) they fight anything hostile, as before.
+  // (Plain befriend progress is not a skip: it builds up passively near every wild creature.) compSkip is the MMCompanion ctx.skip
+  // predicate and the guard on a companion hit.
+  let sootheTgt = null, sootheAt = -1e9;
+  const compSkip = (e) => !!e && (!!e.ko || !!e.calm || (soothe && TAME && ((e === sootheTgt && simT - sootheAt < 6) || !!(e.tm && e.tm.torpor > 0))));
   function hitCreature(c, dmg, how) {
     const sooth = how === 'soothe';
+    if (sooth) { sootheTgt = c; sootheAt = simT; }
     const real = sooth ? dmg * SOOTHE_DMG : dmg;
     c.flash = 0.12;
     if (how !== 'comp') cue('hit');
@@ -902,7 +910,7 @@
   let compCur = null, compLand = false;
   const AIRWATER = ['swim', 'fly', 'glide', 'float'];
   const landOnly = (def) => !!def && !(Array.isArray(def.behaviours) && def.behaviours.some((b) => AIRWATER.indexOf(b) >= 0));
-  const compCtx = { owner: hero, enemies: creatures, pickups: [], def: null, speed: SPEED,
+  const compCtx = { owner: hero, enemies: creatures, pickups: [], def: null, speed: SPEED, skip: (e) => compSkip(e), // G-22
     blocked: (x, y) => { const tx = tileOf(x), ty = tileOf(y); return solidAt(tx, ty) || (compLand && !!compCur && swimAt(tx, ty) && !swimAt(tileOf(compCur.x), tileOf(compCur.y))); } };
   function spawnCompanion(ent, x, y) {
     if (!COMPANIONS || !ent) return null;
@@ -942,7 +950,7 @@
         if (!swimAt(tileOf(bx), tileOf(by)) && !solidAt(tileOf(bx), tileOf(by))) { p.cs.x = bx; p.cs.y = by; }
         else if (!swimAt(tileOf(hero.x), tileOf(hero.y))) { p.cs.x = hero.x; p.cs.y = hero.y; }
       }
-      if (out.hit >= 0 && p.dmg > 0) { const e = creatures[out.hit]; if (e && e.hostile) { p.cs.hits = (p.cs.hits || 0) + 1; hitCreature(e, p.dmg, 'comp'); } }
+      if (out.hit >= 0 && p.dmg > 0) { const e = creatures[out.hit]; if (e && e.hostile && !compSkip(e)) { p.cs.hits = (p.cs.hits || 0) + 1; hitCreature(e, p.dmg, 'comp'); } }
     }
   }
   function finishTame(c) {
@@ -981,6 +989,56 @@
     ISL.noteLog(save, 'tamed', def.id, 1); dirty = true;
     tamedN++; reward();
     return ent;
+  }
+
+  // G-20 / G-21 (b05-01, b05-02): the Stable. The Party tab lists every tame (name, species, level, what it does now) with real buttons:
+  // "Join party" / "Rest" (party limit respected: 2, or 1 on the low tier; the companion spawns / despawns) and "Ride" on a rideable tame
+  // (TAMES.setMount + refreshMount; the saddle follows the chosen species). Swaps wait while you ride or fight a boss. One stable write each.
+  const partyMax = () => Math.min(TAMES.MAX_PARTY, LOW ? 1 : CMP.MAX_ACTIVE);
+  function stableBusy() { return ride ? 'Get off your mount first (R).' : bossAlive() && bz.engaged ? 'Not during a boss fight.' : ''; }
+  function stableJoin(id) {
+    const ent = TAMES.find(tames, id); if (!ent || !COMPANIONS) return false;
+    const busy = stableBusy(); if (busy) { toast(busy); return false; }
+    if (tames.party.indexOf(id) >= 0) return true;
+    if (tames.party.length >= partyMax()) { toast('Your party is full. Rest one first.'); return false; }
+    TAMES.setParty(tames, tames.party.concat([id])); TAMES.write(S, tames);
+    spawnCompanion(ent, hero.x + 36, hero.y + 12);
+    toast((ent.nm || specName(ent.sp)) + ' joins your party.');
+    return true;
+  }
+  function stableRest(id) {
+    const ent = TAMES.find(tames, id); if (!ent) return false;
+    const busy = stableBusy(); if (busy) { toast(busy); return false; }
+    if (tames.party.indexOf(id) < 0) return true;
+    TAMES.setParty(tames, tames.party.filter((x) => x !== id)); TAMES.write(S, tames);
+    dropCompanion(id);
+    toast((ent.nm || specName(ent.sp)) + ' rests at the stable.');
+    return true;
+  }
+  function stableRide(id) {
+    const ent = TAMES.find(tames, id); const d = ent && CR.get(ent.sp); if (!ent || !d || !d.rideable || !MOUNTS) return false;
+    const busy = stableBusy(); if (busy) { toast(busy); return false; }
+    TAMES.setMount(tames, id); TAMES.write(S, tames); refreshMount();
+    toast((ent.nm || d.name) + ' is your mount. R to ride.');
+    return true;
+  }
+  const specName = (sp) => { const d = CR.get(sp); return d ? d.name : sp; };
+  function stableRows(pl) {
+    const busy = stableBusy(), full = tames.party.length >= partyMax();
+    tames.roster.forEach((t) => {
+      const d = CR.get(t.sp); const inParty = tames.party.indexOf(t.id) >= 0; const riding = !!ride && ride.id === t.id; const isMount = !!mountEnt && mountEnt.id === t.id;
+      const p = party.find((x) => x.ent.id === t.id);
+      const what = riding ? 'riding' : inParty ? (p ? p.cs.mode : 'party') : 'resting';
+      const li = el('li', 'stable-row'); li.dataset.tame = t.id;
+      li.appendChild(el('span', 'st-name', (t.nm || specName(t.sp)) + (t.nm && d && t.nm !== d.name ? ' (' + d.name + ')' : '') + ' Lv ' + t.lv + ' - ' + what + (isMount && !riding ? ', mount' : '')));
+      const mk = (cls, text, why, fn) => { const b = el('button', 'st-btn ' + cls, text); b.type = 'button'; b.dataset.tame = t.id; b.style.minHeight = '44px'; b.style.minWidth = '44px'; if (why) { b.disabled = true; b.title = why; b.setAttribute('aria-label', text + ': ' + why); } else b.setAttribute('aria-label', text + ' ' + (t.nm || specName(t.sp))); b.addEventListener('click', () => { if (fn()) openPanel('party'); }); return b; };
+      if (COMPANIONS && d && d.companion) {
+        if (inParty) li.appendChild(mk('st-rest', 'Rest', busy, () => stableRest(t.id)));
+        else li.appendChild(mk('st-join', 'Join party', busy || (full ? 'Party is full (' + partyMax() + '). Rest one first.' : ''), () => stableJoin(t.id)));
+      }
+      if (MOUNTS && d && d.rideable) li.appendChild(mk('st-ride', isMount ? 'Mount' : 'Ride', busy || (isMount ? 'Already your mount' : ''), () => stableRide(t.id)));
+      pl.appendChild(li);
+    });
   }
 
   // mount: the tames.mount entry (else the first rideable tame) through MMCompanion.ride
@@ -1203,7 +1261,7 @@
       else if (e.type === 'weary') {
         bz.tele.length = 0; bz.live.length = 0;
         cue('warn');
-        toast(TAME && e.canTame ? 'The ' + bossName() + ' is weary. Feed it a feast (F) to tame it, or finish it.' : 'The ' + bossName() + ' is weary. Finish it!');
+        toast(TAME && e.canTame ? 'The ' + bossName() + ' is weary. Hold fire and offer a feast (F).' : 'The ' + bossName() + ' is weary. Finish it!');
       } else if (e.type === 'tame_start') toast('The ' + bossName() + ' takes the feast. Soothe shots (Q) put it to sleep, then feed it more feasts.');
       else if (e.type === 'no_tame') toast('The ' + bossName() + ' cannot be tamed.');
       else if (e.type === 'tame') {
@@ -1261,6 +1319,7 @@
       inp.hero.x = hero.x; inp.hero.y = hero.y; inp.dmg = bz.dmg; inp.torporHit = bz.torpor; inp.feast = false; inp.offer = null;
       inp.playerDist = Math.hypot(hero.x - bz.st.x, hero.y - bz.st.y);
       inp.head = bz.hd; // XB: the hydra head your bolts struck (the engine picks the next head left when it is gone)
+      inp.noTame = !(TAME && BOSS_TAMEABLE); // G-22: the weary grace only protects a boss this page can actually tame
       bz.dmg = 0; bz.torpor = 0;
       const r = BOSS.step(bz.st, inp, BOSS_DT);
       if (r.state) bz.st = r.state;
@@ -2613,8 +2672,8 @@
       panelTitle.textContent = 'Pack';
       const pl = $('party-list');
       while (pl.firstChild) pl.removeChild(pl.firstChild);
-      if (!party.length) pl.appendChild(el('li', 'dim', 'No party yet. Soothe a creature, then feed it.'));
-      party.forEach((p) => { const li = el('li', '', (p.ent.nm || p.def.name) + ' (' + p.cs.mode + ')'); li.dataset.tame = p.ent.id; pl.appendChild(li); });
+      if (!tames.roster.length) pl.appendChild(el('li', 'dim', 'No party yet. Soothe a creature, then feed it.'));
+      stableRows(pl); // G-20 / G-21: every tame is a Stable row (Join party / Rest / Ride)
       panelBody.appendChild(el('p', 'dim', 'Stable ' + tames.roster.length + '. XP ' + xp + '. ' + (HOME ? 'You are home.' : 'Home dock takes you home.')));
     } else if (kind === 'help') {
       panelTitle.textContent = 'Help';

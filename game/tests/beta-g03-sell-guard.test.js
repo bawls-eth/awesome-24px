@@ -1,7 +1,7 @@
 // G-03 (b02-02, b02-03, b02-12, b02-14): backpack Sell / Forge guards. A double-click on Sell sells ONE item (the row that slides under the
 // pointer is inert for 300 ms after a re-render), Sell on a protected item (equipped / soulbound / signature / best tier in its slot) asks
 // "Sure?" first for 3 s, a double-tap on "Confirm reforge" never opens (or confirms) a salvage, and arena.discard(uid) still sells in one call.
-// (Vendor stall Buy / Sell-back guards live in realm-world.js: G-03 part c/4 lands in its slot, see fixes/gameplay.md.)
+// The Nexus vendor stall (realm-world.js nxStallRender) has the same 300 ms arm delay and marks the equipped piece in Sell back.
 // Offline: blockDb + every WebSocket closed, town/hub stubbed, no chat, no Firebase writes.
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/beta-g03-sell-guard.test.js
 const { chromium } = require('playwright');
@@ -95,6 +95,37 @@ const items = (page) => page.evaluate(() => window.__mm.arena.save.items.map((x)
     check('3b. the reforge was charged exactly once', before.dust - r.dust === 50 && before.shards - r.shards === 2, JSON.stringify([before, r]));
     check('no page errors (forge)', A.errors.length === 0, A.errors.join(' | '));
     await A.ctx.close();
+  }
+
+  // 4 + (c): the Nexus vendor stall (realm-world.js): a double-tap on Buy buys once; Sell back marks the equipped piece
+  { const WORLD = ORIGIN + '/game/games/mad-maze/index.html?mode=world&test=1&offline=1&seed=12345&qdate=2030-05-01';
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    await blockDb(ctx);
+    await ctx.route('**/game/index.html*', (r) => r.fulfill({ contentType: 'text/html', body: '<!doctype html><title>town</title>town' }));
+    await ctx.route('**/hub/index.html*', (r) => r.fulfill({ contentType: 'text/html', body: '<!doctype html><title>hub</title>hub' }));
+    await ctx.routeWebSocket(/.*/, (ws) => ws.close());
+    const p = await ctx.newPage(); const errors = [];
+    p.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+    await p.goto(ORIGIN + '/game/games/mad-maze/lantern.css');
+    await p.evaluate((v) => { localStorage.clear(); localStorage.setItem('pixeltown-save-v1', v); localStorage.setItem('mm-aim-assist', '0'); },
+      JSON.stringify({ realm: { level: 6, xp: 0, shards: 50, bestWave: 2, dust: 100, items: [{ n: 1, id: 'sparkwand', r: 0, t: 2 }, { n: 3, id: 'sparkwand', r: 1, t: 3 }], nextUid: 20, eq: { weapon: 1 } } }));
+    await p.goto(WORLD);
+    await p.waitForFunction(() => window.__mm && window.__mm.world && window.__mm.arena.active && window.__mm.arena.state === 'play', null, { timeout: 30000 });
+    const W = (fn) => p.evaluate(`(${fn.toString()})(window.__mm.arena, window.__mm.world)`);
+    await W((a, w) => { a.player.iframes = 1e9; a._hitPlayer = () => {}; a.enemies.forEach((e) => { e.active = false; }); const s = w.nexus.site; a.player.x = s.x - 20; a.player.y = s.y; w.nexus.open(); w.nexus.talk('vendor'); return true; });
+    const sel = '#rw-nx-stall button[data-vbuy="sparkwand:2"]';
+    await p.waitForFunction((q) => { const b = document.querySelector(q); return b && !b.disabled; }, sel, { timeout: 3000 });
+    const before = await W((a) => ({ dust: a.save.dust, n: a.save.items.length }));
+    const bb = await p.evaluate((q) => { const b = document.querySelector(q); b.scrollIntoView({ block: 'center' }); const r = b.getBoundingClientRect(); const x = r.x + r.width / 2, y = r.y + r.height / 2; const top = document.elementFromPoint(x, y); return { x, y, top: top ? top.outerHTML.slice(0, 80) : null }; }, sel);
+    await p.touchscreen.tap(bb.x, bb.y); await p.waitForTimeout(90); await p.touchscreen.tap(bb.x, bb.y);
+    await p.waitForTimeout(400);
+    const after = await W((a) => ({ dust: a.save.dust, n: a.save.items.length }));
+    const price = await p.evaluate((q) => Number(document.querySelector(q).dataset.price), sel);
+    check('4. double-tap vendor Buy: one purchase, dust reduced once', after.n === before.n + 1 && before.dust - after.dust === price, JSON.stringify({ before, after, price }));
+    const sb = await p.evaluate(() => [...document.querySelectorAll('#rw-nx-stall button[data-vsell]')].map((b) => ({ n: b.dataset.vsell, t: b.textContent })));
+    check('c. the Sell-back list marks the equipped weapon "(equipped)" and only that one', sb.some((x) => x.n === '1' && /\(equipped\)/.test(x.t)) && sb.filter((x) => /equipped/.test(x.t)).length === 1, JSON.stringify(sb));
+    check('no page errors (vendor)', errors.length === 0, errors.join(' | '));
+    await ctx.close();
   }
 
   await browser.close();

@@ -12,6 +12,8 @@
   const TILE = 32; const CH = 16; const CPX = TILE * CH; const MAX_CHUNKS = 24;
   const SEED_RE = /^[A-Za-z0-9_-]{1,24}$/;
   const AT_RE = /^(\d{1,4}),(\d{1,4})$/;
+  // Beta S-06: INDEX.json / manifests through MMArt's per-page JSON cache (one request per url for the whole page); plain fetch without it.
+  const rwJson = (u) => (typeof window !== 'undefined' && window.MMArt && typeof window.MMArt.fetchJson === 'function' ? window.MMArt.fetchJson(u) : fetch(u).then((r) => (r.ok ? r.json() : null)));
 
   // ---------- code palette per terrain: base, two noise shades, edge line ----------
   const PAL = {
@@ -47,7 +49,7 @@
     if (typeof o === 'string') { try { o = JSON.parse(o); } catch (e) { o = null; } }
     if (!o || typeof o !== 'object' || Array.isArray(o)) o = {};
     const out = {};
-    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo|evT|evDone|finds|discovered|shrineAt|chests|quests|bossKeys|bossPortal|questBags|gp|gearOn|fb)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
+    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo|evT|evDone|finds|discovered|shrineAt|chests|quests|bossKeys|bossPortal|questBags|gp|gearOn|fb|seatPos)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
     out.v = 1;
     out.seed = cleanSeed(o.seed);
     out.version = Number.isInteger(o.version) && o.version > 0 && o.version < 1000 ? o.version : 0;
@@ -76,6 +78,11 @@
     // gear pity (additive, G9): {b: z3 boss kills since the last T12, d: crypt boss kills since the last T10+}, each an int 0..9999; garbage -> defaults (key left out)
     if (o.gp && typeof o.gp === 'object' && !Array.isArray(o.gp)) { const g = (v) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(9999, Math.floor(v))) : 0); const gp = { b: g(o.gp.b), d: g(o.gp.d) }; if (gp.b || gp.d) out.gp = gp; }
     if (o.gearOn === true) out.gearOn = true;
+    // co-op seat positions (additive, beta S-04): only written with ?party=local; {'0'..'3': {x, y}}, at most 4 entries, key left out when empty
+    if (o.seatPos && typeof o.seatPos === 'object' && !Array.isArray(o.seatPos)) {
+      const sp = {}; ['0', '1', '2', '3'].forEach((k) => { const q = o.seatPos[k]; if (q && typeof q === 'object' && Number.isInteger(q.x) && Number.isInteger(q.y) && q.x >= 0 && q.y >= 0 && q.x < 4096 && q.y < 4096) sp[k] = { x: q.x, y: q.y }; });
+      if (Object.keys(sp).length) out.seatPos = sp;
+    }
     if (o.fb === 1) out.fb = 1; // FT2 (additive): this save has picked up its first world bag, so the first-bag guarantee is spent
     const r = o.returnTo && typeof o.returnTo === 'object' ? o.returnTo : null;
     if (o.finds !== undefined) out.finds = window.MMStash ? MMStash.cleanFinds(o.finds) : o.finds; // owned by MMStash (Lantern payout)
@@ -83,11 +90,39 @@
     return out;
   }
   function readSave() { try { return cleanSave(localStorage.getItem(SAVE_KEY)); } catch (e) { return cleanSave(null); } }
+  // Beta S-04 (b14-06): the co-op seat of this page (0-3), or -1 solo; set by create() from the world team (?party=local only).
+  let saveSeat = () => -1;
+  // Merge what another page saved meanwhile (same seed only): discovered fog = union of the bitsets, kill/portal counters = max,
+  // opened chests = union, shrine use = latest, event clock = max. Position: in co-op each seat writes seatPos[seat] and only
+  // seat 0 (or solo) writes the canonical `pos`; solo saves keep exactly today's shape (no seatPos key).
+  function mergeStored(c, cur) {
+    const st = cleanSave(cur);
+    if (st.seed !== c.seed) return c;
+    const F = window.MMFog;
+    if (F && st.discovered) {
+      const a = F.decode(st.discovered), b = c.discovered ? F.decode(c.discovered) : null;
+      if (a && b) { for (let i = 0; i < a.length; i++) a[i] |= b[i]; c.discovered = F.encode(a); } else if (a && !b) c.discovered = st.discovered;
+    }
+    if (st.stats && c.stats) Object.keys(st.stats).forEach((k) => { c.stats[k] = Math.max(c.stats[k] || 0, st.stats[k] || 0); });
+    if (st.chests) { const u = (c.chests || []).slice(); st.chests.forEach((id) => { if (u.indexOf(id) < 0 && u.length < 64) u.push(id); }); c.chests = u; }
+    if (st.shrineAt) { const m = Object.assign({}, st.shrineAt, c.shrineAt || {}); Object.keys(st.shrineAt).forEach((k) => { m[k] = Math.max(m[k] || 0, st.shrineAt[k]); }); c.shrineAt = m; }
+    c.evT = Math.max(c.evT || 0, st.evT || 0);
+    const seat = saveSeat();
+    if (seat >= 0) {
+      const sp = Object.assign({}, st.seatPos || {}, c.seatPos || {});
+      if (c.pos) sp[String(seat)] = { x: c.pos.x, y: c.pos.y };
+      c.seatPos = sp;
+      if (seat > 0) c.pos = st.pos; // only seat 0 moves the canonical position
+    }
+    return c;
+  }
   function writeSave(s) {
     try {
-      const c = cleanSave(s); // `finds` belongs to MMStash: always keep what storage holds (never an older in-memory copy)
+      let c = cleanSave(s); // `finds` belongs to MMStash: always keep what storage holds (never an older in-memory copy)
       let cur = null; try { cur = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch (e) { cur = null; }
       if (cur && typeof cur === 'object' && cur.finds !== undefined) c.finds = window.MMStash ? MMStash.cleanFinds(cur.finds) : cur.finds; else delete c.finds;
+      if (cur && typeof cur === 'object' && !Array.isArray(cur)) c = mergeStored(c, cur);
+      if (c.seatPos && !Object.keys(c.seatPos).length) delete c.seatPos;
       localStorage.setItem(SAVE_KEY, JSON.stringify(c)); return true;
     } catch (e) { return false; }
   }
@@ -148,12 +183,12 @@
       if (!root || typeof fetch !== 'function') return Promise.resolve(0);
       const join = (a, b) => a.replace(/\/+$/, '') + '/' + String(b).replace(/^\/+/, '');
       const okPath = (p) => typeof p === 'string' && /^[A-Za-z0-9_][A-Za-z0-9_.\/-]*\.png$/.test(p) && p.indexOf('..') < 0;
-      return fetch(join(root, 'INDEX.json')).then((r) => (r.ok ? r.json() : null)).then((idx) => {
+      return rwJson(join(root, 'INDEX.json')).then((idx) => {
         const batches = idx && Array.isArray(idx.batches) ? idx.batches : [];
         return Promise.all(batches.map((b) => {
           const id = b && typeof b.path === 'string' ? b.path.replace(/\/+$/, '').split('/').pop() : '';
           if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(id)) return null;
-          return fetch(join(join(root, id), 'manifest.json')).then((r) => (r.ok ? r.json() : null)).then((m) => {
+          return rwJson(join(join(root, id), 'manifest.json')).then((m) => {
             const assets = m && Array.isArray(m.assets) ? m.assets : [];
             return Promise.all(assets.map((a) => {
               const mt = a && typeof a.id === 'string' ? /^tile_([a-z_]+)_([a-d]|edge_\d{2})$/.exec(a.id) : null;
@@ -389,12 +424,12 @@
       const okPath = (p) => typeof p === 'string' && /^[A-Za-z0-9_][A-Za-z0-9_.\/-]*\.png$/.test(p) && p.indexOf('..') < 0;
       const WANT = /^(portal_[a-z]+|spawn_pad|shrine_(heal|rage|ward)|event_beacon|loot_chest_gold|prop_[a-z0-9_]+|coin_f[1-4]|xp_orb_f[1-4]|heart_pickup|focus_pickup|potion_(life|focus|power|swift|guard|wit)|key_boss)$/;
       let got = 0;
-      return fetch(join(root, 'INDEX.json')).then((r) => (r.ok ? r.json() : null)).then((idx) => {
+      return rwJson(join(root, 'INDEX.json')).then((idx) => {
         const batches = idx && Array.isArray(idx.batches) ? idx.batches : [];
         return Promise.all(batches.map((b) => {
           const id = b && typeof b.path === 'string' ? b.path.replace(/\/+$/, '').split('/').pop() : '';
           if (!/^(b1[2345]|b2[26])-[a-z0-9-]{1,48}$/.test(id)) return null; // b26 = the Godlands prop fix, b22 = key_boss (BK2)
-          return fetch(join(join(root, id), 'manifest.json')).then((r) => (r.ok ? r.json() : null)).then((m) => {
+          return rwJson(join(join(root, id), 'manifest.json')).then((m) => {
             const assets = m && Array.isArray(m.assets) ? m.assets : [];
             return Promise.all(assets.map((a) => {
               if (!a || typeof a.id !== 'string' || !WANT.test(a.id) || !okPath(a.path)) return null;
@@ -731,6 +766,10 @@
     // or setTeam) rolls as 'p' + N, so two seats on the same seed and kill get different streams; solo (no seat yet) stays 'p0' = today's seat-0 stream.
     // setGearPlayer (test hook) overrides it.
     let gearPlayerSet = null; let gearTeam = opts.team || null;
+    saveSeat = () => { // beta S-04: same seat rule as gearPlayerId, but solo (no team) is -1 so solo saves never get seatPos
+      const tm = gearTeam || arena.worldTeam || null; let st = -1; try { st = tm && tm.ok !== false ? Number(tm.seat) : -1; } catch (e) { st = -1; }
+      return Number.isInteger(st) && st >= 0 && st < 4 ? st : -1;
+    };
     function gearPlayerId() {
       if (gearPlayerSet !== null) return gearPlayerSet;
       const tm = gearTeam || arena.worldTeam || null; let st = -1; try { st = tm && tm.ok !== false ? Number(tm.seat) : -1; } catch (e) { st = -1; }
@@ -1803,9 +1842,10 @@
       el.appendChild(buy);
       el.appendChild(mk('b', 'nx-st-sub', 'Sell back (T1-T3)'));
       const back = mk('div', 'nx-row'); back.id = 'rw-nx-sell'; let any = false;
+      const eqd = new Set(Object.keys(sv.eq || {}).map((k) => sv.eq[k])); // G-03 (b02-14): the equipped piece says so in the Sell-back list
       sv.items.forEach((it) => {
         const info = arena.vendorBuyBackInfo(it.n); if (!info) return; any = true;
-        const def = typeof RM_ITEM_BY_ID !== 'undefined' && RM_ITEM_BY_ID[it.id] ? RM_ITEM_BY_ID[it.id].name : it.id;
+        const def = (typeof RM_ITEM_BY_ID !== 'undefined' && RM_ITEM_BY_ID[it.id] ? RM_ITEM_BY_ID[it.id].name : it.id) + (eqd.has(it.n) ? ' (equipped)' : '');
         if (nxStallAsk === it.n) {
           const q = mk('span', 'nx-st-q', 'Sell ' + def + ' T' + it.t + ' back for ' + info.dust + ' dust?'); back.appendChild(q);
           const y = nxStallBtn('Confirm +' + info.dust + ' dust', 'Confirm: sell ' + def + ' back for ' + info.dust + ' dust', () => { nxStallAsk = 0; arena.vendorSellBack(it.n); nxStallRender(); }); y.dataset.vyes = String(it.n); back.appendChild(y);
@@ -1817,6 +1857,10 @@
       });
       if (!any) back.appendChild(mk('span', 'nx-st-note', 'Nothing to sell back. Tier 1 to 3 gear can be sold here.'));
       el.appendChild(back);
+      // G-03 (b02-14): after every stall re-render Buy / Sell back / Confirm are inert for 300 ms, so a double-tap buys (or sells) once
+      const armed = Array.from(el.querySelectorAll('button[data-vbuy], button[data-vsell], button[data-vyes]')).filter((b) => !b.disabled);
+      armed.forEach((b) => { b.disabled = true; b.dataset.arm = '1'; });
+      setTimeout(() => armed.forEach((b) => { if (b.isConnected && b.dataset.arm) { b.disabled = false; delete b.dataset.arm; } }), 300);
     }
     function nxStallOpen() { nxBuild(); if (!nxStallOn()) return false; nxStallAsk = 0; nxDom.board.classList.add('hidden'); nxStallRender(); nxDom.stall.classList.remove('hidden'); return true; }
     // PLAYTEST-REVIEW-3 #7: Shop and Forge open over the Nexus (the plaza closes underneath) and closing them returns to the Nexus stall.
@@ -1961,8 +2005,15 @@
       nxRaf = 0; nxNearI = null;
       document.body.classList.remove('nx-walking');
     }
+    // G-23 (b03-01): the Nexus never opens (and so never pauses the arena) mid Trial of Six or while a world boss is awake within its leash
+    // (bossLive is cleared when you walk 40 tiles away). Used by Enter, the button and the prompt.
+    function nexusAllowed() {
+      if (rush.on && (rush.phase === 'fight' || rush.phase === 'rest')) return false;
+      for (let i = 0; i < bossLive.length; i++) if (bossLive[i] && bossLive[i].active) return false;
+      return true;
+    }
     function nexusOpen() {
-      if (!NX_ON || !nxSite || nxOpen || leaving || !arena.active || arena.state !== 'play' || arena.paused) return false;
+      if (!NX_ON || !nxSite || nxOpen || leaving || !arena.active || arena.state !== 'play' || arena.paused || !nexusAllowed()) return false;
       nxBuild(); nxEnterTile = { x: Math.floor(arena.player.x / TILE), y: Math.floor(arena.player.y / TILE) };
       nxOpen = true; arena.paused = true; savePos(true);
       nxBtn.classList.add('hidden'); portalBtn.classList.add('hidden'); siteBtn.classList.add('hidden'); if (typeof lairBtn !== 'undefined') { lairBtn.classList.add('hidden'); lairTxt = ''; }
@@ -1984,7 +2035,7 @@
         if ((k === 'e' || k === 'shift' || ((k === 'enter' || k === ' ') && !onBtn)) && nxNearI && !ev.repeat) { ev.preventDefault(); ev.stopImmediatePropagation(); nxAct(); return; }
         if (/^(e|q|r|f|b|i|k|v|p|shift)$/.test(k) || (k === ' ' && !onBtn)) { ev.preventDefault(); ev.stopImmediatePropagation(); return; }
       }
-      if (ev.key === 'Enter' && !nxOpen && nxNear && promptFor < 0 && !siteFor && arena.active && !arena.paused && arena.state === 'play') { ev.preventDefault(); nexusOpen(); }
+      if (ev.key === 'Enter' && !nxOpen && nxNear && promptFor < 0 && !siteFor && arena.active && !arena.paused && arena.state === 'play' && nexusAllowed()) { ev.preventDefault(); nexusOpen(); } // G-23: blocked = Enter stays a fire key
     }, true);
     nxBtn.addEventListener('click', () => nexusOpen());
     function nexusTick() {
@@ -1992,7 +2043,8 @@
       const p = arena.player; const near = arena.state === 'play' && !arena.paused && (p.x - nxSite.x) ** 2 + (p.y - nxSite.y) ** 2 < 48 * 48;
       nxNear = near;
       const show = near && promptFor < 0 && !siteFor;
-      if (show) { const t = 'Visit the Nexus' + (isCoarse() ? '' : ' (Enter)'); if (nxBtn.textContent !== t) nxBtn.textContent = t; }
+      const ok = nexusAllowed(); // G-23: while a fight is on the prompt says so and the button is disabled
+      if (show) { const t = ok ? 'Visit the Nexus' + (isCoarse() ? '' : ' (Enter)') : 'Finish the fight first'; if (nxBtn.textContent !== t) nxBtn.textContent = t; if (nxBtn.disabled !== !ok) nxBtn.disabled = !ok; }
       nxBtn.classList.toggle('hidden', !show);
     }
     function drawNexusPortal(g, tt, reduced) {
