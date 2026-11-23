@@ -136,6 +136,28 @@ async function open(browser, viewport, touch, qs) {
       return { px: Object.keys(s.textures.list).filter((k) => /^ffpx_/.test(k)).length, keys: (s.ffSpecimens || []).slice(0, 5).map((f) => f.sprite.texture.key) };
     });
     check('?pixelize=0: no ffpx_ textures, the SVG art stays', r.px === 0 && r.keys.length > 0 && r.keys.every((k) => /^ff_/.test(k)), JSON.stringify(r));
+    // Shared Settings panel (mm-settings.js): a More entry opens it, the Town stops acting behind it, changes reach the Town live.
+    const st = await p.page.evaluate(async () => {
+      const s = window.__g.scene.getScene('Town');
+      const btn = document.getElementById('town-settings-btn');
+      if (!btn) return { btn: false };
+      btn.click();
+      await new Promise((r) => setTimeout(r, 100));
+      const dlg = document.getElementById('mmset');
+      const open = !!dlg && !dlg.hidden;
+      const blocked = !s.canAct();
+      const before = document.body.classList.contains('a11y-reduce-motion');
+      MMSettings.set(localStorage, 'reduce-motion', true);
+      window.dispatchEvent(new CustomEvent('mm-settings-change', { detail: { id: 'reduce-motion', value: true } }));
+      const after = document.body.classList.contains('a11y-reduce-motion');
+      MMSettings.set(localStorage, 'reduce-motion', false);
+      window.dispatchEvent(new CustomEvent('mm-settings-change', { detail: { id: 'reduce-motion', value: false } }));
+      s.sharedSettings.close();
+      return { btn: true, inMore: !!btn.closest('#settings-section'), open, blocked, before, after, actsAgain: s.canAct() };
+    });
+    check('settings: a "Settings" entry sits in the More section', st.btn && st.inMore, JSON.stringify(st));
+    check('settings: it opens the shared panel and the Town does not act behind it', st.open && st.blocked && st.actsAgain, JSON.stringify(st));
+    check('settings: reduced motion from the panel reaches the Town live', !st.before && st.after, JSON.stringify(st));
     check('?pixelize=0: 0 console errors', p.errors.length === 0, p.errors.slice(0, 3).join(' | '));
     await p.ctx.close();
   }

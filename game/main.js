@@ -1563,6 +1563,7 @@ class TownScene extends Phaser.Scene {
     this.setupLoginStreak();
     this.setupSfxToggle();
     this.setupMusicToggle();
+    this.setupSharedSettings();
     this.setupReduceMotionToggle();
     this.setupPhotoMode();
     this.setupFishHint();
@@ -2444,7 +2445,7 @@ class TownScene extends Phaser.Scene {
   // so chat/overlay state is respected no matter which input triggered it
   // (keyboard, on-screen button, or shake).
   canAct() {
-    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen && !this.mapOpen && !this.museumOpen && !this.workbenchOpen && !this.mailboxOpen && !this.homeOpen && !this.dailiesOpen && !this.journalOpen && !this.realmMenuOpen && !this.postcardsOpen && !this.navSheetOpen(); // review N3: nothing acts behind the "Where to?" sheet
+    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen && !this.mapOpen && !this.museumOpen && !this.workbenchOpen && !this.mailboxOpen && !this.homeOpen && !this.dailiesOpen && !this.journalOpen && !this.realmMenuOpen && !this.postcardsOpen && !this.navSheetOpen() && !(this.sharedSettings && this.sharedSettings.isOpen()); // review N3: nothing acts behind the "Where to?" sheet
   }
 
   navSheetOpen() { try { return typeof MMNav !== 'undefined' && MMNav.isOpen(); } catch (e) { return false; } }
@@ -4228,6 +4229,37 @@ class TownScene extends Phaser.Scene {
       setSfxMuted(!sfxMuted);
       render();
       if (!sfxMuted) SFX.coin();
+    });
+  }
+
+  // The shared 8-bit Settings panel (shared/mm-settings.js, design/SETTINGS-WIRING.md): a "⚙️ Settings" entry in More opens it;
+  // its changes reach the Town live (sound, music, reduced motion, text size). The Town's own buttons stay as they are.
+  setupSharedSettings() {
+    const host = document.getElementById('settings-section');
+    if (!host || typeof MMSettings === 'undefined' || document.getElementById('town-settings-btn')) return;
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.id = 'town-settings-btn'; btn.textContent = '⚙️ Settings';
+    btn.title = 'Text size, motion, contrast, sound';
+    host.insertBefore(btn, host.firstChild);
+    btn.addEventListener('click', () => {
+      try {
+        if (!this.sharedSettings) this.sharedSettings = MMSettings.mount({ page: 'town', feedback: false });
+        if (this.sharedSettings) this.sharedSettings.open();
+      } catch (e) { /* panel unavailable: the Town's own buttons still work */ }
+    });
+    window.addEventListener('mm-settings-change', (e) => {
+      const d = (e && e.detail) || {};
+      try {
+        if (d.id === 'sound') { setSfxMuted(!d.value); const b = document.getElementById('sfx-toggle-btn'); if (b) { b.textContent = sfxMuted ? '🔇 Sound off' : '🔊 Sound'; b.classList.toggle('muted', sfxMuted); } }
+        if (d.id === 'music') { setMusicEnabled(!!d.value); const b = document.getElementById('music-toggle-btn'); if (b) { b.textContent = musicEnabled ? '🎵 Music on' : '🎵 Music off'; b.classList.toggle('muted', !musicEnabled); } }
+        if (['reduce-motion', 'flashes', 'low-gfx', 'text-size'].includes(d.id)) {
+          const v = MMSettings.read(window.localStorage);
+          document.body.classList.toggle('a11y-reduce-motion', !!(v['reduce-motion'] || !v.flashes || v['low-gfx']));
+          const hs = Number(v['text-size']) || 1;
+          document.body.classList.toggle('a11y-hud-scaled', hs > 1);
+          document.body.style.setProperty('--hud-scale', String(hs));
+        }
+      } catch (err) { /* a bad value never breaks the Town */ }
     });
   }
 
