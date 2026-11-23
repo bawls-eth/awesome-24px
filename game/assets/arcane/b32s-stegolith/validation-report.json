@@ -1,14 +1,14 @@
 {
   "batch": "b32s",
   "label": "stegolith",
-  "generated_utc": "2026-11-22T01:43:53.531585Z",
+  "generated_utc": "2026-11-22T21:51:53.487197Z",
   "files": 20,
   "duplicate_ids": 0,
   "blocking": {},
   "warnings": {},
   "standing_heights": {
     "stegolith/down": 84,
-    "stegolith/up": 84,
+    "stegolith/up": 92,
     "stegolith/right": 84
   },
   "status": "provisional"
