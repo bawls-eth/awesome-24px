@@ -1490,5 +1490,21 @@
   "net-hostile-presence.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "save-hostile-fuzz.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "save-compat-pages.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "save-race-tabs.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "shared-mm-save-merge.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }
