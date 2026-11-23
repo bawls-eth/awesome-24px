@@ -2,7 +2,8 @@
 // tab A finishes a great run and saves; then tab B (still holding the old save in memory) finishes a poor run and saves. Nothing tab A
 // earned may be lost: its best and its round count must still be in storage. Also the Jam assist toggle in a stale tab must not drop an
 // assist best another tab saved, and the Realm (rmMergeSave) / Town writeSave already merge on write (checked here for regressions).
-// A real bug found here is not hidden: it is printed as KNOWN-BUG every run and listed in design/bugbash/saves.md (owner lanes fix it).
+// S1/S2 (design/bugbash/saves.md) were printed here as KNOWN-BUG until the merge-on-write fix (shared/mm-save-merge.js); now real checks.
+// Also: Dash ghost, Stalk practice, Angler fun, Bug Safari save / goals / pb, Deepdelve runs.
 // OFFLINE ONLY: blockDb on the context; the arcade pages never use the database. Never chats, never writes to Firebase.
 // Run: python3 -m http.server 8440 &   BASE=http://localhost:8440/game/index.html NODE_PATH=$(npm root -g) node game/tests/save-race-tabs.test.js
 const { chromium } = require('playwright');
@@ -10,10 +11,6 @@ const { check, done, blockDb } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 const ROOT = BASE.replace(/index\.html.*$/, '');
 
-function KNOWN(name, cond, extra) {
-  if (cond) console.log('PASS ' + name + ' (was a KNOWN bug: now fixed, update bugbash/saves.md)');
-  else console.log('KNOWN-BUG ' + name + ' ' + (extra || ''));
-}
 
 // game -> how a tab plays one round with a given result. Each returns nothing; the page persists inside end().
 const ARCADE = [
@@ -97,6 +94,55 @@ const stored = (page, k) => page.evaluate((key) => JSON.parse(localStorage.getIt
     check('jam: 0 page / console errors', errors.length === 0, errors.slice(0, 3).join(' | '));
     check('jam: 0 database requests', db.count() === 0);
     await ctx.close();
+  }
+
+  // Stalk practice / Angler fun / Bug Safari: a stale tab (loaded before another tab saved) writes once; nothing the other tab
+  // saved may be lost, and a field a newer build stored is kept. "Other tab" = storage written after this tab loaded.
+  const STALE = [
+    { id: 'stalk', path: 'games/stalk/index.html?test=1&week=100&slot=0', ready: '__stalk',
+      seed: { 'pixeltown-stalk-practice-v1': { v: 1, n: 5, best: 300, rounds: 4, hasBest: true, moodBest: { usual: 300 }, futureField: 1 } },
+      act: () => { window.__stalk.practice.start(); },
+      ok: (s) => { const p = s['pixeltown-stalk-practice-v1']; return p && p.n === 6 && p.best === 300 && p.hasBest === true && p.rounds === 4 && p.moodBest.usual === 300 && p.futureField === 1; } },
+    { id: 'angler', path: 'games/angler/index.html?test=1&seed=a&date=2026-07-15', ready: '__angler',
+      seed: { 'pixeltown-angler-fun-v1': { v: 1, bestStreak: 9, bestReact: 120, streak: 3, cond: { calm: { size: 50, react: 100, n: 4 } }, futureField: 1 } },
+      act: () => { const a = window.__angler; a.tap(); a.advance(0.3); a.tap(); }, // spooked: the streak breaks and the fun save is written
+      ok: (s) => { const f = s['pixeltown-angler-fun-v1']; return f && f.bestStreak === 9 && f.bestReact === 120 && f.streak === 0 && f.cond.calm && f.cond.calm.size === 50 && f.cond.calm.react === 100 && f.cond.calm.n === 4 && f.futureField === 1; } },
+    { id: 'bugs', path: 'games/festival/bugs.html?test=1', ready: '__bugs',
+      seed: { 'pixeltown-bugs-v1': { v: 1, stars: { meadow: 3 }, best: { meadow: 5000 }, journal: { ladybug: 7 } },
+        'pixeltown-bugs-goals-v1': { v: 1, done: { meadow: ['m1'] } }, 'pixeltown-bugs-pb-v1': { v: 1, combo: { meadow: 9 }, runs: 5, mod: {}, futureField: 1 } },
+      act: () => { const B = window.__bugs; B.start('meadow', { seed: 'race-1', empty: true }); B.step(91); },
+      ok: (s) => { const b = s['pixeltown-bugs-v1'], g = s['pixeltown-bugs-goals-v1'], p = s['pixeltown-bugs-pb-v1'];
+        return b && b.stars.meadow === 3 && b.best.meadow === 5000 && b.journal.ladybug === 7 && g && g.done.meadow.indexOf('m1') >= 0 && p && p.runs === 6 && p.combo.meadow === 9 && p.futureField === 1; } }
+  ];
+  for (const g of STALE) {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const db = await blockDb(ctx);
+    const errors = [];
+    await ctx.addInitScript(() => { try { localStorage.setItem('pixeltown-bugs-hint-v1', '1'); } catch (e) { /* ignore */ } });
+    const p = await tab(ctx, g.path, errors);
+    await p.waitForFunction((h) => !!window[h], g.ready, { timeout: 15000 }).catch(() => {});
+    await p.evaluate((seed) => { Object.keys(seed).forEach((k) => localStorage.setItem(k, JSON.stringify(seed[k]))); }, g.seed); // another tab saved
+    let ran = true;
+    try { await p.evaluate('(' + g.act.toString() + ')()'); } catch (e) { ran = false; errors.push('act: ' + e.message); }
+    const all = await p.evaluate((keys) => { const o = {}; keys.forEach((k) => { try { o[k] = JSON.parse(localStorage.getItem(k)); } catch (e) { o[k] = null; } }); return o; }, Object.keys(g.seed));
+    check(`${g.id}: a stale tab's write keeps every best / count / goal another tab saved, and unknown fields`, ran && g.ok(all), JSON.stringify(all));
+    check(`${g.id}: 0 page / console errors`, errors.length === 0, errors.slice(0, 3).join(' | '));
+    check(`${g.id}: 0 database requests`, db.count() === 0);
+    await ctx.close();
+  }
+
+  // Deepdelve runs (MMDDRun): both tabs load, both finish a dive (the page re-reads before finish), nothing is lost.
+  {
+    const R = require('../games/deepdelve/dd-run.js');
+    const mem = {}; const st = { getItem: (k) => (k in mem ? mem[k] : null), setItem: (k, v) => { mem[k] = String(v); } };
+    mem[R.KEY] = JSON.stringify({ v: 1, runs: 0, safe: 0, best: { score: 0, depth: 0, ores: 0, combo: 0 }, futureField: 1 });
+    const staleA = R.load(st), staleB = R.load(st);
+    staleA.runs = 3; staleA.best.score = 500; staleA.best.depth = 20; R.save(st, staleA);
+    staleB.runs = 1; staleB.best.score = 90; staleB.best.depth = 4; R.save(st, staleB);
+    const dd = JSON.parse(mem[R.KEY]);
+    check('deepdelve: MMDDRun.save from a stale tab never lowers a best or the dive count, keeps unknown fields', dd.best.score === 500 && dd.best.depth === 20 && dd.runs === 3 && dd.futureField === 1, JSON.stringify(dd));
+    const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'games', 'deepdelve', 'deepdelve.js'), 'utf8');
+    check('deepdelve.js re-reads the runs record right before finishing a dive', /runRec = RUNS\.load\(localStorage\);[^\n]*\n\s*const sum = RUNS\.finish\(runRec/.test(src));
   }
 
   // Town writeSave merges a fresh read on every write (main.js): a field another tab wrote between two writes is kept.
