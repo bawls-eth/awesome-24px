@@ -222,14 +222,34 @@ function playNotes(notes, type = 'sine', volume = 0.12) {
   });
 }
 
+// 8-bit layer: when shared/mm-chip.js + shared/sfx.js are loaded, every Town cue goes through one MMSfx instance on the same
+// AudioContext (chiptune voices, see game/design/CHIP-AUDIO.md). The Town's own sfxMuted / musicEnabled stay the only switches:
+// the instance gets no storage, so it never reads or writes a second mute key. Without MMChip the old blips below still play.
+let townSfx = null;
+function townLowGfx() {
+  try { const p = (typeof MMAccess !== 'undefined' && MMAccess.prefs) ? MMAccess.prefs.load(window.localStorage) : null; return !!(p && p.lowGfx === true); } catch (e) { return false; }
+}
+function getTownSfx() {
+  if (townSfx || typeof MMSfx === 'undefined' || typeof MMChip === 'undefined') return townSfx;
+  try { townSfx = MMSfx.create({ ctxFactory: getAudioCtx, lowGfx: townLowGfx() }); } catch (e) { townSfx = null; }
+  return townSfx;
+}
+function townCue(name, fallback) {
+  return () => {
+    if (sfxMuted) return;
+    const s = getTownSfx();
+    if (s && getAudioCtx()) { try { if (s.play(name)) return; } catch (e) { /* fall back */ } }
+    fallback();
+  };
+}
 const SFX = {
-  catch: () => playNotes([[740, 0.08, 0], [1175, 0.1, 0.06]], 'sine', 0.12),
-  coin: () => playNotes([[988, 0.09, 0]], 'triangle', 0.1),
-  sell: () => playNotes([[523, 0.08, 0], [784, 0.08, 0.05], [1047, 0.12, 0.1]], 'triangle', 0.11),
-  achievement: () => playNotes([[523, 0.1, 0], [659, 0.1, 0.09], [784, 0.1, 0.18], [1047, 0.18, 0.27]], 'square', 0.1),
-  deny: () => playNotes([[196, 0.16, 0]], 'sawtooth', 0.09),
-  pop: () => playNotes([[392, 0.05, 0], [294, 0.06, 0.04]], 'square', 0.08),
-  shutter: () => playNotes([[1800, 0.03, 0], [220, 0.05, 0.03]], 'square', 0.07),
+  catch: townCue('catch', () => playNotes([[740, 0.08, 0], [1175, 0.1, 0.06]], 'sine', 0.12)),
+  coin: townCue('coin', () => playNotes([[988, 0.09, 0]], 'triangle', 0.1)),
+  sell: townCue('sell', () => playNotes([[523, 0.08, 0], [784, 0.08, 0.05], [1047, 0.12, 0.1]], 'triangle', 0.11)),
+  achievement: townCue('achievement', () => playNotes([[523, 0.1, 0], [659, 0.1, 0.09], [784, 0.1, 0.18], [1047, 0.18, 0.27]], 'square', 0.1)),
+  deny: townCue('deny', () => playNotes([[196, 0.16, 0]], 'sawtooth', 0.09)),
+  pop: townCue('pop', () => playNotes([[392, 0.05, 0], [294, 0.06, 0.04]], 'square', 0.08)),
+  shutter: townCue('shutter', () => playNotes([[1800, 0.03, 0], [220, 0.05, 0.03]], 'square', 0.07)),
 };
 
 function setSfxMuted(muted) {
@@ -256,6 +276,9 @@ let musicChordTimer = null;
 function startAmbientMusic() {
   const ctx = getAudioCtx();
   if (!ctx || musicNodes.length) return;
+  // 8-bit Town loop (MMChip 'town' cue) when available and not in low-graphics mode; otherwise the original chord pad.
+  const chip = getTownSfx();
+  if (chip) { try { chip.setMusic(true); if (chip.music('town')) return; } catch (e) { /* fall back to the pad */ } }
   musicChordIndex = 0;
   MUSIC_CHORDS[0].forEach((freq) => {
     const osc = ctx.createOscillator();
@@ -283,6 +306,7 @@ function advanceMusicChord() {
 
 function stopAmbientMusic() {
   const ctx = sfxCtx;
+  if (townSfx) { try { townSfx.setMusic(false); } catch (e) { /* ignore */ } }
   musicNodes.forEach(({ osc, gain }) => {
     if (ctx) gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 1);
     setTimeout(() => { try { osc.stop(); } catch (e) { /* already stopped */ } }, 1100);

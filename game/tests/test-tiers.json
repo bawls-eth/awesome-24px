@@ -655,6 +655,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "shared-mm-chip.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "site-links.test.js": {
     "class": "live",
     "tier": "full"
