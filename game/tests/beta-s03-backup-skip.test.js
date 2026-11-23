@@ -63,4 +63,16 @@ const pb = B.plan(big);
 check('[5] an oversized key is skipped, the small one restores', pb.ok === true && pb.keys.join() === 'pixeltown-jam-v1' && pb.skipped[0].key === 'pixeltown-stalk-v1');
 check('[5] the panel-collapsed special case still validated', B.plan({ format: 'pixeltown-backup', v: 2, keys: { 'pixeltown-panel-collapsed': '"1"' } }).entries['pixeltown-panel-collapsed'] === '1' && B.plan({ format: 'pixeltown-backup', v: 2, keys: { 'pixeltown-panel-collapsed': 'yes' } }).ok === false);
 check('[5] an unknown key still refuses the whole file', B.plan({ format: 'pixeltown-backup', v: 2, keys: { 'pixeltown-jam-v1': '{}', 'evil-key': '{}' } }).error === 'unknown-key');
+// QA -> PS 4: the G-25 / G-26 additive keys are part of the Backup now (cleaned, labelled), so a Backup / Restore keeps them
+{
+  const nodes = JSON.stringify({ v: 1, isles: { reef: { n: [[3, 99999], [1, 'x']], p: { berry: 5 } } } });
+  const deep = JSON.stringify({ v: 1, f: { crypt: 2, BAD: 9 } });
+  const b = B.bundle(fake({ 'pixeltown-isle-nodes-v1': nodes, 'pixeltown-deep-v1': deep }));
+  check('[keys] isle nodes + deep floors are in KNOWN and exported', B.KNOWN.indexOf('pixeltown-isle-nodes-v1') >= 0 && B.KNOWN.indexOf('pixeltown-deep-v1') >= 0 && b.keys['pixeltown-isle-nodes-v1'] === nodes && b.keys['pixeltown-deep-v1'] === deep);
+  const st = fake();
+  const r = B.restore(st, JSON.parse(JSON.stringify(b)));
+  check('[keys] they restore, cleaned (bad node entry / bad biome dropped)', r.ok && JSON.parse(st._m['pixeltown-isle-nodes-v1']).isles.reef.n.length === 1 && JSON.parse(st._m['pixeltown-deep-v1']).f.crypt === 2 && !('BAD' in JSON.parse(st._m['pixeltown-deep-v1']).f));
+  check('[keys] they have readable labels', B.labelOf('pixeltown-isle-nodes-v1') !== 'pixeltown-isle-nodes-v1' && B.labelOf('pixeltown-deep-v1') === 'deepest dungeon floors');
+  check('[keys] a non-object value is refused', B.plan({ format: 'pixeltown-backup', v: 2, keys: { 'pixeltown-deep-v1': '[1]' } }).ok === false);
+}
 done();
