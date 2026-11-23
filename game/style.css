@@ -2297,6 +2297,11 @@ body.touch-device .key-hint { display: none; }
   body.touch-device #chat-panel { right: 200px; }
   /* Short landscape: the bag bar wraps to two rows; keep it compact so it stays above the chat bar. */
   #inventory-panel { padding: 3px 8px; font-size: 11px; gap: 0 6px; line-height: 1.2; }
+  /* 8-bit pass: the 3 px borders made the bag bar and chat bar taller; give the height back in short landscape so they never touch. */
+  #inventory-panel { border-width: 2px; box-shadow: 2px 2px 0 var(--tb-ink); padding: 2px 8px; }
+  body.touch-device #chat-log { max-height: 28px; }
+  /* The 44 px Clear button floats above the bar's right end instead of adding a row to it. */
+  #chat-clear-btn { position: absolute; right: 6px; top: -48px; margin: 0; }
   /* Bottom-centre, in the free strip between the joystick and the action buttons. */
   #walkie-panel {
     top: auto;
