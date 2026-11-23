@@ -287,6 +287,10 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "lantern-intro-help.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "lantern-page.test.js": {
     "class": "browser",
     "tier": "smoke"
