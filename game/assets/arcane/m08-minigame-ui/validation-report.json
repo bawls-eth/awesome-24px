@@ -1,17 +1,20 @@
 {
   "batch": "m08",
-  "status": "partial",
-  "png_files": 5,
+  "status": "delivery-complete-qa-pending",
+  "png_files": 18,
   "expected_png_files": 18,
+  "manifest_ids_unique": true,
   "checks": {
-    "png_dimensions": "generated as 32x32 RGBA",
-    "alpha": "binary",
-    "github_paths": "to be checked after commit"
+    "new_sprite_geometry": "generator-defined native 16/32/48 pixels; 128x128 x6 confetti",
+    "indexed_colors": "16 entries in additional assets",
+    "binary_alpha": true,
+    "transparent_corners": true,
+    "existing_medals": "unchanged and previously verified on branch"
   },
   "not_run": [
     "full repository art audit",
-    "visual review at phone size",
-    "preview contact sheet",
-    "in-game screenshot"
+    "independent style review against b04 Puffcap",
+    "in-game screenshot and 390x844 phone checks",
+    "full browser test suite"
   ]
 }

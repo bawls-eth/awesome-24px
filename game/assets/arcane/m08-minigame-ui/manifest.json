@@ -1,7 +1,7 @@
 {
   "batch": "m08",
   "label": "minigame-ui",
-  "status": "partial",
+  "status": "delivery-complete-awaiting-visual-qa",
   "assets": [
     {
       "id": "medal_bronze",
@@ -71,6 +71,194 @@
       "anchor": {
         "x": 16,
         "y": 16
+      }
+    },
+    {
+      "id": "trophy_angler",
+      "category": "ui",
+      "path": "trophy_angler.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "trophy_jam",
+      "category": "ui",
+      "path": "trophy_jam.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "trophy_bugs",
+      "category": "ui",
+      "path": "trophy_bugs.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "trophy_stalk",
+      "category": "ui",
+      "path": "trophy_stalk.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "trophy_deepdelve",
+      "category": "ui",
+      "path": "trophy_deepdelve.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "trophy_pop",
+      "category": "ui",
+      "path": "trophy_pop.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "trophy_dash",
+      "category": "ui",
+      "path": "trophy_dash.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "trophy_isles",
+      "category": "ui",
+      "path": "trophy_isles.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "ui_star_full",
+      "category": "ui",
+      "path": "ui_star_full.png",
+      "frames": 1,
+      "frame_w": 16,
+      "frame_h": 16,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 8,
+        "y": 8
+      }
+    },
+    {
+      "id": "ui_star_empty",
+      "category": "ui",
+      "path": "ui_star_empty.png",
+      "frames": 1,
+      "frame_w": 16,
+      "frame_h": 16,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 8,
+        "y": 8
+      }
+    },
+    {
+      "id": "ui_new_best",
+      "category": "ui",
+      "path": "ui_new_best.png",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 16,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 24,
+        "y": 8
+      }
+    },
+    {
+      "id": "ui_result_panel",
+      "category": "ui",
+      "path": "ui_result_panel.png",
+      "frames": 1,
+      "frame_w": 48,
+      "frame_h": 48,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 24,
+        "y": 24
+      },
+      "nine_slice": {
+        "top": 6,
+        "right": 6,
+        "bottom": 6,
+        "left": 6
+      }
+    },
+    {
+      "id": "ui_confetti",
+      "category": "effect",
+      "path": "ui_confetti.png",
+      "frames": 6,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 64,
+        "y": 64
       }
     }
   ]
