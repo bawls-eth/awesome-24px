@@ -2581,7 +2581,7 @@ class RealmArena {
   _syncBoss() {
     const el = document.getElementById('realm-boss');
     if (!el) return;
-    const b = this._boss();
+    const b = this.state === 'dead' ? null : this._boss(); // b01-07: no boss bar over the 'You fell' card
     el.classList.toggle('hidden', !b);
     if (!b) return;
     const f = document.getElementById('realm-boss-fill'); if (f) f.style.width = `${Math.max(0, b.hp) / b.maxHp * 100}%`;
@@ -3402,6 +3402,7 @@ class RealmArena {
     if (this.onDeathCache) this.onDeathCache(cache);
     this.lastLoss = 0;
     this.state = 'dead';
+    this._syncBoss(); // b01-07: hide the boss bar with the fall
     this.deadT = 2.6;
     this._snd('death'); // CHIP-AUDIO: the fall jingle (MMChip voice; old sfx.js recipes skip unknown names)
     this.shake = 14;
