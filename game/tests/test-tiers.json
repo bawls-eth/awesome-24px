@@ -1540,5 +1540,13 @@
   "beta-retest-b14.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-retest-b08.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-retest-b15.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
