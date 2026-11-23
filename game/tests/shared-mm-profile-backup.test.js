@@ -89,7 +89,8 @@ const TOWN = JSON.stringify({ name: 'Ben', species: 'doge', coins: 1 });
   check('unknown pixeltown-* key rejects the whole file', !un.ok && un.error === 'unknown-key');
   const st2 = fake({ 'pixeltown-save-v1': TOWN });
   const un2 = B.restore(st2, { format: 'pixeltown-backup', v: 2, keys: { 'pixeltown-save-v1': '{"name":"x"}', 'pixeltown-mm-v1': 'not json' } });
-  check('one invalid value rejects everything (town save untouched)', !un2.ok && st2._m['pixeltown-save-v1'] === TOWN);
+  // beta S-03 (b14-04) changed this: one damaged value is skipped and named, the rest restores (it used to reject the whole file).
+  check('one invalid value is skipped and named, the valid town save restores', un2.ok && st2._m['pixeltown-save-v1'] === '{"name":"x"}' && !('pixeltown-mm-v1' in st2._m) && un2.skipped.length === 1 && un2.skipped[0].key === 'pixeltown-mm-v1');
   const st3 = fake();
   const dirty = { v: 1, heroes: [{ id: 'a', name: 'X', cls: 'zzz', level: 999, evil: 1 }], stash: 'no', fame: -5 };
   const rc = B.restore(st3, { format: 'pixeltown-backup', v: 2, keys: { 'pixeltown-mm-v1': JSON.stringify(dirty), 'pixeltown-angler-v1': JSON.stringify({ caught: { constructor: { n: 5 }, bluegill: { n: 2, best: 4 } }, bosses: { constructor: true } }), 'pixeltown-hub-v1': JSON.stringify({ at: 'constructor', keys: 3 }), 'pixeltown-bugs-v1': JSON.stringify({ stars: { meadow: 99 }, junk: 1 }) } });
@@ -107,10 +108,11 @@ const TOWN = JSON.stringify({ name: 'Ben', species: 'doge', coins: 1 });
   check('3rd write throws -> ok:false with message', !bad.ok && bad.error === 'write-failed' && typeof bad.message === 'string' && bad.message.length > 10);
   check('rolled back: originals restored, new keys removed', st4._m['pixeltown-save-v1'] === TOWN && st4._m['pixeltown-mm-v1'] === orig['pixeltown-mm-v1'] && !('pixeltown-angler-v1' in st4._m) && !('pixeltown-bugs-v1' in st4._m), JSON.stringify(st4._m));
 }
-// corrupt mm-v1 is exported raw
+// corrupt mm-v1: beta S-03 (b14-04) changed this from "exported raw" to "left out of the export and named in warnings"
 {
   const st = fake({ 'pixeltown-mm-v1': '{{corrupt' });
-  check('bundle() keeps raw corrupt value', B.bundle(st).keys['pixeltown-mm-v1'] === '{{corrupt');
+  const bu = B.bundle(st);
+  check('bundle() leaves a corrupt value out and warns about it', !('pixeltown-mm-v1' in bu.keys) && bu.warnings.length === 1 && bu.warnings[0].key === 'pixeltown-mm-v1');
 }
 // full-roster legacy import is retryable
 {

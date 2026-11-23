@@ -1556,5 +1556,9 @@
   "beta-s04-coop-save.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-s03-backup-skip.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }

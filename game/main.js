@@ -4591,7 +4591,9 @@ class TownScene extends Phaser.Scene {
       try { plan = B.plan(text); } catch (e) { plan = { ok: false }; }
       if (!plan || !plan.ok) { this.addChatLine({ system: true, text: ((plan && plan.message) || 'That backup file is damaged.') + ' Nothing was changed.' }); return; }
       const lines = plan.keys.map((k) => '- ' + B.labelOf(k));
-      const ok = window.confirm('Restore this backup? It will replace these saves on this device:\n' + lines.join('\n') + '\n\nNothing changes if you cancel.');
+      // beta S-03: damaged entries are skipped by MMBackup.plan (the town save first); say so plainly, they stay as they are here
+      const bad = Array.isArray(plan.skipped) && plan.skipped.length ? '\n\nCannot restore (damaged in the file), kept as they are on this device:\n' + plan.skipped.map((x) => '- ' + x.label).join('\n') : '';
+      const ok = window.confirm('Restore this backup? It will replace these saves on this device:\n' + lines.join('\n') + bad + '\n\nNothing changes if you cancel.');
       if (!ok) { this.addChatLine({ system: true, text: 'Restore cancelled. Nothing was changed.' }); return; }
       this.commitRestore(() => { const r = B.apply(localStorage, plan); return r && r.ok ? true : ((r && r.message) || 'Restore failed, nothing was changed.'); });
     });

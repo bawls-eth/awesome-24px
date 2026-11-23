@@ -58,6 +58,7 @@ Run each alone: `BASE=http://localhost:<port>/game/index.html /tmp/bt.sh node ga
 - Re-verify: DevTools Network, filter `.json`, load `games/mad-maze/index.html?mode=world`: INDEX.json appears once.
 
 ## S-04 Co-op seats merge the realm save (b14-06, P1)
+- Commit: b1dd500.
 - realm-world.js (slot 1; functions touched): `cleanSave` (accepts the additive `seatPos`, max 4 cleaned entries), `writeSave` (now
   re-reads storage and calls the new `mergeStored`), new module `saveSeat` (set in `create()` next to `gearTeam`, same seat rule as
   gearPlayerId but -1 solo). Merge (same seed only): discovered fog = bitwise OR, stats = max, chests = union, shrineAt = latest,
@@ -68,3 +69,22 @@ Run each alone: `BASE=http://localhost:<port>/game/index.html /tmp/bt.sh node ga
   world-safereturn, world-stash, gear-save-tolerance, world-page, shared-mm-fog green.
 - Re-verify: open `games/mad-maze/index.html?mode=world&party=local&seed=x&seat=0` and `...&seat=1` in two tabs, explore in tab 0, then
   walk in tab 1 for a few seconds, reload tab 0: its minimap still shows everything tab 0 uncovered.
+
+## S-03 Backup tolerates one bad key (b14-04, P1)
+- mm-backup.js (functions touched): new `cleanValue`, `checkValue`, `ownerPresent`; `plan` skips a damaged key into `skipped`
+  ([{key, label, why}], town save first) and sets `message` ("Will restore: ... Cannot restore (damaged in the file): ..."); it fails
+  ('bad-value', nothing changed) only when no key is restorable. An unknown key still refuses the whole file (unchanged). `bundle`
+  leaves a value its cleaner refuses out of the file and lists it in a NON-enumerable `warnings` array (never written to the file).
+  `restore` passes `skipped` / `message` through. Size limits and the panel-collapsed special case unchanged.
+- Town (main.js, my own `restoreBundle`): the confirm adds "Cannot restore (damaged in the file), kept as they are on this device: ...".
+- Existing test changed because the asserted behaviour changed (named here as the rules ask): `shared-mm-profile-backup.test.js`
+  "one invalid value rejects everything" -> "one invalid value is skipped and named, the valid town save restores";
+  "bundle() keeps raw corrupt value" -> "bundle() leaves a corrupt value out and warns about it".
+- Test: `game/tests/beta-s03-backup-skip.test.js` (node, smoke; fixtures from save-compat-fixtures.js). shared-mm-backup,
+  shared-mm-profile-backup, save-hostile-fuzz, shared-bugbash-fuzz, lantern-backup-restore, lantern-backup-reminder, gear-default-on green.
+- OPEN (lantern.js slot 2, after Gameplay G-05): the Lantern UI does not show the new data yet. Exact patch for that slot:
+  `restoreFile`: `if (plan && plan.ok) showConfirm(plan, plan.skipped && plan.skipped.length ? plan.message : '');` and in the Backup
+  click handler (lantern.js ~248) build the bundle once, `var b = B.bundle(localStorage)`, export `JSON.stringify(b, null, 1)` and, when
+  `b.warnings.length`, `say(b.warnings.map(function (w) { return w.label; }).join(', ') + ' is damaged on this device and was left out.', true)`.
+- Re-verify: in DevTools set `localStorage['pixeltown-gift-v1'] = '{bad'`, Backup in the Lantern, Restore that file on a clean profile:
+  everything but the gift restores (the Town Restore confirm lists the gift under "Cannot restore").
