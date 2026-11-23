@@ -1,0 +1,593 @@
+{
+  "batch": "m03",
+  "label": "bug-safari",
+  "assets": [
+    {
+      "id": "bug_ladybug_idle",
+      "path": "bugs/ladybug/bug_ladybug_idle.png",
+      "category": "creature",
+      "species": "ladybug",
+      "action": "idle",
+      "frames": 2,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 4,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "bug_ladybug_move",
+      "path": "bugs/ladybug/bug_ladybug_move.png",
+      "category": "creature",
+      "species": "ladybug",
+      "action": "move",
+      "frames": 4,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "bug_ladybug_icon",
+      "path": "bugs/ladybug/bug_ladybug_icon.png",
+      "category": "ui",
+      "species": "ladybug",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "bug_butterfly_idle",
+      "path": "bugs/butterfly/bug_butterfly_idle.png",
+      "category": "creature",
+      "species": "butterfly",
+      "action": "idle",
+      "frames": 2,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 4,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "bug_butterfly_move",
+      "path": "bugs/butterfly/bug_butterfly_move.png",
+      "category": "creature",
+      "species": "butterfly",
+      "action": "move",
+      "frames": 4,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "bug_butterfly_icon",
+      "path": "bugs/butterfly/bug_butterfly_icon.png",
+      "category": "ui",
+      "species": "butterfly",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "bug_beetle_idle",
+      "path": "bugs/beetle/bug_beetle_idle.png",
+      "category": "creature",
+      "species": "beetle",
+      "action": "idle",
+      "frames": 2,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 4,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "bug_beetle_move",
+      "path": "bugs/beetle/bug_beetle_move.png",
+      "category": "creature",
+      "species": "beetle",
+      "action": "move",
+      "frames": 4,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "bug_beetle_icon",
+      "path": "bugs/beetle/bug_beetle_icon.png",
+      "category": "ui",
+      "species": "beetle",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "bug_cricket_idle",
+      "path": "bugs/cricket/bug_cricket_idle.png",
+      "category": "creature",
+      "species": "cricket",
+      "action": "idle",
+      "frames": 2,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 4,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "bug_cricket_move",
+      "path": "bugs/cricket/bug_cricket_move.png",
+      "category": "creature",
+      "species": "cricket",
+      "action": "move",
+      "frames": 4,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "bug_cricket_icon",
+      "path": "bugs/cricket/bug_cricket_icon.png",
+      "category": "ui",
+      "species": "cricket",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "bug_antlion_idle",
+      "path": "bugs/antlion/bug_antlion_idle.png",
+      "category": "creature",
+      "species": "antlion",
+      "action": "idle",
+      "frames": 2,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 4,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "bug_antlion_move",
+      "path": "bugs/antlion/bug_antlion_move.png",
+      "category": "creature",
+      "species": "antlion",
+      "action": "move",
+      "frames": 4,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "bug_antlion_icon",
+      "path": "bugs/antlion/bug_antlion_icon.png",
+      "category": "ui",
+      "species": "antlion",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "bug_goldbeetle_idle",
+      "path": "bugs/goldbeetle/bug_goldbeetle_idle.png",
+      "category": "creature",
+      "species": "goldbeetle",
+      "action": "idle",
+      "frames": 2,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 4,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "bug_goldbeetle_move",
+      "path": "bugs/goldbeetle/bug_goldbeetle_move.png",
+      "category": "creature",
+      "species": "goldbeetle",
+      "action": "move",
+      "frames": 4,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "bug_goldbeetle_icon",
+      "path": "bugs/goldbeetle/bug_goldbeetle_icon.png",
+      "category": "ui",
+      "species": "goldbeetle",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "bug_moonwing_idle",
+      "path": "bugs/moonwing/bug_moonwing_idle.png",
+      "category": "creature",
+      "species": "moonwing",
+      "action": "idle",
+      "frames": 2,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 4,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "bug_moonwing_move",
+      "path": "bugs/moonwing/bug_moonwing_move.png",
+      "category": "creature",
+      "species": "moonwing",
+      "action": "move",
+      "frames": 4,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "bug_moonwing_icon",
+      "path": "bugs/moonwing/bug_moonwing_icon.png",
+      "category": "ui",
+      "species": "moonwing",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "bug_firefly_idle",
+      "path": "bugs/firefly/bug_firefly_idle.png",
+      "category": "creature",
+      "species": "firefly",
+      "action": "idle",
+      "frames": 2,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 4,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "bug_firefly_move",
+      "path": "bugs/firefly/bug_firefly_move.png",
+      "category": "creature",
+      "species": "firefly",
+      "action": "move",
+      "frames": 4,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "bug_firefly_icon",
+      "path": "bugs/firefly/bug_firefly_icon.png",
+      "category": "ui",
+      "species": "firefly",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "bug_glowmoth_idle",
+      "path": "bugs/glowmoth/bug_glowmoth_idle.png",
+      "category": "creature",
+      "species": "glowmoth",
+      "action": "idle",
+      "frames": 2,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 4,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "bug_glowmoth_move",
+      "path": "bugs/glowmoth/bug_glowmoth_move.png",
+      "category": "creature",
+      "species": "glowmoth",
+      "action": "move",
+      "frames": 4,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 10,
+      "loop": true,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      },
+      "anchor_kind": "body_center"
+    },
+    {
+      "id": "bug_glowmoth_icon",
+      "path": "bugs/glowmoth/bug_glowmoth_icon.png",
+      "category": "ui",
+      "species": "glowmoth",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "ui_bug_net",
+      "path": "ui/ui_bug_net.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "ui_bug_net_swing",
+      "path": "ui/ui_bug_net_swing.png",
+      "category": "ui",
+      "frames": 4,
+      "frame_w": 128,
+      "frame_h": 128,
+      "fps": 12,
+      "loop": false,
+      "anchor": {
+        "x": 64,
+        "y": 64
+      }
+    },
+    {
+      "id": "ui_bug_jar_empty",
+      "path": "ui/ui_bug_jar_empty.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "ui_bug_jar_full",
+      "path": "ui/ui_bug_jar_full.png",
+      "category": "ui",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "bug_arena_meadow",
+      "path": "arenas/bug_arena_meadow.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 96,
+      "frame_h": 64,
+      "anchor": {
+        "x": 48,
+        "y": 32
+      }
+    },
+    {
+      "id": "bug_arena_orchard",
+      "path": "arenas/bug_arena_orchard.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 96,
+      "frame_h": 64,
+      "anchor": {
+        "x": 48,
+        "y": 32
+      }
+    },
+    {
+      "id": "bug_arena_pond_edge",
+      "path": "arenas/bug_arena_pond_edge.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 96,
+      "frame_h": 64,
+      "anchor": {
+        "x": 48,
+        "y": 32
+      }
+    },
+    {
+      "id": "bug_arena_forest",
+      "path": "arenas/bug_arena_forest.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 96,
+      "frame_h": 64,
+      "anchor": {
+        "x": 48,
+        "y": 32
+      }
+    },
+    {
+      "id": "bug_arena_dunes",
+      "path": "arenas/bug_arena_dunes.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 96,
+      "frame_h": 64,
+      "anchor": {
+        "x": 48,
+        "y": 32
+      }
+    },
+    {
+      "id": "bug_arena_cliffs",
+      "path": "arenas/bug_arena_cliffs.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 96,
+      "frame_h": 64,
+      "anchor": {
+        "x": 48,
+        "y": 32
+      }
+    },
+    {
+      "id": "bug_arena_marsh",
+      "path": "arenas/bug_arena_marsh.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 96,
+      "frame_h": 64,
+      "anchor": {
+        "x": 48,
+        "y": 32
+      }
+    },
+    {
+      "id": "bug_arena_lantern_glade",
+      "path": "arenas/bug_arena_lantern_glade.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 96,
+      "frame_h": 64,
+      "anchor": {
+        "x": 48,
+        "y": 32
+      }
+    },
+    {
+      "id": "bug_arena_night_glade",
+      "path": "arenas/bug_arena_night_glade.png",
+      "category": "tile",
+      "frames": 1,
+      "frame_w": 96,
+      "frame_h": 64,
+      "anchor": {
+        "x": 48,
+        "y": 32
+      }
+    }
+  ]
+}
