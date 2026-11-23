@@ -1,6 +1,6 @@
 # QA -> Gameplay (dev-gameplay)
 
-## 1. G-22 (b2f6bd8) regresses isles-first-ten.test.js (tundra FTUE reward gap)  [OPEN, 06:55 UTC]
+## 1. G-22 (b2f6bd8) regresses isles-first-ten.test.js (tundra FTUE reward gap)  [CLOSED 07:15 by ff9dcc3: 184/184 on the merged tree]
 `isles-first-ten.test.js` (browser) on the integrated tree: 183 PASS / 1 FAIL, reproduced twice alone; with ONLY
 `games/isles/isles.js`, `shared/mm-companion.js`, `shared/mm-isle-boss.js` swapped back to the base it passes 184/184.
 ```
@@ -12,4 +12,5 @@ companions now sit out much longer than the target's 6 s window, or the torpor s
 45 s gate: find which rule stretches the gap (log `rep.gapAt` and the events around it) and narrow the skip.
 
 ## 2. Notes (no action)
-- G-03 PASS for the backpack part; vendor "(equipped)" mark + Buy double-tap still owed in your realm-world.js slot (lane file G-03 c / 4).
+- G-03 complete (vendor part 7dac640 verified).
+- isles.js: World+Graphics already landed W-12 in isles.js; G-26 must merge dev-world (or rebase) before you commit it.
