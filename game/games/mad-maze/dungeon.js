@@ -694,12 +694,16 @@
     api.mapDrawn = [];
     function toggleMap(force) { const hide = force === undefined ? !mapEl.classList.contains('hidden') : !force; mapEl.classList.toggle('hidden', hide); }
     mapBtn.addEventListener('click', () => toggleMap());
-    // Tab = map only while the play field has focus (Shift+Tab always leaves it), so keyboard players can still Tab through the page from the
-    // top (a11y sweep: the dungeon had zero tab stops). M toggles the map anywhere (not while typing).
+    // Tab = map (as before) from the page, the Play stop or the play field; Shift+Tab always moves focus. From the page itself the Tab also
+    // reaches the Play stop (a11y sweep: the dungeon had zero tab stops). M toggles the map anywhere (not while typing).
     window.addEventListener('keydown', (e) => {
       if (finished) return;
       const tgt = e.target; const typing = !!(tgt && (tgt.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(tgt.tagName || '')));
-      if (e.key === 'Tab' && !e.shiftKey && tgt && tgt.id === 'realm-canvas-wrap') { e.preventDefault(); if (!e.repeat) toggleMap(); }
+      const field = !tgt || tgt === document.body || tgt === document.documentElement; // nothing focused yet
+      if (e.key === 'Tab' && !e.shiftKey && (field || (tgt && (tgt.id === 'realm-canvas-wrap' || tgt.id === 'realm-play-focus')))) {
+        if (!e.repeat) toggleMap();
+        if (!field) e.preventDefault(); // from the page itself the Tab also moves on to the Play stop, so keyboard players are never stuck
+      }
       else if ((e.key === 'm' || e.key === 'M') && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) { if (!e.repeat) toggleMap(); }
     }); // once the summary is up Tab goes back to normal focus movement
     function drawMap() {
