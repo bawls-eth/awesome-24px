@@ -1568,5 +1568,9 @@
   "beta-w16-dungeon-hud.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-w10-echo-labels.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

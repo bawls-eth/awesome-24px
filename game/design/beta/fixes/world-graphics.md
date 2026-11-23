@@ -36,3 +36,9 @@ Each entry: item, files, test, how to retest by hand. Screenshots in `fixes/img/
 - Test: `tests/beta-w16-dungeon-hud.test.js` (S door and N door tile centres hit the canvas; ability bar outside the room; room >= 540 px with 17:13 kept; hero not under the boss bar; phone boss bar vs mini-map / mutator chip / room top; sticks + pad <= 25% of the room). 4 asserts fail on the old CSS. `dungeon-polish`, `mad-maze-dungeon`, `dungeon-narrow`, `dungeon-mutators`, `realm-phone-layout` green.
 - Left as is: the room-entry banner briefly covers the phone boss bar (dungeon-polish pins the banner above the room); b03-05 coverage measured at ~11% of the room.
 - Before / after: `img/w16-{desk-boss,phone-boss}-{before,after}.jpg`.
+
+## W-10 Echo Garden labels (b09-03, b12-12) - fixed
+- Files: `games/echo/echo.js`, `games/echo/echo-late.css`.
+- Fix: the "+N in bloom" line is a DOM line anchored just above the board (over the time bar) instead of a canvas float at the board centre; name labels moved up 8 px (clear of the selection frame's bottom bar); the "wilt" float starts 32 px lower so its rise stays inside the card; the board width is capped by the viewport height so the 2x2 grid fits 1280x720. `__echo.counts().floats` counts the DOM line too (echo-page "juice" assert unchanged and green); new hooks `labels()`, `widget()`, `floatRects()`, `bloomEl()`.
+- Test: `tests/beta-w10-echo-labels.test.js` (390x844 and 1280x720). `echo-page`, `echo-bugbash`, `minigame-quality-gate` green.
+- Before / after: `img/w10-echo-{before,after}.jpg`.
