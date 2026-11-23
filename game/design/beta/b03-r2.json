@@ -1,0 +1,287 @@
+[
+ {
+  "viewport": "1280x720",
+  "clip": null,
+  "suspect": null,
+  "frequency": "always",
+  "id": "b03-r2-01",
+  "replays": "b03-01",
+  "status": "FIXED",
+  "severity": "P3",
+  "area": "Trial of Six",
+  "title": "G-23 verified: Enter mid Trial fight no longer opens the Nexus",
+  "steps": [
+   "Replay of b03-01 steps from b03.json exactly"
+  ],
+  "expected": "See b03-01",
+  "actual": "Trial started at the Nexus (Lv25 seed 12345), hero 20px from the portal, Enter held 12 frames: nexus.isOpen false, arena not paused, phase fight, 1 shot fired. Button reads \"Finish the fight first\" and is disabled.",
+  "url": "/game/games/mad-maze/index.html",
+  "screenshots": [
+   "img/b03-r2-01.jpg"
+  ],
+  "kind": "bug"
+ },
+ {
+  "viewport": "1280x720",
+  "clip": null,
+  "suspect": null,
+  "frequency": "always",
+  "id": "b03-r2-02",
+  "replays": "b03-02",
+  "status": "FIXED",
+  "severity": "P3",
+  "area": "Dungeon doors",
+  "title": "G-24 doors verified: corner-slip works to 14 px; 18 px off-centre (almost half a tile) still stops",
+  "steps": [
+   "Replay of b03-02 steps from b03.json exactly"
+  ],
+  "expected": "See b03-02",
+  "actual": "meadow seed 7 start room, W and E doors, hold toward the door: offsets 9 and 14 ENTERED (round 1: stuck); 18 and -18 STUCK on both doors. Only W/E open doors exist in this start room (N/S not testable here). Tolerance 14 px looks sane; noted only.",
+  "url": "/game/games/mad-maze/index.html",
+  "screenshots": [
+   "img/b03-r2-02.jpg"
+  ],
+  "kind": "improvement"
+ },
+ {
+  "viewport": "1280x720 + 390x844",
+  "clip": null,
+  "suspect": null,
+  "frequency": "always",
+  "id": "b03-r2-03",
+  "replays": "b03-03",
+  "status": "FIXED",
+  "severity": "P3",
+  "area": "Bosses / HUD",
+  "title": "Toast no longer covers the boss bar on desktop; boss bar now docks right under the minimap",
+  "steps": [
+   "Replay of b03-03 steps from b03.json exactly"
+  ],
+  "expected": "See b03-03",
+  "actual": "Desktop meadow seed100 and crypt f2 seed107: boss bar 1119..1270 x 262..316 (right column), toast bottom-centre 491..789 x 544..600, no overlap with name/HP. Phone: the \"defeated\" banner (x22..272, y137..227) still sits over the XP bar and mutator chip, and after the kill the \"New best tier\" toast is stacked BEHIND the floor-choice card (see b03-r2-07).",
+  "url": "/game/games/mad-maze/index.html",
+  "screenshots": [
+   "img/b03-r2-05.jpg",
+   "img/b03-r2-07.jpg"
+  ],
+  "kind": "visual"
+ },
+ {
+  "viewport": "390x844",
+  "clip": null,
+  "suspect": null,
+  "frequency": "always",
+  "id": "b03-r2-04",
+  "replays": "b03-04",
+  "status": "FIXED",
+  "severity": "P3",
+  "area": "Bosses / phone HUD",
+  "title": "Boss bar, minimap and mutator chip no longer overlap on phone",
+  "steps": [
+   "Replay of b03-04 steps from b03.json exactly"
+  ],
+  "expected": "See b03-04",
+  "actual": "crypt seed31 phone: boss bar 8..276 x150..186, minimap 280..380 x124..214, chip 62..127 x120..145: pairwise disjoint (round 1 overlapped). The transient \"The Lich King!\" intro banner briefly covers the bar and chip (cosmetic).",
+  "url": "/game/games/mad-maze/index.html",
+  "screenshots": [
+   "img/b03-r2-06.jpg"
+  ],
+  "kind": "visual"
+ },
+ {
+  "viewport": "390x844",
+  "clip": null,
+  "suspect": "game/games/mad-maze/mad-maze.css (phone ability grid placement)",
+  "frequency": "always",
+  "id": "b03-r2-05",
+  "replays": "b03-05",
+  "status": "NOT FIXED",
+  "severity": "P2",
+  "area": "Dungeon / phone layout",
+  "title": "Phone portrait: the 2x2 ability pad (250..370 x 562..682) still sits on the bottom-right of the room canvas (0..389 x 215..721); the floor-choice card still lands on it after a boss kill",
+  "steps": [
+   "Replay of b03-05 steps from b03.json exactly"
+  ],
+  "expected": "See b03-05",
+  "actual": "Canvas starts at y=215 with ~100 px stacked HUD above; the pad is in the same place as round 1 (slightly smaller). After the Lich King falls the floor card covers the pad and the lower room.",
+  "url": "/game/games/mad-maze/index.html",
+  "screenshots": [
+   "img/b03-r2-06.jpg",
+   "img/b03-r2-07.jpg"
+  ],
+  "kind": "ux"
+ },
+ {
+  "viewport": "1280x720",
+  "clip": null,
+  "suspect": null,
+  "frequency": "always",
+  "id": "b03-r2-06",
+  "replays": "b03-06",
+  "status": "FIXED",
+  "severity": "P3",
+  "area": "Dungeon / desktop HUD",
+  "title": "Ability bar is docked left (16..72 x 408..656), outside the room canvas (169..1110); hero and S door visible",
+  "steps": [
+   "Replay of b03-06 steps from b03.json exactly"
+  ],
+  "expected": "See b03-06",
+  "actual": "bramble seed77: hero at (640,360) visible, S door row clear.",
+  "url": "/game/games/mad-maze/index.html",
+  "screenshots": [
+   "img/b03-r2-04.jpg"
+  ],
+  "kind": "visual"
+ },
+ {
+  "viewport": "1280x720",
+  "clip": null,
+  "suspect": null,
+  "frequency": "always",
+  "id": "b03-r2-07",
+  "replays": "b03-07",
+  "status": "FIXED",
+  "severity": "P3",
+  "area": "Deep runs",
+  "title": "G-25 verified: fresh save ?floor=3 starts floor 1 with a toast; clearing floor 1 stores pixeltown-deep-v1 and opens floor 2",
+  "steps": [
+   "Replay of b03-07 steps from b03.json exactly"
+  ],
+  "expected": "See b03-07",
+  "actual": "Real player page (no test=1): banner \"Floor 3 opens after you clear floor 1: starting on floor 1\", chip shows no Floor 3, pixeltown-deep-v1 null. After killing the Lich King on floor 1, deep={\"v\":1,\"f\":{\"crypt\":1}} and ?floor=2 gives floor 2, clamped false.",
+  "url": "/game/games/mad-maze/index.html",
+  "screenshots": [
+   "img/b03-r2-03.jpg"
+  ],
+  "kind": "bug"
+ },
+ {
+  "viewport": "1280x720",
+  "clip": null,
+  "suspect": null,
+  "frequency": "sometimes",
+  "id": "b03-r2-08",
+  "replays": "b03-08",
+  "status": "FIXED",
+  "severity": "P3",
+  "area": "Bosses / desktop HUD",
+  "title": "Entering the boss room from the N door: hero no longer under the boss bar",
+  "steps": [
+   "Replay of b03-08 steps from b03.json exactly"
+  ],
+  "expected": "See b03-08",
+  "actual": "crypt seed107 floor2 boss room: hero at (640,83), boss bar moved to the right column (1119..1270 x 262..316).",
+  "url": "/game/games/mad-maze/index.html",
+  "screenshots": [
+   "img/b03-r2-05.jpg"
+  ],
+  "kind": "visual"
+ },
+ {
+  "viewport": "1280x720",
+  "clip": null,
+  "suspect": null,
+  "frequency": "always",
+  "id": "b03-r2-09",
+  "replays": "b03-09",
+  "status": "NOT FIXED",
+  "severity": "P3",
+  "area": "Trial of Six",
+  "title": "Trial still plays in the open Shore zone at the Nexus (informational, outside the stated retest scope)",
+  "steps": [
+   "Replay of b03-09 steps from b03.json exactly"
+  ],
+  "expected": "See b03-09",
+  "actual": "Inferno Wyrm still spawns at the Nexus in \"Shore Safe-ish\" under the step banner.",
+  "url": "/game/games/mad-maze/index.html",
+  "screenshots": [
+   "img/b03-r2-01.jpg"
+  ],
+  "kind": "improvement"
+ },
+ {
+  "viewport": "1280x720",
+  "clip": null,
+  "suspect": "game/games/mad-maze/realm-world.js (rush fall path)",
+  "frequency": "always",
+  "id": "b03-r2-10",
+  "replays": "b03-10",
+  "status": "NOT FIXED",
+  "severity": "P3",
+  "area": "Trial of Six",
+  "title": "Falling in the Trial still shows the generic \"You fell in the Realm... in Shore\" line, no Trial result",
+  "steps": [
+   "Replay of b03-10 steps from b03.json exactly"
+  ],
+  "expected": "See b03-10",
+  "actual": "rush.start() then a death: banner \"You fell in the Realm... no cache this time ... in Shore, 0 kills, +0 this run\"; rush.state phase \"fell\". No Trial summary.",
+  "url": "/game/games/mad-maze/index.html",
+  "screenshots": [],
+  "kind": "ux"
+ },
+ {
+  "viewport": "1280x720",
+  "clip": null,
+  "suspect": null,
+  "frequency": "always",
+  "id": "b03-r2-11",
+  "replays": "b03-13",
+  "status": "FIXED",
+  "severity": "P3",
+  "area": "Dungeon fall summary",
+  "title": "R on the fall summary restarts the same seed; \"Try again (same seed)\" is focused",
+  "steps": [
+   "Replay of b03-13 steps from b03.json exactly"
+  ],
+  "expected": "See b03-13",
+  "actual": "meadow seed 7: Try again (same seed) focused, href seed=7; R navigates to ?mode=dungeon&biome=meadow&seed=7, floor 1.",
+  "url": "/game/games/mad-maze/index.html",
+  "screenshots": [
+   "img/b03-r2-02.jpg"
+  ],
+  "kind": "ux"
+ },
+ {
+  "viewport": "1280x720",
+  "clip": null,
+  "suspect": null,
+  "frequency": "always",
+  "id": "b03-r2-12",
+  "replays": "b03-14",
+  "status": "FIXED",
+  "severity": "P3",
+  "area": "Dungeon fall banner",
+  "title": "Banner now says \"You fell in the Meadow...\" instead of \"Realm ... wave\"",
+  "steps": [
+   "Replay of b03-14 steps from b03.json exactly"
+  ],
+  "expected": "See b03-14",
+  "actual": "Banner \"You fell in the Meadow... no cache this time (3 kills or a minute alive earns one) · 0 kills, +0 this run\"; summary title \"You fell in the Meadow\".",
+  "url": "/game/games/mad-maze/index.html",
+  "screenshots": [
+   "img/b03-r2-02.jpg"
+  ],
+  "kind": "visual"
+ },
+ {
+  "id": "b03-r2-13",
+  "severity": "P3",
+  "area": "Dungeon / phone landscape",
+  "title": "Phone landscape 844x390: top HUD line is cut by the right-hand button row and the ability pad covers the room corner",
+  "steps": [
+   "Open ?mode=dungeon&biome=crypt&seed=31&lv=2 at 844x390 touch"
+  ],
+  "expected": "Zone/room line fully readable",
+  "actual": "\"Lv 1 Crypt · Room 1/8 · key 0 Cry\" is truncated under the bag/quest/menu/Leave buttons; ability pad (578..698 x 256..376) overlays the right of the room (canvas 167..677). New observation, low impact.",
+  "viewport": "844x390",
+  "url": "/game/games/mad-maze/index.html?mode=dungeon&biome=crypt&seed=31&lv=2",
+  "screenshots": [
+   "img/b03-r2-08.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/games/mad-maze/mad-maze.css (landscape phone HUD)",
+  "kind": "visual",
+  "frequency": "always",
+  "status": "NEW"
+ }
+]
