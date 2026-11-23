@@ -3339,7 +3339,10 @@ class TownScene extends Phaser.Scene {
     const dx = REALM_GATE_POS.x - this.localBody.x;
     const dy = (REALM_GATE_POS.y + 30) - this.localBody.y;
     const far = Math.hypot(dx, dy) > GATE_POINTER_MIN_DIST;
-    const show = !st.dismissed && !st.reached && far && !this.inRealm && !this.inUnderground && !this.realmEmbed && !this.buildMode;
+    // One line of guidance at a time: the What's-new banner (returning players, 10 s) sits where the chip goes, so the chip waits.
+    const wn = document.getElementById('whats-new-banner');
+    const newsUp = !!wn && !wn.classList.contains('hidden');
+    const show = !st.dismissed && !st.reached && far && !newsUp && !this.inRealm && !this.inUnderground && !this.realmEmbed && !this.buildMode;
     if (el.classList.contains('hidden') === show) el.classList.toggle('hidden', !show);
     if (!show) return;
     // Screen and world share their axes, so the world direction is the arrow direction (8 ways).
@@ -9218,8 +9221,10 @@ class TownScene extends Phaser.Scene {
   // tab is open and in front of you" is the honest scope here.
 
   setupWalkie() {
-    this.bestieId = savedProfile.bestieId || null;
-    this.bestieName = savedProfile.bestieName || null;
+    // Hostile/corrupt saves: only a non-empty string id and a string name count (an object name used to read "to [object Object]").
+    const bid = savedProfile.bestieId, bname = savedProfile.bestieName;
+    this.bestieId = typeof bid === 'string' && bid ? bid : null;
+    this.bestieName = this.bestieId ? (typeof bname === 'string' && bname ? bname.slice(0, 24) : 'your bestie') : null;
     this.voiceMemos = [];
     this.recording = false;
     this.updateBestieLabel();
