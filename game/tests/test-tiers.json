@@ -1564,5 +1564,9 @@
   "beta-w05-realm-hud.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-w16-dungeon-hud.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

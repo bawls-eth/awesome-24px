@@ -29,3 +29,10 @@ Each entry: item, files, test, how to retest by hand. Screenshots in `fixes/img/
 - Test: `tests/beta-w05-realm-hud.test.js` (new, instead of extending world-phone-hud: 320x568 / 360x640 Leave vs XP; 390x844 goal no truncation; toast vs boss bar, zone, goal, minimap; 844x390 backpack vs goal / zone / minimap / toast; 1280x720 toast vs boss bar, ability bar and card). 9 asserts fail on the old CSS. `world-phone-hud`, `realm-chase-ui`, `realm-phone-layout`, `realm-hud-8bit` green.
 - Seen, not mine: the zone line can sit on the boss bar for up to 1 s until zonePlace (realm-world.js) moves it; the Gameplay class hook on the toast (realm.js:4761) is no longer needed.
 - Before / after: `img/w05-{320,390-toast,844-bp}-{before,after}.jpg`.
+
+## W-16 Dungeon HUD (b03-04, b03-05, b03-06, b03-08) - fixed
+- Files: `games/mad-maze/mad-maze.css` (one appended block).
+- Fix: desktop (>= 900 px, >= 5:4, mouse): the room canvas sits between the top HUD / boss bar (112 px) and the key-hint line (aspect kept; pointer aim maps through the bounding rect so it stays exact), the Q/E/R/F bar docks as a column in the left margin outside the room. Phone portrait: the boss bar sits left of the mini-map and under the mutator chip, above the room.
+- Test: `tests/beta-w16-dungeon-hud.test.js` (S door and N door tile centres hit the canvas; ability bar outside the room; room >= 540 px with 17:13 kept; hero not under the boss bar; phone boss bar vs mini-map / mutator chip / room top; sticks + pad <= 25% of the room). 4 asserts fail on the old CSS. `dungeon-polish`, `mad-maze-dungeon`, `dungeon-narrow`, `dungeon-mutators`, `realm-phone-layout` green.
+- Left as is: the room-entry banner briefly covers the phone boss bar (dungeon-polish pins the banner above the room); b03-05 coverage measured at ~11% of the room.
+- Before / after: `img/w16-{desk-boss,phone-boss}-{before,after}.jpg`.
