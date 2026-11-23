@@ -53,6 +53,18 @@ const ORIGIN = (process.env.BASE || 'http://localhost:8440/game/index.html').rep
     return { menu, play, mode: J.mode };
   });
   check('b10-05: the Jam play HUD is hidden on the song list and shown during a song', hud.menu === 'hidden' && hud.play === 'visible' && hud.mode === 'play', JSON.stringify(hud));
+  // round 3 (b09/b10): a fresh save cannot start Lantern Shuffle at all (locked song, so Hard is refused too); Warm Embers Easy still starts
+  const ls = await page.evaluate(() => {
+    const J = window.__jam; const SG = window.MMJamSongs; const st = (id, t) => !!(J.start ? J.start(id, t) : J.startSong(id, t));
+    const songLocked = !SG.songUnlocked(J.save || {}, 'lantern-shuffle');
+    const c0 = J.chart; const hard = st('lantern-shuffle', 'hard'), sameHard = J.chart === c0; // a refused start leaves the running chart alone
+    const normal = st('lantern-shuffle', 'normal'), sameNormal = J.chart === c0;
+    const warm = st('warm-embers', 'easy'), mWarm = J.mode, newWarm = J.chart !== c0;
+    return { songLocked, hard, sameHard, normal, sameNormal, warm, mWarm, newWarm };
+  });
+  check('round 3: Lantern Shuffle Hard on a fresh save is refused (song still locked)', ls.songLocked && !ls.hard && ls.sameHard, JSON.stringify(ls));
+  check('round 3: Lantern Shuffle on any tier is refused while the song is locked', !ls.normal && ls.sameNormal, JSON.stringify(ls));
+  check('round 3: Warm Embers (always open) still starts', ls.warm && ls.mWarm === 'play' && ls.newWarm, JSON.stringify(ls));
   // b04-09: the Blacksmith's words match the panel: it names the stall's "Open the Forge" button and focuses it
   await ctx.routeWebSocket(/.*/, (ws) => ws.close());
   await ctx.route('**/game/index.html*', (r) => r.fulfill({ contentType: 'text/html', body: '<!doctype html>town' }));
