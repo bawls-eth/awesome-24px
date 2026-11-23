@@ -1390,5 +1390,13 @@
   "shared-mm-minikit.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "shared-mm-pixelize.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "pixelize-page.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }
