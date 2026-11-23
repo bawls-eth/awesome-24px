@@ -2000,8 +2000,15 @@
       nxRaf = 0; nxNearI = null;
       document.body.classList.remove('nx-walking');
     }
+    // G-23 (b03-01): the Nexus never opens (and so never pauses the arena) mid Trial of Six or while a world boss is awake within its leash
+    // (bossLive is cleared when you walk 40 tiles away). Used by Enter, the button and the prompt.
+    function nexusAllowed() {
+      if (rush.on && (rush.phase === 'fight' || rush.phase === 'rest')) return false;
+      for (let i = 0; i < bossLive.length; i++) if (bossLive[i] && bossLive[i].active) return false;
+      return true;
+    }
     function nexusOpen() {
-      if (!NX_ON || !nxSite || nxOpen || leaving || !arena.active || arena.state !== 'play' || arena.paused) return false;
+      if (!NX_ON || !nxSite || nxOpen || leaving || !arena.active || arena.state !== 'play' || arena.paused || !nexusAllowed()) return false;
       nxBuild(); nxEnterTile = { x: Math.floor(arena.player.x / TILE), y: Math.floor(arena.player.y / TILE) };
       nxOpen = true; arena.paused = true; savePos(true);
       nxBtn.classList.add('hidden'); portalBtn.classList.add('hidden'); siteBtn.classList.add('hidden'); if (typeof lairBtn !== 'undefined') { lairBtn.classList.add('hidden'); lairTxt = ''; }
@@ -2023,7 +2030,7 @@
         if ((k === 'e' || k === 'shift' || ((k === 'enter' || k === ' ') && !onBtn)) && nxNearI && !ev.repeat) { ev.preventDefault(); ev.stopImmediatePropagation(); nxAct(); return; }
         if (/^(e|q|r|f|b|i|k|v|p|shift)$/.test(k) || (k === ' ' && !onBtn)) { ev.preventDefault(); ev.stopImmediatePropagation(); return; }
       }
-      if (ev.key === 'Enter' && !nxOpen && nxNear && promptFor < 0 && !siteFor && arena.active && !arena.paused && arena.state === 'play') { ev.preventDefault(); nexusOpen(); }
+      if (ev.key === 'Enter' && !nxOpen && nxNear && promptFor < 0 && !siteFor && arena.active && !arena.paused && arena.state === 'play' && nexusAllowed()) { ev.preventDefault(); nexusOpen(); } // G-23: blocked = Enter stays a fire key
     }, true);
     nxBtn.addEventListener('click', () => nexusOpen());
     function nexusTick() {
@@ -2031,7 +2038,8 @@
       const p = arena.player; const near = arena.state === 'play' && !arena.paused && (p.x - nxSite.x) ** 2 + (p.y - nxSite.y) ** 2 < 48 * 48;
       nxNear = near;
       const show = near && promptFor < 0 && !siteFor;
-      if (show) { const t = 'Visit the Nexus' + (isCoarse() ? '' : ' (Enter)'); if (nxBtn.textContent !== t) nxBtn.textContent = t; }
+      const ok = nexusAllowed(); // G-23: while a fight is on the prompt says so and the button is disabled
+      if (show) { const t = ok ? 'Visit the Nexus' + (isCoarse() ? '' : ' (Enter)') : 'Finish the fight first'; if (nxBtn.textContent !== t) nxBtn.textContent = t; if (nxBtn.disabled !== !ok) nxBtn.disabled = !ok; }
       nxBtn.classList.toggle('hidden', !show);
     }
     function drawNexusPortal(g, tt, reduced) {
