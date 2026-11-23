@@ -1536,5 +1536,9 @@
   "shared-mm-save-merge.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "beta-g02-combine.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }
