@@ -1548,5 +1548,17 @@
   "beta-w08-angler-layout.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-g02-combine.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "beta-g01-gift.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "beta-g03-sell-guard.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }

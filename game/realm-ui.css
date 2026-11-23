@@ -94,6 +94,13 @@ body.touch-device #realm-stick-aim { right: calc(20px + var(--sr)); }
   #realm-bp-list button.eq { grid-column: 2; grid-row: 1 / span 2; }
   #realm-bp-list button.dc { grid-column: 3; grid-row: 1 / span 2; }
   #realm-bp-list li { grid-template-columns: minmax(0, 1fr) auto auto; }
+  /* G-02: Combine on its own row under Equip + Sell (it used to share Equip's cell and cover it) */
+  #realm-bp-list li.cbr button.eq:not(.cb), #realm-bp-list li.cbr button.dc { grid-row: 1; }
+  #realm-bp-list li.cbr button.cb { grid-column: 2 / span 2; grid-row: 2; }
+}
+/* G-02 (wide): Combine takes the 4th column of row 1, never Equip's cell */
+@media (min-width: 421px) {
+  #realm-bp-list li.cbr button.cb { grid-column: 4; grid-row: 1; }
 }
 
 /* ---------- menu + death screen ---------- */

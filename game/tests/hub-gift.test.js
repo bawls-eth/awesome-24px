@@ -80,10 +80,10 @@ async function openCard(page) { await page.click('#gift-btn'); await page.waitFo
   check('full stash: shards are paid instead, token not lost or dropped', (await lj(s.page, SK)).realm.shards === 100 + G.SHARDS_MAX && (await lj(s.page, MK)).stash.every((x) => x && x.id === 'heartcharm'));
   await s.ctx.close();
 
-  // no town save: nothing claimed
-  s = await open(browser, {});
+  // G-01 (b08-01): no town save is no longer a dead end (beta-g01-gift.test.js); a CORRUPT town save still claims nothing
+  s = await open(browser, { seed: { [SK]: 'not json' } });
   await openCard(s.page); await s.page.click('#gift-claim');
-  check('without a usable town save nothing is claimed or written', (await ls(s.page, GK)) === null && (await ls(s.page, SK)) === null && /wait/.test(await s.page.textContent('#gift-note')));
+  check('with a corrupt town save nothing is claimed or written', (await ls(s.page, GK)) === null && (await ls(s.page, SK)) === 'not json' && /Nothing was claimed/.test(await s.page.textContent('#gift-note')));
   await s.ctx.close();
 
   // phone

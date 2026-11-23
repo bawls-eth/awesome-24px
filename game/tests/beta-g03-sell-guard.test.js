@@ -1,0 +1,102 @@
+// G-03 (b02-02, b02-03, b02-12, b02-14): backpack Sell / Forge guards. A double-click on Sell sells ONE item (the row that slides under the
+// pointer is inert for 300 ms after a re-render), Sell on a protected item (equipped / soulbound / signature / best tier in its slot) asks
+// "Sure?" first for 3 s, a double-tap on "Confirm reforge" never opens (or confirms) a salvage, and arena.discard(uid) still sells in one call.
+// (Vendor stall Buy / Sell-back guards live in realm-world.js: G-03 part c/4 lands in its slot, see fixes/gameplay.md.)
+// Offline: blockDb + every WebSocket closed, town/hub stubbed, no chat, no Firebase writes.
+// Run: BASE=http://localhost:8440/game/index.html node game/tests/beta-g03-sell-guard.test.js
+const { chromium } = require('playwright');
+const { check, done, blockDb } = require('./helpers');
+const ORIGIN = (process.env.BASE || 'http://localhost:8440/game/index.html').replace(/\/game\/index\.html.*$/, '');
+const MAZE = ORIGIN + '/game/games/mad-maze/index.html?test=1&offline=1&forge=1';
+const SAVE = 'pixeltown-save-v1', MM = 'pixeltown-mm-v1', ACTIVE = 'pixeltown-mm-active-v1';
+const hero = (id, cls, level) => ({ id, name: cls, cls, level, xp: 0, fame: 0, bonus: 0, mode: 'classic', items: [] });
+const prof = (heroes) => ({ v: 1, heroes, stash: new Array(16).fill(null), fame: 0, mode: 'classic', hall: [], migratedFrom: null });
+const realm = (items, eq, extra) => Object.assign({ shards: 100, bestWave: 0, kills: 0, deaths: 0, kb: { spiral: 0, aimed: 0, ring: 0, drifter: 0, boss: 0 }, bossBestT: 0, level: 20, xp: 0, items, nextUid: 100, eq }, extra || {});
+
+async function open(browser, rm, opts) {
+  const ctx = await browser.newContext(opts || { viewport: { width: 1000, height: 700 } });
+  await blockDb(ctx);
+  await ctx.route('**/game/index.html*', (r) => r.fulfill({ contentType: 'text/html', body: '<!doctype html><title>town</title>town' }));
+  await ctx.route('**/hub/index.html*', (r) => r.fulfill({ contentType: 'text/html', body: '<!doctype html><title>hub</title>hub' }));
+  await ctx.routeWebSocket(/.*/, (ws) => ws.close());
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+  await page.goto(ORIGIN + '/game/games/mad-maze/lantern.css');
+  await page.evaluate(([k1, p, k2, a, k3, s]) => { localStorage.clear(); localStorage.setItem(k1, JSON.stringify(p)); localStorage.setItem(k2, a); localStorage.setItem(k3, s); },
+    [MM, prof([hero('h-1', 'bruiser', 20)]), ACTIVE, JSON.stringify({ v: 1, heroId: 'h-1' }), SAVE, JSON.stringify({ realm: rm })]);
+  await page.goto(MAZE);
+  await page.waitForFunction(() => window.__mm && window.__mm.arena && window.__mm.arena.active, null, { timeout: 15000 });
+  await page.evaluate(() => { const a = window.__mm.arena; a.state = 'play'; a.eBullets.forEach((b) => { b.active = false; }); a.enemies.forEach((e) => { e.active = false; }); a._calcStats(); a.setPaused(true); });
+  return { ctx, page, errors };
+}
+const box = (page, sel) => page.evaluate((s) => { const e = document.querySelector(s); if (!e) return null; e.scrollIntoView({ block: 'center' }); const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; }, sel);
+const awake = (page, sel) => page.waitForFunction((s) => { const b = document.querySelector(s); return b && !b.disabled; }, sel, { timeout: 3000 });
+const items = (page) => page.evaluate(() => window.__mm.arena.save.items.map((x) => x.n));
+
+(async () => {
+  const browser = await chromium.launch();
+
+  // 1 + 2 + 5: junk double-click, protected Sell, direct discard
+  { const junk = [{ n: 11, id: 'heartcharm', r: 0 }, { n: 12, id: 'heartcharm', r: 1 }, { n: 13, id: 'sparkwand', r: 0 }, { n: 14, id: 'quickwand', r: 0 }, { n: 15, id: 'heartcharm', r: 0 }];
+    const A = await open(browser, realm(junk, { weapon: 13 }));
+    const p = A.page;
+    const s1 = '#realm-bp-list li[data-uid="11"] button[data-act="discard"]';
+    await awake(p, s1);
+    const c = await box(p, s1);
+    await p.mouse.dblclick(c.x, c.y);
+    await p.waitForTimeout(400);
+    const after = await items(p);
+    check('1. a real dblclick on Sell of row 1 (junk) sells exactly one item; the row below is still there', after.length === 4 && after.indexOf(11) < 0 && after.indexOf(12) >= 0, JSON.stringify(after));
+    check('1b. right after a re-render the backpack action buttons are inert (disabled), and wake by themselves', await p.evaluate(() => { const a = window.__mm.arena; a.renderBackpack(); const b = document.querySelector('#realm-bp-list button[data-act]'); return !!b && b.disabled; }) && (await awake(p, '#realm-bp-list button[data-act]').then(() => true, () => false)));
+
+    const sEq = '#realm-bp-list li[data-uid="13"] button.dc';
+    await awake(p, sEq);
+    const sh0 = await p.evaluate(() => window.__mm.arena.save.shards);
+    const e1 = await box(p, sEq);
+    await p.mouse.click(e1.x, e1.y);
+    await p.waitForFunction((s) => /Sure/.test(document.querySelector(s).textContent), sEq, { timeout: 2000 }).catch(() => {});
+    const ask = await p.evaluate((s) => ({ t: document.querySelector(s).textContent, items: window.__mm.arena.save.items.length, eq: window.__mm.arena.save.eq.weapon }), sEq);
+    check('2. Sell on the equipped weapon: nothing sold, still equipped, the button says "Sure?"', /Sure/.test(ask.t) && ask.items === 4 && ask.eq === 13, JSON.stringify(ask));
+    await awake(p, sEq);
+    await p.mouse.click(e1.x, e1.y);
+    await p.waitForTimeout(150);
+    const sold = await p.evaluate(() => ({ items: window.__mm.arena.save.items.map((x) => x.n), eq: window.__mm.arena.save.eq.weapon, sh: window.__mm.arena.save.shards }));
+    check('2b. a second click within 3 s sells it and unequips it', sold.items.indexOf(13) < 0 && sold.eq === undefined && sold.sh > sh0, JSON.stringify(sold));
+
+    await p.evaluate(() => { const a = window.__mm.arena; a.save.eq.weapon = 14; a._afterGearChange(); });
+    const s14 = '#realm-bp-list li[data-uid="14"] button.dc';
+    await awake(p, s14);
+    const e2 = await box(p, s14);
+    await p.mouse.click(e2.x, e2.y);
+    await p.waitForFunction((s) => /Sure/.test(document.querySelector(s).textContent), s14, { timeout: 2000 }).catch(() => {});
+    await p.waitForFunction((s) => /^Sell /.test(document.querySelector(s).textContent) && document.querySelector(s).dataset.act === 'sell-ask', s14, { timeout: 5000 }).catch(() => {});
+    const back = await p.evaluate((s) => ({ t: document.querySelector(s).textContent, act: document.querySelector(s).dataset.act, has: window.__mm.arena.save.items.some((x) => x.n === 14) }), s14);
+    check('2c. no second click for 3 s: the button goes back to "Sell" and the item is kept', /^Sell /.test(back.t) && back.act === 'sell-ask' && back.has, JSON.stringify(back));
+
+    const direct = await p.evaluate(() => { const a = window.__mm.arena; const n0 = a.save.items.length; const ok = a.discard(14); return { ok, d: n0 - a.save.items.length, eq: a.save.eq.weapon }; });
+    check('5. arena.discard(uid) called directly still sells (even the equipped one) in one call', direct.ok === true && direct.d === 1 && direct.eq === undefined, JSON.stringify(direct));
+    check('no page errors (sell)', A.errors.length === 0, A.errors.join(' | '));
+    await A.ctx.close();
+  }
+
+  // 3: double-tap "Confirm reforge" -> the item still exists, no salvage confirm open, charged once
+  { const A = await open(browser, realm([{ n: 1, id: 'sparkwand', r: 1, t: 8, a: 12345 }, { n: 7, id: 'heartcharm', r: 0 }], { weapon: 1 }, { dust: 200 }), { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+    const p = A.page;
+    for (const sel of ['button.fg[data-forge-open="1"]', 'button.fg[data-forge-pick="blast"]']) { await awake(p, sel); const b = await box(p, sel); await p.touchscreen.tap(b.x, b.y); }
+    const yes = 'button.fg[data-forge-yes="reforge"]';
+    await awake(p, yes);
+    const y = await box(p, yes);
+    const before = await p.evaluate(() => ({ dust: window.__mm.arena.save.dust, shards: window.__mm.arena.save.shards }));
+    await p.touchscreen.tap(y.x, y.y); await p.waitForTimeout(90); await p.touchscreen.tap(y.x, y.y);
+    await p.waitForTimeout(400);
+    const r = await p.evaluate(() => { const a = window.__mm.arena; const it = a.save.items.find((x) => x.id === 'sparkwand' && x.t === 8); return { it: !!it, f: it && it.f && it.f.id, dust: a.save.dust, shards: a.save.shards, salvageQ: !!document.querySelector('button.fg[data-forge-yes="salvage"]'), ask: a._forgeAsk }; });
+    check('3. double-tap "Confirm reforge": the item still exists (reforged once) and no salvage confirm is open', r.it && r.f === 'blast' && !r.salvageQ && !r.ask, JSON.stringify(r));
+    check('3b. the reforge was charged exactly once', before.dust - r.dust === 50 && before.shards - r.shards === 2, JSON.stringify([before, r]));
+    check('no page errors (forge)', A.errors.length === 0, A.errors.join(' | '));
+    await A.ctx.close();
+  }
+
+  await browser.close();
+  done();
+})().catch((e) => { console.error(e); process.exit(1); });

@@ -20,8 +20,10 @@
   // (rmMergeSave: stored.shards + (mine - base)), so the gift is kept (tests/nav-town-p2.test.js, H1).
   function payShards(n) {
     const raw = rd(SAVE);
-    let o; try { o = JSON.parse(raw); } catch (e) { return false; }
-    if (!o || typeof o !== 'object' || Array.isArray(o)) return false; // no usable town save: nothing is paid and nothing is claimed
+    // G-01 (b08-01): no town save yet (key absent) = start from {} and write only { realm: { shards } } (additive: the Town join card keys off
+    // name / species, so it still shows). A save that exists but is corrupt / not an object is never overwritten: nothing paid, nothing claimed.
+    let o; if (raw === null) o = {}; else { try { o = JSON.parse(raw); } catch (e) { return false; } }
+    if (!o || typeof o !== 'object' || Array.isArray(o)) return false;
     const realm = o.realm && typeof o.realm === 'object' && !Array.isArray(o.realm) ? o.realm : {};
     const cur = Number.isFinite(Number(realm.shards)) && Number(realm.shards) > 0 ? Math.floor(Number(realm.shards)) : 0;
     realm.shards = Math.min(MAX_SHARDS, cur + n);
@@ -63,7 +65,7 @@
     const r = pay(c.gift);
     if (!r.ok) {
       try { if (rawBefore === null) localStorage.removeItem(G.KEY); else localStorage.setItem(G.KEY, rawBefore); } catch (e) { /* ignore */ }
-      note = 'The gift will wait until your town save is ready. Nothing was claimed.';
+      note = 'Could not save the gift. Nothing was claimed.';
     } else note = 'Gift claimed. ' + r.what;
     render();
   }

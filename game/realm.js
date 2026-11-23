@@ -227,6 +227,7 @@ function rmCleanForged(t, f) {
   return { id: f.id, v: Math.round(v * 1000) / 1000 };
 }
 // Sell value: the rarity's value, plus 2 x tier for tiered gear (MMGear.sellValue) while gear is on.
+const RM_ARM_MS = 300, RM_SELL_ASK_MS = 3000; // G-03: backpack buttons wake 300 ms after a re-render; a protected Sell's "Sure?" lasts 3 s
 function rmSellValue(it) { return RM_GEAR_ON && it && it.t ? MMGear.sellValue(it.r, it.t) : RM_RARITIES[it.r].sell; }
 // A resolved MMWeapons spec, re-clamped into a plain frozen object the engine trusts. Only the 26 alternate styles count (bases keep today's fire).
 function rmWpnSpec(s) {
@@ -4207,6 +4208,51 @@ class RealmArena {
     this._afterGearChange();
     return true;
   }
+  // G-03 (b02-02/03/12/14): Sell asks "Sure?" first for an item worth keeping: equipped, soulbound, a signature / relic piece, or the best tier owned
+  // in its slot. Plain junk stays one click. discard(uid) itself is unchanged (one call sells: test hooks and other code paths).
+  sellNeedsConfirm(uid) {
+    const sv = this.save; const it = sv.items.find((x) => x.n === uid); if (!it) return false;
+    if (RM_EQ_KEYS.some((sl) => sv.eq[sl] === uid)) return true;
+    if (it.sig) return true;
+    const G = RM_GEAR_ON && typeof MMGear !== 'undefined' ? MMGear : null;
+    if (G && ((typeof G.isSig === 'function' && G.isSig(it.id)) || (it.t && typeof G.soulbound === 'function' && G.soulbound(it.t)))) return true;
+    if (it.t) { const sl = (RM_ITEM_BY_ID[it.id] || {}).slot; let best = 0; sv.items.forEach((x) => { if (x.t && (RM_ITEM_BY_ID[x.id] || {}).slot === sl) best = Math.max(best, x.t); }); if (it.t >= best) return true; }
+    return false;
+  }
+  // G-03 arm delay: after a backpack / forge re-render every action button is inert for RM_ARM_MS, so the second click of a double-click (or a
+  // double-tap) lands on a dead button instead of the row that slid under the pointer. Real `disabled` (keyboard Enter and the delegated
+  // mad-maze.js handler respect it; Playwright waits for it). The look is kept (no 300 ms flash): the computed colours are pinned inline meanwhile.
+  _armButtons(root) {
+    if (!root || typeof setTimeout === 'undefined') return;
+    const list = Array.from(root.querySelectorAll('#realm-bp-list button[data-act], #realm-bp-list button[data-combine], #realm-bp-list button.fg')).filter((b) => !b.disabled);
+    const keep = list.map((b) => { const cs = getComputedStyle(b); const css = b.style.cssText; b.style.background = cs.background; b.style.color = cs.color; b.style.opacity = cs.opacity; b.disabled = true; b.dataset.arm = '1'; return css; });
+    clearTimeout(this._armT);
+    this._armT = setTimeout(() => {
+      let focusEl = null;
+      list.forEach((b, i) => { if (!b.isConnected || !b.dataset.arm) return; b.disabled = false; b.style.cssText = keep[i]; delete b.dataset.arm; if (b.dataset.armFocus) { delete b.dataset.armFocus; focusEl = b; } });
+      if (focusEl) { try { focusEl.focus({ preventScroll: true }); } catch (e) { /* focus is cosmetic */ } }
+    }, RM_ARM_MS);
+  }
+  _focusArmed(el) { if (!el) return; if (el.disabled && el.dataset.arm) el.dataset.armFocus = '1'; else { try { el.focus({ preventScroll: true }); } catch (e) { /* focus is cosmetic */ } } }
+  // First click on a protected Sell: the button turns into "Sure? Sell +N" for RM_SELL_ASK_MS (re-armed, so a double-click cannot confirm it);
+  // the second click sells through the normal discard path. No click for 3 s restores it.
+  _bindSellAsk(root) {
+    if (!root || root.dataset.sellAskBound) return;
+    root.dataset.sellAskBound = '1';
+    root.addEventListener('click', (e) => {
+      const b = e.target.closest && e.target.closest('button[data-act="sell-ask"]');
+      if (!b || b.disabled) return;
+      const uid = Number(b.dataset.uid); const it = this.save.items.find((x) => x.n === uid); if (!it) return;
+      setTimeout(() => { // after every other click listener of this same click (mad-maze.js ignores 'sell-ask')
+        if (!b.isConnected || b.dataset.act !== 'sell-ask') return;
+        const label = b.textContent; const aria = b.getAttribute('aria-label') || '';
+        b.dataset.act = 'discard'; b.textContent = `Sure? Sell +${rmSellValue(it)}💎`; b.setAttribute('aria-label', `Sure? Sell ${RM_ITEM_BY_ID[it.id].name} for ${rmSellValue(it)} shards`); b.classList.add('rm-sure');
+        b.disabled = true; b.dataset.arm = '1';
+        setTimeout(() => { if (b.isConnected && b.dataset.arm) { b.disabled = false; delete b.dataset.arm; } }, RM_ARM_MS);
+        setTimeout(() => { if (b.isConnected && b.dataset.act === 'discard' && b.classList.contains('rm-sure')) { b.dataset.act = 'sell-ask'; b.textContent = label; b.setAttribute('aria-label', aria); b.classList.remove('rm-sure'); } }, RM_SELL_ASK_MS);
+      }, 0);
+    });
+  }
 
   // ---------- Forge (GW): salvage for dust, deterministic reforge (MMGearForge). Free in-game dust + shards only; no randomness anywhere. ----------
   // Off with ?gear=0, without mm-gear-forge.js or while the GW gate is closed (RM_FORGE_ON: on by default since P2; ?forge=0 closes it): no Forge section,
@@ -4364,7 +4410,7 @@ class RealmArena {
       else return;
       this.renderBackpack();
       const nb = root.querySelector('#realm-bp-forge button.fg') || root.querySelector(`button.fg[data-forge-open="${this._forgeUid}"]`); // keep keyboard focus in the forge
-      if (nb && nb.focus) { try { nb.focus(); } catch (er) { /* focus is cosmetic */ } }
+      if (nb && nb.focus) this._focusArmed(nb); // G-03: an armed button takes focus once it wakes
     });
   }
 
@@ -4428,7 +4474,7 @@ class RealmArena {
     this._forgeUid = it ? it.n : 0; this._forgeAsk = null;
     this._panel('bp');
     const f = typeof document !== 'undefined' ? document.querySelector('#realm-bp-forge button.fg') || document.getElementById('realm-bp-close') : null;
-    if (f && f.focus) { try { f.focus({ preventScroll: true }); } catch (e) { /* focus is cosmetic */ } }
+    if (f && f.focus) this._focusArmed(f);
     return true;
   }
 
@@ -4601,7 +4647,8 @@ class RealmArena {
     if (!sv.items.length) html += '<li class="dim">Nothing yet — defeat enemies to find loot bags.</li>';
     sv.items.forEach((it) => {
       const def = RM_ITEM_BY_ID[it.id]; const rar = RM_RARITIES[it.r]; const on = eqUids.has(it.n); const sell = rmSellValue(it); const why = on ? '' : this._gearWhy(it);
-      html += `<li data-uid="${it.n}" class="${on ? 'on' : ''}"><span class="nm" style="color:${rar.color}">${this._bpBadge(it)}${this._icon(def)} ${this._tierTag(it)}${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(it)}</span>${this._affixHtml(it, def)}${def.slot === 'weapon' ? this._cmpHtml(it, on) : ''}${def.inert ? '<button type="button" class="eq" disabled aria-label="Not usable yet">Equip</button>' : def.wpn && !on && !this._wpnCanEquip(def) ? `<button type="button" class="eq" disabled data-wpn-lock="1" aria-label="${this._wpnHint(def)} only" title="${this._wpnHint(def)}">🔒 ${def.family.charAt(0).toUpperCase() + def.family.slice(1)}</button>` : why ? this._gearLockHtml(it, def, why) : `<button type="button" class="eq" data-act="equip" data-uid="${it.n}">${on ? 'Unequip' : 'Equip'}</button>`}${this.combinable(it.n) ? `<button type="button" class="eq" data-combine="${it.n}" aria-label="Combine ${RM_COMBINE_COUNT} ${rar.name} ${def.name} into one ${RM_RARITIES[it.r + 1].name}">Combine ${RM_COMBINE_COUNT}→${RM_RARITIES[it.r + 1].name}</button>` : ''}<button type="button" class="dc" data-act="discard" data-uid="${it.n}" aria-label="Sell ${def.name} for ${sell} shards">Sell ${sell}💎</button></li>`;
+      const cbOk = this.combinable(it.n); // G-02: a row with a Combine button gets its own cell layout (li.cbr) so Combine never sits on top of Equip
+      html += `<li data-uid="${it.n}" class="${on ? 'on' : ''}${cbOk ? ' cbr' : ''}"><span class="nm" style="color:${rar.color}">${this._bpBadge(it)}${this._icon(def)} ${this._tierTag(it)}${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(it)}</span>${this._affixHtml(it, def)}${def.slot === 'weapon' ? this._cmpHtml(it, on) : ''}${def.inert ? '<button type="button" class="eq" disabled aria-label="Not usable yet">Equip</button>' : def.wpn && !on && !this._wpnCanEquip(def) ? `<button type="button" class="eq" disabled data-wpn-lock="1" aria-label="${this._wpnHint(def)} only" title="${this._wpnHint(def)}">🔒 ${def.family.charAt(0).toUpperCase() + def.family.slice(1)}</button>` : why ? this._gearLockHtml(it, def, why) : `<button type="button" class="eq" data-act="equip" data-uid="${it.n}">${on ? 'Unequip' : 'Equip'}</button>`}${cbOk ? `<button type="button" class="eq cb" data-combine="${it.n}" aria-label="Combine ${RM_COMBINE_COUNT} ${rar.name} ${def.name} into one ${RM_RARITIES[it.r + 1].name}">Combine ${RM_COMBINE_COUNT}→${RM_RARITIES[it.r + 1].name}</button>` : ''}<button type="button" class="dc" data-act="${this.sellNeedsConfirm(it.n) ? 'sell-ask' : 'discard'}" data-uid="${it.n}" aria-label="Sell ${def.name} for ${sell} shards">Sell ${sell}💎</button></li>`;
     });
     html += '</ul></section>';
     html += `<section id="realm-bp-pane-stats" class="rm-bp8-pane" data-bp-pane="stats" role="tabpanel" aria-labelledby="realm-bp-tab-stats"${tab === 'stats' ? '' : ' hidden'}>${this._bpStatBlockHtml()}<div id="realm-bp-stats">${this._statLine()}</div>${this._statsDropHtml()}</section>`;
@@ -4614,6 +4661,7 @@ class RealmArena {
     if (this._cmpOnUid) { const on = root.querySelector(`#realm-bp-list li[data-uid="${this._cmpOnUid}"]`); if (on) on.classList.add('cmp-on'); } // a long-pressed compare line survives a re-render
     if (this._bpDeltaUid) this.bpShowDelta(sv.items.some((x) => x.n === this._bpDeltaUid) ? this._bpDeltaUid : 0);
     root.querySelectorAll('img.rm-slot-ico, img.rm-gear-ico').forEach((img) => { if (img.complete && !img.naturalWidth) img.remove(); else img.addEventListener('error', () => img.remove(), { once: true }); });
+    this._bindSellAsk(root); this._armButtons(root); // G-03
   }
 
   // ---------- backpack Stats drop-down (G13) ----------
