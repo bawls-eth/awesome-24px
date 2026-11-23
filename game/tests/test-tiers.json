@@ -1564,5 +1564,9 @@
   "beta-s10-storage-throws.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-s14-favicon.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }

@@ -103,3 +103,21 @@ Run each alone: `BASE=http://localhost:<port>/game/index.html /tmp/bt.sh node ga
   inside try blocks. Until that lands the test prints one `KNOWN-BUG [realm]` line instead of a FAIL; it turns into a PASS by itself.
 - `MMStore.safe()` was not created: shared/mm-store.js does not exist in this tree, and every module I own already reads storage
   inside a try after the S-05 guards; a new module would need a script tag on every page for no gain.
+
+## S-07 Town frame cost (b13-03): step 1 only
+- `design/beta/perf-town.md` (commit e926d53): profile + A/B. Drawing is the cost (camera hidden -> 16.7 ms), not update logic or
+  the DOM HUD; 730 of 951 display objects are off-camera but batched. Machine load 9-19 during the run: QA re-measures alone.
+  Step 2 (cell culling, merged ground layer, name atlas) waits for the main.js slot after W-06. No code changed.
+
+## S-08 three.min.js lazy (b13-02): not done (blocked by tests I cannot run)
+- Six live-class cave tests (cave*.test.js) call `scene.enterUnderground()` and use `scene.underground` / `THREE` synchronously right
+  after. A lazy load makes the first open asynchronous and would break them; they join the live town, so this lane may not run them.
+- Ready-to-apply plan: `underground.js` gets `ugEnsureThree()` (one in-flight `<script>` promise, retry after an error);
+  `main.js enterUnderground()` returns early with "Loading the cave..." while `typeof THREE === 'undefined'` and re-enters on load,
+  "Could not load the cave. Check your connection and try again." on error; index.html:539 removed. QA first adds a
+  `await page.waitForFunction(() => typeof THREE !== 'undefined' || ...)` / `await s.enterUnderground(); await ugReady` helper to the cave tests.
+
+## S-14 favicon (b15, P3)
+- arcane-frontier/index.html: `<link rel="icon" ... href="../../icons/favicon-32.png">` (the Town's favicon). Test
+  `game/tests/beta-s14-favicon.test.js` (node, smoke). The `?v=` on art manifests part is not done: it changes cache keys for 1,000+
+  files and needs the design note first (lane file).
