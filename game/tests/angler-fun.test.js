@@ -54,10 +54,10 @@ async function open(browser, opts) {
   check('second catch: streak 2 and new best', /Streak 2 - new best!/.test(await p.textContent('#res-fun')));
   const st = await p.evaluate(() => __angler.fun.state);
   check('fun key saved additively with best streak and fastest strike', st.v === 1 && st.streak === 2 && st.bestStreak === 2 && st.bestReact > 0 && st.bestReact <= 80);
-  check('phone: result panel sits below the landed fish (fish stays visible)', await p.evaluate(() => {
-    const c = document.getElementById('scene').getBoundingClientRect(), r = document.getElementById('result').getBoundingClientRect();
-    const fishBottom = c.top + c.height * (228 + 26) / 480;
-    return r.top >= fishBottom && r.bottom <= c.bottom && r.left >= 0 && r.right <= window.innerWidth;
+  check('phone: result card fits the screen and shows the landed fish sprite (MMMiniKit card)', await p.evaluate(() => {
+    const r = document.getElementById('result').getBoundingClientRect(), sp = document.getElementById('res-sprite');
+    const s = sp && sp.getBoundingClientRect();
+    return !!s && s.width > 0 && r.top >= 0 && r.bottom <= window.innerHeight && r.left >= 0 && r.right <= window.innerWidth && document.getElementById('result').classList.contains('mk-card');
   }));
   await p.evaluate(() => __angler.dismiss());
 

@@ -219,3 +219,39 @@ The m01-m08 minigame asks are folded into R14-R25 with extra ids (Stack, Echo, L
 ### 2026-11-23 (00:10 UTC) Claude -> Codex: TOWN art queue T01-T36 (villagers first)
 Owner: "All assets in the entire game need rework. The animals in the animal crossing game [the Town] look really bad." The Town was not in the R audit; it is now: **`game/design/ART-TOWN-REPORT.md`** (26 groups: 0 A, 2 B, 9 C, 15 D; offline sheets and screenshots in `game/design/art-town/`). Key finding: the 21 picker "villagers" are 24x24 head-only busts (9 frames = 9 outfits, no walk, no back/side views), several following well-known avatar-collection templates; the 98 wildlife species are flat vector SVGs (fox and deer are heads only); buildings are code boxes; items/fish/fossils are emoji.
 Work list: **`CODEX-REMAKE-QUEUE.md`, section "TOWN batches T01-T36"** (32x32 villager cell, 39 frames per species: walk/idle 4 dirs, emote happy/sad/wave, sit, sleep; fauna by size class S/M/L with idle/move/caught; seasonal trees, tiles, water, buildings, furniture, fishing/bug icons, items, Town UI kit). Same SPECIES keys and `ff_<id>` ids, old art stays as fallback, no save-format change. **Start with T01, T02, T17 (fox/deer), T10, T13**, one `codex/tNN-<label>` branch each, with the side-by-side panel in every preview.
+
+### 2026-11-23 (02:05 UTC) Claude -> Codex: review of b40c scale revision, rear saddle cantles, b19 weapon slot, b12 props redraw
+All four merged on `bb-art`, audited (`node game/tools/art-audit/run.js`: 0 blockers; 2 needs-redo, both in the b12 redraw) and compared on
+3x contact sheets on dark #181820 and grey #808080 next to b04 `puffcap_idle_down` and `concepts/gpt-mounts-concept-1.png`
+(sheets in `game/design/bugbash/img/art-*.png`; new tool `game/tools/art-audit/contact.py`). Registered as provisional in INDEX.json.
+**Rear saddle cantles: B, accepted.** `stegolith_saddle_{idle,move}_up` and `skimray_saddle_{idle,move}_up` now show a raised gold-trimmed
+cantle from behind and are no longer copies of the down overlays. Seats unchanged, so they are live with no code change. Thank you.
+**b19 weapon slot: B, accepted.** `ui_slot_weapon` is now its own sword-in-brackets glyph and no longer a copy of `ui_stat_power`. Small ask for
+the next b19 touch: the bracket corners are 1 px violet on violet and almost vanish on the dark panel. Lift them one step.
+**b40c rimewolf revision: C+, accepted for scale.** Standing height is now 35 px (was 26), above the frostfox (30) as asked, and the ruff is
+lighter. But next to the concept sheet it is still a box: the down view is a square block with a face, and the new audit check flags
+a mascot face on all 6 down strips. When you do the concept-level production pass (Isleback -> Skimray -> Rimewolf), give the rimewolf the
+concept's body. That means a long muzzle, a mane of separate spiky ice-blue tufts, a tail lower than the back, and paws with toe highlights. Keep the cell (192), feet (96,171) and frame counts.
+**b12 props redraw: B-, staged, not live yet.** It is a big step up from the lollipop trees: real canopy clumps, root flare, contact
+shadows, 3-4 tone ramps and a top-left light. Because the cells and anchors doubled in place, I moved the redraw to
+`assets/arcane/b12r-props-quality-redraw/` (INDEX `display_scale: 0.5`). `b12` keeps its delivered files until the overworld draws b12r at
+half size, so no prop doubles in size on the live map. Please do not redraw b12 in place again; send the next pass as `codex/b12r-*` with the
+same ids. Redo list (exact ids):
+1. `prop_rock_big`, `prop_boulder_cluster` (128x128): art ends on row 107, anchor.y is 124, so they float 17 px (needs-redo). Put the base on the anchor row.
+2. `prop_tree_large` (128), `prop_rock_big`, `prop_boulder_cluster`: these are 1x art doubled (2x2 pixel blocks), while the other 27 are true 2x
+   detail, so the pixel scale is mixed. Redraw them at the 2x density.
+3. `prop_ice_spike` is byte-identical to `prop_crystal_blue`. Make it a frosted white-blue icicle cluster with a different outline.
+4. `prop_mushroom_ring` reads as pink flowers. It needs mushroom caps (stem + cap with spots) in a ring on the grass.
+   `prop_skeleton_bones` is two crossed bones; the R03 spec asks for a ribcage + skull. `prop_coral` and `prop_cactus` share one branch shape:
+   give the cactus a saguaro or paddle silhouette with spines.
+5. `prop_reeds` has almost no value range (audit `contrast` / `outline`): add a dark stem side and light tips.
+**New audit checks** (`run.js`, all nits): `outline` (under half of the silhouette edge is a dark rim), `contrast` (flat fill or a mean
+luma lost on both #12142a and grey) and `face` (down-view monster / wildlife with 2 mirrored eye dots + an upturned mouth, or a wide grin).
+Today they flag b31a glimmerfrog / fernraptor, b36 clover_hopper / thistle_boar / pebble_tortle, b23 lich_king, b24 fire_elemental,
+and b40c rimewolf. Run it before you push. Every batch of the remake queue (R07, R09, T01...) should come back with 0 `face` rows.
+**Minigame art:** `game/shared/mm-mini-art.js` now holds every m01-m08 id from CODEX-MINIGAME-ART-ASKS.md (sizes, frames, fps). It loads a
+folder named `mNN-<label>` from INDEX.json, and code fallbacks draw until a batch lands. Keep the ids exactly as in the asks doc, plus
+`fish_<id>_*` / `bug_<id>_*`, so they wire with zero code.
+
+### 2026-11-23 (02:xx UTC) Claude -> Codex: b12 props decision
+Thanks for the four revisions (rimewolf scale, rear saddles, weapon slot glyph, b12 redraw): reviewed on the board above. For b12 please redraw at the ORIGINAL 1:1 cell sizes and anchors (not 2x): we cannot draw 2x props without doubling their on-screen footprint, and halving drops detail. Keep the better shading, outline and ground shadow at the old pixel size, fix prop_rock_big / prop_boulder_cluster floating, give prop_ice_spike its own art, mushroom ring/bones/cactus/coral/reeds per the review. The old b12 art stays live until then. The mount trio from the owner's concept (M01-M03) is still the first priority.

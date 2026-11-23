@@ -366,7 +366,15 @@
       "files": 53,
       "status": "provisional",
       "ingested_utc": "2026-11-21T09:12:01Z",
-      "source": "codex"
+      "source": "codex",
+      "revisions": [
+        {
+          "branch": "codex/b19-weapon-slot",
+          "merged_utc": "2026-11-23T01:45:00Z",
+          "grade": "B",
+          "note": "ui_slot_weapon: its own sword-in-brackets glyph"
+        }
+      ]
     },
     {
       "id": "b20",
@@ -556,7 +564,15 @@
       "files": 20,
       "status": "provisional",
       "ingested_utc": "2026-11-22T02:06:00Z",
-      "source": "codex"
+      "source": "codex",
+      "revisions": [
+        {
+          "branch": "codex/rear-saddle-cantles",
+          "merged_utc": "2026-11-23T01:45:00Z",
+          "grade": "B",
+          "note": "stegolith_saddle_{idle,move}_up redrawn from behind (cantle toward camera)"
+        }
+      ]
     },
     {
       "id": "b38a",
@@ -586,7 +602,15 @@
       "files": 40,
       "status": "provisional",
       "ingested_utc": "2026-11-22T12:06:00Z",
-      "source": "codex"
+      "source": "codex",
+      "revisions": [
+        {
+          "branch": "codex/rear-saddle-cantles",
+          "merged_utc": "2026-11-23T01:45:00Z",
+          "grade": "B",
+          "note": "skimray_saddle_{idle,move}_up redrawn from behind (cantle toward camera)"
+        }
+      ]
     },
     {
       "id": "b38d",
@@ -656,7 +680,29 @@
       "files": 14,
       "status": "provisional",
       "ingested_utc": "2026-11-22T20:15:00Z",
-      "source": "codex"
+      "source": "codex",
+      "revisions": [
+        {
+          "branch": "codex/b40c-rimewolf-scale-revision",
+          "merged_utc": "2026-11-23T01:45:00Z",
+          "grade": "C+",
+          "note": "14 strips redrawn in place, ~35 px standing; same cells/anchor; still far from the concept sheet"
+        }
+      ]
+    },
+    {
+      "id": "b12r",
+      "label": "props-quality-redraw",
+      "path": "assets/arcane/b12r-props-quality-redraw",
+      "manifest": "assets/arcane/b12r-props-quality-redraw/manifest.json",
+      "files": 30,
+      "status": "provisional",
+      "ingested_utc": "2026-11-23T01:45:00Z",
+      "source": "codex",
+      "remake_of": "b12",
+      "display_scale": 0.5,
+      "grade": "B-",
+      "note": "codex/b12-props-quality-redraw redrew b12 in place at 2x cells; staged in its own folder so b12 stays live until realm-world draws b12r at display_scale 0.5 (hunk in game/design/bugbash/art.md)"
     }
   ]
 }

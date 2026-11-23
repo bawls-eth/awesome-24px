@@ -1,4 +1,8 @@
 {
+  "a11y-viewport-sweep.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "town-polish.test.js": {
     "class": "browser",
     "tier": "full"
@@ -84,6 +88,10 @@
     "tier": "full"
   },
   "bugs-fun.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "bugs-bb.test.js": {
     "class": "browser",
     "tier": "full"
   },
@@ -227,6 +235,10 @@
     "class": "live",
     "tier": "full"
   },
+  "deepdelve-bugbash.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "deepdelve-goals.test.js": {
     "class": "browser",
     "tier": "full"
@@ -278,6 +290,10 @@
   "jam-menu-first-tap.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "jam-bugbash.test.js": {
+    "class": "browser",
+    "tier": "full"
   },
   "jam-fun.test.js": {
     "class": "browser",
@@ -708,6 +724,10 @@
     "tier": "smoke"
   },
   "stalk-page.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "angler-bugbash.test.js": {
     "class": "browser",
     "tier": "smoke"
   },
@@ -1403,6 +1423,10 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "dash-bugbash.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "stack-page.test.js": {
     "class": "browser",
     "tier": "smoke"
@@ -1457,6 +1481,38 @@
   },
   "realm-hud-8bit.test.js": {
     "class": "browser",
+    "tier": "smoke"
+  },
+  "art-mini-art.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "stalk-bugbash.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "live-safety.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "net-hostile-presence.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "save-hostile-fuzz.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "save-compat-pages.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "save-race-tabs.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "shared-mm-save-merge.test.js": {
+    "class": "node",
     "tier": "smoke"
   }
 }

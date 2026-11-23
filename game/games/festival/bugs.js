@@ -15,13 +15,15 @@
   // AC1 graphics tier: the shared "Low graphics" pref (pixeltown-access-v1 lowGfx, read with MMAccess) forces MMPerf's low tier:
   // fewer catch sparks (MMPerf low cap), no halo around gold beetles and moonwings, still flower patches, no popup shadow text.
   // Without the pref (or without MMPerf) the tier is 'high' and every frame draws exactly as before.
-  var gfx = (function () {
+  var gfx = { tier: 'high', low: false, cap: 24, burst: 4 };
+  function readGfx() { // also re-run when the Settings panel flips Low graphics
     var prefs = null, tier = 'high';
     try { prefs = window.MMAccess ? window.MMAccess.prefs.load(window.localStorage) : null; } catch (e) { prefs = null; }
     try { if (window.MMPerf) tier = window.MMPerf.profile([], prefs).tier; } catch (e) { tier = 'high'; }
     var low = tier === 'low';
-    return { tier: tier, low: low, cap: low && window.MMPerf ? window.MMPerf.CAPS.low.sparks : 24, burst: low ? 2 : 4 };
-  })();
+    gfx.tier = tier; gfx.low = low; gfx.cap = low && window.MMPerf ? window.MMPerf.CAPS.low.sparks : 24; gfx.burst = low ? 2 : 4;
+  }
+  readGfx();
 
   var NAMES = { meadow: 'Meadow', orchard: 'Orchard', pond: 'Pond Edge', forest: 'Forest', dunes: 'Dunes', cliffs: 'Cliffs', marsh: 'Marsh', lantern: 'Lantern Glade', glade: 'Night Glade' };
   var THEME = {
@@ -86,6 +88,7 @@
   var bgCache = {}, gmeta = {};
   var keys = {}, joy = { x: 0, y: 0 }, sneakBtn = false;
   var testClock = TEST;
+  var endAt = 0, GUARD_MS = TEST ? 0 : 450, paused = false, pauseWhy = '';
   var lastSummary = null, testSneak = false, nearMisses = 0, banner = null, scoreBump = 0, chainWas = 0, warned = false;
   var HINT_KEY = 'pixeltown-bugs-hint-v1';
   var hintOpen = false;
@@ -99,6 +102,10 @@
     return sfx;
   }
   function beep(name) { if (sfx) { try { sfx.play(name); } catch (e) { /* ignore */ } } }
+  // MMChip cues (CHIP-AUDIO.md): catch / miss / combo1..8 / level_up / warn / ui. Music is the shared Music toggle (off by default).
+  function music(cue) { if (sfx) { try { if (cue) sfx.music(cue); else sfx.stopMusic(); } catch (e) { /* ignore */ } } }
+  var played = []; // last cue names, for the test hook
+  var _beep = beep; beep = function (name) { played.push(name); if (played.length > 40) played.shift(); _beep(name); };
   function syncMute() {
     var b = document.getElementById('btn-mute'); if (!b) return;
     var m = sfx ? sfx.isMuted() : mutedStored();
@@ -129,7 +136,7 @@
     meta = {}; gmeta = {}; popups = []; particles = []; shake = 0; swingAnim = 0; nearMisses = 0; banner = null; scoreBump = 0; chainWas = 0; warned = false;
     $('hud-best').textContent = 'Best ' + bestFor(id, mod);
     var hm = $('hud-mod'); if (hm) { hm.hidden = !mod; hm.textContent = mod ? B.MODS[mod].name : ''; hm.title = mod ? B.MODS[mod].line : ''; }
-    mode = 'play'; overlay.hidden = true;
+    mode = 'play'; overlay.hidden = true; paused = false; pauseWhy = ''; music('minigame');
     $('hud-arena').textContent = NAMES[id];
     if (!hintSeen()) showHint(); else hideHint();
     return game;
@@ -140,11 +147,12 @@
     return m;
   }
   function doSwing() {
-    if (mode !== 'play' || !game) return { swung: false, caught: [] };
+    if (mode !== 'play' || !game || paused) return { swung: false, caught: [] };
     var before = game.state.score;
     var res = game.swing();
     if (res.swung) {
-      swingAnim = 0.22; beep(res.caught.length ? 'pickup' : 'hit');
+      swingAnim = 0.22;
+      if (res.caught.length) beep(game.state.combo >= 2 ? 'combo' + Math.min(8, game.state.combo) : 'catch'); else beep('miss');
       if (res.caught.length) {
         var st = game.state;
         game.state.bugs.forEach(function (b) {
@@ -158,7 +166,7 @@
         if (!reduced) shake = 0.12;
         scoreBump = 0.25;
         var c = game.state.combo;
-        if (MILESTONES.indexOf(c) >= 0) { banner = { text: 'Combo x' + mult(c).toFixed(2).replace(/0$/, '') + '!', t: 0 }; beep('claim'); if (!reduced) shake = 0.2; }
+        if (MILESTONES.indexOf(c) >= 0) { banner = { text: 'Combo x' + mult(c).toFixed(2).replace(/0$/, '') + '!', t: 0 }; beep('perfect'); if (!reduced) shake = 0.2; }
       } else {
         // near miss: an honest "So close!" only when a catchable bug was just out of net reach
         var p0 = game.state.player, near = null, nd = 1e9;
@@ -203,14 +211,15 @@
       goals: newGoals.map(function (gid) { return B.goalsFor(arenaId).filter(function (g) { return g.id === gid; })[0].text; }) };
     mode = 'summary';
     hideHint();
-    if (gained > 0) beep('levelup');
+    endAt = performance.now(); music(null);
+    beep(gained > 0 ? 'level_up' : 'confirm');
     showSummary();
     var ag = $('again'); if (ag && ag.focus) { try { ag.focus({ preventScroll: true }); } catch (e) { ag.focus(); } }
   }
 
   // advance game time; used by loop and test hook
   function step(dt) {
-    if (mode !== 'play' || !game) return;
+    if (mode !== 'play' || !game || paused) return;
     var left = dt;
     while (left > 1e-9 && mode === 'play') {
       var d = Math.min(left, 0.05); left -= d;
@@ -233,7 +242,7 @@
     if (keys.ArrowDown || keys.KeyS) dy += 1;
     var L = Math.hypot(dx, dy);
     var p = game.state.player;
-    var sneaking = !!(keys.ShiftLeft || keys.ShiftRight || sneakBtn || testSneak);
+    var sneaking = !!(keys.ShiftLeft || keys.ShiftRight || keys.KeyE || sneakBtn || testSneak);
     if (L > 0.01) {
       if (L > 1) { dx /= L; dy /= L; L = 1; }
       face = { x: dx / L, y: dy / L };
@@ -400,6 +409,10 @@
       }
     }
     g.restore();
+    if (paused && game && mode === 'play') {
+      g.fillStyle = 'rgba(8,12,10,.62)'; g.fillRect(0, 0, cv.width, cv.height);
+      if (window.MM8 && MM8.text) { MM8.text(g, 'PAUSED', cv.width / 2, 86, 3, '#ffd166', { align: 'center', shadow: '#0d160f' }); MM8.text(g, pauseWhy === 'key' ? 'Esc / P or tap to resume' : pauseWhy === 'hidden' ? 'Tap or press Esc to resume' : 'Resumes when you close the menu', cv.width / 2, 120, 1, '#ffffff', { align: 'center', shadow: '#0d160f' }); }
+    }
     if (B.arena(id).night) { g.fillStyle = 'rgba(8,10,40,.4)'; g.fillRect(0, 0, cv.width, cv.height); }
     hud();
   }
@@ -420,14 +433,14 @@
   // ---------- overlays ----------
   function stars(n) { return '★'.repeat(n) + '☆'.repeat(3 - n); }
   function showMenu() {
-    mode = 'menu'; game = null; arenaId = null;
+    mode = 'menu'; game = null; arenaId = null; paused = false; pauseWhy = ''; music(null);
     clear(overlay); overlay.hidden = false;
     overlay.appendChild(el('h2', 'Bug Safari'));
     var tot = el('p', 'Pick an arena. 90 seconds, no rush between runs. Stars: ' + totalStars() + ' / ' + (ALL.length * 3 + B.GOAL_COUNT), 'dim'); tot.id = 'menu-stars'; overlay.appendChild(tot);
     var grid = el('div', undefined, 'grid');
     ALL.forEach(function (a, i) {
       var open = unlocked(i);
-      var b = btn('', function () { startArena(a.id); }, !open);
+      var b = btn('', function () { beep('select'); startArena(a.id); }, !open);
       b.className = 'card'; b.dataset.arena = a.id;
       b.appendChild(el('strong', NAMES[a.id] + (a.glade ? ' (night variant)' : (a.night ? ' (night)' : ''))));
       b.appendChild(el('span', open ? stars(save.stars[a.id]) : 'Locked'));
@@ -444,7 +457,8 @@
     }
     var rule = el('p', 'Unlock rule: Meadow is always open. Every other arena opens when your total stars across all arenas reach 2 x (its number - 1): Orchard 2, Pond Edge 4, Forest 6, Dunes 8, Cliffs 10, Marsh 12, Lantern Glade 14, Night Glade 16. Earn 1 to 3 stars per arena by score, and 1 star for each journal goal you finish. Nothing is ever locked by time.', 'dim'); rule.id = 'unlock-rule'; overlay.appendChild(rule);
     var row = el('div', undefined, 'row');
-    var j = btn('Bug journal', showJournal); j.id = 'open-journal'; row.appendChild(j);
+    var j = btn('Bug journal', function () { beep('ui_open'); showJournal(); }); j.id = 'open-journal'; row.appendChild(j);
+    if (settings) { var stb = btn('Settings', openSettings); stb.id = 'open-settings'; row.appendChild(stb); }
     var back = document.createElement('a'); back.className = 'menu-back' + (document.body.classList.contains('mm-nav-on') ? ' mm-nav-legacy' : ''); back.id = 'menu-back'; back.href = '../../hub/index.html'; back.textContent = '\u2190 Back to the hub'; // beta gate: the full-screen phone sheet covers the header links (with mm-nav on, the shared Menu button replaces it; it stays in the DOM)
     row.appendChild(back);
     overlay.appendChild(row);
@@ -492,16 +506,50 @@
       sec.appendChild(ul); gw.appendChild(sec);
     });
     overlay.appendChild(gw);
-    var row = el('div', undefined, 'row'); row.appendChild(btn('Back', showMenu)); overlay.appendChild(row);
+    var row = el('div', undefined, 'row'); row.appendChild(btn('Back', function () { beep('back'); showMenu(); })); overlay.appendChild(row);
   }
+  var sumCard = null; // one persistent card element: MMMiniKit adds its R / Enter key handler once per element
   function showSummary() {
+    var K = window.MMMiniKit;
+    if (!K) return showSummaryPlain();
+    var s = lastSummary; clear(overlay); overlay.hidden = false;
+    if (!sumCard) { sumCard = document.createElement('section'); sumCard.id = 'sum-card'; }
+    var lines = [];
+    if (s.mod) lines.push({ id: 'sum-mod', text: B.MODS[s.mod].name + ': ' + B.MODS[s.mod].line, cls: 'modline' });
+    lines.push({ id: 'sum-stars', text: stars(s.stars), cls: 'stars' });
+    lines.push({ id: 'sum-score', text: 'Score ' + s.score + (s.newBest ? '  (new best!)' : '  (best ' + s.best + ')'), cls: '' });
+    // the personal-best chase in one honest line
+    lines.push({ id: 'sum-chase', text: s.score === 0 && s.best === 0 ? 'Walk up close, then swing the net.' : s.newBest ? (s.prevBest > 0 ? 'New best by ' + (s.score - s.prevBest) + ' points!' : 'First score on the board!') : (s.best - s.score === 0 ? 'Tied your best!' : (s.best - s.score) + ' points to beat your best.'), cls: s.newBest ? 'chase win' : 'chase' });
+    var card = K.panel(sumCard, K.result({
+      title: 'Time!', headline: ['Time! ' + NAMES[s.arena]], lines: lines, goalText: 'Next: ' + s.hint,
+      more: [{ id: 'replay', label: 'Replay seed' }, { id: 'to-menu', label: 'Arenas' }],
+      ids: { again: 'again', goal: 'sum-hint' }
+    }), { again: function () { startArena(s.arena); }, more: [function () { startArena(s.arena, { seed: s.seed, mod: s.mod }); }, showMenu], holdMs: GUARD_MS, keyReady: function () { return mode === 'summary'; } });
+    overlay.appendChild(sumCard);
+    var acts = sumCard.querySelector('.mk-actions'); if (acts) acts.id = 'sum-actions';
+    if (card.again) card.again.classList.add('again');
+    if (card.more[0]) card.more[0].title = 'Same bugs, same start, same modifier';
+    overlay.appendChild(el('p', 'Enter or R plays again.', 'dim keyhint'));
+    overlay.appendChild(el('p', 'Bugs caught: ' + s.caught));
+    var gp = el('p', 'Stars gained: ' + s.gained); gp.id = 'sum-gained'; overlay.appendChild(gp);
+    var cp = el('p', 'Best combo: ' + s.bestCombo + (s.bestCombo > 1 ? ' (x' + mult(s.bestCombo).toFixed(2).replace(/0$/, '') + ')' : '')); cp.id = 'sum-combo'; overlay.appendChild(cp);
+    var cl = el('div'); cl.id = 'sum-counts';
+    SPECIES.concat(B.GLADE_SPECIES).forEach(function (sp) { if (s.counts[sp]) { var li = el('div', SP_NAME[sp] + ' x' + s.counts[sp]); li.dataset.species = sp; cl.appendChild(li); } });
+    if (!cl.firstChild) cl.appendChild(el('div', 'No bugs this time', 'dim'));
+    overlay.appendChild(cl);
+    if (s.goals && s.goals.length) { var sg = el('p', 'Journal goal done (+' + s.goals.length + ' star' + (s.goals.length > 1 ? 's' : '') + '): ' + s.goals.join(', ')); sg.id = 'sum-goals'; overlay.appendChild(sg); }
+    if (s.newlyUnlocked.length) overlay.appendChild(el('p', 'Unlocked: ' + s.newlyUnlocked.join(', ')));
+    var nm = el('p', s.nearMisses ? 'Near misses: ' + s.nearMisses + ' (stand a little closer before you swing)' : 'Near misses: 0', 'dim'); nm.id = 'sum-near'; overlay.appendChild(nm);
+    var cb = el('p', 'Arena best combo: ' + s.comboBest + (s.newComboBest ? ' (new!)' : ''), 'dim'); cb.id = 'sum-combo-best'; overlay.appendChild(cb);
+  }
+  function showSummaryPlain() {
     var s = lastSummary; clear(overlay); overlay.hidden = false;
     overlay.appendChild(el('h2', 'Time! ' + NAMES[s.arena]));
     if (s.mod) { var smd = el('p', s.mod ? B.MODS[s.mod].name + ': ' + B.MODS[s.mod].line : '', 'modline'); smd.id = 'sum-mod'; overlay.appendChild(smd); }
     var st = el('p', stars(s.stars), 'stars'); st.id = 'sum-stars'; overlay.appendChild(st);
     var sc = el('p', 'Score ' + s.score + (s.newBest ? '  (new best!)' : '  (best ' + s.best + ')')); sc.id = 'sum-score'; overlay.appendChild(sc);
     // FUN1: the personal-best chase in one honest line, and Play again right under the result (one tap, or Enter / R)
-    var chase = s.newBest ? (s.prevBest > 0 ? 'New best by ' + (s.score - s.prevBest) + ' points!' : 'First score on the board!') : (s.best - s.score === 0 ? 'Tied your best!' : (s.best - s.score) + ' points to beat your best.');
+    var chase = s.score === 0 && s.best === 0 ? 'Walk up close, then swing the net.' : s.newBest ? (s.prevBest > 0 ? 'New best by ' + (s.score - s.prevBest) + ' points!' : 'First score on the board!') : (s.best - s.score === 0 ? 'Tied your best!' : (s.best - s.score) + ' points to beat your best.');
     var ch = el('p', chase, s.newBest ? 'chase win' : 'chase'); ch.id = 'sum-chase'; overlay.appendChild(ch);
     var top = el('div', undefined, 'row'); top.id = 'sum-actions';
     var again = btn('Play again', function () { startArena(s.arena); }, false); again.id = 'again'; again.className = 'again'; top.appendChild(again);
@@ -536,22 +584,33 @@
   syncMute();
 
   // ---------- input ----------
+  var MOVE_CODES = ['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+  function setPaused(v, why) { if (mode !== 'play' || !game) return; if (!v && !paused) return; paused = !!v; pauseWhy = v ? (why || 'key') : ''; if (v) { for (var k in keys) keys[k] = false; joy.x = joy.y = 0; sneakBtn = false; } }
   window.addEventListener('keydown', function (e) {
-    if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].indexOf(e.code) >= 0 && mode === 'play') e.preventDefault();
+    if (window.MMInput && window.MMInput.isTyping(e.target)) return;
+    var act = window.MMInput ? window.MMInput.actionOf(e) : null; // universal controls: Esc / P pause, Enter = Space, E = Shift
+    if (mode === 'play' && (MOVE_CODES.indexOf(e.code) >= 0 || act === 'primary' || act === 'menu')) e.preventDefault();
+    if (mode === 'play' && act === 'menu') { if (!e.repeat) { if (paused) setPaused(false); else setPaused(true, 'key'); } return; }
+    if (mode === 'play' && paused && pauseWhy === 'key' && (act === 'primary' || act === 'up' || act === 'down' || act === 'left' || act === 'right')) { setPaused(false); return; }
     keys[e.code] = true;
-    if (e.code === 'Space' && mode === 'play') doSwing();
-    if (mode === 'summary' && lastSummary && (e.code === 'KeyR' || ((e.code === 'Enter' || e.code === 'NumpadEnter') && !(document.activeElement && document.activeElement.id === 'to-menu')))) {
+    if (mode === 'play' && hintOpen && act && act !== 'restart') dismissHint(); // keyboard-only players never need the mouse for the how-to card
+    if (mode === 'play' && act === 'primary') doSwing();
+    // fallback only: with MMMiniKit the result card owns R / Enter
+    if (!window.MMMiniKit && mode === 'summary' && lastSummary && (e.code === 'KeyR' || ((e.code === 'Enter' || e.code === 'NumpadEnter') && !(document.activeElement && document.activeElement.id === 'to-menu')))) {
       e.preventDefault(); startArena(lastSummary.arena);
     }
   });
   window.addEventListener('keyup', function (e) { keys[e.code] = false; });
   window.addEventListener('blur', function () { keys = {}; joy.x = joy.y = 0; sneakBtn = false; });
-  cv.addEventListener('pointerdown', function (e) { e.preventDefault(); doSwing(); });
+  document.addEventListener('visibilitychange', function () { if (document.hidden) setPaused(true, 'hidden'); }); // a backgrounded tab never costs a run
+  // Keyboard clicks (detail 0) right after the timer ends are the tail of mashing Space: never let them skip the result card.
+  overlay.addEventListener('click', function (e) { if (mode === 'summary' && e.detail === 0 && performance.now() - endAt < GUARD_MS && e.target.closest && e.target.closest('button')) { e.stopPropagation(); e.preventDefault(); } }, true);
+  cv.addEventListener('pointerdown', function (e) { e.preventDefault(); if (paused) { setPaused(false); return; } if (hintOpen && mode === 'play') dismissHint(); doSwing(); });
   var swingBtn = $('btn-swing');
-  swingBtn.addEventListener('pointerdown', function (e) { e.preventDefault(); doSwing(); });
+  swingBtn.addEventListener('pointerdown', function (e) { e.preventDefault(); if (paused) { setPaused(false); return; } if (hintOpen && mode === 'play') dismissHint(); doSwing(); });
   var sneakEl = $('btn-sneak');
   function setSneak(v) { sneakBtn = v; sneakEl.classList.toggle('on', v); }
-  sneakEl.addEventListener('pointerdown', function (e) { e.preventDefault(); setSneak(true); });
+  sneakEl.addEventListener('pointerdown', function (e) { e.preventDefault(); if (hintOpen && mode === 'play') dismissHint(); setSneak(true); });
   ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (n) { sneakEl.addEventListener(n, function () { setSneak(false); }); });
   var joyEl = $('joy'), knob = $('knob'), joyId = null;
   function joyMove(e) {
@@ -561,15 +620,35 @@
     knob.style.transform = 'translate(' + (joy.x * R0) + 'px,' + (joy.y * R0) + 'px)';
   }
   function joyEnd() { joyId = null; joy.x = joy.y = 0; knob.style.transform = ''; }
-  joyEl.addEventListener('pointerdown', function (e) { e.preventDefault(); joyId = e.pointerId; try { joyEl.setPointerCapture(e.pointerId); } catch (x) { /* ignore */ } joyMove(e); });
+  joyEl.addEventListener('pointerdown', function (e) { e.preventDefault(); if (paused) setPaused(false); if (hintOpen && mode === 'play') dismissHint(); joyId = e.pointerId; try { joyEl.setPointerCapture(e.pointerId); } catch (x) { /* ignore */ } joyMove(e); });
   joyEl.addEventListener('pointermove', function (e) { if (e.pointerId === joyId) joyMove(e); });
   joyEl.addEventListener('pointerup', joyEnd); joyEl.addEventListener('pointercancel', joyEnd);
+
+  // ---------- shared Settings panel + Menu (pause while either is open) ----------
+  var settings = null;
+  try { if (window.MMSettings) settings = window.MMSettings.mount({ page: 'bugs' }); } catch (e) { settings = null; }
+  function openSettings() { if (!settings) return; if (mode === 'play') setPaused(true, 'settings'); settings.open(); }
+  if (window.MMNav) {
+    try {
+      if (window.MMNav.onOpen) window.MMNav.onOpen(function () { if (mode === 'play' && !paused) setPaused(true, 'nav'); });
+      if (window.MMNav.onClose) window.MMNav.onClose(function () { if (pauseWhy === 'nav') setPaused(false); });
+      if (settings && window.MMNav.onSettings) window.MMNav.onSettings(openSettings);
+    } catch (e) { /* the shared menu is optional */ }
+  }
+  window.addEventListener('mm-settings-change', function (e) {
+    var d = (e && e.detail) || {};
+    if (d.id === 'sound') { ensureSfx(); if (sfx) sfx.setMuted(!d.value); syncMute(); }
+    else if (d.id === 'music') { ensureSfx(); if (sfx) { sfx.setMusic(!!d.value); if (d.value && mode === 'play') music('minigame'); } }
+    else if (d.id === 'reduce-motion' || d.id === 'flashes') reduced = !!(mq && mq.matches) || sideReduced();
+    else if (d.id === 'low-gfx') readGfx();
+  });
 
   // ---------- loop ----------
   var last = 0;
   function frame(t) {
     if (!testClock) {
       var dt = last ? Math.min(0.05, (t - last) / 1000) : 0; last = t; // capped: a hidden tab never advances time
+      if (pauseWhy === 'settings' && settings && !settings.isOpen()) setPaused(false);
       if (!hintOpen) step(dt);
     }
     render();
@@ -582,6 +661,13 @@
   if (TEST) {
     window.__bugs = {
       get mode() { return mode; },
+      get paused() { return paused; },
+      get pauseWhy() { return pauseWhy; },
+      get cues() { return played.slice(); },
+      setPaused: setPaused,
+      openSettings: openSettings,
+      setGuard: function (ms) { GUARD_MS = ms; },
+      get settings() { return settings; },
       get run() { return game ? game.state : null; },
       get reduced() { return reduced; },
       get save() { return JSON.parse(JSON.stringify(save)); },
