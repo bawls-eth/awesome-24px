@@ -120,6 +120,14 @@ async function open(browser, q, opts, store) {
   check('phone: HP text never wraps inside the HP bar', hp.ws === 'nowrap' && hp.sh <= hp.bh + 2, JSON.stringify(hp));
   const pg = await page.evaluate(() => { const g = document.getElementById('rw-goal'); const r = g.getBoundingClientRect(); const s = document.getElementById('realm-stick-move').getBoundingClientRect(); return { top: r.top, bottom: r.bottom, right: r.right, stickTop: s.top, vw: innerWidth, hidden: g.classList.contains('hidden') }; });
   check('phone: the goal line sits at the top, never over the sticks, inside the screen', pg.hidden || (pg.bottom < pg.stickTop && pg.right <= pg.vw), JSON.stringify(pg));
+  const tabsY = await page.evaluate(async () => {
+    const a = window.__mm.arena; a.setPaused(true); const out = {};
+    for (const t of ['gear', 'stats', 'relics', 'gear']) { a.bpTab(t); await new Promise((r) => requestAnimationFrame(r)); const b = document.querySelector('[data-bp-tab="stats"]'); out[t] = Math.round(b.getBoundingClientRect().top); }
+    out.hint = (document.getElementById('realm-bp-stat4-for') || {}).textContent || '';
+    a.setPaused(false); return out;
+  });
+  check('phone: the backpack tabs stay put when switching Gear / Stats / Relics', tabsY.gear === tabsY.stats && tabsY.stats === tabsY.relics, JSON.stringify(tabsY));
+  check('the Stats tab hint points to the Gear tab (no items to tap there)', /Gear tab/.test(tabsY.hint), JSON.stringify(tabsY));
   check('no page errors (phone)', page.errors.length === 0, page.errors.join(' | '));
   await ctx.close();
 
@@ -131,6 +139,15 @@ async function open(browser, q, opts, store) {
     check('hostile save ' + bad.slice(0, 30) + ': world plays, goal line sane, no errors', st.s === 'play' && !/undefined|NaN|\[object/.test(st.goal) && page.errors.length === 0, JSON.stringify(st) + ' ' + page.errors.join(' | '));
     await ctx.close();
   }
+
+  // ---- dungeon fall: the summary names the fall cache it stashed (was "Loot: no items" next to "Stashed 1 item") ----
+  ({ ctx, page } = await open(browser, 'mode=dungeon&biome=crypt&test=1&seed=42', { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }));
+  await page.evaluate(() => { const a = window.__mm.arena; a.player.hp = 0; a._die(); });
+  await page.waitForFunction(() => { const s = document.getElementById('mm-summary'); return s && !s.classList.contains('hidden') && s.textContent.length > 20; }, null, { timeout: 10000 });
+  const sum = await page.evaluate(() => ({ cache: (document.getElementById('mm-sum-cache') || {}).textContent || '', stash: (document.getElementById('mm-sum-stash') || {}).textContent || '', st: window.__mm.dungeon.stash }));
+  check('dungeon fall summary lists the fall cache that the stash line counts', /^💀 (Fall cache: |pack full)/.test(sum.cache) && !/[<>]/.test(sum.cache), JSON.stringify(sum));
+  check('no page errors (dungeon fall)', page.errors.length === 0, page.errors.join(' | '));
+  await ctx.close();
 
   // ---- ?goal=0 / ?mmsettings=0 leave the page as before ----
   ({ ctx, page } = await open(browser, 'mode=world&test=1&goal=0&mmsettings=0'));

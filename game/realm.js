@@ -4537,7 +4537,7 @@ class RealmArena {
   _bpStatBlockHtml() {
     const v = this._bp4(this.stats || {});
     const rows = [['power', 'Power', 'P', 'How hard each shot hits'], ['defense', 'Defense', 'D', 'How much hurt you can take'], ['speed', 'Speed', 'S', 'How fast you move'], ['luck', 'Luck', 'L', 'Chance of a critical hit (%)']];
-    return `<div id="realm-bp-stat4" class="rm-bp8-stat4" aria-live="polite">${rows.map(([k, lab, ch, mean]) => `<div class="s4" data-s4="${k}"><span class="ic" aria-hidden="true">${ch}</span><span class="lb">${lab}</span><b class="vl">${v[k]}</b><span class="dd" data-d=""></span><span class="mn">${mean}</span></div>`).join('')}<div class="s4-for dim" id="realm-bp-stat4-for">Hover or tap an item to see its +/-</div></div>`;
+    return `<div id="realm-bp-stat4" class="rm-bp8-stat4" aria-live="polite">${rows.map(([k, lab, ch, mean]) => `<div class="s4" data-s4="${k}"><span class="ic" aria-hidden="true">${ch}</span><span class="lb">${lab}</span><b class="vl">${v[k]}</b><span class="dd" data-d=""></span><span class="mn">${mean}</span></div>`).join('')}<div class="s4-for dim" id="realm-bp-stat4-for">Tap an item on the Gear tab to see its +/-</div></div>`;
   }
   // Fill the stat block's +/- for one item (uid) or clear it (0). The block shows on the Stats tab and as a strip on the Gear tab.
   bpShowDelta(uid) {
@@ -4548,7 +4548,7 @@ class RealmArena {
       el.dataset.d = d ? (n > 0 ? 'up' : n < 0 ? 'down' : 'same') : '';
     });
     const txt = def ? (this.save.eq[def.slot] === it.n ? 'Taking off: ' : 'Wearing: ') + def.name : 'Hover or tap an item to see its +/-';
-    document.querySelectorAll('#realm-bp-stat4-for, #realm-bp-cmp4 .s4-for').forEach((f) => { f.textContent = txt; });
+    document.querySelectorAll('#realm-bp-stat4-for, #realm-bp-cmp4 .s4-for').forEach((f) => { f.textContent = !def && f.id === 'realm-bp-stat4-for' ? 'Tap an item on the Gear tab to see its +/-' : txt; }); // the Stats tab has no items to tap
     this._bpDeltaUid = d ? Number(uid) : 0;
     return d;
   }

@@ -67,3 +67,5 @@ html.low-gfx body #realm-abilities .realm-ab, html.low-gfx body #realm-banner { 
 /* ---- bug bash: the HP numbers never wrap to a second line in a narrow (phone) HP bar ---- */
 html body #realm-hp-text { white-space: nowrap; overflow: hidden; }
 @media (max-width: 560px) { html body #realm-hp-text { letter-spacing: 0; font-size: 10px; } }
+/* ---- bug bash: the backpack card is anchored at the top so the Gear / Stats / Relics tabs never jump under the finger when the pane height changes ---- */
+html body #realm-backpack { align-items: flex-start; }
