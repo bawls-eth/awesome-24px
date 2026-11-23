@@ -35,7 +35,7 @@
   const MAX_SUB = 40;       // sub-place label
   const MAX_URL = 200;      // stored repo-relative URL
   const MAX_T = 1e13;       // timestamps (ms) beyond year 2286 are clamped
-  const Q_KEYS = ['isle', 'seed', 'from', 'test'];  // query keys carried over into a stored URL
+  const Q_KEYS = ['isle', 'seed', 'from', 'test', 'map'];  // map=1: the Hub's map view (else its Home screen)  // query keys carried over into a stored URL
   const Q_VAL = /^[A-Za-z0-9_-]{1,24}$/;
 
   // Page registry: path is relative to the repo root.
@@ -147,8 +147,9 @@
     const s = clean(state);
     if (!s.last || s.last.id === currentId) return null;
     const p = BY_ID[s.last.id];
-    return { id: p.id, icon: p.icon, name: p.name, sub: s.last.sub, url: s.last.url,
-      label: 'Continue: ' + p.name + (s.last.sub ? ' - ' + s.last.sub : '') };
+    const name = p.id === 'map' && !/[?&]map=1(?:&|$)/.test(s.last.url) ? 'Home' : p.name; // the plain Hub URL is its Home screen
+    return { id: p.id, icon: p.icon, name, sub: s.last.sub, url: s.last.url,
+      label: 'Continue: ' + name + (s.last.sub ? ' - ' + s.last.sub : '') };
   }
 
   // Path of the current page relative to the repo root, from a location.pathname.
@@ -202,13 +203,16 @@
       if (d.id && d.id !== o.current) {
         const p = BY_ID[d.id];
         const url = cleanUrl(d.file + (qi < 0 ? '' : rest.slice(qi).split('#')[0])) || p.path;
-        return { id: p.id, label: 'Back to ' + p.name, href: relative(here, url) };
+        // The Hub opens on its Home screen; only ?map=1 is the World map view.
+        const name = p.id === 'map' ? (/[?&]map=1(?:&|$)/.test(url) ? p.name : 'Home') : p.name;
+        return { id: p.id, label: 'Back to ' + name, href: relative(here, url) };
       }
     }
     const h = safeHref(o.backHref);
     if (h) return { id: null, label: 'Back to ' + (cleanSub(o.backLabel) || 'the last page'), href: h };
-    const dest = o.current === 'town' ? 'map' : 'town';
-    return { id: dest, label: 'Back to ' + BY_ID[dest].name, href: relative(here, BY_ID[dest].path) };
+    // No known previous page: every place goes back to the Home screen (the Hub); the Hub itself goes to the Town.
+    if (o.current === 'map') return { id: 'town', label: 'Back to ' + BY_ID.town.name, href: relative(here, BY_ID.town.path) };
+    return { id: 'map', label: 'Back to Home', href: relative(here, BY_ID.map.path) };
   }
 
   // ---------- storage (wrapped: storage may be blocked) ----------
@@ -265,6 +269,8 @@
     return a;
   }
 
+  // "World map" opens the Hub's map view (?map=1); the plain Hub URL is the Home screen.
+  function mapHref() { return urlFor('map', cur.file) + '?map=1'; }
   function build() {
     const rootEl = el('div', { id: 'mm-nav-root' });
     let btn = null;
@@ -304,7 +310,7 @@
       if (!p) return;
       const grid = gr.ul;
       const li = el('li');
-      const a = el('a', { class: 'mm-nav-dest', href: urlFor(p.id, cur.file), 'data-place': p.id });
+      const a = el('a', { class: 'mm-nav-dest', href: p.id === 'map' ? mapHref() : urlFor(p.id, cur.file), 'data-place': p.id });
       if (p.id === cur.id) a.setAttribute('aria-current', 'page');
       a.appendChild(el('span', { class: 'mm-nav-ico', 'aria-hidden': 'true' }, p.icon));
       const t = el('span', { class: 'mm-nav-dest-text' });
@@ -316,10 +322,10 @@
     }));
 
     const foot = el('div', { class: 'mm-nav-foot' });
-    const mapA = el('a', { id: 'mm-nav-map', class: 'mm-nav-foot-btn', href: urlFor('map', cur.file) }, '🧭 World map');
+    const mapA = el('a', { id: 'mm-nav-map', class: 'mm-nav-foot-btn', href: mapHref() }, '🧭 World map');
     foot.appendChild(mapA);
-    const set = el('button', { id: 'mm-nav-settings', type: 'button', class: 'mm-nav-foot-btn', hidden: '' }, '⚙ Settings');
-    set.addEventListener('click', () => { const fn = hooks.settings; close(); if (fn) { try { fn(); } catch (e) { /* page hook */ } } });
+    const set = el('button', { id: 'mm-nav-settings', type: 'button', class: 'mm-nav-foot-btn' }, '⚙ Settings');
+    set.addEventListener('click', () => { close(); openSettings(); });
     foot.appendChild(set);
     const x2 = el('button', { id: 'mm-nav-close2', type: 'button', class: 'mm-nav-foot-btn' }, '✕ Close');
     x2.addEventListener('click', () => close());
@@ -361,12 +367,41 @@
   // keyup is NOT swallowed (review N1): a key held when the sheet opened must still reach the page on release, or the game
   // behind keeps it "down" after the sheet closes (the Town player walked on by itself). Only keydown acts, so keyup is harmless.
 
+  // Gamepad while the sheet is open (CONTROLS.md: d-pad / left stick move, A = confirm the focused entry, B = back). Polled only
+  // while open, edge-triggered; the first pad state is taken as "already held" so the Start press that opened the sheet
+  // does not close it again on the next frame.
+  let padRaf = 0, padPrev = null;
+  function readPad() {
+    let gp = null;
+    try { const l = navigator.getGamepads ? navigator.getGamepads() : []; for (let i = 0; l && i < l.length; i++) if (l[i]) { gp = l[i]; break; } } catch (e) { return null; }
+    if (!gp) return null;
+    const bt = (i) => !!(gp.buttons && gp.buttons[i] && (gp.buttons[i].pressed || gp.buttons[i].value > 0.5));
+    const ax = (i) => (gp.axes && Number.isFinite(gp.axes[i]) ? gp.axes[i] : 0);
+    return { up: bt(12) || ax(1) < -0.6, down: bt(13) || ax(1) > 0.6, left: bt(14) || ax(0) < -0.6, right: bt(15) || ax(0) > 0.6, a: bt(0), b: bt(1), start: bt(9) };
+  }
+  function padLoop() {
+    padRaf = 0;
+    if (!ui || !ui.isOpen) { padPrev = null; return; }
+    const p = readPad();
+    if (p && padPrev) {
+      const hit = (k) => p[k] && !padPrev[k];
+      if (hit('b')) { padPrev = null; close(); return; } // Start is left to the page (the Town and the Realm read it themselves)
+      const step = hit('down') || hit('right') ? 1 : hit('up') || hit('left') ? -1 : 0;
+      if (step) {
+        const f = focusables();
+        if (f.length) { const i = f.indexOf(document.activeElement); f[(i < 0 ? 0 : (i + step + f.length) % f.length)].focus(); }
+      }
+      if (hit('a')) { const a = document.activeElement; if (a && ui.sheet.contains(a) && a.click) a.click(); }
+    }
+    padPrev = p || { up: false, down: false, left: false, right: false, a: false, b: false, start: false };
+    if (ui && ui.isOpen && typeof requestAnimationFrame === 'function') padRaf = requestAnimationFrame(padLoop);
+  }
+
   function open() {
     if (!ui) return false;
     if (ui.isOpen) return true;
     document.querySelectorAll('.mm-nav-sheet:not([hidden])').forEach((n) => { if (n !== ui.sheet) n.hidden = true; });
     fillTop();
-    ui.set.hidden = !hooks.settings;
     lastFocus = document.activeElement;
     ui.backdrop.hidden = false;
     ui.sheet.hidden = false;
@@ -375,6 +410,8 @@
     if (ui.btn) ui.btn.setAttribute('aria-expanded', 'true');
     const first = ui.sheet.querySelector('#mm-nav-continue') || ui.sheet.querySelector('#mm-nav-back');
     if (first) first.focus();
+    padPrev = readPad();
+    if (!padRaf && typeof requestAnimationFrame === 'function') padRaf = requestAnimationFrame(padLoop);
     hooks.open.forEach((fn) => { try { fn(); } catch (e) { /* page hook */ } });
     return true;
   }
@@ -389,6 +426,47 @@
     if (back && back.focus && document.contains(back)) back.focus();
     hooks.close.forEach((fn) => { try { fn(); } catch (e) { /* page hook */ } });
     return true;
+  }
+
+  // ---------- Settings (SETTINGS-WIRING.md) ----------
+  // The Menu's Settings entry works on every page. Order: the shared panel when the page has mounted it itself
+  // (MMSettings.mount -> #mmset), else the page's own hook (MMNav.onSettings: Town settings, Isles log, Realm access sheet),
+  // else the shared panel, loaded on demand from next to mm-nav.js (mm-feedback.js for its Help box, then mm-settings.js).
+  let setLoading = false;
+  function sharedDir() {
+    if (!script || !script.src) return null;
+    const m = /^(.*\/)mm-nav\.js(?:\?.*)?$/.exec(script.src);
+    return m ? m[1] : null;
+  }
+  function addScript(src, done) {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = () => done(true);
+    s.onerror = () => done(false);
+    document.head.appendChild(s);
+  }
+  function openShared() {
+    const S = window.MMSettings;
+    if (!S || typeof S.mount !== 'function') return false;
+    try {
+      // The Play group (auto-fire, aim assist, ...) only means something in the Realm; elsewhere the panel stays short.
+      const p = S.mount({ page: cur.id || 'page', play: cur.id === 'realm' });
+      if (p && p.open) { p.open(); return true; }
+    } catch (e) { /* a broken panel must not break the menu */ }
+    return false;
+  }
+  // openSettings() -> 'shared' | 'page' | 'loading' | false
+  function openSettings() {
+    if (typeof document === 'undefined') return false;
+    if (window.MMSettings && document.getElementById('mmset') && openShared()) return 'shared';
+    if (hooks.settings) { try { hooks.settings(); } catch (e) { /* page hook */ } return 'page'; }
+    if (window.MMSettings) return openShared() ? 'shared' : false;
+    const dir = sharedDir();
+    if (!dir || setLoading) return setLoading ? 'loading' : false;
+    setLoading = true;
+    const last = () => addScript(dir + 'mm-settings.js', () => { setLoading = false; openShared(); });
+    if (window.MMFeedback) last(); else addScript(dir + 'mm-feedback.js', last);
+    return 'loading';
   }
 
   // mount(opts) -> true when the nav is on the page, false when it stays off (embedded, ?nav=0, no DOM).
@@ -441,7 +519,7 @@
   }
 
   return {
-    KEY, PLACES, GROUPS, mount, open, close, markPlace, setCovered,
+    KEY, PLACES, GROUPS, mount, open, close, markPlace, setCovered, openSettings,
     isOpen: () => !!(ui && ui.isOpen),
     mounted: () => !!ui,
     current: () => Object.assign({}, cur),

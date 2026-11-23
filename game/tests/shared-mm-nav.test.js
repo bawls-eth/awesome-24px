@@ -109,11 +109,18 @@ check('backTarget: same-origin registry referrer', b1.id === 'stalk' && b1.label
 const b2 = N.backTarget({ referrer: o + '/game/games/isles/index.html?isle=reef&x=<y>', origin: o, file: 'game/index.html', current: 'town' });
 check('backTarget: referrer query is allow-listed', b2.href === 'games/isles/index.html?isle=reef');
 const b3 = N.backTarget({ referrer: 'https://evil.example/game/hub/index.html', origin: o, file: 'game/games/jam/index.html', current: 'jam' });
-check('backTarget: other origin -> Town', b3.id === 'town' && b3.href === '../../index.html' && b3.label === 'Back to Town');
-check('backTarget: same page referrer is ignored', N.backTarget({ referrer: o + '/game/games/jam/index.html', origin: o, file: 'game/games/jam/index.html', current: 'jam' }).id === 'town');
+check('backTarget: other origin -> Home (the Hub home screen)', b3.id === 'map' && b3.href === '../../hub/index.html' && b3.label === 'Back to Home');
+check('backTarget: same page referrer is ignored', N.backTarget({ referrer: o + '/game/games/jam/index.html', origin: o, file: 'game/games/jam/index.html', current: 'jam' }).id === 'map');
 check('backTarget: page fallback backHref/backLabel', (() => { const b = N.backTarget({ origin: o, file: 'game/games/isles/index.html', current: 'isles', backHref: '../../hub/index.html', backLabel: 'World map' }); return b.href === '../../hub/index.html' && b.label === 'Back to World map'; })());
-check('backTarget: unsafe backHref is refused', N.backTarget({ origin: o, file: 'game/games/jam/index.html', current: 'jam', backHref: 'javascript:alert(1)' }).id === 'town');
-check('backTarget: on the Town the default is the World map', N.backTarget({ origin: o, file: 'game/index.html', current: 'town' }).id === 'map');
+check('backTarget: unsafe backHref is refused', N.backTarget({ origin: o, file: 'game/games/jam/index.html', current: 'jam', backHref: 'javascript:alert(1)' }).id === 'map');
+check('backTarget: on the Town the default is Home', (() => { const b = N.backTarget({ origin: o, file: 'game/index.html', current: 'town' }); return b.id === 'map' && b.label === 'Back to Home' && b.href === 'hub/index.html'; })());
+check('backTarget: on the Hub the default is the Town', (() => { const b = N.backTarget({ origin: o, file: 'game/hub/index.html', current: 'map' }); return b.id === 'town' && b.label === 'Back to Town' && b.href === '../index.html'; })());
+// bug bash: the Hub opens on its Home screen, so a plain Hub referrer is "Home" and only ?map=1 is the World map (kept in the href)
+const bh = N.backTarget({ referrer: o + '/game/hub/index.html', origin: o, file: 'game/games/pop/index.html', current: 'pop' });
+const bm = N.backTarget({ referrer: o + '/game/hub/index.html?map=1', origin: o, file: 'game/games/pop/index.html', current: 'pop' });
+check('backTarget: Hub referrer -> "Back to Home"; ?map=1 referrer -> "Back to World map" with ?map=1 kept', bh.label === 'Back to Home' && bh.href === '../../hub/index.html' && bm.label === 'Back to World map' && bm.href === '../../hub/index.html?map=1', JSON.stringify([bh, bm]));
+check('continueTarget: last place the plain Hub reads "Continue: Home"; ?map=1 reads "Continue: World map"', N.continueTarget({ v: 1, last: { id: 'map', url: 'game/hub/index.html', t: 1 } }, 'jam').label === 'Continue: Home' && N.continueTarget({ v: 1, last: { id: 'map', url: 'game/hub/index.html?map=1', t: 1 } }, 'jam').label === 'Continue: World map');
+check('openSettings is exported and is a no-op without a DOM', typeof N.openSettings === 'function' && N.openSettings() === false);
 
 // ---- node: mount is a no-op without a DOM ----
 check('mount() without a DOM returns false and touches nothing', N.mount({ page: 'jam' }) === false && N.mounted() === false && N.open() === false && N.close() === false);

@@ -64,5 +64,29 @@
       try { storage.setItem(KEY, JSON.stringify(c)); return c; } catch (e) { return null; }
     }
   };
-  return { prefs, PALETTES, BG, MIN_CONTRAST, OUTLINE_PX, contrast, palette, passesContrast, remap, names: () => Object.keys(PALETTES) };
+  // High contrast (Settings > See > High contrast, key mm-high-contrast = '1'). mm-access.js is on every page, so it applies the pref
+  // site-wide on load: <html data-high-contrast="1"> plus one small stylesheet that lifts the shared 8-bit tokens (dim text -> paper,
+  // panels -> black, a white outline on focus). Pages and shared widgets add their own [data-high-contrast] rules on top.
+  const HC_KEY = 'mm-high-contrast';
+  const HC_CSS = 'html[data-high-contrast="1"]{--px-dim:#fff1e8;--px-6:#fff1e8;--px-5:#c2c3c7;--px-bg:#000;--px-ink:#000;--px-panel:#000;--dim:#fff1e8;--h-dim:#fff1e8}'
+    + 'html[data-high-contrast="1"] :focus-visible{outline:3px solid #ffec27 !important;outline-offset:2px}';
+  function highContrast(storage) { try { return !!storage && storage.getItem(HC_KEY) === '1'; } catch (e) { return false; } }
+  function applyContrast(doc, storage) {
+    const on = highContrast(storage);
+    const el = doc && doc.documentElement;
+    if (!el) return on;
+    if (on) el.setAttribute('data-high-contrast', '1'); else el.removeAttribute('data-high-contrast');
+    if (on && !doc.getElementById('mm-hc-css') && doc.createElement) {
+      const st = doc.createElement('style');
+      st.id = 'mm-hc-css';
+      st.textContent = HC_CSS;
+      (doc.head || el).appendChild(st);
+    }
+    return on;
+  }
+  if (typeof document !== 'undefined' && typeof localStorage !== 'undefined') {
+    let ls = null; try { ls = localStorage; } catch (e) { ls = null; }
+    try { applyContrast(document, ls); } catch (e) { /* the page works without it */ }
+  }
+  return { prefs, PALETTES, BG, MIN_CONTRAST, OUTLINE_PX, contrast, palette, passesContrast, remap, names: () => Object.keys(PALETTES), HC_KEY, highContrast, applyContrast };
 });
