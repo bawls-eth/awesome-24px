@@ -12,7 +12,8 @@ const PTR_KEY = 'pixeltown-gate-pointer-v1';
 const FB_KEY = 'pixeltown-feedback-v1';
 const SAVE_KEY = 'pixeltown-save-v1';
 const ISLES = JSON.stringify({ v: 1, last: { id: 'isles', sub: 'Coral Reef', url: 'game/games/isles/index.html?isle=reef', t: 1 }, prev: null });
-const IDS = 'town,map,realm,lantern,isles,jam,bugs,angler,deepdelve,stalk,pop,dash,stack,echo';
+// HS1: the sheet lists the places in its three groups (Adventure, Arcade, Quick games); the World map closes Adventure
+const IDS = 'town,realm,isles,lantern,map,pop,dash,stack,echo,jam,angler,bugs,stalk,deepdelve';
 
 async function open(browser, viewport, touch, seedNav) {
   const ctx = await browser.newContext(touch ? { viewport, hasTouch: true, isMobile: true } : { viewport });

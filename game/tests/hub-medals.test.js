@@ -5,7 +5,7 @@
 const { chromium } = require('playwright');
 const { check, done } = require('./helpers');
 const ORIGIN = (process.env.BASE || 'http://localhost:8440/game/index.html').replace(/\/game\/index\.html.*$/, '');
-const HUB = ORIGIN + '/game/hub/index.html';
+const HUB = ORIGIN + '/game/hub/index.html?map=1'; // HS1: map view (the default view is the home screen)
 const PHONE = { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true };
 const key = (g) => 'pixeltown-medals-' + g + '-v1';
 const all = [];

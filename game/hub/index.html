@@ -38,6 +38,16 @@
   </button>
   <ul id="coll-steps" class="coll-steps" aria-label="First things you could find" hidden></ul>
 </section>
+<section id="home" class="home" aria-labelledby="home-title" hidden>
+  <canvas id="home-sky" class="home-sky" aria-hidden="true"></canvas>
+  <div class="home-in">
+    <h1 id="home-title" class="home-title"><canvas id="home-logo" class="home-logo" aria-hidden="true"></canvas><span class="home-sr">Pixeltown</span></h1>
+    <a id="home-play" class="home-play" href="../index.html?from=hub"><span class="hp-arrow" aria-hidden="true">&#9654;</span><span class="hp-txt"><span id="home-play-txt">Play</span><span id="home-play-sub" class="hp-sub"></span></span></a>
+    <a id="home-next" class="home-next" href="#" hidden><span id="home-next-ico" class="hn-ico" aria-hidden="true"></span><span id="home-next-txt" class="hn-txt"></span></a>
+    <div id="home-groups" class="home-groups"></div>
+    <button id="home-coll" class="home-coll" type="button" aria-controls="coll-sheet"><span class="hc-ico" aria-hidden="true">&#128214;</span><span class="hc-name">Collections</span><span id="home-coll-sum" class="home-coll-sum"></span></button>
+  </div>
+</section>
 <main id="stage">
   <canvas id="map" aria-label="World map" role="img"></canvas>
   <div id="toast" role="status" aria-live="polite"></div>
@@ -50,6 +60,7 @@
   <a id="hub-town" class="btn town-btn" href="../index.html?from=hub" aria-label="Back to the Town">&larr; Town</a>
   <span id="hint" class="hint">Tap a node, or use arrows / WASD / D-pad. Enter or A opens a node.</span>
   <button id="gift-btn" type="button" aria-expanded="false" aria-controls="gift-card">Daily gift</button>
+  <button id="view-toggle" type="button" aria-pressed="false">Map</button>
   <button id="open-btn" type="button">Open</button>
 </footer>
 <section id="card" class="card" hidden aria-labelledby="card-title">
@@ -105,5 +116,6 @@
 <script src="calm.js"></script>
 <script src="../shared/mm-collections.js"></script>
 <script src="collections.js"></script>
+<script src="home.js"></script>
 </body>
 </html>
