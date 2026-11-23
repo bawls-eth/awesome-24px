@@ -87,6 +87,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "bugs-bb.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "bugs-variety.test.js": {
     "class": "browser",
     "tier": "full"
