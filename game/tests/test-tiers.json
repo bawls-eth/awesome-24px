@@ -844,7 +844,7 @@
     "tier": "full"
   },
   "town-perf.test.js": {
-    "class": "live",
+    "class": "browser",
     "tier": "full"
   },
   "jam-first-visit.test.js": {

@@ -6748,7 +6748,8 @@ class TownScene extends Phaser.Scene {
     g.fillStyle(0xcfe8f5, 1).fillRect(x + w / 2 - 10, y + 14, 20, 18);
     g.setDepth(y + h);
     g.bake();
-    this.add.text(x + w / 2, y - 44, '👗 Able Sisters', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + h + 1);
+    // Label under the shop, not above the roof: the roof line is the town spawn (1200, 600), where it sat under the player's name.
+    this.add.text(x + w / 2, y + h + 10, '👗 Able Sisters', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + h + 1);
     this.addObstacleRect({ x, y: y + 14, width: w, height: h - 14 });
   }
 
