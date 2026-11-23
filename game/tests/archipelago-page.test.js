@@ -97,7 +97,8 @@ const frames = (page, n) => page.evaluate((k) => new Promise((res) => { let i = 
   check('MMProfile key and town save are untouched (read only)', keys.mm === JSON.stringify(PROFILE) && keys.town === '{"realm":{"level":3}}');
   // B10: the page is also the single writer of its medal summary key (pixeltown-medals-isles-v1); still no tames write without a tame
   // NAV slice D: the shared Menu (mm-nav) records the last place under its own additive key pixeltown-nav-v1
-  check('only own keys written (no tames write; the B10 medal summary and the mm-nav last place are the only additions)', keys.all.filter((k) => !['pixeltown-mm-v1', 'pixeltown-mm-active-v1', 'pixeltown-save-v1', 'pixeltown-archipelago-v1', 'pixeltown-medals-isles-v1', 'pixeltown-nav-v1'].includes(k)).length === 0, keys.all.join(','));
+  // G-26 changed this: the Isles gather-node / pouch store pixeltown-isle-nodes-v1 is a new additive key of the Isles' own (allowed, not a tames write)
+  check('only own keys written (no tames write; the B10 medal summary, the mm-nav last place and the G-26 isle-nodes store are the only additions)', keys.all.filter((k) => !['pixeltown-mm-v1', 'pixeltown-mm-active-v1', 'pixeltown-save-v1', 'pixeltown-archipelago-v1', 'pixeltown-medals-isles-v1', 'pixeltown-nav-v1', 'pixeltown-isle-nodes-v1'].includes(k)).length === 0, keys.all.join(','));
   const med = await pg.evaluate(() => JSON.parse(localStorage.getItem('pixeltown-medals-isles-v1')));
   check('B10 medal summary is {v:1, m:[visit_jungle]} after a first jungle visit', med && med.v === 1 && JSON.stringify(med.m) === JSON.stringify(['visit_jungle']), JSON.stringify(med));
   await pg.screenshot({ path: path.join(process.env.SHOTS || require('os').tmpdir(), 'isles-desktop.png') }).catch(() => {});
