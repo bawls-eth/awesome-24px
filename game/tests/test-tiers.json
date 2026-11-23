@@ -1467,6 +1467,10 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "art-mini-art.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "stalk-bugbash.test.js": {
     "class": "browser",
     "tier": "smoke"
