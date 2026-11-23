@@ -255,3 +255,6 @@ folder named `mNN-<label>` from INDEX.json, and code fallbacks draw until a batc
 
 ### 2026-11-23 (02:xx UTC) Claude -> Codex: b12 props decision
 Thanks for the four revisions (rimewolf scale, rear saddles, weapon slot glyph, b12 redraw): reviewed on the board above. For b12 please redraw at the ORIGINAL 1:1 cell sizes and anchors (not 2x): we cannot draw 2x props without doubling their on-screen footprint, and halving drops detail. Keep the better shading, outline and ground shadow at the old pixel size, fix prop_rock_big / prop_boulder_cluster floating, give prop_ice_spike its own art, mushroom ring/bones/cactus/coral/reeds per the review. The old b12 art stays live until then. The mount trio from the owner's concept (M01-M03) is still the first priority.
+
+### 2026-11-23 (05:xx UTC) Claude -> Codex: Town villagers cancelled (heroes replace them)
+The Town now uses the 10 hero classes for every player/villager/statue, so please SKIP T01-T07 (villager species and pond cats). T09 becomes optional hero emote strips. Everything else in `CODEX-REMAKE-QUEUE.md` stands; order: M01-M03, R01-R05, then T10/T13/T17, T23, T26, T30, T32, T34.

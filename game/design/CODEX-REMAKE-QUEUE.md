@@ -511,3 +511,7 @@ Common/visible first: the species placed in the starting forest / pond / meadow 
 ## Start order
 
 T01, T02, T17 (fox/deer), T10, T13, T23, T26, T30, T32, T34. One branch per batch; Claude wires each by id with the old art as fallback.
+
+
+## UPDATE 2026-11-23 (owner decision): the Town's punk/cat villagers are GONE, replaced by the 10 hero classes
+The Town now draws the 10 Realm heroes (b00-b03 art) as players, villagers and statues. So **T01-T07 are cancelled** (no new villager species or pond-cat art) and **T09 changes** to hero emote/portrait extras only if wanted: sit/sleep/wave/happy/sad strips for the 10 heroes (true down/right, 32 native). T08 (Town NPCs) stays but should be drawn as heroes-style characters, not animals. Everything else in T10-T36 stays. Priority order now: M01-M03 (mounts) -> R01-R05 -> T10, T13, T17 (fauna), T23, T26, T30, T32, T34 -> the rest.
