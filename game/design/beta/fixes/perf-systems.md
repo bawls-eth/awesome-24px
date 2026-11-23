@@ -151,3 +151,16 @@ Run each alone: `BASE=http://localhost:<port>/game/index.html /tmp/bt.sh node ga
   town-front-door, smoke-journey, world-art, enemy-art, item-icons, bolt-art, art-integration, world-page, world-fog, world-party,
   world-safereturn, world-stash, gear-save-tolerance, gear-default-on, deepdelve-page/-perf/-fps, side-access, lantern-backup-restore,
   lantern-backup-reminder and the node backup / fuzz tests. Live-class tests (saves, workbench, cave*) were not run (they join the live town).
+
+## Follow-up after the first merge (coordinator, 07:05 UTC)
+- beta-s01-town-restore flake: the Town's own timed writers (weather, dailies, quests on the Phaser loop) could write the save between
+  the test's "before" read and its "after" / `-prev` check. Test: the Phaser loop sleeps while raw storage is compared, and every
+  save / `-prev` write is recorded with whether it came from the Restore path (`commitRestore` / `restoreBundle`); refused files must
+  cause zero Restore writes. Product: the post-restore reload now uses `setTimeout` instead of `this.time.delayedCall`, so it also
+  happens while the scene is paused (menu, cave, sleeping loop). 3/3 green.
+- beta-s06-art-cache: bytes now = file size on disk x requests (deterministic), plus a unique-url coverage check; the request-drop check
+  counts JSON requests (225 -> 67). Disk-size measure also shows the lane's >= 2 MB target is met (3.82 MB -> 1.15 MB), now asserted. 4/4 green.
+- save-race-tabs "deepdelve.js re-reads the runs record right before finishing a dive": behaviour unchanged (endRun still does
+  `runRec = RUNS.load(LS)` then `RUNS.finish`); the source regex accepts the S-05 `LS` accessor AND checks that LS is the real
+  window.localStorage when it is readable. Existing test changed because the code shape changed (named here). 3/3 green.
+- Also green: deepdelve-page, deepdelve-dive, deepdelve-bugbash, save-hostile-fuzz, save-compat-pages (see commit).

@@ -165,7 +165,9 @@ const stored = (page, k) => page.evaluate((key) => JSON.parse(localStorage.getIt
     const dd = JSON.parse(mem[R.KEY]);
     check('deepdelve: MMDDRun.save from a stale tab never lowers a best or the dive count, keeps unknown fields', dd.best.score === 500 && dd.best.depth === 20 && dd.runs === 3 && dd.futureField === 1, JSON.stringify(dd));
     const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'games', 'deepdelve', 'deepdelve.js'), 'utf8');
-    check('deepdelve.js re-reads the runs record right before finishing a dive', /runRec = RUNS\.load\(localStorage\);[^\n]*\n\s*const sum = RUNS\.finish\(runRec/.test(src));
+    // beta S-05 routes every storage use in deepdelve.js through `LS` (the real localStorage whenever it can be read, else an in-memory
+    // stand-in when the getter throws), so the re-read is RUNS.load(LS); the second regex proves LS is the real storage when readable.
+    check('deepdelve.js re-reads the runs record right before finishing a dive', /runRec = RUNS\.load\((?:localStorage|LS)\);[^\n]*\n\s*const sum = RUNS\.finish\(runRec/.test(src) && /try \{ s = window\.localStorage;[^\n]*\n[\s\S]{0,200}return s;/.test(src));
   }
 
   // Town writeSave merges a fresh read on every write (main.js): a field another tab wrote between two writes is kept.
