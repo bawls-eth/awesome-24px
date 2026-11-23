@@ -2736,6 +2736,12 @@ class TownScene extends Phaser.Scene {
       this.talkToVillager(villager);
       return;
     }
+    // G-13 (b07-11): a visible beach item in pickup range wins over fish shadows and wildlife logging (villagers still first)
+    const beachSpot = this.findNearestBeachItem();
+    if (beachSpot) {
+      this.collectBeachItem(beachSpot);
+      return;
+    }
     const fishTarget = this.findNearestFishingSpot();
     if (fishTarget && fishTarget.shadow) {
       this.startFishing(fishTarget);
@@ -2753,11 +2759,6 @@ class TownScene extends Phaser.Scene {
     const fossilSpot = this.findNearestFossilSpot();
     if (fossilSpot) {
       this.digFossil(fossilSpot);
-      return;
-    }
-    const beachSpot = this.findNearestBeachItem();
-    if (beachSpot) {
-      this.collectBeachItem(beachSpot);
       return;
     }
     const flowerSpot = this.findNearestFlower();
@@ -6575,7 +6576,7 @@ class TownScene extends Phaser.Scene {
       if (d < spec.reach && d < bestDist) { best = spec; bestDist = d; }
     }
     for (let i = n; i < this.ffSparkles.length; i++) this.ffSparkles[i].setVisible(false);
-    if (best && this.canAct()) {
+    if (best && this.canAct() && (!this.fishing || this.fishing.state === 'idle')) { // G-13 (b07-12): no "E: log" label over "Reel it in!"
       const s = best.sprite;
       this.ffHint.setText(`${IS_TOUCH ? '✋' : 'E'}: log ${best.name}`).setPosition(s.x, s.y + s.displayHeight / 2 + 2).setVisible(true);
     } else {

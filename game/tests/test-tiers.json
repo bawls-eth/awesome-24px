@@ -1604,5 +1604,9 @@
   "beta-g12-esc-close.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "beta-g13-beach-first.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }
