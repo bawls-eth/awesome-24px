@@ -98,6 +98,7 @@ const seed = { caveSeed: 0, resources: { stone: 1 }, realm: { shards: 100, bestW
   check('damage: a bolt costs 8 HP, the red flash + shake fire, the bar shows 92%, a second bolt inside the i-frames does nothing', dm.hp1 === 92 && dm.fill1 === '92%' && dm.flash && dm.shake && dm.hp2 === 92 && dm.hp3 === 84, JSON.stringify(dm));
   const dth = await scene(page, (s) => {
     const r = s.realm; const p = r.player; const before = r.save.shards; const deaths = r.save.deaths;
+    r._cacheAliveT = 61; // G-09: a Survivor's cache needs 3 kills or a minute alive; this test models the minute
     p.hp = 5; p.iframes = 0; const b = r.eBullets.find((x) => !x.active); b.active = true; b.x = p.x; b.y = p.y; b.vx = 0; b.vy = 0; b.life = 5; r._update(0.001);
     const o = { state: r.state, before, after: r.save.shards, deaths: r.save.deaths - deaths, banner: document.getElementById('realm-banner').textContent, saved: JSON.parse(localStorage.getItem('pixeltown-save-v1')).realm };
     window.__st(Math.ceil(2.8 * 60)); o.inRealm = s.inRealm; o.hud = !document.getElementById('hud').classList.contains('hidden');

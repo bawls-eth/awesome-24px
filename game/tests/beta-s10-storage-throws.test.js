@@ -59,7 +59,7 @@ const PAGES = [
       clicked = off && await page.waitForFunction(() => !document.getElementById('join-overlay') || document.getElementById('join-overlay').classList.contains('hidden'), null, { timeout: 20000 }).then(() => true).catch(() => false);
     } else if (name === 'hub') {
       await Promise.all([page.waitForNavigation({ timeout: 15000 }).catch(() => {}), page.click(btnSel).catch(() => {})]);
-      clicked = /\/game\/index\.html/.test(page.url());
+      clicked = /\/game\/(index\.html|games\/mad-maze\/index\.html)/.test(page.url()); // G-14: a new profile goes Home -> Realm; a returning one to Town
     }
     const btns = page.locator(btnSel);
     const n = Math.min(await btns.count(), 30);
