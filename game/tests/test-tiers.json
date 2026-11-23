@@ -1,4 +1,8 @@
 {
+  "a11y-viewport-sweep.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "town-polish.test.js": {
     "class": "browser",
     "tier": "full"
