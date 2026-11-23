@@ -614,6 +614,13 @@
   // IF1: the island's own pouch (the jungle pouch plus its staple food); ?pouch=classic is the old jungle pouch and pouch-only feeding
   const CLASSIC_POUCH = Q.get('pouch') === 'classic' || !POUCH;
   const pouch = POUCH ? POUCH.starter(ISLE, { classic: CLASSIC_POUCH }) : Object.assign({}, IC.STARTER_POUCH);
+  // G-26 (b05-04, b05-06): picked glints / nodes and the pouch survive a reload. Own additive key pixeltown-isle-nodes-v1
+  // { v:1, isles:{ <isle>:{ n:[[nodeIndex, untilMs], ...] (at most 200, only the ones still growing back), p:{ <food>: 0..99 } } } }.
+  // Wall clock in page code only; hostile / missing storage = everything ready and the starter pouch (as before).
+  const NODES_KEY = 'pixeltown-isle-nodes-v1', NODES_MAX = 200;
+  function nodesRead() { try { const raw = S.getItem(NODES_KEY); const o = raw && raw.length < 65536 ? JSON.parse(raw) : null; return o && typeof o === 'object' && !Array.isArray(o) && o.isles && typeof o.isles === 'object' && !Array.isArray(o.isles) ? o : { v: 1, isles: {} }; } catch (e) { return { v: 1, isles: {} }; } }
+  const nodesMine = (() => { const r = nodesRead().isles[ISLE]; return r && typeof r === 'object' && !Array.isArray(r) ? r : {}; })();
+  if (nodesMine.p && typeof nodesMine.p === 'object' && !Array.isArray(nodesMine.p)) Object.keys(pouch).forEach((k) => { const v = nodesMine.p[k]; if (typeof v === 'number' && Number.isFinite(v)) pouch[k] = Math.max(0, Math.min(99, Math.floor(v))); });
   let lastHurtT = -1e9, lastRewardT = 0; // IF1: sim time of the last hit taken (regen) and of the last reward (sparkles)
   let lastFindT = 0; // the first-ten pity's clock: the last find (an item, tame, drop or journal entry); a hot-spring soak is a rest, not a find
   function reward(rest) { lastRewardT = simT; if (!rest) lastFindT = simT; }
@@ -1894,9 +1901,12 @@
     spots.forEach((p) => { if (HS.taken(save.gather, ISLE, p.idx)) return; const d = Math.hypot((p.x + 0.5) * TILE - hero.x, (p.y + 0.5) * TILE - hero.y); if (d < bd) { bd = d; best = p; } });
     return best;
   }
+  // G-26 (b05-07): a gather with no room for the find does not spend the spot (same dry run as invAdd)
+  function invRoomFor(id) { if (!CRAFT || typeof id !== 'string') return false; const cur = invCount(id), want = {}; Object.keys(save.inv).forEach((k) => { want[k] = save.inv[k]; }); want[id] = Math.min(CRAFT.MAX_COUNT, cur + 1); return ((CRAFT.cleanInv(want)[id] | 0) - cur) > 0; }
   function gatherNear() {
     const p = spotNear();
     if (!p || hero.dead) return { ok: false, why: 'none' };
+    if (CRAFT && !invRoomFor(p.kind)) { toast('Pack full. The spot keeps its find for later.'); return { ok: false, why: 'full' }; }
     const r = HS.gather(save.gather, ISLE, p, DAY);
     if (r.ok) {
       invAdd(r.kind, 1);
@@ -2135,7 +2145,7 @@
     const got = invAdd(n.kind, 1);
     if (!got) { toast('Your pack has no room for more ' + HS.resName(n.kind) + '.'); return; }
     if (n.sparkle) { n.until = Infinity; nodeAt.delete(k); lastNodeTile = -1; } else n.until = clock.now() + (n.respawn || RESPAWN[n.kind] || 300) * 1000;
-    n.picks++; picked++; reward();
+    n.picks++; picked++; reward(); nodesSave(); // G-26
     toast((n.sparkle ? 'A forage sparkle: ' : '') + '+1 ' + HS.resName(n.kind) + ' (' + invCount(n.kind) + ' in your pack)');
   }
   // node art: one small canvas per resource kind, baked once (code art; shape by kind family)
@@ -2836,6 +2846,10 @@
       });
     });
     panel.scrollTop = top;
+    // G-26 (b05-06): after a craft re-render the Craft buttons are inert for 300 ms, so a double-tap makes one item; focus waits for it
+    const armed = focusId ? Array.from(panelBody.querySelectorAll('button.rc-btn')).filter((b) => !b.disabled) : [];
+    armed.forEach((b) => { b.disabled = true; b.dataset.arm = '1'; });
+    if (armed.length) setTimeout(() => { armed.forEach((b) => { if (b.isConnected && b.dataset.arm) { b.disabled = false; delete b.dataset.arm; } }); if (focusBtn && focusBtn.isConnected && !focusBtn.disabled) { try { focusBtn.focus({ preventScroll: true }); } catch (e) { /* ignore */ } } }, 300);
     if (focusId) { try { (focusBtn && !focusBtn.disabled ? focusBtn : $('panel-close')).focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
   }
   // X7: the Home decor panel: make decor from your pack (MMHomeBuild recipes, have / need per input), then the tame pen roster.
@@ -3155,6 +3169,7 @@
   // ---------- save (own key, throttled) ----------
   let dirty = true, saveT = 0;
   function persist() {
+    nodesSave(); // G-26: the pouch and the picked nodes go with every Isles save
     try {
       if (!has(save.isles, ISLE)) save.isles[ISLE] = { seed: SEED, pos: null, fog: '', chests: [] };
       const rec = save.isles[ISLE];
@@ -3311,6 +3326,20 @@
 
   // ---------- simulation ----------
   const clock = (() => { let off = 0; return { now: () => Date.now() + off, set: (t) => { off = Number(t) - Date.now(); return clock.now(); } }; })();
+  // G-26: a picked node / glint stays picked across a reload until it grows back (wall clock); the pouch is written with it
+  function nodesSave() {
+    try {
+      const now = clock.now(), n = [];
+      for (let i = 0; i < nodes.length && n.length < NODES_MAX; i++) { const q = nodes[i]; if (!q.sparkle && Number.isFinite(q.until) && q.until > now) n.push([q.i, Math.round(q.until)]); }
+      const p = {}; Object.keys(pouch).forEach((k) => { p[k] = Math.max(0, Math.min(99, pouch[k] | 0)); });
+      const o = nodesRead(); const isles = {}; Object.keys(o.isles).slice(0, 16).forEach((k) => { if (/^[a-z]{2,12}$/.test(k)) isles[k] = o.isles[k]; });
+      isles[ISLE] = { n, p }; S.setItem(NODES_KEY, JSON.stringify({ v: 1, isles }));
+    } catch (e) { /* storage blocked: today's picks last for this visit */ }
+  }
+  (function nodesRestore() {
+    const list = Array.isArray(nodesMine.n) ? nodesMine.n.slice(0, NODES_MAX) : []; const now = clock.now(), byI = new Map(); nodes.forEach((q) => { if (!q.sparkle) byI.set(q.i, q); });
+    list.forEach((e) => { if (!Array.isArray(e) || e.length < 2) return; const q = byI.get(e[0]); const u = Number(e[1]); if (q && Number.isFinite(u) && u > now && u - now < 7 * 864e5) q.until = u; });
+  }());
   let spawnT = 0, miniT = 0, hudT = 0;
   let heroMoving = false;
   function update(dt, mx, my) {

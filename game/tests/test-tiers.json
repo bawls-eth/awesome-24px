@@ -1656,5 +1656,9 @@
   "beta-g10-placed-blocks.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "beta-g26-isles-economy.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }
