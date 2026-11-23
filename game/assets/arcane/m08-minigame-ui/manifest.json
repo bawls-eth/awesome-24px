@@ -1,0 +1,77 @@
+{
+  "batch": "m08",
+  "label": "minigame-ui",
+  "status": "partial",
+  "assets": [
+    {
+      "id": "medal_bronze",
+      "category": "ui",
+      "path": "medal_bronze.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "medal_silver",
+      "category": "ui",
+      "path": "medal_silver.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "medal_gold",
+      "category": "ui",
+      "path": "medal_gold.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "medal_star",
+      "category": "ui",
+      "path": "medal_star.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "id": "medal_locked",
+      "category": "ui",
+      "path": "medal_locked.png",
+      "frames": 1,
+      "frame_w": 32,
+      "frame_h": 32,
+      "fps": 0,
+      "loop": false,
+      "anchor": {
+        "x": 16,
+        "y": 16
+      }
+    }
+  ]
+}

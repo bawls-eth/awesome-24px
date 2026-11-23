@@ -1,0 +1,17 @@
+{
+  "batch": "m08",
+  "status": "partial",
+  "png_files": 5,
+  "expected_png_files": 18,
+  "checks": {
+    "png_dimensions": "generated as 32x32 RGBA",
+    "alpha": "binary",
+    "github_paths": "to be checked after commit"
+  },
+  "not_run": [
+    "full repository art audit",
+    "visual review at phone size",
+    "preview contact sheet",
+    "in-game screenshot"
+  ]
+}
