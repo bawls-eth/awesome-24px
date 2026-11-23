@@ -54,7 +54,7 @@
       <button class="big alt" id="replay" type="button">Replay seed</button>
     </div>
   </section>
-  <p class="dim">Keys: arrows move, Enter or Space pops. Free to play: no timers outside a round, nothing to buy.</p>
+  <p class="dim" id="keys">Keys: arrows move, Enter or Space pops. Free to play: no timers outside a round, nothing to buy.</p>
 </main>
 <script src="../../shared/store.js"></script>
 <script src="../../shared/motion.js"></script>
@@ -75,6 +75,7 @@
   cover.concat(shut).forEach(function (id) { var e = document.getElementById(id); if (e && mo) mo.observe(e, { attributes: true, attributeFilter: ['hidden'] }); });
 }());
 </script>
+<script src="../../shared/mm-input.js"></script>
 <script src="../../shared/mm-minikit.js"></script>
 <script src="pop.js"></script>
 </body>
