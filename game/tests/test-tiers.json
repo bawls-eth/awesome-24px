@@ -1536,5 +1536,13 @@
   "shared-mm-save-merge.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "beta-w01-hero-popin.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-w02-boss-popin.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
