@@ -11,7 +11,7 @@ const overlap = (a, b) => a && b && a.vis && b.vis && a.l < b.r && a.r > b.l && 
   const saveBefore = await page.evaluate(() => localStorage.getItem('pixeltown-save-v1'));
   await expandPanel(page);
   const link = await page.evaluate(() => { const a = document.getElementById('world-map-link'); return a && { href: a.getAttribute('href'), tag: a.tagName, text: a.textContent }; });
-  check('World map link exists with href ./hub/index.html', link && link.tag === 'A' && link.href === './hub/index.html', JSON.stringify(link));
+  check('World map link exists with href ./hub/index.html?map=1 (the Hub map view; plain hub/ is now the Home screen)', link && link.tag === 'A' && link.href === './hub/index.html?map=1', JSON.stringify(link));
   const wm = await rect(page, '#world-map-link');
   const hits = [];
   for (const s of ['#joystick', '#action-buttons', '#interact-btn', '#chat-panel']) if (overlap(wm, await rect(page, s))) hits.push(s);

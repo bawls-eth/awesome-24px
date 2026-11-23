@@ -607,6 +607,10 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "town-front-door.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "shared-mm-island-wilds.test.js": {
     "class": "node",
     "tier": "smoke"
