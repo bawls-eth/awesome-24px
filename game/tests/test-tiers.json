@@ -1572,5 +1572,9 @@
   "beta-w10-echo-labels.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-w13-joystick.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

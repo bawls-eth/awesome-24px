@@ -42,3 +42,10 @@ Each entry: item, files, test, how to retest by hand. Screenshots in `fixes/img/
 - Fix: the "+N in bloom" line is a DOM line anchored just above the board (over the time bar) instead of a canvas float at the board centre; name labels moved up 8 px (clear of the selection frame's bottom bar); the "wilt" float starts 32 px lower so its rise stays inside the card; the board width is capped by the viewport height so the 2x2 grid fits 1280x720. `__echo.counts().floats` counts the DOM line too (echo-page "juice" assert unchanged and green); new hooks `labels()`, `widget()`, `floatRects()`, `bloomEl()`.
 - Test: `tests/beta-w10-echo-labels.test.js` (390x844 and 1280x720). `echo-page`, `echo-bugbash`, `minigame-quality-gate` green.
 - Before / after: `img/w10-echo-{before,after}.jpg`.
+
+## W-13 Joystick look (b12-10, P3) - fixed
+- Files: `game/realm-8bit.css` (one appended block; no realm.js / main.js change, so no class request to Gameplay was needed).
+- Fix: knob and ring are pixel art drawn in code (inline SVG pixel grids generated from palette colours: ink outline, gold knob with brown shade and yellow top-left highlight; grey move ring, blue aim ring). Integer pixel scale (ring 25 cells, knob 13 cells). <= 390 px wide and short landscape: ring 100 px (was 124, 20% smaller), knob 39 px. Same centre and drag logic; Town realm gets the same skin.
+- Test: `tests/beta-w13-joystick.test.js` (ring size, integer scale, svg not flat fill, knob corners not gold / centre gold by pixel sample, drag still steers, 430 px keeps 125 px). 6 asserts fail on the old CSS. `realm-phone-layout`, `world-phone-hud`, `realm-hud-8bit`, `realm-universal-controls`, `realm-tutorial` green.
+- Art ask filed (CODEX-REMAKE-QUEUE): a proper stick ring / knob sprite set can replace the code-drawn one later.
+- Before / after: `img/w13-stick-{before,after}.jpg`.
