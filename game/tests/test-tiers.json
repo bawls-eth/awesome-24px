@@ -1652,5 +1652,9 @@
   "beta-s11-deepdelve-rotate.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-g10-placed-blocks.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }

@@ -183,9 +183,14 @@
     run = RUNS.start(runDepth0, RUNS.modFor(SEED, runRec.runs).id); pbDepthShown = false; comboShown = false; $('combo').textContent = '';
     renderDive();
   }
-  function onMined(item, now) {
+  // G-10: cells the player placed this session (cap 4096, oldest out); mining one gives the item back but scores nothing
+  const placedCells = new Set(); const PLACED_CAP = 4096;
+  const cellKey = (x, y, z) => x + ',' + y + ',' + z;
+  function notePlaced(x, y, z) { const k = cellKey(x, y, z); placedCells.delete(k); placedCells.add(k); if (placedCells.size > PLACED_CAP) placedCells.delete(placedCells.values().next().value); }
+  function onMined(item, now, placed) {
     if (!run) return null;
-    const r = RUNS.mined(run, item, now === undefined ? nowS() : now);
+    const r = RUNS.mined(run, item, now === undefined ? nowS() : now, placed ? { placed: true } : undefined);
+    if (r.placed) { sfx('hit'); return r; }
     if (r.ore) { pop('+' + (r.ore * (run.mod === 'veins' ? 16 : 8)) + ' ' + item.replace(/_ore$/, '').replace(/_/g, ' '), 'ore'); sfx('pickup'); shake(0.06, 0.16); }
     else { sfx('hit'); shake(0.025, 0.08); }
     if (r.combo >= 2) {
@@ -477,7 +482,8 @@
     const dirty = world.setBlock(wx, wy, wz, B.AIR);
     if (!dirty.length) return false;
     const item = ITEM_OF[id];
-    if (item && !CREATIVE) { inv[item] = (inv[item] | 0) + 1; found[item] = 1; onMined(item); }
+    const wasPlaced = placedCells.delete(cellKey(wx, wy, wz)); // G-10
+    if (item && !CREATIVE) { inv[item] = (inv[item] | 0) + 1; found[item] = 1; onMined(item, undefined, wasPlaced); }
     if (!CREATIVE) findBlueprint(id, wy);
     if (!CREATIVE) wearPick(NEED_TIER[id] ? 2 : 1);
     afterEdit(dirty);
@@ -506,7 +512,7 @@
     }
     const dirty = world.setBlock(wx, wy, wz, id);
     if (!dirty.length) return false;
-    if (!CREATIVE) inv[item] -= 1; // unlimited blocks in the creative world
+    if (!CREATIVE) { inv[item] -= 1; notePlaced(wx, wy, wz); } // unlimited blocks in the creative world; G-10: remember a placed cell
     if (id === LAMP) lampChunks.add(MMChunks.key(Math.floor(wx / SIZE), Math.floor(wy / SIZE), Math.floor(wz / SIZE)));
     if (CREATIVE) { buildCheck(wx, wy, wz); afterEdit(dirty); renderHud(); return true; }
     buildCheck(wx, wy, wz);
