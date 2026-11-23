@@ -2834,12 +2834,14 @@ body.touch-device #postcards-hint { bottom: calc(188px + env(safe-area-inset-bot
    stat block. Hard pixel edges (no radius), solid dark outlines and stepped drop shadows. Every control >= 44 px
    tall, every line >= 12 px. The tokens live on :root so the shared mm-8bit theme can retune them. */
 :root {
-  --tb-ink: #2b1d14;          /* outline / text on light */
-  --tb-paper: #fff6dc;        /* panel fill */
-  --tb-paper-2: #f2e2b6;      /* inset / idle tab */
-  --tb-accent: #2a74a3;       /* active tab */
-  --tb-accent-ink: #fff6dc;
-  --tb-gold: #7a4f00;
+  /* mapped onto the shared 16-colour MM8 palette (shared/mm-8bit.css, loaded before this file) */
+  --tb-ink: var(--px-ink, #0b0d1a);     /* outline / text on light */
+  --tb-paper: var(--px-7, #fff1e8);     /* panel fill */
+  --tb-paper-2: #f7dcc4;                /* inset / idle tab: px-15 peach lifted one step for AA text */
+  --tb-accent: var(--px-1, #1d2b53);    /* active tab */
+  --tb-accent-ink: var(--px-7, #fff1e8);
+  --tb-gold: #8a3f20;                   /* px-4 brown, one step darker for AA on the paper */
+  --tb-font: var(--px-font, "Courier New", Courier, monospace);
   --tb-shadow: 3px 3px 0 var(--tb-ink);
 }
 #player-list-panel {
@@ -2921,3 +2923,10 @@ body.touch-device #postcards-hint { bottom: calc(188px + env(safe-area-inset-bot
   border-radius: 0; border: 3px solid var(--tb-ink); background: var(--tb-paper); color: var(--tb-ink); cursor: pointer;
 }
 #action-buttons.more-open #hud-more-btn { background: var(--tb-accent); color: var(--tb-accent-ink); }
+/* MM8 type: the shared bold monospace for the menu headings, tabs, hero line, banners and the title. */
+#hero-line, #player-list-panel h2, #player-list-panel #town-tabs .town-tab, #hud-more-btn, #achievement-toast, #whats-new-banner,
+#build-mode-banner, #gate-pointer, #stat-block, .join-card h1 { font-family: var(--tb-font); }
+#player-list-panel #town-tabs .town-tab { letter-spacing: 0; flex-direction: column; gap: 1px; }
+.join-card h1 { text-transform: uppercase; letter-spacing: 0.08em; font-weight: 900; }
+#join-btn, #join-offline-btn { font-family: var(--tb-font); font-weight: 900; text-transform: uppercase; letter-spacing: 0.06em; }
+#join-btn:focus-visible, #join-offline-btn:focus-visible, #hud-more-btn:focus-visible, #town-quick-grid > *:focus-visible { outline: 3px solid var(--px-10, #ffec27); outline-offset: 2px; }
