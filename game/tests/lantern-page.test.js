@@ -155,7 +155,9 @@ const prof = (page) => page.evaluate((K) => JSON.parse(localStorage.getItem(K) |
   s = await open(browser, { mm: '{{corrupt-raw', save: LEGACY_SAVE });
   const [dl2] = await Promise.all([s.page.waitForEvent('download'), s.page.click('#backup')]);
   const b2 = JSON.parse(fs.readFileSync(await dl2.path(), 'utf8'));
-  check('backup of a corrupt pixeltown-mm-v1 keeps the raw value', b2.keys[MM] === '{{corrupt-raw');
+  // beta S-03 (b14-04) changed this: a damaged value is left out of the file (it could never be restored) instead of exported raw.
+  check('backup of a corrupt pixeltown-mm-v1 leaves the damaged value out of the file', !(MM in b2.keys) && b2.format === 'pixeltown-backup');
+  check('the Backup status names what was left out', /left out: Mad Maze heroes and stash/.test(await s.page.evaluate(() => document.body.innerText)));
   await s.ctx.close();
 
   // 5c. Legacy import with a full roster says so and can be retried.

@@ -248,8 +248,11 @@
   }
   function renderNote() { var el = $('backup-last'); if (el) el.textContent = noteText(); }
   function downloadBackup() {
-    // Raw stored values, read before anything is cleaned or saved, so a corrupt key is backed up as it was.
-    var data = JSON.stringify(B.bundle(localStorage), null, 1);
+    // Raw stored values, read before anything is cleaned or saved. Beta S-03: a value that could never be restored (damaged on this
+    // device) is left out and named in bundle.warnings, so the player hears about it now, not on the new device.
+    var bun = B.bundle(localStorage);
+    var warn = bun.warnings && bun.warnings.length ? bun.warnings.map(function (w) { return w.label; }).join(', ') : '';
+    var data = JSON.stringify(bun, null, 1);
     try {
       var url = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
       var a = document.createElement('a');
@@ -259,7 +262,8 @@
       try { localStorage.setItem(NOTE_KEY, JSON.stringify({ v: 1, at: todayUtc() })); } catch (e2) { /* blocked: the note just stays as it was */ }
       renderNote();
       downloaded = true; dropArmed = false; renderPregear();
-      say('Backup file saved. Keep it somewhere safe.');
+      if (warn) say('Backup file saved, but this was damaged on this device and was left out: ' + warn + '.', true);
+      else say('Backup file saved. Keep it somewhere safe.');
     } catch (e) { say('Could not make the backup file.', true); }
   }
 
@@ -325,7 +329,7 @@
     fr.onload = function () {
       var plan;
       try { plan = B.plan(String(fr.result)); } catch (e) { plan = { ok: false }; }
-      if (plan && plan.ok) showConfirm(plan);
+      if (plan && plan.ok) showConfirm(plan, plan.skipped && plan.skipped.length ? plan.message : ''); // beta S-03: name the skipped saves
       else say((plan && plan.message) || 'That file does not look like a Mad Maze backup.', true);
     };
     try { fr.readAsText(file); } catch (e) { say('Could not read that file.', true); }

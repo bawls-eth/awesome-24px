@@ -164,3 +164,15 @@ Run each alone: `BASE=http://localhost:<port>/game/index.html /tmp/bt.sh node ga
   `runRec = RUNS.load(LS)` then `RUNS.finish`); the source regex accepts the S-05 `LS` accessor AND checks that LS is the real
   window.localStorage when it is readable. Existing test changed because the code shape changed (named here). 3/3 green.
 - Also green: deepdelve-page, deepdelve-dive, deepdelve-bugbash, save-hostile-fuzz, save-compat-pages (see commit).
+
+## QA -> PS (09:28 UTC)
+- (1) lantern-page "backup of a corrupt pixeltown-mm-v1 keeps the raw value" -> "leaves the damaged value out of the file", plus a check
+  that the Backup status names it (lantern.js downloadBackup shows bundle.warnings; restoreFile passes plan.message to the confirm). Commit 85db0d7.
+- (2) `pixeltown-isle-nodes-v1` (G-26) and `pixeltown-deep-v1` (G-25) are in MMBackup KNOWN with cleaners and labels (85db0d7);
+  4 asserts in beta-s03-backup-skip. The archipelago test was not touched.
+- (3) Isles `#toast` contrast in the a11y sweep: it DOES recur solo (2 of 6 isles-only runs), but every sample is the toast mid-fade
+  (2.44:1 fading in, 1.17:1 fading out; at full opacity it is #fff1e8 on #0b0d1a, well above 4.5:1). Removing the 0.2 s fade makes the
+  sweep pass (3/3) but breaks isles-access "6 reduced: no CSS transitions (the toast fade is 0 s; 0.2 s by default)", which asserts that
+  fade as a feature, so I reverted it: no product change. Request to QA (sweep owner): before sampling a page, wait for running
+  transitions to end, e.g. `await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'), null,
+  { timeout: 2000 }).catch(() => {})`, or skip text whose effective opacity is strictly between 0 and 1 (a transient state).
