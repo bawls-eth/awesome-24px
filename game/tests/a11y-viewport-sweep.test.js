@@ -148,6 +148,7 @@ const AUDIT = () => {
     if (!fg0) continue;
     if (!bg) { unknownBg++; continue; }
     let op = 1; for (let n = pe; n && n.nodeType === 1; n = n.parentElement) op *= parseFloat(getComputedStyle(n).opacity);
+    if (op > 0.01 && op < 0.99) continue; // mid-fade frame (transient): resting contrast is what counts
     const fg = over([fg0[0], fg0[1], fg0[2], fg0[3] * op], bg);
     const L1 = lum(fg), L2 = lum(bg), ratio = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
     measured++;
