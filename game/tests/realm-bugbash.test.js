@@ -131,6 +131,21 @@ async function open(browser, q, opts, store) {
   check('no page errors (phone)', page.errors.length === 0, page.errors.join(' | '));
   await ctx.close();
 
+  // ---- phone + landscape at 150% text: XP bar, zone line and goal line never overlap ----
+  for (const vp of [{ width: 390, height: 844 }, { width: 844, height: 390 }]) {
+    ({ ctx, page } = await open(browser, 'mode=world&test=1', { viewport: vp, hasTouch: true, isMobile: true }, { 'pixeltown-access-v1': JSON.stringify({ v: 1, hudScale: 1.5 }) }));
+    await page.waitForFunction(() => { const g = document.getElementById('rw-goal'); return g && !g.classList.contains('hidden') && g.style.top; }, null, { timeout: 6000 }).catch(() => {});
+    const ov = await page.evaluate(() => {
+      const R = (id) => { const e = document.getElementById(id); if (!e || !e.getClientRects().length || e.classList.contains('hidden')) return null; const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom }; };
+      const hit = (a, b) => !!a && !!b && a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b;
+      const xp = R('realm-xp'), z = R('rw-zone'), g = R('rw-goal');
+      return { xpZone: hit(xp, z), xpGoal: hit(xp, g), zoneGoal: hit(z, g), g: !!g, xp, z, gr: g };
+    });
+    check(`${vp.width}x${vp.height} at 150% text: XP bar, zone line and Next goal do not overlap`, ov.g && !ov.xpZone && !ov.xpGoal && !ov.zoneGoal, JSON.stringify(ov));
+    check(`${vp.width}x${vp.height} at 150% text: no page errors`, page.errors.length === 0, page.errors.join(' | '));
+    await ctx.close();
+  }
+
   // ---- hostile saves: every Realm key garbage -> the world still starts, no errors ----
   for (const bad of ['{"realm":"x"}', '[]', 'null', '{"realm":{"level":-5,"items":"no","eq":7,"shards":"9e99"}}']) {
     ({ ctx, page } = await open(browser, 'mode=world&test=1', {}, { 'pixeltown-save-v1': bad, 'pixeltown-realm-v1': '{"v":"x","quests":[1],"pos":{"x":"a"},"questBags":"z"}', 'pixeltown-access-v1': '{"hudScale":99}', 'pixeltown-realm-audio-v1': '{{', 'mm-music': '\u0000' }));

@@ -506,13 +506,37 @@
       } catch (e) { return ''; }
     }
     function goalTick(zi, force) {
-      if (!GOAL_ON) return;
       goalT -= 0.25; if (goalT > 0 && !force) return; goalT = 1;
+      zonePlace();
+      if (!GOAL_ON) return;
       const coach = document.getElementById('mm-coach');
       const coachUp = !!coach && !coach.classList.contains('hidden') && coach.getClientRects().length > 0 && getComputedStyle(coach).display !== 'none';
       const t = goalText(zi); const txt = t ? 'Next goal: ' + t : '';
       if (txt !== goalTxt) { goalTxt = txt; goalEl.textContent = txt; goalEl.title = txt; }
       goalEl.classList.toggle('hidden', !txt || coachUp || panelHid);
+      if (txt && !coachUp && !panelHid) goalPlace();
+    }
+    // Phone (zone line on the left, under the XP bar): with big text the top row wraps and pushes the XP bar down onto the fixed zone line.
+    // Once a second, put the zone line back under the XP bar when they overlap (the CSS position otherwise).
+    function zonePlace() {
+      try {
+        if (zoneEl.style.top) zoneEl.style.top = '';
+        const xp = document.getElementById('realm-xp'); if (!xp || !xp.getClientRects().length || !zoneEl.getClientRects().length) return;
+        const r = xp.getBoundingClientRect(); const zr = zoneEl.getBoundingClientRect(); const o = ov.getBoundingClientRect();
+        if (zr.left > o.left + o.width / 2 || zr.right < r.left || zr.left > r.right) return; // the zone sits right (desktop) or beside the bar
+        if (zr.top < r.bottom + 2 && zr.bottom > r.top) zoneEl.style.top = Math.round(r.bottom - o.top + 4) + 'px';
+      } catch (e) { /* the CSS position stays */ }
+    }
+    // Sit just under the XP bar (and under the zone line when that is on the left, as on phones), whatever the text size: once a second, no layout per frame.
+    function goalPlace() {
+      try {
+        const xp = document.getElementById('realm-xp'); const r = xp && xp.getClientRects().length ? xp.getBoundingClientRect() : null; const o = ov.getBoundingClientRect();
+        let top = r ? r.bottom : 0; let left = r ? r.left : 10;
+        const zr = zoneEl.getClientRects().length ? zoneEl.getBoundingClientRect() : null;
+        if (zr && zr.left < o.left + o.width / 2 && zr.bottom > top - 4) { top = Math.max(top, zr.bottom); left = Math.min(left, zr.left); }
+        const t = Math.round(top - o.top + 4) + 'px'; const l = Math.round(Math.max(0, left - o.left)) + 'px';
+        if (goalEl.style.top !== t) goalEl.style.top = t; if (goalEl.style.left !== l) goalEl.style.left = l;
+      } catch (e) { /* the CSS position stays */ }
     }
     function toggleMinimap() {
       const expanded = mini.classList.toggle('big');
