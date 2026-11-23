@@ -1576,5 +1576,9 @@
   "beta-w13-joystick.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-w14-loot-bags.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

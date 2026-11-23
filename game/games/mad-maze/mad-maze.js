@@ -263,6 +263,26 @@
   if (window.MMArt && MMArt.loadItems && params.get('itemart') !== '0') {
     MMArt.loadItems('../../assets/arcane/').then((set) => { if (set.ids().length) arena.setItemArt(set); }).catch(() => {});
   }
+  // T-bags (b02-06): the world loot bags use the b15 bag art (6 tiers, outlined, 24 px) instead of the code squares, and a T12 drop shows the
+  // red bag with its soulbound sparkle baked in (static; no per-frame work). Swapped into the arena's bag sprite table once the strips load;
+  // any failure keeps the code bags. ?bagart=0 turns it off.
+  const BAG_ART = { stat: { loaded: 0, t12: 0 } }; window.__bagArt = BAG_ART;
+  if (realmWorld && arena.sprites && Array.isArray(arena.sprites.worldBag) && params.get('bagart') !== '0') {
+    const BDIR = '../../assets/arcane/b15-loot-bags-and-drops/sprites/';
+    const ids = ['bag_brown', 'bag_pink', 'bag_purple', 'bag_cyan', 'bag_white', 'bag_gold', 'bag_red', 'bag_soulbound_sparkle']; // index = MMZones BAG_TIERS order, then T12 red + sparkle
+    const load = (id) => new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = BDIR + id + '.png'; });
+    Promise.all(ids.map(load)).then((ims) => {
+      if (ims.slice(0, 7).some((im) => !im || im.naturalWidth < 24)) return; // all or nothing: never a mixed set
+      const bake = (im, spark) => { const c = document.createElement('canvas'); c.width = c.height = 26; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
+        g.drawImage(im, 0, 0, 24, 24, 1, 2, 24, 24); if (spark) g.drawImage(spark, 24, 0, 24, 24, 1, 0, 24, 24); return c; }; // frame 0 of each strip, feet at y 23
+      for (let i = 0; i < 6; i++) arena.sprites.worldBag[i] = bake(ims[i], null);
+      arena.sprites.worldBag[6] = bake(ims[6], ims[7] && ims[7].naturalWidth >= 48 ? ims[7] : null);
+      BAG_ART.stat.loaded = 7;
+      const od = arena.dropBag;
+      arena.dropBag = function (x, y, rarity, itemId, worldLoot, gear) { const b = od.apply(arena, arguments); if (b && gear && gear.t === 12) { b.tier = 6; BAG_ART.stat.t12++; } return b; };
+    }).catch(() => {});
+  }
+
   // Boss art: loaded lazily, one boss at a time (the realm asks for a boss id the first time that boss is drawn); ?bossart=0 disables it.
   // W-02: also preloaded before it wakes: a world boss site within 16 tiles (wake radius is 9) and a dungeon room next to the boss room.
   if (window.MMArt && MMArt.loadBosses && params.get('bossart') !== '0') {

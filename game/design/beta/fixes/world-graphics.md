@@ -49,3 +49,9 @@ Each entry: item, files, test, how to retest by hand. Screenshots in `fixes/img/
 - Test: `tests/beta-w13-joystick.test.js` (ring size, integer scale, svg not flat fill, knob corners not gold / centre gold by pixel sample, drag still steers, 430 px keeps 125 px). 6 asserts fail on the old CSS. `realm-phone-layout`, `world-phone-hud`, `realm-hud-8bit`, `realm-universal-controls`, `realm-tutorial` green.
 - Art ask filed (CODEX-REMAKE-QUEUE): a proper stick ring / knob sprite set can replace the code-drawn one later.
 - Before / after: `img/w13-stick-{before,after}.jpg`.
+
+## W-14 loot bags (b02-06) - fixed
+- Files: `games/mad-maze/mad-maze.js` (art wiring block; no realm.js change).
+- Fix: the unwired b15 bag art replaces the arena's 6 code bag sprites (baked once into the same 26 px canvases: outlined pixel bags per bag tier). A T12 drop (gear.t 12) gets a 7th sprite: the red bag with the soulbound sparkle baked in (dropBag wrapper sets the bag's draw index only). All or nothing: any strip missing keeps the code bags; `?bagart=0` keeps them too.
+- Test: `tests/beta-w14-loot-bags.test.js` (7 art sprites outlined, no code glow; T12 bag red vs white / gold; T12 / T5 / plain drops pick the right sprite; red pixels on screen near the T12 bag; `?bagart=0` unchanged). `loot-bag-icons`, `world-pickups`, `gear-world-drops` green.
+- Before: tester evidence b02-06 (plain code squares); after: `img/w14-bags-after.jpg`.
