@@ -298,8 +298,9 @@
     return t;
   }
 
-  if (win && win.document && typeof win.localStorage !== 'undefined') {
-    try { apply(win.document, win.localStorage); } catch (e) { /* ignore */ }
+  // beta S-05/S-10: reading win.localStorage throws (SecurityError) when site data is blocked: probe it inside the try
+  if (win && win.document) {
+    try { if (typeof win.localStorage !== 'undefined') apply(win.document, win.localStorage); } catch (e) { /* ignore */ }
   }
   return {
     ACCESS_KEY: ACCESS_KEY, SCALES: SCALES.slice(), GROUPS: GROUPS, CONTROLS: CONTROLS,

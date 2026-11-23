@@ -1544,5 +1544,9 @@
   "beta-s02-town-two-tabs.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "beta-s05-deepdelve-storage.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }

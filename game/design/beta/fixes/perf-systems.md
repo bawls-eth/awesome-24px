@@ -31,3 +31,14 @@ Run each alone: `BASE=http://localhost:<port>/game/index.html /tmp/bt.sh node ga
 - Re-verify by hand: open the Town in two tabs, chop wood in A, pick fruit in B: both HUDs show both, a reload keeps both. Restore a
   Lantern backup while a Town tab is open, then gather in that tab: the restored numbers stay (plus the one gather).
 - Main.js slot 1 released to Gameplay after this commit (S-07 comes back later).
+
+## S-05 Deepdelve boots when storage throws (b15-01, P1)
+- deepdelve.js: new `LS` accessor + `LS_NOSAVE` at the top of the IIFE (real storage when readable, else an in-memory Map stand-in);
+  every `localStorage` token in the file now goes through `LS` (creativeDoc, kvSet creative path, ACCESS, sfx, startRun, endRun,
+  loadMeta, hubMedals, saveMeta, town read); boot() says "Progress cannot be saved in this browser mode." once with the intro.
+- Shared boot guards (the same SecurityError, S-10 groundwork): `typeof localStorage` runs the getter, so mm-access.js (contrast boot),
+  mm-side-access.js (text size boot) and mm-settings.js (my file, apply on load) now read it inside their try. No behaviour change otherwise.
+- Test: `game/tests/beta-s05-deepdelve-storage.test.js` (smoke): blocked getter -> boots < 5 s, non-blank canvas, note visible, mining
+  +1, 0 pageerror; normal context -> no note, real storage, no probe key left. deepdelve-page, side-access, shared-mm-access,
+  shared-mm-settings green.
+- Re-verify: Chrome, Settings > Privacy > Block all site data for localhost, open Deepdelve: the mine loads and says progress cannot be saved.
