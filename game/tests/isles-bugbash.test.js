@@ -168,6 +168,12 @@ const KO = (I) => {
   await p.page.tap('#btn-pack');
   const hid = await p.page.evaluate(() => getComputedStyle(document.getElementById('hint')).visibility);
   ck(hid === 'hidden', '4b: phone: the hint line hides under the open Pack', hid);
+  const pt = await p.page.evaluate(() => {
+    const pr = document.getElementById('panel').getBoundingClientRect(), nb = document.getElementById('mm-nav-btn'), nr = nb ? nb.getBoundingClientRect() : { bottom: 0 };
+    const h1 = getComputedStyle(document.getElementById('hud-isle'));
+    return { top: Math.round(pr.top), bottom: Math.round(pr.bottom), navBottom: Math.round(nr.bottom), ih: innerHeight, tt: h1.textTransform };
+  });
+  ck(pt.top >= pt.navBottom && pt.bottom <= pt.ih && pt.tt === 'none', '4b2: phone: the Pack starts under the Menu button (title never covered), stays on screen; the island <h1> keeps HUD case', pt);
   await p.page.tap('#panel-close');
   const big = await open(browser, PHONE, '&isle=jungle', Object.assign({ 'pixeltown-access-v1': JSON.stringify({ hudScale: 1.5 }) }, HERO_KEYS));
   await frames(big.page, 10);
