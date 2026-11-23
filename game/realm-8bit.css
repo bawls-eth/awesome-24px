@@ -69,3 +69,16 @@ html body #realm-hp-text { white-space: nowrap; overflow: hidden; }
 @media (max-width: 560px) { html body #realm-hp-text { letter-spacing: 0; font-size: 10px; } }
 /* ---- bug bash: the backpack card is anchored at the top so the Gear / Stats / Relics tabs never jump under the finger when the pane height changes ---- */
 html body #realm-backpack { align-items: flex-start; }
+/* ---- bug bash (a11y sweep): locked / cooling ability slots dim only their icon, never the label text (was 2.9-3.3:1 on navy);
+   the name tag is 12 px (was 10 px). Text: #c2c3c7 on the slot navy (>= 7:1), key letter in the 8-bit yellow. ---- */
+html body #realm-abilities .realm-ab.locked, html body #realm-abilities .realm-ab.cooling { opacity: 1; filter: none; }
+html body #realm-abilities .realm-ab.locked > .ico, html body #realm-abilities .realm-ab.locked > img.realm-ab-img { opacity: 0.35; filter: grayscale(1); }
+html body #realm-abilities .realm-ab.cooling > .ico, html body #realm-abilities .realm-ab.cooling > img.realm-ab-img { opacity: 0.4; }
+html body #realm-abilities .realm-ab .nm { font-size: 12px; letter-spacing: 0; color: #c2c3c7; opacity: 1; }
+html body #realm-abilities .realm-ab .cd { color: #fff1e8; }
+html body #realm-abilities .realm-ab.locked .cd { color: #c2c3c7; }
+html body #realm-abilities .realm-ab .key { color: var(--r8-yel, #ffec27); opacity: 1; }
+/* ---- bug bash (a11y sweep): a page heading for screen readers only; the play field is a keyboard stop with a visible ring ---- */
+.rm-sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+html body #realm-canvas-wrap:focus { outline: none; }
+html body #realm-canvas-wrap:focus-visible { outline: 3px solid var(--r8-yel, #ffec27); outline-offset: -3px; }

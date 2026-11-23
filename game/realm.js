@@ -501,6 +501,7 @@ class RealmArena {
 
     this.canvas = document.createElement('canvas');
     this.canvas.id = 'realm-canvas';
+    this.canvas.setAttribute('role', 'img'); this.canvas.setAttribute('aria-label', 'Realm play field');
     this.container.appendChild(this.canvas);
     this.ctx = this.canvas.getContext('2d');
 

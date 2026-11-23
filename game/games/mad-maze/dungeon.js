@@ -694,7 +694,14 @@
     api.mapDrawn = [];
     function toggleMap(force) { const hide = force === undefined ? !mapEl.classList.contains('hidden') : !force; mapEl.classList.toggle('hidden', hide); }
     mapBtn.addEventListener('click', () => toggleMap());
-    window.addEventListener('keydown', (e) => { if (e.key === 'Tab' && !finished) { e.preventDefault(); if (!e.repeat) toggleMap(); } }); // once the summary is up Tab goes back to normal focus movement
+    // Tab = map only while the play field has focus (Shift+Tab always leaves it), so keyboard players can still Tab through the page from the
+    // top (a11y sweep: the dungeon had zero tab stops). M toggles the map anywhere (not while typing).
+    window.addEventListener('keydown', (e) => {
+      if (finished) return;
+      const tgt = e.target; const typing = !!(tgt && (tgt.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(tgt.tagName || '')));
+      if (e.key === 'Tab' && !e.shiftKey && tgt && tgt.id === 'realm-canvas-wrap') { e.preventDefault(); if (!e.repeat) toggleMap(); }
+      else if ((e.key === 'm' || e.key === 'M') && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) { if (!e.repeat) toggleMap(); }
+    }); // once the summary is up Tab goes back to normal focus movement
     function drawMap() {
       const vis = state.visibleRooms(); const g = mapEl.getContext('2d'); const C = 16;
       g.clearRect(0, 0, mapEl.width, mapEl.height); rect(g, 'rgba(8,4,20,0.78)', 0, 0, mapEl.width, mapEl.height);

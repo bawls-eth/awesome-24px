@@ -146,6 +146,30 @@ async function open(browser, q, opts, store) {
     await ctx.close();
   }
 
+  // ---- a11y sweep findings (bugbash/a11y-viewports.md): landmarks, labelled canvas, early keyboard stop, slot text contrast, prefs on <html> ----
+  for (const q of ['mode=world&test=1&seed=12345', 'mode=dungeon&test=1&seed=5']) {
+    ({ ctx, page } = await open(browser, q, { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }, { 'mm-high-contrast': '1', 'mm-reduce-motion': '1', 'pixeltown-save-v1': JSON.stringify({ realm: { level: 1, xp: 0, shards: 0, bestWave: 0, items: [], nextUid: 1, eq: {} } }) }));
+    const lm = await page.evaluate(() => {
+      const c = document.getElementById('realm-canvas'); const de = document.documentElement;
+      const slots = [...document.querySelectorAll('#realm-abilities .realm-ab')].map((b) => { const cs = getComputedStyle(b); const out = { op: Number(cs.opacity), locked: b.classList.contains('locked') }; ['cd', 'nm', 'key'].forEach((k) => { const e = b.querySelector('.' + k); if (e && e.textContent.trim()) { const s = getComputedStyle(e); out[k] = { c: s.color, fs: parseFloat(s.fontSize), op: Number(s.opacity) }; } }); return out; });
+      return { main: !!document.querySelector('main,[role=main]'), h1: document.querySelectorAll('h1').length, canvas: c && c.getAttribute('aria-label'), hc: de.hasAttribute('data-high-contrast'), rm: de.hasAttribute('data-reduce-motion'), slots };
+    });
+    const tag = q.split('&')[0];
+    check(`[${tag}] one main landmark, one h1, the canvas is labelled`, lm.main && lm.h1 === 1 && !!lm.canvas, JSON.stringify(lm));
+    check(`[${tag}] high-contrast and reduce-motion prefs reach <html>`, lm.hc && lm.rm, JSON.stringify(lm));
+    const locked = lm.slots.filter((s) => s.locked);
+    const lum = (rgb) => { const m = rgb.match(/\d+(\.\d+)?/g).slice(0, 3).map(Number).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]; };
+    const navy = lum('rgb(29,43,83)'); const ratio = (c) => (lum(c) + 0.05) / (navy + 0.05);
+    const bad = []; lm.slots.forEach((s) => { if (s.op < 1) bad.push('slot opacity ' + s.op); ['cd', 'nm', 'key'].forEach((k) => { if (s[k] && (ratio(s[k].c) < 4.5 || s[k].op < 1)) bad.push(k + ' ' + s[k].c); if (s[k] && k === 'nm' && s[k].fs < 12) bad.push('nm ' + s[k].fs + 'px'); }); });
+    check(`[${tag}] ability slot labels (locked too: ${locked.length}) are >= 4.5:1 on navy, name >= 12 px`, bad.length === 0, bad.join('; '));
+    await page.evaluate(() => { document.activeElement && document.activeElement.blur && document.activeElement.blur(); });
+    const stops = [];
+    for (let i = 0; i < 4; i++) { await page.keyboard.press('Tab'); stops.push(await page.evaluate(() => { const e = document.activeElement; return e ? (e.id || e.tagName) + ':' + ((e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 30)) : ''; })); }
+    check(`[${tag}] the play field is a keyboard stop within 3 Tabs, named "Play ..."`, stops.slice(0, 3).some((s) => /^realm-canvas-wrap:Play/.test(s)), stops.join(' / '));
+    check(`[${tag}] no page errors (a11y)`, page.errors.length === 0, page.errors.join(' | '));
+    await ctx.close();
+  }
+
   // ---- hostile saves: every Realm key garbage -> the world still starts, no errors ----
   for (const bad of ['{"realm":"x"}', '[]', 'null', '{"realm":{"level":-5,"items":"no","eq":7,"shards":"9e99"}}']) {
     ({ ctx, page } = await open(browser, 'mode=world&test=1', {}, { 'pixeltown-save-v1': bad, 'pixeltown-realm-v1': '{"v":"x","quests":[1],"pos":{"x":"a"},"questBags":"z"}', 'pixeltown-access-v1': '{"hudScale":99}', 'pixeltown-realm-audio-v1': '{{', 'mm-music': '\u0000' }));
