@@ -658,26 +658,42 @@
     var reduce = REDUCE;
     var t = 0, flies = [];
     for (var i = 0; i < 14; i++) flies.push({ x: (i * 53) % 360, y: 20 + (i * 31) % 80, p: i });
+    // 8-bit camp scene (MM8 palette): banded sky, 2 px stars, stepped hills, pixel lantern post, tiled ground, stepped fountain
+    g.imageSmoothingEnabled = false;
+    var STARS = []; for (var si = 0; si < 26; si++) STARS.push([((si * 89 + 7) % 356) & ~1, ((si * 37 + 3) % 56) & ~1, si % 5 === 0]);
+    var HILL = [10, 14, 14, 18, 22, 22, 18, 16, 12, 12, 16, 20, 26, 26, 22, 18, 14, 12, 10, 14, 18, 18, 14, 10, 8, 12, 16, 20, 20, 16, 12, 10, 14, 18, 22, 18];
+    var POST = ['..oooooo..', '.oYYYYYYo.', 'oYWWWWWWYo', 'oYWwWWwWYo', 'oYWWWWWWYo', 'oYYYYYYYYo', '.oooooooo.', '....oo....'];
+    function sprite(rows, x, y, u, map) { for (var r = 0; r < rows.length; r++) for (var k = 0; k < rows[r].length; k++) { var c = map[rows[r][k]]; if (!c) continue; g.fillStyle = c; g.fillRect(x + k * u, y + r * u, u, u); } }
     function frame() {
       t += 1; g.clearRect(0, 0, 360, 120);
-      g.fillStyle = '#0c0618'; g.fillRect(0, 0, 360, 120);
-      g.fillStyle = '#1d1236'; g.fillRect(0, 96, 360, 24);
-      var glow = g.createRadialGradient(180, 62, 4, 180, 62, 90);
-      glow.addColorStop(0, 'rgba(255,211,107,.55)'); glow.addColorStop(1, 'rgba(255,211,107,0)');
-      g.fillStyle = glow; g.fillRect(0, 0, 360, 120);
-      g.fillStyle = '#5a4a7a'; g.fillRect(177, 36, 6, 60); // post
-      g.fillStyle = '#ffd36b'; g.fillRect(168, 26, 24, 22); // lantern
-      g.fillStyle = '#fff3c4'; g.fillRect(174, 32, 12, 10);
-      g.fillStyle = '#3d2c63'; g.fillRect(120, 88, 120, 10); // fountain basin
-      g.fillStyle = '#6ec6ff'; g.fillRect(126, 90, 108, 5);
+      var bands = ['#0b0d1a', '#0b0d1a', '#12142a', '#1d2b53', '#7e2553'];
+      for (var bi = 0; bi < bands.length; bi++) { g.fillStyle = bands[bi]; g.fillRect(0, bi * 18, 360, bi === bands.length - 1 ? 48 : 18); }
+      for (bi = 1; bi < bands.length; bi++) { g.fillStyle = bands[bi]; for (var dx = (bi % 2) * 2; dx < 360; dx += 4) g.fillRect(dx, bi * 18 - 2, 2, 2); }
+      STARS.forEach(function (st) { var tw = !reduce && st[2] && ((t >> 4) + st[0]) % 3 === 0; g.fillStyle = st[2] ? (tw ? '#ffec27' : '#fff1e8') : '#83769c'; g.fillRect(st[0], st[1], 2, 2); });
+      for (var hi = 0; hi < HILL.length; hi++) { g.fillStyle = '#12142a'; g.fillRect(hi * 10, 96 - HILL[hi], 10, HILL[hi]); g.fillStyle = '#5f574f'; g.fillRect(hi * 10, 96 - HILL[hi], 10, 2); }
+      // ground: grass lip + checker dirt
+      g.fillStyle = '#ab5236'; g.fillRect(0, 96, 360, 24);
+      g.fillStyle = '#7e2553'; for (var gx = 0; gx < 360; gx += 8) for (var gy = 102 + ((gx >> 3) & 1) * 6; gy < 120; gy += 12) g.fillRect(gx, gy, 4, 2);
+      g.fillStyle = '#00e436'; g.fillRect(0, 96, 360, 2); g.fillStyle = '#008751'; g.fillRect(0, 98, 360, 2);
+      // lantern glow: stepped pixel rings (dither), no smooth gradient
+      var rings = [[44, 'rgba(255,163,0,.10)'], [30, 'rgba(255,163,0,.14)'], [18, 'rgba(255,236,39,.18)']];
+      rings.forEach(function (rg) { var r = rg[0]; g.fillStyle = rg[1]; for (var yy = -r; yy <= r; yy += 4) { var w = Math.round(Math.sqrt(r * r - yy * yy) / 4) * 4; g.fillRect(180 - w, 38 + yy, w * 2, 4); } });
+      // post + lantern sprite
+      g.fillStyle = '#0b0d1a'; g.fillRect(175, 44, 10, 54); g.fillStyle = '#5f574f'; g.fillRect(177, 44, 6, 52); g.fillStyle = '#83769c'; g.fillRect(177, 44, 2, 52);
+      var flick = reduce ? 0 : ((t >> 3) % 4 === 0 ? 1 : 0);
+      sprite(POST, 160, 22, 4, { o: '#0b0d1a', Y: '#ffa300', W: flick ? '#ffa300' : '#ffec27', w: '#fff1e8' });
+      // fountain basin: stepped stone with water
+      g.fillStyle = '#0b0d1a'; g.fillRect(118, 86, 124, 12); g.fillRect(122, 84, 116, 2);
+      g.fillStyle = '#83769c'; g.fillRect(120, 88, 120, 8); g.fillStyle = '#c2c3c7'; g.fillRect(120, 88, 120, 2);
+      g.fillStyle = '#29adff'; g.fillRect(124, 90, 112, 4); g.fillStyle = '#fff1e8'; for (var wx = 128 + ((reduce ? 0 : t >> 3) % 4) * 2; wx < 232; wx += 16) g.fillRect(wx, 90, 4, 2);
       flies.forEach(function (f) {
-        var a = reduce ? f.p : t / 30 + f.p;
-        g.fillStyle = 'rgba(255,240,150,' + (0.4 + 0.4 * Math.sin(a * 2)) + ')';
-        g.fillRect(Math.round(f.x + Math.sin(a) * 12), Math.round(f.y + Math.cos(a * 1.3) * 8), 3, 3);
+        var a = reduce ? f.p : t / 30 + f.p, on = Math.sin(a * 2) > -0.2;
+        var fx = Math.round((f.x + Math.sin(a) * 12) / 2) * 2, fy = Math.round((f.y + Math.cos(a * 1.3) * 8) / 2) * 2;
+        g.fillStyle = on ? '#ffec27' : '#ab5236'; g.fillRect(fx, fy, 2, 2);
+        if (on && !REDUCE) { g.fillStyle = 'rgba(255,163,0,.35)'; g.fillRect(fx - 2, fy, 6, 2); g.fillRect(fx, fy - 2, 2, 6); }
       });
       if (drawBurst > 0) {
-        g.fillStyle = 'rgba(160,220,255,.8)';
-        for (var k = 0; k < 10; k++) g.fillRect(180 + (k - 5) * 8 + Math.sin(t + k) * 3, 86 - (40 - drawBurst) * 0.8 - (k % 3) * 6, 3, 3);
+        for (var k = 0; k < 10; k++) { g.fillStyle = k % 2 ? '#29adff' : '#fff1e8'; g.fillRect(Math.round((180 + (k - 5) * 8 + Math.sin(t + k) * 3) / 2) * 2, Math.round((86 - (40 - drawBurst) * 0.8 - (k % 3) * 6) / 2) * 2, 4, 4); }
         drawBurst--;
       }
       if (!reduce || drawBurst > 0) requestAnimationFrame(frame);
