@@ -273,7 +273,10 @@
     if (newBest) save.best = run.dist;
     if (run.score > save.bestScore) save.bestScore = run.score;
     if (run.bestCombo > save.bestCombo) save.bestCombo = run.bestCombo;
-    if (!save.ghost || save.ghost.seed !== run.seed || save.ghost.pv !== PV || run.dist > save.ghost.dist) save.ghost = { seed: run.seed, in: run.ins.slice(0, 4000), dist: run.dist, pv: PV };
+    // G-18 (b09-07): the one stored ghost is your best run. A run on another course only replaces it when it went at least as far (or the
+    // stored ghost is from an old physics version), so a 20 m crash on a new course never wipes the 400 m ghost of your best course.
+    const gh = save.ghost;
+    if (!gh || gh.pv !== PV || (gh.seed === run.seed ? run.dist > gh.dist : run.dist >= gh.dist)) save.ghost = { seed: run.seed, in: run.ins.slice(0, 4000), dist: run.dist, pv: PV };
     award('run1');
     persist();
     play('death'); musicOn('results');

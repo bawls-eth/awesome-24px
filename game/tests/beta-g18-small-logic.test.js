@@ -4,7 +4,7 @@
 //  b10-09 Jam: startSong() refuses a locked tier (the Hard lock is enforced in the code, not only by the disabled button).
 //  b04-09 Realm Nexus: the Blacksmith's line names the stall's Forge button (and focuses it) instead of contradicting the panel.
 //  b10-05 Jam: the play HUD is hidden on the song list / results.  b04-11 Realm World: M toggles the big map.
-//  b01-08 Realm: a window blur clears the sticks.  b11-07 / b15-12 Deepdelve: craft rows read like item names.
+//  b01-08 Realm: a window blur clears the sticks.  b09-07 Dash: a short run on another course keeps the best ghost.  b11-07 / b15-12 Deepdelve: craft rows read like item names.
 // Local pages only (blockDb), no chat, no Firebase writes.
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/beta-g18-small-logic.test.js
 const { chromium } = require('playwright');
@@ -75,6 +75,17 @@ const ORIGIN = (process.env.BASE || 'http://localhost:8440/game/index.html').rep
   await page.evaluate(() => document.getElementById('open-craft').click());
   const rows = await page.evaluate(() => [...document.querySelectorAll('#craft-panel strong')].map((n) => n.textContent));
   check('b11-07: Deepdelve craft rows read "Plank" / "Torch x4", never "plank > plank"', rows.length >= 3 && rows.every((t) => !/ > /.test(t) && /^(\[locked\] )?[A-Z]/.test(t)) && rows.some((t) => /^Torch x\d/.test(t)), JSON.stringify(rows.slice(0, 8)));
+  // b09-07: Dash keeps the ghost of your best run; a short crash on another course does not wipe it
+  await page.goto(ORIGIN + '/game/games/dash/index.html?test=1');
+  await page.waitForFunction(() => window.__dash, null, { timeout: 30000 });
+  const gh = await page.evaluate(() => {
+    const d = window.__dash; d.start('night1'); d.step(20000, { lead: 26 }); const a = { ...d.save.ghost, in: 0 };
+    d.start('crashB'); d.step(20000); const b = { ...d.save.ghost, in: 0 };
+    d.start('night1'); const race = !!d.ghost; return { a, b, race, longB: 0 };
+  });
+  check('b09-07: a long run stores its ghost', gh.a.seed === 'night1' && gh.a.dist > 0, JSON.stringify(gh));
+  check('b09-07: a shorter run on another course keeps the best ghost (seed and distance unchanged)', gh.b.seed === 'night1' && gh.b.dist === gh.a.dist, JSON.stringify(gh));
+  check('b09-07: Play on the best course still races its ghost', gh.race === true, JSON.stringify(gh));
   check('no page errors', errors.length === 0, errors.join(' | '));
   await ctx.close(); await browser.close();
   done();
