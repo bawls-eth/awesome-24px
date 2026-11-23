@@ -1,0 +1,408 @@
+[
+ {
+  "id": "b12-r2-01",
+  "severity": "P2",
+  "area": "Realm overworld / hero",
+  "title": "After picking a hero the player is a green smiley orb, then invisible, for about 3 s before the class sprite appears",
+  "steps": [
+   "Open /game/games/mad-maze/index.html?mode=world&test=1&offline=1&seed=12345&heropick=1 at 1280x720",
+   "Click the first class card (Thicket Ranger)",
+   "Screenshot at +0.3 s, +1.5 s, +3 s, +6 s"
+  ],
+  "expected": "The chosen class sprite is drawn from the first frame (or the spawn pad shows a pixel placeholder of the class)",
+  "actual": "Phone, loaded machine (load factor ~5): +0.1 s small green placeholder pip on the pad, +0.7 s pad EMPTY, +2.2 s placeholder again, class sprite only by ~5 s; terrain also flips flat -> textured. Desktop first run: empty pad at +0.15 s, orb at +0.85 s, sprite at +2.35 s.",
+  "viewport": "1280x720",
+  "url": "/game/games/mad-maze/index.html?mode=world&test=1&offline=1&seed=12345&heropick=1",
+  "screenshots": [
+   "img/b12-r2-01.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/games/mad-maze/mad-maze.js:270-300 (applyHero -> class strip load; the arena drops the fallback before the new strip has loaded) and shared/mm-art.js loadClass",
+  "kind": "visual",
+  "frequency": "always",
+  "status": "NOT FIXED"
+ },
+ {
+  "id": "b12-r2-02",
+  "severity": "P2",
+  "area": "Realm overworld / bosses",
+  "title": "World boss first appears as a pink cartoon devil face (code fallback) while its art lazy-loads",
+  "steps": [
+   "Realm world test seed 12345, desktop",
+   "Walk (teleport) into the Godlands next to the Lich King site",
+   "Look at the boss in the first ~2 s after 'Lich King awakens!'"
+  ],
+  "expected": "Boss art is preloaded when the player nears a boss site, so the boss never shows a placeholder",
+  "actual": "Void Maw is the full purple sprite on its first live frame after the preload; no pink fallback face seen.",
+  "viewport": "1280x720",
+  "url": "/game/games/mad-maze/index.html?mode=world&test=1&offline=1&seed=12345",
+  "screenshots": [
+   "img/b12-r2-02.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/games/mad-maze/mad-maze.js:257-262 (boss art loaded lazily on first draw); preload when the player is within N tiles of world.bossSites",
+  "kind": "visual",
+  "frequency": "often",
+  "status": "FIXED"
+ },
+ {
+  "id": "b12-r2-03",
+  "severity": "P2",
+  "area": "Realm overworld / terrain",
+  "title": "Ghost outline lines run parallel to terrain borders (water and sand), offset from the actual edge",
+  "steps": [
+   "Realm world seed 12345, Shore zone near tile (0,119) or the start beach",
+   "Look at the water/shallow and dirt/sand borders"
+  ],
+  "expected": "One clean transition per terrain border",
+  "actual": "Shore water / sand / grass borders are single clean transitions, no parallel ghost line.",
+  "viewport": "1280x720",
+  "url": "/game/games/mad-maze/index.html?mode=world&test=1&offline=1&seed=12345",
+  "screenshots": [
+   "img/b12-r2-04.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/games/mad-maze/realm-world.js chunk terrain draw (edge/outline pass)",
+  "kind": "visual",
+  "frequency": "always",
+  "status": "FIXED"
+ },
+ {
+  "id": "b12-r2-04",
+  "severity": "P2",
+  "area": "Realm overworld / terrain",
+  "title": "Highlands/Godlands: white snow patches drawn as frames with square holes; red lava areas are plus/cross blocks",
+  "steps": [
+   "Realm world seed 12345, teleport to Highlands (tile 107,125) and Godlands (115,128)"
+  ],
+  "expected": "Organic patches with edge transitions",
+  "actual": "Highlands snow patches are still white frames with square holes and the lava area is still a hard-edged plus/cross.",
+  "viewport": "1280x720",
+  "url": "/game/games/mad-maze/index.html?mode=world&test=1&offline=1&seed=12345",
+  "screenshots": [
+   "img/b12-r2-03.jpg"
+  ],
+  "clip": null,
+  "suspect": "shared/mm-overworld.js patch generator + realm-world.js tile pick (art is R32, the hole pattern is code)",
+  "kind": "visual",
+  "frequency": "always",
+  "status": "NOT FIXED"
+ },
+ {
+  "id": "b12-r2-05",
+  "severity": "P2",
+  "area": "Town (offline)",
+  "title": "Town scale mismatch: Mayor statue and NPCs are 2-3x the player sprite, with mixed pixel density",
+  "steps": [
+   "Join the Town offline at 1280x720 (nav-town.test.js pattern)",
+   "Walk up to the Hole / Postcards area"
+  ],
+  "expected": "One pixel scale for heroes, NPCs and statues (statue on a sculpted plinth)",
+  "actual": "Mayor statue still ~2x the hero on a flat grey slab; mixed pixel density unchanged.",
+  "viewport": "1280x720",
+  "url": "/game/index.html?from=hub",
+  "screenshots": [
+   "img/b12-r2-07.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/main.js statue/NPC setScale; plinth drawn with graphics.fillRect",
+  "kind": "visual",
+  "frequency": "always",
+  "status": "NOT FIXED"
+ },
+ {
+  "id": "b12-r2-06",
+  "severity": "P2",
+  "area": "Town (offline)",
+  "title": "Top Scores board text is illegible (tiny downscaled text)",
+  "steps": [
+   "Join the Town offline at 1280x720",
+   "Look at the TOP SCORES board east of Postcards"
+  ],
+  "expected": "Readable pixel text on the board (>= 12 px)",
+  "actual": "Desktop board is now large and legible (TOP SCORES, ADMINb12 1). Phone board is still half off-screen and a fish icon covers the score row (see b12-r2-18).",
+  "viewport": "1280x720",
+  "url": "/game/index.html?from=hub",
+  "screenshots": [
+   "img/b12-r2-07.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/main.js leaderboard sign text (small font size scaled by camera zoom)",
+  "kind": "visual",
+  "frequency": "always",
+  "status": "FIXED"
+ },
+ {
+  "id": "b12-r2-07",
+  "severity": "P2",
+  "area": "Town (offline)",
+  "title": "Town world labels collide with each other and with HUD chips",
+  "steps": [
+   "Join the Town offline at 390x844 and 1280x720",
+   "Stand near spawn"
+  ],
+  "expected": "World labels never overlap each other or the HUD",
+  "actual": "Desktop: Shop label still overprinted by \"+50% today\", Able Sisters crowded, Hole label under the Realm Gate chip, Mayor label under the panel. Phone: emote chip row still over the Shop / Able Sisters labels.",
+  "viewport": "390x844",
+  "url": "/game/index.html?from=hub",
+  "screenshots": [
+   "img/b12-r2-07.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/main.js label placement (no collision/offset pass); index.html emote bar position",
+  "kind": "visual",
+  "frequency": "always",
+  "status": "NOT FIXED"
+ },
+ {
+  "id": "b12-r2-08",
+  "severity": "P2",
+  "area": "Realm Nexus",
+  "title": "Nexus plaza is a placeholder: flat checkerboard floor, rounded web box, big sans-serif labels",
+  "steps": [
+   "Realm world, open the Nexus (__mm.world.nexus.open or walk to Nexus portal)"
+  ],
+  "expected": "Pixel plaza tiles, 8-bit frame and pixel font like the dungeons",
+  "actual": "Nexus floor is still the purple checkerboard with sans labels and rounded frame; desktop portals still cut at the box edge. Phone plaza is taller now (about 57% of the height), no void bands.",
+  "viewport": "1280x720",
+  "url": "/game/games/mad-maze/index.html?mode=world&test=1&offline=1&seed=12345",
+  "screenshots": [
+   "img/b12-r2-05.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/games/mad-maze/realm-world.js nexus walk draw (nxWalk) - add plaza tiles (Codex) and an 8-bit frame",
+  "kind": "visual",
+  "frequency": "always",
+  "status": "NOT FIXED"
+ },
+ {
+  "id": "b12-r2-09",
+  "severity": "P2",
+  "area": "Isles",
+  "title": "Isles hero never turns or animates: front view while walking left",
+  "steps": [
+   "Open /game/games/isles/index.html?test=1&isle=<home|jungle|reef|mars|ice>",
+   "Hold ArrowLeft, screenshot"
+  ],
+  "expected": "Side view facing left with a walk cycle",
+  "actual": "Hero now shows the ranger side view facing left. The dark navy 2x2 block next to the jungle start is still there (that part NOT FIXED).",
+  "viewport": "390x844",
+  "url": "/game/games/isles/index.html?test=1&isle=jungle",
+  "screenshots": [
+   "img/b12-r2-06.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/games/isles/isles.js hero draw (code-drawn hero, no facing)",
+  "kind": "visual",
+  "frequency": "always",
+  "status": "FIXED"
+ },
+ {
+  "id": "b12-r2-10",
+  "severity": "P3",
+  "area": "Realm / Dungeons phone HUD",
+  "title": "Phone joysticks: orange square knob inside a round ring, both sticks cover a third of the play view",
+  "steps": [
+   "Realm world or any dungeon at 390x844 touch"
+  ],
+  "expected": "Pixel-styled stick art (round or square, not both), smaller/translucent knob",
+  "actual": "Joysticks are now pixel rings with a round orange orb (blue right ring), smaller footprint.",
+  "viewport": "390x844",
+  "url": "/game/games/mad-maze/index.html?mode=world&test=1&offline=1&seed=12345",
+  "screenshots": [
+   "img/b12-r2-06.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/games/mad-maze/realm.js touch stick styles",
+  "kind": "visual",
+  "frequency": "always",
+  "status": "FIXED"
+ },
+ {
+  "id": "b12-r2-11",
+  "severity": "P3",
+  "area": "Hub / menus",
+  "title": "Hub and HUD still use emoji glyphs over pixel art; mixed fonts across pages",
+  "steps": [
+   "Open /game/hub/index.html at 390x844 and 1280x720",
+   "Open Realm Menu, Town join screen"
+  ],
+  "expected": "Pixel icon set (R13) and one pixel font",
+  "actual": "Hub cards still use emoji icons (pixel title banner is new); Realm menu not re-checked.",
+  "viewport": "390x844",
+  "url": "/game/hub/index.html",
+  "screenshots": [],
+  "clip": null,
+  "suspect": null,
+  "kind": "visual",
+  "frequency": "always",
+  "status": "NOT FIXED"
+ },
+ {
+  "id": "b12-r2-12",
+  "severity": "P2",
+  "area": "Echo Garden",
+  "title": "Echo Garden card labels overlapped by selection frame and the leaves HUD; WILT label clipped",
+  "steps": [
+   "Open /game/games/echo/index.html at 1280x720",
+   "Press GOT IT, PLAY, wait for the first tune"
+  ],
+  "expected": "Flower names readable, status pips outside cards",
+  "actual": "Flower labels clean, pips outside the cards, 2x2 grid fits at 720 px.",
+  "viewport": "1280x720",
+  "url": "/game/games/echo/index.html",
+  "screenshots": [
+   "img/b12-r2-08.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/games/echo/*.js card label/pip layout",
+  "kind": "visual",
+  "frequency": "always",
+  "status": "FIXED"
+ },
+ {
+  "id": "b12-r2-13",
+  "severity": "P3",
+  "area": "Angler",
+  "title": "Angler pond canvas stays ~260x380 px on desktop; 85% of the screen is empty pattern",
+  "steps": [
+   "Open /game/games/angler/index.html at 1280x720, PLAY"
+  ],
+  "expected": "Pond scene scaled up by an integer factor to use the viewport",
+  "actual": "Pond scene is now about 440x660 on 1280x720 (was 260x380).",
+  "viewport": "1280x720",
+  "url": "/game/games/angler/index.html",
+  "screenshots": [
+   "img/b12-r2-08.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/games/angler canvas sizing (MM8.crisp scale)",
+  "kind": "visual",
+  "frequency": "always",
+  "status": "FIXED"
+ },
+ {
+  "id": "b12-r2-14",
+  "severity": "P2",
+  "area": "Realm bosses",
+  "title": "Confirm R08: Lich King and Shadow Hydra are the same purple box-torso + fists template",
+  "steps": [
+   "Realm world seed 12345, visit Lich King and Shadow Hydra sites, wait 9 s"
+  ],
+  "expected": "Distinct boss silhouettes at the b07 bar",
+  "actual": "Art queue item R08; only Void Maw was seen this round (it looks distinct).",
+  "viewport": "1280x720",
+  "url": "/game/games/mad-maze/index.html?mode=world&test=1&offline=1&seed=12345",
+  "screenshots": [],
+  "clip": null,
+  "suspect": null,
+  "kind": "visual",
+  "frequency": "always",
+  "status": "NOT RETESTED"
+ },
+ {
+  "id": "b12-r2-15",
+  "severity": "P2",
+  "area": "Dungeons phone",
+  "title": "Confirm known: phone dungeon is a letterboxed strip (~25% black above the room, joystick band below)",
+  "steps": [
+   "Open a dungeon (?mode=dungeon&biome=crypt) at 390x844"
+  ],
+  "expected": "Room fills the portrait view (PLAYTEST-REVIEW-4 #26)",
+  "actual": "Dungeon phone still has a black band between the HUD / minimap and the room (y~130-215); the new HUD is cleaner.",
+  "viewport": "390x844",
+  "url": "/game/games/mad-maze/index.html?mode=dungeon&test=1&offline=1&lv=2&seed=11&biome=crypt",
+  "screenshots": [
+   "img/b12-r2-06.jpg"
+  ],
+  "clip": null,
+  "suspect": "known PR4 #26",
+  "kind": "visual",
+  "frequency": "always",
+  "status": "NOT FIXED"
+ },
+ {
+  "id": "b12-r2-16",
+  "severity": "P3",
+  "area": "Realm overworld / props",
+  "title": "Confirm known: b12 lollipop trees/bushes still live; the b12r redraw is staged but not wired",
+  "steps": [
+   "Realm world seed 12345 Shore/Midlands"
+  ],
+  "expected": "b12r 2x density props",
+  "actual": "Round lollipop trees and ball bushes still live on Shore / Midlands.",
+  "viewport": "1280x720",
+  "url": "/game/games/mad-maze/index.html?mode=world&test=1&offline=1&seed=12345",
+  "screenshots": [
+   "img/b12-r2-04.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/games/mad-maze/realm-world.js:381-393",
+  "kind": "visual",
+  "frequency": "always",
+  "status": "NOT FIXED"
+ },
+ {
+  "id": "b12-r2-17",
+  "severity": "P3",
+  "area": "Stalk Market",
+  "title": "Fixed compass button overlaps the scrolled PRACTICE WEEK heading",
+  "steps": [
+   "Open /game/games/stalk/index.html at 390x844",
+   "Tap PLAY A PRACTICE WEEK"
+  ],
+  "expected": "Heading below the floating button",
+  "actual": "PRACTICE WEEK heading is below the compass button and fully readable.",
+  "viewport": "390x844",
+  "url": "/game/games/stalk/index.html",
+  "screenshots": [
+   "img/b12-r2-08.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/games/stalk scrollIntoView offset",
+  "kind": "visual",
+  "frequency": "once",
+  "status": "FIXED"
+ },
+ {
+  "id": "b12-r2-18",
+  "severity": "P3",
+  "area": "new",
+  "title": "Top Scores board: a fish icon sits on the first score row; on phone the board is half off-screen",
+  "steps": [
+   "Join Town offline at 1280x720 and 390x844",
+   "Look at the Top Scores board"
+  ],
+  "expected": "Rows readable, board fully on screen",
+  "actual": "Desktop: the fish icon covers the ADMINb12 row start. Phone: board clipped at the right edge and fish icon over it.",
+  "viewport": "1280x720",
+  "url": "/game/index.html?from=hub",
+  "screenshots": [
+   "img/b12-r2-07.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/main.js leaderboard sign / ambient fish depth",
+  "kind": "visual",
+  "frequency": "always",
+  "status": "NEW"
+ },
+ {
+  "id": "b12-r2-19",
+  "severity": "P3",
+  "area": "new",
+  "title": "Floating drop text overlaps when several drops land close (T11 Leaf Volley over T10 ...)",
+  "steps": [
+   "Realm world test, w.testDrop 8 times near each other"
+  ],
+  "expected": "Offset labels",
+  "actual": "Labels print over each other; bags themselves are fine (W-14 FIXED: outlined bags per tier brown / purple / white / cyan; no image attached, cap of 8).",
+  "viewport": "1280x720",
+  "url": "/game/games/mad-maze/index.html?mode=world&test=1&offline=1&seed=12345",
+  "screenshots": [],
+  "clip": null,
+  "suspect": "realm-world.js drop float text",
+  "kind": "visual",
+  "frequency": "always",
+  "status": "NEW"
+ }
+]
