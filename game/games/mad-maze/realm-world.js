@@ -914,6 +914,7 @@
     }
     const bossReadyNow = new Uint8Array(world.bossSites.length); // refreshed by bossTick (2 Hz) so drawing never builds lookup strings
     const bossWarned = new Set(); // G-07: "above your level" said once per altar per visit
+    function rushOnNow() { try { return RUSH_ON && rush.on; } catch (e) { return false; } } // G-27 (TDZ-safe: the Trial block sits later in this file)
     function bossTick() {
       if (rush.on) return; // RE2: no altar boss wakes during the Trial of Six
       const p = arena.player; const alive = bossAlive();
@@ -1021,6 +1022,7 @@
     function evTick() {
       // G-15 (b08-04): no Raid / Swarm countdown while the first-run coach is still teaching (it starts once the coach is done or skipped)
       try { const tu = window.__mmTutorial; if (tu && typeof tu.current === 'function' && tu.current() !== 'done') { evList = []; evFocus = null; syncEventHud(); return; } } catch (e) { /* no coach: events as usual */ }
+      try { if (RUSH_ON && rush.on) { evList = []; evFocus = null; syncEventHud(); return; } } catch (e) { /* the Trial is set up later in this file */ } // G-27 (b03-09): no Raid / Swarm timer over a Trial fight
       const now = eventClock(); const p = arena.player;
       evList = Z.eventsFor(world, now);
       const seen = new Set();
@@ -1748,6 +1750,9 @@
       if (!L.ok) { if (nxDom && nxOpen) nxSay('Trial of Six', L.text); return null; }
       if (nxOpen) nexusClose();
       rush.on = true; rush.ladder = L; rush.i = 0; rush.kills = 0; rush.e = null; rush.log = []; rush.phase = 'fight'; rush.n++;
+      // G-27 (b03-09): the Trial is fought on a clear field: the world mobs around (and their bolts) rest until it ends; no new ones spawn meanwhile
+      live.forEach((e, id) => { if (e && e.active && e.zid === id && !e.rushStep) { e.active = false; e.zid = -1; } if (zones) zones.markDead(id, arena.clock); });
+      live.clear(); arena.eBullets.forEach((b) => { b.active = false; });
       rushSpawn();
       return 'rush';
     }
@@ -1813,7 +1818,14 @@
       return true;
     }
     const rushDcPrev = arena.onDeathCache; // a fall ends the trial at once (the arena stops ticking the world while it is down)
-    arena.onDeathCache = (c) => { if (rush.on) rushEnd('fell'); if (typeof rushDcPrev === 'function') rushDcPrev(c); };
+    arena.onDeathCache = (c) => {
+      if (rush.on) { // G-27 (b03-10): say how far the Trial went (after the fall line), not only the generic world fall
+        const n = rush.ladder && rush.ladder.steps ? rush.ladder.steps.length : 6, at = Math.min(n, rush.i + 1), beat = rush.kills;
+        rushEnd('fell'); rush.lastFall = { at, n, beat };
+        setTimeout(() => { try { arena._showBanner('Trial of Six: you fell at fight ' + at + ' of ' + n + ' · ' + beat + ' beaten · every drop is in your pack', 3); } catch (e) { /* cosmetic */ } }, 2700);
+      }
+      if (typeof rushDcPrev === 'function') rushDcPrev(c);
+    };
     function rushTick() {
       if (!rush.on) return;
       if (arena.state === 'dead' || !arena.active) { rushEnd('fell'); return; } // a fall ends the trial: the hero is back by the Nexus, every drop already kept
@@ -2340,7 +2352,7 @@
         if (zones) {
           const p = arena.player; const out = zones.update(p.x, p.y, Math.min(dt, 0.1), arena.clock);
           for (let k = 0; k < out.despawn.length; k++) { const id = out.despawn[k]; const e = live.get(id); if (e && e.active && e.zid === id) { e.active = false; e.zid = -1; despawned++; } live.delete(id); } // free pool slots first
-          for (let k = 0; k < out.spawn.length; k++) if (!spawnZ(out.spawn[k])) zones.markDead(out.spawn[k].id, arena.clock); // pool full: the spawner must not count it
+          for (let k = 0; k < out.spawn.length; k++) if (rushOnNow() || !spawnZ(out.spawn[k])) zones.markDead(out.spawn[k].id, arena.clock); // pool full (or G-27: the Trial of Six is on): the spawner must not count it
           bossT -= dt; if (bossT <= 0) { bossT = 0.5; bossTick(); }
           sweepT -= dt; if (sweepT <= 0) { sweepT = 1; sweepLost(); }
         }
