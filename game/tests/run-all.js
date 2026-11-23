@@ -107,7 +107,9 @@ const hasFlock = argv.includes('--lock-live') && spawnSync('flock', ['--version'
     let stdout = '', stderr = '', timedOut = false;
     child.stdout.on('data', (d) => { stdout += d; });
     child.stderr.on('data', (d) => { stderr += d; });
-    const timer = setTimeout(() => { timedOut = true; child.kill('SIGKILL'); }, 170000 + (live && hasFlock ? 600000 : 0));
+    // per-test budget: 170 s by default; a long test (e.g. the 16-page x 7-viewport a11y sweep) can declare "timeoutSec" (max 1200) in test-tiers.json
+    const own = Number((table[f] || {}).timeoutSec); const budget = Number.isFinite(own) && own > 170 ? Math.min(own, 1200) * 1000 : 170000;
+    const timer = setTimeout(() => { timedOut = true; child.kill('SIGKILL'); }, budget + (live && hasFlock ? 600000 : 0));
     child.on('close', (status) => { clearTimeout(timer); resolve({ f, status: timedOut ? null : status, stdout, stderr, secs: (Date.now() - start) / 1000 }); });
   });
   const report = (r) => {

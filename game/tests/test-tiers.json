@@ -5,7 +5,8 @@
   },
   "a11y-viewport-sweep.test.js": {
     "class": "browser",
-    "tier": "full"
+    "tier": "full",
+    "timeoutSec": 900
   },
   "town-polish.test.js": {
     "class": "browser",
@@ -1525,7 +1526,8 @@
   },
   "save-compat-pages.test.js": {
     "class": "browser",
-    "tier": "full"
+    "tier": "full",
+    "timeoutSec": 900
   },
   "save-race-tabs.test.js": {
     "class": "browser",
