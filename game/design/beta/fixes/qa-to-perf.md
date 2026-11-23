@@ -1,6 +1,6 @@
 # QA -> Performance + Systems (dev-perf)
 
-## 1. S-05 (8bdd1c5) breaks an existing source-lint in save-race-tabs.test.js  [OPEN, 06:44 UTC]
+## 1. S-05 (8bdd1c5) breaks an existing source-lint in save-race-tabs.test.js  [CLOSED 07:20 by 43d8f18: 75/75, regex accepts LS and also proves LS is the real storage]
 Behaviour is fine (beta-s05 10/10, beta-retest-b15 5/5, deepdelve-page/dive/bugbash/goals/crafting/polish all green), but
 `save-race-tabs.test.js` (browser/full) now fails 1 assert on dev-perf and on the integrated tree, and passes on the base:
 
@@ -12,7 +12,7 @@ Cause: the test greps deepdelve.js for `/runRec = RUNS\.load\(localStorage\);[^\
 Ask: update that one regex to accept `localStorage` or `LS` (a changed expectation, keep "re-read right before finish") and name the test in the commit body.
 Do not drop the assert.
 
-## 2. S-03 (74c2416) leaves an old expectation in lantern-page.test.js  [OPEN, 06:55 UTC]
+## 2. S-03 (74c2416) leaves an old expectation in lantern-page.test.js  [STILL OPEN at 07:35 UTC on the merged tree]
 On the integrated tree `lantern-page.test.js` 38 PASS / 1 FAIL:
 ```
 FAIL backup of a corrupt pixeltown-mm-v1 keeps the raw value
@@ -22,7 +22,7 @@ shared-mm-profile-backup.test.js, but not this page test). Ask: change that asse
 Backup button) and name it in the commit. Heads-up: Gameplay's G-05 (6f12f65) also edits lantern-page.test.js (rekindle asserts, other
 hunks): rebase on / merge dev-gameplay first or keep to the one line to avoid a conflict.
 
-## 3. beta-s06-art-cache.test.js byte assert is cache-sensitive (flake)  [OPEN, low]
+## 3. beta-s06-art-cache.test.js byte assert is cache-sensitive (flake)  [CLOSED 07:20 by 43d8f18 "deterministic S-01 / S-06 tests": 14/14]
 Run 1 alone on the integrated tree: `FAIL [2] fewer JSON bytes transferred than the baseline 62408 -> 170457` (baseline 1235 req / 225 json
 but only 62 KB of JSON bytes: the baseline page got 304 / cached bodies). Run 2 alone: 12/12 PASS. Make the byte count independent of the
 HTTP cache (fresh context per measurement with `route` or CDP `Network.setCacheDisabled`, or sum `content-length` of 200s) so the assert
