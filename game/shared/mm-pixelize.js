@@ -24,7 +24,11 @@
 
   function img(w, h, data) { return { w: w, h: h, data: data || new Uint8ClampedArray(w * h * 4) }; }
   function clone(a) { return img(a.w, a.h, new Uint8ClampedArray(a.data)); }
-  function merge(o) { var r = {}, k; for (k in DEFAULTS) r[k] = DEFAULTS[k]; if (o) for (k in o) if (o[k] !== undefined) r[k] = o[k]; return r; }
+  // own keys only, never __proto__ / constructor (a JSON options blob could otherwise re-parent the merged options)
+  function merge(o) { var r = {}, k; for (k in DEFAULTS) r[k] = DEFAULTS[k];
+    if (o && typeof o === 'object') for (k in o) if (Object.prototype.hasOwnProperty.call(o, k) && k !== '__proto__' && k !== 'constructor' && o[k] !== undefined) r[k] = o[k];
+    return r; }
+  function isImg(a) { return !!a && typeof a === 'object' && a.w > 0 && a.h > 0 && isFinite(a.w) && isFinite(a.h) && a.data && a.data.length >= a.w * a.h * 4; }
   function clamp(v) { return v < 0 ? 0 : v > 255 ? 255 : Math.round(v); }
   function hexRgb(h) { var s = String(h || '').replace('#', ''); if (s.length === 3) s = s[0] + s[0] + s[1] + s[1] + s[2] + s[2];
     var n = parseInt(s, 16); return isNaN(n) ? [0, 0, 0] : [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
@@ -168,8 +172,10 @@
 
   // Full pure pipeline on a hi-res RGBA buffer. Returns { w, h, data, palette, colors }.
   function pixelize(src, opts) {
-    var o = merge(opts), size = Math.max(4, Math.floor(o.size)), pad = Math.max(0, Math.min(Math.floor(o.pad), 4));
-    var inner = size - pad * 2, b = opaqueBounds(src, 8);
+    // size 4..256 and pad 0..4 (NaN -> defaults): NaN used to give a 0-byte NaN x NaN image, Infinity threw a RangeError
+    var o = merge(opts), size = Math.max(4, Math.min(256, Math.floor(Number(o.size)) || DEFAULTS.size)), pad = isFinite(Number(o.pad)) ? Math.max(0, Math.min(Math.floor(Number(o.pad)), 4)) : DEFAULTS.pad;
+    if (pad * 2 >= size - 1) pad = 0;
+    var inner = size - pad * 2, b = isImg(src) ? opaqueBounds(src, 8) : null; // a missing / short buffer reads as empty
     if (!b) { var e = img(size, size); e.palette = []; e.colors = 0; return e; }
     var fit = Math.min(inner / b.w, inner / b.h);
     var tw = Math.max(1, Math.round(b.w * fit)), th = Math.max(1, Math.round(b.h * fit));

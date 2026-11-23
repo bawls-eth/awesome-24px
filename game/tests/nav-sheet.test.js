@@ -103,7 +103,7 @@ async function run(label, ctxOpts, tapper) {
 
   // hooks
   const hk = await page.evaluate(() => { const log = []; MMNav.onOpen(() => log.push('open')); MMNav.onClose(() => log.push('close')); MMNav.onSettings(() => log.push('settings')); MMNav.open(); const shown = !document.getElementById('mm-nav-settings').hidden; document.getElementById('mm-nav-settings').click(); return { log, shown }; });
-  check(L('onOpen/onClose/onSettings hooks fire; Settings shows only when registered'), hk.shown && hk.log.join() === 'open,close,settings', JSON.stringify(hk));
+  check(L('onOpen/onClose/onSettings hooks fire; Settings is offered and runs the page hook'), hk.shown && hk.log.join() === 'open,close,settings', JSON.stringify(hk));
 
   // Back (fallback) navigates
   await tapper(page, '#mm-nav-btn');

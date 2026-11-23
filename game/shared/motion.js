@@ -23,7 +23,7 @@
     try { if (storage) storage.setItem(KEY, val ? '1' : '0'); } catch (e) { /* ignore */ }
   }
   // Screen-shake amplitude in px.
-  function shake(amount, isReduced) { return isReduced ? 0 : Math.max(0, +amount || 0); }
+  function shake(amount, isReduced) { const a = +amount; return isReduced || !isFinite(a) ? 0 : Math.max(0, a); } // Infinity used to shake by Infinity px
   // t in seconds. Reduced: steady tint, no blinking. Normal: 8 Hz blink.
   function flash(color, t, isReduced) {
     if (isReduced) return { color, alpha: 0.35, blink: false };
@@ -32,7 +32,7 @@
   }
   // Low-HP edge warning at <=25% HP. Reduced: static border, no pulse.
   function lowHpBorder(hp, max, isReduced, t) {
-    if (!(max > 0) || hp / max > 0.25) return { visible: false, alpha: 0, pulse: false };
+    if (!(max > 0) || !(hp / max <= 0.25)) return { visible: false, alpha: 0, pulse: false }; // NaN hp (not loaded yet) used to show the warning
     if (isReduced) return { visible: true, alpha: 0.5, pulse: false };
     const a = 0.3 + 0.3 * (0.5 + 0.5 * Math.sin((+t || 0) * Math.PI * 2)); // 1 Hz
     return { visible: true, alpha: a, pulse: true };

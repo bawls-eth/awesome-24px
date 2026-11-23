@@ -108,7 +108,7 @@ const overlap = (a, b) => a && b && a.vis && b.vis && a.x < b.x + b.w && b.x < a
     check(L('one tap on "Where to?" opens the sheet; exactly one modal dialog is visible'), sh.open && sh.dialogs === 1 && sh.expanded === 'true' && sh.focusIn, JSON.stringify({ open: sh.open, dialogs: sh.dialogs, expanded: sh.expanded }));
     check(L('all 14 places are listed in catalogue order'), sh.dests.map((d) => d.id).join(',') === IDS, sh.dests.map((d) => d.id).join(','));
     check(L('the Town entry is marked as the current page'), sh.dests[0].cur === 'page');
-    check(L('destinations are plain same-tab links (they leave like the "World map" link does)'), sh.dests.every((d) => !d.target && d.abs.startsWith(new URL(BASE).origin + '/game/')) && sh.sheetMap === sh.worldMap, JSON.stringify([sh.sheetMap, sh.worldMap]));
+    check(L('destinations are plain same-tab links (they leave like the "World map" link does)'), sh.dests.every((d) => !d.target && d.abs.startsWith(new URL(BASE).origin + '/game/')) && sh.sheetMap.split('?')[0] === sh.worldMap.split('?')[0] && /[?&]map=1/.test(sh.sheetMap), JSON.stringify([sh.sheetMap, sh.worldMap])); // the sheet's World map opens the Hub map view (?map=1)
     for (const d of sh.dests.filter((x) => x.id !== 'town')) {
       const r = await page.request.get(d.abs);
       check(L(`destination ${d.id} (${d.href}) resolves with HTTP 200`), r.status() === 200, String(r.status()));

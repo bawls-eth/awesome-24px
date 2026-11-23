@@ -29,10 +29,13 @@ check('goalLine: no target never says So close', !/So close/.test(K.goalLine(499
 check('goalLine: all done', /All medals/.test(K.goalLine(1, null)));
 // seed codes
 ['demo1', 'abc123', 'lx9k2m0a', 'z'].forEach((s) => check('seed code round-trips ' + s, K.parseSeedCode(K.seedCode(s)) === s && /^[A-Z0-9]{1,24}$/.test(K.seedCode(s))));
-check('seedCode is short and clean', K.seedCode('a-b_c!') === 'ABC' && K.seedCode('x'.repeat(40)).length === 24 && K.seedCode(null) === '');
+// bug bash: '-' / '_' / upper case used to be dropped, so Replay from a share code started a different board
+['a-b_c', 'daily-2026-11-23', '__proto__', 'Ab_C-9', 'ZZZ', 'x'.repeat(24)].forEach((s) => check('seed code round-trips (encoded) ' + s, K.parseSeedCode(K.seedCode(s)) === s && /^[A-Z0-9_.-]+$/.test(K.seedCode(s))));
+check('seedCode is short and clean', K.seedCode('a-b_c!') === 'A-B_C' && K.seedCode('x'.repeat(40)).length === 24 && K.seedCode(null) === '' && K.seedCode('<b>!') === 'B');
 check('parseSeedCode is case-insensitive and trims', K.parseSeedCode(' Demo1 ') === 'demo1');
 check('parseSeedCode rejects > 24 chars', K.parseSeedCode('A'.repeat(25)) === null && K.parseSeedCode('A'.repeat(24)) === 'a'.repeat(24));
-check('parseSeedCode rejects outside A-Z0-9', ['', 'AB-C', 'A B', '<b>', 'ÄB', 'a_b', '__proto__', '%41'].every((x) => K.parseSeedCode(x) === null));
+check('parseSeedCode rejects outside the code alphabet', ['', 'A B', '<b>', 'ÄB', '%41', '.', 'A.', '.1', '..A', 'a/b', 'A'.repeat(49)].every((x) => K.parseSeedCode(x) === null));
+check('parseSeedCode keeps - and _ (old A-Z0-9 codes read as before)', K.parseSeedCode('AB-C') === 'ab-c' && K.parseSeedCode('a_b') === 'a_b' && K.parseSeedCode('ABC123') === 'abc123' && K.parseSeedCode('.AB') === 'Ab');
 check('parseSeedCode rejects non-strings', [null, undefined, 5, {}, []].every((x) => K.parseSeedCode(x) === null));
 // view model
 const vm = K.result({ headline: ['Time! ', { text: '42', id: 'r-score' }], stats: [1, 2, 3, 4, 5].map((i) => ({ label: 'S' + i, value: i, best: i === 2 })), seed: 'demo1', value: 490, medals: meds, menuHref: '../../index.html' });

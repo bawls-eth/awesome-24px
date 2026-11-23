@@ -197,10 +197,15 @@ async function isles(browser, label, ctxOpts) {
   // the Menu closes the page panel (no stacking) and shows the 14 places
   await tap(pg, '#mm-nav-btn');
   const nav = await pg.evaluate(() => ({ open: window.MMNav.isOpen(), panel: document.getElementById('panel').hidden, dests: document.querySelectorAll('#mm-nav-sheet .mm-nav-dest').length, settings: !document.getElementById('mm-nav-settings').hidden }));
-  check(L('Menu opens the sheet, closes the craft panel, offers Settings (the island log)'), nav.open && nav.panel && nav.dests === 14 && nav.settings, JSON.stringify(nav));
+  check(L('Menu opens the sheet, closes the craft panel, offers Settings'), nav.open && nav.panel && nav.dests === 14 && nav.settings, JSON.stringify(nav));
   await tap(pg, '#mm-nav-settings');
+  // bug bash (SETTINGS-WIRING.md): the Menu's Settings entry opens the shared Settings sheet (MMSettings); the island log stays a Pack tab
+  const st = await pg.evaluate(() => ({ nav: window.MMNav.isOpen(), set: !!document.getElementById('mmset') && !document.getElementById('mmset').hidden, page: document.getElementById('mmset') && document.getElementById('mmset').dataset.page }));
+  check(L('Settings opens the shared Settings sheet for the isles'), !st.nav && st.set && st.page === 'isles', JSON.stringify(st));
+  await tap(pg, '#mmset-close');
+  await tap(pg, '#btn-pack'); await tap(pg, '#btn-log');
   const lg = await pg.evaluate(() => ({ nav: window.MMNav.isOpen(), title: document.getElementById('panel-title').textContent }));
-  check(L('Settings opens the island log'), !lg.nav && lg.title === 'Island log', JSON.stringify(lg));
+  check(L('the Pack Log tab opens the island log'), !lg.nav && lg.title === 'Island log', JSON.stringify(lg));
   await pg.waitForTimeout(150);
   const fb = await pg.evaluate(() => ({ mounts: window.__fbMounts || null, host: !!document.getElementById('log-feedback') }));
   check(L('island log: the feedback widget script loads once and MMFeedback.mount(el, {page:"isles"}) runs'), fb.host && fbReq === 1 && Array.isArray(fb.mounts) && fb.mounts.length === 1 && fb.mounts[0].id === 'log-feedback' && fb.mounts[0].page === 'isles', JSON.stringify({ fb, fbReq }));
