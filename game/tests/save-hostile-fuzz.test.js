@@ -212,7 +212,7 @@ Object.keys(LOADERS).forEach((name) => {
   a.runs = 3; a.best = Object.assign({}, a.best, { score: 500, depth: 20 }); DDRun.save(s3, a);
   b.runs = 1; b.best = Object.assign({}, b.best, { score: 90, depth: 4 }); DDRun.save(s3, b);
   const dd = DDRun.load(s3);
-  KNOWN('race MMDDRun.save: a stale tab overwrites a newer best (deepdelve-runs: last writer wins)', dd.best.score >= 500 && dd.runs >= 3, JSON.stringify(dd));
+  check('race MMDDRun.save: a stale tab never overwrites a newer best or dive count (merge-on-write, was S2)', dd.best.score >= 500 && dd.runs >= 3, JSON.stringify(dd));
 
   // The feedback box re-reads storage right before every add / delete (mm-feedback.js mount): two tabs adding notes keep both.
   const s4 = mem(), add = Feedback.add;
