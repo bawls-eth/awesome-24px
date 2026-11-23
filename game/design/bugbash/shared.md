@@ -23,6 +23,8 @@ Tests: `game/tests/shared-bugbash-fuzz.test.js` (node, 85 checks) and `game/test
 | mm-pixelize.js | `size` NaN gave a 0-byte image and Infinity threw a RangeError; a null or short buffer threw; a `__proto__` key in the options could re-parent the merged options | low |
 | mm-ghost.js | `decode` accepted junk such as `1x!` or a negative time, because `parseInt` is lenient | low |
 | mm-art.js | `load()` threw synchronously when `fetch` was missing, although it promises never to reject | low |
+| mm-backup.js | (saves S3, P0) The Backup export left out 21 progress keys: Deepdelve, the arcade bests and medals, Bugs goals and PB, Jam assist, Stalk practice, Angler fun and the active hero. They are now exported (additive, VERSION stays 2) | high |
+| profile.js:84 | (saves S4) `profile.games` was kept unbounded, so a 5 MB value made every later save hit the quota. Only that one line changed (hub lane file) | medium |
 | motion.js | `shake(Infinity)` returned Infinity px; `lowHpBorder(NaN hp)` showed the low-HP warning | low |
 
 Checked and found clean: every MMChip cue track has exactly bars*8 valid tokens; every rendered note, including the seeded variation, is within MIDI 24..108; every SFX note and slide end is in range; every alias exists; same seed gives the same events. The MMInput key map matches CONTROLS.md and the hint text matches its example. No shared module of this lane hung in a hostile-argument sweep of every exported function. MMMiniKit.panel() called 6 times adds one key listener. There is no AudioContext before a gesture.
@@ -37,4 +39,6 @@ Checked and found clean: every MMChip cue track has exactly bars*8 valid tokens;
 
 ## Elsewhere
 
-None found outside this lane.
+- The save-hostile-fuzz backup line still reports 2 keys as KNOWN: `pixeltown-backup-pregear-v1` and `arcane-frontier-save-v1`. Both are marked n/a in SAVE-KEYS.md: the first is itself a backup, the second belongs to a separate prototype. The test's progress filter could skip n/a rows (saves lane file).
+
+
