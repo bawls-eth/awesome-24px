@@ -897,7 +897,13 @@
   // the party: MMCompanion states for up to MAX_ACTIVE (1 on the low tier) tames from tames.party
   const party = [];   // {cs, ent, def, ctxDef, art, dmg}
   const partyStates = [];
-  const compCtx = { owner: hero, enemies: creatures, pickups: [], blocked: (x, y) => solidAt(tileOf(x), tileOf(y)), def: null, speed: SPEED };
+  // BB: a land companion (no swim / fly / glide / float behaviour) does not walk out onto open water; one already standing in water
+  // (a catch-up teleport) may still walk out of it. Swimmers and fliers cross freely, as before.
+  let compCur = null, compLand = false;
+  const AIRWATER = ['swim', 'fly', 'glide', 'float'];
+  const landOnly = (def) => !!def && !(Array.isArray(def.behaviours) && def.behaviours.some((b) => AIRWATER.indexOf(b) >= 0));
+  const compCtx = { owner: hero, enemies: creatures, pickups: [], def: null, speed: SPEED,
+    blocked: (x, y) => { const tx = tileOf(x), ty = tileOf(y); return solidAt(tx, ty) || (compLand && !!compCur && swimAt(tx, ty) && !swimAt(tileOf(compCur.x), tileOf(compCur.y))); } };
   function spawnCompanion(ent, x, y) {
     if (!COMPANIONS || !ent) return null;
     const def = CR.get(ent.sp);
@@ -929,8 +935,13 @@
     compCtx.enemies = creatures;
     for (let i = 0; i < party.length; i++) {
       const p = party[i];
-      compCtx.def = p.ctxDef;
+      compCtx.def = p.ctxDef; compCur = p.cs; compLand = p.land === undefined ? (p.land = landOnly(p.def)) : p.land;
       const out = CMP.update(p.cs, compCtx, dt);
+      if (compLand && swimAt(tileOf(p.cs.x), tileOf(p.cs.y))) { // BB: a land companion that ended up in water (catch-up teleport) steps out behind you
+        const bx = hero.x - hero.face.x * TILE * 0.9, by = hero.y - hero.face.y * TILE * 0.9;
+        if (!swimAt(tileOf(bx), tileOf(by)) && !solidAt(tileOf(bx), tileOf(by))) { p.cs.x = bx; p.cs.y = by; }
+        else if (!swimAt(tileOf(hero.x), tileOf(hero.y))) { p.cs.x = hero.x; p.cs.y = hero.y; }
+      }
       if (out.hit >= 0 && p.dmg > 0) { const e = creatures[out.hit]; if (e && e.hostile) { p.cs.hits = (p.cs.hits || 0) + 1; hitCreature(e, p.dmg, 'comp'); } }
     }
   }

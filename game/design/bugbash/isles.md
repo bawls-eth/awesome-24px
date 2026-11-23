@@ -7,7 +7,7 @@ Played every island (Hearth Isle / meadow, Verdant Jungle, Frostfang Tundra, Cor
 `constructor`, locked `reef`/`mars` without `test`, `from=hub`, junk `today`/`launch`/`aurora`/`perf`/`bosses`/`seed`: all safe);
 rapid taps, portrait <-> landscape rotation, keyboard only.
 
-Test: `game/tests/isles-bugbash.test.js` (36 checks). Screenshots: `img/isles-landscape-hint.png`, `img/isles-phone-howto.png`.
+Test: `game/tests/isles-bugbash.test.js` (38 checks). Screenshots: `img/isles-landscape-hint.png`, `img/isles-phone-howto.png`.
 
 ## Fixed (with tests)
 
@@ -35,12 +35,12 @@ Test: `game/tests/isles-bugbash.test.js` (36 checks). Screenshots: `img/isles-la
 13. a11y sweep: `#toast` text was 1.2:1: now light text (5b). No `<main>` / `<h1>`: added (the island name is the h1) (5a). Sail had
     no keyboard-findable name: "Sail: open the sea chart", reachable within 6 Tabs (5c, 5e). `mm-high-contrast` was ignored: applied,
     with solid black plates and white text (5d). `mm-reduce-motion` now reaches the island (5d). `a11y-viewport-sweep` PAGES=isles: 0 offenders.
+14. A land companion (Fern Raptor) idled on deep water at the shore (its follow spot or a catch-up teleport landed in the sea): land
+    companions no longer step from land into water, and one left in water steps out behind you. Swimmers / fliers unchanged. (6a,
+    fails 40/40 on the old code)
 
 ## Open (not fixed)
 
-- **Companion walks on deep water** (low). Repro: jungle, party with a Fern Raptor, stand on the beach next to the sea; the raptor
-  idles on deep water tiles. Expected: non-swimmers stay on land. `isles.js` `compCtx.blocked` uses `solidAt` only (water is not
-  solid for the hero either, it is handled by `swimAt`); a fix should pass `swimAt` into `blocked` for non-swimming species.
 - **Boss "still chewing" toast has no timing** (low): `bossFeed` path (`e.ev === 'toofast'` in `isles.js` ~1170) still says
   "The X is still chewing." Needs the boss tame state's feed clock from `mm-isle-boss.js` to show seconds like creatures do.
 - **Toast can cover the boss sprite** (low, phones): the toast sits at 22% height, where an engaged boss usually stands.

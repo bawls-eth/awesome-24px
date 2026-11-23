@@ -222,6 +222,28 @@ const KO = (I) => {
   for (let i = 0; i < 6; i++) { await a.page.keyboard.press('Tab'); tabs.push(await a.page.evaluate(() => (document.activeElement.getAttribute('aria-label') || document.activeElement.textContent || '').trim().slice(0, 30))); }
   ck(tabs.some((n) => /^Sail/.test(n)) && tabs.some((n) => /pack/i.test(n)), '5e: Pack and Sail are reachable within 6 Tab presses', tabs);
 
+  // ---- 6: a land companion never stands on open water ----
+  const PARTY = JSON.stringify({ v: 1, n: 1, roster: [{ id: 't2', sp: 'fernraptor', nm: 'Rex', lv: 2, xp: 0, bond: 2, aff: 0, cos: '', isle: 'jungle', d: '2026-11-01' }], party: ['t2'], mount: '' });
+  const w = await open(browser, { viewport: { width: 1000, height: 700 } }, '&isle=jungle', Object.assign({ 'pixeltown-tames-v1': PARTY }, HERO_KEYS));
+  await frames(w.page, 6);
+  const wet = await ev(w.page, (I) => {
+    I.pause(true); I.god(true); I.clearCreatures();
+    const W = I.world.w, H = I.world.h;
+    let spot = null;
+    for (let y = 4; y < H - 4 && !spot; y++) for (let x = 4; x < W - 6 && !spot; x++) {
+      // land under the hero and to the east, open water up-left (where a lone companion's follow spot is: up-left, ~1.4 tiles)
+      if (I.swimAt(x, y) || I.isSolid(x, y) || I.swimAt(x + 1, y) || I.isSolid(x + 1, y) || I.swimAt(x, y + 1) || I.isSolid(x, y + 1)) continue;
+      if (I.swimAt(x - 1, y - 1) && I.swimAt(x - 2, y - 1) && I.swimAt(x - 1, y - 2) && I.swimAt(x - 2, y - 2)) spot = { x, y };
+    }
+    if (!spot) return { spot: null, W, H };
+    I.teleport(spot.x + 30, spot.y); I.step(0, 0, 0.5); // far away first: the companion catches up by teleport near the shore
+    I.teleport(spot.x, spot.y);
+    let inWater = 0, n = 0;
+    for (let i = 0; i < 40; i++) { I.step(0, 0, 0.1); const p = I.party()[0]; if (!p) break; n++; if (I.swimAt(Math.floor(p.x / I.tile), Math.floor(p.y / I.tile))) inWater++; }
+    return { spot, n, inWater, party: I.party().length };
+  });
+  ck(wet.spot && wet.party === 1 && wet.n === 40 && wet.inWater === 0, '6a: a land companion (Fern Raptor) stays on land at the shore and never stands on open water', wet);
+
   for (const o of all) ck(o.errors.length === 0, 'no console errors / audio warnings', o.errors.slice(0, 4));
   ck(all.every((o) => o.db.count() === 0), 'blockDb saw 0 database requests', all.map((o) => o.db.count()));
   await browser.close();
