@@ -4600,7 +4600,8 @@ class TownScene extends Phaser.Scene {
       return false;
     }
     this.addChatLine({ system: true, text: 'Save restored! Reloading…' });
-    this.time.delayedCall(800, () => window.location.reload());
+    // a plain timer, not this.time: the reload must happen even while the scene is paused (a menu, the cave, a sleeping loop)
+    setTimeout(() => window.location.reload(), 800);
     return true;
   }
 

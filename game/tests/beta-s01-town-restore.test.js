@@ -22,6 +22,13 @@ async function openTown(browser) {
     const body = (await resp.text()).replace('const game = new Phaser.Game(config);', 'const game = window.__g = new Phaser.Game(config);');
     route.fulfill({ response: resp, body });
   });
+  await ctx.addInitScript(() => {
+    const o = Storage.prototype.setItem; window.__s01w = [];
+    Storage.prototype.setItem = function (k, v) {
+      if (k === 'pixeltown-save-v1' || k === 'pixeltown-save-v1-prev') window.__s01w.push({ k, restore: /commitRestore|restoreBundle|importSave/.test(String(new Error().stack)) });
+      return o.call(this, k, v);
+    };
+  });
   await ctx.addInitScript((v) => { if (!sessionStorage.s01Seeded) { sessionStorage.s01Seeded = '1'; localStorage.setItem('pixeltown-save-v1', v); } }, JSON.stringify(SEED));
   const page = await ctx.newPage();
   const errors = [];
@@ -40,6 +47,9 @@ async function join(page) {
   await page.waitForTimeout(800);
 }
 
+const freeze = (page) => page.evaluate(() => { window.__g.loop.sleep(); });
+// every write of the save / safety copy, with whether it came from the Restore code path
+const restoreWrites = (page) => page.evaluate(() => (window.__s01w || []).filter((w) => w.restore));
 const raw = (page) => page.evaluate((k) => localStorage.getItem(k), SAVE_KEY);
 async function restoreFile(page, name, body) {
   await page.setInputFiles('#save-import-input', { name, mimeType: 'application/json', buffer: Buffer.isBuffer(body) ? body : Buffer.from(body) });
@@ -50,6 +60,9 @@ async function restoreFile(page, name, body) {
   const { ctx, page, db, errors } = await openTown(browser);
   await join(page);
   await page.evaluate(() => { window.__s01Marker = 1; });
+  // The Town's own timed writers (weather, dailies, quests...) run on the Phaser loop and may write the save at any moment.
+  // Sleep the loop while a check compares raw storage, so only what the Restore itself does can change it (deterministic).
+  await freeze(page);
 
   // ---- 2 + 4: files that are not a save change nothing ----
   const before = await raw(page);
@@ -69,6 +82,7 @@ async function restoreFile(page, name, body) {
     check(`[${name}] the newest chat line says nothing was changed`, await page.evaluate(() => { const l = [...document.querySelectorAll('#chat-log .chat-line')].pop(); return !!l && l.textContent.includes('Nothing was changed'); }));
     check(`[${name}] page did not reload`, await page.evaluate(() => window.__s01Marker === 1));
   }
+  check('the Restore code wrote nothing for the refused files', (await restoreWrites(page)).length === 0, JSON.stringify(await restoreWrites(page)));
   check('no safety copy written by refused files', (await page.evaluate((k) => localStorage.getItem(k), PREV_KEY)) === null);
 
   // ---- 3: an old town-only export (made by today's exportSave) still restores ----
@@ -89,6 +103,7 @@ async function restoreFile(page, name, body) {
 
   // ---- 1: a Lantern bundle restores every key ----
   await join(page);
+  await freeze(page);
   const bundle = {
     format: 'pixeltown-backup', v: 2,
     keys: {
@@ -115,6 +130,7 @@ async function restoreFile(page, name, body) {
 
   // ---- cancel: nothing changes ----
   await join(page);
+  await freeze(page);
   const preCancel = await raw(page);
   page.once('dialog', (d) => d.dismiss());
   await restoreFile(page, 'backup.json', JSON.stringify(bundle));

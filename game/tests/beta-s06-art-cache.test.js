@@ -27,18 +27,18 @@ async function coldStart(browser, uncached) {
   const errors = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
   const reqs = [];
-  const jsonBytes = { n: 0 };
   page.on('request', (r) => reqs.push(r.url()));
-  page.on('response', async (r) => {
-    if (/\/assets\/.*\.json(\?|$)/.test(r.url())) { try { jsonBytes.n += (await r.body()).length; } catch (e) { /* aborted */ } }
-  });
   await page.goto(WORLD);
   await page.waitForFunction(() => window.__mm && window.__mm.arena.active && window.__mm.arena.state === 'play', null, { timeout: 30000 });
   await page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() => {});
   await page.waitForTimeout(1500);
-  return { ctx, page, errors, reqs, jsonBytes };
+  return { ctx, page, errors, reqs };
 }
 
+// JSON bytes are computed from the request list and the files on disk (deterministic: the same requests always weigh the same),
+// not from response bodies, whose capture depends on timing under load.
+const fsz = (u) => { try { const pth = require('path').join(__dirname, '..', '..', decodeURIComponent(new URL(u).pathname)); return require('fs').statSync(pth).size; } catch (e) { return 0; } };
+const bytesOf = (urls) => urls.reduce((a, u) => a + fsz(u), 0);
 (async () => {
   const browser = await chromium.launch();
   const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'shared', 'mm-art.js'), 'utf8');
@@ -53,13 +53,17 @@ async function coldStart(browser, uncached) {
   const counts = {};
   json.forEach((u) => { counts[u] = (counts[u] || 0) + 1; });
   const dup = Object.keys(counts).filter((u) => counts[u] > 1);
-  console.log(`  baseline: ${base.reqs.length} requests, ${baseJson.length} json, ${base.jsonBytes.n} json bytes`);
-  console.log(`  cached:   ${cur.reqs.length} requests, ${json.length} json, ${cur.jsonBytes.n} json bytes`);
+  const bBytes = bytesOf(baseJson), cBytes = bytesOf(json);
+  const bUniq = new Set(baseJson).size, cUniq = new Set(json).size;
+  console.log(`  baseline: ${base.reqs.length} requests, ${baseJson.length} json (${bUniq} unique), ${bBytes} json bytes`);
+  console.log(`  cached:   ${cur.reqs.length} requests, ${json.length} json (${cUniq} unique), ${cBytes} json bytes`);
   check('[1] every assets/*.json url requested at most once', dup.length === 0, dup.map((u) => u.replace(ORIGIN, '') + ' x' + counts[u]).join(', '));
   check('[1] the baseline really fetched INDEX.json more than once', baseJson.filter((u) => /INDEX\.json/.test(u)).length > 1, String(baseJson.filter((u) => /INDEX\.json/.test(u)).length));
   check('[2] fewer cold-start JSON requests than the baseline', json.length < baseJson.length, `${baseJson.length} -> ${json.length}`);
-  check('[2] total cold-start requests drop by >= 100', base.reqs.length - cur.reqs.length >= 100, `${base.reqs.length} -> ${cur.reqs.length}`);
-  check('[2] fewer JSON bytes transferred than the baseline', cur.jsonBytes.n < base.jsonBytes.n, `${base.jsonBytes.n} -> ${cur.jsonBytes.n}`);
+  check('[2] cold-start JSON requests drop by >= 100', baseJson.length - json.length >= 100, `${baseJson.length} -> ${json.length}`);
+  check('[2] the cached page still requests every JSON url the baseline needed', [...new Set(baseJson)].every((u) => json.includes(u)), `${bUniq} unique -> ${cUniq} unique`);
+  check('[2] fewer JSON bytes requested than the baseline (file sizes x requests)', cBytes < bBytes, `${bBytes} -> ${cBytes}`);
+  check('[2] JSON bytes drop by >= 2 MB (lane acceptance)', bBytes - cBytes >= 2000000, `${bBytes} -> ${cBytes}`);
   const art = await cur.page.evaluate(() => { const s = window.__mm.world.artState(); return { loading: s.loading, loaded: s.loaded.length }; });
   check('[3] world art finished loading with sprites', art.loading === false && art.loaded > 0, JSON.stringify(art));
   const items = await cur.page.evaluate(async () => { const s = await window.MMArt.loadItems('../../assets/arcane/'); return Object.keys(s.byId).length; });

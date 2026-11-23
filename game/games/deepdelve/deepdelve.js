@@ -604,6 +604,7 @@
   }());
   let govFloor = 0; // access lowGfx keeps the governor at (or below) the low view
   const gov = { level: 0, samples: [], head: 0, count: 0, lastChange: -1e9, lastRaise: -1e9, restoreGap: GOV.RESTORE_GAP, changes: 0, auto: params.get('perf') !== '0' };
+  let resizeTimer = 0, lastResizeAt = -1e9; // beta S-11: see onResize
   // Desktop render-pixel budget: big or hi-dpi windows are rendered below native size (the fill cost is what software and
   // integrated GPUs choke on). Phones keep 1:1; a 1280x720 window (544 px canvas) renders at ~0.83, a 4K window at 0.6.
   const MAX_PIXELS = 480000;
@@ -632,6 +633,7 @@
   // Feed one frame time (ms) at time `now` (ms). Returns true when quality changed.
   function govFrame(ms, now) {
     if (!(ms > 0) || ms > 500) return false; // tab switches and stalls are not render cost
+    if (now - lastResizeAt < 1000) return false; // beta S-11: a resize storm is not render cost either
     gov.samples[gov.head] = ms; gov.head = (gov.head + 1) % GOV.WINDOW; gov.count = Math.min(GOV.WINDOW, gov.count + 1);
     if (gov.count < GOV.MIN_SAMPLES || now - gov.lastChange < GOV.MIN_GAP) return false;
     const avg = govAvg();
@@ -669,7 +671,15 @@
     renderer.setSize(w, h, false);
     camera.aspect = w / h; camera.updateProjectionMatrix();
   }
-  window.addEventListener('resize', resize);
+  // Beta S-11 (b13-07): a rotation / resize storm used to re-allocate the drawing buffer on every event AND feed those slow frames to
+  // the quality governor, which then halved the render scale (195x331 -> 97x165 on a phone) and kept it there. Now the resize is
+  // applied once, 150 ms after the last event, and frames within 1 s of a resize are not counted as render cost.
+  function onResize() {
+    lastResizeAt = performance.now(); govReset();
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { resizeTimer = 0; resize(); lastResizeAt = performance.now(); govReset(); }, 150);
+  }
+  window.addEventListener('resize', onResize);
 
   function fillWindow(pcx, pcz) {
     const ox = Math.max(0, Math.min(MMChunks.WORLD.cx - WIN, pcx - 2)), oz = Math.max(0, Math.min(MMChunks.WORLD.cz - WIN, pcz - 2));
