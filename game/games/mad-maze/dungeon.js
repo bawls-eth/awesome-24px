@@ -106,6 +106,11 @@
 
   // ---- b25 dungeon tile art: floors / walls baked into the same cached room canvas (visual only, collision untouched) ----
   const DOOR_TILES = [[8, 0], [16, 6], [8, 12], [0, 6]]; // N E S W door tiles (MMRooms.DOORS), kept local so excl never depends on a door existing
+  // G-25: deepest dungeon floor cleared per biome on this device ({ v:1, f:{ <biome>: 0..3 } }); hostile / missing storage = 0
+  const DEEP_KEY = 'pixeltown-deep-v1';
+  function deepRead() { try { const o = JSON.parse(localStorage.getItem(DEEP_KEY) || 'null'); return o && typeof o === 'object' && !Array.isArray(o) && o.f && typeof o.f === 'object' && !Array.isArray(o.f) ? o : { v: 1, f: {} }; } catch (e) { return { v: 1, f: {} }; } }
+  function deepCleared(biome) { const v = deepRead().f[biome]; return typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 3 ? v : 0; }
+  function deepMark(biome, n) { if (!(n >= 1 && n <= 3) || deepCleared(biome) >= n) return; const o = deepRead(); const f = {}; Object.keys(o.f).forEach((k) => { if (/^[a-z]{2,12}$/.test(k)) f[k] = o.f[k]; }); f[biome] = n; try { localStorage.setItem(DEEP_KEY, JSON.stringify({ v: 1, f })); } catch (e) { /* storage blocked: the gate stays where it was */ } }
   function tileSetReady(ts, biome) { return !!ts && ts.variants(biome + '_floor').length > 0 && ts.variants(biome + '_wall').length > 0; }
   // Returns { canvas, n (art tiles drawn), torches: [{x,y}] }. rng streams are separate from the code-drawn bake ('dtile:' prefix) so old looks never shift.
   function bakeRoomTiles(ts, biome, rid, tpl, pal, seed, isBoss, tint, excl) {
@@ -179,7 +184,12 @@
     // DV1 deep run: floor 2..3 of the same biome (opts.floor from ?floor=, set only by the stairs). Each floor below the first has its own derived seed.
     const EG = typeof window !== 'undefined' && window.MMEndgame ? window.MMEndgame : null;
     const qsHas = (re) => { try { return re.test(location.search); } catch (e) { return false; } };
-    const floorQ = Math.floor(Number(opts.floor)); const floor0 = floorQ >= 2 && floorQ <= 3 ? floorQ : 1;
+    const floorQ = Math.floor(Number(opts.floor)); const floorWant = floorQ >= 2 && floorQ <= 3 ? floorQ : 1;
+    // G-25 (b03-07): ?floor= is clamped to the deepest floor this device has cleared in that biome + 1 (additive key pixeltown-deep-v1,
+    // written when a floor's boss falls). A ?test=1 page may bypass it (the deep-run tests), unless it asks for the gate with ?floorgate=1.
+    const gateOn = !(opts.test && !qsHas(/[?&]floorgate=1(&|$)/));
+    const floor0 = gateOn ? Math.min(floorWant, deepCleared(MMBiomes.clean(opts.biome)) + 1) : floorWant;
+    const floorClamped = floor0 < floorWant;
     const seed = floor0 > 1 ? baseSeed + 'f' + floor0 : baseSeed;
     // BL2: ?lair=1 (read here; the BK2 boss-key portal passes it) = a 2-room dungeon: an antechamber guarding the key + the biome boss hall behind a key door
     let lair = opts.lair === true || opts.lair === '1'; try { if (new URLSearchParams(location.search).get('lair') === '1') lair = true; } catch (e) { /* node / no location */ }
@@ -318,7 +328,7 @@
       const dmg = MMSplash.slamDmg(e.dmgMul || 1, Math.max(0, d), MMSplash.slamR(2));
       if (dmg > 0) { slamHits++; arena._hitPlayer(arena._guarded(dmg)); }
     }
-    const api = { fellText: B.fell, mut: MUT ? { ids: MUT.ids.slice(), label: MUT.label, text: MUT.text, fx: Object.assign({}, MUT.fx) } : null, floor, baseSeed, deep: deepInfo, pickups: () => drops.map((q) => ({ type: q.type, x: q.x, y: q.y, value: q.value, tier: q.tier })), pickStats: () => ({ live: drops.length, total: pickTotal, got: Object.assign({}, pickGot), magnet: MAGNET_R, on: pickOn }), lair, seed, biome, bossBolt, bossSig, sigCount: () => sigN, layoutVersion: layoutV, narrow: narrowOn, graph: dungeon, state, arena, granted, grantItem, get gearOn() { return gearOn; }, get gear() { return gearGot; }, gp: () => gpNow() };
+    const api = { fellText: B.fell, floorWant, floorClamped, mut: MUT ? { ids: MUT.ids.slice(), label: MUT.label, text: MUT.text, fx: Object.assign({}, MUT.fx) } : null, floor, baseSeed, deep: deepInfo, pickups: () => drops.map((q) => ({ type: q.type, x: q.x, y: q.y, value: q.value, tier: q.tier })), pickStats: () => ({ live: drops.length, total: pickTotal, got: Object.assign({}, pickGot), magnet: MAGNET_R, on: pickOn }), lair, seed, biome, bossBolt, bossSig, sigCount: () => sigN, layoutVersion: layoutV, narrow: narrowOn, graph: dungeon, state, arena, granted, grantItem, get gearOn() { return gearOn; }, get gear() { return gearGot; }, gp: () => gpNow() };
     // Lantern stash payout (MMStash): every kept find of this run is paid into the stash when the summary shows (win or fall)
     const ST = window.MMStash && window.MMProfile ? window.MMStash : null; const shards0 = arena.save.shards;
     if (ST) {
@@ -615,7 +625,7 @@
         arena.dropBag(e.x - 20, e.y + 20, bagR1); arena.dropBag(e.x + 20, e.y + 20, bagR2);
         if (gearOn) dropBossGear(e, bagR1);
         arena._showBanner(B.boss_name + ' defeated! The portal opens.', 2.6);
-        arena.onSave(arena.save); mapSig = ''; deepShow();
+        arena.onSave(arena.save); mapSig = ''; deepMark(biome, floor); deepShow(); // G-25: this floor counts as cleared on this device
       }
       arena._syncBoss();
     }
@@ -834,7 +844,7 @@
         arena.state = 'play'; arena.run.wave = 0; arena.biome = 0;
         const res = state.enter(dungeon.rooms.find((r) => r.type === 'start').id);
         loadRoom(res.ok ? state.current : 0, null);
-        arena._showBanner(floor > 1 ? `${B.name} #${baseSeed} · Floor ${floor}` : MUT ? `${B.name} #${seed} · ${MUT.label}` : `${B.name} #${seed}`, 1.8);
+        arena._showBanner(floorClamped ? `Floor ${floorWant} opens after you clear floor ${floor0}: starting on floor ${floor0}` : floor > 1 ? `${B.name} #${baseSeed} · Floor ${floor}` : MUT ? `${B.name} #${seed} · ${MUT.label}` : `${B.name} #${seed}`, floorClamped ? 3 : 1.8); // G-25
         mutChip();
         drawMap();
       },

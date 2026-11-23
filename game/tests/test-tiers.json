@@ -1628,5 +1628,9 @@
   "beta-g24-dungeon-doors.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "beta-g25-floor-gate.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }
