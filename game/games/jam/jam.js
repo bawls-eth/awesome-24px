@@ -232,6 +232,9 @@
   function startSong(id, tr, opts) {
     opts = opts || {};
     if (!SG.song(id)) return null;
+    // G-18 (b10-09): the tier lock is enforced here, not only by the disabled button (any entry point: Quick play, Concert, a query, a test
+    // hook). A locked Hard falls back to nothing: no run starts. Concert and practice pick their own (already unlocked) tiers.
+    if (SG.TIERS.indexOf(tr) >= 0 && SG.tierUnlocked && !SG.tierUnlocked(save, id, tr) && SG.songUnlocked && SG.songUnlocked(save, id)) return null;
     ensureAudio();
     songId = id; tier = SG.TIERS.indexOf(tr) >= 0 ? tr : 'normal';
     chart = opts.chart || SG.chartFor(id, tier, opts.seed !== undefined ? opts.seed : qs.get('seed') || undefined);
