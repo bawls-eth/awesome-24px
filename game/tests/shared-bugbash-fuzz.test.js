@@ -222,6 +222,14 @@ try {
   check('fmt / fmtTime on hostile numbers', K.fmt(NaN) === '0' && K.fmt(Infinity) === '0' && K.fmtTime(-5) === '0.0s' && K.fmtTime(61500) === '1:01.5s');
 }
 
+// ---- MMMotion ----
+{
+  const Mo = fresh('motion.js');
+  check('shake(Infinity / NaN / -3) is 0, shake(4) is 4, reduced is 0', Mo.shake(Infinity) === 0 && Mo.shake(NaN) === 0 && Mo.shake(-3) === 0 && Mo.shake(4) === 4 && Mo.shake(4, true) === 0);
+  check('lowHpBorder(NaN hp) is hidden (used to show), 10/100 shows, 50/100 hides', !Mo.lowHpBorder(NaN, 100).visible && Mo.lowHpBorder(10, 100).visible && !Mo.lowHpBorder(50, 100).visible && !Mo.lowHpBorder(1, 0).visible);
+  check('reduced() with a throwing storage / matchMedia never throws', noThrow(() => Mo.reduced({ matchMedia() { throw new Error('x'); } }, { getItem() { throw new Error('x'); } })));
+}
+
 // ---- MMGhost ----
 {
   const G = fresh('mm-ghost.js');
