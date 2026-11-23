@@ -250,7 +250,7 @@
   function downloadBackup() {
     // Raw stored values, read before anything is cleaned or saved. Beta S-03: a value that could never be restored (damaged on this
     // device) is left out and named in bundle.warnings, so the player hears about it now, not on the new device.
-    var bun = B.bundle(localStorage);
+    var bun; try { bun = B.bundle(localStorage); } catch (e) { say('Could not read your saves here (site data is blocked), so there is nothing to back up.', true); return; } // b15-r2-16
     var warn = bun.warnings && bun.warnings.length ? bun.warnings.map(function (w) { return w.label; }).join(', ') : '';
     var data = JSON.stringify(bun, null, 1);
     try {
@@ -343,7 +343,7 @@
   }
   function renderPregear() {
     var row = $('pregear-row'); if (!row) return;
-    var has = !!(B.hasPregear && B.hasPregear(localStorage));
+    var has = false; try { has = !!(B.hasPregear && B.hasPregear(localStorage)); } catch (e) { has = false; } // b15-r2-16: storage may be blocked
     row.hidden = !has;
     if (!has) { dropArmed = false; return; }
     var at = pregearAt(), note = loadNote();
