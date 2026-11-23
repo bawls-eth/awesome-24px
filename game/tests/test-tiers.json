@@ -287,6 +287,10 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "jam-bugbash.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "jam-fun.test.js": {
     "class": "browser",
     "tier": "smoke"
