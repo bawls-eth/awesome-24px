@@ -185,17 +185,18 @@
         x += g[0].length + 1;
       }
     };
-    paint(1, 1, '#2a1630');            // drop shadow
-    paint(0, 0, '#ffb53a', '#fff2a8'); // gold letters, light top row
+    paint(1, 1, '#0b0d1a');            // drop shadow
+    paint(0, 0, '#ffa300', '#ffec27'); // gold letters, light top row
   }
 
   // ---------- stepped sky, stars and hills ----------
   function hash(x, y) { let h = (x * 374761393 + y * 668265263) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return (h ^ (h >>> 16)) >>> 0; }
-  const SKY = ['#1a1238', '#241a4d', '#33235e', '#4a2f6e', '#6b3d74', '#9a4f6e'];
+  // Colours from the shared 16-colour 8-bit palette (shared/mm-8bit.css --px-*): ink, page bg, navy, plum, brown, pink bands.
+  const SKY = ['#0b0d1a', '#12142a', '#1d2b53', '#7e2553', '#ab5236', '#ff77a8'];
   const HILLS = [
-    { col: '#3b2a5c', base: 0.62, amp: 10, f: 0.045, sp: 2 },
-    { col: '#2a5a4a', base: 0.74, amp: 8, f: 0.07, sp: 5 },
-    { col: '#2f7a3f', base: 0.86, amp: 6, f: 0.11, sp: 10 },
+    { col: '#83769c', base: 0.62, amp: 10, f: 0.045, sp: 2 },
+    { col: '#1d2b53', base: 0.74, amp: 8, f: 0.07, sp: 5 },
+    { col: '#008751', base: 0.86, amp: 6, f: 0.11, sp: 10 },
   ];
   const sky = $('home-sky');
   const sc = sky.getContext('2d');
@@ -219,11 +220,11 @@
     for (let i = 0; i < 70; i++) {
       const h = hash(i, 7), x = h % W, y = (h >>> 8) % Math.floor(H * 0.55);
       const tw = (hash(i, Math.floor(skyT * 2)) & 7) === 0;
-      sc.fillStyle = tw ? '#6b5c9a' : ((h >>> 20) & 3) === 0 ? '#fff2a8' : '#d9d4ff';
+      sc.fillStyle = tw ? '#5f574f' : ((h >>> 20) & 3) === 0 ? '#ffec27' : '#fff1e8';
       sc.fillRect(x, y, 1, 1);
     }
     // moon
-    sc.fillStyle = '#fff2a8'; sc.fillRect(W - 14, 6, 6, 6); sc.fillRect(W - 15, 7, 8, 4); sc.fillStyle = SKY[0]; sc.fillRect(W - 12, 6, 3, 3);
+    sc.fillStyle = '#ffec27'; sc.fillRect(W - 14, 6, 6, 6); sc.fillRect(W - 15, 7, 8, 4); sc.fillStyle = SKY[0]; sc.fillRect(W - 12, 6, 3, 3);
     HILLS.forEach((L, li) => {
       const off = skyT * L.sp;
       sc.fillStyle = L.col;
