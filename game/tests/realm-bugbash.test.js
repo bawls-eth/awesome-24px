@@ -188,6 +188,21 @@ async function open(browser, q, opts, store) {
   check('no page errors (dungeon fall)', page.errors.length === 0, page.errors.join(' | '));
   await ctx.close();
 
+  // ---- phone boss fight (Trial of Six): the zone line never covers the boss bar, the goal line steps aside ----
+  ({ ctx, page } = await open(browser, 'mode=world&test=1', { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }, { 'pixeltown-save-v1': JSON.stringify({ realm: { level: 20, xp: 0, shards: 0, bestWave: 0, items: [], nextUid: 1, eq: {} } }) }));
+  const rs = await page.evaluate(() => String(window.__mm.world.rush.start()));
+  await page.waitForFunction(() => { const b = document.getElementById('realm-boss'); return b && !b.classList.contains('hidden'); }, null, { timeout: 8000 }).catch(() => {});
+  await page.waitForTimeout(1300);
+  const bz = await page.evaluate(() => {
+    const R = (e) => { const r = e.getBoundingClientRect(); return { l: r.left, t: r.top, r: r.right, b: r.bottom }; };
+    const b = R(document.getElementById('realm-boss')); const z = R(document.getElementById('rw-zone')); const g = document.getElementById('rw-goal');
+    return { hit: b.l < z.r && z.l < b.r && b.t < z.b && z.t < b.b, goalHidden: g.classList.contains('hidden'), b, z };
+  });
+  check('phone boss fight: the zone line sits clear of the boss bar', rs === 'rush' && !bz.hit, rs + ' ' + JSON.stringify(bz));
+  check('phone boss fight: the Next goal line steps aside', bz.goalHidden, JSON.stringify(bz));
+  check('no page errors (rush)', page.errors.length === 0, page.errors.join(' | '));
+  await ctx.close();
+
   // ---- same-device co-op (?party=local): the goal line never runs under the partner distance chip ----
   {
     ({ ctx, page } = await open(browser, 'mode=world&test=1&party=local&seed=bbcoop&seat=0', { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }));

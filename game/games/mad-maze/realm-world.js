@@ -513,8 +513,9 @@
       const coachUp = !!coach && !coach.classList.contains('hidden') && coach.getClientRects().length > 0 && getComputedStyle(coach).display !== 'none';
       const t = goalText(zi); const txt = t ? 'Next goal: ' + t : '';
       if (txt !== goalTxt) { goalTxt = txt; goalEl.textContent = txt; goalEl.title = txt; }
-      goalEl.classList.toggle('hidden', !txt || coachUp || panelHid);
-      if (txt && !coachUp && !panelHid) goalPlace();
+      const bossUp = !!bossRect() || (RUSH_ON && rush.on); // a boss fight / the Trial of Six is the goal right now: the line steps aside
+      goalEl.classList.toggle('hidden', !txt || coachUp || panelHid || bossUp);
+      if (txt && !coachUp && !panelHid && !bossUp) goalPlace();
     }
     // Phone (zone line on the left, under the XP bar): with big text the top row wraps and pushes the XP bar down onto the fixed zone line.
     // Once a second, put the zone line back under the XP bar when they overlap (the CSS position otherwise).
@@ -523,10 +524,13 @@
         if (zoneEl.style.top) zoneEl.style.top = '';
         const xp = document.getElementById('realm-xp'); if (!xp || !xp.getClientRects().length || !zoneEl.getClientRects().length) return;
         const r = xp.getBoundingClientRect(); const zr = zoneEl.getBoundingClientRect(); const o = ov.getBoundingClientRect();
-        if (zr.left > o.left + o.width / 2 || zr.right < r.left || zr.left > r.right) return; // the zone sits right (desktop) or beside the bar
-        if (zr.top < r.bottom + 2 && zr.bottom > r.top) zoneEl.style.top = Math.round(r.bottom - o.top + 4) + 'px';
+        if (zr.left > o.left + o.width / 2) return; // the zone sits right (desktop)
+        let bottom = -1; // the lowest bar it would cover: the XP bar, and the boss bar while a boss fight runs
+        [r, bossRect()].forEach((b) => { if (b && !(zr.right < b.left || zr.left > b.right) && zr.top < b.bottom + 2 && zr.bottom > b.top) bottom = Math.max(bottom, b.bottom); });
+        if (bottom >= 0) { zoneEl.style.top = Math.round(bottom - o.top + 4) + 'px'; const z2 = zoneEl.getBoundingClientRect(); const b2 = bossRect(); if (b2 && z2.top < b2.bottom + 2 && z2.bottom > b2.top && !(z2.right < b2.left || z2.left > b2.right)) zoneEl.style.top = Math.round(b2.bottom - o.top + 4) + 'px'; }
       } catch (e) { /* the CSS position stays */ }
     }
+    function bossRect() { const e = document.getElementById('realm-boss'); return e && !e.classList.contains('hidden') && e.getClientRects().length ? e.getBoundingClientRect() : null; }
     // Sit just under the XP bar (and under the zone line when that is on the left, as on phones), whatever the text size: once a second, no layout per frame.
     function goalPlace() {
       try {
