@@ -100,6 +100,7 @@
       if (el.classList) el.classList.toggle('reduce-motion', !!(v['reduce-motion'] || !v.flashes)); // MM8.reducedMotion() reads this class
       at('data-low-gfx', v['low-gfx']);
       at('data-high-contrast', v['high-contrast']);
+      try { if (win && win.MMAccess && win.MMAccess.applyContrast) win.MMAccess.applyContrast(doc, storage); } catch (e) { /* attribute above is enough */ }
     }
     return v;
   }

@@ -611,6 +611,7 @@
   });
   $('card-close').addEventListener('click', closeCard);
   $('open-btn').addEventListener('click', () => { if (!walker.wps) openNode(hub.at); });
+  if ($('map-play')) $('map-play').addEventListener('click', () => { if (!walker.wps) openNode(hub.at); });
 
   // ---------- input ----------
   function canvasPoint(e) {

@@ -139,6 +139,25 @@ async function run(browser, label, opts, tap) {
   const browser = await chromium.launch();
   await run(browser, 'phone 390x844', { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }, (p, s) => p.tap(s));
   await run(browser, 'desktop 1280x720', { viewport: { width: 1280, height: 720 } }, (p, s) => p.click(s));
+  // a11y sweep items (hub lane): the high-contrast pref applies on load (mm-access.js on every page), the map view has an <h1>,
+  // and its first Tab stop opens the place the villager stands on.
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+    await blockDb(ctx);
+    await ctx.addInitScript(() => { try { localStorage.setItem('mm-high-contrast', '1'); } catch (e) { /* opaque */ } });
+    const page = await ctx.newPage();
+    await page.goto(HUB + '?map=1');
+    await page.waitForFunction(() => window.__hub && window.__home);
+    const hc = await page.evaluate(() => ({ attr: document.documentElement.getAttribute('data-high-contrast'), css: !!document.getElementById('mm-hc-css'), dim: getComputedStyle(document.documentElement).getPropertyValue('--px-dim').trim(), h1: [...document.querySelectorAll('h1')].filter((h) => h.getClientRects().length && getComputedStyle(h).display !== 'none').map((h) => h.textContent) }));
+    check('[high contrast] mm-high-contrast=1 sets data-high-contrast on <html> and lifts the dim token; the map view has a visible <h1>', hc.attr === '1' && hc.css && hc.dim === '#fff1e8' && hc.h1.length === 1 && /World map/.test(hc.h1[0]), JSON.stringify(hc));
+    await page.keyboard.press('Tab');
+    const f = await page.evaluate(() => { const a = document.activeElement; const r = a.getBoundingClientRect(); return { id: a.id, inView: r.left >= 0 && r.right <= innerWidth && r.height >= 44 }; });
+    await page.keyboard.press('Enter');
+    await page.waitForTimeout(200);
+    const card = await page.evaluate(() => !document.getElementById('card').hidden);
+    check('[keyboard] first Tab stop on the map view is "Play here" (on screen, >= 44 px) and Enter opens the place card', f.id === 'map-play' && f.inView && card, JSON.stringify({ f, card }));
+    await ctx.close();
+  }
   await browser.close();
   done();
 })().catch((e) => { console.error(e); process.exitCode = 1; });
