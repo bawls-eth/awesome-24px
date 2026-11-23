@@ -534,6 +534,14 @@
         let top = r ? r.bottom : 0; let left = r ? r.left : 10;
         const zr = zoneEl.getClientRects().length ? zoneEl.getBoundingClientRect() : null;
         if (zr && zr.left < o.left + o.width / 2 && zr.bottom > top - 4) { top = Math.max(top, zr.bottom); left = Math.min(left, zr.left); }
+        const gw = goalEl.getBoundingClientRect().width || 200;
+        ['realm-partner', 'realm-boss'].forEach((id) => { // co-op partner chip / boss bar: never under them
+          const e = document.getElementById(id); if (!e || e.classList.contains('hidden') || !e.getClientRects().length) return;
+          const b = e.getBoundingClientRect(); if (b.left < left + gw && b.right > left && b.bottom > top && b.top < top + 24) top = Math.max(top, b.bottom);
+        });
+        let mw = ''; const chip = document.querySelector('.mm-team-hud'); // co-op distance chip beside the minimap: the goal line stops short of it
+        if (chip && chip.style.display !== 'none' && chip.getClientRects().length) { const c = chip.getBoundingClientRect(); if (c.top < top + 28 && c.bottom > top && c.left > left) mw = Math.max(80, Math.floor(c.left - left - 6)) + 'px'; }
+        if (goalEl.style.maxWidth !== mw) goalEl.style.maxWidth = mw;
         const t = Math.round(top - o.top + 4) + 'px'; const l = Math.round(Math.max(0, left - o.left)) + 'px';
         if (goalEl.style.top !== t) goalEl.style.top = t; if (goalEl.style.left !== l) goalEl.style.left = l;
       } catch (e) { /* the CSS position stays */ }

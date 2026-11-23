@@ -188,6 +188,24 @@ async function open(browser, q, opts, store) {
   check('no page errors (dungeon fall)', page.errors.length === 0, page.errors.join(' | '));
   await ctx.close();
 
+  // ---- same-device co-op (?party=local): the goal line never runs under the partner distance chip ----
+  {
+    ({ ctx, page } = await open(browser, 'mode=world&test=1&party=local&seed=bbcoop&seat=0', { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }));
+    const p2 = await ctx.newPage(); p2.errors = []; p2.on('pageerror', (e) => p2.errors.push(e.message));
+    await p2.goto(PAGE + '?mode=world&test=1&party=local&seed=bbcoop&seat=1');
+    await page.waitForFunction(() => { const c = document.querySelector('.mm-team-hud'); return c && c.style.display !== 'none' && c.textContent.length > 0; }, null, { timeout: 10000 }).catch(() => {});
+    await page.waitForTimeout(1200);
+    const co = await page.evaluate(() => {
+      const c = document.querySelector('.mm-team-hud'); const g = document.getElementById('rw-goal');
+      if (!c || c.style.display === 'none' || !g || g.classList.contains('hidden')) return { skip: true, chip: !!c };
+      const a = c.getBoundingClientRect(); const b = g.getBoundingClientRect();
+      return { hit: a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom, fs: parseFloat(getComputedStyle(c).fontSize), chip: c.textContent, a: [a.left, a.top, a.right, a.bottom].map(Math.round), b: [b.left, b.top, b.right, b.bottom].map(Math.round), mw: g.style.maxWidth, cd: c.style.display };
+    });
+    check('co-op: the partner chip shows and the goal line does not run under it; chip text >= 12 px', !co.skip && !co.hit && co.fs >= 12, JSON.stringify(co));
+    check('co-op: no page errors on either seat', page.errors.length === 0 && p2.errors.length === 0, page.errors.concat(p2.errors).join(' | '));
+    await ctx.close();
+  }
+
   // ---- ?goal=0 / ?mmsettings=0 leave the page as before ----
   ({ ctx, page } = await open(browser, 'mode=world&test=1&goal=0&mmsettings=0'));
   check('?goal=0 and ?mmsettings=0 add neither the goal line nor the shared panel', await page.evaluate(() => !document.getElementById('rw-goal') && !document.getElementById('mmset')));

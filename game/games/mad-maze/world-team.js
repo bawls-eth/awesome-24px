@@ -249,7 +249,7 @@
     if (opts.hud !== false && hudHost) {
       chip = doc.createElement('div'); chip.className = 'mm-team-hud'; chip.setAttribute('aria-live', 'polite');
       chip.style.cssText = 'position:fixed;left:auto;right:8px;top:8px;display:none;pointer-events:none;z-index:6;padding:2px 6px;border-radius:6px;' +
-        'background:rgba(11,7,22,0.72);border:1px solid rgba(255,255,255,0.3);color:#fff;font:bold 11px system-ui,sans-serif;white-space:nowrap;max-width:40vw;overflow:hidden;text-overflow:ellipsis';
+        'background:rgba(11,7,22,0.72);border:1px solid rgba(255,255,255,0.3);color:#fff;font:bold 12px system-ui,sans-serif;white-space:nowrap;max-width:40vw;overflow:hidden;text-overflow:ellipsis';
       hudHost.appendChild(chip);
     }
     function drawChip() {
