@@ -1,0 +1,14 @@
+{
+  "batch": "t10",
+  "label": "garden-bugs",
+  "generated_utc": "2026-11-23T10:47:42.040475Z",
+  "files": 31,
+  "duplicate_ids": 0,
+  "blocking": {},
+  "warnings": {},
+  "standing_heights": {
+    "None/right": 44,
+    "None/down": 48
+  },
+  "status": "provisional"
+}
