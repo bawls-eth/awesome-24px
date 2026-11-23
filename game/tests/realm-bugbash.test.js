@@ -84,8 +84,11 @@ async function open(browser, q, opts, store) {
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('mm-settings-change', { detail: { id: 'reduce-motion', value: true } })));
   check('reduce motion from the shared panel reaches the arena', await page.evaluate(() => window.__mm.arena._reduced === true));
   await page.keyboard.press('Escape');
-  const esc = await page.evaluate(() => ({ open: !document.getElementById('mmset').hidden, panel: window.__mm.arena.panel }));
+  const esc = await page.evaluate(() => { const d = document.getElementById('mmset'); return { open: !!d && !d.hidden, panel: window.__mm.arena.panel }; });
   check('Esc closes the shared panel first', !esc.open, JSON.stringify(esc));
+  // closed, the panel leaves the page again: the shared Menu's Settings entry keeps opening the Realm sheet (nav-realm)
+  const navSet = await page.evaluate(() => { if (!window.MMNav || !MMNav.openSettings) return 'no-api'; const r = MMNav.openSettings(); const ok = window.__mmAccess.isOpen(); window.__mmAccess.close(); return r + ':' + ok; });
+  check('after it closes, the Menu Settings entry opens the Realm sheet again', navSet === 'page:true' || navSet === 'no-api', navSet);
 
   // pad Back / Select on the fall screen = Try again; not in play
   const pad = await page.evaluate(async () => {

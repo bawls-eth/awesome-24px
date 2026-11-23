@@ -672,7 +672,7 @@
       else if (k === 'autoFire' && AX2) { arena.setAutoFire(!arena.access2().autoFire); axRender(); }
       else if (k === 'aimToggle' && AX2) { arena.setAimToggle(!arena.access2().aimToggle); axRender(); }
       else if (k === 'shapes' && AX2) { arena.setBulletShapes(!arena.access2().shapes); axRender(); }
-      else if (k === 'shared') { if (SHARED) { axClose(); SHARED.open(); } }
+      else if (k === 'shared') { const P = SHARED ? SHARED.panel() : null; if (P) { axClose(); P.open(); } }
       else if (k === 'done') axClose();
       else axSet(k, !axPrefs[k]);
     });
@@ -726,7 +726,24 @@
   // Shared Settings panel (shared/mm-settings.js, SETTINGS-WIRING.md): sound, music, aim assist and the rest of the one cross-game panel.
   // The Realm's own sheet (#mm-settings, ids kept for its tests) links to it; every change there applies live through the arena's setters.
   // ?mmsettings=0 leaves it out (the page as before).
-  const SHARED = AX_ON && window.MMSettings && params.get('mmsettings') !== '0' ? (() => { try { return MMSettings.mount({ page: 'realm', feedback: false }); } catch (e) { return null; } })() : null;
+  // Mounted lazily on the first open and taken out of the page again when it closes, so the shared Menu's Settings entry keeps opening the
+  // Realm sheet (mm-nav prefers a mounted #mmset; the Realm sheet is the superset: palette, outline, ambient drone, and this link).
+  const SHARED = AX_ON && window.MMSettings && params.get('mmsettings') !== '0' ? (() => {
+    let P = null; let back = null;
+    function detach() { [back, P && P.el].forEach((n) => { if (n && n.parentNode) n.parentNode.removeChild(n); }); }
+    function panel() {
+      if (!P) {
+        try { P = MMSettings.mount({ page: 'realm', feedback: false, play: true }); } catch (e) { P = null; }
+        if (!P || !P.el) return null;
+        back = document.getElementById('mmset-back');
+        ['keydown', 'keyup'].forEach((t) => P.el.addEventListener(t, (e) => { if (e.key !== 'Tab' && e.key !== 'Escape') e.stopPropagation(); })); // keys typed in the panel never drive the hero
+        new MutationObserver(() => { if (P.el.hidden) detach(); }).observe(P.el, { attributes: true, attributeFilter: ['hidden'] });
+      }
+      if (!P.el.isConnected) { if (back) document.body.appendChild(back); document.body.appendChild(P.el); }
+      return P;
+    }
+    return { panel, isOpen: () => !!P && P.el.isConnected && P.isOpen(), close: () => { if (P) P.close(); } };
+  })() : null;
   if (SHARED) {
     window.addEventListener('mm-settings-change', (ev) => {
       const d = ev && ev.detail ? ev.detail : {}; const v = d.value;
@@ -749,8 +766,6 @@
     });
     // Esc closes the shared panel first (the arena would otherwise toggle its menu underneath)
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && SHARED.isOpen()) { SHARED.close(); e.stopPropagation(); e.preventDefault(); } }, true);
-    // keys typed in the panel never drive the hero
-    ['keydown', 'keyup'].forEach((t) => SHARED.el.addEventListener(t, (e) => { if (e.key !== 'Tab' && e.key !== 'Escape') e.stopPropagation(); }));
   }
 
   if (AX_ON) {
