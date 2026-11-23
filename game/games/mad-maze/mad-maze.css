@@ -477,3 +477,6 @@ body.touch-device #rw-rush, body.touch-device #rw-rush-go { bottom: calc(230px +
 @media (max-width: 560px) {
   #rw-goal { left: calc(10px + env(safe-area-inset-left, 0px)); top: calc(124px + env(safe-area-inset-top, 0px)); max-width: calc(100vw - 100px); }
 }
+
+/* W-05 (b01-06): the goal line wraps to a second line instead of an ellipsis, so the target (zone, count) is always readable. */
+#rw-goal { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }

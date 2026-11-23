@@ -259,3 +259,18 @@ body.touch-device #realm-stick-aim { right: calc(20px + var(--sr)); }
   .rm-bp8-slots.realm-bp-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .rm-bp8-stat4 .s4 { grid-template-columns: 24px 1fr auto 44px; }
 }
+
+/* W-05 (b15-11, b15-04, b01-06, b02-07, b02-09, b03-03). <= 360 px: Leave wraps to the right end of its row, clear of the XP bar on the left.
+   The "New best tier" toast (realm.js chaseToast, inline top:12%) gets its own slot away from the boss bar, zone and goal lines: above the
+   ability bar on desktop, above the ability pad on touch portrait, bottom centre between the sticks on short landscape. While the backpack
+   is open the goal line hides and the toast moves into the free margin beside the card (hidden under 700 px, where the card fills the width). */
+@media (max-width: 360px) { #realm-leave-btn { margin-left: auto; } }
+#realm-chase-toast { top: auto !important; bottom: calc(120px + env(safe-area-inset-bottom, 0px)) !important; }
+body.touch-device #realm-chase-toast { bottom: calc(24px + 124px + 14px + 124px + 12px + env(safe-area-inset-bottom, 0px)) !important; }
+@media (orientation: landscape) and (max-height: 500px) {
+  body.touch-device #realm-chase-toast { bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important; max-width: calc(100% - 420px) !important; }
+}
+body:has(#realm-backpack:not(.hidden)) #rw-goal { display: none !important; }
+body:has(#realm-backpack:not(.hidden)) #realm-chase-toast { top: 12px !important; bottom: auto !important; left: calc(12px + env(safe-area-inset-left, 0px)) !important; transform: none !important;
+  max-width: calc((100% - 460px) / 2 - 24px) !important; z-index: 31; }
+@media (max-width: 699px) { body:has(#realm-backpack:not(.hidden)) #realm-chase-toast { display: none !important; } }

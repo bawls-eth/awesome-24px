@@ -22,3 +22,10 @@ Each entry: item, files, test, how to retest by hand. Screenshots in `fixes/img/
 - Test: `tests/beta-w08-angler-layout.test.js` (fails 5 asserts on the old CSS). `angler-page`, `angler-polish`, `angler-bugbash`, `angler-fun` green.
 - Not done: a "More" disclosure for the 4 buttons (needs angler.js, Gameplay); the scrolling row covers it with CSS only.
 - Before / after: `img/w08-{p150,land,desk}-{before,after}.jpg`.
+
+## W-05 Realm phone HUD (b15-11, b15-04, b01-06, b02-07, b02-09, b03-03) - fixed
+- Files: `game/realm-ui.css` (slot 2, after G-02 merged from dev-gameplay; one appended block), `games/mad-maze/mad-maze.css` (#rw-goal wrap).
+- Fix: <= 360 px Leave moves to the right end of its row (was 54x16 px over the XP bar). Goal line wraps instead of an ellipsis. The "New best tier" toast (inline `top:12%` in realm.js, overridden with !important; no realm.js edit) has its own slot: above the ability bar on desktop, above the ability pad on touch portrait, bottom centre on short landscape. Backpack open: goal line hidden; the toast moves into the free margin beside the 460 px card (hidden below 700 px where the card fills the width).
+- Test: `tests/beta-w05-realm-hud.test.js` (new, instead of extending world-phone-hud: 320x568 / 360x640 Leave vs XP; 390x844 goal no truncation; toast vs boss bar, zone, goal, minimap; 844x390 backpack vs goal / zone / minimap / toast; 1280x720 toast vs boss bar, ability bar and card). 9 asserts fail on the old CSS. `world-phone-hud`, `realm-chase-ui`, `realm-phone-layout`, `realm-hud-8bit` green.
+- Seen, not mine: the zone line can sit on the boss bar for up to 1 s until zonePlace (realm-world.js) moves it; the Gameplay class hook on the toast (realm.js:4761) is no longer needed.
+- Before / after: `img/w05-{320,390-toast,844-bp}-{before,after}.jpg`.

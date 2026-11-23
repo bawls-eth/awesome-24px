@@ -1560,5 +1560,9 @@
   "beta-g03-sell-guard.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "beta-w05-realm-hud.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
