@@ -19,6 +19,7 @@ Run each alone: `BASE=http://localhost:<port>/game/index.html /tmp/bt.sh node ga
   reload the join card shows the backup's name. Pick any other JSON (`{"hello":1}`): chat says nothing was changed, the town is unchanged.
 
 ## S-02 Town cross-tab safety (b14-01, b14-02, P0)
+- Commit: 3006734.
 - main.js (functions touched): new top-level `writeSaveMerged`, `townMergeCounts`, `townUnion`; Town scene `snapshotResourceBase` (new),
   `saveResources`, `setupActivities` (one line: base snapshot), `setupAchievements` (one line: stats base), `saveAchievements`,
   `saveFossils`, the home-plot save (crafted goods now go through `saveResources`), new `setupSaveSync` + `adoptSave`, one call in `create()`.
@@ -71,6 +72,7 @@ Run each alone: `BASE=http://localhost:<port>/game/index.html /tmp/bt.sh node ga
   walk in tab 1 for a few seconds, reload tab 0: its minimap still shows everything tab 0 uncovered.
 
 ## S-03 Backup tolerates one bad key (b14-04, P1)
+- Commit: 74c2416.
 - mm-backup.js (functions touched): new `cleanValue`, `checkValue`, `ownerPresent`; `plan` skips a damaged key into `skipped`
   ([{key, label, why}], town save first) and sets `message` ("Will restore: ... Cannot restore (damaged in the file): ..."); it fails
   ('bad-value', nothing changed) only when no key is restorable. An unknown key still refuses the whole file (unchanged). `bundle`
@@ -88,3 +90,64 @@ Run each alone: `BASE=http://localhost:<port>/game/index.html /tmp/bt.sh node ga
   `b.warnings.length`, `say(b.warnings.map(function (w) { return w.label; }).join(', ') + ' is damaged on this device and was left out.', true)`.
 - Re-verify: in DevTools set `localStorage['pixeltown-gift-v1'] = '{bad'`, Backup in the Lantern, Restore that file on a clean profile:
   everything but the gift restores (the Town Restore confirm lists the gift under "Cannot restore").
+
+## S-10 Storage-throws sweep (b15-02, P2)
+- Commit: ffe25da (test + request; shared guards in 8bdd1c5).
+- Measured with `game/tests/beta-s10-storage-throws.test.js` (12 pages, localStorage getter throws SecurityError, blockDb + SDK stub):
+  hub, town (Join -> Play offline -> Town runs), isles, angler, dash, echo, jam, pop, stack, stalk, deepdelve boot with 0 pageerror,
+  show their canvas / root and their primary button works. The shared-module fixes were in the S-05 commit (mm-access, mm-side-access,
+  mm-settings boot guards).
+- Only the Realm page still throws: `games/mad-maze/mad-maze.js:577` (World+Graphics single owner). Exact one-line patch, requested in
+  `design/beta/assignments/world-graphics.md` Requests:
+  `let axPrefs = AX_ON ? AXM.prefs.load(localStorage) : null;` ->
+  `let axPrefs = null; try { axPrefs = AX_ON ? AXM.prefs.load(localStorage) : null; } catch (e) { axPrefs = AX_ON ? AXM.prefs.load(null) : null; }`
+  (MMAccess.prefs.load(null) returns the defaults.) Lines 640 and 760 are inside handlers and already fall back; 44 / 162 / 163 / 199 are
+  inside try blocks. Until that lands the test prints one `KNOWN-BUG [realm]` line instead of a FAIL; it turns into a PASS by itself.
+- `MMStore.safe()` was not created: shared/mm-store.js does not exist in this tree, and every module I own already reads storage
+  inside a try after the S-05 guards; a new module would need a script tag on every page for no gain.
+
+## S-07 Town frame cost (b13-03): step 1 only
+- `design/beta/perf-town.md` (commit e926d53): profile + A/B. Drawing is the cost (camera hidden -> 16.7 ms), not update logic or
+  the DOM HUD; 730 of 951 display objects are off-camera but batched. Machine load 9-19 during the run: QA re-measures alone.
+  Step 2 (cell culling, merged ground layer, name atlas) waits for the main.js slot after W-06. No code changed.
+
+## S-08 three.min.js lazy (b13-02): not done (blocked by tests I cannot run)
+- Six live-class cave tests (cave*.test.js) call `scene.enterUnderground()` and use `scene.underground` / `THREE` synchronously right
+  after. A lazy load makes the first open asynchronous and would break them; they join the live town, so this lane may not run them.
+- Ready-to-apply plan: `underground.js` gets `ugEnsureThree()` (one in-flight `<script>` promise, retry after an error);
+  `main.js enterUnderground()` returns early with "Loading the cave..." while `typeof THREE === 'undefined'` and re-enters on load,
+  "Could not load the cave. Check your connection and try again." on error; index.html:539 removed. QA first adds a
+  `await page.waitForFunction(() => typeof THREE !== 'undefined' || ...)` / `await s.enterUnderground(); await ugReady` helper to the cave tests.
+
+## S-14 favicon (b15, P3)
+- Commit: 958fd57.
+- arcane-frontier/index.html: `<link rel="icon" ... href="../../icons/favicon-32.png">` (the Town's favicon). Test
+  `game/tests/beta-s14-favicon.test.js` (node, smoke). The `?v=` on art manifests part is not done: it changes cache keys for 1,000+
+  files and needs the design note first (lane file).
+
+## S-11 rotate storm, Deepdelve part (b13-07)
+- Commit: 92426be.
+- deepdelve.js (slot 1): new `onResize` (one re-size 150 ms after the last resize event) replaces the direct `resize` listener;
+  `govFrame` ignores frames within 1 s of a resize (`lastResizeAt`, declared beside `gov`), and the sample window is reset.
+  Before: 60 rotations = 120 drawing-buffer re-allocations and the governor could halve the scale (b13: 195x331 -> 97x165) and keep it.
+- Test: `game/tests/beta-s11-deepdelve-rotate.test.js` (full): backing size after the storm = fresh load, governor level unchanged,
+  <= 12 re-sizes (old code: 120, verified by serving the old file), governor still reacts to real slow frames. deepdelve-perf,
+  deepdelve-fps, deepdelve-page green.
+- Realm part (realm.js resize handlers, mad-maze.js perfEval) and the 10-minute soak / listener-step bisect are NOT done: realm.js and
+  mad-maze.js are not my files and the soak needs a quiet machine (load stayed 6-19). Finding for Gameplay / WG: debounce the 4 Realm
+  'resize' listeners the same way and skip perfEval samples within 1 s of a resize, or the adaptive step stays at 0.75.
+
+## S-09 Deepdelve frame spikes (b13-05): measured, no code change
+- Today (load 5-6): 12 taps at 1x 390 -> 2 long tasks > 100 ms (112, 107; acceptance <= 2: met); first 2 s at 4x -> worst frame 433 ms
+  (acceptance <= 300: not met), long tasks [77, 351]. Relight after an edit costs 4-14 ms at 1x (full 5x5-chunk window), so it is not
+  the spike. The 351 ms task is native (the profile's self time is "(program)", first GL program compile / upload), not JS. A
+  `renderer.compile(scene, camera)` behind the loading text would move it before "Loading the mine..." clears; left for a quiet-machine
+  measurement, since the numbers swing 2x with load.
+
+## Not started / blocked
+- S-12 Isles start-up: isles.js slot 3 (after Gameplay and World+Graphics).
+- S-13 One Backup: needs owner decision O-04 (not approved yet).
+- Regression runs on this branch (alone, wrapped in /tmp/bt.sh): save-race-tabs, nav-town, nav-town-p2, town-offline, town-bugbash,
+  town-front-door, smoke-journey, world-art, enemy-art, item-icons, bolt-art, art-integration, world-page, world-fog, world-party,
+  world-safereturn, world-stash, gear-save-tolerance, gear-default-on, deepdelve-page/-perf/-fps, side-access, lantern-backup-restore,
+  lantern-backup-reminder and the node backup / fuzz tests. Live-class tests (saves, workbench, cave*) were not run (they join the live town).
