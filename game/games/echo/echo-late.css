@@ -10,6 +10,10 @@
 ul.medals li { font-size: calc(12px * var(--ui-scale, 1)); }
 #msg, #wilts { font-size: calc(14px * var(--ui-scale, 1)); }
 .overlay { max-height: calc(100vh - 80px); overflow-y: auto; }
+/* W-10: the "+N in bloom" line sits just above the board (over the time bar), not on the flower labels; desktop: the 2x2 board fits the height */
+#echo-bloom { position: absolute; left: 0; right: 0; z-index: 2; text-align: center; pointer-events: none; font: 900 calc(16px * var(--ui-scale, 1)) / 20px var(--px-font, ui-monospace, monospace); color: #ffd166; text-transform: uppercase; letter-spacing: 1px; text-shadow: 2px 2px 0 #0b0d1a; visibility: hidden; }
+#echo-bloom.on { visibility: visible; }
+#board { width: min(100%, calc((100vh - 210px) * 0.9)); margin: 0 auto; }
 /* phone held sideways: the garden fills the height, the numbers and messages sit beside it */
 @media (orientation: landscape) and (max-height: 560px) {
   #top { padding: 4px 16px; }

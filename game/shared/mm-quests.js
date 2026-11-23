@@ -2,10 +2,13 @@
 // State shape (stored later under an additive `quests` key of pixeltown-realm-v1): { date:'YYYY-MM-DD', q:{ <questId>:{ p:int, done:bool, claimed:bool } } }
 // No DOM, no clock, no Math.random. Every function returns new objects; inputs are never mutated; hostile input is cleaned.
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory(require('./rng.js'), require('./mm-daily.js'), require('./mm-weapon-items.js'));
-  else root.MMQuests = factory(root.MMRng, root.MMDaily, root.MMWeaponItems || null);
-})(typeof self !== 'undefined' ? self : this, function (MMRng, MMDaily, MMWeaponItems) {
-  const ZONES = ['Shore', 'Meadows', 'Deeps', 'Godlands']; // zone 0..3 (REALM-UNIFIED-DESIGN)
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./rng.js'), require('./mm-daily.js'), require('./mm-weapon-items.js'), null);
+  else root.MMQuests = factory(root.MMRng, root.MMDaily, root.MMWeaponItems || null, root.MMZones || null);
+})(typeof self !== 'undefined' ? self : this, function (MMRng, MMDaily, MMWeaponItems, MMZones) {
+  // G-06 (b01-01, b04-04): the canon zone names (MMZones.TABLES.ZONES: Shore / Midlands / Highlands / Godlands); the fixed canon list when
+  // MMZones is not loaded (node). Quest ids, seeds and progress are unchanged, so a stored `quests` state stays valid.
+  const CANON = ['Shore', 'Midlands', 'Highlands', 'Godlands'];
+  const ZONES = CANON.map((n, i) => { try { const z = MMZones && MMZones.TABLES && MMZones.TABLES.ZONES && MMZones.TABLES.ZONES[i]; return z && typeof z.name === 'string' && z.name ? z.name : n; } catch (e) { return n; } }); // zone 0..3
   const BIOMES = ['warren', 'bramble', 'meadow', 'crypt'];
   const BAGS = ['brown', 'pink', 'purple']; // bag tier by quest kind; matches the b15 bag art ids bag_<colour>
   const NPC = 'npc_quest_giver', ORACLE_NPC = 'npc_ghost_guide'; // b21 ids (no oracle art exists, the ghost guide stands in)
@@ -116,7 +119,7 @@
   // summary(state, dateUtc): rows for a board UI (descriptors + progress + status).
   function summary(state, dateUtc) {
     const d = pad(dateUtc), s = clean(state, d);
-    return quests(d).map((x) => ({ id: x.id, text: x.text, need: x.need, p: s.q[x.id].p, done: s.q[x.id].done, claimed: s.q[x.id].claimed, reward: x.reward }));
+    return quests(d).map((x) => ({ id: x.id, kind: x.kind, zone: x.zone === undefined ? null : x.zone, text: x.text, need: x.need, p: s.q[x.id].p, done: s.q[x.id].done, claimed: s.q[x.id].claimed, reward: x.reward })); // G-06: + kind, zone (additive)
   }
   return { ZONES, BIOMES, BAGS, NPC, ORACLE_NPC, quests, fresh, clean, progress, claim, rewardBag, oracle, summary };
 });

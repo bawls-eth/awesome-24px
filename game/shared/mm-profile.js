@@ -42,6 +42,8 @@
     if (typeof it.from === 'string') o.from = it.from.slice(0, 40);
     if (typeof it.cls === 'string') o.cls = it.cls.slice(0, 20);
     if (it.level !== undefined) o.level = int(it.level, 1, MAX_LEVEL);
+    if (it.rk === true) o.rk = true; // G-05: this Keepsake has been used to Rekindle (kept as a memento; additive, absent = not used yet)
+    if (typeof it.md === 'string' && HERO_MODES.indexOf(it.md) >= 0) o.md = it.md; // G-05: the fallen hero's mode (additive)
     return o;
   }
   function cleanHero(h, usedIds) {
@@ -169,27 +171,41 @@
     if (p.hall.length > MAX_HALL) p.hall.shift();
     let keepsake = null, keepsakeLost = false;
     if (mode !== 'hardcore') {
-      keepsake = Object.assign({}, h.keepsake || { id: 'keepsake', r: 0, from: h.name, cls: h.cls, level: h.level }, { keepsake: true });
+      keepsake = Object.assign({}, h.keepsake || { id: 'keepsake', r: 0, from: h.name, cls: h.cls, level: h.level, md: h.mode }, { keepsake: true });
       const slot = p.stash.indexOf(null);
       if (slot >= 0) p.stash[slot] = keepsake; else { keepsake = null; keepsakeLost = true; } // stash full: Keepsake could not be stored
     }
     return { ok: true, profile: p, fame: fame, keepsake: keepsake, keepsakeLost: keepsakeLost };
   }
 
-  // New hero of the same class at level min(10, floor(L/2)); not allowed in hardcore.
-  function rekindle(profile, heroId) {
+  // G-05 (b11-01, owner default O-05): Rekindle starts from a FALLEN hero's Keepsake (a stash slot index), never from a living hero (that was a
+  // free clone). New hero of the Keepsake's class at level min(10, floor(L/2)); the Keepsake stays in the stash marked `rk: true` (one use).
+  // rekindleCheck(profile, slot) -> '' when allowed, else the reason. A string (a hero id) is refused: 'not-fallen' for a living hero.
+  function rekindleCheck(p, src) {
+    if (typeof src === 'string') return findHero(p, src) >= 0 ? 'not-fallen' : 'no-hero';
+    if (!Number.isInteger(src) || src < 0 || src >= p.stash.length) return 'no-keepsake';
+    const ks = p.stash[src];
+    if (!isObj(ks) || ks.keepsake !== true || CLASSES.indexOf(ks.cls) < 0) return 'no-keepsake';
+    if (ks.rk === true) return 'used';
+    if (p.mode === 'hardcore' || ks.md === 'hardcore') return 'hardcore-no-rekindle';
+    if (p.heroes.length >= MAX_HEROES) return 'roster-full';
+    return '';
+  }
+  function rekindle(profile, src) {
     const p = clean(profile);
-    const i = findHero(p, heroId);
-    if (i < 0) return fail(p, 'no-hero');
-    const h = p.heroes[i];
-    if (heroMode(p, h) === 'hardcore') return fail(p, 'hardcore-no-rekindle');
-    if (p.heroes.length >= MAX_HEROES) return fail(p, 'roster-full');
-    const lvl = Math.max(1, Math.min(10, Math.floor(h.level / 2)));
+    const why = rekindleCheck(p, src);
+    if (why) return fail(p, why);
+    const ks = p.stash[src];
+    const lvl = Math.max(1, Math.min(10, Math.floor(int(ks.level, 1, MAX_LEVEL) / 2)));
     let n = 1, id;
-    do { id = 'hero-' + h.cls + '-' + (n++); } while (findHero(p, id) >= 0);
-    const nh = cleanHero({ id: id, name: h.name, cls: h.cls, level: lvl, xp: 0, fame: 0, mode: h.mode, items: [] }, Object.create(null));
+    do { id = 'hero-' + ks.cls + '-' + (n++); } while (findHero(p, id) >= 0);
+    const base = str(ks.from, 20, 'Hero'); let name = base, k = 2; // a living hero of the same name: "Name II", "Name III", ...
+    const ROMAN = ['', '', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII'];
+    while (p.heroes.some((x) => x.name === name) && k < ROMAN.length) name = base + ' ' + ROMAN[k++];
+    const nh = cleanHero({ id: id, name: name, cls: ks.cls, level: lvl, xp: 0, fame: 0, mode: ks.md === 'picnic' ? 'picnic' : 'classic', items: [] }, Object.create(null));
     p.heroes.push(nh);
-    return { ok: true, profile: p, hero: nh };
+    p.stash[src] = Object.assign({}, ks, { rk: true });
+    return { ok: true, profile: p, hero: nh, slot: src };
   }
 
   // Honourable retirement: level 20 required, fame x1.2 (Careful +20%) x mode, listed in the hall.
@@ -244,7 +260,7 @@
   return {
     KEY: KEY, LEGACY_KEY: LEGACY_KEY, ACTIVE_KEY: ACTIVE_KEY, cleanActive: cleanActive, STASH_SLOTS: STASH_SLOTS, MAX_LEVEL: MAX_LEVEL,
     empty: empty, clean: clean, importLegacy: importLegacy, setMode: setMode,
-    fall: fall, rekindle: rekindle, retire: retire,
+    fall: fall, rekindle: rekindle, rekindleCheck: (profile, src) => rekindleCheck(clean(profile), src), retire: retire,
     legacyHasProgress: legacyHasProgress, legacyOffer: legacyOffer, realmLevel: realmLevel, realmHeroId: realmHeroId
   };
 }));

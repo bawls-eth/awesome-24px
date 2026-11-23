@@ -1662,6 +1662,7 @@ class TownScene extends Phaser.Scene {
     this.setupSharedSettings();
     this.setupReduceMotionToggle();
     this.setupPhotoMode();
+    this.setupEscClose();
     this.setupFishHint();
     this.setupGiftHint();
     this.setupSaveBackup();
@@ -2735,6 +2736,12 @@ class TownScene extends Phaser.Scene {
       this.talkToVillager(villager);
       return;
     }
+    // G-13 (b07-11): a visible beach item in pickup range wins over fish shadows and wildlife logging (villagers still first)
+    const beachSpot = this.findNearestBeachItem();
+    if (beachSpot) {
+      this.collectBeachItem(beachSpot);
+      return;
+    }
     const fishTarget = this.findNearestFishingSpot();
     if (fishTarget && fishTarget.shadow) {
       this.startFishing(fishTarget);
@@ -2752,11 +2759,6 @@ class TownScene extends Phaser.Scene {
     const fossilSpot = this.findNearestFossilSpot();
     if (fossilSpot) {
       this.digFossil(fossilSpot);
-      return;
-    }
-    const beachSpot = this.findNearestBeachItem();
-    if (beachSpot) {
-      this.collectBeachItem(beachSpot);
       return;
     }
     const flowerSpot = this.findNearestFlower();
@@ -4433,6 +4435,24 @@ class TownScene extends Phaser.Scene {
       setReduceMotion(!reduceMotion);
       render();
     });
+  }
+
+  // G-12 (b07-01, b04-08): Esc (and P, the universal Menu key) closes the top Town overlay through closeTopOverlay, so every overlay's
+  // own close logic runs. Window bubble phase: the nav sheet (window capture), Postcards (document) and the Museum (its own window
+  // listener) keep their own Esc and are skipped here, so one press never closes two layers. Typing in a text field: untouched
+  // (the chat box blurs itself). A key that closed an overlay is consumed, so P never also opens a menu / takes a photo.
+  setupEscClose() {
+    this._escCloseKey = (e) => {
+      if (e.defaultPrevented || e.repeat) return;
+      const k = e.key;
+      if (k !== 'Escape' && k !== 'Esc' && k !== 'p' && k !== 'P') return;
+      const t = e.target;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || ''))) return;
+      if (this.museumOpen || this.postcardsOpen || this.navSheetOpen()) return;
+      if (this.closeTopOverlay()) { e.preventDefault(); e.stopImmediatePropagation(); }
+    };
+    window.addEventListener('keydown', this._escCloseKey);
+    this.events.once('shutdown', () => window.removeEventListener('keydown', this._escCloseKey));
   }
 
   setupPhotoMode() {
@@ -6557,7 +6577,7 @@ class TownScene extends Phaser.Scene {
       if (d < spec.reach && d < bestDist) { best = spec; bestDist = d; }
     }
     for (let i = n; i < this.ffSparkles.length; i++) this.ffSparkles[i].setVisible(false);
-    if (best && this.canAct()) {
+    if (best && this.canAct() && (!this.fishing || this.fishing.state === 'idle')) { // G-13 (b07-12): no "E: log" label over "Reel it in!"
       const s = best.sprite;
       this.ffHint.setText(`${IS_TOUCH ? '✋' : 'E'}: log ${best.name}`).setPosition(s.x, s.y + s.displayHeight / 2 + 2).setVisible(true);
     } else {
@@ -9433,20 +9453,23 @@ class TownScene extends Phaser.Scene {
   }
 
   drawNoticeBoard() {
-    const x = 1350;
+    const x = 1380; // W-06: 30 px east of the old spot, so the bigger board clears the Postcards sign label
     const y = 520;
     const g = this.bakedGfx(y - 1);
     g.fillStyle(0x6b4a30, 1).fillRect(x - 2, y - 4, 4, 30);
-    g.fillStyle(0xe8d9b5, 1).fillRect(x - 55, y - 54, 110, 52);
-    g.lineStyle(2, 0x8f7044, 1).strokeRect(x - 55, y - 54, 110, 52);
+    // W-06 (b12-06): a bigger board and 12 px text rendered at 2x, so TOP SCORES reads (cap height >= 8 screen px at both zooms; was 8 px, smeared).
+    g.fillStyle(0xe8d9b5, 1).fillRect(x - 72, y - 78, 144, 76);
+    g.lineStyle(2, 0x8f7044, 1).strokeRect(x - 72, y - 78, 144, 76);
     g.bake();
-    this.noticeBoardText = this.add.text(x, y - 28, '', {
-      fontSize: '8px',
+    this.noticeBoardText = this.add.text(x, y - 40, '', {
+      fontSize: '12px',
       fontFamily: 'monospace',
+      fontStyle: 'bold',
       color: '#3a2a1a',
       align: 'center',
-      wordWrap: { width: 96 },
-    }).setOrigin(0.5).setDepth(y);
+      wordWrap: { width: 136 },
+    }).setOrigin(0.5).setDepth(y).setResolution(2);
+    this.noticeBoardRect = { x: x - 72, y: y - 78, w: 144, h: 76 };
   }
 
   updateNoticeBoard(sorted) {

@@ -515,3 +515,32 @@ T01, T02, T17 (fox/deer), T10, T13, T23, T26, T30, T32, T34. One branch per batc
 
 ## UPDATE 2026-11-23 (owner decision): the Town's punk/cat villagers are GONE, replaced by the 10 hero classes
 The Town now draws the 10 Realm heroes (b00-b03 art) as players, villagers and statues. So **T01-T07 are cancelled** (no new villager species or pond-cat art) and **T09 changes** to hero emote/portrait extras only if wanted: sit/sleep/wave/happy/sad strips for the 10 heroes (true down/right, 32 native). T08 (Town NPCs) stays but should be drawn as heroes-style characters, not animals. Everything else in T10-T36 stays. Priority order now: M01-M03 (mounts) -> R01-R05 -> T10, T13, T17 (fauna), T23, T26, T30, T32, T34 -> the rest.
+
+
+## UPDATE 2026-11-23 (beta, World + Graphics lane): art asks from the beta reports (code side is done or waiting on these)
+Same rules and formats as above (ART-HANDOFF, 4x native cells, true down / up / right views, effects separate, original art only). Claude wires
+each by id with today's art as the fallback.
+
+#### B-01 Nexus plaza floor + frame (b12-08, b04-05..07, W-04)
+- `nexus_floor_a..f` (32x32 native, opaque, seamless, 6 variants: dark violet flagstones with a faint rune inlay on 2 of them), `nexus_floor_edge_00..15`
+  (b10t edge_bits contract, against void), `nexus_rim_{n,e,s,w}` and 4 outer corners (a raised stone kerb, 32 native), `nexus_portal_pad` (64 native,
+  the stone pad each portal stands on). Today the plaza is a code-drawn two-tone checkerboard on a rounded web box.
+
+#### B-02 Touch stick ring + knob (b12-10, W-13)
+- `ui_stick_ring_move`, `ui_stick_ring_aim` (100 native, transparent centre, 2 px rim, aim ring blue accent), `ui_stick_knob_{idle,pressed}` (40 native,
+  round, 3-tone with top-left highlight), matching the R11/R12 8-bit HUD kit. A code-drawn pixel version ships now (realm-8bit.css, W-13).
+
+#### B-03 Tundra generics (b06-01, W-17): 4 species are still code-drawn recolours
+- `glacier_shellback` M64 (armoured ice turtle, frosted shell plates), `icicle_bat` S48 (a real bat: membrane wings, icicle fangs), `shagtusk` L96
+  (woolly tusked mount, `saddle_shagtusk` overlay separate), `sabrefang` L96 (sabre-tooth cat, pale stripes). Enemy strip set each (idle 4, move 6,
+  attack 5, death 5) x down / up / right.
+
+#### B-04 Mars creatures (b06-02, W-17): every species is code-drawn from two shared templates
+- `regolith_roly` S48 (rolling rock bug), `bubblemoth` S48 (moth with glassy bubble wings), `dust_devil` S48 (a dust swirl with a grit core: a creature,
+  not a blob), `scrapper_drone` S48, `rustbeetle` M64 (rust-red beetle shell), `crater_strider` L96 (long-legged strider), `void_grazer` XL128.
+  Enemy strip set each x down / up / right.
+
+#### B-05 Isle bosses: Frost Dragon vs Red Titan (b06-03, W-17)
+- Both are one recoloured yeti-like humanoid today. `frost_dragon` XL128 (winged ice dragon, frost breath in attack_b, wings in the silhouette) and
+  `red_titan` XL128 (hulking red-rock giant, magma seams, ground slam in attack_b). Boss strips: down only, idle 4, move 6, attack_a 6, attack_b 6,
+  hit 2, death 8. Plus `arena_ring_tundra`, `arena_ring_mars` (boss arena ring, 256 native; today a code ring).

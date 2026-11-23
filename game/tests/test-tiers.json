@@ -1537,6 +1537,78 @@
     "class": "node",
     "tier": "smoke"
   },
+  "beta-w01-hero-popin.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-w02-boss-popin.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-w08-angler-layout.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-g02-combine.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "beta-g01-gift.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "beta-g03-sell-guard.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "beta-w05-realm-hud.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-w16-dungeon-hud.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-w10-echo-labels.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-w13-joystick.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-w14-loot-bags.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-w09-arcade-layout.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-w11-bug-clarity.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-g04-full-pack.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "beta-g22-tame-safe.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "shared-mm-companion-tame-skip.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "beta-g05-rekindle.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "shared-mm-profile-rekindle.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "beta-s01-town-restore.test.js": {
     "class": "browser",
     "tier": "smoke"
@@ -1561,6 +1633,34 @@
     "class": "node",
     "tier": "smoke"
   },
+  "beta-g23-trial-enter.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "beta-g20-isles-stable.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "beta-w12-isles-hero.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-w07-town-hud.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-g12-esc-close.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "beta-g13-beach-first.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "beta-g06-quest-zones.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "beta-s10-storage-throws.test.js": {
     "class": "browser",
     "tier": "full"
@@ -1570,6 +1670,26 @@
     "tier": "smoke"
   },
   "beta-s11-deepdelve-rotate.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-w03-terrain.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-w04-nexus.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-w06-town-board.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-w15-stalk-compass.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-w18-isles-howto.test.js": {
     "class": "browser",
     "tier": "full"
   }

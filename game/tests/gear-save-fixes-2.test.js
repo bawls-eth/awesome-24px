@@ -104,16 +104,17 @@ const stored = (page) => page.evaluate((k) => { try { return JSON.parse(localSto
     // F11: a full pack sells at the tiered value (direct pickup, bag pickup), never the classic price
     const f11 = await A.page.evaluate(() => {
       const a = window.__mm.arena; const sv = a.save; const keep = sv.items.slice(); const nu = sv.nextUid;
+      sv.items.push({ n: sv.nextUid++, id: 'sparkwand', r: 0, t: 11, a: 9 }); // G-04: a full pack only sells a tiered drop that is not an upgrade (best held T11, no T12 chase)
       while (sv.items.length < RM_BACKPACK) sv.items.push({ n: sv.nextUid++, id: 'heartcharm', r: 0 });
-      const s0 = sv.shards; a.collectItem('sparkwand', 1, { t: 12, a: 7 }); const d1 = sv.shards - s0;
+      const s0 = sv.shards; a.collectItem('sparkwand', 1, { t: 10, a: 7 }); const d1 = sv.shards - s0;
       const p = a.player; const b = a.dropBag(p.x, p.y, 2, 'sparkwand', null, { t: 9, a: 3 }); b.vx = 0; b.vy = 0; b.t = 0.3;
       const s1 = sv.shards; a._updateBags(0.016); const d2 = sv.shards - s1;
       const s2 = sv.shards; a.collectItem('heartcharm', 1); const d3 = sv.shards - s2;
-      const r = { d1, d2, d3, want1: rmSellValue({ r: 1, t: 12 }), want2: rmSellValue({ r: 2, t: 9 }), classic1: RM_RARITIES[1].sell, classic2: RM_RARITIES[2].sell, n: sv.items.length, last: a.lastFullSale, bGear: b.gear, gearOn: RM_GEAR_ON };
+      const r = { d1, d2, d3, want1: rmSellValue({ r: 1, t: 10 }), want2: rmSellValue({ r: 2, t: 9 }), classic1: RM_RARITIES[1].sell, classic2: RM_RARITIES[2].sell, n: sv.items.length, last: a.lastFullSale, bGear: b.gear, gearOn: RM_GEAR_ON };
       sv.items.length = 0; keep.forEach((x) => sv.items.push(x)); sv.nextUid = nu + 40; a.onSave(sv);
       return r;
     });
-    check('F11: a full pack sells a T12 pickup for rmSellValue({r, t}) (not RM_RARITIES[r].sell) and adds no item', f11.gearOn && f11.d1 === f11.want1 && f11.d1 !== f11.classic1 && f11.n === 24, JSON.stringify(f11));
+    check('F11: a full pack sells a (non-upgrade) T10 pickup for rmSellValue({r, t}) (not RM_RARITIES[r].sell) and adds no item', f11.gearOn && f11.d1 === f11.want1 && f11.d1 !== f11.classic1 && f11.n === 24, JSON.stringify(f11));
     check('F11: a tiered BAG picked up on a full pack sells at its tiered value too (the tier rides into the pickup); a classic pickup keeps the classic price', f11.d2 === f11.want2 && f11.d2 !== f11.classic2 && f11.last && f11.last.t === 0 && f11.d3 === f11.classic1 && f11.bGear === null, JSON.stringify(f11));
 
     // F13 in realm.js: a reforge moves the pending find; settle pays the new uid

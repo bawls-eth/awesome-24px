@@ -23,6 +23,7 @@
   const K = {
     PHASE2: 0.7, PHASE3: 0.35,      // phase changes at 70% / 35% HP
     WEARY: 0.1,                     // weary at 10% HP (a hit can never skip past it)
+    WEARY_GRACE: 8,                 // G-22: a TAMEABLE first-fight boss cannot be killed for its first 8 s of weary (time to offer a feast)
     MIN_WINDUP: 0.6, MIN_SLAM: 0.8, // seconds of telegraph before any hit zone is live
     MAX_LIVE: 2,                    // hard cap on live hazards (phases 1-2 allow only 1)
     MAX_DMG_MUL: 1.2,               // x def.dmg per hit, one hit per hazard
@@ -220,13 +221,16 @@
     // 1. damage: a hit from the fight can never skip weary (hp stops just under the weary line)
     const dmg = fin(inp.dmg, 0, 0, 1e7);
     if (dmg > 0 && s.st === 'fight') { const hp0 = s.hp; s.hp = Math.max(s.hpMax * K.WEARY - 0.001, s.hp - dmg); cutHeads(s, hp0 - s.hp, inp.head, events); }
-    else if (dmg > 0 && s.st === 'weary') s.hp -= dmg;
+    else if (dmg > 0 && s.st === 'weary') { // G-22 (b06-04): a tameable weary boss keeps >= 1 HP for WEARY_GRACE s; a rematch (never tameable) or input.noTame dies as before
+      const grace = !s.rematch && inp.noTame !== true && !!(def.tame && def.tame.method === 'knockout' && def.diet.indexOf('feast') >= 0) && typeof s.wt === 'number' && s.t - s.wt < K.WEARY_GRACE;
+      s.hp = grace ? Math.max(1, s.hp - dmg) : s.hp - dmg;
+    }
     // 2. phase changes (every crossed phase is reported, in order)
     if (s.st === 'fight') {
       const f = s.hp / s.hpMax, want = f <= K.PHASE3 ? 2 : f <= K.PHASE2 ? 1 : 0;
       while (s.phase < want) { s.phase++; s.cd = Math.max(s.cd, K.PHASE_PAUSE); events.push({ type: 'phase', phase: s.phase, name: sc.phases[s.phase].name }); }
       if (s.hp <= s.hpMax * K.WEARY) {
-        s.st = 'weary';
+        s.st = 'weary'; s.wt = s.t; // G-22: when weary began (additive state field; an older state without it gets no grace)
         s.hazards.forEach((h) => events.push({ type: 'cancel', id: h.id }));
         s.hazards.slice().forEach((h) => settle(s, h, events));
         s.hazards = []; s.queue = '';

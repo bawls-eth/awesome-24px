@@ -148,3 +148,9 @@ body.px8 { background-color:var(--bg); color:var(--ink); }
 #unlock-details summary { cursor:pointer; min-height:48px; display:flex; align-items:center; color:var(--accent); }
 
 @media (pointer: coarse) and (min-height: 700px) and (orientation: portrait) { #canvas-wrap { padding:4px 0; } }
+/* W-09 (b10-03): short portrait screens (390x844 at 150% text = 260x563): the lane canvas yields height so the four pads stay on screen */
+@media (orientation: portrait) and (max-height: 640px) {
+  #game { width:min(100%, calc((100vh - 340px) * 0.762)); min-width:150px; }
+  #canvas-wrap { padding:4px 0; }
+  #pads .pad, .pad { min-height:56px; }
+}

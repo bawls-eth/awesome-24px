@@ -42,7 +42,8 @@ async function go(ctx, errors, query, base) {
   return page;
 }
 const stored = (page) => page.evaluate((k) => JSON.parse(localStorage.getItem(k)).realm, SAVE);
-const ui = (page) => page.evaluate(() => {
+const ui = async (page) => { await page.waitForFunction(() => !document.querySelector('#realm-bp-list button[data-arm]'), null, { timeout: 3000 }).catch(() => {}); return uiNow(page); }; // G-03: read once the re-render's 300 ms arm delay is over
+const uiNow = (page) => page.evaluate(() => {
   const box = document.getElementById('realm-bp-forge');
   const bt = (b) => { const r = b.getBoundingClientRect(); return { t: b.textContent, h: r.height, w: r.width, dis: b.disabled, d: Object.assign({}, b.dataset) }; };
   return { toggles: Array.from(document.querySelectorAll('#realm-bp-list button.fg[data-forge-open]')).map((b) => b.dataset.forgeOpen + ':' + b.getBoundingClientRect().height),

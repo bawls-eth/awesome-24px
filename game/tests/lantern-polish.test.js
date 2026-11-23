@@ -74,7 +74,9 @@ async function open(browser, { mm, active, query, viewport } = {}) {
   check('a valid active hero is preselected', (await c2.page.locator('#heroes li.sel').getAttribute('data-hero')) === 'h2');
   await c2.ctx.close();
 
-  // 5. keyboard
+  // 5. keyboard (G-05: Rekindle lives on a fallen hero's Keepsake, so a Keepsake is put in the stash and its row is a Tab stop)
+  await p.evaluate((K) => { const o = JSON.parse(localStorage.getItem(K)); const i = o.stash.indexOf(null); o.stash[i >= 0 ? i : 0] = { id: 'keepsake', r: 0, keepsake: true, from: 'Old Moss', cls: 'ranger', level: 8 }; localStorage.setItem(K, JSON.stringify(o)); }, MM);
+  await p.reload(); await p.waitForSelector('#rekindle-list .rekindle-ks');
   await p.evaluate(() => document.activeElement && document.activeElement.blur());
   const seen = new Set();
   for (let i = 0; i < 80; i++) {

@@ -308,10 +308,27 @@
     // 4-tile grid so open ground reads as rolling, plus 0-2 tiny square pebbles / tufts per tile. Low-contrast squares only (never round, so the
     // bright round shapes stay bullets). ?tiledetail=0 = the flat look.
     const TILE_DETAIL = !/[?&]tiledetail=0(&|$)/.test(qs0);
+    const GOD_LOOK = TILE_DETAIL && !/[?&]godlook=0(&|$)/.test(qs0); // W-03: ?godlook=0 = the old grey ash
+    const edgeStat = { drawn: 0, skipped: 0 }, shadeStat = { dithered: 0, ash: 0 }; // bake counters (test hooks)
+    // W-03 (b04-01): a patch side that borders a different shade class fades out over 8 px as a 2-colour checker (baked), not a hard seam.
+    const shadeOf = (wx, wy) => { const v = (h2(wx >> 2, wy >> 2, 501) + h2((wx + 2) >> 2, (wy + 2) >> 2, 502)) * 0.5; return v < 0.32 ? -1 : v > 0.72 ? 1 : 0; };
+    function shadePatch(g, wx, wy, px, py, col) {
+      const sc = shadeOf(wx, wy); const n = shadeOf(wx, wy - 1) === sc, s = shadeOf(wx, wy + 1) === sc, w = shadeOf(wx - 1, wy) === sc, e = shadeOf(wx + 1, wy) === sc;
+      const x0 = w ? 0 : 8, x1 = e ? TILE : TILE - 8, y0 = n ? 0 : 8, y1 = s ? TILE : TILE - 8;
+      rect(g, col, px + x0, py + y0, x1 - x0, y1 - y0);
+      g.fillStyle = col; // the 8 px rim on the open sides: every other 2x2 cell (checker), so the patch dissolves into the ground
+      for (let yy = 0; yy < TILE; yy += 2) for (let xx = 0; xx < TILE; xx += 2) {
+        if (xx >= x0 && xx < x1 && yy >= y0 && yy < y1) continue;
+        if (((xx + yy) >> 1) & 1) continue;
+        if ((xx < 4 && !w) || (xx >= TILE - 4 && !e) || (yy < 4 && !n) || (yy >= TILE - 4 && !s)) continue; // outer 4 px: ground only
+        g.fillRect(px + xx, py + yy, 2, 2);
+      }
+      shadeStat.dithered++;
+    }
     function tileDetail(g, wx, wy, px, py) {
-      const v = (h2(wx >> 2, wy >> 2, 501) + h2((wx + 2) >> 2, (wy + 2) >> 2, 502)) * 0.5;
-      if (v < 0.32) rect(g, 'rgba(0,0,0,0.08)', px, py, TILE, TILE);
-      else if (v > 0.72) rect(g, 'rgba(255,255,255,0.05)', px, py, TILE, TILE);
+      const sc = shadeOf(wx, wy);
+      if (sc < 0) shadePatch(g, wx, wy, px, py, 'rgba(0,0,0,0.08)');
+      else if (sc > 0) shadePatch(g, wx, wy, px, py, 'rgba(255,255,255,0.05)');
       const n = Math.floor(h2(wx, wy, 503) * 3); // 0..2 specks
       for (let k = 0; k < n; k++) {
         const r = h2(wx + k * 17, wy, 504); const sx = px + 2 + Math.floor(h2(wx, wy + k * 13, 505) * (TILE - 6)); const sy = py + 2 + Math.floor(h2(wx * 3 + k, wy * 5, 506) * (TILE - 6));
@@ -338,14 +355,22 @@
           for (let k = 0; k < 3; k++) { const r = h2(wx * 3 + k, wy, 7); if (r < 0.55) rect(g, r < 0.27 ? pal[1] : pal[2], px + Math.floor(h2(wx, wy * 5 + k, 11) * 26), py + Math.floor(h2(wx * 7 + k, wy, 13) * 26), t === T.flower_meadow ? 3 : 6, t === T.flower_meadow ? 3 : 4); }
         }
         if (TILE_DETAIL && t !== T.deep_water && t !== T.shallow_water && !solid[i]) tileDetail(g, wx, wy, px, py);
+        if (GOD_LOOK && t === T.godland_ash) { // W-03 (b04-02): ash gets a dark ember wash and sparse ember specks (palette lava_rock accent)
+          rect(g, 'rgba(36,8,18,0.42)', px, py, TILE, TILE);
+          if (h2(wx, wy, 601) < 0.22) { const ex = px + 3 + Math.floor(h2(wx, wy, 602) * (TILE - 8)), ey = py + 3 + Math.floor(h2(wx, wy, 603) * (TILE - 8)); rect(g, '#ff7a2a', ex, ey, 2, 2); rect(g, 'rgba(255,122,42,0.35)', ex - 1, ey + 2, 4, 1); }
+          shadeStat.ash++;
+        }
         if (solid[i] && t !== T.deep_water) { rect(g, 'rgba(0,0,0,0.28)', px, py, TILE, TILE); rect(g, 'rgba(255,255,255,0.18)', px, py, TILE, 4); rect(g, 'rgba(0,0,0,0.35)', px, py + TILE - 5, TILE, 5); }
         // Transition sprites already draw the terrain boundary.
         if (transition) continue;
+        // W-03 (b12-03): one edge per border. A neighbour that draws a transition tile (b10t edge art) already paints this boundary, so the
+        // 2 px line is skipped there (it used to run parallel to the blend, one tile away: the double outline).
         const e = pal[3];
-        if (wx + 1 < ww && terrain[wy * ww + wx + 1] !== t) rect(g, e, px + TILE - 2, py, 2, TILE);
-        if (wx > 0 && terrain[wy * ww + wx - 1] !== t) rect(g, e, px, py, 2, TILE);
-        if (wy + 1 < wh && terrain[(wy + 1) * ww + wx] !== t) rect(g, e, px, py + TILE - 2, TILE, 2);
-        if (wy > 0 && terrain[(wy - 1) * ww + wx] !== t) rect(g, e, px, py, TILE, 2);
+        const edgeTo = (nx, ny) => { const nt = terrain[ny * ww + nx]; if (nt === t) return false; if (transitionAt(nx, ny, nt)) { edgeStat.skipped++; return false; } edgeStat.drawn++; return true; };
+        if (wx + 1 < ww && edgeTo(wx + 1, wy)) rect(g, e, px + TILE - 2, py, 2, TILE);
+        if (wx > 0 && edgeTo(wx - 1, wy)) rect(g, e, px, py, 2, TILE);
+        if (wy + 1 < wh && edgeTo(wx, wy + 1)) rect(g, e, px, py + TILE - 2, TILE, 2);
+        if (wy > 0 && edgeTo(wx, wy - 1)) rect(g, e, px, py, TILE, 2);
       }
       const list = propsBy[cy * ccols + cx];
       if (list) for (let k = 0; k < list.length; k++) {
@@ -531,8 +556,12 @@
         if (window.MMQuests && save.quests) {
           const rows = MMQuests.summary(save.quests, questDate());
           if (rows.some((q) => q.done && !q.claimed)) return 'Claim your quest reward at the Nexus';
-          const q = rows.find((r) => !r.done);
-          if (q) return q.text + (q.need > 1 ? ` (${Math.min(q.p, q.need)}/${q.need})` : '');
+          // G-06: a daily quest leads the goal line only when it is in reach: its zone's recLv <= hero level + 2 (a boss quest: the Midlands
+          // recLv, where the first altars wake). A Lv 1 hero keeps the level goal instead of "Defeat 20 creatures in the Highlands".
+          const zq = (Z.TABLES && Z.TABLES.ZONES) || []; const lvq = arena.save && arena.save.level | 0;
+          const reach = (r) => { const zz = Number.isInteger(r.zone) && r.zone >= 0 && r.zone <= 3 ? r.zone : r.kind === 'boss' ? 1 : -1; return zz < 0 || (((zq[zz] || {}).recLv | 0) <= lvq + 2); };
+          const q = rows.find((r) => !r.done); // the next quest on the board; out of reach = the level goal stays (no skipping ahead)
+          if (q && reach(q)) return q.text + (q.need > 1 ? ` (${Math.min(q.p, q.need)}/${q.need})` : '');
         }
         const zs = (Z.TABLES && Z.TABLES.ZONES) || []; const z = zi && zi.zone >= 0 && zi.zone <= 3 ? zi.zone : 0;
         const next = zs[z + 1]; const lv = arena.save && arena.save.level | 0;
@@ -1609,7 +1638,9 @@
     const NX = window.MMNexus || null;
     const NX_ON = !!NX && !!window.MMQuests && !/[?&]nexus=0(&|$)/.test(typeof location !== 'undefined' ? location.search : '');
     const NX_WALK = NX_ON && !/[?&]nexuswalk=0(&|$)/.test(typeof location !== 'undefined' ? location.search : '');
-    const NX_VW = 640; const NX_VH = 480; const NX_R = 10; // walk view (world px, 4:3) and the hero's collision radius
+    // W-04 (b04-07): portrait phones get a tall walk view (400x540 world px) so the plaza fills >= 55% of the screen instead of a 4:3 strip
+    const NX_TALL = typeof window !== 'undefined' && window.innerWidth < 600 && window.innerHeight > window.innerWidth * 1.3;
+    const NX_VW = NX_TALL ? 400 : 640; const NX_VH = NX_TALL ? 540 : 480; const NX_R = 10; // walk view (world px) and the hero's collision radius
     const nxHero = { x: 0, y: 0, moving: false, aim: 0, mx: 0, my: 1, iframes: 0 }; let nxRaf = 0; let nxLast = 0; let nxNearI = null; const nxCam = { x: 0, y: 0 };
     const NX_NAME = { realm: 'The Realm', warren: 'Warren dungeon', bramble: 'Bramble dungeon', vault: 'Lantern vault', meadow: 'Meadow dungeon', crypt: 'Crypt dungeon' };
     // Shown name of a Nexus portal (display only; MMNexus keeps its ids and labels): the vault says where it leads (NAV-AUDIT 4.1 renames).
@@ -1631,6 +1662,9 @@
       + '#rw-nexus .nx-talk{max-width:760px;width:100%;margin:10px auto;box-sizing:border-box;padding:10px 12px;border-radius:10px;background:#231b42;border:1px solid #4a3d85;min-height:44px}#rw-nexus .nx-talk b{color:#ffe27a}'
       + '#rw-nx-act{display:block;margin:8px auto 0;min-height:48px !important;border-color:#ffe27a !important;background:#3a2c10 !important;max-width:100%;white-space:normal}#rw-nx-act.hidden{visibility:hidden}#rw-nexus .nx-stage:focus-visible{outline:3px solid #ffe27a}'
       + 'body.nx-walking #realm-stick-move{z-index:90}body.touch-device.nx-walking #rw-nexus{padding-bottom:calc(170px + env(safe-area-inset-bottom,0px))}'
+      + '#rw-nexus.nx-tall .nx-stage{aspect-ratio:400/540;width:min(100%,calc((100vh - 250px)*400/540))}#rw-nexus .nx-talk{flex:0 0 auto;overflow-wrap:anywhere}' // W-04
+      + 'body.nx-walking:has(#rw-nx-stall:not(.hidden)) .realm-stick,body.nx-walking:has(#rw-nx-board:not(.hidden)) .realm-stick{display:none !important}' // W-04 (b04-06, b02-13): no stick over the Buy / Claim rows
+      + '@media (min-width:1000px) and (min-height:560px){#rw-nexus .nx-board:not(.hidden){position:fixed;right:16px;top:64px;width:min(400px,calc(50vw - 350px));max-height:calc(100vh - 80px);overflow-y:auto;z-index:2;margin:0}}' // W-04 (b04-10): the board opens beside the plaza, not below the fold
       + '#rw-nexus .nx-board{max-width:760px;width:100%;margin:0 auto 12px;box-sizing:border-box;padding:10px 12px;border-radius:10px;background:#1d2a2a;border:1px solid #3b6b5f}#rw-nexus .nx-board.hidden{display:none}#rw-nexus .nx-q{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid #2f4a45}#rw-nexus .nx-q:first-of-type{border-top:0}#rw-nexus .nx-q span{flex:1}#rw-nexus .nx-q em{color:#8fe9ff;font-style:normal}'
       // PLAYTEST-REVIEW-2 #8: an unfinished quest's Claim is outline-only (dashed, muted, no fill) and the row carries a progress bar
       + '#rw-nexus .nx-stall{background:#2a2418;border-color:#6b5a36}#rw-nexus .nx-st-head{display:flex;align-items:center;gap:8px;justify-content:space-between}#rw-nexus .nx-st-note,#rw-nexus .nx-st-wallet{margin:6px 0;font-size:13px}#rw-nexus .nx-st-sub{display:block;margin:10px 0 6px;font-size:12px;color:#e8d9b0}#rw-nexus .nx-stall button{height:auto;padding:6px 10px;white-space:normal;max-width:100%;text-align:left}#rw-nexus .nx-stall button:disabled{background:transparent;border-style:dashed;border-color:#6b6390;color:#a59cc4;cursor:not-allowed}#rw-nexus .nx-st-q{flex:0 0 100%}#rw-nx-forge{margin:4px 0}'
@@ -1643,10 +1677,12 @@
       img.onload = () => { if (img.naturalHeight >= 64) { nxPortrait[id] = img; if (done) done(); } };
       img.src = opts.assetRoot.replace(/\/+$/, '') + '/b21-npcs-and-vendors/enemies/' + id + '/' + id + '_idle_down.png';
     }
+    const nxLabels = []; // W-04 test hook: portal label rects in plaza px (rebuilt per plaza draw)
     function nxDrawPlaza() { // one static draw per open / art arrival (1280x960 = the 40x30 tile plaza at 32 px)
-      if (!nxDom) return;
+      if (!nxDom) return; nxLabels.length = 0;
       const L = NX.layout(); const c = nxDom.plaza; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
       g.fillStyle = '#0e0a18'; g.fillRect(0, 0, c.width, c.height);
+      g.fillStyle = '#2e2742'; g.fillRect(0, 0, L.w * TILE, L.h * TILE); g.fillStyle = '#3d3457'; for (let i = 0; i < L.w; i++) { g.fillRect(i * TILE + 2, 2, TILE - 4, TILE - 6); g.fillRect(i * TILE + 2, (L.h - 1) * TILE + 2, TILE - 4, TILE - 6); } for (let j = 1; j < L.h - 1; j++) { g.fillRect(2, j * TILE + 2, TILE - 4, TILE - 6); g.fillRect((L.w - 1) * TILE + 2, j * TILE + 2, TILE - 4, TILE - 6); } // W-04: a stone kerb ring, never a void band
       for (let ty = 1; ty < L.h - 1; ty++) for (let tx = 1; tx < L.w - 1; tx++) { g.fillStyle = (tx + ty) % 2 ? '#4b4660' : '#554f6c'; g.fillRect(tx * TILE, ty * TILE, TILE, TILE); }
       g.fillStyle = '#6d6788'; for (let i = 1; i < L.w - 1; i++) { g.fillRect(i * TILE, TILE, TILE, 2); g.fillRect(i * TILE, (L.h - 2) * TILE + 30, TILE, 2); }
       const pad = wArt.spawn_pad; const sp = L.spawn;
@@ -1664,8 +1700,11 @@
         if (a) drawArt(g, a, 0, q.x, q.y + 23);
         else { g.globalAlpha = 0.3; g.fillStyle = '#a98bff'; g.beginPath(); g.arc(q.x, q.y, 30, 0, 7); g.fill(); g.globalAlpha = 1; g.strokeStyle = '#a98bff'; g.lineWidth = 4; g.beginPath(); g.arc(q.x, q.y, 24, 0, 7); g.stroke(); }
         g.restore();
-        g.font = 'bold 22px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#000'; g.fillText(nxPortalName(q), q.x + 1, q.y - 37); g.fillStyle = '#e8dcff'; g.fillText(nxPortalName(q), q.x, q.y - 38);
-        const nm = nxMutOf(q); if (nm) { g.font = 'bold 16px system-ui, sans-serif'; g.fillStyle = '#000'; g.fillText('✦ ' + nm.label, q.x + 1, q.y - 59); g.fillStyle = '#c9b6ff'; g.fillText('✦ ' + nm.label, q.x, q.y - 60); }
+        // W-04 (b04-07, b02-15): pixel font, and the label is kept inside the floor the camera can show (it was cut at the plaza edges)
+        g.font = 'bold 20px ui-monospace, Menlo, Consolas, monospace'; g.textAlign = 'center'; const nmP = nxPortalName(q); const lw = g.measureText(nmP).width;
+        const lx = Math.max(TILE + lw / 2 + 4, Math.min((L.w - 1) * TILE - lw / 2 - 4, q.x)); nxLabels.push({ id: q.id, x: lx - lw / 2, y: q.y - 56, w: lw, h: 24 });
+        g.fillStyle = '#000'; g.fillText(nmP, lx + 2, q.y - 36); g.fillStyle = '#e8dcff'; g.fillText(nmP, lx, q.y - 38);
+        const nm = nxMutOf(q); if (nm) { g.font = 'bold 15px ui-monospace, Menlo, Consolas, monospace'; const mw = g.measureText('+ ' + nm.label).width; const mx = Math.max(TILE + mw / 2 + 4, Math.min((L.w - 1) * TILE - mw / 2 - 4, q.x)); g.fillStyle = '#000'; g.fillText('✦ ' + nm.label, mx + 2, q.y - 58); g.fillStyle = '#c9b6ff'; g.fillText('✦ ' + nm.label, mx, q.y - 60); }
       });
       if (RUSH_ON && L.trial) { // RE2: the Trial gate, code-drawn (no art id): a gold ring and its name
         const q = L.trial; g.save(); g.globalAlpha = 0.3; g.fillStyle = '#ffd45a'; g.beginPath(); g.arc(q.x, q.y, 30, 0, 7); g.fill(); g.globalAlpha = 1; g.strokeStyle = '#ffd45a'; g.lineWidth = 4; g.beginPath(); g.arc(q.x, q.y, 24, 0, 7); g.stroke(); g.restore();
@@ -1842,9 +1881,10 @@
       el.appendChild(buy);
       el.appendChild(mk('b', 'nx-st-sub', 'Sell back (T1-T3)'));
       const back = mk('div', 'nx-row'); back.id = 'rw-nx-sell'; let any = false;
+      const eqd = new Set(Object.keys(sv.eq || {}).map((k) => sv.eq[k])); // G-03 (b02-14): the equipped piece says so in the Sell-back list
       sv.items.forEach((it) => {
         const info = arena.vendorBuyBackInfo(it.n); if (!info) return; any = true;
-        const def = typeof RM_ITEM_BY_ID !== 'undefined' && RM_ITEM_BY_ID[it.id] ? RM_ITEM_BY_ID[it.id].name : it.id;
+        const def = (typeof RM_ITEM_BY_ID !== 'undefined' && RM_ITEM_BY_ID[it.id] ? RM_ITEM_BY_ID[it.id].name : it.id) + (eqd.has(it.n) ? ' (equipped)' : '');
         if (nxStallAsk === it.n) {
           const q = mk('span', 'nx-st-q', 'Sell ' + def + ' T' + it.t + ' back for ' + info.dust + ' dust?'); back.appendChild(q);
           const y = nxStallBtn('Confirm +' + info.dust + ' dust', 'Confirm: sell ' + def + ' back for ' + info.dust + ' dust', () => { nxStallAsk = 0; arena.vendorSellBack(it.n); nxStallRender(); }); y.dataset.vyes = String(it.n); back.appendChild(y);
@@ -1856,6 +1896,10 @@
       });
       if (!any) back.appendChild(mk('span', 'nx-st-note', 'Nothing to sell back. Tier 1 to 3 gear can be sold here.'));
       el.appendChild(back);
+      // G-03 (b02-14): after every stall re-render Buy / Sell back / Confirm are inert for 300 ms, so a double-tap buys (or sells) once
+      const armed = Array.from(el.querySelectorAll('button[data-vbuy], button[data-vsell], button[data-vyes]')).filter((b) => !b.disabled);
+      armed.forEach((b) => { b.disabled = true; b.dataset.arm = '1'; });
+      setTimeout(() => armed.forEach((b) => { if (b.isConnected && b.dataset.arm) { b.disabled = false; delete b.dataset.arm; } }), 300);
     }
     function nxStallOpen() { nxBuild(); if (!nxStallOn()) return false; nxStallAsk = 0; nxDom.board.classList.add('hidden'); nxStallRender(); nxDom.stall.classList.remove('hidden'); return true; }
     // PLAYTEST-REVIEW-3 #7: Shop and Forge open over the Nexus (the plaza closes underneath) and closing them returns to the Nexus stall.
@@ -1884,7 +1928,7 @@
       let plaza = cv; let act = null;
       if (NX_WALK) { // the plaza is drawn once offscreen; the stage canvas shows a camera window onto it with the walking hero
         plaza = document.createElement('canvas'); plaza.width = NX.W * TILE; plaza.height = NX.H * TILE;
-        root.classList.add('nx-walk'); stage.tabIndex = 0; stage.setAttribute('role', 'application'); stage.setAttribute('aria-label', 'The Nexus plaza: walk with WASD, the arrow keys or the move stick');
+        root.classList.add('nx-walk'); if (NX_TALL) root.classList.add('nx-tall'); stage.tabIndex = 0; stage.setAttribute('role', 'application'); stage.setAttribute('aria-label', 'The Nexus plaza: walk with WASD, the arrow keys or the move stick');
         act = document.createElement('button'); act.type = 'button'; act.id = 'rw-nx-act'; act.className = 'hidden'; act.tabIndex = -1; act.addEventListener('click', () => nxAct());
       }
       const L = NX.layout(); const lists = document.createElement('div'); lists.className = 'nx-lists';
@@ -1969,7 +2013,8 @@
     }
     function nxWalkDraw() {
       const c = nxDom.cv; const g = c.getContext('2d'); const h = nxHero; const L = NX.layout(); g.imageSmoothingEnabled = false;
-      nxCam.x = Math.round(Math.max(0, Math.min(L.w * TILE - NX_VW, h.x - NX_VW / 2))); nxCam.y = Math.round(Math.max(0, Math.min(L.h * TILE - NX_VH, h.y - NX_VH / 2)));
+      const cl = (v, lo, hi) => (hi < lo ? (lo + hi) / 2 : Math.max(lo, Math.min(hi, v))); // W-04 (b04-05): the view stays on the floor (ring excluded); a plaza smaller than the view is centred
+      nxCam.x = Math.round(cl(h.x - NX_VW / 2, TILE, (L.w - 1) * TILE - NX_VW)); nxCam.y = Math.round(cl(h.y - NX_VH / 2, TILE, (L.h - 1) * TILE - NX_VH));
       g.drawImage(nxDom.plaza, nxCam.x, nxCam.y, NX_VW, NX_VH, 0, 0, NX_VW, NX_VH);
       g.save(); g.translate(-nxCam.x, -nxCam.y);
       if (nxNearI) { const r = nxNearI.ref; g.strokeStyle = '#ffe27a'; g.lineWidth = 3; g.beginPath(); g.arc(r.x, r.y, nxNearI.kind === 'npc' ? 30 : 36, 0, Math.PI * 2); g.stroke(); }
@@ -2000,8 +2045,15 @@
       nxRaf = 0; nxNearI = null;
       document.body.classList.remove('nx-walking');
     }
+    // G-23 (b03-01): the Nexus never opens (and so never pauses the arena) mid Trial of Six or while a world boss is awake within its leash
+    // (bossLive is cleared when you walk 40 tiles away). Used by Enter, the button and the prompt.
+    function nexusAllowed() {
+      if (rush.on && (rush.phase === 'fight' || rush.phase === 'rest')) return false;
+      for (let i = 0; i < bossLive.length; i++) if (bossLive[i] && bossLive[i].active) return false;
+      return true;
+    }
     function nexusOpen() {
-      if (!NX_ON || !nxSite || nxOpen || leaving || !arena.active || arena.state !== 'play' || arena.paused) return false;
+      if (!NX_ON || !nxSite || nxOpen || leaving || !arena.active || arena.state !== 'play' || arena.paused || !nexusAllowed()) return false;
       nxBuild(); nxEnterTile = { x: Math.floor(arena.player.x / TILE), y: Math.floor(arena.player.y / TILE) };
       nxOpen = true; arena.paused = true; savePos(true);
       nxBtn.classList.add('hidden'); portalBtn.classList.add('hidden'); siteBtn.classList.add('hidden'); if (typeof lairBtn !== 'undefined') { lairBtn.classList.add('hidden'); lairTxt = ''; }
@@ -2017,13 +2069,18 @@
       nxNear = true; return true; // the prompt shows again next tick if the player is still beside the portal
     }
     window.addEventListener('keydown', (ev) => {
-      if (nxOpen && ev.key === 'Escape') { ev.preventDefault(); ev.stopImmediatePropagation(); nexusClose(); return; }
+      if (nxOpen && ev.key === 'Escape') { // G-12: Esc closes the quest board / stall first, the Nexus on the next press
+        ev.preventDefault(); ev.stopImmediatePropagation();
+        if (nxDom && !nxDom.board.classList.contains('hidden')) { nxDom.board.classList.add('hidden'); return; }
+        if (nxDom && nxDom.stall && !nxDom.stall.classList.contains('hidden')) { nxStallHide(); return; }
+        nexusClose(); return;
+      }
       if (nxOpen && NX_WALK) { // walking: E / Enter / Space use the nearby portal or NPC; fire, ability and panel keys do nothing in the plaza
         const k = String(ev.key || '').toLowerCase(); const onBtn = !!(ev.target && ev.target.closest && ev.target.closest('button'));
         if ((k === 'e' || k === 'shift' || ((k === 'enter' || k === ' ') && !onBtn)) && nxNearI && !ev.repeat) { ev.preventDefault(); ev.stopImmediatePropagation(); nxAct(); return; }
         if (/^(e|q|r|f|b|i|k|v|p|shift)$/.test(k) || (k === ' ' && !onBtn)) { ev.preventDefault(); ev.stopImmediatePropagation(); return; }
       }
-      if (ev.key === 'Enter' && !nxOpen && nxNear && promptFor < 0 && !siteFor && arena.active && !arena.paused && arena.state === 'play') { ev.preventDefault(); nexusOpen(); }
+      if (ev.key === 'Enter' && !nxOpen && nxNear && promptFor < 0 && !siteFor && arena.active && !arena.paused && arena.state === 'play' && nexusAllowed()) { ev.preventDefault(); nexusOpen(); } // G-23: blocked = Enter stays a fire key
     }, true);
     nxBtn.addEventListener('click', () => nexusOpen());
     function nexusTick() {
@@ -2031,7 +2088,8 @@
       const p = arena.player; const near = arena.state === 'play' && !arena.paused && (p.x - nxSite.x) ** 2 + (p.y - nxSite.y) ** 2 < 48 * 48;
       nxNear = near;
       const show = near && promptFor < 0 && !siteFor;
-      if (show) { const t = 'Visit the Nexus' + (isCoarse() ? '' : ' (Enter)'); if (nxBtn.textContent !== t) nxBtn.textContent = t; }
+      const ok = nexusAllowed(); // G-23: while a fight is on the prompt says so and the button is disabled
+      if (show) { const t = ok ? 'Visit the Nexus' + (isCoarse() ? '' : ' (Enter)') : 'Finish the fight first'; if (nxBtn.textContent !== t) nxBtn.textContent = t; if (nxBtn.disabled !== !ok) nxBtn.disabled = !ok; }
       nxBtn.classList.toggle('hidden', !show);
     }
     function drawNexusPortal(g, tt, reduced) {
@@ -2173,6 +2231,8 @@
     function nxBoardRender() {
       const b = nxDom.board; b.textContent = '';
       const h = document.createElement('b'); h.textContent = 'Daily quests · ' + questDate(); b.appendChild(h);
+      const bx = document.createElement('button'); bx.type = 'button'; bx.id = 'rw-nx-board-close'; bx.textContent = 'Close'; bx.setAttribute('aria-label', 'Close the quest board'); // G-12
+      bx.style.cssText = 'float:right;min-height:44px;min-width:44px'; bx.addEventListener('click', () => b.classList.add('hidden')); b.insertBefore(bx, h);
       MMQuests.summary(save.quests, questDate()).forEach((q) => {
         const row = document.createElement('div'); row.className = 'nx-q'; row.dataset.quest = q.id;
         const t = document.createElement('span'); t.textContent = q.text + ' (' + q.p + '/' + q.need + ') '; const r = document.createElement('em'); r.textContent = '+' + q.reward.shards + ' 💎' + (QBAG_ON && q.reward.bag ? ' · ' + q.reward.bag + ' bag' : ''); t.appendChild(r);
@@ -2370,7 +2430,7 @@
 
     const api = {
       seed, world, genMs, SAVE_KEY, TILE, CPX, MAX_CHUNKS,
-      chunkCount: () => chunks.size, chunkBuilds: () => chunkBuilds, artTiles: () => artTiles, miniDraws: () => miniDraws,
+      chunkCount: () => chunks.size, chunkBuilds: () => chunkBuilds, bakeChunk: (cx, cy) => buildChunk(cx, cy).cv, terrainName: (tx, ty) => TN[terrain[ty * ww + tx]] || '', hasTransition: (tx, ty) => !!transitionAt(tx, ty, terrain[ty * ww + tx]), bakeStats: () => ({ edge: Object.assign({}, edgeStat), shade: Object.assign({}, shadeStat) }), // W-03 hooks artTiles: () => artTiles, miniDraws: () => miniDraws,
       slam: { on: SLAM_ON, hits: () => slamHits, winds: () => slamWinds }, zone: () => lastZone, fireBudget: { on: FB_ON, capFor: ebCapFor, now: () => (arena.fireBudget ? Object.assign({}, arena.fireBudget) : null), live: () => arena._ebLive, capped: () => arena._ebCapped }, zoneGrad: { on: ZGRAD, bands: world.bands || 'classic', recLv, last: () => lastCross, crossings: () => crossN, slowLeft: () => Math.max(0, slowUntil - arena.clock), moveScale: () => moveScaleAt(arena.player.x, arena.player.y) }, hudText: () => ({ zone: zName.textContent, coords: zCoords.textContent, arrow: arrowDeg }),
       tileAt: (x, y) => O.tileAt(world, Math.floor(x / TILE), Math.floor(y / TILE)), solidAt, shotSolidAt, nearestFree,
       tileCenter: (tx, ty) => ({ x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE }),
@@ -2412,7 +2472,7 @@
       pickups: { on: PICK_ON, cap: PICK_CAP, magnet: MAGNET_R, list: () => picks.map((q) => ({ type: q.type, art: q.art, value: q.value, tier: q.tier, x: q.x, y: q.y, lifeMs: q.lifeMs })), spawn: spawnPickups, got: () => Object.assign({}, pickGot), total: () => pickTotal },
       nexus: { on: NX_ON, site: nxSite, portalName: (id) => (NX_ON ? nxPortalName(NX.layout().portals.find((q) => q.id === id)) : ''), promptFor: (id) => { const q = NX_ON ? NX.layout().portals.find((p) => p.id === id) : null; return q ? nxLabel({ kind: 'portal', ref: q }) : ''; }, open: nexusOpen, close: nexusClose, isOpen: () => nxOpen, near: () => nxNear, enterTile: () => nxEnterTile, talk: (id) => { const n = NX_ON && NX.layout().npcs.find((x) => x.id === id); if (n) { nxBuild(); nxTalk(n); } return nxDom && nxDom.last; }, stall: { on: () => NX_ON && nxStallOn(), open: () => NX_ON && nxStallOpen(), isOpen: () => !!(nxDom && nxDom.stall && nxDom.stall.isConnected && !nxDom.stall.classList.contains('hidden')), forge: () => NX_ON && nxStallForge() }, portal: (id) => { const q = NX_ON && NX.layout().portals.find((x) => x.id === id); return q ? nxPortal(q) : null; }, lastUrl: () => api.lastNexusUrl || null, today: todayUtc,
         // walkable plaza (PLAYTEST-REVIEW-2 #5); step(mx, my, dt) injects input for tests, place() only accepts free plaza points
-        walk: { on: NX_WALK, view: { w: NX_VW, h: NX_VH }, hero: () => ({ x: nxHero.x, y: nxHero.y, tx: Math.floor(nxHero.x / TILE), ty: Math.floor(nxHero.y / TILE), moving: nxHero.moving }), cam: () => ({ x: nxCam.x, y: nxCam.y }),
+        walk: { on: NX_WALK, view: { w: NX_VW, h: NX_VH }, labels: () => nxLabels.map((r) => Object.assign({}, r)), tall: NX_TALL, hero: () => ({ x: nxHero.x, y: nxHero.y, tx: Math.floor(nxHero.x / TILE), ty: Math.floor(nxHero.y / TILE), moving: nxHero.moving }), cam: () => ({ x: nxCam.x, y: nxCam.y }),
           near: () => (nxNearI ? { kind: nxNearI.kind, id: nxNearI.ref.id } : null), act: () => nxAct(), step: (mx, my, dt) => { if (nxOpen && NX_WALK) nxWalkStep(Number(dt) || 1 / 60, Number(mx) || 0, Number(my) || 0); return { x: nxHero.x, y: nxHero.y }; },
           place: (x, y) => { if (!nxOpen || !NX_WALK || !nxFree(Number(x), Number(y))) return false; nxHero.x = Number(x); nxHero.y = Number(y); nxSyncPrompt(); return true; }, running: () => nxRaf !== 0 } },
       quests: { date: questDate, list: () => MMQuests.quests(questDate()), summary: () => MMQuests.summary(save.quests, questDate()), state: () => JSON.parse(JSON.stringify(save.quests || MMQuests.fresh(questDate()))), event: nxQuestEvent, claim: nxClaim, flush: () => { qDirty = false; return writeSave(save); } },

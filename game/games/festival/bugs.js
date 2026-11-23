@@ -313,7 +313,7 @@
     var c = document.createElement('canvas'); c.width = W * TILE; c.height = H * TILE; var g = c.getContext('2d');
     var th = THEME[id];
     for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) {
-      g.fillStyle = (x + y) % 2 ? th[0] : th[1]; g.fillRect(x * TILE, y * TILE, TILE, TILE);
+      g.fillStyle = th[0]; g.fillRect(x * TILE, y * TILE, TILE, TILE); if ((x + y) % 2 === 0) { g.globalAlpha = 0.5; g.fillStyle = th[1]; g.fillRect(x * TILE, y * TILE, TILE, TILE); g.globalAlpha = 1; } // W-11: calmer checker (half contrast)
       var h = hash(x, y), px = x * TILE, py = y * TILE;
       if (h % 3 === 0) { g.fillStyle = 'rgba(0,0,0,.10)'; g.fillRect(px + (h >> 6) % 13, py + (h >> 10) % 13, 3, 1); g.fillRect(px + (h >> 6) % 13 + 1, py + (h >> 10) % 13 - 1, 1, 1); }
       if (h % 5 === 0) { g.fillStyle = 'rgba(255,255,255,.12)'; g.fillRect(px + (h >> 4) % 12, py + (h >> 8) % 12, 2, 3); }
@@ -347,8 +347,28 @@
       g.restore(); return;
     }
     if (b.glow) circle(g, x, y, 6, 'rgba(255,240,140,' + (reduced || gfx.low ? 0.4 : 0.3 + 0.2 * Math.sin(time * 4 + m.ph)).toFixed(2) + ')'); // VAR1 glow bug: steady with reduced motion / low gfx
-    drawSpecies(g, b.type, x, y, flap, time);
+    drawBugBig(g, b.type, x, y, flap, time);
     g.restore();
+  }
+  // W-11 (b10-11): on phones the field is shown near 1:1, so bugs were 8-10 screen px and blended into the grass. Each bug is drawn
+  // through two small scratch canvases: its sprite plus a 1 px dark outline (silhouette composited at 4 offsets), at 2x when the field
+  // is displayed under 1.8x (phones), 1x otherwise. Canvas 2D only, no getImageData; hit areas, timing and scores are untouched.
+  var BUG_S = 28, bugA = document.createElement('canvas'), bugB = document.createElement('canvas'); bugA.width = bugA.height = bugB.width = bugB.height = BUG_S;
+  var ga = bugA.getContext('2d'), gb = bugB.getContext('2d'), bugStat = { scale: 1, draws: 0 };
+  function lum(hex) { var n = parseInt(hex.slice(1), 16), c = [n >> 16 & 255, n >> 8 & 255, n & 255].map(function (v) { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; }
+  var inkCache = {};
+  function inkFor(id) { if (inkCache[id]) return inkCache[id]; var th = THEME[id] || THEME.meadow; var L = Math.max(lum(th[0]), lum(th[1])); return (inkCache[id] = L < 0.12 ? '#f2ead6' : '#14100c'); } // dark arenas (night glade, lantern) get a light rim
+  function bugScale() { var r = cv.getBoundingClientRect(); var k = r.width > 0 ? r.width / cv.width : 2; return k < 1.8 ? 2 : 1; }
+  function drawBugBig(g, type, x, y, flap, time) {
+    var h = BUG_S / 2, k = bugStat.scale;
+    ga.setTransform(1, 0, 0, 1, 0, 0); ga.clearRect(0, 0, BUG_S, BUG_S); drawSpecies(ga, type, h, h, flap, time);
+    gb.globalCompositeOperation = 'source-over'; gb.clearRect(0, 0, BUG_S, BUG_S);
+    gb.drawImage(bugA, -1, 0); gb.drawImage(bugA, 1, 0); gb.drawImage(bugA, 0, -1); gb.drawImage(bugA, 0, 1);
+    gb.globalCompositeOperation = 'source-in'; gb.fillStyle = bugStat.ink || '#14100c'; gb.fillRect(0, 0, BUG_S, BUG_S); gb.globalCompositeOperation = 'source-over';
+    var sm = g.imageSmoothingEnabled; g.imageSmoothingEnabled = false;
+    g.drawImage(bugB, Math.round(x - h * k), Math.round(y - h * k), BUG_S * k, BUG_S * k);
+    g.drawImage(bugA, Math.round(x - h * k), Math.round(y - h * k), BUG_S * k, BUG_S * k);
+    g.imageSmoothingEnabled = sm; bugStat.draws++;
   }
   function drawSpecies(g, type, x, y, flap, time) {
     flap = Math.round(flap);
@@ -398,8 +418,9 @@
     g.fillStyle = 'rgba(238,238,238,.35)'; g.fillRect(nx - 2, ny - 2, 5, 5);
   }
   function render() {
-    var g = ctx; g.setTransform(1, 0, 0, 1, 0, 0);
+    var g = ctx; g.setTransform(1, 0, 0, 1, 0, 0); var nowMs = performance.now(); if (!bugStat.t || nowMs - bugStat.t > 1000) { bugStat.t = nowMs; bugStat.scale = bugScale(); } // layout read at most once a second
     var id = arenaId || 'meadow';
+    bugStat.ink = inkFor(id);
     var ox = 0, oy = 0;
     if (shake > 0 && !reduced) { ox = Math.round((Math.random() - .5) * 3); oy = Math.round((Math.random() - .5) * 3); }
     g.save(); g.translate(ox, oy);
@@ -713,6 +734,7 @@
       get modsOn() { return MODS_ON; },
       nextFor: function (id) { return JSON.parse(JSON.stringify(peekNext(id))); },
       get particles() { return particles.length; },
+      bugArt: function () { return { scale: bugStat.scale, draws: bugStat.draws, ink: bugStat.ink, theme: THEME, inks: Object.keys(THEME).map(function (k) { return [k, inkFor(k)]; }) }; },
       get gfx() { return { tier: gfx.tier, low: gfx.low, cap: gfx.cap, burst: gfx.burst, dpr: gfx.dpr || 1 }; },
       render: render,
       renderAt: function (t) { if (game) game.state.time = t; render(); }, // draw one frame at run time t (no step: nothing wanders)
