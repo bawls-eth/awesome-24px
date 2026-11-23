@@ -641,7 +641,9 @@
       rings.forEach(function (r) { var rr = Math.round((14 + r.t * 90) / 3) * 3, rx = colOf(r.lane) * LANE_W + LANE_W / 2; g.fillStyle = LANE_COL[r.lane]; g.globalAlpha = Math.max(0, 1 - r.t / 0.3);
         g.fillRect(rx - rr, HIT_Y - rr, rr * 2, 3); g.fillRect(rx - rr, HIT_Y + rr - 3, rr * 2, 3); g.fillRect(rx - rr, HIT_Y - rr, 3, rr * 2); g.fillRect(rx + rr - 3, HIT_Y - rr, 3, rr * 2); g.globalAlpha = 1; });
       g.font = 'bold 14px monospace';
-      popups.forEach(function (p) { var y = HIT_Y - 40 - (reduced ? 0 : p.t * 40); g.globalAlpha = reduced ? 1 : 1 - p.t / 0.6; g.fillStyle = '#000'; g.fillText(p.text, p.x + 1, y + 1); g.fillStyle = p.col; g.fillText(p.text, p.x, y);
+      popups.forEach(function (p) { var y = HIT_Y - 40 - (reduced ? 0 : Math.round(p.t * 40 / 3) * 3); g.globalAlpha = reduced ? 1 : (p.t < 0.4 ? 1 : 0.5);
+        if (window.MM8 && MM8.text) MM8.text(g, String(p.text).toUpperCase(), p.x, y - 12, 2, p.col, { align: 'center', shadow: '#0b0814' });
+        else { g.fillStyle = '#000'; g.fillText(p.text, p.x + 1, y + 1); g.fillStyle = p.col; g.fillText(p.text, p.x, y); }
         if (p.tag) { g.font = 'bold 10px monospace'; g.fillStyle = p.tag === 'early' ? '#9bf6ff' : '#ffadad'; g.fillText(p.tag, p.x, y + 12); g.font = 'bold 14px monospace'; }
         g.globalAlpha = 1; });
       sparks.forEach(function (p) { g.globalAlpha = p.t < 0.3 ? 1 : 0.5; g.fillStyle = p.col; g.fillRect(Math.round(p.x / 3) * 3 - 2, Math.round(p.y / 3) * 3 - 2, 4, 4); });
@@ -650,8 +652,9 @@
       if (!relax && !practice && combo >= 5) {
         var cs = 34 + (reduced ? 0 : Math.round(comboPop * 8));
         g.font = 'bold ' + cs + 'px monospace'; g.globalAlpha = 0.32 + Math.min(0.4, combo / 100);
-        g.fillStyle = combo >= 50 ? '#ffd166' : '#ffffff'; g.fillText(String(combo), CW / 2, 120);
-        g.font = 'bold 12px monospace'; g.fillText('COMBO', CW / 2, 138); g.globalAlpha = 1;
+        if (window.MM8 && MM8.text) { MM8.text(g, String(combo), CW / 2, 92 - (cs > 36 ? 3 : 0), cs > 36 ? 5 : 4, combo >= 50 ? '#ffd166' : '#ffffff', { align: 'center', shadow: '#0b0814' }); MM8.text(g, 'COMBO', CW / 2, 128, 2, combo >= 50 ? '#ffd166' : '#ffffff', { align: 'center', shadow: '#0b0814' }); }
+        else { g.fillStyle = combo >= 50 ? '#ffd166' : '#ffffff'; g.fillText(String(combo), CW / 2, 120); g.font = 'bold 12px monospace'; g.fillText('COMBO', CW / 2, 138); }
+        g.globalAlpha = 1;
       }
       if (banner) {
         var ba = banner.t < 0.8 ? 1 : Math.max(0, 1 - (banner.t - 0.8) / 0.3), bs = reduced ? 22 : 22 + Math.round(Math.max(0, 0.15 - banner.t) * 60);

@@ -128,3 +128,4 @@ body { font-family: "Courier New", ui-monospace, Menlo, Consolas, monospace; -we
 .pad { color:var(--px-ink); }
 #pads { gap:12px; padding:3px; }
 body.px8 { background-color:var(--bg); color:var(--ink); }
+#game { width:min(100%, max(260px, calc((100vh - 262px) * 0.762))); }
