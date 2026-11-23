@@ -172,6 +172,15 @@ try {
   check('no AudioContext is created at construction (autoplay policy)', made === 0);
   check('hostile sound names are rejected without making a context', ['toString', '__proto__', 'constructor', 'nope', null, 5].every((n) => fx.play(n) === false) && made === 0);
   check('play() on a suspended context asks to resume', fx.play('coin') === true && made === 1 && rejected >= 1);
+  const navDesc = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  const ua = { isActive: false };
+  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { userActivation: ua } });
+  const fx2 = Sfx.create({ ctxFactory: factory, storage: null });
+  fx2.play('coin'); // creates the (suspended) context outside a gesture
+  const queued = [fx2.play('coin'), fx2.play('select'), fx2.play('chest')];
+  ua.isActive = true; const tapped = fx2.play('coin');
+  if (navDesc) Object.defineProperty(globalThis, 'navigator', navDesc); else delete globalThis.navigator;
+  check('suspended context + no user activation: sounds are dropped, not queued to burst out on the first tap', queued.every((x) => x === false) && tapped === true, JSON.stringify([queued, tapped]));
   setTimeout(() => {
     process.off('unhandledRejection', onU);
     check('a rejected resume() (autoplay blocked) is never an unhandled rejection', unhandled === 0);

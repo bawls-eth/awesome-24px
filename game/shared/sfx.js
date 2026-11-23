@@ -23,6 +23,7 @@
   const own = (o, k) => typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k);
   // resume() is a Promise in every modern browser and rejects under some autoplay policies (Safari): never leave it unhandled
   const wake = (c) => { if (c.state === 'suspended' && c.resume) { try { const p = c.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* ignore */ } } };
+  const gesture = () => { try { const n = typeof navigator !== 'undefined' ? navigator : null, u = n && n.userActivation; return !u || !!u.isActive; } catch (e) { return true; } };
   const chip = () => CHIP || (typeof self !== 'undefined' && self.MMChip) || null;
   const KEY = 'mm-sfx-muted';
   const LIMITS = { shot: 12, hit: 16, portal: 4, bag_rare: 4, boss_awaken: 2, warn: 4, claim: 4, ui_tap: 10 }; // max per second
@@ -125,6 +126,10 @@
       const c = ensure();
       if (!c) return false;
       try {
+        // Autoplay: a sound asked for outside a user gesture while the context is still suspended would be queued at the frozen
+        // currentTime and every such sound would then burst out together on the first tap. Drop it instead (browsers that
+        // report navigator.userActivation only; elsewhere the old behaviour stays).
+        if (c.state === 'suspended' && !gesture()) return false;
         if (!allowed(name, c.currentTime)) return false;
         wake(c);
         if (chipName) { duck(c); C.playSfx(c, sfxBus || master || c.destination, chipName, cache); } else rec.forEach((r) => voice(c, r));
