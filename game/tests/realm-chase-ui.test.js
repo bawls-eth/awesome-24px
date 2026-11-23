@@ -31,6 +31,7 @@ async function open(browser, query, viewport, items, gp) {
   await page.goto(MAZE + (query || ''));
   await page.waitForFunction(() => window.__mm && window.__mm.arena && window.__mm.arena.active, null, { timeout: 15000 });
   await page.evaluate(() => { const a = window.__mm.arena; a.state = 'play'; a.eBullets.forEach((b) => { b.active = false; }); a.enemies.forEach((e) => { e.active = false; }); a._calcStats(); a.setPaused(true); });
+  await page.click('#realm-bp-tab-relics'); // BP8: the relic book + pity line live on the backpack's Relics (Collections) tab
   return { ctx, page, errors, db };
 }
 const view = (page) => page.evaluate(() => {
@@ -58,11 +59,12 @@ const view = (page) => page.evaluate(() => {
       && v1.rows.map((r) => r.id).join() === exp.entries.map((e) => e.id).join() && v1.rows.filter((r) => r.found).map((r) => r.id).sort().join() === 'arm_sig_dread,arm_sig_hydra'
       && v1.rows.find((r) => r.id === 'arm_sig_dread').text.indexOf('Dread Plate (Dread Knight)') >= 0 && v1.rows.find((r) => r.id === 'arm_sig_oracle').text.indexOf('Not yet: Void Oracle relic') >= 0, JSON.stringify(v1.rows));
     check('the relic book text is calm: no countdown, timer or urgency words', !/(\d+\s*(s|sec|min|hours?|days?)\b|left|hurry|expires|last chance|streak|missed)/i.test(v1.rows.map((r) => r.text).join(' ') + ' ' + v1.hint + ' ' + v1.label), JSON.stringify(v1));
-    await page.click('#realm-bp-stats-toggle');
+    await page.click('#realm-bp-tab-stats'); await page.click('#realm-bp-tab-relics'); // switching to the tab refreshes the pity line
     const v2 = await view(page);
     const c = await page.evaluate(() => MMEndgame.chase({ gp: { b: 12, d: 3 }, items: window.__mm.arena.save.items }));
-    check('the Stats drop-down starts with the pity line from MMEndgame.chase ("12 of 60 toward a sure T12": boss pity from the World save, crypt pity from this save)', !!v2.chase && v2.chase.indexOf(c.text) >= 0 && c.text === '12 of 60 toward a sure T12' && v2.chase.indexOf(c.luckText) >= 0 && JSON.stringify(await page.evaluate(() => window.__mm.arena.chaseGp())) === '{"b":12,"d":3}', JSON.stringify({ chase: v2.chase, c: c.text }));
-    check('the pity line is the first thing in the Stats box', await page.evaluate(() => document.getElementById('realm-bp-stats-box').firstElementChild.id === 'realm-bp-chase'));
+    check('the Collections tab shows the pity line from MMEndgame.chase ("12 of 60 toward a sure T12": boss pity from the World save, crypt pity from this save)', !!v2.chase && v2.chase.indexOf(c.text) >= 0 && c.text === '12 of 60 toward a sure T12' && v2.chase.indexOf(c.luckText) >= 0 && JSON.stringify(await page.evaluate(() => window.__mm.arena.chaseGp())) === '{"b":12,"d":3}', JSON.stringify({ chase: v2.chase, c: c.text }));
+    check('the pity line sits at the top of the Relics (Collections) tab, above the relic book, and is visible there', await page.evaluate(() => { const ch = document.getElementById('realm-bp-chase'); const pane = document.getElementById('realm-bp-pane-relics'); const tg = document.getElementById('realm-bp-relic-toggle'); return !!ch && ch.parentElement === pane && !pane.hidden && ch.getBoundingClientRect().height > 0 && !!(ch.compareDocumentPosition(tg) & Node.DOCUMENT_POSITION_FOLLOWING) && pane.querySelector('.rm-bp8-h').textContent === 'Collections'; }));
+    check('the Stats box no longer carries a second pity line', await page.evaluate(() => { const a = window.__mm.arena; a.setStatsOpen(true); return !document.querySelector('#realm-bp-stats-box #realm-bp-chase') && document.querySelectorAll('#realm-bp-chase').length === 1; }));
     errs.push(...A.errors); await A.ctx.close(); // toast below: a T10 pick-up beats the T9 best (relics are T12, so a save without them)
   }
   { const T = await open(browser, '', null, [{ n: 1, id: 'sparkwand', r: 1, t: 9 }]); const page = T.page;
@@ -81,7 +83,7 @@ const view = (page) => page.evaluate(() => {
   // ---- hostile World save: the pity line falls back to 0, no error ----
   { const H = await open(browser); const page = H.page;
     await page.evaluate(() => { localStorage.setItem('pixeltown-realm-v1', '{"gp":{"b":"__proto__"}}x'); });
-    await page.click('#realm-bp-stats-toggle');
+    await page.click('#realm-bp-tab-gear'); await page.click('#realm-bp-tab-relics');
     const v = await view(page);
     check('a broken World save reads as 0 of 60 (no throw)', !!v.chase && v.chase.indexOf('0 of 60 toward a sure T12') >= 0, JSON.stringify(v.chase));
     errs.push(...H.errors); await H.ctx.close(); }
@@ -96,7 +98,7 @@ const view = (page) => page.evaluate(() => {
 
   // ---- ?chase=0 hides both + no toast ----
   { const O = await open(browser, '&chase=0', null, [{ n: 1, id: 'sparkwand', r: 1, t: 9 }, { n: 2, id: 'arm_sig_dread', r: 0, t: 12 }]); const page = O.page;
-    await page.click('#realm-bp-stats-toggle');
+    await page.click('#realm-bp-tab-stats'); await page.click('#realm-bp-stats-toggle');
     const v = await view(page);
     const t = await page.evaluate(() => { const a = window.__mm.arena; a.collectItem('sparkwand', 0, { t: 12 }); return { last: a.lastChaseToast || '', el: !!document.getElementById('realm-chase-toast') }; });
     check('?chase=0 hides the relic book, the pity line and the toast (the Stats box itself stays)', !v.has && v.chase === null && !t.el && t.last === '' && await page.evaluate(() => !!document.querySelector('#realm-bp-stats-box tr[data-stat]')), JSON.stringify({ v: v.has, chase: v.chase, t }));
