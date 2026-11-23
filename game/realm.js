@@ -227,6 +227,7 @@ function rmCleanForged(t, f) {
   return { id: f.id, v: Math.round(v * 1000) / 1000 };
 }
 // Sell value: the rarity's value, plus 2 x tier for tiered gear (MMGear.sellValue) while gear is on.
+const RM_PROVOKE_S = 4; // G-08: seconds a world shooter hit from off screen ignores hold-fire
 const RM_ARM_MS = 300, RM_SELL_ASK_MS = 3000; // G-03: backpack buttons wake 300 ms after a re-render; a protected Sell's "Sure?" lasts 3 s
 function rmSellValue(it) { return RM_GEAR_ON && it && it.t ? MMGear.sellValue(it.r, it.t) : RM_RARITIES[it.r].sell; }
 // A resolved MMWeapons spec, re-clamped into a plain frozen object the engine trusts. Only the 26 alternate styles count (bases keep today's fire).
@@ -2476,7 +2477,7 @@ class RealmArena {
     if (!e) return null;
     const def = RM_ENEMIES[type];
     const scale = (1 + 0.15 * Math.max(0, this.run.wave - 1)) * (this.team && this.role === 'host' ? RT_HP_SCALE : 1); // tougher with a partner
-    e.active = true; e.type = type; e.x = x; e.y = y;
+    e.active = true; e.type = type; e.x = x; e.y = y; e.provT = 0; // G-08: a pooled enemy starts unprovoked
     e.maxHp = Math.ceil(def.hp * scale); e.hp = e.maxHp;
     e.slowT = 0; e.slowF = 1; e.boneT = 0; e.status = null; e._stm = null; e._stNext = Infinity; e._stAcc = 0; e.fireMul = 1; e._pipAt = -9; e._pipN = 0; e._pipMore = 0; e._tg = 0; e._tgW = 0; e._tgP = 0; e._tgA = 0;
     e.dg = null; e._at = undefined; e.t = 0; e.flash = 0; e.angle = this.rng() * Math.PI * 2; e.dir = this.rng() < 0.5 ? 1 : -1;
@@ -2978,11 +2979,12 @@ class RealmArena {
       if (e.slowT > 0) { e.slowT -= dt0; dt = dt0 * e.slowF; } // a signature slow (Blizzard Ring / Thorn Bloom); never set otherwise
       const p = this._nearest(e.x, e.y);
       e.t += dt; e.flash = Math.max(0, e.flash - dt * 6);
-      if (wd && (p.x - e.x) * (p.x - e.x) + (p.y - e.y) * (p.y - e.y) > wake2) { e._tg = 0; continue; } // world: an enemy far from every player sleeps (no moving, no firing)
+      if (wd && !(e.provT > 0) && (p.x - e.x) * (p.x - e.x) + (p.y - e.y) * (p.y - e.y) > wake2) { e._tg = 0; continue; } // world: an enemy far from every player sleeps (no moving, no firing); a provoked one (G-08) wakes
       this._curE = e; this._curDm = e.dmgMul || 1; // bullets fired below carry this enemy's damage multiplier (1 = unchanged)
       let sm = null;
       if (e.status) { if (e._stNext <= this._stT * 1000) this._stRefresh(e); sm = e._stm; if (sm) { this._curDm *= sm.enemyDmg; if (sm.dot > 0) this._stEnemyDot(e, sm, dt0); if (!e.active) continue; } }
-      const hold = (wd || this._dv) && !this._canFire(e, p); // world: off-screen shooters hold their fire (cooldowns wait at 0.2 s)
+      if (e.provT > 0) e.provT = Math.max(0, e.provT - dt0); // G-08: provoked countdown
+      const hold = (wd || this._dv) && !(e.provT > 0) && !this._canFire(e, p); // world: off-screen shooters hold their fire (cooldowns wait at 0.2 s); a provoked one does not
       if (hold) { e.cd = Math.max(e.cd, 0.2); if (e.type === 'boss') e.cd2 = Math.max(e.cd2, 0.2); }
       if (e.type === 'boss') { if (sm && sm.speed < 1) e.t -= dt * (1 - sm.speed); this._updateBoss(e, dt * (e.fireMul || 1) / (sm ? sm.enemyFire : 1)); if (tg) this._tgBoss(e, hold, p); this._curDm = 1; this._curE = null; continue; } // slowed: the sway runs slower
       if (sm && sm.stun) { e._tg = 0; continue; } // stunned: no moving, no firing
@@ -2992,6 +2994,7 @@ class RealmArena {
       const dx = p.x - e.x; const dy = p.y - e.y; const dist = Math.hypot(dx, dy) || 1;
       if (e.type === 'spiral') {
         // Drifts toward its anchor and keeps spinning out a steady spiral.
+        if (e.provT > 0 && wd && !this._canFire(e, p)) { e.ax += (dx / dist) * RM_ENEMIES.spiral.speed * 1.6 * sp * dt; e.ay += (dy / dist) * RM_ENEMIES.spiral.speed * 1.6 * sp * dt; } // G-08: provoked + off screen: the anchor walks in
         const ax = e.ax - e.x; const ay = e.ay - e.y; const ad = Math.hypot(ax, ay);
         if (ad > 8) { e.x += (ax / ad) * RM_ENEMIES.spiral.speed * sp * dt; e.y += (ay / ad) * RM_ENEMIES.spiral.speed * sp * dt; }
         if (e.cd <= 0) { e.cd = 0.09; e.angle += 0.47; this.fireEnemyBullet(e.x, e.y, e.angle, 150, 1); }
@@ -3105,6 +3108,9 @@ class RealmArena {
     if (this.dungeon && e.dg === 'boss') { this.dungeon.hitBoss(e, dmg); return; }
     if (e.type === 'boss' && e.invuln > 0) { if (quiet) return; this._floatText(e.x, e.y - 40, 'shielded', '#c9d1d9'); this._burst(e.x, e.y, '#fff', 1, 60); return; }
     if (this.onEnemyHit) this.onEnemyHit(e, dmg);
+    // G-08 (b01-03): a world shooter hit while it holds its fire (off screen) is provoked for RM_PROVOKE_S: it may fire, and a
+    // non-approaching type steps toward the hero until it is on screen. No farming from beyond the edge of the view.
+    if (this.world && this.mode === 'world' && this._holdFire && e.type !== 'boss' && !this._canFire(e, this._nearest(e.x, e.y))) e.provT = RM_PROVOKE_S;
     e.hp -= dmg; e.flash = 1;
     if (!quiet || e.hp <= 0) this._snd(e.hp > 0 ? 'hit' : 'kill'); // P2: a splashed (quiet) target that survives plays no extra 'hit' (the primary hit just played one; no voice per target)
     if (e.type === 'boss') {
