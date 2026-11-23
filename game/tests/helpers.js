@@ -77,9 +77,12 @@ async function offlineStub(ctx) {
 // Expose the Phaser game as window.__g on a page (same rewrite as launch()).
 async function exposeGame(page) {
   await page.route('**/main.js*', async (route) => {
-    const resp = await route.fetch();
-    const body = (await resp.text()).replace('const game = new Phaser.Game(config);', 'const game = window.__g = new Phaser.Game(config);');
-    route.fulfill({ response: resp, body });
+    // a page / context closed mid-request disposes the response: ignore that instead of an unhandled rejection
+    try {
+      const resp = await route.fetch();
+      const body = (await resp.text()).replace('const game = new Phaser.Game(config);', 'const game = window.__g = new Phaser.Game(config);');
+      await route.fulfill({ response: resp, body });
+    } catch (e) { /* page or context already closed */ }
   });
 }
 // Join the Town through "Play offline" (page must run under offlineStub).
