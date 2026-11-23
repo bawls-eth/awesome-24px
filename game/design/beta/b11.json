@@ -17,7 +17,7 @@
   "screenshots": [
    "img/b11-01.jpg"
   ],
-  "clip": null,
+  "clip": "img/b11-01.mp4",
   "suspect": "game/shared/mm-profile.js:180 rekindle() looks in living p.heroes and never removes the source; game/games/mad-maze/lantern.js:526 renders the button for every hero",
   "kind": "bug",
   "frequency": "always"
@@ -30,14 +30,15 @@
   "steps": [
    "Open deepdelve/index.html?test=1",
    "Give 1 coal",
-   "Place coal on an air cell and mine it again 100 times (a human can do this inside the 1.6 s combo gap)"
+   "Place coal on an air cell and mine it again 100 times (a human can do this inside the 1.6 s combo gap)",
+   "Clip: real-time loop on a phone viewport, 45 cycles in 6 s gave score 810 at 0 deep"
   ],
   "expected": "Score should come from depth and newly found ore",
   "actual": "100 cycles at depth 0: blocks 100, ores 100, bestCombo 100, score 1800 (Steady hands x9 combo). coal, iron_ore, gold_ore, crystal, glowstone are all placeable and re-minable; each mine adds ore points and combo, no depth needed. Unbounded personal-best inflation",
   "viewport": "1280x720",
   "url": "/game/games/deepdelve/index.html",
   "screenshots": [],
-  "clip": null,
+  "clip": "img/b11-02.mp4",
   "suspect": "game/games/deepdelve/deepdelve.js:91 PLACEABLE includes ore blocks; :459 mineBlock -> onMined; dd-run.js mined()",
   "kind": "bug",
   "frequency": "always"
@@ -200,6 +201,69 @@
   "clip": null,
   "suspect": "realm-world.js",
   "kind": "ux",
+  "frequency": "always"
+ },
+ {
+  "id": "b11-11",
+  "severity": "P3",
+  "area": "stalk",
+  "title": "Last action message (e.g. 'Sold 20 to a neighbour...') persists across the week rollover",
+  "steps": [
+   "?test=1&week=2900&slot=0, buy 20, sell to a neighbour on a weekday",
+   "Roll to week 2901"
+  ],
+  "expected": "Message cleared or replaced by a new-week line",
+  "actual": "New Sunday still shows 'Sold 20 to a neighbour at 110 each ... A weekly goal is done!' (only spoiled stalks produce a new-week message). Confusing when weeks pass silently",
+  "viewport": "390x844",
+  "url": "/game/games/stalk/index.html?test=1",
+  "screenshots": [
+   "img/b11-08.jpg"
+  ],
+  "clip": null,
+  "suspect": "stalk.js tick()/sync(): say() only on spoiledNote",
+  "kind": "ux",
+  "frequency": "always"
+ },
+ {
+  "id": "b11-12",
+  "severity": "P3",
+  "area": "deepdelve",
+  "title": "Creative world on phone: hotbar clipped at the left edge, Goals panel lists survival goals as 'Depth -8'",
+  "steps": [
+   "390x844 touch, press Creative world",
+   "Look at hotbar",
+   "Open Goals"
+  ],
+  "expected": "Hotbar fits or scrolls to the selection; creative world either hides survival goals or labels them",
+  "actual": "First hotbar slot is cut off at the screen edge. Goals panel in the calm creative world shows Bronze 'Depth -8', 'Depth -20' with a minus sign (depth is shown as negative) and survival goals that cannot progress there",
+  "viewport": "390x844",
+  "url": "/game/games/deepdelve/index.html?mode=creative",
+  "screenshots": [
+   "img/b11-07.jpg"
+  ],
+  "clip": null,
+  "suspect": "deepdelve.js goal titles; hotbar css",
+  "kind": "visual",
+  "frequency": "always"
+ },
+ {
+  "id": "b11-13",
+  "severity": "P3",
+  "area": "stalk",
+  "title": "Stalk neighbour dwarfs the stall price: 204 vs 122 on the same half-day (confirms b11-04 with numbers)",
+  "steps": [
+   "?test=1&week=2900&slot=8 with 20 stalks"
+  ],
+  "expected": "Stall price competitive with neighbours",
+  "actual": "Stall 122, Pip 110, Maple 204 (best), Bramble 53; selling 20 to Maple nets 4,065 vs 2,440 at the stall (fee 15). Free to check every half-day",
+  "viewport": "390x844",
+  "url": "/game/games/stalk/index.html?test=1",
+  "screenshots": [
+   "img/b11-08.jpg"
+  ],
+  "clip": null,
+  "suspect": "mm-stalk-market.js neighbourPrice",
+  "kind": "balance",
   "frequency": "always"
  }
 ]
