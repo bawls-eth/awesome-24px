@@ -14,7 +14,7 @@
   // Tier shape: which eighth-note slots of a bar may hold a note, how dense, hold chance, notes-per-second cap.
   const TIER = {
     easy: { slots: [0, 2, 4, 6], dens: 0.7, hold: 0.08, cap: 2 },
-    normal: { slots: [0, 1, 2, 3, 4, 5, 6, 7], dens: 0.5, hold: 0.12, cap: 3.5 },
+    normal: { slots: [0, 1, 2, 3, 4, 5, 6, 7], dens: 0.56, hold: 0.12, cap: 4 },
     hard: { slots: [0, 1, 2, 3, 4, 5, 6, 7], dens: 0.75, hold: 0.14, cap: 5.5 }
   };
   // Original songs, defined as data. scale = semitone steps over rootHz; prog = bass root offsets per bar (loops).

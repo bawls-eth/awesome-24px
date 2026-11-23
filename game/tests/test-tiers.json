@@ -1,4 +1,8 @@
 {
+  "a11y-viewport-sweep.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "town-polish.test.js": {
     "class": "browser",
     "tier": "full"
@@ -286,6 +290,10 @@
   "jam-menu-first-tap.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "jam-bugbash.test.js": {
+    "class": "browser",
+    "tier": "full"
   },
   "jam-fun.test.js": {
     "class": "browser",
@@ -708,6 +716,10 @@
     "tier": "smoke"
   },
   "stalk-page.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "angler-bugbash.test.js": {
     "class": "browser",
     "tier": "smoke"
   },
@@ -1403,6 +1415,10 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "dash-bugbash.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "stack-page.test.js": {
     "class": "browser",
     "tier": "smoke"
@@ -1463,8 +1479,20 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "art-mini-art.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
   "stalk-bugbash.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "live-safety.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "net-hostile-presence.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
