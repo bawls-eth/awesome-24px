@@ -87,6 +87,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "bugs-bb.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "bugs-variety.test.js": {
     "class": "browser",
     "tier": "full"
@@ -227,6 +231,10 @@
     "class": "live",
     "tier": "full"
   },
+  "deepdelve-bugbash.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "deepdelve-goals.test.js": {
     "class": "browser",
     "tier": "full"
@@ -284,6 +292,10 @@
     "tier": "smoke"
   },
   "stalk-notes.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "lantern-intro-help.test.js": {
     "class": "browser",
     "tier": "smoke"
   },
@@ -1395,6 +1407,10 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "echo-bugbash.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "echo-page.test.js": {
     "class": "browser",
     "tier": "smoke"
@@ -1445,6 +1461,10 @@
   },
   "realm-bugbash.test.js": {
     "class": "browser",
-    "tier": "full"
+    "tier": "smoke"
+  },
+  "stalk-bugbash.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }

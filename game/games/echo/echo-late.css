@@ -1,0 +1,20 @@
+/* Echo Garden, loaded after the 8-bit theme: text size (--ui-scale from MMSideAccess / MMSettings) and short landscape screens. */
+#hud { grid-template-columns: repeat(auto-fit, minmax(calc(78px * var(--ui-scale, 1)), 1fr)); }
+.stat .lbl { font-size: calc(12px * var(--ui-scale, 1)); }
+.stat strong { font-size: calc(20px * var(--ui-scale, 1)); }
+#top h1 { font-size: calc(20px * var(--ui-scale, 1)); }
+#btn-mute { font-size: calc(13px * var(--ui-scale, 1)); }
+.card h2 { font-size: calc(18px * var(--ui-scale, 1)); }
+.card, .card p, .dim { font-size: calc(14px * var(--ui-scale, 1)); }
+.big { font-size: calc(18px * var(--ui-scale, 1)); }
+ul.medals li { font-size: calc(12px * var(--ui-scale, 1)); }
+#msg, #wilts { font-size: calc(14px * var(--ui-scale, 1)); }
+.overlay { max-height: calc(100vh - 80px); overflow-y: auto; }
+/* phone held sideways: the garden fills the height, the numbers and messages sit beside it */
+@media (orientation: landscape) and (max-height: 560px) {
+  #top { padding: 4px 16px; }
+  #stage { max-width: 940px; display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 14px; row-gap: 6px; align-content: start; padding-bottom: 8px; }
+  #stage > * { grid-column: 2; }
+  #board { grid-column: 1; grid-row: 1 / span 8; width: auto; max-width: none; height: calc(100vh - 112px); min-height: 200px; aspect-ratio: 360 / 400; align-self: start; }
+  .overlay { top: 4px; left: 16px; right: 16px; max-height: calc(100vh - 12px); }
+}

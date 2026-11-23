@@ -122,3 +122,23 @@ body { background-image:linear-gradient(rgba(255,255,255,.03) 2px, transparent 2
 #btn-swing { clip-path:polygon(25% 0,75% 0,75% 8%,92% 8%,92% 25%,100% 25%,100% 75%,92% 75%,92% 92%,75% 92%,75% 100%,25% 100%,25% 92%,8% 92%,8% 75%,0 75%,0 25%,8% 25%,8% 8%,25% 8%); }
 #hud-time.hurry { animation-timing-function:steps(2, end); }
 #hud-score { transition:none; }
+
+/* BB1: the field fits the window height, so a run never needs page scrolling (desktop 1280x720, phone landscape). */
+#canvas-wrap { width:min(100%, max(288px, calc((100vh - 190px) * 1.4286 + 24px))); margin:0 auto; }
+@supports (height:100dvh) { #canvas-wrap { width:min(100%, max(288px, calc((100dvh - 190px) * 1.4286 + 24px))); } }
+/* Phone landscape: the stick and buttons float in the side gutters beside the field instead of sitting below it. */
+@media (orientation: landscape) and (max-height: 520px) and (pointer: coarse) {
+  #top { padding-top:2px; padding-bottom:2px; }
+  #top h1 { display:none; }
+  #canvas-wrap { width:min(100%, max(288px, calc((100vh - 150px) * 1.4286 + 24px))); }
+  #touch { position:fixed; left:0; right:0; bottom:calc(8px + env(safe-area-inset-bottom)); padding:0 calc(10px + env(safe-area-inset-left)) 0 calc(10px + env(safe-area-inset-right)); z-index:20; pointer-events:none; align-items:flex-end; }
+  #touch > * { pointer-events:auto; }
+  #joy { width:112px; height:112px; } #knob { left:36px; top:36px; }
+  #btn-swing { width:96px; height:96px; }
+  #touch { gap:8px; }
+  #touch #btn-sneak { margin-left:auto; }
+  #help { display:none; }
+}
+/* 150% text: the HUD wraps instead of overflowing, and menu cards keep their text inside the button. */
+#hud { row-gap:2px; }
+#overlay button.card { overflow-wrap:anywhere; }

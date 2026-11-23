@@ -100,7 +100,7 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
   check('chain preview: a twin pair that lands next to its twin predicts a x2 chain (group of 2, new tile 3)', pv.pr && pv.pr.size === 2 && pv.pr.chain === 2 && pv.pr.cells.length === 2, JSON.stringify(pv.pr));
   check('chain preview: never touches the board (or the seeded refills); a lone tile predicts nothing', pv.same && pv.lone === null);
   check('chain preview is a safe lower bound: the real pop chained at least as far', pv.chain >= pv.pr.chain, JSON.stringify(pv));
-  check('combo audio ladder: a x2 chain plays the brighter "claim" step', pv.chain === 2 ? pv.sound === 'claim' : pv.sound === ['pickup', 'claim', 'bag_rare', 'levelup'][Math.min(pv.chain, 4) - 1], JSON.stringify(pv));
+  check('combo audio ladder: a x2 chain plays the brighter "combo2" chip step', pv.sound === ['pop', 'combo2', 'combo3', 'combo4', 'combo5', 'combo6', 'combo7', 'combo8'][Math.min(pv.chain, 8) - 1], JSON.stringify(pv));
   const lad = await p.evaluate(() => {
     __pop.set([[1, 1, 3, 2, 3, 2], [2, 3, 2, 3, 2, 3], [3, 2, 3, 2, 3, 2], [2, 3, 2, 3, 2, 3], [3, 2, 3, 2, 3, 2]]);
     const r = __pop.tap(0, 1), one = __pop.lastSound;
@@ -108,7 +108,7 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
     __pop.tap(0, 0);
     return { chain: r.chain, one, miss: __pop.lastSound };
   });
-  check('combo audio ladder: a plain pop plays the base "pickup" step', lad.chain !== 1 || lad.one === 'pickup', JSON.stringify(lad));
+  check('combo audio ladder: a plain pop plays the base "pop" chip step', lad.chain !== 1 || lad.one === 'pop', JSON.stringify(lad));
   check('combo audio ladder: a lone tile only plays the soft tap (no ladder step)', lad.miss === 'ui_tap', JSON.stringify(lad));
   await p.evaluate(() => { document.getElementById('board').focus(); });
   await p.keyboard.press('ArrowRight');
@@ -165,6 +165,29 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
   const sc = await boardFor('seed=DEMO1'), sl = await boardFor('seed=demo1'), sb = await boardFor('seed=%3Cb%3Ebad%3C%2Fb%3E');
   check('kit: ?seed=DEMO1 (share code) plays the demo1 board', sc.seed === 'demo1' && JSON.stringify(sc.v) === JSON.stringify(sl.v) && sc.ok, sc.seed);
   check('kit: an invalid share code is ignored (fresh seed, no errors)', sb.seed !== '<b>bad</b>' && /^[a-z0-9]+$/.test(sb.seed) && sb.ok, sb.seed);
+  // ---- bug bash: seeds, bonus, keys, hostile saves, layout ----
+  const zz = await open(browser, { viewport: { width: 1280, height: 720 } }, '?test=1&seed=a-b_C', { [KEY]: JSON.stringify({ v: 1, hint: true, best: 'x', medals: 'no', rounds: -5, bestTile: 1e99 }) });
+  await zz.page.click('#play');
+  const bs = await zz.page.evaluate(() => { const r = { seed: __pop.run.seed, v: JSON.stringify(__pop.values()) }; __pop.start('ABC'); r.v2 = JSON.stringify(__pop.values()); r.seed2 = __pop.run.seed; return r; });
+  check('seed is normalised to share-code form, so the code and the seed play the same board', bs.seed === 'abc' && bs.seed2 === 'abc' && bs.v === bs.v2, JSON.stringify(bs));
+  const hs = await zz.page.evaluate(() => ({ best: __pop.save.best, rounds: __pop.save.rounds, tile: __pop.save.bestTile, med: __pop.save.medals.length }));
+  check('hostile save (wrong types, negatives, huge numbers) is cleaned to safe values', hs.best === 0 && hs.rounds === 0 && hs.tile === 99 && hs.med === 0, JSON.stringify(hs));
+  const bonus = await zz.page.evaluate(() => { __pop.start('bonus1'); __pop.set([[1,2,1,2,1,2],[2,1,2,1,2,1],[1,2,1,2,1,2],[2,1,2,1,2,1],[3,3,3,3,3,1]]); __pop.run.time = 50; __pop.tap(4, 2); return { t: __pop.run.time, m: __pop.run.maxTile }; });
+  check('a Big pop that jumps straight to level 5 still earns the +5 s bonus', bonus.m >= 5 && bonus.t >= 55, JSON.stringify(bonus));
+  const lay = await zz.page.evaluate(() => { const b = document.getElementById('board').getBoundingClientRect(); return { bottom: b.bottom, vh: innerHeight, scrollW: document.documentElement.scrollWidth, vw: innerWidth }; });
+  check('desktop 1280x720: the whole board fits above the fold', lay.bottom <= lay.vh && lay.scrollW <= lay.vw, JSON.stringify(lay));
+  check('MMInput is loaded for the universal key map', await zz.page.evaluate(() => !!window.MMInput && MMInput.actionOf('w') === 'up'));
+  check('bug-bash page: no console errors, 0 DB requests', zz.errors.length === 0 && zz.db.count() === 0, JSON.stringify(zz.errors));
+  await zz.ctx.close();
+  const ls = await open(browser, { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true }, '?test=1', { [KEY]: JSON.stringify({ v: 1, hint: true }) });
+  await ls.page.click('#play');
+  const lb = await ls.page.evaluate(() => { const b = document.getElementById('board').getBoundingClientRect(); return { top: b.top, bottom: b.bottom, h: b.height / 6, vh: innerHeight, sw: document.documentElement.scrollWidth, vw: innerWidth }; });
+  check('landscape phone: the board fits the screen height with cells >= 44 px', lb.bottom <= lb.vh && lb.h >= 44 && lb.sw <= lb.vw, JSON.stringify(lb));
+  await ls.page.evaluate(() => __pop.step(95));
+  const lr = await ls.page.evaluate(() => { const r = document.getElementById('result'), b = r.getBoundingClientRect(); return { bottom: b.bottom, top: b.top, vh: innerHeight, vis: !r.hidden }; });
+  check('landscape phone: the result card stays on screen (scrolls inside itself)', lr.vis && lr.bottom <= lr.vh + 1 && lr.top >= 0, JSON.stringify(lr));
+  check('landscape page: no console errors', ls.errors.length === 0, JSON.stringify(ls.errors));
+  await ls.ctx.close();
   await browser.close();
   done();
 })().catch((e) => { console.error(e); process.exit(1); });
