@@ -208,3 +208,8 @@ button:active { box-shadow: inset 2px 2px 0 rgba(0,0,0,.3); }
 .panel.px-panel, .howto.px-panel { margin: 0; box-shadow: var(--px-ring4), 6px 8px 0 0 rgba(0,0,0,.5); background: var(--px-panel); }
 #hud, .hint, .boss-bar { box-shadow: var(--px-ring2), inset 0 -3px 0 0 rgba(0,0,0,.3); border: 0; background: var(--px-panel); }
 .hp-bar { background: var(--px-ink); border-color: var(--px-ink); }
+.pack-tabs button { font-size: calc(13px * var(--us)); }
+/* 8B: the MM8 .dim rule (.8em) would shrink calm panel text under the 12 px x scale floor; here .dim only changes the colour */
+.px8 .panel .dim, .px8 .log-list .dim, .px8 #hud .dim { font-size: inherit; }
+/* 8B: the panel title + Close stay pinned while a long tab (Log, Craft) scrolls */
+.panel .panel-head { position: sticky; top: -10px; margin: -10px -12px 0; padding: 10px 12px 6px; background: var(--px-panel); z-index: 2; }

@@ -149,12 +149,23 @@ async function isles(browser, label, ctxOpts) {
   check(L('no overlap: Menu vs HUD vs minimap'), !overlap(btn, hud) && !overlap(btn, mini) && !overlap(hud, mini), JSON.stringify({ btn, hud, mini }));
   const backInfo = await pg.evaluate(() => { const a = document.getElementById('back'); return { inDom: !!a, legacy: a.classList.contains('mm-nav-legacy'), label: a.getAttribute('aria-label'), text: a.textContent }; });
   check(L('the old "<-" link is now labelled and kept in the DOM as mm-nav-legacy (hidden)'), backInfo.inDom && backInfo.legacy && back.w <= 1 && /World map/.test(backInfo.text) && /World map/.test(backInfo.label), JSON.stringify([backInfo, back]));
+  // 8B: the first-visit how-to (5 short lines) never takes a tap; the thin top bar stays clear of the stick / Attack / action column
+  const how = await pg.evaluate(() => { const b = document.getElementById('howto'); return { vis: !b.hidden, n: b.querySelectorAll('li').length, pe: getComputedStyle(b).pointerEvents, min: Math.min(...[...b.querySelectorAll('li')].map((li) => parseFloat(getComputedStyle(li).fontSize))) }; });
+  check(L('8B: a fresh visit shows the 5-line how-to (text >= 12 px) that never blocks a tap'), how.vis && how.n === 5 && how.pe === 'none' && how.min >= 12, JSON.stringify(how));
+  const stk = await rect(pg, '#stick'), fire = await rect(pg, '#btn-fire'), acts = await rect(pg, '#acts');
+  check(L('8B: the top bar is thin (<= 130 px) and clear of the stick, Attack and the action buttons'), hud.h <= 130 && !overlap(hud, stk) && !overlap(hud, fire) && !overlap(hud, acts) && (label !== '390x844' || (fire.vis && (await pg.textContent('#btn-fire')) === 'Attack' && fire.l > stk.r)), JSON.stringify({ hud, stk, fire, acts }));
   // 8B: one Pack button in the top bar holds Party (Home dock) / Craft / Log / Help
   const pk = await rect(pg, '#btn-pack');
   check(L('the Pack button is visible (>= 44 px), not under the Menu or the minimap, on top'), pk.vis && pk.w >= 44 && pk.h >= 44 && !overlap(btn, pk) && !overlap(mini, pk) && await onTop(pg, '#btn-pack'), JSON.stringify(pk));
   await tap(pg, '#btn-pack');
   const tabs = await pg.evaluate(() => ({ open: !document.getElementById('panel').hidden, title: document.getElementById('panel-title').textContent, tabs: [...document.querySelectorAll('#pack-tabs [role=tab]')].map((b) => b.textContent), sel: (document.querySelector('#pack-tabs [aria-selected=true]') || {}).id }));
   check(L('Pack opens one panel with at most 4 tabs (Party / Craft / Log / Help), Party selected'), tabs.open && tabs.title === 'Pack' && tabs.tabs.join() === 'Party,Craft,Log,Help' && tabs.sel === 'tab-party', JSON.stringify(tabs));
+  check(L('8B: opening the Pack hides the how-to'), (await pg.evaluate(() => document.getElementById('howto').hidden)) === true);
+  await tap(pg, '#tab-help');
+  const hp = await pg.evaluate(() => ({ title: document.getElementById('panel-title').textContent, n: document.querySelectorAll('#help-list li').length, sel: (document.querySelector('#pack-tabs [aria-selected=true]') || {}).id,
+    tabs: [...document.querySelectorAll('#pack-tabs button')].map((b) => { const r = b.getBoundingClientRect(); return Math.min(r.width, r.height); }), sw: document.documentElement.scrollWidth <= document.documentElement.clientWidth }));
+  check(L('8B: the Help tab shows the same 5 lines; every tab is >= 44 px; no sideways scroll'), hp.title === 'Help' && hp.n === 5 && hp.sel === 'tab-help' && hp.tabs.length === 4 && hp.tabs.every((v) => v >= 44) && hp.sw, JSON.stringify(hp));
+  await tap(pg, '#tab-party');
   const home = await pg.evaluate(() => { const b = document.getElementById('btn-home'); return { text: b.textContent, vis: !b.hidden }; });
   check(L('"Home dock" button (not "Home") away from home'), home.vis && home.text === 'Home dock', JSON.stringify(home));
   const hb = await rect(pg, '#btn-home');
