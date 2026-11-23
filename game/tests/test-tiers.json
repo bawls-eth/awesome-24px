@@ -1536,5 +1536,13 @@
   "shared-mm-save-merge.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "beta-s01-town-restore.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "beta-s02-town-two-tabs.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }

@@ -155,12 +155,108 @@ function cleanCount(v) {
   return Number.isFinite(v) && v > 0 ? Math.min(v, 1e9) : 0;
 }
 
+// Beta S-01: true from the moment a Restore writes the save until the page reloads, so no other writer (a timer, the
+// cross-tab listener, a late gather) can put the old in-memory state back over the restored file.
+let SAVE_RESTORING = false;
+const SAVE_PREV_KEY = 'pixeltown-save-v1-prev'; // additive: the raw save from just before the last Restore
+
+// The Town page does not load the backup tool or its owner cleaners up front (they are only needed for a Restore):
+// load them once, in the same order as the Lantern page, skipping any that are already here. Resolves MMBackup or null.
+let backupModulesPromise = null;
+function loadBackupModules() {
+  if (window.MMBackup) return Promise.resolve(window.MMBackup);
+  if (backupModulesPromise) return backupModulesPromise;
+  const mods = [['MMRng', 'rng'], ['MMClasses', 'mm-classes'], ['MMWeapons', 'mm-weapons'], ['MMUnlocks', 'mm-unlocks'], ['MMItems', 'mm-items'],
+    ['MMProfile', 'mm-profile'], ['MMStash', 'mm-stash'], ['MMMap', 'mm-map'], ['MMAngler', 'mm-angler'], ['MMBugs', 'mm-bugs'],
+    ['MMHubProfile', 'profile'], ['MMDaily', 'mm-daily'], ['MMAccess', 'mm-access'], ['MMGift', 'mm-gift'], ['MMBackup', 'mm-backup']];
+  const one = (name, file) => new Promise((resolve) => {
+    if (window[name]) { resolve(); return; }
+    const el = document.createElement('script');
+    el.src = 'shared/' + file + '.js?v=20261123s01';
+    el.onload = () => resolve();
+    el.onerror = () => resolve();
+    document.head.appendChild(el);
+  });
+  backupModulesPromise = mods.reduce((p, [name, file]) => p.then(() => one(name, file)), Promise.resolve())
+    .then(() => window.MMBackup || null)
+    .then((B) => { if (!B) backupModulesPromise = null; return B; });
+  return backupModulesPromise;
+}
+
 function writeSave(partial) {
+  if (SAVE_RESTORING) return;
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify({ ...loadSave(), ...partial }));
   } catch (e) {
     // ignore — nothing to persist to
   }
+}
+
+// Beta S-02 (two Town tabs, or a Town tab + a Lantern Restore): merge-on-write for the counters and sets a whole
+// sub-object used to overwrite. fn(stored) returns the partial to write on top of what storage holds RIGHT NOW.
+function writeSaveMerged(fn) {
+  if (SAVE_RESTORING) return null;
+  const stored = loadSave();
+  let partial = null;
+  try { partial = fn(stored); } catch (e) { partial = null; }
+  if (!partial || typeof partial !== 'object') return null;
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ ...stored, ...partial })); } catch (e) { /* nothing to persist to */ }
+  return partial;
+}
+
+// Counters: stored + (mine - base) per key, clamped to 0..cap. Keys only storage has are kept (additive);
+// a tab that missed another tab's write adds only its OWN change, never its stale total.
+function townMergeCounts(stored, mine, base, cap) {
+  const s = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : {};
+  const b = base && typeof base === 'object' ? base : null;
+  const out = { ...s };
+  const lim = cap || 1e9;
+  Object.keys(mine || {}).forEach((k) => {
+    const m = Number(mine[k]) || 0;
+    const delta = b ? m - (Number(b[k]) || 0) : m - (cleanCount(s[k]));
+    out[k] = Math.min(lim, cleanCount(cleanCount(s[k]) + delta));
+  });
+  return out;
+}
+
+// Sets of ids: stored order first, then this tab's new ids, no duplicates (an unlock or museum donation is never lost).
+function townUnion(stored, mine) {
+  const out = [];
+  const seen = new Set();
+  [stored, mine].forEach((a) => {
+    (Array.isArray(a) ? a : []).forEach((id) => {
+      const key = typeof id + ':' + String(id);
+      if ((typeof id === 'string' || (typeof id === 'number' && Number.isFinite(id))) && !seen.has(key)) { seen.add(key); out.push(id); }
+    });
+  });
+  return out;
+}
+
+// Beta S-01: what the Town Restore accepts as a town-only save file. A plain object that has a name or at least one field
+// the Town writes, at most TOWN_RESTORE_MAX characters; prototype keys, non-identifier keys and a backup bundle's envelope
+// are dropped. Returns the cleaned object or null ("not a Pixeltown save", nothing is written).
+const TOWN_RESTORE_MAX = 2000000;
+const TOWN_SAVE_FIELDS = ['name', 'species', 'frame', 'realm', 'resources', 'crafted', 'caveInv', 'cavePick', 'caveSeed',
+  'lifetimeStats', 'achievementsUnlocked', 'equippedTitle', 'fossilsHeld', 'museumCollection', 'museumFauna', 'museumFlora',
+  'fishlog', 'home', 'mail', 'birthdays', 'dailies', 'bugoff', 'loginStreak', 'lastLoginDate', 'sellStreak', 'lastSellDate',
+  'sfxMuted', 'musicEnabled', 'reduceMotion', 'lastSeenVersion', 'villagerAffinity', 'villagerTalkDay', 'bestieId', 'bestieName',
+  'ffDiscovered', 'weedsPulled', 'turnipBuys', 'questClaimedBucket', 'triviaAnsweredBucket', 'tournamentBonusBucket',
+  'merchantGiftBoxDay', 'kkEnjoyedWindow', 'settingsOpen'];
+function cleanTownSave(obj) {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
+  if (obj.format === 'pixeltown-backup') return null; // a bundle is never a town save (S-01: it used to be written as one)
+  const hasName = typeof obj.name === 'string' && obj.name.trim().length > 0;
+  if (!hasName && !TOWN_SAVE_FIELDS.some((f) => Object.prototype.hasOwnProperty.call(obj, f))) return null;
+  const out = {};
+  Object.keys(obj).forEach((k) => {
+    if (k === '__proto__' || k === 'constructor' || k === 'prototype') return;
+    if (!/^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(k)) return;
+    out[k] = obj[k];
+  });
+  let s = '';
+  try { s = JSON.stringify(out); } catch (e) { return null; }
+  if (typeof s !== 'string' || s.length > TOWN_RESTORE_MAX) return null;
+  return out;
 }
 
 // ---------- SFX ----------
@@ -1591,6 +1687,7 @@ class TownScene extends Phaser.Scene {
     this.setupPanelCollapse();
     this.setupWhereTo();
     this.setupGatePointer();
+    this.setupSaveSync(); // beta S-02: follow saves made in another tab
     if (IS_TOUCH) {
       this.setupTouchControls();
       this.setupTiltShake();
@@ -2515,6 +2612,7 @@ class TownScene extends Phaser.Scene {
     const sc = savedCrafted && typeof savedCrafted === 'object' ? savedCrafted : {};
     this.craftedGoods = {};
     RECIPES.forEach((r) => { this.craftedGoods[r.id] = n(sc[r.id]); });
+    this.snapshotResourceBase(); // beta S-02: delta writes start from what this tab loaded
     this.treeCooldowns = {};
     this.rockCooldowns = {};
     this.fishing = { state: 'idle', spot: null, bobber: null, timer: null };
@@ -2527,8 +2625,32 @@ class TownScene extends Phaser.Scene {
     if (btn) btn.addEventListener('click', () => { if (this.canAct()) this.interact(); });
   }
 
+  // Beta S-02: the counters this tab last loaded or wrote; saveResources adds only (mine - base) on top of storage.
+  snapshotResourceBase() {
+    this._saveBase = this._saveBase || {};
+    this._saveBase.resources = { ...this.resources };
+    this._saveBase.crafted = { ...this.craftedGoods };
+    this._saveBase.caveInv = { ...this.caveInv };
+  }
+
   saveResources() {
-    writeSave({ resources: this.resources, crafted: this.craftedGoods, caveInv: this.caveInv, caveSeed: this.caveSeed, cavePick: this.cavePick });
+    if (!this._saveBase) this.snapshotResourceBase();
+    const b = this._saveBase;
+    const p = writeSaveMerged((stored) => ({
+      resources: townMergeCounts(stored.resources, this.resources, b.resources),
+      crafted: townMergeCounts(stored.crafted, this.craftedGoods, b.crafted),
+      caveInv: townMergeCounts(stored.caveInv, this.caveInv, b.caveInv, 9999),
+      caveSeed: this.caveSeed,
+      cavePick: this.cavePick,
+    }));
+    if (!p) return;
+    // Adopt what was written IN PLACE (the cave holds references to these objects), so another tab's gains show here too.
+    let changed = false;
+    [['resources', this.resources], ['crafted', this.craftedGoods], ['caveInv', this.caveInv]].forEach(([key, mine]) => {
+      Object.keys(mine).forEach((k) => { const v = cleanCount(p[key][k]); if (mine[k] !== v) { mine[k] = v; changed = true; } });
+    });
+    this.snapshotResourceBase();
+    if (changed) this.updateInventoryHUD();
   }
 
   interact() {
@@ -3994,12 +4116,17 @@ class TownScene extends Phaser.Scene {
   }
 
   saveFossils() {
-    writeSave({
+    // Beta S-02: museum donations are sets (union with storage); the fossil bag is this tab's (the listener keeps it fresh).
+    const p = writeSaveMerged((stored) => ({
       fossilsHeld: this.fossilsHeld,
-      museumCollection: [...this.museumCollection],
-      museumFauna: [...this.museumFauna],
-      museumFlora: [...this.museumFlora],
-    });
+      museumCollection: townUnion(stored.museumCollection, [...this.museumCollection]),
+      museumFauna: townUnion(stored.museumFauna, [...this.museumFauna]),
+      museumFlora: townUnion(stored.museumFlora, [...this.museumFlora]),
+    }));
+    if (!p) return;
+    p.museumCollection.forEach((id) => this.museumCollection.add(id));
+    p.museumFauna.forEach((id) => this.museumFauna.add(id));
+    p.museumFlora.forEach((id) => this.museumFlora.add(id));
   }
 
   updateFossilHUD() {
@@ -4151,6 +4278,7 @@ class TownScene extends Phaser.Scene {
       for (const k of Object.keys(saved.lifetimeStats)) this.lifetimeStats[k] = cleanCount(saved.lifetimeStats[k]);
     }
     this.achievementsUnlocked = new Set(Array.isArray(saved.achievementsUnlocked) ? saved.achievementsUnlocked.filter((id) => typeof id === 'string') : []);
+    this._statsBase = { ...this.lifetimeStats }; // beta S-02: delta writes for lifetime stats
     this.equippedTitle = (typeof saved.equippedTitle === 'string' && this.achievementsUnlocked.has(saved.equippedTitle)) ? saved.equippedTitle : null;
     const mine = this.allPlayers.get(this.selfData.id);
     if (mine) mine.title = this.equippedTitle;
@@ -4175,7 +4303,16 @@ class TownScene extends Phaser.Scene {
   }
 
   saveAchievements() {
-    writeSave({ lifetimeStats: this.lifetimeStats, achievementsUnlocked: [...this.achievementsUnlocked] });
+    // Beta S-02: stats are stored + this tab's own increase, unlocks are the union, so another tab's progress is kept.
+    const base = this._statsBase || null;
+    const p = writeSaveMerged((stored) => ({
+      lifetimeStats: townMergeCounts(stored.lifetimeStats, this.lifetimeStats, base),
+      achievementsUnlocked: townUnion(stored.achievementsUnlocked, [...this.achievementsUnlocked]),
+    }));
+    if (!p) return;
+    Object.keys(p.lifetimeStats).forEach((k) => { this.lifetimeStats[k] = cleanCount(p.lifetimeStats[k]); });
+    p.achievementsUnlocked.forEach((id) => this.achievementsUnlocked.add(id));
+    this._statsBase = { ...this.lifetimeStats };
   }
 
   incrementStat(key, amount = 1) {
@@ -4326,6 +4463,58 @@ class TownScene extends Phaser.Scene {
     closeBtn.addEventListener('click', dismiss);
   }
 
+  // Beta S-02: another tab (a second Town, the Lantern Restore, the Hub gift) changed pixeltown-save-v1. Re-read it and adopt the
+  // counters / sets into memory (fields only, no scene rebuild), so this tab's next write builds on it instead of undoing it.
+  // A changed or missing name means the save was replaced (a Restore): say so and reload.
+  setupSaveSync() {
+    this._saveName = loadSave().name;
+    this._onSaveStorage = (e) => {
+      if (!e || (e.key !== SAVE_KEY && e.key !== null)) return;
+      if (SAVE_RESTORING) return;
+      const s = loadSave();
+      const myName = this._saveName;
+      if (typeof myName === 'string' && myName && s.name !== myName) {
+        SAVE_RESTORING = true; // from now on this tab never writes its old state back
+        this.addChatLine({ system: true, text: 'Your save changed in another tab. Reloading...' });
+        setTimeout(() => window.location.reload(), 800);
+        return;
+      }
+      this.adoptSave(s);
+    };
+    window.addEventListener('storage', this._onSaveStorage);
+    this.events.once('shutdown', () => window.removeEventListener('storage', this._onSaveStorage));
+  }
+
+  adoptSave(s) {
+    if (!s || typeof s !== 'object') return;
+    const obj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
+    const sr = obj(s.resources), sc = obj(s.crafted), si = obj(s.caveInv);
+    if (this.resources) Object.keys(this.resources).forEach((k) => { this.resources[k] = cleanCount(sr[k]); });
+    if (this.craftedGoods) Object.keys(this.craftedGoods).forEach((k) => { this.craftedGoods[k] = cleanCount(sc[k]); });
+    if (this.caveInv) Object.keys(this.caveInv).forEach((k) => { this.caveInv[k] = Math.min(9999, cleanCount(si[k])); });
+    if (this.resources) this.snapshotResourceBase();
+    if (this.lifetimeStats) {
+      const st = obj(s.lifetimeStats);
+      Object.keys(this.lifetimeStats).forEach((k) => { if (!(k in st)) delete this.lifetimeStats[k]; });
+      Object.keys(st).forEach((k) => { this.lifetimeStats[k] = cleanCount(st[k]); });
+      this._statsBase = { ...this.lifetimeStats };
+    }
+    let achChanged = false;
+    if (this.achievementsUnlocked) {
+      // Storage is the truth here (a Restore may have replaced the list); every unlock of this tab was written when it happened.
+      const next = (Array.isArray(s.achievementsUnlocked) ? s.achievementsUnlocked : []).filter((id) => typeof id === 'string');
+      achChanged = next.length !== this.achievementsUnlocked.size || next.some((id) => !this.achievementsUnlocked.has(id));
+      if (achChanged) { this.achievementsUnlocked.clear(); next.forEach((id) => this.achievementsUnlocked.add(id)); }
+    }
+    if (this.museumCollection) {
+      ['museumCollection', 'museumFauna', 'museumFlora'].forEach((k) => { this[k].clear(); (Array.isArray(s[k]) ? s[k] : []).forEach((id) => this[k].add(id)); });
+      if (Array.isArray(s.fossilsHeld)) this.fossilsHeld = s.fossilsHeld.slice(0, FOSSIL_BAG_CAP);
+      this.updateFossilHUD();
+    }
+    this.updateInventoryHUD();
+    if (achChanged) this.renderAchievementsPanel();
+  }
+
   setupSaveBackup() {
     const exportBtn = document.getElementById('save-export-btn');
     const importBtn = document.getElementById('save-import-btn');
@@ -4351,23 +4540,61 @@ class TownScene extends Phaser.Scene {
     this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'save backed up!');
   }
 
+  // Beta S-01: Restore validates the file. A Lantern backup bundle is planned and applied with MMBackup (every key, after a
+  // confirm listing what will be replaced); an old town-only file must pass cleanTownSave; anything else changes nothing.
+  // Before any write the current raw save is kept under pixeltown-save-v1-prev (one safety copy, replaced per restore).
   importSave(input) {
     const file = input.files && input.files[0];
     input.value = '';
     if (!file) return;
+    const refuse = (why) => this.addChatLine({ system: true, text: (why ? why + ' ' : '') + 'That is not a Pixeltown save. Nothing was changed.' });
+    if (typeof file.size === 'number' && file.size > TOWN_RESTORE_MAX + 1000000) { refuse('That file is too big.'); return; }
     const reader = new FileReader();
+    reader.onerror = () => refuse('Could not read that file.');
     reader.onload = () => {
-      try {
-        const parsed = JSON.parse(reader.result);
-        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('bad save file');
-        localStorage.setItem(SAVE_KEY, JSON.stringify(parsed));
-        this.addChatLine({ system: true, text: 'Save restored! Reloading…' });
-        this.time.delayedCall(800, () => window.location.reload());
-      } catch (e) {
-        this.addChatLine({ system: true, text: "That doesn't look like a valid Pixeltown save file." });
+      const text = String(reader.result || '');
+      let parsed;
+      try { parsed = JSON.parse(text); } catch (e) { refuse(); return; }
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.format === 'pixeltown-backup') {
+        this.restoreBundle(text);
+        return;
       }
+      const clean = cleanTownSave(parsed);
+      if (!clean) { refuse(); return; }
+      this.commitRestore(() => { localStorage.setItem(SAVE_KEY, JSON.stringify(clean)); return true; });
     };
     reader.readAsText(file);
+  }
+
+  // Keep the safety copy, block every other writer, write, reload. write() returns true or a message.
+  commitRestore(write) {
+    let prev = null;
+    try { prev = localStorage.getItem(SAVE_KEY); } catch (e) { prev = null; }
+    try { if (typeof prev === 'string') localStorage.setItem(SAVE_PREV_KEY, prev); } catch (e) { /* quota: restore anyway */ }
+    SAVE_RESTORING = true;
+    let r;
+    try { r = write(); } catch (e) { r = 'Restore failed (storage is full or blocked), so nothing was changed.'; }
+    if (r !== true) {
+      SAVE_RESTORING = false;
+      this.addChatLine({ system: true, text: typeof r === 'string' ? r : 'Restore failed, nothing was changed.' });
+      return false;
+    }
+    this.addChatLine({ system: true, text: 'Save restored! Reloading…' });
+    this.time.delayedCall(800, () => window.location.reload());
+    return true;
+  }
+
+  restoreBundle(text) {
+    loadBackupModules().then((B) => {
+      if (!B) { this.addChatLine({ system: true, text: 'Could not load the restore tool. Check your connection and try again. Nothing was changed.' }); return; }
+      let plan;
+      try { plan = B.plan(text); } catch (e) { plan = { ok: false }; }
+      if (!plan || !plan.ok) { this.addChatLine({ system: true, text: ((plan && plan.message) || 'That backup file is damaged.') + ' Nothing was changed.' }); return; }
+      const lines = plan.keys.map((k) => '- ' + B.labelOf(k));
+      const ok = window.confirm('Restore this backup? It will replace these saves on this device:\n' + lines.join('\n') + '\n\nNothing changes if you cancel.');
+      if (!ok) { this.addChatLine({ system: true, text: 'Restore cancelled. Nothing was changed.' }); return; }
+      this.commitRestore(() => { const r = B.apply(localStorage, plan); return r && r.ok ? true : ((r && r.message) || 'Restore failed, nothing was changed.'); });
+    });
   }
 
   setupTriviaKey() {
@@ -6898,7 +7125,8 @@ class TownScene extends Phaser.Scene {
   }
 
   saveHome() {
-    writeSave({ home: { slots: this.home.slots, tank: this.home.tank, paidDay: this.home.paidDay }, crafted: this.craftedGoods });
+    writeSave({ home: { slots: this.home.slots, tank: this.home.tank, paidDay: this.home.paidDay } });
+    this.saveResources(); // beta S-02: crafted goods go through the delta merge, not a whole-object write
   }
 
   renderHome() {
