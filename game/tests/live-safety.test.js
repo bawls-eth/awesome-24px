@@ -36,7 +36,8 @@ function loadsTown(s) {
     return townVars.some((v) => new RegExp('^\\s*' + v.replace(/\$/g, '\\$') + '\\s*(\\+\\s*[\'"`]\\?[^\'"`]*[\'"`]\\s*)?[,)]').test(arg));
   });
 }
-const isBlocked = (s) => /\bblockDb\s*\(/.test(s) || (/routeWebSocket\s*\(/.test(s) && /\.route\(\s*(DB_HOSTS?|DB_HOST|BLOCK|\/[^/\n]*firebaseio)/.test(s));
+// helpers.offlineStub(ctx) and helpers.twoTabs(ctx) count as blocking ONLY while their bodies call blockDb / offlineStub (asserted below).
+const isBlocked = (s) => /\bblockDb\s*\(/.test(s) || /\b(offlineStub|twoTabs)\s*\(\s*ctx/.test(s) || (/routeWebSocket\s*\(/.test(s) && /\.route\(\s*(DB_HOSTS?|DB_HOST|BLOCK|\/[^/\n]*firebaseio)/.test(s));
 
 const bad = { unclassified: [], launch: [], unblocked: [], netjs: [], chat: [], names: [] };
 for (const f of files) {
@@ -91,6 +92,9 @@ check('6. live tests join only as ADMIN* bots', bad.names.length === 0, bad.name
 const helpers = fs.readFileSync(path.join(dir, 'helpers.js'), 'utf8');
 const bd = (helpers.match(/async function blockDb[\s\S]*?\n\}/) || [''])[0];
 check('blockDb blocks HTTP (route) AND sockets (routeWebSocket) for the DB hosts', /ctx\.route\(\s*DB_HOSTS/.test(bd) && /ctx\.routeWebSocket\(\s*DB_HOSTS/.test(bd) && /firebaseio/.test(helpers));
+const os = (helpers.match(/async function offlineStub[\s\S]*?\n\}/) || [''])[0];
+const tt = (helpers.match(/async function twoTabs[\s\S]*?\n\}/) || [''])[0];
+check('helpers.offlineStub calls blockDb(ctx) first and twoTabs calls offlineStub(ctx) before opening pages', /^[^]*?await blockDb\(ctx\)[^]*?ctx\.route\(/.test(os) && /await offlineStub\(ctx\)[^]*?ctx\.newPage\(/.test(tt));
 const runAll = fs.readFileSync(path.join(dir, 'run-all.js'), 'utf8');
 check('7. run-all.js wraps live-class tests in flock /tmp/live.lock (--lock-live)', /flock/.test(runAll) && /\/tmp\/live\.lock/.test(runAll) && /class === 'live'/.test(runAll));
 
