@@ -287,6 +287,10 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "lantern-intro-help.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
   "lantern-page.test.js": {
     "class": "browser",
     "tier": "smoke"
@@ -1394,6 +1398,10 @@
   "stack-page.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "echo-bugbash.test.js": {
+    "class": "browser",
+    "tier": "full"
   },
   "echo-page.test.js": {
     "class": "browser",

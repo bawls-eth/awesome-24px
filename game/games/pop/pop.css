@@ -31,3 +31,15 @@ ul.medals li.on { color:#111; background:var(--accent); font-weight:bold; }
 #msg { min-height:1.4em; margin:0; text-align:center; }
 .new { color:var(--accent); font-weight:bold; }
 .back[hidden] { display:none !important; }
+/* bug bash: the board never outgrows the screen height (1280x720 desktop used to push the bottom rows below the fold).
+   "#stage #board" outranks the shared arcade skin (width: calc(100% - 24px)) that loads after this file. */
+#stage #board { width:min(calc(100% - 24px), calc((100vh - 250px) * 5 / 6)); width:min(calc(100% - 24px), calc((100dvh - 250px) * 5 / 6)); min-width:min(calc(100% - 24px), 220px); margin:12px auto 14px; }
+#stage .overlay { max-height:calc(100vh - 90px); max-height:calc(100dvh - 90px); overflow-y:auto; }
+/* landscape phone: board on the left at full height, HUD and messages on the right */
+@media (orientation:landscape) and (max-height:560px) {
+  #stage { max-width:none; display:grid; grid-template-columns:auto minmax(0,1fr); column-gap:14px; align-content:start; align-items:start; }
+  #stage > * { grid-column:2; }
+  #stage #board { grid-column:1; grid-row:1 / span 6; width:calc((100vh - 120px) * 5 / 6); width:calc((100dvh - 120px) * 5 / 6); min-width:0; margin:8px 12px 8px 12px; }
+  #hud { grid-template-columns:repeat(2,1fr); }
+  #stage .overlay { right:16px; top:8px; max-height:calc(100vh - 100px); max-height:calc(100dvh - 100px); }
+}

@@ -71,14 +71,16 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
     const foc = r.querySelector('button, a');
     return { card: r.classList.contains('mk-card'), code: document.getElementById('r-code').textContent, goal: document.getElementById('r-goal').textContent, menu: !!r.querySelector('a.mk-link[href]'), copy: [c.width, c.height], small, first: foc && foc.id, medals: !!r.querySelector('#r-medals'), rows: r.querySelectorAll('.mk-row').length };
   });
-  check('kit: shared result card with share code TOW1, 3 stat rows, a goal line, a Menu link, medals kept', kit.card && kit.code === 'TOW1' && kit.rows === 3 && kit.goal.length > 0 && kit.menu && kit.medals, JSON.stringify(kit));
+  check('kit: shared result card with share code TOW1, 3 stat rows, a goal line, NO Town link (stray taps), medals kept', kit.card && kit.code === 'TOW1' && kit.rows === 3 && kit.goal.length > 0 && !kit.menu && kit.medals, JSON.stringify(kit));
   check('kit: Copy is >= 44 px, Play again is the first focusable, no text under 12 px', kit.copy[0] >= 44 && kit.copy[1] >= 44 && kit.first === 'again' && kit.small.length === 0, JSON.stringify(kit));
   const btns = await p.evaluate(() => ['again', 'replay'].map((id) => { const r = document.getElementById(id).getBoundingClientRect(); return [id, r.width, r.height]; }));
   check('phone: Play again / Replay seed are >= 44 px', btns.every((x) => x[1] >= 44 && x[2] >= 44), JSON.stringify(btns));
+  await p.waitForTimeout(500);
   await p.tap('#replay');
   const log2 = await p.evaluate(() => { for (let i = 0; i < 6; i++) { __stack.align(0); __stack.drop(); } return { log: JSON.stringify(__stack.run.log), seed: __stack.run.seed }; });
   check('Replay seed swings the very same blocks (sides, speeds, colours)', log2.log === log1 && log2.seed === 'tow1', log2.log);
   await p.evaluate(() => __stack.end());
+  await p.waitForTimeout(500);
   await p.tap('#again');
   const log3 = await p.evaluate(() => { for (let i = 0; i < 9; i++) { __stack.align(0); __stack.drop(); } return { log: JSON.stringify(__stack.run.log.slice(0, 7)), seed: __stack.run.seed }; });
   check('Play again rolls a new seed (variety)', log3.seed !== 'tow1' && log3.log !== log1, log3.seed);
@@ -86,6 +88,7 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
   await p.evaluate(() => __stack.step(91));
   check('after 90 s the round ends: "Time!"', await p.evaluate(() => __stack.run.state === 'over' && /Time!/.test(document.getElementById('r-title').textContent)));
   // keyboard
+  await p.waitForTimeout(500);
   await p.tap('#again');
   await p.evaluate(() => { document.activeElement.blur(); __stack.align(0); });
   await p.keyboard.press('Space');
@@ -96,6 +99,16 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
   check('best marker: the save best is shown on the HUD', (await p.textContent('#h-best')) === String(await p.evaluate(() => __stack.save.best)));
   check('phone: no console errors, 0 DB requests', s.errors.length === 0 && s.db.count() === 0, JSON.stringify(s.errors) + s.db.count());
   await s.ctx.close();
+
+  // ---- stray taps: mashing the screen through the end of a round never leaves the page (bug bash) ----
+  const m = await open(browser, { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }, '?seed=tow1', { [KEY]: JSON.stringify({ v: 1, hint: true }) });
+  await m.page.tap('#play');
+  for (let i = 0; i < 40; i++) { await m.page.touchscreen.tap(20 + (i * 53) % 350, 90 + (i * 131) % 700); if (i % 4 === 3) await m.page.waitForTimeout(40); }
+  const mm = await m.page.evaluate(() => ({ url: location.href, st: __stack.run.state, link: !!document.querySelector('#result a[href]') }));
+  check('mashing taps over the canvas, Drop and the result card never navigates away', /games\/stack\//.test(mm.url) && !mm.link, JSON.stringify(mm));
+  const early = await m.page.evaluate(() => new Promise((res) => { if (__stack.run.state === 'play') __stack.end(); const c0 = __stack.run.state; const a = document.getElementById('again'); a.click(); res(__stack.run.state); }));
+  check('a click in the first 450 ms of the result card is ignored (no instant restart)', early === 'over', early);
+  await m.ctx.close();
 
   // ---- desktop, returning player, reduced motion + low graphics, hostile save ----
   const d = await open(browser, { viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' }, '?test=1',
