@@ -30,17 +30,36 @@
 
   // ---------- save ----------
   const int = (x, hi) => (typeof x === 'number' && isFinite(x) && x >= 0 ? Math.min(hi, Math.floor(x)) : 0);
-  function load() {
+  function readRaw() {
     let o = null;
-    try { const s = localStorage.getItem(KEY); if (typeof s === 'string' && s.length < 4000) o = JSON.parse(s); } catch (e) { o = null; }
+    try { const s = localStorage.getItem(KEY); if (typeof s === 'string' && s.length < 120000) o = JSON.parse(s); } catch (e) { o = null; }
+    return o && typeof o === 'object' && !Array.isArray(o) ? o : null;
+  }
+  function clean(o) {
     if (!o || typeof o !== 'object' || Array.isArray(o)) o = {};
     const ok = MEDALS.map((m) => m[0]);
     return { v: 1, hint: o.hint === true, best: int(o.best, 9999), bestCombo: int(o.bestCombo, 9999), rounds: int(o.rounds, 1e9),
       medals: Array.isArray(o.medals) ? o.medals.filter((m, i, a) => ok.indexOf(m) >= 0 && a.indexOf(m) === i) : [] };
   }
+  const load = () => clean(readRaw());
   let save = load();
+  // Merge-on-write (bugbash/saves.md S1/S7): a second tab holding an older save can never lower a best, drop rounds / medals, or
+  // erase a field a newer build wrote. MMSaveMerge (shared/mm-save-merge.js) is optional: without it the old plain write is used.
+  let base = JSON.parse(JSON.stringify(save));
+  function writeSave() {
+    const M = window.MMSaveMerge;
+    if (!M) { localStorage.setItem(KEY, JSON.stringify(save)); localStorage.setItem(MKEY, JSON.stringify({ v: 1, m: save.medals.slice() })); return; }
+    const raw = readRaw(), mine = Object.assign({}, save);
+    const v = M.merge(raw, base, mine, M.SPECS[KEY]);
+    Object.assign(v, clean(v), { medals: Array.isArray(v.medals) ? v.medals.slice(0, 200) : [] }); // ids a newer build added stay stored
+    localStorage.setItem(KEY, JSON.stringify(v)); // throws on a full storage: save / base stay as they were, the next write retries
+    Object.assign(save, clean(v)); base = JSON.parse(JSON.stringify(save));
+    let mk = null;
+    try { const s = localStorage.getItem(MKEY); mk = typeof s === 'string' && s.length < 20000 ? JSON.parse(s) : null; } catch (e) { mk = null; }
+    localStorage.setItem(MKEY, JSON.stringify(Object.assign(M.merge(mk, null, { v: 1, m: save.medals.slice() }, M.SPECS.medals), { v: 1 })));
+  }
   function persist() {
-    try { localStorage.setItem(KEY, JSON.stringify(save)); localStorage.setItem(MKEY, JSON.stringify({ v: 1, m: save.medals.slice() })); } catch (e) { /* storage refused: play on */ }
+    try { writeSave(); } catch (e) { /* storage refused: play on */ }
     try { if (window.MMHubProfile && MMHubProfile.sync) MMHubProfile.sync(localStorage, 'stack', save.medals.slice()); } catch (e) { /* hub map progress is optional */ }
   }
   function award(id) { if (save.medals.indexOf(id) >= 0) return false; save.medals.push(id); run.newMedals.push(id); persist(); return true; }

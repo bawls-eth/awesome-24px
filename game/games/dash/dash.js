@@ -34,19 +34,41 @@
     const ins = gh.in.slice(0, 4000).filter((p) => Array.isArray(p) && p.length === 2 && p.every((n) => typeof n === 'number' && isFinite(n) && n >= 0 && n < 1e6)).map((p) => [Math.floor(p[0]), Math.floor(p[1])]);
     return { seed: gh.seed, in: ins, dist: int(gh.dist, 1e7), pv: int(gh.pv, 99) };
   }
-  function load() {
+  function readRaw() {
     let o = null;
     try { const s = localStorage.getItem(KEY); if (typeof s === 'string' && s.length < 120000) o = JSON.parse(s); } catch (e) { o = null; }
+    return o && typeof o === 'object' && !Array.isArray(o) ? o : null;
+  }
+  function clean(o) {
     if (!o || typeof o !== 'object' || Array.isArray(o)) o = {};
     const ok = MEDALS.map((m) => m[0]);
     return { v: 1, hint: o.hint === true, best: int(o.best, 1e7), bestScore: int(o.bestScore, 1e9), bestCombo: int(o.bestCombo, 1e4), runs: int(o.runs, 1e9),
       medals: Array.isArray(o.medals) ? o.medals.filter((m, i, a) => ok.indexOf(m) >= 0 && a.indexOf(m) === i) : [], ghost: cleanGhost(o.ghost) };
   }
+  const load = () => clean(readRaw());
   let save = load();
+  // Merge-on-write (bugbash/saves.md S1/S7): a second tab holding an older save can never lower a best, drop rounds / medals, or
+  // erase a field a newer build wrote. MMSaveMerge (shared/mm-save-merge.js) is optional: without it the old plain write is used.
+  let base = JSON.parse(JSON.stringify(save));
+  function writeSave() {
+    const M = window.MMSaveMerge;
+    if (!M) { localStorage.setItem(KEY, JSON.stringify(save)); localStorage.setItem(MKEY, JSON.stringify({ v: 1, m: save.medals.slice() })); return; }
+    const raw = readRaw(), mine = Object.assign({}, save);
+    // keep a ghost another tab saved unless this tab made a new one, or it is a better run on the same course
+    const rg = raw && cleanGhost(raw.ghost), mg = save.ghost;
+    if (rg && (JSON.stringify(mg) === JSON.stringify(base.ghost) || (mg && rg.seed === mg.seed && rg.pv === mg.pv && rg.dist > mg.dist))) delete mine.ghost;
+    const v = M.merge(raw, base, mine, M.SPECS[KEY]);
+    Object.assign(v, clean(v), { medals: Array.isArray(v.medals) ? v.medals.slice(0, 200) : [] }); // ids a newer build added stay stored
+    localStorage.setItem(KEY, JSON.stringify(v)); // throws on a full storage: save / base stay as they were, the next write retries
+    Object.assign(save, clean(v)); base = JSON.parse(JSON.stringify(save));
+    let mk = null;
+    try { const s = localStorage.getItem(MKEY); mk = typeof s === 'string' && s.length < 20000 ? JSON.parse(s) : null; } catch (e) { mk = null; }
+    localStorage.setItem(MKEY, JSON.stringify(Object.assign(M.merge(mk, null, { v: 1, m: save.medals.slice() }, M.SPECS.medals), { v: 1 })));
+  }
   const hubSync = () => { try { if (window.MMHubProfile && MMHubProfile.sync) MMHubProfile.sync(localStorage, 'dash', save.medals.slice()); } catch (e) { /* hub map progress is optional */ } };
   if (save.medals.length) hubSync(); // medals won before the arcade map group existed reach the Hub map too
   function persist() {
-    try { localStorage.setItem(KEY, JSON.stringify(save)); localStorage.setItem(MKEY, JSON.stringify({ v: 1, m: save.medals.slice() })); } catch (e) { /* ignore */ }
+    try { writeSave(); } catch (e) { /* ignore */ }
     hubSync();
   }
   function award(id) { if (save.medals.indexOf(id) >= 0) return false; save.medals.push(id); run.newMedals.push(id); persist(); play('claim'); return true; }
