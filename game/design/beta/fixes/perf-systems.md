@@ -19,6 +19,7 @@ Run each alone: `BASE=http://localhost:<port>/game/index.html /tmp/bt.sh node ga
   reload the join card shows the backup's name. Pick any other JSON (`{"hello":1}`): chat says nothing was changed, the town is unchanged.
 
 ## S-02 Town cross-tab safety (b14-01, b14-02, P0)
+- Commit: 3006734.
 - main.js (functions touched): new top-level `writeSaveMerged`, `townMergeCounts`, `townUnion`; Town scene `snapshotResourceBase` (new),
   `saveResources`, `setupActivities` (one line: base snapshot), `setupAchievements` (one line: stats base), `saveAchievements`,
   `saveFossils`, the home-plot save (crafted goods now go through `saveResources`), new `setupSaveSync` + `adoptSave`, one call in `create()`.
@@ -91,6 +92,7 @@ Run each alone: `BASE=http://localhost:<port>/game/index.html /tmp/bt.sh node ga
   everything but the gift restores (the Town Restore confirm lists the gift under "Cannot restore").
 
 ## S-10 Storage-throws sweep (b15-02, P2)
+- Commit: ffe25da (test + request; shared guards in 8bdd1c5).
 - Measured with `game/tests/beta-s10-storage-throws.test.js` (12 pages, localStorage getter throws SecurityError, blockDb + SDK stub):
   hub, town (Join -> Play offline -> Town runs), isles, angler, dash, echo, jam, pop, stack, stalk, deepdelve boot with 0 pageerror,
   show their canvas / root and their primary button works. The shared-module fixes were in the S-05 commit (mm-access, mm-side-access,
@@ -118,11 +120,13 @@ Run each alone: `BASE=http://localhost:<port>/game/index.html /tmp/bt.sh node ga
   `await page.waitForFunction(() => typeof THREE !== 'undefined' || ...)` / `await s.enterUnderground(); await ugReady` helper to the cave tests.
 
 ## S-14 favicon (b15, P3)
+- Commit: 958fd57.
 - arcane-frontier/index.html: `<link rel="icon" ... href="../../icons/favicon-32.png">` (the Town's favicon). Test
   `game/tests/beta-s14-favicon.test.js` (node, smoke). The `?v=` on art manifests part is not done: it changes cache keys for 1,000+
   files and needs the design note first (lane file).
 
 ## S-11 rotate storm, Deepdelve part (b13-07)
+- Commit: 92426be.
 - deepdelve.js (slot 1): new `onResize` (one re-size 150 ms after the last resize event) replaces the direct `resize` listener;
   `govFrame` ignores frames within 1 s of a resize (`lastResizeAt`, declared beside `gov`), and the sample window is reset.
   Before: 60 rotations = 120 drawing-buffer re-allocations and the governor could halve the scale (b13: 195x331 -> 97x165) and keep it.
@@ -139,3 +143,11 @@ Run each alone: `BASE=http://localhost:<port>/game/index.html /tmp/bt.sh node ga
   the spike. The 351 ms task is native (the profile's self time is "(program)", first GL program compile / upload), not JS. A
   `renderer.compile(scene, camera)` behind the loading text would move it before "Loading the mine..." clears; left for a quiet-machine
   measurement, since the numbers swing 2x with load.
+
+## Not started / blocked
+- S-12 Isles start-up: isles.js slot 3 (after Gameplay and World+Graphics).
+- S-13 One Backup: needs owner decision O-04 (not approved yet).
+- Regression runs on this branch (alone, wrapped in /tmp/bt.sh): save-race-tabs, nav-town, nav-town-p2, town-offline, town-bugbash,
+  town-front-door, smoke-journey, world-art, enemy-art, item-icons, bolt-art, art-integration, world-page, world-fog, world-party,
+  world-safereturn, world-stash, gear-save-tolerance, gear-default-on, deepdelve-page/-perf/-fps, side-access, lantern-backup-restore,
+  lantern-backup-reminder and the node backup / fuzz tests. Live-class tests (saves, workbench, cave*) were not run (they join the live town).
