@@ -118,3 +118,19 @@ body { background-color:var(--bg); background-image:linear-gradient(rgba(255,255
 #boss-fill { background:repeating-linear-gradient(90deg, rgba(255,107,107,.7) 0 6px, rgba(200,60,60,.7) 6px 8px); }
 #bait-val, #bells-val { text-shadow:2px 2px 0 var(--px-ink); }
 body.px8 { background-color:var(--bg); color:var(--ink); }
+
+/* BB-angler: the status line and boss strain bar sit BELOW the scene (they used to cover the bottom of the reel strip), result is a card */
+#stage { flex-direction:column; gap:8px; padding:10px 0 6px; }
+#scene { flex:1 1 0; min-height:0; height:auto; max-height:100%; width:auto; max-width:100%; aspect-ratio:2/3; }
+#msg { position:static; flex:0 0 auto; margin:0 auto; width:fit-content; max-width:96%; min-height:calc(3 * 1.25em + 16px); display:flex; align-items:center; justify-content:center; line-height:1.25; font-size:calc(14px * var(--ui-scale,1)); }
+#boss-ui { position:static; flex:0 0 auto; width:calc(100% - 12px); margin:0 auto; }
+#result { position:fixed; left:50%; top:50%; bottom:auto; transform:translate(-50%,-50%); width:min(92vw,400px); max-height:calc(100vh - 16px); max-height:calc(100dvh - 16px); overflow:auto; z-index:4; text-align:left; }
+#result .mk-head { font-size:calc(18px * var(--ui-scale,1)); }
+#result .mk-line { font-size:calc(14px * var(--ui-scale,1)); color:var(--ink); margin:2px 0; }
+#result .mk-line.dim { color:var(--mut); } #result .mk-line.fun { color:var(--acc); font-weight:700; }
+#result .res-sprite { width:96px; height:56px; image-rendering:pixelated; align-self:center; }
+#result .mk-medals { list-style:none; margin:2px 0; padding:0; display:flex; flex-wrap:wrap; gap:4px 12px; font-size:calc(13px * var(--ui-scale,1)); color:var(--mut); }
+#result .mk-medals .on { color:var(--acc); font-weight:700; }
+#pregame .panel { width:min(92vw,420px); margin-top:12vh; text-align:center; }
+#pregame p { margin:8px 0; } #pregame .btn { min-width:160px; min-height:56px; margin-top:8px; }
+@media (max-height:520px) and (orientation:landscape) { #pregame .panel { margin-top:0; } #msg { min-height:calc(2 * 1.25em + 12px); } }

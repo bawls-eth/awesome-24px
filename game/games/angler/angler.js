@@ -24,7 +24,7 @@
   // AC1 graphics tier: the shared "Low graphics" pref (pixeltown-access-v1 lowGfx, read with MMAccess) forces MMPerf's low tier:
   // no water shimmer, fewer rain/snow drops, one splash ring and fanfare sparks capped at MMPerf's low cap.
   // Without the pref (or without MMPerf) the tier is 'high' and every frame draws exactly as before.
-  const gfx = (() => {
+  const computeGfx = () => {
     let prefs = null, tier = 'high';
     try { prefs = window.MMAccess ? window.MMAccess.prefs.load(window.localStorage) : null; } catch (e) { prefs = null; }
     try { if (window.MMPerf) tier = window.MMPerf.profile([], prefs).tier; } catch (e) { tier = 'high'; }
@@ -32,7 +32,8 @@
     let dpr = 1;
     try { if (window.MMPerf && window.MMPerf.applyCanvas) dpr = window.MMPerf.applyCanvas(cv, tier).dpr; } catch (e) { dpr = 1; }
     return { tier, low, dpr, cap: low && window.MMPerf ? window.MMPerf.CAPS.low.sparks : Infinity, drops: low ? 16 : 40, rings: low ? 1 : 3 };
-  })();
+  };
+  let gfx = computeGfx();
 
   // ---- rng / clock / date (seeded and fake in test mode) ----
   let rng = Math.random;
@@ -166,7 +167,11 @@
   const saveFun = () => { fun = cleanFun(fun); Store.set(FUN_KEY, fun); };
   let sfx = null; const sounds = [];
   function ensureSfx() { if (sfx || !window.MMSfx) return; try { sfx = window.MMSfx.create({ storage: window.localStorage }); } catch (e) { sfx = null; } }
-  function cue(name) { sounds.push(name); if (sounds.length > 30) sounds.shift(); if (sfx) { try { sfx.play(name); } catch (e) { /* ignore */ } } }
+  // Logical cue names stay (tests + CHIP-AUDIO aliases); the 8-bit voice played for each is the Fishing set in CHIP-AUDIO.md.
+  const CHIP_VOICE = { ui_tap: 'splash', warn: 'bite', hurt: 'miss', levelup: 'catch', bag_rare: 'chest', boss_awaken: 'boss' };
+  function cue(name) { sounds.push(name); if (sounds.length > 30) sounds.shift(); if (sfx) { try { sfx.play(CHIP_VOICE[name] || name); } catch (e) { /* ignore */ } } }
+  let reelTick = 0; // rate limit for the reel voice while the line is held
+  function reelCue(dt) { reelTick -= dt; if (reelTick > 0) return; reelTick = 0.22; if (sfx) { try { sfx.play('reel'); } catch (e) { /* ignore */ } } }
   ['pointerdown', 'keydown'].forEach((n) => window.addEventListener(n, ensureSfx, { passive: true }));
   let shakes = 0;
   function shake(big) { // CSS shake on the canvas; off with reduced motion and the low graphics tier
@@ -222,21 +227,58 @@
       const u = D.economy.useBait(journal);
       if (u.type) { journal = u.journal; g.baitUsed = u.type; g.bite.wait *= A.BAITS[u.type].waitMult; saveJournal(); }
     }
-    g.state = 'waiting'; g.t = 0; g.react = 0;
+    g.state = 'waiting'; g.t = 0; g.react = 0; g.newSize = g.newStreak = g.newReact = false;
     g.baited = !!g.baitUsed; cue('ui_tap');
     setMsg(g.tour ? 'Tournament cast ' + journal.tour.run.used + '/' + D.CASTS + '. Waiting for a bite...' : g.baited ? 'Bait on the hook! Waiting for a bite...' : 'Waiting for a bite... (do not press yet)');
     renderSpots();
   }
+  // Result card: the shared MMMiniKit card (stats, medals, next goal, Play again first). Ids res-title / res-detail / res-fun / res-ok are kept.
+  const MEDAL_DEFS = [['catch1', 'Catch a fish', 1], ['species10', 'Catch 10 species', 10], ['boss1', 'Beat a boss fish', 0]];
+  function medalList() {
+    const n = A.journal.speciesCount(journal), t = A.journal.trophyCount(journal);
+    return MEDAL_DEFS.map((m) => ({ id: m[0], label: m[1], target: m[2] || undefined, earned: m[0] === 'boss1' ? t >= 1 : n >= m[2] }));
+  }
+  function resultStats(outcome) {
+    const st = [];
+    if (outcome === 'caught' && g.fish) st.push({ label: 'Size', value: g.size + ' cm', best: !!g.newSize, id: 'res-size' });
+    st.push({ label: 'Streak', value: String(fun.streak), best: !!g.newStreak, id: 'res-streak' });
+    if (outcome === 'caught' && g.react > 0) st.push({ label: 'Strike', value: g.react + ' ms', best: !!g.newReact, id: 'res-strike' });
+    st.push({ label: 'Best streak', value: String(fun.bestStreak), id: 'res-beststreak' });
+    return st;
+  }
+  function buildResult(outcome, title, detail, funLine) {
+    const MK = window.MMMiniKit, el = $('result'), medals = medalList(), again = outcome === 'caught' ? 'Cast again' : 'Try again';
+    if (!MK) { // card kit missing: plain fallback keeps the page playable
+      el.textContent = '';
+      const h = mk('h2', '', title); h.id = 'res-title'; const d = mk('p', '', detail); d.id = 'res-detail'; const b = mk('button', 'btn primary', again); b.id = 'res-ok'; b.type = 'button'; b.addEventListener('click', dismiss);
+      el.appendChild(h); el.appendChild(d); el.appendChild(b); return;
+    }
+    const extra = [];
+    if (outcome === 'caught' && g.fish) {
+      const c = document.createElement('canvas'); c.width = 48; c.height = 28; c.id = 'res-sprite'; c.className = 'res-sprite'; c.setAttribute('aria-hidden', 'true');
+      const cx = c.getContext('2d'); cx.imageSmoothingEnabled = false; drawFish(cx, 24, 14, 16, g.fish, false); extra.push(c);
+    }
+    const ul = mk('ul', 'mk-medals'); ul.id = 'res-medals'; ul.setAttribute('aria-label', 'Medals');
+    medals.forEach((m) => { const li = mk('li', m.earned ? 'on' : '', (m.earned ? '\u2605 ' : '\u2606 ') + m.label); li.dataset.medal = m.id; ul.appendChild(li); });
+    extra.push(ul);
+    const vm = MK.result({
+      title, headline: [{ text: title, id: 'res-title' }], stats: resultStats(outcome),
+      lines: [{ id: 'res-detail', text: detail, cls: 'dim' }].concat(funLine ? [{ id: 'res-fun', text: funLine, cls: 'fun' }] : []),
+      medals, value: A.journal.speciesCount(journal), menuHref: '../../hub/index.html', menuLabel: 'Hub', ids: { again: 'res-ok', head: 'res-head' },
+    });
+    const pn = MK.panel(el, vm, { again: dismiss, extra, holdMs: TEST ? 0 : 300, keyReady: () => g.state === 'result' });
+    pn.again.textContent = again;
+    el.classList.add('panel');
+    return pn;
+  }
   function finish(outcome, title, detail, funLine) {
     g.state = 'result'; g.result = { outcome, fish: g.fish && g.fish.id, size: g.size };
-    $('res-title').textContent = title; $('res-detail').textContent = detail;
-    $('res-fun').textContent = funLine || ''; $('res-fun').hidden = !funLine;
-    $('res-ok').textContent = outcome === 'caught' ? 'Cast again' : 'Try again';
+    const pn = buildResult(outcome, title, detail, funLine);
     $('result').hidden = false; g.resultAt = g.t;
     $('res-title').className = outcome === 'caught' && g.fish ? 'r' + g.fish.rarity : '';
     setMsg(title); renderSpots();
     if (g.tour) afterTourCast();
-    if (!TEST) setTimeout(() => { try { $('res-ok').focus({ preventScroll: true }); } catch (e) { /* ignore */ } }, 0);
+    if (!TEST) setTimeout(() => { try { if (pn && pn.focus && g.state === 'result') pn.focus(); } catch (e) { /* ignore */ } }, 0);
   }
   function dismiss() {
     if (g.state !== 'result') return;
@@ -287,6 +329,7 @@
   function land() {
     if (g.fish.cove) { landCove(); return; }
     const f = g.fish, isNew = !journal.caught[f.id];
+    g.newSize = !isNew && g.size > journal.caught[f.id].best;
     const firstTrophy = f.boss && !journal.trophies[f.id];
     journal = A.journal.record(journal, f.id, g.size);
     if (f.boss) { journal = A.journal.addTrophy(journal, f.id); journal = B.addHall(journal, f.id, g.size, todayStr()); }
@@ -307,6 +350,7 @@
   // Cove fish go to their own journal key: no stock, no bells, no bait drops (no currency here), just the collection.
   function landCove() {
     const f = g.fish, isNew = !journal.cove[f.id];
+    g.newSize = !isNew && g.size > journal.cove[f.id].best;
     journal = I.cove.record(journal, f.id, g.size);
     saveJournal(); renderStatus();
     g.fan = { t: 0, big: f.rarity >= 4 };
@@ -320,7 +364,9 @@
     fun.streak += 1;
     const newStreak = fun.streak > fun.bestStreak && fun.streak >= 2;
     if (fun.streak > fun.bestStreak) fun.bestStreak = fun.streak;
+    g.newStreak = newStreak;
     const newReact = g.react > 0 && (fun.bestReact === 0 || g.react < fun.bestReact);
+    g.newReact = newReact;
     if (newReact) fun.bestReact = g.react;
     saveFun();
     cue(f.rarity >= 3 || f.boss ? 'bag_rare' : 'levelup'); shake(f.rarity >= 4 || !!f.boss);
@@ -349,6 +395,7 @@
       else if (s === 'missed') { cue('hurt'); finish('missed', 'Too slow', 'The bite lasts ' + g.bite.window.toFixed(1) + ' s. Press the moment you see the "!".' + breakStreak()); }
     } else if (g.state === 'reeling') {
       const r = g.reel.tick(dt, anyHeld());
+      if (anyHeld()) reelCue(dt); else reelTick = 0;
       if (g.boss && r.phase !== g.lastPhase) { g.lastPhase = r.phase; g.phaseAt = g.t; }
       if (r.status === 'reeling' && g.surge) {
         const sp = B.phaseAt(g.surge, g.t), ts = B.tensionStep(g.strain, dt, anyHeld(), sp === 'surge');
@@ -363,24 +410,84 @@
     else g.bobY = reduced() || g.state !== 'waiting' ? 0 : Math.sin(g.t * 3) * 1.5;
   }
 
+  // ---- shared settings (MMSettings) and the pre-game card ----
+  let Settings = null;
+  try { if (window.MMSettings && window.MMSettings.mount) Settings = window.MMSettings.mount({ page: 'angler' }); } catch (e) { Settings = null; }
+  if (Settings && window.MMNav && window.MMNav.onSettings) window.MMNav.onSettings(() => { if (g.state === 'idle' || g.state === 'result') Settings.open(); });
+  window.addEventListener('mm-settings-change', (e) => {
+    const d = (e && e.detail) || {};
+    if (d.id === 'sound') { ensureSfx(); if (sfx) { try { sfx.setMuted(!d.value); } catch (er) { /* ignore */ } } }
+    else if (d.id === 'low-gfx') { gfx = computeGfx(); ctx.imageSmoothingEnabled = false; if (ready) draw(); }
+  });
+  const PREGAME_KEY = 'pixeltown-angler-intro-v1'; // sessionStorage: the card shows once per visit, never blocks a test run
+  function pregameText() {
+    const touch = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+    const keys = window.MMInput ? window.MMInput.hint({ touch, only: ['primary', 'secondary', 'menu'], names: { primary: 'cast / reel', secondary: 'next spot', menu: 'menu' } }) : '';
+    return { how: 'Cast, wait for the "!", then press to hook. Hold to reel and keep the fish in the green zone.', keys: touch ? 'Tap the water to cast and reel. Menu is top left.' : keys };
+  }
+  function openPregame() {
+    const el = $('pregame'); if (!el) return;
+    const t = pregameText(); $('pg-how').textContent = t.how; $('pg-keys').textContent = t.keys;
+    el.hidden = false; try { $('pg-play').focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+  }
+  function closePregame() {
+    $('pregame').hidden = true;
+    try { sessionStorage.setItem(PREGAME_KEY, '1'); } catch (e) { /* storage blocked: the card just shows next visit */ }
+  }
+  $('pg-play').addEventListener('click', closePregame);
+
   // ---- input ----
   function setInput(src, v) {
     const before = anyHeld(); held[src] = v; const after = anyHeld();
     if (!before && after) onDown();
   }
-  const ignoreEl = (t) => t && t.closest && t.closest('button, a, select, input, label, .overlay, #result, #status');
+  const ignoreEl = (t) => t && t.closest && t.closest('button, a, select, input, label, .overlay, #result, #status, #pregame, #mmset, .mmset-back, [id^="mm-nav"], [class^="mm-nav"]');
   document.addEventListener('pointerdown', (e) => { if (ignoreEl(e.target)) return; setInput('ptr', true); });
   const up = () => setInput('ptr', false);
   document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
   window.addEventListener('blur', () => { held.ptr = held.key = held.pad = held.btn = false; });
+  // Controls follow CONTROLS.md through MMInput: Primary = Space / Enter (cast, strike, hold to reel, dismiss a result),
+  // Secondary = Shift / E (next open spot while idle), Menu = Esc / P (close a panel, else the Menu sheet), Restart = R (cast again from a result).
+  let navWasOpen = false;
+  window.addEventListener('keydown', () => { navWasOpen = !!(window.MMNav && MMNav.isOpen && MMNav.isOpen()); }, true);
+  const anyPanelOpen = () => overlayOpen() || (!$('pregame').hidden) || !!(Settings && Settings.isOpen());
+  function nextSpot() {
+    if (g.state !== 'idle' || g.tour) return false;
+    const list = A.SPOTS.concat(coveOpen() ? [COVE] : []).filter((id) => !spotLocked(id)), i = list.indexOf(g.spot);
+    if (list.length < 2) return false;
+    return pickSpot(list[(i + 1) % list.length]);
+  }
+  function closeTopPanel() {
+    if (Settings && Settings.isOpen()) { Settings.close(); return true; }
+    if (!$('journal').hidden) { closeJournal(); return true; }
+    if (!$('gear').hidden) { closeGear(); return true; }
+    const o = ['tourney', 'market', 'aquarium'].find((id) => !$(id).hidden);
+    if (o) { closeOverlay(o); return true; }
+    return false;
+  }
+  const actionOf = (e) => (window.MMInput ? window.MMInput.actionOf(e) : (e.code === 'Space' || e.key === 'Enter' ? 'primary' : null));
   document.addEventListener('keydown', (e) => {
-    if (e.code !== 'Space' || e.repeat) return;
-    if (overlayOpen()) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (window.MMInput && MMInput.isTyping(e.target)) return;
+    const a = actionOf(e);
+    if (a === 'menu') {
+      if (e.repeat) return;
+      if (closeTopPanel()) { e.preventDefault(); return; }
+      if (!$('pregame').hidden) return;
+      if (window.MMNav && MMNav.isOpen && MMNav.mounted()) { if (e.key === 'Escape' && navWasOpen) return; if (MMNav.isOpen()) MMNav.close(); else MMNav.open(); e.preventDefault(); }
+      return;
+    }
+    if (anyPanelOpen()) return;
+    if (a === 'restart') { if (!e.repeat && g.state === 'result' && (g.t - g.resultAt > 0.25 || TEST)) { e.preventDefault(); dismiss(); } return; }
+    if (a === 'secondary') { if (!e.repeat) { e.preventDefault(); nextSpot(); } return; }
+    if (a !== 'primary' || e.repeat) return;
+    const tag = e.target && e.target.tagName;
+    if (e.key === 'Enter' && (tag === 'BUTTON' || tag === 'A')) return; // Enter on a focused control presses that control
     e.preventDefault();
     if (g.state === 'result') { if (g.t - g.resultAt > 0.25 || TEST) dismiss(); return; }
     setInput('key', true);
   });
-  document.addEventListener('keyup', (e) => { if (e.code === 'Space') setInput('key', false); });
+  document.addEventListener('keyup', (e) => { if (actionOf(e) === 'primary') setInput('key', false); });
   function pollPad() {
     try {
       const pads = navigator.getGamepads ? navigator.getGamepads() : [];
@@ -568,12 +675,6 @@
   function closeGear() { $('gear').hidden = true; $('gear-btn').focus(); }
   $('gear-btn').addEventListener('click', openGear);
   $('gear-close').addEventListener('click', closeGear);
-  document.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape') return;
-    if (!$('journal').hidden) closeJournal(); else if (!$('gear').hidden) closeGear();
-    else ['tourney', 'market', 'aquarium'].forEach((id) => { if (!$(id).hidden) closeOverlay(id); });
-  });
-
   // ---- depth: tournament / market / aquarium ----
   const BAIT_NAMES = { plain: 'Plain', quick: 'Quick-bite', rare: 'Rare-lure', big: 'Big-fish' };
   function totalCaught() { let n = 0; Object.keys(journal.caught).forEach((id) => { n += journal.caught[id].n; }); return n; }
@@ -928,11 +1029,12 @@
   ready = true; initFilters(); renderSpots(); renderJournalCount(); renderStatus();
   $('spot-title').textContent = spotName(g.spot); setMsg(idleMsg());
   draw();
+  (function () { let seen = false; try { seen = sessionStorage.getItem(PREGAME_KEY) === '1'; } catch (e) { seen = false; } if (!seen && (!TEST || params.get('intro') === '1')) openPregame(); })();
   if (TEST) {
     window.__angler = {
       get state() { return g.state; }, get result() { return g.result; }, get reel() { return g.reel; },
       get bite() { return g.bite; }, get journal() { return A.journal.clean(journal); }, get full() { return journal; }, get spot() { return g.spot; },
-      get reduced() { return reduced(); }, get bobY() { return g.bobY; },
+      get reduced() { return reduced(); }, pregame: { get open() { return !$('pregame').hidden; }, show: openPregame, close: closePregame }, settings: Settings, nextSpot, medalList, get bobY() { return g.bobY; },
       get gfx() { return { tier: gfx.tier, low: gfx.low, dpr: gfx.dpr, cap: gfx.cap === Infinity ? null : gfx.cap, drops: gfx.drops, rings: gfx.rings }; },
       setHold(v) { setInput('test', !!v); },
       tap() { setInput('test', true); setInput('test', false); },
