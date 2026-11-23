@@ -13,7 +13,9 @@
     "actual": "Goal line switches from 'Reach Lv 5 for Midlands (Lv 1)' to 'Defeat 22 creatures in the Deeps (0/22)' after the first kills, and keeps it at Lv 1-4. No zone in the HUD, minimap or toasts is called 'the Deeps' (it is zone 2 = Highlands, recommended Lv 10). mm-quests uses its own zone list ['Shore','Meadows','Deeps','Godlands'] while mm-zones / realm-world use ['Shore','Midlands','Highlands','Godlands']. The goal line always prefers the first open daily quest over the level-appropriate zone hint.",
     "viewport": "1280x720",
     "url": "/game/games/mad-maze/index.html?mode=world",
-    "screenshots": ["img/b01-01.jpg"],
+    "screenshots": [
+      "img/b01-01.jpg"
+    ],
     "clip": null,
     "suspect": "game/shared/mm-quests.js:8 (ZONES names); game/games/mad-maze/realm-world.js:494-505 (goalText prefers the daily quest regardless of hero level)",
     "kind": "bug",
@@ -33,7 +35,10 @@
     "actual": "'Sand Titan awakens!' while the zone line reads 'Shore · Safe-ish' and the zone toast says 'Shore: Safe-ish, recommended Lv 1'. The Lv 1 hero (100 hp) went 100 -> 0 in 31 s while circle-strafing and firing the whole time; the boss lost 72 of 238 hp. The wake check is a plain 9-tile radius around the altar.",
     "viewport": "1280x720",
     "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=4242",
-    "screenshots": ["img/b01-02.jpg", "img/b01-03.jpg"],
+    "screenshots": [
+      "img/b01-02.jpg",
+      "img/b01-03.jpg"
+    ],
     "clip": null,
     "suspect": "game/games/mad-maze/realm-world.js:875 (bossTick: d < 9 * TILE, no zone check)",
     "kind": "balance",
@@ -53,7 +58,9 @@
     "actual": "Hero bolt reach measured 497 px (580 px/s x 0.85 s). The view's half-height is only 270 px (+24 px margin), so _canFire returns false for anything 295-497 px above/below the hero. Measured: a Whirler 400 px above (off-screen) took 4.8 of 6 hp in 6 s and never fired. Spiral enemies do not approach, so on 16:9 desktop (and horizontally on phone portrait) you can safely farm stationary shooters from out of view. Low risk/reward exploit, but it also means the hero shoots at things the player cannot see.",
     "viewport": "1280x720",
     "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=4242",
-    "screenshots": ["img/b01-04.jpg"],
+    "screenshots": [
+      "img/b01-04.jpg"
+    ],
     "clip": null,
     "suspect": "game/realm.js:2959-2968 (_canFire uses the screen rect) vs game/realm.js:30 (RM_PLAYER bulletSpeed 580, bulletLife 0.85)",
     "kind": "balance",
@@ -72,7 +79,9 @@
     "actual": "Each death: 'Kills 0, Shards this run +0, Survivor's cache: Common Hearty Charm / Swift Charm / Lucky Ring / Scholar Ring', 'Stashed 1..4 items'. Respawn is instant at the world spawn with 1.4 s i-frames. Once the 24-slot pack is full the cache is sold for +3 shards per death instead. Values are small (Common), so P3, but it is a free loop.",
     "viewport": "1280x720",
     "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=4242",
-    "screenshots": [],
+    "screenshots": [
+      "img/b01-08.jpg"
+    ],
     "clip": null,
     "suspect": "game/realm.js:3295-3303 (_deathBonus has no kill / time condition)",
     "kind": "balance",
@@ -108,7 +117,10 @@
     "actual": "Goal line ends with an ellipsis so the actual target (zone) is never visible on a phone; the gear toast sits on top of the zone/goal lines for its lifetime; the locked F slot reads 'Lv7 Blizzar'.",
     "viewport": "390x844",
     "url": "/game/games/mad-maze/index.html?mode=world",
-    "screenshots": ["img/b01-05.jpg", "img/b01-06.jpg"],
+    "screenshots": [
+      "img/b01-05.jpg",
+      "img/b01-06.jpg"
+    ],
     "clip": null,
     "suspect": null,
     "kind": "visual",
@@ -127,7 +139,10 @@
     "actual": "'Sand Titan · phase 1' bar is drawn over the boss when it is in the top ~110 px; 'Shore: Safe-ish, recommended Lv 1' banner sits across the middle of the arena mid-fight (it also contradicts the boss you are fighting).",
     "viewport": "1280x720",
     "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=4242",
-    "screenshots": ["img/b01-02.jpg", "img/b01-03.jpg"],
+    "screenshots": [
+      "img/b01-02.jpg",
+      "img/b01-03.jpg"
+    ],
     "clip": null,
     "suspect": null,
     "kind": "ux",
@@ -145,10 +160,54 @@
     "actual": "In emulation the third-finger tap orphaned the two stick pointers: after lifting everything, moveVec stayed (-0.87, 0) and aim/fire stayed on; the hero kept walking into the world edge and died standing still. This may be partly a Chromium touch-emulation artifact (real devices send pointercancel), but the code has no fallback: onBlur clears keys and mouse only.",
     "viewport": "390x844",
     "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=4242",
-    "screenshots": ["img/b01-06.jpg"],
+    "screenshots": [
+      "img/b01-06.jpg"
+    ],
     "clip": null,
     "suspect": "game/realm.js:2118 (onBlur leaves this.moveVec / this.aimVec); game/games/mad-maze/mad-maze.js:77-94 (stick ends only on pointerup/cancel/lostpointercapture)",
     "kind": "bug",
     "frequency": "sometimes"
+  },
+  {
+    "id": "b01-09",
+    "severity": "P3",
+    "area": "Realm enemy AI: separation",
+    "title": "Enemies have no separation: Highlands Wraith Knights / Godlands imps draw on top of each other and read as one sprite",
+    "steps": [
+      "?mode=world&seed=4242, go 75% of the way from the spawn to the centre (Highlands, tile ~108,111) or to the Godlands centre",
+      "Look at any camp of the same creature"
+    ],
+    "expected": "Enemies of a camp keep a small gap (or a soft push-apart) so the player can count the threat.",
+    "actual": "Three Wraith Knights overlap almost exactly at one spot (whirlers drift to anchors within +-110 px of the spawn point and nothing pushes them apart); Godlands imp camps form one red blob. On the Shore it is rare (0 exact stacks in a 70 s fight), inland it is constant.",
+    "viewport": "1280x720",
+    "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=4242",
+    "screenshots": [
+      "img/b01-07.jpg",
+      "img/b01-09.jpg"
+    ],
+    "clip": null,
+    "suspect": "game/realm.js:2971-3018 (_updateEnemies: no neighbour separation), game/realm.js:2483 (spiral anchor jitter)",
+    "kind": "visual",
+    "frequency": "often"
+  },
+  {
+    "id": "b01-10",
+    "severity": "P3",
+    "area": "Realm movement / collision",
+    "title": "Phone run ended with the hero standing on a solid deep-water tile at the world's west edge (could not repro on purpose)",
+    "steps": [
+      "390x844 touch, fresh Frostcaller (random daily seed), hold the move stick north-west from the south coast for ~40 s while tapping Q (Dash)"
+    ],
+    "expected": "The hero never stands on a solid tile (deep water); the coast stops it.",
+    "actual": "Hero walked from tile 93,229 to tile 2,116 and stood at (76, 3723) where solidAt() is true (tile 0 = deep_water), taking hits until death. On desktop seed 4242 the coast does stop the hero (walking and dashing), so the entry path is unknown; note _movePlayer lets a hero who is already inside a solid tile walk anywhere ('stuck' escape rule), so one bad entry gives free ocean walking where enemies (blocked by the same tiles) cannot follow.",
+    "viewport": "390x844",
+    "url": "/game/games/mad-maze/index.html?mode=world",
+    "screenshots": [
+      "img/b01-06.jpg"
+    ],
+    "clip": null,
+    "suspect": "game/realm.js:2797 (stuck => move freely inside solid)",
+    "kind": "bug",
+    "frequency": "once"
   }
 ]
