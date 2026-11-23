@@ -22,6 +22,10 @@ shared-mm-profile-backup.test.js, but not this page test). Ask: change that asse
 Backup button) and name it in the commit. Heads-up: Gameplay's G-05 (6f12f65) also edits lantern-page.test.js (rekindle asserts, other
 hunks): rebase on / merge dev-gameplay first or keep to the one line to avoid a conflict.
 
+## 4. New additive key not in the Backup  [OPEN, 09:08 UTC]
+Gameplay's G-26 stores Isles nodes / pouch under `pixeltown-isle-nodes-v1`. It is not in MMBackup KNOWN, so a Backup / Restore loses it.
+Add it with a cleaner (object, capped list of NODES_MAX 200, see isles.js:617-620) and a label.
+
 ## 3. beta-s06-art-cache.test.js byte assert is cache-sensitive (flake)  [CLOSED 07:20 by 43d8f18 "deterministic S-01 / S-06 tests": 14/14]
 Run 1 alone on the integrated tree: `FAIL [2] fewer JSON bytes transferred than the baseline 62408 -> 170457` (baseline 1235 req / 225 json
 but only 62 KB of JSON bytes: the baseline page got 304 / cached bodies). Run 2 alone: 12/12 PASS. Make the byte count independent of the

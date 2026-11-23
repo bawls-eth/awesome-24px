@@ -41,6 +41,17 @@ so `artTiles` and `miniDraws` are now inside the `//` comment. Fix: put `// W-03
 properties are real again; re-run `world-page.test.js` (66 asserts) and `beta-w03-terrain.test.js`. Grep the same line for anything else the
 comment swallowed.
 
+### 6b (09:08). The same swallowed handles also crash world-fog, world-bosskey and world-sites (`w.miniDraws is not a function`).
+One-line fix, four tests: world-page, world-fog, world-bosskey, world-sites.
+
+## 7. W-16 (c68631c) breaks realm-polish3.test.js  [OPEN, 09:08 UTC]
+```
+FAIL desktop 1280x720 dungeon: the whole room shows as before (no dungeon view, no pan) {"w":753.2,"h":576,"dv":null,"cx":0,"cw":680}
+```
+mad-maze.css at c68631c^ 49/49, at the merged tip 48/49. The new desktop room band changes the dungeon canvas box that realm-polish3 pins.
+Either keep the whole room visible with no pan at 1280x720 under the new band, or (if the new box is the intended design) update that assert
+deliberately with the new numbers and name it in the commit.
+
 ## 3. Weak "fails before" (no action required, FYI)
 beta-w01, beta-w10, beta-w11, beta-w12, beta-w14 crash on the base because a test hook is missing, so they do not show the bug on the base by
 measurement. They pass on the merged tree with real asserts; recorded as PASS (weak b) in qa-verification.md.
