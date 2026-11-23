@@ -477,3 +477,20 @@ body.touch-device #rw-rush, body.touch-device #rw-rush-go { bottom: calc(230px +
 @media (max-width: 560px) {
   #rw-goal { left: calc(10px + env(safe-area-inset-left, 0px)); top: calc(124px + env(safe-area-inset-top, 0px)); max-width: calc(100vw - 100px); }
 }
+
+/* W-05 (b01-06): the goal line wraps to a second line instead of an ellipsis, so the target (zone, count) is always readable. */
+#rw-goal { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+
+/* W-16 (b03-04, b03-06, b03-08): dungeon HUD. The room canvas keeps its full size (realm-polish3 pins the full-height room); the HUD moves
+   out of the room instead, into the side margins of the 17x13 room on wide desktop screens: the Q/E/R/F bar as a column in the left margin,
+   the key-hint line wrapped in the left margin under the map button, the boss bar in the right margin under the mini-map. So the S door row,
+   the N door row and a hero entering through either are never under HUD.
+   Phone portrait: the boss bar sits left of the mini-map and under the mutator chip, above the room. */
+@media (min-width: 1100px) and (min-aspect-ratio: 16/10) {
+  body.dungeon-mode:not(.touch-device) #realm-abilities { left: calc(16px + env(safe-area-inset-left, 0px)); bottom: calc(64px + env(safe-area-inset-bottom, 0px)); transform: none; flex-direction: column; }
+  body.dungeon-mode:not(.touch-device) #realm-help { left: calc(10px + env(safe-area-inset-left, 0px)); right: auto; top: calc(132px + env(safe-area-inset-top, 0px)); bottom: auto; transform: none; width: calc((100vw - 100vh * 17 / 13) / 2 - 20px); max-width: none; white-space: normal; text-align: left; font-size: 12px; line-height: 1.3; }
+  body.dungeon-mode:not(.touch-device) #realm-boss { left: auto; right: calc(10px + env(safe-area-inset-right, 0px)); transform: none; top: calc(262px + env(safe-area-inset-top, 0px)); width: calc((100vw - 100vh * 17 / 13) / 2 - 20px); }
+}
+@media (max-width: 600px) and (orientation: portrait) {
+  body.dungeon-mode #realm-boss { top: calc(150px + env(safe-area-inset-top, 0px)); left: calc(8px + env(safe-area-inset-left, 0px)); right: auto; transform: none; width: calc(100vw - 8px - 116px); }
+}

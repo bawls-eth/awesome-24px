@@ -8,6 +8,7 @@
   const SPOT_NAMES = { west: 'West Pond', east: 'East Pond', river: 'River Run', pier: 'Sea Pier', ice: 'Ice Hole', mangrove: 'Mangrove' };
   const ICE_MONTHS = [12, 1, 2];
   const RATES = { hold: 1.2, release: 1.6, fill: 0.25, drain: 0.15, snapLimit: 1.0, bossSnapLimit: 1.5 };
+  const LOST_SEC = 6; // G-16: seconds of an empty meter with no input before the fish swims off
   const BITE = { windowSec: 1.0, minWait: 1.5, maxWait: 4.5 };
   const SEASONS = ['winter', 'spring', 'summer', 'autumn'];
 
@@ -263,6 +264,10 @@
       s.meter += (inZone() ? RATES.fill * fillMult : -RATES.drain) * dt;
       s.meter = Math.max(0, Math.min(1, s.meter));
       if (s.meter >= 1) s.status = 'caught';
+      // G-16 (b10-04, owner default O-06): an empty meter for LOST_SEC with no input ends the reel ('lost': it swam off, no penalty).
+      // Any input (holding) or any meter resets the clock, so active play (and every golden catch sequence) is unchanged.
+      s.idle0 = holding || s.meter > 0 ? 0 : (s.idle0 || 0) + dt;
+      if (s.status === 'reeling' && s.idle0 >= LOST_SEC - 1e-9) s.status = 'lost';
       return s;
     };
     s.inZone = inZone;

@@ -227,6 +227,9 @@ function rmCleanForged(t, f) {
   return { id: f.id, v: Math.round(v * 1000) / 1000 };
 }
 // Sell value: the rarity's value, plus 2 x tier for tiered gear (MMGear.sellValue) while gear is on.
+const RM_CACHE_KILLS = 3, RM_CACHE_ALIVE_S = 60; // G-09: a Survivor's cache needs this many kills or seconds alive since the last one
+const RM_PROVOKE_S = 4; // G-08: seconds a world shooter hit from off screen ignores hold-fire
+const RM_ARM_MS = 300, RM_SELL_ASK_MS = 3000; // G-03: backpack buttons wake 300 ms after a re-render; a protected Sell's "Sure?" lasts 3 s
 function rmSellValue(it) { return RM_GEAR_ON && it && it.t ? MMGear.sellValue(it.r, it.t) : RM_RARITIES[it.r].sell; }
 // A resolved MMWeapons spec, re-clamped into a plain frozen object the engine trusts. Only the 26 alternate styles count (bases keep today's fire).
 function rmWpnSpec(s) {
@@ -2115,7 +2118,7 @@ class RealmArena {
     };
     this.onKeyUp = (e) => { const k = e.key.toLowerCase(); this.keys[k] = false; if (k === 'enter') this.keys[' '] = false; };
     this._syncHelp();
-    this.onBlur = () => { this.keys = {}; this.mouse.down = false; };
+    this.onBlur = () => { this.keys = {}; this.mouse.down = false; this.moveVec.x = 0; this.moveVec.y = 0; this.aimVec.on = false; this.aimVec.x = 0; this.aimVec.y = 0; }; // G-18 (b01-08): a lost pointerup never leaves the sticks running
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('keyup', this.onKeyUp);
     window.addEventListener('blur', this.onBlur);
@@ -2475,7 +2478,7 @@ class RealmArena {
     if (!e) return null;
     const def = RM_ENEMIES[type];
     const scale = (1 + 0.15 * Math.max(0, this.run.wave - 1)) * (this.team && this.role === 'host' ? RT_HP_SCALE : 1); // tougher with a partner
-    e.active = true; e.type = type; e.x = x; e.y = y;
+    e.active = true; e.type = type; e.x = x; e.y = y; e.provT = 0; // G-08: a pooled enemy starts unprovoked
     e.maxHp = Math.ceil(def.hp * scale); e.hp = e.maxHp;
     e.slowT = 0; e.slowF = 1; e.boneT = 0; e.status = null; e._stm = null; e._stNext = Infinity; e._stAcc = 0; e.fireMul = 1; e._pipAt = -9; e._pipN = 0; e._pipMore = 0; e._tg = 0; e._tgW = 0; e._tgP = 0; e._tgA = 0;
     e.dg = null; e._at = undefined; e.t = 0; e.flash = 0; e.angle = this.rng() * Math.PI * 2; e.dir = this.rng() < 0.5 ? 1 : -1;
@@ -2682,7 +2685,7 @@ class RealmArena {
   _floatText(x, y, text, color) {
     const t = this._take(this.texts);
     if (!t) return null;
-    t.active = true; t.x = x; t.y = y; t.vy = -48; t.life = 0.7; t.text = text; t.color = color; t.ico = ''; t.plain = '';
+    t.active = true; t.x = x; t.y = y; t.vy = -48; t.life = 0.7; t.text = text; t.color = color; t.ico = ''; t.plain = ''; t.outline = '';
     return t;
   }
 
@@ -2693,6 +2696,7 @@ class RealmArena {
     if (this.paused) { this._readPad(); this._padPauseEdge(); return; } // backpack open (Start can still close it)
     const p = this.player;
     this._stT += dt; this._stTick(dt); this._focusTick(dt); this._gearTick(dt);
+    if (this.state === 'play') this._cacheAliveT = (this._cacheAliveT || 0) + dt; // G-09: time alive since the last Survivor's cache
     this._accT += dt; if (this._accT >= 1) { this._accT = 0; this.refreshAccess(); }
     this.shake = Math.max(0, this.shake - dt * 30);
     this.flash = Math.max(0, this.flash - dt * 2.2);
@@ -2977,11 +2981,12 @@ class RealmArena {
       if (e.slowT > 0) { e.slowT -= dt0; dt = dt0 * e.slowF; } // a signature slow (Blizzard Ring / Thorn Bloom); never set otherwise
       const p = this._nearest(e.x, e.y);
       e.t += dt; e.flash = Math.max(0, e.flash - dt * 6);
-      if (wd && (p.x - e.x) * (p.x - e.x) + (p.y - e.y) * (p.y - e.y) > wake2) { e._tg = 0; continue; } // world: an enemy far from every player sleeps (no moving, no firing)
+      if (wd && !(e.provT > 0) && (p.x - e.x) * (p.x - e.x) + (p.y - e.y) * (p.y - e.y) > wake2) { e._tg = 0; continue; } // world: an enemy far from every player sleeps (no moving, no firing); a provoked one (G-08) wakes
       this._curE = e; this._curDm = e.dmgMul || 1; // bullets fired below carry this enemy's damage multiplier (1 = unchanged)
       let sm = null;
       if (e.status) { if (e._stNext <= this._stT * 1000) this._stRefresh(e); sm = e._stm; if (sm) { this._curDm *= sm.enemyDmg; if (sm.dot > 0) this._stEnemyDot(e, sm, dt0); if (!e.active) continue; } }
-      const hold = (wd || this._dv) && !this._canFire(e, p); // world: off-screen shooters hold their fire (cooldowns wait at 0.2 s)
+      if (e.provT > 0) e.provT = Math.max(0, e.provT - dt0); // G-08: provoked countdown
+      const hold = (wd || this._dv) && !(e.provT > 0) && !this._canFire(e, p); // world: off-screen shooters hold their fire (cooldowns wait at 0.2 s); a provoked one does not
       if (hold) { e.cd = Math.max(e.cd, 0.2); if (e.type === 'boss') e.cd2 = Math.max(e.cd2, 0.2); }
       if (e.type === 'boss') { if (sm && sm.speed < 1) e.t -= dt * (1 - sm.speed); this._updateBoss(e, dt * (e.fireMul || 1) / (sm ? sm.enemyFire : 1)); if (tg) this._tgBoss(e, hold, p); this._curDm = 1; this._curE = null; continue; } // slowed: the sway runs slower
       if (sm && sm.stun) { e._tg = 0; continue; } // stunned: no moving, no firing
@@ -2991,6 +2996,7 @@ class RealmArena {
       const dx = p.x - e.x; const dy = p.y - e.y; const dist = Math.hypot(dx, dy) || 1;
       if (e.type === 'spiral') {
         // Drifts toward its anchor and keeps spinning out a steady spiral.
+        if (e.provT > 0 && wd && !this._canFire(e, p)) { e.ax += (dx / dist) * RM_ENEMIES.spiral.speed * 1.6 * sp * dt; e.ay += (dy / dist) * RM_ENEMIES.spiral.speed * 1.6 * sp * dt; } // G-08: provoked + off screen: the anchor walks in
         const ax = e.ax - e.x; const ay = e.ay - e.y; const ad = Math.hypot(ax, ay);
         if (ad > 8) { e.x += (ax / ad) * RM_ENEMIES.spiral.speed * sp * dt; e.y += (ay / ad) * RM_ENEMIES.spiral.speed * sp * dt; }
         if (e.cd <= 0) { e.cd = 0.09; e.angle += 0.47; this.fireEnemyBullet(e.x, e.y, e.angle, 150, 1); }
@@ -3104,6 +3110,13 @@ class RealmArena {
     if (this.dungeon && e.dg === 'boss') { this.dungeon.hitBoss(e, dmg); return; }
     if (e.type === 'boss' && e.invuln > 0) { if (quiet) return; this._floatText(e.x, e.y - 40, 'shielded', '#c9d1d9'); this._burst(e.x, e.y, '#fff', 1, 60); return; }
     if (this.onEnemyHit) this.onEnemyHit(e, dmg);
+    // G-08 (b01-03): a world shooter hit while it holds its fire (off screen) is provoked for RM_PROVOKE_S: it may fire, and a
+    // non-approaching type steps toward the hero until it is on screen. No farming from beyond the edge of the view.
+    // Allocation-free (arena-p2-hotpath): a plain camera-rect test on numbers, no _nearest / _canFire / Math.hypot call per hit.
+    if (this._holdFire && this.world && this.mode === 'world' && !this.dungeon && e.type !== 'boss') {
+      const c = this.camera, ex = e.x, ey = e.y;
+      if (ex < c.x - 24 || ex > c.x + this.W + 24 || ey < c.y - 24 || ey > c.y + this.H + 24) e.provT = RM_PROVOKE_S;
+    }
     e.hp -= dmg; e.flash = 1;
     if (!quiet || e.hp <= 0) this._snd(e.hp > 0 ? 'hit' : 'kill'); // P2: a splashed (quiet) target that survives plays no extra 'hit' (the primary hit just played one; no voice per target)
     if (e.type === 'boss') {
@@ -3294,6 +3307,14 @@ class RealmArena {
   // Deterministic (no randomness): the item cycles with your falls so repeat runs bring variety.
   _deathBonus() {
     const sv = this.save; const w = Math.max(1, this.run.wave);
+    // G-09 (owner default O-06): the Survivor's cache needs effort: 3+ kills or 60 s alive since the last cache (shards are still never lost).
+    // Counted per page visit (kills from save.kills, time from _cacheAliveT, which _update adds while you play).
+    const kills = (sv.kills | 0) - (typeof this._cacheKAt === 'number' ? this._cacheKAt : (sv.kills | 0) - (this.run.kills | 0));
+    if (kills < RM_CACHE_KILLS && (this._cacheAliveT || 0) < RM_CACHE_ALIVE_S) {
+      this._cacheKAt = sv.kills | 0; this._cacheAliveT = 0;
+      return { id: '', rarity: 0, text: 'no cache this time (3 kills or a minute alive earns one)', n: 0 };
+    }
+    this._cacheKAt = sv.kills | 0; this._cacheAliveT = 0;
     const rarity = w >= 6 ? 2 : w >= 3 ? 1 : 0;
     const def = RM_BASE_ITEMS[(sv.deaths + w) % RM_BASE_ITEMS.length]; const rar = RM_RARITIES[rarity];
     let text;
@@ -3384,7 +3405,8 @@ class RealmArena {
     this.shake = 14;
     this._burst(this.player.x, this.player.y, '#ff6f91', 30, 300);
     this._deathZone = this._worldCopy() ? this._zoneLabel() : '';
-    this._showBanner(`You fell in the Realm…  no 💎 lost — ${cache.text}  ·  ${this._deathZone ? `in ${this._deathZone}` : `wave ${Math.max(1, this.run.wave)}`}, ${this.run.kills} kills, +${this.run.shards} 💎 this run`, 2.6);
+    const dg = this.dungeon && this.dungeon.api && typeof this.dungeon.api.fellText === 'string' ? this.dungeon.api.fellText : ''; // G-24 (b03-14): "You fell in the Crypt", no "wave" in a dungeon
+    this._showBanner(dg ? `${dg}…  no 💎 lost — ${cache.text}  ·  ${this.run.kills} kills, +${this.run.shards} 💎 this run` : `You fell in the Realm…  no 💎 lost — ${cache.text}  ·  ${this._deathZone ? `in ${this._deathZone}` : `wave ${Math.max(1, this.run.wave)}`}, ${this.run.kills} kills, +${this.run.shards} 💎 this run`, 2.6);
     this.onSave(this.save);
     this._syncHud();
   }
@@ -3456,16 +3478,43 @@ class RealmArena {
   // Picks an item up. A full backpack sells it on the spot for shards.
   // gear (optional, additive): { t, a?, sig? } of a tiered drop. The entry is built WITH them before onItem (the stash record) and the save write, so no
   // T0 copy of a tiered drop ever reaches storage or the stash (review F2). Cleaned like a stored item (rmCleanGear / rmCleanSig).
-  collectItem(id, rarity, gear) {
-    this._snd('pickup');
+  // G-04 (b02-04/05, owner default O-06): is this drop worth more than a free slot? A tiered drop above the best tier held in its slot, a T12 chase
+  // piece, or a signature / relic. Such a drop is never auto-sold by a full pack.
+  _fullPackKeeps(id, gear, gt) {
+    if (!gt) return false;
+    if (gt >= 12 || (gear && gear.sig)) return true;
+    if (RM_GEAR_ON && typeof MMGear !== 'undefined' && typeof MMGear.isSig === 'function' && MMGear.isSig(id)) return true;
+    const sl = (RM_ITEM_BY_ID[id] || {}).slot; let best = 0;
+    this.save.items.forEach((x) => { if (x && x.t && (RM_ITEM_BY_ID[x.id] || {}).slot === sl) best = Math.max(best, x.t); });
+    return gt > best;
+  }
+  // A HUD toast for the full pack (the banner line, not a faint float text), at most once per 4 s.
+  _fullPackToast(text) {
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (this._fullToastAt && now - this._fullToastAt < 4000) return false;
+    this._fullToastAt = now; this.lastFullToast = text; // test hook
+    try { this._showBanner(text, 2.5); } catch (e) { /* cosmetic */ }
+    return true;
+  }
+  // collectItem(id, rarity, gear, fromBag) -> true when the drop was taken (into the pack, or sold by a full pack), false when an upgrade waits on the
+  // ground for room (G-04). fromBag: the caller keeps its own bag on the ground; otherwise a direct grant (chest, rush) is dropped as a bag at the hero.
+  collectItem(id, rarity, gear, fromBag) {
     const sv = this.save; const def = RM_ITEM_BY_ID[id]; const rar = RM_RARITIES[rarity];
     if (sv.items.length >= RM_BACKPACK) {
       // review F11: a full pack sells a tiered drop at its tiered value (rmSellValue, the same price the backpack's Sell button pays), never the classic one
       const gt = gear && typeof gear === 'object' && !Array.isArray(gear) ? rmCleanGear(id, rarity, gear).t : 0;
+      if (this._fullPackKeeps(id, gear, gt)) { // G-04: an upgrade stays on the ground, nothing paid, nothing saved
+        this._fullPackToast(`Backpack full: make room for ${def.name} T${gt}`);
+        if (!fromBag && this.player) { const b = this.dropBag(this.player.x, this.player.y + 30, rarity, id, null, gear); if (b) { b.id = id; b.vx = 0; b.vy = 0; b.waitRoom = true; } }
+        return false;
+      }
+      this._snd('pickup');
       const val = rmSellValue(gt ? { r: rarity, t: gt } : { r: rarity });
       sv.shards += val; this.lastFullSale = { id, r: rarity, t: gt, shards: val }; // test hook
-      this._floatText(this.player.x, this.player.y - 24, `sold ${def.name} +${val} 💎`, rar.color);
+      const ft = this._floatText(this.player.x, this.player.y - 24, `sold ${def.name} +${val} 💎`, rar.color); if (ft) ft.outline = '#0b0d1a'; // G-04: readable on grass
+      this._fullPackToast(`Backpack full: sold ${def.name} +${val} 💎`);
     } else {
+      this._snd('pickup');
       const ent = rmTagged({ n: sv.nextUid++, id, r: rarity }); const prevBest = this._bestTierHeld();
       if (gear && typeof gear === 'object' && !Array.isArray(gear)) {
         const g = rmCleanGear(id, rarity, gear);
@@ -3479,6 +3528,7 @@ class RealmArena {
     }
     this.onSave(this.save);
     this._syncHud(); if (this.paused) this.renderBackpack();
+    return true;
   }
 
   _updateBags(dt) {
@@ -3486,13 +3536,24 @@ class RealmArena {
     for (let i = 0; i < this.bags.length; i++) {
       const b = this.bags[i];
       if (!b.active) continue;
+      if (b.waitRoom && Number.isFinite(b.lifetime) && Math.hypot(p.x - b.x, p.y - b.y) < 240) b.t = Math.min(b.t, Math.max(0.3, b.lifetime - 10)); // G-04: never vanishes while you stand by it
       b.t += dt;
-      if (b.t >= b.lifetime) { b.active = false; b.gear = null; continue; } // review F9: an inactive bag never keeps its tier
+      if (b.t >= b.lifetime) { b.active = false; b.gear = null; b.waitRoom = false; continue; } // review F9: an inactive bag never keeps its tier
       b.x += b.vx * dt; b.y += b.vy * dt; b.vx *= 0.93; b.vy *= 0.93;
       b.x = Math.max(14, Math.min(this._bw() - 14, b.x)); b.y = Math.max(14, Math.min(this._bh() - 14, b.y));
       const dx = p.x - b.x; const dy = p.y - b.y; const d = Math.hypot(dx, dy) || 1;
+      const full = this.save.items.length >= RM_BACKPACK;
+      if (b.waitRoom && !full) b.waitRoom = false; // room again: the bag behaves like any other
+      if (b.waitRoom) { // G-04: an upgrade waiting for room does not drift into you, and does not vanish while you stand near it
+        if (d < 20 && !this.down) this._fullPackToast(`Backpack full: make room for ${(RM_ITEM_BY_ID[b.id] || {}).name || 'this item'}`);
+        continue;
+      }
       if (b.t > 0.4 && d < 110) { const k = (230 * dt) / d; b.x += dx * k; b.y += dy * k; } // bags drift toward you
-      if (b.t > 0.25 && d < 20 && !this.down) { const g = b.gear; b.active = false; this.collectItem(b.id, b.r, g || undefined); b.gear = null; continue; } // the tier goes INTO the pickup (a full pack sells it at its tiered value, review F11)
+      if (b.t > 0.25 && d < 20 && !this.down) { // the tier goes INTO the pickup (a full pack sells it at its tiered value, review F11)
+        const g = b.gear; b.active = false;
+        if (this.collectItem(b.id, b.r, g || undefined, true) === false) { b.active = true; b.waitRoom = true; continue; } // G-04: kept on the ground, tier and all
+        b.gear = null; continue;
+      }
       const q = this.team && this.role === 'host' && this.team.partner && this.team.partner.ready && !this.team.partner.down ? this.team.partner : null;
       // `loot` stays [id, r] (the wire format never carries t / a / sig). Review F9, the choice: a TIERED bag (b.gear) is never handed to a partner at all, so a
       // T12 can never arrive there as a T0 copy and soulbound gear never crosses; each seat rolls its own tiered drops locally (seeded per seat). Armor too.
@@ -4207,6 +4268,51 @@ class RealmArena {
     this._afterGearChange();
     return true;
   }
+  // G-03 (b02-02/03/12/14): Sell asks "Sure?" first for an item worth keeping: equipped, soulbound, a signature / relic piece, or the best tier owned
+  // in its slot. Plain junk stays one click. discard(uid) itself is unchanged (one call sells: test hooks and other code paths).
+  sellNeedsConfirm(uid) {
+    const sv = this.save; const it = sv.items.find((x) => x.n === uid); if (!it) return false;
+    if (RM_EQ_KEYS.some((sl) => sv.eq[sl] === uid)) return true;
+    if (it.sig) return true;
+    const G = RM_GEAR_ON && typeof MMGear !== 'undefined' ? MMGear : null;
+    if (G && ((typeof G.isSig === 'function' && G.isSig(it.id)) || (it.t && typeof G.soulbound === 'function' && G.soulbound(it.t)))) return true;
+    if (it.t) { const sl = (RM_ITEM_BY_ID[it.id] || {}).slot; let best = 0; sv.items.forEach((x) => { if (x.t && (RM_ITEM_BY_ID[x.id] || {}).slot === sl) best = Math.max(best, x.t); }); if (it.t >= best) return true; }
+    return false;
+  }
+  // G-03 arm delay: after a backpack / forge re-render every action button is inert for RM_ARM_MS, so the second click of a double-click (or a
+  // double-tap) lands on a dead button instead of the row that slid under the pointer. Real `disabled` (keyboard Enter and the delegated
+  // mad-maze.js handler respect it; Playwright waits for it). The look is kept (no 300 ms flash): the computed colours are pinned inline meanwhile.
+  _armButtons(root) {
+    if (!root || typeof setTimeout === 'undefined') return;
+    const list = Array.from(root.querySelectorAll('#realm-bp-list button[data-act], #realm-bp-list button[data-combine], #realm-bp-list button.fg')).filter((b) => !b.disabled);
+    const keep = list.map((b) => { const cs = getComputedStyle(b); const css = b.style.cssText; b.style.background = cs.background; b.style.color = cs.color; b.style.opacity = cs.opacity; b.disabled = true; b.dataset.arm = '1'; return css; });
+    clearTimeout(this._armT);
+    this._armT = setTimeout(() => {
+      let focusEl = null;
+      list.forEach((b, i) => { if (!b.isConnected || !b.dataset.arm) return; b.disabled = false; b.style.cssText = keep[i]; delete b.dataset.arm; if (b.dataset.armFocus) { delete b.dataset.armFocus; focusEl = b; } });
+      if (focusEl) { try { focusEl.focus({ preventScroll: true }); } catch (e) { /* focus is cosmetic */ } }
+    }, RM_ARM_MS);
+  }
+  _focusArmed(el) { if (!el) return; if (el.disabled && el.dataset.arm) el.dataset.armFocus = '1'; else { try { el.focus({ preventScroll: true }); } catch (e) { /* focus is cosmetic */ } } }
+  // First click on a protected Sell: the button turns into "Sure? Sell +N" for RM_SELL_ASK_MS (re-armed, so a double-click cannot confirm it);
+  // the second click sells through the normal discard path. No click for 3 s restores it.
+  _bindSellAsk(root) {
+    if (!root || root.dataset.sellAskBound) return;
+    root.dataset.sellAskBound = '1';
+    root.addEventListener('click', (e) => {
+      const b = e.target.closest && e.target.closest('button[data-act="sell-ask"]');
+      if (!b || b.disabled) return;
+      const uid = Number(b.dataset.uid); const it = this.save.items.find((x) => x.n === uid); if (!it) return;
+      setTimeout(() => { // after every other click listener of this same click (mad-maze.js ignores 'sell-ask')
+        if (!b.isConnected || b.dataset.act !== 'sell-ask') return;
+        const label = b.textContent; const aria = b.getAttribute('aria-label') || '';
+        b.dataset.act = 'discard'; b.textContent = `Sure? Sell +${rmSellValue(it)}💎`; b.setAttribute('aria-label', `Sure? Sell ${RM_ITEM_BY_ID[it.id].name} for ${rmSellValue(it)} shards`); b.classList.add('rm-sure');
+        b.disabled = true; b.dataset.arm = '1';
+        setTimeout(() => { if (b.isConnected && b.dataset.arm) { b.disabled = false; delete b.dataset.arm; } }, RM_ARM_MS);
+        setTimeout(() => { if (b.isConnected && b.dataset.act === 'discard' && b.classList.contains('rm-sure')) { b.dataset.act = 'sell-ask'; b.textContent = label; b.setAttribute('aria-label', aria); b.classList.remove('rm-sure'); } }, RM_SELL_ASK_MS);
+      }, 0);
+    });
+  }
 
   // ---------- Forge (GW): salvage for dust, deterministic reforge (MMGearForge). Free in-game dust + shards only; no randomness anywhere. ----------
   // Off with ?gear=0, without mm-gear-forge.js or while the GW gate is closed (RM_FORGE_ON: on by default since P2; ?forge=0 closes it): no Forge section,
@@ -4364,7 +4470,7 @@ class RealmArena {
       else return;
       this.renderBackpack();
       const nb = root.querySelector('#realm-bp-forge button.fg') || root.querySelector(`button.fg[data-forge-open="${this._forgeUid}"]`); // keep keyboard focus in the forge
-      if (nb && nb.focus) { try { nb.focus(); } catch (er) { /* focus is cosmetic */ } }
+      if (nb && nb.focus) this._focusArmed(nb); // G-03: an armed button takes focus once it wakes
     });
   }
 
@@ -4428,7 +4534,7 @@ class RealmArena {
     this._forgeUid = it ? it.n : 0; this._forgeAsk = null;
     this._panel('bp');
     const f = typeof document !== 'undefined' ? document.querySelector('#realm-bp-forge button.fg') || document.getElementById('realm-bp-close') : null;
-    if (f && f.focus) { try { f.focus({ preventScroll: true }); } catch (e) { /* focus is cosmetic */ } }
+    if (f && f.focus) this._focusArmed(f);
     return true;
   }
 
@@ -4601,7 +4707,8 @@ class RealmArena {
     if (!sv.items.length) html += '<li class="dim">Nothing yet — defeat enemies to find loot bags.</li>';
     sv.items.forEach((it) => {
       const def = RM_ITEM_BY_ID[it.id]; const rar = RM_RARITIES[it.r]; const on = eqUids.has(it.n); const sell = rmSellValue(it); const why = on ? '' : this._gearWhy(it);
-      html += `<li data-uid="${it.n}" class="${on ? 'on' : ''}"><span class="nm" style="color:${rar.color}">${this._bpBadge(it)}${this._icon(def)} ${this._tierTag(it)}${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(it)}</span>${this._affixHtml(it, def)}${def.slot === 'weapon' ? this._cmpHtml(it, on) : ''}${def.inert ? '<button type="button" class="eq" disabled aria-label="Not usable yet">Equip</button>' : def.wpn && !on && !this._wpnCanEquip(def) ? `<button type="button" class="eq" disabled data-wpn-lock="1" aria-label="${this._wpnHint(def)} only" title="${this._wpnHint(def)}">🔒 ${def.family.charAt(0).toUpperCase() + def.family.slice(1)}</button>` : why ? this._gearLockHtml(it, def, why) : `<button type="button" class="eq" data-act="equip" data-uid="${it.n}">${on ? 'Unequip' : 'Equip'}</button>`}${this.combinable(it.n) ? `<button type="button" class="eq" data-combine="${it.n}" aria-label="Combine ${RM_COMBINE_COUNT} ${rar.name} ${def.name} into one ${RM_RARITIES[it.r + 1].name}">Combine ${RM_COMBINE_COUNT}→${RM_RARITIES[it.r + 1].name}</button>` : ''}<button type="button" class="dc" data-act="discard" data-uid="${it.n}" aria-label="Sell ${def.name} for ${sell} shards">Sell ${sell}💎</button></li>`;
+      const cbOk = this.combinable(it.n); // G-02: a row with a Combine button gets its own cell layout (li.cbr) so Combine never sits on top of Equip
+      html += `<li data-uid="${it.n}" class="${on ? 'on' : ''}${cbOk ? ' cbr' : ''}"><span class="nm" style="color:${rar.color}">${this._bpBadge(it)}${this._icon(def)} ${this._tierTag(it)}${def.name}</span><span class="rar">${rar.name}</span><span class="st">${this._itemText(it)}</span>${this._affixHtml(it, def)}${def.slot === 'weapon' ? this._cmpHtml(it, on) : ''}${def.inert ? '<button type="button" class="eq" disabled aria-label="Not usable yet">Equip</button>' : def.wpn && !on && !this._wpnCanEquip(def) ? `<button type="button" class="eq" disabled data-wpn-lock="1" aria-label="${this._wpnHint(def)} only" title="${this._wpnHint(def)}">🔒 ${def.family.charAt(0).toUpperCase() + def.family.slice(1)}</button>` : why ? this._gearLockHtml(it, def, why) : `<button type="button" class="eq" data-act="equip" data-uid="${it.n}">${on ? 'Unequip' : 'Equip'}</button>`}${cbOk ? `<button type="button" class="eq cb" data-combine="${it.n}" aria-label="Combine ${RM_COMBINE_COUNT} ${rar.name} ${def.name} into one ${RM_RARITIES[it.r + 1].name}">Combine ${RM_COMBINE_COUNT}→${RM_RARITIES[it.r + 1].name}</button>` : ''}<button type="button" class="dc" data-act="${this.sellNeedsConfirm(it.n) ? 'sell-ask' : 'discard'}" data-uid="${it.n}" aria-label="Sell ${def.name} for ${sell} shards">Sell ${sell}💎</button></li>`;
     });
     html += '</ul></section>';
     html += `<section id="realm-bp-pane-stats" class="rm-bp8-pane" data-bp-pane="stats" role="tabpanel" aria-labelledby="realm-bp-tab-stats"${tab === 'stats' ? '' : ' hidden'}>${this._bpStatBlockHtml()}<div id="realm-bp-stats">${this._statLine()}</div>${this._statsDropHtml()}</section>`;
@@ -4614,6 +4721,7 @@ class RealmArena {
     if (this._cmpOnUid) { const on = root.querySelector(`#realm-bp-list li[data-uid="${this._cmpOnUid}"]`); if (on) on.classList.add('cmp-on'); } // a long-pressed compare line survives a re-render
     if (this._bpDeltaUid) this.bpShowDelta(sv.items.some((x) => x.n === this._bpDeltaUid) ? this._bpDeltaUid : 0);
     root.querySelectorAll('img.rm-slot-ico, img.rm-gear-ico').forEach((img) => { if (img.complete && !img.naturalWidth) img.remove(); else img.addEventListener('error', () => img.remove(), { once: true }); });
+    this._bindSellAsk(root); this._armButtons(root); // G-03
   }
 
   // ---------- backpack Stats drop-down (G13) ----------
@@ -5005,7 +5113,10 @@ class RealmArena {
         g.drawImage(ic, x0, t.y - 15); g.textAlign = 'left';
         g.fillStyle = '#000'; g.fillText(t.plain, x0 + 23, t.y + 1); g.fillStyle = t.color; g.fillText(t.plain, x0 + 22, t.y);
         g.textAlign = 'center';
-      } else { g.fillStyle = '#000'; g.fillText(t.text, t.x + 1, t.y + 1); g.fillStyle = t.color; g.fillText(t.text, t.x, t.y); }
+      } else {
+        if (t.outline) { g.lineWidth = 4; g.strokeStyle = t.outline; g.strokeText(t.text, t.x, t.y); } // G-04: a dark outline (full-pack sale text on grass)
+        g.fillStyle = '#000'; g.fillText(t.text, t.x + 1, t.y + 1); g.fillStyle = t.color; g.fillText(t.text, t.x, t.y);
+      }
       t.y = ty0;
     }
     g.globalAlpha = 1;

@@ -3,6 +3,8 @@
 // Standalone page only: never joins the town. Firebase hosts are blocked (blockDb) and must see 0 attempts.
 const { chromium } = require('playwright');
 const { check, done, blockDb } = require('./helpers');
+// G-17: the kit's result card ignores clicks for its holdMs after it opens: wait for that (a condition, not a sleep) before tapping it
+const kitReady = (pg) => pg.waitForFunction(() => { const r = document.getElementById('result'); return !r || !r.__mkOn || r.__mkOn.clickReady(); }, null, { timeout: 3000 }).catch(() => {});
 const BASE = process.env.BASE || 'http://localhost:9355/game/index.html';
 const PAGE = BASE.replace(/index\.html.*$/, '') + 'games/pop/index.html';
 const KEY = 'pixeltown-pop-v1', MKEY = 'pixeltown-medals-pop-v1';
@@ -75,11 +77,11 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
   });
   check('kit: shared result card with share code DEMO1, a goal line and a Menu link', kit.card && kit.code === 'DEMO1' && kit.goal.length > 0 && kit.menu && kit.medals, JSON.stringify(kit));
   check('kit: Copy is >= 44 px, Play again is the first focusable, no text under 12 px', kit.copy[0] >= 44 && kit.copy[1] >= 44 && kit.first === 'again' && kit.small.length === 0, JSON.stringify(kit));
-  await p.tap('#replay');
+  await kitReady(p); await p.tap('#replay');
   const b2 = await p.evaluate(() => ({ v: __pop.values(), seed: __pop.run.seed, st: __pop.run.state, score: __pop.run.score }));
   check('Replay seed deals the very same board (seeded)', JSON.stringify(b2.v) === JSON.stringify(b1) && b2.seed === 'demo1' && b2.st === 'play' && b2.score === 0);
   await p.evaluate(() => __pop.end());
-  await p.tap('#again');
+  await kitReady(p); await p.tap('#again');
   const b3 = await p.evaluate(() => ({ v: __pop.values(), seed: __pop.run.seed }));
   check('Play again rolls a new seed (variety between runs)', b3.seed !== 'demo1' && JSON.stringify(b3.v) !== JSON.stringify(b1), b3.seed);
   // keyboard

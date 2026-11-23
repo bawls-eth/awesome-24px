@@ -166,3 +166,12 @@ html[data-ui-big] .hc-name, html[data-ui-big] .hc-hint, html[data-ui-big] .hn-tx
 @media (prefers-reduced-motion: reduce) { .home-play:active, .home-card:active, .home-coll:active { transform: none; } }
 /* Big text on a narrow phone: the footer buttons wrap onto two rows instead of cutting "Open" off the screen. */
 @media (max-width: 420px) { html[data-ui-big] #bar { flex-wrap: wrap; justify-content: center; flex-shrink: 0; } html[data-ui-big] #bar button, html[data-ui-big] #bar .btn { flex: 1 1 auto; padding: 0 8px; } }
+/* W-09 (b15-03): very narrow screens (200% zoom on a phone, ~195 css px): one card column, titles wrap instead of 2-letter ellipses,
+   the bottom bar wraps inside the viewport */
+@media (max-width: 300px) {
+  .home-cards { grid-template-columns: minmax(0, 1fr); }
+  .hc-name, .hc-hint, .hn-txt, .hp-sub { white-space: normal; overflow-wrap: anywhere; text-overflow: clip; max-width: none; }
+  #bar { flex-wrap: wrap; justify-content: center; }
+  #bar button, #bar .btn { flex: 1 1 auto; padding: 0 6px; min-width: 44px; }
+  .home-title { padding-left: 52px; }
+}

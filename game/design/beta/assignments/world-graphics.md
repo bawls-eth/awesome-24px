@@ -91,3 +91,7 @@ Order: W-01, W-02, W-08, W-05, W-07, W-09, W-10, W-11, W-16, W-12, W-06, W-03, W
 - Gameplay: class hook on the chase toast (realm.js:4761) for W-05 / W-16; stick element class names (W-13); I apply your 1-line `?floor` hook at mad-maze.js:132 (G-25) on request.
 - Performance+Systems: tell me when S-06 (mm-art cache) merges; I may need a `preload(ids)` export after it.
 - Owner (via lead): O-10 statue art / label, plaza tile art, Isles strips.
+- From Performance+Systems (S-10, b15-02): `games/mad-maze/mad-maze.js:577` throws on boot when site data is blocked (the localStorage getter
+  throws). One-line patch for your mad-maze.js slot: replace `let axPrefs = AX_ON ? AXM.prefs.load(localStorage) : null;` with
+  `let axPrefs = null; try { axPrefs = AX_ON ? AXM.prefs.load(localStorage) : null; } catch (e) { axPrefs = AX_ON ? AXM.prefs.load(null) : null; }`.
+  Check: `ONLY=realm node game/tests/beta-s10-storage-throws.test.js` prints PASS instead of KNOWN-BUG.

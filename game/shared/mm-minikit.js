@@ -175,7 +175,18 @@
       });
     }
     var shownAt = Date.now(), hold = Math.max(0, Number(on.holdMs) || 0); // holdMs: a short pause so a key held at the end does not skip the card
-    el.__mkOn = { again: function () { if (!el.hidden) again.click(); }, ready: function () { return Date.now() - shownAt >= hold && (!on.keyReady || !!on.keyReady()); } };
+    el.__mkOn = { again: function () { if (!el.hidden) again.click(); }, ready: function () { return Date.now() - shownAt >= hold && (!on.keyReady || !!on.keyReady()); }, clickReady: function () { return Date.now() - shownAt >= hold; } };
+    // G-17 (b09-02): the click guard is the kit default: every button / link in the card is inert for holdMs after it opens (taps still
+    // landing from the round, or a mashing finger, never hit Play again / Replay / Copy / Menu). Same hold as R / Enter; reduced motion
+    // does not change it. A page keeps its own extra guard if it has one. Only trusted (user) clicks are held: scripted clicks are the page's own.
+    if (!el.__mkClick) {
+      el.__mkClick = true;
+      el.addEventListener('click', function (ev) {
+        if (!ev.isTrusted || !el.__mkOn || el.__mkOn.clickReady()) return; // a real tap / click / Enter-on-button only: a page's own scripted .click() stays its call
+        var t = ev.target && ev.target.closest ? ev.target.closest('button, a') : null; if (!t || !el.contains(t)) return;
+        ev.preventDefault(); ev.stopImmediatePropagation();
+      }, true);
+    }
     return { again: again, replay: replay, more: more, copy: copy, menu: menu, vm: vm, focus: function () { try { again.focus({ preventScroll: true }); } catch (e) { again.focus(); } } };
   }
 

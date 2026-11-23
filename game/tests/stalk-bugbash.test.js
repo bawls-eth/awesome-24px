@@ -49,20 +49,21 @@ const KEY = 'pixeltown-stalk-v1';
   check('typing b/s into a settings text box never trades', await p.evaluate((b) => JSON.stringify(window.__stalk.save) === b, holdBefore));
   await p.evaluate(() => window.MMSettings.mount({ page: 'stalk' }).close());
 
-  // ---- clock safety ----
-  await p.evaluate(() => window.__stalk.setTime(100, 0));
+  // ---- clock safety ---- (G-11: the page already saw week 100 slot 5, so going back to its Sunday is itself a clock-back; the trading
+  // week starts at the next Sunday instead, and every later week is one higher)
+  await p.evaluate(() => window.__stalk.setTime(101, 0));
   await p.evaluate(() => window.__stalk.buy(5));
-  await p.evaluate(() => window.__stalk.setTime(100, 4));
+  await p.evaluate(() => window.__stalk.setTime(101, 4));
   const owned = await p.evaluate(() => window.__stalk.save.holdings);
   check('bought 5 stalks on Sunday', owned === 5);
-  await p.evaluate(() => window.__stalk.setTime(99, 6)); // clock set one week back
-  check('clock one week back: stalks are NOT spoiled and no week is recorded', await p.evaluate(() => window.__stalk.save.holdings === 5 && window.__stalk.save.week === 100 && window.__stalk.save.history.length === 0));
+  await p.evaluate(() => window.__stalk.setTime(100, 6)); // clock set one week back
+  check('clock one week back: stalks are NOT spoiled and no week is recorded', await p.evaluate(() => window.__stalk.save.holdings === 5 && window.__stalk.save.week === 101 && window.__stalk.save.history.length === 0));
   check('clock back: trading is paused with a plain explanation', await p.evaluate(() => document.getElementById('sellall').disabled && /earlier week/i.test(document.getElementById('market-reason').textContent)));
   check('clock back: selling is refused and nothing changes', await p.evaluate(() => { const r = window.__stalk.sell(5); return r.ok === false && window.__stalk.save.holdings === 5; }));
-  await p.evaluate(() => window.__stalk.setTime(100, 6));
+  await p.evaluate(() => window.__stalk.setTime(101, 6));
   check('clock restored: trading resumes', await p.evaluate(() => { const r = window.__stalk.sell(5); return r.ok === true && window.__stalk.save.holdings === 0; }));
-  await p.evaluate(() => window.__stalk.setTime(101, 0));
-  check('forward rollover still records the week', await p.evaluate(() => window.__stalk.save.week === 101 && window.__stalk.save.history.length === 1));
+  await p.evaluate(() => window.__stalk.setTime(102, 0));
+  check('forward rollover still records the week', await p.evaluate(() => window.__stalk.save.week === 102 && window.__stalk.save.history.length === 1));
   await p.evaluate(() => window.__stalk.setTime(40, 3)); // far back (clock reset to long ago): normal rollover, never stuck
   check('far-off clock never sticks the market (normal rollover, no pause)', await p.evaluate(() => window.__stalk.save.week === 40 && !/earlier week/i.test(document.getElementById('market-reason').textContent)));
 

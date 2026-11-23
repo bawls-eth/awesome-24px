@@ -95,6 +95,8 @@
   // ---------- Continue / Play ----------
   // MMNav has already recorded this page (hub.js mounts first), so when the last place is the map the one before it is used.
   let cont = null;
+  // G-14: fresh = no place remembered (checked by the caller) and not one medal anywhere
+  function freshProfile() { try { const m = medals(); return Object.keys(m).every((k) => !(Array.isArray(m[k]) && m[k].length)); } catch (e) { return true; } }
   function buildPlay() {
     const a = $('home-play'), txt = $('home-play-txt');
     let t = null;
@@ -113,14 +115,32 @@
       txt.textContent = 'Continue';
       $('home-play-sub').textContent = t.name + (t.sub ? ' - ' + t.sub : '');
       a.setAttribute('aria-label', t.label);
-    } else {
-      cont = { id: 'town', href: FIXED.town, label: 'Play: start in the Town' };
+    } else if (!freshProfile()) {
+      cont = { id: 'town', href: FIXED.town, label: 'Play: start in the Town' }; // no memory but some progress (medals): as before
       a.setAttribute('href', FIXED.town);
       a.dataset.place = 'town';
       txt.textContent = 'Play';
       $('home-play-sub').textContent = 'Start in the Town';
       a.setAttribute('aria-label', cont.label);
+    } else {
+      // G-14 (b08-02, SIMPLIFY-PLAN / PLAYTEST-REVIEW-4): a fresh profile has ONE first move: the guided Realm adventure (its coach is the
+      // only coached first session). PLAY, the Next line and the highlighted card all name it. A returning profile still resumes above.
+      cont = { id: 'realm', href: FIXED.realm, label: 'Play: start the guided adventure in the Realm', fresh: true };
+      a.setAttribute('href', FIXED.realm);
+      a.dataset.place = 'realm';
+      txt.textContent = 'Play';
+      $('home-play-sub').textContent = 'Start the guided adventure';
+      a.setAttribute('aria-label', cont.label);
     }
+  }
+  // G-14: the card of the first move is highlighted (class + aria-describedby the PLAY sub line); only on a fresh profile
+  function markFirst() {
+    const cards = groupsEl.querySelectorAll('a.home-card');
+    for (let i = 0; i < cards.length; i++) { cards[i].classList.remove('home-card-first'); cards[i].removeAttribute('data-first'); }
+    if (!cont || !cont.fresh) return;
+    const c = groupsEl.querySelector('a.home-card[data-place="' + cont.id + '"]'); if (!c) return;
+    c.classList.add('home-card-first'); c.dataset.first = '1';
+    c.style.outline = '3px solid #ffec27'; c.style.outlineOffset = '2px'; // inline: the 8-bit stylesheet is another lane's file
   }
 
   // ---------- next step (one line from the calm goals) ----------
@@ -128,6 +148,15 @@
   function buildNext() {
     const a = $('home-next');
     next = null;
+    if (cont && cont.fresh && !/(?:^|&)calm=0(?:&|$)/.test(qs)) { // G-14: on a fresh profile the Next line names the same first move as PLAY (not a second, different one)
+      next = { key: 'first-realm', place: 'realm' };
+      a.setAttribute('href', FIXED.realm); a.dataset.key = 'first-realm'; a.dataset.place = 'realm';
+      $('home-next-ico').textContent = '⚔️';
+      $('home-next-txt').textContent = 'Next: the guided adventure (Realm)';
+      a.setAttribute('aria-label', 'Next step: the guided adventure in the Realm. A coach shows you moving, shooting and loot.');
+      a.hidden = false;
+      return;
+    }
     if (/(?:^|&)calm=0(?:&|$)/.test(qs) || !window.MMCalmGoals || !nav) { a.hidden = true; return; }
     let dismissed = [];
     try { const raw = readKey('pixeltown-calm-v1'); const o = raw && raw.length < 8192 ? JSON.parse(raw) : null; dismissed = MMCalmGoals.cleanDismissed(o && o.dismissed); } catch (e) { dismissed = []; }
@@ -275,6 +304,7 @@
   buildPlay();
   buildNext();
   buildGroups();
+  markFirst(); // G-14
   buildColl();
   show(!mapParam, false);
 

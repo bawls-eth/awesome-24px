@@ -232,7 +232,10 @@
   function startSong(id, tr, opts) {
     opts = opts || {};
     if (!SG.song(id)) return null;
-    ensureAudio();
+    // G-18 (b10-09): the tier lock is enforced here, not only by the disabled button (any entry point: Quick play, Concert, a query, a test
+    // hook). A locked Hard falls back to nothing: no run starts. Concert and practice pick their own (already unlocked) tiers.
+    if (SG.TIERS.indexOf(tr) >= 0 && SG.tierUnlocked && !SG.tierUnlocked(save, id, tr) && SG.songUnlocked && SG.songUnlocked(save, id)) return null;
+    ensureAudio(); hudShown(true);
     songId = id; tier = SG.TIERS.indexOf(tr) >= 0 ? tr : 'normal';
     chart = opts.chart || SG.chartFor(id, tier, opts.seed !== undefined ? opts.seed : qs.get('seed') || undefined);
     practice = opts.practice ? makePractice(id, opts.practice) : null;
@@ -696,7 +699,10 @@
     var how = Math.abs(a) < 5 ? 'right on time' : Math.abs(a) + ' ms ' + (a < 0 ? 'early' : 'late');
     return 'Timing: you averaged ' + how + ' over ' + res.hits + ' hits (offset ' + fmtOff(SG.offsetOf(save)) + ').';
   }
+  // G-18 (b10-05): the play HUD (score, combo, accuracy, judgement, song, progress) only shows during a song, never stale over the menu / results
+  function hudShown(on) { var h = document.getElementById('hud'); if (h) h.style.visibility = on ? '' : 'hidden'; }
   function showMenu() {
+    hudShown(false);
     mode = 'menu'; run = null; chart = null; paused = false; concert = null; practice = null; relax = false; assistRun = false; document.body.dataset.assist = '0'; document.body.dataset.practice = '0'; document.body.dataset.relax = '0';
     clear(overlay); overlay.hidden = false;
     overlay.appendChild(el('h2', 'Campfire Jam'));
@@ -1013,6 +1019,7 @@
     overlay.appendChild(row);
   }
   function showResults() {
+    hudShown(false);
     var res = lastResult, rep = lastReport, s = SG.song(songId);
     clear(overlay); overlay.hidden = false;
     overlay.appendChild(el('h2', s.name + ' / ' + SG.TIER_NAMES[tier]));

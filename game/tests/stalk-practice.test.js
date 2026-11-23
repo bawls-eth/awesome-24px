@@ -50,7 +50,9 @@ const PAGE = ORIGIN + '/game/games/stalk/index.html';
   await p.tap('#pr-next');
   const end = await p.evaluate(() => ({ done: window.__stalk.practice.state.done, title: document.getElementById('pr-end-title').textContent, items: document.querySelectorAll('#pr-end-list li').length, again: !document.getElementById('pr-end').hidden, actionsHidden: document.getElementById('pr-actions').hidden, saved: JSON.parse(localStorage.getItem('pixeltown-stalk-practice-v1')) }));
   check('end-of-week summary with pattern reveal, peak and Play again', end.done && end.again && end.items === 5 && end.actionsHidden && /bells/.test(end.title));
-  check('practice best saved under its own key', end.saved && end.saved.v === 1 && end.saved.rounds === 1 && end.saved.hasBest === true && end.saved.n === 1);
+  // G-18 (b11-05): a first week that ends in a loss is not a practice best (hasBest only after a week at or above the start)
+  const won = await p.evaluate(() => window.__stalk.practice.state.bells >= 1000);
+  check('practice best saved under its own key', end.saved && end.saved.v === 1 && end.saved.rounds === 1 && end.saved.hasBest === won && end.saved.n === 1, JSON.stringify({ won, saved: end.saved }));
   check('real stall save untouched by practice', (await p.evaluate(() => localStorage.getItem('pixeltown-stalk-v1'))) === realBefore);
   const rb = await p.evaluate(() => document.getElementById('pr-again').getBoundingClientRect().height);
   check('Play again is one big tap target', rb >= 44);

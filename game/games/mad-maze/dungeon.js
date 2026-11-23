@@ -106,6 +106,11 @@
 
   // ---- b25 dungeon tile art: floors / walls baked into the same cached room canvas (visual only, collision untouched) ----
   const DOOR_TILES = [[8, 0], [16, 6], [8, 12], [0, 6]]; // N E S W door tiles (MMRooms.DOORS), kept local so excl never depends on a door existing
+  // G-25: deepest dungeon floor cleared per biome on this device ({ v:1, f:{ <biome>: 0..3 } }); hostile / missing storage = 0
+  const DEEP_KEY = 'pixeltown-deep-v1';
+  function deepRead() { try { const o = JSON.parse(localStorage.getItem(DEEP_KEY) || 'null'); return o && typeof o === 'object' && !Array.isArray(o) && o.f && typeof o.f === 'object' && !Array.isArray(o.f) ? o : { v: 1, f: {} }; } catch (e) { return { v: 1, f: {} }; } }
+  function deepCleared(biome) { const v = deepRead().f[biome]; return typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 3 ? v : 0; }
+  function deepMark(biome, n) { if (!(n >= 1 && n <= 3) || deepCleared(biome) >= n) return; const o = deepRead(); const f = {}; Object.keys(o.f).forEach((k) => { if (/^[a-z]{2,12}$/.test(k)) f[k] = o.f[k]; }); f[biome] = n; try { localStorage.setItem(DEEP_KEY, JSON.stringify({ v: 1, f })); } catch (e) { /* storage blocked: the gate stays where it was */ } }
   function tileSetReady(ts, biome) { return !!ts && ts.variants(biome + '_floor').length > 0 && ts.variants(biome + '_wall').length > 0; }
   // Returns { canvas, n (art tiles drawn), torches: [{x,y}] }. rng streams are separate from the code-drawn bake ('dtile:' prefix) so old looks never shift.
   function bakeRoomTiles(ts, biome, rid, tpl, pal, seed, isBoss, tint, excl) {
@@ -179,7 +184,12 @@
     // DV1 deep run: floor 2..3 of the same biome (opts.floor from ?floor=, set only by the stairs). Each floor below the first has its own derived seed.
     const EG = typeof window !== 'undefined' && window.MMEndgame ? window.MMEndgame : null;
     const qsHas = (re) => { try { return re.test(location.search); } catch (e) { return false; } };
-    const floorQ = Math.floor(Number(opts.floor)); const floor0 = floorQ >= 2 && floorQ <= 3 ? floorQ : 1;
+    const floorQ = Math.floor(Number(opts.floor)); const floorWant = floorQ >= 2 && floorQ <= 3 ? floorQ : 1;
+    // G-25 (b03-07): ?floor= is clamped to the deepest floor this device has cleared in that biome + 1 (additive key pixeltown-deep-v1,
+    // written when a floor's boss falls). A ?test=1 page may bypass it (the deep-run tests), unless it asks for the gate with ?floorgate=1.
+    const gateOn = !(opts.test && !qsHas(/[?&]floorgate=1(&|$)/));
+    const floor0 = gateOn ? Math.min(floorWant, deepCleared(MMBiomes.clean(opts.biome)) + 1) : floorWant;
+    const floorClamped = floor0 < floorWant;
     const seed = floor0 > 1 ? baseSeed + 'f' + floor0 : baseSeed;
     // BL2: ?lair=1 (read here; the BK2 boss-key portal passes it) = a 2-room dungeon: an antechamber guarding the key + the biome boss hall behind a key door
     let lair = opts.lair === true || opts.lair === '1'; try { if (new URLSearchParams(location.search).get('lair') === '1') lair = true; } catch (e) { /* node / no location */ }
@@ -318,7 +328,7 @@
       const dmg = MMSplash.slamDmg(e.dmgMul || 1, Math.max(0, d), MMSplash.slamR(2));
       if (dmg > 0) { slamHits++; arena._hitPlayer(arena._guarded(dmg)); }
     }
-    const api = { mut: MUT ? { ids: MUT.ids.slice(), label: MUT.label, text: MUT.text, fx: Object.assign({}, MUT.fx) } : null, floor, baseSeed, deep: deepInfo, pickups: () => drops.map((q) => ({ type: q.type, x: q.x, y: q.y, value: q.value, tier: q.tier })), pickStats: () => ({ live: drops.length, total: pickTotal, got: Object.assign({}, pickGot), magnet: MAGNET_R, on: pickOn }), lair, seed, biome, bossBolt, bossSig, sigCount: () => sigN, layoutVersion: layoutV, narrow: narrowOn, graph: dungeon, state, arena, granted, grantItem, get gearOn() { return gearOn; }, get gear() { return gearGot; }, gp: () => gpNow() };
+    const api = { fellText: B.fell, floorWant, floorClamped, mut: MUT ? { ids: MUT.ids.slice(), label: MUT.label, text: MUT.text, fx: Object.assign({}, MUT.fx) } : null, floor, baseSeed, deep: deepInfo, pickups: () => drops.map((q) => ({ type: q.type, x: q.x, y: q.y, value: q.value, tier: q.tier })), pickStats: () => ({ live: drops.length, total: pickTotal, got: Object.assign({}, pickGot), magnet: MAGNET_R, on: pickOn }), lair, seed, biome, bossBolt, bossSig, sigCount: () => sigN, layoutVersion: layoutV, narrow: narrowOn, graph: dungeon, state, arena, granted, grantItem, get gearOn() { return gearOn; }, get gear() { return gearGot; }, gp: () => gpNow() };
     // Lantern stash payout (MMStash): every kept find of this run is paid into the stash when the summary shows (win or fall)
     const ST = window.MMStash && window.MMProfile ? window.MMStash : null; const shards0 = arena.save.shards;
     if (ST) {
@@ -553,7 +563,7 @@
       return o;
     }
     function gearGrant(g, x, y) {
-      const sv = arena.save; const n0 = sv.items.length; const full = n0 >= RM_BACKPACK;
+      const sv = arena.save; const n0 = sv.items.length; const full = n0 >= RM_BACKPACK; let took = true;
       // collectItem's burst and text draw the arena rng: swap in a throwaway seeded stream so no later arena draw (bags, enemy AI) shifts when gear drops
       const keep = arena.rng; const fx = MMRng.create('dgearfx:' + seed + ':' + gearGot.length); arena.rng = () => fx.next();
       try {
@@ -561,10 +571,11 @@
         // review F2: the tier, affix seed and (with the GW gate open) the T12 boss signature go INTO collectItem, so the entry the stash records (onItem)
         // and the one written to storage already carry them: no T0 copy, and a soulbound T11+ is never paid to the Lantern stash.
         const gear = { t: g.t }; if (g.a) gear.a = g.a; if (g.sig && typeof RM_FORGE_ON !== 'undefined' && RM_FORGE_ON === true) gear.sig = g.sig;
-        arena.collectItem(g.id, g.r, gear);
+        took = arena.collectItem(g.id, g.r, gear); // G-04: false = a full pack left this upgrade on the ground as a bag (not sold)
       } finally { arena.rng = keep; }
       const d = MMGear.describe({ id: g.id, r: g.r, t: g.t, a: g.a }); const rar = RM_RARITIES[g.r] || RM_RARITIES[0];
-      const rec = { id: g.id, r: g.r, t: g.t, a: g.a || 0, slot: g.slot, name: d ? d.name : g.id, color: d ? d.tierColor : rar.color, rarName: rar.name, sold: full };
+      const rec = { id: g.id, r: g.r, t: g.t, a: g.a || 0, slot: g.slot, name: d ? d.name : g.id, color: d ? d.tierColor : rar.color, rarName: rar.name, sold: full && took !== false };
+      if (took === false) rec.waiting = true;
       gearGot.push(rec);
       if (typeof x === 'number') { arena.rng = () => fx.next(); try { arena._floatText(x, y, rec.name, rec.color); } finally { arena.rng = keep; } }
       return rec;
@@ -614,7 +625,7 @@
         arena.dropBag(e.x - 20, e.y + 20, bagR1); arena.dropBag(e.x + 20, e.y + 20, bagR2);
         if (gearOn) dropBossGear(e, bagR1);
         arena._showBanner(B.boss_name + ' defeated! The portal opens.', 2.6);
-        arena.onSave(arena.save); mapSig = ''; deepShow();
+        arena.onSave(arena.save); mapSig = ''; deepMark(biome, floor); deepShow(); // G-25: this floor counts as cleared on this device
       }
       arena._syncBoss();
     }
@@ -745,7 +756,7 @@
         <div class="mm-sum-btns">${backWorld ? '' : `<a class="mm-btn" id="mm-sum-again" href="?mode=dungeon&seed=${Number(baseSeed) + 1 || ''}${layoutV === 2 ? '&lv=2' : ''}${biome !== 'warren' ? '&biome=' + biome : ''}${opts.test ? '&test=1' : ''}${hubExit ? '&from=hub' : ''}">New dungeon</a>`}<a class="mm-btn${backWorld ? '' : ' alt'}" id="mm-sum-home" href="${backWorld || homeHref}">${backWorld ? 'Back to the world' : homeText}</a></div></div>`;
       if (gearGot.length) { // tiered finds: "T7 Name" via textContent
         const ul = sumEl.querySelector('#mm-sum-loot'); const none = ul.querySelector('.none'); if (none) none.remove();
-        gearGot.forEach((g) => { const li = document.createElement('li'); li.className = 'mm-sum-gear'; li.style.color = g.color; li.textContent = g.name + ' '; const sm = document.createElement('small'); sm.textContent = g.rarName + (g.sold ? ' (sold, pack full)' : ''); li.appendChild(sm); ul.appendChild(li); });
+        gearGot.forEach((g) => { const li = document.createElement('li'); li.className = 'mm-sum-gear'; li.style.color = g.color; li.textContent = g.name + ' '; const sm = document.createElement('small'); sm.textContent = g.rarName + (g.sold ? ' (sold, pack full)' : g.waiting ? ' (left on the ground, pack full)' : ''); li.appendChild(sm); ul.appendChild(li); });
       }
       if (MUT || floor > 1) { // DV1: the mutator and the floor on their own rows (textContent)
         const st = sumEl.querySelector('.mm-sum-stats');
@@ -756,8 +767,24 @@
       deepHide();
       sumEl.classList.remove('hidden');
       api.summary = s; api.summaryTitle = sumEl.querySelector('h2').textContent;
+      if (died && !backWorld) { // G-24 (b03-13): "Try again (same seed)" on the fall summary; R / pad Back press it
+        const row = sumEl.querySelector('.mm-sum-btns');
+        if (row && !sumEl.querySelector('#mm-sum-retry')) {
+          const a = document.createElement('a'); a.className = 'mm-btn'; a.id = 'mm-sum-retry'; a.textContent = 'Try again (same seed)';
+          let q = null; try { q = new URLSearchParams(location.search); } catch (e) { q = null; }
+          if (q) { q.set('mode', 'dungeon'); q.set('seed', String(baseSeed)); q.delete('floor'); a.href = 'index.html?' + q.toString(); }
+          row.insertBefore(a, row.firstChild); api.retryUrl = a.getAttribute('href');
+          try { a.focus({ preventScroll: true }); } catch (e) { /* focus is cosmetic */ }
+        }
+      }
     }
     function finish() { if (finished) return; deepHide(); arena.stop(); showSummary(false); }
+    window.addEventListener('keydown', (e) => { // G-24: R (universal Restart) / Backspace (pad Back) on the fall summary = Try again (same seed)
+      if (sumEl.classList.contains('hidden') || e.repeat) return;
+      const k = String(e.key || '').toLowerCase(); if (k !== 'r' && k !== 'backspace') return;
+      const a = sumEl.querySelector('#mm-sum-retry'); if (!a) return;
+      e.preventDefault(); e.stopImmediatePropagation(); api.retryPressed = (api.retryPressed || 0) + 1; if (opts.navigate !== false) a.click();
+    }, true);
 
     // ---------- DV1: mutator chip + deep-run stairs / off-ramp ----------
     // The chip names the run's mutator(s) under the map button (textContent only). After the boss, a calm choice: the stairs down to the next floor
@@ -817,7 +844,7 @@
         arena.state = 'play'; arena.run.wave = 0; arena.biome = 0;
         const res = state.enter(dungeon.rooms.find((r) => r.type === 'start').id);
         loadRoom(res.ok ? state.current : 0, null);
-        arena._showBanner(floor > 1 ? `${B.name} #${baseSeed} · Floor ${floor}` : MUT ? `${B.name} #${seed} · ${MUT.label}` : `${B.name} #${seed}`, 1.8);
+        arena._showBanner(floorClamped ? `Floor ${floorWant} opens after you clear floor ${floor0}: starting on floor ${floor0}` : floor > 1 ? `${B.name} #${baseSeed} · Floor ${floor}` : MUT ? `${B.name} #${seed} · ${MUT.label}` : `${B.name} #${seed}`, floorClamped ? 3 : 1.8); // G-25
         mutChip();
         drawMap();
       },
@@ -856,6 +883,20 @@
         // scheduled boss bullets
         if (queue.length) { const now = arena.clock; queue = queue.filter((q) => { if (q.at > now) return true; arena.fireEnemyBullet(q.x, q.y, q.a, q.s, q.k); return false; }); }
         bossExtras(dt);
+        // G-24 (b03-02) corner-slip: pushing toward an open door up to 14 px off its centre line slides the hero onto the line (no wiggling)
+        if (!state.doorsClosed()) {
+          const k = arena.keys || {}; const mv = arena.moveVec || { x: 0, y: 0 };
+          const ix = (k.d || k.arrowright ? 1 : 0) - (k.a || k.arrowleft ? 1 : 0) + (mv.x || 0), iy = (k.s || k.arrowdown ? 1 : 0) - (k.w || k.arrowup ? 1 : 0) + (mv.y || 0);
+          for (const o of curDoors()) {
+            if (o.status !== 'open') continue;
+            const cx = (o.tile.x + 0.5) * T; const cy = (o.tile.y + 0.5) * T; const ax = cx - p.x, ay = cy - p.y;
+            const horiz = Math.abs(ax) >= Math.abs(ay); const along = horiz ? ax : ay, off = horiz ? ay : ax, push = horiz ? ix : iy;
+            if (Math.abs(along) > T * 1.4 || Math.abs(off) < 0.5 || Math.abs(off) > 14 || !(push * along > 0.2)) continue;
+            const st = Math.sign(off) * Math.min(Math.abs(off), 120 * dt); const nx = horiz ? p.x : p.x + st, ny = horiz ? p.y + st : p.y;
+            if (!arena._blocked(nx, ny, RM_PLAYER.r)) { p.x = nx; p.y = ny; }
+            break;
+          }
+        }
         // doors: walking into an open door, or bumping a locked one
         const sealed = state.doorsClosed();
         if (!sealed) for (const o of curDoors()) {

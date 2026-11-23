@@ -63,8 +63,12 @@ async function open(browser, opts, q) {
   check('advisor odds mention the mood', /and the .+ Week mood: /.test(odds), odds);
   for (let i = 0; i < 12; i++) { const done = await p.evaluate(() => window.__stalk.practice.state.done); if (done) break; await p.tap('#pr-next'); }
   const end = await p.evaluate(() => ({ list: [...document.querySelectorAll('#pr-end-list li')].map((l) => l.textContent), saved: JSON.parse(localStorage.getItem('pixeltown-stalk-practice-v1')), mood: window.__stalk.practice.state.mood }));
-  check('week end names the mood, its odds and the mood best', end.list.some((t) => t.indexOf('Market mood was ') === 0 && / best: [+-]?\d/.test(t)), JSON.stringify(end.list));
-  check('practice key stays v1 with an additive moodBest field', end.saved.v === 1 && end.saved.rounds === 1 && typeof end.saved.moodBest[end.mood] === 'number' && end.saved.hasBest === true, JSON.stringify(end.saved));
+  check('week end names the mood, its odds and the mood best', end.list.some((t) => t.indexOf('Market mood was ') === 0 && / best: ([+-]?\d|none yet \(a loss is not a best\))/.test(t)), JSON.stringify(end.list));
+  // G-18 (b11-05) changed this: a loss is never stored as a best (practice best or mood best). The scripted week here spoils its turnips (a loss),
+  // so the save keeps no best for it; a profit (>= 0) is stored as both.
+  const lost = end.saved.rounds === 1 && end.saved.hasBest === false;
+  check('practice key stays v1 with an additive moodBest field (a loss is not stored as a best)', end.saved.v === 1 && end.saved.rounds === 1 && end.saved.moodBest && typeof end.saved.moodBest === 'object' &&
+    (lost ? !Object.prototype.hasOwnProperty.call(end.saved.moodBest, end.mood) : (typeof end.saved.moodBest[end.mood] === 'number' && end.saved.moodBest[end.mood] >= 0)), JSON.stringify(end.saved));
   if (SHOTS) await p.screenshot({ path: SHOTS + '/stalk-end-phone.png' });
   const realAfter = await p.evaluate(() => localStorage.getItem('pixeltown-stalk-v1'));
   check('the real save is never touched by a mood practice week', realAfter === realBefore, realBefore + ' / ' + realAfter);

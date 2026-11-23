@@ -87,6 +87,26 @@
     'pixeltown-mm-active-v1': (o, v) => (o.profile && o.profile.cleanActive ? o.profile.cleanActive(v) : cleanPlain(v)),
     'pixeltown-bugs-goals-v1': (o, v) => (isObj(v) ? (o.bugs && o.bugs.cleanGoals ? o.bugs.cleanGoals(v) : cleanPlain(v)) : undefined)
   };
+  // Beta (QA -> PS 4): G-26 Isles nodes / pouch and G-25 deepest dungeon floor per biome. Shapes from isles.js:617-620 and dungeon.js:109-113.
+  CLEANERS['pixeltown-isle-nodes-v1'] = (o, v) => {
+    if (!isObj(v) || !isObj(v.isles)) return undefined;
+    const isles = {};
+    Object.keys(v.isles).slice(0, 32).forEach((k) => {
+      const r = v.isles[k];
+      if (!/^[a-z][a-z0-9_-]{0,31}$/.test(k) || !isObj(r)) return;
+      const e = {};
+      if (Array.isArray(r.n)) e.n = r.n.filter((x) => Array.isArray(x) && x.length === 2 && Number.isInteger(x[0]) && x[0] >= 0 && x[0] < 100000 && typeof x[1] === 'number' && isFinite(x[1]) && x[1] >= 0 && x[1] < 8.64e15).slice(0, 200).map((x) => [x[0], x[1]]);
+      if (isObj(r.p)) { const p = {}; Object.keys(r.p).slice(0, 64).forEach((f) => { const n = r.p[f]; if (/^[a-z][a-z0-9_]{0,31}$/.test(f) && typeof n === 'number' && isFinite(n)) p[f] = Math.max(0, Math.min(99, Math.floor(n))); }); e.p = p; }
+      isles[k] = e;
+    });
+    return { v: 1, isles: isles };
+  };
+  CLEANERS['pixeltown-deep-v1'] = (o, v) => {
+    if (!isObj(v) || !isObj(v.f)) return undefined;
+    const f = {};
+    Object.keys(v.f).slice(0, 32).forEach((k) => { const n = v.f[k]; if (/^[a-z]{2,12}$/.test(k) && Number.isInteger(n) && n >= 0 && n <= 3) f[k] = n; });
+    return { v: 1, f: f };
+  };
   ['pixeltown-jam-assist-v1', 'pixeltown-deepdelve-v1', 'pixeltown-deepdelve-runs-v1', 'pixeltown-deepdelve-creative-v1', 'pixeltown-angler-fun-v1',
     'pixeltown-stalk-practice-v1', 'pixeltown-bugs-pb-v1', 'pixeltown-dash-v1', 'pixeltown-pop-v1', 'pixeltown-stack-v1', 'pixeltown-echo-v1']
     .concat(['angler', 'bugs', 'dash', 'deepdelve', 'echo', 'pop', 'stack', 'stalk'].map((g) => 'pixeltown-medals-' + g + '-v1'))
@@ -103,7 +123,7 @@
     'pixeltown-mm-active-v1': 'active Mad Maze hero', 'pixeltown-bugs-goals-v1': 'Bug Safari goals', 'pixeltown-bugs-pb-v1': 'Bug Safari bests',
     'pixeltown-jam-assist-v1': 'Jam assist setting', 'pixeltown-deepdelve-v1': 'Deepdelve progress', 'pixeltown-deepdelve-runs-v1': 'Deepdelve dives',
     'pixeltown-deepdelve-creative-v1': 'Deepdelve creative world', 'pixeltown-angler-fun-v1': 'Angler bests', 'pixeltown-stalk-practice-v1': 'Stalk Market practice',
-    'pixeltown-dash-v1': 'Dash bests', 'pixeltown-pop-v1': 'Pop bests', 'pixeltown-stack-v1': 'Stack bests', 'pixeltown-echo-v1': 'Echo Garden bests',
+    'pixeltown-dash-v1': 'Dash bests', 'pixeltown-pop-v1': 'Pop bests', 'pixeltown-stack-v1': 'Stack bests', 'pixeltown-isle-nodes-v1': 'Archipelago gathering spots and pouch', 'pixeltown-deep-v1': 'deepest dungeon floors', 'pixeltown-echo-v1': 'Echo Garden bests',
     'pixeltown-medals-angler-v1': 'Angler medals', 'pixeltown-medals-bugs-v1': 'Bug Safari medals', 'pixeltown-medals-dash-v1': 'Dash medals',
     'pixeltown-medals-deepdelve-v1': 'Deepdelve medals', 'pixeltown-medals-echo-v1': 'Echo Garden medals', 'pixeltown-medals-pop-v1': 'Pop medals',
     'pixeltown-medals-stack-v1': 'Stack medals', 'pixeltown-medals-stalk-v1': 'Stalk Market medals'
@@ -116,20 +136,56 @@
     return out.sort();
   }
 
-  // Raw stored strings of the known keys, exactly as they are (no cleaning).
+  // Raw stored strings of the known keys, exactly as they are (no cleaning). Beta S-03: a value its owner cleaner refuses (damaged on
+  // this device) is left out and listed in `warnings` ([{key, label, why}], NOT enumerable, so it never lands in the file) so the
+  // Backup button can say what was left out instead of "saved, keep it safe" for a file that cannot be restored.
   function bundle(storage) {
     const keys = {};
+    const warnings = [];
     try {
       listKeys(storage).forEach((k) => {
         let v = null;
         try { v = storage.getItem(k); } catch (e) { v = null; }
-        if (typeof v === 'string') keys[k] = v;
+        if (typeof v !== 'string') return;
+        const why = checkValue(k, v);
+        if (why) warnings.push({ key: k, label: label(k), why: why }); else keys[k] = v;
       });
     } catch (e) { /* ignore */ }
-    return { format: FORMAT, v: VERSION, keys: keys };
+    const out = { format: FORMAT, v: VERSION, keys: keys };
+    try { Object.defineProperty(out, 'warnings', { value: warnings, enumerable: false }); } catch (e) { /* frozen: no warnings */ }
+    return out;
   }
 
   const fail = (error, message) => ({ ok: false, error: error, message: message, keys: [], entries: {} });
+
+  // One stored / bundled value: {value} (the cleaned string to write) or {why} when it cannot be restored. Never throws.
+  function cleanValue(k, rawStr, owners) {
+    if (typeof rawStr !== 'string' || rawStr.length > MAX_VALUE) return { why: 'too big or unreadable' };
+    if (k === 'pixeltown-panel-collapsed') {
+      if (rawStr !== '0' && rawStr !== '1' && rawStr !== '"0"' && rawStr !== '"1"') return { why: 'not valid' };
+      return { value: rawStr.replace(/"/g, '') };
+    }
+    let parsed;
+    try { parsed = JSON.parse(rawStr); } catch (e) { return { why: 'not valid' }; }
+    let cleaned;
+    try { cleaned = CLEANERS[k](owners || getOwners(), parsed); } catch (e) { cleaned = undefined; }
+    if (cleaned === undefined) return { why: 'not valid' };
+    const s = JSON.stringify(cleaned);
+    if (typeof s !== 'string' || s.length > MAX_VALUE) return { why: 'too big' };
+    return { value: s };
+  }
+  // At export: '' when the value would restore, else why not. A key whose owner module is not on this page is only parse-checked
+  // (its cleaner would refuse it here for the missing module, not for damage).
+  const OWNER_OF = { 'pixeltown-mm-v1': 'profile', 'pixeltown-hub-v1': 'map', 'pixeltown-angler-v1': 'angler', 'pixeltown-bugs-v1': 'bugs', 'pixeltown-profile-v1': 'hubProfile' };
+  function ownerPresent(k) { const o = OWNER_OF[k]; if (!o) return true; try { return !!getOwners()[o]; } catch (e) { return false; } }
+  function checkValue(k, v) {
+    try {
+      const r = cleanValue(k, v);
+      if (!r.why) return '';
+      if (r.why === 'not valid' && !ownerPresent(k)) { try { JSON.parse(v); return ''; } catch (e) { return 'not valid'; } }
+      return r.why;
+    } catch (e) { return ''; }
+  }
 
   // Validate and clean a restore file without touching storage.
   // Returns {ok, keys:[...], entries:{key: string}} or {ok:false, error, message}.
@@ -151,8 +207,7 @@
           if (KNOWN.indexOf(k) < 0) return fail('unknown-key', 'That backup contains an entry this game does not know (' + String(k).slice(0, 40) + '), so nothing was changed.');
           const v = obj.keys[k];
           const s = typeof v === 'string' ? v : JSON.stringify(v);
-          if (typeof s !== 'string' || s.length > MAX_VALUE) return fail('bad-value', 'The ' + label(k) + ' in that backup is too big or unreadable.');
-          raw[k] = s;
+          raw[k] = typeof s === 'string' ? s : ''; // a damaged value is skipped below, not fatal (beta S-03)
         }
       } else {
         // Old single-save format: a plain town save. Anything else (an old Angler export, say) is refused.
@@ -164,26 +219,26 @@
       let total = 0;
       Object.keys(raw).forEach((k) => { total += raw[k].length; });
       if (total > MAX_TOTAL) return fail('too-big', 'That backup file is too big, so nothing was changed.');
+      // Beta S-03 (b14-04): a damaged key is skipped (listed in `skipped`, the town save first), the rest still restores.
+      // Only when NO key is restorable does the plan fail (as before: 'bad-value', nothing changed).
       const owners = getOwners();
       const entries = {};
-      const keys = Object.keys(raw).sort();
-      for (let i = 0; i < keys.length; i++) {
-        const k = keys[i];
-        if (k === 'pixeltown-panel-collapsed') {
-          if (raw[k] !== '0' && raw[k] !== '1' && raw[k] !== '"0"' && raw[k] !== '"1"') return fail('bad-value', 'The ' + label(k) + ' in that backup is not valid.');
-          entries[k] = raw[k].replace(/"/g, '');
-          continue;
-        }
-        let parsed;
-        try { parsed = JSON.parse(raw[k]); } catch (e) { return fail('bad-value', 'The ' + label(k) + ' in that backup is not valid, so nothing was changed.'); }
-        let cleaned;
-        try { cleaned = CLEANERS[k](owners, parsed); } catch (e) { cleaned = undefined; }
-        if (cleaned === undefined) return fail('bad-value', 'The ' + label(k) + ' in that backup is not valid, so nothing was changed.');
-        const s = JSON.stringify(cleaned);
-        if (typeof s !== 'string' || s.length > MAX_VALUE) return fail('bad-value', 'The ' + label(k) + ' in that backup is too big.');
-        entries[k] = s;
+      const skipped = [];
+      const all = Object.keys(raw).sort();
+      for (let i = 0; i < all.length; i++) {
+        const k = all[i];
+        const r = cleanValue(k, raw[k], owners);
+        if (r.why) skipped.push({ key: k, label: label(k), why: r.why }); else entries[k] = r.value;
       }
-      return { ok: true, keys: keys, entries: entries, labels: keys.map(label) };
+      skipped.sort((a, b) => (a.key === SAVE_KEY ? -1 : b.key === SAVE_KEY ? 1 : a.key < b.key ? -1 : 1));
+      const keys = Object.keys(entries).sort();
+      if (!keys.length) {
+        const first = skipped[0];
+        return fail('bad-value', 'The ' + (first ? first.label : 'save') + ' in that backup is not valid, so nothing was changed.');
+      }
+      const out = { ok: true, keys: keys, entries: entries, labels: keys.map(label), skipped: skipped };
+      if (skipped.length) out.message = 'Will restore: ' + keys.map(label).join(', ') + '. Cannot restore (damaged in the file): ' + skipped.map((x) => x.label).join(', ') + '. Those stay as they are on this device.';
+      return out;
     } catch (e) {
       return fail('invalid', 'That file does not look like a Mad Maze backup.');
     }
@@ -223,7 +278,9 @@
   function restore(storage, input) {
     const p = plan(input);
     if (!p.ok) return { ok: false, restored: [], error: p.error, message: p.message };
-    return apply(storage, p);
+    const r = apply(storage, p);
+    if (r && r.ok && p.skipped && p.skipped.length) { r.skipped = p.skipped.slice(); r.message = p.message; } // beta S-03
+    return r;
   }
 
   // Gear-on hardening (slice GH): ONE safety snapshot of every known key, taken just before the first tiered item is written to a town save that

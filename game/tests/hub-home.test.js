@@ -73,9 +73,11 @@ async function homeChecks(browser, label, opts) {
   check(L('primary path (Play + every card + Collections) fits with no scrolling, no horizontal scroll'), lay.scroll <= 1 && lay.sw <= lay.iw && lay.last <= lay.bar, JSON.stringify(lay));
   check(L('every home + footer control is >= 44 px; text >= 12 px'), lay.small.length === 0 && lay.minFont >= 12, JSON.stringify(lay.small) + ' ' + lay.minFont);
   const play = await vis(pg, '#home-play');
-  check(L('one big Play button (>= 56 px tall) near the top; empty memory = Play, start in the Town'), play.vis && play.h >= 56 && play.t < 140 && (await pg.textContent('#home-play-txt')) === 'Play' && (await pg.getAttribute('#home-play', 'href')) === '../index.html?from=hub', JSON.stringify(play));
+  // G-14 (b08-02): a fresh profile's one first move is the guided Realm adventure (it was the Town)
+  check(L('one big Play button (>= 56 px tall) near the top; fresh profile = Play, the guided Realm adventure'), play.vis && play.h >= 56 && play.t < 140 && (await pg.textContent('#home-play-txt')) === 'Play' && (await pg.getAttribute('#home-play', 'href')) === '../games/mad-maze/index.html?mode=world&from=hub', JSON.stringify(play));
   const nx = await pg.evaluate(() => ({ n: window.__home.next(), vis: !document.getElementById('home-next').hidden, t: document.getElementById('home-next-txt').textContent, href: document.getElementById('home-next').getAttribute('href'), items: document.querySelectorAll('#home .home-next').length }));
-  check(L('calm goals collapse to ONE next-step line (first idea, a real link)'), nx.vis && nx.items === 1 && nx.n && nx.n.key === 'isles:tame1' && /^Next: /.test(nx.t) && nx.href === '../games/isles/index.html', JSON.stringify(nx));
+  // G-14: on a fresh profile the one next-step line names the same first move as Play (calm goals take over once there is progress)
+  check(L('ONE next-step line, a real link, naming the same first move as Play on a fresh profile'), nx.vis && nx.items === 1 && nx.n && nx.n.key === 'first-realm' && /^Next: /.test(nx.t) && nx.href === '../games/mad-maze/index.html?mode=world&from=hub', JSON.stringify(nx));
   const foot = await pg.evaluate(() => [...document.querySelectorAll('#bar a, #bar button')].filter((n) => n.offsetParent).map((n) => n.id));
   check(L('footer keeps Town / Daily gift / Open (+ the Map toggle)'), ['hub-town', 'gift-btn', 'open-btn', 'view-toggle'].every((id) => foot.includes(id)), foot.join());
 

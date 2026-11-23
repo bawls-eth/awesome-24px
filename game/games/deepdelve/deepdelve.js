@@ -23,6 +23,28 @@
   const CREATIVE_KEY = 'pixeltown-deepdelve-creative-v1';
   const GROTTO = window.MMDDGrotto || null, BUILD = window.MMDDBuild || null;
 
+  // Beta S-05 (b15-01): `localStorage` itself can throw (SecurityError: cookies / site data blocked). Every read and write in this
+  // file goes through LS: the real storage when it can be read, else an in-memory stand-in so the mine still boots and plays.
+  // LS_NOSAVE is true when nothing will persist (blocked getter, or a probe write that throws), and the status line says so once.
+  let LS_NOSAVE = false;
+  const LS = (function () {
+    let s = null;
+    try { s = window.localStorage; if (s) s.getItem('pixeltown-deepdelve-v1'); } catch (e) { s = null; }
+    if (s) {
+      try { s.setItem('pixeltown-deepdelve-probe', '1'); s.removeItem('pixeltown-deepdelve-probe'); } catch (e) { LS_NOSAVE = true; }
+      return s;
+    }
+    LS_NOSAVE = true;
+    const m = new Map();
+    return {
+      getItem: (k) => (m.has(String(k)) ? m.get(String(k)) : null),
+      setItem: (k, v) => { m.set(String(k), String(v)); },
+      removeItem: (k) => { m.delete(String(k)); },
+      key: (i) => Array.from(m.keys())[i] || null,
+      get length() { return m.size; },
+      clear: () => m.clear(),
+    };
+  }());
   const $ = (id) => document.getElementById(id);
   const say = (t) => { $('msg').textContent = t || ''; };
   const touchUI = () => { const t = $('touch'); return !!t && !t.hidden; };
@@ -34,7 +56,7 @@
   let idb = null;
   function creativeDoc() {
     try {
-      const o = JSON.parse(localStorage.getItem(CREATIVE_KEY) || 'null');
+      const o = JSON.parse(LS.getItem(CREATIVE_KEY) || 'null');
       if (o && typeof o === 'object' && !Array.isArray(o) && o.v === 1 && o.kv && typeof o.kv === 'object' && !Array.isArray(o.kv)) return o;
     } catch (e) { /* corrupt or blocked: start fresh */ }
     return { v: 1, kv: {} };
@@ -69,7 +91,7 @@
   function kvSet(k, v) {
     memStore.set(k, v);
     return new Promise((resolve) => {
-      if (CREATIVE) { try { const d = creativeDoc(); d.kv[k] = v; localStorage.setItem(CREATIVE_KEY, JSON.stringify(d)); return resolve(true); } catch (e) { return resolve(false); } }
+      if (CREATIVE) { try { const d = creativeDoc(); d.kv[k] = v; LS.setItem(CREATIVE_KEY, JSON.stringify(d)); return resolve(true); } catch (e) { return resolve(false); } }
       if (!idb) return resolve(false);
       try {
         const tx = idb.transaction('kv', 'readwrite');
@@ -120,7 +142,7 @@
   // quality governor at the low view and keeps it there; a colour-blind palette recolours the block outline and the creatures.
   const ACCESS = (function () {
     let p = null;
-    try { p = window.MMAccess && MMAccess.prefs ? MMAccess.prefs.load(localStorage) : null; } catch (e) { p = null; }
+    try { p = window.MMAccess && MMAccess.prefs ? MMAccess.prefs.load(LS) : null; } catch (e) { p = null; }
     p = p || { palette: 'normal', hudScale: 1, flashes: true, lowGfx: false };
     const pal = window.MMAccess ? MMAccess.palette(p.palette) : { name: 'normal', ally: '#5ad1ff', enemy: '#ffb347' };
     return { palette: pal.name, ally: pal.ally, enemy: pal.enemy, scale: p.hudScale, lowGfx: p.lowGfx === true, reduced };
@@ -135,7 +157,7 @@
   let sfxBox = null;
   function sfx(name) {
     try {
-      if (!sfxBox && window.MMSfx && !TEST) sfxBox = MMSfx.create({ storage: localStorage });
+      if (!sfxBox && window.MMSfx && !TEST) sfxBox = MMSfx.create({ storage: LS });
       if (sfxBox) sfxBox.play(name);
     } catch (e) { /* audio is optional */ }
   }
@@ -157,13 +179,18 @@
   const modName = (id) => { const m = RUNS && RUNS.MODS.filter((x) => x.id === id)[0]; return m ? m.name : 'Dive'; };
   function startRun() {
     if (!RUNS) return;
-    if (!runRec) runRec = RUNS.load(localStorage);
+    if (!runRec) runRec = RUNS.load(LS);
     run = RUNS.start(runDepth0, RUNS.modFor(SEED, runRec.runs).id); pbDepthShown = false; comboShown = false; $('combo').textContent = '';
     renderDive();
   }
-  function onMined(item, now) {
+  // G-10: cells the player placed this session (cap 4096, oldest out); mining one gives the item back but scores nothing
+  const placedCells = new Set(); const PLACED_CAP = 4096;
+  const cellKey = (x, y, z) => x + ',' + y + ',' + z;
+  function notePlaced(x, y, z) { const k = cellKey(x, y, z); placedCells.delete(k); placedCells.add(k); if (placedCells.size > PLACED_CAP) placedCells.delete(placedCells.values().next().value); }
+  function onMined(item, now, placed) {
     if (!run) return null;
-    const r = RUNS.mined(run, item, now === undefined ? nowS() : now);
+    const r = RUNS.mined(run, item, now === undefined ? nowS() : now, placed ? { placed: true } : undefined);
+    if (r.placed) { sfx('hit'); return r; }
     if (r.ore) { pop('+' + (r.ore * (run.mod === 'veins' ? 16 : 8)) + ' ' + item.replace(/_ore$/, '').replace(/_/g, ' '), 'ore'); sfx('pickup'); shake(0.06, 0.16); }
     else { sfx('hit'); shake(0.025, 0.08); }
     if (r.combo >= 2) {
@@ -187,9 +214,9 @@
   function endRun(safe, why) {
     if (!run || !runRec) return null;
     const short = run.depth < 2 && run.blocks < 5; // a stumble near the surface is not worth a summary
-    runRec = RUNS.load(localStorage); // the freshest bests / counts: another tab may have dived meanwhile (bugbash/saves.md S2)
+    runRec = RUNS.load(LS); // the freshest bests / counts: another tab may have dived meanwhile (bugbash/saves.md S2)
     const sum = RUNS.finish(runRec, run, safe);
-    RUNS.save(localStorage, runRec);
+    RUNS.save(LS, runRec);
     startRun();
     if (short) return sum;
     showSummary(sum, why);
@@ -245,14 +272,14 @@
     }
     return out;
   }
-  function loadMeta() { try { return sanitiseMeta(localStorage.getItem(META_KEY)); } catch (e) { return sanitiseMeta(null); } }
+  function loadMeta() { try { return sanitiseMeta(LS.getItem(META_KEY)); } catch (e) { return sanitiseMeta(null); } }
   // Hub medal summary: this game's own additive key, read by the hub page only.
-  function hubMedals() { if (CREATIVE) return; try { const g = meta.goals, m = ['bronze', 'silver', 'secret', 'depth20', 'depth40', 'crawler', 'wyrm', 'torches10', 'build1', 'build3'].filter((k) => g[k] === true); localStorage.setItem('pixeltown-medals-deepdelve-v1', JSON.stringify({ v: 1, m })); } catch (e) { /* storage blocked */ } try { const g = meta.goals; window.MMHubProfile.sync(localStorage, 'deepdelve', [g.maxDepth >= 1 && 'dig'].concat(['bronze', 'silver', 'secret', 'depth20', 'depth40', 'wyrm'].filter((k) => g[k] === true))); } catch (e) { /* hub map progress is optional */ } }
-  function saveMeta() { if (CREATIVE) return true; hubMedals(); try { localStorage.setItem(META_KEY, JSON.stringify(meta)); return true; } catch (e) { return false; } }
+  function hubMedals() { if (CREATIVE) return; try { const g = meta.goals, m = ['bronze', 'silver', 'secret', 'depth20', 'depth40', 'crawler', 'wyrm', 'torches10', 'build1', 'build3'].filter((k) => g[k] === true); LS.setItem('pixeltown-medals-deepdelve-v1', JSON.stringify({ v: 1, m })); } catch (e) { /* storage blocked */ } try { const g = meta.goals; window.MMHubProfile.sync(LS, 'deepdelve', [g.maxDepth >= 1 && 'dig'].concat(['bronze', 'silver', 'secret', 'depth20', 'depth40', 'wyrm'].filter((k) => g[k] === true))); } catch (e) { /* hub map progress is optional */ } }
+  function saveMeta() { if (CREATIVE) return true; hubMedals(); try { LS.setItem(META_KEY, JSON.stringify(meta)); return true; } catch (e) { return false; } }
   // Read-only look at the old in-town cave keys; never writes or deletes anything on the town save.
   function readTownCave() {
     let o;
-    try { const raw = localStorage.getItem(TOWN_KEY); if (!raw) return null; o = JSON.parse(raw); } catch (e) { return null; }
+    try { const raw = LS.getItem(TOWN_KEY); if (!raw) return null; o = JSON.parse(raw); } catch (e) { return null; }
     if (!o || typeof o !== 'object' || Array.isArray(o)) return null;
     if (o.caveSeed === undefined && o.caveInv === undefined && o.cavePick === undefined) return null;
     return sanitiseMeta({ cave: { seed: o.caveSeed, inv: o.caveInv, pick: o.cavePick } }).cave;
@@ -455,7 +482,8 @@
     const dirty = world.setBlock(wx, wy, wz, B.AIR);
     if (!dirty.length) return false;
     const item = ITEM_OF[id];
-    if (item && !CREATIVE) { inv[item] = (inv[item] | 0) + 1; found[item] = 1; onMined(item); }
+    const wasPlaced = placedCells.delete(cellKey(wx, wy, wz)); // G-10
+    if (item && !CREATIVE) { inv[item] = (inv[item] | 0) + 1; found[item] = 1; onMined(item, undefined, wasPlaced); }
     if (!CREATIVE) findBlueprint(id, wy);
     if (!CREATIVE) wearPick(NEED_TIER[id] ? 2 : 1);
     afterEdit(dirty);
@@ -484,7 +512,7 @@
     }
     const dirty = world.setBlock(wx, wy, wz, id);
     if (!dirty.length) return false;
-    if (!CREATIVE) inv[item] -= 1; // unlimited blocks in the creative world
+    if (!CREATIVE) { inv[item] -= 1; notePlaced(wx, wy, wz); } // unlimited blocks in the creative world; G-10: remember a placed cell
     if (id === LAMP) lampChunks.add(MMChunks.key(Math.floor(wx / SIZE), Math.floor(wy / SIZE), Math.floor(wz / SIZE)));
     if (CREATIVE) { buildCheck(wx, wy, wz); afterEdit(dirty); renderHud(); return true; }
     buildCheck(wx, wy, wz);
@@ -582,6 +610,7 @@
   }());
   let govFloor = 0; // access lowGfx keeps the governor at (or below) the low view
   const gov = { level: 0, samples: [], head: 0, count: 0, lastChange: -1e9, lastRaise: -1e9, restoreGap: GOV.RESTORE_GAP, changes: 0, auto: params.get('perf') !== '0' };
+  let resizeTimer = 0, lastResizeAt = -1e9; // beta S-11: see onResize
   // Desktop render-pixel budget: big or hi-dpi windows are rendered below native size (the fill cost is what software and
   // integrated GPUs choke on). Phones keep 1:1; a 1280x720 window (544 px canvas) renders at ~0.83, a 4K window at 0.6.
   const MAX_PIXELS = 480000;
@@ -610,6 +639,7 @@
   // Feed one frame time (ms) at time `now` (ms). Returns true when quality changed.
   function govFrame(ms, now) {
     if (!(ms > 0) || ms > 500) return false; // tab switches and stalls are not render cost
+    if (now - lastResizeAt < 1000) return false; // beta S-11: a resize storm is not render cost either
     gov.samples[gov.head] = ms; gov.head = (gov.head + 1) % GOV.WINDOW; gov.count = Math.min(GOV.WINDOW, gov.count + 1);
     if (gov.count < GOV.MIN_SAMPLES || now - gov.lastChange < GOV.MIN_GAP) return false;
     const avg = govAvg();
@@ -647,7 +677,15 @@
     renderer.setSize(w, h, false);
     camera.aspect = w / h; camera.updateProjectionMatrix();
   }
-  window.addEventListener('resize', resize);
+  // Beta S-11 (b13-07): a rotation / resize storm used to re-allocate the drawing buffer on every event AND feed those slow frames to
+  // the quality governor, which then halved the render scale (195x331 -> 97x165 on a phone) and kept it there. Now the resize is
+  // applied once, 150 ms after the last event, and frames within 1 s of a resize are not counted as render cost.
+  function onResize() {
+    lastResizeAt = performance.now(); govReset();
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { resizeTimer = 0; resize(); lastResizeAt = performance.now(); govReset(); }, 150);
+  }
+  window.addEventListener('resize', onResize);
 
   function fillWindow(pcx, pcz) {
     const ox = Math.max(0, Math.min(MMChunks.WORLD.cx - WIN, pcx - 2)), oz = Math.max(0, Math.min(MMChunks.WORLD.cz - WIN, pcz - 2));
@@ -1148,6 +1186,12 @@
     queueSave(); renderHud();
     return true;
   }
+  // G-18 (b11-07, b15-12): a craft row reads 'Plank' / 'Torch x4', not 'plank > plank' (the recipe name only when it differs from the item)
+  function craftLabel(r) {
+    const out = String(MMDDCraft.outText(r) || '').replace(/_/g, ' '), base = String(r.id || '').replace(/_/g, ' ');
+    const t = out.indexOf(base) === 0 ? out : base + ': ' + out;
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  }
   function renderCraft() {
     const ul = $('recipes');
     while (ul.firstChild) ul.removeChild(ul.firstChild);
@@ -1159,7 +1203,7 @@
       if (only && !r.ready) return;
       const li = document.createElement('li');
       const info = document.createElement('span'); info.className = 'ri';
-      const nm = document.createElement('strong'); nm.textContent = r.id.replace(/_/g, ' ') + ' > ' + MMDDCraft.outText(r);
+      const nm = document.createElement('strong'); nm.textContent = craftLabel(r);
       const ct = document.createElement('small'); ct.textContent = costText(r.cost) + ' (' + r.station + ')' + (r.reason ? ' - ' + r.reason : '');
       info.appendChild(nm); info.appendChild(ct);
       const b = document.createElement('button'); b.type = 'button'; b.className = 'btn mini'; b.dataset.recipe = r.id; b.textContent = 'Craft';
@@ -1173,7 +1217,7 @@
       if (only && !r.ready) return;
       const li = document.createElement('li');
       const info = document.createElement('span'); info.className = 'ri';
-      const nm = document.createElement('strong'); nm.textContent = (r.locked ? '[locked] ' : '') + r.id.replace(/_/g, ' ') + ' > ' + MMDDCraft.outText(r);
+      const nm = document.createElement('strong'); nm.textContent = (r.locked ? '[locked] ' : '') + craftLabel(r);
       const ct = document.createElement('small'); ct.textContent = costText(r.cost) + ' (' + (r.kind === 'grotto' ? 'grotto' : 'blueprint') + ')' + (r.reason ? ' - ' + r.reason : '');
       info.appendChild(nm); info.appendChild(ct);
       const b = document.createElement('button'); b.type = 'button'; b.className = 'btn mini'; b.dataset.recipe = r.id; b.textContent = 'Craft';
@@ -1854,8 +1898,9 @@
     bindControls();
     renderHud();
     if (TEST) exposeTest();
-    say(TEST ? '' : introText());
-    if (!TEST) setTimeout(() => say(''), 6000);
+    const NOSAVE_NOTE = 'Progress cannot be saved in this browser mode.'; // beta S-05: said once, with the intro
+    say(LS_NOSAVE ? NOSAVE_NOTE + (TEST ? '' : ' ' + introText()) : (TEST ? '' : introText()));
+    if (!TEST) setTimeout(() => say(''), LS_NOSAVE ? 9000 : 6000);
     requestAnimationFrame(frame);
   }
   boot();

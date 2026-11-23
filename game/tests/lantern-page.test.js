@@ -79,12 +79,13 @@ const prof = (page) => page.evaluate((K) => JSON.parse(localStorage.getItem(K) |
   p = await prof(s.page);
   check('Fall deletes the hero, banks fame and puts a Keepsake in the stash', !p.heroes.find((h) => h.id === 'h-a') && p.fame === 1100 && p.stash[0] && p.stash[0].keepsake === true && p.hall[0].how === 'fall', JSON.stringify(p));
   check('Picnic hero cannot Fall', await s.page.evaluate(() => window.__lantern.fall('h-c').ok === false));
-  // Rekindle on Elder (level 20 -> level 10)
+  // G-05: Rekindle starts from the fallen Fally's Keepsake (level 9 -> level 4); living hero cards have no Rekindle button
   const elderCard = s.page.locator('#heroes li[data-hero="h-b"]');
-  await elderCard.locator('.rekindle').click();
+  check('living hero cards have no Rekindle button (G-05)', (await s.page.locator('#heroes .rekindle').count()) === 0);
+  await s.page.locator('#rekindle-list .rekindle-ks').first().click();
   p = await prof(s.page);
-  const reborn = p.heroes.filter((h) => h.name === 'Elder' && h.id !== 'h-b');
-  check('Rekindle level math: L20 -> L10, same class, new id', reborn.length === 1 && reborn[0].level === 10 && reborn[0].cls === 'frostcaller', JSON.stringify(p.heroes));
+  const reborn = p.heroes.filter((h) => h.name === 'Fally');
+  check('Rekindle level math: L9 Keepsake -> L4, same class, new id; the Keepsake stays marked rk', reborn.length === 1 && reborn[0].level === 4 && reborn[0].cls === 'ranger' && reborn[0].id !== 'h-a' && p.stash[0].keepsake === true && p.stash[0].rk === true, JSON.stringify(p.heroes));
   const cozyCard = s.page.locator('#heroes li', { hasText: 'Cozy' });
   check('Retire disabled below level 20 with a reason', (await cozyCard.locator('.retire').isDisabled()) && /level 20/.test(await cozyCard.textContent()));
   await elderCard.locator('.retire').click();
@@ -154,7 +155,9 @@ const prof = (page) => page.evaluate((K) => JSON.parse(localStorage.getItem(K) |
   s = await open(browser, { mm: '{{corrupt-raw', save: LEGACY_SAVE });
   const [dl2] = await Promise.all([s.page.waitForEvent('download'), s.page.click('#backup')]);
   const b2 = JSON.parse(fs.readFileSync(await dl2.path(), 'utf8'));
-  check('backup of a corrupt pixeltown-mm-v1 keeps the raw value', b2.keys[MM] === '{{corrupt-raw');
+  // beta S-03 (b14-04) changed this: a damaged value is left out of the file (it could never be restored) instead of exported raw.
+  check('backup of a corrupt pixeltown-mm-v1 leaves the damaged value out of the file', !(MM in b2.keys) && b2.format === 'pixeltown-backup');
+  check('the Backup status names what was left out', /left out: Mad Maze heroes and stash/.test(await s.page.evaluate(() => document.body.innerText)));
   await s.ctx.close();
 
   // 5c. Legacy import with a full roster says so and can be retried.

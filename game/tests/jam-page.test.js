@@ -269,7 +269,8 @@ const startChart = (p) => p.evaluate((c) => { window.__jam.start('warm-embers', 
   await rs.ctx.close();
 
   // ---- secret song: full combo on Hard ----
-  const sc = await open(browser, { viewport: { width: 1000, height: 700 } }, JSON.stringify({ v: 1, hint: true, offsetMs: 0, fullCombo: true }));
+  // G-18 (b10-09): Hard opens after 2 stars on Normal (now enforced in startSong too), so these saves carry that Normal result
+  const sc = await open(browser, { viewport: { width: 1000, height: 700 } }, JSON.stringify({ v: 1, hint: true, offsetMs: 0, fullCombo: true, best: { 'warm-embers': { normal: { score: 900, stars: 2, rank: 'B', combo: 20 } } } }));
   check('tampered fullCombo with no Hard evidence: secret stays locked', await sc.page.evaluate(() => document.querySelector('.card[data-song=midnight-campfire]').classList.contains('locked') && !('fullCombo' in window.__jam.save)));
   await sc.page.evaluate(() => window.__jam.start('warm-embers', 'hard')); await drive(sc.page, 0);
   check('perfect Hard run: full combo shown and Midnight Campfire unlocked', await sc.page.evaluate(() => window.__jam.mode === 'results' && document.getElementById('res-acc').textContent.includes('Full combo') && document.getElementById('res-unlocked').textContent.includes('Midnight Campfire') && window.__jam.save.fullCombo === true));
@@ -279,7 +280,7 @@ const startChart = (p) => p.evaluate((c) => { window.__jam.start('warm-embers', 
   check('Midnight Campfire plays with the shared engine', await sc.page.evaluate(() => window.__jam.mode === 'play' && window.__jam.chart.song === 'midnight-campfire' && window.__jam.chart.count > 30));
   check('secret flow: no console errors', sc.errors.length === 0 && sc.bad.length === 0, sc.errors.join('|'));
   await sc.ctx.close();
-  const nm = await open(browser, { viewport: { width: 1000, height: 700 } }, JSON.stringify({ v: 1, hint: true, offsetMs: 0 }));
+  const nm = await open(browser, { viewport: { width: 1000, height: 700 } }, JSON.stringify({ v: 1, hint: true, offsetMs: 0, best: { 'warm-embers': { normal: { score: 900, stars: 2, rank: 'B', combo: 20 } } } }));
   await nm.page.evaluate(() => window.__jam.start('warm-embers', 'hard')); await drive(nm.page, 0, 5);
   check('Hard run with one miss does not unlock the secret', await nm.page.evaluate(() => window.__jam.mode === 'results' && !('fullCombo' in window.__jam.save) && window.__jam.save.unlocked.indexOf('midnight-campfire') < 0 && !(document.getElementById('res-unlocked') || { textContent: '' }).textContent.includes('Midnight')));
   await nm.ctx.close();

@@ -614,6 +614,13 @@
   // IF1: the island's own pouch (the jungle pouch plus its staple food); ?pouch=classic is the old jungle pouch and pouch-only feeding
   const CLASSIC_POUCH = Q.get('pouch') === 'classic' || !POUCH;
   const pouch = POUCH ? POUCH.starter(ISLE, { classic: CLASSIC_POUCH }) : Object.assign({}, IC.STARTER_POUCH);
+  // G-26 (b05-04, b05-06): picked glints / nodes and the pouch survive a reload. Own additive key pixeltown-isle-nodes-v1
+  // { v:1, isles:{ <isle>:{ n:[[nodeIndex, untilMs], ...] (at most 200, only the ones still growing back), p:{ <food>: 0..99 } } } }.
+  // Wall clock in page code only; hostile / missing storage = everything ready and the starter pouch (as before).
+  const NODES_KEY = 'pixeltown-isle-nodes-v1', NODES_MAX = 200;
+  function nodesRead() { try { const raw = S.getItem(NODES_KEY); const o = raw && raw.length < 65536 ? JSON.parse(raw) : null; return o && typeof o === 'object' && !Array.isArray(o) && o.isles && typeof o.isles === 'object' && !Array.isArray(o.isles) ? o : { v: 1, isles: {} }; } catch (e) { return { v: 1, isles: {} }; } }
+  const nodesMine = (() => { const r = nodesRead().isles[ISLE]; return r && typeof r === 'object' && !Array.isArray(r) ? r : {}; })();
+  if (nodesMine.p && typeof nodesMine.p === 'object' && !Array.isArray(nodesMine.p)) Object.keys(pouch).forEach((k) => { const v = nodesMine.p[k]; if (typeof v === 'number' && Number.isFinite(v)) pouch[k] = Math.max(0, Math.min(99, Math.floor(v))); });
   let lastHurtT = -1e9, lastRewardT = 0; // IF1: sim time of the last hit taken (regen) and of the last reward (sparkles)
   let lastFindT = 0; // the first-ten pity's clock: the last find (an item, tame, drop or journal entry); a hot-spring soak is a rest, not a find
   function reward(rest) { lastRewardT = simT; if (!rest) lastFindT = simT; }
@@ -714,7 +721,8 @@
       const d = Math.hypot(c.x - hero.x, c.y - 8 - hero.y);
       if (d < bd) { bd = d; best = c; bx = c.x; by = c.y - 8; }
     }
-    if (bossAlive() && !bz.ko) { const d = Math.hypot(bz.x - hero.x, bz.y - 36 - hero.y); if (d < bd + 2 * TILE) { best = bz; bx = bz.x; by = bz.y - 30; } }
+    const wearyTame = bz.st && bz.st.st === 'weary' && TAME && BOSS_TAMEABLE && !bz.rm; // G-22: auto-attack never finishes a boss you could tame
+    if (bossAlive() && !bz.ko && !wearyTame) { const d = Math.hypot(bz.x - hero.x, bz.y - 36 - hero.y); if (d < bd + 2 * TILE) { best = bz; bx = bz.x; by = bz.y - 30; } }
     if (!best) return false;
     if (fire(bx - hero.x, by - hero.y)) { autoN++; return true; }
     return false;
@@ -754,8 +762,15 @@
     removeWhere((x) => x === c, 90000);
   }
   // hitCreature(c, dmg, how): how = 'soothe' (bolt in soothe mode) | 'comp' (a companion) | undefined (plain bolt)
+  // G-22 (b05-03): companions never attack what you are taming. Always skipped: a KO / calm sleeper. While soothe mode is on: the last
+  // soothe target (6 s) and any tameable creature (it has a tame state). With soothe off (you are hunting) they fight anything hostile, as before.
+  // (Plain befriend progress is not a skip: it builds up passively near every wild creature.) compSkip is the MMCompanion ctx.skip
+  // predicate and the guard on a companion hit.
+  let sootheTgt = null, sootheAt = -1e9;
+  const compSkip = (e) => !!e && (!!e.ko || !!e.calm || (soothe && TAME && ((e === sootheTgt && simT - sootheAt < 6) || !!e.tm))); // soothe on: any tameable creature (it may be the next soothe target before the first bolt lands)
   function hitCreature(c, dmg, how) {
     const sooth = how === 'soothe';
+    if (sooth) { sootheTgt = c; sootheAt = simT; }
     const real = sooth ? dmg * SOOTHE_DMG : dmg;
     c.flash = 0.12;
     if (how !== 'comp') cue('hit');
@@ -902,7 +917,7 @@
   let compCur = null, compLand = false;
   const AIRWATER = ['swim', 'fly', 'glide', 'float'];
   const landOnly = (def) => !!def && !(Array.isArray(def.behaviours) && def.behaviours.some((b) => AIRWATER.indexOf(b) >= 0));
-  const compCtx = { owner: hero, enemies: creatures, pickups: [], def: null, speed: SPEED,
+  const compCtx = { owner: hero, enemies: creatures, pickups: [], def: null, speed: SPEED, skip: (e) => compSkip(e), // G-22
     blocked: (x, y) => { const tx = tileOf(x), ty = tileOf(y); return solidAt(tx, ty) || (compLand && !!compCur && swimAt(tx, ty) && !swimAt(tileOf(compCur.x), tileOf(compCur.y))); } };
   function spawnCompanion(ent, x, y) {
     if (!COMPANIONS || !ent) return null;
@@ -942,7 +957,7 @@
         if (!swimAt(tileOf(bx), tileOf(by)) && !solidAt(tileOf(bx), tileOf(by))) { p.cs.x = bx; p.cs.y = by; }
         else if (!swimAt(tileOf(hero.x), tileOf(hero.y))) { p.cs.x = hero.x; p.cs.y = hero.y; }
       }
-      if (out.hit >= 0 && p.dmg > 0) { const e = creatures[out.hit]; if (e && e.hostile) { p.cs.hits = (p.cs.hits || 0) + 1; hitCreature(e, p.dmg, 'comp'); } }
+      if (out.hit >= 0 && p.dmg > 0) { const e = creatures[out.hit]; if (e && e.hostile && !compSkip(e)) { p.cs.hits = (p.cs.hits || 0) + 1; hitCreature(e, p.dmg, 'comp'); } }
     }
   }
   function finishTame(c) {
@@ -981,6 +996,56 @@
     ISL.noteLog(save, 'tamed', def.id, 1); dirty = true;
     tamedN++; reward();
     return ent;
+  }
+
+  // G-20 / G-21 (b05-01, b05-02): the Stable. The Party tab lists every tame (name, species, level, what it does now) with real buttons:
+  // "Join party" / "Rest" (party limit respected: 2, or 1 on the low tier; the companion spawns / despawns) and "Ride" on a rideable tame
+  // (TAMES.setMount + refreshMount; the saddle follows the chosen species). Swaps wait while you ride or fight a boss. One stable write each.
+  const partyMax = () => Math.min(TAMES.MAX_PARTY, LOW ? 1 : CMP.MAX_ACTIVE);
+  function stableBusy() { return ride ? 'Get off your mount first (R).' : bossAlive() && bz.engaged ? 'Not during a boss fight.' : ''; }
+  function stableJoin(id) {
+    const ent = TAMES.find(tames, id); if (!ent || !COMPANIONS) return false;
+    const busy = stableBusy(); if (busy) { toast(busy); return false; }
+    if (tames.party.indexOf(id) >= 0) return true;
+    if (tames.party.length >= partyMax()) { toast('Your party is full. Rest one first.'); return false; }
+    TAMES.setParty(tames, tames.party.concat([id])); TAMES.write(S, tames);
+    spawnCompanion(ent, hero.x + 36, hero.y + 12);
+    toast((ent.nm || specName(ent.sp)) + ' joins your party.');
+    return true;
+  }
+  function stableRest(id) {
+    const ent = TAMES.find(tames, id); if (!ent) return false;
+    const busy = stableBusy(); if (busy) { toast(busy); return false; }
+    if (tames.party.indexOf(id) < 0) return true;
+    TAMES.setParty(tames, tames.party.filter((x) => x !== id)); TAMES.write(S, tames);
+    dropCompanion(id);
+    toast((ent.nm || specName(ent.sp)) + ' rests at the stable.');
+    return true;
+  }
+  function stableRide(id) {
+    const ent = TAMES.find(tames, id); const d = ent && CR.get(ent.sp); if (!ent || !d || !d.rideable || !MOUNTS) return false;
+    const busy = stableBusy(); if (busy) { toast(busy); return false; }
+    TAMES.setMount(tames, id); TAMES.write(S, tames); refreshMount();
+    toast((ent.nm || d.name) + ' is your mount. R to ride.');
+    return true;
+  }
+  const specName = (sp) => { const d = CR.get(sp); return d ? d.name : sp; };
+  function stableRows(pl) {
+    const busy = stableBusy(), full = tames.party.length >= partyMax();
+    tames.roster.forEach((t) => {
+      const d = CR.get(t.sp); const inParty = tames.party.indexOf(t.id) >= 0; const riding = !!ride && ride.id === t.id; const isMount = !!mountEnt && mountEnt.id === t.id;
+      const p = party.find((x) => x.ent.id === t.id);
+      const what = riding ? 'riding' : inParty ? (p ? p.cs.mode : 'party') : 'resting';
+      const li = el('li', 'stable-row'); li.dataset.tame = t.id;
+      li.appendChild(el('span', 'st-name', (t.nm || specName(t.sp)) + (t.nm && d && t.nm !== d.name ? ' (' + d.name + ')' : '') + ' Lv ' + t.lv + ' - ' + what + (isMount && !riding ? ', mount' : '')));
+      const mk = (cls, text, why, fn) => { const b = el('button', 'st-btn ' + cls, text); b.type = 'button'; b.dataset.tame = t.id; b.style.minHeight = '44px'; b.style.minWidth = '44px'; if (why) { b.disabled = true; b.title = why; b.setAttribute('aria-label', text + ': ' + why); } else b.setAttribute('aria-label', text + ' ' + (t.nm || specName(t.sp))); b.addEventListener('click', () => { if (fn()) openPanel('party'); }); return b; };
+      if (COMPANIONS && d && d.companion) {
+        if (inParty) li.appendChild(mk('st-rest', 'Rest', busy, () => stableRest(t.id)));
+        else li.appendChild(mk('st-join', 'Join party', busy || (full ? 'Party is full (' + partyMax() + '). Rest one first.' : ''), () => stableJoin(t.id)));
+      }
+      if (MOUNTS && d && d.rideable) li.appendChild(mk('st-ride', isMount ? 'Mount' : 'Ride', busy || (isMount ? 'Already your mount' : ''), () => stableRide(t.id)));
+      pl.appendChild(li);
+    });
   }
 
   // mount: the tames.mount entry (else the first rideable tame) through MMCompanion.ride
@@ -1203,7 +1268,7 @@
       else if (e.type === 'weary') {
         bz.tele.length = 0; bz.live.length = 0;
         cue('warn');
-        toast(TAME && e.canTame ? 'The ' + bossName() + ' is weary. Feed it a feast (F) to tame it, or finish it.' : 'The ' + bossName() + ' is weary. Finish it!');
+        toast(TAME && e.canTame ? 'The ' + bossName() + ' is weary. Hold fire and offer a feast (F).' : 'The ' + bossName() + ' is weary. Finish it!');
       } else if (e.type === 'tame_start') toast('The ' + bossName() + ' takes the feast. Soothe shots (Q) put it to sleep, then feed it more feasts.');
       else if (e.type === 'no_tame') toast('The ' + bossName() + ' cannot be tamed.');
       else if (e.type === 'tame') {
@@ -1261,6 +1326,7 @@
       inp.hero.x = hero.x; inp.hero.y = hero.y; inp.dmg = bz.dmg; inp.torporHit = bz.torpor; inp.feast = false; inp.offer = null;
       inp.playerDist = Math.hypot(hero.x - bz.st.x, hero.y - bz.st.y);
       inp.head = bz.hd; // XB: the hydra head your bolts struck (the engine picks the next head left when it is gone)
+      inp.noTame = !(TAME && BOSS_TAMEABLE); // G-22: the weary grace only protects a boss this page can actually tame
       bz.dmg = 0; bz.torpor = 0;
       const r = BOSS.step(bz.st, inp, BOSS_DT);
       if (r.state) bz.st = r.state;
@@ -1406,28 +1472,50 @@
   }
 
   // ---------- hero sprite (code art, baked once) ----------
+  // W-12 (b12-09): three true views (down = face, up = back of the head, right = profile; left mirrors right) x 2 walk frames, baked once.
+  // While moving the 2-frame walk cycle plays; idle and reduced motion hold frame 0.
   const heroArt = (() => {
-    const s = Math.round(32 * DPR), frames = [];
-    const col = CLASS_COL[HERO.cls] || '#4f9a45';
-    for (let f = 0; f < 2; f++) {
-      const cv = mk(s, s), c = cv.getContext('2d');
-      c.scale(DPR, DPR);
-      const bob = f ? 1 : 0;
-      c.fillStyle = '#2a1c14'; c.fillRect(11, 26 - bob, 4, 5); c.fillRect(17, 26 + bob - 1, 4, 5);
-      c.fillStyle = col; c.fillRect(9, 14 + bob, 14, 13);
-      c.fillStyle = '#f0c8a0'; c.fillRect(10, 4 + bob, 12, 11);
-      c.fillStyle = '#1e1a22'; c.fillRect(13, 8 + bob, 2, 3); c.fillRect(18, 8 + bob, 2, 3);
-      c.fillStyle = col; c.fillRect(9, 2 + bob, 14, 4);
-      c.fillStyle = '#0c140f'; c.fillRect(9, 26 + bob, 14, 1);
-      // 8B: a crisp light rim around the hero, baked once here (never per frame), so the hero reads on any ground
-      let rc = cv;
-      for (let k = 0; k < Math.max(1, Math.round(DPR)) && MS && MS.rimCanvas; k++) rc = MS.rimCanvas(rc, 0, null, mk) || rc; // 1 logical px thick
-      frames.push(rc);
-    }
+    const s = Math.round(32 * DPR);
+    const col = CLASS_COL[HERO.cls] || '#4f9a45', skin = '#f0c8a0', boot = '#2a1c14', ink = '#1e1a22';
+    const views = {};
+    ['down', 'up', 'right'].forEach((v) => {
+      views[v] = [];
+      for (let f = 0; f < 2; f++) {
+        const cv = mk(s, s), c = cv.getContext('2d');
+        c.scale(DPR, DPR);
+        const step = f ? 1 : 0;
+        if (v === 'right') { // profile: legs scissor, one eye, nose and hood toward +x
+          c.fillStyle = boot; c.fillRect(12 + step * 2, 26, 4, 5); c.fillRect(16 - step * 2, 26, 4, 5);
+          c.fillStyle = col; c.fillRect(11, 14, 11, 13); c.fillRect(10, 16 + step, 3, 7); // body + trailing arm
+          c.fillStyle = skin; c.fillRect(12, 4, 11, 11); c.fillRect(23, 9, 1, 2); // head + nose
+          c.fillStyle = ink; c.fillRect(19, 8, 2, 3);
+          c.fillStyle = col; c.fillRect(11, 2, 12, 4); c.fillRect(11, 2, 4, 9); // hood over the back of the head
+        } else if (v === 'up') { // back view: no face, hood / hair covers the head
+          c.fillStyle = boot; c.fillRect(11, 26 - step, 4, 5); c.fillRect(17, 25 + step, 4, 5);
+          c.fillStyle = col; c.fillRect(9, 14, 14, 13);
+          c.fillStyle = 'rgba(0,0,0,0.18)'; c.fillRect(15, 15, 2, 11); // back seam
+          c.fillStyle = skin; c.fillRect(10, 4, 12, 11);
+          c.fillStyle = col; c.fillRect(9, 2, 14, 11);
+        } else { // down: the original front view
+          c.fillStyle = boot; c.fillRect(11, 26 - step, 4, 5); c.fillRect(17, 26 + step - 1, 4, 5);
+          c.fillStyle = col; c.fillRect(9, 14 + step, 14, 13);
+          c.fillStyle = skin; c.fillRect(10, 4 + step, 12, 11);
+          c.fillStyle = ink; c.fillRect(13, 8 + step, 2, 3); c.fillRect(18, 8 + step, 2, 3);
+          c.fillStyle = col; c.fillRect(9, 2 + step, 14, 4);
+        }
+        c.fillStyle = '#0c140f'; c.fillRect(9, 30, 14, 1);
+        // 8B: a crisp light rim around the hero, baked once here (never per frame), so the hero reads on any ground
+        let rc = cv;
+        for (let k = 0; k < Math.max(1, Math.round(DPR)) && MS && MS.rimCanvas; k++) rc = MS.rimCanvas(rc, 0, null, mk) || rc; // 1 logical px thick
+        views[v].push(rc);
+      }
+    });
     const sh = mk(Math.round(24 * DPR), Math.round(8 * DPR)), sc = sh.getContext('2d');
     sc.fillStyle = 'rgba(0,0,0,0.28)'; sc.beginPath(); sc.ellipse(sh.width / 2, sh.height / 2, sh.width / 2, sh.height / 2, 0, 0, Math.PI * 2); sc.fill();
-    return { frames: frames, shadow: sh };
+    return { frames: views.down, views: views, shadow: sh };
   })();
+  const heroDraw = { view: 'down', frame: 0, flip: false, id: '' }; // test hook: what the last frame drew
+  function heroView() { const fx = hero.face.x, fy = hero.face.y; if (Math.abs(fy) > Math.abs(fx)) return fy > 0 ? 'down' : 'up'; return 'right'; }
 
   // ---------- render ----------
   const MOOD_COL = { shy: '#9ad07a', neutral: '#e0c060', hostile: '#e0604a' };
@@ -1540,7 +1628,10 @@
       if (REDUCED && hero.iframes > 0) g.globalAlpha = 0.6;
       if (ART) {
         if (GFX.shadows && !ride) g.drawImage(heroArt.shadow, hx - 12, hy - 2, 24, 8);
-        g.drawImage(heroArt.frames[Math.floor(hero.t * 6) % 2], hx - 16 + rdx, hy - 28 + lift, 32, 32);
+        const hv = heroView(), hf = heroMoving && !REDUCED && !ride ? Math.floor(hero.t * 6) % 2 : 0, flipH = hv === 'right' && hero.face.x < 0;
+        heroDraw.view = hv; heroDraw.frame = hf; heroDraw.flip = flipH; heroDraw.id = hv + hf + (flipH ? 'L' : '');
+        if (flipH) { g.save(); g.translate(hx + rdx, 0); g.scale(-1, 1); g.drawImage(heroArt.views[hv][hf], -16, hy - 28 + lift, 32, 32); g.restore(); }
+        else g.drawImage(heroArt.views[hv][hf], hx - 16 + rdx, hy - 28 + lift, 32, 32);
       } else { g.fillStyle = CLASS_COL[HERO.cls] || '#4f9a45'; g.beginPath(); g.arc(hx, hy - 8 + lift, HERO_R, 0, Math.PI * 2); g.fill(); }
       g.globalAlpha = 1;
     }
@@ -1835,9 +1926,12 @@
     spots.forEach((p) => { if (HS.taken(save.gather, ISLE, p.idx)) return; const d = Math.hypot((p.x + 0.5) * TILE - hero.x, (p.y + 0.5) * TILE - hero.y); if (d < bd) { bd = d; best = p; } });
     return best;
   }
+  // G-26 (b05-07): a gather with no room for the find does not spend the spot (same dry run as invAdd)
+  function invRoomFor(id) { if (!CRAFT || typeof id !== 'string') return false; const cur = invCount(id), want = {}; Object.keys(save.inv).forEach((k) => { want[k] = save.inv[k]; }); want[id] = Math.min(CRAFT.MAX_COUNT, cur + 1); return ((CRAFT.cleanInv(want)[id] | 0) - cur) > 0; }
   function gatherNear() {
     const p = spotNear();
     if (!p || hero.dead) return { ok: false, why: 'none' };
+    if (CRAFT && !invRoomFor(p.kind)) { toast('Pack full. The spot keeps its find for later.'); return { ok: false, why: 'full' }; }
     const r = HS.gather(save.gather, ISLE, p, DAY);
     if (r.ok) {
       invAdd(r.kind, 1);
@@ -2076,7 +2170,7 @@
     const got = invAdd(n.kind, 1);
     if (!got) { toast('Your pack has no room for more ' + HS.resName(n.kind) + '.'); return; }
     if (n.sparkle) { n.until = Infinity; nodeAt.delete(k); lastNodeTile = -1; } else n.until = clock.now() + (n.respawn || RESPAWN[n.kind] || 300) * 1000;
-    n.picks++; picked++; reward();
+    n.picks++; picked++; reward(); nodesSave(); // G-26
     toast((n.sparkle ? 'A forage sparkle: ' : '') + '+1 ' + HS.resName(n.kind) + ' (' + invCount(n.kind) + ' in your pack)');
   }
   // node art: one small canvas per resource kind, baked once (code art; shape by kind family)
@@ -2613,8 +2707,8 @@
       panelTitle.textContent = 'Pack';
       const pl = $('party-list');
       while (pl.firstChild) pl.removeChild(pl.firstChild);
-      if (!party.length) pl.appendChild(el('li', 'dim', 'No party yet. Soothe a creature, then feed it.'));
-      party.forEach((p) => { const li = el('li', '', (p.ent.nm || p.def.name) + ' (' + p.cs.mode + ')'); li.dataset.tame = p.ent.id; pl.appendChild(li); });
+      if (!tames.roster.length) pl.appendChild(el('li', 'dim', 'No party yet. Soothe a creature, then feed it.'));
+      stableRows(pl); // G-20 / G-21: every tame is a Stable row (Join party / Rest / Ride)
       panelBody.appendChild(el('p', 'dim', 'Stable ' + tames.roster.length + '. XP ' + xp + '. ' + (HOME ? 'You are home.' : 'Home dock takes you home.')));
     } else if (kind === 'help') {
       panelTitle.textContent = 'Help';
@@ -2777,6 +2871,10 @@
       });
     });
     panel.scrollTop = top;
+    // G-26 (b05-06): after a craft re-render the Craft buttons are inert for 300 ms, so a double-tap makes one item; focus waits for it
+    const armed = focusId ? Array.from(panelBody.querySelectorAll('button.rc-btn')).filter((b) => !b.disabled) : [];
+    armed.forEach((b) => { b.disabled = true; b.dataset.arm = '1'; });
+    if (armed.length) setTimeout(() => { armed.forEach((b) => { if (b.isConnected && b.dataset.arm) { b.disabled = false; delete b.dataset.arm; } }); if (focusBtn && focusBtn.isConnected && !focusBtn.disabled) { try { focusBtn.focus({ preventScroll: true }); } catch (e) { /* ignore */ } } }, 300);
     if (focusId) { try { (focusBtn && !focusBtn.disabled ? focusBtn : $('panel-close')).focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
   }
   // X7: the Home decor panel: make decor from your pack (MMHomeBuild recipes, have / need per input), then the tame pen roster.
@@ -3096,6 +3194,7 @@
   // ---------- save (own key, throttled) ----------
   let dirty = true, saveT = 0;
   function persist() {
+    nodesSave(); // G-26: the pouch and the picked nodes go with every Isles save
     try {
       if (!has(save.isles, ISLE)) save.isles[ISLE] = { seed: SEED, pos: null, fog: '', chests: [] };
       const rec = save.isles[ISLE];
@@ -3220,6 +3319,7 @@
     box.hidden = false;
     const hide = () => { box.hidden = true; };
     setTimeout(hide, 9000);
+    const x = $('howto-close'); if (x) x.addEventListener('click', hide); // W-18 (b15-14): a real close control (44 px), keyboard / screen reader reachable
     window.addEventListener('keydown', function once() { setTimeout(hide, 2500); window.removeEventListener('keydown', once); });
     window.addEventListener('pointerdown', function once() { setTimeout(hide, 2500); window.removeEventListener('pointerdown', once); });
   })();
@@ -3252,6 +3352,20 @@
 
   // ---------- simulation ----------
   const clock = (() => { let off = 0; return { now: () => Date.now() + off, set: (t) => { off = Number(t) - Date.now(); return clock.now(); } }; })();
+  // G-26: a picked node / glint stays picked across a reload until it grows back (wall clock); the pouch is written with it
+  function nodesSave() {
+    try {
+      const now = clock.now(), n = [];
+      for (let i = 0; i < nodes.length && n.length < NODES_MAX; i++) { const q = nodes[i]; if (!q.sparkle && Number.isFinite(q.until) && q.until > now) n.push([q.i, Math.round(q.until)]); }
+      const p = {}; Object.keys(pouch).forEach((k) => { p[k] = Math.max(0, Math.min(99, pouch[k] | 0)); });
+      const o = nodesRead(); const isles = {}; Object.keys(o.isles).slice(0, 16).forEach((k) => { if (/^[a-z]{2,12}$/.test(k)) isles[k] = o.isles[k]; });
+      isles[ISLE] = { n, p }; S.setItem(NODES_KEY, JSON.stringify({ v: 1, isles }));
+    } catch (e) { /* storage blocked: today's picks last for this visit */ }
+  }
+  (function nodesRestore() {
+    const list = Array.isArray(nodesMine.n) ? nodesMine.n.slice(0, NODES_MAX) : []; const now = clock.now(), byI = new Map(); nodes.forEach((q) => { if (!q.sparkle) byI.set(q.i, q); });
+    list.forEach((e) => { if (!Array.isArray(e) || e.length < 2) return; const q = byI.get(e[0]); const u = Number(e[1]); if (q && Number.isFinite(u) && u > now && u - now < 7 * 864e5) q.until = u; });
+  }());
   let spawnT = 0, miniT = 0, hudT = 0;
   let heroMoving = false;
   function update(dt, mx, my) {
@@ -3394,6 +3508,7 @@
       deathsShown: () => deathsShown,
       render: () => { render(); return true; },
       face: (x, y) => { const l = Math.hypot(x, y) || 1; hero.face.x = x / l; hero.face.y = y / l; return true; },
+      heroDraw: () => Object.assign({}, heroDraw), setMoving: (on) => { heroMoving = !!on; return heroMoving; }, // W-12 hooks
       spawn: (sp, tx, ty) => (SPAWNABLE.indexOf(sp) >= 0 && creatures.length < CAP ? addCreature(sp, (tx + 0.5) * TILE, (ty + 0.5) * TILE, -1).uid : null),
       flags: () => ({ tame: TAME, companions: COMPANIONS, mounts: MOUNTS, saddles: SADDLES }),
       anger: (id) => { const c = creatures.find((x) => x.uid === id); if (c) c.angry = 30; return !!c; },

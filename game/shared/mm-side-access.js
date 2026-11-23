@@ -26,8 +26,9 @@
     return c;
   }
   const api = { compute, apply, reduced: () => false };
-  if (typeof document !== 'undefined' && typeof localStorage !== 'undefined') {
-    let ls = null; try { ls = localStorage; } catch (e) { ls = null; }
+  if (typeof document !== 'undefined') {
+    // beta S-05/S-10: `typeof localStorage` still runs the getter, which throws when site data is blocked
+    let ls = null; try { ls = typeof localStorage !== 'undefined' ? localStorage : null; } catch (e) { ls = null; }
     const c = apply(document, ls);
     api.scale = c.scale;
     api.reduced = () => !!(typeof document !== 'undefined' && document.documentElement.getAttribute('data-reduce-motion') === '1');

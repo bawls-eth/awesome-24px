@@ -425,6 +425,7 @@
       bossUi();
       if (r.status === 'snapped') { cue('hurt'); finish('snapped', 'Line snapped!', (g.boss ? 'The boss won this round. At max tension the line lasts only 1.5 s.' : 'Tension stayed at max too long. Release more often.') + nearLine() + breakStreak()); }
       else if (r.status === 'caught') land();
+      else if (r.status === 'lost') { cue('back'); finish('lost', 'It swam off', 'It swam off. No harm done.'); } // G-16: no penalty (the streak is kept); a tournament cast counts like any other ending
     }
     if (g.state === 'biting' || g.state === 'hooked') g.bobY = 6;
     else g.bobY = reduced() || g.state !== 'waiting' ? 0 : Math.sin(g.t * 3) * 1.5;

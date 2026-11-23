@@ -24,10 +24,16 @@
     testSlot = qsl === null ? 0 : M.clampSlot(qsl);
   }
   function curWeek() { return testWeek !== null ? testWeek : M.weekNumber(new Date()); }
-  function curSlot() { return testSlot !== null ? testSlot : M.slotOf(new Date()); }
+  function realSlot() { return testSlot !== null ? testSlot : M.slotOf(new Date()); }
+  // G-11 (b11-04 clock part): the furthest slot seen this week is kept (save.seen, additive). A device clock moved back inside the week
+  // shows that furthest slot (no Sunday buy reopening, no future prices revealed) and pauses trading with a plain note.
+  var slotBack = false;
+  function curSlot() { var r = realSlot(); return slotBack && save.seen && save.seen.w === curWeek() && save.seen.s > r ? save.seen.s : r; }
 
   var save = M.cleanSave(S.get(KEY, null));
   var wk = null, spoiledNote = 0, msgText = '';
+  // G-18 (b11-11): every week rollover replaces the last action message (it used to linger into the new week unless stalks spoiled)
+  function weekNote() { return spoiledNote > 0 ? spoiledNote + ' stalks spoiled over the weekend. A fresh week has started.' : 'A fresh week has started. The stall buys on Sunday.'; }
   // Hub medal summary: its own additive key, read by the hub page only.
   function persist() { S.set(KEY, save); try { var m = ['bronze', 'silver', 'gold'].filter(function (k) { return save.medals && save.medals[k] === true; }); window.localStorage.setItem('pixeltown-medals-stalk-v1', JSON.stringify({ v: 1, m: m })); } catch (e) { /* storage blocked */ } try { window.MMHubProfile.sync(localStorage, 'stalk', [(save.invested > 0 || save.played >= 1) && 'trade'].concat(m)); } catch (e) { /* hub map progress is optional */ } }
 
@@ -35,11 +41,13 @@
   // instead of treating it as a rollover (which would spoil real stalks). Far-off weeks roll over as usual.
   var clockBack = false, settings = null;
   function sync() {
-    var w = curWeek();
-    clockBack = save.week > w && save.week - w <= 1;
+    var w = curWeek(), rs = realSlot();
+    slotBack = !!(save.seen && save.seen.w === w && save.seen.s > rs);
+    clockBack = (save.week > w && save.week - w <= 1) || slotBack;
+    if (!clockBack && (!save.seen || save.seen.w < w || (save.seen.w === w && save.seen.s < rs))) { save.seen = { w: w, s: rs }; persist(); }
     if (clockBack) { if (!wk || wk.seed !== String(w)) wk = M.generateWeek(w); return false; }
     var r = M.syncWeek(save, w);
-    if (r.rolled) { save = r.save; if (r.spoiled > 0) spoiledNote = r.spoiled; persist(); }
+    if (r.rolled) { save = r.save; spoiledNote = r.spoiled > 0 ? r.spoiled : -1; persist(); } // G-18 (b11-11): -1 = a quiet rollover, still announced
     if (!wk || wk.seed !== String(w)) wk = M.generateWeek(w);
     return r.rolled;
   }
@@ -69,6 +77,8 @@
   function signed(n) { return (n > 0 ? '+' : '') + fmt(n); }
   function say(t) { msgText = t; $('msg').textContent = t; }
   var CLOCK_MSG = 'Your clock shows an earlier week than your last visit, so trading is paused. Practice still works.';
+  var SLOT_MSG = 'Your device clock moved back. The market keeps the latest time you saw, so trading is paused until then. Practice still works.'; // G-11
+  function clockMsg() { return slotBack ? SLOT_MSG : CLOCK_MSG; }
 
   // 8-bit turnip: hand-placed 16x16 pixel sprite drawn at 3x (48 px canvas)
   var TURNIP = [
@@ -246,7 +256,7 @@
     $('buy10').disabled = clockBack || !sunday || M.maxBuy(save, wk) < 10;
     $('sell1').disabled = clockBack || sunday || save.holdings < 1;
     $('sellall').disabled = clockBack || sunday || save.holdings < 1;
-    $('market-reason').textContent = clockBack ? CLOCK_MSG : sunday
+    $('market-reason').textContent = clockBack ? clockMsg() : sunday
       ? (M.maxBuy(save, wk) < 1 && save.holdings < M.MAX_HOLD ? 'Not enough bells for a stalk today. A practice week has its own bells, and a fresh week tops you up.' : 'Selling closed: the market only buys stalks Monday to Saturday. Buying is open today.')
       : 'Buying closed: stalks can only be bought on Sunday. Selling is open now.';
     $('buy1').textContent = 'Buy 1';
@@ -281,7 +291,7 @@
     funds: 'Not enough bells for that.', limit: 'Your stall holds at most ' + M.MAX_HOLD + ' stalks.',
     holdings: 'You do not own that many.', quantity: 'Pick at least one.'
   };
-  function paused() { if (!clockBack) return false; beep('error'); say(CLOCK_MSG); render(); return true; }
+  function paused() { if (!clockBack) return false; beep('error'); say(clockMsg()); render(); return true; }
   function doBuy(n) {
     sync();
     if (paused()) return { ok: false, reason: 'clock', save: save };
@@ -458,9 +468,9 @@
     pr.done = true;
     var spoiled = pr.hold, profit = pr.earned - pr.invested;
     var sells = pr.wk.sell, peak = Math.max.apply(null, sells), peakSlot = sells.indexOf(peak) + 1;
-    var hadBest = prSave.hasBest, isBest = !hadBest || profit > prSave.best;
+    var hadBest = prSave.hasBest, isBest = hadBest ? profit > prSave.best : profit >= 0; // G-18 (b11-05): a first-week loss is never stored as the practice best
     if (isBest) { prSave.best = profit; prSave.hasBest = true; }
-    var moodHad = pr.mood && Object.prototype.hasOwnProperty.call(prSave.moodBest, pr.mood), moodNew = pr.mood && (!moodHad || profit > prSave.moodBest[pr.mood]);
+    var moodHad = pr.mood && Object.prototype.hasOwnProperty.call(prSave.moodBest, pr.mood), moodNew = pr.mood && (moodHad ? profit > prSave.moodBest[pr.mood] : profit >= 0); // G-18 (b11-05): like the practice best, a loss is never a mood best
     if (moodNew) prSave.moodBest[pr.mood] = profit;
     prSave.rounds += 1; prPersist();
     beep(profit > 0 ? 'claim' : 'ui_tap');
@@ -473,13 +483,13 @@
       'Sunday price ' + pr.wk.buyPrice + '; the peak was ' + peak + ' on ' + M.slotLabel(peakSlot) + '.',
       pr.invested ? (pr.marks.length ? 'You sold on ' + pr.marks.map(function (i) { return M.slotLabel(i); }).join(', ') + '.' : 'You never sold.') : 'You did not buy any stalks this time.',
       spoiled ? spoiled + ' stalks spoiled at the end of the week.' : 'Nothing spoiled.',
-      'Practice best: ' + signed(prSave.best) + ' bells over ' + prSave.rounds + ' practice week(s).'
-    ].concat(pr.mood ? ['Market mood was ' + MOODS[pr.mood].name + ' (' + oddsLine(pr.mood) + '). ' + MOODS[pr.mood].name + ' best: ' + signed(prSave.moodBest[pr.mood]) + ' bells' + (moodNew && moodHad ? ' (new!)' : '') + '.'] : []).forEach(function (t) { var li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
+      (prSave.hasBest ? 'Practice best: ' + signed(prSave.best) + ' bells' : 'No practice best yet (a loss never counts)') + ' over ' + prSave.rounds + ' practice week(s).'
+    ].concat(pr.mood ? ['Market mood was ' + MOODS[pr.mood].name + ' (' + oddsLine(pr.mood) + '). ' + MOODS[pr.mood].name + ' best: ' + (Object.prototype.hasOwnProperty.call(prSave.moodBest, pr.mood) ? signed(prSave.moodBest[pr.mood]) + ' bells' + (moodNew && moodHad ? ' (new!)' : '') : 'none yet (a loss is not a best)') + '.'] : []).forEach(function (t) { var li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
     drawChartOn($('pr-chart'), pr.wk, M.SLOTS - 1, 1, pr.marks);
     prBestLine();
     // Shared result card (MMMiniKit): headline, stat rows, the lines above, and one Play again button.
     var vm = { title: 'Practice week', headline: [{ text: title, id: 'pr-end-title' }], ids: { again: 'pr-again', head: 'pr-end-head', goal: 'pr-end-goal' },
-      stats: [{ label: 'Profit', value: signed(profit) }, { label: 'Final bells', value: fmt(pr.bells) }, { label: 'Practice best', value: signed(prSave.best), best: isBest && hadBest }],
+      stats: [{ label: 'Profit', value: signed(profit) }, { label: 'Final bells', value: fmt(pr.bells) }, { label: 'Practice best', value: prSave.hasBest ? signed(prSave.best) : '-', best: isBest && hadBest }],
       goalText: 'Practice weeks never touch your real stall, medals or stats.', replay: false };
     var card = null;
     if (window.MMMiniKit && MMMiniKit.panel) { try { card = MMMiniKit.panel($('pr-card'), MMMiniKit.result(vm), { again: prStart, extra: [ul] }); } catch (e) { card = null; } }
@@ -516,10 +526,10 @@
   prBestLine();
 
   // Real-time week/slot changes while the page stays open (no nagging, just keeps the numbers right).
-  function tick() { var before = curSlot(); var rolled = sync(); if (rolled || before !== lastSlot) { lastSlot = before; animateChartSoon = true; if (rolled && spoiledNote) { say(spoiledNote + ' stalks spoiled over the weekend. A fresh week has started.'); spoiledNote = 0; } render(); if (animateChartSoon) { animateChartSoon = false; animateChart(); } } }
+  function tick() { var before = curSlot(); var rolled = sync(); if (rolled || before !== lastSlot) { lastSlot = before; animateChartSoon = true; if (rolled && spoiledNote) { say(weekNote()); spoiledNote = 0; } render(); if (animateChartSoon) { animateChartSoon = false; animateChart(); } } }
   var lastSlot = -1, animateChartSoon = false;
   sync();
-  if (spoiledNote) { say(spoiledNote + ' stalks spoiled over the weekend. A fresh week has started.'); spoiledNote = 0; }
+  if (spoiledNote) { say(weekNote()); spoiledNote = 0; }
   persist();
   drawIcon(); syncMute(); lastSlot = curSlot(); render(); animateChart();
   if (testWeek === null && testSlot === null) setInterval(tick, 20000);
@@ -536,7 +546,7 @@
         else if (testSlot === null) testSlot = 0;
         if (testWeek === null) testWeek = M.weekNumber(new Date());
         var before = save.week; sync();
-        if (spoiledNote) { say(spoiledNote + ' stalks spoiled over the weekend. A fresh week has started.'); spoiledNote = 0; }
+        if (spoiledNote) { say(weekNote()); spoiledNote = 0; }
         void before; persist(); render(); animateChart();
       },
       step: function (n) {

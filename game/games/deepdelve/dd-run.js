@@ -64,7 +64,10 @@
     return false;
   }
   // A block broke at time `now` (seconds). Returns { combo, ore } for feedback.
-  function mined(run, item, now) {
+  // G-10 (b11-02): opts.placed = the player placed this block this session: the item comes back, but no block / ore points and the combo
+  // neither grows nor breaks (a place / mine loop scores nothing).
+  function mined(run, item, now, opts) {
+    if (opts && opts.placed) return { combo: run.combo, ore: 0, placed: true };
     run.blocks++;
     run.combo = now - run.lastBreak <= gapOf(run) ? run.combo + 1 : 1;
     run.lastBreak = now;
