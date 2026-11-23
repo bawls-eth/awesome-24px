@@ -109,6 +109,9 @@ setTimeout(() => { console.log('FAIL nav-town-p2 timed out (a step waited foreve
   await frames(page, 20);
   const g2 = await pos(page);
   check('N3: the stick does not move the player behind the open sheet', Math.abs(g2.x - g1.x) <= 2, JSON.stringify([g1, g2]));
+  // MMNav's own pad support: A confirms the FOCUSED Menu entry (nav-settings.test.js). Here nothing in the sheet has focus,
+  // so A / X / Start must do nothing at all, in the sheet or in the Town behind it.
+  await page.evaluate(() => { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); });
   const before = await page.evaluate((s) => eval(s).__interacts, S);
   await pad([1, 0], [0]); await frames(page, 3); await pad([1, 0], []); await frames(page, 3);
   await pad([1, 0], [2]); await frames(page, 3); await pad([1, 0], []); await frames(page, 3);

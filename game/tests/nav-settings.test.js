@@ -1,5 +1,5 @@
 // Bug bash (hub lane): the Menu's Settings entry works on every page (SETTINGS-WIRING.md), the Menu and the Hub home screen
-// answer a gamepad (CONTROLS.md: d-pad / stick move, A confirm, B / Start back, Start opens the Menu), "World map" in the
+// answer a gamepad (CONTROLS.md: d-pad / stick move, A confirm, B back, Start toggles the Menu on the Hub), "World map" in the
 // Menu opens the map view (?map=1) while a plain Hub visit stays the Home screen, and keys typed in the Settings feedback
 // box never reach the page hotkeys (P0). Hub page (no page settings hook) on phone 390x844 touch and desktop 1280x720.
 //   python3 -m http.server 8440 &   BASE=http://localhost:8440/game/index.html NODE_PATH=$(npm root -g) node game/tests/nav-settings.test.js
@@ -102,6 +102,11 @@ async function run(browser, label, opts, tap) {
   check(L('gamepad d-pad down moves the focus to the next Menu entry'), g2.open && g2.focus && g2.focus !== g1.focus, JSON.stringify(g2));
   await press(page, 1);
   check(L('gamepad B closes the Menu'), await page.evaluate(() => !MMNav.isOpen()));
+  await press(page, 9);
+  const t1 = await page.evaluate(() => MMNav.isOpen());
+  await press(page, 9);
+  const t2 = await page.evaluate(() => MMNav.isOpen());
+  check(L('gamepad Start toggles the Menu on the Hub (open, then closed)'), t1 && !t2, JSON.stringify({ t1, t2 }));
   await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
   await press(page, 13);
   const g3 = await page.evaluate(() => { const a = document.activeElement; return { id: a && a.id, home: window.__home.isHome() }; });

@@ -367,7 +367,7 @@
   // keyup is NOT swallowed (review N1): a key held when the sheet opened must still reach the page on release, or the game
   // behind keeps it "down" after the sheet closes (the Town player walked on by itself). Only keydown acts, so keyup is harmless.
 
-  // Gamepad while the sheet is open (CONTROLS.md: d-pad / left stick move, A = confirm, B or Start = back). Polled only
+  // Gamepad while the sheet is open (CONTROLS.md: d-pad / left stick move, A = confirm the focused entry, B = back). Polled only
   // while open, edge-triggered; the first pad state is taken as "already held" so the Start press that opened the sheet
   // does not close it again on the next frame.
   let padRaf = 0, padPrev = null;
@@ -385,7 +385,7 @@
     const p = readPad();
     if (p && padPrev) {
       const hit = (k) => p[k] && !padPrev[k];
-      if (hit('b') || hit('start')) { padPrev = null; close(); return; }
+      if (hit('b')) { padPrev = null; close(); return; } // Start is left to the page (the Town and the Realm read it themselves)
       const step = hit('down') || hit('right') ? 1 : hit('up') || hit('left') ? -1 : 0;
       if (step) {
         const f = focusables();

@@ -12,7 +12,7 @@ New test: `game/tests/nav-settings.test.js`. Extended: `hub-home`, `shared-mm-na
 | 2 | Settings panel showed the shooter-only Play group (auto-fire, aim assist...) on the Hub and arcade games | P3 | `mm-settings.js` `play:false` option; the Menu passes it everywhere but the Realm |
 | 3 | Menu "World map" (sheet card and footer button) opened the Hub **Home screen**, not the map | P2 | links go to `hub/index.html?map=1`; `map` is an allowed query key |
 | 4 | Back with no known previous page said "Back to Town" from every game, although the Home screen is the hub | P2 | fallback is "Back to Home" (the Hub) for every place; the Hub's own fallback stays the Town. A Hub referrer reads "Back to Home", a `?map=1` referrer "Back to World map" (href keeps `?map=1`); Continue to the plain Hub reads "Continue: Home" |
-| 5 | Gamepad did nothing on the Home screen and in the Menu sheet | P2 | Menu sheet: d-pad/stick move focus, A confirm, B/Start close (polled only while open, the Start press that opened it is ignored). Hub: Start opens the Menu; on Home the d-pad walks the focus, A presses, B closes the book / gift card |
+| 5 | Gamepad did nothing on the Home screen and in the Menu sheet | P2 | Menu sheet: d-pad/stick move focus, A confirms the focused entry, B closes (polled only while open; Start is left to the page, so the Town's own pad rules keep working). Hub: Start toggles the Menu; on Home the d-pad walks the focus, A presses, B closes the book / gift card |
 | 6 | Esc / P (CONTROLS.md "Menu") did nothing on the Hub | P3 | opens the Menu when no book / gift / card / text field is open; Esc with the book open only closes the book |
 | 7 | 150% text: every Home card read "Lantern C...", "Walk and f...", the footer cut "Open" off the screen at 320 px and overflowed the bottom at 390 px | P2 | `data-ui-big` on `<html>` (mm-side-access / mm-settings); names and hints wrap, one card per row on phones, footer wraps and does not shrink |
 | 8 | a11y sweep: `mm-high-contrast` was never applied (no `data-high-contrast` on `<html>`) | P2 | `mm-access.js` (loaded on every page) applies it on load with one small token stylesheet (`#mm-hc-css`: dim text to paper, panels black, yellow focus ring); Settings re-applies it live |
@@ -51,5 +51,8 @@ The test for it must set `Object.defineProperty(navigator, 'webdriver', { get: (
   `festival-bugs|menu|overlap:#btn-mute` and `festival-bugs|landmark|no-h1` at 667x375, `angler|contrast|#pg-play` 4.45:1,
   `angler|keyboard-primary|too-far` (14 Tabs), `stalk|menu|overlap:#btn-settings` at 320x568 and at 150% text. I removed only the
   13 `*|high-contrast|pref-not-applied` entries (fixed site-wide by `mm-access.js`) and the 4 hub entries.
+- **smoke-journey on the merged tip** (stalk lane, `games/stalk/index.html:18`): `[390x844] stalk: no new small offenders ... ["a#back"]`
+  (the stalk bug bash made `#back` a small visible link; it is not from this lane). The same run also says some angler/bugs fixture
+  entries are fixed and can be removed by their lanes.
 - **Hub footer "Open" on the Home screen** (my file, left as is because `hub-home.test.js` asserts it): it opens the map node card over the
   Home screen, which reads oddly. Consider hiding it on Home in the next flow pass. P4.

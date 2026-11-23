@@ -714,7 +714,7 @@
     const st = bt(9), wasSt = pad.st; pad.st = st;
     const navOpen = !!(window.MMNav && MMNav.isOpen && MMNav.isOpen());
     const setOpen = (() => { const d = document.getElementById('mmset'); return !!(d && !d.hidden); })();
-    if (navOpen || setOpen) { pad.dir = dir; pad.a = bt(0); pad.b = bt(1); return; }
+    if (navOpen || setOpen) { if (navOpen && st && !wasSt) MMNav.close(); pad.dir = dir; pad.a = bt(0); pad.b = bt(1); return; } // Start toggles the Menu
     if (st && !wasSt && window.MMNav && MMNav.open && $('card').hidden) { pad.dir = dir; pad.a = bt(0); pad.b = bt(1); MMNav.open(); return; }
     if (homeOn()) { homePad(dir, bt(0), bt(1)); return; }
     if (dir && dir !== pad.dir && $('card').hidden) step({ l: -1, r: 1 }[dir] || 0, { u: -1, d: 1 }[dir] || 0);
