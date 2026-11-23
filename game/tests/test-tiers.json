@@ -1640,5 +1640,9 @@
   "beta-g20-isles-stable.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "beta-w12-isles-hero.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

@@ -70,3 +70,10 @@ Each entry: item, files, test, how to retest by hand. Screenshots in `fixes/img/
 - Fix: each bug is drawn through two small scratch canvases (sprite + silhouette composited at 4 offsets = 1 px rim), at 2x when the field shows under 1.8x screen scale (phones), 1x on desktop. Rim is dark ink, or a light rim on the dark arenas (night glade, lantern) so it is >= 3:1 against every ground. Ground checker at half contrast. No getImageData, layout read at most once a second; sim, hit areas and scores untouched. Hook `__bugs.bugArt()`.
 - Measured: phone bugs 8-10 px -> 23-27 screen px on the long side.
 - Test: `tests/beta-w11-bug-clarity.test.js` (old code fails at the hook). `bugs-page`, `bugs-polish`, `bugs-bb`, `bugs-fun`, `minigame-lowgfx` green.
+
+## W-12 Isles hero facing (b12-09) - fixed (code art), art ask noted
+- Files: `games/isles/isles.js` (slot 2, after Gameplay's G-20/G-21/G-22 merged; hero bake + one draw line + 2 test hooks).
+- Fix: the baked code hero now has three true views (down = face, up = back of the head, right = profile with one eye; left mirrors right) x 2 walk frames, baked once. The walk cycle plays only while moving; idle and reduced motion hold frame 0 (it used to bob forever in a front view).
+- Dark 2x2 block next to the jungle start: the tiles there are `jungle_floor` / `jungle_moss` (dark speckled jungle floor art) beside `sand` / `wet_sand`; no void or missing tile id around spawn (seed 123). It reads as a hole because the dark jungle floor tile sits as a 2x2 island inside sand; that is generator output (pinned) plus tile art contrast, not a draw bug.
+- Better long-term: the Realm class strips (MMArt b00-b03, true down / up / right) could replace the code hero, but the Isles page does not load mm-art.js; left for a later slot.
+- Test: `tests/beta-w12-isles-hero.test.js` (views per direction, distinct frame sets, 2-frame walk, static idle, pixel hashes differ, reduced motion static; logs the spawn terrain). `isles-bugbash`, `isles-access`, `isles-first-ten`, `isle-art-bake` green.
