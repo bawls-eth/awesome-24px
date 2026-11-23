@@ -1672,5 +1672,9 @@
   "beta-s11-deepdelve-rotate.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-w03-terrain.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

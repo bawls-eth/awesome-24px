@@ -86,3 +86,13 @@ Each entry: item, files, test, how to retest by hand. Screenshots in `fixes/img/
 - Open (need index.html / main.js slot 3): build banner row (b07-08), hide "Hold to talk" offline (needs an offline class from main.js), dock the quick-chat row to the bottom band.
 - Test: `tests/beta-w07-town-hud.test.js` (OFFLINE stub: 0 DB requests, 0 sockets; never chats). `nav-town`, `town-offline`, `town-8bit-menu`, `nav-town-p2` green.
 - Before / after: `img/w07-{emote,more}-{before,after}.jpg`.
+
+## W-03 Terrain look (b12-03, b04-01, b04-02 fixed; b12-04 / b04-03 snow shapes reported)
+- Files: `games/mad-maze/realm-world.js` (slot 3: merged dev-gameplay G-06 / G-12 / G-23 and dev-perf S-04 first; three small hunks in the chunk bake + test hooks). Generator untouched (`shared-mm-overworld-golden` green).
+- b12-03 double outline: a plain tile drew its 2 px edge line toward a neighbour that already draws a b10t transition tile, so every blended border had a second parallel line one tile away. The line is now skipped there (one edge per border).
+- b04-01 hard shade patches: a patch side that borders a different shade class fades out over 8 px as a 2x2 checker (baked once), no hard square seams.
+- b04-02 Godlands vs Highlands: `godland_ash` gets a baked dark ember wash plus sparse ember specks (lava_rock accent); mean colour distance ash vs rock deltaE ~8 -> >= 20. `?godlook=0` restores the grey ash; `?tiledetail=0` gives the flat look (no patches, no wash).
+- b12-04 / b04-03 snow "frames with square holes": no isolated 1-tile hole inside snow exists in the generator output (seed 12345 scan: 0); the notches are snow edge-transition tiles at the band border (b10t art masks), so the fix is art (the remake queue terrain variants / inner corners, already in R-batch rules), not code.
+- Bake: 8-10 ms per chunk in the test (budget 60); `world-perf` green.
+- Test: `tests/beta-w03-terrain.test.js` (3 seeds). `shared-mm-chunk-bake`, `shared-mm-overworld-golden`, `world-art`, `world-props-godlands`, `world-props-b26`, `world-perf` green.
+- Before / after: `img/w03-{before,after}-{shore,god}.jpg`.

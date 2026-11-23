@@ -308,10 +308,27 @@
     // 4-tile grid so open ground reads as rolling, plus 0-2 tiny square pebbles / tufts per tile. Low-contrast squares only (never round, so the
     // bright round shapes stay bullets). ?tiledetail=0 = the flat look.
     const TILE_DETAIL = !/[?&]tiledetail=0(&|$)/.test(qs0);
+    const GOD_LOOK = TILE_DETAIL && !/[?&]godlook=0(&|$)/.test(qs0); // W-03: ?godlook=0 = the old grey ash
+    const edgeStat = { drawn: 0, skipped: 0 }, shadeStat = { dithered: 0, ash: 0 }; // bake counters (test hooks)
+    // W-03 (b04-01): a patch side that borders a different shade class fades out over 8 px as a 2-colour checker (baked), not a hard seam.
+    const shadeOf = (wx, wy) => { const v = (h2(wx >> 2, wy >> 2, 501) + h2((wx + 2) >> 2, (wy + 2) >> 2, 502)) * 0.5; return v < 0.32 ? -1 : v > 0.72 ? 1 : 0; };
+    function shadePatch(g, wx, wy, px, py, col) {
+      const sc = shadeOf(wx, wy); const n = shadeOf(wx, wy - 1) === sc, s = shadeOf(wx, wy + 1) === sc, w = shadeOf(wx - 1, wy) === sc, e = shadeOf(wx + 1, wy) === sc;
+      const x0 = w ? 0 : 8, x1 = e ? TILE : TILE - 8, y0 = n ? 0 : 8, y1 = s ? TILE : TILE - 8;
+      rect(g, col, px + x0, py + y0, x1 - x0, y1 - y0);
+      g.fillStyle = col; // the 8 px rim on the open sides: every other 2x2 cell (checker), so the patch dissolves into the ground
+      for (let yy = 0; yy < TILE; yy += 2) for (let xx = 0; xx < TILE; xx += 2) {
+        if (xx >= x0 && xx < x1 && yy >= y0 && yy < y1) continue;
+        if (((xx + yy) >> 1) & 1) continue;
+        if ((xx < 4 && !w) || (xx >= TILE - 4 && !e) || (yy < 4 && !n) || (yy >= TILE - 4 && !s)) continue; // outer 4 px: ground only
+        g.fillRect(px + xx, py + yy, 2, 2);
+      }
+      shadeStat.dithered++;
+    }
     function tileDetail(g, wx, wy, px, py) {
-      const v = (h2(wx >> 2, wy >> 2, 501) + h2((wx + 2) >> 2, (wy + 2) >> 2, 502)) * 0.5;
-      if (v < 0.32) rect(g, 'rgba(0,0,0,0.08)', px, py, TILE, TILE);
-      else if (v > 0.72) rect(g, 'rgba(255,255,255,0.05)', px, py, TILE, TILE);
+      const sc = shadeOf(wx, wy);
+      if (sc < 0) shadePatch(g, wx, wy, px, py, 'rgba(0,0,0,0.08)');
+      else if (sc > 0) shadePatch(g, wx, wy, px, py, 'rgba(255,255,255,0.05)');
       const n = Math.floor(h2(wx, wy, 503) * 3); // 0..2 specks
       for (let k = 0; k < n; k++) {
         const r = h2(wx + k * 17, wy, 504); const sx = px + 2 + Math.floor(h2(wx, wy + k * 13, 505) * (TILE - 6)); const sy = py + 2 + Math.floor(h2(wx * 3 + k, wy * 5, 506) * (TILE - 6));
@@ -338,14 +355,22 @@
           for (let k = 0; k < 3; k++) { const r = h2(wx * 3 + k, wy, 7); if (r < 0.55) rect(g, r < 0.27 ? pal[1] : pal[2], px + Math.floor(h2(wx, wy * 5 + k, 11) * 26), py + Math.floor(h2(wx * 7 + k, wy, 13) * 26), t === T.flower_meadow ? 3 : 6, t === T.flower_meadow ? 3 : 4); }
         }
         if (TILE_DETAIL && t !== T.deep_water && t !== T.shallow_water && !solid[i]) tileDetail(g, wx, wy, px, py);
+        if (GOD_LOOK && t === T.godland_ash) { // W-03 (b04-02): ash gets a dark ember wash and sparse ember specks (palette lava_rock accent)
+          rect(g, 'rgba(36,8,18,0.42)', px, py, TILE, TILE);
+          if (h2(wx, wy, 601) < 0.22) { const ex = px + 3 + Math.floor(h2(wx, wy, 602) * (TILE - 8)), ey = py + 3 + Math.floor(h2(wx, wy, 603) * (TILE - 8)); rect(g, '#ff7a2a', ex, ey, 2, 2); rect(g, 'rgba(255,122,42,0.35)', ex - 1, ey + 2, 4, 1); }
+          shadeStat.ash++;
+        }
         if (solid[i] && t !== T.deep_water) { rect(g, 'rgba(0,0,0,0.28)', px, py, TILE, TILE); rect(g, 'rgba(255,255,255,0.18)', px, py, TILE, 4); rect(g, 'rgba(0,0,0,0.35)', px, py + TILE - 5, TILE, 5); }
         // Transition sprites already draw the terrain boundary.
         if (transition) continue;
+        // W-03 (b12-03): one edge per border. A neighbour that draws a transition tile (b10t edge art) already paints this boundary, so the
+        // 2 px line is skipped there (it used to run parallel to the blend, one tile away: the double outline).
         const e = pal[3];
-        if (wx + 1 < ww && terrain[wy * ww + wx + 1] !== t) rect(g, e, px + TILE - 2, py, 2, TILE);
-        if (wx > 0 && terrain[wy * ww + wx - 1] !== t) rect(g, e, px, py, 2, TILE);
-        if (wy + 1 < wh && terrain[(wy + 1) * ww + wx] !== t) rect(g, e, px, py + TILE - 2, TILE, 2);
-        if (wy > 0 && terrain[(wy - 1) * ww + wx] !== t) rect(g, e, px, py, TILE, 2);
+        const edgeTo = (nx, ny) => { const nt = terrain[ny * ww + nx]; if (nt === t) return false; if (transitionAt(nx, ny, nt)) { edgeStat.skipped++; return false; } edgeStat.drawn++; return true; };
+        if (wx + 1 < ww && edgeTo(wx + 1, wy)) rect(g, e, px + TILE - 2, py, 2, TILE);
+        if (wx > 0 && edgeTo(wx - 1, wy)) rect(g, e, px, py, 2, TILE);
+        if (wy + 1 < wh && edgeTo(wx, wy + 1)) rect(g, e, px, py + TILE - 2, TILE, 2);
+        if (wy > 0 && edgeTo(wx, wy - 1)) rect(g, e, px, py, TILE, 2);
       }
       const list = propsBy[cy * ccols + cx];
       if (list) for (let k = 0; k < list.length; k++) {
@@ -2394,7 +2419,7 @@
 
     const api = {
       seed, world, genMs, SAVE_KEY, TILE, CPX, MAX_CHUNKS,
-      chunkCount: () => chunks.size, chunkBuilds: () => chunkBuilds, artTiles: () => artTiles, miniDraws: () => miniDraws,
+      chunkCount: () => chunks.size, chunkBuilds: () => chunkBuilds, bakeChunk: (cx, cy) => buildChunk(cx, cy).cv, terrainName: (tx, ty) => TN[terrain[ty * ww + tx]] || '', hasTransition: (tx, ty) => !!transitionAt(tx, ty, terrain[ty * ww + tx]), bakeStats: () => ({ edge: Object.assign({}, edgeStat), shade: Object.assign({}, shadeStat) }), // W-03 hooks artTiles: () => artTiles, miniDraws: () => miniDraws,
       slam: { on: SLAM_ON, hits: () => slamHits, winds: () => slamWinds }, zone: () => lastZone, fireBudget: { on: FB_ON, capFor: ebCapFor, now: () => (arena.fireBudget ? Object.assign({}, arena.fireBudget) : null), live: () => arena._ebLive, capped: () => arena._ebCapped }, zoneGrad: { on: ZGRAD, bands: world.bands || 'classic', recLv, last: () => lastCross, crossings: () => crossN, slowLeft: () => Math.max(0, slowUntil - arena.clock), moveScale: () => moveScaleAt(arena.player.x, arena.player.y) }, hudText: () => ({ zone: zName.textContent, coords: zCoords.textContent, arrow: arrowDeg }),
       tileAt: (x, y) => O.tileAt(world, Math.floor(x / TILE), Math.floor(y / TILE)), solidAt, shotSolidAt, nearestFree,
       tileCenter: (tx, ty) => ({ x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE }),
