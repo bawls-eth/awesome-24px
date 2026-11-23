@@ -1,12 +1,279 @@
 [
-{"id":"b15-01","severity":"P1","area":"Deepdelve / storage","title":"Deepdelve hangs forever on 'Loading the mine...' when localStorage throws (Safari private mode, 'block all cookies')","steps":["Context with window.localStorage getter throwing SecurityError (addInitScript)","Open /game/games/deepdelve/index.html at 390x844","Wait 15 s"],"expected":"Game starts, progress simply not saved (like the other pages)","actual":"Status stays 'Loading the mine...', no world, 4 uncaught 'denied' pageerrors; same setup without the throw loads in under 3 s.","viewport":"390x844","url":"/game/games/deepdelve/index.html","screenshots":["img/b15-01.jpg"],"clip":null,"suspect":"game/games/deepdelve/deepdelve.js:138,160,190,192 (bare `localStorage` passed as an argument, evaluated outside try/catch)","kind":"bug","frequency":"always"},
-{"id":"b15-02","severity":"P2","area":"Storage-blocked robustness","title":"Every page logs uncaught SecurityError pageerrors when localStorage access throws (hub, town, realm, isles, angler, dash, echo, jam, pop, stack, stalk)","steps":["addInitScript making localStorage/sessionStorage getters throw","Open each page"],"expected":"No uncaught exceptions; pages degrade to unsaved play","actual":"2-4 uncaught pageerrors per page. Pages still render and mostly work (only Deepdelve hard-fails, see b15-01) but unguarded accesses exist, so prefs/progress may silently fail.","viewport":"390x844","url":"all pages","screenshots":[],"clip":null,"suspect":"page boot code reading localStorage outside try/catch (shared/mm-*.js and each page)","kind":"bug","frequency":"always"},
-{"id":"b15-03","severity":"P2","area":"Hub / zoom 200% on phone","title":"Hub at 200% zoom on a phone (195 css px wide) clips the title, truncates every card to 2 letters and cuts off the bottom bar","steps":["Viewport 195x422 DPR2 touch (= 390px phone at 200% zoom), save with a Continue target","Open /game/hub/index.html"],"expected":"Single-column cards with readable names; reflow without clipping","actual":"'PIXELTOWN' title overlapped by the Menu compass button, card titles read 'To...', 'Is...', 'Th...', the 'Next:' line is ellipsised, bottom action bar cut off at the left with 'Daily gift' wrapping. Cards stay 2-column.","viewport":"195x422@2x","url":"/game/hub/index.html","screenshots":["img/b15-02.jpg"],"clip":null,"suspect":"game/hub/hub.css grid columns / bottom bar","kind":"visual","frequency":"always"},
-{"id":"b15-04","severity":"P2","area":"Realm HUD / 320x568","title":"Realm HUD is crowded at 320x568: Leave button collides with the XP bar, goal line truncated, twin sticks plus 4 ability buttons cover much of the playfield","steps":["Phone 320x568 touch","Open /game/games/mad-maze/index.html?mode=world"],"expected":"HUD fits without overlap on the smallest supported phone","actual":"Top-left stack (compass, HP, XP) collides with Leave; status chips ('Shore - Safe-ish', 'Raid in 0:2...', 'Next goal: Reach Lv 5 for M...') clipped; 2x2 ability pad and both joysticks leave about 35% of the screen for the world.","viewport":"320x568","url":"/game/games/mad-maze/index.html?mode=world","screenshots":["img/b15-03.jpg"],"clip":null,"suspect":"game/realm-ui.css / realm-8bit.css small-screen rules","kind":"visual","frequency":"always"},
-{"id":"b15-05","severity":"P3","area":"Town / landscape phone","title":"Town on a landscape phone (844x390): Realm Gate pointer chip, quick-chat row and 'Hold to talk' overlap world content and each other; the chip covers a villager","steps":["Town via offline stub, join, rotate to 844x390"],"expected":"Overlays stay in the corners","actual":"Pointer chip sits under 'Where to?' and over an NPC; quick-chat row and Hold to talk cover the Shop / Able Sisters labels. Still playable.","viewport":"844x390","url":"/game/index.html?from=hub","screenshots":["img/b15-05.jpg"],"clip":null,"suspect":"game/style.css landscape rules","kind":"visual","frequency":"always"},
-{"id":"b15-06","severity":"P3","area":"Town join screen / 320","title":"At 320x568 the 'Back to the map' pill overlaps the Hearthvale title icon","steps":["Phone 320x568, open /game/index.html?from=hub"],"expected":"Pill and title separated","actual":"Pill covers the island emoji and top of the title.","viewport":"320x568","url":"/game/index.html?from=hub","screenshots":["img/b15-06.jpg"],"clip":null,"suspect":"game/style.css back-pill position","kind":"visual","frequency":"always"},
-{"id":"b15-07","severity":"P2","area":"Arcane Frontier","title":"games/arcane-frontier/index.html is a half-committed scaffold: style.css and 14 scripts return 404, page unstyled with 648 px horizontal scroll at 320 wide","steps":["Open /game/games/arcane-frontier/index.html"],"expected":"Not reachable, or working","actual":"404 for style.css and js/{assets,save,audio,input,map,fx,combat,items,player,bosses,enemies,world,ui,main}.js; raw unstyled UI, canvas#bigmap 648 px wide. Not linked from hub but publicly reachable.","viewport":"320x568","url":"/game/games/arcane-frontier/index.html","screenshots":["img/b15-04.jpg"],"clip":null,"suspect":"game/games/arcane-frontier/index.html:8,141-156 (commit c66bc46 WIP)","kind":"bug","frequency":"always"},
-{"id":"b15-08","severity":"P3","area":"Offline","title":"No service worker: reload or navigation while offline shows the browser error page on every page","steps":["Load any page, go offline, reload or follow a link to another game"],"expected":"Cached shell or friendly offline message","actual":"Chrome ERR_INTERNET_DISCONNECTED. In-page play continues offline (Town Menu opened, scene stayed active). manifest.json exists but nothing registers a service worker.","viewport":"any","url":"all","screenshots":[],"clip":null,"suspect":"no navigator.serviceWorker in game/","kind":"improvement","frequency":"always"},
-{"id":"b15-09","severity":"P3","area":"Hub / keyboard","title":"Hub 'Next step' card is focusable but shows no visible focus ring","steps":["Open hub, press Tab twice"],"expected":"Visible focus indicator","actual":"Play button has a ring, the second stop ('Next step: ...') has none.","viewport":"1280x720","url":"/game/hub/index.html","screenshots":[],"clip":null,"suspect":"game/hub/hub.css","kind":"ux","frequency":"always"},
-{"id":"b15-10","severity":"P3","area":"Accessibility","title":"Dash, Echo, Pop, Stack expose only 4-5 Tab stops; Isles only Pack / Soothe / Menu (canvas not keyboard-reachable by Tab)","steps":["Tab through each page"],"expected":"Canvas / primary action reachable by keyboard with a role and label","actual":"Dash: Menu, Sound, Jump, Got it. Isles: Pack, Soothe shots, Menu. Consistent with the known a11y sweep; confirming.","viewport":"1280x720","url":"games/*","screenshots":[],"clip":null,"suspect":null,"kind":"ux","frequency":"always"}
+ {
+  "id": "b15-01",
+  "severity": "P1",
+  "area": "Deepdelve / storage",
+  "title": "Deepdelve hangs forever on 'Loading the mine...' when localStorage throws (Safari private mode, 'block all cookies')",
+  "steps": [
+   "Context with window.localStorage getter throwing SecurityError (addInitScript)",
+   "Open /game/games/deepdelve/index.html at 390x844",
+   "Wait 15 s"
+  ],
+  "expected": "Game starts, progress simply not saved (like the other pages)",
+  "actual": "Status stays 'Loading the mine...', no world, 4 uncaught 'denied' pageerrors; same setup without the throw loads in under 3 s.",
+  "viewport": "390x844",
+  "url": "/game/games/deepdelve/index.html",
+  "screenshots": [
+   "img/b15-01.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/games/deepdelve/deepdelve.js:138,160,190,192 (bare `localStorage` passed as an argument, evaluated outside try/catch)",
+  "kind": "bug",
+  "frequency": "always"
+ },
+ {
+  "id": "b15-02",
+  "severity": "P2",
+  "area": "Storage-blocked robustness",
+  "title": "Every page logs uncaught SecurityError pageerrors when localStorage access throws (hub, town, realm, isles, angler, dash, echo, jam, pop, stack, stalk)",
+  "steps": [
+   "addInitScript making localStorage/sessionStorage getters throw",
+   "Open each page"
+  ],
+  "expected": "No uncaught exceptions; pages degrade to unsaved play",
+  "actual": "2-4 uncaught pageerrors per page. Pages still render and mostly work (only Deepdelve hard-fails, see b15-01) but unguarded accesses exist, so prefs/progress may silently fail.",
+  "viewport": "390x844",
+  "url": "all pages",
+  "screenshots": [],
+  "clip": null,
+  "suspect": "page boot code reading localStorage outside try/catch (shared/mm-*.js and each page)",
+  "kind": "bug",
+  "frequency": "always"
+ },
+ {
+  "id": "b15-03",
+  "severity": "P2",
+  "area": "Hub / zoom 200% on phone",
+  "title": "Hub at 200% zoom on a phone (195 css px wide) clips the title, truncates every card to 2 letters and cuts off the bottom bar",
+  "steps": [
+   "Viewport 195x422 DPR2 touch (= 390px phone at 200% zoom), save with a Continue target",
+   "Open /game/hub/index.html"
+  ],
+  "expected": "Single-column cards with readable names; reflow without clipping",
+  "actual": "'PIXELTOWN' title overlapped by the Menu compass button, card titles read 'To...', 'Is...', 'Th...', the 'Next:' line is ellipsised, bottom action bar cut off at the left with 'Daily gift' wrapping. Cards stay 2-column.",
+  "viewport": "195x422@2x",
+  "url": "/game/hub/index.html",
+  "screenshots": [
+   "img/b15-02.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/hub/hub.css grid columns / bottom bar",
+  "kind": "visual",
+  "frequency": "always"
+ },
+ {
+  "id": "b15-04",
+  "severity": "P2",
+  "area": "Realm HUD / 320x568",
+  "title": "Realm HUD is crowded at 320x568: Leave button collides with the XP bar, goal line truncated, twin sticks plus 4 ability buttons cover much of the playfield",
+  "steps": [
+   "Phone 320x568 touch",
+   "Open /game/games/mad-maze/index.html?mode=world"
+  ],
+  "expected": "HUD fits without overlap on the smallest supported phone",
+  "actual": "Top-left stack (compass, HP, XP) collides with Leave; status chips ('Shore - Safe-ish', 'Raid in 0:2...', 'Next goal: Reach Lv 5 for M...') clipped; 2x2 ability pad and both joysticks leave about 35% of the screen for the world.",
+  "viewport": "320x568",
+  "url": "/game/games/mad-maze/index.html?mode=world",
+  "screenshots": [
+   "img/b15-03.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/realm-ui.css / realm-8bit.css small-screen rules",
+  "kind": "visual",
+  "frequency": "always"
+ },
+ {
+  "id": "b15-05",
+  "severity": "P3",
+  "area": "Town / landscape phone",
+  "title": "Town on a landscape phone (844x390): Realm Gate pointer chip, quick-chat row and 'Hold to talk' overlap world content and each other; the chip covers a villager",
+  "steps": [
+   "Town via offline stub, join, rotate to 844x390"
+  ],
+  "expected": "Overlays stay in the corners",
+  "actual": "Pointer chip sits under 'Where to?' and over an NPC; quick-chat row and Hold to talk cover the Shop / Able Sisters labels. Still playable.",
+  "viewport": "844x390",
+  "url": "/game/index.html?from=hub",
+  "screenshots": [
+   "img/b15-05.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/style.css landscape rules",
+  "kind": "visual",
+  "frequency": "always"
+ },
+ {
+  "id": "b15-06",
+  "severity": "P3",
+  "area": "Town join screen / 320",
+  "title": "At 320x568 the 'Back to the map' pill overlaps the Hearthvale title icon",
+  "steps": [
+   "Phone 320x568, open /game/index.html?from=hub"
+  ],
+  "expected": "Pill and title separated",
+  "actual": "Pill covers the island emoji and top of the title.",
+  "viewport": "320x568",
+  "url": "/game/index.html?from=hub",
+  "screenshots": [
+   "img/b15-06.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/style.css back-pill position",
+  "kind": "visual",
+  "frequency": "always"
+ },
+ {
+  "id": "b15-07",
+  "severity": "P2",
+  "area": "Arcane Frontier",
+  "title": "games/arcane-frontier/index.html is a half-committed scaffold: style.css and 14 scripts return 404, page unstyled with 648 px horizontal scroll at 320 wide",
+  "steps": [
+   "Open /game/games/arcane-frontier/index.html"
+  ],
+  "expected": "Not reachable, or working",
+  "actual": "404 for style.css and js/{assets,save,audio,input,map,fx,combat,items,player,bosses,enemies,world,ui,main}.js; raw unstyled UI, canvas#bigmap 648 px wide. Not linked from hub but publicly reachable.",
+  "viewport": "320x568",
+  "url": "/game/games/arcane-frontier/index.html",
+  "screenshots": [
+   "img/b15-04.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/games/arcane-frontier/index.html:8,141-156 (commit c66bc46 WIP)",
+  "kind": "bug",
+  "frequency": "always"
+ },
+ {
+  "id": "b15-08",
+  "severity": "P3",
+  "area": "Offline",
+  "title": "No service worker: reload or navigation while offline shows the browser error page on every page",
+  "steps": [
+   "Load any page, go offline, reload or follow a link to another game"
+  ],
+  "expected": "Cached shell or friendly offline message",
+  "actual": "Chrome ERR_INTERNET_DISCONNECTED. In-page play continues offline (Town Menu opened, scene stayed active). manifest.json exists but nothing registers a service worker.",
+  "viewport": "any",
+  "url": "all",
+  "screenshots": [],
+  "clip": null,
+  "suspect": "no navigator.serviceWorker in game/",
+  "kind": "improvement",
+  "frequency": "always"
+ },
+ {
+  "id": "b15-09",
+  "severity": "P3",
+  "area": "Hub / keyboard",
+  "title": "Hub 'Next step' card is focusable but shows no visible focus ring",
+  "steps": [
+   "Open hub, press Tab twice"
+  ],
+  "expected": "Visible focus indicator",
+  "actual": "Play button has a ring, the second stop ('Next step: ...') has none.",
+  "viewport": "1280x720",
+  "url": "/game/hub/index.html",
+  "screenshots": [],
+  "clip": null,
+  "suspect": "game/hub/hub.css",
+  "kind": "ux",
+  "frequency": "always"
+ },
+ {
+  "id": "b15-10",
+  "severity": "P3",
+  "area": "Accessibility",
+  "title": "Dash, Echo, Pop, Stack expose only 4-5 Tab stops; Isles only Pack / Soothe / Menu (canvas not keyboard-reachable by Tab)",
+  "steps": [
+   "Tab through each page"
+  ],
+  "expected": "Canvas / primary action reachable by keyboard with a role and label",
+  "actual": "Dash: Menu, Sound, Jump, Got it. Isles: Pack, Soothe shots, Menu. Consistent with the known a11y sweep; confirming.",
+  "viewport": "1280x720",
+  "url": "games/*",
+  "screenshots": [],
+  "clip": null,
+  "suspect": null,
+  "kind": "ux",
+  "frequency": "always"
+ },
+ {
+  "id": "b15-11",
+  "severity": "P2",
+  "area": "Realm HUD / 320 and 360 wide",
+  "title": "Leave button overlaps the XP bar on 320x568 and 360x640 (measured); 2560x1440 is clean",
+  "steps": [
+   "Phone 320x568 or 360x640 touch, open /game/games/mad-maze/index.html?mode=world",
+   "Compare #realm-leave-btn and #realm-xp rects (also visible in b15-03)"
+  ],
+  "expected": "No overlap",
+  "actual": "#realm-leave-btn x64..146,y54..98 vs #realm-xp x8..118,y82..100: about 54x16 px overlap at both widths, so a Leave tap lands on the XP text. At 2560x1440 Leave sits top-right with no overlap against HP, info or XP.",
+  "viewport": "320x568",
+  "url": "/game/games/mad-maze/index.html?mode=world",
+  "screenshots": [
+   "img/b15-03.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/realm-ui.css narrow-width HUD rules",
+  "kind": "visual",
+  "frequency": "always"
+ },
+ {
+  "id": "b15-12",
+  "severity": "P3",
+  "area": "Deepdelve crafting",
+  "title": "Craft list shows raw ids as labels: 'plank > plank', 'brick > brick', 'stew > stew', 'bugjar > bugjar'",
+  "steps": [
+   "Open Deepdelve, press C"
+  ],
+  "expected": "Readable recipe names with output quantity",
+  "actual": "Each row title is 'name > name' (same word twice), lower-case, no output quantity.",
+  "viewport": "390x844",
+  "url": "/game/games/deepdelve/index.html",
+  "screenshots": [
+   "img/b15-07.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/games/deepdelve/deepdelve.js craft list renderer",
+  "kind": "ux",
+  "frequency": "always"
+ },
+ {
+  "id": "b15-13",
+  "severity": "P3",
+  "area": "Navigation / back button",
+  "title": "Browser Back (phone back gesture) while the shared Menu is open leaves the page instead of closing the Menu",
+  "steps": [
+   "Open Hub, press Start on pad or the Menu button",
+   "Press browser Back"
+  ],
+  "expected": "Back closes the Menu first",
+  "actual": "Navigates to the previous page; the Menu is not history-aware (Isles: Esc opens the Menu, Back leaves). Back and forward between pages otherwise work on all 12 pages with no errors.",
+  "viewport": "1280x720",
+  "url": "/game/hub/index.html",
+  "screenshots": [
+   "img/b15-08.jpg"
+  ],
+  "clip": null,
+  "suspect": "game/shared/mm-nav.js (no history entry on open)",
+  "kind": "ux",
+  "frequency": "always"
+ },
+ {
+  "id": "b15-14",
+  "severity": "P3",
+  "area": "Isles first visit",
+  "title": "First-visit 'How to play' card has no close control and stays up (pointer-events none, no buttons)",
+  "steps": [
+   "New save, open Isles on 390x844, walk around"
+  ],
+  "expected": "Dismiss button or fade after first move",
+  "actual": "Card (about 193 px tall) stays visible after movement; non-blocking for taps but it hides the playfield and is not dismissible by keyboard or screen reader.",
+  "viewport": "390x844",
+  "url": "/game/games/isles/index.html",
+  "screenshots": [],
+  "clip": null,
+  "suspect": "game/games/isles/isles.js:3215",
+  "kind": "ux",
+  "frequency": "always"
+ }
 ]
