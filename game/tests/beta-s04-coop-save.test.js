@@ -2,6 +2,7 @@
 // Two Realm pages in ONE browser context (shared localStorage), ?party=local&seat=0/1, same seed. blockDb on the context.
 //  1. A discovers cells, then B (started with fewer) walks and saves: stored discovered >= A's count + B's new ones.
 //  2. Stored `pos` is seat 0's tile after both saved; `seatPos['1']` is B's tile.
+//  4. (b14-06) A seat's save keeps every other seat's latest entry from storage; closing A then B keeps seat 0's last tile.
 //  3. Solo (no party flag): no `seatPos` key, `pos` is the player's tile (today's shape).
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/beta-s04-coop-save.test.js
 const { chromium } = require('playwright');
@@ -67,7 +68,21 @@ async function visit(p, pts) {
   const s2 = await stored(A);
   check('[2] seat 0 moves the canonical pos, seat 1 entry kept', s2.pos.x === a2.x && s2.pos.y === a2.y && s2.seatPos['1'].x === bTile.x && s2.seatPos['0'].x === a2.x, JSON.stringify({ pos: s2.pos, sp: s2.seatPos }));
   check('[1] A\'s later save keeps B\'s discovered cells', await fogSuperset(A, s2.discovered, s1.discovered));
-  await A.close(); await B.close();
+  // round 3 (b14-06): B saves again after A moved. B's in-memory copy of seat 0 is stale, so it must not overwrite A's latest seat 0 entry
+  const S0 = await ctx.newPage(); await S0.goto(ORIGIN + '/game/games/mad-maze/lantern.css'); // a plain same-origin page to read storage after both seats close
+  await visit(B, [[90, 210]]);
+  await B.evaluate(() => window.__mm.world.savePos(true));
+  const b2 = await tile(B);
+  const s3 = await stored(B);
+  check('[4] b14-06: after B saves, seatPos[0] is still A\'s latest tile (not the stale start tile B held)', s3.seatPos && s3.seatPos['0'] && s3.seatPos['0'].x === a2.x && s3.seatPos['0'].y === a2.y && (a2.x !== aTile.x || a2.y !== aTile.y), JSON.stringify({ sp: s3.seatPos, a2, aTile }));
+  check('[4] b14-06: B\'s own seatPos[1] moved to its new tile and the canonical pos stays seat 0\'s', s3.seatPos['1'].x === b2.x && s3.seatPos['1'].y === b2.y && s3.pos.x === a2.x && s3.pos.y === a2.y, JSON.stringify({ sp: s3.seatPos, pos: s3.pos, b2 }));
+  // the tester's order: close A first (its pagehide save), then B last; B's closing save must not put seat 0 back to a stale tile
+  const aEnd = await tile(A);
+  await A.close({ runBeforeUnload: true }); await B.waitForTimeout(200);
+  await B.close({ runBeforeUnload: true });
+  const s4 = await stored(S0);
+  check('[4] b14-06: closing A then B leaves seatPos[0] on A\'s last tile and seatPos[1] on B\'s', s4 && s4.seatPos && s4.seatPos['0'].x === aEnd.x && s4.seatPos['0'].y === aEnd.y && s4.seatPos['1'].x === b2.x && s4.seatPos['1'].y === b2.y, JSON.stringify({ sp: s4 && s4.seatPos, aEnd, b2 }));
+  await S0.close();
 
   await ctx.close();
   // ---- 3: solo keeps today's shape (a fresh profile that never played co-op) ----

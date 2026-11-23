@@ -97,6 +97,28 @@ const items = (page) => page.evaluate(() => window.__mm.arena.save.items.map((x)
     await A.ctx.close();
   }
 
+  // 3c (round 3, b02-12): a slow double-tap (~340 ms apart, past the 300 ms arm) on "Confirm reforge" still never reaches Salvage: the forge's
+  // destructive buttons (Salvage / Confirm) wake only after 400 ms, while the plain ones wake at 300 ms.
+  { const A = await open(browser, realm([{ n: 1, id: 'sparkwand', r: 1, t: 8, a: 12345 }, { n: 7, id: 'heartcharm', r: 0 }], { weapon: 1 }, { dust: 200 }), { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+    const p = A.page;
+    for (const sel of ['button.fg[data-forge-open="1"]', 'button.fg[data-forge-pick="blast"]']) { await awake(p, sel); const b = await box(p, sel); await p.touchscreen.tap(b.x, b.y); }
+    const yes = 'button.fg[data-forge-yes="reforge"]';
+    await awake(p, yes);
+    const y = await box(p, yes);
+    const before = await p.evaluate(() => ({ dust: window.__mm.arena.save.dust, shards: window.__mm.arena.save.shards }));
+    await p.touchscreen.tap(y.x, y.y);
+    await p.waitForTimeout(340);
+    const mid = await p.evaluate(() => { const s = document.querySelector('button.fg[data-forge-salvage]'); return { sal: !!s, salOff: !!(s && s.disabled) }; });
+    await p.touchscreen.tap(y.x, y.y);
+    await p.waitForTimeout(600);
+    const r = await p.evaluate(() => { const a = window.__mm.arena; const it = a.save.items.find((x) => x.id === 'sparkwand' && x.t === 8); const s = document.querySelector('button.fg[data-forge-salvage]'); return { it: !!it, f: it && it.f && it.f.id, dust: a.save.dust, shards: a.save.shards, salvageQ: !!document.querySelector('button.fg[data-forge-yes="salvage"]'), salOn: !!(s && !s.disabled) }; });
+    check('3c. 340 ms after a reforge the Salvage button is still asleep (past the 300 ms plain arm)', mid.sal && mid.salOff, JSON.stringify(mid));
+    check('3d. two taps 340 ms apart on "Confirm reforge": the wand still exists (reforged once), no salvage confirm open', r.it && r.f === 'blast' && !r.salvageQ, JSON.stringify(r));
+    check('3e. charged exactly once, and Salvage wakes afterwards (not stuck)', before.dust - r.dust === 50 && before.shards - r.shards === 2 && r.salOn, JSON.stringify([before, r]));
+    check('no page errors (forge slow double-tap)', A.errors.length === 0, A.errors.join(' | '));
+    await A.ctx.close();
+  }
+
   // 4 + (c): the Nexus vendor stall (realm-world.js): a double-tap on Buy buys once; Sell back marks the equipped piece
   { const WORLD = ORIGIN + '/game/games/mad-maze/index.html?mode=world&test=1&offline=1&seed=12345&qdate=2030-05-01';
     const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });

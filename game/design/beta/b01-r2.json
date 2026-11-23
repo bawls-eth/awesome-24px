@@ -1,0 +1,232 @@
+[
+  {
+    "id": "b01-r2-01",
+    "replays": "b01-01",
+    "status": "FIXED",
+    "severity": "P2",
+    "area": "Realm world: goal line / daily quests",
+    "title": "Quest zone names and Lv 1 goal line (G-06)",
+    "steps": [
+      "Fresh profile, ?mode=world&seed=4242, kill 4 shore creatures via hook, read the Next goal line",
+      "Set hero level 8 and read the line again"
+    ],
+    "expected": "Zone names are canon; a Lv 1 hero keeps a reachable goal.",
+    "actual": "Lv 1 after 4 kills: 'Reach Lv 5 for Midlands (Lv 1)' (no longer jumps to the quest). Lv 8: 'Defeat 22 creatures in the Highlands (0/22)'. mm-quests.js now uses the canon names. Quest board panel text not read in detail.",
+    "viewport": "1280x720",
+    "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=4242",
+    "screenshots": [
+      "img/b01-r2-01.jpg",
+      "img/b01-r2-02.jpg"
+    ],
+    "clip": null,
+    "suspect": null,
+    "kind": "bug",
+    "frequency": "always"
+  },
+  {
+    "id": "b01-r2-02",
+    "replays": "b01-02",
+    "status": "FIXED",
+    "severity": "P2",
+    "area": "Realm world: boss altars",
+    "title": "Altar wakes by zone (G-07)",
+    "steps": [
+      "seed 4242, hero on a lower-zone tile 4-8 tiles from a zone 1 / 2 altar, bossTick x20 (10 s)",
+      "Hero inside the altar zone, 8.2 tiles away, real-time play"
+    ],
+    "expected": "Lower-zone hero never wakes the altar; in-zone hero does.",
+    "actual": "3 altars (Sand Titan z1 from z0, Hydra z2 from z1, Crystal Titan z2 from z1): none woke for the lower-zone hero. In-zone hero at 8.2 tiles: 'Sand Titan awakens!' after 1 s. Lv 8 hero died in 15 s.",
+    "viewport": "1280x720",
+    "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=4242",
+    "screenshots": [
+      "img/b01-r2-04.jpg",
+      "img/b01-r2-05.jpg"
+    ],
+    "clip": null,
+    "suspect": null,
+    "kind": "balance",
+    "frequency": "always"
+  },
+  {
+    "id": "b01-r2-03",
+    "replays": "b01-03",
+    "status": "FIXED",
+    "severity": "P2",
+    "area": "Realm combat: hold-fire",
+    "title": "Provoked off-screen whirler (G-08)",
+    "steps": [
+      "Spawn a Whirler 400 px above the view, hit it once, wait 2 s real time"
+    ],
+    "expected": "It fires or closes in within 2 s.",
+    "actual": "Unprovoked: _canFire false. After one hit: provT 4, fired 21 bullets in 2 s and walked 40 px closer.",
+    "viewport": "1280x720",
+    "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=4242",
+    "screenshots": [
+      "img/b01-r2-03.jpg"
+    ],
+    "clip": null,
+    "suspect": null,
+    "kind": "balance",
+    "frequency": "always"
+  },
+  {
+    "id": "b01-r2-04",
+    "replays": "b01-04",
+    "status": "FIXED",
+    "severity": "P3",
+    "area": "Realm death / Survivor's cache",
+    "title": "0-kill death no longer pays a cache",
+    "steps": [
+      "Lv 8 hero dies after 1 kill / 15 s alive"
+    ],
+    "expected": "No free cache for a trivial run.",
+    "actual": "Death card: 'no cache this time (3 kills or a minute alive earns one)'. The 4-death suicide loop itself was not re-run.",
+    "viewport": "1280x720",
+    "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=4242",
+    "screenshots": [
+      "img/b01-r2-05.jpg"
+    ],
+    "clip": null,
+    "suspect": null,
+    "kind": "balance",
+    "frequency": "always"
+  },
+  {
+    "id": "b01-r2-05",
+    "replays": "b01-05",
+    "status": "NOT RETESTED",
+    "severity": "P3",
+    "area": "Realm enemy AI: leash",
+    "title": "Aggro / leash",
+    "steps": [],
+    "expected": "-",
+    "actual": "Outside the retest list.",
+    "viewport": "1280x720",
+    "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=4242",
+    "screenshots": [],
+    "clip": null,
+    "suspect": null,
+    "kind": "improvement",
+    "frequency": "always"
+  },
+  {
+    "id": "b01-r2-06",
+    "replays": "b01-06",
+    "status": "FIXED",
+    "severity": "P3",
+    "area": "Realm phone HUD",
+    "title": "Goal line cut off",
+    "steps": [
+      "390x844 touch, fresh hero, read the goal line"
+    ],
+    "expected": "Goal line readable.",
+    "actual": "Line now wraps to two lines and the zone target is visible. Gear toast overlap and 'Blizzard' label clip not retested (needs a Frostcaller plus a drop).",
+    "viewport": "390x844",
+    "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=4242",
+    "screenshots": [
+      "img/b01-r2-07.jpg"
+    ],
+    "clip": null,
+    "suspect": null,
+    "kind": "visual",
+    "frequency": "always"
+  },
+  {
+    "id": "b01-r2-07",
+    "replays": "b01-07",
+    "status": "NOT FIXED",
+    "severity": "P3",
+    "area": "Realm boss HUD",
+    "title": "Boss bar over boss / zone banner mid fight",
+    "steps": [
+      "Wake Sand Titan, die to it"
+    ],
+    "expected": "Boss bar hides nothing and is gone after death.",
+    "actual": "Bar is still drawn on the 'You fell' card after death. The overlap with a boss at the top of the screen was not re-seen in this run.",
+    "viewport": "1280x720",
+    "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=4242",
+    "screenshots": [
+      "img/b01-r2-04.jpg",
+      "img/b01-r2-05.jpg"
+    ],
+    "clip": null,
+    "suspect": null,
+    "kind": "ux",
+    "frequency": "sometimes"
+  },
+  {
+    "id": "b01-r2-08",
+    "replays": "b01-08",
+    "status": "NOT RETESTED",
+    "severity": "P3",
+    "area": "Realm phone controls",
+    "title": "Stick vectors on blur",
+    "steps": [],
+    "expected": "-",
+    "actual": "Outside the retest list.",
+    "viewport": "390x844",
+    "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=4242",
+    "screenshots": [],
+    "clip": null,
+    "suspect": null,
+    "kind": "bug",
+    "frequency": "always"
+  },
+  {
+    "id": "b01-r2-09",
+    "replays": "b01-09",
+    "status": "NOT RETESTED",
+    "severity": "P3",
+    "area": "Realm enemy AI: separation",
+    "title": "Overlap",
+    "steps": [],
+    "expected": "-",
+    "actual": "Outside the retest list.",
+    "viewport": "1280x720",
+    "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=4242",
+    "screenshots": [
+      "img/b01-r2-06.jpg"
+    ],
+    "clip": null,
+    "suspect": null,
+    "kind": "visual",
+    "frequency": "always"
+  },
+  {
+    "id": "b01-r2-10",
+    "replays": "b01-10",
+    "status": "NOT RETESTED",
+    "severity": "P3",
+    "area": "Realm movement",
+    "title": "Hero on solid tile",
+    "steps": [],
+    "expected": "-",
+    "actual": "Outside the retest list; not reproducible in round 1.",
+    "viewport": "390x844",
+    "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=4242",
+    "screenshots": [],
+    "clip": null,
+    "suspect": null,
+    "kind": "bug",
+    "frequency": "always"
+  },
+  {
+    "id": "b01-r2-11",
+    "status": "NEW",
+    "severity": "P3",
+    "area": "Realm HUD: zone line",
+    "title": "After teleport to zone-3 tile (120,114) the zone line read 'Highlands \u00b7 Deadly' after 4 s",
+    "steps": [
+      "Teleport via the test hook to a zone-3 tile, hold fire + D for 4 s, read the zone line"
+    ],
+    "expected": "Zone line matches the hero tile zone (Godlands).",
+    "actual": "Line read Highlands (centre distance 22). Could be teleport/HUD lag or a radius mismatch with World.zone[]; unconfirmed.",
+    "viewport": "1280x720",
+    "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=4242",
+    "screenshots": [],
+    "clip": null,
+    "suspect": "game/games/mad-maze/realm-world.js zone HUD vs World.zone[]",
+    "kind": "bug",
+    "frequency": "once"
+  }
+]

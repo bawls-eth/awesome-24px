@@ -197,6 +197,7 @@
       }
       if (!isObj(obj)) return fail('not-an-object', 'That file does not look like a Mad Maze backup.');
       const raw = {};
+      const unknown = []; // beta b14 P3: entries this version does not know are skipped (never written), not fatal
       if (obj.format === FORMAT) {
         if (!(Number(obj.v) >= 1) || !isObj(obj.keys)) return fail('bad-bundle', 'That backup file is damaged.');
         const names = Object.keys(obj.keys);
@@ -204,7 +205,7 @@
         if (names.length > MAX_KEYS) return fail('too-many-keys', 'That backup file has too many entries.');
         for (let i = 0; i < names.length; i++) {
           const k = names[i];
-          if (KNOWN.indexOf(k) < 0) return fail('unknown-key', 'That backup contains an entry this game does not know (' + String(k).slice(0, 40) + '), so nothing was changed.');
+          if (KNOWN.indexOf(k) < 0) { if (unknown.length < MAX_KEYS) unknown.push(String(k).slice(0, 40)); continue; }
           const v = obj.keys[k];
           const s = typeof v === 'string' ? v : JSON.stringify(v);
           raw[k] = typeof s === 'string' ? s : ''; // a damaged value is skipped below, not fatal (beta S-03)
@@ -231,13 +232,21 @@
         if (r.why) skipped.push({ key: k, label: label(k), why: r.why }); else entries[k] = r.value;
       }
       skipped.sort((a, b) => (a.key === SAVE_KEY ? -1 : b.key === SAVE_KEY ? 1 : a.key < b.key ? -1 : 1));
+      unknown.forEach((k) => skipped.push({ key: k, label: k, why: 'not known by this version' }));
       const keys = Object.keys(entries).sort();
+      if (!keys.length && unknown.length && skipped.length === unknown.length) {
+        return fail('unknown-key', 'That backup contains only entries this game does not know (' + unknown[0] + '), so nothing was changed.');
+      }
       if (!keys.length) {
         const first = skipped[0];
         return fail('bad-value', 'The ' + (first ? first.label : 'save') + ' in that backup is not valid, so nothing was changed.');
       }
       const out = { ok: true, keys: keys, entries: entries, labels: keys.map(label), skipped: skipped };
-      if (skipped.length) out.message = 'Will restore: ' + keys.map(label).join(', ') + '. Cannot restore (damaged in the file): ' + skipped.map((x) => x.label).join(', ') + '. Those stay as they are on this device.';
+      const dmg = skipped.filter((x) => x.why !== 'not known by this version'), unk = skipped.filter((x) => x.why === 'not known by this version');
+      if (skipped.length) {
+        out.message = 'Will restore: ' + keys.map(label).join(', ') + '.' + (dmg.length ? ' Cannot restore (damaged in the file): ' + dmg.map((x) => x.label).join(', ') + '. Those stay as they are on this device.' : '')
+          + (unk.length ? ' Skipped (not known by this version of the game): ' + unk.map((x) => x.label).join(', ') + '.' : '');
+      }
       return out;
     } catch (e) {
       return fail('invalid', 'That file does not look like a Mad Maze backup.');

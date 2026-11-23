@@ -49,3 +49,18 @@ baked ground Graphics), and the season-wash rectangle (visible in autumn, by des
    (4x CPU, 0 remotes median <= 50 ms; 55 remotes within 15%), measured alone.
 
 Not measured: 55 remotes (needs the fake SDK from net-hostile-presence.test.js; skipped while the machine was loaded).
+
+## Round 3 (19:10-19:25 UTC): step 2 landed, measured on a quiet machine (load 0.7-2.5)
+Culling (main.js `cullOffscreen`, commit 458cc5f): ~720 of ~950 top-level objects excluded from the camera via `cameraFilter`.
+Same harness as above (4x CPU, 390x844 touch, offline, 0 remotes, 12 s CPU profile), A/B in alternating runs:
+
+| culling | frames in 12 s | fps | median | p90 | JS self time per frame |
+|---|---|---|---|---|---|
+| off | 342 / 350 | 28.5 / 29.2 | 33.3 ms | 50.0 ms | 8.26 / 8.07 ms |
+| on | 397 / 399 | 33.1 / 33.3 | 33.3 ms | 33.4 ms | 5.66 / 5.67 ms |
+
+At 1x (beta-s07-town-cull): Phaser `render()` JS per frame 1.73 ms -> 0.44 ms. So: +14% frames, p90 frame 50 -> 33 ms, JS per frame
+-30%. The median stays at two vsync intervals: the rest of the frame is SwiftShader fill (headless software GL), which a phone GPU does
+not pay. The b13 "11-14 fps" was measured at load 6-24; on a quiet box the same setup was 28.5 fps before culling and 33 fps after.
+Not done (next bites): merge the baked ground into the island quadrants (one full-view layer less), shared name atlas for remote labels.
+55 remotes still not measured (fake SDK).

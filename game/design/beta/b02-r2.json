@@ -1,0 +1,313 @@
+[
+ {
+  "id": "b02-01",
+  "severity": "P1",
+  "area": "Realm backpack / loot",
+  "title": "Combine covers Equip (3+ copies)",
+  "status": "FIXED",
+  "steps": [
+   "Replayed from b02.json step list (seeded save via __mm.arena, blockDb on)"
+  ],
+  "expected": "Round-1 issue resolved",
+  "actual": "Row of 4x Scholar Ring shows three separate buttons: Equip (543,436 64x44), Sell 3 (615), Combine 3->Uncommon (687); same on phone. QA replay beta-retest-b02 passes 12/12.",
+  "viewport": "1280x720",
+  "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=12345",
+  "screenshots": [
+   "img/b02-r2-01.png"
+  ],
+  "clip": null,
+  "suspect": null,
+  "kind": "bug",
+  "frequency": "always"
+ },
+ {
+  "id": "b02-02",
+  "severity": "P1",
+  "area": "Realm backpack / loot",
+  "title": "Double-click on Sell sells two items",
+  "status": "FIXED",
+  "steps": [
+   "Replayed from b02.json step list (seeded save via __mm.arena, blockDb on)"
+  ],
+  "expected": "Round-1 issue resolved",
+  "actual": "Buttons arm 300 ms after each re-render; QA replay dblclick sells one and the equipped Iron Cuirass stays. Phone double-tap on Vendor Buy also bought only one.",
+  "viewport": "1280x720",
+  "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=12345",
+  "screenshots": [
+   "img/b02-r2-01.png"
+  ],
+  "clip": null,
+  "suspect": null,
+  "kind": "bug",
+  "frequency": "always"
+ },
+ {
+  "id": "b02-03",
+  "severity": "P1",
+  "area": "Realm backpack / loot",
+  "title": "Sell has no confirm for equipped T12",
+  "status": "FIXED",
+  "steps": [
+   "Replayed from b02.json step list (seeded save via __mm.arena, blockDb on)"
+  ],
+  "expected": "Round-1 issue resolved",
+  "actual": "One click on Sell of the equipped T12 Spark Wand turns the button into 'Sure? Sell +39' and sells nothing (shards 100, item and slot kept); the ask expires back to 'Sell 39' after ~3 s.",
+  "viewport": "1280x720",
+  "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=12345",
+  "screenshots": [
+   "img/b02-r2-02.png"
+  ],
+  "clip": null,
+  "suspect": null,
+  "kind": "bug",
+  "frequency": "always"
+ },
+ {
+  "id": "b02-04",
+  "severity": "P1",
+  "area": "Realm backpack / loot",
+  "title": "Full pack auto-sells a T12 drop",
+  "status": "FIXED",
+  "steps": [
+   "Replayed from b02.json step list (seeded save via __mm.arena, blockDb on)"
+  ],
+  "expected": "Round-1 issue resolved",
+  "actual": "24/24 pack + T12 bag at the hero: stays on the ground (shards 200, no sale), banner 'Backpack full: make room for Spark Wand T12'. After freeing one slot the T12 was picked up. A common r0 bag still auto-sells +3 (by design).",
+  "viewport": "1280x720",
+  "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=12345",
+  "screenshots": [
+   "img/b02-r2-03.png"
+  ],
+  "clip": null,
+  "suspect": null,
+  "kind": "bug",
+  "frequency": "always"
+ },
+ {
+  "id": "b02-05",
+  "severity": "P2",
+  "area": "Realm backpack / loot",
+  "title": "No full-pack warning / unreadable sale text",
+  "status": "FIXED",
+  "steps": [
+   "Replayed from b02.json step list (seeded save via __mm.arena, blockDb on)"
+  ],
+  "expected": "Round-1 issue resolved",
+  "actual": "The 'Backpack full' banner is large, dark panel with gold border, readable over grass.",
+  "viewport": "1280x720",
+  "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=12345",
+  "screenshots": [
+   "img/b02-r2-03.png"
+  ],
+  "clip": null,
+  "suspect": null,
+  "kind": "ux",
+  "frequency": "always"
+ },
+ {
+  "id": "b02-06",
+  "severity": "P2",
+  "area": "Realm backpack / loot",
+  "title": "Loot bags tiny plain squares",
+  "status": "FIXED",
+  "steps": [
+   "Replayed from b02.json step list (seeded save via __mm.arena, blockDb on)"
+  ],
+  "expected": "Round-1 issue resolved",
+  "actual": "Bag is now a red pouch sprite with a sparkle, readable on sand.",
+  "viewport": "1280x720",
+  "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=12345",
+  "screenshots": [
+   "img/b02-r2-03.png"
+  ],
+  "clip": null,
+  "suspect": null,
+  "kind": "visual",
+  "frequency": "always"
+ },
+ {
+  "id": "b02-07",
+  "severity": "P2",
+  "area": "Realm backpack / loot",
+  "title": "'New best tier' toast over backpack header",
+  "status": "NOT RETESTED",
+  "steps": [
+   "Replayed from b02.json step list (seeded save via __mm.arena, blockDb on)"
+  ],
+  "expected": "Round-1 issue resolved",
+  "actual": "Forced chaseToast via the hook did not draw a visible toast (0x0 rect), could not compare; needs a real best-tier pickup with the pack open.",
+  "viewport": "390x844",
+  "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=12345",
+  "screenshots": [],
+  "clip": null,
+  "suspect": null,
+  "kind": "visual",
+  "frequency": "once"
+ },
+ {
+  "id": "b02-08",
+  "severity": "P2",
+  "area": "Realm backpack / loot",
+  "title": "Stats tab keeps compare deltas of a Gear-tab item",
+  "status": "NOT FIXED",
+  "steps": [
+   "Replayed from b02.json step list (seeded save via __mm.arena, blockDb on)"
+  ],
+  "expected": "Round-1 issue resolved",
+  "actual": "Tapped T11 row while T8 equipped, switched to Stats: POWER 3.5 +2.7 still shown (green because the item is better) with 'Wearing: Spark Wand' (no tier). Lingering delta unchanged; reads as a debuff when the tapped item is worse.",
+  "viewport": "390x844",
+  "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=12345",
+  "screenshots": [
+   "img/b02-r2-05.png"
+  ],
+  "clip": null,
+  "suspect": "game/realm.js (bp compare state not cleared on tab switch)",
+  "kind": "ux",
+  "frequency": "always"
+ },
+ {
+  "id": "b02-09",
+  "severity": "P2",
+  "area": "Realm backpack / loot",
+  "title": "Phone landscape: Next goal label over backpack card",
+  "status": "FIXED",
+  "steps": [
+   "Replayed from b02.json step list (seeded save via __mm.arena, blockDb on)"
+  ],
+  "expected": "Round-1 issue resolved",
+  "actual": "844x390 backpack card: no Next goal label over it; minimap/zone label sit right of the card without overlapping HP/XP.",
+  "viewport": "844x390",
+  "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=12345",
+  "screenshots": [
+   "img/b02-r2-06.png"
+  ],
+  "clip": null,
+  "suspect": null,
+  "kind": "visual",
+  "frequency": "always"
+ },
+ {
+  "id": "b02-10",
+  "severity": "P3",
+  "area": "Realm backpack / loot",
+  "title": "Gear rows inconsistent tall layouts",
+  "status": "FIXED",
+  "steps": [
+   "Replayed from b02.json step list (seeded save via __mm.arena, blockDb on)"
+  ],
+  "expected": "Round-1 issue resolved",
+  "actual": "All rows share one layout (icon, name, buttons in a row, rarity and description below); about 2 rows fit on desktop; still no sort (improvement).",
+  "viewport": "1280x720",
+  "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=12345",
+  "screenshots": [
+   "img/b02-r2-01.png"
+  ],
+  "clip": null,
+  "suspect": null,
+  "kind": "improvement",
+  "frequency": "always"
+ },
+ {
+  "id": "b02-11",
+  "severity": "P3",
+  "area": "Realm backpack / loot",
+  "title": "T12 drop for a class that can never equip it",
+  "status": "NOT RETESTED",
+  "steps": [
+   "Replayed from b02.json step list (seeded save via __mm.arena, blockDb on)"
+  ],
+  "expected": "Round-1 issue resolved",
+  "actual": "Drop-table design item, not touched this round.",
+  "viewport": "1280x720",
+  "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=12345",
+  "screenshots": [],
+  "clip": null,
+  "suspect": null,
+  "kind": "improvement",
+  "frequency": "sometimes"
+ },
+ {
+  "id": "b02-12",
+  "severity": "P2",
+  "area": "Realm backpack / loot",
+  "title": "Double-tap Confirm reforge opens Salvage confirm",
+  "status": "NOT FIXED",
+  "steps": [
+   "Replayed from b02.json step list (seeded save via __mm.arena, blockDb on)"
+  ],
+  "expected": "Round-1 issue resolved",
+  "actual": "T8 Spark Wand, 100 dust + 5 shards, Forge > Keen > double-tap (80 ms) on 'Confirm: pay 60 dust + 2'. Reforge charged once (dust 40, shards 3, uid 30 -> 500, still equipped) but the page then shows 'Salvage this item for 25 dust?' with 'Confirm salvage +25 dust' under the finger; one more tap destroys the wand. Same as round 1.",
+  "viewport": "390x844",
+  "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=12345",
+  "screenshots": [
+   "img/b02-r2-04.png"
+  ],
+  "clip": null,
+  "suspect": "game/realm.js:4457-4470 (_bindForge: forge box re-renders and Salvage lands where Confirm was; no arm delay on forge buttons)",
+  "kind": "bug",
+  "frequency": "always"
+ },
+ {
+  "id": "b02-13",
+  "severity": "P2",
+  "area": "Realm backpack / loot",
+  "title": "Round action button over vendor stall Buy buttons",
+  "status": "FIXED",
+  "steps": [
+   "Replayed from b02.json step list (seeded save via __mm.arena, blockDb on)"
+  ],
+  "expected": "Round-1 issue resolved",
+  "actual": "Nexus stall at 390x844: no pad drawn over the stall; first Buy hits itself (elementFromPoint). Rows below the fold not hit-tested.",
+  "viewport": "390x844",
+  "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=12345",
+  "screenshots": [
+   "img/b02-r2-08.png"
+  ],
+  "clip": null,
+  "suspect": null,
+  "kind": "bug",
+  "frequency": "always"
+ },
+ {
+  "id": "b02-14",
+  "severity": "P2",
+  "area": "Realm backpack / loot",
+  "title": "Vendor Buy double-tap buys two; sell back lists equipped",
+  "status": "FIXED",
+  "steps": [
+   "Replayed from b02.json step list (seeded save via __mm.arena, blockDb on)"
+  ],
+  "expected": "Round-1 issue resolved",
+  "actual": "Double tap (80 ms) on Spark Wand T1 20 dust: dust 100 -> 80, items 6 -> 7 (one). Sell back lists only T1 wands (equipped T8 not offered).",
+  "viewport": "390x844",
+  "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=12345",
+  "screenshots": [
+   "img/b02-r2-07.png"
+  ],
+  "clip": null,
+  "suspect": null,
+  "kind": "bug",
+  "frequency": "always"
+ },
+ {
+  "id": "b02-15",
+  "severity": "P3",
+  "area": "Realm backpack / loot",
+  "title": "Nexus labels clipped; stall style differs",
+  "status": "NOT FIXED",
+  "steps": [
+   "Replayed from b02.json step list (seeded save via __mm.arena, blockDb on)"
+  ],
+  "expected": "Round-1 issue resolved",
+  "actual": "Labels read Nexus Guide / Blacksmith / Healer in full, but a sliver of an NPC is cut by the map frame at the right edge and stall buttons remain rounded system-font purple pills unlike the square pixel buttons of the backpack.",
+  "viewport": "390x844",
+  "url": "/game/games/mad-maze/index.html?mode=world&test=1&seed=12345",
+  "screenshots": [
+   "img/b02-r2-08.png"
+  ],
+  "clip": null,
+  "suspect": null,
+  "kind": "visual",
+  "frequency": "always"
+ }
+]

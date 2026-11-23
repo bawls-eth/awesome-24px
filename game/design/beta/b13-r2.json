@@ -1,0 +1,251 @@
+[
+ {
+  "id": "b13-r2-01",
+  "replays": "b13-01",
+  "status": "FIXED",
+  "severity": "P1",
+  "area": "Realm/Arena/Dungeon cold start (network)",
+  "title": "Realm cold start 1,235 -> 1,085 requests; every manifest JSON fetched exactly once (225 -> 67 JSON, 0 duplicates)",
+  "steps": [
+   "Open game/games/mad-maze/index.html?mode=world&test=1&seed=777 at 390x844, fresh context, DB blocked, record responses for 5 s"
+  ],
+  "expected": "each shared manifest fetched once",
+  "actual": "Realm 1,085 requests (947 PNG, 67 JSON all unique); Arena 283 (was 368); Dungeon 351 (was 438); Lantern 197 (67 JSON once). Remaining weight: ~947 eagerly fetched PNGs in Realm.",
+  "viewport": "390x844",
+  "url": "game/games/mad-maze/index.html?mode=world&test=1&seed=777",
+  "screenshots": [
+   "img/b13-r2-01.png"
+  ],
+  "clip": null,
+  "suspect": "game/shared/mm-art.js:143 (memo in place)",
+  "kind": "perf",
+  "frequency": "always"
+ },
+ {
+  "id": "b13-r2-02",
+  "replays": "b13-02",
+  "status": "NOT FIXED",
+  "severity": "P2",
+  "area": "Town / Deepdelve load weight",
+  "title": "three.min.js still requested on every Town load; deprecation warning still logged on Town and Deepdelve",
+  "steps": [
+   "Open game/index.html?from=hub and game/games/deepdelve/index.html?test=1, record requests + console"
+  ],
+  "expected": "three.js only loaded when the cave / Deepdelve opens; no warning",
+  "actual": "Town: 46 requests incl. 1 three request, console warning 'Scripts build/three.js and build/three.min.js are deprecated with r150+'. S-08 listed open in fixes/perf-systems.md.",
+  "viewport": "390x844",
+  "url": "game/index.html?from=hub",
+  "screenshots": [
+   "img/b13-r2-02.png"
+  ],
+  "clip": null,
+  "suspect": "game/index.html:539",
+  "kind": "perf",
+  "frequency": "always"
+ },
+ {
+  "id": "b13-r2-03",
+  "replays": "b13-03",
+  "status": "NOT FIXED",
+  "severity": "P1",
+  "area": "Town (offline stub) with 55 remote players",
+  "title": "Town frame cost at 4x unchanged (S-07 was profile-only): 11-14 fps on a loaded box, 24-28 fps on a quiet box",
+  "steps": [
+   "Play offline, 4x CPU, 390x844, addRemotePlayerCapped x55, rAF sampling 8 s windows, at load avg ~3 and ~1.5"
+  ],
+  "expected": ">= 30 fps at 4x with the capped crowd",
+  "actual": "Load ~3: 0 remotes 10.7 fps (p95 133 ms), 55 remotes 13.8/13.5 fps. Load ~1.5: 0 remotes 27.8 fps (p95 50), 55 remotes 24.3/23.5 fps (p95 50 ms, 36-63 long tasks/8 s, max 59 ms). Crowd costs ~4 fps; base Town frame is the bulk; very load-sensitive. 55 name labels overlap into a text wall at 390x844 (synthetic worst case).",
+  "viewport": "390x844",
+  "url": "game/index.html (offline join)",
+  "screenshots": [
+   "img/b13-r2-03.png"
+  ],
+  "clip": null,
+  "suspect": "game/main.js:1801, :4847, :5686",
+  "kind": "perf",
+  "frequency": "always"
+ },
+ {
+  "id": "b13-r2-04",
+  "replays": "b13-04",
+  "status": "NOT REPRODUCED",
+  "severity": "P2",
+  "area": "Realm world sustained play",
+  "title": "Realm 4x CPU on a quiet box: flat 58-60 fps, no long task over 99 ms (1 min only)",
+  "steps": [
+   "Realm world test=1, 4x CPU, load avg ~1.5, hold arrow keys in 4 directions, 5 x 12 s windows"
+  ],
+  "expected": "flat frame time",
+  "actual": "fps 59.3/57.5/57.8/58.3/59.7, p95 17 ms, ltmax 0-99 ms; nodes 1530 -> 1748 (plateau), listeners 1986 -> 1991. Short, no enemy crowd: the 72-enemy 10 min degradation is neither confirmed nor refuted.",
+  "viewport": "390x844",
+  "url": "game/games/mad-maze/index.html?mode=world&test=1&seed=777",
+  "screenshots": [],
+  "clip": null,
+  "suspect": "game/realm.js (unproven)",
+  "kind": "perf",
+  "frequency": "once"
+ },
+ {
+  "id": "b13-r2-05",
+  "replays": "b13-05",
+  "status": "NOT FIXED",
+  "severity": "P2",
+  "area": "Deepdelve",
+  "title": "Deepdelve taps still cause long tasks: 1x phone, 8 taps -> 16 long tasks, max 601 ms, worst frame 717 ms; 4x tap run did not finish in 60 s",
+  "steps": [
+   "deepdelve/index.html?test=1, 390x844 touch, 1x: wait 3 s, 8 random touchscreen taps 700 ms apart, longtask observer",
+   "Repeat at 4x CPU"
+  ],
+  "expected": "no frame over 100 ms; cheap edits",
+  "actual": "1x: boot long task 172 ms, taps -> [64,55,52,347,93,346,80,234,72,277,88,601,122,277,51,52] ms. 4x: script killed after 60 s (an earlier 4x walk+tap script hung at 0% CPU for 8 min); consistent with round-1 13 s tap stall, cause not isolated. S-09 documented as measured, no code change.",
+  "viewport": "390x844",
+  "url": "game/games/deepdelve/index.html?test=1",
+  "screenshots": [
+   "img/b13-r2-04.png"
+  ],
+  "clip": null,
+  "suspect": "game/games/deepdelve/deepdelve.js:518, :751",
+  "kind": "perf",
+  "frequency": "often"
+ },
+ {
+  "id": "b13-r2-06",
+  "replays": "b13-06",
+  "status": "FIXED",
+  "severity": "P2",
+  "area": "Isles load",
+  "title": "Isles 4x: DOMContentLoaded 1.9 s (was 3.06 s), longest long task 68 ms (was 234-392 ms), 53 fps after load",
+  "steps": [
+   "Isles 390x844, 4x CPU, DB blocked, longtask observer"
+  ],
+  "expected": "interactive in ~1-2 s",
+  "actual": "249 requests (unchanged), DCL 1917 ms, load 5.8 s (box load ~10), rAF 53.3 fps p95 33 ms max 100 ms, 2 long tasks of 68 ms. S-12 not recorded as landed, so read FIXED as 'no longer reproduces'.",
+  "viewport": "390x844",
+  "url": "game/games/isles/index.html",
+  "screenshots": [],
+  "clip": null,
+  "suspect": "game/games/isles/isles.js",
+  "kind": "perf",
+  "frequency": "always"
+ },
+ {
+  "id": "b13-r2-07",
+  "replays": "b13-07",
+  "status": "PARTIAL",
+  "severity": "P3",
+  "area": "Realm / Deepdelve resize + rotate",
+  "title": "After 60 rotations Realm canvas returns to full size (390x844); main-thread block remains (35 long tasks, max 290 ms); Deepdelve stays 195x331",
+  "steps": [
+   "4x CPU, 60 x setViewportSize alternating 844x390 / 390x844 at 40 ms, restore, wait 4 s"
+  ],
+  "expected": "debounced resize, resolution recovers",
+  "actual": "Realm canvas 390x844 (round 1: stuck at 292x633), 35 long tasks ltmax 290 ms (round 1: 24 / 350). Deepdelve canvas 195x331 (round 1 fell to 97x165), 32 long tasks ltmax 313 ms (round 1: 27 / 283).",
+  "viewport": "390x844",
+  "url": "game/games/mad-maze/index.html?mode=world&test=1&seed=777",
+  "screenshots": [],
+  "clip": null,
+  "suspect": "game/realm.js resize handlers",
+  "kind": "perf",
+  "frequency": "always"
+ },
+ {
+  "id": "b13-r2-08",
+  "replays": "b13-08",
+  "status": "NOT FIXED",
+  "severity": "P3",
+  "area": "Realm listeners",
+  "title": "Realm JSEventListeners still creep up during play (+5 in 1 min: 1986 -> 1991); 10 min rate not measured",
+  "steps": [
+   "Realm 4x, 5 x 12 s walk windows, Performance.getMetrics"
+  ],
+  "expected": "plateau",
+  "actual": "1986,1986,1986,1991,1991 across 60 s.",
+  "viewport": "390x844",
+  "url": "game/games/mad-maze/index.html?mode=world&test=1&seed=777",
+  "screenshots": [],
+  "clip": null,
+  "suspect": "game/games/mad-maze/realm-world.js",
+  "kind": "perf",
+  "frequency": "sometimes"
+ },
+ {
+  "id": "b13-r2-09",
+  "replays": "b13-09",
+  "status": "FIXED",
+  "severity": "P3",
+  "area": "Arcane Frontier page",
+  "title": "favicon 404 gone: index.html has <link rel=icon> to ../../icons/favicon-32.png",
+  "steps": [
+   "Open arcane-frontier/index.html, list responses with status >= 400"
+  ],
+  "expected": "no favicon 404",
+  "actual": "favicon-32.png loads. But see b13-r2-12: 15 other files 404.",
+  "viewport": "390x844",
+  "url": "game/games/arcane-frontier/index.html",
+  "screenshots": [],
+  "clip": null,
+  "suspect": "game/games/arcane-frontier/index.html:8",
+  "kind": "bug",
+  "frequency": "always"
+ },
+ {
+  "id": "b13-r2-10",
+  "replays": "b13-10",
+  "status": "NOT FIXED",
+  "severity": "P3",
+  "area": "Repo asset weight",
+  "title": "Large unreferenced images still shipped (warrior-master-sheet.png 3.4 MB, dusk_moth.png 1.66 MB ...)",
+  "steps": [
+   "ls -la the files"
+  ],
+  "expected": "only runtime assets deployed",
+  "actual": "unchanged; owner backlog O-09.",
+  "viewport": "1280x720",
+  "url": "game/assets/",
+  "screenshots": [],
+  "clip": null,
+  "suspect": null,
+  "kind": "improvement",
+  "frequency": "always"
+ },
+ {
+  "id": "b13-r2-11",
+  "replays": "b13-11",
+  "status": "NOT FIXED",
+  "severity": "P3",
+  "area": "Mini games / network",
+  "title": "Art pack URLs still unversioned (design note, backlog S-14)",
+  "steps": [
+   "Inspect Realm art URLs"
+  ],
+  "expected": "fingerprinted URLs",
+  "actual": "unchanged; scripts use ?v=, ~947 PNG and 67 manifests do not. Not measurable locally.",
+  "viewport": "390x844",
+  "url": "game/games/mad-maze/index.html?mode=world&test=1&seed=777",
+  "screenshots": [],
+  "clip": null,
+  "suspect": "game/shared/mm-art.js",
+  "kind": "improvement",
+  "frequency": "always"
+ },
+ {
+  "id": "b13-r2-12",
+  "replays": null,
+  "status": "NEW",
+  "severity": "P3",
+  "area": "Arcane Frontier page",
+  "title": "arcane-frontier/index.html is a dead scaffold: style.css and 14 js/*.js files all return 404",
+  "steps": [
+   "Open game/games/arcane-frontier/index.html, log responses >= 400"
+  ],
+  "expected": "page loads its game, or is not deployed",
+  "actual": "15 x 404 every load (style.css, js/audio, assets, save, input, map, player, enemies, bosses, ui, fx, combat, items, world, main). Latest commit is a WIP scaffold. Not linked from Hub or Town (only tools/nav-audit/run.js), so players cannot reach it; matters if the folder is deployed.",
+  "viewport": "1280x720",
+  "url": "game/games/arcane-frontier/index.html",
+  "screenshots": [],
+  "clip": null,
+  "suspect": "game/games/arcane-frontier/index.html:9,141-155",
+  "kind": "bug",
+  "frequency": "always"
+ }
+]

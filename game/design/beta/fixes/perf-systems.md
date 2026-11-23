@@ -176,3 +176,16 @@ Run each alone: `BASE=http://localhost:<port>/game/index.html /tmp/bt.sh node ga
   fade as a feature, so I reverted it: no product change. Request to QA (sweep owner): before sampling a page, wait for running
   transitions to end, e.g. `await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'), null,
   { timeout: 2000 }).catch(() => {})`, or skip text whose effective opacity is strictly between 0 and 1 (a transient state).
+
+## Round 3 (19:10 UTC)
+- b14 P3 unknown backup key (cced528): plan() skips and names a key this version does not know; a file of only unknown keys is still
+  refused. Existing tests changed (behaviour changed): shared-mm-backup, shared-mm-profile-backup, beta-s03-backup-skip [5].
+- S-07 step 2 (458cc5f): camera culling via cameraFilter. Quiet-machine numbers in design/beta/perf-town.md (round 3): 4x 390x844
+  28.5-29 fps -> 33 fps, p90 50 -> 33 ms, JS per frame 8.2 -> 5.7 ms. Test beta-s07-town-cull (full).
+- S-08 (5a1bffb): three.js loads on the first cave visit as the ES module build (no deprecation warning, ~650 KB off every Town load).
+  helpers.js townReady now awaits `ugEnsureThree()` so the live cave tests (not run here) keep calling enterUnderground synchronously.
+  Test beta-s08-town-three-lazy (full). Re-verify: DevTools Network on the Town: no three request until you jump in the dig hole.
+- b13-08 Realm listeners: NOT reproduced. 96 s of walking with GC before each sample: JSEventListeners flat at 1999 (Nodes 1495).
+  A probe of every addEventListener after boot shows per-render listeners only on freshly created elements (backpack relic toggle,
+  icon <img> load/error in mad-maze.js decorate, slot icons in realm.js renderBackpack) that are dropped with their nodes. The b13 +12
+  steps likely come from a panel / event path not hit by walking; realm.js and mad-maze.js are not my files (measure only).

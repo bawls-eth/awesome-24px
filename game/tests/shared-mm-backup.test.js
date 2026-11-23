@@ -29,7 +29,9 @@ check('old plain town save still restores', plain.ok);
 const key = (k, v) => ({ format: 'pixeltown-backup', v: 2, keys: { [k]: v } });
 const st = fake({ 'pixeltown-realm-v1': '{"keep":1}' });
 const unk = B.restore(st, { format: 'pixeltown-backup', v: 2, keys: { 'pixeltown-realm-v1': '{}', 'pixeltown-evil-v1': '{}' } });
-check('unknown key rejects whole bundle, writes nothing', !unk.ok && unk.error === 'unknown-key' && st._m['pixeltown-realm-v1'] === '{"keep":1}' && !('pixeltown-evil-v1' in st._m));
+// beta b14 P3 changed this: an unknown key is skipped (and named), the known keys restore; it used to refuse the whole file
+check('unknown key is skipped and never written, the known key restores', unk.ok && st._m['pixeltown-realm-v1'] === '{}' && !('pixeltown-evil-v1' in st._m) && unk.skipped.some((x) => x.key === 'pixeltown-evil-v1'));
+check('a file of ONLY unknown keys is refused, writes nothing', (() => { const s3 = fake({ a: '1' }); const r3 = B.restore(s3, { format: 'pixeltown-backup', v: 2, keys: { 'pixeltown-evil-v1': '{}' } }); return !r3.ok && r3.error === 'unknown-key' && Object.keys(s3._m).length === 1; })());
 check('not json', B.plan('{{').error === 'not-json');
 check('array / null / number rejected', [[], null, 5].every((x) => !B.plan(x).ok));
 check('bad value string rejected', B.plan(key('pixeltown-jam-v1', 'garbage{')).error === 'bad-value');

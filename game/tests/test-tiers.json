@@ -1764,5 +1764,29 @@
   "beta-retest-b02.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-w05r3-hud-narrow.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r3-blacksmith-godgate.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r3-lantern-blocked.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-r3-boss-bar-fall.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "beta-s07-town-cull.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-s08-town-three-lazy.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
