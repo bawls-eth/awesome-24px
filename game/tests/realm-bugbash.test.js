@@ -188,6 +188,18 @@ async function open(browser, q, opts, store) {
   check('no page errors (dungeon fall)', page.errors.length === 0, page.errors.join(' | '));
   await ctx.close();
 
+  // ---- chip music: with Music on (mm-music=1) a gesture starts the `realm` loop in the shore; the drone never runs beside it ----
+  ({ ctx, page } = await open(browser, 'mode=world&test=1', {}, { 'mm-music': '1', 'pixeltown-realm-audio-v1': JSON.stringify({ v: 1, ambience: true }) }));
+  await page.mouse.click(640, 400);
+  await page.waitForFunction(() => window.RealmAudio && RealmAudio.state().cue, null, { timeout: 5000 }).catch(() => {});
+  const mu = await page.evaluate(() => { const f = window.__mm.arena.sfx; return { st: RealmAudio.state(), cue: f && f.musicCue(), drone: f && f.ambienceOn() }; });
+  check('Music on: the realm chip loop plays after a gesture, without the drone', mu.cue === 'realm' && mu.st.cue === 'realm' && mu.drone === false, JSON.stringify(mu));
+  await page.evaluate(() => { localStorage.setItem('mm-music', '0'); RealmAudio.tick(); });
+  const mu2 = await page.evaluate(() => { const f = window.__mm.arena.sfx; return { cue: f.musicCue(), st: RealmAudio.state() }; });
+  check('Music off: the chip loop stops (the saved drone choice takes over)', !mu2.cue && !mu2.st.cue, JSON.stringify(mu2));
+  check('no page errors (music)', page.errors.length === 0, page.errors.join(' | '));
+  await ctx.close();
+
   // ---- phone boss fight (Trial of Six): the zone line never covers the boss bar, the goal line steps aside ----
   ({ ctx, page } = await open(browser, 'mode=world&test=1', { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true }, { 'pixeltown-save-v1': JSON.stringify({ realm: { level: 20, xp: 0, shards: 0, bestWave: 0, items: [], nextUid: 1, eq: {} } }) }));
   const rs = await page.evaluate(() => String(window.__mm.world.rush.start()));
