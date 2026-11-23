@@ -106,7 +106,9 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
   for (let i = 0; i < 40; i++) { await m.page.touchscreen.tap(20 + (i * 53) % 350, 90 + (i * 131) % 700); if (i % 4 === 3) await m.page.waitForTimeout(40); }
   const mm = await m.page.evaluate(() => ({ url: location.href, st: __stack.run.state, link: !!document.querySelector('#result a[href]') }));
   check('mashing taps over the canvas, Drop and the result card never navigates away', /games\/stack\//.test(mm.url) && !mm.link, JSON.stringify(mm));
-  const early = await m.page.evaluate(() => new Promise((res) => { if (__stack.run.state === 'play') __stack.end(); const c0 = __stack.run.state; const a = document.getElementById('again'); a.click(); res(__stack.run.state); }));
+  await m.page.evaluate(() => { if (__stack.run.state === 'play') __stack.end(); }); await m.page.waitForTimeout(500);
+  await m.page.click('#again'); await m.page.waitForFunction(() => __stack.run.state === 'play'); // a fresh run, whatever the mashing did
+  const early = await m.page.evaluate(() => { __stack.end(); document.getElementById('again').click(); return __stack.run.state; });
   check('a click in the first 450 ms of the result card is ignored (no instant restart)', early === 'over', early);
   await m.ctx.close();
 
