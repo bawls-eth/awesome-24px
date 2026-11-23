@@ -79,6 +79,8 @@ async function run(browser, label, opts, tap) {
   const sc = await page.evaluate(() => ({ ui: getComputedStyle(document.documentElement).getPropertyValue('--ui-scale').trim(), sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, acc: (() => { try { return JSON.parse(localStorage.getItem('pixeltown-access-v1')).hudScale; } catch (e) { return null; } })() }));
   check(L('Text size Huge sets --ui-scale 1.5 and pixeltown-access-v1.hudScale, no horizontal scroll'), sc.ui === '1.5' && sc.acc === 1.5 && sc.sw <= sc.cw, JSON.stringify(sc));
   await page.click('#mmset-close');
+  const mt = await page.evaluate(() => { MMNav.open(); const n = document.querySelector('.mm-nav-dest-name'); const r = { px: parseFloat(getComputedStyle(n).fontSize), fam: getComputedStyle(n).fontFamily, ssw: document.getElementById('mm-nav-sheet').scrollWidth, scw: document.getElementById('mm-nav-sheet').clientWidth }; MMNav.close(); return r; });
+  check(L('the Menu follows Text size (place names 15 px x 1.5) in the 8-bit font, no sideways scroll'), mt.px >= 22 && !/system-ui|Segoe|Roboto/.test(mt.fam) && mt.ssw <= mt.scw, JSON.stringify(mt));
 
   // ---- "World map" in the Menu opens the map view; Back from a game names Home vs World map ----
   await page.goto(HUB);

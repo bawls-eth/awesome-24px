@@ -17,7 +17,8 @@ New test: `game/tests/nav-settings.test.js`. Extended: `hub-home`, `shared-mm-na
 | 7 | 150% text: every Home card read "Lantern C...", "Walk and f...", the footer cut "Open" off the screen at 320 px and overflowed the bottom at 390 px | P2 | `data-ui-big` on `<html>` (mm-side-access / mm-settings); names and hints wrap, one card per row on phones, footer wraps and does not shrink |
 | 8 | a11y sweep: `mm-high-contrast` was never applied (no `data-high-contrast` on `<html>`) | P2 | `mm-access.js` (loaded on every page) applies it on load with one small token stylesheet (`#mm-hc-css`: dim text to paper, panels black, yellow focus ring); Settings re-applies it live |
 | 9 | a11y sweep: Hub map had no `<h1>`; the first useful keyboard action took 16 Tabs | P2 | the HUD name is an `<h1>` ("World map: ..."); a skip-link style "Play here" button is the first Tab stop on the map view and opens the place card |
-| 10 | P0 check: keys typed in the Settings feedback box (WASD, Enter, arrows) | ok | verified they never reach the map hotkeys (test) |
+| 10 | The Menu sheet ignored Settings > Text size and used the system sans font (SIMPLIFY-PLAN 4.1 says one pixel font) | P3 | `mm-nav.css`: `--ui-scale` on titles, rows, place names, hints and footer; `--px-font` stack; one place per row on phones at big text. The corner Menu button keeps its font (a wider label would overlap page buttons) |
+| 11 | P0 check: keys typed in the Settings feedback box (WASD, Enter, arrows) | ok | verified they never reach the map hotkeys (test) |
 
 Checked and fine: medal ids of all 11 games match the Hub whitelist (pop/dash/stack/echo MEDALS arrays, MMBugs/MMIsles MEDAL_IDS);
 Continue from each of 13 places; hostile saves in 30 keys: no errors, no prototype pollution, no injected markup, no horizontal scroll.
@@ -46,5 +47,9 @@ The test for it must set `Object.defineProperty(navigator, 'webdriver', { get: (
   (the Menu's World map now does this; `nav-town.test.js` compares paths only). P3.
 - **Realm** (`games/mad-maze/mad-maze.js`, `NAV.onSettings(() => axOpen(false))`): with a new profile the hero picker (`#realm-hero`) is open
   and Menu > Settings opens `#mm-settings` on top of it: two dialogs at once. Close/disable the picker first or hide Settings while it is up. P3.
+- **a11y sweep, not caused here** (the allow-list was seeded before these lanes merged; seen on the merged tip with a partial sweep):
+  `festival-bugs|menu|overlap:#btn-mute` and `festival-bugs|landmark|no-h1` at 667x375, `angler|contrast|#pg-play` 4.45:1,
+  `angler|keyboard-primary|too-far` (14 Tabs), `stalk|menu|overlap:#btn-settings` at 320x568 and at 150% text. I removed only the
+  13 `*|high-contrast|pref-not-applied` entries (fixed site-wide by `mm-access.js`) and the 4 hub entries.
 - **Hub footer "Open" on the Home screen** (my file, left as is because `hub-home.test.js` asserts it): it opens the map node card over the
   Home screen, which reads oddly. Consider hiding it on Home in the next flow pass. P4.
