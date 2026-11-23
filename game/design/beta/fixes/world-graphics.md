@@ -55,3 +55,12 @@ Each entry: item, files, test, how to retest by hand. Screenshots in `fixes/img/
 - Fix: the unwired b15 bag art replaces the arena's 6 code bag sprites (baked once into the same 26 px canvases: outlined pixel bags per bag tier). A T12 drop (gear.t 12) gets a 7th sprite: the red bag with the soulbound sparkle baked in (dropBag wrapper sets the bag's draw index only). All or nothing: any strip missing keeps the code bags; `?bagart=0` keeps them too.
 - Test: `tests/beta-w14-loot-bags.test.js` (7 art sprites outlined, no code glow; T12 bag red vs white / gold; T12 / T5 / plain drops pick the right sprite; red pixels on screen near the T12 bag; `?bagart=0` unchanged). `loot-bag-icons`, `world-pickups`, `gear-world-drops` green.
 - Before: tester evidence b02-06 (plain code squares); after: `img/w14-bags-after.jpg`.
+
+## W-09 Arcade / Hub layout (b09-01, b10-03, b15-03 fixed; b09-08 open; b09-09 checked)
+- Files: `games/pop/pop.css`, `games/jam/jam.css`, `hub/hub.css`, `games/stack/stack.css` (appended blocks).
+- Pop: score stat never wraps (nowrap, tabular digits, size capped at 4.6vw): 6 digits keep the box height (was 49 -> 72 px).
+- Jam at 260x563: the lane canvas yields height in short portrait so the four pads are fully on screen during a song (were at y 561).
+- Hub at 195 CSS px: one card column, titles wrap instead of 2-letter ellipses, the bottom bar wraps inside the viewport, title clears the Menu button.
+- Stack: the intro / result card starts at 76 px (below the header row). The test's disjoint check also passed on the old CSS at 390x844 (b09-09 was seen at another size), so it is a guard, not a repro.
+- OPEN b09-08 (Dash result above the fold): `dash-page` pins the result card below the scene and the card is ~590 px tall at 390x844, so CSS reordering cannot meet "top < 400 and fully visible" without breaking Run again under the thumb. Needs a compact result card (dash.js / minikit, Gameplay).
+- Test: `tests/beta-w09-arcade-layout.test.js` (6 asserts fail on the old CSS). `pop-page`, `dash-page`, `dash-bugbash`, `stack-page`, `jam-page`, `hub-page`, `hub-home` green.

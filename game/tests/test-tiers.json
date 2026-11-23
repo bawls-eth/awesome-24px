@@ -1580,5 +1580,9 @@
   "beta-w14-loot-bags.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-w09-arcade-layout.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
