@@ -137,7 +137,9 @@ const fsz = (sel) => parseFloat(getComputedStyle(document.querySelector(sel)).fo
   check('3 scale: the ability button scales (ring 33 px vs 22 px, label 21 px)', Math.abs(sz.ring - 33) < 0.6 && Math.abs(sz1.ring - 22) < 0.6 && sz.abil === 21, JSON.stringify([sz, sz1]));
   for (const t of [big, desk]) {
     const L = await ev(t, LAYOUT);
-    check(`3 ${t.label}: every visible button (${L.n}) is on screen, >= 44 px, and overlaps no other`, L.n >= 6 && !L.off.length && !L.small.length && !L.over.length && !L.hscroll, JSON.stringify(L));
+    // 8B: Log / Craft / Home dock moved into the Pack panel (one HUD button), so the HUD shows fewer buttons; the Pack must be one of them
+    check(`3 ${t.label}: the Pack button is shown and scales (>= 44 px)`, await ev(t, () => { const r = document.getElementById('btn-pack').getBoundingClientRect(); return r.width >= 44 && r.height >= 44 && parseFloat(getComputedStyle(document.getElementById('btn-pack')).fontSize) >= 18; }));
+    check(`3 ${t.label}: every visible button (${L.n}) is on screen, >= 44 px, and overlaps no other`, L.n >= 4 && !L.off.length && !L.small.length && !L.over.length && !L.hscroll, JSON.stringify(L));
     check(`3 ${t.label}: HUD / action text is >= 12 px x 1.5 (smallest ${L.minTxt} px)`, L.minTxt >= 18 - 0.01, JSON.stringify(L.tiny));
     await ev(t, () => { window.__isles.openPanel('log'); return true; });
     const P = await ev(t, LAYOUT);

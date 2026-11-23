@@ -200,7 +200,75 @@
     return Promise.resolve().then(() => li(base + ARENA.id + '.png')).then((im) => (im ? { img: im, w: ARENA.w, h: ARENA.h, ax: ARENA.ax, ay: ARENA.ay } : null), () => null);
   }
 
-  return { SETS: SETS, MEADOW_BASE: MEADOW_BASE, MEADOW_TILES: MEADOW_TILES, MEADOW_BLEND: MEADOW_BLEND, MEADOW_PALETTE: MEADOW_PALETTE, MEADOW_PROPS: MEADOW_PROPS,
+  // 8B: code-drawn terrain detail, painted ONCE onto a baked chunk (never per frame) so big fields do not look flat: 8 seeded tile variants
+  // (plain, speckle pair, grass tuft, pebble, dash, cross, checker dither, shade corner) in the tile's own palette shades, wave dashes on
+  // water, and stepped (stair) edges where two terrains meet (the neighbour's base colour in 4 px steps). Pure in its inputs: the same
+  // terrain + seed paint the same pixels. pal: name -> [base, shade, light, edge]. Returns the number of tiles touched.
+  const DETAIL_VARIANTS = 8;
+  function dhash(x, y, s) { let h = (Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(s | 0, 2246822519)) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+  function detailVariant(wx, wy, seed) { return Math.floor(dhash(wx, wy, seed) * DETAIL_VARIANTS); }
+  const WATERY = /water|sea|lagoon|murk|reef_deep|ocean/;
+  // one tile's detail pixels (variant v, offset cell q 0..15) and its stepped east / south edges, as fillRects at the tile origin
+  function paintTile(ctx, nm, p, v, q, T, u, eCol, sCol, par) {
+    const ox = u * (2 + 3 * (q & 3)), oy = u * (2 + 3 * (q >> 2));
+    if (WATERY.test(nm)) {
+      if (v < 3) { ctx.fillStyle = p[2]; ctx.fillRect(ox, oy, u * 3, u); ctx.fillRect(ox + u * 3, oy - u, u * 2, u); }
+    } else if (v === 1) { ctx.fillStyle = p[1]; ctx.fillRect(ox, oy, u, u); ctx.fillRect(ox + u * 3, oy + u * 2, u, u); }
+    else if (v === 2) { ctx.fillStyle = p[2]; ctx.fillRect(ox, oy, u, u * 2); ctx.fillRect(ox - u, oy - u, u, u); ctx.fillRect(ox + u, oy - u, u, u); }
+    else if (v === 3) { ctx.fillStyle = p[3]; ctx.fillRect(ox, oy + u, u * 2, u); ctx.fillStyle = p[2]; ctx.fillRect(ox, oy, u * 2, u); }
+    else if (v === 4) { ctx.fillStyle = p[2]; ctx.fillRect(ox, oy, u * 3, u); }
+    else if (v === 5) { ctx.fillStyle = p[1]; ctx.fillRect(ox + u, oy, u, u * 3); ctx.fillRect(ox, oy + u, u * 3, u); }
+    else if (v === 6) { ctx.fillStyle = p[1]; for (let k = 0; k < 4; k++) ctx.fillRect(ox + (k & 1) * u, oy + (k >> 1) * u * 2 + (k & 1) * u, u, u); }
+    else if (v === 7) { ctx.fillStyle = p[1]; ctx.fillRect(0, 0, u * 2, u * 2); }
+    if (eCol) { ctx.fillStyle = eCol; for (let k = (par >> 1) * 2 * u; k < T; k += 4 * u) ctx.fillRect(T - u, k, u, 2 * u); }
+    if (sCol) { ctx.fillStyle = sCol; for (let k = (par & 1) * 2 * u; k < T; k += 4 * u) ctx.fillRect(k, T - u, 2 * u, u); }
+  }
+  // an offset view of a context, so paintTile draws straight onto a chunk (the plain path; the node test inspects it)
+  function shifted(ctx, px, py) {
+    return { set fillStyle(v) { ctx.fillStyle = v; }, fillRect: (x, y, w2, h2) => ctx.fillRect(px + x, py + y, w2, h2) };
+  }
+  // opts.create(w, h) -> canvas turns on stamps: each distinct tile look (terrain, variant, offset cell, edge colours) is painted once into
+  // a small cached canvas and placed with ONE drawImage per detailed tile, so a chunk bake stays about one call per tile.
+  const STAMPS = new Map();
+  function detail(ctx, terrain, w, h, cx, cy, opts) {
+    try {
+      const o = opts && typeof opts === 'object' ? opts : {};
+      const names = o.names || NAMES, pal = o.palette || PALETTE, T = o.tile | 0 || 32, CH = o.ch | 0 || 16, seed = o.seed | 0;
+      if (!ctx || typeof ctx.fillRect !== 'function' || !terrain) return 0;
+      const mk = typeof o.create === 'function' && typeof ctx.drawImage === 'function' ? o.create : null;
+      const at = (x, y) => (x >= 0 && y >= 0 && x < w && y < h ? terrain[y * w + x] | 0 : -1);
+      const u = Math.max(1, Math.round(T / 16)); // one art pixel (2 px on a 32 px tile)
+      let n = 0;
+      for (let ty = 0; ty < CH; ty++) for (let tx = 0; tx < CH; tx++) {
+        const wx = cx * CH + tx, wy = cy * CH + ty, t = at(wx, wy);
+        if (t < 0) continue;
+        const nm = names[t], p = pal[nm];
+        if (!p) continue;
+        n++;
+        const v = detailVariant(wx, wy, seed), q = Math.floor(dhash(wy, wx, seed + 7) * 16);
+        const e = at(wx + 1, wy), s2 = at(wx, wy + 1);
+        const eCol = e >= 0 && e !== t && pal[names[e]] ? pal[names[e]][0] : null, sCol = s2 >= 0 && s2 !== t && pal[names[s2]] ? pal[names[s2]][0] : null;
+        const par = (eCol ? (wy & 1) << 1 : 0) | (sCol ? wx & 1 : 0);
+        if ((WATERY.test(nm) ? v >= 3 : v === 0) && !eCol && !sCol) continue;
+        const px = tx * T, py = ty * T;
+        if (!mk) { paintTile(shifted(ctx, px, py), nm, p, v, q, T, u, eCol, sCol, par); continue; }
+        const key = nm + '|' + v + '|' + q + '|' + (eCol || '') + '|' + (sCol || '') + '|' + par + '|' + T + '|' + p[0] + p[1] + p[2] + p[3];
+        let st = STAMPS.get(key);
+        if (!st) {
+          if (STAMPS.size >= 1500) STAMPS.clear();
+          st = mk(T, T);
+          const sg = st && st.getContext ? st.getContext('2d') : null;
+          if (!sg) { paintTile(shifted(ctx, px, py), nm, p, v, q, T, u, eCol, sCol, par); continue; }
+          paintTile(sg, nm, p, v, q, T, u, eCol, sCol, par);
+          STAMPS.set(key, st);
+        }
+        ctx.drawImage(st, px, py);
+      }
+      return n;
+    } catch (e) { return 0; }
+  }
+
+  return { DETAIL_VARIANTS: DETAIL_VARIANTS, detailVariant: detailVariant, detail: detail, SETS: SETS, MEADOW_BASE: MEADOW_BASE, MEADOW_TILES: MEADOW_TILES, MEADOW_BLEND: MEADOW_BLEND, MEADOW_PALETTE: MEADOW_PALETTE, MEADOW_PROPS: MEADOW_PROPS,
     MEADOW_ALIAS: MEADOW_ALIAS, edgeId: edgeId, ICON_BASE: ICON_BASE, ITEM_ICONS: ITEM_ICONS, iconUrl: iconUrl, ARENA: ARENA, loadArena: loadArena, PROP_BASE: PROP_BASE, PROPS: PROPS, PROP_ALIAS: PROP_ALIAS, loadProps: loadProps, propFor: propFor, drawPropArt: drawPropArt,
     BASE: BASE, VARIANTS: VARIANTS, NAMES: NAMES, TERRAINS: TERRAINS, PALETTE: PALETTE, tileId: tileId, idMap: idMap, load: load, create: create };
 });
