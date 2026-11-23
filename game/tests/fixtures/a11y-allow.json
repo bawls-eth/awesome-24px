@@ -1,10 +1,6 @@
 {
- "angler|keyboard-primary|not-found": "no Tab stop within 40 matches the primary action regex /cast|play|start|fish|begin|go|enter/i (stops",
- "angler|landmark|no-h1": "no visible <h1>",
- "angler|pref:text-200|menu:overlap:#journal-btn": "overlaps #journal-btn by 96x92",
  "dash|pref:text-150|text-not-scaled": "mean text 15.6px -> 15.6px (x1.00), expected >= x1.2 (hudScale 1.5 pref ignored)",
  "echo|keyboard-primary|no-effect": "Enter/Space on the focused primary action changed nothing",
- "festival-bugs|hscroll|page": "scrollWidth 333 > viewport 320; wide: n/a",
  "festival-bugs|keyboard-primary|not-found": "no Tab stop within 40 matches the primary action regex /play|start|begin|go|catch|safari|enter/i (st",
  "isles|contrast|#toast": "1.01:1 (need 4.5) #0c0e1b on #0b0d1a 14px \"Coral Reef opens with a \"",
  "isles|high-contrast|contrast:#toast": "2.44:1 (need 4.5) #535057 on #0b0d1a 14px \"Coral Reef opens with a \"",
@@ -57,7 +53,6 @@
  "realm-world|text-size|#realm-ab-3 > span.nm": "10.0px \"Bloom\"",
  "stack|keyboard-primary|no-effect": "Enter/Space on the focused primary action changed nothing",
  "stack|pref:text-150|text-not-scaled": "mean text 15.6px -> 15.6px (x1.00), expected >= x1.2 (hudScale 1.5 pref ignored)",
- "stalk|keyboard-primary|no-effect": "Enter/Space on the focused primary action changed nothing",
  "town|contrast|#bestie-label": "2.11:1 (need 4.5) #bcab96 on #fef8e8 12px \"pick a bestie \u2192\"",
  "town|contrast|#walkie-talk-btn": "2.45:1 (need 4.5) #ac9f8d on #fef8e8 12px \"\ud83c\udf99\ufe0f Hold to talk\"",
  "town|high-contrast|contrast:#bestie-label": "2.11:1 (need 4.5) #bcab96 on #fef8e8 12px \"pick a bestie \u2192\"",

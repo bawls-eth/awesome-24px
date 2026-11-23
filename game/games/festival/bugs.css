@@ -37,7 +37,7 @@ body { min-height:100vh; display:flex; flex-direction:column; align-items:center
 #help { font-size:calc(12px * var(--ui-scale,1)); color:var(--dim); margin:0; }
 @media (pointer: coarse), (max-width: 700px) { #touch { display:flex; } #help { display:none; } }
 
-#btn-mute { align-self:center; font:inherit; font-size:calc(12px * var(--ui-scale,1)); color:var(--ink); background:var(--panel); border:1px solid #0d160f; border-radius:8px; min-height:48px; min-width:48px; padding:4px 8px; cursor:pointer; }
+#btn-mute { margin-left:auto; align-self:center; font:inherit; font-size:calc(12px * var(--ui-scale,1)); color:var(--ink); background:var(--panel); border:1px solid #0d160f; border-radius:8px; min-height:48px; min-width:48px; padding:4px 8px; cursor:pointer; }
 #hint { margin-top:8px; background:rgba(13,22,15,.94); border:2px solid var(--accent); border-radius:8px; padding:8px 10px; font-size:calc(13px * var(--ui-scale,1)); }
 #hint[hidden] { display:none; }
 #hint p { margin:4px 0 8px; }
@@ -129,7 +129,6 @@ body { background-image:linear-gradient(rgba(255,255,255,.03) 2px, transparent 2
 /* Phone landscape: the stick and buttons float in the side gutters beside the field instead of sitting below it. */
 @media (orientation: landscape) and (max-height: 520px) and (pointer: coarse) {
   #top { padding-top:2px; padding-bottom:2px; }
-  #top h1 { display:none; }
   #canvas-wrap { width:min(100%, max(288px, calc((100vh - 150px) * 1.4286 + 24px))); }
   #touch { position:fixed; left:0; right:0; bottom:calc(8px + env(safe-area-inset-bottom)); padding:0 calc(10px + env(safe-area-inset-left)) 0 calc(10px + env(safe-area-inset-right)); z-index:20; pointer-events:none; align-items:flex-end; }
   #touch > * { pointer-events:auto; }
@@ -142,3 +141,5 @@ body { background-image:linear-gradient(rgba(255,255,255,.03) 2px, transparent 2
 /* 150% text: the HUD wraps instead of overflowing, and menu cards keep their text inside the button. */
 #hud { row-gap:2px; }
 #overlay button.card { overflow-wrap:anywhere; }
+/* Bug bash a11y: at 320 px the joystick + sneak + swing row was 333 px wide (horizontal scroll). */
+@media (max-width: 340px) { #joy { width:96px; height:96px; } #knob { left:28px; top:28px; } #btn-swing { width:84px; height:84px; } #btn-sneak { width:72px; } #touch { gap:6px; } }

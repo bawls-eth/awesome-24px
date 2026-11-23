@@ -26,7 +26,7 @@ const IDS = ['town', 'map', 'realm', 'lantern', 'isles', 'jam', 'bugs', 'angler'
 const SHEET_IDS = ['town', 'realm', 'isles', 'lantern', 'map', 'pop', 'dash', 'stack', 'echo', 'jam', 'angler', 'bugs', 'stalk', 'deepdelve'];
 const AUDITS = ['small', 'tinyText', 'overStick'];
 // The allow-lists may only shrink: these are the sizes frozen with the first fixture. Lower them when entries are removed.
-const FROZEN_MAX = { allow404: 0, offOrigin: 2, small: 9, tinyText: 2, overStick: 2 };
+const FROZEN_MAX = { allow404: 0, offOrigin: 2, small: 7, tinyText: 0, overStick: 0 };
 const T0 = Date.now();
 
 async function open(browser, viewport, touch) {
