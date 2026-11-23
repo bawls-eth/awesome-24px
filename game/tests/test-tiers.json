@@ -1395,6 +1395,10 @@
     "class": "browser",
     "tier": "smoke"
   },
+  "echo-bugbash.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "echo-page.test.js": {
     "class": "browser",
     "tier": "smoke"
