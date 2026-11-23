@@ -991,6 +991,56 @@
     return ent;
   }
 
+  // G-20 / G-21 (b05-01, b05-02): the Stable. The Party tab lists every tame (name, species, level, what it does now) with real buttons:
+  // "Join party" / "Rest" (party limit respected: 2, or 1 on the low tier; the companion spawns / despawns) and "Ride" on a rideable tame
+  // (TAMES.setMount + refreshMount; the saddle follows the chosen species). Swaps wait while you ride or fight a boss. One stable write each.
+  const partyMax = () => Math.min(TAMES.MAX_PARTY, LOW ? 1 : CMP.MAX_ACTIVE);
+  function stableBusy() { return ride ? 'Get off your mount first (R).' : bossAlive() && bz.engaged ? 'Not during a boss fight.' : ''; }
+  function stableJoin(id) {
+    const ent = TAMES.find(tames, id); if (!ent || !COMPANIONS) return false;
+    const busy = stableBusy(); if (busy) { toast(busy); return false; }
+    if (tames.party.indexOf(id) >= 0) return true;
+    if (tames.party.length >= partyMax()) { toast('Your party is full. Rest one first.'); return false; }
+    TAMES.setParty(tames, tames.party.concat([id])); TAMES.write(S, tames);
+    spawnCompanion(ent, hero.x + 36, hero.y + 12);
+    toast((ent.nm || specName(ent.sp)) + ' joins your party.');
+    return true;
+  }
+  function stableRest(id) {
+    const ent = TAMES.find(tames, id); if (!ent) return false;
+    const busy = stableBusy(); if (busy) { toast(busy); return false; }
+    if (tames.party.indexOf(id) < 0) return true;
+    TAMES.setParty(tames, tames.party.filter((x) => x !== id)); TAMES.write(S, tames);
+    dropCompanion(id);
+    toast((ent.nm || specName(ent.sp)) + ' rests at the stable.');
+    return true;
+  }
+  function stableRide(id) {
+    const ent = TAMES.find(tames, id); const d = ent && CR.get(ent.sp); if (!ent || !d || !d.rideable || !MOUNTS) return false;
+    const busy = stableBusy(); if (busy) { toast(busy); return false; }
+    TAMES.setMount(tames, id); TAMES.write(S, tames); refreshMount();
+    toast((ent.nm || d.name) + ' is your mount. R to ride.');
+    return true;
+  }
+  const specName = (sp) => { const d = CR.get(sp); return d ? d.name : sp; };
+  function stableRows(pl) {
+    const busy = stableBusy(), full = tames.party.length >= partyMax();
+    tames.roster.forEach((t) => {
+      const d = CR.get(t.sp); const inParty = tames.party.indexOf(t.id) >= 0; const riding = !!ride && ride.id === t.id; const isMount = !!mountEnt && mountEnt.id === t.id;
+      const p = party.find((x) => x.ent.id === t.id);
+      const what = riding ? 'riding' : inParty ? (p ? p.cs.mode : 'party') : 'resting';
+      const li = el('li', 'stable-row'); li.dataset.tame = t.id;
+      li.appendChild(el('span', 'st-name', (t.nm || specName(t.sp)) + (t.nm && d && t.nm !== d.name ? ' (' + d.name + ')' : '') + ' Lv ' + t.lv + ' - ' + what + (isMount && !riding ? ', mount' : '')));
+      const mk = (cls, text, why, fn) => { const b = el('button', 'st-btn ' + cls, text); b.type = 'button'; b.dataset.tame = t.id; b.style.minHeight = '44px'; b.style.minWidth = '44px'; if (why) { b.disabled = true; b.title = why; b.setAttribute('aria-label', text + ': ' + why); } else b.setAttribute('aria-label', text + ' ' + (t.nm || specName(t.sp))); b.addEventListener('click', () => { if (fn()) openPanel('party'); }); return b; };
+      if (COMPANIONS && d && d.companion) {
+        if (inParty) li.appendChild(mk('st-rest', 'Rest', busy, () => stableRest(t.id)));
+        else li.appendChild(mk('st-join', 'Join party', busy || (full ? 'Party is full (' + partyMax() + '). Rest one first.' : ''), () => stableJoin(t.id)));
+      }
+      if (MOUNTS && d && d.rideable) li.appendChild(mk('st-ride', isMount ? 'Mount' : 'Ride', busy || (isMount ? 'Already your mount' : ''), () => stableRide(t.id)));
+      pl.appendChild(li);
+    });
+  }
+
   // mount: the tames.mount entry (else the first rideable tame) through MMCompanion.ride
   let ride = null, rideArt = null, mountEnt = null, rideKind = null, rideDir = 0, rideDrawn = '', saddleDrawn = '', rideLift = 0, rideDx = 0; // rideLift / rideDx: where the hero was last drawn (test handle)
   function refreshMount() {
@@ -2622,8 +2672,8 @@
       panelTitle.textContent = 'Pack';
       const pl = $('party-list');
       while (pl.firstChild) pl.removeChild(pl.firstChild);
-      if (!party.length) pl.appendChild(el('li', 'dim', 'No party yet. Soothe a creature, then feed it.'));
-      party.forEach((p) => { const li = el('li', '', (p.ent.nm || p.def.name) + ' (' + p.cs.mode + ')'); li.dataset.tame = p.ent.id; pl.appendChild(li); });
+      if (!tames.roster.length) pl.appendChild(el('li', 'dim', 'No party yet. Soothe a creature, then feed it.'));
+      stableRows(pl); // G-20 / G-21: every tame is a Stable row (Join party / Rest / Ride)
       panelBody.appendChild(el('p', 'dim', 'Stable ' + tames.roster.length + '. XP ' + xp + '. ' + (HOME ? 'You are home.' : 'Home dock takes you home.')));
     } else if (kind === 'help') {
       panelTitle.textContent = 'Help';
