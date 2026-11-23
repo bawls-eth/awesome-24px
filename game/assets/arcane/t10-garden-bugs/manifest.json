@@ -1,0 +1,500 @@
+{
+  "batch": "t10",
+  "label": "garden-bugs",
+  "assets": [
+    {
+      "id": "ff_ladybug_idle",
+      "path": "fauna/ff_ladybug_idle.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 2,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "idle",
+      "dir": "right",
+      "fps": 2,
+      "loop": true
+    },
+    {
+      "id": "ff_ladybug_move",
+      "path": "fauna/ff_ladybug_move.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 4,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "move",
+      "dir": "right",
+      "fps": 8,
+      "loop": true
+    },
+    {
+      "id": "ff_ladybug_caught",
+      "path": "fauna/ff_ladybug_caught.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 1,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "caught",
+      "dir": "right",
+      "fps": 0,
+      "loop": false
+    },
+    {
+      "id": "ff_ladybug_idle_down",
+      "path": "fauna/ff_ladybug_idle_down.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 2,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "idle",
+      "dir": "down",
+      "fps": 2,
+      "loop": true
+    },
+    {
+      "id": "ff_ladybug_move_down",
+      "path": "fauna/ff_ladybug_move_down.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 4,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "move",
+      "dir": "down",
+      "fps": 8,
+      "loop": true
+    },
+    {
+      "id": "ff_ladybug_caught_down",
+      "path": "fauna/ff_ladybug_caught_down.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 1,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "caught",
+      "dir": "down",
+      "fps": 0,
+      "loop": false
+    },
+    {
+      "id": "ff_honeybee_idle",
+      "path": "fauna/ff_honeybee_idle.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 2,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "idle",
+      "dir": "right",
+      "fps": 2,
+      "loop": true
+    },
+    {
+      "id": "ff_honeybee_move",
+      "path": "fauna/ff_honeybee_move.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 4,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "move",
+      "dir": "right",
+      "fps": 8,
+      "loop": true
+    },
+    {
+      "id": "ff_honeybee_caught",
+      "path": "fauna/ff_honeybee_caught.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 1,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "caught",
+      "dir": "right",
+      "fps": 0,
+      "loop": false
+    },
+    {
+      "id": "ff_honeybee_idle_down",
+      "path": "fauna/ff_honeybee_idle_down.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 2,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "idle",
+      "dir": "down",
+      "fps": 2,
+      "loop": true
+    },
+    {
+      "id": "ff_honeybee_move_down",
+      "path": "fauna/ff_honeybee_move_down.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 4,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "move",
+      "dir": "down",
+      "fps": 8,
+      "loop": true
+    },
+    {
+      "id": "ff_honeybee_caught_down",
+      "path": "fauna/ff_honeybee_caught_down.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 1,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "caught",
+      "dir": "down",
+      "fps": 0,
+      "loop": false
+    },
+    {
+      "id": "ff_firefly_idle",
+      "path": "fauna/ff_firefly_idle.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 2,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "idle",
+      "dir": "right",
+      "fps": 2,
+      "loop": true
+    },
+    {
+      "id": "ff_firefly_move",
+      "path": "fauna/ff_firefly_move.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 4,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "move",
+      "dir": "right",
+      "fps": 8,
+      "loop": true
+    },
+    {
+      "id": "ff_firefly_caught",
+      "path": "fauna/ff_firefly_caught.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 1,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "caught",
+      "dir": "right",
+      "fps": 0,
+      "loop": false
+    },
+    {
+      "id": "ff_firefly_idle_down",
+      "path": "fauna/ff_firefly_idle_down.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 2,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "idle",
+      "dir": "down",
+      "fps": 2,
+      "loop": true
+    },
+    {
+      "id": "ff_firefly_move_down",
+      "path": "fauna/ff_firefly_move_down.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 4,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "move",
+      "dir": "down",
+      "fps": 8,
+      "loop": true
+    },
+    {
+      "id": "ff_firefly_caught_down",
+      "path": "fauna/ff_firefly_caught_down.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 1,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "caught",
+      "dir": "down",
+      "fps": 0,
+      "loop": false
+    },
+    {
+      "id": "ff_grasshopper_idle",
+      "path": "fauna/ff_grasshopper_idle.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 2,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "idle",
+      "dir": "right",
+      "fps": 2,
+      "loop": true
+    },
+    {
+      "id": "ff_grasshopper_move",
+      "path": "fauna/ff_grasshopper_move.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 4,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "move",
+      "dir": "right",
+      "fps": 8,
+      "loop": true
+    },
+    {
+      "id": "ff_grasshopper_caught",
+      "path": "fauna/ff_grasshopper_caught.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 1,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "caught",
+      "dir": "right",
+      "fps": 0,
+      "loop": false
+    },
+    {
+      "id": "ff_grasshopper_idle_down",
+      "path": "fauna/ff_grasshopper_idle_down.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 2,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "idle",
+      "dir": "down",
+      "fps": 2,
+      "loop": true
+    },
+    {
+      "id": "ff_grasshopper_move_down",
+      "path": "fauna/ff_grasshopper_move_down.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 4,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "move",
+      "dir": "down",
+      "fps": 8,
+      "loop": true
+    },
+    {
+      "id": "ff_grasshopper_caught_down",
+      "path": "fauna/ff_grasshopper_caught_down.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 1,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "caught",
+      "dir": "down",
+      "fps": 0,
+      "loop": false
+    },
+    {
+      "id": "ff_snail_idle",
+      "path": "fauna/ff_snail_idle.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 2,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "idle",
+      "dir": "right",
+      "fps": 2,
+      "loop": true
+    },
+    {
+      "id": "ff_snail_move",
+      "path": "fauna/ff_snail_move.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 4,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "move",
+      "dir": "right",
+      "fps": 8,
+      "loop": true
+    },
+    {
+      "id": "ff_snail_caught",
+      "path": "fauna/ff_snail_caught.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 1,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "caught",
+      "dir": "right",
+      "fps": 0,
+      "loop": false
+    },
+    {
+      "id": "ff_snail_idle_down",
+      "path": "fauna/ff_snail_idle_down.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 2,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "idle",
+      "dir": "down",
+      "fps": 2,
+      "loop": true
+    },
+    {
+      "id": "ff_snail_move_down",
+      "path": "fauna/ff_snail_move_down.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 4,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "move",
+      "dir": "down",
+      "fps": 8,
+      "loop": true
+    },
+    {
+      "id": "ff_snail_caught_down",
+      "path": "fauna/ff_snail_caught_down.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 1,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "fauna",
+      "action": "caught",
+      "dir": "down",
+      "fps": 0,
+      "loop": false
+    },
+    {
+      "id": "ff_firefly_glow",
+      "path": "fauna/ff_firefly_glow.png",
+      "frame_w": 64,
+      "frame_h": 64,
+      "frames": 1,
+      "anchor": {
+        "x": 32,
+        "y": 59
+      },
+      "category": "effect",
+      "fps": 0,
+      "loop": false
+    }
+  ]
+}
