@@ -1823,7 +1823,8 @@
       if (n.role === 'heal') { const p = arena.player; const was = p.hp; p.hp = arena.stats.maxHp; arena._syncHud(); nxSay(name, was < p.hp ? 'There. Whole again, no charge.' : 'You look perfectly well to me.'); return; }
       if (n.role === 'oracle') { const o = MMQuests.oracle(todayUtc()); nxSay(name, o ? o.text : 'The mists are quiet.'); return; }
       if (n.role === 'quests') { if (typeof nxBoardOpen === 'function') nxBoardOpen(); nxSay(name, 'Here is the day\'s board. Three jobs, free to take.'); return; }
-      if (n.stall && nxStallOn()) { nxStallOpen(); nxSay(name, n.stall === 'forge' ? 'The anvil is yours to use. Salvage and reforge live in your backpack Forge.' : 'Same goods, same prices, every day. Take your time.'); return; }
+      if (n.stall && nxStallOn()) { nxStallOpen(); if (n.stall === 'forge') { const fb = document.getElementById('rw-nx-forge'); if (fb) { fb.classList.add('nx-hi'); try { fb.focus({ preventScroll: true }); } catch (e) { /* focus is cosmetic */ } } } // G-18 (b04-09): the Blacksmith points at the Forge button in this stall
+        nxSay(name, n.stall === 'forge' ? 'The anvil is yours to use. Tap "Open the Forge" below to salvage and reforge your gear.' : 'Same goods, same prices, every day. Take your time.'); return; }
       if (n.role === 'shop' && typeof arena.setShop === 'function') { nxSay(name, 'Take a look. Everything is priced in 💎 shards, same every day.'); nxStallShop(); return; } // forge/stall off: the vendor still opens the classic shop
       const key = n.role === 'rumours' ? 'rumours' : n.role === 'shop' ? 'vendor' : n.role === 'combine' ? 'blacksmith' : 'guide';
       const L = NX_LINES[key]; nxSay(name, L[(MMRng.hash(todayUtc() + n.id) + nxTalkN) % L.length]);
