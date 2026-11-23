@@ -84,8 +84,9 @@
     }
     return on;
   }
-  if (typeof document !== 'undefined' && typeof localStorage !== 'undefined') {
-    let ls = null; try { ls = localStorage; } catch (e) { ls = null; }
+  if (typeof document !== 'undefined') {
+    // beta S-05/S-10: `typeof localStorage` still runs the getter, which throws when site data is blocked
+    let ls = null; try { ls = typeof localStorage !== 'undefined' ? localStorage : null; } catch (e) { ls = null; }
     try { applyContrast(document, ls); } catch (e) { /* the page works without it */ }
   }
   return { prefs, PALETTES, BG, MIN_CONTRAST, OUTLINE_PX, contrast, palette, passesContrast, remap, names: () => Object.keys(PALETTES), HC_KEY, highContrast, applyContrast };

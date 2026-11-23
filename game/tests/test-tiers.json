@@ -1568,5 +1568,29 @@
   "shared-mm-profile-rekindle.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "beta-s01-town-restore.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "beta-s02-town-two-tabs.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "beta-s05-deepdelve-storage.test.js": {
+    "class": "browser",
+    "tier": "smoke"
+  },
+  "beta-s06-art-cache.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-s04-coop-save.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "beta-s03-backup-skip.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }
