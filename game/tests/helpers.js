@@ -42,6 +42,8 @@ async function townReady(page, timeout) {
     const g = window.__g; const s = g && g.scene && g.scene.getScene && g.scene.getScene('Town');
     return !!(s && s.sys && s.sys.isActive() && s.lifetimeStats && s.localBody && s.cameras && s.cameras.main);
   }, null, { timeout: timeout || LS.budget(20000), polling: 100 }).catch(() => { /* a test that never expects a Town (rare) still gets its own assertions */ });
+  // beta S-08: three.js now loads on the first cave visit; tests that call scene.enterUnderground() synchronously get it ready here
+  await page.evaluate(() => (typeof window.ugEnsureThree === 'function' ? window.ugEnsureThree() : true)).catch(() => {});
 }
 const scene = (page, fn, arg) => page.evaluate(`(${fn.toString()})(window.__g.scene.getScene('Town'), ${JSON.stringify(arg)})`);
 

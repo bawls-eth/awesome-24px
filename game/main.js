@@ -3792,6 +3792,18 @@ class TownScene extends Phaser.Scene {
 
   enterUnderground() {
     if (this.inUnderground) return;
+    // beta S-08: three.js loads on the first cave visit (ugEnsureThree in underground.js); until then say so, then go in
+    if (typeof THREE === 'undefined' && typeof ugEnsureThree === 'function') {
+      if (this._ugLoading) return;
+      this._ugLoading = true;
+      this.showFloatingText(this.localBody.x, this.localBody.y - 30, 'Loading the cave...');
+      ugEnsureThree().then((ok) => {
+        this._ugLoading = false;
+        if (ok) { this.enterUnderground(); return; }
+        this.addChatLine({ system: true, text: 'Could not load the cave. Check your connection and try the hole again.' });
+      });
+      return;
+    }
     this.inUnderground = true;
     this.incrementStat('caveVisits');
     document.getElementById('dig-hole-hint').classList.add('hidden');
