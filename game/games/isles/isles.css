@@ -213,3 +213,22 @@ button:active { box-shadow: inset 2px 2px 0 rgba(0,0,0,.3); }
 .px8 .panel .dim, .px8 .log-list .dim, .px8 #hud .dim { font-size: inherit; }
 /* 8B: the panel title + Close stay pinned while a long tab (Log, Craft) scrolls */
 .panel .panel-head { position: sticky; top: -10px; margin: -10px -12px 0; padding: 10px 12px 6px; background: var(--px-panel); z-index: 2; }
+/* BB (bug bash): the first-visit how-to never covers the hero. Phones: it sits under the HUD row; the toast draws over it */
+#toast { z-index: 5; }
+@media (max-width: 600px) and (min-height: 501px) { .howto { top: calc(130px + env(safe-area-inset-top)); } }
+/* BB: 150% text: ATTACK still fits its 76 px button (the label stays above the 12 px floor) */
+#btn-fire { padding: 0 2px; letter-spacing: 0; font-size: min(calc(14px * var(--us)), 18px); }
+/* BB: an open Pack / sea chart hides the calm hint line and the how-to behind it (they read through the panel edges) */
+body.panel-open .hint, body.panel-open .howto { visibility: hidden; }
+/* BB: short landscape phones: the hint leaves the hero (screen centre) and sits at the bottom between the stick and the buttons;
+   the minimap shrinks so the Map / Attack column keeps its room; the how-to moves right of the hero */
+@media (max-height: 500px) and (orientation: landscape) {
+  #mini { width: 96px; height: 96px; }
+  body.touch .hint, body.touch.abil-on .hint { left: calc(160px + env(safe-area-inset-left)); right: calc(212px + env(safe-area-inset-right)); bottom: calc(8px + env(safe-area-inset-bottom)); transform: none; width: auto; max-width: none; }
+  body.touch .decor, body.touch.abil-on .decor { left: calc(160px + env(safe-area-inset-left)); right: calc(212px + env(safe-area-inset-right)); bottom: calc(72px + env(safe-area-inset-bottom)); }
+  body.touch .boss-bar { bottom: auto; top: calc(8px + env(safe-area-inset-top)); left: auto; right: calc(112px + env(safe-area-inset-right)); transform: none; width: min(260px, calc(100% - 560px)); min-width: 180px; }
+  .howto { left: auto; right: calc(72px + env(safe-area-inset-right)); top: calc(112px + env(safe-area-inset-top)); transform: none; width: min(300px, 38%); }
+}
+/* BB: the Feed button fills up while the creature chews (--p 0..1, a few times a second); still tappable, it just says how long */
+#btn-feed { white-space: nowrap; min-width: 96px; }
+#btn-feed.chew { background: linear-gradient(90deg, #b9e08a calc(var(--p, 1) * 100%), #c8b07a 0); color: #3a2c10; }

@@ -1359,6 +1359,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "isles-bugbash.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "isles-access.test.js": {
     "class": "browser",
     "tier": "full"
