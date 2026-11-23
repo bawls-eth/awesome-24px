@@ -1,0 +1,14 @@
+{
+  "batch": "t13",
+  "label": "wetland-fauna",
+  "generated_utc": "2026-11-23T10:49:01.255393Z",
+  "files": 35,
+  "duplicate_ids": 0,
+  "blocking": {},
+  "warnings": {},
+  "standing_heights": {
+    "None/right": 64,
+    "None/down": 100
+  },
+  "status": "provisional"
+}
