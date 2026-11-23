@@ -1450,5 +1450,9 @@
   "realm-hud-8bit.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "art-mini-art.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }
