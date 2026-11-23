@@ -323,7 +323,7 @@
       more: [{ id: 'fresh', label: 'New course' }],
       menuHref: '../../index.html',
       ids: { again: 'again', code: 'r-code', copy: 'r-copy', goal: 'r-goal' },
-    }), { again: () => start(run.seed), more: [() => start()], extra: [rMedals], keyReady: () => performance.now() - endAt > 700 });
+    }), { again: () => start(run.seed), more: [() => start()], extra: [rMedals], holdMs: 400, keyReady: () => performance.now() - endAt > 700 }); // G-17: kit click guard
   }
   function medalList(ul) {
     while (ul.firstChild) ul.removeChild(ul.firstChild);

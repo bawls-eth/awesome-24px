@@ -194,6 +194,7 @@
   const rMedals = $('r-medals');
   let resCard = null, resShownAt = -1e9;
   // taps still landing from the round (or a mashing finger) must not hit Play again / Replay / Copy the instant the card appears
+  // G-17: the MMMiniKit card now guards real taps itself; this page guard stays as well (it also holds scripted / keyboard-style clicks)
   $('result').addEventListener('click', (ev) => { if (performance.now() - resShownAt < 450) { ev.stopPropagation(); ev.preventDefault(); } }, true);
   // the result card never navigates: any link inside it is neutralised (belt and braces)
   $('result').addEventListener('click', (ev) => { const a = ev.target && ev.target.closest && ev.target.closest('a'); if (a) ev.preventDefault(); }, true);
@@ -222,9 +223,11 @@
       lines,
       goalText: nextGoal(),
       seed: run.seed,
-      // no Town link on the card: a mashing finger landing on it left the game (bug bash). The Menu button (MMNav) is the way out.
+      // no Town link on the card: a mashing finger landing on it left the game (bug bash). G-17 (b08-07): a kit "Menu" button opens the shared
+      // nav sheet (MMNav) instead, and the kit's click guard keeps it inert for the first 400 ms.
+      more: window.MMNav && typeof window.MMNav.open === 'function' ? [{ id: 'r-menu', label: 'Menu' }] : [],
       ids: { head: 'r-title', again: 'again', replay: 'replay', code: 'r-code', copy: 'r-copy', goal: 'r-goal' },
-    }), { again: () => start(), replay: (sd) => start(sd), extra: [rMedals], holdMs: 400 });
+    }), { again: () => start(), replay: (sd) => start(sd), more: [() => { try { window.MMNav.open(); } catch (e) { /* no nav sheet */ } }], extra: [rMedals], holdMs: 400 });
   }
   function medalList(ul) {
     while (ul.firstChild) ul.removeChild(ul.firstChild);

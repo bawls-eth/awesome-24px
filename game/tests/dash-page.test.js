@@ -4,6 +4,8 @@
 // Standalone page only: never joins the town. Firebase hosts are blocked (blockDb) and must see 0 attempts.
 const { chromium } = require('playwright');
 const { check, done, blockDb } = require('./helpers');
+// G-17: the kit's result card ignores clicks for its holdMs after it opens: wait for that (a condition, not a sleep) before tapping it
+const kitReady = (pg) => pg.waitForFunction(() => { const r = document.getElementById('result'); return !r || !r.__mkOn || r.__mkOn.clickReady(); }, null, { timeout: 3000 }).catch(() => {});
 const BASE = process.env.BASE || 'http://localhost:9355/game/index.html';
 const PAGE = BASE.replace(/index\.html.*$/, '') + 'games/dash/index.html';
 const KEY = 'pixeltown-dash-v1', MKEY = 'pixeltown-medals-dash-v1';
@@ -61,7 +63,7 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
   await p.evaluate(() => { __dash.start('night1'); __dash.step(20000, { lead: 26 }); });
   const g1 = await p.evaluate(() => ({ st: __dash.run.state, dist: __dash.run.dist, ghost: __dash.save.ghost }));
   check('best run on a course is saved as a ghost (inputs + distance)', g1.st === 'over' && g1.ghost && g1.ghost.seed === 'night1' && g1.ghost.in.length > 5 && g1.ghost.dist === g1.dist, JSON.stringify({ st: g1.st, d: g1.dist, n: g1.ghost && g1.ghost.in.length }));
-  await p.tap('#again');
+  await kitReady(p); await p.tap('#again');
   const gh = await p.evaluate(() => {
     const out = { seed: __dash.run.seed, ghost: !!__dash.ghost, msg: document.getElementById('msg').textContent, ys: [] };
     for (let i = 0; i < 600; i++) { __dash.step(1); if (i % 30 === 0) out.ys.push(Math.round(__dash.ghost.y)); }
@@ -83,7 +85,7 @@ const lj = (p, k) => p.evaluate((key) => JSON.parse(localStorage.getItem(key)), 
   // targets
   const t = await p.evaluate(() => ['jump', 'again', 'fresh', 'btn-mute'].map((id) => { const r = document.getElementById(id).getBoundingClientRect(); return [id, Math.round(r.width), Math.round(r.height)]; }).concat([['scroll', document.documentElement.scrollWidth <= innerWidth ? 99 : 0, 99]]));
   check('phone: Jump, Play again, New course, Sound are >= 44 px; no horizontal scroll', t.every((x) => x[1] >= 44 && x[2] >= 44), JSON.stringify(t));
-  await p.tap('#fresh');
+  await kitReady(p); await p.tap('#fresh');
   check('New course rolls a new seed', await p.evaluate(() => __dash.run.state === 'play' && __dash.run.seed !== 'night1' && !__dash.ghost));
   // the big Jump button (touch) makes the hero jump
   const jb = await p.locator('#jump').boundingBox();

@@ -4,6 +4,8 @@
 // Standalone page only: never joins the town. Firebase hosts are blocked (blockDb) and must see 0 attempts.
 const { chromium } = require('playwright');
 const { check, done, blockDb } = require('./helpers');
+// G-17: the kit's result card ignores clicks for its holdMs after it opens: wait for that (a condition, not a sleep) before tapping it
+const kitReady = (pg) => pg.waitForFunction(() => { const r = document.getElementById('result'); return !r || !r.__mkOn || r.__mkOn.clickReady(); }, null, { timeout: 3000 }).catch(() => {});
 const BASE = process.env.BASE || 'http://localhost:9371/game/index.html';
 const PAGE = BASE.replace(/index\.html.*$/, '') + 'games/echo/index.html';
 const KEY = 'pixeltown-echo-v1', MKEY = 'pixeltown-medals-echo-v1';
@@ -75,10 +77,10 @@ const echoTune = (p) => p.evaluate(() => { __echo.listen(); const s = __echo.seq
   check('kit: Copy is >= 44 px, Play again is the first focusable, no text under 12 px', kit.copy[0] >= 44 && kit.copy[1] >= 44 && kit.first === 'again' && kit.small.length === 0, JSON.stringify(kit));
   const btns = await p.evaluate(() => ['again', 'replay'].map((id) => { const r = document.getElementById(id).getBoundingClientRect(); return [id, r.width, r.height]; }));
   check('phone: Play again / Replay seed are >= 44 px', btns.every((x) => x[1] >= 44 && x[2] >= 44), JSON.stringify(btns));
-  await p.tap('#replay');
+  await kitReady(p); await p.tap('#replay');
   check('Replay seed sings the very same melody', await p.evaluate((q) => JSON.stringify(__echo.seq(20)) === q && __echo.run.seed === 'bloom1' && __echo.run.score === 0 && __echo.run.leaves === 3, seq1));
   await p.evaluate(() => __echo.end());
-  await p.tap('#again');
+  await kitReady(p); await p.tap('#again');
   check('Play again rolls a new seed and a new melody', await p.evaluate((q) => JSON.stringify(__echo.seq(20)) !== q && __echo.run.seed !== 'bloom1', seq1));
   // keyboard: number keys
   await p.evaluate(() => { document.activeElement.blur(); __echo.listen(); });

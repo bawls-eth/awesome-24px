@@ -1636,5 +1636,9 @@
   "beta-g16-reel-lost.test.js": {
     "class": "browser",
     "tier": "smoke"
+  },
+  "beta-g17-result-guard.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }
