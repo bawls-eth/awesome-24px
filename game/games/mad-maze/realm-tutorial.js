@@ -62,11 +62,32 @@
         e.style.top = Math.round(top) + 'px'; r = e.getBoundingClientRect();
       }
     }
+    // G-15 (b08-04): the 'bag' step guarantees a bag within 6 tiles of the hero (one tutorial bag, dropped two tiles ahead) and says where it is
+    let tuBag = null;
+    function bagNear() {
+      const p = arena.player; if (!p || !Array.isArray(arena.bags)) return null;
+      let best = null, bd = 6 * 32;
+      arena.bags.forEach((b) => { if (b && b.active) { const d = Math.hypot(b.x - p.x, b.y - p.y); if (d <= bd) { bd = d; best = b; } } });
+      return best;
+    }
+    function ensureBag() {
+      if (bagNear() || !arena.player || typeof arena.dropBag !== 'function' || arena.state !== 'play') return;
+      const p = arena.player; const b = arena.dropBag(p.x + 140, p.y, 0, 'heartcharm'); // 4.4 tiles: inside 6, outside the 110 px pickup drift, so the hero walks to it
+      if (b) { b.id = 'heartcharm'; b.vx = 0; b.vy = 0; b.tutorial = true; tuBag = b; }
+    }
+    function bagWhere() {
+      const b = bagNear(), p = arena.player; if (!b || !p) return '';
+      const dx = b.x - p.x, dy = b.y - p.y;
+      const dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'below you' : 'above you');
+      return ' A bag is close by, ' + (dir === 'right' || dir === 'left' ? 'to your ' + dir : dir) + '.';
+    }
     function render() {
       const cur = MT.realmCurrent(rec.s);
       if (cur === 'done') { root.classList.add('hidden'); keepClear(toast); return; }
       const pr = MT.realmProgress(rec.s);
-      txt.textContent = MT.realmText(cur, coarse); prog.textContent = (pr.done + 1) + ' / ' + pr.total; root.dataset.step = cur; root.classList.remove('hidden');
+      if (cur === 'bag') ensureBag();
+      txt.textContent = MT.realmText(cur, coarse) + (cur === 'bag' ? bagWhere() : ''); prog.textContent = (pr.done + 1) + ' / ' + pr.total; root.dataset.step = cur;
+      root.classList.toggle('hidden', arena.state === 'dead'); // G-15: the fall panel (Try again) is never under the coach card
       keepClear(root);
     }
     window.addEventListener('resize', () => { keepClear(root); keepClear(toast); });
@@ -102,6 +123,8 @@
       try {
         const p = arena.player;
         if (rec.s.finished) return;
+        const dead = arena.state === 'dead'; if (dead !== stat.dead) { stat.dead = dead; render(); } // G-15: hide the coach while the fall panel is up
+        if (!dead && MT.realmCurrent(rec.s) === 'bag' && ((stat.tick = (stat.tick + 1) % 8) === 0)) { ensureBag(); txt.textContent = MT.realmText('bag', coarse) + bagWhere(); }
         if (arena.active && p && stat.x0 === null) { stat.x0 = p.x; stat.y0 = p.y; }
         if (arena.active && !arena.paused && arena.state === 'play' && p && stat.x0 !== null) {
           if (Math.hypot(p.x - stat.x0, p.y - stat.y0) > 48) event('moved');

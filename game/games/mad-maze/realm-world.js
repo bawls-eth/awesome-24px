@@ -1012,6 +1012,8 @@
       return res;
     }
     function evTick() {
+      // G-15 (b08-04): no Raid / Swarm countdown while the first-run coach is still teaching (it starts once the coach is done or skipped)
+      try { const tu = window.__mmTutorial; if (tu && typeof tu.current === 'function' && tu.current() !== 'done') { evList = []; evFocus = null; syncEventHud(); return; } } catch (e) { /* no coach: events as usual */ }
       const now = eventClock(); const p = arena.player;
       evList = Z.eventsFor(world, now);
       const seen = new Set();
