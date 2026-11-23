@@ -19,6 +19,8 @@
     const el = doc && doc.documentElement;
     if (el) {
       el.style.setProperty('--ui-scale', String(c.scale));
+      // data-ui-big: CSS cannot compare a custom property, so big text (>= 1.25) also gets an attribute for layout rules.
+      if (c.scale >= 1.25) el.setAttribute('data-ui-big', '1'); else el.removeAttribute('data-ui-big');
       if (c.reduceMotion) el.setAttribute('data-reduce-motion', '1'); else el.removeAttribute('data-reduce-motion');
     }
     return c;

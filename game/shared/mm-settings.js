@@ -94,6 +94,7 @@
     const el = doc && doc.documentElement;
     if (el) {
       el.style.setProperty('--ui-scale', String(v['text-size']));
+      if (v['text-size'] >= 1.25) el.setAttribute('data-ui-big', '1'); else el.removeAttribute('data-ui-big'); // layout hook (mm-side-access.js)
       const at = (n, on) => { if (on) el.setAttribute(n, '1'); else el.removeAttribute(n); };
       at('data-reduce-motion', v['reduce-motion'] || !v.flashes);
       if (el.classList) el.classList.toggle('reduce-motion', !!(v['reduce-motion'] || !v.flashes)); // MM8.reducedMotion() reads this class

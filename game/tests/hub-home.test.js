@@ -186,6 +186,21 @@ async function homeChecks(browser, label, opts) {
     const o = await open(browser, PHONE, HUB, { 'pixeltown-access-v1': JSON.stringify({ v: 1, hudScale: 1.5 }) });
     const r = await o.page.evaluate(() => ({ scale: getComputedStyle(document.documentElement).getPropertyValue('--ui-scale').trim(), sw: document.documentElement.scrollWidth, iw: innerWidth, f: parseFloat(getComputedStyle(document.querySelector('.hc-name')).fontSize) }));
     check('ui-scale 1.5: bigger text, no horizontal scroll', r.scale === '1.5' && r.f >= 19 && r.sw <= r.iw, JSON.stringify(r));
+    // bug bash: at 150 % no game name or hint is cut ("Lantern C..."), cards go one per row on phones, the footer stays on screen
+    const big = await o.page.evaluate(() => {
+      const cut = [...document.querySelectorAll('#home .hc-name, #home .hc-hint, #home-play-sub, #home-next .hn-txt')].filter((n) => n.scrollWidth > n.clientWidth + 1).map((n) => n.textContent);
+      const cols = new Set([...document.querySelectorAll('#home .home-card')].map((a) => Math.round(a.getBoundingClientRect().left))).size;
+      const foot = [...document.querySelectorAll('#bar a, #bar button')].filter((n) => n.offsetParent).map((n) => n.getBoundingClientRect()).every((r) => r.bottom <= innerHeight + 0.5 && r.right <= innerWidth + 0.5 && r.left >= 0);
+      return { attr: document.documentElement.getAttribute('data-ui-big'), cut, cols, foot };
+    });
+    check('ui-scale 1.5: no cut-off game names or hints, one card per row, every footer button fully on screen', big.attr === '1' && big.cut.length === 0 && big.cols === 1 && big.foot, JSON.stringify(big));
+    await o.ctx.close();
+  }
+  for (const vp of [{ width: 320, height: 568 }, { width: 844, height: 390 }]) {
+    const o = await open(browser, { viewport: vp, isMobile: true, hasTouch: true }, HUB, { 'pixeltown-access-v1': JSON.stringify({ v: 1, hudScale: 1.5 }) });
+    const r = await o.page.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: innerWidth, cut: [...document.querySelectorAll('#home .hc-name, #home .hc-hint')].filter((n) => n.scrollWidth > n.clientWidth + 1).length,
+      foot: [...document.querySelectorAll('#bar a, #bar button')].filter((n) => n.offsetParent).every((n) => { const b = n.getBoundingClientRect(); return b.bottom <= innerHeight + 0.5 && b.right <= innerWidth + 0.5; }) }));
+    check('ui-scale 1.5 at ' + vp.width + 'x' + vp.height + ': no horizontal scroll, no cut names, footer on screen', r.sw <= r.iw && r.cut === 0 && r.foot, JSON.stringify(r));
     await o.ctx.close();
   }
   await browser.close();
