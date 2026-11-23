@@ -7450,6 +7450,10 @@ class TownScene extends Phaser.Scene {
         if (blockers.some((b) => x > b[0] && x < b[2] && y > b[1] && y < b[3])) continue;
         if (this.ffInPond(MAIN_POND, x, y, 1.25) || this.ffInPond(EAST_POND, x, y, 1.25)) continue;
         if (keepClear.some((k) => Math.hypot(k.x - x, k.y - y) < 60)) continue;
+        // Interaction radii that win over a weed in interact(): the shop house, the museum and every possible scavenger spot (day-dependent), so a weed is never shadowed by them.
+        if (Math.hypot(HOUSE_POS.x + HOUSE_POS.w / 2 - x, HOUSE_POS.y + HOUSE_POS.h / 2 - y) < SHOP_RADIUS + 12) continue;
+        if (Math.hypot(MUSEUM_POS.x + MUSEUM_POS.w / 2 - x, MUSEUM_POS.y + MUSEUM_POS.h / 2 - y) < MUSEUM_RADIUS + 12) continue;
+        if (SCAVENGER_SPOTS.some((k) => Math.hypot(k.x - x, k.y - y) < SCAVENGER_RADIUS + 12)) continue;
         // The home plot is a 156x96 footprint: keep weeds off it (and its fence).
         if (Math.abs(x - HOME_POS.x) < 175 && Math.abs(y - HOME_POS.y) < 80) continue;
         // Talk-radius NPCs: stay outside their interaction radius so a weed can't steal a chat.
