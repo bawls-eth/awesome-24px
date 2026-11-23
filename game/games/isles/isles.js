@@ -604,7 +604,8 @@
   const CLASSIC_POUCH = Q.get('pouch') === 'classic' || !POUCH;
   const pouch = POUCH ? POUCH.starter(ISLE, { classic: CLASSIC_POUCH }) : Object.assign({}, IC.STARTER_POUCH);
   let lastHurtT = -1e9, lastRewardT = 0; // IF1: sim time of the last hit taken (regen) and of the last reward (sparkles)
-  function reward() { lastRewardT = simT; }
+  let lastFindT = 0; // the first-ten pity's clock: the last find (an item, tame, drop or journal entry); a hot-spring soak is a rest, not a find
+  function reward(rest) { lastRewardT = simT; if (!rest) lastFindT = simT; }
   function blocked(x, y) {
     const r = HERO_R - 1;
     return heroSolidAt(tileOf(x - r), tileOf(y - r)) || heroSolidAt(tileOf(x + r), tileOf(y - r)) || heroSolidAt(tileOf(x - r), tileOf(y + r)) || heroSolidAt(tileOf(x + r), tileOf(y + r));
@@ -1965,12 +1966,18 @@
   if (!save.spark || save.spark.day !== DAY) save.spark = { day: DAY, n: {} };
   let sparkle = null, sparkTry = 0;
   function sparkTick() {
-    if (!POUCH || !CRAFT || hero.dead || simT - lastRewardT < POUCH.SPARKLE_AFTER) return;
+    // the first-ten-minutes pity (MMIslePouch.PITY_*): a soak does not reset it, placed 2-3 steps away and no daily cap, so a fresh player
+    // never waits long whatever the spawns did; it is still a plain seeded find (own MMRng stream), it never expires or nags
+    const pity = !!(POUCH && POUCH.PITY_AFTER) && simT < POUCH.PITY_WINDOW;
+    const since = pity ? simT - lastFindT : simT - lastRewardT;
+    // never while you are low on air (mars): a find must not lure you away from the way back to a dome
+    if (!POUCH || !CRAFT || hero.dead || envS.warnO || envS.emptyO || since < (pity ? POUCH.PITY_AFTER : POUCH.SPARKLE_AFTER)) return;
     // an unpicked sparkle you walked far away from moves back near you (it is the same sparkle: the day's count does not grow)
     const moving = !!sparkle && sparkle.until === 0;
     if (moving && Math.hypot((sparkle.x + 0.5) * TILE - hero.x, (sparkle.y + 0.5) * TILE - hero.y) <= (POUCH.SPARKLE_R + 4) * TILE) return;
     const used = (save.spark.n[ISLE] | 0) - (moving ? 1 : 0);
-    if (used >= POUCH.SPARKLES_PER_DAY || (bz.engaged && bossAlive())) return;
+    // the daily cap (and the 40 s wait) after the first ten minutes; the pity window before that (MMIslePouch.sparkleDue)
+    if ((POUCH.sparkleDue ? !POUCH.sparkleDue(since, simT, used) : used >= POUCH.SPARKLES_PER_DAY) || (bz.engaged && bossAlive())) return;
     if (moving) { nodeAt.delete(sparkle.y * W + sparkle.x); sparkle.until = Infinity; }
     const rs = RNG.create('isles|spark|' + ISLE + '|' + SEED + '|' + DAY + '|' + used + '|' + (sparkTry++));
     // a tile the hero can walk to: a small flood fill (4-neighbour, <= SPARKLE_R steps) from the hero's tile, then one seeded pick among
@@ -1979,7 +1986,7 @@
     seen.set(q[0], 0);
     for (let h = 0; h < q.length; h++) {
       const i = q[h], st = seen.get(i), x = i % W, y = (i - x) / W;
-      if (st >= 2 && !nodeAt.has(i)) (st <= 6 ? near : far).push(i);
+      if (st >= 2 && !nodeAt.has(i)) (st <= (pity ? 3 : 6) ? near : far).push(i);
       if (st >= R) continue;
       for (let k = 0; k < 4; k++) {
         const nx = x + (k === 0) - (k === 1), ny = y + (k === 2) - (k === 3), ni = ny * W + nx;
@@ -2244,7 +2251,7 @@
     if (!(bz.engaged && bossAlive())) hero.hp = hero.maxHp;
     dirty = true;
     toast('Warm and rested. The hot spring soaks the cold away.');
-    logEvent('soak'); reward();
+    logEvent('soak'); reward(true);
   }
   function iceStep(dt) {
     if (!THIN_ICE) return;
@@ -2947,8 +2954,8 @@
     }
     if (bz.tele.length) return 'Step out of the glowing shape before it fills!';
     if (bz.onIce) return 'Thin ice: a little slippery. The hot springs are always safe.';
-    if (bz.st.sub) return 'The ' + nm + ' is under the water. Watch for bubbles.';
-    if (bz.st.dig) return 'The ' + nm + ' is underground.';
+    if (bz.st.sub) return 'The ' + nm + ' is under the water. Keep moving and watch for bubbles.';
+    if (bz.st.dig) return 'The ' + nm + ' is underground. Keep moving: it bursts up under a glowing shape.';
     return '';
   }
   const DIR8 = ['east', 'south-east', 'south', 'south-west', 'west', 'north-west', 'north', 'north-east'];
