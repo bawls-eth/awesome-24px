@@ -1,13 +1,15 @@
 // Time sweep: run a set of tests as if started at several UTC instants (and optionally time zones) and report every test whose
 // RESULT CHANGES with the clock, or that fails at any instant. Finds tests (and product code) that only pass at some hours / dates.
 //   node game/design/beta/tools/time-sweep.js --port 9741 [--files a.test.js,b.test.js | --grep REGEX] [--class browser|node|any]
-//        [--times ISO,ISO,...] [--tz Zone,Zone] [--max-secs 40] [--jobs 2] [--wrap /tmp/bt.sh] [--json out.json] [--list]
+//        [--times ISO,ISO,...] [--tz Zone,Zone] [--max-secs 40] [--jobs 2] [--wrap /tmp/bt.sh] [--json out.json] [--list] [--no-retry]
 // Needs a static server on --port serving the repo root (python3 -m http.server PORT). NEVER runs live-class tests (they join the
 // real town); the selected tests keep their own database stubs. The clock is only shifted (time-sweep-preload.js), it still runs.
 // Default --times: now, and eight instants chosen to cross the known windows: night, early morning, afternoon, the merchant /
 // concert evening hours, a Saturday, 23:59:40 UTC (a test that crosses midnight), 31 December and 29 February.
 // --max-secs drops tests whose measured time (game/tests/.timings.json, or --timings FILE) is above it (unmeasured tests stay).
-// Exit code 0 = every selected test gave the same passing result at every instant; 1 = something changed or failed.
+// A failed run is run once more alone; "passed on retry" is reported apart (load, not the clock). The per-run timeout (the test's
+// timeoutSec or 300 s) includes the time spent waiting in the --wrap command's queue.
+// Exit code 0 = every selected test gave the same passing result at every instant; 1 = something changed or failed (after the retry).
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
@@ -71,6 +73,17 @@ function runOne(file, at, tz) {
       console.log(`${r.ok ? 'ok  ' : 'FAIL'} ${f} @ ${at}${tz ? ' ' + tz : ''} (${r.secs} s)${r.ok ? '' : ' :: ' + (r.fails[0] || 'exit ' + r.code)}`);
     }
   }));
+  // A failed run is run once more, alone, at the same clock (unless --no-retry). A run that passes then failed for load (a busy box,
+  // a queue in the --wrap command, a server that went away), not for the clock: it is listed apart and does not count as a change.
+  const flaky = [];
+  if (!argv.includes('--no-retry')) {
+    for (const r of res.filter((x) => !x.ok)) {
+      const again = await runOne(r.file, r.at, r.tz);
+      console.log(`${again.ok ? 'ok  ' : 'FAIL'} retry ${r.file} @ ${r.at}${r.tz ? ' ' + r.tz : ''} (${again.secs} s)${again.ok ? '' : ' :: ' + (again.fails[0] || 'exit ' + again.code)}`);
+      r.retry = { ok: again.ok, secs: again.secs, fails: again.fails };
+      if (again.ok) { flaky.push(r); r.firstFails = r.fails; r.ok = true; r.passedOnRetry = true; } else { r.fails = again.fails.length ? again.fails : r.fails; r.tail = again.tail; }
+    }
+  }
   const by = {}; for (const r of res) (by[r.file] = by[r.file] || []).push(r);
   const changed = [], red = [];
   for (const f of Object.keys(by).sort()) { const n = by[f].filter((r) => r.ok).length; if (n === 0) red.push(f); else if (n < by[f].length) changed.push(f); }
@@ -78,8 +91,10 @@ function runOne(file, at, tz) {
   console.log(`same passing result at every clock: ${files.length - changed.length - red.length}`);
   console.log(`RESULT CHANGES WITH THE CLOCK: ${changed.length}`);
   for (const f of changed) { console.log('  ' + f); for (const r of by[f].filter((x) => !x.ok)) console.log(`    fails @ ${r.at}${r.tz ? ' ' + r.tz : ''}: ${r.fails.slice(0, 3).join(' | ') || 'exit ' + r.code}`); }
+  console.log(`failed once, passed when run again alone at the same clock (load, not the clock): ${flaky.length}`);
+  for (const r of flaky) console.log(`  ${r.file} @ ${r.at}${r.tz ? ' ' + r.tz : ''}: ${(r.firstFails && r.firstFails[0]) || 'exit ' + r.code}`);
   console.log(`fails at every clock (not a clock problem, or broken by the shift itself): ${red.length}`);
   for (const f of red) console.log(`  ${f}: ${(by[f][0].fails[0] || 'exit ' + by[f][0].code)}`);
-  if (val('--json')) fs.writeFileSync(val('--json'), JSON.stringify({ times, zones, files, changed, red, runs: res }, null, 1));
+  if (val('--json')) fs.writeFileSync(val('--json'), JSON.stringify({ times, zones, files, changed, red, flaky: flaky.map((r) => ({ file: r.file, at: r.at, tz: r.tz, fails: r.firstFails })), runs: res }, null, 1));
   process.exit(changed.length || red.length ? 1 : 0);
 })();
