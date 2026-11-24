@@ -1816,5 +1816,9 @@
   "beta-r4-b10-15-tour-card.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-r4-b09-12-pop-hud-fit.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
