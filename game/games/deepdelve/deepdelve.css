@@ -133,3 +133,6 @@ body.px8 { background-color:var(--bg); color:var(--ink); }
   #msg { top:30%; max-width:56%; padding:4px 10px; font-size:calc(14px * var(--ui-scale,1)); }
   .bar { padding-top:3px; padding-bottom:3px; }
 }
+
+/* cyc2 U-06: at 200% zoom (<= 260 css px) the tool buttons were 43 px wide: keep the 44 px tap target */
+@media (max-width: 260px) { .tools .btn { min-width:44px; } }

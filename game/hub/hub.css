@@ -195,3 +195,6 @@ html[data-ui-big] .hc-name, html[data-ui-big] .hc-hint, html[data-ui-big] .hn-tx
 /* cycle 0 art (b12-r2-11): code-drawn pixel icons (MMPixelIcons) in place of the emoji glyphs */
 .hc-ico[data-pixel] { width: 32px; line-height: 0; }
 .px-ico { image-rendering: pixelated; image-rendering: crisp-edges; display: inline-block; }
+
+/* cyc2 U-06: at 200% zoom (<= 260 css px) the Collections chip was 43 px wide: keep the 44 px tap target */
+@media (max-width: 260px) { .home-row > .home-coll { min-width:44px; } }
