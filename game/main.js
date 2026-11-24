@@ -456,6 +456,10 @@ const SPARKLE_CATCH_RADIUS = 26;
 
 const IS_TOUCH = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
 if (IS_TOUCH) document.body.classList.add('touch-device');
+if (IS_TOUCH) { // b08-r2-09: the join card's tip uses touch words on a phone, never key names
+  const jt = document.querySelector('#join-overlay .join-tip');
+  if (jt) jt.textContent = 'Drag the stick to walk · tap A to interact (fish, chop, mine, catch bugs) · tap C to chat · more in the menu';
+}
 
 // Shared accessibility prefs (pixeltown-access-v1, written by the Realm settings): the town only mirrors them
 // as body classes + a CSS variable. Reading never throws; missing/corrupt prefs fall back to defaults.
@@ -9843,7 +9847,21 @@ function renderAvatarGrid() {
 
 function updateJoinButtonState() {
   joinBtn.disabled = nameInput.value.trim().length === 0;
+  const jh = document.getElementById('join-hint'); if (jh) jh.classList.toggle('hidden', !joinBtn.disabled); // b08-r2-11: a disabled Join says why
 }
+updateJoinButtonState();
+// b08-r2 (round 4): the join card's compass Menu opens the shared "Where to?" sheet (mounted on first use; the Town mounts it again later, a no-op)
+(function joinMenu() {
+  const b = document.getElementById('join-menu-btn'); if (!b) return;
+  let on = false;
+  b.addEventListener('click', () => {
+    try {
+      if (!on) on = typeof MMNav !== 'undefined' && MMNav.mount({ page: 'town', hideMenu: true }) === true;
+      if (!on) { location.href = './hub/index.html'; return; }
+      if (MMNav.isOpen()) MMNav.close(); else MMNav.open();
+    } catch (e) { location.href = './hub/index.html'; }
+  });
+})();
 
 nameInput.addEventListener('input', updateJoinButtonState);
 nameInput.addEventListener('keydown', (e) => {
