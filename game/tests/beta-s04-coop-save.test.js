@@ -7,6 +7,7 @@
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/beta-s04-coop-save.test.js
 const { chromium } = require('playwright');
 const { check, done, blockDb } = require('./helpers');
+const LS = require('./lib/load-scale'); // cycle 4: the page-load waits are load-scaled (factor 1 on an idle box). The time-sweep run timed out here at load factor 4 to 6: a wait, not a speed claim.
 const ORIGIN = (process.env.BASE || 'http://localhost:8440/game/index.html').replace(/\/game\/index\.html.*$/, '');
 const SEED = 's04' + (Date.now() % 100000);
 const PAGE = (q) => ORIGIN + '/game/games/mad-maze/index.html?mode=world&test=1&seed=' + SEED + (q ? '&' + q : '');
@@ -34,8 +35,8 @@ async function visit(p, pts) {
     const p = await ctx.newPage();
     p.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
     await p.goto(url);
-    await p.waitForFunction(() => window.__mm && window.__mm.world && window.__mm.arena.state === 'play', null, { timeout: 30000 });
-    if (team) await p.waitForFunction(() => window.__mm.team && window.__mm.team.ok && window.__mm.team.seat >= 0, null, { timeout: 15000 });
+    await p.waitForFunction(() => window.__mm && window.__mm.world && window.__mm.arena.state === 'play', null, { timeout: LS.budget(30000) });
+    if (team) await p.waitForFunction(() => window.__mm.team && window.__mm.team.ok && window.__mm.team.seat >= 0, null, { timeout: LS.budget(15000) });
     await p.evaluate(() => { const a = window.__mm.arena; a.player.iframes = 1e9; a._hitPlayer = () => {}; });
     return p;
   };
@@ -92,7 +93,7 @@ async function visit(p, pts) {
   const S = await ctx2.newPage();
   S.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
   await S.goto(PAGE(''));
-  await S.waitForFunction(() => window.__mm && window.__mm.world && window.__mm.arena.state === 'play', null, { timeout: 30000 });
+  await S.waitForFunction(() => window.__mm && window.__mm.world && window.__mm.arena.state === 'play', null, { timeout: LS.budget(30000) });
   await visit(S, [[50, 50]]);
   await S.evaluate(() => window.__mm.world.savePos(true));
   const so = await stored(S);

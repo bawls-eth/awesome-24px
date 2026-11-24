@@ -43,11 +43,48 @@ const inViewCulled = (page) => page.evaluate(() => {
   const st = await page.evaluate(() => { const t = window.__g.scene.getScene('Town'); return { culled: t._culled, total: t.sys.displayList.list.length }; });
   check('[1] most world objects are culled at spawn', st.culled > st.total * 0.4, JSON.stringify(st));
   check('[1] nothing overlapping the camera view is culled', (await inViewCulled(page)).length === 0, (await inViewCulled(page)).slice(0, 5).join(' '));
-  const visOn = await page.evaluate(() => window.__g.scene.getScene('Town').sys.displayList.list.map((o) => o.visible ? 1 : 0).join(''));
+  // [2] cycle 4 (L): this check compared two strings of `visible` flags BY LIST INDEX, read 300 ms apart with the game running. It was
+  // red about one run in three, with or without the cull switch, because the GAME changes the list in those 300 ms: the firefly
+  // sparkle pool (ffSparkles, Star, depth 99994) shows and hides stars, a pond ripple (Arc, depth -1) is added on a timer (every
+  // later index shifts), and the depth sort moves 7 to 28 objects. None of that is the cull. Now the same claim is proven exactly:
+  //  a. in ONE synchronous step (no game timer can run): flags per OBJECT before, after a cull-off pass, after a forced cull-on pass
+  //  b. over the same 300 ms of live frames (culling off, then on): every write to `visible` is recorded with its call stack, and
+  //     none may come from cullOffscreen / uncull. The game's own writes are counted and printed, not hidden.
+  const vis = await page.evaluate(() => {
+    const t = window.__g.scene.getScene('Town'); const L = t.sys.displayList.list.slice();
+    const read = () => L.map((o) => (o.visible ? 1 : 0));
+    const diff = (a, b) => a.map((v, k) => (v === b[k] ? null : k + ' ' + L[k].type + ':' + (L[k].texture ? L[k].texture.key : '') + '@' + Math.round(L[k].x) + ',' + Math.round(L[k].y) + ' ' + v + '->' + b[k])).filter(Boolean);
+    const v0 = read(); const culled0 = L.filter((o) => o.cameraFilter & t.cameras.main.id).length;
+    t.cullOff = true; t.cullOffscreen(); const v1 = read(); const culled1 = L.filter((o) => o.cameraFilter & t.cameras.main.id).length;
+    t.cullOff = false; t._cullAt = null; t._cullN = 3; t.cullOffscreen(); const v2 = read(); const culled2 = L.filter((o) => o.cameraFilter & t.cameras.main.id).length;
+    return { n: L.length, hidden: v0.filter((v) => !v).length, culled0, culled1, culled2, offDiff: diff(v0, v1).slice(0, 6), onDiff: diff(v1, v2).slice(0, 6) };
+  });
+  check('[2] game-owned visible flags are untouched by culling: the same objects, before / after a cull-off pass / after a forced cull-on pass (' + vis.n + ' objects, ' + vis.hidden + ' hidden)', vis.offDiff.length === 0 && vis.onDiff.length === 0 && vis.hidden > 0, JSON.stringify(vis));
+  check('[2] those passes really switched the culling (culled ' + vis.culled0 + ' -> ' + vis.culled1 + ' -> ' + vis.culled2 + ')', vis.culled0 > vis.n * 0.4 && vis.culled1 === 0 && vis.culled2 > vis.n * 0.4, JSON.stringify(vis));
+  // b. live frames: trap the `visible` setter of every class on the display list
+  await page.evaluate(() => {
+    const t = window.__g.scene.getScene('Town'); const seen = new Set(); const log = window.__visLog = { writes: 0, changes: 0, fromCull: [], who: {}, undo: [] };
+    t.sys.displayList.list.forEach((o) => {
+      let p = Object.getPrototypeOf(o), d = null;
+      while (p && !(d = Object.getOwnPropertyDescriptor(p, 'visible'))) p = Object.getPrototypeOf(p);
+      if (!p || !d || !d.set || seen.has(p)) return; seen.add(p);
+      Object.defineProperty(p, 'visible', { configurable: true, enumerable: d.enumerable, get: d.get, set(v) {
+        log.writes++;
+        if (!!v !== !!d.get.call(this)) { log.changes++; const st = String(new Error().stack); if (/cullOffscreen|uncull/.test(st)) log.fromCull.push(this.type + '@' + Math.round(this.x) + ',' + Math.round(this.y)); const k = this.type + ' d' + Math.round(this.depth); log.who[k] = (log.who[k] || 0) + 1; }
+        d.set.call(this, v);
+      } });
+      log.undo.push(() => Object.defineProperty(p, 'visible', d));
+    });
+    log.classes = seen.size; t.cullOff = true;
+  });
+  await page.waitForTimeout(300);
+  await page.evaluate(() => { window.__g.scene.getScene('Town').cullOff = false; });
+  await page.waitForTimeout(300);
+  const live = await page.evaluate(() => { const l = window.__visLog; const t = window.__g.scene.getScene('Town'); return { classes: l.classes, writes: l.writes, changes: l.changes, fromCull: l.fromCull.slice(0, 6), who: l.who, culled: t._culled }; });
+  console.log('  visible writes in 600 ms of live frames (300 culling off, 300 on): ' + JSON.stringify(live));
+  check('[2] over live frames with culling off and on, no write to `visible` comes from the cull (' + live.changes + ' changes by the game itself, ' + live.classes + ' classes trapped)', live.classes >= 3 && live.fromCull.length === 0, JSON.stringify(live));
   await page.evaluate(() => { window.__g.scene.getScene('Town').cullOff = true; });
   await page.waitForTimeout(300);
-  const visOff = await page.evaluate(() => window.__g.scene.getScene('Town').sys.displayList.list.map((o) => o.visible ? 1 : 0).join(''));
-  check('[2] game-owned visible flags are untouched by culling', visOn === visOff);
   check('[4] culling off restores every object to the camera', await page.evaluate(() => { const t = window.__g.scene.getScene('Town'); const id = t.cameras.main.id; return t.sys.displayList.list.every((o) => !(o.cameraFilter & id)); }));
   await page.evaluate(() => { window.__g.scene.getScene('Town').cullOff = false; });
 
@@ -58,6 +95,9 @@ const inViewCulled = (page) => page.evaluate(() => {
     const bad = await inViewCulled(page);
     check(`[3] after moving to ${x},${y} nothing in view is culled`, bad.length === 0, bad.slice(0, 5).join(' '));
   }
+  // [2] again, over the three walks: hundreds of objects were newly culled and un-culled there; still no `visible` write from the cull
+  const walked = await page.evaluate(() => { const l = window.__visLog; l.undo.forEach((f) => f()); return { changes: l.changes, fromCull: l.fromCull.slice(0, 6), n: l.fromCull.length, who: l.who }; });
+  check('[2] over the three walks too, no write to `visible` comes from the cull (' + walked.changes + ' changes by the game itself)', walked.n === 0, JSON.stringify(walked));
 
   // [5] R4: pooled objects (the sparkle star, firefly sparkles) jump to a new spot between two cull passes. They must not keep the
   // cull bit of their old spot (they would be undrawn for up to 3 frames in view, and [3] could catch them), and hidden objects

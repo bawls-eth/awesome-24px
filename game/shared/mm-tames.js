@@ -125,7 +125,10 @@
     return { bond: b, full: full, half: half, empty: 5 - full - half, label: 'Bond ' + b + ' of ' + MAX_BOND };
   }
   // ID-07 perks: cosmetic only (an idle sway at bond 4, a ribbon at 6, a glow at 10). Never speed, damage or feed (isles-first-ten cadence).
-  function perks(bond) { const b = int(bond, 1, MAX_BOND, 1); return { sway: b >= 4, ribbon: b >= 6, glow: b >= 10 }; }
+  // cycle 4 (L hot path): one frozen object per bond level, built once. The Isles draw asks three times per companion per frame
+  // (sway, glow, ribbon); a fresh object each time was 3 objects per companion per frame for a draw-only view.
+  const PERKS = []; for (let pb = 0; pb <= MAX_BOND; pb++) PERKS.push(Object.freeze({ sway: pb >= 4, ribbon: pb >= 6, glow: pb >= 10 }));
+  function perks(bond) { return PERKS[int(bond, 1, MAX_BOND, 1)]; }
   // ID-07 extra aff sources, capped per tame per SESSION (sess = a plain in-memory object the page keeps; never saved):
   // ride: +10 per riding minute (cap 30); fight: +5 per fight won together (cap 25). Returns the aff to add (0 once capped).
   const BOND_AFF = { ride: { per: 10, cap: 30 }, fight: { per: 5, cap: 25 } };

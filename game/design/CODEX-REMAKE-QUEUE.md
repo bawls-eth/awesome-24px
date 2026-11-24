@@ -629,3 +629,25 @@ Priority now:
 6. **Town label art** 16x16 (b19 style) for the 16 code icons now in `shared/mm-pixel-icons.js` (house, museum, mail, hammer, book,
    turnip, dice, joystick, grave, wheat, dress, pickaxe, cart, flask, bugs, angler) and a door icon if the doors' test pin is lifted.
 
+
+## UPDATE 2026-11-24 (cycle 4, Claude G): W-06 exact redraw spec, ground now covered by code
+No new `codex/*` branch since b03 (icicle bat merged, glacier shellback REDO still open).
+Code stopgaps shipped this cycle: Isles tundra / jungle ground overlay (`MMIsleArt.biomeDetail`: snow drifts, sparkles, ice cracks,
+frost; roots, leaf litter, moss; soft seams instead of the dashed 32 px box; `?tundradetail=0` / `?jungledetail=0`), Town building
+finish pass 2 (window glints / frame / sill, roof shingle courses, contact shadows; `?bldfinish2=0`). R05 tundra PNGs are still wanted.
+
+### W-06 redraw spec (the three under-size Isles creatures). Why not code: the strips are drawn at exactly 1/4 of the 4x cell so one art
+pixel = one screen pixel. The only per-frame-safe scale is an integer one: 2x puts puffwool at 56 and frostfox at 60 (over the S cap
+48) and would show 2x2 art pixels next to 1x creatures (mixed pixel density, ART-HANDOFF). So: redraw, same files / ids / cells / anchors.
+Heights are STANDING px at 1x (anchor row minus the top opaque row, idle, facing down, = `__isles.stripSize(kind)`); in the 4x PNG
+multiply by 4. Hero = 48 (native), S class band 32-48.
+| kind | file set | cell / anchor (unchanged) | now (1x) | target (1x) | target in the 4x PNG | width |
+|---|---|---|---|---|---|---|
+| pebble_tortle | b35 meadow creatures | 192, ax 96, ay 173 | 21 | **34** (+13) | 136 px: top opaque row at y = 37 | scale the body x1.6 (about 40 px wide at 1x, 160 in the PNG); shell reads as a dome with 3-4 tone ramp + top-left highlight |
+| puffwool | b35 meadow creatures | 192, ax 96, ay 169 | 28 | **38** (+10) | 152 px: top row at y = 17 | x1.35 (wool silhouette, keep the 2-tone wool clumps but outline them) |
+| frostfox | b40b tundra creatures | 192, ax 96, ay 171 | 30 | **40** (+10) | 160 px: top row at y = 11 | x1.33; tail may overhang to x 20..172 |
+Rules: every view (down / up / right, true back and side) and every act strip (idle, walk, attack, hurt, death; frostfox also sleep,
+eat) at the same new height (+-1 px between frames for bob only); feet stay on the anchor row; frame counts and fps unchanged; dark
+colour-matched outline, 3-4 tone ramp, top-left light (b04 bar). Deliver with a contact sheet next to `puffcap_idle_down` and the hero
+at 1x and 3x. On delivery G adds a check that reads `stripSize` and pins 32 <= h <= 48 for all three.
+Then (lower): the jungle small set down toward 36-40 (chompbill 46, canopy_glider 46, fernraptor 52), same rules.

@@ -330,6 +330,9 @@ function rmCleanSave(s) {
   const kb = s.kb && typeof s.kb === 'object' ? s.kb : {};
   out.kb = { spiral: rmCleanCount(kb.spiral), aimed: rmCleanCount(kb.aimed), ring: rmCleanCount(kb.ring), drifter: rmCleanCount(kb.drifter), boss: rmCleanCount(kb.boss) };
   out.bossBestT = Math.min(rmCleanCount(s.bossBestT), 999999); // fastest boss kill in tenths of a second (0 = none yet)
+  // ID-06 (additive, only written when set): 1 = that best was set by an Assisted run (damage taken below 100 percent). Still a best.
+  if (s.bestWaveA === 1 && out.bestWave > 0) out.bestWaveA = 1;
+  if (s.bossBestTA === 1 && out.bossBestT > 0) out.bossBestTA = 1;
   out.level = Math.max(1, Math.min(RM_MAX_LEVEL, rmCleanCount(s.level) || 1));
   out.xp = out.level >= RM_MAX_LEVEL ? 0 : Math.min(rmCleanCount(s.xp), rmXpNeeded(out.level) - 1);
   out.items = [];
@@ -409,6 +412,13 @@ function rmMergeSave(mine, stored, opts) {
   out.bestWave = Math.max(a.bestWave, b.bestWave); out.kills = Math.max(a.kills, b.kills); out.deaths = Math.max(a.deaths, b.deaths);
   out.kb = {}; Object.keys(a.kb).forEach((k) => { out.kb[k] = Math.max(a.kb[k], b.kb[k]); });
   out.bossBestT = a.bossBestT && b.bossBestT ? Math.min(a.bossBestT, b.bossBestT) : (a.bossBestT || b.bossBestT);
+  { // ID-06: the Assisted tag follows the best it belongs to; on a tie the unassisted one wins
+    const wA = (a.bestWave === out.bestWave && a.bestWaveA) || 0, wB = (b.bestWave === out.bestWave && b.bestWaveA) || 0;
+    const aw = a.bestWave === out.bestWave, bw = b.bestWave === out.bestWave;
+    if (out.bestWave > 0 && (aw ? wA : 1) && (bw ? wB : 1)) out.bestWaveA = 1;
+    const ab = a.bossBestT === out.bossBestT, bb = b.bossBestT === out.bossBestT;
+    if (out.bossBestT > 0 && (ab ? a.bossBestTA : 1) && (bb ? b.bossBestTA : 1)) out.bossBestTA = 1;
+  }
   const lead = (a.level > b.level || (a.level === b.level && a.xp >= b.xp)) ? a : b;
   out.level = lead.level; out.xp = lead.xp;
   const base = Number.isFinite(opts.base) ? opts.base : a.shards;
@@ -641,7 +651,7 @@ class RealmArena {
   _teamEnd(why) {
     if (!this.active) return;
     if (why === 'wipe') { // we fell with them: the same cache as dying alone
-      this.save.deaths += 1; this.save.bestWave = Math.max(this.save.bestWave, this.run.wave - 1);
+      this.save.deaths += 1; this._setBestWave(this.run.wave - 1);
       this._deathBonus();
       this.onSave(this.save);
       this.stop(); this.onExit('death'); return;
@@ -653,11 +663,11 @@ class RealmArena {
   // A kill / wave bonus the host told us about: pay it out with OUR multipliers.
   _teamReward(r) {
     const sv = this.save;
-    if (r.t === 'wave') { const gain = Math.max(0, Math.round(r.sh)); sv.shards += gain; sv.bestWave = Math.max(sv.bestWave, this.run.wave); this.run.shards += gain; this.onSave(sv); this._syncHud(); return; }
+    if (r.t === 'wave') { const gain = Math.max(0, Math.round(r.sh)); sv.shards += gain; this._setBestWave(this.run.wave); this.run.shards += gain; this.onSave(sv); this._syncHud(); return; }
     const gain = Math.max(1, Math.round(r.sh * this.stats.shards));
     sv.shards += gain; this.run.shards += gain;
     if (r.t === 'drifter') sv.kb.drifter += 1;
-    else if (r.boss) { sv.kb.boss += 1; sv.kills += 1; if (r.tenths && (!sv.bossBestT || r.tenths < sv.bossBestT)) sv.bossBestT = r.tenths; } else if (Object.prototype.hasOwnProperty.call(sv.kb, r.t) && typeof sv.kb[r.t] === 'number') { sv.kb[r.t] += 1; sv.kills += 1; }
+    else if (r.boss) { sv.kb.boss += 1; sv.kills += 1; if (r.tenths && (!sv.bossBestT || r.tenths < sv.bossBestT)) this._setBossBest(r.tenths); } else if (Object.prototype.hasOwnProperty.call(sv.kb, r.t) && typeof sv.kb[r.t] === 'number') { sv.kb[r.t] += 1; sv.kills += 1; }
     this._floatText(this.player.x, this.player.y - 36, `+${gain} 💎`, '#8fe9ff');
     this._gainXp(Math.max(1, Math.round(r.xp * this.stats.xp)));
     this.saveSoon(); // review F16: one coalesced persist for a burst of partner kills
@@ -741,6 +751,7 @@ class RealmArena {
   // Re-read the two preferences (aim-assist toggle, reduce-motion); called on construction and at every start().
   _wireRefresh() {
     try { this._aimAssist = localStorage.getItem('mm-aim-assist') !== '0'; } catch (e) { this._aimAssist = true; }
+    this._aimCone = this._assistOn() ? MMAssist.aimCone(this._assistPref()) : 14; // ID-06 aim help: 14 (Off, the old cone) / 20 / 26 / 32 degrees
     this._syncAimBtn();
     this._readReduced();
   }
@@ -2485,7 +2496,8 @@ class RealmArena {
     this.abilityCd = [0, 0, 0, 0]; this.shield.hits = 0; this.shield.t = 0; this.overdriveT = 0; this.paused = false; this._sigReset();
     this.focus = null; this._focusSync(); // FO2: every run starts with full focus (null when focus is off)
     p.x = this.W / 2; p.y = this.H / 2; p.hp = this.stats.maxHp; p.dashT = 0; p.iframes = 1; p.fireCd = 0; p.aim = -Math.PI / 2;
-    this.run = { wave: 0, kills: 0, shards: 0 }; this._waveSc = null;
+    this.run = { wave: 0, kills: 0, shards: 0, assisted: false }; this._waveSc = null;
+    if (this._assistOn() && MMAssist.isAssisted(this._assistPref())) this.run.assisted = true; // ID-06: tagged from the start
     this.biome = 0; this.clock = 0; this._speedMul = 1; this.down = false; this.reviveT = 0; this._syncBoss();
     this.shake = 0; this.flash = 0;
     this.displayShards = this.save.shards;
@@ -2922,7 +2934,7 @@ class RealmArena {
       if (this._aimAssist && typeof MMAim !== 'undefined') { // touch aim assist: snap to the nearest enemy within the cone
         const t = this._aimTargets; t.length = 0;
         for (let i = 0; i < this.enemies.length; i++) if (this.enemies[i].active) t.push(this.enemies[i]);
-        p.aim = MMAim.assist(p.aim, p, t, { enabled: true, tile: RM_TILE });
+        p.aim = MMAim.assist(p.aim, p, t, { enabled: true, tile: RM_TILE, cone: this._aimCone || 14 });
       }
     } else if (this.mouse.seen) {
       p.aim = Math.atan2(this.mouse.y + this.camera.y - p.y, this.mouse.x + this.camera.x - p.x); // mouse is in screen units: + camera = world (camera is 0,0 without a world)
@@ -3035,7 +3047,7 @@ class RealmArena {
     this.run.shards += gain; this.save.shards += gain; this.run.kills += 1; this.save.kills += 1; this.save.kb.boss += 1;
     const tenths = Math.max(1, Math.round((this.clock - this.bossT0) * 10));
     const newBest = !e.bossName && (!this.save.bossBestT || tenths < this.save.bossBestT); // the best time is Gloomheart's only
-    if (newBest) this.save.bossBestT = tenths;
+    if (newBest) this._setBossBest(tenths);
     this.eBullets.forEach((b) => { if (b.active) { b.active = false; this._burst(b.x, b.y, '#ffe27a', 1, 60); } });
     this._burst(e.x, e.y, '#ff5fa2', 40, 340); this._burst(e.x, e.y, '#ffe27a', 30, 260);
     this.shake = 14;
@@ -3043,7 +3055,7 @@ class RealmArena {
     this._floatText(e.x, e.y - 30, `+${gain} 💎`, '#8fe9ff');
     this._gainXp(Math.round(RM_XP.boss * tier * this.stats.xp));
     this.dropBag(e.x - 20, e.y + 20, 2); this.dropBag(e.x + 20, e.y + 20, this.rollRarity()); // a guaranteed rare, plus one more
-    this._showBanner(`${e.bossName || 'Gloomheart'} defeated!  +${gain} 💎${newBest ? '  New best time!' : ''}`, 2.4, true);
+    this._showBanner(`${e.bossName || 'Gloomheart'} defeated!  +${gain} 💎${newBest ? `  New best time!${this.run.assisted ? ' (Assisted)' : ''}` : ''}`, 2.4, true);
     if (this.team) { this.team.ev('rew', [40 + 10 * tier, RM_XP.boss * tier, 'boss', 1, tenths]); this.team.ev('clr', []); }
     this.onSave(this.save);
     this._syncBoss();
@@ -3348,6 +3360,18 @@ class RealmArena {
     return this._spCache.get(`splash:${bk}:${RM_SPLASH_COL.slice(1)}`, S, S, (c) => { c.strokeStyle = RM_SPLASH_COL; c.lineWidth = 2; c.beginPath(); c.arc(S / 2, S / 2, S / 2 - 2, 0, Math.PI * 2); c.stroke(); c.globalAlpha = 0.25; c.fillStyle = RM_SPLASH_COL; c.fill(); c.globalAlpha = 1; });
   }
 
+  // ---------- ID-06 assist (MMAssist, device pref 'mm-assist'): damage taken + aim help. Assisted runs still record bests, tagged ----------
+  _assistOn() { return typeof MMAssist !== 'undefined' && !!MMAssist && typeof MMAssist.read === 'function'; }
+  _assistPref() { try { return MMAssist.read(localStorage); } catch (e) { return { dmg: 100, aim: 0 }; } }
+  refreshAssist() { this._wireRefresh(); if (this.run && this._assistOn() && MMAssist.isAssisted(this._assistPref())) this.run.assisted = true; return this.assistInfo(); }
+  assistInfo() { const a = this._assistOn() ? this._assistPref() : { dmg: 100, aim: 0 }; return { dmg: a.dmg, aim: a.aim, cone: this._aimCone || 14, runAssisted: !!(this.run && this.run.assisted), bestWaveA: !!this.save.bestWaveA, bossBestTA: !!this.save.bossBestTA }; }
+  // A new best keeps the run's tag; an unassisted run that ties the best clears it (the same score, now without assist).
+  _setBestWave(w) {
+    const sv = this.save; const as = !!(this.run && this.run.assisted);
+    if (w > sv.bestWave) { sv.bestWave = w; if (as) sv.bestWaveA = 1; else delete sv.bestWaveA; } else if (w > 0 && w === sv.bestWave && !as) delete sv.bestWaveA;
+  }
+  _setBossBest(t) { const sv = this.save; sv.bossBestT = t; if (this.run && this.run.assisted) sv.bossBestTA = 1; else delete sv.bossBestTA; }
+
   _hitPlayer(dmg) {
     const p = this.player;
     if (this.down) return; // already down: hazards must not reset the revive
@@ -3359,6 +3383,10 @@ class RealmArena {
     if (tk !== 1) dmg = Math.max(1, Math.round(dmg * tk));
     let hpFloor = 0; // b08-r2-04: the first-run coach may soften hits ({ mult, floor }) so a new player never falls before they have played
     if (typeof this.hurtGuard === 'function') { let g = null; try { g = this.hurtGuard(dmg); } catch (e) { g = null; } if (g) { if (g.mult > 0 && g.mult < 1) dmg = Math.max(1, Math.round(dmg * g.mult)); if (g.floor > 0) hpFloor = Math.min(p.hp, g.floor); } }
+    if (this._assistOn() && !(this.team && this.team.isPvp)) { // ID-06 damage taken (device pref mm-assist, read per hit so Settings apply at once; never in a duel)
+      const as = this._assistPref();
+      if (MMAssist.isAssisted(as)) { dmg = MMAssist.scaleDamage(dmg, as); this.run.assisted = true; }
+    }
     p.hp = Math.max(hpFloor, p.hp - dmg);
     if (this._hitPauseOn && !this._reduced && dmg >= RM_HIT_PAUSE_FRAC * (this.stats.maxHp || 1)) this._hitPauseAt = this._lastT || 0; // ID-14: draw-only hold (see _loop)
     this._heroHurtAt = performance.now() / 1000; this._gHurtT = this._stT; // _gHurtT: game time of the last hit (G8 regen waits 3 s)
@@ -3386,7 +3414,7 @@ class RealmArena {
   _waveCleared() {
     const bonus = 5 * this.run.wave;
     this.run.shards += bonus; this.save.shards += bonus;
-    this.save.bestWave = Math.max(this.save.bestWave, this.run.wave);
+    this._setBestWave(this.run.wave);
     this.onSave(this.save);
     this.state = 'banner';
     this.nextWaveIn = RM_WAVE_PAUSE;
@@ -3491,7 +3519,7 @@ class RealmArena {
 
   _die() {
     this.save.deaths += 1;
-    this.save.bestWave = Math.max(this.save.bestWave, this.run.wave - 1);
+    this._setBestWave(this.run.wave - 1);
     const cache = this._deathBonus();
     this._lastCache = cache.text;
     if (this.onDeathCache) this.onDeathCache(cache);
@@ -3504,7 +3532,7 @@ class RealmArena {
     this._burst(this.player.x, this.player.y, '#ff6f91', 30, 300);
     this._deathZone = this._worldCopy() ? this._zoneLabel() : '';
     const dg = this.dungeon && this.dungeon.api && typeof this.dungeon.api.fellText === 'string' ? this.dungeon.api.fellText : ''; // G-24 (b03-14): "You fell in the Crypt", no "wave" in a dungeon
-    this._showBanner(dg ? `${dg}…  no 💎 lost — ${cache.text}  ·  ${this.run.kills} kills, +${this.run.shards} 💎 this run` : `You fell in the Realm…  no 💎 lost — ${cache.text}  ·  ${this._deathZone ? `in ${this._deathZone}` : `wave ${Math.max(1, this.run.wave)}`}, ${this.run.kills} kills, +${this.run.shards} 💎 this run`, 2.6);
+    this._showBanner(dg ? `${dg}…  no 💎 lost — ${cache.text}  ·  ${this.run.kills} kills, +${this.run.shards} 💎 this run${this.run.assisted ? '  ·  Assisted' : ''}` : `You fell in the Realm…  no 💎 lost — ${cache.text}  ·  ${this._deathZone ? `in ${this._deathZone}` : `wave ${Math.max(1, this.run.wave)}`}, ${this.run.kills} kills, +${this.run.shards} 💎 this run${this.run.assisted ? '  ·  Assisted' : ''}`, 2.6);
     this.onSave(this.save);
     this._syncHud();
   }
@@ -4286,7 +4314,7 @@ class RealmArena {
     this._deathShown = true; this.keys = {}; this.mouse.down = false; this.aimVec.on = false; this.moveVec.x = 0; this.moveVec.y = 0;
     const showWave = this.mode !== 'world' || !!this.dungeon;
     const waveRow = showWave ? `<div class="realm-board-row"><span>🌊 Wave reached</span><b>${Math.max(1, this.run.wave)}</b></div>` : '<div class="realm-board-row rm-zone-row"><span>🗺️ Zone</span><b></b></div>';
-    d.querySelector('.rm-recap').innerHTML = `${waveRow}<div class="realm-board-row"><span>⚔️ Kills</span><b>${this.run.kills}</b></div><div class="realm-board-row"><span>💎 Shards this run</span><b>+${this.run.shards}</b></div><div class="realm-board-row"><span>🎁 Survivor's cache</span><b>${this._lastCache.replace(/^cache: /, '')}</b></div>`;
+    d.querySelector('.rm-recap').innerHTML = `${waveRow}<div class="realm-board-row"><span>⚔️ Kills</span><b>${this.run.kills}</b></div><div class="realm-board-row"><span>💎 Shards this run</span><b>+${this.run.shards}</b></div><div class="realm-board-row"><span>🎁 Survivor's cache</span><b>${this._lastCache.replace(/^cache: /, '')}</b></div>${this.run.assisted ? '<div class="realm-board-row rm-assisted"><span>🛟 Run</span><b>Assisted</b></div>' : ''}`;
     if (!showWave) { const zb = d.querySelector('.rm-zone-row b'); if (zb) zb.textContent = this._deathZone || this._zoneLabel(); } // textContent: the zone name comes from the page
     const sn = this.menuNote ? String(this.menuNote() || '') : '';
     if (sn) { const row = document.createElement('div'); row.className = 'realm-board-row rm-stash-row'; row.textContent = sn; d.querySelector('.rm-recap').appendChild(row); }
@@ -4302,7 +4330,7 @@ class RealmArena {
     const sv = this.save; const kb = sv.kb;
     const t = sv.bossBestT ? `${(sv.bossBestT / 10).toFixed(1)} s` : '—';
     const rows = [
-      ['🏆', 'Best wave', sv.bestWave], ['⭐', 'Level', sv.level], ['💎', 'Shards banked', sv.shards], ['☠️', 'Falls', sv.deaths],
+      ['🏆', 'Best wave', sv.bestWave + (sv.bestWaveA ? ' (Assisted)' : '')], ['⭐', 'Level', sv.level], ['💎', 'Shards banked', sv.shards], ['☠️', 'Falls', sv.deaths],
       ['🟣', 'Whirlers', kb.spiral], ['🔺', 'Snipers', kb.aimed], ['🟠', 'Bursters', kb.ring], ['✨', 'Wanderers', kb.drifter],
       ['👹', 'Gloomheart defeated', kb.boss], ['⏱️', 'Fastest Gloomheart', t],
     ];
@@ -4547,6 +4575,9 @@ class RealmArena {
         const opts = this.reforgeOptions(it.n);
         if (opts && opts.length) {
           box.appendChild(mk('div', 'rm-forge-h', 'Reforge: add one forged affix (exact value and cost):'));
+          const cheap = opts.filter((o) => !o.current).sort((x, y) => (x.cost.dust + x.cost.shards) - (y.cost.dust + y.cost.shards))[0]; // ID-40: which side is short (fixed income table)
+          let hint = null; try { hint = cheap && !cheap.afford && typeof MMGearForge.shortHint === 'function' ? MMGearForge.shortHint(cheap.cost, { dust: sv.dust || 0, shards: sv.shards }) : null; } catch (e) { hint = null; }
+          if (hint) { const h = mk('div', 'rm-forge-short dim', hint.text); h.title = 'Counted in Godlands kills with every bag salvaged'; box.appendChild(h); }
           opts.forEach((o) => {
             const b = btn(`${o.text} · ${cost(o.cost)}${o.current ? ' · forged now' : !o.afford ? ' · not enough' : ''}`, { forgePick: o.id, uid: it.n });
             b.dataset.dust = String(o.cost.dust); b.dataset.shards = String(o.cost.shards); b.dataset.v = String(o.v);
@@ -5297,7 +5328,7 @@ class RealmArena {
     if (xpt) xpt.textContent = this.save.level >= RM_MAX_LEVEL ? 'MAX' : `${this.save.xp} / ${rmXpNeeded(this.save.level)} xp`;
     this._syncAbilities(); this._focusHud(!!force);
     const best = document.getElementById('realm-best');
-    if (best) best.textContent = this.save.bestWave > 0 && !wc ? `Best wave ${this.save.bestWave}` : '';
+    if (best) best.textContent = this.save.bestWave > 0 && !wc ? `Best wave ${this.save.bestWave}${this.save.bestWaveA ? ' (Assisted)' : ''}` : '';
     if (force) this._hideBanner();
   }
 

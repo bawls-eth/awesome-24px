@@ -1244,6 +1244,9 @@
         nbMeet(NB ? NB.ids.boss(site.boss, site.zone) : null, BOSS_NAME[i]); // ID-04
         // ID-13: the FIRST world boss of a zone rolls with the bag floor (MMZones FIRST_KILL_BAG_FLOOR); the bit is set and saved once (writeSave below).
         // Trial of Six kills (rushKilled) never come here, so they neither read nor set zk.
+        // cycle 4 (L): the bit is read from storage too. A second tab opened before the first kill kept zk = 0 in memory, so the same hero
+        // got the first-kill floor once per open tab (the write below only merged the bit afterwards). One read per boss kill.
+        const zdisk = readSave().zk | 0; if (zdisk & ~(save.zk | 0)) save.zk = ((save.zk | 0) | zdisk) & 15;
         const zbit = 1 << Math.max(0, Math.min(3, site.zone | 0)); const fk = !((save.zk | 0) & zbit);
         rollFor({ zone: site.zone, tier: site.zone, boss: true, src: 'boss', bossId: site.boss, firstKill: fk }, e.x, e.y + 30, 'boss' + i);
         if (fk) save.zk = ((save.zk | 0) | zbit) & 15;
@@ -2320,7 +2323,11 @@
       setTimeout(() => armed.forEach((b) => { if (b.isConnected && b.dataset.arm) { b.disabled = false; delete b.dataset.arm; } }), 300);
     }
     let nxStallKind = 'shop';
-    function nxStallOpen(kind) { nxBuild(); if (!nxStallOn()) return false; nxStallKind = kind === 'forge' ? 'forge' : 'shop'; nxStallAsk = 0; nxDom.board.classList.add('hidden'); nbHide(false); nxStallRender(); nxDom.stall.classList.remove('hidden'); return true; }
+    // cyc4 U: the board / stall replaces an open notebook; when focus was inside the notebook (its Close), it moves to the new panel's
+    // first button instead of falling to <body> (the notebook is emptied). Focus anywhere else is left alone.
+    const nbHadFocus = () => !!(nxDom && nxDom.notebook && !nxDom.notebook.classList.contains('hidden') && nxDom.notebook.contains(document.activeElement));
+    const nxFocusFirst = (el) => { const f = el && el.querySelector('button:not([disabled])'); if (f) { try { f.focus({ preventScroll: true }); } catch (e) { /* focus is cosmetic */ } } };
+    function nxStallOpen(kind) { nxBuild(); if (!nxStallOn()) return false; nxStallKind = kind === 'forge' ? 'forge' : 'shop'; nxStallAsk = 0; nxDom.board.classList.add('hidden'); const had = nbHadFocus(); nbHide(false); nxStallRender(); nxDom.stall.classList.remove('hidden'); if (had) nxFocusFirst(nxDom.stall); return true; }
     // PLAYTEST-REVIEW-3 #7: Shop and Forge open over the Nexus (the plaza closes underneath) and closing them returns to the Nexus stall.
     // nxReturn remembers that origin only for a panel opened from the stall; any other panel, a death or a leave forgets it.
     let nxReturn = null;
@@ -2757,7 +2764,7 @@
         b.appendChild(row);
       });
     }
-    function nxBoardOpen() { nxBuild(); nbHide(false); nxBoardRender(); nxDom.board.classList.remove('hidden'); nxStallHide(); }
+    function nxBoardOpen() { nxBuild(); const had = nbHadFocus(); nbHide(false); nxBoardRender(); nxDom.board.classList.remove('hidden'); nxStallHide(); if (had) nxFocusFirst(nxDom.board); }
     function nxClaim(id) {
       const out = MMQuests.claim(save.quests, id, questDate()); save.quests = out.state;
       if (out.reward) {
