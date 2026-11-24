@@ -1108,6 +1108,7 @@
     let ent = null;
     if (rule.allow) ent = TAMES.add(tames, { sp: def.id, nm: def.name, isle: ISLE, d: today(), bond: bond });
     else if (owned[0]) TAMES.addAffinity(tames, owned[0].id, 30);
+    if (window.MMNotebook && !/[?&]notebook=0(&|$)/.test(location.search)) { try { window.MMNotebook.record(localStorage, window.MMNotebook.ids.tame(def.id)); } catch (e) { /* storage blocked */ } } // ID-04: first tame of a species (a known page writes nothing)
     if (ent && alpha) { TAMES.setCosmetic(tames, ent.id, 'alpha'); ent.lv = Math.max(1, Math.min(TAMES.MAX_LV, (def.lv && def.lv[0]) | 0)); }
     if (ent) {
       if (tames.party.length < Math.min(TAMES.MAX_PARTY, LOW ? 1 : CMP.MAX_ACTIVE)) {

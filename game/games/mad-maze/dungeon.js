@@ -625,6 +625,7 @@
         if (gearOn) dropBossGear(e, bagR1);
         arena._showBanner(B.boss_name + ' defeated! The portal opens.', 2.6);
         arena.onSave(arena.save); mapSig = ''; deepMark(biome, floor); deepShow(); // G-25: this floor counts as cleared on this device
+        if (window.MMNotebook && !/[?&]notebook=0(&|$)/.test(location.search)) { try { MMNotebook.record(localStorage, MMNotebook.ids.clear(biome)); } catch (e2) { /* storage blocked */ } } // ID-04: first clear of this dungeon
       }
       arena._syncBoss();
     }

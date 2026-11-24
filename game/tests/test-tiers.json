@@ -2043,5 +2043,9 @@
   "cyc1-art-town-buildings.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc2-notebook.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

@@ -49,6 +49,7 @@ Backup: yes = exported by `MMBackup` (shared/mm-backup.js KNOWN), **NO** = not e
 | `pixeltown-medals-stack-v1` | stack.js | `{v, m:[id]}` | 1 | MMHubMedals.clean | progress | yes |
 | `pixeltown-medals-stalk-v1` | stalk.js | `{v, m:[id]}` | 1 | MMHubMedals.clean | progress | yes |
 | `pixeltown-arms-v1` | games/mad-maze/mad-maze.js | `{v, seen:[id], ...}` weapon unlocks | 1 | mad-maze.js | progress | yes |
+| `pixeltown-notebook-v1` | shared/mm-notebook.js `record` (re-reads before every write; first meet only), written from realm-world.js (first kill per creature per zone, first world-boss kill), dungeon.js (first clear per biome), isles.js (first tame per species) | `{v, e:{<page id>: <first time, epoch ms>}}`, ids `kill:<pattern>:<creature>@<zone>`, `boss:<boss>@<zone>`, `clear:<biome>`, `tame:<species>`, max 300 pages (cyc2-S ID-04) | 1 | MMNotebook.clean | progress | yes |
 | `pixeltown-gift-v1` | shared/mm-gift.js, hub/gift.js | `{v, days, last:'YYYY-MM-DD'}` | 1 | MMGift.clean | progress | yes |
 | `pixeltown-feedback-v1` | shared/mm-feedback.js (re-reads before every add / delete) | `{v, entries:[{id,t,k,page,text,ua}]}` | 1 | MMFeedback.clean | progress | yes |
 | `pixeltown-backup-pregear-v1` | shared/mm-backup.js `snapshotPregear` | backup bundle `{format, v, at, keys:{key:raw}}` (<= 1 MB) | 2 | MMBackup.planRestorePregear | progress | n/a (is a backup) |
