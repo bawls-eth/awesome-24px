@@ -1976,6 +1976,10 @@
     "class": "browser",
     "tier": "full"
   },
+  "town-hint-lookups.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "realm-frame-lookups.test.js": {
     "class": "browser",
     "tier": "full"

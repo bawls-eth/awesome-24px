@@ -3412,10 +3412,23 @@ class TownScene extends Phaser.Scene {
     });
   }
 
+  // cycle1 L-09: the hint updaters run every frame, so they keep their element (looked up again only if it left the page) and
+  // touch the class list only when the state changes (as updateIslesSignHint / updatePostcardHint already did).
+  hintEl(id) {
+    const c = this._hintEls || (this._hintEls = {});
+    let el = c[id];
+    if (!el || !el.isConnected) { el = document.getElementById(id); c[id] = el; }
+    return el;
+  }
+
+  setHintHidden(el, hidden) {
+    if (el.classList.contains('hidden') !== hidden) el.classList.toggle('hidden', hidden);
+  }
+
   updateDigHoleHint() {
-    const hint = document.getElementById('dig-hole-hint');
+    const hint = this.hintEl('dig-hole-hint');
     if (!hint) return;
-    hint.classList.toggle('hidden', this.inUnderground || this.inRealm || this.buildMode || !this.isNearDigHole());
+    this.setHintHidden(hint, !!(this.inUnderground || this.inRealm || this.buildMode || !this.isNearDigHole()));
   }
 
   // A real tappable button — not just a key hint — since "press E" isn't
@@ -3438,7 +3451,7 @@ class TownScene extends Phaser.Scene {
   }
 
   updateFishHint() {
-    const btn = document.getElementById('fish-hint-btn');
+    const btn = this.hintEl('fish-hint-btn');
     if (!btn) return;
     const state = this.fishing.state;
     const target = state === 'idle' ? this.findNearestFishingSpot() : null;
@@ -3451,8 +3464,8 @@ class TownScene extends Phaser.Scene {
       this.fishTargetShadow = targetShadow;
     }
     const show = !this.inUnderground && !this.inRealm && !this.buildMode && (state !== 'idle' || !!target);
-    btn.classList.toggle('hidden', !show);
-    btn.classList.toggle('biting', state === 'biting');
+    this.setHintHidden(btn, !show);
+    if (btn.classList.contains('biting') !== (state === 'biting')) btn.classList.toggle('biting', state === 'biting');
     let label = '🎣 Fish';
     if (state === 'biting') label = '❗ Reel it in!';
     else if (state === 'casting') label = '🎣 Waiting for a bite…';
@@ -3492,9 +3505,9 @@ class TownScene extends Phaser.Scene {
   }
 
   updateRealmGateHint() {
-    const hint = document.getElementById('realm-gate-hint');
+    const hint = this.hintEl('realm-gate-hint');
     if (!hint) return;
-    hint.classList.toggle('hidden', this.inUnderground || this.inRealm || this.buildMode || !this.isNearRealmGate());
+    this.setHintHidden(hint, !!(this.inUnderground || this.inRealm || this.buildMode || !this.isNearRealmGate()));
   }
 
   // ---------- NAV slice E: "Where to?" sheet + Realm Gate pointer (UI only; no network, no save keys) ----------
@@ -3576,9 +3589,9 @@ class TownScene extends Phaser.Scene {
   }
 
   updateGatePointer(time) {
-    const el = document.getElementById('gate-pointer');
-    if (!el || !this.localBody || !this.gatePointer) return;
     if (time - this._gatePointerAt < 200) return; // a few times a second is plenty
+    const el = this.hintEl('gate-pointer');
+    if (!el || !this.localBody || !this.gatePointer) return;
     this._gatePointerAt = time;
     const st = this.gatePointer;
     const dx = REALM_GATE_POS.x - this.localBody.x;
@@ -9226,16 +9239,22 @@ class TownScene extends Phaser.Scene {
     // TN2 low tier: the villagers ease every third frame (their tags move with them, so nothing drifts apart)
     this.npcTick = ((this.npcTick || 0) + 1) % TOWN_PERF.npcEvery;
     if (this.npcTick === 0) this.updateVillagers();
-    const btn = document.getElementById('gift-hint-btn');
+    const btn = this.hintEl('gift-hint-btn');
     if (!btn) return;
     const v = (!this.inUnderground && !this.inRealm && !this.buildMode) ? this.findNearestVillager() : null;
-    btn.classList.toggle('hidden', !v);
+    this.setHintHidden(btn, !v);
     if (!v) return;
-    // e.g. "🎁 Gift Mocha 🍎🌸" — dimmed when nothing they like is in the bag.
-    const label = `🎁 Gift ${v.name} ${v.likes.map((k) => VILLAGER_GIFT_ICONS[k] || k).join('')}`;
+    // e.g. "🎁 Gift Mocha 🍎🌸" — dimmed when nothing they like is in the bag. The label is built once per villager (cycle1 L-09).
+    if (this._giftHintFor !== v) {
+      this._giftHintFor = v;
+      this._giftHintLabel = `🎁 Gift ${v.name} ${v.likes.map((k) => VILLAGER_GIFT_ICONS[k] || k).join('')}`;
+    }
+    const label = this._giftHintLabel;
     if (btn.textContent !== label) btn.textContent = label;
-    const has = v.likes.some((k) => (this.resources[k] || 0) > 0);
-    btn.style.opacity = has ? '' : '0.6';
+    let has = false;
+    for (let i = 0; i < v.likes.length && !has; i++) has = (this.resources[v.likes[i]] || 0) > 0;
+    const op = has ? '' : '0.6';
+    if (btn.style.opacity !== op) btn.style.opacity = op;
   }
 
   drawCampfire() {
