@@ -46,6 +46,12 @@ const SCENES = {
     });
     await p.waitForTimeout(300);
   },
+  // every creature in view mid hit flash (paused); 'before' = ?hitflash=0 (the old white circle)
+  'isles-hit': async (p) => {
+    await p.goto(isles('&isle=meadow&howto=0' + (/^before/.test(tag) ? '&hitflash=0' : ''))); await islesReady(p);
+    await p.evaluate(() => { const I = window.__isles; I.god(true); I.pause(true); I.hitFlash('all'); document.querySelectorAll('.howto, #howto').forEach((e) => { e.hidden = true; }); I.render(); });
+    await p.waitForTimeout(300);
+  },
   'boss-tundra': (p) => bossScene(p, 'tundra', ['glacier_shellback', 'shagtusk', 'sabrefang', 'icicle_bat']),
   'boss-mars': (p) => bossScene(p, 'mars', ['regolith_roly', 'rustbeetle', 'crater_strider', 'dust_devil']),
 };
