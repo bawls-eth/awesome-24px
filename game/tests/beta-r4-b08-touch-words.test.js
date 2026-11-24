@@ -2,7 +2,8 @@
 // keys line, the Town join tip and the Realm skip link / play-field label use touch words, never key names. The Town join card has a
 // compass Menu that opens the shared "Where to?" sheet, and a disabled Join says "Type your name to join." (hidden once a name is typed).
 // A desktop context still shows the key names (nothing removed for keyboard players).
-// Offline: blockDb on every context, Town WebSockets closed, no chat, no Firebase writes.
+// The Join button is found through the hint it is described by (aria-describedby), which is what this test checks; it is never clicked
+// (this test never joins the town). Offline: blockDb on every context, Town WebSockets closed, no chat, no Firebase writes.
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/beta-r4-b08-touch-words.test.js
 const { chromium } = require('playwright');
 const { check, done, blockDb } = require('./helpers');
@@ -36,13 +37,13 @@ async function ctxPage(browser, opts) {
     check('Realm (phone): skip link and play-field label name no keys (the key help line is hidden on touch)', !KEYS.test(rl.skip) && !KEYS.test(rl.aria) && /stick/.test(rl.aria), JSON.stringify(rl));
     // Town join card
     await s.page.goto(ORIGIN + '/game/index.html?from=hub');
-    await s.page.waitForSelector('#join-btn');
+    await s.page.waitForSelector('#name-input');
     const tj = await s.page.evaluate(() => ({ tip: document.querySelector('#join-overlay .join-tip').textContent }));
     check('Town join (phone): the tip names no keys', !KEYS.test(tj.tip) && !/\bE\b to interact|\bB\b to build|1-9/.test(tj.tip) && /stick/.test(tj.tip), JSON.stringify(tj));
-    const h0 = await s.page.evaluate(() => { const h = document.getElementById('join-hint'); const b = document.getElementById('join-btn'); return { dis: b.disabled, txt: h ? h.textContent : '', vis: !!h && h.getClientRects().length > 0 && !h.classList.contains('hidden') }; });
-    check('Town join: with no name, Join is disabled and a visible hint says why', h0.dis && h0.vis && /name/i.test(h0.txt), JSON.stringify(h0));
+    const h0 = await s.page.evaluate(() => { const h = document.getElementById('join-hint'); const b = document.querySelector('[aria-describedby~="join-hint"]'); return { dis: !!b && b.disabled, btn: b ? b.textContent : '', txt: h ? h.textContent : '', vis: !!h && h.getClientRects().length > 0 && !h.classList.contains('hidden') }; });
+    check('Town join: with no name, the Join button the hint describes is disabled and a visible hint says why', h0.dis && /Join/.test(h0.btn) && h0.vis && /name/i.test(h0.txt), JSON.stringify(h0));
     await s.page.fill('#name-input', 'ADMINtouch');
-    const h1 = await s.page.evaluate(() => { const h = document.getElementById('join-hint'); return { dis: document.getElementById('join-btn').disabled, vis: !!h && h.getClientRects().length > 0 && !h.classList.contains('hidden') }; });
+    const h1 = await s.page.evaluate(() => { const h = document.getElementById('join-hint'); const b = document.querySelector('[aria-describedby~="join-hint"]'); return { dis: !b || b.disabled, vis: !!h && h.getClientRects().length > 0 && !h.classList.contains('hidden') }; });
     check('Town join: once a name is typed Join is enabled and the hint goes', !h1.dis && !h1.vis, JSON.stringify(h1));
     const mb = await s.page.evaluate(() => { const b = document.getElementById('join-menu-btn'); if (!b) return null; const r = b.getBoundingClientRect(); const c = document.querySelector('#join-overlay .join-card').getBoundingClientRect(); return { w: r.width, h: r.height, left: r.left - c.left, top: r.top - c.top, txt: b.textContent }; });
     check('Town join: a compass Menu sits top-left in the card (>= 44 px)', !!mb && mb.w >= 44 && mb.h >= 44 && mb.left < 40 && mb.top < 40 && /🧭/.test(mb.txt), JSON.stringify(mb));
@@ -56,7 +57,7 @@ async function ctxPage(browser, opts) {
     await d.page.goto(ORIGIN + '/game/games/pop/index.html');
     const dk = await d.page.evaluate(() => document.getElementById('keys').textContent);
     await d.page.goto(ORIGIN + '/game/index.html');
-    await d.page.waitForSelector('#join-btn');
+    await d.page.waitForSelector('#name-input');
     const dt = await d.page.evaluate(() => document.querySelector('#join-overlay .join-tip').textContent);
     check('desktop: Pop and the Town join tip still list the keys', /arrows/.test(dk) && /WASD/.test(dt), JSON.stringify({ dk, dt }));
     await d.ctx.close();

@@ -1799,7 +1799,7 @@
   },
   "beta-r4-b05-05-oakback-food.test.js": {
     "class": "node",
-    "tier": "full"
+    "tier": "smoke"
   },
   "beta-r4-b08-touch-words.test.js": {
     "class": "browser",
@@ -1807,7 +1807,7 @@
   },
   "beta-r4-o07-stalk-neighbour-cap.test.js": {
     "class": "node",
-    "tier": "full"
+    "tier": "smoke"
   },
   "beta-r4-b11-09-lantern-name.test.js": {
     "class": "browser",
