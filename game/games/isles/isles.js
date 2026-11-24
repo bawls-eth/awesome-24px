@@ -670,6 +670,7 @@
       if (c.pt <= 0) { c.ph = 'rest'; c.pt = 0.35; c.vx = 0; c.vy = 0; }
     } else if (c.pt <= 0) { c.ph = ''; c.cd = s.atk.cd; }
   }
+  const leftNow = (c) => c.leaving > 0 && c.leaving <= 0.01;
   function stepCreatures(dt) {
     for (let i = 0; i < creatures.length; i++) {
       const c = creatures[i];
@@ -689,7 +690,10 @@
       c.hostile = !c.ko && !c.calm && s.dmg > 0 && (c.mood === 'hostile' || c.angry > 0);
       if (!c.seen && Math.abs(hero.x - c.x) < 8 * TILE && Math.hypot(hero.x - c.x, hero.y - c.y) < 8 * TILE) { c.seen = true; noteSeen(c); }
     }
-    if (creatures.length && creatures.some((c) => c.leaving > 0 && c.leaving <= 0.01)) removeWhere((c) => c.leaving > 0 && c.leaving <= 0.01, 0);
+    // cycle 2 (L): a plain scan, no closure per frame (was creatures.some(...) every frame, and a second closure when one left)
+    let gone = false;
+    for (let i = 0; i < creatures.length; i++) { const l = creatures[i].leaving; if (l > 0 && l <= 0.01) { gone = true; break; } }
+    if (gone) removeWhere(leftNow, 0);
   }
   // IF1: the first sighting of a species ever is a journal entry (a small reward beat); later ones just count
   function noteSeen(c) {

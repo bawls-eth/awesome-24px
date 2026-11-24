@@ -1432,6 +1432,10 @@
     "class": "node",
     "tier": "smoke"
   },
+  "isles-frame-some.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
   "isles-ftue-fixes.test.js": {
     "class": "browser",
     "tier": "full"
