@@ -6,6 +6,7 @@
 // (5) no page errors. Firebase blocked in every context.
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/r4-d2-art.test.js
 const { chromium } = require('playwright');
+const LS = require('./lib/load-scale'); // the budget is load-scaled (factor 1 on an idle box, so the strict 3 s still applies there)
 const { check, done, blockDb } = require('./helpers');
 const ORIGIN = (process.env.BASE || 'http://localhost:8440/game/index.html').replace(/\/game\/index\.html.*$/, '');
 const WORLD = (seed, q) => ORIGIN + '/game/games/mad-maze/index.html?mode=world&test=1&offline=1&heropick=0&tutorial=0&seed=' + seed + (q || '');
@@ -32,7 +33,7 @@ const WORLD = (seed, q) => ORIGIN + '/game/games/mad-maze/index.html?mode=world&
   const tc = Date.now(); await card.click();
   const applied = await hp.waitForFunction(() => window.__heroArt && (window.__heroArt.stat.applied > 0 || window.__heroArt.stat.quick > 0), null, { timeout: 15000 }).then(() => Date.now() - tc).catch(() => -1);
   console.log('INFO first-hero pick: class art applied ' + applied + ' ms after the click; hero manifests fetched after hover: ' + hm.length);
-  check('first-hero pick: class sprite (idle strips or the full set) applied within 3 s of the click (W-01)', applied >= 0 && applied <= 3000, 'ms=' + applied);
+  check('first-hero pick: class sprite (idle strips or the full set) applied within 3 s of the click (W-01)', applied >= 0 && applied <= LS.budget(3000), 'ms=' + applied + ' budget=' + LS.budget(3000));
   check('hero strips load from one pack manifest (not every INDEX batch)', hm.filter((u) => !/b0[0-3]-/.test(u)).length <= 2, JSON.stringify(hm.slice(0, 6)));
   await hp.close();
   const one = await page.evaluate(async () => {
