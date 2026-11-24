@@ -6666,7 +6666,9 @@ class TownScene extends Phaser.Scene {
     const st = this.worldIcons = { on: !/[?&]worldicons=0(&|$)/.test(location.search) && !!window.MMPixelIcons, labels: [], ms: 0 };
     if (!st.on) return st;
     const t0 = performance.now();
-    const MAP = { '🏠': 'house', '🏡': 'house', '🏛️': 'museum', '🏛': 'museum', '📬': 'mail', '📮': 'mail', '🔨': 'hammer', '📖': 'book', '🥬': 'turnip', '🌀': 'realm', '🎣': 'angler' };
+    const MAP = { '🏠': 'house', '🏡': 'house', '🏛️': 'museum', '🏛': 'museum', '📬': 'mail', '📮': 'mail', '🔨': 'hammer', '📖': 'book', '🥬': 'turnip', '🌀': 'realm', '🎣': 'angler',
+      // cycle 3 art (G): the rest of the world labels. 🚪 portal doors stay glyphs (beta-r4-doors / replay-doors find them by /^🚪/).
+      '🎲': 'dice', '🕹️': 'joystick', '🕹': 'joystick', '🪦': 'grave', '🌾': 'wheat', '👗': 'dress', '⛏️': 'pickaxe', '⛏': 'pickaxe', '🛒': 'cart', '🦋': 'bugs', '🧪': 'flask' };
     const split = (txt) => { const m = typeof txt === 'string' ? /^(\S+) (.+)$/s.exec(txt) : null; return m && MAP[m[1]] ? { id: MAP[m[1]], rest: m[2] } : null; };
     const texKey = (id) => {
       const key = 'pxico-' + id;

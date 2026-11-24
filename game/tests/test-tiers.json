@@ -2123,5 +2123,25 @@
   "cyc3-economy-tuning.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "cyc3-art-town-label-icons.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-art-death-dissolve.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-art-nexus-life.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-art-realm-icorner.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-art-isles-dissolve.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

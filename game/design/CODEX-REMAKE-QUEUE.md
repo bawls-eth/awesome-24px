@@ -609,3 +609,23 @@ grass-like non-PNG tiles, `?islefield=0`); Town world labels use code-drawn 16 p
 6. T-BLD, R03b: unchanged from cycle 1 (code finish / tree overlay are stopgaps).
 Idle / death animation polish (Town heroes, Realm enemies, Isles creatures) and Nexus plaza life were NOT done in code this cycle; enemy
 death strips (5 frames, last 2 lying down) already ship for b04 and the R07 set, so a code dissolve is the cheap next step (cycle 3).
+
+## UPDATE 2026-11-24 (cycle 3, Claude G): b03 verdicts, what code now covers, re-prioritised asks
+Reviewed: `codex/b03-icicle-bat` ACCEPTED + merged provisional (audit 0/0; wiring waits on the pinned tundra kinds list in
+`shared-mm-creature-strips.test.js`). `codex/b03-glacier-shellback` REDO: true side view for `_right`, death last 2 frames lying
+down, a readable attack (sheet `beta/img/cyc3-art-codex-b03-contact.jpg`, board entry has details).
+Code stopgaps shipped this cycle (so these asks drop in priority but stay wanted): Realm R01b inner corners copy the corner from the
+terrain's own edge tile (`?icorner=0`), so the stair-step is gone but corners are square, not rounded; enemy / Isles creature death
+dissolve (2x2 Bayer, `?dissolve=0`); Nexus torch / banner / NPC life (`?nxlife=0`); pixel icons for every Town world label except the
+pinned glyphs (statue, Isles sign, mailbox count, the four portal doors).
+Priority now:
+1. **Glacier Shellback redo** (above), then the rest of B-03 / B-04 tundra + mars species in the icicle bat's quality.
+2. **W-06 Isles creature scale** (unchanged, the largest visual mismatch left: creatures 1.5-2x the hero at 390x844).
+3. **Isles tundra / jungle ground**: snow, ice and moss are flat single-colour tiles with dashed 32 px seams
+   (`beta/img/cyc3-art-isles-tundra-survey-d.jpg`); R05 tundra ground needs 3-4 variants each with grain, plus edge sets.
+4. **R01b PNG inner corners** `tile_<snow|lava_rock|dry_grass|gravel>_icorner_{ne,nw,se,sw}`: rounded inner corners to replace the
+   square code corner.
+5. **R02 Isles ground redo**, black sand (unchanged).
+6. **Town label art** 16x16 (b19 style) for the 16 code icons now in `shared/mm-pixel-icons.js` (house, museum, mail, hammer, book,
+   turnip, dice, joystick, grave, wheat, dress, pickaxe, cart, flask, bugs, angler) and a door icon if the doors' test pin is lifted.
+

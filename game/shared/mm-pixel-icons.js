@@ -68,6 +68,31 @@
       '................', '................', '....rrrrrrrrr...', '...Rrrrrrrrrr...', '...Rryyyyyyrr...', '...Rrrrrrrrrr...', '...Rrrrrrrrrr...', '...Rrrrrrrrrr...', '...Rrrrrrrrrr...', '...Rrrrrrrrrr...', '...Rwwwwwwwww...', '....RRRRRRRRR...', '................', '................', '................', '................'],
     turnip: [ // cycle 2 art (G): Town world-label icon
       '................', '......g..g......', '.....gGggGg.....', '.......gG.......', '.....PppppP.....', '....PpwppppP....', '....pwwwwwwp....', '....wwwwwwws....', '....wwwwwwws....', '.....wwwwss.....', '......wws.......', '.......s........', '................', '................', '................', '................'],
+    // cycle 3 art (G): the remaining Town world-label icons (Polyroll, Arcade, Graveyard, Windmill, Able Sisters, Hole, merchant)
+    dice: [
+      '................', '................', '...wwwwwwwwww...', '..wwwwwwwwwwws..', '..wrrwwwwwwwws..', '..wrrwwwwwwwws..', '..wwwwwrrwwwws..', '..wwwwwrrwwwws..',
+      '..wwwwwwwwrrws..', '..wwwwwwwwrrws..', '..wwwwwwwwwwws..', '..ssssssssssss..', '...SSSSSSSSSS...', '................', '................', '................'],
+    joystick: [
+      '................', '......rrr.......', '.....rwrrr......', '.....rrrrR......', '......RRR.......', '.......d........', '.......d........', '.......d...rr...',
+      '..sswsssssssss..', '..sssssssssssS..', '..dddddddddddd..', '................', '................', '................', '................', '................'],
+    grave: [
+      '................', '......ssss......', '....sswssssS....', '...swwssssssS...', '...swsssdsssS...', '...swssdddssS...', '...swsssdsssS...', '...swsssdsssS...',
+      '...swssssssSS...', '...swssssssSS...', '...sssssssSSS...', '..gGgGGGGGGgGg..', '................', '................', '................', '................'],
+    wheat: [
+      '................', '...y....y....y..', '..yoy..yoy..yoy.', '..yoy..yoy..yoy.', '..yoy..yoy..yoy.', '...o....o....o..', '....o...o...o...', '.....o..o..o....',
+      '......o.o.o.....', '......nnnnn.....', '.......ooo......', '......o.o.o.....', '.....o..o..o....', '................', '................', '................'],
+    dress: [
+      '................', '.....P....P.....', '.....pP..pP.....', '.....pppppP.....', '.....pwpppP.....', '......yyyy......', '.....pwppppP....', '....pwpppppP....',
+      '....pppppppPP...', '...pwpppppppP...', '...ppppppppPP...', '..pppppppppppP..', '..PPPPPPPPPPPP..', '................', '................', '................'],
+    pickaxe: [
+      '................', '....sssssss.....', '..sswwsssssSS...', '.ss....nN....SS.', '.s.....nN.....S.', '.......nN.......', '.......nN.......', '.......nN.......',
+      '.......nN.......', '.......nN.......', '.......nN.......', '.......nN.......', '.......NN.......', '................', '................', '................'],
+    flask: [ // cycle 3 art (G): Professor Byte's lab label
+      '................', '......wwww......', '.......sw.......', '.......sw.......', '.......sw.......', '......swws......', '.....swwwws.....', '....swwwwwws....',
+      '...sggggggggs...', '...sgwgggggGs...', '..sggggggggGGs..', '..sgggggggGGGs..', '...ssssssssss...', '................', '................', '................'],
+    cart: [
+      '................', '................', '.dd.............', '...d............', '...dssssssssss..', '...dswswswswsd..', '....sssssssssd..', '....swswswswsd..',
+      '.....ssssssss...', '.....d......d...', '....dddddddddd..', '.....SS....SS...', '.....SS....SS...', '................', '................', '................'],
   };
   const SIZE = 16;
   const hex = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
