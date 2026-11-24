@@ -36,7 +36,7 @@ const MAP = require('../shared/mm-map.js');
     check(vp.width + ': W-06 wildlife scale table: fox ~hero height (22-27 px), deer / caribou <= 32 px, butterfly / frog <= 16 px (were 56 / 68 / 32 px)',
       fauna.length >= 3 && (!f.fox || (f.fox >= 22 && f.fox <= 27)) && (!f.deer || f.deer <= 32) && (!f.caribou || f.caribou <= 32) && (!f.butterfly || f.butterfly <= 16) && (!f.frog || f.frog <= 16), JSON.stringify({ hero: r.ph, f: fauna.map((k) => k + ':' + f[k]) }));
     check(vp.width + ': flora keeps its size (oak tree 88 px)', !f.oak_tree || f.oak_tree === 88, String(f.oak_tree));
-    check(vp.width + ': no DB writes', db.count() >= 0);
+    check(vp.width + ': no database traffic', db.attempts() === 0, String(db.attempts()));
     await ctx.close();
   }
   { // ?npcscale=classic restores the old NPC sizes
