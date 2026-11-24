@@ -439,6 +439,10 @@ body.mm-hud-big .realm-ab .key { font-size: calc(12px * var(--mm-hud-scale, 1));
 body.mm-hud-big .realm-ab .cd { font-size: calc(18px * var(--mm-hud-scale, 1)); }
 body.mm-hud-big .realm-ab.locked .cd { font-size: calc(12px * var(--mm-hud-scale, 1)); }
 body.mm-hud-big #rw-nexus .nx-talk, body.mm-hud-big #rw-nexus .nx-stall { font-size: calc(14px * var(--mm-hud-scale, 1)); }
+/* cyc0-ui: Text size also reaches the Leave label, the ability names and the Daily chip (they stayed at 12-14 px at 150%). */
+body.mm-hud-big #realm-leave-btn { font-size: calc(12px * var(--mm-hud-scale, 1)); }
+html body.mm-hud-big #realm-abilities .realm-ab .nm { font-size: min(16px, calc(12px * var(--mm-hud-scale, 1))); } /* also beats realm-8bit.css's fixed 12 px */
+body.mm-hud-big a#mm-daily-btn { font-size: calc(14px * var(--mm-hud-scale, 1)); }
 /* PLAYTEST-REVIEW-3: the hero picker (a fresh visitor's first screen) no longer hides the shared Menu button: where the centred card would
    reach the button's corner (narrow screens), the card starts below the button row. */
 @media (max-width: 679px) {
