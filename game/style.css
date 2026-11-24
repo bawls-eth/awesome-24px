@@ -3012,9 +3012,6 @@ body.has-back-pill #join-overlay > .join-card { max-height: calc(100vh - 64px - 
   body.touch-device #walkie-panel { left: auto; right: calc(146px + env(safe-area-inset-right, 0px)); transform: none; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
 }
 
-/* cyc0-ui (b08-r2-07): offline Town HUD declutter. Offline, the quick-chat phrases only answer "Chat needs the online town"
-   and Hold to talk has nobody to reach, so both step aside (online they are unchanged); the chat log and C stay. */
-body.town-offline #quick-chat-row, body.town-offline #walkie-panel { display: none !important; }
 /* cyc0-ui: Text size (hudScale) on phones. The bag bar and the people panel are zoomed by --hud-scale but kept their
    46vw caps, so at 150% (and at 200% browser zoom) the bag bar spread over Where to? / the Menu. Cap the zoomed width so
    both still fit side by side, and scale the action buttons (A / C / Emotes / Tools) with the rest of the HUD. */
