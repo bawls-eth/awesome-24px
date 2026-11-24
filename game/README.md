@@ -186,15 +186,10 @@ right now, before you even pick a name.
   "Walkie-talkie" below)
 - A Bored Ape "Mayor" statue watches over the plaza, and Moon Cats drift
   lazily around the pond — pure flavor, no gameplay attached
-- Four **GTA3-style portal doors**, in a 2x2 in the 🕹️ Arcade
-  District southeast of the statue — to
-  [GTA 3](https://quenq.com/apps/gta-3/),
-  [NFS Underground 2](https://nfsu2.xyz/),
-  [Kart Racing](https://olivers.tools/kart/), and
-  [Vice City](https://quenq.com/apps/vice-city/) — walk up and interact to
-  leave Pixeltown entirely for that browser game, in this same tab. It's
-  one-way: there's no teleport back, just like walking through a loading
-  door and leaving the area behind (a confirm prompt checks before you go).
+- Four **arcade doors**, in a 2x2 in the 🕹️ Arcade District southeast of
+  the statue: City Drive, Night Racer, Neon Coast and Kart Rally. Kart Rally
+  opens another site in a new tab after a "this leaves the game" confirm
+  (Pixeltown stays open); the other three show a "Coming soon" card.
   If your browser brings you back to this exact tab with its Back button,
   the door you just used works again right away — it used to get stuck
   permanently closed in that case

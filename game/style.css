@@ -2276,17 +2276,17 @@ body.touch-device .key-hint { display: none; }
 }
 
 @media (max-width: 600px), (max-height: 500px) and (pointer: coarse) {
-  /* 28px close buttons were too small to tap reliably: 40px hit area. */
+  /* 28px close buttons were too small to tap reliably: 44px hit area (R4 D4: was 40, WCAG 2.5.5 / Apple HIG want 44). */
   [id$="-overlay"] button[id$="close-btn"] {
-    width: 40px !important;
-    height: 40px !important;
+    width: 44px !important;
+    height: 44px !important;
     top: 6px !important;
     right: 6px !important;
     font-size: 16px;
   }
   /* ...and keep the (now bigger) close button off the card title. */
   [id$="-overlay"] [class$="-card"] > h1,
-  [id$="-overlay"] [class$="-card"] > h2 { padding-right: 44px; }
+  [id$="-overlay"] [class$="-card"] > h2 { padding-right: 48px; }
   /* The "What's new" banner grew to ~450px tall at 360px wide and covered the
      chat bar and HUD: cap it and scroll inside. */
   #whats-new-banner {
@@ -2969,3 +2969,10 @@ body:has(#emote-popup:not(.hidden)) #quick-chat-row { visibility: hidden; }
   #settings-section button, #settings-section select, #settings-section a { min-height: 44px; box-sizing: border-box; }
   #settings-section #town-settings-btn { min-width: 44px; width: 100%; }
 }
+
+/* O-01: arcade door "Coming soon" card (44 px touch targets, safe-area aware) */
+#door-soon-overlay { position: fixed; inset: 0; z-index: 25; display: flex; align-items: center; justify-content: center; background: var(--ac-scrim); padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); box-sizing: border-box; }
+#door-soon-overlay.hidden { display: none; }
+#door-soon-overlay .join-card { position: relative; max-height: 90vh; overflow-y: auto; }
+#door-soon-close-btn { position: absolute; top: 6px; right: 6px; width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--ac-border); background: var(--ac-inset); color: var(--ac-text); cursor: pointer; }
+#door-soon-ok-btn { min-height: 44px; min-width: 120px; }

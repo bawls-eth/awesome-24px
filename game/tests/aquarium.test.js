@@ -70,7 +70,7 @@ const LOG = { caught: { koi: { n: 2, best: 40 }, shark: { n: 1, best: 70 }, squi
   const fp = await scene(page, (s) => {
     const cx = HOME_POS.x + HOME_TANK_OFFSET.x; const cy = HOME_POS.y + HOME_TANK_OFFSET.y;
     const hits = s.obstacles.getChildren().filter((r) => r.x + r.width / 2 > cx - 40 && r.x - r.width / 2 < cx + 40 && r.y + r.height / 2 > cy - 34 && r.y - r.height / 2 < cy + 34).length;
-    const texts = s.children.list.filter((c) => c.type === 'Text' && c.visible && /Racing|GTA|Vice|NFS|Arcade|Polyroll|Workbench|Mailbox/.test(c.text) && Math.abs(c.x - cx) < 90 && Math.abs(c.y - cy) < 40).map((c) => c.text);
+    const texts = s.children.list.filter((c) => c.type === 'Text' && c.visible && /City Drive|Night Racer|Neon Coast|Kart Rally|Arcade|Polyroll|Workbench|Mailbox/.test(c.text) && Math.abs(c.x - cx) < 90 && Math.abs(c.y - cy) < 40).map((c) => c.text);
     return { hits, texts, cx, cy };
   });
   check('aquarium: tank footprint overlaps no obstacle or nearby label/door', fp.hits === 0 && fp.texts.length === 0, JSON.stringify(fp));

@@ -817,7 +817,7 @@ const SHOP_RADIUS = 70;
 // arcade district, southeast of the statue — previously these were
 // scattered across the whole map (the tournament sign in particular sat
 // all the way on the opposite, western edge, by the main pond), which
-// meant a lot of walking just to find them. Having one GTA portal instead
+// meant a lot of walking just to find them. Having one portal instead
 // of the original two redundant ones is part of the same tidy-up.
 const POLYROLL_POS = { x: 1900, y: 760 };
 const POLYROLL_RADIUS = 50;
@@ -1222,18 +1222,14 @@ const KK_CONCERT_END_HOUR = 21; // 9pm local time
 const WEATHER_CYCLE_MS = 8 * 60 * 1000; // 8-minute weather windows
 const WEATHER_RAIN_CHANCE = 0.3; // ~30% of windows are rainy
 const WEATHER_RAIN_COUNT = 70;
-// One-way, GTA3-loading-door style portals: each is a real door object in
-// the town that, on interact, leaves Pixeltown entirely for another
-// browser game in this same tab. No teleport back — closing/navigating
-// away from the destination is how you return. Both doors live in the
-// arcade district (see POLYROLL_POS above) — there used to be two
-// redundant GTA 3 doors on opposite sides of the map; one is enough now
-// that there's a single, easy-to-find spot for all of this.
+// Arcade district doors (O-01, owner decision): original neutral names only. A door with a `url` opens that page in a NEW
+// tab (rel=noopener) after a "this leaves the game" confirm, so Pixeltown stays open behind it; a door without one shows
+// the "Coming soon" card. The doors used to carry third-party game names and same-tab links; those are gone.
 const PORTALS = [
-  { x: 1830, y: 870, label: '🚪 GTA 3', color: 0x4fa0e0, url: 'https://quenq.com/apps/gta-3/' },
-  { x: 1970, y: 870, label: '🚪 NFS Underground 2', color: 0xe0454f, url: 'https://nfsu2.xyz/' },
-  { x: 1830, y: 960, label: '🚪 Kart Racing', color: 0xffa726, url: 'https://olivers.tools/kart/' },
-  { x: 1970, y: 960, label: '🚪 Vice City', color: 0xff4fa0, url: 'https://quenq.com/apps/vice-city/' },
+  { x: 1830, y: 870, label: '🚪 City Drive', color: 0x4fa0e0, url: null },
+  { x: 1970, y: 870, label: '🚪 Night Racer', color: 0xe0454f, url: null },
+  { x: 1830, y: 960, label: '🚪 Kart Rally', color: 0xffa726, url: 'https://olivers.tools/kart/' },
+  { x: 1970, y: 960, label: '🚪 Neon Coast', color: 0xff4fa0, url: null },
 ];
 const EAST_POND = { cx: 2000, cy: 280, rx: 130, ry: 80 };
 const MAIN_POND = { cx: 260, cy: 600, rx: 150, ry: 90 };
@@ -1653,7 +1649,7 @@ class TownScene extends Phaser.Scene {
     this.setupActivities();
     this.setupBuilding();
     this.setupWalkie();
-    this.setupPortalReopen();
+    this.setupPortalReopen(); this.setupDoorSoon();
     this.setupPolyroll();
     this.setupAchievements();
     this.setupLoginStreak();
@@ -2458,7 +2454,7 @@ class TownScene extends Phaser.Scene {
       ['guestbookOpen', 'guestbook-close-btn'], ['triviaOpen', 'trivia-close-btn'],
       ['keysHelpOpen', 'keys-help-close-btn'], ['changelogOpen', 'changelog-close-btn'],
       ['museumOpen', 'museum-close-btn'], ['workbenchOpen', 'workbench-close-btn'], ['mailboxOpen', 'mailbox-close-btn'], ['homeOpen', 'home-close-btn'], ['dailiesOpen', 'dailies-close-btn'], ['journalOpen', 'journal-close-btn'], ['realmMenuOpen', 'realm-menu-close-btn'],
-      ['postcardsOpen', 'postcards-close-btn'],
+      ['postcardsOpen', 'postcards-close-btn'], ['doorSoonOpen', 'door-soon-close-btn'],
     ];
     const open = overlays.find(([flag]) => this[flag]);
     if (open) {
@@ -2576,7 +2572,7 @@ class TownScene extends Phaser.Scene {
   // so chat/overlay state is respected no matter which input triggered it
   // (keyboard, on-screen button, or shake).
   canAct() {
-    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen && !this.mapOpen && !this.museumOpen && !this.workbenchOpen && !this.mailboxOpen && !this.homeOpen && !this.dailiesOpen && !this.journalOpen && !this.realmMenuOpen && !this.postcardsOpen && !this.navSheetOpen() && !(this.sharedSettings && this.sharedSettings.isOpen()); // review N3: nothing acts behind the "Where to?" sheet
+    return !this.chatFocused && !this.polyrollOpen && !this.achievementsOpen && !this.outfitShopOpen && !this.guestbookOpen && !this.triviaOpen && !this.keysHelpOpen && !this.changelogOpen && !this.mapOpen && !this.museumOpen && !this.workbenchOpen && !this.mailboxOpen && !this.homeOpen && !this.dailiesOpen && !this.journalOpen && !this.realmMenuOpen && !this.postcardsOpen && !this.doorSoonOpen && !this.navSheetOpen() && !(this.sharedSettings && this.sharedSettings.isOpen()); // review N3: nothing acts behind the "Where to?" sheet
   }
 
   navSheetOpen() { try { return typeof MMNav !== 'undefined' && MMNav.isOpen(); } catch (e) { return false; } }
@@ -3108,12 +3104,7 @@ class TownScene extends Phaser.Scene {
     return Math.hypot(this.localBody.x - DIG_HOLE_POS.x, this.localBody.y - DIG_HOLE_POS.y) < DIG_HOLE_RADIUS;
   }
 
-  // These doors are one-way, GTA3-loading-door style: they leave Pixeltown
-  // entirely for another browser game in this same tab. There's no
-  // teleport back — closing/navigating away from that page is how you
-  // return, same as actually walking through a loading door and leaving
-  // the area behind. Always confirm first since this abandons the
-  // current session.
+  // O-01: arcade doors. Linked doors open in a new tab (noopener) after a confirm; the rest show the Coming soon card.
   findNearestPortal() {
     let best = null;
     let bestDist = DOOR_RADIUS;
@@ -3129,14 +3120,42 @@ class TownScene extends Phaser.Scene {
   }
 
   useDoor() {
-    if (this.doorBusy) return;
+    if (this.doorBusy || this.doorSoonOpen) return;
     const portal = this.findNearestPortal();
     if (!portal) return;
     const name = portal.label.replace('🚪', '').trim();
-    const ok = window.confirm(`Walk through the portal to ${name}? This leaves Pixeltown in this tab — there's no way back through it.`);
+    if (!portal.url) { this.openDoorSoon(name); return; }
+    const ok = window.confirm(`${name} is another site. It opens in a new tab and leaves the game; Pixeltown stays open in this tab.`);
     if (!ok) return;
-    this.doorBusy = true;
-    window.location.href = portal.url;
+    const w = window.open(portal.url, '_blank', 'noopener,noreferrer');
+    if (w) { try { w.opener = null; } catch (e) { /* already detached */ } }
+  }
+
+  openDoorSoon(name) {
+    const ov = document.getElementById('door-soon-overlay');
+    if (!ov) return;
+    document.getElementById('door-soon-title').textContent = '🚪 ' + name;
+    this.doorSoonOpen = true;
+    ov.classList.remove('hidden');
+    this.doorSoonReturn = document.activeElement;
+    const btn = document.getElementById('door-soon-close-btn');
+    if (btn) btn.focus();
+  }
+
+  closeDoorSoon() {
+    this.doorSoonOpen = false;
+    const ov = document.getElementById('door-soon-overlay');
+    if (ov) ov.classList.add('hidden');
+    const back = this.doorSoonReturn; this.doorSoonReturn = null;
+    if (back && back.focus && document.contains(back)) { try { back.focus(); } catch (e) { /* gone */ } }
+  }
+
+  setupDoorSoon() {
+    const ov = document.getElementById('door-soon-overlay');
+    if (!ov) return;
+    document.getElementById('door-soon-close-btn').addEventListener('click', () => this.closeDoorSoon());
+    document.getElementById('door-soon-ok-btn').addEventListener('click', () => this.closeDoorSoon());
+    ov.addEventListener('click', (e) => { if (e.target === ov) this.closeDoorSoon(); });
   }
 
   // If the player presses the browser's Back button after going through a
