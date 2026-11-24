@@ -2047,5 +2047,13 @@
   "cyc2-notebook.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc2-isles-wander-slide.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc2-errands.test.js": {
+    "class": "node",
+    "tier": "smoke"
   }
 }

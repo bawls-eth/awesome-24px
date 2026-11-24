@@ -2298,7 +2298,7 @@
       const talk = document.createElement('div'); talk.className = 'nx-talk'; talk.setAttribute('role', 'status'); talk.textContent = nxHint();
       const board = document.createElement('div'); board.className = 'nx-board hidden'; board.id = 'rw-nx-board';
       const stall = document.createElement('div'); stall.className = 'nx-board nx-stall hidden'; stall.id = 'rw-nx-stall'; stall.setAttribute('role', 'region'); stall.setAttribute('aria-label', 'Vendor stall');
-      root.appendChild(head); root.appendChild(stage); if (act) root.appendChild(act); root.appendChild(talk); if (notebook) root.appendChild(notebook); root.appendChild(board); if (nxStallOn()) root.appendChild(stall); if (!NX_WALK) root.appendChild(lists); ov.appendChild(root);
+      root.appendChild(head); root.appendChild(stage); if (act) root.appendChild(act); root.appendChild(talk); root.appendChild(board); if (nxStallOn()) root.appendChild(stall); if (notebook) root.appendChild(notebook); /* after the quest board: '#rw-nexus .nx-board' still finds the board first */ if (!NX_WALK) root.appendChild(lists); ov.appendChild(root);
       back.addEventListener('click', () => nexusClose());
       nxDom = { root, cv, plaza, act, stage, talk, board, stall, back, nbBtn, notebook, last: null };
       nbSyncBtn();
