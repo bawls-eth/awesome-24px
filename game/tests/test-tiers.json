@@ -1808,5 +1808,9 @@
   "beta-r4-o07-stalk-neighbour-cap.test.js": {
     "class": "node",
     "tier": "full"
+  },
+  "beta-r4-b11-09-lantern-name.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
