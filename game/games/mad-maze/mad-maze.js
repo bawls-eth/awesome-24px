@@ -173,6 +173,15 @@
     if (!heroArtCache.has(ac)) heroArtCache.set(ac, MMArt.loadClass('../../assets/arcane/', ac).then((set) => (set && set.has(ac) && set.anim(ac, 'idle', 'down') ? set : null)).catch(() => null));
     return heroArtCache.get(ac);
   }
+  // R4-D2 (W-01): the 4 idle strips arrive long before the full ~20-strip class set on a slow link, so a hero is drawn from them first
+  // (walk / attack fall back to idle in Realm._drawHero) and the full set replaces them when it resolves.
+  const heroQuickCache = new Map();
+  function heroQuickP(ac) {
+    if (!ac || !window.MMArt) return Promise.resolve(null);
+    if (!heroQuickCache.has(ac)) heroQuickCache.set(ac, MMArt.loadClass('../../assets/arcane/', ac, { actions: ['idle'] }).then((set) => (set && set.has(ac) && set.anim(ac, 'idle', 'down') ? set : null)).catch(() => null));
+    return heroQuickCache.get(ac);
+  }
+  const heroFull = new Set(); // classes whose full set is already applied (a late quick set never replaces it)
   window.__heroArt = { stat: heroArtStat, cached: () => Array.from(heroArtCache.keys()) };
   const artClass = window.MMArt ? MMArt.artClassFor(activeHeroClass()) : null;
   if (artClass) { // only applied while it is still the active hero's class (a later pick must not be overwritten by this slower request)
@@ -333,9 +342,13 @@
     if (arena.setBoltClass) arena.setBoltClass(h.cls);
     // W-01: the previous sprite stays on screen until the new strip resolves (no fallback orb / empty frame); the code fallback only when it fails.
     if (!ac) { arena.setHeroArt(null); heroArtStat.fallback++; return; }
+    heroQuickP(ac).then((set) => {
+      const cur = heroState().hero; if (!set || !cur || cur.id !== h.id || heroFull.has(ac)) return;
+      arena.setHeroArt(set, ac); heroArtStat.quick = (heroArtStat.quick || 0) + 1;
+    }).catch(() => {});
     heroArtP(ac).then((set) => {
       const cur = heroState().hero; if (!cur || cur.id !== h.id) return;
-      if (set) { arena.setHeroArt(set, ac); heroArtStat.applied++; } else { arena.setHeroArt(null); heroArtStat.fallback++; heroArtStat.failed++; }
+      if (set) { heroFull.add(ac); arena.setHeroArt(set, ac); heroArtStat.applied++; } else { arena.setHeroArt(null); heroArtStat.fallback++; heroArtStat.failed++; }
     }).catch(() => {});
   }
   const HERO_CAP = 12; // MMProfile roster cap (same as the Lantern)
@@ -498,6 +511,10 @@
       status.textContent = 'Now playing ' + h.name + ' (' + HS.className(MMClasses, h.cls) + '). Class stats, abilities and art applied; your run continues.';
       renderPick();
     });
+    // R4-D2 (W-01 / b12-r2-01): the create grid warms a class's strips on hover, focus or press, so the first-hero pick is usually drawn
+    // from its first frame (the press -> click gap plus one manifest round trip); the sprite then swaps in without the empty-pad gap.
+    const warmNew = (e) => { const b = e.target.closest && e.target.closest('button[data-newcls]'); if (!b || b.disabled || !window.MMArt) return; const ac = MMArt.artClassFor(b.dataset.newcls); heroQuickP(ac); heroArtP(ac); };
+    ['pointerover', 'pointerdown', 'focusin'].forEach((ev) => body.addEventListener(ev, warmNew));
     body.addEventListener('pointerover', (e) => { const b = e.target.closest && e.target.closest('button[data-hero]'); if (!b || b.disabled) return; const h = heroState().prof.heroes.find((x) => x.id === b.dataset.hero); if (h && window.MMArt) heroArtP(MMArt.artClassFor(h.cls)); });
     const bh = document.getElementById('realm-board-hero'); if (bh) bh.addEventListener('click', () => arena.openHeroPanel('stats'));
     setInterval(() => { try { const zi = realmWorld.api.zone(); if (zi && zi.zone < 4) deepest.z = Math.max(deepest.z, zi.zone); } catch (e) { /* ignore */ } }, 1500);

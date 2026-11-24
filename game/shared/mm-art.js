@@ -234,6 +234,15 @@
     if (typeof artClass !== 'string' || !artClass) return Promise.resolve(new ArtSet());
     var o = {}; for (var k in opts || {}) o[k] = opts[k];
     o.only = [artClass];
+    // R4-D2 (W-01 / b12-r2-01 hero pop-in): a hero class lives in exactly one static pack (b00-b03; no INDEX batch carries hero strips).
+    // Read that one manifest first instead of all 80 INDEX manifests, so the sprite is ready in one round trip; fall back to the full scan.
+    var pack = packFor(artClass);
+    if (pack) {
+      return loadScales(assetRoot).then(function (sc) {
+        if (!o.scales) o.scales = sc;
+        return load(join(assetRoot || ASSET_ROOT, pack.id), 'manifest.json', o);
+      }).then(function (s) { return s && s.has(artClass) ? s : loadPacks(assetRoot, o); }, function () { return loadPacks(assetRoot, o); });
+    }
     return loadPacks(assetRoot, o);
   }
   // loadAll(assetRoot, opts?) -> one set holding every pack listed in INDEX.json (plus the registered ones).

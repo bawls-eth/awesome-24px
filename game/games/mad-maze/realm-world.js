@@ -156,17 +156,17 @@
     const ww = world.w; const wh = world.h;
     const terrain = world.terrain; const solid = world.solid;
     // R4-D2 (b12-r2-04, b04-03): the DRAWN terrain. The generator thresholds a detail noise, which leaves 1-tile holes inside snow (the
-    // "snow frames with square holes") and plus / cross shaped lava specks. Two passes of a cardinal-majority filter, on walkable land
+    // "snow frames with square holes") and plus / cross shaped lava specks. A cardinal-majority filter, on walkable land
     // tiles only (never water, roads or solid tiles, so the drawn ground always matches collision): a tile with 3-4 neighbours of one other
-    // terrain, or with no same-terrain neighbour, draws as that neighbour terrain. Gameplay terrain (speed, zone, spawns) is untouched.
+    // terrain, or with no same-terrain neighbour, draws as that neighbour terrain (repeated until stable, at most 4 passes). Gameplay terrain (speed, zone, spawns) is untouched.
     // ?smooth=0 draws the raw generator terrain.
     const SMOOTH = !/[?&]smooth=0(&|$)/.test(qs0);
     const drawT = new Uint8Array(terrain);
     const smoothStat = { changed: 0 };
     if (SMOOTH) {
       const keep = (t) => t === T.deep_water || t === T.shallow_water || t === T.dirt_road;
-      for (let pass = 0; pass < 2; pass++) {
-        const src = new Uint8Array(drawT);
+      for (let pass = 0, moved = 1; pass < 4 && moved; pass++) { // until stable (at most 4 passes)
+        const src = new Uint8Array(drawT); moved = 0;
         for (let y = 1; y < wh - 1; y++) for (let x = 1; x < ww - 1; x++) {
           const i = y * ww + x; const t = src[i];
           if (solid[i] || keep(t)) continue;
@@ -179,7 +179,7 @@
             let n = 0; for (let j = 0; j < 4; j++) if (nb[j] === o) n++;
             if (n > bestN) { bestN = n; best = o; }
           }
-          if (best >= 0 && (bestN >= 3 || (same === 0 && bestN >= 2))) { drawT[i] = best; smoothStat.changed++; }
+          if (best >= 0 && (bestN >= 3 || (same === 0 && bestN >= 2))) { drawT[i] = best; smoothStat.changed++; moved = 1; }
         }
       }
     }
