@@ -2095,5 +2095,13 @@
   "cyc2-dd-path-replay.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc3-first-kill-zk.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc3-errands-wired.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

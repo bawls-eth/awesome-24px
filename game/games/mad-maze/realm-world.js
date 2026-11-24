@@ -49,7 +49,7 @@
     if (typeof o === 'string') { try { o = JSON.parse(o); } catch (e) { o = null; } }
     if (!o || typeof o !== 'object' || Array.isArray(o)) o = {};
     const out = {};
-    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo|evT|evDone|finds|discovered|shrineAt|chests|quests|bossKeys|bossPortal|questBags|gp|gearOn|fb|seatPos)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
+    Object.keys(o).forEach((k) => { if (/^[A-Za-z][A-Za-z0-9_]{0,31}$/.test(k) && !/^(v|seed|version|pos|stats|returnTo|evT|evDone|finds|discovered|shrineAt|chests|quests|bossKeys|bossPortal|questBags|gp|gearOn|fb|seatPos|zk|errand)$/.test(k)) out[k] = o[k]; }); // keep unknown (future) keys
     out.v = 1;
     out.seed = cleanSeed(o.seed);
     out.version = Number.isInteger(o.version) && o.version > 0 && o.version < 1000 ? o.version : 0;
@@ -83,6 +83,9 @@
       const sp = {}; ['0', '1', '2', '3'].forEach((k) => { const q = o.seatPos[k]; if (q && typeof q === 'object' && Number.isInteger(q.x) && Number.isInteger(q.y) && q.x >= 0 && q.y >= 0 && q.x < 4096 && q.y < 4096) sp[k] = { x: q.x, y: q.y }; });
       if (Object.keys(sp).length) out.seatPos = sp;
     }
+    if (Number.isInteger(o.zk) && o.zk > 0 && o.zk < 16) out.zk = o.zk; // ID-13 (additive): bit z set once the first world boss of zone z died (first-kill bag floor spent); garbage -> key left out
+    if (o.errand !== undefined && window.MMErrands) { const er = window.MMErrands.cleanRealm(o.errand); if (er.p) out.errand = er; } // ID-12 (additive): the Realm leg of the parcel errand; not started -> key left out
+    else if (o.errand !== undefined) out.errand = o.errand; // a page without MMErrands keeps the value as it is (never drops progress)
     if (o.fb === 1) out.fb = 1; // FT2 (additive): this save has picked up its first world bag, so the first-bag guarantee is spent
     const r = o.returnTo && typeof o.returnTo === 'object' ? o.returnTo : null;
     if (o.finds !== undefined) out.finds = window.MMStash ? MMStash.cleanFinds(o.finds) : o.finds; // owned by MMStash (Lantern payout)
@@ -97,6 +100,8 @@
   // seat 0 (or solo) writes the canonical `pos`; solo saves keep exactly today's shape (no seatPos key).
   function mergeStored(c, cur) {
     const st = cleanSave(cur);
+    if (st.zk) c.zk = ((c.zk | 0) | st.zk) & 15;
+    if (st.errand && window.MMErrands) { const E = window.MMErrands; const a = E.cleanRealm(st.errand), b = E.cleanRealm(c.errand); const p = a.p | b.p; c.errand = { id: E.ID, p: p, d: p ? (a.d | b.d) : 0 }; } // ID-12: the errand only moves forward // ID-13: zone first-kill bits are per hero, not per island: union with what another tab spent
     if (st.seed !== c.seed) return c;
     const F = window.MMFog;
     if (F && st.discovered) {
@@ -1081,7 +1086,7 @@
       return { on: GEAR_ON, b: gp.b, d: gp.d, text: v ? v.text : '', cryptText: v ? v.cryptText : '', bonusPct: v ? v.bonusPct : 0, bossKillsLeft: v ? v.bossKillsLeft : 60 };
     }
     function giveBag(x, y, bag, info) {
-      const got = { zone: info.zone, boss: !!info.boss, src: info.src || (info.boss ? 'boss' : 'mob'), tier: bag.tier, items: [], shards: bag.shards, potions: bag.potions };
+      const got = { zone: info.zone, boss: !!info.boss, src: info.src || (info.boss ? 'boss' : 'mob'), tier: bag.tier, tierIndex: bag.tierIndex, firstKill: info.firstKill === true, items: [], shards: bag.shards, potions: bag.potions };
       const rolls = []; let toasted = false;
       // review F12: the pity counter lives in storage and another world tab may have spent (or raised) it since this page loaded: re-read it right
       // before a boss roll / pityStep, so two tabs at b = 60 give ONE forced T12, not two. Unreadable storage keeps the in-memory value.
@@ -1170,6 +1175,24 @@
       try { arena._floatText(arena.player.x, arena.player.y - 60, 'New notebook page: ' + name, '#ffe27a'); } catch (e) { /* no float text */ }
       return true;
     }
+    // ---- ID-12 Town-to-Realm errand (MMErrands): this page writes ONLY the Realm save's `errand`; the Town save is read, never written ----
+    const ER = window.MMErrands && !/[?&]errands=0(&|$)/.test(qs0) ? window.MMErrands : null;
+    function erTown() { try { const o = JSON.parse(localStorage.getItem('pixeltown-save-v1') || 'null'); return o && typeof o === 'object' ? o.errand : null; } catch (e) { return null; } }
+    function erKill(zone) {
+      if (!ER || !save.errand) return false; // nothing delivered yet: no work per kill
+      const r = ER.trophy(save.errand, zone); if (!r.ok) return false;
+      save.errand = r.realm; writeSave(save);
+      try { arena._floatText(arena.player.x, arena.player.y - 72, 'Trophy for Mocha! Take it back to town.', '#ffe27a'); } catch (e) { /* no float text */ }
+      return true;
+    }
+    // the Vendor's errand line (and the delivery itself), or null when the Town has no errand running
+    function erVendor() {
+      if (!ER) return null;
+      const town = erTown(); const st = ER.stage(town, save.errand);
+      if (st === 'carry') { const r = ER.deliver(save.errand, town); if (r.ok) { save.errand = r.realm; writeSave(save); return 'A parcel from Mocha? Thank you! ' + ER.LINES.hunt; } }
+      if (st === 'hunt' || st === 'return') return ER.LINES[st];
+      return null;
+    }
     function onEnemyHit(e, dmg) { if (evOnHit(e, dmg)) return; if (zones && e.zid >= 0) zones.markCombat(e.zid); }
     function onEnemyKilled(e) {
       if (e.rushStep) { rushKilled(e); return; }
@@ -1181,6 +1204,7 @@
         if (!info) return;
         kills++; save.stats.kills++; nxQuestEvent({ type: 'kill', zone: info.zone, n: 1 });
         nbMeet(NB ? NB.ids.kill(info.type, info.creature, info.zone) : null, info.creature); // ID-04: first kill of this creature in this zone
+        erKill(info.zone); // ID-12: a Midlands-or-deeper kill after the parcel delivery gives the Vendor's trophy (once)
         // cyc2-S bug fix: the elite test read e.type, which is the bolt pattern ('aimed'), never 'giant_spider_queen', so the elite never rolled
         // its own gear row (MMGearDrops ELITE). The creature id lives on the zone group (info.creature).
         const elite = info.creature === 'giant_spider_queen';
@@ -1193,7 +1217,11 @@
         const site = world.bossSites[i]; bossLive[i] = null; bossReadyNow[i] = 0; miniKey = '';
         zones.bossDefeated(site, arena.clock); kills++; save.stats.bossKills++; nxQuestEvent({ type: 'kill', zone: site.zone, boss: true, n: 1 });
         nbMeet(NB ? NB.ids.boss(site.boss, site.zone) : null, BOSS_NAME[i]); // ID-04
-        rollFor({ zone: site.zone, tier: site.zone, boss: true, src: 'boss', bossId: site.boss }, e.x, e.y + 30, 'boss' + i);
+        // ID-13: the FIRST world boss of a zone rolls with the bag floor (MMZones FIRST_KILL_BAG_FLOOR); the bit is set and saved once (writeSave below).
+        // Trial of Six kills (rushKilled) never come here, so they neither read nor set zk.
+        const zbit = 1 << Math.max(0, Math.min(3, site.zone | 0)); const fk = !((save.zk | 0) & zbit);
+        rollFor({ zone: site.zone, tier: site.zone, boss: true, src: 'boss', bossId: site.boss, firstKill: fk }, e.x, e.y + 30, 'boss' + i);
+        if (fk) save.zk = ((save.zk | 0) | zbit) & 15;
         spawnPickups(e.x, e.y + 20, 'boss' + i, kills, 5);
         dropKey(e.x + 24, e.y + 26, 'boss' + i); // BK2: every world boss drops a boss key
         writeSave(save);
@@ -2188,10 +2216,12 @@
       if (n.role === 'heal') { const p = arena.player; const was = p.hp; p.hp = arena.stats.maxHp; arena._syncHud(); nxSay(name, was < p.hp ? 'There. Whole again, no charge.' : 'You look perfectly well to me.'); return; }
       if (n.role === 'oracle') { const o = MMQuests.oracle(todayUtc()); nxSay(name, o ? o.text : 'The mists are quiet.'); return; }
       if (n.role === 'quests') { if (typeof nxBoardOpen === 'function') nxBoardOpen(); nxSay(name, 'Here is the day\'s board. Three jobs, free to take.'); return; }
+      const erLine = n.role === 'shop' ? erVendor() : null; // ID-12: the Vendor takes Mocha's parcel / names the trophy, then opens the stall as always
       if (n.stall && nxStallOn()) { nxStallOpen(n.stall); if (n.stall === 'forge') { const fb = document.getElementById('rw-nx-forge'); if (fb) { fb.classList.add('nx-hi'); try { fb.focus({ preventScroll: true }); } catch (e) { /* focus is cosmetic */ } } } // G-18 (b04-09): the Blacksmith points at the Forge button in this stall
-        nxSay(name, n.stall === 'forge' ? 'The anvil is yours to use. Tap "Open the Forge" below to salvage and reforge your gear.' : 'Same goods, same prices, every day. Take your time.'); return; }
-      if (n.role === 'shop' && typeof arena.setShop === 'function') { nxSay(name, 'Take a look. Everything is priced in 💎 shards, same every day.'); nxStallShop(); return; } // forge/stall off: the vendor still opens the classic shop
+        nxSay(name, erLine || (n.stall === 'forge' ? 'The anvil is yours to use. Tap "Open the Forge" below to salvage and reforge your gear.' : 'Same goods, same prices, every day. Take your time.')); return; }
+      if (n.role === 'shop' && typeof arena.setShop === 'function') { nxSay(name, erLine || 'Take a look. Everything is priced in 💎 shards, same every day.'); nxStallShop(); return; } // forge/stall off: the vendor still opens the classic shop
       const key = n.role === 'rumours' ? 'rumours' : n.role === 'shop' ? 'vendor' : n.role === 'combine' ? 'blacksmith' : 'guide';
+      if (erLine) { nxSay(name, erLine); return; }
       const L = NX_LINES[key]; nxSay(name, L[(MMRng.hash(todayUtc() + n.id) + nxTalkN) % L.length]);
     }
     // ---------- VN: the vendor / forge stall (arena.vendorStock / vendorBuy / vendorSellBack / openForge; realm.js owns the save) ----------
@@ -2854,7 +2884,7 @@
       diffOn: !!DIFF, diffMode, diffAt, spawner: () => zones, spawned: () => spawned, despawned: () => despawned,
       liveCount: () => { let n = 0; live.forEach((e, id) => { if (e.active && e.zid === id) n++; }); return n; },
       liveEnemies: () => { const o = []; live.forEach((e, id) => { if (e.active && e.zid === id) o.push({ id, x: e.x, y: e.y, type: e.type, zone: e.zone, tier: e.tier, art: e.art, hp: e.maxHp, spd: e.spdMul, dmg: e.dmgMul, diff: e.diff || null }); }); return o; },
-      enemyById: (id) => live.get(id) || null, setDropAll: (on) => { dropAll = !!on; }, lastDrops: () => lastDrops.slice(), kills: () => kills, gearOn: GEAR_ON, gearDefaultOn: GEAR_DEFAULT_ON, gearPity, setGearPlayer: (id) => { gearPlayerSet = id === null ? null : String(id).slice(0, 60); }, gearPlayerId, setTeam: (t) => { gearTeam = t || null; }, gearHint: () => Object.assign({}, gearHintSt), gearSave: () => ({ gp: save.gp || null }), testDrop: (info, tag) => { kills++; return rollFor(info, arena.player.x, arena.player.y, tag || 't'); }, // test hook: one kill's worth of drops with the real seed/pity path
+      enemyById: (id) => live.get(id) || null, setDropAll: (on) => { dropAll = !!on; }, lastDrops: () => lastDrops.slice(), kills: () => kills, gearOn: GEAR_ON, gearDefaultOn: GEAR_DEFAULT_ON, gearPity, setGearPlayer: (id) => { gearPlayerSet = id === null ? null : String(id).slice(0, 60); }, gearPlayerId, setTeam: (t) => { gearTeam = t || null; }, gearHint: () => Object.assign({}, gearHintSt), gearSave: () => ({ gp: save.gp || null }), errand: () => (save.errand ? Object.assign({}, save.errand) : null), erKill, erVendor, debugCleanSave: () => { try { return cleanSave(localStorage.getItem(SAVE_KEY)); } catch (e) { return null; } }, forceSave: () => writeSave(save), zk: () => save.zk | 0, testDrop: (info, tag) => { kills++; return rollFor(info, arena.player.x, arena.player.y, tag || 't'); }, // test hook: one kill's worth of drops with the real seed/pity path
       
       bossesClassic, rosterClassic, bandsClassic, bossArtIds: () => world.bossSites.map((b) => b.boss),
       bossSites: () => world.bossSites.map((b, i) => ({ i, x: b.x, y: b.y, zone: b.zone, boss: b.boss, name: BOSS_NAME[i], live: !!(bossLive[i] && bossLive[i].active), ready: !!zones && zones.bossReady(b, arena.clock) })),
