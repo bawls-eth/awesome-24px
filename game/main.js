@@ -1335,6 +1335,15 @@ const PORTALS = [
   { x: 1830, y: 960, label: '🚪 Kart Rally', color: 0xffa726, url: 'https://olivers.tools/kart/' },
   { x: 1970, y: 960, label: '🚪 Neon Coast', color: 0xff4fa0, url: null },
 ];
+// Cycle 1 S: the targets that answer E AFTER a weed in interact() (arcade doors, dig hole, Realm Gate, visiting merchant). A weed in
+// pull range of any point of their ring would steal E, so their keep-clear is their real radius + WEED_PULL_RADIUS (the ring test in
+// weedSpotsForDay adds 8, hence the - 8). Pushed here because PORTALS is declared after WEED_SHADOW_RINGS.
+WEED_SHADOW_RINGS.push(
+  ...PORTALS.map((p) => ({ x: p.x, y: p.y, r: DOOR_RADIUS + WEED_PULL_RADIUS - 8 })),
+  { x: DIG_HOLE_POS.x, y: DIG_HOLE_POS.y, r: DIG_HOLE_RADIUS + WEED_PULL_RADIUS - 8 },
+  { x: REALM_GATE_POS.x, y: REALM_GATE_POS.y + 30, r: REALM_GATE_RADIUS + WEED_PULL_RADIUS - 8 },
+  { x: MERCHANT_POS.x, y: MERCHANT_POS.y, r: MERCHANT_RADIUS + WEED_PULL_RADIUS - 8 },
+);
 const EAST_POND = { cx: 2000, cy: 280, rx: 130, ry: 80 };
 const MAIN_POND = { cx: 260, cy: 600, rx: 150, ry: 90 };
 

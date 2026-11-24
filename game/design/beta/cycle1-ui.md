@@ -32,6 +32,7 @@ Copy nit for the Jam owner (not fixed here): on a touch device Jam's How to play
 | U-06 | low | the sweep's text-200 pass still only checks hscroll / Menu / clipping; add tap-target and HUD-overlap checks at 195 px |
 | U-09 | low | 160x284 Town: the stick (128 px) and the Emotes / Tools / A / C grid still overlap each other (pre-existing, not the bag bar) |
 | U-10 | info | Realm phone info line repeats the zone name ("Shore") that the zone line also shows; dropping it saves width, not height |
+Branch `cyc1-ui` (from `claude/animal-crossing-game-7z3roh` 86eda4b).
 
 ## ID-02 Zone danger meter: shared HUD component spec (for S; U owns the CSS, S owns the logic)
 

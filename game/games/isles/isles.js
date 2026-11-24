@@ -420,6 +420,7 @@
   const groupState = world.spawnGroups.map(() => ({ alive: 0, until: 0 }));
   const CAP = LOW ? 12 : 24, BIG_CAP = 4;
   const SPAWN_R = 22, DESPAWN_R = 34, LEASH = 14 * TILE;
+  const SLIDE = Q.get('slide') !== '0'; // cycle 1 S: wall-slide steering (steer); ?slide=0 = the old straight aim
   const LEASH_BACK = 4 * TILE, LEASH_GIVEUP = 8; // cyc0-S: a leashed creature walks back to within 4 tiles of home (or gives up after 8 s)
   let creatures = [];
   let uid = 0, simT = 0;
@@ -584,6 +585,25 @@
   function startAttack(c, s, dx, dy) {
     c.ph = 'wind'; c.pt = s.atk.windup; c.ang = Math.atan2(dy, dx); c.ox = c.x; c.oy = c.y; c.vx = 0; c.vy = 0; c.hitDone = false; c.tgAt = simT;
   }
+  // Cycle 1 S: wall-slide steering for creatures that chase the hero or walk back home after the leash (curious / befriended walkers keep
+  // the straight aim: they move slowly and the taming pacing of isles-first-ten is tuned on it). Movement is per
+  // axis, so a creature aimed straight at a wall used to bump it (vx flipped) and re-aim 0.1 s later: pinned on a cliff with the hero
+  // just behind it. Now, when the straight heading is blocked a short probe ahead, it turns 45/90/135 degrees to one side (the side the
+  // target lies on first, then the other) and keeps that side while the straight line stays blocked, so it slides along the wall and
+  // round its end. Straight line free again = straight at the target. Deterministic (no randomness), ?slide=0 = the old straight aim.
+  function steer(c, dx, dy, speed) {
+    const d = Math.hypot(dx, dy) || 1, a0 = Math.atan2(dy, dx);
+    const go = (a) => { c.vx = Math.cos(a) * speed; c.vy = Math.sin(a) * speed; };
+    if (!SLIDE) { c.vx = dx / d * speed; c.vy = dy / d * speed; return; }
+    const pr = Math.min(d, (c.rad || 8) + TILE * 0.6);
+    const free = (a) => !creatureSolid(c, tileOf(c.x + Math.cos(a) * pr), tileOf(c.y + Math.sin(a) * pr));
+    if (free(a0)) { c.slide = 0; go(a0); return; }
+    // the first side to try: the one kept from the last think, else the side the current motion already leans to, else +1
+    const lean = Math.cos(a0) * (c.vy || 0) - Math.sin(a0) * (c.vx || 0);
+    const sides = c.slide ? [c.slide, -c.slide] : lean < 0 ? [-1, 1] : [1, -1];
+    for (let si = 0; si < 2; si++) for (let k = 1; k <= 3; k++) { const a = a0 + sides[si] * k * Math.PI / 4; if (free(a)) { c.slide = sides[si]; go(a); return; } }
+    c.slide = 0; go(a0); // boxed in: the old straight aim (the per-axis step still slides where it can)
+  }
   function think(c) {
     const s = specOf(c.sp, c.kind);
     // taming clock (10 Hz with the accumulated time)
@@ -599,7 +619,7 @@
     // just outside it (free shots, never reaching). A return blocked by terrain gives up after LEASH_GIVEUP s and settles where it is.
     if (c.ret || home > LEASH) {
       c.angry = 0; c.ret = (c.ret || 0) + 0.1;
-      if (home > LEASH_BACK && c.ret < LEASH_GIVEUP) { const hd = home || 1; c.vx = (c.hx - c.x) / hd * s.speed; c.vy = (c.hy - c.y) / hd * s.speed; return; }
+      if (home > LEASH_BACK && c.ret < LEASH_GIVEUP) { steer(c, c.hx - c.x, c.hy - c.y, s.speed); return; }
       if (home > LEASH_BACK) { c.hx = c.x; c.hy = c.y; }
       c.ret = 0; c.vx = 0; c.vy = 0; return;
     }
@@ -610,7 +630,7 @@
     const chase = !hero.dead && !mercy && s.dmg > 0 && c.mood !== 'shy' && (c.angry > 0 || (c.mood === 'hostile' && d < s.aggroR));
     if (chase) {
       if (c.cd <= 0 && d < c.rad + HERO_R + s.atk.reach * 0.8) { startAttack(c, s, dx, dy); return; }
-      c.vx = dx / d * s.speed * 1.15; c.vy = dy / d * s.speed * 1.15; return;
+      steer(c, dx, dy, s.speed * 1.15); return;
     }
     // shy creatures flee when startled (hit, or the hero shooting nearby); with ?tame=0 they flee whenever the hero is close (B8)
     if (c.mood === 'shy' && d < 4 * TILE && (!TAME || !c.tm || c.angry > 0 || hero.shotT > 0)) { c.vx = -dx / d * s.speed * 1.2; c.vy = -dy / d * s.speed * 1.2; return; }

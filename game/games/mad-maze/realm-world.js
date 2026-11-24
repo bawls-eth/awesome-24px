@@ -747,6 +747,33 @@
     zoneEl.innerHTML = '<div class="rw-zname"></div><div class="rw-zsub"><span class="rw-arrow" aria-hidden="true">➤</span> <span class="rw-coords"></span></div>';
     const ov = document.getElementById('realm-overlay') || document.body;
     ov.appendChild(mini); ov.appendChild(zoneEl);
+    // ---------- ID-02 zone danger meter (cycle 1 S; markup + classes: design/beta/cycle1-ui.md). MMDanger turns the smooth
+    // MMOverworld.difficultyAt under the hero into an area level and compares it with the hero level: comfortable / tough / too hot.
+    // Text label + icon + bar (colour is never the only cue), written once a second from goalTick and only when it changes. ?danger=0 = off.
+    const DANGER_ON = !/[?&]danger=0(&|$)/.test(qs0) && !!window.MMDanger && typeof O.difficultyAt === 'function';
+    const dangerEl = document.createElement('span'); dangerEl.id = 'rw-danger'; dangerEl.className = 'rw-danger hidden';
+    dangerEl.innerHTML = '<span class="rw-danger-ico" aria-hidden="true"></span><span class="rw-danger-bar" aria-hidden="true"><span class="rw-danger-fill"></span></span><span class="rw-danger-txt"></span>';
+    const dIco = dangerEl.querySelector('.rw-danger-ico'); const dFill = dangerEl.querySelector('.rw-danger-fill'); const dTxt = dangerEl.querySelector('.rw-danger-txt');
+    let dangerKey = ''; let dangerNow = null;
+    if (DANGER_ON) zoneEl.appendChild(dangerEl);
+    function dangerTick(hide) {
+      if (!DANGER_ON) return;
+      try {
+        const p = arena.player; const lv = Math.max(1, (arena.save && arena.save.level) | 0);
+        const r = MMDanger.rate(lv, O.difficultyAt(world, p.x / TILE, p.y / TILE), world.bands || 'classic');
+        dangerNow = r; if (nxOpen) hide = true; // the Nexus plaza covers the world: no danger reading there
+        const key = r.id + '|' + r.area + '|' + r.hero + '|' + r.fill;
+        if (key !== dangerKey) {
+          dangerKey = key;
+          dangerEl.dataset.level = r.id; dangerEl.dataset.area = String(r.area);
+          dangerEl.setAttribute('aria-label', r.text); dangerEl.title = r.text;
+          dFill.style.setProperty('--rw-danger', String(r.fill));
+          if (dIco.textContent !== r.icon) dIco.textContent = r.icon;
+          if (dTxt.textContent !== r.label) dTxt.textContent = r.label; // the word changes only with the bucket: no aria-live spam
+        }
+        dangerEl.classList.toggle('hidden', !!hide);
+      } catch (e) { dangerEl.classList.add('hidden'); }
+    }
     // ---------- 'Next goal' line (bug bash): ONE short HUD line from the existing goal sources, no new state: an unclaimed daily quest reward,
     // else the first open daily quest (MMQuests) with its progress, else the next zone inland (MMZones recLv), else a boss altar.
     // textContent only, refreshed at most once a second, hidden while the first-run coach talks or a phone panel covers the corner. ?goal=0 = off.
@@ -775,6 +802,7 @@
     }
     function goalTick(zi, force) {
       goalT -= 0.25; if (goalT > 0 && !force) return; goalT = 1;
+      dangerTick(panelHid || !!bossRect() || (RUSH_ON && rush.on));
       zonePlace();
       if (!GOAL_ON) return;
       const coach = document.getElementById('mm-coach');
@@ -2736,7 +2764,7 @@
     const api = {
       seed, world, genMs, SAVE_KEY, TILE, CPX, MAX_CHUNKS,
       chunkCount: () => chunks.size, chunkBuilds: () => chunkBuilds, fieldStats: () => Object.assign({ on: FIELD_DETAIL }, fieldStat), treeFix: () => treeFixApi(), bakeChunk: (cx, cy) => buildChunk(cx, cy).cv, terrainName: (tx, ty) => TN[terrain[ty * ww + tx]] || '', hasTransition: (tx, ty) => !!transitionAt(tx, ty, drawT[ty * ww + tx]), drawName: (tx, ty) => TN[drawT[ty * ww + tx]] || '', smoothStats: () => Object.assign({}, smoothStat, { corners: cornerStat.filled }), bakeStats: () => ({ edge: Object.assign({}, edgeStat), shade: Object.assign({}, shadeStat) }),  artTiles: () => artTiles, miniDraws: () => miniDraws, // W-03 hooks: bakeChunk / terrainName / hasTransition / bakeStats
-      slam: { on: SLAM_ON, hits: () => slamHits, winds: () => slamWinds }, zone: () => lastZone, fireBudget: { on: FB_ON, capFor: ebCapFor, now: () => (arena.fireBudget ? Object.assign({}, arena.fireBudget) : null), live: () => arena._ebLive, capped: () => arena._ebCapped }, zoneGrad: { on: ZGRAD, bands: world.bands || 'classic', recLv, last: () => lastCross, crossings: () => crossN, slowLeft: () => Math.max(0, slowUntil - arena.clock), moveScale: () => moveScaleAt(arena.player.x, arena.player.y) }, hudText: () => ({ zone: zName.textContent, coords: zCoords.textContent, arrow: arrowDeg }),
+      slam: { on: SLAM_ON, hits: () => slamHits, winds: () => slamWinds }, zone: () => lastZone, fireBudget: { on: FB_ON, capFor: ebCapFor, now: () => (arena.fireBudget ? Object.assign({}, arena.fireBudget) : null), live: () => arena._ebLive, capped: () => arena._ebCapped }, danger: () => ({ on: DANGER_ON, now: dangerNow, hidden: dangerEl.classList.contains('hidden'), el: dangerEl.isConnected }), zoneGrad: { on: ZGRAD, bands: world.bands || 'classic', recLv, last: () => lastCross, crossings: () => crossN, slowLeft: () => Math.max(0, slowUntil - arena.clock), moveScale: () => moveScaleAt(arena.player.x, arena.player.y) }, hudText: () => ({ zone: zName.textContent, coords: zCoords.textContent, arrow: arrowDeg }),
       tileAt: (x, y) => O.tileAt(world, Math.floor(x / TILE), Math.floor(y / TILE)), solidAt, shotSolidAt, nearestFree,
       tileCenter: (tx, ty) => ({ x: (tx + 0.5) * TILE, y: (ty + 0.5) * TILE }),
       save: () => readSave(), savePos, portals: () => portals.map((q) => ({ i: q.i, x: q.x, y: q.y, tx: q.tx, ty: q.ty, biome: q.biome })),

@@ -2019,5 +2019,17 @@
   "cyc1-ui-realm-hud.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc1-danger-meter.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc1-quest-zone-rewards.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "cyc1-isles-wall-slide.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
