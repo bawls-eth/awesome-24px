@@ -3265,7 +3265,9 @@ class RealmArena {
     let tk = this.buffTaken > 0 && this.buffTaken < 1 ? this.buffTaken : 1; // additive timed buff (world shrine of Warding)
     if (p._stm) tk = Math.max(0.5, Math.min(1.5, tk * p._stm.taken)); // status mods (armored / armorBroken / curse), capped 0.5..1.5
     if (tk !== 1) dmg = Math.max(1, Math.round(dmg * tk));
-    p.hp = Math.max(0, p.hp - dmg);
+    let hpFloor = 0; // b08-r2-04: the first-run coach may soften hits ({ mult, floor }) so a new player never falls before they have played
+    if (typeof this.hurtGuard === 'function') { let g = null; try { g = this.hurtGuard(dmg); } catch (e) { g = null; } if (g) { if (g.mult > 0 && g.mult < 1) dmg = Math.max(1, Math.round(dmg * g.mult)); if (g.floor > 0) hpFloor = Math.min(p.hp, g.floor); } }
+    p.hp = Math.max(hpFloor, p.hp - dmg);
     this._heroHurtAt = performance.now() / 1000; this._gHurtT = this._stT; // _gHurtT: game time of the last hit (G8 regen waits 3 s)
     this._snd('hurt');
     p.iframes = this.stats.iframes;
