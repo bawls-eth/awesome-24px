@@ -1899,5 +1899,15 @@
   "beta-r4-replay-saves.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-r4-replay-doors.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 420
+  },
+  "beta-r4-replay-backup-cross.test.js": {
+    "class": "browser",
+    "tier": "full",
+    "timeoutSec": 420
   }
 }
