@@ -2115,5 +2115,9 @@
   "cyc3-telegraph-audit.test.js": {
     "class": "node",
     "tier": "smoke"
+  },
+  "cyc2-shore-fade.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

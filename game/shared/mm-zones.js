@@ -54,8 +54,11 @@
     BAG_WEIGHTS: [[0.90, 0.09, 0.01, 0, 0, 0], [0.70, 0.22, 0.07, 0.01, 0, 0], [0.50, 0.28, 0.15, 0.06, 0.01, 0], [0.30, 0.28, 0.24, 0.12, 0.05, 0.01]],
     BOSS_BAG_WEIGHTS: [[0.30, 0.40, 0.20, 0.10, 0, 0], [0.10, 0.30, 0.35, 0.20, 0.05, 0], [0, 0.10, 0.30, 0.35, 0.20, 0.05], [0, 0, 0.10, 0.30, 0.40, 0.20]],
     // ID-13 (cycle 2 D): the bag tier floor for the FIRST boss kill in each zone (pink, pink, purple, cyan). Applied only when rollDrop gets info.firstKill === true
-    // (nothing passes it yet: S wires it with a per-zone first-kill flag in the Realm save). It raises a low roll, never lowers one: it lifts 30% / 10% / 10% / 10% of first boss bags.
+    // (wired in cycle 3: realm-world.js passes it for the first world boss of a zone, Realm save bitmask `zk`). It raises a low roll, never lowers one: it lifts 30% / 10% / 10% / 10% of first boss bags.
     FIRST_KILL_BAG_FLOOR: [1, 1, 2, 3],
+    // ID-01 (cycle 3 S, spec cycle2-specs.md): Shore (zone 0) kill XP fades with the hero level, index min(level, 7) - 1: Lv 1-4 = 1, Lv 5 = 0.85,
+    // Lv 6 = 0.70, Lv 7+ = 0.60. Only the normal kill XP on the Shore; shards, drops, boss XP and zones 1+ are untouched.
+    SHORE_XP_FADE: [1, 1, 1, 1, 0.85, 0.70, 0.60],
     // rarity weights [common,uncommon,rare,epic] by zone. Epic only appears in BOSS_RARITY_WEIGHTS[3] (godlands bosses).
     RARITY_WEIGHTS: [[0.85, 0.14, 0.01, 0], [0.60, 0.32, 0.08, 0], [0.35, 0.40, 0.25, 0], [0.15, 0.35, 0.50, 0]],
     BOSS_RARITY_WEIGHTS: [[0.60, 0.33, 0.07, 0], [0.35, 0.45, 0.20, 0], [0.15, 0.40, 0.45, 0], [0.05, 0.25, 0.58, 0.12]],
@@ -257,6 +260,11 @@
     for (let i = w.length - 1; i >= 0; i--) if (w[i] > 0) return i;
     return 0;
   }
+  // ID-01: the Shore XP fade multiplier (1 for zone > 0, a missing zone or bad input)
+  function shoreFade(level, zone) {
+    if (zone !== 0 || typeof level !== 'number' || !isFinite(level) || level < 1) return 1;
+    return T.SHORE_XP_FADE[Math.min(Math.floor(level), T.SHORE_XP_FADE.length) - 1];
+  }
   function dropChance(info) { return info && info.boss ? 1 : T.DROP_CHANCE[clampZone(info && info.zone)]; }
 
   // One bag roll. info: {zone, tier?, boss?, shardMul?}. rngSeed: any string/number. ctx (optional): {luck: 0..1 extra rarity bias}.
@@ -385,7 +393,7 @@
   return {
     VERSION: VERSION, TABLES: TABLES, EVENT_PERIOD: EVENT_PERIOD,
     createSpawner: createSpawner, statMultipliers: statMultipliers, bossEnemy: bossEnemy,
-    rollDrop: rollDrop, rollDropForPlayers: rollDropForPlayers, dropChance: dropChance,
+    rollDrop: rollDrop, rollDropForPlayers: rollDropForPlayers, dropChance: dropChance, shoreFade: shoreFade,
     zoneInfoAt: zoneInfoAt, eventsFor: eventsFor, eventPlan: eventPlan, eventTier: eventTier, eventReward: eventReward,
   };
 }));

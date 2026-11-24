@@ -702,6 +702,7 @@ class RealmArena {
     this._padRes = { move: { x: 0, y: 0 }, aim: { x: 0, y: 0, on: false }, fire: false, ability: [false, false, false, false], pause: false }; // reused every frame (no per-frame allocation)
     this._aimAssist = true; this._reduced = false;
     let hpq = ''; try { hpq = location.search || ''; } catch (e) { hpq = ''; }
+    this._shoreFadeOn = !/[?&]shorefade=0(&|$)/.test(hpq); this._shoreFadeToast = false; // ID-01 (?shorefade=0: off)
     this._hitPauseOn = !/[?&]hitpause=0(&|$)/.test(hpq); this._hitPauseAt = -1; this.hitPausedFrames = 0; // ID-14
     // AR (NEXT-SLICES-3 Wave 4): Realm one-thumb access, opt-in per page (enableAccess2(); the town classic arena never calls it, duels never use it).
     this._ax2 = false; this._autoFire = false; this._aimToggle = false; this._shapes = false; this._aimPressMax = 0; this.autoFireN = 0;
@@ -2528,7 +2529,7 @@ class RealmArena {
     e.dg = null; e._at = undefined; e.t = 0; e.flash = 0; e.angle = this.rng() * Math.PI * 2; e.dir = this.rng() < 0.5 ? 1 : -1;
     e.cd = 0.8 + this.rng() * 0.8; // first shot is never instant
     if (this.world) { e.ax = x + (this.rng() - 0.5) * 220; e.ay = y + (this.rng() - 0.5) * 220; } else { e.ax = 80 + this.rng() * (this.W - 160); e.ay = 80 + this.rng() * (this.H - 160); } // drift target for Whirlers (near home in a world)
-    e.spdMul = 1; e.dmgMul = 1; e.xpMul = 1; e.shardMul = 1; e.art = null; e.bossArt = null; e.zid = -1; e.evid = null; e.campId = null; e.bossName = null; e.bossTier = 0; e.diff = null; // world-mode extras (multipliers 1 = unchanged)
+    e.spdMul = 1; e.dmgMul = 1; e.xpMul = 1; e.shardMul = 1; e.art = null; e.bossArt = null; e.zid = -1; e.evid = null; e.campId = null; e.bossName = null; e.bossTier = 0; e.diff = null; e.zone = undefined; // world-mode extras (zone: ID-01, a reused pool entry never keeps an old zone) (multipliers 1 = unchanged)
     e.rad = 0; e.cre = null; e.tame = null; // B7: per-creature hit radius (0 = the type's), creature tag (enemyStep runs only for these), taming state
     if (this.world && type === 'boss') { e.ax = x; e.ay = y; }
     if (type === 'boss') this._snd('boss_awaken'); // NEXT-SLICES SF1 cue: any boss spawn (classic wave, world altar / event, dungeon)
@@ -3197,7 +3198,11 @@ class RealmArena {
     this._burst(e.x, e.y, def.color, 16, 230);
     if (this._fxPool) { if (e.type === 'spiral') this.fxPlay('fx_explosion_small', e.x, e.y, { w: 72 }); else this.fxPlay('fx_poof_death', e.x, e.y, { w: 64 }); }
     this._floatText(e.x, e.y - 22, `+${gain} 💎`, '#8fe9ff');
-    this._gainXp(Math.round(RM_XP[e.type] * (1 + 0.1 * Math.max(0, this.run.wave - 1)) * (e.xpMul || 1) * this.stats.xp));
+    // ID-01 Shore XP fade: only for a world kill in zone 0 (MMZones.shoreFade by the level being gained); rounded after, never below 1 XP
+    const fade = this._shoreFadeOn && e.zone === 0 && typeof MMZones !== 'undefined' && MMZones.shoreFade ? MMZones.shoreFade(this.save.level, 0) : 1;
+    const xpRaw = RM_XP[e.type] * (1 + 0.1 * Math.max(0, this.run.wave - 1)) * (e.xpMul || 1) * this.stats.xp;
+    this._gainXp(fade < 1 ? Math.max(1, Math.round(xpRaw * fade)) : Math.round(xpRaw));
+    if (fade < 1 && !this._shoreFadeToast) { this._shoreFadeToast = true; this._floatText(this.player.x, this.player.y - 56, 'The Midlands has better prey', '#ffe27a'); } // once per session, no number
     if (this.mode !== 'world' && this.rng() < RM_BAG_CHANCE) this.dropBag(e.x, e.y, this.rollRarity()); // a world rolls its own zone drops (onEnemyKilled)
     this.shake = Math.max(this.shake, 3);
     this.saveSoon(); // review F16: a splash that kills 8 in one frame persists once (a bag pickup, wave or death that follows persists at once anyway)
