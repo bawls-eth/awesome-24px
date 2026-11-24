@@ -10060,6 +10060,7 @@ function enterTown(net, data) {
   joinOverlay.classList.add('hidden');
   { const bp = document.getElementById('back-to-map-pill'); if (bp) bp.classList.add('hidden'); document.body.classList.remove('has-back-pill'); } // the pill is for the join screen only (it would cover the inventory bar and leave lobbies without a confirm)
   hud.classList.remove('hidden');
+  document.body.classList.toggle('town-offline', net instanceof OfflineNet); // cyc0-ui b08-r2-07: offline HUD declutter (style.css)
   // R4 D4 (b07-r2-14): remember (this tab only, sessionStorage, never the save) that the player was in town and how, so
   // browser Back from the Isles / a game returns to the town instead of the join card.
   try { sessionStorage.setItem(TOWN_SESSION_KEY, net instanceof OfflineNet ? 'offline' : 'online'); } catch (e) { /* storage blocked */ }
