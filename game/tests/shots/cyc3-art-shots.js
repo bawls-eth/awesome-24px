@@ -96,6 +96,18 @@ const SCENES = {
     });
     await p.waitForTimeout(300);
   },
+  // a killed glimmerfrog mid-hold (dissolve level ~8); 'before' = &dissolve=0 (the old hold on the last frame)
+  'isles-dissolve': async (p) => {
+    await p.goto(isles('&isle=jungle' + (BEFORE ? '&dissolve=0' : ''))); await islesReady(p);
+    await p.evaluate(() => {
+      const I = window.__isles; I.god(true); I.clearCreatures(); const h = I.hero(); const uid = I.spawn('glimmerfrog', h.tx + 2, h.ty);
+      for (let i = 0; i < 40 && I.creatures().some((c) => c.uid === uid); i++) { const c = I.creatures().find((x) => x.uid === uid); const hh = I.hero(); I.soothe(false); I.fire(c.x - hh.x, c.y - 8 - hh.y); I.step(0, 0, 0.1); }
+      I.pause && I.pause(true); let dt = 0.2; let last = null;
+      for (; dt < 3; dt += 0.05) { const before = I.dissolve().draws; I.render(); I.drawDeathsAt(dt); if (I.dissolve().draws > before && I.dissolve().level >= 7) break; last = dt; }
+      if (!I.dissolve().on) { I.render(); I.drawDeathsAt(Math.max(0.2, (last || 0.6))); }
+    });
+    await p.waitForTimeout(100);
+  },
   'isles-tundra': async (p) => { await p.goto(isles('&isle=tundra')); await islesReady(p); },
 };
 (async () => {

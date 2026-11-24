@@ -2111,5 +2111,9 @@
   "cyc3-art-realm-icorner.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc3-art-isles-dissolve.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }

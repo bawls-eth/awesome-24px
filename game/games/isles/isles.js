@@ -1971,9 +1971,34 @@
       if (el > MS.duration('death', d.sk) + 0.35) { d.on = false; continue; }
       const st = STRIPS.get(d.sk, 'death', d.dir);
       if (!st) { d.on = false; continue; }
-      STRIPS.draw(g, st, MS.frameIndex('death', el, d.sk), d.x - camX, d.y - camY, 1, MS.flipFor('death', d.dir));
+      const dur = MS.duration('death', d.sk);
+      if (el > dur && DISSOLVE && !REDUCED) dissolveDeath(st, d, MS.frameIndex('death', el, d.sk), (el - dur) / 0.35);
+      else STRIPS.draw(g, st, MS.frameIndex('death', el, d.sk), d.x - camX, d.y - camY, 1, MS.flipFor('death', d.dir));
       if (d.id !== st.id) { d.id = st.id; deathsShown++; }
     }
+  }
+  // cycle 3 art (G): over the 0.35 s hold on the death strip's last frame the body breaks up in 2x2 ordered-dither (Bayer 4x4) blocks and
+  // squashes toward its feet (12 % flatter, 8 % wider) instead of popping off. One shared scratch canvas + 17 preset patterns (built once);
+  // per dissolving body: clear, one strip draw, one pattern fill (destination-out), one drawImage. Reduced motion / ?dissolve=0 = the old hold.
+  const DISSOLVE = Q.get('dissolve') !== '0';
+  const dslStat = { on: DISSOLVE, draws: 0, ms: 0, level: -1 }; let dslKit = null;
+  function dissolveDeath(st, d, frame, p) {
+    const t0 = performance.now();
+    const need = Math.ceil(Math.max(st.w, st.h) * 2.2);
+    if (!dslKit || dslKit.cv.width < need) {
+      const W = Math.max(256, need), cv = document.createElement('canvas'); cv.width = cv.height = W; const c = cv.getContext('2d');
+      const B = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5], pats = [];
+      for (let lv = 0; lv <= 16; lv++) { const pc = document.createElement('canvas'); pc.width = pc.height = 8; const x = pc.getContext('2d'); x.fillStyle = '#000'; for (let i = 0; i < 16; i++) if (B[i] < lv) x.fillRect((i % 4) * 2, ((i / 4) | 0) * 2, 2, 2); pats.push(c.createPattern(pc, 'repeat')); }
+      dslKit = { cv, c, pats, W, fx: W / 2, fy: Math.round(W * 0.85) };
+    }
+    const k = dslKit, c = k.c, lv = Math.min(16, Math.max(1, Math.ceil(p * 16)));
+    c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-over'; c.clearRect(0, 0, k.W, k.W); c.imageSmoothingEnabled = false;
+    const sx = 1 + 0.08 * p, sy = 1 - 0.12 * p; c.setTransform(sx, 0, 0, sy, k.fx * (1 - sx), k.fy * (1 - sy));
+    STRIPS.draw(c, st, frame, k.fx, k.fy, 1, MS.flipFor('death', d.dir));
+    c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'destination-out'; c.fillStyle = k.pats[lv]; c.fillRect(0, 0, k.W, k.W); c.globalCompositeOperation = 'source-over';
+    const sm = g.imageSmoothingEnabled; g.imageSmoothingEnabled = false;
+    g.drawImage(k.cv, Math.round(d.x - camX - k.fx), Math.round(d.y - camY - k.fy)); g.imageSmoothingEnabled = sm;
+    dslStat.draws++; dslStat.level = lv; dslStat.ms += performance.now() - t0;
   }
   function drawHeart(x, y, col) {
     g.fillStyle = col; g.fillRect(x - 5, y - 3, 4, 4); g.fillRect(x + 1, y - 3, 4, 4); g.fillRect(x - 4, y, 8, 3); g.fillRect(x - 2, y + 3, 4, 2);
@@ -3702,7 +3727,7 @@
       },
       craftIcons: () => Object.keys(craftIcon).sort(),
       isleArt: () => (IA ? IA.ready.then(() => ({ pack: IA.pack, tiles: IA.active(), props: IA.propsActive() ? Object.keys(IA.props()).sort() : [] })) : { pack: '', tiles: false, props: [] }),
-      deathsShown: () => deathsShown,
+      deathsShown: () => deathsShown, dissolve: () => Object.assign({}, dslStat), deadPool: () => deadPool.map((d) => Object.assign({}, d)), drawDeathsAt: (dt) => { deadPool.forEach((d) => { if (d.on) d.t0 = simT - dt; }); drawDeaths(); },
       render: () => { render(); return true; },
       face: (x, y) => { const l = Math.hypot(x, y) || 1; hero.face.x = x / l; hero.face.y = y / l; return true; },
       heroDraw: () => Object.assign({}, heroDraw), setMoving: (on) => { heroMoving = !!on; return heroMoving; }, // W-12 hooks
