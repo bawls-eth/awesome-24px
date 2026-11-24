@@ -2964,8 +2964,23 @@ body.a11y-hud-scaled #chat-log, body.a11y-hud-scaled #quick-chat-row button, bod
 @media (min-width: 601px) and (min-height: 501px) {
   body.a11y-hud-scaled #gate-pointer { top: calc(68px * var(--hud-scale) + env(safe-area-inset-top, 0px)); }
 }
-/* Very narrow views (200% browser zoom on a phone): there is no room for the chip beside the Menu; Where to? still lists the Realm. */
-@media (max-width: 300px) { #gate-pointer { display: none !important; } }
+/* Very narrow views (200% browser zoom on a phone): there is no room for the chip beside the Menu. cyc4 U: it was hidden here, so a
+   new player at 200% zoom had no first-minute goal on screen. Now it is a compact goal card in the free left column under the bag
+   bar (above the stick, left of the action column): the words wrap, the 44 px close button sits under them. It steps aside while
+   the bag (its counts drop over this spot) or the people panel is open. Short views (<= 420 px tall, e.g. 160x284) keep it hidden:
+   no free column there; Where to? still lists the Realm. */
+@media (max-width: 300px) {
+  #gate-pointer, body.a11y-hud-scaled #gate-pointer {
+    top: calc(192px + env(safe-area-inset-top, 0px)); left: calc(8px + env(safe-area-inset-left, 0px)); right: auto; transform: none;
+    width: 124px; flex-wrap: wrap; justify-content: flex-end; align-items: flex-start; gap: 0; padding: 4px 4px 0 8px;
+    border-radius: 12px; white-space: normal; font-size: 12px;
+  }
+  #gate-pointer-text { flex: 1 1 100%; line-height: 1.25; overflow-wrap: break-word; }
+  #gate-pointer-close { margin: 0 -2px 0 0; }
+  body:has(#inventory-panel.bag-open) #gate-pointer, #player-list-panel:not(.collapsed) ~ #gate-pointer,
+  body:has(#emote-popup:not(.hidden)) #gate-pointer, body:has(#action-buttons.more-open) #gate-pointer { display: none !important; } /* the emote picker / Tools tray open over this column */
+}
+@media (max-width: 300px) and (max-height: 420px) { #gate-pointer { display: none !important; } }
 
 /* W-07 (b07-07, b08-06): while the emote wheel is open the quick-chat phrases step aside (the wheel sat on Fishing! / Nice! / Bye!). */
 body:has(#emote-popup:not(.hidden)) #quick-chat-row { visibility: hidden; }

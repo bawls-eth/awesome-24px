@@ -2211,5 +2211,25 @@
   "cyc4-art-town-finish2.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc4-ui-assist-settings.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc4-ui-realm-195.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc4-ui-town-zoom-goal.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc4-ui-notebook-focus.test.js": {
+    "class": "browser",
+    "tier": "full"
+  },
+  "cyc4-ui-turnip-contrast.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
