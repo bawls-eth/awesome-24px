@@ -17,6 +17,7 @@ async function islesReady(p) {
 const SCENES = {
   hub: async (p) => { await p.goto(origin + '/game/hub/index.html'); await p.waitForTimeout(2500); },
   'isles-jungle': async (p) => { await p.goto(isles('&isle=jungle')); await islesReady(p); },
+  'isles-meadow': async (p) => { await p.goto(isles('&isle=meadow&howto=0')); await islesReady(p); },
   'isles-sand': async (p) => {
     await p.goto(isles('&isle=jungle')); await islesReady(p);
     await p.evaluate(() => { const I = window.__isles; I.god(true); const t = I.findTile('black_sand', 3) || I.findTile('black_sand', 1); if (t) I.teleport(t.x, t.y); });

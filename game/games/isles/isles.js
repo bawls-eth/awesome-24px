@@ -292,6 +292,10 @@
     const c = cv.getContext('2d');
     // 8B: the code-drawn terrain gets seeded detail pixels (8 tile variants) and stepped edges, once per chunk bake
     if (code && !GFX_LOW && window.MMIsleArt && window.MMIsleArt.detail) window.MMIsleArt.detail(c, world.terrain, W, H, cx, cy, { names: NAMES, palette: PAL, tile: TILE, ch: CH, seed: parseInt(SEED, 10) % 100003, create: mk });
+    // cycle 0 art (b06-r2-06 flat start terrain): on an art bake (meadow b35 / jungle b30) the tiles WITHOUT a PNG (grass, sand, water,
+    // flowers...) were flat palette fields; they now get the same seeded detail pixels and stepped edges. The art terrains are left out of
+    // the palette, so their PNG pixels (and the b35 edge masks) are never painted over. ?tdetail=0 = flat as before
+    else if (!code && !GFX_LOW && T_DETAIL && IA && IA.active() && window.MMIsleArt && window.MMIsleArt.detail) detailBaked += window.MMIsleArt.detail(c, world.terrain, W, H, cx, cy, { names: NAMES, palette: artFreePal(), tile: TILE, ch: CH, seed: parseInt(SEED, 10) % 100003, create: mk });
     // cycle 0 art (b12-r2-09): warm volcanic black sand drawn over the baked b30 / code tiles (overlay; the PNGs stay as delivered). ?warmsand=0
     if (WARM_SAND && window.MMIsleArt && window.MMIsleArt.warmSand) sandWarmed += window.MMIsleArt.warmSand(c, world.terrain, W, cx, cy, { names: NAMES, tile: TILE, ch: CH });
     // props of this chunk and its 8 neighbours, back to front: a 64 px tree near a chunk edge is painted on both sides of the seam
@@ -309,6 +313,14 @@
   }
   const propsBaked = { png: 0, code: 0 }; // test handle counters (bake time only)
   const WARM_SAND = Q.get('warmsand') !== '0';
+  const T_DETAIL = Q.get('tdetail') !== '0';
+  let detailBaked = 0, artFree = null; // cycle 0 art: tiles detailed on art bakes; the palette without the PNG terrains (built once)
+  function artFreePal() {
+    if (artFree) return artFree;
+    const set = window.MMIsleArt.SETS && window.MMIsleArt.SETS[IA.pack], skip = set ? set.terrains : [];
+    artFree = {}; Object.keys(PAL).forEach((k) => { if (skip.indexOf(k) < 0) artFree[k] = PAL[k]; });
+    return artFree;
+  }
   let sandWarmed = 0; // black-sand tiles re-lit by the warm overlay (bake time only)
   function chunkCanvas(cx, cy) {
     return chunkCache.get(cx + ',' + cy, () => { if (bakesLeft <= 0) return null; bakesLeft--; return ART ? bakeArt(cx, cy) : bakeFlat(cx, cy); });
@@ -3582,6 +3594,19 @@
       propsReady: () => (IA ? IA.ready.then(() => ({ props: IA.propsActive() ? Object.keys(IA.props()).sort() : [], tiles: IA.active() })) : { props: [], tiles: false }),
       propsBaked: () => Object.assign({}, propsBaked),
       sandWarmed: () => ({ on: WARM_SAND, tiles: sandWarmed }), // cycle 0 art
+      detailBaked: () => ({ on: T_DETAIL, tiles: detailBaked }), // cycle 0 art
+      // cycle 0 art: distinct colours and an FNV hash of the baked pixels of terrain `name` in the chunk under the hero
+      tileStats: (name) => {
+        const id = NAMES.indexOf(name), cx = Math.floor(tileOf(hero.x) / CH), cy = Math.floor(tileOf(hero.y) / CH);
+        const cv = chunkCache.get(cx + ',' + cy, () => null); if (!cv || id < 0) return null;
+        const c = cv.getContext('2d'), cols = new Set(); let h = 2166136261, n = 0;
+        for (let ty = 0; ty < CH; ty++) for (let tx = 0; tx < CH; tx++) {
+          if (O.tileAt(world, cx * CH + tx, cy * CH + ty) !== id) continue;
+          const d = c.getImageData(tx * TILE, ty * TILE, TILE, TILE).data; n++;
+          for (let i = 0; i < d.length; i += 4) { cols.add((d[i] << 16) | (d[i + 1] << 8) | d[i + 2]); h = Math.imul(h ^ d[i] ^ (d[i + 1] << 8) ^ (d[i + 2] << 16), 16777619); }
+        }
+        return n ? { tiles: n, colors: cols.size, hash: h >>> 0 } : null;
+      },
       // cycle 0 art: mean colour of the baked black-sand tiles in the chunk under the hero (null when none baked there)
       sandColor: () => {
         const id = NAMES.indexOf('black_sand'), cx = Math.floor(tileOf(hero.x) / CH), cy = Math.floor(tileOf(hero.y) / CH);
