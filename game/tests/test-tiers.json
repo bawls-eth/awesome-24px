@@ -1923,5 +1923,9 @@
   "beta-r4-b08-10-home-footer.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "beta-r4-weed-reach.test.js": {
+    "class": "browser",
+    "tier": "smoke"
   }
 }

@@ -186,7 +186,10 @@ const townRealm = async (page) => { const s = JSON.parse(await ls(page, 'pixelto
   check('2 world: written once (later tiered pickups leave it alone)', (await ls(o.page, PRE)) === snap1);
   const bundleKeys = await o.page.evaluate(() => (window.MMBackup ? Object.keys(window.MMBackup.bundle(localStorage).keys) : null));
   check('2: the snapshot key is not part of a backup bundle (page MMBackup)', Array.isArray(bundleKeys) && bundleKeys.indexOf(PRE) < 0 && bundleKeys.indexOf('pixeltown-save-v1') >= 0, JSON.stringify(bundleKeys));
-  check('2/3: neither the snapshot key nor the hint key is a known backup key', MMBackup.KNOWN.indexOf(PRE) < 0 && MMBackup.KNOWN.indexOf(HINT) < 0 && MMBackup.PREGEAR_KEY === PRE);
+  check('2/3: the snapshot key is not a known backup key (a backup never holds a backup)', MMBackup.KNOWN.indexOf(PRE) < 0 && MMBackup.PREGEAR_KEY === PRE);
+  // R4 O-04 (owner decision): ONE Backup carries every save key and all settings, the "seen" hints included, so the gear hint
+  // IS covered now (it used to be left out); it travels in the bundle like the other hint flags.
+  check('2/3: the gear hint key is covered by the one Backup (R4 O-04)', MMBackup.KNOWN.indexOf(HINT) >= 0);
   check('1/2 world: no console errors', o.errors.length === 0, o.errors.join(' | '));
   await o.ctx.close();
   // a save that already has gv (or a tiered item) never gets a snapshot; quota errors are swallowed
