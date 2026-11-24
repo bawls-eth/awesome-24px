@@ -7,7 +7,7 @@
 //  5. After a successful restore pixeltown-save-v1-prev holds the pre-restore raw string.
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/beta-s01-town-restore.test.js
 const { chromium } = require('playwright');
-const { check, done, blockDb } = require('./helpers');
+const { check, done, offlineStub } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 const SAVE_KEY = 'pixeltown-save-v1';
 const PREV_KEY = 'pixeltown-save-v1-prev';
@@ -15,8 +15,7 @@ const SEED = { name: 'ADMINs01', species: 'ranger', frame: 0, resources: { wood:
 
 async function openTown(browser) {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 }, acceptDownloads: true });
-  const db = await blockDb(ctx);
-  await ctx.route(/gstatic\.com\/firebasejs\//, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by beta-s01 */' }));
+  const db = await offlineStub(ctx);
   await ctx.route('**/main.js*', async (route) => {
     const resp = await route.fetch();
     const body = (await resp.text()).replace('const game = new Phaser.Game(config);', 'const game = window.__g = new Phaser.Game(config);');

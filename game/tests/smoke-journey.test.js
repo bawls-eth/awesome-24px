@@ -15,7 +15,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { chromium } = require('playwright');
-const { check, done, blockDb } = require('./helpers');
+const { check, done, offlineStub } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 const ORIGIN = new URL(BASE).origin;
 const FIX = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', 'smoke-journey.json'), 'utf8'));
@@ -31,8 +31,7 @@ const T0 = Date.now();
 
 async function open(browser, viewport, touch) {
   const ctx = await browser.newContext(touch ? { viewport, hasTouch: true, isMobile: true } : { viewport });
-  const db = await blockDb(ctx);
-  await ctx.route(/gstatic\.com\/firebasejs\//, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by smoke-journey.test.js */' }));
+  const db = await offlineStub(ctx);
   if (process.env.THREE_JS) await ctx.route(THREE_URL, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: fs.readFileSync(process.env.THREE_JS) }));
   // First frame: the time of the first animation frame after navigation starts.
   await ctx.addInitScript(() => { try { requestAnimationFrame(() => { window.__smokeFirstFrame = performance.now(); }); } catch (e) { /* ignore */ } });

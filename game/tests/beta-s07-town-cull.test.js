@@ -7,7 +7,7 @@
 //  3. after a long walk (camera moves) the new view is drawn (no culled object in view) within a few frames
 //  4. turning culling off restores every object to the camera; JS render work per frame is printed (on vs off)
 const { chromium } = require('playwright');
-const { check, done, blockDb } = require('./helpers');
+const { check, done, offlineStub } = require('./helpers');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 
 const inViewCulled = (page) => page.evaluate(() => {
@@ -23,8 +23,7 @@ const inViewCulled = (page) => page.evaluate(() => {
 (async () => {
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
-  const db = await blockDb(ctx);
-  await ctx.route(/gstatic\.com\/firebasejs\//, (r) => r.fulfill({ status: 200, contentType: 'application/javascript', body: '/* firebase SDK blocked by beta-s07 */' }));
+  const db = await offlineStub(ctx);
   await ctx.route('**/main.js*', async (route) => {
     const resp = await route.fetch();
     const body = (await resp.text()).replace('const game = new Phaser.Game(config);', 'const game = window.__g = new Phaser.Game(config);');
