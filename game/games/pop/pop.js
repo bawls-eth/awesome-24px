@@ -73,6 +73,11 @@
   // ---------- board ----------
   const canvas = $('board'), g = canvas.getContext('2d');
   canvas.width = CW; canvas.height = CH;
+  const COARSE = (() => { try { return (window.matchMedia && matchMedia('(pointer: coarse)').matches) || params.get('touch') === '1'; } catch (e) { return false; } })();
+  if (COARSE) { // b08-r2-09: a phone player reads touch words, never key names
+    const kp = $('keys'); if (kp) kp.textContent = 'Tap two or more touching twins to pop them. Free to play: no timers outside a round, nothing to buy.';
+    canvas.setAttribute('aria-label', 'Pixel Pop board: tap two or more touching twins.');
+  }
   let rng = null, nextId = 1;
   let grid = []; // grid[c][r] = {v, id, y, s, wob}
   const run = { state: 'ready', seed: '', score: 0, time: ROUND, maxTile: 0, bestChain: 0, pops: 0, newMedals: [] };

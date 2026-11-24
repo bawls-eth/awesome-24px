@@ -1070,7 +1070,7 @@
     if (tames.mount !== mountEnt.id) { TAMES.setMount(tames, mountEnt.id); TAMES.write(S, tames); }
     hero.scale = CMP.moveScale(ride, moveScaleAt(tileOf(hero.x), tileOf(hero.y)));
     abilityMount(def);
-    toast('Riding ' + (mountEnt.nm || def.name) + '. R to get off.');
+    toast('Riding ' + (mountEnt.nm || def.name) + (document.body.classList.contains('touch') ? '. Tap Ride to get off.' : '. R to get off.'));
     logEvent('ride');
     return true;
   }
@@ -3164,7 +3164,7 @@
     if (nearPedestal() && !bossAlive()) return document.body.classList.contains('touch') ? 'The trophy pedestal. Tap Trophies to look, or for a rematch.' : 'The trophy pedestal. Press P or Trophies to look, or for a rematch.';
     if (nearDock() && !ride) return document.body.classList.contains('touch') ? 'The dock. Tap Sail to open the sea chart.' : 'The dock. Press T or Sail to open the sea chart.';
     if (spotNear()) return 'Something to gather here. Press G or Gather.';
-    if (ride) return 'Riding ' + (mountEnt ? mountEnt.nm || 'your mount' : 'your mount') + (CMP.canSwim(ride) && swimAt(tileOf(hero.x), tileOf(hero.y)) ? ' through the water' : '') + '. Press R or Ride to get off.' +
+    if (ride) return 'Riding ' + (mountEnt ? mountEnt.nm || 'your mount' : 'your mount') + (CMP.canSwim(ride) && swimAt(tileOf(hero.x), tileOf(hero.y)) ? ' through the water' : '') + (document.body.classList.contains('touch') ? '. Tap Ride to get off.' : '. Press R or Ride to get off.') +
       (abil ? (document.body.classList.contains('touch') ? ' Tap ' : ' F or ') + abilDef.name + ': ' + abilDef.desc.charAt(0).toLowerCase() + abilDef.desc.slice(1) : '');
     { const fx = tileOf(hero.x + hero.face.x * TILE * 1.2), fy = tileOf(hero.y + hero.face.y * TILE * 1.2); if (swimAt(fx, fy) && !solidAt(fx, fy)) return 'Open water. Ride a Tidesteed or Skimray to swim across.'; }
     if (!TAME) return '';
@@ -3325,6 +3325,12 @@
   })();
   const coarse = (() => { try { return window.matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } })();
   if (coarse || Q.get('touch') === '1' || ('ontouchstart' in window && window.innerWidth <= 700)) document.body.classList.add('touch');
+  if (document.body.classList.contains('touch')) { // b08-r2-09: touch words on a phone, never key names
+    const li = document.querySelectorAll('#howto-list li');
+    if (li[0]) li[0].textContent = 'Move: the stick.';
+    if (li[1]) li[1].textContent = 'Attack: the big button.';
+    const hp = $('help'); if (hp) hp.textContent = 'Touch: the stick moves, the big button attacks. Feed, Soothe, Ride and Gather buttons appear when you can use them. Pack holds party, craft, log and help.';
+  }
   // PI2: one-thumb layout. On touch the mount ability button moves next to the move stick (the same thumb reaches both); off, it goes
   // back to its place in the action column. The DOM moves only when the mode changes.
   const actsEl = $('acts'), touchEl = $('touch');

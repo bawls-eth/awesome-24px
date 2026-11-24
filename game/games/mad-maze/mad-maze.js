@@ -50,6 +50,10 @@
   }
 
   if ((window.matchMedia && matchMedia('(pointer: coarse)').matches) || 'ontouchstart' in window) document.body.classList.add('touch-device');
+  if (document.body.classList.contains('touch-device')) { // b08-r2-09: a phone player reads touch words, never key names
+    const pf = document.getElementById('realm-play-focus'); if (pf) pf.textContent = 'Play: focus the game';
+    const cw = document.getElementById('realm-canvas-wrap'); if (cw) cw.setAttribute('aria-label', 'Play the Realm: left stick moves, right stick aims and fires, ability buttons cast, Menu at the top');
+  }
 
   // Daily seed: ?daily=1 (world or dungeon) uses the UTC-date seed; an explicit valid ?seed= still wins. ?today=YYYY-MM-DD only with ?test=1.
   const SEED_RE = /^[A-Za-z0-9_-]{1,24}$/;
