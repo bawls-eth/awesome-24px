@@ -1993,7 +1993,13 @@
   // ---------- B10: homestead (Hearth Isle only, local save), gather spots, travel, medals ----------
   // the day key comes from Date.now() (the same source as the page clock and the save load), never from a bare `new Date()`: a second
   // time source made the daily spots, sparkles and bonus finds follow the wall calendar even when the page clock is pinned (tests)
-  const DAY = todayQ && /^\d{4}-\d{2}-\d{2}$/.test(todayQ) ? todayQ : (() => { try { return new Date(Date.now()).toISOString().slice(0, 10); } catch (e) { return ''; } })();
+  // cycle 3 (L): the day is no longer frozen for the life of the page. A tab that stays open over 00:00 UTC (a phone tab can live for
+  // days) kept yesterday's gather spots and the spent sparkle / glint budgets until a reload: dayRoll() (below, 5 Hz, one number compare)
+  // moves to the new day. The day rule itself is unchanged (UTC date, MMGameDay.utcKey = the old toISOString slice; L-08 may change it
+  // there). ?today= pins the day as before.
+  const DAY_PIN = !!(todayQ && /^\d{4}-\d{2}-\d{2}$/.test(todayQ));
+  const dayRead = () => { if (DAY_PIN) return todayQ; try { return window.MMGameDay ? window.MMGameDay.utcKey(Date.now()) : new Date(Date.now()).toISOString().slice(0, 10); } catch (e) { return ''; } };
+  let DAY = dayRead(); let dayNum = Math.floor(Date.now() / 86400000); let dayRolls = 0;
   const tileName = (tx, ty) => NAMES[O.tileAt(world, tx, ty)] || '';
   const WET = { deep_water: 1, shallow_water: 1, abyss: 1, lagoon: 1, dust_sea: 1 };
   const homeO = HOME ? HS.origin(world.spawnPoint, world.center, W, H) : null;
@@ -2601,6 +2607,30 @@
     GLINTS.forEach((q, i) => { q.i = i; });
   }());
   if (GLINTS.length && (!save.glint || save.glint.day !== DAY)) save.glint = { day: DAY, n: {} };
+  // cycle 3 (L): a new day while the page is open. Exactly what a reload on the new day would give: the gather log rolls (MMHomestead
+  // rollDay), today's seeded spots replace yesterday's, the sparkle and glint budgets start again. A resource tile is either a gather
+  // spot or a walk-over node, never both: yesterday's spots become nodes again, today's spots stop being nodes.
+  function dayRoll() {
+    if (DAY_PIN) return false;
+    const dn = Math.floor(Date.now() / 86400000); if (dn === dayNum) return false;
+    dayNum = dn; const d = dayRead(); if (!d || d === DAY) return false;
+    DAY = d; dayRolls++;
+    HS.rollDay(save.gather, DAY);
+    const next = HS.dailySpots(world.resources, ISLE + '|' + SEED, DAY, HS.MAX_SPOTS); const nextSet = new Set(next.map((p) => p.idx));
+    const byIdx = new Map(); nodes.forEach((n) => { if (n.i >= 0 && !n.sparkle && !n.food) byIdx.set(n.i, n); });
+    spots.forEach((p) => {
+      if (nextSet.has(p.idx)) return;
+      const r = world.resources[p.idx]; if (!r) return; let n = byIdx.get(p.idx);
+      if (n) { n.until = 0; nodeAt.set(n.y * W + n.x, n); } else addNode({ i: p.idx, x: r.x, y: r.y, kind: r.kind, until: 0, picks: 0 });
+    });
+    byIdx.forEach((n, i) => { if (nextSet.has(i)) { n.until = Infinity; if (nodeAt.get(n.y * W + n.x) === n) nodeAt.delete(n.y * W + n.x); } });
+    spots.length = 0; spotSet.clear(); spotTiles.clear();
+    next.forEach((p) => { spots.push(p); spotSet.add(p.idx); spotTiles.add(p.y * W + p.x); });
+    save.spark = { day: DAY, n: {} };
+    if (GLINTS.length) save.glint = { day: DAY, n: {} };
+    dirty = true;
+    return true;
+  }
   const glintTaken = (q) => !!save.glint && Array.isArray(save.glint.n[ISLE]) && save.glint.n[ISLE].indexOf(q.i) >= 0;
   const glintLive = (q) => !glintTaken(q) && (!q.night || tdNight());
   function glintCheck() {
@@ -3554,7 +3584,7 @@
     if (bz.st) bossStep(dt);
     if (ENV_ON) envStep(dt);
     tdStep(dt); // TD1: thin ice, hot spring soak, glints, the air arrow
-    restAcc += dt; if (restAcc >= 0.2) { restStep(restAcc); restAcc = 0; } // IF1: 5 Hz is plenty for a calm heal
+    restAcc += dt; if (restAcc >= 0.2) { restStep(restAcc); restAcc = 0; dayRoll(); } // IF1: 5 Hz is plenty for a calm heal
     stepBolts(dt);
     if (party.length) { if (!GFX.aiHz) stepParty(dt); else if ((partyAcc += dt) >= 1 / GFX.aiHz - 1e-9) { stepParty(partyAcc); partyAcc = 0; } } // PI2: 15 Hz on the low tier
     saveT -= dt;
@@ -3778,7 +3808,7 @@
       closePanel: () => closePanel(),
       destinations: () => DESTS.filter((id) => id !== ISLE),
       travel: (id) => travelTo(id),
-      day: DAY,
+      get day() { return DAY; }, dayRolls: () => dayRolls, dayRoll: () => dayRoll(), nodeTiles: () => nodes.filter((n) => n.i >= 0 && !n.sparkle && !n.food && nodeAt.get(n.y * W + n.x) === n).map((n) => n.i),
       spots: () => spots.map((p) => ({ idx: p.idx, x: p.x, y: p.y, kind: p.kind, taken: HS.taken(save.gather, ISLE, p.idx) })),
       gather: () => gatherNear(),
       gatherLog: () => Object.assign({}, save.gather.log),
