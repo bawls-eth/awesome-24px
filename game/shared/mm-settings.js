@@ -4,7 +4,8 @@
 // Every setting reads and writes the device keys the games ALREADY use, so nothing is lost or renamed:
 //   mm-auto-fire, mm-aim-toggle, mm-aim-assist (default on), mm-bullet-shapes, mm-reduce-motion (MMMotion), mm-sfx-muted (sfx.js),
 //   pixeltown-access-v1 {hudScale, flashes, lowGfx} (MMAccess.prefs; other fields such as palette are kept untouched).
-// New additive keys: mm-music ('1'/'0'), mm-high-contrast ('1'/'0'). Never touches the save (pixeltown-save-v1), never the network or Firebase.
+// New additive keys: mm-music ('1'/'0'), mm-high-contrast ('1'/'0'), mm-assist (JSON {dmg, aim}, ID-06, cycle 4: S applies it in
+// the Realm, U owns these controls). Assist = 'Damage taken' 100..50 % in 6 steps + 'Aim help' Off / Light / Medium / Strong. Never touches the save (pixeltown-save-v1), never the network or Firebase.
 // After each change: <html> gets --ui-scale, data-reduce-motion, data-low-gfx, data-high-contrast, and window gets a
 // 'mm-settings-change' CustomEvent {detail:{id, value}} so a page can call its own setter (e.g. realm.setAutoFire).
 // Text is only ever set with textContent. UMD: browser global MMSettings, or require() in node (model functions only).
@@ -34,6 +35,37 @@
       return true;
     } catch (e) { return false; }
   }
+  // ID-06 assist (device pref, never the save). Contract: design/beta/cycle4-systems.md (S, cyc4-systems): key mm-assist =
+  // JSON {dmg, aim}; dmg rounded to 10 and clamped 50..100 (default 100), aim rounded and clamped 0..3 (default 0), unknown
+  // fields dropped; only dmg < 100 tags a run "Assisted" (aim help does not). S's shared/mm-assist.js (global MMAssist) is used
+  // when the page loaded it; this fallback follows the same rules so the rows work on pages without it.
+  const ASSIST_KEY = 'mm-assist';
+  const ASSIST_DMG = [100, 90, 80, 70, 60, 50];
+  const ASSIST_AIM = [0, 1, 2, 3];
+  const AIM_LABEL = ['Off', 'Light', 'Medium', 'Strong'];
+  const MA = () => { try { const m = win ? win.MMAssist : null; return m && typeof m.read === 'function' && typeof m.write === 'function' ? m : null; } catch (e) { return null; } };
+  function cleanAssist(o) {
+    const x = o && typeof o === 'object' && !Array.isArray(o) ? o : {};
+    const num = (v) => (typeof v === 'number' && isFinite(v) ? v : null);
+    const d = num(x.dmg), a = num(x.aim);
+    return { dmg: d === null ? 100 : Math.max(50, Math.min(100, Math.round(d / 10) * 10)), aim: a === null ? 0 : Math.max(0, Math.min(3, Math.round(a))) };
+  }
+  function readAssist(s) {
+    const m = MA();
+    if (m) { try { return cleanAssist(m.read(s)); } catch (e) { /* fall back */ } }
+    let raw = null;
+    try { raw = JSON.parse(s.getItem(ASSIST_KEY)); } catch (e) { raw = null; }
+    return cleanAssist(raw);
+  }
+  function writeAssist(s, field, val) {
+    try {
+      const next = cleanAssist(Object.assign(readAssist(s), { [field]: val }));
+      const m = MA();
+      if (m) m.write(s, next); else s.setItem(ASSIST_KEY, JSON.stringify(next));
+      return true;
+    } catch (e) { return false; }
+  }
+  const assisted = (s) => readAssist(s).dmg < 100;
   function osReduced() {
     try { return !!(win && win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { return false; }
   }
@@ -50,6 +82,13 @@
       get: (s) => flag(s, 'mm-aim-assist', true), set: (s, on) => setFlag(s, 'mm-aim-assist', on) },
     { id: 'bullet-shapes', group: 'play', label: 'Bullet shapes', hint: 'Shapes as well as colours.', type: 'toggle',
       get: (s) => flag(s, 'mm-bullet-shapes', false), set: (s, on) => setFlag(s, 'mm-bullet-shapes', on) },
+    // ID-06 (cycle 4): 'steps' = a labelled radio group of 44 px steps with the value in the visible label text.
+    { id: 'assist-dmg', group: 'play', label: 'Damage taken', hint: 'Lower = enemies hurt less. Realm and dungeons only.', type: 'steps',
+      steps: ASSIST_DMG, stepLabel: (v) => v + '%', valueText: (v) => v + ' percent',
+      get: (s) => readAssist(s).dmg, set: (s, v) => ASSIST_DMG.indexOf(v) >= 0 && writeAssist(s, 'dmg', v) },
+    { id: 'assist-aim', group: 'play', label: 'Aim help', hint: 'Nudges shots toward the nearest enemy.', type: 'steps',
+      steps: ASSIST_AIM, stepLabel: (v) => AIM_LABEL[v], valueText: (v) => AIM_LABEL[v],
+      get: (s) => readAssist(s).aim, set: (s, v) => ASSIST_AIM.indexOf(v) >= 0 && writeAssist(s, 'aim', v) },
     { id: 'text-size', group: 'see', label: 'Text size', hint: '', type: 'choice', choices: SCALES,
       get: (s) => readAccess(s).hudScale, set: (s, v) => SCALES.indexOf(v) >= 0 && writeAccess(s, 'hudScale', v) },
     { id: 'reduce-motion', group: 'see', label: 'Reduce motion', hint: 'No shake or blinking.', type: 'toggle',
@@ -85,7 +124,7 @@
   function set(storage, id, value) {
     const it = item(id);
     if (!it) return false;
-    const v = it.type === 'toggle' ? !!value : value;
+    const v = it.type === 'toggle' ? !!value : it.type === 'steps' ? Number(value) : value;
     return !!it.set(storage, v);
   }
   // apply(doc, storage): mirror the prefs on <html> (CSS hooks). Returns what it applied.
@@ -157,6 +196,7 @@
     const scroll = el('div', 'mmset-scroll');
     dlg.appendChild(scroll);
     const ctrls = {};
+    let assistReset = null, assistLive = null;
     function sync() {
       const v = read(storage);
       ITEMS.forEach((it) => {
@@ -165,10 +205,19 @@
         if (it.type === 'toggle') {
           c.setAttribute('aria-checked', v[it.id] ? 'true' : 'false');
           c.querySelector('.mmset-state').textContent = v[it.id] ? 'ON' : 'OFF';
+        } else if (it.type === 'steps') {
+          c.querySelectorAll('[role=radio]').forEach((b) => {
+            const on = Number(b.getAttribute('data-value')) === v[it.id];
+            b.setAttribute('aria-checked', on ? 'true' : 'false');
+            b.tabIndex = on ? 0 : -1; // roving tabindex: one Tab stop per group, arrows move inside it
+          });
+          const val = c.querySelector('.mmset-val');
+          if (val) val.textContent = it.stepLabel(v[it.id]);
         } else {
           c.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', Number(b.getAttribute('data-value')) === v[it.id] ? 'true' : 'false'));
         }
       });
+      if (assistReset) assistReset.hidden = !(v['assist-dmg'] !== 100 || v['assist-aim'] !== 0);
       apply(doc, storage);
     }
     function change(id, value) {
@@ -192,6 +241,71 @@
       sec.appendChild(h);
       if (town && g.id === 'play') sec.appendChild(el('p', 'mmset-hint mmset-gnote', 'Only used in the Realm arena (Realm Gate). Nothing here changes the Town.'));
       ITEMS.filter((it) => it.group === g.id).forEach((it) => {
+        if (it.type === 'steps') {
+          if (it.id === 'assist-dmg') {
+            const sh = el('h4', 'mmset-sub', 'Assist');
+            sh.id = 'mmset-assist-h';
+            sec.appendChild(sh);
+            sec.appendChild(el('p', 'mmset-hint mmset-gnote', 'Optional help. Runs with lower damage taken get an "Assisted" tag; nothing is hidden or locked.'));
+          }
+          const wrap = el('div', 'mmset-row mmset-steps');
+          wrap.id = 'mmset-' + it.id;
+          wrap.setAttribute('data-setting', it.id);
+          const lab = el('span', 'mmset-label');
+          lab.id = 'mmset-' + it.id + '-label';
+          lab.appendChild(doc.createTextNode(it.label + ': '));
+          lab.appendChild(el('span', 'mmset-val', ''));
+          wrap.appendChild(lab);
+          const hint = el('span', 'mmset-hint', it.hint);
+          hint.id = 'mmset-' + it.id + '-hint';
+          wrap.appendChild(hint);
+          const rg = el('div', 'mmset-opts mmset-radios');
+          rg.setAttribute('role', 'radiogroup');
+          rg.setAttribute('aria-labelledby', lab.id);
+          rg.setAttribute('aria-describedby', hint.id);
+          const pick = (v, focus) => {
+            change(it.id, v);
+            const b = rg.querySelector('[data-value="' + v + '"]');
+            if (focus && b) b.focus();
+            if (assistLive) assistLive.textContent = it.label + ' ' + it.valueText(v);
+          };
+          it.steps.forEach((v, i) => {
+            const b = el('button', 'mmset-opt mmset-step mm8-btn', it.stepLabel(v));
+            b.type = 'button';
+            b.setAttribute('role', 'radio');
+            b.setAttribute('data-value', String(v));
+            b.setAttribute('aria-label', it.valueText(v));
+            b.addEventListener('click', () => pick(v, false));
+            b.addEventListener('keydown', (e) => {
+              const n = it.steps.length;
+              const to = { ArrowRight: i + 1, ArrowDown: i + 1, ArrowLeft: i - 1, ArrowUp: i - 1, Home: 0, End: n - 1 }[e.key];
+              if (to === undefined) return;
+              e.preventDefault();
+              pick(it.steps[Math.max(0, Math.min(n - 1, to))], true);
+            });
+            rg.appendChild(b);
+          });
+          wrap.appendChild(rg);
+          ctrls[it.id] = wrap;
+          sec.appendChild(wrap);
+          if (it.id === 'assist-aim') {
+            assistReset = el('button', 'mmset-opt mmset-assist-reset mm8-btn', 'Reset assist');
+            assistReset.type = 'button';
+            assistReset.id = 'mmset-assist-reset';
+            assistReset.addEventListener('click', () => {
+              change('assist-dmg', 100); change('assist-aim', 0);
+              if (assistLive) assistLive.textContent = 'Assist reset: damage taken 100 percent, aim help off';
+              try { ctrls['assist-dmg'].querySelector('[aria-checked="true"]').focus(); } catch (e) { /* ignore */ }
+            });
+            sec.appendChild(assistReset);
+            assistLive = el('span', 'mmset-sr');
+            assistLive.id = 'mmset-assist-live';
+            assistLive.setAttribute('role', 'status');
+            assistLive.setAttribute('aria-live', 'polite');
+            sec.appendChild(assistLive);
+          }
+          return;
+        }
         if (it.type === 'toggle') {
           const b = el('button', 'mmset-row mmset-toggle');
           b.type = 'button';
@@ -303,6 +417,23 @@
     return t;
   }
 
+  // ID-06 'Assisted' tag for run summaries / death cards (S places it; text, never colour alone). Returns the span or null.
+  function assistTag(doc, storage) {
+    const d = doc || (win && win.document);
+    if (!d) return null;
+    ensureCss(d);
+    const t = d.createElement('span');
+    t.className = 'mm-assisted-tag';
+    t.textContent = 'Assisted';
+    let a = { dmg: 100, aim: 0 };
+    try { a = readAssist(storage || win.localStorage); } catch (e) { /* defaults */ }
+    const bits = [];
+    if (a.dmg !== 100) bits.push('damage taken ' + a.dmg + ' percent');
+    if (a.aim) bits.push('aim help ' + AIM_LABEL[a.aim]);
+    t.setAttribute('title', 'Played with assist' + (bits.length ? ': ' + bits.join(', ') : ''));
+    return t;
+  }
+
   // beta S-05/S-10: reading win.localStorage throws (SecurityError) when site data is blocked: probe it inside the try
   if (win && win.document) {
     try { if (typeof win.localStorage !== 'undefined') apply(win.document, win.localStorage); } catch (e) { /* ignore */ }
@@ -310,6 +441,8 @@
   return {
     ACCESS_KEY: ACCESS_KEY, SCALES: SCALES.slice(), GROUPS: GROUPS, CONTROLS: CONTROLS,
     ITEMS: ITEMS.map((it) => ({ id: it.id, group: it.group, label: it.label, type: it.type })),
-    read: read, set: set, apply: apply, mount: mount, toast: toast
+    read: read, set: set, apply: apply, mount: mount, toast: toast,
+    ASSIST_KEY: ASSIST_KEY, ASSIST_DMG: ASSIST_DMG.slice(), ASSIST_AIM: ASSIST_AIM.slice(), AIM_LABEL: AIM_LABEL.slice(),
+    readAssist: readAssist, cleanAssist: cleanAssist, assisted: assisted, assistTag: assistTag
   };
 }));

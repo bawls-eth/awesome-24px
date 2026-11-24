@@ -130,6 +130,14 @@
     if (isObj(v.e)) Object.keys(v.e).slice(0, 5000).forEach((k) => { const t = v.e[k]; if (n < 300 && /^(kill|boss|clear|tame):[a-z0-9_:@]{1,60}$/.test(k) && typeof t === 'number' && isFinite(t) && t >= 0 && t <= 8.64e15) { e[k] = Math.floor(t); n++; } });
     return { v: 1, e: e };
   };
+  // cyc4-S ID-06: the assist pref 'mm-assist' ({dmg, aim}) is a player setting like mm-aim-assist (not hardware-bound like lowGfx), so it
+  // joins the ONE Backup. It is JSON, not a '0'/'1' flag: cleaned inline with the same rule as MMAssist.clean (dmg 50..100 step 10, aim 0..3).
+  CLEANERS['mm-assist'] = (o, v) => {
+    if (!isObj(v)) return undefined;
+    const n = (x) => (typeof x === 'number' && isFinite(x) ? x : NaN);
+    const d = n(v.dmg), a = n(v.aim);
+    return { dmg: isFinite(d) ? Math.max(50, Math.min(100, Math.round(d / 10) * 10)) : 100, aim: isFinite(a) ? Math.max(0, Math.min(3, Math.round(a))) : 0 };
+  };
   const DEVICE_FIELDS = { 'pixeltown-access-v1': ['lowGfx'] };
   const KNOWN = Object.keys(CLEANERS).concat(FLAG_KEYS);
   const isSetting = (k) => /^mm-/.test(k) || k === 'pixeltown-access-v1' || k === 'pixeltown-realm-audio-v1' || k === 'pixeltown-panel-collapsed';
@@ -149,7 +157,7 @@
     'pixeltown-medals-deepdelve-v1': 'Deepdelve medals', 'pixeltown-medals-echo-v1': 'Echo Garden medals', 'pixeltown-medals-pop-v1': 'Pop medals',
     'pixeltown-medals-stack-v1': 'Stack medals', 'pixeltown-medals-stalk-v1': 'Stalk Market medals',
     'mm-sfx-muted': 'sound setting', 'mm-music': 'music setting', 'mm-high-contrast': 'high contrast setting', 'mm-reduce-motion': 'reduce motion setting',
-    'mm-aim-assist': 'aim assist setting', 'mm-aim-toggle': 'aim toggle setting', 'mm-bullet-shapes': 'bullet shapes setting', 'mm-auto-fire': 'auto fire setting',
+    'mm-aim-assist': 'aim assist setting', 'mm-aim-toggle': 'aim toggle setting', 'mm-bullet-shapes': 'bullet shapes setting', 'mm-auto-fire': 'auto fire setting', 'mm-assist': 'assist setting',
     'pixeltown-hub-hint-v1': 'hub hint seen', 'pixeltown-bugs-hint-v1': 'Bug Safari hint seen', 'pixeltown-realm-audio-v1': 'Realm ambience setting',
     'pixeltown-realm-tutorial-v1': 'Realm tutorial progress', 'pixeltown-calm-v1': 'hidden hub ideas', 'pixeltown-gearhint-v1': 'gear hint seen',
     'pixeltown-medals-jam-v1': 'Jam medals', 'pixeltown-notebook-v1': 'hero notebook'

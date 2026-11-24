@@ -1223,7 +1223,7 @@ const PANEL_PHONE_QUERY = '(max-width: 600px), (max-height: 500px) and (pointer:
 // and a villager's birthday (when there is one). Finishing every chore that
 // applies today pays a one-time bonus. Local only; paid-day lives in the
 // additive `dailies: {day, paid, days}` save key.
-const DAILY_BONUS = 5;
+const DAILY_BONUS = 40; // cycle 4 D: was 5 (15 s of gathering at 33 stars/min); 40 is about 1.2 min, once a day, and the only chore payout above the daily quest (~11) so finishing the card is worth a detour
 // ---------- villager birthdays ----------
 // Every BIRTHDAY_CYCLE_DAYS (UTC) days one villager has a birthday: purely
 // deterministic (day number -> villager), so it needs no network and is the
@@ -2174,6 +2174,7 @@ class TownScene extends Phaser.Scene {
   uncull(o) {
     const cam = this.cameras && this.cameras.main;
     if (o && cam && (o.cameraFilter & cam.id)) o.cameraFilter &= ~cam.id;
+    if (o && o._cs) o._cs = 0; // cycle 4: its remembered box is stale, the next pass measures it again
     return o;
   }
 
@@ -2186,24 +2187,45 @@ class TownScene extends Phaser.Scene {
     this._cullN = ((this._cullN || 0) + 1) % 4;
     const moved = this._cullAt ? Math.abs(this._cullAt.x - v.x) + Math.abs(this._cullAt.y - v.y) : Infinity;
     if (this._cullN !== 0 && moved < 48) return;
-    this._cullAt = { x: v.x, y: v.y };
+    // cycle 4 (L hot path): reading x / y / displayWidth / displayHeight off ~900 objects of many shapes cost about 60 bytes per object
+    // per pass (each read of a number field through a many-shapes lookup returns a fresh boxed number): 14.6 KB per frame, three
+    // quarters of everything main.js allocated per frame. Now each object remembers its box as four whole numbers (_cl, _ct, _cr, _cb:
+    // floor / ceil, so the box only grows and nothing is culled that was not before). A box that was the same on 3 passes in a row is
+    // "settled": it is used as it is and measured again only every 8th pass (staggered over the list). Sprites (players, villagers,
+    // animals: things that walk) are measured on every pass as before. A settled object that starts to move is seen within 8 passes
+    // (32 frames) and the 320 px margin covers that; a pooled object that jumps goes through uncull() (measured on the next pass); a
+    // hidden object forgets its box. A forced / first pass (_cullAt null) measures everything. An object with no size (an empty label)
+    // is skipped as before and looked at again every 8th pass.
+    const full = !this._cullAt;
+    if (full) this._cullAt = { x: v.x, y: v.y }; else { this._cullAt.x = v.x; this._cullAt.y = v.y; }
+    const pass = this._cullPass = ((this._cullPass | 0) + 1) & 0x3ffffff;
     const M = 320, x0 = v.x - M, y0 = v.y - M, x1 = v.right + M, y1 = v.bottom + M;
     const bit = cam.id;
     const list = this.sys.displayList.list;
-    let culled = 0;
+    let culled = 0, measured = 0;
     for (let i = 0; i < list.length; i++) {
       const o = list[i];
       if (o.scrollFactorX !== 1 || o.scrollFactorY !== 1 || o.type === 'Container' || o.type === 'Graphics' || o.type === 'Particles' || o.type === 'ParticleEmitter') continue;
       // Hidden objects draw nothing anyway; never leave them culled. A pooled object (sparkle star, firefly) is moved and shown
       // between two cull passes: with a stale cull bit from its old spot it would stay undrawn for up to 3 frames in view.
-      if (!o.visible) { if (o.cameraFilter & bit) o.cameraFilter &= ~bit; continue; }
-      const w = o.displayWidth, h = o.displayHeight;
-      if (!(w > 0) || !(h > 0)) continue;
-      const r = (o.rotation ? Math.max(w, h) : 0); // rotated: use a square that contains it
-      const left = o.x - w * (o.originX === undefined ? 0.5 : o.originX) - r, top = o.y - h * (o.originY === undefined ? 0.5 : o.originY) - r;
-      const out = left + w + 2 * r < x0 || left > x1 || top + h + 2 * r < y0 || top > y1;
+      if (!o.visible) { if (o.cameraFilter & bit) o.cameraFilter &= ~bit; if (o._cs) o._cs = 0; continue; }
+      let l, t, r2, b;
+      if (!full && o._cs >= 3 && o.type !== 'Sprite' && pass - o._cv < 8) { if (o._cz) continue; l = o._cl; t = o._ct; r2 = o._cr; b = o._cb; } // _cz: it had no size (an empty label), skipped as before
+      else {
+        const w = o.displayWidth, h = o.displayHeight;
+        measured++;
+        if (!(w > 0) || !(h > 0)) { if (!o._cz) { o._cz = 1; o._cl = NaN; o._cv = pass - (i & 7); } else o._cv = pass; o._cs = 3; continue; } // no size: nothing to cull (bit left as it is, as before); looked at again every 8th pass
+        if (o._cz) o._cz = 0;
+        const r = (o.rotation ? Math.max(w, h) : 0); // rotated: use a square that contains it
+        const left = o.x - w * (o.originX === undefined ? 0.5 : o.originX) - r, top = o.y - h * (o.originY === undefined ? 0.5 : o.originY) - r;
+        l = Math.floor(left); t = Math.floor(top); r2 = Math.ceil(left + w + 2 * r); b = Math.ceil(top + h + 2 * r);
+        if (l === o._cl && t === o._ct && r2 === o._cr && b === o._cb) { if (o._cs < 3) { o._cs = (o._cs | 0) + 1; o._cv = o._cs === 3 ? pass - (i & 7) : pass; } else o._cv = pass; }
+        else { o._cl = l; o._ct = t; o._cr = r2; o._cb = b; o._cs = 0; o._cv = pass; }
+      }
+      const out = r2 < x0 || l > x1 || b < y0 || t > y1;
       if (out) { if (!(o.cameraFilter & bit)) o.cameraFilter |= bit; culled++; } else if (o.cameraFilter & bit) o.cameraFilter &= ~bit;
     }
+    this._cullMeasured = measured; // test hook: objects measured (not taken from the remembered box) on the last pass
     this._culled = culled;
   }
 
@@ -7084,6 +7106,7 @@ class TownScene extends Phaser.Scene {
             const img = this.add.image(left, top, key).setOrigin(0, 0).setDepth(t.depth);
             this.children.moveTo(img, this.children.getIndex(t)); // same display-list slot as the Graphics
             t.destroy();
+            if (opt && opt.finish && this.bldFinish && this.bldFinish.on) this.bldContactShadow(img, key); // cycle 4 art
             return img;
           };
         }
@@ -7135,11 +7158,78 @@ class TownScene extends Phaser.Scene {
         }
         if (best >= 0) { d[i] = Math.round(br * 0.3); d[i + 1] = Math.round(bg * 0.3); d[i + 2] = Math.round(bb * 0.3); d[i + 3] = 255; st.outline++; }
       }
+      if (this.bldFinish2()) this.finishBakedTexture2(W, H, src, d, st);
       ctx.putImageData(im, 0, 0);
       if (tex.refresh) tex.refresh();
       st.count++;
       return true;
     } catch (e) { return false; } finally { st.ms += performance.now() - t0; }
+  }
+
+  // Cycle 4 art (G): building finish, second pass (still once at create, never per frame), so buildings stop reading as flat boxes at 1x:
+  //  windows: any pale-blue glass pane gets a 2-step diagonal glint in its top-left corner, a darker inner frame on its right / bottom
+  //  edge and a lit sill row under it; roofs: the rows where the silhouette still widens (a pitched roof) get shingle courses every 5 px
+  //  (a darker row, staggered seams every 8 px) and a lit row under each course; plus a ground contact shadow strip under the footprint
+  //  (bldContactShadow, a separate ground image). ?bldfinish2=0 = the cycle 1 finish only; ?bldfinish=0 still turns every finish off.
+  bldFinish2() { return this.bldDepth() && !/[?&]bldfinish2=0(&|$)/.test(typeof location !== 'undefined' ? location.search : ''); }
+  finishBakedTexture2(W, H, src, d, st) {
+    st.glass = st.glass || 0; st.roof = st.roof || 0;
+    const op = (x, y) => x >= 0 && y >= 0 && x < W && y < H && src[(y * W + x) * 4 + 3] >= 128;
+    const glass = (x, y) => { if (!op(x, y)) return false; const i = (y * W + x) * 4; return src[i + 2] >= 200 && src[i + 1] >= 185 && src[i + 2] >= src[i] + 15; };
+    const mul = (i, f) => { for (let c = 0; c < 3; c++) d[i + c] = Math.max(0, Math.min(255, Math.round(d[i + c] * f))); };
+    const mix = (i, r, g, b, a) => { d[i] = Math.round(d[i] * (1 - a) + r * a); d[i + 1] = Math.round(d[i + 1] * (1 - a) + g * a); d[i + 2] = Math.round(d[i + 2] * (1 - a) + b * a); };
+    // glass: runs to the pane's left / top / right / bottom edge, per pixel
+    const G = new Uint8Array(W * H); for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (glass(x, y)) G[y * W + x] = 1;
+    const lx = new Uint8Array(W * H), ly = new Uint8Array(W * H), rx = new Uint8Array(W * H), ry = new Uint8Array(W * H);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const k = y * W + x; if (!G[k]) continue; lx[k] = x > 0 && G[k - 1] ? Math.min(250, lx[k - 1] + 1) : 0; ly[k] = y > 0 && G[k - W] ? Math.min(250, ly[k - W] + 1) : 0; }
+    for (let y = H - 1; y >= 0; y--) for (let x = W - 1; x >= 0; x--) { const k = y * W + x; if (!G[k]) continue; rx[k] = x < W - 1 && G[k + 1] ? Math.min(250, rx[k + 1] + 1) : 0; ry[k] = y < H - 1 && G[k + W] ? Math.min(250, ry[k + W] + 1) : 0; }
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const k = y * W + x, i = k * 4;
+      if (G[k]) {
+        const s = lx[k] + ly[k], small = lx[k] + rx[k] < 5 || ly[k] + ry[k] < 5;
+        if (small) continue; // a sliver of blue (a sign letter, a gem) is not a pane
+        if (rx[k] === 0 || ry[k] === 0) mul(i, 0.8); // inner frame shadow (light from the top-left)
+        else if (lx[k] >= 1 && ly[k] >= 1 && (s === 3 || s === 4 || s === 7)) mix(i, 255, 255, 255, 0.75); // diagonal glint
+        st.glass++;
+      } else if (op(x, y) && y > 0 && G[k - W] && ly[k - W] >= 4) mul(i, 1.25); // lit sill under a pane
+    }
+    // pitched roofs: the top rows where the opaque span keeps widening
+    const span = (y) => { let a = -1, b = -1; for (let x = 0; x < W; x++) if (op(x, y)) { if (a < 0) a = x; b = x; } return a < 0 ? null : [a, b]; };
+    let top = -1; for (let y = 0; y < H && top < 0; y++) if (span(y)) top = y;
+    if (top < 0) return;
+    let end = top, prev = span(top), flat = 0;
+    for (let y = top + 1; y < H; y++) { const s = span(y); if (!s) break; if (s[1] - s[0] > prev[1] - prev[0]) { end = y; flat = 0; } else if (++flat > 2) break; prev = s; }
+    if (end - top < 10) return; // no pitched roof (flat-topped boards / stalls)
+    for (let y = top + 3; y < end - 1; y++) {
+      const course = (y - top) % 5, row = Math.floor((y - top) / 5);
+      for (let x = 0; x < W; x++) {
+        if (!op(x, y) || !op(x - 2, y) || !op(x + 2, y) || !op(x, y - 2)) continue; // keep the outline / rim intact
+        const i = (y * W + x) * 4;
+        if (course === 4) { mul(i, 0.8); st.roof++; } else if (course === 0) mul(i, 1.1);
+        else if ((x + row * 4) % 8 === 0) { mul(i, 0.86); st.roof++; }
+      }
+    }
+  }
+  // the contact shadow under a finished building image: two dark strips along the footprint's bottom row (ground depth, under the walls)
+  bldContactShadow(img, key) {
+    try {
+      if (!this.bldFinish2()) return null;
+      const cv = this.textures.get(key).getSourceImage(), W = cv.width, H = cv.height, d = cv.getContext('2d').getImageData(0, 0, W, H).data;
+      let y = H - 1, a = -1, b = -1;
+      for (; y >= 0 && a < 0; y--) for (let x = 0; x < W; x++) if (d[(y * W + x) * 4 + 3] >= 128) { if (a < 0) a = x; b = x; }
+      if (a < 0 || b - a < 12) return null;
+      // a baked_ canvas texture (one per building), placed as a plain Image: no live Graphics, nothing re-tessellated per frame (town-perf)
+      const sw = b - a + 2, skey = 'baked_shadow_' + key;
+      if (!this.textures.exists(skey)) {
+        const ct = this.textures.createCanvas(skey, sw, 4), sc = ct.getContext();
+        sc.fillStyle = 'rgba(16,20,12,0.22)'; sc.fillRect(0, 0, sw, 4);
+        sc.fillStyle = 'rgba(16,20,12,0.18)'; sc.fillRect(2, 0, Math.max(1, sw - 4), 2);
+        ct.refresh();
+      }
+      const g = this.add.image(img.x + a + 2, img.y + y + 2, skey).setOrigin(0, 0).setDepth(img.depth - 0.5);
+      const st = this.bldFinish; if (st) { st.shadows = (st.shadows || 0) + 1; (st.shadowPairs || (st.shadowPairs = [])).push([img.depth, g.depth, b - a]); }
+      return g;
+    } catch (e) { return null; }
   }
 
   // Draws static vector art once into a texture and places it as a plain
@@ -8211,7 +8301,8 @@ class TownScene extends Phaser.Scene {
     this.add.text(x, y - 46, '🥬 Turnips', { fontSize: '12px' }).setOrigin(0.5).setDepth(y + 1);
     // R4 D4 (b07-r2-13): the price sat at y+20, exactly where a shopper's name label is drawn. It now sits above the sign.
     this.turnipBuyLabel = this.add.text(x, y - 62, '', { fontSize: '11px', color: '#ffe066', stroke: '#1c2430', strokeThickness: 3 }).setOrigin(0.5).setDepth(y + 1);
-    this.turnipSellLabel = this.add.text(HOUSE_POS.x + HOUSE_POS.w / 2, HOUSE_POS.y - 50, '', { fontSize: '11px', color: '#6fbf73' }).setOrigin(0.5).setDepth(HOUSE_POS.y + HOUSE_POS.h + 1); // cyc3 U: drawn over the Shop roof like the title and deal lines
+    // cycle 4 art (U ask): the green sell price had no outline and sank into the Shop roof / grass; same dark stroke as the buy price
+    this.turnipSellLabel = this.add.text(HOUSE_POS.x + HOUSE_POS.w / 2, HOUSE_POS.y - 50, '', { fontSize: '11px', color: '#8fe08a', stroke: '#1c2430', strokeThickness: 3 }).setOrigin(0.5).setDepth(HOUSE_POS.y + HOUSE_POS.h + 1); // cyc3 U: drawn over the Shop roof like the title and deal lines
   }
 
   updateTurnipPriceLabels(time) {

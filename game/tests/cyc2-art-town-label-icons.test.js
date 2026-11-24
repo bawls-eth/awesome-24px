@@ -6,6 +6,7 @@
 // Firebase blocked (offlineStub), offline join as an ADMIN bot, nothing written to any DB.
 const { chromium } = require('playwright');
 const { check, done, offlineStub, exposeGame, joinOffline } = require('./helpers');
+const LS = require('./lib/load-scale');
 const ORIGIN = (process.env.BASE || 'http://localhost:8440/game/index.html').replace(/\/game\/index\.html.*$/, '');
 
 async function sample(browser, q, vp) {
@@ -49,7 +50,7 @@ async function sample(browser, q, vp) {
   check('Shop and Museum labels read as words', on.shop.indexOf('Shop') >= 0 && on.museum.indexOf('Museum') >= 0, JSON.stringify([on.shop, on.museum]));
   check("pinned glyph labels untouched: 🦸 Founder's Statue and ⛵ Isles", on.statue.some((t) => t.indexOf("🦸 Founder's Statue") >= 0) && on.isles.indexOf('⛵ Isles') >= 0, JSON.stringify([on.statue, on.isles]));
   check('a later setText strips the glyph again and keeps the icon', on.mail && on.mail.text === 'Mailbox ❗3' && on.mail.icon, JSON.stringify(on.mail));
-  check('one-off create cost < 60 ms', on.ms < 60, on.ms.toFixed(1) + ' ms');
+  check(`one-off create cost < ${LS.budget(60)} ms (60 ms on an idle box; load-scaled: the time-sweep run measured 71.9 ms at load factor 4 to 6)`, on.ms < LS.budget(60), on.ms.toFixed(1) + ' ms');
   const ph = await sample(browser, '', { width: 390, height: 844 });
   check('phone 390x844: same labels converted', ph.labels.length === on.labels.length, ph.labels.length + ' vs ' + on.labels.length);
   const off = await sample(browser, '?worldicons=0');

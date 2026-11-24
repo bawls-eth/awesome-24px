@@ -9,6 +9,7 @@
 // Run: python3 -m http.server 8440 &   BASE=http://localhost:8440/game/index.html NODE_PATH=$(npm root -g) node game/tests/net-hostile-presence.test.js
 const { chromium } = require('playwright');
 const { check, done, offlineStub } = require('./helpers');
+const LS = require('./lib/load-scale'); // cycle 4: the flood's frame window is load-scaled (factor 1 on an idle box: the strict 1.5 s). The time-sweep run counted 6 and 8 frames in 1.5 s at load factor 4 to 6.
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 
 // In-memory stand-in for the firebase compat SDK (app + database). Every write is recorded in window.__fb.writes.
@@ -186,16 +187,16 @@ const HOSTILE_PLAYERS = [
   check('no injected script ever ran (no window.__xss, no onerror/onload attributes in the page)', st2.xss === 0 && st2.injected === 0, JSON.stringify(st2));
 
   // ---- 3. a presence flood (a client writing hundreds of fake players) must not freeze the town ----
-  const flood = await page.evaluate(async () => {
+  const flood = await page.evaluate(async (waitMs) => {
     const t0 = performance.now();
     for (let i = 0; i < 300; i++) window.__fb.emit('players', 'child_added', '-NfloodId' + String(i).padStart(5, '0'), { name: 'flood' + i, species: 'hero_ranger', frame: 0, x: 1000 + (i % 30) * 10, y: 500 + Math.floor(i / 30) * 10 });
     const emitMs = performance.now() - t0;
     const f0 = window.__g.loop.frame;
-    await new Promise((r) => setTimeout(r, 1500));
-    return { emitMs: Math.round(emitMs), frames: window.__g.loop.frame - f0, remote: window.__g.scene.getScene('Town').remotePlayers.size };
-  });
+    await new Promise((r) => setTimeout(r, waitMs));
+    return { emitMs: Math.round(emitMs), frames: window.__g.loop.frame - f0, remote: window.__g.scene.getScene('Town').remotePlayers.size, waitMs };
+  }, LS.budget(1500));
   console.log('INFO presence flood of 300 fake players: ' + JSON.stringify(flood) + ' (no client-side cap on remote players yet: see design/bugbash/netsafety.md)');
-  check('presence flood: the game loop keeps running afterwards (not frozen)', flood.frames >= 10, JSON.stringify(flood));
+  check(`presence flood: the game loop keeps running afterwards (not frozen): 10 or more frames in ${LS.budget(1500)} ms (1500 ms on an idle box)`, flood.frames >= 10, JSON.stringify(flood));
   check('presence flood: delivering 300 records takes under 8 s on the main thread', flood.emitMs < 8000, JSON.stringify(flood));
 
   // ---- 4. the only things this client wrote are its own presence record and the player counter ----
