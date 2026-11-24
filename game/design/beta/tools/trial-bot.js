@@ -4,6 +4,9 @@
 const { chromium } = require('playwright');
 const ORIGIN = process.env.BASE_ORIGIN || 'http://localhost:9734';
 const WORLD = ORIGIN + '/game/games/mad-maze/index.html?mode=world&test=1&seed=12345&qdate=2030-05-01';
+// cyc5 D: optional human-skill knobs (all default to the old bot): SLOW_MS extra wait per loop (a human is ~30 Hz), MARGIN dodge radius px (34),
+// ORBIT preferred boss distance px (240), STEPS fights to play (6), HUMAN_MS reaction delay is SLOW_MS; none of them touches the game.
+const SLOW_MS = +process.env.SLOW_MS || 0, MARGIN = +process.env.MARGIN || 34, ORBIT = +process.env.ORBIT || 240, STEPS = +process.env.STEPS || 6;
 const LEVEL = +process.argv[2] || 20, RAR = +process.argv[3] || 0, TRIALS = +process.argv[4] || 2;
 const sv = { realm: { level: LEVEL, xp: 0, shards: 50, bestWave: 2, items: [{ n: 1, id: 'sparkwand', r: RAR }], nextUid: 2, eq: { weapon: 1 }, gv: 1, gp: { b: 0, d: 0 } } };
 const E = (page, fn, arg) => page.evaluate(`(${fn.toString()})(window.__mm.arena, window.__mm.world, ${JSON.stringify(arg)})`);
@@ -31,7 +34,7 @@ const E = (page, fn, arg) => page.evaluate(`(${fn.toString()})(window.__mm.arena
     const started = await E(page, (a, w) => w.rush.start());
     if (!started) { out.push({ error: 'start refused' }); break; }
     const trial = { t, fights: [] };
-    for (let step = 0; step < 6; step++) {
+    for (let step = 0; step < STEPS; step++) {
       await E(page, (a, w) => { const s = w.rush.state(); if (s.phase === 'rest') w.rush.next(); });
       await page.waitForTimeout(200);
       const info = await E(page, (a, w) => { const e = w.rush.entity(); return e ? { boss: e.art, hp: e.maxHp, hp0: a.player.hp, maxHp: a.stats.maxHp, dmgMul: e.dmgMul } : null; });
@@ -58,15 +61,16 @@ const E = (page, fn, arg) => page.evaluate(`(${fn.toString()})(window.__mm.arena
           let cost = 0;
           for (let tt = 0.05; tt <= 0.45; tt += 0.05) {
             const qx = s.px + dx * SP * tt, qy = s.py + dy * SP * tt;
-            for (const b of s.bl) { const d = Math.hypot(b[0] + b[2] * tt - qx, b[1] + b[3] * tt - qy); if (d < 34) cost += (34 - d) * (1.2 - tt); }
+            for (const b of s.bl) { const d = Math.hypot(b[0] + b[2] * tt - qx, b[1] + b[3] * tt - qy); if (d < MARGIN) cost += (MARGIN - d) * (1.2 - tt); }
           }
           const nd = Math.hypot(s.ex - (s.px + dx * SP * 0.3), s.ey - (s.py + dy * SP * 0.3));
-          cost += Math.abs(nd - 240) * 0.04 + (dx || dy ? 0.3 : 0);
+          cost += Math.abs(nd - ORBIT) * 0.04 + (dx || dy ? 0.3 : 0);
           const tx = -(s.ey - s.py) / bd, ty = (s.ex - s.px) / bd; cost -= (dx * tx + dy * ty) * 0.8;
           if (!best || cost < best.c) best = { c: cost, dx, dy };
         }
         await key('d', best.dx > 0.3); await key('a', best.dx < -0.3); await key('s', best.dy > 0.3); await key('w', best.dy < -0.3);
         n++;
+        if (SLOW_MS) await page.waitForTimeout(SLOW_MS);
       }
       const secs = +((Date.now() - t0) / 1000).toFixed(1);
       const hpc = await page.evaluate(() => window.__hp); const secs2 = Object.keys(sec).length; const liveAvg = +(Object.values(sec).reduce((x, r) => x + r.liveSum / r.n, 0) / secs2).toFixed(1); const liveMaxAll = Math.max(...Object.values(sec).map((r) => r.liveMax)); const loopHz = +(n / secs).toFixed(1);

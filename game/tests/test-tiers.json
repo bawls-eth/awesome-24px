@@ -2283,5 +2283,17 @@
   "cyc5-art-dungeon-ceiling.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc5-d-oakback-pace.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "cyc5-d-trial-numbers.test.js": {
+    "class": "node",
+    "tier": "smoke"
+  },
+  "cyc5-d-stalk-paid-line.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
