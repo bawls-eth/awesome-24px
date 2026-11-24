@@ -757,6 +757,11 @@
       box.appendChild(mk('p', '', 'In progress: ' + tr.run.used + '/' + D.CASTS + ' casts, ' + tr.run.score + ' points.'));
     } else if (done) {
       box.appendChild(mk('p', 'rule', 'Today\'s tournament is complete. A new one starts with the next calendar day.'));
+    } else if (D.tournament.blockedWhy && D.tournament.blockedWhy(journal, day)) { // cycle 3: say why instead of a Start button that does nothing
+      const w = mk('p', 'rule', D.tournament.blockedWhy(journal, day) === 'ahead'
+        ? 'Your last tournament is dated after today on this device (the clock or the time zone changed). Your streak is safe. The next tournament opens the day after it.'
+        : 'The date on this device looks wrong. Tournaments wait until it is right. Your streak is safe.');
+      w.id = 'tour-wait'; box.appendChild(w);
     } else {
       const b = btn(tr.run && tr.run.day === day ? 'Resume (' + tr.run.used + '/' + D.CASTS + ')' : 'Start tournament', startTournament, g.state !== 'idle');
       b.id = 'tour-start'; b.classList.add('primary'); box.appendChild(b);

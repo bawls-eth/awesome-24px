@@ -2111,5 +2111,9 @@
   "cyc3-realm-frame-alloc.test.js": {
     "class": "browser",
     "tier": "full"
+  },
+  "cyc3-gameday-streak.test.js": {
+    "class": "browser",
+    "tier": "full"
   }
 }
