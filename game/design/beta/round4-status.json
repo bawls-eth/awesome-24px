@@ -1,8 +1,9 @@
 {
- "_updated": "2026-11-24 00:16 UTC (D5: round-3 fixes replayed on d267d0b vs the round-3 tip)",
+ "_updated": "2026-11-24 00:35 UTC (D5: first poll of r4-d1..r4-d4; no fixes/r4-d*.md notes yet, statuses taken from the branch commits and D5's own runs)",
  "_log": [
   "seed: owners from ROUND4.md file ownership; round-3 fixes entered as \"claimed\" until D5 replays them",
-  "2026-11-24 00:16 D5: replayed 9 round-3 fixes by real input on the tree before round 3 (d267d0b, port 9606) and on the tip (port 9605): b01-07, b04-13, b02-12, b14-06, b15-r2-15, b15-r2-16, b14-r2-N01, b13-r2-02 verified; b03-r2-05 found only half fixed (pad still on the room) and set back to open; b13-r2-03 culling works but the fps target was not re-measured (claimed)"
+  "2026-11-24 00:16 D5: replayed 9 round-3 fixes by real input on the tree before round 3 (d267d0b, port 9606) and on the tip (port 9605): b01-07, b04-13, b02-12, b14-06, b15-r2-15, b15-r2-16, b14-r2-N01, b13-r2-02 verified; b03-r2-05 found only half fixed (pad still on the room) and set back to open; b13-r2-03 culling works but the fps target was not re-measured (claimed)",
+  "2026-11-24 00:35 D5 poll: r4-d1 98571b4, r4-d3 08e50c2, r4-d4 4332af8 (trees archived and served on port 9607), r4-d2 not served yet. Each lane test was run by D5 against the round-3 tip code (before) and the lane tree (after). b07-r2-06 verified with D5's own walk-and-press-E replay; the other lane items stay claimed until D5 replays them or a tester does"
  ],
  "b01-r2-05": {
   "owner": "D1",
@@ -48,9 +49,9 @@
  },
  "b02-08": {
   "owner": "D1",
-  "status": "open",
-  "test": "-",
-  "note": "Stats tab keeps Gear-tab compare deltas"
+  "status": "claimed",
+  "test": "beta-r4-b02-08-stats-delta (D1)",
+  "note": "D1 ea204c1. Lane test run by D5: 3 red on the round-3 tip, 7/7 on the D1 tree. It clicks the real rows and tabs through element.click(); not replayed by D5 with touch input"
  },
  "b02-11": {
   "owner": "D1",
@@ -96,15 +97,15 @@
  },
  "b04-01": {
   "owner": "D2",
-  "status": "open",
+  "status": "claimed",
   "test": "-",
-  "note": "terrain quilt look (W-03)"
+  "note": "D2 83d7d5e (drawn-terrain smoothing, organic shade patches). Visual: needs D5 screenshots + a tester"
  },
  "b04-03": {
   "owner": "D2",
-  "status": "open",
+  "status": "claimed",
   "test": "-",
-  "note": "snow blobs / dashed dry-grass outline"
+  "note": "D2 83d7d5e. Visual: needs D5 screenshots + a tester"
  },
  "b04-09": {
   "owner": "D2",
@@ -138,9 +139,9 @@
  },
  "b05-05": {
   "owner": "D1",
-  "status": "open",
-  "test": "-",
-  "note": "Oakback needs golden apples, 1 glint per 900 s (balance)"
+  "status": "claimed",
+  "test": "beta-r4-b05-05-oakback-food (D1)",
+  "note": "D1 98571b4 (4 golden-apple glints, 300 s). The lane test is node-only and passes 4/4 from the D1 checkout whatever tree is served, so D5 has no red-before; not replayed in the Isles"
  },
  "b05-08": {
   "owner": "D1",
@@ -222,9 +223,9 @@
  },
  "b07-r2-04": {
   "owner": "D4",
-  "status": "open",
-  "test": "-",
-  "note": "leftover \"Pick your villager\" wording"
+  "status": "claimed",
+  "test": "beta-r4-d4-town (D4)",
+  "note": "D4 ef67a0c. Lane test run by D5: 11 red on the round-3 tip, 19/19 on the D4 tree. Not replayed by D5's own input"
  },
  "b07-r2-05": {
   "owner": "D2",
@@ -234,27 +235,27 @@
  },
  "b07-r2-06": {
   "owner": "D4",
-  "status": "open",
-  "test": "-",
-  "note": "O-01 decided: City Drive / Night Racer / Neon Coast / Kart Rally; links new tab + rel=noopener + hint, or Coming soon card"
+  "status": "verified",
+  "test": "tests/r4-open/beta-r4-replay-doors (D5), beta-r4-doors (D4)",
+  "note": "O-01, D4 000f85c. D5 replay by play: walk to each of the 4 doors, press E: City Drive / Night Racer / Neon Coast show a Coming soon card (Esc closes, hero walks on); Kart Rally asks 'leaves the game ... new tab', Yes opens a new tab with no opener and the Town tab stays, No opens nothing. Red before (GTA 3 / NFS Underground 2 / Vice City, same-tab navigation), 21/21 on the D4 tree. Note: a flower 22 px from the Kart Rally door takes the first E press (collectFlower), the door answers on the second"
  },
  "b07-r2-08": {
   "owner": "D4",
-  "status": "open",
-  "test": "-",
-  "note": "build-mode banner overlaps at 390x844"
+  "status": "verified",
+  "test": "beta-r4-d4-town (D4) + D5 screenshots",
+  "note": "D4 ef67a0c. D5 manual replay at 390x844 with the people panel open: on the round-3 tip the build banner and Wall / Undo lie on the people panel; on the D4 tree the panel folds to a chip and banner, Wall, Undo are in a clear row under Hold to talk (screenshots compared by D5). Lane test 11 red before, 19/19 after"
  },
  "b07-r2-09": {
   "owner": "D4",
-  "status": "open",
-  "test": "-",
-  "note": "Town Settings lists Realm combat options"
+  "status": "claimed",
+  "test": "beta-r4-d4-town (D4)",
+  "note": "D4 ef67a0c (combat toggles under a 'Realm combat' group). Lane test red before / green after (run by D5); not replayed by D5"
  },
  "b07-r2-10": {
   "owner": "D4",
-  "status": "open",
-  "test": "-",
-  "note": "two different More buttons"
+  "status": "claimed",
+  "test": "beta-r4-d4-town (D4)",
+  "note": "D4 ef67a0c (touch tray button reads Tools; seen by D5 on the D4 tree screenshot). Lane test red before / green after"
  },
  "b07-r2-12": {
   "owner": "D2",
@@ -264,21 +265,21 @@
  },
  "b07-r2-13": {
   "owner": "D4",
-  "status": "open",
-  "test": "-",
-  "note": "stall price label on the player name; failed buy silent"
+  "status": "claimed",
+  "test": "beta-r4-d4-town (D4)",
+  "note": "D4 ef67a0c (stall label above the sign, refused buy says why). Lane test red before / green after (run by D5); not replayed by D5"
  },
  "b07-r2-14": {
   "owner": "D4",
-  "status": "open",
-  "test": "-",
-  "note": "Back from the Isles lands on the join card"
+  "status": "claimed",
+  "test": "beta-r4-d4-town (D4)",
+  "note": "D4 ef67a0c (Back from the Isles lands in the town). Lane test uses a real page.goBack; red before / green after (run by D5)"
  },
  "b08-r2-04": {
   "owner": "D1",
-  "status": "open",
-  "test": "-",
-  "note": "passive new player dies on the Shore in ~35 s"
+  "status": "claimed",
+  "test": "beta-r4-b08-shore-survival (D1)",
+  "note": "D1 bff4400. Lane test run by D5: 7 red on the round-3 tip; on the D1 tree 8 pass and check 4 'after 3 quiet seconds the hero heals on their own' is RED ({h1:1,h2:1}) at load/core ~4. Needs a solo rerun before it can be called green; a passive-player survival replay by D5 is still to do"
  },
  "b08-r2-07": {
   "owner": "D4",
@@ -408,9 +409,9 @@
  },
  "b10-r2-16": {
   "owner": "D4",
-  "status": "open",
-  "test": "-",
-  "note": "Angler chrome crowds the scene (260 px)"
+  "status": "claimed",
+  "test": "beta-r4-d4-mobile (D4)",
+  "note": "D4 4332af8 covers the 260 px title and Bells chip only; 'chrome crowds the scene / wastes the desktop screen' still needs a tester"
  },
  "b11-r2-04": {
   "owner": "D1",
@@ -456,15 +457,15 @@
  },
  "b12-r2-01": {
   "owner": "D2",
-  "status": "open",
+  "status": "claimed",
   "test": "-",
-  "note": "hero is a green orb / invisible ~3 s after the pick"
+  "note": "D2 1dbb00c (hero pop-in fix W-01). Not run by D5 yet"
  },
  "b12-r2-04": {
   "owner": "D2",
-  "status": "open",
+  "status": "claimed",
   "test": "-",
-  "note": "snow frames with square holes; lava plus blocks"
+  "note": "D2 83d7d5e (inner-corner fill: no snow holes; organic shade patches). Visual: needs D5 screenshots + a tester"
  },
  "b12-r2-05": {
   "owner": "D2",
@@ -576,9 +577,9 @@
  },
  "b14-05": {
   "owner": "D3",
-  "status": "open",
-  "test": "-",
-  "note": "O-04 decided: ONE backup for every game key + settings, from Town, Lantern and Hub"
+  "status": "claimed",
+  "test": "beta-r4-o04-backup (D3)",
+  "note": "D3 08e50c2 (module: every save key + settings, build stamp, preview fields, compat check). Node-only test, 20/20; the Town / Lantern / Hub buttons were not replayed by D5"
  },
  "b14-06": {
   "owner": "D3",
@@ -624,9 +625,9 @@
  },
  "b14-13": {
   "owner": "D3",
-  "status": "open",
-  "test": "-",
-  "note": "part of O-04: backup includes settings (not device flags)"
+  "status": "claimed",
+  "test": "beta-r4-o04-backup (D3)",
+  "note": "D3 08e50c2, same as b14-05"
  },
  "b14-r2-N01": {
   "owner": "D3",
@@ -654,9 +655,9 @@
  },
  "b15-06": {
   "owner": "D4",
-  "status": "open",
-  "test": "-",
-  "note": "Back pill overlaps the title icon at 320"
+  "status": "claimed",
+  "test": "beta-r4-d4-mobile (D4)",
+  "note": "D4 4332af8. Lane test: 6 red on the round-3 tip, 10/10 on the D4 tree (run by D5)"
  },
  "b15-07": {
   "owner": "D5",
@@ -678,9 +679,9 @@
  },
  "b15-13": {
   "owner": "D4",
-  "status": "open",
-  "test": "-",
-  "note": "Back with the shared Menu open leaves the page"
+  "status": "claimed",
+  "test": "beta-r4-d4-town (D4)",
+  "note": "D4 ef67a0c (Back closes the shared Menu, Town and Hub). Lane test uses a real page.goBack but opens the Menu with MMNav.open(); red before / green after (run by D5)"
  },
  "b15-r2-15": {
   "owner": "D4",
@@ -702,8 +703,8 @@
  },
  "b15-r2-18": {
   "owner": "D4",
-  "status": "open",
-  "test": "-",
-  "note": "Hub moon overlaps the logo at 195 px"
+  "status": "claimed",
+  "test": "beta-r4-d4-mobile (D4)",
+  "note": "D4 4332af8 (moon off the logo at 195 px). Lane test red before / green after (run by D5)"
  }
 }
