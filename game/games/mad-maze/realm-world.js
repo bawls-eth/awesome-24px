@@ -1244,6 +1244,9 @@
         nbMeet(NB ? NB.ids.boss(site.boss, site.zone) : null, BOSS_NAME[i]); // ID-04
         // ID-13: the FIRST world boss of a zone rolls with the bag floor (MMZones FIRST_KILL_BAG_FLOOR); the bit is set and saved once (writeSave below).
         // Trial of Six kills (rushKilled) never come here, so they neither read nor set zk.
+        // cycle 4 (L): the bit is read from storage too. A second tab opened before the first kill kept zk = 0 in memory, so the same hero
+        // got the first-kill floor once per open tab (the write below only merged the bit afterwards). One read per boss kill.
+        const zdisk = readSave().zk | 0; if (zdisk & ~(save.zk | 0)) save.zk = ((save.zk | 0) | zdisk) & 15;
         const zbit = 1 << Math.max(0, Math.min(3, site.zone | 0)); const fk = !((save.zk | 0) & zbit);
         rollFor({ zone: site.zone, tier: site.zone, boss: true, src: 'boss', bossId: site.boss, firstKill: fk }, e.x, e.y + 30, 'boss' + i);
         if (fk) save.zk = ((save.zk | 0) | zbit) & 15;
