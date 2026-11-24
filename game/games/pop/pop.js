@@ -444,7 +444,7 @@
   document.addEventListener('keydown', (ev) => {
     if (ev.key !== 'Enter' && ev.key !== ' ') return;
     const ae = document.activeElement;
-    if (ae && ae !== document.body && ae !== document.documentElement) return;
+    if (ae && ae !== document.body && ae !== document.documentElement && ae.id !== 'board') return; // the focused board starts the round too
     const pb = $('play');
     if (!pb || pb.offsetParent === null || pb.disabled || (window.MMNav && MMNav.isOpen && MMNav.isOpen())) return;
     ev.preventDefault(); pb.click();

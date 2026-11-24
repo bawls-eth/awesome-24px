@@ -39,6 +39,19 @@ const AE = () => { const e = document.activeElement; return !e || e === document
     const started = await p2.evaluate(() => { const b = document.getElementById('play'); return !b || b.offsetParent === null; });
     check(`${g}: nothing is focused on load and Enter starts the run from the start card`, focus0 === 'BODY' && started, JSON.stringify({ focus0, started }));
     await c2.close();
+    // a focused game board + Enter also starts from the start card (the a11y sweep's "primary action" lands on the board)
+    if (g !== 'dash') {
+      const { ctx: c3, page: p3 } = await mk();
+      await p3.goto(ROOT + `game/games/${g}/index.html`);
+      await p3.waitForSelector('#play', { state: 'visible', timeout: 10000 });
+      await p3.waitForTimeout(300);
+      await p3.focus('#board');
+      await p3.keyboard.press('Enter');
+      await p3.waitForTimeout(500);
+      const st3 = await p3.evaluate(() => { const b = document.getElementById('play'); return { started: !b || b.offsetParent === null, focus: document.activeElement && document.activeElement.id }; });
+      check(`${g}: Enter on the focused board starts the run from the start card`, st3.started, JSON.stringify(st3));
+      await c3.close();
+    }
     await ctx.close();
   }
   {
