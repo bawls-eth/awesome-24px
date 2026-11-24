@@ -27,9 +27,24 @@ const SCENES = {
     await exposeGame(p); await p.goto(origin + '/game/index.html'); await joinOffline(p, 'ADMINcyc1art');
     await p.evaluate(() => { const s = window.__g.scene.getScene('Town'); s.localBody.setPosition(1450, 650); }); await p.waitForTimeout(1500);
   },
+  // cycle 1: 'before' realm shots use the opt-out flags (same server, the exact old look) so the late-loading R03 props are in both
   realm: async (p) => {
-    await p.goto(origin + '/game/games/mad-maze/index.html?mode=world&test=1&offline=1&heropick=0&tutorial=0&seed=12345');
-    await p.waitForFunction(() => window.__mm && window.__mm.world && window.__mm.arena.active, null, { timeout: 30000 }); await p.waitForTimeout(3500);
+    await p.goto(origin + '/game/games/mad-maze/index.html?mode=world&test=1&offline=1&heropick=0&tutorial=0&seed=12345' + (/^before/.test(tag) ? '&fielddetail=0&treefix=0' : ''));
+    await p.waitForFunction(() => window.__mm && window.__mm.world && window.__mm.arena.active, null, { timeout: 30000 });
+    // the world art (R03 props) loads late under load: wait for it so before / after shots both show the PNG props
+    await p.waitForFunction(() => { const W = window.__mm.world; const s = W.artState && W.artState(); return s && s.loaded && s.loaded.indexOf('prop_tree_medium') >= 0; }, null, { timeout: 25000 }).catch(() => {}); await p.waitForTimeout(2500);
+  },
+  // R03 medium / small tree: the strip as shipped (left) and after the bake-step canopy fix (right), 6x, on Realm grass
+  trees: async (p) => {
+    await SCENES.realm(p);
+    await p.evaluate(() => {
+      const t = window.__mm.world.treeFix(); const ids = ['prop_tree_medium', 'prop_tree_small'];
+      const cv = document.createElement('canvas'); cv.width = 4 * 32 * 6 + 60; cv.height = 64 * 6 + 20; const g = cv.getContext('2d'); g.imageSmoothingEnabled = false;
+      g.fillStyle = '#4f9a45'; g.fillRect(0, 0, cv.width, cv.height); let x = 10;
+      ids.forEach((id) => { const a = t.art(id); if (!a) return; [a.orig, a.fixed].forEach((im) => { g.drawImage(im, 0, 0, a.fw, a.fh, x, 10 + (64 - a.fh) * 6, a.fw * 6, a.fh * 6); x += a.fw * 6 + 12; }); });
+      Object.assign(cv.style, { position: 'fixed', left: '0', top: '0', zIndex: 99999, maxWidth: '100vw', imageRendering: 'pixelated' }); document.body.appendChild(cv);
+    });
+    await p.waitForTimeout(300);
   },
   'boss-tundra': (p) => bossScene(p, 'tundra', ['glacier_shellback', 'shagtusk', 'sabrefang', 'icicle_bat']),
   'boss-mars': (p) => bossScene(p, 'mars', ['regolith_roly', 'rustbeetle', 'crater_strider', 'dust_devil']),
