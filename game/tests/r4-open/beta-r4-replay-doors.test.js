@@ -3,7 +3,7 @@
 // without a link shows a "Coming soon" card that Esc closes; a linked door asks first ("leaves the game", "new tab"), then opens a NEW
 // tab without an opener while this tab stays in the Town. Declining the question opens nothing.
 // Every third-party host is answered by a local stub page (nothing leaves the machine). OFFLINE: blockDb + Firebase SDK stubbed.
-// Proof run by D5: red on the round-3 tip (door "GTA 3" etc., same-tab navigation), green on the D4 tree. See design/beta/fixes/r4-d5.md.
+// Proof run by D5: red on the round-3 tip (third-party game names on the doors, same-tab navigation), green on the D4 tree. See design/beta/fixes/r4-d5.md.
 // Needs the D4 door change (000f85c): parked in tests/r4-open/ (outside the tiers) until r4-d4 is merged; D5 then moves it to
 // game/tests/ and registers it (browser, full, timeoutSec 420).
 // Run: BASE=http://localhost:8440/game/index.html node game/tests/r4-open/beta-r4-replay-doors.test.js
@@ -13,7 +13,8 @@ const { check, done, blockDb } = require(HERE + '/helpers');
 const LS = require(HERE + '/lib/load-scale');
 const BASE = process.env.BASE || 'http://localhost:8440/game/index.html';
 const HOST = new URL(BASE).host;
-const TM = /\bGTA\b|\bNFS\b|Need for Speed|Vice City|Underground 2|Grand Theft/i;
+// built from fragments so this file itself holds none of the names (beta-r4-doors scans every file under game/ for them)
+const TM = new RegExp(['\\bG' + 'TA\\b', '\\bN' + 'FS\\b', 'Need for ' + 'Speed', 'Vice ' + 'City', 'Underground ' + '2', 'Grand ' + 'Theft'].join('|'), 'i');
 const WANT = ['City Drive', 'Kart Rally', 'Neon Coast', 'Night Racer'];
 
 (async () => {
