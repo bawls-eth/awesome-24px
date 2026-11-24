@@ -12,7 +12,9 @@ Results, Lv 20, common wand (one trial, wall-clock; see the caveat):
 | 1 | inferno_wyrm | 990 | 4.004 | 66.7 s | 0 | won |
 | 2 | lich_king | 990 | 4.004 | 71.7 s | 0 | won |
 | 3 | void_maw | 1030 | 4.084 | 71.5 s | 0 | won |
-| 4-6 | see the end of this section | | | | | |
+| 4 | void_oracle | 1030 | 4.164 | 69.7 s | 0 | won |
+| 5 | shadow_hydra | 1070 | 4.244 | 70.7 s | 0 | won |
+| 6 | (still running when this was committed; not reported) | | | | | | |
 
 Reading: a fight is about 70 s at about 14 HP/s of bot damage (common wand), so a full Trial is about 7 minutes of play with no rest in between. Pacing problem 1: fight length is flat (67-72 s) for all fights; there is no ramp in time or threat. Pacing problem 2 (caveat, NOT proven): damage taken was 0 in three fights, so either the dodge lookahead beats the boss patterns at Lv 20 or hits are not being counted. I did not instrument the number of live boss bolts, so I cannot claim the boss is toothless; the cycle-1 fact still stands that a non-dodging hero dies in 20-43 s. Deaths per fight in this run: 0 of 3 (so far). The next cycle should log `eBullets` alive per second and the min distance to a bolt to settle that.
 
