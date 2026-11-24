@@ -397,10 +397,28 @@
     const SW = { ranger: '#6fbf73', frostcaller: '#7ec8f0', herald: '#e8b86a', punk: '#e0679a', bruiser: '#a9784f', rogue: '#8a7ac8', warlock: '#7a3fb0', paladin: '#f0d36a', berserker: '#e8643c', druid: '#5aa05a', necromancer: '#6a8a7a', graveTender: '#7f9a5a', trickster: '#5ad0b0', shadowPaw: '#6a5a8a' };
     // b20 class portrait: replaces the colour swatch (and the animated canvas) once the image loads; a missing image keeps today's swatch / canvas.
     const PORTRAIT_ROOT = '../../assets/arcane/b20-class-portraits-and-ability-icons/portraits/portrait_';
+    // cyc5-G (b12-r3-01 hero pick pop-in): every class portrait is fetched AND decoded once, as the page boots, so a card built after that is
+    // drawn with its portrait in the same frame (no swatch -> portrait swap). The picker card stays invisible until they are decoded (capped).
+    const portraitCache = new Map(); // cls -> { ok, failed, p }
+    function portraitP(cls) {
+      const c = String(cls || '').toLowerCase(); if (params.get('uiicons') === '0' || !/^[a-z]+$/.test(c)) return Promise.resolve(false);
+      if (!portraitCache.has(c)) {
+        const e = { ok: false, failed: false, p: null }; const im = new Image(); im.decoding = 'async';
+        e.p = new Promise((res) => {
+          im.onload = () => { const dec = typeof im.decode === 'function' ? im.decode().catch(() => {}) : Promise.resolve(); dec.then(() => { e.ok = im.naturalWidth > 0; e.img = im; res(e.ok); }); };
+          im.onerror = () => { e.failed = true; res(false); };
+        });
+        im.src = PORTRAIT_ROOT + c + '.png'; portraitCache.set(c, e);
+      }
+      return portraitCache.get(c).p;
+    }
+    const portraitsP = Promise.all(Object.keys(MMClasses.CLASSES).map(portraitP));
     function portraitImg(cls, sw, cv, size) {
       const c = String(cls || '').toLowerCase(); if (params.get('uiicons') === '0' || !/^[a-z]+$/.test(c)) return null;
+      const pc = portraitCache.get(c); if (pc && pc.failed) return null; // known 404: keep the swatch, no request
       const im = document.createElement('img'); im.className = 'hp-portrait'; im.alt = ''; im.setAttribute('aria-hidden', 'true'); im.draggable = false; im.hidden = true; im.dataset.cls = c;
       if (size) { im.style.width = im.style.height = size + 'px'; }
+      if (pc && pc.ok) { im.hidden = false; if (sw) sw.hidden = true; if (cv) { cv.hidden = true; cv.removeAttribute('data-art'); } } // decoded: shown in the first frame
       im.addEventListener('load', () => { im.hidden = false; if (sw) sw.hidden = true; if (cv) { cv.hidden = true; cv.removeAttribute('data-art'); } });
       im.addEventListener('error', () => { im.remove(); });
       im.src = PORTRAIT_ROOT + c + '.png';
@@ -496,10 +514,28 @@
       tPick.setAttribute('aria-pressed', String(tab === 'pick')); tStats.setAttribute('aria-pressed', String(tab === 'stats'));
       body.scrollTop = 0; if (tab === 'pick') renderPick(); else renderStats();
     }
-    arena.onHeroPanel = (t) => { tab = t === 'stats' ? 'stats' : 'pick'; creating = tab === 'pick' && heroState().prof.heroes.length === 0; render(); };
+    // cyc5-G (b12-r3-01): the first open waits (capped, load-independent) for the decoded portraits with the card invisible, then renders once,
+    // complete; the classes a first pick can choose get their idle strips warmed at the same time, so the picked hero is drawn at once.
+    const WARM_CAP = 1200, FIRST_CAP = 1500; let warmed = false; const warm = window.__heroWarm = { waits: 0, revealedAt: 0, capped: false };
+    function warmStrips() {
+      if (!window.MMArt) return; const st = heroState();
+      const cls = st.prof.heroes.length ? st.prof.heroes.slice(0, 6).map((h) => h.cls) : Object.keys(unlockedSet(st.prof));
+      cls.forEach((c) => { const ac = MMArt.artClassFor(c); if (ac) heroQuickP(ac); });
+    }
+    arena.onHeroPanel = (t) => {
+      tab = t === 'stats' ? 'stats' : 'pick'; creating = tab === 'pick' && heroState().prof.heroes.length === 0;
+      if (warmed) { render(); return; }
+      warmStrips(); warm.waits++; card.style.visibility = 'hidden'; wrap.setAttribute('aria-busy', 'true');
+      let capT = 0; const cap = new Promise((r) => { capT = setTimeout(() => { warm.capped = true; r(); }, WARM_CAP); });
+      Promise.race([portraitsP, cap]).then(() => {
+        clearTimeout(capT); warmed = true; card.style.visibility = ''; wrap.removeAttribute('aria-busy'); warm.revealedAt = Math.round(performance.now());
+        if (arena.panel === 'hero') render();
+      });
+    };
     tabs.addEventListener('click', (e) => { const b = e.target.closest('button[data-tab]'); if (!b) return; tab = b.dataset.tab; creating = tab === 'pick' && heroState().prof.heroes.length === 0; status.textContent = ''; render(); });
     close.addEventListener('click', () => arena.setPaused(false));
     body.addEventListener('click', (e) => {
+      if (body.getAttribute('aria-busy') === 'true') return; // first hero being readied: a second tap never creates another
       if (e.target.closest('button[data-newhero]')) { creating = true; status.textContent = ''; render(); return; }
       if (e.target.closest('button[data-back]')) { creating = false; render(); return; }
       const nc = e.target.closest('button[data-newcls]');
@@ -507,7 +543,16 @@
         if (nc.disabled) return; const first = heroState().prof.heroes.length === 0; const h = createHero(nc.dataset.newcls);
         if (!h) { status.textContent = 'Could not create that hero (roster full, class locked, or storage blocked).'; return; }
         creating = false; status.textContent = h.sessionOnly ? h.name + ' is ready for this visit (site data is blocked, so heroes are not saved).' : h.name + ' is ready. Class stats, abilities and art applied.';
-        if (first) arena.setPaused(false); else renderPick();
+        // cyc5-G (b12-r3-01): the first hero's world reveal waits (capped) for its idle strip, so the world never shows the code orb or an
+        // empty pad first; the strip was warmed when the grid opened, so this is usually already resolved.
+        if (first) {
+          const ac = window.MMArt ? MMArt.artClassFor(h.cls) : null; const t0 = performance.now(); body.setAttribute('aria-busy', 'true');
+          let capT = 0; const cap = new Promise((r) => { capT = setTimeout(r, FIRST_CAP); });
+          Promise.race([ac ? heroQuickP(ac) : Promise.resolve(null), cap]).then(() => {
+            clearTimeout(capT); body.removeAttribute('aria-busy'); warm.firstWait = Math.round(performance.now() - t0);
+            if (arena.panel === 'hero') arena.setPaused(false);
+          });
+        } else renderPick();
         return;
       }
       const b = e.target.closest('button[data-hero]'); if (!b || b.disabled) return;
